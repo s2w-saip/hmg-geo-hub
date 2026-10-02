@@ -1,0 +1,43 @@
+{
+  "id": "PJ-4",
+  "title": "test",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/v1/x",
+      "summary": "x"
+    }
+  ],
+  "purpose": "test",
+  "screens": [
+    "a"
+  ],
+  "filters": {
+    "supported": [],
+    "ignored": [],
+    "extra_params": []
+  },
+  "response": "test",
+  "metrics_rules": [
+    "x"
+  ],
+  "read_model": [
+    "x"
+  ],
+  "query_design": "test",
+  "perf": {
+    "risk": "low",
+    "rows_scanned": "x",
+    "indexes": [],
+    "notes": "x"
+  },
+  "auth": "test",
+  "writes": "test",
+  "current_refs": [
+    "x"
+  ],
+  "parity": "test",
+  "open_questions": [
+    "x"
+  ]
+}

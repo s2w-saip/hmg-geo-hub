@@ -1,0 +1,96 @@
+{
+  "id": "M-2",
+  "title": "M-2 언급 유형·태도 분포 (GET /v1/mentions/types)",
+  "purpose": "답변분석 언급 탭의 두 카드를 한 엔드포인트로 공급한다: (1) 언급 유형 분포(M08, 유형 5종×당사/비교 노출·점유율 + 유형×감성 매트릭스, rd.answer_brand 그레인) (2) 브랜드 태도 분포(A3, 답변×브랜드 단일 스탠스 4계열, rd.answer_stance 그레인). 확정 DDL(DB-v2.sql)에 두 그레인이 이미 실재해 구 설계(api-partial/M-2)가 \"제안\"으로 남겼던 v2r.mentions.type_* 5컬럼·v2r.stances 신설안이 모두 해소됐다 — rd.answer_brand.t_mention~t_final_choice·s_pos~s_mix, rd.answer_stance(own_bit·stance·first_turn)로 그대로 대응.",
+  "screens": [
+    "/standard/answer-analysis/mention (언급 유형별 + 브랜드 태도 분포/우호도 탭) — server.ts:3440-3461",
+    "/website/answer-analysis/mention (감정 분포·멘션 유형) — server.ts 부근 fetchWebsiteMentions 계열(10-feature-trace.tsv:167-168), website 표면 매핑은 open_question",
+    "/projects/[id]/analysis/mention 유형·태도 카드(프로젝트 표면, project_key 단일값으로 좁힘)"
+  ],
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/v1/mentions/types",
+      "summary": "언급 유형 5종(mention·recommendation·comparison·definition·final_choice)×당사/비교 노출·점유율(M08) + 유형×감성 매트릭스(근사) + 답변×브랜드 스탠스 4계열 분포(A3)"
+    }
+  ],
+  "filters": {
+    "supported": [
+      "own_brand(서버 결정, 필수 — bgrp/own_bit 매핑)",
+      "brand[](비교 대상 카탈로그 브랜드 한정, 미지정=카탈로그 전체와 비교)",
+      "country[](geo_key)",
+      "engine[](engine_key)",
+      "from/to(앵커 날짜=round_date, D1 기간 누적, 미지정=A1 스냅샷)",
+      "funnel[]·brand_presence[]·list_type[]·depth1[]~depth3[](global 표면 전용, 프롬프트 카탈로그 축 — prompt_key 경유 catalog_entry 조인/사전 필터)"
+    ],
+    "ignored": [
+      "source[](인용 전용 축 — 이 기능은 언급·스탠스만 다룸, meta.ignored_filters)"
+    ],
+    "extra_params": [
+      "lang[]: website 표면 전용. global 요청에 오면 값 무시 + meta.ignored_filters(현행 standard-filters.ts:64 관행 계승)",
+      "stance_scope: 'own'|'all', 기본 'own' — 유형×감성 매트릭스의 브랜드군 범위(현행 sentimentMatrix.own/all 두 배열을 한 콜에 다 싣는 대신 선택형으로 응답 크기 축소를 검토했으나, 스펙 §8이 mentions/types 하나만 명명해 기본은 own+all 둘 다 내려주는 것으로 확정 — 이 파라미터는 all만 필요할 때의 축소 옵션). 검증: 두 값 외 400",
+      "top_brands: int, 기본 없음(전체) — brand[] 미지정 시 비교 브랜드군을 카탈로그 전체가 아니라 상위 N으로 제한할지는 open_question, 있다면 1~50 검증"
+    ]
+  },
+  "response": "data: { answers_total: int (M08 노출률 분모, rd.answer 카운트), by_type: [ { type: enum(mention|recommendation|comparison|definition|final_choice), own_mentions: int, other_mentions: int, own_answers: int, other_answers: int, own_exposure: {num:int, den:int}, other_exposure: {num:int, den:int}, own_share: {num:int, den:int} } ] (고정 5행, own_share.num=own_mentions·den=own_mentions+other_mentions), sentiment_matrix: [ { type: enum, scope: 'own'|'all', rows: int, positive: int, neutral: int, mixed: int, negative: int } ] (5유형×2스코프=10행. ⚠️ 근사: 한 (답변×브랜드) 행이 유형 2개 이상이면 그 행의 s_* 합이 두 유형에 각각 계상되어 셀 합≠총 감성 신호 수 — 화면은 유형 안 구성비로만 읽는다, 유형 간 합산 금지), stance: { positive: int, neutral: int, mixed: int, negative: int, pairs: int } (A3, pairs=4계열 합=답변×브랜드 대표턴 쌍 수) }. 비율은 항상 {num,den} 정수 쌍(A3 own_share/own_exposure 등)으로 실어 나눗셈은 응답 직전 1회만 — 공통 응답 봉투(data/meta) §계약서 그대로. 페이지네이션 없음(유형 5종·스탠스 4계열 고정 행).",
+  "metrics_rules": [
+    "M08 언급 유형 분포: 유형별 답변 수 / 답변(가산, 답변 그레인) — 이 단위의 핵심 지표, by_type[].own_exposure·other_exposure",
+    "R06/D1 기간 누적 = round_date 가 기간 안인 모든 완료 측정 합. A1 기간 미지정 = 최신 노출 회차의 모든 완료 측정(대표 1건 제한 아님)",
+    "R07 분모 게이트: 발행 회차·run 상태·현행 카탈로그·정식 대상 시장·제외 지역 — rd.answer/rd.answer_brand/rd.answer_stance 의 std_in(생성 컬럼) 으로 적재 시 이미 판정, 조회는 std_in=true 만 필터",
+    "A15 ACR 반복 접기: rd.answer.acr_in(생성 컬럼, is_acr AND acr_iter_rank>1 이면 false) — answer_brand·answer_stance 는 별도 acr_in 사본이 없어 rd.answer 조인으로 반영하거나(join 방식) 게이트 전파(B3, propagate_answer_gates)가 std_in 계산에 acr_in 을 이미 반영했는지 확인 필요(open_question — DDL 상 std_in 생성식은 answer_brand/answer_stance 에 없고 '게이트 사본' 컬럼으로만 존재, 전파 함수 본문 미열람)",
+    "A16 언급 분석 없는 측정은 모수에서 제외, 결손 표시 — rd.answer.gap(analysis_state>=2, 생성 컬럼) true 인 답변은 std_in 도 false 가 되어 자동 제외(std_in 정의에 analysis_state<2 포함) — 결손률은 meta 또는 별도 필드 노출 필요(open_question, 이 응답 스키마엔 gap_count 없음)",
+    "A3 감성 mixed 처리(M03 정의): stance.positive/negative 는 순수 카운트 그대로, 화면이 '긍정 비율' 같은 파생비율을 만들 때만 분모=4계열 합(pairs)·분자=positive 규칙 적용 — sentiment_matrix 의 4계열(유형별 근사)에는 A3 규칙을 적용하지 않고 있는 그대로 노출(정의 대상이 다름: A3는 M03/스탠스, 매트릭스는 유형별 근사 분해)",
+    "필터 규칙 3(공통 §4): own_brand=X 이면 프롬프트 모집단 = 카탈로그 brand=X ∪ 공통(HMG) 프롬프트, 당사 판정=X — answer_brand.own_bit/answer_stance.own_bit 이 이미 이 판정을 적재 시 반영(own_mask on rd.answer 도 같은 판정의 답변 그레인 사본)"
+  ],
+  "read_model": [
+    "rd.answer(std_in, gap, acr_in 생성 컬럼, round_date, surface, project_key, bgrp, engine_key, geo_key, lang_key, prompt_key) — answers_total 분모 및 acr_in 참조",
+    "rd.answer_brand(round_date, answer_key, brand_key, own_bit, competitive, t_mention/t_recommendation/t_comparison/t_definition/t_final_choice, s_pos/s_neu/s_neg/s_mix, mention_count, std_in, elig, dflt, engine_key, geo_key, lang_key, bgrp, project_key) — M08 by_type·sentiment_matrix 원천, DB-v2.sql:479-490",
+    "rd.answer_stance(round_date, answer_key, entity_key, brand_key, own_bit, turn_index, stance, first_turn, std_in, engine_key(=surface 컬럼뿐 — geo/engine 은 없음, 회차 필터는 round_date+answer 조인으로 보강 필요)) — A3 stance 원천, DB-v2.sql:497-504",
+    "rd.dim_brand_name(brand_key, name, bare, own_bit) — brand[] 필터의 이름→brand_key 해석(응답엔 brand_key 노출 안 함, 이 단위는 브랜드 분해 없이 own/other 2군만 집계)",
+    "rd.catalog_entry(prompt_key, brand_bit, …) — funnel[]/brand_presence[]/list_type[]/depth1~3[] global 필터 해석(제안 아님, DDL 398행 실재)"
+  ],
+  "query_design": "\"파티션 가지치기: surface = :surface AND round_date BETWEEN :lo AND :hi (스냅샷이면 최신 노출 회차 단일 round_date 또는 그 회차의 round_date 범위 — R05/A1). (1) answers_total: SELECT count(*) FROM rd.answer WHERE surface=:s AND round_date BETWEEN :lo AND :hi AND bgrp=:own_brand AND std_in AND (:engine_key[] IS NULL OR engine_key=ANY(:engine_key[])) AND (:geo_key[] IS NULL OR geo_key=ANY(:geo_key[])) AND (:prompt_key[] IS NULL OR prompt_key=ANY(:prompt_key[])). (2) M08+매트릭스: WITH per AS (SELECT CASE WHEN t_mention>0 THEN 'mention' ... END 대신 5행 UNION ALL 로 유형별 FILTER 합산 — SELECT 'mention' AS type, sum(t_mention) FILTER(WHERE own_bit>0) AS own_n, sum(t_mention) FILTER(WHERE own_bit=0) AS other_n, count(*) FILTER(WHERE own_bit>0 AND t_mention>0) AS own_ans, count(*) FILTER(WHERE own_bit=0 AND t_mention>0) AS other_ans, sum(s_pos) FILTER(WHERE t_mention>0 AND own_bit>0) AS own_p, … (own/all 매트릭스는 own_bit 조건 유무로 두 세트) FROM rd.answer_brand WHERE surface=:s AND round_date BETWEEN :lo AND :hi AND std_in AND (:brand_key[] IS NULL OR brand_key=ANY(:brand_key[])) AND 같은 engine/geo/lang/prompt 축 UNION ALL … 'recommendation' … 'final_choice'). rd.answer 재조인 불필요 — engine/geo/lang/bgrp/project_key 가 answer_brand 에 이미 사본으로 있어(G-03 성격의 자식 반정규화) 단일 표 스캔으로 끝난다. (3) A3 스탠스: SELECT stance, count(*) FROM rd.answer_stance WHERE surface=:s AND round_date BETWEEN :lo AND :hi AND std_in AND own_bit>0 AND first_turn GROUP BY stance — first_turn 이 이미 적재 시 턴 접기를 끝내 놓아 DISTINCT ON 이 조회 시점에 필요 없다(A17: 판정은 적재 트랜잭션에서). engine/geo/lang/project 축 필터는 answer_stance 컬럼에 없는 것들(geo_key·lang_key·project_key 미확인 — DDL 497-501 행엔 surface·turn_index·own_bit·stance 만 명시되고 engine/geo/lang/project 는 안 보임)이라 rd.answer 와 answer_key 등치 조인이 필요할 수 있음(open_question — read_model 재확인 필요, 있으면 조인 생략).\"",
+  "perf": {
+    "risk": "medium",
+    "rows_scanned": "10배(프롬프트·브랜드 키 10배, DB-v2.sql §3 성능 근거 한계 문단 참조 — 실측 아님)에서 rd.answer_brand 는 (답변×표시 브랜드×경쟁여부) 그레인이라 rd.answer 대비 수 배(현행 프로덕션 실측 24.2s→4.19s 최적화 사례의 원천 scope_mentions 와 유사 배율, scope-aggregates.ts:10808-10811 주석). rd.answer_stance 는 (답변×턴×엔티티) 1:1이나 first_turn=true 필터로 사실상 (답변×엔티티) 로 줄어 answer_brand 와 비슷한 자릿수. 글로벌 스냅샷~30일 조합은 수만~수십만 행, 1년 누적은 수백만 행까지 커질 수 있음(M-1 동형 근거 재사용, F08/F09 쿼리를 v3 하네스에 신설해야 실측 확정 — open_question).",
+    "indexes": [
+      "ab_brand_idx(brand_key, round_date) INCLUDE(answer_key, prompt_key) — brand[] 필터가 걸린 조합에 유효, 필터 없으면 ab_rd_brin(round_date) 파티션 프루닝이 주력",
+      "ab_rd_brin(round_date) — 기간 필터 기본 가지치기, DB-v2.sql:526",
+      "st_rd_brin(round_date) — answer_stance 기간 가지치기, DB-v2.sql:528. 유일한 인덱스라 own_bit>0 AND first_turn 조건은 BRIN 프루닝 후 leaf 내 순차 필터(추가 인덱스 미제안 — D8 원칙상 새 인덱스도 신중, v3 실측서 병목이면 (surface, round_date, own_bit) 부분 인덱스를 다음 라운드에 제안)",
+      "ab_p_proj_idx / (project 표면 단일 project_key 제약 시)"
+    ],
+    "notes": "D8(파생 층 없음)로 유형×감성 매트릭스(5유형×2스코프×4계열=40셀)와 스탠스 4계열을 매 요청 원본 그레인에서 UNION ALL 5회 + 별도 GROUP BY 1회로 실시간 계산. rd.answer_stance 가 engine/geo/lang/project 축을 자체 보유하는지 미확인이라(read_model 항목 참조) 조인이 추가되면 answer_key 등치 조인 비용이 붙어 위험도가 medium→high 로 올라갈 수 있음 — DDL 재확인이 perf 판정의 선결 조건(open_question)."
+  },
+  "auth": "§9(A8) 그대로: FastAPI가 Supabase Auth JWT를 JWKS로 검증(미검증 401). 공통 필터 규칙 1(권한 교집합): 서버가 세션 role(hq/region/country/admin/vendor)에서 scope-policy 상당 로직으로 허용 brand/region/country를 계산해 요청 brand[]·country[]와 교집합하고, own_brand는 서버가 결정(클라이언트가 못 바꿈) — 스코프가 비면 default-deny. 이 엔드포인트는 읽기 전용이라 운영자(비용 액션) 게이트는 해당 없음. 경로 접근(이 엔드포인트를 어느 role이 볼 수 있는지)은 route-policy 허용 목록에 별도 등재 — vendor는 프로젝트 표면만 보므로 global 전용 필터(funnel 등)가 오면 무시되는지 확인 필요(open_question). 쓰기가 없으므로 app.access_audit_log(AU-1 미결) 대상이 아니고, 호출자 귀속은 읽기 감사(audit.ts auditDataAccess 계열)로 남긴다.",
+  "writes": "없음(읽기 전용). Scope API pull·적재는 별도 적재 모듈(A10)이 담당하며 같은 트랜잭션에서 rd.answer_brand/rd.answer_stance의 std_in 등 게이트 사본을 rd.propagate_answer_gates 로 함께 갱신한다(B3, DB-v2.sql:541-553 부근). 이 API는 rd만 조회한다.",
+  "parity": "\"신구 대조 하네스 F01~F07에는 이 단위 대응 항목이 없음 — F08(유형, aggregateTypeKpiFromMirror의 typeRows[].{ownMentions,otherMentions,ownAnswers,otherAnswers} 5행×4값 + sentimentMatrix.own/all 각 5행×5필드)·F09(스탠스, AnswerStanceDistribution의 positive/neutral/mixed/negative/pairs) 신설 제안. 대조는 harness 관례(runs/*/values-old.jsonl)로 현행 fetchStandardKpiTypes·fetchStandardKpiStanceDist를 동일 필터로 호출해 정수 단위 전수 비교. 값이 달라질 것으로 예상되는 지점(버그 아닌 결정된 정의 변경): (1) A1 스냅샷이 회차 대표 1건이 아니라 최신 노출 회차 전체 완료 측정 합으로 바뀜 (2) A15 ACR 반복 접기가 acr_iter_rank 기준(적재 시 판정)으로 바뀌어 현행 acr_summary.prompt_run_id 유무 접기(R13, 결손 있던 방식)와 갈릴 수 있음 (3) R12 분석 도착 재확인으로 08-31류 회차의 과소표시(~10%p)가 새 구조에서 해소되어 절대값이 오를 수 있음 — 전부 A4(과거 재계산 + 1회 고지) 대상으로 별도 기록.\"",
+  "open_questions": [
+    "A15/R12 반영 경로 미확정: rd.answer_brand·rd.answer_stance 에는 acr_iter_rank·gap 원본이 없고 std_in(게이트 사본)만 있다 — 그 std_in 생성이 rd.answer.acr_in/gap 과 항상 동기화되는지(B3 propagate_answer_gates 본문 미열람, DECISIONS.md '당사 합 불변식'만 확인) 설계 리드/데이터 모듈에 확인 필요",
+    "rd.answer_stance 에 engine_key·geo_key·lang_key·project_key 컬럼이 있는지 DDL 497-504행에서 확인 못함(surface·turn_index·own_bit·stance·first_turn·std_in 만 명시) — 없으면 A3 스탠스 카드에 국가/엔진 필터를 걸 때마다 rd.answer 조인이 강제되어 perf 위험도가 올라간다. read_model 확정 후 query_design 재검토 필요",
+    "M-2(이 단위)와 M-1(브랜드 비교)의 경계: 두 단위 다 rd.answer_brand 를 읽지만 M-1 은 brand_key 별 행 분해(경쟁사 표), M-2 는 own/other 2군 합산(유형·태도)만 낸다고 가정했다 — 브랜드별 유형 분포(예: '현대차의 recommendation 유형만')처럼 두 축이 겹치는 요청이 오면 M-1 로 보낼지 이 단위에 brand_key 분해 옵션을 추가할지 명세에 없음",
+    "stance_scope='all'(경쟁사 포함 스탠스)이 화면에 실제로 쓰이는지 미확인 — 현행 fetchStandardKpiStanceDist 는 own 개념 자체가 없이 trackedRollupPredicate(당사만)로 이미 고정돼 있어(scope-aggregates.ts:7419) all 스코프 스탠스가 요구사항인지 재확인 필요, 없으면 stance 필드에서 own/all 구분 자체를 빼고 단순화",
+    "웹사이트 표면(/website/answer-analysis/mention)이 이 API 를 surface=website 파라미터로 그대로 쓰는지, 별도 엔드포인트가 필요한지 — 10-feature-trace.tsv:167-168 의 fetchWebsiteMentions 계열을 이번 라운드에서 열람하지 못함(같은 모듈의 M-3 프롬프트별 언급과 경계도 함께 확인 필요)",
+    "brand[] 미지정 시 '비교(other)' 군의 모집단이 카탈로그 전체 브랜드인지 top_brands 로 제한할지 — 계약서 §4 필터 규칙 3(관점 브랜드와 모집단)은 답변 모집단(프롬프트 축)을 정의할 뿐 '비교 대상 브랜드군' 크기는 명문화가 없어 UI 의도 재확인 필요"
+  ],
+  "current_refs": [
+    "lib/scope/server.ts:3440-3446 (fetchStandardKpiTypes)",
+    "lib/scope/server.ts:3453-3461 (fetchStandardKpiStanceDist)",
+    "lib/scope/server.ts:2281-2293 (cachedKpiStanceDist/cachedKpiTypes 캐시 래핑 — 신설계에서는 D8로 캐시 폐기)",
+    "lib/db/repositories/scope-aggregates.ts:7357-7433 (AnswerStanceDistribution, aggregateAnswerStanceDistributionFromMirror — DISTINCT ON (job_id, entity_id) ORDER BY turn_index 로 최저 턴 대표)",
+    "lib/db/repositories/scope-aggregates.ts:10673-10732 (MENTION_TYPE_KEYS·TypeKpiRow·TypeSentimentRow·TypeKpi 인터페이스)",
+    "lib/db/repositories/scope-aggregates.ts:10735-10884 (aggregateTypeKpiFromMirror 본문, LATERAL VALUES 세로 전개 + 답변 단위 선접기 최적화 주석 10763-10811)"
+  ],
+  "bg_additions": {
+    "date": "2026-09-28",
+    "rule": "선택 인자. 주지 않으면 응답 모양·값이 종전과 같다(모듈-언급.md §3.2)",
+    "extra_params": [
+      "split_own:bool=false (D13: M-1·trend 와 같은 판정·행 키)"
+    ],
+    "response_fields": [
+      "data.by_own_brand[]:{own_brand_code, by_type[5], sentiment_matrix[10], stance} (split_own=true 일 때만. 관점 비트가 하나면 []. 비트 오름차순. 블록 = 그 비트만 당사로 둔 스코프, other = 그 밖 경쟁 행 전부, 분모 answers_total 공유)"
+    ],
+    "limits": [
+      "추가 문장 = 관점 비트 수(≤ 3) × 2"
+    ]
+  }
+}

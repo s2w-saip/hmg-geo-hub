@@ -1,0 +1,87 @@
+{
+  "auth": "role='admin'만 접근(현행 canAccessAdmin과 동일: scope-policy.ts:48 `user.role === \"admin\"`). AD 모듈 공통 게이트로 FastAPI 의존성에서 JWT(JWKS, A8) 검증 후 `app.user_account.role='admin'`을 조회해 403 게이트. operator_scope는 이 단위에 관여하지 않는다(자사/제외 판정은 스코프 조회 대상이 아니라 전사 참조 규칙 테이블이라 region·country 오퍼레이터에게는 항상 읽기도 막는다: role≠admin이면 GET·PUT 둘 다 403). 공통 필터 모델의 권한 교집합(§2 \"권한 교집합\")은 이 단위에 적용 대상이 없음(브랜드·지역·국가 스코프 축이 없는 화면).",
+  "current_refs": [
+    "lib/db/repositories/entity-registry.ts:27-64 (entityRegistryRepository: listOwn/listAll/upsert/remove)",
+    "lib/db/repositories/entity-registry.ts:79-113 (listDiscoveredBrands: scope_mentions 집계+registry 병합)",
+    "app/[locale]/(dash)/admin/standards/entities/page.tsx (화면, listDiscoveredBrands 호출)",
+    "app/[locale]/(dash)/admin/standards/entities/_actions.ts:21-58 (requireAdmin, setEntityRole: own/excluded=upsert, competitor=remove, revalidateTag/revalidatePath)",
+    "app/[locale]/(dash)/admin/standards/entities/_components/entity-catalog.tsx (역할 select UI, 정렬: own→excluded→competitor)",
+    "lib/auth/scope-policy.ts:48 (canAccessAdmin: role==='admin')"
+  ],
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/v1/admin/entities",
+      "summary": "발견된 Brand 엔티티 전체 카탈로그(답변·턴 집계 + 등재 역할) 목록, 키셋 페이지네이션"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/admin/entities/{entity_id}",
+      "summary": "엔티티 역할 설정: own·excluded는 app.entity_registry upsert, competitor는 파생 기본값이라 행 삭제 + judgment_change('entity') 큐잉"
+    }
+  ],
+  "filters": {
+    "supported": [],
+    "ignored": [
+      "surface",
+      "own_brand",
+      "brand[]",
+      "country[]",
+      "lang[]",
+      "engine[]",
+      "from/to",
+      "funnel[]",
+      "brand_presence[]",
+      "list_type[]",
+      "depth1~3[]",
+      "source[]"
+    ],
+    "extra_params": [
+      "q: string, optional, 이름 부분일치 검색(현행 EntityCatalog 클라이언트측 query와 동일 동작을 서버로 이관, ILIKE)",
+      "role: enum(own|excluded|competitor), optional, 등재 역할 필터",
+      "sort: enum(answers_desc|name_asc), default answers_desc(현행 mentions desc 대응, 아래 metrics_rules 참고)",
+      "cursor: string, optional, 키셋 페이지네이션 토큰",
+      "limit: int, default 100, max 500"
+    ]
+  },
+  "metrics_rules": [
+    "P1(적재 시점 판정): 역할 변경은 조회 시점 재계산이 아니라 적재 파이프라인(loader)이 rule_ver를 올려 rd.dim_brand_name.own_bit·rd.dim_entity.registry_role과 그 하위 own_mask/own_rk_*/ment_*/sent_*(rd.answer)·own_bit/competitive/rk(rd.answer_brand)를 leaf 재구축으로 갱신한다(DB-v2.sql 헤더 HOT 규율 주석). 이 API 자체는 큐만 쓴다: 반영은 비동기, 즉시 반영 아님.",
+    "제안: '엔티티 = 현재 own/excluded 등재 여부와 무관하게 DB-v2.sql:406 rd.dim_entity(entity_type=Brand)에 존재하는 모든 Brand 엔티티' 로 카탈로그 모수를 정의(현행 listDiscoveredBrands와 동일하게 미측정·명부만 있는 엔티티도 answers=0으로 포함).",
+    "M-계열 미해당: 이 단위는 M01~M12 지표 산출 API가 아니라 그 지표들이 참조하는 참조 테이블(app.entity_registry·rd.dim_brand_name.own_bit)의 관리 화면이다."
+  ],
+  "open_questions": [
+    "mentions(발생 횟수) 지표 소실: 현행 listDiscoveredBrands는 scope_mentions.mention_count 합(occurrence 단위)을 보여주는데, rd 읽기 스키마엔 엔티티 그레인 occurrence 집계가 없다(rd.v_answer_occurrence는 answer_key 등치 조회 전용, §3 규약). rd.answer_stance는 (답변,턴,엔티티) 1행이라 최대 turn 수까지만 센다. 지표를 'answers(distinct)+turns(stance 행수)'로 바꿔도 되는지, 아니면 D8 예외 추가(엔티티×occurrence 카운터)가 필요한지 기술 리드 결정 필요.",
+    "surface 무관 전량 집계의 파티션 가지치기 불능(perf 참고): rd.answer_stance가 (surface, round_date)로 파티션인데 이 화면은 surface 필터가 없어(현행도 없음) 3개 서피스 전체 리프를 스캔해야 한다. surface를 admin 화면에 새로 도입(예: 전체/글로벌/웹사이트/프로젝트 탭)할지, 아니면 전량 스캔을 감수할지 결정 필요.",
+    "round_date 무경계 전량 이력 집계: 규약상 '모든 사실 표 질의에 round_date 범위'가 원칙인데 이 화면은 회차 개념이 없는 전사 명부 관리라 현행처럼 전체 이력을 본다. 10배 규모에서 무경계 GROUP BY entity_key 비용이 크므로(perf.risk 참고) 최근 N일(예: 180일) 기본창 + '전체 이력 보기' 옵션 분리를 제안하되, 이는 현행 UX 변경이라 승인 필요.",
+    "entity_registry.name(등재 시 admin이 고정한 표기)과 rd.dim_entity.rep_name(최신 관측 대표 표기)이 다를 수 있음 — 목록 표시 이름 우선순위(현행: 등재 시 registry.name 우선, entity-registry.ts:105)를 그대로 유지하는지 재확인 필요.",
+    "AD-1 표준 카탈로그와의 경계: app.brand_name_prefix·app.brand_display_alias·app.non_competitor_name·app.competitor_domain_token(브랜드 표기·비경쟁사·경쟁사 도메인 토큰 규칙)이 AD-1(카탈로그)과 AD-2(엔티티 레지스트리) 중 어디 소속인지 계약서에 명시가 없다. 이 설계서는 app.entity_registry(own/excluded 역할)만 AD-2로 좁혔고, 나머지 브랜드 판정 참조 테이블은 AD-1 제안으로 남겨둔다 — 모듈 설계 리드 확인 필요."
+  ],
+  "parity": "\"신구 대조 F-키 신규 필요(기존 F01~F07은 KPI/추이 계열이라 매칭 없음): 제안 F08 = 'admin 엔티티 카탈로그 총 행수·own/excluded/competitor 건수 신구 일치, 상위 20개 answers 순위 신구 일치(단 mentions→answers 산식 변경은 mig.known_diff로 기지 차이 등록)'. 행 단위 대조는 mig.row_oracle_diff에 entity_id 키로 적재.\"",
+  "perf": {
+    "risk": "high",
+    "rows_scanned": "10배에서 rd.answer_stance 전체(surface 3종 x 전체 round_date) full scan, entity_key 선두 인덱스 부재로 그룹집계가 seq scan. rd.answer가 10x에서 언급된 참고치(answer_entity 대안 5,500만 행 추정, DB-v2.sql:493)를 상한으로 보면 answer_stance도 유사 자릿수(수천만 행) 가능 — 실측 미확보.",
+    "indexes": [
+      "기존: rd.dim_entity PK(entity_key), dim_entity_brand_idx(brand_key) — 카탈로그 좌변 조인엔 충분(dim 테이블은 소규모).",
+      "기존: rd.answer_stance PK(surface, round_date, answer_key, turn_index, entity_key), st_rd_brin(round_date) — 둘 다 entity_key 선두가 아니라 이 쿼리(GROUP BY entity_key, surface·round_date 미필터)에 안 먹는다.",
+      "제안: rd.answer_stance (entity_key) INCLUDE (answer_key) — GROUP BY entity_key 집계를 index-only scan으로 좁히기 위함. 새 요약 표가 아니라 기존 사실 표 위 보조 인덱스라 D8 위반 아님. 근거: 화면이 admin 전용 저빈도라도, entity_key 선두 인덱스 없이는 매 호출이 전체 파티션 seq scan."
+    ],
+    "notes": "R08 '완료 비율 컬럼'류 게이트 없이 순수 GROUP BY라 RDS 실측 게이트(§3 성능 근거의 한계) 대상 1순위 후보로 권고. 완화책 두 가지를 open_questions에 냄(surface 필터 도입, round_date 창 제한) — 계약 D8이 사전집계를 막으므로 인덱스+창 제한 외의 해법이 없다."
+  },
+  "purpose": "HMG-GEO 전사 공통 '자사 여부' 명부(app.entity_registry)를 admin이 관리하는 화면 — 측정에서 발견된 Brand 엔티티 전체를 답변·발생 규모와 함께 보여주고 역할(자사/경쟁사/제외)을 지정한다. 이 역할이 전 화면 KPI(M01~M04·M08·M11 등 당사 판정)의 원천 규칙이다.",
+  "query_design": "\"읽기(카탈로그 목록):\\nWITH agg AS (\\n  SELECT s.entity_key, count(DISTINCT s.answer_key)::int AS answers, count(*)::int AS turns\\n  FROM rd.answer_stance s   -- surface·round_date 미필터(open_questions 참고, 파티션 전체 스캔)\\n  GROUP BY s.entity_key\\n)\\nSELECT e.entity_id, coalesce(r.name, e.rep_name) AS name, e.entity_type,\\n       coalesce(r.role,'competitor') AS role, coalesce(a.answers,0) AS answers, coalesce(a.turns,0) AS turns\\nFROM rd.dim_entity e\\nLEFT JOIN agg a USING (entity_key)\\nLEFT JOIN app.entity_registry r ON r.entity_id = e.entity_id\\nWHERE e.entity_type = 'Brand'\\n  AND (:role IS NULL OR coalesce(r.role,'competitor') = :role)\\n  AND (:q IS NULL OR coalesce(r.name, e.rep_name) ILIKE '%'||:q||'%')\\nORDER BY answers DESC, e.entity_id\\nLIMIT :limit;  -- 키셋: WHERE (answers, entity_id) < (:cursor_answers, :cursor_entity_id) 로 다음 페이지\\n\\n쓰기(역할 설정) 트랜잭션:\\nBEGIN;\\n-- role IN ('own','excluded')\\nINSERT INTO app.entity_registry (entity_id, name, role, updated_by, updated_at)\\nVALUES (:entity_id, :name, :role, app.actor(), now())\\nON CONFLICT (entity_id) DO UPDATE SET name=EXCLUDED.name, role=EXCLUDED.role, updated_by=EXCLUDED.updated_by, updated_at=now();\\n-- role = 'competitor' (파생 기본값, 저장하지 않음)\\n-- DELETE FROM app.entity_registry WHERE entity_id = :entity_id;\\n\\nINSERT INTO app.judgment_change (kind, subject_uuids, subject_texts, payload, requested_by)\\nVALUES ('entity', ARRAY[:entity_id]::uuid[], ARRAY[:name], jsonb_build_object('role', :role), app.actor());\\n\\nINSERT INTO app.access_audit_log (actor_id, actor_role, kind, action, target, detail)\\nVALUES (app.actor(), 'admin', 'data_access', 'entity_role_change', :entity_id::text, jsonb_build_object('role', :role, 'name', :name));\\nCOMMIT;\\n-- ing·rd 반영(own_bit/registry_role 전파, 필요 시 leaf 재구축)은 loader가 judgment_change를 claim해 비동기 처리(B4 원칙과 동일).\"",
+  "read_model": [
+    "rd.dim_entity: entity_key, entity_id, entity_type, rep_name, brand_key, registry_role, first_seen (DB-v2.sql:406-409)",
+    "rd.answer_stance: round_date, answer_key, entity_key, brand_key, surface, turn_index, own_bit, stance, first_turn, std_in (DB-v2.sql:497-501, GROUP BY entity_key로 answers·turns 집계)",
+    "app.entity_registry: entity_id, name, role, brand_code, updated_by, updated_at (DB-v2.sql:46-48, 쓰기 대상)",
+    "app.judgment_change: change_id, kind='entity', subject_uuids, subject_texts, payload, requested_by, status (DB-v2.sql:73-86, 쓰기 대상)",
+    "app.access_audit_log: actor_id, actor_role, kind, action, target, detail (DB-v2.sql:217-220, 감사 기록)",
+    "제안: rd.dim_brand_name.own_bit·kind 를 응답에 곁들여 '이미 own_bit>0으로 확정된 브랜드'와 '아직 dim_brand_name에 없는 신규 발견 엔티티'를 구분 표시(근거: 현행 화면은 이 구분이 없어 굳이 안 해도 파리티는 맞음 — 개선 제안일 뿐, 기본 설계엔 미포함)."
+  ],
+  "response": "\"GET 목록: { data: [{ entity_id: uuid, name: string, entity_type: string, role: 'own'|'excluded'|'competitor', answers: int, turns: int }], meta: { next_cursor: string|null, ignored_filters: string[], dropped_filters: {} } } — 이 화면은 회차·엔진 개념이 없어 공통 meta의 surface/cycles/generation/as_of는 생략(비율 분모·분자가 없는 카운트 응답이라 M-계열 정수쌍 규칙도 해당 없음).\\nPUT 응답: { data: { entity_id, name, role }, meta: { applied: false, change_id: bigint } } — applied=false로 '큐에 넣었을 뿐 rd 반영은 비동기'임을 명시(즉시 반영 아님을 클라이언트에 신호).\"",
+  "screens": [
+    "/admin/standards/entities (엔티티 카탈로그 표 + 역할 select)"
+  ],
+  "title": "AD-2 엔티티 레지스트리 API 설계",
+  "writes": "\"app.entity_registry(upsert 또는 delete) + app.judgment_change(kind='entity', INSERT) + app.access_audit_log(INSERT) 단일 트랜잭션. rd(dim_brand_name.own_bit, dim_entity.registry_role, answer/answer_brand의 own_* 파생열) 반영은 이 API 범위 밖(loader 비동기). ing 스키마는 쓰지 않는다.\"",
+  "id": "AD-2"
+}

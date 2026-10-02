@@ -1,0 +1,32 @@
+{
+  "dashboard": {
+    "kpi": {
+      "api": {
+        "ratio": {
+          "trafficConversion": {
+            "num": "GA4 key events",
+            "den": "AI-channel sessions"
+          },
+          "ownedUrlRate": {
+            "num": "Measurements citing owned URL",
+            "den": "Completed measurements"
+          },
+          "targetUrlRate": {
+            "num": "Measurements citing target URL",
+            "den": "Completed measurements"
+          }
+        },
+        "definition": {
+          "trafficConversion": "GA4 key events (conversions) per session in the GA4 'AI Assistant' channel. The denominator is sessions, not active users. Key events are mostly engagement signals (configuration, brochure requests and the like); the AI Assistant channel started 2026-06-05, so data is still accruing.",
+          "ownedUrlRate": "Share of completed measurements (answers) of registered prompts that cite our owned URL (the registered base address and its sub-pages, target URLs included) at least once. Judged per measurement, so a prompt measured several times counts each time",
+          "targetUrlRate": "Share of completed measurements (answers) of registered prompts whose own designated target URL was cited at least once. A hit on another prompt's target does not count; the denominator is the same completed-measurement count as the Owned URL Citation Rate"
+        },
+        "formula": {
+          "trafficConversion": "GA4 key events in the AI Assistant channel ÷ AI-Assistant-channel sessions × 100 (unit: %, 28 days to the latest loaded GA4 date, AI Assistant = GA4 sessionDefaultChannelGroup)",
+          "ownedUrlRate": "measurements citing our owned URL ÷ completed measurements × 100 (unit: %; multiple citations within one measurement count once)",
+          "targetUrlRate": "measurements citing their own target URL ÷ completed measurements × 100 (unit: %; a hit on another prompt's target does not count)"
+        }
+      }
+    }
+  }
+}

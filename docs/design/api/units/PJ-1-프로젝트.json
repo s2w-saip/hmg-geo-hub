@@ -1,0 +1,120 @@
+{
+  "auth": "역할(app.user_role: hq/region/country/admin/vendor/website)·운영자(app.operator_scope: none/assigned/global, 역할과 직교)·데이터 스코프(app.user_account.scope_all·scope_brands·scope_countries·scope_regions, default-deny 교집합) 3축. FastAPI 가 Supabase JWT(JWKS) 검증(A8), 스코프는 매 요청 서버가 재계산. 게이트: (1) 생성 = operator='global' 또는 role='admin'(canCreateProject 계승, current_refs 참고) (2) 목록 = role='admin' 이면 전체, 그 외 app.project_member(status='active') 로 자기 멤버십만, kind='customer' 만(표준 루트는 이 API 미노출, 별도 시드) (3) 조회·수정 = 활성 멤버(role 무관) 또는 admin, 브랜드·국가 필드는 세션 scope_brands·scope_countries 교집합이 비면 dropped_filters 아니라 403(단건이므로 숨기지 않고 거부) (4) 삭제 = project_member.role='owner' 또는 admin(requireOwner 계승) (5) Scope 연결 상태 조회 = 활성 멤버 또는 admin, 쓰기(outbox enqueue)는 API 트랜잭션 안에서 서버가 하고 클라이언트가 직접 못 건드림. 모든 액션은 app.access_audit_log(kind='data_access'|'api_read') 기록 대상(AU-1 미결이라 쓰기 주체는 열림).",
+  "current_refs": [
+    "lib/db/repositories/projects.ts:135 projectRepository(getById·getByScopeProjectId·listForUser·listAll·insert·update·setScopeProjectId·setAiEngines·listEngineHistory·delete)",
+    "app/[locale]/(dash)/projects/new/_actions.ts:31 createProject(operator 게이트·검증·insert)",
+    "app/[locale]/(dash)/projects/[id]/setting/_actions.ts:302 deleteProject(requireOwner→delete→deleteScopeMirror)",
+    "app/[locale]/(dash)/projects/[id]/setting/_actions.ts:54 requireOwner",
+    "app/[locale]/(dash)/projects/[id]/setting/page.tsx:39,127 general 설정 초기값(projectRepository.getById)",
+    "app/[locale]/(dash)/projects/[id]/setting/page.tsx:62,231 diagnoseProjectAnalysisConnection(scopeLink)",
+    "lib/scope/server.ts:679 diagnoseProjectAnalysisConnection(live Scope API probe, 신설계에서 폐기 대상)",
+    "lib/scope/project-sync.ts:95,205,219 createScopeMirror/attachScopeMirror/deleteScopeMirror",
+    "lib/auth/operator-policy.ts:21 canCreateProject",
+    "lib/db/repositories/request-cache.ts:24 cachedProjectById, :29 cachedMembership",
+    "lib/db/repositories/project-members.ts (findMembership)"
+  ],
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/v1/projects",
+      "summary": "프로젝트 목록(활성 멤버십 기준, admin 은 전체), 키셋 페이지네이션"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/projects",
+      "summary": "프로젝트 생성(operator=global 또는 admin) + 생성자 Owner 멤버 등록 + Scope 연결 outbox 적재"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/projects/{project_id}",
+      "summary": "프로젝트 상세(일반 설정값 + 내 멤버십 role)"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/projects/{project_id}",
+      "summary": "편집 가능 필드 수정(name·description·domain·brand_code·ga4_property_id·ai_engines), country_code 불변"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/projects/{project_id}",
+      "summary": "하드 삭제(Owner 또는 admin, confirm_name 대조) + Scope 연결 해제 outbox 적재"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/projects/{project_id}/scope-link",
+      "summary": "Scope 연결·측정 진행 상태(rd 읽기 전용 유도, 라이브 Scope API 직접 호출 없음)"
+    }
+  ],
+  "filters": {
+    "supported": [
+      "surface(고정: project 단건 조회라 사실상 미사용, 목록도 kind='customer' 고정이라 무의미)"
+    ],
+    "ignored": [
+      "brand[]",
+      "country[]",
+      "lang[]",
+      "engine[]",
+      "from/to",
+      "funnel[]",
+      "brand_presence[]",
+      "list_type[]",
+      "depth1~3[]",
+      "source[]"
+    ],
+    "extra_params": [
+      "cursor: string, 선택, 키셋 페이지네이션 토큰(created_at,project_id 인코딩)",
+      "limit: int, 기본 20, 최대 100",
+      "q: string, 선택, name ILIKE 검색(행수 적어 순차 스캔 허용)",
+      "confirm_name: string, DELETE 전용, 프로젝트 이름 재입력 대조(현행 deleteProject 계승)"
+    ]
+  },
+  "response": "list: `{ data: { items: [{project_id, kind, name, description, domain, brand_code, country_code, scope_project_id, ga4_property_id, ai_engines[], my_role, created_by, created_at, updated_at}], next_cursor }, meta }`. detail: 같은 항목 1건 + `scope_link_hint`(unlinked|linked, scope_project_id 유무로만, 실제 진단은 별도 엔드포인트). create/update: 생성·수정된 프로젝트 행. delete: `{ deleted: true }`. scope-link: `{ data: { scope_project_id, linked: bool, job_count: int, served_count: int, last_measured_at: timestamptz|null, state: 'unlinked'|'no_jobs'|'partial'|'healthy' } }` — 분자·분모(served_count/job_count) 정수 노출.",
+  "metrics_rules": [
+    "지표 계열(M01~M12) 해당 없음 — PJ-1 은 엔티티 CRUD·연결 상태이지 집계 지표가 아니다.",
+    "R03(view_date ≤ 오늘)·D1·D5·D6·A1~A6 무관.",
+    "scope-link 의 'healthy/partial/no_jobs' 판정은 새로 정의(현행 diagnoseProjectAnalysisConnection 의 mention/citation 이원 probe 를 대체): job_count=0→no_jobs, served_count=0<job_count→partial, served_count>0→healthy, scope_project_id NULL→unlinked."
+  ],
+  "read_model": [
+    "app.project(project_id, kind, name, description, domain, brand_code, country_code, scope_project_id, ga4_property_id, ai_engines, created_by, created_at, updated_at)",
+    "app.project_member(project_id, user_id, role, status, invited_by, invited_at, accepted_at)",
+    "app.project_engine_history(history_id, project_id, engines, changed_by, changed_at) — 제안: PATCH 로 ai_engines 바뀔 때 API 가 직접 append 할지, 트리거(judgment_change)만 타고 이력은 다른 소비자가 쓸지 미결 → open_questions",
+    "app.scope_outbox(outbox_id, aggregate='project', aggregate_id, op, payload, next_attempt_at, done_at) — 쓰기 전용(적재기가 소비, API 는 INSERT 만)",
+    "app.user_account(user_id, role, operator, scope_all, scope_brands, scope_countries, scope_regions) — 인가",
+    "rd.dim_project(project_key, scope_project_id, surface, is_root, project_id, site_id) — scope-link 조회의 project_key 해석",
+    "rd.job(answer_key, project_key, measured_at, status_code, dropped, served) — scope-link 의 job_count·served_count·last_measured_at",
+    "제안: rd.job(project_key, measured_at DESC) 인덱스 — 현재 DDL 에 project_key 단독·복합 인덱스가 없어 scope-link 조회가 파티션 전체를 훑는다(job_qa_list_idx 는 surface·measured_at 순이라 project_key 선두가 아님). D8 이 금지하는 사전 집계·요약표가 아니라 기존 그레인 위 인덱스라 예외 넷과 같은 성격."
+  ],
+  "query_design": "목록(비관리자): `SELECT p.project_id,p.kind,p.name,p.description,p.domain,p.brand_code,p.country_code,p.scope_project_id,p.ga4_property_id,p.ai_engines,p.created_by,p.created_at,p.updated_at,pm.role AS my_role FROM app.project p JOIN app.project_member pm ON pm.project_id=p.project_id AND pm.user_id=:user_id AND pm.status='active' WHERE p.kind='customer' AND (:q IS NULL OR p.name ILIKE '%'||:q||'%') AND (p.created_at,p.project_id) < (:cursor_created_at,:cursor_project_id) ORDER BY p.created_at DESC, p.project_id DESC LIMIT :limit`(project_member_user_idx 로 pm 진입, p 는 project_id PK join). 관리자는 pm JOIN 제거. 상세: `SELECT p.*, pm.role AS my_role FROM app.project p LEFT JOIN app.project_member pm ON pm.project_id=p.project_id AND pm.user_id=:user_id WHERE p.project_id=:id`. 생성(트랜잭션): INSERT app.project(kind='customer',...) RETURNING *; INSERT app.project_member(project_id, user_id=created_by, role='owner', status='active', accepted_at=now()); INSERT app.scope_outbox(aggregate='project', op='create', payload={project_id, name, domain, brand_code, country_code, ai_engines}). 수정(트랜잭션): UPDATE app.project SET ... WHERE project_id=:id RETURNING *(app.project 의 AFTER UPDATE 트리거가 domain·brand_code·country_code·ai_engines 변경 시 judgment_change 자동 기록, ai_engines 변경 시 app.project_engine_history 도 append 하는지는 open_questions); country_code 변경 요청은 400. 삭제(트랜잭션): SELECT project_id,name,scope_project_id FROM app.project WHERE project_id=:id FOR UPDATE; 이름 대조 실패면 롤백·400; DELETE FROM app.prompt WHERE project_id=:id(캐스케이드 자식부터, 현행 delete() 계승 순서 확인 필요: prompt→prompt_candidate→project_member→project, 단 신설계엔 project_owned_base·project_tracked_*·project_custom_field 도 FK ON DELETE CASCADE 로 DDL 이 이미 선언(REFERENCES app.project ON DELETE CASCADE)했으므로 app.project 삭제 한 문장으로 캐스케이드 가능 — 자식 개별 DELETE 불필요, 트리거·FK 로 단순화); DELETE FROM app.project WHERE project_id=:id; INSERT app.scope_outbox(aggregate='project', op='delete', payload={scope_project_id}). scope-link: `SELECT dp.project_key, dp.scope_project_id, count(*) job_count, count(*) FILTER (WHERE j.served) served_count, max(j.measured_at) last_measured_at FROM rd.dim_project dp LEFT JOIN rd.job j ON j.project_key=dp.project_key WHERE dp.scope_project_id=:scope_project_id GROUP BY dp.project_key, dp.scope_project_id`.",
+  "perf": {
+    "risk": "low",
+    "rows_scanned": "app.project·app.project_member: 프로젝트 수 = 고객사 단위 CRUD 엔티티(회차·측정과 무관하게 적음, 10배 가정해도 수백~수천 행) → 목록·상세·생성·수정·삭제 전부 low. scope-link 만 rd.job 을 건드려 다르다: LIST(surface)→RANGE(round_date) 파티션인데 project_key 로만 필터링하므로 project_key 인덱스 없이는 폭 10배에서 해당 프로젝트가 걸친 모든 파티션 전체 스캔(medium~high, 특히 표준/웹사이트처럼 오래 누적된 project_key 는 파티션 수만큼 반복). 인덱스 제안 적용 시 low 로 낮아진다.",
+    "indexes": [
+      "project_member_user_idx(user_id, status) — 기존, 목록 멤버십 필터",
+      "app.project PK(project_id) — 상세·수정·삭제",
+      "app.project_member PK(project_id, user_id) — 생성 시 owner 등록",
+      "scope_outbox_due_idx — 이 API 는 쓰기만, 소비는 적재기",
+      "제안: rd.job(project_key, measured_at DESC) INCLUDE (served) — scope-link 전용, 없으면 medium~high"
+    ],
+    "notes": "D8 예외 넷에 해당 없음 — 이 API 는 집계 지표를 안 만들고 존재·카운트 확인만. scope-link 의 count/max 는 조회 시 계산(P1 허용 범위, 그레인 축소가 아니라 단순 GROUP BY 이며 사전 집계 저장이 아님)."
+  },
+  "writes": "생성: app.project INSERT + app.project_member(owner) INSERT + app.scope_outbox INSERT, 한 트랜잭션. 수정: app.project UPDATE(트리거가 app.prompt_audit_log 급 감사는 아니고 judgment_change 를 기록 — project 전용 감사 로그 테이블이 DDL 에 없어 프로젝트 필드 변경 이력은 judgment_change 큐에만 남고 열람용 rd 투영이 없음, open_questions). 삭제: app.project DELETE(FK CASCADE 로 자식 정리) + app.scope_outbox INSERT, 한 트랜잭션. app.member_audit_log 는 생성 시 owner 등록에도 남길지 애매(현재 DDL 의 member_audit_log 는 초대·역할변경류로 보이고 owner 최초 등록은 다른 이벤트) → open_questions. scope-link: 쓰기 없음(읽기 전용, rd 조회만).",
+  "parity": "현행 F01~F07 신구 대조 하네스는 지표 화면(KPI·추이·언급·인용) 대상이라 PJ-1 은 별도 항목이 필요하다. 제안: PJ-CRUD-01(생성 후 projectRepository.getById 와 응답 필드 1:1 대조) · PJ-CRUD-02(목록 개수·정렬이 현행 listForUser/listAll 과 같은 user 로 동일 집합인지 대조) · PJ-LINK-01(scope-link 의 linked/unlinked 판정이 현행 diagnoseProjectAnalysisConnection 의 overall='unlinked' 케이스와 최소 일치하는지, healthy/partial/noData 산식 자체는 재정의라 완전 대조 대상 아님).",
+  "open_questions": [
+    "ai_engines 변경(PATCH /v1/projects/{id})을 PJ-1(프로젝트 본체 필드)에 둘지, PJ-4(설정)로 옮길지 — DDL 상 app.project 의 직접 컬럼이라 PJ-1 귀속이 자연스럽지만 현행 UI 는 /setting 화면(aiEngines 섹션)이라 PJ-4 소유일 수도 있다. 이 단위는 PJ-1 소유로 초안 작성, PJ-4 설계자와 조율 필요.",
+    "app.project_engine_history 로의 append 를 API 가 직접 하는지, 트리거(judgment_change)가 하는지 DDL 주석에 명시 없음 — 적재기 쪽 결정인지 API 트랜잭션 쪽 결정인지 확인 필요.",
+    "project 필드 변경(name/description/domain 등) 자체의 열람용 감사 이력이 rd/app 어디에도 투영돼 있지 않다 — judgment_change 큐만 있고 사람이 볼 이력 테이블이 없다. prompt_audit_log 급의 project_audit_log 가 필요한지 제안 필요.",
+    "삭제 시 app.prompt 등 자식 테이블을 API 가 명시 DELETE 할지, FK ON DELETE CASCADE(DDL 이미 선언)에 맡기고 app.project 한 줄만 지울지 — 후자가 단순하지만 FK CASCADE 범위(어떤 테이블까지 cascade 가 걸려있는지)를 DDL 전체에서 재확인해야 한다.",
+    "생성 시 app.scope_outbox payload 스키마(적재기가 기대하는 필드 형태)가 이 문서 범위 밖(적재 모듈 소관) — 적재 파이프라인 설계자와 계약 확정 필요.",
+    "GET /v1/projects/{id}/scope-link 가 이 모듈(PJ-1) 소속인지, 아니면 관리자 모듈(scope 연결 진단은 admin 전용 현행 화면)인지 — 현행은 isAdmin 조건부 렌더라 admin 전용일 수 있음, §9 권한에서 admin-only 로 좁힐지 확인.",
+    "app.member_audit_log 에 프로젝트 생성 시 최초 owner 등록도 기록할지(현행 코드에서 확인 못함, '미확인')."
+  ],
+  "id": "PJ-1",
+  "purpose": "프로젝트(고객 프로젝트) 목록·생성·조회·수정·삭제와 Scope 측정 엔진 연결 상태 확인을 제공한다. 운영자(비용 게이트)·멤버십(Owner/Viewer) 권한 아래에서만 쓰기가 가능하고, 실제 Scope 측정 시작·프롬프트·멤버 관리는 각각 PJ-3·PJ-2 로 위임한다.",
+  "screens": [
+    "/projects (목록)",
+    "/projects/new (생성 폼)",
+    "/projects/[id] (상세, 프로젝트 헤더·general 초기값)",
+    "/projects/[id]/setting (general·scopeLink 구획만 해당, aiEngines·ownedBases·trackedUrls·tracked 는 PJ-4)"
+  ],
+  "title": "프로젝트 (PJ-1)"
+}

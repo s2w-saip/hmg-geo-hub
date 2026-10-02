@@ -1,0 +1,17 @@
+# core 요청: bg-kpi-filters (값 갭 보강 BG-01·03·04·05·06·08·26)
+
+작성 2026-09-28 · 그룹 bg-kpi-filters 빌더(수정 라운드, 검증 c755897 결함 D1~D5 대응, 2차 검증 D1~D3 대응 R4 추가). 막힌 기능은 없다. 아래는 이 라운드가 추가형 범위 밖이라
+직접 고치지 않은 결정·정리 요청이다. 추가형으로 반영한 core 변경은 맨 아래 "반영 내역" 에 적는다.
+
+| ID | 무엇 | 왜 | 제안 | 영향 기능(현재 상태) |
+| --- | --- | --- | --- | --- |
+| R1 | 글로벌 카드 `params.applied_prompts` 의 대상 시장·soft-delete 게이트 (메인 결정) | 검증 D1: 미측정 목록(K-1b)은 본문을 내므로 권한상 계정 대상 시장 3분기(`catalog_market_scope`, GET /v1/prompts 와 같은 술어)와 soft-delete 제외를 걸었다. 카드 `applied_prompts_sql`(sf 1)은 rd.catalog_entry 만 보고 시장을 보지 않는다(현행 catalogPromptCountWhere 와 같음). 그래서 시장 밖 적용 행이 있는 계정(regions = {US} 인 Kia 행 + KIA_EU)은 목록 total < 카드 applied − measured 이고, 카드의 "미측정" 수도 시장 밖 행만큼 부풀어 보인다 | 선택지 (a) 권장: `applied_prompts_sql(ms, *, kind=None, catalog_row_pred: str \| None = None)` 로 `applied_prompt_keys_sql` 과 같은 인자를 받고 K-1 이 목록과 같은 술어를 넘긴다(카드 = 목록 복원, 현행과 값이 달라지는 의도적 차이로 mig.known_diff 등록). (b) 현행 유지(카드는 시장 무관, 목록만 게이트, 차이를 문서로 둔다: 지금 상태) | summary(동작, 목록만 게이트). 회귀 `test_verify_fixes.py::test_d1_*` 는 카드 applied 3 을 현재값으로 고정하므로 (a) 채택 시 기대값 갱신 |
+| R2 (**해소 2026-09-30 core 10, 제품 결정 7: 관점 행 한정 채택**, DECISIONS-API '전환 결정 반영') | 글로벌 택소노미 축(depth1~3·funnel·list_type·brand_presence) 행 매칭의 관점 브랜드 한정 | 검증 D5 는 depth4 만 고쳤다(새 축, 추가형). 기존 축은 `_taxonomy_prompt_keys_global` 이 rd.catalog_entry 전 행에서 prompt_key 를 풀어, 타 브랜드 카탈로그 행에만 있는 값을 관점 계정이 필터로 주면 그 행과 prompt_key 를 공유하는 데이터가 반환된다(값 존재·연결 오라클). dropped 판정도 rd.dim_taxon 사전 기준이라 관점과 무관하다 | 행 WHERE 에 `ce.brand_bit = ANY(:pop_bits)` 를 모든 축에 걸고, 사전 판정도 관점 행에 있는 값으로 한정(depth4 와 같은 규칙). 기존 값이 바뀔 수 있어(공유 scope_prompt_id 에서 브랜드 행마다 분류가 다른 경우) 결정 필요 | summary·engines·compare·trend(기존 동작, 새 결함 부류 아님) |
+| R3 | 카탈로그 /v1/prompts `CATALOG_SUPPORT` 에 depth4 선언(그룹 간 통지) | 검증 D2 수정으로 core 가 depth4 를 준 축(provided)으로 세어 비선언 엔드포인트를 `ignored_filters` 에 적는다. 카탈로그 global 은 자체 술어로 depth4 를 적용하므로 선언하지 않으면 "적용했는데 ignored" 가 된다. 이 워크트리에서 `features/catalog/prompts/catalog/service.py` CATALOG_SUPPORT.global_ 에 `DEPTH4_AXIS` 한 줄을 더했다 | catalog 그룹 통합 시 이 한 줄을 유지(충돌 시 catalog 쪽 정본에 같은 선언) | catalog.prompts(동작, 회귀 `test_d2_catalog_prompts_depth4_single_mark`) |
+| R4 | `mig.known_diff` 에 K-1b 한 키 한 행 등록(2차 검증 D3) | 현행 listUnmeasuredPromptsFromCatalog 는 카탈로그 행 단위(같은 prompt_key 의 브랜드 행 둘 = 두 행, total = 행 수), K-1b 는 카드 distinct 키 단위(한 키 한 행, total = 서로 다른 키 수)라 병행 대조에서 값이 갈린다. mig 표는 DB 소유(core)라 이 워크트리에서 행을 넣지 않았다 | rule_id `K-1b`, 설명 "미측정 목록 = 서로 다른 프롬프트 키 단위(대표 행 = 게이트 통과 행 중 최소 prompt_id), 현행 = 카탈로그 행 단위" 한 행 추가 | summary.unmeasured(동작, 문서: README·모듈-KPI K-1b·DECISIONS-API) |
+
+## 반영 내역(추가형, 이 워크트리)
+- `core.measure.applied_prompt_keys_sql(..., catalog_row_pred=None)`: global 에서 주면 "살아 있고 술어를 통과하는 원본 카탈로그 행(별칭 cp, 바깥 ce 도 참조 가능)" 이 있는 키만 남긴다. 2차 검증 수정에서 호출자가 브랜드·시장·택소노미·depth4 행 술어 한 벌(`kpi/summary/queries.CatalogRowGate`)을 넘긴다(core 코드 변경 없음). 기본값은 종전 동작(카드 카운트와 같은 술어). 이 함수는 이 그룹이 더한 것이다.
+- `core.filters.CommonFilters.provided()` 에 depth4 포함, `resolve_read_context` 의 선언 조건부 계산 제거(검증 D2). 영향: depth4 를 선언하지 않은 모든 엔드포인트가 depth4 를 받으면 `meta.ignored_filters` 에 'depth4' 를 적는다(값은 불변). options·dates 의 기능 안 표식 헬퍼는 중복이라 제거했다.
+- `core.filters._taxonomy_prompt_keys_global(..., pop_bits)`: depth4 행 매칭과 dropped 판정을 관점 카탈로그 행(brand_bit ∈ pop_bits)으로 한정(검증 D5). depth4 없이 다른 축만 준 경우는 종전 그대로(R2).
+- `tests/core/test_app.py::test_openapi_keeps_feature_stubs` 기대 작업·경로 수 174/139 → 175/140(K-1b 새 엔드포인트 1, c755897 부터 실패하던 것을 2차 수정에서 맞춤). 다른 그룹이 엔드포인트를 더하면 통합 때 증분을 합산한다.

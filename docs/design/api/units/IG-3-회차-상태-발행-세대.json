@@ -1,0 +1,130 @@
+{
+  "auth": "\n운영자 전용(role IN admin·hq 일부 + operator scope). `/v1/admin/cycles*`·`/v1/admin/report-publications*` 는 모두 A8(Supabase Auth + FastAPI JWKS 검증) 통과 후 `app.user_account.role`·`operator` 로 게이트: 조회(GET)는 `operator IN ('assigned','global')` 또는 `role='admin'`, `assigned` 는 자신이 속한 `project_id`(rd.dim_project.scope_project_id 경유)로 한정. 쓰기(PATCH·POST)는 `operator='global'` 또는 `role='admin'` 만(D8 예외 ③ 카운터 노출과 cycle_admin 은 운영 액션이라 R09·R01 게이트를 흔들 수 있어 vendor·website·country·region 역할은 전부 거부, default-deny). 모든 쓰기는 `app.actor()`(세션 `app.actor_id`)가 설정된 커넥션에서만 실행 가능(app.actor() 트리거가 미설정 시 예외 — app.access_audit_log 강제). 배치 틱(ingest.cycles.tick)은 사용자 인증이 아니라 로더 프로세스 자신의 실행 컨텍스트(A10, Scope API pull 트랜잭션 안)이며 외부 HTTP 노출 없음 — FastAPI api_ro/api_rw 어느 쪽도 이 틱을 트리거하지 않는다.\n",
+  "current_refs": [
+    "lib/summary/cycle-control.ts:1-120(회차 관제 4단계: 열기·귀속·카운터·종결, 안 하는 일 목록 P5)",
+    "lib/summary/cycle-control.ts:37-49(CYCLE_COMPLETE_QUIET_HOURS=36h, DEFAULT_COMPLETE_QUIET_HOURS 재노출)",
+    "lib/db/repositories/summary-cycles.ts:1019(DEFAULT_COMPLETE_QUIET_HOURS=36)",
+    "lib/db/repositories/scope-mirror.ts:201(RUN_RECHECK_WINDOW_DAYS=3)",
+    "lib/db/repositories/summary-cycles.ts:922(CycleControlPlan 인터페이스)",
+    "lib/db/repositories/summary-cycles.ts:1268(readCycleControlPlan)",
+    "lib/db/repositories/summary-cycles.ts:1565(applyCycleControl)",
+    "scripts/summary/hide-cycle.ts:1-80(회차 숨김 CLI: hidden_scope all|citations, hidden_reason collection_error|operator, --unhide 가역, DATABASE_URL env 전용)",
+    "scripts/reports/ingest-publication.ts(리포트 발행값 적재 CLI, API 아님)",
+    "lib/db/repositories/report-publications.ts:1-50(발행 사실표 리더, 적재는 CLI 전용이라는 주석, reportTruthTablesAvailable 프로브)",
+    "app/api/cron/cycle-chain-watch/route.ts:1-40(회차 사슬 감시 크론: 노출 지체→Slack, 생성 적체→GitHub Issue, requireCronSecret)",
+    "lib/db/migrations/0080_report_publications.sql(app.report_publication 1:1 전신)"
+  ],
+  "endpoints": [
+    {
+      "method": "CRON",
+      "path": "(내부, HTTP 미노출) ingest.cycles.tick",
+      "summary": "20분마다 로더 프로세스 내부에서 실행: ①새 cycle_anchor_at 발견 시 ing.cycle 오픈 ②미귀속 run 을 ing.cycle_run 에 귀속(scope/derived/late) ③expected/completed/gap 카운터 재계산 ④종결 조건(R01) 충족 시 status=closed. FastAPI api_ro/api_rw 밖 — 현행 lib/summary/cycle-control.ts 를 Python 로더로 이식."
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/cycles",
+      "summary": "회차 원장 목록(surface·project·status·round_date 범위 필터) — 운영 콘솔 리스트."
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/cycles/{cyc_key}",
+      "summary": "회차 상세(카운터 completed_units·gap_answers·completion_ratio·analysis_done_ratio 포함, D8 예외 ③ 운영자 전용 노출)."
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/admin/cycles/{cyc_key}",
+      "summary": "cycle_admin 운영 요청 큐잉(hide|unhide|close|set_view_date) — app.judgment_change INSERT, ing/rd 반영은 로더가 비동기 적용."
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/report-publications",
+      "summary": "발행 리포트 이력 조회(app.report_publication, status=active 우선, slug·round_date·brand_scope 필터)."
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/report-publications",
+      "summary": "리포트 발행값 적재 요청(현행 scripts/reports/ingest-publication.ts CLI 를 API 화) — 매니페스트 파일 메타(sha256·source_filename) + site_fact/engine_fact 페이로드를 app 트랜잭션에 쓰고 judgment_change('report_publication') 큐잉 → 로더가 rd.report_unit_value 교체."
+    }
+  ],
+  "filters": {
+    "supported": [
+      "surface(고정 열거 global|website|project, GET /v1/admin/cycles 전용)",
+      "from/to(round_date 범위, GET 목록 전용)"
+    ],
+    "ignored": [
+      "brand[]",
+      "country[]",
+      "lang[]",
+      "engine[]",
+      "funnel[]",
+      "brand_presence[]",
+      "list_type[]",
+      "depth1~3[]",
+      "source[]",
+      "own_brand"
+    ],
+    "extra_params": [
+      "project_key: int2, 기본 없음(생략 시 전 프로젝트, operator=assigned 는 자신의 project_key 로 강제 교집합)",
+      "status: enum(open|closed|published|stale), 기본 없음(전체)",
+      "cyc_key: int4, 단건 상세용 경로 파라미터",
+      "hidden: bool, 기본 없음(숨김 회차 포함 여부 — 운영 콘솔은 기본 포함)"
+    ]
+  },
+  "id": "IG-3",
+  "metrics_rules": [
+    "R01(회차 종결): 다음 앵커 출현 / 완주 100%(정온 36h, CYCLE_COMPLETE_QUIET_HOURS) / 재확인 창(3일, RUN_RECHECK_WINDOW_DAYS) 밖 중 하나 — closed_by 컬럼에 next_anchor|complete|recheck_window|operator 기록",
+    "R03(노출 게이트): view_date ≤ 오늘(KST, rd.today_kst()) 인 회차만 고객 화면 서빙 — 이 판정 자체는 소비 모듈(필터·KPI 등) 책임이고, IG-3 은 view_date·view_anchor_at 원장값만 적재",
+    "R04(숨김): hidden_scope ∈ {all,citations,mentions}(rd.cycle 코드 0/1/2/3), hidden_reason ∈ {collection_error,operator} — PATCH 로 cycle_admin 요청, 가역(unhide)은 hidden_scope/reason/at 을 모두 NULL 복귀",
+    "R08(분석 갭 게이트): analysis_done_ratio(=STORED GENERATED, (completed_answers-gap_answers)/completed_answers) >= app.rule_param 'analysis_publish_ratio'(시드 0.95) 이상이어야 published 전이 허용",
+    "R12(분석 도착 재동기화): 재확인 창(3일) 동안 run 상태뿐 아니라 '분석 없는 완료 답변 수'를 워터마크로 다시 당김 — 현행 결손(08-31 회차 과소표시)의 직접 대응",
+    "R13(ACR 반복 접기): job 메타데이터(prompt_run_id·run_id·cell)로 접되 분석 결과 유무에 의존하지 않음 — IG-2 판정 소관이나 rd.cycle 이 회차 경계를 제공",
+    "A4(과거 회차 재계산): 재판정 발생 시 해당 회차 rd.cycle.generation 을 증가시키고 rd.surface_generation.generation 도 함께 올려 캐시 무효화 신호(1회 고지는 UI 소관)",
+    "A5/R09(리포트 발행값 우선): status='active' 인 app.report_publication 이 있는 round_date·brand_scope 조합은 웹사이트 지표가 rd.report_unit_value 값 고정(라이브 재계산 무시), 최신 회차에 리포트가 없으면 라이브+표식",
+    "D-cycle_admin 페이로드 계약: {cycle_id, op: hide|unhide|close|set_view_date, hidden_scope?, reason?, view_date?} — app.judgment_change CHECK 제약이 payload NOT NULL 강제",
+    "generation(발행 세대): rd.surface_generation(surface PK, generation, last_load_id, rule_ver, as_of) — 적재 트랜잭션마다 1 증가, 응답 meta.generation 은 이 값을 그대로 노출(캐시 무효화·신구 대조 키)"
+  ],
+  "open_questions": [
+    "report_unit_value 적재는 site_fact/engine_fact 를 파일 매니페스트 업로드(현행 CLI 방식: 소스 파일 sha256 검증)로 받을지, JSON 페이로드 직접 POST 로 받을지 — 대량(브랜드×국가×엔진) 이라 멀티파트 업로드가 나을 수 있음. IG-3 판단 밖, 프론트/파일업로드 모듈과 합의 필요",
+    "anchor_pin(ing.answer_anchor_pin)·answer_drop(ing.answer_drop) 은 job 단위 운영 액션이라 이 설계에서는 IG-3(회차 단위) 범위 밖으로 두고 QA/드릴다운 모듈(job_id 조회 경로) 소관으로 가정했다 — 경계 확정 필요",
+    "cyc_key 목록 API 의 pagination 방식(계약서는 커서 기반을 요구하나, rd.cycle 은 (surface, round_date) 자연키라 프로젝트당 행 수가 작아 단순 range 응답으로 충분할 수 있음) 미확정",
+    "app.judgment_change 의 cycle_admin/report_publication 처리 SLA(운영자가 PATCH 후 몇 분 내 rd 반영을 기대하는지) — 로더 폴링 주기(20분 pull 과 별도 루프인지) 미확인",
+    "GET /v1/admin/cycles 응답에 D8 예외③ 카운터(completed_units·gap_answers 등)를 항상 포함할지, 아니면 상세(GET /{cyc_key})에서만 줄지 — 목록이 프로젝트×회차 다건이라 폭 넓히면 응답 크기 증가",
+    "rd.report_unit_value.cyc_key 는 nullable(리포트가 rd.cycle 과 항상 1:1 매핑되지 않을 수 있음, 웹사이트 회차는 project 단위 가상 회차라 round_date 로만 조인될 수도 있음) — 조인 키를 cyc_key·round_date 어느 쪽 우선으로 할지 IG-2/필터 모듈과 확인 필요"
+  ],
+  "parity": "\n현행 신구 대조 하네스(mig.parity_run/parity_result)의 feature 키는 F01~F07(값 비교)이며 회차 관제 자체는 값 산출 기능이 아니라 \"어느 회차가 서빙 가능한가\"라는 전제 조건이라 F01~F07 어디에도 직접 대응하지 않는다. 제안하는 별도 대조 항목: (1) ing.cycle vs 구 summary_cycles — cycle_id·status·view_anchor_at·hidden_scope 행 단위 diff(mig.row_oracle_diff 오라클 목록에 'summary_cycles' 자체가 없어 oracle CHECK 확장 필요, 제안), (2) rd.surface_generation.generation 단조 증가 검증(신 로더가 구 시스템과 같은 적재 이벤트에서 세대를 증가시키는지), (3) app.report_publication ingest 후 rd.report_unit_value 재계산값과 구 report_site_facts 값의 완전 일치(A5 는 발행값 고정이므로 diff=0 이 계약, 다르면 로더 버그). mig.parity_run.cycle_id 컬럼이 이미 있어 회차별 parity_run 을 이 단위로 스코프할 수 있음.\n",
+  "perf": {
+    "indexes": [
+      "cycle_pick_idx ON rd.cycle (surface, round_date DESC) INCLUDE (cyc_key, project_key, servable, view_date, hidden_scope, generation) — GET /v1/admin/cycles 의 surface+round_date 범위 스캔을 인덱스만으로 커버",
+      "cycle_project_idx ON rd.cycle (project_key, round_date DESC) — project_key 필터(operator=assigned 교집합) 경로",
+      "report_publications_active_uq ON app.report_publication (surface, round_date, brand_scope) WHERE status='active' — R09 조회의 유일 인덱스",
+      "rd.report_unit_value PRIMARY KEY (round_date, file_seq) — cyc_key 로 찾는 경로는 인덱스 없음(제안: cyc_key 보조 인덱스, 목록 API 가 round_date 만으로 부족할 때)"
+    ],
+    "notes": "회차 원장(rd.cycle)의 그레인은 '프로젝트 × 회차'다. 폭 10배는 프로젝트 수(현재 규모 기준 수십~수백)가 10배가 되는 것이지 회차당 행이 늘어나는 구조가 아니라 — 목록 API 는 cycle_pick_idx 로 100건 내외 range scan, 상세는 PK 단건 조회다. D8 예외 ③ 카운터(completed_units 등)는 rd.cycle 자체 컬럼이라 자식 표 스캔이 없다(집계 아님, 로더가 채워 넣은 값). PATCH(cycle_admin)·POST(report_publication) 는 app.judgment_change 1행 INSERT + 감사 로그뿐이라 폭과 무관하게 상수 비용. 위험은 로더 쪽(ing.cycle_run 귀속 스캔)에 있지 이 API 표면에는 없다.",
+    "risk": "low",
+    "rows_scanned": "목록: surface+round_date 범위당 프로젝트 수(현재 규모 10~50, 10배에도 수백) 행. 상세: 1행(PK). PATCH/POST: 1행 INSERT."
+  },
+  "purpose": "\n회차(cycle) 원장의 상태 전이(오픈→귀속→카운터 갱신→종결/숨김/노출일)와 읽기 스키마 발행 세대(generation) 번호, 그리고 고객사에 이미 나간 리포트 발행값을 rd 계층에 고정 적재하는 적재 파이프라인 하위 단위. 화면이 직접 계산하지 않는 \"언제 노출해도 되는가\"·\"어느 값이 확정값인가\"를 앱 트랜잭션 밖(로더)에서 판정해 rd.cycle·rd.surface_generation·rd.report_unit_value 에 써 두면, 기능 API(api_ro)는 그 값을 그대로 읽기만 한다(D8 원칙: 파생 층 없이 술어와 인덱스로).\n",
+  "query_design": "\n[배치] ingest.cycles.tick 절차(현행 4단계를 유지, DB 는 v2 표로 교체):\n1. 오픈: `SELECT DISTINCT scope_project_id, cycle_anchor_at FROM ing.cycle_round cr LEFT JOIN ing.cycle c USING (scope_project_id, anchor_date) WHERE c.cycle_id IS NULL` 형태로 신규 anchor 탐지 → `INSERT INTO ing.cycle(...) ON CONFLICT (scope_project_id, cycle_anchor_at) DO NOTHING`.\n2. 귀속: 미귀속 run 을 `ing.cycle_run(run_id, cycle_id, attributed_by)` 로 배치 INSERT, `cycle_open_idx`(WHERE status='open')로 열린 회차만 대상.\n3. 카운터: 열린 회차별 `UPDATE ing.cycle SET expected_units=..., completed_units=..., completed_answers=..., gap_answers=(분석 없는 완료 답변 수, R12) WHERE cycle_id = $1` — completion_ratio·analysis_done_ratio 는 GENERATED STORED 라 재계산 불요.\n4. 종결: `UPDATE ing.cycle SET status='closed', closed_by=..., closed_at=now() WHERE status='open' AND (다음 anchor 존재 OR (completion_ratio=1 AND updated_at < now()-interval '36 hours') OR now() > cycle_anchor_at + interval '3 days')`.\n5. 같은 트랜잭션에서 rd.cycle 을 ing.cycle 의 투영으로 UPSERT(A17), rd.surface_generation.generation 을 1 증가 + last_load_id 갱신.\n\n[API] GET /v1/admin/cycles:\n```sql\nSELECT cyc_key, cycle_id, surface, project_key, round_date, anchor_date, status, servable, view_date, hidden_scope, generation\nFROM rd.cycle\nWHERE surface = ANY($1::int2[])\n  AND round_date BETWEEN $2 AND $3\n  AND ($4::int2 IS NULL OR project_key = $4)\nORDER BY round_date DESC\nLIMIT $5;\n```\n(cycle_pick_idx 로 커버, LIMIT 은 커서 없이 range 로 충분 — open_questions 참고)\n\n[API] PATCH /v1/admin/cycles/{cyc_key} 처리 절차:\n1. `SELECT cycle_id FROM rd.cycle WHERE cyc_key = $1` 로 uuid 해소(FastAPI 경로는 정수 cyc_key, 원장 키는 uuid cycle_id).\n2. `INSERT INTO app.judgment_change (kind, subject_uuids, payload, requested_by) VALUES ('cycle_admin', ARRAY[$cycle_id], $payload, app.actor())`.\n3. `INSERT INTO app.access_audit_log (actor_id, actor_role, kind, action, target) VALUES (app.actor(), $role, 'data_access', 'cycle_admin:'||$op, $cycle_id)`.\n4. 응답은 202(비동기 적용) + change_id, 트랜잭션 커밋 시점엔 아직 rd 미반영(로더 폴링 대상).\n\n[API] POST /v1/admin/report-publications 처리 절차:\n1. `INSERT INTO app.report_publication (...) RETURNING id`.\n2. `INSERT INTO app.report_site_fact (...)` · `INSERT INTO app.report_site_engine_fact (...)` 배치(파일 seq × 브랜드 × 엔진 행 수만큼).\n3. 같은 트랜잭션에서 `UPDATE app.report_publication SET status='active' WHERE surface=$s AND round_date=$r AND brand_scope=$b` 의 이전 active 행을 `status='superseded', superseded_by=$new_id` 로 먼저 닫음(report_publications_active_uq 유니크 제약 준수).\n4. `INSERT INTO app.judgment_change (kind, subject_uuids, payload) VALUES ('report_publication', ARRAY[$publication_id], NULL)`.\n5. 로더가 이 change 를 집어 `rd.report_unit_value` 를 `(round_date, file_seq)` 키로 교체(DELETE+INSERT 또는 UPSERT), rd.surface_generation 갱신.\n",
+  "read_model": [
+    "rd.cycle(cyc_key, cycle_id, surface, project_key, round_date, anchor_date, status, servable, view_date, hidden_scope, generation)",
+    "rd.surface_generation(surface, generation, last_load_id, rule_ver, as_of, updated_at)",
+    "rd.report_unit_value(round_date, file_seq, cyc_key, pub_id, brand, country_code, lang_code, in_headline_pool, target_hit_prompts, measured_prompts, owned_prompts, owned_prompts_den, prev_target_hit_prompts, prev_measured_prompts, prev_owned_prompts, prev_owned_prompts_den, load_id)",
+    "ing.cycle(cycle_id, cyc_key, surface, scope_project_id, cycle_anchor_at, anchor_source, anchor_date, round_date, status, closed_by, closed_at, expected_units, completed_units, completed_answers, gap_answers, completion_ratio, analysis_done_ratio, fleet_visible, view_anchor_at, hidden_scope, hidden_reason, hidden_at, published_at, stale_since, projected_round_date, generation, origin, updated_at)",
+    "ing.cycle_round(scope_project_id, anchor_date, surface, round_date, basis, assigned_at)",
+    "ing.cycle_run(run_id, cycle_id, attributed_by, attributed_at)",
+    "app.judgment_change(change_id, kind, subject_uuids, subject_texts, payload, requested_by, requested_at, status, claimed_at, applied_at, applied_load_id, error)",
+    "app.report_publication(id, slug, surface, brand_scope, volume, version, title, cycle_label, cycle_label_en, round_date, prev_round_date, asof_cur, asof_prev, published_on, engines, excluded_fs, bench_n, bench_n_all, src_cite, source_filename, source_sha256, manifest_verified, verify_note, sb_data_version, status, superseded_by, ingested_at)",
+    "app.report_site_fact(publication_id, file_seq, brand, country_code, country_name, region_label, lang_code, lang_label, agency_status, in_headline_pool, target_hit_prompts, measured_prompts, owned_prompts, owned_prompts_den, owned_answers, monitored_answers, prompts, answers, prev_target_hit_prompts, prev_measured_prompts, prev_owned_prompts, prev_owned_prompts_den, raw)",
+    "app.report_site_engine_fact(publication_id, file_seq, engine, target_hit_prompts, prev_target_hit_prompts)",
+    "app.access_audit_log(ts, audit_id, actor_id, actor_role, kind, action, target, detail, request_id)",
+    "app.rule_param(key, value) — 'analysis_publish_ratio' 시드값(R08 임계 0.95)"
+  ],
+  "response": "\nGET /v1/admin/cycles → `{ data: [{ cyc_key, cycle_id, surface, project_key, round_date, anchor_date, status, servable, view_date, hidden_scope, generation, completed_units?, expected_units?, gap_answers?, completion_ratio?, analysis_done_ratio? }], meta: { surface, mode:\"admin\", as_of, generation, ignored_filters, dropped_filters, suppressed:false } }` — 카운터 필드(?)는 D8 예외③으로 운영자 role 에서만 채움. GET /{cyc_key} 는 같은 셰이프의 단건 + 항상 카운터 포함. PATCH 응답은 `{ data: { change_id, status:\"pending\" }, meta:{...} }`(202). POST /v1/admin/report-publications 응답은 `{ data: { publication_id, status:\"active\", superseded: uuid|null }, meta:{...} }`(201). 페이지네이션은 목록이 소규모(perf 참고)라 커서 없이 `round_date` 범위 + LIMIT.\n",
+  "screens": [
+    "관리자 콘솔 — 회차 운영(hide/unhide/close/set_view_date), 현행 CLI(scripts/summary/hide-cycle.ts) 의 UI 화면화",
+    "관리자 콘솔 — 리포트 발행값 업로드/이력(현행 scripts/reports/ingest-publication.ts CLI 의 UI 화면화)",
+    "(간접) 전 화면의 meta.generation·meta.cycles — 이 단위가 채우는 값을 소비하는 쪽은 다른 모듈"
+  ],
+  "title": "회차 상태·발행 세대 (ingest.cycles)",
+  "writes": "\n쓰기 스키마는 항상 앱(api_rw)이 아니라 로더(loader 롤)가 최종 반영한다(A17·B4). API 표면에서의 쓰기 경계는 두 개뿐: (1) PATCH /v1/admin/cycles/{cyc_key} — 트랜잭션 경계: app.judgment_change 1행 INSERT + app.access_audit_log 1행, 같은 트랜잭션. ing.cycle·rd.cycle 은 이 트랜잭션에서 건드리지 않는다(비동기 적용, GRANT 상 api_rw 는 ing/rd 에 쓰기 권한 자체가 없음 — REVOKE UPDATE,DELETE ON app.judgment_change FROM api_rw 로 상태 전이도 로더 전용). (2) POST /v1/admin/report-publications — 트랜잭션 경계: 이전 active 행 supersede UPDATE 1건 + report_publication INSERT 1건 + report_site_fact/engine_fact 배치 INSERT + judgment_change INSERT + access_audit_log INSERT, 전부 한 트랜잭션(report_publications_active_uq 제약이 동시성 가드). 로더 쪽 실제 rd 반영(ing.cycle UPSERT→rd.cycle, rd.report_unit_value 교체, rd.surface_generation 증가)은 GRANT UPDATE(status,claimed_at,applied_at,applied_load_id,error) ON app.judgment_change TO loader 로 loader 롤이 change 를 claim→apply 하는 별도 트랜잭션이며 감사 대상은 app.access_audit_log(kind='data_access') 로 남긴다.\n"
+}

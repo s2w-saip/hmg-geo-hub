@@ -1,0 +1,1170 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`키 off 문장 스냅샷 — 커밋을 가로질러 고정한다 > Sub KPI Q4 > Sub KPI Q4 1`] = `
+"SET LOCAL idle_in_transaction_session_timeout = '30s'
+
+/* ── 다음 문장 ── */
+
+CREATE TEMP TABLE _answer_set ON COMMIT DROP AS SELECT a.job_id, a.target, a.prompt_id FROM scope_answers a WHERE a.status = 'completed' AND true AND a.job_id IN (
+    SELECT DISTINCT ON (a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id
+    JOIN (
+      SELECT r.project_id, max(a.measured_at) - interval '7 days' AS floor_at
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE r.project_id = ANY($1::uuid[])
+        AND r.status IN ('completed', 'partial_failed')
+        AND a.status = 'completed'
+      GROUP BY r.project_id
+    ) pm ON pm.project_id = r.project_id
+    WHERE r.project_id = ANY($2::uuid[])
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed'
+      AND a.measured_at >= pm.floor_at
+    ORDER BY a.prompt_id, a.target, a.region, a.measured_at DESC
+  )
+
+/* ── 다음 문장 ── */
+
+ANALYZE _answer_set
+
+/* ── 다음 문장 ── */
+
+
+    WITH ans AS (
+      SELECT a.target,
+        EXISTS (
+          SELECT 1 FROM scope_mentions m
+          WHERE m.job_id = a.job_id AND (CASE WHEN m.brand_rollup_entity_id IS NULL THEN m.brand_rollup_entity_id WHEN m.brand ~* $1 THEN $2 WHEN m.brand ~* $3 THEN $4 WHEN m.brand ~* $5 THEN $6 ELSE (CASE m.brand_rollup_entity_id WHEN $7 THEN $8 WHEN $9 THEN $10 WHEN $11 THEN $12 WHEN $13 THEN $14 WHEN $15 THEN $16 WHEN $17 THEN $18 WHEN $19 THEN $20 ELSE m.brand_rollup_entity_id END) END) IN ($21, $22, $23, $24, $25, $26, $27, $28, $29, $30)
+        ) AS has_tracked,
+        r.rk AS tp,
+        (SELECT COALESCE(sum(m.mention_count), 0) FROM scope_mentions m
+          WHERE m.job_id = a.job_id AND (CASE WHEN m.brand_rollup_entity_id IS NULL THEN m.brand_rollup_entity_id WHEN m.brand ~* $31 THEN $32 WHEN m.brand ~* $33 THEN $34 WHEN m.brand ~* $35 THEN $36 ELSE (CASE m.brand_rollup_entity_id WHEN $37 THEN $38 WHEN $39 THEN $40 WHEN $41 THEN $42 WHEN $43 THEN $44 WHEN $45 THEN $46 WHEN $47 THEN $48 WHEN $49 THEN $50 ELSE m.brand_rollup_entity_id END) END) IN ($51, $52, $53, $54, $55, $56, $57, $58, $59, $60)) AS tracked_mc
+      FROM _answer_set a
+      LEFT JOIN (
+    WITH names AS (
+  WITH RECURSIVE _rn_pairs AS (
+    (SELECT m.entity_id, m.brand FROM scope_mentions m
+      WHERE m.entity_type = 'Brand' AND m.brand IS NOT NULL
+      ORDER BY m.entity_id, m.brand LIMIT 1)
+    UNION ALL
+    SELECT nx.entity_id, nx.brand FROM _rn_pairs p
+    CROSS JOIN LATERAL (
+      SELECT m.entity_id, m.brand FROM scope_mentions m
+      WHERE m.entity_type = 'Brand' AND m.brand IS NOT NULL
+        AND (m.entity_id, m.brand) > (p.entity_id, p.brand)
+      ORDER BY m.entity_id, m.brand LIMIT 1
+    ) nx
+  )
+  SELECT DISTINCT ON (entity_id) entity_id, brand
+  FROM _rn_pairs ORDER BY entity_id, (brand ~ '^[A-Za-z]') DESC, brand
+),
+    _br_src AS MATERIALIZED (
+      SELECT (CASE WHEN m.brand_rollup_entity_id IS NULL THEN m.brand_rollup_entity_id WHEN m.brand ~* $61 THEN $62 WHEN m.brand ~* $63 THEN $64 WHEN m.brand ~* $65 THEN $66 ELSE (CASE m.brand_rollup_entity_id WHEN $67 THEN $68 WHEN $69 THEN $70 WHEN $71 THEN $72 WHEN $73 THEN $74 WHEN $75 THEN $76 WHEN $77 THEN $78 WHEN $79 THEN $80 ELSE m.brand_rollup_entity_id END) END) AS rid, COALESCE(m.brand, '') AS brand, m.job_id, m.avg_position
+      FROM scope_mentions m
+      JOIN _answer_set a ON a.job_id = m.job_id
+      WHERE m.brand_rollup_entity_id IS NOT NULL
+        AND m.avg_position IS NOT NULL
+    ),
+    _br_raw AS MATERIALIZED (
+      SELECT (CASE COALESCE(n.brand, s.brand) WHEN $81 THEN $82 WHEN $83 THEN $84 WHEN $85 THEN $86 WHEN $87 THEN $88 WHEN $89 THEN $90 WHEN $91 THEN $92 WHEN $93 THEN $94 WHEN $95 THEN $96 WHEN $97 THEN $98 WHEN $99 THEN $100 WHEN $101 THEN $102 WHEN $103 THEN $104 WHEN $105 THEN $106 WHEN $107 THEN $108 WHEN $109 THEN $110 WHEN $111 THEN $112 WHEN $113 THEN $114 WHEN $115 THEN $116 WHEN $117 THEN $118 WHEN $119 THEN $120 WHEN $121 THEN $122 WHEN $123 THEN $124 WHEN $125 THEN $126 WHEN $127 THEN $128 WHEN $129 THEN $130 WHEN $131 THEN $132 WHEN $133 THEN $134 WHEN $135 THEN $136 WHEN $137 THEN $138 WHEN $139 THEN $140 WHEN $141 THEN $142 WHEN $143 THEN $144 WHEN $145 THEN $146 WHEN $147 THEN $148 WHEN $149 THEN $150 WHEN $151 THEN $152 WHEN $153 THEN $154 WHEN $155 THEN $156 ELSE COALESCE(n.brand, s.brand) END) AS name, s.brand, s.job_id, s.avg_position,
+        (s.rid IN ($157, $158, $159, $160, $161, $162, $163, $164, $165, $166)) AS is_trk
+      FROM _br_src s
+      LEFT JOIN names n ON n.entity_id = s.rid
+      WHERE COALESCE(n.brand, s.brand) <> ''
+    ),
+    _br_pairs AS MATERIALIZED (
+      SELECT DISTINCT name, brand FROM _br_raw
+    ),
+    _br_keep AS (
+      SELECT x.name, x.brand FROM _br_pairs x
+      WHERE (CASE lower(btrim(x.name, $167)) WHEN $168 THEN (x.brand ~* $169) WHEN $170 THEN (x.brand ~* $171) WHEN $172 THEN (x.brand ~* $173) WHEN $174 THEN (x.brand ~* $175) WHEN $176 THEN (x.brand ~* $177) WHEN $178 THEN (x.brand ~* $179) WHEN $180 THEN (x.brand ~* $181) WHEN $182 THEN (x.brand ~* $183) WHEN $184 THEN (x.brand ~* $185) WHEN $186 THEN (x.brand ~* $187) WHEN $188 THEN (x.brand ~* $189) WHEN $190 THEN (x.brand ~* $191) WHEN $192 THEN (x.brand ~* $193) WHEN $194 THEN (x.brand ~* $195) WHEN $196 THEN (x.brand ~* $197) WHEN $198 THEN (x.brand ~* $199) WHEN $200 THEN (x.brand ~* $201) WHEN $202 THEN (x.brand ~* $203) WHEN $204 THEN (x.brand ~* $205) WHEN $206 THEN (x.brand ~* $207) WHEN $208 THEN (x.brand ~* $209) WHEN $210 THEN (x.brand ~* $211) WHEN $212 THEN (x.brand ~* $213) WHEN $214 THEN (x.brand ~* $215) WHEN $216 THEN (x.brand ~* $217) WHEN $218 THEN (x.brand ~* $219) WHEN $220 THEN (x.brand ~* $221) ELSE lower(btrim(x.name, $222)) NOT IN ($223, $224, $225, $226, $227, $228, $229, $230, $231, $232, $233, $234, $235, $236, $237, $238, $239, $240, $241, $242, $243, $244, $245, $246, $247, $248, $249, $250, $251, $252, $253, $254, $255, $256, $257, $258, $259, $260, $261, $262, $263, $264, $265, $266, $267, $268, $269, $270, $271, $272, $273, $274, $275, $276, $277, $278, $279, $280, $281, $282, $283, $284, $285, $286, $287, $288, $289, $290, $291, $292, $293, $294, $295, $296, $297, $298, $299, $300, $301, $302, $303, $304, $305, $306, $307, $308, $309, $310, $311, $312, $313, $314, $315, $316, $317, $318, $319, $320, $321, $322, $323, $324, $325, $326, $327, $328, $329, $330, $331, $332, $333, $334, $335, $336, $337, $338, $339, $340, $341, $342, $343, $344, $345, $346, $347, $348, $349, $350, $351, $352, $353, $354, $355, $356, $357, $358, $359, $360, $361, $362, $363, $364, $365, $366, $367, $368, $369, $370, $371, $372, $373, $374, $375, $376, $377, $378, $379, $380) END)
+    ),
+    _br_mm AS (
+      SELECT r.name, r.job_id, r.avg_position, r.is_trk
+      FROM _br_raw r JOIN _br_keep k ON k.name = r.name AND k.brand = r.brand
+    ),
+    _br_pos AS (
+      SELECT name, job_id, min(avg_position) AS tp, bool_or(is_trk) AS is_trk
+      FROM _br_mm GROUP BY 1, 2
+    ),
+    _br_rk AS (
+      SELECT job_id, is_trk,
+        rank() OVER (PARTITION BY job_id ORDER BY tp) AS rk
+      FROM _br_pos
+    )
+    SELECT job_id, min(rk)::int AS rk FROM _br_rk WHERE is_trk GROUP BY job_id
+  ) r ON r.job_id = a.job_id
+    )
+    SELECT target,
+      count(*)::int AS answers,
+      count(*) FILTER (WHERE has_tracked)::int AS tracked,
+      count(*) FILTER (WHERE tracked_mc >= 2)::int AS multi,
+      count(*) FILTER (WHERE has_tracked AND COALESCE(tp, 100) <= 1)::int AS top1,
+      count(*) FILTER (WHERE has_tracked AND COALESCE(tp, 100) <= 3)::int AS top3,
+      -- 순위가 매겨진 답변만 평균 (④ Core 와 동일 정의). 미언급 답변을 100위로
+      -- 채우면 평균이 '순위'가 아니라 '노출률의 역수'가 되어, 엔진 간 일관성이
+      -- ① 노출률 일관성을 복제하던 버그를 낳았다 (2026-07-29 실측: 65.3/39.9 →
+      -- 6.1/5.9, 일관성 61.1% → 95.9%).
+      round(avg(tp)::numeric, 1) AS avg_position
+    FROM ans GROUP BY target
+  
+
+/* ── 다음 문장 ── */
+
+
+    WITH names AS (
+  SELECT r.entity_id, r.brand,
+         (CASE r.brand WHEN $1 THEN $2 WHEN $3 THEN $4 WHEN $5 THEN $6 WHEN $7 THEN $8 WHEN $9 THEN $10 WHEN $11 THEN $12 WHEN $13 THEN $14 WHEN $15 THEN $16 WHEN $17 THEN $18 WHEN $19 THEN $20 WHEN $21 THEN $22 WHEN $23 THEN $24 WHEN $25 THEN $26 WHEN $27 THEN $28 WHEN $29 THEN $30 WHEN $31 THEN $32 WHEN $33 THEN $34 WHEN $35 THEN $36 WHEN $37 THEN $38 WHEN $39 THEN $40 WHEN $41 THEN $42 WHEN $43 THEN $44 WHEN $45 THEN $46 WHEN $47 THEN $48 WHEN $49 THEN $50 WHEN $51 THEN $52 WHEN $53 THEN $54 WHEN $55 THEN $56 WHEN $57 THEN $58 WHEN $59 THEN $60 WHEN $61 THEN $62 WHEN $63 THEN $64 WHEN $65 THEN $66 WHEN $67 THEN $68 WHEN $69 THEN $70 WHEN $71 THEN $72 WHEN $73 THEN $74 WHEN $75 THEN $76 ELSE r.brand END) AS cname,
+         lower(btrim((CASE r.brand WHEN $77 THEN $78 WHEN $79 THEN $80 WHEN $81 THEN $82 WHEN $83 THEN $84 WHEN $85 THEN $86 WHEN $87 THEN $88 WHEN $89 THEN $90 WHEN $91 THEN $92 WHEN $93 THEN $94 WHEN $95 THEN $96 WHEN $97 THEN $98 WHEN $99 THEN $100 WHEN $101 THEN $102 WHEN $103 THEN $104 WHEN $105 THEN $106 WHEN $107 THEN $108 WHEN $109 THEN $110 WHEN $111 THEN $112 WHEN $113 THEN $114 WHEN $115 THEN $116 WHEN $117 THEN $118 WHEN $119 THEN $120 WHEN $121 THEN $122 WHEN $123 THEN $124 WHEN $125 THEN $126 WHEN $127 THEN $128 WHEN $129 THEN $130 WHEN $131 THEN $132 WHEN $133 THEN $134 WHEN $135 THEN $136 WHEN $137 THEN $138 WHEN $139 THEN $140 WHEN $141 THEN $142 WHEN $143 THEN $144 WHEN $145 THEN $146 WHEN $147 THEN $148 WHEN $149 THEN $150 WHEN $151 THEN $152 ELSE r.brand END), $153)) AS bare
+  FROM (
+  WITH RECURSIVE _rn_pairs AS (
+    (SELECT m.entity_id, m.brand FROM scope_mentions m
+      WHERE m.entity_type = 'Brand' AND m.brand IS NOT NULL
+      ORDER BY m.entity_id, m.brand LIMIT 1)
+    UNION ALL
+    SELECT nx.entity_id, nx.brand FROM _rn_pairs p
+    CROSS JOIN LATERAL (
+      SELECT m.entity_id, m.brand FROM scope_mentions m
+      WHERE m.entity_type = 'Brand' AND m.brand IS NOT NULL
+        AND (m.entity_id, m.brand) > (p.entity_id, p.brand)
+      ORDER BY m.entity_id, m.brand LIMIT 1
+    ) nx
+  )
+  SELECT DISTINCT ON (entity_id) entity_id, brand
+  FROM _rn_pairs ORDER BY entity_id, (brand ~ '^[A-Za-z]') DESC, brand
+) r
+)
+    SELECT x.target,
+      sum(x.mention_count)::int AS total,
+      sum(x.mention_count) FILTER (WHERE x.rid IN ($154, $155, $156, $157, $158, $159, $160, $161, $162, $163))::int AS tracked
+    FROM (
+      SELECT a.target, m.mention_count, m.brand,
+        (CASE WHEN m.brand_rollup_entity_id IS NULL THEN m.brand_rollup_entity_id WHEN m.brand ~* $164 THEN $165 WHEN m.brand ~* $166 THEN $167 WHEN m.brand ~* $168 THEN $169 ELSE (CASE m.brand_rollup_entity_id WHEN $170 THEN $171 WHEN $172 THEN $173 WHEN $174 THEN $175 WHEN $176 THEN $177 WHEN $178 THEN $179 WHEN $180 THEN $181 WHEN $182 THEN $183 ELSE m.brand_rollup_entity_id END) END) AS rid
+      FROM scope_mentions m JOIN _answer_set a ON a.job_id = m.job_id
+      WHERE m.brand_rollup_entity_id IS NOT NULL
+      OFFSET 0
+    ) x
+    LEFT JOIN names n ON n.entity_id = x.rid
+    WHERE COALESCE(n.brand, x.brand) IS NOT NULL
+      AND (CASE COALESCE(n.bare, lower(btrim((CASE x.brand WHEN $184 THEN $185 WHEN $186 THEN $187 WHEN $188 THEN $189 WHEN $190 THEN $191 WHEN $192 THEN $193 WHEN $194 THEN $195 WHEN $196 THEN $197 WHEN $198 THEN $199 WHEN $200 THEN $201 WHEN $202 THEN $203 WHEN $204 THEN $205 WHEN $206 THEN $207 WHEN $208 THEN $209 WHEN $210 THEN $211 WHEN $212 THEN $213 WHEN $214 THEN $215 WHEN $216 THEN $217 WHEN $218 THEN $219 WHEN $220 THEN $221 WHEN $222 THEN $223 WHEN $224 THEN $225 WHEN $226 THEN $227 WHEN $228 THEN $229 WHEN $230 THEN $231 WHEN $232 THEN $233 WHEN $234 THEN $235 WHEN $236 THEN $237 WHEN $238 THEN $239 WHEN $240 THEN $241 WHEN $242 THEN $243 WHEN $244 THEN $245 WHEN $246 THEN $247 WHEN $248 THEN $249 WHEN $250 THEN $251 WHEN $252 THEN $253 WHEN $254 THEN $255 WHEN $256 THEN $257 WHEN $258 THEN $259 ELSE x.brand END), $260))) WHEN $261 THEN (x.brand ~* $262) WHEN $263 THEN (x.brand ~* $264) WHEN $265 THEN (x.brand ~* $266) WHEN $267 THEN (x.brand ~* $268) WHEN $269 THEN (x.brand ~* $270) WHEN $271 THEN (x.brand ~* $272) WHEN $273 THEN (x.brand ~* $274) WHEN $275 THEN (x.brand ~* $276) WHEN $277 THEN (x.brand ~* $278) WHEN $279 THEN (x.brand ~* $280) WHEN $281 THEN (x.brand ~* $282) WHEN $283 THEN (x.brand ~* $284) WHEN $285 THEN (x.brand ~* $286) WHEN $287 THEN (x.brand ~* $288) WHEN $289 THEN (x.brand ~* $290) WHEN $291 THEN (x.brand ~* $292) WHEN $293 THEN (x.brand ~* $294) WHEN $295 THEN (x.brand ~* $296) WHEN $297 THEN (x.brand ~* $298) WHEN $299 THEN (x.brand ~* $300) WHEN $301 THEN (x.brand ~* $302) WHEN $303 THEN (x.brand ~* $304) WHEN $305 THEN (x.brand ~* $306) WHEN $307 THEN (x.brand ~* $308) WHEN $309 THEN (x.brand ~* $310) WHEN $311 THEN (x.brand ~* $312) WHEN $313 THEN (x.brand ~* $314) ELSE COALESCE(n.bare, lower(btrim((CASE x.brand WHEN $315 THEN $316 WHEN $317 THEN $318 WHEN $319 THEN $320 WHEN $321 THEN $322 WHEN $323 THEN $324 WHEN $325 THEN $326 WHEN $327 THEN $328 WHEN $329 THEN $330 WHEN $331 THEN $332 WHEN $333 THEN $334 WHEN $335 THEN $336 WHEN $337 THEN $338 WHEN $339 THEN $340 WHEN $341 THEN $342 WHEN $343 THEN $344 WHEN $345 THEN $346 WHEN $347 THEN $348 WHEN $349 THEN $350 WHEN $351 THEN $352 WHEN $353 THEN $354 WHEN $355 THEN $356 WHEN $357 THEN $358 WHEN $359 THEN $360 WHEN $361 THEN $362 WHEN $363 THEN $364 WHEN $365 THEN $366 WHEN $367 THEN $368 WHEN $369 THEN $370 WHEN $371 THEN $372 WHEN $373 THEN $374 WHEN $375 THEN $376 WHEN $377 THEN $378 WHEN $379 THEN $380 WHEN $381 THEN $382 WHEN $383 THEN $384 WHEN $385 THEN $386 WHEN $387 THEN $388 WHEN $389 THEN $390 ELSE x.brand END), $391))) NOT IN ($392, $393, $394, $395, $396, $397, $398, $399, $400, $401, $402, $403, $404, $405, $406, $407, $408, $409, $410, $411, $412, $413, $414, $415, $416, $417, $418, $419, $420, $421, $422, $423, $424, $425, $426, $427, $428, $429, $430, $431, $432, $433, $434, $435, $436, $437, $438, $439, $440, $441, $442, $443, $444, $445, $446, $447, $448, $449, $450, $451, $452, $453, $454, $455, $456, $457, $458, $459, $460, $461, $462, $463, $464, $465, $466, $467, $468, $469, $470, $471, $472, $473, $474, $475, $476, $477, $478, $479, $480, $481, $482, $483, $484, $485, $486, $487, $488, $489, $490, $491, $492, $493, $494, $495, $496, $497, $498, $499, $500, $501, $502, $503, $504, $505, $506, $507, $508, $509, $510, $511, $512, $513, $514, $515, $516, $517, $518, $519, $520, $521, $522, $523, $524, $525, $526, $527, $528, $529, $530, $531, $532, $533, $534, $535, $536, $537, $538, $539, $540, $541, $542, $543, $544, $545, $546, $547, $548, $549) END)
+    GROUP BY x.target
+  
+
+/* ── 다음 문장 ── */
+
+
+    SELECT a.target,
+      COALESCE(sum(m.sentiment_positive), 0)::int AS p,
+      COALESCE(sum(m.sentiment_neutral), 0)::int AS ne,
+      COALESCE(sum(m.sentiment_negative), 0)::int AS ng,
+      COALESCE(sum(m.sentiment_mixed), 0)::int AS mx
+    FROM scope_mentions m JOIN _answer_set a ON a.job_id = m.job_id
+    WHERE (CASE WHEN m.brand_rollup_entity_id IS NULL THEN m.brand_rollup_entity_id WHEN m.brand ~* $1 THEN $2 WHEN m.brand ~* $3 THEN $4 WHEN m.brand ~* $5 THEN $6 ELSE (CASE m.brand_rollup_entity_id WHEN $7 THEN $8 WHEN $9 THEN $10 WHEN $11 THEN $12 WHEN $13 THEN $14 WHEN $15 THEN $16 WHEN $17 THEN $18 WHEN $19 THEN $20 ELSE m.brand_rollup_entity_id END) END) IN ($21, $22, $23, $24, $25, $26, $27, $28, $29, $30)
+    GROUP BY a.target
+  
+
+/* ── 다음 문장 ── */
+
+
+    WITH c2 AS MATERIALIZED (
+      SELECT a.target, c.url
+      FROM scope_citations c JOIN _answer_set a ON a.job_id = c.job_id
+    ),
+    ub AS MATERIALIZED (
+    SELECT url, ((split_part(base, '/', 1) = ANY(ARRAY[$1]::text[]) AND ((base = ANY(ARRAY[$2]::text[]) OR base LIKE ANY(ARRAY[$3]::text[]) OR base = ANY(ARRAY[$4]::text[])))) OR base IN (
+    SELECT DISTINCT rtrim(split_part(split_part(regexp_replace(regexp_replace(lower(btrim(wp.target_url, E' 	
+
+')), '^https?://', ''), '^www\\.', ''), '?', 1), '#', 1), '/') AS turl
+    FROM website_prompts wp
+    JOIN website_sites ws ON ws.id = wp.site_id
+    WHERE ws.scope_project_id::text = ANY($5::text[]) AND wp.target_url <> '')) AS owned
+    FROM (SELECT url, rtrim(split_part(split_part(regexp_replace(regexp_replace(lower(btrim(url, E' 	
+
+')), '^https?://', ''), '^www\\.', ''), '?', 1), '#', 1), '/') AS base
+        FROM (SELECT DISTINCT url FROM c2) d) x
+  )
+    SELECT c2.target,
+      count(*)::int AS total,
+      count(*) FILTER (WHERE COALESCE(ub.owned, false))::int AS owned
+    FROM c2 LEFT JOIN ub ON ub.url = c2.url
+    GROUP BY c2.target
+  
+
+/* ── 다음 문장 ── */
+
+
+    WITH pa AS (
+      SELECT a.prompt_id,
+        bool_or(EXISTS (
+          SELECT 1 FROM scope_mentions m
+          WHERE m.job_id = a.job_id AND (CASE WHEN m.brand_rollup_entity_id IS NULL THEN m.brand_rollup_entity_id WHEN m.brand ~* $1 THEN $2 WHEN m.brand ~* $3 THEN $4 WHEN m.brand ~* $5 THEN $6 ELSE (CASE m.brand_rollup_entity_id WHEN $7 THEN $8 WHEN $9 THEN $10 WHEN $11 THEN $12 WHEN $13 THEN $14 WHEN $15 THEN $16 WHEN $17 THEN $18 WHEN $19 THEN $20 ELSE m.brand_rollup_entity_id END) END) IN ($21, $22, $23, $24, $25, $26, $27, $28, $29, $30)
+        )) AS mentioned
+      FROM _answer_set a
+      WHERE a.prompt_id IS NOT NULL
+      GROUP BY a.prompt_id
+    )
+    SELECT count(*) FILTER (WHERE NOT mentioned)::int AS missing,
+           count(*)::int AS prompts
+    FROM pa
+  "
+`;
+
+exports[`키 off 문장 스냅샷 — 커밋을 가로질러 고정한다 > ⑤ 추이 > ⑤ 추이 1`] = `
+"SET LOCAL idle_in_transaction_session_timeout = '30s'
+
+/* ── 다음 문장 ── */
+
+CREATE TEMP TABLE _answer_set ON COMMIT DROP AS SELECT DISTINCT ON (date_trunc('week', a.measured_at), a.prompt_id, a.target, a.region) a.job_id, a.run_id, a.measured_at, date_trunc('week', a.measured_at) AS bucket FROM scope_answers a WHERE a.status = 'completed' AND true AND a.run_id IN (SELECT run_id FROM scope_runs WHERE project_id = ANY($1::uuid[])) AND a.measured_at IS NOT NULL AND a.measured_at >= now() - interval '120 days'
+    AND true AND NOT EXISTS (
+    SELECT 1 FROM summary_cycle_runs cr
+      JOIN summary_cycles c ON c.cycle_id = cr.cycle_id
+     WHERE cr.run_id = a.run_id
+       AND ((c.hidden_reason IS NOT NULL AND COALESCE(c.hidden_scope, 'all') = 'all') OR CASE c.surface
+         WHEN $2 THEN COALESCE(
+           c.view_anchor_at, c.cycle_anchor_at + interval '2 days'
+         ) > now() WHEN $3 THEN COALESCE(
+           c.view_anchor_at, c.cycle_anchor_at + interval '1 day'
+         ) > now()
+         ELSE c.status IN ($4)
+       END)
+  ) ORDER BY date_trunc('week', a.measured_at), a.prompt_id, a.target, a.region, a.measured_at DESC
+
+/* ── 다음 문장 ── */
+
+ANALYZE _answer_set
+
+/* ── 다음 문장 ── */
+
+
+    WITH ans AS (
+      SELECT a.measured_at,
+        a.bucket,
+        EXISTS (
+          SELECT 1 FROM scope_mentions m
+          WHERE m.job_id = a.job_id AND (CASE WHEN m.brand_rollup_entity_id IS NULL THEN m.brand_rollup_entity_id WHEN m.brand ~* $1 THEN $2 WHEN m.brand ~* $3 THEN $4 WHEN m.brand ~* $5 THEN $6 ELSE (CASE m.brand_rollup_entity_id WHEN $7 THEN $8 WHEN $9 THEN $10 WHEN $11 THEN $12 WHEN $13 THEN $14 WHEN $15 THEN $16 WHEN $17 THEN $18 WHEN $19 THEN $20 ELSE m.brand_rollup_entity_id END) END) IN ($21, $22, $23, $24, $25, $26, $27, $28, $29, $30)
+        ) AS has_tracked
+      FROM _answer_set a
+    )
+    SELECT bucket,
+      count(*)::int AS answers,
+      count(*) FILTER (WHERE has_tracked)::int AS tracked,
+      count(DISTINCT date_trunc('day', measured_at))::int AS measured_days,
+      min(measured_at) AS first_at, max(measured_at) AS last_at
+    FROM ans GROUP BY bucket ORDER BY bucket
+  
+
+/* ── 다음 문장 ── */
+
+
+    WITH names AS (
+  SELECT r.entity_id, r.brand,
+         (CASE r.brand WHEN $1 THEN $2 WHEN $3 THEN $4 WHEN $5 THEN $6 WHEN $7 THEN $8 WHEN $9 THEN $10 WHEN $11 THEN $12 WHEN $13 THEN $14 WHEN $15 THEN $16 WHEN $17 THEN $18 WHEN $19 THEN $20 WHEN $21 THEN $22 WHEN $23 THEN $24 WHEN $25 THEN $26 WHEN $27 THEN $28 WHEN $29 THEN $30 WHEN $31 THEN $32 WHEN $33 THEN $34 WHEN $35 THEN $36 WHEN $37 THEN $38 WHEN $39 THEN $40 WHEN $41 THEN $42 WHEN $43 THEN $44 WHEN $45 THEN $46 WHEN $47 THEN $48 WHEN $49 THEN $50 WHEN $51 THEN $52 WHEN $53 THEN $54 WHEN $55 THEN $56 WHEN $57 THEN $58 WHEN $59 THEN $60 WHEN $61 THEN $62 WHEN $63 THEN $64 WHEN $65 THEN $66 WHEN $67 THEN $68 WHEN $69 THEN $70 WHEN $71 THEN $72 WHEN $73 THEN $74 WHEN $75 THEN $76 ELSE r.brand END) AS cname,
+         lower(btrim((CASE r.brand WHEN $77 THEN $78 WHEN $79 THEN $80 WHEN $81 THEN $82 WHEN $83 THEN $84 WHEN $85 THEN $86 WHEN $87 THEN $88 WHEN $89 THEN $90 WHEN $91 THEN $92 WHEN $93 THEN $94 WHEN $95 THEN $96 WHEN $97 THEN $98 WHEN $99 THEN $100 WHEN $101 THEN $102 WHEN $103 THEN $104 WHEN $105 THEN $106 WHEN $107 THEN $108 WHEN $109 THEN $110 WHEN $111 THEN $112 WHEN $113 THEN $114 WHEN $115 THEN $116 WHEN $117 THEN $118 WHEN $119 THEN $120 WHEN $121 THEN $122 WHEN $123 THEN $124 WHEN $125 THEN $126 WHEN $127 THEN $128 WHEN $129 THEN $130 WHEN $131 THEN $132 WHEN $133 THEN $134 WHEN $135 THEN $136 WHEN $137 THEN $138 WHEN $139 THEN $140 WHEN $141 THEN $142 WHEN $143 THEN $144 WHEN $145 THEN $146 WHEN $147 THEN $148 WHEN $149 THEN $150 WHEN $151 THEN $152 ELSE r.brand END), $153)) AS bare
+  FROM (
+  WITH RECURSIVE _rn_pairs AS (
+    (SELECT m.entity_id, m.brand FROM scope_mentions m
+      WHERE m.entity_type = 'Brand' AND m.brand IS NOT NULL
+      ORDER BY m.entity_id, m.brand LIMIT 1)
+    UNION ALL
+    SELECT nx.entity_id, nx.brand FROM _rn_pairs p
+    CROSS JOIN LATERAL (
+      SELECT m.entity_id, m.brand FROM scope_mentions m
+      WHERE m.entity_type = 'Brand' AND m.brand IS NOT NULL
+        AND (m.entity_id, m.brand) > (p.entity_id, p.brand)
+      ORDER BY m.entity_id, m.brand LIMIT 1
+    ) nx
+  )
+  SELECT DISTINCT ON (entity_id) entity_id, brand
+  FROM _rn_pairs ORDER BY entity_id, (brand ~ '^[A-Za-z]') DESC, brand
+) r
+)
+    SELECT x.bucket AS bucket,
+      sum(x.mention_count)::int AS total_mentions,
+      sum(x.mention_count) FILTER (WHERE x.rid IN ($154, $155, $156, $157, $158, $159, $160, $161, $162, $163))::int AS tracked_mentions
+    FROM (
+      SELECT a.bucket AS bucket, m.mention_count, m.brand,
+        (CASE WHEN m.brand_rollup_entity_id IS NULL THEN m.brand_rollup_entity_id WHEN m.brand ~* $164 THEN $165 WHEN m.brand ~* $166 THEN $167 WHEN m.brand ~* $168 THEN $169 ELSE (CASE m.brand_rollup_entity_id WHEN $170 THEN $171 WHEN $172 THEN $173 WHEN $174 THEN $175 WHEN $176 THEN $177 WHEN $178 THEN $179 WHEN $180 THEN $181 WHEN $182 THEN $183 ELSE m.brand_rollup_entity_id END) END) AS rid
+      FROM scope_mentions m JOIN _answer_set a ON a.job_id = m.job_id
+      WHERE m.brand_rollup_entity_id IS NOT NULL
+      OFFSET 0
+    ) x
+    LEFT JOIN names n ON n.entity_id = x.rid
+    WHERE COALESCE(n.brand, x.brand) IS NOT NULL
+      AND (CASE COALESCE(n.bare, lower(btrim((CASE x.brand WHEN $184 THEN $185 WHEN $186 THEN $187 WHEN $188 THEN $189 WHEN $190 THEN $191 WHEN $192 THEN $193 WHEN $194 THEN $195 WHEN $196 THEN $197 WHEN $198 THEN $199 WHEN $200 THEN $201 WHEN $202 THEN $203 WHEN $204 THEN $205 WHEN $206 THEN $207 WHEN $208 THEN $209 WHEN $210 THEN $211 WHEN $212 THEN $213 WHEN $214 THEN $215 WHEN $216 THEN $217 WHEN $218 THEN $219 WHEN $220 THEN $221 WHEN $222 THEN $223 WHEN $224 THEN $225 WHEN $226 THEN $227 WHEN $228 THEN $229 WHEN $230 THEN $231 WHEN $232 THEN $233 WHEN $234 THEN $235 WHEN $236 THEN $237 WHEN $238 THEN $239 WHEN $240 THEN $241 WHEN $242 THEN $243 WHEN $244 THEN $245 WHEN $246 THEN $247 WHEN $248 THEN $249 WHEN $250 THEN $251 WHEN $252 THEN $253 WHEN $254 THEN $255 WHEN $256 THEN $257 WHEN $258 THEN $259 ELSE x.brand END), $260))) WHEN $261 THEN (x.brand ~* $262) WHEN $263 THEN (x.brand ~* $264) WHEN $265 THEN (x.brand ~* $266) WHEN $267 THEN (x.brand ~* $268) WHEN $269 THEN (x.brand ~* $270) WHEN $271 THEN (x.brand ~* $272) WHEN $273 THEN (x.brand ~* $274) WHEN $275 THEN (x.brand ~* $276) WHEN $277 THEN (x.brand ~* $278) WHEN $279 THEN (x.brand ~* $280) WHEN $281 THEN (x.brand ~* $282) WHEN $283 THEN (x.brand ~* $284) WHEN $285 THEN (x.brand ~* $286) WHEN $287 THEN (x.brand ~* $288) WHEN $289 THEN (x.brand ~* $290) WHEN $291 THEN (x.brand ~* $292) WHEN $293 THEN (x.brand ~* $294) WHEN $295 THEN (x.brand ~* $296) WHEN $297 THEN (x.brand ~* $298) WHEN $299 THEN (x.brand ~* $300) WHEN $301 THEN (x.brand ~* $302) WHEN $303 THEN (x.brand ~* $304) WHEN $305 THEN (x.brand ~* $306) WHEN $307 THEN (x.brand ~* $308) WHEN $309 THEN (x.brand ~* $310) WHEN $311 THEN (x.brand ~* $312) WHEN $313 THEN (x.brand ~* $314) ELSE COALESCE(n.bare, lower(btrim((CASE x.brand WHEN $315 THEN $316 WHEN $317 THEN $318 WHEN $319 THEN $320 WHEN $321 THEN $322 WHEN $323 THEN $324 WHEN $325 THEN $326 WHEN $327 THEN $328 WHEN $329 THEN $330 WHEN $331 THEN $332 WHEN $333 THEN $334 WHEN $335 THEN $336 WHEN $337 THEN $338 WHEN $339 THEN $340 WHEN $341 THEN $342 WHEN $343 THEN $344 WHEN $345 THEN $346 WHEN $347 THEN $348 WHEN $349 THEN $350 WHEN $351 THEN $352 WHEN $353 THEN $354 WHEN $355 THEN $356 WHEN $357 THEN $358 WHEN $359 THEN $360 WHEN $361 THEN $362 WHEN $363 THEN $364 WHEN $365 THEN $366 WHEN $367 THEN $368 WHEN $369 THEN $370 WHEN $371 THEN $372 WHEN $373 THEN $374 WHEN $375 THEN $376 WHEN $377 THEN $378 WHEN $379 THEN $380 WHEN $381 THEN $382 WHEN $383 THEN $384 WHEN $385 THEN $386 WHEN $387 THEN $388 WHEN $389 THEN $390 ELSE x.brand END), $391))) NOT IN ($392, $393, $394, $395, $396, $397, $398, $399, $400, $401, $402, $403, $404, $405, $406, $407, $408, $409, $410, $411, $412, $413, $414, $415, $416, $417, $418, $419, $420, $421, $422, $423, $424, $425, $426, $427, $428, $429, $430, $431, $432, $433, $434, $435, $436, $437, $438, $439, $440, $441, $442, $443, $444, $445, $446, $447, $448, $449, $450, $451, $452, $453, $454, $455, $456, $457, $458, $459, $460, $461, $462, $463, $464, $465, $466, $467, $468, $469, $470, $471, $472, $473, $474, $475, $476, $477, $478, $479, $480, $481, $482, $483, $484, $485, $486, $487, $488, $489, $490, $491, $492, $493, $494, $495, $496, $497, $498, $499, $500, $501, $502, $503, $504, $505, $506, $507, $508, $509, $510, $511, $512, $513, $514, $515, $516, $517, $518, $519, $520, $521, $522, $523, $524, $525, $526, $527, $528, $529, $530, $531, $532, $533, $534, $535, $536, $537, $538, $539, $540, $541, $542, $543, $544, $545, $546, $547, $548, $549) END)
+    GROUP BY x.bucket
+  
+
+/* ── 다음 문장 ── */
+
+
+    SELECT a.bucket AS bucket,
+      COALESCE(sum(m.sentiment_positive), 0)::int AS p,
+      COALESCE(sum(m.sentiment_neutral), 0)::int AS ne,
+      COALESCE(sum(m.sentiment_negative), 0)::int AS ng,
+      COALESCE(sum(m.sentiment_mixed), 0)::int AS mx
+    FROM scope_mentions m JOIN _answer_set a ON a.job_id = m.job_id
+    WHERE (CASE WHEN m.brand_rollup_entity_id IS NULL THEN m.brand_rollup_entity_id WHEN m.brand ~* $1 THEN $2 WHEN m.brand ~* $3 THEN $4 WHEN m.brand ~* $5 THEN $6 ELSE (CASE m.brand_rollup_entity_id WHEN $7 THEN $8 WHEN $9 THEN $10 WHEN $11 THEN $12 WHEN $13 THEN $14 WHEN $15 THEN $16 WHEN $17 THEN $18 WHEN $19 THEN $20 ELSE m.brand_rollup_entity_id END) END) IN ($21, $22, $23, $24, $25, $26, $27, $28, $29, $30)
+    GROUP BY a.bucket
+  
+
+/* ── 다음 문장 ── */
+
+
+    WITH pos AS (
+      SELECT a.bucket, r.rk AS tp
+      FROM _answer_set a
+      LEFT JOIN (
+    WITH names AS (
+  WITH RECURSIVE _rn_pairs AS (
+    (SELECT m.entity_id, m.brand FROM scope_mentions m
+      WHERE m.entity_type = 'Brand' AND m.brand IS NOT NULL
+      ORDER BY m.entity_id, m.brand LIMIT 1)
+    UNION ALL
+    SELECT nx.entity_id, nx.brand FROM _rn_pairs p
+    CROSS JOIN LATERAL (
+      SELECT m.entity_id, m.brand FROM scope_mentions m
+      WHERE m.entity_type = 'Brand' AND m.brand IS NOT NULL
+        AND (m.entity_id, m.brand) > (p.entity_id, p.brand)
+      ORDER BY m.entity_id, m.brand LIMIT 1
+    ) nx
+  )
+  SELECT DISTINCT ON (entity_id) entity_id, brand
+  FROM _rn_pairs ORDER BY entity_id, (brand ~ '^[A-Za-z]') DESC, brand
+),
+    _br_src AS MATERIALIZED (
+      SELECT (CASE WHEN m.brand_rollup_entity_id IS NULL THEN m.brand_rollup_entity_id WHEN m.brand ~* $1 THEN $2 WHEN m.brand ~* $3 THEN $4 WHEN m.brand ~* $5 THEN $6 ELSE (CASE m.brand_rollup_entity_id WHEN $7 THEN $8 WHEN $9 THEN $10 WHEN $11 THEN $12 WHEN $13 THEN $14 WHEN $15 THEN $16 WHEN $17 THEN $18 WHEN $19 THEN $20 ELSE m.brand_rollup_entity_id END) END) AS rid, COALESCE(m.brand, '') AS brand, m.job_id, m.avg_position
+      FROM scope_mentions m
+      JOIN _answer_set a ON a.job_id = m.job_id
+      WHERE m.brand_rollup_entity_id IS NOT NULL
+        AND m.avg_position IS NOT NULL
+    ),
+    _br_raw AS MATERIALIZED (
+      SELECT (CASE COALESCE(n.brand, s.brand) WHEN $21 THEN $22 WHEN $23 THEN $24 WHEN $25 THEN $26 WHEN $27 THEN $28 WHEN $29 THEN $30 WHEN $31 THEN $32 WHEN $33 THEN $34 WHEN $35 THEN $36 WHEN $37 THEN $38 WHEN $39 THEN $40 WHEN $41 THEN $42 WHEN $43 THEN $44 WHEN $45 THEN $46 WHEN $47 THEN $48 WHEN $49 THEN $50 WHEN $51 THEN $52 WHEN $53 THEN $54 WHEN $55 THEN $56 WHEN $57 THEN $58 WHEN $59 THEN $60 WHEN $61 THEN $62 WHEN $63 THEN $64 WHEN $65 THEN $66 WHEN $67 THEN $68 WHEN $69 THEN $70 WHEN $71 THEN $72 WHEN $73 THEN $74 WHEN $75 THEN $76 WHEN $77 THEN $78 WHEN $79 THEN $80 WHEN $81 THEN $82 WHEN $83 THEN $84 WHEN $85 THEN $86 WHEN $87 THEN $88 WHEN $89 THEN $90 WHEN $91 THEN $92 WHEN $93 THEN $94 WHEN $95 THEN $96 ELSE COALESCE(n.brand, s.brand) END) AS name, s.brand, s.job_id, s.avg_position,
+        (s.rid IN ($97, $98, $99, $100, $101, $102, $103, $104, $105, $106)) AS is_trk
+      FROM _br_src s
+      LEFT JOIN names n ON n.entity_id = s.rid
+      WHERE COALESCE(n.brand, s.brand) <> ''
+    ),
+    _br_pairs AS MATERIALIZED (
+      SELECT DISTINCT name, brand FROM _br_raw
+    ),
+    _br_keep AS (
+      SELECT x.name, x.brand FROM _br_pairs x
+      WHERE (CASE lower(btrim(x.name, $107)) WHEN $108 THEN (x.brand ~* $109) WHEN $110 THEN (x.brand ~* $111) WHEN $112 THEN (x.brand ~* $113) WHEN $114 THEN (x.brand ~* $115) WHEN $116 THEN (x.brand ~* $117) WHEN $118 THEN (x.brand ~* $119) WHEN $120 THEN (x.brand ~* $121) WHEN $122 THEN (x.brand ~* $123) WHEN $124 THEN (x.brand ~* $125) WHEN $126 THEN (x.brand ~* $127) WHEN $128 THEN (x.brand ~* $129) WHEN $130 THEN (x.brand ~* $131) WHEN $132 THEN (x.brand ~* $133) WHEN $134 THEN (x.brand ~* $135) WHEN $136 THEN (x.brand ~* $137) WHEN $138 THEN (x.brand ~* $139) WHEN $140 THEN (x.brand ~* $141) WHEN $142 THEN (x.brand ~* $143) WHEN $144 THEN (x.brand ~* $145) WHEN $146 THEN (x.brand ~* $147) WHEN $148 THEN (x.brand ~* $149) WHEN $150 THEN (x.brand ~* $151) WHEN $152 THEN (x.brand ~* $153) WHEN $154 THEN (x.brand ~* $155) WHEN $156 THEN (x.brand ~* $157) WHEN $158 THEN (x.brand ~* $159) WHEN $160 THEN (x.brand ~* $161) ELSE lower(btrim(x.name, $162)) NOT IN ($163, $164, $165, $166, $167, $168, $169, $170, $171, $172, $173, $174, $175, $176, $177, $178, $179, $180, $181, $182, $183, $184, $185, $186, $187, $188, $189, $190, $191, $192, $193, $194, $195, $196, $197, $198, $199, $200, $201, $202, $203, $204, $205, $206, $207, $208, $209, $210, $211, $212, $213, $214, $215, $216, $217, $218, $219, $220, $221, $222, $223, $224, $225, $226, $227, $228, $229, $230, $231, $232, $233, $234, $235, $236, $237, $238, $239, $240, $241, $242, $243, $244, $245, $246, $247, $248, $249, $250, $251, $252, $253, $254, $255, $256, $257, $258, $259, $260, $261, $262, $263, $264, $265, $266, $267, $268, $269, $270, $271, $272, $273, $274, $275, $276, $277, $278, $279, $280, $281, $282, $283, $284, $285, $286, $287, $288, $289, $290, $291, $292, $293, $294, $295, $296, $297, $298, $299, $300, $301, $302, $303, $304, $305, $306, $307, $308, $309, $310, $311, $312, $313, $314, $315, $316, $317, $318, $319, $320) END)
+    ),
+    _br_mm AS (
+      SELECT r.name, r.job_id, r.avg_position, r.is_trk
+      FROM _br_raw r JOIN _br_keep k ON k.name = r.name AND k.brand = r.brand
+    ),
+    _br_pos AS (
+      SELECT name, job_id, min(avg_position) AS tp, bool_or(is_trk) AS is_trk
+      FROM _br_mm GROUP BY 1, 2
+    ),
+    _br_rk AS (
+      SELECT job_id, is_trk,
+        rank() OVER (PARTITION BY job_id ORDER BY tp) AS rk
+      FROM _br_pos
+    )
+    SELECT job_id, min(rk)::int AS rk FROM _br_rk WHERE is_trk GROUP BY job_id
+  ) r ON r.job_id = a.job_id
+    )
+    SELECT bucket, round(avg(tp)::numeric, 1) AS avg_position
+    FROM pos GROUP BY bucket
+  
+
+/* ── 다음 문장 ── */
+
+
+    WITH c2 AS MATERIALIZED (
+      SELECT a.bucket AS bucket, c.url
+      FROM scope_citations c JOIN _answer_set a ON a.job_id = c.job_id
+      WHERE NOT EXISTS (
+    SELECT 1 FROM summary_cycle_runs cr
+      JOIN summary_cycles c ON c.cycle_id = cr.cycle_id
+     WHERE cr.run_id = a.run_id
+       AND c.hidden_reason IS NOT NULL
+       AND COALESCE(c.hidden_scope, 'all') = 'citations'
+  )
+    ),
+    ub AS MATERIALIZED (
+    SELECT url, ((split_part(base, '/', 1) = ANY(ARRAY[$1]::text[]) AND ((base = ANY(ARRAY[$2]::text[]) OR base LIKE ANY(ARRAY[$3]::text[]) OR base = ANY(ARRAY[$4]::text[])))) OR base IN (
+    SELECT DISTINCT rtrim(split_part(split_part(regexp_replace(regexp_replace(lower(btrim(wp.target_url, E' 	
+
+')), '^https?://', ''), '^www\\.', ''), '?', 1), '#', 1), '/') AS turl
+    FROM website_prompts wp
+    JOIN website_sites ws ON ws.id = wp.site_id
+    WHERE ws.scope_project_id::text = ANY($5::text[]) AND wp.target_url <> '')) AS owned
+    FROM (SELECT url, rtrim(split_part(split_part(regexp_replace(regexp_replace(lower(btrim(url, E' 	
+
+')), '^https?://', ''), '^www\\.', ''), '?', 1), '#', 1), '/') AS base
+        FROM (SELECT DISTINCT url FROM c2) d) x
+  )
+    SELECT c2.bucket,
+      count(*)::int AS total,
+      count(*) FILTER (WHERE COALESCE(ub.owned, false))::int AS owned
+    FROM c2 LEFT JOIN ub ON ub.url = c2.url
+    GROUP BY c2.bucket
+  "
+`;
+
+exports[`키 off 문장 스냅샷 — 커밋을 가로질러 고정한다 > ⑥ 추이 > ⑥ 추이 1`] = `
+"
+    WITH snap AS MATERIALIZED (
+      SELECT DISTINCT ON (
+        date_trunc('week', a.measured_at), a.prompt_id, a.target, a.region
+      ) a.job_id, a.measured_at
+      FROM scope_answers a
+      WHERE a.status = 'completed' AND true AND a.run_id IN (SELECT run_id FROM scope_runs WHERE project_id = ANY($1::uuid[])) AND a.measured_at IS NOT NULL AND a.measured_at >= now() - interval '120 days' AND true AND NOT EXISTS (
+    SELECT 1 FROM summary_cycle_runs cr
+      JOIN summary_cycles c ON c.cycle_id = cr.cycle_id
+     WHERE cr.run_id = a.run_id
+       AND (c.hidden_reason IS NOT NULL OR CASE c.surface
+         WHEN $2 THEN COALESCE(
+           c.view_anchor_at, c.cycle_anchor_at + interval '2 days'
+         ) > now() WHEN $3 THEN COALESCE(
+           c.view_anchor_at, c.cycle_anchor_at + interval '1 day'
+         ) > now()
+         ELSE c.status IN ($4)
+       END)
+  )
+      ORDER BY date_trunc('week', a.measured_at),
+        a.prompt_id, a.target, a.region, a.measured_at DESC
+    ),
+    target_set AS MATERIALIZED (
+    SELECT DISTINCT regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(lower(regexp_replace(wp.target_url, '^\\s+|\\s+$', '', 'g')), '^https?://', ''), '^www\\.', ''), '#.*$', ''), $5, '', 'g'), $6, '?'), $7, ''), '/+$', '') AS turl
+    FROM website_prompts wp
+    JOIN website_sites ws ON ws.id = wp.site_id
+    WHERE ws.scope_project_id::text = ANY($8::text[]) AND wp.target_url <> ''),
+    
+    c2 AS MATERIALIZED (
+      SELECT c.job_id, coalesce(c.url, '') AS uk, coalesce(c.domain, '') AS dk
+      FROM scope_citations c JOIN snap ON snap.job_id = c.job_id
+    ),
+    un AS MATERIALIZED (
+      SELECT uk, dk, regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(lower(regexp_replace(nullif(uk, ''), '^\\s+|\\s+$', '', 'g')), '^https?://', ''), '^www\\.', ''), '#.*$', ''), $9, '', 'g'), $10, '?'), $11, ''), '/+$', '') AS n
+      FROM (SELECT DISTINCT uk, dk FROM c2) d
+    ),
+    ub AS MATERIALIZED (
+      SELECT uk, dk, ((split_part(n, '/', 1) = ANY(ARRAY[$12]::text[]) AND ((n = ANY(ARRAY[$13]::text[]) OR n LIKE ANY(ARRAY[$14]::text[]) OR n = ANY(ARRAY[$15]::text[])))) OR n IN (SELECT turl FROM target_set)) AS owned,
+        (n IN (SELECT turl FROM target_set)) AS target
+      FROM un
+    ),
+    cit AS (
+      SELECT c2.job_id,
+        bool_or(ub.owned) AS owned,
+        bool_or(ub.target) AS target
+      FROM c2 JOIN ub ON ub.uk = c2.uk AND ub.dk = c2.dk
+      GROUP BY c2.job_id
+    )
+    SELECT date_trunc('week', snap.measured_at) AS bucket,
+      count(*) FILTER (WHERE cit.owned)::int AS owned_answers,
+      count(*) FILTER (WHERE cit.owned AND cit.target)::int AS target_answers,
+      count(DISTINCT date_trunc('day', snap.measured_at))::int AS measured_days,
+      min(snap.measured_at) AS first_at, max(snap.measured_at) AS last_at
+    FROM snap LEFT JOIN cit ON cit.job_id = snap.job_id
+    GROUP BY bucket ORDER BY bucket
+  "
+`;
+
+exports[`키 off 문장 스냅샷 — 커밋을 가로질러 고정한다 > ⑥ 카드 > ⑥ 카드 1`] = `
+"
+    WITH snap AS MATERIALIZED (SELECT a.job_id FROM scope_answers a WHERE a.status = 'completed' AND true AND a.job_id IN (
+    SELECT DISTINCT ON (a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id
+    JOIN (
+      SELECT r.project_id, max(a.measured_at) - interval '7 days' AS floor_at
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE r.project_id = ANY($1::uuid[])
+        AND r.status IN ('completed', 'partial_failed')
+        AND a.status = 'completed'
+      GROUP BY r.project_id
+    ) pm ON pm.project_id = r.project_id
+    WHERE r.project_id = ANY($2::uuid[])
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed'
+      AND a.measured_at >= pm.floor_at
+    ORDER BY a.prompt_id, a.target, a.region, a.measured_at DESC
+  )),
+    target_set AS MATERIALIZED (
+    SELECT DISTINCT regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(lower(regexp_replace(wp.target_url, '^\\s+|\\s+$', '', 'g')), '^https?://', ''), '^www\\.', ''), '#.*$', ''), $3, '', 'g'), $4, '?'), $5, ''), '/+$', '') AS turl
+    FROM website_prompts wp
+    JOIN website_sites ws ON ws.id = wp.site_id
+    WHERE ws.scope_project_id::text = ANY($6::text[]) AND wp.target_url <> ''),
+    
+    c2 AS MATERIALIZED (
+      SELECT c.job_id, coalesce(c.url, '') AS uk, coalesce(c.domain, '') AS dk
+      FROM scope_citations c JOIN snap ON snap.job_id = c.job_id
+    ),
+    un AS MATERIALIZED (
+      SELECT uk, dk, regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(lower(regexp_replace(nullif(uk, ''), '^\\s+|\\s+$', '', 'g')), '^https?://', ''), '^www\\.', ''), '#.*$', ''), $7, '', 'g'), $8, '?'), $9, ''), '/+$', '') AS n
+      FROM (SELECT DISTINCT uk, dk FROM c2) d
+    ),
+    ub AS MATERIALIZED (
+      SELECT uk, dk, ((split_part(n, '/', 1) = ANY(ARRAY[$10]::text[]) AND ((n = ANY(ARRAY[$11]::text[]) OR n LIKE ANY(ARRAY[$12]::text[]) OR n = ANY(ARRAY[$13]::text[])))) OR n IN (SELECT turl FROM target_set)) AS owned,
+        (n IN (SELECT turl FROM target_set)) AS target
+      FROM un
+    ),
+    cit AS (
+      SELECT c2.job_id,
+        bool_or(ub.owned) AS owned,
+        bool_or(ub.target) AS target
+      FROM c2 JOIN ub ON ub.uk = c2.uk AND ub.dk = c2.dk
+      GROUP BY c2.job_id
+    )
+    SELECT
+      count(*) FILTER (WHERE cit.owned)::int AS owned_answers,
+      count(*) FILTER (WHERE cit.owned AND cit.target)::int AS target_answers
+    FROM snap LEFT JOIN cit ON cit.job_id = snap.job_id
+  "
+`;
+
+exports[`키 off 문장 스냅샷 — 커밋을 가로질러 고정한다 > 인용 화면 > 인용 화면 1`] = `
+"SELECT count(*)::int AS answers,
+                 max(COALESCE(r.cycle_anchor_at, a.measured_at))::text AS last_measured_at
+            FROM scope_answers a LEFT JOIN scope_runs r ON r.run_id = a.run_id
+           WHERE true AND a.job_id IN (
+    SELECT DISTINCT ON (a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id
+    JOIN (
+      SELECT r.project_id, max(a.measured_at) - interval '7 days' AS floor_at
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE r.project_id = ANY($1::uuid[])
+        AND r.status IN ('completed', 'partial_failed')
+        AND a.status = 'completed'
+      GROUP BY r.project_id
+    ) pm ON pm.project_id = r.project_id
+    WHERE r.project_id = ANY($2::uuid[])
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed'
+      AND a.measured_at >= pm.floor_at
+    ORDER BY a.prompt_id, a.target, a.region, a.measured_at DESC
+  )
+
+/* ── 다음 문장 ── */
+
+
+      WITH c2 AS MATERIALIZED (
+        SELECT CASE WHEN lower(c.domain) IN ($1, $2, $3, $4, $5) THEN (
+      CASE WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $6) THEN $7 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $8) THEN $9 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')), $10) THEN $11 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $12) THEN $13 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $14) THEN $15 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')), $16) THEN $17 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $18) THEN $19 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $20) THEN $21 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $22) THEN $23 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $24) THEN $25 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $26) THEN $27 ELSE lower(c.domain) END
+    ) ELSE lower(c.domain) END AS domain, c.category, a.target, CASE WHEN lower(c.domain) IN ($28) THEN rtrim(split_part(split_part(regexp_replace(regexp_replace(lower(btrim(c.url, E' 	
+
+')), '^https?://', ''), '^www\\.', ''), '?', 1), '#', 1), '/') END AS base
+        FROM scope_citations c JOIN scope_answers a ON a.job_id = c.job_id
+        WHERE true AND a.job_id IN (
+    SELECT DISTINCT ON (a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id
+    JOIN (
+      SELECT r.project_id, max(a.measured_at) - interval '7 days' AS floor_at
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE r.project_id = ANY($29::uuid[])
+        AND r.status IN ('completed', 'partial_failed')
+        AND a.status = 'completed'
+      GROUP BY r.project_id
+    ) pm ON pm.project_id = r.project_id
+    WHERE r.project_id = ANY($30::uuid[])
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed'
+      AND a.measured_at >= pm.floor_at
+    ORDER BY a.prompt_id, a.target, a.region, a.measured_at DESC
+  ) AND c.domain IS NOT NULL
+      )
+      SELECT domain, category, target,
+        count(*)::int AS citations,
+        -- COALESCE: 비후보 도메인 그룹은 base 가 전행 NULL → bool_or 가 NULL.
+        COALESCE(bool_or((((split_part(base, '/', 1) = ANY(ARRAY[$31]::text[]) AND ((base = ANY(ARRAY[$32]::text[]) OR base LIKE ANY(ARRAY[$33]::text[]) OR base = ANY(ARRAY[$34]::text[])))) OR base IN (
+    SELECT DISTINCT rtrim(split_part(split_part(regexp_replace(regexp_replace(lower(btrim(wp.target_url, E' 	
+
+')), '^https?://', ''), '^www\\.', ''), '?', 1), '#', 1), '/') AS turl
+    FROM website_prompts wp
+    JOIN website_sites ws ON ws.id = wp.site_id
+    WHERE ws.scope_project_id::text = ANY($35::text[]) AND wp.target_url <> '')) OR (NULLIF(base, '') IS NULL AND domain ~* $36))), false) AS owned,
+        -- 행 단위 owned 카운트 (KPI ⑤ 분자 규칙) — 공식(당사) 타일의 분자.
+        count(*) FILTER (WHERE (((split_part(base, '/', 1) = ANY(ARRAY[$37]::text[]) AND ((base = ANY(ARRAY[$38]::text[]) OR base LIKE ANY(ARRAY[$39]::text[]) OR base = ANY(ARRAY[$40]::text[])))) OR base IN (
+    SELECT DISTINCT rtrim(split_part(split_part(regexp_replace(regexp_replace(lower(btrim(wp.target_url, E' 	
+
+')), '^https?://', ''), '^www\\.', ''), '?', 1), '#', 1), '/') AS turl
+    FROM website_prompts wp
+    JOIN website_sites ws ON ws.id = wp.site_id
+    WHERE ws.scope_project_id::text = ANY($41::text[]) AND wp.target_url <> '')) OR (NULLIF(base, '') IS NULL AND domain ~* $42)))::int AS owned_citations
+      FROM c2 GROUP BY domain, category, target
+    
+
+/* ── 다음 문장 ── */
+
+
+      SELECT CASE WHEN lower(c.domain) IN ($1, $2, $3, $4, $5) THEN (
+      CASE WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $6) THEN $7 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $8) THEN $9 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')), $10) THEN $11 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $12) THEN $13 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $14) THEN $15 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')), $16) THEN $17 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $18) THEN $19 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $20) THEN $21 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $22) THEN $23 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $24) THEN $25 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $26) THEN $27 ELSE lower(c.domain) END
+    ) ELSE lower(c.domain) END AS domain,
+        count(DISTINCT c.job_id)::int AS citing_answers,
+        count(DISTINCT a.prompt_id)::int AS prompts
+      FROM scope_citations c JOIN scope_answers a ON a.job_id = c.job_id
+      WHERE true AND a.job_id IN (
+    SELECT DISTINCT ON (a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id
+    JOIN (
+      SELECT r.project_id, max(a.measured_at) - interval '7 days' AS floor_at
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE r.project_id = ANY($28::uuid[])
+        AND r.status IN ('completed', 'partial_failed')
+        AND a.status = 'completed'
+      GROUP BY r.project_id
+    ) pm ON pm.project_id = r.project_id
+    WHERE r.project_id = ANY($29::uuid[])
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed'
+      AND a.measured_at >= pm.floor_at
+    ORDER BY a.prompt_id, a.target, a.region, a.measured_at DESC
+  ) AND c.domain IS NOT NULL
+      GROUP BY 1
+    
+
+/* ── 다음 문장 ── */
+
+
+          WITH c2 AS MATERIALIZED (
+            SELECT a.prompt_id, a.job_id, a.target, CASE WHEN lower(c.domain) IN ($1, $2, $3, $4, $5) THEN (
+      CASE WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $6) THEN $7 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $8) THEN $9 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')), $10) THEN $11 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $12) THEN $13 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $14) THEN $15 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')), $16) THEN $17 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $18) THEN $19 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $20) THEN $21 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $22) THEN $23 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $24) THEN $25 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $26) THEN $27 ELSE lower(c.domain) END
+    ) ELSE lower(c.domain) END AS domain, CASE WHEN lower(c.domain) IN ($28) THEN rtrim(split_part(split_part(regexp_replace(regexp_replace(lower(btrim(c.url, E' 	
+
+')), '^https?://', ''), '^www\\.', ''), '?', 1), '#', 1), '/') END AS base
+            FROM scope_citations c JOIN scope_answers a ON a.job_id = c.job_id
+            WHERE true AND a.job_id IN (
+    SELECT DISTINCT ON (a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id
+    JOIN (
+      SELECT r.project_id, max(a.measured_at) - interval '7 days' AS floor_at
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE r.project_id = ANY($29::uuid[])
+        AND r.status IN ('completed', 'partial_failed')
+        AND a.status = 'completed'
+      GROUP BY r.project_id
+    ) pm ON pm.project_id = r.project_id
+    WHERE r.project_id = ANY($30::uuid[])
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed'
+      AND a.measured_at >= pm.floor_at
+    ORDER BY a.prompt_id, a.target, a.region, a.measured_at DESC
+  ) AND c.domain IS NOT NULL AND a.prompt_id IS NOT NULL
+          ), pr AS (
+            -- 자사 판정은 **인용 행 단위**다(2026-09-08). 도메인 단위로 접으면
+            -- genesis.com 처럼 국가 경로로 갈리는 공유 호스트에서 타국·글로벌
+            -- 페이지만 인용한 프롬프트가 자사로 승격된다.
+            SELECT c2.prompt_id, count(*)::int AS cites,
+              array_agg(DISTINCT c2.target) AS targets,
+              COALESCE(bool_or((((split_part(base, '/', 1) = ANY(ARRAY[$31]::text[]) AND ((base = ANY(ARRAY[$32]::text[]) OR base LIKE ANY(ARRAY[$33]::text[]) OR base = ANY(ARRAY[$34]::text[])))) OR base IN (
+    SELECT DISTINCT rtrim(split_part(split_part(regexp_replace(regexp_replace(lower(btrim(wp.target_url, E' 	
+
+')), '^https?://', ''), '^www\\.', ''), '?', 1), '#', 1), '/') AS turl
+    FROM website_prompts wp
+    JOIN website_sites ws ON ws.id = wp.site_id
+    WHERE ws.scope_project_id::text = ANY($35::text[]) AND wp.target_url <> '')) OR (NULLIF(base, '') IS NULL AND domain ~* $36))), false) AS owned,
+              min(sp.text) AS text, min(sp.funnel_stage) AS funnel
+            FROM c2
+            LEFT JOIN scope_prompts sp ON sp.prompt_id = c2.prompt_id
+            GROUP BY c2.prompt_id
+          )
+          SELECT prompt_id, text, funnel, cites, targets, owned, bucket_total::int AS bucket_total FROM (
+            SELECT pr.*,
+              row_number() OVER (PARTITION BY owned ORDER BY cites DESC, prompt_id) AS rk,
+              count(*) OVER (PARTITION BY owned) AS bucket_total
+            FROM pr
+          ) t WHERE rk <= $37
+        
+
+/* ── 다음 문장 ── */
+
+
+    WITH ans AS MATERIALIZED (
+      SELECT DISTINCT ON (a.prompt_id, a.target, a.region, date_trunc('week', a.measured_at))
+        a.job_id, date_trunc('week', a.measured_at) AS wk
+      FROM scope_answers a
+      WHERE a.measured_at IS NOT NULL
+        AND a.measured_at >= now() - interval '120 days' AND a.status = 'completed' AND true AND a.run_id IN (SELECT run_id FROM scope_runs WHERE project_id = ANY($1::uuid[])) AND true AND NOT EXISTS (
+    SELECT 1 FROM summary_cycle_runs cr
+      JOIN summary_cycles c ON c.cycle_id = cr.cycle_id
+     WHERE cr.run_id = a.run_id
+       AND (c.hidden_reason IS NOT NULL OR CASE c.surface
+         WHEN $2 THEN COALESCE(
+           c.view_anchor_at, c.cycle_anchor_at + interval '2 days'
+         ) > now() WHEN $3 THEN COALESCE(
+           c.view_anchor_at, c.cycle_anchor_at + interval '1 day'
+         ) > now()
+         ELSE c.status IN ($4)
+       END)
+  )
+      ORDER BY a.prompt_id, a.target, a.region, date_trunc('week', a.measured_at),
+        a.measured_at DESC
+    )
+    SELECT to_char(ans.wk, 'YYYY-MM-DD') AS day,
+      CASE WHEN lower(c.domain) IN ($5, $6, $7, $8, $9) THEN (
+      CASE WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $10) THEN $11 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $12) THEN $13 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')), $14) THEN $15 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $16) THEN $17 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $18) THEN $19 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')), $20) THEN $21 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $22) THEN $23 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $24) THEN $25 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $26) THEN $27 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $28) THEN $29 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $30) THEN $31 ELSE lower(c.domain) END
+    ) ELSE lower(c.domain) END AS key,
+      count(*)::int AS n
+    FROM scope_citations c JOIN ans ON ans.job_id = c.job_id
+    WHERE c.domain IS NOT NULL
+    GROUP BY 1, 2
+  
+
+/* ── 다음 문장 ── */
+
+
+          WITH cbase AS MATERIALIZED (
+            SELECT CASE WHEN lower(c.domain) IN ($1, $2, $3, $4, $5) THEN (
+      CASE WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $6) THEN $7 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $8) THEN $9 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')), $10) THEN $11 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $12) THEN $13 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $14) THEN $15 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')), $16) THEN $17 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $18) THEN $19 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $20) THEN $21 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $22) THEN $23 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $24) THEN $25 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $26) THEN $27 ELSE lower(c.domain) END
+    ) ELSE lower(c.domain) END AS domain, COALESCE(c.url, '') AS url,
+              c.title AS title, c.id AS cid, CASE WHEN lower(c.domain) IN ($28) THEN rtrim(split_part(split_part(regexp_replace(regexp_replace(lower(btrim(c.url, E' 	
+
+')), '^https?://', ''), '^www\\.', ''), '?', 1), '#', 1), '/') END AS base,
+              a.prompt_id, a.job_id, a.target, a.region, a.measured_at
+            FROM scope_citations c JOIN scope_answers a ON a.job_id = c.job_id
+            WHERE true AND a.job_id IN (
+    SELECT DISTINCT ON (a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id
+    JOIN (
+      SELECT r.project_id, max(a.measured_at) - interval '7 days' AS floor_at
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE r.project_id = ANY($29::uuid[])
+        AND r.status IN ('completed', 'partial_failed')
+        AND a.status = 'completed'
+      GROUP BY r.project_id
+    ) pm ON pm.project_id = r.project_id
+    WHERE r.project_id = ANY($30::uuid[])
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed'
+      AND a.measured_at >= pm.floor_at
+    ORDER BY a.prompt_id, a.target, a.region, a.measured_at DESC
+  ) AND c.domain IS NOT NULL AND CASE WHEN lower(c.domain) IN ($31, $32, $33, $34, $35) THEN (
+      CASE WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $36) THEN $37 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $38) THEN $39 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')), $40) THEN $41 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $42) THEN $43 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $44) THEN $45 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')), $46) THEN $47 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $48) THEN $49 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $50) THEN $51 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $52) THEN $53 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $54) THEN $55 WHEN starts_with((lower(c.domain) || replace(split_part(split_part(coalesce(substr(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), nullif(strpos(substr(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), CASE WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'https://') THEN 9 WHEN starts_with(lower(btrim(coalesce(c.url, ''), E' \\t\\n\\r')), 'http://') THEN 8 ELSE 1 END), '/'), 0)), ''), '?', 1), '#', 1), '%40', '@')) || '/', $56) THEN $57 ELSE lower(c.domain) END
+    ) ELSE lower(c.domain) END IN ($58)
+          ), u AS (
+            SELECT b.domain, b.url,
+              count(*)::int AS cites,
+              array_agg(DISTINCT b.target) AS targets,
+              (array_agg(b.title ORDER BY b.measured_at ASC NULLS LAST, b.cid ASC))[1] AS title,
+              (array_agg(sp.text ORDER BY b.measured_at ASC NULLS LAST, b.cid ASC))[1] AS prompt_text
+            FROM cbase b LEFT JOIN scope_prompts sp ON sp.prompt_id = b.prompt_id
+            GROUP BY 1, 2
+          ), urls AS (
+            SELECT domain, url, title, prompt_text, cites, targets FROM (
+              SELECT u.*, row_number() OVER (PARTITION BY domain ORDER BY cites DESC, url) AS rk
+              FROM u
+            ) t WHERE rk <= $59::int
+          ), pl AS (
+            SELECT b.domain, b.prompt_id, count(*)::int AS cites,
+              count(*) FILTER (WHERE (((split_part(base, '/', 1) = ANY(ARRAY[$60]::text[]) AND ((base = ANY(ARRAY[$61]::text[]) OR base LIKE ANY(ARRAY[$62]::text[]) OR base = ANY(ARRAY[$63]::text[])))) OR base IN (
+    SELECT DISTINCT rtrim(split_part(split_part(regexp_replace(regexp_replace(lower(btrim(wp.target_url, E' 	
+
+')), '^https?://', ''), '^www\\.', ''), '?', 1), '#', 1), '/') AS turl
+    FROM website_prompts wp
+    JOIN website_sites ws ON ws.id = wp.site_id
+    WHERE ws.scope_project_id::text = ANY($64::text[]) AND wp.target_url <> '')) OR (NULLIF(base, '') IS NULL AND domain ~* $65)))::int AS owned_cites,
+              array_agg(DISTINCT b.target) AS targets
+            FROM cbase b
+            WHERE b.prompt_id IS NOT NULL AND b.domain IN ($66)
+            GROUP BY 1, 2
+          ), plr AS (
+            SELECT pl.*, row_number() OVER (PARTITION BY domain ORDER BY cites DESC, prompt_id) AS rk
+            FROM pl
+          ), keep AS (
+            SELECT domain, prompt_id FROM plr WHERE rk <= $67
+          ), prompts AS (
+            SELECT r.domain, r.prompt_id, r.cites, r.owned_cites, r.targets, sp.text, sp.funnel_stage AS funnel
+            FROM plr r LEFT JOIN scope_prompts sp ON sp.prompt_id = r.prompt_id
+            WHERE r.rk <= $68
+          ), refs AS (
+            SELECT b.domain, b.prompt_id, b.job_id, b.target, b.region, count(*)::int AS cites
+            FROM cbase b
+            WHERE b.prompt_id IS NOT NULL AND b.domain IN ($69)
+            GROUP BY 1, 2, 3, 4, 5
+          ), prefs AS (
+            SELECT domain, prompt_id, job_id, target, region, cites FROM (
+              SELECT refs.*, row_number() OVER (PARTITION BY refs.domain, refs.prompt_id ORDER BY refs.cites DESC, refs.job_id) AS rk
+              FROM refs JOIN keep ON keep.domain = refs.domain AND keep.prompt_id = refs.prompt_id
+            ) t WHERE rk <= $70
+          )
+          SELECT
+            COALESCE((SELECT json_agg(urls) FROM urls), '[]'::json) AS urls,
+            COALESCE((SELECT json_agg(prompts) FROM prompts), '[]'::json) AS prompt_rows,
+            COALESCE((SELECT json_agg(prefs) FROM prefs), '[]'::json) AS prompt_refs
+        
+
+/* ── 다음 문장 ── */
+
+
+            SELECT prompt_id, job_id, target, region, cites FROM (
+              SELECT a.prompt_id, a.job_id, a.target, a.region, count(*)::int AS cites,
+                row_number() OVER (PARTITION BY a.prompt_id ORDER BY count(*) DESC, a.job_id) AS rk
+              FROM scope_citations c JOIN scope_answers a ON a.job_id = c.job_id
+              WHERE true AND a.job_id IN (
+    SELECT DISTINCT ON (a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id
+    JOIN (
+      SELECT r.project_id, max(a.measured_at) - interval '7 days' AS floor_at
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE r.project_id = ANY($1::uuid[])
+        AND r.status IN ('completed', 'partial_failed')
+        AND a.status = 'completed'
+      GROUP BY r.project_id
+    ) pm ON pm.project_id = r.project_id
+    WHERE r.project_id = ANY($2::uuid[])
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed'
+      AND a.measured_at >= pm.floor_at
+    ORDER BY a.prompt_id, a.target, a.region, a.measured_at DESC
+  ) AND c.domain IS NOT NULL
+                AND a.prompt_id IN ($3)
+              GROUP BY a.prompt_id, a.job_id, a.target, a.region
+            ) t WHERE rk <= $4
+          "
+`;
+
+exports[`키 off 문장 스냅샷 — 커밋을 가로질러 고정한다 > 자사·타겟 URL 인용률 > 자사·타겟 URL 인용률 1`] = `
+"
+    WITH snap AS MATERIALIZED (
+      SELECT a.job_id, a.prompt_id FROM scope_answers a
+      WHERE a.status = 'completed' AND true AND a.job_id IN (
+    SELECT DISTINCT ON (a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id
+    JOIN (
+      SELECT r.project_id, max(a.measured_at) - interval '7 days' AS floor_at
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE r.project_id = ANY($1::uuid[])
+        AND r.status IN ('completed', 'partial_failed')
+        AND a.status = 'completed'
+      GROUP BY r.project_id
+    ) pm ON pm.project_id = r.project_id
+    WHERE r.project_id = ANY($2::uuid[])
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed'
+      AND a.measured_at >= pm.floor_at
+    ORDER BY a.prompt_id, a.target, a.region, a.measured_at DESC
+  ) AND a.prompt_id IS NOT NULL
+    ),
+    wp AS MATERIALIZED (
+      -- 등록 프롬프트 ↔ 그 프롬프트의 지정 타겟(정규화). 인용 URL 과 같은 정규화를 써야
+      -- http/https·www·끝 슬래시·트래킹 파라미터 차이로 도달을 놓치지 않는다.
+      -- 타겟이 빈 유닛도 **분모에는 남는다**(결정 4) — 빈 타겟은 NULL 로 만들어
+      -- 비교식이 NULL(=미도달)로 접히게 한다.
+      SELECT wp.scope_prompt_id AS prompt_id,
+        nullif(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(lower(regexp_replace(coalesce(wp.target_url, ''), '^\\s+|\\s+$', '', 'g')), '^https?://', ''), '^www\\.', ''), '#.*$', ''), $3, '', 'g'), $4, '?'), $5, ''), '/+$', ''), '') AS turl
+      FROM website_prompts wp
+      JOIN website_sites ws ON ws.id = wp.site_id
+      WHERE ws.scope_project_id::text = ANY($6::text[])
+    ),
+    -- 정규화는 DISTINCT url 당 1회. 종전에는 cit 가 인라인되며 정규화 식이 해시
+    -- 조인 조건으로 올라가, snap(2.7만 job) 으로 좁히지 못하고 scope_citations
+    -- 전체 294만행에 regex 7단을 돌렸다 (2026-09-03 프로덕션 EXPLAIN: 73.9s 중 72.9s).
+    c2 AS MATERIALIZED (
+      SELECT snap.prompt_id, c.url, coalesce(c.domain, '') AS dk
+      FROM scope_citations c JOIN snap ON snap.job_id = c.job_id
+      WHERE c.url IS NOT NULL
+    ),
+    un AS MATERIALIZED (
+      SELECT url, dk, regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(lower(regexp_replace(url, '^\\s+|\\s+$', '', 'g')), '^https?://', ''), '^www\\.', ''), '#.*$', ''), $7, '', 'g'), $8, '?'), $9, ''), '/+$', '') AS cnorm,
+        rtrim(split_part(split_part(regexp_replace(regexp_replace(lower(btrim(url, E' 	
+
+')), '^https?://', ''), '^www\\.', ''), '?', 1), '#', 1), '/') AS base
+      FROM (SELECT DISTINCT url, dk FROM c2) d
+    ),
+    -- 자사 판정도 DISTINCT (url, domain) 당 1회 — ⑥ 의 ub 와 같은 구조다.
+    ub AS MATERIALIZED (
+      SELECT url, dk, cnorm, (split_part(base, '/', 1) = ANY(ARRAY[$10]::text[]) AND ((base = ANY(ARRAY[$11]::text[]) OR base LIKE ANY(ARRAY[$12]::text[]) OR base = ANY(ARRAY[$13]::text[])))) AS owned_base FROM un
+    ),
+    cit AS (
+      SELECT c2.prompt_id, ub.cnorm, ub.owned_base
+      FROM c2 JOIN ub ON ub.url = c2.url AND ub.dk = c2.dk
+    ),
+    -- 프롬프트 단위로 한 번에 접는다. 타겟 일치식은 **행당 1회**만 평가된다 —
+    -- 분자 두 개가 각자 cit ⋈ wp 를 돌면 같은 식이 두 번 평가된다(실측 5.2s → 4.1s).
+    -- 자사는 여기서 base 판정만 접고, "타겟 ⊂ 자사" 는 아래에서 OR 로 얹는다:
+    -- bool_or(a OR b) = bool_or(a) OR bool_or(b) 이므로 결과가 같다.
+    pm AS MATERIALIZED (
+      SELECT cit.prompt_id,
+        bool_or(CASE
+      WHEN coalesce(wp.turl, '') = '' OR coalesce(cit.cnorm, '') = '' THEN false
+      ELSE cit.cnorm = wp.turl END) AS target_hit,
+        bool_or(cit.owned_base) AS owned_base_hit
+      FROM cit JOIN wp ON wp.prompt_id = cit.prompt_id::text
+      GROUP BY cit.prompt_id
+    )
+    SELECT
+      (SELECT count(DISTINCT snap.prompt_id) FROM snap
+        JOIN wp ON wp.prompt_id = snap.prompt_id::text)::int AS measured_prompts,
+      (SELECT count(*) FROM pm WHERE pm.target_hit)::int AS hit_prompts,
+      (SELECT count(*) FROM pm WHERE pm.owned_base_hit OR pm.target_hit)::int AS owned_prompts
+  "
+`;
+
+exports[`키 off 문장 스냅샷 — 커밋을 가로질러 고정한다 > 출처 구성 > 출처 구성 1`] = `
+"
+    SELECT c.domain AS domain,
+      count(*)::int AS citations,
+      bool_or(c.domain ~* $1) AS is_ours
+    FROM scope_citations c
+    WHERE c.domain IS NOT NULL AND c.job_id IN (SELECT a.job_id FROM scope_answers a WHERE a.status = 'completed' AND true AND a.job_id IN (
+    SELECT DISTINCT ON (a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id
+    JOIN (
+      SELECT r.project_id, max(a.measured_at) - interval '7 days' AS floor_at
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE r.project_id = ANY($2::uuid[])
+        AND r.status IN ('completed', 'partial_failed')
+        AND a.status = 'completed'
+      GROUP BY r.project_id
+    ) pm ON pm.project_id = r.project_id
+    WHERE r.project_id = ANY($3::uuid[])
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed'
+      AND a.measured_at >= pm.floor_at
+    ORDER BY a.prompt_id, a.target, a.region, a.measured_at DESC
+  ))
+    GROUP BY c.domain ORDER BY citations DESC
+  "
+`;
+
+exports[`키 off 문장 스냅샷 — 커밋을 가로질러 고정한다 > 코어 ⑤ > 코어 ⑤ 1`] = `
+"SET LOCAL idle_in_transaction_session_timeout = '30s'
+
+/* ── 다음 문장 ── */
+
+CREATE TEMP TABLE _answer_set ON COMMIT DROP AS SELECT a.job_id, a.region, a.measured_at, a.run_id FROM scope_answers a WHERE a.status = 'completed' AND true AND a.job_id IN (
+    SELECT DISTINCT ON (a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id
+    JOIN (
+      SELECT r.project_id, max(a.measured_at) - interval '7 days' AS floor_at
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE r.project_id = ANY($1::uuid[])
+        AND r.status IN ('completed', 'partial_failed')
+        AND a.status = 'completed'
+      GROUP BY r.project_id
+    ) pm ON pm.project_id = r.project_id
+    WHERE r.project_id = ANY($2::uuid[])
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed'
+      AND a.measured_at >= pm.floor_at
+    ORDER BY a.prompt_id, a.target, a.region, a.measured_at DESC
+  )
+
+/* ── 다음 문장 ── */
+
+ANALYZE _answer_set
+
+/* ── 다음 문장 ── */
+
+
+    WITH ans AS (
+      -- 지역별 asOf 도 회차(cycle) 기준 — 표준 asOf 와 같은 규칙(축 라우터
+      -- cycleAsOfRowSql: 앵커 축이면 ca.round_date, 아니면 COALESCE 폴백).
+      SELECT COALESCE(a.region, 'UNKNOWN') AS region,
+        COALESCE(r.cycle_anchor_at, a.measured_at) AS measured_at,
+        EXISTS (
+          SELECT 1 FROM scope_mentions m
+          WHERE m.job_id = a.job_id AND (CASE WHEN m.brand_rollup_entity_id IS NULL THEN m.brand_rollup_entity_id WHEN m.brand ~* $1 THEN $2 WHEN m.brand ~* $3 THEN $4 WHEN m.brand ~* $5 THEN $6 ELSE (CASE m.brand_rollup_entity_id WHEN $7 THEN $8 WHEN $9 THEN $10 WHEN $11 THEN $12 WHEN $13 THEN $14 WHEN $15 THEN $16 WHEN $17 THEN $18 WHEN $19 THEN $20 ELSE m.brand_rollup_entity_id END) END) IN ($21, $22, $23, $24, $25, $26, $27, $28, $29, $30)
+        ) AS has_tracked
+      FROM _answer_set a LEFT JOIN scope_runs r ON r.run_id = a.run_id
+    )
+    SELECT region,
+      count(*)::int AS answers,
+      count(*) FILTER (WHERE has_tracked)::int AS tracked,
+      max(measured_at) AS last_measured_at
+    FROM ans GROUP BY region ORDER BY region
+  
+
+/* ── 다음 문장 ── */
+
+
+    WITH names AS (
+  SELECT r.entity_id, r.brand,
+         (CASE r.brand WHEN $1 THEN $2 WHEN $3 THEN $4 WHEN $5 THEN $6 WHEN $7 THEN $8 WHEN $9 THEN $10 WHEN $11 THEN $12 WHEN $13 THEN $14 WHEN $15 THEN $16 WHEN $17 THEN $18 WHEN $19 THEN $20 WHEN $21 THEN $22 WHEN $23 THEN $24 WHEN $25 THEN $26 WHEN $27 THEN $28 WHEN $29 THEN $30 WHEN $31 THEN $32 WHEN $33 THEN $34 WHEN $35 THEN $36 WHEN $37 THEN $38 WHEN $39 THEN $40 WHEN $41 THEN $42 WHEN $43 THEN $44 WHEN $45 THEN $46 WHEN $47 THEN $48 WHEN $49 THEN $50 WHEN $51 THEN $52 WHEN $53 THEN $54 WHEN $55 THEN $56 WHEN $57 THEN $58 WHEN $59 THEN $60 WHEN $61 THEN $62 WHEN $63 THEN $64 WHEN $65 THEN $66 WHEN $67 THEN $68 WHEN $69 THEN $70 WHEN $71 THEN $72 WHEN $73 THEN $74 WHEN $75 THEN $76 ELSE r.brand END) AS cname,
+         lower(btrim((CASE r.brand WHEN $77 THEN $78 WHEN $79 THEN $80 WHEN $81 THEN $82 WHEN $83 THEN $84 WHEN $85 THEN $86 WHEN $87 THEN $88 WHEN $89 THEN $90 WHEN $91 THEN $92 WHEN $93 THEN $94 WHEN $95 THEN $96 WHEN $97 THEN $98 WHEN $99 THEN $100 WHEN $101 THEN $102 WHEN $103 THEN $104 WHEN $105 THEN $106 WHEN $107 THEN $108 WHEN $109 THEN $110 WHEN $111 THEN $112 WHEN $113 THEN $114 WHEN $115 THEN $116 WHEN $117 THEN $118 WHEN $119 THEN $120 WHEN $121 THEN $122 WHEN $123 THEN $124 WHEN $125 THEN $126 WHEN $127 THEN $128 WHEN $129 THEN $130 WHEN $131 THEN $132 WHEN $133 THEN $134 WHEN $135 THEN $136 WHEN $137 THEN $138 WHEN $139 THEN $140 WHEN $141 THEN $142 WHEN $143 THEN $144 WHEN $145 THEN $146 WHEN $147 THEN $148 WHEN $149 THEN $150 WHEN $151 THEN $152 ELSE r.brand END), $153)) AS bare
+  FROM (
+  WITH RECURSIVE _rn_pairs AS (
+    (SELECT m.entity_id, m.brand FROM scope_mentions m
+      WHERE m.entity_type = 'Brand' AND m.brand IS NOT NULL
+      ORDER BY m.entity_id, m.brand LIMIT 1)
+    UNION ALL
+    SELECT nx.entity_id, nx.brand FROM _rn_pairs p
+    CROSS JOIN LATERAL (
+      SELECT m.entity_id, m.brand FROM scope_mentions m
+      WHERE m.entity_type = 'Brand' AND m.brand IS NOT NULL
+        AND (m.entity_id, m.brand) > (p.entity_id, p.brand)
+      ORDER BY m.entity_id, m.brand LIMIT 1
+    ) nx
+  )
+  SELECT DISTINCT ON (entity_id) entity_id, brand
+  FROM _rn_pairs ORDER BY entity_id, (brand ~ '^[A-Za-z]') DESC, brand
+) r
+)
+    SELECT COALESCE(n.cname, (CASE x.brand WHEN $154 THEN $155 WHEN $156 THEN $157 WHEN $158 THEN $159 WHEN $160 THEN $161 WHEN $162 THEN $163 WHEN $164 THEN $165 WHEN $166 THEN $167 WHEN $168 THEN $169 WHEN $170 THEN $171 WHEN $172 THEN $173 WHEN $174 THEN $175 WHEN $176 THEN $177 WHEN $178 THEN $179 WHEN $180 THEN $181 WHEN $182 THEN $183 WHEN $184 THEN $185 WHEN $186 THEN $187 WHEN $188 THEN $189 WHEN $190 THEN $191 WHEN $192 THEN $193 WHEN $194 THEN $195 WHEN $196 THEN $197 WHEN $198 THEN $199 WHEN $200 THEN $201 WHEN $202 THEN $203 WHEN $204 THEN $205 WHEN $206 THEN $207 WHEN $208 THEN $209 WHEN $210 THEN $211 WHEN $212 THEN $213 WHEN $214 THEN $215 WHEN $216 THEN $217 WHEN $218 THEN $219 WHEN $220 THEN $221 WHEN $222 THEN $223 WHEN $224 THEN $225 WHEN $226 THEN $227 WHEN $228 THEN $229 ELSE x.brand END)) AS name,
+      sum(x.mention_count)::int AS mentions,
+      count(DISTINCT x.job_id)::int AS answers,
+      bool_or(x.rid IN ($230, $231, $232, $233, $234, $235, $236, $237, $238, $239)) AS is_tracked
+    FROM (
+      SELECT m.job_id, m.mention_count, m.brand,
+        (CASE WHEN m.brand_rollup_entity_id IS NULL THEN m.brand_rollup_entity_id WHEN m.brand ~* $240 THEN $241 WHEN m.brand ~* $242 THEN $243 WHEN m.brand ~* $244 THEN $245 ELSE (CASE m.brand_rollup_entity_id WHEN $246 THEN $247 WHEN $248 THEN $249 WHEN $250 THEN $251 WHEN $252 THEN $253 WHEN $254 THEN $255 WHEN $256 THEN $257 WHEN $258 THEN $259 ELSE m.brand_rollup_entity_id END) END) AS rid
+      FROM scope_mentions m JOIN _answer_set a ON a.job_id = m.job_id
+      WHERE m.brand_rollup_entity_id IS NOT NULL
+      OFFSET 0
+    ) x
+    LEFT JOIN names n ON n.entity_id = x.rid
+    WHERE COALESCE(n.brand, x.brand) IS NOT NULL
+      AND (CASE COALESCE(n.bare, lower(btrim((CASE x.brand WHEN $260 THEN $261 WHEN $262 THEN $263 WHEN $264 THEN $265 WHEN $266 THEN $267 WHEN $268 THEN $269 WHEN $270 THEN $271 WHEN $272 THEN $273 WHEN $274 THEN $275 WHEN $276 THEN $277 WHEN $278 THEN $279 WHEN $280 THEN $281 WHEN $282 THEN $283 WHEN $284 THEN $285 WHEN $286 THEN $287 WHEN $288 THEN $289 WHEN $290 THEN $291 WHEN $292 THEN $293 WHEN $294 THEN $295 WHEN $296 THEN $297 WHEN $298 THEN $299 WHEN $300 THEN $301 WHEN $302 THEN $303 WHEN $304 THEN $305 WHEN $306 THEN $307 WHEN $308 THEN $309 WHEN $310 THEN $311 WHEN $312 THEN $313 WHEN $314 THEN $315 WHEN $316 THEN $317 WHEN $318 THEN $319 WHEN $320 THEN $321 WHEN $322 THEN $323 WHEN $324 THEN $325 WHEN $326 THEN $327 WHEN $328 THEN $329 WHEN $330 THEN $331 WHEN $332 THEN $333 WHEN $334 THEN $335 ELSE x.brand END), $336))) WHEN $337 THEN (x.brand ~* $338) WHEN $339 THEN (x.brand ~* $340) WHEN $341 THEN (x.brand ~* $342) WHEN $343 THEN (x.brand ~* $344) WHEN $345 THEN (x.brand ~* $346) WHEN $347 THEN (x.brand ~* $348) WHEN $349 THEN (x.brand ~* $350) WHEN $351 THEN (x.brand ~* $352) WHEN $353 THEN (x.brand ~* $354) WHEN $355 THEN (x.brand ~* $356) WHEN $357 THEN (x.brand ~* $358) WHEN $359 THEN (x.brand ~* $360) WHEN $361 THEN (x.brand ~* $362) WHEN $363 THEN (x.brand ~* $364) WHEN $365 THEN (x.brand ~* $366) WHEN $367 THEN (x.brand ~* $368) WHEN $369 THEN (x.brand ~* $370) WHEN $371 THEN (x.brand ~* $372) WHEN $373 THEN (x.brand ~* $374) WHEN $375 THEN (x.brand ~* $376) WHEN $377 THEN (x.brand ~* $378) WHEN $379 THEN (x.brand ~* $380) WHEN $381 THEN (x.brand ~* $382) WHEN $383 THEN (x.brand ~* $384) WHEN $385 THEN (x.brand ~* $386) WHEN $387 THEN (x.brand ~* $388) WHEN $389 THEN (x.brand ~* $390) ELSE COALESCE(n.bare, lower(btrim((CASE x.brand WHEN $391 THEN $392 WHEN $393 THEN $394 WHEN $395 THEN $396 WHEN $397 THEN $398 WHEN $399 THEN $400 WHEN $401 THEN $402 WHEN $403 THEN $404 WHEN $405 THEN $406 WHEN $407 THEN $408 WHEN $409 THEN $410 WHEN $411 THEN $412 WHEN $413 THEN $414 WHEN $415 THEN $416 WHEN $417 THEN $418 WHEN $419 THEN $420 WHEN $421 THEN $422 WHEN $423 THEN $424 WHEN $425 THEN $426 WHEN $427 THEN $428 WHEN $429 THEN $430 WHEN $431 THEN $432 WHEN $433 THEN $434 WHEN $435 THEN $436 WHEN $437 THEN $438 WHEN $439 THEN $440 WHEN $441 THEN $442 WHEN $443 THEN $444 WHEN $445 THEN $446 WHEN $447 THEN $448 WHEN $449 THEN $450 WHEN $451 THEN $452 WHEN $453 THEN $454 WHEN $455 THEN $456 WHEN $457 THEN $458 WHEN $459 THEN $460 WHEN $461 THEN $462 WHEN $463 THEN $464 WHEN $465 THEN $466 ELSE x.brand END), $467))) NOT IN ($468, $469, $470, $471, $472, $473, $474, $475, $476, $477, $478, $479, $480, $481, $482, $483, $484, $485, $486, $487, $488, $489, $490, $491, $492, $493, $494, $495, $496, $497, $498, $499, $500, $501, $502, $503, $504, $505, $506, $507, $508, $509, $510, $511, $512, $513, $514, $515, $516, $517, $518, $519, $520, $521, $522, $523, $524, $525, $526, $527, $528, $529, $530, $531, $532, $533, $534, $535, $536, $537, $538, $539, $540, $541, $542, $543, $544, $545, $546, $547, $548, $549, $550, $551, $552, $553, $554, $555, $556, $557, $558, $559, $560, $561, $562, $563, $564, $565, $566, $567, $568, $569, $570, $571, $572, $573, $574, $575, $576, $577, $578, $579, $580, $581, $582, $583, $584, $585, $586, $587, $588, $589, $590, $591, $592, $593, $594, $595, $596, $597, $598, $599, $600, $601, $602, $603, $604, $605, $606, $607, $608, $609, $610, $611, $612, $613, $614, $615, $616, $617, $618, $619, $620, $621, $622, $623, $624, $625) END)
+    GROUP BY 1
+    ORDER BY mentions DESC
+  
+
+/* ── 다음 문장 ── */
+
+
+    SELECT
+      COALESCE(sum(m.sentiment_positive), 0)::int AS p,
+      COALESCE(sum(m.sentiment_neutral), 0)::int AS ne,
+      COALESCE(sum(m.sentiment_negative), 0)::int AS ng,
+      COALESCE(sum(m.sentiment_mixed), 0)::int AS mx
+    FROM scope_mentions m
+    WHERE (CASE WHEN m.brand_rollup_entity_id IS NULL THEN m.brand_rollup_entity_id WHEN m.brand ~* $1 THEN $2 WHEN m.brand ~* $3 THEN $4 WHEN m.brand ~* $5 THEN $6 ELSE (CASE m.brand_rollup_entity_id WHEN $7 THEN $8 WHEN $9 THEN $10 WHEN $11 THEN $12 WHEN $13 THEN $14 WHEN $15 THEN $16 WHEN $17 THEN $18 WHEN $19 THEN $20 ELSE m.brand_rollup_entity_id END) END) IN ($21, $22, $23, $24, $25, $26, $27, $28, $29, $30) AND m.job_id IN (SELECT job_id FROM _answer_set)
+  
+
+/* ── 다음 문장 ── */
+
+
+    WITH pos AS (
+      SELECT r.rk AS tp
+      FROM _answer_set a
+      LEFT JOIN (
+    WITH names AS (
+  WITH RECURSIVE _rn_pairs AS (
+    (SELECT m.entity_id, m.brand FROM scope_mentions m
+      WHERE m.entity_type = 'Brand' AND m.brand IS NOT NULL
+      ORDER BY m.entity_id, m.brand LIMIT 1)
+    UNION ALL
+    SELECT nx.entity_id, nx.brand FROM _rn_pairs p
+    CROSS JOIN LATERAL (
+      SELECT m.entity_id, m.brand FROM scope_mentions m
+      WHERE m.entity_type = 'Brand' AND m.brand IS NOT NULL
+        AND (m.entity_id, m.brand) > (p.entity_id, p.brand)
+      ORDER BY m.entity_id, m.brand LIMIT 1
+    ) nx
+  )
+  SELECT DISTINCT ON (entity_id) entity_id, brand
+  FROM _rn_pairs ORDER BY entity_id, (brand ~ '^[A-Za-z]') DESC, brand
+),
+    _br_src AS MATERIALIZED (
+      SELECT (CASE WHEN m.brand_rollup_entity_id IS NULL THEN m.brand_rollup_entity_id WHEN m.brand ~* $1 THEN $2 WHEN m.brand ~* $3 THEN $4 WHEN m.brand ~* $5 THEN $6 ELSE (CASE m.brand_rollup_entity_id WHEN $7 THEN $8 WHEN $9 THEN $10 WHEN $11 THEN $12 WHEN $13 THEN $14 WHEN $15 THEN $16 WHEN $17 THEN $18 WHEN $19 THEN $20 ELSE m.brand_rollup_entity_id END) END) AS rid, COALESCE(m.brand, '') AS brand, m.job_id, m.avg_position
+      FROM scope_mentions m
+      JOIN _answer_set a ON a.job_id = m.job_id
+      WHERE m.brand_rollup_entity_id IS NOT NULL
+        AND m.avg_position IS NOT NULL
+    ),
+    _br_raw AS MATERIALIZED (
+      SELECT (CASE COALESCE(n.brand, s.brand) WHEN $21 THEN $22 WHEN $23 THEN $24 WHEN $25 THEN $26 WHEN $27 THEN $28 WHEN $29 THEN $30 WHEN $31 THEN $32 WHEN $33 THEN $34 WHEN $35 THEN $36 WHEN $37 THEN $38 WHEN $39 THEN $40 WHEN $41 THEN $42 WHEN $43 THEN $44 WHEN $45 THEN $46 WHEN $47 THEN $48 WHEN $49 THEN $50 WHEN $51 THEN $52 WHEN $53 THEN $54 WHEN $55 THEN $56 WHEN $57 THEN $58 WHEN $59 THEN $60 WHEN $61 THEN $62 WHEN $63 THEN $64 WHEN $65 THEN $66 WHEN $67 THEN $68 WHEN $69 THEN $70 WHEN $71 THEN $72 WHEN $73 THEN $74 WHEN $75 THEN $76 WHEN $77 THEN $78 WHEN $79 THEN $80 WHEN $81 THEN $82 WHEN $83 THEN $84 WHEN $85 THEN $86 WHEN $87 THEN $88 WHEN $89 THEN $90 WHEN $91 THEN $92 WHEN $93 THEN $94 WHEN $95 THEN $96 ELSE COALESCE(n.brand, s.brand) END) AS name, s.brand, s.job_id, s.avg_position,
+        (s.rid IN ($97, $98, $99, $100, $101, $102, $103, $104, $105, $106)) AS is_trk
+      FROM _br_src s
+      LEFT JOIN names n ON n.entity_id = s.rid
+      WHERE COALESCE(n.brand, s.brand) <> ''
+    ),
+    _br_pairs AS MATERIALIZED (
+      SELECT DISTINCT name, brand FROM _br_raw
+    ),
+    _br_keep AS (
+      SELECT x.name, x.brand FROM _br_pairs x
+      WHERE (CASE lower(btrim(x.name, $107)) WHEN $108 THEN (x.brand ~* $109) WHEN $110 THEN (x.brand ~* $111) WHEN $112 THEN (x.brand ~* $113) WHEN $114 THEN (x.brand ~* $115) WHEN $116 THEN (x.brand ~* $117) WHEN $118 THEN (x.brand ~* $119) WHEN $120 THEN (x.brand ~* $121) WHEN $122 THEN (x.brand ~* $123) WHEN $124 THEN (x.brand ~* $125) WHEN $126 THEN (x.brand ~* $127) WHEN $128 THEN (x.brand ~* $129) WHEN $130 THEN (x.brand ~* $131) WHEN $132 THEN (x.brand ~* $133) WHEN $134 THEN (x.brand ~* $135) WHEN $136 THEN (x.brand ~* $137) WHEN $138 THEN (x.brand ~* $139) WHEN $140 THEN (x.brand ~* $141) WHEN $142 THEN (x.brand ~* $143) WHEN $144 THEN (x.brand ~* $145) WHEN $146 THEN (x.brand ~* $147) WHEN $148 THEN (x.brand ~* $149) WHEN $150 THEN (x.brand ~* $151) WHEN $152 THEN (x.brand ~* $153) WHEN $154 THEN (x.brand ~* $155) WHEN $156 THEN (x.brand ~* $157) WHEN $158 THEN (x.brand ~* $159) WHEN $160 THEN (x.brand ~* $161) ELSE lower(btrim(x.name, $162)) NOT IN ($163, $164, $165, $166, $167, $168, $169, $170, $171, $172, $173, $174, $175, $176, $177, $178, $179, $180, $181, $182, $183, $184, $185, $186, $187, $188, $189, $190, $191, $192, $193, $194, $195, $196, $197, $198, $199, $200, $201, $202, $203, $204, $205, $206, $207, $208, $209, $210, $211, $212, $213, $214, $215, $216, $217, $218, $219, $220, $221, $222, $223, $224, $225, $226, $227, $228, $229, $230, $231, $232, $233, $234, $235, $236, $237, $238, $239, $240, $241, $242, $243, $244, $245, $246, $247, $248, $249, $250, $251, $252, $253, $254, $255, $256, $257, $258, $259, $260, $261, $262, $263, $264, $265, $266, $267, $268, $269, $270, $271, $272, $273, $274, $275, $276, $277, $278, $279, $280, $281, $282, $283, $284, $285, $286, $287, $288, $289, $290, $291, $292, $293, $294, $295, $296, $297, $298, $299, $300, $301, $302, $303, $304, $305, $306, $307, $308, $309, $310, $311, $312, $313, $314, $315, $316, $317, $318, $319, $320) END)
+    ),
+    _br_mm AS (
+      SELECT r.name, r.job_id, r.avg_position, r.is_trk
+      FROM _br_raw r JOIN _br_keep k ON k.name = r.name AND k.brand = r.brand
+    ),
+    _br_pos AS (
+      SELECT name, job_id, min(avg_position) AS tp, bool_or(is_trk) AS is_trk
+      FROM _br_mm GROUP BY 1, 2
+    ),
+    _br_rk AS (
+      SELECT job_id, is_trk,
+        rank() OVER (PARTITION BY job_id ORDER BY tp) AS rk
+      FROM _br_pos
+    )
+    SELECT job_id, min(rk)::int AS rk FROM _br_rk WHERE is_trk GROUP BY job_id
+  ) r ON r.job_id = a.job_id
+    )
+    SELECT round(avg(tp)::numeric, 1) AS avg_position, count(tp)::int AS sampled
+    FROM pos
+  
+
+/* ── 다음 문장 ── */
+
+
+    WITH c2 AS MATERIALIZED (
+      SELECT c.job_id, c.url
+      FROM scope_citations c WHERE c.job_id IN (SELECT job_id FROM _answer_set)
+    ),
+    ub AS MATERIALIZED (
+    SELECT url, ((split_part(base, '/', 1) = ANY(ARRAY[$1]::text[]) AND ((base = ANY(ARRAY[$2]::text[]) OR base LIKE ANY(ARRAY[$3]::text[]) OR base = ANY(ARRAY[$4]::text[])))) OR base IN (
+    SELECT DISTINCT rtrim(split_part(split_part(regexp_replace(regexp_replace(lower(btrim(wp.target_url, E' 	
+
+')), '^https?://', ''), '^www\\.', ''), '?', 1), '#', 1), '/') AS turl
+    FROM website_prompts wp
+    JOIN website_sites ws ON ws.id = wp.site_id
+    WHERE ws.scope_project_id::text = ANY($5::text[]) AND wp.target_url <> '')) AS owned
+    FROM (SELECT url, rtrim(split_part(split_part(regexp_replace(regexp_replace(lower(btrim(url, E' 	
+
+')), '^https?://', ''), '^www\\.', ''), '?', 1), '#', 1), '/') AS base
+        FROM (SELECT DISTINCT url FROM c2) d) x
+  )
+    SELECT count(*)::int AS total,
+      count(*) FILTER (WHERE COALESCE(ub.owned, false))::int AS owned,
+      count(DISTINCT c2.job_id)::int AS with_cit
+    FROM c2 LEFT JOIN ub ON ub.url = c2.url
+  
+
+/* ── 다음 문장 ── */
+
+
+    WITH c2 AS MATERIALIZED (
+      SELECT c.job_id, c.domain, c.url
+      FROM scope_citations c
+      WHERE c.domain IS NOT NULL AND c.job_id IN (SELECT job_id FROM _answer_set)
+    ),
+    ub AS MATERIALIZED (
+    SELECT url, ((split_part(base, '/', 1) = ANY(ARRAY[$1]::text[]) AND ((base = ANY(ARRAY[$2]::text[]) OR base LIKE ANY(ARRAY[$3]::text[]) OR base = ANY(ARRAY[$4]::text[])))) OR base IN (
+    SELECT DISTINCT rtrim(split_part(split_part(regexp_replace(regexp_replace(lower(btrim(wp.target_url, E' 	
+
+')), '^https?://', ''), '^www\\.', ''), '?', 1), '#', 1), '/') AS turl
+    FROM website_prompts wp
+    JOIN website_sites ws ON ws.id = wp.site_id
+    WHERE ws.scope_project_id::text = ANY($5::text[]) AND wp.target_url <> '')) AS owned
+    FROM (SELECT url, rtrim(split_part(split_part(regexp_replace(regexp_replace(lower(btrim(url, E' 	
+
+')), '^https?://', ''), '^www\\.', ''), '?', 1), '#', 1), '/') AS base
+        FROM (SELECT DISTINCT url FROM c2) d) x
+  )
+    SELECT c2.domain AS host,
+      count(DISTINCT c2.job_id)::int AS citing_answers,
+      count(*)::int AS citations,
+      count(*) FILTER (WHERE COALESCE(ub.owned, false))::int AS owned_citations,
+      bool_or(COALESCE(ub.owned, false)) AS is_ours
+    FROM c2 LEFT JOIN ub ON ub.url = c2.url
+    GROUP BY c2.domain ORDER BY citing_answers DESC
+  "
+`;

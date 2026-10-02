@@ -1,0 +1,69 @@
+{
+  "sha": "8c9b3e7",
+  "note": "8c9b3e7 의 scope-aggregates.ts 빌더를 그대로 복원해 뽑은 텍스트. 함대 조각은 그 시점 판본(hidden_reason 포함)을 주입했다.",
+  "cases": {
+    "루트 추이(기간 없음)": {
+      "text": "a.status = 'completed' AND true AND a.run_id IN (SELECT run_id FROM scope_runs WHERE true) AND a.region NOT IN ($1) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $2 AND scope_prompt_id IS NOT NULL)",
+      "params": [
+        "ID",
+        "26751906-c175-485c-9e69-29fc68d0fdbb"
+      ]
+    },
+    "루트 추이(기간)": {
+      "text": "a.status = 'completed' AND true AND a.run_id IN (SELECT run_id FROM scope_runs WHERE true) AND a.job_id IN (SELECT ca.job_id FROM scope_answer_cycle_anchors ca WHERE ca.round_date >= $1::date AND ca.round_date <= $2::date AND ca.view_anchor_date IS NOT NULL\n      AND ca.view_anchor_date <= hmg_anchor_today() AND true AND (ca.surface = 'project' OR EXISTS (\n    SELECT 1 FROM summary_cycles sc\n     WHERE sc.cycle_id = ca.cycle_id\n       AND sc.fleet_visible\n       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()\n       AND sc.active_generation_id IS NOT NULL AND sc.hidden_reason IS NULL\n  )) AND ca.is_default_engine) AND a.region NOT IN ($3) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $4 AND scope_prompt_id IS NOT NULL)",
+      "params": [
+        "2026-08-20",
+        "2026-09-04",
+        "ID",
+        "26751906-c175-485c-9e69-29fc68d0fdbb"
+      ]
+    },
+    "루트 스냅샷": {
+      "text": "a.status = 'completed' AND true AND a.job_id IN (\n    SELECT DISTINCT ON (ca.round_date, a.prompt_id, a.target, a.region) a.job_id\n    FROM scope_answers a\n    JOIN scope_runs r ON r.run_id = a.run_id JOIN scope_answer_cycle_anchors ca ON ca.job_id = a.job_id\n    WHERE true\n      AND r.status IN ('completed', 'partial_failed')\n      AND a.status = 'completed' AND a.region NOT IN ($1) AND NOT (\n    a.region <> 'KR'\n    AND a.prompt_id IS NOT NULL\n    AND a.prompt_id IN (SELECT sp.prompt_id FROM scope_prompts sp WHERE sp.is_korean)\n  ) AND (\n    a.prompt_id IS NULL\n    OR a.prompt_id NOT IN (\n      SELECT sp.prompt_id FROM scope_prompts sp\n      WHERE sp.prompt_id IS NOT NULL\n        AND sp.regions IS NOT NULL AND cardinality(sp.regions) > 0\n    )\n    OR (a.prompt_id, a.region) IN (\n      SELECT sp.prompt_id, r FROM scope_prompts sp, unnest(sp.regions) AS r\n      WHERE sp.prompt_id IS NOT NULL\n        AND sp.regions IS NOT NULL AND cardinality(sp.regions) > 0\n    )\n  ) AND ca.round_date = (SELECT max(ca2.round_date) FROM scope_answer_cycle_anchors ca2 WHERE ca2.surface = 'standard' AND ca2.view_anchor_date IS NOT NULL\n      AND ca2.view_anchor_date <= hmg_anchor_today() AND true AND (ca.surface = 'project' OR EXISTS (\n    SELECT 1 FROM summary_cycles sc\n     WHERE sc.cycle_id = ca.cycle_id\n       AND sc.fleet_visible\n       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()\n       AND sc.active_generation_id IS NOT NULL AND sc.hidden_reason IS NULL\n  ))) AND ca.view_anchor_date IS NOT NULL\n      AND ca.view_anchor_date <= hmg_anchor_today() AND true AND (ca.surface = 'project' OR EXISTS (\n    SELECT 1 FROM summary_cycles sc\n     WHERE sc.cycle_id = ca.cycle_id\n       AND sc.fleet_visible\n       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()\n       AND sc.active_generation_id IS NOT NULL AND sc.hidden_reason IS NULL\n  )) AND ca.is_default_engine\n    ORDER BY ca.round_date, a.prompt_id, a.target, a.region, ca.measured_at_orig DESC, a.job_id DESC\n  ) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $2 AND scope_prompt_id IS NOT NULL)",
+      "params": [
+        "ID",
+        "26751906-c175-485c-9e69-29fc68d0fdbb"
+      ]
+    },
+    "루트 누적": {
+      "text": "a.status = 'completed' AND true AND a.job_id IN (\n    SELECT DISTINCT ON (ca.round_date, a.prompt_id, a.target, a.region) a.job_id\n    FROM scope_answers a\n    JOIN scope_runs r ON r.run_id = a.run_id JOIN scope_answer_cycle_anchors ca ON ca.job_id = a.job_id\n    WHERE true\n      AND r.status IN ('completed', 'partial_failed')\n      AND a.status = 'completed' AND a.region NOT IN ($1) AND NOT (\n    a.region <> 'KR'\n    AND a.prompt_id IS NOT NULL\n    AND a.prompt_id IN (SELECT sp.prompt_id FROM scope_prompts sp WHERE sp.is_korean)\n  ) AND (\n    a.prompt_id IS NULL\n    OR a.prompt_id NOT IN (\n      SELECT sp.prompt_id FROM scope_prompts sp\n      WHERE sp.prompt_id IS NOT NULL\n        AND sp.regions IS NOT NULL AND cardinality(sp.regions) > 0\n    )\n    OR (a.prompt_id, a.region) IN (\n      SELECT sp.prompt_id, r FROM scope_prompts sp, unnest(sp.regions) AS r\n      WHERE sp.prompt_id IS NOT NULL\n        AND sp.regions IS NOT NULL AND cardinality(sp.regions) > 0\n    )\n  ) AND ca.round_date >= $2::date AND ca.round_date <= $3::date AND ca.view_anchor_date IS NOT NULL\n      AND ca.view_anchor_date <= hmg_anchor_today() AND true AND (ca.surface = 'project' OR EXISTS (\n    SELECT 1 FROM summary_cycles sc\n     WHERE sc.cycle_id = ca.cycle_id\n       AND sc.fleet_visible\n       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()\n       AND sc.active_generation_id IS NOT NULL AND sc.hidden_reason IS NULL\n  )) AND ca.is_default_engine\n    ORDER BY ca.round_date, a.prompt_id, a.target, a.region, ca.measured_at_orig DESC, a.job_id DESC\n  ) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $4 AND scope_prompt_id IS NOT NULL)",
+      "params": [
+        "ID",
+        "2026-08-20",
+        "2026-09-04",
+        "26751906-c175-485c-9e69-29fc68d0fdbb"
+      ]
+    },
+    "상세 추이": {
+      "text": "true AND a.status = 'completed' AND a.run_id IN (SELECT run_id FROM scope_runs WHERE true) AND a.region NOT IN ($1) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $2 AND scope_prompt_id IS NOT NULL)",
+      "params": [
+        "ID",
+        "26751906-c175-485c-9e69-29fc68d0fdbb"
+      ]
+    },
+    "상세 스냅샷": {
+      "text": "true AND a.job_id IN (\n    SELECT DISTINCT ON (ca.round_date, a.prompt_id, a.target, a.region) a.job_id\n    FROM scope_answers a\n    JOIN scope_runs r ON r.run_id = a.run_id JOIN scope_answer_cycle_anchors ca ON ca.job_id = a.job_id\n    WHERE true\n      AND r.status IN ('completed', 'partial_failed')\n      AND a.status = 'completed' AND a.region NOT IN ($1) AND NOT (\n    a.region <> 'KR'\n    AND a.prompt_id IS NOT NULL\n    AND a.prompt_id IN (SELECT sp.prompt_id FROM scope_prompts sp WHERE sp.is_korean)\n  ) AND (\n    a.prompt_id IS NULL\n    OR a.prompt_id NOT IN (\n      SELECT sp.prompt_id FROM scope_prompts sp\n      WHERE sp.prompt_id IS NOT NULL\n        AND sp.regions IS NOT NULL AND cardinality(sp.regions) > 0\n    )\n    OR (a.prompt_id, a.region) IN (\n      SELECT sp.prompt_id, r FROM scope_prompts sp, unnest(sp.regions) AS r\n      WHERE sp.prompt_id IS NOT NULL\n        AND sp.regions IS NOT NULL AND cardinality(sp.regions) > 0\n    )\n  ) AND ca.round_date = (SELECT max(ca2.round_date) FROM scope_answer_cycle_anchors ca2 WHERE ca2.surface = 'standard' AND ca2.view_anchor_date IS NOT NULL\n      AND ca2.view_anchor_date <= hmg_anchor_today() AND true AND (ca.surface = 'project' OR EXISTS (\n    SELECT 1 FROM summary_cycles sc\n     WHERE sc.cycle_id = ca.cycle_id\n       AND sc.fleet_visible\n       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()\n       AND sc.active_generation_id IS NOT NULL AND sc.hidden_reason IS NULL\n  ))) AND ca.view_anchor_date IS NOT NULL\n      AND ca.view_anchor_date <= hmg_anchor_today() AND true AND (ca.surface = 'project' OR EXISTS (\n    SELECT 1 FROM summary_cycles sc\n     WHERE sc.cycle_id = ca.cycle_id\n       AND sc.fleet_visible\n       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()\n       AND sc.active_generation_id IS NOT NULL AND sc.hidden_reason IS NULL\n  )) AND ca.is_default_engine\n    ORDER BY ca.round_date, a.prompt_id, a.target, a.region, ca.measured_at_orig DESC, a.job_id DESC\n  ) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $2 AND scope_prompt_id IS NOT NULL)",
+      "params": [
+        "ID",
+        "26751906-c175-485c-9e69-29fc68d0fdbb"
+      ]
+    },
+    "bare 누적": {
+      "text": "job_id IN (\n    SELECT DISTINCT ON (ca.round_date, a.prompt_id, a.target, a.region) a.job_id\n    FROM scope_answers a\n    JOIN scope_runs r ON r.run_id = a.run_id JOIN scope_answer_cycle_anchors ca ON ca.job_id = a.job_id\n    WHERE true\n      AND r.status IN ('completed', 'partial_failed')\n      AND a.status = 'completed' AND a.region NOT IN ($1) AND NOT (\n    a.region <> 'KR'\n    AND a.prompt_id IS NOT NULL\n    AND a.prompt_id IN (SELECT sp.prompt_id FROM scope_prompts sp WHERE sp.is_korean)\n  ) AND (\n    a.prompt_id IS NULL\n    OR a.prompt_id NOT IN (\n      SELECT sp.prompt_id FROM scope_prompts sp\n      WHERE sp.prompt_id IS NOT NULL\n        AND sp.regions IS NOT NULL AND cardinality(sp.regions) > 0\n    )\n    OR (a.prompt_id, a.region) IN (\n      SELECT sp.prompt_id, r FROM scope_prompts sp, unnest(sp.regions) AS r\n      WHERE sp.prompt_id IS NOT NULL\n        AND sp.regions IS NOT NULL AND cardinality(sp.regions) > 0\n    )\n  ) AND ca.round_date >= $2::date AND ca.round_date <= $3::date AND ca.view_anchor_date IS NOT NULL\n      AND ca.view_anchor_date <= hmg_anchor_today() AND true AND (ca.surface = 'project' OR EXISTS (\n    SELECT 1 FROM summary_cycles sc\n     WHERE sc.cycle_id = ca.cycle_id\n       AND sc.fleet_visible\n       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()\n       AND sc.active_generation_id IS NOT NULL AND sc.hidden_reason IS NULL\n  )) AND ca.is_default_engine\n    ORDER BY ca.round_date, a.prompt_id, a.target, a.region, ca.measured_at_orig DESC, a.job_id DESC\n  ) AND true AND prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $4 AND scope_prompt_id IS NOT NULL)",
+      "params": [
+        "ID",
+        "2026-08-20",
+        "2026-09-04",
+        "26751906-c175-485c-9e69-29fc68d0fdbb"
+      ]
+    },
+    "창 바닥(ca 조인됨)": {
+      "text": "ca.round_date >= hmg_anchor_today() - 120 AND ca.view_anchor_date IS NOT NULL\n      AND ca.view_anchor_date <= hmg_anchor_today() AND (ca.surface = 'project' OR EXISTS (\n    SELECT 1 FROM summary_cycles sc\n     WHERE sc.cycle_id = ca.cycle_id\n       AND sc.fleet_visible\n       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()\n       AND sc.active_generation_id IS NOT NULL AND sc.hidden_reason IS NULL\n  ))",
+      "params": []
+    },
+    "창 바닥(조인 없음)": {
+      "text": "a.job_id IN (SELECT ca.job_id FROM scope_answer_cycle_anchors ca WHERE ca.round_date >= hmg_anchor_today() - 120 AND ca.view_anchor_date IS NOT NULL\n      AND ca.view_anchor_date <= hmg_anchor_today() AND (ca.surface = 'project' OR EXISTS (\n    SELECT 1 FROM summary_cycles sc\n     WHERE sc.cycle_id = ca.cycle_id\n       AND sc.fleet_visible\n       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()\n       AND sc.active_generation_id IS NOT NULL AND sc.hidden_reason IS NULL\n  )))",
+      "params": []
+    }
+  }
+}

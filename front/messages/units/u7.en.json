@@ -1,0 +1,27 @@
+{
+  "answerAnalysis": {
+    "citations": {
+      "table": {
+        "loading": "Loading domains",
+        "loadFailed": "Could not load the domains. Please try again shortly.",
+        "loadMore": "Load more"
+      },
+      "drilldown": {
+        "loading": "Loading details",
+        "loadFailed": "Could not load the details. Close the row and open it again."
+      },
+      "summary": {
+        "defMeasured": {
+          "ownedHitRate": {
+            "definition": "Share of completed measurements (answers) of the prompts registered for the website that cite an owned URL (the registered base address and its sub-pages, target URLs included) at least once. Judged per measurement, so a prompt measured on several engines, countries or rounds counts once for each. It shares the same denominator as the Target URL Hit Rate beside it (owned is a superset of target). Published rounds use the value of the published citation report. Not computed while a source-category filter is active.",
+            "formula": "Measurements citing an owned URL / completed measurements x 100 (multiple citations within one measurement count once)"
+          },
+          "targetHitRate": {
+            "definition": "Share of completed measurements (answers) of the prompts registered for the website whose designated target page was actually cited. It asks whether the intended page was reached, not merely whether the site was cited. Judged per measurement, so a prompt measured on several engines, countries or rounds counts once for each. A hit requires the addresses to be identical after normalization (protocol, www, trailing slash and tracking parameters removed). Published rounds use the value of the published citation report. Not computed while a source-category filter is active.",
+            "formula": "Measurements whose target URL was cited / completed measurements x 100 (a hit on another prompt's target does not count)"
+          }
+        }
+      }
+    }
+  }
+}

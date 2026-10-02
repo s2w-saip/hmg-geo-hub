@@ -1,0 +1,24 @@
+{
+  "projectDetail": {
+    "intent": {
+      "actionErrors": {
+        "emptyPrompt": "The prompt is empty",
+        "invalidSource": "This source is only available from Intent",
+        "nothingToSend": "There are no prompts to send",
+        "generateFailed": "Failed to generate prompts",
+        "noSelection": "Nothing is selected",
+        "tooManySelected": "You can pick up to 50 items of each kind at a time",
+        "nothingToRemove": "There are no prompts to delete",
+        "promptNotFound": "The prompts to delete were not found",
+        "emptyKeyword": "Enter a keyword",
+        "duplicateKeyword": "This keyword is already added",
+        "keywordNotFound": "The keyword to delete was not found",
+        "noKeywordsToRemove": "There are no keywords to delete",
+        "unknownCountry": "This country is not supported",
+        "contextMapNotReady": "The context map is being prepared",
+        "conflict": "This overlapped with another change. Please try again",
+        "tryAgain": "Please try again in a moment"
+      }
+    }
+  }
+}

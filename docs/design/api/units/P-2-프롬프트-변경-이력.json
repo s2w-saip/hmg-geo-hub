@@ -1,0 +1,95 @@
+{
+  "auth": "스코프 적용: FastAPI 의존성이 JWT(JWKS) 검증 후 `AllowedScope`(all/brands[]/regions[]/countries[])를 세션에서 파생(A8). 공통 필터 모델 규약대로 서버가 brand[]·country[] 쿼리 파라미터와 스코프를 default-deny 교집합한다(스코프 밖 값은 meta.dropped_filters). 라우트 게이트는 현행과 동일하게 NON_VENDOR(모든 role 허용, vendor 제외) — canAccessRoute(\"/standard/prompts\") 상당. 운영자 게이트 없음(열람 전용, admin 전용 아님 — _actions.ts:14 주석 \"편집과 달리 admin 전용이 아니다\"). prompt_id 단일 조회(구 listForPrompt)도 같은 라우트 게이트 하나로 통합하고 스코프 교집합을 동일 적용 — 구 listForPrompt 는 스코프 미적용이었던 결함을 이 설계에서 닫는다(open_questions 참고).",
+  "current_refs": [
+    "lib/db/repositories/prompt-audit-logs.ts:57-71 (baseSelect)",
+    "lib/db/repositories/prompt-audit-logs.ts:82-89 (listForPrompt, 스코프 미적용)",
+    "lib/db/repositories/prompt-audit-logs.ts:94-119 (listGlobalScoped)",
+    "lib/db/repositories/prompt-audit-logs.ts:122-140 (listDailyCounts, 미사용 dead code)",
+    "lib/db/schema.ts:1545-1557 (promptAuditLogs 테이블)",
+    "lib/standards/audit.ts:1-36 (PromptAuditEventType·PROMPT_AUDIT_EVENT_TYPES·computeChanges)",
+    "app/[locale]/(dash)/standard/prompts/page.tsx:37-47 (AUDIT_WINDOW_DAYS=90, listGlobalScoped 호출)",
+    "app/[locale]/(dash)/standard/prompts/_components/audit-history-view.tsx:1-200 (클라이언트 필터: 기간 30/90·이벤트타입, batch 접기, CSV export)",
+    "app/[locale]/(dash)/standard/prompts/_actions.ts:20-28 (fetchPromptAuditTimeline, UI 미호출 — dead code)",
+    "lib/db/repositories/standards.ts:237-261 (catalogMarketScopeCondition), :277-289 (listStandardCatalogScoped 스코프 패턴)"
+  ],
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/v1/prompts/history",
+      "summary": "글로벌 표준 프롬프트 카탈로그(app.prompt) 변경 감사 이력 — 스코프 교집합(brand·country) 적용, prompt_id 지정 시 단일 프롬프트 타임라인(구 listForPrompt 통합, 스코프 강제)"
+    }
+  ],
+  "filters": {
+    "supported": [
+      "brand[] (app.prompt.brand_code 조인, umbrella 'HMG'·NULL 은 항상 포함 — 현행 UMBRELLA_BRAND 예외 유지)",
+      "country[] (app.prompt.regions 배열 교집합, catalogMarketScopeCondition 동치 술어)",
+      "from/to (created_at 기준, round_date 아님 — 감사 이벤트는 회차 축이 아니라 실제 발생 시각)"
+    ],
+    "ignored": [
+      "surface (prompt_audit_log 는 app.prompt 트리거 전용이라 항상 global 표준 카탈로그 고정 — website_prompt 는 감사 로그 없음, DDL 156-157 트리거는 app.prompt 에만 있음)",
+      "engine[]",
+      "lang[]",
+      "funnel[]",
+      "brand_presence[]",
+      "list_type[]",
+      "depth1~3[]",
+      "source[]"
+    ],
+    "extra_params": [
+      "prompt_id: uuid, optional — 단일 프롬프트 타임라인(스코프 교집합은 그대로 적용, 구 listForPrompt 와 달리 우회 불가)",
+      "event_type[]: text[] (created|text_updated|meta_updated|enabled_changed|kind_changed|deleted|restored), optional, app.prompt_audit_log CHECK 제약과 동일 어휘, 기본값 = 전체",
+      "cursor: text, optional — 키셋 페이지네이션 토큰(created_at,audit_id 인코딩)",
+      "limit: int, 기본 100, 상한 500(현행 DEFAULT_LIMIT 유지)"
+    ]
+  },
+  "response": "data[]: { audit_id: bigint, prompt_id: uuid, prompt_text: string|null (삭제 행이면 app.prompt 삭제 안 됨: soft-delete 라 항상 존재, LEFT JOIN 은 방어적 유지), prompt_brand: string|null, event_type: string, changes: object (필드명 → {old:string|null, new:string|null}, jsonb 그대로 통과), actor_id: uuid|null, actor_type: \"user\"|\"system\", actor_email: string|null, batch_id: uuid|null, created_at: timestamptz }. meta: { surface:\"global\"(고정), mode:\"catalog_audit\", as_of, cycles:[](회차 무관이라 빈 배열), generation(rd.surface_generation[1] 참고치, 이 API 자체는 rd 미조회이므로 생략 가능 — open_questions), ignored_filters, dropped_filters, suppressed:false, next_cursor: string|null }. 페이지네이션은 키셋((created_at DESC, audit_id DESC) 튜플 비교) — 현행처럼 \"최근 90일 최대 500건 단발\"을 첫 페이지 기본값으로 유지하되 다음 페이지 진행 가능하게 확장.",
+  "metrics_rules": [
+    "규칙 없음(지표 API 아님) — 감사 이벤트 원장 열람. P1~P7·M01~M12·R01~R13 비적용",
+    "예외 R03 준용: view_date ≤ 오늘 같은 노출 게이트는 이 API 에 없음(권한·스코프만)"
+  ],
+  "read_model": [
+    "app.prompt_audit_log.audit_id",
+    "app.prompt_audit_log.prompt_id",
+    "app.prompt_audit_log.project_id",
+    "app.prompt_audit_log.actor_id",
+    "app.prompt_audit_log.actor_type",
+    "app.prompt_audit_log.event_type",
+    "app.prompt_audit_log.changes",
+    "app.prompt_audit_log.batch_id",
+    "app.prompt_audit_log.created_at",
+    "app.prompt.prompt_id",
+    "app.prompt.project_id",
+    "app.prompt.text",
+    "app.prompt.brand_code",
+    "app.prompt.regions",
+    "app.user_account.user_id",
+    "app.user_account.email"
+  ],
+  "query_design": "쓰기 없음(읽기 전용). SQL 스케치:\\n```sql\\nSELECT pal.audit_id, pal.prompt_id, pal.actor_id, pal.actor_type, pal.event_type,\\n       pal.changes, pal.batch_id, pal.created_at,\\n       ua.email AS actor_email, p.text AS prompt_text, p.brand_code AS prompt_brand\\nFROM app.prompt_audit_log pal\\nLEFT JOIN app.prompt p ON p.prompt_id = pal.prompt_id\\nLEFT JOIN app.user_account ua ON ua.user_id = pal.actor_id\\nWHERE pal.project_id = :standard_root_project_id   -- app.project WHERE kind='standard_root' (project_one_root 유일 인덱스로 1행 상수화)\\n  AND pal.created_at >= :from\\n  AND (:to IS NULL OR pal.created_at < :to)\\n  AND (:prompt_id IS NULL OR pal.prompt_id = :prompt_id)\\n  AND (:event_types IS NULL OR pal.event_type = ANY(:event_types))\\n  -- 스코프 교집합(브랜드): scope.all 이면 생략\\n  AND (p.brand_code IS NULL OR p.brand_code = ANY(:scope_brands) OR p.brand_code = 'HMG')\\n  -- 스코프 교집합(국가/시장): effectiveScopeCountries 상당, catalogMarketScopeCondition 동치\\n  AND (p.regions IS NULL OR NOT EXISTS (SELECT 1 FROM unnest(p.regions) r WHERE btrim(r)<>'' AND lower(btrim(r)) NOT LIKE 'x:%')\\n       OR EXISTS (SELECT 1 FROM unnest(p.regions) r WHERE lower(btrim(r)) NOT LIKE 'x:%' AND upper(btrim(r)) = ANY(:scope_countries)))\\n  -- 키셋 페이지네이션(다음 페이지)\\n  AND (pal.created_at, pal.audit_id) < (:cursor_created_at, :cursor_audit_id)\\nORDER BY pal.created_at DESC, pal.audit_id DESC\\nLIMIT :limit;\\n```\\n:standard_root_project_id 는 app.project 에서 `WHERE kind='standard_root'`로 요청마다 조회하거나 기동 시 1회 캐시(변경 없음, project_one_root 유일 인덱스가 보증).",
+  "perf": {
+    "risk": "low",
+    "rows_scanned": "10배에서도 app.prompt_audit_log 는 관리자 저빈도 편집 이벤트 원장 — dim_prompt 12만 행(전체 프롬프트 카탈로그, DB-v2.sql:397 주석) 대비 편집 이벤트는 그 몇 % 수준으로 훨씬 작다(추정치, 볼륨 실측 없음). prompt_audit_project_idx(project_id, created_at DESC) 가 project_id=상수 + created_at 범위를 커버해 인덱스 레인지 스캔 후 LIMIT 조기 종료 — leaf 재구성 없이 100~500건만 페치.",
+    "indexes": [
+      "app.prompt_audit_project_idx (project_id, created_at DESC) — 주 필터·정렬 커버",
+      "app.prompt_audit_prompt_idx (prompt_id, created_at DESC) — prompt_id 지정 시 사용",
+      "app.prompt PK(project_id, prompt_id) — LEFT JOIN 룩업"
+    ],
+    "notes": "브랜드·국가 스코프 필터는 JOIN 후 WHERE 라 인덱스 미지원이지만, project_id+created_at 로 이미 좁혀진 소량 행에 적용되므로 순차 필터 비용 낮음. event_type 전용 인덱스 없음 — 카디널리티 7종뿐이라 불필요(select성 낮아 인덱스 이득 적음). LIMIT+키셋이라 OFFSET 페이지네이션의 후반 페이지 비용 폭증 없음."
+  },
+  "writes": "없음(읽기 전용 API). app.prompt_audit_log 쓰기는 P-1(프롬프트 카탈로그 CUD)의 트랜잭션(app.tg_catalog_change 트리거 상당 로직, 새 설계에서는 API 계층에서 INSERT + judgment_change 같은 트랜잭션)이 담당 — 이 단위(P-2)는 SELECT 만.",
+  "parity": "신구 대조: 구 listGlobalScoped(project_id=STANDARD_ROOT_PROJECT_ID, from=90일 전, brand/country 스코프)와 새 GET /v1/prompts/history?from=<90일전> 이 같은 행 집합·같은 순서(created_at DESC)를 반환하는지 대조. 하네스 F01~F07 키에 이 기능이 없으면(현재 기능은 프롬프트 카탈로그 화면 보조 탭이라 핵심 지표 F01~F07 범위 밖으로 추정) 별도 대조 항목 신설 필요: \"PA-01 감사 이력 건수·필드 일치\"(같은 브랜드·기간 스코프에서 count(*) 와 최근 20건 audit_id·event_type·changes JSON 대조). CSV export 는 클라이언트 측 filtered 배열을 그대로 직렬화하던 것을 API 응답 페이지들을 합쳐 동일 CSV 를 만드는 방식으로 전환(서버 export 엔드포인트 신설은 하지 않음, open_questions 참고).",
+  "open_questions": [
+    "구 listForPrompt(스코프 미적용, UI 미호출 dead code)를 prompt_id 파라미터로 흡수하며 스코프를 새로 강제하는 것이 맞는지: 관리자 화면(P-1, admin/standards)에서 향후 이 파라미터로 전체 이력(스코프 무관)을 보고 싶을 수 있음 — admin 전용 우회가 필요하면 별도 role 게이트(operator=global) 추가 여부는 P-1/AU-1 담당과 조율 필요.",
+    "listDailyCounts(90일 일별 카운트, 차트 마커용)는 현재 UI 어디서도 호출되지 않는 dead code로 확인됨(grep 0건) — 이 설계에서 드롭. 부활이 필요하면 별도 엔드포인트로 재제안.",
+    "CSV 전체 내보내기가 500건(limit 상한)을 넘는 스코프(대형 브랜드·90일 전체)일 때 클라이언트가 여러 페이지를 순회해 합쳐야 하는데, 이 반복 호출이 사용자 대기 시간에 문제없는지 — 아니면 limit 상한을 CSV 전용으로 더 높게(예: 5,000) 허용할지 P-1 설계 리드 결정 필요.",
+    "meta.generation·meta.cycles 필드가 계약서 공통 응답 형태에 포함되는데, 이 API 는 rd(회차 파티션 사실표)를 전혀 읽지 않아 실질적 의미가 없음 — 공통 형태를 유지하되 빈 값/고정값으로 채우는 것이 맞는지, 아니면 비-회차형 API 는 meta 축소 변형을 쓰는지 계약서에 명시 필요.",
+    "app.prompt LEFT JOIN 에서 이론상 prompt_id 가 app.prompt 에 없는 감사 행이 있을 수 있는지(하드 삭제 이력·데이터 정합 예외) — 현재 soft-delete(deleted_at) 만 존재해 발생 안 할 것으로 보이나 FK 제약이 없어(현행 스키마도 FK 없음) 확정은 미확인."
+  ],
+  "id": "P-2",
+  "title": "프롬프트 변경 이력 (GET /v1/prompts/history)",
+  "purpose": "표준(글로벌) 프롬프트 카탈로그(app.prompt)의 변경 이벤트(생성·본문수정·메타수정·활성화·kind변경·삭제·복원)를 스코프(브랜드·국가) 교집합으로 열람하는 감사 원장 조회 — /standard/prompts 화면의 \"변경 이력\" 탭 데이터 소스.",
+  "screens": [
+    "/standard/prompts (탭: 변경 이력) — 카탈로그 탭의 형제 탭, 같은 브랜드·시장 스코프 술어를 공유해야 카탈로그 스코프 우회 경로가 생기지 않음(B1 권한 레드팀 주석 원칙 유지)"
+  ],
+  "write_model": "[]"
+}

@@ -1,0 +1,174 @@
+{
+  "id": "QA-2",
+  "title": "검수 판정·노트·락 (Raw Data QA Reviews)",
+  "purpose": "검수자가 Scope job(답변) 단위로 섹션별 ok/issue 판정을 저장하고, 낱알(답변/프롬프트/멘션/인용/ACR/메타) 단위 노트를 남기고 해소하며, 동시 검수를 막는 락과 탭 단위 세션을 관리한다. 목록·상세 조합(QA-1 소유)과 분리된 \"판정 쓰기 + 노트 + 락\" 하위 리소스.",
+  "screens": [
+    "/raw-data-qa/answers/[jobId] 판정 패널(섹션 플래그·락 배지)",
+    "/raw-data-qa/notes 노트 목록·CSV 내보내기"
+  ],
+  "endpoints": [
+    {
+      "method": "PUT",
+      "path": "/v1/qa/reviews/{job_id}",
+      "summary": "섹션별(answer/prompt/mentions/citations/acr/meta) ok·issue 판정 저장. 저장 직전 락 재확인(재획득)."
+    },
+    {
+      "method": "GET",
+      "path": "/v1/qa/reviews/{job_id}",
+      "summary": "해당 job 의 현재 판정(섹션 플래그·파생 status·검수자) 단건 조회. 락 불필요."
+    },
+    {
+      "method": "POST",
+      "path": "/v1/qa/reviews/{job_id}/lock",
+      "summary": "락 획득/재획득(본인 세션이면 갱신, 만료된 남의 락이면 탈취). 실패 시 409 + held_by."
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/qa/reviews/{job_id}/lock",
+      "summary": "락 heartbeat(30초 주기). 본인 세션 소유가 아니면 held=false."
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/qa/reviews/{job_id}/lock",
+      "summary": "락 해제. sendBeacon 대응으로 POST ?release=1 도 동일하게 처리."
+    },
+    {
+      "method": "GET",
+      "path": "/v1/qa/reviews/deltas",
+      "summary": "목록 화면 10초 폴링 — job_ids(≤200)에 대한 락·판정 상태만 일괄 반환(전체 리로드 회피)."
+    },
+    {
+      "method": "POST",
+      "path": "/v1/qa/reviews/sessions",
+      "summary": "검수 세션(탭 단위) 시작. JWT 인증 + is_qa_reviewer 필수, session_id 발급."
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/qa/reviews/sessions/{session_id}",
+      "summary": "세션 last_seen_at 갱신(활동 유지, 락 응답을 막지 않는 부수 호출)."
+    },
+    {
+      "method": "POST",
+      "path": "/v1/qa/reviews/{job_id}/notes",
+      "summary": "낱알 단위 노트 생성(target_kind·target_key·target_label 스냅샷·severity·body)."
+    },
+    {
+      "method": "GET",
+      "path": "/v1/qa/reviews/{job_id}/notes",
+      "summary": "해당 job 의 노트 전체(생성순, 해소분 포함) — 상세 패널용."
+    },
+    {
+      "method": "GET",
+      "path": "/v1/qa/reviews/notes",
+      "summary": "노트 목록 화면 — 필터 + 커서(keyset) 페이지네이션(created_at DESC, note_id DESC)."
+    },
+    {
+      "method": "GET",
+      "path": "/v1/qa/reviews/notes/counts",
+      "summary": "현재 필터 기준 target_kind 별 미해결(또는 필터대로) 노트 건수."
+    },
+    {
+      "method": "GET",
+      "path": "/v1/qa/reviews/notes/export",
+      "summary": "CSV 내보내기용 전량(커서 없음, 상한 10,000행)."
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/qa/reviews/notes/{note_id}",
+      "summary": "노트 본문·severity 수정 또는 resolved 토글(resolved_at/resolved_by 갱신)."
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/qa/reviews/notes/{note_id}",
+      "summary": "노트 삭제."
+    }
+  ],
+  "filters": {
+    "supported": [
+      "surface(=ANY, rd.job.surface)",
+      "from/to(round_date 범위, rd.job.round_date)",
+      "engine[](rd.dim_engine.code → engine_key, ANY)",
+      "lang[](rd.dim_lang.code → lang_key, ANY)",
+      "country[](rd.dim_country.code → geo_key, ANY)",
+      "job_ids[](deltas 전용, ≤200)"
+    ],
+    "ignored": [
+      "funnel[]",
+      "brand_presence[]",
+      "list_type[]",
+      "depth1~3[]",
+      "source[]"
+    ],
+    "extra_params": [
+      "state[]: unreviewed|ok|issue, app.qa_answer_review.status(파생) 조인 필터, 없으면 unreviewed",
+      "reviewer[]: app.qa_answer_review.reviewer_name 또는 app.qa_review_note.reviewer_name IN, 텍스트값(자유입력 스냅샷이라 코드화 안 됨)",
+      "q: string(≤200), ILIKE — 노트 body 및 rd.dim_prompt.text 부분일치(P1 예외: 조회 시 계산 허용)",
+      "target_kind[]: answer|prompt|mention|citation|acr|meta (notes 전용)",
+      "severity[]: issue|question|info (notes 전용)",
+      "include_resolved: bool, 기본 false(미해결만) (notes 전용)",
+      "cursor: string(base64, {created_at, note_id}), notes 목록 전용",
+      "limit: int, 기본 50, notes 목록. export 는 고정 상한 10,000(cursor 없음)"
+    ]
+  },
+  "response": "공통 형태 `{ data, meta: { as_of, generation, ignored_filters, dropped_filters } }` 를 따르되 brand/country 등 D8 관련 카드형 지표가 없어 surface/mode/cycles/suppressed 는 QA 리소스엔 실질 의미 없음(생략 또는 고정값). 리소스별: (1) 판정 GET/PUT data = {job_id, status:\"ok\"|\"issue\"(DB GENERATED), section_flags:{answer?,prompt?,mentions?,citations?,acr?,meta?: \"ok\"|\"issue\"}, reviewer_name, reviewed_at, updated_at}. (2) 락 POST/PATCH data = {job_id, session_id, reviewer_name, acquired_at, heartbeat_at} 또는 409 시 {error:\"lock-held\", held_by:{reviewer_name, acquired_at}}; PATCH 는 {held: bool}. (3) deltas data = {locks:[{job_id,session_id,reviewer_name,acquired_at,heartbeat_at}], reviews:[{job_id,status,reviewer_name}]}. (4) 세션 POST data = {session_id}. (5) 노트 data(단건) = {note_id, job_id, target_kind, target_key, target_label, severity, body, reviewer_name, created_at, resolved_at, resolved_by}; 목록 응답은 표시용 조인 필드(prompt_text, surface, engine, country)를 더해 {..., prompt_text, surface, engine, country} + next_cursor. counts data = {target_kind: count} 맵(정수, 분자·분모 개념 없음 — 단순 카운트).",
+  "metrics_rules": [
+    "D8 파생 층 없음 — QA 테이블은 요약·캐시가 아니라 인간 생성 운영 데이터라 예외 대상도 아님(원본 그대로 저장)",
+    "G-18 채택(a): QA 신원 = Supabase 계정 + app.user_account.is_qa_reviewer(기존 '이름+공용 비번' HMAC 쿠키 폐지)",
+    "G-24 채택(a): QA 모집단 = 모든 Scope job(비완료·드롭 포함) — 락·노트·판정 대상 job_id 제약에 상태 필터 없음, rd.job 이 이를 그대로 보유",
+    "A17: 쓰기는 app 스키마만(app.qa_answer_review/qa_review_note/qa_answer_lock/qa_review_session), rd·ing 미반영(loader 무관 — 순수 앱 도메인)",
+    "P1 예외: q 텍스트 검색은 조회 시 ILIKE 계산 허용",
+    "status 컬럼은 서버(클라이언트/앱 코드)가 아니라 DB GENERATED ALWAYS AS(STORED)로 파생 — 앱은 플래그만 쓰면 됨(현행 upsertReview 의 TS 파생 로직 제거)"
+  ],
+  "read_model": [
+    "app.qa_answer_review.job_id/flag_answer/flag_prompt/flag_mentions/flag_citations/flag_acr/flag_meta/status/reviewer_id/reviewer_name/session_id/reviewed_at/updated_at",
+    "app.qa_review_note.note_id/job_id/target_kind/target_key/target_label/severity/body/reviewer_id/reviewer_name/session_id/created_at/resolved_at/resolved_by",
+    "app.qa_answer_lock.job_id/session_id/reviewer_name/acquired_at/heartbeat_at",
+    "app.qa_review_session.session_id/user_id/reviewer_name/started_at/last_seen_at/user_agent/ip_hash",
+    "app.user_account.user_id/is_qa_reviewer/display_name/status",
+    "rd.job.job_id/answer_key/surface/round_date/measured_at/engine_key/geo_key/lang_key/status_code/dropped(존재·좌표 확인, 노트/락 표시용 조인)",
+    "rd.dim_prompt.prompt_key/text(노트 목록 표시·검색)",
+    "rd.dim_engine.engine_key/code",
+    "rd.dim_country.geo_key/code",
+    "rd.dim_lang.lang_key/code"
+  ],
+  "query_design": "읽기(예: GET /v1/qa/reviews/notes): rd.job j 를 surface+round_date 로 먼저 가지치기해 후보 answer_key 집합을 좁히고, app.qa_review_note n 을 job_id 등치로 조인(테이블이 인간 생성 데이터라 작음 — n 을 드라이버로 잡아도 무방). 스케치:\n```sql\nSELECT n.note_id, n.job_id, n.target_kind, n.target_key, n.target_label, n.severity, n.body,\n       n.reviewer_name, n.created_at, n.resolved_at, n.resolved_by,\n       dp.text AS prompt_text, j.surface, de.code AS engine, dc.code AS country\n  FROM app.qa_review_note n\n  JOIN rd.job j        ON j.job_id = n.job_id\n  LEFT JOIN rd.dim_prompt dp ON dp.prompt_key = j.prompt_key\n  LEFT JOIN rd.dim_engine de ON de.engine_key = j.engine_key\n  LEFT JOIN rd.dim_country dc ON dc.geo_key   = j.geo_key\n WHERE j.surface = ANY($surfaces)                         -- rd.job PK 좌표 가지치기\n   AND j.round_date BETWEEN $from AND $to\n   AND ($engines IS NULL OR j.engine_key = ANY($engine_keys))\n   AND ($langs   IS NULL OR j.lang_key   = ANY($lang_keys))\n   AND ($countries IS NULL OR j.geo_key  = ANY($geo_keys))\n   AND ($target_kinds IS NULL OR n.target_kind = ANY($target_kinds))\n   AND ($severities   IS NULL OR n.severity    = ANY($severities))\n   AND ($include_resolved OR n.resolved_at IS NULL)\n   AND ($cursor IS NULL OR (n.created_at, n.note_id) < ($cursor_ts, $cursor_id))\n ORDER BY n.created_at DESC, n.note_id DESC\n LIMIT $limit + 1;\n```\nstate/reviewer 필터는 app.qa_answer_review 를 job_id 로 추가 LEFT JOIN해 WHERE 에 status/reviewer_name 조건을 더한다. q 는 `n.body ILIKE '%'||$q||'%' OR dp.text ILIKE ...`(P1 예외, 소규모 테이블이라 순차 스캔 허용).\n\n쓰기 절차:\n1. **판정 저장 PUT /v1/qa/reviews/{job_id}**: 트랜잭션 시작 → `SET LOCAL app.actor_id = :user_id` → `INSERT INTO app.qa_answer_lock(job_id, session_id, reviewer_name) VALUES(...) ON CONFLICT (job_id) DO UPDATE SET session_id=EXCLUDED.session_id, reviewer_name=EXCLUDED.reviewer_name, acquired_at=now(), heartbeat_at=now() WHERE qa_answer_lock.session_id = EXCLUDED.session_id OR qa_answer_lock.heartbeat_at < now()-interval '180s' RETURNING *`(재확인, 실패 시 롤백 후 409) → `INSERT INTO app.qa_answer_review(job_id, flag_*, reviewer_id, reviewer_name, session_id) VALUES(...) ON CONFLICT (job_id) DO UPDATE SET flag_*=EXCLUDED.*, reviewer_id=EXCLUDED.reviewer_id, reviewer_name=EXCLUDED.reviewer_name, session_id=EXCLUDED.session_id, updated_at=now() RETURNING status` → COMMIT.\n2. **락 POST/PATCH/DELETE**: 위와 동일한 ON CONFLICT 패턴(단문 자동커밋), DELETE 는 `WHERE job_id=$1 AND session_id=$2`(소유자만).\n3. **노트 CRUD**: 단문 INSERT/UPDATE/DELETE, actor_id 세팅 후 실행. UPDATE 는 patch 필드만 SET(부분 갱신), resolved 토글 시 resolved_at/resolved_by 함께 설정.\n4. **세션 생성/heartbeat**: INSERT INTO app.qa_review_session(user_id, reviewer_name, user_agent, ip_hash) / UPDATE ... SET last_seen_at=now().\njob_id 는 rd.job 소속 여부를 쓰기 전 SELECT 1 FROM rd.job WHERE job_id=$1 로 확인(스키마 간 FK 없음 — A17 경계라 cross-schema FK 미설정, 애플리케이션 검증), 없으면 404.",
+  "perf": {
+    "risk": "low",
+    "rows_scanned": "app.qa_answer_review/qa_review_note/qa_answer_lock/qa_review_session 은 인간(검수자) 생성 운영 데이터라 콘텐츠 폭 10배 스케일링 대상이 아니다(rd.answer·rd.citation 과 그레인이 다름). 판정=검수한 job 수만큼(상한 = rd.job 총량, 실질은 훨씬 작음), 노트=판정 대비 소수, 락=동시 검수자 수(수십 이내). 노트 목록 조인의 좌측 가지치기는 rd.job(surface,round_date)이 담당하며 10배에서도 job_qa_list_idx/job_round_idx 로 해당 창은 이미 수백~수천 leaf 이하.",
+    "indexes": [
+      "app.qa_answer_review PK(job_id), qa_review_status_idx(status, reviewed_at DESC), qa_review_reviewer_idx(reviewer_name, reviewed_at DESC)",
+      "app.qa_review_note qa_note_job_idx(job_id, created_at), qa_note_cursor_idx(created_at DESC, note_id)",
+      "app.qa_answer_lock PK(job_id)",
+      "rd.job PK(answer_key), job_id UNIQUE, job_qa_list_idx(surface, measured_at DESC, answer_key DESC), job_round_idx(surface, round_date, prompt_key) — 노트/락 조인의 좌변 가지치기용"
+    ],
+    "notes": "deltas(job_ids≤200)·lock 단건은 PK 등치라 O(log n)×200 수준으로 무시 가능. 유일한 위험은 q ILIKE 순차 스캔인데 대상이 qa_review_note(작음)+dim_prompt(조인 후 개별 행)이라 answer-fact 표 전체 스캔이 아니다. reviewer[]/state[] 필터는 텍스트·상태 동등 비교뿐이라 추가 인덱스 불필요. 새 인덱스·집계 테이블 제안 없음(D8)."
+  },
+  "auth": "JWT(Supabase Auth, JWKS 검증, A8) 필수 + `app.user_account.is_qa_reviewer = true` 게이트(역할·브랜드·국가 스코프 default-deny 교집합 미적용 — G-24 로 모집단이 전체 job 이므로 QA 전용 게이트가 스코프를 대신함, 기존 '역할 없는 외부 인력 쿠키' 예외를 Supabase 계정 기반으로 대체: G-18). 세션(app.qa_review_session, session_id)은 인증 주체가 아니라 **탭 단위 락 소유자 식별자**일 뿐 — 인증은 매 요청 JWT 가 담당하므로 기존 HMAC 서명 쿠키의 보안 역할(신원 위조 방지)은 JWT 서명이 대체하고, session_id 는 단순 서버 발급 opaque id(위조돼도 JWT user_id 와 무관해 피해 없음). 쓰기는 api_rw 롤로 `app.actor()`(app.actor_id 세션변수, 미설정 시 예외로 쓰기 거부) 필수 — 감사는 각 행의 reviewer_id/session_id/timestamptz 로 대체(별도 permission_audit_log 트리거는 이 4개 표에 없음, 확인함: DB-v2.sql 236~260행에 트리거 미정의). 읽기는 api_ro(문장 5초 타임아웃, read-only).",
+  "writes": "app.qa_answer_review(UPSERT), app.qa_review_note(INSERT/UPDATE/DELETE), app.qa_answer_lock(UPSERT/DELETE), app.qa_review_session(INSERT/UPDATE). 트랜잭션 경계: 판정 PUT 만 \"락 재확인 + 판정 UPSERT\"를 한 트랜잭션으로 묶는다(락을 잃었으면 판정도 저장하지 않아야 하므로). 나머지는 단문 자동커밋. rd·ing 스키마는 전혀 건드리지 않음(로더 무관, judgment_change 큐도 안 씀 — 이 표들은 재판정 대상이 아니라 순수 앱 도메인 기록). 감사 기록은 별도 로그 테이블이 아니라 각 행의 reviewer_id/reviewer_name/session_id/시각 컬럼 자체.",
+  "current_refs": [
+    "lib/qa/auth.ts:1-140(requireReviewer/verifyReviewerCookie/signReviewerCookie — 폐기 대상, G-18 로 Supabase 계정 대체)",
+    "lib/db/repositories/qa-review.ts:76-95(acquireLock)",
+    "lib/db/repositories/qa-review.ts:121-136(heartbeatLock/releaseLock)",
+    "lib/db/repositories/qa-review.ts:137-151(listLocks)",
+    "lib/db/repositories/qa-review.ts:153-172(createReviewSession/touchReviewSession)",
+    "lib/db/repositories/qa-review.ts:862-899(getReview/upsertReview)",
+    "lib/db/repositories/qa-review.ts:966-1055(listNotes/listAllNotes/countNotesByKind/listNotesForJob/createNote)",
+    "lib/db/repositories/qa-review.ts:1083-1109(updateNote/deleteNote)",
+    "lib/db/repositories/qa-review.ts:1110-1127(getListDeltas)",
+    "app/api/qa/review/route.ts:1-47(PUT 판정)",
+    "app/api/qa/lock/route.ts:1-63(POST/PATCH/DELETE 락)",
+    "app/api/qa/note/route.ts:1-72(POST/PATCH/DELETE 노트)",
+    "app/api/qa/answers/route.ts:1-22(GET deltas 폴링)",
+    "app/api/qa/session/route.ts:1-51(POST/DELETE 세션 — 비밀번호 게이트는 G-18 로 폐기)",
+    "app/api/qa/notes/export/route.ts(파일 존재만 확인, 본문 미열람 — listAllNotes 호출로 추정)"
+  ],
+  "parity": "DB-보정.md §\"기능\" 목록에 \"QA 미검수\"로 명시(F01~F07 하네스 밖) — 기존 값 캐시(values-old.jsonl)에 QA 항목 없음, 새 대조 항목을 정의해야 한다. 제안: ① 마이그레이션 직후 행수 대조 — 구 qa_answer_reviews/qa_review_notes/qa_answer_locks 대비 신 app.qa_answer_review/qa_review_note/qa_answer_lock 건수 1:1(그레인 동일, job_id 키 불변) ② 판정 status 파생 대조 — 마이그레이션된 임의 N건에서 구 TS 파생값과 신 DB GENERATED 값 일치 ③ 락 TTL 동작 스모크 — 180초 경과 후 타 세션 재획득 가능 여부 실행 확인 ④ 노트 target_key 포맷('job_id:ord') 보존 확인(인용 노트 샘플).",
+  "open_questions": [
+    "app.qa_review_note/qa_answer_lock/qa_answer_review 의 job_id 는 rd.job 과 cross-schema FK 가 없다(A17 경계) — 애플리케이션 레벨 SELECT 확인 방식으로 충분한지, 아니면 loader 가 판정용 좁은 참조 테이블을 별도로 두어야 하는지",
+    "브랜드 필터를 노트 목록에 걸 근거가 rd.job.bgrp(비트)뿐인데 계약 §3 술어 규약상 비트식은 WHERE 금지(FILTER 안에서만 허용) — 노트 화면에서 브랜드 필터를 뺄지(현재 설계처럼), 아니면 QA-1 목록에서 이미 필터링된 job_ids 를 넘겨받는 방식으로 통일할지 QA-1 담당자와 결정 필요",
+    "G-18 로 QA 신원이 'Supabase 계정 + is_qa_reviewer' 로 바뀌면서, 기존에 GGMD 계정이 없던 외부 검수 인력을 어떻게 온보딩할지(계정 발급 절차)가 새 미결로 생긴다 — A17/A8 밖의 운영 절차 결정 필요",
+    "app.qa_answer_review/qa_review_note 의 reviewer_id 가 nullable 인 이유가 DDL 주석에 없다 — Supabase 계정 필수 전제(G-18)라면 NOT NULL 로 강화해야 하는지 확인 필요",
+    "app.qa_answer_lock 에 session_id UNIQUE 제약이 없어 한 세션이 여러 job 을 동시에 잠글 수 있다(멀티탭 의도로 추정) — 의도된 것인지 명시 결정 필요",
+    "노트 CSV export(현재 최대 1만행 동기 응답)를 그대로 API 로 노출할지, 응답 크기·5초 statement_timeout 을 고려해 별도 비동기 내보내기로 뺄지 — perf 상 위험은 낮으나(운영 데이터 소량) API 설계 관례상 결정 필요"
+  ]
+}

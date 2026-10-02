@@ -1,0 +1,22 @@
+{
+  "$comment": "Browser console errors and warnings that do not fail a screen (design 5.4 item 6). Every entry needs a reason; keep the list short. pattern = JavaScript regex on the message text. screens = limit to these screen ids (all when absent). when legacyLeaf = only for cases whose screen declares leaf 'legacy' and expects ok (the page content under the checked layout belongs to a later unit and still runs the legacy data path, which fails without DATABASE_URL). Allowed messages are still written to the case result under console.allowed.",
+  "entries": [
+    {
+      "id": "legacy-leaf-boundary",
+      "pattern": "\\[dash\\] segment render failed",
+      "when": "legacyLeaf",
+      "reason": "(dash)/error.tsx logs the legacy leaf failure (DATABASE_URL unset by design). The harness separately requires the next log to show 'DATABASE_URL is not set' for that case, so a real API failure is not hidden."
+    },
+    {
+      "id": "legacy-leaf-server-error",
+      "pattern": "DATABASE_URL is not set",
+      "when": "legacyLeaf",
+      "reason": "Next dev forwards the same server error of the legacy leaf to the browser console."
+    },
+    {
+      "id": "react-devtools",
+      "pattern": "Download the React DevTools",
+      "reason": "React development-build notice (info level in some builds, harmless)."
+    }
+  ]
+}

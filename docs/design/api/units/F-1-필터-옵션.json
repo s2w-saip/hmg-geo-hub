@@ -1,0 +1,113 @@
+{
+  "id": "F-1",
+  "title": "필터 옵션 (GET /v1/filters/options)",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/v1/filters/options",
+      "summary": "표면(surface)별 선택 가능한 브랜드×권역×국가×언어 캐스케이드 매트릭스, 엔진 목록, 카탈로그 택소노미(funnel·brand_presence·list_type·depth1-3), 인용 출처 카테고리 목록을 스코프·데이터 창 안에서 반환. F-2(선택 가능 날짜)는 별도 엔드포인트(GET /v1/filters/dates)이며 이 단위 범위 밖."
+    }
+  ],
+  "purpose": "필터 패널(대시보드·표준 답변분석·웹사이트·프로젝트·ACR 화면)의 드롭다운 옵션을 공급한다. 현행 6개 함수(listMeasuredRegions·listMeasuredScopeMatrix·listMeasuredStandardLanguages·listWebsiteCountries·listWebsiteScopeMatrix·listCatalogTaxonomy, +엔진은 listMeasuredEngines/정적목록)를 표면 하나로 통합한다. 계약서 §4 규칙 4(옵션 창 = 데이터 창)를 전 표면에 동일 적용: 스냅샷이면 최신 노출 회차, 기간 지정이면 그 기간만을 옵션 창으로 쓴다.",
+  "screens": [
+    "/dashboard (분석 범위 조정 필터바: 브랜드·국가·언어)",
+    "/standard/answer-analysis/citation, /mention (필터바 옵션: 카탈로그·국가·언어·매트릭스)",
+    "/standard/ai-funnel/acr, /conversion, /visibility (필터바: 카탈로그·국가)",
+    "/website, /website/answer-analysis/citation, /mention, /website/ai-funnel/*, /website/prompts (필터바: 국가·언어·국가×언어 매트릭스, 관리자만 브랜드)",
+    "/projects/[id], /projects/[id]/analysis/citation, /mention (필터바: 국가·엔진·카탈로그·프로젝트 커스텀 필드)"
+  ],
+  "filters": {
+    "supported": [
+      "surface(extra_param, 필수)",
+      "from/to(있으면 그 기간을 옵션 창, 없으면 스냅샷=최신 노출 회차)",
+      "project_id(extra_param, surface=project 전용)",
+      "own_brand(서버 결정, 카탈로그 HMG 엄브렐러 포함 판정에 사용)"
+    ],
+    "ignored": [
+      "brand[]",
+      "country[]",
+      "lang[]",
+      "engine[]",
+      "funnel[]",
+      "brand_presence[]",
+      "list_type[]",
+      "depth1[]~depth3[]",
+      "source[]"
+    ],
+    "extra_params": [
+      "surface: enum(\"global\"|\"website\"|\"project\"), 필수. 현행 URL엔 없고 화면 라우트가 암묵 결정하던 것을 명시 파라미터로 승격",
+      "project_id: uuid, surface=project 일 때 필수(스코프 밖이면 403). global·website 는 무시하고 dropped_filters 아님(애초에 그 표면엔 없는 축)",
+      "from/to: ISO date(KST 앵커), 둘 다 있어야 기간 창 적용. 한쪽만 오면 422"
+    ],
+    "note": "이 엔드포인트는 브랜드·국가·언어·엔진 선택으로 결과를 좁히지 않는다(캐스케이드는 §4 규칙 5에 따라 클라이언트가 반환된 매트릭스를 draft 선택으로 좁힌다 — 현행 listMeasuredScopeMatrix/listWebsiteScopeMatrix와 동일 설계, 2026-09-04 고객 요구: 국가 선택 중에도 언어가 즉시 좁혀져야 하므로 서버가 매번 재조회하면 지연이 생긴다). 따라서 brand[]·country[]·lang[]·engine[]·funnel[]·brand_presence[]·list_type[]·depth1~3[]·source[] 는 이 API 가 받아도 조용히 무시하고 meta.ignored_filters 에 넣는다(§4 규칙 2)."
+  },
+  "response": "data: {\\n  geo_matrix: [{brand_bit: int|null, region: string, lang: string|null}] — 캐스케이드 매트릭스(브랜드 미해당=null, HMG 엄브렐러는 own_brand 계정에서 자동 포함). global·project 는 rd.answer.cat_mask 비트 전개, website 는 rd.dim_project.site_brand_bit/site_geo_key + rd.dim_prompt.lang_key 조합.\\n  regions: [{code, region_key, hidden: bool}] — dim_country 코드·소속 권역(참고용 단순 목록, geo_matrix 의 region distinct 와 반드시 일치해야 함).\\n  languages: [string] — geo_matrix 의 lang distinct(하위호환 단순 목록).\\n  engines: [{code, is_default: bool}] — 옵션 창 안에서 실제 측정된 엔진(rd.dim_engine 조인).\\n  catalog: {funnel: [taxon], brand_presence: [taxon], list_type: [taxon], depth1: [taxon(parent 포함)], depth2: [taxon], depth3: [taxon]} — global·project 표면만. taxon = {key, code, parent_key}.\\n  source_categories: [{key, slug, name}] — 인용 계열 화면 전용(citations 모듈 지원 표면만, website·global·project 공통 가능).\\n}\\nmeta: {surface, mode: \\\"snapshot\\\"|\\\"period\\\", as_of, cycles: [cyc_key...], generation, ignored_filters, dropped_filters: {}, suppressed: []} — 계약서 §8 공통 형태.",
+  "metrics_rules": [
+    "지표 아님(옵션 카탈로그) — §4 필터 규칙 1(권한 교집합)·2(지원축 선언)·4(옵션 창=데이터 창)·5(캐스케이드) 적용",
+    "규칙 4 신규 적용: 현행은 기간 미지정 시 국가 옵션을 '최근 7일 run' 기준으로 뽑아 최신 노출 회차 45개국 중 3개국만 보이는 편차가 있었다(계약서 §4, 하네스 실측 2026-09-27) — 새 구조는 스냅샷=최신 노출 회차(rd.cycle 최댓값, R03 view_date<=오늘) 전체를 창으로 쓴다. 값이 달라지는 결정이므로 open_questions 에 재확인 필요",
+    "R03 노출 게이트: rd.cycle.view_date <= today_kst() 인 회차만 옵션 창 후보",
+    "웹사이트 매트릭스도 전 프로젝트(global) 와 동일 원칙으로 통일: 현행 listWebsiteCountries/listWebsiteScopeMatrix 는 app.website_site/app.website_prompt(등록 여부)만 보고 측정 여부를 안 본다 — 새 구조는 rd.answer(surface=2) 로 걸러 '옵션에 있으면 데이터가 있다' 불변식을 website 에도 성립시킨다(현행과의 명백한 동작 변경, open_questions)",
+    "브랜드 스코프 계정(고객)은 카탈로그 브랜드 = 본인 브랜드 + HMG 공통(엄브렐러) 로 고정, 국가 옵션은 effectiveScopeCountries(직접 countries 우선, 없으면 regions 확장) 로 제한(§4 규칙 3, standard-filters.ts:64 계승)",
+    "숨김 지역(app.hidden_market) 은 표준 옵션에서 제외(HIDDEN_STANDARD_REGIONS 계승, dim_country.hidden_standard 플래그로 대체)"
+  ],
+  "read_model": [
+    "app.user_account(role, scope_all, scope_brands, scope_regions, scope_countries) — 권한 스코프 원천",
+    "app.rhq_region_country(region_id, country_code) — region 계정의 권역→국가 확장",
+    "app.hidden_market(surface, country_code) — 표준·웹사이트 숨김 지역(제안: rd.dim_country.hidden_standard 로 이미 투영돼 있어 이 표를 직접 읽을 필요는 적재기만, API 는 dim_country 만 읽음)",
+    "app.brand(brand_code, brand_bit, is_umbrella, is_hmg_own) — 브랜드 비트 사전, 엄브렐러 판정",
+    "app.project(project_id, kind, brand_code, country_code, scope_project_id) — surface=project 의 project_id → scope_project_id 해석, kind='customer' 검증",
+    "app.project_member(project_id, user_id, status) — surface=project 접근 권한(멤버 아니면 403)",
+    "rd.dim_project(project_key, scope_project_id, surface, is_root, project_id, site_id, site_brand_bit, site_geo_key) — surface·project_id ↔ project_key 매핑, website 사이트 브랜드·지오 비트",
+    "rd.cycle(cyc_key, surface, project_key, round_date, anchor_date, view_date, servable, hidden_scope, generation) — 스냅샷(최신 노출 회차)·기간 창 해석(cycle_pick_idx 인덱스)",
+    "rd.surface_generation(surface, generation, as_of) — meta.generation/as_of",
+    "rd.answer(surface, round_date, cyc_key, project_key, engine_key, geo_key, lang_key, cat_mask, elig, std_in) — global·project 표면의 측정된 국가×언어×브랜드(cat_mask 비트)·엔진 옵션 원천(answer_g/answer_p 파티션)",
+    "rd.answer_w(round_date, cyc_key, project_key, engine_key, geo_key, lang_key, elig, std_in) — website 표면의 측정된 국가×언어×엔진 옵션 원천(제안: 현행과 달리 등록 기준이 아니라 측정 기준으로 전환)",
+    "rd.dim_country(geo_key, code, region_key, kind, hidden_standard, virtual_brand_bit) — geo_key→ISO/가상코드 변환",
+    "rd.dim_region(region_key, code) — 국가 소속 권역",
+    "rd.dim_lang(lang_key, code) — lang_key→BCP-47 소문자 코드",
+    "rd.dim_engine(engine_key, code, is_default) — 엔진 코드·기본 엔진 플래그",
+    "rd.dim_prompt(prompt_key, surface, project_key, in_root_catalog, lang_key, unit_key) — 카탈로그 프롬프트 판별(in_root_catalog), website 프롬프트 언어",
+    "rd.catalog_entry(catalog_row_id, prompt_key, brand_bit, presence_key, funnel_key, list_type_key, depth1_key, depth2_key, depth3_key, kind) — 카탈로그 택소노미 원천(현행 listCatalogTaxonomy, prompts 테이블과 동일 계약: 측정 무관, 카탈로그 등록 자체가 옵션)",
+    "rd.dim_taxon(taxon_key, axis, code, parent_key) — presence_key 등 정수키 → 코드·부모 라벨 해석",
+    "rd.citation(surface, round_date, cyc_key, project_key, geo_key, engine_key, source_key, cit_in) — 출처 카테고리 옵션 창(인용 원소가 실제로 있는 창만)",
+    "rd.dim_source(source_key, category_key) — source_key → 출처 카테고리 키",
+    "app.citation_category(category_key, name, slug, ord) — 카테고리 라벨·정렬"
+  ],
+  "query_design": "1) 스코프 해석: user_account 조회 → scope_all/scope_brands/scope_countries/scope_regions. region 전용이면 rhq_region_country 로 country_code 집합 산출(합집합) → allowed_countries. scope_all=false 이면 allowed_countries 비어 있으면 403(default-deny).\\n2) surface·project 해석: surface=global → dim_project WHERE is_root(루트 프로젝트 1건). surface=website → dim_project WHERE surface=2 전체(사이트별 project_key 목록, 스코프로 브랜드·국가 좁힘은 5번에서). surface=project → project_id 로 app.project 조회(kind='customer') → project_member 로 접근권 확인 → scope_project_id 로 dim_project 매핑(project_key 1건).\\n3) 창 해석: from/to 있으면 `wcyc AS (SELECT cyc_key FROM rd.cycle WHERE surface=:s AND project_key = ANY(:pks) AND round_date BETWEEN :from AND :to AND view_date <= rd.today_kst() AND servable)`. 없으면 `wcyc AS (SELECT cyc_key FROM rd.cycle WHERE surface=:s AND project_key = ANY(:pks) AND view_date <= rd.today_kst() AND servable ORDER BY round_date DESC LIMIT 1)`(cycle_pick_idx 로 인덱스 스캔, 표면 전체가 아니라 프로젝트별 최신 회차가 필요하면 DISTINCT ON (project_key) 로 확장 — website 다건 프로젝트 케이스, R05 처럼).\\n4) 지오×언어×브랜드 매트릭스(global/project, surface IN (1,3)):\\n```sql\\nSELECT DISTINCT a.geo_key, a.lang_key, b.brand_bit\\nFROM rd.answer a\\nJOIN wcyc w ON w.cyc_key = a.cyc_key\\nCROSS JOIN LATERAL (SELECT brand_bit FROM app.brand WHERE (a.cat_mask & brand_bit) <> 0\\n                     UNION ALL SELECT NULL WHERE a.cat_mask & 8 <> 0 /* HMG 엄브렐러 */) b(brand_bit)\\nWHERE a.surface = :s AND a.std_in\\n  AND (:allowed_countries IS NULL OR a.geo_key = ANY(:allowed_geo_keys))\\n  AND (:scope_brands IS NULL OR (a.cat_mask & :scope_brand_mask) <> 0)\\n```\\nanswer_cell_idx(surface, round_date, cyc_key, prompt_key, engine_key, geo_key) 는 이 질의 패턴(geo_key·lang_key·cat_mask distinct)에 커버링이 아니므로 answer_rd_brin(round_date) + cyc_key IN(wcyc) 로 파티션·회차 가지치기 후 순차 스캔(행 수는 창 크기에 비례, 8번 perf 참고).\\n5) website 매트릭스(surface=2): `SELECT DISTINCT dp.site_brand_bit, dp.site_geo_key, a.lang_key FROM rd.answer_w a JOIN rd.dim_project dp ON dp.project_key = a.project_key JOIN wcyc w ON w.cyc_key = a.cyc_key WHERE a.std_in AND (:scope 필터)` — 현행처럼 website_sites/website_prompts 를 직접 읽지 않고 측정 사실표로 좁힌다(옵션=데이터 창 통일, open_questions).\\n6) 엔진: `SELECT DISTINCT engine_key FROM rd.answer(_w) a JOIN wcyc ON ... WHERE a.std_in AND (스코프)` → dim_engine 조인해 code.\\n7) 카탈로그(global/project 만, website 는 카탈로그 개념 없음): `SELECT DISTINCT brand_bit, presence_key, funnel_key, list_type_key, depth1_key, depth2_key, depth3_key FROM rd.catalog_entry ce JOIN rd.dim_prompt dp ON dp.prompt_key = ce.prompt_key WHERE dp.project_key = :root_or_target_project_key AND dp.in_root_catalog` — 측정 창과 무관(현행과 동일 계약, 카탈로그 등록 자체가 옵션). dim_taxon 조인으로 code·parent 해석.\\n8) 출처 카테고리: `SELECT DISTINCT s.category_key FROM rd.citation c JOIN rd.dim_source s ON s.source_key = c.source_key JOIN wcyc w ON w.cyc_key = c.cyc_key WHERE c.surface = :s AND c.cit_in AND (스코프)` → app.citation_category 조인.\\n9) meta: rd.surface_generation 에서 generation/as_of, wcyc 에서 cycles 목록.",
+  "perf": {
+    "risk": "medium",
+    "rows_scanned": "스냅샷(기간 미지정, 회차 1개): 10배에서 프롬프트×국가×언어×엔진 조합 수 규모, 현행 실측 매트릭스 139행(website)·138행(표준) 과 같은 자릿수 유지 전망 → 콜드 1초 이내 저위험. 기간 지정(특히 1년 프리셋): rd.answer/rd.answer_w 를 round_date 범위로 훑어야 하므로 K-2(기간 비교)가 지적한 '전 기간 조합 6.7초 최악치'와 같은 스캔 폭 — 이 경우만 high 로 격상.",
+    "indexes": [
+      "answer_rd_brin(round_date) — 기간 창 파티션·회차 가지치기",
+      "cycle_pick_idx(surface, round_date DESC) INCLUDE (cyc_key, project_key, servable, view_date, hidden_scope, generation) — 스냅샷 최신 회차 탐색 index-only",
+      "answer_cell_idx(surface, round_date, cyc_key, prompt_key, engine_key, geo_key) — cyc_key IN(wcyc) 반연결의 보조 경로",
+      "ab_p_proj_idx/answer_p_proj_idx(project_key, round_date) — surface=project 단일 프로젝트 필터"
+    ],
+    "notes": "DISTINCT geo_key×lang_key×cat_mask 조합은 카디널리티가 낮아(수백 행) 결과 집합 자체는 가볍다. 위험은 결과가 아니라 '기간이 길수록 rd.answer 원본 행을 다 훑어야 DISTINCT 를 뽑을 수 있다'는 스캔 비용 쪽이다. 완화책: 스냅샷(기간 미지정)이 압도적 다수 호출일 것으로 예상되므로(패널을 열 때 기본값) 그 경로는 cycle_pick_idx 로 단일 회차만 스캔해 low, 기간 프리셋(주간·2주)은 회차 수가 적어 실질적으로 medium 을 벗어나지 않을 전망. 1년 프리셋 조합만 실측 게이트(v3 폭 10배)에서 확인 필요 — D8 예외 없이 사전집계 없이 버틸 수 있는지가 이 단위의 유일한 성능 미결."
+  },
+  "auth": "서버가 app.user_account 에서 role·scope_all·scope_brands·scope_regions·scope_countries 를 계산해 요청과 무관하게 자체 스코프를 확정한다(클라이언트가 스코프를 넘기지 않음 — own_brand 와 동일하게 서버 결정). 스코프가 비면 403(default-deny, §9 fail-closed). surface=project 는 추가로 app.project_member(project_id, user_id, status='active') 존재를 확인, 없으면 403(경로 접근 게이트와 별개로 API 레벨에서도 재검증 — route-policy 가 화면단은 막아도 API 직접 호출은 이 검사가 유일한 방어선). 운영자(operator_scope) 게이트는 미적용(읽기 전용 조회, 비용 액션 아님). 인증은 A8: Supabase Auth 세션 → FastAPI 가 JWT(JWKS) 검증.",
+  "writes": "없음(읽기 전용)",
+  "current_refs": [
+    "lib/db/repositories/scope-aggregates.ts:7488 listMeasuredRegions",
+    "lib/db/repositories/scope-aggregates.ts:7636 listMeasuredScopeMatrix",
+    "lib/db/repositories/scope-aggregates.ts:7679 listMeasuredStandardLanguages",
+    "lib/db/repositories/scope-aggregates.ts:7789 listMeasuredEngines",
+    "lib/db/repositories/website-sites.ts:104 listMeasuredLanguages(website)",
+    "lib/db/repositories/website-sites.ts:142 listWebsiteScopeMatrix",
+    "lib/db/repositories/website-sites.ts:175 listWebsiteCountries",
+    "lib/db/repositories/standards.ts:394 listCatalogTaxonomy",
+    "lib/scope/server.ts:792 fetchProjectMeasuredEngines",
+    "components/dash/standard-filters.ts:64 readStandardFilters(관점 브랜드·스코프 교집합 규칙)",
+    "lib/rhq.ts effectiveScopeCountries(region→country 확장, scope-aggregates.ts:7539 주석에서 참조)",
+    "app/[locale]/(dash)/dashboard/page.tsx:199-215 (병렬 호출 지점, 현행 5개 함수 개별 호출)"
+  ],
+  "parity": "F06 하네스(harness/README.md:75) 그대로 채택: 표준측 listMeasuredRegions(optionScope,_,true,dateRange)+엔진 정적 목록 vs 웹사이트측 listWebsiteCountries(scope)+엔진 정적 목록의 현행 값과, 새 /v1/filters/options 의 geo_matrix distinct region·engines 를 같은 스코프·같은 창으로 대조. 확장 필요 항목(하네스 F06 이 지금 커버 안 함): (1) listMeasuredScopeMatrix/listWebsiteScopeMatrix 의 (brand,region,lang) 3축 조합 전체 대조 — F06 은 region distinct 만 캡처, (2) listCatalogTaxonomy 의 brand×presence×listType×depth1-3 조합 대조, (3) 엔진이 현행은 정적 목록인데 새 설계는 측정 기반이라 값 자체가 달라질 수 있어 항목이 아니라 \"의도된 차이\"로 표시하고 새로 실측 필요, (4) 웹사이트 창을 등록 기준→측정 기준으로 바꾸는 변경은 기존 하네스가 절대 못 잡는다(F06 웹사이트 축이 listWebsiteCountries 를 그대로 호출) — 새 대조 항목: 두 방식의 국가 목록 차집합을 전수 리포트해 얼마나 좁아지는지 실측.",
+  "open_questions": [
+    "계약서 §8 은 GET /v1/filters?surface= 하나로 옵션+선택가능일을 함께 낸다고 적었는데, 이번 작업 지시는 F-1(옵션)·F-2(날짜)를 GET /v1/filters/options·GET /v1/filters/dates 두 엔드포인트로 나눴다. 어느 쪽이 최종안인지 API 설계 설계 리드 확인 필요 — 이 설계는 지시받은 2-엔드포인트 안으로 작성했다.",
+    "웹사이트 필터 창을 '등록된 사이트(app.website_site/website_prompt 기준)' 에서 '측정된 데이터(rd.answer_w 기준)' 로 바꾸는 것은 §4 규칙 4 를 문자 그대로 따른 결과지만, 현행 화면은 신규 온보딩 사이트가 첫 측정 전에도 국가·언어 옵션에 보이는 것을 전제로 만들어졌을 수 있다(프롬프트 설계·검수 단계 UX). 이 변경이 제품 요구사항과 맞는지 확인 필요.",
+    "엔진 옵션을 현행 '정적 목록'에서 '측정 기반 DISTINCT'로 바꾸는 것 — F06 하네스가 정적 목록을 currently 값으로 캡처하고 있어 이 변경은 신구 대조에서 항상 '차이'로 뜬다. 정적 유지가 의도(운영진이 엔진을 늘려도 데이터 도착 전에 옵션에 먼저 노출하고 싶을 수 있음)인지 K-3(엔진 모듈) 설계자와 조율 필요.",
+    "카탈로그 브랜드 매트릭스에서 cat_mask 비트 전개(CROSS JOIN LATERAL) 방식이 rd.answer 원본 행 수만큼 반복 전개되어(브랜드 최대 5비트) 6번 질의의 실제 스캔 배율이 산식보다 커질 수 있다 — v3 폭 10배 실측 시 이 전개 방식이 병목인지, catalog_entry 를 통해 prompt_key→brand_bit 로 먼저 좁히고 answer 를 prompt_key 로 조인하는 대안이 더 싼지 실측 필요.",
+    "HMG 엄브렐러(brand_bit=8) 를 own_brand 계정에 자동 포함하는 로직을 서버가 어디서 판정하는지(요청 시점 own_brand 조회 vs cat_mask 자체에 이미 반영) — read_model 4번 rd.answer.cat_mask 의 정의(적재 시점에 엄브렐러 프롬프트도 8 비트로 채우는지)를 데이터 모델 설계자(rd.dim_prompt.cat_mask 적재 규칙)에 재확인 필요.",
+    "source_categories 축을 이 엔드포인트에 둘지, citations 모듈(GET /v1/citations/sources)에만 둘지: 계약서 §4 필터표는 '인용 계열 기능만' 이라 적어 필터 옵션 API 가 아니라 citations 모듈이 자체 발행할 수도 있다. 중복 방지를 위해 citations 모듈 설계자와 소유권 확인 필요."
+  ]
+}

@@ -1,0 +1,1422 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ACR(앵커 축 on) — job_id 가 없어 run 축으로 붙는다 > acrWhere · 기간 없음 1`] = `
+{
+  "params": [],
+  "text": "true AND x.run_id IN (SELECT ca.run_id FROM scope_answer_cycle_anchors ca WHERE ca.round_date = (SELECT max(ca2.round_date) FROM scope_answer_cycle_anchors ca2 WHERE ca2.surface = 'standard' AND ca2.view_anchor_date IS NOT NULL
+      AND ca2.view_anchor_date <= hmg_anchor_today() AND true AND (ca2.surface = 'project' OR EXISTS (
+    SELECT 1 FROM summary_cycles sc
+     WHERE sc.cycle_id = ca2.cycle_id
+       AND sc.fleet_visible
+       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()
+       AND sc.active_generation_id IS NOT NULL
+  ))) AND ca.view_anchor_date IS NOT NULL
+      AND ca.view_anchor_date <= hmg_anchor_today() AND true AND (ca.surface = 'project' OR EXISTS (
+    SELECT 1 FROM summary_cycles sc
+     WHERE sc.cycle_id = ca.cycle_id
+       AND sc.fleet_visible
+       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()
+       AND sc.active_generation_id IS NOT NULL
+  )))",
+}
+`;
+
+exports[`ACR(앵커 축 on) — job_id 가 없어 run 축으로 붙는다 > acrWhere · 여러 회차 1`] = `
+{
+  "params": [
+    "2026-08-20",
+    "2026-09-04",
+  ],
+  "text": "true AND x.run_id IN (SELECT ca.run_id FROM scope_answer_cycle_anchors ca WHERE ca.round_date >= $1::date AND ca.round_date <= $2::date AND ca.view_anchor_date IS NOT NULL
+      AND ca.view_anchor_date <= hmg_anchor_today() AND true AND (ca.surface = 'project' OR EXISTS (
+    SELECT 1 FROM summary_cycles sc
+     WHERE sc.cycle_id = ca.cycle_id
+       AND sc.fleet_visible
+       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()
+       AND sc.active_generation_id IS NOT NULL
+  )))",
+}
+`;
+
+exports[`ACR(앵커 축 on) — job_id 가 없어 run 축으로 붙는다 > latestAcrPromptRunIds · 기간 없음 1`] = `
+{
+  "params": [],
+  "text": "(
+    SELECT DISTINCT ON (x.prompt_id, x.target, x.region) x.prompt_run_id
+    FROM (
+      SELECT DISTINCT prompt_run_id, run_id, prompt_id, target, region, measured_at
+      FROM scope_acr_rollups
+    ) x
+    WHERE true AND x.run_id IN (SELECT ca.run_id FROM scope_answer_cycle_anchors ca WHERE ca.round_date = (SELECT max(ca2.round_date) FROM scope_answer_cycle_anchors ca2 WHERE ca2.surface = 'standard' AND ca2.view_anchor_date IS NOT NULL
+      AND ca2.view_anchor_date <= hmg_anchor_today() AND true AND (ca2.surface = 'project' OR EXISTS (
+    SELECT 1 FROM summary_cycles sc
+     WHERE sc.cycle_id = ca2.cycle_id
+       AND sc.fleet_visible
+       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()
+       AND sc.active_generation_id IS NOT NULL
+  ))) AND ca.view_anchor_date IS NOT NULL
+      AND ca.view_anchor_date <= hmg_anchor_today() AND true AND (ca.surface = 'project' OR EXISTS (
+    SELECT 1 FROM summary_cycles sc
+     WHERE sc.cycle_id = ca.cycle_id
+       AND sc.fleet_visible
+       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()
+       AND sc.active_generation_id IS NOT NULL
+  )))
+    ORDER BY x.prompt_id, x.target, x.region, x.measured_at DESC
+  )",
+}
+`;
+
+exports[`answerWhere(앵커 축 on) — project / website 표면 > project · 기간 없음 — 최신 회차 하나 1`] = `
+{
+  "params": [
+    [
+      "11111111-1111-4111-8111-111111111111",
+    ],
+    [
+      "11111111-1111-4111-8111-111111111111",
+    ],
+  ],
+  "text": "a.status = 'completed' AND true AND a.job_id IN (
+    SELECT DISTINCT ON (ca.round_date, a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id JOIN scope_answer_cycle_anchors ca ON ca.job_id = a.job_id
+    WHERE r.project_id = ANY($1::uuid[])
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed' AND ca.round_date = (SELECT max(ca2.round_date) FROM scope_answer_cycle_anchors ca2 WHERE ca2.project_id = ANY($2::uuid[]) AND ca2.view_anchor_date IS NOT NULL
+      AND ca2.view_anchor_date <= hmg_anchor_today() AND true AND (ca2.surface = 'project' OR EXISTS (
+    SELECT 1 FROM summary_cycles sc
+     WHERE sc.cycle_id = ca2.cycle_id
+       AND sc.fleet_visible
+       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()
+       AND sc.active_generation_id IS NOT NULL
+  ))) AND ca.view_anchor_date IS NOT NULL
+      AND ca.view_anchor_date <= hmg_anchor_today() AND true AND (ca.surface = 'project' OR EXISTS (
+    SELECT 1 FROM summary_cycles sc
+     WHERE sc.cycle_id = ca.cycle_id
+       AND sc.fleet_visible
+       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()
+       AND sc.active_generation_id IS NOT NULL
+  )) AND ca.is_default_engine
+    ORDER BY ca.round_date, a.prompt_id, a.target, a.region, ca.measured_at_orig DESC, a.job_id DESC
+  )",
+}
+`;
+
+exports[`answerWhere(앵커 축 on) — project / website 표면 > project(단일) · 여러 회차 1`] = `
+{
+  "params": [
+    [
+      "11111111-1111-4111-8111-111111111111",
+    ],
+    "2026-08-20",
+    "2026-09-04",
+  ],
+  "text": "a.status = 'completed' AND true AND a.job_id IN (
+    SELECT DISTINCT ON (ca.round_date, a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id JOIN scope_answer_cycle_anchors ca ON ca.job_id = a.job_id
+    WHERE r.project_id = ANY($1::uuid[])
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed' AND ca.round_date >= $2::date AND ca.round_date <= $3::date AND ca.view_anchor_date IS NOT NULL
+      AND ca.view_anchor_date <= hmg_anchor_today() AND true AND (ca.surface = 'project' OR EXISTS (
+    SELECT 1 FROM summary_cycles sc
+     WHERE sc.cycle_id = ca.cycle_id
+       AND sc.fleet_visible
+       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()
+       AND sc.active_generation_id IS NOT NULL
+  )) AND ca.is_default_engine
+    ORDER BY ca.round_date, a.prompt_id, a.target, a.region, ca.measured_at_orig DESC, a.job_id DESC
+  )",
+}
+`;
+
+exports[`answerWhere(앵커 축 on) — project / website 표면 > website · 추이(allRuns) 1`] = `
+{
+  "params": [
+    [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222",
+    ],
+    "2026-08-20",
+    "2026-09-04",
+  ],
+  "text": "a.status = 'completed' AND true AND a.run_id IN (SELECT run_id FROM scope_runs WHERE project_id = ANY($1::uuid[])) AND a.job_id IN (SELECT ca.job_id FROM scope_answer_cycle_anchors ca WHERE ca.round_date >= $2::date AND ca.round_date <= $3::date AND ca.view_anchor_date IS NOT NULL
+      AND ca.view_anchor_date <= hmg_anchor_today() AND true AND (ca.surface = 'project' OR EXISTS (
+    SELECT 1 FROM summary_cycles sc
+     WHERE sc.cycle_id = ca.cycle_id
+       AND sc.fleet_visible
+       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()
+       AND sc.active_generation_id IS NOT NULL
+  )) AND ca.is_default_engine)",
+}
+`;
+
+exports[`answerWhere(앵커 축 on) — project / website 표면 > website(함대 = 프로젝트 여럿) · 여러 회차 1`] = `
+{
+  "params": [
+    [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222",
+    ],
+    "2026-08-20",
+    "2026-09-04",
+  ],
+  "text": "a.status = 'completed' AND true AND a.job_id IN (
+    SELECT DISTINCT ON (ca.round_date, a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id JOIN scope_answer_cycle_anchors ca ON ca.job_id = a.job_id
+    WHERE r.project_id = ANY($1::uuid[])
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed' AND ca.round_date >= $2::date AND ca.round_date <= $3::date AND ca.view_anchor_date IS NOT NULL
+      AND ca.view_anchor_date <= hmg_anchor_today() AND true AND (ca.surface = 'project' OR EXISTS (
+    SELECT 1 FROM summary_cycles sc
+     WHERE sc.cycle_id = ca.cycle_id
+       AND sc.fleet_visible
+       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()
+       AND sc.active_generation_id IS NOT NULL
+  )) AND ca.is_default_engine
+    ORDER BY ca.round_date, a.prompt_id, a.target, a.region, ca.measured_at_orig DESC, a.job_id DESC
+  )",
+}
+`;
+
+exports[`answerWhere(앵커 축 on) — project / website 표면 > website(함대) · 기간 없음 — 함대 전체가 한 날짜를 본다 1`] = `
+{
+  "params": [
+    [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222",
+    ],
+    [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222",
+    ],
+  ],
+  "text": "a.status = 'completed' AND true AND a.job_id IN (
+    SELECT DISTINCT ON (ca.round_date, a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id JOIN scope_answer_cycle_anchors ca ON ca.job_id = a.job_id
+    WHERE r.project_id = ANY($1::uuid[])
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed' AND ca.round_date = (SELECT max(ca2.round_date) FROM scope_answer_cycle_anchors ca2 WHERE ca2.project_id = ANY($2::uuid[]) AND ca2.view_anchor_date IS NOT NULL
+      AND ca2.view_anchor_date <= hmg_anchor_today() AND true AND (ca2.surface = 'project' OR EXISTS (
+    SELECT 1 FROM summary_cycles sc
+     WHERE sc.cycle_id = ca2.cycle_id
+       AND sc.fleet_visible
+       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()
+       AND sc.active_generation_id IS NOT NULL
+  ))) AND ca.view_anchor_date IS NOT NULL
+      AND ca.view_anchor_date <= hmg_anchor_today() AND true AND (ca.surface = 'project' OR EXISTS (
+    SELECT 1 FROM summary_cycles sc
+     WHERE sc.cycle_id = ca.cycle_id
+       AND sc.fleet_visible
+       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()
+       AND sc.active_generation_id IS NOT NULL
+  )) AND ca.is_default_engine
+    ORDER BY ca.round_date, a.prompt_id, a.target, a.region, ca.measured_at_orig DESC, a.job_id DESC
+  )",
+}
+`;
+
+exports[`answerWhere(앵커 축 on) — 글로벌(루트) 표면 > cumulative 선언 — 여러 회차와 같은 모드 1`] = `
+{
+  "params": [
+    "2026-08-20",
+    "2026-09-04",
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "a.status = 'completed' AND true AND a.job_id IN (
+    SELECT DISTINCT ON (ca.round_date, a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id JOIN scope_answer_cycle_anchors ca ON ca.job_id = a.job_id
+    WHERE true
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed' AND NOT (
+    a.region <> 'KR'
+    AND a.prompt_id IS NOT NULL
+    AND a.prompt_id IN (SELECT sp.prompt_id FROM scope_prompts sp WHERE sp.text ~ '[가-힣]')
+  ) AND ca.round_date >= $1::date AND ca.round_date <= $2::date AND ca.view_anchor_date IS NOT NULL
+      AND ca.view_anchor_date <= hmg_anchor_today() AND true AND (ca.surface = 'project' OR EXISTS (
+    SELECT 1 FROM summary_cycles sc
+     WHERE sc.cycle_id = ca.cycle_id
+       AND sc.fleet_visible
+       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()
+       AND sc.active_generation_id IS NOT NULL
+  )) AND ca.is_default_engine
+    ORDER BY ca.round_date, a.prompt_id, a.target, a.region, ca.measured_at_orig DESC, a.job_id DESC
+  ) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $3 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`answerWhere(앵커 축 on) — 글로벌(루트) 표면 > dateFrom 만 1`] = `
+{
+  "params": [
+    "2026-08-20",
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "a.status = 'completed' AND true AND a.job_id IN (
+    SELECT DISTINCT ON (ca.round_date, a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id JOIN scope_answer_cycle_anchors ca ON ca.job_id = a.job_id
+    WHERE true
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed' AND NOT (
+    a.region <> 'KR'
+    AND a.prompt_id IS NOT NULL
+    AND a.prompt_id IN (SELECT sp.prompt_id FROM scope_prompts sp WHERE sp.text ~ '[가-힣]')
+  ) AND ca.round_date >= $1::date AND ca.view_anchor_date IS NOT NULL
+      AND ca.view_anchor_date <= hmg_anchor_today() AND true AND (ca.surface = 'project' OR EXISTS (
+    SELECT 1 FROM summary_cycles sc
+     WHERE sc.cycle_id = ca.cycle_id
+       AND sc.fleet_visible
+       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()
+       AND sc.active_generation_id IS NOT NULL
+  )) AND ca.is_default_engine
+    ORDER BY ca.round_date, a.prompt_id, a.target, a.region, ca.measured_at_orig DESC, a.job_id DESC
+  ) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $2 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`answerWhere(앵커 축 on) — 글로벌(루트) 표면 > 기간 없음 — 노출 가능한 최신 회차 하나 1`] = `
+{
+  "params": [
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "a.status = 'completed' AND true AND a.job_id IN (
+    SELECT DISTINCT ON (ca.round_date, a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id JOIN scope_answer_cycle_anchors ca ON ca.job_id = a.job_id
+    WHERE true
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed' AND NOT (
+    a.region <> 'KR'
+    AND a.prompt_id IS NOT NULL
+    AND a.prompt_id IN (SELECT sp.prompt_id FROM scope_prompts sp WHERE sp.text ~ '[가-힣]')
+  ) AND ca.round_date = (SELECT max(ca2.round_date) FROM scope_answer_cycle_anchors ca2 WHERE ca2.surface = 'standard' AND ca2.view_anchor_date IS NOT NULL
+      AND ca2.view_anchor_date <= hmg_anchor_today() AND true AND (ca2.surface = 'project' OR EXISTS (
+    SELECT 1 FROM summary_cycles sc
+     WHERE sc.cycle_id = ca2.cycle_id
+       AND sc.fleet_visible
+       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()
+       AND sc.active_generation_id IS NOT NULL
+  ))) AND ca.view_anchor_date IS NOT NULL
+      AND ca.view_anchor_date <= hmg_anchor_today() AND true AND (ca.surface = 'project' OR EXISTS (
+    SELECT 1 FROM summary_cycles sc
+     WHERE sc.cycle_id = ca.cycle_id
+       AND sc.fleet_visible
+       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()
+       AND sc.active_generation_id IS NOT NULL
+  )) AND ca.is_default_engine
+    ORDER BY ca.round_date, a.prompt_id, a.target, a.region, ca.measured_at_orig DESC, a.job_id DESC
+  ) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $1 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`answerWhere(앵커 축 on) — 글로벌(루트) 표면 > 엔진 선택 1`] = `
+{
+  "params": [
+    "2026-08-20",
+    "2026-09-04",
+    "deepseek",
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "a.status = 'completed' AND true AND a.job_id IN (
+    SELECT DISTINCT ON (ca.round_date, a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id JOIN scope_answer_cycle_anchors ca ON ca.job_id = a.job_id
+    WHERE true
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed' AND NOT (
+    a.region <> 'KR'
+    AND a.prompt_id IS NOT NULL
+    AND a.prompt_id IN (SELECT sp.prompt_id FROM scope_prompts sp WHERE sp.text ~ '[가-힣]')
+  ) AND ca.round_date >= $1::date AND ca.round_date <= $2::date AND ca.view_anchor_date IS NOT NULL
+      AND ca.view_anchor_date <= hmg_anchor_today() AND true AND (ca.surface = 'project' OR EXISTS (
+    SELECT 1 FROM summary_cycles sc
+     WHERE sc.cycle_id = ca.cycle_id
+       AND sc.fleet_visible
+       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()
+       AND sc.active_generation_id IS NOT NULL
+  ))
+    ORDER BY ca.round_date, a.prompt_id, a.target, a.region, ca.measured_at_orig DESC, a.job_id DESC
+  ) AND a.target IN ($3) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $4 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`answerWhere(앵커 축 on) — 글로벌(루트) 표면 > 여러 회차 1`] = `
+{
+  "params": [
+    "2026-08-20",
+    "2026-09-04",
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "a.status = 'completed' AND true AND a.job_id IN (
+    SELECT DISTINCT ON (ca.round_date, a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id JOIN scope_answer_cycle_anchors ca ON ca.job_id = a.job_id
+    WHERE true
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed' AND NOT (
+    a.region <> 'KR'
+    AND a.prompt_id IS NOT NULL
+    AND a.prompt_id IN (SELECT sp.prompt_id FROM scope_prompts sp WHERE sp.text ~ '[가-힣]')
+  ) AND ca.round_date >= $1::date AND ca.round_date <= $2::date AND ca.view_anchor_date IS NOT NULL
+      AND ca.view_anchor_date <= hmg_anchor_today() AND true AND (ca.surface = 'project' OR EXISTS (
+    SELECT 1 FROM summary_cycles sc
+     WHERE sc.cycle_id = ca.cycle_id
+       AND sc.fleet_visible
+       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()
+       AND sc.active_generation_id IS NOT NULL
+  )) AND ca.is_default_engine
+    ORDER BY ca.round_date, a.prompt_id, a.target, a.region, ca.measured_at_orig DESC, a.job_id DESC
+  ) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $3 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`answerWhere(앵커 축 on) — 글로벌(루트) 표면 > 추이(allRuns) — 창만 앵커 축, 회차 dedup 은 버킷이 맡는다 1`] = `
+{
+  "params": [
+    "2026-08-20",
+    "2026-09-04",
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "a.status = 'completed' AND true AND a.run_id IN (SELECT run_id FROM scope_runs WHERE true) AND a.job_id IN (SELECT ca.job_id FROM scope_answer_cycle_anchors ca WHERE ca.round_date >= $1::date AND ca.round_date <= $2::date AND ca.view_anchor_date IS NOT NULL
+      AND ca.view_anchor_date <= hmg_anchor_today() AND true AND (ca.surface = 'project' OR EXISTS (
+    SELECT 1 FROM summary_cycles sc
+     WHERE sc.cycle_id = ca.cycle_id
+       AND sc.fleet_visible
+       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()
+       AND sc.active_generation_id IS NOT NULL
+  )) AND ca.is_default_engine) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $3 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`answerWhere(앵커 축 on) — 글로벌(루트) 표면 > 한 회차 1`] = `
+{
+  "params": [
+    "2026-09-04",
+    "2026-09-04",
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "a.status = 'completed' AND true AND a.job_id IN (
+    SELECT DISTINCT ON (ca.round_date, a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id JOIN scope_answer_cycle_anchors ca ON ca.job_id = a.job_id
+    WHERE true
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed' AND NOT (
+    a.region <> 'KR'
+    AND a.prompt_id IS NOT NULL
+    AND a.prompt_id IN (SELECT sp.prompt_id FROM scope_prompts sp WHERE sp.text ~ '[가-힣]')
+  ) AND ca.round_date >= $1::date AND ca.round_date <= $2::date AND ca.view_anchor_date IS NOT NULL
+      AND ca.view_anchor_date <= hmg_anchor_today() AND true AND (ca.surface = 'project' OR EXISTS (
+    SELECT 1 FROM summary_cycles sc
+     WHERE sc.cycle_id = ca.cycle_id
+       AND sc.fleet_visible
+       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()
+       AND sc.active_generation_id IS NOT NULL
+  )) AND ca.is_default_engine
+    ORDER BY ca.round_date, a.prompt_id, a.target, a.region, ca.measured_at_orig DESC, a.job_id DESC
+  ) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $3 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`detailAnswerWhere(앵커 축 on) — 상세·누적 경로 > cumulative + 기간 — run 앵커 창이 아니라 round_date 1`] = `
+{
+  "params": [
+    "2026-08-20",
+    "2026-09-04",
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "true AND a.job_id IN (
+    SELECT DISTINCT ON (ca.round_date, a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id JOIN scope_answer_cycle_anchors ca ON ca.job_id = a.job_id
+    WHERE true
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed' AND NOT (
+    a.region <> 'KR'
+    AND a.prompt_id IS NOT NULL
+    AND a.prompt_id IN (SELECT sp.prompt_id FROM scope_prompts sp WHERE sp.text ~ '[가-힣]')
+  ) AND ca.round_date >= $1::date AND ca.round_date <= $2::date AND ca.view_anchor_date IS NOT NULL
+      AND ca.view_anchor_date <= hmg_anchor_today() AND true AND (ca.surface = 'project' OR EXISTS (
+    SELECT 1 FROM summary_cycles sc
+     WHERE sc.cycle_id = ca.cycle_id
+       AND sc.fleet_visible
+       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()
+       AND sc.active_generation_id IS NOT NULL
+  )) AND ca.is_default_engine
+    ORDER BY ca.round_date, a.prompt_id, a.target, a.region, ca.measured_at_orig DESC, a.job_id DESC
+  ) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $3 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`detailAnswerWhere(앵커 축 on) — 상세·누적 경로 > project · cumulative + 기간 1`] = `
+{
+  "params": [
+    [
+      "11111111-1111-4111-8111-111111111111",
+    ],
+    "2026-08-20",
+    "2026-09-04",
+  ],
+  "text": "true AND a.job_id IN (
+    SELECT DISTINCT ON (ca.round_date, a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id JOIN scope_answer_cycle_anchors ca ON ca.job_id = a.job_id
+    WHERE r.project_id = ANY($1::uuid[])
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed' AND ca.round_date >= $2::date AND ca.round_date <= $3::date AND ca.view_anchor_date IS NOT NULL
+      AND ca.view_anchor_date <= hmg_anchor_today() AND true AND (ca.surface = 'project' OR EXISTS (
+    SELECT 1 FROM summary_cycles sc
+     WHERE sc.cycle_id = ca.cycle_id
+       AND sc.fleet_visible
+       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()
+       AND sc.active_generation_id IS NOT NULL
+  )) AND ca.is_default_engine
+    ORDER BY ca.round_date, a.prompt_id, a.target, a.region, ca.measured_at_orig DESC, a.job_id DESC
+  )",
+}
+`;
+
+exports[`detailAnswerWhere(앵커 축 on) — 상세·누적 경로 > 기간 없음 — 최신 회차 하나 1`] = `
+{
+  "params": [
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "true AND a.job_id IN (
+    SELECT DISTINCT ON (ca.round_date, a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id JOIN scope_answer_cycle_anchors ca ON ca.job_id = a.job_id
+    WHERE true
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed' AND NOT (
+    a.region <> 'KR'
+    AND a.prompt_id IS NOT NULL
+    AND a.prompt_id IN (SELECT sp.prompt_id FROM scope_prompts sp WHERE sp.text ~ '[가-힣]')
+  ) AND ca.round_date = (SELECT max(ca2.round_date) FROM scope_answer_cycle_anchors ca2 WHERE ca2.surface = 'standard' AND ca2.view_anchor_date IS NOT NULL
+      AND ca2.view_anchor_date <= hmg_anchor_today() AND true AND (ca2.surface = 'project' OR EXISTS (
+    SELECT 1 FROM summary_cycles sc
+     WHERE sc.cycle_id = ca2.cycle_id
+       AND sc.fleet_visible
+       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()
+       AND sc.active_generation_id IS NOT NULL
+  ))) AND ca.view_anchor_date IS NOT NULL
+      AND ca.view_anchor_date <= hmg_anchor_today() AND true AND (ca.surface = 'project' OR EXISTS (
+    SELECT 1 FROM summary_cycles sc
+     WHERE sc.cycle_id = ca.cycle_id
+       AND sc.fleet_visible
+       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()
+       AND sc.active_generation_id IS NOT NULL
+  )) AND ca.is_default_engine
+    ORDER BY ca.round_date, a.prompt_id, a.target, a.region, ca.measured_at_orig DESC, a.job_id DESC
+  ) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $1 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`detailAnswerWhere(앵커 축 on) — 상세·누적 경로 > 여러 회차 1`] = `
+{
+  "params": [
+    "2026-08-20",
+    "2026-09-04",
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "true AND a.job_id IN (
+    SELECT DISTINCT ON (ca.round_date, a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id JOIN scope_answer_cycle_anchors ca ON ca.job_id = a.job_id
+    WHERE true
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed' AND NOT (
+    a.region <> 'KR'
+    AND a.prompt_id IS NOT NULL
+    AND a.prompt_id IN (SELECT sp.prompt_id FROM scope_prompts sp WHERE sp.text ~ '[가-힣]')
+  ) AND ca.round_date >= $1::date AND ca.round_date <= $2::date AND ca.view_anchor_date IS NOT NULL
+      AND ca.view_anchor_date <= hmg_anchor_today() AND true AND (ca.surface = 'project' OR EXISTS (
+    SELECT 1 FROM summary_cycles sc
+     WHERE sc.cycle_id = ca.cycle_id
+       AND sc.fleet_visible
+       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()
+       AND sc.active_generation_id IS NOT NULL
+  )) AND ca.is_default_engine
+    ORDER BY ca.round_date, a.prompt_id, a.target, a.region, ca.measured_at_orig DESC, a.job_id DESC
+  ) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $3 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`detailAnswerWhere(앵커 축 on) — 상세·누적 경로 > 추이(allRuns) + 기간 — 행 클리핑 대신 round_date 1`] = `
+{
+  "params": [
+    "2026-08-20",
+    "2026-09-04",
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "true AND a.status = 'completed' AND a.run_id IN (SELECT run_id FROM scope_runs WHERE true) AND a.job_id IN (SELECT ca.job_id FROM scope_answer_cycle_anchors ca WHERE ca.round_date >= $1::date AND ca.round_date <= $2::date AND ca.view_anchor_date IS NOT NULL
+      AND ca.view_anchor_date <= hmg_anchor_today() AND true AND (ca.surface = 'project' OR EXISTS (
+    SELECT 1 FROM summary_cycles sc
+     WHERE sc.cycle_id = ca.cycle_id
+       AND sc.fleet_visible
+       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()
+       AND sc.active_generation_id IS NOT NULL
+  )) AND ca.is_default_engine) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $3 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`snapshotRunFilter(앵커 축 on) — JS 드릴다운의 답변셋 > 루트 · 기간 없음 1`] = `
+{
+  "params": [
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "job_id IN (
+    SELECT DISTINCT ON (ca.round_date, a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id JOIN scope_answer_cycle_anchors ca ON ca.job_id = a.job_id
+    WHERE true
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed' AND NOT (
+    a.region <> 'KR'
+    AND a.prompt_id IS NOT NULL
+    AND a.prompt_id IN (SELECT sp.prompt_id FROM scope_prompts sp WHERE sp.text ~ '[가-힣]')
+  ) AND ca.round_date = (SELECT max(ca2.round_date) FROM scope_answer_cycle_anchors ca2 WHERE ca2.surface = 'standard' AND ca2.view_anchor_date IS NOT NULL
+      AND ca2.view_anchor_date <= hmg_anchor_today() AND true AND (ca2.surface = 'project' OR EXISTS (
+    SELECT 1 FROM summary_cycles sc
+     WHERE sc.cycle_id = ca2.cycle_id
+       AND sc.fleet_visible
+       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()
+       AND sc.active_generation_id IS NOT NULL
+  ))) AND ca.view_anchor_date IS NOT NULL
+      AND ca.view_anchor_date <= hmg_anchor_today() AND true AND (ca.surface = 'project' OR EXISTS (
+    SELECT 1 FROM summary_cycles sc
+     WHERE sc.cycle_id = ca.cycle_id
+       AND sc.fleet_visible
+       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()
+       AND sc.active_generation_id IS NOT NULL
+  )) AND ca.is_default_engine
+    ORDER BY ca.round_date, a.prompt_id, a.target, a.region, ca.measured_at_orig DESC, a.job_id DESC
+  ) AND true AND prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $1 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`snapshotRunFilter(앵커 축 on) — JS 드릴다운의 답변셋 > 프로젝트 · 여러 회차 1`] = `
+{
+  "params": [
+    [
+      "11111111-1111-4111-8111-111111111111",
+    ],
+    "2026-08-20",
+    "2026-09-04",
+  ],
+  "text": "job_id IN (
+    SELECT DISTINCT ON (ca.round_date, a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id JOIN scope_answer_cycle_anchors ca ON ca.job_id = a.job_id
+    WHERE r.project_id = ANY($1::uuid[])
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed' AND ca.round_date >= $2::date AND ca.round_date <= $3::date AND ca.view_anchor_date IS NOT NULL
+      AND ca.view_anchor_date <= hmg_anchor_today() AND true AND (ca.surface = 'project' OR EXISTS (
+    SELECT 1 FROM summary_cycles sc
+     WHERE sc.cycle_id = ca.cycle_id
+       AND sc.fleet_visible
+       AND sc.view_anchor_at IS NOT NULL AND sc.view_anchor_at <= now()
+       AND sc.active_generation_id IS NOT NULL
+  )) AND ca.is_default_engine
+    ORDER BY ca.round_date, a.prompt_id, a.target, a.region, ca.measured_at_orig DESC, a.job_id DESC
+  ) AND true",
+}
+`;
+
+exports[`website 프롬프트 표(앵커 축 on) — 기간과 '마지막 측정일'이 한 축 > 렌즈 · 기간 없음 — 노출 게이트만 남는다 1`] = `
+{
+  "params": [],
+  "text": "a.status = 'completed' AND ca.view_anchor_date IS NOT NULL
+      AND ca.view_anchor_date <= hmg_anchor_today()",
+}
+`;
+
+exports[`website 프롬프트 표(앵커 축 on) — 기간과 '마지막 측정일'이 한 축 > 렌즈 · 여러 회차 1`] = `
+{
+  "params": [
+    "2026-08-20",
+    "2026-09-04",
+  ],
+  "text": "a.status = 'completed' AND ca.round_date >= $1::date AND ca.round_date <= $2::date AND ca.view_anchor_date IS NOT NULL
+      AND ca.view_anchor_date <= hmg_anchor_today()",
+}
+`;
+
+exports[`website 프롬프트 표(앵커 축 on) — 기간과 '마지막 측정일'이 한 축 > 투영 + 렌즈 조인 1`] = `
+{
+  "params": [
+    "2026-08-20",
+    "2026-09-04",
+  ],
+  "text": "
+    WITH lens AS (
+      SELECT a.prompt_id,
+             count(*)::int AS answers,
+             -- 마지막 측정일 = **회차(cycle) 기준**. 웹사이트 대시보드 asOf·추이 눈금이
+             -- 이미 COALESCE(r.cycle_anchor_at, a.measured_at) 축이라(#209,
+             -- scope-aggregates.ts) 이 열만 원본 measured_at 을 쓰면 같은 화면에서
+             -- 유닛마다 날짜가 갈린다 — 2026-09-08 실증: 제네시스/US 를 회차 밖(9/7)에
+             -- 개별 측정하자 이 열만 9/7 로 뜨고 나머지 Genesis 유닛은 9/4 였다.
+             -- 측정 이월은 상시 현상이라 예외가 아니라 축을 맞추는 것이 맞다.
+             to_char(max(ca.round_date), 'YYYY-MM-DD') AS last_measured_at,
+             array_agg(DISTINCT a.target) AS engines
+      FROM scope_answers a
+      LEFT JOIN scope_runs r ON r.run_id = a.run_id JOIN scope_answer_cycle_anchors ca ON ca.job_id = a.job_id
+      WHERE a.status = 'completed' AND ca.round_date >= $1::date AND ca.round_date <= $2::date AND ca.view_anchor_date IS NOT NULL
+      AND ca.view_anchor_date <= hmg_anchor_today()
+      GROUP BY a.prompt_id
+    )
+    SELECT wp.id,
+           wp.prompt_text,
+           wp.target_url,
+           wp.domain,
+           wp.lang_code,
+           ws.brand,
+           ws.country_code,
+           COALESCE(l.answers, 0) AS answers,
+           l.last_measured_at,
+           COALESCE(l.engines, ARRAY[]::text[]) AS engines
+    FROM website_prompts wp
+    JOIN website_sites ws ON ws.id = wp.site_id
+    LEFT JOIN lens l ON l.prompt_id::text = wp.scope_prompt_id
+    WHERE true",
+}
+`;
+
+exports[`추이 버킷·dedup(앵커 축 on) > 언급 브랜드 일별 — 주 버킷은 anchor_week, dedup 은 회차 1`] = `
+{
+  "params": [
+    "기아",
+    "Kia",
+    "현대",
+    "Hyundai",
+    "현대차",
+    "Hyundai",
+    "현대자동차",
+    "Hyundai",
+    "제네시스",
+    "Genesis",
+    "هيونداي",
+    "Hyundai",
+    "كيا",
+    "Kia",
+    "جينيسيس",
+    "Genesis",
+    "יונדאי",
+    "Hyundai",
+    "קיה",
+    "Kia",
+    "폭스바겐",
+    "Volkswagen",
+    "메르세데스-벤츠",
+    "Mercedes-Benz",
+    "메르세데즈-벤츠",
+    "Mercedes-Benz",
+    "메르세데스-AMG",
+    "Mercedes-AMG",
+    "هوندا",
+    "Honda",
+    "마쓰다",
+    "Mazda",
+    "르노",
+    "Renault",
+    "טויוטה",
+    "Toyota",
+    "미니",
+    "MINI",
+    "Mini",
+    "MINI",
+    "링컨",
+    "Lincoln",
+    "링크앤코",
+    "Lynk & Co",
+    "대우",
+    "Daewoo",
+    "Skoda",
+    "Škoda",
+    "테슬라",
+    "Tesla",
+    "루시드",
+    "Lucid",
+    "تويوتا",
+    "Toyota",
+    "奔驰",
+    "Mercedes-Benz",
+    "宝马",
+    "BMW",
+    "نيسان",
+    "Nissan",
+    "KG 모빌리티",
+    "KG Mobility",
+    "זיקר",
+    "Zeekr",
+    "מרצדס",
+    "Mercedes-Benz",
+    "שברולט",
+    "Chevrolet",
+    "ב.מ.וו",
+    "BMW",
+    "엑스펑",
+    "XPeng",
+    "피닌파리나",
+    "Pininfarina",
+    "Xpeng",
+    "XPeng",
+    "기아",
+    "Kia",
+    "현대",
+    "Hyundai",
+    "현대차",
+    "Hyundai",
+    "현대자동차",
+    "Hyundai",
+    "제네시스",
+    "Genesis",
+    "هيونداي",
+    "Hyundai",
+    "كيا",
+    "Kia",
+    "جينيسيس",
+    "Genesis",
+    "יונדאי",
+    "Hyundai",
+    "קיה",
+    "Kia",
+    "폭스바겐",
+    "Volkswagen",
+    "메르세데스-벤츠",
+    "Mercedes-Benz",
+    "메르세데즈-벤츠",
+    "Mercedes-Benz",
+    "메르세데스-AMG",
+    "Mercedes-AMG",
+    "هوندا",
+    "Honda",
+    "마쓰다",
+    "Mazda",
+    "르노",
+    "Renault",
+    "טויוטה",
+    "Toyota",
+    "미니",
+    "MINI",
+    "Mini",
+    "MINI",
+    "링컨",
+    "Lincoln",
+    "링크앤코",
+    "Lynk & Co",
+    "대우",
+    "Daewoo",
+    "Skoda",
+    "Škoda",
+    "테슬라",
+    "Tesla",
+    "루시드",
+    "Lucid",
+    "تويوتا",
+    "Toyota",
+    "奔驰",
+    "Mercedes-Benz",
+    "宝马",
+    "BMW",
+    "نيسان",
+    "Nissan",
+    "KG 모빌리티",
+    "KG Mobility",
+    "זיקר",
+    "Zeekr",
+    "מרצדס",
+    "Mercedes-Benz",
+    "שברולט",
+    "Chevrolet",
+    "ב.מ.וו",
+    "BMW",
+    "엑스펑",
+    "XPeng",
+    "피닌파리나",
+    "Pininfarina",
+    "Xpeng",
+    "XPeng",
+    "	
+
+                  　﻿",
+    "기아",
+    "Kia",
+    "현대",
+    "Hyundai",
+    "현대차",
+    "Hyundai",
+    "현대자동차",
+    "Hyundai",
+    "제네시스",
+    "Genesis",
+    "هيونداي",
+    "Hyundai",
+    "كيا",
+    "Kia",
+    "جينيسيس",
+    "Genesis",
+    "יונדאי",
+    "Hyundai",
+    "קיה",
+    "Kia",
+    "폭스바겐",
+    "Volkswagen",
+    "메르세데스-벤츠",
+    "Mercedes-Benz",
+    "메르세데즈-벤츠",
+    "Mercedes-Benz",
+    "메르세데스-AMG",
+    "Mercedes-AMG",
+    "هوندا",
+    "Honda",
+    "마쓰다",
+    "Mazda",
+    "르노",
+    "Renault",
+    "טויוטה",
+    "Toyota",
+    "미니",
+    "MINI",
+    "Mini",
+    "MINI",
+    "링컨",
+    "Lincoln",
+    "링크앤코",
+    "Lynk & Co",
+    "대우",
+    "Daewoo",
+    "Skoda",
+    "Škoda",
+    "테슬라",
+    "Tesla",
+    "루시드",
+    "Lucid",
+    "تويوتا",
+    "Toyota",
+    "奔驰",
+    "Mercedes-Benz",
+    "宝马",
+    "BMW",
+    "نيسان",
+    "Nissan",
+    "KG 모빌리티",
+    "KG Mobility",
+    "זיקר",
+    "Zeekr",
+    "מרצדס",
+    "Mercedes-Benz",
+    "שברולט",
+    "Chevrolet",
+    "ב.מ.וו",
+    "BMW",
+    "엑스펑",
+    "XPeng",
+    "피닌파리나",
+    "Pininfarina",
+    "Xpeng",
+    "XPeng",
+    "^[	
+
+                  　﻿]*(Genesis|제네시스|جينيسيس)([^[:alnum:]]|$)",
+    "00000000-0000-0000-0000-000000000304",
+    "^[	
+
+                  　﻿]*(Hyundai|현대자동차|현대차|현대|هيونداي|יונדאי)([^[:alnum:]]|$)",
+    "00000000-0000-0000-0000-000000000301",
+    "^[	
+
+                  　﻿]*(Kia|기아|كيا|קיה)([^[:alnum:]]|$)",
+    "00000000-0000-0000-0000-000000000302",
+    "e0348d5f-afe4-48e6-aa99-1dee566f2822",
+    "00000000-0000-0000-0000-000000000301",
+    "c6dc2ca3-0fc9-42bc-b255-6fbfdb394e45",
+    "00000000-0000-0000-0000-000000000301",
+    "65eabd79-6138-4851-8b58-8a9b0261b517",
+    "00000000-0000-0000-0000-000000000301",
+    "ed4b8012-4a73-4174-9b43-4cb696934b25",
+    "00000000-0000-0000-0000-000000000302",
+    "53a1ac82-6346-477d-9fb7-31d78b9248fa",
+    "00000000-0000-0000-0000-000000000302",
+    "e21f66ad-9a28-46ab-8436-78ead06bd8f9",
+    "00000000-0000-0000-0000-000000000302",
+    "fd2f4a33-8f9b-4a46-bfd0-62133d162d28",
+    "00000000-0000-0000-0000-000000000304",
+    "기아",
+    "Kia",
+    "현대",
+    "Hyundai",
+    "현대차",
+    "Hyundai",
+    "현대자동차",
+    "Hyundai",
+    "제네시스",
+    "Genesis",
+    "هيونداي",
+    "Hyundai",
+    "كيا",
+    "Kia",
+    "جينيسيس",
+    "Genesis",
+    "יונדאי",
+    "Hyundai",
+    "קיה",
+    "Kia",
+    "폭스바겐",
+    "Volkswagen",
+    "메르세데스-벤츠",
+    "Mercedes-Benz",
+    "메르세데즈-벤츠",
+    "Mercedes-Benz",
+    "메르세데스-AMG",
+    "Mercedes-AMG",
+    "هوندا",
+    "Honda",
+    "마쓰다",
+    "Mazda",
+    "르노",
+    "Renault",
+    "טויוטה",
+    "Toyota",
+    "미니",
+    "MINI",
+    "Mini",
+    "MINI",
+    "링컨",
+    "Lincoln",
+    "링크앤코",
+    "Lynk & Co",
+    "대우",
+    "Daewoo",
+    "Skoda",
+    "Škoda",
+    "테슬라",
+    "Tesla",
+    "루시드",
+    "Lucid",
+    "تويوتا",
+    "Toyota",
+    "奔驰",
+    "Mercedes-Benz",
+    "宝马",
+    "BMW",
+    "نيسان",
+    "Nissan",
+    "KG 모빌리티",
+    "KG Mobility",
+    "זיקר",
+    "Zeekr",
+    "מרצדס",
+    "Mercedes-Benz",
+    "שברולט",
+    "Chevrolet",
+    "ב.מ.וו",
+    "BMW",
+    "엑스펑",
+    "XPeng",
+    "피닌파리나",
+    "Pininfarina",
+    "Xpeng",
+    "XPeng",
+    "	
+
+                  　﻿",
+    "smart",
+    "^[	
+
+                  　﻿]*smart[^[:alnum:]]",
+    "cruise",
+    "^[	
+
+                  　﻿]*cruise[^[:alnum:]]",
+    "international",
+    "^[	
+
+                  　﻿]*international[^[:alnum:]]",
+    "pilot",
+    "^[	
+
+                  　﻿]*pilot[^[:alnum:]]",
+    "falcon",
+    "^[	
+
+                  　﻿]*falcon[^[:alnum:]]",
+    "century",
+    "^[	
+
+                  　﻿]*century[^[:alnum:]]",
+    "element",
+    "^[	
+
+                  　﻿]*element[^[:alnum:]]",
+    "lightning",
+    "^[	
+
+                  　﻿]*lightning[^[:alnum:]]",
+    "punch",
+    "^[	
+
+                  　﻿]*punch[^[:alnum:]]",
+    "one",
+    "^[	
+
+                  　﻿]*one[^[:alnum:]]",
+    "integra",
+    "^[	
+
+                  　﻿]*integra[^[:alnum:]]",
+    "bolt",
+    "^[	
+
+                  　﻿]*bolt[^[:alnum:]]",
+    "fit",
+    "^[	
+
+                  　﻿]*fit[^[:alnum:]]",
+    "focus",
+    "^[	
+
+                  　﻿]*focus[^[:alnum:]]",
+    "legacy",
+    "^[	
+
+                  　﻿]*legacy[^[:alnum:]]",
+    "charger",
+    "^[	
+
+                  　﻿]*charger[^[:alnum:]]",
+    "city",
+    "^[	
+
+                  　﻿]*city[^[:alnum:]]",
+    "edge",
+    "^[	
+
+                  　﻿]*edge[^[:alnum:]]",
+    "is",
+    "^[	
+
+                  　﻿]*is[^[:alnum:]]",
+    "vision",
+    "^[	
+
+                  　﻿]*vision[^[:alnum:]]",
+    "volt",
+    "^[	
+
+                  　﻿]*volt[^[:alnum:]]",
+    "crown",
+    "^[	
+
+                  　﻿]*crown[^[:alnum:]]",
+    "golf",
+    "^[	
+
+                  　﻿]*golf[^[:alnum:]]",
+    "transit",
+    "^[	
+
+                  　﻿]*transit[^[:alnum:]]",
+    "gravity",
+    "^[	
+
+                  　﻿]*gravity[^[:alnum:]]",
+    "fastback",
+    "^[	
+
+                  　﻿]*fastback[^[:alnum:]]",
+    "dual electronics",
+    "^[	
+
+                  　﻿]*dual electronics[^[:alnum:]]",
+    "기아",
+    "Kia",
+    "현대",
+    "Hyundai",
+    "현대차",
+    "Hyundai",
+    "현대자동차",
+    "Hyundai",
+    "제네시스",
+    "Genesis",
+    "هيونداي",
+    "Hyundai",
+    "كيا",
+    "Kia",
+    "جينيسيس",
+    "Genesis",
+    "יונדאי",
+    "Hyundai",
+    "קיה",
+    "Kia",
+    "폭스바겐",
+    "Volkswagen",
+    "메르세데스-벤츠",
+    "Mercedes-Benz",
+    "메르세데즈-벤츠",
+    "Mercedes-Benz",
+    "메르세데스-AMG",
+    "Mercedes-AMG",
+    "هوندا",
+    "Honda",
+    "마쓰다",
+    "Mazda",
+    "르노",
+    "Renault",
+    "טויוטה",
+    "Toyota",
+    "미니",
+    "MINI",
+    "Mini",
+    "MINI",
+    "링컨",
+    "Lincoln",
+    "링크앤코",
+    "Lynk & Co",
+    "대우",
+    "Daewoo",
+    "Skoda",
+    "Škoda",
+    "테슬라",
+    "Tesla",
+    "루시드",
+    "Lucid",
+    "تويوتا",
+    "Toyota",
+    "奔驰",
+    "Mercedes-Benz",
+    "宝马",
+    "BMW",
+    "نيسان",
+    "Nissan",
+    "KG 모빌리티",
+    "KG Mobility",
+    "זיקר",
+    "Zeekr",
+    "מרצדס",
+    "Mercedes-Benz",
+    "שברולט",
+    "Chevrolet",
+    "ב.מ.וו",
+    "BMW",
+    "엑스펑",
+    "XPeng",
+    "피닌파리나",
+    "Pininfarina",
+    "Xpeng",
+    "XPeng",
+    "	
+
+                  　﻿",
+    "apple",
+    "google",
+    "samsung",
+    "pilot",
+    "falcon",
+    "century",
+    "element",
+    "lightning",
+    "punch",
+    "one",
+    "integra",
+    "bolt",
+    "fit",
+    "focus",
+    "legacy",
+    "charger",
+    "city",
+    "edge",
+    "is",
+    "vision",
+    "volt",
+    "crown",
+    "golf",
+    "transit",
+    "gravity",
+    "fastback",
+    "dual electronics",
+    "across",
+    "advanced",
+    "clever",
+    "contact",
+    "dealership",
+    "drift",
+    "five",
+    "flat",
+    "guest",
+    "impact",
+    "index",
+    "mass",
+    "maximum",
+    "miles",
+    "modern",
+    "motion",
+    "option",
+    "particular",
+    "peak",
+    "plus",
+    "powerful",
+    "race",
+    "reach",
+    "real",
+    "record",
+    "rise",
+    "security",
+    "sharp",
+    "specialist",
+    "specialized",
+    "stack",
+    "status",
+    "torque",
+    "urban",
+    "victory",
+    "wise",
+    "/drive",
+    "more than",
+    "sure",
+    "winners",
+    "game",
+    "silence",
+    "alliance",
+    "canada",
+    "china",
+    "usa",
+    "germany",
+    "australia",
+    "españa",
+    "automotive manufacturer",
+    "automotive repair shop",
+    "german automotive industry",
+    "german luxury car brands",
+    "italian automotive brands",
+    "original equipment manufacturer",
+    "third party",
+    "local dealership",
+    "credit union",
+    "bank",
+    "retailer",
+    "global pet foods",
+    "jd power",
+    "motor trend",
+    "mobile.de",
+    "point s",
+    "form lighting",
+    "green filter",
+    "event tires",
+    "stance wheels",
+    "kobalt",
+    "target",
+    "mark's",
+    "a-premium",
+    "digit insurance",
+    "dollar rent a car",
+    "app store",
+    "amazon prime",
+    "microsoft surface",
+    "power performance",
+    "wedge performance",
+    "march performance",
+    "evs tuning",
+    "ethos car care",
+    "western motorsports",
+    "comp cams",
+    "link ecu",
+    "arka",
+    "king george/kingsway dealership",
+    "destination mazda",
+    "pace american",
+    "alcantara",
+    "fila",
+    "wahl",
+    "reliance",
+    "vanguard",
+    "acsi",
+    "ergo",
+    "중고차 플랫폼",
+    "일본 럭셔리 자동차 브랜드",
+    "독일 자동차 브랜드",
+    "프랑스 자동차 제조사",
+    "국내 배터리 제조사",
+    "대만 모터사이클 산업",
+    "고가 브랜드",
+    "저가 브랜드",
+    "독3사",
+    "캐피탈사",
+    "자동차리콜센터",
+    "국토교통부",
+    "보배드림",
+    "사설 정비소",
+    "독립 정비소",
+    "카센터",
+    "온라인샵",
+    "아우디 공식 딜러",
+    "자동차 동호회",
+    "차지비",
+    "순정부품",
+    "삼성전자",
+    "카카오",
+    "레카로",
+    "요코하마",
+    "파파존스",
+    "테인",
+    "세나",
+    "말레이시아",
+    "smart",
+    "cruise",
+    "international",
+    "fahren",
+    "gran turismo",
+  ],
+  "text": "
+    WITH names AS (
+  SELECT r.entity_id, r.brand,
+         (CASE r.brand WHEN $1 THEN $2 WHEN $3 THEN $4 WHEN $5 THEN $6 WHEN $7 THEN $8 WHEN $9 THEN $10 WHEN $11 THEN $12 WHEN $13 THEN $14 WHEN $15 THEN $16 WHEN $17 THEN $18 WHEN $19 THEN $20 WHEN $21 THEN $22 WHEN $23 THEN $24 WHEN $25 THEN $26 WHEN $27 THEN $28 WHEN $29 THEN $30 WHEN $31 THEN $32 WHEN $33 THEN $34 WHEN $35 THEN $36 WHEN $37 THEN $38 WHEN $39 THEN $40 WHEN $41 THEN $42 WHEN $43 THEN $44 WHEN $45 THEN $46 WHEN $47 THEN $48 WHEN $49 THEN $50 WHEN $51 THEN $52 WHEN $53 THEN $54 WHEN $55 THEN $56 WHEN $57 THEN $58 WHEN $59 THEN $60 WHEN $61 THEN $62 WHEN $63 THEN $64 WHEN $65 THEN $66 WHEN $67 THEN $68 WHEN $69 THEN $70 WHEN $71 THEN $72 WHEN $73 THEN $74 WHEN $75 THEN $76 ELSE r.brand END) AS cname,
+         lower(btrim((CASE r.brand WHEN $77 THEN $78 WHEN $79 THEN $80 WHEN $81 THEN $82 WHEN $83 THEN $84 WHEN $85 THEN $86 WHEN $87 THEN $88 WHEN $89 THEN $90 WHEN $91 THEN $92 WHEN $93 THEN $94 WHEN $95 THEN $96 WHEN $97 THEN $98 WHEN $99 THEN $100 WHEN $101 THEN $102 WHEN $103 THEN $104 WHEN $105 THEN $106 WHEN $107 THEN $108 WHEN $109 THEN $110 WHEN $111 THEN $112 WHEN $113 THEN $114 WHEN $115 THEN $116 WHEN $117 THEN $118 WHEN $119 THEN $120 WHEN $121 THEN $122 WHEN $123 THEN $124 WHEN $125 THEN $126 WHEN $127 THEN $128 WHEN $129 THEN $130 WHEN $131 THEN $132 WHEN $133 THEN $134 WHEN $135 THEN $136 WHEN $137 THEN $138 WHEN $139 THEN $140 WHEN $141 THEN $142 WHEN $143 THEN $144 WHEN $145 THEN $146 WHEN $147 THEN $148 WHEN $149 THEN $150 WHEN $151 THEN $152 ELSE r.brand END), $153)) AS bare
+  FROM (
+  WITH RECURSIVE _rn_pairs AS (
+    (SELECT m.entity_id, m.brand FROM scope_mentions m
+      WHERE m.entity_type = 'Brand' AND m.brand IS NOT NULL
+      ORDER BY m.entity_id, m.brand LIMIT 1)
+    UNION ALL
+    SELECT nx.entity_id, nx.brand FROM _rn_pairs p
+    CROSS JOIN LATERAL (
+      SELECT m.entity_id, m.brand FROM scope_mentions m
+      WHERE m.entity_type = 'Brand' AND m.brand IS NOT NULL
+        AND (m.entity_id, m.brand) > (p.entity_id, p.brand)
+      ORDER BY m.entity_id, m.brand LIMIT 1
+    ) nx
+  )
+  SELECT DISTINCT ON (entity_id) entity_id, brand
+  FROM _rn_pairs ORDER BY entity_id, (brand ~ '^[A-Za-z]') DESC, brand
+) r
+),
+    ans AS MATERIALIZED (
+      SELECT DISTINCT ON (ca.round_date, a.prompt_id, a.target, a.region)
+        a.job_id, ca.anchor_week AS wk
+      FROM scope_answers a JOIN scope_answer_cycle_anchors ca ON ca.job_id = a.job_id
+      WHERE a.measured_at IS NOT NULL AND a.measured_at >= now() - interval '120 days' AND true AND true
+      ORDER BY ca.round_date, a.prompt_id, a.target, a.region,
+        ca.measured_at_orig DESC, a.job_id DESC
+    )
+    SELECT to_char(x.wk, 'YYYY-MM-DD') AS day,
+      COALESCE(n.cname, (CASE x.brand WHEN $154 THEN $155 WHEN $156 THEN $157 WHEN $158 THEN $159 WHEN $160 THEN $161 WHEN $162 THEN $163 WHEN $164 THEN $165 WHEN $166 THEN $167 WHEN $168 THEN $169 WHEN $170 THEN $171 WHEN $172 THEN $173 WHEN $174 THEN $175 WHEN $176 THEN $177 WHEN $178 THEN $179 WHEN $180 THEN $181 WHEN $182 THEN $183 WHEN $184 THEN $185 WHEN $186 THEN $187 WHEN $188 THEN $189 WHEN $190 THEN $191 WHEN $192 THEN $193 WHEN $194 THEN $195 WHEN $196 THEN $197 WHEN $198 THEN $199 WHEN $200 THEN $201 WHEN $202 THEN $203 WHEN $204 THEN $205 WHEN $206 THEN $207 WHEN $208 THEN $209 WHEN $210 THEN $211 WHEN $212 THEN $213 WHEN $214 THEN $215 WHEN $216 THEN $217 WHEN $218 THEN $219 WHEN $220 THEN $221 WHEN $222 THEN $223 WHEN $224 THEN $225 WHEN $226 THEN $227 WHEN $228 THEN $229 ELSE x.brand END)) AS key,
+      sum(x.mention_count)::int AS n
+    FROM (
+      SELECT ans.wk AS wk, m.mention_count AS mention_count, m.brand AS brand,
+        (CASE WHEN m.brand_rollup_entity_id IS NULL THEN m.brand_rollup_entity_id WHEN m.brand ~* $230 THEN $231 WHEN m.brand ~* $232 THEN $233 WHEN m.brand ~* $234 THEN $235 ELSE (CASE m.brand_rollup_entity_id WHEN $236 THEN $237 WHEN $238 THEN $239 WHEN $240 THEN $241 WHEN $242 THEN $243 WHEN $244 THEN $245 WHEN $246 THEN $247 WHEN $248 THEN $249 ELSE m.brand_rollup_entity_id END) END) AS rid
+      FROM scope_mentions m JOIN ans ON ans.job_id = m.job_id
+      WHERE m.brand_rollup_entity_id IS NOT NULL
+      OFFSET 0
+    ) x
+    LEFT JOIN names n ON n.entity_id = x.rid
+    WHERE COALESCE(n.brand, x.brand) IS NOT NULL
+      AND (CASE COALESCE(n.bare, lower(btrim((CASE x.brand WHEN $250 THEN $251 WHEN $252 THEN $253 WHEN $254 THEN $255 WHEN $256 THEN $257 WHEN $258 THEN $259 WHEN $260 THEN $261 WHEN $262 THEN $263 WHEN $264 THEN $265 WHEN $266 THEN $267 WHEN $268 THEN $269 WHEN $270 THEN $271 WHEN $272 THEN $273 WHEN $274 THEN $275 WHEN $276 THEN $277 WHEN $278 THEN $279 WHEN $280 THEN $281 WHEN $282 THEN $283 WHEN $284 THEN $285 WHEN $286 THEN $287 WHEN $288 THEN $289 WHEN $290 THEN $291 WHEN $292 THEN $293 WHEN $294 THEN $295 WHEN $296 THEN $297 WHEN $298 THEN $299 WHEN $300 THEN $301 WHEN $302 THEN $303 WHEN $304 THEN $305 WHEN $306 THEN $307 WHEN $308 THEN $309 WHEN $310 THEN $311 WHEN $312 THEN $313 WHEN $314 THEN $315 WHEN $316 THEN $317 WHEN $318 THEN $319 WHEN $320 THEN $321 WHEN $322 THEN $323 WHEN $324 THEN $325 ELSE x.brand END), $326))) WHEN $327 THEN (x.brand ~* $328) WHEN $329 THEN (x.brand ~* $330) WHEN $331 THEN (x.brand ~* $332) WHEN $333 THEN (x.brand ~* $334) WHEN $335 THEN (x.brand ~* $336) WHEN $337 THEN (x.brand ~* $338) WHEN $339 THEN (x.brand ~* $340) WHEN $341 THEN (x.brand ~* $342) WHEN $343 THEN (x.brand ~* $344) WHEN $345 THEN (x.brand ~* $346) WHEN $347 THEN (x.brand ~* $348) WHEN $349 THEN (x.brand ~* $350) WHEN $351 THEN (x.brand ~* $352) WHEN $353 THEN (x.brand ~* $354) WHEN $355 THEN (x.brand ~* $356) WHEN $357 THEN (x.brand ~* $358) WHEN $359 THEN (x.brand ~* $360) WHEN $361 THEN (x.brand ~* $362) WHEN $363 THEN (x.brand ~* $364) WHEN $365 THEN (x.brand ~* $366) WHEN $367 THEN (x.brand ~* $368) WHEN $369 THEN (x.brand ~* $370) WHEN $371 THEN (x.brand ~* $372) WHEN $373 THEN (x.brand ~* $374) WHEN $375 THEN (x.brand ~* $376) WHEN $377 THEN (x.brand ~* $378) WHEN $379 THEN (x.brand ~* $380) ELSE COALESCE(n.bare, lower(btrim((CASE x.brand WHEN $381 THEN $382 WHEN $383 THEN $384 WHEN $385 THEN $386 WHEN $387 THEN $388 WHEN $389 THEN $390 WHEN $391 THEN $392 WHEN $393 THEN $394 WHEN $395 THEN $396 WHEN $397 THEN $398 WHEN $399 THEN $400 WHEN $401 THEN $402 WHEN $403 THEN $404 WHEN $405 THEN $406 WHEN $407 THEN $408 WHEN $409 THEN $410 WHEN $411 THEN $412 WHEN $413 THEN $414 WHEN $415 THEN $416 WHEN $417 THEN $418 WHEN $419 THEN $420 WHEN $421 THEN $422 WHEN $423 THEN $424 WHEN $425 THEN $426 WHEN $427 THEN $428 WHEN $429 THEN $430 WHEN $431 THEN $432 WHEN $433 THEN $434 WHEN $435 THEN $436 WHEN $437 THEN $438 WHEN $439 THEN $440 WHEN $441 THEN $442 WHEN $443 THEN $444 WHEN $445 THEN $446 WHEN $447 THEN $448 WHEN $449 THEN $450 WHEN $451 THEN $452 WHEN $453 THEN $454 WHEN $455 THEN $456 ELSE x.brand END), $457))) NOT IN ($458, $459, $460, $461, $462, $463, $464, $465, $466, $467, $468, $469, $470, $471, $472, $473, $474, $475, $476, $477, $478, $479, $480, $481, $482, $483, $484, $485, $486, $487, $488, $489, $490, $491, $492, $493, $494, $495, $496, $497, $498, $499, $500, $501, $502, $503, $504, $505, $506, $507, $508, $509, $510, $511, $512, $513, $514, $515, $516, $517, $518, $519, $520, $521, $522, $523, $524, $525, $526, $527, $528, $529, $530, $531, $532, $533, $534, $535, $536, $537, $538, $539, $540, $541, $542, $543, $544, $545, $546, $547, $548, $549, $550, $551, $552, $553, $554, $555, $556, $557, $558, $559, $560, $561, $562, $563, $564, $565, $566, $567, $568, $569, $570, $571, $572, $573, $574, $575, $576, $577, $578, $579, $580, $581, $582, $583, $584, $585, $586, $587, $588, $589, $590, $591, $592, $593, $594, $595, $596, $597, $598, $599, $600, $601, $602, $603, $604, $605, $606, $607, $608, $609, $610, $611, $612, $613, $614, $615) END)
+      true
+    GROUP BY 1, 2
+  ",
+}
+`;

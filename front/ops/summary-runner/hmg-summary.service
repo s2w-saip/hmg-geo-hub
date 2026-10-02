@@ -1,0 +1,62 @@
+[Unit]
+Description=hmg-geo summary table generation (pending cycles)
+Documentation=https://github.com/Kongventures/hmg-geo
+After=network-online.target
+Wants=network-online.target
+# 실패하면 사람에게 닿게 한다 (2026-09-16). `%n` = 이 유닛의 전체 이름이라
+# 알림 유닛은 어느 유닛이 죽었는지 안다. 이 한 줄이 **타이머 상시화의 선결
+# 조건**이었다 — README 의 "실패 알림 배선 뒤 상시화" 가 가리키던 배선.
+# systemd 는 Result=failed 로 끝날 때만 부른다(성공·정상 종료에는 안 부른다).
+OnFailure=hmg-runner-failure@%n.service
+
+[Service]
+Type=oneshot
+User=hmgrunner
+Group=hmgrunner
+WorkingDirectory=/opt/hmg-runner/current
+
+# ARN 은 비밀이 아니다(포인터). 값은 스크립트가 인스턴스 롤로 직독한다 — 유닛 파일에도,
+# EnvironmentFile 에도, 디스크 어디에도 값이 남지 않는다.
+Environment=DB_SECRET_ARN=__DB_SECRET_ARN__
+Environment=CRON_SECRET_ARN=__CRON_SECRET_ARN__
+Environment=HMG_INTERNAL_BASE_URL=__HMG_INTERNAL_BASE_URL__
+# 한 틱이 소화할 회차 **묶음** 수(행 수가 아니다 — generate-cycle.ts `--max-cycles` 참조).
+# 묶음 = 글로벌 anchor 1개 · 웹사이트 cycle_week 1개(= 함대 95개 전부). 웹사이트 1 이면
+# "이번 주 함대 전부", 밀린 주는 틱(30분)마다 1주씩 소화한다. 타임아웃 1500 s 안에
+# 글로벌 2묶음(~260 s) + 웹사이트 1묶음(~465 s) 이 2배 여유로 끝난다.
+Environment=MAX_CYCLES_GLOBAL=2
+Environment=MAX_CYCLES_WEBSITE=1
+ExecStart=/opt/hmg-runner/bin/run-generate.sh
+
+# 다음 타이머 창(30분)을 넘기지 않게 끊는다.
+# 예상 = 글로벌 ~130 s + 웹사이트 함대 95개 ~465 s(ap-south-1 in-region RTT 기준) ≈ 600 s.
+# 1500 s 는 그 2.5배 — RTT 가 추정(3 ms)보다 나빠도 한 창 안에서 끝난다. 이 값을 올리기 전에
+# **왜 느린지**를 먼저 본다(계획 문서 §6 R1: 20 ms 를 넘으면 추정을 다시 세운다).
+TimeoutStartSec=1500
+KillSignal=SIGTERM
+# 생성기는 스왑 tx 안에서 죽으면 롤백된다(비파괴). 그래도 정리 시간을 준다.
+TimeoutStopSec=60
+
+# 재시도 금지 — 30분 뒤 타이머가 다시 온다. 즉시 재시도는 같은 실패를 반복하고
+# `FOR SHARE` 경합만 만든다.
+Restart=no
+
+# 하드닝 (sudo 를 쓰지 않으므로 NoNewPrivileges 가 안전하다)
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/opt/hmg-runner /var/lib/hmg-runner
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+LockPersonality=yes
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hmg-summary
+
+[Install]
+WantedBy=multi-user.target

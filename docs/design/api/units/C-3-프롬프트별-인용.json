@@ -1,0 +1,97 @@
+{
+  "auth": "권한 스코프는 서버가 세션에서 role→(brand,region,country) 를 계산해 요청 필터와 교집합(default-deny, lib/auth/scope-policy.ts 계승). own_brand 는 클라이언트가 바꿀 수 없고 서버가 세션에서 확정한다(§4 규칙 1). project 표면은 추가로 프로젝트 멤버십(vendor 는 project_member 활성 행)을 요구한다. 인증은 Supabase Auth 유지 + FastAPI 가 JWT(JWKS) 검증(A8). 운영자 게이트는 이 엔드포인트(읽기)에는 적용되지 않는다(측정 트리거가 아님). app.access_audit_log 쓰기 주체는 AU-1 로 별도 결정 예정(계약 §3 \"알려진 미결\") — 이 설계는 그 결과를 상속.",
+  "current_refs": [
+    "lib/scope/server.ts:3425 fetchStandardCitationOwnedPrompts(필터→집계 얇은 래퍼)",
+    "lib/scope/server.ts:3894 fetchStandardCitations(탭 카운트 promptSplit 을 재사용)",
+    "lib/db/repositories/scope-aggregates.ts:11512-11625 aggregateCitationOwnedPromptsFromMirror(페이지 목록 본체, 도메인 단위 owned 판정)",
+    "lib/db/repositories/scope-aggregates.ts:6828 wantSplit = !filters.sourceCategory?.length(source 필터 켜지면 promptSplit 전체 억제)",
+    "lib/db/repositories/scope-aggregates.ts:6877-6902 splitRows 쿼리(행 단위 owned 판정, 2026-09-08 수정 — 상단 주석 6885-6887)",
+    "lib/db/repositories/scope-aggregates.ts:6342-6389 citationOwnedClause/citationOwnedBaseSql(JS↔SQL owned 매칭 쌍둥이, prefix+정규식)",
+    "lib/db/repositories/scope-aggregates.ts:5287-5288 CITATION_SPLIT_PROMPTS=20·CITATION_SPLIT_REFS=8(버킷당 미리보기·답변 표본 상한)",
+    "app/[locale]/(dash)/standard/answer-analysis/citation/prompts/page.tsx:27,36(라우트 배선, 탭 카운트 재사용)",
+    "components/dash/citations-view.tsx:535-542(website 표면의 baseSplit 상위5 — 같은 owned/uncited 판정을 website 화면에서도 소비)"
+  ],
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/v1/citations/prompts",
+      "summary": "프롬프트별 인용 목록(자사=owned / 미인용=uncited 버킷) — 페이지네이션, 검색, 두 버킷의 탭 카운트를 한 응답에 포함"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/citations/prompts/{prompt_key}/answers",
+      "summary": "목록 행 하나를 펼친 답변 표본(엔진·지역·해당 프롬프트 인용 수) — 목록 응답에 이미 상위 8건이 포함되므로 더 볼 때만 호출하는 보조 엔드포인트"
+    }
+  ],
+  "filters": {
+    "supported": [
+      "surface",
+      "own_brand(서버 결정)",
+      "brand[](catalog_entry.brand_bit 경유)",
+      "country[](geo_key)",
+      "engine[]",
+      "from/to(anchor 기간, 미지정=스냅샷)",
+      "funnel[](표준 전용, dim_prompt.funnel_key 또는 catalog_entry.funnel_key)",
+      "brand_presence[]/list_type[]/depth1-3[](표준 전용, catalog_entry 축)",
+      "lang[](website 전용, dim_prompt.lang_key)",
+      "source[](신규 지원 — 현행은 JS 파생 categorizeDomain 이라 SQL 재현 불가로 이 기능 전체를 억제했으나, dim_source.category_key 가 적재 시점 컬럼이 되며 rd.citation.source_key 조인으로 직접 필터 가능해짐. open_questions 참조)"
+    ],
+    "ignored": [],
+    "extra_params": [
+      "owned: bool (필수) — true=자사 인용 버킷, false=미인용 버킷. 현행 opts.owned 계승",
+      "cursor: string (선택) — 키셋 커서(base64 encode of {cites,prompt_key}), 생략 시 첫 페이지",
+      "limit: int (기본 50, 최대 200) — 현행 pageSize 상한 계승",
+      "q: string (선택) — 프롬프트 텍스트 ILIKE 검색, 현행 opts.q 계승"
+    ]
+  },
+  "id": "C-3",
+  "metrics_rules": [
+    "M05 인용 점유율의 owned 판정 규칙을 프롬프트 단위로 재사용: 타겟 URL 일치 = 자사, 루트 홈(root_home)은 전 언어 자사. 이 판정은 이제 조회 시 정규식이 아니라 적재 시 채워진 rd.citation.owner_key 로 존재한다(P1)",
+    "G-02 결정 (a): rd.citation 그레인 채택 + owner_key + 허용 배열(app.owned_base WHERE brand_code = own_brand) — DECISIONS.md:375-379",
+    "자사 판정은 인용 행 단위(2026-09-08 수정, scope-aggregates.ts:6885-6887 근거) — 도메인 단위로 접으면 국가 경로로 갈리는 공유 호스트에서 오판정 발생. 이 설계는 행 단위만 채택하고 구 도메인 단위 경로(11512-11625)는 계승하지 않는다",
+    "D1/R06 기간 누적: anchor 날짜(round_date)가 [from,to] 안인 모든 완료 측정(rd.answer/rd.citation)의 합. 미지정 시 R05 스냅샷(최신 노출 회차)",
+    "cit_in 게이트(G-21 g): 인용 모수는 언급 분석 결손과 무관 — rd.citation.cit_in = true 인 행만 모수에 포함(std_in 아님)",
+    "A2: URL 인용률류 지표는 측정 단위(가산형) — 이 화면은 프롬프트당 cites 카운트 자체가 가산 집계",
+    "P5: source[] 를 이 기능이 지원 안 했던 현행과 달리 지원 전환하므로 meta.ignored_filters 에서 빠진다(§4 규칙 2)"
+  ],
+  "open_questions": [
+    "source[] 신규 지원이 실제로 요구사항인지, 아니면 현행처럼 이 화면에서는 의도적으로 억제 상태를 유지해야 하는지 확인 필요(현행은 UI 상 이 화면에서 source 필터를 노출하지 않았을 가능성 — page.tsx 실제 필터바 구성 미확인). 지원하면 C-2(출처 카테고리) 와 필터 축이 겹치므로 C-2 담당자와 조율 필요",
+    "rd.citation 에 prompt_key 인덱스가 없다(기존 인덱스는 source_key·url_key·round_date BRIN·project_key 뿐, DB-v2.sql:530-532). GROUP BY prompt_key 집계가 BRIN 가지치기 이후 해시 집계로 충분한지, 아니면 (surface, round_date, prompt_key) 인덱스가 필요한지는 RDS 실측 게이트에서 판단 필요(D8 은 이미 확정된 DDL 을 재설계 대상으로 열지 않으므로 여기서는 제안만)",
+    "답변 표본 보조 엔드포인트(/v1/citations/prompts/{prompt_key}/answers)를 별도로 둘지, 아니면 목록 응답에 상위 8건만 항상 포함하고 더보기를 없앨지 — 현행은 항상 top 8 만 주고 더보기 UI가 없어(citationAnswerRef 상한 CITATION_SPLIT_REFS=8) 후자가 현상 유지에 가깝다. 보조 엔드포인트는 이번 설계의 신규 제안이라 채택 여부 확인 필요",
+    "website 표면의 baseSplit(top5, citations-view.tsx:535-542)을 이 통합 엔드포인트로 완전히 대체할지, 아니면 그 화면은 C-1(GET /v1/citations/domains)의 요약 응답에 얹힌 채 유지할지는 C-1 담당 설계자와 경계 확인 필요 — 이 설계는 통합을 전제로 하되 확정은 아님",
+    "funnel_key 해석 경로가 두 갈래(dim_prompt.funnel_key 직접 vs catalog_entry.funnel_key 프로젝트별 오버라이드)인데 이 화면이 어느 쪽을 표시해야 하는지 DDL 주석만으로는 불명확(dim_prompt.funnel_key 주석: 'scope_prompt_id 가 같은 app.prompt 어느 행이든' — 정확한 우선순위 미확인)"
+  ],
+  "parity": "\"F01~F07 어느 것도 프롬프트별 인용 분할을 커버하지 않음 — 신규 대조 항목 필요. 제안: (1) 카운트 대조: /v1/citations/prompts 응답의 counts.owned + counts.uncited 합이 그 필터 창의 인용 있는 distinct 프롬프트 수(rd.citation 에 cit_in 인용이 1건 이상 있는 prompt_key 수)와 같아야 함(분모 완전성). (2) 행 단위 대조: owned=true 상위 N 행의 (prompt_id, cites) 튜플 집합이 현행 aggregateCitationOwnedPromptsFromMirror 결과의 상위 N 과 도메인 단위 vs 행 단위 owned 판정 차이만큼만 달라야 함(완전 일치가 아니라 '알려진 정의 변경'으로 설명되는 차이인지 확인 — 6885-6887 수정 이후 행 단위가 맞으므로 신 구조가 정답, 구 페이지 목록 함수 쪽이 구식). (3) 답변 표본 대조: 임의 prompt_key 하나의 answers 상위 8건 (job_id, cites) 이 현행 refs 쿼리 결과와 일치.\"",
+  "perf": {
+    "indexes": [
+      "cit_rd_brin(round_date, BRIN, pages_per_range=32) — 기간 가지치기",
+      "cit_p_proj_idx(project_key, round_date) — project 표면 스코프 좁힘, citation_p 파티션 전용",
+      "answer_cell_idx / answer_prompt_idx / answer_rd_brin — scoped_answer CTE 쪽 프루닝",
+      "catalog_entry_prompt_idx / catalog_entry_axis_idx — brand_presence/list_type/depth1-3 축 필터 시"
+    ],
+    "notes": "rd.citation 에 prompt_key 전용 인덱스가 없다(open_questions 참조) — round_date BRIN + surface 파티션 가지치기 이후 남는 행을 해시 집계(GROUP BY prompt_key)로 처리한다고 가정. citation 행 폭 약 76B(DB-성능-물리-설계.md:40)라 파티션 프루닝된 창 안에서는 순차 스캔도 비교적 저렴할 것으로 추정되나 실측 없음(계약 §3 '성능 근거의 한계' — v3 실측 생략, RDS 게이트에서 판정). source[] 신규 필터 채택 시 dim_source 조인 1회 추가(source_key 인덱스 있음, cit_source_idx)",
+    "risk": "medium",
+    "rows_scanned": "10배 폭 기준 rd.citation 전체는 1,500만~3,000만 행(DB-성능-물리-설계.md:79, citations/domains 와 동일 기반표) — 단 이 엔드포인트는 항상 surface+round_date 파티션 가지치기와 project_key/own_brand 스코프가 걸리므로 실제 스캔은 그보다 훨씬 작음. 스냅샷(1일)~주간 창은 수천~수만 행으로 저위험. 표준(global) 무기간 지정 또는 연 단위 누적 창은 문서화된 고위험 사례(웹사이트 인용 1년 조합 1.7~2.0초 추정, 계약 §3)와 같은 패턴이라 medium~high 로 봐야 함. 정확한 임계는 RDS 실데이터 게이트 확정 전까지 미확정"
+  },
+  "purpose": "표준(글로벌)·웹사이트 표면에서 어떤 프롬프트의 답변들이 자사(owned) URL 을 인용했는지, 어떤 프롬프트는 인용은 있으나 자사 URL 이 전혀 없는지(uncited)를 프롬프트 단위로 갈라 보여준다. 각 프롬프트의 인용 수·응답 엔진·퍼널 단계·대표 답변 표본을 함께 제공해, \"우리 콘텐츠가 어느 프롬프트에서 인용되고 어느 프롬프트에서 빠지는지\"를 드릴다운으로 확인하게 한다.",
+  "query_design": "\"핵심 변화: 현행은 owned 판정을 조회 시 URL 정규화+prefix 정규식(citationOwnedBaseSql)으로 매번 계산했지만, 새 구조는 적재 시점에 rd.citation.owner_key 로 이미 채워져 있어(P1) 조회는 단순 허용집합 매칭이 된다.\\n\\nSTEP0 (요청 1회, 캐시 가능하지 않지만 저렴): 허용 owner_key 집합\\nSELECT owner_key FROM app.owned_base WHERE brand_code = :own_brand;  -- 수십 행\\n\\nSTEP1 CTE 전개(파티션 prune: surface, round_date):\\nWITH scoped_answer AS (\\n  SELECT a.answer_key, a.prompt_key FROM rd.answer a\\n  WHERE a.surface = :surface AND a.round_date BETWEEN :from AND :to\\n    AND a.project_key = ANY(:project_keys)      -- own_brand ∪ HMG 공통 프롬프트 모집단(§4 규칙3)\\n    AND (:engine_keys IS NULL OR a.engine_key = ANY(:engine_keys))\\n    AND (:geo_keys    IS NULL OR a.geo_key    = ANY(:geo_keys))\\n    AND (:lang_keys   IS NULL OR a.lang_key   = ANY(:lang_keys))  -- website 전용\\n    AND a.cit_in\\n), scoped_prompt AS (   -- brand[]/funnel[]/brand_presence[]/list_type[]/depth1-3[] 있을 때만 조인\\n  SELECT DISTINCT ce.prompt_key FROM rd.catalog_entry ce\\n  WHERE (:brand_bits IS NULL OR ce.brand_bit = ANY(:brand_bits))\\n    AND (:funnel_keys IS NULL OR ce.funnel_key = ANY(:funnel_keys))\\n    AND (:presence_keys IS NULL OR ce.presence_key = ANY(:presence_keys))\\n    AND (:list_type_keys IS NULL OR ce.list_type_key = ANY(:list_type_keys))\\n    AND (:depth1_keys IS NULL OR ce.depth1_key = ANY(:depth1_keys))\\n), pr AS (\\n  SELECT c.prompt_key, count(*)::int AS cites,\\n         array_agg(DISTINCT c.engine_key) AS engine_keys,\\n         bool_or(c.owner_key = ANY(:allowed_owner_keys)) AS owned\\n  FROM rd.citation c\\n  JOIN scoped_answer sa ON sa.answer_key = c.answer_key\\n  WHERE c.surface = :surface AND c.round_date BETWEEN :from AND :to AND c.cit_in\\n    AND (:source_category_keys IS NULL OR EXISTS (\\n           SELECT 1 FROM rd.dim_source ds WHERE ds.source_key = c.source_key\\n             AND ds.category_key = ANY(:source_category_keys)))\\n    AND (:has_catalog_filter = false OR c.prompt_key IN (SELECT prompt_key FROM scoped_prompt))\\n  GROUP BY c.prompt_key\\n)\\n-- (A) 탭 카운트(양쪽 버킷 동시)\\nSELECT owned, count(*)::int AS prompts FROM pr GROUP BY owned;\\n\\n-- (B) 페이지 목록(키셋, cites DESC, prompt_key DESC 타이브레이크)\\nSELECT pr.prompt_key, dp.prompt_id, dp.text, dp.funnel_key, pr.cites, pr.engine_keys\\nFROM pr JOIN rd.dim_prompt dp ON dp.prompt_key = pr.prompt_key\\nWHERE pr.owned = :owned\\n  AND (:cursor_cites IS NULL OR (pr.cites, pr.prompt_key) < (:cursor_cites, :cursor_prompt_key))\\n  AND (:q IS NULL OR dp.text ILIKE '%' || :q || '%')\\nORDER BY pr.cites DESC, pr.prompt_key DESC\\nLIMIT :limit;\\n\\n-- (C) 페이지에 실린 prompt_key 들의 답변 표본(상위 8, CITATION_SPLIT_REFS 계승)\\nSELECT prompt_key, answer_key, engine_key, geo_key, cites FROM (\\n  SELECT c.prompt_key, c.answer_key, j.engine_key, j.geo_key, count(*)::int AS cites,\\n         row_number() OVER (PARTITION BY c.prompt_key ORDER BY count(*) DESC, c.answer_key) AS rk\\n  FROM rd.citation c JOIN rd.job j ON j.answer_key = c.answer_key\\n  WHERE c.prompt_key = ANY(:page_prompt_keys) AND c.cit_in\\n  GROUP BY c.prompt_key, c.answer_key, j.engine_key, j.geo_key\\n) t WHERE rk <= 8;\\n\\n쓰기 API 아님(읽기 전용) — 절차 항목 해당 없음.\"",
+  "read_model": [
+    "rd.answer(surface, round_date, project_key, engine_key, geo_key, lang_key, prompt_key, answer_key, cit_in)",
+    "rd.citation(surface, round_date, answer_key, prompt_key, engine_key, geo_key, source_key, owner_key, cit_in)",
+    "rd.job(answer_key, engine_key, geo_key) — 답변 표본용",
+    "rd.dim_prompt(prompt_key, prompt_id, text, funnel_key, lang_key)",
+    "rd.dim_source(source_key, category_key) — source[] 필터 시에만",
+    "rd.catalog_entry(prompt_key, brand_bit, funnel_key, presence_key, list_type_key, depth1_key) — brand[]/funnel[]/brand_presence[]/list_type[]/depth1-3[] 필터 시에만",
+    "app.owned_base(owner_key, brand_code, kind) — own_brand 의 허용 owner_key 집합 산출",
+    "rd.dim_engine(engine_key, code) — providers 라벨화",
+    "rd.dim_taxon(taxon_key, axis, code) — funnel_key 라벨화(axis='funnel')",
+    "rd.dim_project(project_key, surface, is_root, site_brand_bit) — own_brand→project_key 스코프 산출(서버 로직)"
+  ],
+  "response": "\"data: { rows: [{ prompt_id: uuid, text: string, funnel: string|null, citations: int, providers: string[](엔진 코드 라벨), answers: [{ job_id: uuid, provider: string, region: string|null, citations_in_answer: int }] (최대 8건) }], counts: { owned: int, uncited: int } (현재 필터 창의 두 버킷 총 프롬프트 수 — 분자/분모류 아니라 카운트 자체가 지표), page: { cursor: string|null(다음 페이지 커서, 없으면 null), limit: int } }. meta 는 §8 공통 형태(surface, mode, as_of, cycles, generation, ignored_filters, dropped_filters, suppressed) 그대로.\"",
+  "screens": [
+    "/standard/answer-analysis/citation/prompts (현행 전용 페이지 — 그대로 이관)",
+    "/website/answer-analysis/citation 의 Owned base 프롬프트 분리 카드(현행은 top5 내장, 이 엔드포인트로 통합 여지 — open_questions 참조)"
+  ],
+  "title": "프롬프트별 인용 (자사/미인용 분할)",
+  "writes": "없음(읽기 전용 API). 쓰기 스키마(app, ing)를 만지지 않는다."
+}

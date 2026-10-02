@@ -1,0 +1,158 @@
+{
+  "id": "IN-2",
+  "title": "소셜 스크레이핑 (Purchase Context Map) — /v1/intent/social",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/v1/intent/social/context-map/stats",
+      "summary": "구매 맥락 지도 코퍼스 통계(맥락·조건·관계·소스 수) — 헤더 카드"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/intent/social/context-map/contexts",
+      "summary": "맥락(ConsumerContext) 목록 — 페이지, 검색·정렬"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/intent/social/context-map/conditions",
+      "summary": "조건(ConsumerRequirement) 목록 — 페이지, 검색·정렬"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/intent/social/context-map/combinations",
+      "summary": "조건×조건 동시출현(조합 패턴) 목록 — 페이지, 검색, 빈도 정렬"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/intent/social/context-map/entities/{entity_id}",
+      "summary": "엔티티 상세(근거 인용 최대 8건·소스 도메인·연결 엔티티) — 다이얼로그 오픈 시"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/intent/social/context-map/export",
+      "summary": "전 코퍼스 3탭(맥락·조건·조합) xlsx 다운로드 — 상세(근거·도메인·연결) 제외"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/intent/social/prompts",
+      "summary": "project_id 로 캐시된 생성 프롬프트 목록(제거분 제외, 유사도 주석 포함)"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/intent/social/prompts/more",
+      "summary": "코퍼스 Top-N 시드에서 다음 배치 생성('더 생성') — LLM 호출 + 저장"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/intent/social/prompts/selected",
+      "summary": "사용자가 고른 맥락·조건·조합에서 생성('구성 생성') — LLM 호출 + 저장"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/intent/social/prompts/remove",
+      "summary": "생성 프롬프트 소프트 삭제(removed_at 마킹, exclude-set 유지 목적)"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/intent/social/candidates",
+      "summary": "선택한 생성 프롬프트를 프로젝트 후보 카탈로그(app.prompt_candidate)로 전송"
+    }
+  ],
+  "purpose": "고객이 자동차 구매를 두고 실제로 어떤 맥락(가구 형태·라이프스타일·사용 환경)과 어떤 구매 조건(가격·연비·공간 등)을 이야기하는지, Scope 가 계산한 업계 전체(자동차) 코퍼스에서 열람하고(구매 맥락 지도), 그 신호를 브랜드·프로젝트 맥락에 맞춰 LLM 으로 소비자 질문(프롬프트 후보)으로 변환해 프로젝트 프롬프트 카탈로그에 넣는 단위. 코퍼스 자체는 스크레이핑 실행이 아니라 Scope 가 준 정적 스냅샷의 열람이고, \"생성\"은 이 화면이 유일하게 쓰는 능동 동작이다.",
+  "screens": [
+    "고객 관심 > 커뮤니티 수집(전역, /customer-interest/social-scraping) — 현재는 고정 픽스처(패밀리 SUV) 데모, 실 데이터 미연결(page.tsx 주석 명시)",
+    "프로젝트 > Intent > Social Scraping(/projects/{id}/intent/social-scraping) — 실 데이터 연결 화면(ProjectIntentSocialScrapingPage). 탭: 맥락/조건/조합 지도, 프롬프트 카탈로그(생성 목록 + 구성 플로우 + 노드맵 뷰)"
+  ],
+  "filters": {
+    "supported": [
+      "search(자유 텍스트, 캐노니컬명 ILIKE)",
+      "sort(맥락·조건: name|mentions, 조합: cooccurrence 고정)",
+      "dir(asc|desc)",
+      "page(0-base)",
+      "size(<=200, 기본 50)"
+    ],
+    "ignored": [
+      "surface",
+      "own_brand",
+      "brand[]",
+      "country[]",
+      "lang[]",
+      "engine[]",
+      "from/to",
+      "funnel[]",
+      "brand_presence[]",
+      "list_type[]",
+      "depth1~3[]",
+      "source[]"
+    ],
+    "extra_params": [
+      "entity_id(path, uuid): GET .../entities/{entity_id} 대상 엔티티",
+      "project_id(query, uuid, 프롬프트 4종 엔드포인트 필수): 캐시·생성·삭제·후보전송의 스코프",
+      "lang(query, ko|en, export 전용): xlsx 시트명·헤더 라벨 언어(§open_questions 1 — 현재는 body.labels 로 프론트가 통째로 넘김, 서버 고정 라벨로 단순화 제안)"
+    ]
+  },
+  "response": "GET .../contexts | .../conditions → Paged: {data:[{id, name, theme_id, theme_name, mention_count, perspective:{positive_pct,negative_pct,neutral_pct}(분자 sentiment_positive/negative/neutral, 분모 utterance 합 함께 반환), linked_count}], meta:{total, page, size, …공통 meta}}. theme_id/theme_name 은 조건에는 없음(맥락 전용, dimension 컬럼 기반 7종 고정 사전); category_id(조건 전용)는 canonical_name 정규식 휴리스틱 파생값이고 필터 축이 아님을 명시.\nGET .../combinations → Paged: {data:[{id:\"{cond_a}:{cond_b}\", cond_a_id, cond_a_name, cond_b_id, cond_b_name, co_occurrence_count, frequency(low|medium|high, 페이지 최대치가 아니라 코퍼스 전체 최대치 대비 버킷)]}\nGET .../entities/{id} → {id, name, mention_count, perspective, evidence_quotes:[{quote, source_title, source_url, sentiment}](최대 8), source_domains:{host:count}, linked:[{id,name,strength}]}\nGET .../stats → {contexts, conditions, relationships(=drives+combinations), drives, combinations, sources}\nGET .../export → xlsx 바이너리(Content-Disposition attachment), 3시트(맥락/조건/조합), 상세열 없음\nGET .../prompts → {data:[{id, question, layer(L1-context|L2-condition|L3-intersection), funnel_stage, source_label, priority, origin(composed|null), similar_to:{text,score,kind}|null}]}(similar_to 는 조회 시점 계산, 미영속)\nPOST .../prompts/more, .../prompts/selected → {data:{prompts:[...위와 동일 shape], exhausted(more 전용) | skipped_existing(selected 전용)}}\nPOST .../prompts/remove → {data:{removed_count}}\nPOST .../candidates → {data:{added_count, skipped_count}}(중복 텍스트는 건너뜀, app 레이어 dedup)",
+  "metrics_rules": [
+    "해당 없음 — 이 단위는 측정 코어 M01~M12·R01~R13 규칙 밖이다(산업 코퍼스 열람 + LLM 프롬프트 생성이며 AI 측정 응답을 읽지 않는다)",
+    "perspective 필드는 현재도 실은 '관점(buyer/seller)'이 아니라 '감성(sentiment positive/negative/neutral)'이다 — 현행 리포지토리가 필드명만 유지하고 값은 감성으로 채운다(sentimentPerspective() 주석 명시). 새 API 는 필드명을 perspective 대신 sentiment 로 바꿔 정직하게 노출할 것을 제안(§open_questions 2)",
+    "생성 시 브랜드 차별화: LLM 프롬프트에 project.brand + tracked competitor/vehicle 을 주입하되 질문 텍스트 자체는 브랜드 중립으로 강제(생성 규칙, DB 아님)"
+  ],
+  "read_model": [
+    "ext.ctx_snapshot.snapshot_id, .industry_entity_id, .is_active",
+    "ext.ctx_entity.snapshot_id, .id, .type, .canonical_name, .dimension, .mention_count, .utterance_count, .sentiment_positive, .sentiment_negative, .sentiment_neutral",
+    "ext.ctx_drive.snapshot_id, .context_id, .requirement_id, .co_count",
+    "ext.ctx_combination.snapshot_id, .cond_a, .cond_b, .co_count",
+    "ext.ctx_evidence.snapshot_id, .id, .entity_id, .quote, .source_host, .source_url, .sentiment",
+    "ext.ctx_domain.snapshot_id, .entity_id, .host, .n",
+    "app.ctx_generated_prompt.project_id, .prompt_id, .batch_no, .seed_entity_ids, .text, .source_label, .model, .generated_at, .removed_at",
+    "app.project.project_id, .brand",
+    "app.project_tracked_competitor.project_id, .brand_name",
+    "app.project_tracked_vehicle.project_id, .brand, .model",
+    "app.prompt_candidate.project_id, .source, .text, .source_keyword",
+    "app.prompt.project_id, .text (유사도 비교용 등록 프롬프트 텍스트만)",
+    "app.project_member.project_id, .user_id, .role, .status / app.user_account.role, .operator (권한 게이트)",
+    "제안: app.ctx_generated_prompt 에 layer text, funnel_stage text, priority int2, origin text 4개 컬럼 추가 — 현행 GeneratedPrompt 의 layer/funnelStage/priority/origin 이 DDL 에 자리가 없다(seed_entity_ids·source_label·model·removed_at 만 있음). 근거: buildSeeds()/RESPONSE_SCHEMA 가 이 4값을 만들어 매 행에 영속시켰고(scope-context-prompts.ts), 목록 응답이 이를 그대로 보여준다(GeneratedPrompt 타입)",
+    "제안: app.ctx_generated_prompt 에 UNIQUE(project_id, seed_entity_ids) — 현행 whole-blob 낙관적 락(version 토큰)이 사라지는 대신(행 단위 INSERT 로 전환), 동시 '더 생성' 두 건이 같은 시드를 중복 생성하는 것을 막을 유일한 방어선이다. 근거: generate-context-prompts.ts 의 seed id(l1-/l2-/l3-) 는 현재 exclude-set 키이자 사실상의 자연키",
+    "제안: LLM 생성 비용(OpenRouter 호출) 을 기록할 컬럼/표 없음 — operator-policy.ts 주석은 intent 수집을 '비용 발생 행동'으로 분류하는데 DB-v2 에는 ext.dfs_call.cost 같은 대응 컬럼이 ctx_generated_prompt 쪽엔 없다(§open_questions 3)"
+  ],
+  "query_design": "-- GET contexts/conditions (동일 쿼리, type 만 다름)\nWITH active AS (SELECT snapshot_id FROM ext.ctx_snapshot WHERE industry_entity_id = $industry_id AND is_active)\nSELECT e.id, e.canonical_name, e.dimension, e.mention_count, e.utterance_count,\n       e.sentiment_positive, e.sentiment_negative, e.sentiment_neutral,\n       (SELECT count(*) FROM ext.ctx_drive d WHERE d.snapshot_id = e.snapshot_id\n          AND (CASE WHEN $type='ConsumerContext' THEN d.context_id ELSE d.requirement_id END) = e.id) AS linked_count\nFROM ext.ctx_entity e, active\nWHERE e.snapshot_id = active.snapshot_id AND e.type = $type\n  AND ($search IS NULL OR e.canonical_name ILIKE '%'||$search_escaped||'%')\nORDER BY (CASE WHEN $sort='name' THEN e.canonical_name END) $dir,\n         (CASE WHEN $sort='mentions' THEN e.mention_count END) $dir\nLIMIT $size OFFSET $page*$size;\n-- + 별도 COUNT(*) 쿼리(total)\n\n-- GET combinations\nSELECT c.cond_a, c.cond_b, c.co_count, a.canonical_name AS a_name, b.canonical_name AS b_name\nFROM ext.ctx_combination c\nJOIN ext.ctx_entity a ON a.snapshot_id = c.snapshot_id AND a.id = c.cond_a\nJOIN ext.ctx_entity b ON b.snapshot_id = c.snapshot_id AND b.id = c.cond_b\nWHERE c.snapshot_id = $active_snapshot\n  AND ($search IS NULL OR a.canonical_name ILIKE ... OR b.canonical_name ILIKE ...)\nORDER BY c.co_count $dir LIMIT $size OFFSET $page*$size;\n-- + COUNT(*) 동형 쿼리 + SELECT max(co_count) FROM ext.ctx_combination WHERE snapshot_id=$active (버킷 기준값)\n\n-- GET entities/{id}: entity 1행 + evidence(LIMIT 8, snapshot_id+entity_id) + domains(ORDER BY n DESC) + drives(방향별 JOIN entity) 4개 병렬 조회, 전부 snapshot_id 고정.\n\n-- 쓰기: POST prompts/more\nBEGIN;\n  -- 1) 시드 풀: ctx_entity type별 mention_count DESC LIMIT N(맥락150/조건200), ctx_combination/ctx_drive 를 그 id 집합으로 좁혀 LIMIT 500/전체\n  -- 2) 기존 app.ctx_generated_prompt(project_id, removed_at IS NULL) 의 seed_entity_ids 로 exclude\n  -- 3) (DB 트랜잭션 밖) OpenRouter 호출\n  INSERT INTO app.ctx_generated_prompt (project_id, batch_no, seed_entity_ids, text, source_label, model, layer, funnel_stage, priority)\n  SELECT ... FROM unnest(...)  -- LLM 응답 매핑, batch_no = 기존 max(batch_no)+1\n  ON CONFLICT (project_id, seed_entity_ids) DO NOTHING;  -- 제안 컬럼 §read_model 적용 시\nCOMMIT;\n\n-- 쓰기: POST prompts/remove\nUPDATE app.ctx_generated_prompt SET removed_at = now()\nWHERE project_id = $pid AND prompt_id = ANY($ids) AND removed_at IS NULL;\n\n-- 쓰기: POST candidates\n-- app-레벨 dedup: SELECT text FROM app.prompt_candidate WHERE project_id=$pid 로 기존 집합 확보 후\nINSERT INTO app.prompt_candidate (project_id, source, text, source_keyword)\nSELECT $pid, 'social_scraping', unnest($texts), NULL\nON CONFLICT DO NOTHING;  -- 현행은 unique 제약 없이 앱단 필터링(§read_model 유지, DDL 불변)",
+  "perf": {
+    "risk": "low",
+    "rows_scanned": "코퍼스 전체가 작다: ext.ctx_entity ~4,136행/스냅샷, ext.ctx_combination+ctx_drive 합쳐 export 시 ~9.9k행. 10배(폭)를 가정해도 4만~10만행대로, PK(snapshot_id,type,mention_count DESC)·(snapshot_id,id) 인덱스로 페이지 조회는 index scan. app.ctx_generated_prompt 는 프로젝트당 수십~백행(현행 프로덕션 최대 84행) 수준.",
+    "indexes": [
+      "ext.ctx_snapshot(industry_entity_id) WHERE is_active — 유니크, active 스냅샷 단건 조회",
+      "ext.ctx_entity PK(snapshot_id, id)",
+      "ext.ctx_entity_type_mentions(snapshot_id, type, mention_count DESC) — 목록·시드풀 정렬에 직결",
+      "ext.ctx_drive PK(snapshot_id, context_id, requirement_id) — context→requirement 방향 index scan. requirement→context 역방향(조건 상세의 linked)은 PK 두 번째 컬럼 선두가 아니라 seq scan 위험 — 제안: ext.ctx_drive_requirement_idx(snapshot_id, requirement_id) 추가(현행 코드의 0027 마이그레이션이 이미 이 인덱스를 갖고 있었다, scope-context-map.ts:213 주석 '양방향 모두 인덱스')",
+      "ext.ctx_evidence(snapshot_id, entity_id) — 상세 다이얼로그",
+      "canonical_name ILIKE 검색은 무인덱스 seq scan이지만 스냅샷당 4k행 규모라 위험 낮음(트라이그램 GIN 은 과설계로 보류)"
+    ],
+    "notes": "ACR·외부 데이터 설계 문서(§7)가 이미 '키워드·컨텍스트 맵: 점 조회·페이지 조회, 낮음'으로 판정. 유일한 예외는 GET export(무페이징 9.9k행 3라운드트립) — 정의상 전량이고 상세 fan-out이 없어 현행도 저위험으로 취급됨. RDS 구축 후 실측 게이트 필요(계약서 성능 근거 한계 조항) 대상은 아님(고위험 목록에 없음)."
+  },
+  "auth": "FastAPI JWT(JWKS, app.user_account 매핑) 의존성으로 세션 확립. 읽기(GET .../context-map/*): 인증 사용자면 통과 — 코퍼스가 스냅샷 단위 전역이라(브랜드·프로젝트 축 없음) 역할·프로젝트 필터 없음(현행 app/api/context-map/route.ts 주석과 동일 판단, 코퍼스가 프로젝트 분할되면 재검토 필요). 쓰기 4종(prompts/more, prompts/selected, prompts/remove, candidates)과 GET .../prompts 는 project_id 필수 + canOperateProject 동치 게이트: role='admin' 이면 통과, operator='none' 이면 거부, operator='global' 이면 통과, operator='assigned' 이면 app.project_member(project_id,user_id).status='active' 필요. 이 3axis 정책(role/operator/membership)은 app.user_role·app.operator_scope·app.project_member 로 DDL 에 이미 존재 — 새 컬럼 불필요, FastAPI 의존성으로 이식만 하면 된다.",
+  "writes": "POST prompts/more · prompts/selected: app.ctx_generated_prompt 에 INSERT(배치). 트랜잭션 경계 = \"시드 풀 조회(rd 아님, ext) → (트랜잭션 밖) LLM 호출 → INSERT 배치\"는 단일 짧은 트랜잭션, LLM 대기는 트랜잭션 밖(현행 lock-wait 회피와 동일 설계). 감사: 없음(judgment_change 대상 아님 — 카탈로그 판정 변경이 아니라 프로젝트 로컬 생성물). POST prompts/remove: app.ctx_generated_prompt UPDATE(removed_at), 감사 없음. POST candidates: app.prompt_candidate 에 INSERT(app 레벨 dedup, 트랜잭션 1개). 넷 다 app 스키마만 건드리므로 api_rw 쓰기 권한 범위 안(계약서 A17), rd·ing 반영 없음(적재기 대상 아님).",
+  "current_refs": [
+    "lib/db/schema.ts:1347-1445 (scopeContextEntities/Drives/Combinations/Evidence/Domains/PromptCache 테이블 정의, 현행 미러)",
+    "lib/db/repositories/scope-context-map.ts:1-645 (전체 read repository: listContexts/listConditions/listCombinations/getEntityDetail/listAllForExport/getSeedPool/getEntitySeeds/getStats)",
+    "lib/db/repositories/scope-context-prompts.ts:1-95 (prompt cache get/setIfUnchanged, 낙관적 락)",
+    "lib/social-scraping/generate-context-prompts.ts:1-266 (buildSeeds/generateContextPrompts/generateFromSeeds, LLM 스키마·규칙)",
+    "lib/social-scraping/selection-seeds.ts (구성 플로우 시드 구성, buildSelectionSeeds)",
+    "lib/social-scraping/similarity.ts:1-85 (textSimilarity, 문자 bigram 코사인, 조회 시점 유사도 주석)",
+    "lib/social-scraping/context-map-export.ts, lib/social-scraping/content-disposition.ts (xlsx 조립·파일명 헤더)",
+    "app/api/context-map/route.ts (GET, tab=contexts|conditions|combinations|detail)",
+    "app/api/context-map/export/route.ts (POST, xlsx 바이트)",
+    "app/[locale]/(dash)/projects/[id]/intent/_actions.ts:65-417 (addCandidate/addCandidates/generateMoreSocialPrompts/generateSelectedSocialPrompts/removeSocialPrompts, requireOperate 게이트)",
+    "app/[locale]/(dash)/projects/[id]/intent/social-scraping/page.tsx (초기 로드: 캐시 전용 읽기, 페이지당 50행)",
+    "lib/auth/operator-policy.ts:19-45 (canCreateProject/canOperateProject/isOperator)",
+    "app/[locale]/(dash)/customer-interest/social-scraping/page.tsx, components/social-scraping/sample-data.ts (전역 화면은 여전히 고정 픽스처 — 이 단위 API 로 아직 교체 안 됨, §open_questions 4)"
+  ],
+  "parity": "하네스 F01~F07 키에 이 단위 대응 항목 없음(신구 대조 하네스는 측정 코어 지표용, values-old.jsonl 미확인이나 코퍼스 열람 기능은 대상 밖으로 추정 — §open_questions 5). 신규 대조 항목 제안: (a) GET contexts/conditions 페이지별 id 집합·mention_count 합이 구 API(app/api/context-map GET tab=contexts|conditions) 응답과 스냅샷 고정 시 1:1 일치, (b) GET combinations 의 frequency 버킷(strength)이 코퍼스 max 기준으로 구현과 동일, (c) POST candidates 의 skipped_count 가 구현의 \"이미 추가됨\" 판정과 텍스트 단위로 일치, (d) export xlsx 행수(~9.9k) 합이 구현과 일치.",
+  "open_questions": [
+    "1. export 라벨: 현행은 클라이언트가 시트명·헤더 라벨 전체를 POST body(labels)로 넘긴다(FE i18n 소유). FastAPI 백엔드로 옮기면 messages/{ko,en}.json 을 서버가 갖지 않으므로, 고정 ko/en enum 라벨을 서버에 내재화(제안)할지 FE 가 계속 body 로 넘기게 둘지(임의 문자열 주입 표면 유지) 결정 필요.",
+    "2. perspective vs sentiment: 현행 필드명(perspective, buyer/seller/neutral)이 실제 값(sentiment positive/negative/neutral)과 불일치. 새 API 는 이름을 sentiment_* 로 바로잡을지, 프론트 하위호환을 위해 perspective 이름을 유지할지 결정 필요.",
+    "3. LLM 생성 비용(OpenRouter) 기록: DB-v2 에 대응 컬럼 없음. operator-policy 는 intent collection 을 비용 행동으로 명시 게이트하는데 실제 비용값을 어디에도 안 남긴다 — ext.dfs_call.cost 처럼 별도 로그 표가 필요한지, 아니면 비용 로깅은 이 단위 범위 밖(OpenRouter 자체 대시보드로 충분)인지 결정 필요.",
+    "4. 전역 화면(/customer-interest/social-scraping)은 지금도 고정 픽스처다. 이 API 설계가 그 화면까지 교체 대상인지, 프로젝트 화면(/projects/{id}/intent/social-scraping)만 대상인지 범위 확인 필요 — 전역 화면은 project_id 가 없어 이 API 형태(project_id 필수)로는 못 붙는다.",
+    "5. ext.ctx_* 스냅샷 갱신 주체·주기: DB-보정 문서는 '수동 스냅샷 작업'이라고만 적었다. 스냅샷 교체(ctx_snapshot.is_active 갱신) 를 이 단위의 API 로 노출할지(관리자용 POST) 여부 — 계약서 범위 힌트(customer-interest/social-scraping)엔 없어 관리자(admin) 모듈(/v1/admin/*) 소관으로 보이나 명시 확인 필요.",
+    "6. IN-1(키워드)과의 후보 카탈로그 경계: addCandidate/addCandidates 는 현재 source in (google_keyword, social_scraping) 두 값을 같은 함수로 처리한다. POST /v1/intent/social/candidates 를 이 단위 전용으로 분리했는데, IN-1 쪽도 별도 엔드포인트를 만들면 로직이 중복된다 — 공용 POST /v1/intent/candidates{source} 하나로 합칠지 IN-1 설계자와 조율 필요."
+  ]
+}

@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>웹 크롤·SEO(제거) API</title><meta name="description" content=""><style>
+:root {
+  --bg: #f7f7f5; --panel: #ffffff; --ink: #1d1f23; --ink2: #4a4f57; --ink3: #7a808a;
+  --line: #e3e3de; --line2: #eeeeea; --accent: #0a67f2; --accent-soft: #e8f0fe;
+  --ok: #1a7f4b; --ok-soft: #e6f4ec; --warn: #9a6200; --warn-soft: #fdf3e1;
+  --bad: #b3261e; --bad-soft: #fbe9e7; --muted-soft: #efefec; --code-bg: #f1f1ee;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15171a; --panel: #1c1f23; --ink: #e8e9eb; --ink2: #b4b8bf; --ink3: #858b94;
+    --line: #2d3137; --line2: #262a2f; --accent: #6ea8ff; --accent-soft: #1d2b44;
+    --ok: #5fd08f; --ok-soft: #173024; --warn: #f0b95b; --warn-soft: #3a2d14;
+    --bad: #ff8a80; --bad-soft: #3d1d1b; --muted-soft: #25282d; --code-bg: #25282d;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15171a; --panel: #1c1f23; --ink: #e8e9eb; --ink2: #b4b8bf; --ink3: #858b94;
+  --line: #2d3137; --line2: #262a2f; --accent: #6ea8ff; --accent-soft: #1d2b44;
+  --ok: #5fd08f; --ok-soft: #173024; --warn: #f0b95b; --warn-soft: #3a2d14;
+  --bad: #ff8a80; --bad-soft: #3d1d1b; --muted-soft: #25282d; --code-bg: #25282d;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 56px; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.7 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", "Segoe UI", sans-serif;
+  word-break: keep-all; overflow-wrap: break-word; }
+.wrap { max-width: 1240px; margin: 0 auto; padding: 24px 16px 80px; display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 32px; }
+nav.toc { position: sticky; top: 46px; align-self: start; max-height: calc(100vh - 60px); overflow: auto; font-size: 13px; padding-right: 8px; }
+nav.toc .h { font-weight: 700; color: var(--ink2); margin: 4px 0 8px; font-size: 12px; letter-spacing: .02em; }
+nav.toc a { display: block; color: var(--ink2); text-decoration: none; padding: 3px 8px; border-radius: 6px; }
+nav.toc a:hover { background: var(--muted-soft); color: var(--ink); }
+nav.toc a.sub { padding-left: 20px; font-size: 12.5px; color: var(--ink3); }
+main { min-width: 0; }
+header.doc { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 28px 28px 22px; margin-bottom: 28px; }
+header.doc .eyebrow { font-size: 12px; color: var(--accent); font-weight: 700; letter-spacing: .04em; }
+header.doc h1 { font-size: 28px; line-height: 1.3; margin: 6px 0 10px; }
+header.doc p.lead { font-size: 16px; color: var(--ink2); margin: 0 0 18px; }
+.meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px 18px; font-size: 13px; }
+.meta div span { display: block; color: var(--ink3); font-size: 12px; }
+section { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 24px 26px; margin-bottom: 22px; }
+h2 { font-size: 21px; margin: 0 0 14px; padding-bottom: 10px; border-bottom: 1px solid var(--line2); }
+h2 .num { color: var(--accent); margin-right: 8px; font-variant-numeric: tabular-nums; }
+h3 { font-size: 16.5px; margin: 26px 0 10px; }
+h3:first-of-type { margin-top: 10px; }
+p { margin: 8px 0 12px; }
+ul, ol { margin: 6px 0 14px; padding-left: 22px; }
+li { margin: 3px 0; }
+code { font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+pre { background: var(--code-bg); border-radius: 10px; padding: 14px 16px; overflow-x: auto; font-size: 12.5px; line-height: 1.55; }
+pre code { background: none; padding: 0; }
+.tbl { overflow-x: auto; margin: 10px 0 16px; border: 1px solid var(--line); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { text-align: left; vertical-align: top; padding: 8px 11px; border-bottom: 1px solid var(--line2); }
+th { background: var(--muted-soft); font-weight: 650; color: var(--ink2); white-space: nowrap; font-size: 12.5px; }
+tr:last-child td { border-bottom: none; }
+.cat table { table-layout: fixed; }
+.cat code { white-space: normal; word-break: break-all; }
+td.id, th.id { white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: 650; }
+.b { display: inline-block; font-size: 11.5px; font-weight: 650; padding: 1px 8px; border-radius: 999px; white-space: nowrap; line-height: 1.6; }
+.b.ok { background: var(--ok-soft); color: var(--ok); }
+.b.warn { background: var(--warn-soft); color: var(--warn); }
+.b.bad { background: var(--bad-soft); color: var(--bad); }
+.b.info { background: var(--accent-soft); color: var(--accent); }
+.b.mute { background: var(--muted-soft); color: var(--ink3); }
+.callout { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 12px 16px; border-radius: 0 10px 10px 0; margin: 12px 0 16px; }
+.callout.warn { border-color: var(--warn); background: var(--warn-soft); }
+.callout.bad { border-color: var(--bad); background: var(--bad-soft); }
+.callout p { margin: 4px 0; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin: 10px 0 16px; }
+.card { border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; background: var(--bg); }
+.card .k { font-size: 12px; color: var(--ink3); }
+.card .v { font-size: 22px; font-weight: 750; font-variant-numeric: tabular-nums; }
+.card .d { font-size: 12.5px; color: var(--ink2); }
+.small { font-size: 12.5px; color: var(--ink3); }
+.src { font-size: 12px; color: var(--ink3); }
+details { margin: 8px 0; }
+summary { cursor: pointer; font-weight: 650; color: var(--ink2); }
+footer { color: var(--ink3); font-size: 12.5px; text-align: center; margin-top: 30px; }
+@media (max-width: 900px) {
+  .wrap { grid-template-columns: 1fr; gap: 0; }
+  nav.toc { display: none; }
+  header.doc, section { padding: 18px 16px; }
+  header.doc h1 { font-size: 23px; }
+  .tbl table { min-width: 680px; }
+  .cat table { min-width: 860px; }
+  .tbl th:first-child, .tbl td:first-child { min-width: 96px; }
+}
+
+.apiwrap{max-width:1100px;margin:0 auto;padding:24px 16px 80px;min-width:0}.apiwrap .m,.apiwrap td,.apiwrap dd,.apiwrap p,.apiwrap li{overflow-wrap:anywhere}
+.apiwrap td.nw{white-space:nowrap;overflow-wrap:normal}.clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.router{background:var(--code-bg);border-radius:8px;padding:10px 12px;font-size:12.5px}
+.crumb{font-size:13px;color:var(--ink3);margin:0 0 6px}.crumb a{color:var(--accent);text-decoration:none}
+.unit{border-top:1px solid var(--line);padding-top:18px;margin-top:22px}
+.unit h3{margin:0 0 6px;font-size:18px}
+dl.kv{display:grid;grid-template-columns:140px minmax(0,1fr);gap:6px 14px;margin:10px 0}
+dl.kv dt{color:var(--ink3);font-size:13px}dl.kv dd{margin:0;min-width:0;overflow-wrap:break-word}
+pre.blk{background:var(--code-bg);border-radius:8px;padding:12px;overflow-x:auto;font-size:12.5px;line-height:1.5;white-space:pre-wrap;overflow-wrap:break-word}
+ul.tight{margin:4px 0;padding-left:18px}ul.tight li{margin:2px 0;overflow-wrap:break-word}
+.risk{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;white-space:nowrap}
+.risk.low{background:var(--ok-soft);color:var(--ok)}.risk.medium{background:var(--warn-soft);color:var(--warn)}.risk.high{background:var(--bad-soft);color:var(--bad)}.risk.na{background:var(--muted-soft);color:var(--ink3)}
+.m{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
+.navmods{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0}.navmods a{font-size:13px;padding:3px 9px;border:1px solid var(--line);border-radius:14px;text-decoration:none;color:var(--ink2);background:var(--panel)}
+@media (max-width:640px){dl.kv{grid-template-columns:1fr}dl.kv dt{margin-top:6px}}
+</style></head>
+<body><main class="apiwrap"><p class='crumb'><a href='index.html'>API 명세</a> / 웹 크롤·SEO(제거)</p><h1>웹 크롤·SEO(제거)</h1><h2>단위 상세</h2><section class="unit" id="WG-1"><h3>WG-1 웹 크롤·SEO (webgeo/crawl) — 소비자 없음, 신규 API 설계 대상 아님 <span class="risk na">n/a</span></h3>
+<p>crawl_pages·crawl_links·webgeo_*(webgeo_sites, webgeo_pages, webgeo_page_seo, webgeo_raw_html_objects 등) 테이블을 읽는 화면이나 배치가 현재 앱에 없다. 10-feature-trace.tsv 전행에 webgeo/crawl 관련 행이 0건이고, 리서치 프리뷰 리포 전체 git grep(webgeo, crawl_pages, crawl_links)에서 실제 소비(라우트·쿼리·컴포넌트)는 0건 — 나온 것은 drizzle 드리프트 감시 스크립트의 제외 주석과 무관한 정적 카탈로그(webgeo_final_list.xlsx, lib/geo-catalog/)뿐이다. drift-sql.ts 자체가 &quot;이 앱의 읽기 경로가 쓰지 않고 별도 파이프라인이 소유한다&quot;고 명시하고, DB 설계 v2 결정 G-13 은 &quot;crawl_* 참조가 0건&quot; 임을 확인한 뒤 폐기는 보류(용도 미확인)하고 crawl 은 S3 보관·webgeo 는 ext 스키마로 정적 이관만 하기로 했다(DECISIONS.md:228-240). 계약서 §3 도 이 방향과 일치한다: rd 스키마(기능 API 읽기 대상)에 webgeo_*·crawl_* 표가 아예 없고 ext 절 주석에 &quot;정적 이관&quot;으로만 적혀 있다(DB-v2.sql:741). 결론: WG-1 은 현재 범위에서 API 로 노출할 기능이 없다 — &quot;쓰는 곳이 없으면 그렇게 보고한다&quot;는 지시에 따라 엔드포인트를 설계하지 않는다.</p>
+<div class="tbl"><table><tr><th>메서드</th><th>경로</th><th>요약</th></tr></table></div>
+<dl class="kv">
+<dt>화면(현행)</dt><dd><span class='muted'>없음</span></dd>
+<dt>대체하는 현행 코드</dt><dd><ul class='tight'><li>notes/hmg-refactor-design/db/DB-v2.sql:741 — &#x27;ext.webgeo_*: 현행 정의 그대로 정적 이관(+ webgeo_pages (raw_html_path) 인덱스). crawl_*: S3 + mig.archive_manifest(G-13).&#x27; → rd 스키마(기능 API 읽기 대상)에 webgeo_*·crawl_* 표 없음</li><li>notes/hmg-refactor-design/db/DECISIONS.md:228-240 — G-13 결정: &#x27;crawl_* 참조가 0건이다(03-db-live-catalog.md §4). 용도가 미확인이라 폐기는 금지한다&#x27; → (a) crawl S3 보관·webgeo ext 정적·컨텍스트맵 스냅샷 채택, (c) crawl 폐기는 기각</li><li>notes/hmg-refactor-design/db/DB-보정.md:32,164 — ext 스키마 소유 목록에 webgeo 가 &#x27;loader(외부 적재)&#x27; 전용으로 기재, G-13 요약행 &#x27;crawl·webgeo·맵 → S3 / ext / 스냅샷&#x27;</li><li>../hmg-geo-research-preview-7639b9e/scripts/db/drift-sql.ts:41-47 — OUT_OF_BAND_PREFIXES 주석: &#x27;webgeo_ / crawl_ — 웹사이트 GEO 수집·SEO 계열. 이 앱의 읽기 경로가 쓰지 않고 별도 파이프라인이 소유한다&#x27; (drizzle schema.ts 에도 모델링돼 있지 않음)</li><li>../hmg-geo-research-preview-7639b9e/front/docs/development-guide.md:80 — &#x27;summary_*·webgeo_*·crawl_* 처럼 drizzle 로 모델링한 적이 없는 계열은 결과에서 분류·제외한다&#x27;</li><li>notes/hmg-refactor-research/10-feature-trace.tsv — 전행 grep(webgeo|crawl_pages|crawl_links, 대소문자 무관) 0건. 화면·구획·함수 추적 어디에도 이 표를 읽는 기능이 없음</li><li>../hmg-geo-research-preview-7639b9e 전체 git grep(webgeo|crawl_pages|crawl_links) — lib/geo-catalog/(webgeo_final_list.xlsx 정적 엑셀 카탈로그, DB 표와 무관)·drift-sql.ts·front/docs/development-guide.md 뿐, 라우트·쿼리·컴포넌트에서 0건</li><li>notes/hmg-refactor-research/03-db-live-catalog.md:41,45,49-50,100,112-115,148,156-159 — 라이브 DB 실측: crawl_pages(3.9GB)·crawl_links(2.1GB, 인덱스 4/5 미사용)·webgeo_pages(416MB)·webgeo_page_seo(516MB) 존재하나 &#x27;활성 연결(Q14)&#x27; 표에 이 표들로의 앱 연결 없음, 정리/이관 대상으로만 분류</li></ul></dd>
+<dt>필터 지원</dt><dd></dd>
+<dt>필터 무시(ignored)</dt><dd></dd>
+<dt>추가 파라미터</dt><dd><span class='muted'>없음</span></dd>
+<dt>지표·규칙</dt><dd><span class='muted'>없음</span></dd>
+<dt>읽는 표·열</dt><dd><ul class='tight'><li>해당없음 — rd 스키마에 webgeo_*·crawl_* 투영이 없다(DB-v2.sql §3 확인, grep 0건). ext.webgeo_* 는 기능 API(api_ro) 가 읽지 않는 정적 이관 대상으로만 존재(계약서 §3 &#x27;스키마 경계: 기능 API는 rd·app·ext 만 읽는다&#x27;와 상충하지 않도록, ext 안에서도 이 표는 소비자가 없어 읽기 경로를 만들지 않는다)</li><li>제안: 없음 — 소비자가 확인되지 않은 상태에서 새 읽기 경로·투영을 여는 것은 D8(파생 층 금지) 이전에 &#x27;쓰지 않는 기능을 미리 만들지 않는다&#x27;는 원칙에도 어긋난다</li></ul></dd>
+<dt>권한</dt><dd>해당없음. 신규 API 가 없으므로 스코프·역할 게이트 설계 대상이 없다. 참고로 라이브 카탈로그 실측상 이 4개 표는 RLS 가 활성 상태이나(03-db-live-catalog.md:148) 그건 현재 DB 의 설정일 뿐, 신설 FastAPI 인증(A8 Supabase Auth + JWKS) 설계와는 무관하다 — api_ro 가 이 표를 애초에 읽지 않는다.</dd>
+<dt>쓰기</dt><dd>없음</dd>
+<dt>성능(10배)</dt><dd>해당없음 (엔드포인트 없음)<br><span class="muted">인덱스: </span><br>설계 대상 API 가 없어 성능 산정 불필요. 다만 해당 표들이 라이브 DB 에서 이미 대형(crawl_links 는 인덱스 crawl_links_src_link_unique 982MB 가 4/5 미사용 상태로 관찰됨, 03-db-live-catalog.md:100,112)이라, 훗날 실제 소비자가 나타나 API 를 신설할 경우 이 부채(미사용 인덱스·라지 테이블)부터 별도로 정리해야 한다는 점만 기록해 둔다.</dd>
+<dt>신구 대조</dt><dd>해당없음 — 신규 API 가 없으므로 하네스 기능 F01~F07 어디에도 이 단위에 대응하는 항목이 없다(F01~F07 자체가 webgeo/crawl 을 다루지 않음, 10-feature-trace.tsv 근거). 새 대조 항목도 추가하지 않는다 — 대조할 신구 화면 쌍이 없다.</dd>
+<dt>열린 질문</dt><dd><ul class='tight'><li>WG-1 을 아예 이관 단위로 유지할 필요가 있는가: 확인된 소비자가 0건이므로 이 API 설계 단위 자체를 취소하고 모듈 지도에서 제거하는 편이 맞는지 설계 리드 확인 필요.</li><li>webgeo_*·crawl_* 를 실제로 쓰는 &#x27;별도 파이프라인&#x27;(drift-sql.ts:44 가 언급)이 무엇인지 리포 밖(다른 서비스·배치)에 있는지 확인이 안 됐다 — 확인되면 그 파이프라인 쪽 이관 계획(스키마·인증)이 별도로 필요할 수 있다.</li><li>G-13 은 &#x27;용도 미확인이라 폐기 금지&#x27;로 crawl_* 를 S3 로만 보관하기로 했는데, 이관 후에도 아무도 안 쓰면 그 데이터를 다시 조회할 계획이 있는지(있다면 그게 WG-1 의 진짜 범위가 될 수 있음) 사용자 확인이 필요하다.</li><li>webgeo_pages 의 raw_html_path FK 가 인덱스 없음으로 관찰됐다(03-db-live-catalog.md:163) — 이관·아카이브 작업(적재 모듈 소관) 시점에만 문제이며 이 API 설계 범위 밖이지만, 적재 모듈 담당자에게 전달이 필요한지 확인.</li></ul></dd>
+</dl>
+<details><summary>응답 형태</summary><pre class="blk">해당없음 (신규 엔드포인트 없음)</pre></details>
+<details><summary>쿼리 설계</summary><pre class="blk">해당없음. 설계할 쿼리가 없다(엔드포인트 0개). 참고로 현재 라이브 DB 실측(03-db-live-catalog.md)상 이 표들은 이미 상당히 큰 편(crawl_pages 3.9GB/5.73만행, crawl_links 2.1GB/410만행, webgeo_pages 416MB/3.6만행, webgeo_page_seo 516MB/3.9만행)이라 향후 API 를 열 경우에도 우선 인덱스·partition 설계가 선행돼야 한다.</pre></details>
+</section><div class='navmods'><a href='m-filters.html'>필터</a><a href='m-kpi.html'>KPI</a><a href='m-trend.html'>추이</a><a href='m-mentions.html'>언급</a><a href='m-citations.html'>인용</a><a href='m-geo.html'>국가별</a><a href='m-answers.html'>답변 드릴다운</a><a href='m-funnel.html'>AI 퍼널</a><a href='m-prompts.html'>프롬프트</a><a href='m-projects.html'>프로젝트</a><a href='m-admin.html'>관리자</a><a href='m-auth.html'>인증</a><a href='m-qa.html'>검수 콘솔</a><a href='m-intent.html'>고객 관심</a><a href='m-contextmap.html'>컨텍스트 맵(intent 로 흡수)</a><a href='m-webgeo.html'>웹 크롤·SEO(제거)</a><a href='m-ingest.html'>적재 파이프라인</a></div></main></body></html>

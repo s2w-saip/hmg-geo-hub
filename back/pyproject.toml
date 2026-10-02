@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = []          # 의존성 선언 전용. 설치는 잠금 파일(pip install --require-hashes -r requirements.lock | requirements-dev.lock, D-4). 코드는 pythonpath = ["."] 로 import 한다
+
+[project]
+name = "hmg-geo-hub-back"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["fastapi>=0.115", "uvicorn[standard]>=0.30", "pydantic>=2.8", "sqlalchemy[asyncio]>=2.0", "asyncpg>=0.29", "pyjwt[crypto]>=2.9", "httpx>=0.27", "boto3>=1.35", "python-multipart>=0.0.9"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.24", "ruff>=0.6", "pglast>=7,<8", "psycopg2-binary>=2.9"]   # pglast 7 = PostgreSQL 17 파서(SQL 경계 가드)
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests/core", "app", "ingest"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+filterwarnings = ["ignore::DeprecationWarning:jwt.*"]
+markers = ["legacy_profile(spec): 그 시험 동안만 현행 프로필 교체(conftest._legacy_profile_marker, spec = off | implemented | 스위치 쉼표 목록)"]
+
+[tool.ruff]
+line-length = 140
+target-version = "py312"
+exclude = ["tests/parity", "migration", "db"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "UP", "SIM", "B", "I"]
+ignore = ["B008", "E501"]   # B008: FastAPI Depends()·Query() 기본값 관례, E501: 기능 스텁 요약 문자열

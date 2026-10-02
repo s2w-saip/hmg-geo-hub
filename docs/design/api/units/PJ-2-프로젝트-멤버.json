@@ -1,0 +1,104 @@
+{
+  "auth": "역할: 이 유닛은 데이터 스코프(brand/region/country) 와 무관 — 프로젝트 멤버십 자체가 게이트다(현행 계승, D7 로 AFW 세션·잠금 요구는 미적용). 판정 순서: ① 세션 유효성(A8: FastAPI 가 Supabase Auth JWT 를 JWKS 검증) ② app.user_account.role='admin' 이면 전 프로젝트에 대해 무조건 통과(개발자 슈퍼유저, 현행 계승: member/_actions.ts:41-43) ③ 아니면 app.project_member 에서 (project_id, 세션 user_id) 행을 찾아 판정. 액션별 요구 수준: GET 목록·감사 로그 = 활성 멤버(status='active', role 무관); POST 초대·DELETE 제거/취소·PATCH 역할변경 = 활성 Owner(role='owner' AND status='active') 만; POST accept·reject = 대상 user_id 가 세션 본인이어야 하고(자기 행 자체가 권한, Owner 여부 무관) status='pending' 이어야 함(member/_actions.ts:185-231). 비멤버·비관리자가 GET 을 호출하면 프로젝트 존재 여부를 흘리지 않기 위해 403 이 아니라 404 를 반환(현행 member/page.tsx:38-40 notFound() 패턴 계승). 운영자(app.operator_scope) 는 비용 액션(측정 실행)에만 관여해 이 유닛과 무관. 쓰기는 app.actor() 함수가 세션 GUC app.actor_id 미설정 시 예외를 던지므로(db/DB-v2.sql:96-98), API 레이어는 트랜잭션 시작 직후 SET LOCAL app.actor_id = :caller_id 를 반드시 실행한다.",
+  "current_refs": [
+    "lib/db/repositories/project-members.ts:95-306 (projectMemberRepository 전체 구현)",
+    "lib/db/repositories/member-audit-logs.ts:48-90 (memberAuditLogRepository)",
+    "app/[locale]/(dash)/projects/[id]/member/_actions.ts:59-123 (inviteMember)",
+    "app/[locale]/(dash)/projects/[id]/member/_actions.ts:124-150 (cancelInvite)",
+    "app/[locale]/(dash)/projects/[id]/member/_actions.ts:151-184 (removeMember)",
+    "app/[locale]/(dash)/projects/[id]/member/_actions.ts:185-213 (acceptInvite)",
+    "app/[locale]/(dash)/projects/[id]/member/_actions.ts:214-232 (rejectInvite)",
+    "app/[locale]/(dash)/projects/[id]/member/_actions.ts:29-56 (requireOwner)",
+    "app/[locale]/(dash)/projects/[id]/setting/_actions.ts:332-359 (promoteToOwner)",
+    "app/[locale]/(dash)/projects/[id]/setting/_actions.ts:360-391 (demoteToViewer, 마지막 Owner 강등 금지)",
+    "app/[locale]/(dash)/projects/[id]/member/page.tsx:1-99 (화면 조합·admin 바이패스·404)",
+    "app/[locale]/(dash)/projects/[id]/member/_actions.audit.test.ts:1-45 (7액션 모두 감사로그 기록 검증)"
+  ],
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/v1/projects/{project_id}/members",
+      "summary": "프로젝트 멤버 목록(Owner+Viewer, pending+active 전부, Owner 우선·초대순 정렬)"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/projects/{project_id}/members",
+      "summary": "이메일로 기존 가입자 초대(role=viewer 고정 생성, pending). Owner/admin 전용"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/projects/{project_id}/members/{user_id}",
+      "summary": "역할 변경(viewer→owner 위임 / owner→viewer 강등, 활성 멤버만, 마지막 Owner 강등 금지). Owner/admin 전용"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/projects/{project_id}/members/{user_id}",
+      "summary": "멤버십 제거 — status에 따라 초대 취소(pending) 또는 멤버 제거(active, Owner·본인 불가)를 서버가 판정해 단일 삭제로 처리. Owner/admin 전용"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/projects/{project_id}/members/me/accept",
+      "summary": "본인의 대기 중 초대 수락(status pending→active). 대상 본인만"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/projects/{project_id}/members/me/reject",
+      "summary": "본인의 대기 중 초대 거절(행 삭제). 대상 본인만"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/projects/{project_id}/members/audit",
+      "summary": "멤버 변경 감사 로그(invite/cancel_invite/remove/promote/demote/accept/reject), 최신순 키셋 페이지네이션"
+    }
+  ],
+  "filters": {
+    "supported": [],
+    "ignored": [],
+    "extra_params": [
+      "project_id (path, uuid, 필수) — app.project.project_id",
+      "user_id (path, uuid, PATCH/DELETE/accept/reject 대상) — app.user_account.user_id, accept/reject 는 'me' 리터럴로 세션 본인 지정",
+      "email (body, invite, citext 형식 검증 EMAIL_RE 계승, 필수)",
+      "role (body, PATCH, enum 'owner'|'viewer', 필수)",
+      "limit (query, audit 전용, int, 기본 50, 상한 200 제안)",
+      "cursor (query, audit 전용, string, 키셋 커서: base64(created_at, audit_id))"
+    ]
+  },
+  "response": "이 유닛은 §4 공통 필터 모델을 쓰지 않으므로(멤버십 관리는 데이터 필터·기간·surface 축과 무관) meta 는 계약서 공통 형태를 그대로 두되 surface/mode/as_of/cycles/generation/ignored_filters/dropped_filters/suppressed 는 전부 null 또는 빈 값으로 채운다(스키마 일관성 목적, 실질 사용 없음). data 형태:\n\nGET /members data: [{user_id: uuid, email: string, display_name: string|null, role: \"owner\"|\"viewer\", status: \"pending\"|\"active\", invited_by: uuid, invited_by_email: string, invited_at: ISO8601, accepted_at: ISO8601|null}] — 정렬: role(owner 먼저), invited_at asc.\n\nPOST /members (초대) data: 생성된 멤버십 1건(위와 동일 shape, status=\"pending\"). 실패는 HTTP 4xx + {code, message} (예: \"invitee_not_found\" 404, \"already_member\" 409, \"self_invite\" 400) — 현행 ActionResult 의 {ok:false,error} 한국어 문자열을 HTTP status + 기계 판독 code 로 승격.\n\nPATCH /members/{user_id} data: 갱신된 멤버십 1건. 실패 code: \"last_owner_cannot_demote\" 409, \"not_active\" 409, \"already_that_role\" 409.\n\nDELETE /members/{user_id}: 204 No Content. 실패 code: \"cannot_remove_owner\" 409(강등 먼저 요구), \"cannot_remove_self\" 400, \"not_found\" 404.\n\nPOST .../me/accept, .../me/reject: 갱신(accept) 또는 삭제(reject)된 멤버십 1건 또는 204. 실패 code: \"no_pending_invite\" 404.\n\nGET /members/audit data: [{audit_id: bigint→string, actor_id: uuid, actor_email: string|null, target_user_id: uuid, target_email: string|null, action: \"invite\"|\"cancel_invite\"|\"remove\"|\"promote\"|\"demote\"|\"accept\"|\"reject\", context: string|null, created_at: ISO8601}], meta.page: {next_cursor: string|null}(키셋, PK 없는 시계열이므로 (created_at DESC, audit_id DESC) 튜플 비교).",
+  "metrics_rules": [
+    "해당 없음 — 이 유닛은 M01~M12 지표·R01~R13 규칙을 계산하지 않는다(멤버십 CRUD). 유일하게 적용되는 도메인 규칙은 이 유닛 자체의 비즈니스 불변식(현행 계승, 계약서 밖 새 결정 아님): (1) 초대 대상은 반드시 기존 가입자(app.user_account 존재)여야 한다 — pending 행에 무등록 이메일이 남는 orphan 방지. (2) Owner 는 제거 전에 반드시 강등(demote)돼야 한다. (3) 활성 Owner 가 1명뿐이면 강등 불가(last-owner guard). (4) 본인을 제거·초대할 수 없다. (5) 7종 액션(invite/cancel_invite/remove/promote/demote/accept/reject) 은 성공 시 반드시 app.member_audit_log 에 1건 기록한다(테스트로 강제됨: member/_actions.audit.test.ts)."
+  ],
+  "open_questions": [
+    "cross-project 대기 초대 배지(/projects 목록의 알림 뱃지, 현행 pendingForUser(userId) — project-members.ts:207-226)는 project_id 를 모르는 상태에서 호출되므로 이 경로(/v1/projects/{id}/members/...)에 안 맞는다. PJ-1(/v1/projects) 쪽에 GET /v1/me/project-invites 같은 별도 엔드포인트로 둘지, 이 모듈이 /v1/projects/members/pending(전역) 형태로 소유할지 PJ-1 담당자와 경계 확정 필요.",
+    "app.project_member 는 DB-v2 에서 PK 가 (project_id, user_id) 복합키이고 현행 schema.ts 의 별도 id(uuid) 컬럼이 없다 — API 를 user_id 기반 경로로 설계했는데, promote/demote/accept/reject 가 현행처럼 'membership_id' 개념을 필요로 하는 프론트 로직(선택된 행 추적)이 있다면 user_id 로 충분한지 프론트 설계자 확인 필요.",
+    "removeUserAndSucceedOrphans(project-members.ts:286-330, 사용자 삭제 시 admin 자동 승계)는 이 유닛(PJ-2)이 아니라 관리자의 사용자 삭제(/v1/admin/users) 트랜잭션 안에서 호출되는 내부 로직으로 보인다 — PJ-2 API 표면에 노출할 엔드포인트는 아니라고 판단했는데, admin 유닛 담당자와 소유권 확인 필요.",
+    "PATCH 역할변경(promote/demote)의 현행 구현이 물리적으로 setting/_actions.ts(PJ-4 설정 파일)에 있다 — 계약서 §4 트리거(judgment_change('project_setting', ...))가 domain/brand_code/country_code/ai_engines 변경에만 걸려 있고(db/DB-v2.sql:117) role 변경은 여기 해당 안 됨을 확인했으나, PJ-4 설계자와 '역할 변경 = PJ-2 소유'라는 이 경계 판단에 이견이 없는지 교차 확인 필요.",
+    "invite 시 이메일 발송(현행 Q5(a): 로그만 남기고 실제 발송 없음, member/_actions.ts:107-111)을 새 구조에서도 유지할지, 아니면 이번에 실제 발송을 붙일지 결정 안 됨 — D4(전체 이관 범위)에는 명시 없음."
+  ],
+  "parity": "신구 대조 하네스(F01~F07)는 KPI·추이·언급·인용 등 분석 지표용이라 이 유닛(멤버 CRUD)에는 해당 값 키가 없다. 대신 새 대조 항목을 제안한다: (1) 7종 액션 각각 성공 케이스에서 app.member_audit_log 행이 정확히 1건, action 값이 기대 enum과 일치하는지 신구 동일 시나리오로 대조. (2) 마지막 Owner 강등 차단·본인 제거 차단·Owner 제거 차단 3가지 방어 로직이 신구 동일 입력에서 동일하게 거부되는지(부정 케이스 대조 — 그동안 분석 API parity가 놓치기 쉬운 유형). (3) pending→active 상태 전이가 accepted_at 타임스탬프를 신구 동일 정밀도로 남기는지. 이 유닛은 D1~D8 시간축 재정의와 무관해 값 자체가 바뀔 이유가 없으므로 parity는 \"완전 일치\"가 기대치다(분석 API처럼 정의 변경으로 인한 차이 여지가 없음).",
+  "perf": {
+    "risk": "low",
+    "rows_scanned": "GET 목록: 프로젝트당 멤버 행 수(현행 관측상 수~수십 건, PK (project_id,user_id) 이미 프로젝트 단위 클러스터). GET audit: limit(기본 50)건, PK(audit_id) 오름차순이라 project_id 필터 시 인덱스 없으면 전체 스캔 — 아래 인덱스 제안 이유. 폭 10배(프로젝트 수·유저 수 10배)에서도 단일 프로젝트 쿼리 행 수는 그대로라 위험 없음.",
+    "indexes": [
+      "app.project_member PK (project_id, user_id) — 목록·존재확인 전부 커버, 이미 DDL 에 있음(db/DB-v2.sql:125)",
+      "app.project_member_user_idx (user_id, status) — cross-project 미결(open_questions) 대응용, 이미 있음(db/DB-v2.sql:126)",
+      "제안: app.member_audit_log 에 (project_id, created_at DESC) 인덱스 없음 — 현재 PK 는 audit_id 단독이라 GET .../audit 가 project_id 로 필터하면 풀스캔이다. app.prompt_audit_log 는 이미 동형 인덱스(prompt_audit_project_idx, db/DB-v2.sql:224)를 갖고 있어 같은 패턴을 따른다: CREATE INDEX member_audit_project_idx ON app.member_audit_log (project_id, created_at DESC);"
+    ],
+    "notes": "이 유닛은 rd 사실표(surface × round_date 파티션)를 전혀 읽지 않는다 — app 스키마 소규모 참조 테이블만 다루는 순수 CRUD라 D8(파생 층 금지) 논의 대상이 아니고, 위 인덱스 제안 1건 외에는 성능 위험이 없다."
+  },
+  "purpose": "/v1/projects/{id}/members: 프로젝트 멤버(Owner/Viewer) 초대·조회·역할위임·제거와 그 감사로그를 담당한다. 데이터 분석 축(필터·기간)과 무관한 순수 CRUD 유닛으로, app.project_member·app.member_audit_log 두 표만 다룬다.",
+  "query_design": "읽기(GET /members): SELECT pm.user_id, ua.email, ua.display_name, pm.role, pm.status, pm.invited_by, ib.email AS invited_by_email, pm.invited_at, pm.accepted_at FROM app.project_member pm JOIN app.user_account ua ON ua.user_id = pm.user_id JOIN app.user_account ib ON ib.user_id = pm.invited_by WHERE pm.project_id = :project_id ORDER BY pm.role, pm.invited_at; (PK 스캔, 조인 2회 전부 PK 룩업).\\n\\n읽기(GET /members/audit): SELECT l.audit_id, l.actor_id, a.email AS actor_email, l.target_user_id, t.email AS target_email, l.action, l.context, l.created_at FROM app.member_audit_log l LEFT JOIN app.user_account a ON a.user_id=l.actor_id LEFT JOIN app.user_account t ON t.user_id=l.target_user_id WHERE l.project_id=:project_id AND (l.created_at, l.audit_id) < (:cursor_ts, :cursor_id) ORDER BY l.created_at DESC, l.audit_id DESC LIMIT :limit; (키셋, 제안 인덱스 필요 — perf 참조).\\n\\n쓰기(POST invite), 단일 트랜잭션: SET LOCAL app.actor_id = :caller; SELECT user_id FROM app.user_account WHERE email=:email → 없으면 404; caller=invitee 면 400; SELECT 1 FROM app.project_member WHERE project_id AND user_id=invitee → 있으면 409; INSERT INTO app.project_member(project_id,user_id,role,status,invited_by) VALUES(:pid,:invitee,'viewer','pending',:caller); INSERT INTO app.member_audit_log(project_id,actor_id,target_user_id,action,context) VALUES(:pid,:caller,:invitee,'invite','role=viewer'); COMMIT.\\n\\n쓰기(PATCH role), 단일 트랜잭션: SET LOCAL app.actor_id=:caller; SELECT role,status FROM app.project_member WHERE project_id AND user_id=:target FOR UPDATE → 없으면 404, status<>'active' 면 409; 목표 role='owner' 인데 이미 owner 면 409; 목표 role='viewer'(강등) 면 SELECT count(*) FROM app.project_member WHERE project_id AND role='owner' AND status='active' → <=1 이면 409(last_owner_cannot_demote); UPDATE app.project_member SET role=:new WHERE project_id AND user_id=:target; INSERT member_audit_log(action = new='owner'?'promote':'demote', context='viewer->owner'|'owner->viewer'); COMMIT.\\n\\n쓰기(DELETE), 단일 트랜잭션: SET LOCAL app.actor_id=:caller; SELECT role,status FROM app.project_member WHERE project_id AND user_id=:target FOR UPDATE → 없으면 404; target=caller 면 400(cannot_remove_self); status='active' AND role='owner' 면 409(cannot_remove_owner); DELETE FROM app.project_member WHERE project_id AND user_id=:target; INSERT member_audit_log(action = 이전 status='pending' ? 'cancel_invite' : 'remove', context='role='||이전role); COMMIT.\\n\\n쓰기(POST me/accept): SET LOCAL app.actor_id=:caller; UPDATE app.project_member SET status='active', accepted_at=now() WHERE project_id AND user_id=:caller AND status='pending' RETURNING *; 0행이면 404(no_pending_invite); INSERT member_audit_log(actor=target=caller, action='accept'); COMMIT.\\n\\n쓰기(POST me/reject): SET LOCAL app.actor_id=:caller; DELETE FROM app.project_member WHERE project_id AND user_id=:caller AND status='pending' RETURNING *; 0행이면 404; INSERT member_audit_log(actor=target=caller, action='reject'); COMMIT.",
+  "read_model": [
+    "app.project_member.project_id / .user_id / .role / .status / .invited_by / .invited_at / .accepted_at",
+    "app.user_account.user_id / .email / .display_name / .role (권한 판정: role='admin' 바이패스)",
+    "app.project.project_id (프로젝트 존재 확인, 404 판정)",
+    "app.member_audit_log.audit_id / .project_id / .actor_id / .target_user_id / .action / .context / .created_at",
+    "제안: app.member_audit_log (project_id, created_at DESC) 인덱스 — perf 참조"
+  ],
+  "screens": [
+    "/projects/{id}/member — 멤버 목록(Owner/Viewer, pending/active), 초대 폼(Owner만), 행별 취소/제거/역할위임 버튼(Owner만), 감사 로그 패널",
+    "/projects 목록 — 카드별 내 역할 배지(다른 유닛 PJ-1 이 읽지만 이 유닛의 데이터를 씀), 대기 초대 알림 배지(open_questions 참조)"
+  ],
+  "writes": "app.project_member: INSERT(초대)·UPDATE(role 변경, accept 의 status/accepted_at)·DELETE(취소/제거/reject). app.member_audit_log: INSERT 전용(append-only, 트리거 member_audit_ao 가 UPDATE/DELETE 차단, db/DB-v2.sql:232). 트랜잭션 경계: 액션 1건 = app.project_member 변경 1건 + app.member_audit_log INSERT 1건을 같은 트랜잭션에 묶는다(원자성 — 현행처럼 두 호출이 분리돼 있으면 감사 유실 가능성이 생기므로 신설계에서는 단일 SQL 트랜잭션으로 강제). 감사 기록 주체는 app.actor() 가 아니라 API 레이어가 명시 INSERT(현행 패턴 계승) — 단 쓰기 세션 전체에 SET LOCAL app.actor_id 를 걸어 다른 app 트리거(예: app.project AFTER UPDATE)가 우연히 이 커넥션에서 발화해도 fail-closed 되게 한다.",
+  "id": "PJ-2",
+  "title": "프로젝트 멤버 (/v1/projects/{id}/members)"
+}

@@ -1,0 +1,101 @@
+{
+  "id": "FU-1",
+  "title": "AI 선택률(ACR) — GET /v1/funnel/acr",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/v1/funnel/acr",
+      "summary": "셀별 최다 선택 브랜드·선택 구도·선택률 추이·차종 전환율·점유 맵을 한 번에 반환(현행 fetchStandardAcr 1콜 = Q1~Q6 통합과 동일 패턴)"
+    }
+  ],
+  "purpose": "표준(글로벌)·웹사이트·프로젝트 표면에서 ACR(선택률) 셀 집합을 필터링해 (1) 브랜드별 선택 점유·커버리지, (2) 일별 선택률 추이, (3) 프롬프트×엔진 배틀 그리드, (4) 차종(product) 선택 전환율, (5) 지역×엔진 점유 맵을 한 응답으로 낸다. 현행 fetchStandardAcr/aggregateAcrFromMirror(Q1~Q6) 을 rd.acr_cell/acr_choice 기반으로 재구현한다.",
+  "screens": [
+    "/standard/ai-funnel/acr (브랜드별 ACR 표, KPI 카드 4종, 선택률 추이, 배틀 그리드, 차종 전환율 표, 점유 맵)",
+    "/website/ai-funnel/acr (현재 전량 정적 fixture — A12 미충족, open_questions 참조)"
+  ],
+  "filters": {
+    "supported": [
+      "surface(경로 파라미터 또는 own 결정)",
+      "own_brand(서버 결정)",
+      "brand[]",
+      "country[]",
+      "engine[]",
+      "from/to(앵커=round_date, 양끝 포함)",
+      "brand_presence[]",
+      "list_type[]",
+      "depth1[]~depth3[]",
+      "lang[](website 표면에서만 실제로 좁혀짐)"
+    ],
+    "ignored": [
+      "source[](인용 계열 전용, ACR 은 언급 입력이라 무관 — R13 주석)",
+      "funnel[](현행도 ACR 화면엔 안 씀 — kind='acr' 프롬프트는 별도 카탈로그 서브셋)"
+    ],
+    "extra_params": [
+      "top_brands: int, 기본 12, 브랜드 표·KPI 랭킹 상한(현행 LIMIT 12 그대로)",
+      "trend_series: int, 기본 5, 추이 시리즈에 넣을 브랜드 수(당사 우선 + 상위, 현행 topBrands.slice(0,5))",
+      "battle_limit: int, 기본 200, 배틀 그리드 프롬프트 상한(현행 .slice(0,200), 페이로드 폭주 방지)",
+      "territory_limit: int, 기본 12, 점유 맵 시트(지역×엔진) 상한(현행 .slice(0,12))",
+      "model_limit: int, 기본 12, 차종 전환율 표 상한(현행 LIMIT 12)"
+    ]
+  },
+  "response": "{ data: { totals: {promptRuns:int, prompts:int, iterations:int, engines:string[]}, brands: [{brand, isOurs:bool, choiceCount:int, appearanceCount:int, choiceShare:{num:int,den:int}, coverage:{num:int,den:int}}], trend: [{date, series: {[brand]: {num:int,den:int}}}], battle: [{promptId, promptText, cells: [{engine, winnerBrand, winnerIsOurs, choiceCount:int}]}], modelConversion: [{brand, model, isOurs, conversionRate:{num:int,den:int}, shortlistCount:int, top1Count:int}], territory: [{region, engine, rows: [{promptId, promptText, validAcr:int, entries:[{brand, choice:int, isOurs}]}]}] }, meta: {...공통, mode: 'snapshot'|'cumulative'} }. 모든 비율은 분자·분모 정수를 함께 반환하고(P3), 퍼센트 계산은 프론트에서 한다(현행처럼 서버 round1 고정값 대신).",
+  "metrics_rules": [
+    "G-11(채택 a): ACR 시간축은 A1·R05(스냅샷=최신 노출 회차의 모든 완료 측정)·D1/R06(기간=앵커 날짜가 기간 안인 모든 완료 측정)을 적용 — 현행(셀당 대표 1건 스냅샷, 전 이력 누적 기간)에서 규칙이 바뀐다.",
+    "G-11: 숨김은 mentions 계열로 통일(현행은 'all' 지면 고정 — acrWhere 머리 주석의 hidden_scope='citations' 예외 처리가 사라짐).",
+    "G-11: rd.acr_choice PK 에 rollup_level(level) 포함 — 현행 PK 충돌로 인한 brand 레벨 우선 롤백 결함(sync.ts:1131-1160) 해소.",
+    "R13/A15: ACR 반복 접기는 job 메타데이터(acr_cell_job, run·셀 단위)로 하고 분석 결과 유무에 의존하지 않는다 — acr_cell.valid_acr·co_* 는 적재 시 이미 접혀 있으므로 조회부는 재접기하지 않는다.",
+    "A16: 언급 분석 없는 반복 job 은 acr_cell.acr_in=false 로 적재 시 모수에서 빠진다(조회부는 acr_in 필터만 걸면 된다).",
+    "D1 원칙과 A15가 충돌하지 않는 이유: ACR 표준 모수(rd.answer 기반 M01~M12)에는 run-셀당 1건만 들어가고, 이 ACR 전용 기능(rd.acr_cell)은 반복 전량을 셀 단위로 이미 접어 저장하므로 이중 집계가 아니다.",
+    "당사 판정: rd.dim_brand_name.own_bit 로 적재 시 굳힌다(현행 acrIsOurs의 canonRollupSql/entity_id 폴백 재귀 계산이 조회부에서 사라짐, P1)."
+  ],
+  "read_model": [
+    "rd.acr_cell.{acr_cell_key,round_date,cyc_key,prompt_key,surface,bgrp,project_key,engine_key,geo_key,lang_key,cat_mask,planned,valid_turn1,valid_acr,co_single,co_conditional,co_generic,co_off_shortlist,co_unresolved,co_none,is_rep,acr_in,measured_date,rule_ver}",
+    "rd.acr_choice_brand / rd.acr_choice_product / rd.acr_choice_company (rd.acr_choice 의 level 파티션).{acr_cell_key,entity_key,brand_key,parent_brand_key,level,own_bit,name_own,appearance,choice,cond_choice,off_shortlist,unresolved,generic,keep}",
+    "rd.dim_brand_name.{brand_key,name,bare,kind,own_bit}",
+    "rd.dim_entity.{entity_key,entity_id,rep_name,brand_key} (product·company 레벨 표시명 폴백, lens2 m11)",
+    "rd.dim_prompt.{prompt_key,prompt_id,text,kind='acr',project_key,surface,cat_mask,lang_key}",
+    "rd.catalog_entry.{prompt_key,brand_bit,presence_key,list_type_key,depth1_key,depth2_key,depth3_key} (brand[]/list_type[]/depth1-3[] semi-join)",
+    "rd.dim_engine.{engine_key,code}, rd.dim_country.{geo_key,code,region_key}, rd.dim_lang.{lang_key,code}",
+    "rd.cycle.{cyc_key,round_date,anchor_date,surface,project_key,servable,view_date,hidden_scope} (R03 노출 게이트, hidden_scope='mentions' 제외)",
+    "rd.dim_project.{project_key,surface,is_root,project_id}",
+    "rd.acr_cell_job.{answer_key,acr_cell_key} (이미 확정된 테이블, 이 기능에서는 직접 안 읽음 — QA/드릴다운 다른 단위 전용, 참고로만 표기)"
+  ],
+  "query_design": "1) 셀 선택 CTE: SELECT c.acr_cell_key, c.round_date, c.prompt_key, c.engine_key, c.geo_key, c.lang_key, c.valid_acr, c.co_* FROM rd.acr_cell c WHERE c.surface = :surface AND c.acr_in AND (기간 지정: c.round_date BETWEEN :from AND :to | 미지정: c.cyc_key = (최신 노출 회차 서브쿼리: SELECT cyc_key FROM rd.cycle WHERE surface=:surface AND project_key=:project_key AND servable AND view_date<=current_date AND hidden_scope<>3 ORDER BY round_date DESC LIMIT 1)) AND (:engine_keys 있으면 c.engine_key = ANY(:engine_keys)) AND (:geo_keys 있으면 c.geo_key = ANY(:geo_keys)) AND (:lang_keys 있으면 c.lang_key = ANY(:lang_keys) — website 표면에서만 실효). own_brand 좁힘(bgrp)은 적재 시 굳은 값이라 원칙상 등치이나 정확한 값 목록 산출 로직은 미확인(적재 모듈 정본 확인 필요) — 우선은 bgrp 대신 안전하게 catalog_entry 세미조인으로 own_brand 모집단(관점 브랜드 X ∪ 공통)을 건다: c.prompt_key IN (SELECT prompt_key FROM rd.catalog_entry WHERE brand_bit & :own_mask <> 0 OR brand_bit = 0) — 이 비트 연산은 FILTER 가 아니라 세미조인 서브쿼리 안이라 규약 위반 소지 있음(open_questions). brand[]/list_type[]/depth1-3[] 는 동일 패턴의 catalog_entry 세미조인 추가. 2) 브랜드 집계(구 Q2): SELECT bn.name AS brand, bn.own_bit<>0 AS is_ours, sum(ch.choice)::int AS choice, sum(ch.appearance)::int AS appearance, count(DISTINCT ch.acr_cell_key)::int AS cells FROM rd.acr_choice_brand ch JOIN cells ON cells.acr_cell_key = ch.acr_cell_key JOIN rd.dim_brand_name bn ON bn.brand_key = ch.brand_key WHERE ch.keep GROUP BY bn.name, bn.own_bit ORDER BY choice DESC, cells DESC LIMIT :top_brands. 분모(총 iterations)는 SELECT sum(valid_acr)::int, count(*)::int FROM cells 로 별도. 3) 추이(구 Q3): cells 를 round_date 로 group, 분자는 acr_choice_brand 를 round_date(acr_cell 조인)로 group — brand_day/day_tot 패턴은 현행과 동일하되 hidden_scope 필터를 'mentions' 전용으로 축소(G-11). 4) 배틀(구 Q4): cells JOIN acr_choice_brand ON keep, GROUP BY prompt_key, engine_key, brand_key ORDER BY choice DESC 후 DISTINCT ON (prompt_key, engine_key) 로 승자 선정 — 현행과 동일 모양. 5) 차종 전환율(구 Q5): rd.acr_choice_product JOIN cells, GROUP BY entity_key(또는 rep_name), parent_brand_key, HAVING sum(choice)>0, ORDER BY choice/valid_acr DESC LIMIT :model_limit. 6) 점유 맵(구 Q6): cells 를 (geo_key, engine_key) 로 그룹핑해 시트를 만들고, 각 시트 안에서 acr_choice_brand 를 acr_cell_key 로 묶어 entries 배열 구성 — 현행과 동일, 셀 수 기준 상위 territory_limit.",
+  "perf": {
+    "risk": "medium",
+    "rows_scanned": "스냅샷(최신 회차 1개): 10배에서도 수만 acr_cell 행 + 그 브랜드 파티션 행(엔티티당 1행, 대략 셀당 3~8행) — 낮음. 기간 누적(예: 1년): DB-ACR-외부-데이터.md §7 추정 1배 590K행 → 10배 약 590만 행 중 acr_choice_brand 파티션만 읽음(언급 영역의 약 1/10 규모) — 중간 위험, 실측 게이트 필요(제품 결정으로 v3 폭 10배 실측 생략됨, RDS 구축 후 실측).",
+    "indexes": [
+      "acr_cell_round_cov (surface, bgrp, round_date) INCLUDE (acr_cell_key,cyc_key,prompt_key,engine_key,geo_key,lang_key,cat_mask,acr_in,valid_acr)",
+      "acr_cell_cyc_cov (surface, bgrp, cyc_key) INCLUDE (...)",
+      "acr_choice PK (level, acr_cell_key, entity_key) INCLUDE (brand_key,own_bit,name_own,keep,choice,appearance) — index-only scan",
+      "acr_choice_brand_brin / acr_choice_product_brin USING brin (acr_cell_key)"
+    ],
+    "notes": "acr_cell 은 파티션 없음(DDL 실측: PARTITION BY 절 부재), acr_choice 만 level 로 LIST 파티션. bgrp 를 등치 조건으로 못 쓰면(own_brand 세미조인으로 우회 시) 두 커버링 인덱스의 2번째 키 컬럼을 못 타 (surface, round_date) prefix 만 쓰는 인덱스 스캔으로 저하된다 — bgrp 정확한 채움 규칙(적재기가 어떤 값을 넣는지) 확인 후 등치 WHERE 로 되돌리는 것이 1순위 최적화. 배틀·점유 맵은 응답 크기 위험(현행도 LIMIT 200/12로 억제, 그대로 승계)."
+  },
+  "auth": "역할 hq·region·country·admin·vendor·website(§9) 의 데이터 스코프(허용 브랜드·권역·국가)를 서버가 계산해 요청 필터와 교집합(default-deny). own_brand 는 클라이언트가 바꿀 수 없고 서버가 계정/프로젝트에서 결정(§4). 운영자 게이트는 이 기능(읽기 전용 조회)엔 해당 없음. website 표면은 route-policy 상 website 역할도 접근 가능해야 하나 현재 원천이 없어(A12 준비 중) 실질적으로 빈 응답.",
+  "writes": "없음 (읽기 전용). ACR 데이터 자체의 쓰기는 측정 코어 적재 트랜잭션(A10, 다른 모듈)이 rd.acr_cell/acr_choice/acr_cell_job 을 함께 갱신.",
+  "current_refs": [
+    "lib/scope/server.ts:3493 fetchStandardAcr",
+    "lib/db/repositories/scope-aggregates.ts:9327 aggregateAcrFromMirror (Q1 총량)",
+    "lib/db/repositories/scope-aggregates.ts:9352-9386 Q2 브랜드 레벨",
+    "lib/db/repositories/scope-aggregates.ts:9394-9444 Q3 일별 추이(브랜드 선택 수/유효 반복)",
+    "lib/db/repositories/scope-aggregates.ts:9448-9503 Q4 배틀 그리드(prompt×engine 최다선택)",
+    "lib/db/repositories/scope-aggregates.ts:9505-9535 Q5 차종 전환율",
+    "lib/db/repositories/scope-aggregates.ts:9537-9584 Q6 점유 맵(테리토리)",
+    "lib/db/repositories/scope-aggregates.ts:9222 acrWhere (필터 술어 빌더)",
+    "lib/db/repositories/scope-aggregates.ts:9297 latestAcrPromptRunIds",
+    "lib/db/repositories/standards.ts:375 countStandardAcrPrompts (측정 대기 배지)",
+    "acr-live-view.tsx:220-661 (표·KPI·추이·배틀·차종·점유 맵 렌더)",
+    "app/standard/ai-funnel/acr/page.tsx:70-97 (필터 옵션 로딩·카탈로그 게이트)",
+    "standard/ai-funnel/_data/sample.ts:44-456 (website 표면은 전량 정적 fixture, 실데이터 원천 없음)"
+  ],
+  "parity": "하네스 기능 키: F0x 매핑 미확인(10-feature-trace.tsv 에 F 코드 없음, funnel/acr 화면은 route 문자열로만 식별) — 신구 대조는 route '/standard/ai-funnel/acr' 조합별로 brands[].choiceShare/coverage 분자·분모, totals.{promptRuns,iterations}, trend 시리즈 값을 구 fetchStandardAcr 출력과 정수 단위로 비교. 값이 다를 것으로 예상되는 지점(정의 변경이라 불일치가 정상): (1) 스냅샷 시간축이 '셀당 대표 1건'→'최신 노출 회차 전 완료 측정'으로 바뀌어 iterations 총량이 달라짐(G-11), (2) hidden_scope 필터가 'all'→'mentions' 전용으로 좁아짐, (3) acr_choice PK 에 level 이 들어가 현행 PK충돌로 유실됐던 product/company 레벨 행이 복원됨.",
+  "open_questions": [
+    "bgrp 값 채움 규칙 미확인: DB-통합.sql:518 주석은 'global=cat_mask, website=사이트 브랜드 비트, project=프로젝트 브랜드 비트'라 하나, 이 값이 own_brand 등치 조건으로 직접 WHERE 가능한 단일 정수인지, 아니면 여전히 비트 조합이라 FILTER/세미조인이 필요한지 적재기 코드(미확인, 이관 대상 스크립트에 없음) 확인 필요. 이 답에 따라 query_design 1)의 own_brand 좁힘 방식이 세미조인(현재 안)에서 단순 WHERE bgrp=:val 로 바뀌어 성능 위험이 낮아진다.",
+    "웹사이트 ACR 원천 부재(A12 충돌): 작업 지시는 '웹사이트·프로젝트는 A12 에 따라 같은 원천으로 구현'이나, DB-보정.md §6('가시성 4분면·웹사이트 ACR: 원천 미확인이라 A12 준비 중')·현행 코드(website ai-funnel/acr 전량 sample.ts 정적 fixture, live 함수 없음)는 웹사이트 표면 ACR 에 실데이터 원천이 없다고 명시한다. 이 엔드포인트는 surface 파라미터를 받아 rd.acr_cell.surface 로 필터링하는 동일 쿼리를 쓰되, website 표면 프롬프트에 kind='acr' 측정이 실제로 적재되는지(원천 존재 여부)는 별도 확인 필요. 없으면 A12 원칙대로 빈 응답(totals.promptRuns=0)을 그대로 두고, 있으면 설계는 그대로 재사용 가능.",
+    "프로젝트(surface=project) ACR 의 실측 사례가 10-feature-trace.tsv 에 없음 — 현재 어느 화면도 프로젝트별 ACR 을 그리지 않는 것으로 보이나, dim_project.surface IN(1,2,3) 정의상 구조적으로는 지원 가능. FU-3(프로젝트 모듈)와 경계 협의 필요: 프로젝트 상세 화면에 ACR 탭을 새로 낼지, 이번 이관 범위에서 제외할지.",
+    "co_single/co_conditional/co_generic/co_off_shortlist/co_unresolved/co_none(acr_cell) 은 v2 신설 컬럼으로 현행 화면 어디에도 대응이 없다(git grep 무매치). '선택 구도' 카드에 셀 단위 결과 유형 분포로 추가 노출할지, 이번 이관에서는 안 쓰고 남겨둘지 결정 필요.",
+    "FU-2(GA4 유입·전환)와의 경계: 계약서 지시대로 이 단위는 ACR(선택률, Scope 측정 기반)만 다루고 GA4 유입·전환은 전혀 건드리지 않는다 — 공통 필터의 from/to·country 의미가 두 기능에서 각각 앵커 날짜(ACR) 대 GA4 속성 시간대(전환)로 다르다는 점을 프론트 문서에 명시할 필요.",
+    "extra_params(top_brands·trend_series·battle_limit·territory_limit·model_limit)의 서버 상한값을 계약서에 명문화할지, 아니면 이 문서를 그 정본으로 삼을지 — 현행은 코드 상수(LIMIT 12/200/12, slice(0,5))로만 존재."
+  ]
+}

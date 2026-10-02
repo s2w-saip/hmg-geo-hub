@@ -1,0 +1,96 @@
+{
+  "id": "AU-1",
+  "title": "인증·세션·스코프 (GET /v1/auth/me + FastAPI 의존성 체인)",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/v1/auth/me",
+      "summary": "Supabase JWT 로 인증된 현재 사용자의 세션(role·operator·scope·menu_groups·is_qa_reviewer) 조회. 프론트 GNB/SNB 렌더링과 클라이언트측 UI 분기가 이 응답을 1회 캐시해 쓴다(현행 getSession() 대체)."
+    }
+  ],
+  "purpose": "모든 다른 API 모듈이 의존하는 인증·인가 기반: Supabase 발급 JWT 를 JWKS 로 검증해 신원을 확정하고, app.user_account 프로필에서 role·operator·데이터 스코프·메뉴 화이트리스트를 읽어 FastAPI 의존성(get_current_user·require_role·require_menu_group·get_scope_filter·require_operator)으로 노출한다. 데이터 *값* 스코프(scope-policy)·URL *장소* 게이트(route-policy)·비용 액션 게이트(operator-policy) 세 축을 그대로 이식하고, DB 커넥션 롤 선택 규칙과 app.access_audit_log 쓰기 주체(미결 항목)를 이 단위에서 정한다.",
+  "screens": [
+    "전 화면 공통 — 특정 화면 소유 아님. DashLayout 격의 GNB/SNB 렌더링, 모든 라우터의 스코프 필터 계산, 프로젝트/관리자 쓰기 액션의 operator 게이트가 이 단위에 의존한다."
+  ],
+  "filters": {
+    "supported": [],
+    "ignored": [
+      "surface",
+      "own_brand",
+      "brand[]",
+      "country[]",
+      "lang[]",
+      "engine[]",
+      "from/to",
+      "funnel[]",
+      "brand_presence[]",
+      "list_type[]",
+      "depth1~3[]",
+      "source[]"
+    ],
+    "extra_params": []
+  },
+  "response": "data: { user_id: uuid, email: string, role: \"hq\"|\"region\"|\"country\"|\"admin\"|\"vendor\"|\"website\", operator: \"none\"|\"assigned\"|\"global\", scope: { all: bool, brands: string[]|null, regions: string[]|null, countries: string[]|null }, menu_groups: (\"standard\"|\"website\"|\"project\"|\"admin\")[]|null, is_qa_reviewer: bool }. 비율·페이지네이션 없음(단건 세션 조회). meta 는 공통 응답 형태({surface,mode,as_of,cycles,generation,ignored_filters,dropped_filters,suppressed})를 그대로 채우되 이 엔드포인트에는 surface/cycles/generation 개념이 없어 null 또는 고정값(예: mode=\"session\")으로 둔다 — 통합자에게 이 예외를 명시할 것.",
+  "metrics_rules": [
+    "A8(채택) Supabase Auth 유지 + FastAPI JWT(JWKS) 검증",
+    "D7 HMG 보안요구(AFW) 제외 — 이 인증 설계에 SSO/AFW 미반영",
+    "A17 스키마 경계: api_ro read-only, api_rw 는 app 스키마 쓰기만 — access_audit_log 쓰기 주체 설계가 이 규약의 직접 파생",
+    "P1 조회 시 계산 허용 예외 목록에 권한 교집합(서버가 세션에서 스코프 계산 후 요청과 교집합, default-deny)이 포함(spec.template.html:190)"
+  ],
+  "read_model": [
+    "app.user_account.user_id",
+    "app.user_account.email",
+    "app.user_account.role",
+    "app.user_account.operator",
+    "app.user_account.scope_all",
+    "app.user_account.scope_brands",
+    "app.user_account.scope_regions",
+    "app.user_account.scope_countries",
+    "app.user_account.menu_groups",
+    "app.user_account.is_qa_reviewer",
+    "app.user_account.status",
+    "app.project_member.project_id (require_operator 'assigned' 판정용, PK 조회)",
+    "app.project_member.user_id",
+    "app.project_member.status",
+    "제안: app.access_audit_log 쓰기 대상 — 스키마엔 이미 존재(db/DB-v2.sql:217), 이 단위는 쓰기 경로만 새로 설계"
+  ],
+  "query_design": "[get_current_user 의존성] 1) Authorization: Bearer <jwt> 파싱 → Supabase 프로젝트 JWKS(캐시 TTL 10분, kid 미스 시 1회 강제 갱신)로 서명·exp·aud='authenticated' 검증(WebCrypto 대응은 python-jose/authlib 의 RS256/ES256 검증). 2) sub 클레임으로 단건 조회(api_ro 풀):\n  SELECT user_id, email, role, operator, scope_all, scope_brands, scope_regions, scope_countries, menu_groups, is_qa_reviewer, status\n  FROM app.user_account WHERE user_id = $1 AND status = 'active';\n  없으면 401(인증됐으나 프로필 없음 = 접근 없음, 현행 session.ts 동일 원칙). 3) vendor 는 Python 에서도 operator='none' 강제(DB CHECK ua_vendor_no_operator 와 이중 방어, defense-in-depth). 4) menu_groups 는 NULL 이면 무제한(DB CHECK ua_menu_nonempty 가 빈 배열 저장을 막아 애플리케이션에서 빈배열 분기 불필요 — 현행 session.ts 의 방어 코드보다 단순화).\n[require_role(*roles)] Depends(get_current_user) 결과의 role 이 집합에 없으면 403. admin 은 모든 role 게이트를 우회하지 않음(라우트별 명시 role 목록에 admin 포함 여부로 제어, 현행 route-policy.ts:ROUTES 표와 동일 원칙 — 단 URL 게이트가 아니라 라우터 의존성으로 이식).\n[require_menu_group(group)] menu_groups 가 NULL 이거나 group 포함 시 통과, 아니면 403. role 허용과 AND(좁히기 전용, 상승 불가 — 현행 route-policy.ts:333-336 groupAllowed 그대로).\n[get_scope_filter] scope.all=true 면 제약 없음 반환. 아니면 {brands, regions, countries} 그대로 반환 — 각 읽기 라우터가 이 값을 공통 필터 모델과 교집합해 WHERE 절에 반영(§2 \"권한 스코프는 서버가 계산해 교집합\"). DB 값이 아니라 세션 값을 신뢰(요청 파라미터로 넓히기 불가).\n[require_operator(action)] project_id 가 필요한 액션(collect·run)은:\n  SELECT 1 FROM app.project_member WHERE project_id = $1 AND user_id = $2 AND status = 'active';\n  role='admin' 이면 즉시 통과, operator='none' 이면 즉시 거부, operator='global' 이면 즉시 통과, operator='assigned' 이면 위 쿼리 결과로 판정(현행 operator-policy.ts canOperateProject 그대로 이식). project 생성(canCreateProject)은 project_id 가 없으므로 operator='global' 또는 role='admin' 만으로 판정, DB 조회 없음.\n[DB 커넥션 롤 선택 규칙 — 계약 §5 \"커넥션 롤 선택\" 요청에 대한 이 단위의 답] \n  - api_ro: GET 라우터 전부(필터·KPI·추이·언급·인용·국가별·답변 드릴다운·퍼널·프롬프트 조회·프로젝트 조회·컨텍스트맵). default_transaction_read_only=on 이라 쓰기 불가·5s 제한시간.\n  - api_rw: app 스키마에 쓰는 모든 POST/PUT/PATCH/DELETE(프로젝트·프롬프트·멤버·설정·재판정 요청 judgment_change INSERT·QA 리뷰·access_audit_log 배치 라이터). 쓰기 트랜잭션 시작 시 SET LOCAL app.actor_id = '<user_id>' 필수(app.actor() 가 미설정 시 예외 — user_account 갱신 등 감사 필요 트리거의 전제, db/DB-v2.sql:96-98).\n  - admin_long: statement_timeout 30s 인 긴 읽기 전용(AD-01 등 관리자 대량 스캔·인용 큐레이션 화면) — 이 값을 넘길 것으로 예상되는 admin 전용 조회 라우터에서만 선택. 일반 admin 화면(카탈로그 CRUD 등)은 읽기는 admin_long, 쓰기는 여전히 api_rw.\n  - 선택 로직은 라우터 등록 시점에 고정(요청 파라미터로 전환 불가) — FastAPI dependency 로 pool 을 주입하고, 감사 kind 는 라우터가 명시.\n[access_audit_log 쓰기 — 미결 항목에 대한 제안] api_ro 세션은 read-only 라 같은 트랜잭션에서 못 쓴다. 요청마다 별도 api_rw 트랜잭션을 열어 즉시 쓰면 모든 GET 이 쓰기 커넥션을 점유해 5s 읽기 SLA 와 충돌한다. 제안: 프로세스 내 인메모리 버퍼 + 백그라운드 asyncio 태스크가 api_rw 커넥션 1개로 주기 플러시(≤2s 또는 500건 중 먼저 도달) 배치 INSERT:\n  INSERT INTO app.access_audit_log (actor_id, actor_role, kind, action, target, detail, request_id)\n  SELECT * FROM unnest($1::uuid[], $2::app.user_role[], $3::text[], $4::text[], $5::text[], $6::jsonb[], $7::uuid[]);\n  요청 처리 트랜잭션과 완전히 분리(응답은 감사 쓰기를 기다리지 않음). access_audit_log 자체엔 app.actor() 를 요구하는 트리거가 없어(user_account/permission_audit_log 트리거와 별개) SET LOCAL app.actor_id 불필요.",
+  "perf": {
+    "rows_scanned": "요청당 O(1): app.user_account PK 단건 1행 + (operator 판정 시) app.project_member 복합PK 단건 1행. 폭 10배와 무관 — 사용자·멤버십 수는 로그인 계정·프로젝트 규모에 비례하지 사실 표 규모에 비례하지 않는다.",
+    "indexes": [
+      "app.user_account PRIMARY KEY(user_id) — 기존, db/DB-v2.sql:101",
+      "app.project_member PRIMARY KEY(project_id, user_id) — 기존, db/DB-v2.sql:123-125, require_operator 정확히 이 키로 조회",
+      "app.project_member_user_idx(user_id, status) — 기존, db/DB-v2.sql:126, '내가 assigned 인 프로젝트 전체' 류 역방향 조회용(다른 모듈)"
+    ],
+    "risk": "low",
+    "notes": "이 단위의 유일한 쓰기(access_audit_log)는 요청 경로 밖 비동기 배치라 응답 지연에 안 걸린다. JWKS 검증은 네트워크 없이 로컬(WebCrypto/RSA 캐시)이라 인증 자체는 DB 부하와 무관. 유일한 위험은 JWKS 캐시 미스 시 콜드 fetch 지연(로그인 회전 시 드물게 발생) — 프로세스 기동 시 선로드로 완화."
+  },
+  "auth": "get_current_user(JWT/JWKS 검증) → require_role(*roles)(URL/액션별 허용 role 집합, role 밖이면 403) → require_menu_group(group)(계정별 메뉴 화이트리스트와 AND, 좁히기 전용) → get_scope_filter(scope.all 아니면 brands/regions/countries 반환, 요청 파라미터와 서버측 교집합·초과값은 meta.dropped_filters) → require_operator(action, project_id?)(비용 액션 전용: none 거부·global 통과·assigned 는 project_member 활성 멤버십 확인, admin 은 role 게이트에서 이미 전부 통과). vendor 는 operator 상시 'none'(DB CHECK + 애플리케이션 이중 방어). admin 은 route/menu 게이트만 통과하면 scope·operator 제약이 사실상 없음(scope_all=true 전제, 현행과 동일 관례이나 DB 는 admin 이라고 자동으로 scope_all 을 강제하지 않으므로 계정 시딩 규칙으로 보장해야 함 — open_questions 참조).",
+  "writes": "GET /v1/auth/me 자체는 app.user_account 에 쓰지 않는다(계정 CRUD 는 별도 관리자 모듈 /v1/admin/users 소관). 이 단위가 새로 설계해 담당하는 쓰기는 app.access_audit_log 배치 라이터 하나뿐(위 query_design 참조) — 트랜잭션 경계: 배치 1회 = 벌크 INSERT 1트랜잭션, 개별 요청 트랜잭션과 분리. 감사 기록: access_audit_log 자체가 감사 로그이므로 별도 감사 불필요.",
+  "current_refs": [
+    "lib/auth/session.ts:23-65 (getSession, React cache() 로 요청당 1회 검증+프로필 조회 — FastAPI 의 요청 스코프 의존성 캐시로 대응)",
+    "lib/auth/types.ts:1-42 (Role/AllowedScope/OperatorScope/MenuGroup/User/Session 타입 정의)",
+    "lib/auth/scope-policy.ts:34-46 (deriveScopeFilter)",
+    "lib/auth/scope-policy.ts:65-84 (isInScope, brand=null 공통 취급 규칙)",
+    "lib/auth/scope-policy.ts:99-119 (projectInScope, region→country 전개)",
+    "lib/auth/route-policy.ts:333-336 (groupAllowed, 좁히기 전용 AND)",
+    "lib/auth/route-policy.ts:338-357 (canAccessRoute, 최장 경로 매치 default-deny)",
+    "lib/auth/operator-policy.ts:21-45 (canCreateProject·canOperateProject·isOperator)",
+    "middleware.ts:33-52 (Supabase getClaims() 로컬 JWT 검증, 비동기 네트워크 없는 경로)",
+    "db/DB-v2.sql:96-98 (app.actor(), app.actor_id GUC 미설정 시 쓰기 거부)",
+    "db/DB-v2.sql:101-111 (app.user_account DDL·CHECK 제약)",
+    "db/DB-v2.sql:121-126 (app.project_member DDL·인덱스)",
+    "db/DB-v2.sql:217-220 (app.access_audit_log DDL)",
+    "db/DB-v2.sql:829-836 (api_ro 권한·5s timeout·read_only)",
+    "db/DB-v2.sql:838-843 (api_rw 권한·app.actor() EXECUTE)",
+    "db/DB-v2.sql:873-877 (admin_long 권한·30s timeout)"
+  ],
+  "parity": "F01~F07 하네스는 데이터 화면(대시보드 수치) 신구 대조용이라 이 단위엔 직접 대응 항목이 없다(세션 조회는 신 구조 전용 엔드포인트, 구버전엔 REST 대응 API 자체가 없음 — 현행은 Next.js 서버 컴포넌트 내부 함수 호출이었다). 대조 제안: (1) 현행 lib/auth/scope-policy.test.ts·route-policy.test.ts·operator-policy.test.ts 의 기대값 테이블을 FastAPI 의존성 단위테스트로 그대로 이식해 4역할×3오퍼레이터×menu_groups 조합의 판정 동등성을 확인. (2) 라이브 대조는 로그인 세션으로 GET /v1/auth/me 응답과 현재 배포본의 getSession() 결과를 필드별(role, operator, scope.*, menu_groups, is_qa_reviewer) 비교.",
+  "open_questions": [
+    "access_audit_log 의 kind='api_read' 를 모든 GET 요청마다 기록할지(볼륨 큼), 아니면 admin/citation-override 류 민감 조회만 'data_access'로 표본화하고 일반 조회는 별도 구조화 로그(애플리케이션 로그, DB 밖)로 뺄지 — 이 설계는 배치 라이터 메커니즘만 정하고 기록 대상 범위는 통합자/운영 결정 필요.",
+    "admin 역할 계정이 DB 상 scope_all=false 로 시딩될 수 있는가? 현행 코드는 role='admin' 이면 무조건 무제한으로 취급하지만 app.user_account 스키마는 admin 도 scope_all=false·scope_brands 채움이 가능(CHECK ua_scope_nonempty 는 admin 을 vendor 처럼 예외 처리하지 않음) — admin 계정 생성 규칙(항상 scope_all=true 강제)을 관리자 모듈(/v1/admin/users)과 합의해야 함.",
+    "access_audit_log 배치 라이터가 프로세스 크래시 시 미플러시분을 유실한다(감사 로그 특성상 허용 가능한지 확인 필요) — 허용 안 되면 아웃박스 패턴(요청 트랜잭션 안에서 outbox 표에 먼저 쓰고 별도 워커가 flush)으로 전환해야 하지만 그러면 api_ro 트랜잭션에 쓰기가 섞여 A17 원칙과 충돌한다.",
+    "menu_group 'admin' 화이트리스트와 role='admin' 의 관계: role 자체가 admin 이 아니어도 menu_groups 에 'admin' 이 포함될 수 있는 스키마 구조인데(app.menu_group enum 은 role 과 독립), 실제로 admin 메뉴에 role 게이트를 role-level 로 별도 강제해야 하는지 관리자 모듈과 확정 필요.",
+    "/raw-data-qa (QA 콘솔) 는 현행에서 Supabase 로그인 게이트를 면제하고 자체 쿠키 게이트를 쓴다(middleware.ts 주석) — FastAPI 전환 시 이 표면을 AU-1 이 다룰지 QA 모듈이 다룰지 미배정."
+  ]
+}

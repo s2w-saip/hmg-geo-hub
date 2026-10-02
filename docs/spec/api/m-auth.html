@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>인증 API</title><meta name="description" content=""><style>
+:root {
+  --bg: #f7f7f5; --panel: #ffffff; --ink: #1d1f23; --ink2: #4a4f57; --ink3: #7a808a;
+  --line: #e3e3de; --line2: #eeeeea; --accent: #0a67f2; --accent-soft: #e8f0fe;
+  --ok: #1a7f4b; --ok-soft: #e6f4ec; --warn: #9a6200; --warn-soft: #fdf3e1;
+  --bad: #b3261e; --bad-soft: #fbe9e7; --muted-soft: #efefec; --code-bg: #f1f1ee;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15171a; --panel: #1c1f23; --ink: #e8e9eb; --ink2: #b4b8bf; --ink3: #858b94;
+    --line: #2d3137; --line2: #262a2f; --accent: #6ea8ff; --accent-soft: #1d2b44;
+    --ok: #5fd08f; --ok-soft: #173024; --warn: #f0b95b; --warn-soft: #3a2d14;
+    --bad: #ff8a80; --bad-soft: #3d1d1b; --muted-soft: #25282d; --code-bg: #25282d;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15171a; --panel: #1c1f23; --ink: #e8e9eb; --ink2: #b4b8bf; --ink3: #858b94;
+  --line: #2d3137; --line2: #262a2f; --accent: #6ea8ff; --accent-soft: #1d2b44;
+  --ok: #5fd08f; --ok-soft: #173024; --warn: #f0b95b; --warn-soft: #3a2d14;
+  --bad: #ff8a80; --bad-soft: #3d1d1b; --muted-soft: #25282d; --code-bg: #25282d;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 56px; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.7 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", "Segoe UI", sans-serif;
+  word-break: keep-all; overflow-wrap: break-word; }
+.wrap { max-width: 1240px; margin: 0 auto; padding: 24px 16px 80px; display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 32px; }
+nav.toc { position: sticky; top: 46px; align-self: start; max-height: calc(100vh - 60px); overflow: auto; font-size: 13px; padding-right: 8px; }
+nav.toc .h { font-weight: 700; color: var(--ink2); margin: 4px 0 8px; font-size: 12px; letter-spacing: .02em; }
+nav.toc a { display: block; color: var(--ink2); text-decoration: none; padding: 3px 8px; border-radius: 6px; }
+nav.toc a:hover { background: var(--muted-soft); color: var(--ink); }
+nav.toc a.sub { padding-left: 20px; font-size: 12.5px; color: var(--ink3); }
+main { min-width: 0; }
+header.doc { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 28px 28px 22px; margin-bottom: 28px; }
+header.doc .eyebrow { font-size: 12px; color: var(--accent); font-weight: 700; letter-spacing: .04em; }
+header.doc h1 { font-size: 28px; line-height: 1.3; margin: 6px 0 10px; }
+header.doc p.lead { font-size: 16px; color: var(--ink2); margin: 0 0 18px; }
+.meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px 18px; font-size: 13px; }
+.meta div span { display: block; color: var(--ink3); font-size: 12px; }
+section { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 24px 26px; margin-bottom: 22px; }
+h2 { font-size: 21px; margin: 0 0 14px; padding-bottom: 10px; border-bottom: 1px solid var(--line2); }
+h2 .num { color: var(--accent); margin-right: 8px; font-variant-numeric: tabular-nums; }
+h3 { font-size: 16.5px; margin: 26px 0 10px; }
+h3:first-of-type { margin-top: 10px; }
+p { margin: 8px 0 12px; }
+ul, ol { margin: 6px 0 14px; padding-left: 22px; }
+li { margin: 3px 0; }
+code { font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+pre { background: var(--code-bg); border-radius: 10px; padding: 14px 16px; overflow-x: auto; font-size: 12.5px; line-height: 1.55; }
+pre code { background: none; padding: 0; }
+.tbl { overflow-x: auto; margin: 10px 0 16px; border: 1px solid var(--line); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { text-align: left; vertical-align: top; padding: 8px 11px; border-bottom: 1px solid var(--line2); }
+th { background: var(--muted-soft); font-weight: 650; color: var(--ink2); white-space: nowrap; font-size: 12.5px; }
+tr:last-child td { border-bottom: none; }
+.cat table { table-layout: fixed; }
+.cat code { white-space: normal; word-break: break-all; }
+td.id, th.id { white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: 650; }
+.b { display: inline-block; font-size: 11.5px; font-weight: 650; padding: 1px 8px; border-radius: 999px; white-space: nowrap; line-height: 1.6; }
+.b.ok { background: var(--ok-soft); color: var(--ok); }
+.b.warn { background: var(--warn-soft); color: var(--warn); }
+.b.bad { background: var(--bad-soft); color: var(--bad); }
+.b.info { background: var(--accent-soft); color: var(--accent); }
+.b.mute { background: var(--muted-soft); color: var(--ink3); }
+.callout { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 12px 16px; border-radius: 0 10px 10px 0; margin: 12px 0 16px; }
+.callout.warn { border-color: var(--warn); background: var(--warn-soft); }
+.callout.bad { border-color: var(--bad); background: var(--bad-soft); }
+.callout p { margin: 4px 0; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin: 10px 0 16px; }
+.card { border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; background: var(--bg); }
+.card .k { font-size: 12px; color: var(--ink3); }
+.card .v { font-size: 22px; font-weight: 750; font-variant-numeric: tabular-nums; }
+.card .d { font-size: 12.5px; color: var(--ink2); }
+.small { font-size: 12.5px; color: var(--ink3); }
+.src { font-size: 12px; color: var(--ink3); }
+details { margin: 8px 0; }
+summary { cursor: pointer; font-weight: 650; color: var(--ink2); }
+footer { color: var(--ink3); font-size: 12.5px; text-align: center; margin-top: 30px; }
+@media (max-width: 900px) {
+  .wrap { grid-template-columns: 1fr; gap: 0; }
+  nav.toc { display: none; }
+  header.doc, section { padding: 18px 16px; }
+  header.doc h1 { font-size: 23px; }
+  .tbl table { min-width: 680px; }
+  .cat table { min-width: 860px; }
+  .tbl th:first-child, .tbl td:first-child { min-width: 96px; }
+}
+
+.apiwrap{max-width:1100px;margin:0 auto;padding:24px 16px 80px;min-width:0}.apiwrap .m,.apiwrap td,.apiwrap dd,.apiwrap p,.apiwrap li{overflow-wrap:anywhere}
+.apiwrap td.nw{white-space:nowrap;overflow-wrap:normal}.clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.router{background:var(--code-bg);border-radius:8px;padding:10px 12px;font-size:12.5px}
+.crumb{font-size:13px;color:var(--ink3);margin:0 0 6px}.crumb a{color:var(--accent);text-decoration:none}
+.unit{border-top:1px solid var(--line);padding-top:18px;margin-top:22px}
+.unit h3{margin:0 0 6px;font-size:18px}
+dl.kv{display:grid;grid-template-columns:140px minmax(0,1fr);gap:6px 14px;margin:10px 0}
+dl.kv dt{color:var(--ink3);font-size:13px}dl.kv dd{margin:0;min-width:0;overflow-wrap:break-word}
+pre.blk{background:var(--code-bg);border-radius:8px;padding:12px;overflow-x:auto;font-size:12.5px;line-height:1.5;white-space:pre-wrap;overflow-wrap:break-word}
+ul.tight{margin:4px 0;padding-left:18px}ul.tight li{margin:2px 0;overflow-wrap:break-word}
+.risk{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;white-space:nowrap}
+.risk.low{background:var(--ok-soft);color:var(--ok)}.risk.medium{background:var(--warn-soft);color:var(--warn)}.risk.high{background:var(--bad-soft);color:var(--bad)}.risk.na{background:var(--muted-soft);color:var(--ink3)}
+.m{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
+.navmods{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0}.navmods a{font-size:13px;padding:3px 9px;border:1px solid var(--line);border-radius:14px;text-decoration:none;color:var(--ink2);background:var(--panel)}
+@media (max-width:640px){dl.kv{grid-template-columns:1fr}dl.kv dt{margin-top:6px}}
+</style></head>
+<body><main class="apiwrap"><p class='crumb'><a href='index.html'>API 명세</a> / 인증</p><h1>인증</h1><h2>단위 상세</h2><section class="unit" id="AU-1"><h3>AU-1 인증·세션·스코프 (GET /v1/auth/me + FastAPI 의존성 체인) <span class="risk low">low</span></h3>
+<p>모든 다른 API 모듈이 의존하는 인증·인가 기반: Supabase 발급 JWT 를 JWKS 로 검증해 신원을 확정하고, app.user_account 프로필에서 role·operator·데이터 스코프·메뉴 화이트리스트를 읽어 FastAPI 의존성(get_current_user·require_role·require_menu_group·get_scope_filter·require_operator)으로 노출한다. 데이터 *값* 스코프(scope-policy)·URL *장소* 게이트(route-policy)·비용 액션 게이트(operator-policy) 세 축을 그대로 이식하고, DB 커넥션 롤 선택 규칙과 app.access_audit_log 쓰기 주체(미결 항목)를 이 단위에서 정한다.</p>
+<div class="tbl"><table><tr><th>메서드</th><th>경로</th><th>요약</th></tr><tr><td class='m nw'>GET</td><td class='m nw'>/v1/auth/me</td><td>Supabase JWT 로 인증된 현재 사용자의 세션(role·operator·scope·menu_groups·is_qa_reviewer) 조회. 프론트 GNB/SNB 렌더링과 클라이언트측 UI 분기가 이 응답을 1회 캐시해 쓴다(현행 getSession() 대체).</td></tr></table></div>
+<dl class="kv">
+<dt>화면(현행)</dt><dd><ul class='tight'><li>전 화면 공통 — 특정 화면 소유 아님. DashLayout 격의 GNB/SNB 렌더링, 모든 라우터의 스코프 필터 계산, 프로젝트/관리자 쓰기 액션의 operator 게이트가 이 단위에 의존한다.</li></ul></dd>
+<dt>대체하는 현행 코드</dt><dd><ul class='tight'><li>lib/auth/session.ts:23-65 (getSession, React cache() 로 요청당 1회 검증+프로필 조회 — FastAPI 의 요청 스코프 의존성 캐시로 대응)</li><li>lib/auth/types.ts:1-42 (Role/AllowedScope/OperatorScope/MenuGroup/User/Session 타입 정의)</li><li>lib/auth/scope-policy.ts:34-46 (deriveScopeFilter)</li><li>lib/auth/scope-policy.ts:65-84 (isInScope, brand=null 공통 취급 규칙)</li><li>lib/auth/scope-policy.ts:99-119 (projectInScope, region→country 전개)</li><li>lib/auth/route-policy.ts:333-336 (groupAllowed, 좁히기 전용 AND)</li><li>lib/auth/route-policy.ts:338-357 (canAccessRoute, 최장 경로 매치 default-deny)</li><li>lib/auth/operator-policy.ts:21-45 (canCreateProject·canOperateProject·isOperator)</li><li>middleware.ts:33-52 (Supabase getClaims() 로컬 JWT 검증, 비동기 네트워크 없는 경로)</li><li>db/DB-v2.sql:96-98 (app.actor(), app.actor_id GUC 미설정 시 쓰기 거부)</li><li>db/DB-v2.sql:101-111 (app.user_account DDL·CHECK 제약)</li><li>db/DB-v2.sql:121-126 (app.project_member DDL·인덱스)</li><li>db/DB-v2.sql:217-220 (app.access_audit_log DDL)</li><li>db/DB-v2.sql:829-836 (api_ro 권한·5s timeout·read_only)</li><li>db/DB-v2.sql:838-843 (api_rw 권한·app.actor() EXECUTE)</li><li>db/DB-v2.sql:873-877 (admin_long 권한·30s timeout)</li></ul></dd>
+<dt>필터 지원</dt><dd></dd>
+<dt>필터 무시(ignored)</dt><dd>surface, own_brand, brand[], country[], lang[], engine[], from/to, funnel[], brand_presence[], list_type[], depth1~3[], source[]</dd>
+<dt>추가 파라미터</dt><dd><span class='muted'>없음</span></dd>
+<dt>지표·규칙</dt><dd><ul class='tight'><li>A8(채택) Supabase Auth 유지 + FastAPI JWT(JWKS) 검증</li><li>D7 HMG 보안요구(AFW) 제외 — 이 인증 설계에 SSO/AFW 미반영</li><li>A17 스키마 경계: api_ro read-only, api_rw 는 app 스키마 쓰기만 — access_audit_log 쓰기 주체 설계가 이 규약의 직접 파생</li><li>P1 조회 시 계산 허용 예외 목록에 권한 교집합(서버가 세션에서 스코프 계산 후 요청과 교집합, default-deny)이 포함(spec.template.html:190)</li></ul></dd>
+<dt>읽는 표·열</dt><dd><ul class='tight'><li>app.user_account.user_id</li><li>app.user_account.email</li><li>app.user_account.role</li><li>app.user_account.operator</li><li>app.user_account.scope_all</li><li>app.user_account.scope_brands</li><li>app.user_account.scope_regions</li><li>app.user_account.scope_countries</li><li>app.user_account.menu_groups</li><li>app.user_account.is_qa_reviewer</li><li>app.user_account.status</li><li>app.project_member.project_id (require_operator &#x27;assigned&#x27; 판정용, PK 조회)</li><li>app.project_member.user_id</li><li>app.project_member.status</li><li>제안: app.access_audit_log 쓰기 대상 — 스키마엔 이미 존재(db/DB-v2.sql:217), 이 단위는 쓰기 경로만 새로 설계</li></ul></dd>
+<dt>권한</dt><dd>get_current_user(JWT/JWKS 검증) → require_role(*roles)(URL/액션별 허용 role 집합, role 밖이면 403) → require_menu_group(group)(계정별 메뉴 화이트리스트와 AND, 좁히기 전용) → get_scope_filter(scope.all 아니면 brands/regions/countries 반환, 요청 파라미터와 서버측 교집합·초과값은 meta.dropped_filters) → require_operator(action, project_id?)(비용 액션 전용: none 거부·global 통과·assigned 는 project_member 활성 멤버십 확인, admin 은 role 게이트에서 이미 전부 통과). vendor 는 operator 상시 &#x27;none&#x27;(DB CHECK + 애플리케이션 이중 방어). admin 은 route/menu 게이트만 통과하면 scope·operator 제약이 사실상 없음(scope_all=true 전제, 현행과 동일 관례이나 DB 는 admin 이라고 자동으로 scope_all 을 강제하지 않으므로 계정 시딩 규칙으로 보장해야 함 — open_questions 참조).</dd>
+<dt>쓰기</dt><dd>GET /v1/auth/me 자체는 app.user_account 에 쓰지 않는다(계정 CRUD 는 별도 관리자 모듈 /v1/admin/users 소관). 이 단위가 새로 설계해 담당하는 쓰기는 app.access_audit_log 배치 라이터 하나뿐(위 query_design 참조) — 트랜잭션 경계: 배치 1회 = 벌크 INSERT 1트랜잭션, 개별 요청 트랜잭션과 분리. 감사 기록: access_audit_log 자체가 감사 로그이므로 별도 감사 불필요.</dd>
+<dt>성능(10배)</dt><dd>요청당 O(1): app.user_account PK 단건 1행 + (operator 판정 시) app.project_member 복합PK 단건 1행. 폭 10배와 무관 — 사용자·멤버십 수는 로그인 계정·프로젝트 규모에 비례하지 사실 표 규모에 비례하지 않는다.<br><span class="muted">인덱스: app.user_account PRIMARY KEY(user_id) — 기존, db/DB-v2.sql:101, app.project_member PRIMARY KEY(project_id, user_id) — 기존, db/DB-v2.sql:123-125, require_operator 정확히 이 키로 조회, app.project_member_user_idx(user_id, status) — 기존, db/DB-v2.sql:126, &#x27;내가 assigned 인 프로젝트 전체&#x27; 류 역방향 조회용(다른 모듈)</span><br>이 단위의 유일한 쓰기(access_audit_log)는 요청 경로 밖 비동기 배치라 응답 지연에 안 걸린다. JWKS 검증은 네트워크 없이 로컬(WebCrypto/RSA 캐시)이라 인증 자체는 DB 부하와 무관. 유일한 위험은 JWKS 캐시 미스 시 콜드 fetch 지연(로그인 회전 시 드물게 발생) — 프로세스 기동 시 선로드로 완화.</dd>
+<dt>신구 대조</dt><dd>F01~F07 하네스는 데이터 화면(대시보드 수치) 신구 대조용이라 이 단위엔 직접 대응 항목이 없다(세션 조회는 신 구조 전용 엔드포인트, 구버전엔 REST 대응 API 자체가 없음 — 현행은 Next.js 서버 컴포넌트 내부 함수 호출이었다). 대조 제안: (1) 현행 lib/auth/scope-policy.test.ts·route-policy.test.ts·operator-policy.test.ts 의 기대값 테이블을 FastAPI 의존성 단위테스트로 그대로 이식해 4역할×3오퍼레이터×menu_groups 조합의 판정 동등성을 확인. (2) 라이브 대조는 로그인 세션으로 GET /v1/auth/me 응답과 현재 배포본의 getSession() 결과를 필드별(role, operator, scope.*, menu_groups, is_qa_reviewer) 비교.</dd>
+<dt>열린 질문</dt><dd><ul class='tight'><li>access_audit_log 의 kind=&#x27;api_read&#x27; 를 모든 GET 요청마다 기록할지(볼륨 큼), 아니면 admin/citation-override 류 민감 조회만 &#x27;data_access&#x27;로 표본화하고 일반 조회는 별도 구조화 로그(애플리케이션 로그, DB 밖)로 뺄지 — 이 설계는 배치 라이터 메커니즘만 정하고 기록 대상 범위는 통합자/운영 결정 필요.</li><li>admin 역할 계정이 DB 상 scope_all=false 로 시딩될 수 있는가? 현행 코드는 role=&#x27;admin&#x27; 이면 무조건 무제한으로 취급하지만 app.user_account 스키마는 admin 도 scope_all=false·scope_brands 채움이 가능(CHECK ua_scope_nonempty 는 admin 을 vendor 처럼 예외 처리하지 않음) — admin 계정 생성 규칙(항상 scope_all=true 강제)을 관리자 모듈(/v1/admin/users)과 합의해야 함.</li><li>access_audit_log 배치 라이터가 프로세스 크래시 시 미플러시분을 유실한다(감사 로그 특성상 허용 가능한지 확인 필요) — 허용 안 되면 아웃박스 패턴(요청 트랜잭션 안에서 outbox 표에 먼저 쓰고 별도 워커가 flush)으로 전환해야 하지만 그러면 api_ro 트랜잭션에 쓰기가 섞여 A17 원칙과 충돌한다.</li><li>menu_group &#x27;admin&#x27; 화이트리스트와 role=&#x27;admin&#x27; 의 관계: role 자체가 admin 이 아니어도 menu_groups 에 &#x27;admin&#x27; 이 포함될 수 있는 스키마 구조인데(app.menu_group enum 은 role 과 독립), 실제로 admin 메뉴에 role 게이트를 role-level 로 별도 강제해야 하는지 관리자 모듈과 확정 필요.</li><li>/raw-data-qa (QA 콘솔) 는 현행에서 Supabase 로그인 게이트를 면제하고 자체 쿠키 게이트를 쓴다(middleware.ts 주석) — FastAPI 전환 시 이 표면을 AU-1 이 다룰지 QA 모듈이 다룰지 미배정.</li></ul></dd>
+</dl>
+<details><summary>응답 형태</summary><pre class="blk">data: { user_id: uuid, email: string, role: &quot;hq&quot;|&quot;region&quot;|&quot;country&quot;|&quot;admin&quot;|&quot;vendor&quot;|&quot;website&quot;, operator: &quot;none&quot;|&quot;assigned&quot;|&quot;global&quot;, scope: { all: bool, brands: string[]|null, regions: string[]|null, countries: string[]|null }, menu_groups: (&quot;standard&quot;|&quot;website&quot;|&quot;project&quot;|&quot;admin&quot;)[]|null, is_qa_reviewer: bool }. 비율·페이지네이션 없음(단건 세션 조회). meta 는 공통 응답 형태({surface,mode,as_of,cycles,generation,ignored_filters,dropped_filters,suppressed})를 그대로 채우되 이 엔드포인트에는 surface/cycles/generation 개념이 없어 null 또는 고정값(예: mode=&quot;session&quot;)으로 둔다 — 통합자에게 이 예외를 명시할 것.</pre></details>
+<details><summary>쿼리 설계</summary><pre class="blk">[get_current_user 의존성] 1) Authorization: Bearer &lt;jwt&gt; 파싱 → Supabase 프로젝트 JWKS(캐시 TTL 10분, kid 미스 시 1회 강제 갱신)로 서명·exp·aud=&#x27;authenticated&#x27; 검증(WebCrypto 대응은 python-jose/authlib 의 RS256/ES256 검증). 2) sub 클레임으로 단건 조회(api_ro 풀):
+  SELECT user_id, email, role, operator, scope_all, scope_brands, scope_regions, scope_countries, menu_groups, is_qa_reviewer, status
+  FROM app.user_account WHERE user_id = $1 AND status = &#x27;active&#x27;;
+  없으면 401(인증됐으나 프로필 없음 = 접근 없음, 현행 session.ts 동일 원칙). 3) vendor 는 Python 에서도 operator=&#x27;none&#x27; 강제(DB CHECK ua_vendor_no_operator 와 이중 방어, defense-in-depth). 4) menu_groups 는 NULL 이면 무제한(DB CHECK ua_menu_nonempty 가 빈 배열 저장을 막아 애플리케이션에서 빈배열 분기 불필요 — 현행 session.ts 의 방어 코드보다 단순화).
+[require_role(*roles)] Depends(get_current_user) 결과의 role 이 집합에 없으면 403. admin 은 모든 role 게이트를 우회하지 않음(라우트별 명시 role 목록에 admin 포함 여부로 제어, 현행 route-policy.ts:ROUTES 표와 동일 원칙 — 단 URL 게이트가 아니라 라우터 의존성으로 이식).
+[require_menu_group(group)] menu_groups 가 NULL 이거나 group 포함 시 통과, 아니면 403. role 허용과 AND(좁히기 전용, 상승 불가 — 현행 route-policy.ts:333-336 groupAllowed 그대로).
+[get_scope_filter] scope.all=true 면 제약 없음 반환. 아니면 {brands, regions, countries} 그대로 반환 — 각 읽기 라우터가 이 값을 공통 필터 모델과 교집합해 WHERE 절에 반영(§2 &quot;권한 스코프는 서버가 계산해 교집합&quot;). DB 값이 아니라 세션 값을 신뢰(요청 파라미터로 넓히기 불가).
+[require_operator(action)] project_id 가 필요한 액션(collect·run)은:
+  SELECT 1 FROM app.project_member WHERE project_id = $1 AND user_id = $2 AND status = &#x27;active&#x27;;
+  role=&#x27;admin&#x27; 이면 즉시 통과, operator=&#x27;none&#x27; 이면 즉시 거부, operator=&#x27;global&#x27; 이면 즉시 통과, operator=&#x27;assigned&#x27; 이면 위 쿼리 결과로 판정(현행 operator-policy.ts canOperateProject 그대로 이식). project 생성(canCreateProject)은 project_id 가 없으므로 operator=&#x27;global&#x27; 또는 role=&#x27;admin&#x27; 만으로 판정, DB 조회 없음.
+[DB 커넥션 롤 선택 규칙 — 계약 §5 &quot;커넥션 롤 선택&quot; 요청에 대한 이 단위의 답] 
+  - api_ro: GET 라우터 전부(필터·KPI·추이·언급·인용·국가별·답변 드릴다운·퍼널·프롬프트 조회·프로젝트 조회·컨텍스트맵). default_transaction_read_only=on 이라 쓰기 불가·5s 제한시간.
+  - api_rw: app 스키마에 쓰는 모든 POST/PUT/PATCH/DELETE(프로젝트·프롬프트·멤버·설정·재판정 요청 judgment_change INSERT·QA 리뷰·access_audit_log 배치 라이터). 쓰기 트랜잭션 시작 시 SET LOCAL app.actor_id = &#x27;&lt;user_id&gt;&#x27; 필수(app.actor() 가 미설정 시 예외 — user_account 갱신 등 감사 필요 트리거의 전제, db/DB-v2.sql:96-98).
+  - admin_long: statement_timeout 30s 인 긴 읽기 전용(AD-01 등 관리자 대량 스캔·인용 큐레이션 화면) — 이 값을 넘길 것으로 예상되는 admin 전용 조회 라우터에서만 선택. 일반 admin 화면(카탈로그 CRUD 등)은 읽기는 admin_long, 쓰기는 여전히 api_rw.
+  - 선택 로직은 라우터 등록 시점에 고정(요청 파라미터로 전환 불가) — FastAPI dependency 로 pool 을 주입하고, 감사 kind 는 라우터가 명시.
+[access_audit_log 쓰기 — 미결 항목에 대한 제안] api_ro 세션은 read-only 라 같은 트랜잭션에서 못 쓴다. 요청마다 별도 api_rw 트랜잭션을 열어 즉시 쓰면 모든 GET 이 쓰기 커넥션을 점유해 5s 읽기 SLA 와 충돌한다. 제안: 프로세스 내 인메모리 버퍼 + 백그라운드 asyncio 태스크가 api_rw 커넥션 1개로 주기 플러시(≤2s 또는 500건 중 먼저 도달) 배치 INSERT:
+  INSERT INTO app.access_audit_log (actor_id, actor_role, kind, action, target, detail, request_id)
+  SELECT * FROM unnest($1::uuid[], $2::app.user_role[], $3::text[], $4::text[], $5::text[], $6::jsonb[], $7::uuid[]);
+  요청 처리 트랜잭션과 완전히 분리(응답은 감사 쓰기를 기다리지 않음). access_audit_log 자체엔 app.actor() 를 요구하는 트리거가 없어(user_account/permission_audit_log 트리거와 별개) SET LOCAL app.actor_id 불필요.</pre></details>
+</section><div class='navmods'><a href='m-filters.html'>필터</a><a href='m-kpi.html'>KPI</a><a href='m-trend.html'>추이</a><a href='m-mentions.html'>언급</a><a href='m-citations.html'>인용</a><a href='m-geo.html'>국가별</a><a href='m-answers.html'>답변 드릴다운</a><a href='m-funnel.html'>AI 퍼널</a><a href='m-prompts.html'>프롬프트</a><a href='m-projects.html'>프로젝트</a><a href='m-admin.html'>관리자</a><a href='m-auth.html'>인증</a><a href='m-qa.html'>검수 콘솔</a><a href='m-intent.html'>고객 관심</a><a href='m-contextmap.html'>컨텍스트 맵(intent 로 흡수)</a><a href='m-webgeo.html'>웹 크롤·SEO(제거)</a><a href='m-ingest.html'>적재 파이프라인</a></div></main></body></html>

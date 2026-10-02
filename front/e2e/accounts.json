@@ -1,0 +1,13 @@
+{
+  "$comment": "E2E accounts = back/tests/support.py ACCOUNTS_SQL (same UUIDs and emails). stack.sh applies ACCOUNTS_SQL to hmg_e2e_front and checks this file against app.user_account. The password is a local test constant for the mock auth server only; tokens are issued at run time and never stored here.",
+  "password": "e2e-pass",
+  "accounts": [
+    { "key": "ADMIN", "id": "11111111-0000-4000-8000-000000000001", "email": "t-admin@example.test", "role": "admin", "menuGroups": null, "status": "active" },
+    { "key": "HQ_HYUNDAI", "id": "11111111-0000-4000-8000-000000000002", "email": "t-hq-h@example.test", "role": "hq", "menuGroups": ["standard", "project"], "status": "active" },
+    { "key": "KIA_US", "id": "11111111-0000-4000-8000-000000000003", "email": "t-kia-us@example.test", "role": "country", "menuGroups": null, "status": "active" },
+    { "key": "VENDOR", "id": "11111111-0000-4000-8000-000000000004", "email": "t-vendor@example.test", "role": "vendor", "menuGroups": ["project"], "status": "active" },
+    { "key": "KIA_EU", "id": "11111111-0000-4000-8000-000000000005", "email": "t-kia-eu@example.test", "role": "region", "menuGroups": null, "status": "active" },
+    { "key": "SUSPENDED", "id": "11111111-0000-4000-8000-000000000006", "email": "t-susp@example.test", "role": "hq", "menuGroups": null, "status": "suspended" },
+    { "key": "WEBSITE_KIA", "id": "11111111-0000-4000-8000-000000000007", "email": "t-core-web-kia@example.test", "role": "website", "menuGroups": ["website"], "status": "active" }
+  ]
+}

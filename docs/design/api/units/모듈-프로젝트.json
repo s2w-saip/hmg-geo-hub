@@ -1,0 +1,490 @@
+{
+  "module": "projects (프로젝트: PJ-1 프로젝트, PJ-2 멤버, PJ-3 프롬프트, PJ-4 설정)",
+  "router": "/v1/projects (APIRouter 1개에 하위 라우터 4개 결합: projects.py(PJ-1), members.py(PJ-2), prompts.py(PJ-3), settings.py(PJ-4)) + /v1/me/project-invites (PJ-2 소유, me 라우터)",
+  "summary": "프로젝트 모듈은 집계 지표가 없는 app 스키마 CRUD 모듈이다(rd 읽기는 프롬프트 영향 미리보기와 Scope 연결 진단 2곳뿐). 단위 설계 4개 중 PJ-4 는 산출물이 비어 있어(\"test\", /v1/x) 현행 setting/_actions.ts 기준으로 설계 리드가 보충 초안을 썼다(단위 재설계 필요). 핵심 해소: (1) ai_engines 는 PJ-1 PATCH 에서 빼 PJ-4 PUT /settings/engines 로 옮기고 Owner+운영자 이중 게이트를 복원(현행 setting/_actions.ts:255), (2) domain 은 owned base 파생값이라 PATCH 에서 제외(setting/_actions.ts:144, general-form.tsx:57), (3) Scope 전파는 전부 app.scope_outbox 비동기(계약 §5, DB-앱-도메인.md:42)로 확정해 PJ-3 open ① 을 닫음, (4) PJ-1 의 scope-link 제안 인덱스는 사실 오류(rd.job 은 비파티션 DB-v2.sql:441, INCLUDE(served) 는 HOT 규율 위반)로 기각하고 최신 회차 한정 쿼리로 대체해 PJ-4(admin 전용)로 이동. DB 선행 과제 3건을 발견: DB-v2.sql 의 app.project·app.prompt 트리거는 주석(:120·:156)만 있고 CREATE TRIGGER 가 없다, outbox 워커가 쓸 롤 권한이 없다(loader 는 app SELECT 만, :860-861), api_rw 는 rd 를 못 읽는다(:839-843). 10배 성능 위험은 전 엔드포인트 low(최대 medium 1건: 프롬프트 영향 미리보기)이며, 실제 위험은 성능보다 비동기 전환에 따른 UX·워커 계약과 병행 운영 중 쓰기 이원화다.",
+  "endpoints_table": [
+    {
+      "id": "PJ-1",
+      "method": "GET",
+      "path": "/v1/projects",
+      "summary": "프로젝트 목록(kind='customer'만, 비관리자는 활성 멤버십, admin 은 전체), q 이름 검색, 키셋 페이지네이션",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-1",
+      "method": "POST",
+      "path": "/v1/projects",
+      "summary": "생성(operator=global 또는 admin, 국가·브랜드 스코프 검증, ai_engines 1개 이상): project + owner 멤버 + owned_base 시드 + engine_history 첫 행 + outbox(project:create, schedule:set_targets) 한 트랜잭션",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-1",
+      "method": "GET",
+      "path": "/v1/projects/{project_id}",
+      "summary": "상세(일반 설정 + my_role + scope_linked 힌트). 비멤버 404",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-1",
+      "method": "PATCH",
+      "path": "/v1/projects/{project_id}",
+      "summary": "name·description·brand_code·ga4_property_id 수정(Owner/admin). domain·ai_engines·country_code 불가. brand_code 변경 시 tracked_brand 재구성 + outbox(project:update)",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-1",
+      "method": "DELETE",
+      "path": "/v1/projects/{project_id}",
+      "summary": "하드 삭제(Owner/admin, body confirm_name 대조, standard_root 거부): FK CASCADE + outbox(project:delete)",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-2",
+      "method": "GET",
+      "path": "/v1/projects/{project_id}/members",
+      "summary": "멤버 목록(pending+active, owner 우선·초대순). 활성 멤버/admin",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-2",
+      "method": "POST",
+      "path": "/v1/projects/{project_id}/members",
+      "summary": "기존 가입자 이메일 초대(viewer·pending 고정) + member_audit_log(invite) 원자 기록. Owner/admin",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-2",
+      "method": "PATCH",
+      "path": "/v1/projects/{project_id}/members/{user_id}",
+      "summary": "역할 변경 promote/demote(활성 멤버만, 마지막 Owner 강등 금지, FOR UPDATE). Owner/admin",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-2",
+      "method": "DELETE",
+      "path": "/v1/projects/{project_id}/members/{user_id}",
+      "summary": "pending=초대 취소(cancel_invite), active=제거(remove). Owner·본인 제거 불가. Owner/admin",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-2",
+      "method": "POST",
+      "path": "/v1/projects/{project_id}/members/me:accept",
+      "summary": "본인 대기 초대 수락(pending→active, accepted_at) + 감사",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-2",
+      "method": "POST",
+      "path": "/v1/projects/{project_id}/members/me:reject",
+      "summary": "본인 대기 초대 거절(행 삭제) + 감사",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-2",
+      "method": "GET",
+      "path": "/v1/projects/{project_id}/member-audit",
+      "summary": "멤버 변경 감사 로그 최신순 키셋(제안 인덱스 member_audit_project_idx 필요)",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-2",
+      "method": "GET",
+      "path": "/v1/me/project-invites",
+      "summary": "세션 사용자의 대기 초대 목록(/projects 알림 배지, 현행 pendingForUser project-members.ts:207)",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-3",
+      "method": "GET",
+      "path": "/v1/projects/{project_id}/prompt-candidates",
+      "summary": "후보 풀 목록(source·source_keyword·text). Owner/admin",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-3",
+      "method": "POST",
+      "path": "/v1/projects/{project_id}/prompt-candidates:select",
+      "summary": "선택 후보를 draft 프롬프트로 승격(후보 유지)",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-3",
+      "method": "DELETE",
+      "path": "/v1/projects/{project_id}/prompt-candidates/{candidate_id}",
+      "summary": "후보 1건 삭제",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-3",
+      "method": "POST",
+      "path": "/v1/projects/{project_id}/prompt-candidates:bulkDelete",
+      "summary": "후보 선택 삭제",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-3",
+      "method": "GET",
+      "path": "/v1/projects/{project_id}/prompts",
+      "summary": "프롬프트 목록(status[]·kind·q·커스텀필드 값 필터, 키셋) + 태그값 일괄 조립",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-3",
+      "method": "POST",
+      "path": "/v1/projects/{project_id}/prompts",
+      "summary": "수동 추가(줄바꿈 분리, 행당 1건 draft)",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-3",
+      "method": "PATCH",
+      "path": "/v1/projects/{project_id}/prompts/{prompt_id}",
+      "summary": "본문(draft 만)·메타(brand_code·category·prompt_type·lang·regions) 수정",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-3",
+      "method": "DELETE",
+      "path": "/v1/projects/{project_id}/prompts/{prompt_id}",
+      "summary": "단순 삭제: status='draft' 이고 scope_prompt_id NULL 만, 그 외 409(:hardDelete 사용)",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-3",
+      "method": "GET",
+      "path": "/v1/projects/{project_id}/prompts/{prompt_id}/lifecycle-impact",
+      "summary": "중지·완전삭제 전 영향 미리보기(served 답변·브랜드 언급 행·인용 원소·공유 행). api_ro 로 rd 조회",
+      "risk": "medium"
+    },
+    {
+      "id": "PJ-3",
+      "method": "POST",
+      "path": "/v1/projects/{project_id}/prompts/{prompt_id}:pause",
+      "summary": "측정 중지(Owner): 공유 행 있으면 409, outbox(prompt:disable) + status='paused'",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-3",
+      "method": "POST",
+      "path": "/v1/projects/{project_id}/prompts/{prompt_id}:resume",
+      "summary": "측정 재개(운영자 게이트): paused 만, outbox(prompt:enable) + status='done'",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-3",
+      "method": "POST",
+      "path": "/v1/projects/{project_id}/prompts/{prompt_id}:hardDelete",
+      "summary": "완전 삭제(Owner): 공유 0 이면 outbox(prompt:delete) + soft delete(deleted_at) 로 적재기가 rd·ing 정리, 공유 >0 이면 로컬 행만 soft delete",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-3",
+      "method": "POST",
+      "path": "/v1/projects/{project_id}/prompts:execute",
+      "summary": "저장+실행(운영자 게이트): draft 와 복구 대상(queued ∧ scope_prompt_id NULL ∧ 미완료 outbox 없음)을 outbox(prompt:create) 적재 + status='queued'. 202",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-3",
+      "method": "GET",
+      "path": "/v1/projects/{project_id}/prompts:export",
+      "summary": "xlsx 스트림(id+text+커스텀 태그 열). 활성 멤버, access_audit_log(download)",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-3",
+      "method": "POST",
+      "path": "/v1/projects/{project_id}/prompts:import",
+      "summary": "xlsx multipart 가져오기(id 있으면 수정·없으면 신규, 헤더=태그 자동 생성, 행 상한)",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-3",
+      "method": "GET",
+      "path": "/v1/projects/{project_id}/prompt-fields",
+      "summary": "커스텀 태그 목록(보관 포함)",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-3",
+      "method": "POST",
+      "path": "/v1/projects/{project_id}/prompt-fields",
+      "summary": "태그 추가(예약어 거부)",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-3",
+      "method": "POST",
+      "path": "/v1/projects/{project_id}/prompt-fields/{field_id}:archive",
+      "summary": "태그 보관",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-3",
+      "method": "POST",
+      "path": "/v1/projects/{project_id}/prompt-fields/{field_id}:restore",
+      "summary": "태그 복구",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-3",
+      "method": "DELETE",
+      "path": "/v1/projects/{project_id}/prompt-fields/{field_id}",
+      "summary": "태그 완전 삭제(값 FK CASCADE)",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-3",
+      "method": "PUT",
+      "path": "/v1/projects/{project_id}/prompts/{prompt_id}/fields/{field_id}",
+      "summary": "프롬프트 1건 태그값 설정(UPSERT)",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-3",
+      "method": "POST",
+      "path": "/v1/projects/{project_id}/prompt-fields/{field_id}:bulkSet",
+      "summary": "여러 프롬프트에 같은 태그값 일괄 적용",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-3",
+      "method": "DELETE",
+      "path": "/v1/projects/{project_id}/prompts/{prompt_id}/fields/{field_id}",
+      "summary": "태그값 지우기",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-4",
+      "method": "GET",
+      "path": "/v1/projects/{project_id}/settings",
+      "summary": "설정 화면 묶음 1회 조회(엔진·owned base·추적 브랜드 별칭·경쟁사(타깃 포함)·차종·추적 URL 건수). 활성 멤버/admin. 화면당 호출 수 억제(G-25)",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-4",
+      "method": "PUT",
+      "path": "/v1/projects/{project_id}/settings/engines",
+      "summary": "AI 엔진 교체(Owner ∧ 운영자 게이트): 변경 시 app.project.ai_engines + engine_history INSERT + outbox(schedule:set_targets, reenable). 같은 값이면 no-op",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-4",
+      "method": "GET",
+      "path": "/v1/projects/{project_id}/settings/engines/history",
+      "summary": "엔진 변경 이력(changed_at DESC)",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-4",
+      "method": "POST",
+      "path": "/v1/projects/{project_id}/settings/owned-bases",
+      "summary": "owned base 추가(정규화) + domain 재동기화 + judgment_change('project_owned_base') + outbox(project:update)",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-4",
+      "method": "DELETE",
+      "path": "/v1/projects/{project_id}/settings/owned-bases",
+      "summary": "owned base 삭제(?base_norm=) + domain 재동기화 + judgment_change + outbox",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-4",
+      "method": "GET",
+      "path": "/v1/projects/{project_id}/settings/tracked-urls",
+      "summary": "추적 URL 목록(키셋)",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-4",
+      "method": "POST",
+      "path": "/v1/projects/{project_id}/settings/tracked-urls",
+      "summary": "추적 URL 추가(http(s) 정규화) + judgment_change('project_target_url')",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-4",
+      "method": "DELETE",
+      "path": "/v1/projects/{project_id}/settings/tracked-urls",
+      "summary": "추적 URL 삭제(?url_norm=) + judgment_change('project_target_url')",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-4",
+      "method": "GET",
+      "path": "/v1/projects/{project_id}/settings/tracked-urls:export",
+      "summary": "추적 URL xlsx 스트림(활성 멤버)",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-4",
+      "method": "POST",
+      "path": "/v1/projects/{project_id}/settings/tracked-urls:import",
+      "summary": "추적 URL xlsx 가져오기(Owner) + judgment_change 1건",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-4",
+      "method": "PUT",
+      "path": "/v1/projects/{project_id}/settings/brand-aliases",
+      "summary": "프로젝트 브랜드 별칭 교체(brand_code 일치 검증) + tracked_brand 재구성 + judgment_change('project_setting')",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-4",
+      "method": "POST",
+      "path": "/v1/projects/{project_id}/settings/competitors",
+      "summary": "추적 경쟁 브랜드 추가 + tracked_brand 재구성 + judgment_change('project_setting')",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-4",
+      "method": "DELETE",
+      "path": "/v1/projects/{project_id}/settings/competitors",
+      "summary": "추적 경쟁 브랜드 삭제(?brand_name=) + 재구성 + judgment_change",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-4",
+      "method": "PUT",
+      "path": "/v1/projects/{project_id}/settings/competitors/target",
+      "summary": "KPI #16 비교 기준 브랜드 지정/해제(brand_name|null). 조회 시점 설정이라 judgment_change 없음",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-4",
+      "method": "POST",
+      "path": "/v1/projects/{project_id}/settings/vehicles",
+      "summary": "추적 차종 추가(+그 브랜드를 경쟁사 목록에 자동 등록, 프로젝트 브랜드 제외) + 재구성 + judgment_change",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-4",
+      "method": "DELETE",
+      "path": "/v1/projects/{project_id}/settings/vehicles",
+      "summary": "추적 차종 삭제(?brand=&model=) + 재구성 + judgment_change",
+      "risk": "low"
+    },
+    {
+      "id": "PJ-4",
+      "method": "GET",
+      "path": "/v1/projects/{project_id}/settings/scope-link",
+      "summary": "Scope 연결 진단(admin 전용): scope_project_id·outbox 대기/오류·최신 회차 job/served 수. api_ro, 라이브 Scope 호출 없음",
+      "risk": "low"
+    }
+  ],
+  "shared": [
+    "라우터 구조: app/modules/projects/{router.py, deps.py, schemas.py, errors.py, sql/*.sql, repo/{projects,members,prompts,fields,settings,outbox,judgment,audit}.py, xlsx.py}. router.py 가 APIRouter(prefix='/v1') 에 projects·members·prompts·settings 하위 라우터와 me 라우터(/v1/me/project-invites)를 include. 정적 세그먼트 경로(member-audit, prompts:export 등)는 {id} 경로보다 먼저 선언.",
+    "DB 연결 2종(A17·권한 §10): ro_conn = api_ro 풀(rd·app·ext SELECT, default_transaction_read_only, statement_timeout 5s: DB-v2.sql:830-836), rw_tx = api_rw 풀 트랜잭션(app 쓰기만, rd USAGE 없음: DB-v2.sql:839-843). rd 를 읽는 엔드포인트(lifecycle-impact, scope-link)는 ro_conn 만 쓰고, 쓰기 트랜잭션 안에서 rd 를 조회하지 않는다.",
+    "rw_tx 의존성: BEGIN 직후 SET LOCAL app.actor_id = principal.user_id(app.actor() 가 없으면 예외, DB-v2.sql:96-98), SET LOCAL statement_timeout='5s', SET LOCAL app.request_id. PgBouncer transaction 모드이므로 세션 SET 금지(SET LOCAL 만), prepared statement 캐시 끔(계약 §5). 모든 쓰기 액션 = 단일 트랜잭션(원본 변경 + 감사 + outbox + judgment_change).",
+    "권한 의존성 require_project(level): level ∈ member | owner | operate | owner_and_operate. 판정: ① JWT(JWKS) → app.user_account(인증 모듈 get_principal) ② role='admin' 이면 통과(현행 member/_actions.ts:41-43 등 계승) ③ app.project 행이 없거나 kind='standard_root' 이거나 비멤버면 404(member/page.tsx:38-40 계승) ④ 멤버지만 수준 미달이면 403. operate = canOperateProject(operator-policy.ts:30) 포팅 + global 분기에도 프로젝트 brand_code·country_code 가 세션 스코프 안인지 대조(DB-앱-도메인.md:42 결정). 반환 ProjectCtx(project, membership, principal).",
+    "IDOR 구조적 차단: 하위 리소스(prompt_id·field_id·candidate_id·user_id) 를 다루는 모든 SQL 에 WHERE project_id = :project_id 를 함께 둔다(현행 assertFieldInProject/assertPromptInProject prompt/_actions.ts:694-712 의 대체). DDL 복합 FK(app.prompt_custom_field_value → (project_id, prompt_id)/(project_id, field_id), DB-v2.sql:166-170)가 이중 방어.",
+    "공유 Pydantic 모델: CrudMeta(계약 meta 형태 그대로, surface·mode·as_of·cycles·generation·suppressed = null, ignored_filters·dropped_filters = []), Envelope[T]{data, meta}, Page[T]{items, next_cursor}, ErrorBody{error:{code, message}}, Project, ProjectCreate, ProjectPatch(extra='forbid' 로 domain·ai_engines·country_code 거부), Member, MemberAuditEntry, Invite, Prompt(프로젝트용: 은퇴 축 제외), PromptCreate, PromptPatch, PromptCandidate, CustomField, LifecycleImpact, ExecuteResult, ImportResult, SettingsBundle, EngineHistoryEntry, OwnedBase, TrackedUrl, Competitor, Vehicle, ScopeLink.",
+    "커서 코덱: base64url(json[ts_iso, id]) 공용. 정렬 튜플 비교 (ts, id) < (:ts, :id), LIMIT :limit+1 로 next_cursor 판정.",
+    "에러 코드 표(HTTP status + code): not_found 404, forbidden 403, validation 422, conflict 계열 409(already_member, last_owner_cannot_demote, cannot_remove_owner, not_active, already_that_role, prompt_not_draft, shared_prompt, name_mismatch, duplicate), bad_request 400(self_invite, cannot_remove_self, country_immutable, invalid_engine, reserved_label). 현행 ActionResult 한국어 문자열은 프론트 i18n 이 code 로 매핑.",
+    "outbox 헬퍼 enqueue_scope(tx, aggregate, aggregate_id, op, payload): 어휘 project:{create,update,delete}, prompt:{create,enable,disable,delete}, schedule:{set_targets}. payload 에 local id(멱등 키) 포함. 미완료 동일 (aggregate, aggregate_id, op) 가 있으면 새로 넣지 않는다(제안 인덱스 scope_outbox_aggregate_idx).",
+    "judgment 헬퍼 enqueue_judgment(tx, kind, subject_uuids, payload): 트리거가 선언되지 않은 경로(project_owned_base, project_target_url, tracked_* 변경의 project_setting)만 API 가 명시 INSERT. app.project(domain·brand_code·country_code·ai_engines) 와 app.prompt(catalog·prompt_kind) 는 DDL 주석이 트리거 몫으로 선언했으므로 API 는 넣지 않는다(트리거 본문 확정이 선행 조건).",
+    "공유 리포지토리 함수: rebuild_tracked_brand(tx, project_id)(현행 syncTrackedBrandCatalog tracked-entities.ts:309 포팅, PJ-1 PATCH brand_code 변경과 PJ-4 경쟁사·차종·별칭 쓰기가 공용), resync_project_domain(tx, project_id)(현행 syncLegacyProjectDomain setting/_actions.ts:144: domain = created_at 최선두 owned base, PJ-1 생성과 PJ-4 owned base 쓰기가 공용), count_shared_scope_prompt(tx, scope_prompt_id, exclude_prompt_id)(prompt_scope_idx 사용, PJ-3 pause·hardDelete·impact 공용).",
+    "감사 헬퍼: member_audit(tx, ...) 는 PJ-2 7종 액션이 명시 INSERT(append-only 트리거 DB-v2.sql:232). access_audit(tx, principal, kind, action, target) 는 api_rw 트랜잭션 안 쓰기 액션(라이프사이클·삭제·export download)에 사용, 읽기 감사는 AU-1 결정 따름.",
+    "xlsx 유틸: openpyxl 기반 StreamingResponse(export, Content-Disposition) 와 UploadFile multipart(import, 행 상한·시트 1개·헤더 검증). PJ-3 prompts 와 PJ-4 tracked-urls 공용. 현행 base64 JSON 응답(서버 액션 제약)은 계승하지 않는다."
+  ],
+  "read_schema": [
+    "app.project: project_id, kind, name, description, domain, brand_code, country_code, scope_project_id, ga4_property_id, ai_engines, created_by, created_at, updated_at (DB-v2.sql:114-118). 현행 projects.language(schema.ts:92, deprecated) 는 DB-v2 에 없음: 이관 시 버림.",
+    "app.project_member: project_id, user_id, role, status, invited_by, invited_at, accepted_at; PK(project_id,user_id), project_member_user_idx(user_id,status), CHECK((status='active') = (accepted_at IS NOT NULL)) (DB-v2.sql:121-126)",
+    "app.project_engine_history: history_id, project_id, engines, changed_by, changed_at (DB-v2.sql:127-128)",
+    "app.project_owned_base: project_id, base_url, base_norm, label, created_by, created_at; PK(project_id, base_norm) (DB-v2.sql:129-130)",
+    "app.project_tracked_url: project_id, url, url_norm, label, created_by, created_at; PK(project_id, url_norm) (DB-v2.sql:131-132)",
+    "app.project_tracked_brand: project_id, canonical_name, aliases, created_at (DB-v2.sql:133-134)",
+    "app.project_tracked_competitor: project_id, brand_name, aliases, notes, is_target, created_at; tracked_competitor_one_target 부분 유일 인덱스 (DB-v2.sql:135-138)",
+    "app.project_tracked_vehicle: project_id, brand, model, segment, aliases, created_at (DB-v2.sql:139-140)",
+    "app.prompt_candidate: candidate_id, project_id, source, source_keyword, text, created_at (DB-v2.sql:144-146)",
+    "app.prompt: prompt_id, project_id, candidate_id, text, prompt_type, category, brand_code, kind, lang, regions, scope_prompt_id, status, created_by, created_at, updated_by, updated_at, deleted_at; prompt_project_live_idx, prompt_scope_idx (DB-v2.sql:147-155). brand_presence·list_type·depth1~4·funnel_stage 열은 표준 루트용으로 존재하나 프로젝트 API 는 노출하지 않음",
+    "app.project_custom_field: field_id, project_id, label, archived, created_by, created_at (DB-v2.sql:158-160); app.prompt_custom_field_value: project_id, prompt_id, field_id, value; pcfv_filter_idx (DB-v2.sql:161-166)",
+    "app.member_audit_log: audit_id, project_id, actor_id, target_user_id, action, context, created_at (DB-v2.sql:228-229); app.prompt_audit_log(트리거 기록, 읽기는 이 모듈 범위 밖); app.access_audit_log(쓰기 액션 감사, 월 파티션 선생성 필요)",
+    "app.scope_outbox: outbox_id, aggregate, aggregate_id, op, payload, created_at, attempts, next_attempt_at, done_at, last_error (DB-v2.sql:211-215). API 는 INSERT·SELECT 만",
+    "app.judgment_change: kind(project_setting·project_owned_base·project_target_url·catalog·prompt_kind), subject_uuids, payload, requested_by (DB-v2.sql:73-89). api_rw 는 INSERT 만(UPDATE·DELETE REVOKE :841)",
+    "app.user_account: user_id, email, display_name, role, operator, scope_all, scope_brands, scope_regions, scope_countries, status (DB-v2.sql:101-111); app.brand(brand_code) 검증",
+    "rd.dim_project: project_key, scope_project_id, surface, project_id (DB-v2.sql:383-384); rd.dim_prompt: prompt_key, prompt_id(= Scope scope_prompt_id, ing.prompt PK 투영 DB-v2.sql:323·390) ",
+    "rd.cycle: cyc_key, project_key, round_date, servable, view_date; cycle_project_idx(project_key, round_date DESC) (DB-v2.sql:420-426)",
+    "rd.job: answer_key, round_date, surface, project_key, measured_at, status_code, served; job_round_idx(surface, round_date, prompt_key) (DB-v2.sql:441-451). 비파티션 표",
+    "rd.answer: surface, round_date, answer_key, prompt_key, project_key; answer_prompt_idx(prompt_key, round_date), answer_p_proj_idx(project_key, round_date), PK(surface, round_date, answer_key) (DB-v2.sql:455-476·522·526)",
+    "rd.answer_brand: PK 접두(surface, round_date, answer_key) 로만 조회 (DB-v2.sql:479-487); rd.citation: PK 접두(surface, round_date, answer_key) 로만 조회 (DB-v2.sql:507-513)",
+    "제안(채택) member_audit_project_idx: CREATE INDEX ON app.member_audit_log (project_id, created_at DESC). 근거: PK 가 audit_id 단독이라 GET member-audit 가 project_id 필터 시 전체 스캔, prompt_audit_project_idx(DB-v2.sql:224)와 동형. D8 판정: 인덱스이며 파생 층 아님 → 허용",
+    "제안(채택) scope_outbox_aggregate_idx: CREATE INDEX ON app.scope_outbox (aggregate, aggregate_id, created_at DESC). 근거: execute 의 미완료 중복 적재 방지와 scope-link 의 outbox 상태 조회가 aggregate_id 로 찾는데 기존 인덱스는 scope_outbox_due_idx(next_attempt_at) 뿐이고 outbox 는 완료 행이 누적된다. D8 판정: 인덱스 → 허용",
+    "제안(채택) app.prompt.status CHECK (status IN ('draft','queued','running','done','failed','paused')). 근거: DB-v2 는 text 무제약(DB-v2.sql:153), 현행은 pgEnum 6값(schema.ts:335-342). D8 무관",
+    "제안(채택) app.member_audit_log.action CHECK (invite, cancel_invite, remove, promote, demote, accept, reject + 관리자 승계 액션). 근거: DDL 무제약, 현행 7종은 테스트로 강제(member/_actions.audit.test.ts). 관리자 모듈의 승계 action 값(admin/_actions.ts:240)은 미확인이라 확인 후 목록 확정",
+    "제안(기각) PJ-1 의 rd.job (project_key, measured_at DESC) INCLUDE (served): served 는 제자리 UPDATE 대상이라 btree 금지(HOT 규율 DB-v2.sql:14-16), 전제인 'rd.job 파티션 전체 스캔'도 사실 아님(비파티션). 최신 회차 한정 쿼리로 대체",
+    "DB 선행 요청(DDL 공백): app.project AFTER UPDATE 트리거(주석 DB-v2.sql:120)와 app.prompt tg_catalog_change(주석 :156)의 CREATE TRIGGER·함수 본문이 v2 에 없다(v2 의 CREATE TRIGGER 는 :231-233 append-only 3개뿐). v1 초안 본문(DB-앱-도메인.sql:412-424)은 standard_root 가 아니면 즉시 RETURN 해 프로젝트 프롬프트 감사가 빠지므로, 전 프로젝트 대상 + prompt_audit_log.batch_id 를 GUC(app.batch_id, 제안)로 받는 형태로 정의 요청",
+    "DB 선행 요청(권한 공백): outbox 워커가 쓸 열 권한이 없다. loader 는 app SELECT + judgment_change 상태 열 UPDATE 만(DB-v2.sql:860-861). 제안: 워커 전용 롤(또는 loader)에 GRANT UPDATE (attempts, next_attempt_at, done_at, last_error) ON app.scope_outbox, UPDATE (scope_project_id, updated_at) ON app.project, UPDATE (scope_prompt_id, status, updated_by, updated_at) ON app.prompt, EXECUTE ON app.actor(). 워커는 SET LOCAL app.actor_id = 시스템 사용자 uuid(prompt_audit_log actor_type='system')"
+  ],
+  "consistency_fixes": [
+    "PJ-4 단위 설계 부재: 산출물이 title 'test', 엔드포인트 GET /v1/x 인 더미다. 원 범위(wf-module-design-v1.js.bak:56 'AI 엔진·소유 베이스·추적 URL·추적 대상·Scope 연결')와 현행 setting/_actions.ts(updateProjectEngines:255, owned base:522·548, 추적 URL:562·587·599·630, 경쟁사:402·431·446, 차종:457·510, triggerReprocess:725) 기준으로 설계 리드가 보충 초안을 썼다. 단위 설계자 재실행(query_design·perf 상세)이 필요하다고 표시한다.",
+    "ai_engines 소유: PJ-1 PATCH 에서 제거하고 PJ-4 PUT /settings/engines 로 이동. 근거: 현행 updateProjectEngines(setting/_actions.ts:255-300)는 requireOwner + canOperateProject 이중 게이트(비용 레버, 2026-08-18 결정)인데 PJ-1 PATCH 는 Owner 만이라 운영자 게이트가 빠진다. PJ-1 open question 1 해소.",
+    "engine_history append 주체: DDL 에 트리거가 없으므로 API 가 PUT engines 트랜잭션에서 명시 INSERT(현행 projectRepository.setAiEngines projects.ts:292-305 계승), 같은 값이면 no-op(레거시 NULL 은 첫 저장 기록, setting/_actions.ts:272-276). 생성 시 첫 행도 기록(projects.ts:255-262). PJ-1 open question 2 해소.",
+    "domain 필드: PJ-1 PATCH 에서 제거. 현행 domain 은 owned base 첫 행에서 파생(syncLegacyProjectDomain setting/_actions.ts:144-152)되고 일반 설정 폼은 domain 을 보내지 않는다(general-form.tsx:57-62). 생성 시 입력 domain 은 정규화 후 owned_base 1행으로 시드(new/_actions.ts:97-104) 하고 이후 변경은 PJ-4 owned base 쓰기의 resync_project_domain 공용 함수만.",
+    "PJ-1 생성 누락 보강: 국가·브랜드 스코프 검증(projectCreationOptions scope-policy.ts:286, new/_actions.ts:57-83), ai_engines 1개 이상(new/_actions.ts:55), owned_base 시드, engine_history 첫 행, outbox(schedule:set_targets) 를 생성 트랜잭션에 포함.",
+    "country_code 불변: 현행 updateProject 패치 필드에 country 가 없다(setting/_actions.ts:156-164) → PATCH 에서 country_code 는 400(country_immutable). ProjectPatch 를 extra='forbid' 로 두어 domain·ai_engines 도 422.",
+    "brand_code 변경 부수효과: 현행 updateProject 는 옛 브랜드 tracked_brand 삭제 + syncTrackedBrandCatalog(setting/_actions.ts:209-229)를 한다. PJ-1 PATCH 트랜잭션에서 공유 함수 rebuild_tracked_brand 를 호출. brand 별칭 편집(brandAliases)은 PJ-4 PUT /settings/brand-aliases 로 분리.",
+    "DDL 트리거 공백: PJ-1(project_setting judgment_change 자동 기록)과 PJ-3(tg_catalog_change 가 prompt_audit_log·judgment_change 기록)은 트리거를 확정처럼 적었으나 DB-v2.sql 에는 주석(:120·:156)만 있고 CREATE TRIGGER 가 없다. DB 선행 과제로 올리고, 확정 전까지 PJ-1 PATCH·PJ-3 쓰기는 머지 금지. 트리거가 v1 초안처럼 standard_root 한정(DB-앱-도메인.sql:414-416)이면 프로젝트 프롬프트 감사가 전부 빠지므로 전 프로젝트 대상으로 요청.",
+    "트리거 대상이 아닌 판정 입력(tracked_competitor·vehicle·brand, owned_base, tracked_url) 은 API 가 enqueue_judgment 로 명시 INSERT(kind project_setting·project_owned_base·project_target_url, DB-v2.sql:76-77). 현행 flagPromptsForReanalysis(tracked-entities.ts:370)·needs_reanalysis 열은 DB-v2 에 없으므로 폐기하고, 응답의 reprocessable 카운트는 {judgment_change_id} 로 대체. triggerReprocess(setting/_actions.ts:725, 현행 console.log stub)는 엔드포인트를 만들지 않는다.",
+    "Scope 전파 방식 확정(PJ-3 open question 1): 계약 §5 'Scope API 는 적재 모듈만 만진다' 와 DB-앱-도메인.md:42 결정에 따라 전부 app.scope_outbox 비동기. API 는 외부 HTTP 를 동기 호출하지 않는다. execute 는 202 + {queued, skipped_pending}, 결과는 prompt.status·scope-link 로 관찰. PJ-1 의 생성·삭제도 같은 방식(현행 createScopeMirror 동기 호출 project-sync.ts:95 대체).",
+    "outbox 워커 권한 공백: 워커가 scope_project_id·scope_prompt_id 를 되써야 하는데 loader 는 app SELECT 만 있다(DB-v2.sql:860-861). 열 단위 GRANT 제안을 DB 선행 과제로 올림. 없으면 execute 가 영구 queued 로 남는다.",
+    "rd 읽기 연결: api_rw 는 rd USAGE 가 없다(DB-v2.sql:839-843). PJ-1 scope-link·PJ-3 lifecycle-impact 는 api_ro 연결로 분리하고 쓰기 트랜잭션과 섞지 않는다(PJ-1·PJ-3 는 연결 구분을 적지 않았음).",
+    "PJ-1 scope-link 사실 오류 정정: 'rd.job 은 LIST→RANGE 파티션' 은 틀렸다(DB-v2.sql:441-447 에 PARTITION BY 없음). 제안 인덱스 rd.job(project_key, measured_at DESC) INCLUDE(served) 는 served 가 제자리 UPDATE 열이라 HOT 규율(DB-v2.sql:14-16) 위반 → 기각. 대체: rd.cycle cycle_project_idx 로 최신 round_date 1개 → rd.job job_round_idx(surface=3, round_date) 범위 안 project_key 필터, served 는 rd.answer_p answer_p_proj_idx. 새 인덱스 불필요.",
+    "scope-link 소속·권한: 현행 진단은 설정 화면에서 admin 에게만 렌더(setting/page.tsx:62). PJ-1 에서 PJ-4 GET /settings/scope-link 로 옮기고 admin 전용. 상태 정의도 비동기 구조에 맞춰 unlinked(링크 없음, outbox 없음) | pending_link(outbox 미완료) | link_error(outbox last_error) | no_data | partial | healthy 로 재정의. PJ-1 open question 6 해소.",
+    "PJ-3 lifecycle-impact 쿼리 정정: rd.job WHERE prompt_key 는 선두 인덱스가 없다(job_round_idx 는 3번째 열). rd.answer answer_prompt_idx(prompt_key, round_date) 로 answer 집합을 얻고 rd.answer_brand·rd.citation 은 PK 접두(surface, round_date, answer_key) 조인. 단위 변경을 known diff 로 고지: answers = 미러 전체 행(scope-mirror.ts:570-573) → served 답변, mentions = 엔티티 행(scope_mentions, :574-578) → 표시 브랜드 행(rd.answer_brand).",
+    "공유 가드 의미 정정: PJ-3 는 pause·resume·hardDelete 에 모두 '공유 0 확인' 을 적었으나 현행은 pause 만 공유 시 거부(prompt/_actions.ts:283-291), resume 은 검사 없음(:310-345), hardDelete 는 거부가 아니라 공유 시 로컬 행만 지우고 Scope·미러를 보존(:357-380). 현행 의미로 맞춘다.",
+    "hardDelete 의 '미러 이력 삭제' 는 API 가 할 수 없다(rd·ing 쓰기 없음). soft delete(deleted_at=now) + outbox(prompt:delete) + 트리거의 judgment_change('catalog', 옛 scope_prompt_id) 로 적재기가 rd·ing 을 정리하는 계약으로 바꾼다. prompt_audit_log event_type 'deleted'·'restored'(DB-v2.sql:220) 와 정합. 물리 행 정리 시점은 열린 질문.",
+    "deletePrompt 가드(PJ-3 open question 2): status='draft' ∧ scope_prompt_id IS NULL 만 허용, 그 외 409(prompt_not_draft). 근거: 현행(prompt/_actions.ts:212-220)은 가드가 없어 측정 중 프롬프트를 Scope 중단 없이 지울 수 있고, 이는 hardDelete 주석(:224-231)이 막으려던 좀비 측정과 같은 결함. 권장안이며 제품 확인 필요로 표시.",
+    "prompt status 도메인: PJ-3 는 draft|queued|done|paused 4값이지만 현행 enum 은 running·failed 포함 6값(schema.ts:335-342), 재분석 대상 술어도 running·failed 를 쓴다(tracked-entities.ts:379). 6값으로 맞추고 CHECK 제안.",
+    "은퇴 축 제외: 프로젝트 UI 에서 list_type·depth1~4·funnel_stage 는 커스텀 필드로 이관됐다(prompt/_actions.ts:676-680 주석, WBS 4.1.5). PJ-3 Prompt 응답·목록 필터에서 제외하고 커스텀 필드(tags)로만 노출. brand_presence 도 프로젝트 UI 미사용이라 제외(DDL 열은 표준 루트용 유지).",
+    "응답 봉투 통일: 4개 단위 모두 §4 공통 필터 모델을 쓰지 않는다. PJ-1 이 surface 를 supported 로 적은 것을 삭제하고 공통 필터 파라미터를 받지 않는다(따라서 ignored_filters 도 빈 배열). 목록은 data:{items, next_cursor}(PJ-1·PJ-3 방식), PJ-2 의 meta.page 는 폐기(meta 는 계약 형태 고정). 오류는 PJ-2 방식(HTTP status + {error:{code, message}})으로 PJ-1·PJ-3·PJ-4 통일.",
+    "경로 표기 통일: 커스텀 동작은 콜론 표기(PJ-3 :pause 방식)로 맞춰 PJ-2 /me/accept·/me/reject → /members/me:accept·/members/me:reject. /members/audit 는 /members/{user_id} 와 충돌 여지가 있어 /member-audit 로. 초대 배지는 GET /v1/me/project-invites 로 PJ-2 소유(PJ-2 open question 1 해소).",
+    "비멤버 응답 통일: 존재 은닉을 위해 비멤버·표준 루트는 404(member/page.tsx:38-40 계승), 멤버지만 수준 미달은 403. PJ-1 이 적은 '브랜드·국가가 세션 스코프 밖이면 403' 조회 규칙은 현행에 없는 새 규칙이라 삭제(조회는 멤버십 게이트만). 스코프 대조는 생성 검증과 운영자 global 분기에만 적용.",
+    "운영자 global 분기 스코프 대조: 현행 canOperateProject 는 global 이면 무조건 true(operator-policy.ts:30-39). DB-앱-도메인.md:42 결정대로 공통 require_project(operate) 에서 프로젝트 brand_code·country_code 가 세션 스코프 안인지 추가 검사. 대상: PJ-3 execute·resume, PJ-4 engines.",
+    "역할 변경(promote/demote) 소유: 현행 구현이 setting/_actions.ts:332·360 에 있으나 PJ-2 PATCH /members/{user_id} 로 확정, PJ-4 에서 제외(PJ-2 open question 4 해소). 역할 변경은 judgment_change 대상 아님(DB-v2.sql:120 트리거 열 목록 밖) 확인.",
+    "자연키 전환: DB-v2 의 project_member·tracked_*·owned_base·tracked_url 은 별도 id 가 없는 복합 PK 다. 현행 membershipId·id 기반 삭제를 user_id·brand_name·(brand, model)·base_norm·url_norm 로 대체. 슬래시가 든 키(base_norm·url_norm)는 경로가 아니라 쿼리 파라미터로.",
+    "감사 기록 범위: member_audit_log 는 트리거가 없으므로 PJ-2 가 명시 INSERT 하고 원본 변경과 같은 트랜잭션(현행은 두 호출 분리 member/_actions.ts:100-111). 생성 시 최초 Owner 등록은 현행도 기록하지 않으므로(projects.ts:244-253) 유지(PJ-1 open question 7 해소). 모든 쓰기의 SET LOCAL app.actor_id 는 PJ-2 만 적었으나 공통 rw_tx 로 전 단위 적용.",
+    "범위 밖으로 이관: tracked keyword 는 PJ-4 범위에 적혀 있으나 현행 쓰기가 intent/_actions.ts:430·453·469 에 있어 Intent 모듈 소관. prompt_candidate 생성(kw_prompt_draft·ctx_generated_prompt 승격)도 Intent 모듈(PJ-3 open question 3 확인). 사용자 삭제 시 Owner 승계(removeUserAndSucceedOrphans project-members.ts:286, admin/_actions.ts:235)는 관리자 모듈(PJ-2 open question 3 확인).",
+    "삭제 캐스케이드 확인: DB-v2 는 app.project 자식(project_member·engine_history·owned_base·tracked_*·prompt_candidate·prompt·custom_field·ctx_generated_prompt) 을 전부 ON DELETE CASCADE 로 선언(DB-v2.sql:121-176), prompt_custom_field_value 는 복합 FK CASCADE. 따라서 DELETE app.project 한 문장(현행 projects.ts:322-335 의 11문장 대체). 감사 로그(member·prompt audit)는 FK 가 없어 보존된다. PJ-1 open question 4 해소.",
+    "계약 위반 점검: 4개 단위 모두 사전 집계·요약 표·매트뷰·결과 캐시 제안 없음(D8 준수). 유일한 rd 인덱스 제안(PJ-1)은 HOT 규율 위반으로 기각했다."
+  ],
+  "deps": [
+    "인증·권한 모듈: FastAPI JWT(JWKS) 검증과 get_principal(A8), scope-policy 포팅(projectCreationOptions scope-policy.ts:286, isDimensionLockedByRole), operator-policy 포팅(operator-policy.ts:21·30). require_project 가 이것 위에 선다",
+    "DB 설계(소유자): app.project·app.prompt 트리거 본문, outbox 워커 열 GRANT, 제안 인덱스 2(member_audit_project_idx, scope_outbox_aggregate_idx)·CHECK 2(prompt.status, member_audit_log.action) 확정",
+    "적재 모듈: scope_outbox 워커(Scope 프로젝트·프롬프트·스케줄 생성·수정·삭제, scope_project_id·scope_prompt_id 회수, 멱등·순서 보장), judgment_change 소비(project_setting·project_owned_base·project_target_url·catalog·prompt_kind), 프롬프트 완전삭제·프로젝트 삭제 시 rd·ing 정리 계약, rd.dim_project·rd.cycle·rd.answer 적재(scope-link·impact 의 원천)",
+    "AU-1(접근 감사 쓰기 주체): 읽기 감사 방식. 쓰기 액션 감사는 api_rw 트랜잭션에서 app.access_audit_log INSERT(월 파티션 선생성은 적재 모듈, DB-앱-도메인.md:68)",
+    "관리자 모듈: 사용자 삭제 시 Owner 승계와 member_audit_log 기록(admin/_actions.ts:235-240), action 어휘 공유",
+    "Intent 모듈: prompt_candidate 생성 파이프라인, tracked keyword CRUD(intent/_actions.ts:430)",
+    "역의존: 프로젝트 대시보드·분석·AI 퍼널 모듈(projects/[id]/analysis·ai-funnel)이 이 모듈의 require_project(member) 의존성과 ProjectCtx 를 재사용",
+    "프론트: OpenAPI 생성 클라이언트, outbox 비동기 상태(queued·pending_link) 표시와 폴링 UX, 오류 code → i18n 매핑, xlsx 다운로드·업로드 처리"
+  ],
+  "build_order": [
+    "0. DB 선행(차단 조건): 트리거 본문 2종(전 프로젝트 대상), outbox 워커 열 GRANT, 제안 인덱스·CHECK 확정. 스모크에 'PATCH 후 judgment_change 1행', 'prompt INSERT 후 prompt_audit_log 1행', '워커 롤로 scope_prompt_id UPDATE 성공' 단언 추가",
+    "1. 공통 구성요소: ro_conn·rw_tx(SET LOCAL), CrudMeta·Envelope·Page·ErrorBody, 커서 코덱, require_project(인증 모듈 get_principal 필요), enqueue_scope·enqueue_judgment·access_audit·member_audit 헬퍼, xlsx 유틸",
+    "2. PJ-1 읽기(목록·상세)와 PJ-2 읽기(멤버·member-audit·me/project-invites): 게이트(404/403·admin 우회) 테스트를 먼저 고정",
+    "3. PJ-2 쓰기 7종: 현행 member/_actions.test.ts·_actions.audit.test.ts 의 불변식(마지막 Owner·본인 제거·감사 7종)을 pytest 로 이식",
+    "4. PJ-1 쓰기(생성·수정·삭제) + outbox 적재 계약(project:create/update/delete, schedule:set_targets) 을 적재 모듈과 확정",
+    "5. PJ-4 설정: engines(운영자 게이트)·owned base(domain 재동기화)·추적 URL(xlsx 포함)·브랜드 별칭·경쟁사·차종(rebuild_tracked_brand) → 설정 묶음 GET",
+    "6. PJ-3: 후보·프롬프트 CRUD·커스텀 필드 → 라이프사이클(pause·resume·hardDelete) → execute(outbox 워커 가동 후 E2E) → import·export",
+    "7. rd 읽기 2종(PJ-3 lifecycle-impact, PJ-4 scope-link): rd 적재 가동 후 RDS 실데이터 게이트에서 EXPLAIN ANALYZE",
+    "8. 병행 운영 전환(A13): 이 모듈은 쓰기 화면 그룹(mig.screen_group.has_writes=true)이라 그룹 단위로 쓰기를 한쪽에만 두고 전환(현행·신규 이중 쓰기 금지)"
+  ],
+  "risks": [
+    "차단 위험: DB-v2 에 app.project·app.prompt 트리거 본문이 없어 judgment_change·prompt_audit_log 가 조용히 누락될 수 있다(오류 없이 rd 투영이 낡고 감사가 비는 형태). 트리거 확정 전 PJ-1 PATCH·PJ-3 쓰기 배포 금지, 스모크 단언으로 흔적을 남긴다",
+    "차단 위험: outbox 워커 롤 권한이 없으면 execute 는 영구 queued, 생성 프로젝트는 영구 unlinked. 현행이 겪은 '고아 queued' 교착(prompt/_actions.ts:405-410 주석, 2026-08-18 6건)을 구조적으로 재현한다",
+    "UX 변화: 현행은 Scope 실패를 동기로 알려 draft 를 보존했다(prompt/_actions.ts:452-461). outbox 전환 후에는 성공 응답이 '큐 적재' 만 뜻하므로 프론트가 상태를 폴링·표시해야 하고, 워커 실패(last_error)를 설정 화면 scope-link 로만 볼 수 있다. 사용자 고지 필요",
+    "outbox 순서·멱등: prompt:create 는 project:create 완료(scope_project_id 확보) 뒤에만 성공한다. 워커가 선행 미완료면 재시도 지연하도록 계약해야 하고, Scope API 가 외부 멱등 키를 지원하는지 미확인이라 재시도 시 중복 Scope 프롬프트 위험",
+    "데이터 정리 계약 공백: 프롬프트 완전삭제·프로젝트 삭제 후 rd·ing 이력 제거를 적재기가 해야 하는데 judgment_change 에 이를 명시하는 payload 규약이 없다. 없으면 삭제한 프롬프트 이력이 대시보드 지표에 계속 남아 현행(즉시 소급 변경)과 달라진다",
+    "known diff: lifecycle-impact 의 answers(미러 전체 → served)·mentions(엔티티 행 → 표시 브랜드 행) 단위가 바뀐다. 팝업 숫자가 현행보다 작게 보이므로 문구 조정과 1회 고지",
+    "10배 성능: app 표는 프로젝트 단위 소량이라 전부 low(프로젝트·프롬프트 폭 10배여도 단일 프로젝트 쿼리 행 수는 페이지 크기로 제한). medium 1건: lifecycle-impact 는 프롬프트 1개의 전 회차 answer 를 answer_prompt_idx 로 모든 leaf 에서 훑고 answer_brand·citation 을 PK 접두 조인한다(10배에서 프롬프트당 수천 answer 추정, 실측 없음). scope-link 는 최신 회차 1개로 한정해 low. 판정은 RDS 실데이터 게이트",
+    "화면당 동시 호출(G-25): 설정 화면이 엔진·owned base·경쟁사·차종·URL·이력·scope-link 를 따로 부르면 5개 초과. GET /settings 묶음 1회 + (admin) scope-link 로 2회 이내 유지",
+    "병행 운영(A13) 쓰기 이원화: 전환 전 현행(Supabase)과 신규(RDS)가 같은 프로젝트를 각각 쓰면 멤버·프롬프트가 갈라진다. 화면 그룹 단위 원자 전환과 전환 시점 동결 필요",
+    "access_audit_log 월 파티션 미생성 시 쓰기 트랜잭션 전체가 실패한다(감사를 같은 트랜잭션에 넣는 설계의 대가). 파티션 선생성 감시 필요",
+    "권한 변경(운영자 global 스코프 대조 추가)은 현행보다 좁아지는 변경이라 기존 global 운영자 일부가 스코프 밖 프로젝트 실행을 못 하게 된다. 전환 전 영향 사용자 목록 확인",
+    "PgBouncer transaction 모드에서 세션 SET 을 쓰면 GUC 가 다른 요청으로 새어 app.actor_id 가 오염될 수 있다(Supavisor 세션 GUC 누출 전례). SET LOCAL 만 허용하는 코드 리뷰 가드"
+  ],
+  "doc": "# 프로젝트 모듈 설계 (PJ-1 ~ PJ-4)\n\n작성: 모듈 설계 리드 · 기준: DESIGN-CONTRACT v2, DB-v2.sql(2026-09-27) · 현행 코드: hmg-geo 통합 프리뷰 7639b9e\n\n## 1. 개요\n\n프로젝트 모듈은 고객 프로젝트(app.project kind='customer')의 생애주기를 다룬다: 프로젝트 본체(PJ-1), 멤버십(PJ-2), 프롬프트와 측정 실행(PJ-3), 설정(PJ-4). 집계 지표(M01~M12)를 계산하지 않는 app 스키마 CRUD 모듈이며, rd 를 읽는 곳은 프롬프트 영향 미리보기(PJ-3)와 Scope 연결 진단(PJ-4) 두 곳뿐이다.\n\n설계 결론 요약:\n- Scope 반영(프로젝트 생성·수정·삭제, 프롬프트 발행·중지·재개·삭제, 엔진 스케줄)은 전부 `app.scope_outbox` 비동기 적재다. API 는 외부 HTTP 를 동기 호출하지 않는다(계약 §5, DB-앱-도메인.md:42).\n- 판정 입력 변경은 `app.judgment_change` 로 적재기에 넘긴다. app.project·app.prompt 는 DDL 주석이 트리거 몫으로 선언했고, 나머지(tracked_*, owned_base, tracked_url)는 API 가 명시 INSERT 한다.\n- PJ-4 는 단위 산출물이 비어 있어(더미 \"test\") 설계 리드 보충 초안이다. 단위 설계 재실행이 필요하다.\n\n## 2. 단위 정합 결과(주요)\n\n| 쟁점 | 결정 |\n| --- | --- |\n| ai_engines 소유 | PJ-4 PUT /settings/engines. Owner ∧ 운영자 이중 게이트(현행 setting/_actions.ts:255) |\n| domain | PATCH 불가. owned base 첫 행 파생(setting/_actions.ts:144), 생성 시에만 입력 → owned_base 시드 |\n| country_code | 불변(현행 patch 필드에 없음, setting/_actions.ts:156-164) |\n| Scope 전파 | outbox 비동기 확정(PJ-3 open 1 해소) |\n| scope-link | PJ-1 → PJ-4, admin 전용(setting/page.tsx:62). 제안 인덱스 기각(rd.job 비파티션, served 는 HOT 금지 열) |\n| 역할 변경 | PJ-2 PATCH /members/{user_id} |\n| 초대 배지 | PJ-2 GET /v1/me/project-invites |\n| 단순 삭제 | draft ∧ scope_prompt_id NULL 만(권장, 제품 확인) |\n| 완전 삭제 | soft delete + outbox(prompt:delete) + 적재기 정리. 공유 행이 있으면 로컬만 |\n| status | 6값(draft·queued·running·done·failed·paused, schema.ts:335-342) + CHECK 제안 |\n| 은퇴 축 | list_type·depth·funnel·brand_presence 는 프로젝트 API 에서 비노출(커스텀 필드로 이관됨) |\n| 봉투 | data:{items,next_cursor}, meta 는 계약 형태 고정(분석 필드 null), 오류 = status + {error:{code,message}} |\n| 비멤버 | 404(존재 은닉), 수준 미달 403 |\n| 범위 밖 | tracked keyword·후보 생성 → Intent, Owner 승계 → 관리자 모듈 |\n\n## 3. 엔드포인트 명세\n\n### PJ-1 프로젝트 (`/v1/projects`)\n- `GET /v1/projects?q=&cursor=&limit=`(기본 50, 최대 100): kind='customer'. 비관리자는 `project_member(status='active')` JOIN(project_member_user_idx), admin 은 JOIN 없음(현행 projects/page.tsx:40-41). 정렬 (created_at DESC, project_id DESC) 키셋. 항목: project_id, name, description, domain, brand_code, country_code, scope_project_id, ga4_property_id, ai_engines, my_role, created_by, created_at, updated_at.\n- `POST /v1/projects`: body {name, description?, domain?, brand_code?, country_code, ai_engines[1..]}. 게이트 canCreateProject(operator=global 또는 admin, operator-policy.ts:21) + 국가·브랜드 스코프 검증(scope-policy.ts:286). 한 트랜잭션: INSERT app.project → INSERT project_member(owner, active, accepted_at=now()) → domain 있으면 owned_base 1행 + resync_project_domain → INSERT project_engine_history(첫 행) → outbox(project:create, payload{project_id,name,domain,brand_code,country_code}) → outbox(schedule:set_targets, {engines}). 201.\n- `GET /v1/projects/{id}`: 상세 + my_role + scope_linked(bool). require_project(member).\n- `PATCH /v1/projects/{id}`: {name?, description?, brand_code?, ga4_property_id?(숫자만, setting/_actions.ts:188-196)}. require_project(owner). brand_code 변경 시 rebuild_tracked_brand, outbox(project:update). project_setting judgment_change 는 트리거 몫.\n- `DELETE /v1/projects/{id}`: body {confirm_name}. require_project(owner). SELECT ... FOR UPDATE → 이름 대조(불일치 409 name_mismatch) → DELETE app.project(FK CASCADE, DB-v2.sql:121-176) → outbox(project:delete, {scope_project_id}) → access_audit(data_access). 204.\n\n### PJ-2 멤버\n- `GET /v1/projects/{id}/members`: pending+active, 정렬 role(owner 먼저), invited_at. user_account 2회 PK 조인(email, display_name, invited_by_email). require_project(member).\n- `POST /members` {email}: 가입자 없음 404 invitee_not_found, 본인 400 self_invite, 기존 409 already_member. INSERT(viewer, pending) + member_audit(invite, 'role=viewer'). require_project(owner). 이메일 발송 없음(현행 Q5(a) member/_actions.ts:113-114 계승, 열린 질문).\n- `PATCH /members/{user_id}` {role}: FOR UPDATE, active 만(409 not_active), 같은 역할 409, 강등 시 활성 owner 수 ≤1 이면 409 last_owner_cannot_demote. + member_audit(promote|demote).\n- `DELETE /members/{user_id}`: 본인 400, owner 409 cannot_remove_owner(현행 member/_actions.ts:159-164), pending→cancel_invite, active→remove. 204.\n- `POST /members/me:accept`, `POST /members/me:reject`: UPDATE/DELETE ... WHERE user_id=세션 AND status='pending', 0행이면 404 no_pending_invite. + member_audit(accept|reject).\n- `GET /v1/projects/{id}/member-audit?cursor=&limit=`(기본 20, 최대 200): (created_at DESC, audit_id DESC) 키셋. 제안 인덱스 필요.\n- `GET /v1/me/project-invites`: project_member_user_idx(user_id, status='pending') + app.project 이름.\n\n### PJ-3 프롬프트\n- 후보: `GET /prompt-candidates`, `POST /prompt-candidates:select` {candidate_ids[]}(승격, 후보 유지), `DELETE /prompt-candidates/{cid}`, `POST /prompt-candidates:bulkDelete`.\n- `GET /prompts?status[]=&kind=&q=&field_id=&field_value=&cursor=&limit=`: prompt_project_live_idx(project_id, created_at) 키셋, 태그값은 prompt_id = ANY(:page_ids) 로 1회 조립. 항목: prompt_id, text, kind, status, brand_code, category, prompt_type, lang, regions, scope_prompt_id, created_at, updated_at, tags{field_id: value}.\n- `POST /prompts` {text}(줄바꿈 분리), `PATCH /prompts/{pid}`(text 는 draft 만, 409 prompt_not_draft), `DELETE /prompts/{pid}`(draft ∧ 미발행만).\n- `GET /prompts/{pid}/lifecycle-impact`(Owner, api_ro): 아래 §6 쿼리. scope_prompt_id NULL 이면 전부 0.\n- `POST /prompts/{pid}:pause`(Owner): status ∈ {queued,running,done,failed} 만, 공유 행 >0 이면 409 shared_prompt(현행 :283-291). outbox(prompt:disable) + status='paused' + access_audit.\n- `POST /prompts/{pid}:resume`(operate): paused 만, outbox(prompt:enable) + status='done'(현행 :339).\n- `POST /prompts/{pid}:hardDelete`(Owner): 공유 0 이면 outbox(prompt:delete; paused 가 아니면 disable 선행 의미 포함) + deleted_at=now(); 공유 >0 이면 deleted_at 만. 트리거가 judgment_change('catalog', 옛 scope_prompt_id) 를 남기고 적재기가 rd·ing 정리.\n- `POST /prompts:execute`(operate): 대상 = draft ∪ (queued ∧ scope_prompt_id NULL ∧ 미완료 outbox 없음). FOR UPDATE → 각 행 outbox(prompt:create, {prompt_id, text, brand_code, category, lang, regions, kind}) → status='queued'. 대상 0 이면 409. 202 {queued, skipped_pending}.\n- `GET /prompts:export`(member, xlsx 스트림, access_audit download), `POST /prompts:import`(Owner, multipart, 행 상한 제안 5,000: 현행 상한 미확인).\n- 커스텀 태그: `GET/POST /prompt-fields`, `:archive`, `:restore`, `DELETE`, `PUT /prompts/{pid}/fields/{fid}`, `POST /prompt-fields/{fid}:bulkSet`, `DELETE /prompts/{pid}/fields/{fid}`. 예약어는 API 상수(현행 RESERVED_FIELD_LABELS prompt/_actions.ts:681-686), UNIQUE(project_id, label) 위반은 409 duplicate.\n\n### PJ-4 설정 (`/v1/projects/{id}/settings`, 보충 초안)\n- `GET /settings`(member): {engines, owned_bases[], brand_aliases, competitors[](is_target 포함), vehicles[], tracked_url_count}. 설정 화면 호출 수 억제용 묶음.\n- `PUT /settings/engines` {engines[]}(owner_and_operate): 어휘 정규화(lib/scope/engines.ts:45 계승), 변경 시 UPDATE ai_engines + engine_history INSERT + outbox(schedule:set_targets, {engines, reenable}), 같으면 no-op. 0개 = 수집 중단(현행 계승). 응답 {engines, changed}.\n- `GET /settings/engines/history`.\n- `POST /settings/owned-bases` {base_url, label?}, `DELETE /settings/owned-bases?base_norm=`: + resync_project_domain + judgment_change('project_owned_base') + outbox(project:update).\n- `GET/POST /settings/tracked-urls`, `DELETE ?url_norm=`, `:export`, `:import`: + judgment_change('project_target_url').\n- `PUT /settings/brand-aliases` {brand_code, aliases[]}: 현재 brand_code 와 일치할 때만 반영(setting/_actions.ts:204-225), rebuild_tracked_brand + judgment_change('project_setting').\n- `POST /settings/competitors`, `DELETE ?brand_name=`, `PUT /settings/competitors/target` {brand_name|null}(judgment_change 없음, 현행 :443-455).\n- `POST /settings/vehicles`(브랜드를 경쟁사에 자동 등록, 프로젝트 브랜드 제외: 현행 :478-493), `DELETE ?brand=&model=`.\n- `GET /settings/scope-link`(admin): 아래 §6.\n\n## 4. 공통 구성요소\n- 라우터: `modules/projects/{router, deps, schemas, errors, sql/, repo/, xlsx}`. 정적 세그먼트 경로를 {id} 경로보다 먼저 선언.\n- 연결: `ro_conn`(api_ro, 읽기 전용·5s) / `rw_tx`(api_rw, BEGIN + SET LOCAL app.actor_id·statement_timeout·request_id). rd 조회는 ro_conn 만.\n- 권한: `require_project(level)` = member | owner | operate | owner_and_operate. admin 우회, 비멤버·루트 404, 미달 403, operate 의 global 분기 스코프 대조.\n- 헬퍼: enqueue_scope, enqueue_judgment, member_audit, access_audit, rebuild_tracked_brand, resync_project_domain, count_shared_scope_prompt, 커서 코덱, xlsx 유틸.\n- 모델: CrudMeta, Envelope[T], Page[T], ErrorBody 와 도메인 모델(§3). ProjectPatch 는 extra='forbid'.\n\n## 5. 읽기 스키마\n- app: project, project_member, project_engine_history, project_owned_base, project_tracked_url·brand·competitor·vehicle, prompt_candidate, prompt, project_custom_field, prompt_custom_field_value, member_audit_log, scope_outbox, judgment_change(INSERT), user_account, brand, access_audit_log(INSERT).\n- rd(api_ro): dim_project, dim_prompt, cycle, job, answer, answer_brand, citation.\n- 제안(채택): `member_audit_project_idx (project_id, created_at DESC)`, `scope_outbox_aggregate_idx (aggregate, aggregate_id, created_at DESC)`, `app.prompt.status` CHECK 6값, `member_audit_log.action` CHECK. 전부 인덱스·제약이라 D8 무관.\n- 제안(기각): rd.job (project_key, measured_at DESC) INCLUDE (served): HOT 규율 위반, 전제 오류.\n- DB 선행 요청: ① app.project·app.prompt 트리거 본문(DB-v2.sql:120·156 주석만, 전 프로젝트 대상, batch_id GUC) ② outbox 워커 열 GRANT(scope_outbox 상태 열, project.scope_project_id, prompt.scope_prompt_id·status).\n\n## 6. rd 쿼리(2곳)\n\nlifecycle-impact(:pk = rd.dim_prompt WHERE prompt_id = :scope_prompt_id):\n```sql\nWITH a AS (SELECT round_date, answer_key FROM rd.answer WHERE surface = 3 AND prompt_key = :pk)\nSELECT (SELECT count(*) FROM a) AS answers,\n       (SELECT count(*) FROM a JOIN rd.answer_brand b ON b.surface = 3 AND b.round_date = a.round_date AND b.answer_key = a.answer_key) AS mentions,\n       (SELECT count(*) FROM a JOIN rd.citation c ON c.surface = 3 AND c.round_date = a.round_date AND c.answer_key = a.answer_key) AS citations;\n```\nshared_rows 는 app.prompt(prompt_scope_idx) 에서 별도 조회.\n\nscope-link:\n```sql\nSELECT project_key FROM rd.dim_project WHERE scope_project_id = :sp;                 -- UNIQUE\nSELECT round_date FROM rd.cycle WHERE project_key = :pk ORDER BY round_date DESC LIMIT 1;  -- cycle_project_idx\nSELECT count(*) AS jobs, count(*) FILTER (WHERE served) AS served, max(measured_at) AS last_measured_at\n  FROM rd.job WHERE surface = 3 AND round_date = :rd AND project_key = :pk;          -- job_round_idx 접두\nSELECT op, attempts, next_attempt_at, done_at, last_error FROM app.scope_outbox\n WHERE aggregate = 'project' AND aggregate_id = :project_id ORDER BY created_at DESC LIMIT 5;  -- 제안 인덱스\n```\nstate: unlinked | pending_link | link_error | no_data | partial(served < jobs) | healthy.\n\n## 7. 권한\n| 동작 | 게이트 |\n| --- | --- |\n| 목록 | 로그인(비관리자는 활성 멤버십 한정) |\n| 생성 | operator=global 또는 admin + 국가·브랜드 스코프 |\n| 상세·멤버 목록·감사·설정 조회·export | 활성 멤버 또는 admin |\n| 수정·삭제·멤버 관리·프롬프트 CRUD·pause·hardDelete·태그·owned base·URL·경쟁사·차종 | 활성 Owner 또는 admin |\n| execute·resume | 운영자(canOperateProject + global 스코프 대조) |\n| engines | Owner ∧ 운영자 |\n| accept·reject | 초대 대상 본인 |\n| scope-link | admin |\n\n## 8. 성능(10배 가정)\n- app 표 경로: 단일 프로젝트 행 수(멤버 수십, 프롬프트 수백~수천 추정, 미확인)라 폭 10배에도 페이지당 O(limit). 전부 low.\n- lifecycle-impact: medium. 프롬프트 1개의 전 회차 answer 를 answer_prompt_idx 로 surface=3 전 leaf 에서 찾고 PK 접두 조인. 새 인덱스 없이 가능하나 실측 필요.\n- scope-link: 최신 회차 1개 한정이라 low.\n- 설정 화면: 묶음 GET 으로 2회 이내(G-25).\n- D8: 사전 집계·캐시 없음. count 는 조회 시 계산.\n\n## 9. 대조 방법\n- 이 모듈은 F01~F07 지표 하네스 대상이 아니다. 계약 테스트로 대조한다: 현행 테스트(member/_actions.test.ts, _actions.audit.test.ts, prompt/_actions.execute.test.ts, prompt/_actions.custom-fields.test.ts, setting/_actions.test.ts·_actions.tracked.test.ts·_actions.engines.test.ts)의 불변식을 pytest API 테스트로 이식.\n- 섀도 비교(읽기): 샘플 사용자별 프로젝트 목록 집합, 프로젝트별 멤버 집합·역할, 프롬프트 수·상태 분포, 커스텀 태그값, owned base·추적 URL·경쟁사·차종 집합을 현행 DB 와 신규 DB 에서 뽑아 일치 확인(이관 검증).\n- lifecycle-impact 는 현행 promptImpact(scope-mirror.ts:567) 와 비교하되 단위 변경(answers·mentions)을 mig.known_diff 로 등록.\n- 비동기 경로: 스테이징에서 생성 → outbox 드레인 → scope_project_id 회수 → execute → scope_prompt_id 회수까지 E2E 단언.\n\n## 10. 열린 질문\n1. 워커 계약: outbox op 어휘·payload 스키마, 순서(프로젝트 링크 전 프롬프트 create 지연), Scope 멱등 키 지원 여부(미확인).\n2. 완전삭제·프로젝트 삭제 후 rd·ing 정리를 judgment_change 에 어떻게 표현할지(kind 신설 또는 payload 규약), soft delete 행의 물리 정리 시점.\n3. 단순 삭제를 draft ∧ 미발행으로 좁히는 것에 대한 제품 확인.\n4. 초대 이메일 실제 발송 여부(현행은 발송 없음).\n5. 관리자 승계 액션의 member_audit_log.action 값(미확인)과 CHECK 목록.\n6. 운영자 global 스코프 대조 도입 시 영향 사용자 목록.\n7. import 행 상한(현행 상한 미확인).\n8. PJ-4 는 보충 초안이므로 단위 설계자가 query_design·perf 를 재작성해야 한다.\n9. 엔진 어휘를 rd.dim_engine 코드와 일치시킬지(현행 lib/scope/engines.ts 상수 계승 여부)."
+}

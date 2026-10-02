@@ -1,0 +1,16 @@
+[Unit]
+Description=hmg-geo summary generation poll (every 30 min)
+Documentation=https://github.com/Kongventures/hmg-geo
+
+[Timer]
+# 30분 폴링 (설계 v4.1 §7-2). 회차가 안 열려 있으면 `--pending` 이 0건으로 즉시 끝난다.
+OnCalendar=*:00,30
+# 미러 동기화 크론(*/20)의 회차 관제 쓰기와 정면으로 겹치지 않게 살짝 흩는다.
+RandomizedDelaySec=180
+AccuracySec=30s
+# 인스턴스가 꺼져 있던 사이 놓친 창은 부팅 직후 1회만 따라잡는다.
+Persistent=true
+Unit=hmg-summary.service
+
+[Install]
+WantedBy=timers.target

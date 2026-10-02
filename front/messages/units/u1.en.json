@@ -1,0 +1,20 @@
+{
+  "apiError": {
+    "session": "Your session has expired. Please sign in again.",
+    "qaSession": "Your review session has expired. Please enter your name and password again.",
+    "forbidden": "You do not have access to this menu.",
+    "permission": "You do not have permission to do this.",
+    "notFound": "The requested item was not found.",
+    "cursorStale": "The data was updated, so the list is reloading from the first page.",
+    "conflict": "This conflicts with another change. Refresh and try again.",
+    "invalid": "The request contains an invalid value.",
+    "tooLarge": "The file is larger than allowed.",
+    "uploadLimit": "Files up to {limitMb} MB can be uploaded.",
+    "unsupportedMedia": "This file type is not supported.",
+    "rateLimited": "Too many requests. Please try again shortly.",
+    "timeout": "The response is taking too long. Please try again shortly.",
+    "unavailable": "The service is temporarily unavailable. Please try again shortly.",
+    "internal": "An unexpected error occurred.",
+    "requestId": "Request ID: {requestId}"
+  }
+}

@@ -1,0 +1,993 @@
+[
+ {
+  "brand": "Hyundai",
+  "cc": "MX",
+  "lang": "es",
+  "fs": 1,
+  "langCode": "es",
+  "slug": "hyundai.com.mx",
+  "scope": "Hyundai Mexico"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "US",
+  "lang": "en",
+  "fs": 2,
+  "langCode": "en",
+  "slug": "hyundaiusa.com",
+  "scope": "Hyundai United States"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "CA",
+  "lang": "en",
+  "fs": 3,
+  "langCode": "en",
+  "slug": "hyundaicanada.com",
+  "scope": "Hyundai Canada"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "CA",
+  "lang": "fr",
+  "fs": 4,
+  "langCode": "fr",
+  "slug": "hyundaicanada.com",
+  "scope": "Hyundai Canada"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "KR",
+  "lang": "ko",
+  "fs": 5,
+  "langCode": "ko",
+  "slug": "hyundai.com-kr",
+  "scope": "Hyundai South Korea",
+  "urlNotLike": "hyundai-n.com%"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "IN",
+  "lang": "en",
+  "fs": 6,
+  "langCode": "en",
+  "slug": "hyundai.com-in",
+  "scope": "Hyundai India"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "JP",
+  "lang": "ja",
+  "fs": 7,
+  "langCode": "ja",
+  "slug": "hyundai.com-jp",
+  "scope": "Hyundai Japan"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "CN",
+  "lang": "zh",
+  "fs": 8,
+  "langCode": "zh",
+  "slug": "hyundai.com.cn",
+  "scope": "Hyundai China"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "AU",
+  "lang": "en",
+  "fs": 9,
+  "langCode": "en",
+  "slug": "hyundai.com-au",
+  "scope": "Hyundai Australia"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "NL",
+  "lang": "nl",
+  "fs": 11,
+  "langCode": "nl",
+  "slug": "hyundai.com-nl",
+  "scope": "Hyundai Netherlands"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "NO",
+  "lang": "no",
+  "fs": 12,
+  "langCode": "no",
+  "slug": "hyundai.com-no",
+  "scope": "Hyundai Norway"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "EU",
+  "lang": "en",
+  "fs": 14,
+  "langCode": "en",
+  "slug": "hyundai.com-eu",
+  "scope": "Hyundai Europe"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "DE",
+  "lang": "de",
+  "fs": 15,
+  "langCode": "de",
+  "slug": "hyundai.com-de",
+  "scope": "Hyundai Germany"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "SE",
+  "lang": "sv",
+  "fs": 22,
+  "langCode": "sv",
+  "slug": "hyundai.com-se",
+  "scope": "Hyundai Sweden"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "ES",
+  "lang": "es",
+  "fs": 23,
+  "langCode": "es",
+  "slug": "hyundai.com-es",
+  "scope": "Hyundai Spain"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "SK",
+  "lang": "sk",
+  "fs": 24,
+  "langCode": "sk",
+  "slug": "hyundai.com-sk",
+  "scope": "Hyundai Slovakia"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "GB",
+  "lang": "en",
+  "fs": 27,
+  "langCode": "en",
+  "slug": "hyundai.com-uk",
+  "scope": "Hyundai United Kingdom"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "IT",
+  "lang": "it",
+  "fs": 29,
+  "langCode": "it",
+  "slug": "hyundai.com-it",
+  "scope": "Hyundai Italy"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "CZ",
+  "lang": "cs",
+  "fs": 30,
+  "langCode": "cs",
+  "slug": "hyundai.com-cz",
+  "scope": "Hyundai Czechia"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "TR",
+  "lang": "tr",
+  "fs": 32,
+  "langCode": "tr",
+  "slug": "hyundai.com-tr",
+  "scope": "Hyundai Türkiye"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "PL",
+  "lang": "pl",
+  "fs": 34,
+  "langCode": "pl",
+  "slug": "hyundai.com-pl",
+  "scope": "Hyundai Poland"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "FR",
+  "lang": "fr",
+  "fs": 35,
+  "langCode": "fr",
+  "slug": "hyundai.com-fr",
+  "scope": "Hyundai France"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "CL",
+  "lang": "es",
+  "fs": 38,
+  "langCode": "es",
+  "slug": "hyundai.cl",
+  "scope": "Hyundai Chile"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "BR",
+  "lang": "pt",
+  "fs": 39,
+  "langCode": "pt",
+  "slug": "hyundai.com.br",
+  "scope": "Hyundai Brazil"
+ },
+ {
+  "brand": "Hyundai N",
+  "cc": "KR",
+  "lang": "ko",
+  "fs": 40,
+  "langCode": "ko",
+  "slug": "hyundai-n.com",
+  "scope": "Hyundai South Korea (Hyundai N)"
+ },
+ {
+  "brand": "Hyundai N",
+  "cc": "worldwide",
+  "lang": "en",
+  "fs": 41,
+  "langCode": "en",
+  "slug": "hyundai-n.com",
+  "scope": "Hyundai Worldwide (Hyundai N)"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "worldwide",
+  "lang": "en",
+  "fs": 41,
+  "langCode": "en",
+  "slug": "hyundai.com-worldwide",
+  "scope": "Hyundai Worldwide",
+  "urlNotLike": "hyundai-n.com%"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "worldwide",
+  "lang": "ko",
+  "fs": 42,
+  "langCode": "ko",
+  "slug": "hyundai.com-worldwide",
+  "scope": "Hyundai Worldwide",
+  "urlNotLike": "hyundai-n.com%"
+ },
+ {
+  "brand": "Genesis",
+  "cc": "CA",
+  "lang": "en",
+  "fs": 45,
+  "langCode": "en",
+  "slug": "genesis.com-ca",
+  "scope": "Genesis Canada"
+ },
+ {
+  "brand": "Genesis",
+  "cc": "CA",
+  "lang": "fr",
+  "fs": 46,
+  "langCode": "fr",
+  "slug": "genesis.com-ca",
+  "scope": "Genesis Canada"
+ },
+ {
+  "brand": "Genesis",
+  "cc": "KR",
+  "lang": "ko",
+  "fs": 47,
+  "langCode": "ko",
+  "slug": "genesis.com-kr",
+  "scope": "Genesis South Korea"
+ },
+ {
+  "brand": "Genesis",
+  "cc": "MIDDLEEAST",
+  "lang": "ar",
+  "fs": 48,
+  "langCode": "ar",
+  "slug": "genesis.com-middleeast",
+  "scope": "Genesis Middle East"
+ },
+ {
+  "brand": "Genesis",
+  "cc": "CN",
+  "lang": "zh",
+  "fs": 49,
+  "langCode": "zh",
+  "slug": "genesis.com.cn",
+  "scope": "Genesis China"
+ },
+ {
+  "brand": "Genesis",
+  "cc": "AU",
+  "lang": "en",
+  "fs": 50,
+  "langCode": "en",
+  "slug": "genesis.com-au",
+  "scope": "Genesis Australia"
+ },
+ {
+  "brand": "Genesis",
+  "cc": "DE",
+  "lang": "de",
+  "fs": 51,
+  "langCode": "de",
+  "slug": "genesis.com-de",
+  "scope": "Genesis Germany"
+ },
+ {
+  "brand": "Genesis",
+  "cc": "GB",
+  "lang": "en",
+  "fs": 52,
+  "langCode": "en",
+  "slug": "genesis.com-uk",
+  "scope": "Genesis United Kingdom"
+ },
+ {
+  "brand": "Genesis",
+  "cc": "IT",
+  "lang": "it",
+  "fs": 53,
+  "langCode": "it",
+  "slug": "genesis.com-it",
+  "scope": "Genesis Italy"
+ },
+ {
+  "brand": "Genesis",
+  "cc": "CH",
+  "lang": "fr",
+  "fs": 54,
+  "langCode": "fr",
+  "slug": "genesis.com-ch",
+  "scope": "Genesis Switzerland"
+ },
+ {
+  "brand": "Genesis",
+  "cc": "worldwide",
+  "lang": "en",
+  "fs": 56,
+  "langCode": "en",
+  "slug": "genesis.com-worldwide",
+  "scope": "Genesis Worldwide"
+ },
+ {
+  "brand": "Kia",
+  "cc": "MX",
+  "lang": "es",
+  "fs": 59,
+  "langCode": "es",
+  "slug": "kia.com-mx",
+  "scope": "Kia Mexico"
+ },
+ {
+  "brand": "Kia",
+  "cc": "US",
+  "lang": "en",
+  "fs": 60,
+  "langCode": "en",
+  "slug": "kia.com-us",
+  "scope": "Kia United States"
+ },
+ {
+  "brand": "Kia",
+  "cc": "US",
+  "lang": "es",
+  "fs": 61,
+  "langCode": "es",
+  "slug": "kia.com-us",
+  "scope": "Kia United States"
+ },
+ {
+  "brand": "Kia",
+  "cc": "CA",
+  "lang": "en",
+  "fs": 63,
+  "langCode": "en",
+  "slug": "kia.ca",
+  "scope": "Kia Canada"
+ },
+ {
+  "brand": "Kia",
+  "cc": "CA",
+  "lang": "fr",
+  "fs": 64,
+  "langCode": "fr",
+  "slug": "kia.ca",
+  "scope": "Kia Canada"
+ },
+ {
+  "brand": "Kia",
+  "cc": "TW",
+  "lang": "zh",
+  "fs": 65,
+  "langCode": "zh",
+  "slug": "kia.com-tw",
+  "scope": "Kia Taiwan"
+ },
+ {
+  "brand": "Kia",
+  "cc": "KR",
+  "lang": "ko",
+  "fs": 66,
+  "langCode": "ko",
+  "slug": "kia.com-kr",
+  "scope": "Kia South Korea"
+ },
+ {
+  "brand": "Kia",
+  "cc": "IN",
+  "lang": "en",
+  "fs": 69,
+  "langCode": "en",
+  "slug": "kia.com-in",
+  "scope": "Kia India"
+ },
+ {
+  "brand": "Kia",
+  "cc": "ID",
+  "lang": "id",
+  "fs": 70,
+  "langCode": "id",
+  "slug": "kia.com-id",
+  "scope": "Kia Indonesia"
+ },
+ {
+  "brand": "Kia",
+  "cc": "CN",
+  "lang": "zh",
+  "fs": 71,
+  "langCode": "zh",
+  "slug": "kia.cn",
+  "scope": "Kia China"
+ },
+ {
+  "brand": "Kia",
+  "cc": "TH",
+  "lang": "th",
+  "fs": 72,
+  "langCode": "th",
+  "slug": "kia.com-th",
+  "scope": "Kia Thailand"
+ },
+ {
+  "brand": "Kia",
+  "cc": "AU",
+  "lang": "en",
+  "fs": 73,
+  "langCode": "en",
+  "slug": "kia.com-au",
+  "scope": "Kia Australia"
+ },
+ {
+  "brand": "Kia",
+  "cc": "GR",
+  "lang": "el",
+  "fs": 74,
+  "langCode": "el",
+  "slug": "kia.com-gr",
+  "scope": "Kia Greece",
+  "urlNotLike": "kia.com/eu%"
+ },
+ {
+  "brand": "Kia",
+  "cc": "NL",
+  "lang": "nl",
+  "fs": 75,
+  "langCode": "nl",
+  "slug": "kia.com-nl",
+  "scope": "Kia Netherlands"
+ },
+ {
+  "brand": "Kia",
+  "cc": "NO",
+  "lang": "no",
+  "fs": 76,
+  "langCode": "no",
+  "slug": "kia.com-no",
+  "scope": "Kia Norway"
+ },
+ {
+  "brand": "Kia",
+  "cc": "DK",
+  "lang": "da",
+  "fs": 77,
+  "langCode": "da",
+  "slug": "kia.com-dk",
+  "scope": "Kia Denmark"
+ },
+ {
+  "brand": "Kia",
+  "cc": "DE",
+  "lang": "de",
+  "fs": 78,
+  "langCode": "de",
+  "slug": "kia.com-de",
+  "scope": "Kia Germany"
+ },
+ {
+  "brand": "Kia",
+  "cc": "SE",
+  "lang": "sv",
+  "fs": 86,
+  "langCode": "sv",
+  "slug": "kia.com-se",
+  "scope": "Kia Sweden"
+ },
+ {
+  "brand": "Kia",
+  "cc": "ES",
+  "lang": "es",
+  "fs": 87,
+  "langCode": "es",
+  "slug": "kia.com-es",
+  "scope": "Kia Spain"
+ },
+ {
+  "brand": "Kia",
+  "cc": "SK",
+  "lang": "sk",
+  "fs": 88,
+  "langCode": "sk",
+  "slug": "kia.com-sk",
+  "scope": "Kia Slovakia"
+ },
+ {
+  "brand": "Kia",
+  "cc": "EE",
+  "lang": "et",
+  "fs": 91,
+  "langCode": "et",
+  "slug": "kia.ee",
+  "scope": "Kia Estonia"
+ },
+ {
+  "brand": "Kia",
+  "cc": "GB",
+  "lang": "en",
+  "fs": 92,
+  "langCode": "en",
+  "slug": "kia.com-uk",
+  "scope": "Kia United Kingdom"
+ },
+ {
+  "brand": "Kia",
+  "cc": "UA",
+  "lang": "uk",
+  "fs": 94,
+  "langCode": "uk",
+  "slug": "kia.com-ua",
+  "scope": "Kia Ukraine"
+ },
+ {
+  "brand": "Kia",
+  "cc": "IT",
+  "lang": "it",
+  "fs": 95,
+  "langCode": "it",
+  "slug": "kia.com-it",
+  "scope": "Kia Italy"
+ },
+ {
+  "brand": "Kia",
+  "cc": "CZ",
+  "lang": "cs",
+  "fs": 96,
+  "langCode": "cs",
+  "slug": "kia.com-cz",
+  "scope": "Kia Czechia"
+ },
+ {
+  "brand": "Kia",
+  "cc": "KZ",
+  "lang": "ru",
+  "fs": 97,
+  "langCode": "ru",
+  "slug": "kia.com.kz",
+  "scope": "Kia Kazakhstan"
+ },
+ {
+  "brand": "Kia",
+  "cc": "TR",
+  "lang": "tr",
+  "fs": 99,
+  "langCode": "tr",
+  "slug": "kia.com-tr",
+  "scope": "Kia Türkiye"
+ },
+ {
+  "brand": "Kia",
+  "cc": "PL",
+  "lang": "pl",
+  "fs": 101,
+  "langCode": "pl",
+  "slug": "kia.com-pl",
+  "scope": "Kia Poland"
+ },
+ {
+  "brand": "Kia",
+  "cc": "FR",
+  "lang": "fr",
+  "fs": 102,
+  "langCode": "fr",
+  "slug": "kia.com-fr",
+  "scope": "Kia France"
+ },
+ {
+  "brand": "Kia",
+  "cc": "FI",
+  "lang": "fi",
+  "fs": 103,
+  "langCode": "fi",
+  "slug": "kia.com-fi",
+  "scope": "Kia Finland"
+ },
+ {
+  "brand": "Kia",
+  "cc": "HU",
+  "lang": "hu",
+  "fs": 104,
+  "langCode": "hu",
+  "slug": "kia.com-hu",
+  "scope": "Kia Hungary"
+ },
+ {
+  "brand": "Kia",
+  "cc": "IL",
+  "lang": "he",
+  "fs": 106,
+  "langCode": "he",
+  "slug": "kia-israel.co.il",
+  "scope": "Kia Israel"
+ },
+ {
+  "brand": "Kia",
+  "cc": "worldwide",
+  "lang": "ko",
+  "fs": 107,
+  "langCode": "ko",
+  "slug": "worldwide.kia.com",
+  "scope": "Kia Worldwide"
+ },
+ {
+  "brand": "Kia",
+  "cc": "worldwide",
+  "lang": "en",
+  "fs": 108,
+  "langCode": "en",
+  "slug": "worldwide.kia.com",
+  "scope": "Kia Worldwide"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "CPO",
+  "lang": "ko",
+  "fs": 109,
+  "langCode": "ko",
+  "slug": "certified.hyundai.com",
+  "scope": "Hyundai Certified Pre-Owned"
+ },
+ {
+  "brand": "Genesis",
+  "cc": "BH",
+  "lang": "en",
+  "fs": 110,
+  "langCode": "en",
+  "slug": "genesis.com-bh",
+  "scope": "Genesis Bahrain"
+ },
+ {
+  "brand": "Genesis",
+  "cc": "KW",
+  "lang": "en",
+  "fs": 111,
+  "langCode": "en",
+  "slug": "genesis.com-kw",
+  "scope": "Genesis Kuwait"
+ },
+ {
+  "brand": "Genesis",
+  "cc": "OM",
+  "lang": "en",
+  "fs": 112,
+  "langCode": "en",
+  "slug": "genesis.com-om",
+  "scope": "Genesis Oman"
+ },
+ {
+  "brand": "Genesis",
+  "cc": "QA",
+  "lang": "en",
+  "fs": 113,
+  "langCode": "en",
+  "slug": "genesis.com-qa",
+  "scope": "Genesis Qatar"
+ },
+ {
+  "brand": "Genesis",
+  "cc": "SA-Dammam",
+  "lang": "en",
+  "fs": 114,
+  "langCode": "en",
+  "pathSeg": "sa-dammam",
+  "urlLike": "genesis.com/sa-dammam%",
+  "slug": "genesis.com-sa-dammam",
+  "scope": "Genesis Saudi Arabia Dammam"
+ },
+ {
+  "brand": "Genesis",
+  "cc": "MIDDLEEAST",
+  "lang": "en",
+  "fs": 115,
+  "langCode": "en",
+  "slug": "genesis.com-middleeast",
+  "scope": "Genesis Middle East"
+ },
+ {
+  "brand": "Genesis",
+  "cc": "SA-Jeddah",
+  "lang": "en",
+  "fs": 116,
+  "langCode": "en",
+  "pathSeg": "sa-jeddah",
+  "urlLike": "genesis.com/sa-jeddah%",
+  "slug": "genesis.com-sa-jeddah",
+  "scope": "Genesis Saudi Arabia Jeddah"
+ },
+ {
+  "brand": "Genesis",
+  "cc": "SA-Riyadh",
+  "lang": "en",
+  "fs": 117,
+  "langCode": "en",
+  "pathSeg": "sa-riyadh",
+  "urlLike": "genesis.com/sa-riyadh%",
+  "slug": "genesis.com-sa-riyadh",
+  "scope": "Genesis Saudi Arabia Riyadh"
+ },
+ {
+  "brand": "Genesis",
+  "cc": "AE",
+  "lang": "en",
+  "fs": 118,
+  "langCode": "en",
+  "slug": "genesis.com-ae",
+  "scope": "Genesis United Arab Emirates"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "ID",
+  "lang": "en",
+  "fs": 119,
+  "langCode": "en",
+  "slug": "hyundai.com-id",
+  "scope": "Hyundai Indonesia"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "ID",
+  "lang": "id",
+  "fs": 120,
+  "langCode": "id",
+  "slug": "hyundai.com-id",
+  "scope": "Hyundai Indonesia"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "MY",
+  "lang": "en",
+  "fs": 121,
+  "langCode": "en",
+  "slug": "hyundai.com-my",
+  "scope": "Hyundai Malaysia"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "TH",
+  "lang": "en",
+  "fs": 122,
+  "langCode": "en",
+  "slug": "hyundai.com-th",
+  "scope": "Hyundai Thailand"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "TH",
+  "lang": "th",
+  "fs": 123,
+  "langCode": "th",
+  "slug": "hyundai.com-th",
+  "scope": "Hyundai Thailand"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "PH",
+  "lang": "en",
+  "fs": 124,
+  "langCode": "en",
+  "slug": "hyundai.com-ph",
+  "scope": "Hyundai Philippines"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "PE",
+  "lang": "es",
+  "fs": 125,
+  "langCode": "es",
+  "slug": "hyundai.pe",
+  "scope": "Hyundai Peru"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "PR",
+  "lang": "es",
+  "fs": 126,
+  "langCode": "es",
+  "slug": "hyundaipr.com",
+  "scope": "Hyundai Puerto Rico"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "CO",
+  "lang": "es",
+  "fs": 127,
+  "langCode": "es",
+  "slug": "hyundaicolombia.co",
+  "scope": "Hyundai Colombia"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "MIDDLEEAST",
+  "lang": "en",
+  "fs": 128,
+  "langCode": "en",
+  "slug": "hyundai-me.com",
+  "scope": "Hyundai Middle East"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "MIDDLEEAST",
+  "lang": "ar",
+  "fs": 129,
+  "langCode": "ar",
+  "slug": "hyundai-me.com",
+  "scope": "Hyundai Middle East"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "SA",
+  "lang": "ar",
+  "fs": 130,
+  "langCode": "ar",
+  "slug": "hyundaiksa.com",
+  "scope": "Hyundai Saudi Arabia"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "SA",
+  "lang": "en",
+  "fs": 131,
+  "langCode": "en",
+  "slug": "hyundaiksa.com",
+  "scope": "Hyundai Saudi Arabia"
+ },
+ {
+  "brand": "Kia",
+  "cc": "AT",
+  "lang": "de",
+  "fs": 132,
+  "langCode": "de",
+  "slug": "kia.com-at",
+  "scope": "Kia Austria"
+ },
+ {
+  "brand": "Kia",
+  "cc": "BE",
+  "lang": "fr",
+  "fs": 133,
+  "langCode": "fr",
+  "slug": "kia.com-be",
+  "scope": "Kia Belgium"
+ },
+ {
+  "brand": "Kia",
+  "cc": "IE",
+  "lang": "en",
+  "fs": 134,
+  "langCode": "en",
+  "slug": "kia.com-ie",
+  "scope": "Kia Ireland"
+ },
+ {
+  "brand": "Kia",
+  "cc": "IS",
+  "lang": "is",
+  "fs": 135,
+  "langCode": "is",
+  "slug": "kia.com-is",
+  "scope": "Kia Iceland"
+ },
+ {
+  "brand": "Kia",
+  "cc": "MT",
+  "lang": "en",
+  "fs": 136,
+  "langCode": "en",
+  "slug": "kia.com-mt",
+  "scope": "Kia Malta"
+ },
+ {
+  "brand": "Kia",
+  "cc": "MY",
+  "lang": "en",
+  "fs": 137,
+  "langCode": "en",
+  "slug": "kia.com-my",
+  "scope": "Kia Malaysia"
+ },
+ {
+  "brand": "Kia",
+  "cc": "VN",
+  "lang": "vi",
+  "fs": 138,
+  "langCode": "vi",
+  "slug": "kiavietnam.com.vn",
+  "scope": "Kia Vietnam"
+ },
+ {
+  "brand": "Genesis",
+  "cc": "FR",
+  "lang": "fr",
+  "fs": 139,
+  "langCode": "fr",
+  "slug": "genesis.com-fr",
+  "scope": "Genesis France"
+ },
+ {
+  "brand": "Genesis",
+  "cc": "NL",
+  "lang": "nl",
+  "fs": 140,
+  "langCode": "nl",
+  "slug": "genesis.com-nl",
+  "scope": "Genesis Netherlands"
+ },
+ {
+  "brand": "Kia",
+  "cc": "BE",
+  "lang": "nl",
+  "fs": 141,
+  "langCode": "nl",
+  "slug": "kia.com-be",
+  "scope": "Kia Belgium"
+ },
+ {
+  "brand": "Kia",
+  "cc": "SG",
+  "lang": "en",
+  "fs": 142,
+  "langCode": "en",
+  "slug": "kia.com-sg",
+  "scope": "Kia Singapore"
+ },
+ {
+  "brand": "Hyundai",
+  "cc": "CN-BJ",
+  "lang": "zh",
+  "fs": 143,
+  "langCode": "zh",
+  "slug": "beijing-hyundai.com.cn",
+  "scope": "Hyundai Beijing Hyundai"
+ },
+ {
+  "brand": "Kia",
+  "cc": "PH",
+  "lang": "en",
+  "fs": 144,
+  "langCode": "en",
+  "slug": "kiaphilippines.com",
+  "scope": "Kia Philippines"
+ }
+]

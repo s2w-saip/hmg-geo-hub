@@ -1,0 +1,403 @@
+{
+ "about": "결과 캐시 데우기 대상 = 필터 미지정 기본 화면 호출(대시보드·표준 언급·표준 인용·웹사이트). 조사 stg-perf-investigation 5절 B3 의 34개 중 /v1/funnel/conversion(D3, 캐시 대상 제외)을 뺀 33개 + M2(WU-3 뒤 D1 이 card=true 로 갈라져 언급 탭의 비카드 요약 호출이 따로 선다) = 34개. params 값 목록 = 같은 키 반복(front 가 보내는 순서). src = front 호출 근거 file:line. derive.brand_key_from = 그 호출의 data.brands 로 front candidateBrandKeys(dashboard.ts:481-489 → lib/scope/competitor-row.ts competitorDeltaBrands, 현행 hmg-geo a862208: 우선 노출도 후보 = 언급 상위 10(자사 포함) 안 경쟁사의 평균 순위 순)를 재현해 brand_key(오름차순)를 더한다(빈 집합이면 붙이지 않는다: trend.ts:156). 원천 D2 는 명부 제외 행을 이미 뺀 M-1 이라 제외 키가 붙지 않는다(제외 키를 담은 T-1 은 dropped_filters 로 저장되지 않으므로 정적 brand_key 호출을 두지 않는다). /v1/trend 의 measured_days=false(성능 A1) = front 가 그 값을 보내는 호출(TrendRequest.measuredDays false)과 같은 모양: 결과 캐시 키가 원문 쿼리를 담으므로 빠지면 데우기가 화면 호출과 다른 키를 채운다. card=true(WU-3 카드 경로, CommonFilters.card) = 현행이 집계층 사실표로 읽던 대시보드·웹사이트 호출(D1·D2·D6~D9·W1·W2·W5~W8, 근거 front/lib/hgh/adapters/dashboard.ts 머리 'WU-3 card path'): 결과 캐시 키가 원문 쿼리를 담으므로 front 가 보내는 card 와 같아야 한다. D8·W7 은 기본 화면(기간 없음)이라 붙는다.",
+ "calls": [
+  {
+   "id": "D1",
+   "path": "/v1/kpi/summary",
+   "params": {
+    "surface": "global",
+    "card": "true"
+   },
+   "src": "front/lib/hgh/adapters/summary.ts:83-91(hghGet :89) <- dashboard.ts:179-181 fetchDashboardSummary(card: true) <- dashboard/page.tsx:386; card=true = WU-3 카드 경로(현행 S1.dashboard viaGlobalS1, dashboard.ts 머리 'WU-3 card path'). 언급 탭의 같은 경로 비카드 호출은 M2"
+  },
+  {
+   "id": "D2",
+   "path": "/v1/mentions/brands",
+   "params": {
+    "surface": "global",
+    "top_n": "20",
+    "sort": "mentions",
+    "include": "hmg",
+    "card": "true"
+   },
+   "src": "front/lib/hgh/adapters/dashboard.ts:184-195(hghGet :193) fetchCardBrands(card) <- dashboard.ts:659 loadLiveDashboard·:718 loadCompetitorSources(keptCardBrands); card=true = 현행 KPI #16(S1.dashboard)·경쟁사 값(S1.competitors) 집계층"
+  },
+  {
+   "id": "D4",
+   "path": "/v1/filters/dates",
+   "params": {
+    "surface": "global",
+    "family": "all"
+   },
+   "src": "front/lib/hgh/adapters/filters.ts:400-405(hghGet :404) <- dashboard.ts:288-291 keptDates(family all :290) <- dashboard/page.tsx:302"
+  },
+  {
+   "id": "D5",
+   "path": "/v1/filters/options",
+   "params": {
+    "surface": "global"
+   },
+   "src": "front/lib/hgh/adapters/filters.ts:205-210(hghGet :209) <- dashboard/page.tsx:298 loadPanelOptions; 같은 URL = 언급 M5·인용 C5"
+  },
+  {
+   "id": "D6",
+   "path": "/v1/trend",
+   "params": {
+    "surface": "global",
+    "bucket": "cycle",
+    "dimension": "none",
+    "metrics": [
+     "visibility",
+     "share_of_voice",
+     "sentiment",
+     "position",
+     "citation_share"
+    ],
+    "measured_days": "false",
+    "card": "true"
+   },
+   "src": "front/lib/hgh/adapters/trend.ts:177-199(hghGet :197) <- dashboard.ts:686-700 loadLiveTrend(cycle, OVERVIEW_TREND_METRICS 5, card) <- dashboard/_data/live.ts:673 <- dashboard/page.tsx:389; measured_days=false = dashboard.ts loadLiveTrend(LiveTrend 는 measuredDays 를 읽지 않는다); card=true = 현행 S1.dashboard viaGlobalSeries"
+  },
+  {
+   "id": "D7",
+   "path": "/v1/trend",
+   "params": {
+    "surface": "global",
+    "bucket": "cycle",
+    "dimension": "brand",
+    "metrics": [
+     "visibility",
+     "share_of_voice",
+     "position"
+    ],
+    "top": "20",
+    "split_own": "true",
+    "measured_days": "false",
+    "card": "true"
+   },
+   "src": "front/lib/hgh/adapters/dashboard.ts:724-734 fetchTrend(brandKeys = candidateBrandKeys(D2 응답) dashboard.ts:481-489, trend.ts:193 오름차순, card) <- dashboard/page.tsx:405 loadCompetitorSources; measured_days=false = dashboard.ts loadCompetitorSources(경쟁사 Δ 는 마지막 두 값만); card=true = 현행 S1.competitors viaGlobalSeries",
+   "derive": {
+    "brand_key_from": "D2"
+   }
+  },
+  {
+   "id": "D8",
+   "path": "/v1/citations/domains",
+   "params": {
+    "surface": "global",
+    "limit": "0",
+    "competitor_sources": "true",
+    "card": "true"
+   },
+   "src": "front/lib/hgh/adapters/dashboard.ts:228-241(hghGet :239) fetchDashboardDomains <- dashboard.ts:736 loadCompetitorSources <- dashboard/page.tsx:405; card=true 는 기간 없을 때만(domainsCard): 현행 S3.citation 은 기간 경로가 없어 기간 요청이 미러였다"
+  },
+  {
+   "id": "D9",
+   "path": "/v1/geo",
+   "params": {
+    "surface": "global",
+    "card": "true"
+   },
+   "src": "front/lib/hgh/adapters/dashboard.ts:251-255(hghGet :253) fetchGeo(card) <- dashboard/_data/live.ts:522 loadLiveGeo; card=true = 현행 S1.dashboard viaGlobalS1(GEO)"
+  },
+  {
+   "id": "M1",
+   "path": "/v1/mentions/brands",
+   "params": {
+    "surface": "global",
+    "top_n": "100",
+    "sort": "mentions",
+    "split_own": "true",
+    "include": [
+     "multi",
+     "prompts",
+     "types"
+    ],
+    "full": "true"
+   },
+   "src": "front/lib/hgh/adapters/mentions.ts:107-113 BRANDS_TABLE, :439 fetchMentionBrands(hghGet :145) <- mention/page.tsx:479"
+  },
+  {
+   "id": "M2",
+   "path": "/v1/kpi/summary",
+   "params": {
+    "surface": "global"
+   },
+   "src": "front/lib/hgh/adapters/mentions.ts:200-210 mentionsEssentials(fetchKpiSummary :206, hghGet summary.ts:89) <- mention/page.tsx; 같은 URL = kpi-tab.ts:168 loadKpiHeroSubKpis <- mention/page.tsx:439. card 없음: 답변분석 탭은 WU-3 카드 경로가 아니다(D1 과 서명 분리)"
+  },
+  {
+   "id": "M3",
+   "path": "/v1/filters/dates",
+   "params": {
+    "surface": "global",
+    "family": "mentions"
+   },
+   "src": "front/lib/hgh/adapters/filters.ts:404 <- mention/page.tsx:229"
+  },
+  {
+   "id": "M4",
+   "path": "/v1/trend",
+   "params": {
+    "surface": "global",
+    "bucket": "cycle",
+    "dimension": "none",
+    "metrics": [
+     "visibility",
+     "share_of_voice",
+     "sentiment",
+     "position"
+    ]
+   },
+   "src": "front/lib/hgh/adapters/mentions.ts:186-189(OVERVIEW_TREND_METRICS 4) <- kpi-tab.ts:345 <- mention/page.tsx:476"
+  },
+  {
+   "id": "M6",
+   "path": "/v1/kpi/summary",
+   "params": {
+    "surface": "global",
+    "cycle_offset": "1"
+   },
+   "src": "front/lib/hgh/adapters/kpi-tab.ts:167-183(cycleOffset 1, hghGet summary.ts:83) <- mention/page.tsx:473"
+  },
+  {
+   "id": "M7",
+   "path": "/v1/kpi/engines",
+   "params": {
+    "surface": "global",
+    "part": "all"
+   },
+   "src": "front/lib/hgh/adapters/mentions.ts:159-168(hghGet :167) <- kpi-tab.ts:339 <- mention/page.tsx:476"
+  },
+  {
+   "id": "M8",
+   "path": "/v1/mentions/brands",
+   "params": {
+    "surface": "global",
+    "top_n": "30",
+    "sort": "mentions",
+    "split_own": "true",
+    "group_by": "engine"
+   },
+   "src": "front/lib/hgh/adapters/kpi-tab.ts:337 <- mention/page.tsx:476"
+  },
+  {
+   "id": "M9",
+   "path": "/v1/trend",
+   "params": {
+    "surface": "global",
+    "bucket": "cycle",
+    "dimension": "engine",
+    "metrics": [
+     "visibility",
+     "share_of_voice",
+     "sentiment"
+    ]
+   },
+   "src": "front/lib/hgh/adapters/kpi-tab.ts:340 <- mention/page.tsx:476"
+  },
+  {
+   "id": "M10",
+   "path": "/v1/trend",
+   "params": {
+    "surface": "global",
+    "bucket": "cycle",
+    "dimension": "type",
+    "metrics": [
+     "type_exposure"
+    ],
+    "measured_days": "false"
+   },
+   "src": "front/lib/hgh/adapters/kpi-tab.ts:343 <- mention/page.tsx:476; measured_days=false = kpi-tab.ts 유형 추이(toTypeTrend 는 measuredDays 를 읽지 않는다)"
+  },
+  {
+   "id": "M11",
+   "path": "/v1/trend",
+   "params": {
+    "surface": "global",
+    "bucket": "cycle",
+    "dimension": "brand",
+    "metrics": [
+     "visibility",
+     "share_of_voice",
+     "position"
+    ],
+    "top": "10",
+    "split_own": "true"
+   },
+   "src": "front/lib/hgh/adapters/mentions.ts:174-183 fetchBrandTrend <- kpi-tab.ts:203-208 <- mention/page.tsx:481"
+  },
+  {
+   "id": "M12",
+   "path": "/v1/mentions/types",
+   "params": {
+    "surface": "global"
+   },
+   "src": "front/lib/hgh/adapters/mentions.ts:150-153(hghGet :152) <- kpi-tab.ts:481-484 <- mention/page.tsx:477"
+  },
+  {
+   "id": "C1",
+   "path": "/v1/citations/domains",
+   "params": {
+    "surface": "global",
+    "limit": "200",
+    "competitor_sources": "true"
+   },
+   "src": "front/lib/hgh/adapters/citations.ts:628-632 mainDomainsRequest(hghGet :554) <- citations.ts:689-731 loadCitationsView <- citation/page.tsx:157"
+  },
+  {
+   "id": "C2",
+   "path": "/v1/citations/sources",
+   "params": {
+    "surface": "global"
+   },
+   "src": "front/lib/hgh/adapters/citations.ts:560 <- citations.ts:689-731"
+  },
+  {
+   "id": "C3",
+   "path": "/v1/filters/dates",
+   "params": {
+    "surface": "global",
+    "family": "citations"
+   },
+   "src": "front/lib/hgh/adapters/filters.ts:404 <- citation/page.tsx:198"
+  },
+  {
+   "id": "C6",
+   "path": "/v1/trend",
+   "params": {
+    "surface": "global",
+    "bucket": "cycle",
+    "dimension": "source",
+    "top": "15",
+    "measured_days": "false"
+   },
+   "src": "front/lib/hgh/adapters/citations.ts:613-615 fetchSourceTrend <- citations.ts:706; measured_days=false = citations.ts fetchSourceTrend"
+  },
+  {
+   "id": "C7",
+   "path": "/v1/trend",
+   "params": {
+    "surface": "global",
+    "bucket": "cycle",
+    "dimension": "category",
+    "top": "13",
+    "measured_days": "false"
+   },
+   "src": "front/lib/hgh/adapters/citations.ts:616-618 fetchCategoryTrend <- citations.ts:707; measured_days=false = citations.ts fetchCategoryTrend"
+  },
+  {
+   "id": "C8",
+   "path": "/v1/citations/prompts",
+   "params": {
+    "surface": "global",
+    "owned": "true",
+    "limit": "1"
+   },
+   "src": "front/lib/hgh/adapters/citations.ts:564-576 fetchCitationPrompts <- citations.ts:709-712"
+  },
+  {
+   "id": "C9",
+   "path": "/v1/trend",
+   "params": {
+    "surface": "global",
+    "bucket": "cycle",
+    "dimension": "none",
+    "metrics": [
+     "visibility",
+     "citation_share"
+    ],
+    "measured_days": "false"
+   },
+   "src": "front/lib/hgh/adapters/citations.ts:623-625 fetchShareTrend <- citations.ts:826-836 <- citation/page.tsx:394; measured_days=false = citations.ts fetchShareTrend"
+  },
+  {
+   "id": "W1",
+   "path": "/v1/kpi/summary",
+   "params": {
+    "surface": "website",
+    "card": "true"
+   },
+   "src": "front/lib/hgh/adapters/dashboard.ts:179-181 fetchDashboardSummary(card: true, hghGet summary.ts:89) <- website/_data/live.ts:94 loadWebsiteDashboard <- website/page.tsx; card=true = 현행 S4.dashboard viaTrend"
+  },
+  {
+   "id": "W2",
+   "path": "/v1/mentions/brands",
+   "params": {
+    "surface": "website",
+    "top_n": "20",
+    "sort": "mentions",
+    "include": "hmg",
+    "card": "true"
+   },
+   "src": "front/lib/hgh/adapters/dashboard.ts:184-195(hghGet :193) fetchCardBrands(card) <- website/_data/live.ts:94; card=true = 현행 S4.dashboard(KPI #16)"
+  },
+  {
+   "id": "W3",
+   "path": "/v1/filters/dates",
+   "params": {
+    "surface": "website",
+    "family": "all"
+   },
+   "src": "front/lib/hgh/adapters/dashboard.ts:289 keptDates <- website/page.tsx:258"
+  },
+  {
+   "id": "W4",
+   "path": "/v1/filters/options",
+   "params": {
+    "surface": "website"
+   },
+   "src": "front/lib/hgh/adapters/filters.ts:209 <- website/page.tsx:256"
+  },
+  {
+   "id": "W5",
+   "path": "/v1/kpi/engines",
+   "params": {
+    "surface": "website",
+    "part": "all",
+    "card": "true"
+   },
+   "src": "front/lib/hgh/adapters/dashboard.ts:243-249(hghGet :247) fetchEngineRows(card: website 만) <- website/_data/live.ts:329 loadSubKpis; card=true = 현행 S4.subkpi 배지(글로벌 배지 S2.mention 은 미러라 보내지 않는다)"
+  },
+  {
+   "id": "W6",
+   "path": "/v1/trend",
+   "params": {
+    "surface": "website",
+    "bucket": "cycle",
+    "dimension": "none",
+    "metrics": [
+     "visibility",
+     "share_of_voice",
+     "sentiment",
+     "position",
+     "citation_share",
+     "target_url_rate",
+     "owned_url_rate",
+     "citation_accuracy"
+    ],
+    "measured_days": "false",
+    "card": "true"
+   },
+   "src": "front/lib/hgh/adapters/trend.ts WEBSITE_TREND_METRICS(8 = URL_TREND_METRICS 7 + citation_accuracy, WU-9 현행 ⑥ 선) <- website/_data/live.ts:247 loadLiveTrend(cycle, WU-6: 현행 X.trendGrid 회차 자리 축, unit 무관) <- website/page.tsx:139·338(measurement-basis.ts:14-18); measured_days=false = dashboard.ts loadLiveTrend; card=true = dashboard.ts loadLiveTrend(card), 현행 websiteTrendSet 집계층"
+  },
+  {
+   "id": "W7",
+   "path": "/v1/citations/domains",
+   "params": {
+    "surface": "website",
+    "limit": "7",
+    "card": "true"
+   },
+   "src": "front/lib/hgh/adapters/dashboard.ts:757-763 loadComposition -> fetchDashboardDomains(SOURCE_TOP_N 7, hghGet :239) <- website/_data/live.ts:288; card=true 는 기간 없을 때만(domainsCard): 현행 S6.citation 은 기간 경로가 없어 기간 요청이 미러였다"
+  },
+  {
+   "id": "W8",
+   "path": "/v1/geo",
+   "params": {
+    "surface": "website",
+    "card": "true"
+   },
+   "src": "front/lib/hgh/adapters/dashboard.ts:251-255(hghGet :253) fetchGeo(card) <- website/_data/live.ts:207; card=true = 현행 S4.dashboard viaTrend(GEO)"
+  }
+ ]
+}

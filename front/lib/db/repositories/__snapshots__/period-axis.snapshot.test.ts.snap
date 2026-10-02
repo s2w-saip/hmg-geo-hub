@@ -1,0 +1,3675 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`JS 주 월요일 산술 — 공개 함수 출력으로 고정 > buildWeeklyTrend 1`] = `
+{
+  "points": [
+    {
+      "a": 3,
+      "b": 0,
+      "week": "2026-08-24",
+    },
+    {
+      "a": 3,
+      "b": 7,
+      "week": "2026-08-31",
+    },
+    {
+      "a": 0,
+      "b": 4,
+      "week": "2026-09-07",
+    },
+  ],
+  "series": [
+    "a",
+    "b",
+  ],
+}
+`;
+
+exports[`JS 주 월요일 산술 — 공개 함수 출력으로 고정 > weeklyTopNUnion 1`] = `
+[
+  "b",
+  "a",
+]
+`;
+
+exports[`acrWhere / latestAcrPromptRunIds — ACR 경로 > acrWhere · cumulative 기간 없음 1`] = `
+{
+  "params": [],
+  "text": "true",
+}
+`;
+
+exports[`acrWhere / latestAcrPromptRunIds — ACR 경로 > acrWhere · cumulative+기간 1`] = `
+{
+  "params": [
+    "2026-08-20",
+    "2026-09-04",
+    "2026-08-20",
+    "2026-09-04",
+  ],
+  "text": "true AND (x.run_id IN (SELECT run_id FROM scope_runs WHERE true AND cycle_anchor_at IS NOT NULL AND cycle_anchor_at >= $1::date AND cycle_anchor_at < ($2::date + 1)) OR (x.run_id IN (SELECT run_id FROM scope_runs WHERE true AND cycle_anchor_at IS NULL) AND x.measured_at >= $3::date AND x.measured_at < ($4::date + 1)))",
+}
+`;
+
+exports[`acrWhere / latestAcrPromptRunIds — ACR 경로 > acrWhere · dateFrom 만 1`] = `
+{
+  "params": [
+    "2026-08-20",
+    "2026-08-20",
+  ],
+  "text": "true AND (x.run_id IN (SELECT run_id FROM scope_runs WHERE true AND cycle_anchor_at IS NOT NULL AND cycle_anchor_at >= $1::date) OR (x.run_id IN (SELECT run_id FROM scope_runs WHERE true AND cycle_anchor_at IS NULL) AND x.measured_at >= $2::date))",
+}
+`;
+
+exports[`acrWhere / latestAcrPromptRunIds — ACR 경로 > acrWhere · dateFrom+dateTo 1`] = `
+{
+  "params": [
+    "2026-08-20",
+    "2026-09-04",
+    "2026-08-20",
+    "2026-09-04",
+  ],
+  "text": "true AND (x.run_id IN (SELECT run_id FROM scope_runs WHERE true AND cycle_anchor_at IS NOT NULL AND cycle_anchor_at >= $1::date AND cycle_anchor_at < ($2::date + 1)) OR (x.run_id IN (SELECT run_id FROM scope_runs WHERE true AND cycle_anchor_at IS NULL) AND x.measured_at >= $3::date AND x.measured_at < ($4::date + 1)))",
+}
+`;
+
+exports[`acrWhere / latestAcrPromptRunIds — ACR 경로 > acrWhere · dateTo 만 1`] = `
+{
+  "params": [
+    "2026-09-04",
+    "2026-09-04",
+  ],
+  "text": "true AND (x.run_id IN (SELECT run_id FROM scope_runs WHERE true AND cycle_anchor_at IS NOT NULL AND cycle_anchor_at < ($1::date + 1)) OR (x.run_id IN (SELECT run_id FROM scope_runs WHERE true AND cycle_anchor_at IS NULL) AND x.measured_at < ($2::date + 1)))",
+}
+`;
+
+exports[`acrWhere / latestAcrPromptRunIds — ACR 경로 > acrWhere · 기간 없음 1`] = `
+{
+  "params": [],
+  "text": "true",
+}
+`;
+
+exports[`acrWhere / latestAcrPromptRunIds — ACR 경로 > latestAcrPromptRunIds · cumulative 기간 없음 1`] = `
+{
+  "params": [],
+  "text": "(
+    SELECT DISTINCT ON (x.prompt_id, x.target, x.region) x.prompt_run_id
+    FROM (
+      SELECT DISTINCT prompt_run_id, run_id, prompt_id, target, region, measured_at
+      FROM scope_acr_rollups
+    ) x
+    WHERE true
+    ORDER BY x.prompt_id, x.target, x.region, x.measured_at DESC
+  )",
+}
+`;
+
+exports[`acrWhere / latestAcrPromptRunIds — ACR 경로 > latestAcrPromptRunIds · cumulative+기간 1`] = `
+{
+  "params": [
+    "2026-08-20",
+    "2026-09-04",
+    "2026-08-20",
+    "2026-09-04",
+  ],
+  "text": "(SELECT DISTINCT x.prompt_run_id FROM (
+      SELECT DISTINCT prompt_run_id, run_id, prompt_id, target, region, measured_at
+      FROM scope_acr_rollups
+    ) x WHERE true AND (x.run_id IN (SELECT run_id FROM scope_runs WHERE true AND cycle_anchor_at IS NOT NULL AND cycle_anchor_at >= $1::date AND cycle_anchor_at < ($2::date + 1)) OR (x.run_id IN (SELECT run_id FROM scope_runs WHERE true AND cycle_anchor_at IS NULL) AND x.measured_at >= $3::date AND x.measured_at < ($4::date + 1))))",
+}
+`;
+
+exports[`acrWhere / latestAcrPromptRunIds — ACR 경로 > latestAcrPromptRunIds · dateFrom 만 1`] = `
+{
+  "params": [
+    "2026-08-20",
+    "2026-08-20",
+  ],
+  "text": "(
+    SELECT DISTINCT ON (x.prompt_id, x.target, x.region) x.prompt_run_id
+    FROM (
+      SELECT DISTINCT prompt_run_id, run_id, prompt_id, target, region, measured_at
+      FROM scope_acr_rollups
+    ) x
+    WHERE true AND (x.run_id IN (SELECT run_id FROM scope_runs WHERE true AND cycle_anchor_at IS NOT NULL AND cycle_anchor_at >= $1::date) OR (x.run_id IN (SELECT run_id FROM scope_runs WHERE true AND cycle_anchor_at IS NULL) AND x.measured_at >= $2::date))
+    ORDER BY x.prompt_id, x.target, x.region, x.measured_at DESC
+  )",
+}
+`;
+
+exports[`acrWhere / latestAcrPromptRunIds — ACR 경로 > latestAcrPromptRunIds · dateFrom+dateTo 1`] = `
+{
+  "params": [
+    "2026-08-20",
+    "2026-09-04",
+    "2026-08-20",
+    "2026-09-04",
+  ],
+  "text": "(
+    SELECT DISTINCT ON (x.prompt_id, x.target, x.region) x.prompt_run_id
+    FROM (
+      SELECT DISTINCT prompt_run_id, run_id, prompt_id, target, region, measured_at
+      FROM scope_acr_rollups
+    ) x
+    WHERE true AND (x.run_id IN (SELECT run_id FROM scope_runs WHERE true AND cycle_anchor_at IS NOT NULL AND cycle_anchor_at >= $1::date AND cycle_anchor_at < ($2::date + 1)) OR (x.run_id IN (SELECT run_id FROM scope_runs WHERE true AND cycle_anchor_at IS NULL) AND x.measured_at >= $3::date AND x.measured_at < ($4::date + 1)))
+    ORDER BY x.prompt_id, x.target, x.region, x.measured_at DESC
+  )",
+}
+`;
+
+exports[`acrWhere / latestAcrPromptRunIds — ACR 경로 > latestAcrPromptRunIds · dateTo 만 1`] = `
+{
+  "params": [
+    "2026-09-04",
+    "2026-09-04",
+  ],
+  "text": "(
+    SELECT DISTINCT ON (x.prompt_id, x.target, x.region) x.prompt_run_id
+    FROM (
+      SELECT DISTINCT prompt_run_id, run_id, prompt_id, target, region, measured_at
+      FROM scope_acr_rollups
+    ) x
+    WHERE true AND (x.run_id IN (SELECT run_id FROM scope_runs WHERE true AND cycle_anchor_at IS NOT NULL AND cycle_anchor_at < ($1::date + 1)) OR (x.run_id IN (SELECT run_id FROM scope_runs WHERE true AND cycle_anchor_at IS NULL) AND x.measured_at < ($2::date + 1)))
+    ORDER BY x.prompt_id, x.target, x.region, x.measured_at DESC
+  )",
+}
+`;
+
+exports[`acrWhere / latestAcrPromptRunIds — ACR 경로 > latestAcrPromptRunIds · 기간 없음 1`] = `
+{
+  "params": [],
+  "text": "(
+    SELECT DISTINCT ON (x.prompt_id, x.target, x.region) x.prompt_run_id
+    FROM (
+      SELECT DISTINCT prompt_run_id, run_id, prompt_id, target, region, measured_at
+      FROM scope_acr_rollups
+    ) x
+    WHERE true
+    ORDER BY x.prompt_id, x.target, x.region, x.measured_at DESC
+  )",
+}
+`;
+
+exports[`answerWhere — 표준(루트) 표면 > cumulative 기간 없음 1`] = `
+{
+  "params": [
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "a.status = 'completed' AND true AND a.job_id IN (
+    WITH _fc_base AS (
+      SELECT a.job_id, a.prompt_id, a.target, a.region, a.measured_at,
+        (r.started_at >= now() - interval '7 days') AS in_window
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE true AND r.status IN ('completed', 'partial_failed') AND a.status = 'completed'
+        
+        AND NOT (
+    a.region <> 'KR'
+    AND a.prompt_id IS NOT NULL
+    AND a.prompt_id IN (SELECT sp.prompt_id FROM scope_prompts sp WHERE sp.text ~ '[가-힣]')
+  )
+        
+    ),
+    _fc_cells AS (
+      SELECT prompt_id, target, region, bool_or(in_window) AS w,
+        min(measured_at) AS first_at,
+        max(measured_at) FILTER (WHERE in_window) AS w_last
+      FROM _fc_base GROUP BY 1, 2, 3
+    ),
+    -- ── 기대 셀을 "이번 창에 실제로 돈 셀"로 한정 (2026-09-04, #188) ──────────
+    -- expected 는 원래 이력 무제한이었다. 그래서 한 시장의 측정이 멈추면 그 셀이
+    -- 기대치에 영구히 남고 window 가 절대 따라잡지 못해, 그 시장을 커버하는
+    -- 프롬프트가 **다른 시장에서까지 통째로** 탈락했다(2026-09-04 EG 실증:
+    -- 마지막 측정 8/25 인 EG 셀 2개 때문에 AE Hyundai 프롬프트 208개가 fail).
+    -- 고침: 창 안에 한 건도 측정되지 않은 (엔진, 국가) 셀은 기대치에서 뺀다.
+    -- 그 시장은 돌았는데 이 프롬프트만 빠진 경우는 셀이 active 에 남아 여전히 탈락한다.
+    -- main 의 원안(#188)은 이 목록을 scope_answers 재스캔으로 얻었지만, 같은
+    -- 술어의 창 안 행은 이미 _fc_base.in_window 에 있으므로 셀 집계에서 파생한다
+    -- (스캔 1회 유지 — 아래 단일 스캔 주석의 전제).
+    _fc_active AS (
+      SELECT DISTINCT target, region FROM _fc_cells WHERE w
+    ),
+    -- ── 창 끝 이후에 처음 생긴 셀은 기대치에서 뺀다 (2026-09-28) ──────────────
+    -- expected 는 이력 무제한이라 **미래**도 본다. 프롬프트에 시장이 나중에 추가되면
+    -- (2026-09-28 scope 가 743개 프롬프트에 IN·AU·GB·MY·SA·TH·ID 등을 태깅) 그 새 셀이
+    -- 과거 창의 기대치에 들어가, 과거 창을 조회할 때 그 프롬프트가 "셀 부족"으로 탈락한다.
+    -- 위 _fc_active 한정(#188)은 그 시장이 **다른 프롬프트로** 창 안에서 측정됐으면 못 막는다
+    -- (IN·AU·GB 등은 다른 프롬프트로 매 회차 돈다).
+    -- 고침: 셀의 최초 completed 측정 시각(first_at)이 창 안 마지막 측정(w_last 의 최대)보다
+    -- 뒤면 그 셀은 "이 창 시점에 아직 없던 셀"이므로 기대치에서 뺀다.
+    --   · 창 판정 술어(windowPredicate)는 불투명하므로 창 무관 정의를 쓴다 — 창 끝 = 창 안
+    --     행의 measured_at 최대. 창 경계를 SQL 로 다시 해석하지 않는다.
+    --   · 대칭: 창 안 셀(w)은 first_at <= 자기 w_last <= 창 끝 이라 절대 빠지지 않는다.
+    --     즉 이 절은 **창 밖 셀만** 뺀다 — window 쪽 집계는 불변이다.
+    --   · 창 끝은 _fc_cells 에서 파생한다(_fc_base 를 다시 읽지 않는다 — materialize 된
+    --     CTE 의 세 번째 참조를 만들지 않기 위해). 스캔 1회 구조는 그대로다.
+    --   · NULL 은 종전대로 둔다: 창 안 셀(w)은 무조건 유지, measured_at 이 전부 NULL 인
+    --     셀(first_at NULL)도 유지, 창 끝을 모르면(w_last 전부 NULL) 아무것도 빼지 않는다.
+    -- 프로덕션 미러 실측(2026-09-28, 읽기 전용): 루트 회차 5개 + 기본 7일 창 전부에서 종전
+    -- 게이트 통과 프롬프트 중 탈락 0. 노출 게이트를 끈 9/13·9/20 창에서는 종전 게이트가
+    -- 9/27 회차에 새로 생긴 셀 때문에 기아 EN 2개를 떨어뜨렸고(11,408) 이 절이 되살렸다.
+    -- EXPLAIN (ANALYZE, BUFFERS) 기본 7일 창 교차 4회 중앙값 596.6 → 626.0 ms(+4.9%, ID 해제로
+    -- 늘어난 행 포함) · scope_answers 스캔 1회 · _fc_base 참조 2회 그대로.
+    _fc_gate AS (
+      SELECT prompt_id FROM _fc_cells c
+      WHERE (c.target, c.region) IN (SELECT target, region FROM _fc_active)
+        AND (c.w OR c.first_at IS NULL
+          OR c.first_at <= (SELECT COALESCE(max(w_last), 'infinity'::timestamptz) FROM _fc_cells))
+      GROUP BY prompt_id
+      HAVING count(*) FILTER (WHERE w) >= count(*)
+    )
+    SELECT DISTINCT ON (b.prompt_id, b.target, b.region) b.job_id
+    FROM _fc_base b
+    JOIN _fc_gate g ON g.prompt_id = b.prompt_id
+    WHERE b.in_window
+    ORDER BY b.prompt_id, b.target, b.region, b.measured_at DESC
+  ) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $1 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`answerWhere — 표준(루트) 표면 > cumulative+기간 1`] = `
+{
+  "params": [
+    "2026-08-20",
+    "2026-09-04",
+    "2026-08-20",
+    "2026-09-04",
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "a.status = 'completed' AND true AND (a.run_id IN (SELECT run_id FROM scope_runs WHERE true AND cycle_anchor_at IS NOT NULL AND cycle_anchor_at >= $1::date AND cycle_anchor_at < ($2::date + 1)) OR (a.run_id IN (SELECT run_id FROM scope_runs WHERE true AND cycle_anchor_at IS NULL) AND a.measured_at >= $3::date AND a.measured_at < ($4::date + 1))) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $5 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`answerWhere — 표준(루트) 표면 > dateFrom 만 1`] = `
+{
+  "params": [
+    "2026-08-20",
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "a.status = 'completed' AND true AND a.job_id IN (
+    WITH _fc_base AS (
+      SELECT a.job_id, a.prompt_id, a.target, a.region, a.measured_at,
+        (COALESCE(r.cycle_anchor_at, r.started_at) >= $1::date) AS in_window
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE true AND r.status IN ('completed', 'partial_failed') AND a.status = 'completed'
+        
+        AND NOT (
+    a.region <> 'KR'
+    AND a.prompt_id IS NOT NULL
+    AND a.prompt_id IN (SELECT sp.prompt_id FROM scope_prompts sp WHERE sp.text ~ '[가-힣]')
+  )
+        
+    ),
+    _fc_cells AS (
+      SELECT prompt_id, target, region, bool_or(in_window) AS w,
+        min(measured_at) AS first_at,
+        max(measured_at) FILTER (WHERE in_window) AS w_last
+      FROM _fc_base GROUP BY 1, 2, 3
+    ),
+    -- ── 기대 셀을 "이번 창에 실제로 돈 셀"로 한정 (2026-09-04, #188) ──────────
+    -- expected 는 원래 이력 무제한이었다. 그래서 한 시장의 측정이 멈추면 그 셀이
+    -- 기대치에 영구히 남고 window 가 절대 따라잡지 못해, 그 시장을 커버하는
+    -- 프롬프트가 **다른 시장에서까지 통째로** 탈락했다(2026-09-04 EG 실증:
+    -- 마지막 측정 8/25 인 EG 셀 2개 때문에 AE Hyundai 프롬프트 208개가 fail).
+    -- 고침: 창 안에 한 건도 측정되지 않은 (엔진, 국가) 셀은 기대치에서 뺀다.
+    -- 그 시장은 돌았는데 이 프롬프트만 빠진 경우는 셀이 active 에 남아 여전히 탈락한다.
+    -- main 의 원안(#188)은 이 목록을 scope_answers 재스캔으로 얻었지만, 같은
+    -- 술어의 창 안 행은 이미 _fc_base.in_window 에 있으므로 셀 집계에서 파생한다
+    -- (스캔 1회 유지 — 아래 단일 스캔 주석의 전제).
+    _fc_active AS (
+      SELECT DISTINCT target, region FROM _fc_cells WHERE w
+    ),
+    -- ── 창 끝 이후에 처음 생긴 셀은 기대치에서 뺀다 (2026-09-28) ──────────────
+    -- expected 는 이력 무제한이라 **미래**도 본다. 프롬프트에 시장이 나중에 추가되면
+    -- (2026-09-28 scope 가 743개 프롬프트에 IN·AU·GB·MY·SA·TH·ID 등을 태깅) 그 새 셀이
+    -- 과거 창의 기대치에 들어가, 과거 창을 조회할 때 그 프롬프트가 "셀 부족"으로 탈락한다.
+    -- 위 _fc_active 한정(#188)은 그 시장이 **다른 프롬프트로** 창 안에서 측정됐으면 못 막는다
+    -- (IN·AU·GB 등은 다른 프롬프트로 매 회차 돈다).
+    -- 고침: 셀의 최초 completed 측정 시각(first_at)이 창 안 마지막 측정(w_last 의 최대)보다
+    -- 뒤면 그 셀은 "이 창 시점에 아직 없던 셀"이므로 기대치에서 뺀다.
+    --   · 창 판정 술어(windowPredicate)는 불투명하므로 창 무관 정의를 쓴다 — 창 끝 = 창 안
+    --     행의 measured_at 최대. 창 경계를 SQL 로 다시 해석하지 않는다.
+    --   · 대칭: 창 안 셀(w)은 first_at <= 자기 w_last <= 창 끝 이라 절대 빠지지 않는다.
+    --     즉 이 절은 **창 밖 셀만** 뺀다 — window 쪽 집계는 불변이다.
+    --   · 창 끝은 _fc_cells 에서 파생한다(_fc_base 를 다시 읽지 않는다 — materialize 된
+    --     CTE 의 세 번째 참조를 만들지 않기 위해). 스캔 1회 구조는 그대로다.
+    --   · NULL 은 종전대로 둔다: 창 안 셀(w)은 무조건 유지, measured_at 이 전부 NULL 인
+    --     셀(first_at NULL)도 유지, 창 끝을 모르면(w_last 전부 NULL) 아무것도 빼지 않는다.
+    -- 프로덕션 미러 실측(2026-09-28, 읽기 전용): 루트 회차 5개 + 기본 7일 창 전부에서 종전
+    -- 게이트 통과 프롬프트 중 탈락 0. 노출 게이트를 끈 9/13·9/20 창에서는 종전 게이트가
+    -- 9/27 회차에 새로 생긴 셀 때문에 기아 EN 2개를 떨어뜨렸고(11,408) 이 절이 되살렸다.
+    -- EXPLAIN (ANALYZE, BUFFERS) 기본 7일 창 교차 4회 중앙값 596.6 → 626.0 ms(+4.9%, ID 해제로
+    -- 늘어난 행 포함) · scope_answers 스캔 1회 · _fc_base 참조 2회 그대로.
+    _fc_gate AS (
+      SELECT prompt_id FROM _fc_cells c
+      WHERE (c.target, c.region) IN (SELECT target, region FROM _fc_active)
+        AND (c.w OR c.first_at IS NULL
+          OR c.first_at <= (SELECT COALESCE(max(w_last), 'infinity'::timestamptz) FROM _fc_cells))
+      GROUP BY prompt_id
+      HAVING count(*) FILTER (WHERE w) >= count(*)
+    )
+    SELECT DISTINCT ON (b.prompt_id, b.target, b.region) b.job_id
+    FROM _fc_base b
+    JOIN _fc_gate g ON g.prompt_id = b.prompt_id
+    WHERE b.in_window
+    ORDER BY b.prompt_id, b.target, b.region, b.measured_at DESC
+  ) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $2 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`answerWhere — 표준(루트) 표면 > dateFrom+dateTo 1`] = `
+{
+  "params": [
+    "2026-08-20",
+    "2026-09-04",
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "a.status = 'completed' AND true AND a.job_id IN (
+    WITH _fc_base AS (
+      SELECT a.job_id, a.prompt_id, a.target, a.region, a.measured_at,
+        (COALESCE(r.cycle_anchor_at, r.started_at) >= $1::date AND COALESCE(r.cycle_anchor_at, r.started_at) < ($2::date + 1)) AS in_window
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE true AND r.status IN ('completed', 'partial_failed') AND a.status = 'completed'
+        
+        AND NOT (
+    a.region <> 'KR'
+    AND a.prompt_id IS NOT NULL
+    AND a.prompt_id IN (SELECT sp.prompt_id FROM scope_prompts sp WHERE sp.text ~ '[가-힣]')
+  )
+        
+    ),
+    _fc_cells AS (
+      SELECT prompt_id, target, region, bool_or(in_window) AS w,
+        min(measured_at) AS first_at,
+        max(measured_at) FILTER (WHERE in_window) AS w_last
+      FROM _fc_base GROUP BY 1, 2, 3
+    ),
+    -- ── 기대 셀을 "이번 창에 실제로 돈 셀"로 한정 (2026-09-04, #188) ──────────
+    -- expected 는 원래 이력 무제한이었다. 그래서 한 시장의 측정이 멈추면 그 셀이
+    -- 기대치에 영구히 남고 window 가 절대 따라잡지 못해, 그 시장을 커버하는
+    -- 프롬프트가 **다른 시장에서까지 통째로** 탈락했다(2026-09-04 EG 실증:
+    -- 마지막 측정 8/25 인 EG 셀 2개 때문에 AE Hyundai 프롬프트 208개가 fail).
+    -- 고침: 창 안에 한 건도 측정되지 않은 (엔진, 국가) 셀은 기대치에서 뺀다.
+    -- 그 시장은 돌았는데 이 프롬프트만 빠진 경우는 셀이 active 에 남아 여전히 탈락한다.
+    -- main 의 원안(#188)은 이 목록을 scope_answers 재스캔으로 얻었지만, 같은
+    -- 술어의 창 안 행은 이미 _fc_base.in_window 에 있으므로 셀 집계에서 파생한다
+    -- (스캔 1회 유지 — 아래 단일 스캔 주석의 전제).
+    _fc_active AS (
+      SELECT DISTINCT target, region FROM _fc_cells WHERE w
+    ),
+    -- ── 창 끝 이후에 처음 생긴 셀은 기대치에서 뺀다 (2026-09-28) ──────────────
+    -- expected 는 이력 무제한이라 **미래**도 본다. 프롬프트에 시장이 나중에 추가되면
+    -- (2026-09-28 scope 가 743개 프롬프트에 IN·AU·GB·MY·SA·TH·ID 등을 태깅) 그 새 셀이
+    -- 과거 창의 기대치에 들어가, 과거 창을 조회할 때 그 프롬프트가 "셀 부족"으로 탈락한다.
+    -- 위 _fc_active 한정(#188)은 그 시장이 **다른 프롬프트로** 창 안에서 측정됐으면 못 막는다
+    -- (IN·AU·GB 등은 다른 프롬프트로 매 회차 돈다).
+    -- 고침: 셀의 최초 completed 측정 시각(first_at)이 창 안 마지막 측정(w_last 의 최대)보다
+    -- 뒤면 그 셀은 "이 창 시점에 아직 없던 셀"이므로 기대치에서 뺀다.
+    --   · 창 판정 술어(windowPredicate)는 불투명하므로 창 무관 정의를 쓴다 — 창 끝 = 창 안
+    --     행의 measured_at 최대. 창 경계를 SQL 로 다시 해석하지 않는다.
+    --   · 대칭: 창 안 셀(w)은 first_at <= 자기 w_last <= 창 끝 이라 절대 빠지지 않는다.
+    --     즉 이 절은 **창 밖 셀만** 뺀다 — window 쪽 집계는 불변이다.
+    --   · 창 끝은 _fc_cells 에서 파생한다(_fc_base 를 다시 읽지 않는다 — materialize 된
+    --     CTE 의 세 번째 참조를 만들지 않기 위해). 스캔 1회 구조는 그대로다.
+    --   · NULL 은 종전대로 둔다: 창 안 셀(w)은 무조건 유지, measured_at 이 전부 NULL 인
+    --     셀(first_at NULL)도 유지, 창 끝을 모르면(w_last 전부 NULL) 아무것도 빼지 않는다.
+    -- 프로덕션 미러 실측(2026-09-28, 읽기 전용): 루트 회차 5개 + 기본 7일 창 전부에서 종전
+    -- 게이트 통과 프롬프트 중 탈락 0. 노출 게이트를 끈 9/13·9/20 창에서는 종전 게이트가
+    -- 9/27 회차에 새로 생긴 셀 때문에 기아 EN 2개를 떨어뜨렸고(11,408) 이 절이 되살렸다.
+    -- EXPLAIN (ANALYZE, BUFFERS) 기본 7일 창 교차 4회 중앙값 596.6 → 626.0 ms(+4.9%, ID 해제로
+    -- 늘어난 행 포함) · scope_answers 스캔 1회 · _fc_base 참조 2회 그대로.
+    _fc_gate AS (
+      SELECT prompt_id FROM _fc_cells c
+      WHERE (c.target, c.region) IN (SELECT target, region FROM _fc_active)
+        AND (c.w OR c.first_at IS NULL
+          OR c.first_at <= (SELECT COALESCE(max(w_last), 'infinity'::timestamptz) FROM _fc_cells))
+      GROUP BY prompt_id
+      HAVING count(*) FILTER (WHERE w) >= count(*)
+    )
+    SELECT DISTINCT ON (b.prompt_id, b.target, b.region) b.job_id
+    FROM _fc_base b
+    JOIN _fc_gate g ON g.prompt_id = b.prompt_id
+    WHERE b.in_window
+    ORDER BY b.prompt_id, b.target, b.region, b.measured_at DESC
+  ) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $3 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`answerWhere — 표준(루트) 표면 > dateTo 만 1`] = `
+{
+  "params": [
+    "2026-09-04",
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "a.status = 'completed' AND true AND a.job_id IN (
+    WITH _fc_base AS (
+      SELECT a.job_id, a.prompt_id, a.target, a.region, a.measured_at,
+        (COALESCE(r.cycle_anchor_at, r.started_at) < ($1::date + 1)) AS in_window
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE true AND r.status IN ('completed', 'partial_failed') AND a.status = 'completed'
+        
+        AND NOT (
+    a.region <> 'KR'
+    AND a.prompt_id IS NOT NULL
+    AND a.prompt_id IN (SELECT sp.prompt_id FROM scope_prompts sp WHERE sp.text ~ '[가-힣]')
+  )
+        
+    ),
+    _fc_cells AS (
+      SELECT prompt_id, target, region, bool_or(in_window) AS w,
+        min(measured_at) AS first_at,
+        max(measured_at) FILTER (WHERE in_window) AS w_last
+      FROM _fc_base GROUP BY 1, 2, 3
+    ),
+    -- ── 기대 셀을 "이번 창에 실제로 돈 셀"로 한정 (2026-09-04, #188) ──────────
+    -- expected 는 원래 이력 무제한이었다. 그래서 한 시장의 측정이 멈추면 그 셀이
+    -- 기대치에 영구히 남고 window 가 절대 따라잡지 못해, 그 시장을 커버하는
+    -- 프롬프트가 **다른 시장에서까지 통째로** 탈락했다(2026-09-04 EG 실증:
+    -- 마지막 측정 8/25 인 EG 셀 2개 때문에 AE Hyundai 프롬프트 208개가 fail).
+    -- 고침: 창 안에 한 건도 측정되지 않은 (엔진, 국가) 셀은 기대치에서 뺀다.
+    -- 그 시장은 돌았는데 이 프롬프트만 빠진 경우는 셀이 active 에 남아 여전히 탈락한다.
+    -- main 의 원안(#188)은 이 목록을 scope_answers 재스캔으로 얻었지만, 같은
+    -- 술어의 창 안 행은 이미 _fc_base.in_window 에 있으므로 셀 집계에서 파생한다
+    -- (스캔 1회 유지 — 아래 단일 스캔 주석의 전제).
+    _fc_active AS (
+      SELECT DISTINCT target, region FROM _fc_cells WHERE w
+    ),
+    -- ── 창 끝 이후에 처음 생긴 셀은 기대치에서 뺀다 (2026-09-28) ──────────────
+    -- expected 는 이력 무제한이라 **미래**도 본다. 프롬프트에 시장이 나중에 추가되면
+    -- (2026-09-28 scope 가 743개 프롬프트에 IN·AU·GB·MY·SA·TH·ID 등을 태깅) 그 새 셀이
+    -- 과거 창의 기대치에 들어가, 과거 창을 조회할 때 그 프롬프트가 "셀 부족"으로 탈락한다.
+    -- 위 _fc_active 한정(#188)은 그 시장이 **다른 프롬프트로** 창 안에서 측정됐으면 못 막는다
+    -- (IN·AU·GB 등은 다른 프롬프트로 매 회차 돈다).
+    -- 고침: 셀의 최초 completed 측정 시각(first_at)이 창 안 마지막 측정(w_last 의 최대)보다
+    -- 뒤면 그 셀은 "이 창 시점에 아직 없던 셀"이므로 기대치에서 뺀다.
+    --   · 창 판정 술어(windowPredicate)는 불투명하므로 창 무관 정의를 쓴다 — 창 끝 = 창 안
+    --     행의 measured_at 최대. 창 경계를 SQL 로 다시 해석하지 않는다.
+    --   · 대칭: 창 안 셀(w)은 first_at <= 자기 w_last <= 창 끝 이라 절대 빠지지 않는다.
+    --     즉 이 절은 **창 밖 셀만** 뺀다 — window 쪽 집계는 불변이다.
+    --   · 창 끝은 _fc_cells 에서 파생한다(_fc_base 를 다시 읽지 않는다 — materialize 된
+    --     CTE 의 세 번째 참조를 만들지 않기 위해). 스캔 1회 구조는 그대로다.
+    --   · NULL 은 종전대로 둔다: 창 안 셀(w)은 무조건 유지, measured_at 이 전부 NULL 인
+    --     셀(first_at NULL)도 유지, 창 끝을 모르면(w_last 전부 NULL) 아무것도 빼지 않는다.
+    -- 프로덕션 미러 실측(2026-09-28, 읽기 전용): 루트 회차 5개 + 기본 7일 창 전부에서 종전
+    -- 게이트 통과 프롬프트 중 탈락 0. 노출 게이트를 끈 9/13·9/20 창에서는 종전 게이트가
+    -- 9/27 회차에 새로 생긴 셀 때문에 기아 EN 2개를 떨어뜨렸고(11,408) 이 절이 되살렸다.
+    -- EXPLAIN (ANALYZE, BUFFERS) 기본 7일 창 교차 4회 중앙값 596.6 → 626.0 ms(+4.9%, ID 해제로
+    -- 늘어난 행 포함) · scope_answers 스캔 1회 · _fc_base 참조 2회 그대로.
+    _fc_gate AS (
+      SELECT prompt_id FROM _fc_cells c
+      WHERE (c.target, c.region) IN (SELECT target, region FROM _fc_active)
+        AND (c.w OR c.first_at IS NULL
+          OR c.first_at <= (SELECT COALESCE(max(w_last), 'infinity'::timestamptz) FROM _fc_cells))
+      GROUP BY prompt_id
+      HAVING count(*) FILTER (WHERE w) >= count(*)
+    )
+    SELECT DISTINCT ON (b.prompt_id, b.target, b.region) b.job_id
+    FROM _fc_base b
+    JOIN _fc_gate g ON g.prompt_id = b.prompt_id
+    WHERE b.in_window
+    ORDER BY b.prompt_id, b.target, b.region, b.measured_at DESC
+  ) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $2 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`answerWhere — 표준(루트) 표면 > 기간 없음 1`] = `
+{
+  "params": [
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "a.status = 'completed' AND true AND a.job_id IN (
+    WITH _fc_base AS (
+      SELECT a.job_id, a.prompt_id, a.target, a.region, a.measured_at,
+        (r.started_at >= now() - interval '7 days') AS in_window
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE true AND r.status IN ('completed', 'partial_failed') AND a.status = 'completed'
+        
+        AND NOT (
+    a.region <> 'KR'
+    AND a.prompt_id IS NOT NULL
+    AND a.prompt_id IN (SELECT sp.prompt_id FROM scope_prompts sp WHERE sp.text ~ '[가-힣]')
+  )
+        
+    ),
+    _fc_cells AS (
+      SELECT prompt_id, target, region, bool_or(in_window) AS w,
+        min(measured_at) AS first_at,
+        max(measured_at) FILTER (WHERE in_window) AS w_last
+      FROM _fc_base GROUP BY 1, 2, 3
+    ),
+    -- ── 기대 셀을 "이번 창에 실제로 돈 셀"로 한정 (2026-09-04, #188) ──────────
+    -- expected 는 원래 이력 무제한이었다. 그래서 한 시장의 측정이 멈추면 그 셀이
+    -- 기대치에 영구히 남고 window 가 절대 따라잡지 못해, 그 시장을 커버하는
+    -- 프롬프트가 **다른 시장에서까지 통째로** 탈락했다(2026-09-04 EG 실증:
+    -- 마지막 측정 8/25 인 EG 셀 2개 때문에 AE Hyundai 프롬프트 208개가 fail).
+    -- 고침: 창 안에 한 건도 측정되지 않은 (엔진, 국가) 셀은 기대치에서 뺀다.
+    -- 그 시장은 돌았는데 이 프롬프트만 빠진 경우는 셀이 active 에 남아 여전히 탈락한다.
+    -- main 의 원안(#188)은 이 목록을 scope_answers 재스캔으로 얻었지만, 같은
+    -- 술어의 창 안 행은 이미 _fc_base.in_window 에 있으므로 셀 집계에서 파생한다
+    -- (스캔 1회 유지 — 아래 단일 스캔 주석의 전제).
+    _fc_active AS (
+      SELECT DISTINCT target, region FROM _fc_cells WHERE w
+    ),
+    -- ── 창 끝 이후에 처음 생긴 셀은 기대치에서 뺀다 (2026-09-28) ──────────────
+    -- expected 는 이력 무제한이라 **미래**도 본다. 프롬프트에 시장이 나중에 추가되면
+    -- (2026-09-28 scope 가 743개 프롬프트에 IN·AU·GB·MY·SA·TH·ID 등을 태깅) 그 새 셀이
+    -- 과거 창의 기대치에 들어가, 과거 창을 조회할 때 그 프롬프트가 "셀 부족"으로 탈락한다.
+    -- 위 _fc_active 한정(#188)은 그 시장이 **다른 프롬프트로** 창 안에서 측정됐으면 못 막는다
+    -- (IN·AU·GB 등은 다른 프롬프트로 매 회차 돈다).
+    -- 고침: 셀의 최초 completed 측정 시각(first_at)이 창 안 마지막 측정(w_last 의 최대)보다
+    -- 뒤면 그 셀은 "이 창 시점에 아직 없던 셀"이므로 기대치에서 뺀다.
+    --   · 창 판정 술어(windowPredicate)는 불투명하므로 창 무관 정의를 쓴다 — 창 끝 = 창 안
+    --     행의 measured_at 최대. 창 경계를 SQL 로 다시 해석하지 않는다.
+    --   · 대칭: 창 안 셀(w)은 first_at <= 자기 w_last <= 창 끝 이라 절대 빠지지 않는다.
+    --     즉 이 절은 **창 밖 셀만** 뺀다 — window 쪽 집계는 불변이다.
+    --   · 창 끝은 _fc_cells 에서 파생한다(_fc_base 를 다시 읽지 않는다 — materialize 된
+    --     CTE 의 세 번째 참조를 만들지 않기 위해). 스캔 1회 구조는 그대로다.
+    --   · NULL 은 종전대로 둔다: 창 안 셀(w)은 무조건 유지, measured_at 이 전부 NULL 인
+    --     셀(first_at NULL)도 유지, 창 끝을 모르면(w_last 전부 NULL) 아무것도 빼지 않는다.
+    -- 프로덕션 미러 실측(2026-09-28, 읽기 전용): 루트 회차 5개 + 기본 7일 창 전부에서 종전
+    -- 게이트 통과 프롬프트 중 탈락 0. 노출 게이트를 끈 9/13·9/20 창에서는 종전 게이트가
+    -- 9/27 회차에 새로 생긴 셀 때문에 기아 EN 2개를 떨어뜨렸고(11,408) 이 절이 되살렸다.
+    -- EXPLAIN (ANALYZE, BUFFERS) 기본 7일 창 교차 4회 중앙값 596.6 → 626.0 ms(+4.9%, ID 해제로
+    -- 늘어난 행 포함) · scope_answers 스캔 1회 · _fc_base 참조 2회 그대로.
+    _fc_gate AS (
+      SELECT prompt_id FROM _fc_cells c
+      WHERE (c.target, c.region) IN (SELECT target, region FROM _fc_active)
+        AND (c.w OR c.first_at IS NULL
+          OR c.first_at <= (SELECT COALESCE(max(w_last), 'infinity'::timestamptz) FROM _fc_cells))
+      GROUP BY prompt_id
+      HAVING count(*) FILTER (WHERE w) >= count(*)
+    )
+    SELECT DISTINCT ON (b.prompt_id, b.target, b.region) b.job_id
+    FROM _fc_base b
+    JOIN _fc_gate g ON g.prompt_id = b.prompt_id
+    WHERE b.in_window
+    ORDER BY b.prompt_id, b.target, b.region, b.measured_at DESC
+  ) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $1 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`answerWhere — 표준(루트) 표면 > 추이(allRuns) + cumulative — allRuns 가 이긴다 1`] = `
+{
+  "params": [
+    "2026-08-20",
+    "2026-09-04",
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "a.status = 'completed' AND true AND a.run_id IN (SELECT run_id FROM scope_runs WHERE true) AND a.measured_at >= $1::date AND a.measured_at < ($2::date + 1) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $3 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`answerWhere — 표준(루트) 표면 > 추이(allRuns) + 기간 1`] = `
+{
+  "params": [
+    "2026-08-20",
+    "2026-09-04",
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "a.status = 'completed' AND true AND a.run_id IN (SELECT run_id FROM scope_runs WHERE true) AND a.measured_at >= $1::date AND a.measured_at < ($2::date + 1) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $3 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`answerWhere — 프로젝트 컨텍스트 > 단일 · cumulative 기간 없음 1`] = `
+{
+  "params": [
+    [
+      "11111111-1111-4111-8111-111111111111",
+    ],
+    [
+      "11111111-1111-4111-8111-111111111111",
+    ],
+  ],
+  "text": "a.status = 'completed' AND true AND a.job_id IN (
+    SELECT DISTINCT ON (a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id
+    JOIN (
+      SELECT r.project_id, max(a.measured_at) - interval '7 days' AS floor_at
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE r.project_id = ANY($1::uuid[])
+        AND r.status IN ('completed', 'partial_failed')
+        AND a.status = 'completed'
+      GROUP BY r.project_id
+    ) pm ON pm.project_id = r.project_id
+    WHERE r.project_id = ANY($2::uuid[])
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed'
+      AND a.measured_at >= pm.floor_at
+    ORDER BY a.prompt_id, a.target, a.region, a.measured_at DESC
+  )",
+}
+`;
+
+exports[`answerWhere — 프로젝트 컨텍스트 > 단일 · cumulative+기간 1`] = `
+{
+  "params": [
+    [
+      "11111111-1111-4111-8111-111111111111",
+    ],
+    "2026-08-20",
+    "2026-09-04",
+    [
+      "11111111-1111-4111-8111-111111111111",
+    ],
+    "2026-08-20",
+    "2026-09-04",
+  ],
+  "text": "a.status = 'completed' AND true AND (a.run_id IN (SELECT run_id FROM scope_runs WHERE project_id = ANY($1::uuid[]) AND cycle_anchor_at IS NOT NULL AND cycle_anchor_at >= $2::date AND cycle_anchor_at < ($3::date + 1)) OR (a.run_id IN (SELECT run_id FROM scope_runs WHERE project_id = ANY($4::uuid[]) AND cycle_anchor_at IS NULL) AND a.measured_at >= $5::date AND a.measured_at < ($6::date + 1)))",
+}
+`;
+
+exports[`answerWhere — 프로젝트 컨텍스트 > 단일 · dateFrom 만 1`] = `
+{
+  "params": [
+    [
+      "11111111-1111-4111-8111-111111111111",
+    ],
+    "2026-08-20",
+    [
+      "11111111-1111-4111-8111-111111111111",
+    ],
+    "2026-08-20",
+  ],
+  "text": "a.status = 'completed' AND true AND a.job_id IN (
+    SELECT DISTINCT ON (a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id
+    JOIN (
+      SELECT r.project_id, max(a.measured_at) - interval '7 days' AS floor_at
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE r.project_id = ANY($1::uuid[])
+        AND r.status IN ('completed', 'partial_failed')
+        AND a.status = 'completed' AND COALESCE(r.cycle_anchor_at, r.started_at) >= $2::date
+      GROUP BY r.project_id
+    ) pm ON pm.project_id = r.project_id
+    WHERE r.project_id = ANY($3::uuid[])
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed' AND COALESCE(r.cycle_anchor_at, r.started_at) >= $4::date
+      AND a.measured_at >= pm.floor_at
+    ORDER BY a.prompt_id, a.target, a.region, a.measured_at DESC
+  )",
+}
+`;
+
+exports[`answerWhere — 프로젝트 컨텍스트 > 단일 · dateFrom+dateTo 1`] = `
+{
+  "params": [
+    [
+      "11111111-1111-4111-8111-111111111111",
+    ],
+    "2026-08-20",
+    "2026-09-04",
+    [
+      "11111111-1111-4111-8111-111111111111",
+    ],
+    "2026-08-20",
+    "2026-09-04",
+  ],
+  "text": "a.status = 'completed' AND true AND a.job_id IN (
+    SELECT DISTINCT ON (a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id
+    JOIN (
+      SELECT r.project_id, max(a.measured_at) - interval '7 days' AS floor_at
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE r.project_id = ANY($1::uuid[])
+        AND r.status IN ('completed', 'partial_failed')
+        AND a.status = 'completed' AND COALESCE(r.cycle_anchor_at, r.started_at) >= $2::date AND COALESCE(r.cycle_anchor_at, r.started_at) < ($3::date + 1)
+      GROUP BY r.project_id
+    ) pm ON pm.project_id = r.project_id
+    WHERE r.project_id = ANY($4::uuid[])
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed' AND COALESCE(r.cycle_anchor_at, r.started_at) >= $5::date AND COALESCE(r.cycle_anchor_at, r.started_at) < ($6::date + 1)
+      AND a.measured_at >= pm.floor_at
+    ORDER BY a.prompt_id, a.target, a.region, a.measured_at DESC
+  )",
+}
+`;
+
+exports[`answerWhere — 프로젝트 컨텍스트 > 단일 · dateTo 만 1`] = `
+{
+  "params": [
+    [
+      "11111111-1111-4111-8111-111111111111",
+    ],
+    "2026-09-04",
+    [
+      "11111111-1111-4111-8111-111111111111",
+    ],
+    "2026-09-04",
+  ],
+  "text": "a.status = 'completed' AND true AND a.job_id IN (
+    SELECT DISTINCT ON (a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id
+    JOIN (
+      SELECT r.project_id, max(a.measured_at) - interval '7 days' AS floor_at
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE r.project_id = ANY($1::uuid[])
+        AND r.status IN ('completed', 'partial_failed')
+        AND a.status = 'completed' AND COALESCE(r.cycle_anchor_at, r.started_at) < ($2::date + 1)
+      GROUP BY r.project_id
+    ) pm ON pm.project_id = r.project_id
+    WHERE r.project_id = ANY($3::uuid[])
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed' AND COALESCE(r.cycle_anchor_at, r.started_at) < ($4::date + 1)
+      AND a.measured_at >= pm.floor_at
+    ORDER BY a.prompt_id, a.target, a.region, a.measured_at DESC
+  )",
+}
+`;
+
+exports[`answerWhere — 프로젝트 컨텍스트 > 단일 · 기간 없음 1`] = `
+{
+  "params": [
+    [
+      "11111111-1111-4111-8111-111111111111",
+    ],
+    [
+      "11111111-1111-4111-8111-111111111111",
+    ],
+  ],
+  "text": "a.status = 'completed' AND true AND a.job_id IN (
+    SELECT DISTINCT ON (a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id
+    JOIN (
+      SELECT r.project_id, max(a.measured_at) - interval '7 days' AS floor_at
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE r.project_id = ANY($1::uuid[])
+        AND r.status IN ('completed', 'partial_failed')
+        AND a.status = 'completed'
+      GROUP BY r.project_id
+    ) pm ON pm.project_id = r.project_id
+    WHERE r.project_id = ANY($2::uuid[])
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed'
+      AND a.measured_at >= pm.floor_at
+    ORDER BY a.prompt_id, a.target, a.region, a.measured_at DESC
+  )",
+}
+`;
+
+exports[`answerWhere — 프로젝트 컨텍스트 > 여럿 · cumulative 1`] = `
+{
+  "params": [
+    [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222",
+    ],
+    "2026-08-20",
+    "2026-09-04",
+    [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222",
+    ],
+    "2026-08-20",
+    "2026-09-04",
+  ],
+  "text": "a.status = 'completed' AND true AND (a.run_id IN (SELECT run_id FROM scope_runs WHERE project_id = ANY($1::uuid[]) AND cycle_anchor_at IS NOT NULL AND cycle_anchor_at >= $2::date AND cycle_anchor_at < ($3::date + 1)) OR (a.run_id IN (SELECT run_id FROM scope_runs WHERE project_id = ANY($4::uuid[]) AND cycle_anchor_at IS NULL) AND a.measured_at >= $5::date AND a.measured_at < ($6::date + 1)))",
+}
+`;
+
+exports[`answerWhere — 프로젝트 컨텍스트 > 여럿 · dateFrom+dateTo 1`] = `
+{
+  "params": [
+    [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222",
+    ],
+    "2026-08-20",
+    "2026-09-04",
+    [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222",
+    ],
+    "2026-08-20",
+    "2026-09-04",
+  ],
+  "text": "a.status = 'completed' AND true AND a.job_id IN (
+    SELECT DISTINCT ON (a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id
+    JOIN (
+      SELECT r.project_id, max(a.measured_at) - interval '7 days' AS floor_at
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE r.project_id = ANY($1::uuid[])
+        AND r.status IN ('completed', 'partial_failed')
+        AND a.status = 'completed' AND COALESCE(r.cycle_anchor_at, r.started_at) >= $2::date AND COALESCE(r.cycle_anchor_at, r.started_at) < ($3::date + 1)
+      GROUP BY r.project_id
+    ) pm ON pm.project_id = r.project_id
+    WHERE r.project_id = ANY($4::uuid[])
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed' AND COALESCE(r.cycle_anchor_at, r.started_at) >= $5::date AND COALESCE(r.cycle_anchor_at, r.started_at) < ($6::date + 1)
+      AND a.measured_at >= pm.floor_at
+    ORDER BY a.prompt_id, a.target, a.region, a.measured_at DESC
+  )",
+}
+`;
+
+exports[`answerWhere — 프로젝트 컨텍스트 > 여럿 · 추이(allRuns) 1`] = `
+{
+  "params": [
+    [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222",
+    ],
+    "2026-08-20",
+    "2026-09-04",
+  ],
+  "text": "a.status = 'completed' AND true AND a.run_id IN (SELECT run_id FROM scope_runs WHERE project_id = ANY($1::uuid[])) AND a.measured_at >= $2::date AND a.measured_at < ($3::date + 1)",
+}
+`;
+
+exports[`catalogPromptCountWhere — 카탈로그 축 > 루트 · 기간 없음 1`] = `
+{
+  "params": [
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "project_id = $1 AND scope_prompt_id IS NOT NULL",
+}
+`;
+
+exports[`catalogPromptCountWhere — 카탈로그 축 > 프로젝트 · 기간 1`] = `
+{
+  "params": [],
+  "text": "scope_prompt_id IS NOT NULL",
+}
+`;
+
+exports[`detailAnswerWhere > 루트 · cumulative 기간 없음 1`] = `
+{
+  "params": [
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "true AND a.job_id IN (
+    WITH _fc_base AS (
+      SELECT a.job_id, a.prompt_id, a.target, a.region, a.measured_at,
+        (r.started_at >= now() - interval '7 days') AS in_window
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE true AND r.status IN ('completed', 'partial_failed') AND a.status = 'completed'
+        
+        AND NOT (
+    a.region <> 'KR'
+    AND a.prompt_id IS NOT NULL
+    AND a.prompt_id IN (SELECT sp.prompt_id FROM scope_prompts sp WHERE sp.text ~ '[가-힣]')
+  )
+        
+    ),
+    _fc_cells AS (
+      SELECT prompt_id, target, region, bool_or(in_window) AS w,
+        min(measured_at) AS first_at,
+        max(measured_at) FILTER (WHERE in_window) AS w_last
+      FROM _fc_base GROUP BY 1, 2, 3
+    ),
+    -- ── 기대 셀을 "이번 창에 실제로 돈 셀"로 한정 (2026-09-04, #188) ──────────
+    -- expected 는 원래 이력 무제한이었다. 그래서 한 시장의 측정이 멈추면 그 셀이
+    -- 기대치에 영구히 남고 window 가 절대 따라잡지 못해, 그 시장을 커버하는
+    -- 프롬프트가 **다른 시장에서까지 통째로** 탈락했다(2026-09-04 EG 실증:
+    -- 마지막 측정 8/25 인 EG 셀 2개 때문에 AE Hyundai 프롬프트 208개가 fail).
+    -- 고침: 창 안에 한 건도 측정되지 않은 (엔진, 국가) 셀은 기대치에서 뺀다.
+    -- 그 시장은 돌았는데 이 프롬프트만 빠진 경우는 셀이 active 에 남아 여전히 탈락한다.
+    -- main 의 원안(#188)은 이 목록을 scope_answers 재스캔으로 얻었지만, 같은
+    -- 술어의 창 안 행은 이미 _fc_base.in_window 에 있으므로 셀 집계에서 파생한다
+    -- (스캔 1회 유지 — 아래 단일 스캔 주석의 전제).
+    _fc_active AS (
+      SELECT DISTINCT target, region FROM _fc_cells WHERE w
+    ),
+    -- ── 창 끝 이후에 처음 생긴 셀은 기대치에서 뺀다 (2026-09-28) ──────────────
+    -- expected 는 이력 무제한이라 **미래**도 본다. 프롬프트에 시장이 나중에 추가되면
+    -- (2026-09-28 scope 가 743개 프롬프트에 IN·AU·GB·MY·SA·TH·ID 등을 태깅) 그 새 셀이
+    -- 과거 창의 기대치에 들어가, 과거 창을 조회할 때 그 프롬프트가 "셀 부족"으로 탈락한다.
+    -- 위 _fc_active 한정(#188)은 그 시장이 **다른 프롬프트로** 창 안에서 측정됐으면 못 막는다
+    -- (IN·AU·GB 등은 다른 프롬프트로 매 회차 돈다).
+    -- 고침: 셀의 최초 completed 측정 시각(first_at)이 창 안 마지막 측정(w_last 의 최대)보다
+    -- 뒤면 그 셀은 "이 창 시점에 아직 없던 셀"이므로 기대치에서 뺀다.
+    --   · 창 판정 술어(windowPredicate)는 불투명하므로 창 무관 정의를 쓴다 — 창 끝 = 창 안
+    --     행의 measured_at 최대. 창 경계를 SQL 로 다시 해석하지 않는다.
+    --   · 대칭: 창 안 셀(w)은 first_at <= 자기 w_last <= 창 끝 이라 절대 빠지지 않는다.
+    --     즉 이 절은 **창 밖 셀만** 뺀다 — window 쪽 집계는 불변이다.
+    --   · 창 끝은 _fc_cells 에서 파생한다(_fc_base 를 다시 읽지 않는다 — materialize 된
+    --     CTE 의 세 번째 참조를 만들지 않기 위해). 스캔 1회 구조는 그대로다.
+    --   · NULL 은 종전대로 둔다: 창 안 셀(w)은 무조건 유지, measured_at 이 전부 NULL 인
+    --     셀(first_at NULL)도 유지, 창 끝을 모르면(w_last 전부 NULL) 아무것도 빼지 않는다.
+    -- 프로덕션 미러 실측(2026-09-28, 읽기 전용): 루트 회차 5개 + 기본 7일 창 전부에서 종전
+    -- 게이트 통과 프롬프트 중 탈락 0. 노출 게이트를 끈 9/13·9/20 창에서는 종전 게이트가
+    -- 9/27 회차에 새로 생긴 셀 때문에 기아 EN 2개를 떨어뜨렸고(11,408) 이 절이 되살렸다.
+    -- EXPLAIN (ANALYZE, BUFFERS) 기본 7일 창 교차 4회 중앙값 596.6 → 626.0 ms(+4.9%, ID 해제로
+    -- 늘어난 행 포함) · scope_answers 스캔 1회 · _fc_base 참조 2회 그대로.
+    _fc_gate AS (
+      SELECT prompt_id FROM _fc_cells c
+      WHERE (c.target, c.region) IN (SELECT target, region FROM _fc_active)
+        AND (c.w OR c.first_at IS NULL
+          OR c.first_at <= (SELECT COALESCE(max(w_last), 'infinity'::timestamptz) FROM _fc_cells))
+      GROUP BY prompt_id
+      HAVING count(*) FILTER (WHERE w) >= count(*)
+    )
+    SELECT DISTINCT ON (b.prompt_id, b.target, b.region) b.job_id
+    FROM _fc_base b
+    JOIN _fc_gate g ON g.prompt_id = b.prompt_id
+    WHERE b.in_window
+    ORDER BY b.prompt_id, b.target, b.region, b.measured_at DESC
+  ) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $1 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`detailAnswerWhere > 루트 · cumulative+기간 1`] = `
+{
+  "params": [
+    "2026-08-20",
+    "2026-09-04",
+    "2026-08-20",
+    "2026-09-04",
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "true AND a.status = 'completed' AND (a.run_id IN (SELECT run_id FROM scope_runs WHERE true AND cycle_anchor_at IS NOT NULL AND cycle_anchor_at >= $1::date AND cycle_anchor_at < ($2::date + 1)) OR (a.run_id IN (SELECT run_id FROM scope_runs WHERE true AND cycle_anchor_at IS NULL) AND a.measured_at >= $3::date AND a.measured_at < ($4::date + 1))) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $5 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`detailAnswerWhere > 루트 · dateFrom 만 1`] = `
+{
+  "params": [
+    "2026-08-20",
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "true AND a.job_id IN (
+    WITH _fc_base AS (
+      SELECT a.job_id, a.prompt_id, a.target, a.region, a.measured_at,
+        (COALESCE(r.cycle_anchor_at, r.started_at) >= $1::date) AS in_window
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE true AND r.status IN ('completed', 'partial_failed') AND a.status = 'completed'
+        
+        AND NOT (
+    a.region <> 'KR'
+    AND a.prompt_id IS NOT NULL
+    AND a.prompt_id IN (SELECT sp.prompt_id FROM scope_prompts sp WHERE sp.text ~ '[가-힣]')
+  )
+        
+    ),
+    _fc_cells AS (
+      SELECT prompt_id, target, region, bool_or(in_window) AS w,
+        min(measured_at) AS first_at,
+        max(measured_at) FILTER (WHERE in_window) AS w_last
+      FROM _fc_base GROUP BY 1, 2, 3
+    ),
+    -- ── 기대 셀을 "이번 창에 실제로 돈 셀"로 한정 (2026-09-04, #188) ──────────
+    -- expected 는 원래 이력 무제한이었다. 그래서 한 시장의 측정이 멈추면 그 셀이
+    -- 기대치에 영구히 남고 window 가 절대 따라잡지 못해, 그 시장을 커버하는
+    -- 프롬프트가 **다른 시장에서까지 통째로** 탈락했다(2026-09-04 EG 실증:
+    -- 마지막 측정 8/25 인 EG 셀 2개 때문에 AE Hyundai 프롬프트 208개가 fail).
+    -- 고침: 창 안에 한 건도 측정되지 않은 (엔진, 국가) 셀은 기대치에서 뺀다.
+    -- 그 시장은 돌았는데 이 프롬프트만 빠진 경우는 셀이 active 에 남아 여전히 탈락한다.
+    -- main 의 원안(#188)은 이 목록을 scope_answers 재스캔으로 얻었지만, 같은
+    -- 술어의 창 안 행은 이미 _fc_base.in_window 에 있으므로 셀 집계에서 파생한다
+    -- (스캔 1회 유지 — 아래 단일 스캔 주석의 전제).
+    _fc_active AS (
+      SELECT DISTINCT target, region FROM _fc_cells WHERE w
+    ),
+    -- ── 창 끝 이후에 처음 생긴 셀은 기대치에서 뺀다 (2026-09-28) ──────────────
+    -- expected 는 이력 무제한이라 **미래**도 본다. 프롬프트에 시장이 나중에 추가되면
+    -- (2026-09-28 scope 가 743개 프롬프트에 IN·AU·GB·MY·SA·TH·ID 등을 태깅) 그 새 셀이
+    -- 과거 창의 기대치에 들어가, 과거 창을 조회할 때 그 프롬프트가 "셀 부족"으로 탈락한다.
+    -- 위 _fc_active 한정(#188)은 그 시장이 **다른 프롬프트로** 창 안에서 측정됐으면 못 막는다
+    -- (IN·AU·GB 등은 다른 프롬프트로 매 회차 돈다).
+    -- 고침: 셀의 최초 completed 측정 시각(first_at)이 창 안 마지막 측정(w_last 의 최대)보다
+    -- 뒤면 그 셀은 "이 창 시점에 아직 없던 셀"이므로 기대치에서 뺀다.
+    --   · 창 판정 술어(windowPredicate)는 불투명하므로 창 무관 정의를 쓴다 — 창 끝 = 창 안
+    --     행의 measured_at 최대. 창 경계를 SQL 로 다시 해석하지 않는다.
+    --   · 대칭: 창 안 셀(w)은 first_at <= 자기 w_last <= 창 끝 이라 절대 빠지지 않는다.
+    --     즉 이 절은 **창 밖 셀만** 뺀다 — window 쪽 집계는 불변이다.
+    --   · 창 끝은 _fc_cells 에서 파생한다(_fc_base 를 다시 읽지 않는다 — materialize 된
+    --     CTE 의 세 번째 참조를 만들지 않기 위해). 스캔 1회 구조는 그대로다.
+    --   · NULL 은 종전대로 둔다: 창 안 셀(w)은 무조건 유지, measured_at 이 전부 NULL 인
+    --     셀(first_at NULL)도 유지, 창 끝을 모르면(w_last 전부 NULL) 아무것도 빼지 않는다.
+    -- 프로덕션 미러 실측(2026-09-28, 읽기 전용): 루트 회차 5개 + 기본 7일 창 전부에서 종전
+    -- 게이트 통과 프롬프트 중 탈락 0. 노출 게이트를 끈 9/13·9/20 창에서는 종전 게이트가
+    -- 9/27 회차에 새로 생긴 셀 때문에 기아 EN 2개를 떨어뜨렸고(11,408) 이 절이 되살렸다.
+    -- EXPLAIN (ANALYZE, BUFFERS) 기본 7일 창 교차 4회 중앙값 596.6 → 626.0 ms(+4.9%, ID 해제로
+    -- 늘어난 행 포함) · scope_answers 스캔 1회 · _fc_base 참조 2회 그대로.
+    _fc_gate AS (
+      SELECT prompt_id FROM _fc_cells c
+      WHERE (c.target, c.region) IN (SELECT target, region FROM _fc_active)
+        AND (c.w OR c.first_at IS NULL
+          OR c.first_at <= (SELECT COALESCE(max(w_last), 'infinity'::timestamptz) FROM _fc_cells))
+      GROUP BY prompt_id
+      HAVING count(*) FILTER (WHERE w) >= count(*)
+    )
+    SELECT DISTINCT ON (b.prompt_id, b.target, b.region) b.job_id
+    FROM _fc_base b
+    JOIN _fc_gate g ON g.prompt_id = b.prompt_id
+    WHERE b.in_window
+    ORDER BY b.prompt_id, b.target, b.region, b.measured_at DESC
+  ) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $2 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`detailAnswerWhere > 루트 · dateFrom+dateTo 1`] = `
+{
+  "params": [
+    "2026-08-20",
+    "2026-09-04",
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "true AND a.job_id IN (
+    WITH _fc_base AS (
+      SELECT a.job_id, a.prompt_id, a.target, a.region, a.measured_at,
+        (COALESCE(r.cycle_anchor_at, r.started_at) >= $1::date AND COALESCE(r.cycle_anchor_at, r.started_at) < ($2::date + 1)) AS in_window
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE true AND r.status IN ('completed', 'partial_failed') AND a.status = 'completed'
+        
+        AND NOT (
+    a.region <> 'KR'
+    AND a.prompt_id IS NOT NULL
+    AND a.prompt_id IN (SELECT sp.prompt_id FROM scope_prompts sp WHERE sp.text ~ '[가-힣]')
+  )
+        
+    ),
+    _fc_cells AS (
+      SELECT prompt_id, target, region, bool_or(in_window) AS w,
+        min(measured_at) AS first_at,
+        max(measured_at) FILTER (WHERE in_window) AS w_last
+      FROM _fc_base GROUP BY 1, 2, 3
+    ),
+    -- ── 기대 셀을 "이번 창에 실제로 돈 셀"로 한정 (2026-09-04, #188) ──────────
+    -- expected 는 원래 이력 무제한이었다. 그래서 한 시장의 측정이 멈추면 그 셀이
+    -- 기대치에 영구히 남고 window 가 절대 따라잡지 못해, 그 시장을 커버하는
+    -- 프롬프트가 **다른 시장에서까지 통째로** 탈락했다(2026-09-04 EG 실증:
+    -- 마지막 측정 8/25 인 EG 셀 2개 때문에 AE Hyundai 프롬프트 208개가 fail).
+    -- 고침: 창 안에 한 건도 측정되지 않은 (엔진, 국가) 셀은 기대치에서 뺀다.
+    -- 그 시장은 돌았는데 이 프롬프트만 빠진 경우는 셀이 active 에 남아 여전히 탈락한다.
+    -- main 의 원안(#188)은 이 목록을 scope_answers 재스캔으로 얻었지만, 같은
+    -- 술어의 창 안 행은 이미 _fc_base.in_window 에 있으므로 셀 집계에서 파생한다
+    -- (스캔 1회 유지 — 아래 단일 스캔 주석의 전제).
+    _fc_active AS (
+      SELECT DISTINCT target, region FROM _fc_cells WHERE w
+    ),
+    -- ── 창 끝 이후에 처음 생긴 셀은 기대치에서 뺀다 (2026-09-28) ──────────────
+    -- expected 는 이력 무제한이라 **미래**도 본다. 프롬프트에 시장이 나중에 추가되면
+    -- (2026-09-28 scope 가 743개 프롬프트에 IN·AU·GB·MY·SA·TH·ID 등을 태깅) 그 새 셀이
+    -- 과거 창의 기대치에 들어가, 과거 창을 조회할 때 그 프롬프트가 "셀 부족"으로 탈락한다.
+    -- 위 _fc_active 한정(#188)은 그 시장이 **다른 프롬프트로** 창 안에서 측정됐으면 못 막는다
+    -- (IN·AU·GB 등은 다른 프롬프트로 매 회차 돈다).
+    -- 고침: 셀의 최초 completed 측정 시각(first_at)이 창 안 마지막 측정(w_last 의 최대)보다
+    -- 뒤면 그 셀은 "이 창 시점에 아직 없던 셀"이므로 기대치에서 뺀다.
+    --   · 창 판정 술어(windowPredicate)는 불투명하므로 창 무관 정의를 쓴다 — 창 끝 = 창 안
+    --     행의 measured_at 최대. 창 경계를 SQL 로 다시 해석하지 않는다.
+    --   · 대칭: 창 안 셀(w)은 first_at <= 자기 w_last <= 창 끝 이라 절대 빠지지 않는다.
+    --     즉 이 절은 **창 밖 셀만** 뺀다 — window 쪽 집계는 불변이다.
+    --   · 창 끝은 _fc_cells 에서 파생한다(_fc_base 를 다시 읽지 않는다 — materialize 된
+    --     CTE 의 세 번째 참조를 만들지 않기 위해). 스캔 1회 구조는 그대로다.
+    --   · NULL 은 종전대로 둔다: 창 안 셀(w)은 무조건 유지, measured_at 이 전부 NULL 인
+    --     셀(first_at NULL)도 유지, 창 끝을 모르면(w_last 전부 NULL) 아무것도 빼지 않는다.
+    -- 프로덕션 미러 실측(2026-09-28, 읽기 전용): 루트 회차 5개 + 기본 7일 창 전부에서 종전
+    -- 게이트 통과 프롬프트 중 탈락 0. 노출 게이트를 끈 9/13·9/20 창에서는 종전 게이트가
+    -- 9/27 회차에 새로 생긴 셀 때문에 기아 EN 2개를 떨어뜨렸고(11,408) 이 절이 되살렸다.
+    -- EXPLAIN (ANALYZE, BUFFERS) 기본 7일 창 교차 4회 중앙값 596.6 → 626.0 ms(+4.9%, ID 해제로
+    -- 늘어난 행 포함) · scope_answers 스캔 1회 · _fc_base 참조 2회 그대로.
+    _fc_gate AS (
+      SELECT prompt_id FROM _fc_cells c
+      WHERE (c.target, c.region) IN (SELECT target, region FROM _fc_active)
+        AND (c.w OR c.first_at IS NULL
+          OR c.first_at <= (SELECT COALESCE(max(w_last), 'infinity'::timestamptz) FROM _fc_cells))
+      GROUP BY prompt_id
+      HAVING count(*) FILTER (WHERE w) >= count(*)
+    )
+    SELECT DISTINCT ON (b.prompt_id, b.target, b.region) b.job_id
+    FROM _fc_base b
+    JOIN _fc_gate g ON g.prompt_id = b.prompt_id
+    WHERE b.in_window
+    ORDER BY b.prompt_id, b.target, b.region, b.measured_at DESC
+  ) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $3 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`detailAnswerWhere > 루트 · dateTo 만 1`] = `
+{
+  "params": [
+    "2026-09-04",
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "true AND a.job_id IN (
+    WITH _fc_base AS (
+      SELECT a.job_id, a.prompt_id, a.target, a.region, a.measured_at,
+        (COALESCE(r.cycle_anchor_at, r.started_at) < ($1::date + 1)) AS in_window
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE true AND r.status IN ('completed', 'partial_failed') AND a.status = 'completed'
+        
+        AND NOT (
+    a.region <> 'KR'
+    AND a.prompt_id IS NOT NULL
+    AND a.prompt_id IN (SELECT sp.prompt_id FROM scope_prompts sp WHERE sp.text ~ '[가-힣]')
+  )
+        
+    ),
+    _fc_cells AS (
+      SELECT prompt_id, target, region, bool_or(in_window) AS w,
+        min(measured_at) AS first_at,
+        max(measured_at) FILTER (WHERE in_window) AS w_last
+      FROM _fc_base GROUP BY 1, 2, 3
+    ),
+    -- ── 기대 셀을 "이번 창에 실제로 돈 셀"로 한정 (2026-09-04, #188) ──────────
+    -- expected 는 원래 이력 무제한이었다. 그래서 한 시장의 측정이 멈추면 그 셀이
+    -- 기대치에 영구히 남고 window 가 절대 따라잡지 못해, 그 시장을 커버하는
+    -- 프롬프트가 **다른 시장에서까지 통째로** 탈락했다(2026-09-04 EG 실증:
+    -- 마지막 측정 8/25 인 EG 셀 2개 때문에 AE Hyundai 프롬프트 208개가 fail).
+    -- 고침: 창 안에 한 건도 측정되지 않은 (엔진, 국가) 셀은 기대치에서 뺀다.
+    -- 그 시장은 돌았는데 이 프롬프트만 빠진 경우는 셀이 active 에 남아 여전히 탈락한다.
+    -- main 의 원안(#188)은 이 목록을 scope_answers 재스캔으로 얻었지만, 같은
+    -- 술어의 창 안 행은 이미 _fc_base.in_window 에 있으므로 셀 집계에서 파생한다
+    -- (스캔 1회 유지 — 아래 단일 스캔 주석의 전제).
+    _fc_active AS (
+      SELECT DISTINCT target, region FROM _fc_cells WHERE w
+    ),
+    -- ── 창 끝 이후에 처음 생긴 셀은 기대치에서 뺀다 (2026-09-28) ──────────────
+    -- expected 는 이력 무제한이라 **미래**도 본다. 프롬프트에 시장이 나중에 추가되면
+    -- (2026-09-28 scope 가 743개 프롬프트에 IN·AU·GB·MY·SA·TH·ID 등을 태깅) 그 새 셀이
+    -- 과거 창의 기대치에 들어가, 과거 창을 조회할 때 그 프롬프트가 "셀 부족"으로 탈락한다.
+    -- 위 _fc_active 한정(#188)은 그 시장이 **다른 프롬프트로** 창 안에서 측정됐으면 못 막는다
+    -- (IN·AU·GB 등은 다른 프롬프트로 매 회차 돈다).
+    -- 고침: 셀의 최초 completed 측정 시각(first_at)이 창 안 마지막 측정(w_last 의 최대)보다
+    -- 뒤면 그 셀은 "이 창 시점에 아직 없던 셀"이므로 기대치에서 뺀다.
+    --   · 창 판정 술어(windowPredicate)는 불투명하므로 창 무관 정의를 쓴다 — 창 끝 = 창 안
+    --     행의 measured_at 최대. 창 경계를 SQL 로 다시 해석하지 않는다.
+    --   · 대칭: 창 안 셀(w)은 first_at <= 자기 w_last <= 창 끝 이라 절대 빠지지 않는다.
+    --     즉 이 절은 **창 밖 셀만** 뺀다 — window 쪽 집계는 불변이다.
+    --   · 창 끝은 _fc_cells 에서 파생한다(_fc_base 를 다시 읽지 않는다 — materialize 된
+    --     CTE 의 세 번째 참조를 만들지 않기 위해). 스캔 1회 구조는 그대로다.
+    --   · NULL 은 종전대로 둔다: 창 안 셀(w)은 무조건 유지, measured_at 이 전부 NULL 인
+    --     셀(first_at NULL)도 유지, 창 끝을 모르면(w_last 전부 NULL) 아무것도 빼지 않는다.
+    -- 프로덕션 미러 실측(2026-09-28, 읽기 전용): 루트 회차 5개 + 기본 7일 창 전부에서 종전
+    -- 게이트 통과 프롬프트 중 탈락 0. 노출 게이트를 끈 9/13·9/20 창에서는 종전 게이트가
+    -- 9/27 회차에 새로 생긴 셀 때문에 기아 EN 2개를 떨어뜨렸고(11,408) 이 절이 되살렸다.
+    -- EXPLAIN (ANALYZE, BUFFERS) 기본 7일 창 교차 4회 중앙값 596.6 → 626.0 ms(+4.9%, ID 해제로
+    -- 늘어난 행 포함) · scope_answers 스캔 1회 · _fc_base 참조 2회 그대로.
+    _fc_gate AS (
+      SELECT prompt_id FROM _fc_cells c
+      WHERE (c.target, c.region) IN (SELECT target, region FROM _fc_active)
+        AND (c.w OR c.first_at IS NULL
+          OR c.first_at <= (SELECT COALESCE(max(w_last), 'infinity'::timestamptz) FROM _fc_cells))
+      GROUP BY prompt_id
+      HAVING count(*) FILTER (WHERE w) >= count(*)
+    )
+    SELECT DISTINCT ON (b.prompt_id, b.target, b.region) b.job_id
+    FROM _fc_base b
+    JOIN _fc_gate g ON g.prompt_id = b.prompt_id
+    WHERE b.in_window
+    ORDER BY b.prompt_id, b.target, b.region, b.measured_at DESC
+  ) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $2 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`detailAnswerWhere > 루트 · 기간 없음 1`] = `
+{
+  "params": [
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "true AND a.job_id IN (
+    WITH _fc_base AS (
+      SELECT a.job_id, a.prompt_id, a.target, a.region, a.measured_at,
+        (r.started_at >= now() - interval '7 days') AS in_window
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE true AND r.status IN ('completed', 'partial_failed') AND a.status = 'completed'
+        
+        AND NOT (
+    a.region <> 'KR'
+    AND a.prompt_id IS NOT NULL
+    AND a.prompt_id IN (SELECT sp.prompt_id FROM scope_prompts sp WHERE sp.text ~ '[가-힣]')
+  )
+        
+    ),
+    _fc_cells AS (
+      SELECT prompt_id, target, region, bool_or(in_window) AS w,
+        min(measured_at) AS first_at,
+        max(measured_at) FILTER (WHERE in_window) AS w_last
+      FROM _fc_base GROUP BY 1, 2, 3
+    ),
+    -- ── 기대 셀을 "이번 창에 실제로 돈 셀"로 한정 (2026-09-04, #188) ──────────
+    -- expected 는 원래 이력 무제한이었다. 그래서 한 시장의 측정이 멈추면 그 셀이
+    -- 기대치에 영구히 남고 window 가 절대 따라잡지 못해, 그 시장을 커버하는
+    -- 프롬프트가 **다른 시장에서까지 통째로** 탈락했다(2026-09-04 EG 실증:
+    -- 마지막 측정 8/25 인 EG 셀 2개 때문에 AE Hyundai 프롬프트 208개가 fail).
+    -- 고침: 창 안에 한 건도 측정되지 않은 (엔진, 국가) 셀은 기대치에서 뺀다.
+    -- 그 시장은 돌았는데 이 프롬프트만 빠진 경우는 셀이 active 에 남아 여전히 탈락한다.
+    -- main 의 원안(#188)은 이 목록을 scope_answers 재스캔으로 얻었지만, 같은
+    -- 술어의 창 안 행은 이미 _fc_base.in_window 에 있으므로 셀 집계에서 파생한다
+    -- (스캔 1회 유지 — 아래 단일 스캔 주석의 전제).
+    _fc_active AS (
+      SELECT DISTINCT target, region FROM _fc_cells WHERE w
+    ),
+    -- ── 창 끝 이후에 처음 생긴 셀은 기대치에서 뺀다 (2026-09-28) ──────────────
+    -- expected 는 이력 무제한이라 **미래**도 본다. 프롬프트에 시장이 나중에 추가되면
+    -- (2026-09-28 scope 가 743개 프롬프트에 IN·AU·GB·MY·SA·TH·ID 등을 태깅) 그 새 셀이
+    -- 과거 창의 기대치에 들어가, 과거 창을 조회할 때 그 프롬프트가 "셀 부족"으로 탈락한다.
+    -- 위 _fc_active 한정(#188)은 그 시장이 **다른 프롬프트로** 창 안에서 측정됐으면 못 막는다
+    -- (IN·AU·GB 등은 다른 프롬프트로 매 회차 돈다).
+    -- 고침: 셀의 최초 completed 측정 시각(first_at)이 창 안 마지막 측정(w_last 의 최대)보다
+    -- 뒤면 그 셀은 "이 창 시점에 아직 없던 셀"이므로 기대치에서 뺀다.
+    --   · 창 판정 술어(windowPredicate)는 불투명하므로 창 무관 정의를 쓴다 — 창 끝 = 창 안
+    --     행의 measured_at 최대. 창 경계를 SQL 로 다시 해석하지 않는다.
+    --   · 대칭: 창 안 셀(w)은 first_at <= 자기 w_last <= 창 끝 이라 절대 빠지지 않는다.
+    --     즉 이 절은 **창 밖 셀만** 뺀다 — window 쪽 집계는 불변이다.
+    --   · 창 끝은 _fc_cells 에서 파생한다(_fc_base 를 다시 읽지 않는다 — materialize 된
+    --     CTE 의 세 번째 참조를 만들지 않기 위해). 스캔 1회 구조는 그대로다.
+    --   · NULL 은 종전대로 둔다: 창 안 셀(w)은 무조건 유지, measured_at 이 전부 NULL 인
+    --     셀(first_at NULL)도 유지, 창 끝을 모르면(w_last 전부 NULL) 아무것도 빼지 않는다.
+    -- 프로덕션 미러 실측(2026-09-28, 읽기 전용): 루트 회차 5개 + 기본 7일 창 전부에서 종전
+    -- 게이트 통과 프롬프트 중 탈락 0. 노출 게이트를 끈 9/13·9/20 창에서는 종전 게이트가
+    -- 9/27 회차에 새로 생긴 셀 때문에 기아 EN 2개를 떨어뜨렸고(11,408) 이 절이 되살렸다.
+    -- EXPLAIN (ANALYZE, BUFFERS) 기본 7일 창 교차 4회 중앙값 596.6 → 626.0 ms(+4.9%, ID 해제로
+    -- 늘어난 행 포함) · scope_answers 스캔 1회 · _fc_base 참조 2회 그대로.
+    _fc_gate AS (
+      SELECT prompt_id FROM _fc_cells c
+      WHERE (c.target, c.region) IN (SELECT target, region FROM _fc_active)
+        AND (c.w OR c.first_at IS NULL
+          OR c.first_at <= (SELECT COALESCE(max(w_last), 'infinity'::timestamptz) FROM _fc_cells))
+      GROUP BY prompt_id
+      HAVING count(*) FILTER (WHERE w) >= count(*)
+    )
+    SELECT DISTINCT ON (b.prompt_id, b.target, b.region) b.job_id
+    FROM _fc_base b
+    JOIN _fc_gate g ON g.prompt_id = b.prompt_id
+    WHERE b.in_window
+    ORDER BY b.prompt_id, b.target, b.region, b.measured_at DESC
+  ) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $1 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`detailAnswerWhere > 프로젝트 · cumulative 1`] = `
+{
+  "params": [
+    [
+      "11111111-1111-4111-8111-111111111111",
+    ],
+    "2026-08-20",
+    "2026-09-04",
+    [
+      "11111111-1111-4111-8111-111111111111",
+    ],
+    "2026-08-20",
+    "2026-09-04",
+  ],
+  "text": "true AND a.status = 'completed' AND (a.run_id IN (SELECT run_id FROM scope_runs WHERE project_id = ANY($1::uuid[]) AND cycle_anchor_at IS NOT NULL AND cycle_anchor_at >= $2::date AND cycle_anchor_at < ($3::date + 1)) OR (a.run_id IN (SELECT run_id FROM scope_runs WHERE project_id = ANY($4::uuid[]) AND cycle_anchor_at IS NULL) AND a.measured_at >= $5::date AND a.measured_at < ($6::date + 1)))",
+}
+`;
+
+exports[`detailAnswerWhere > 프로젝트 · 추이(allRuns) 1`] = `
+{
+  "params": [
+    [
+      "11111111-1111-4111-8111-111111111111",
+    ],
+    "2026-08-20",
+    "2026-09-04",
+  ],
+  "text": "true AND a.status = 'completed' AND a.run_id IN (SELECT run_id FROM scope_runs WHERE project_id = ANY($1::uuid[])) AND a.measured_at >= $2::date AND a.measured_at < ($3::date + 1)",
+}
+`;
+
+exports[`mentionBrandDayCountsQuery — 셀당 최신 1건(주 버킷) > cycle 주 격자 1`] = `
+{
+  "params": [
+    "기아",
+    "Kia",
+    "현대",
+    "Hyundai",
+    "현대차",
+    "Hyundai",
+    "현대자동차",
+    "Hyundai",
+    "제네시스",
+    "Genesis",
+    "هيونداي",
+    "Hyundai",
+    "كيا",
+    "Kia",
+    "جينيسيس",
+    "Genesis",
+    "יונדאי",
+    "Hyundai",
+    "קיה",
+    "Kia",
+    "폭스바겐",
+    "Volkswagen",
+    "메르세데스-벤츠",
+    "Mercedes-Benz",
+    "메르세데즈-벤츠",
+    "Mercedes-Benz",
+    "메르세데스-AMG",
+    "Mercedes-AMG",
+    "هوندا",
+    "Honda",
+    "마쓰다",
+    "Mazda",
+    "르노",
+    "Renault",
+    "טויוטה",
+    "Toyota",
+    "미니",
+    "MINI",
+    "Mini",
+    "MINI",
+    "링컨",
+    "Lincoln",
+    "링크앤코",
+    "Lynk & Co",
+    "대우",
+    "Daewoo",
+    "Skoda",
+    "Škoda",
+    "테슬라",
+    "Tesla",
+    "루시드",
+    "Lucid",
+    "تويوتا",
+    "Toyota",
+    "奔驰",
+    "Mercedes-Benz",
+    "宝马",
+    "BMW",
+    "نيسان",
+    "Nissan",
+    "KG 모빌리티",
+    "KG Mobility",
+    "זיקר",
+    "Zeekr",
+    "מרצדס",
+    "Mercedes-Benz",
+    "שברולט",
+    "Chevrolet",
+    "ב.מ.וו",
+    "BMW",
+    "엑스펑",
+    "XPeng",
+    "피닌파리나",
+    "Pininfarina",
+    "Xpeng",
+    "XPeng",
+    "기아",
+    "Kia",
+    "현대",
+    "Hyundai",
+    "현대차",
+    "Hyundai",
+    "현대자동차",
+    "Hyundai",
+    "제네시스",
+    "Genesis",
+    "هيونداي",
+    "Hyundai",
+    "كيا",
+    "Kia",
+    "جينيسيس",
+    "Genesis",
+    "יונדאי",
+    "Hyundai",
+    "קיה",
+    "Kia",
+    "폭스바겐",
+    "Volkswagen",
+    "메르세데스-벤츠",
+    "Mercedes-Benz",
+    "메르세데즈-벤츠",
+    "Mercedes-Benz",
+    "메르세데스-AMG",
+    "Mercedes-AMG",
+    "هوندا",
+    "Honda",
+    "마쓰다",
+    "Mazda",
+    "르노",
+    "Renault",
+    "טויוטה",
+    "Toyota",
+    "미니",
+    "MINI",
+    "Mini",
+    "MINI",
+    "링컨",
+    "Lincoln",
+    "링크앤코",
+    "Lynk & Co",
+    "대우",
+    "Daewoo",
+    "Skoda",
+    "Škoda",
+    "테슬라",
+    "Tesla",
+    "루시드",
+    "Lucid",
+    "تويوتا",
+    "Toyota",
+    "奔驰",
+    "Mercedes-Benz",
+    "宝马",
+    "BMW",
+    "نيسان",
+    "Nissan",
+    "KG 모빌리티",
+    "KG Mobility",
+    "זיקר",
+    "Zeekr",
+    "מרצדס",
+    "Mercedes-Benz",
+    "שברולט",
+    "Chevrolet",
+    "ב.מ.וו",
+    "BMW",
+    "엑스펑",
+    "XPeng",
+    "피닌파리나",
+    "Pininfarina",
+    "Xpeng",
+    "XPeng",
+    "	
+
+                  　﻿",
+    "2026-08-20",
+    "2026-09-04",
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+    "기아",
+    "Kia",
+    "현대",
+    "Hyundai",
+    "현대차",
+    "Hyundai",
+    "현대자동차",
+    "Hyundai",
+    "제네시스",
+    "Genesis",
+    "هيونداي",
+    "Hyundai",
+    "كيا",
+    "Kia",
+    "جينيسيس",
+    "Genesis",
+    "יונדאי",
+    "Hyundai",
+    "קיה",
+    "Kia",
+    "폭스바겐",
+    "Volkswagen",
+    "메르세데스-벤츠",
+    "Mercedes-Benz",
+    "메르세데즈-벤츠",
+    "Mercedes-Benz",
+    "메르세데스-AMG",
+    "Mercedes-AMG",
+    "هوندا",
+    "Honda",
+    "마쓰다",
+    "Mazda",
+    "르노",
+    "Renault",
+    "טויוטה",
+    "Toyota",
+    "미니",
+    "MINI",
+    "Mini",
+    "MINI",
+    "링컨",
+    "Lincoln",
+    "링크앤코",
+    "Lynk & Co",
+    "대우",
+    "Daewoo",
+    "Skoda",
+    "Škoda",
+    "테슬라",
+    "Tesla",
+    "루시드",
+    "Lucid",
+    "تويوتا",
+    "Toyota",
+    "奔驰",
+    "Mercedes-Benz",
+    "宝马",
+    "BMW",
+    "نيسان",
+    "Nissan",
+    "KG 모빌리티",
+    "KG Mobility",
+    "זיקר",
+    "Zeekr",
+    "מרצדס",
+    "Mercedes-Benz",
+    "שברולט",
+    "Chevrolet",
+    "ב.מ.וו",
+    "BMW",
+    "엑스펑",
+    "XPeng",
+    "피닌파리나",
+    "Pininfarina",
+    "Xpeng",
+    "XPeng",
+    "^[	
+
+                  　﻿]*(Genesis|제네시스|جينيسيس)([^[:alnum:]]|$)",
+    "00000000-0000-0000-0000-000000000304",
+    "^[	
+
+                  　﻿]*(Hyundai|현대자동차|현대차|현대|هيونداي|יונדאי)([^[:alnum:]]|$)",
+    "00000000-0000-0000-0000-000000000301",
+    "^[	
+
+                  　﻿]*(Kia|기아|كيا|קיה)([^[:alnum:]]|$)",
+    "00000000-0000-0000-0000-000000000302",
+    "e0348d5f-afe4-48e6-aa99-1dee566f2822",
+    "00000000-0000-0000-0000-000000000301",
+    "c6dc2ca3-0fc9-42bc-b255-6fbfdb394e45",
+    "00000000-0000-0000-0000-000000000301",
+    "65eabd79-6138-4851-8b58-8a9b0261b517",
+    "00000000-0000-0000-0000-000000000301",
+    "ed4b8012-4a73-4174-9b43-4cb696934b25",
+    "00000000-0000-0000-0000-000000000302",
+    "53a1ac82-6346-477d-9fb7-31d78b9248fa",
+    "00000000-0000-0000-0000-000000000302",
+    "e21f66ad-9a28-46ab-8436-78ead06bd8f9",
+    "00000000-0000-0000-0000-000000000302",
+    "fd2f4a33-8f9b-4a46-bfd0-62133d162d28",
+    "00000000-0000-0000-0000-000000000304",
+    "기아",
+    "Kia",
+    "현대",
+    "Hyundai",
+    "현대차",
+    "Hyundai",
+    "현대자동차",
+    "Hyundai",
+    "제네시스",
+    "Genesis",
+    "هيونداي",
+    "Hyundai",
+    "كيا",
+    "Kia",
+    "جينيسيس",
+    "Genesis",
+    "יונדאי",
+    "Hyundai",
+    "קיה",
+    "Kia",
+    "폭스바겐",
+    "Volkswagen",
+    "메르세데스-벤츠",
+    "Mercedes-Benz",
+    "메르세데즈-벤츠",
+    "Mercedes-Benz",
+    "메르세데스-AMG",
+    "Mercedes-AMG",
+    "هوندا",
+    "Honda",
+    "마쓰다",
+    "Mazda",
+    "르노",
+    "Renault",
+    "טויוטה",
+    "Toyota",
+    "미니",
+    "MINI",
+    "Mini",
+    "MINI",
+    "링컨",
+    "Lincoln",
+    "링크앤코",
+    "Lynk & Co",
+    "대우",
+    "Daewoo",
+    "Skoda",
+    "Škoda",
+    "테슬라",
+    "Tesla",
+    "루시드",
+    "Lucid",
+    "تويوتا",
+    "Toyota",
+    "奔驰",
+    "Mercedes-Benz",
+    "宝马",
+    "BMW",
+    "نيسان",
+    "Nissan",
+    "KG 모빌리티",
+    "KG Mobility",
+    "זיקר",
+    "Zeekr",
+    "מרצדס",
+    "Mercedes-Benz",
+    "שברולט",
+    "Chevrolet",
+    "ב.מ.וו",
+    "BMW",
+    "엑스펑",
+    "XPeng",
+    "피닌파리나",
+    "Pininfarina",
+    "Xpeng",
+    "XPeng",
+    "	
+
+                  　﻿",
+    "smart",
+    "^[	
+
+                  　﻿]*smart[^[:alnum:]]",
+    "cruise",
+    "^[	
+
+                  　﻿]*cruise[^[:alnum:]]",
+    "international",
+    "^[	
+
+                  　﻿]*international[^[:alnum:]]",
+    "pilot",
+    "^[	
+
+                  　﻿]*pilot[^[:alnum:]]",
+    "falcon",
+    "^[	
+
+                  　﻿]*falcon[^[:alnum:]]",
+    "century",
+    "^[	
+
+                  　﻿]*century[^[:alnum:]]",
+    "element",
+    "^[	
+
+                  　﻿]*element[^[:alnum:]]",
+    "lightning",
+    "^[	
+
+                  　﻿]*lightning[^[:alnum:]]",
+    "punch",
+    "^[	
+
+                  　﻿]*punch[^[:alnum:]]",
+    "one",
+    "^[	
+
+                  　﻿]*one[^[:alnum:]]",
+    "integra",
+    "^[	
+
+                  　﻿]*integra[^[:alnum:]]",
+    "bolt",
+    "^[	
+
+                  　﻿]*bolt[^[:alnum:]]",
+    "fit",
+    "^[	
+
+                  　﻿]*fit[^[:alnum:]]",
+    "focus",
+    "^[	
+
+                  　﻿]*focus[^[:alnum:]]",
+    "legacy",
+    "^[	
+
+                  　﻿]*legacy[^[:alnum:]]",
+    "charger",
+    "^[	
+
+                  　﻿]*charger[^[:alnum:]]",
+    "city",
+    "^[	
+
+                  　﻿]*city[^[:alnum:]]",
+    "edge",
+    "^[	
+
+                  　﻿]*edge[^[:alnum:]]",
+    "is",
+    "^[	
+
+                  　﻿]*is[^[:alnum:]]",
+    "vision",
+    "^[	
+
+                  　﻿]*vision[^[:alnum:]]",
+    "volt",
+    "^[	
+
+                  　﻿]*volt[^[:alnum:]]",
+    "crown",
+    "^[	
+
+                  　﻿]*crown[^[:alnum:]]",
+    "golf",
+    "^[	
+
+                  　﻿]*golf[^[:alnum:]]",
+    "transit",
+    "^[	
+
+                  　﻿]*transit[^[:alnum:]]",
+    "gravity",
+    "^[	
+
+                  　﻿]*gravity[^[:alnum:]]",
+    "fastback",
+    "^[	
+
+                  　﻿]*fastback[^[:alnum:]]",
+    "dual electronics",
+    "^[	
+
+                  　﻿]*dual electronics[^[:alnum:]]",
+    "기아",
+    "Kia",
+    "현대",
+    "Hyundai",
+    "현대차",
+    "Hyundai",
+    "현대자동차",
+    "Hyundai",
+    "제네시스",
+    "Genesis",
+    "هيونداي",
+    "Hyundai",
+    "كيا",
+    "Kia",
+    "جينيسيس",
+    "Genesis",
+    "יונדאי",
+    "Hyundai",
+    "קיה",
+    "Kia",
+    "폭스바겐",
+    "Volkswagen",
+    "메르세데스-벤츠",
+    "Mercedes-Benz",
+    "메르세데즈-벤츠",
+    "Mercedes-Benz",
+    "메르세데스-AMG",
+    "Mercedes-AMG",
+    "هوندا",
+    "Honda",
+    "마쓰다",
+    "Mazda",
+    "르노",
+    "Renault",
+    "טויוטה",
+    "Toyota",
+    "미니",
+    "MINI",
+    "Mini",
+    "MINI",
+    "링컨",
+    "Lincoln",
+    "링크앤코",
+    "Lynk & Co",
+    "대우",
+    "Daewoo",
+    "Skoda",
+    "Škoda",
+    "테슬라",
+    "Tesla",
+    "루시드",
+    "Lucid",
+    "تويوتا",
+    "Toyota",
+    "奔驰",
+    "Mercedes-Benz",
+    "宝马",
+    "BMW",
+    "نيسان",
+    "Nissan",
+    "KG 모빌리티",
+    "KG Mobility",
+    "זיקר",
+    "Zeekr",
+    "מרצדס",
+    "Mercedes-Benz",
+    "שברולט",
+    "Chevrolet",
+    "ב.מ.וו",
+    "BMW",
+    "엑스펑",
+    "XPeng",
+    "피닌파리나",
+    "Pininfarina",
+    "Xpeng",
+    "XPeng",
+    "	
+
+                  　﻿",
+    "apple",
+    "google",
+    "samsung",
+    "pilot",
+    "falcon",
+    "century",
+    "element",
+    "lightning",
+    "punch",
+    "one",
+    "integra",
+    "bolt",
+    "fit",
+    "focus",
+    "legacy",
+    "charger",
+    "city",
+    "edge",
+    "is",
+    "vision",
+    "volt",
+    "crown",
+    "golf",
+    "transit",
+    "gravity",
+    "fastback",
+    "dual electronics",
+    "across",
+    "advanced",
+    "clever",
+    "contact",
+    "dealership",
+    "drift",
+    "five",
+    "flat",
+    "guest",
+    "impact",
+    "index",
+    "mass",
+    "maximum",
+    "miles",
+    "modern",
+    "motion",
+    "option",
+    "particular",
+    "peak",
+    "plus",
+    "powerful",
+    "race",
+    "reach",
+    "real",
+    "record",
+    "rise",
+    "security",
+    "sharp",
+    "specialist",
+    "specialized",
+    "stack",
+    "status",
+    "torque",
+    "urban",
+    "victory",
+    "wise",
+    "/drive",
+    "more than",
+    "sure",
+    "winners",
+    "game",
+    "silence",
+    "alliance",
+    "canada",
+    "china",
+    "usa",
+    "germany",
+    "australia",
+    "españa",
+    "automotive manufacturer",
+    "automotive repair shop",
+    "german automotive industry",
+    "german luxury car brands",
+    "italian automotive brands",
+    "original equipment manufacturer",
+    "third party",
+    "local dealership",
+    "credit union",
+    "bank",
+    "retailer",
+    "global pet foods",
+    "jd power",
+    "motor trend",
+    "mobile.de",
+    "point s",
+    "form lighting",
+    "green filter",
+    "event tires",
+    "stance wheels",
+    "kobalt",
+    "target",
+    "mark's",
+    "a-premium",
+    "digit insurance",
+    "dollar rent a car",
+    "app store",
+    "amazon prime",
+    "microsoft surface",
+    "power performance",
+    "wedge performance",
+    "march performance",
+    "evs tuning",
+    "ethos car care",
+    "western motorsports",
+    "comp cams",
+    "link ecu",
+    "arka",
+    "king george/kingsway dealership",
+    "destination mazda",
+    "pace american",
+    "alcantara",
+    "fila",
+    "wahl",
+    "reliance",
+    "vanguard",
+    "acsi",
+    "ergo",
+    "중고차 플랫폼",
+    "일본 럭셔리 자동차 브랜드",
+    "독일 자동차 브랜드",
+    "프랑스 자동차 제조사",
+    "국내 배터리 제조사",
+    "대만 모터사이클 산업",
+    "고가 브랜드",
+    "저가 브랜드",
+    "독3사",
+    "캐피탈사",
+    "자동차리콜센터",
+    "국토교통부",
+    "보배드림",
+    "사설 정비소",
+    "독립 정비소",
+    "카센터",
+    "온라인샵",
+    "아우디 공식 딜러",
+    "자동차 동호회",
+    "차지비",
+    "순정부품",
+    "삼성전자",
+    "카카오",
+    "레카로",
+    "요코하마",
+    "파파존스",
+    "테인",
+    "세나",
+    "말레이시아",
+    "smart",
+    "cruise",
+    "international",
+    "fahren",
+    "gran turismo",
+  ],
+  "text": "
+    WITH names AS (
+  SELECT r.entity_id, r.brand,
+         (CASE r.brand WHEN $1 THEN $2 WHEN $3 THEN $4 WHEN $5 THEN $6 WHEN $7 THEN $8 WHEN $9 THEN $10 WHEN $11 THEN $12 WHEN $13 THEN $14 WHEN $15 THEN $16 WHEN $17 THEN $18 WHEN $19 THEN $20 WHEN $21 THEN $22 WHEN $23 THEN $24 WHEN $25 THEN $26 WHEN $27 THEN $28 WHEN $29 THEN $30 WHEN $31 THEN $32 WHEN $33 THEN $34 WHEN $35 THEN $36 WHEN $37 THEN $38 WHEN $39 THEN $40 WHEN $41 THEN $42 WHEN $43 THEN $44 WHEN $45 THEN $46 WHEN $47 THEN $48 WHEN $49 THEN $50 WHEN $51 THEN $52 WHEN $53 THEN $54 WHEN $55 THEN $56 WHEN $57 THEN $58 WHEN $59 THEN $60 WHEN $61 THEN $62 WHEN $63 THEN $64 WHEN $65 THEN $66 WHEN $67 THEN $68 WHEN $69 THEN $70 WHEN $71 THEN $72 WHEN $73 THEN $74 WHEN $75 THEN $76 ELSE r.brand END) AS cname,
+         lower(btrim((CASE r.brand WHEN $77 THEN $78 WHEN $79 THEN $80 WHEN $81 THEN $82 WHEN $83 THEN $84 WHEN $85 THEN $86 WHEN $87 THEN $88 WHEN $89 THEN $90 WHEN $91 THEN $92 WHEN $93 THEN $94 WHEN $95 THEN $96 WHEN $97 THEN $98 WHEN $99 THEN $100 WHEN $101 THEN $102 WHEN $103 THEN $104 WHEN $105 THEN $106 WHEN $107 THEN $108 WHEN $109 THEN $110 WHEN $111 THEN $112 WHEN $113 THEN $114 WHEN $115 THEN $116 WHEN $117 THEN $118 WHEN $119 THEN $120 WHEN $121 THEN $122 WHEN $123 THEN $124 WHEN $125 THEN $126 WHEN $127 THEN $128 WHEN $129 THEN $130 WHEN $131 THEN $132 WHEN $133 THEN $134 WHEN $135 THEN $136 WHEN $137 THEN $138 WHEN $139 THEN $140 WHEN $141 THEN $142 WHEN $143 THEN $144 WHEN $145 THEN $146 WHEN $147 THEN $148 WHEN $149 THEN $150 WHEN $151 THEN $152 ELSE r.brand END), $153)) AS bare
+  FROM (
+  WITH RECURSIVE _rn_pairs AS (
+    (SELECT m.entity_id, m.brand FROM scope_mentions m
+      WHERE m.entity_type = 'Brand' AND m.brand IS NOT NULL
+      ORDER BY m.entity_id, m.brand LIMIT 1)
+    UNION ALL
+    SELECT nx.entity_id, nx.brand FROM _rn_pairs p
+    CROSS JOIN LATERAL (
+      SELECT m.entity_id, m.brand FROM scope_mentions m
+      WHERE m.entity_type = 'Brand' AND m.brand IS NOT NULL
+        AND (m.entity_id, m.brand) > (p.entity_id, p.brand)
+      ORDER BY m.entity_id, m.brand LIMIT 1
+    ) nx
+  )
+  SELECT DISTINCT ON (entity_id) entity_id, brand
+  FROM _rn_pairs ORDER BY entity_id, (brand ~ '^[A-Za-z]') DESC, brand
+) r
+),
+    ans AS MATERIALIZED (
+      SELECT DISTINCT ON (a.prompt_id, a.target, a.region, COALESCE(_cw.cycle_week, (date_trunc('week', a.measured_at))::date))
+        a.job_id, COALESCE(_cw.cycle_week, (date_trunc('week', a.measured_at))::date) AS wk
+      FROM scope_answers a LEFT JOIN (
+        SELECT cr.run_id, c.cycle_week
+        FROM summary_cycle_runs cr JOIN summary_cycles c ON c.cycle_id = cr.cycle_id
+      ) _cw ON _cw.run_id = a.run_id
+      WHERE a.measured_at IS NOT NULL AND a.measured_at >= now() - interval '120 days' AND a.status = 'completed' AND true AND a.run_id IN (SELECT run_id FROM scope_runs WHERE true) AND a.measured_at >= $154::date AND a.measured_at < ($155::date + 1) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $156 AND scope_prompt_id IS NOT NULL) AND true
+      ORDER BY a.prompt_id, a.target, a.region, COALESCE(_cw.cycle_week, (date_trunc('week', a.measured_at))::date),
+        a.measured_at DESC
+    )
+    SELECT to_char(x.wk, 'YYYY-MM-DD') AS day,
+      COALESCE(n.cname, (CASE x.brand WHEN $157 THEN $158 WHEN $159 THEN $160 WHEN $161 THEN $162 WHEN $163 THEN $164 WHEN $165 THEN $166 WHEN $167 THEN $168 WHEN $169 THEN $170 WHEN $171 THEN $172 WHEN $173 THEN $174 WHEN $175 THEN $176 WHEN $177 THEN $178 WHEN $179 THEN $180 WHEN $181 THEN $182 WHEN $183 THEN $184 WHEN $185 THEN $186 WHEN $187 THEN $188 WHEN $189 THEN $190 WHEN $191 THEN $192 WHEN $193 THEN $194 WHEN $195 THEN $196 WHEN $197 THEN $198 WHEN $199 THEN $200 WHEN $201 THEN $202 WHEN $203 THEN $204 WHEN $205 THEN $206 WHEN $207 THEN $208 WHEN $209 THEN $210 WHEN $211 THEN $212 WHEN $213 THEN $214 WHEN $215 THEN $216 WHEN $217 THEN $218 WHEN $219 THEN $220 WHEN $221 THEN $222 WHEN $223 THEN $224 WHEN $225 THEN $226 WHEN $227 THEN $228 WHEN $229 THEN $230 WHEN $231 THEN $232 ELSE x.brand END)) AS key,
+      sum(x.mention_count)::int AS n
+    FROM (
+      SELECT ans.wk AS wk, m.mention_count AS mention_count, m.brand AS brand,
+        (CASE WHEN m.brand_rollup_entity_id IS NULL THEN m.brand_rollup_entity_id WHEN m.brand ~* $233 THEN $234 WHEN m.brand ~* $235 THEN $236 WHEN m.brand ~* $237 THEN $238 ELSE (CASE m.brand_rollup_entity_id WHEN $239 THEN $240 WHEN $241 THEN $242 WHEN $243 THEN $244 WHEN $245 THEN $246 WHEN $247 THEN $248 WHEN $249 THEN $250 WHEN $251 THEN $252 ELSE m.brand_rollup_entity_id END) END) AS rid
+      FROM scope_mentions m JOIN ans ON ans.job_id = m.job_id
+      WHERE m.brand_rollup_entity_id IS NOT NULL
+      OFFSET 0
+    ) x
+    LEFT JOIN names n ON n.entity_id = x.rid
+    WHERE COALESCE(n.brand, x.brand) IS NOT NULL
+      AND (CASE COALESCE(n.bare, lower(btrim((CASE x.brand WHEN $253 THEN $254 WHEN $255 THEN $256 WHEN $257 THEN $258 WHEN $259 THEN $260 WHEN $261 THEN $262 WHEN $263 THEN $264 WHEN $265 THEN $266 WHEN $267 THEN $268 WHEN $269 THEN $270 WHEN $271 THEN $272 WHEN $273 THEN $274 WHEN $275 THEN $276 WHEN $277 THEN $278 WHEN $279 THEN $280 WHEN $281 THEN $282 WHEN $283 THEN $284 WHEN $285 THEN $286 WHEN $287 THEN $288 WHEN $289 THEN $290 WHEN $291 THEN $292 WHEN $293 THEN $294 WHEN $295 THEN $296 WHEN $297 THEN $298 WHEN $299 THEN $300 WHEN $301 THEN $302 WHEN $303 THEN $304 WHEN $305 THEN $306 WHEN $307 THEN $308 WHEN $309 THEN $310 WHEN $311 THEN $312 WHEN $313 THEN $314 WHEN $315 THEN $316 WHEN $317 THEN $318 WHEN $319 THEN $320 WHEN $321 THEN $322 WHEN $323 THEN $324 WHEN $325 THEN $326 WHEN $327 THEN $328 ELSE x.brand END), $329))) WHEN $330 THEN (x.brand ~* $331) WHEN $332 THEN (x.brand ~* $333) WHEN $334 THEN (x.brand ~* $335) WHEN $336 THEN (x.brand ~* $337) WHEN $338 THEN (x.brand ~* $339) WHEN $340 THEN (x.brand ~* $341) WHEN $342 THEN (x.brand ~* $343) WHEN $344 THEN (x.brand ~* $345) WHEN $346 THEN (x.brand ~* $347) WHEN $348 THEN (x.brand ~* $349) WHEN $350 THEN (x.brand ~* $351) WHEN $352 THEN (x.brand ~* $353) WHEN $354 THEN (x.brand ~* $355) WHEN $356 THEN (x.brand ~* $357) WHEN $358 THEN (x.brand ~* $359) WHEN $360 THEN (x.brand ~* $361) WHEN $362 THEN (x.brand ~* $363) WHEN $364 THEN (x.brand ~* $365) WHEN $366 THEN (x.brand ~* $367) WHEN $368 THEN (x.brand ~* $369) WHEN $370 THEN (x.brand ~* $371) WHEN $372 THEN (x.brand ~* $373) WHEN $374 THEN (x.brand ~* $375) WHEN $376 THEN (x.brand ~* $377) WHEN $378 THEN (x.brand ~* $379) WHEN $380 THEN (x.brand ~* $381) WHEN $382 THEN (x.brand ~* $383) ELSE COALESCE(n.bare, lower(btrim((CASE x.brand WHEN $384 THEN $385 WHEN $386 THEN $387 WHEN $388 THEN $389 WHEN $390 THEN $391 WHEN $392 THEN $393 WHEN $394 THEN $395 WHEN $396 THEN $397 WHEN $398 THEN $399 WHEN $400 THEN $401 WHEN $402 THEN $403 WHEN $404 THEN $405 WHEN $406 THEN $407 WHEN $408 THEN $409 WHEN $410 THEN $411 WHEN $412 THEN $413 WHEN $414 THEN $415 WHEN $416 THEN $417 WHEN $418 THEN $419 WHEN $420 THEN $421 WHEN $422 THEN $423 WHEN $424 THEN $425 WHEN $426 THEN $427 WHEN $428 THEN $429 WHEN $430 THEN $431 WHEN $432 THEN $433 WHEN $434 THEN $435 WHEN $436 THEN $437 WHEN $438 THEN $439 WHEN $440 THEN $441 WHEN $442 THEN $443 WHEN $444 THEN $445 WHEN $446 THEN $447 WHEN $448 THEN $449 WHEN $450 THEN $451 WHEN $452 THEN $453 WHEN $454 THEN $455 WHEN $456 THEN $457 WHEN $458 THEN $459 ELSE x.brand END), $460))) NOT IN ($461, $462, $463, $464, $465, $466, $467, $468, $469, $470, $471, $472, $473, $474, $475, $476, $477, $478, $479, $480, $481, $482, $483, $484, $485, $486, $487, $488, $489, $490, $491, $492, $493, $494, $495, $496, $497, $498, $499, $500, $501, $502, $503, $504, $505, $506, $507, $508, $509, $510, $511, $512, $513, $514, $515, $516, $517, $518, $519, $520, $521, $522, $523, $524, $525, $526, $527, $528, $529, $530, $531, $532, $533, $534, $535, $536, $537, $538, $539, $540, $541, $542, $543, $544, $545, $546, $547, $548, $549, $550, $551, $552, $553, $554, $555, $556, $557, $558, $559, $560, $561, $562, $563, $564, $565, $566, $567, $568, $569, $570, $571, $572, $573, $574, $575, $576, $577, $578, $579, $580, $581, $582, $583, $584, $585, $586, $587, $588, $589, $590, $591, $592, $593, $594, $595, $596, $597, $598, $599, $600, $601, $602, $603, $604, $605, $606, $607, $608, $609, $610, $611, $612, $613, $614, $615, $616, $617, $618) END)
+      true
+    GROUP BY 1, 2
+  ",
+}
+`;
+
+exports[`mentionBrandDayCountsQuery — 셀당 최신 1건(주 버킷) > measured 주 격자 1`] = `
+{
+  "params": [
+    "기아",
+    "Kia",
+    "현대",
+    "Hyundai",
+    "현대차",
+    "Hyundai",
+    "현대자동차",
+    "Hyundai",
+    "제네시스",
+    "Genesis",
+    "هيونداي",
+    "Hyundai",
+    "كيا",
+    "Kia",
+    "جينيسيس",
+    "Genesis",
+    "יונדאי",
+    "Hyundai",
+    "קיה",
+    "Kia",
+    "폭스바겐",
+    "Volkswagen",
+    "메르세데스-벤츠",
+    "Mercedes-Benz",
+    "메르세데즈-벤츠",
+    "Mercedes-Benz",
+    "메르세데스-AMG",
+    "Mercedes-AMG",
+    "هوندا",
+    "Honda",
+    "마쓰다",
+    "Mazda",
+    "르노",
+    "Renault",
+    "טויוטה",
+    "Toyota",
+    "미니",
+    "MINI",
+    "Mini",
+    "MINI",
+    "링컨",
+    "Lincoln",
+    "링크앤코",
+    "Lynk & Co",
+    "대우",
+    "Daewoo",
+    "Skoda",
+    "Škoda",
+    "테슬라",
+    "Tesla",
+    "루시드",
+    "Lucid",
+    "تويوتا",
+    "Toyota",
+    "奔驰",
+    "Mercedes-Benz",
+    "宝马",
+    "BMW",
+    "نيسان",
+    "Nissan",
+    "KG 모빌리티",
+    "KG Mobility",
+    "זיקר",
+    "Zeekr",
+    "מרצדס",
+    "Mercedes-Benz",
+    "שברולט",
+    "Chevrolet",
+    "ב.מ.וו",
+    "BMW",
+    "엑스펑",
+    "XPeng",
+    "피닌파리나",
+    "Pininfarina",
+    "Xpeng",
+    "XPeng",
+    "기아",
+    "Kia",
+    "현대",
+    "Hyundai",
+    "현대차",
+    "Hyundai",
+    "현대자동차",
+    "Hyundai",
+    "제네시스",
+    "Genesis",
+    "هيونداي",
+    "Hyundai",
+    "كيا",
+    "Kia",
+    "جينيسيس",
+    "Genesis",
+    "יונדאי",
+    "Hyundai",
+    "קיה",
+    "Kia",
+    "폭스바겐",
+    "Volkswagen",
+    "메르세데스-벤츠",
+    "Mercedes-Benz",
+    "메르세데즈-벤츠",
+    "Mercedes-Benz",
+    "메르세데스-AMG",
+    "Mercedes-AMG",
+    "هوندا",
+    "Honda",
+    "마쓰다",
+    "Mazda",
+    "르노",
+    "Renault",
+    "טויוטה",
+    "Toyota",
+    "미니",
+    "MINI",
+    "Mini",
+    "MINI",
+    "링컨",
+    "Lincoln",
+    "링크앤코",
+    "Lynk & Co",
+    "대우",
+    "Daewoo",
+    "Skoda",
+    "Škoda",
+    "테슬라",
+    "Tesla",
+    "루시드",
+    "Lucid",
+    "تويوتا",
+    "Toyota",
+    "奔驰",
+    "Mercedes-Benz",
+    "宝马",
+    "BMW",
+    "نيسان",
+    "Nissan",
+    "KG 모빌리티",
+    "KG Mobility",
+    "זיקר",
+    "Zeekr",
+    "מרצדס",
+    "Mercedes-Benz",
+    "שברולט",
+    "Chevrolet",
+    "ב.מ.וו",
+    "BMW",
+    "엑스펑",
+    "XPeng",
+    "피닌파리나",
+    "Pininfarina",
+    "Xpeng",
+    "XPeng",
+    "	
+
+                  　﻿",
+    "2026-08-20",
+    "2026-09-04",
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+    "기아",
+    "Kia",
+    "현대",
+    "Hyundai",
+    "현대차",
+    "Hyundai",
+    "현대자동차",
+    "Hyundai",
+    "제네시스",
+    "Genesis",
+    "هيونداي",
+    "Hyundai",
+    "كيا",
+    "Kia",
+    "جينيسيس",
+    "Genesis",
+    "יונדאי",
+    "Hyundai",
+    "קיה",
+    "Kia",
+    "폭스바겐",
+    "Volkswagen",
+    "메르세데스-벤츠",
+    "Mercedes-Benz",
+    "메르세데즈-벤츠",
+    "Mercedes-Benz",
+    "메르세데스-AMG",
+    "Mercedes-AMG",
+    "هوندا",
+    "Honda",
+    "마쓰다",
+    "Mazda",
+    "르노",
+    "Renault",
+    "טויוטה",
+    "Toyota",
+    "미니",
+    "MINI",
+    "Mini",
+    "MINI",
+    "링컨",
+    "Lincoln",
+    "링크앤코",
+    "Lynk & Co",
+    "대우",
+    "Daewoo",
+    "Skoda",
+    "Škoda",
+    "테슬라",
+    "Tesla",
+    "루시드",
+    "Lucid",
+    "تويوتا",
+    "Toyota",
+    "奔驰",
+    "Mercedes-Benz",
+    "宝马",
+    "BMW",
+    "نيسان",
+    "Nissan",
+    "KG 모빌리티",
+    "KG Mobility",
+    "זיקר",
+    "Zeekr",
+    "מרצדס",
+    "Mercedes-Benz",
+    "שברולט",
+    "Chevrolet",
+    "ב.מ.וו",
+    "BMW",
+    "엑스펑",
+    "XPeng",
+    "피닌파리나",
+    "Pininfarina",
+    "Xpeng",
+    "XPeng",
+    "^[	
+
+                  　﻿]*(Genesis|제네시스|جينيسيس)([^[:alnum:]]|$)",
+    "00000000-0000-0000-0000-000000000304",
+    "^[	
+
+                  　﻿]*(Hyundai|현대자동차|현대차|현대|هيونداي|יונדאי)([^[:alnum:]]|$)",
+    "00000000-0000-0000-0000-000000000301",
+    "^[	
+
+                  　﻿]*(Kia|기아|كيا|קיה)([^[:alnum:]]|$)",
+    "00000000-0000-0000-0000-000000000302",
+    "e0348d5f-afe4-48e6-aa99-1dee566f2822",
+    "00000000-0000-0000-0000-000000000301",
+    "c6dc2ca3-0fc9-42bc-b255-6fbfdb394e45",
+    "00000000-0000-0000-0000-000000000301",
+    "65eabd79-6138-4851-8b58-8a9b0261b517",
+    "00000000-0000-0000-0000-000000000301",
+    "ed4b8012-4a73-4174-9b43-4cb696934b25",
+    "00000000-0000-0000-0000-000000000302",
+    "53a1ac82-6346-477d-9fb7-31d78b9248fa",
+    "00000000-0000-0000-0000-000000000302",
+    "e21f66ad-9a28-46ab-8436-78ead06bd8f9",
+    "00000000-0000-0000-0000-000000000302",
+    "fd2f4a33-8f9b-4a46-bfd0-62133d162d28",
+    "00000000-0000-0000-0000-000000000304",
+    "기아",
+    "Kia",
+    "현대",
+    "Hyundai",
+    "현대차",
+    "Hyundai",
+    "현대자동차",
+    "Hyundai",
+    "제네시스",
+    "Genesis",
+    "هيونداي",
+    "Hyundai",
+    "كيا",
+    "Kia",
+    "جينيسيس",
+    "Genesis",
+    "יונדאי",
+    "Hyundai",
+    "קיה",
+    "Kia",
+    "폭스바겐",
+    "Volkswagen",
+    "메르세데스-벤츠",
+    "Mercedes-Benz",
+    "메르세데즈-벤츠",
+    "Mercedes-Benz",
+    "메르세데스-AMG",
+    "Mercedes-AMG",
+    "هوندا",
+    "Honda",
+    "마쓰다",
+    "Mazda",
+    "르노",
+    "Renault",
+    "טויוטה",
+    "Toyota",
+    "미니",
+    "MINI",
+    "Mini",
+    "MINI",
+    "링컨",
+    "Lincoln",
+    "링크앤코",
+    "Lynk & Co",
+    "대우",
+    "Daewoo",
+    "Skoda",
+    "Škoda",
+    "테슬라",
+    "Tesla",
+    "루시드",
+    "Lucid",
+    "تويوتا",
+    "Toyota",
+    "奔驰",
+    "Mercedes-Benz",
+    "宝马",
+    "BMW",
+    "نيسان",
+    "Nissan",
+    "KG 모빌리티",
+    "KG Mobility",
+    "זיקר",
+    "Zeekr",
+    "מרצדס",
+    "Mercedes-Benz",
+    "שברולט",
+    "Chevrolet",
+    "ב.מ.וו",
+    "BMW",
+    "엑스펑",
+    "XPeng",
+    "피닌파리나",
+    "Pininfarina",
+    "Xpeng",
+    "XPeng",
+    "	
+
+                  　﻿",
+    "smart",
+    "^[	
+
+                  　﻿]*smart[^[:alnum:]]",
+    "cruise",
+    "^[	
+
+                  　﻿]*cruise[^[:alnum:]]",
+    "international",
+    "^[	
+
+                  　﻿]*international[^[:alnum:]]",
+    "pilot",
+    "^[	
+
+                  　﻿]*pilot[^[:alnum:]]",
+    "falcon",
+    "^[	
+
+                  　﻿]*falcon[^[:alnum:]]",
+    "century",
+    "^[	
+
+                  　﻿]*century[^[:alnum:]]",
+    "element",
+    "^[	
+
+                  　﻿]*element[^[:alnum:]]",
+    "lightning",
+    "^[	
+
+                  　﻿]*lightning[^[:alnum:]]",
+    "punch",
+    "^[	
+
+                  　﻿]*punch[^[:alnum:]]",
+    "one",
+    "^[	
+
+                  　﻿]*one[^[:alnum:]]",
+    "integra",
+    "^[	
+
+                  　﻿]*integra[^[:alnum:]]",
+    "bolt",
+    "^[	
+
+                  　﻿]*bolt[^[:alnum:]]",
+    "fit",
+    "^[	
+
+                  　﻿]*fit[^[:alnum:]]",
+    "focus",
+    "^[	
+
+                  　﻿]*focus[^[:alnum:]]",
+    "legacy",
+    "^[	
+
+                  　﻿]*legacy[^[:alnum:]]",
+    "charger",
+    "^[	
+
+                  　﻿]*charger[^[:alnum:]]",
+    "city",
+    "^[	
+
+                  　﻿]*city[^[:alnum:]]",
+    "edge",
+    "^[	
+
+                  　﻿]*edge[^[:alnum:]]",
+    "is",
+    "^[	
+
+                  　﻿]*is[^[:alnum:]]",
+    "vision",
+    "^[	
+
+                  　﻿]*vision[^[:alnum:]]",
+    "volt",
+    "^[	
+
+                  　﻿]*volt[^[:alnum:]]",
+    "crown",
+    "^[	
+
+                  　﻿]*crown[^[:alnum:]]",
+    "golf",
+    "^[	
+
+                  　﻿]*golf[^[:alnum:]]",
+    "transit",
+    "^[	
+
+                  　﻿]*transit[^[:alnum:]]",
+    "gravity",
+    "^[	
+
+                  　﻿]*gravity[^[:alnum:]]",
+    "fastback",
+    "^[	
+
+                  　﻿]*fastback[^[:alnum:]]",
+    "dual electronics",
+    "^[	
+
+                  　﻿]*dual electronics[^[:alnum:]]",
+    "기아",
+    "Kia",
+    "현대",
+    "Hyundai",
+    "현대차",
+    "Hyundai",
+    "현대자동차",
+    "Hyundai",
+    "제네시스",
+    "Genesis",
+    "هيونداي",
+    "Hyundai",
+    "كيا",
+    "Kia",
+    "جينيسيس",
+    "Genesis",
+    "יונדאי",
+    "Hyundai",
+    "קיה",
+    "Kia",
+    "폭스바겐",
+    "Volkswagen",
+    "메르세데스-벤츠",
+    "Mercedes-Benz",
+    "메르세데즈-벤츠",
+    "Mercedes-Benz",
+    "메르세데스-AMG",
+    "Mercedes-AMG",
+    "هوندا",
+    "Honda",
+    "마쓰다",
+    "Mazda",
+    "르노",
+    "Renault",
+    "טויוטה",
+    "Toyota",
+    "미니",
+    "MINI",
+    "Mini",
+    "MINI",
+    "링컨",
+    "Lincoln",
+    "링크앤코",
+    "Lynk & Co",
+    "대우",
+    "Daewoo",
+    "Skoda",
+    "Škoda",
+    "테슬라",
+    "Tesla",
+    "루시드",
+    "Lucid",
+    "تويوتا",
+    "Toyota",
+    "奔驰",
+    "Mercedes-Benz",
+    "宝马",
+    "BMW",
+    "نيسان",
+    "Nissan",
+    "KG 모빌리티",
+    "KG Mobility",
+    "זיקר",
+    "Zeekr",
+    "מרצדס",
+    "Mercedes-Benz",
+    "שברולט",
+    "Chevrolet",
+    "ב.מ.וו",
+    "BMW",
+    "엑스펑",
+    "XPeng",
+    "피닌파리나",
+    "Pininfarina",
+    "Xpeng",
+    "XPeng",
+    "	
+
+                  　﻿",
+    "apple",
+    "google",
+    "samsung",
+    "pilot",
+    "falcon",
+    "century",
+    "element",
+    "lightning",
+    "punch",
+    "one",
+    "integra",
+    "bolt",
+    "fit",
+    "focus",
+    "legacy",
+    "charger",
+    "city",
+    "edge",
+    "is",
+    "vision",
+    "volt",
+    "crown",
+    "golf",
+    "transit",
+    "gravity",
+    "fastback",
+    "dual electronics",
+    "across",
+    "advanced",
+    "clever",
+    "contact",
+    "dealership",
+    "drift",
+    "five",
+    "flat",
+    "guest",
+    "impact",
+    "index",
+    "mass",
+    "maximum",
+    "miles",
+    "modern",
+    "motion",
+    "option",
+    "particular",
+    "peak",
+    "plus",
+    "powerful",
+    "race",
+    "reach",
+    "real",
+    "record",
+    "rise",
+    "security",
+    "sharp",
+    "specialist",
+    "specialized",
+    "stack",
+    "status",
+    "torque",
+    "urban",
+    "victory",
+    "wise",
+    "/drive",
+    "more than",
+    "sure",
+    "winners",
+    "game",
+    "silence",
+    "alliance",
+    "canada",
+    "china",
+    "usa",
+    "germany",
+    "australia",
+    "españa",
+    "automotive manufacturer",
+    "automotive repair shop",
+    "german automotive industry",
+    "german luxury car brands",
+    "italian automotive brands",
+    "original equipment manufacturer",
+    "third party",
+    "local dealership",
+    "credit union",
+    "bank",
+    "retailer",
+    "global pet foods",
+    "jd power",
+    "motor trend",
+    "mobile.de",
+    "point s",
+    "form lighting",
+    "green filter",
+    "event tires",
+    "stance wheels",
+    "kobalt",
+    "target",
+    "mark's",
+    "a-premium",
+    "digit insurance",
+    "dollar rent a car",
+    "app store",
+    "amazon prime",
+    "microsoft surface",
+    "power performance",
+    "wedge performance",
+    "march performance",
+    "evs tuning",
+    "ethos car care",
+    "western motorsports",
+    "comp cams",
+    "link ecu",
+    "arka",
+    "king george/kingsway dealership",
+    "destination mazda",
+    "pace american",
+    "alcantara",
+    "fila",
+    "wahl",
+    "reliance",
+    "vanguard",
+    "acsi",
+    "ergo",
+    "중고차 플랫폼",
+    "일본 럭셔리 자동차 브랜드",
+    "독일 자동차 브랜드",
+    "프랑스 자동차 제조사",
+    "국내 배터리 제조사",
+    "대만 모터사이클 산업",
+    "고가 브랜드",
+    "저가 브랜드",
+    "독3사",
+    "캐피탈사",
+    "자동차리콜센터",
+    "국토교통부",
+    "보배드림",
+    "사설 정비소",
+    "독립 정비소",
+    "카센터",
+    "온라인샵",
+    "아우디 공식 딜러",
+    "자동차 동호회",
+    "차지비",
+    "순정부품",
+    "삼성전자",
+    "카카오",
+    "레카로",
+    "요코하마",
+    "파파존스",
+    "테인",
+    "세나",
+    "말레이시아",
+    "smart",
+    "cruise",
+    "international",
+    "fahren",
+    "gran turismo",
+  ],
+  "text": "
+    WITH names AS (
+  SELECT r.entity_id, r.brand,
+         (CASE r.brand WHEN $1 THEN $2 WHEN $3 THEN $4 WHEN $5 THEN $6 WHEN $7 THEN $8 WHEN $9 THEN $10 WHEN $11 THEN $12 WHEN $13 THEN $14 WHEN $15 THEN $16 WHEN $17 THEN $18 WHEN $19 THEN $20 WHEN $21 THEN $22 WHEN $23 THEN $24 WHEN $25 THEN $26 WHEN $27 THEN $28 WHEN $29 THEN $30 WHEN $31 THEN $32 WHEN $33 THEN $34 WHEN $35 THEN $36 WHEN $37 THEN $38 WHEN $39 THEN $40 WHEN $41 THEN $42 WHEN $43 THEN $44 WHEN $45 THEN $46 WHEN $47 THEN $48 WHEN $49 THEN $50 WHEN $51 THEN $52 WHEN $53 THEN $54 WHEN $55 THEN $56 WHEN $57 THEN $58 WHEN $59 THEN $60 WHEN $61 THEN $62 WHEN $63 THEN $64 WHEN $65 THEN $66 WHEN $67 THEN $68 WHEN $69 THEN $70 WHEN $71 THEN $72 WHEN $73 THEN $74 WHEN $75 THEN $76 ELSE r.brand END) AS cname,
+         lower(btrim((CASE r.brand WHEN $77 THEN $78 WHEN $79 THEN $80 WHEN $81 THEN $82 WHEN $83 THEN $84 WHEN $85 THEN $86 WHEN $87 THEN $88 WHEN $89 THEN $90 WHEN $91 THEN $92 WHEN $93 THEN $94 WHEN $95 THEN $96 WHEN $97 THEN $98 WHEN $99 THEN $100 WHEN $101 THEN $102 WHEN $103 THEN $104 WHEN $105 THEN $106 WHEN $107 THEN $108 WHEN $109 THEN $110 WHEN $111 THEN $112 WHEN $113 THEN $114 WHEN $115 THEN $116 WHEN $117 THEN $118 WHEN $119 THEN $120 WHEN $121 THEN $122 WHEN $123 THEN $124 WHEN $125 THEN $126 WHEN $127 THEN $128 WHEN $129 THEN $130 WHEN $131 THEN $132 WHEN $133 THEN $134 WHEN $135 THEN $136 WHEN $137 THEN $138 WHEN $139 THEN $140 WHEN $141 THEN $142 WHEN $143 THEN $144 WHEN $145 THEN $146 WHEN $147 THEN $148 WHEN $149 THEN $150 WHEN $151 THEN $152 ELSE r.brand END), $153)) AS bare
+  FROM (
+  WITH RECURSIVE _rn_pairs AS (
+    (SELECT m.entity_id, m.brand FROM scope_mentions m
+      WHERE m.entity_type = 'Brand' AND m.brand IS NOT NULL
+      ORDER BY m.entity_id, m.brand LIMIT 1)
+    UNION ALL
+    SELECT nx.entity_id, nx.brand FROM _rn_pairs p
+    CROSS JOIN LATERAL (
+      SELECT m.entity_id, m.brand FROM scope_mentions m
+      WHERE m.entity_type = 'Brand' AND m.brand IS NOT NULL
+        AND (m.entity_id, m.brand) > (p.entity_id, p.brand)
+      ORDER BY m.entity_id, m.brand LIMIT 1
+    ) nx
+  )
+  SELECT DISTINCT ON (entity_id) entity_id, brand
+  FROM _rn_pairs ORDER BY entity_id, (brand ~ '^[A-Za-z]') DESC, brand
+) r
+),
+    ans AS MATERIALIZED (
+      SELECT DISTINCT ON (a.prompt_id, a.target, a.region, date_trunc('week', a.measured_at))
+        a.job_id, date_trunc('week', a.measured_at) AS wk
+      FROM scope_answers a
+      WHERE a.measured_at IS NOT NULL AND a.measured_at >= now() - interval '120 days' AND a.status = 'completed' AND true AND a.run_id IN (SELECT run_id FROM scope_runs WHERE true) AND a.measured_at >= $154::date AND a.measured_at < ($155::date + 1) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $156 AND scope_prompt_id IS NOT NULL) AND true
+      ORDER BY a.prompt_id, a.target, a.region, date_trunc('week', a.measured_at),
+        a.measured_at DESC
+    )
+    SELECT to_char(x.wk, 'YYYY-MM-DD') AS day,
+      COALESCE(n.cname, (CASE x.brand WHEN $157 THEN $158 WHEN $159 THEN $160 WHEN $161 THEN $162 WHEN $163 THEN $164 WHEN $165 THEN $166 WHEN $167 THEN $168 WHEN $169 THEN $170 WHEN $171 THEN $172 WHEN $173 THEN $174 WHEN $175 THEN $176 WHEN $177 THEN $178 WHEN $179 THEN $180 WHEN $181 THEN $182 WHEN $183 THEN $184 WHEN $185 THEN $186 WHEN $187 THEN $188 WHEN $189 THEN $190 WHEN $191 THEN $192 WHEN $193 THEN $194 WHEN $195 THEN $196 WHEN $197 THEN $198 WHEN $199 THEN $200 WHEN $201 THEN $202 WHEN $203 THEN $204 WHEN $205 THEN $206 WHEN $207 THEN $208 WHEN $209 THEN $210 WHEN $211 THEN $212 WHEN $213 THEN $214 WHEN $215 THEN $216 WHEN $217 THEN $218 WHEN $219 THEN $220 WHEN $221 THEN $222 WHEN $223 THEN $224 WHEN $225 THEN $226 WHEN $227 THEN $228 WHEN $229 THEN $230 WHEN $231 THEN $232 ELSE x.brand END)) AS key,
+      sum(x.mention_count)::int AS n
+    FROM (
+      SELECT ans.wk AS wk, m.mention_count AS mention_count, m.brand AS brand,
+        (CASE WHEN m.brand_rollup_entity_id IS NULL THEN m.brand_rollup_entity_id WHEN m.brand ~* $233 THEN $234 WHEN m.brand ~* $235 THEN $236 WHEN m.brand ~* $237 THEN $238 ELSE (CASE m.brand_rollup_entity_id WHEN $239 THEN $240 WHEN $241 THEN $242 WHEN $243 THEN $244 WHEN $245 THEN $246 WHEN $247 THEN $248 WHEN $249 THEN $250 WHEN $251 THEN $252 ELSE m.brand_rollup_entity_id END) END) AS rid
+      FROM scope_mentions m JOIN ans ON ans.job_id = m.job_id
+      WHERE m.brand_rollup_entity_id IS NOT NULL
+      OFFSET 0
+    ) x
+    LEFT JOIN names n ON n.entity_id = x.rid
+    WHERE COALESCE(n.brand, x.brand) IS NOT NULL
+      AND (CASE COALESCE(n.bare, lower(btrim((CASE x.brand WHEN $253 THEN $254 WHEN $255 THEN $256 WHEN $257 THEN $258 WHEN $259 THEN $260 WHEN $261 THEN $262 WHEN $263 THEN $264 WHEN $265 THEN $266 WHEN $267 THEN $268 WHEN $269 THEN $270 WHEN $271 THEN $272 WHEN $273 THEN $274 WHEN $275 THEN $276 WHEN $277 THEN $278 WHEN $279 THEN $280 WHEN $281 THEN $282 WHEN $283 THEN $284 WHEN $285 THEN $286 WHEN $287 THEN $288 WHEN $289 THEN $290 WHEN $291 THEN $292 WHEN $293 THEN $294 WHEN $295 THEN $296 WHEN $297 THEN $298 WHEN $299 THEN $300 WHEN $301 THEN $302 WHEN $303 THEN $304 WHEN $305 THEN $306 WHEN $307 THEN $308 WHEN $309 THEN $310 WHEN $311 THEN $312 WHEN $313 THEN $314 WHEN $315 THEN $316 WHEN $317 THEN $318 WHEN $319 THEN $320 WHEN $321 THEN $322 WHEN $323 THEN $324 WHEN $325 THEN $326 WHEN $327 THEN $328 ELSE x.brand END), $329))) WHEN $330 THEN (x.brand ~* $331) WHEN $332 THEN (x.brand ~* $333) WHEN $334 THEN (x.brand ~* $335) WHEN $336 THEN (x.brand ~* $337) WHEN $338 THEN (x.brand ~* $339) WHEN $340 THEN (x.brand ~* $341) WHEN $342 THEN (x.brand ~* $343) WHEN $344 THEN (x.brand ~* $345) WHEN $346 THEN (x.brand ~* $347) WHEN $348 THEN (x.brand ~* $349) WHEN $350 THEN (x.brand ~* $351) WHEN $352 THEN (x.brand ~* $353) WHEN $354 THEN (x.brand ~* $355) WHEN $356 THEN (x.brand ~* $357) WHEN $358 THEN (x.brand ~* $359) WHEN $360 THEN (x.brand ~* $361) WHEN $362 THEN (x.brand ~* $363) WHEN $364 THEN (x.brand ~* $365) WHEN $366 THEN (x.brand ~* $367) WHEN $368 THEN (x.brand ~* $369) WHEN $370 THEN (x.brand ~* $371) WHEN $372 THEN (x.brand ~* $373) WHEN $374 THEN (x.brand ~* $375) WHEN $376 THEN (x.brand ~* $377) WHEN $378 THEN (x.brand ~* $379) WHEN $380 THEN (x.brand ~* $381) WHEN $382 THEN (x.brand ~* $383) ELSE COALESCE(n.bare, lower(btrim((CASE x.brand WHEN $384 THEN $385 WHEN $386 THEN $387 WHEN $388 THEN $389 WHEN $390 THEN $391 WHEN $392 THEN $393 WHEN $394 THEN $395 WHEN $396 THEN $397 WHEN $398 THEN $399 WHEN $400 THEN $401 WHEN $402 THEN $403 WHEN $404 THEN $405 WHEN $406 THEN $407 WHEN $408 THEN $409 WHEN $410 THEN $411 WHEN $412 THEN $413 WHEN $414 THEN $415 WHEN $416 THEN $417 WHEN $418 THEN $419 WHEN $420 THEN $421 WHEN $422 THEN $423 WHEN $424 THEN $425 WHEN $426 THEN $427 WHEN $428 THEN $429 WHEN $430 THEN $431 WHEN $432 THEN $433 WHEN $434 THEN $435 WHEN $436 THEN $437 WHEN $438 THEN $439 WHEN $440 THEN $441 WHEN $442 THEN $443 WHEN $444 THEN $445 WHEN $446 THEN $447 WHEN $448 THEN $449 WHEN $450 THEN $451 WHEN $452 THEN $453 WHEN $454 THEN $455 WHEN $456 THEN $457 WHEN $458 THEN $459 ELSE x.brand END), $460))) NOT IN ($461, $462, $463, $464, $465, $466, $467, $468, $469, $470, $471, $472, $473, $474, $475, $476, $477, $478, $479, $480, $481, $482, $483, $484, $485, $486, $487, $488, $489, $490, $491, $492, $493, $494, $495, $496, $497, $498, $499, $500, $501, $502, $503, $504, $505, $506, $507, $508, $509, $510, $511, $512, $513, $514, $515, $516, $517, $518, $519, $520, $521, $522, $523, $524, $525, $526, $527, $528, $529, $530, $531, $532, $533, $534, $535, $536, $537, $538, $539, $540, $541, $542, $543, $544, $545, $546, $547, $548, $549, $550, $551, $552, $553, $554, $555, $556, $557, $558, $559, $560, $561, $562, $563, $564, $565, $566, $567, $568, $569, $570, $571, $572, $573, $574, $575, $576, $577, $578, $579, $580, $581, $582, $583, $584, $585, $586, $587, $588, $589, $590, $591, $592, $593, $594, $595, $596, $597, $598, $599, $600, $601, $602, $603, $604, $605, $606, $607, $608, $609, $610, $611, $612, $613, $614, $615, $616, $617, $618) END)
+      true
+    GROUP BY 1, 2
+  ",
+}
+`;
+
+exports[`optionWindowPredicate — 필터 옵션 창 > dateFrom 만 1`] = `
+{
+  "params": [
+    "2026-08-20",
+  ],
+  "text": "COALESCE(r.cycle_anchor_at, r.started_at) >= $1::date",
+}
+`;
+
+exports[`optionWindowPredicate — 필터 옵션 창 > dateFrom+dateTo 1`] = `
+{
+  "params": [
+    "2026-08-20",
+    "2026-09-04",
+  ],
+  "text": "COALESCE(r.cycle_anchor_at, r.started_at) >= $1::date AND COALESCE(r.cycle_anchor_at, r.started_at) < ($2::date + 1)",
+}
+`;
+
+exports[`optionWindowPredicate — 필터 옵션 창 > dateTo 만 1`] = `
+{
+  "params": [
+    "2026-09-04",
+  ],
+  "text": "COALESCE(r.cycle_anchor_at, r.started_at) < ($1::date + 1)",
+}
+`;
+
+exports[`optionWindowPredicate — 필터 옵션 창 > 기간 없음(기본 7일) 1`] = `
+{
+  "params": [],
+  "text": "r.started_at >= now() - interval '7 days'",
+}
+`;
+
+exports[`optionWindowPredicate — 필터 옵션 창 > 빈 객체 1`] = `
+{
+  "params": [],
+  "text": "r.started_at >= now() - interval '7 days'",
+}
+`;
+
+exports[`snapshotRunFilter — JS 미러 경로(드릴다운) > 루트 · cumulative+기간 1`] = `
+{
+  "params": [
+    "2026-08-20",
+    "2026-09-04",
+    "2026-08-20",
+    "2026-09-04",
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "status = 'completed' AND (run_id IN (SELECT run_id FROM scope_runs WHERE true AND cycle_anchor_at IS NOT NULL AND cycle_anchor_at >= $1::date AND cycle_anchor_at < ($2::date + 1)) OR (run_id IN (SELECT run_id FROM scope_runs WHERE true AND cycle_anchor_at IS NULL) AND measured_at >= $3::date AND measured_at < ($4::date + 1))) AND true AND prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $5 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`snapshotRunFilter — JS 미러 경로(드릴다운) > 루트 · 기간 없음 1`] = `
+{
+  "params": [
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "job_id IN (
+    WITH _fc_base AS (
+      SELECT a.job_id, a.prompt_id, a.target, a.region, a.measured_at,
+        (r.started_at >= now() - interval '7 days') AS in_window
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE true AND r.status IN ('completed', 'partial_failed') AND a.status = 'completed'
+        
+        AND NOT (
+    a.region <> 'KR'
+    AND a.prompt_id IS NOT NULL
+    AND a.prompt_id IN (SELECT sp.prompt_id FROM scope_prompts sp WHERE sp.text ~ '[가-힣]')
+  )
+        
+    ),
+    _fc_cells AS (
+      SELECT prompt_id, target, region, bool_or(in_window) AS w,
+        min(measured_at) AS first_at,
+        max(measured_at) FILTER (WHERE in_window) AS w_last
+      FROM _fc_base GROUP BY 1, 2, 3
+    ),
+    -- ── 기대 셀을 "이번 창에 실제로 돈 셀"로 한정 (2026-09-04, #188) ──────────
+    -- expected 는 원래 이력 무제한이었다. 그래서 한 시장의 측정이 멈추면 그 셀이
+    -- 기대치에 영구히 남고 window 가 절대 따라잡지 못해, 그 시장을 커버하는
+    -- 프롬프트가 **다른 시장에서까지 통째로** 탈락했다(2026-09-04 EG 실증:
+    -- 마지막 측정 8/25 인 EG 셀 2개 때문에 AE Hyundai 프롬프트 208개가 fail).
+    -- 고침: 창 안에 한 건도 측정되지 않은 (엔진, 국가) 셀은 기대치에서 뺀다.
+    -- 그 시장은 돌았는데 이 프롬프트만 빠진 경우는 셀이 active 에 남아 여전히 탈락한다.
+    -- main 의 원안(#188)은 이 목록을 scope_answers 재스캔으로 얻었지만, 같은
+    -- 술어의 창 안 행은 이미 _fc_base.in_window 에 있으므로 셀 집계에서 파생한다
+    -- (스캔 1회 유지 — 아래 단일 스캔 주석의 전제).
+    _fc_active AS (
+      SELECT DISTINCT target, region FROM _fc_cells WHERE w
+    ),
+    -- ── 창 끝 이후에 처음 생긴 셀은 기대치에서 뺀다 (2026-09-28) ──────────────
+    -- expected 는 이력 무제한이라 **미래**도 본다. 프롬프트에 시장이 나중에 추가되면
+    -- (2026-09-28 scope 가 743개 프롬프트에 IN·AU·GB·MY·SA·TH·ID 등을 태깅) 그 새 셀이
+    -- 과거 창의 기대치에 들어가, 과거 창을 조회할 때 그 프롬프트가 "셀 부족"으로 탈락한다.
+    -- 위 _fc_active 한정(#188)은 그 시장이 **다른 프롬프트로** 창 안에서 측정됐으면 못 막는다
+    -- (IN·AU·GB 등은 다른 프롬프트로 매 회차 돈다).
+    -- 고침: 셀의 최초 completed 측정 시각(first_at)이 창 안 마지막 측정(w_last 의 최대)보다
+    -- 뒤면 그 셀은 "이 창 시점에 아직 없던 셀"이므로 기대치에서 뺀다.
+    --   · 창 판정 술어(windowPredicate)는 불투명하므로 창 무관 정의를 쓴다 — 창 끝 = 창 안
+    --     행의 measured_at 최대. 창 경계를 SQL 로 다시 해석하지 않는다.
+    --   · 대칭: 창 안 셀(w)은 first_at <= 자기 w_last <= 창 끝 이라 절대 빠지지 않는다.
+    --     즉 이 절은 **창 밖 셀만** 뺀다 — window 쪽 집계는 불변이다.
+    --   · 창 끝은 _fc_cells 에서 파생한다(_fc_base 를 다시 읽지 않는다 — materialize 된
+    --     CTE 의 세 번째 참조를 만들지 않기 위해). 스캔 1회 구조는 그대로다.
+    --   · NULL 은 종전대로 둔다: 창 안 셀(w)은 무조건 유지, measured_at 이 전부 NULL 인
+    --     셀(first_at NULL)도 유지, 창 끝을 모르면(w_last 전부 NULL) 아무것도 빼지 않는다.
+    -- 프로덕션 미러 실측(2026-09-28, 읽기 전용): 루트 회차 5개 + 기본 7일 창 전부에서 종전
+    -- 게이트 통과 프롬프트 중 탈락 0. 노출 게이트를 끈 9/13·9/20 창에서는 종전 게이트가
+    -- 9/27 회차에 새로 생긴 셀 때문에 기아 EN 2개를 떨어뜨렸고(11,408) 이 절이 되살렸다.
+    -- EXPLAIN (ANALYZE, BUFFERS) 기본 7일 창 교차 4회 중앙값 596.6 → 626.0 ms(+4.9%, ID 해제로
+    -- 늘어난 행 포함) · scope_answers 스캔 1회 · _fc_base 참조 2회 그대로.
+    _fc_gate AS (
+      SELECT prompt_id FROM _fc_cells c
+      WHERE (c.target, c.region) IN (SELECT target, region FROM _fc_active)
+        AND (c.w OR c.first_at IS NULL
+          OR c.first_at <= (SELECT COALESCE(max(w_last), 'infinity'::timestamptz) FROM _fc_cells))
+      GROUP BY prompt_id
+      HAVING count(*) FILTER (WHERE w) >= count(*)
+    )
+    SELECT DISTINCT ON (b.prompt_id, b.target, b.region) b.job_id
+    FROM _fc_base b
+    JOIN _fc_gate g ON g.prompt_id = b.prompt_id
+    WHERE b.in_window
+    ORDER BY b.prompt_id, b.target, b.region, b.measured_at DESC
+  ) AND true AND prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $1 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`snapshotRunFilter — JS 미러 경로(드릴다운) > 프로젝트 · cumulative+기간 1`] = `
+{
+  "params": [
+    [
+      "11111111-1111-4111-8111-111111111111",
+    ],
+    "2026-08-20",
+    "2026-09-04",
+    [
+      "11111111-1111-4111-8111-111111111111",
+    ],
+    "2026-08-20",
+    "2026-09-04",
+  ],
+  "text": "status = 'completed' AND (run_id IN (SELECT run_id FROM scope_runs WHERE project_id = ANY($1::uuid[]) AND cycle_anchor_at IS NOT NULL AND cycle_anchor_at >= $2::date AND cycle_anchor_at < ($3::date + 1)) OR (run_id IN (SELECT run_id FROM scope_runs WHERE project_id = ANY($4::uuid[]) AND cycle_anchor_at IS NULL) AND measured_at >= $5::date AND measured_at < ($6::date + 1))) AND true",
+}
+`;
+
+exports[`snapshotRunFilter — JS 미러 경로(드릴다운) > 프로젝트 · dateFrom+dateTo 1`] = `
+{
+  "params": [
+    [
+      "11111111-1111-4111-8111-111111111111",
+    ],
+    "2026-08-20",
+    "2026-09-04",
+    [
+      "11111111-1111-4111-8111-111111111111",
+    ],
+    "2026-08-20",
+    "2026-09-04",
+  ],
+  "text": "job_id IN (
+    SELECT DISTINCT ON (a.prompt_id, a.target, a.region) a.job_id
+    FROM scope_answers a
+    JOIN scope_runs r ON r.run_id = a.run_id
+    JOIN (
+      SELECT r.project_id, max(a.measured_at) - interval '7 days' AS floor_at
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE r.project_id = ANY($1::uuid[])
+        AND r.status IN ('completed', 'partial_failed')
+        AND a.status = 'completed' AND COALESCE(r.cycle_anchor_at, r.started_at) >= $2::date AND COALESCE(r.cycle_anchor_at, r.started_at) < ($3::date + 1)
+      GROUP BY r.project_id
+    ) pm ON pm.project_id = r.project_id
+    WHERE r.project_id = ANY($4::uuid[])
+      AND r.status IN ('completed', 'partial_failed')
+      AND a.status = 'completed' AND COALESCE(r.cycle_anchor_at, r.started_at) >= $5::date AND COALESCE(r.cycle_anchor_at, r.started_at) < ($6::date + 1)
+      AND a.measured_at >= pm.floor_at
+    ORDER BY a.prompt_id, a.target, a.region, a.measured_at DESC
+  ) AND true",
+}
+`;
+
+exports[`website 프롬프트 표 — 측정 렌즈와 투영 > 렌즈 · dateFrom 만 1`] = `
+{
+  "params": [
+    "2026-08-20",
+  ],
+  "text": "a.status = 'completed' AND a.measured_at >= $1::date",
+}
+`;
+
+exports[`website 프롬프트 표 — 측정 렌즈와 투영 > 렌즈 · dateFrom+dateTo 1`] = `
+{
+  "params": [
+    "2026-08-20",
+    "2026-09-04",
+  ],
+  "text": "a.status = 'completed' AND a.measured_at >= $1::date AND a.measured_at < ($2::date + 1)",
+}
+`;
+
+exports[`website 프롬프트 표 — 측정 렌즈와 투영 > 렌즈 · dateTo 만 1`] = `
+{
+  "params": [
+    "2026-09-04",
+  ],
+  "text": "a.status = 'completed' AND a.measured_at < ($1::date + 1)",
+}
+`;
+
+exports[`website 프롬프트 표 — 측정 렌즈와 투영 > 렌즈 · 기간 없음 1`] = `
+{
+  "params": [],
+  "text": "a.status = 'completed'",
+}
+`;
+
+exports[`website 프롬프트 표 — 측정 렌즈와 투영 > 투영 + 렌즈 조인 1`] = `
+{
+  "params": [
+    "2026-08-20",
+    "2026-09-04",
+  ],
+  "text": "
+    WITH lens AS (
+      SELECT a.prompt_id,
+             count(*)::int AS answers,
+             -- 마지막 측정일 = **회차(cycle) 기준**. 웹사이트 대시보드 asOf·추이 눈금이
+             -- 이미 COALESCE(r.cycle_anchor_at, a.measured_at) 축이라(#209,
+             -- scope-aggregates.ts) 이 열만 원본 measured_at 을 쓰면 같은 화면에서
+             -- 유닛마다 날짜가 갈린다 — 2026-09-08 실증: 제네시스/US 를 회차 밖(9/7)에
+             -- 개별 측정하자 이 열만 9/7 로 뜨고 나머지 Genesis 유닛은 9/4 였다.
+             -- 측정 이월은 상시 현상이라 예외가 아니라 축을 맞추는 것이 맞다.
+             max(COALESCE(r.cycle_anchor_at, a.measured_at)) AS last_measured_at,
+             array_agg(DISTINCT a.target) AS engines
+      FROM scope_answers a
+      LEFT JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE a.status = 'completed' AND a.measured_at >= $1::date AND a.measured_at < ($2::date + 1)
+      GROUP BY a.prompt_id
+    )
+    SELECT wp.id,
+           wp.prompt_text,
+           wp.target_url,
+           wp.domain,
+           wp.lang_code,
+           ws.brand,
+           ws.country_code,
+           COALESCE(l.answers, 0) AS answers,
+           l.last_measured_at,
+           COALESCE(l.engines, ARRAY[]::text[]) AS engines
+    FROM website_prompts wp
+    JOIN website_sites ws ON ws.id = wp.site_id
+    LEFT JOIN lens l ON l.prompt_id::text = wp.scope_prompt_id
+    WHERE true",
+}
+`;
+
+exports[`기간 모드 판정 — 현행 진리표 > hasPeriod / mirrorCumulative 1`] = `
+[
+  {
+    "hasPeriod": false,
+    "mirrorCumulative": false,
+    "name": "기간 없음",
+  },
+  {
+    "hasPeriod": true,
+    "mirrorCumulative": false,
+    "name": "dateFrom 만",
+  },
+  {
+    "hasPeriod": true,
+    "mirrorCumulative": false,
+    "name": "dateTo 만",
+  },
+  {
+    "hasPeriod": true,
+    "mirrorCumulative": false,
+    "name": "기간",
+  },
+  {
+    "hasPeriod": false,
+    "mirrorCumulative": false,
+    "name": "cumulative 만",
+  },
+  {
+    "hasPeriod": true,
+    "mirrorCumulative": true,
+    "name": "cumulative + 기간",
+  },
+]
+`;
+
+exports[`기간 비교 리더 — 일자 경계 조각 > anchorDayExpr · bare 1`] = `
+{
+  "params": [],
+  "text": "(cycle_anchor_at AT TIME ZONE 'UTC')::date",
+}
+`;
+
+exports[`기간 비교 리더 — 일자 경계 조각 > anchorDayExpr · 별칭 있음 1`] = `
+{
+  "params": [],
+  "text": "(c.cycle_anchor_at AT TIME ZONE 'UTC')::date",
+}
+`;
+
+exports[`기간 비교 리더 — 일자 경계 조각 > dayAfter 1`] = `
+{
+  "params": [
+    "2026-09-13",
+  ],
+  "text": "((($1::date) + 1)::timestamp AT TIME ZONE 'UTC')",
+}
+`;
+
+exports[`기간 비교 리더 — 일자 경계 조각 > dayStart 1`] = `
+{
+  "params": [
+    "2026-08-17",
+  ],
+  "text": "(($1::date)::timestamp AT TIME ZONE 'UTC')",
+}
+`;
+
+exports[`루트 주소 지정 가능(SCOPE_MODE=live) > acrWhere · cumulative 1`] = `
+{
+  "params": [
+    "44444444-4444-4444-8444-444444444444",
+    "2026-08-20",
+    "2026-09-04",
+    "44444444-4444-4444-8444-444444444444",
+    "2026-08-20",
+    "2026-09-04",
+  ],
+  "text": "true AND (x.run_id IN (SELECT run_id FROM scope_runs WHERE project_id = $1 AND cycle_anchor_at IS NOT NULL AND cycle_anchor_at >= $2::date AND cycle_anchor_at < ($3::date + 1)) OR (x.run_id IN (SELECT run_id FROM scope_runs WHERE project_id = $4 AND cycle_anchor_at IS NULL) AND x.measured_at >= $5::date AND x.measured_at < ($6::date + 1)))",
+}
+`;
+
+exports[`루트 주소 지정 가능(SCOPE_MODE=live) > acrWhere · 기간 1`] = `
+{
+  "params": [
+    "44444444-4444-4444-8444-444444444444",
+    "2026-08-20",
+    "2026-09-04",
+    "44444444-4444-4444-8444-444444444444",
+    "2026-08-20",
+    "2026-09-04",
+  ],
+  "text": "true AND (x.run_id IN (SELECT run_id FROM scope_runs WHERE project_id = $1 AND cycle_anchor_at IS NOT NULL AND cycle_anchor_at >= $2::date AND cycle_anchor_at < ($3::date + 1)) OR (x.run_id IN (SELECT run_id FROM scope_runs WHERE project_id = $4 AND cycle_anchor_at IS NULL) AND x.measured_at >= $5::date AND x.measured_at < ($6::date + 1)))",
+}
+`;
+
+exports[`루트 주소 지정 가능(SCOPE_MODE=live) > acrWhere · 기간 없음 1`] = `
+{
+  "params": [
+    "44444444-4444-4444-8444-444444444444",
+  ],
+  "text": "true AND x.run_id IN (SELECT run_id FROM scope_runs WHERE project_id = $1)",
+}
+`;
+
+exports[`루트 주소 지정 가능(SCOPE_MODE=live) > answerWhere · cumulative 기간 없음 1`] = `
+{
+  "params": [
+    "44444444-4444-4444-8444-444444444444",
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "a.status = 'completed' AND true AND a.job_id IN (
+    WITH _fc_base AS (
+      SELECT a.job_id, a.prompt_id, a.target, a.region, a.measured_at,
+        (r.started_at >= now() - interval '7 days') AS in_window
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE r.project_id = $1 AND r.status IN ('completed', 'partial_failed') AND a.status = 'completed'
+        
+        AND NOT (
+    a.region <> 'KR'
+    AND a.prompt_id IS NOT NULL
+    AND a.prompt_id IN (SELECT sp.prompt_id FROM scope_prompts sp WHERE sp.text ~ '[가-힣]')
+  )
+        
+    ),
+    _fc_cells AS (
+      SELECT prompt_id, target, region, bool_or(in_window) AS w,
+        min(measured_at) AS first_at,
+        max(measured_at) FILTER (WHERE in_window) AS w_last
+      FROM _fc_base GROUP BY 1, 2, 3
+    ),
+    -- ── 기대 셀을 "이번 창에 실제로 돈 셀"로 한정 (2026-09-04, #188) ──────────
+    -- expected 는 원래 이력 무제한이었다. 그래서 한 시장의 측정이 멈추면 그 셀이
+    -- 기대치에 영구히 남고 window 가 절대 따라잡지 못해, 그 시장을 커버하는
+    -- 프롬프트가 **다른 시장에서까지 통째로** 탈락했다(2026-09-04 EG 실증:
+    -- 마지막 측정 8/25 인 EG 셀 2개 때문에 AE Hyundai 프롬프트 208개가 fail).
+    -- 고침: 창 안에 한 건도 측정되지 않은 (엔진, 국가) 셀은 기대치에서 뺀다.
+    -- 그 시장은 돌았는데 이 프롬프트만 빠진 경우는 셀이 active 에 남아 여전히 탈락한다.
+    -- main 의 원안(#188)은 이 목록을 scope_answers 재스캔으로 얻었지만, 같은
+    -- 술어의 창 안 행은 이미 _fc_base.in_window 에 있으므로 셀 집계에서 파생한다
+    -- (스캔 1회 유지 — 아래 단일 스캔 주석의 전제).
+    _fc_active AS (
+      SELECT DISTINCT target, region FROM _fc_cells WHERE w
+    ),
+    -- ── 창 끝 이후에 처음 생긴 셀은 기대치에서 뺀다 (2026-09-28) ──────────────
+    -- expected 는 이력 무제한이라 **미래**도 본다. 프롬프트에 시장이 나중에 추가되면
+    -- (2026-09-28 scope 가 743개 프롬프트에 IN·AU·GB·MY·SA·TH·ID 등을 태깅) 그 새 셀이
+    -- 과거 창의 기대치에 들어가, 과거 창을 조회할 때 그 프롬프트가 "셀 부족"으로 탈락한다.
+    -- 위 _fc_active 한정(#188)은 그 시장이 **다른 프롬프트로** 창 안에서 측정됐으면 못 막는다
+    -- (IN·AU·GB 등은 다른 프롬프트로 매 회차 돈다).
+    -- 고침: 셀의 최초 completed 측정 시각(first_at)이 창 안 마지막 측정(w_last 의 최대)보다
+    -- 뒤면 그 셀은 "이 창 시점에 아직 없던 셀"이므로 기대치에서 뺀다.
+    --   · 창 판정 술어(windowPredicate)는 불투명하므로 창 무관 정의를 쓴다 — 창 끝 = 창 안
+    --     행의 measured_at 최대. 창 경계를 SQL 로 다시 해석하지 않는다.
+    --   · 대칭: 창 안 셀(w)은 first_at <= 자기 w_last <= 창 끝 이라 절대 빠지지 않는다.
+    --     즉 이 절은 **창 밖 셀만** 뺀다 — window 쪽 집계는 불변이다.
+    --   · 창 끝은 _fc_cells 에서 파생한다(_fc_base 를 다시 읽지 않는다 — materialize 된
+    --     CTE 의 세 번째 참조를 만들지 않기 위해). 스캔 1회 구조는 그대로다.
+    --   · NULL 은 종전대로 둔다: 창 안 셀(w)은 무조건 유지, measured_at 이 전부 NULL 인
+    --     셀(first_at NULL)도 유지, 창 끝을 모르면(w_last 전부 NULL) 아무것도 빼지 않는다.
+    -- 프로덕션 미러 실측(2026-09-28, 읽기 전용): 루트 회차 5개 + 기본 7일 창 전부에서 종전
+    -- 게이트 통과 프롬프트 중 탈락 0. 노출 게이트를 끈 9/13·9/20 창에서는 종전 게이트가
+    -- 9/27 회차에 새로 생긴 셀 때문에 기아 EN 2개를 떨어뜨렸고(11,408) 이 절이 되살렸다.
+    -- EXPLAIN (ANALYZE, BUFFERS) 기본 7일 창 교차 4회 중앙값 596.6 → 626.0 ms(+4.9%, ID 해제로
+    -- 늘어난 행 포함) · scope_answers 스캔 1회 · _fc_base 참조 2회 그대로.
+    _fc_gate AS (
+      SELECT prompt_id FROM _fc_cells c
+      WHERE (c.target, c.region) IN (SELECT target, region FROM _fc_active)
+        AND (c.w OR c.first_at IS NULL
+          OR c.first_at <= (SELECT COALESCE(max(w_last), 'infinity'::timestamptz) FROM _fc_cells))
+      GROUP BY prompt_id
+      HAVING count(*) FILTER (WHERE w) >= count(*)
+    )
+    SELECT DISTINCT ON (b.prompt_id, b.target, b.region) b.job_id
+    FROM _fc_base b
+    JOIN _fc_gate g ON g.prompt_id = b.prompt_id
+    WHERE b.in_window
+    ORDER BY b.prompt_id, b.target, b.region, b.measured_at DESC
+  ) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $2 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`루트 주소 지정 가능(SCOPE_MODE=live) > answerWhere · cumulative+기간 1`] = `
+{
+  "params": [
+    "44444444-4444-4444-8444-444444444444",
+    "2026-08-20",
+    "2026-09-04",
+    "44444444-4444-4444-8444-444444444444",
+    "2026-08-20",
+    "2026-09-04",
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "a.status = 'completed' AND true AND (a.run_id IN (SELECT run_id FROM scope_runs WHERE project_id = $1 AND cycle_anchor_at IS NOT NULL AND cycle_anchor_at >= $2::date AND cycle_anchor_at < ($3::date + 1)) OR (a.run_id IN (SELECT run_id FROM scope_runs WHERE project_id = $4 AND cycle_anchor_at IS NULL) AND a.measured_at >= $5::date AND a.measured_at < ($6::date + 1))) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $7 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`루트 주소 지정 가능(SCOPE_MODE=live) > answerWhere · dateFrom 만 1`] = `
+{
+  "params": [
+    "2026-08-20",
+    "44444444-4444-4444-8444-444444444444",
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "a.status = 'completed' AND true AND a.job_id IN (
+    WITH _fc_base AS (
+      SELECT a.job_id, a.prompt_id, a.target, a.region, a.measured_at,
+        (COALESCE(r.cycle_anchor_at, r.started_at) >= $1::date) AS in_window
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE r.project_id = $2 AND r.status IN ('completed', 'partial_failed') AND a.status = 'completed'
+        
+        AND NOT (
+    a.region <> 'KR'
+    AND a.prompt_id IS NOT NULL
+    AND a.prompt_id IN (SELECT sp.prompt_id FROM scope_prompts sp WHERE sp.text ~ '[가-힣]')
+  )
+        
+    ),
+    _fc_cells AS (
+      SELECT prompt_id, target, region, bool_or(in_window) AS w,
+        min(measured_at) AS first_at,
+        max(measured_at) FILTER (WHERE in_window) AS w_last
+      FROM _fc_base GROUP BY 1, 2, 3
+    ),
+    -- ── 기대 셀을 "이번 창에 실제로 돈 셀"로 한정 (2026-09-04, #188) ──────────
+    -- expected 는 원래 이력 무제한이었다. 그래서 한 시장의 측정이 멈추면 그 셀이
+    -- 기대치에 영구히 남고 window 가 절대 따라잡지 못해, 그 시장을 커버하는
+    -- 프롬프트가 **다른 시장에서까지 통째로** 탈락했다(2026-09-04 EG 실증:
+    -- 마지막 측정 8/25 인 EG 셀 2개 때문에 AE Hyundai 프롬프트 208개가 fail).
+    -- 고침: 창 안에 한 건도 측정되지 않은 (엔진, 국가) 셀은 기대치에서 뺀다.
+    -- 그 시장은 돌았는데 이 프롬프트만 빠진 경우는 셀이 active 에 남아 여전히 탈락한다.
+    -- main 의 원안(#188)은 이 목록을 scope_answers 재스캔으로 얻었지만, 같은
+    -- 술어의 창 안 행은 이미 _fc_base.in_window 에 있으므로 셀 집계에서 파생한다
+    -- (스캔 1회 유지 — 아래 단일 스캔 주석의 전제).
+    _fc_active AS (
+      SELECT DISTINCT target, region FROM _fc_cells WHERE w
+    ),
+    -- ── 창 끝 이후에 처음 생긴 셀은 기대치에서 뺀다 (2026-09-28) ──────────────
+    -- expected 는 이력 무제한이라 **미래**도 본다. 프롬프트에 시장이 나중에 추가되면
+    -- (2026-09-28 scope 가 743개 프롬프트에 IN·AU·GB·MY·SA·TH·ID 등을 태깅) 그 새 셀이
+    -- 과거 창의 기대치에 들어가, 과거 창을 조회할 때 그 프롬프트가 "셀 부족"으로 탈락한다.
+    -- 위 _fc_active 한정(#188)은 그 시장이 **다른 프롬프트로** 창 안에서 측정됐으면 못 막는다
+    -- (IN·AU·GB 등은 다른 프롬프트로 매 회차 돈다).
+    -- 고침: 셀의 최초 completed 측정 시각(first_at)이 창 안 마지막 측정(w_last 의 최대)보다
+    -- 뒤면 그 셀은 "이 창 시점에 아직 없던 셀"이므로 기대치에서 뺀다.
+    --   · 창 판정 술어(windowPredicate)는 불투명하므로 창 무관 정의를 쓴다 — 창 끝 = 창 안
+    --     행의 measured_at 최대. 창 경계를 SQL 로 다시 해석하지 않는다.
+    --   · 대칭: 창 안 셀(w)은 first_at <= 자기 w_last <= 창 끝 이라 절대 빠지지 않는다.
+    --     즉 이 절은 **창 밖 셀만** 뺀다 — window 쪽 집계는 불변이다.
+    --   · 창 끝은 _fc_cells 에서 파생한다(_fc_base 를 다시 읽지 않는다 — materialize 된
+    --     CTE 의 세 번째 참조를 만들지 않기 위해). 스캔 1회 구조는 그대로다.
+    --   · NULL 은 종전대로 둔다: 창 안 셀(w)은 무조건 유지, measured_at 이 전부 NULL 인
+    --     셀(first_at NULL)도 유지, 창 끝을 모르면(w_last 전부 NULL) 아무것도 빼지 않는다.
+    -- 프로덕션 미러 실측(2026-09-28, 읽기 전용): 루트 회차 5개 + 기본 7일 창 전부에서 종전
+    -- 게이트 통과 프롬프트 중 탈락 0. 노출 게이트를 끈 9/13·9/20 창에서는 종전 게이트가
+    -- 9/27 회차에 새로 생긴 셀 때문에 기아 EN 2개를 떨어뜨렸고(11,408) 이 절이 되살렸다.
+    -- EXPLAIN (ANALYZE, BUFFERS) 기본 7일 창 교차 4회 중앙값 596.6 → 626.0 ms(+4.9%, ID 해제로
+    -- 늘어난 행 포함) · scope_answers 스캔 1회 · _fc_base 참조 2회 그대로.
+    _fc_gate AS (
+      SELECT prompt_id FROM _fc_cells c
+      WHERE (c.target, c.region) IN (SELECT target, region FROM _fc_active)
+        AND (c.w OR c.first_at IS NULL
+          OR c.first_at <= (SELECT COALESCE(max(w_last), 'infinity'::timestamptz) FROM _fc_cells))
+      GROUP BY prompt_id
+      HAVING count(*) FILTER (WHERE w) >= count(*)
+    )
+    SELECT DISTINCT ON (b.prompt_id, b.target, b.region) b.job_id
+    FROM _fc_base b
+    JOIN _fc_gate g ON g.prompt_id = b.prompt_id
+    WHERE b.in_window
+    ORDER BY b.prompt_id, b.target, b.region, b.measured_at DESC
+  ) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $3 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`루트 주소 지정 가능(SCOPE_MODE=live) > answerWhere · dateFrom+dateTo 1`] = `
+{
+  "params": [
+    "2026-08-20",
+    "2026-09-04",
+    "44444444-4444-4444-8444-444444444444",
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "a.status = 'completed' AND true AND a.job_id IN (
+    WITH _fc_base AS (
+      SELECT a.job_id, a.prompt_id, a.target, a.region, a.measured_at,
+        (COALESCE(r.cycle_anchor_at, r.started_at) >= $1::date AND COALESCE(r.cycle_anchor_at, r.started_at) < ($2::date + 1)) AS in_window
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE r.project_id = $3 AND r.status IN ('completed', 'partial_failed') AND a.status = 'completed'
+        
+        AND NOT (
+    a.region <> 'KR'
+    AND a.prompt_id IS NOT NULL
+    AND a.prompt_id IN (SELECT sp.prompt_id FROM scope_prompts sp WHERE sp.text ~ '[가-힣]')
+  )
+        
+    ),
+    _fc_cells AS (
+      SELECT prompt_id, target, region, bool_or(in_window) AS w,
+        min(measured_at) AS first_at,
+        max(measured_at) FILTER (WHERE in_window) AS w_last
+      FROM _fc_base GROUP BY 1, 2, 3
+    ),
+    -- ── 기대 셀을 "이번 창에 실제로 돈 셀"로 한정 (2026-09-04, #188) ──────────
+    -- expected 는 원래 이력 무제한이었다. 그래서 한 시장의 측정이 멈추면 그 셀이
+    -- 기대치에 영구히 남고 window 가 절대 따라잡지 못해, 그 시장을 커버하는
+    -- 프롬프트가 **다른 시장에서까지 통째로** 탈락했다(2026-09-04 EG 실증:
+    -- 마지막 측정 8/25 인 EG 셀 2개 때문에 AE Hyundai 프롬프트 208개가 fail).
+    -- 고침: 창 안에 한 건도 측정되지 않은 (엔진, 국가) 셀은 기대치에서 뺀다.
+    -- 그 시장은 돌았는데 이 프롬프트만 빠진 경우는 셀이 active 에 남아 여전히 탈락한다.
+    -- main 의 원안(#188)은 이 목록을 scope_answers 재스캔으로 얻었지만, 같은
+    -- 술어의 창 안 행은 이미 _fc_base.in_window 에 있으므로 셀 집계에서 파생한다
+    -- (스캔 1회 유지 — 아래 단일 스캔 주석의 전제).
+    _fc_active AS (
+      SELECT DISTINCT target, region FROM _fc_cells WHERE w
+    ),
+    -- ── 창 끝 이후에 처음 생긴 셀은 기대치에서 뺀다 (2026-09-28) ──────────────
+    -- expected 는 이력 무제한이라 **미래**도 본다. 프롬프트에 시장이 나중에 추가되면
+    -- (2026-09-28 scope 가 743개 프롬프트에 IN·AU·GB·MY·SA·TH·ID 등을 태깅) 그 새 셀이
+    -- 과거 창의 기대치에 들어가, 과거 창을 조회할 때 그 프롬프트가 "셀 부족"으로 탈락한다.
+    -- 위 _fc_active 한정(#188)은 그 시장이 **다른 프롬프트로** 창 안에서 측정됐으면 못 막는다
+    -- (IN·AU·GB 등은 다른 프롬프트로 매 회차 돈다).
+    -- 고침: 셀의 최초 completed 측정 시각(first_at)이 창 안 마지막 측정(w_last 의 최대)보다
+    -- 뒤면 그 셀은 "이 창 시점에 아직 없던 셀"이므로 기대치에서 뺀다.
+    --   · 창 판정 술어(windowPredicate)는 불투명하므로 창 무관 정의를 쓴다 — 창 끝 = 창 안
+    --     행의 measured_at 최대. 창 경계를 SQL 로 다시 해석하지 않는다.
+    --   · 대칭: 창 안 셀(w)은 first_at <= 자기 w_last <= 창 끝 이라 절대 빠지지 않는다.
+    --     즉 이 절은 **창 밖 셀만** 뺀다 — window 쪽 집계는 불변이다.
+    --   · 창 끝은 _fc_cells 에서 파생한다(_fc_base 를 다시 읽지 않는다 — materialize 된
+    --     CTE 의 세 번째 참조를 만들지 않기 위해). 스캔 1회 구조는 그대로다.
+    --   · NULL 은 종전대로 둔다: 창 안 셀(w)은 무조건 유지, measured_at 이 전부 NULL 인
+    --     셀(first_at NULL)도 유지, 창 끝을 모르면(w_last 전부 NULL) 아무것도 빼지 않는다.
+    -- 프로덕션 미러 실측(2026-09-28, 읽기 전용): 루트 회차 5개 + 기본 7일 창 전부에서 종전
+    -- 게이트 통과 프롬프트 중 탈락 0. 노출 게이트를 끈 9/13·9/20 창에서는 종전 게이트가
+    -- 9/27 회차에 새로 생긴 셀 때문에 기아 EN 2개를 떨어뜨렸고(11,408) 이 절이 되살렸다.
+    -- EXPLAIN (ANALYZE, BUFFERS) 기본 7일 창 교차 4회 중앙값 596.6 → 626.0 ms(+4.9%, ID 해제로
+    -- 늘어난 행 포함) · scope_answers 스캔 1회 · _fc_base 참조 2회 그대로.
+    _fc_gate AS (
+      SELECT prompt_id FROM _fc_cells c
+      WHERE (c.target, c.region) IN (SELECT target, region FROM _fc_active)
+        AND (c.w OR c.first_at IS NULL
+          OR c.first_at <= (SELECT COALESCE(max(w_last), 'infinity'::timestamptz) FROM _fc_cells))
+      GROUP BY prompt_id
+      HAVING count(*) FILTER (WHERE w) >= count(*)
+    )
+    SELECT DISTINCT ON (b.prompt_id, b.target, b.region) b.job_id
+    FROM _fc_base b
+    JOIN _fc_gate g ON g.prompt_id = b.prompt_id
+    WHERE b.in_window
+    ORDER BY b.prompt_id, b.target, b.region, b.measured_at DESC
+  ) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $4 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`루트 주소 지정 가능(SCOPE_MODE=live) > answerWhere · dateTo 만 1`] = `
+{
+  "params": [
+    "2026-09-04",
+    "44444444-4444-4444-8444-444444444444",
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "a.status = 'completed' AND true AND a.job_id IN (
+    WITH _fc_base AS (
+      SELECT a.job_id, a.prompt_id, a.target, a.region, a.measured_at,
+        (COALESCE(r.cycle_anchor_at, r.started_at) < ($1::date + 1)) AS in_window
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE r.project_id = $2 AND r.status IN ('completed', 'partial_failed') AND a.status = 'completed'
+        
+        AND NOT (
+    a.region <> 'KR'
+    AND a.prompt_id IS NOT NULL
+    AND a.prompt_id IN (SELECT sp.prompt_id FROM scope_prompts sp WHERE sp.text ~ '[가-힣]')
+  )
+        
+    ),
+    _fc_cells AS (
+      SELECT prompt_id, target, region, bool_or(in_window) AS w,
+        min(measured_at) AS first_at,
+        max(measured_at) FILTER (WHERE in_window) AS w_last
+      FROM _fc_base GROUP BY 1, 2, 3
+    ),
+    -- ── 기대 셀을 "이번 창에 실제로 돈 셀"로 한정 (2026-09-04, #188) ──────────
+    -- expected 는 원래 이력 무제한이었다. 그래서 한 시장의 측정이 멈추면 그 셀이
+    -- 기대치에 영구히 남고 window 가 절대 따라잡지 못해, 그 시장을 커버하는
+    -- 프롬프트가 **다른 시장에서까지 통째로** 탈락했다(2026-09-04 EG 실증:
+    -- 마지막 측정 8/25 인 EG 셀 2개 때문에 AE Hyundai 프롬프트 208개가 fail).
+    -- 고침: 창 안에 한 건도 측정되지 않은 (엔진, 국가) 셀은 기대치에서 뺀다.
+    -- 그 시장은 돌았는데 이 프롬프트만 빠진 경우는 셀이 active 에 남아 여전히 탈락한다.
+    -- main 의 원안(#188)은 이 목록을 scope_answers 재스캔으로 얻었지만, 같은
+    -- 술어의 창 안 행은 이미 _fc_base.in_window 에 있으므로 셀 집계에서 파생한다
+    -- (스캔 1회 유지 — 아래 단일 스캔 주석의 전제).
+    _fc_active AS (
+      SELECT DISTINCT target, region FROM _fc_cells WHERE w
+    ),
+    -- ── 창 끝 이후에 처음 생긴 셀은 기대치에서 뺀다 (2026-09-28) ──────────────
+    -- expected 는 이력 무제한이라 **미래**도 본다. 프롬프트에 시장이 나중에 추가되면
+    -- (2026-09-28 scope 가 743개 프롬프트에 IN·AU·GB·MY·SA·TH·ID 등을 태깅) 그 새 셀이
+    -- 과거 창의 기대치에 들어가, 과거 창을 조회할 때 그 프롬프트가 "셀 부족"으로 탈락한다.
+    -- 위 _fc_active 한정(#188)은 그 시장이 **다른 프롬프트로** 창 안에서 측정됐으면 못 막는다
+    -- (IN·AU·GB 등은 다른 프롬프트로 매 회차 돈다).
+    -- 고침: 셀의 최초 completed 측정 시각(first_at)이 창 안 마지막 측정(w_last 의 최대)보다
+    -- 뒤면 그 셀은 "이 창 시점에 아직 없던 셀"이므로 기대치에서 뺀다.
+    --   · 창 판정 술어(windowPredicate)는 불투명하므로 창 무관 정의를 쓴다 — 창 끝 = 창 안
+    --     행의 measured_at 최대. 창 경계를 SQL 로 다시 해석하지 않는다.
+    --   · 대칭: 창 안 셀(w)은 first_at <= 자기 w_last <= 창 끝 이라 절대 빠지지 않는다.
+    --     즉 이 절은 **창 밖 셀만** 뺀다 — window 쪽 집계는 불변이다.
+    --   · 창 끝은 _fc_cells 에서 파생한다(_fc_base 를 다시 읽지 않는다 — materialize 된
+    --     CTE 의 세 번째 참조를 만들지 않기 위해). 스캔 1회 구조는 그대로다.
+    --   · NULL 은 종전대로 둔다: 창 안 셀(w)은 무조건 유지, measured_at 이 전부 NULL 인
+    --     셀(first_at NULL)도 유지, 창 끝을 모르면(w_last 전부 NULL) 아무것도 빼지 않는다.
+    -- 프로덕션 미러 실측(2026-09-28, 읽기 전용): 루트 회차 5개 + 기본 7일 창 전부에서 종전
+    -- 게이트 통과 프롬프트 중 탈락 0. 노출 게이트를 끈 9/13·9/20 창에서는 종전 게이트가
+    -- 9/27 회차에 새로 생긴 셀 때문에 기아 EN 2개를 떨어뜨렸고(11,408) 이 절이 되살렸다.
+    -- EXPLAIN (ANALYZE, BUFFERS) 기본 7일 창 교차 4회 중앙값 596.6 → 626.0 ms(+4.9%, ID 해제로
+    -- 늘어난 행 포함) · scope_answers 스캔 1회 · _fc_base 참조 2회 그대로.
+    _fc_gate AS (
+      SELECT prompt_id FROM _fc_cells c
+      WHERE (c.target, c.region) IN (SELECT target, region FROM _fc_active)
+        AND (c.w OR c.first_at IS NULL
+          OR c.first_at <= (SELECT COALESCE(max(w_last), 'infinity'::timestamptz) FROM _fc_cells))
+      GROUP BY prompt_id
+      HAVING count(*) FILTER (WHERE w) >= count(*)
+    )
+    SELECT DISTINCT ON (b.prompt_id, b.target, b.region) b.job_id
+    FROM _fc_base b
+    JOIN _fc_gate g ON g.prompt_id = b.prompt_id
+    WHERE b.in_window
+    ORDER BY b.prompt_id, b.target, b.region, b.measured_at DESC
+  ) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $3 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`루트 주소 지정 가능(SCOPE_MODE=live) > answerWhere · 기간 없음 1`] = `
+{
+  "params": [
+    "44444444-4444-4444-8444-444444444444",
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "a.status = 'completed' AND true AND a.job_id IN (
+    WITH _fc_base AS (
+      SELECT a.job_id, a.prompt_id, a.target, a.region, a.measured_at,
+        (r.started_at >= now() - interval '7 days') AS in_window
+      FROM scope_answers a
+      JOIN scope_runs r ON r.run_id = a.run_id
+      WHERE r.project_id = $1 AND r.status IN ('completed', 'partial_failed') AND a.status = 'completed'
+        
+        AND NOT (
+    a.region <> 'KR'
+    AND a.prompt_id IS NOT NULL
+    AND a.prompt_id IN (SELECT sp.prompt_id FROM scope_prompts sp WHERE sp.text ~ '[가-힣]')
+  )
+        
+    ),
+    _fc_cells AS (
+      SELECT prompt_id, target, region, bool_or(in_window) AS w,
+        min(measured_at) AS first_at,
+        max(measured_at) FILTER (WHERE in_window) AS w_last
+      FROM _fc_base GROUP BY 1, 2, 3
+    ),
+    -- ── 기대 셀을 "이번 창에 실제로 돈 셀"로 한정 (2026-09-04, #188) ──────────
+    -- expected 는 원래 이력 무제한이었다. 그래서 한 시장의 측정이 멈추면 그 셀이
+    -- 기대치에 영구히 남고 window 가 절대 따라잡지 못해, 그 시장을 커버하는
+    -- 프롬프트가 **다른 시장에서까지 통째로** 탈락했다(2026-09-04 EG 실증:
+    -- 마지막 측정 8/25 인 EG 셀 2개 때문에 AE Hyundai 프롬프트 208개가 fail).
+    -- 고침: 창 안에 한 건도 측정되지 않은 (엔진, 국가) 셀은 기대치에서 뺀다.
+    -- 그 시장은 돌았는데 이 프롬프트만 빠진 경우는 셀이 active 에 남아 여전히 탈락한다.
+    -- main 의 원안(#188)은 이 목록을 scope_answers 재스캔으로 얻었지만, 같은
+    -- 술어의 창 안 행은 이미 _fc_base.in_window 에 있으므로 셀 집계에서 파생한다
+    -- (스캔 1회 유지 — 아래 단일 스캔 주석의 전제).
+    _fc_active AS (
+      SELECT DISTINCT target, region FROM _fc_cells WHERE w
+    ),
+    -- ── 창 끝 이후에 처음 생긴 셀은 기대치에서 뺀다 (2026-09-28) ──────────────
+    -- expected 는 이력 무제한이라 **미래**도 본다. 프롬프트에 시장이 나중에 추가되면
+    -- (2026-09-28 scope 가 743개 프롬프트에 IN·AU·GB·MY·SA·TH·ID 등을 태깅) 그 새 셀이
+    -- 과거 창의 기대치에 들어가, 과거 창을 조회할 때 그 프롬프트가 "셀 부족"으로 탈락한다.
+    -- 위 _fc_active 한정(#188)은 그 시장이 **다른 프롬프트로** 창 안에서 측정됐으면 못 막는다
+    -- (IN·AU·GB 등은 다른 프롬프트로 매 회차 돈다).
+    -- 고침: 셀의 최초 completed 측정 시각(first_at)이 창 안 마지막 측정(w_last 의 최대)보다
+    -- 뒤면 그 셀은 "이 창 시점에 아직 없던 셀"이므로 기대치에서 뺀다.
+    --   · 창 판정 술어(windowPredicate)는 불투명하므로 창 무관 정의를 쓴다 — 창 끝 = 창 안
+    --     행의 measured_at 최대. 창 경계를 SQL 로 다시 해석하지 않는다.
+    --   · 대칭: 창 안 셀(w)은 first_at <= 자기 w_last <= 창 끝 이라 절대 빠지지 않는다.
+    --     즉 이 절은 **창 밖 셀만** 뺀다 — window 쪽 집계는 불변이다.
+    --   · 창 끝은 _fc_cells 에서 파생한다(_fc_base 를 다시 읽지 않는다 — materialize 된
+    --     CTE 의 세 번째 참조를 만들지 않기 위해). 스캔 1회 구조는 그대로다.
+    --   · NULL 은 종전대로 둔다: 창 안 셀(w)은 무조건 유지, measured_at 이 전부 NULL 인
+    --     셀(first_at NULL)도 유지, 창 끝을 모르면(w_last 전부 NULL) 아무것도 빼지 않는다.
+    -- 프로덕션 미러 실측(2026-09-28, 읽기 전용): 루트 회차 5개 + 기본 7일 창 전부에서 종전
+    -- 게이트 통과 프롬프트 중 탈락 0. 노출 게이트를 끈 9/13·9/20 창에서는 종전 게이트가
+    -- 9/27 회차에 새로 생긴 셀 때문에 기아 EN 2개를 떨어뜨렸고(11,408) 이 절이 되살렸다.
+    -- EXPLAIN (ANALYZE, BUFFERS) 기본 7일 창 교차 4회 중앙값 596.6 → 626.0 ms(+4.9%, ID 해제로
+    -- 늘어난 행 포함) · scope_answers 스캔 1회 · _fc_base 참조 2회 그대로.
+    _fc_gate AS (
+      SELECT prompt_id FROM _fc_cells c
+      WHERE (c.target, c.region) IN (SELECT target, region FROM _fc_active)
+        AND (c.w OR c.first_at IS NULL
+          OR c.first_at <= (SELECT COALESCE(max(w_last), 'infinity'::timestamptz) FROM _fc_cells))
+      GROUP BY prompt_id
+      HAVING count(*) FILTER (WHERE w) >= count(*)
+    )
+    SELECT DISTINCT ON (b.prompt_id, b.target, b.region) b.job_id
+    FROM _fc_base b
+    JOIN _fc_gate g ON g.prompt_id = b.prompt_id
+    WHERE b.in_window
+    ORDER BY b.prompt_id, b.target, b.region, b.measured_at DESC
+  ) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $2 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`루트 주소 지정 가능(SCOPE_MODE=live) > answerWhere · 추이(allRuns) 1`] = `
+{
+  "params": [
+    "44444444-4444-4444-8444-444444444444",
+    "2026-08-20",
+    "2026-09-04",
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "a.status = 'completed' AND true AND a.run_id IN (SELECT run_id FROM scope_runs WHERE project_id = $1) AND a.measured_at >= $2::date AND a.measured_at < ($3::date + 1) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $4 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`루트 주소 지정 가능(SCOPE_MODE=live) > detailAnswerWhere · cumulative 1`] = `
+{
+  "params": [
+    "44444444-4444-4444-8444-444444444444",
+    "2026-08-20",
+    "2026-09-04",
+    "44444444-4444-4444-8444-444444444444",
+    "2026-08-20",
+    "2026-09-04",
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "true AND a.status = 'completed' AND (a.run_id IN (SELECT run_id FROM scope_runs WHERE project_id = $1 AND cycle_anchor_at IS NOT NULL AND cycle_anchor_at >= $2::date AND cycle_anchor_at < ($3::date + 1)) OR (a.run_id IN (SELECT run_id FROM scope_runs WHERE project_id = $4 AND cycle_anchor_at IS NULL) AND a.measured_at >= $5::date AND a.measured_at < ($6::date + 1))) AND a.prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $7 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`루트 주소 지정 가능(SCOPE_MODE=live) > snapshotRunFilter · cumulative 1`] = `
+{
+  "params": [
+    "44444444-4444-4444-8444-444444444444",
+    "2026-08-20",
+    "2026-09-04",
+    "44444444-4444-4444-8444-444444444444",
+    "2026-08-20",
+    "2026-09-04",
+    "26751906-c175-485c-9e69-29fc68d0fdbb",
+  ],
+  "text": "status = 'completed' AND (run_id IN (SELECT run_id FROM scope_runs WHERE project_id = $1 AND cycle_anchor_at IS NOT NULL AND cycle_anchor_at >= $2::date AND cycle_anchor_at < ($3::date + 1)) OR (run_id IN (SELECT run_id FROM scope_runs WHERE project_id = $4 AND cycle_anchor_at IS NULL) AND measured_at >= $5::date AND measured_at < ($6::date + 1))) AND true AND prompt_id IN (SELECT scope_prompt_id FROM prompts WHERE project_id = $7 AND scope_prompt_id IS NOT NULL)",
+}
+`;
+
+exports[`원장(summary_cycles) 표면·주 키 식 > cycleWeekExpr 1`] = `
+{
+  "params": [],
+  "text": "(date_trunc('week', (c.cycle_anchor_at AT TIME ZONE 'UTC')))::date",
+}
+`;
+
+exports[`원장(summary_cycles) 표면·주 키 식 > surfaceExpr · 루트 없음 1`] = `
+{
+  "params": [],
+  "text": "CASE
+      
+      WHEN EXISTS (SELECT 1 FROM website_sites ws WHERE ws.scope_project_id = r.project_id::text) THEN 'website'
+      ELSE 'project'
+    END",
+}
+`;
+
+exports[`원장(summary_cycles) 표면·주 키 식 > surfaceExpr · 루트 있음 1`] = `
+{
+  "params": [
+    "33333333-3333-4333-8333-333333333333",
+  ],
+  "text": "CASE
+      WHEN r.project_id = $1::uuid THEN 'global'
+      WHEN EXISTS (SELECT 1 FROM website_sites ws WHERE ws.scope_project_id = r.project_id::text) THEN 'website'
+      ELSE 'project'
+    END",
+}
+`;
+
+exports[`회차 일자 판정 — dateRangeReason 진리표 > 진리표 1`] = `
+[
+  {
+    "name": "기간 없음",
+    "reason": null,
+  },
+  {
+    "name": "회차 1개 · 범위 안",
+    "reason": null,
+  },
+  {
+    "name": "회차 2개 · 날짜 2개",
+    "reason": "range-multi-cycle",
+  },
+  {
+    "name": "범위 밖",
+    "reason": "range-outside-cycle",
+  },
+  {
+    "name": "오프셋 표기(+09:00) — 앞 10자 규칙",
+    "reason": null,
+  },
+]
+`;

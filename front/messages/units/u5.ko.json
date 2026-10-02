@@ -1,0 +1,32 @@
+{
+  "dashboard": {
+    "kpi": {
+      "api": {
+        "ratio": {
+          "trafficConversion": {
+            "num": "GA4 key events",
+            "den": "AI 채널 세션"
+          },
+          "ownedUrlRate": {
+            "num": "자사 URL 인용 측정",
+            "den": "완료 측정"
+          },
+          "targetUrlRate": {
+            "num": "타겟 URL 인용 측정",
+            "den": "완료 측정"
+          }
+        },
+        "definition": {
+          "trafficConversion": "GA4 'AI Assistant' 채널 세션 대비 GA4 키 이벤트(전환) 수의 비율. 분모는 활성사용자가 아니라 세션입니다. 키 이벤트는 대부분 관여 신호(구성·브로셔 요청 등)이며, AI Assistant 채널은 2026-06-05 시작이라 데이터 누적 중입니다.",
+          "ownedUrlRate": "등록 프롬프트의 완료 측정(답변) 중, 자사 URL(등록한 대표 주소와 그 하위 페이지, 타겟 URL 포함)이 1회 이상 인용된 측정의 비율. 판정 단위가 측정이라 한 프롬프트를 여러 번 측정하면 각각 셉니다",
+          "targetUrlRate": "등록 프롬프트의 완료 측정(답변) 중, 그 프롬프트에 지정한 타겟 URL이 1회 이상 인용된 측정의 비율. 다른 프롬프트의 타겟이 인용된 경우는 제외하며, 분모는 자사 URL 인용률과 같은 완료 측정 수입니다"
+        },
+        "formula": {
+          "trafficConversion": "AI Assistant 채널의 GA4 key events 수 ÷ AI Assistant 채널 세션 수 × 100 (단위: %, GA4 최신 적재일까지 28일, AI Assistant = GA4 sessionDefaultChannelGroup)",
+          "ownedUrlRate": "자사 URL이 인용된 측정 수 ÷ 완료 측정 수 × 100 (단위: %, 한 측정에서 여러 번 인용돼도 1회)",
+          "targetUrlRate": "타겟 URL이 인용된 측정 수 ÷ 완료 측정 수 × 100 (단위: %, 다른 프롬프트의 타겟이 인용된 경우는 제외)"
+        }
+      }
+    }
+  }
+}

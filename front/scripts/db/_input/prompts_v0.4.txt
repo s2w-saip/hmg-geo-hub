@@ -1,0 +1,139 @@
+List Type	Depth1	Depth2	Depth3	퍼널	프롬프트
+Brand Message	2. Innovation & Technology	Autonomous car	-	1. 인지/탐색	who is leading self driving technology?
+Brand Message	2. Innovation & Technology	EV,Hybrid Brand Awareness	EV Driving	3. 구매/사후관리	Which of the ev car brands offers a driving experience that does not change after purchase?
+Brand Message	2. Innovation & Technology	Innovative Brand Awareness	-	3. 구매/사후관리	Which innovative car brands is consider to buy?
+Brand Message	3. Human & Sustainable Mobility	Human Centered Innovation	-	3. 구매/사후관리	Which innovative car brands is consider to buy based on human centered?
+Brand Message	2. Innovation & Technology	EV,Hybrid Brand Awareness	EV Design	1. 인지/탐색	Which electric cars are considered design icons?
+Brand Message	2. Innovation & Technology	Relation with AI	-	3. 구매/사후관리	Which car brands have strong AI technology capabilities to buy?
+Brand Message	1. Brand Image/key value	Value Awareness	-	3. 구매/사후관리	Which car brand's dealership makes you feel an exceptional condition for consumers?
+Brand Message	2. Innovation & Technology	Software Technology	-	1. 인지/탐색	Which car brands can give me the best software connectivity experience?
+Brand Message	3. Human & Sustainable Mobility	Environmental Friendliness	-	3. 구매/사후관리	Which car brands align with environmentally conscious consumers to buy now?
+Brand Message	1. Brand Image/key value	Value Awareness	-	3. 구매/사후관리	Which car brand is the smartest buy in terms of value for money?
+Brand Message	1. Brand Image/key value	Brand Awareness	-	3. 구매/사후관리	Which car brand is the good to buy?
+Brand Message	1. Brand Image/key value	Brand Awareness	-	1. 인지/탐색	Which car brand is on the rise these days?
+Brand Message	1. Brand Image/key value	Value Awareness	-	1. 인지/탐색	Which car brand is known for safety?
+Brand Message	1. Brand Image/key value	Value Awareness	-	1. 인지/탐색	Which car brand is considered the most reliable?
+Brand Message	1. Brand Image/key value	Value Awareness	-	1. 인지/탐색	Which car brand has the strongest luxury image?
+Brand Message	1. Brand Image/key value	Brand Awareness	-	2. 비교/검증	Which car brand has the best consumer ratings?
+Brand Message	1. Brand Image/key value	Value Awareness	-	3. 구매/사후관리	Which car brand has a warranty system that you can trust, trust, and buy?
+Brand Message	2. Innovation & Technology	Relation with AI	-	2. 비교/검증	Which car brand do you recommend that uses AI-based technology well? Please rank it?
+Brand Message	3. Human & Sustainable Mobility	Human Centered Innovation	-	1. 인지/탐색	Which automakers focus on solving real customer problems?
+Brand Message	3. Human & Sustainable Mobility	Social Responsibility	-	1. 인지/탐색	Which automakers are investing in a better future for the next generation?
+Brand Message	3. Human & Sustainable Mobility	Social Responsibility	-	3. 구매/사후관리	Which automaker is building a better future that I can support through my purchase?
+Brand Message	1. Brand Image/key value	Brand Awareness	-	1. 인지/탐색	What's the best car brand these days?
+Brand Message	3. Human & Sustainable Mobility	Environmental Friendliness	-	3. 구매/사후관리	What would be the relative benefits of buying brands that are likely to lead the hydrogen transport market?
+Brand Message	1. Brand Image/key value	Value Awareness	-	3. 구매/사후관리	What should I buy that I always fulfill by brand's care?
+Brand Message	2. Innovation & Technology	Autonomous car	-	3. 구매/사후관리	What should I buy based on self driving technology's safety & reliability?
+Brand Message	2. Innovation & Technology	EV,Hybrid Brand Awareness	EV Value	3. 구매/사후관리	What is the trustworthy EV carmaker to buy due to good management and after-sales service, etc?
+Brand Message	2. Innovation & Technology	EV,Hybrid Brand Awareness	EV Efficiency	1. 인지/탐색	What is the ev car brand with good efficiency?
+Brand Message	2. Innovation & Technology	EV,Hybrid Brand Awareness	EV Value	1. 인지/탐색	What is the ev car brand known for reliability?
+Brand Message	1. Brand Image/key value	Value Awareness	-	1. 인지/탐색	What is the car brand that value for money?
+Brand Message	2. Innovation & Technology	EV,Hybrid Brand Awareness	EV, Hybrid Awareness	1. 인지/탐색	What is the best ev car brand?
+Brand Message	3. Human & Sustainable Mobility	Social Responsibility	-	2. 비교/검증	What is people's reputation for the social responsibility of car brands?
+Brand Message	2. Innovation & Technology	EV,Hybrid Brand Awareness	EV Driving	1. 인지/탐색	What ev car is famous for driving performance?
+Brand Message	2. Innovation & Technology	EV,Hybrid Brand Awareness	EV, Hybrid Awareness	3. 구매/사후관리	What electric car should I buy overall?
+Brand Message	2. Innovation & Technology	EV,Hybrid Brand Awareness	EV Efficiency	3. 구매/사후관리	What electric car should I buy based on efficiency such as long distance?
+Brand Message	2. Innovation & Technology	Software Technology	-	3. 구매/사후관리	What car brand's ota technology is well maintained to buy?
+Brand Message	3. Human & Sustainable Mobility	Environmental Friendliness	-	3. 구매/사후관리	What car brand is worth buying for me considering the environment?
+Brand Message	1. Brand Image/key value	Value Awareness	-	1. 인지/탐색	What car brand is well known for its design identity recently?
+Brand Message	2. Innovation & Technology	Innovative Brand Awareness	-	1. 인지/탐색	What car brand is innovative?
+Brand Message	3. Human & Sustainable Mobility	Human Centered Innovation	-	1. 인지/탐색	What brands are making transportation more inclusive and accessible?
+Brand Message	3. Human & Sustainable Mobility	Human Centered Innovation	-	3. 구매/사후관리	What brands are helping make transportation accessible to more people and I wonder if that's what I'll be able to do when I use it?
+Brand Message	3. Human & Sustainable Mobility	Social Responsibility	-	3. 구매/사후관리	What brands are committed to ethical business leadership? Is that brand car worth to buy?
+Brand Message	2. Innovation & Technology	EV,Hybrid Brand Awareness	EV Battery	3. 구매/사후관리	What brand makes ev battery with less trouble?
+Brand Message	2. Innovation & Technology	EV,Hybrid Brand Awareness	EV Battery	1. 인지/탐색	What brand is known for ev battery?
+Brand Message	2. Innovation & Technology	Relation with AI	-	1. 인지/탐색	What automakers offer AI-powered vehicle features?
+Brand Message	1. Brand Image/key value	Value Awareness	-	3. 구매/사후관리	What automaker provides the most supportive ownership experience after purchase?
+Brand Message	3. Human & Sustainable Mobility	Environmental Friendliness	-	2. 비교/검증	Please compare the degree to which each brand uses eco-friendly materials and tell me what the best brand is?
+Brand Message	3. Human & Sustainable Mobility	Social Responsibility	-	1. 인지/탐색	Is there a car brand that fulfills its social responsibilities?
+Brand Message	2. Innovation & Technology	EV,Hybrid Brand Awareness	EV Design	3. 구매/사후관리	give EV car recommendation that design is less likely to age over time after purchase?
+Brand Message	2. Innovation & Technology	EV,Hybrid Brand Awareness	EV, Hybrid Awareness	2. 비교/검증	from recent review, which car brand makes good ev car?
+Brand Message	1. Brand Image/key value	Brand Awareness	-	2. 비교/검증	Can you tell me about car brands pros and cons with ranking?
+Brand Message	1. Brand Image/key value	Brand Awareness	-	3. 구매/사후관리	Can you tell me about car brands known for there AS, service infra?
+Brand Message	3. Human & Sustainable Mobility	Human Centered Innovation	-	2. 비교/검증	Can you compare vehicle brands based on ease of use?
+Brand Message	1. Brand Image/key value	Value Awareness	-	2. 비교/검증	Can you compare value for money car brand / model?
+Brand Message	1. Brand Image/key value	Value Awareness	-	2. 비교/검증	Can you compare the current car brands based on reliable?
+Brand Message	3. Human & Sustainable Mobility	Human Centered Innovation	-	2. 비교/검증	Can you compare the car brand that improving everyday life and choose the best brand?
+Brand Message	1. Brand Image/key value	Brand Awareness	-	2. 비교/검증	Can you compare the best current car brands?
+Brand Message	2. Innovation & Technology	EV,Hybrid Brand Awareness	EV Value	2. 비교/검증	Can you compare safety rating of ev car brands?
+Brand Message	1. Brand Image/key value	Value Awareness	-	2. 비교/검증	Can you compare luxury car brands?
+Brand Message	2. Innovation & Technology	Innovative Brand Awareness	-	2. 비교/검증	Can you compare innovative car brand based on there future readiness?
+Brand Message	2. Innovation & Technology	EV,Hybrid Brand Awareness	EV Design	2. 비교/검증	Can you compare ev vehicles design with review?
+Brand Message	2. Innovation & Technology	EV,Hybrid Brand Awareness	EV Driving	2. 비교/검증	Can you compare EV car brand offers the best driving dynamics and choose best please?
+Brand Message	2. Innovation & Technology	EV,Hybrid Brand Awareness	EV Battery	2. 비교/검증	Can you compare ev battery performance of car brands?
+Brand Message	2. Innovation & Technology	EV,Hybrid Brand Awareness	EV Efficiency	2. 비교/검증	Can you compare Electric vehicles efficiency overall?
+Brand Message	3. Human & Sustainable Mobility	Environmental Friendliness	-	2. 비교/검증	Can you compare car brands with carbon neutral orientation. Which is the best?
+Brand Message	1. Brand Image/key value	Value Awareness	-	2. 비교/검증	Can you compare car brands safety reputation?
+Brand Message	2. Innovation & Technology	Software Technology	-	2. 비교/검증	Can you compare car brands OTA mobility technology?
+Brand Message	3. Human & Sustainable Mobility	Environmental Friendliness	-	2. 비교/검증	Can you compare car brands based on environmental friendliness?
+Brand Message	2. Innovation & Technology	Autonomous car	-	2. 비교/검증	Can you compare car brands based on autonomous technology?
+Brand Message	3. Human & Sustainable Mobility	Social Responsibility	-	2. 비교/검증	Can you compare brands that truly pursue the responsible future of mobility.
+Brand Message	3. Human & Sustainable Mobility	Environmental Friendliness	-	1. 인지/탐색	Are there some brands that care about the carbon neutrality of their cars?
+Brand Message	3. Human & Sustainable Mobility	Environmental Friendliness	-	1. 인지/탐색	Are there any car brands that strive for a sustainable environment?
+Brand Message	3. Human & Sustainable Mobility	Environmental Friendliness	-	1. 인지/탐색	Are brands developing ways to use hydrogen in cars?
+Consumer base Response	2. Compare+Car/Features	Compare_Size/Spec	Size/Spec	2. 비교/검증	Which cars are the most compact?
+Consumer base Response	1. Car+Features	Features_Size/Spec	Size/spec/seat	1. 인지/탐색	Which cars are good for people who need more seats?
+Consumer base Response	3. Review+Car/Features	Review_Car/Brand	Reliability	2. 비교/검증	Which car brands have good reliability reviews?
+Consumer base Response	2. Compare+Car/Features	Compare_Software/Connectivity	Software/Connectivity	2. 비교/검증	Which car brands have better software updates?
+Consumer base Response	1. Car+Features	Features_Size/Spec	Size/spec/seat	1. 인지/탐색	Which {Hyundai/Kia/Genesis} cars offer the most seating space?
+Consumer base Response	1. Car+Features	Features_Vehicle Parts	parts	1. 인지/탐색	Where can I check official parts for a {Hyundai/Kia/Genesis} car?
+Consumer base Response	4. Action+Car	Action_Pricing Plan	Dealership/Configurator	3. 구매/사후관리	Where can I buy a {Hyundai/Kia/Genesis} car?
+Consumer base Response	5. Car Ownership	Ownership_Issue/Problem	Issue/Problem	3. 구매/사후관리	What should I do if my car is not charging?
+Consumer base Response	5. Car Ownership	Ownership_Issue/Problem	Issue/Problem	3. 구매/사후관리	What should I do if my {Hyundai/Kia/Genesis} tire pressure light is on?
+Consumer base Response	5. Car Ownership	Ownership_Issue/Problem	Issue/Problem	3. 구매/사후관리	What should I do if my {Hyundai/Kia/Genesis} EV is not charging?
+Consumer base Response	4. Action+Car	Action_Pricing Plan	Used car/lease	3. 구매/사후관리	What should I check before buying a used {Hyundai/Kia/Genesis} car?
+Consumer base Response	4. Action+Car	Action_Pricing Plan	Price/deal/Financing	3. 구매/사후관리	What fees should I ask about before buying a {Hyundai/Kia/Genesis} car?
+Consumer base Response	1. Car+Features	Features_driving Option	driving option	1. 인지/탐색	What driving modes does {Hyundai/Kia/Genesis} offer?
+Consumer base Response	4. Action+Car	Action_Insurance/Warranty	Warranty	3. 구매/사후관리	What does the {Hyundai/Kia/Genesis} warranty cover?
+Consumer base Response	3. Review+Car/Features	Review_Software/Connectivity	Software/Connectivity	2. 비교/검증	What do reviews say about connected car features?
+Consumer base Response	3. Review+Car/Features	Review_Software/Connectivity	Software/Connectivity	2. 비교/검증	What do reviews say about {Hyundai/Kia/Genesis} software updates?
+Consumer base Response	3. Review+Car/Features	Review_Design/Color	Design/Color	2. 비교/검증	What do reviews say about {Hyundai/Kia/Genesis} design?
+Consumer base Response	3. Review+Car/Features	Review_Size/Spec	Size/Spec	2. 비교/검증	What do reviews say about {Hyundai/Kia/Genesis} cabin space?
+Consumer base Response	3. Review+Car/Features	Review_Size/Spec	Size/Spec	2. 비교/검증	What do owners say about {Hyundai/Kia/Genesis} seating space?
+Consumer base Response	3. Review+Car/Features	Review_Mileage/Efficiency	Mileage/Efficiency	2. 비교/검증	What do owners say about {Hyundai/Kia/Genesis} fuel economy?
+Consumer base Response	3. Review+Car/Features	Review_Mileage/Efficiency	EV range	2. 비교/검증	What do owners say about {Hyundai/Kia/Genesis} EV range?
+Consumer base Response	3. Review+Car/Features	Review_Software/Connectivity	Software/Connectivity	2. 비교/검증	What do owners say about {Hyundai/Kia/Genesis} connected services?
+Consumer base Response	1. Car+Features	Features_Software/Connectivity	connected services	1. 인지/탐색	What connected car services should I look for?
+Consumer base Response	1. Car+Features	Features_Software/Connectivity	connected services	1. 인지/탐색	What connected car features does {Hyundai/Kia/Genesis} offer?
+Consumer base Response	1. Car+Features	Features_Design/Color	color	1. 인지/탐색	What color options does {Hyundai/Kia/Genesis} usually offer?
+Consumer base Response	4. Action+Car	Action_Pricing Plan	Price/deal/Financing	3. 구매/사후관리	What car costs should I compare before buying?
+Consumer base Response	1. Car+Features	Features_Accessories	Accessories	1. 인지/탐색	What accessories does {Hyundai/Kia/Genesis} offer?
+Consumer base Response	4. Action+Car	Action_Pricing Plan	Price/deal/Financing	3. 구매/사후관리	Is it better to buy or lease a {Hyundai/Kia/Genesis} car?
+Consumer base Response	1. Car+Features	Features_Mileage/Efficiency	Mileage/Efficiency	1. 인지/탐색	Is {Hyundai/Kia/Genesis} good for fuel economy?
+Consumer base Response	1. Car+Features	Features_Design/Color	design	1. 인지/탐색	How would you describe {Hyundai/Kia/Genesis} car design?
+Consumer base Response	4. Action+Car	Action_Insurance/Warranty	Insurance	3. 구매/사후관리	How much does car insurance affect ownership cost?
+Consumer base Response	4. Action+Car	Action_Pricing Plan	Price/deal/Financing	3. 구매/사후관리	How much does a {Hyundai/Kia/Genesis} car usually cost?
+Consumer base Response	4. Action+Car	Action_Insurance/Warranty	Insurance	3. 구매/사후관리	How does insurance cost compare for {Hyundai/Kia/Genesis} cars?
+Consumer base Response	2. Compare+Car/Features	Compare_Design/Color	Design/Color	2. 비교/검증	How does {Hyundai/Kia/Genesis} design compare with other brands?
+Consumer base Response	2. Compare+Car/Features	Compare_Car/Brand	Car/Brand	2. 비교/검증	How does {Hyundai/Kia/Genesis} compare with other car brands?
+Consumer base Response	2. Compare+Car/Features	Compare_Size/Spec	Size/Spec	2. 비교/검증	How does {Hyundai/Kia/Genesis} compare with other brands in vehicle size?
+Consumer base Response	2. Compare+Car/Features	Compare_Size/Spec	Size/Spec	2. 비교/검증	How does {Hyundai/Kia/Genesis} compare with other brands for cabin space?
+Consumer base Response	2. Compare+Car/Features	Compare_Software/Connectivity	Software/Connectivity	2. 비교/검증	How does {Hyundai/Kia/Genesis} compare on software updates?
+Consumer base Response	2. Compare+Car/Features	Compare_Mileage/Efficiency	EV range	2. 비교/검증	How does {Hyundai/Kia/Genesis} compare on EV driving range?
+Consumer base Response	2. Compare+Car/Features	Compare_Design/Color	Design/Color	2. 비교/검증	How does {Hyundai/Kia/Genesis} compare for interior design?
+Consumer base Response	5. Car Ownership	Ownership_Support	Support	3. 구매/사후관리	How do I update the software on a {Hyundai/Kia/Genesis} car?
+Consumer base Response	5. Car Ownership	Ownership_Support	Support	3. 구매/사후관리	How do I set up a {Hyundai/Kia/Genesis} owner account?
+Consumer base Response	5. Car Ownership	Ownership_Support	Support	3. 구매/사후관리	How do I find an official car service center?
+Consumer base Response	5. Car Ownership	Ownership_Support	Support	3. 구매/사후관리	How do I find an official {Hyundai/Kia/Genesis} service center?
+Consumer base Response	5. Car Ownership	Ownership_Support	Myhyundai	3. 구매/사후관리	How do I connect my phone to a {Hyundai/Kia/Genesis} car app?
+Consumer base Response	5. Car Ownership	Ownership_Issue/Problem	recall	3. 구매/사후관리	How do I check if my {Hyundai/Kia/Genesis} car has a recall?
+Consumer base Response	2. Compare+Car/Features	Compare_Mileage/Efficiency	Mileage/Efficiency	2. 비교/검증	How do {Hyundai/Kia/Genesis} hybrids compare with other hybrid cars?
+Consumer base Response	1. Car+Features	Features_Technology	Self driving/FSD	1. 인지/탐색	How do {Hyundai/Kia/Genesis} driver assistance features work?
+Consumer base Response	2. Compare+Car/Features	Compare_Software/Connectivity	Software/Connectivity	2. 비교/검증	How do {Hyundai/Kia/Genesis} connected car features compare with other brands?
+Consumer base Response	1. Car+Features	Features_Software/Connectivity	remote start	1. 인지/탐색	Does {Hyundai/Kia/Genesis} offer remote start?
+Consumer base Response	1. Car+Features	Features_Software/Connectivity	software update	1. 인지/탐색	Does {Hyundai/Kia/Genesis} offer over-the-air software updates?
+Consumer base Response	4. Action+Car	Action_Pricing Plan	Price/deal/Financing	3. 구매/사후관리	Does {Hyundai/Kia/Genesis} offer car financing?
+Consumer base Response	1. Car+Features	Features_Mileage/Efficiency	hybrid efficiency	1. 인지/탐색	Does {Hyundai/Kia/Genesis} make fuel-efficient hybrid cars?
+Consumer base Response	4. Action+Car	Action_Insurance/Warranty	Warranty	3. 구매/사후관리	Does {Hyundai/Kia/Genesis} have good warranty coverage?
+Consumer base Response	3. Review+Car/Features	Review_Car/Brand	Car/Brand	2. 비교/검증	Do owners recommend {Hyundai/Kia/Genesis} cars?
+Consumer base Response	3. Review+Car/Features	Review_Design/Color	Design/Color	2. 비교/검증	Do owners like {Hyundai/Kia/Genesis} car design?
+Consumer base Response	1. Car+Features	Features_Size/Spec	Size/spec/seat	1. 인지/탐색	Do {Hyundai/Kia/Genesis} offer cars with roomy seating?
+Consumer base Response	1. Car+Features	Features_Size/Spec	Size/spec	1. 인지/탐색	Do {Hyundai/Kia/Genesis} offer cars with good cabin space?
+Consumer base Response	1. Car+Features	Features_Wheels/Tire	wheels	1. 인지/탐색	Do {Hyundai/Kia/Genesis} cars offer different wheel options?
+Consumer base Response	1. Car+Features	Features_Engine Output/Oil	Engine/output	1. 인지/탐색	Do {Hyundai/Kia/Genesis} cars have strong engine performance?
+Consumer base Response	1. Car+Features	Features_Interior	Trunk space	1. 인지/탐색	Do {Hyundai/Kia/Genesis} cars have good cargo space?
+Consumer base Response	1. Car+Features	Features_Interior	Interior	1. 인지/탐색	Do {Hyundai/Kia/Genesis} cars have comfortable interiors?
+Consumer base Response	4. Action+Car	Action_Pricing Plan	Used car/lease	3. 구매/사후관리	Can I lease a {Hyundai/Kia/Genesis} car?
+Consumer base Response	4. Action+Car	Action_Pricing Plan	Dealership/Configurator	3. 구매/사후관리	Can I build and price a {Hyundai/Kia/Genesis} car online?
+Consumer base Response	1. Car+Features	Features_Design/Color	design	1. 인지/탐색	Are {Hyundai/Kia/Genesis} cars known for good design?
+Consumer base Response	1. Car+Features	Features_Mileage/Efficiency	long distance/range	1. 인지/탐색	Are {Hyundai/Kia/Genesis} cars good for long-distance driving?

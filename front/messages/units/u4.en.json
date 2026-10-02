@@ -1,0 +1,8 @@
+{
+  "dashboard": {
+    "filters": {
+      "optionsLoading": "Loading options",
+      "optionsFailed": "Could not load options. Open the filter again to retry."
+    }
+  }
+}

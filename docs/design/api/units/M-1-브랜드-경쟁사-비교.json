@@ -1,0 +1,153 @@
+{
+  "auth": "A8: FastAPI 의존성이 Supabase Auth JWT 를 JWKS 로 검증해 user_id·project 접근권을 얻는다. 공통 필터 모델 규약대로 서버가 프로젝트 스코프(app.project_member)를 계산해 요청 필터와 교집합한다(default-deny) — 권한 밖 brand[]·country[] 등은 meta.dropped_filters 로 빠진다. own_brand 는 클라이언트 입력을 받지 않고 서버가 rd.dim_project(project_key) → bgrp 로 결정한다(계약 §2: \"own_brand(서버 결정)\"). 운영자 전용 게이트는 없음(고객 프로젝트 읽기 전용 API).",
+  "current_refs": [
+    "lib/scope/server.ts:3301 fetchStandardCompetitorSources(대시보드 경쟁사 행 조립부, 이 API 범위는 이 중 brands+firstPosition 부분)",
+    "lib/scope/server.ts:3858 fetchStandardMentionCompetitorBrands",
+    "lib/scope/server.ts:3029 fetchStandardKpiBrandTrend",
+    "lib/scope/server.ts:3139 fetchStandardKpiFirstPosition",
+    "lib/scope/result-adapter.ts:1039 CompetitorBrandValue(응답 필드 참고: brand,mentions,share,mentionRate,avgPosition,isTracked,sentiment)",
+    "lib/db/repositories/scope-aggregates.ts:10010 BrandTrendResult",
+    "lib/db/repositories/scope-aggregates.ts:10933 FirstPositionResult",
+    "lib/db/repositories/entity-registry.ts:79 listDiscoveredBrands — 범위 밖(admin 카탈로그 모듈, entity_id 그레인 집계이지 이 API 의 답변×브랜드 그레인이 아님)"
+  ],
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/v1/mentions/brands",
+      "summary": "기간 내 브랜드별 노출률(M01)·점유율(M02)·평균순위(M04/D5)·언급 수와 경쟁사 상위 N, 주별 브랜드 추이를 한 번에 반환"
+    }
+  ],
+  "filters": {
+    "supported": [
+      "surface",
+      "own_brand(서버 결정)",
+      "brand[]",
+      "country[]",
+      "lang[]",
+      "engine[]",
+      "from/to(앵커 날짜)",
+      "funnel[]",
+      "brand_presence[]",
+      "list_type[]",
+      "depth1~3[]"
+    ],
+    "ignored": [],
+    "extra_params": [
+      "top_n:int=10(1~50, 경쟁사 상위 N 개수)",
+      "sort:enum(mentions|share|avg_rank)=mentions(경쟁사 정렬 기준, F03 현행=언급 수 내림차순)",
+      "include_trend:bool=true(주별 브랜드 추이 포함 여부)",
+      "trend_weeks:int=13(1~53, 추이 창 폭)"
+    ]
+  },
+  "id": "M-1",
+  "metrics_rules": [
+    "M01 노출률 = 당사 등장 답변 / 답변(가산, 분자·분모 정수)",
+    "M02 점유율(SOV) = 당사 언급 / 전체 언급(가산)",
+    "D5/M04 우선노출도 = 순위 합 / 순위가 있는 답변 = 평균 순위(낮을수록 좋음), 경쟁 브랜드 순위도 평균 순위에서 파생",
+    "M11 브랜드·경쟁사 비교 = 브랜드별 M01·M02·M04(가산, 답변×브랜드 그레인)",
+    "M12 모수(답변 수, 가산)",
+    "R03 노출 게이트: view_date ≤ 오늘(KST)인 회차만",
+    "D1 기간 누적: 앵커 날짜가 기간 안인 모든 완료 측정 합산(스냅샷 아님)",
+    "G-03: 당사 브랜드 행은 rd.answer 판정 열(own_mask·own_rk_*·ment_*·sent_*)로 자식 스캔 없이 계산",
+    "G-01(a): 경쟁사 행은 rd.answer_brand(답변×표시 브랜드×경쟁 여부) 그레인"
+  ],
+  "open_questions": [
+    "브랜드별 감성 분해(s_pos/s_neu/s_neg/s_mix)를 이 단위(M-1 브랜드 비교 표)에 둘지 M-2(언급 유형·태도 분포)에 둘지: 현행 CompetitorBrandValue.sentiment 가 경쟁사 표 행에 포함돼 있어 이 API 에 유지 제안하나, M-2 설계자와 중복 여부 확인 필요",
+    "주별 브랜드 추이(스파크라인·라인차트)를 이 API 의 include_trend 로 합칠지, 별도 GET /v1/trend(family=mentions, group_by=brand) 로 분리할지: 계약에 별도 /v1/trend 엔드포인트가 명시돼 있어 겹칠 수 있음",
+    "own_bit 다중값 처리: rd.dim_brand_name 코멘트에 'Hyundai N 은 own_bit 1(open_issues)'로 남아 있어 현대 계열 own 판정 세부가 미확정 — own 브랜드 다중 매핑 규칙 필요",
+    "top_n 기본 정렬 기준: 현행 F03 은 언급 수 내림차순이나 대시보드 경쟁사 미니 카드가 다른 기준(share·avgPosition)을 쓸 가능성 — 확인 필요",
+    "depth1~3·funnel·brand_presence·list_type 필터 시 rd.catalog_entry 조인 비용이 성능 문서 §8 표에 별도 판정으로 없음 — RDS 실측 게이트에서 이 조합도 재야 함"
+  ],
+  "parity": "하네스 F03 키(`fetchStandardAggregates(...).brands`, 경쟁사 상위10+추적 브랜드, rank=전브랜드 언급수 내림차순)와 대조. 신 API 의 own 행 + competitors[] 를 (brand, mentions, share, mentionRate, avgPosition, rank) 필드별로 old 값과 오차 허용 범위 내 비교. C07 `brands:[\"*\"]`(상위N 해제)는 top_n 상한(50) 초과 시 old 전체 vs new 상한 잘림 차이를 별도 표기.",
+  "perf": {
+    "indexes": [
+      "rd.answer: answer_cell_idx(surface,round_date,cyc_key,prompt_key,engine_key,geo_key) — 당사 집계 기저",
+      "rd.answer: answer_rd_brin(round_date) — 기간 가지치기",
+      "rd.answer_brand: ab_brand_idx(brand_key,round_date) INCLUDE(answer_key,prompt_key)",
+      "rd.answer_brand: ab_rd_brin(round_date)",
+      "rd.catalog_entry: catalog_entry_prompt_idx(prompt_key), catalog_entry_axis_idx(brand_bit,list_type_key,depth1_key) — depth/funnel/presence/list_type 필터 시"
+    ],
+    "notes": "DB-성능-물리-설계.md §8: mentions/brands·브랜드 추이는 폭 10배·현 이력(약 13주)에서 1,000만~1,300만 행, v1 실측 최악 716ms(3코어)로 '가능' 판정이나 이력 1년 누적 시 '경계'(16 vCPU 필요 추정)로 격상. 파티션(surface LIST → round_date RANGE) 가지치기 + BRIN 전제. depth/funnel 등 catalog_entry 조인 조합은 문서에 별도 판정 없음(RDS 실측 게이트 대상).",
+    "risk": "medium",
+    "rows_scanned": "폭 10배·현 이력(약 13주) 기준 rd.answer_brand 약 1,000만~1,300만 행(competitor 집계), rd.answer 약 450만~700만 행(own 집계) — DB-성능-물리-설계.md §8"
+  },
+  "purpose": "고객이 보는 관점 브랜드(own_brand) 대비 경쟁사들의 노출률·점유율·평균 순위·언급 수를 한 화면(경쟁사 표·스파크라인·우선노출도 순위표)에 공급한다. 기간(from/to) 안 완료 측정 전체를 D1 규칙대로 합산해 자사 1행 + 경쟁사 상위 N 행 + 선택적 주별 추이를 낸다.",
+  "query_design": "읽기 스키마(rd)만, 조인 없이 파티션 가지치기로 두 갈래를 병렬 실행.\n\n1) 당사 행(rd.answer, G-03 판정 열만):\n```sql\nSELECT count(*) FILTER (WHERE std_in) AS answers_total,\n       sum(ment_total) FILTER (WHERE std_in) AS mentions_total,\n       count(*) FILTER (WHERE std_in AND own_mask <> 0) AS own_exposure,\n       sum(ment_h) FILTER (WHERE std_in) AS own_mentions,      -- h/k/g 중 own_brand 에 맞는 열을 서버가 선택\n       sum(own_rk_h) FILTER (WHERE std_in AND own_rk_h > 0) AS own_rank_sum,\n       count(*) FILTER (WHERE std_in AND own_rk_h > 0) AS own_ranked_answers,\n       sum(sent_pos_h) FILTER (WHERE std_in) AS own_pos, sum(sent_neg_h) FILTER (WHERE std_in) AS own_neg,\n       sum(sent_all_h) FILTER (WHERE std_in) AS own_scored\nFROM rd.answer\nWHERE surface = :surface AND round_date BETWEEN :from AND :to\n  AND project_key = ANY(:project_keys) AND engine_key = ANY(:engine_keys)\n  AND geo_key = ANY(:geo_keys) AND lang_key = ANY(:lang_keys)\n  AND (:catalog_filtered = false OR prompt_key IN (SELECT prompt_key FROM rd.catalog_entry WHERE ...funnel/presence/list_type/depth...));\n```\n\n2) 경쟁사 행(rd.answer_brand, competitive=true, own_bit=0):\n```sql\nSELECT brand_key,\n       count(DISTINCT answer_key) AS exposure_answers,\n       sum(mention_count) AS mentions,\n       sum(rk) FILTER (WHERE rk > 0) AS rank_sum,\n       count(*) FILTER (WHERE rk > 0) AS ranked_rows,\n       sum(s_pos) AS s_pos, sum(s_neu) AS s_neu, sum(s_neg) AS s_neg, sum(s_mix) AS s_mix\nFROM rd.answer_brand\nWHERE surface = :surface AND round_date BETWEEN :from AND :to AND std_in\n  AND competitive AND own_bit = 0\n  AND project_key = ANY(:project_keys) AND engine_key = ANY(:engine_keys)\n  AND geo_key = ANY(:geo_keys) AND lang_key = ANY(:lang_keys)\n  AND (:brand_filter IS NULL OR brand_key = ANY(:brand_filter))\n  AND (:catalog_filtered = false OR prompt_key IN (SELECT prompt_key FROM rd.catalog_entry WHERE ...))\nGROUP BY brand_key\nORDER BY :sort_column DESC\nLIMIT :top_n;\n```\nbrand_key → rd.dim_brand_name.name 은 점 조회(수십 행, 캐시 가능 차원)로 해석. exposure_rate = exposure_answers/answers_total(공유 분모), share = mentions/mentions_total. avg_rank = rank_sum/ranked_rows(조회 시 계산, P1 예외).\n\n3) include_trend=true 면 위 두 쿼리를 round_date 를 주 단위로 GROUP BY 해 반복(같은 WHERE, GROUP BY brand_key, date_trunc('week', round_date) 또는 rd.cycle.view_date 기준 버킷 — 버킷 키 산식은 계약 §2 공용 규약을 따름), trend_weeks 로 기간 상한.",
+  "read_model": [
+    "rd.answer.round_date",
+    "rd.answer.surface",
+    "rd.answer.project_key",
+    "rd.answer.engine_key",
+    "rd.answer.geo_key",
+    "rd.answer.lang_key",
+    "rd.answer.prompt_key",
+    "rd.answer.std_in",
+    "rd.answer.own_mask",
+    "rd.answer.own_rk_h/own_rk_k/own_rk_g",
+    "rd.answer.ment_total",
+    "rd.answer.ment_h/ment_k/ment_g",
+    "rd.answer.sent_pos_h/sent_pos_k/sent_pos_g",
+    "rd.answer.sent_neg_h/sent_neg_k/sent_neg_g",
+    "rd.answer.sent_all_h/sent_all_k/sent_all_g",
+    "rd.answer_brand.round_date",
+    "rd.answer_brand.surface",
+    "rd.answer_brand.answer_key",
+    "rd.answer_brand.brand_key",
+    "rd.answer_brand.project_key",
+    "rd.answer_brand.engine_key",
+    "rd.answer_brand.geo_key",
+    "rd.answer_brand.lang_key",
+    "rd.answer_brand.prompt_key",
+    "rd.answer_brand.own_bit",
+    "rd.answer_brand.competitive",
+    "rd.answer_brand.mention_count",
+    "rd.answer_brand.rk",
+    "rd.answer_brand.s_pos/s_neu/s_neg/s_mix",
+    "rd.answer_brand.std_in",
+    "rd.dim_brand_name.brand_key",
+    "rd.dim_brand_name.name",
+    "rd.dim_brand_name.own_bit",
+    "rd.catalog_entry.prompt_key",
+    "rd.catalog_entry.brand_bit",
+    "rd.catalog_entry.funnel_key",
+    "rd.catalog_entry.presence_key",
+    "rd.catalog_entry.list_type_key",
+    "rd.catalog_entry.depth1_key/depth2_key/depth3_key",
+    "rd.dim_project.project_key",
+    "rd.cycle.view_date(R03 게이트, 필터 모듈 공유)"
+  ],
+  "response": "{ data: { own: { brand_key, brand_name, exposure: {num, den}, share: {num, den}, avg_rank: {sum, count, value|null}, mentions, sentiment: {positive, neutral, negative, mixed, scored_total} }, competitors: [ { brand_key, brand_name, rank(전체 언급수 내림차순), exposure: {num, den}, share: {num, den}, avg_rank: {sum, count, value|null}, mentions, sentiment: {...} }, ... 최대 top_n 개 ], trend: [ { week_start, brand_key, brand_name, mentions, exposure: {num, den}, share: {num, den} }, ... ] | null(include_trend=false) }, meta: { surface, mode, as_of, cycles, generation, ignored_filters, dropped_filters, suppressed } }。 비율은 항상 분자·분모 정수(num/den)를 함께 실어 프론트가 재계산 가능하게 하고, 순위 없는 값은 avg_rank.value=null(0 아님, 스펙 확정).",
+  "screens": [
+    "/dashboard 핵심 지표 요약 경쟁사 행",
+    "/standard/answer-analysis/mention 경쟁사 표 · 히어로 경쟁사",
+    "/standard/answer-analysis/mention 경쟁사 스파크라인",
+    "/standard/answer-analysis/mention 우선 노출도 탭(브랜드별 평균 순위 스냅샷+추이) — M-1 범위: 순위표·평균순위 부분만, 탭 내 다른 KPI(노출률 트렌드 축 등)는 별도 단위"
+  ],
+  "title": "브랜드·경쟁사 비교",
+  "writes": "없음(읽기 전용 API, api_ro 만 사용). app.judgment_change 등 쓰기 경로는 이 단위에 없음.",
+  "bg_additions": {
+    "date": "2026-09-28",
+    "rule": "전부 선택 인자. 주지 않으면 응답 모양·값이 종전과 같다(정본 표: 모듈-언급.md §3.1.1)",
+    "extra_params": [
+      "split_own:bool=false (D13: 관점 비트가 둘 이상이면 당사 행을 비트별로 가른다. 판정 core.measure.split_own_scopes(ms), trend·M-2 와 공용. 비트 하나면 가르지 않음. 당사 합계는 관점 전체 + 비트별 rd.answer 1회 스캔)",
+      "include[]:enum(prompts|multi|types|hmg) 최대 4, 중복 422 (BG-12~15)",
+      "group_by:enum(engine) (BG-16)",
+      "q:str 1~100자 SAFE_TEXT (BG-19, 경쟁 브랜드 이름 부분 일치, 앱 casefold)",
+      "full:bool=false (BG-19, 경쟁 행 전량, 상한 FULL_CAP=2000)"
+    ],
+    "response_fields": [
+      "brands[].own_brand_code:str (split_own 으로 가른 당사 행만. 값 = 비트의 부모 브랜드 코드 Refs.brand_code_of_bit. 그 행 brand_key = 그 이름의 rd.dim_brand_name 키, trend 분리 계열과 같다)",
+      "brands[].prompts:int (include=prompts, 등장 고유 프롬프트 수)",
+      "brands[].multi:{mentions,answers,prompts} (include=multi, 한 답변 안 언급 ≥ 2)",
+      "brands[].types:{mention,recommendation,comparison,definition,final_choice} + data.types_total (include=types, top_n 컷 전 합)",
+      "brands[].is_hmg_own:bool (include=hmg, rd.dim_brand_name.own_bit ≠ 0)",
+      "data.by_engine[]:{engine,totals,brands[]} (group_by=engine. std_in 답변이 있는 엔진만, 답변 0 블록 없음, 블록 answers 합 = totals.answers)",
+      "data.truncated:bool (full=true 일 때만)"
+    ],
+    "limits": [
+      "top_n 1~100",
+      "brand_key[] 최대 100",
+      "FULL_CAP 2000"
+    ]
+  }
+}

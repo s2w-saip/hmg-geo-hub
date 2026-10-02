@@ -1,0 +1,239 @@
+{
+  "module": "qa",
+  "router": "app/api/v1/qa/ 패키지. router.py 가 APIRouter(prefix=\"/v1/qa\", tags=[\"qa\"], dependencies=[Depends(require_qa_reviewer)]) 하나를 만들고 하위 라우터 4개를 include 한다: answers.py(QA-1 목록·진행률·이웃·필터옵션 + QA-3 상세), reviews.py(QA-2 판정·락·세션·deltas), notes.py(QA-2 노트 목록·카운트·내보내기·단건 수정/삭제), 그리고 공통 deps.py·filters.py·coords.py·sql.py·locks.py. 경로 선언 순서 규칙: 정적 경로(/answers/progress, /notes/counts, /notes/export)를 경로 변수 경로보다 먼저 등록하고 job_id·note_id·session_id 는 uuid 타입으로 선언해 정적 세그먼트와 충돌하지 않게 한다. 읽기 핸들러는 api_ro 풀, 쓰기 핸들러는 api_rw 풀을 Depends 로 주입한다(PgBouncer transaction 모드, prepared statement 캐시 끔).",
+  "summary": "검수 콘솔(qa) 모듈은 단위 2개(QA-1 목록, QA-2 판정·노트·락)에 상세 조회 1개(QA-3, 설계 리드 신설)를 더해 엔드포인트 20개로 묶었다. 현행 getReviewAnswerDetail(qa-review.ts:652, feature-trace 207행)을 맡은 단위가 없어서 QA-3 을 새로 두었다. 확인된 주요 모순은 여섯 가지다. (1) 시간 축이 단위마다 달랐다: QA-1 은 measured_at, QA-2 는 round_date 였고 measured_at(현행 qa-review.ts:241-242)으로 통일했다. (2) 인증: G-18(a) 로 이미 결정돼 있어 QA-1 의 열린 질문을 닫았고 require_qa_reviewer 하나로 정리했다. (3) QA-2 의 경로 /v1/qa/reviews/{job_id} 가 /reviews/notes 같은 정적 경로와 충돌해 리소스 계층을 다시 짰다. (4) api_rw 에는 rd 스키마 USAGE 가 없다(DB-v2.sql 권한 절 4항). 그래서 QA-2 의 트랜잭션 안 rd.job 존재 확인은 실패한다. api_ro 사전 확인으로 옮겼다. (5) job_qa_list_idx 는 measured_at DESC(= NULLS FIRST)인데 현행 정렬은 NULLS LAST 라 인덱스 정렬을 쓰지 못한다. DDL 교정을 제안했다. (6) sendBeacon 은 Authorization 헤더를 보낼 수 없어 JWT 체계에서 락 해제 경로가 끊긴다. D8 위반은 없다: 현행 unstable_cache 두 곳(qa-review.ts:476-482, 527-528)을 없애고 매 요청 계산으로 바꾼다. QA-1 이 제안한 ing.answer.n_mentions/n_citations 투영은 기각했다(현행 값은 행 수라 불일치 위험이 있다). 대신 뷰 확장 3건과 인덱스 교정 1건을 제안으로 올렸다. 10배 기준 위험은 목록·진행률이 medium, 나머지는 low 다.",
+  "endpoints_table": [
+    {
+      "id": "QA-1",
+      "method": "GET",
+      "path": "/v1/qa/answers",
+      "summary": "검수 목록: 키셋 페이지(measured_at DESC NULLS LAST, answer_key DESC), 행마다 좌표·job 상태·드롭·멘션/인용/노트 수·검수상태·락",
+      "risk": "medium"
+    },
+    {
+      "id": "QA-1",
+      "method": "GET",
+      "path": "/v1/qa/answers/progress",
+      "summary": "필터 기준(scoped)과 전체 기준(total) 진행률 total/reviewed/issues/notes, 캐시 없이 매 요청 계산",
+      "risk": "medium"
+    },
+    {
+      "id": "QA-1",
+      "method": "GET",
+      "path": "/v1/qa/answers/{job_id}/neighbors",
+      "summary": "목록과 같은 필터·정렬 기준의 이전/다음 job_id",
+      "risk": "low"
+    },
+    {
+      "id": "QA-1",
+      "method": "GET",
+      "path": "/v1/qa/filters",
+      "summary": "필터 드롭다운 옵션(brand/country/engine/lang/reviewer), 차원표 직접 조회",
+      "risk": "low"
+    },
+    {
+      "id": "QA-3",
+      "method": "GET",
+      "path": "/v1/qa/answers/{job_id}",
+      "summary": "상세 낱알 전량: 답변 헤더·프롬프트·카탈로그·멘션·인용·ACR 셀·앵커 고정/드롭 사유(설계 리드 신설, 현행 qa-review.ts:652 대체)",
+      "risk": "low"
+    },
+    {
+      "id": "QA-2",
+      "method": "GET",
+      "path": "/v1/qa/answers/{job_id}/review",
+      "summary": "현재 판정 단건(섹션 플래그·DB 파생 status·검수자)",
+      "risk": "low"
+    },
+    {
+      "id": "QA-2",
+      "method": "PUT",
+      "path": "/v1/qa/answers/{job_id}/review",
+      "summary": "섹션 판정 저장, 한 트랜잭션에서 락 재확인 후 UPSERT, 락을 잃으면 409 lock-lost",
+      "risk": "low"
+    },
+    {
+      "id": "QA-2",
+      "method": "POST",
+      "path": "/v1/qa/answers/{job_id}/lock",
+      "summary": "락 획득·재획득·만료 탈취(단일 upsert 문), 실패 시 409 + held_by",
+      "risk": "low"
+    },
+    {
+      "id": "QA-2",
+      "method": "PATCH",
+      "path": "/v1/qa/answers/{job_id}/lock",
+      "summary": "heartbeat(30초), 본인 세션 소유가 아니면 held=false",
+      "risk": "low"
+    },
+    {
+      "id": "QA-2",
+      "method": "DELETE",
+      "path": "/v1/qa/answers/{job_id}/lock",
+      "summary": "본인 세션 락 해제(프론트는 fetch keepalive 로 호출, sendBeacon 경로 폐지)",
+      "risk": "low"
+    },
+    {
+      "id": "QA-2",
+      "method": "GET",
+      "path": "/v1/qa/deltas",
+      "summary": "목록 10초 폴링: job_ids(최대 200)의 유효 락(TTL 안)과 판정 상태만",
+      "risk": "low"
+    },
+    {
+      "id": "QA-2",
+      "method": "POST",
+      "path": "/v1/qa/sessions",
+      "summary": "탭 단위 검수 세션 발급(JWT 사용자에 귀속), session_id 반환",
+      "risk": "low"
+    },
+    {
+      "id": "QA-2",
+      "method": "PATCH",
+      "path": "/v1/qa/sessions/{session_id}",
+      "summary": "세션 last_seen_at 갱신(본인 세션만)",
+      "risk": "low"
+    },
+    {
+      "id": "QA-2",
+      "method": "GET",
+      "path": "/v1/qa/sessions/current",
+      "summary": "현재 세션 조회(부작용 없음: 쿠키·세션 행 확인, last_seen_at 갱신 없음, no-store, BG-45)",
+      "risk": "low"
+    },
+    {
+      "id": "QA-2",
+      "method": "GET",
+      "path": "/v1/qa/answers/{job_id}/notes",
+      "summary": "해당 job 의 노트 전체(생성순, 해소분 포함)",
+      "risk": "low"
+    },
+    {
+      "id": "QA-2",
+      "method": "POST",
+      "path": "/v1/qa/answers/{job_id}/notes",
+      "summary": "낱알 노트 생성(target_kind·target_key·target_label·severity·body)",
+      "risk": "low"
+    },
+    {
+      "id": "QA-2",
+      "method": "GET",
+      "path": "/v1/qa/notes",
+      "summary": "노트 목록: 답변 필터(QaFilter) + 노트 축, 키셋(created_at DESC, note_id DESC)",
+      "risk": "low"
+    },
+    {
+      "id": "QA-2",
+      "method": "GET",
+      "path": "/v1/qa/notes/counts",
+      "summary": "현재 필터 기준 target_kind 별 노트 건수",
+      "risk": "low"
+    },
+    {
+      "id": "QA-2",
+      "method": "GET",
+      "path": "/v1/qa/notes/export",
+      "summary": "CSV 내보내기(text/csv, 커서 없음, 상한 10,000행)",
+      "risk": "low"
+    },
+    {
+      "id": "QA-2",
+      "method": "PATCH",
+      "path": "/v1/qa/notes/{note_id}",
+      "summary": "본문·severity 수정 또는 resolved 토글(resolved_at/resolved_by 동시 설정)",
+      "risk": "low"
+    },
+    {
+      "id": "QA-2",
+      "method": "DELETE",
+      "path": "/v1/qa/notes/{note_id}",
+      "summary": "노트 삭제",
+      "risk": "low"
+    }
+  ],
+  "shared": [
+    "인증 의존성 deps.require_qa_reviewer: AU-1 의 JWT(JWKS) 검증 결과 sub 로 app.user_account 를 조회해 status='active' AND is_qa_reviewer=true 가 아니면 403(fail-closed). 결과 QaActor{user_id, reviewer_name(=display_name), email} 를 핸들러에 주입. role 스코프(own_brand·brand/country default-deny 교집합)는 적용하지 않는다(G-24 모집단 = 전체 job, G-18 게이트가 스코프를 대신). 따라서 meta.dropped_filters 는 항상 []",
+    "DB 의존성: get_ro_conn(api_ro 풀, 읽기 전용·5초 statement_timeout 은 롤 기본값) · get_rw_tx(api_rw 풀, 명시 트랜잭션 + SELECT set_config('app.actor_id', :user_id, true) 로 트랜잭션 로컬 설정. SET LOCAL 은 바인드 파라미터를 못 받고 세션 SET 은 PgBouncer transaction 모드에서 누출되므로 set_config(...,true) 만 쓴다)",
+    "filters.QaFilter(Pydantic v2 query model, 목록·진행률·이웃·노트가 공유): surface: list[Literal['global','website','project']](명세 §4 어휘, 1/2/3 매핑; 단위 QA-1 의 standard 어휘 폐기), brand: list[str](app.brand.brand_code), country: list[str](rd.dim_country.code), engine: list[str](rd.dim_engine.code), lang: list[str](rd.dim_lang.code, 소문자), from_/to: date|None(alias from/to, KST 날짜, measured_at 기준), q: str|None(최대 200자, 프롬프트 텍스트만), state: list[Literal['unreviewed','ok','issue']](OR 결합, 비면 무제한), reviewer: list[str](app.qa_answer_review.reviewer_name), has_notes: bool=False, no_mentions: bool=False. QaNoteFilter = QaFilter + target_kind: list[Literal['answer','prompt','mention','citation','acr','meta']], severity: list[Literal['issue','question','info']], include_resolved: bool=False. 공통 필터 모델의 funnel/brand_presence/list_type/depth1~3/source/own_brand 가 들어오면 meta.ignored_filters 에 이름을 넣고 무시",
+    "공통 응답 envelope(계약 §2): 읽기 응답은 {data, meta:{surface:null|단일값, mode:'qa', as_of:서버 now(ISO), cycles:[], generation:null, ignored_filters, dropped_filters:[], suppressed:false}} 로 고정. 목록형은 meta.next_cursor 추가. 쓰기 응답은 {data} 만. 오류는 409 {error:'lock-held'|'lock-lost', held_by:{reviewer_name, acquired_at}}, 404 {error:'job-not-found'}, 403 {error:'not-qa-reviewer'}",
+    "coords.resolve_filter(conn, f): 필터 코드 → 키 해석을 요청당 1회 소형 조회로 수행(캐시 없음, D8). brand 코드 → brand_bit(app.brand); 표면 2·3 의 brand/country 는 프로젝트 좌표로 해석해 project_key 배열로 만든다: SELECT dp.project_key FROM rd.dim_project dp LEFT JOIN app.website_site ws ON ws.site_id = dp.site_id LEFT JOIN app.project p ON p.project_id = dp.project_id WHERE dp.surface IN (2,3) AND COALESCE(ws.brand_code, p.brand_code) = ANY(:brand_codes) (country 도 같은 방식으로 COALESCE(ws.country_code, p.country_code)). 표면 1 은 브랜드 = 카탈로그(rd.catalog_entry semi-join), 국가 = rd.job.geo_key. 이 분기는 현행 BRAND_SQL/COUNTRY_SQL(qa-review.ts:206-207)의 COALESCE(표면 좌표, 카탈로그/측정 region) 규칙을 계승한다",
+    "coords.enrich_page(conn, rows): 페이지 행(최대 200)의 표시 좌표를 배치 조회로 붙인다. prompt_key = ANY → 카탈로그 브랜드 배열(rd.catalog_entry ⋈ app.brand ON brand_bit, catalog_entry_prompt_idx), project_key = ANY → 표면 2·3 브랜드·국가, engine/geo/lang 키 → 코드(dim 표)",
+    "sql.qa_job_scope(f, resolved) -> (from_sql, where_sql, params): FROM rd.job j LEFT JOIN rd.dim_prompt dp ON dp.prompt_key = j.prompt_key LEFT JOIN app.qa_answer_review rv ON rv.job_id = j.job_id 와 술어 묶음을 만드는 단일 빌더. 목록·진행률·이웃·노트 목록·노트 카운트·내보내기가 모두 이 함수를 쓴다(현행 answerPredicates(qa-review.ts:234) + ANSWER_FROM(qa-review.ts:212) 역할). 술어는 불리언과 = ANY(상수 배열), 카탈로그 브랜드는 EXISTS(SELECT 1 FROM rd.catalog_entry ce WHERE ce.prompt_key = j.prompt_key AND ce.brand_bit = ANY(:bits)) semi-join(배열 1,000 초과 규약 회피), has_notes 는 EXISTS(app.qa_review_note n WHERE n.job_id = j.job_id), no_mentions 는 NOT EXISTS(rd.v_answer_mention_raw m WHERE m.answer_key = j.answer_key)(등치 상관만, 누설 가능 연산자를 뷰에 넣지 않는다). 비트 식(bgrp)은 WHERE 에 쓰지 않는다",
+    "sql.keyset: 2구간 키셋. 커서 = base64url('<measured_at ISO 또는 빈값>|<answer_key>'). 비NULL 구간: j.measured_at IS NOT NULL AND (j.measured_at, j.answer_key) < (:ts, :key) ORDER BY j.measured_at DESC, j.answer_key DESC; 이 구간에서 limit+1 을 못 채우면 같은 요청에서 NULL 구간(j.measured_at IS NULL AND j.answer_key < :key 또는 전체) 을 이어 조회. 현행 cursorPredicate(qa-review.ts:290-305)의 OR measured_at IS NULL 분기를 두 쿼리로 나눠 인덱스 범위 스캔을 유지. surface 가 비었거나 복수면 표면별 분기(surface = 1/2/3 각각 LIMIT limit+1)를 UNION ALL 후 바깥 ORDER BY ... LIMIT limit+1 로 병합(비파티션 표라 자동 MergeAppend 가 없으므로 명시)",
+    "sql.lock_upsert(job_id, session_id, reviewer_name): 현행 acquireLock(qa-review.ts:76-119) 의 단일 문 INSERT ... ON CONFLICT (job_id) DO UPDATE ... WHERE qa_answer_lock.session_id = EXCLUDED.session_id OR qa_answer_lock.heartbeat_at < now() - make_interval(secs => :ttl) RETURNING *. 실패 시 보유자 조회, 행이 사라진 경계 사례는 1회 재시도(qa-review.ts:112-116 계승). locks.LOCK_TTL_SECONDS = 180, HEARTBEAT_SECONDS = 30 을 목록 락 배지·deltas·획득·판정 저장이 공유(현행 qa-review.ts:40). 유효 락 판정은 항상 heartbeat_at > now() - ttl(현행 listLocks qa-review.ts:137-148)",
+    "sql.assert_job_exists(ro_conn, job_id) -> JobRef{answer_key, surface, round_date, status_code, dropped}: SELECT ... FROM rd.job WHERE job_id = :job_id(UNIQUE 인덱스). 쓰기 핸들러는 api_rw 트랜잭션을 열기 전에 api_ro 로 이것을 먼저 호출해 없으면 404. rd.job 행은 적재기가 지우지 않는다는 전제에서 TOCTOU 무해(적재 모듈 확인 사항)",
+    "sql.assert_session_owner(rw_tx, session_id): SELECT 1 FROM app.qa_review_session WHERE session_id = :s AND user_id = app.actor() FOR SHARE. 락·판정·노트 쓰기는 모두 이 확인을 같은 트랜잭션에서 선행(세션 id 도용 방지). reviewer_id 는 항상 app.actor() 로 기록해 actor 미설정 시 쓰기가 예외로 거부되게 한다(현재 QA 표에는 actor 를 부르는 트리거가 없으므로 이 명시 호출이 유일한 강제점)",
+    "Pydantic 응답 모델(OpenAPI → openapi-typescript): QaCoords{surface, brand:list[str], country:str|None, engine:str, lang:str|None}, QaListRow(QaCoords + job_id, prompt_text, measured_at, job_status:Literal['completed','in_progress','failed','other'], dropped:bool, mention_count, citation_count, note_count, review_status, reviewer_name, lock:QaLock|None), QaLock{job_id, session_id, reviewer_name, acquired_at, heartbeat_at}, QaProgressCounts{total, reviewed, issues, notes}, QaReview{job_id, status, section_flags:dict[section, 'ok'|'issue'], reviewer_name, reviewed_at, updated_at}, QaNote{note_id, job_id, target_kind, target_key, target_label, severity, body, reviewer_name, created_at, resolved_at, resolved_by}, QaNoteListRow(QaNote + prompt_text + QaCoords), QaAnswerDetail(QA-3 참조)"
+  ],
+  "read_schema": [
+    "rd.job: answer_key, job_id, run_key, prompt_key, cyc_key, round_date, measured_at, surface, project_key, engine_key, geo_key, lang_key, status_code, dropped, served (DB-v2.sql:441-448). 인덱스 job_qa_list_idx(surface, measured_at DESC, answer_key DESC)(:449), job_id UNIQUE",
+    "rd.dim_prompt: prompt_key, prompt_id, surface, project_key, kind, text, lang_key, funnel_key, regions, is_korean (DB-v2.sql:389-396)",
+    "rd.dim_project: project_key, surface, is_root, project_id, site_id, site_brand_bit, site_geo_key (DB-v2.sql:382-383)",
+    "rd.catalog_entry: prompt_key, brand_bit, presence_key, funnel_key, list_type_key, depth1_key, depth2_key, depth3_key, kind (DB-v2.sql:398-400), 인덱스 catalog_entry_prompt_idx",
+    "rd.dim_engine(engine_key, code), rd.dim_country(geo_key, code, kind), rd.dim_lang(lang_key, code), rd.dim_taxon(taxon_key, axis, code)",
+    "rd.dim_entity: entity_id, entity_key, rep_name, entity_type, registry_role (QA-3 롤업 부모 이름)",
+    "rd.acr_cell_job(answer_key, acr_cell_key) PK · rd.acr_cell(acr_cell_key, planned, valid_turn1, valid_acr, co_single, co_conditional, co_generic, co_off_shortlist, co_unresolved, co_none, is_rep, acr_in) · rd.acr_choice(level, acr_cell_key, entity_key, brand_key, parent_brand_key, own_bit, appearance, choice, cond_choice, off_shortlist, unresolved, generic) · rd.dim_brand_name(brand_key, name) (QA-3)",
+    "rd.v_answer_body: answer_key, job_id, answer_text, model_slug, measured_at, analysis_status, status (DB-v2.sql:631-633, answer_key 등치만)",
+    "rd.v_answer_mention_raw: answer_key, ord, entity_id, entity_key, registry_role, display_name, entity_type, mention_count, avg_position, brand_rollup_entity_id, surfaces (DB-v2.sql:634-638). 목록 no_mentions·mention_count 와 QA-3 멘션 낱알",
+    "rd.v_answer_registry: answer_key, pin_anchor, pin_reason, drop_reason, dropped_at (DB-v2.sql:647-649)",
+    "app.brand(brand_code, brand_bit, sort_order) · app.project(project_id, brand_code, country_code, kind) · app.website_site(site_id, brand_code, country_code) · app.prompt(scope_prompt_id, project_id, brand_code, brand_presence, list_type, depth1~4, funnel_stage, kind, prompt_type, category, deleted_at)(QA-3 카탈로그 표시, prompt_scope_idx) · app.citation_domain_override(domain, category_key) · app.citation_category(category_key, name, slug)",
+    "app.user_account(user_id, display_name, status, is_qa_reviewer, role) · app.qa_review_session(session_id, user_id, reviewer_name, started_at, last_seen_at, user_agent, ip_hash) · app.qa_answer_review(job_id, flag_answer, flag_prompt, flag_mentions, flag_citations, flag_acr, flag_meta, status GENERATED, reviewer_id, reviewer_name, session_id, reviewed_at, updated_at) · app.qa_review_note(note_id, job_id, target_kind, target_key, target_label, severity, body, reviewer_id, reviewer_name, session_id, created_at, resolved_at, resolved_by) · app.qa_answer_lock(job_id, session_id, reviewer_name, acquired_at, heartbeat_at) (DB-v2.sql:236-257), 인덱스 qa_review_status_idx, qa_review_reviewer_idx, qa_note_job_idx, qa_note_cursor_idx",
+    "제안 P-Q1(DDL 교정, D8 무관): job_qa_list_idx 를 (surface, measured_at DESC NULLS LAST, answer_key DESC) 로 바꾼다. 근거: PG 에서 DESC 는 NULLS FIRST 가 기본이라 현 DDL(:449)은 현행 정렬 measured_at DESC NULLS LAST(qa-review.ts:357)와 방향이 달라 정렬 인덱스 스캔이 불가하고, 모집단에 measured_at NULL(비완료 job, G-24)이 섞인다. 인덱스 하나를 대체할 뿐 새 표·집계 없음",
+    "제안 P-Q2(뷰 확장, D8: 저장 없음 → 파생 층 아님): rd.v_answer_mention_raw 에 ing.mention 의 sentiment_positive, sentiment_neutral, sentiment_negative, sentiment_mixed, type_mention, type_recommendation, type_comparison, type_definition, type_final_choice 투영 추가. 근거: 현행 상세 멘션 낱알(qa-review.ts:544-565)이 이 값을 보이는데 확정 뷰(:634-638)에 없다",
+    "제안 P-Q3(새 뷰, D8: 저장 없음): rd.v_answer_citation_raw(answer_key, surface, project_key, geo_key, bgrp, ord, url, title, ref_index, scope_category, host, domain_label) = rd.job ⋈ ing.answer_key_map ⋈ ing.citation(run_month, job_id). 근거: 현행 상세 인용 낱알(qa-review.ts:567-579, 720-729)의 ref_index·저장 분류(scope_category)는 rd.citation(:507-512)에 없고, G-24 모집단(드롭·비완료 포함)에 rd.citation 이 적재되는지 미확인이다. 목록 citation_count 도 이 뷰의 answer_key = ANY(페이지) 등치 count 로 낸다. 기존 5개 문서형 뷰와 같은 소유자(loader_ro)·security_barrier 규약",
+    "제안 P-Q4(뷰 확장, D8: 저장 없음): rd.v_answer_registry 에 ing.answer_anchor_pin.source_measured_at, ing.answer_drop.source_measured_at 추가. 근거: 현행 상세 derived.anchor/drop(qa-review.ts:633-646) 필드",
+    "기각: QA-1 제안(rd.v_answer_body 에 ing.answer.n_mentions/n_citations 투영). 현행 목록 수치는 scope_mentions/scope_citations 행 count(qa-review.ts:345-346)라 Scope 보고 스칼라와 다를 수 있다. 뷰 행 count(등치 배치)로 대체해 값 보존",
+    "참고(채택 안 함): api_rw 에 GRANT USAGE ON SCHEMA rd + GRANT SELECT(job_id) ON rd.job 을 주면 쓰기 트랜잭션 안에서 존재 확인이 가능하다. A17 쓰기 경계를 넓히는 변경이라 api_ro 사전 확인(shared.assert_job_exists)을 택했다"
+  ],
+  "consistency_fixes": [
+    "[누락] 상세 조회를 맡은 단위가 없다. 현행 getReviewAnswerDetail(qa-review.ts:652, feature-trace 207행)은 QA-1·QA-2 어디에도 없다. QA-3: GET /v1/qa/answers/{job_id} 를 신설해 이 모듈에서 설계한다(doc §3.3). 단위 설계자 재검토 대상",
+    "[시간 축 모순] QA-1 은 from/to 를 measured_at 에, QA-2 는 round_date 에 걸었다. 현행은 목록·노트 모두 같은 answerPredicates 의 measured_at 이다(qa-review.ts:241-242, notePredicates:931). measured_at(KST 날짜 경계: measured_at >= (:from::date)::timestamp AT TIME ZONE 'Asia/Seoul', < (:to::date + 1) 같은 방식)으로 통일한다. 근거: QA 는 지표가 아닌 원시 색인이고 rd.job 은 비파티션이며 job_qa_list_idx 가 measured_at 축이다. DB-보정.md:141(PR-01 수집 기간 = rd.job.measured_at)과도 일관된다. 현행 ::date 는 DB 타임존 기준이라 경계가 최대 9시간 달라질 수 있어 대조 항목에 넣는다",
+    "[필터 모델 분기] QA-2 노트 목록이 brand 를 빼고(bgrp WHERE 금지를 이유로) reviewer 에 노트 작성자까지 OR 로 넣었다. q 는 노트 본문까지 검색하고 state 기본값을 unreviewed 로 두었다. 현행 notePredicates = answerPredicates + 노트 3축(qa-review.ts:930-937)이다. 따라서 노트도 QaFilter 전체(brand 포함, bgrp 가 아니라 coords 해석 경로)를 공유한다. reviewer 는 rv.reviewer_name 만, q 는 프롬프트 텍스트만, state 는 비면 무제한으로 되돌린다(값 보존)",
+    "[인증 모순] QA-1 은 인증 축을 열린 질문으로 두고 role 스코프 교집합 적용도 언급했다. QA-2 는 G-18(a) 를 적용했다. DECISIONS.md G-18 은 이미 채택(a)(QA = Supabase 계정 + is_qa_reviewer)이다. 모듈 전체가 require_qa_reviewer 하나만 쓰고, 스코프 교집합은 적용하지 않으며 dropped_filters=[] 로 둔다. 현행 이름+공용 비밀번호 HMAC 쿠키(lib/qa/auth.ts:1-40, 기본 비밀번호 하드코딩 포함)는 폐지한다",
+    "[경로 충돌] QA-2 의 /v1/qa/reviews/{job_id} 와 /v1/qa/reviews/notes, /deltas, /sessions 가 같은 세그먼트 자리를 두고 겹친다. QA-1 의 /answers/progress 와 /answers/{job_id}/neighbors 도 같은 문제다. 리소스 계층을 /v1/qa/answers/{job_id}/{review|lock|notes}, /v1/qa/notes[/{note_id}|/counts|/export], /v1/qa/sessions, /v1/qa/deltas 로 재배치한다. 경로 변수는 uuid 로 타입을 지정하고 정적 경로를 먼저 등록한다",
+    "[권한 경계 위반] QA-2 는 api_rw 쓰기 트랜잭션 안에서 SELECT 1 FROM rd.job 을 한다. 그런데 api_rw 는 app USAGE 만 있다(DB-v2.sql 권한 4항). 따라서 실행 시 permission denied 가 난다. api_ro 로 먼저 확인(assert_job_exists)하고 나서 api_rw 트랜잭션을 연다",
+    "[감사 강제 착오] QA-2 는 'SET LOCAL app.actor_id 후 app.actor() 미설정 시 쓰기 거부'라고 했다. 그러나 QA 4개 표에는 app.actor() 를 부르는 트리거나 기본값이 없다(DB-v2.sql:236-257, 확인함). 그래서 설정을 빠뜨려도 쓰기는 통과한다. INSERT/UPDATE 값에 reviewer_id = app.actor() 를 명시해 강제점을 만든다. 설정은 set_config('app.actor_id', :uid, true) 로 한다(SET LOCAL 은 바인드 불가, 세션 SET 은 PgBouncer 누출)",
+    "[세션 소유 검증 누락] 두 단위 모두 session_id 가 JWT 사용자 소유인지 확인하지 않았다. 남의 session_id 를 넣으면 그 사람 락을 heartbeat·해제할 수 있다. 락·판정·노트 쓰기와 세션 PATCH 는 qa_review_session.user_id = app.actor() 를 같은 트랜잭션에서 확인한다",
+    "[sendBeacon 비호환] QA-2 는 DELETE 대용으로 POST ?release=1(sendBeacon)을 유지했다. sendBeacon 은 Authorization 헤더를 보낼 수 없어 JWT(A8) 체계에서 401 이 난다. 현행이 동작한 것은 동일 출처 쿠키 덕분이다(detail-shell.tsx:91-94, lock/route.ts:24-28). ?release=1 은 폐지하고 프론트는 fetch(method DELETE, keepalive: true, Authorization 헤더)로 해제한다. 전송이 실패하면 TTL 180초 만료로 회수되는데, 현행 비콘 실패 시와 같은 동작이다",
+    "[인덱스 방향 불일치] QA-1 은 job_qa_list_idx 로 정렬 스캔이 된다고 가정했다. 그러나 DDL 은 measured_at DESC(= NULLS FIRST)이고 정렬은 NULLS LAST 라 정렬에 쓸 수 없다. 제안 P-Q1(NULLS LAST 교정)과 2구간 키셋(shared.keyset)으로 해소한다",
+    "[표면 미지정] QA-1 은 surface 전체 호출이 존재하는지를 열린 질문으로 남겼다. 현행 QaFilter.surface 는 선택 축이고 기본값은 빈 배열(전체)이다(filters.ts QaFilter, qa-review.ts:237). 따라서 기본 화면이 전체 표면이다. 표면별 3분기 UNION ALL + 바깥 병합으로 확정한다",
+    "[표면 어휘] QA-1 은 standard|website|project 를 썼다. 명세 §4(spec.template.html:159)는 global|website|project 다. 명세 어휘로 바꾸고 rd.job.surface(1/2/3)에서 직접 낸다. 이때 현행 오분류(qa-review.ts:185-191: 글로벌 루트가 project 로, project_id NULL 레거시가 standard 로 라벨)가 교정되어 표면별 건수가 바뀐다. A4 방식으로 1회 고지한다",
+    "[브랜드·국가 좌표 해석 오류] QA-1 은 표면 3(프로젝트)의 브랜드를 rd.dim_project.site_brand_bit 로 풀었다. 현행은 COALESCE(website_sites.brand, projects.brand, 카탈로그 brand)(qa-review.ts:206)이고 국가도 COALESCE(표면 국가, a.region)(:207)이다. 표면 2 는 app.website_site, 표면 3 은 app.project 의 brand_code/country_code 로, 표면 1 은 카탈로그 브랜드와 rd.job.geo_key 로 푼다(shared.coords). QA-1 의 '카탈로그 X ∪ 공통 프롬프트' 언급은 지표 모수 규칙이라 QA 에는 적용하지 않는다(현행 단순 일치 보존)",
+    "[G-24 표시 누락] DECISIONS.md G-24 채택(a) 는 '목록에 status·드롭 표시, 상세에서 드롭 사유 표시'다. QA-1 QaListRow 에 job_status(rd.job.status_code 매핑)·dropped 가 없다. 두 필드를 추가하고, QA-3 상세에 v_answer_registry 의 drop_reason 을 넣는다",
+    "[수치 정의 변경 위험] QA-1 은 mention_count/citation_count 를 ing.answer.n_mentions/n_citations 투영(rd.v_answer_body 확장 제안)으로 내려 했다. 현행은 멘션·인용 행 count(qa-review.ts:345-346)다. 기각하고 v_answer_mention_raw·v_answer_citation_raw(P-Q3)의 answer_key = ANY(페이지) 등치 count 로 낸다",
+    "[lang 축 불일치] QA-1 은 필터에 rd.job.lang_key, 표시에 rd.dim_prompt.lang_key 를 썼다. 필터와 표시를 rd.job.lang_key 하나로 통일한다. 현행은 scope_prompts.lang(qa-review.ts:240) 이다. 두 키가 같은지는 적재 모듈에 확인하고 대조 항목에 넣는다",
+    "[노트 목록 응답 좌표] QA-2 노트 행은 surface/engine/country 를 냈다. 현행 QaNoteRow 는 prompt_text/surface/brand/engine(qa-review.ts:905-921)이다. QaCoords 공용 모델(surface, brand[], country, engine, lang)로 통일한다",
+    "[캐시 제거 확인] 현행 getProgress 30초 캐시(qa-review.ts:476-482)와 listFilterOptions 5분 캐시(:527-528)는 D8 위반이라 둘 다 없앤다. 대체: 진행률은 매 요청 계산하고 total 은 app 표 카운트로 분해한다. 필터 옵션은 차원표 직접 조회다. 두 단위 모두 캐시를 제안하지 않았다(위반 없음)",
+    "[DDL 이름 대조] 단위가 쓴 표·열은 모두 DB-v2.sql 에 있다: job_qa_list_idx, qa_note_cursor_idx, dim_prompt_text_trgm_hint(:397, 이름과 달리 trigram 이 아닌 btree(surface, project_key)라 ILIKE 가속 효과 없음. QA-1 이 인덱스 목록에 올린 것은 효과 과대평가). DDL 에 없는 이름을 확정처럼 적은 곳은 QA-1 의 ing.answer.n_mentions 투영뿐이다. 제안으로 표시돼 있었고 기각했다"
+  ],
+  "deps": [
+    "AU-1(인증·권한 모듈): FastAPI JWT(JWKS) 검증 공통 의존성, app.access_audit_log 쓰기 주체 결정(QA 상세 원문 열람을 data_access 로 기록할지), 외부 검수자 계정 온보딩(role 은 NOT NULL enum 이라 role='vendor'·operator='none'·menu_groups='{}'·is_qa_reviewer=true 안을 제안, ua_scope_nonempty 가 vendor 를 면제함, DB-v2.sql:101-110)",
+    "관리자 모듈: app.user_account.is_qa_reviewer 토글 화면(누가 부여하는가)",
+    "적재 모듈: rd.job 에 모든 status·드롭 job 을 적재 트랜잭션 안에서 원자적으로 투영(현행 bulkMirrorRunVisibleSql 가시성 게이트(scope-mirror-progress-read.ts:60) 를 트랜잭션 원자성으로 대체한다는 전제), rd.job 행 비삭제 보장, rd.job.lang_key 의 의미(프롬프트 언어인지), rd.acr_cell_job 적재, 문서형 뷰 확장(P-Q2~P-Q4) 적용",
+    "DB 설계(DDL 정본 관리): P-Q1 인덱스 교정, P-Q2·P-Q4 뷰 열 추가, P-Q3 새 뷰 rd.v_answer_citation_raw 반영과 roles 절(뷰 소유자 loader_ro, api_ro SELECT) 재실행",
+    "이관 모듈: 현행 qa_answer_reviews.section_flags(jsonb) → flag_* 6열, qa_review_notes/qa_answer_locks/qa_review_sessions 이관. 레거시 행은 계정이 없어 reviewer_id·user_id NULL(DDL 이 nullable 인 이유), 이관 시점에 살아 있는 락은 버림",
+    "공통 응답·필터 모듈: envelope Pydantic 모델, ignored_filters 산출 헬퍼",
+    "프론트(Next.js): raw-data-qa 화면 3개의 호출 전환, 락 해제를 sendBeacon 에서 fetch keepalive 로 교체, 검수자 로그인 화면을 Supabase Auth 로 교체"
+  ],
+  "build_order": [
+    "0. 선행 합의: AU-1 과 require_qa_reviewer 인터페이스·외부 검수자 계정 규약 확정, DB 설계와 P-Q1~P-Q4 반영 합의",
+    "1. 공통 구성요소: deps(require_qa_reviewer, ro/rw 의존성), filters.QaFilter/QaNoteFilter, coords(resolve_filter, enrich_page), sql.qa_job_scope + keyset, locks 상수, Pydantic 응답 모델. 단위 테스트는 술어 생성·커서 왕복(NULL 구간 포함)",
+    "2. QA-2 세션·락(POST/PATCH sessions, POST/PATCH/DELETE lock, deltas): 쓰기 경로와 세션 소유 검증을 먼저 굳힌다. 동시성 테스트(두 세션 동시 획득 → 한쪽만 성공, TTL 만료 탈취, 행 소멸 재시도)",
+    "3. QA-1 목록·이웃·필터옵션: 2구간 키셋 + 표면 3분기 병합, enrich_page 배치 조회. 현행과 같은 필터 조합으로 순서·건수 대조",
+    "4. QA-1 진행률: scoped(공통 빌더 COUNT) + total(app 표 분해 카운트 + rd.job count)",
+    "5. QA-2 판정 GET/PUT: 락 재확인 + UPSERT 단일 트랜잭션, status GENERATED 확인",
+    "6. QA-3 상세: 뷰 확장 적용 후 멘션·인용·ACR·레지스트리 낱알. P-Q2~P-Q4 미반영 상태면 해당 필드는 null 로 두고 열린 질문으로 추적",
+    "7. QA-2 노트 CRUD·목록·카운트·CSV 내보내기",
+    "8. 대조(doc §7)·RDS 실측 게이트(목록 무필터·unreviewed·issue, 진행률 total·scoped) → 프론트 전환(A13 화면 그룹 순차)"
+  ],
+  "risks": [
+    "[medium, 10배 성능] 목록의 선택적 필터 조합(예: 희소 국가 + state=unreviewed + no_mentions)에서는 키셋 인덱스 스캔이 limit+1 을 채우지 못해 표면 슬라이스를 거의 다 훑는다. rd.job 10배 추정은 100만~200만 행이다(현행 미러 십수만 행, qa-review.ts:467 주석 기준 추정). no_mentions 는 행마다 뷰 경유 등치 프로브(rd.job → answer_key_map → ing.mention 파티션)라 가장 비싸다. api_ro 5초 타임아웃에 걸릴 수 있어 RDS 실측 게이트 대상이다. 완화책: state=issue·reviewer 처럼 qa 쪽이 선택적이면 qa_review_status_idx/qa_review_reviewer_idx 에서 출발하는 계획을 유도(DB-앱-도메인.md:58)",
+    "[medium, 10배 성능] 진행률 scoped 는 필터 결과 전체 COUNT 다. 무필터에 가까울수록 rd.job 전 행 index-only 카운트 + qa 표 해시 조인이 되며, 캐시를 둘 수 없어(D8) 목록 화면 진입마다 실행된다. total 은 app 표 분해로 조인을 없앴지만 count(*) FROM rd.job 은 남는다. visibility map 이 최신이 아니면(status_code·dropped 제자리 UPDATE, fillfactor 90) index-only 가 힙을 방문한다",
+    "[medium, 정합] 표면 오분류 교정(qa-review.ts:185-191)과 국가 KST 경계 변경, 동률 정렬 키 변경(job_id → answer_key)으로 현행 화면과 건수·순서가 달라진다. 대조에서 '의도된 차이'로 분류하고 1회 고지해야 한다",
+    "[medium, 의존] P-Q2~P-Q4 뷰 확장이 DDL 에 반영되지 않으면 QA-3 이 현행 상세의 감성·유형 카운트, 인용 ref_index·저장 분류, 앵커/드롭 source_measured_at 을 잃는다. 비서빙 job 의 인용이 rd.citation 에 없으면 목록 citation_count 도 드롭·비완료 job 에서 0 이 된다",
+    "[low, 보안] 외부 검수자 온보딩 절차가 없으면 G-18 전환 당일 검수가 멈춘다. role='vendor' 계정이 menu_groups 설정 실수로 다른 화면에 닿지 않도록 AU-1 의 default-deny 를 확인해야 한다",
+    "[low, 운영] 락 해제가 fetch keepalive 로 바뀐다. 교차 출처 + Authorization 헤더라 CORS 프리플라이트가 붙는데, 언로드 중 프리플라이트 keepalive 요청은 브라우저별 지원이 불확실하다. 실패하면 TTL 180초 동안 락이 남는다(현행 비콘 실패 시와 같은 동작)",
+    "[low, 권한] 노트 수정·삭제에 작성자 제한이 없다(현행 updateNote/deleteNote qa-review.ts:1083-1105 계승). 계정 기반으로 바뀌면서 누가 지웠는지가 행에 남지 않는다(하드 삭제)"
+  ],
+  "doc": "# 검수 콘솔(qa) 모듈 설계\n\n작성 2026-09-27 · 기준: 설계 공용 계약 v2(DESIGN-CONTRACT.md), 확정 DDL DB-v2.sql, 결정 G-18(a)·G-24(a) · 현행 근거: hmg-geo 7639b9e `lib/db/repositories/qa-review.ts`\n\n## 1. 개요\n\nRaw Data QA 콘솔은 사람이 Scope job 1건씩 원문과 분석 낱알을 보고 섹션별 ok/issue 를 판정하고 노트를 남기는 운영 화면이다. 지표 API 가 아니므로 표준 모수 규칙(D1·A1·A15·A16·R05 is_rep)은 적용하지 않는다. 모집단은 G-24(a) 에 따라 rd.job 전체(비완료·드롭 포함)다.\n\n단위 구성:\n\n| 단위 | 범위 | 비고 |\n| --- | --- | --- |\n| QA-1 | 목록·진행률·이웃·필터 옵션 | 읽기 전용 |\n| QA-2 | 판정·락·세션·노트·폴링 | 쓰기는 app 스키마만(A17) |\n| QA-3 | 상세 낱알 조회 | 설계 리드 신설. 현행 getReviewAnswerDetail(qa-review.ts:652)을 맡은 단위가 없어서 추가했다 |\n\nD8 준수: 새 표·집계·캐시는 없다. 현행 unstable_cache 2곳(qa-review.ts:476-482 진행률 30초, :527-528 필터 옵션 5분)은 없앤다. 대신 인덱스 교정 1건(P-Q1)과 문서형 뷰 확장·신설 3건(P-Q2~P-Q4)을 제안한다. 뷰는 저장이 없으므로 파생 층이 아니다.\n\n## 2. 라우터 구조\n\n```\napp/api/v1/qa/\n  router.py    APIRouter(prefix=\"/v1/qa\", dependencies=[Depends(require_qa_reviewer)])\n  deps.py      require_qa_reviewer, get_ro_conn(api_ro), get_rw_tx(api_rw + set_config)\n  filters.py   QaFilter, QaNoteFilter (Pydantic v2 query model)\n  coords.py    resolve_filter, enrich_page\n  sql.py       qa_job_scope, keyset, lock_upsert, assert_job_exists, assert_session_owner\n  locks.py     LOCK_TTL_SECONDS=180, HEARTBEAT_SECONDS=30\n  answers.py   QA-1 + QA-3\n  reviews.py   QA-2 판정·락·세션·deltas\n  notes.py     QA-2 노트\n```\n\n정적 경로(/answers/progress, /notes/counts, /notes/export)를 먼저 등록하고, 경로 변수는 uuid 로 타입을 지정한다.\n\n## 3. 엔드포인트 명세\n\n### 3.1 QA-1 목록 계열 (api_ro)\n\n**GET /v1/qa/answers**: 질의 = QaFilter + cursor + limit(기본 50, 최대 200).\n\n- 응답 `data: QaListRow[]`. 한 행 = { job_id, prompt_text, surface(global|website|project), brand[], country, engine, lang, measured_at, job_status(completed|in_progress|failed|other ← rd.job.status_code 0/1/2/3), dropped, mention_count, citation_count, note_count, review_status(unreviewed|ok|issue), reviewer_name, lock }\n- `meta.next_cursor` 를 함께 낸다.\n- 조회 절차:\n  1. resolve_filter 로 코드를 키·project_key 배열로 푼다.\n  2. 본 쿼리(qa_job_scope + 2구간 키셋) 로 limit+1 행을 가져온다. surface 가 비었거나 복수면 표면별 분기를 UNION ALL 하고 바깥에서 ORDER BY measured_at DESC NULLS LAST, answer_key DESC LIMIT n+1 로 병합한다.\n  3. 페이지 배치 조회 4개(모두 등치 = ANY(페이지)):\n     - 락: TTL 안의 것만\n     - 노트 수: qa_note_job_idx, GROUP BY job_id\n     - 멘션 수: rd.v_answer_mention_raw count\n     - 인용 수: rd.v_answer_citation_raw count(P-Q3)\n  4. enrich_page 로 좌표를 붙인다.\n\n**GET /v1/qa/answers/progress**: `data: { scoped: {total, reviewed, issues, notes}, total: {...} }`.\n\n- scoped: 공통 빌더로 COUNT(*), COUNT(rv.job_id), COUNT(*) FILTER(WHERE rv.status='issue'), COUNT(*) FILTER(WHERE EXISTS note).\n- total: 조인 없이 분해한다.\n  - total = count(*) FROM rd.job\n  - reviewed = count(*) FROM app.qa_answer_review\n  - issues = count(*) WHERE status='issue'(qa_review_status_idx)\n  - notes = count(DISTINCT job_id) FROM app.qa_review_note\n- 전제: rd.job 에 없는 job_id 를 가진 검수 행(고아)이 0 건이다. 대조로 확인한다.\n\n**GET /v1/qa/answers/{job_id}/neighbors**: `data: { prev, next }`.\n\n- 기준 행의 (measured_at, answer_key) 를 구한다.\n- 같은 필터 + 부등호로 LIMIT 1 을 두 번 실행한다. 현행 getNeighbors(qa-review.ts:390-431) 패턴을 rd.job 키로 옮긴 것이다.\n\n**GET /v1/qa/filters**: `data: { brand, country, engine, lang, reviewer }`.\n\n| 필드 | 원천 |\n| --- | --- |\n| brand | app.brand (sort_order) |\n| country | rd.dim_country (kind='iso') + app.website_site/app.project 국가 코드 합집합 |\n| engine | rd.dim_engine |\n| lang | rd.dim_lang |\n| reviewer | DISTINCT app.qa_answer_review.reviewer_name |\n\n현행은 데이터 DISTINCT 스캔이다(qa-review.ts:491-525). 차원표로 바꾸면 '현재 0건' 옵션이 섞인다(열린 질문 1).\n\n### 3.2 QA-2 판정·락·세션 (쓰기 = api_rw, 사전 확인 = api_ro)\n\n- **POST /v1/qa/sessions** → `{session_id}`. user_id = JWT sub, reviewer_name = user_account.display_name, ip_hash = 서버 HMAC.\n- **PATCH /v1/qa/sessions/{session_id}** → last_seen_at 갱신(본인만).\n- **GET /v1/qa/sessions/current** → `{session_id, reviewer_name, started_at, last_seen_at}`(BG-45 추가 2026-09-28). 부작용 없는 현재 세션 조회:\n  쿠키 서명·만료 + 세션 행 존재 확인, last_seen_at 갱신 없음, Cache-Control no-store. 쿠키 없음·만료·행 삭제·게이트 꺼짐은 401(검수 레이아웃 게이트·입장 페이지가 매 렌더에 부른다).\n- **POST /v1/qa/answers/{job_id}/lock** → 성공 `{job_id, session_id, reviewer_name, acquired_at, heartbeat_at}`, 실패 409 `{error:'lock-held', held_by}`. 처리 순서:\n  1. assert_job_exists(ro)\n  2. rw 트랜잭션 안에서 set_config\n  3. assert_session_owner\n  4. lock_upsert(단일 문, TTL 180초)\n  5. 세션 last_seen 갱신(실패해도 무시)\n- **PATCH …/lock** → `{held: bool}` (WHERE job_id AND session_id).\n- **DELETE …/lock** → 본인 세션만. `?release=1`(sendBeacon) 경로는 폐지한다. 프론트는 fetch keepalive 로 호출한다.\n- **GET …/review** → `QaReview`. 행이 없으면 `data: null`.\n- **PUT …/review**: 본문 `{session_id, section_flags}`. 한 트랜잭션 안에서 다음 순서로 처리한다.\n  1. set_config\n  2. assert_session_owner\n  3. lock_upsert. 실패하면 롤백 후 409 `lock-lost`\n  4. `INSERT INTO app.qa_answer_review(job_id, flag_*, reviewer_id, reviewer_name, session_id) VALUES(..., app.actor(), ...) ON CONFLICT (job_id) DO UPDATE SET flag_*=EXCLUDED.flag_*, reviewer_id=EXCLUDED.reviewer_id, reviewer_name=EXCLUDED.reviewer_name, session_id=EXCLUDED.session_id, updated_at=now() RETURNING status`\n  5. COMMIT\n\n  status 는 DB GENERATED 열이다. 현행의 TS 파생 로직(qa-review.ts:876-879)은 없앤다. 미지정 섹션은 NULL 로 덮는다(현행 section_flags 전체 교체와 같다).\n- **GET /v1/qa/deltas?job_ids=**(최대 200, 초과분 무시: 현행 answers/route.ts:9-20) → `{locks, reviews}`. 둘 다 PK 등치 조회다.\n\n### 3.3 QA-3 상세 (api_ro, 신설)\n\n**GET /v1/qa/answers/{job_id}** → `data: QaAnswerDetail`. 모든 조회가 answer_key 또는 PK 등치다.\n\n- **answer**: rd.job ⋈ rd.v_answer_body(answer_text, model_slug, status, analysis_status, measured_at) + 좌표. 추가로 job_status, dropped 를 싣는다.\n- **prompt**: rd.dim_prompt(text, lang, regions, is_korean, funnel) + 카탈로그 표시(app.prompt WHERE scope_prompt_id = dim_prompt.prompt_id AND 루트 프로젝트 AND deleted_at IS NULL, prompt_scope_idx). depth4·prompt_type·category 는 rd.catalog_entry 에 없어서 app.prompt 에서 읽는다.\n- **mentions**: rd.v_answer_mention_raw WHERE answer_key = :k.\n  - 정렬: mention_count DESC, display_name NULLS LAST\n  - 롤업 부모 이름: 같은 답변의 display_name 이 먼저, 없으면 rd.dim_entity.rep_name(현행 qa-review.ts:689-698 계승)\n  - is_own / is_excluded: registry_role 로 판정\n  - 감성·유형 카운트: P-Q2 가 필요하다\n- **citations**: rd.v_answer_citation_raw(P-Q3) WHERE answer_key = :k, ref_index·ord 순서.\n  - 저장 분류 = scope_category\n  - 오버라이드 = app.citation_domain_override(domain 정규화 lower, www 제거)\n  - effective = 오버라이드 ?? 저장값(현행 qa-review.ts:717-738)\n- **acr**: rd.acr_cell_job(answer_key = :k) ⋈ rd.acr_cell ⋈ rd.acr_choice(level IN (1,2,3) AND acr_cell_key = ANY) ⋈ rd.dim_entity/rd.dim_brand_name.\n  - appearance_rate, acr, overall_choice_share 는 조회 시 계산한다(P1 예외).\n  - 현행은 (run, prompt, target, region) 4축 근사 연결이었다(qa-review.ts:710-719). 이제 source_job_ids 에 근거한 정확 연결이라 값이 달라질 수 있다(의도된 차이).\n- **derived**: rd.v_answer_registry(pin_anchor, pin_reason, drop_reason, dropped_at, + P-Q4 의 source_measured_at).\n\n### 3.4 QA-2 노트 (쓰기 = api_rw)\n\n- **GET /v1/qa/answers/{job_id}/notes**: qa_note_job_idx, created_at 순, 해소분 포함.\n- **POST /v1/qa/answers/{job_id}/notes**: 본문 `{session_id, target_kind, target_key, target_label, severity, body}`. body 는 비어 있으면 안 되고, target_key 는 인용이면 'job_id:ord'(DDL 주석 :250). reviewer_id = app.actor() 다.\n- **GET /v1/qa/notes**: QaNoteFilter + cursor.\n  - 드라이버는 app.qa_review_note n(qa_note_cursor_idx)이고, rd.job j 를 job_id UNIQUE 로 조인한다.\n  - qa_job_scope 의 술어를 j 에 적용하고 노트 3축을 더한다.\n  - 정렬: created_at DESC, note_id DESC. 응답 행 = QaNote + prompt_text + QaCoords.\n- **GET /v1/qa/notes/counts**: 같은 술어로 GROUP BY target_kind → `{kind: n}`.\n- **GET /v1/qa/notes/export**: 같은 술어로 LIMIT 10000(현행 QA_NOTE_EXPORT_LIMIT, qa-review.ts:1002). text/csv 스트리밍으로 보내고, 헤더 열은 현행 export/route.ts 를 계승한다.\n- **PATCH /v1/qa/notes/{note_id}**: 부분 갱신. resolved=true 면 resolved_at=now(), resolved_by=reviewer_name. false 면 둘 다 NULL(CHECK 제약 :253).\n- **DELETE /v1/qa/notes/{note_id}**: 하드 삭제(현행 계승, 열린 질문 5).\n\n## 4. 공통 구성요소\n\n- **QaFilter**: surface[] · brand[] · country[] · engine[] · lang[] · from/to(KST, measured_at) · q(≤200, 프롬프트 텍스트) · state[](OR) · reviewer[] · has_notes · no_mentions. QaNoteFilter 는 여기에 target_kind[] · severity[] · include_resolved 를 더한다. 공통 필터 모델의 나머지 축은 ignored_filters 로 보낸다.\n- **coords**: 표면별 좌표 규칙.\n\n  | 표면 | 브랜드 | 국가 |\n  | --- | --- | --- |\n  | 1 global | 카탈로그(rd.catalog_entry ⋈ app.brand) | rd.job.geo_key |\n  | 2 website | app.website_site | app.website_site |\n  | 3 project | app.project | app.project |\n\n  현행 BRAND_SQL/COUNTRY_SQL(qa-review.ts:206-207) 규칙을 계승한다. 필터는 project_key 배열(표면 2·3)과 카탈로그 semi-join(표면 1)으로 바꾼다.\n- **qa_job_scope**: 목록·진행률·이웃·노트 3종이 공유하는 FROM + WHERE 빌더. 한 곳만 고치면 모든 화면에 반영된다(현행 answerPredicates 단일 정본 원칙 유지).\n- **keyset**: 2구간(비NULL → NULL). 커서는 base64url('ts|answer_key')다. 표면이 복수면 분기별로 병합한다.\n- **locks**: TTL 180초 · heartbeat 30초. 유효 락 = heartbeat_at > now() - TTL.\n- **쓰기 트랜잭션 규약**: 모든 쓰기는 다음 순서를 따른다.\n  1. api_ro 로 assert_job_exists\n  2. api_rw 로 BEGIN\n  3. set_config('app.actor_id', uid, true)\n  4. assert_session_owner(세션을 쓰는 경우)\n  5. DML(reviewer_id = app.actor())\n  6. COMMIT\n\n## 5. 읽기 스키마와 제안\n\n사용 표·열은 구조화 출력의 read_schema 를 정본으로 한다. 제안 요약:\n\n| ID | 종류 | 내용 | D8 판정 |\n| --- | --- | --- | --- |\n| P-Q1 | 인덱스 교정 | job_qa_list_idx → (surface, measured_at DESC NULLS LAST, answer_key DESC) | 해당 없음(인덱스 대체) |\n| P-Q2 | 뷰 열 추가 | v_answer_mention_raw 에 sentiment_* 4열, type_* 5열 | 저장 없음, 허용 |\n| P-Q3 | 새 뷰 | rd.v_answer_citation_raw(ing.citation 원문, ref_index, scope_category) | 저장 없음, 허용 |\n| P-Q4 | 뷰 열 추가 | v_answer_registry 에 pin/drop source_measured_at | 저장 없음, 허용 |\n\n기각: ing.answer.n_mentions/n_citations 투영(현행 수치는 행 count). 채택 안 함: api_rw 의 rd.job SELECT 권한.\n\n## 6. 권한\n\n- 게이트는 JWT(A8) + app.user_account.is_qa_reviewer AND status='active' 다(G-18 a). role 스코프 교집합은 적용하지 않는다(G-24 a). 현행 쿠키 게이트(lib/qa/auth.ts)는 폐지한다.\n- 검수자 이름은 클라이언트 입력이 아니라 display_name 스냅샷이다. 신원 위조 방지를 HMAC 쿠키 서명 대신 JWT 서명이 맡는다.\n- session_id 는 인증 주체가 아니라 탭 단위 락 소유 식별자다. 모든 쓰기에서 세션이 JWT 사용자 소유인지 검증한다.\n- 롤 분리:\n  - 읽기: api_ro(읽기 전용, 5초)\n  - 쓰기: api_rw(app 만). rd 존재 확인은 api_ro 로 먼저 한다.\n- 감사: 행마다 reviewer_id(app.actor())·session_id·시각을 남긴다. 원문 열람 접근 로그는 AU-1 결정을 따른다.\n\n## 7. 성능 (10배 기준, RDS 실측 게이트에서 판정)\n\n| 엔드포인트 | 10배 읽는 행 | 가지치기·인덱스 | 위험 |\n| --- | --- | --- | --- |\n| 목록 | 기본 limit+1(≤201)행 × 표면 3분기. 선택적 필터면 표면 슬라이스 최대 수십만~200만 행 | job_qa_list_idx(P-Q1 후), semi-join 은 catalog_entry_prompt_idx·qa_note_job_idx, no_mentions 는 뷰 등치 프로브 | medium |\n| 진행률 | scoped: 필터 결과 전체 COUNT. total: rd.job 전 행 index-only + app 표 카운트 | job_qa_list_idx index-only, qa_review_status_idx | medium |\n| 이웃 | LIMIT 1 × 2 | 목록과 같음 | low |\n| 필터 옵션 | 차원표 수백 행 + 검수자 DISTINCT | qa_review_reviewer_idx | low |\n| 상세 | 답변 1건의 멘션·인용·ACR 수십~수백 행 | 뷰 PK 경로, acr_cell_job PK, acr_choice PK | low |\n| 판정·락·세션·deltas | PK 등치(deltas 최대 200) | PK | low |\n| 노트 목록·카운트·내보내기 | 노트 전량(인간 생성, 10배 대상 아님) + rd.job 등치 조인 | qa_note_cursor_idx, rd.job job_id UNIQUE | low |\n\nq(ILIKE)는 dim_prompt 약 12만 행(10배) 순차 비교다. dim_prompt_text_trgm_hint(:397)는 이름과 달리 btree(surface, project_key)라 ILIKE 를 가속하지 않는다. 실측에서 느리면 pg_trgm 을 판단한다(DDL 주석에 v3 후 판단이라고 되어 있다).\n\n## 8. 대조 방법 (신구)\n\n1. **목록**: 같은 필터 조합 12종(무필터, 표면별, 브랜드별, state 조합, has_notes, no_mentions, q)에서 첫 3페이지 job_id 집합과 순서를 현행 listReviewAnswers 와 비교한다. 의도된 차이는 분류해 둔다.\n   - 표면 오분류 교정(qa-review.ts:185-191)\n   - 날짜 경계 KST\n   - 동률 정렬 키(job_id → answer_key)\n2. **수치**: 행별 mention_count/citation_count/note_count 가 현행과 일치해야 한다. 드롭·비완료 job 의 인용 수로 P-Q3 필요성을 확인한다.\n3. **진행률**: scoped·total 을 현행 countProgress 와 비교한다. 고아 검수 행(rd.job 에 없는 job_id) 0 건을 SQL 로 단언한다.\n4. **상세**: 표본 50 job(완료·드롭·비완료·ACR 포함)의 낱알 수와 필드를 현행 getReviewAnswerDetail 과 비교한다. ACR 은 근사 연결에서 정확 연결로 바뀌므로 차이 목록을 따로 낸다.\n5. **동시성**: 두 세션 동시 획득 시 한쪽만 성공하는지, TTL 만료 탈취, 판정 저장 중 락 상실 시 409 이면서 판정이 저장되지 않는지, 남의 session_id 사용 시 403 인지 확인한다.\n6. **권한**: is_qa_reviewer=false 와 status='suspended' 계정은 403 이어야 한다. 쓰기에서 actor 가 빠지면 예외가 나야 한다.\n\n## 9. 열린 질문\n\n1. 필터 옵션을 차원표로 바꾸면 '현재 0건' 값이 드롭다운에 섞인다. 프로덕트 오너 승인이 필요하다(대안: rd.job DISTINCT 는 10배에서 캐시 없이 비싸다).\n2. progress.total 을 정확 COUNT 로 유지할지, pg_class.reltuples 근사(estimate=true)를 허용할지. 현행 주석(qa-review.ts:467-471)은 이 값이 '운용 지표가 아니다'라고 적고 있다.\n3. 외부 검수자 계정 규약(role='vendor', menu_groups 비움)과 display_name 필수화. AU-1 과 합의가 필요하다.\n4. P-Q2~P-Q4 뷰 변경을 DDL 정본에 반영할지. 미반영이면 상세의 해당 필드는 null 이다.\n5. 노트 수정·삭제를 작성자로 제한할지, 삭제를 소프트 삭제로 바꿀지(현행은 무제한 하드 삭제).\n6. 브라우저별 keepalive 프리플라이트 지원이 불충분하면, Next.js 같은 출처 릴레이(Supabase SSR 세션에서 토큰을 꺼내 FastAPI DELETE 호출)를 둘지.\n7. rd.job.lang_key 가 프롬프트 언어(현행 scope_prompts.lang)와 같은 값인지. 적재 모듈에 확인이 필요하다.\n"
+}

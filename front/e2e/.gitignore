@@ -1,0 +1,7 @@
+# Run output of the local E2E harness (never committed). Both are symlinks created by stack.sh
+# to a directory outside front/ (next dev watches front/; see stack.sh header), hence no
+# trailing slash: a symlink is not a directory to git.
+#   .run  logs, pid files, API trace, tap log, per-run QA password, browser storage states
+#   .out  captures and per-case results per run, Playwright output
+.run
+.out

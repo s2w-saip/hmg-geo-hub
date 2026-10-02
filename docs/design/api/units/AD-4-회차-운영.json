@@ -1,0 +1,47 @@
+{
+  "id": "AD-4",
+  "title": "회차 운영",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/v1/admin/cycles",
+      "summary": "test"
+    }
+  ],
+  "purpose": "test",
+  "screens": [
+    "test"
+  ],
+  "filters": {
+    "supported": [
+      "surface"
+    ],
+    "ignored": [],
+    "extra_params": []
+  },
+  "response": "test",
+  "metrics_rules": [
+    "test"
+  ],
+  "read_model": [
+    "test"
+  ],
+  "query_design": "test",
+  "perf": {
+    "risk": "low",
+    "rows_scanned": "test",
+    "indexes": [
+      "test"
+    ],
+    "notes": "test"
+  },
+  "auth": "test",
+  "writes": "test",
+  "current_refs": [
+    "test"
+  ],
+  "parity": "test",
+  "open_questions": [
+    "test"
+  ]
+}

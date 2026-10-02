@@ -1,0 +1,124 @@
+{
+  "id": "CM-1",
+  "title": "컨텍스트 맵 조회·내보내기 (컨텍스트 맵 모듈)",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/v1/context-map/stats",
+      "summary": "컨텍스트·조건·관계(구동+조합) 개수와 출처 도메인 수(코퍼스 요약 헤더)"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/context-map/contexts",
+      "summary": "ConsumerContext 엔티티 목록(테마·언급수·감성·연결수), 검색·정렬·키셋 페이지네이션"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/context-map/conditions",
+      "summary": "ConsumerRequirement 엔티티 목록(카테고리·언급수·감성·연결수), 검색·정렬·키셋 페이지네이션"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/context-map/combinations",
+      "summary": "조건×조건 공출현 쌍 목록(공출현 수·상대강도), 검색·키셋 페이지네이션"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/context-map/entities/{id}",
+      "summary": "엔티티 상세: 근거 인용문(최대 N개)·출처 도메인 분포·연결 엔티티(구동 관계)"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/context-map/export",
+      "summary": "3개 목록(컨텍스트·조건·조합)의 전량·비페이지 얇은 열 스냅샷 — 프론트가 xlsx로 직렬화(라벨은 프론트 i18n)"
+    }
+  ],
+  "purpose": "고객 관심(Customer Intent) > Social Scraping 화면의 \"구매 맥락 지도\"가 쓰는 조회·내보내기 API. scope 원천에서 1회 이관된 정적 산업 코퍼스(ConsumerContext·ConsumerRequirement 엔티티, 구동 관계, 조건×조건 공출현, 근거 인용문·출처 도메인)를 페이지 단위로 보여주고 엔티티 상세는 다이얼로그가 열릴 때만 지연 로드한다. 프로젝트·스코프 축이 없는 단일(현재는 자동차) 산업 코퍼스이므로 공통 필터 모델(브랜드·국가·기간 등)은 적용되지 않는다. 프롬프트 생성용 시드 풀 선택(getSeedPool·getEntitySeeds)은 이 단위 범위 밖 — 고객 관심 모듈의 다른 단위(/v1/intent/*) 소관으로 가정(open_questions 참고).",
+  "screens": [
+    "projects/[id]/intent/social-scraping 구매 맥락 지도 3탭 매트릭스(컨텍스트/조건/조합)",
+    "projects/[id]/intent/social-scraping 엔티티 상세 다이얼로그(근거 인용문·출처 도메인·연결 강도)",
+    "projects/[id]/intent/social-scraping 헤더 'Excel 내보내기' 버튼"
+  ],
+  "filters": {
+    "supported": [],
+    "ignored": [
+      "own_brand",
+      "brand[]",
+      "country[]",
+      "lang[]",
+      "engine[]",
+      "from/to",
+      "funnel[]",
+      "brand_presence[]",
+      "list_type[]",
+      "depth1[]~depth3[]",
+      "source[]"
+    ],
+    "extra_params": [
+      "tab: enum{contexts,conditions,combinations} — 3개 세부 경로로 대체했으므로 파라미터 아님(하위 호환 매핑만 참고)",
+      "search: string, 선택, ILIKE 검색어 — %·_ 이스케이프 후 %…% 래핑(현행 likePattern 계승)",
+      "sort: enum{mentions,name}, 기본 mentions — /contexts·/conditions 전용. /combinations 는 항상 co_count",
+      "dir: enum{asc,desc}, 기본 desc",
+      "cursor: string, 선택, 이전 응답의 next_cursor를 그대로 회신(불투명 토큰: 정렬키+id 인코딩). 없으면 첫 페이지",
+      "limit: int, 기본 50, 검증 1~200(현행 MAX_PAGE_SIZE=200 계승) — /contexts·/conditions·/combinations",
+      "evidence_limit: int, 기본 8, 검증 1~50 — /entities/{id} 전용(현행 EVIDENCE_PER_ENTITY=8 계승, 상한만 신설)",
+      "industry_id: uuid, 선택 — 다중 산업 코퍼스 전환 전까지는 무시하고 유일 활성 스냅샷을 쓴다(open_questions 1)"
+    ]
+  },
+  "response": "공통: 모든 목록 응답은 { rows: [...], next_cursor: string|null, total: int }. /stats → data: { contexts, conditions, drives, combinations, sources } (전부 int). /contexts → rows[]: { id, canonical_name, dimension(코드, null 가능), theme_name(현행 DIMENSION_THEME 매핑 그대로 서버 계산, 미분류시 \"기타\"), mention_count, utterance_count, sentiment_positive, sentiment_negative, sentiment_neutral(3개 다 정수, 비율은 분자·분모 규약대로 원시값만 반환하고 %는 클라이언트가 계산), linked_count }. /conditions → rows[]: 위와 동일한데 dimension/theme_name 대신 category(현행 CATEGORY_RULES 정규식 그대로 서버 계산, \"기타\" 폴백, 필터 불가 — 표시 전용임을 명시). /combinations → rows[]: { cond_a_id, cond_a_name, cond_b_id, cond_b_name, co_count(int), frequency(enum high/medium/low, 코퍼스 전체 max 대비 상대강도) } + 최상위에 max_co_count(int, 버킷 산출 근거 투명화). /entities/{id} → data: { id, canonical_name, type(ConsumerContext|ConsumerRequirement), mention_count, utterance_count, sentiment_positive, sentiment_negative, sentiment_neutral, evidence: [{ quote, source_host, source_url, sentiment }](evidence_limit개 절단), source_domains: [{ host, count }](count 내림차순), linked: [{ id, canonical_name, co_count, strength(high/medium/low, 이 엔티티의 링크 중 최댓값 대비) }] } | 404. /export → data: { contexts: [...], conditions: [...], combinations: [...] }(각각 목록 응답의 rows 스키마와 동일하되 전량·비페이지, next_cursor 없음). 페이지네이션은 키셋(정렬키, id 튜플)만 쓰고 offset/page는 제공하지 않는다(현행 page/size 오프셋 방식에서 전환).",
+  "metrics_rules": [
+    "코어 지표 체계(M01~M12) 밖의 산업 코퍼스 통계다 — 규칙 코드 미부여, 이관 그대로 계승",
+    "키셋 페이지네이션: 정렬 컬럼 + id를 튜플로 커서 인코딩, WHERE (sort_col, id) < (cursor_col, cursor_id) 형태로 다음 페이지 절단(공통 계약 '페이지네이션은 키셋')",
+    "search는 ILIKE 와일드카드(%·_) 이스케이프 후 사용 — 그대로 넘기면 사용자가 '50%' 입력 시 전체매칭이 되는 현행 버그(수정 지점)를 재발시킨다(likePattern 계승)",
+    "combinations의 frequency·entities 상세의 linked[].strength는 절대값이 아니라 '조회 시점 코퍼스(또는 해당 엔티티) 내 최댓값 대비 상대강도' — 페이지 최댓값이 아니라 전체 최댓값 기준이어야 페이지마다 등급 의미가 흔들리지 않는다(현행 bucketStrength 계승)",
+    "conditions.category는 canonical_name에 대한 표시 전용 정규식 휴리스틱이며 corpus의 실제 신호가 아니다 — 필터 축으로 노출하지 않는다(현행 주석 '범위 밖' 계승)",
+    "export는 정의상 '전부'이며 목록 탭이 보여주는 얇은 열만 싣는다 — 상세(evidence/domains/links) fan-out 없음(현행 listAllForExport 계승)"
+  ],
+  "read_model": [
+    "ext.ctx_snapshot(snapshot_id, industry_entity_id, source, utterance_total, taken_at, is_active) — 활성 스냅샷 해소",
+    "ext.ctx_entity(snapshot_id, id, type, canonical_name, dimension, mention_count, utterance_count, sentiment_positive, sentiment_negative, sentiment_neutral) — /contexts·/conditions·/entities/{id} 본문",
+    "ext.ctx_drive(snapshot_id, context_id, requirement_id, co_count) — linked_count·엔티티 상세의 구동 관계",
+    "ext.ctx_combination(snapshot_id, cond_a, cond_b, co_count) — /combinations",
+    "ext.ctx_evidence(snapshot_id, id, entity_id, utterance_id, quote, source_host, source_url, sentiment) — 엔티티 상세 근거 인용문",
+    "ext.ctx_domain(snapshot_id, entity_id, host, n) — 엔티티 상세 출처 도메인 분포"
+  ],
+  "query_design": "스냅샷 해소(모든 쿼리 앞단, 요청당 1회): SELECT snapshot_id FROM ext.ctx_snapshot WHERE is_active = true [AND industry_entity_id = $industry_id] — 현재는 산업 1종이라 사실상 LIMIT 1.\n\n/contexts, /conditions (키셋, sort=mentions desc 예시): SELECT id, canonical_name, dimension, mention_count, utterance_count, sentiment_positive, sentiment_negative, sentiment_neutral, (SELECT count(*)::int FROM ext.ctx_drive d WHERE d.snapshot_id=$snap AND d.context_id=e.id) AS linked_count FROM ext.ctx_entity e WHERE e.snapshot_id=$snap AND e.type=$type AND ($search IS NULL OR e.canonical_name ILIKE $pattern ESCAPE '\\\\') AND (e.mention_count, e.id) < ($cursor_mentions, $cursor_id) ORDER BY e.mention_count DESC, e.id DESC LIMIT $limit+1(다음 페이지 존재 판정용 1개 더 읽고 자름). ConsumerRequirement는 linked_count 서브쿼리를 d.requirement_id=e.id로 뒤집는다. category/theme_name은 응답 조립 시 앱 레이어에서 canonical_name/dimension에 정적 매핑(현행 categorize()/DIMENSION_THEME 그대로 포트, 페이지 크기만큼만 적용되므로 SQL로 밀 필요 없음). total은 같은 WHERE(커서 제외)로 별도 count(*) 쿼리.\n\n/combinations (키셋, sort 고정 co_count desc): SELECT c.cond_a, c.cond_b, c.co_count, a.canonical_name AS a_name, b.canonical_name AS b_name FROM ext.ctx_combination c JOIN ext.ctx_entity a ON a.snapshot_id=c.snapshot_id AND a.id=c.cond_a JOIN ext.ctx_entity b ON b.snapshot_id=c.snapshot_id AND b.id=c.cond_b WHERE c.snapshot_id=$snap AND ($search IS NULL OR a.canonical_name ILIKE $pattern ESCAPE '\\\\' OR b.canonical_name ILIKE $pattern ESCAPE '\\\\') AND (c.co_count, c.cond_a, c.cond_b) < ($cursor_co, $cursor_a, $cursor_b) ORDER BY c.co_count DESC, c.cond_a DESC, c.cond_b DESC LIMIT $limit+1. max_co_count: SELECT coalesce(max(co_count),0) FROM ext.ctx_combination WHERE snapshot_id=$snap(요청마다 재계산, 저장 안 함 — D8).\n\n/entities/{id}: ① SELECT * FROM ext.ctx_entity WHERE snapshot_id=$snap AND id=$id(없으면 404) ② SELECT quote, source_host, source_url, sentiment FROM ext.ctx_evidence WHERE snapshot_id=$snap AND entity_id=$id ORDER BY id LIMIT $evidence_limit ③ SELECT host, n FROM ext.ctx_domain WHERE snapshot_id=$snap AND entity_id=$id ORDER BY n DESC ④ type=ConsumerContext면 SELECT d.requirement_id AS id, e.canonical_name, d.co_count FROM ext.ctx_drive d JOIN ext.ctx_entity e ON e.snapshot_id=d.snapshot_id AND e.id=d.requirement_id WHERE d.snapshot_id=$snap AND d.context_id=$id ORDER BY d.co_count DESC, 반대면 context_id=d.requirement_id로 뒤집어 d.context_id를 반환(현행 양방향 조회 계승). ②③④는 병렬 실행.\n\n/export: 위 /contexts, /conditions, /combinations 쿼리에서 커서·LIMIT만 제거하고 전량 조회(3회 왕복, 병렬). thin 컬럼만(evidence/domains/links 없음).",
+  "perf": {
+    "risk": "low",
+    "rows_scanned": "현재 단일 활성 스냅샷 실측 근거(구 마이그레이션 0027 주석): ConsumerContext+ConsumerRequirement 엔티티 4,136행, export 전량 약 9.9k행(엔티티+조합 합계). 모든 쿼리가 snapshot_id= 로 선두 컬럼 가지치기하므로 산업(스냅샷) 종류가 10배로 늘어도(자동차 외 9개 산업 추가) 요청당 스캔 행수는 그대로다 — 회차/기간 파티션이 아니라 PK/인덱스 리딩 컬럼 seek 이기 때문. 위험은 '한 스냅샷 자체가 10배 커지는 경우'(예: 조건 엔티티 4,136→41,360)뿐이고, /export(비페이지 전량)가 가장 먼저 영향받는다 — 현재 규모에서는 저위험.",
+    "indexes": [
+      "ext.ctx_entity_type_mentions(snapshot_id, type, mention_count DESC) — 기존, /contexts·/conditions sort=mentions 키셋",
+      "ext.ctx_evidence_entity(snapshot_id, entity_id) — 기존, 엔티티 상세 근거",
+      "ext.ctx_entity PK(snapshot_id, id) — 기존, 엔티티 상세·조인",
+      "ext.ctx_domain PK(snapshot_id, entity_id, host) — 기존, host 정렬만 커버 안 하지만 행수 적어 저위험",
+      "제안: ext.ctx_combination_co_idx(snapshot_id, co_count DESC, cond_a, cond_b) — /combinations 키셋 정렬용, 현재 PK(snapshot_id, cond_a, cond_b)만 있어 co_count 정렬이 인덱스 미사용",
+      "제안: ext.ctx_drive_req_idx(snapshot_id, requirement_id, context_id) — 조건→구동 컨텍스트 역방향 조회·conditions.linked_count 용, 현재 PK 선두 컬럼이 context_id라 이 방향은 풀스캔(구 마이그레이션 0027은 양방향 인덱스를 뒀는데 v2 DDL엔 한쪽만 있음)"
+    ],
+    "notes": "sort=name(캐논이컬 이름 정렬)에는 전용 인덱스가 없다 — 현재 엔티티 규모(수천 행)에서는 순차 스캔+정렬 비용이 낮아 별도 인덱스를 제안하지 않는다. 10배 규모까지는 이 판단을 유지하되, RDS 실측 게이트에서 명시적으로 확인 필요. search(ILIKE '%…%')도 인덱스를 못 타므로 같은 근거로 그대로 순차 스캔."
+  },
+  "auth": "세션 인증(로그인 사용자)만 요구 — 역할별 브랜드·국가 스코프 교집합(§9 default-deny)은 적용하지 않는다. 현행 근거(app/api/context-map/route.ts:19-24 주석): 코퍼스가 프로젝트·스코프 축이 없는 단일 산업 코퍼스라 역할로 걸 필터가 없다는 것이 명시적 설계 판단이며, 새 설계도 이관한다. 운영자(비용 액션) 게이트 없음 — 조회 전용. 경로 접근은 §9 route-policy 로 고객 관심>Social Scraping 화면을 노출하는 역할에만 연결(admin 모듈 설계자 소관). 코퍼스가 향후 산업별/프로젝트별로 분할되면(open_questions 1) 이 판단은 재검토 대상이다(현행 주석이 스스로 그렇게 적어둠).",
+  "writes": "없음(읽기 전용 API). ext 스키마는 이관 전용 적재기(mig)만 쓰며 이 단위는 SELECT만 한다. 현행 미러도 불변(마이그레이션 0027 주석 \"no write path\")이라 동일 성질이 유지된다.",
+  "current_refs": [
+    "app/api/context-map/route.ts:26 GET 핸들러(tab 분기)",
+    "app/api/context-map/export/route.ts:38 POST 핸들러(xlsx 바이트 응답)",
+    "lib/db/repositories/scope-context-map.ts:164 getStats",
+    "lib/db/repositories/scope-context-map.ts:190 listContexts",
+    "lib/db/repositories/scope-context-map.ts:206 listConditions",
+    "lib/db/repositories/scope-context-map.ts:221 listCombinations",
+    "lib/db/repositories/scope-context-map.ts:287 listAllForExport",
+    "lib/db/repositories/scope-context-map.ts:319 getEntityDetail",
+    "lib/db/repositories/scope-context-map.ts:50-55 MAX_PAGE_SIZE·DEFAULT_PAGE_SIZE·EVIDENCE_PER_ENTITY 상수",
+    "lib/db/repositories/scope-context-map.ts:57-83 DIMENSION_THEME·CATEGORY_RULES·categorize()",
+    "lib/db/repositories/scope-context-map.ts:114 clampPaging, :127 likePattern",
+    "lib/db/repositories/scope-context-map.ts:402 getSeedPool, :499 getEntitySeeds(이 단위 범위 밖으로 가정, open_questions 4)",
+    "components/social-scraping/context-map-view.tsx:1661 detail fetch(/api/context-map?tab=detail&id=)"
+  ],
+  "parity": "신구 대조 하네스 F01~F07은 측정 데이터(언급·인용) 파리티용이라 이 단위와 무관 — context-map은 산식이 아니라 1회 이관된 정적 코퍼스라서 파리티의 성격이 다르다. 제안: 신규 대조 항목(F-CTX)으로 ① 행수 대조: 구 scope_context_entities/drives/combinations/evidence/domains 각 count(*) vs 신 ext.ctx_entity/ctx_drive/ctx_combination/ctx_evidence/ctx_domain(snapshot_id=활성) count(*) 정확히 일치 ② 체크섬 대조: (id, canonical_name, mention_count, sentiment_*) 정렬 후 해시 비교로 이관 중 값 변형 없음을 확인 ③ /export 응답을 구 buildContextMapWorkbook 입력과 나란히 diff(3개 배열 각각 row 단위). 마이그레이션 무결성 검증이지 쿼리 로직 파리티가 아니므로 A4(과거 재계산 고지) 대상이 아니다.",
+  "open_questions": [
+    "다중 산업 코퍼스: ext.ctx_snapshot은 이미 industry_entity_id로 산업별 스냅샷을 구분하도록 설계됐는데, rd 쪽에는 이를 프로젝트·산업에 연결할 테이블이 없다(grep 확인, 없음). 지금은 활성 스냅샷이 항상 1개(자동차)라고 가정해 industry_id 파라미터를 사실상 무시하는데, HMG가 산업을 늘리면 이 API가 industry_id를 받을지 프로젝트의 산업으로 자동 해소할지, 그 연결 테이블을 누가(적재 모듈? 카탈로그 모듈?) 만들지 결정 필요",
+    "DIMENSION_THEME·CATEGORY_RULES가 한국어 라벨을 서버에서 하드코딩해 영어 로케일에서도 한국어로 나가는 현행 버그성 동작(코드에 i18n 분기 없음, 확인함: scope-context-map.ts:57-83)을 그대로 승계할지, dimension 원시 코드만 내려주고 프론트 i18n(messages/{ko,en}.json)으로 이관할지 — 이번 설계는 '현행 그대로 이관'을 기본값으로 잡았다",
+    "/export 응답 형식을 현행 xlsx 바이너리(POST, 서버가 워크북 빌드)에서 JSON(GET, 프론트가 xlsx 빌드)으로 바꾸는 것이 맞는지 확정 필요 — FastAPI/Next.js 분리 이후 워크북 빌드(lib/social-scraping/context-map-export.ts)와 라벨(messages/{ko,en}.json)이 계속 프론트 소관이라는 전제이며, 이 전제가 아키텍처 결정(A-계열)으로 이미 확정돼 있는지 계약서에서 명문화를 못 찾았다",
+    "getSeedPool(프롬프트 생성 시드 풀)·getEntitySeeds(구성 플로우 id 해소)가 이 단위(CM-1) 범위 밖이라고 가정했다(호출부가 intent/_actions.ts의 '더 생성'·구성 플로우라 컨텍스트 맵 조회·내보내기와 다른 사용처). 다른 모듈 목록의 '고객 관심: /v1/intent/keywords, /v1/intent/social' 소관으로 볼지, 이 API 안에 남길지 모듈 설계 리드 확인 필요",
+    "evidence_limit 상한(제안 50)과 combinations/contexts limit 상한(200, 현행 MAX_PAGE_SIZE 계승)의 근거 수치가 현행 코드 주석 이상의 실측(예: 실제 사용자가 몇 페이지까지 넘기는지)은 없다 — 숫자 자체는 제품 판단 필요 항목"
+  ]
+}

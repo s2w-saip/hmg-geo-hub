@@ -1,0 +1,100 @@
+{
+  "auth": "§9 원칙(공용 계약 §2): 서버가 세션에서 `own_brand`·허용 brand[]·country[] 스코프를 계산하고 요청 필터와 교집합(default-deny). 이 단위 추가 게이트: `app.ga4_property.status='active'` 인 (brand,country) 만 실데이터, `pending_grant`/`unmapped`/미등록은 A12 \"준비 중\"(측정 대기 카운트에만 반영). 브랜드 스코프 계정은 own_brand 밖 브랜드의 GA4 속성을 볼 수 없음(현행 resolveProperties 의 scope 교집합과 동일). 관리자 전용 쓰기(전환 이벤트 등록)는 이 단위 범위 밖(§8 카탈로그의 `admin` 모듈이 소유 — GET /v1/admin/... 근처, 이 엔드포인트는 읽기만).",
+  "current_refs": [
+    "lib/ga4/conversion.ts:507 getAiConversionLive (페이지 KPI·추이·페이지별·엔진별, GA4 라이브 호출+unstable_cache 24h)",
+    "lib/ga4/conversion.ts:628 getAiTrafficConversionRollup (권역/HQ 다국가 합산, N개 속성 병렬 GA4 호출)",
+    "lib/ga4/conversion.ts:675 getAiTrafficConversionKpi (대시보드 KPI 타일, 28일)",
+    "lib/ga4/conversion.ts:795 getAiVisitsLive (AI 유입 방문수: sessions/users/pageViews, 입구 페이지)",
+    "lib/ga4/conversion.ts:836 getAiVisitsKpi (대시보드 방문수 타일)",
+    "lib/ga4/conversion.ts:196 parseConversionFilters (engine/device/visitorType 파싱)",
+    "lib/ga4/conversion.ts:211 parseConversionPeriod (7/28/90일)",
+    "lib/ga4/conversion.ts:131 ENGINE_SOURCE (engine 토큰→sessionSource 호스트명 매핑)",
+    "lib/ga4/client.ts:62 AI_CHANNEL_GROUP='AI Assistant' (sessionDefaultChannelGroup 판정)",
+    "lib/ga4/property-map.ts:82 resolveProperty / :107 resolveProperties (scope×filter→GA4 property_id, DB 레지스트리 우선+env 폴백)",
+    "lib/ga4/tracked-events-actions.ts:95,113 loadConversionEvents/saveConversionEvents (관리자 전환 이벤트 등록, 이 단위 범위 밖)"
+  ],
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/v1/funnel/conversion",
+      "summary": "AI 유입·전환 통합 뷰. KPI(AI/일반 전환율·lift)+추이+엔진별+페이지별+국가별(다국가 선택 시)+AI 유입 방문수(volume)를 한 응답에 담는다. 현행 5개 함수(getAiConversionLive·Rollup·Kpi·getAiVisitsLive·Kpi)를 쿼리 하나로 통합(P4)."
+    },
+    {
+      "method": "GET",
+      "path": "/v1/funnel/conversion/coverage",
+      "summary": "제안: brand[]×country[] 스코프가 reach 하는 시장 수 대비 GA4 active 매핑 수(측정 대기 안내용, A12). 현행 resolveProperties 의 unmapped 카운트를 대체. 메인 엔드포인트 meta 필드로 흡수 가능하면 이 엔드포인트는 불필요 — open_questions 참고"
+    }
+  ],
+  "filters": {
+    "supported": [
+      "own_brand(서버 결정, 스코프 게이트만)",
+      "brand[] (app.ga4_property.brand_code 대조)",
+      "country[] (app.ga4_property.country_code 대조)",
+      "from/to (달력일 그대로, D1 앵커 날짜 개념과 무관 — Scope 와 별도 계열이므로 GA4 report 날짜 범위에 직결)"
+    ],
+    "ignored": [
+      "lang[]",
+      "funnel[]",
+      "brand_presence[]",
+      "list_type[]",
+      "depth1[]",
+      "depth2[]",
+      "depth3[]",
+      "source[]",
+      "engine[] (공용축과 이름은 같지만 여기선 하단 extra_params engine 이 그 자리를 대신함 — meta.ignored_filters 에 올리되 다음 필드 설명 붙임: \"engine 은 이 기능에서 extra_params.engine 으로 받는다\")"
+    ],
+    "extra_params": [
+      "engine: string[] (선택값 chatgpt|gemini|copilot|perplexity|claude, AI 코호트만 narrow, ENGINE_SOURCE 매핑을 rd.ga4_dim_value(kind='source') 값으로 룩업). 제안: 별도 축으로 유지(공용 engine[] 재사용은 의미 충돌 — 공용은 LLM 측정 엔진, 이건 GA4 sessionSource)",
+      "device: string[] (mobile|desktop|tablet, 양쪽 코호트 공통 — rd.ga4_dim_value kind='device')",
+      "visitor_type: string[] (new|returning, 양쪽 코호트 공통 — rd.ga4_dim_value kind='nvr')",
+      "limit_pages: int, 기본 12 (페이지별 표 행수 상한, 현행 fetchPageSplit limit)"
+    ]
+  },
+  "id": "FU-2",
+  "metrics_rules": [
+    "신규 M(제안, §6 GA4 계열 누락): AI 전환율 = Σ(is_conv 조건 만족 전환수) / Σ(sessions), WHERE is_ai=true, GROUP BY 없이 기간 합산. 분자·분모 둘 다 정수로 응답에 포함(P3).",
+    "D8 준수: rd.ga4_row 는 이미 원본 그레인(1:1) 이므로 이 지표 자체가 D8 예외 목록에 없다 — 사전 집계 아님, 조회 시 SUM 만 한다(P2 준수).",
+    "결정 G-12(a) 채택 반영: 분모가 activeUsers(현행) → sessions(신규) 로 바뀐다. 이유: users_day 는 행(채널·기기·신규재방문·페이지·이벤트 조합) 사이에서 합산 불가(GA4 사용자 중복 계산 위험, DDL 주석 'users_day 는 행 사이로 합하지 않는다 — API 규약, lens1 m9') 인 반면 sessions 는 가산 가능. 이것은 A13 의 5단계 변경 게이트 대상 정의 변경이다 — 신구 대조 하네스는 이 차이를 '결정된 정의 변경'으로 설명해야 통과(계약 §2 정합성 기준).",
+    "AI 코호트 판정: rd.ga4_row.is_ai (channel_group='AI Assistant', ingest 시점 판정 — P1 준수, 조회 시 문자열 비교 없음).",
+    "전환 판정: rd.ga4_row.is_conv (추적 이벤트 지정 시 그 이벤트, 아니면 GA4 key events 폴백 — 이 선택도 적재 시점에 결정. 현행 resolveConvSpec 의 '속성별 등록 이벤트 있으면 그것, 없으면 key events' 로직이 ingest 로 이동). API 는 is_conv=true 행만 분자에 합산하면 된다 — 속성별 분기(ConvSpec 유무) 를 쿼리에서 다시 판단하지 않는다.",
+    "human 코호트 = total(report=1, is_ai 무관 전체) − ai(is_ai=true) — 현재도 같은 차분 방식(lift=aiRate−humanRate, pp).",
+    "engine 별 분해는 report=2(traffic_ai) 사용(1:1 그레인이면서 이미 AI 코호트로 좁혀진 표, engine_key 보유) — report=1 을 engine 으로 다시 나누지 않는다(적재 불변식: Σreport2.sessions(date,device,nvr)=report1 AI행.sessions).",
+    "AI 유입 방문수(volume) 는 별도 지표 렌즈(RATE 아님) — sessions 합계 그대로(현행 getAiVisitsLive 와 동일 정의, D8 예외 아님, 원본 그레인 합산일 뿐)."
+  ],
+  "open_questions": [
+    "is_conv 판정 매커니즘이 report=3(events)·report=4(landing) 중 어디에 실리는지, 그리고 report=1/2(traffic)의 key_events 컬럼과의 관계가 DDL 주석만으로는 확정 안 됨. 현행 코드(resolveConvSpec)는 '속성별 등록 이벤트 있으면 eventName 매치, 없으면 keyEvents 폴백'인데 이걸 ingest 가 어느 report 행에 반영하는지(report=1의 key_events 를 그대로 쓰는지, report=3/4 의 is_conv 플래그된 행만 쓰는지) 로더 설계 문서가 없어 미확인. 쿼리 스케치는 최선 추정이며 로더 담당 설계자 확인 필요.",
+    "engine_key 가 rd.dim_engine(FK 미선언, DDL:688-689)과 같은 코드 공간을 공유하는지, 아니면 rd.ga4_dim_value(kind='source')로 별도 관리되는지 불명확. 공용 필터 engine[] 재사용 여부가 여기 달려 있음(제안: 공유 안 함 — GA4 sessionSource 값(chatgpt.com 등)과 LLM engine 코드(chatgpt 등)는 이름은 겹쳐도 서로 다른 분류축).",
+    "rollup(다국가 합산, 현행 getAiTrafficConversionRollup)을 메인 엔드포인트 응답에 흡수할지, 별도 엔드포인트로 뺄지 — 공용 계약에 이 축을 위한 명시 규칙이 없다. 제안: brand[]/country[] 가 복수 매치되면 응답이 자동으로 byCountry 배열을 채우는 방식(엔드포인트 분리 없이 필터 결과에 따라 형태가 달라짐) — API 설계 단순화와 P4('기능=엔드포인트=쿼리 하나') 사이 긴장, 통합자 판단 필요.",
+    "coverage(측정대기 시장 수) 를 별도 엔드포인트로 뺄지 meta 로 흡수할지 — /v1/funnel/conversion/coverage 는 제안일 뿐, 다른 필터 모듈(GET /v1/filters/options)이 이미 비슷한 정보를 낼 수도 있어 중복 우려.",
+    "GA4 pull 주기(A10 의 'Scope API 20분 pull'이 GA4 에도 적용되는지, 별도 주기인지)가 계약서에 명시 안 됨 — API 응답의 meta.as_of(신선도 표시) 값을 이 주기에 맞춰야 하는데 근거 문서가 없음. GA4 는 계약상 'Scope 와 무관한 별도 계열'이라 적재 트랜잭션 경계(A10)가 그대로 적용되는지 불확실.",
+    "device/visitor_type/engine 세 축을 공용 필터 모델 밖 extra_params 로 둔 것이 맞는지 — 계약 §2 공용 필터 모델에 없는 축이라 P5('지원 축 외엔 조용히 무시 금지')를 지키려면 meta.ignored_filters 대신 정식 문서화된 extra_params 로 취급해야 하는데, 이 처리 방식 자체가 계약에 선례가 없어 통합자 확인 필요.",
+    "'준비 중'(A12) 판정 기준 status 값 3종(active/pending_grant/unmapped) 중 pending_grant 와 unmapped 를 API 응답에서 구분해 보여줄지(권한 요청 중 vs 미매핑) — 현행 UI(conversion/page.tsx:53-61)는 '미연동' 단일 안내만 함."
+  ],
+  "parity": "\"신구 대조 하네스 F01~F07 키에 GA4 전용 항목이 없어(현재 하네스는 Scope 측정 계열 위주로 보임 — 확인 필요) 이 단위는 새 항목을 제안한다: F-GA4-1(KPI aiConvRate/humanConvRate/lift, 분자·분모 포함), F-GA4-2(추이 일별 시계열), F-GA4-3(엔진별 breakdown), F-GA4-4(페이지별 표), F-GA4-5(국가별 rollup, 다국가 선택 시). 다만 metrics_rules 의 분모 변경(activeUsers→sessions)으로 신구 값이 정의상 다르게 나오는 게 정상이므로, 하네스는 '차이가 결정된 정의 변경(G-12a)으로 설명됨'을 확인하는 쪽으로 판정 기준을 잡아야 한다(단순 수치 일치 비교 불가). 페이지별·엔진별 표는 목록 자체(URL 집합, 엔진 집합)의 일치만 먼저 확인하고 rate 값은 재계산.\"",
+  "perf": {
+    "indexes": [
+      "rd.ga4_row PK (prop_key, report, date, channel_key, source_key, device_key, nvr_key, page_key, event_key) — RANGE(date) 파티션과 결합해 date 범위 가지치기 필요, but 리프 스캔 시 prop_key 가 PK 선두가 아니라 파티션 내부에서 (report,date) 순 정렬만 보장 — property 단위 필터는 리프 내 인덱스 스캔이 아니라 prop_key 조건의 selectivity 에 의존. 제안: PK 순서를 (date, prop_key, report, ...) 로 바꾸거나 (prop_key, date) 부분 인덱스 추가 — 현재 PK 만으로는 '특정 속성 90일' 질의가 파티션 리프 전체를 스캔할 위험(로더 설계자·통합자 확인 필요, 이 설계 문서에서 인덱스 추가를 제안만 해둔다)",
+      "app.ga4_property (brand_code, country_code) — PK 는 property_id 단독이라 브랜드×국가 역방향 조회(scope→property 목록)에 인덱스 없음. 제안: UNIQUE(brand_code, country_code) 또는 covering index — 시장 수가 41개(현행 실측) 규모라 low 리스크지만 향후 브랜드 확장 시 문제될 수 있어 표시만 해둔다."
+    ],
+    "notes": "폭 10배 기준이 이 도메인엔 원천적으로 안 맞는다 — GA4 데이터는 Scope 측정과 무관하게 구글이 발생시키는 실제 트래픽이므로 '프롬프트·URL·브랜드 키 10배'가 아니라 '속성 수(현재 1개 Kia/IT, 카탈로그 시장 41개) × 90일 범위의 세션 볼륨'이 규모 변수. 현재 관측 규모(Kia/IT 실측 수치는 코드 주석 근거)로는 하루 세션 두 자릿수~세 자릿수라 rd.ga4_row 행수는 파티션당(90일×5 report×수십 차원조합) 최대 수만 행 추정 — 현재 스케일에서는 low. 다만 41개 시장 전부가 active 매핑되면(현재 1개→41개, 41배) 단일 쿼리가 41개 속성을 GROUP BY 하는 형태(신 설계는 SQL 하나로 전 시장 SUM 이라 41개 병렬 API 호출이던 현행보다 오히려 유리) — 이 경우도 인덱스 문제(위 제안)가 없으면 low~medium.",
+    "risk": "low",
+    "rows_scanned": "현재 1개 속성 기준 파티션(≤90일) 내 수천~수만 행. 41개 속성 전체 active 매핑 시나리오에서도 GROUP BY 단일 쿼리라 수십만 행 이내로 추정(실측 없음, '제안' 수준 추정치)."
+  },
+  "purpose": "Scope 측정과 별도 계열인 GA4 기반 AI 유입·전환 지표(전환율·lift·엔진별·페이지별·국가별·AI 유입 방문수)를 하나의 읽기 API 로 제공. 현행은 요청마다 GA4 Data API 를 라이브 호출(unstable_cache 24h)했으나, 확정 DB v2(G-12)는 GA4 를 ing.ga4_row/rd.ga4_row 로 적재해 두고 이 API 는 rd.ga4_row 만 읽는 순수 SQL 질의로 바뀐다 — D8(파생 층 없음)·P6(캐시 없음)·P7(RDS 1초)를 GA4 계열에도 동일 적용.",
+  "query_design": "\"CTE ai_total AS (SELECT date, SUM(sessions) sess, SUM(key_events) conv FROM rd.ga4_row WHERE prop_key = ANY($props) AND report=1 AND date BETWEEN $from AND $to AND is_ai GROUP BY date), human_total AS (같은 조건 NOT is_ai), engine_split AS (SELECT engine_key, SUM(sessions) sess, SUM(key_events) conv FROM rd.ga4_row WHERE prop_key=ANY($props) AND report=2 AND date BETWEEN $from AND $to [AND engine_key = ANY($engineKeys)] GROUP BY engine_key), page_split AS (SELECT page_key, is_ai, SUM(sessions) sess, SUM(key_events) conv FROM rd.ga4_row WHERE prop_key=ANY($props) AND report=4 AND date BETWEEN $from AND $to GROUP BY page_key, is_ai ORDER BY SUM(sessions) FILTER (WHERE is_ai) DESC LIMIT $limit_pages), by_country AS (다국가 선택 시: 위 ai_total/human_total 을 prop_key 대신 (brand_bit, geo_key) 로 GROUP BY, rd.ga4_dim_property 조인). 모든 CTE 는 WHERE report=N·date 범위·prop_key IN(스코프 교집합에서 미리 resolve) 조건으로 파티션 가지치기(RANGE date)+리프 내 조건. device/visitor_type/engine 필터는 각각 device_key/nvr_key/(engine_key 또는 source_key) 조건 추가. is_conv 정의가 확정되면(open_questions) key_events 를 일반화된 conv_count 로 교체.\"",
+  "read_model": [
+    "rd.ga4_row (prop_key, date, report, channel_key, source_key, device_key, nvr_key, page_key, event_key, is_ai, engine_key, is_conv, sessions, users_day, page_views, key_events, event_count)",
+    "rd.ga4_dim_property (prop_key, property_id, brand_bit, geo_key, status, source)",
+    "rd.ga4_dim_value (kind, value_key, value) — channel/source/device/nvr/event/page 라벨 역참조(engine·device·visitor_type·page URL 표시용)",
+    "app.ga4_property (property_id, brand_code, country_code, status) — 스코프→속성 매핑(브랜드·국가 필터를 prop_key 로 변환하는 1차 조회, rd.ga4_dim_property 의 brand_bit/geo_key 가 이미 이 값의 투영이므로 실제 질의는 rd 쪽만 봐도 될 가능성 — 제안: app.ga4_property 는 관리자 등록 화면 전용, 기능 API 는 rd.ga4_dim_property 만 읽는다(A17 경계 준수)",
+    "app.ga4_tracked_event — 이 API 자체는 안 읽음(ingest 가 is_conv 계산에 이미 소비). 관리자 화면(admin 모듈)에서만 씀"
+  ],
+  "response": "\"{ data: { summary: {ai_conv_rate: number(%), human_conv_rate: number(%), lift: number(pp), ai_sessions: int, ai_conversions: int, human_sessions: int, human_conversions: int}, trend: [{date, ai_sessions, ai_conversions, human_sessions, human_conversions}], by_engine: [{engine, sessions, conversions, conv_rate}], pages: [{url, ai_sessions, ai_conversions, ai_conv_rate, human_sessions, human_conversions, human_conv_rate, lift}], by_country: [{brand, country, ai_sessions, ai_conversions, ai_conv_rate, human_sessions, human_conversions, human_conv_rate, lift}] | null(단일 시장 선택 시), visits: {ai_sessions: int, ai_users_window_sum_disclaimer: '기간 사용자수 미제공(행간 합산 금지)', pages: [{url, sessions}], trend: [{date, sessions}]}, coverage: {measured_markets: int, total_markets: int, unmapped: [{brand,country,status}]} }, meta: { surface, mode, as_of, ignored_filters, dropped_filters, suppressed, extra_params_used: {engine, device, visitor_type} } }\"",
+  "screens": [
+    "/standard/ai-funnel/conversion (KPI 3카드·국가별표·추이·엔진별·페이지별표·AI유입방문수)",
+    "/website/ai-funnel/conversion (같은 구성, HQ/권역 rollup 포함)",
+    "/dashboard 요약 카드 중 GA4 AI유입전환율 서브타일(getLiveDashboard 조립분, app/[locale]/(dash)/dashboard/_data/live.ts:882 경유)"
+  ],
+  "title": "AI 유입·전환 (GA4)",
+  "writes": "없음(읽기 전용). GA4 적재(ing.ga4_pull/ing.ga4_row→rd.ga4_row 반영)는 별도 적재 모듈 소관(A10 의 pull 경계와 동일 원칙 적용 추정, 이 단위 밖). 전환 이벤트 등록(app.ga4_tracked_event 쓰기)도 admin 모듈 소관."
+}

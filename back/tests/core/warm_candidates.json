@@ -1,0 +1,121 @@
+{
+ "about": "BE-9 데우기 D7 후보 대조 사례(동기화 S1). expected = hmg-geo 2670a16 lib/scope/competitor-row.ts 규칙 + hub front 어댑터 접착(dashboard.ts toCompetitorBrandValue·candidateBrandKeys, trend.ts:156)을 tests/core/warm_candidates.mjs 로 돌린 값. old_rule = 옛 warm 규칙(position 도 언급 순) 값(되돌림 판별용).",
+ "cases": [
+  {"id": "fold_ties", "note": "옛 시험 사례: 당사·HMG 제외, 언급 동률 이름 순, ' toyota' 가 Toyota 를 접는다(모집단 접기 포함)",
+   "expected": [11, 12, 13, 14, 15], "old_rule": [10, 11, 12, 13, 14, 15],
+   "brands": [
+    {"name": "Hyundai", "mentions": 90, "brand_key": 1, "is_own": true, "avg_rank": {"sum": 3, "count": 3}, "exposure": {"num": 90, "den": 200}, "share": {"num": 90, "den": 1000}},
+    {"name": "Genesis", "mentions": 50, "brand_key": 4, "is_own": false, "avg_rank": {"sum": 2, "count": 2}, "exposure": {"num": 50, "den": 200}, "share": {"num": 50, "den": 1000}, "is_hmg_own": true},
+    {"name": "Toyota", "mentions": 40, "brand_key": 10, "is_own": false, "avg_rank": {"sum": 5, "count": 5}, "exposure": {"num": 40, "den": 200}, "share": {"num": 40, "den": 1000}},
+    {"name": "BMW", "mentions": 40, "brand_key": 11, "is_own": false, "avg_rank": null, "exposure": {"num": 40, "den": 200}, "share": {"num": 40, "den": 1000}},
+    {"name": "Audi", "mentions": 40, "brand_key": 12, "is_own": false, "avg_rank": {"sum": 1, "count": 1}, "exposure": {"num": 40, "den": 200}, "share": {"num": 40, "den": 1000}},
+    {"name": "Ford", "mentions": 30, "brand_key": 13, "is_own": false, "avg_rank": null, "exposure": {"num": 30, "den": 200}, "share": {"num": 30, "den": 1000}},
+    {"name": " toyota", "mentions": 45, "brand_key": 14, "is_own": false, "avg_rank": null, "exposure": {"num": 45, "den": 200}, "share": {"num": 45, "den": 1000}},
+    {"name": "Kia", "mentions": 0, "brand_key": 15, "is_own": false, "avg_rank": {"sum": 4, "count": 4}, "exposure": {"num": 0, "den": 200}, "share": {"num": 0, "den": 1000}},
+    {"name": "Tesla", "mentions": 20, "brand_key": null, "is_own": false, "avg_rank": {"sum": 2, "count": 2}, "exposure": {"num": 20, "den": 200}, "share": {"num": 20, "den": 1000}}
+   ]},
+  {"id": "pool_boundary", "note": "순위 있는 경쟁사가 언급 11·12위(모집단 10 밖)면 우선 노출도 후보가 아니다(옛 규칙은 언급 순으로 넣었다)",
+   "expected": [21, 22, 23, 24, 25], "old_rule": [21, 22, 23, 24, 25, 28, 29],
+   "brands": [
+    {"name": "Hyundai", "mentions": 200, "brand_key": 1, "is_own": true, "avg_rank": {"sum": 30, "count": 10}, "exposure": {"num": 200, "den": 200}, "share": {"num": 200, "den": 1000}},
+    {"name": "Kia", "mentions": 150, "brand_key": 2, "is_own": false, "avg_rank": {"sum": 20, "count": 10}, "exposure": {"num": 150, "den": 200}, "share": {"num": 150, "den": 1000}, "is_hmg_own": true},
+    {"name": "Genesis", "mentions": 120, "brand_key": 3, "is_own": false, "avg_rank": {"sum": 40, "count": 10}, "exposure": {"num": 120, "den": 200}, "share": {"num": 120, "den": 1000}, "is_hmg_own": true},
+    {"name": "C1", "mentions": 100, "brand_key": 21, "is_own": false, "avg_rank": {"sum": 30, "count": 10}, "exposure": {"num": 100, "den": 200}, "share": {"num": 100, "den": 1000}},
+    {"name": "C2", "mentions": 90, "brand_key": 22, "is_own": false, "avg_rank": null, "exposure": {"num": 90, "den": 200}, "share": {"num": 90, "den": 1000}},
+    {"name": "C3", "mentions": 80, "brand_key": 23, "is_own": false, "avg_rank": null, "exposure": {"num": 80, "den": 200}, "share": {"num": 80, "den": 1000}},
+    {"name": "C4", "mentions": 70, "brand_key": 24, "is_own": false, "avg_rank": null, "exposure": {"num": 70, "den": 200}, "share": {"num": 70, "den": 1000}},
+    {"name": "C5", "mentions": 60, "brand_key": 25, "is_own": false, "avg_rank": {"sum": 20, "count": 10}, "exposure": {"num": 60, "den": 200}, "share": {"num": 60, "den": 1000}},
+    {"name": "C6", "mentions": 50, "brand_key": 26, "is_own": false, "avg_rank": null, "exposure": {"num": 50, "den": 200}, "share": {"num": 50, "den": 1000}},
+    {"name": "C7", "mentions": 40, "brand_key": 27, "is_own": false, "avg_rank": null, "exposure": {"num": 40, "den": 200}, "share": {"num": 40, "den": 1000}},
+    {"name": "C8", "mentions": 30, "brand_key": 28, "is_own": false, "avg_rank": {"sum": 10, "count": 10}, "exposure": {"num": 30, "den": 200}, "share": {"num": 30, "den": 1000}},
+    {"name": "C9", "mentions": 20, "brand_key": 29, "is_own": false, "avg_rank": {"sum": 10, "count": 10}, "exposure": {"num": 20, "den": 200}, "share": {"num": 20, "den": 1000}}
+   ]},
+  {"id": "rank_order", "note": "모집단 안 경쟁사는 평균 순위가 좋은 순(언급 순이 아니다)",
+   "expected": [31, 32, 33, 34, 35, 36], "old_rule": [31, 32, 33, 34],
+   "brands": [
+    {"name": "Hyundai", "mentions": 300, "brand_key": 1, "is_own": true, "avg_rank": {"sum": 20, "count": 10}, "exposure": {"num": 300, "den": 200}, "share": {"num": 300, "den": 1000}},
+    {"name": "C1", "mentions": 100, "brand_key": 31, "is_own": false, "avg_rank": {"sum": 40, "count": 10}, "exposure": {"num": 100, "den": 200}, "share": {"num": 100, "den": 1000}},
+    {"name": "C2", "mentions": 90, "brand_key": 32, "is_own": false, "avg_rank": {"sum": 30, "count": 10}, "exposure": {"num": 90, "den": 200}, "share": {"num": 90, "den": 1000}},
+    {"name": "C3", "mentions": 80, "brand_key": 33, "is_own": false, "avg_rank": {"sum": 25, "count": 10}, "exposure": {"num": 80, "den": 200}, "share": {"num": 80, "den": 1000}},
+    {"name": "C4", "mentions": 70, "brand_key": 34, "is_own": false, "avg_rank": {"sum": 20, "count": 10}, "exposure": {"num": 70, "den": 200}, "share": {"num": 70, "den": 1000}},
+    {"name": "C5", "mentions": 60, "brand_key": 35, "is_own": false, "avg_rank": {"sum": 15, "count": 10}, "exposure": {"num": 60, "den": 200}, "share": {"num": 60, "den": 1000}},
+    {"name": "C6", "mentions": 50, "brand_key": 36, "is_own": false, "avg_rank": {"sum": 12, "count": 10}, "exposure": {"num": 50, "den": 200}, "share": {"num": 50, "den": 1000}}
+   ]},
+  {"id": "round_ties", "note": "평균 순위는 JS Math.round 한 자리(2.25 → 2.3, 2.26 → 2.3) 뒤 동률이면 이름 순",
+   "expected": [41, 42, 43, 44, 46, 47, 48, 49], "old_rule": [41, 42, 43, 44, 45, 46, 47, 48],
+   "brands": [
+    {"name": "Hyundai", "mentions": 300, "brand_key": 1, "is_own": true, "avg_rank": {"sum": 10, "count": 10}, "exposure": {"num": 300, "den": 200}, "share": {"num": 300, "den": 1000}},
+    {"name": "H1", "mentions": 100, "brand_key": 41, "is_own": false, "avg_rank": null, "exposure": {"num": 100, "den": 200}, "share": {"num": 100, "den": 1000}},
+    {"name": "H2", "mentions": 90, "brand_key": 42, "is_own": false, "avg_rank": null, "exposure": {"num": 90, "den": 200}, "share": {"num": 90, "den": 1000}},
+    {"name": "H3", "mentions": 80, "brand_key": 43, "is_own": false, "avg_rank": null, "exposure": {"num": 80, "den": 200}, "share": {"num": 80, "den": 1000}},
+    {"name": "H4", "mentions": 70, "brand_key": 44, "is_own": false, "avg_rank": null, "exposure": {"num": 70, "den": 200}, "share": {"num": 70, "den": 1000}},
+    {"name": "Zeta", "mentions": 50, "brand_key": 45, "is_own": false, "avg_rank": {"sum": 9, "count": 4}, "exposure": {"num": 50, "den": 200}, "share": {"num": 50, "den": 1000}},
+    {"name": "Alpha", "mentions": 40, "brand_key": 46, "is_own": false, "avg_rank": {"sum": 23, "count": 10}, "exposure": {"num": 40, "den": 200}, "share": {"num": 40, "den": 1000}},
+    {"name": "Beta", "mentions": 30, "brand_key": 47, "is_own": false, "avg_rank": {"sum": 10, "count": 10}, "exposure": {"num": 30, "den": 200}, "share": {"num": 30, "den": 1000}},
+    {"name": "Gamma", "mentions": 20, "brand_key": 48, "is_own": false, "avg_rank": {"sum": 20, "count": 10}, "exposure": {"num": 20, "den": 200}, "share": {"num": 20, "den": 1000}},
+    {"name": "Delta", "mentions": 10, "brand_key": 49, "is_own": false, "avg_rank": {"sum": 113, "count": 50}, "exposure": {"num": 10, "den": 200}, "share": {"num": 10, "den": 1000}}
+   ]},
+  {"id": "tracked_fold_in_pool", "note": "모집단 접기는 자사 행까지 함께 접는다(자사 표기가 이기면 경쟁 표기는 우선 노출도 후보가 아니다)",
+   "expected": [51, 52, 53], "old_rule": [51, 52, 53],
+   "brands": [
+    {"name": "Kia", "mentions": 90, "brand_key": 2, "is_own": false, "avg_rank": {"sum": 10, "count": 10}, "exposure": {"num": 90, "den": 200}, "share": {"num": 90, "den": 1000}, "is_hmg_own": true},
+    {"name": "KIA ", "mentions": 80, "brand_key": 51, "is_own": false, "avg_rank": {"sum": 10, "count": 10}, "exposure": {"num": 80, "den": 200}, "share": {"num": 80, "den": 1000}},
+    {"name": "Hyundai", "mentions": 70, "brand_key": 1, "is_own": true, "avg_rank": null, "exposure": {"num": 70, "den": 200}, "share": {"num": 70, "den": 1000}},
+    {"name": "Mazda", "mentions": 60, "brand_key": 52, "is_own": false, "avg_rank": {"sum": 30, "count": 10}, "exposure": {"num": 60, "den": 200}, "share": {"num": 60, "den": 1000}},
+    {"name": "Honda", "mentions": 50, "brand_key": 53, "is_own": false, "avg_rank": {"sum": 20, "count": 10}, "exposure": {"num": 50, "den": 200}, "share": {"num": 50, "den": 1000}}
+   ]},
+  {"id": "no_key_and_dup_name", "note": "brand_key 없는 행은 빠지고, 같은 이름 두 행은 마지막 행 키",
+   "expected": [52, 53, 99], "old_rule": [52, 53, 99],
+   "brands": [
+    {"name": "Tesla", "mentions": 90, "brand_key": null, "is_own": false, "avg_rank": {"sum": 10, "count": 10}, "exposure": {"num": 90, "den": 200}, "share": {"num": 90, "den": 1000}},
+    {"name": "Ford", "mentions": 80, "brand_key": 13, "is_own": false, "avg_rank": {"sum": 20, "count": 10}, "exposure": {"num": 80, "den": 200}, "share": {"num": 80, "den": 1000}},
+    {"name": "Ford", "mentions": 5, "brand_key": 99, "is_own": false, "avg_rank": null, "exposure": {"num": 5, "den": 200}, "share": {"num": 5, "den": 1000}},
+    {"name": "Mazda", "mentions": 70, "brand_key": 52, "is_own": false, "avg_rank": null, "exposure": {"num": 70, "den": 200}, "share": {"num": 70, "den": 1000}},
+    {"name": "Honda", "mentions": 60, "brand_key": 53, "is_own": false, "avg_rank": {"sum": 15, "count": 10}, "exposure": {"num": 60, "den": 200}, "share": {"num": 60, "den": 1000}}
+   ]},
+  {"id": "small", "note": "브랜드 3개(모집단 < 10)",
+   "expected": [10, 53], "old_rule": [10, 53],
+   "brands": [
+    {"name": "Hyundai", "mentions": 10, "brand_key": 1, "is_own": true, "avg_rank": {"sum": 10, "count": 10}, "exposure": {"num": 10, "den": 200}, "share": {"num": 10, "den": 1000}},
+    {"name": "Toyota", "mentions": 5, "brand_key": 10, "is_own": false, "avg_rank": {"sum": 30, "count": 10}, "exposure": {"num": 5, "den": 200}, "share": {"num": 5, "den": 1000}},
+    {"name": "Honda", "mentions": 3, "brand_key": 53, "is_own": false, "avg_rank": null, "exposure": {"num": 3, "den": 200}, "share": {"num": 3, "den": 1000}}
+   ]},
+  {"id": "empty", "note": "빈 목록",
+   "expected": [], "old_rule": [],
+   "brands": [
+   ]},
+  {"id": "after_exclusion_refill", "note": "명부 제외 행은 M-1 이 이미 빼고 다음 순위로 채운 목록이 입력이다: 제외가 없었다면 11위였던 C10 이 모집단에 든다",
+   "expected": [61, 62, 63, 64, 70], "old_rule": [61, 62, 63, 64, 70, 71],
+   "brands": [
+    {"name": "Hyundai", "mentions": 200, "brand_key": 1, "is_own": true, "avg_rank": {"sum": 30, "count": 10}, "exposure": {"num": 200, "den": 200}, "share": {"num": 200, "den": 1000}},
+    {"name": "Kia", "mentions": 150, "brand_key": 2, "is_own": false, "avg_rank": {"sum": 20, "count": 10}, "exposure": {"num": 150, "den": 200}, "share": {"num": 150, "den": 1000}, "is_hmg_own": true},
+    {"name": "C1", "mentions": 100, "brand_key": 61, "is_own": false, "avg_rank": null, "exposure": {"num": 100, "den": 200}, "share": {"num": 100, "den": 1000}},
+    {"name": "C2", "mentions": 95, "brand_key": 62, "is_own": false, "avg_rank": null, "exposure": {"num": 95, "den": 200}, "share": {"num": 95, "den": 1000}},
+    {"name": "C3", "mentions": 90, "brand_key": 63, "is_own": false, "avg_rank": null, "exposure": {"num": 90, "den": 200}, "share": {"num": 90, "den": 1000}},
+    {"name": "C4", "mentions": 85, "brand_key": 64, "is_own": false, "avg_rank": null, "exposure": {"num": 85, "den": 200}, "share": {"num": 85, "den": 1000}},
+    {"name": "C5", "mentions": 80, "brand_key": 65, "is_own": false, "avg_rank": null, "exposure": {"num": 80, "den": 200}, "share": {"num": 80, "den": 1000}},
+    {"name": "C6", "mentions": 75, "brand_key": 66, "is_own": false, "avg_rank": null, "exposure": {"num": 75, "den": 200}, "share": {"num": 75, "den": 1000}},
+    {"name": "C7", "mentions": 70, "brand_key": 67, "is_own": false, "avg_rank": null, "exposure": {"num": 70, "den": 200}, "share": {"num": 70, "den": 1000}},
+    {"name": "C10", "mentions": 60, "brand_key": 70, "is_own": false, "avg_rank": {"sum": 10, "count": 10}, "exposure": {"num": 60, "den": 200}, "share": {"num": 60, "den": 1000}},
+    {"name": "C11", "mentions": 50, "brand_key": 71, "is_own": false, "avg_rank": {"sum": 10, "count": 10}, "exposure": {"num": 50, "den": 200}, "share": {"num": 50, "den": 1000}}
+   ]},
+  {"id": "zero_mention_ranked", "note": "언급 0 행은 노출률·점유율 후보가 아니지만 모집단 안에서 순위가 있으면 우선 노출도 후보",
+   "expected": [81, 82, 83], "old_rule": [81, 82, 83],
+   "brands": [
+    {"name": "Hyundai", "mentions": 10, "brand_key": 1, "is_own": true, "avg_rank": null, "exposure": {"num": 10, "den": 200}, "share": {"num": 10, "den": 1000}},
+    {"name": "Z0", "mentions": 0, "brand_key": 81, "is_own": false, "avg_rank": {"sum": 10, "count": 10}, "exposure": {"num": 0, "den": 200}, "share": {"num": 0, "den": 1000}},
+    {"name": "A5", "mentions": 5, "brand_key": 82, "is_own": false, "avg_rank": null, "exposure": {"num": 5, "den": 200}, "share": {"num": 5, "den": 1000}},
+    {"name": "B4", "mentions": 4, "brand_key": 83, "is_own": false, "avg_rank": null, "exposure": {"num": 4, "den": 200}, "share": {"num": 4, "den": 1000}}
+   ]},
+  {"id": "locale_ties", "note": "언급·순위 동률은 이름 localeCompare(악센트 무시): Seat, Škoda, smart, Subaru",
+   "expected": [92, 93, 94, 95], "old_rule": [92, 93, 94, 95],
+   "brands": [
+    {"name": "Hyundai", "mentions": 100, "brand_key": 1, "is_own": true, "avg_rank": null, "exposure": {"num": 100, "den": 200}, "share": {"num": 100, "den": 1000}},
+    {"name": "Subaru", "mentions": 10, "brand_key": 91, "is_own": false, "avg_rank": {"sum": 20, "count": 10}, "exposure": {"num": 10, "den": 200}, "share": {"num": 10, "den": 1000}},
+    {"name": "smart", "mentions": 10, "brand_key": 92, "is_own": false, "avg_rank": {"sum": 20, "count": 10}, "exposure": {"num": 10, "den": 200}, "share": {"num": 10, "den": 1000}},
+    {"name": "Škoda", "mentions": 10, "brand_key": 93, "is_own": false, "avg_rank": {"sum": 20, "count": 10}, "exposure": {"num": 10, "den": 200}, "share": {"num": 10, "den": 1000}},
+    {"name": "Seat", "mentions": 10, "brand_key": 94, "is_own": false, "avg_rank": {"sum": 20, "count": 10}, "exposure": {"num": 10, "den": 200}, "share": {"num": 10, "den": 1000}},
+    {"name": "Opel", "mentions": 10, "brand_key": 95, "is_own": false, "avg_rank": {"sum": 20, "count": 10}, "exposure": {"num": 10, "den": 200}, "share": {"num": 10, "den": 1000}}
+   ]}
+ ]
+}

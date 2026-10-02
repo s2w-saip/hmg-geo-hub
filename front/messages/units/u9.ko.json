@@ -1,0 +1,38 @@
+{
+  "projectDetail": {
+    "setting": {
+      "aiEngines": {
+        "savedQueued": "AI 엔진 설정이 저장되었습니다 (측정 반영 대기)"
+      },
+      "scopeLink": {
+        "linkProbe": {
+          "title": "측정 연결 진단",
+          "stateLabel": "상태",
+          "roundLabel": "최근 회차",
+          "round": "{date} ({status})",
+          "jobsLabel": "측정 작업",
+          "jobs": "제공 {served} / 전체 {total} ({pct}%) · 진행 중 {inProgress} · 실패 {failed}",
+          "jobsNone": "아직 측정 작업이 없습니다",
+          "outboxLabel": "반영 대기열",
+          "outbox": "대기 {pending} · 오류 {erroring} · 프롬프트 대기 {promptPending}",
+          "state": {
+            "unlinked": "scope 프로젝트 미연결",
+            "pending_link": "연결 대기 중",
+            "link_error": "연결 오류",
+            "no_data": "연결됨, 측정 데이터 없음",
+            "partial": "일부 측정만 제공 중",
+            "healthy": "정상"
+          },
+          "fix": {
+            "unlinked": "프로젝트가 아직 측정 엔진에 연결되지 않았습니다. 프롬프트 탭에서 '저장 + 실행'을 누르면 연결을 요청합니다.",
+            "pending_link": "연결 요청이 대기열에 있습니다. 잠시 후 새로고침해 상태를 확인하세요.",
+            "link_error": "연결 요청이 오류로 멈춰 있습니다. 반영 대기열의 오류 건수를 확인하고 운영자에게 알려주세요.",
+            "no_data": "연결은 됐지만 아직 제공 가능한 측정 결과가 없습니다. 측정 실행 여부와 최근 회차를 확인하세요.",
+            "partial": "측정 작업 일부만 결과로 제공되고 있습니다. 실패·진행 중 건수를 확인하세요.",
+            "healthy": "설정은 정상입니다. 분석 화면이 비어 있으면 필터 조건이나 최근 회차 공개 여부를 확인하세요."
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,3956 @@
+{
+  "app": {
+    "name": "HMG GEO Monitoring",
+    "tagline": "Generative Engine Optimization measurement dashboard"
+  },
+  "citationCategories": {
+    "officialHmg": "Official (HMG)",
+    "officialCompetitor": "Official (Competitor)",
+    "dealerMarketplace": "Dealer & Marketplace",
+    "automotiveMedia": "Automotive Media",
+    "newsMedia": "News & Media",
+    "communityForums": "Community & Forums",
+    "socialVideo": "Social & Video",
+    "blogsReviews": "Blogs & Reviews",
+    "wikiReference": "Wiki & Reference",
+    "governmentPublic": "Government & Public",
+    "awardCertification": "Award & Certification",
+    "academicResearch": "Academic & Research",
+    "other": "Other"
+  },
+  "nav": {
+    "dashboard": "Overview",
+    "standardPrompts": "Global prompts",
+    "answerAnalysis": "Answer analysis",
+    "answerAnalysisMention": "Mention",
+    "answerAnalysisCitation": "Citation",
+    "aiFunnel": "AI Agent Funnel",
+    "aiFunnelVisibility": "AI Visibility",
+    "aiFunnelAcr": "ACR",
+    "aiFunnelConversion": "AI Conversion",
+    "customerInterest": "Customer interest",
+    "customerInterestGoogleKeywords": "Google keywords",
+    "customerInterestSocialScraping": "Social Scraping",
+    "projects": "Project list",
+    "projectNew": "Create project",
+    "admin": "User management",
+    "adminStandards": "Global config",
+    "adminStandardPrompts": "Global prompts",
+    "adminStandardCustomerInterest": "Customer interest config",
+    "adminStandardEntities": "Entity catalog",
+    "keywordTools": "Keyword tools",
+    "adminGa4": "GA4 connection",
+    "logout": "Log out",
+    "groups": {
+      "standard": "Global",
+      "website": "Website",
+      "project": "Project",
+      "admin": "Admin"
+    },
+    "section": {
+      "aiFunnel": "AI Agent Funnel",
+      "customerInterest": "Customer interest",
+      "adminStandards": "Global config"
+    },
+    "projectDetail": {
+      "sectionLabel": "Project detail",
+      "openDashboard": "Open project Dashboard",
+      "backToList": "Back to project list",
+      "dashboard": "Dashboard",
+      "intent": "Intent",
+      "intentGoogleKeyword": "Google Keyword",
+      "intentSocialScraping": "Social Scraping",
+      "prompt": "Prompt",
+      "aiFunnel": "AI Agent Funnel",
+      "aiFunnelVisibility": "AI Visibility",
+      "aiFunnelAcr": "ACR",
+      "aiFunnelConversion": "AI Conversion",
+      "analysis": "Analysis",
+      "analysisMention": "Mention",
+      "analysisCitation": "Citation",
+      "member": "Member",
+      "setting": "Setting",
+      "general": "General"
+    },
+    "openSidebar": "Open menu",
+    "closeSidebar": "Close menu",
+    "websitePrompts": "Prompts",
+    "adminCitationSources": "Citation Sources"
+  },
+  "locale": {
+    "label": "Language",
+    "ko": "한국어",
+    "en": "English"
+  },
+  "login": {
+    "title": "Sign in",
+    "cardTitle": "HMG GEO Monitoring Login",
+    "email": "Email",
+    "password": "Password",
+    "passwordToggleShow": "Show password",
+    "passwordToggleHide": "Hide password",
+    "submit": "Sign in",
+    "error": "Invalid email or password."
+  },
+  "roles": {
+    "hq": "Headquarters (HQ)",
+    "region": "Region manager",
+    "country": "Country manager",
+    "admin": "System administrator",
+    "vendor": "GEO execution partner",
+    "website": "Website viewer"
+  },
+  "website": {
+    "dashboard": {
+      "title": "Official site citations",
+      "subtitle": "See how often each region's official sites are cited in AI answers.",
+      "compositionDescription": "Citation source mix — details on the Citation analysis screen"
+    },
+    "prompts": {
+      "title": "Website prompts",
+      "subtitle": "Browse the prompts each region's official site is measured with.",
+      "promptLabel": "Prompt",
+      "brandLabel": "Brand",
+      "countryLabel": "Country",
+      "langLabel": "Language",
+      "targetUrlLabel": "Target URL",
+      "answersLabel": "Measurements",
+      "lastMeasuredLabel": "Last measured",
+      "enginesLabel": "Engines",
+      "searchPlaceholder": "Search prompt or target URL",
+      "lensTitle": "Measurement lens",
+      "lensHint": "Engine and period do not filter the list. They set the range the measurement columns are computed over.",
+      "notMeasured": "Not measured",
+      "empty": "No prompts match these filters.",
+      "emptyHint": "Try widening the filters.",
+      "pageOf": "Page {page} of {pages}",
+      "prev": "Previous",
+      "next": "Next",
+      "rangeLabel": "{from}–{to} of {total}",
+      "exportLabel": "Download Excel",
+      "exportFilename": "website-prompts",
+      "exportSheetName": "Website Prompts"
+    }
+  },
+  "dashboard": {
+    "title": "AI answer performance",
+    "empty": "No measurement data yet",
+    "subtitle": "Track whether HMG brands appear in AI answers, which sources create trust, and whether exposure turns into site visits.",
+    "summary": {
+      "label": "Key metrics summary"
+    },
+    "filters": {
+      "groupLabel": "KPI analysis filters",
+      "filterLabel": "Filters",
+      "reset": "Reset",
+      "apply": "Apply",
+      "applying": "Applying…",
+      "reloading": "Reloading…",
+      "panelTitle": "Adjust analysis scope",
+      "panelDescription": "Start from the KPI readout, then narrow by period, market, vehicle, or AI engine when you need the cause.",
+      "allOption": "All",
+      "moreOpen": "Show {count} more filters",
+      "moreClose": "Hide more filters",
+      "searchPlaceholder": "Search…",
+      "group": {
+        "geography": "Country",
+        "language": "Language",
+        "engine": "AI engine",
+        "promptContext": "Prompt funnel",
+        "source": "Source category",
+        "time": "Period",
+        "competitor": "Competitor",
+        "brand": "Brand",
+        "brandPresence": "Brand inclusion",
+        "listType": "List type",
+        "depth1": "Depth 1",
+        "depth2": "Depth 2",
+        "depth3": "Depth 3",
+        "depth4": "Depth 4",
+        "device": "Device",
+        "visitorType": "New/Returning",
+        "rhqRegion": "Region",
+        "globalHub": "Global / Hub"
+      },
+      "section": {
+        "dimension": "Dimensions",
+        "prompt": "Prompt filters",
+        "citation": "Answer filters",
+        "tag": "Tags"
+      },
+      "clearAxis": "Clear",
+      "timeRange": {
+        "weekly": "Weekly (last 7 days)",
+        "biweekly": "Biweekly (last 14 days)",
+        "monthly": "Monthly (last 30 days)",
+        "yearly": "Yearly (last 1 year)",
+        "custom": "Custom range",
+        "from": "From",
+        "to": "To",
+        "noRoundOnDay": "No measurement round on this date",
+        "defaultRound": "Shown by default when no period is selected",
+        "noRoundInWindow": "No measurement round in this period",
+        "snappedToRound": "The week containing the nearest round is {from} ~ {to}.",
+        "goToNearestRound": "Go to that round's week ({from} ~ {to})",
+        "roundCount": "{count} rounds",
+        "prevMonth": "Previous month",
+        "nextMonth": "Next month"
+      },
+      "value": {
+        "owned": "Owned",
+        "external": "External",
+        "branded": "Branded",
+        "unbranded": "Unbranded",
+        "mobile": "Mobile",
+        "desktop": "Desktop",
+        "tablet": "Tablet",
+        "new": "New",
+        "returning": "Returning",
+        "worldwide": "Worldwide (Global)",
+        "EU": "Europe Hub (EU)",
+        "MIDDLEEAST": "Middle East Hub (MENA)",
+        "HYUNDAI-N": "Hyundai N",
+        "CPO": "Hyundai CPO",
+        "pseudoWorldwide": "Worldwide (Global)",
+        "pseudoEuRegion": "Europe Region",
+        "pseudoMiddleEast": "Middle East",
+        "pseudoNBrand": "N Brand",
+        "pseudoCpo": "Certified Pre-Owned (CPO)"
+      },
+      "product": {
+        "brand": "Brand",
+        "segment": "Segment",
+        "model": "Model",
+        "allBrands": "All brands",
+        "brandLocked": "Locked to your scope brand (admin-only switch)"
+      },
+      "scope": {
+        "label": "My scope",
+        "brand": "Brand",
+        "region": "Region",
+        "country": "Country",
+        "all": "All",
+        "countSummary": {
+          "brand": "{count} brands",
+          "region": "{count} regions",
+          "country": "{count} countries"
+        }
+      },
+      "defaultScopeHint": "With no filters selected, all data within your account scope is shown (last 7 days unless a period is set).",
+      "competitorNeedsOfficialCompetitor": "Available only when the Official (Competitor) category is included",
+      "searchResultCount": "{matched} of {total} match"
+    },
+    "kpi": {
+      "infoAriaLabel": "View metric definition",
+      "definitionLabel": "Definition",
+      "formulaLabel": "Formula",
+      "pending": "Awaiting data",
+      "pendingHint": "Shows automatically once scope supplies this metric",
+      "coverageLabel": "{measured} / {total} markets measured",
+      "category": {
+        "content": "Answer content",
+        "source": "Answer source",
+        "conversion": "Answer conversion"
+      },
+      "question": {
+        "coverage": "How many answers expose us?",
+        "density": "How densely within an answer?",
+        "favorability": "How favorably described?",
+        "priority": "How high is the placement?",
+        "citationVolume": "How often cited?",
+        "targetSource": "Is the intended target cited?",
+        "ownedUrl": "How many prompts cite our owned URL?",
+        "targetUrl": "How many prompts cite our target URL?",
+        "visit": "Does it drive real visits?"
+      },
+      "name": {
+        "visibility": "AI Visibility",
+        "shareOfVoice": "AI Share of Voice",
+        "sentiment": "AI Sentiment",
+        "position": "AI Average Position",
+        "ownedUrlRate": "Owned URL Citation Rate",
+        "targetUrlRate": "Target URL Citation Rate",
+        "citationShare": "AI Citation Share",
+        "citationAccuracy": "AI Target Source Citation Rate",
+        "trafficConversion": "AI Traffic Conversion"
+      },
+      "definition": {
+        "visibility": "Share of all monitored answers in which our brand appears at least once",
+        "shareOfVoice": "Our brand's share of all industry brand mentions (multiple mentions within one answer counted)",
+        "sentiment": "Share of positive signals among all sentiment signals attached to mentions of our brand (mention-level, not per-answer dominance; mixed signals count toward the denominator)",
+        "position": "Average rank of our brand among the brands mentioned in each answer where our brand appears (1 = mentioned first; non-competitor/noise brands excluded; answers without our brand excluded)",
+        "citationShare": "Share of all citation occurrences that point to predefined HMG site base URLs (including country/language path bases; multiple citations within one answer counted)",
+        "ownedUrlRate": "Share of measured prompts that cite our owned URL (the registered base address and its sub-pages, target URLs included) at least once. Judged per prompt, so its denominator differs from the answer-level 'AI Target Source Citation Rate'",
+        "targetUrlRate": "Share of measured prompts whose own designated target URL was cited at least once. A hit on another prompt's target does not count; the denominator is the same measured-prompt count as the Owned URL Citation Rate",
+        "citationAccuracy": "Share of answers citing our domain that cite our TARGET domain",
+        "trafficConversion": "GA4 key events per active user in the GA4 'AI Assistant' channel — for Kia/IT the key event mix is 87% configuration_conversion + 12% request_brochure + 0.4% test_drive + 0% purchase (mostly engagement). AI Assistant channel started 2026-06-05, data still accruing.",
+        "citationShareGlobal": "Share of all citation occurrences whose source category is Official (HMG): the official sites and official social accounts of the three HMG brands (Hyundai, Kia, Genesis), regardless of brand or country. Same source-category classification as Answer Analysis > Citations (multiple citations within one answer counted)"
+      },
+      "formula": {
+        "visibility": "answers mentioning our brand ≥1× ÷ monitored answers × 100 (unit: %)",
+        "shareOfVoice": "our brand mentions ÷ total brand mentions × 100 (unit: %)",
+        "sentiment": "positive sentiment signals on our brand mentions ÷ all sentiment signals on our brand mentions (positive+neutral+negative+mixed) × 100 (unit: %)",
+        "position": "Σ(our rank among brands in the answer = non-noise brands mentioned before ours + 1) ÷ answers mentioning our brand ≥1× (unit: rank)",
+        "citationShare": "citations to predefined HMG site base URLs ÷ total source citations × 100 (unit: %)",
+        "ownedUrlRate": "prompts citing our owned URL ÷ measured prompts × 100 (unit: %; multiple citations within one prompt count once)",
+        "targetUrlRate": "prompts citing their own target URL ÷ measured prompts × 100 (unit: %; a hit on another prompt's target does not count)",
+        "citationAccuracy": "answers citing our target domain ÷ answers citing our domain × 100 (unit: %)",
+        "trafficConversion": "GA4 key events from AI-Assistant-channel active users ÷ AI-Assistant-channel active users × 100 (unit: %, trailing 28 days, AI Assistant = GA4 sessionDefaultChannelGroup)",
+        "citationShareGlobal": "Official (HMG) category citations ÷ total source citations × 100 (unit: %)"
+      },
+      "competitorSov": "SOV vs competitor ({brand})",
+      "sub": {
+        "brandMentionAnswers": "Brand-mention answers",
+        "multiMentionAnswers": "Multi-mention answers",
+        "negativeRate": "Negative mention rate",
+        "top3Rate": "Top-3 mention rate",
+        "engineConsistency": "Cross-engine consistency",
+        "aiVisits": "AI-referred visits",
+        "missingPromptCount": "Prompts with no brand mention",
+        "acrTop1": "ACR (rank-1 rate)",
+        "positiveKeywords": "Positive keyword mentions",
+        "negativeKeywords": "Negative keyword mentions",
+        "def": {
+          "engineConsistency": {
+            "definition": "Computes this metric per AI engine, then shows the lowest engine value as a share of the highest. Closer to 100% means the brand performs evenly across engines. Hidden when only one engine is measured, since there is nothing to compare.",
+            "formula": "Min engine value / max engine value x 100 (unit: %)"
+          }
+        }
+      },
+      "ratio": {
+        "visibility": {
+          "num": "Brand-mention answers",
+          "den": "Monitored answers"
+        },
+        "shareOfVoice": {
+          "num": "Our mentions",
+          "den": "All brand mentions"
+        },
+        "sentiment": {
+          "num": "Positive sentiment signals",
+          "den": "All sentiment signals"
+        },
+        "position": {
+          "num": "Sum of first-mention ranks",
+          "den": "Ranked answers (unranked excluded)"
+        },
+        "ownedUrlRate": {
+          "num": "Owned URL cited prompts",
+          "den": "Measured prompts"
+        },
+        "targetUrlRate": {
+          "num": "Target URL cited prompts",
+          "den": "Measured prompts"
+        },
+        "citationShare": {
+          "num": "Defined-base citations",
+          "den": "All source citations"
+        },
+        "citationAccuracy": {
+          "num": "Target-domain answers",
+          "den": "Our-domain answers"
+        },
+        "trafficConversion": {
+          "num": "GA4 key events",
+          "den": "AI-channel active users"
+        }
+      },
+      "sparklineHint": "Visits, last 28 days",
+      "provenance": {
+        "published": "Published value, customer report ({cycle}) · based on {sites} sites",
+        "live": "Live aggregate · outside the published report"
+      }
+    },
+    "trend": {
+      "title": "KPI trend",
+      "description": "KPI time series over the last 120 days (~17 weeks), normalized to weekly buckets — gaps are left broken",
+      "selector": "KPI",
+      "accruing": "A trend needs at least 2 measurement buckets — measurements are still accruing.",
+      "axis": {
+        "percent": "%",
+        "rank": "Rank",
+        "rankDirectional": "Rank (lower is better)"
+      }
+    },
+    "basis": {
+      "label": "Measurement basis",
+      "unit": {
+        "week": "Weekly",
+        "day": "Daily"
+      },
+      "note": "Bucketed by measurement day",
+      "asOf": "As of {date}"
+    },
+    "table": {
+      "title": "KPI detail",
+      "description": "Start / end / delta — click headers to sort; color reflects improvement direction",
+      "kpi": "KPI",
+      "start": "Start",
+      "end": "End",
+      "delta": "Delta"
+    },
+    "geo": {
+      "title": "Competitive position by market",
+      "metric": "{brand} share of voice · rank",
+      "lead": "Lead",
+      "rival": "Top rival",
+      "notMeasured": "Not yet measured",
+      "map": {
+        "title": "GEO MAP",
+        "caption": "{brand} share of voice by country — darker means higher",
+        "share": "{brand} share of voice",
+        "legendLow": "Low",
+        "legendHigh": "High"
+      },
+      "regions": {
+        "northAmerica": "North America",
+        "asia": "Asia",
+        "oceania": "Oceania",
+        "europe": "Europe",
+        "latinAmerica": "Latin America",
+        "middleEast": "Middle East",
+        "africa": "Africa"
+      }
+    },
+    "rankings": {
+      "title": "Competitive visibility rankings",
+      "domainTitle": "Domain citation rankings",
+      "brandTitle": "Brand mention rankings",
+      "brandMetric": "AI share of voice",
+      "domainMetric": "Citation share"
+    },
+    "composition": {
+      "title": "Composition analysis",
+      "description": "Prompt-funnel and citation-source composition — full detail on Answer / Citation analysis screens",
+      "topicTitle": "Prompt funnel composition",
+      "sourceTitle": "Source composition",
+      "unclassified": "Unclassified",
+      "others": "Others",
+      "empty": "No measurement data yet",
+      "promptsUnit": "prompts",
+      "citationsUnit": "citations"
+    },
+    "overview": {
+      "title": "AI answer performance overview",
+      "cadence": "Measured weekly",
+      "lastMeasured": "Measurement cycle {date}",
+      "compare": "vs. previous cycle",
+      "competitors": "Competitors",
+      "noCompetitorData": "No competitor value for this KPI",
+      "competitorDeltaBasis": "Competitor change is the difference between the last two measured points. It shows − when there are fewer than two.",
+      "openDetail": "Open detail",
+      "sparkTooltipWow": "WoW",
+      "cardEmpty": "Pending",
+      "geo": {
+        "title": "GEO status by country",
+        "kpiSelector": "KPI",
+        "countrySelect": "Select countries",
+        "countrySearch": "Search countries",
+        "all": "All",
+        "colRegion": "Region / country",
+        "colRival": "Top competitor",
+        "noRival": "—",
+        "selected": "{n} selected",
+        "brandRequired": "Pick a single brand to see the regional breakdown.",
+        "mapCaption": "{label} — darker is higher",
+        "mapCaptionRank": "{label} — darker means an earlier (lower) rank",
+        "countryAll": "All countries",
+        "selectAll": "Select all",
+        "deselectAll": "Deselect all"
+      }
+    }
+  },
+  "metricUnit": {
+    "position": "#{n}"
+  },
+  "periodCompare": {
+    "label": {
+      "weekly": "vs. previous 7 days",
+      "biweekly": "vs. previous 14 days",
+      "monthly": "vs. previous 30 days",
+      "yearly": "vs. previous year",
+      "thisMonth": "vs. last month",
+      "lastMonth": "vs. the month before last",
+      "thisWeek": "vs. last week",
+      "lastWeek": "vs. the week before last"
+    },
+    "metric": {
+      "visibility": "AI Exposure",
+      "share": "AI Share of Voice",
+      "favorability": "AI Favorability",
+      "position": "AI First-Rank Exposure",
+      "mentionsPerAnswer": "Mentions",
+      "citationsPerAnswer": "Citations"
+    },
+    "basis": "▲▼ Change compares the selected period ({cur}) with the immediately preceding period of the same length ({prev}).",
+    "window": "Based on {curCycles} cycle(s) now vs {prevCycles} previously",
+    "asOf": "As of {date} (most recent published measurement cycle)",
+    "reason": {
+      "noPrevWindow": "No measurement cycles in the preceding {days}-day period",
+      "noPrevYear": "No data for the preceding year",
+      "noPrevWeek": "No measurement cycles in the preceding week",
+      "noPrevMonth": "No measurement cycles in the preceding month",
+      "noDataPrev": "No data collected in the preceding period under these filters",
+      "noDataCur": "No data collected in the selected period under these filters",
+      "missingShare": "Only {pct}% of the planned collection completed in the preceding period, so no comparison is shown",
+      "startWindow": "The preceding period overlaps the start of measurement, so no comparison is shown",
+      "startMonth": "The preceding month is when measurement started, so no comparison is shown",
+      "unsupported": "Period comparison is not available for this filter combination"
+    },
+    "aria": {
+      "up": "up {value}",
+      "down": "down {value}",
+      "flat": "no change",
+      "suppressed": "no comparison"
+    }
+  },
+  "answerAnalysis": {
+    "title": "Answer analysis",
+    "weekAxis": "wk of {md}",
+    "empty": "No measurement data yet",
+    "pending": "Pending measurement integration — available after the scope data expansion",
+    "subtitle": "① Brand Mentions + ② Citation Sources — cross-prompt analysis",
+    "tabs": {
+      "mentions": "Brand Mentions",
+      "citations": "Citation Sources"
+    },
+    "filters": {
+      "range": "Range",
+      "range_7d": "Last 7 days",
+      "range_14d": "Last 14 days",
+      "range_30d": "Last 30 days",
+      "range_90d": "Last 90 days",
+      "provider": "AI Provider",
+      "providerAll": "All",
+      "brandSearch": "Search brand",
+      "brandSearchPlaceholder": "e.g., Hyundai",
+      "domainSearch": "Search domain",
+      "domainSearchPlaceholder": "e.g., carblog.kr",
+      "category": "Category",
+      "categoryAll": "All"
+    },
+    "mentions": {
+      "description": "Which brands show up in AI answers, and how often. Source: brand_mentions",
+      "summary": {
+        "total": "Total Mentions",
+        "uniqueBrands": "Unique Brands",
+        "totalPrompts": "Total Prompts",
+        "missingPrompts": "Prompts with no brand mention",
+        "multiMention": "Multi-mention answers",
+        "top3Rate": "Top-3 mention rate",
+        "ratioAnswers": "{num} / {den} answers",
+        "deltaBasis": "▲▼ changes compare the period cumulative total against the total as of the first measurement in range ({date})."
+      },
+      "asOf": "As of {date}",
+      "compare": {
+        "title": "Ours vs Competitor",
+        "hint": "Head-to-head comparison of your brand against the comparison target under the current filters.",
+        "ours": "Ours",
+        "designatedBadge": "Designated competitor · {brand}",
+        "autoBadge": "Auto-selected · {brand}",
+        "designatedNote": "The comparison brand designated in project settings.",
+        "autoNote": "No designated comparison brand — automatically comparing against the top external brand by share under the current filters.",
+        "manualBadge": "Selected · {brand}",
+        "manualNote": "Comparing against a brand you picked — reflected instantly from already-measured data.",
+        "selectLabel": "Compare against",
+        "useDefault": "Default (auto/designated)",
+        "empty": "No competitor data to compare",
+        "metric": {
+          "share": "Mention share",
+          "rate": "Mention rate",
+          "position": "Avg. position"
+        },
+        "positionHint": "Lower is better",
+        "oursScope": "\"Ours\" aggregates mentions of {brands}."
+      },
+      "breakdown": {
+        "sentimentTitle": "Sentiment breakdown",
+        "sentimentHint": "Sentiment signals attached to mentions of our in-scope brands (mention-level) — the positive share matches the dashboard AI favorability KPI",
+        "typesTitle": "Mention types",
+        "typesHint": "How our in-scope brands are mentioned",
+        "typesShareHint": "Narrow by mention type to compare our vs competitor brand share — see how the per-type share differs from the overall share.",
+        "typesShareDef": {
+          "definition": "Within each mention type (recommendation, comparison, definition, final choice, plain mention), the per-brand share of mentions. The 100% stacked bar compares our brands, the comparison brand, and top brands.",
+          "formula": "Share denominator = total brand mentions in that type"
+        },
+        "ours": "Ours",
+        "others": "Others",
+        "oursShare": "Ours {pct}%",
+        "typesAbsToggle": "Show our mention counts by type",
+        "positive": "Positive",
+        "neutral": "Neutral",
+        "negative": "Negative",
+        "mixed": "Mixed",
+        "type": {
+          "mention": "Mention",
+          "recommendation": "Recommendation",
+          "comparison": "Comparison",
+          "definition": "Definition",
+          "final_choice": "Final choice"
+        },
+        "sub": {
+          "positiveKeywords": "Positive keyword mentions",
+          "negativeKeywords": "Negative keyword mentions",
+          "def": {
+            "positiveKeywords": {
+              "definition": "Total positive sentiment signals attached to mentions of our brand. Counts signals, not answers.",
+              "formula": "Sum of positive sentiment signals on our brand's mentions (unit: signals)"
+            },
+            "negativeKeywords": {
+              "definition": "Total negative sentiment signals attached to mentions of our brand. Counts signals, not answers.",
+              "formula": "Sum of negative sentiment signals on our brand's mentions (unit: signals)"
+            }
+          }
+        },
+        "drilldownHint": "Click an item to see the prompts where this signal occurred, with the real AI answers."
+      },
+      "trend": {
+        "title": "Weekly brand mentions (own + top 10)",
+        "hint": "Weekly top-brand mention trend (current filters). Each week counts one latest answer per prompt x engine x country cell (same unit as the table); re-measurements within a week are not double-counted. A round that takes several days to finish still lands in the single week of its round date. If that week's round measured only part of the prompt set, the week reads lower by that much. The cards above sum every round in the period, so their totals can differ from this trend."
+      },
+      "prompts": {
+        "title": "Prompts & answers"
+      },
+      "table": {
+        "title": "Top Brands by Mention Count (top 100)",
+        "hint": "Sortable · row click expands sentiment / type breakdown + drilldown notice",
+        "empty": "No brands match the current filter",
+        "col": {
+          "rank": "Rank",
+          "brand": "Brand",
+          "mentions": "Mentions",
+          "share": "Share %",
+          "position": "Avg. position",
+          "prompts": "Prompts",
+          "rate": "Mention Rate",
+          "multiMentions": "Multi-mention count",
+          "multiRate": "Multi-mention rate"
+        },
+        "colDefinition": {
+          "rank": "Canonical rank by mention count. Re-sorting by other columns does not change each brand's rank.",
+          "mentions": "Total number of times this brand was mentioned across AI answers. Multiple mentions within the same answer are all counted.",
+          "share": "This brand's share of total brand mentions (Share of Voice) — its weight relative to competing brands.",
+          "position": "The average rank of this brand among the brands mentioned in each AI answer (non-competitor/noise brands excluded). Lower means it appeared earlier/more prominently; answers not mentioning this brand are excluded from the average.",
+          "prompts": "The number of distinct prompts in which this brand was mentioned at least once.",
+          "rate": "The percentage of all measured answers that mention this brand at least once.",
+          "multiMentions": "Sum of mentions in answers where this brand is mentioned 2+ times.",
+          "multiRate": "Share of measured answers where this brand is mentioned 2+ times in one answer."
+        },
+        "colFormula": {
+          "share": "This brand's mentions ÷ total brand mentions × 100",
+          "rate": "Answers mentioning this brand ÷ total measured answers × 100"
+        },
+        "multiToggle": "Multiple mentions",
+        "multiHint": "When on, only answers that mention the brand two or more times are counted: mentions, prompts and mention rate switch to that basis (share is relative to the multi-mention total).",
+        "multiUnavailable": "Items without multi-mention data show a dash."
+      },
+      "drilldown": {
+        "tabs": {
+          "prompts": "Prompts",
+          "citations": "Citation Sources"
+        },
+        "noPrompts": "No sample prompts for this brand",
+        "noCitations": "No sample cited domains for this brand",
+        "citationsLoading": "Loading citation sources…",
+        "citationsError": "Couldn't load citation sources",
+        "promptsLoading": "Loading prompts…",
+        "promptsError": "Couldn't load prompts",
+        "positive": "Positive",
+        "neutral": "Neutral",
+        "negative": "Negative",
+        "sources": "Sources",
+        "position": "Avg. position {value}",
+        "col": {
+          "prompt": "Prompt",
+          "mentions": "Mentions",
+          "share": "Share %",
+          "volume": "Volume",
+          "funnel": "Funnel",
+          "providers": "Providers",
+          "domain": "Domain",
+          "category": "Category",
+          "citationsCount": "Citations",
+          "urls": "URLs",
+          "promptsCount": "Prompts",
+          "rank": "Rank"
+        },
+        "colDefinition": {
+          "mentions": "Total number of times this brand was mentioned in this specific prompt.",
+          "share": "What share of this brand's TOTAL mentions came from this prompt — a different denominator than the brand ranking table's \"Share %\" (Share of Voice vs. other brands). Here it's this prompt's weight within this one brand's own mentions.",
+          "rank": "Best (lowest) position the brand appeared at across this prompt's answers. A dash when no position data."
+        },
+        "colFormula": {
+          "share": "This prompt's mentions of the brand ÷ this brand's total mentions × 100"
+        },
+        "funnel": {
+          "awareness": "Awareness",
+          "consideration": "Consideration",
+          "purchase": "Purchase"
+        },
+        "type": {
+          "mention": "Mention",
+          "recommendation": "Recommendation",
+          "comparison": "Comparison",
+          "information": "Information",
+          "definition": "Definition"
+        },
+        "top3": "Mentioned in TOP 3",
+        "top3Badge": "TOP 3"
+      },
+      "answerModal": {
+        "eyebrow": "AI answer",
+        "title": "Real AI answer mentioning {brand}",
+        "titleCitation": "The real AI answer for this prompt",
+        "mentionsInAnswer": "{count} mention(s) here",
+        "citationsInAnswer": "{count} citation(s) here",
+        "position": "Rank {n}",
+        "sourcesTitle": "Cited sources",
+        "measuredOn": "Measured {date}",
+        "runsBadge": "{count} measurements in period",
+        "brandMentionsTitle": "Brand mentions",
+        "ownGroup": "HMG (own)",
+        "competitorGroup": "Competitors",
+        "modelMentionsTitle": "Related vehicle models",
+        "loading": "Loading answer…",
+        "loadError": "Couldn't load the answer. Please try again shortly.",
+        "noAnswer": "This answer body hasn't been synced yet. Check back after the next mirror sync.",
+        "detected": "Detected in this answer",
+        "legendTitle": "Highlights",
+        "legendBrand": "Brand",
+        "legendModel": "Related models",
+        "tableHint": "Click a prompt to view the real AI response with marker-pen highlights. (Mentions is summed across all AI engine answers, so it can differ from the highlights shown in a single answer.)",
+        "sentiment": {
+          "label": {
+            "positive": "Positive",
+            "negative": "Negative",
+            "mixed": "Mixed",
+            "neutral": "Neutral"
+          },
+          "assertion": "Claim",
+          "descriptors": "Descriptors",
+          "criteria": "Criteria",
+          "context": "Context as read by the analyzer",
+          "legendTitle": "Sentiment underline",
+          "unpainted": "{count} mention(s) hidden — position could not be verified in the answer text"
+        },
+        "stance": {
+          "tagTitle": "Answer-level brand stance",
+          "axisNote": "A stance assigned per brand after reading the whole answer — a different axis from the sentence-level sentiment underline.",
+          "label": {
+            "positive": "Positive",
+            "negative": "Negative",
+            "mixed": "Mixed",
+            "neutral": "Neutral"
+          },
+          "evidenceTitle": "Supporting quote",
+          "evidenceVerified": "Quote verified against the answer text",
+          "reasonTitle": "Why",
+          "own": "Ours",
+          "turn": "Turn {n}",
+          "evidenceMismatch": "This quote was not found in the answer text",
+          "evidenceUnavailable": "The text for this turn is unavailable — not verified"
+        }
+      },
+      "def": {
+        "missingPrompts": {
+          "definition": "Number of measured prompts where our brand appears in none of the answers. A mention on any single engine counts as mentioned.",
+          "formula": "Prompts with no mention of our brand (unit: prompts)"
+        },
+        "multiMention": {
+          "definition": "Answers where our brand is mentioned two or more times — how often the brand is discussed repeatedly rather than in passing. Sums every measurement cycle inside the selected period.",
+          "formula": "Answers with total brand mentions >= 2 (unit: answers)"
+        },
+        "top3Rate": {
+          "definition": "Share of answers mentioning our brand where the mean exposure rank of our brand is 3.0 or lower. Based on the mean exposure rank, not literal 'top 3'.",
+          "formula": "Answers with mean exposure rank <= 3.0 / answers mentioning our brand x 100 (%)"
+        },
+        "total": {
+          "definition": "Total brand and model mentions counted across AI answers in the current filter scope. Sums every measurement cycle inside the selected period.",
+          "formula": "Sum of brand/model mention counts in answers (unit: mentions)"
+        },
+        "uniqueBrands": {
+          "definition": "Number of brands with at least one mention. Spelling and language variants are folded into one canonical name.",
+          "formula": "Count of unique mentioned brands (unit: brands)"
+        },
+        "totalPrompts": {
+          "definition": "Number of prompts with collected AI answers in the current filter scope.",
+          "formula": "Count of unique measured prompts (unit: prompts)"
+        }
+      },
+      "signalDrilldown": {
+        "title": "Prompts with the “{signal}” signal",
+        "hint": "Prompts where this signal was attached to a mention of our brand. Click a row to read the actual AI answer. (Top 50 by signal count)",
+        "loading": "Loading prompts…",
+        "error": "Could not load the list. Please try again shortly.",
+        "empty": "No prompts carry this signal under the current filters.",
+        "signalCount": "{count} signals",
+        "engines": "{count} engines"
+      },
+      "kpi": {
+        "tabsAria": "KPI tabs",
+        "tabs": {
+          "exposure": "AI Exposure",
+          "sov": "AI Share of Voice",
+          "favorability": "AI Favorability",
+          "first-rank": "AI First-Rank Exposure"
+        },
+        "pending": "This KPI view is not available yet — coming in a later step",
+        "degraded": "This section's aggregation did not finish in time and is hidden (other figures are unaffected)",
+        "metric": {
+          "exposure": "AI Exposure",
+          "sov": "AI Share of Voice"
+        },
+        "hero": {
+          "coverage": "Measurement coverage",
+          "coverageItem": "{date} · {days} day(s) measured",
+          "deltaBasis": "▲▼ Change compares the period cumulative total against the total as of the first measurement in range ({date}).",
+          "deltaBasisCycle": "▲▼ Change compares against the previous round ({date}), computed from the same rollup and rule as the Overview card.",
+          "brandTrendNote": {
+            "exposure": "Exposure rate (%) by brand — the weekly top-brand chart below plots mention counts (absolute), a different measure.",
+            "sov": "Share of voice (%) by brand — the weekly top-brand chart below plots mention counts (absolute), a different measure."
+          },
+          "coverageDays": "{days}d measured"
+        },
+        "tooltip": {
+          "exposureNumerator": "Answers mentioning the brand",
+          "exposureDenominator": "Monitored answers",
+          "sovNumerator": "Our brand mentions",
+          "sovDenominator": "All brand mentions",
+          "wow": "WoW",
+          "count": "{n}"
+        },
+        "competitor": {
+          "title": "Competitor analysis ({metric})",
+          "hint": {
+            "exposure": "Share of AI answers where the brand appears. Values are the measurement-date snapshot; trend and change come from cycle aggregates. A round that takes several days to finish still lands in the single week of its round date.",
+            "sov": "Share of all brand mentions held by each brand. Values are the measurement-date snapshot; trend and change come from cycle aggregates. A round that takes several days to finish still lands in the single week of its round date."
+          },
+          "select": "Select competitor",
+          "selectAll": "All",
+          "empty": "No comparable brand data",
+          "ownDonutLabel": "Ours",
+          "ownLegend": "{brand} (ours)",
+          "restLegend": "Others",
+          "col": {
+            "brand": "Brand",
+            "trend": "Trend (weekly, {n} cycles)",
+            "delta": "Change",
+            "gap": "Gap vs. ours"
+          },
+          "ownSet": "Ours ({n} brands)",
+          "coverage": "Trend axis: {cycles} cycles ({measured} measured)",
+          "coverageWithGaps": "Trend axis: {cycles} cycles · {measured} measured · {missing} missing (missing cycles break the line)",
+          "notInSeries": "no trend",
+          "notInSeriesHint": "\"no trend\" means the brand is outside the trend series (top 10 plus our brands), so no cycle trend was computed — it does not mean there were no measurements.",
+          "selectedCount": "{n} selected",
+          "search": "Search brands",
+          "noMatch": "No matching brand",
+          "donutRelativeNote": "Slice sizes are relative weights among the selected brands — exposure is a per-brand appearance rate, so brand values do not add up to 100%. The centre value is still our combined exposure."
+        },
+        "engine": {
+          "title": {
+            "exposure": "Exposure by AI engine",
+            "sov": "Share of voice by AI engine"
+          },
+          "hint": {
+            "exposure": "Own vs. competitor-average exposure rate by AI engine. This section always shows ours and the competitor average only, independently of competitor picks elsewhere.",
+            "sov": "Share of all brand mentions by AI engine. This section always shows ours and the competitor average only, independently of competitor picks elsewhere."
+          },
+          "engineLabel": "AI engine",
+          "all": "All",
+          "empty": "No per-engine measurements",
+          "competitorAvg": "Competitor avg.",
+          "competitorAvgWithCount": "Competitor avg. (top {n})",
+          "own": "Own"
+        },
+        "type": {
+          "title": {
+            "exposure": "Exposure by mention type",
+            "sov": "Share of voice by mention type"
+          },
+          "hint": {
+            "exposure": "Compare our brand's exposure within each mention type against the overall exposure rate.",
+            "sov": "Compare our share against competitors within each mention type, against the overall share."
+          },
+          "ownOnly": "Ours only",
+          "withOthers": "Include others",
+          "own": "Ours",
+          "other": "Others",
+          "ownValue": "Ours {pct}",
+          "denominator": {
+            "own": {
+              "exposure": "Denominator = all answers (our signals only)",
+              "sov": "Denominator = sum of our type signals (composition across types)"
+            },
+            "all": {
+              "exposure": "Denominator = all brand signals of that type (composition, 100%)",
+              "sov": "Denominator = all brand signals of that type (composition, 100%)"
+            }
+          },
+          "signalNote": "Counts are sums of the five type signals — not total mentions (a mention carrying several type signals is counted in each). Read composition within a type only; do not sum across types.",
+          "comboNote": "The five lines on the right are per-type exposure trends (mention, recommendation, comparison, definition, final choice). Cycles without measurements leave a break in the line.",
+          "answers": "Monitored answers",
+          "empty": "No per-type measurements",
+          "otherValue": "Others {pct}",
+          "competitorValue": "{brand} {pct}",
+          "competitorAll": "Pick a competitor",
+          "stackNote": "With others, the bar is a composition within that type — ours, the selected competitor and the rest add up to 100%. On both tabs the composition is based on type signal counts (per-brand answer counts are not in the source data).",
+          "total": "Total",
+          "showCounts": "Show own mention counts by type",
+          "showPct": "Show ratios",
+          "signals": "{n}",
+          "chips": "Mention type",
+          "favorability": "AI favorability",
+          "firstRank": "AI first exposure",
+          "noteTitle": "How to read type figures"
+        },
+        "overview": {
+          "title": "Measurement overview",
+          "applied": "Prompts in filter",
+          "measured": "Measured prompts",
+          "unmeasured": "Unmeasured prompts",
+          "unit": "{n}",
+          "measuredConditional": "Measured under these filters",
+          "conditionalNote": "Country / engine / date filters are active, so \"in filter − measured\" cannot be read as unmeasured (those axes change whether a measurement exists, not which prompts are in the catalog).",
+          "asOf": "As of",
+          "appliedLinkAria": "Open prompt list",
+          "unmeasuredDialog": {
+            "open": "Show unmeasured prompts",
+            "title": "Unmeasured prompts",
+            "description": "{n} applied prompts with no answer in this as-of snapshot",
+            "descriptionLoading": "Applied prompts with no answer in the snapshot",
+            "loading": "Loading…",
+            "error": "Failed to load the list",
+            "empty": "No unmeasured prompts",
+            "truncated": "Showing {shown} of {total}",
+            "col": {
+              "prompt": "Prompt",
+              "taxonomy": "Taxonomy",
+              "funnel": "Funnel"
+            }
+          }
+        },
+        "favorability": {
+          "positiveTitle": "Positive signal share",
+          "negativeTitle": "Negative signal share",
+          "trendPositive": "Positive AI answers (favorability)",
+          "trendNegative": "Negative AI answers",
+          "tooltipPositiveCount": "Our positive signals",
+          "tooltipTotalCount": "Our total signals",
+          "trendNote": "Shares are based on sentiment signals attached to our mentions (mention level) — the positive share uses the same formula as the dashboard AI favorability.",
+          "dist": {
+            "title": "Sentiment distribution",
+            "hint": "Composition of sentiment signals attached to our brand mentions (mention level).",
+            "empty": "No sentiment signal data",
+            "clickHint": "Click an item to see the prompts and the actual AI answers.",
+            "signals": "{n} signals"
+          },
+          "matrix": {
+            "title": "Sentiment by mention type",
+            "hint": "Compares the sentiment mix of our mentions by mention type. The figure on the right is the positive share for that type.",
+            "all": "All",
+            "positiveCol": "Positive",
+            "showCounts": "Show our counts by type",
+            "showPct": "Show shares",
+            "empty": "No sentiment-by-type data",
+            "note": "Based on the sum of type signals — one mention can carry several type signals, so totals may differ from the sentiment distribution.",
+            "count": "{n}",
+            "noteTitle": "Why totals differ"
+          },
+          "axis": {
+            "occurrence": "Occurrence level",
+            "answer": "Answer level"
+          },
+          "stance": {
+            "title": "Brand stance distribution",
+            "hint": "A stance toward our brands assigned after reading each whole answer (answer × brand). The counting unit differs from the sentiment distribution above.",
+            "empty": "No answers have a stance under these filters",
+            "pendingNote": "Answer-level brand stance has not been collected yet — it will appear here once collection starts.",
+            "pairs": "{n} answer × brand pairs"
+          },
+          "negativeBasisNote": "The negative rate uses a different basis: positive comes from the round rollup, negative from the cumulative rollup. The two do not necessarily add up to 100%."
+        },
+        "firstRank": {
+          "title": "AI first-appearance rank",
+          "unit": "#{n}",
+          "hint": "Shows, on average, where each brand ranks among the brands mentioned in an AI answer.",
+          "formula": "Formula: in each answer, brands are ranked by the order in which they are first mentioned (1st = mentioned first), and those ranks are averaged. Lower means mentioned earlier.",
+          "deltaBasis": "▲▼ Change is the average-rank difference vs. the previous cycle. Negative (moving up) is an improvement.",
+          "noRank": "No data",
+          "rankedAnswers": "{n} ranked answers",
+          "chartAxis": "Rank",
+          "chartNote": "The y-axis is reversed so #1 is at the top. Cycles without measurement break the line.",
+          "topPct": "Top {pct}%",
+          "table": {
+            "order": "Order",
+            "brand": "Brand",
+            "rank": "Average position",
+            "avgPosition": "Average position bar",
+            "trend": "Trend (weekly, {n} cycles)",
+            "wow": "WoW",
+            "ladderToggle": "Ladder view",
+            "competitor": "Select competitor",
+            "all": "All",
+            "selectedCount": "{n} selected",
+            "search": "Search brands",
+            "noMatch": "No matching brand",
+            "limitHint": "You can select up to {n} competitors.",
+            "empty": "No rank data"
+          },
+          "tooltipRankedAnswers": "Ranked answers {n}",
+          "ladderCard": "By rank",
+          "formulaTitle": "Formula"
+        },
+        "degradedTrend": "Only the trend aggregation for this section timed out — the figures on the left are unaffected",
+        "metricShort": {
+          "exposure": "Exposure",
+          "sov": "SOV"
+        }
+      }
+    },
+    "citations": {
+      "description": "Which sources AI cites as evidence. Source: citation_analysis (Category → Subcategory → Domain → URL tree)",
+      "asOf": "As of {date}",
+      "baseSplit": {
+        "title": "Prompt split by owned base URL",
+        "hint": "Within the current citation data, split prompts into those that cited an owned base URL at least once and those that did not.",
+        "ownedTitle": "Prompts citing owned bases",
+        "ownedDescription": "Prompts where at least one owned base URL citation was found",
+        "uncitedTitle": "Prompts without owned-base citations",
+        "uncitedDescription": "Prompts that had citations, but none to an owned base URL",
+        "uncitedEmpty": "No uncited prompts in the current filter set",
+        "empty": "No prompts to show",
+        "citations": "{count} citations",
+        "providers": "{count} providers",
+        "more": "{count} more prompts",
+        "def": {
+          "definition": "Summing every measurement round in the selected period, prompts are split by whether any cited source matches an owned base URL. Each list shows the top 5 by citation count; the badge is the group total. 'Citations' counts all sources cited by that prompt's answers, not only owned ones.",
+          "formula": "Split: owned base URL cited or not · List: top 5 by citation count (desc)"
+        }
+      },
+      "summary": {
+        "total": "Total Citations",
+        "uniqueDomains": "Unique Domains",
+        "categories": "Categories",
+        "officialShare": "Official (HMG) share",
+        "officialOwnShare": "Official (own brand) share",
+        "dealerShare": "Dealer & marketplace share",
+        "def": {
+          "officialOwnShare": {
+            "definition": "Share of all citations attributed to your own brand's official sites. The own-site set follows the current brand scope (permissions + filters); for projects it resolves as configured owned bases → project domain → brand×country catalog — the same judgment as the dashboard official-site citation KPI. The Official (HMG) slice in the source-category chart counts every HMG official site, so the two can differ.",
+            "formula": "Citations matched to our official sites / all citations x 100 (counted by citations, not domains)"
+          },
+          "ownedHitRate": {
+            "definition": "Share of measured prompts that cite an owned URL (the registered base address and its sub-pages, target URLs included) at least once. Judged per prompt, so its denominator differs from the answer-level citation metrics; it shares the same denominator as the Target URL Hit Rate beside it (owned is a superset of target). The Official Citation Rate in the published citation reports is answer-level, so its denominator differs from this one. Not computed while a source-category filter is active (the classification is derived per citation and cannot be combined with prompt-level judgment).",
+            "formula": "Prompts citing an owned URL / measured prompts x 100 (multiple citations within one prompt count once)"
+          },
+          "targetHitRate": {
+            "definition": "Share of measured prompts whose own designated target page was actually cited. It asks whether the intended page was reached, not merely whether the site was cited. Judged per prompt, so its denominator differs from the answer-level citation metrics; it matches the Target URL Hit Rate in the published citation reports. A hit requires the addresses to be identical after normalization (protocol, www, trailing slash and tracking parameters removed) — the same rule the reports use. Not computed while a source-category filter is active (the classification is derived per citation and cannot be combined with prompt-level judgment).",
+            "formula": "Prompts whose target URL was cited / measured prompts x 100 (a hit on another prompt's target does not count)"
+          }
+        },
+        "ownedHitRate": "Owned URL Citation Rate",
+        "targetHitRate": "Target URL Hit Rate",
+        "reportTruth": {
+          "published": "Published value from the customer report ({cycle}). Based on the published set of {sites} sites, so the denominator can differ from the dashboard-wide aggregate.",
+          "live": "Live aggregate. This filter combination is outside the published report, so the dashboard value is shown."
+        }
+      },
+      "trend": {
+        "title": "Weekly citations — top 10 domains",
+        "hint": "Weekly top-domain citation trend (current filters) — each week counts one latest answer per prompt x engine x country cell, so re-measurements within a week are not double-counted. The cards above sum every round in the period, so their totals can differ from this trend."
+      },
+      "categoryTrend": {
+        "title": "Source category composition over time",
+        "hint": "Weekly citation-source category mix (100% stacked · reflects current filters)"
+      },
+      "engineCategory": {
+        "title": "Source categories by engine",
+        "hint": "Which source types each AI engine cites (100% stacked)"
+      },
+      "table": {
+        "title": "Domains",
+        "hint": "Sortable · domain row expand reveals URL list (per-URL citations / prompt)",
+        "empty": "No domains match the current filter",
+        "col": {
+          "rank": "#",
+          "domain": "Domain",
+          "category": "Category",
+          "citations": "Citations",
+          "share": "Share %",
+          "prompts": "Prompts",
+          "coverage": "Coverage Rate"
+        },
+        "colDefinition": {
+          "citations": "Total number of times AI answers cited this domain — a domain cited more than once within a single answer adds to the total.",
+          "share": "This domain's share of all domain citations combined.",
+          "prompts": "The number of distinct prompts whose answers cited this domain — a prompt measured across multiple AI engines still counts once.",
+          "coverage": "The share of all measured answers that cited this domain at least once."
+        },
+        "colFormula": {
+          "citations": "Sum of citation events for this domain",
+          "share": "This domain's citations ÷ total citations across all domains × 100 (unit: %)",
+          "prompts": "Distinct prompt count among the answers that cited this domain",
+          "coverage": "Distinct answers that cited this domain ÷ total measured answers × 100 (unit: %)"
+        }
+      },
+      "drilldown": {
+        "noUrls": "Individual URLs are not provided for this domain because its citation count is low. URL details are shown only for the most-cited domains.",
+        "noUrlsOfficial": "No cited URLs for this domain yet.",
+        "noPrompts": "No prompts cited this domain",
+        "promptsTopOnly": "Prompt lists are provided only for the most-cited domains.",
+        "cites": "cites",
+        "placeholder": "Prompt list will arrive once domain-prompts / prompt-details / url-prompts APIs are wired."
+      },
+      "pie": {
+        "categoryTitle": "Citations by Category",
+        "subcategoryTitle": "Subcategories",
+        "hint": "Click a slice to update the right pie with that category's subcategories",
+        "clickHint": "Click a slice to filter by that category (click again to clear)",
+        "officialCenter": "Official (HMG)"
+      },
+      "precondition": "Prereq: \"Analyze Citations\" must be run from Overview first. Empty data shows guidance only.",
+      "siteCountry": "Cited site country",
+      "v2": {
+        "chips": {
+          "label": "Domain category",
+          "all": "All",
+          "hint": "Pick several categories. All = no filter."
+        },
+        "competitor": {
+          "label": "Competitor",
+          "all": "Default: all",
+          "disabledHint": "Available only when the Official (Competitor) category is included",
+          "scopeNote": "The competitor selection applies only to the source-category breakdown and the citation domain table.",
+          "hint": "Keeps only citations of the selected competitors' official domains"
+        },
+        "overview": {
+          "totalCitations": "Total citations",
+          "uniqueDomains": "Cited domains"
+        },
+        "status": {
+          "title": "Citation status",
+          "hint": "See how much each source class accounts for.",
+          "officialOwn": "Official (HMG) citation share",
+          "dealer": "Dealer & marketplace share",
+          "ownedPrompts": "Prompts citing an official (own) URL",
+          "uncitedPrompts": "Prompts not citing an official (own) URL",
+          "requiresOwn": "Available only when the Official (HMG) category is included",
+          "deltaBasisOwn": "▲▼ Change in the official (own) citation share compares the period cumulative total against the total as of the first measurement in range ({date}).",
+          "deltaBasisOwnRound": "▲▼ Change in the Official (HMG) citation share follows the same rule as the Overview card: the difference between the previous round ({date}) and the round before it. The number above is the period cumulative, so subtracting the change does not give the previous round's value.",
+          "deltaBasisCategory": "▲▼ Changes in the dealer share and source categories compare against the previous round ({date}). No change is shown when there is no previous round."
+        },
+        "categoryStatus": {
+          "title": "By source category",
+          "hint": "See how much each source class accounts for.",
+          "countsTitle": "Citations by source category",
+          "shareTitle": "Citation share",
+          "officialCenter": "Official"
+        },
+        "typeCategory": {
+          "title": "Source categories by mention type",
+          "hint": "Composition (100%) of the sources cited by answers whose mention of our brand carries each type signal. Answers with several type signals count in each.",
+          "officialValue": "Official {pct}",
+          "empty": "No source-by-type data"
+        },
+        "tone": {
+          "title": "Cited domains by answer sentiment",
+          "hint": "See which domains positive and negative answers cite.",
+          "positive": "URLs cited in positive answers",
+          "negative": "URLs cited in negative answers",
+          "note": "Tone = comparison of positive vs. negative signals on our mentions within the answer (ties excluded). Based on all citations regardless of the category filter."
+        },
+        "domainsHeading": "Cited domains",
+        "drilldownTabs": {
+          "urls": "Cited URLs ({n})",
+          "prompts": "Prompts",
+          "promptsCaption": "Click a prompt to open the actual AI answers with highlights. Citations = times this domain was cited for that prompt; share = its portion of all citations of this domain."
+        },
+        "promptsPage": {
+          "title": "Prompts citing official domains",
+          "description": "Within the current citation data, see which prompts cited an official (own) domain URL at least once and which did not, to find strengths and opportunities.",
+          "ownedTab": "Citing prompts ({n})",
+          "uncitedTab": "Non-citing prompts ({n})",
+          "search": "Prompt",
+          "range": "{from}–{to} of {total}",
+          "col": {
+            "prompt": "Prompt",
+            "citations": "Citations",
+            "funnel": "Funnel",
+            "providers": "AI engine"
+          },
+          "empty": "No prompts match",
+          "back": "Back to citation analysis"
+        },
+        "toneUrlsPage": {
+          "title": "URLs cited in positive / negative answers",
+          "description": "Cited URLs and domains by answer sentiment.",
+          "positiveTab": "Cited in positive answers ({n})",
+          "negativeTab": "Cited in negative answers ({n})",
+          "search": "Search cited URLs",
+          "byDomain": "Group by domain",
+          "range": "{from}–{to} of {total}",
+          "col": {
+            "domain": "Domain",
+            "url": "URL"
+          },
+          "cites": "{n} citations",
+          "empty": "No URLs match",
+          "back": "Back to citation analysis"
+        },
+        "subpageSearch": {
+          "submit": "Search"
+        },
+        "pager": {
+          "prev": "Previous",
+          "next": "Next",
+          "page": "{page} / {pages}"
+        }
+      }
+    },
+    "exportCsv": "Export CSV",
+    "exportExcel": "Export Excel",
+    "pageSubtitle": "{tab} - {description}"
+  },
+  "aiFunnelView": {
+    "visibility": {
+      "quadrant": {
+        "star": "Star",
+        "starHint": "SEO ↑ · AI exposure ↑ — keep",
+        "seoGap": "SEO Gap",
+        "seoGapHint": "AI sees but search is weak",
+        "aiGap": "AI Gap",
+        "aiGapHint": "People find but AI doesn't",
+        "deadZone": "Dead Zone",
+        "deadZoneHint": "Both weak"
+      },
+      "scatter": {
+        "title": "4-quadrant scatter (quantile-based)",
+        "hint": "X = SEO impressions, Y = AI bot crawls · dashed = median",
+        "x": "SEO impressions",
+        "y": "AI crawls",
+        "medianX": "SEO median",
+        "medianY": "AI median",
+        "pages": "Pages"
+      },
+      "table": {
+        "title": "Page diagnostics",
+        "col": {
+          "url": "URL",
+          "seo": "SEO impressions",
+          "ai": "AI crawls",
+          "quadrant": "Quadrant",
+          "priority": "Priority"
+        }
+      }
+    },
+    "acr": {
+      "pillsLabel": "ACR by brand",
+      "kpi": {
+        "top1": "Top1 ACR",
+        "top1Hint": "Selected as #1 ratio",
+        "top5": "Top5 ACR",
+        "top5Hint": "Appeared in Top 5 ratio",
+        "answers": "Answers",
+        "answersHint": "Total answers in period",
+        "rank1": "#1 count",
+        "rank1Hint": "Our brand ranked 1st"
+      },
+      "trend": {
+        "title": "ACR trend — Us vs Top 3 competitors",
+        "hint": "Daily Top1 ACR (%) line"
+      },
+      "battle": {
+        "title": "Battle Grid",
+        "hint": "Winner brand per prompt × model cell (our brands highlighted)",
+        "col": {
+          "prompt": "Prompt"
+        },
+        "showMore": "Show {count} more",
+        "showLess": "Collapse"
+      },
+      "modelConversion": {
+        "title": "Model conversion — conversion rate by vehicle",
+        "hint": "Probability of becoming #1 once shortlisted = top1 / shortlist",
+        "col": {
+          "brand": "Brand",
+          "model": "Model",
+          "conv": "Conv.",
+          "bar": "",
+          "shortlist": "Shortlist",
+          "top1": "Top1"
+        }
+      },
+      "territory": {
+        "title": "Territory map (battle grid)",
+        "hint": "Per language × AI model sheet: winning brand across prompts (rows) × 10 iterations (cols)",
+        "iterations": "Iterations 1–10",
+        "dominant": "Dominant",
+        "noChoice": "No choice"
+      },
+      "def": {
+        "top1": {
+          "title": "Top1 ACR (choice rate)",
+          "definition": "When the same question is asked to the AI many times, the share of times it recommends your brand as the #1 pick. Measures how far you get inside the answer — all the way to the final choice.",
+          "formula": "Final-choice rounds ÷ total rounds"
+        },
+        "coverage": {
+          "title": "Shortlist coverage",
+          "definition": "The share of questions where your brand made the recommendation shortlist at least once — even without being the final pick. Measures whether you get on the list at all.",
+          "formula": "Questions where the brand appeared ÷ total questions"
+        },
+        "conversion": {
+          "title": "Conversion rate (shortlist → pick)",
+          "definition": "Once your brand is on the shortlist, how often it converts to the final #1 recommendation. Measures the shortlist → final-pick step.",
+          "formula": "Final choices ÷ rounds where the brand appeared"
+        }
+      }
+    },
+    "conversion": {
+      "period": {
+        "label": "Window",
+        "days": "{days}d"
+      },
+      "kpi": {
+        "ai": "AI conv rate",
+        "human": "Human rate (same-page)",
+        "lift": "Lift",
+        "liftHint": "AI − Human (pp)",
+        "users": "active users",
+        "frac": "{events} events · {users} users",
+        "aiRateNote": "Rate = conversion events ÷ active users. A single user converting more than once can push this past 100%."
+      },
+      "trend": {
+        "title": "Conversion rate · Visits trend",
+        "hint": "Same-page cohort comparison (left: conversion %, right: visits) — a low bar means a small sample, so that day's rate can swing widely.",
+        "aiLabel": "AI conversion",
+        "humanLabel": "Human conversion",
+        "visitsLabel": "Visits"
+      },
+      "engineBreakdown": {
+        "title": "AI model (engine) breakdown",
+        "hint": "Summed over the selected window. An engine with few active users can show an unstable rate.",
+        "col": {
+          "rate": "Conv. rate",
+          "users": "Active users"
+        },
+        "lowSample": "Low sample"
+      },
+      "table": {
+        "title": "Per-page conversion",
+        "hint": "Positive Lift = AI converts better",
+        "col": {
+          "url": "URL",
+          "aiUsers": "AI active users",
+          "humanUsers": "Human active users",
+          "aiRate": "AI rate",
+          "humanRate": "Human rate",
+          "lift": "Lift"
+        }
+      },
+      "coverage": "{measured} of {total} markets measured — the aggregate KPI is an active-user-weighted sum over measured markets only. Key event mixes differ per market, so this single number is indicative.",
+      "countries": {
+        "title": "AI conversion by country",
+        "hint": "Negative Lift = AI converts less than the rest of that market.",
+        "col": {
+          "country": "Country"
+        }
+      },
+      "unmapped": {
+        "title": "{brand} {country} is not yet wired to GA4",
+        "description": "AI traffic conversion needs a per-market GA4 property. Ask the ops team for the GA4 property id and to grant viewer access to 'geo-ops@example.com'.",
+        "settingsCta": "Connect GA4 in project settings"
+      },
+      "pending": {
+        "title": "{brand} {country} — measurement data accumulating",
+        "description": "GA4 is connected, but there's no AI-traffic data to show yet. The 'AI Assistant' channel started fairly recently and data is still accumulating. Please check back later.",
+        "descriptionFiltered": "No AI-traffic data matches the selected filters. Try narrowing fewer axes or clearing them."
+      },
+      "region": {
+        "summary": "{count} markets · AI {ai}% · Human {human}% · Lift {lift}pp"
+      },
+      "regionUnknown": "Other"
+    },
+    "visits": {
+      "title": "AI-referred site visits",
+      "subtitle": "Visit volume from AI models (ChatGPT, Gemini, Claude, …) — the inflow size, repeat rate, and entry pages the conversion-rate core KPI can't show.",
+      "kpi": {
+        "visits": "Visits",
+        "visitsHint": "AI-referred sessions (incl. repeats)",
+        "visitors": "Unique visitors",
+        "visitorsHint": "Deduplicated users",
+        "frequency": "Visit frequency",
+        "frequencyHint": "Visits ÷ unique visitors (repeat intensity)"
+      },
+      "unit": {
+        "visits": "",
+        "users": ""
+      },
+      "trend": {
+        "title": "Visits trend",
+        "hint": "Daily AI-referred sessions"
+      },
+      "table": {
+        "title": "Visits by entry page",
+        "hint": "Landing page where AI traffic first arrived (top by visits)",
+        "col": {
+          "url": "Entry page",
+          "sessions": "Visits",
+          "users": "Unique visitors"
+        }
+      }
+    },
+    "acrLive": {
+      "empty": {
+        "title": "Awaiting ACR measurement",
+        "desc": "{count} prompts are tagged for ACR (2-turn choice measurement). This page fills with real data from the next measurement cycle."
+      },
+      "territoryHint": "Per region × engine sheet: distribution of final picks across a prompt's iterations (block count = choices; not iteration order)",
+      "territoryDistribution": "Choice distribution",
+      "measuredNote": "Latest cycle — {prompts} prompts · {promptRuns} cells (prompt×engine×region) · {iterations} iterations",
+      "brandTable": {
+        "hint": "Per-brand final choice rate (Top1 ACR) and shortlist coverage — see each column header's ⓘ for the full definition.",
+        "col": {
+          "brand": "Brand",
+          "bar": "",
+          "coverage": "Shortlist coverage",
+          "choices": "Final picks",
+          "appearances": "Mentions"
+        }
+      }
+    }
+  },
+  "aiFunnelVisibility": {
+    "title": "AI Visibility",
+    "subtitle": "AI bot crawls + search visibility (Star / SEO gap / AI gap / Dead zone)"
+  },
+  "aiFunnelAcr": {
+    "title": "ACR · AI Choice Rate (beta)",
+    "subtitle": "Share of AI answers picking the target brand as #1"
+  },
+  "aiFunnelConversion": {
+    "title": "AI Conversion (beta)",
+    "subtitle": "AI traffic conversion rate (GA4 ai_source cohort)",
+    "sampleNotice": {
+      "title": "About AI Conversion",
+      "line1": "By connecting Google Analytics, you can check the inflow and conversion rates of traffic from ChatGPT and Gemini.",
+      "line2": "The page you are currently viewing is a sample page showing data for the Kia Italy region."
+    }
+  },
+  "customerInterestGoogleKeywords": {
+    "title": "Google keywords",
+    "subtitle": "Search volume · trends · intent analysis",
+    "statusTitle": "Keyword connection status",
+    "empty": {
+      "title": "No global keywords registered",
+      "description": "Register keywords in Admin to show search volume, trend, and intent classification."
+    }
+  },
+  "customerInterestSocialScraping": {
+    "title": "Social Scraping",
+    "subtitle": "Community VoC · mentions · sentiment · intent analysis",
+    "statusTitle": "Collection source status",
+    "tabs": {
+      "table": "Table view",
+      "nodeMap": "Context map view"
+    },
+    "contextMap": {
+      "stat": {
+        "contexts": "Buyer contexts",
+        "conditions": "Purchase conditions",
+        "relations": "Relations",
+        "sources": "Sources",
+        "workers": "Sample"
+      },
+      "section": {
+        "contexts": "Buyer contexts",
+        "conditions": "Purchase conditions",
+        "combinations": "Combination patterns"
+      },
+      "perspective": {
+        "label": "Perspective",
+        "all": "All",
+        "buyer": "Buyer",
+        "seller": "Seller",
+        "neutral": "Neutral"
+      },
+      "legend": {
+        "context": "Buyer context group",
+        "contextLeaf": "Buyer context",
+        "condition": "Purchase condition group",
+        "conditionLeaf": "Purchase condition",
+        "drives": "Drives",
+        "combo": "Co-occurs",
+        "hint": "Select a node to reveal drives & combination links"
+      },
+      "badge": {
+        "buyer": "B",
+        "seller": "S",
+        "neutral": "N",
+        "deepEvidence": "DE"
+      },
+      "freq": {
+        "high": "High",
+        "medium": "Medium",
+        "low": "Low"
+      },
+      "physics": {
+        "button": "Physics",
+        "title": "Simulation controls",
+        "reset": "Reset",
+        "repulsion": "Repulsion (spread)",
+        "linkDistance": "Link distance",
+        "collide": "Node spacing",
+        "linkStrength": "Link strength",
+        "reheat": "Reheat",
+        "fit": "Fit view",
+        "hint": "Higher repulsion + spacing → more spread."
+      },
+      "detail": {
+        "sources": "sources",
+        "domains": "domains",
+        "clusters": "clusters",
+        "mentions": "mentions",
+        "perspective": "Perspective",
+        "drivenConditions": "Driven conditions",
+        "drivenByContexts": "Driven by contexts",
+        "evidence": "Evidence quotes",
+        "related": "Related conditions",
+        "sourcesByDomain": "Sources by domain",
+        "deepEvidence": "Deep evidence",
+        "scenario": "Scenario",
+        "coOccur": "Co-occur sources",
+        "overlapRate": "overlap rate",
+        "sourceUrls": "Source URLs",
+        "supporting": "supporting",
+        "contradicting": "contradicting",
+        "neutral": "neutral",
+        "buyer": "buyer",
+        "seller": "seller",
+        "scanned": "{n} sources scanned · confidence {c}",
+        "andMore": "and {n} more"
+      },
+      "tooltip": {
+        "sources": "{n} sources",
+        "mentions": "{n} mentions",
+        "drives": "drives {n} conditions",
+        "domains": "{n} domains",
+        "clusters": "{m}/{w} clusters",
+        "buyer": "{n} buyer",
+        "seller": "{n} seller",
+        "neutral": "{n} neutral",
+        "evidence": "Evidence",
+        "related": "Related",
+        "deepLinked": "Deep evidence linked"
+      }
+    },
+    "empty": {
+      "title": "No community sources registered",
+      "description": "Register target domains and channels in Admin to show VoC summaries."
+    }
+  },
+  "brandSelect": {
+    "all": "All brands",
+    "placeholder": "Select brand"
+  },
+  "customerInterest": {
+    "title": "Customer interest",
+    "subtitle": "Compare search demand and community response in one place, then identify signals that can become prompt candidates.",
+    "status": {
+      "pending": "Pending"
+    },
+    "tabs": {
+      "label": "Customer interest data",
+      "overview": {
+        "title": "Overview",
+        "description": "Read search and community signals together.",
+        "statusTitle": "Data connection status",
+        "statusDescription": "Market interest trends appear here once keywords and community sources are connected.",
+        "empty": {
+          "title": "No interest data connected",
+          "description": "Register keywords and community sources in Global config to aggregate search demand and VoC summaries here."
+        }
+      },
+      "keywords": {
+        "title": "Google keywords",
+        "description": "Track search volume and direction.",
+        "statusTitle": "Keyword connection status",
+        "statusDescription": "Search volume, movement, and intent labels appear once tracking keywords are registered.",
+        "empty": {
+          "title": "No global keywords registered",
+          "description": "Register keywords in Admin to show search volume, movement, and intent classification."
+        }
+      },
+      "community": {
+        "title": "Community collection",
+        "description": "Review mentions, sentiment, and purchase context.",
+        "statusTitle": "Collection source status",
+        "statusDescription": "Community VoC summaries appear once collection domains and channels are registered.",
+        "empty": {
+          "title": "No community sources registered",
+          "description": "Register collection domains and channels in Admin to show VoC summaries."
+        }
+      }
+    }
+  },
+  "projectDetail": {
+    "eyebrow": "PROJECT",
+    "back": "Back to projects",
+    "placeholderName": "Project #{id}",
+    "subtitle": "Working surface for one tracked brand / domain",
+    "tabs": {
+      "dashboard": "Dashboard",
+      "intent": "Intent",
+      "prompt": "Prompt",
+      "aiFunnel": "AI Agent Funnel",
+      "analysis": "Analysis",
+      "member": "Member"
+    },
+    "dashboard": {
+      "tiles": {
+        "prompts": "Prompts",
+        "candidates": "Candidate pool",
+        "members": "Active members",
+        "lastAi": "Last AI call"
+      },
+      "kpi": {
+        "title": "7 Core KPI — this project",
+        "description": "Same v25 KPI as the global dashboard, scoped to this project (sample data until backend lands)",
+        "pending": "Awaiting measurement data — KPIs appear here, scoped to this project, once scope measurements arrive.",
+        "pendingAggregation": "Measurement is complete. Results are aggregated on about a 20-minute cycle and will appear here automatically — please check back shortly.",
+        "notice": {
+          "hiddenMultipleOwnedBases": "Because there is more than one owned URL (your site's main address), 'AI target source citation rate' is not shown. The tracked-URL list is kept for detailed analysis.",
+          "legacyDomainFallback": "This metric is being calculated from a site address you entered earlier. Re-register the main address under Settings > Owned URL to keep it running smoothly."
+        }
+      },
+      "status": {
+        "title": "Prompt status breakdown",
+        "description": "{count} total · draft / queued / running / done / failed",
+        "empty": "No prompts registered yet"
+      },
+      "recentCandidates": {
+        "title": "Recent candidates",
+        "description": "Top 5 from the Intent pool",
+        "empty": "No candidates collected yet",
+        "cta": "Go to Intent"
+      },
+      "recentPrompts": {
+        "title": "Recent prompts",
+        "description": "Top 5 most recently changed (status badge)",
+        "empty": "No prompts registered yet",
+        "cta": "Go to Prompt"
+      },
+      "quickActions": {
+        "title": "Quick actions",
+        "description": "Jump to common workflows",
+        "intent": "Collect keywords / build candidates",
+        "prompt": "Add / run prompts",
+        "member": "Invite a member"
+      }
+    },
+    "intent": {
+      "title": "Intent — customer interest",
+      "subtitle": "Two independent tools — Google Keyword and Social Scraping",
+      "subTabs": {
+        "googleKeyword": "Google Keyword",
+        "socialScraping": "Social Scraping"
+      },
+      "googleKeyword": {
+        "title": "Google Keyword",
+        "keywordTabsLabel": "Keyword tabs",
+        "addKeyword": "Add keyword",
+        "range": {
+          "3m": "Last 3 months",
+          "6m": "Last 6 months",
+          "12m": "Last 12 months"
+        },
+        "trendTitle": "Interest trend",
+        "trendInfo": "Monthly Google search volume for this keyword. Data source: Google Ads monthly search volume. Shown as a relative index where the period's peak volume equals 100.",
+        "avgTitle": "Avg interest",
+        "avgInfo": "Average of the interest index over the displayed period. Data source: Google Ads monthly search volume.",
+        "compareSeries": "Compare",
+        "serpTitle": "Google Keyword-based prompt generation",
+        "appliedCount": "{count} applied",
+        "addSelected": "Send to candidate pool",
+        "regenerate": "Regenerate",
+        "loading": "Loading…",
+        "loadError": "Failed to load data",
+        "retry": "Retry",
+        "serpEmpty": "No search results",
+        "trendEmpty": "No trend data",
+        "apply": "Apply",
+        "suggested": "Suggested prompt",
+        "addToPrompt": "Send to candidate pool",
+        "addToPromptSuccess": "Added to candidate pool",
+        "addToPromptDone": "Already added",
+        "manage": "Related searches",
+        "delete": "Delete keyword",
+        "addKeywordPlaceholder": "Type a keyword, press Enter",
+        "confirmAdd": "Add",
+        "cancel": "Cancel",
+        "keywordAdded": "Keyword added",
+        "keywordDeleted": "Keyword deleted",
+        "keywordExists": "Keyword already added",
+        "enterSelect": "Select keywords",
+        "exitSelect": "Cancel selection",
+        "selectAllKeywords": "Select all",
+        "keywordsSelected": "{count} selected",
+        "deleteSelected": "Delete selected",
+        "deleteSelectedSuccess": "Deleted {count} keywords",
+        "removeSelected": "Remove selected",
+        "removeSelectedSuccess": "Removed {count} prompts from the list",
+        "removedCount": "{count} removed",
+        "restoreRemoved": "Undo remove",
+        "removeHint": "Removed prompts reappear when you regenerate",
+        "cannotDeleteLast": "At least one keyword is required",
+        "intent": {
+          "transactional": "Transactional",
+          "informational": "Informational",
+          "navigational": "Navigational",
+          "commercial": "Commercial"
+        },
+        "related": {
+          "title": "Related searches for {keyword}",
+          "found": "{count} keywords found",
+          "analysisComplete": "Analysis complete",
+          "colKeyword": "Keyword",
+          "colVolume": "Volume",
+          "colIntent": "Intent",
+          "languages": "{count} languages",
+          "add": "Add as keyword",
+          "added": "Added",
+          "addSelected": "Add selected",
+          "selected": "{count} selected",
+          "selectAll": "Select all",
+          "close": "Close",
+          "empty": "No related searches",
+          "loading": "Loading related searches…",
+          "error": "Failed to load related searches",
+          "expand": "Show sub-keywords"
+        },
+        "col": {
+          "titleUrl": "Title / URL",
+          "snippet": "Snippet"
+        },
+        "emptyState": {
+          "title": "No tracked keywords yet for this project",
+          "description": "Enter a keyword to search. Separate with commas to search several at once.",
+          "placeholder": "e.g. Ioniq 5, EV3, EV subsidy",
+          "searchButton": "Search",
+          "noResults": "No results found",
+          "relatedLabel": "Related keywords"
+        }
+      },
+      "socialScraping": {
+        "topic": "Topic",
+        "locationLabel": "Location",
+        "purposeLabel": "Research Purpose",
+        "purposeValue": "Purchase Context Exploration",
+        "viewMap": "View map",
+        "regenerate": "Regenerate",
+        "contextsTitle": "Buyer contexts",
+        "noContexts": "No results match the current filter",
+        "addToPrompt": "Add to prompt pool",
+        "addToPromptSuccess": "Added to candidate pool",
+        "addToPromptDone": "Already added",
+        "purchaseConditionsTitle": "Purchase Conditions",
+        "combinationPatternsTitle": "Combination Patterns",
+        "intentFilter": {
+          "all": "All",
+          "buyer": "Buyer",
+          "seller": "Seller",
+          "neutral": "Neutral"
+        }
+      }
+    },
+    "prompt": {
+      "title": "Prompt",
+      "subtitle": "Pick from candidates / add manually → classify → batch-call AI",
+      "candidates": {
+        "title": "Candidate pool",
+        "description": "Auto-collected from Intent (Google Keyword + Social Scraping)",
+        "empty": "No candidates yet",
+        "selectedCount": "{count} selected",
+        "apply": "Promote",
+        "applySuccess": "{count} promoted to working list",
+        "delete": "Delete candidate",
+        "deleteSuccess": "Candidate deleted",
+        "deleteSelected": "Delete selected",
+        "deleteSelectedSuccess": "Deleted {count} candidates",
+        "source": {
+          "google_keyword": "Google Keyword",
+          "social_scraping": "Social Scraping",
+          "manual": "Manual"
+        },
+        "sort": {
+          "label": "Sort",
+          "newest": "Newest first",
+          "oldest": "Oldest first",
+          "text": "A–Z",
+          "source": "By source"
+        }
+      },
+      "manual": {
+        "title": "Add manually",
+        "description": "Author a prompt that isn't in the candidate pool",
+        "label": "Prompt",
+        "placeholder": "e.g. Best family EV SUV for 2026?\nEnter one prompt per line to add multiple at once",
+        "add": "Add",
+        "success": "Prompt added",
+        "successCount": "{count} prompts added"
+      },
+      "list": {
+        "title": "Working list",
+        "description": "{count} total · classify, then batch-call",
+        "empty": "No working prompts yet",
+        "draftCount": "{count} ready to execute",
+        "execute": "Save + execute",
+        "delete": "Delete",
+        "deleteSuccess": "Deleted",
+        "bulk": {
+          "selectAll": "Select all",
+          "selectOne": "Select this prompt",
+          "selected": "{count} selected",
+          "tagPlaceholder": "Select tag",
+          "valuePlaceholder": "Enter value · reuse existing",
+          "apply": "Apply",
+          "clear": "Clear selection",
+          "applied": "Applied to {count} prompts",
+          "selectHint": "Select rows to bulk-apply a tag"
+        },
+        "categoryPlaceholder": "Category (e.g. model, region)",
+        "promptType": {
+          "comparison": "Comparison",
+          "recommendation": "Recommendation",
+          "information": "Information",
+          "other": "Other"
+        },
+        "status": {
+          "draft": "Draft",
+          "queued": "Queued",
+          "running": "Running",
+          "done": "Done",
+          "failed": "Failed",
+          "paused": "Paused"
+        },
+        "statusDescription": {
+          "draft": "Not run yet. Click \"Save + Run\" to move it to Queued and start the AI call.",
+          "queued": "Waiting for its AI call to start.",
+          "running": "The AI call and answer analysis are in progress.",
+          "done": "The AI call and answer analysis are complete — results now show up in Answer Analysis.",
+          "failed": "The AI call or analysis hit an error. No action is needed — scope automatically retries it on its next measurement cycle, and the status flips to \"Done\" on its own once that succeeds.",
+          "paused": "Measurement is paused on scope. Existing measurement history and dashboard figures are preserved; resuming picks up from the next measurement cycle."
+        },
+        "exportCsv": "Export CSV",
+        "noMatch": "No prompts match the current filters",
+        "filter": {
+          "all": "All",
+          "brand": "Brand",
+          "depth1": "Depth 1",
+          "funnelStage": "Funnel stage",
+          "listType": "List type",
+          "depth2": "Depth 2",
+          "depth3": "Depth 3",
+          "depth4": "Depth 4",
+          "category": "Category"
+        },
+        "addColumn": "Add tag column",
+        "col": {
+          "text": "Prompt",
+          "status": "Status",
+          "brand": "Brand",
+          "category": "Category"
+        },
+        "sort": {
+          "label": "Sort",
+          "default": "Default",
+          "byLabel": "By label",
+          "brand": "By brand",
+          "depth1": "By depth 1",
+          "funnelStage": "By funnel"
+        },
+        "confirm": {
+          "title": "Confirm execution",
+          "description": "This starts a batch AI call for {count} pending prompt(s). It cannot be undone and call usage will be counted. Continue?",
+          "cancel": "Cancel",
+          "execute": "Execute"
+        },
+        "lifecycle": {
+          "open": "Manage measurement",
+          "title": "Manage prompt measurement",
+          "loading": "Checking measurement history…",
+          "impact": "This prompt has {answers} answers · {mentions} mentions · {citations} citations of measurement history.",
+          "sharedWarning": "This prompt shares its measurement with {count} other rows. It cannot be paused individually; deleting removes only this row and preserves the shared history.",
+          "pauseHint": "Pausing stops future measurement only — history and metrics are preserved, and you can resume anytime.",
+          "resumeHint": "Resuming re-enables measurement from the next cycle.",
+          "pause": "Pause measurement",
+          "pausedToast": "Measurement paused. History is preserved.",
+          "resume": "Resume measurement",
+          "resumedToast": "Measurement resumed — effective from the next cycle.",
+          "hardDelete": "Delete permanently",
+          "confirmTitle": "Delete permanently?",
+          "confirmDescription": "This cannot be undone. All measurement history including {answers} answers will be deleted, retroactively changing past metrics (visibility, share of voice) for the affected period.",
+          "confirmDelete": "Delete permanently",
+          "back": "Go back",
+          "deletedToast": "Prompt and its measurement history were deleted",
+          "cancel": "Cancel"
+        }
+      },
+      "io": {
+        "export": "Export Excel",
+        "import": "Import Excel",
+        "importSummary": "Added {created} · Updated {updated} · Skipped {skipped}",
+        "tagsCreated": "{count} new tag(s) created automatically",
+        "moreWarnings": "{count} more warning(s)",
+        "importing": "Importing…",
+        "importStart": "Importing Excel…",
+        "guide": {
+          "trigger": "How to use",
+          "title": "Managing prompts with Excel",
+          "formatLabel": "File format",
+          "formatBody": "The first row (header) holds 'text' plus any tag names you want. You don't need an 'id' column — the system assigns it on save.",
+          "newLabel": "Adding new prompts",
+          "newBody": "Upload rows with no 'id', filling in 'text' (the prompt) and your tag columns, and new prompts are created. Any tag named in the file that doesn't exist yet is created automatically.",
+          "editLabel": "Editing existing items",
+          "editBody": "Export the current list first, then keep the 'id' as-is and change the values before re-uploading to update those items.",
+          "tagLabel": "Tags (custom labels)",
+          "tagBody": "Every column other than 'text' is treated as a tag — just put the tag name in the header (e.g. Priority, Region). Leaving a cell blank clears that tag's value.",
+          "notesLabel": "Notes",
+          "note1": "Rows whose text already exists — or is duplicated within the file — are skipped automatically.",
+          "note2": "Prompts already in measurement keep their text unchanged; only tags are applied.",
+          "tip": "New to this? Start by clicking 'Export Excel' to get the format.",
+          "close": "Close"
+        }
+      },
+      "customFields": {
+        "title": "Custom tags",
+        "description": "Create and manage tags specific to this project.",
+        "empty": "No custom tags yet",
+        "openButton": "New tag",
+        "labelLabel": "Tag name",
+        "labelPlaceholder": "e.g. Campaign",
+        "cancel": "Cancel",
+        "create": "Create tag",
+        "created": "Tag added",
+        "archived": "Archived",
+        "archiveButton": "Archive",
+        "restoreButton": "Restore",
+        "deleteButton": "Delete permanently",
+        "deleteDisabledHint": "Can't delete permanently while prompts still use it — archive instead",
+        "archivedToast": "Tag archived",
+        "restoredToast": "Tag restored",
+        "deletedToast": "Tag deleted",
+        "deleteConfirm": {
+          "title": "Delete tag column",
+          "description": "Delete the “{label}” tag? Every value assigned to it across all prompts will be deleted too, and this can't be undone.",
+          "cancel": "Cancel",
+          "confirm": "Delete"
+        }
+      }
+    },
+    "aiFunnel": {
+      "title": "AI Agent Funnel — this project",
+      "subtitle": "Visibility / ACR / Conversion (data contract pending)",
+      "subTabs": {
+        "visibility": "AI Visibility",
+        "acr": "ACR",
+        "conversion": "AI Conversion"
+      },
+      "visibility": {
+        "title": "AI Visibility",
+        "description": "AI bot crawls + search visibility (4-quadrant page health)"
+      },
+      "acr": {
+        "title": "ACR",
+        "description": "Share of AI answers picking this project's brand as #1"
+      },
+      "conversion": {
+        "title": "AI Conversion",
+        "description": "AI traffic conversion rate (GA4 ai_source cohort)"
+      }
+    },
+    "analysis": {
+      "title": "Analysis — Answer Analysis",
+      "subtitle": "This project's ① Brand Mentions + ② Citation Sources — same structure as the global analysis, scoped to this project",
+      "tabs": {
+        "mentions": "Brand Mentions",
+        "citations": "Citation Sources"
+      },
+      "customFieldFilter": {
+        "all": "All"
+      }
+    },
+    "member": {
+      "title": "Member",
+      "subtitle": "Owner invites Viewers by email — cancel / remove · Viewer is read-only",
+      "invite": {
+        "title": "Invite a member",
+        "description": "Existing users only · role fixed to Viewer",
+        "emailLabel": "Email",
+        "emailPlaceholder": "user@hmg.test",
+        "submit": "Invite",
+        "success": "Invite sent (console log)"
+      },
+      "list": {
+        "title": "Members",
+        "description": "{count} total",
+        "empty": "No members yet",
+        "unknownUser": "(unknown)",
+        "emailLabel": "Email",
+        "roleLabel": "Role",
+        "statusLabel": "Status",
+        "invitedAtLabel": "Invited",
+        "statusPending": "Pending",
+        "statusActive": "Active",
+        "cancel": "Cancel invite",
+        "remove": "Remove",
+        "cancelSuccess": "Invite cancelled",
+        "removeSuccess": "Member removed",
+        "promote": "Promote to Owner",
+        "demote": "Demote to Viewer",
+        "promoteSuccess": "Promoted to Owner",
+        "demoteSuccess": "Demoted to Viewer",
+        "lastOwnerError": "Cannot demote the last Owner",
+        "promoteConfirm": {
+          "title": "Promote to Owner?",
+          "description": "{email} will gain Owner privileges — invite/remove members, change roles, edit project settings, and delete the project.",
+          "confirm": "Promote"
+        },
+        "demoteConfirm": {
+          "title": "Demote to Viewer?",
+          "description": "{email} will be limited to Viewer access — can read project content but can no longer change members, prompts, or settings.",
+          "confirm": "Demote"
+        },
+        "confirmDialog": {
+          "cancel": "Cancel"
+        }
+      },
+      "audit": {
+        "title": "Recent member activity",
+        "description": "{count} entries — who invited/removed/promoted whom (last 20)",
+        "empty": "No activity recorded yet",
+        "unknownUser": "(unknown)",
+        "line": {
+          "invite": "{actor} invited {target}",
+          "cancel_invite": "{actor} cancelled {target}'s invite",
+          "remove": "{actor} removed {target}",
+          "promote": "{actor} promoted {target} to Owner",
+          "demote": "{actor} demoted {target} to Viewer",
+          "accept_self": "{actor} accepted the invite",
+          "reject_self": "{actor} rejected the invite"
+        }
+      }
+    },
+    "setting": {
+      "title": "Setting",
+      "subtitle": "General info · Tracked entities · Danger zone",
+      "ownedBases": {
+        "title": "Owned URL (our site's scope)",
+        "description": "Your site's main address. The address you register — and every page beneath it — counts as 'our site' when deciding how often AI answers cite you. When exactly one address is registered, the 'AI target source citation rate' metric is calculated.",
+        "hint": "Register the main address including the market/language folder, e.g. https://www.kia.com/it/it — every page beneath it counts as our site.",
+        "legacyHint": "A site address you entered earlier still exists: {domain}. Re-register it in the list below to carry it over.",
+        "multiBaseHint": "If you register more than one main address, the 'AI target source citation rate' metric is temporarily hidden. The 'Tracked URLs' list below stays for detailed analysis.",
+        "baseLabel": "Site address",
+        "basePlaceholder": "https://example.com/market/lang",
+        "memoLabel": "Memo",
+        "memoPlaceholder": "(optional) market/channel note",
+        "add": "Add",
+        "added": "Owned URL added",
+        "removed": "Owned URL removed",
+        "remove": "Remove",
+        "empty": "No owned URLs yet",
+        "primaryFallback": "Primary owned URL",
+        "secondaryFallback": "Additional owned URL"
+      },
+      "tracked": {
+        "title": "Tracked entities",
+        "description": "Brands/models this project emphasizes or designates (e.g. the SOV benchmark brand). The own/competitor definition itself is workspace-wide (Admin > Global config > Entity catalog) — entries here do not change KPI judgment. Adding or removing items re-analyzes existing answers.",
+        "reprocess": {
+          "title": "Re-process existing answers?",
+          "description": "Will re-analyze {count} existing prompt response(s) under the new tracked entity rules.",
+          "hint": "The analyzer worker handles this in the background — results may not appear immediately.",
+          "skip": "Later",
+          "confirm": "Reprocess now",
+          "queued": "Queued {count} prompt(s) for reanalysis"
+        },
+        "form": {
+          "title": "Brand / model input",
+          "description": "Enter only a brand to register a top-level brand dimension. Enter both brand and model to register a lower-level model dimension.",
+          "brandLabel": "Brand",
+          "brandPlaceholder": "e.g. Hyundai, Kia, Tesla",
+          "modelLabel": "Model",
+          "modelPlaceholder": "e.g. Ioniq 5, EV3, Model Y",
+          "modelHint": "Leave blank to track the brand only.",
+          "aliasesLabel": "Variation",
+          "aliasesPlaceholder": "e.g. hyundai, Hyundai Motor, Tucson, Toucan",
+          "aliasesHint": "Separate with commas. Only these spellings are treated as tracked surfaces during answer analysis.",
+          "notesLabel": "Notes",
+          "notesPlaceholder": "(optional) why this brand is tracked",
+          "notesHint": "Notes are available only for brand-level tracking.",
+          "notesDisabledHint": "For model tracking, use variations instead of notes.",
+          "addBrand": "Add brand",
+          "addVehicle": "Add model",
+          "brandAdded": "Brand added",
+          "vehicleAdded": "Model added",
+          "brandRemoved": "Brand removed",
+          "vehicleRemoved": "Model removed"
+        },
+        "brands": {
+          "title": "Tracked brands",
+          "description": "Competitor brands to track. Mark one as the head-to-head rival and the competitor comparison on the dashboard and answer analysis is always calculated against that brand; if none is marked, the competitor with the highest share at the time is used automatically.",
+          "empty": "No tracked brands yet"
+        },
+        "target": {
+          "badge": "Head-to-head",
+          "set": "Set as head-to-head rival",
+          "unset": "Clear head-to-head rival",
+          "updated": "{brand} is now the head-to-head rival — competitor comparison on the dashboard and answer analysis is shown against this brand",
+          "cleared": "Cleared — the competitor with the highest share is now compared automatically"
+        },
+        "models": {
+          "title": "Tracked brand / models",
+          "description": "Entities aggregated as lower-level model dimensions",
+          "empty": "No tracked models yet"
+        },
+        "own": {
+          "title": "Own brand",
+          "description": "Manage spelling recognition (aliases) for our brand and models. This does not change how own vs competitor is judged.",
+          "brandLock": "Project brand",
+          "aliasesLabel": "Brand aliases",
+          "aliasPlaceholder": "Type an alias, press Enter",
+          "aliasAdd": "Add alias",
+          "aliasRemove": "Remove alias {alias}",
+          "aliasesSaved": "Brand aliases saved",
+          "duplicateHint": "The own brand is also registered in the competitor list — manage aliases above and consider removing the duplicate entry.",
+          "modelsTitle": "Own models",
+          "modelsDescription": "Our models aggregated as lower-level model dimensions",
+          "modelsEmpty": "No own models yet",
+          "modelPlaceholder": "e.g. EV6",
+          "modelAliasPlaceholder": "e.g. ev6, EV-6 (comma-separated)",
+          "addModel": "Add own model"
+        },
+        "competitor": {
+          "title": "Competitors",
+          "description": "Register competitor brands/models to track. Mark one as the head-to-head rival and the competitor comparison on the dashboard and answer analysis is always shown against that brand; if none is marked, the competitor with the highest share at the time is used automatically.",
+          "ownBrandError": "{brand} is the project's own brand — manage its aliases and models in the own-brand area above.",
+          "ownModelRedirected": "Registered as a {brand} model — it appears in the own-brand area",
+          "ownRedirectHint": "Entering a {brand} model shows it in the own-brand area automatically.",
+          "brandsTitle": "Competitor brands",
+          "brandsDescription": "Comparison targets aggregated as top-level brand dimensions",
+          "brandsEmpty": "No competitor brands yet",
+          "modelsTitle": "Competitor models",
+          "modelsDescription": "Comparison targets aggregated as lower-level model dimensions",
+          "modelsEmpty": "No competitor models yet"
+        }
+      },
+      "trackedUrls": {
+        "title": "Tracked URLs (pages to watch)",
+        "description": "Individual pages within your site whose performance you especially want to watch. Of the answers that cite your site, the share that cite exactly these registered pages becomes the 'AI target source citation rate'.",
+        "hint": "Register the exact page address, e.g. https://kia.com/it/it/modelli — even a slightly different address counts as a different page.",
+        "multiBaseHint": "Because there is more than one owned URL, the 'AI target source citation rate' metric is not shown. This list is kept for detailed analysis only.",
+        "noOwnedBaseHint": "Register an owned URL (your site's main address) above first, and this list will feed the metric.",
+        "urlLabel": "URL",
+        "urlPlaceholder": "https://example.com/landing-page",
+        "memoLabel": "Memo",
+        "memoPlaceholder": "(optional) label/notes",
+        "add": "Add",
+        "added": "URL added",
+        "removed": "URL removed",
+        "remove": "Remove",
+        "empty": "No tracked URLs yet",
+        "io": {
+          "export": "Export Excel",
+          "import": "Import Excel",
+          "importSummary": "Added {created} · Updated {updated} · Skipped {skipped}",
+          "moreWarnings": "{count} more warning(s)",
+          "importing": "Importing…",
+          "importStart": "Importing Excel…"
+        }
+      },
+      "general": {
+        "title": "General",
+        "description": "Project basics (country is immutable after creation)",
+        "nameLabel": "Project name",
+        "descriptionLabel": "Description",
+        "brandLabel": "Brand",
+        "brandHint": "This project's owned brand. Used as the owned-brand axis for KPI ⑤ and answer analysis; spelling aliases are managed under Tracked targets > Own brand.",
+        "ga4Label": "GA4 property ID",
+        "ga4Hint": "GA4 Data API property id for this project's domain (numeric, e.g. 469542848). Used to measure AI traffic conversion + visits. Leave blank to auto-resolve from the (brand, country) catalog. When set, the geo-ops@example.com account must have viewer access to that property.",
+        "save": "Save changes",
+        "saveSuccess": "Changes saved",
+        "reprocessTitle": "Re-process existing answers?",
+        "reprocessDescription": "Will re-analyze {count} existing prompt response(s) under the new owned-brand rules.",
+        "reprocessHint": "Brand/variation changes affect KPI and answer-analysis aggregation. The analyzer worker handles this in the background.",
+        "reprocessSkip": "Later",
+        "reprocessConfirm": "Reprocess now",
+        "reprocessQueued": "Queued {count} prompt(s) for reanalysis",
+        "countryLabel": "Country",
+        "countryHint": "The country anchors what this project measures, so it cannot be changed after creation. Create a new project to measure another country."
+      },
+      "aiEngines": {
+        "title": "AI engines",
+        "description": "Choose which AI engines answers are collected from. From the next measurement on, only the selected engines are collected.",
+        "save": "Save changes",
+        "saved": "AI engine settings saved",
+        "savedNotPushed": "AI engine settings saved (updating the measurement engines failed — it will be retried on the next save)",
+        "savedNone": "All AI engines are deselected — answer collection is paused",
+        "noneWarning": "Deselecting every engine pauses answer collection.",
+        "legacyHint": "No engine setting has been saved yet; answers are collected with the default engines (ChatGPT · Gemini). Saving makes this selection explicit.",
+        "history": {
+          "title": "Engine change history",
+          "empty": "No changes yet",
+          "none": "(no engines — collection paused)"
+        }
+      },
+      "scopeLink": {
+        "title": "scope link",
+        "description": "Shows which scope-workspace project this project's measurement data is mirrored from. Once scope_project_id is stored, mirror sync automatically includes this project (the root project is identified via SCOPE_ROOT_PROJECT_ID).",
+        "status": "Status",
+        "scopeProjectId": "scope ID",
+        "statusValue": {
+          "missing": "Unlinked (scope_project_id is empty — no mirror data)",
+          "root": "ROOT — matches SCOPE_ROOT_PROJECT_ID (mirror sync active)",
+          "linked": "Linked — scope_project_id present (mirror sync active)"
+        },
+        "analysisProbe": {
+          "title": "Answer Analysis Probe",
+          "overallLabel": "Probe",
+          "mentionLabel": "mention",
+          "citationLabel": "citation",
+          "overall": {
+            "healthy": "Public API connection OK",
+            "unlinked": "No linked scope project",
+            "workspaceAccess": "Public API access unavailable",
+            "noData": "Public API has no data",
+            "partial": "Only partial response available",
+            "error": "Public API error",
+            "mock": "Mock mode"
+          },
+          "state": {
+            "ok": "Data found",
+            "empty": "Responds, but no data",
+            "unlinked": "No linked scope project",
+            "forbidden": "Workspace or permission denied",
+            "notFound": "Scope project not found",
+            "error": "Request error",
+            "mock": "Mock mode"
+          },
+          "fix": {
+            "healthy": "The connection looks healthy. If /mention or /citation still looks empty, check the active filters and whether measurement has actually run in scope.",
+            "unlinked": "First confirm that this hmg-geo project has a stored scope_project_id.",
+            "workspaceAccess": "This project may be included for mirror sync, but the answer-analysis pages read scope's public project APIs directly. The current SCOPE_API_KEY likely cannot read the workspace that owns this scope project.",
+            "noData": "The public APIs are reachable, but this scope project does not have mention/citation data yet. Confirm that measurement has actually run for that project in scope.",
+            "partial": "Only one endpoint is responding. The scope project may have only partial results, or the mention/citation public APIs may currently differ in availability.",
+            "error": "A scope public API call failed. Check the Vercel function logs for fetchProjectMentions / fetchProjectCitations errors.",
+            "mock": "In local mock mode we do not probe the real scope public APIs."
+          }
+        }
+      },
+      "danger": {
+        "title": "Danger zone",
+        "description": "This action cannot be undone",
+        "deleteButton": "Delete project",
+        "deleteDialog": {
+          "title": "Delete this project?",
+          "description": "All data for \"{name}\" (members, prompts, candidates, analysis) will be permanently deleted.",
+          "confirmLabel": "Type the project name to confirm",
+          "confirm": "Delete",
+          "cancel": "Cancel"
+        },
+        "deleteSuccess": "Project deleted"
+      }
+    }
+  },
+  "standardPromptsView": {
+    "title": "Global prompts",
+    "subtitle": "Browse the global prompts currently tracked in your scope.",
+    "collectionPeriod": "Collected {from} – {to}",
+    "lastCollectedAt": "Last collected {date}",
+    "scopeLabel": "Scope",
+    "scopeAll": "All",
+    "scopeCommonHint": "Own brand + common",
+    "scopeMarketHint": "Scoped to my markets",
+    "scopeMarketHintDetail": "Only prompts whose target markets include my country — or that have no market set (inherited) — are shown.",
+    "scopeRegionLabel": "Region",
+    "scopeCountryLabel": "Country",
+    "scopeCountryCount": "{count} countries",
+    "count": "{count} total",
+    "common": "Common",
+    "textLabel": "Prompt",
+    "brandLabel": "Brand",
+    "frameworkColumn": "Framework",
+    "funnelLabel": "Funnel",
+    "presenceLabel": "Brand presence",
+    "searchPlaceholder": "Search prompts",
+    "filterDepth1": "Depth1",
+    "filterListType": "List type",
+    "filterDepth2": "Depth2",
+    "filterDepth3": "Depth3",
+    "filterDepth4": "Depth4",
+    "filterFunnel": "Funnel",
+    "filterAll": "All",
+    "filterReset": "Reset",
+    "filterApply": "Apply",
+    "filteredCount": "Showing {shown} / {total}",
+    "empty": "No global prompts available in your scope",
+    "kindLabel": "Measurement",
+    "kindAcr": "ACR",
+    "kindSingle": "Single",
+    "historyColumn": "History",
+    "pageRange": "{from}–{to} of {total}",
+    "pageSize": "Per page",
+    "pageOf": "Page {page} / {pages}",
+    "prev": "Prev",
+    "next": "Next",
+    "marketLabel": "Target market",
+    "marketAll": "All markets",
+    "marketAllHint": "No target market set — measured across the whole project scope (inherited).",
+    "marketMoreHint": "Show remaining target markets",
+    "langLabel": "Language",
+    "statusLabel": "Status",
+    "statusMeasured": "Measured",
+    "statusUnmeasured": "Not measured",
+    "statusUnmeasuredHint": "This prompt has not been published to the measurement engine yet — that is why this language/market has no data.",
+    "exportLabel": "Download Excel",
+    "exportFilename": "global-prompts",
+    "exportSheetName": "Global Prompts",
+    "exportFailed": "Could not build the Excel file. Please try again."
+  },
+  "promptAudit": {
+    "marker": "{count} prompt changes",
+    "timelineTitle": "Change history",
+    "loading": "Loading…",
+    "loadFailed": "Failed to load history",
+    "empty": "No recorded changes",
+    "actorUnknown": "(system)",
+    "bulkBadge": "Bulk",
+    "diffOld": "Before",
+    "diffNew": "After",
+    "events": {
+      "created": "Created",
+      "text_updated": "Text updated",
+      "meta_updated": "Labels updated",
+      "enabled_changed": "Enabled toggled",
+      "kind_changed": "Kind changed",
+      "deleted": "Deleted",
+      "restored": "Restored"
+    },
+    "history": {
+      "tabCatalog": "Catalog",
+      "tabHistory": "Change history",
+      "sectionTitle": "Prompt change history",
+      "sectionDescription": "Create / edit / delete records for global prompts (last 90 days)",
+      "filterPeriod": "Period",
+      "filterEvent": "Event",
+      "filterAll": "All",
+      "days30": "Last 30 days",
+      "days90": "Last 90 days",
+      "bulkGroup": "Bulk replace {count}",
+      "exportCsv": "Export CSV",
+      "shownCount": "{count} shown",
+      "colWhen": "When",
+      "colPrompt": "Prompt",
+      "colEvent": "Event",
+      "colActor": "Actor",
+      "colChanges": "Changes",
+      "viewTextDiff": "View text change"
+    }
+  },
+  "adminStandardPrompts": {
+    "title": "Global prompts",
+    "subtitle": "Register and manage the global prompt catalog",
+    "list": {
+      "title": "Global prompt catalog",
+      "description": "{count} entries — referenced by global dashboards",
+      "empty": "No global prompts registered yet",
+      "add": "Add",
+      "addSuccess": "Global prompt added",
+      "enable": "Enable",
+      "disable": "Disable",
+      "enableSuccess": "Enabled",
+      "disableSuccess": "Disabled",
+      "delete": "Delete",
+      "deleteSuccess": "Deleted",
+      "disabled": "Disabled",
+      "textLabel": "Prompt",
+      "textPlaceholder": "e.g., Recommend the most popular family SUV",
+      "typeLabel": "Type",
+      "presenceLabel": "Brand inclusion",
+      "typeNone": "(unset)",
+      "categoryLabel": "Category",
+      "categoryPlaceholder": "e.g., model / region",
+      "brandLabel": "Brand",
+      "brandPlaceholder": "e.g., Hyundai (leave blank = all)",
+      "frameworkColumn": "Framework",
+      "catalogStrip": "Global catalog",
+      "statsTotal": "Total {count}",
+      "statsInUse": "In use {count}",
+      "statsUntracked": "Untracked {count}",
+      "statsScopeOrphans": "scope-only {count}",
+      "trackingColumn": "Tracking",
+      "inUse": "In use",
+      "untracked": "Untracked",
+      "filterTracking": "Tracking",
+      "filterDepth1": "Depth1",
+      "filterFunnel": "Funnel",
+      "filterAll": "All",
+      "filterReset": "Reset",
+      "filteredCount": "Showing {shown} / {total}",
+      "unlabeled": "Unlabeled",
+      "col": {
+        "listType": "List type",
+        "depth1": "Depth1",
+        "depth2": "Depth2",
+        "depth3": "Depth3",
+        "depth4": "Depth4"
+      },
+      "funnel": {
+        "awareness": "Awareness",
+        "consideration": "Consideration",
+        "purchase": "Purchase"
+      },
+      "exportCsv": "Export CSV",
+      "statsAcr": "ACR {count}",
+      "kindColumn": "Measurement",
+      "kindAcr": "ACR",
+      "kindSingle": "Single",
+      "filterKind": "Measurement",
+      "kindToAcr": "Switch to ACR",
+      "kindToSingle": "Switch to single",
+      "kindConfirmAcr": "Switch this prompt to ACR (2-turn choice measurement)? From the next cycle it runs 10 iterations × 2 turns, which increases measurement volume significantly.",
+      "kindConfirmSingle": "Switch this prompt back to single measurement? ACR data will stop accumulating from the next cycle.",
+      "kindUpdated": "Measurement kind updated",
+      "kindUpdateFailed": "Failed to update measurement kind",
+      "historyColumn": "History",
+      "actionsColumn": "Actions",
+      "edit": "Edit",
+      "editTitle": "Edit prompt",
+      "editText": "Text",
+      "editSave": "Save",
+      "editSaving": "Saving…",
+      "editCancel": "Cancel",
+      "editFailed": "Failed to save",
+      "editTextMeasuredNote": "This prompt is being measured — changing the text takes effect from the next measurement, and the change is recorded in the audit history.",
+      "editField": {
+        "brand": "Brand",
+        "brandPresence": "Brand presence (branded/unbranded)",
+        "listType": "List type",
+        "depth1": "Depth1",
+        "depth2": "Depth2",
+        "depth3": "Depth3",
+        "depth4": "Depth4",
+        "funnelStage": "Funnel"
+      },
+      "deleteConfirm": "Delete this prompt? It will be excluded from measurement and can be restored with its history.",
+      "deleteFailed": "Failed to delete",
+      "restore": "Restore",
+      "restoreConfirm": "Restore this prompt? It will return to measurement.",
+      "restoreFailed": "Failed to restore",
+      "viewActive": "Active",
+      "viewDeleted": "Deleted {count}",
+      "editMarkets": "Target markets",
+      "editMarketsHint": "None selected = all (inherited)",
+      "editLang": "Language",
+      "editLangHint": "ISO 639-1 two letters (e.g. KO, EN). Display and filtering only — not a measurement axis",
+      "editMarketsEmpty": "No markets configured for this project"
+    },
+    "io": {
+      "export": "Export Excel",
+      "import": "Import Excel",
+      "previewTitle": "Import preview",
+      "previewChanges": "{count} changes",
+      "previewUnchanged": "{count} unchanged",
+      "previewUnmatched": "{count} unmatched ids",
+      "previewApply": "Apply {count}",
+      "previewCancel": "Cancel",
+      "previewClose": "Close",
+      "colPrompt": "Prompt",
+      "colChanges": "Changes",
+      "applying": "Applying… {done}/{total}",
+      "applyDone": "Done — {applied} applied · {failed} failed",
+      "applyRetryFailed": "Retry failed"
+    }
+  },
+  "adminGa4": {
+    "title": "GA4 connection",
+    "subtitle": "Register GA4 properties per brand × country and verify access.",
+    "registry": {
+      "title": "Connection registry",
+      "description": "resolveProperty reads this mapping first (falls back to legacy env when unmapped)."
+    },
+    "hint": "Enter the property ID → add our account as a Viewer on that GA4 property → click Verify to confirm real access. On success the status flips to Active.",
+    "form": {
+      "brand": "Brand",
+      "country": "Country (ISO)",
+      "propertyId": "GA4 property ID",
+      "add": "Add"
+    },
+    "table": {
+      "brand": "Brand",
+      "country": "Country",
+      "propertyId": "Property ID",
+      "status": "Status",
+      "verifiedAt": "Verified",
+      "actions": "Actions"
+    },
+    "status": {
+      "active": "Active",
+      "pending_grant": "Pending grant",
+      "unmapped": "Unmapped"
+    },
+    "verify": "Verify",
+    "verified": "Verified — status set to Active",
+    "remove": "Remove",
+    "empty": "No GA4 mappings registered",
+    "addSuccess": "Mapping registered",
+    "removeSuccess": "Mapping removed",
+    "importSuccess": "Legacy mapping imported into the registry",
+    "legacy": {
+      "title": "Legacy (env) mappings — not yet registered",
+      "description": "Markets already connected and live via code/env. Import into the registry, then verify.",
+      "source": "env",
+      "import": "Import"
+    },
+    "override": {
+      "title": "Project overrides",
+      "description": "These projects read a GA4 property set in their own settings, overriding the standard mapping. (Edit in project settings.)",
+      "project": "Project",
+      "propertyId": "Override property ID"
+    },
+    "events": {
+      "button": "Events",
+      "title": "Select conversion events — {target}",
+      "description": "Choose which GA4 events count as conversions for this property. When you select events, the conversion KPI numerator is computed from them; select nothing to keep using GA4 key events as-is.",
+      "loading": "Loading events…",
+      "empty": "No events fired in the last 90 days",
+      "colEvent": "Event",
+      "colVolume": "Last 90 days",
+      "selectedCount": "{count} events counted as conversion",
+      "fallbackHint": "None selected — using GA4 key events as-is",
+      "save": "Save",
+      "cancel": "Cancel",
+      "close": "Close",
+      "saved": "Conversion event selection saved"
+    }
+  },
+  "adminStandardEntities": {
+    "title": "Entity catalog",
+    "subtitle": "Manage the role (own / competitor / excluded) of brands discovered in measurements. The 'own' set is the single source of truth for every KPI's own-brand judgment.",
+    "catalog": {
+      "title": "Brand entities",
+      "description": "Competitor is the derived default (anything not own) and is not stored. Role changes apply to KPI aggregation immediately.",
+      "count": "{total} total · {own} own",
+      "searchPlaceholder": "Search brands…",
+      "colBrand": "Brand",
+      "colMentions": "Mentions",
+      "colAnswers": "Answers",
+      "colRole": "Role",
+      "roleOwn": "Own",
+      "roleCompetitor": "Competitor",
+      "roleExcluded": "Excluded",
+      "ownBadge": "Own",
+      "roleUpdated": "Role for {brand} updated — KPIs reflect it immediately",
+      "empty": "No entities to show",
+      "excludedHint": "Excluded: reserved for noise entities to drop from aggregation — consumption is not wired yet, so excluded currently behaves like competitor."
+    }
+  },
+  "adminCitationSources": {
+    "title": "Citation Sources",
+    "subtitle": "Correct the category of domains cited in AI answers. Categories are derived at read time, so a save applies to the entire history immediately — no backfill.",
+    "list": {
+      "title": "Domain curation",
+      "description": "Start with the most-cited domains. Corrected domains always stay listed, regardless of citation count.",
+      "count": "{total} total · {overrides} corrected · {other} uncategorized",
+      "searchPlaceholder": "Search domain…",
+      "filterCategory": "Category filter",
+      "filterAll": "All categories",
+      "otherOnly": "Uncategorized only",
+      "colDomain": "Domain",
+      "colCitations": "Citations",
+      "colCategory": "Category",
+      "colSource": "Source",
+      "colNote": "Note",
+      "colActions": "Actions",
+      "source": {
+        "override": "Operator",
+        "owned": "Owned",
+        "seed": "Curated",
+        "rule": "Rule",
+        "fallback": "Uncategorized"
+      },
+      "shadowsOwned": "Overriding a verified owned domain",
+      "revert": "Revert",
+      "saved": "Saved category for {domain} — applied to citation aggregates immediately",
+      "reverted": "Reverted {domain} — back to the default classification",
+      "empty": "No domains to show",
+      "hint": "Shows the top {limit} domains by citation count, plus every domain with a correction."
+    }
+  },
+  "adminStandardCustomerInterest": {
+    "title": "Customer interest config",
+    "subtitle": "Google keyword lists / community VoC source allowlist",
+    "research": {
+      "title": "Social Research",
+      "description": "Autonomously research real consumer voices to build a purchase context map and send candidates to the global prompt catalog."
+    },
+    "list": {
+      "title": "Global keyword catalog",
+      "description": "{count} entries — seeds the Intent pipeline",
+      "empty": "No global keywords registered yet",
+      "add": "Add",
+      "addSuccess": "Keyword added",
+      "enable": "Enable",
+      "disable": "Disable",
+      "enableSuccess": "Enabled",
+      "disableSuccess": "Disabled",
+      "delete": "Delete",
+      "deleteSuccess": "Deleted",
+      "disabled": "Disabled",
+      "termLabel": "Keyword",
+      "termPlaceholder": "e.g., family SUV",
+      "sourceLabel": "Source",
+      "source": {
+        "google_keyword": "Google Keyword",
+        "community_voc": "Community VoC"
+      },
+      "brandLabel": "Brand",
+      "brandPlaceholder": "e.g., Hyundai (leave blank = all)",
+      "notesLabel": "Notes",
+      "notesPlaceholder": "Optional — reason for registration"
+    },
+    "sources": {
+      "title": "Global source URLs",
+      "description": "{count} entries — community-VoC scraper allowlist",
+      "empty": "No sources registered yet",
+      "add": "Add",
+      "addSuccess": "Source added",
+      "enable": "Enable",
+      "disable": "Disable",
+      "enableSuccess": "Enabled",
+      "disableSuccess": "Disabled",
+      "delete": "Delete",
+      "deleteSuccess": "Deleted",
+      "disabled": "Disabled",
+      "urlLabel": "URL / domain",
+      "urlPlaceholder": "e.g., reddit.com/r/cars",
+      "channelLabel": "Channel",
+      "channel": {
+        "news": "News",
+        "pr": "PR",
+        "social": "Social",
+        "community": "Community"
+      },
+      "brandLabel": "Brand",
+      "brandPlaceholder": "e.g., Hyundai (leave blank = all)",
+      "notesLabel": "Notes",
+      "notesPlaceholder": "Optional — reason for registration"
+    }
+  },
+  "projects": {
+    "title": "Projects",
+    "subtitle": "Track brands and domains as project units",
+    "addProject": "Add project",
+    "emptyTitle": "No projects yet",
+    "emptyDescription": "Create your first project to start tracking",
+    "card": {
+      "prompts": "Prompts",
+      "members": "Members"
+    },
+    "controls": {
+      "searchPlaceholder": "Search by project name or domain",
+      "searchClear": "Clear search",
+      "noResults": "No matching projects",
+      "filter": {
+        "all": "All",
+        "owner": "Owner",
+        "viewer": "Viewer"
+      },
+      "sort": {
+        "label": "Sort by",
+        "name": "Name",
+        "createdAt": "Created",
+        "prompts": "Prompts",
+        "members": "Members",
+        "asc": "Ascending",
+        "desc": "Descending"
+      }
+    },
+    "pending": {
+      "title": "Pending invites ({count})",
+      "description": "Accept to jump straight into that project",
+      "accept": "Accept",
+      "reject": "Reject",
+      "acceptSuccess": "Invite accepted",
+      "rejectSuccess": "Invite rejected"
+    },
+    "overview": {
+      "tiles": {
+        "total": "Total projects",
+        "members": "Active members",
+        "recent": "New in last {days} days",
+        "queued": "Queued / running prompts"
+      },
+      "distribution": {
+        "brand": {
+          "title": "By brand",
+          "description": "Across projects you can see (top 6)"
+        },
+        "country": {
+          "title": "By country",
+          "description": "Across projects you can see (top 6)"
+        }
+      }
+    }
+  },
+  "projectNew": {
+    "title": "Create project",
+    "subtitle": "Create within your authorized scope (5 inputs)",
+    "back": "Back to projects",
+    "form": {
+      "title": "Project info",
+      "description": "Description",
+      "name": "Title",
+      "namePlaceholder": "e.g. Ioniq 6 Korea launch",
+      "descriptionPlaceholder": "Brief project purpose",
+      "domain": "Domain",
+      "brand": "Brand",
+      "brandPlaceholder": "Select (optional)",
+      "noBrandHint": "No brands available in your scope",
+      "country": "Country",
+      "countryPlaceholder": "Select",
+      "noCountryHint": "No countries in your scope — ask admin to widen your scope",
+      "submit": "Create project",
+      "titleRequired": "Title is required",
+      "countryRequired": "Country is required",
+      "region": "Region",
+      "regionPlaceholder": "Select brand first, then region",
+      "aiEngines": "AI engines",
+      "aiEnginesHint": "Answers are collected only from the selected engines. You can change this later in Setting > General.",
+      "aiEnginesRequired": "Select at least one AI engine"
+    }
+  },
+  "admin": {
+    "title": "Admin Console",
+    "subtitle": "Grant user permissions · manage roles & scopes",
+    "userCount": "{n} users",
+    "list": {
+      "heading": "Users",
+      "search": {
+        "placeholder": "Search by email or role",
+        "clear": "Clear search",
+        "empty": "No matching users."
+      },
+      "rowAria": "Edit user {email}",
+      "columns": {
+        "email": "Email",
+        "role": "Role",
+        "scope": "Allowed scope",
+        "operator": "Operations",
+        "createdAt": "Created",
+        "lastSignIn": "Last sign-in"
+      },
+      "operator": {
+        "none": "Read-only",
+        "assigned": "Assigned",
+        "global": "Global"
+      },
+      "scopeAll": "All",
+      "noScope": "No scope",
+      "neverSignedIn": "Never signed in",
+      "empty": "No users."
+    },
+    "create": {
+      "heading": "Add user",
+      "emailLabel": "Email",
+      "emailPlaceholder": "user@example.com",
+      "submit": "Create user",
+      "submitting": "Creating…",
+      "success": "User created.",
+      "tempPasswordToast": "Temporary password (shown once)",
+      "tempPasswordHint": "This password will not be shown again. Share it securely and tell the user to change it after first sign-in.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "close": "Close"
+    },
+    "edit": {
+      "title": "Edit user",
+      "description": "Change the role and allowed scope, then save.",
+      "role": "Role",
+      "operator": {
+        "label": "Operator authority (cost actions)",
+        "none": "None (read-only)",
+        "assigned": "Assigned only (operate assigned projects)",
+        "global": "Global (create & operate any project)",
+        "hint": "Authority for cost-incurring actions: project creation, intent collection, prompt runs. Granted separately from role.",
+        "vendorLocked": "External vendors are permanently operator-OFF (read-only)."
+      },
+      "scope": {
+        "label": "Allowed scope",
+        "all": "Allow all scope",
+        "brands": "Brands",
+        "regions": "Regions",
+        "countries": "Countries",
+        "placeholder": "Comma-separated (e.g., KR, JP)"
+      },
+      "save": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "noChanges": "No changes to save",
+      "dangerZone": {
+        "title": "Danger zone",
+        "deleteLabel": "Delete user",
+        "deleteHint": "This action cannot be undone.",
+        "confirm": "Confirm delete",
+        "cancel": "Cancel",
+        "deleting": "Deleting…",
+        "selfBlocked": "You cannot delete yourself."
+      }
+    },
+    "toast": {
+      "saveSuccess": "Saved.",
+      "deleteSuccess": "User deleted."
+    },
+    "errors": {
+      "unauthorized": "Not authorized.",
+      "createFailed": "Failed to create user.",
+      "rollbackFailed": "User creation partially completed. Please contact an administrator.",
+      "updateFailed": "Update failed.",
+      "deleteFailed": "Failed to delete user.",
+      "cannotDeleteSelf": "You cannot delete yourself.",
+      "cannotDemoteSelf": "Admins cannot demote themselves.",
+      "lastAdminProtected": "This is the last remaining admin. Grant admin to another user first.",
+      "invalidEmail": "Invalid email format.",
+      "vendorOperatorForbidden": "External vendors cannot be granted operator authority."
+    }
+  },
+  "noAccess": {
+    "title": "No accessible menus",
+    "description": "Please ask an administrator to grant you permissions.",
+    "logoutHint": "Sign out to use a different account."
+  },
+  "emptyState": {
+    "mock": {
+      "title": "Mock data",
+      "description": "Currently running in mock mode. This view will refresh automatically once the real data source is connected.",
+      "badge": "Mock"
+    },
+    "pending": {
+      "title": "Data source pending",
+      "description": "The data source for this screen is not yet decided. It will be connected once confirmed."
+    },
+    "no-access": {
+      "title": "No accessible menus",
+      "description": "Please ask an administrator to grant you permissions."
+    }
+  },
+  "results": {
+    "recent": "Recent measurements",
+    "prompt": "Prompt",
+    "target": "Target engine",
+    "status": "Status",
+    "createdAt": "Measured at",
+    "empty": "No measurements yet."
+  },
+  "socialScraping": {
+    "input": {
+      "keywordLabel": "Keyword / Topic",
+      "keywordPlaceholder": "e.g. family SUV, electric SUV, hybrid",
+      "locationLabel": "Location / Language",
+      "purposeLabel": "Research purpose",
+      "purposePlaceholder": "Describe the research goal",
+      "purpose": {
+        "purchase-context": {
+          "label": "Purchase context exploration",
+          "body": "Inductively collect, from communities, reviews and blogs, the situations people are in and the conditions they want when they search this keyword. Derive both buyer contexts (who/when) and purchase conditions (what), then lay them out as a purchase context map."
+        },
+        "competitor-voc": {
+          "label": "Competitor VoC comparison",
+          "body": "Collect conversations that mention us alongside competitors to compare strengths, weaknesses, switching reasons and complaints."
+        },
+        "feature-demand": {
+          "label": "Feature / spec demand",
+          "body": "Collect the features and specs consumers repeatedly ask for, and their priority."
+        },
+        "custom": {
+          "label": "Custom",
+          "body": ""
+        }
+      },
+      "start": "Start Research",
+      "howItWorksTitle": "How it works",
+      "step1": {
+        "title": "Enter topic",
+        "desc": "Enter the keyword to research and your research purpose."
+      },
+      "step2": {
+        "title": "AI researches",
+        "desc": "A Director dispatches Workers in waves to read real consumer voices on the web."
+      },
+      "step3": {
+        "title": "Context map",
+        "desc": "Visualize buyer contexts × purchase conditions × combinations as a graph."
+      },
+      "step4": {
+        "title": "Prompt candidates",
+        "desc": "Convert the contexts into consumer questions and send them to the prompt candidate pool."
+      }
+    },
+    "exploring": {
+      "researching": "Researching: “{keyword}”",
+      "doneTitle": "Exploration complete: “{keyword}”",
+      "workers": "Workers",
+      "sources": "Sources",
+      "cost": "Cost",
+      "firecrawl": "Searches",
+      "waveLabel": "Wave {wave}",
+      "activityLog": "Activity Log",
+      "thinking": "Analyzing...",
+      "starting": "Preparing the research run...",
+      "confirmTitle": "Generate the context map?",
+      "confirmDesc": "Collected {workers} workers · {sources} sources. Generate the matrix now or keep exploring.",
+      "keepResearching": "Keep researching",
+      "generate": "Generate context map",
+      "guidePlaceholder": "Guide the agent (e.g. dig deeper on cost)",
+      "send": "Send",
+      "you": "You",
+      "extraStrategy": "Deeper pass — reinforcing the run per your guidance",
+      "extraLabelA": "Deep dive A",
+      "extraQueryA": "family SUV long-term ownership cost real reviews",
+      "extraLabelB": "Deep dive B",
+      "extraQueryB": "family SUV per-option satisfaction and complaints",
+      "extraDiscover": "Extra round complete — new signals reinforced"
+    },
+    "contextMap": {
+      "back": "Back to start",
+      "title": "Purchase Context Map: “{keyword}”",
+      "titleGeneric": "Purchase Context Map",
+      "summaryLine": "{contexts} buyer contexts · {conditions} purchase conditions · {relations} relations · {sources} source domains",
+      "exportExcel": "Export Excel",
+      "exportPending": "Generating…",
+      "exportSuccess": "Excel file downloaded",
+      "exportError": "Could not generate the Excel file",
+      "exportFilename": "context-map",
+      "generatePrompts": "Generate prompts",
+      "fitView": "Fit view",
+      "relayout": "Re-run layout",
+      "stats": {
+        "contexts": "Buyer contexts",
+        "conditions": "Purchase conditions",
+        "relations": "Relations",
+        "sources": "Sources"
+      },
+      "perspectiveFilter": "Sentiment",
+      "perspective": {
+        "all": "All",
+        "buyer": "Positive",
+        "seller": "Negative",
+        "neutral": "Neutral"
+      },
+      "contextsSection": "Buyer contexts",
+      "conditionsSection": "Purchase Conditions",
+      "combinationsSection": "Combination patterns",
+      "catalogSection": "Recommended prompts",
+      "mentions": "{count} mentions",
+      "detailButton": "Details",
+      "pickAdd": "Pick",
+      "pickAdded": "Picked",
+      "composer": {
+        "title": "Compose prompts",
+        "description": "Generate consumer questions from the picked buyer contexts, purchase conditions, and combination patterns, and add them to the catalog",
+        "clear": "Clear all",
+        "chipContext": "Buyer context",
+        "chipCondition": "Purchase condition",
+        "chipCombo": "Combination pattern",
+        "removeChip": "Remove {name}",
+        "crossLabel": "Include buyer context × purchase condition crosses",
+        "generate": "Generate from selection",
+        "generating": "Generating...",
+        "generated": "Generated {count} prompts",
+        "generatedSkipped": "Generated {count} · skipped {skipped} already generated",
+        "noneGenerated": "Everything picked has already been generated"
+      },
+      "col": {
+        "name": "Name",
+        "theme": "Theme",
+        "category": "Category",
+        "perspective": "Sentiment",
+        "drivenConditions": "Driven conditions",
+        "drivenByContexts": "Driven by",
+        "relatedConditions": "Related",
+        "mentions": "Mentions",
+        "domains": "Domains",
+        "conditionA": "Condition A",
+        "conditionB": "Condition B",
+        "frequency": "Frequency",
+        "cooccurrence": "Co-occurrence",
+        "sources": "Sources",
+        "question": "Question",
+        "layer": "Layer",
+        "funnel": "Funnel",
+        "priority": "Priority"
+      },
+      "frequency": {
+        "high": "High",
+        "medium": "Med",
+        "low": "Low"
+      },
+      "layer": {
+        "l1": "Buyer context",
+        "l2": "Purchase condition",
+        "l3": "Combination pattern"
+      },
+      "funnel": {
+        "awareness": "Awareness",
+        "consideration": "Consideration",
+        "purchase": "Purchase"
+      },
+      "catalogSelectAll": "Select all",
+      "catalogSelectedCount": "{count} selected",
+      "catalogSendToPool": "Send to candidate pool",
+      "catalogSendToStandard": "Send to global catalog",
+      "catalogSendSuccess": "Sent {count} candidates (demo)",
+      "catalogSaveSuccess": "Added {count} to the candidate pool",
+      "catalogSaveSkipped": "Added {count} · {skipped} already in pool",
+      "catalogSaveNone": "All selected are already in the candidate pool",
+      "catalogAddedBadge": "Added",
+      "catalogShowAdded": "Show added",
+      "catalogGenerateMore": "Generate more",
+      "catalogGenerating": "Generating…",
+      "catalogGenerateMoreSuccess": "Generated {count} new prompts",
+      "catalogGenerateMoreExhausted": "No more contexts to generate",
+      "catalogRemove": "Remove prompt",
+      "catalogRemoveSelected": "Remove selected",
+      "catalogRemoveSuccess": "Removed {count}",
+      "catalogSimilarBadge": "{percent}% similar",
+      "catalogSimilarToPrompt": "Registered prompt: {text}",
+      "catalogSimilarToCandidate": "Candidate pool: {text}",
+      "legend": {
+        "context": "Buyer context",
+        "condition": "Purchase condition",
+        "drives": "Drives",
+        "combo": "Combination"
+      },
+      "detail": {
+        "close": "Close",
+        "contextKind": "Buyer Context",
+        "conditionKind": "Purchase Condition",
+        "combinationKind": "Combination pattern",
+        "mentions": "{count} mentions",
+        "perspectiveTitle": "Sentiment breakdown",
+        "perspective": {
+          "buyer": "Positive",
+          "seller": "Negative",
+          "neutral": "Neutral"
+        },
+        "evidenceTitle": "Evidence quotes",
+        "domainsTitle": "Sources by domain",
+        "drivenConditions": "Driven conditions",
+        "drivenByContexts": "Driven by contexts",
+        "relatedConditions": "Related conditions",
+        "strength": {
+          "high": "High",
+          "medium": "Med",
+          "low": "Low"
+        },
+        "cooccurrence": "{count} co-occurrences · {justification}",
+        "scenario": "Scenario",
+        "sourceUrls": "Source URLs",
+        "cooccurrenceCount": "Co-mentioned in {count} utterances",
+        "loadError": "Could not load details"
+      },
+      "searchContexts": "Search buyer contexts",
+      "searchConditions": "Search purchase conditions",
+      "searchCombinations": "Search combination patterns",
+      "pageRange": "{first}–{last} of {total}",
+      "pageOf": "{page} / {pages}",
+      "prevPage": "Prev",
+      "nextPage": "Next",
+      "loading": "Loading…",
+      "loadError": "Could not load the list",
+      "retry": "Retry",
+      "noResults": "No results",
+      "catalogEmpty": "No prompts to show",
+      "catalogGenerateFailed": "Prompt generation failed. Retry with the \"Generate more\" button above",
+      "catalogComposedBadge": "Composed",
+      "summaryHint": "Relations = {drives} context→condition links + {combinations} condition co-occurrence pairs · Source domains = distinct domains the evidence was collected from. All figures cover the whole corpus and ignore per-tab search or filters."
+    },
+    "prompts": {
+      "title": "Generate prompt candidates",
+      "desc": "Consumer questions derived from the “{keyword}” context map. Select and send them to the prompt candidate pool.",
+      "columnQuestion": "Question",
+      "columnLayer": "Layer",
+      "columnFunnel": "Funnel",
+      "columnPriority": "Priority",
+      "selectAll": "Select all",
+      "layer": {
+        "l1": "Buyer context",
+        "l2": "Purchase condition",
+        "l3": "Combination pattern"
+      },
+      "funnel": {
+        "awareness": "Awareness",
+        "consideration": "Consideration",
+        "purchase": "Purchase"
+      },
+      "selectedCount": "{count} selected",
+      "sendToPool": "Send to candidate pool",
+      "sendToCatalog": "Send to global catalog",
+      "sendSuccess": "Sent {count} candidates (demo)"
+    }
+  },
+  "keywordTools": {
+    "eyebrow": "Admin tools",
+    "title": "Keyword tools",
+    "subtitle": "DataForSEO search-volume lookup + AI keyword→prompt generation (paid external APIs)",
+    "tabs": {
+      "volume": "Search volume",
+      "toPrompt": "Keyword → prompt"
+    },
+    "location": "Country / language",
+    "locationPlaceholder": "Select a country and language",
+    "keywords": "Keywords (one per line)",
+    "keywordsPlaceholder": "Enter keywords, one per line\ne.g.\nHyundai Ioniq 6\nKia EV6\nGenesis GV80",
+    "keywordCount": "{count} keywords",
+    "run": "Get volume",
+    "generate": "Generate prompts",
+    "running": "Processing…",
+    "exportCsv": "Export CSV",
+    "includeVolume": "Also fetch search volume",
+    "errorSelectLocation": "Select a country/language first.",
+    "errorNoKeywords": "Enter at least one keyword.",
+    "errorGeneric": "Something went wrong while processing the request.",
+    "noResults": "No results.",
+    "resultsCount": "{count} rows",
+    "volumeCols": {
+      "keyword": "Keyword",
+      "volume": "Volume",
+      "competition": "Competition",
+      "cpc": "CPC",
+      "trend": "Recent trend"
+    },
+    "summary": {
+      "total": "Keywords",
+      "avg": "Avg. volume",
+      "totalVolume": "Total volume",
+      "high": "High",
+      "mid": "Mid",
+      "low": "Low"
+    },
+    "promptCols": {
+      "prompt": "Generated prompt",
+      "intent": "Intent",
+      "keyword": "Source keyword",
+      "volume": "Volume"
+    },
+    "intent": {
+      "informational": "Informational",
+      "navigational": "Navigational",
+      "transactional": "Transactional",
+      "commercial": "Commercial"
+    }
+  },
+  "dashError": {
+    "title": "Failed to load data",
+    "description": "This may be a transient error, or the selected filter combination took too long to aggregate. Please retry — your current filters are preserved.",
+    "digest": "Error code: {digest}",
+    "retry": "Retry",
+    "retrying": "Retrying…"
+  },
+  "betaNotice": {
+    "title": "About the GEO Dashboard",
+    "intro": "The GEO Dashboard is a service that gives you an at-a-glance view of Hyundai Motor Group's GEO (Generative Engine Optimization) performance.",
+    "betaLine1": "During the beta period, the self-service prompt configuration feature is disabled.",
+    "betaLine2": "If you would like to set up your own prompts to track performance, or need an additional account, please feel free to contact us — access is granted upon consultation.",
+    "feedbackLine1": "We are continuously improving the dashboard.",
+    "feedbackLine2": "If you run into any inconvenience or need additional features, please send us your feedback anytime, including both email addresses below.",
+    "feedbackLine3": "Your feedback will be reviewed and reflected in future updates.",
+    "mailLabel": "Copy email addresses",
+    "mailAria": "Copy both feedback email addresses",
+    "copied": "Copied",
+    "copyFailed": "Copy failed",
+    "manualLabel": "User manual",
+    "manualAria": "Download the user manual",
+    "hideToday": "Don't show again today",
+    "close": "Close",
+    "banner": "If you run into any inconvenience or need additional features, please email us anytime, including both addresses. Your feedback will be reviewed and reflected in the next update."
+  },
+  "qaReview": {
+    "title": "Raw Data QA",
+    "gate": {
+      "heading": "Raw Data QA",
+      "lead": "Enter your reviewer name and the password.",
+      "name": "Reviewer name",
+      "namePlaceholder": "e.g. Jane Doe",
+      "password": "Password",
+      "passwordPlaceholder": "Shared password",
+      "submit": "Enter",
+      "submitting": "Checking",
+      "errorCredentials": "That password is not correct.",
+      "errorName": "Enter a name of 1-40 characters.",
+      "errorRateLimited": "Too many attempts. Try again shortly.",
+      "errorUnknown": "Could not sign in. Please try again.",
+      "notice": "Closing the browser requires entering your name and password again."
+    },
+    "common": {
+      "signedInAs": "Reviewer",
+      "signOut": "End review",
+      "list": "Review queue",
+      "notes": "Notes",
+      "empty": "No answers match these filters.",
+      "save": "Save",
+      "saving": "Saving",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "more": "Load more",
+      "none": "—"
+    },
+    "list": {
+      "progressScoped": "{reviewed} of {total} reviewed in this filter ({percent}%)",
+      "progressTotal": "{reviewed} of {total} reviewed overall",
+      "issues": "{count} issues",
+      "notes": "{count} notes",
+      "colPrompt": "Prompt",
+      "colSurface": "Surface",
+      "colBrand": "Brand",
+      "colCountry": "Country",
+      "colEngine": "Engine",
+      "colLang": "Language",
+      "colMeasuredAt": "Measured",
+      "colMentions": "Mentions",
+      "colCitations": "Citations",
+      "colState": "Review",
+      "colReviewer": "Reviewer",
+      "surfaceStandard": "Global",
+      "surfaceWebsite": "Website",
+      "surfaceProject": "Project",
+      "stateUnreviewed": "Unreviewed",
+      "stateOk": "Done",
+      "stateIssue": "Issue",
+      "filters": "Filters",
+      "filterReset": "Reset",
+      "filterSearch": "Search prompts",
+      "filterFrom": "From",
+      "filterTo": "To",
+      "filterHasNotes": "With notes only",
+      "filterNoMentions": "Zero mentions only",
+      "filterSurface": "Surface",
+      "filterBrand": "Brand",
+      "filterCountry": "Country",
+      "filterEngine": "Engine",
+      "filterLang": "Language",
+      "filterState": "Review state",
+      "filterReviewer": "Reviewer",
+      "copyLink": "Copy filter link",
+      "copied": "Copied",
+      "linkHint": "Share this link to hand someone the same slice of work."
+    },
+    "lock": {
+      "held": "{name} is reviewing this",
+      "readOnly": "Another reviewer has this open, so it is read-only.",
+      "lost": "The lock expired and another reviewer took it. Reopen from the queue.",
+      "badge": "In review",
+      "mine": "You have this"
+    },
+    "sections": {
+      "answer": "Answer text",
+      "prompt": "Prompt",
+      "mentions": "Mentions",
+      "citations": "Citations",
+      "acr": "ACR rollup",
+      "meta": "Metadata",
+      "ok": "Looks right",
+      "issue": "Issue"
+    },
+    "detail": {
+      "backToList": "Back to queue",
+      "prev": "Previous",
+      "next": "Next",
+      "markReviewed": "Mark reviewed",
+      "markIssue": "Mark issue",
+      "addNote": "Add note",
+      "reviewedBy": "{name} · {at}",
+      "saved": "Saved",
+      "shortcuts": "Shortcuts: J next · K previous · O save · N note",
+      "acrScopeNotice": "This is the ACR rollup for the prompt-run, not for this single answer.",
+      "noAcr": "No ACR rollup for this answer.",
+      "noMentions": "No mentions detected.",
+      "noCitations": "No citations.",
+      "noAnswerBody": "The answer body is not in the mirror.",
+      "anchorFolded": "Folded to a cycle anchor (source {source} → anchor {anchor})",
+      "dropped": "Excluded from the mirror ({reason})",
+      "userTurn": "Prompt",
+      "assistantTurn": "AI answer",
+      "noteCount": "{count} notes",
+      "mentionEntity": "Entity",
+      "mentionType": "Type",
+      "mentionOwn": "Own",
+      "mentionExcluded": "Excluded",
+      "mentionCount": "Mentions",
+      "mentionSentiment": "Sentiment",
+      "mentionPosition": "Avg. position",
+      "mentionSurfaces": "Surface forms",
+      "mentionRollup": "Rolls up to",
+      "mentionTypes": "Mention type",
+      "citationRef": "#",
+      "citationUrl": "URL",
+      "citationDomain": "Domain",
+      "citationTitle": "Title",
+      "citationCategory": "Category",
+      "citationCategoryOverridden": "Override applied (stored {stored})",
+      "citationNorm": "Normalized URL",
+      "citationHost": "Host",
+      "citationBaseNorm": "Base normalized",
+      "acrEntity": "Entity",
+      "acrLevel": "Level",
+      "acrIterations": "Iterations",
+      "acrCounts": "Counts",
+      "acrRates": "Rates",
+      "acrCoOccurrence": "Co-choice",
+      "metaJobId": "Job ID",
+      "metaRunId": "Run ID",
+      "metaPromptId": "Prompt ID",
+      "metaStatus": "Status",
+      "metaModel": "Model",
+      "metaMeasuredAt": "Measured at",
+      "metaEngine": "Engine",
+      "metaRegion": "Region",
+      "metaSurface": "Surface",
+      "promptCatalog": "Catalog",
+      "promptNoCatalog": "This prompt is not in the global catalog.",
+      "promptFunnel": "Funnel",
+      "promptLang": "Language",
+      "promptRegions": "Markets",
+      "promptListType": "List type",
+      "promptDepth": "Taxonomy",
+      "promptKind": "Measurement kind",
+      "promptBrandPresence": "Brand in prompt",
+      "sentPositive": "Positive",
+      "sentNeutral": "Neutral",
+      "sentNegative": "Negative",
+      "sentMixed": "Mixed",
+      "typeMention": "Mention",
+      "typeRecommendation": "Recommendation",
+      "typeComparison": "Comparison",
+      "typeDefinition": "Definition",
+      "typeFinalChoice": "Final choice",
+      "sentNeutralHint": "scope counts unclassified occurrences as neutral.",
+      "acrPlanned": "Planned",
+      "acrValidTurn1": "Valid T1",
+      "acrValidAcr": "Valid ACR",
+      "acrAppearance": "Appear",
+      "acrChoice": "Choice",
+      "acrConditional": "Conditional",
+      "acrOffShortlist": "Off-list",
+      "acrUnresolved": "Unresolved",
+      "acrGeneric": "Generic",
+      "acrRateAppearance": "Appearance",
+      "acrRateAcr": "ACR",
+      "acrRateShare": "Share",
+      "coSingle": "Single",
+      "coConditional": "Conditional",
+      "coGeneric": "Generic",
+      "coOffShortlist": "Off-list",
+      "coUnresolved": "Unresolved",
+      "coNone": "None"
+    },
+    "notes": {
+      "heading": "Notes",
+      "colCreatedAt": "Created",
+      "colReviewer": "Author",
+      "colTarget": "Target",
+      "colSeverity": "Severity",
+      "colBody": "Note",
+      "colPrompt": "Prompt",
+      "colResolved": "Resolved",
+      "severityIssue": "Issue",
+      "severityQuestion": "Question",
+      "severityInfo": "Info",
+      "targetAnswer": "Answer",
+      "targetPrompt": "Prompt",
+      "targetMention": "Mention",
+      "targetCitation": "Citation",
+      "targetAcr": "ACR",
+      "targetMeta": "Metadata",
+      "filterTargetKind": "Target kind",
+      "filterSeverity": "Severity",
+      "filterIncludeResolved": "Include resolved",
+      "resolve": "Mark resolved",
+      "unresolve": "Reopen",
+      "exportCsv": "Export CSV",
+      "empty": "No notes yet.",
+      "placeholder": "Describe what looks wrong (machine value vs what you read).",
+      "dialogTitle": "Add note",
+      "dialogTarget": "Target",
+      "byKind": "Notes by target",
+      "total": "{count} total"
+    }
+  },
+  "adminEcat": {
+    "nav": {
+      "label": "Entity management menu",
+      "entities": "Entities",
+      "draft": "Draft",
+      "versions": "Versions & applies",
+      "review": "Review inbox",
+      "audit": "Audit log"
+    },
+    "page": {
+      "subtitle": "Manage the roles, aliases and merges of the entities found in measurements as versions. Edits go into a draft and reach the KPIs only after an apply (preview and approval).",
+      "unavailable": "Could not load the entity versions. Please try again shortly.",
+      "legacy": "Entity versioning is only available on the new backend connection.",
+      "precutover": "There is no active entity version yet (registry v1 not migrated). Version management opens after the migration."
+    },
+    "roles": {
+      "own": "Own",
+      "competitor": "Competitor",
+      "hidden": "Hidden",
+      "removed": "Removed"
+    },
+    "status": {
+      "apply": {
+        "draft": "Preview pending",
+        "previewed": "Previewed",
+        "approved": "Approved",
+        "running": "Applying",
+        "applied": "Applied",
+        "rejected": "Rejected",
+        "failed": "Failed",
+        "rolled_back": "Rolled back"
+      },
+      "version": {
+        "draft": "Draft",
+        "active": "Active",
+        "retired": "Retired",
+        "discarded": "Discarded"
+      },
+      "review": {
+        "pending": "Pending",
+        "resolved": "Registered",
+        "dismissed": "Dismissed"
+      }
+    },
+    "origin": {
+      "cutover": "Migration",
+      "admin": "Admin",
+      "rollback": "Rollback"
+    },
+    "surface": {
+      "global": "Global",
+      "website": "Website",
+      "project": "Project"
+    },
+    "common": {
+      "staleApplies": "{count} open apply request(s) need a new preview",
+      "loading": "Loading…",
+      "cancel": "Cancel",
+      "reason": "Reason",
+      "reasonRequired": "Enter a reason (required)",
+      "reasonOptional": "Reason (optional)"
+    },
+    "errors": {
+      "ECAT_DRAFT_EXISTS": "A draft is already open. Only one draft can exist at a time.",
+      "ECAT_NO_ACTIVE": "There is no active version (registry v1 not migrated).",
+      "ECAT_NO_DRAFT": "There is no draft. Create a draft first.",
+      "ECAT_VERSION_NOT_FOUND": "Version not found.",
+      "ECAT_VERSION_STATE": "Only a draft can be edited.",
+      "ECAT_MERGE_CHAIN": "The merge target is itself merged into another entity. Merges can only be one level deep.",
+      "ECAT_MERGE_SELF": "An entity cannot be merged into itself or be its own parent brand.",
+      "ECAT_PARENT_SELF": "An entity cannot be its own parent brand.",
+      "ECAT_UNKNOWN_ENTITY": "Unknown entity.",
+      "ECAT_ENTITY_IN_USE": "Another entity refers to this hub entity as merge target or parent brand, so it cannot be deleted.",
+      "ECAT_SURFACE_ADD_GLOBAL": "Adding an alias needs a target entity. Global surfaces can only be blocked.",
+      "ECAT_SURFACE_EMPTY": "The surface (alias) text is empty.",
+      "ECAT_LINT_STALE": "The draft changed after the lint. Run the lint again on the draft, or preview the apply request again.",
+      "ECAT_LINT_UNKNOWN_KEY": "This confirmation is not in the current lint result. Run the lint again.",
+      "ECAT_LINT_BLOCKED": "Blocking (L1) or structural (L3) lint findings remain, so an apply cannot be requested.",
+      "ECAT_LINT_UNACKED": "Unconfirmed warnings (L2) remain.",
+      "ECAT_SCOPE_INVALID": "Invalid apply range. 'From a round' needs a start date.",
+      "ECAT_APPLY_NOT_FOUND": "Apply request not found.",
+      "ECAT_APPLY_OPEN": "This version already has an open apply request.",
+      "ECAT_APPLY_STATE": "This action is not possible in the current state. Reload to see the status.",
+      "ECAT_APPLY_RUNNING": "Another apply is in progress. Try again after it finishes.",
+      "ECAT_BASE_CHANGED": "The active version changed after the request, so it was rejected. Request again.",
+      "ECAT_EXPOSED_REQUIRES_APPROVAL": "An apply that includes exposed rounds can only be approved by a designated approver.",
+      "ECAT_PREVIEW_STALE": "The data changed after the preview. Preview again before approving.",
+      "ECAT_REVIEW_DECIDED": "This review item was already handled.",
+      "ECAT_LEGACY_WRITE": "Roles can no longer be saved directly after the switch to versioning. Edit them in a draft.",
+      "ECAT_IMMUTABLE": "Active and retired versions cannot be changed.",
+      "ECAT_APPLY_TRANSITION": "This status change is not allowed.",
+      "ECAT_SCAN_FAILED": "The rescan of added surfaces failed. Resume or preview again.",
+      "ECAT_APPLY_INCOMPLETE": "An earlier apply has not finished. Resume that apply first.",
+      "ECAT_ESCALATED": "Too many answers are affected, so it moved to a full rebuild. Check the progress.",
+      "ECAT_REJECTED": "This apply request was rejected.",
+      "brand_required": "An own assignment needs a brand.",
+      "invalid_brand": "Unknown brand or umbrella brand.",
+      "reasonRequired": "Enter a reason.",
+      "notFound": "Not found.",
+      "conflict": "This conflicts with another change. Reload and try again.",
+      "invalid": "Invalid input.",
+      "generic": "The request could not be processed. Please try again shortly.",
+      "ECAT_PREVIEW_PENDING": "The preview is still being computed. Approve after the result arrives.",
+      "ECAT_ROLLBACK_IMMUTABLE": "A rollback draft cannot be edited. To make other changes, discard it and create a new draft.",
+      "ECAT_ENTITY_NOT_IN_DRAFT": "This entity row is not in the draft. Reload the page and try again.",
+      "ECAT_SURFACE_NOT_IN_DRAFT": "This surface is not in the draft. Reload the page and try again.",
+      "ECAT_REVIEW_NOT_FOUND": "The review item was not found. Reload the page and try again.",
+      "duplicate_pending": "The same request is already waiting to be processed. Check the status shortly.",
+      "name_required": "Own and hidden roles need a name.",
+      "ECAT_SCAN_PENDING": "The past-answer scan of the added surfaces has not finished. Preview again after the scan completes.",
+      "ECAT_APPLY_ABANDONED": "The apply was abandoned and closed. The rounds in range went back to the version before the apply; the active version and new rounds follow the new version.",
+      "ECAT_APPLY_ABANDONING": "Abandoning the apply. The rounds in range are being returned to the version before the apply.",
+      "ECAT_KIND_UNSUPPORTED": "This apply is of a kind this screen does not handle."
+    },
+    "draftBar": {
+      "draft": "Draft v{ver}: {count} change(s) against the active version",
+      "none": "No open draft (active v{ver}). Create a draft to edit.",
+      "open": "Open draft",
+      "create": "Create draft",
+      "created": "Draft v{ver} created",
+      "createTitle": "New draft",
+      "createDescription": "Copies the active version v{ver} into a draft. Only one draft can exist at a time.",
+      "titleLabel": "Title",
+      "titlePlaceholder": "e.g. Block generic words, September",
+      "reasonLabel": "Reason (optional)",
+      "cancel": "Cancel",
+      "confirm": "Create"
+    },
+    "list": {
+      "title": "Entities",
+      "description": "Roles are the active version's. Hidden leaves rankings and lists only and keeps the KPIs; removed drops the entity's mentions as well and changes the KPIs.",
+      "tabsLabel": "View by role",
+      "tabs": {
+        "all": "All",
+        "own": "Own",
+        "competitor": "Competitor",
+        "hidden": "Hidden",
+        "removed": "Removed",
+        "hub": "Added in hub",
+        "changed": "Changed in draft",
+        "review": "Review inbox"
+      },
+      "count": "Showing {shown} of {total}",
+      "periodNote": "Answer and mention counts are per entity over all time (same definition as production, dropped answers excluded).",
+      "search": "Search name or display brand…",
+      "colName": "Entity",
+      "colType": "Type",
+      "colBrand": "Display brand",
+      "colRole": "Role",
+      "colDraft": "Draft v{ver}",
+      "colAnswers": "Answers",
+      "colMentions": "Mentions",
+      "colSurfaces": "Surfaces",
+      "hubBadge": "Hub",
+      "notObserved": "not observed",
+      "changedBadge": "changed",
+      "empty": "No entities to show",
+      "more": "Show {count} more",
+      "ownLineage": "Counts toward {brand}",
+      "ownLineageNone": "No own brand"
+    },
+    "picker": {
+      "placeholder": "Search entities by name",
+      "noMatch": "No matching entity",
+      "clear": "Clear selection"
+    },
+    "detail": {
+      "draftRole": "Draft v{ver}:",
+      "summary": "Type {type} · Display brand {brand} · Answers {answers} · Mentions {mentions}",
+      "hubOrigin": "Entity added in the hub",
+      "needDraft": "You are viewing the active version v{ver}. Create a draft above to edit.",
+      "sectionRole": "Role and relations",
+      "role": "Role",
+      "roleHint": {
+        "own": "Own: counted as our brand in the KPIs. Needs a brand.",
+        "competitor": "Competitor: the default. Saving it removes the override row (when there is no merge or parent brand).",
+        "hidden": "Hidden: left out of rankings, lists and competitor selection only. KPI values do not change.",
+        "removed": "Removed: the entity's mentions, stances and ACR rows are dropped and its brand rollup is cut. The KPIs change."
+      },
+      "brandCode": "Own brand",
+      "name": "Registered name",
+      "note": "Note",
+      "mergeInto": "Merge into",
+      "mergeHint": "Folds this entity's mentions into the target. Within one answer each display brand counts once.",
+      "parentBrand": "Parent brand (rollup)",
+      "removeWarn": "Removing drops the mentions too, which changes the visibility and SoV bases. Check the impact in the preview before applying.",
+      "ownWarn": "Edits of own entities need item-by-item confirmation in the lint. Read the mention samples below first.",
+      "saveToDraft": "Save to draft",
+      "revertDefault": "Revert to default",
+      "saved": "{name}: saved to the draft",
+      "reverted": "{name}: reverted to default in the draft",
+      "mergeSources": "Entities merged into this one:",
+      "sectionSurfaces": "Add or block surfaces (aliases)",
+      "surfacesNone": "No surfaces are switched on for this entity.",
+      "surface": "Surface",
+      "surfaceAction": "Action",
+      "actionBlock": "Block",
+      "actionAdd": "Add alias",
+      "lang": "Language",
+      "surfaceSubmit": "Add to draft",
+      "surfaceAdded": "Alias {surface} added to the draft",
+      "surfaceBlocked": "Surface {surface} blocked in the draft",
+      "surfaceRemove": "Switch off {surface}",
+      "surfaceHint": "Block: drops mentions caught only through that surface. Add alias: rematches the stored answer text to create mentions (sentiment unknown).",
+      "sectionSamples": "Mention samples in context",
+      "observedSurfaces": "Surfaces seen in the samples (select one to filter)",
+      "blockThis": "Block {surface}",
+      "sourceOccurrence": "Occurrence context",
+      "sourceBody": "Text window (approximate)",
+      "turn": "Turn {n}",
+      "samplesNone": "No samples.",
+      "ownLineageWarn": "This entity's mentions count toward {brand} KPIs regardless of its register role (display name prefix, roll-up). Removing, merging or changing its parent brand can change {brand} KPIs."
+    },
+    "lint": {
+      "never": "The lint has not run yet. Run it before requesting an apply.",
+      "summary": "Run {at}: blocking {l1} · warnings {l2} · structural {l3} · unconfirmed warnings {unacked}",
+      "run": "Run lint",
+      "ran": "Lint done: blocking {l1} · warnings {l2} · structural {l3}",
+      "ackAllPlain": "Confirm all ordinary warnings",
+      "saveAcks": "Save confirmations",
+      "acksSaved": "Saved {count} warning confirmation(s)",
+      "stale": "The draft changed after the lint. Run it again.",
+      "blocked": "Blocking (L1) or structural (L3) findings prevent an apply request. Fix those edits.",
+      "observedSource": "Observed surface conflicts judged from: {source}",
+      "level": {
+        "L1": "Blocking (L1)",
+        "L2": "Warnings (L2): confirm each",
+        "L3": "Structural (L3)",
+        "INFO": "Info (existing structure): already in the previous version, does not block"
+      },
+      "ack": "Confirm {target}",
+      "escalate": "Own entity: cannot be confirmed in bulk, confirm it after reading the mention samples",
+      "clean": "No lint findings."
+    },
+    "apply": {
+      "scopeLegend": "Apply range (choose every time)",
+      "scope": {
+        "unexposed": "Unexposed rounds only",
+        "from_round": "From a round",
+        "all": "All rounds"
+      },
+      "scopeHint": {
+        "unexposed": "Applies to rounds not yet exposed and to new rounds. The requesting admin can approve it.",
+        "from_round": "Applies to rounds from the chosen date. Exposed rounds in range need an approver and a notice.",
+        "all": "Applies to every round retroactively. Exposed rounds are included, so an approver and a notice are needed."
+      },
+      "fromRound": "Start round date",
+      "exposedNotice": "Applying to exposed rounds can make published reports and the dashboard differ. Check the exposed rounds listed in the preview.",
+      "reason": "Reason (required)",
+      "reasonPlaceholder": "Why is this change being applied?",
+      "submit": "Request apply (start preview)",
+      "requested": "Apply request #{id} created. Computing the preview",
+      "blocked": {
+        "notLinted": "Run the lint before requesting an apply.",
+        "stale": "The draft changed after the lint. Run the lint again.",
+        "lintBlocked": "Resolve the blocking (L1) and structural (L3) findings first.",
+        "unacked": "Unconfirmed warnings (L2) remain."
+      }
+    },
+    "draft": {
+      "pageTitle": "Entity draft",
+      "metaTitle": "Draft v{ver}",
+      "metaDescription": "Based on v{based} · created {at}",
+      "title": "Title",
+      "reason": "Reason",
+      "saveMeta": "Save title and reason",
+      "metaSaved": "Title and reason saved",
+      "discard": "Discard draft",
+      "discarded": "Draft v{ver} discarded ({count} open apply request(s) rejected)",
+      "discardTitle": "Discard draft v{ver}",
+      "discardDescription": "The draft content is kept but can no longer be edited, and its open apply requests are rejected.",
+      "changesTitle": "Changes",
+      "changesDescription": "Entity rows and surfaces that differ from the base version v{based}.",
+      "addTitle": "Add and block globally",
+      "addDescription": "Add an entity Scope did not catch, or block a surface globally regardless of the entity.",
+      "hubTitle": "Add hub entity",
+      "hubName": "Name",
+      "hubType": "Type",
+      "hubRole": "Role",
+      "hubBrand": "Own brand",
+      "hubNote": "Note",
+      "hubSubmit": "Add to draft",
+      "hubAdded": "{name} added to the draft",
+      "hubHint": "A hub entity gets mentions only through aliases. After adding it, open it in the list and add its aliases.",
+      "globalTitle": "Globally blocked surfaces",
+      "globalSurface": "Surface",
+      "globalLang": "Language",
+      "globalSubmit": "Block globally",
+      "globalBlocked": "Surface {surface} blocked globally",
+      "globalHint": "Surfaces never counted as a mention of any entity, such as generic words (e.g. Plus, Modern).",
+      "lintTitle": "Lint",
+      "lintDescription": "An apply can be requested when there are no blocking (L1) or structural (L3) findings and every warning (L2) is confirmed.",
+      "applyTitle": "Apply request",
+      "applyDescription": "Choose the range and give a reason to compute the preview (own KPIs before and after per round, country and engine, mention samples). The KPIs do not change before approval.",
+      "rollbackReadOnly": "This is a rollback draft. It applies the previous version's content as it is, so entities and surfaces cannot be edited. To make other changes, discard it and create a new draft."
+    },
+    "diff": {
+      "none": "No difference from the base version.",
+      "counts": "v{ver} against v{against}: {entities} entity row(s) · {surfaces} surface(s)",
+      "empty": "(none)",
+      "colEntity": "Entity",
+      "colChange": "Change",
+      "colRole": "Role",
+      "colFields": "Other fields",
+      "entity": {
+        "added": "Override added",
+        "removed": "Back to default",
+        "changed": "Changed"
+      },
+      "field": {
+        "name": "Name",
+        "entity_type": "Type",
+        "brand_code": "Own brand",
+        "merge_into": "Merge into",
+        "parent_brand_id": "Parent brand",
+        "note": "Note"
+      },
+      "colSurface": "Surface",
+      "colScope": "Target",
+      "colAction": "Action",
+      "global": "Global",
+      "surface": {
+        "added": "Switched on",
+        "removed": "Switched off",
+        "changed": "Action changed"
+      },
+      "action": {
+        "add": "Add alias",
+        "block": "Block"
+      },
+      "off": "off"
+    },
+    "versions": {
+      "pageTitle": "Entity versions & applies",
+      "title": "Versions",
+      "description": "One active version and at most one draft. A rollback creates a new apply with the previous content over the same range.",
+      "colVer": "Version",
+      "colStatus": "Status",
+      "colTitle": "Title and reason",
+      "colOrigin": "Origin",
+      "colRows": "Entities · surfaces",
+      "colCreated": "Created",
+      "colActivated": "Activated",
+      "colLastApply": "Last apply",
+      "ver": "v{ver}",
+      "rows": "{entities} · {surfaces}",
+      "widen": "Widen range",
+      "widenTitle": "Widen the range of active v{ver}",
+      "widenDescription": "Applies the active version to rounds it has not reached yet (for example exposed rounds).",
+      "rollback": "Roll back",
+      "rollbackNeedsNoDraft": "Cannot roll back while a draft is open. Apply or discard the draft.",
+      "rollbackTitle": "Roll back active v{ver}",
+      "rollbackDescription": "Creates a rollback draft with the previous version's content and an apply request. The preview is computed automatically and it applies only after approval.",
+      "rollbackScopeNote": "The rollback uses the same range as the last apply. Exposed rounds in range need an approver.",
+      "rollbackRequested": "Rollback apply #{id} created",
+      "openDraft": "Open draft",
+      "compareTitle": "Compare versions",
+      "compareVer": "Version",
+      "compareAgainst": "Against",
+      "compareBase": "Base version",
+      "compareRun": "Compare",
+      "appliesTitle": "Apply requests",
+      "appliesNone": "No apply requests.",
+      "colApply": "Request",
+      "colScope": "Range",
+      "colAffected": "Affected answers",
+      "colRequested": "Requested",
+      "colReason": "Reason",
+      "applyId": "#{id}",
+      "verFrom": "v{from} → v{ver}",
+      "needsApprover": "approver needed"
+    },
+    "applyDetail": {
+      "pageTitle": "Entity apply",
+      "title": "Apply request #{id}",
+      "subtitle": "v{from} → v{ver}",
+      "affected": "{count} affected answers",
+      "busyPreview": "Computing the preview",
+      "busyApply": "Applying",
+      "requested": "Requested",
+      "approved": "Approved",
+      "started": "Started",
+      "finished": "Finished",
+      "reason": "Reason",
+      "errorCode": "Error: {code}",
+      "approverYou": "This apply includes exposed rounds. You can approve it as an approver.",
+      "approverOther": "This apply includes exposed rounds. Only a designated approver can approve it.",
+      "pollStopped": "Automatic refresh stopped. Reload the page to see the status.",
+      "action": {
+        "approve": "Approve",
+        "preview": "Preview again",
+        "resume": "Resume",
+        "reject": "Reject",
+        "rollback": "Roll back",
+        "abandon": "Abandon apply"
+      },
+      "done": {
+        "approve": "Approved. The apply starts shortly",
+        "preview": "A new preview was requested",
+        "resume": "Resume requested",
+        "reject": "Rejected",
+        "rollback": "Rollback requested",
+        "abandon": "Abandon requested"
+      },
+      "rollbackRequested": "Rollback apply #{id} created",
+      "confirm": {
+        "approve": {
+          "title": "Approve apply",
+          "body": "On approval the loader reprojects the affected answers of the rounds in range. It is refused if the data changed after the preview."
+        },
+        "reject": {
+          "title": "Reject apply",
+          "body": "Closes this apply request. The draft stays as it is."
+        },
+        "rollback": {
+          "title": "Roll back",
+          "body": "Creates a new apply request with the previous version's content over the same range. It also goes through preview and approval."
+        },
+        "preview": {
+          "title": "Preview again",
+          "body": "Recomputes the preview. An approved request loses its approval."
+        },
+        "resume": {
+          "title": "Resume",
+          "body": "Continues the stopped apply."
+        },
+        "abandon": {
+          "title": "Abandon apply",
+          "body": "Closes the failed apply without resuming it. The rounds in range are reprojected with the version before the apply, and the active version stays as it is (new rounds use the new version). Once the abandon starts, the apply cannot be resumed."
+        }
+      },
+      "confirmExposed": "This reaches {count} exposed round(s) retroactively. A notice is needed after approval.",
+      "previewTitle": "Preview",
+      "previewDescription": "Every affected answer recomputed with the new version (not a sample). The KPIs do not change before approval.",
+      "previewPending": "Computing the preview. This page refreshes automatically.",
+      "previewNone": "No preview.",
+      "previewUnreadable": "The preview has a format this page cannot read.",
+      "queueTitle": "Processing queue",
+      "queueError": "error",
+      "previewLintBlocked": "The draft lint has blocking (L1) or structural (L3) findings, so the preview cannot run again. Fix the draft and run the lint again.",
+      "hiddenNotice": "Hiding applies to all periods at once. {count} hidden change(s) take effect on every round regardless of the chosen range.",
+      "abandonPins": {
+        "planned": "Abandoning pins {count} cycle(s) in range to the version before the apply. {unexposed} of them are not exposed yet and will be left out of later \"{scope}\" applies.",
+        "abandoning": "The abandon is pinning {count} cycle(s) in range to the version before the apply. {unexposed} of them are not exposed yet and will be left out of later \"{scope}\" applies.",
+        "abandoned": "The abandon pinned {count} cycle(s) in range to the version before the apply. {unexposed} of them are not exposed yet and will be left out of later \"{scope}\" applies.",
+        "approval": "An apply whose range includes a pinned cycle needs a designated approver. New cycles follow the active version v{active}.",
+        "cycle": "{date} {surface}: pinned to v{ver}",
+        "unexposedTag": "not exposed yet",
+        "more": "{count} more",
+        "nonePlanned": "No cycle gets newly pinned by abandoning.",
+        "none": "The abandon pinned no cycle."
+      },
+      "confirmRefreeze": "Re-freezes {exposed} exposed round(s) ({count} frozen round(s) in total): after approval and apply, their card values follow the new version."
+    },
+    "preview": {
+      "computedAt": "Computed {at}",
+      "impact": {
+        "impactedAnswers": "Affected answers",
+        "changedAnswers": "Answers whose values change",
+        "entities": "Entities involved",
+        "surfaces": "Surfaces switched on"
+      },
+      "impactDetail": "Work answers {work} · prompt runs {runs} (orphans {orphans}) · blocked surfaces {block} · added surfaces {add} · rounds in range {rounds}",
+      "exposedTitle": "{count} exposed round(s) in range (approver and notice required)",
+      "andMore": "and {count} more",
+      "noExposed": "No exposed rounds in range.",
+      "approx": "Approximations: {noOcc} answer(s) without occurrence rows (June to August loads; partial surface blocks keep the count), {acr} ACR answer(s) (no turn 1 rematch, choice counts not recomputed).",
+      "kpiTitle": "Own KPIs before and after",
+      "brandLabel": "Own brand",
+      "kpiNote": "Visibility and SoV in %, differences in percentage points. Position is the average rank (lower is better). Only groups that change are listed.",
+      "kpiNone": "No round changes the own KPIs.",
+      "kpiTopTitle": "Round × country × engine: {shown} largest changes ({total} groups changed)",
+      "kpiTruncated": "Too many groups changed; the server sent part of them.",
+      "exposedOnly": "Exposed rounds only",
+      "exposed": "exposed",
+      "colRound": "Round",
+      "colCountry": "Country",
+      "colEngine": "Engine",
+      "colAnswers": "Answers",
+      "metric": {
+        "vis": "Visibility",
+        "sov": "SoV",
+        "pos": "Avg. position"
+      },
+      "brandsTitle": "Competitor brands that change most",
+      "brandsNone": "No competitor brand changes.",
+      "colBrand": "Brand",
+      "colMentions": "Mentions (range total)",
+      "colBrandAnswers": "Answers (range total)",
+      "samplesRemoved": "Mentions removed {count}",
+      "samplesAdded": "Mentions added {count}",
+      "samplesMoved": "Mentions moved {count}",
+      "samplesNone": "No samples.",
+      "noContext": "no context",
+      "approxBadge": "approximate",
+      "change": {
+        "remove": "Removed",
+        "block": "Blocked",
+        "add": "Alias added",
+        "restore": "Restored",
+        "unblock": "Unblocked",
+        "move": "Merge or rollup changed"
+      },
+      "refreezeTitle": "Re-freezes {exposed} exposed round(s) ({count} frozen round(s) in total)",
+      "refreezeBody": "When the apply finishes, these rounds are re-frozen with the current interpretation, so their card values follow the new version. The card line in the table shows the current card value and an estimate after the re-freeze.",
+      "refreezeApprox": "The after-re-freeze value is an estimate: it is the live value of the current frozen cells plus the change from this apply, so it does not include answers loaded after the freeze or the operational summary fold (the rule that merges competitor and non-competitor rows of the same answer into one). Check the card once the re-freeze finishes for the actual value.",
+      "cardLabel": "Card"
+    },
+    "review": {
+      "pageTitle": "Entity review inbox",
+      "title": "Review inbox",
+      "description": "Entities Scope finds for the first time are already counted as competitors. Register them into the draft (role, merge) or dismiss them here. New surfaces are registered as a block (default) or an alias.",
+      "needDraft": "Registering needs a draft. Create one on the Draft tab first.",
+      "statusLabel": "Status",
+      "statusAll": "All",
+      "kindLabel": "Kind",
+      "kindAny": "All kinds",
+      "kind": {
+        "new_entity": "New entity",
+        "new_surface": "New surface"
+      },
+      "search": "Search name or surface",
+      "searchSubmit": "Search",
+      "colKind": "Kind",
+      "colName": "Entity",
+      "colSurface": "Surface",
+      "colAnswers": "Answers",
+      "colMentions": "Mentions",
+      "colSeen": "First and last seen",
+      "colStatus": "Status",
+      "alert": "Alert grade {grade}",
+      "resolvedVer": "v{ver}",
+      "decide": "Handle",
+      "empty": "Nothing to review",
+      "decideHint": {
+        "new_entity": "Register it into the draft with a role (competitor by default), merge it into another entity, or dismiss it.",
+        "new_surface": "Block this surface in the draft (default), add it as an alias, or dismiss it."
+      },
+      "role": "Role",
+      "brand": "Own brand",
+      "mergeInto": "Merge into (optional)",
+      "surfaceAction": "Surface handling",
+      "surfaceBlock": "Block",
+      "surfaceAdd": "Add alias",
+      "note": "Note",
+      "dismiss": "Dismiss",
+      "register": "Register in draft",
+      "registered": "Registered in draft v{ver}",
+      "dismissed": "Dismissed"
+    },
+    "audit": {
+      "pageTitle": "Entity audit log",
+      "title": "Audit log",
+      "description": "Draft edits, lint, applies, approvals, rollbacks and review decisions (newest first). Actors are shown as the first 8 characters of their account id.",
+      "colTime": "Time",
+      "colAction": "Action",
+      "colActor": "Actor",
+      "colTarget": "Target",
+      "colDetail": "Detail",
+      "ver": "v{ver}",
+      "apply": "Apply #{id}",
+      "surface": "Surface #{id}",
+      "review": "Review #{id}",
+      "empty": "No records",
+      "newest": "Newest",
+      "older": "Older records"
+    }
+  }
+}

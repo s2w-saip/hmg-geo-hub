@@ -1,0 +1,489 @@
+{
+  "$comment": "Screen list for the local E2E (design 5.3, 5.4). One entry per screen, one Playwright test per case: title '<id> <case name>' (run one with -g '<id>'). A screen with no cases is a placeholder for a later unit and is reported as skipped. sourceFlags = groups whose HGH_SOURCE_<group>=api is set on next dev by stack.sh (add your group when your unit converts). serverCallBudget (defaults, or per screen with a budgetNote) = the most backend /v1 calls in flight at once while the page loads, judged on visit cases expecting ok from the tap's [start, end) spans (design G-25: 5+ concurrent calls per screen saturate the backend; D6: essentials first); the total number of calls and their waves are recorded, not judged. Field reference: ScreenDef and CaseDef in e2e/harness.ts.",
+  "sourceFlags": ["SESSION", "G1", "G2", "G3", "G4", "G5", "G6", "G7"],
+  "defaults": { "locale": "ko", "serverCallBudget": 4 },
+  "screens": [
+    {
+      "id": "login-landing",
+      "unit": "U2",
+      "title": "로그인 착지",
+      "flow": "login",
+      "path": "/ko/login",
+      "leaf": "legacy",
+      "relay": "bearer",
+      "apis": ["GET /v1/auth/me"],
+      "ready": ["aside[aria-label='Secondary navigation']", "[aria-label='Primary']"],
+      "note": "Real login form -> mock auth password grant -> login action GET /v1/auth/me with the new token -> defaultLandingFor. The landing page content is a later unit (legacy), only the layout is checked.",
+      "cases": [
+        { "account": "ADMIN", "expect": "ok", "landing": "/ko/dashboard" },
+        { "account": "VENDOR", "expect": "ok", "landing": "/ko/projects" },
+        { "account": "WEBSITE_KIA", "expect": "ok", "landing": "/ko/website" },
+        { "account": "SUSPENDED", "expect": "login", "apiStatus": { "GET /v1/auth/me": 401 } },
+        { "name": "bad-password", "account": "ADMIN", "password": "wrong", "expect": "login-error", "errorText": "login.error", "apis": [] }
+      ]
+    },
+    {
+      "id": "dash-layout",
+      "unit": "U2",
+      "title": "(dash) 레이아웃 GNB·SNB",
+      "flow": "visit",
+      "path": "/ko/no-access",
+      "relay": "bearer",
+      "apis": ["GET /v1/auth/me"],
+      "ready": ["aside[aria-label='Secondary navigation']", "[aria-label='Primary']"],
+      "note": "/no-access is a static leaf under the (dash) layout, so session, route guard, GNB rail and SNB are checked without any later-unit data.",
+      "cases": [
+        { "account": "ADMIN", "expect": "ok", "rail": ["/dashboard", "/website", "/projects", "/admin"] },
+        { "account": "HQ_HYUNDAI", "expect": "ok", "rail": ["/dashboard", "/projects"] },
+        { "account": "KIA_US", "expect": "ok", "rail": ["/dashboard", "/website", "/projects"] },
+        { "account": "VENDOR", "expect": "ok", "rail": ["/projects"] },
+        { "account": "WEBSITE_KIA", "expect": "ok", "rail": ["/website"] },
+        { "account": "SUSPENDED", "expect": "login", "apiStatus": { "GET /v1/auth/me": 401 } },
+        { "name": "anonymous", "account": null, "expect": "login", "apis": [] }
+      ]
+    },
+    {
+      "id": "session-refresh",
+      "unit": "U2",
+      "title": "세션 갱신(짧은 토큰)",
+      "flow": "refresh",
+      "path": "/ko/no-access",
+      "relay": "bearer",
+      "apis": ["GET /v1/auth/me"],
+      "ready": ["aside[aria-label='Secondary navigation']"],
+      "note": "Token lifetime 30 s (inside supabase-js's 90 s expiry margin) makes every getSession refresh: middleware refresh, server-component read of the pre-refresh cookie (reuse grace) and the backend still see a valid token.",
+      "cases": [{ "account": "KIA_EU", "expect": "ok", "expIn": 30 }]
+    },
+    {
+      "id": "project-gate",
+      "unit": "U2",
+      "title": "프로젝트 게이트",
+      "flow": "visit",
+      "path": "/ko/projects/c0000000-0000-4000-8000-000000000003",
+      "leaf": "legacy",
+      "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/projects/{project_id}"],
+      "ready": ["aside[aria-label='Secondary navigation']"],
+      "values": [
+        { "route": "/v1/projects/{project_id}", "jsonPath": "data.name", "selector": "aside[aria-label='Secondary navigation']", "match": "contains" }
+      ],
+      "note": "Layout gate GET /v1/projects/{id}: admin or active member passes (SNB project header = API name), anyone else 404. The project dashboard under it is U5 (legacy).",
+      "cases": [
+        { "account": "ADMIN", "expect": "ok" },
+        { "account": "VENDOR", "expect": "ok" },
+        { "name": "VENDOR-root", "account": "VENDOR", "path": "/ko/projects/c0000000-0000-4000-8000-000000000001", "expect": "not-found", "apiStatus": { "GET /v1/projects/{project_id}": 404 } },
+        { "account": "HQ_HYUNDAI", "expect": "not-found", "apiStatus": { "GET /v1/projects/{project_id}": 404 } },
+        { "account": "WEBSITE_KIA", "expect": "no-access", "apis": ["GET /v1/auth/me"], "apiStatus": { "GET /v1/projects/{project_id}": 404 } },
+        { "name": "ADMIN-missing", "account": "ADMIN", "path": "/ko/projects/c0000000-0000-4000-8000-0000000000ff", "expect": "not-found", "apiStatus": { "GET /v1/projects/{project_id}": 404 } }
+      ]
+    },
+    {
+      "id": "qa-gate",
+      "unit": "U12",
+      "title": "검수 콘솔 게이트",
+      "flow": "qaGate",
+      "path": "/ko/raw-data-qa",
+      "relay": "qa",
+      "apis": ["POST /v1/qa/sessions"],
+      "ready": ["table"],
+      "note": "Browser carries the ADMIN Supabase session too, so the relay check proves sb-* cookies and Authorization never reach /v1/qa/*.",
+      "cases": [
+        { "account": "ADMIN", "expect": "ok", "landing": "/ko/raw-data-qa/answers", "reviewer": "e2e-gate" },
+        { "name": "bad-password", "account": "ADMIN", "password": "wrong", "expect": "qa-error", "reviewer": "e2e-gate", "errorText": "qaReview.gate.errorCredentials", "apiStatus": { "POST /v1/qa/sessions": 401 }, "apis": [] }
+      ]
+    },
+    {
+      "id": "qa-list",
+      "unit": "U12",
+      "title": "검수 목록",
+      "flow": "visit",
+      "path": "/ko/raw-data-qa/answers",
+      "relay": "qa",
+      "apis": ["GET /v1/qa/sessions/current", "GET /v1/qa/answers", "GET /v1/qa/answers/progress", "GET /v1/qa/filters"],
+      "ready": ["table tbody tr"],
+      "values": [{ "route": "/v1/qa/answers", "jsonPath": "data.items.length", "selector": "table tbody tr", "match": "count" }],
+      "cases": [
+        { "account": "QA", "expect": "ok" },
+        { "name": "QA-noMentions", "account": "QA", "path": "/ko/raw-data-qa/answers?noMentions=1", "expect": "ok", "query": { "GET /v1/qa/answers": { "no_mentions": ["true"] }, "GET /v1/qa/answers/progress": { "no_mentions": ["true"] } } },
+        { "name": "no-qa-cookie", "account": "ADMIN", "expect": "qa-gate", "apis": [] }
+      ]
+    },
+    {
+      "id": "qa-detail",
+      "unit": "U12",
+      "title": "검수 상세",
+      "flow": "visit",
+      "path": "/ko/raw-data-qa/answers/{jobId}",
+      "relay": "qa",
+      "apis": [
+        "GET /v1/qa/sessions/current",
+        "GET /v1/qa/answers/{job_id}",
+        "GET /v1/qa/answers/{job_id}/review",
+        "GET /v1/qa/answers/{job_id}/notes",
+        "GET /v1/qa/answers/{job_id}/neighbors",
+        "POST /v1/qa/answers/{job_id}/lock"
+      ],
+      "ready": ["main"],
+      "values": [{ "route": "/v1/qa/answers/{job_id}", "jsonPath": "data.prompt.text", "selector": "main", "match": "contains", "prefix": 40 }],
+      "cases": [
+        { "account": "QA", "expect": "ok", "resolve": { "var": "jobId", "from": "/ko/raw-data-qa/answers", "route": "/v1/qa/answers", "jsonPath": "data.items[0].job_id" } },
+        { "name": "QA-missing", "account": "QA", "path": "/ko/raw-data-qa/answers/00000000-0000-4000-8000-000000000000", "expect": "not-found", "apis": ["GET /v1/qa/answers/{job_id}"], "apiStatus": { "GET /v1/qa/answers/{job_id}": 404 } }
+      ]
+    },
+    {
+      "id": "qa-note",
+      "unit": "U12",
+      "title": "검수 노트 작성",
+      "flow": "qaNote",
+      "path": "/ko/raw-data-qa/answers/{jobId}",
+      "relay": "qa",
+      "apis": ["POST /v1/qa/answers/{job_id}/notes"],
+      "cases": [
+        { "account": "QA", "expect": "ok", "noteBody": "e2e note: answer check", "resolve": { "var": "jobId", "from": "/ko/raw-data-qa/answers", "route": "/v1/qa/answers", "jsonPath": "data.items[0].job_id" } }
+      ]
+    },
+    {
+      "id": "qa-notes",
+      "unit": "U12",
+      "title": "검수 노트 모아보기",
+      "flow": "visit",
+      "path": "/ko/raw-data-qa/notes",
+      "relay": "qa",
+      "apis": ["GET /v1/qa/sessions/current", "GET /v1/qa/notes", "GET /v1/qa/notes/counts"],
+      "ready": ["main"],
+      "values": [{ "route": "/v1/qa/notes", "jsonPath": "data.items.length", "selector": "main ul > li", "match": "count" }],
+      "cases": [{ "account": "QA", "expect": "ok" }]
+    },
+    {
+      "id": "qa-logout",
+      "unit": "U12",
+      "title": "검수 종료",
+      "flow": "qaLogout",
+      "path": "/ko/raw-data-qa/answers",
+      "relay": "qa",
+      "apis": ["POST /v1/qa/sessions", "PATCH /v1/qa/sessions/{session_id}"],
+      "cases": [{ "account": "ADMIN", "expect": "qa-gate", "reviewer": "e2e-logout" }]
+    },
+
+    {
+      "id": "dashboard", "unit": "U5", "title": "대시보드", "flow": "visit", "path": "/ko/dashboard", "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/filters/dates", "GET /v1/kpi/summary", "GET /v1/trend", "GET /v1/mentions/brands", "GET /v1/citations/domains", "GET /v1/funnel/conversion", "GET /v1/filters/options"],
+      "ready": ["main h1"],
+      "markers": ["dashboard:filters", "dashboard:last-measured", "dashboard:kpi-cards", "dashboard:kpi-competitors"],
+      "note": "Admin also calls GET /v1/geo (GEO map section, showsGeoMap); a country account does not.",
+      "cases": [
+        { "account": "ADMIN", "expect": "ok" },
+        { "account": "KIA_US", "expect": "ok" }
+      ]
+    },
+    {
+      "id": "website", "unit": "U5", "title": "웹사이트 대시보드", "flow": "visit", "path": "/ko/website", "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/filters/dates", "GET /v1/filters/options", "GET /v1/kpi/summary", "GET /v1/kpi/engines", "GET /v1/trend", "GET /v1/mentions/brands", "GET /v1/citations/domains"],
+      "ready": ["main h1"],
+      "markers": ["website:as-of", "website:filters", "website:summary", "website:trend", "website:composition"],
+      "note": "Admin also calls GET /v1/geo (GEO section); the website account does not.",
+      "cases": [
+        { "account": "ADMIN", "expect": "ok" },
+        { "account": "WEBSITE_KIA", "expect": "ok" }
+      ]
+    },
+    {
+      "id": "project-dashboard", "unit": "U5", "title": "프로젝트 대시보드", "flow": "visit", "path": "/ko/projects/c0000000-0000-4000-8000-000000000003", "relay": "bearer",
+      "apis": [
+        "GET /v1/auth/me", "GET /v1/projects/{project_id}", "GET /v1/projects/{project_id}/prompt-candidates", "GET /v1/filters/options", "GET /v1/filters/dates",
+        "GET /v1/kpi/summary", "GET /v1/kpi/engines", "GET /v1/trend", "GET /v1/mentions/brands", "GET /v1/citations/domains", "GET /v1/funnel/conversion", "GET /v1/projects/{project_id}/settings"
+      ],
+      "ready": ["main a[href$='/member']"],
+      "note": "Same page as the U2 project-gate screen; this one checks the U5 body. VENDOR = active member (viewer); HQ_HYUNDAI = in-scope non-member (gate 404).",
+      "cases": [
+        { "account": "VENDOR", "expect": "ok" },
+        { "account": "HQ_HYUNDAI", "expect": "not-found", "apis": ["GET /v1/auth/me"], "apiStatus": { "GET /v1/projects/{project_id}": 404 } }
+      ]
+    },
+    {
+      "id": "standard-mention", "unit": "U6", "title": "글로벌 언급", "flow": "visit", "path": "/ko/standard/answer-analysis/mention", "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/mentions/brands", "GET /v1/mentions/types", "GET /v1/kpi/summary", "GET /v1/kpi/engines", "GET /v1/trend", "GET /v1/filters/dates", "GET /v1/filters/options"],
+      "ready": ["main h1"],
+      "markers": ["standard-mention:filters", "standard-mention:kpi-hero", "standard-mention:data"],
+      "cases": [{ "account": "ADMIN", "expect": "ok" }]
+    },
+    {
+      "id": "website-mention", "unit": "U6", "title": "웹사이트 언급", "flow": "visit", "path": "/ko/website/answer-analysis/mention", "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/mentions/brands", "GET /v1/mentions/types", "GET /v1/kpi/summary", "GET /v1/kpi/engines", "GET /v1/trend", "GET /v1/filters/dates", "GET /v1/filters/options"],
+      "ready": ["main h1"],
+      "markers": ["website-mention:filters", "website-mention:data"],
+      "cases": [{ "account": "ADMIN", "expect": "ok" }]
+    },
+    {
+      "id": "project-mention", "unit": "U6", "title": "프로젝트 언급", "flow": "visit", "path": "/ko/projects/c0000000-0000-4000-8000-000000000003/analysis/mention", "relay": "bearer",
+      "apis": [
+        "GET /v1/auth/me", "GET /v1/projects/{project_id}", "GET /v1/mentions/brands", "GET /v1/mentions/types", "GET /v1/kpi/summary", "GET /v1/kpi/engines", "GET /v1/trend",
+        "GET /v1/filters/dates", "GET /v1/filters/options"
+      ],
+      "ready": ["main h2"],
+      "cases": [
+        { "account": "VENDOR", "expect": "ok" },
+        { "account": "HQ_HYUNDAI", "expect": "not-found", "apis": ["GET /v1/auth/me"], "apiStatus": { "GET /v1/projects/{project_id}": 404 } }
+      ]
+    },
+    {
+      "id": "standard-citation", "unit": "U7", "title": "글로벌 인용", "flow": "visit", "path": "/ko/standard/answer-analysis/citation", "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/citations/domains", "GET /v1/citations/sources", "GET /v1/citations/prompts", "GET /v1/trend", "GET /v1/filters/dates", "GET /v1/filters/options"],
+      "ready": ["main h1"],
+      "markers": ["standard-citation:filters", "standard-citation:status", "standard-citation:domains"],
+      "cases": [{ "account": "ADMIN", "expect": "ok" }]
+    },
+    {
+      "id": "standard-citation-prompts", "unit": "U7", "title": "글로벌 인용 프롬프트", "flow": "visit", "path": "/ko/standard/answer-analysis/citation/prompts", "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/citations/prompts"],
+      "ready": ["main h1"],
+      "cases": [{ "account": "ADMIN", "expect": "ok" }]
+    },
+    {
+      "id": "standard-citation-tone-urls", "unit": "U7", "title": "글로벌 인용 톤 URL", "flow": "visit", "path": "/ko/standard/answer-analysis/citation/tone-urls", "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/citations/sources/tone"],
+      "ready": ["main h1"],
+      "cases": [{ "account": "ADMIN", "expect": "ok" }]
+    },
+    {
+      "id": "website-citation", "unit": "U7", "title": "웹사이트 인용", "flow": "visit", "path": "/ko/website/answer-analysis/citation", "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/citations/domains", "GET /v1/citations/sources", "GET /v1/citations/targets", "GET /v1/citations/prompts", "GET /v1/trend", "GET /v1/filters/dates", "GET /v1/filters/options"],
+      "ready": ["main h1"],
+      "markers": ["website-citation:filters", "website-citation:data"],
+      "cases": [{ "account": "ADMIN", "expect": "ok" }]
+    },
+    {
+      "id": "project-citation", "unit": "U7", "title": "프로젝트 인용", "flow": "visit", "path": "/ko/projects/c0000000-0000-4000-8000-000000000003/analysis/citation", "relay": "bearer",
+      "apis": [
+        "GET /v1/auth/me", "GET /v1/projects/{project_id}", "GET /v1/citations/domains", "GET /v1/citations/sources", "GET /v1/citations/prompts", "GET /v1/trend",
+        "GET /v1/filters/dates", "GET /v1/filters/options"
+      ],
+      "ready": ["main h2"],
+      "cases": [
+        { "account": "VENDOR", "expect": "ok" },
+        { "account": "HQ_HYUNDAI", "expect": "not-found", "apis": ["GET /v1/auth/me"], "apiStatus": { "GET /v1/projects/{project_id}": 404 } }
+      ]
+    },
+    {
+      "id": "standard-acr", "unit": "U8", "title": "글로벌 ACR", "flow": "visit", "path": "/ko/standard/ai-funnel/acr", "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/funnel/acr", "GET /v1/filters/dates", "GET /v1/filters/options"],
+      "ready": ["main h1"],
+      "cases": [{ "account": "ADMIN", "expect": "ok" }]
+    },
+    {
+      "id": "standard-conversion", "unit": "U8", "title": "글로벌 전환", "flow": "visit", "path": "/ko/standard/ai-funnel/conversion", "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/funnel/conversion", "GET /v1/filters/options"],
+      "ready": ["main h1"],
+      "cases": [{ "account": "ADMIN", "expect": "ok" }]
+    },
+    {
+      "id": "standard-visibility", "unit": "U8", "title": "글로벌 AI 노출", "flow": "visit", "path": "/ko/standard/ai-funnel/visibility", "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/filters/options"],
+      "ready": ["main h1"],
+      "note": "Body is a static sample (hidden menu); the only data call is the filter options.",
+      "cases": [{ "account": "ADMIN", "expect": "ok" }]
+    },
+    {
+      "id": "website-acr", "unit": "U8", "title": "웹사이트 ACR", "flow": "visit", "path": "/ko/website/ai-funnel/acr", "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/filters/options"],
+      "ready": ["main h1"],
+      "note": "Body is a static sample (decision D9 a, hidden menu); the only data call is GET /v1/filters/options?surface=website.",
+      "cases": [{ "account": "ADMIN", "expect": "ok" }]
+    },
+    {
+      "id": "website-conversion", "unit": "U8", "title": "웹사이트 전환", "flow": "visit", "path": "/ko/website/ai-funnel/conversion", "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/funnel/conversion", "GET /v1/filters/options"],
+      "ready": ["main h1"],
+      "cases": [{ "account": "ADMIN", "expect": "ok" }]
+    },
+    {
+      "id": "project-acr", "unit": "U8", "title": "프로젝트 ACR", "flow": "visit", "path": "/ko/projects/c0000000-0000-4000-8000-000000000003/ai-funnel/acr", "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/projects/{project_id}"],
+      "ready": ["main h2"],
+      "note": "Body is a static sample; only the project gate reads data.",
+      "cases": [
+        { "account": "VENDOR", "expect": "ok" },
+        { "account": "HQ_HYUNDAI", "expect": "not-found", "apis": ["GET /v1/auth/me"], "apiStatus": { "GET /v1/projects/{project_id}": 404 } }
+      ]
+    },
+    {
+      "id": "project-visibility", "unit": "U8", "title": "프로젝트 AI 노출", "flow": "visit", "path": "/ko/projects/c0000000-0000-4000-8000-000000000003/ai-funnel/visibility", "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/projects/{project_id}"],
+      "ready": ["main h2"],
+      "note": "Body is a static sample; only the project gate reads data.",
+      "cases": [
+        { "account": "VENDOR", "expect": "ok" },
+        { "account": "HQ_HYUNDAI", "expect": "not-found", "apis": ["GET /v1/auth/me"], "apiStatus": { "GET /v1/projects/{project_id}": 404 } }
+      ]
+    },
+    {
+      "id": "project-conversion", "unit": "U8", "title": "프로젝트 전환", "flow": "visit", "path": "/ko/projects/c0000000-0000-4000-8000-000000000003/ai-funnel/conversion", "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/projects/{project_id}", "GET /v1/funnel/conversion"],
+      "ready": ["main h2"],
+      "cases": [
+        { "account": "VENDOR", "expect": "ok" },
+        { "account": "HQ_HYUNDAI", "expect": "not-found", "apis": ["GET /v1/auth/me"], "apiStatus": { "GET /v1/projects/{project_id}": 404 } }
+      ]
+    },
+    {
+      "id": "standard-prompts", "unit": "U8", "title": "글로벌 프롬프트", "flow": "visit", "path": "/ko/standard/prompts", "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/prompts", "GET /v1/prompts/history", "GET /v1/filters/dates"],
+      "ready": ["main h1"],
+      "cases": [{ "account": "ADMIN", "expect": "ok" }]
+    },
+    {
+      "id": "website-prompts", "unit": "U8", "title": "웹사이트 프롬프트", "flow": "visit", "path": "/ko/website/prompts", "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/prompts", "GET /v1/filters/dates", "GET /v1/filters/options"],
+      "ready": ["main h1"],
+      "cases": [{ "account": "ADMIN", "expect": "ok" }]
+    },
+    {
+      "id": "projects", "unit": "U9", "title": "프로젝트 목록", "flow": "visit", "path": "/ko/projects", "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/projects", "GET /v1/me/project-invites"],
+      "ready": ["main h1"],
+      "cases": [{ "account": "VENDOR", "expect": "ok" }]
+    },
+    {
+      "id": "projects-new", "unit": "U9", "title": "프로젝트 생성", "flow": "visit", "path": "/ko/projects/new", "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/projects/creation-options"],
+      "ready": ["main h1"],
+      "note": "Route open to hq/region/country/admin; vendor is kept out at the route layer (no-access).",
+      "cases": [
+        { "account": "ADMIN", "expect": "ok" },
+        { "account": "VENDOR", "expect": "no-access", "apis": ["GET /v1/auth/me"] }
+      ]
+    },
+    {
+      "id": "projects-by-scope", "unit": "U9", "title": "Scope 연결 프로젝트", "flow": "visit", "path": "/ko/projects/by-scope/{scopeId}", "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/projects/by-scope/{scope_project_id}"],
+      "note": "Redirect only: a project scope id -> /projects/{id}, a website-track scope id -> /website?geography&brand, anything the account may not see -> 404. The first-render count includes the redirect target's calls.",
+      "cases": [
+        { "name": "ADMIN-project", "account": "ADMIN", "path": "/ko/projects/by-scope/a0000000-0000-4000-8000-000000000003", "landing": "/ko/projects/c0000000-0000-4000-8000-000000000003", "expect": "ok" },
+        { "name": "ADMIN-site", "account": "ADMIN", "path": "/ko/projects/by-scope/a0000000-0000-4000-8000-000000000002", "landing": "/ko/website", "expect": "ok" },
+        { "account": "HQ_HYUNDAI", "path": "/ko/projects/by-scope/a0000000-0000-4000-8000-000000000003", "expect": "not-found", "apis": ["GET /v1/auth/me"], "apiStatus": { "GET /v1/projects/by-scope/{scope_project_id}": 404 } }
+      ]
+    },
+    {
+      "id": "project-member", "unit": "U9", "title": "프로젝트 멤버", "flow": "visit", "path": "/ko/projects/c0000000-0000-4000-8000-000000000003/member", "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/projects/{project_id}", "GET /v1/projects/{project_id}/members", "GET /v1/projects/{project_id}/member-audit"],
+      "ready": ["main h2"],
+      "cases": [
+        { "account": "VENDOR", "expect": "ok" },
+        { "account": "HQ_HYUNDAI", "expect": "not-found", "apis": ["GET /v1/auth/me"], "apiStatus": { "GET /v1/projects/{project_id}": 404 } }
+      ]
+    },
+    {
+      "id": "project-setting", "unit": "U9", "title": "프로젝트 설정", "flow": "visit", "path": "/ko/projects/c0000000-0000-4000-8000-000000000003/setting", "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/projects/{project_id}", "GET /v1/projects/{project_id}/settings", "GET /v1/projects/{project_id}/settings/tracked-urls", "GET /v1/projects/{project_id}/settings/engines/history"],
+      "ready": ["main h2"],
+      "cases": [
+        { "account": "VENDOR", "expect": "ok" },
+        {
+          "account": "ADMIN", "expect": "ok",
+          "apis": ["GET /v1/auth/me", "GET /v1/projects/{project_id}", "GET /v1/projects/{project_id}/settings", "GET /v1/projects/{project_id}/settings/tracked-urls", "GET /v1/projects/{project_id}/settings/engines/history", "GET /v1/projects/{project_id}/settings/scope-link"]
+        },
+        { "account": "HQ_HYUNDAI", "expect": "not-found", "apis": ["GET /v1/auth/me"], "apiStatus": { "GET /v1/projects/{project_id}": 404 } }
+      ]
+    },
+    {
+      "id": "project-prompt", "unit": "U9", "title": "프로젝트 프롬프트", "flow": "visit", "path": "/ko/projects/c0000000-0000-4000-8000-000000000003/prompt", "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/projects/{project_id}", "GET /v1/projects/{project_id}/prompt-candidates", "GET /v1/projects/{project_id}/prompts", "GET /v1/projects/{project_id}/prompt-fields"],
+      "ready": ["main h2"],
+      "cases": [
+        { "account": "VENDOR", "expect": "ok" },
+        { "account": "HQ_HYUNDAI", "expect": "not-found", "apis": ["GET /v1/auth/me"], "apiStatus": { "GET /v1/projects/{project_id}": 404 } }
+      ]
+    },
+    {
+      "id": "project-google-keyword", "unit": "U10", "title": "프로젝트 키워드", "flow": "visit", "path": "/ko/projects/c0000000-0000-4000-8000-000000000003/intent/google-keyword", "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/projects/{project_id}", "GET /v1/intent/keywords"],
+      "ready": ["main h2"],
+      "cases": [
+        { "account": "VENDOR", "expect": "ok" },
+        { "account": "HQ_HYUNDAI", "expect": "not-found", "apis": ["GET /v1/auth/me"], "apiStatus": { "GET /v1/projects/{project_id}": 404 } }
+      ]
+    },
+    {
+      "id": "project-social-scraping", "unit": "U10", "title": "프로젝트 소셜(컨텍스트 맵)", "flow": "visit", "path": "/ko/projects/c0000000-0000-4000-8000-000000000003/intent/social-scraping", "relay": "bearer",
+      "apis": [
+        "GET /v1/auth/me", "GET /v1/projects/{project_id}", "GET /v1/intent/social/context-map/stats", "GET /v1/intent/social/context-map/contexts",
+        "GET /v1/intent/social/context-map/conditions", "GET /v1/intent/social/context-map/combinations", "GET /v1/intent/social/prompts", "GET /v1/projects/{project_id}/prompt-candidates"
+      ],
+      "ready": ["main h2"],
+      "cases": [
+        { "account": "VENDOR", "expect": "ok" },
+        { "account": "HQ_HYUNDAI", "expect": "not-found", "apis": ["GET /v1/auth/me"], "apiStatus": { "GET /v1/projects/{project_id}": 404 } }
+      ]
+    },
+    {
+      "id": "customer-interest-keywords", "unit": "U10", "title": "고객 관심 키워드", "flow": "visit", "path": "/ko/customer-interest/google-keywords", "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/intent/standard-keywords"],
+      "ready": ["main h1"],
+      "cases": [{ "account": "ADMIN", "expect": "ok" }]
+    },
+    {
+      "id": "admin-users", "unit": "U11", "title": "계정 관리", "flow": "visit", "path": "/ko/admin", "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/admin/users"],
+      "ready": ["main h1"],
+      "cases": [
+        { "account": "ADMIN", "expect": "ok" },
+        { "account": "HQ_HYUNDAI", "expect": "no-access", "apis": ["GET /v1/auth/me"] }
+      ]
+    },
+    {
+      "id": "admin-prompts", "unit": "U11", "title": "글로벌 프롬프트 관리", "flow": "visit", "path": "/ko/admin/standards/prompts", "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/admin/catalog/prompts", "GET /v1/admin/catalog/markets"],
+      "ready": ["main h1"],
+      "cases": [
+        { "account": "ADMIN", "expect": "ok" },
+        { "account": "HQ_HYUNDAI", "expect": "no-access", "apis": ["GET /v1/auth/me"] }
+      ]
+    },
+    {
+      "id": "admin-customer-interest", "unit": "U11", "title": "고객 관심 원천", "flow": "visit", "path": "/ko/admin/standards/customer-interest", "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/admin/interest/keywords", "GET /v1/admin/interest/sources"],
+      "ready": ["main h1"],
+      "cases": [
+        { "account": "ADMIN", "expect": "ok" },
+        { "account": "HQ_HYUNDAI", "expect": "no-access", "apis": ["GET /v1/auth/me"] }
+      ]
+    },
+    {
+      "id": "admin-entities", "unit": "U11", "title": "엔티티", "flow": "visit", "path": "/ko/admin/standards/entities", "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/admin/entities"],
+      "ready": ["main h1"],
+      "cases": [
+        { "account": "ADMIN", "expect": "ok" },
+        { "account": "HQ_HYUNDAI", "expect": "no-access", "apis": ["GET /v1/auth/me"] }
+      ]
+    },
+    {
+      "id": "admin-citation-sources", "unit": "U11", "title": "인용 출처", "flow": "visit", "path": "/ko/admin/standards/citation-sources", "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/admin/citation-overrides/candidates"],
+      "ready": ["main h1"],
+      "cases": [
+        { "account": "ADMIN", "expect": "ok" },
+        { "account": "HQ_HYUNDAI", "expect": "no-access", "apis": ["GET /v1/auth/me"] }
+      ]
+    },
+    {
+      "id": "admin-ga4", "unit": "U11", "title": "GA4 레지스트리", "flow": "visit", "path": "/ko/admin/ga4", "relay": "bearer",
+      "apis": ["GET /v1/auth/me", "GET /v1/admin/ga4/properties", "GET /v1/admin/ga4/markets", "GET /v1/admin/ga4/project-overrides"],
+      "ready": ["main h1"],
+      "cases": [
+        { "account": "ADMIN", "expect": "ok" },
+        { "account": "HQ_HYUNDAI", "expect": "no-access", "apis": ["GET /v1/auth/me"] }
+      ]
+    },
+    {
+      "id": "admin-keyword-tools", "unit": "U11", "title": "키워드 도구", "flow": "visit", "path": "/ko/admin/keyword-tools", "relay": "bearer",
+      "apis": ["GET /v1/auth/me"],
+      "ready": ["main h1"],
+      "note": "No read on first render: the tools call /v1/admin/keyword-tools/* on user action only (paid external APIs).",
+      "cases": [
+        { "account": "ADMIN", "expect": "ok" },
+        { "account": "HQ_HYUNDAI", "expect": "no-access", "apis": ["GET /v1/auth/me"] }
+      ]
+    }
+  ]
+}

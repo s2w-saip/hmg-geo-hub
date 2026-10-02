@@ -1,0 +1,97 @@
+{
+  "auth": "공통 필터 모델의 스코프 계산과 동일(계약서 §2): 서버가 JWT(JWKS, A8) 클레임에서 프로젝트 권한을 계산해 요청 필터와 교집합(default-deny). `project_id`(표준=HMG 루트, 웹사이트=`app.website_site`↔프로젝트, 프로젝트=`project_id`)에 `app.project_member` 행이 없으면 403. `own_brand` 는 스코프 안에서 서버가 프로젝트 설정(`app.project` 또는 표준 루트 규약)으로 결정 — 요청 바디로 받지 않는다(계약 §2 \"own_brand(서버 결정)\"). 운영자 전용 게이트 없음(일반 프로젝트 멤버 열람 가능, QA 콘솔과 달리 쓰기가 없어 role 분기 불필요). `rd.job`↔`rd.answer` 조회가 아니라 `rd.answer`/`rd.citation` 만 읽으므로 드롭·미완료 job 노출 위험 없음(served 게이트가 이미 rd.answer 존재 여부로 걸려 있음).",
+  "current_refs": [
+    "lib/scope/server.ts:2021 fetchStandardSubKpis(export, requestDeduped)",
+    "lib/scope/server.ts:2045 fetchStandardKpiHeroSubKpis(파트 좁힌 히어로 변형)",
+    "lib/scope/server.ts:4880 fetchWebsiteSubKpis",
+    "lib/db/repositories/scope-aggregates.ts:3080 export interface SubKpiEngineRow",
+    "lib/db/repositories/scope-aggregates.ts:3095 export interface StandardSubKpis(rows/promptsWithoutBrand/measuredPrompts)",
+    "lib/db/repositories/scope-aggregates.ts:10310 ENGINE_KPI_PER_JOB(현행 mentions 조인 집계, 신설계에서는 rd.answer 당사열로 대체)",
+    "app/[locale]/(dash)/dashboard/_data/live.ts:826 function consistency(values)",
+    "app/[locale]/(dash)/dashboard/_data/live.ts:838 export function applyEngineConsistency(kpis, rows)",
+    "lib/scope/kpi-tab-budget.ts:678-698 applyEngineConsistency 5지표 소비 지점 주석(S4 웹사이트 배지 경로 한정 설명)",
+    "app/[locale]/(dash)/website/page.tsx:343 subKpis.then((sub) => applyEngineConsistency(items, sub.rows))",
+    "app/[locale]/(dash)/projects/[id]/_data/live.ts:267 applyEngineConsistency(applyTrendDeltas(kpiItems, deltaDaily), subKpis.rows)"
+  ],
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/v1/kpi/engines",
+      "summary": "지정 표면(surface)·필터의 엔진별 서브 지표 5종(노출률·점유율·우호도·우선노출도·인용점유율) 분해 행과, Core 카드별 엔진 간 일관성 비율(min÷max)을 함께 반환한다."
+    }
+  ],
+  "filters": {
+    "supported": [
+      "surface(필수, own_brand 는 이 값 기준 서버가 결정)",
+      "country[] (rd.answer.geo_key)",
+      "lang[] (rd.answer.lang_key)",
+      "engine[] (결과 행 자체를 좁히는 용도 — rd.answer.engine_key IN)",
+      "from/to (앵커 날짜, rd.answer.anchor_date BETWEEN — D1)",
+      "funnel[]/brand_presence[]/list_type[]/depth1~3[] (rd.answer.cat_mask 비트 또는 rd.catalog_entry 조인, 세부 비트 매핑은 open_questions)"
+    ],
+    "ignored": [
+      "brand[] (경쟁 브랜드 선택 — 이 엔드포인트는 own_brand 고정 관점의 자사 열만 읽어 경쟁 브랜드 선택이 값에 영향을 주지 않는다)",
+      "source[] (인용 세부 도메인 선택 — citTotal/citOwned 는 도메인 단위가 아니라 cit_in/owner_key 집계라 이 축을 보지 않는다. 도메인별 분해는 인용 모듈(/v1/citations/*) 몫)",
+      "list_type[]/depth1-3[] 의 정확한 적용 여부는 미확인(open_questions)"
+    ],
+    "extra_params": [
+      "surface: enum(global|website|project), 기본값 없음(필수), project 면 project_id 병행 필수 검증",
+      "project_id: uuid, 기본값 null, surface=project 일 때만 사용·스코프 교집합 검사",
+      "part: enum(all|exposure|sov|favorability|position|citation), 기본값 all, 히어로 좁힘(fetchStandardKpiHeroSubKpis 대응) — 필요한 CTE 열만 실행해 트랜잭션 폭 축소(kpi-tab-budget.ts:678 실측 근거 계승)"
+    ]
+  },
+  "id": "K-3",
+  "metrics_rules": [
+    "M01 AI 노출률(분자 tracked=당사 1회 이상 등장 답변 수, 분모 answers=std_in 답변 수) — rd.answer.own_mask",
+    "M02 AI 점유율(분자 trackedMentions=당사 멘션 합, 분모 totalMentions=ment_total 전체 브랜드 멘션 합)",
+    "M03 AI 우호도(분자 positiveMentions, 분모 sentMentions=당사 감정 신호 합; 부정률은 negativeMentions÷sentMentions)",
+    "M04 AI 우선노출도(avgPosition=순위 진입 답변만의 평균 own_rk, top1/top3 카운트)",
+    "M05 AI 인용 점유율(분자 citOwned, 분모 citTotal=cit_in 인용 원소 수)",
+    "D1 기간 누적: from/to 가 있으면 앵커 날짜가 기간 안인 모든 완료 측정(anchor_date BETWEEN), 없으면 최신 회차 스냅샷(cyc_key = 최신 servable 회차)",
+    "R03 view_date ≤ 오늘: rd.cycle.view_date 로 아직 비공개인 회차 제외(조회 시 계산)",
+    "G-03 답변 당사 열: rd.answer 의 own_rk_*/ment_*/sent_*_h/k/g 를 자식 스캔 없이 그대로 합산(설계 §3 결정, 현행 ENGINE_KPI_PER_JOB 의 mentions 조인 폐기)",
+    "A15 ACR 반복 측정: std_in 이 acr_iter_rank>1 인 반복행을 이미 제외(rd.answer.std_in 생성열)",
+    "A16 언급 분석 없는 측정은 std_in=false 로 자동 제외(분석 결손 표시는 이 엔드포인트 범위 밖)",
+    "applyEngineConsistency 산식(그대로 유지): consistency(values)=100×min÷max, 유효 엔진(분모>0) 2개 미만이면 null"
+  ],
+  "open_questions": [
+    "funnel[]/brand_presence[]/list_type[]/depth1-3[] 를 이 Sub KPI 가 실제로 받는지 현행 코드에서 직접 확인 못함(10-feature-trace 90행 filters 열이 '-') — detailAnswerWhere(citation/mention 상세 경로)는 받지만 cachedSubKpis 가 같은 필터 세트를 쓰는지 file:line 미확인. rd.answer.cat_mask 비트 매핑도 미확인 — 적재 모듈 설계자 확인 필요.",
+    "own_brand 가 '단일 브랜드(h|k|g)'만인지, 표준(글로벌) 표면에서는 'HMG 전체(합산)' 관점도 있는지: rd.answer 는 own 열이 h/k/g 셋뿐이라 합산 관점을 만들려면 세 브랜드 열을 answer 단위로 OR/SUM 해야 하는데 own_rk 처럼 순위형은 min(rk>0) 규칙이 필요 — 산식 결정 필요(M04 HMG=3사 순위 중 0 제외 최솟값 규칙, 계약 §3, 은 이미 이런 합산 산식이 있다는 뜻이라 여기 재사용 가능한지 확인).",
+    "website 표면 citOwned 는 loc_owned(웹 유닛 자사) 를, project 표면은 loc_owned+tgt_hit(프로젝트 자사·추적) 를 쓴다고 가정했다(DB-인용-도메인-웹사이트.md 표) — K-3 가 이 3종 소유 판정 중 무엇을 쓸지는 인용 모듈(K 담당 밖) 설계자와 합의 필요.",
+    "part=all 로 6개 파트(answers/mentions/sentiment/position/citation)를 항상 한 트랜잭션에서 돌릴지, 현행처럼 화면별 파트 좁힘(exposure/sov/favorability/citation)을 그대로 유지할지 — 신설계는 열 자체가 rd.answer 하나에 다 있어 조인 단계 분리 이득이 사라졌을 수 있다(현행 절감폭이 조인 단계 축소 때문이었음, kpi-tab-budget.ts:640-660 주석). v3 실측에서 파트 분리 유지 여부를 재검증 요망.",
+    "promptsWithoutBrand/measuredPrompts(현행 Q5) 는 이 단위(K-3) 가 아니라 K-1(요약 카드)에 귀속시켐다 — 엔진별 분해가 아닌 전체 스칼라라서. 설계 리드가 K-1 설계와 대조해 중복·누락이 없는지 확인 필요.",
+    "engineConsistency 계산을 API 응답에서 서버가 내려줄지(제안, 이 문서 채택) 아니면 프론트가 rows 로 계산할지 — 서버 계산이면 프론트 계산 로직(consistency 함수)을 이관 삭제, 계약서에 명시 결정 없음."
+  ],
+  "parity": "현행 하네스(F01~F07, `notes/hmg-refactor-proto/harness/`)에는 엔진별 SubKpi 분해 + 일관성 배지에 대응하는 항목이 없다(F01=Overview 스칼라, F05=국가별, F07=기간 비교). 신규 대조 항목 제안: F08(제안) — filters 조합별로 `rows`(엔진×5필드 그룹)와 `engineConsistency` 5값을 구엔진(`fetchStandardSubKpis`+`applyEngineConsistency`, website 는 `fetchWebsiteSubKpis`)과 신엔진(`GET /v1/kpi/engines`) 양쪽에서 떠 `values-old.jsonl`/`values-new.jsonl` 로 남기고 EXCEPT ALL 0건을 확인한다. 표준/웹사이트/프로젝트 3표면 각각 최소 1개 필터 조합(무필터 스냅샷 + 90일 누적)으로 대조.",
+  "perf": {
+    "indexes": [
+      "answer_cell_idx(surface, round_date, cyc_key, prompt_key, engine_key, geo_key) — surface+round_date 파티션 프루닝 후 range scan 경로, cyc_key/prompt_key 는 이 질의에 조건이 없어 사실상 비선택적",
+      "answer_rd_brin(round_date) — from/to 넓은 기간에서 파티션 내부 블록 스킵 보조",
+      "cit_rd_brin(round_date), cit_source_idx 는 이 질의에서 owner_key 조건이라 미스 — owner_key 인덱스 없음",
+      "제안: rd.citation (surface, round_date, engine_key) 부분 인덱스 WHERE cit_in — cit_in 이 인덱스에 없어 owner_key IN(...) 필터가 항상 힙 스캔. D8 예외 대상 아님(파생표가 아니라 단순 조건 인덱스이므로 §3 D8 위반 아니라고 판단하나, 인덱스 신설이므로 '제안'으로 표시)"
+    ],
+    "notes": "rd.answer/rd.citation 모두 std_in/cit_in 이 생성열이라 어떤 btree 에도 없다(설계 의도, lens1 m6 HOT 규율) — 이 질의는 surface+round_date 로 파티션·인덱스 범위를 좁힘한 뒤 GROUP BY engine_key 전 나머지 필터(geo/lang/std_in/cit_in)는 힙 스캔+필터다. 폭 10배가 아니라 기간 길이가 스캔 행수를 지배한다(무필터 스냅샷=1회차분, 90일 누적=회차수×1회차분). v2/v3 실측이 '이력 10배'였지 '폭 10배' 가 아니었다는 계약 §3 한계가 그대로 적용되므로, RDS 구축 후 이 질의를 EXPLAIN ANALYZE 로 먼저 재는 것을 게이트로 건다.",
+    "risk": "medium",
+    "rows_scanned": "무필터 스냅샷: 최신 회차 1건의 std_in=true 답변 전량(현행 실측 규모 미확인, 표준 표면 기준 수만~십만 행 추정) + 같은 회차 cit_in 인용 원소 전량. 90일 누적: 회차 수(약 30, 3일 주기 기준) × 위 값. 10배 폭 가정 시 프롬프트·브랜드 키가 늘어도 이 질의는 answer/citation 그레인 합산이라 행수는 답변·인용 발생량에 비례(브랜드 키 증가와 독립) — 따라서 '폭 10배'의 영향은 answer_brand 를 읽는 K-1/언급 화면보다 이 엔드포인트가 상대적으로 덜 받는다."
+  },
+  "purpose": "Core KPI 5종(노출률·점유율·우호도·우선노출도·인용점유율) 각각을 AI 엔진(ChatGPT/Gemini/…)별로 쪼갠 값과, 그 엔진 간 편차를 하나의 배지 숫자(일관성=최소÷최대×100)로 요약해 \"어떤 엔진에서 유독 약한가\"를 보여준다. K-1(요약 카드 스칼라)과 K-2(기간 비교 Δ)가 전체·과거대비를 보는 반면, K-3 은 항상 **엔진 축으로 쪼갠 현재 스냅샷/기간누적** 값만 담당한다.",
+  "query_design": "현행 ENGINE_KPI_PER_JOB(scope-aggregates.ts:10310) 은 scope_mentions 를 job 단위로 조인·GROUP BY 해 당사 열을 그 자리에서 만들었다(853,909 멘션 행 인출이 지배 비용, 같은 파일 주석 실측). 신설계는 그 계산을 적재 시점에 이미 끝낸 rd.answer.own_*/ment_*/sent_*_h·k·g 열을 그대로 합산하므로 조인이 사라진다.\\n\\n[본체 CTE, own_brand='h' 예시 — 컬럼 접미사는 API layer 의 3값 allow-list(h/k/g)에서만 선택, 사용자 입력 미반영]\\nWITH scope AS (\\n  SELECT a.engine_key,\\n    count(*) AS answers,\\n    count(*) FILTER (WHERE (a.own_mask & 1) <> 0) AS tracked,\\n    count(*) FILTER (WHERE a.ment_h >= 2) AS multi,\\n    count(*) FILTER (WHERE a.own_rk_h = 1) AS top1,\\n    count(*) FILTER (WHERE a.own_rk_h BETWEEN 1 AND 3) AS top3,\\n    avg(a.own_rk_h) FILTER (WHERE a.own_rk_h > 0) AS avg_position,\\n    sum(a.ment_total) AS total_mentions,\\n    sum(a.ment_h) AS tracked_mentions,\\n    sum(a.sent_all_h) AS sent_mentions,\\n    sum(a.sent_pos_h) AS positive_mentions,\\n    sum(a.sent_neg_h) AS negative_mentions\\n  FROM rd.answer a\\n  JOIN rd.cycle cy ON cy.cyc_key = a.cyc_key AND cy.view_date <= current_date   -- R03\\n  WHERE a.surface = $1 AND a.std_in\\n    AND a.round_date BETWEEN $2 AND $3                                        -- D1, from/to 없으면 최신 회차 round_date 단일값\\n    AND (a.geo_key = ANY($4) OR $4 IS NULL)\\n    AND (a.lang_key = ANY($5) OR $5 IS NULL)\\n    AND (a.engine_key = ANY($6) OR $6 IS NULL)\\n    -- funnel/brand_presence/list_type/depth1-3: cat_mask 비트 술어(정확한 비트는 open_questions)\\n  GROUP BY a.engine_key\\n),\\ncit AS (\\n  SELECT c.engine_key,\\n    count(*) FILTER (WHERE c.cit_in) AS cit_total,\\n    count(*) FILTER (WHERE c.cit_in AND c.owner_key = ANY($7)) AS cit_owned   -- $7 = own_brand 허용 owner_key 배열(전역 자사, M05)\\n  FROM rd.citation c\\n  WHERE c.surface = $1 AND c.round_date BETWEEN $2 AND $3\\n    AND (c.geo_key = ANY($4) OR $4 IS NULL) AND (c.lang_key = ANY($5) OR $5 IS NULL)\\n    AND (c.engine_key = ANY($6) OR $6 IS NULL)\\n  GROUP BY c.engine_key\\n)\\nSELECT s.*, coalesce(c.cit_total,0) AS cit_total, coalesce(c.cit_owned,0) AS cit_owned\\nFROM scope s LEFT JOIN cit c ON c.engine_key = s.engine_key\\nORDER BY s.engine_key;\\n\\nwebsite/project 표면은 owner_key 대신 c.loc_owned(웹 유닛 자사, 표 §3 참고)로 교체하고, part≠all 이면 scope CTE 의 열 일부만 SELECT(트랜잭션 폭 축소, 현행 KPI_TAB_SUB_KPI_PARTS 계승). engineConsistency 5값은 API layer 에서 이 결과 rows 를 받아 applyEngineConsistency 와 동일한 min÷max 계산으로 응답에 얹는다(파생 저장 없음, 조회 시 계산이라 D8 위반 아님).",
+  "read_model": [
+    "rd.answer.engine_key, round_date, anchor_date, cyc_key, surface, geo_key, lang_key, cat_mask, std_in, own_mask, own_rk_h, own_rk_k, own_rk_g, ment_total, ment_h, ment_k, ment_g, sent_pos_h, sent_pos_k, sent_pos_g, sent_neg_h, sent_neg_k, sent_neg_g, sent_all_h, sent_all_k, sent_all_g",
+    "rd.citation.engine_key, round_date, surface, geo_key, lang_key, cit_in, owner_key, loc_owned",
+    "rd.cycle.cyc_key, view_date, servable (R03 게이트)",
+    "app.owned_base.owner_key, brand_code (own_brand → 허용 owner_key 배열 산출, M05)",
+    "app.project.project_id, app.project_member (surface=project 스코프 교집합)",
+    "app.website_site (surface=website 의 project_id↔site_id 매핑, own_brand 결정)"
+  ],
+  "response": "{\"data\": {\"rows\": [{\"engine\": \"chatgpt\", \"answers\": \"int\", \"tracked\": \"int\", \"multi\": \"int\", \"top1\": \"int\", \"top3\": \"int\", \"avgPosition\": \"number|null\", \"totalMentions\": \"int\", \"trackedMentions\": \"int\", \"sentMentions\": \"int\", \"positiveMentions\": \"int\", \"negativeMentions\": \"int\", \"citTotal\": \"int\", \"citOwned\": \"int\"}], \"engineConsistency\": {\"visibility\": \"number|null (100×min÷max, tracked/answers)\", \"shareOfVoice\": \"number|null (trackedMentions/totalMentions)\", \"sentiment\": \"number|null (positiveMentions/sentMentions)\", \"position\": \"number|null (avgPosition 그대로 min÷max)\", \"citationShare\": \"number|null (citOwned/citTotal)\"}}, \"meta\": {\"surface\": \"string\", \"mode\": \"snapshot|cumulative\", \"as_of\": \"date\", \"cycles\": \"int(포함 회차 수)\", \"generation\": \"bigint(rd.surface_generation.generation)\", \"ignored_filters\": [\"string[]\"], \"dropped_filters\": [\"string[]\"], \"suppressed\": \"bool(hidden_scope 로 전체 억제된 경우)\"}}",
+  "screens": [
+    "/standard/answer-analysis/mention — KPI 탭 히어로·엔진별 섹션(현행 fetchStandardKpiEngineTrend 의 스냅샷 부분, latest/latestBrands)",
+    "/website — KPI 카드 엔진 일관성 배지(fetchWebsiteSubKpis→applyEngineConsistency)",
+    "/website/answer-analysis/mention — 요약 카드(missingPrompts/multiMention/top3Rate 는 K-1 경계, 엔진별 분해 자체는 K-3)",
+    "/projects/[id]/analysis/mention — 측정개요 Sub KPI(fetchProjectSubKpis, project 표면)",
+    "/dashboard — Core 카드 엔진 일관성 배지(applyEngineConsistency, live.ts:838)"
+  ],
+  "title": "엔진별 서브 지표(GET /v1/kpi/engines)",
+  "writes": "없음 — 읽기 전용(api_ro). 스코프 밖 접근 시도는 app.access_audit_log 감사 대상이나, 계약서 §3 \"알려진 미결\"에 쓰기 주체가 없다고 명시돼 있어(api_ro 는 읽기 전용) 이 엔드포인트에서 새로 감사 로그 쓰기를 만들지 않는다 — AU-1 설계(다른 단위)가 해소할 때까지 이 API 는 감사 미기록 상태로 둔다."
+}

@@ -1,0 +1,208 @@
+{
+  "auth": "역할 게이트: `app.user_role = 'admin'`(현행 `canAccessAdmin`/`requireCatalogEditor` 동치, v1 편집 게이트=admin 고정, hq 개방 시 이 한 곳만 확장 — route-policy.ts:250 \"v1 편집 게이트=admin 고정\" 주석과 일치). FastAPI 의존성 `require_admin()` 이 Supabase JWT(JWKS) 검증 후 `app.user_account.role` 조회해 403. 스코프(brand/country) 필터는 적용하지 않는다 — 관리자는 전량을 본다(현행 listStandardCatalog 주석 \"admin UI 는 전부를 본다\"와 동일, listStandardCatalogScoped 의 브랜드·시장 교집합은 /v1/prompts 등 뷰어 API 쪽 관심사). 모든 쓰기는 `app.actor()`(current_setting('app.actor_id')) 를 세션 시작 시 SET 해 트리거·감사가 행위자를 필수로 요구하게 한다.",
+  "current_refs": [
+    "app/[locale]/(dash)/admin/standards/_actions.ts:1-784 (createStandardPrompt, updateStandardPromptText, updateStandardPromptLabels, updateStandardPromptRegions, bulkSetStandardPromptRegions, setStandardPromptKind, softDeleteStandardPrompt, restoreStandardPrompt, toggleStandardPromptEnabled, buildCatalogWorkbook/parseCatalogWorkbook 부근)",
+    "lib/db/repositories/standards.ts:29-410 (listStandardCatalog, listStandardCatalogScoped, catalogMarketScopeCondition, listCatalogTaxonomy, countStandardAcrPrompts, standardPromptRepository, standardKeywordRepository:414-480, standardSourceRepository:481-)",
+    "lib/db/repositories/prompt-audit-logs.ts:22-160 (promptAuditLogRepository.listForPrompt/listGlobalScoped/listDailyCounts, applyAuditedCatalogChange:198, createAuditedCatalogPrompt:248)",
+    "lib/standards/audit.ts (computeChanges, PromptAuditChanges/EventType 타입, 미열람 — 존재만 확인 git grep)",
+    "lib/standards/prompt-regions.ts (normalizePromptRegions/normalizePromptLang/sameRegions/regionsForAudit)",
+    "lib/standards/prompt-markets.ts (normalizeMarket, isPseudoRegion, marketInScope 정본 주석)",
+    "lib/auth/route-policy.ts:244-272 (/admin/standards, /admin/standards/prompts, /admin/standards/customer-interest 라우트 정책)",
+    "lib/auth/scope-policy.ts:48 (canAccessAdmin)",
+    "app/[locale]/(dash)/admin/standards/prompts/page.tsx, _components/prompt-edit-dialog.tsx, _components/catalog-io.tsx, _components/prompt-list.tsx (미열람, 존재만 확인)"
+  ],
+  "filters": {
+    "supported": [],
+    "ignored": [
+      "surface",
+      "own_brand",
+      "brand[]",
+      "country[]",
+      "lang[]",
+      "engine[]",
+      "from/to",
+      "funnel[]",
+      "brand_presence[]",
+      "list_type[]",
+      "depth1~3[]",
+      "source[]"
+    ],
+    "extra_params": [
+      "q: string(옵션, 본문 ILIKE 검색 — 현행 prompt-list 검색 상당)",
+      "brand: string(옵션, 카탈로그 소속 브랜드 필터 — 조회 협소화용, 공통 필터 모델의 brand[]와 별개로 목록 UI 자체 협소화)",
+      "kind: 'single'|'acr'(옵션)",
+      "include_deleted: bool(기본 false)",
+      "cursor/limit: 키셋 페이지네이션"
+    ]
+  },
+  "id": "AD-1",
+  "metrics_rules": [
+    "해당 없음 — 이 단위는 M01~M12 지표 계산을 하지 않는다(원천 편집·조회 CRUD). R-계열 중 참고하는 것: R08 완료 비율 컬럼은 rd.catalog_entry 쪽 몫이라 이 API 밖. 감사 append-only 규율은 D8과 별개로 트리거 tg_append_only(app.prompt_audit_log)가 강제한다."
+  ],
+  "open_questions": [
+    "standard_keyword/standard_source(고객 관심어·표준 소스) CRUD 를 이 단위에 포함시켰다 — 현행 코드는 admin/standards 라우트 패밀리에 같이 있지만(_actions.ts 동일 파일), 사용목적은 GEO 콘텐츠 원천이 아니라 GET /v1/intent/keywords, /v1/intent/social(고객 관심) 화면의 입력 데이터다. AD-1(표준 프롬프트·택소노미)과 도메인이 다르므로 별도 관리 단위(예: AD-intent 또는 intent 모듈에 admin 서브 라우트)로 뺄지 결정 필요. 이번 설계에서는 임시로 /v1/admin/catalog/keywords·/sources 에 남겨뒀다.",
+    "rd.dim_taxon.axis CHECK 가 depth1~depth2~depth3 까지만 있고 depth4 가 없다(공통 필터 모델도 depth1~3 만). app.prompt.depth4 는 여전히 쓰기 컬럼으로 존재(DB-v2.sql:150) — 즉 depth4 는 '분석 필터 축 아님, 편집 전용 메타'로 확정된 것으로 이해했다. 맞는지 확인 필요(현행 CatalogTaxonomyRow는 depth4 를 살아있는 옵션으로 노출했었음, standards.ts:266-283).",
+    "scope 발행 콜백(applyScope → Scope PATCH)은 A10 '20분 pull·적재 트랜잭션 안 판정' 원칙과 결이 다르다 — 카탈로그 편집은 즉시 Scope PATCH(현행처럼 동기 호출)인지, 아니면 app.scope_outbox 에 적재해 비동기 반영하는지 결정 필요. DDL 에 app.scope_outbox(aggregate IN project/prompt/schedule) 가 이미 있어 이쪽이 유력해 보이지만 계약서에 명문화가 없다.",
+    "rd.catalog_entry(적재기 전용 쓰기) 를 AD-1 이 참조는 하되(드리프트·집계 확인용) 절대 쓰지 않는다는 것을 재확인했다 — 이 경계가 맞는지, 아니면 '카탈로그 스냅샷 확인' 화면(적용 여부 즉시 반영 배지)이 rd 최신성 지연(최대 20분)을 감수하고도 되는지 UX 결정 필요.",
+    "엑셀 대량 가져오기/내보내기(catalog-io.tsx, CHUNK_LIMIT=25, buildCatalogWorkbook/parseCatalogWorkbook)를 REST 엔드포인트로 어떻게 노출할지 — bulk PATCH 배열 하나로 합쳤다(POST /v1/admin/catalog/prompts:bulk-apply). 클라이언트 분할 호출(25건 청크)을 서버가 유지할지, 서버가 통짜로 받아 트랜잭션 배치 처리할지 결정 필요(서버리스 타임아웃 제약이 이제도 유효한지는 A14 서울 리전 FastAPI 배포 방식에 달림, 미확인)."
+  ],
+  "parity": "[\"parity 최종 답은 위 문자열 하나 배열로 제출함(중복 필드 아님 — 스키마 오류 방지용 재확인 주석, 실제 값은 아래 parity 필드 참고)\"]",
+  "perf": {
+    "indexes": [
+      "prompt_project_live_idx ON app.prompt (project_id, created_at) WHERE deleted_at IS NULL — 목록 기본 정렬·페이지네이션에 사용(단 현행은 depth1/2/3/text 정렬이라 이 인덱스는 부분 최적화, ORDER BY 절 자체를 바꾸거나 커버링 인덱스 추가가 필요할 수 있음, 제안).",
+      "prompt_scope_idx ON app.prompt (scope_prompt_id) WHERE scope_prompt_id IS NOT NULL AND deleted_at IS NULL — 추적/미추적 카운트·scope 링크 JOIN.",
+      "app.prompt_audit_log: prompt_audit_project_idx(project_id, created_at DESC), prompt_audit_prompt_idx(prompt_id, created_at DESC) — 전역 이력 탭·단건 이력 둘 다 커버.",
+      "app.pcfv_filter_idx(field_id, value) INCLUDE(prompt_id) — 커스텀 필드 값 필터(이 단위 범위 밖일 수 있으나 프롬프트 커스텀필드가 카탈로그 편집 화면에 같이 뜬다면 참고).",
+      "제안: app.prompt (project_id, deleted_at, depth1, depth2, depth3, text) 커버링 인덱스 — 현행 목록 쿼리가 그 순서로 ORDER BY 하는데 현재 인덱스는 created_at 기준이라 표준 카탈로그(추정 수백~수천 행, 폭 10배에도 10배 이하로 작음)에서는 순차 스캔이 더 쌀 수도 있음(행 수가 작아 위험도 낮음 — 실측 후 필요시만 추가)."
+    ],
+    "notes": "app.prompt 는 프로젝트당 넓은 원본 테이블이고 표준 루트 카탈로그는 그 중 project_id 하나로 좁힌 부분집합이다. 현행 실측 없음(미확인) — 연구 문서상 카탈로그 규모는 수백~수천 행 수준으로 추정(F01 하네스가 다루지 않음). 폭 10배가 적용돼도(프롬프트 키 10배) 이 표는 여전히 수만 행 이하이고 project_id 인덱스로 즉시 가지친다. 감사 로그(app.prompt_audit_log)는 append-only 누적이라 시간이 지날수록 커지지만 project_id+created_at 인덱스가 최신순 페이지네이션을 커버한다. 엑셀 벌크 적용(25건 청크)은 각 청크가 개별 트랜잭션이라 초당 요청 수만 문제고 단건 쿼리 비용은 낮다. 스코프 드리프트 계산(scope orphan: rd.dim_prompt LEFT JOIN app.prompt)은 rd.dim_prompt 가 10배 폭에서 약 12만 행(dim_prompt_text_trgm_hint 주석 근거)이라 project_key 로 먼저 좁히지 않으면 전체 스캔이 된다 — WHERE rd.dim_prompt.project_key = (표준 루트 project_key) 를 반드시 걸어야 함.",
+    "risk": "low",
+    "rows_scanned": "카탈로그 목록·단건 CRUD: 수백~수천 행(표준 루트 project_id 로 즉시 가지치기, app.prompt 인덱스 존재). 드리프트 카운트(scope orphan): rd.dim_prompt 약 12만 행 중 project_key 조건으로 가지치기 후 그 부분집합만(가지치기 누락 시 전체 12만 스캔 — 그 경우만 medium)."
+  },
+  "purpose": "HMG 표준(글로벌) 프롬프트 카탈로그와 7축 택소노미(brand·brand_presence·list_type·depth1-3·funnel)를 관리자가 열람·생성·수정·소프트삭제·복원하고, 측정 종류(single/acr)·대상 시장(regions)·언어(lang)를 편집하며, 모든 변경을 append-only 감사 로그로 남기고 Scope 쪽 프롬프트에 반영한다. 표준 프롬프트를 소비하는 모든 화면(대시보드 필터·언급/인용 분석·AI 퍼널)의 원천 편집 창구.",
+  "query_design": "[\"목록: SELECT p.*, (p.scope_prompt_id IS NOT NULL) AS tracked FROM app.prompt p WHERE p.project_id = :standard_root_project_id AND (:include_deleted OR p.deleted_at IS NULL) [AND p.text ILIKE '%'||:q||'%'] [AND p.kind = :kind] ORDER BY p.depth1, p.depth2, p.depth3, p.text (또는 키셋: created_at, prompt_id) — prompt_project_live_idx 사용.\", \"통계(추적/미추적/ACR/삭제): 위 결과 집합에서 애플리케이션 레벨 집계(현행과 동일, 행수가 작아 SQL GROUP BY 로 대체해도 무방 — 제안).\", \"드리프트(scope_orphans): SELECT count(*) FROM rd.dim_prompt d LEFT JOIN app.prompt p ON p.scope_prompt_id = d.prompt_id WHERE d.project_key = :standard_root_project_key AND p.prompt_id IS NULL — project_key 로 먼저 가지치기 필수(위 perf 참고).\", \"생성(트랜잭션): INSERT app.prompt(...) RETURNING prompt_id → INSERT app.prompt_audit_log(event_type='created', changes={text:{old:null,new:text}}) → (Scope PATCH 성공 시) UPDATE app.prompt SET scope_prompt_id=:x — 3단계 한 트랜잭션(현행 createAuditedCatalogPrompt 그대로).\", \"단건 수정(본문/라벨/시장·언어/종류): SELECT ... FOR UPDATE 로 현재 행 조회 → computeChanges(old,new) → UPDATE app.prompt SET ... WHERE prompt_id=:id AND project_id=:root AND deleted_at IS NULL → INSERT app.prompt_audit_log(event_type=...) → (변경이 Scope 노출 대상이면) Scope PATCH 콜백, 실패 시 전체 롤백(현행 applyAuditedCatalogChange 그대로, guard 조건도 유지: restore 는 deleted_at IS NOT NULL, 그 외는 IS NULL).\", \"소프트삭제/복원: 위와 동일 패턴, patch={deleted_at: now()|null}.\", \"벌크(엑셀 적용): 서버가 행별로 위 단건 수정 트랜잭션을 반복(현행 25건 청크 유지 또는 서버 단일 배치 — open_questions 참고), 부분 성공 허용·실패 건 개별 보고.\", \"감사 이력: SELECT l.*, u.email FROM app.prompt_audit_log l LEFT JOIN app.user_account u ON u.user_id=l.actor_id LEFT JOIN app.prompt p ON p.prompt_id=l.prompt_id WHERE l.project_id=:root [AND l.created_at >= :from] [AND l.event_type = ANY(:types)] ORDER BY l.created_at DESC (키셋 커서) — prompt_audit_project_idx 사용.\"]",
+  "read_model": [
+    "app.prompt(prompt_id, project_id, candidate_id, text, prompt_type, category, brand_code, brand_presence, list_type, depth1, depth2, depth3, depth4, funnel_stage, kind, lang, regions, scope_prompt_id, status, created_by, created_at, updated_by, updated_at, deleted_at)",
+    "app.prompt_audit_log(audit_id, prompt_id, project_id, actor_id, actor_type, event_type, changes, batch_id, created_at)",
+    "app.project(project_id, kind='standard_root') — 표준 루트 프로젝트 단건 조회(현행 STANDARD_ROOT_PROJECT_ID 상당, project_one_root 부분 유니크 인덱스로 유일성 보장)",
+    "app.brand(brand_code, ...) — 브랜드 코드 유효성 검증·목록",
+    "app.user_account(user_id, email, role) — 행위자 이메일 조인, 관리자 권한 확인",
+    "app.standard_keyword(keyword_id, term, source_type, brand_code, enabled, notes, created_by, created_at, updated_at) — 제안 경계: intent 모듈과 공유될 수 있음(open_questions)",
+    "app.standard_source(source_id, url, channel, brand_code, enabled, notes, created_by, created_at, updated_at) — 위와 동일",
+    "app.judgment_change(kind='catalog'|'prompt_kind', subject_uuids, payload, status) — 제안: 편집을 Scope 로 즉시 PATCH 하지 않고 비동기 큐잉하는 경우에만 쓰기 대상(open_questions)",
+    "app.scope_outbox(aggregate='prompt', aggregate_id, op, payload) — 위와 동일 대안",
+    "rd.dim_prompt(prompt_id, project_key, prompt_key) — 드리프트(scope_orphans) 계산 전용 읽기, project_key 가지치기 필수",
+    "rd.dim_project(project_key, scope_project_id, is_root) — 표준 루트 project_key 조회(rd 조인 키 확보용)"
+  ],
+  "response": "\"단일 응답 스키마 { data, meta } (계약서 §3): 목록은 data.items: CatalogPromptRow[] + data.stats:{total,tracked,untracked,scope_orphans,acr,deleted}(전부 정수) + meta.cursor(다음 페이지 키셋, 없으면 null). CatalogPromptRow = {prompt_id, text, prompt_type, category, brand_code, brand_presence, list_type, depth1..depth4, funnel_stage, kind, lang, regions[], scope_prompt_id, scope_text, tracked:bool, created_at, updated_at, deleted_at}. 감사 이력은 data.items: AuditLogRow[] = {audit_id, prompt_id, prompt_text, actor_email, event_type, changes(필드별 {old,new}), created_at} + meta.cursor. 쓰기 엔드포인트는 {data:{prompt_id}, meta:{...}} 또는 실패 시 표준 오류 바디(현행 ActionResult의 ok/error 를 HTTP 4xx + {error:{code,message}}로 치환).\"",
+  "screens": [
+    "/admin/standards/prompts (표준 프롬프트 카탈로그 목록·통계·필터·편집 다이얼로그·소프트삭제/복원)",
+    "/admin/standards/prompts (변경 이력 탭 — 전역 90일 감사 로그, 현행 promptAuditLogRepository.listGlobalScoped)",
+    "/admin/standards/customer-interest (고객 관심 키워드·소스 CRUD — 경계 open_question)",
+    "(간접) /standard/*, /website/* 필터바의 listCatalogTaxonomy — 이 단위가 쓰는 분석계 읽기 API 는 아니지만 이 단위가 관리하는 데이터의 소비처"
+  ],
+  "title": "AD-1 표준 카탈로그 관리 (/v1/admin/catalog)",
+  "writes": "\"app.prompt(INSERT/UPDATE, project_id=표준 루트로 한정, 물리 DELETE 없음 — 소프트삭제만) + app.prompt_audit_log(INSERT, append-only, tg_append_only 트리거로 UPDATE/DELETE 자체가 DB 레벨 거부) 같은 트랜잭션. 감사행 없는 app.prompt 단독 쓰기는 없다(모든 변경 경로가 applyAuditedCatalogChange/createAuditedCatalogPrompt 트랜잭션 경유). Scope 반영은 같은 트랜잭션의 콜백으로 실행되고 실패 시 로컬도 롤백(현행 규약 유지) — 단 A10(적재 트랜잭션 안 판정) 원칙과 이 동기 콜백의 관계는 open_questions 참고. app.standard_keyword/app.standard_source 는 감사 로그 없이 단순 INSERT/UPDATE(현행과 동일, 별도 audit 테이블 DDL 에 없음 — 제안: 필요하면 prompt_audit_log 와 유사한 append-only 로그 신설, 이번엔 제안 안 함).\"",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/v1/admin/catalog/prompts",
+      "summary": "표준 카탈로그 목록 + 통계(전체/추적/미추적/ACR/삭제), q·kind·include_deleted 필터, 키셋 페이지네이션"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/catalog/prompts",
+      "summary": "카탈로그 프롬프트 생성(로컬 INSERT+감사+Scope 발행 트랜잭션)"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/catalog/prompts/{prompt_id}",
+      "summary": "단건 상세(택소노미 7축·시장·언어·kind·scope 연결 상태)"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/admin/catalog/prompts/{prompt_id}/text",
+      "summary": "본문 수정"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/admin/catalog/prompts/{prompt_id}/labels",
+      "summary": "택소노미 라벨 수정(prompt_type/category/brand/brand_presence/list_type/depth1-4/funnel_stage)"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/admin/catalog/prompts/{prompt_id}/regions",
+      "summary": "대상 시장(regions)·언어(lang) 수정"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/catalog/prompts/bulk-regions",
+      "summary": "다중 선택 행 시장 일괄 설정(건별 1개 감사 로그, 부분 성공 허용)"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/admin/catalog/prompts/{prompt_id}/kind",
+      "summary": "측정 종류 전환(single↔acr) — 셀당 측정량 급증 경고 포함"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/admin/catalog/prompts/{prompt_id}",
+      "summary": "소프트삭제(deleted_at 설정, 물리삭제 아님)"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/catalog/prompts/{prompt_id}/restore",
+      "summary": "소프트삭제 복원"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/catalog/prompts/{prompt_id}/audit",
+      "summary": "단건 변경 이력"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/catalog/audit",
+      "summary": "전역 변경 이력(90일 기본, event_type·from 필터, 키셋 페이지네이션)"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/catalog/taxonomy",
+      "summary": "택소노미 캐스케이딩 옵션(brand→brand_presence→list_type→depth1→depth2→depth3→depth4 DISTINCT)"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/catalog/markets",
+      "summary": "시장 편집 시 쓸 어휘(표준 루트 프로젝트의 실제 측정 시장 목록)"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/catalog/prompts:bulk-apply",
+      "summary": "엑셀 가져오기 적용(프리뷰에서 만든 diff 페이로드를 청크로 적용, 부분 성공 허용)"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/catalog/prompts:export",
+      "summary": "카탈로그 엑셀 내보내기(현행 buildCatalogWorkbook 상당)"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/catalog/keywords",
+      "summary": "고객 관심 키워드 목록 (경계 재검토 대상, open_questions)"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/catalog/keywords",
+      "summary": "고객 관심 키워드 생성"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/admin/catalog/keywords/{keyword_id}",
+      "summary": "고객 관심 키워드 수정"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/admin/catalog/keywords/{keyword_id}",
+      "summary": "고객 관심 키워드 삭제(물리, 감사 없음 — 현행과 동일)"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/catalog/sources",
+      "summary": "표준 소스(뉴스/PR/소셜/커뮤니티) 목록"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/catalog/sources",
+      "summary": "표준 소스 생성"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/admin/catalog/sources/{source_id}",
+      "summary": "표준 소스 수정"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/admin/catalog/sources/{source_id}",
+      "summary": "표준 소스 삭제(물리, 감사 없음)"
+    }
+  ]
+}

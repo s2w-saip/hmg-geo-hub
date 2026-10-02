@@ -1,0 +1,87 @@
+{
+  "id": "IG-2",
+  "auth": "내부 적재 경로다. HTTP 엔드포인트로 노출되지 않고 `loader` 롤(전용 DB 세션)만 `ing`·`rd`·`app.judgment_change` 갱신 트랜잭션을 실행한다. api_ro·api_rw 는 이 단위의 결과(rd 판정 컬럼)만 읽고, 판정 로직 자체에는 접근하지 않는다(A17 스키마 경계). 트리거 경로는 둘: ① IG-1(Scope pull) 이 run 을 끝낸 뒤 같은 트랜잭션 안에서 이 단위를 호출(정기 20분 pull, A10) ② `app.judgment_change` 에 pending 행이 쌓이면 적재기 폴링 잡이 claim(claimed_at 갱신 후 `status='running'`)해 이 단위의 재판정 경로만 실행. 운영자 게이트는 이 단위에 없다 — 요청 게이트(무엇을 재판정 큐에 넣을 것인가)는 app 쓰기 API 쪽(§9 운영자 행) 소관이고, 이 단위는 큐를 소비만 한다. DB 롤 자체가 `ing`·`rd` 스키마 쓰기를 loader 하나로 제한하므로(DDL 헤더 주석) 이 층에서의 권한 분기는 없다.",
+  "current_refs": [
+    "lib/scope/mirror/sync.ts:957-1160 (R13 ACR 반복 접기 — 현행은 acr_summary.prompt_run_id 존재 여부에 의존해 분석 없는 반복 job 이 개별 행으로 남음. 새 설계는 ing.acr_prompt_run/ing.acr_rollup_row 를 run·셀 메타데이터로 채워 이 결함을 없앤다)",
+    "lib/db/repositories/scope-aggregates.ts:483-538 ownBrandRankPerJobSql (④ 우선노출도 — 답변 안 브랜드 행을 정본명 단위로 min(avg_position) 접고 rank() 부여. own_rk_h/k/g 산식의 직접 출처)",
+    "lib/db/repositories/scope-aggregates.ts:7374-7414 aggregateAnswerStanceDistributionFromMirror (job×엔티티 DISTINCT ON 최저 턴 — rd.answer_stance.first_turn 산식 출처, DB-v2.sql 주석에도 인용됨)",
+    "lib/scope/hmg-brands.ts:22-151 HMG_BRANDS·SEED_ROSTER·entity_alias (own_mask 판정의 브랜드 명부·별칭 원본, app.entity_registry/app.entity_alias 로 이관 확정)",
+    "lib/scope/result-adapter.ts:883,1365,1413,2501,2514 (job.status/analysis.status 조합 — rd.job.status_code·analysis_code, rd.answer.analysis_state 결손 판정 원천, G-05)",
+    "lib/summary/read/cycle-completion.ts:25-28 (완료 비율 임계 실측 — R08/B5 analysis_done_ratio ≥ 0.95 게이트의 현행 근거)",
+    "notes/hmg-refactor-design/db/DB-v2.sql:540-580 rd.propagate_answer_gates (자식 게이트 전파 함수, 이 단위가 적재 흐름 7단계에서 호출)",
+    "notes/hmg-refactor-design/db/DB-v2.sql:586-628 rd.ensure_leaf/ensure_month_leaf (이 단위가 투영 INSERT 전에 호출해야 하는 leaf 보장 헬퍼)"
+  ],
+  "endpoints": [
+    {
+      "method": "internal",
+      "path": "loader.project_judge(run_key, answer_key[]?)",
+      "summary": "IG-1 이 run 삽입을 끝낸 뒤 같은 트랜잭션에서 호출 — 해당 run 의 job 전부에 대해 rd.job/rd.answer/자식 표 판정 컬럼을 채우고 게이트를 전파한다"
+    },
+    {
+      "method": "internal",
+      "path": "loader.project_rejudge(change_id[])",
+      "summary": "app.judgment_change 의 pending 행(카탈로그·브랜드 규칙·hidden_market·entity 등 판정 입력 변경)을 claim 해, 영향받는 answer_key 집합을 규칙 버전으로 재계산하고 rd.propagate_answer_gates 로 자식에 전파한다"
+    }
+  ],
+  "filters": {
+    "supported": [],
+    "ignored": [],
+    "extra_params": []
+  },
+  "metrics_rules": [
+    "A15/R13 ACR 반복 접기: job 메타데이터(prompt_run·run·셀)로 접는다. ing.acr_prompt_run(prompt_run_id, run_id, cell 식별자)이 정본 — 분석 유무에 의존하지 않는다(현행 결함 lib/scope/mirror/sync.ts:957-987 대체)",
+    "A16 언급 분석 없는 측정: rd.answer.analysis_state(0~3) ≥ 2 면 gap=true(생성 열). std_in(언급 계열 모수)은 gap 인 행을 제외하지만 cit_in(인용 계열 모수)은 결손과 무관하게 포함한다(G-21 g) — 두 모수를 반드시 별도 생성 열로 유지한다",
+    "acr_iter_rank: 같은 셀(prompt_key, engine_key, geo_key, cyc_key) 안 ACR 반복 job 을 measured_at 오름차순으로 순번을 매겨 1이 아니면 acr_in=false(표준 지표 모수는 셀당 1건, A15)",
+    "R05 is_rep: 회차 내부 (cyc_key, prompt_key, engine_key, geo_key) 셀에서 elig=true 후보 중 measured_at 최신 1건. 회차 상태(숨김·마감)와 무관 — 숨김 운영 때 재선정하지 않는다",
+    "R08/B5 analysis_done_ratio = (completed − gap) / completed ≥ 0.95 일 때 해당 회차·셀을 발행 가능으로 판정(app.rule_param.analysis_publish_ratio 시드값). 이 카운터는 ing.cycle 완료·결손 카운터로만 두고 API 에 노출하지 않는다(D8 예외 ③, G-09)",
+    "own_mask/own_rk_h·k·g: 답변 안 브랜드 행을 정본 브랜드명 단위로 min(avg_position) 접고 rank() 부여(scope-aggregates.ts:493-538 계승). own_mask 는 H(1)·K(2)·G(4) 비트 OR, 순위 없는 답변은 0 유지(종전 '미랭크 제외' 규칙)",
+    "ment_*/sent_*: rd.answer_brand 를 답변×표시브랜드×경쟁여부 그레인으로 채운 뒤 답변 단위로 H/K/G 세 열에 합산해 rd.answer 당사 열을 만든다(G-03, D8 예외 ②). 합 불변식: Σ rd.answer_brand(자사 행) = rd.answer 당사 열 — 어기면 롤백·경보",
+    "A3 mixed 감성: 분모(sent_all_*)에 포함하고 긍정(sent_pos_*)에서는 제외. stance 코드 1 pos/2 neu/3 mix/4 neg 그대로 rd.answer_stance 에 적재",
+    "first_turn: (surface, round_date, answer_key, entity_key) 안 최저 turn_index 1건만 true — 현행 DISTINCT ON (job_id, entity_id) 계승(scope-aggregates.ts:7374)",
+    "R02/R01 회차 귀속·원장: ing.cycle/ing.cycle_round 로 이미 판정된 cyc_key·round_date·anchor_date 를 rd.job/rd.answer 에 그대로 복사(이 단위는 회차 판정 자체를 하지 않는다 — IG-3 소관, 경계는 open_questions)",
+    "cat_mask/bgrp: rd.catalog_entry(적재기 쓰기, 앱은 judgment_change 로만 요청)의 브랜드 비트·그룹을 answer_key 의 prompt_key 로 조인해 복사"
+  ],
+  "open_questions": [
+    "IG-3(회차 상태·발행 세대)과의 경계: rd.job/rd.answer 의 cyc_key·round_date·anchor_date 는 IG-3 이 먼저 확정한 값을 이 단위가 그대로 복사하는가, 아니면 이 단위가 국가·프롬프트 단위 굳힘(G-06)까지 겸하는가. DB-보정.md §4 적재 흐름 3번(원장·귀속)과 4번(rd.job·rd.answer 투영)이 같은 트랜잭션 안이라 실무 경계가 모호하다 — IG-3 설계자와 합의 필요",
+    "app.judgment_change 의 kind 중 'project_setting'·'project_owned_base'·'project_target_url' 은 이 단위(전역 판정 재계산)가 처리하는가, 아니면 프로젝트 단위만 좁혀 재판정하는 별도 경로가 필요한가 — 영향 범위가 프로젝트 하나로 국한되면 전체 규칙 버전(rule_ver) 갱신 없이 처리 가능할 수 있다",
+    "G-01 (a)/(b) 미확정: rd.answer_brand(채택 시)와 rd.answer_entity(대안) 중 v3 실측 전까지는 (a) 가정으로 이 단위를 설계했다. (b) 채택 시 이 단위의 언급 판정 CTE·경쟁 여부 판정이 name_first·name_rk 열 추가로 바뀐다",
+    "rd.propagate_answer_gates 는 answer_key 배열을 받아 위치를 rd.job 조인으로 찾는데, 재판정 큐가 수만 건을 한 번에 올리면(예: 브랜드 규칙 전역 변경) 이 함수 호출 1회의 트랜잭션 크기·잠금 보유 시간이 어느 정도까지 허용되는지 v3 게이트에 없다 — 배치 크기 상한을 이 단위에서 결정해야 하는지 확인 필요",
+    "ing.acr_prompt_run 의 '셀' 식별자(cell 컬럼)가 DDL 열거에 이름으로 나오지 않아 (prompt_key, engine_key, geo_key, cyc_key) 조합으로 추정했다 — IG-1 설계자에게 ing.acr_prompt_run 실제 컬럼 확인 필요",
+    "app.judgment_change.payload 의 kind='catalog' 케이스가 옛·새 scope_prompt_id 를 담는다고 주석에 있는데(줄 157), 이 단위가 옛 prompt_key 소속 답변과 새 prompt_key 소속 답변을 모두 재판정해야 하는지, 아니면 신규 배정분만인지 불명확"
+  ],
+  "parity": "[\"신구 대조는 F01~F07 API 값이 아니라 이 단위가 채우는 rd 판정 컬럼 자체를 야간 감사로 검증한다: ① 게이트 동치 감사(이미 propagate_answer_gates 안 IF EXISTS 로 트랜잭션 내 단언, DB-v2.sql:571-579) ② answer_key 전역 유일성(SELECT answer_key FROM rd.answer GROUP BY 1 HAVING count(*)>1 = 0건, DDL 주석) ③ 당사 합 불변식(Σ rd.answer_brand 자사 행 = rd.answer 당사 열, DB-보정.md §3) ④ R08 완료비율 재계산이 ing.cycle 카운터와 rd.job 실측 카운트(SELECT count(*) FILTER (served))가 일치하는지\", \"A4 과거 회차 재계산 대조: rule_ver 가 바뀐 회차를 v3 합성 데이터로 재적재해 이전 rule_ver 산출값과 diff, 1회 고지 대상 목록을 뽑는 하네스가 필요(아직 없음 — 하네스 설계가 이 단위 범위인지 확인 필요, open_questions)\", \"harness F01~F07 자체는 API 계층(다른 단위) 값이라 이 단위의 직접 parity 대상이 아니다. 다만 F01~F07 산출값이 올바르려면 이 단위의 std_in/cit_in/is_rep/own_* 가 선행 조건이므로, F01~F07 신구 대조 실패 시 1차 원인 후보로 이 단위의 게이트 컬럼을 먼저 확인한다\"]",
+  "perf": {
+    "risk": "medium",
+    "rows_scanned": "run 1건당 job 수(현행 6.6만 job/run 실측, DB-보정.md §5) × 자식 표 팬아웃(answer_brand 는 답변당 브랜드 행 수, 폭 10배 가정 시 회차당 수백만 행). 전파 함수는 배치 answer_key 수에 선형(스모크: 24만 행 12 leaf 4.5ms, rd.job 경유 시 0.028ms/키)",
+    "indexes": [
+      "rd.job(answer_key) PK — propagate_answer_gates 의 위치 조회 필수 경로(DB-v2.sql:542 주석, rd.answer 직접 스캔 대비 행수 비례 개선)",
+      "rd.job_run_idx(run_key) — IG-1 이 넘긴 run 의 job 일괄 조회",
+      "rd.answer_cell_idx(surface, round_date, cyc_key, prompt_key, engine_key, geo_key) — R05 is_rep 셀 선정 스캔",
+      "rd.ab_brand_idx / rd.cit_source_idx / rd.cit_url_idx — 이 단위 쓰기 경로가 아니라 후속 조회용이지만, 재판정 UPDATE 가 HOT 규율(제자리 갱신 대상 열은 인덱스 제외)을 지키는지 이 단위가 매 배치마다 점검해야 함"
+    ],
+    "notes": "위험 medium 인 이유: DB-보정.md §5 v3 게이트가 아직 실측 전이라 폭 10배에서의 적재 트랜잭션 소요·work_mem 요구가 미지수다(v2b 5부류 원인 중 CPU·조인·해시 유출이 적재 경로에도 재현될 수 있음). 또 rd.propagate_answer_gates 가 단일 UPDATE 로 answer_brand·answer_stance·citation·job 4표를 순차 갱신하므로 배치가 크면 잠금 보유 시간이 늘어난다(§4 적재 흐름 10단계 'leaf 에 VACUUM'과 겹치지 않게 스케줄 분리 필요). D8 이 사전 집계·캐시를 금지하므로 이 단위 자체가 성능 완충 장치이며, v3 게이트 통과 전에는 배치 크기(예: run 단위 vs 일 단위)를 보수적으로 잡아야 한다."
+  },
+  "purpose": "Scope 원본(ing)과 카탈로그·규칙(app)을 같은 적재 트랜잭션 안에서 판정해 rd 읽기 스키마의 판정 컬럼(브랜드 롤업·자사 순위·감성·게이트·ACR 반복 접기·분석 결손)을 채우고, 재판정 요청(app.judgment_change)을 소화해 규칙 버전이 바뀔 때도 같은 경로로 갱신한다. API 계층은 이 단위가 채운 rd 판정 컬럼만 읽고 판정 로직 자체를 다시 계산하지 않는다(D8, A17).",
+  "query_design": "적재 트랜잭션(A10) 안에서 DB-보정.md §4 순서를 따른다. IG-1 이 4번(rd.job·rd.answer 투영)까지 마친 뒤 이 단위가 5~7번을 담당한다.\n\n5. 자식 투영(신규 answer_key 배치): INSERT INTO rd.answer_brand SELECT ... FROM ing.mention m JOIN rd.dim_brand_name b ... JOIN rd.answer a ON a.answer_key=m.answer_key — 브랜드명 정규화·비경쟁 제외는 scope-aggregates.ts:483-538 SQL(canonBrandNameSql·excludeNonCompetitorBrandsSql 상당)을 적재 시점 계산으로 이식, rank() OVER (PARTITION BY answer_key ORDER BY min(avg_position)) 로 rk 산출. INSERT INTO rd.answer_stance SELECT DISTINCT ON (surface, round_date, answer_key, entity_key) ... ORDER BY turn_index FROM ing.answer_stance(first_turn 최저 1건만 true). INSERT INTO rd.citation SELECT ... FROM ing.citation c JOIN rd.dim_url u ... JOIN rd.dim_source s ...(loc_owned/tgt_hit/owner_key 는 app.owned_base·app.project_owned_base·app.project_tracked_url 조인 판정).\n\n6. 당사 요약(rd.answer UPDATE): UPDATE rd.answer a SET own_mask=..., own_rk_h=..., own_rk_k=..., own_rk_g=..., ment_total=..., ment_h/k/g=..., sent_pos/neg/all_h/k/g=... FROM (SELECT answer_key, ... FROM rd.answer_brand WHERE own_bit>0 GROUP BY answer_key) s WHERE a.answer_key=s.answer_key — 불변식 단언 실패 시 RAISE EXCEPTION.\n\n7. 게이트 전파와 불변식 단언: SELECT rd.propagate_answer_gates(array_agg(answer_key)) FROM 이번_배치 — 내부에서 std_in/elig/dflt(→answer_brand), std_in(→answer_stance), cit_in/gap/dflt(→citation), cyc_key/analysis_code(→job) 갱신 후 IS DISTINCT FROM 재조회로 동치 단언, 실패 시 롤백.\n\n재판정 경로(app.judgment_change 소비): BEGIN; UPDATE app.judgment_change SET status='running', claimed_at=now() WHERE change_id = ANY($claimed) RETURNING kind, subject_uuids, subject_texts, payload; — kind 별로 영향 answer_key 집합을 선정(예: 'brand_rule' → 해당 브랜드 언급 전 answer_key, rule_ver 증가 후 app.rule_set INSERT), 위 5~7 단계를 UPDATE 로 재실행(PK 충돌 없이 값만 덮어씀). UPDATE app.judgment_change SET status='applied', applied_at=now(), applied_load_id=$load_id WHERE change_id = ANY($claimed); COMMIT;",
+  "read_model": [
+    "ing.mention (run_month, job_id, ord, entity_id, display_name, entity_type) — rd.answer_brand 투영 입력",
+    "ing.mention_occurrence — rd.v_answer_occurrence 문서형 뷰의 원본(이 단위가 answer_key 등치만 유지, 직접 쓰기는 IG-1)",
+    "ing.answer_stance (run_month, job_id, turn_index, entity_id) — rd.answer_stance 투영 입력",
+    "ing.citation (run_month, job_id, ord, url, title, ref_index) — rd.citation 투영 입력",
+    "ing.acr_prompt_run / ing.acr_rollup_row — rd.acr_cell/acr_choice/acr_cell_job 투영 입력, R13 접기 키",
+    "app.entity_registry / app.entity_alias — 브랜드·엔티티 정규화(own_mask 판정 명부)",
+    "app.brand_name_prefix / app.brand_display_alias / app.non_competitor_name — 브랜드 표기·비경쟁 제외 규칙(scope-aggregates.ts 산식 이식 원천)",
+    "app.competitor_domain_token / app.owned_base / app.citation_domain_override — rd.citation 의 owner_key·loc_owned·tgt_hit 판정 입력",
+    "app.rule_param(key='analysis_publish_ratio') — R08 게이트 임계값",
+    "app.rule_set — 규칙 지문 13개, rule_ver 발급(재판정 시 새 rule_ver 채번)",
+    "app.judgment_change — 재판정 요청 큐(claim→applied)",
+    "rd.job / rd.answer / rd.answer_brand / rd.answer_stance / rd.citation — 이 단위가 쓰는 읽기 투영(쓰기 대상)",
+    "rd.catalog_entry — cat_mask 판정 조인(쓰기 주체는 적재기 자신, 이 단위와 동일 롤)",
+    "rd.dim_brand_name / rd.dim_entity / rd.dim_source / rd.dim_url — 정수 키 발급 원장(신규 값 시 INSERT, 재번호 금지)",
+    "제안: ing.acr_prompt_run 의 셀 식별자 컬럼명 — DDL 열거에 'cell' 표기가 없어 (prompt_key, engine_key, geo_key, cyc_key) 로 추정했다. IG-1 설계자 확인 후 정확한 컬럼명으로 교체 필요"
+  ],
+  "response": "이 단위는 응답 스키마가 없다(내부 배치, HTTP 응답 없음). 대신 트랜잭션 종료 시 ing.load 행에 결과를 기록한다: load_id, 처리 answer_key 수, 게이트 전파로 갱신된 자식 행 수(n, propagate_answer_gates 반환값), 불변식 위반 시 실패 사유(error), applied_load_id 로 app.judgment_change 에 역참조. 이 값은 API 로 노출되지 않고 야간 감사·운영 대시보드(별도 모듈)가 ing.load 를 직접 읽는다.",
+  "screens": [],
+  "title": "IG-2 판정·읽기 스키마 투영",
+  "writes": "쓰기 스키마: rd(loader 롤, 적재 트랜잭션 안) — rd.job(UPDATE cyc_key·analysis_code), rd.answer(INSERT/UPDATE 당사 열·게이트), rd.answer_brand/rd.answer_stance/rd.citation(INSERT 신규 배치, UPDATE 재판정 시), rd.acr_cell/acr_choice/acr_cell_job(INSERT). app.judgment_change(UPDATE status/claimed_at/applied_at/applied_load_id 만 — 요청 행 자체는 앱이 쓰고 이 단위는 소비만). ing 스키마는 쓰지 않는다(IG-1 소관).\n\n트랜잭션 경계: IG-1 의 run 적재 트랜잭션과 하나로 묶인다(A10 \"적재 트랜잭션 안에서 판정\"). 재판정 경로는 별도 트랜잭션(app.judgment_change 클레임 단위)이며, 영향 범위가 크면(전역 브랜드 규칙 변경 등) DB-보정.md §4 \"범위가 크면 leaf 스왑으로 넘긴다\"에 따라 이 단위가 아니라 leaf 재구축 경로로 이관한다(source_key·url_key·brand_key·competitive·rk·owner_key·loc_owned·tgt_hit 열은 HOT 규율상 제자리 UPDATE 대상이 아니므로 재구축 스왑만 가능, DDL 헤더 주석).\n\n감사 기록: 이 단위 자체는 app.access_audit_log 를 쓰지 않는다(그 표는 읽기 접근 감사이고 쓰기 주체가 아직 미정, DESIGN-CONTRACT §3 \"알려진 미결\"). 적재 행위 감사는 ing.load(load_id, 처리 범위, 소요, 오류)가 담당하며 이는 IG-1 이 이미 쓰는 표에 이 단위가 결과만 추가 기록한다."
+}

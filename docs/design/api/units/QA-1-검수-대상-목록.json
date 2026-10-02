@@ -1,0 +1,115 @@
+{
+  "id": "QA-1",
+  "title": "검수 대상 목록 (GET /v1/qa/answers)",
+  "purpose": "Raw Data QA 콘솔의 답변 목록·진행률·필터 옵션·이전/다음 탐색을 제공한다. 검수 모수는 표시/판정 게이트를 통과한 답변이 아니라 Scope 가 수집한 모든 job(대기·실패·드롭 포함)이며(G-24), 이 색인이 QA-2(판정·노트·락)와 상세 화면이 공유하는 job_id 진입점이다.",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/v1/qa/answers",
+      "summary": "검수 목록(키셋 페이지네이션, 락·검수상태·노트수 포함)"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/qa/answers/progress",
+      "summary": "필터 기준 + 전체 기준 진행률(total/reviewed/issues/notes)"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/qa/answers/{job_id}/neighbors",
+      "summary": "목록과 같은 정렬 기준의 이전/다음 job_id"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/qa/filters",
+      "summary": "필터 드롭다운 옵션(brand/country/engine/lang/reviewer)"
+    }
+  ],
+  "screens": [
+    "app/[locale]/raw-data-qa/answers (목록·필터바·진행률 헤더)",
+    "답변 상세 이전/다음 네비(QA-2 상세 화면에서 호출)"
+  ],
+  "filters": {
+    "supported": [
+      "surface",
+      "brand[]",
+      "country[]",
+      "engine[]",
+      "lang[]",
+      "from/to(측정 시각)"
+    ],
+    "ignored": [
+      "funnel[]",
+      "brand_presence[]",
+      "list_type[]",
+      "depth1~3[]",
+      "source[]"
+    ],
+    "extra_params": [
+      "q: string, 기본 없음, 최대 200자 — 프롬프트 텍스트 ILIKE 검색(rd.dim_prompt.text)",
+      "reviewer[]: string[], 기본 없음 — app.qa_answer_review.reviewer_name IN",
+      "state[]: enum(unreviewed|ok|issue)[], 기본 없음 — OR 결합(미검수 또는 이상 등 복수 선택 허용)",
+      "has_notes: bool, 기본 false — EXISTS app.qa_review_note",
+      "no_mentions: bool, 기본 false — NOT EXISTS rd.v_answer_mention_raw(answer_key 등치)",
+      "cursor: string(base64url, measured_at|answer_key), 기본 없음 — 키셋 페이지 토큰",
+      "limit: int, 기본 50, 최대 200 — QA_PAGE_SIZE 계승"
+    ]
+  },
+  "response": "목록: { data: QaListRow[], meta: { surface, mode:'qa', as_of, cycles:[], generation, ignored_filters, dropped_filters, suppressed:false, next_cursor: string|null } }. QaListRow = { job_id: uuid, prompt_text: string|null, surface: enum(standard|website|project), brand: string[](복수 카탈로그 브랜드 가능), country: string|null, engine: string, lang: string|null, measured_at: string|null(ISO), mention_count: int, citation_count: int, note_count: int, review_status: enum(unreviewed|ok|issue), reviewer_name: string|null, lock: {reviewer_name, acquired_at, heartbeat_at}|null }. 진행률: { data: { scoped: {total,reviewed,issues,notes}, total: {total,reviewed,issues,notes} }, meta:{...} } — total.total 은 A17 하 정확 계산이 부담이면 근사(estimate=true 플래그) 허용을 open_questions 로 남김. 이웃: { data: { prev: uuid|null, next: uuid|null } }. 필터옵션: { data: { brand: string[], country: string[], engine: string[], lang: string[], reviewer: string[] } } — 소스가 차원표라 '옵션은 있지만 현재 0건'인 값이 섞일 수 있음(비고 참조).",
+  "metrics_rules": [
+    "R05(is_rep) 미적용 — QA 모수는 완료 게이트·대표 판정과 무관하게 rd.job 전체(G-24 '모든 job(현행 유지)')",
+    "D1/A1/A15/A16 미적용 — 이 API 는 지표 산출이 아니라 원시 색인·검수 큐이므로 표준 모수 규칙(std_in/cit_in/dflt)과 무관",
+    "P1 예외: q(ILIKE), state(OR 결합), reviewer(단순 IN) 는 조회 시 계산 허용 범위",
+    "D8: 이 단위는 새 요약 표·캐시를 두지 않는다. 필터 옵션은 차원표(rd.dim_country/rd.dim_engine/rd.dim_lang/app.brand) 직접 조회로 대체해 DISTINCT 스캔을 원천 회피(비고 참조, 계약 위반 아님 — 새 표가 아니라 기존 차원표 재사용)"
+  ],
+  "read_model": [
+    "rd.job.answer_key, rd.job.job_id, rd.job.run_key, rd.job.prompt_key, rd.job.measured_at, rd.job.surface, rd.job.project_key, rd.job.engine_key, rd.job.geo_key, rd.job.lang_key, rd.job.status_code, rd.job.dropped, rd.job.served",
+    "rd.dim_project.project_key, rd.dim_project.surface, rd.dim_project.site_brand_bit, rd.dim_project.site_geo_key, rd.dim_project.is_root",
+    "rd.dim_prompt.prompt_key, rd.dim_prompt.text, rd.dim_prompt.lang_key, rd.dim_prompt.in_root_catalog",
+    "rd.catalog_entry.prompt_key, rd.catalog_entry.brand_bit — 표준 표면(surface=1) 프롬프트의 브랜드 해석(다대다: 한 프롬프트가 여러 브랜드 카탈로그 행을 가질 수 있음, 계약 §2 '카탈로그 brand X ∪ 공통 프롬프트')",
+    "rd.dim_engine.engine_key, rd.dim_engine.code / rd.dim_country.geo_key, rd.dim_country.code / rd.dim_lang.lang_key, rd.dim_lang.code — 코드↔키 해석 및 필터 옵션 원천",
+    "app.brand.brand_code, app.brand.brand_bit — 브랜드 필터 파라미터(코드) → brand_bit 해석, 필터 옵션 원천",
+    "app.qa_answer_review.job_id, app.qa_answer_review.status, app.qa_answer_review.reviewer_name, app.qa_answer_review.reviewed_at — 검수상태·검수자, 진행률 카운트",
+    "app.qa_review_note.job_id — 노트 존재 여부/카운트(qa_note_job_idx 사용)",
+    "app.qa_answer_lock.job_id, app.qa_answer_lock.session_id, app.qa_answer_lock.reviewer_name, app.qa_answer_lock.acquired_at, app.qa_answer_lock.heartbeat_at — 목록 행의 락 표시(락 획득/해제 자체는 QA-2 소관, 이 단위는 읽기만)",
+    "rd.v_answer_mention_raw(answer_key 등치) — no_mentions 필터의 EXISTS 판정",
+    "제안: rd.v_answer_body 에 ing.answer.n_mentions, ing.answer.n_citations 두 컬럼을 추가 투영. 근거: 목록 행의 mention_count/citation_count 는 ing.answer 가 적재 시점에 이미 계산해 저장한 스칼라 컬럼(신규 집계 아님)이고, api_ro 는 ing 를 직접 못 읽으므로(§3 스키마 경계) rd.v_answer_body(이미 QA 용 문서형 뷰로 지정됨, DB-v2.sql:631-633)에 얹는 것이 가장 작은 변경. answer_key IN(현재 페이지 50개) 등치 배치 조회이므로 뷰 주석의 '범위 스캔 금지' 제약과 충돌하지 않는다(등치 조회, 파티션 구간 스캔 아님)."
+  ],
+  "query_design": "1) 필터 전처리(주 쿼리 전 1회, 모두 소형 조회): brand[] 가 있으면 app.brand 로 brand_bit 조회 → (a) SELECT project_key FROM rd.dim_project WHERE site_brand_bit = ANY($bits) → project_key 배열, (b) SELECT DISTINCT prompt_key FROM rd.catalog_entry WHERE brand_bit = ANY($bits) → prompt_key 배열. country[]/engine[]/lang[] 은 각 dim 표에서 code→key 조회. 2) 목록 본쿼리(단일 SELECT, 모두 '= ANY(상수 배열)' 또는 불리언):\nSELECT j.answer_key, j.job_id, j.measured_at, j.surface, j.engine_key, j.geo_key, dp.text AS prompt_text, dp.lang_key\nFROM rd.job j\nLEFT JOIN rd.dim_prompt dp ON dp.prompt_key = j.prompt_key\nWHERE ($surface_filter IS NULL OR j.surface = ANY($surface_filter))\n  AND ($geo_filter    IS NULL OR j.geo_key    = ANY($geo_filter))\n  AND ($engine_filter  IS NULL OR j.engine_key = ANY($engine_filter))\n  AND ($brand_filter   IS NULL OR (j.surface <> 1 AND j.project_key = ANY($brand_project_keys)) OR (j.surface = 1 AND j.prompt_key = ANY($brand_prompt_keys)))\n  AND ($from IS NULL OR j.measured_at >= $from) AND ($to IS NULL OR j.measured_at < $to + interval '1 day')\n  AND ($q IS NULL OR dp.text ILIKE '%'||$q||'%')\n  AND (커서 술어: (j.measured_at, j.answer_key) 튜플비교, NULL 구간은 기존 qa-review.ts:293-301 분기 유지)\nORDER BY j.measured_at DESC NULLS LAST, j.answer_key DESC LIMIT $limit+1.\nreviewer[]/state[]/has_notes 는 LEFT JOIN app.qa_answer_review rv ON rv.job_id=j.job_id 로 붙여 WHERE 에 추가(구 코드 answerPredicates 의 state OR 분기 그대로). no_mentions 는 NOT EXISTS(rd.v_answer_mention_raw). 3) 페이지 내 50개 job_id 로 배치 후속 조회 2개: 락(app.qa_answer_lock WHERE job_id = ANY($page_ids)), 노트수(app.qa_review_note GROUP BY job_id WHERE job_id = ANY($page_ids)), mention/citation 카운트(제안된 뷰 확장 사용 시 answer_key = ANY 등치, 미승인 시 상세 이동 전까지 0/미표시로 폴백 — open_questions). 4) progress: countProgress(filter) 는 위와 같은 WHERE 로 COUNT(*)/COUNT(rv.job_id)/COUNT(*) FILTER (WHERE rv.status='issue')/COUNT(*) FILTER (WHERE EXISTS notes). total(무필터)은 같은 쿼리를 필터 없이 별도 실행(D8: DB 캐시 불가 — 비고의 근사치 대안 참고). 5) filters: brand=SELECT brand_code FROM app.brand ORDER BY sort_order; country=SELECT code FROM rd.dim_country WHERE kind='iso' ORDER BY code; engine=SELECT code FROM rd.dim_engine ORDER BY code; lang=SELECT code FROM rd.dim_lang ORDER BY code; reviewer=SELECT DISTINCT reviewer_name FROM app.qa_answer_review ORDER BY reviewer_name. 6) neighbors: anchor = SELECT measured_at FROM rd.job WHERE job_id=$job_id; 이후 같은 WHERE(필터)+prev/next 부등호로 LIMIT 1 두 번(qa-review.ts:390-431 패턴 그대로, rd.job 기준으로 치환).",
+  "perf": {
+    "rows_scanned": "rd.job 은 비파티션 단일 표. 10배 폭 가정 시 leaf 없음(파티션 아님) — 현재 미러 '십수만 행' 기준 10배 시 약 100만~수백만 행 추정(근거: DB-보정.md '모집단이 미러 전체'). 목록 본쿼리는 인덱스로 상위 limit+1(≤201)행만 실질 접근(정렬 인덱스 스캔), progress.total 과 filters.reviewer 만 전 행/전 리뷰표 스캔.",
+    "indexes": [
+      "job_qa_list_idx(surface, measured_at DESC, answer_key DESC)",
+      "job_round_idx(surface, round_date, prompt_key)",
+      "job_run_idx(run_key)",
+      "qa_note_job_idx(job_id, created_at)",
+      "qa_review_status_idx(status, reviewed_at DESC)",
+      "qa_review_reviewer_idx(reviewer_name, reviewed_at DESC)",
+      "dim_prompt_text_trgm_hint(surface, project_key)"
+    ],
+    "risk": "medium",
+    "notes": "① surface 필터를 비워(전체 표면) 호출하면 job_qa_list_idx(surface 선두 컬럼) 가 전역 measured_at 정렬에 그대로 안 맞아 인덱스 정렬 활용이 깨질 수 있다(3개 surface 값을 병합 정렬해야 함, 비파티션 표라 MergeAppend 자동 적용 안 됨) — FE 가 항상 surface 값을 하나 골라 보내는지 확인 필요(open_questions). ② progress.total 과 filters.reviewer 는 D8 로 DB 캐시를 못 두므로 매 요청 전량 스캔/카운트다 — job_qa_list_idx 는 index-only 카운트에 유리하지만 10배 후 실측 없이는 1초 게이트 통과를 장담 못한다(v3 게이트 대상, DB-보정.md §5). ③ brand 필터의 표준 표면 분기(prompt_key = ANY(...))는 rd.catalog_entry 사전 조회 결과 크기에 비례 — 카탈로그 자체가 작아(수만 행) 안전. ④ 필터 옵션을 rd.dim_*/app.brand 직접 조회로 바꾼 것(비고)은 표들이 전부 소형이라 위험 없음(low)."
+  },
+  "auth": "A8: FastAPI 가 Supabase JWT(JWKS) 검증. 현행 검수 콘솔은 일반 role 스코프 체계를 쓰지 않고 별도 쿠키 게이트(외부 검수자, GGMD 계정 없음, qa-review.ts:17-28 명시)였다 — 재설계에서 이 축을 role 기반 스코프에 편입할지 별도 게이트를 유지할지는 결정 안 됨(open_questions). 편입 시에도 공통 필터 모델의 own_brand 서버 결정·default-deny 교집합은 적용하되, 검수자 계정은 role 이 없다는 현행 전제와 충돌하므로 별도 운영자 게이트(§9 관리자 유형)로 다루는 편이 안전.",
+  "writes": "없음(읽기 전용). 락 획득/해제·검수 판정·노트 작성은 QA-2(app.qa_answer_review/app.qa_review_note/app.qa_answer_lock 직접 CRUD, /v1/qa/reviews)의 책임.",
+  "current_refs": [
+    "lib/db/repositories/qa-review.ts:328 listReviewAnswers",
+    "lib/db/repositories/qa-review.ts:390 getNeighbors",
+    "lib/db/repositories/qa-review.ts:446 countProgress",
+    "lib/db/repositories/qa-review.ts:472 getProgress",
+    "lib/db/repositories/qa-review.ts:491 readFilterOptions",
+    "lib/db/repositories/qa-review.ts:527 listFilterOptions(unstable_cache 300s — D8 위반이라 신설계는 제거)",
+    "lib/db/repositories/qa-review.ts:196 RUN_SURFACE_CTE(표면 판정, rd.dim_project.surface 로 대체)",
+    "lib/db/repositories/qa-review.ts:229 answerPredicates",
+    "lib/db/repositories/qa-review.ts:283 cursorPredicate",
+    "lib/qa/filters.ts:24 QaFilter 타입"
+  ],
+  "parity": "F01~F07 신구 대조 하네스(notes/hmg-refactor-proto/harness)에 QA 목록 기능이 없다면 신규 대조 항목으로 추가 필요: (1) 동일 필터 조합에서 목록 job_id 시퀀스 동치(순서·페이지 경계 포함), (2) progress.scoped 4개 카운트 동치, (3) filters 응답의 각 축 값 집합 동치(신설계는 차원표 기반이라 '0건 옵션'이 늘 수 있음 — 이 차이는 mig.known_diff 로 등록해야 대조가 오탐하지 않는다). measured_at 정렬·NULL 처리(qa-review.ts:293-301)는 100% 동치 요구.",
+  "open_questions": [
+    "mention_count/citation_count 를 rd.v_answer_body 확장(제안)으로 낼지, 아니면 QA-1 목록에서는 아예 빼고 상세(QA-2)에서만 보여줄지 — 현행은 목록 표 컬럼(qa-review.ts:213)이라 빼면 화면 변경.",
+    "surface 미지정(전체) 호출이 실제 트래픽에 존재하는지 — FE 기본값이 항상 특정 surface 인지 확인해야 job_qa_list_idx 활용성 판단 가능.",
+    "progress.total(무필터 전체) 의 정확도 요구 수준 — 구 코드 주석부터 '운용 지표가 아님'이라 했으므로 pg_class.reltuples 근사치로 대체해 D8·성능 압박을 동시에 줄이는 안을 검토할지, 아니면 정확 COUNT 를 유지할지 결정 필요.",
+    "필터 옵션을 DISTINCT-스캔(구 방식) 대신 차원표 직접 조회(본 설계안)로 바꾸면 '현재 0건인 옵션'이 드롭다운에 섞인다 — 프로덕트 오너 승인 필요.",
+    "검수 콘솔의 인증 축(현행 쿠키 게이트, role 없는 외부 검수자)을 A8 공통 JWT 인증에 어떻게 편입할지 — §9 권한 설계자(AU-1 담당)와 조율 필요.",
+    "app.qa_answer_lock 조회(목록 행의 락 배지)를 QA-1(읽기)과 QA-2(쓰기) 중 어느 쪽 라우터에 둘지 — 이 설계는 QA-1 이 읽기만 한다고 가정했다."
+  ]
+}

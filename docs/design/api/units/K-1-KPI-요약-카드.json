@@ -1,0 +1,103 @@
+{
+  "id": "K-1",
+  "title": "KPI 요약 카드",
+  "purpose": "글로벌·웹사이트·프로젝트 대시보드의 \"핵심 지표 요약\" 카드 하나(M01~M07)와 그 모수(M12) + 분석 결손 건수(A16)를 한 번의 스냅샷 또는 기간 누적 조회로 낸다. 기간 비교 Δ(K-2)·엔진별 서브 지표(K-3)는 이 API 의 소관이 아니다.",
+  "screens": [
+    "/dashboard 핵심 지표 요약 카드 본체(dashboard.summary.label, 현행 getLiveDashboard→fetchStandardAggregates)",
+    "/website KPI 카드(요약)(dashboard.summary.label, 현행 getLiveWebsiteDashboard→fetchWebsiteAggregates)",
+    "/projects/[id] 측정개요 7 KPI 카드(dashboard.kpi.*, 현행 fetchProjectStandardAggregates)",
+    "/standard/answer-analysis/{mention,citation} 측정 개요 카드-적용(overview, 현행 fetchStandardAppliedPromptCount) — M12 적용 프롬프트 수만 이 API 가 제공, 측정/Δ 세부는 K-2·언급/인용 모듈 소관"
+  ],
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/v1/kpi/summary",
+      "summary": "M01~M07 카드 값 + M12 모수(답변 수·측정 프롬프트 수·적용 프롬프트 수) + A16 분석 결손 건수를, 스냅샷(기간 미지정) 또는 기간 누적(from/to 지정)으로 반환한다."
+    }
+  ],
+  "filters": {
+    "supported": [
+      "own_brand(서버 결정)",
+      "brand[]",
+      "country[]",
+      "engine[]",
+      "from/to(앵커 날짜)",
+      "funnel[]",
+      "brand_presence[]",
+      "list_type[]",
+      "depth1[]~depth3[]",
+      "lang[](website 전용)"
+    ],
+    "ignored": [
+      "source[](인용 출처 카테고리 — M09 분포는 이 API 범위 밖, M05 인용 점유율은 출처 카테고리로 안 쪼갠다)"
+    ],
+    "extra_params": [
+      "surface: enum(global|website|project), 필수 — 응답 meta.surface 및 partition 선택에 씀",
+      "project_id: uuid, surface=project 또는 website 일 때 필수(rd.dim_project.project_id 대응, hq/전사 계정은 생략 가능=함대 전체)"
+    ]
+  },
+  "response": "data: {\n  visibility(M01): {rate: number, num: int, den: int},           // pct(num/den), 분모 0 이면 rate 없음(키 생략)\n  share_of_voice(M02): {rate: number, num: int, den: int} | null, // den(총 언급) 0 이면 null\n  sentiment(M03): {rate: number, num: int, den: int} | null,      // den(감성 채점 언급, A3: 혼합 포함) 0 이면 null\n  position(M04): {avg: number, sum: int, count: int} | null,      // 순위 있는 답변 count=0 이면 null. count는 평균 노출도 산정용\n  citation_share(M05): {rate: number, num: int, den: int} | null, // 인용 계열 gap(hidden_scope) 이거나 den 0 이면 null\n  target_url_citation_rate(M06, website 전용): {rate: number, num: int, den: int} | null,   // A2 채택: 측정 단위\n  owned_url_citation_rate(M07, website 전용): {rate: number, num: int, den: int} | null,     // 비가산(유닛 단위), R09 리포트 발행값 우선 시 그 값\n  params(M12): {answers: int, measured_prompts: int, applied_prompts: int},\n  analysis_gap(A16): {gap_answers: int, gap_rate: number}          // 언급 분석 없는 측정(gap=true) 건수·비율, 모수(std_in)에서는 이미 제외됨\n}\nmeta: 계약서 §8 공통 형태(surface, mode, as_of, cycles, generation, ignored_filters, dropped_filters, suppressed). suppressed 예: {\"target_url_citation_rate\":\"not_website_surface\"}, {\"share_of_voice\":\"missing_mentions\"}. 페이지네이션 없음(단일 객체).",
+  "metrics_rules": [
+    "M01 노출률 = own_mask<>0 답변 수 / std_in 답변 수 (overview-card-values.ts:63 계승)",
+    "M02 SOV = 당사 언급(ment_h/k/g 합, own_brand 에 맞는 열) / 전체 언급(ment_total)",
+    "M03 우호도 = 당사 긍정 언급(sent_pos_*) / 당사 감성 채점 언급(sent_all_*, A3: mixed 는 분모 포함·분자 제외)",
+    "M04 우선 노출도(D5) = 순위 합(own_rk_* 합) / 순위 있는 답변 수(own_rk_*>0 count) = 평균 순위, 낮을수록 좋음",
+    "M05 인용 점유율 = 당사 인용(loc_owned true 인 rd.citation 행) / 전체 인용(cit_in true 인 행), 인용 계열 hidden_scope 면 null",
+    "M06 타겟 URL 인용률(A2 채택) = tgt_cited 인 rd.answer / cit_in rd.answer (측정 단위, 웹사이트 전용)",
+    "M07 자사 URL 인용률 = own_url_cited 인 rd.answer(또는 유닛) / cit_in 대상, R09(리포트 발행값 우선)면 rd.report_unit_value 의 owned_prompts/owned_prompts_den 로 대체",
+    "M12 답변 수(가산) = count(rd.answer std_in), 측정 프롬프트 수(비가산) = count(DISTINCT prompt_key) FROM std_in 답변, 적용 프롬프트 수 = count(DISTINCT prompt_key) FROM rd.catalog_entry(필터 교집합, 측정 무관)",
+    "A16 분석 결손 = rd.answer.gap true 건수(analysis_state>=2), std_in/cit_in 모수 자체는 이미 제외(D8 예외 ①②로 자식 스캔 없이 own_* 로 낸다)",
+    "A1/R05 스냅샷 모수 = 최신 노출 회차(view_date<=오늘, servable, 관련 hidden_scope 아님)의 모든 완료 측정 합(셀 대표 1건 아님)",
+    "R06/D1 기간 누적 = anchor_date 가 [from,to] 안인 모든 완료 측정 합",
+    "A15/R13 ACR 반복 = rd.answer.acr_in(=is_acr AND acr_iter_rank=1 이거나 비ACR) 인 행만 표준 지표 모수에 포함(std_in/cit_in 생성식에 이미 반영됨)",
+    "R07 분모 게이트 = std_in(언급 계열)·cit_in(인용 계열) 불리언 컬럼 그대로 WHERE",
+    "R09 리포트 발행값 우선 = surface=website 이고 그 round_date 에 app.report_publication(status='active') 가 있으면 rd.report_unit_value 를 M06/M07 원천으로 쓴다"
+  ],
+  "read_model": [
+    "rd.cycle(cyc_key, surface, project_key, round_date, anchor_date, status, servable, view_date, hidden_scope, generation) — 스냅샷 회차 선택",
+    "rd.answer(surface, round_date, answer_key, cyc_key, project_key, prompt_key, engine_key, geo_key, lang_key, cat_mask, std_in, cit_in, dflt, elig, gap, is_acr, acr_iter_rank, own_mask, own_rk_h/k/g, ment_total, ment_h/k/g, sent_pos_h/k/g, sent_all_h/k/g, tgt_cited, own_url_cited, has_cit) — M01~M04·M06·M07·M12·A16 본체",
+    "rd.citation(surface, round_date, answer_key, cit_in, dflt, loc_owned, project_key, engine_key, geo_key, lang_key, prompt_key) — M05 인용 점유율",
+    "rd.dim_project(project_key, surface, is_root, project_id, site_id) — surface/project_id → project_key 해석, own_brand 서버 판정",
+    "rd.dim_prompt(prompt_key, surface, project_key, funnel_key, cat_mask, lang_key) — M12 측정 프롬프트 수(DISTINCT), funnel[]/brand_presence[] 필터 적용 지점",
+    "rd.catalog_entry(prompt_key, brand_bit, presence_key, funnel_key, list_type_key, depth1_key, depth2_key, depth3_key) — M12 적용 프롬프트 수(측정 무관, 카탈로그 카운트)",
+    "rd.web_unit(unit_key, project_key, file_seq) — 웹사이트 project_key ↔ 리포트 file_seq 대응",
+    "rd.report_unit_value(round_date, file_seq, pub_id, brand, country_code, lang_code, target_hit_prompts, measured_prompts, owned_prompts, owned_prompts_den) — R09 리포트 발행값 우선 시 M06/M07 원천",
+    "app.report_publication(id, surface, brand_scope, round_date, status) — 해당 회차 리포트 발행 여부 판정(status='active')",
+    "제안: 없음(D8 예외 ①②만으로 M01~M05·M12·A16 전부 해결됨, M06/M07 은 기존 rd.report_unit_value·rd.answer 열로 해결)"
+  ],
+  "query_design": "\"1) 회차 선택(스냅샷 모드, from/to 없음): SELECT project_key, cyc_key, round_date FROM rd.cycle WHERE surface=:sf AND servable AND view_date<=current_date AND hidden_scope NOT IN (관련 값: 언급계열이면 (1,3) 인 회차는 그 지표만 suppress, 인용계열이면 (1,2)) — cycle_pick_idx(surface, round_date DESC) 로 project_key 별 최신 1행(DISTINCT ON (project_key) ORDER BY round_date DESC)을 뽑는다. project_id 지정 시 rd.dim_project 로 project_key 1개만.\\n2) 기간 누적 모드(from/to 지정): 별도 회차 선택 없이 rd.answer/rd.citation 을 anchor_date BETWEEN :from AND :to 로 직접 스캔(R06/D1) — 파티션 가지치기는 round_date 로 대신 걸되 round_date>=from-여유(anchor_src 지연 반영 불필요, anchor_date 자체가 조건이므로 round_date 는 anchor_date 의 상한 근사로만 pruning 힌트).\\n3) M01~M04·M12·A16 본체(한 쿼리): SELECT count(*) FILTER (WHERE std_in) AS den_std, count(*) FILTER (WHERE std_in AND own_mask<>0) AS num_vis, sum(ment_h/k/g 중 own_brand 열) FILTER (WHERE std_in) AS num_sov, sum(ment_total) FILTER (WHERE std_in) AS den_sov, sum(sent_pos_*) FILTER(...) AS num_sent, sum(sent_all_*) FILTER(...) AS den_sent, sum(own_rk_*) FILTER (WHERE std_in AND own_rk_*>0) AS pos_sum, count(*) FILTER (WHERE std_in AND own_rk_*>0) AS pos_cnt, count(*) FILTER (WHERE gap) AS gap_answers, count(DISTINCT prompt_key) FILTER (WHERE std_in) AS measured_prompts FROM rd.answer WHERE surface=:sf AND round_date=ANY(:picked_round_dates) AND cyc_key=ANY(:picked_cyc_keys)(스냅샷) 또는 anchor_date BETWEEN :from AND :to(누적) AND project_key=ANY(:proj) AND engine_key=ANY(:eng) AND geo_key=ANY(:geo) [AND cat_mask/기타 필터] — WHERE 는 전부 불리언·`=ANY(상수배열)`, own_mask 등 비트식은 FILTER 안에서만(계약서 술어 규약).\\n4) M05: 위와 같은 조건으로 rd.citation 에서 sum(cit_in) 분모, sum(cit_in AND loc_owned) 분자.\\n5) M06/M07(website 전용): app.report_publication 에서 status='active' AND surface='website' AND round_date=:picked_round_date 존재 확인 → 있으면 rd.report_unit_value(회차 file_seq 조인, rd.web_unit 으로 project_key→file_seq) 의 target_hit_prompts/measured_prompts, owned_prompts/owned_prompts_den 을 SUM. 없으면 rd.answer 에서 sum(cit_in) 분모, sum(cit_in AND tgt_cited) / sum(cit_in AND own_url_cited) 분자로 라이브 계산 + suppressed 없이 meta 에 '라이브+표식'.\\n6) M12 적용 프롬프트 수: SELECT count(DISTINCT prompt_key) FROM rd.catalog_entry ce JOIN rd.dim_prompt p USING(prompt_key) WHERE p.surface=:sf AND p.project_key=ANY(:proj) [AND ce.brand_bit/funnel_key/list_type_key/depth*_key 필터] — 측정 여부 무관, R03(view_date<=오늘) 미적용(카탈로그는 즉시 반영).\"",
+  "perf": {
+    "risk": "medium",
+    "rows_scanned": "스냅샷: 픽업된 회차들의 rd.answer 리프 부분(project_key 별 최신 1개 round_date 파티션 IN 절 pruning, 10배에서 project당 answer_prompt_idx/answer_cell_idx 커버 스캔 — 글로벌 surface 45개국 x 최신 회차 셀 수, 대략 수천~수만 행 예상). 기간 누적(예: 1년): round_date pruning 폭이 넓어져 answer_g/w/p 파티션 다수를 스캔 — 알려진 고위험 사례(웹사이트 인용 1년 조합, 원소 그레인 1.7~2.0초 추정)와 같은 패턴이라 from/to 폭이 클수록 이 API 도 그 위험을 그대로 물려받는다.",
+    "indexes": [
+      "answer_cell_idx(surface, round_date, cyc_key, prompt_key, engine_key, geo_key) — 스냅샷 회차+셀 필터",
+      "answer_prompt_idx(prompt_key, round_date) — 기간 누적 시 프롬프트 축 필터",
+      "answer_rd_brin(round_date) — 기간 누적 긴 창의 파티션 내부 pruning 보조",
+      "cycle_pick_idx(surface, round_date DESC) INCLUDE (cyc_key, project_key, servable, view_date, hidden_scope, generation) — 1)의 최신 노출 회차 선택 전량 커버링",
+      "ab_brand_idx/cit_source_idx 는 이 API 범위 밖(M02/M05 는 rd.answer/rd.citation 집계 열만 읽어 rd.answer_brand·rd.citation 소스 조인 불필요 — D8 예외 ②)",
+      "catalog_entry_axis_idx(brand_bit, list_type_key, depth1_key) — M12 적용 프롬프트 카운트"
+    ],
+    "notes": "M01~M05 는 D8 예외 ①②(rd.answer 당사 열)로 답변 원본 1회 스캔만 하고 자식(answer_brand/answer_stance) 조인이 없어 저위험. 위험은 오직 스캔 폭(기간 누적 창 길이 · project_key IN 배열 크기)에서 온다. RDS 구축 후 실데이터로 from/to 1년·글로벌 45개국 전체 조합을 EXPLAIN ANALYZE 실측 게이트 통과 필요(계약서 §3 '성능 근거의 한계' — 폭 10배 근거 없음, 실측 전 이 판정은 잠정).",
+    "risk_reason": "n/a"
+  },
+  "auth": "\"공통 필터 모델 규칙 1(권한 교집합): 서버가 세션에서 scope(허용 brand/country/region)를 계산하고 요청 country[]/brand[] 와 교집합, 스코프 밖 값은 meta.dropped_filters. own_brand 는 클라이언트가 못 바꾼다(계정 스코프·프로젝트 브랜드에서 서버 결정). project_id 지정 시 app.project_member 로 해당 프로젝트 멤버십 확인(fail-closed, 비멤버 403). surface=admin/vendor 운영자 게이트는 이 카드 자체엔 없음(읽기 전용, 비용 액션 아님). JWT(JWKS) 검증은 A8 공통 미들웨어(모든 /v1/* 공통, 이 엔드포인트 고유 로직 아님).\"",
+  "writes": "\"없음(읽기 전용 GET). 단 app.access_audit_log 쓰기 주체가 계약서에 '미결(AU-1)'로 남아 있음 — 이 API 가 조회 감사 로그를 남겨야 한다면 그 결정(AU-1)을 따른다.\"",
+  "current_refs": [
+    "lib/kpi/overview-card-values.ts:24-81 (round1/pct/overviewTrendValues — M01~M05 산식 정본, values.visibility/shareOfVoice/sentiment/position/citationShare)",
+    "app/[locale]/(dash)/dashboard/_data/live.ts:387,882 (getLiveDashboard — 미러 KPI 5종 조립)",
+    "lib/scope/server.ts:1917 (fetchStandardAggregates — 7-KPI 표준 집계 스냅샷)",
+    "lib/scope/server.ts:3591-3612 (fetchProjectStandardAggregates — 프로젝트 7 KPI)",
+    "app/[locale]/(dash)/website/_data/live.ts:65-134 (getLiveWebsiteDashboard — 7 KPI 조립, M06/M07 포함)",
+    "lib/scope/server.ts:4818-4827 (fetchWebsiteAggregates — 7KPI 원자재, summary_table 우선→scope_mirror 폴백 — 이 배관은 옮기지 않음)",
+    "lib/scope/server.ts:3463 (fetchStandardAppliedPromptCount — M12 적용 프롬프트, 카탈로그 카운트)",
+    "lib/db/repositories/scope-aggregates.ts:4056-4116 (StandardTrendBucket 필드 정의: answers/trackedAnswers/totalMentions/trackedMentions/sentMentions/positiveMentions/avgPosition/totalCitations/ownedCitations)"
+  ],
+  "parity": "\"신구 대조 하네스 F01~F07 키 대응: F01(노출률)→M01, F02(SOV)→M02, F03(우호도)→M03, F04(우선노출도)→M04, F05(인용점유율)→M05. M06/M07(웹사이트)·M12·A16 은 하네스에 없는 신규 항목이라 별도 대조 항목 추가 필요: (a) M06/M07 값이 R09 적용 회차에서 app.report_site_fact 원본과 소수점까지 일치하는지 (b) A16 gap_answers 가 08-31 회차 프로덕션 실측(약 10%p 과소, R12 근거)과 방향이 맞는지 스모크. from/to 없는 스냅샷 모드는 A1 채택(회차 전체 완료측정)이라 현행(셀당 대표 1건)과 값이 갈릴 수 있음 — 그 차이는 결정된 정의 변경(A1)으로 설명 가능해야 대조 통과.\"",
+  "open_questions": [
+    "surface=project 일 때 '카드'의 모수가 글로벌과 동일 산식인지(현행 fetchProjectStandardAggregates 본문 미열람, aggregateStandardFromMirror 미확인) — K-3(엔진별)과 경계가 프로젝트 표면에서 특히 애매하다: 프로젝트 화면의 7 KPI 카드가 이 API(K-1) 하나로 끝나는지, 엔진별 분해가 K-3 인지 화면 쪽 확인 필요",
+    "M06/M07 을 project surface(웹사이트 아닌 일반 프로젝트)에도 노출할지 — 현행은 website 전용으로 보이나 프로젝트가 자체 웹사이트 프롬프트를 가질 수 있어(app.website_site 는 brand_code 소속) 명세서 §8 표에도 surface 축이 명시 안 돼 있음",
+    "R09 리포트 발행값 우선을 K-1(요약카드)에도 적용할지, 아니면 M06/M07 상세 화면(웹사이트 URL KPI 전용 화면)에만 적용하고 K-1 카드는 항상 라이브로 낼지 — 계약서는 '웹사이트 인용 계열'이라고만 해 요약카드 포함 여부가 불명확, R09 원 결정(2026-09-20) 문서 확인 필요",
+    "own_url_cited(M07)의 그레인이 답변(rd.answer)인지 유닛(unit_key)인지 — DDL 의 own_url_cited 는 rd.answer 컬럼(답변 그레인)인데 M07 정의는 '유닛' 단위·비가산이라고 돼 있어(§6 M07 행) 산식이 답변 카운트로 근사인지 유닛 카운트가 별도로 필요한지 미확정 — 제안: 없음 상태로는 유닛 단위 정확 재현이 어려울 수 있어 이 부분만 예외적으로 '제안' 컬럼이 필요할 수도 있음, 확정 전 K-3/웹사이트 팀 확인 요망",
+    "hidden_scope 에 따른 M01~M04(언급 계열)와 M05~M07(인용 계열) 의 개별 suppress 처리를 카드 하나의 응답에서 지표별로 따로 낼지, 전체 카드를 suppress 할지 — meta.suppressed 맵으로 지표별 처리한다고 가정했으나 명세서에 카드 단위 vs 지표 단위 억제 기준이 명시돼 있지 않음"
+  ]
+}

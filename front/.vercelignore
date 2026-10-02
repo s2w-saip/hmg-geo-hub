@@ -1,0 +1,3 @@
+# Local-only E2E harness (mock Supabase auth server, Playwright specs, run output).
+# Never part of a deployment; app code is also barred from importing it (eslint.config.mjs).
+/e2e/

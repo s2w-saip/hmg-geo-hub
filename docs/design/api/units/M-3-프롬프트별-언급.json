@@ -1,0 +1,132 @@
+{
+  "auth": "공통 필터 모델과 동일하게 서버가 요청자의 프로젝트 스코프를 default-deny 로 계산해 project_key 허용 집합을 만들고, rd.answer_brand.project_key ∈ 허용집합 조건을 WHERE 에 반드시 포함한다(교집합 밖 값은 응답 없이 dropped_filters 에 표기). mode=brand 일 때 요청한 brand(브랜드명) 이 해석한 brand_key 가 해당 프로젝트의 카탈로그·추적 대상(app.project_tracked_brand/competitor, 또는 rd.dim_brand_name.own_bit)에 속하는지 검사해, 속하지 않으면 빈 목록(데이터 없음)으로 응답하고 임의 브랜드 열람을 막는다(권한 밖 브랜드로 프롬프트 원문을 훑는 경로 차단). mode=signal 은 own_bit=1 행만 보므로 브랜드 검사가 필요 없다. 조회 자체는 app.access_audit_log 에 별도로 남기지 않는다(계약 §3 \"알려진 미결\" — AU-1 미정, 이 단위에서 새로 결정하지 않음). 비표준 FastAPI 의존성으로 JWT(JWKS) 검증 + 프로젝트 멤버십 확인(app.project_member)은 auth 모듈의 공통 의존성을 그대로 쓴다.",
+  "current_refs": [
+    "lib/scope/server.ts:3726 fetchStandardMentions(본문 mentions 집계, perBrandPrompts 포함 형태 근거)",
+    "lib/scope/server.ts:4983 fetchWebsiteMentions(website 표면 대응)",
+    "lib/scope/server.ts:3876 fetchStandardBrandMentionPrompts(브랜드 드릴다운 lazy fetch)",
+    "lib/scope/server.ts:5002 fetchWebsiteBrandMentionPrompts(website 브랜드 드릴다운)",
+    "lib/scope/server.ts:3923 fetchStandardSignalPrompts(신호 드릴다운)",
+    "lib/scope/server.ts:3931 fetchWebsiteSignalPrompts(website 신호 드릴다운)",
+    "lib/scope/server.ts:1218 cachedStandardBrandMentionPrompts(aggregateMentionsFromMirror onlyBrand 위임)",
+    "lib/db/repositories/scope-aggregates.ts:7260 SIGNAL_COLUMNS/isSignalKey(신호 9종 정의)",
+    "lib/db/repositories/scope-aggregates.ts:7266 aggregateSignalPromptsFromMirror(신호별 프롬프트 SQL, 당사 행만·상위 50)",
+    "lib/db/repositories/scope-aggregates.ts:5305 MENTION_SLIM_LEVELS/applyMentionLevel(레거시 top-N 캡, 새 설계에선 페이지네이션으로 대체 대상)",
+    "lib/scope/result-adapter.ts:1089 MentionsPromptLive(응답 형태 정본)",
+    "lib/scope/result-adapter.ts:1069 MentionAnswerLive(프롬프트당 답변 참조 형태)",
+    "app/[locale]/(dash)/standard/answer-analysis/_components/mentions-drilldown.tsx:113 (프롬프트 탭 UI)",
+    "app/[locale]/(dash)/standard/answer-analysis/_components/signal-prompts-dialog.tsx:41-59 (신호 다이얼로그 UI)",
+    "messages/ko.json:608 drilldown 텍스트(컬럼·정의·share 산식 문구)",
+    "messages/ko.json:646 signalDrilldown 텍스트"
+  ],
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/v1/mentions/prompts",
+      "summary": "프롬프트별 언급 성과 표. mode=brand 로 특정 브랜드가 언급된 프롬프트 목록(=브랜드 언급 프롬프트 드릴다운), mode=signal 로 당사 언급에 특정 감성·유형 신호가 발생한 프롬프트 목록(=신호 프롬프트 드릴다운)을 같은 응답 형태로 반환한다."
+    }
+  ],
+  "filters": {
+    "supported": [
+      "surface",
+      "own_brand(프로젝트 스코프 결정에만 사용, 값 자체를 필터 파라미터로 받지 않음)",
+      "country[]",
+      "lang[]",
+      "engine[]",
+      "from/to",
+      "funnel[]",
+      "brand_presence[]",
+      "list_type[]",
+      "depth1[]",
+      "depth2[]",
+      "depth3[]"
+    ],
+    "ignored": [
+      "brand[](다중 비교 축은 M-1 GET /v1/mentions/brands 소관 — 이 엔드포인트는 mode=brand 의 단일 target 만 받는다, meta.ignored_filters 표기)",
+      "source[](인용 전용 축, citations 모듈 소관)"
+    ],
+    "extra_params": [
+      "mode: enum(brand|signal), 필수 — 드릴다운 종류 선택",
+      "brand: string, mode=brand 일 때 필수. rd.dim_brand_name.name 과 매칭해 brand_key 로 해석(레거시 fetchStandardBrandMentionPrompts(brand:string,...) 와 동일 계약 유지)",
+      "signal: enum(positive|neutral|negative|mixed|mention|recommendation|comparison|definition|final_choice), mode=signal 일 때 필수 — SIGNAL_COLUMNS 9종과 1:1",
+      "limit: int, 기본 50, 최대 200 — 프롬프트 페이지 크기",
+      "cursor: string(opaque), 이전 응답 meta.page.next_cursor 를 그대로 전달 — 키셋(mentions DESC, prompt_key DESC)",
+      "answers_limit: int, 기본 10, 최대 50 — 프롬프트당 답변(job) 참조 개수 상한. 레거시 SIGNAL_REFS_PER_PROMPT=6·MENTION_SLIM_LEVELS.refs(2~8) 대신 명시 파라미터로 노출"
+    ]
+  },
+  "id": "M-3",
+  "metrics_rules": [
+    "M02(점유율/SOV) 산식 재사용: 이 응답의 share = 이 프롬프트의 타깃(브랜드 또는 신호) 언급 수 ÷ 같은 필터·타깃 전체 언급 수 × 100. 브랜드 랭킹 표(M11)의 share(전체 브랜드 대비 SOV)와 분모가 다르다 — ko.json drilldown.colFormula.share 문구 그대로 승계",
+    "M04(우선 노출도) 관련: rd.answer_brand.rk(답변 내 브랜드 등장 순위)를 응답의 position 에 매핑 — 레거시 MentionAnswerLive.position 은 '백필 전까지 null' 이었으나 v2 DDL 은 rk 를 이미 원본 그레인에 갖고 있어 채워서 낸다(레거시 대비 개선, R05 무관 상시 값)",
+    "WA-23(신호 매핑 정정, DB-보정.md:136): mode=signal 은 rd.answer 가 아니라 rd.answer_brand 의 당사(own_bit=1) 행만 본다 — rd.answer 전체로 매핑하던 v1 오류를 반복하지 않는다",
+    "A3(감성 mixed 처리): signal=mixed 는 s_mix 컬럼을 그대로 세고(분모 포함·긍정 제외 규칙은 M03 카드 산식이며 이 프롬프트 목록은 mixed 발생 건수 자체를 센다), 별도 재계산을 하지 않는다",
+    "D8 예외①(rd.answer_brand 그레인, DB-보정.md:55): 이 엔드포인트가 그 예외의 실사용처다 — G-01 (a) 채택 전제. G-01 (b)(rd.answer_entity) 로 결정이 바뀌면 GROUP BY 축이 answer_key,brand_key 대신 answer_key,ord(entity) 가 되어 이 단위의 query_design 을 다시 써야 한다(open_questions)",
+    "std_in 모수(계약 §3 술어 규약): mode=brand·mode=signal 둘 다 rd.answer_brand.std_in = true 행만 센다 — 분석 결손(gap) 답변은 제외",
+    "R05(대표 재선정)은 answers 하위 목록에서만 쓰인다: 같은 (prompt_key, engine_key, geo_key) 셀에 반복 측정이 있으면 대표 1건만 노출하고 나머지는 runs 카운트로 접는다(레거시 MentionAnswerLive.runs 계승)"
+  ],
+  "open_questions": [
+    "G-01 (a)/(b) 미결: (a) rd.answer_brand 채택 시 이 설계 그대로. (b) rd.answer_entity 채택 시 그레인이 (answer_key, ord) 로 바뀌어 프롬프트 집계의 GROUP BY·share 분모·own_bit 판정 경로를 다시 설계해야 한다. v3 실측 전까지 이 문서는 (a) 가정.",
+    "mode=brand 의 brand 파라미터를 이름(string)으로 받을지 rd.dim_brand_name.brand_key(int)로 받을지 — 레거시는 string(브랜드 표시명)이었지만 새 설계는 정수 키가 정본이다. string 유지 시 이름 해석 실패(별칭·표기 변형)를 어떻게 다룰지(빈 목록 vs 404) 결정 필요.",
+    "'프롬프트별 언급 성과 표'(mode 없는 기본 호출)를 지원할지: 계약 §4 범위 문구가 이 이름을 별도로 들고 있으나, 현행 코드에는 '브랜드/신호로 스코프하지 않은 전체 프롬프트 언급 표'가 없다(레거시는 항상 브랜드 랭킹 표(M-1)가 이 역할을 대신했다). 이 설계는 mode 를 필수로 두고 이 표를 별도로 만들지 않았다 — M-1(브랜드 표)과 중복 없이 필요하면 설계 리드가 결정.",
+    "answers 하위 배열에 highlights(발화 구간 하이라이트)를 넣을지: 이 설계는 answers 모듈(GET /v1/answers/{id})의 몫으로 보고 jobId 참조만 반환한다. mentions-drilldown.tsx UI 가 지금은 프롬프트 표 자체에서 하이라이트를 안 쓰고(답변 모달 진입 시 lazy) 있어 경계가 맞다고 판단했지만, 설계 리드 확인 필요.",
+    "AU-1(접근 감사 로그) 미정 — 이 엔드포인트도 api_ro 라 쓰기 주체가 없다(계약 §3 알려진 미결과 동일 이슈, 별도 결정 불필요하지만 기록).",
+    "answer_key 전역 유일성 미보장(계약 §3) — mode=signal 의 answers 서브쿼리가 rd.job 원장을 반드시 거치도록 설계했는지 통합 검증 단계에서 재확인 필요."
+  ],
+  "parity": "[\"신구 대조 하네스 F01~F07 은 프롬프트 단위 드릴다운을 커버하지 않는다(F03/F04 는 브랜드·도메인 top-N 집계, M-1/citations 소관) — 이 단위는 하네스에 새 대조 항목이 필요하다.\", \"제안 대조: 동일 (surface, filters, brand) 튜플에 대해 신 mode=brand 응답의 {prompt 목록, 프롬프트별 mentions, share} 을 레거시 fetchStandardBrandMentionPrompts(brand, filters) 결과와 비교 — 프롬프트 집합 일치율·mentions 합 오차 0·share 오차 ≤0.1pp.\", \"제안 대조: 동일 (surface, filters, signal) 튜플에 대해 신 mode=signal 응답을 레거시 fetchStandardSignalPrompts(signal, filters)(scope-aggregates.ts:7266) 와 비교 — 특히 own_bit=1 필터가 레거시의 trackedRollupPredicate(당사 판정)와 같은 답변 집합을 뽑는지가 핵심 리스크(판정 로직 재구현 지점).\", \"answers 서브목록의 runs 집계(반복 측정 접기)는 레거시에 없던 신설 필드가 아니라 MentionAnswerLive.runs 를 그대로 계승한 것이므로, 레거시 lib/scope/result-adapter.ts:1082 runs 필드 값과 1:1 대조 가능.\"]",
+  "perf": {
+    "indexes": [
+      "rd.ab_brand_idx (brand_key, round_date) INCLUDE (answer_key, prompt_key) — mode=brand 의 주 인덱스, DB-v2.sql:531 기존 정의 그대로 사용",
+      "rd.ab_rd_brin (round_date) — mode=signal 의 기간 가지치기 1차 필터(브랜드 등식 조건이 없어 selective index가 없다)",
+      "rd.job_run_idx / rd.answer_run_idx — answers 서브쿼리의 job_id·measured_at 조회 보조",
+      "제안: rd.answer_brand 에 WHERE own_bit=1 부분 인덱스 (surface, project_key, round_date) — mode=signal 은 own_bit=1 을 걸러줄 인덱스가 DDL에 없다(own_bit 은 bgrp/cat_mask/own_mask 처럼 FILTER 전용 비트마스크가 아니라 단순 int2 컬럼이라 등식 조건으로 인덱스화 가능). 새 표·캐시가 아니라 기존 그레인 위의 인덱스이므로 D8 저촉 아님. 근거는 v3 실측 후 판단할 것(현재는 제안일 뿐)."
+    ],
+    "notes": "mode=brand 는 brand_key 등식이 있어 ab_brand_idx 로 좁은 range scan 이 가능하다(위험 낮음, 계약 §5 v1 이력10배 p95 601ms 사례와 유사한 인덱스 형태). mode=signal 은 등식 조건이 own_bit(카디널리티 낮음, 필터력 약함) + 신호 컬럼>0 뿐이라 브랜드 등식이 없는 채 ab_rd_brin 만으로 기간을 좁힌 뒤 나머지를 필터한다 — 기간이 넓거나(예: from/to 미지정 누적) 10배 폭에서 project_key 카디널리티가 커지면 answer_brand_p 파티션 스캔이 커진다. answers 서브쿼리는 페이지의 prompt_key IN (최대 200개) 로 ab_brand_idx 재사용 가능(mode=brand) 이거나 own_bit 조건 재사용(mode=signal, 위 제안 인덱스 있을 때). 계약 §5 의 '화면 하나가 API 5개 이상 동시 호출' 전제상 워커 경합도 고려해야 하지만 이 단위 자체의 문장 수는 2개(프롬프트 페이지 1 + answers 배치 1)로 적다.",
+    "risk": "medium",
+    "rows_scanned": "10배 v3 실측 미시행(계약 §3 성능 근거의 한계). DB-보정.md:60 의 대안 그레인 추정(answer_entity 10배 약 5,500만 행이 answer_brand 대비 2.4~3.7배)을 역산하면 rd.answer_brand 10배 규모는 약 1,500만~2,300만 행 추정(미검증, 비교값일 뿐). mode=brand 는 brand_key 등식으로 그중 브랜드 1개분만(대략 answer 수 규모, 브랜드당 언급 스파스성에 따라 수천~수만 행) 스캔. mode=signal 은 own_bit=1 필터만 걸리므로 project 의 전체 std_in 행 중 own 비중(대략 answer 1건당 own 브랜드 1행 존재로 가정 시 project 답변 수와 같은 자릿수, 기간 폭에 따라 수만~수십만 행)을 스캔한 뒤 신호>0 으로 추가로 좁힌다."
+  },
+  "purpose": "한 프롬프트가 특정 브랜드 언급 또는 특정 감성·유형 신호와 관련해 얼마나 실적을 냈는지 프롬프트 단위로 드릴다운해 보여준다. 브랜드 랭킹 표(M-1)나 유형·감정 분포 카드(M-2)를 클릭했을 때 '그래서 어느 프롬프트에서 그랬는지'에 답하는 상세 목록이며, 답변 원문 자체는 다루지 않고(answers 모듈 소관) 프롬프트 텍스트·집계값·답변(job) 참조만 낸다.",
+  "query_design": "\"mode=brand: WITH scoped AS (SELECT ab.prompt_key, ab.answer_key, ab.engine_key, ab.mention_count FROM rd.answer_brand ab JOIN rd.dim_prompt dp ON dp.prompt_key=ab.prompt_key LEFT JOIN rd.catalog_entry ce ON ce.prompt_key=ab.prompt_key WHERE ab.surface=:surface AND ab.round_date BETWEEN :from AND :to AND ab.project_key=ANY(:project_keys) AND ab.brand_key=:brand_key AND ab.std_in AND (:geo IS NULL OR ab.geo_key=ANY(:geo)) AND (:lang IS NULL OR dp.lang_key=ANY(:lang)) AND (:engine IS NULL OR ab.engine_key=ANY(:engine)) AND (:funnel IS NULL OR dp.funnel_key=ANY(:funnel)) AND (:presence IS NULL OR ce.presence_key=ANY(:presence)) AND (:list_type IS NULL OR ce.list_type_key=ANY(:list_type)) AND (:depth1 IS NULL OR ce.depth1_key=ANY(:depth1))), agg AS (SELECT prompt_key, sum(mention_count)::int AS mentions FROM scoped GROUP BY prompt_key), tot AS (SELECT sum(mentions)::bigint AS grand FROM agg) SELECT dp.prompt_key, dp.prompt_id, dp.text, tx.code AS funnel_code, agg.mentions, ROUND(agg.mentions::numeric/NULLIF(tot.grand,0)*100,1) AS share_pct FROM agg JOIN rd.dim_prompt dp ON dp.prompt_key=agg.prompt_key LEFT JOIN rd.dim_taxon tx ON tx.taxon_key=dp.funnel_key CROSS JOIN tot WHERE (agg.mentions, agg.prompt_key) < (:cursor_mentions, :cursor_prompt_key) ORDER BY agg.mentions DESC, agg.prompt_key DESC LIMIT :limit. mode=signal: 위와 동일 골격에서 브랜드 등식 대신 AND ab.own_bit=1 AND ab.<signal_column> > 0 (signal_column 은 SIGNAL_COLUMNS 매핑을 서버 화이트리스트로 결정, 사용자 문자열을 SQL 에 직접 넣지 않음). answers 서브쿼리(페이지에 실린 prompt_key 배치당 1회): WITH cell AS (SELECT ab.prompt_key, ab.engine_key, ab.geo_key, ab.answer_key, ab.mention_count, ab.rk, j.job_id, j.measured_at, a.is_rep, row_number() OVER (PARTITION BY ab.prompt_key, ab.engine_key, ab.geo_key ORDER BY a.is_rep DESC, j.measured_at DESC) AS rn, count(*) OVER (PARTITION BY ab.prompt_key, ab.engine_key, ab.geo_key) AS runs FROM rd.answer_brand ab JOIN rd.answer a ON a.surface=ab.surface AND a.round_date=ab.round_date AND a.answer_key=ab.answer_key JOIN rd.job j ON j.answer_key=ab.answer_key WHERE ab.prompt_key = ANY(:page_prompt_keys) AND ab.surface=:surface AND ab.round_date BETWEEN :from AND :to AND (mode=brand 이면 ab.brand_key=:brand_key, mode=signal 이면 ab.own_bit=1 AND ab.<signal_column>>0) AND ab.std_in AND 동일 지오/엔진/언어 필터) SELECT prompt_key, job_id, engine_key, geo_key, mention_count, rk, measured_at, runs FROM cell WHERE rn <= :answers_limit ORDER BY prompt_key, mention_count DESC.\"",
+  "read_model": [
+    "rd.answer_brand.prompt_key, rd.answer_brand.answer_key, rd.answer_brand.brand_key, rd.answer_brand.surface, rd.answer_brand.round_date, rd.answer_brand.project_key, rd.answer_brand.engine_key, rd.answer_brand.geo_key, rd.answer_brand.own_bit, rd.answer_brand.mention_count, rd.answer_brand.rk, rd.answer_brand.s_pos, rd.answer_brand.s_neu, rd.answer_brand.s_neg, rd.answer_brand.s_mix, rd.answer_brand.t_mention, rd.answer_brand.t_recommendation, rd.answer_brand.t_comparison, rd.answer_brand.t_definition, rd.answer_brand.t_final_choice, rd.answer_brand.std_in",
+    "rd.answer.answer_key, rd.answer.is_rep, rd.answer.surface, rd.answer.round_date (answers 서브쿼리 대표 판정용)",
+    "rd.job.answer_key, rd.job.job_id, rd.job.measured_at (answers 서브쿼리 job 노출)",
+    "rd.dim_prompt.prompt_key, rd.dim_prompt.prompt_id, rd.dim_prompt.text, rd.dim_prompt.funnel_key, rd.dim_prompt.lang_key, rd.dim_prompt.project_key, rd.dim_prompt.surface",
+    "rd.dim_taxon.taxon_key, rd.dim_taxon.code (funnel 라벨, axis='funnel')",
+    "rd.catalog_entry.prompt_key, rd.catalog_entry.presence_key, rd.catalog_entry.list_type_key, rd.catalog_entry.depth1_key, rd.catalog_entry.depth2_key, rd.catalog_entry.depth3_key (택소노미 필터축)",
+    "rd.dim_brand_name.brand_key, rd.dim_brand_name.name (mode=brand 의 brand 이름→brand_key 해석)",
+    "rd.dim_engine.engine_key, rd.dim_engine.code (providers 라벨)",
+    "rd.dim_country.geo_key, rd.dim_country.code (region 라벨)"
+  ],
+  "response": "data: { mode: \\\"brand\\\"|\\\"signal\\\", target: {brand_key,name} 또는 {signal}, items: [{ prompt_key:int, prompt_id:uuid, prompt_text:string|null, funnel_stage:string|null, mentions:int, share_pct:number(분자 mentions·분모는 meta.total_mentions 로 별도 제공), providers:string[], answers:[{ job_id:uuid, provider:string, region:string|null, mention_count:int, position:int|null(=rk, 0이면 순위없음→null 변환), measured_at:string|null, runs:int }] }] }, meta: { total_mentions:int(share_pct 분모), page:{ next_cursor:string|null, has_more:bool }, surface, mode, as_of, cycles, generation, ignored_filters, dropped_filters, suppressed } — 비율은 항상 분자(mentions)·분모(total_mentions) 정수를 함께 낸다(계약 §설계할 것 3 규칙).",
+  "screens": [
+    "/standard/answer-analysis/mention 의 브랜드 랭킹 표 행 클릭 → 드릴다운 '프롬프트' 탭(mentions-drilldown.tsx:113)",
+    "/website/answer-analysis/mention 의 동일 드릴다운(mentions-drilldown.tsx, website 표면)",
+    "표준/웹사이트 언급 화면의 '신호가 발생한 프롬프트' 다이얼로그(signal-prompts-dialog.tsx:41-59, 감정 분포·멘션 유형 카드 세그먼트 클릭)"
+  ],
+  "title": "프롬프트별 언급",
+  "writes": "없음. 이 단위는 읽기 전용 API(api_ro)이며 rd·app 스키마 어디에도 쓰지 않는다. 조회 자체를 app.judgment_change 나 app.access_audit_log 에 남기지 않는다(계약상 쓰기 주체는 api_rw/loader 뿐이고, 이 단위는 그 경로를 타지 않음).",
+  "bg_additions": {
+    "date": "2026-09-28",
+    "rule": "전부 선택 인자. 주지 않으면 응답 모양·값이 종전과 같다(정본: 모듈-언급.md §3.3.1)",
+    "extra_params": [
+      "mention_brand:str 1~100자 (BG-17, mode=brand 타깃 셋 중 하나. 표시명 → brand_key, 없으면 404 brand_not_found)",
+      "own:bool=false (BG-17, mode=brand 타깃 셋 중 하나. 당사 행)",
+      "own_brand_code:str 1~50자 (own=true 전용. D13 split_own 행 키만 받는다. 브랜드 코드가 아니면 422, 행 키가 아니면 빈 목록)",
+      "terms:bool=false (BG-18, 답변 참조 하이라이트 표기)"
+    ],
+    "response_fields": [
+      "data.target.own:true, data.target.own_brand_code (own 타깃일 때)",
+      "items[].answers[].terms:{brand[],model[]} (terms=true 일 때)"
+    ],
+    "validation": [
+      "mode=brand 는 brand_key·mention_brand·own 중 정확히 하나",
+      "mode=signal 에 brand_key·own·mention_brand·own_brand_code 가 오면 422",
+      "terms=true 는 limit × answers_limit ≤ 1000(TERMS_MAX_REFS)"
+    ],
+    "limits": [
+      "terms 답변 참조당 brand 8·model 24",
+      "TERMS_MAX_REFS 1000"
+    ],
+    "cursor": "새 타깃 인자(mention_brand·own·own_brand_code)는 값이 있을 때만 필터 해시에 들어간다. 기본값 요청의 해시는 BG 라운드 전과 같아 배포 전 커서가 이어진다. terms 는 해시 밖",
+    "terms_rule": "model 표기 = 롤업 id 가 그 답변의 타깃 Brand 행이거나 롤업 엔티티의 정본 브랜드가 타깃(현행 highlightTermsForBrand 와 같다). mode=signal 의 terms 는 현행에 없는 확장이라 화면 유지 어댑터는 요청하지 않는다"
+  }
+}

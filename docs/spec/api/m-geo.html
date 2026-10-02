@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>국가별 API</title><meta name="description" content=""><style>
+:root {
+  --bg: #f7f7f5; --panel: #ffffff; --ink: #1d1f23; --ink2: #4a4f57; --ink3: #7a808a;
+  --line: #e3e3de; --line2: #eeeeea; --accent: #0a67f2; --accent-soft: #e8f0fe;
+  --ok: #1a7f4b; --ok-soft: #e6f4ec; --warn: #9a6200; --warn-soft: #fdf3e1;
+  --bad: #b3261e; --bad-soft: #fbe9e7; --muted-soft: #efefec; --code-bg: #f1f1ee;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15171a; --panel: #1c1f23; --ink: #e8e9eb; --ink2: #b4b8bf; --ink3: #858b94;
+    --line: #2d3137; --line2: #262a2f; --accent: #6ea8ff; --accent-soft: #1d2b44;
+    --ok: #5fd08f; --ok-soft: #173024; --warn: #f0b95b; --warn-soft: #3a2d14;
+    --bad: #ff8a80; --bad-soft: #3d1d1b; --muted-soft: #25282d; --code-bg: #25282d;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15171a; --panel: #1c1f23; --ink: #e8e9eb; --ink2: #b4b8bf; --ink3: #858b94;
+  --line: #2d3137; --line2: #262a2f; --accent: #6ea8ff; --accent-soft: #1d2b44;
+  --ok: #5fd08f; --ok-soft: #173024; --warn: #f0b95b; --warn-soft: #3a2d14;
+  --bad: #ff8a80; --bad-soft: #3d1d1b; --muted-soft: #25282d; --code-bg: #25282d;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 56px; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.7 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", "Segoe UI", sans-serif;
+  word-break: keep-all; overflow-wrap: break-word; }
+.wrap { max-width: 1240px; margin: 0 auto; padding: 24px 16px 80px; display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 32px; }
+nav.toc { position: sticky; top: 46px; align-self: start; max-height: calc(100vh - 60px); overflow: auto; font-size: 13px; padding-right: 8px; }
+nav.toc .h { font-weight: 700; color: var(--ink2); margin: 4px 0 8px; font-size: 12px; letter-spacing: .02em; }
+nav.toc a { display: block; color: var(--ink2); text-decoration: none; padding: 3px 8px; border-radius: 6px; }
+nav.toc a:hover { background: var(--muted-soft); color: var(--ink); }
+nav.toc a.sub { padding-left: 20px; font-size: 12.5px; color: var(--ink3); }
+main { min-width: 0; }
+header.doc { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 28px 28px 22px; margin-bottom: 28px; }
+header.doc .eyebrow { font-size: 12px; color: var(--accent); font-weight: 700; letter-spacing: .04em; }
+header.doc h1 { font-size: 28px; line-height: 1.3; margin: 6px 0 10px; }
+header.doc p.lead { font-size: 16px; color: var(--ink2); margin: 0 0 18px; }
+.meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px 18px; font-size: 13px; }
+.meta div span { display: block; color: var(--ink3); font-size: 12px; }
+section { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 24px 26px; margin-bottom: 22px; }
+h2 { font-size: 21px; margin: 0 0 14px; padding-bottom: 10px; border-bottom: 1px solid var(--line2); }
+h2 .num { color: var(--accent); margin-right: 8px; font-variant-numeric: tabular-nums; }
+h3 { font-size: 16.5px; margin: 26px 0 10px; }
+h3:first-of-type { margin-top: 10px; }
+p { margin: 8px 0 12px; }
+ul, ol { margin: 6px 0 14px; padding-left: 22px; }
+li { margin: 3px 0; }
+code { font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+pre { background: var(--code-bg); border-radius: 10px; padding: 14px 16px; overflow-x: auto; font-size: 12.5px; line-height: 1.55; }
+pre code { background: none; padding: 0; }
+.tbl { overflow-x: auto; margin: 10px 0 16px; border: 1px solid var(--line); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { text-align: left; vertical-align: top; padding: 8px 11px; border-bottom: 1px solid var(--line2); }
+th { background: var(--muted-soft); font-weight: 650; color: var(--ink2); white-space: nowrap; font-size: 12.5px; }
+tr:last-child td { border-bottom: none; }
+.cat table { table-layout: fixed; }
+.cat code { white-space: normal; word-break: break-all; }
+td.id, th.id { white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: 650; }
+.b { display: inline-block; font-size: 11.5px; font-weight: 650; padding: 1px 8px; border-radius: 999px; white-space: nowrap; line-height: 1.6; }
+.b.ok { background: var(--ok-soft); color: var(--ok); }
+.b.warn { background: var(--warn-soft); color: var(--warn); }
+.b.bad { background: var(--bad-soft); color: var(--bad); }
+.b.info { background: var(--accent-soft); color: var(--accent); }
+.b.mute { background: var(--muted-soft); color: var(--ink3); }
+.callout { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 12px 16px; border-radius: 0 10px 10px 0; margin: 12px 0 16px; }
+.callout.warn { border-color: var(--warn); background: var(--warn-soft); }
+.callout.bad { border-color: var(--bad); background: var(--bad-soft); }
+.callout p { margin: 4px 0; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin: 10px 0 16px; }
+.card { border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; background: var(--bg); }
+.card .k { font-size: 12px; color: var(--ink3); }
+.card .v { font-size: 22px; font-weight: 750; font-variant-numeric: tabular-nums; }
+.card .d { font-size: 12.5px; color: var(--ink2); }
+.small { font-size: 12.5px; color: var(--ink3); }
+.src { font-size: 12px; color: var(--ink3); }
+details { margin: 8px 0; }
+summary { cursor: pointer; font-weight: 650; color: var(--ink2); }
+footer { color: var(--ink3); font-size: 12.5px; text-align: center; margin-top: 30px; }
+@media (max-width: 900px) {
+  .wrap { grid-template-columns: 1fr; gap: 0; }
+  nav.toc { display: none; }
+  header.doc, section { padding: 18px 16px; }
+  header.doc h1 { font-size: 23px; }
+  .tbl table { min-width: 680px; }
+  .cat table { min-width: 860px; }
+  .tbl th:first-child, .tbl td:first-child { min-width: 96px; }
+}
+
+.apiwrap{max-width:1100px;margin:0 auto;padding:24px 16px 80px;min-width:0}.apiwrap .m,.apiwrap td,.apiwrap dd,.apiwrap p,.apiwrap li{overflow-wrap:anywhere}
+.apiwrap td.nw{white-space:nowrap;overflow-wrap:normal}.clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.router{background:var(--code-bg);border-radius:8px;padding:10px 12px;font-size:12.5px}
+.crumb{font-size:13px;color:var(--ink3);margin:0 0 6px}.crumb a{color:var(--accent);text-decoration:none}
+.unit{border-top:1px solid var(--line);padding-top:18px;margin-top:22px}
+.unit h3{margin:0 0 6px;font-size:18px}
+dl.kv{display:grid;grid-template-columns:140px minmax(0,1fr);gap:6px 14px;margin:10px 0}
+dl.kv dt{color:var(--ink3);font-size:13px}dl.kv dd{margin:0;min-width:0;overflow-wrap:break-word}
+pre.blk{background:var(--code-bg);border-radius:8px;padding:12px;overflow-x:auto;font-size:12.5px;line-height:1.5;white-space:pre-wrap;overflow-wrap:break-word}
+ul.tight{margin:4px 0;padding-left:18px}ul.tight li{margin:2px 0;overflow-wrap:break-word}
+.risk{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;white-space:nowrap}
+.risk.low{background:var(--ok-soft);color:var(--ok)}.risk.medium{background:var(--warn-soft);color:var(--warn)}.risk.high{background:var(--bad-soft);color:var(--bad)}.risk.na{background:var(--muted-soft);color:var(--ink3)}
+.m{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
+.navmods{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0}.navmods a{font-size:13px;padding:3px 9px;border:1px solid var(--line);border-radius:14px;text-decoration:none;color:var(--ink2);background:var(--panel)}
+@media (max-width:640px){dl.kv{grid-template-columns:1fr}dl.kv dt{margin-top:6px}}
+</style></head>
+<body><main class="apiwrap"><p class='crumb'><a href='index.html'>API 명세</a> / 국가별</p><h1>국가별</h1><h2>단위 상세</h2><section class="unit" id="G-1"><h3>G-1 G-1 국가별 현황 (GET /v1/geo) <span class="risk medium">medium</span></h3>
+<p>국가(웹사이트는 사이트 국가)별로 당사(관점 브랜드) 대 경쟁사의 시장 위치를 KPI 5종(노출률·점유율·우호도·우선노출도·인용점유율)과 최대경쟁사·선두 자사브랜드로 보여준다. 권역(RHQ) 단위로 국가를 묶어 지도/트리로 드릴다운하는 것이 목적이며, 다른 KPI 모듈(kpi/summary)과 산식은 같고 국가 축으로만 좁힌 것이다(M11 브랜드·경쟁사 비교와 그레인 공유).</p>
+<div class="tbl"><table><tr><th>메서드</th><th>경로</th><th>요약</th></tr><tr><td class='m nw'>GET</td><td class='m nw'>/v1/geo</td><td>국가별 GEO 현황: 권역→국가 트리, 국가·권역별 KPI 5종(M01·M02·M03·M04·M05)과 최대경쟁사·선두 자사브랜드. surface=global 은 전 세계 측정 국가, surface=website 는 사이트 선언 국가 기준(현행 웹사이트 GEO 는 언급 수만 지원했으나 통합 그레인 채택으로 5종 전부 가능해짐, open_questions 참조).</td></tr></table></div>
+<dl class="kv">
+<dt>화면(현행)</dt><dd><ul class='tight'><li>/dashboard 국가별 GEO 현황(getLiveGeo, surface=global)</li><li>/website GEO(지도+스냅샷, showsGeoMap 권한자만, getLiveWebsiteGeo, surface=website)</li></ul></dd>
+<dt>대체하는 현행 코드</dt><dd><ul class='tight'><li>app/[locale]/(dash)/dashboard/_data/live.ts:194 buildGeo</li><li>app/[locale]/(dash)/dashboard/_data/live.ts:465 getLiveGeoImpl</li><li>app/[locale]/(dash)/dashboard/_data/live.ts:126 marketStats</li><li>app/[locale]/(dash)/dashboard/_data/live.ts:162 ourBrandsOf</li><li>app/[locale]/(dash)/dashboard/_data/live.ts:169 ourLabelOf</li><li>app/[locale]/(dash)/dashboard/_data/live.ts:176 activeBrandFor</li><li>app/[locale]/(dash)/dashboard/_data/overview-metrics.ts:34 marketMetrics</li><li>app/[locale]/(dash)/dashboard/_data/overview-metrics.ts:28 metricValue</li><li>lib/scope/server.ts:4018 fetchStandardGeoKpi</li><li>lib/db/repositories/scope-aggregates.ts:11654 aggregateGeoKpiFromMirror</li><li>app/[locale]/(dash)/website/_data/live.ts:171 getLiveWebsiteGeoImpl</li><li>app/[locale]/(dash)/website/_data/live.ts:157 website ourBrandsOf(중복 정의)</li><li>lib/scope/server.ts:4936 fetchWebsiteGeoCompetition</li><li>lib/rhq/index.ts:53 rhqForCountry</li><li>lib/rhq/index.ts:58 rhqRegionIdsForBrand</li></ul></dd>
+<dt>필터 지원</dt><dd>surface(필수, global|website|project), own_brand(서버 결정, 응답의 &#x27;우리&#x27; 라벨·판정 기준), brand[](관점 브랜드 단일 선택 시에만 권역 그룹핑 활성 — 현행 activeBrandFor 규칙 계승: filters.brand 길이 1 우선, 아니면 스코프가 단일 브랜드일 때 그 브랜드, 그 외엔 국가/권역 묶기 불가로 markets=[]), country[](권한 교집합 후 결과를 추가로 좁히는 것도 허용 — 필터 패널의 국가 선택과 국가별 표의 행 제한을 겸함), engine[], from/to(기간 지정 시 D1 누적, 미지정 시 R05 스냅샷=최신 노출 회차)</dd>
+<dt>필터 무시(ignored)</dt><dd>lang[](표준·프로젝트 표면에서는 웹사이트 전용 축이라 무시. website 표면에서는 site_geo_key 로 이미 국가가 고정되므로 lang 필터는 프롬프트 언어 좁히기로 지원 가능 — 제안: 지원 축에 추가 여부는 open_questions), funnel[], brand_presence[], list_type[], depth1~3[], source[](이 화면은 인용을 국가별 합계로만 쓰고 출처 카테고리 분해가 없어 무시)</dd>
+<dt>추가 파라미터</dt><dd><ul class='tight'><li>brand: string[] — query 파라미터명은 공통 필터와 동일(brand[]), GEO 전용 의미(권역 그룹핑 축)만 §7 기능 명세에 별도 서술</li></ul></dd>
+<dt>지표·규칙</dt><dd><ul class='tight'><li>M01 노출률: own_answers/answers(답변 그레인, 가산)</li><li>M02 점유율(SoV): own_mentions/total_mentions(언급 그레인, 가산, 분모=시장 전체 언급 그대로 — 권한 밖 형제 HMG 브랜드도 분모엔 포함되지만 분자·경쟁사 목록엔 미포함, 브랜드 격리 원칙 계승)</li><li>M03 우호도: own_sent_pos/own_sent_total(A3: mixed 는 분모 포함·긍정 제외)</li><li>M04 우선노출도(D5 확정): own_pos_sum/own_pos_cnt = 평균 순위, 낮을수록 좋음. P1 예외 &#x27;M04 HMG=3사 순위 중 0을 뺀 최솟값&#x27;을 own_rk_h/own_rk_k/own_rk_g 에서 조회 시 조합(허용된 own_brand 부분집합만 포함)</li><li>M05 인용점유율: own_url_cited 계열/전체 인용(자사=타겟일치 또는 owned_base 최장일치, 루트홈은 전언어 자사)</li><li>R05 스냅샷=최신 노출 회차(cyc_key)의 모든 완료 측정, from/to 없을 때</li><li>R06 기간 누적=앵커 날짜(round_date)가 기간 안인 모든 완료 측정 합(D1), 카드=추이 버킷 합과 같아야(D6)</li><li>R03 노출 게이트: rd.cycle.view_date &lt;= 오늘(KST)인 회차만</li><li>G-01(a) 채택: rd.answer_brand 그레인으로 시장 전체·경쟁사·브랜드별 언급 집계</li><li>G-03 D8 예외 ②: rd.answer 당사 열(own_mask·own_rk_*·ment_*·sent_*)로 &#x27;우리&#x27; 합계는 자식표(answer_brand) 스캔 없이 계산</li><li>브랜드 격리(현행 계승, 새 결정 아님): 권한 밖 형제 HMG 브랜드는 own_mask/own_rk 대상에서 빠지고 competitive=true 목록(경쟁사)에도 없음 — 분모(시장 전체 언급)에는 포함</li></ul></dd>
+<dt>읽는 표·열</dt><dd><ul class='tight'><li>rd.answer(answer_key, round_date, surface, geo_key, prompt_key, std_in, own_mask, own_rk_h, own_rk_k, own_rk_g, ment_h, ment_k, ment_g, ment_total, sent_pos_h, sent_pos_k, sent_pos_g, sent_all_h, sent_all_k, sent_all_g)</li><li>rd.answer_brand(round_date, answer_key, brand_key, geo_key, surface, mention_count, competitive, own_bit, std_in)</li><li>rd.citation(round_date, answer_key, geo_key, surface, cit_in, loc_owned, tgt_hit, owner_key)</li><li>rd.catalog_entry(prompt_key, brand_bit) — 관점 브랜드 모집단 좁히기(brand[] 단일 선택 시만)</li><li>rd.dim_country(geo_key, code, region_key, hidden_standard)</li><li>rd.dim_brand_name(brand_key, name, own_bit)</li><li>rd.cycle(cyc_key, surface, round_date, servable, view_date, hidden_scope) — R03·R05 스냅샷 회차 선택</li><li>app.rhq_region(region_id, brand_code, label)</li><li>app.rhq_region_country(region_id, country_code)</li><li>app.hidden_market(surface, country_code) — 제안: 숨김 국가 제외(R04 계열, 현행 hidden-regions.ts:22 대응 여부 확인 필요, 미확인)</li></ul></dd>
+<dt>권한</dt><dd>역할: hq·region·country·admin·vendor·website(§9 정본). own_brand 는 계정 스코프(scope.brands) 또는 project 브랜드에서 서버가 결정(§4 표, 클라이언트 무시). 데이터 스코프: 서버가 role→{brands,regions,countries} 계산 후 요청 country[]·brand[] 와 교집합(default-deny), 근거 lib/auth/scope-policy.ts(신 구조는 동등 predicate 를 FastAPI 의존성으로 이식). geo_key 허용집합은 교집합 결과를 rd.dim_country.code 로 매핑해 WHERE geo_key = ANY(:allowed_geo_keys) 에 주입. vendor·website 역할은 이 화면 라우트 접근 자체가 route-policy 밖일 수 있음(현행 lib/auth/route-policy.ts::ROUTES 승계, admin/hq/region 에 한해 showsGeoMap true — 현행 lib/auth/scope-policy.ts 의 showsGeoMap 상수, 신 구조는 role 목록을 그대로 이식하되 새 위치 미확인이라 제안 표시). 감사 로그(app.access_audit_log) 쓰기 주체 미정(AU-1) — 계약서 §3 미결 사항 그대로 인계.</dd>
+<dt>쓰기</dt><dd>없음(읽기 전용). 쓰기 스키마(app/ing)는 이 API 가 만지지 않는다 — 재판정 요청(judgment_change)도 이 화면에는 진입점 없음(당사 판정 own_bit·브랜드 롤업은 카탈로그·엔티티 레지스트리 재판정의 부수효과로 다른 모듈(관리자 entities/catalog)이 담당).</dd>
+<dt>성능(10배)</dt><dd>10배 폭 합성 기준(근거 미확정, 계약서 §3 성능 근거의 한계): 스냅샷(기간 미지정) 쿼리는 최신 노출 회차 1개(round_date 단일값) 파티션 프루닝으로 rd.answer 는 answer_rd_brin 덕에 그 회차 분량만 읽음 — 현행 6.6만 job/전체 체인 규모에서 회차당 수천~수만 행 추정(정확한 회차당 표준 답변 수는 미확인, DB-보정.md 에 수치 없음). rd.answer_brand 는 답변당 평균 브랜드행(자사 3+경쟁 다수) 배수라 같은 회차에서 answer 대비 3~6배 행 추정. 1년 기간 조회(from/to 최대창)는 계약서가 명시한 고위험 사례(&#x27;웹사이트 인용 1년 조합 1.7~2.0초 추정&#x27;)와 같은 유형 — GEO 도 전 세계 국가를 한 번에 그룹핑하므로 기간이 길수록 answer_brand 스캔 행수가 선형 증가.<br><span class="muted">인덱스: answer_rd_brin(rd.answer, round_date) — 스냅샷/기간 파티션 프루닝, answer_cyc_idx(rd.answer, cyc_key) — R05 최신 노출 회차 선택 보조(cyc_key 는 rd.cycle.cycle_pick_idx 로 먼저 결정), cycle_pick_idx(rd.cycle, surface, round_date DESC) INCLUDE(...) — 스냅샷 대상 회차(servable·view_date) 선택, ab_rd_brin(rd.answer_brand, round_date) — 기간 조회 파티션 프루닝(스냅샷은 프루닝 효과 작음, 단일 회차라 이미 좁음), 제안: answer_brand_geo_idx ON rd.answer_brand (surface, round_date, geo_key) INCLUDE (brand_key, competitive, mention_count, rk, own_bit) — 현재 ab_brand_idx 는 (brand_key, round_date) 순이라 이 화면의 GROUP BY geo_key 접근에는 안 맞고, D8 은 매트뷰·요약표만 금지할 뿐 group-by 축에 맞춘 통상 btree 커버링 인덱스는 성능 최적화(P7)의 정상 범위로 판단. v3 실측 전 제안으로만 표시.</span><br>가장 무거운 부분은 시장 전체·경쟁사 집계를 위한 rd.answer_brand 스캔(rd.answer 당사 열 활용으로 &#x27;우리&#x27; 쪽은 이미 제거됨, G-03/D8 예외 ②). 스냅샷(기본 진입 화면)은 위험 낮음(회차 1개, 국가 전체라도 파티션이 작음); 1년 등 장기간 조회는 answer_brand 전량 스캔이라 계약서가 지목한 고위험군에 포함되므로 medium 으로 표시하고 v3 폭 10배 실측 게이트에서 재판정 필요.</dd>
+<dt>신구 대조</dt><dd>&quot;신구 대조 하네스(mig.parity_run/parity_result, DDL-VERIFY 계열)에 feature_id &#x27;F04&#x27;(추정, 10-feature-trace.tsv 상 dashboard 국가별 GEO 계열 — 정확한 F0x 코드는 harness/README.md 확인 필요, 미확인)로 등록. 비교 항목: (a) 국가별 markets 배열의 {code, hmgSov, hmgRank, fieldSize, topBrand.sov, topRival.sov} — 소수1자리 반올림까지 일치, (b) 권역 롤업 합계, (c) metrics 5종 ours 값. 알려진 차이(mig.known_diff 로 등록 필요): ① R12 분석 도착 재동기화로 08-31 류 회차의 약 10%p 과소표시가 새 구조에서 사라짐(정의 개선, 결손 아님) ② website 표면에 KPI 5종이 새로 채워지면 현행 0-필드와 달라짐(위 open_questions) ③ M04 계산 경로가 answer_brand 합산에서 rd.answer 당사 열 조회로 바뀌어도 &#x27;당사 합 불변식&#x27;(DB-보정.md) 보장 시 값은 동일해야 함 — 다르면 로더 버그.&quot;</dd>
+<dt>열린 질문</dt><dd><ul class='tight'><li>웹사이트 GEO(surface=website)에 KPI 5종 전부를 새로 노출할지, 현행처럼 SoV(언급 수)만 유지할지: 통합 그레인(rd.answer/rd.answer_brand)에는 이제 웹사이트 표면도 posSum/sentiment/citation 열이 다 있어 기술적으로는 5종 전부 가능(현행 제약은 미러 분리 배관이 원인이었을 뿐 데이터 부재가 아니었음, website live.ts:176-183 의 0-필드 채움 주석 참고). 신구 대조(F0x)에서 값이 새로 생기는 건 A4(정의 변경 고지 대상)인지 확인 필요.</li><li>surface=project(개별 프로젝트) 에 이 화면이 존재하는지: 현행 트레이스(10-feature-trace.tsv)에 /projects 용 getLiveGeo 계열 행이 없다 — /dashboard(global)·/website 두 표면만 확인됨. project 표면은 이 API 의 대상 밖으로 보되, 계약서가 &#x27;기능=API=쿼리 하나(P4)&#x27;를 요구하므로 필요해지면 같은 엔드포인트에 surface=project 를 추가하는 것으로 충분한지 다른 설계자(프로젝트 모듈)와 조율 필요.</li><li>brand[] 미선택(전사 다중 브랜드) 상태에서 markets=[] 로 비우는 현행 규칙(&#x27;권역 뷰는 브랜드 선택 필수&#x27;)이 여전히 유효한 제품 결정인지: 계약서에서 이 규칙(구 코드 주석의 &#x27;C5&#x27;)의 출처를 못 찾음(미확인) — 유지할지 재확인 필요.</li><li>rd.answer_brand 에 (surface, round_date, geo_key) 커버링 인덱스가 없다 — perf 절 참고, 새 인덱스 제안이 이 화면 전용으로 정당화되는지(다른 모듈의 유사 group-by 수요와 합쳐 설계할지) 통합자 판단 필요.</li><li>권역(RHQ) 매핑이 브랜드마다 다른데 웹사이트 표면(site_geo_key 고정)에도 권역 트리 개념을 적용할지, 국가 평면 목록으로만 보여줄지 미정.</li></ul></dd>
+</dl>
+<details><summary>응답 형태</summary><pre class="blk">&quot;data.markets: GeoRegionRow[] — {region_id, region_label, country_count, own: {visibility,shareOfVoice,sentiment,position,citationShare}(각 {value, numerator, denominator}), rank:{our:int, field_size:int}, top_own_brand:{brand,share_of_voice}|null, top_rival:{brand,share_of_voice}|null, countries: GeoCountryRow[](같은 필드셋 + {code, country_name}, 국가 desc by shareOfVoice)}. data.pending: string[](측정 없는 region_id). meta.own_label: string(당사 라벨, 단일 브랜드명 또는 &#x27;HMG&#x27;). meta.{surface,mode,as_of,cycles,generation,ignored_filters,dropped_filters,suppressed} 공통 형태(계약서 §2). 페이지네이션 없음(국가 수는 유한 카디널리티, 키셋 불필요).&quot;</pre></details>
+<details><summary>쿼리 설계</summary><pre class="blk">&quot;1) pop CTE(rd.answer): WHERE surface=:surface AND round_date BETWEEN :from AND :to(스냅샷이면 R05 로 뽑은 단일 round_date) AND std_in AND geo_key = ANY(:allowed_geo_keys); brand[] 단일 선택 시 rd.catalog_entry(ce.prompt_key=a.prompt_key) 로 ce.brand_bit IN (0, :active_brand_bit) 조인해 &#x27;관점 브랜드 X 의 모수 = 카탈로그 brand X ∪ 공통&#x27; 적용(§2 필터 규칙 3). SELECT a.answer_key, a.geo_key, a.own_mask, a.ment_h,a.ment_k,a.ment_g, a.own_rk_h,a.own_rk_k,a.own_rk_g, a.sent_pos_h,a.sent_pos_k,a.sent_pos_g, a.sent_all_h,a.sent_all_k,a.sent_all_g.\n2) own_by_geo: pop 을 geo_key 로 GROUP BY. answers=count(*), own_answers=count(*) FILTER(own_mask &amp; :own_bits&lt;&gt;0), own_mentions=sum(CASE WHEN :own_bits&amp;1&lt;&gt;0 THEN ment_h ELSE 0 END + CASE ...&amp;2... THEN ment_k ELSE 0 END + CASE ...&amp;4... THEN ment_g ELSE 0 END), own_pos_sum/own_pos_cnt 는 같은 패턴으로 own_rk_h/k/g 를 0 초과일 때만 sum/count(D5 예외 그대로), own_sent_pos/own_sent_total 은 sent_pos_*/sent_all_* 합. :own_bits 는 서버가 own_brand(단일 또는 admin 전체=7)에서 산출.\n3) ab CTE(rd.answer_brand): pop 과 answer_key 로 JOIN, WHERE surface=:surface AND std_in, GROUP BY geo_key, brand_key, competitive → SUM(mention_count) mentions. \n4) totals: ab 를 geo_key 로 GROUP BY SUM(mentions) = 시장 전체 언급(분모, 형제 HMG 브랜드 포함 전부).\n5) own_brand_rows: ab WHERE brand_key IN (:h_key,:k_key,:g_key) — topBrand(선두 자사브랜드) 후보, 개별 브랜드 SoV = mentions/total.\n6) rivals: ab WHERE competitive GROUP BY geo_key ORDER BY mentions DESC 로 DISTINCT ON(geo_key) 최대경쟁사(topRival) 1건 + fieldSize=경쟁사 수+1(우리).\n7) cit CTE(rd.citation): pop 조인 WHERE surface=:surface AND cit_in, GROUP BY geo_key, cit_total=count(*), cit_owned=count(*) FILTER(loc_owned OR tgt_hit)(자사=owned_base 최장일치 또는 타겟URL 일치, M05).\n8) 위 CTE 들을 geo_key 로 LEFT JOIN 해 국가 1행씩 반환(국가명은 rd.dim_country, 경쟁사·자사브랜드명은 rd.dim_brand_name).\n9) 앱 계층: geo_key→country_code 를 app.rhq_region_country(region_id, country_code) 역참조해 app.rhq_region(region_id, brand_code=:active_brand) 으로 권역 묶음(브랜드별 1:N, brand[] 미단일이면 이 단계 생략하고 markets=[]). 권역 합계는 소속 국가 원시값(mentions·answers 등 분자·분모)을 합산 후 재계산(SoV 등 비가산 지표를 평균하지 않음, P3). pending = app.rhq_region 에는 있으나 위 결과에 없는 region_id.\n\n쓰기 없음(읽기 전용 GET).&quot;</pre></details>
+</section><div class='navmods'><a href='m-filters.html'>필터</a><a href='m-kpi.html'>KPI</a><a href='m-trend.html'>추이</a><a href='m-mentions.html'>언급</a><a href='m-citations.html'>인용</a><a href='m-geo.html'>국가별</a><a href='m-answers.html'>답변 드릴다운</a><a href='m-funnel.html'>AI 퍼널</a><a href='m-prompts.html'>프롬프트</a><a href='m-projects.html'>프로젝트</a><a href='m-admin.html'>관리자</a><a href='m-auth.html'>인증</a><a href='m-qa.html'>검수 콘솔</a><a href='m-intent.html'>고객 관심</a><a href='m-contextmap.html'>컨텍스트 맵(intent 로 흡수)</a><a href='m-webgeo.html'>웹 크롤·SEO(제거)</a><a href='m-ingest.html'>적재 파이프라인</a></div></main></body></html>

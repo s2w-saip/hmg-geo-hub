@@ -1,0 +1,237 @@
+{
+  "module": "고객 관심(intent): IN-1 키워드(DataForSEO) + IN-2 소셜 스크레이핑(구매 맥락 지도)",
+  "router": "app/modules/intent/ 패키지 하나, APIRouter(prefix=\"/v1/intent\", tags=[\"intent\"]) 아래 하위 라우터 3개: (1) keywords.py (IN-1: /keywords, /insight, /related, /lookup, /fetches, /serp-drafts) (2) social.py (IN-2: APIRouter(prefix=\"/social\"), /context-map/*, /prompts) (3) candidates.py (IN-1·IN-2 공용: POST /candidates). 공용 파일: deps.py(인증·프로젝트 스코프·운영자 게이트·api_ro/api_rw 세션·actor GUC), schemas.py(IntentMeta·Envelope·Page·SentimentBreakdown·CandidateIn 등), repo_kw.py(rd.kw_* 읽기 SQL), repo_ctx.py(ext.ctx_* 읽기 SQL), repo_app.py(app.* 쓰기 SQL: tracked_keyword·prompt_candidate·kw_prompt_draft·ctx_generated_prompt·judgment_change), presets.py(location_presets 이식 + term_norm), llm.py(OpenRouter 호출 래퍼, 트랜잭션 밖 실행 강제), xlsx.py(export 스트리밍). 읽기 핸들러는 api_ro 풀만, 쓰기 핸들러는 '읽기(api_ro) → 외부 호출(무 트랜잭션) → 쓰기(api_rw 단일 짧은 트랜잭션)' 3단 구조. api_rw 는 app 스키마 USAGE 만 있으므로(DB-v2.sql:839-843) rd·ext 를 같은 트랜잭션에서 읽지 않는다.",
+  "summary": "IN-1(키워드)과 IN-2(소셜 스크레이핑)를 /v1/intent 한 라우터로 묶었다. 핵심 해소 5가지: (1) IN-1 의 동기 DataForSEO 재조회는 api_rw 가 ext·rd 를 쓸 수 없다는 계약 §3 과 충돌하므로, app.judgment_change 에 kind 'dfs_fetch'(DDL 변경 제안)를 넣어 적재기(loader)가 수집하는 비동기 큐 방식(202 + 상태 폴링)으로 확정했다(DB-ACR-외부-데이터.md:70 의 '수집 중' 응답 설계와 일치). GET 에서 유료 호출을 일으키는 fresh 파라미터는 제거했다. (2) 키워드 데이터 읽기를 keyword_id 기반에서 term+country 기반(/v1/intent/insight·related·lookup)으로 바꿔, 프로젝트 없는 표준 화면(/customer-interest/google-keywords, 현행도 insight 를 실호출함)까지 같은 엔드포인트로 덮는다. (3) 후보 풀 쓰기를 POST /v1/intent/candidates(source=google_keyword|social_scraping, 다건, 앱 단 dedup) 하나로 합쳤다. (4) 응답 봉투를 IntentMeta(공통 meta 필드 유지, surface·mode·cycles·generation=null, as_of=관측시각 또는 스냅샷 시각, page 확장)로 통일하고, 삭제는 두 단위 모두 DELETE ?ids= 로 맞췄다. (5) DB-v2 에서 빠진 ext.ctx_drive(snapshot_id, requirement_id) 인덱스(초안 DB-ACR-외부-데이터.sql 에는 있었음)와 app.ctx_generated_prompt 의 layer·funnel_stage·priority·origin·seed_key 컬럼, app.prompt_candidate(project_id) 인덱스를 제안으로 올렸다. 두 단위 모두 측정 지표 M01~M12 를 소비하지 않고, 요청당 읽는 행이 10배에서도 수십~수백 행이라 성능 위험은 낮다. 예외는 export(전량)와 LLM·외부 호출 지연이다.",
+  "endpoints_table": [
+    {
+      "id": "IN-1",
+      "method": "GET",
+      "path": "/v1/intent/keywords?project_id=",
+      "summary": "프로젝트 추적 키워드 목록(탭) + 키워드별 최신 월 검색량(rd.kw_volume_monthly 최신 1행)",
+      "risk": "low"
+    },
+    {
+      "id": "IN-1",
+      "method": "POST",
+      "path": "/v1/intent/keywords?project_id=",
+      "summary": "추적 키워드 추가(body: term, country?). (project_id, term, country_code) 유니크 위반 시 409",
+      "risk": "low"
+    },
+    {
+      "id": "IN-1",
+      "method": "DELETE",
+      "path": "/v1/intent/keywords?project_id=&ids=",
+      "summary": "추적 키워드 1~100건 삭제(단건·다건 통합, WHERE project_id 스코프). 응답 removed_count",
+      "risk": "low"
+    },
+    {
+      "id": "IN-1",
+      "method": "GET",
+      "path": "/v1/intent/insight?term=&country=&project_id=",
+      "summary": "12개월 검색량 추이 + 최신 SERP 행(최신 gen 초안 포함) + freshness(fresh|stale|missing)·serp_call_id. 읽기 전용, 외부 호출 없음",
+      "risk": "low"
+    },
+    {
+      "id": "IN-1",
+      "method": "GET",
+      "path": "/v1/intent/related?term=&country=&project_id=",
+      "summary": "최신 연관 검색어(rd.kw_suggestion 최신 call, is_seed 제외, 최대 30) + freshness",
+      "risk": "low"
+    },
+    {
+      "id": "IN-1",
+      "method": "GET",
+      "path": "/v1/intent/lookup?terms=&country=&project_id=",
+      "summary": "다건 term 조회(빈 상태 검색 플로우): term별 seed 행 볼륨·intent + 연관어. 없는 term 은 missing",
+      "risk": "low"
+    },
+    {
+      "id": "IN-1",
+      "method": "POST",
+      "path": "/v1/intent/fetches",
+      "summary": "DataForSEO 수집 요청(body: project_id?, kind insight|related|search, terms[], country, force?). 신선하면 200 skip, 아니면 app.judgment_change('dfs_fetch') INSERT 후 202 {change_id}. 동일 미완료 요청은 기존 change_id 반환",
+      "risk": "medium"
+    },
+    {
+      "id": "IN-1",
+      "method": "GET",
+      "path": "/v1/intent/fetches/{change_id}",
+      "summary": "수집 요청 상태(pending|running|applied|failed, error). 요청자 본인 또는 운영자만",
+      "risk": "low"
+    },
+    {
+      "id": "IN-1",
+      "method": "POST",
+      "path": "/v1/intent/serp-drafts",
+      "summary": "SERP 행 LLM 프롬프트 초안 생성(body: project_id?, serp_call_id, ranks?[] 생략 시 초안 없는 전 행). app.kw_prompt_draft INSERT(gen=기존 max+1)",
+      "risk": "medium"
+    },
+    {
+      "id": "IN-1·IN-2 공용",
+      "method": "POST",
+      "path": "/v1/intent/candidates?project_id=",
+      "summary": "후보 풀 추가(body: source google_keyword|social_scraping, items[{text, source_keyword?}]). trim·빈값 제외·기존 텍스트 dedup, 응답 added_count·skipped_count·candidate_ids",
+      "risk": "low"
+    },
+    {
+      "id": "IN-2",
+      "method": "GET",
+      "path": "/v1/intent/social/context-map/stats",
+      "summary": "활성 스냅샷 통계(contexts, conditions, drives, combinations, relationships=drives+combinations, sources=count(DISTINCT host))",
+      "risk": "low"
+    },
+    {
+      "id": "IN-2",
+      "method": "GET",
+      "path": "/v1/intent/social/context-map/contexts?search=&sort=&dir=&page=&size=",
+      "summary": "맥락(ConsumerContext) 페이지 목록: 이름·테마·언급수·감성 비율(분자·분모 동봉)·연결 수",
+      "risk": "low"
+    },
+    {
+      "id": "IN-2",
+      "method": "GET",
+      "path": "/v1/intent/social/context-map/conditions?search=&sort=&dir=&page=&size=",
+      "summary": "조건(ConsumerRequirement) 페이지 목록(맥락과 같은 핸들러, type 만 다름). category 는 이름 정규식 휴리스틱 파생값",
+      "risk": "low"
+    },
+    {
+      "id": "IN-2",
+      "method": "GET",
+      "path": "/v1/intent/social/context-map/combinations?search=&dir=&page=&size=",
+      "summary": "조건×조건 동시출현 페이지 목록, frequency 버킷은 스냅샷 전체 max(co_count) 대비",
+      "risk": "low"
+    },
+    {
+      "id": "IN-2",
+      "method": "GET",
+      "path": "/v1/intent/social/context-map/entities/{entity_id}",
+      "summary": "엔티티 상세: 근거 인용 최대 8, 소스 도메인, 연결 엔티티(강도 = 해당 엔티티 연결 중 max 대비)",
+      "risk": "low"
+    },
+    {
+      "id": "IN-2",
+      "method": "GET",
+      "path": "/v1/intent/social/context-map/export?lang=ko|en",
+      "summary": "활성 스냅샷 3시트(맥락·조건·조합) xlsx 스트리밍 다운로드, 라벨은 서버 고정 ko/en",
+      "risk": "medium"
+    },
+    {
+      "id": "IN-2",
+      "method": "GET",
+      "path": "/v1/intent/social/prompts?project_id=",
+      "summary": "프로젝트 생성 프롬프트 목록(removed_at IS NULL), similar_to 는 조회 시 app.prompt 텍스트와 비교해 계산(미영속)",
+      "risk": "low"
+    },
+    {
+      "id": "IN-2",
+      "method": "POST",
+      "path": "/v1/intent/social/prompts?project_id=",
+      "summary": "프롬프트 생성(body: mode more|selected, selection?{context_ids, condition_ids, combination_ids}). 시드 읽기(api_ro) → LLM(트랜잭션 밖) → INSERT ON CONFLICT(project_id, seed_key) DO NOTHING. 응답 prompts·exhausted·skipped_existing",
+      "risk": "medium"
+    },
+    {
+      "id": "IN-2",
+      "method": "DELETE",
+      "path": "/v1/intent/social/prompts?project_id=&ids=",
+      "summary": "생성 프롬프트 소프트 삭제(removed_at=now(), seed_key 는 제외 집합으로 계속 유지). 응답 removed_count",
+      "risk": "low"
+    }
+  ],
+  "shared": [
+    "라우터: /v1/intent 루트 APIRouter + keywords·social·candidates 하위 라우터(router 필드 참조). 모든 project 종속 엔드포인트는 project_id 를 query parameter 로 받는다(IN-1 이 'path' 라고 적었지만 경로에 자리가 없던 모순 해소).",
+    "의존성 get_principal: Supabase JWT(JWKS) 검증 → app.user_account(role, operator, scope_all, scope_countries …) 로드. 인증 모듈(AU) 소유, intent 는 소비만.",
+    "의존성 require_project_member(project_id): app.project 존재 + app.project_member(project_id, user_id).status='active' 또는 admin 또는 operator='global'. 읽기용.",
+    "의존성 require_operate(project_id?): 현행 canOperateProject(lib/auth/operator-policy.ts, operator-policy.test.ts:45-65 로 검증된 규칙) 이식. admin 통과, operator='none' 거부, 'global' 통과, 'assigned' 는 active 멤버만. project_id 가 없으면(표준 화면) admin 또는 operator='global' 만. 모든 쓰기·유료 호출(추가·삭제·fetches·serp-drafts·candidates·social prompts 생성·삭제)에 적용.",
+    "의존성 require_standard_viewer: project_id 없는 키워드 읽기(표준 화면)용. role IN (hq, region, country, admin)(현행 STANDARD_VIEWERS, lib/auth/route-policy.ts:28) + country 가 사용자 국가 스코프 안(scope_all 이면 통과). 단일값 파라미터라 스코프 밖이면 403.",
+    "DB 세션 의존성 두 개: ro_conn(api_ro 풀, default_transaction_read_only=on, statement_timeout 5s) 과 rw_tx(api_rw 풀, 트랜잭션 시작 시 SELECT set_config('app.actor_id', :uid, true) 로 행위자 GUC 설정, app.actor() 호환 DB-v2.sql:96-98). PgBouncer transaction 모드라 SET 이 아닌 set_config(..., is_local=true) 만 쓴다.",
+    "Pydantic 모델 IntentMeta: 공통 meta 모양 유지 {surface: null, mode: null, as_of, cycles: null, generation: null, ignored_filters, dropped_filters: [], suppressed: []} + 확장 page{total, page, size}·snapshot_id·freshness. 클라이언트가 공통 필터 축(brand[], engine[] 등)을 보내면 ignored_filters 에 이름을 적는다(계약 §2 규약 준수, 단위들이 surface 생략·고정값 'intent' 로 갈렸던 것 통일).",
+    "Pydantic 모델 Envelope[T] = {data: T, meta: IntentMeta}, Page[T] = Envelope[list[T]] + meta.page. IN-2 의 'Paged' 와 IN-1 의 {data, meta} 를 이 둘로 통일.",
+    "Pydantic 모델 SentimentBreakdown {positive, negative, neutral(정수 개수), total, positive_pct, negative_pct, neutral_pct}: 현행 sentimentPerspective(lib/db/repositories/scope-context-map.ts:87-100) 규칙 그대로(분모 = 세 감성 합, utterance_count 아님, 각 비율 Math.round 와 같은 반올림, total=0 이면 neutral_pct=100). 필드명 perspective(buyer/seller) 는 폐기(IN-2 open 2 확정).",
+    "Pydantic 모델 CandidateIn {source: Literal['google_keyword','social_scraping'], items: list[{text, source_keyword?}] (1~200)}, CandidateOut {added_count, skipped_count, candidate_ids}.",
+    "공유 함수 presets.py: LOCATION_LANGUAGE_PRESETS 를 lib/keyword/location-presets.ts 정적 배열(getPresetById :72) 에서 파이썬 상수로 이식, country(ISO2, 소문자 id) → (location_code, language_code). 알 수 없는 country 는 400(현행은 'kr' 폴백, insight/route.ts:24-26: 조용한 폴백은 오답을 숨기므로 400 으로 바꾼다). DB 테이블 승격은 하지 않는다(IN-1 open 7 확정).",
+    "공유 함수 term_norm(term) = unicodedata.normalize('NFC', term).strip().lower(): 현행 cacheKey 의 trim().toLowerCase()(lib/keyword/insight.ts:54-55) 와 같고 NFC 만 추가. rd.dim_keyword.term_norm 을 쓰는 적재기와 같은 함수를 공유 패키지로 둔다(불일치 시 조회 전부 missing).",
+    "공유 상수 FRESHNESS = {insight: 24h, related: 7d, search: 7d}: 현행 TTL(lib/keyword/cache.ts:41-44) 이식. API 가 fetches 수락 시 '신선하면 skip' 판단과 GET 응답 freshness 계산에만 쓴다. app.rule_param 편입은 하지 않는다(rule_param 은 rule_set 지문에 들어가 재판정을 일으키는 판정 입력이라 성격이 다름, IN-1 open 6 확정).",
+    "공유 SQL repo_kw: resolve_kw_keys(term_norms[]) (rd.dim_keyword UNIQUE(term_norm)), latest_volume(kw_keys, loc, lang), trend_12m(kw_key, loc, lang), latest_serp_call(kw_key, loc, lang), serp_rows_with_latest_draft(call_id), latest_suggestion_call(seed_kw_key, loc, lang), suggestion_rows(call_id, include_seed).",
+    "공유 SQL repo_ctx: active_snapshot(industry_entity_id) (ext.ctx_snapshot 부분 유니크), list_entities(snapshot, type, search, sort, dir, page, size), count_entities, list_combinations, combo_max, entity_detail 4조회, stats, seed_pool(snapshot, n_ctx=150, n_cond=200, n_combo=500).",
+    "공유 SQL repo_app: insert_candidates(project_id, source, rows) (기존 텍스트 SELECT 후 신규만 INSERT, 한 트랜잭션), tracked_keyword CRUD, insert_kw_drafts, insert_ctx_prompts ON CONFLICT DO NOTHING, soft_remove_ctx_prompts, enqueue_dfs_fetch, find_open_dfs_fetch.",
+    "공유 llm.py: OpenRouter 호출 래퍼. DB 커넥션을 쥔 채 호출하지 못하게 시그니처에서 커넥션을 받지 않는다. 모델명은 응답 행에 기록(kw_prompt_draft.model, ctx_generated_prompt.model).",
+    "정렬·방향 화이트리스트: sort·dir 은 SQL 파라미터로 바인딩할 수 없으므로 {('name','asc'): 'canonical_name ASC', …} 고정 매핑에서만 SQL 조각을 고른다. search 는 ILIKE 이스케이프(%, _, \\) 공용 함수.",
+    "서버 설정 CONTEXT_MAP_INDUSTRY_ENTITY_ID(+ LLM 라벨 CONTEXT_MAP_KEYWORD='자동차'): 현행 코퍼스가 단일 자동차 산업(_actions.ts:141-147 주석) 이므로 활성 스냅샷은 이 설정값으로 고른다. 활성 스냅샷이 없으면 A12 '준비 중' 응답(data=null, meta.suppressed=['no_active_snapshot'])."
+  ],
+  "read_schema": [
+    "[확정 DDL, 읽기 api_ro] app.project(project_id, brand_code, country_code, kind): IN-2 가 적은 app.project.brand 는 DDL 에 없다(brand_code, DB-v2.sql:114-116). LLM 주입용 브랜드 표시명은 app.brand.brand_code → canonical_entity_id 경유 표시명 또는 코드 상수(표시명 출처 미확인)",
+    "[확정 DDL] app.project_member(project_id, user_id, role, status, accepted_at), app.user_account(user_id, role, operator, scope_all, scope_countries): 권한 게이트",
+    "[확정 DDL] app.project_tracked_keyword(keyword_id, project_id, term, country_code, created_at, UNIQUE NULLS NOT DISTINCT(project_id, term, country_code)) (DB-v2.sql:141-142)",
+    "[확정 DDL] app.project_tracked_competitor(project_id, brand_name), app.project_tracked_vehicle(project_id, brand, model): IN-2 LLM 입력",
+    "[확정 DDL] app.prompt(project_id, text): IN-2 similar_to 비교",
+    "[확정 DDL] app.prompt_candidate(candidate_id, project_id, source CHECK google_keyword|social_scraping|manual, source_keyword, text, created_at) (DB-v2.sql:144-146)",
+    "[확정 DDL] app.kw_prompt_draft(serp_call_id, rank, gen, prompt, model, generated_at, PK(serp_call_id, rank, gen)) (DB-v2.sql:184-185)",
+    "[확정 DDL] app.ctx_generated_prompt(project_id, prompt_id, batch_no, seed_entity_ids, text, source_label, model, generated_at, removed_at, PK(project_id, prompt_id)) (DB-v2.sql:186-188)",
+    "[확정 DDL] app.judgment_change(change_id, kind, subject_uuids, subject_texts, payload, requested_by, requested_at, status, error) (DB-v2.sql:73-86): fetches 큐",
+    "[확정 DDL] rd.dim_keyword(kw_key, term, term_norm UNIQUE), rd.kw_volume_monthly(kw_key, location_code, language_code, month, search_volume, competition_index, cpc, call_id, observed_at, PK 4열), rd.kw_serp(call_id, kw_key, location_code, language_code, rank, url, domain, title, snippet, observed_at, PK(call_id, rank), idx kw_serp_latest), rd.kw_suggestion(call_id, seed_kw_key, location_code, language_code, pos, kw_key, search_volume, intent, is_seed, PK(call_id,pos), idx kw_suggestion_latest) (DB-v2.sql:696-707)",
+    "[확정 DDL] ext.ctx_snapshot(snapshot_id, industry_entity_id, source, utterance_total, taken_at, is_active, 부분 유니크 ctx_snapshot_one_active), ext.ctx_entity(snapshot_id, id, type, canonical_name, dimension, mention_count, utterance_count, sentiment_positive/negative/neutral, idx ctx_entity_type_mentions), ext.ctx_drive(snapshot_id, context_id, requirement_id, co_count, PK 3열), ext.ctx_combination(snapshot_id, cond_a, cond_b, co_count), ext.ctx_evidence(snapshot_id, id, entity_id, quote, source_host, source_url, sentiment, idx ctx_evidence_entity), ext.ctx_domain(snapshot_id, entity_id, host, n) (DB-v2.sql:724-741)",
+    "[확정 DDL, API 비접근] ext.dfs_call(call_id, endpoint, location_code, language_code, keywords, request, response, status_code, cost, requested_by, project_id, requested_at): 쓰기·읽기 모두 적재기 전용으로 둔다(IN-1 이 API 쓰기 대상으로 적은 것은 계약 위반, consistency_fixes 참조). API 는 비용 조회를 하지 않는다.",
+    "[제안 P1, DDL 변경] app.judgment_change.kind CHECK 에 'dfs_fetch' 추가. payload = {fetch: insight|related|search, location_code, language_code, depth, project_id}, subject_texts = term_norm 배열, requested_by = 행위자. 근거: api_rw 는 app 쓰기만 가능(DB-v2.sql:839-843) 하고 ext·rd 는 loader 만(DB-v2.sql:856-858) 이므로 사용자 주도 수집은 앱 큐 경유가 유일한 계약 준수 경로. D8 판정: 큐 행이지 집계가 아님, 준수.",
+    "[제안 P2, 인덱스] CREATE INDEX ctx_drive_requirement ON ext.ctx_drive (snapshot_id, requirement_id). 근거: 조건 목록의 linked_count·조건 상세의 연결 엔티티는 requirement_id 방향 조회인데 PK 선두가 context_id 라 스냅샷 전체 스캔. 현행 0027 이 이 인덱스를 가졌고(lib/db/schema.ts:1386, 주석 scope-context-map.ts:522-523), DB 초안 DB-ACR-외부-데이터.sql 의 ctx_drives_requirement 에도 있었으나 DB-v2 통합에서 빠졌다. D8 판정: 인덱스, 준수.",
+    "[제안 P3, 컬럼] app.ctx_generated_prompt 에 layer text CHECK (layer IN ('L1-context','L2-condition','L3-intersection')), funnel_stage text, priority int2, origin text CHECK (origin IS NULL OR origin='composed') 추가. 근거: 현행 GeneratedPrompt(components/social-scraping/types.ts:187-204) 가 행마다 영속하고 목록이 그대로 표시하는데 DDL 에 자리가 없다. D8 판정: 생성물 자체 속성(파생 집계 아님), 준수.",
+    "[제안 P4, 컬럼+제약] app.ctx_generated_prompt 에 seed_key text NOT NULL + UNIQUE (project_id, seed_key). seed_key 는 현행 시드 id 문자열(l1-<ctx>, l2-<cond>, l3-<a>:<b>, l3-<ctx>-<cond>, lib/social-scraping/selection-seeds.ts:14-17) 을 조합쌍 정렬로 정규화한 값(현행은 a:b 와 b:a 를 둘 다 검사, selection-seeds.ts:92). 근거: 통 JSON 낙관적 락(version, scope-context-prompts.ts:19-31) 이 사라지면 동시 생성의 중복 방지선이 이것뿐. IN-2 가 제안한 UNIQUE(project_id, seed_entity_ids) 는 순서 의존 배열이라 a:b/b:a 를 못 막아 기각. D8 판정: 준수.",
+    "[제안 P5, 인덱스] CREATE INDEX prompt_candidate_project ON app.prompt_candidate (project_id, created_at DESC). 근거: DDL 에 project_id 인덱스가 없어 후보 dedup(현행 listTextsForProject, _actions.ts:115-118)·Prompt 탭 후보 목록이 표 전체 스캔. 전 프로젝트 후보가 10배가 되면 선형 증가. D8 판정: 준수. projects 모듈과 공동 제안.",
+    "[불필요 판정] IN-2 가 인용한 ctx_generated_prompt 부분 인덱스(초안의 ctx_generated_prompts_live) 는 PK(project_id, prompt_id) 선두로 충분해 제안하지 않는다. ctx canonical_name 트라이그램도 스냅샷당 약 4천 행이라 보류(IN-2 판단 유지)."
+  ],
+  "consistency_fixes": [
+    "[계약 위반] IN-1 이 ext.dfs_call·rd.kw_volume_monthly·rd.kw_serp·rd.kw_suggestion 을 API 가 쓰는 동기 refresh 로 설계했다. 계약 §3 은 api_rw = app + judgment_change INSERT, rd·ext 는 loader(DB-v2.sql:9-10, 839-858) 이므로 불가. IN-1 권장안 (a)'collector 전용 DB 역할'과 (c)'api_rw 에 권한 부여'는 모두 역할 경계 변경이라 기각. 확정: (b) 변형 = POST /v1/intent/fetches 가 app.judgment_change('dfs_fetch', 제안 P1) 를 넣고 202, DataForSEO 적재자가 처리, 클라이언트는 GET /v1/intent/fetches/{id} 폴링 후 GET insight 재조회. DB-ACR-외부-데이터.md:70('첫 조회는 수집 중 상태로 응답') 과 일치.",
+    "[계약 위반] IN-1 의 GET insight 에 fresh=true 로 유료 재조회를 승격하는 안: GET 은 api_ro(읽기 전용) 이고 부수효과가 없어야 하므로 제거. 재조회는 fetches(force=true) 로만.",
+    "[빈틈] IN-1 refresh 흐름에서 SERP 초안(app.kw_prompt_draft) 은 loader 가 쓸 수 없다(loader 는 app SELECT 만, DB-v2.sql:860). 현행은 insight 계산 안에서 전 행 초안을 한 번에 만든다(lib/keyword/insight.ts:98-114). 확정: 적재 완료 후 클라이언트가 POST /v1/intent/serp-drafts(ranks 생략 = 초안 없는 전 행, LLM 1회) 를 부르고, IN-1 의 행 단위 /serp/{rank}/prompt 는 같은 엔드포인트의 ranks=[n](재생성) 으로 흡수. 초안이 없는 행은 suggested_prompt=null(현행은 term 폴백, :86·:112): 화면 폴백은 FE 가 한다.",
+    "[빈틈] 표준 화면 /customer-interest/google-keywords 는 project_id 없이 GoogleKeywordView 를 렌더하고 /api/keyword/insight·related 를 실호출한다(google-keywords/page.tsx, google-keyword-view.tsx:212·241). IN-1 은 keyword_id 기반 읽기만 설계해 이 화면을 못 덮는다. 확정: 읽기를 term+country 기반(GET /v1/intent/insight·related·lookup) 으로 바꾸고 project_id 는 선택(권한 판단용). rd.kw_* 는 프로젝트 비종속 공용 외부 데이터라 가능.",
+    "[권한 차이] 현행 insight·related·search 라우트는 requireUser 만 검사(lib/keyword/api.ts:31-35) 해 로그인 사용자 누구나 유료 DataForSEO+LLM 호출을 일으킨다(route-policy.ts:279-286 주석은 action 층 게이트라고 하지만 이 라우트 자체엔 없음). 새 설계: 읽기는 멤버·표준 열람자, 유료 수집(fetches·serp-drafts)은 require_operate 로 강화. 표준 화면 비운영자는 캐시된 값만 보고 없으면 '준비 중'(A12). 동작 변경이므로 risks·open 에 남김.",
+    "[중복] 후보 쓰기가 IN-1 POST /v1/intent/candidates(단건) 와 IN-2 POST /v1/intent/social/candidates(다건 dedup) 로 갈렸다. 현행도 addCandidate/addCandidates 한 모듈(_actions.ts:64-141) 이다. 확정: POST /v1/intent/candidates 하나(다건, source 필수, 앱 단 dedup, 현행 addCandidates 규칙). 'manual' source 와 후보 목록 읽기·후보→프롬프트 승격은 projects 모듈 소유.",
+    "[불일치] project_id 위치: IN-1 은 'path' 라 적고 경로엔 없음, IN-2 는 query. 확정: 전부 query parameter project_id.",
+    "[불일치] 삭제 방식: IN-1 DELETE /{id} + DELETE ?ids[], IN-2 POST /prompts/remove. 확정: 두 단위 모두 DELETE ?project_id=&ids=(1~100건) 하나. IN-2 소프트 삭제 의미는 유지.",
+    "[불일치] 응답 봉투: IN-1 은 meta.surface 생략/고정 'intent' 미정, IN-2 는 Paged{meta:{total,page,size}}. 확정: IntentMeta(공통 meta 필드 전부 유지, surface·mode·cycles·generation=null, as_of = kw 관측시각 또는 ctx_snapshot.taken_at, page·snapshot_id·freshness 확장). surface 열거에 'intent' 를 추가하지 않는다(측정 surface 의미 오염 방지).",
+    "[불일치] IN-2 생성 엔드포인트 more·selected 두 개와 응답 필드 차이(exhausted vs skipped_existing). 확정: POST /v1/intent/social/prompts 하나 + mode, 응답에 두 필드 모두(해당 없으면 false/0).",
+    "[계약 위반] IN-2 query_design 이 'BEGIN; ext 시드 조회 → INSERT app' 를 한 트랜잭션으로 적었으나 api_rw 는 ext USAGE 가 없고(DB-v2.sql:839) api_ro 는 읽기 전용이다. 확정: 시드 읽기(api_ro) → LLM(무 트랜잭션) → INSERT(api_rw 단일 트랜잭션) 3단. 기존 seed_key 제외 집합은 api_rw 트랜잭션 안에서 app 만 읽어 다시 확인.",
+    "[확정 DDL 밖 이름] IN-2 read_model 의 app.project.brand 는 DDL 에 없음(brand_code). IN-2 perf 의 'PK(snapshot_id, type, mention_count DESC)' 는 PK 가 아니라 인덱스 ctx_entity_type_mentions. IN-2 의 layer·funnel_stage·priority·origin 과 UNIQUE 는 '제안'으로 표기돼 있어 규약 준수(P3·P4 로 정리).",
+    "[근거 정정] IN-2 가 인용한 'scope-context-map.ts:213 주석 양방향 모두 인덱스' 는 해당 줄이 아니다. 실제 근거: lib/db/repositories/scope-context-map.ts:353, :522-523 주석과 lib/db/schema.ts:1386 index('scope_context_drives_requirement_idx'). 결론(인덱스 필요)은 맞아 P2 로 채택.",
+    "[누락 발견] ext.ctx_drive(snapshot_id, requirement_id) 인덱스가 DB 초안(DB-ACR-외부-데이터.sql, ctx_drives_requirement) 에 있었는데 DB-v2.sql:732-733 에서 빠졌다. IN-2 는 이를 '제안'으로 올렸다: DB 설계 쪽 회귀로 통합자에게 알린다(P2).",
+    "[쿼리 결함] IN-1 목록 쿼리가 :loc/:lang 단일 값을 쓰지만 추적 키워드마다 country_code 가 다르다(NULL 이면 프로젝트 country). 확정: 파이썬에서 (keyword_id, term_norm, loc, lang) 배열을 만들어 unnest 로 조인한 뒤 LATERAL 최신 1행.",
+    "[쿼리 결함] IN-1 SERP 조회의 LEFT JOIN app.kw_prompt_draft 는 gen 이 여러 개면 행이 중복된다. 확정: LATERAL (SELECT prompt, model FROM app.kw_prompt_draft WHERE serp_call_id=s.call_id AND rank=s.rank ORDER BY gen DESC LIMIT 1). 단 rd 와 app 조인은 api_ro 가 둘 다 읽을 수 있어 한 쿼리 가능.",
+    "[쿼리 결함] IN-1 related 는 is_seed 행을 빼야 현행과 같다(현행 related 는 seed 를 의도적으로 제외, lookup/search 만 include_seed, lib/keyword/insight.ts 검색 주석 :172-176 부근). related = is_seed=false, lookup = seed 행 볼륨·intent + 비seed 연관어.",
+    "[패리티] SERP 행 수: IN-1 은 depth 기본 10 으로 적었으나 현행은 10개 조회 후 8행만 표시(MAX_SERP_ROWS=8, lib/keyword/insight.ts:52). 확정: 적재 depth 10, 응답 기본 limit 8(파라미터 limit ≤ depth).",
+    "[패리티] term 정규화: IN-1 SQL 은 lower(term) 만. 현행 키는 trim().toLowerCase()(insight.ts:54-55). 확정: 공용 term_norm(NFC+trim+lower) 을 API·적재기가 공유, SQL 안에서 lower() 를 쓰지 않고 파이썬에서 계산한 값으로 = 비교.",
+    "[패리티] 국가 폴백: 현행은 알 수 없는 country 를 'kr' 로 조용히 대체(insight/route.ts:24-26). 확정: 400. 표준 화면은 사용자 국가 스코프 밖이면 403.",
+    "[IN-2 open 결정] perspective → sentiment 로 이름 교정(OpenAPI 로 FE 클라이언트를 재생성하고 A13 병행 운영 동안 구 FE 는 구 API 를 쓰므로 하위호환 불필요). export 라벨은 서버 고정 ko/en(임의 문자열 주입 표면 제거). 전역 /customer-interest/social-scraping 은 현행도 고정 픽스처(page.tsx 주석) 라 이 API 범위 밖.",
+    "[IN-1 open 결정] 관리자 도구(/api/keyword/volume·to-prompt·prompt-to-volume, requireAdminUser) 는 intent 모듈에서 빼고 admin 모듈(/v1/admin/keyword-tools/*) 소관으로 넘긴다. 추적 키워드 추가 시 자동 수집은 하지 않고 FE 가 추가 직후 fetches 를 호출(비용 행동을 명시적 한 번으로 유지)."
+  ],
+  "deps": [
+    "인증·권한 모듈(AU): JWT(JWKS) 검증, app.user_account 매핑, get_principal·국가 스코프 계산 공용 의존성. require_operate 는 prompts 실행 게이트와 같은 함수라 AU 가 소유하고 intent·projects 가 공유하는 게 맞다.",
+    "projects 모듈: app.project 조회, 후보 풀 읽기·'manual' 후보·후보→app.prompt 승격(Prompt 탭), app.prompt_candidate(project_id) 인덱스 공동 제안(P5), project_tracked_competitor·vehicle CRUD(IN-2 는 읽기만).",
+    "적재 모듈(loader): (1) DataForSEO 적재자가 app.judgment_change 'dfs_fetch' 를 짧은 주기(목표 5초 이내, 전용 직결 커넥션 LISTEN/NOTIFY 또는 폴링) 로 집어 ext.dfs_call(월 파티션, rd.ensure_month_leaf 허용 목록에 이미 포함 DB-v2.sql:619) + rd.dim_keyword·rd.kw_* 를 한 트랜잭션으로 쓰고 status 전이. term_norm 공용 함수 공유. SERP·제안 투영 보존은 키워드별 최신 3회(DB-ACR-외부-데이터.md:60). (2) 컨텍스트 맵 스냅샷 수동 적재·is_active 전환.",
+    "DB 설계(통합자): 제안 P1(judgment_change kind), P2(ctx_drive 인덱스 복원), P3·P4(ctx_generated_prompt 컬럼·유니크), P5(prompt_candidate 인덱스) 반영 여부.",
+    "admin 모듈: 키워드 도구(volume·to-prompt·prompt-to-volume), 표준 키워드(app.standard_keyword) 관리, 컨텍스트 맵 스냅샷 활성화 UI(필요 시).",
+    "공통 코어: 응답 봉투·공통 meta·ignored_filters 기록 유틸, OpenAPI 생성, LLM(OpenRouter) 클라이언트 설정.",
+    "접근 감사(AU-1 미결): export 다운로드의 app.access_audit_log(kind='download') 기록 주체가 정해지면 붙인다."
+  ],
+  "build_order": [
+    "1. 공통 골격: intent 라우터·deps(get_principal 소비, require_project_member, require_operate, require_standard_viewer, ro_conn/rw_tx + actor GUC)·IntentMeta/Envelope/Page·presets(term_norm, 국가 프리셋 이식)·정렬/검색 화이트리스트.",
+    "2. IN-2 컨텍스트 맵 읽기(stats·contexts·conditions·combinations·entities): 정적 스냅샷이라 현행 /api/context-map 과 값이 정확히 같아야 해 대조가 가장 쉽다. P2 인덱스 선반영.",
+    "3. IN-1 읽기(keywords 목록·insight·related·lookup): rd.kw_* 가 비어 있으면 freshness=missing·'준비 중'. 추적 키워드 추가·삭제(api_rw).",
+    "4. 공용 POST /v1/intent/candidates(현행 addCandidates 규칙) + P5 인덱스.",
+    "5. IN-2 생성 프롬프트(GET·POST 생성·DELETE): P3·P4 반영 후. LLM 3단 구조, ON CONFLICT(project_id, seed_key).",
+    "6. IN-1 수집 큐(POST/GET fetches) 와 SERP 초안(serp-drafts): P1 승인 + 적재기 dfs_fetch 처리기 완성이 선행 조건. 그 전까지 fetches 는 501 이 아니라 A12 '준비 중' 으로 응답.",
+    "7. IN-2 export(xlsx 스트리밍) 와 다운로드 감사(AU-1 결정 후)."
+  ],
+  "risks": [
+    "성능(10배, low): 모든 읽기가 (kw_key, location_code, language_code) 또는 snapshot_id·project_id 로 좁혀진 점 조회·최신 call 1건 조회·페이지 조회라 요청당 읽는 행은 10배에서도 수십~수백. 파티션 표가 아니므로 가지치기 조건 없음, 인덱스로 한정. 측정 사실 표(rd.answer 등)를 읽지 않아 알려진 고위험(웹사이트 인용 1년, G-25) 과 무관.",
+    "성능(medium): export 는 무페이징 전량. 현재 약 9.9천 행, 10배(폭) 가정 시 약 10만 행을 api_ro statement_timeout 5s 안에 3쿼리로 읽고 xlsx 를 만든다. 서버 사이드 커서 + 스트리밍 xlsx 작성(메모리 상한) 으로 구현하고 RDS 실측 게이트 대상에 넣는다.",
+    "지연(medium): 키워드 수집이 동기에서 비동기(큐 → 적재기 → 폴링)로 바뀌어 첫 조회 체감이 수 초 늘 수 있다. 적재기 픽업 주기가 20분 폴(A10) 과 같은 주기면 기능이 죽으므로 dfs_fetch 는 별도 빠른 경로가 필수.",
+    "의존(high, 일정): P1(kind 추가) 과 적재기 처리기가 없으면 IN-1 유료 수집 전체가 막힌다. 병행 운영(A13) 동안 구 화면이 계속 수집하므로 기능 공백은 없지만, 신 화면 전환 조건으로 걸어야 한다.",
+    "권한 강화에 따른 동작 변화: 현행 로그인 사용자 누구나 가능하던 표준 화면 실시간 조회가 운영자 전용이 된다. 표준 화면 비운영자는 캐시 값만(없으면 '준비 중'). 제품 확인 필요.",
+    "LLM 호출이 커넥션을 쥐지 않게 강제하지 않으면 api_rw 풀 고갈(현행은 lock-wait 회피 설계였음). llm.py 시그니처로 구조적으로 막는다. FastAPI 요청 타임아웃과 OpenRouter 지연(수십 초) 정합 필요.",
+    "동시 생성 중복: P4 없이 행 단위 INSERT 로 바꾸면 '더 생성' 동시 2건이 같은 시드를 두 번 생성·과금한다. P4 가 반영되기 전엔 IN-2 생성 엔드포인트를 내보내지 않는다.",
+    "스냅샷 교체: ctx_generated_prompt 에 snapshot_id 가 없어 스냅샷이 바뀌고 엔티티 id 가 달라지면 seed_key 제외 집합이 무력화돼 같은 의미의 시드가 다시 생성될 수 있다(열린 질문).",
+    "고아 초안: rd.kw_serp 는 키워드별 최신 3회만 보존(DB-ACR-외부-데이터.md:60) 하는데 app.kw_prompt_draft 는 FK 가 없어 잘린 call 의 초안이 남는다. 읽기는 최신 call 만 조인하므로 기능 영향은 없고 정리 잡이 필요.",
+    "term_norm 불일치: API 와 적재기가 다른 정규화를 쓰면 조회가 전부 missing 이 되고 중복 수집·과금이 난다. 공용 패키지 한 벌 + 계약 테스트.",
+    "비용 기록 공백: LLM(OpenRouter) 생성 비용은 어디에도 남지 않는다(ext.dfs_call.cost 대응물 없음). 운영자 게이트는 있으나 사용량 상한이 없다."
+  ],
+  "doc": "# 고객 관심(intent) 모듈 설계 (IN-1 키워드 + IN-2 소셜 스크레이핑)\n\n기준: 설계 공용 계약 v2(`DESIGN-CONTRACT.md`), 확정 DDL `db/DB-v2.sql`. 현행 근거: 통합 프리뷰 7639b9e.\n\n## 1. 개요\n\n고객 관심 화면 두 탭을 하나의 FastAPI 모듈 `/v1/intent` 로 제공한다.\n\n| 단위 | 화면 | 원천 | 성격 |\n| --- | --- | --- | --- |\n| IN-1 | 프로젝트 intent/google-keyword, 표준 customer-interest/google-keywords | DataForSEO 응답 투영 `rd.kw_*`, `app.project_tracked_keyword`, `app.kw_prompt_draft` | 외부 데이터 조회 + 유료 수집 요청 + LLM 초안 |\n| IN-2 | 프로젝트 intent/social-scraping | 컨텍스트 맵 정적 스냅샷 `ext.ctx_*`, `app.ctx_generated_prompt` | 코퍼스 열람 + LLM 프롬프트 생성 |\n\n두 단위 모두 측정 지표 M01~M12, 규칙 R01~R13 을 소비하지 않는다. 공통 필터 모델의 축은 전부 지원하지 않으며, 들어오면 `meta.ignored_filters` 에 기록한다.\n\n모듈 차원의 핵심 결정:\n\n1. **유료 수집은 비동기 큐**: api_rw 는 app 과 judgment_change INSERT 만 가능하다(DB-v2.sql:839-843). 그래서 DataForSEO 재조회는 `app.judgment_change` kind `dfs_fetch`(제안 P1)로 요청하고 적재기가 `ext.dfs_call`·`rd.kw_*` 를 쓴다. API 는 202 를 주고 클라이언트가 폴링한다. DB-ACR-외부-데이터.md:70 의 \"첫 조회는 수집 중 상태로 응답\" 과 같다.\n2. **키워드 읽기는 term+country 기반**: `rd.kw_*` 는 프로젝트에 묶이지 않은 공용 외부 데이터다. 그래서 프로젝트 화면과 표준 화면(project 없음)이 같은 엔드포인트를 쓴다.\n3. **후보 풀 쓰기 단일화**: `POST /v1/intent/candidates` 하나를 두 단위가 공유한다.\n4. **GET 은 부수효과 없음**: IN-1 의 `fresh` 파라미터는 없앴다.\n\n## 2. 엔드포인트 명세\n\n모든 project 종속 엔드포인트는 `project_id` 를 query 로 받는다. 응답은 `{data, meta}` 형태다(§3 IntentMeta).\n\n### IN-1 키워드\n\n| 메서드 | 경로 | 권한 | 설명 |\n| --- | --- | --- | --- |\n| GET | /v1/intent/keywords?project_id= | 멤버 | 추적 키워드 목록과 키워드별 최신 월 검색량 |\n| POST | /v1/intent/keywords?project_id= | 운영 | body {term, country?}. 중복이면 409 |\n| DELETE | /v1/intent/keywords?project_id=&ids= | 운영 | 1~100건 삭제. WHERE project_id 스코프로 남의 행 차단(현행 _actions.ts:445-455 방식) |\n| GET | /v1/intent/insight?term=&country=&project_id?&limit=8 | 멤버 또는 표준 열람자 | 12개월 추이, 최신 SERP(최신 gen 초안 포함), serp_call_id, freshness |\n| GET | /v1/intent/related?term=&country=&project_id? | 같음 | 최신 연관어(is_seed 제외, 최대 30), freshness |\n| GET | /v1/intent/lookup?terms=&country=&project_id? | 같음 | 여러 term 조회(빈 상태 검색 플로우) |\n| POST | /v1/intent/fetches | 운영 | body {project_id?, kind: insight/related/search, terms[], country, force?}. 신선하면 200 {status:'fresh'}, 아니면 judgment_change INSERT 후 202 {change_id}. 같은 요청이 미완료면 기존 change_id 반환 |\n| GET | /v1/intent/fetches/{change_id} | 요청자 또는 운영 | pending, running, applied, failed(+error) |\n| POST | /v1/intent/serp-drafts | 운영 | body {project_id?, serp_call_id, ranks?}. ranks 를 생략하면 초안 없는 전 행을 LLM 1회로 처리, 지정하면 재생성(gen+1) |\n| POST | /v1/intent/candidates?project_id= | 운영 | 공용. body {source, items[{text, source_keyword?}]}. 응답 {added_count, skipped_count, candidate_ids} |\n\nfreshness 는 `observed_at` 과 상수 FRESHNESS(insight 24h, related·search 7d, lib/keyword/cache.ts:41-44)로 계산하며 fresh, stale, missing 중 하나다. missing 이면 data 가 빈 값이다. FE 는 운영자라면 수집 버튼을, 아니면 \"준비 중\"(A12)을 보여준다.\n\n응답 예:\n\n- insight: `{term, country, location_code, language_code, trend:[{month, search_volume, competition_index, cpc}]≤12, serp_call_id, serp:[{rank, url, domain, title, snippet, suggested_prompt|null, draft_model}]≤limit}`. `meta.as_of` = max(observed_at), `meta.freshness`.\n- related: `{found_count, items:[{term, search_volume, intent}]}`.\n- lookup: `[{term, status, search_volume, intent, related:[…]}]`.\n- keywords: `[{keyword_id, term, country, created_at, latest_month, latest_volume}]`.\n\n### IN-2 소셜 스크레이핑\n\n| 메서드 | 경로 | 권한 | 설명 |\n| --- | --- | --- | --- |\n| GET | /v1/intent/social/context-map/stats | 인증 사용자 | contexts, conditions, drives, combinations, relationships, sources |\n| GET | /v1/intent/social/context-map/contexts | 인증 사용자 | search, sort(name/mentions), dir, page, size(≤200, 기본 50) |\n| GET | /v1/intent/social/context-map/conditions | 인증 사용자 | 같음. category 는 이름 휴리스틱 값이며 필터 축이 아님 |\n| GET | /v1/intent/social/context-map/combinations | 인증 사용자 | co_count 정렬. frequency 는 스냅샷 전체 max 대비(현행 scope-context-map.ts:266) |\n| GET | /v1/intent/social/context-map/entities/{entity_id} | 인증 사용자 | 근거 최대 8, 도메인, 연결 엔티티 |\n| GET | /v1/intent/social/context-map/export?lang= | 인증 사용자 | 3시트 xlsx 스트리밍. 라벨은 서버 고정 ko/en |\n| GET | /v1/intent/social/prompts?project_id= | 멤버 | 생성 프롬프트(삭제분 제외). similar_to 는 조회할 때 계산 |\n| POST | /v1/intent/social/prompts?project_id= | 운영 | body {mode: more/selected, selection?}. 응답 {prompts, exhausted, skipped_existing} |\n| DELETE | /v1/intent/social/prompts?project_id=&ids= | 운영 | 소프트 삭제(removed_at). seed_key 는 제외 집합으로 계속 유지 |\n\n엔티티 행: `{id, name, theme_id?, theme_name?, category?, mention_count, sentiment:{positive, negative, neutral, total, positive_pct, negative_pct, neutral_pct}, linked_count}`. sentiment 의 분모는 세 감성 개수의 합이다. 합이 0 이면 neutral_pct 를 100 으로 둔다(현행 sentimentPerspective, scope-context-map.ts:87-100). 구 필드명 perspective(buyer/seller)는 폐기한다.\n\n## 3. 공통 구성요소\n\n- **라우터**: `app/modules/intent/` 아래 keywords.py, social.py, candidates.py 를 두고, deps·schemas·repo_kw·repo_ctx·repo_app·presets·llm·xlsx 를 공유한다.\n- **IntentMeta**: 공통 meta 필드(surface, mode, as_of, cycles, generation, ignored_filters, dropped_filters, suppressed)를 그대로 둔다. surface, mode, cycles, generation 은 null 이다. 여기에 page{total,page,size}, snapshot_id, freshness 를 확장한다. surface 열거형에 'intent' 는 추가하지 않는다.\n- **DB 세션**: 읽기는 `ro_conn`(api_ro), 쓰기는 `rw_tx`(api_rw, `set_config('app.actor_id', uid, true)`)를 쓴다. api_rw 는 rd·ext 를 읽을 수 없다. 그래서 쓰기 핸들러는 항상 **읽기(api_ro) → 외부 호출(트랜잭션 없음) → 쓰기(api_rw 짧은 트랜잭션)** 3단으로 짠다.\n- **term_norm**: NFC, trim, lower 순서로 만든다. 현행 insight.ts:54-55 와 같고 NFC 만 추가했다. 적재기와 한 벌을 공유한다.\n- **국가 프리셋**: lib/keyword/location-presets.ts 배열을 파이썬 상수로 옮긴다. 모르는 country 는 400 으로 거부한다.\n- **정렬·검색 안전**: sort·dir 은 화이트리스트 매핑으로만 SQL 조각을 고르고, ILIKE 입력은 이스케이프한다.\n- **컨텍스트 맵 산업 선택**: 서버 설정 CONTEXT_MAP_INDUSTRY_ENTITY_ID 로 정한다(현행 단일 자동차 코퍼스, _actions.ts:141-147). 활성 스냅샷이 없으면 \"준비 중\" 을 준다.\n\n## 4. 읽기 스키마\n\n확정 DDL 에서 쓰는 이름:\n\n- app: project(brand_code, country_code), project_member, user_account, project_tracked_keyword, project_tracked_competitor, project_tracked_vehicle, prompt(text), prompt_candidate, kw_prompt_draft, ctx_generated_prompt, judgment_change\n- rd: dim_keyword, kw_volume_monthly, kw_serp(kw_serp_latest), kw_suggestion(kw_suggestion_latest)\n- ext: ctx_snapshot, ctx_entity(ctx_entity_type_mentions), ctx_drive, ctx_combination, ctx_evidence(ctx_evidence_entity), ctx_domain\n- ext.dfs_call 은 API 가 접근하지 않는다(적재기 전용).\n\n제안(DB-v2 에 없음, D8 판정 포함):\n\n| ID | 내용 | 근거 | D8 |\n| --- | --- | --- | --- |\n| P1 | judgment_change.kind 에 'dfs_fetch' | 사용자 주도 수집의 유일한 계약 준수 경로 | 큐 행, 준수 |\n| P2 | ext.ctx_drive (snapshot_id, requirement_id) 인덱스 | requirement 방향 조회. 현행 schema.ts:1386 과 DB 초안에 있었는데 v2 에서 빠짐 | 인덱스, 준수 |\n| P3 | ctx_generated_prompt 에 layer, funnel_stage, priority, origin | 현행 GeneratedPrompt 속성(types.ts:187-204)을 담을 자리가 없음 | 생성물 속성, 준수 |\n| P4 | ctx_generated_prompt 에 seed_key + UNIQUE(project_id, seed_key) | 통 JSON 낙관적 락이 사라진 뒤 남는 동시 생성 중복 방지선. 조합쌍은 정렬해 정규화 | 준수 |\n| P5 | prompt_candidate (project_id, created_at DESC) 인덱스 | dedup·후보 목록이 표 전체를 스캔 | 준수 |\n\n## 5. 권한\n\n- 컨텍스트 맵 읽기: 인증 사용자면 된다. 코퍼스는 브랜드와 프로젝트 축이 없는 전역 데이터다(현행 app/api/context-map/route.ts 주석과 같은 판단). 코퍼스가 프로젝트별로 나뉘면 다시 본다.\n- 키워드 읽기: project_id 가 있으면 active 멤버, admin, global 운영자만 읽는다. 없으면 STANDARD_VIEWERS(hq, region, country, admin)이면서 country 가 사용자 국가 스코프 안이어야 한다. 스코프 밖이면 403.\n- 쓰기와 유료 호출(키워드 추가·삭제, fetches, serp-drafts, candidates, 소셜 프롬프트 생성·삭제): canOperateProject 를 이식해 적용한다. admin 은 통과, none 은 거부, global 은 통과, assigned 는 active 멤버일 때만 통과한다. project_id 가 없으면 admin 또는 global 만 허용한다. 현행은 insight·related·search 라우트가 requireUser 만 검사하므로 이 부분은 권한이 강해지는 변경이다.\n- 모든 쓰기 SQL 은 WHERE project_id 로 클라이언트가 보낸 id 의 소속을 다시 확인한다.\n\n## 6. 성능\n\n| 엔드포인트 | 10배에서 요청당 행 | 한정 조건 | 위험 |\n| --- | --- | --- | --- |\n| keywords 목록 | 프로젝트 추적 키워드 수(수백 이하) + 키워드당 1행 | project_id 유니크 선두, PK 4열 | low |\n| insight | 추이 ≤12, SERP ≤10, 초안 LATERAL 1 | kw_key·loc·lang 최신 call(kw_serp_latest) | low |\n| related·lookup | ≤30 × terms | kw_suggestion_latest | low |\n| context-map 목록 | 페이지 ≤200 + COUNT(스냅샷당 수천~수만) | ctx_entity_type_mentions, P2 | low |\n| entities 상세 | 근거 8, 도메인·연결 수십 | PK·ctx_evidence_entity·P2 | low |\n| stats | ctx_domain 스냅샷 전체 DISTINCT host | snapshot_id | low |\n| export | 전량 약 10만(10배 가정) | snapshot_id | medium: 서버 커서 + 스트리밍 |\n| 생성류 | 시드 풀 ≤850 + 프로젝트 생성물 수백 | 인덱스 | medium: LLM 지연 |\n\n파티션 가지치기와 D8 예외는 해당이 없다. 사전 집계, 캐시, 요약 표는 두지 않는다(stats·COUNT·similar_to 는 조회할 때 계산). 측정 사실 표를 읽지 않아 G-25 등 알려진 고위험과는 무관하다.\n\n## 7. 대조 방법(신구 패리티)\n\n- IN-2 읽기: 스냅샷이 정적이므로 값이 정확히 같아야 한다. 현행 `/api/context-map?tab=contexts|conditions|combinations`(정렬·방향 조합별 page 0~2), `tab=detail`(상위 20 엔티티), stats, export 행 수와 셀 값을 새 엔드포인트와 비교한다. 차이로 인정하는 것은 필드명(perspective 에서 sentiment 로)과 버킷 경계뿐이다.\n- IN-2 생성: LLM 출력은 비결정적이라 값은 대조하지 않는다. 시드 풀 구성(Top-N id 집합, 현행 getSeedPool), 제외 집합 동작(같은 시드 재생성 0건), skipped_existing 수를 대조한다.\n- IN-1: 현행 캐시(keyword_cache)는 폐기 대상이라 값 대조 원천이 없다. 같은 DataForSEO 응답 원본 픽스처를 적재기에 넣은 뒤 새 insight·related 출력이 현행 buildMonthlyTrend·SERP 8행 절단·related seed 제외 규칙의 출력과 같은지 계약 테스트로 확인한다. term_norm 은 API 와 적재기 양쪽에 같은 골든 세트(한글 NFD 입력 포함)를 넣어 검사한다.\n- 권한: 역할 × operator × 멤버십 행렬(operator-policy.test.ts:45-65 사례)을 엔드포인트마다 적용한다. 다른 프로젝트 id 로 DELETE 했을 때 0건이 나오는지 확인한다.\n\n## 8. 열린 질문\n\n1. P1(judgment_change 'dfs_fetch')을 승인할지, 그리고 적재기 픽업 주기(목표 5초 이내)와 방식(LISTEN/NOTIFY 또는 폴링).\n2. 표준 화면에서 운영자가 아닌 사용자의 실시간 조회를 막아도 되는지(현행은 로그인 사용자 누구나 유료 호출 가능).\n3. 표준 화면 키워드 탭의 원천: 현행 샘플 픽스처(DEFAULT_KEYWORD_TERMS)를 유지할지, app.standard_keyword(source_type='google_keyword', enabled, 브랜드 스코프)로 바꿀지.\n4. LLM 생성 비용(OpenRouter)을 기록할지. 기록한다면 표를 새로 둘지, 아니면 범위 밖으로 둘지.\n5. 컨텍스트 맵 스냅샷을 교체할 때 ctx_generated_prompt 의 seed_key 가 계속 유효한지(snapshot_id 를 함께 보관할지).\n6. 코퍼스가 여러 산업으로 늘면 project 에서 industry 로 가는 매핑을 어디에 둘지(현재는 서버 설정 하나).\n7. prompt_candidate, project_tracked_keyword, ctx_generated_prompt 에 행위자 열(created_by)이 없다. 계약의 \"api_rw 행위자 필수\" 원칙에 맞춰 추가할지.\n8. export 다운로드 감사(access_audit_log 'download')를 누가 쓸지(AU-1 결정에 따른다).\n9. fetches 한 번에 받을 terms 상한(현행 /api/keyword/search 의 상한은 미확인).\n"
+}

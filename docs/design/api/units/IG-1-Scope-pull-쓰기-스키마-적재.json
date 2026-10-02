@@ -1,0 +1,118 @@
+{
+  "auth": "외부 REST 스코프 인증 아님. `POST /internal/v1/ingest/sync`(수동 트리거)는 FastAPI 의존성이 `X-Cron-Secret`(현행 `requireCronSecret` 계승, lib/cron-auth.ts 대응)을 검사하는 fail-closed 게이트 하나뿐이다. 나머지 3개(GET status/backlog/load-log)는 계약서 §9 권한 중 `operator` 역할만(운영자 콘솔 전용, 고객 테넌트 무관 — 스코프 필터 없음). Scope `/api/v1` 자체 호출은 로더 프로세스가 보유한 서버측 API 키로 수행(사용자 컨텍스트 없음).",
+  "current_refs": [
+    "lib/scope/mirror/sync.ts:200 (RUN_RECHECK_WINDOW_DAYS 참조)",
+    "lib/scope/mirror/sync.ts:993 dedupeAcrIterationJobs",
+    "lib/scope/mirror/sync.ts:1050 SYNC_ERROR_MAX_CHARS",
+    "lib/scope/mirror/sync.ts:1648-1650 mirrorJobs 대표 job 필터",
+    "lib/scope/mirror/sync.ts:1863 markSyncAttemptStarted 호출",
+    "lib/db/repositories/scope-mirror.ts:59,114 anchorReapplySql",
+    "lib/db/repositories/scope-mirror.ts:201 RUN_RECHECK_WINDOW_DAYS 정의",
+    "lib/db/repositories/scope-mirror.ts:420 markSyncAttemptStarted",
+    "lib/db/repositories/scope-mirror.ts:456-476 워터마크 재확인 창 판정",
+    "lib/db/schema.ts:762-777 scope_answers 테이블·인덱스",
+    "lib/db/schema.ts:784-799 scope_answers.measured_at 앵커 주석·PK",
+    "lib/db/schema.ts:1101-1127 scope_citations 테이블·인덱스",
+    "lib/db/schema.ts:1184 scopePrompts",
+    "app/api/cron/sync-mirror/route.ts:1-40 크론 진입점·실행 순서 주석(이슈 #262)"
+  ],
+  "endpoints": [
+    {
+      "method": "POST",
+      "path": "/internal/v1/ingest/sync",
+      "summary": "수동 트리거(디버그·백필용). 본문 없이 다음 로테이션 대상 1개 또는 {scope_project_id} 지정 1개를 즉시 20분 패스 1회 실행. 정규 동작은 내부 스케줄러(비-HTTP) 틱이 20분마다 호출하며 이 엔드포인트는 그 틱과 같은 함수를 호출하는 얇은 래퍼"
+    },
+    {
+      "method": "GET",
+      "path": "/internal/v1/ingest/status",
+      "summary": "ing.sync_cursor + ing.run(sync_state IN ('new','staging','deferred','blocked')) 요약 — 프로젝트별 last_attempt_at·last_success_at·last_error·미해소 run 수(운영 콘솔 A18 관제 화면 데이터원)"
+    },
+    {
+      "method": "GET",
+      "path": "/internal/v1/ingest/backlog",
+      "summary": "run_open_idx 기반 — 재확인 창이 닫혔는데 unresolved_jobs>0 또는 analysis_pending>0 인 run 목록(경보 대상, R12)"
+    },
+    {
+      "method": "GET",
+      "path": "/internal/v1/ingest/load-log",
+      "summary": "ing.load 최근 N건(kind·status·jobs_fetched·jobs_changed·rd_answers_upserted 등) — 적재 트랜잭션 사후 감사"
+    }
+  ],
+  "filters": {
+    "extra_params": [
+      "scope_project_id (uuid, optional, POST /sync 전용) : 특정 프로젝트만 즉시 실행. 미지정 시 ing.sync_cursor.last_attempt_at 오래된 순 로테이션 1개",
+      "force (bool, default false, POST /sync 전용) : 워터마크 건너뛰기 조건 무시하고 전량 재pull(현행 route.ts:31 ?force=1 계승)",
+      "since_hours (int, default 24, GET /backlog) : next_attempt_at 또는 recheck 창 만료 기준 조회 범위",
+      "limit/cursor (GET /load-log, GET /status) : 키셋 페이지네이션, load_id DESC"
+    ],
+    "ignored": [
+      "surface",
+      "own_brand",
+      "country[]",
+      "lang[]",
+      "engine[]",
+      "funnel[]",
+      "brand_presence[]",
+      "list_type[]",
+      "depth1~3[]",
+      "source[]",
+      "brand[]"
+    ],
+    "supported": [
+      "from/to (GET /load-log 만: ing.load.started_at 범위, 고객 앵커 날짜 축이 아니라 적재 원장 시각 축이므로 공통 필터 모델의 from/to 의미와 다름 — meta.ignored_filters 아님, 별도 파라미터로 문서화)"
+    ]
+  },
+  "id": "IG-1",
+  "metrics_rules": [
+    "R12 워터마크 = 이전 상태 있음 ∧ status 동일 ∧ total_jobs 동일 ∧ ((unresolved_jobs=0 ∧ analysis_pending=0) ∨ now > 두 재확인 창) — 적재 스킵 판정, DB-보정.md §4-2",
+    "R01 종결/R08 발행비율(analysis_done_ratio ≥ 0.95)의 근거 카운터(completed_units·gap_answers)는 이 단위가 ing.cycle에 채우지만 게이트 판정 로직 자체는 IG-3(cycles) 소유 — 경계는 '채움'까지",
+    "A10 Scope API 20분 pull, 적재 트랜잭션 안에서 판정 — 적재 흐름 10단계는 DB-보정.md §4 그대로(diff→원본 반영→원장·귀속→rd.job/answer 투영→자식 투영→당사 요약→게이트 전파·불변식→셀 대표 재선정→회차 재평가→세대 증가 커밋)",
+    "DN-3 결손 원천 = analysis_status 우선, 없으면 대용식(analysis_pending 카운트)",
+    "DN-7 교체 방식 = 해시 diff(content_hash bytea, changed/new만 UPSERT)",
+    "DN-9 대량 run 가시성 = 스테이지 전량 수신 후 단일 반영(부분 run 미노출)"
+  ],
+  "open_questions": [
+    "이 단위가 '적재 자체' 를 뜻하는지, 트리거용 HTTP 표면(수동 실행·관제 조회)까지 뜻하는지 모호했다. 정규 20분 pull은 비-HTTP 스케줄러가 도는 것이 자연스러워 보여, /sync 를 '수동 트리거 겸 스케줄러가 호출하는 내부 함수의 얇은 래퍼'로 설계했다 — 스케줄러 자체의 구현(cron·워커 큐)은 이 단위 밖인지 확인 필요",
+    "ing.load.scope_ref(jsonb)의 스키마가 DDL에 정의 없이 자유 형식이다. 감사 조회(/load-log)에서 무엇을 보여줄지는 적재기 구현이 실제로 채우는 필드를 봐야 확정 가능 — 미확인",
+    "IG-2(판정·읽기 스키마 투영)와의 경계: 계약 §4 적재 흐름 4~9단계(rd.job/answer 투영부터 회차 재평가까지)가 '한 트랜잭션'이라 이 단위(IG-1)와 IG-2가 코드상 분리되기 어려워 보인다. 이 설계는 IG-1 = '스테이지까지 + 트랜잭션 오케스트레이션', IG-2 = '판정 컬럼 계산 로직(R02·R05·R07·R13 등 값 자체)'으로 나눴는데, 모듈 설계 리드의 확인 필요",
+    "GET /internal/v1/ingest/* 3개(status·backlog·load-log)를 API 설계 스펙에 포함했는데, 이들이 §8 API 초안 목록(필터·KPI·추이 등 20여 개)에 없다 — 운영 콘솔 전용 내부 API로 별도 분류할지, 이 산출물에서 아예 빼고 IG-3(회차 상태)나 별도 '관제' 모듈로 넘길지 결정 필요",
+    "ing.load.status='failed'로 트랜잭션 롤백된 경우 alert-routing 대상인지(경보 채널 라우팅)는 이 API 설계 범위 밖으로 보고 다루지 않았다 — 확인 필요",
+    "force=1 재pull이 R12 워터마크를 완전히 우회하면 해시 diff 로 쓰기 0 을 보장하더라도 Scope API 호출량이 급증한다 — 레이트리밋 상한을 이 엔드포인트에 둘지(adhoc-measurement 룰과 무관, 이건 pull이지 measurement 발행 아님) 미정"
+  ],
+  "parity": "\"F01~F07 기능 하네스는 조회 API(rd/app 기반) 대상이라 이 쓰기 단위에는 직접 대응 항목이 없다. 대신 다음 세 가지로 신구 대조한다: (1) 적재 직후 rd.answer 건수 = 현행 scope_answers 건수(같은 run_id·status='completed' 조건) 동치, (2) run 1개를 새 파이프라인과 현행 파이프라인에 동시 투입해 content_hash 기준 diff 결과의 changed/new/removed 집계가 일치, (3) R12 워터마크 스킵 판정 — 분석 늦게 붙은 completed 답변 케이스(현행 결함 #1)를 재현해 새 구조가 스킵하지 않는지 확인. 하네스 코드는 harness/README.md 패턴을 참고하되 새 스크립트 필요(미작성).\"",
+  "perf": {
+    "indexes": [
+      "ing.run_due_idx (next_attempt_at) WHERE sync_state IN ('new','staging','deferred') : 로테이션 대상 스캔",
+      "ing.run_open_idx (scope_project_id) WHERE unresolved_jobs>0 OR analysis_pending>0 : /backlog 조회",
+      "ing.run_project_idx (scope_project_id, started_at DESC) : /status 프로젝트별 최근 run",
+      "ing.stage_answer_idx (load_id, job_id) : 스테이지 전량 확인·diff",
+      "ing.answer PK (run_month, job_id) : 원본 UPSERT 대상 키(파티션 프루닝은 run_month 단일 값이라 리프 1개만)"
+    ],
+    "notes": "쓰기 경로라 D8(사전집계 금지)이 적용되는 조회 성능 게이트 대상이 아니다. 위험은 '10배에서 읽는 행 규모'가 아니라 '적재 트랜잭션 소요·잠금 시간'이다. DB-보정.md §11 실측: run 1개 전면 교체(답변 3.85만) 7~22초·WAL 약 1.3GB(해시 diff 적용 시 재확인 패스는 쓰기 0). 6.6만 job run 전체 체인 소요는 미측정(§12). GET /status·/backlog·/load-log 는 행 규모가 작아(run·load 원장, leaf 수 적음) 위험 낮음.",
+    "risk": "medium",
+    "rows_scanned": "적재 트랜잭션: run 1개당 스테이지 answer 최대 수만 행(현행 최대 run ≈3.85만 답변) + 자식(언급·발생·스탠스·인용) run당 수십만 행. 조회 3종(status/backlog/load-log): 수백~수천 행(ing.run/ing.load 원장 규모, 10배에서도 28.8K→288K run 이지만 인덱스 스캔이라 낮은 위험)"
+  },
+  "purpose": "Scope /api/v1 를 20분 주기로 pull 하여 ing(쓰기 스키마, 넓은 원본 불변)에 해시 diff 로 반영하고, 같은 적재 트랜잭션 안에서 rd(읽기 스키마)의 핵심 투영(rd.job·rd.answer 등)까지 갱신한다. A10(20분 pull, 트랜잭션 안 판정)·R12(워터마크에 분석 도착 포함)·A17(쓰기/읽기 스키마 분리, 한 트랜잭션 동시 갱신)을 구현하는 단위. 대량 미러(전체 재빌드·회차 재투영)의 실행 경로도 이 단위가 오케스트레이션하지만 판정 로직 본문(R02·R05·R07·R13 등 규칙값 계산)은 IG-2 소유다.",
+  "query_design": "\"쓰기 API 처리 절차(DB-보정.md §4 그대로, run 1개 = 트랜잭션 1개):\\n1) 프로젝트 로테이션: SELECT scope_project_id FROM ing.sync_cursor ORDER BY last_attempt_at NULLS FIRST LIMIT 1 (또는 지정 scope_project_id). markSyncAttemptStarted 방식으로 last_attempt_at 만 선기록(에러 지우지 않음).\\n2) 프롬프트 증분: Scope listPrompts(updated_from = ing.sync_cursor.prompts_updated_to) → ing.prompt UPSERT(scope_prompt_id PK).\\n3) run 목록 대조: Scope listMeasurementRuns 결과를 ing.run 과 LEFT JOIN, 신규 > status/total 변경 > 워터마크 R12 통과(재확인 대상) 순으로 정렬해 패스당 상한(현행 25 계승) 적용.\\n4) run 별 페이지 수신: ing.stage_answer/stage_mention/stage_occurrence/stage_stance/stage_citation/stage_acr 에 INSERT(UNLOGGED, load_id 태그). 전량 수신 전 커밋 금지 — 중단 시 ing.run.stage_cursor 저장 후 다음 패스에서 재개.\\n5) 적재 트랜잭션 시작: pg_advisory_xact_lock(hashtext(scope_project_id)).\\n   a. diff: stage_answer LEFT JOIN ing.answer ON job_id, content_hash <> 이거나 신규면 changed_set. run 목록에 없는 기존 job_id 는 removed_set(또는 ing.answer_drop 반영분 제외).\\n   b. 키 확보: changed_set 중 answer_key_map 미존재 job_id 는 INSERT ... ON CONFLICT DO NOTHING RETURNING answer_key (자동증분, 최초 1회만).\\n   c. 원본 반영: ing.answer UPSERT(changed_set만), 자식 4종은 changed job_id 단위 DELETE 후 stage_* → INSERT.\\n   d. 워터마크·회차: ing.run 카운트 UPDATE(seen_jobs·completed_jobs·unresolved_jobs·analysis_pending), ing.cycle_run 귀속 UPSERT.\\n   e. rd 투영: rd.job UPSERT(전량, status 무관) — INSERT ... ON CONFLICT (answer_key) DO UPDATE. rd.answer UPSERT(완료·비드롭만). rd 자식(answer_brand 등)은 (answer_key) 단위 DELETE 후 재삽입 — 이 판정 로직 자체는 IG-2 소유 함수 호출.\\n   f. rd.surface_generation SET generation = generation + 1 WHERE surface = :surface.\\n   g. ing.load UPDATE SET status='committed', finished_at=now(), jobs_fetched=..., jobs_changed=..., rd_answers_upserted=... WHERE load_id = :load_id.\\n   h. COMMIT.\\n6) 커밋 후: 최신 rd 파티션 dead tuple 비율 확인 → 기준 초과 시 비동기 VACUUM (ANALYZE) 트리거(트랜잭션 밖).\\n\\nGET /status: SELECT * FROM ing.sync_cursor c LEFT JOIN LATERAL (SELECT count(*) FILTER (WHERE unresolved_jobs>0 OR analysis_pending>0) AS open_runs FROM ing.run WHERE scope_project_id=c.scope_project_id) r ON true.\\nGET /backlog: SELECT * FROM ing.run WHERE unresolved_jobs>0 OR analysis_pending>0 ORDER BY started_at LIMIT :limit (run_open_idx 사용).\\nGET /load-log: SELECT * FROM ing.load WHERE started_at BETWEEN :from AND :to ORDER BY load_id DESC LIMIT :limit.\"",
+  "read_model": [
+    "ing.sync_cursor (scope_project_id, surface, last_attempt_at, last_success_at, last_error, prompts_updated_to) : 로테이션·프롬프트 커서",
+    "ing.run (run_id, run_key, scope_project_id, run_month, status, trigger, targets, regions, total_jobs, started_at, completed_at, cycle_anchor_at, seen_jobs, completed_jobs, unresolved_jobs, analysis_pending, recheck_until, analysis_recheck_until, sync_state, stage_cursor, attempts, next_attempt_at, last_error, last_load_id, synced_at) : run 상태·워터마크 원장",
+    "ing.load (load_id, kind, run_id, scope_ref, rule_ver, started_at, finished_at, status, jobs_fetched, jobs_changed, jobs_removed, rd_answers_upserted, rd_gate_propagated, rd_rep_flips, rd_children_rows, error) : 적재 트랜잭션 감사 로그",
+    "ing.answer_key_map (job_id, answer_key, run_month) : 불변 키 발급 원장",
+    "ing.answer (run_month, job_id, answer_key, run_id, prompt_id, target, region, status, measured_at, model_slug, prompt_run_id, analysis_status, analysis_version, quality_breakdown, answer_text, n_mentions, n_citations, result_fallback, content_hash, seed_origin, first_seen_at, load_id) : 넓은 원본 답변",
+    "ing.mention / ing.mention_occurrence / ing.answer_stance / ing.citation (run_month, job_id, ord ...) : 넓은 원본 자식",
+    "ing.acr_prompt_run / ing.acr_rollup_row : ACR 원본",
+    "ing.prompt (scope_prompt_id, scope_project_id, text, funnel_stage, lang, regions, kind, scope_updated_at, synced_at) : 프롬프트 증분 미러",
+    "ing.answer_anchor_pin / ing.answer_drop : 운영자 입력(원본 불변, 투영 단계에서만 적용)",
+    "ing.stage_answer / ing.stage_mention / ing.stage_occurrence / ing.stage_stance / ing.stage_citation / ing.stage_acr (UNLOGGED, load_id 태그) : 전량 수신 스테이징",
+    "rd.job (answer_key, job_id, run_key, prompt_key, ...) : 전량 색인 투영(이 단위는 UPSERT 만, 컬럼 값 계산 로직은 IG-2)",
+    "rd.answer, rd.surface_generation (generation, last_load_id, rule_ver, as_of) : 세대 증가 지점",
+    "제안: ing.load.scope_ref 의 구체 필드 스키마(jsonb 자유형식이라 감사 조회 UI가 무엇을 파싱할지 DDL에 명시 없음) — 근거: DDL 주석 없음, 적재기 구현 시점에 결정 필요"
+  ],
+  "response": "\"POST /sync: { data: { load_id, run_id, scope_project_id, status: 'committed'|'skipped'|'failed', jobs_fetched, jobs_changed, jobs_removed, rd_answers_upserted, duration_ms }, meta: { surface, mode:'internal', as_of, generation } } — surface·mode·as_of·generation 은 계약 §2 공통 응답 형태를 준수하되 고객향이 아니므로 cycles/ignored_filters/dropped_filters/suppressed 는 빈 값 고정.\\nGET /status: { data: [{ scope_project_id, surface, last_attempt_at, last_success_at, last_error, open_runs }], meta:{...} } — 페이지네이션 없음(프로젝트 수 적음).\\nGET /backlog: { data: [{ run_id, scope_project_id, sync_state, unresolved_jobs, analysis_pending, next_attempt_at, attempts }], meta:{ next_cursor } } — 키셋(run_id).\\nGET /load-log: { data: [{ load_id, kind, run_id, status, jobs_fetched, jobs_changed, jobs_removed, rd_answers_upserted, started_at, finished_at, error }], meta:{ next_cursor } } — 키셋(load_id DESC).\"",
+  "screens": [
+    "없음(고객·운영자 대시보드 화면에 직접 노출되지 않음). 운영 콘솔의 '적재 상태' 패널(계약서 §3 G-18 언급된 AD-01·큐레이션 화면군에 인접)이 있다면 GET /status·/backlog 를 소비할 수 있으나 화면 자체는 미확인(10-feature-trace.tsv 에 이 단위 전용 화면 행 없음)"
+  ],
+  "title": "IG-1 Scope pull·쓰기 스키마 적재 (ingest.sync)",
+  "writes": "\"쓰는 스키마: ing 전 테이블(sync_cursor, run, load, answer_key_map, answer, mention, mention_occurrence, answer_stance, citation, acr_prompt_run, acr_rollup_row, prompt, stage_*) + rd 의 핵심 투영(rd.job, rd.answer, rd.surface_generation — 자식 투영 값 계산은 IG-2 소유 함수를 이 트랜잭션 안에서 호출). app 스키마는 쓰지 않는다(A17: app 쓰기는 api_rw+judgment_change 뿐).\\n트랜잭션 경계: run 1개 = 적재 트랜잭션 1개(DB-보정.md §4). 시작 시 pg_advisory_xact_lock(scope_project_id 해시)으로 같은 프로젝트의 적재·재투영·관리 동작을 직렬화. 실패 시 전체 롤백(원본·투영 모두 옛 상태 유지) — ing.load.status='failed', ing.run.attempts+1, next_attempt_at 지수 백오프.\\n감사: ing.load 1행이 모든 적재 트랜잭션의 시도·결과를 기록(load_id PK, kind='run'). 운영자 요청(카탈로그 편집·회차 숨김 등)에서 온 재판정은 kind='judgment'로 별도 기록되며 app.judgment_change 큐를 이 단위가 소비(IG-2·IG-3 경계와 겹치는 지점은 open_questions 참조).\""
+}

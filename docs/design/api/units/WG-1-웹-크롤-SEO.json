@@ -1,0 +1,44 @@
+{
+  "id": "WG-1",
+  "title": "웹 크롤·SEO (webgeo/crawl) — 소비자 없음, 신규 API 설계 대상 아님",
+  "endpoints": [],
+  "purpose": "crawl_pages·crawl_links·webgeo_*(webgeo_sites, webgeo_pages, webgeo_page_seo, webgeo_raw_html_objects 등) 테이블을 읽는 화면이나 배치가 현재 앱에 없다. 10-feature-trace.tsv 전행에 webgeo/crawl 관련 행이 0건이고, 리서치 프리뷰 리포 전체 git grep(webgeo, crawl_pages, crawl_links)에서 실제 소비(라우트·쿼리·컴포넌트)는 0건 — 나온 것은 drizzle 드리프트 감시 스크립트의 제외 주석과 무관한 정적 카탈로그(webgeo_final_list.xlsx, lib/geo-catalog/)뿐이다. drift-sql.ts 자체가 \"이 앱의 읽기 경로가 쓰지 않고 별도 파이프라인이 소유한다\"고 명시하고, DB 설계 v2 결정 G-13 은 \"crawl_* 참조가 0건\" 임을 확인한 뒤 폐기는 보류(용도 미확인)하고 crawl 은 S3 보관·webgeo 는 ext 스키마로 정적 이관만 하기로 했다(DECISIONS.md:228-240). 계약서 §3 도 이 방향과 일치한다: rd 스키마(기능 API 읽기 대상)에 webgeo_*·crawl_* 표가 아예 없고 ext 절 주석에 \"정적 이관\"으로만 적혀 있다(DB-v2.sql:741). 결론: WG-1 은 현재 범위에서 API 로 노출할 기능이 없다 — \"쓰는 곳이 없으면 그렇게 보고한다\"는 지시에 따라 엔드포인트를 설계하지 않는다.",
+  "screens": [],
+  "filters": {
+    "supported": [],
+    "ignored": [],
+    "extra_params": []
+  },
+  "response": "해당없음 (신규 엔드포인트 없음)",
+  "metrics_rules": [],
+  "read_model": [
+    "해당없음 — rd 스키마에 webgeo_*·crawl_* 투영이 없다(DB-v2.sql §3 확인, grep 0건). ext.webgeo_* 는 기능 API(api_ro) 가 읽지 않는 정적 이관 대상으로만 존재(계약서 §3 '스키마 경계: 기능 API는 rd·app·ext 만 읽는다'와 상충하지 않도록, ext 안에서도 이 표는 소비자가 없어 읽기 경로를 만들지 않는다)",
+    "제안: 없음 — 소비자가 확인되지 않은 상태에서 새 읽기 경로·투영을 여는 것은 D8(파생 층 금지) 이전에 '쓰지 않는 기능을 미리 만들지 않는다'는 원칙에도 어긋난다"
+  ],
+  "query_design": "해당없음. 설계할 쿼리가 없다(엔드포인트 0개). 참고로 현재 라이브 DB 실측(03-db-live-catalog.md)상 이 표들은 이미 상당히 큰 편(crawl_pages 3.9GB/5.73만행, crawl_links 2.1GB/410만행, webgeo_pages 416MB/3.6만행, webgeo_page_seo 516MB/3.9만행)이라 향후 API 를 열 경우에도 우선 인덱스·partition 설계가 선행돼야 한다.",
+  "perf": {
+    "risk": "n/a",
+    "rows_scanned": "해당없음 (엔드포인트 없음)",
+    "indexes": [],
+    "notes": "설계 대상 API 가 없어 성능 산정 불필요. 다만 해당 표들이 라이브 DB 에서 이미 대형(crawl_links 는 인덱스 crawl_links_src_link_unique 982MB 가 4/5 미사용 상태로 관찰됨, 03-db-live-catalog.md:100,112)이라, 훗날 실제 소비자가 나타나 API 를 신설할 경우 이 부채(미사용 인덱스·라지 테이블)부터 별도로 정리해야 한다는 점만 기록해 둔다."
+  },
+  "auth": "해당없음. 신규 API 가 없으므로 스코프·역할 게이트 설계 대상이 없다. 참고로 라이브 카탈로그 실측상 이 4개 표는 RLS 가 활성 상태이나(03-db-live-catalog.md:148) 그건 현재 DB 의 설정일 뿐, 신설 FastAPI 인증(A8 Supabase Auth + JWKS) 설계와는 무관하다 — api_ro 가 이 표를 애초에 읽지 않는다.",
+  "writes": "없음",
+  "current_refs": [
+    "notes/hmg-refactor-design/db/DB-v2.sql:741 — 'ext.webgeo_*: 현행 정의 그대로 정적 이관(+ webgeo_pages (raw_html_path) 인덱스). crawl_*: S3 + mig.archive_manifest(G-13).' → rd 스키마(기능 API 읽기 대상)에 webgeo_*·crawl_* 표 없음",
+    "notes/hmg-refactor-design/db/DECISIONS.md:228-240 — G-13 결정: 'crawl_* 참조가 0건이다(03-db-live-catalog.md §4). 용도가 미확인이라 폐기는 금지한다' → (a) crawl S3 보관·webgeo ext 정적·컨텍스트맵 스냅샷 채택, (c) crawl 폐기는 기각",
+    "notes/hmg-refactor-design/db/DB-보정.md:32,164 — ext 스키마 소유 목록에 webgeo 가 'loader(외부 적재)' 전용으로 기재, G-13 요약행 'crawl·webgeo·맵 → S3 / ext / 스냅샷'",
+    "../hmg-geo-research-preview-7639b9e/scripts/db/drift-sql.ts:41-47 — OUT_OF_BAND_PREFIXES 주석: 'webgeo_ / crawl_ — 웹사이트 GEO 수집·SEO 계열. 이 앱의 읽기 경로가 쓰지 않고 별도 파이프라인이 소유한다' (drizzle schema.ts 에도 모델링돼 있지 않음)",
+    "../hmg-geo-research-preview-7639b9e/front/docs/development-guide.md:80 — 'summary_*·webgeo_*·crawl_* 처럼 drizzle 로 모델링한 적이 없는 계열은 결과에서 분류·제외한다'",
+    "notes/hmg-refactor-research/10-feature-trace.tsv — 전행 grep(webgeo|crawl_pages|crawl_links, 대소문자 무관) 0건. 화면·구획·함수 추적 어디에도 이 표를 읽는 기능이 없음",
+    "../hmg-geo-research-preview-7639b9e 전체 git grep(webgeo|crawl_pages|crawl_links) — lib/geo-catalog/(webgeo_final_list.xlsx 정적 엑셀 카탈로그, DB 표와 무관)·drift-sql.ts·front/docs/development-guide.md 뿐, 라우트·쿼리·컴포넌트에서 0건",
+    "notes/hmg-refactor-research/03-db-live-catalog.md:41,45,49-50,100,112-115,148,156-159 — 라이브 DB 실측: crawl_pages(3.9GB)·crawl_links(2.1GB, 인덱스 4/5 미사용)·webgeo_pages(416MB)·webgeo_page_seo(516MB) 존재하나 '활성 연결(Q14)' 표에 이 표들로의 앱 연결 없음, 정리/이관 대상으로만 분류"
+  ],
+  "parity": "해당없음 — 신규 API 가 없으므로 하네스 기능 F01~F07 어디에도 이 단위에 대응하는 항목이 없다(F01~F07 자체가 webgeo/crawl 을 다루지 않음, 10-feature-trace.tsv 근거). 새 대조 항목도 추가하지 않는다 — 대조할 신구 화면 쌍이 없다.",
+  "open_questions": [
+    "WG-1 을 아예 이관 단위로 유지할 필요가 있는가: 확인된 소비자가 0건이므로 이 API 설계 단위 자체를 취소하고 모듈 지도에서 제거하는 편이 맞는지 설계 리드 확인 필요.",
+    "webgeo_*·crawl_* 를 실제로 쓰는 '별도 파이프라인'(drift-sql.ts:44 가 언급)이 무엇인지 리포 밖(다른 서비스·배치)에 있는지 확인이 안 됐다 — 확인되면 그 파이프라인 쪽 이관 계획(스키마·인증)이 별도로 필요할 수 있다.",
+    "G-13 은 '용도 미확인이라 폐기 금지'로 crawl_* 를 S3 로만 보관하기로 했는데, 이관 후에도 아무도 안 쓰면 그 데이터를 다시 조회할 계획이 있는지(있다면 그게 WG-1 의 진짜 범위가 될 수 있음) 사용자 확인이 필요하다.",
+    "webgeo_pages 의 raw_html_path FK 가 인덱스 없음으로 관찰됐다(03-db-live-catalog.md:163) — 이관·아카이브 작업(적재 모듈 소관) 시점에만 문제이며 이 API 설계 범위 밖이지만, 적재 모듈 담당자에게 전달이 필요한지 확인."
+  ]
+}

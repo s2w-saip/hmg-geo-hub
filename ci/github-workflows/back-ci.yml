@@ -1,0 +1,167 @@
+# back CI: ruff + pytest(SQL 경계 가드 포함)를 postgres:17 컨테이너 위 합성 개발 DB 로 돌린다.
+#   DB = DB-v2.32(원장 발행 게이트·현행 재현 되돌림 열·웹 보고서 유닛 표·엔티티 버전 모델·인용 출처 유형 답변 열·카드 동결 층·발행 생성기·카드 읽기 뷰·웹 셀 판정·택소노미 축·엔티티 목록 합계·롤업 대표 표기 원장·동결 접기 보관·표시명 해시 키·창 판정 기초·재동결 감사 권한·동결 카드 뷰 계획 안정화 포함) → 합성 픽스처(fixture-00·10) → rd 투영(seed-30·40) → 엔티티 합계·창 판정 기초 재계산 → check-expected 단언. 고객 데이터·비밀값 없음(로컬 전용 비밀번호 dev).
+#   seed-40 은 DB-v2.13(rd.answer.cit_off)을 선행 단언한다. 시험 픽스처(tests/dbforward.py)는 템플릿이 최신이면 아무것도 하지 않는다.
+#   기능 빌더의 SQL 은 tests/core/test_guards.py(정적)와 테스트 중 엔진 가드(HGH_SQL_GUARD, core.sqlguard)가 잡는다.
+#
+# 러너: 참고용 사본이다. 이 경로(ci/github-workflows/)는 GitHub Actions 가 읽지 않으므로 이 레포에서는 실행되지 않는다.
+#   원본 레포는 사내 전용 러너(macOS)에서 돌며, 아래 준비 단계(python·docker·캐시 경로)는 그 러너 기준이다.
+name: back-ci
+
+on:
+  push:
+    branches: [stg, main]
+    paths: ["back/**", "ci/github-workflows/back-ci.yml"]
+  pull_request:
+    branches: [stg, main]
+    paths: ["back/**", "ci/github-workflows/back-ci.yml"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: back-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: internal-runner  # 원본: 사내 전용 러너 라벨
+    # 호스티드 실측 약 12분(pytest 11분). 공용 러너는 부하가 높아 여유를 둔다(러너 대기 시간은 여기에 들지 않는다).
+    timeout-minutes: 50
+    env:
+      TZ: UTC
+      HGH_CI_SHARED_RUNNER: "1"
+      PG: hgh-ci-pg-${{ github.run_id }}-${{ github.run_attempt }}
+      PSQL_ADMIN: docker exec -i hgh-ci-pg-${{ github.run_id }}-${{ github.run_attempt }} psql -U postgres -X -q -v ON_ERROR_STOP=1 -d postgres
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+    defaults:
+      run:
+        working-directory: back
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          clean: true
+          persist-credentials: false
+
+      - name: 러너 준비(도구 확인·전용 캐시·python 3.12 venv·고아 컨테이너 정리)
+        run: |
+          set -euo pipefail
+          echo "runner: ${RUNNER_NAME} (${RUNNER_OS}/${RUNNER_ARCH})"
+          docker info --format 'docker server {{.ServerVersion}} cpus={{.NCPU}} mem={{.MemTotal}}' \
+            || { echo "::error::docker 데몬에 붙지 못한다(colima 확인)"; exit 1; }
+          py=""
+          for c in python3.12 /opt/homebrew/opt/python@3.12/bin/python3.12 /opt/homebrew/bin/python3.12 /usr/local/bin/python3.12 "$HOME/.local/bin/python3.12"; do
+            if command -v "$c" >/dev/null 2>&1; then py="$(command -v "$c")"; break; fi
+          done
+          [ -n "$py" ] || { echo "::error::러너에 python3.12 가 없다(brew install python@3.12)"; exit 1; }
+          "$py" -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version; print("python", sys.version.split()[0], sys.executable)'
+          "$py" -m venv "$RUNNER_TEMP/hgh-venv"
+          echo "$RUNNER_TEMP/hgh-venv/bin" >> "$GITHUB_PATH"
+          echo "VIRTUAL_ENV=$RUNNER_TEMP/hgh-venv" >> "$GITHUB_ENV"
+          echo "PIP_CACHE_DIR=${HOME:?}/Library/Caches/gha-${GITHUB_REPOSITORY//\//-}/pip" >> "$GITHUB_ENV"
+          now=$(date +%s)
+          docker ps -a --filter label=hgh-ci.pg --format '{{.Names}} {{.Label "hgh-ci.created"}}' | while read -r n c; do
+            if [ -n "$c" ] && [ $((now - c)) -gt 7200 ]; then
+              echo "고아 컨테이너 정리: $n"
+              docker rm -f -v "$n" >/dev/null || true
+            fi
+          done
+          echo "시작 시 hgh-ci 컨테이너: $(docker ps -a --filter label=hgh-ci.pg -q | wc -l | tr -d ' ')개"
+
+      - name: 의존성
+        run: |
+          python --version
+          python -m pip install -q --require-hashes -r requirements-dev.lock   # 해시 고정(런타임 requirements.lock + 개발 도구, D-4)
+
+      - name: ruff
+        run: ruff check app tests conftest.py ingest
+
+      - name: 개발 DB 컨테이너(postgres:17, 실행별 고유 이름·빈 포트·tmpfs)
+        run: |
+          set -euo pipefail
+          port=""
+          for attempt in 1 2 3; do
+            p=$(python -c 'import socket; s = socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1]); s.close()')
+            if docker run -d --name "$PG" \
+                --label hgh-ci.pg=1 --label "hgh-ci.created=$(date +%s)" --label "hgh-ci.run=${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+                --memory 2g --memory-swap 2g \
+                --tmpfs /var/lib/postgresql/data:rw,size=1g \
+                -p "127.0.0.1:${p}:5432" \
+                -e POSTGRES_PASSWORD=dev \
+                postgres:17 >/dev/null; then
+              port="$p"; break
+            fi
+            docker rm -f -v "$PG" >/dev/null 2>&1 || true
+          done
+          [ -n "$port" ] || { echo "::error::postgres 컨테이너 기동 실패"; exit 1; }
+          echo "PGPORT=$port" >> "$GITHUB_ENV"
+          echo "URL_PREFIX=postgresql://postgres:dev@127.0.0.1:${port}/" >> "$GITHUB_ENV"
+          echo "container=$PG port=127.0.0.1:$port mounts=[$(docker inspect -f '{{range .Mounts}}{{.Type}}:{{.Name}} {{end}}' "$PG")] (빈 칸 = 볼륨 없음)"
+          for i in $(seq 1 60); do
+            if docker exec "$PG" pg_isready -U postgres -q; then break; fi
+            sleep 1
+          done
+          docker exec "$PG" pg_isready -U postgres
+          # 초기화 중 임시 서버는 소켓만 연다. 호스트 TCP(colima 포트 포워딩)로 붙어야 최종 서버가 뜬 것이다.
+          PORT="$port" python - <<'PY'
+          import os, time
+          import psycopg2
+          url = f"postgresql://postgres:dev@127.0.0.1:{os.environ['PORT']}/postgres"
+          last = None
+          for i in range(90):
+              try:
+                  psycopg2.connect(url, connect_timeout=3).close()
+                  print(f"host tcp ok ({i}s)")
+                  break
+              except Exception as e:
+                  last = e
+                  time.sleep(1)
+          else:
+              raise SystemExit(f"host port unreachable: {last}")
+          PY
+
+      - name: 개발 DB 구성(DB-v2.32 + 픽스처 + seed-30·40)
+        run: |
+          set -euo pipefail
+          docker exec "$PG" mkdir -p /work/back/tests /work/back/migration
+          docker cp db "$PG:/work/back/db"
+          docker cp tests/fixtures "$PG:/work/back/tests/fixtures"
+          docker cp migration/seed "$PG:/work/back/migration/seed"
+          q() { d="$1"; shift; docker exec -i -w "/work/back/$d" "$PG" psql -U postgres -X -q -v ON_ERROR_STOP=1 -d hmg_core "$@"; }
+          $PSQL_ADMIN -c "CREATE DATABASE hmg_core"
+          q db -f DB-v2.32.sql
+          q tests/fixtures -f fixture-00-rules.sql
+          q tests/fixtures -f fixture-10-data.sql
+          q migration/seed -f seed-30-dims.sql > /dev/null
+          q migration/seed -f seed-40-facts.sql > /dev/null
+          q . -c "SELECT rd.refresh_entity_mention_total(NULL)" > /dev/null   # 픽스처 언급의 엔티티 합계(= fill-v225.sql, DB-v2.25 P134)
+          q . -c "SELECT rd.refresh_cycle_pick_basis(NULL)" > /dev/null       # 창 판정 함대 가시·판정 갭(= fill-v230.sql, DB-v2.30 P150)
+          q . -At -c "SELECT 'rd.answer', count(*) FROM rd.answer UNION ALL SELECT 'rd.citation', count(*) FROM rd.citation"
+
+      - name: 픽스처 기대값(check-expected)
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/check-expected.txt"
+          docker exec -i -w /work/back/tests/fixtures "$PG" psql -U postgres -X -q -v ON_ERROR_STOP=1 -d hmg_core \
+            -A -t -F '|' -f check-expected.sql > "$out"
+          tail -1 "$out"
+          grep -E '\|FAIL\|' "$out" || true
+          test "$(tail -1 "$out" | cut -d'|' -f2)" = "0"
+
+      - name: pytest(가드 포함, 대분류별 격리 DB)
+        env:
+          TEMPLATE_DB: hmg_core
+        run: bash tests/run-areas.sh   # PSQL_ADMIN(docker exec)·URL_PREFIX(127.0.0.1:<빈 포트>)는 위에서 설정
+
+      - name: 개발 DB 컨테이너 정리
+        if: always()
+        working-directory: ${{ github.workspace }}
+        run: |
+          docker rm -f -v "$PG" >/dev/null 2>&1 || true
+          left=$(docker ps -a --filter "name=^${PG}$" -q | wc -l | tr -d ' ')
+          echo "정리 후 ${PG} 잔존: ${left}개, hgh-ci 컨테이너 전체: $(docker ps -a --filter label=hgh-ci.pg -q | wc -l | tr -d ' ')개"
+          test "$left" = "0"
+
+      - name: 작업 공간 정리(캐시·생성물)
+        if: always()
+        working-directory: ${{ github.workspace }}
+        run: git clean -ffdxq && git status --short | head -5

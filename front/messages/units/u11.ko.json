@@ -1,0 +1,55 @@
+{
+  "admin": {
+    "list": {
+      "status": {
+        "active": "활성",
+        "suspended": "정지"
+      }
+    },
+    "errors": {
+      "emailTaken": "이미 등록된 이메일입니다.",
+      "scopeRequired": "역할에 맞는 허용 범위를 지정하세요. (관리자·외부 수행사가 아니면 브랜드가 필요하고, 국가 역할은 국가가 필요합니다)",
+      "rowVersionConflict": "다른 곳에서 먼저 변경되었습니다. 목록을 새로 고친 뒤 다시 시도하세요.",
+      "userReferenced": "작업 기록이 있는 사용자는 삭제할 수 없습니다. 대신 계정을 정지하세요."
+    },
+    "toast": {
+      "suspendSuccess": "계정을 정지했습니다.",
+      "resumeSuccess": "계정 정지를 해제했습니다."
+    },
+    "edit": {
+      "dangerZone": {
+        "suspend": "계정 정지",
+        "resume": "정지 해제",
+        "suspendHint": "정지하면 로그인할 수 없고 기록은 남습니다.",
+        "resumeHint": "정지를 해제하면 다시 로그인할 수 있습니다."
+      }
+    }
+  },
+  "adminStandardEntities": {
+    "catalog": {
+      "roleUpdatedPending": "{brand}의 역할 변경을 요청했습니다. 집계 재구축 후 KPI에 반영됩니다",
+      "apiPeriodNote": "수치: 최신 노출 회차, 글로벌 표면, 귀속 표시 브랜드 기준",
+      "ownBrand": "자사 브랜드",
+      "ownConfirm": "자사로 지정",
+      "ownCancel": "취소"
+    }
+  },
+  "adminCitationSources": {
+    "list": {
+      "source": {
+        "social": "소셜"
+      },
+      "savedPending": "{domain} 분류를 저장했습니다. 재분류가 반영되면 인용 집계에 나타납니다",
+      "revertedPending": "{domain} 교정 원복을 요청했습니다. 반영되면 기본 분류로 돌아갑니다",
+      "hintApi": "최신 노출 회차(글로벌 표면)의 인용 수 상위 {limit}개 도메인과, 교정 이력이 있는 도메인 전체를 보여줍니다."
+    }
+  },
+  "adminGa4": {
+    "status": {
+      "unmappedProperty": "시장 매핑 없음"
+    }
+  },
+  "keywordTools": {
+    "pendingCollection": "{count}개 키워드는 아직 수집 중입니다({terms}). 잠시 후 다시 조회하세요."
+  }
+}

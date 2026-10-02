@@ -1,0 +1,100 @@
+{
+  "id": "F-2",
+  "title": "선택 가능 날짜·기준일 (GET /v1/filters/dates)",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/v1/filters/dates",
+      "summary": "표면(global/website/project)의 선택 가능한 회차 앵커 날짜 목록·최신 노출 회차·최초 측정일·기간 프리셋 끝점을 한 번에 낸다. 읽기 전용."
+    }
+  ],
+  "purpose": "기간 필터 UI(달력·프리셋 드롭다운)가 '고를 수 있는 날짜'를 서버에서 받는다. R01(회차 종결)·R03(노출 게이트)·R04(숨김)를 통과한 회차만 노출하고, 프리셋(weekly·biweekly·monthly·yearly)의 끝점(E)과 시작 클램프(수집 시작일)를 함께 낸다. F-1(필터 옵션 매트릭스: brand/country/lang/engine 등 값 목록)과 분리된 이유는 날짜축이 값 필터를 받지 않는 별도 축이기 때문(현행 설계 주석: 브랜드/국가를 채우면 필터를 바꿀 때마다 달력이 흔들린다).",
+  "screens": [
+    "/dashboard, /standard/*, /website/* 의 기간 필터 드롭다운(달력 + weekly/biweekly/monthly/yearly 프리셋)",
+    "/standard/prompts 헤더 '수집 기간·마지막 수집일'",
+    "/projects/[id]/analysis/* 의 프로젝트 표면 기간 달력"
+  ],
+  "filters": {
+    "supported": [],
+    "ignored": [
+      "brand",
+      "country",
+      "lang",
+      "engine",
+      "funnel",
+      "brand_presence",
+      "list_type",
+      "depth1",
+      "depth2",
+      "depth3",
+      "source",
+      "from",
+      "to"
+    ],
+    "extra_params": [
+      "surface:enum(global|website|project)=필수, 원장 어휘(rd.cycle.surface: 1 global·2 website·3 project)",
+      "family:enum(mentions|citations|all)=mentions(기본). 화면의 지표 계열에 맞춰 숨김 게이트를 고른다(R04)",
+      "project_id:uuid=surface=project일 때만 필수(로컬 프로젝트 id, rd.dim_project.scope_project_id로 해소)",
+      "limit:int=400(상한 400 고정, 서버가 자름 — 현행 MAX_DATES와 동일 상수)"
+    ]
+  },
+  "response": "data: { surface, latest_round_date: 'YYYY-MM-DD'|null (rd.cycle 중 서빙 가능·노출·비숨김 최신 round_date, R05 스냅샷 기준일), first_measured_date: 'YYYY-MM-DD'|null (같은 조건의 최초 round_date, 프리셋 시작 클램프용 minDay), dates: string[] (내림차순, 최대 limit개, KST YYYY-MM-DD), dates_truncated: bool (전체 개수가 limit을 넘었는가), presets: [{preset:'weekly'|'biweekly'|'monthly'|'yearly', from, to}] (latest_round_date를 끝점 E로, first_measured_date로 시작 클램프해 서버가 계산) }. meta: { surface, mode:'snapshot', as_of: latest_round_date, cycles: [], generation (rd.surface_generation.generation), ignored_filters, dropped_filters: {}, suppressed: {} }. 분자/분모 성격의 값이 없어 비율 필드 없음. 페이지네이션 없음(상한 절단만).",
+  "metrics_rules": [
+    "R01 회차 종결 — servable(=status:published류 게이트가 이미 반영된 값)만 후보",
+    "R03 노출 게이트 — view_date IS NOT NULL AND view_date <= rd.today_kst() (KST 시계, current_date 미사용)",
+    "R04 숨김 — hidden_scope로 family별 배제: family=mentions → hidden_scope NOT IN (1,3), family=citations → hidden_scope NOT IN (1,2), family=all → hidden_scope <> 0 (현행 anchorNotHiddenSql family='all' 주석 '회차는 그레인이라 반쪽만 못 넣는다'를 그대로 옮김, 제 판단·미검증: DDL 자체엔 family별 배제 매핑이 명시돼 있지 않아 확인 필요 → open_questions)",
+    "R05 스냅샷/기준일 — latest_round_date = 위 게이트를 통과한 round_date의 최댓값",
+    "presets는 현행 순수함수 presetRange(preset,end,minDay)와 동일 산식(주 -6일·격주 -13일·월 -29일·년 -1년, 시작일이 first_measured_date보다 앞서면서 끝점보다는 이르면 클램프)을 서버에서 재현"
+  ],
+  "read_model": [
+    "rd.cycle.surface",
+    "rd.cycle.project_key",
+    "rd.cycle.round_date",
+    "rd.cycle.view_date",
+    "rd.cycle.servable",
+    "rd.cycle.hidden_scope",
+    "rd.cycle.cyc_key",
+    "rd.surface_generation.surface",
+    "rd.surface_generation.generation",
+    "rd.surface_generation.as_of",
+    "rd.dim_project.project_key",
+    "rd.dim_project.surface",
+    "rd.dim_project.scope_project_id",
+    "rd.dim_project.is_root",
+    "rd.today_kst() (함수)"
+  ],
+  "query_design": "입력(상위 인가 계층이 미리 계산): :surface(int2), :project_keys(int4[] — global/website는 서버가 계산한 스코프 내 project_key 목록, project는 project_id→rd.dim_project.project_key 단일 해소), :excluded_hidden(int2[] — family로 결정), :limit.\n\nWITH picked AS (\n  SELECT DISTINCT round_date\n  FROM rd.cycle\n  WHERE surface = :surface\n    AND project_key = ANY(:project_keys)\n    AND servable\n    AND view_date IS NOT NULL AND view_date <= rd.today_kst()\n    AND hidden_scope <> ALL(:excluded_hidden)\n),\nagg AS (SELECT min(round_date) AS first_round, max(round_date) AS latest_round, count(*) AS n FROM picked)\nSELECT p.round_date, a.first_round, a.latest_round, a.n\nFROM picked p CROSS JOIN agg a\nORDER BY p.round_date DESC\nLIMIT :limit;\n\n-- generation: SELECT generation, as_of FROM rd.surface_generation WHERE surface=:surface;\n-- project_id 해소(surface=project): SELECT project_key FROM rd.dim_project WHERE surface=3 AND scope_project_id=:project_id;\n-- presets는 위 결과(latest_round_date, first_measured_date)만으로 애플리케이션 코드에서 계산(추가 쿼리 불필요).\n-- (참고, 응답에 미노출) 함대 앵커 불일치 진단은 서버 로그 전용: SELECT count(DISTINCT project_key) FROM rd.cycle WHERE surface=:surface AND project_key=ANY(:project_keys) AND round_date=:latest_round — 1 초과 시 경고 로그(현행 logFleetAnchor와 동형).",
+  "perf": {
+    "indexes": [
+      "cycle_pick_idx (surface, round_date DESC) INCLUDE (cyc_key, project_key, servable, view_date, hidden_scope, generation)",
+      "cycle_project_idx (project_key, round_date DESC)"
+    ],
+    "rows_scanned": "rd.cycle은 답변 그레인이 아니라 회차 그레인 — surface=global: project_keys 보통 단원(루트) → cycle_project_idx로 수백 행. surface=website: 스코프 내 사이트(project_key) 수 × 회차 수, 10배 폭에서도 수만 행 이하로 추정(회차 주기가 3일~1주이고 역사 길이가 폭과 무관, §3 성능 근거 한계 문단과 일치 — '이력 10배'가 아니라 '폭 10배' 전제이므로 사이트 수는 늘어도 회차 캐던스는 불변). surface=project: 단일 project_key → 매우 작음.",
+    "risk": "low",
+    "notes": "cycle_pick_idx는 (surface, round_date DESC)에 필요한 열을 전부 INCLUDE해 Index Only Scan 가능(project_key/hidden_scope/servable/view_date 필터는 인덱스 안에서 Filter로 처리, 힙 접근 없음). project_keys 배열이 작을 때(전형: 루트 1건, 웹사이트 수십 건)는 플래너가 cycle_project_idx로 각 project_key를 개별 스캔해 병합할 수도 있음 — 둘 다 저비용. RDS 실측 게이트 전 추정치이며(§3 '성능 근거의 한계'), 실측 후 재확인 필요."
+  },
+  "auth": "세션의 role·scope로 서버가 project_key 후보 목록을 미리 계산(default-deny, 상위 auth 계층 책임 — 이 기능의 read_model 밖). global 표면은 루트 프로젝트(전 역할 공통, brand/country로 갈리지 않음 — 달력 자체가 브랜드 무관 축이라는 현행 설계 그대로). website 표면은 rd.dim_project.site_brand_bit/site_geo_key가 계정 스코프와 교집합하는 project_key만. project 표면은 project_id가 그 사용자의 프로젝트 멤버십/스코프 안에 있는지 확인(스코프 밖이면 404/403, 값 유출 금지). 운영자(operator) 게이트는 이 기능과 무관(비용 액션 아님).",
+  "writes": "없음(읽기 전용).",
+  "current_refs": [
+    "lib/scope/server.ts:5451 fetchSelectableAnchorDates",
+    "lib/scope/server.ts:5483 fetchProjectSelectableAnchorDates",
+    "lib/scope/server.ts:5509 fetchLatestAnchorDay",
+    "lib/scope/server.ts:5399-5405 logFleetAnchor(함대 불일치 진단 로그)",
+    "lib/db/repositories/scope-answer-anchors.ts:204 MAX_DATES=400",
+    "lib/db/repositories/scope-answer-anchors.ts:239 anchorViewableSql(R03 시간 게이트)",
+    "lib/db/repositories/scope-answer-anchors.ts:252 AnchorHiddenFamily",
+    "lib/db/repositories/scope-answer-anchors.ts:276 anchorNotHiddenSql(R04 family별 배제)",
+    "lib/db/repositories/scope-aggregates.ts:9601 standardCollectionDates(최초 측정일 — 현행은 brand/country 스코프 적용, 이 설계는 무필터로 통합)",
+    "components/dash/dimension-filter-panel.tsx:1852 presetRange",
+    "components/dash/dimension-filter-panel.tsx:1878 TIME_PRESET_ORDER",
+    "components/dash/selectable-dates.ts:1-70 (kstToday/parseDay/addDays 등 순수 날짜 산술, 서버 presets 계산과 동일 산식 이식 대상)"
+  ],
+  "parity": "하네스 F01~F07에 이 기능과 1:1 대응하는 키가 없음(F06은 국가 등 값 옵션 — F-1 영역). 새 대조 항목 제안: D-01(latest_round_date == fetchLatestAnchorDay 반환값, surface×project 조합별), D-02(dates 배열 == fetchSelectableAnchorDates 반환값의 집합·정렬 일치, family별), D-03(first_measured_date, 무필터 버전과 standardCollectionDates.firstMeasuredAt(스코프 적용판) 두 값을 나란히 대조해 차이를 문서화 — open_questions #1과 연결), D-04(presets 배열 == presetRange(preset, E, minDay) 4종 재현).",
+  "open_questions": [
+    "최초 측정일(first_measured_date)을 달력처럼 무필터(함대 전체)로 낼지, 현행 standardCollectionDates처럼 brand/country 스코프를 반영할지 결정 필요 — 헤더 표시 문구('수집 기간')는 스코프 반영 기대, 프리셋 클램프는 무필터가 현행 배선. 하나의 필드로 합치면 둘 중 하나가 틀려 보일 위험.",
+    "F-1(필터 옵션)과의 경계: 공통 필터 모델 §4 규칙 4 '옵션 창 = 데이터 창'(기간이 있으면 그 기간을 옵션 창으로)이 날짜축엔 순환 의존(날짜 자체가 옵션 창을 정하는 입력)이라 적용 제외로 명시할지 F-1 설계자와 확인 필요.",
+    "presets 배열을 서버가 낼지(이 설계 채택안, 로직 이중화 제거) 아니면 순수함수라 프론트에 남길지 — 옮기면 components/dash/selectable-dates.ts의 KST 날짜 산술을 Python으로 이식해야 하고 두 언어 간 동작 동치성 테스트가 새로 필요.",
+    "family='all'의 hidden_scope 배제 규칙(<>0 전부 배제)을 DDL 주석만으로 유추함(제 판단, file:line 대조 미완) — DB/적재 설계자 확인 필요.",
+    "limit=400 절단 시 dates_truncated=true를 UI가 어떻게 쓸지(더보기 없음, 달력은 어차피 화면 폭만큼만 그림) — 상수를 계약에 고정할지 파라미터로 열지 결정."
+  ]
+}

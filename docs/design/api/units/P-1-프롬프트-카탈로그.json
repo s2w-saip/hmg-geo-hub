@@ -1,0 +1,99 @@
+{
+  "auth": "세션 → `deriveScopeFilter` 상당의 서버 계산 스코프(브랜드·권역·국가) 를 FastAPI 의존성으로 주입, 요청 필터와 **교집합**(default-deny, 스코프 없음 → 401·빈 스코프 → 거부). 축별 규칙:\n- 카탈로그 브랜드(global `app.prompt.brand_code`, website `app.website_site.brand_code`): `scope.all` 이면 무필터, 아니면 `brand IN scope.brands ∪ {NULL, 'HMG'}`(공용 프롬프트는 전 브랜드 계정에 노출, 계약 §4 규칙3 · standards.ts:300-307 계승).\n- 대상 시장(global, B1 2026-09-03 결정): `app.prompt.regions` ∩ `effectiveScopeCountries(scope)` 교집합 3분기 술어(NULL=상속·의사코드뿐=시장귀속없음·그외 실교집합) 그대로 이식, `catalogMarketScopeCondition`(standards.ts:237-261) 이 정본.\n- 국가(website, `app.website_site.country_code`): `scope.all` 이면 무필터, 아니면 `effectiveCountries(scope)` ∩ 요청. 브랜드 가상 지역 코드(HYUNDAI-N 등)는 국가 컬럼이 아니라 사이트의 브랜드로 판정(website-sites.ts:295-314 `narrowGeoToScope`/`websiteSiteGeoPred` 계승, rd.dim_country.kind='virtual_brand' 를 정규 사전으로 쓸지는 open_questions).\n- CSV 내보내기(`format=csv`) 는 같은 인가 경로 재사용, 별도 운영자 게이트 없음(비용 액션 아님, 읽기 전용).\n- soft-delete(`app.prompt.deleted_at`)·삭제 행은 이 뷰어 엔드포인트에서 항상 제외(관리자 카탈로그 `/v1/admin/catalog` 가 별도로 다룸).",
+  "current_refs": [
+    "lib/db/repositories/standards.ts:287 listStandardCatalogScoped(글로벌 카탈로그 조회)",
+    "lib/db/repositories/standards.ts:237 catalogMarketScopeCondition(대상 시장 스코프 교집합, B1)",
+    "lib/scope/standard-prompt-exclusions.ts:22 isExcludedStandardPrompt(수작업 제외 목록, DB 미모델링)",
+    "lib/db/repositories/website-sites.ts:507 listWebsitePromptsScoped(웹사이트 카탈로그+측정 렌즈, 서버 페이징)",
+    "lib/db/repositories/website-sites.ts:574 listWebsitePromptsForExport(같은 술어, 페이지 없이 전량)",
+    "lib/db/repositories/website-sites.ts:564 WEBSITE_PROMPT_EXPORT_MAX_ROWS(내보내기 상한 50,000)",
+    "lib/db/repositories/website-sites.ts:343 websitePromptRowWhere / :386 websitePromptLens(행 필터·측정 렌즈 분리, 목록·내보내기 공유)",
+    "app/api/website/prompts/export/route.ts:38 GET(xlsx 직렬화 라우트)",
+    "app/[locale]/(dash)/standard/prompts/_components/prompt-export.ts:107 buildStandardPromptSheet(글로벌은 클라이언트 메모리 배열 직렬화, 서버 재조회 없음)",
+    "lib/db/repositories/standards.ts:394 listCatalogTaxonomy(카탈로그 축 옵션 — 경계상 filters 모듈 소관, 참고용)"
+  ],
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/v1/prompts",
+      "summary": "글로벌·웹사이트 프롬프트 카탈로그 목록(측정 메타 포함, 키셋 페이지네이션). format=csv 시 같은 필터로 전량(상한 50,000) CSV 내보내기."
+    }
+  ],
+  "filters": {
+    "supported": [
+      "surface(필수: global|website)",
+      "brand[](카탈로그 브랜드)",
+      "country[](대상 시장/사이트 국가)",
+      "lang[](website: wp.lang_code, global: prompts.lang)",
+      "funnel[](global 전용, funnel_stage)",
+      "brand_presence[](global 전용)",
+      "list_type[](global 전용)",
+      "depth1[]~depth3[](global 전용)",
+      "engine[](website 전용, 측정 렌즈 — 행 필터 아님)",
+      "from/to(website 전용, 측정 렌즈 — round_date 범위, 행 필터 아님)"
+    ],
+    "ignored": [
+      "source[](인용 출처 카테고리 — 이 기능과 무관, meta.ignored_filters)",
+      "engine[]·from/to(global 요청 시: 글로벌 카탈로그는 측정 렌즈를 안 씀 — meta.ignored_filters)"
+    ],
+    "extra_params": [
+      "search: string, 선택, prompt_text/target_url ILIKE(website), prompts.text ILIKE(global)",
+      "sort: enum, global=depth1,depth2,depth3,text 고정(변경 불가) / website=prompt|brand|country|lang|targetUrl|answers|lastMeasuredAt",
+      "dir: asc|desc, 기본 website=desc(lastMeasuredAt), global=고정",
+      "cursor: string(opaque), 키셋 페이지네이션 토큰 — 이전 페이지 마지막 행의 정렬키 튜플을 인코딩",
+      "page_size: int, 기본 50, 상한 200(website), global 은 상한 없이 전량(현재도 2,431행 전량을 화면이 메모리 필터하므로 유지, 10배에도 ~24k행)",
+      "format: json|csv, 기본 json. csv 는 cursor/page_size 무시하고 같은 필터로 상한(50,000행)까지 전량, Content-Disposition attachment"
+    ]
+  },
+  "id": "P-1",
+  "metrics_rules": [
+    "이 기능은 M01~M12 KPI 를 계산하지 않는다 — 카탈로그 원본 + 측정 존재 여부/횟수만 낸다.",
+    "R05(대표 답변)·R07(분모 게이트) 미적용: 측정 메타의 answers 카운트는 rd.answer 그레인(완료·비드롭 job) 원시 카운트다 — std_in/elig 게이트를 걸지 않는다(현행 website 카운트가 status='completed' 그대로 세는 것과 동치, rd.answer 자체가 이미 드롭 제외).",
+    "관점 브랜드와 모집단(계약 §4 규칙3): 카탈로그 브랜드 필터는 브랜드 ∪ 공통(HMG·NULL) — standard-filters.ts:64 규칙 그대로.",
+    "B1(2026-09-03): 대상 시장도 열람 스코프를 좁힌다 — 글로벌 카탈로그 regions ∩ effectiveScopeCountries.",
+    "D15(2026-08-29): scope_prompt_id 미발행(NULL) 행도 노출하고 '미측정' 배지로 구분한다(숨기지 않는다).",
+    "M12 프롬프트 수는 비가산 지표다 — 이 카탈로그가 그 분모(측정 프롬프트 수)의 원천이지만 계산은 kpi/mentions 모듈이 한다(이 API 는 원장만 제공).",
+    "시간 축은 round_date(계약 §3 G-04) — 웹사이트 측정 렌즈 from/to·lastMeasuredAt 은 anchor_date 가 아니라 round_date 로 통일(현행 앵커축 on/off 이원화 해소, hmg-geo-anchor-not-measured.md 결함 해소)."
+  ],
+  "open_questions": [
+    "글로벌 카탈로그에도 실제 answers 카운트/최근측정일/엔진을 붙일지: 현행은 tracked(scope_prompt_id NOT NULL) 불리언뿐이고 website 만 실카운트를 낸다. 이 설계는 현행 패리티로 글로벌=불리언, 웹사이트=실카운트를 유지했다 — 통일이 필요하면 rd.dim_prompt/rd.answer 조인을 글로벌에도 추가(비용 증가, 10배 24k행이라 위험은 낮음).",
+    "수작업 제외 목록(isExcludedStandardPrompt, DB 미모델링 코드 상수)을 새 구조에서 어디에 둘지: app.prompt 컬럼(제안: `excluded bool`)으로 승격할지 코드 상수로 유지할지. 승격 시 admin 카탈로그 편집(P-2 인접)과 겹친다 — D8 예외 목록에 없는 신규 컬럼이라 이 문서 선에서 결정 불가, 기술 리드 에스컬레이션.",
+    "website 측정 메타 정렬(answers·lastMeasuredAt)은 집계값이라 진짜 키셋 페이지네이션이 불가능하다(정렬 컬럼이 인덱스에 없는 파생값). 옵션: (a) 이 두 정렬 키만 오프셋 유지(현행 그대로, 계약 §6 규칙 위반을 명시적 예외로 기록) (b) 카탈로그 네이티브 컬럼(prompt/brand/country/lang/targetUrl)만 키셋 지원하고 answers/lastMeasuredAt 정렬은 1페이지(기본 뷰)로 한정 — 결정 필요.",
+    "웹사이트 국가 필터의 가상 브랜드 지역 코드(HYUNDAI-N) 해소를 rd.dim_country(kind='virtual_brand') 사전으로 통일할지, 현행처럼 앱 코드 상수(WEBSITE_BRAND_GEO_CODES)로 유지할지 — DB-v2 에 그 사전이 이미 있어 보이나(dim_country.virtual_brand_bit) 이 조사 범위에서 연결 관계를 확정 못 함(미확인).",
+    "CSV 내보내기가 measurement meta(answers/engines)를 포함할지: 현재 website export 는 포함(xlsx), global export 는 tracked 배지만. CSV 로 통일 시 글로벌도 measured 배지 정도만 낼지 결정 필요(위 1번과 연동).",
+    "xlsx 파일 자체(현재 website 다운로드 포맷)를 새 BFF 가 서버에서 생성해 계속 제공할지, CSV 만 내려주고 xlsx 변환은 프론트/다른 계층으로 옮길지 — 작업 지시의 'CSV 내보내기(format 파라미터)' 문구와 현행 xlsx 다운로드 UX 사이의 간극. 고객 요구(이노션, 2026-09-11) 원문은 '엑셀'이었다."
+  ],
+  "parity": "\"F01~F07 하네스는 KPI/트렌드/필터옵션용이라 이 기능(카탈로그 목록·내보내기)을 다루지 않는다 — 신규 대조 항목 필요. 제안: (1) surface×필터 조합별 total 행수 신구 일치(글로벌: listStandardCatalogScoped(scope).rows.length, 웹사이트: listWebsitePromptsScoped 의 total) (2) CSV 전량 행수 = 같은 필터의 목록 total 과 일치(웹사이트는 truncated 플래그 케이스 별도 확인, 상한 50,000) (3) 웹사이트 answers/lastMeasuredAt/engines 신구 값 일치(엔진·기간 렌즈 조합 샘플 20건) (4) 글로벌 tracked/untracked 배지 신구 일치(scope_prompt_id NOT NULL 판정) (5) 수작업 제외 목록 적용 후에도 신구 행수 일치.\"",
+  "perf": {
+    "risk": "medium",
+    "rows_scanned": "10배 추정: 글로벌 app.prompt(루트 프로젝트) 약 24,310행(현행 2,431×10), 웹사이트 app.website_prompt 약 126,850행(현행 12,685행 2026-09-16 실측×10, 사이트 128×10=1,280). CSV 내보내기는 필터 후 전량(상한 50,000행)까지 measurement meta 조인.",
+    "indexes": [
+      "app.prompt: prompt_project_live_idx(project_id, created_at) WHERE deleted_at IS NULL",
+      "app.prompt: prompt_scope_idx(scope_prompt_id) WHERE scope_prompt_id IS NOT NULL AND deleted_at IS NULL",
+      "rd.dim_prompt: dim_prompt_text_trgm_hint(surface, project_key) — 주석에 '텍스트 검색은 10배 약 12만행 순차 ILIKE(pg_trgm 은 v3 후 판단)'이 정확히 이 기능을 가리킴",
+      "app.website_prompt: UNIQUE(site_id, file_seq, seq_no) — site_id 선두라 브랜드·국가 필터(사이트 선해석 후 site_id IN)의 사실상 인덱스",
+      "app.website_prompt: website_prompt_scope_idx(scope_prompt_id)",
+      "rd.answer: answer_prompt_idx(prompt_key, round_date) — 측정 메타 조인의 핵심 인덱스"
+    ],
+    "notes": "행 필터(브랜드·국가·언어)는 인덱스로 좁혀지지만 자유 텍스트 search(ILIKE prompt_text/target_url)는 필터 없이 걸리면 위 두 테이블 모두 순차 스캔이다(글로벌 24k, 웹사이트 127k) — DDL 주석이 이미 이 위험을 인지하고 pg_trgm 을 v3 로 유보했다. D8 이라 사전집계·매트뷰로는 못 피하므로, 상한 없는 자유검색은 이 규모에서 medium 위험으로 받아들이거나 v3 실측 후 trgm GIN 인덱스를 추가한다(계약 §3 D8 예외 목록엔 없음 — 인덱스 추가는 사전집계가 아니라 스키마 최적화라 D8 위반이 아니다). 측정 메타 조인(website)은 페이지(50행)에서는 answer_prompt_idx 인덱스 네스티드 루프로 저비용이지만, CSV 전량(최대 50,000 prompt_key)에서는 50k 회 인덱스 탐침이 누적돼 medium~high 로 올라갈 수 있다 — RDS 실측 게이트에서 확인 필요."
+  },
+  "purpose": "글로벌(표준)·웹사이트 프롬프트 카탈로그를 스코프에 맞게 조회하고, 각 프롬프트의 측정 여부/측정 메타(웹사이트: 답변 수·최근 측정일·측정 엔진, 글로벌: 발행 여부 배지)를 붙여 목록으로 내려주며, 같은 필터로 전량 CSV 내보내기를 제공한다. 카탈로그 원본 CRUD 와 변경 이력은 P-2 소관이고 이 단위는 열람 전용이다.",
+  "query_design": "[글로벌 목록] SELECT p.prompt_id, p.text, p.prompt_type, p.category, p.brand_code, p.brand_presence, p.list_type, p.depth1, p.depth2, p.depth3, p.depth4, p.funnel_stage, p.kind, p.lang, p.regions, p.scope_prompt_id, p.status FROM app.prompt p WHERE p.project_id = :root_project_id AND p.deleted_at IS NULL AND (p.brand_code IS NULL OR p.brand_code = 'HMG' OR p.brand_code = ANY(:scope_brands)) AND (:market_scope_predicate — regions IS NULL OR NOT EXISTS 실국가 OR EXISTS 겹침) AND (:brand_filter 있으면 추가 AND) AND (:funnel/:presence/:list_type/:depth1..3 필터) AND (:search 있으면 p.text ILIKE) AND p.prompt_id <> ALL(:excluded_ids) ORDER BY p.depth1, p.depth2, p.depth3, p.text, p.prompt_id [키셋: AND (p.depth1,p.depth2,p.depth3,p.text,p.prompt_id) > (:cursor 튜플)] LIMIT :page_size+1. 측정 배지는 scope_prompt_id IS NOT NULL 이면 tracked=true(추가 조인 없음, D15). — [웹사이트 목록] WITH scoped_sites AS (SELECT site_id, brand_code, country_code FROM app.website_site WHERE (:brand_filter) AND (:country_filter, 가상 브랜드 코드는 브랜드로 치환)), rows AS (SELECT wp.website_prompt_id, wp.prompt_text, wp.target_url, wp.domain, wp.lang_code, wp.owned_base_url, wp.scope_prompt_id, s.brand_code, s.country_code FROM app.website_prompt wp JOIN scoped_sites s ON s.site_id = wp.site_id WHERE (:lang_filter) AND (:search 있으면 wp.prompt_text ILIKE OR wp.target_url ILIKE)) SELECT r.*, m.answers, m.last_round_date, m.engines FROM rows r LEFT JOIN LATERAL (SELECT count(*)::int AS answers, max(a.round_date) AS last_round_date, array_agg(DISTINCT e.code) AS engines FROM rd.dim_prompt dp JOIN rd.answer a ON a.prompt_key = dp.prompt_key AND a.surface = 2 JOIN rd.dim_engine e ON e.engine_key = a.engine_key WHERE dp.prompt_id = r.scope_prompt_id AND r.scope_prompt_id IS NOT NULL AND (:engine_filter 있으면 e.code = ANY(...)) AND (:from/:to 있으면 a.round_date BETWEEN)) m ON true ORDER BY <sort_expr> [answers/lastMeasuredAt 은 계산값이라 오프셋, 그 외는 키셋] LIMIT :page_size+1 [OFFSET :offset | AND 키셋조건]. — [CSV, 양쪽 공통] 위 술어를 그대로 쓰고 LIMIT/OFFSET·cursor 없이 ORDER BY 고정 정렬로 최대 50,000행, 초과 시 응답 헤더에 truncated 표시(현행 X-Export-Truncated 계승).",
+  "read_model": [
+    "app.prompt.prompt_id, text, prompt_type, category, brand_code, brand_presence, list_type, depth1, depth2, depth3, depth4, funnel_stage, kind, lang, regions, scope_prompt_id, status, deleted_at, project_id",
+    "app.website_prompt.website_prompt_id, site_id, file_seq, domain, lang_code, seq_no, target_url, prompt_text, owned_base_url, scope_prompt_id",
+    "app.website_site.site_id, brand_code, country_code, scope_project_id",
+    "app.brand(브랜드 코드 유효성 검증용, 참조만)",
+    "rd.dim_prompt.prompt_id, prompt_key, surface, project_key(측정 메타 조인 키 — app.prompt.scope_prompt_id / app.website_prompt.scope_prompt_id = rd.dim_prompt.prompt_id 로 해석, 미확인: 이 등치 관계는 DB-앱-도메인.md 서술로 유추한 것이라 DDL 자체에 FK 로 선언돼 있지 않음)",
+    "rd.answer.prompt_key, round_date, surface, engine_key(측정 메타: 답변 수·최근 측정일·엔진 집계, 게이트 컬럼은 쓰지 않음 — 원시 카운트)",
+    "rd.dim_engine.engine_key, code(엔진 코드 표시명)",
+    "제안: rd.dim_country.kind='virtual_brand', virtual_brand_bit(웹사이트 가상 지역 코드 해소용 — 현재는 앱 코드 상수 WEBSITE_BRAND_GEO_CODES 로 추정, DDL 에 이미 존재하는 컬럼이라 신설 제안은 아니지만 이 API 의 실제 사용 여부는 미확인)"
+  ],
+  "response": "data: { rows: [ 공통 { id, promptText, kind, scopePromptId, tracked(bool) }, global 전용 { promptType, category, brand, brandPresence, listType, depth1..4, funnelStage, lang, regions, status }, website 전용 { brand, countryCode, langCode, targetUrl, domain, ownedBaseUrl, answers(int), lastMeasuredAt(date|null), engines(string[]) } ], next_cursor(string|null), total(int, global 은 전량이라 rows.length 와 동일, website 는 행 필터만 반영한 카운트) }. meta 는 계약 §8 공통 형태(surface, ignored_filters, dropped_filters 등)를 따르되 mode/as_of/cycles/generation 은 이 기능엔 해당 없음(카탈로그는 회차 스냅샷이 아니다) — 값을 어떻게 채울지(null vs 생략)는 결정 필요(open_questions). CSV 응답은 같은 컬럼을 헤더+행으로, Content-Type text/csv, Content-Disposition attachment, 상한 도달 시 X-Export-Truncated: true 헤더(현행 계승).",
+  "screens": [
+    "/standard/prompts (탭:카탈로그)",
+    "/website/prompts"
+  ],
+  "title": "프롬프트 카탈로그",
+  "writes": "없음 — 읽기 전용. 카탈로그 편집(CRUD)은 관리자 카탈로그(/v1/admin/catalog)가 app.prompt/app.website_prompt 를 쓰고 트리거로 app.prompt_audit_log 기록 + judgment_change('catalog') 적재까지 처리한다(DB-앱-도메인.md:38, DB-v2.sql:155 트리거 주석). 이 단위는 그 결과를 조회만 한다."
+}

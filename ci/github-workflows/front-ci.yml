@@ -1,0 +1,146 @@
+# front CI: 타입·린트·단위 테스트·문자열 가드 + 백엔드 계약(OpenAPI) 드리프트 + 금지 import 가드.
+#   - back/** 변경에도 돈다: 백엔드 계약이 바뀌었는데 front/lib/hgh/{openapi.json,api-types.ts} 를 재생성하지
+#     않았으면 여기서 실패한다(재생성: node front/scripts/gen-api-types.mjs).
+#   - 비밀값·DB·외부 네트워크(레지스트리 제외) 불필요. OpenAPI 생성은 app.openapi() 만 부르고 설정을 읽지 않는다.
+#
+# 러너: 참고용 사본이다. 이 경로(ci/github-workflows/)는 GitHub Actions 가 읽지 않으므로 이 레포에서는 실행되지 않는다.
+#   원본 레포는 사내 전용 러너(macOS)에서 돌며, 아래 준비 단계(python·docker·캐시 경로)는 그 러너 기준이다.
+name: front-ci
+
+on:
+  push:
+    branches: [stg, main]
+    paths: ["front/**", "back/**", "ci/github-workflows/front-ci.yml"]
+  pull_request:
+    branches: [stg, main]
+    paths: ["front/**", "back/**", "ci/github-workflows/front-ci.yml"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: front-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: internal-runner  # 원본: 사내 전용 러너 라벨
+    # 호스티드 실측 약 14분(단위 테스트 10분·운영 빌드 2분). 공용 러너는 부하가 높아 여유를 둔다(러너 대기 시간은 여기에 들지 않는다).
+    timeout-minutes: 50
+    env:
+      TZ: UTC
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+    defaults:
+      run:
+        working-directory: front
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          clean: true
+          persist-credentials: false
+
+      - name: 러너 준비(도구 확인·전용 캐시·python 3.12 venv)
+        run: |
+          set -euo pipefail
+          echo "runner: ${RUNNER_NAME} (${RUNNER_OS}/${RUNNER_ARCH})"
+          cache_root="${HOME:?}/Library/Caches/gha-${GITHUB_REPOSITORY//\//-}"
+          echo "npm_config_cache=$cache_root/npm" >> "$GITHUB_ENV"
+          echo "PIP_CACHE_DIR=$cache_root/pip" >> "$GITHUB_ENV"
+          py=""
+          for c in python3.12 /opt/homebrew/opt/python@3.12/bin/python3.12 /opt/homebrew/bin/python3.12 /usr/local/bin/python3.12 "$HOME/.local/bin/python3.12"; do
+            if command -v "$c" >/dev/null 2>&1; then py="$(command -v "$c")"; break; fi
+          done
+          [ -n "$py" ] || { echo "::error::러너에 python3.12 가 없다(brew install python@3.12)"; exit 1; }
+          "$py" -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version; print("python", sys.version.split()[0], sys.executable)'
+          "$py" -m venv "$RUNNER_TEMP/hgh-venv"
+          echo "$RUNNER_TEMP/hgh-venv/bin" >> "$GITHUB_PATH"
+          echo "VIRTUAL_ENV=$RUNNER_TEMP/hgh-venv" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: 의존성
+        run: npm ci --no-audit --no-fund
+
+      - name: 타입 검사
+        run: npx tsc --noEmit
+
+      - name: 린트
+        run: npm run lint
+
+      - name: 단위 테스트
+        run: npm test
+
+      - name: 하드코딩 문자열 가드
+        run: npm run check:strings
+
+      # 운영 빌드(정적 프리렌더 포함)는 dev·단위 테스트가 못 보는 결함을 잡는다: API 원천에서 cookies() 의
+      # 동적 사용 신호를 catch 가 삼켜 /ko 프리렌더가 실패한 사례(2026-09-30 stg 배포). 값은 가짜(외부 호출 없음).
+      - name: 운영 빌드(API 원천 플래그)
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-dummy
+          HGH_API_BASE_URL: https://example.invalid
+          HGH_SOURCE_SESSION: api
+          HGH_SOURCE_G1: api
+          HGH_SOURCE_G2: api
+          HGH_SOURCE_G3: api
+          HGH_SOURCE_G4: api
+          HGH_SOURCE_G5: api
+          HGH_SOURCE_G6: api
+          HGH_SOURCE_G7: api
+        run: |
+          set -o pipefail
+          log="$RUNNER_TEMP/hgh-front-build.log"
+          npx next build 2>&1 | tee "$log"
+          ! grep -E "gate session check failed|auth_unbound" "$log"
+
+      # OpenAPI 출력은 fastapi·pydantic·starlette 판에 따라 달라진다. back 런타임 잠금(requirements.lock, 해시 고정, D-4)으로 설치해
+      # 드리프트 검사가 계약 변화만 잡게 한다(app.openapi() 는 런타임 의존성만 쓴다). back 의존성을 올리면 잠금과 스냅샷을 같은 커밋에.
+      - name: back 의존성(OpenAPI 생성용)
+        working-directory: back
+        run: |
+          python --version
+          python -m pip install -q --require-hashes -r requirements.lock   # 러너 준비 단계의 venv(RUNNER_TEMP)
+
+      - name: OpenAPI 드리프트(back → openapi.json → api-types.ts)
+        env:
+          HGH_BACK_PYTHON: python
+        run: |
+          node scripts/gen-api-types.mjs
+          git diff --exit-code -- lib/hgh/openapi.json lib/hgh/api-types.ts
+
+      # 정적 import 는 ESLint(no-restricted-imports, npm run lint 가 app·components·hooks·i18n·lib·utils·middleware.ts 전부를 본다)가
+      # import type 예외까지 정확히 막는다. 여기서는 한 번 더 막는다:
+      #   lib/hgh(테스트 제외: 옛 함수와의 대조 테스트 허용)의 옛 데이터 계층 런타임 로드 = 부수효과 import "x"·동적 import()·require()
+      #   (정적 import ... from 은 ESLint 몫: 여러 줄 import type 을 grep 이 오탐하지 않게 여기서 보지 않는다)
+      #   앱 코드의 e2e/ 참조 = 모든 형태(from·부수효과 import·import()·require(), 타입 import·재수출 포함)
+      - name: 금지 import 가드
+        run: |
+          set -uo pipefail
+          status=0
+          RUNTIME_SRC="(import[[:space:]]*|import\(|require\()[[:space:]]*['\"]"
+          ANY_SRC="(from|import|import\(|require\()[[:space:]]*['\"]"
+          LEGACY="(@/lib/|(\.\./)+(lib/)?)(db|scope/server)(\.[jt]sx?)?(/[^'\"]*)?['\"]"
+          E2E="(@/|(\.\./)+|\./)?e2e(/[^'\"]*)?['\"]"
+          if grep -rnE --include='*.ts' --include='*.tsx' --exclude='*.test.ts' --exclude='*.test.tsx' "${RUNTIME_SRC}${LEGACY}" lib/hgh; then
+            echo "::error::lib/hgh must not load lib/db or lib/scope/server at runtime"
+            status=1
+          fi
+          paths=()
+          for p in app components hooks i18n lib utils middleware.ts; do
+            if [ -e "$p" ]; then paths+=("$p"); fi
+          done
+          if grep -rnE --include='*.ts' --include='*.tsx' --include='*.js' --include='*.jsx' --include='*.mjs' \
+            "${ANY_SRC}${E2E}" "${paths[@]}"; then
+            echo "::error::app code must not import front/e2e"
+            status=1
+          fi
+          exit "$status"
+
+      - name: 작업 공간 정리(node_modules·.next·생성물)
+        if: always()
+        working-directory: ${{ github.workspace }}
+        run: git clean -ffdxq && git status --short | head -5

@@ -1,0 +1,161 @@
+{
+  "auth": "읽기(1·2·3): 프로젝트 활성 멤버(뷰어 포함) — `app.project_member` 로 멤버십 확인, 계약 §2 default-deny 스코프 교집합(브랜드/국가 스코프 없는 프로젝트 종속 기능이라 실질적으로는 \"그 project_id 의 멤버인가\"만 검사). 쓰기·유료 외부호출 계열(4·5·6·7·8·9·10·11): 운영자 권한(현행 `canOperateProject` 상당 — COST 액션, GGMD 시나리오 3-2와 동일 성격: 글로벌 오퍼레이터=범위 내 전 프로젝트, 배정 오퍼레이터=활성 멤버인 프로젝트만, vendor/뷰어는 불가). project_id 는 매 쓰기 쿼리의 WHERE 절에 넣어 클라이언트가 준 id가 남의 프로젝트 행을 건드리지 못하게 한다(현행 removeTrackedKeyword 방식 유지). 관리자 전용 배치 도구(현행 /admin/keyword-tools 대응, 있다면)는 `role=admin` 게이트.",
+  "current_refs": [
+    "app/api/keyword/insight/route.ts",
+    "app/api/keyword/related/route.ts",
+    "app/api/keyword/search/route.ts",
+    "app/api/keyword/volume/route.ts",
+    "app/api/keyword/prompt-to-volume/route.ts",
+    "app/api/keyword/to-prompt/route.ts",
+    "lib/keyword/insight.ts",
+    "lib/keyword/service.ts",
+    "lib/keyword/dataforseo-discovery.ts:1-90",
+    "lib/keyword/dataforseo.ts",
+    "lib/keyword/keyword-to-prompt.ts",
+    "lib/keyword/cache.ts:41-44 (TTL insight=24h related=7d)",
+    "lib/keyword/location-presets.ts:1-30",
+    "lib/keyword/api.ts (requireUser/requireAdminUser)",
+    "lib/db/migrations/0018_tracked_keywords.sql",
+    "app/[locale]/(dash)/projects/[id]/intent/_actions.ts:65-90 (addCandidate)",
+    "app/[locale]/(dash)/projects/[id]/intent/_actions.ts:420-478 (addTrackedKeyword/removeTrackedKeyword/removeTrackedKeywords)",
+    "app/[locale]/(dash)/projects/[id]/intent/_components/google-keyword-view.tsx"
+  ],
+  "description": "IN-1 키워드(고객 관심 모듈) — DataForSEO 검색량·SERP·연관검색어 조회 및 프로젝트 추적 키워드 CRUD, LLM 프롬프트 변환 API 설계",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/v1/intent/keywords",
+      "summary": "프로젝트가 추적 중인 키워드 목록(탭) + 각 키워드의 최신 월 검색량 요약"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/intent/keywords",
+      "summary": "키워드 추적 추가(app.project_tracked_keyword, term+country 유니크 위반 시 409)"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/intent/keywords/{keyword_id}",
+      "summary": "추적 키워드 1건 삭제(project_id 스코프 확인)"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/intent/keywords",
+      "summary": "추적 키워드 다건 삭제(query: ids[])"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/intent/keywords/{keyword_id}/insight",
+      "summary": "12개월 검색량 트렌드 + 최신 SERP 스냅샷(캐시된 rd.kw_* 그대로 반환, 즉시 응답)"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/intent/keywords/{keyword_id}/insight/refresh",
+      "summary": "DataForSEO 검색량+SERP 실시간 재조회 → ext.dfs_call·rd.kw_volume_monthly·rd.kw_serp 갱신(유료, 동기 응답)"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/intent/keywords/{keyword_id}/related",
+      "summary": "연관 검색어(최신 rd.kw_suggestion 스냅샷)"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/intent/keywords/{keyword_id}/related/refresh",
+      "summary": "DataForSEO 연관 검색어 실시간 재조회(유료, 동기 응답)"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/intent/keywords/search",
+      "summary": "아직 추적하지 않은 다건 키워드를 한 번에 조회(빈 상태 진입 플로우: 각 term의 볼륨+intent+연관어, 유료)"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/intent/keywords/{keyword_id}/serp/{rank}/prompt",
+      "summary": "해당 SERP 행에 대해 LLM으로 자연어 프롬프트 초안 생성·저장(app.kw_prompt_draft, 유료)"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/intent/candidates",
+      "summary": "SERP 행/초안 텍스트를 프로젝트 프롬프트 후보 풀에 추가(app.prompt_candidate, source=google_keyword — IN-2 social_scraping과 공유 엔드포인트, 소유 모듈은 open_questions 참고)"
+    }
+  ],
+  "filters": {
+    "supported": [],
+    "ignored": [
+      "surface",
+      "own_brand",
+      "brand[]",
+      "country[](공통 필터 의미로는)",
+      "lang[]",
+      "engine[]",
+      "from/to",
+      "funnel[]",
+      "brand_presence[]",
+      "list_type[]",
+      "depth1~3[]",
+      "source[]"
+    ],
+    "extra_params": [
+      "project_id: uuid, path — 소속 프로젝트",
+      "keyword_id: uuid, path — app.project_tracked_keyword.keyword_id",
+      "term: string, body — 신규/애드혹 검색어(공백 trim, 빈 값 400)",
+      "country: string(ISO2, 단일값), body/query, 기본값=프로젝트 country — 공통 필터의 country[] 배열과 무관, DataForSEO location_code/language_code로 서버가 변환",
+      "depth: int, query, 기본 10 — SERP 조회 개수 상한",
+      "fresh: bool, query, 기본 false — true면 insight GET도 refresh 동작으로 승격할지, 혹은 refresh 전용 엔드포인트만 쓸지는 open_questions",
+      "ids: uuid[], query — 다건 삭제 대상"
+    ]
+  },
+  "id": "IN-1",
+  "metrics_rules": [
+    "이 단위는 M01~M12·R01~R13 지표·규칙을 소비하지 않는다(언급·인용·측정 지표가 아니라 DataForSEO 외부 데이터 조회)",
+    "공통 응답 형태({data, meta:{surface,mode,as_of,...}}) 는 이 단위에는 surface·회차 개념이 없어 meta.surface 생략 또는 고정값 'intent' 로 표시 — 계약과 다른 부분이라 open_questions 로 이관",
+    "D8(파생 층 금지) 준수: rd.kw_* 는 사전집계가 아니라 DataForSEO 응답의 좁은 투영(그레인 1:1) — 신설 요약 표 없음",
+    "A17 준수 시도: app.project_tracked_keyword·app.kw_prompt_draft·app.prompt_candidate 쓰기는 api_rw 로 표준 경로. 단 ext.dfs_call·rd.kw_* 쓰기는 계약상 loader 전용(§3 표) 이라 이 단위 API가 직접 못 씀 — open_questions #1",
+    "GGMD 시나리오 3-2 관례(계약 문서 밖, 현행 코드 주석 근거 app/.../_actions.ts:33-39): DataForSEO/LLM 유료 호출은 운영자 권한 게이트"
+  ],
+  "open_questions": [
+    "① ext.dfs_call·rd.kw_volume_monthly·rd.kw_serp·rd.kw_suggestion 의 쓰기 주체는 계약 §3(db/DB-보정.md:32)에 loader(적재기) 로 못박혀 있고, api_ro는 default_transaction_read_only=on(db/DB-v2.sql:836), api_rw는 app 스키마만 쓸 수 있다(db/DB-v2.sql:839-843). 그런데 키워드 검색/재조회는 사용자가 버튼을 누르면 수 초 안에 응답해야 하는 대화형·동기 기능이라 20분 폴(A10) 배치 loader 모델과 맞지 않는다. 옵션: (a) FastAPI 안에 loader 와 동등한 별도 DB 역할/커넥션을 쓰는 'collector' 하위 라우터를 둔다(api_ro/api_rw 풀과 분리) (b) 진짜 loader 프로세스에 요청을 큐잉하고 API는 폴링 응답으로 전환한다(UX 저하) (c) ext/rd.kw_* 쓰기 권한을 api_rw 에도 부여하도록 DB 설계를 조정한다(계약 §3 재검토 필요). 권장: (a).",
+    "② app.judgment_change 의 kind CHECK 목록(db/DB-v2.sql:75-78)에 키워드/DataForSEO 관련 kind가 없어 ①의 (b) 경로도 현재 스키마로는 못 만든다 — kind 추가는 스키마 변경 제안 필요.",
+    "③ 관리자 전용 대량 볼륨 조회 도구(/api/keyword/volume, 현행 /admin/keyword-tools)는 계약이 준 고정 엔드포인트 목록(/v1/admin/*)에 없다. IN-1에 포함해 /v1/intent/keywords/admin/volume 같은 하위 경로로 둘지, 별도 관리자 모듈 소관으로 뺄지 결정 필요.",
+    "④ POST /api/keyword/prompt-to-volume, /api/keyword/to-prompt(범용 프롬프트↔키워드 변환, 관리자용, 프로젝트 비종속)는 IN-1 소속인지 Prompt 모듈 소속인지 불명확 — 현재 설계에는 미포함, 필요하면 별도 제안.",
+    "⑤ POST /v1/intent/candidates(app.prompt_candidate 삽입)는 IN-1·IN-2 두 단위가 공유하는데, 주어진 고정 API 목록의 어느 모듈에도 프롬프트 후보 쓰기 엔드포인트가 없다 — Prompt 모듈이 소유하고 이 단위는 source=google_keyword 로만 호출하는 클라이언트여야 하는지 확인 필요.",
+    "⑥ SERP/연관검색어 신선도(TTL) 규칙이 계약 R01~R13에 없다 — 현행은 코드 상수(insight 24h, related 7d, lib/keyword/cache.ts:41-44). 신설계에서 이 정책을 API 레이어 상수로 유지할지 app.rule_param(신규 kind, 계약 §1 rule_param 목록에 없음)으로 편입할지 결정 필요.",
+    "⑦ app.project_tracked_keyword.country_code(자유 텍스트)와 rd.kw_*.location_code/language_code(DataForSEO 코드)를 잇는 매핑은 DB에 없고 lib/keyword/location-presets.ts 의 정적 30개국 배열뿐이다 — FastAPI 이식 시 파이썬 상수로 그대로 옮길지, DB 차원 테이블로 승격할지(D8 예외 대상 아님, 순수 참조 데이터라 문제 없음) 확인.",
+    "⑧ GET .../insight 를 항상 캐시만 반환하게 하면 '한 번도 조회 안 한 키워드'는 빈 응답이 된다 — 추적 키워드 추가(POST /v1/intent/keywords) 시점에 서버가 즉시 최초 refresh를 트리거할지(그러면 ①의 쓰기 경로가 이 엔드포인트에도 필요), 클라이언트가 추가 직후 별도로 refresh를 호출하게 할지 결정 필요."
+  ],
+  "parity": "F01~F07 은 전부 KPI/언급/인용 집계 대조(harness README:71-76)라 이 단위와 무관 — 새 대조 항목 제안: 현행 3개 API(/api/keyword/insight, /api/keyword/related, /api/keyword/search)를 같은 term+country로 호출해 얻은 trend(12개월 search_volume 배열)·serp(rank·url·title 목록)·related(term·volume·intent 목록) 값을 신규 API 응답과 키 단위(term_norm, location_code, language_code)로 정렬 후 diff. DataForSEO 응답 자체가 실시간이라 완전 동치는 기대 불가 — \"같은 call_id/캐시 스냅샷을 신구가 공유하도록 한 번 조회 결과를 고정해두고 비교\" 전제가 필요(제안: 대조 시점에 신규 API로 refresh 1회 실행 → 그 스냅샷을 구 코드가 캐시 경유로 읽게 만들거나, 구 코드 응답을 캡처해두고 신규 API가 같은 kw_key/call_id를 읽는지 확인).",
+  "perf": {
+    "indexes": [
+      "rd.dim_keyword UNIQUE(term_norm) — 용어→kw_key 단건 조회",
+      "rd.kw_volume_monthly PK(kw_key, location_code, language_code, month) — 12개월 범위 포인트 스캔",
+      "kw_serp_latest ON rd.kw_serp(kw_key, location_code, language_code, call_id DESC) — 최신 SERP 호출 찾기",
+      "rd.kw_serp PK(call_id, rank) — 그 호출의 행 전체 스캔(≤depth)",
+      "kw_suggestion_latest ON rd.kw_suggestion(seed_kw_key, location_code, language_code, call_id DESC) — 최신 연관어 호출 찾기",
+      "rd.kw_suggestion PK(call_id, pos) — 그 호출의 행 전체 스캔(≤30)",
+      "app.project_tracked_keyword PK(keyword_id), UNIQUE NULLS NOT DISTINCT(project_id, term, country_code) — 목록/추가 유니크 검사",
+      "dfs_call_kw_gin ON ext.dfs_call USING gin(keywords) — refresh 시 최근 동일 keyword 호출 이력 조회(중복 호출 방지용, 필요 시)"
+    ],
+    "notes": "모든 조회가 (kw_key, location_code, language_code) 또는 (project_id) 로 정확히 좁혀지는 포인트/최신-호출 조회라, 테이블 폭이 10배(추적 키워드·과거 호출 이력 10배)가 되어도 한 요청이 읽는 행 수는 늘지 않는다 — kw_serp/kw_suggestion 은 항상 '최신 call_id 1건'만 골라 그 행만 읽으므로 이력이 쌓여도 스캔 폭이 고정이다. GET /v1/intent/keywords(목록)만 project_id 로 project_tracked_keyword 전체를 스캔하는데, 프로젝트당 키워드 수는 UI 상 소수(탭 형태)이므로 10배(≈500행)라도 무시할 만하다. 쓰기 경로(refresh/search)는 외부 DataForSEO 호출 지연(수백 ms~수 초)이 DB 스캔보다 압도적으로 커서 DB 성능이 병목이 아니다.",
+    "risk": "low",
+    "rows_scanned": "10배에서도 요청당 O(수십) 행 — 트렌드 ≤12, SERP ≤depth(기본 10), 연관어 ≤30, 목록 ≤수백(project_tracked_keyword 전체, 프로젝트당). 전용 leaf/파티션 없음(kw_* 는 파티션 표가 아님) — 가지치기 조건은 WHERE kw_key/location_code/language_code = 상수뿐."
+  },
+  "purpose": "고객이 관심 갖는 검색어의 검색량 추이·SERP 경쟁 현황·연관 검색어를 조회하고, 그 결과를 측정 프롬프트 후보로 승격시키는 창구. DataForSEO(Google Ads 월별 검색량·구글 SERP·키워드 제안)를 원천으로, 트래킹 중인 키워드별로 12개월 검색량 트렌드와 최신 SERP 10건을 캐시된 값으로 즉시 보여주고, 버튼 클릭 시에만 유료 실시간 재조회를 한다.",
+  "query_design": "\"1) 목록: SELECT tk.keyword_id, tk.term, tk.country_code, tk.created_at, vm.month, vm.search_volume FROM app.project_tracked_keyword tk LEFT JOIN LATERAL (SELECT month, search_volume FROM rd.kw_volume_monthly v JOIN rd.dim_keyword dk ON dk.kw_key=v.kw_key WHERE dk.term_norm=lower(tk.term) AND v.location_code=:loc AND v.language_code=:lang ORDER BY v.month DESC LIMIT 1) vm ON true WHERE tk.project_id=:project_id ORDER BY tk.created_at; (:loc/:lang 은 tk.country_code 를 서버 상수 프리셋으로 변환한 값)\\n\\n2) insight GET(트렌드): SELECT kw_key FROM rd.dim_keyword WHERE term_norm=lower(:term); 이어서 SELECT month, search_volume, competition_index, cpc, observed_at FROM rd.kw_volume_monthly WHERE kw_key=:kw_key AND location_code=:loc AND language_code=:lang ORDER BY month DESC LIMIT 12.\\n\\n3) insight GET(SERP): SELECT call_id FROM rd.kw_serp WHERE kw_key=:kw_key AND location_code=:loc AND language_code=:lang ORDER BY call_id DESC LIMIT 1; 그 call_id로 SELECT s.rank, s.url, s.domain, s.title, s.snippet, s.observed_at, d.prompt, d.model FROM rd.kw_serp s LEFT JOIN app.kw_prompt_draft d ON d.serp_call_id=s.call_id AND d.rank=s.rank WHERE s.call_id=:call_id ORDER BY s.rank.\\n\\n4) related GET: SELECT call_id FROM rd.kw_suggestion WHERE seed_kw_key=:kw_key AND location_code=:loc AND language_code=:lang ORDER BY call_id DESC LIMIT 1; 그 call_id로 SELECT su.pos, dk.term, su.search_volume, su.intent, su.is_seed FROM rd.kw_suggestion su JOIN rd.dim_keyword dk ON dk.kw_key=su.kw_key WHERE su.call_id=:call_id ORDER BY su.pos.\\n\\n5) refresh(쓰기, loader급 권한 필요 — open_questions①): DataForSEO search_volume+serp_organic 호출 → INSERT ext.dfs_call(엔드포인트별 1행, request/response jsonb, cost) → INSERT rd.dim_keyword ON CONFLICT(term_norm) DO NOTHING 후 RETURNING/SELECT 로 kw_key 확보(seed·연관어 각각) → INSERT rd.kw_volume_monthly ... ON CONFLICT(kw_key,location_code,language_code,month) DO UPDATE SET search_volume=...,call_id=...,observed_at=now() → INSERT rd.kw_serp(신규 call_id, rank별) → 트랜잭션 커밋. related refresh/search 도 동일 패턴으로 rd.kw_suggestion에 INSERT.\\n\\n6) prompt 초안(쓰기, api_rw): LLM 호출 후 INSERT app.kw_prompt_draft(serp_call_id, rank, gen, prompt, model) — gen 은 같은 (serp_call_id,rank)에 재생성 시 +1.\\n\\n7) candidates(쓰기, api_rw): INSERT app.prompt_candidate(project_id, source='google_keyword', source_keyword=:term, text=:text).\"",
+  "read_model": [
+    "app.project_tracked_keyword.keyword_id / .project_id / .term / .country_code / .created_at",
+    "rd.dim_keyword.kw_key / .term / .term_norm",
+    "rd.kw_volume_monthly.kw_key / .location_code / .language_code / .month / .search_volume / .competition_index / .cpc / .call_id / .observed_at",
+    "rd.kw_serp.call_id / .kw_key / .location_code / .language_code / .rank / .url / .domain / .title / .snippet / .observed_at",
+    "rd.kw_suggestion.call_id / .seed_kw_key / .location_code / .language_code / .pos / .kw_key / .search_volume / .intent / .is_seed",
+    "app.kw_prompt_draft.serp_call_id / .rank / .gen / .prompt / .model / .generated_at",
+    "app.prompt_candidate.candidate_id / .project_id / .source / .source_keyword / .text / .created_at",
+    "ext.dfs_call.call_id / .endpoint / .location_code / .language_code / .keywords / .request / .response / .status_code / .cost / .requested_by / .project_id / .requested_at (쓰기 대상, 조회에는 비용 집계용으로만 필요 시 참조)"
+  ],
+  "response": "\"insight: { data: { keyword_id, term, country, trend: [{month, search_volume}]×≤12, serp: [{rank, url, domain, title, snippet, suggested_prompt}]×≤depth, as_of(관측시각) }, meta:{...} }. related: { data: { found_count, items: [{term, search_volume, intent, is_seed}]×≤30 }, meta:{...} }. 목록: { data: [{keyword_id, term, country, created_at, latest_month, latest_volume}], meta:{...} }. search(다건): { data: [{term, search_volume, intent, found_count, related:[...]}], meta:{...} }. candidates POST: { data: {candidate_id}, meta:{...} }. 볼륨·순위는 정수 그대로(비율 없음 — 분자/분모 불필요).\"",
+  "screens": [
+    "projects/[id]/intent/google-keyword (탭별 검색량 추이 + SERP + 관련 검색어)",
+    "projects/[id]/intent 빈 상태(다건 키워드 최초 검색)",
+    "admin/keyword-tools(관리자 볼륨 대량 조회 — 이 설계에 포함할지는 open_questions)"
+  ],
+  "title": "IN-1 키워드 (/v1/intent/keywords)",
+  "writes": "\"app.project_tracked_keyword(추적 키워드 추가/삭제) · app.kw_prompt_draft(SERP 행 LLM 프롬프트 초안) · app.prompt_candidate(후보 풀 추가) 는 표준 api_rw 경로(트랜잭션 경계 = 요청 1건, 감사 로그는 계약에 이 세 테이블 전용 항목이 없어 별도 audit 미기록 — 필요하면 제안). ext.dfs_call·rd.kw_volume_monthly·rd.kw_serp·rd.kw_suggestion(DataForSEO 실시간 재조회 결과) 은 계약상 쓰기 주체가 loader뿐이라 이 단위 API가 직접 쓸 표준 권한이 없음 — open_questions①에서 별도 collector 쓰기 경로를 제안. 그 경로가 확정되면: 트랜잭션 경계 = 외부 호출 1회당(성공 응답 수신 후) ext.dfs_call INSERT 1건 + rd.kw_* INSERT/UPSERT 를 한 트랜잭션으로 커밋, 실패 시 ext.dfs_call 만 status_code!=200 으로 기록하고 rd.kw_* 는 쓰지 않음.\""
+}

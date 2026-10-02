@@ -1,0 +1,128 @@
+{
+  "id": "C-4",
+  "title": "타겟·자사 URL 인용률 (GET /v1/citations/targets)",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/v1/citations/targets",
+      "summary": "웹사이트(추후 프로젝트) 타겟 URL 인용률(M06)·자사 URL 인용률(M07) 요약값. 스냅샷·기간 모두 지원, 발행 회차는 리포트 값 우선(R09/A5)"
+    }
+  ],
+  "purpose": "웹사이트 프롬프트가 겨냥한 지정 타겟 URL 이 그 측정에서 실제로 인용됐는지(M06), 자사 URL(선언 base ∪ 타겟)이 인용됐는지(M07)를 측정 단위(A2)로 집계한 요약 카드값을 낸다. 현행 /website/answer-analysis/citation 의 '자사·타겟 URL 인용률' 요약카드(citations.summary.ownedHitRate/targetHitRate)를 대체한다.",
+  "screens": [
+    "/website/answer-analysis/citation (요약카드: 자사·타겟 URL 인용률)"
+  ],
+  "filters": {
+    "supported": [
+      "surface(쿼리 파라미터, website 고정. project 확장은 open_questions)",
+      "own_brand(서버 결정)",
+      "brand[]",
+      "country[]",
+      "lang[]",
+      "engine[]",
+      "from/to"
+    ],
+    "ignored": [
+      "funnel[]",
+      "brand_presence[]",
+      "list_type[]",
+      "depth1[]~depth3[]",
+      "source[]"
+    ],
+    "extra_params": []
+  },
+  "response": "{ data: { measured: int, target: { hits: int, rate: number|null }, owned: { hits: int, rate: number|null } }, meta: { surface, mode: snapshot|cumulative, as_of, cycles, generation, source: 'report'|'live', publication_slug?: string, ignored_filters, dropped_filters, suppressed } }. rate = round1(100*hits/measured), measured=0 이면 rate=null(측정 대기). 분자·분모는 항상 정수(P3), 퍼센트는 저장하지 않고 응답 시점에 파생.",
+  "metrics_rules": [
+    "A2: M06·M07 을 프롬프트 단위(비가산)에서 측정 단위(가산)로 전환 — 분모=측정(웹사이트 등록 프롬프트의 완료 측정), 분자=그 측정에서 타겟/자사 URL 적중",
+    "M06/M07: 스펙 §6 표는 M07 그레인을 '유닛'·비가산으로 적었으나, 확정 DB 설계(DB-인용-도메인-웹사이트.md §1·§6 D-C3)는 M06·M07 모두 rd.answer 의 답변 행 불리언(web_reg, tgt_cited, own_url_cited)으로 굳혀 두 지표를 동일하게 측정 단위·가산형으로 낸다. 이 설계는 확정 DB 를 따른다(open_questions 1)",
+    "R05/A1: 스냅샷 = 최신 노출 회차의 모든 완료 측정(대표 1건 아님)",
+    "R06/D1: 기간 누적 = anchor_date 가 기간 안인 모든 완료 측정의 합",
+    "R07: 분모 게이트로 언급 계열 std_in 이 아니라 인용 전용 게이트 cit_in(분석 갭 미포함 여부 무관, G-21 g) 사용",
+    "R03/R04: 노출일 ≤ 오늘(KST)인 회차만, hidden_scope 가 all·citations 인 회차는 제외(인용 계열 숨김)",
+    "엔진 필터: engine[] 비면 dflt=true(기본 엔진)만, 있으면 engine_key = ANY(선택)",
+    "R09/A5(D-C9): 조회 회차에 status='active' 발행물이 있고 켜진 필터가 발행 축(brand/country/lang, in_headline_pool)뿐이면 rd.report_unit_value 합산값으로 대체. 엔진 축을 기본이 아닌 값으로 좁히면(report_unit_value 에 엔진 축 없음) 발행값 라우팅 불가 → 라이브 + meta.source='live'",
+    "own_url_cited 는 '타겟 ⊂ 자사'(2026-09-06 결정) 원칙상 tgt_cited 를 포함해야 하나 적재 정의가 그 포함을 보장하는지 미확인 — 쿼리에서 own_url_cited OR tgt_cited 로 방어적 OR(현행 aggregateWebsiteTargetHitRate 의 owned_prompts 산식과 동일 보수화)"
+  ],
+  "read_model": [
+    "rd.answer.surface",
+    "rd.answer.round_date",
+    "rd.answer.cyc_key",
+    "rd.answer.project_key",
+    "rd.answer.engine_key",
+    "rd.answer.geo_key",
+    "rd.answer.lang_key",
+    "rd.answer.bgrp",
+    "rd.answer.dflt",
+    "rd.answer.cit_in",
+    "rd.answer.web_reg",
+    "rd.answer.tgt_cited",
+    "rd.answer.own_url_cited",
+    "rd.cycle.cyc_key",
+    "rd.cycle.surface",
+    "rd.cycle.project_key",
+    "rd.cycle.round_date",
+    "rd.cycle.servable",
+    "rd.cycle.view_date",
+    "rd.cycle.hidden_scope",
+    "rd.cycle.generation",
+    "rd.dim_country.geo_key",
+    "rd.dim_country.region_key",
+    "rd.dim_country.virtual_brand_bit",
+    "rd.dim_project.project_key",
+    "rd.dim_project.surface",
+    "rd.dim_project.is_root",
+    "app.report_publication.id",
+    "app.report_publication.surface",
+    "app.report_publication.round_date",
+    "app.report_publication.brand_scope",
+    "app.report_publication.status",
+    "rd.report_unit_value.round_date",
+    "rd.report_unit_value.pub_id",
+    "rd.report_unit_value.brand",
+    "rd.report_unit_value.country_code",
+    "rd.report_unit_value.lang_code",
+    "rd.report_unit_value.in_headline_pool",
+    "rd.report_unit_value.target_hit_prompts",
+    "rd.report_unit_value.measured_prompts",
+    "rd.report_unit_value.owned_prompts",
+    "rd.report_unit_value.owned_prompts_den"
+  ],
+  "query_design": "라이브 경로(발행값 미해당 시): WITH allowed_cyc AS (SELECT cyc_key FROM rd.cycle WHERE surface=2 AND project_key = ANY(:scope_project_keys) AND round_date BETWEEN :from AND :to AND servable AND view_date <= (now() AT TIME ZONE 'Asia/Seoul')::date AND hidden_scope NOT IN (1,2)) SELECT count(*) AS measured, count(*) FILTER (WHERE tgt_cited) AS target_hit, count(*) FILTER (WHERE own_url_cited OR tgt_cited) AS owned_hit FROM rd.answer_w WHERE surface=2 AND round_date BETWEEN :from AND :to AND cyc_key = ANY(SELECT cyc_key FROM allowed_cyc) AND project_key = ANY(:scope_project_keys) AND web_reg AND cit_in AND (CASE WHEN :engine_empty THEN dflt ELSE engine_key = ANY(:engine_keys) END) AND geo_key = ANY(:allowed_geo_keys) AND (:lang_empty OR lang_key = ANY(:lang_keys)) AND (:brand_empty OR bgrp = ANY(:brand_masks)). 스냅샷(from/to 미지정)은 round_date = 최신 노출 회차 1개로 좁힌다(cycle_pick_idx 로 조회). 발행값 경로(R09 조건 충족 시): SELECT coalesce(sum(measured_prompts),0), coalesce(sum(target_hit_prompts),0), coalesce(sum(owned_prompts),0) FROM rd.report_unit_value v JOIN app.report_publication p ON p.id = v.pub_id AND p.status='active' WHERE v.round_date = :published_round_date AND v.in_headline_pool AND v.brand = ANY(:allowed_brands) AND (:country_empty OR v.country_code = ANY(:countries)) AND (:lang_empty OR v.lang_code = ANY(:langs)). 라우팅 판정(엔진이 기본값뿐이고 brand/country/lang 만 켜졌는지, 권한이 발행 모집단을 덮는지)은 현행 resolveReportTruthRoute/decidePublishedSelection(server.ts:5083-5150) 로직을 이식.",
+  "perf": {
+    "risk": "low",
+    "rows_scanned": "라이브: 웹 답변 2만~100만행(DB-인용-도메인-웹사이트.md §5 'M06·M07 카드·추이' 행, r.answer 불리언 스캔만·자식 조인 없음). 발행값: 회차당 rd.report_unit_value 105행(같은 문서 §5 '발행값 라우팅')",
+    "indexes": [
+      "rd.answer 파티션 LIST(surface)→RANGE(round_date) 가지치기",
+      "cycle_pick_idx (surface, round_date DESC) INCLUDE(cyc_key, project_key, servable, view_date, hidden_scope, generation) — allowed_cyc 산출",
+      "answer_cell_idx (surface, round_date, cyc_key, prompt_key, engine_key, geo_key) — 스냅샷·엔진 좁히기",
+      "answer_rd_brin (round_date) — 기간 누적 leaf 다건일 때 보조",
+      "제안: answer_w_project_idx ON rd.answer_w(project_key, round_date) — 현행 answer_p_proj_idx(project 표면 전용)와 대칭. 참고 문서가 이미 '낮음'으로 판정해 필수는 아니나 10배 실측에서 project_key 필터 비용이 확인되면 채택"
+    ],
+    "notes": "D8 범위 안(조인 제거·파티션 가지치기·불리언/ANY 술어)만 쓴다. 1년 전체 조합도 '낮음'으로 문서화돼 있으나 서울 RDS 10배 콜드 실측 게이트는 아직 없다(§3 성능 근거의 한계, DESIGN-CONTRACT §3)."
+  },
+  "auth": "표준 3계층(scope·route·operator) 중 scope 만 관여: 서버가 세션에서 brand/country/project 스코프를 계산해 :scope_project_keys·:allowed_geo_keys·(발행 경로의) :allowed_brands 에 교집합 주입(default-deny, 스코프 공집합이면 거부). 관점 브랜드(own_brand)는 클라이언트가 못 바꾼다. route-policy 는 /website/answer-analysis/citation 진입 자체에 적용(이 엔드포인트 자체는 게이트 대상 아님). 운영자(비용 액션) 게이트 없음, 읽기 전용.",
+  "writes": "없음",
+  "current_refs": [
+    "lib/scope/server.ts:5194 fetchWebsiteTargetHitRate",
+    "lib/scope/server.ts:5210 EMPTY_WEBSITE_PROMPT_HIT_RATES",
+    "lib/scope/server.ts:5179 websiteTargetHitRateLive",
+    "lib/scope/server.ts:5103 websiteTargetHitRateFromPublication",
+    "lib/db/repositories/scope-aggregates.ts:8845 aggregateWebsiteTargetHitRate",
+    "lib/db/repositories/scope-aggregates.ts:8797 WebsiteTargetHitRateResult",
+    "lib/db/repositories/scope-aggregates.ts:8760 aggregateWebsiteCitationAccuracy(⑥, 답변 그레인·다른 산식)",
+    "lib/db/repositories/scope-aggregates.ts:8990 websitePromptUrlHitJobFlagsSql(job 그레인 target_hit/owned_hit, rd.answer.tgt_cited/own_url_cited 의 현행 대응)",
+    "lib/db/repositories/scope-aggregates.ts:8162 aggregateCitationAccuracy(프로젝트 표면 KPI⑥, 별도 답변 그레인 함수)",
+    "lib/db/schema.ts:1676 reportPublications, :1721 reportSiteFacts, :1758 reportSiteEngineFacts",
+    "lib/db/schema.ts:139 projectOwnedBases, :159 projectTrackedUrls",
+    "app/[locale]/(dash)/website/answer-analysis/citation/page.tsx:151-156 (요약카드 호출부)",
+    "components/dash/citations-view.tsx:459-492 (자사·타겟 URL 인용률·딜러 비중 카드)"
+  ],
+  "parity": "하네스 F01(website)의 target_rate = hitPrompts/measuredPrompts 가 기존 대조점(harness/README.md old provider 표). ownedRate(자사 URL 인용률)는 F01 에 없어 새 대조 항목 추가 필요 — combos.json 의 12개 조합에 대해 이 엔드포인트의 measured/target.hits/target.rate/owned.hits/owned.rate 5개 값을 values-old.jsonl(aggregateWebsiteTargetHitRate 직접 호출) 대비 검증. 발행값 라우팅(source='report')은 R09 활성 회차가 있는 조합에서 rd.report_unit_value 합산값과 report_site_fact 원본 합산값을 대조.",
+  "open_questions": [
+    "M06·M07 그레인 표기 불일치: 스펙 §6 표는 M07 을 '유닛'·비가산으로 적었지만 확정 DB 설계(DB-인용-도메인-웹사이트.md)는 둘 다 답변 행 불리언·가산으로 확정했다. 이 설계는 DB 를 따랐는데, 스펙 표기 정정이 필요한지 확인 요청",
+    "surface=project 확장 여부: app.project_owned_base/app.project_tracked_url(현행 project_owned_bases/project_tracked_urls)이 이미 있고 '프로젝트 자사·추적' 판정이 rd.citation.loc_owned/tgt_hit 재판정 트리거 표에 실려 있어(DB-인용-도메인-웹사이트.md §4) rd.answer.tgt_cited/own_url_cited 가 project 표면도 커버할 개연성이 있다. 다만 web_reg 플래그는 website 카탈로그 등록 전용이라 project 표면 분모 정의가 다르다(현행 KPI⑥ aggregateCitationAccuracy 는 답변 그레인이지 M06 과 산식이 다르다). project 표면을 이 엔드포인트에 합칠지, KPI⑥ 을 별도 유지할지 결정 필요",
+    "own_url_cited 가 적재 시점에 tgt_cited 를 이미 포함하는지: 포함되면 쿼리의 방어적 OR 가 불필요해져 더 단순해진다. 코어 적재 영역에 정의 확인 요청",
+    "엔진별 세부: report_unit_value/report_site_engine_fact 는 target_hit_prompts 만 엔진별로 있고 owned_prompts 엔진별 값이 없다. 엔진 필터가 기본값이 아닐 때 발행값 경로를 전면 배제할지, target 만 발행값을 쓰고 owned 는 항상 라이브로 쪼갤지 결정 필요(현재 설계는 전면 배제로 보수화)",
+    "이 엔드포인트가 요약값 외에 등록 타겟 URL별 적중 여부(드릴다운 리스트)도 내야 하는지: 현행 화면(citations-view.tsx)에는 요약카드만 있고 타겟 URL별 표는 없다. 필요하면 C-1/C-3 과의 경계, D8 예외 필요 여부를 별도 논의해야 한다"
+  ]
+}
