@@ -20,6 +20,7 @@ Front(Next.js)** 3층으로 다시 짜는 재설계입니다. 아래를 중심�
 | `front/` | 현행 대시보드. 화면은 유지하고 서버 데이터 함수만 back API 호출로 교체하는 중 |
 | `infra/` | AWS CLI 구성 스크립트(상태·비밀 파일은 원본에도 커밋되지 않음) |
 | `ANALYSIS-ENGINE-DESIGN.md` | 분석 엔진 Python 통합·분석 버전 관리 **설계 초안**(검토 중, 미구현) |
+| `docs/interfaces/scope-measurement-interface-v0.1.md` | Scope 측정 연동 인터페이스 **v0.1 협의안**(측정 대상 관리·수동 측정·원문 조회 API, OpenSpec 변경안 포함) |
 
 읽는 순서 제안: 이 문서 → 아래 원본 README → `docs/design/DESIGN-CONTRACT.md` →
 `back/FEATURES.md` → `docs/design/db/DECISIONS.md` → `docs/design/api/DECISIONS-API.md` →
