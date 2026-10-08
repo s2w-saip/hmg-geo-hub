@@ -128,6 +128,7 @@ export default async function AnswerDetailPage({
 
   return (
     <DetailShell
+      key={jobId}
       detail={data.detail}
       review={data.review}
       initialNotes={data.notes}

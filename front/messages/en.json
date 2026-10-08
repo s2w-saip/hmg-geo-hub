@@ -3248,6 +3248,7 @@
       "held": "{name} is reviewing this",
       "readOnly": "Another reviewer has this open, so it is read-only.",
       "lost": "The lock expired and another reviewer took it. Reopen from the queue.",
+      "unavailable": "Could not verify the lock. Your input is preserved. Reopen from the queue.",
       "badge": "In review",
       "mine": "You have this"
     },
@@ -3270,6 +3271,7 @@
       "addNote": "Add note",
       "reviewedBy": "{name} · {at}",
       "saved": "Saved",
+      "saveFailed": "Could not save. Your input is preserved. Please save again.",
       "shortcuts": "Shortcuts: J next · K previous · O save · N note",
       "acrScopeNotice": "This is the ACR rollup for the prompt-run, not for this single answer.",
       "noAcr": "No ACR rollup for this answer.",

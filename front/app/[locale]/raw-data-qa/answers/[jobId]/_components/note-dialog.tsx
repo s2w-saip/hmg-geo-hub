@@ -20,11 +20,13 @@ import type { NoteTarget, SerializedNote } from "./types";
 // scope_citations.id 가 바뀌면 targetKey 만으로는 무엇을 지목했는지 알 수 없다.
 export function NoteDialog({
   jobId,
+  readOnly = false,
   target,
   onClose,
   onCreated,
 }: {
   jobId: string;
+  readOnly?: boolean;
   target: NoteTarget | null;
   onClose: () => void;
   onCreated: (note: SerializedNote) => void;
@@ -48,7 +50,7 @@ export function NoteDialog({
   };
 
   async function submit() {
-    if (!target || !body.trim()) return;
+    if (readOnly || !target || !body.trim()) return;
     setBusy(true);
     try {
       const res = await fetch("/api/qa/note", {
@@ -125,7 +127,7 @@ export function NoteDialog({
           <Button variant="ghost" onClick={onClose}>
             {t("common.cancel")}
           </Button>
-          <Button onClick={submit} disabled={busy || !body.trim()}>
+          <Button onClick={submit} disabled={readOnly || busy || !body.trim()}>
             {busy ? t("common.saving") : t("common.save")}
           </Button>
         </DialogFooter>
