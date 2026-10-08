@@ -880,10 +880,10 @@ export async function setPromptCustomFieldValueBulk(
   promptIds: string[],
   fieldId: string,
   value: string,
-): Promise<ActionResult<{ count: number }>> {
+): Promise<import("@/lib/projects/bulk-field-result").BulkFieldResult> {
   if (api.isProjectsApi()) {
     const r = await api.setPromptCustomFieldValueBulk(projectId, promptIds, fieldId, value);
-    if (r.ok) revalidatePath(`/projects/${projectId}/prompt`);
+    if (r.ok || r.progress) revalidatePath(`/projects/${projectId}/prompt`);
     return r;
   }
   await requireOwner(projectId);

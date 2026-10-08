@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { exportCatalogPages, type CatalogPageQuery, type RemoteCatalog } from "@/lib/standards/catalog-page";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -271,6 +272,7 @@ function MarketCell({
 
 export function StandardPromptReadonlyList({
   rows,
+  remote,
   scopeAll,
   scopeRole,
   scopeBrands,
@@ -278,6 +280,7 @@ export function StandardPromptReadonlyList({
   scopeCountries,
 }: {
   rows: StandardPromptViewRow[];
+  remote?: RemoteCatalog;
   scopeAll: boolean;
   scopeRole: Role;
   scopeBrands: string[];
@@ -309,27 +312,30 @@ export function StandardPromptReadonlyList({
   // table. They only sync when the user presses 적용.
   const [draft, setDraft] = useState<FilterState>(EMPTY_FILTER);
   const [applied, setApplied] = useState<FilterState>(EMPTY_FILTER);
+  const [remotePage, setRemotePage] = useState(remote?.initial);
+  const [readError, setReadError] = useState<Error | null>(null);
+  const firstRead = useRef(true);
   // 변경 이력 타임라인 다이얼로그 (catalog-prompt-audit — 열람 전용).
   const [timelineRow, setTimelineRow] = useState<{ id: string; text: string } | null>(null);
 
   // ── Cascading option lists — each depth narrows by the PENDING (draft)
   // parent selection so the dropdowns react immediately, even before 적용.
   const listTypeOptions = useMemo(
-    () => sortedUnique(rows.map((r) => r.listType)),
-    [rows],
+    () => remotePage?.facets.listType ?? sortedUnique(rows.map((r) => r.listType)),
+    [rows, remotePage],
   );
   const depth1Options = useMemo(
     () =>
-      sortedUnique(
+      remotePage?.facets.depth1 ?? sortedUnique(
         rows
           .filter((r) => draft.listType === ALL || r.listType === draft.listType)
           .map((r) => r.depth1),
       ),
-    [rows, draft.listType],
+    [rows, draft.listType, remotePage],
   );
   const depth2Options = useMemo(
     () =>
-      sortedUnique(
+      remotePage?.facets.depth2 ?? sortedUnique(
         rows
           .filter(
             (r) =>
@@ -338,11 +344,11 @@ export function StandardPromptReadonlyList({
           )
           .map((r) => r.depth2),
       ),
-    [rows, draft.listType, draft.depth1],
+    [rows, draft.listType, draft.depth1, remotePage],
   );
   const depth3Options = useMemo(
     () =>
-      sortedUnique(
+      remotePage?.facets.depth3 ?? sortedUnique(
         rows
           .filter(
             (r) =>
@@ -352,11 +358,11 @@ export function StandardPromptReadonlyList({
           )
           .map((r) => r.depth3),
       ),
-    [rows, draft.listType, draft.depth1, draft.depth2],
+    [rows, draft.listType, draft.depth1, draft.depth2, remotePage],
   );
   const depth4Options = useMemo(
     () =>
-      sortedUnique(
+      remotePage?.facets.depth4 ?? sortedUnique(
         rows
           .filter(
             (r) =>
@@ -367,19 +373,19 @@ export function StandardPromptReadonlyList({
           )
           .map((r) => r.depth4),
       ),
-    [rows, draft.listType, draft.depth1, draft.depth2, draft.depth3],
+    [rows, draft.listType, draft.depth1, draft.depth2, draft.depth3, remotePage],
   );
   const funnelOptions = useMemo(
-    () => sortedUnique(rows.map((r) => r.funnelStage)),
-    [rows],
+    () => remotePage?.facets.funnel ?? sortedUnique(rows.map((r) => r.funnelStage)),
+    [rows, remotePage],
   );
   // 시장·언어 옵션은 **표시되는 행 전체**에서 파생한다 — 미측정 행까지 포함(D15).
   // 별도 어휘 조회 없이 rows 만으로 만든다(기존 funnelStage 패턴과 동일).
   const marketOptions = useMemo(
-    () => marketFilterOptions(rows.map((r) => r.regions)),
-    [rows],
+    () => remotePage?.facets.market ?? marketFilterOptions(rows.map((r) => r.regions)),
+    [rows, remotePage],
   );
-  const langOptions = useMemo(() => sortedUnique(rows.map((r) => r.lang)), [rows]);
+  const langOptions = useMemo(() => remotePage?.facets.lang ?? sortedUnique(rows.map((r) => r.lang)), [rows, remotePage]);
 
   // Picking a parent invalidates its children — reset them to "all".
   function updateDraft(patch: Partial<FilterState>) {
@@ -400,7 +406,7 @@ export function StandardPromptReadonlyList({
     [rows, query, applied],
   );
 
-  const { sorted, headerProps } = useSortableTable<StandardPromptViewRow, SortKey>(
+  const { sorted, sortKey, asc, headerProps } = useSortableTable<StandardPromptViewRow, SortKey>(
     filtered,
     {
       text: (r) => r.text,
@@ -444,31 +450,46 @@ export function StandardPromptReadonlyList({
     },
   );
 
-  // ── 클라이언트 페이지네이션 (2026-08-18 요청). 데이터는 이미 전량 클라이언트에
-  // 있으므로(스코프 계정당 수백 행) URL 왕복 없이 상태로만 나눈다. 필터·검색·정렬이
-  // 바뀌면 1페이지로 — 그대로 두면 빈 페이지가 뜬다(website prompt-table 선례).
+  // Keep the existing pager controls. Remote mode reads only the requested page;
+  // filters, search and sort still reset the visible page to the first one.
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
   const [page, setPage] = useState(1);
-  const pages = Math.max(1, Math.ceil(sorted.length / pageSize));
-  const sortedKey = sorted.map((r) => r.id).join("|");
+  const total = remotePage?.total ?? sorted.length;
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  const sortedKey = remote ? JSON.stringify([query, applied, sortKey, asc]) : sorted.map((r) => r.id).join("|");
   useEffect(() => {
     setPage(1);
   }, [sortedKey, pageSize]);
   const safePage = Math.min(page, pages);
   const pageRows = useMemo(
-    () => sorted.slice((safePage - 1) * pageSize, safePage * pageSize),
-    [sorted, safePage, pageSize],
+    () => remotePage?.rows ?? sorted.slice((safePage - 1) * pageSize, safePage * pageSize),
+    [sorted, safePage, pageSize, remotePage],
   );
-  const rangeFrom = sorted.length === 0 ? 0 : (safePage - 1) * pageSize + 1;
-  const rangeTo = Math.min(safePage * pageSize, sorted.length);
+  const rangeFrom = total === 0 ? 0 : (remotePage?.offset ?? (safePage - 1) * pageSize) + 1;
+  const rangeTo = Math.min(rangeFrom + pageRows.length - 1, total);
+  const readQuery: CatalogPageQuery = { filters: applied, draft, search: query, sort: sortKey, asc,
+    offset: (safePage - 1) * pageSize, limit: pageSize,
+    collation: Intl.Collator().resolvedOptions().locale.startsWith("ko") ? "ko" : "en",
+    market_labels: Object.fromEntries((remotePage?.facets.marketSort ?? marketOptions).map(code => [code, marketLabel(code)])) };
+  const readKey = JSON.stringify(readQuery);
+  useEffect(() => {
+    if (!remote) return;
+    // Initial SQL uses English ICU. Match the browser's existing Korean comparator after hydration.
+    if (firstRead.current) { firstRead.current = false; if (JSON.parse(readKey).collation !== "ko") return; }
+    let active = true;
+    const timer = setTimeout(() => {
+      remote.load(JSON.parse(readKey)).then(result => {
+        if (active) { setRemotePage(result); setReadError(null); }
+      }).catch(error => { if (active) setReadError(error instanceof Error ? error : new Error("Catalog read failed")); });
+    }, 120);
+    return () => { active = false; clearTimeout(timer); };
+  }, [readKey, remote]);
 
   // ── 엑셀 내보내기 ────────────────────────────────────────────────────────
-  // 넘기는 것은 `sorted` — 필터·검색·정렬이 걸린 **전량**(페이지 슬라이스 전).
-  // 화면이 그 배열의 앞 pageSize 개만 그리고 있을 뿐이라, 같은 객체를 직렬화하면
-  // "현재 페이지가 아니라 필터 전량"이 정의상 성립한다(prompt-export.ts 머리 주석).
+  // Export follows every filtered page in server order, never only visible rows.
   const [exporting, setExporting] = useState(false);
   async function handleExport() {
-    if (exporting || sorted.length === 0) return;
+    if (exporting || total === 0) return;
     setExporting(true);
     try {
       const labels: StandardPromptExportLabels = {
@@ -494,7 +515,9 @@ export function StandardPromptReadonlyList({
         statusMeasured: t("statusMeasured"),
         statusUnmeasured: t("statusUnmeasured"),
       };
-      const sheet = buildStandardPromptSheet(sorted, rows, labels, {
+      const exportRows = remote ? await exportCatalogPages(remote.load, readQuery) : sorted;
+      const columnRows = remotePage ? [Object.fromEntries(remotePage.columns.map(key => [key, "present"]))] as unknown as StandardPromptViewRow[] : rows;
+      const sheet = buildStandardPromptSheet(exportRows, columnRows, labels, {
         market: marketLabel,
         language: (code) => languageName(code, locale),
       });
@@ -550,8 +573,8 @@ export function StandardPromptReadonlyList({
           { key: "depth3", label: t("filterDepth3") },
           { key: "depth4", label: t("filterDepth4") },
         ] as const
-      ).filter((c) => rows.some((r) => r[c.key])),
-    [rows, t],
+      ).filter((c) => remotePage ? remotePage.columns.includes(c.key) : rows.some((r) => r[c.key])),
+    [rows, t, remotePage],
   );
 
   // depth selects render only when the current parent yields ≥1 real option,
@@ -569,6 +592,7 @@ export function StandardPromptReadonlyList({
     { key: "depth4", id: "sp-view-d4", label: t("filterDepth4"), options: depth4Options, minW: "min-w-36" },
   ];
 
+  if (readError) throw readError;
   return (
     // 배지 툴팁(대상 시장 접힘·미측정 사유)이 이 서브트리 안에서 뜬다.
     <TooltipProvider delayDuration={200}>
@@ -909,7 +933,7 @@ export function StandardPromptReadonlyList({
             variant="outline"
             size="sm"
             onClick={handleExport}
-            disabled={exporting || sorted.length === 0}
+            disabled={exporting || total === 0}
             className="h-8"
           >
             <Download className="h-3.5 w-3.5" aria-hidden />
@@ -917,12 +941,12 @@ export function StandardPromptReadonlyList({
           </Button>
 
           <span className="ml-auto self-center text-[11px] tabular-nums text-muted-foreground">
-            {t("filteredCount", { shown: sorted.length, total: rows.length })}
+            {t("filteredCount", { shown: total, total: remotePage?.count ?? rows.length })}
           </span>
         </div>
       </div>
 
-      {sorted.length === 0 ? (
+      {total === 0 ? (
         <p className="rounded-md border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
           {t("empty")}
         </p>
@@ -1101,11 +1125,11 @@ export function StandardPromptReadonlyList({
           </table>
         </div>
       )}
-      {sorted.length > 0 ? (
+      {total > 0 ? (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
             <span className="tabular-nums">
-              {t("pageRange", { from: rangeFrom, to: rangeTo, total: sorted.length })}
+              {t("pageRange", { from: rangeFrom, to: rangeTo, total })}
             </span>
             <span className="text-border">·</span>
             <Label htmlFor="sp-page-size" className="text-[11px] font-normal text-muted-foreground">

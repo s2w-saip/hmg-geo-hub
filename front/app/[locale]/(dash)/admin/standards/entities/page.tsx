@@ -17,7 +17,7 @@ import { draftChangeCount, ecatGate, requireAdminPage } from "./_ecat-data";
 // 기본값(명부 미등재)이라 저장되지 않는다 — 2026-07-03 결정.
 // Source (D8, HGH_SOURCE_G7): api reads GET /v1/admin/entities?surface=global (latest exposed
 // cycle, attributed display brand numbers: DC-13); rows carry the brand code an own assignment
-// needs (U11-N2). A backend failure other than auth degrades to an empty list, as legacy did.
+// needs (U11-N2). Failed reads reach the existing dashboard error boundary.
 // E7 (entity versioning): once an active version exists the page becomes the version manager:
 // the list (GET /v1/admin/entities + active and draft version rows, the real role incl. hidden
 // and removed), the draft bar and the entity drawer. Reads: versions and the list together, then
@@ -38,11 +38,7 @@ export default async function AdminStandardEntitiesPage({
     const [gate, list] = await Promise.all([
       ecatGate(locale),
       ecat.listEntityRows().catch((e) => {
-        try {
-          return api.degradeRead(e, [] as Awaited<ReturnType<typeof ecat.listEntityRows>>);
-        } catch (err) {
-          throwForPage(err, locale);
-        }
+        throwForPage(e, locale);
       }),
     ]);
     if (gate.kind === "unavailable") {
@@ -99,7 +95,7 @@ export default async function AdminStandardEntitiesPage({
     );
   }
 
-  const rows = await listDiscoveredBrands().catch(() => []);
+  const rows = await listDiscoveredBrands();
   return (
     <div className="flex animate-fade-in flex-col gap-6">
       <PageHeader title={t("title")} description={t("subtitle")} />

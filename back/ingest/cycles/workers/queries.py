@@ -28,32 +28,45 @@ FAILED = "UPDATE app.judgment_change SET status = 'failed', claimed_at = coalesc
 ESCALATED = """
 UPDATE app.judgment_change SET status = 'escalated_rebuild', claimed_at = coalesce(claimed_at, now()), error = $2 WHERE change_id = $1
 """
-RUNNING = "UPDATE app.judgment_change SET status = 'running', claimed_at = now() WHERE change_id = $1"
+RUNNING = "UPDATE app.judgment_change SET status = 'running', claimed_at = clock_timestamp() WHERE change_id = $1 RETURNING claimed_at"
+DFS_RECOVER = """
+UPDATE app.judgment_change SET status = 'failed', error = 'dfs_outcome_unknown: worker lease expired; reconcile before retry'
+ WHERE kind = 'dfs_fetch' AND status = 'running'
+   AND coalesce(claimed_at, requested_at) < coalesce($1::timestamptz, now()) - interval '15 minutes'
+ RETURNING change_id
+"""
+DFS_OWNED = "SELECT change_id FROM app.judgment_change WHERE change_id = $1 AND status = 'running' AND claimed_at = $2 FOR UPDATE"
+DFS_FAILED = "UPDATE app.judgment_change SET status = 'failed', error = $3 WHERE change_id = $1 AND status = 'running' AND claimed_at = $2"
 PENDING_COUNT = "SELECT count(*) FROM app.judgment_change WHERE status = 'pending' AND kind = ANY($1::text[])"
 
 # ── 아웃박스(app.scope_outbox: loader 는 attempts·next_attempt_at·done_at·last_error 만 UPDATE) ──
 OUTBOX_CLAIM = """
-UPDATE app.scope_outbox o SET next_attempt_at = now() + interval '5 minutes'
+UPDATE app.scope_outbox o SET next_attempt_at = coalesce($1::timestamptz, now()) + interval '5 minutes'
  WHERE o.outbox_id IN (SELECT outbox_id FROM app.scope_outbox WHERE done_at IS NULL AND next_attempt_at <= coalesce($1::timestamptz, now())
+                        AND coalesce(last_error, '') NOT LIKE 'scope_outcome_unknown:%' AND NOT (outbox_id = ANY($3::bigint[]))
                         ORDER BY outbox_id FOR UPDATE SKIP LOCKED LIMIT $2)
-RETURNING o.outbox_id, o.aggregate, o.aggregate_id, o.op, o.payload, o.attempts
+RETURNING o.outbox_id, o.aggregate, o.aggregate_id, o.op, o.payload, o.attempts, o.next_attempt_at
 """
 # done_at IS NULL: 처리 중 API 가 같은 대상 토글을 superseded 로 닫았으면 그 표시를 덮지 않는다(pj-prompts §6 ④)
-OUTBOX_DONE = "UPDATE app.scope_outbox SET done_at = now(), last_error = NULL WHERE outbox_id = $1 AND done_at IS NULL"
+OUTBOX_DONE = "UPDATE app.scope_outbox SET done_at = now(), last_error = NULL WHERE outbox_id = $1 AND next_attempt_at = $2 AND done_at IS NULL RETURNING outbox_id"
+OUTBOX_OWNED = "SELECT outbox_id FROM app.scope_outbox WHERE outbox_id = $1 AND next_attempt_at = $2 AND done_at IS NULL FOR UPDATE"
+# 생성 전에 커밋: 중단/응답 누락/되쓰기 실패 후 자동으로 중복 생성하지 않는다.
+OUTBOX_DISPATCH = "UPDATE app.scope_outbox SET last_error = 'scope_outcome_unknown: create dispatched; reconcile before retry' WHERE outbox_id = $1 AND next_attempt_at = $2 AND done_at IS NULL RETURNING outbox_id"
+OUTBOX_UNKNOWN = "UPDATE app.scope_outbox SET attempts = attempts + 1, last_error = $3 WHERE outbox_id = $1 AND next_attempt_at = $2 AND done_at IS NULL"
 OUTBOX_FAIL = """
 UPDATE app.scope_outbox SET attempts = attempts + 1, last_error = $2,
-       next_attempt_at = now() + make_interval(mins => least(power(2, least(attempts, 10))::int, 1440))
- WHERE outbox_id = $1 AND done_at IS NULL RETURNING attempts
+       next_attempt_at = greatest(now(), $3::timestamptz) + make_interval(mins => least(power(2, least(attempts, 10))::int, 1440))
+ WHERE outbox_id = $1 AND next_attempt_at = $3 AND done_at IS NULL RETURNING attempts
 """
 PROJECT_SCOPE_ID = "SELECT scope_project_id FROM app.project WHERE project_id = $1"
 PROMPT_SCOPE_IDS = """
 SELECT p.scope_prompt_id, pr.scope_project_id FROM app.prompt p JOIN app.project pr ON pr.project_id = p.project_id WHERE p.prompt_id = $1
 """
 SET_PROJECT_SCOPE = """
-UPDATE app.project SET scope_project_id = $2, updated_at = now() WHERE project_id = $1 AND scope_project_id IS DISTINCT FROM $2
+UPDATE app.project SET scope_project_id = $2, updated_at = now() WHERE project_id = $1 RETURNING project_id
 """
 SET_PROMPT_SCOPE = """
-UPDATE app.prompt SET scope_prompt_id = $2, updated_by = app.actor(), updated_at = now() WHERE prompt_id = $1 AND scope_prompt_id IS DISTINCT FROM $2
+UPDATE app.prompt SET scope_prompt_id = $2, updated_by = app.actor(), updated_at = now() WHERE prompt_id = $1 RETURNING prompt_id
 """
 SYSTEM_ACTOR = "SELECT set_config('app.actor_id', $1, true), set_config('app.actor_type', 'system', true)"
 

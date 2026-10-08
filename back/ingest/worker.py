@@ -34,6 +34,7 @@ class Task:
     runs: int = 0
     errors: int = 0
     last_error: str | None = None
+    timeout_s: float = 1800
 
 
 @dataclass
@@ -41,28 +42,65 @@ class Scheduler:
     tasks: list[Task] = field(default_factory=list)
     daily: Job | None = None
     last_daily: dt.date | None = None
+    daily_retry_at: dt.datetime | None = None
+    daily_errors: int = 0
+    _running: dict[str, asyncio.Task] = field(default_factory=dict, init=False, repr=False)
 
     async def step(self, now: dt.datetime) -> list[str]:
-        """기한이 된 작업을 순서대로 한 번씩. 반환 = 이번 틱에 돈 작업 이름."""
+        """시험·단발 실행: 기한이 된 작업을 동시에 시작하고 이번 틱의 완료를 기다린다."""
+        ran = self.start_due(now)
+        await asyncio.gather(*(self._running[name] for name in ran))
+        return ran
+
+    def start_due(self, now: dt.datetime) -> list[str]:
+        """실행 루프는 완료를 기다리지 않는다. 같은 작업은 한 번에 하나만 실행한다."""
         ran: list[str] = []
         kst_day = (now + dt.timedelta(hours=9)).date()
-        if self.daily is not None and self.last_daily != kst_day:
-            await self._run("daily", self.daily, now)
-            self.last_daily = kst_day
+        if (self.daily is not None and self.last_daily != kst_day and not self._busy("daily")
+                and (self.daily_retry_at is None or now >= self.daily_retry_at)):
+            self._running["daily"] = asyncio.create_task(self._daily(now, kst_day), name="ingest-daily")
             ran.append("daily")
         for t in self.tasks:
-            if t.next_at is None or now >= t.next_at:
-                ok = await self._run(t.name, t.fn, now)
-                t.runs += 1
-                if not ok:
-                    t.errors += 1
+            if not self._busy(t.name) and (t.next_at is None or now >= t.next_at):
                 t.next_at = now + t.every
+                self._running[t.name] = asyncio.create_task(self._periodic(t, now), name=f"ingest-{t.name}")
                 ran.append(t.name)
         return ran
 
-    async def _run(self, name: str, fn: Job, now: dt.datetime) -> bool:
+    def _busy(self, name: str) -> bool:
+        task = self._running.get(name)
+        return task is not None and not task.done()
+
+    async def _daily(self, now: dt.datetime, day: dt.date) -> None:
+        started = asyncio.get_running_loop().time()
+        if await self._run("daily", self.daily, now, 300):
+            self.last_daily = day
+            self.daily_errors = 0
+            self.daily_retry_at = None
+        else:
+            self.daily_errors += 1
+            delay = min(30 * 2 ** min(self.daily_errors - 1, 5), 900)
+            elapsed = asyncio.get_running_loop().time() - started
+            self.daily_retry_at = now + dt.timedelta(seconds=elapsed + delay)
+
+    async def _periodic(self, task: Task, now: dt.datetime) -> None:
+        ok = await self._run(task.name, task.fn, now, task.timeout_s)
+        task.runs += 1
+        if not ok:
+            task.errors += 1
+        else:
+            task.last_error = None
+
+    async def close(self) -> None:
+        for task in self._running.values():
+            task.cancel()
+        await asyncio.gather(*self._running.values(), return_exceptions=True)
+        self._running.clear()
+
+    async def _run(self, name: str, fn: Job, now: dt.datetime, timeout_s: float) -> bool:
         try:
-            await fn(now)
+            async with asyncio.timeout(timeout_s):
+                await fn(now)
             return True
         except Exception as e:  # noqa: BLE001  한 작업의 실패가 루프를 멈추지 않는다
             log.exception("워커 작업 %s 실패", name)
@@ -72,13 +110,17 @@ class Scheduler:
             return False
 
     def next_due(self, now: dt.datetime) -> dt.datetime:
-        dues = [t.next_at for t in self.tasks if t.next_at is not None]
+        dues = [t.next_at for t in self.tasks if t.next_at is not None and not self._busy(t.name)]
+        if self.daily_retry_at is not None and not self._busy("daily"):
+            dues.append(self.daily_retry_at)
         return min(dues) if dues else now
 
 
 def build_scheduler(db: Any, source: Any, dfs: Any | None) -> Scheduler:
     from ingest.cycles.workers.service import cycles_tick, run_dfs, run_outbox, run_queue
     from ingest.pull.sync.service import run_pass
+
+    tick_lock = asyncio.Lock()
 
     async def pull(now: dt.datetime) -> None:
         await run_pass(db, source, now=now)
@@ -90,10 +132,12 @@ def build_scheduler(db: Any, source: Any, dfs: Any | None) -> Scheduler:
         await run_outbox(db, source, now=now)
 
     async def tick(now: dt.datetime) -> None:
-        await cycles_tick(db, now=now)
+        async with tick_lock:
+            await cycles_tick(db, now=now)
 
     async def daily(now: dt.datetime) -> None:
-        await cycles_tick(db, now=now, daily=True)
+        async with tick_lock:
+            await cycles_tick(db, now=now, daily=True)
 
     return Scheduler(tasks=[Task("queue", dt.timedelta(seconds=60), queue), Task("pull", dt.timedelta(minutes=20), pull),
                             Task("cycles_tick", dt.timedelta(minutes=20), tick)], daily=daily)
@@ -101,12 +145,14 @@ def build_scheduler(db: Any, source: Any, dfs: Any | None) -> Scheduler:
 
 async def run_forever(sched: Scheduler, stop: asyncio.Event, *, clock: Callable[[], dt.datetime] | None = None) -> None:
     clock = clock or (lambda: dt.datetime.now(dt.UTC))
-    while not stop.is_set():
-        now = clock()
-        await sched.step(now)
-        wait = max(1.0, (sched.next_due(clock()) - clock()).total_seconds())
-        with contextlib.suppress(TimeoutError):
-            await asyncio.wait_for(stop.wait(), timeout=min(wait, 60.0))
+    try:
+        while not stop.is_set():
+            sched.start_due(clock())
+            wait = max(1.0, (sched.next_due(clock()) - clock()).total_seconds())
+            with contextlib.suppress(TimeoutError):
+                await asyncio.wait_for(stop.wait(), timeout=min(wait, 1.0))
+    finally:
+        await sched.close()
 
 
 async def _main() -> None:

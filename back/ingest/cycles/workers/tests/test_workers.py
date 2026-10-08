@@ -89,7 +89,10 @@ async def test_outbox_create_writes_back_scope_ids_and_retries(fresh_db):
     fail = (await _q(fresh_db, "SELECT attempts, last_error, next_attempt_at > now() AS later, done_at FROM app.scope_outbox WHERE op = 'create' AND aggregate = 'prompt'"))[0]
     assert fail["attempts"] == 1 and "503" in fail["last_error"] and fail["later"] and fail["done_at"] is None
     assert not [w for w in src.writes if w[1] == "update"]                   # id 없이 Scope 에 보내지 않는다
-    # 재시도(임대 시각 뒤): 생성 성공 → app.prompt.scope_prompt_id 되쓰기, 트리거가 시스템 행위자 감사·catalog 요청을 남긴다
+    # 503 생성 결과는 불명확: 운영자가 원격 생성 여부를 확인하기 전에는 자동 재전송하지 않는다.
+    assert "scope_outcome_unknown:" in fail["last_error"]
+    await _app(fresh_db, "UPDATE app.scope_outbox SET last_error = NULL WHERE aggregate = 'prompt' AND op = 'create'")
+    # 이 가짜 원천에서는 생성되지 않았음을 확인한 후 재시도: 생성 → 되쓰기 → 후속 갱신.
     out = await run_outbox(db, src, system_actor=uuid.UUID(ACTOR), now=dt.datetime.now(dt.UTC) + dt.timedelta(days=2))
     assert [o.status for o in out] == ["done", "done"]                        # 생성 → 되쓰기 → 같은 틱의 갱신이 그 id 로 나간다
     upd = [w for w in src.writes if w[1] == "update"][0]

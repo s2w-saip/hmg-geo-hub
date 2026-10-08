@@ -3105,6 +3105,425 @@
     "title": "CatalogRow",
     "type": "object"
    },
+   "CatalogScreenFilters": {
+    "additionalProperties": false,
+    "properties": {
+     "depth1": {
+      "default": "all",
+      "title": "Depth1",
+      "type": "string"
+     },
+     "depth2": {
+      "default": "all",
+      "title": "Depth2",
+      "type": "string"
+     },
+     "depth3": {
+      "default": "all",
+      "title": "Depth3",
+      "type": "string"
+     },
+     "depth4": {
+      "default": "all",
+      "title": "Depth4",
+      "type": "string"
+     },
+     "funnel": {
+      "default": "all",
+      "title": "Funnel",
+      "type": "string"
+     },
+     "kind": {
+      "default": "all",
+      "title": "Kind",
+      "type": "string"
+     },
+     "lang": {
+      "default": "all",
+      "title": "Lang",
+      "type": "string"
+     },
+     "listType": {
+      "default": "all",
+      "title": "Listtype",
+      "type": "string"
+     },
+     "market": {
+      "default": "all",
+      "title": "Market",
+      "type": "string"
+     },
+     "presence": {
+      "default": "all",
+      "title": "Presence",
+      "type": "string"
+     },
+     "status": {
+      "default": "all",
+      "title": "Status",
+      "type": "string"
+     },
+     "view": {
+      "default": "active",
+      "enum": [
+       "active",
+       "deleted"
+      ],
+      "title": "View",
+      "type": "string"
+     }
+    },
+    "title": "CatalogScreenFilters",
+    "type": "object"
+   },
+   "CatalogScreenPage": {
+    "properties": {
+     "columns": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Columns",
+      "type": "array"
+     },
+     "count": {
+      "title": "Count",
+      "type": "integer"
+     },
+     "facets": {
+      "additionalProperties": {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      "title": "Facets",
+      "type": "object"
+     },
+     "limit": {
+      "title": "Limit",
+      "type": "integer"
+     },
+     "offset": {
+      "title": "Offset",
+      "type": "integer"
+     },
+     "rows": {
+      "items": {
+       "$ref": "#/components/schemas/CatalogScreenRow"
+      },
+      "title": "Rows",
+      "type": "array"
+     },
+     "stats": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/CatalogStats"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "total": {
+      "title": "Total",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "rows",
+     "total",
+     "count",
+     "offset",
+     "limit",
+     "facets",
+     "columns"
+    ],
+    "title": "CatalogScreenPage",
+    "type": "object"
+   },
+   "CatalogScreenQuery": {
+    "additionalProperties": false,
+    "properties": {
+     "asc": {
+      "default": true,
+      "title": "Asc",
+      "type": "boolean"
+     },
+     "collation": {
+      "default": "en",
+      "enum": [
+       "en",
+       "ko"
+      ],
+      "title": "Collation",
+      "type": "string"
+     },
+     "draft": {
+      "$ref": "#/components/schemas/CatalogScreenFilters"
+     },
+     "filters": {
+      "$ref": "#/components/schemas/CatalogScreenFilters"
+     },
+     "limit": {
+      "default": 50,
+      "maximum": 500.0,
+      "minimum": 1.0,
+      "title": "Limit",
+      "type": "integer"
+     },
+     "market_labels": {
+      "additionalProperties": {
+       "type": "string"
+      },
+      "maxProperties": 400,
+      "title": "Market Labels",
+      "type": "object"
+     },
+     "offset": {
+      "default": 0,
+      "maximum": 10000000.0,
+      "minimum": 0.0,
+      "title": "Offset",
+      "type": "integer"
+     },
+     "search": {
+      "default": "",
+      "maxLength": 5000,
+      "title": "Search",
+      "type": "string"
+     },
+     "sort": {
+      "default": "depth1",
+      "enum": [
+       "text",
+       "brand",
+       "presence",
+       "listType",
+       "depth1",
+       "depth2",
+       "depth3",
+       "depth4",
+       "funnel",
+       "kind",
+       "market",
+       "lang",
+       "status",
+       "tracked"
+      ],
+      "title": "Sort",
+      "type": "string"
+     }
+    },
+    "title": "CatalogScreenQuery",
+    "type": "object"
+   },
+   "CatalogScreenRow": {
+    "properties": {
+     "brand": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Brand"
+     },
+     "brandPresence": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Brandpresence"
+     },
+     "category": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Category"
+     },
+     "deletedAt": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Deletedat"
+     },
+     "depth1": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Depth1"
+     },
+     "depth2": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Depth2"
+     },
+     "depth3": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Depth3"
+     },
+     "depth4": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Depth4"
+     },
+     "funnelStage": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Funnelstage"
+     },
+     "id": {
+      "title": "Id",
+      "type": "string"
+     },
+     "kind": {
+      "title": "Kind",
+      "type": "string"
+     },
+     "lang": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Lang"
+     },
+     "listType": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Listtype"
+     },
+     "promptType": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Prompttype"
+     },
+     "regions": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Regions"
+     },
+     "scopePromptId": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Scopepromptid"
+     },
+     "scopeText": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Scopetext"
+     },
+     "text": {
+      "title": "Text",
+      "type": "string"
+     }
+    },
+    "required": [
+     "id",
+     "text",
+     "promptType",
+     "category",
+     "brand",
+     "brandPresence",
+     "listType",
+     "depth1",
+     "depth2",
+     "depth3",
+     "depth4",
+     "funnelStage",
+     "kind",
+     "lang",
+     "regions",
+     "scopePromptId",
+     "scopeText",
+     "deletedAt"
+    ],
+    "title": "CatalogScreenRow",
+    "type": "object"
+   },
    "CatalogStats": {
     "description": "활성 행 기준 통계(필터와 무관한 루트 카탈로그 전체). deleted 는 include_deleted 일 때만 센다(현행 동일).",
     "properties": {
@@ -7534,6 +7953,22 @@
     "title": "Envelope[CatalogPromptDetail]",
     "type": "object"
    },
+   "Envelope_CatalogScreenPage_": {
+    "properties": {
+     "data": {
+      "$ref": "#/components/schemas/CatalogScreenPage"
+     },
+     "meta": {
+      "$ref": "#/components/schemas/Meta"
+     }
+    },
+    "required": [
+     "data",
+     "meta"
+    ],
+    "title": "Envelope[CatalogScreenPage]",
+    "type": "object"
+   },
    "Envelope_ChangeItem_": {
     "properties": {
      "data": {
@@ -8844,6 +9279,38 @@
      "meta"
     ],
     "title": "Envelope[ProjectList]",
+    "type": "object"
+   },
+   "Envelope_ProjectScreenPage_CandidateItem__": {
+    "properties": {
+     "data": {
+      "$ref": "#/components/schemas/ProjectScreenPage_CandidateItem_"
+     },
+     "meta": {
+      "$ref": "#/components/schemas/Meta"
+     }
+    },
+    "required": [
+     "data",
+     "meta"
+    ],
+    "title": "Envelope[ProjectScreenPage[CandidateItem]]",
+    "type": "object"
+   },
+   "Envelope_ProjectScreenPage_PromptItem__": {
+    "properties": {
+     "data": {
+      "$ref": "#/components/schemas/ProjectScreenPage_PromptItem_"
+     },
+     "meta": {
+      "$ref": "#/components/schemas/Meta"
+     }
+    },
+    "required": [
+     "data",
+     "meta"
+    ],
+    "title": "Envelope[ProjectScreenPage[PromptItem]]",
     "type": "object"
    },
    "Envelope_PromptItem_": {
@@ -16028,6 +16495,190 @@
      }
     },
     "title": "ProjectPatch",
+    "type": "object"
+   },
+   "ProjectScreenPage_CandidateItem_": {
+    "properties": {
+     "draft_count": {
+      "default": 0,
+      "title": "Draft Count",
+      "type": "integer"
+     },
+     "ids": {
+      "items": {
+       "format": "uuid",
+       "type": "string"
+      },
+      "title": "Ids",
+      "type": "array"
+     },
+     "limit": {
+      "title": "Limit",
+      "type": "integer"
+     },
+     "offset": {
+      "title": "Offset",
+      "type": "integer"
+     },
+     "rows": {
+      "items": {
+       "$ref": "#/components/schemas/app__features__projects__prompts__candidates__schemas__CandidateItem"
+      },
+      "title": "Rows",
+      "type": "array"
+     },
+     "show_brand": {
+      "default": false,
+      "title": "Show Brand",
+      "type": "boolean"
+     },
+     "show_category": {
+      "default": false,
+      "title": "Show Category",
+      "type": "boolean"
+     },
+     "total": {
+      "title": "Total",
+      "type": "integer"
+     },
+     "values": {
+      "additionalProperties": {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      "title": "Values",
+      "type": "object"
+     }
+    },
+    "required": [
+     "rows",
+     "total",
+     "offset",
+     "limit"
+    ],
+    "title": "ProjectScreenPage[CandidateItem]",
+    "type": "object"
+   },
+   "ProjectScreenPage_PromptItem_": {
+    "properties": {
+     "draft_count": {
+      "default": 0,
+      "title": "Draft Count",
+      "type": "integer"
+     },
+     "ids": {
+      "items": {
+       "format": "uuid",
+       "type": "string"
+      },
+      "title": "Ids",
+      "type": "array"
+     },
+     "limit": {
+      "title": "Limit",
+      "type": "integer"
+     },
+     "offset": {
+      "title": "Offset",
+      "type": "integer"
+     },
+     "rows": {
+      "items": {
+       "$ref": "#/components/schemas/app__features__projects__prompts__crud__schemas__PromptItem"
+      },
+      "title": "Rows",
+      "type": "array"
+     },
+     "show_brand": {
+      "default": false,
+      "title": "Show Brand",
+      "type": "boolean"
+     },
+     "show_category": {
+      "default": false,
+      "title": "Show Category",
+      "type": "boolean"
+     },
+     "total": {
+      "title": "Total",
+      "type": "integer"
+     },
+     "values": {
+      "additionalProperties": {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      "title": "Values",
+      "type": "object"
+     }
+    },
+    "required": [
+     "rows",
+     "total",
+     "offset",
+     "limit"
+    ],
+    "title": "ProjectScreenPage[PromptItem]",
+    "type": "object"
+   },
+   "ProjectScreenQuery": {
+    "additionalProperties": false,
+    "properties": {
+     "collation": {
+      "default": "en",
+      "enum": [
+       "ko",
+       "en"
+      ],
+      "title": "Collation",
+      "type": "string"
+     },
+     "direction": {
+      "anyOf": [
+       {
+        "enum": [
+         "asc",
+         "desc"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Direction"
+     },
+     "ids_only": {
+      "default": false,
+      "title": "Ids Only",
+      "type": "boolean"
+     },
+     "limit": {
+      "default": 200,
+      "maximum": 500.0,
+      "minimum": 1.0,
+      "title": "Limit",
+      "type": "integer"
+     },
+     "offset": {
+      "default": 0,
+      "maximum": 10000000.0,
+      "minimum": 0.0,
+      "title": "Offset",
+      "type": "integer"
+     },
+     "sort": {
+      "default": "",
+      "maxLength": 36,
+      "title": "Sort",
+      "type": "string"
+     }
+    },
+    "title": "ProjectScreenQuery",
     "type": "object"
    },
    "PromptCounts": {
@@ -26675,6 +27326,87 @@
      }
     },
     "summary": "엑셀 파싱 → 행별 diff(쓰기 없음). multipart file 또는 xlsx 본문",
+    "tags": [
+     "admin.catalog"
+    ]
+   }
+  },
+  "/v1/admin/catalog/prompts/screen": {
+   "post": {
+    "operationId": "readAdminPromptScreen",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CatalogScreenQuery"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Envelope_CatalogScreenPage_"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "401": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorBody"
+        }
+       }
+      },
+      "description": "unauthenticated"
+     },
+     "403": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorBody"
+        }
+       }
+      },
+      "description": "forbidden"
+     },
+     "404": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorBody"
+        }
+       }
+      },
+      "description": "not_found"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorBody"
+        }
+       }
+      },
+      "description": "unprocessable"
+     },
+     "503": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorBody"
+        }
+       }
+      },
+      "description": "unavailable(auth_unavailable: JWKS 장애 포함)"
+     }
+    },
+    "summary": "Read Admin Screen",
     "tags": [
      "admin.catalog"
     ]
@@ -48694,6 +49426,99 @@
     ]
    }
   },
+  "/v1/projects/{project_id}/prompt-candidates/screen": {
+   "post": {
+    "operationId": "readProjectCandidateScreen",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "project_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Project Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ProjectScreenQuery"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Envelope_ProjectScreenPage_CandidateItem__"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "401": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorBody"
+        }
+       }
+      },
+      "description": "unauthenticated"
+     },
+     "403": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorBody"
+        }
+       }
+      },
+      "description": "forbidden"
+     },
+     "404": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorBody"
+        }
+       }
+      },
+      "description": "not_found"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorBody"
+        }
+       }
+      },
+      "description": "unprocessable"
+     },
+     "503": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorBody"
+        }
+       }
+      },
+      "description": "unavailable(auth_unavailable: JWKS 장애 포함)"
+     }
+    },
+    "summary": "Read Candidate Screen",
+    "tags": [
+     "projects.prompts"
+    ]
+   }
+  },
   "/v1/projects/{project_id}/prompt-candidates/select": {
    "post": {
     "operationId": "post_v1_projects_by_project_id_prompt_candidates_select",
@@ -49995,6 +50820,99 @@
      }
     },
     "summary": "xlsx multipart 가져오기(행 상한)",
+    "tags": [
+     "projects.prompts"
+    ]
+   }
+  },
+  "/v1/projects/{project_id}/prompts/screen": {
+   "post": {
+    "operationId": "readProjectPromptScreen",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "project_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Project Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ProjectScreenQuery"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Envelope_ProjectScreenPage_PromptItem__"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "401": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorBody"
+        }
+       }
+      },
+      "description": "unauthenticated"
+     },
+     "403": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorBody"
+        }
+       }
+      },
+      "description": "forbidden"
+     },
+     "404": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorBody"
+        }
+       }
+      },
+      "description": "not_found"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorBody"
+        }
+       }
+      },
+      "description": "unprocessable"
+     },
+     "503": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorBody"
+        }
+       }
+      },
+      "description": "unavailable(auth_unavailable: JWKS 장애 포함)"
+     }
+    },
+    "summary": "Read Prompt Screen",
     "tags": [
      "projects.prompts"
     ]
@@ -53368,6 +54286,87 @@
      }
     },
     "summary": "표준 카탈로그 변경 감사 이력(app.prompt_audit_log), prompt_id 단일 타임라인 포함, 스코프 교집합, 키셋, csv 상한 5,000",
+    "tags": [
+     "catalog.prompts"
+    ]
+   }
+  },
+  "/v1/prompts/screen": {
+   "post": {
+    "operationId": "readStandardPromptScreen",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CatalogScreenQuery"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Envelope_CatalogScreenPage_"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "401": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorBody"
+        }
+       }
+      },
+      "description": "unauthenticated"
+     },
+     "403": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorBody"
+        }
+       }
+      },
+      "description": "forbidden"
+     },
+     "404": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorBody"
+        }
+       }
+      },
+      "description": "not_found"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorBody"
+        }
+       }
+      },
+      "description": "unprocessable"
+     },
+     "503": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorBody"
+        }
+       }
+      },
+      "description": "unavailable(auth_unavailable: JWKS 장애 포함)"
+     }
+    },
+    "summary": "Read Standard Screen",
     "tags": [
      "catalog.prompts"
     ]

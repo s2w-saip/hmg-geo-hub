@@ -15,12 +15,19 @@ from app.core.envelope import Envelope, Page, crud_meta
 from app.core.errors import ERROR_RESPONSES
 from app.core.filters import parse_custom_fields
 from app.core.write import RwConn
+from app.features.projects.prompts.screen import ProjectScreenPage, ProjectScreenQuery, prompt_screen
 
 from . import service
 from .common import PJ3_CONSUMED, ROUTER_DEPS, project_gate
 from .schemas import Q_PATTERN, Created, ManualAdd, PromptItem, PromptKind, PromptList, PromptPatch, PromptStatus
 
 router = APIRouter(tags=["projects.prompts"], dependencies=ROUTER_DEPS, responses=ERROR_RESPONSES)
+
+
+@router.post("/v1/projects/{project_id}/prompts/screen", response_model=Envelope[ProjectScreenPage[PromptItem]], operation_id="readProjectPromptScreen")
+async def read_prompt_screen(project_id: uuid.UUID, body: ProjectScreenQuery, p: CurrentUser, conn: RoConn) -> Envelope[ProjectScreenPage[PromptItem]]:
+    await project_gate(conn, p, project_id, "active_member")
+    return Envelope(data=await prompt_screen(conn, project_id, body), meta=crud_meta(surface="project"))
 
 
 @router.get("/v1/projects/{project_id}/prompts", summary="프롬프트 목록(status[]·kind·q·커스텀 필드 값, 키셋) + 태그값",

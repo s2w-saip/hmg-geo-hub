@@ -57,6 +57,7 @@ vi.mock("next/cache", () => ({
 }));
 vi.mock("next-intl/server", () => ({
   setRequestLocale: () => undefined,
+  getLocale: async () => "ko",
   getTranslations: async () => (k: string) => k,
 }));
 // Live Scope calls of the legacy path (outside the compared data): no-ops.
@@ -361,7 +362,7 @@ function listItem(p: Project) {
 }
 
 function backend(method: string, path: string, query: URLSearchParams): Response {
-  if (method !== "GET") return writeAnswer ? writeAnswer() : fail(500, "internal");
+  if (method !== "GET" && !path.endsWith("/screen")) return writeAnswer ? writeAnswer() : fail(500, "internal");
   if (path === "/v1/projects") {
     const rows = PROJECTS.filter((p) => p.kind === "customer" && (me.role === "admin" || activeRole(p.id, me.id)));
     return ok({ items: byDesc(rows, (p) => p.createdAt).map(listItem), next_cursor: null }, { page: { limit: Number(query.get("limit")), next_cursor: null } });
@@ -460,14 +461,14 @@ function backend(method: string, path: string, query: URLSearchParams): Response
   if (sub === "/settings/scope-link") {
     return ok({ project_id: p.id, linked: true, scope_project_id: p.scopeProjectId, state: "healthy", jobs: null, latest_round: null, outbox: { pending: 0, erroring: 0, prompt_pending: 0, recent: [] } });
   }
-  if (sub === "/prompt-candidates") {
+  if (sub === "/prompt-candidates" || sub === "/prompt-candidates/screen") {
     const rows = byDesc(CANDIDATES.filter((c) => c.projectId === p.id), (c) => c.createdAt);
-    return ok({ items: rows.map((c) => ({ candidate_id: c.id, source: c.source, source_keyword: c.sourceKeyword, text: c.text, created_at: apiTs(c.createdAt) })), next_cursor: null });
+    const items = rows.map((c) => ({ candidate_id: c.id, source: c.source, source_keyword: c.sourceKeyword, text: c.text, created_at: apiTs(c.createdAt) }));
+    return ok(sub.endsWith("/screen") ? { rows: items, ids: [], total: rows.length, offset: 0, limit: 200, show_brand: false, show_category: false, draft_count: 0, values: {} } : { items, next_cursor: null });
   }
-  if (sub === "/prompts") {
+  if (sub === "/prompts" || sub === "/prompts/screen") {
     const rows = byDesc(PROMPTS.filter((x) => x.projectId === p.id), (x) => x.createdAt);
-    return ok({
-      items: rows.map((x) => ({
+    const items = rows.map((x) => ({
         prompt_id: x.id,
         text: x.text,
         kind: "single",
@@ -482,8 +483,14 @@ function backend(method: string, path: string, query: URLSearchParams): Response
         tags: Object.fromEntries(VALUES.filter((v) => v.promptId === x.id).map((v) => [v.fieldId, v.value])),
         created_at: apiTs(x.createdAt),
         updated_at: apiTs(x.createdAt),
-      })),
-    });
+      }));
+    const fields = FIELDS.filter(f => f.projectId === p.id);
+    return ok(sub.endsWith("/screen") ? {
+      rows: items.reverse(), ids: [], total: rows.length, offset: 0, limit: 200,
+      show_brand: rows.some(r => !!r.brand), show_category: rows.some(r => !!r.category),
+      draft_count: rows.filter(r => r.status === "draft" || (r.status === "queued" && !r.scopePromptId)).length,
+      values: Object.fromEntries(fields.map(f => [f.id, [...new Set(VALUES.filter(v => v.fieldId === f.id && v.value).map(v => v.value))]]).filter(([, values]) => (values as string[]).length)),
+    } : { items });
   }
   if (sub === "/prompt-fields") {
     return ok({
@@ -803,14 +810,19 @@ describe("/projects/[id]/setting", () => {
   });
 });
 
+function pagingProps(props: Record<string, unknown>) {
+  const remote = props.remote as { initial: unknown };
+  return { ...props, remote: { initial: remote.initial } };
+}
+
 describe("/projects/[id]/prompt", () => {
   const view = async (source: Source, account: Account) => {
     const tree = await render(source, account, () => PromptPage(params({ id: PA })));
     if ((tree as { thrown?: string }).thrown) return tree;
     return {
-      candidates: propsOf(tree, CandidateList)[0],
+      candidates: pagingProps(propsOf(tree, CandidateList)[0]),
       manual: propsOf(tree, ManualPromptInput).length,
-      list: propsOf(tree, PromptList)[0],
+      list: pagingProps(propsOf(tree, PromptList)[0]),
     };
   };
   it("owner and viewer: same candidates, prompts (oldest first, tags), fields, edit flags", async () => {

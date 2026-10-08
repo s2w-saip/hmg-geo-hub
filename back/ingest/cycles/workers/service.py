@@ -13,6 +13,7 @@ ga4_property·ga4_tracked_event 는 외부 적재(IG-4, 소유 미정)라 이 �
 """
 from __future__ import annotations
 
+import asyncio
 import datetime as dt
 import json
 import logging
@@ -44,6 +45,7 @@ from . import queries as q
 from .dfs import DfsSource, legacy_dfs, plan_calls, write_dfs
 
 log = logging.getLogger("hgh.ingest.workers")
+DFS_TIMEOUT_S = 600
 
 IG3_KINDS = frozenset({"cycle_admin", "report_publication", "anchor_pin", "answer_drop"})
 ECAT_KIND = "entity_version"
@@ -276,12 +278,20 @@ async def run_outbox(db: LoaderDB, source: Any, *, limit: int = 20, now: dt.date
                      system_actor: uuid.UUID | None = None) -> list[OutboxOutcome]:
     actor = system_actor or get_ingest_settings().system_actor
     out: list[OutboxOutcome] = []
+    seen: list[int] = []
     async with db.session() as conn:
-        async with db.tx(conn):                                            # 임대(5분): 트랜잭션을 쥔 채 외부 호출하지 않는다
-            rows = sorted(await conn.fetch(q.OUTBOX_CLAIM, now, limit), key=lambda r: r["outbox_id"])   # 같은 대상은 생성 → 갱신 순서
-        for r in rows:
-            payload = r["payload"] if isinstance(r["payload"], dict) else json.loads(r["payload"])
+        for _ in range(limit):
+            async with db.tx(conn):
+                rows = await conn.fetch(q.OUTBOX_CLAIM, now, 1, seen)
+            if not rows:
+                break
+            r = rows[0]
+            seen.append(int(r["outbox_id"]))
+            lease = r["next_attempt_at"]
+            creating = r["op"] == "create" and r["aggregate"] in ("project", "prompt")
+            dispatched = False
             try:
+                payload = r["payload"] if isinstance(r["payload"], dict) else json.loads(r["payload"])
                 parse_outbox(r["aggregate"], r["op"], payload)       # core.contracts(생산자와 같은 계약)
                 payload = await _fill_scope_ids(conn, r["aggregate"], r["aggregate_id"], payload)
                 need = {"project": ["scope_project_id"], "schedule": ["scope_project_id"],
@@ -291,22 +301,42 @@ async def run_outbox(db: LoaderDB, source: Any, *, limit: int = 20, now: dt.date
                 missing = [k for k in need if not payload.get(k)]
                 if missing:                                # 선행 생성(아웃박스 앞 행)이 아직 Scope id 를 되쓰지 않았다: 백오프 후 재시도
                     raise RuntimeError(f"Scope id 대기: {','.join(missing)}")
-                resp = await source.write(r["aggregate"], r["op"], str(r["aggregate_id"]), payload)
+                if creating:
+                    if actor is None:
+                        raise RuntimeError("HGH_INGEST_SYSTEM_ACTOR 미설정: Scope id 되쓰기 행위자 없음")
+                    async with db.tx(conn):
+                        if not await conn.fetchval(q.OUTBOX_DISPATCH, r["outbox_id"], lease):
+                            raise RuntimeError("Scope outbox lease lost")
+                    dispatched = True
+                async with asyncio.timeout(120):
+                    resp = await source.write(r["aggregate"], r["op"], str(r["aggregate_id"]), payload)
+                new_id = None
+                if creating:
+                    key = "project_id" if r["aggregate"] == "project" else "prompt_id"
+                    try:
+                        new_id = uuid.UUID(str(resp.get(key))) if isinstance(resp, dict) else None
+                    except (ValueError, TypeError, AttributeError):
+                        new_id = None
+                    if not new_id or new_id.int == 0:
+                        raise ValueError(f"Scope create response missing valid {key}")
                 async with db.tx(conn):
-                    if r["op"] == "create" and r["aggregate"] in ("project", "prompt"):
-                        if actor is None:
-                            raise RuntimeError("HGH_INGEST_SYSTEM_ACTOR 미설정: Scope id 되쓰기 행위자 없음")
+                    if not await conn.fetchval(q.OUTBOX_OWNED, r["outbox_id"], lease):
+                        raise RuntimeError("Scope outbox lease lost")
+                    if creating:
                         await conn.execute(q.SYSTEM_ACTOR, str(actor))
-                        new_id = (resp or {}).get("project_id" if r["aggregate"] == "project" else "prompt_id")
-                        if new_id:
-                            sql = q.SET_PROJECT_SCOPE if r["aggregate"] == "project" else q.SET_PROMPT_SCOPE
-                            await conn.execute(sql, r["aggregate_id"], uuid.UUID(str(new_id)))
-                    await conn.execute(q.OUTBOX_DONE, r["outbox_id"])
+                        sql = q.SET_PROJECT_SCOPE if r["aggregate"] == "project" else q.SET_PROMPT_SCOPE
+                        if not await conn.fetchval(sql, r["aggregate_id"], new_id):
+                            raise RuntimeError("Scope create local target missing")
+                    await conn.fetchval(q.OUTBOX_DONE, r["outbox_id"], lease)
                 out.append(OutboxOutcome(int(r["outbox_id"]), "done"))
             except Exception as e:  # noqa: BLE001  재시도(지수 백오프). 오류는 코드·경로만(비밀 없음)
                 msg = describe_error(e)
                 async with db.tx(conn):
-                    await conn.execute(q.OUTBOX_FAIL, r["outbox_id"], msg)
+                    if dispatched:
+                        msg = f"scope_outcome_unknown: {msg}; reconcile before retry"
+                        await conn.execute(q.OUTBOX_UNKNOWN, r["outbox_id"], lease, msg)
+                    else:
+                        await conn.execute(q.OUTBOX_FAIL, r["outbox_id"], msg, lease)
                 out.append(OutboxOutcome(int(r["outbox_id"]), "failed", msg))
     return out
 
@@ -334,12 +364,15 @@ async def run_dfs(db: LoaderDB, dfs: DfsSource, *, limit: int = 5, now: dt.datet
     ext.dfs_call·rd.kw_* 전부. 호출 하나라도 HTTP 오류면 그 요청 전체를 실패로 둔다(부분 적재 없음)."""
     out: list[QueueOutcome] = []
     async with db.session() as conn:
+        async with db.tx(conn):
+            expired = await conn.fetch(q.DFS_RECOVER, now)
+            out.extend(QueueOutcome(int(r["change_id"]), "dfs_fetch", "failed", error="dfs_outcome_unknown: worker lease expired") for r in expired)
         for _ in range(limit):
             async with db.tx(conn):
                 row = await conn.fetchrow(q.CLAIM, ["dfs_fetch"], [])
                 if row is None:
                     break
-                await conn.execute(q.RUNNING, row["change_id"])
+                lease = await conn.fetchval(q.RUNNING, row["change_id"])
             cid = int(row["change_id"])
             try:
                 p = row["payload"] if isinstance(row["payload"], dict) else json.loads(row["payload"] or "null")
@@ -350,11 +383,14 @@ async def run_dfs(db: LoaderDB, dfs: DfsSource, *, limit: int = 5, now: dt.datet
                     log.warning("dfs_fetch %s: 옛 payload(endpoint=%s)를 새 계약으로 변환해 처리", cid, only[0])
                 d = parse_change("dfs_fetch", p)
                 calls = []
-                for endpoint, keywords, req in plan_calls(d, only):
-                    status, body, cost = await dfs.call(endpoint, req)        # 트랜잭션 밖
-                    calls.append((endpoint, keywords, req, status, body, cost))
+                async with asyncio.timeout(DFS_TIMEOUT_S):  # 외부 호출은 15분 임대보다 짧게. 유료 호출 자동 재시도 없음.
+                    for endpoint, keywords, req in plan_calls(d, only):
+                        status, body, cost = await dfs.call(endpoint, req)        # 트랜잭션 밖
+                        calls.append((endpoint, keywords, req, status, body, cost))
                 at = now or dt.datetime.now(dt.UTC)
                 async with db.tx(conn):
+                    if not await conn.fetchval(q.DFS_OWNED, cid, lease):
+                        raise RuntimeError("dfs_outcome_unknown: worker lease lost")
                     ctx = await begin_load(conn, "dfs", scope_ref={"source": "dfs_fetch", "change_ids": [cid], "fetch": d.fetch})
                     for endpoint, keywords, req, status, body, cost in calls:
                         await write_dfs(conn, endpoint=endpoint, keywords=keywords, loc=d.location_code, lang=d.language_code, request=req,
@@ -367,7 +403,9 @@ async def run_dfs(db: LoaderDB, dfs: DfsSource, *, limit: int = 5, now: dt.datet
                 out.append(QueueOutcome(cid, "dfs_fetch", "applied", ctx.load_id))
             except Exception as e:  # noqa: BLE001
                 msg = describe_error(e)
+                if isinstance(e, TimeoutError):
+                    msg = "dfs_outcome_unknown: request deadline exceeded; reconcile before retry"
                 async with db.tx(conn):
-                    await conn.execute(q.FAILED, cid, msg)
+                    await conn.execute(q.DFS_FAILED, cid, lease, msg)
                 out.append(QueueOutcome(cid, "dfs_fetch", "failed", error=msg))
     return out

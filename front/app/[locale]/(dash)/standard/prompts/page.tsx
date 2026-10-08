@@ -5,11 +5,11 @@ import { PageHeader } from "@/components/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getSession } from "@/lib/auth/session";
 import { canAccessRoute } from "@/lib/auth/route-policy";
-import { listStandardCatalogScoped } from "@/lib/db/repositories/standards";
 import { promptAuditLogRepository } from "@/lib/db/repositories/prompt-audit-logs";
 import { standardCollectionDates } from "@/lib/db/repositories/scope-aggregates";
 import { isAnalysisApi } from "@/lib/hgh/adapters/filters";
-import { listGlobalAuditApi, listStandardCatalogApi, standardCollectionPeriodApi } from "@/lib/hgh/adapters/catalog";
+import { listGlobalAuditApi, standardCollectionPeriodApi } from "@/lib/hgh/adapters/catalog";
+import { loadCatalogPage } from "./_page-actions";
 import { throwForPage } from "@/lib/hgh/errors";
 import { StandardPromptReadonlyList } from "./_components/prompt-list-readonly";
 import { AuditHistoryView } from "./_components/audit-history-view";
@@ -42,22 +42,20 @@ export default async function StandardPromptsPage({
 
   const scope = session.user.scope;
   const { tab } = await searchParams;
-  const { rows, from, to, auditRows } = isAnalysisApi("prompts", "global")
+  const { catalog, from, to, auditRows } = isAnalysisApi("prompts", "global")
     ? await loadApi()
     : await loadLegacy();
 
-  // Backend API source (HGH_SOURCE_G5=api, unit U8, lib/hgh/adapters/catalog.ts): three calls
-  // in parallel (D6): GET /v1/prompts?surface=global&all=true (BG-34, the whole scoped root
-  // catalog), GET /v1/filters/dates (collection period header: first measured round .. latest
-  // round, known_diff U8-N10/DC-07) and GET /v1/prompts/history (90-day window, first 500).
+  // Bounded catalog page, collection period and 90-day history are read independently.
+  // The server applies account scope before catalog counts, facets and pagination.
   async function loadApi() {
     try {
       const [catalog, period, audit] = await Promise.all([
-        listStandardCatalogApi(),
+        loadCatalogPage(false, {}),
         standardCollectionPeriodApi(),
         listGlobalAuditApi(),
       ]);
-      return { rows: catalog.rows, from: period.from, to: period.to, auditRows: audit };
+      return { catalog, from: period.from, to: period.to, auditRows: audit };
     } catch (e) {
       throwForPage(e, locale);
     }
@@ -66,8 +64,8 @@ export default async function StandardPromptsPage({
   async function loadLegacy() {
     // 변경 이력(catalog-prompt-audit)은 뷰어와 같은 브랜드 스코프 술어로 90일 창.
     const AUDIT_WINDOW_DAYS = 90;
-    const [{ rows }, collection, auditRows] = await Promise.all([
-      listStandardCatalogScoped(scope),
+    const [catalog, collection, auditRows] = await Promise.all([
+      loadCatalogPage(false, {}),
       standardCollectionDates(scope),
       promptAuditLogRepository.listGlobalScoped({
         scope,
@@ -77,7 +75,7 @@ export default async function StandardPromptsPage({
     // 수집 기간 헤더 (2026-07-23 피드백 ③): 계정 scope 범위의 completed 답변
     // measured_at min~max. UTC 달력일 — 측정 타임스탬프 저장 기준과 동일.
     const day = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null);
-    return { rows, from: day(collection.firstMeasuredAt), to: day(collection.lastMeasuredAt), auditRows };
+    return { catalog, from: day(collection.firstMeasuredAt), to: day(collection.lastMeasuredAt), auditRows };
   }
 
   return (
@@ -101,9 +99,10 @@ export default async function StandardPromptsPage({
           <TabsTrigger value="history">{tAudit("tabHistory")}</TabsTrigger>
         </TabsList>
         <TabsContent value="catalog" className="mt-0">
-          <SectionCard title={t("count", { count: rows.length })}>
+          <SectionCard title={t("count", { count: catalog.count })}>
             <StandardPromptReadonlyList
-              rows={rows}
+              rows={catalog.rows}
+              remote={{ initial: catalog, load: loadCatalogPage.bind(null, false) }}
               scopeAll={scope.all}
               scopeRole={session.user.role}
               scopeBrands={scope.brands ?? []}

@@ -105,6 +105,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/catalog/prompts/screen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Read Admin Screen */
+        post: operations["readAdminPromptScreen"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/catalog/prompts/{prompt_id}": {
         parameters: {
             query?: never;
@@ -2304,6 +2321,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/projects/{project_id}/prompt-candidates/screen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Read Candidate Screen */
+        post: operations["readProjectCandidateScreen"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/projects/{project_id}/prompt-candidates/select": {
         parameters: {
             query?: never;
@@ -2493,6 +2527,23 @@ export interface paths {
          * @description 데이터 행 상한 5000. 초과·형식 오류는 422, 5MB 초과 413.
          */
         post: operations["post_v1_projects_by_project_id_prompts_import"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{project_id}/prompts/screen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Read Prompt Screen */
+        post: operations["readProjectPromptScreen"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2852,6 +2903,23 @@ export interface paths {
         get: operations["listPromptHistory"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/prompts/screen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Read Standard Screen */
+        post: operations["readStandardPromptScreen"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4268,6 +4336,170 @@ export interface components {
             funnel?: string | null;
             /** List Type */
             list_type?: string | null;
+        };
+        /** CatalogScreenFilters */
+        CatalogScreenFilters: {
+            /**
+             * Depth1
+             * @default all
+             */
+            depth1: string;
+            /**
+             * Depth2
+             * @default all
+             */
+            depth2: string;
+            /**
+             * Depth3
+             * @default all
+             */
+            depth3: string;
+            /**
+             * Depth4
+             * @default all
+             */
+            depth4: string;
+            /**
+             * Funnel
+             * @default all
+             */
+            funnel: string;
+            /**
+             * Kind
+             * @default all
+             */
+            kind: string;
+            /**
+             * Lang
+             * @default all
+             */
+            lang: string;
+            /**
+             * Listtype
+             * @default all
+             */
+            listType: string;
+            /**
+             * Market
+             * @default all
+             */
+            market: string;
+            /**
+             * Presence
+             * @default all
+             */
+            presence: string;
+            /**
+             * Status
+             * @default all
+             */
+            status: string;
+            /**
+             * View
+             * @default active
+             * @enum {string}
+             */
+            view: "active" | "deleted";
+        };
+        /** CatalogScreenPage */
+        CatalogScreenPage: {
+            /** Columns */
+            columns: string[];
+            /** Count */
+            count: number;
+            /** Facets */
+            facets: {
+                [key: string]: string[];
+            };
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Rows */
+            rows: components["schemas"]["CatalogScreenRow"][];
+            stats?: components["schemas"]["CatalogStats"] | null;
+            /** Total */
+            total: number;
+        };
+        /** CatalogScreenQuery */
+        CatalogScreenQuery: {
+            /**
+             * Asc
+             * @default true
+             */
+            asc: boolean;
+            /**
+             * Collation
+             * @default en
+             * @enum {string}
+             */
+            collation: "en" | "ko";
+            draft?: components["schemas"]["CatalogScreenFilters"];
+            filters?: components["schemas"]["CatalogScreenFilters"];
+            /**
+             * Limit
+             * @default 50
+             */
+            limit: number;
+            /** Market Labels */
+            market_labels?: {
+                [key: string]: string;
+            };
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            /**
+             * Search
+             * @default
+             */
+            search: string;
+            /**
+             * Sort
+             * @default depth1
+             * @enum {string}
+             */
+            sort: "text" | "brand" | "presence" | "listType" | "depth1" | "depth2" | "depth3" | "depth4" | "funnel" | "kind" | "market" | "lang" | "status" | "tracked";
+        };
+        /** CatalogScreenRow */
+        CatalogScreenRow: {
+            /** Brand */
+            brand: string | null;
+            /** Brandpresence */
+            brandPresence: string | null;
+            /** Category */
+            category: string | null;
+            /** Deletedat */
+            deletedAt: string | null;
+            /** Depth1 */
+            depth1: string | null;
+            /** Depth2 */
+            depth2: string | null;
+            /** Depth3 */
+            depth3: string | null;
+            /** Depth4 */
+            depth4: string | null;
+            /** Funnelstage */
+            funnelStage: string | null;
+            /** Id */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Lang */
+            lang: string | null;
+            /** Listtype */
+            listType: string | null;
+            /** Prompttype */
+            promptType: string | null;
+            /** Regions */
+            regions: string[] | null;
+            /** Scopepromptid */
+            scopePromptId: string | null;
+            /** Scopetext */
+            scopeText: string | null;
+            /** Text */
+            text: string;
         };
         /**
          * CatalogStats
@@ -5970,6 +6202,11 @@ export interface components {
             data: components["schemas"]["CatalogPromptDetail"];
             meta: components["schemas"]["Meta"];
         };
+        /** Envelope[CatalogScreenPage] */
+        Envelope_CatalogScreenPage_: {
+            data: components["schemas"]["CatalogScreenPage"];
+            meta: components["schemas"]["Meta"];
+        };
         /** Envelope[ChangeItem] */
         Envelope_ChangeItem_: {
             data: components["schemas"]["ChangeItem"];
@@ -6378,6 +6615,16 @@ export interface components {
         /** Envelope[ProjectList] */
         Envelope_ProjectList_: {
             data: components["schemas"]["ProjectList"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[ProjectScreenPage[CandidateItem]] */
+        Envelope_ProjectScreenPage_CandidateItem__: {
+            data: components["schemas"]["ProjectScreenPage_CandidateItem_"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[ProjectScreenPage[PromptItem]] */
+        Envelope_ProjectScreenPage_PromptItem__: {
+            data: components["schemas"]["ProjectScreenPage_PromptItem_"];
             meta: components["schemas"]["Meta"];
         };
         /** Envelope[PromptItem] */
@@ -9012,6 +9259,101 @@ export interface components {
             ga4_property_id?: string | null;
             /** Name */
             name?: string | null;
+        };
+        /** ProjectScreenPage[CandidateItem] */
+        ProjectScreenPage_CandidateItem_: {
+            /**
+             * Draft Count
+             * @default 0
+             */
+            draft_count: number;
+            /** Ids */
+            ids?: string[];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Rows */
+            rows: components["schemas"]["app__features__projects__prompts__candidates__schemas__CandidateItem"][];
+            /**
+             * Show Brand
+             * @default false
+             */
+            show_brand: boolean;
+            /**
+             * Show Category
+             * @default false
+             */
+            show_category: boolean;
+            /** Total */
+            total: number;
+            /** Values */
+            values?: {
+                [key: string]: string[];
+            };
+        };
+        /** ProjectScreenPage[PromptItem] */
+        ProjectScreenPage_PromptItem_: {
+            /**
+             * Draft Count
+             * @default 0
+             */
+            draft_count: number;
+            /** Ids */
+            ids?: string[];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Rows */
+            rows: components["schemas"]["app__features__projects__prompts__crud__schemas__PromptItem"][];
+            /**
+             * Show Brand
+             * @default false
+             */
+            show_brand: boolean;
+            /**
+             * Show Category
+             * @default false
+             */
+            show_category: boolean;
+            /** Total */
+            total: number;
+            /** Values */
+            values?: {
+                [key: string]: string[];
+            };
+        };
+        /** ProjectScreenQuery */
+        ProjectScreenQuery: {
+            /**
+             * Collation
+             * @default en
+             * @enum {string}
+             */
+            collation: "ko" | "en";
+            /** Direction */
+            direction?: ("asc" | "desc") | null;
+            /**
+             * Ids Only
+             * @default false
+             */
+            ids_only: boolean;
+            /**
+             * Limit
+             * @default 200
+             */
+            limit: number;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            /**
+             * Sort
+             * @default
+             */
+            sort: string;
         };
         /** PromptCounts */
         PromptCounts: {
@@ -13224,6 +13566,75 @@ export interface operations {
             };
             /** @description unsupported_media_type(multipart/form-data 의 file 또는 xlsx 본문만) */
             415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description unprocessable */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description unavailable(auth_unavailable: JWKS 장애 포함) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    readAdminPromptScreen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CatalogScreenQuery"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_CatalogScreenPage_"];
+                };
+            };
+            /** @description unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description not_found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -24426,6 +24837,77 @@ export interface operations {
             };
         };
     };
+    readProjectCandidateScreen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectScreenQuery"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ProjectScreenPage_CandidateItem__"];
+                };
+            };
+            /** @description unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description not_found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description unprocessable */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description unavailable(auth_unavailable: JWKS 장애 포함) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     post_v1_projects_by_project_id_prompt_candidates_select: {
         parameters: {
             query?: never;
@@ -25331,6 +25813,77 @@ export interface operations {
             };
             /** @description unsupported_media_type(multipart/form-data 의 file 또는 xlsx 본문만) */
             415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description unprocessable */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description unavailable(auth_unavailable: JWKS 장애 포함) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    readProjectPromptScreen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectScreenQuery"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ProjectScreenPage_PromptItem__"];
+                };
+            };
+            /** @description unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description not_found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -27305,6 +27858,75 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Envelope_ListData_HistoryRow__"];
                     "text/csv": unknown;
+                };
+            };
+            /** @description unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description not_found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description unprocessable */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description unavailable(auth_unavailable: JWKS 장애 포함) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    readStandardPromptScreen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CatalogScreenQuery"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_CatalogScreenPage_"];
                 };
             };
             /** @description unauthenticated */

@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { NextIntlClientProvider } from "next-intl";
@@ -91,17 +89,19 @@ describe("내보내기 버튼 — 렌더", () => {
   });
 });
 
-describe("내보내기 입력 — 페이지 슬라이스가 아니라 필터 전량", () => {
-  // 고객 요구의 핵심("현재 페이지가 아니라 필터 전량")이 한 줄의 인자 선택에
-  // 달려 있다. 렌더 마크업으로는 관측할 수 없어 소스로 못 박는다:
-  //   sorted   = 필터·검색·정렬이 걸린 전량
-  //   pageRows = 그중 현재 페이지 슬라이스
-  it("buildStandardPromptSheet 에 sorted 를 넘긴다 (pageRows 가 아니다)", () => {
-    const src = readFileSync(
-      fileURLToPath(new URL("./prompt-list-readonly.tsx", import.meta.url)),
-      "utf8",
-    );
-    expect(src).toContain("buildStandardPromptSheet(sorted, rows,");
-    expect(src).not.toContain("buildStandardPromptSheet(pageRows");
+describe("paged export keeps all filtered rows", () => {
+  it("exports more than the visible 50 rows in their server order", async () => {
+    const { exportCatalogPages } = await import("@/lib/standards/catalog-page");
+    const all = Array.from({ length: 12005 }, (_, i) => row(i));
+    const calls: number[] = [];
+    const exported = await exportCatalogPages(async q => {
+      calls.push(q.offset!);
+      expect(q.search).toBe("prompt");
+      expect(q.sort).toBe("text");
+      return { rows: all.slice(q.offset, q.offset! + q.limit!) as never[], total: all.length,
+        count: all.length, offset: q.offset!, limit: q.limit!, facets: {}, columns: [] };
+    }, { search: "prompt", sort: "text", offset: 100, limit: 50 });
+    expect(exported).toEqual(all);
+    expect(calls).toEqual(Array.from({ length: 25 }, (_, i) => i * 500));
   });
 });

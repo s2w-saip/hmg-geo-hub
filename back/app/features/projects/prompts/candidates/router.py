@@ -15,11 +15,18 @@ from app.core.envelope import Envelope, Page, crud_meta
 from app.core.errors import ERROR_RESPONSES
 from app.core.write import RwConn
 from app.features.projects.prompts.crud.common import PJ3_CONSUMED, ROUTER_DEPS, project_gate
+from app.features.projects.prompts.screen import ProjectScreenPage, ProjectScreenQuery, candidate_screen
 
 from . import service
-from .schemas import CandidateIds, CandidateList, DeleteResult, SelectResult
+from .schemas import CandidateIds, CandidateItem, CandidateList, DeleteResult, SelectResult
 
 router = APIRouter(tags=["projects.prompts"], dependencies=ROUTER_DEPS, responses=ERROR_RESPONSES)
+
+
+@router.post("/v1/projects/{project_id}/prompt-candidates/screen", response_model=Envelope[ProjectScreenPage[CandidateItem]], operation_id="readProjectCandidateScreen")
+async def read_candidate_screen(project_id: uuid.UUID, body: ProjectScreenQuery, p: CurrentUser, conn: RoConn) -> Envelope[ProjectScreenPage[CandidateItem]]:
+    await project_gate(conn, p, project_id, "active_member")
+    return Envelope(data=await candidate_screen(conn, project_id, body), meta=crud_meta(surface="project"))
 
 
 @router.get("/v1/projects/{project_id}/prompt-candidates", summary="후보 풀 목록", response_model=Envelope[CandidateList])

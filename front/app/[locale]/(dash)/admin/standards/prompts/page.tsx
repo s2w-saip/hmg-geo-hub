@@ -4,11 +4,7 @@ import { SectionCard } from "@/components/section-card";
 import { PageHeader } from "@/components/page-header";
 import { getSession } from "@/lib/auth/session";
 import { canAccessAdmin } from "@/lib/auth/scope-policy";
-import {
-  listStandardCatalog,
-  type StandardCatalogRow,
-  type StandardCatalogStats,
-} from "@/lib/db/repositories/standards";
+import { loadCatalogPage } from "../../../standard/prompts/_page-actions";
 import * as api from "@/lib/hgh/adapters/admin";
 import { throwForPage } from "@/lib/hgh/errors";
 import { StandardPromptList } from "./_components/prompt-list";
@@ -26,9 +22,8 @@ import { CatalogIo } from "./_components/catalog-io";
 // + brand + scope-link → 사용중(linked)/미추적(unlinked) badge derives
 // straight from `scopePromptId IS NULL`.
 //
-// Source (D8, HGH_SOURCE_G7): api reads GET /v1/admin/catalog/prompts?include_deleted=true (cursor
-// to the end) and GET /v1/admin/catalog/markets, issued together (lib/hgh/adapters/admin.ts). A
-// failed vocabulary read degrades to [] on its own (as legacy); only the list errors the page.
+// Source (D8, HGH_SOURCE_G7): a bounded catalog page and the market vocabulary are read together.
+// A failed vocabulary read retains the existing independent [] fallback; catalog errors propagate.
 export default async function AdminStandardPromptsPage({
   params,
 }: {
@@ -42,20 +37,11 @@ export default async function AdminStandardPromptsPage({
   if (!session) redirect(`/${locale}/login`);
   if (!canAccessAdmin(session.user)) redirect(`/${locale}/dashboard`);
 
-  let rows: StandardCatalogRow[];
-  let stats: StandardCatalogStats;
-  let markets: string[];
-  if (api.isAdminApi()) {
-    [{ rows, stats }, markets] = await Promise.all([api.listAdminCatalog(), api.catalogMarketVocabularyForScreen()]).catch((e) =>
-      throwForPage(e, locale),
-    );
-  } else {
-    // includeDeleted: admin은 "삭제됨" 뷰에서 soft-delete 행을 보고 복원할 수 있다.
-    ({ rows, stats } = await listStandardCatalog({ includeDeleted: true }));
-    // 시장 어휘는 하드코딩하지 않고 **루트 프로젝트 실황**에서 온다 — scope 의
-    // 검증(어휘 밖 400)과 같은 상한이라 화면과 서버 검증이 갈리지 않는다.
-    markets = await getStandardMarketVocabulary();
-  }
+  const [catalog, markets] = await Promise.all([
+    loadCatalogPage(true, { limit: 200 }),
+    api.isAdminApi() ? api.catalogMarketVocabularyForScreen() : getStandardMarketVocabulary(),
+  ]).catch(e => throwForPage(e, locale));
+  if (!catalog.stats) throw new Error("Catalog statistics missing");
 
   return (
     <div className="flex animate-fade-in flex-col gap-6">
@@ -65,9 +51,9 @@ export default async function AdminStandardPromptsPage({
       </div>
       <SectionCard
         title={t("list.title")}
-        description={t("list.description", { count: rows.length })}
+        description={t("list.description", { count: catalog.count })}
       >
-        <StandardPromptList rows={rows} stats={stats} markets={markets} />
+        <StandardPromptList rows={catalog.rows} stats={catalog.stats} markets={markets} remote={{ initial: catalog, load: loadCatalogPage.bind(null, true) }} />
       </SectionCard>
     </div>
   );

@@ -13,12 +13,10 @@ import { DomainList } from "./_components/domain-list";
 // 목록과, 도메인별 카테고리 교정(citation_domain_overrides). 분류는 read-time
 // 파생이라 저장 즉시 전 이력이 재분류된다(백필 없음).
 //
-// 목록이 비어 있는 정상적인 경우가 둘 있다: ① 미러(scope_citations)에 인용이
-// 없을 때 ② 마이그레이션 0043 미적용(테이블 없음). 둘 다 화면이 죽지 않도록
-// 빈 목록으로 접는다 — 로더(loadCitationOverrides)의 자세와 동일하다.
+// 정상 빈 목록과 조회 장애를 구분한다. 테이블 누락·DB 장애도 기존 오류 경계로 전달한다.
 // Source (D8, HGH_SOURCE_G7): api reads GET /v1/admin/citation-overrides/candidates?surface=global
 // (latest exposed cycle weights, DC-14; 'social' layer and shadows_owned from the backend, BG-42).
-// A backend failure other than auth degrades to an empty list, as legacy did.
+// Failed reads use the existing dashboard error boundary and its retry action.
 export const dynamic = "force-dynamic";
 
 const CURATION_LIMIT = 500;
@@ -39,13 +37,9 @@ export default async function AdminCitationSourcesPage({
   const apiSource = api.isAdminApi();
   const rows: api.AdminCurationRow[] = apiSource
     ? await api.listCitationCuration(CURATION_LIMIT).catch((e) => {
-        try {
-          return api.degradeRead(e, [] as api.AdminCurationRow[]);
-        } catch (err) {
-          throwForPage(err, locale);
-        }
+        throwForPage(e, locale);
       })
-    : await citationOverrideRepository.listDomainCuration(CURATION_LIMIT).catch(() => []);
+    : await citationOverrideRepository.listDomainCuration(CURATION_LIMIT);
 
   return (
     <div className="flex animate-fade-in flex-col gap-6">

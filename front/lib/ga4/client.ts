@@ -18,16 +18,31 @@ export type GaReport = {
 
 const RETRYABLE = new Set([429, 500, 502, 503, 504]);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const REPORT_DEADLINE_MS = 30_000;
 
 export async function runReport(
   propertyId: string,
   body: RunReportBody,
 ): Promise<GaReport> {
+  const controller = new AbortController();
+  const deadline = new Promise<never>((_resolve, reject) => {
+    controller.signal.addEventListener("abort", () => reject(new Error("GA4 runReport timed out")), { once: true });
+  });
+  const timer = setTimeout(() => controller.abort(), REPORT_DEADLINE_MS);
+  try {
+    return await Promise.race([executeReport(propertyId, body, controller.signal), deadline]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function executeReport(propertyId: string, body: RunReportBody, signal: AbortSignal): Promise<GaReport> {
   const token = await getGa4AccessToken();
   if (!token) throw new Error("GA4: no OAuth credentials configured");
   const url = `https://analyticsdata.googleapis.com/v1beta/properties/${propertyId}:runReport`;
   const maxAttempts = 4;
   for (let attempt = 1; ; attempt++) {
+    signal.throwIfAborted();
     const res = await fetch(url, {
       method: "POST",
       headers: {
@@ -35,6 +50,7 @@ export async function runReport(
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
+      signal,
     });
     if (res.ok) return res.json() as Promise<GaReport>;
     const detail = await res.text();

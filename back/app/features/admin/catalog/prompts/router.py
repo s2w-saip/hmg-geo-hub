@@ -33,6 +33,7 @@ from app.features.admin.catalog.prompts.schemas import (
     RegionsBody,
     TextBody,
 )
+from app.features.catalog.prompts.catalog.screen import CatalogScreenPage, CatalogScreenQuery, catalog_screen
 
 router = APIRouter(tags=["admin.catalog"], dependencies=[require_admin, require_menu_group("admin")],
                    responses=ERROR_RESPONSES)
@@ -40,6 +41,11 @@ router = APIRouter(tags=["admin.catalog"], dependencies=[require_admin, require_
 # 목록이 지원하는 공통 필터 축(app.prompt 열 대응). 그 밖의 공통 축은 meta.ignored_filters.
 LIST_AXES = ("brand", "funnel", "brand_presence", "list_type", "depth1", "depth2", "depth3")
 ACR_WARNING = "acr_measurement_cost"     # single→acr: 다음 측정부터 2턴 × acr_iterations(기본 10) 측정, 셀당 약 20배
+
+
+@router.post("/v1/admin/catalog/prompts/screen", response_model=Envelope[CatalogScreenPage], operation_id="readAdminPromptScreen")
+async def read_admin_screen(ro: RoConn, body: CatalogScreenQuery) -> Envelope[CatalogScreenPage]:
+    return Envelope(data=await catalog_screen(ro, None, body, admin=True), meta=crud_meta(mode="admin"))
 
 
 async def _write_result(rw: RwConn, new: dict, changes: dict, change_ids: list[int], outbox: int | None, *,

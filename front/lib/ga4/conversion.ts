@@ -2,7 +2,7 @@ import "server-only";
 import { unstable_cache } from "next/cache";
 import { splitFilterValues } from "@/components/dash/filter-encoding";
 import { CONVERSION_PERIODS, DEFAULT_CONVERSION_DAYS } from "./conversion-window";
-import { runReport, AI_CHANNEL_GROUP, isoToGa4, dateNDaysAgo, type GaReport } from "./client";
+import { runReport, AI_CHANNEL_GROUP, isoToGa4, dateNDaysAgo } from "./client";
 import { ga4TrackedEventRepository } from "@/lib/db/repositories/ga4-tracked-events";
 
 // 24h TTL — dev 단계 기본값. GA4 data updates ~1h이지만 개발 검증 단계에선
@@ -256,13 +256,9 @@ interface CohortRow {
 export type ConvSpec = string[] | null;
 
 async function resolveConvSpec(propertyId: string): Promise<ConvSpec> {
-  try {
-    const names = await ga4TrackedEventRepository.listForProperty(propertyId);
-    return names.length ? names : null;
-  } catch {
-    // DB unreachable → fall back to key events rather than failing the KPI.
-    return null;
-  }
+  // Missing configuration is a valid default; unavailable configuration is not.
+  const names = await ga4TrackedEventRepository.listForProperty(propertyId);
+  return names.length ? names : null;
 }
 
 function eventNameExpr(events: string[]): object {
@@ -512,7 +508,7 @@ export async function getAiConversionLive(
   try {
     return await unstable_cache(
       () => getAiConversionLiveInner(propertyId, days, filters),
-      ["ga4-conv-live", propertyId, String(days), filterKey(filters)],
+      ["ga4-conv-live-v2", propertyId, String(days), filterKey(filters)],
       { revalidate: GA4_CACHE_TTL_SECONDS, tags: [GA4_CACHE_TAG] },
     )();
   } catch (err) {
@@ -562,9 +558,7 @@ async function getAiTrafficConversionRollupInner(
     };
   }
   const range = dateNDaysAgo(days);
-  const specByProp = await ga4TrackedEventRepository
-    .listForProperties(mapped.map((m) => m.propertyId))
-    .catch(() => new Map<string, string[]>());
+  const specByProp = await ga4TrackedEventRepository.listForProperties(mapped.map((m) => m.propertyId));
   const perCountry = await Promise.all(
     mapped.map(async (m) => {
       try {
@@ -582,6 +576,9 @@ async function getAiTrafficConversionRollupInner(
     }),
   );
   const ok = perCountry.filter(<T>(x: T | null): x is T => x !== null);
+  // Only complete reads enter the normal 24-hour cache. The wrapper returns the
+  // existing unavailable state outside the cache, so recovery is retried next time.
+  if (ok.length !== mapped.length) throw new Error("GA4 rollup incomplete");
   let totalAiUsers = 0;
   let totalHumanUsers = 0;
   let totalAiKey = 0;
@@ -631,17 +628,17 @@ export async function getAiTrafficConversionRollup(
   filters?: ConversionFilters,
 ): Promise<AiTrafficConversionRollup | null> {
   if (markets.length === 0) return null;
-  const mappedKey = markets
-    .filter((m) => m.propertyId)
-    .map((m) => m.propertyId!)
-    .sort()
-    .join(",");
-  const totalKey = `t${markets.length}`;
-  return unstable_cache(
-    () => getAiTrafficConversionRollupInner(markets, days, filters),
-    ["ga4-rollup", mappedKey, totalKey, String(days), filterKey(filters)],
-    { revalidate: GA4_CACHE_TTL_SECONDS, tags: [GA4_CACHE_TAG] },
-  )();
+  const mappedKey = JSON.stringify(markets.map((m) => [m.brand, m.country, m.propertyId]));
+  try {
+    return await unstable_cache(
+      () => getAiTrafficConversionRollupInner(markets, days, filters),
+      ["ga4-rollup-v2", mappedKey, String(days), filterKey(filters)],
+      { revalidate: GA4_CACHE_TTL_SECONDS, tags: [GA4_CACHE_TAG] },
+    )();
+  } catch (err) {
+    console.warn("[ga4] rollup unavailable:", err instanceof Error ? err.message : err);
+    return null;
+  }
 }
 
 // Dashboard KPI ⑦ — same call surface, but only the headline numbers. 28d
@@ -679,7 +676,7 @@ export async function getAiTrafficConversionKpi(
   try {
     return await unstable_cache(
       () => getAiTrafficConversionKpiInner(propertyId, days),
-      ["ga4-kpi", propertyId, String(days)],
+      ["ga4-kpi-v2", propertyId, String(days)],
       { revalidate: GA4_CACHE_TTL_SECONDS, tags: [GA4_CACHE_TAG] },
     )();
   } catch (err) {

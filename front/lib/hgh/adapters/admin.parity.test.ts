@@ -237,6 +237,9 @@ let pg: Pg;
 
 const DDL = `
 SET TIME ZONE 'UTC';
+-- PGlite has no ICU. ASCII fixture only; native PostgreSQL tests cover actual ICU ordering.
+CREATE COLLATION "en-x-icu" FROM "C";
+CREATE COLLATION "ko-x-icu" FROM "C";
 CREATE TYPE standard_keyword_source AS ENUM ('google_keyword', 'community_voc');
 CREATE TYPE standard_source_channel AS ENUM ('news', 'pr', 'social', 'community');
 CREATE TABLE profiles (id uuid PRIMARY KEY, email text, role text NOT NULL, scope_all boolean NOT NULL DEFAULT false,
@@ -458,13 +461,19 @@ class BackendModel {
     }
 
     // catalog
-    if (p === "/v1/admin/catalog/prompts" && m === "GET") {
+    if ((p === "/v1/admin/catalog/prompts" && m === "GET") || (p === "/v1/admin/catalog/prompts/screen" && m === "POST")) {
       const rows = [...this.catalog]
         .filter((c) => url.searchParams.get("include_deleted") === "true" || !c.deletedAt)
         .sort((a, b) => pgAsc(a.depth1, b.depth1) || pgAsc(a.depth2, b.depth2) || pgAsc(a.depth3, b.depth3) || pgAsc(a.text, b.text) || pgAsc(a.id, b.id));
       const active = this.catalog.filter((c) => !c.deletedAt);
       const tracked = active.filter((c) => c.scopePromptId).length;
       const stats = { total: active.length, tracked, untracked: active.length - tracked, scope_orphans: 1, acr: active.filter((c) => c.kind === "acr").length, deleted: this.catalog.length - active.length };
+      if (p.endsWith("/screen")) {
+        const sorted = [...active].sort((a, b) => pgAsc(a.depth1 ?? "~", b.depth1 ?? "~") || pgAsc(a.depth2, b.depth2) || pgAsc(a.depth3, b.depth3) || pgAsc(a.text, b.text));
+        const offset = Number(body.offset ?? 0), limit = Number(body.limit ?? 200);
+        return ok(env({ rows: sorted.slice(offset, offset + limit).map(c => ({ ...c, promptType: null, category: null, brandPresence: null, listType: null, depth4: null, funnelStage: null })),
+          total: active.length, count: this.catalog.length, offset, limit, facets: {}, columns: [], stats }));
+      }
       const { slice, next } = page(rows, url);
       return ok(env({ items: slice.map((c) => this.catalogItem(c)), stats }, { page: { next_cursor: next, limit: MODEL_PAGE } }));
     }
@@ -853,15 +862,15 @@ describe("accounts (/admin)", () => {
 });
 
 async function catalogScreen(source: Source) {
-  return run(source, async () => propsOf(await PromptsPage(params), StandardPromptList));
+  return run(source, async () => omit(propsOf(await PromptsPage(params), StandardPromptList), ["remote"]));
 }
 
 describe("standard catalog (/admin/standards/prompts)", () => {
-  it("rows (incl. deleted), stats and markets match", async () => {
+  it("initial active rows, whole-catalog stats and markets match", async () => {
     const legacy = await catalogScreen("legacy");
     const api = await catalogScreen("api");
     expect(diffPaths(legacy, api)).toEqual([]);
-    expect((legacy.rows as Array<{ text: string }>).map((r) => r.text)).toEqual(["alpha", "beta", "gamma", "delta"]);
+    expect((legacy.rows as Array<{ text: string }>).map((r) => r.text)).toEqual(["alpha", "beta", "delta"]);
     expect(legacy.stats).toEqual({ total: 3, tracked: 1, untracked: 2, scopeOrphans: 1, acr: 1, deleted: 1 });
     expect(legacy.markets).toEqual(["KR", "US"]);
   });
@@ -1075,7 +1084,7 @@ describe("first render call budget (D6) and in-request dedupe", () => {
   it("each page issues only its own GETs, never the same request twice; the users header and list share pages", async () => {
     const screens: Array<[string, () => Promise<unknown>, string[]]> = [
       ["users", () => usersScreen("api"), ["/v1/admin/users"]],
-      ["catalog", () => catalogScreen("api"), ["/v1/admin/catalog/prompts", "/v1/admin/catalog/markets"]],
+      ["catalog", () => catalogScreen("api"), ["/v1/admin/catalog/prompts/screen", "/v1/admin/catalog/markets"]],
       ["interest", () => interestScreen("api"), ["/v1/admin/interest/keywords", "/v1/admin/interest/sources"]],
       ["entities", () => entitiesScreen("api"), ["/v1/admin/entities", "/v1/admin/entities/versions"]],
       ["citations", () => citationScreen("api"), ["/v1/admin/citation-overrides/candidates"]],
@@ -1086,7 +1095,7 @@ describe("first render call budget (D6) and in-request dedupe", () => {
       await load();
       const paths = [...new Set(model.calls.map((c) => c.split(" ")[1].split("?")[0]))].sort();
       expect({ name, paths }).toEqual({ name, paths: [...endpoints].sort() });
-      expect(model.calls.every((c) => c.startsWith("GET "))).toBe(true);
+      expect(model.calls.every((c) => c.startsWith("GET ") || c === "POST /v1/admin/catalog/prompts/screen")).toBe(true);
       expect(new Set(model.calls).size).toBe(model.calls.length);
     }
     // 5 accounts, 2 per model page: 3 cursor pages, once for the header and the list together.
@@ -1104,7 +1113,7 @@ describe("first render call budget (D6) and in-request dedupe", () => {
     await catalogScreen("api");
     expect(model.calls).toContain("GET /v1/admin/entities?limit=500&sort=answers_desc&surface=global");
     expect(model.calls).toContain("GET /v1/admin/citation-overrides/candidates?limit=500&surface=global");
-    expect(model.calls).toContain("GET /v1/admin/catalog/prompts?include_deleted=true&limit=500");
+    expect(model.calls).toContain("POST /v1/admin/catalog/prompts/screen");
   });
 });
 
@@ -1134,10 +1143,10 @@ describe("permissions (both sources)", () => {
     model.handle = orig;
   });
 
-  it("api: a 5xx on the degrade-to-empty pages reads as an empty list, as legacy's catch did", async () => {
+  it("api: entity and citation 5xx propagate instead of becoming empty success", async () => {
     model.handle = async () => err(503, "unavailable");
-    expect((await entitiesScreen("api")).rows).toEqual([]);
-    expect((await citationScreen("api")).rows).toEqual([]);
+    await expect(entitiesScreen("api")).rejects.toMatchObject({ status: 503 });
+    await expect(citationScreen("api")).rejects.toMatchObject({ status: 503 });
     const ga4 = await ga4Screen("api");
     expect(ga4.rows).toEqual([]);
     expect(ga4.overrides).toEqual([]);

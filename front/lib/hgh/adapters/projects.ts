@@ -646,9 +646,9 @@ export function toCandidateRow(c: ApiCandidateItem): CandidateRow {
   };
 }
 
-export function toPromptRows(items: readonly ApiPromptItem[]): PromptRow[] {
+export function toPromptRows(items: readonly ApiPromptItem[], reverse = true): PromptRow[] {
   // API order: created_at DESC, prompt_id DESC. Legacy order: created_at ASC.
-  return [...items].reverse().map((p) => ({
+  return (reverse ? [...items].reverse() : items).map((p) => ({
     id: p.prompt_id,
     text: p.text,
     promptType: (p.prompt_type ?? null) as PromptType | null,
@@ -1523,24 +1523,40 @@ export async function setPromptCustomFieldValueBulk(
   promptIds: string[],
   fieldId: string,
   value: string,
-): Promise<ActionResult<{ count: number }>> {
+): Promise<import("@/lib/projects/bulk-field-result").BulkFieldResult> {
   const stored = value.trim();
   if (!stored) return { ok: false, error: "값을 입력해주세요" };
   const ids = [...new Set(promptIds)];
   if (ids.length === 0) return { ok: false, error: "프롬프트를 선택해주세요" };
   let count = 0;
-  for (const part of chunk(ids, CHUNK.bulkPromptIds)) {
-    const r = await run(
-      () =>
-        hghPost("/v1/projects/{project_id}/prompt-fields/{field_id}/bulk-set", {
-          ...W,
-          pathParams: { project_id: projectId, field_id: fieldId },
-          body: { value: stored, prompt_ids: part },
-        }),
-      {},
-    );
-    if (!r.ok) return r;
-    count += r.value!.data.count;
+  try {
+    for (const part of chunk(ids, CHUNK.bulkPromptIds)) {
+      const r = await run(
+        () =>
+          hghPost("/v1/projects/{project_id}/prompt-fields/{field_id}/bulk-set", {
+            ...W,
+            pathParams: { project_id: projectId, field_id: fieldId },
+            body: { value: stored, prompt_ids: part },
+          }),
+        {},
+      );
+      if (!r.ok) return { ...r, progress: { appliedIds: ids.slice(0, count), remainingIds: ids.slice(count) } };
+      if (r.value?.data.count !== part.length) {
+        return {
+          ok: false,
+          error: "저장 결과를 확인하지 못했습니다",
+          progress: { appliedIds: ids.slice(0, count), remainingIds: ids.slice(count) },
+        };
+      }
+      count += part.length;
+    }
+  } catch (error) {
+    if (count === 0) throw error;
+    return {
+      ok: false,
+      error: "일괄 저장이 중단되었습니다",
+      progress: { appliedIds: ids.slice(0, count), remainingIds: ids.slice(count) },
+    };
   }
   return { ok: true, value: { count } };
 }

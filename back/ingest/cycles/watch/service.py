@@ -127,10 +127,13 @@ SELECT count(*) FROM ing.cycle_gate g JOIN ing.cycle c ON c.cycle_id = g.cycle_i
 PUBLISH_GATE_MARK = "UPDATE ing.cycle_gate SET alerted_at = $2 WHERE cycle_id = ANY($1::uuid[]) AND alerted_at IS NULL"
 LOAD_FAILURES = "SELECT count(*) FROM ing.load WHERE status = 'failed' AND started_at > $1::timestamptz - interval '6 hours'"
 QUEUE = """
-SELECT count(*) FILTER (WHERE status IN ('failed', 'escalated_rebuild') AND requested_at > $1::timestamptz - interval '6 hours') AS bad,
-       count(*) FILTER (WHERE status = 'pending' AND requested_at < $1::timestamptz - interval '1 hour'
-                              AND kind NOT IN ('ga4_property', 'ga4_tracked_event')) AS stale
-  FROM app.judgment_change WHERE status IN ('failed', 'escalated_rebuild', 'pending')
+SELECT count(*) FILTER (WHERE status IN ('failed', 'escalated_rebuild')
+                         AND (requested_at > $1::timestamptz - interval '6 hours' OR error LIKE 'dfs_outcome_unknown:%')) AS bad,
+       count(*) FILTER (WHERE (status = 'pending' AND requested_at < $1::timestamptz - interval '1 hour'
+                              AND kind NOT IN ('ga4_property', 'ga4_tracked_event'))
+                           OR (status = 'running' AND kind = 'dfs_fetch'
+                               AND coalesce(claimed_at, requested_at) < $1::timestamptz - interval '15 minutes')) AS stale
+  FROM app.judgment_change WHERE status IN ('failed', 'escalated_rebuild', 'pending', 'running')
 """
 
 CHECKS = ("heartbeat", "ingest_backlog", "view_lag", "publish_backlog", "load_failures", "queue", "projection_gap", "publish_gate",
@@ -794,7 +797,7 @@ async def watch(db: LoaderDB, *, now: dt.datetime | None = None, heartbeat_minut
             if qrow and qrow["bad"]:
                 rep.findings.append(Finding("queue", 1, "code", f"판정 입력 큐 실패·이관 {qrow['bad']}건(최근 6시간)", {"bad": qrow["bad"]}))
             if qrow and qrow["stale"]:
-                rep.findings.append(Finding("queue", 1, "live", f"판정 입력 큐 1시간 넘은 대기 {qrow['stale']}건", {"stale": qrow["stale"]}))
+                rep.findings.append(Finding("queue", 1, "live", f"판정 입력 큐 장기 대기·실행 임대 만료 {qrow['stale']}건", {"stale": qrow["stale"]}))
         if "projection_gap" in on:
             rep.checked.append("projection_gap")
             gap = await _projection_gap(db, conn, rep, now, grace_hours=projection_gap_grace_hours, fill=fill,

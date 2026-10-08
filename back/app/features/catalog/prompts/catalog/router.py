@@ -10,11 +10,18 @@ from fastapi.responses import Response
 
 from app.core.auth import CurrentUser
 from app.core.db import RoConn
+from app.core.envelope import Envelope, build_meta
 from app.core.errors import ERROR_RESPONSES, ErrorBody
 from app.features.catalog.prompts.catalog.schemas import CatalogQuery
+from app.features.catalog.prompts.catalog.screen import CatalogScreenPage, CatalogScreenQuery, catalog_screen
 from app.features.catalog.prompts.catalog.service import CatalogEnvelope, list_catalog
 
 router = APIRouter(tags=["catalog.prompts"])
+
+
+@router.post("/v1/prompts/screen", response_model=Envelope[CatalogScreenPage], operation_id="readStandardPromptScreen", responses=ERROR_RESPONSES)
+async def read_standard_screen(p: CurrentUser, conn: RoConn, body: CatalogScreenQuery) -> Envelope[CatalogScreenPage]:
+    return Envelope(data=await catalog_screen(conn, p, body), meta=build_meta(mode="catalog", surface="global"))
 
 _EXPORT_DOC = {
     "description": "format=csv(text/csv, UTF-8 BOM) 또는 format=xlsx. 상한 도달 시 X-Export-Truncated: true",

@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { usePagedQuery } from "@/hooks/use-paged-query";
+import { useWindowedRows } from "@/hooks/use-windowed-rows";
+import type { ProjectPageQuery, RemoteProjectRows } from "@/lib/projects/prompt-page";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -105,18 +108,26 @@ export function PromptList({
   customFields,
   canEdit,
   locale,
+  remote,
 }: {
   projectId: string;
   prompts: PromptRow[];
   customFields: CustomFieldRow[];
   canEdit: boolean;
   locale: string;
+  remote?: RemoteProjectRows<PromptRow>;
 }) {
   const t = useTranslations("projectDetail.prompt.list");
   const tCf = useTranslations("projectDetail.prompt.customFields");
   const [pending, startTransition] = useTransition();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [sort, setSort] = useState<SortState>({ key: "", dir: null });
+  const [rowCount, setRowCount] = useState(remote?.initial.total ?? prompts.length);
+  const windowed = useWindowedRows(rowCount, JSON.stringify(sort), 56, !!remote);
+  const readQuery: ProjectPageQuery = { sort: sort.key, direction: sort.dir, offset: windowed.start, limit: windowed.limit };
+  const page = usePagedQuery(remote?.initial, remote?.load, readQuery);
+  useEffect(() => { if (page.data) setRowCount(page.data.total); }, [page.data]);
+  const sourcePrompts = page.data?.rows ?? prompts;
   // 일괄 태깅 — 선택된 프롬프트 id 집합 + 적용할 태그/값.
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkFieldId, setBulkFieldId] = useState<string>("");
@@ -149,10 +160,12 @@ export function PromptList({
   const [valueOverlay, setValueOverlay] = useState<
     Record<string, Record<string, string | null>>
   >({});
+  // Editing state survives a row leaving the mounted scroll window, including failed saves.
+  const cellDrafts = useRef(new Map<string, string>());
   const effectivePrompts = useMemo(() => {
     let base = removedPromptIds.size
-      ? prompts.filter((p) => !removedPromptIds.has(p.id))
-      : prompts;
+      ? sourcePrompts.filter((p) => !removedPromptIds.has(p.id))
+      : sourcePrompts;
     if (Object.keys(statusOverlay).length > 0) {
       base = base.map((p) =>
         statusOverlay[p.id] ? { ...p, status: statusOverlay[p.id] } : p,
@@ -169,16 +182,16 @@ export function PromptList({
       }
       return { ...p, customValues };
     });
-  }, [prompts, valueOverlay, removedPromptIds, statusOverlay]);
+  }, [sourcePrompts, valueOverlay, removedPromptIds, statusOverlay]);
 
   // 조건부 코어 열 — 값이 하나라도 있으면 열 노출(안 쓰는 프로젝트는 숨김).
   const showBrand = useMemo(
-    () => effectivePrompts.some((p) => p.brand),
-    [effectivePrompts],
+    () => page.data?.show_brand ?? effectivePrompts.some((p) => p.brand),
+    [effectivePrompts, page.data],
   );
   const showCategory = useMemo(
-    () => effectivePrompts.some((p) => p.category),
-    [effectivePrompts],
+    () => page.data?.show_category ?? effectivePrompts.some((p) => p.category),
+    [effectivePrompts, page.data],
   );
 
   // 열 정의 — 프롬프트·상태 고정 + (조건부)브랜드·카테고리 + 태그 열들.
@@ -204,7 +217,7 @@ export function PromptList({
   const valuesByField = useMemo(() => {
     const m = new Map<string, string[]>();
     for (const f of activeCustomFields) {
-      const set = new Set<string>();
+      const set = new Set<string>(page.data?.values[f.id] ?? []);
       for (const p of effectivePrompts) {
         const v = p.customValues[f.id];
         if (v) set.add(v);
@@ -212,7 +225,7 @@ export function PromptList({
       m.set(f.id, [...set].sort((a, b) => a.localeCompare(b)));
     }
     return m;
-  }, [activeCustomFields, effectivePrompts]);
+  }, [activeCustomFields, effectivePrompts, page.data]);
 
   function cellSortValue(p: PromptRow, key: string): string | number {
     if (key === "text") return p.text.toLowerCase();
@@ -223,7 +236,7 @@ export function PromptList({
   }
 
   const sorted = useMemo(() => {
-    if (!sort.dir) return effectivePrompts;
+    if (remote || !sort.dir) return effectivePrompts;
     const dir = sort.dir === "asc" ? 1 : -1;
     return [...effectivePrompts].sort((a, b) => {
       const va = cellSortValue(a, sort.key);
@@ -236,17 +249,17 @@ export function PromptList({
       if (va > vb) return 1 * dir;
       return 0;
     });
-  }, [effectivePrompts, sort]);
+  }, [effectivePrompts, sort, remote]);
 
   // RUN 대상 = draft + 회수 대상(queued인데 scope에 안 올라간 행) — executePrompts의
   // 판정과 동일해야 한다(_actions.ts:407-409). 안 맞추면 백엔드가 처리할 수 있는데도
   // 버튼이 비활성인 채로 남는다(2026-08-20 고아 6건 RUN 불가 실증).
-  const draftCount = effectivePrompts.filter(
+  const draftCount = page.data?.draft_count ?? effectivePrompts.filter(
     (p) => p.status === "draft" || (p.status === "queued" && !p.scopePromptId),
   ).length;
   const visibleIds = useMemo(() => sorted.map((p) => p.id), [sorted]);
   const allVisibleSelected =
-    visibleIds.length > 0 && visibleIds.every((id) => selected.has(id));
+    visibleIds.length > 0 && visibleIds.every((id) => selected.has(id)) && (!remote || selected.size === rowCount);
 
   function onSort(key: string) {
     setSort((prev) =>
@@ -269,6 +282,14 @@ export function PromptList({
     });
   }
   function toggleSelectAll(on: boolean) {
+    if (remote?.selectAll) {
+      if (!on) { setSelected(new Set()); return; }
+      startTransition(async () => {
+        try { setSelected(new Set(await remote.selectAll!())); }
+        catch { toast.error(t("bulk.selectFailed")); }
+      });
+      return;
+    }
     setSelected((prev) => {
       const next = new Set(prev);
       for (const id of visibleIds) {
@@ -285,7 +306,16 @@ export function PromptList({
     startTransition(async () => {
       const r = await setPromptCustomFieldValueBulk(projectId, ids, bulkFieldId, value);
       if (!r.ok) {
-        toast.error(r.error);
+        if (r.progress) {
+          const { appliedIds, remainingIds } = r.progress;
+          setValueOverlay((prev) => {
+            const next = { ...prev };
+            for (const id of appliedIds) next[id] = { ...next[id], [bulkFieldId]: value };
+            return next;
+          });
+          setSelected(new Set(remainingIds));
+          toast.error(t("bulk.incomplete", { count: appliedIds.length, remaining: remainingIds.length }) + " " + r.error);
+        } else toast.error(r.error);
         return;
       }
       setValueOverlay((prev) => {
@@ -365,6 +395,7 @@ export function PromptList({
     return t(`col.${col.key}`);
   }
 
+  if (page.error) throw page.error;
   return (
     <TooltipProvider delayDuration={200}>
       <div className="flex flex-col gap-3">
@@ -562,7 +593,7 @@ export function PromptList({
           </div>
         ) : null}
 
-        {prompts.length === 0 ? (
+        {(page.data?.total ?? prompts.length) === 0 ? (
           <p className="rounded-md border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
             {t("empty")}
           </p>
@@ -575,6 +606,7 @@ export function PromptList({
                     <th className="sticky left-0 z-20 w-8 bg-card px-3 py-2">
                       <Checkbox
                         checked={allVisibleSelected}
+                        disabled={pending}
                         onCheckedChange={(v) => toggleSelectAll(v === true)}
                         aria-label={t("bulk.selectAll")}
                       />
@@ -616,7 +648,8 @@ export function PromptList({
                   {canEdit ? <th className="w-8 px-2 py-2" /> : null}
                 </tr>
               </thead>
-              <tbody>
+              <tbody ref={windowed.containerRef} aria-busy={page.loading}>
+                {remote && windowed.top(page.data?.offset ?? 0) > 0 ? <tr aria-hidden><td colSpan={columns.length + 2} style={{ height: windowed.top(page.data?.offset ?? 0), padding: 0, border: 0 }} /></tr> : null}
                 {sorted.length === 0 ? (
                   <tr>
                     <td
@@ -627,12 +660,13 @@ export function PromptList({
                     </td>
                   </tr>
                 ) : (
-                  sorted.map((p) => (
-                    <tr key={p.id} className="border-b border-border/60 last:border-0">
+                  sorted.map((p, index) => (
+                    <tr key={p.id} data-window-row={(page.data?.offset ?? 0) + index} className="border-b border-border/60 last:border-0">
                       {canEdit ? (
                         <td className="sticky left-0 z-10 bg-card px-3 py-2 align-top">
                           <Checkbox
-                            checked={selected.has(p.id)}
+                          checked={selected.has(p.id)}
+                          disabled={pending}
                             onCheckedChange={(v) => toggleSelect(p.id, v === true)}
                             aria-label={t("bulk.selectOne")}
                           />
@@ -658,6 +692,7 @@ export function PromptList({
                               promptId={p.id}
                               field={col.field}
                               value={p.customValues[col.key]}
+                              drafts={cellDrafts.current}
                               suggestionsId={`cf-vals-${col.key}`}
                               onSaved={(value) =>
                                 setValueOverlay((prev) => ({
@@ -713,6 +748,7 @@ export function PromptList({
                     </tr>
                   ))
                 )}
+                {remote && windowed.bottom(page.data?.offset ?? 0, sourcePrompts.length) > 0 ? <tr aria-hidden><td colSpan={columns.length + 2} style={{ height: windowed.bottom(page.data?.offset ?? 0, sourcePrompts.length), padding: 0, border: 0 }} /></tr> : null}
               </tbody>
             </table>
           </div>
@@ -936,6 +972,7 @@ function CustomFieldValueControl({
   field,
   value,
   suggestionsId,
+  drafts,
   onSaved,
 }: {
   projectId: string;
@@ -943,14 +980,16 @@ function CustomFieldValueControl({
   field: CustomFieldRow;
   value: string | undefined;
   suggestionsId?: string;
+  drafts: Map<string, string>;
   onSaved: (value: string | null) => void;
 }) {
   const [pending, startTransition] = useTransition();
-  const [text, setText] = useState(value ?? "");
+  const draftKey = `${promptId}:${field.id}`;
+  const [text, setText] = useState(() => drafts.get(draftKey) ?? value ?? "");
 
   function onBlur() {
     const trimmed = text.trim();
-    if (trimmed === (value ?? "")) return;
+    if (trimmed === (value ?? "")) { drafts.delete(draftKey); return; }
     startTransition(async () => {
       const r = trimmed
         ? await setPromptCustomFieldValue(projectId, promptId, field.id, trimmed)
@@ -959,6 +998,7 @@ function CustomFieldValueControl({
         toast.error(r.error);
         return;
       }
+      if (drafts.get(draftKey) === text) drafts.delete(draftKey);
       onSaved(trimmed || null);
     });
   }
@@ -966,7 +1006,7 @@ function CustomFieldValueControl({
   return (
     <Input
       value={text}
-      onChange={(e) => setText(e.target.value)}
+      onChange={(e) => { drafts.set(draftKey, e.target.value); setText(e.target.value); }}
       onBlur={onBlur}
       placeholder={field.label}
       list={suggestionsId}

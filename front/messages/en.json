@@ -1816,6 +1816,8 @@
           "apply": "Apply",
           "clear": "Clear selection",
           "applied": "Applied to {count} prompts",
+          "selectFailed": "Could not load all prompt IDs. Please try again.",
+          "incomplete": "Confirmed {count} saved. {remaining} remain selected because saving is unconfirmed; retry with the same value.",
           "selectHint": "Select rows to bulk-apply a tag"
         },
         "categoryPlaceholder": "Category (e.g. model, region)",
@@ -2360,6 +2362,7 @@
     "title": "Global prompts",
     "subtitle": "Register and manage the global prompt catalog",
     "list": {
+      "exportFailed": "Export failed. Please try again.",
       "title": "Global prompt catalog",
       "description": "{count} entries — referenced by global dashboards",
       "empty": "No global prompts registered yet",

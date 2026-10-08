@@ -1,6 +1,9 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { usePagedQuery } from "@/hooks/use-paged-query";
+import { useWindowedRows } from "@/hooks/use-windowed-rows";
+import type { ProjectPageQuery, RemoteProjectRows } from "@/lib/projects/prompt-page";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
@@ -39,15 +42,23 @@ export function CandidateList({
   projectId,
   candidates,
   canEdit,
+  remote,
 }: {
   projectId: string;
   candidates: CandidateRow[];
   canEdit: boolean;
+  remote?: RemoteProjectRows<CandidateRow>;
 }) {
   const t = useTranslations("projectDetail.prompt.candidates");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [sort, setSort] = useState<SortKey>("newest");
   const [pending, startTransition] = useTransition();
+  const [rowCount, setRowCount] = useState(remote?.initial.total ?? candidates.length);
+  const windowed = useWindowedRows<HTMLUListElement>(rowCount, sort, 80, !!remote);
+  const readQuery: ProjectPageQuery = { sort, offset: windowed.start, limit: windowed.limit,
+    collation: Intl.Collator().resolvedOptions().locale.startsWith("ko") ? "ko" : "en" };
+  const page = usePagedQuery(remote?.initial, remote?.load, readQuery);
+  useEffect(() => { if (page.data) setRowCount(page.data.total); }, [page.data]);
 
   const sorted = useMemo(() => {
     const rows = [...candidates];
@@ -118,7 +129,10 @@ export function CandidateList({
     });
   }
 
-  if (candidates.length === 0) {
+  const visible = page.data?.rows ?? sorted;
+  const offset = page.data?.offset ?? 0;
+  if (page.error) throw page.error;
+  if ((page.data?.total ?? candidates.length) === 0) {
     return (
       <p className="rounded-md border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
         {t("empty")}
@@ -171,9 +185,10 @@ export function CandidateList({
           </div>
         ) : null}
       </div>
-      <ul className="flex flex-col divide-y divide-border rounded-md border border-border bg-card">
-        {sorted.map((c) => (
-          <li key={c.id} className="flex items-start gap-3 px-4 py-3">
+      <ul ref={windowed.containerRef} aria-busy={page.loading} className="flex flex-col divide-y divide-border rounded-md border border-border bg-card">
+        {remote && windowed.top(offset) > 0 ? <li aria-hidden style={{ height: windowed.top(offset), border: 0 }} /> : null}
+        {visible.map((c, index) => (
+          <li key={c.id} data-window-row={offset + index} className="flex items-start gap-3 px-4 py-3">
             {canEdit ? (
               <Checkbox
                 checked={selected.has(c.id)}
@@ -207,6 +222,7 @@ export function CandidateList({
             ) : null}
           </li>
         ))}
+        {remote && windowed.bottom(offset, visible.length) > 0 ? <li aria-hidden style={{ height: windowed.bottom(offset, visible.length), border: 0 }} /> : null}
       </ul>
     </div>
   );

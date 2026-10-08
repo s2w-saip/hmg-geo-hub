@@ -65,7 +65,7 @@ class HttpScopeSource:
         delay = 1.0
         for attempt in range(self._retries + 1):
             r = await self._client.request(method, self._base + path, params=q, json=body, headers=self._headers)
-            if (r.status_code == 429 or r.status_code >= 500) and attempt < self._retries:
+            if method != "POST" and (r.status_code == 429 or r.status_code >= 500) and attempt < self._retries:
                 await asyncio.sleep(delay)
                 delay = min(delay * 2, 30.0)
                 continue

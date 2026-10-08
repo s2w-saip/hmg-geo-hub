@@ -1,19 +1,11 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { SectionCard } from "@/components/section-card";
 import { getSession } from "@/lib/auth/session";
-import { projectRepository } from "@/lib/db/repositories/projects";
-import { projectMemberRepository } from "@/lib/db/repositories/project-members";
-import {
-  promptCandidateRepository,
-  promptRepository,
-} from "@/lib/db/repositories/prompts";
-import { projectCustomFieldRepository } from "@/lib/db/repositories/project-custom-fields";
-import { isProjectsApi, loadPromptPage, type PromptPageData } from "@/lib/hgh/adapters/projects";
-import { CandidateList, type CandidateRow } from "./_components/candidate-list";
+import { loadAllProjectPromptIds, loadProjectCandidateRows, loadProjectPromptRows, loadProjectPromptScreen } from "./_page-actions";
+import { CandidateList } from "./_components/candidate-list";
 import { ManualPromptInput } from "./_components/manual-input";
-import { PromptList, type PromptRow } from "./_components/prompt-list";
-import { type CustomFieldRow } from "./_components/custom-fields-panel";
+import { PromptList } from "./_components/prompt-list";
 
 // Project detail > Prompt (v23 IA, v22 user flow #3).
 // Owner sees: candidate pool with multi-select promotion, manual input,
@@ -31,13 +23,7 @@ export default async function ProjectPromptPage({
   const session = await getSession();
   if (!session) redirect(`/${locale}/login`);
 
-  const isAdmin = session.user.role === "admin";
-  // Data source (D8): HGH_SOURCE_G6=api = the U2 project gate + GET …/prompt-candidates,
-  // …/prompts (cursor to the end, API newest first reversed to the legacy oldest first) and
-  // …/prompt-fields; custom values ride on the prompt items (tags). Legacy below.
-  const { canEdit, candidates, prompts, customFields } = isProjectsApi()
-    ? await loadPromptPage(locale, id, isAdmin)
-    : await legacyPromptPage(id, session.user.id, isAdmin);
+  const { canEdit, candidatePage, promptPage, customFields } = await loadProjectPromptScreen(id);
 
   return (
     <div className="flex flex-col gap-6">
@@ -55,7 +41,8 @@ export default async function ProjectPromptPage({
         >
           <CandidateList
             projectId={id}
-            candidates={candidates}
+            candidates={candidatePage.rows}
+            remote={{ initial: candidatePage, load: loadProjectCandidateRows.bind(null, id) }}
             canEdit={canEdit}
           />
         </SectionCard>
@@ -74,11 +61,12 @@ export default async function ProjectPromptPage({
 
       <SectionCard
         title={t("list.title")}
-        description={t("list.description", { count: prompts.length })}
+        description={t("list.description", { count: promptPage.total })}
       >
         <PromptList
           projectId={id}
-          prompts={prompts}
+          prompts={promptPage.rows}
+          remote={{ initial: promptPage, load: loadProjectPromptRows.bind(null, id), selectAll: loadAllProjectPromptIds.bind(null, id) }}
           customFields={customFields}
           canEdit={canEdit}
           locale={locale}
@@ -86,59 +74,4 @@ export default async function ProjectPromptPage({
       </SectionCard>
     </div>
   );
-}
-
-// Legacy source (the rollback path, D8).
-async function legacyPromptPage(id: string, userId: string, isAdmin: boolean): Promise<PromptPageData> {
-  const project = await projectRepository.getById(id);
-  if (!project) notFound();
-
-  const membership = await projectMemberRepository.findMembership(id, userId);
-  // admin = developer superuser (resolved 2026-06-02): can view + edit
-  // every project's prompt tab regardless of membership.
-  if (!isAdmin && (!membership || membership.status !== "active")) notFound();
-
-  const canEdit = isAdmin || membership?.role === "owner";
-
-  const [candidatesRaw, promptsRaw, customFieldsRaw, customValuesRaw] = await Promise.all([
-    promptCandidateRepository.listForProject(id),
-    promptRepository.listForProject(id),
-    projectCustomFieldRepository.listForProject(id),
-    projectCustomFieldRepository.listValuesForProject(id),
-  ]);
-
-  const candidates: CandidateRow[] = candidatesRaw.map((c) => ({
-    id: c.id,
-    source: c.source,
-    sourceKeyword: c.sourceKeyword,
-    text: c.text,
-    createdAt: c.createdAt.toISOString(),
-  }));
-
-  const customFields: CustomFieldRow[] = customFieldsRaw.map((f) => ({
-    id: f.id,
-    label: f.label,
-    archived: f.archived,
-  }));
-
-  // promptId -> fieldId -> value, so each PromptRow carries just its own slice.
-  const valuesByPrompt = new Map<string, Record<string, string>>();
-  for (const v of customValuesRaw) {
-    const bucket = valuesByPrompt.get(v.promptId) ?? {};
-    bucket[v.fieldId] = v.value;
-    valuesByPrompt.set(v.promptId, bucket);
-  }
-
-  const prompts: PromptRow[] = promptsRaw.map((p) => ({
-    id: p.id,
-    text: p.text,
-    promptType: p.promptType,
-    category: p.category,
-    brand: p.brand,
-    status: p.status,
-    scopePromptId: p.scopePromptId ?? null,
-    customValues: valuesByPrompt.get(p.id) ?? {},
-  }));
-
-  return { canEdit, candidates, prompts, customFields };
 }

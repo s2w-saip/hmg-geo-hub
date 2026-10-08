@@ -813,6 +813,42 @@ describe("write requests (method, path, body) and success values", () => {
     expect(calls.at(-1)?.body).toEqual({ text: "a\nb\n\nc" });
   });
 
+  it("bulk tag failure reports confirmed chunks and leaves only the remainder for retry", async () => {
+    const ids = Array.from({ length: 2500 }, (_, i) => `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`);
+    let attempt = 0;
+    serve((r) => ++attempt === 2 ? err(500, "internal_error") : ok({ count: (r.body as { prompt_ids: string[] }).prompt_ids.length }));
+    const result = await P.setPromptCustomFieldValueBulk(PID, ids, PID2, "v");
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("expected partial failure");
+    expect(result.progress).toEqual({ appliedIds: ids.slice(0, 1000), remainingIds: ids.slice(1000) });
+    expect(attempt).toBe(2);
+    const retryCalls: string[] = [];
+    serve((r) => {
+      const part = (r.body as { prompt_ids: string[] }).prompt_ids;
+      retryCalls.push(...part);
+      return ok({ count: part.length });
+    });
+    await expect(P.setPromptCustomFieldValueBulk(PID, result.progress!.remainingIds, PID2, "v")).resolves.toEqual({ ok: true, value: { count: 1500 } });
+    expect(retryCalls).toEqual(ids.slice(1000));
+  });
+
+  it("bulk tag malformed success and first-request failure never claim an applied chunk", async () => {
+    serve(() => ok({ count: 0 }));
+    const malformed = await P.setPromptCustomFieldValueBulk(PID, [PID2], PID2, "v");
+    expect(malformed).toMatchObject({ ok: false, progress: { appliedIds: [], remainingIds: [PID2] } });
+    serve(() => err(403, "forbidden"));
+    await expect(P.setPromptCustomFieldValueBulk(PID, [PID2], PID2, "v")).rejects.toBeInstanceOf(UnauthorizedError);
+  });
+
+  it("bulk tag permission loss after one committed chunk retains the confirmed progress", async () => {
+    const ids = Array.from({ length: 1001 }, (_, i) => `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`);
+    let attempt = 0;
+    serve(() => ++attempt === 1 ? ok({ count: 1000 }) : err(403, "forbidden"));
+    await expect(P.setPromptCustomFieldValueBulk(PID, ids, PID2, "v")).resolves.toMatchObject({
+      ok: false, progress: { appliedIds: ids.slice(0, 1000), remainingIds: ids.slice(1000) },
+    });
+  });
+
   it("xlsx export: bytes -> base64, filename from Content-Disposition, legacy name when absent", async () => {
     const bytes = new Uint8Array([80, 75, 3, 4]);
     serve(
