@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>마이그레이션 테이블 더블체크</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --bg: #eef0f3; --sheet: #ffffff;
+    --ink: #1a1d23; --ink-2: #454b57; --ink-3: #6f7685;
+    --line: #d9dde4; --soft: #f3f5f8;
+    --accent: #1f4e8c; --accent-soft: #e8eff9;
+    --warn: #8a5a00; --warn-soft: #fcf4e3;
+    --risk: #b42318; --risk-soft: #fcebe9;
+    --ok: #1b6b3a; --ok-soft: #e4f3e9;
+    --font: "Pretendard", "Pretendard Variable", "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+    --mono: ui-monospace, "Cascadia Code", "D2Coding", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1216; --sheet: #161a20; --ink: #e6e9ef; --ink-2: #b8bec9; --ink-3: #8a91a0;
+      --line: #2c323c; --soft: #1d222a; --accent: #8db5f2; --accent-soft: #1a2638;
+      --warn: #e4b55a; --warn-soft: #2e2611; --risk: #f29286; --risk-soft: #3a1f1d; --ok: #6fcf97; --ok-soft: #15301d; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1216; --sheet: #161a20; --ink: #e6e9ef; --ink-2: #b8bec9; --ink-3: #8a91a0;
+    --line: #2c323c; --soft: #1d222a; --accent: #8db5f2; --accent-soft: #1a2638;
+    --warn: #e4b55a; --warn-soft: #2e2611; --risk: #f29286; --risk-soft: #3a1f1d; --ok: #6fcf97; --ok-soft: #15301d; color-scheme: dark;
+  }
+  /* 1280px≈15.5px · 1920px≈18px · 2560px≈20.8px · 3840px≈26px */
+  html { font-size: clamp(15px, 0.4vw + 10.5px, 27px); scroll-padding-top: 1rem; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 1rem; line-height: 1.65; word-break: keep-all; overflow-wrap: break-word; padding-inline: max(16px, 2.5vw); padding-block: 2.5rem 5rem; }
+  .sheet { max-width: 66rem; margin: 0 auto; background: var(--sheet); border: 1px solid var(--line); border-radius: 10px; padding: 2.6rem 3rem 2.4rem; }
+  @media (max-width: 700px) { .sheet { padding: 1.4rem 1.1rem; } }
+
+  .eyebrow { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; color: var(--accent); margin: 0 0 0.6rem; }
+  h1 { font-size: 1.85rem; font-weight: 800; line-height: 1.25; letter-spacing: -0.02em; margin: 0; text-wrap: balance; }
+  .meta { display: flex; flex-wrap: wrap; gap: 0.3em 1.8em; margin: 1rem 0 0; padding-top: 0.8rem; border-top: 2px solid var(--ink); font-size: 0.82rem; color: var(--ink-2); }
+  .meta b { color: var(--ink-3); font-weight: 600; margin-right: 0.5em; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(11em, 1fr)); gap: 0.7rem; margin: 1.6rem 0 0; }
+  .tile { border: 1px solid var(--line); border-left: 4px solid var(--c, var(--accent)); border-radius: 8px; padding: 0.6rem 0.9rem; }
+  .tile .k { font-size: 0.8rem; color: var(--ink-2); font-weight: 600; }
+  .tile .v { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+  .tile .d { font-size: 0.8rem; color: var(--ink-3); margin-top: 0.1em; }
+
+  nav.toc { margin: 1.4rem 0 0; font-size: 0.86rem; color: var(--ink-2); display: flex; flex-wrap: wrap; gap: 0.3em 1.2em; }
+  nav.toc a { color: var(--accent); text-decoration: none; }
+  nav.toc a:hover { text-decoration: underline; }
+
+  section { margin-top: 2.2rem; }
+  h2 { font-size: 1.22rem; font-weight: 750; line-height: 1.35; letter-spacing: -0.01em; margin: 0 0 0.6rem; display: flex; gap: 0.6em; align-items: baseline; }
+  h2 .no { font-family: var(--mono); font-size: 0.72em; color: var(--accent); font-weight: 600; }
+  .key { margin: 0 0 0.9rem; padding: 0.55rem 0.9rem; border-left: 3px solid var(--accent); background: var(--soft); font-weight: 600; border-radius: 0 6px 6px 0; }
+  h3 { font-size: 0.98rem; font-weight: 700; margin: 1.2rem 0 0.35rem; }
+  p { margin: 0 0 0.7em; }
+  ul, ol { margin: 0 0 0.8em; padding-left: 1.3em; }
+  li { margin: 0.28em 0; }
+  .small { font-size: 0.86rem; color: var(--ink-2); }
+  .note { font-size: 0.84rem; color: var(--ink-3); }
+  code { font-family: var(--mono); font-size: 0.84em; background: var(--soft); border-radius: 4px; padding: 0.05em 0.35em; }
+  .pill { display: inline-block; font-size: 0.74em; font-weight: 700; line-height: 1.5; padding: 0 0.5em; border-radius: 999px; white-space: nowrap; }
+  .pill.must { background: var(--risk-soft); color: var(--risk); }
+  .pill.rec { background: var(--warn-soft); color: var(--warn); }
+  .pill.opt { background: var(--soft); color: var(--ink-2); }
+  .pill.no { background: var(--ok-soft); color: var(--ok); }
+  .pill.chk { background: var(--accent-soft); color: var(--accent); }
+
+  .table-wrap { overflow-x: auto; margin: 0.5rem 0 0.9rem; border: 1px solid var(--line); border-radius: 8px; }
+  table { width: 100%; min-width: 46em; border-collapse: collapse; font-size: 0.84rem; line-height: 1.5; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; vertical-align: top; padding: 0.5em 0.75em; border-bottom: 1px solid var(--line); }
+  th { background: var(--soft); color: var(--ink-2); font-size: 0.9em; white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: 0; }
+  td:first-child { font-weight: 600; }
+  td.c { color: var(--ink-2); }
+  td.n { text-align: right; white-space: nowrap; }
+
+  .callout { border-left: 3px solid var(--warn); background: var(--warn-soft); padding: 0.6rem 0.9rem; border-radius: 0 6px 6px 0; margin: 0.8rem 0; font-size: 0.9rem; }
+  .callout.risk { border-color: var(--risk); background: var(--risk-soft); }
+  .callout b.t { display: block; margin-bottom: 0.2em; }
+
+  .draft { border: 1px solid var(--accent); border-radius: 8px; padding: 1rem 1.2rem; margin: 0.6rem 0 0.9rem; background: var(--accent-soft); font-size: 0.9rem; }
+  .draft h4 { margin: 0.8em 0 0.3em; font-size: 0.86rem; letter-spacing: 0.04em; color: var(--accent); }
+  .draft h4:first-child { margin-top: 0; }
+  .draft ol { margin: 0; padding-left: 1.5em; }
+  .draft li { margin: 0.3em 0; }
+  .draft .lead { margin: 0 0 0.5em; }
+
+  .gloss { margin-top: 1.6rem; padding: 0.7rem 0.9rem; background: var(--soft); border-radius: 8px; font-size: 0.84rem; color: var(--ink-2); line-height: 1.8; }
+  .gloss b { color: var(--ink); }
+  footer.src { margin-top: 1.6rem; padding-top: 0.8rem; border-top: 1px solid var(--line); font-size: 0.8rem; color: var(--ink-3); }
+  @media print { html { font-size: 10pt; } body { background: #fff; padding: 0; } .sheet { border: 0; padding: 0; max-width: none; } h2, h3 { break-after: avoid; } .table-wrap { overflow: visible; } tr { break-inside: avoid; } }
+</style>
+</head>
+<body>
+<article class="sheet">
+  <header>
+    <p class="eyebrow">HMG GEO 인수 · 데이터 마이그레이션 · 내부 검토용</p>
+    <h1>마이그레이션 테이블 더블체크 v2 — 앤서 전달 문서 3장 전수 검토 결과</h1>
+    <div class="meta">
+      <span><b>검토일</b>2026-10-07</span>
+      <span><b>검토 대상</b>앤서 「AI 답변 데이터와 이관 대상」(2026-10-06) 3장</span>
+      <span><b>검토 방법</b>레거시 테이블 79개 전체를 코드로 추적, 앤서 마이그레이션 스크립트·설계 문서와 교차 확인</span>
+      <span><b>기준 코드</b>hub-share 72c260a3 (front · back/migration · DB-v2.32)</span>
+    </div>
+    <div class="tiles">
+      <div class="tile" style="--c: var(--ok)"><div class="k">누락 테이블</div><div class="v">0</div><div class="d">79개 모두 문서에 분류되어 있음</div></div>
+      <div class="tile" style="--c: var(--risk)"><div class="k">분류 오류</div><div class="v">19</div><div class="d">회차 원장·앵커·드롭 8개는 재계산 불가</div></div>
+      <div class="tile" style="--c: var(--warn)"><div class="k">문서 ↔ 스크립트 불일치</div><div class="v">7</div><div class="d">문서상 이관 대상이나 시드에서 누락</div></div>
+      <div class="tile" style="--c: var(--accent)"><div class="k">DB 밖 자산 누락</div><div class="v">8</div><div class="d">계정·GA4·리포트 파일·S3·Scope 데이터</div></div>
+      <div class="tile" style="--c: var(--ink-3)"><div class="k">문서 내용 오류</div><div class="v">6</div><div class="d">N2·N3·N4·N9·경로·crawl 0건</div></div>
+    </div>
+    <nav class="toc">
+      <a href="#s0">0 결론</a><a href="#s1">1 테이블별 판정</a><a href="#s2">2 DB 밖 자산</a><a href="#s3">3 문서 오류</a><a href="#s4">4 스크립트 미처리 테이블</a><a href="#s5">5 앤서 요청 사항</a><a href="#s6">6 S2W 결정 사항</a><a href="#s7">7 확인 못 한 것</a><a href="#s8">부록</a>
+    </nav>
+  </header>
+
+  <section id="s0">
+    <h2><span class="no">0</span>결론</h2>
+    <p class="key">이관 목록에서 빠진 테이블은 없습니다. 다만 분류가 틀린 항목이 있습니다. 운영자가 직접 입력한 값이 들어 있는 회차 원장 테이블이 "재계산 가능"으로 분류돼 있고, 문서에는 이관 대상으로 적힌 테이블 중 일부가 실제 시드 스크립트에서는 빠져 있습니다.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>S2W 판정</th><th>개수</th><th>해당 테이블</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pill must">이관 필수</span></td><td class="n">41</td><td class="c">3-1 컨텍스트 6 · 업무 데이터 14 · 공급 원본 3 · 3-2 13 · 앵커·드롭 2 · summary_cycles/cycle_runs 2 · scope_cycle_rounds 1</td></tr>
+          <tr><td><span class="pill rec">이관 권장</span></td><td class="n">12</td><td class="c">scope_prompts · QA 3 · member_audit · bff_audit · 분석 결과 4 · summary_generations · scope_answer_cycle_anchors</td></tr>
+          <tr><td><span class="pill opt">선택</span></td><td class="n">6</td><td class="c">summary_settings · cycle_anchor_state · cycle_registry_runs · 키워드 캐시 2 · scope_sync_cursors</td></tr>
+          <tr><td><span class="pill no">불필요</span></td><td class="n">20</td><td class="c">summary 세부·집계 테이블 13 · 폐기 테이블 5 · scope_sync_watermarks · qa_answer_locks</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">v1(10-07 오전)은 테이블명만 비교하고 회차 원장 6개를 지적한 수준이었습니다. v2에서는 테이블별로 쓰기 경로·읽기 경로·재생성 조건을 코드로 확인했고, 앤서의 <code>export.py</code>·<code>seed-10/20</code>·<code>verify-seed.sql</code>과 설계 결정(G-09·G-13·결정 32·S0~S11)까지 함께 대조했습니다.</p>
+  </section>
+
+  <section id="s1">
+    <h2><span class="no">1</span>테이블별 판정 — 앤서 분류와 다른 항목</h2>
+
+    <h3>1-1. 회차 원장·앵커·드롭: "재계산 가능 / 보류"로 분류돼 있으나 이관 필수</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>테이블</th><th>앤서 분류</th><th>S2W 판정</th><th>근거</th></tr></thead>
+        <tbody>
+          <tr><td><code>summary_cycles</code></td><td class="c">3-4 재계산 가능</td><td><span class="pill must">필수</span></td><td class="c"><code>hidden_reason/hidden_at/hidden_scope</code>는 운영자가 스크립트로 직접 입력한 값(<code>scripts/summary/hide-cycle.ts:184,193</code>, 0070:111-113 "사람이 찍은 값이 그대로 남는다"). <code>view_anchor_at</code>은 최초 노출 시각을 보존(<code>generate/swap.ts:96-98</code>), <code>closed_by/closed_at/sealed_units</code>는 마감 시점 스냅샷, <code>anchor_source='operator'</code>는 수동 개설 회차. <strong>앤서 <code>seed-20-ing.sql:341-368</code>이 이 테이블을 <code>ing.cycle</code>의 소스로 사용</strong></td></tr>
+          <tr><td><code>summary_cycle_runs</code></td><td class="c">3-4 재계산 가능</td><td><span class="pill must">필수</span></td><td class="c"><code>attributed_by</code>(late/operator)와 <code>synced_at_seen</code>(생성 시점 식별값)은 재계산 불가. <code>seed-20:357-359</code> → <code>ing.cycle_run</code></td></tr>
+          <tr><td><code>scope_cycle_rounds</code></td><td class="c">3-4 재계산 가능</td><td><span class="pill must">필수</span></td><td class="c">순번 배정이 실행 시점 순서에 따라 달라지고 "과거 배정은 재계산하지 않음"(0077:517-519). 운영자 재배정 스크립트도 있음. <code>seed-20:329-331</code> → <code>ing.cycle_round</code></td></tr>
+          <tr><td><code>scope_answer_anchors</code> (177,007건)</td><td class="c">3-3 보류</td><td><span class="pill must">필수</span></td><td class="c">앱·스크립트에서 쓰는 코드가 없음 = 전부 수동 관리 레지스트리(0053:112-126). 재싱크 때마다 입력으로 사용(<code>scope-mirror.ts:121</code>), refresh의 고정(pinned) 소스. <code>seed-20:312-314</code> → <code>ing.answer_anchor_pin</code></td></tr>
+          <tr><td><code>scope_answer_drops</code> (14,182건)</td><td class="c">3-3 보류</td><td><span class="pill must">필수</span></td><td class="c">위와 동일(0054:80-90). <code>seed-20:315-316</code> → <code>ing.answer_drop</code></td></tr>
+          <tr><td><code>scope_answer_cycle_anchors</code></td><td class="c">3-4 재계산 가능</td><td><span class="pill rec">권장(덤프)</span></td><td class="c">재계산하려면 DB 함수 20여 개를 포팅하고 입력 테이블 5개가 있어야 함. <code>export.py</code> BIG 목록에 이미 포함, seed-20이 <code>measured_at</code> 원복에 사용</td></tr>
+          <tr><td><code>scope_cycle_anchor_state</code> / <code>scope_cycle_registry_runs</code></td><td class="c">3-4 재계산 가능</td><td><span class="pill opt">선택</span></td><td class="c">파생 캐시. 위 테이블과 세트로 받는 것이 일관성 있음(export.py SMALL 목록에 포함)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>1-2. 분석 결과·동결 데이터: "검산용 덤프 / 운영 내부"로 분류돼 있으나 적재 가능한 형태의 덤프 권장</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>테이블</th><th>앤서 분류</th><th>S2W 판정</th><th>근거</th></tr></thead>
+        <tbody>
+          <tr><td><code>scope_mentions</code> · <code>scope_mention_occurrences</code> · <code>scope_answer_stances</code> · <code>scope_acr_rollups</code></td><td class="c">검산용 1회 덤프</td><td><span class="pill rec">권장</span></td><td class="c">HUB 시드가 <code>ing.mention / mention_occurrence / answer_stance / acr_*</code>의 소스로 사용(<code>seed-20:216-300</code>). HUB 결정 37에 따라 과거 이력은 v0(Scope 분석값)로 유지되므로 이 덤프가 곧 v0 이력. 포맷은 export.py CSV.gz + mig_src DDL, 추출 시점은 컷오버 직전. 참고: 드롭 함수가 ACR 롤업은 삭제하지 않음(0054:46-48)</td></tr>
+          <tr><td><code>summary_generations</code></td><td class="c">운영 내부</td><td><span class="pill rec">권장(활성 세대)</span></td><td class="c"><code>roster/base/target/noise_snapshot</code>은 집계 기준 스냅샷("재해석 방지" 목적, <code>lib/summary/tenant/hmg.ts:59-61</code>). 앤서 <code>export.py --frz frz_ops_generation</code>이 이미 추출. <strong>PDF에는 동결 데이터(결정 32) 언급이 없음</strong></td></tr>
+          <tr><td>summary 세부·집계 테이블의 활성 세대 데이터</td><td class="c">재계산 가능</td><td><span class="pill no">불필요</span> + 문서 보완</td><td class="c">0080:19-21 "발행 시점과 생성 시점이 다르면 값이 달라짐". 앤서 스크립트는 <code>frz_ops_cell/prompt/answer/brand/sum_*</code> 쿼리 15개로 동결값을 추출하는데 PDF 3-4에는 이 내용이 없음</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>1-3. 문서에는 이관 대상인데 실제 시드 스크립트에서 빠진 테이블 — 확인 필요</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>테이블</th><th>PDF</th><th>앤서 스크립트 실제 동작</th><th>요청</th></tr></thead>
+        <tbody>
+          <tr><td><code>profiles</code> (128건)</td><td class="c">3-2 이관</td><td class="c"><code>seed-10-app.sql:25-27</code> "profiles는 이관 대상이 아니다"(시스템 계정 1건으로 대체). 계정 이관은 레포 밖 <code>load-accounts.tpl.sh</code>가 담당(DECISIONS.md:557)</td><td class="c"><span class="pill chk">확인</span> 계정 이관 스크립트·규칙(R2/R3) 수령, <code>auth.users</code> export</td></tr>
+          <tr><td><code>project_members</code></td><td class="c">3-1 이관</td><td class="c"><code>verify-seed.sql:61</code> <code>app.project_member(미이관: profiles FK)</code></td><td class="c"><span class="pill chk">확인</span> 계정 이관 후 적재 계획</td></tr>
+          <tr><td><code>standard_prompts</code> (8건)</td><td class="c">3-2 이관</td><td class="c"><code>seed-10:1148</code> "대상 표 없음" → 드롭</td><td class="c"><span class="pill chk">확인</span> HUB에 대응 테이블이 없음. 처리 방안 확인</td></tr>
+          <tr><td><code>qa_review_sessions</code> · <code>qa_answer_reviews</code> · <code>qa_review_notes</code></td><td class="c">3-3 보류</td><td class="c"><code>verify-seed.sql:63-64</code> "미이관(지시 목록 외)". 단위 설계(모듈-검수-콘솔.json:214)는 이관을 전제</td><td class="c"><span class="pill chk">확인</span> 설계와 구현 불일치. QA 인수 시 이관 요청</td></tr>
+          <tr><td><code>scope_context_*</code> 6개</td><td class="c">3-1 이관</td><td class="c">mig_src 스테이징까지만. <code>ext.ctx_*</code>에 적재하는 로더 코드 없음 → 활성 스냅샷이 없으면 API가 "준비 중" 응답. 최초 적재 스크립트도 레포에 없음(0027:1-6 "Scope 라이브 PG 직접")</td><td class="c"><span class="pill chk">확인</span> 로더 구현 여부·일정, 최초 적재 스크립트</td></tr>
+          <tr><td><code>keyword_cache</code> · <code>keyword_volume_cache</code></td><td class="c">선택</td><td class="c">스테이징까지만, "폐기 대상"(BUILDER-B-REPORT:27)</td><td class="c">선택으로 동의</td></tr>
+          <tr><td><code>scope_sync_cursors</code></td><td class="c">운영 내부</td><td class="c"><code>seed-20:458-462</code>에서 <code>ing.sync_cursor</code>의 소스로 사용</td><td class="c">참고용으로 수령</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>1-4. 기타 불일치</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>테이블</th><th>앤서 분류</th><th>S2W 판정</th><th>근거</th></tr></thead>
+        <tbody>
+          <tr><td><code>member_audit_logs</code> (142건)</td><td class="c">3-3 보류</td><td><span class="pill rec">권장</span></td><td class="c">화면에서 조회함(<code>member/_components/audit-log.tsx</code>). 앤서 <code>seed-10:1226</code>에서 이미 적재</td></tr>
+          <tr><td><code>bff_audit_logs</code> (162,063건)</td><td class="c">3-3 보류</td><td><span class="pill opt">조건부</span></td><td class="c">조회 코드 없음(INSERT only). HUB는 신규 <code>app.access_audit_log</code>로 대체. 보존 의무(HMG·이노션) 확인 전까지 덤프 보관</td></tr>
+          <tr><td><code>summary_settings</code></td><td class="c">운영 내부</td><td><span class="pill opt">선택</span></td><td class="c">키 4개뿐이지만 <code>website_excluded_fs</code>(리포트 제외 유닛 71·94·97)는 업무 규칙이므로 값을 인계</td></tr>
+          <tr><td><code>summary_ga4</code></td><td class="c">재계산 가능</td><td><span class="pill no">불필요</span></td><td class="c">읽고 쓰는 코드가 없음. 빈 테이블</td></tr>
+          <tr><td><code>scope_mirror_progress</code></td><td class="c">0건·폐기</td><td><span class="pill no">불필요</span></td><td class="c">폐기 테이블이 아니라 현재 벌크 싱크의 체크포인트 테이블(0073)</td></tr>
+          <tr><td><code>scope_prompts</code></td><td class="c">정본 확인 요청</td><td><span class="pill rec">권장</span></td><td class="c">정본은 Scope(<code>ing.prompt</code>)로 두고 미러 사본도 함께 이관. <code>is_korean</code>은 GENERATED 컬럼이므로 COPY 시 제외</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>1-5. 앤서 분류에 동의하는 항목</h3>
+    <ul>
+      <li><strong>이관 필수:</strong> 3-1 컨텍스트 6(단 로더 확인 필요), 업무 데이터 15, 공급 원본 3, 3-2 13(단 profiles·standard_prompts 확인 필요). 모두 사람이 입력했거나 Scope 원본이라 재생성이 불가능합니다.</li>
+      <li><strong>이관 불필요:</strong> summary 세부·집계 테이블 13개(<code>summary_cycle_jobs</code>, <code>summary_answers</code>, <code>summary_brand_mentions</code>, <code>summary_domain_citations</code>, <code>summary_target_hits</code>, <code>summary_prompt_dim</code>, <code>summary_trend_*</code> 4, <code>summary_url_hits</code>, <code>summary_url_hit_generations</code>, <code>summary_ga4</code>), 폐기 테이블 5개(<code>ai_responses</code>, <code>brand_mentions</code>, <code>citation_analysis</code>, <code>youtube_video_metadata</code>, <code>scope_mirror_progress</code>), <code>scope_sync_watermarks</code>, <code>qa_answer_locks</code>.</li>
+    </ul>
+  </section>
+
+  <section id="s2">
+    <h2><span class="no">2</span>DB 밖 자산 — 문서에 없어서 추가해야 할 항목</h2>
+    <p class="key">계정은 <code>profiles</code> 테이블만 옮겨서는 복원되지 않습니다. 크롤링 원본 HTML은 S3가 아니라 DB 테이블에 들어 있고, S3 아카이빙은 아직 구현되지 않았습니다.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>자산</th><th>확인된 사실</th><th>요청</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><strong>Supabase <code>auth.users</code></strong></td><td class="c"><code>profiles.id = auth.users.id</code>(FK 없음, <code>schema.ts:48-56</code>). 계정 생성은 Supabase Admin API로 처리(<code>admin/_actions.ts:63-140</code>). HUB는 Supabase Auth를 유지하고 JWKS로 검증(A8)</td><td class="c">auth.users export(이메일·password hash·confirmed_at·last_sign_in), <strong>uuid 유지</strong>, <code>load-accounts.tpl.sh</code>·account-migration.md 사본</td></tr>
+          <tr><td>2</td><td><strong>GA4 OAuth 계정</strong></td><td class="c">토큰은 환경변수 <code>GA4_OAUTH_*</code> 또는 <code>.ga4-token.json</code>에만 존재(<code>lib/ga4/auth.ts:13-39</code>), DB에 없음. 설정 테이블은 이관됨. HUB <code>rd.ga4_*</code> 적재 담당(IG-4) 미정</td><td class="c">OAuth 계정 교체 및 property별 뷰어 권한 부여 절차. 데이터 이관은 없음(재조회 전제)</td></tr>
+          <tr><td>3</td><td><strong>발행 리포트 파일</strong></td><td class="c"><code>report_publications</code>에는 <code>source_filename+sha256</code>만 있고 파일 경로 컬럼 없음(0080:86-87). 산출물은 <code>docs/data/{1-source,2-extract,3-publish,4-archive}</code> + <code>.verify-manifest.json</code>(gitignore 대상) + 고객 Confluence 첨부. vol.2 생성기 소스는 레포에 없음</td><td class="c">산출물 파일 일체·manifest·Confluence 위치, vol.2 생성기 소스</td></tr>
+          <tr><td>4</td><td><strong>S3 스냅샷 버킷</strong></td><td class="c"><code>hmg-geo-hub-&lt;env&gt;-artifacts-*</code>(앤서 scope 계정, <code>infra/20-iam-s3.sh:7</code>)에 <code>ddl/</code>·<code>snap/</code> 보관. <code>mig.archive_manifest</code>는 테이블 정의만 있고 INSERT 코드·데이터 없음 → S3 아카이빙 <strong>미구현</strong></td><td class="c">버킷 접근 권한 또는 사본. crawl/webgeo "S3 보관"은 아직 실행 전인 것으로 이해하고 있으니 계획 확인</td></tr>
+          <tr><td>5</td><td><strong>crawl_*·webgeo_* 건수 불일치</strong></td><td class="c">PDF는 "전부 0건"이라고 하나 HUB 2026-09-27 실측은 <code>crawl_pages</code> 3.9GB/57K건, <code>crawl_links</code> 2.1GB/4.1M건, <code>webgeo_*</code> 약 0.9GB(03-db-live-catalog.md:41-50). 원본 HTML은 DB 테이블 <code>webgeo_raw_html_objects</code>에 저장</td><td class="c"><code>count(*)</code>·<code>pg_total_relation_size</code>로 재확인. 조회하는 곳이 없으니 폐기는 타당하나, 폐기 전 pg_dump 1회</td></tr>
+          <tr><td>6</td><td><strong>Scope에 등록된 데이터</strong></td><td class="c">프로젝트 설정(별칭·regions·acr_iterations), 프롬프트 메타(keywords <code>hmg:*</code>·kind·enabled — 미러 <code>scope_prompts</code>에는 일부 누락), 스케줄, 반복×턴 원문(S-A1), 엔티티 카탈로그(S-A2), 분석 옵션(S-A3)</td><td class="c">Scope export 범위·포맷·일정. PDF는 Scope를 "공급 DB"로만 다루고 있음</td></tr>
+          <tr><td>7</td><td><strong>DB 함수 정의</strong></td><td class="c">레거시 마이그레이션이 만든 함수 29개(트리거·뷰 없음). 화면 조회 시 호출되는 함수는 6개. HUB는 URL 정규화·앵커 접기·드롭·회차 로직을 재구현했고, 14개는 포팅/폐기 결정이 없음</td><td class="c">데이터만 이관하면 값이 이미 테이블에 저장돼 있어 함수는 불필요. 재계산·검증용으로 <code>citation_url_*</code>·<code>scope_anchor_fold</code>·<code>scope_answer_drop_apply</code>·KST 회차 상수 정의만 보존</td></tr>
+          <tr><td>8</td><td><strong><code>_bak_anchor_fold</code></strong></td><td class="c">운영 DB에만 있는 테이블. 0053:21-22 "지우지 않는다 — 8/25·09-01 접기의 원본 measured_at 정본". HUB <code>archive.bak_anchor_fold</code>로 복사 예정(DB-v2.32:789)</td><td class="c">덤프 1회(선택)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="s3">
+    <h2><span class="no">3</span>문서 내용 중 사실과 다른 부분</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>문서 내용</th><th>실제</th><th>근거</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td class="c">N2 "드롭된 답변의 물리 삭제 여부 미확인"</td><td><strong>물리 삭제됨</strong></td><td class="c"><code>0072_*.sql:86-105</code> (<code>scope_answer_drop_apply</code> 재정의)</td></tr>
+          <tr><td>2</td><td class="c">N3 "answer_text는 멀티턴이면 마지막 턴(추정)"</td><td><strong>첫 번째 턴 답변</strong></td><td class="c"><code>lib/scope/mirror/sync.ts:1332-1333</code></td></tr>
+          <tr><td>3</td><td class="c">N4 "모든 테이블에 CHECK 제약 없음"</td><td>미러 테이블 4개만 해당</td><td class="c">0025/0036/0070/0071/0073/0080에 CHECK 제약 있음</td></tr>
+          <tr><td>4</td><td class="c">N9 "프롬프트 삭제 시 관련 데이터 물리 삭제"</td><td>맞으나 <code>mention_occurrences</code>·<code>anchors</code>·<code>drops</code>는 삭제하지 않아 고아 데이터 발생</td><td class="c"><code>scope-mirror.ts:822-843</code></td></tr>
+          <tr><td>5</td><td class="c">파일 경로 <code>lib/scope/mirror/scope-mirror.ts</code></td><td>실제 경로는 <code>lib/db/repositories/scope-mirror.ts</code></td><td class="c">—</td></tr>
+          <tr><td>6</td><td class="c">3-4 "crawl_*·webgeo_* 전부 0건"</td><td>9/27 HUB 실측(6GB·수백만 건)과 불일치</td><td class="c"><code>docs/research/03-db-live-catalog.md:41-50</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="s4">
+    <h2><span class="no">4</span>앤서 마이그레이션 스크립트가 처리하지 않는 레거시 테이블</h2>
+    <p class="key">79개 중 실제로 HUB 테이블에 데이터가 들어가는 것은 41개뿐입니다(app 23 · ing 14 · frz 일부 4+). 나머지는 스테이징 테이블에만 올라가거나 아예 처리되지 않습니다.</p>
+    <ul>
+      <li><strong>전혀 처리하지 않음 10개:</strong> <code>ai_responses</code>, <code>bff_audit_logs</code>, <code>brand_mentions</code>, <code>citation_analysis</code>, <code>qa_review_sessions</code>, <code>scope_sync_watermarks</code>, <code>summary_domain_citations</code>, <code>summary_ga4</code>, <code>summary_target_hits</code>, <code>youtube_video_metadata</code></li>
+      <li><strong>레포 밖 스크립트로만 처리 1개:</strong> <code>profiles</code></li>
+      <li><strong>mig_src 스테이징까지만 15개:</strong> <code>keyword_cache</code>, <code>keyword_volume_cache</code>, <code>project_members</code>, <code>qa_answer_locks</code>, <code>qa_answer_reviews</code>, <code>qa_review_notes</code>, <code>scope_context_*</code> 6, <code>scope_cycle_anchor_state</code>, <code>scope_cycle_registry_runs</code>, <code>scope_mirror_progress</code></li>
+    </ul>
+    <div class="callout risk"><b class="t">리스크</b>스테이징까지만 되는 15개 중 <code>project_members</code>·QA 3개·<code>scope_context_*</code> 6개는 이관 목록에는 있지만 실제 적재 코드가 없는 상태입니다. 문서만 믿고 컷오버하면 프로젝트 멤버·검수 이력·컨텍스트 맵 데이터가 빈 채로 넘어갑니다.</div>
+  </section>
+
+  <section id="s5">
+    <h2><span class="no">5</span>앤서에 보낼 추가 요청 사항</h2>
+    <p class="small">회신 메일에 그대로 붙여 쓸 수 있게 작성했습니다. 항목 번호는 §1~§3 내용과 대응됩니다.</p>
+    <div class="draft">
+      <p class="lead">3장의 이관 목록을 레거시 테이블 79개 전체 및 귀사 <code>back/migration</code> 스크립트(export.py·seed-10/20·verify-seed)와 대조했습니다. 목록 자체에 누락은 없었고, 아래 항목을 추가로 요청드립니다.</p>
+      <h4>A. 이관 목록 추가·확정</h4>
+      <ol>
+        <li>회차 원장 테이블 <strong><code>summary_cycles</code>, <code>summary_cycle_runs</code>, <code>scope_cycle_rounds</code></strong>를 이관 목록에 추가 부탁드립니다. 회차 숨김·마감·노출일·순번 배정은 운영 중 결정된 값이라 재계산이 불가능하고, 귀사 <code>seed-20-ing.sql</code>에서도 이 테이블들을 <code>ing.cycle*</code>의 소스로 사용하고 있습니다. <code>scope_answer_cycle_anchors</code>·<code>scope_cycle_anchor_state</code>·<code>scope_cycle_registry_runs</code>는 export.py에 포함된 그대로 덤프로 함께 주시면 됩니다.</li>
+        <li>3-3 보류 7개는 <strong>전부 이관</strong>으로 확정 부탁드립니다. <code>scope_answer_anchors</code>·<code>scope_answer_drops</code>는 현재 대시보드 수치 재현과 <code>ing.answer_anchor_pin/answer_drop</code>의 소스이고, 검수 이력 3개와 감사 로그 2개는 기능 인수와 보존 의무 때문에 저희가 보관하겠습니다.</li>
+        <li>분석 결과 4개 테이블은 <strong><code>ing.mention*</code>·<code>acr_*</code>에 바로 적재할 수 있는 포맷</strong>(export.py CSV.gz + mig_src DDL)으로, <strong>컷오버 직전 시점</strong>에 추출 부탁드립니다. v0 이력(결정 37)의 소스 데이터가 됩니다.</li>
+        <li><strong>동결 데이터</strong>: <code>export.py --frz</code>로 추출되는 <code>summary_generations</code> 활성 세대 스냅샷(roster/base/target/noise)과 <code>frz_ops_*</code> 15종을 이관 범위에 명시해 주십시오. 3-4에는 "재계산 가능"으로만 적혀 있습니다.</li>
+      </ol>
+      <h4>B. 문서와 스크립트가 다른 부분 — 확인 요청</h4>
+      <ol start="5">
+        <li><code>profiles</code>는 3-2에 이관 대상으로 적혀 있으나 <code>seed-10-app.sql:25-27</code>에는 "이관 대상이 아니다"로 되어 있습니다. 계정 이관은 레포 밖 <code>load-accounts.tpl.sh</code>로 처리되는 것으로 보입니다. 해당 스크립트와 규칙(R2/R3)을 공유해 주시고, <strong>Supabase <code>auth.users</code> export(이메일·password hash·confirmed_at·last_sign_in, uuid 유지)</strong>가 가능한지 알려 주십시오.</li>
+        <li><code>project_members</code>는 3-1에 있으나 <code>verify-seed.sql:61</code>에 "미이관(profiles FK)"으로 되어 있습니다. 계정 이관 후 적재 계획을 확인 부탁드립니다.</li>
+        <li><code>standard_prompts</code>는 3-2에 있으나 <code>seed-10:1148</code>에 "대상 표 없음"으로 되어 있습니다. HUB에서 어떻게 처리되는지 알려 주십시오.</li>
+        <li>QA 테이블 3개는 3-3 보류인데 <code>verify-seed.sql:63-64</code>에 "미이관"으로 되어 있습니다. 검수 콘솔은 저희가 인수할 예정이므로 이관을 요청드립니다.</li>
+        <li><code>scope_context_*</code> 6개는 3-1 이관 대상이지만 mig_src 스테이징까지만 되어 있고 <code>ext.ctx_*</code>에 적재하는 로더가 레포에 없습니다. 로더 구현 여부·일정과, Scope 코퍼스(2026-07-07 스냅샷) 최초 적재 스크립트를 공유 부탁드립니다.</li>
+      </ol>
+      <h4>C. DB 밖 자산</h4>
+      <ol start="10">
+        <li>GA4 OAuth 계정의 property 권한 이전 절차(토큰은 환경변수에만 있음).</li>
+        <li>발행 리포트 산출물(<code>docs/data/1-source~4-archive</code>, <code>.verify-manifest.json</code>), Confluence 첨부 위치, vol.2 생성기 소스.</li>
+        <li>S3 <code>hmg-geo-hub-&lt;env&gt;-artifacts-*</code> 버킷의 <code>snap/</code>·<code>ddl/</code> 접근 권한 또는 사본. <code>mig.archive_manifest</code>가 비어 있어 crawl/webgeo S3 보관은 아직 실행 전으로 이해하고 있는데, 맞는지 확인 부탁드립니다.</li>
+        <li><code>crawl_*</code>·<code>webgeo_*</code>·<code>webgeo_raw_html_objects</code>의 실제 <code>count(*)</code>와 용량(문서는 "0건"이나 9/27 실측은 6GB). 폐기 전 pg_dump 1회 요청드립니다.</li>
+        <li>Scope에 등록된 데이터 export: 프로젝트 설정(별칭·regions·acr_iterations), 프롬프트 메타(keywords·kind·enabled), 스케줄, 반복×턴 원문(S-A1), 엔티티 카탈로그(S-A2), 분석 옵션(S-A3) — 포맷과 일정.</li>
+        <li><code>_bak_anchor_fold</code> 덤프 1회(선택).</li>
+      </ol>
+      <h4>D. 정정 및 기타</h4>
+      <ol start="16">
+        <li>문서 내용 정정 부탁드립니다. N2: 드롭된 답변은 <code>0072</code>에서 물리 삭제됨 / N3: <code>answer_text</code>는 첫 번째 턴 / N4: CHECK 제약이 없는 것은 미러 테이블 4개만 / N9: <code>deletePromptData</code>가 occurrences·anchors·drops는 삭제하지 않음.</li>
+        <li>전체 테이블의 <strong>정확한 <code>count(*)</code></strong>(n_live_tup 추정치는 9/27 조사와 30~60% 차이), 3-1의 근거인 <strong>협의자료 v0.12 원문</strong>, Q1(ing 적재 범위)·Q3(loader_ro 실제 권한)·Q4(RDS 사양·force_ssl) 확인 결과 공유 부탁드립니다.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="s6">
+    <h2><span class="no">6</span>S2W가 결정해서 회신할 사항</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>항목</th><th>권고안</th></tr></thead>
+        <tbody>
+          <tr><td><code>scope_prompts</code> 정본</td><td class="c">정본은 Scope(<code>ing.prompt</code>)로 두고, HMG <code>prompts</code>·<code>prompt_candidates</code>·<code>website_prompts</code>는 편집·후보 데이터로 둘 다 이관. <code>is_korean</code> GENERATED 컬럼은 COPY에서 제외</td></tr>
+          <tr><td>QA 기능 인수 여부</td><td class="c">인수 → QA 테이블 3개 이관(요청 8번)</td></tr>
+          <tr><td>감사 로그 보존</td><td class="c">HMG·이노션에 보존 의무 확인. 확인 전까지 <code>bff_audit_logs</code> 덤프 보관</td></tr>
+          <tr><td><code>summary_settings.website_excluded_fs</code></td><td class="c">값(71·94·97)을 업무 규칙으로 인수인계 문서에 기록</td></tr>
+          <tr><td>H1 접속 방식 입력값</td><td class="c">Azure 리전·VNet 대역·egress IP·조회 빈도·대상 환경(stg/prod)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="s7">
+    <h2><span class="no">7</span>코드만으로는 확인하지 못한 것</h2>
+    <ol>
+      <li>실제 <code>count(*)</code> — 문서의 추정치만 있고, 3-1의 24개는 건수 자체가 없음.</li>
+      <li>Scope 코퍼스(<code>scope_context_*</code>) 재추출 가능 여부 — 적재 스크립트가 레포에 없음.</li>
+      <li>summary 13주 파티션 DROP이 실제 운영에서 실행됐는지(코드에 자동 DROP 없음).</li>
+      <li><code>frz-import-ops</code>가 generation 스냅샷을 HUB 판정에 실제로 쓰는지(DB-v2.21에 선언만 확인).</li>
+      <li>stg <code>mig_src</code>의 실제 테이블 목록(export.py 57 + frz 15 외에 <code>profiles</code>, <code>scope_mentions_0930</code>, "1002 사본" 등 레포 밖에서 적재한 테이블 존재).</li>
+      <li>S9 적재 실행일·병행 운영 기간 — 어느 문서에도 날짜 없음.</li>
+    </ol>
+  </section>
+
+  <section id="s8">
+    <h2><span class="no">부록</span>상세 리포트</h2>
+    <ul>
+      <li><a href="../reports/%EB%B6%80%EB%A1%9D/%EB%A7%88%EC%9D%B4%EA%B7%B8%EB%A0%88%EC%9D%B4%EC%85%98%20%EB%B6%80%EB%A1%9D%20A%20%EC%A0%84%EC%88%98%20%EB%A7%A4%ED%8A%B8%EB%A6%AD%EC%8A%A4.md">A. 전수 매트릭스 (79개)</a> — 테이블별 정의·데이터 출처·재생성 조건·조회 위치·판정, DB 함수 29개</li>
+      <li><a href="../reports/%EB%B6%80%EB%A1%9D/%EB%A7%88%EC%9D%B4%EA%B7%B8%EB%A0%88%EC%9D%B4%EC%85%98%20%EB%B6%80%EB%A1%9D%20B%20HUB%20%EB%A7%A4%ED%95%91.md">B. HUB 측 이관 매핑</a> — 레거시 → app/ing/rd/frz 매핑, 특수 그룹 11종, 단계 S0~S11</li>
+      <li><a href="../reports/%EB%B6%80%EB%A1%9D/%EB%A7%88%EC%9D%B4%EA%B7%B8%EB%A0%88%EC%9D%B4%EC%85%98%20%EB%B6%80%EB%A1%9D%20C%20DB%EB%B0%96%20%EC%9E%90%EC%82%B0.md">C. DB 밖 자산·사실 확인</a> — 계정/GA4/리포트/S3/Scope/크론/함수/문서 정정</li>
+      <li><a href="../reports/%EB%B6%80%EB%A1%9D/%EB%A7%88%EC%9D%B4%EA%B7%B8%EB%A0%88%EC%9D%B4%EC%85%98%20%ED%85%8C%EC%9D%B4%EB%B8%94%20%EB%8D%94%EB%B8%94%EC%B2%B4%ED%81%AC.md">본문 마크다운 원본 (v2)</a></li>
+    </ul>
+  </section>
+
+  <div class="gloss">
+    <b>용어</b> · <b>mig_src</b> 앤서 마이그레이션 스크립트가 레거시 테이블을 그대로 올려 두는 스테이징 스키마 · <b>seed-10/20</b> mig_src → app / ing 적재 SQL · <b>frz</b> 활성 세대의 동결 데이터(결정 32) · <b>v0</b> Scope가 계산해서 넘겨준 분석값(결정 37: 전환 이전 이력은 v0 유지) · <b>회차 원장</b> 회차의 앵커·마감·노출·숨김 상태를 기록한 테이블 묶음 · <b>컷오버</b> 레거시에서 HUB로 전환하는 시점
+  </div>
+
+  <footer class="src">
+    근거 파일: <code>hmg-geo-hub-share/front/lib/db/schema.ts</code>(pgTable 69) · <code>front/lib/db/migrations/*.sql</code>(CREATE TABLE 74) · <code>front/scripts/db/scope-mirror.sql</code>(6) → 합계 79 · <code>back/migration/export.py:24-37</code> · <code>back/migration/seed/seed-10-app.sql</code>, <code>seed-20-ing.sql</code>, <code>verify-seed.sql</code> · <code>back/db/DB-v2.32.sql</code> · <code>docs/design/db/DECISIONS.md</code> · <code>docs/design/api/전체-통합.md</code> · <code>docs/research/03-db-live-catalog.md</code> · 앤서 PDF <code>데이터 및 마이그레이션-2026-10-06.pdf</code>
+  </footer>
+</article>
+</body>
+</html>

@@ -1,0 +1,49 @@
+{
+  "verifiedOn": "2026-10-08",
+  "checks": [
+    {
+      "file": "reports\\GEO 현재 소프트웨어 아키텍처 분석.html",
+      "links": 198,
+      "anchors": 63,
+      "status": "passed"
+    },
+    {
+      "file": "개발 핵심 문서\\13 현재 소프트웨어 아키텍처.html",
+      "links": 198,
+      "anchors": 63,
+      "status": "passed"
+    },
+    {
+      "file": "개발 핵심 문서\\00 시작하기.html",
+      "links": 29,
+      "anchors": 0,
+      "status": "passed"
+    },
+    {
+      "name": "source hashes and excerpts",
+      "sources": 40,
+      "status": "passed"
+    }
+  ],
+  "browser": {
+    "status": "passed",
+    "desktop": {
+      "width": 1440,
+      "bodyWidth": 1425,
+      "svg": 1056
+    },
+    "mobile": {
+      "width": 390,
+      "bodyWidth": 390
+    },
+    "javascriptExceptions": [],
+    "interactions": [
+      "initial panels",
+      "click tab",
+      "keyboard tab",
+      "source anchor opens",
+      "expand/collapse evidence"
+    ]
+  },
+  "limitation": "Document validation only; no app integration test or production access."
+}

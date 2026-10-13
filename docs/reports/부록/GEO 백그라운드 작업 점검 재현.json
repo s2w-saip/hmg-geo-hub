@@ -1,0 +1,83 @@
+{
+  "createdAt": "2026-10-08T03:49:36.566781+00:00",
+  "pythonVersion": "3.12.10",
+  "method": "Unmodified Python worker functions/AST plus actual request contracts; mock DB transactions and external I/O, simulated scheduler clock. Not PostgreSQL integration, ECS shutdown, or production testing.",
+  "summary": {
+    "total": 4,
+    "passed": 4
+  },
+  "checks": [
+    {
+      "id": "R12",
+      "title": "일일 작업: 실패해도 당일 완료로 기록하여 같은 날 재시도하지 않음",
+      "status": "PASS",
+      "evidence": {
+        "firstRun": "failed",
+        "lastDailyAfterFailure": "2026-10-08",
+        "retriesAtOneMinuteAndOneHour": 0,
+        "nextDayRan": true,
+        "sourceCodeUnmodified": true
+      }
+    },
+    {
+      "id": "R13",
+      "title": "60초 큐 작업: 긴 pull이 끝날 때까지 다음 실행과 회차 처리가 막힘",
+      "status": "PASS",
+      "evidence": {
+        "callsWhilePullBlocked": [
+          [
+            "queue",
+            "2026-10-08T00:00:00+00:00"
+          ],
+          [
+            "pull-start",
+            "2026-10-08T00:00:00+00:00"
+          ]
+        ],
+        "configuredQueueEverySeconds": 60,
+        "simulatedPullDurationSeconds": 900,
+        "secondQueueOnlyAfterPullReturns": true,
+        "actualElapsedLatencyMeasured": false
+      }
+    },
+    {
+      "id": "R14",
+      "title": "DataForSEO 작업: claim 커밋 뒤 중단되면 running에 남고 다음 소비에서 제외",
+      "status": "PASS",
+      "evidence": {
+        "statusAfterCancellation": "running",
+        "subsequentWorkerSelectedRows": 0,
+        "externalCallAttempts": 1,
+        "queueWatchQueryIncludesRunning": false,
+        "transactionEvidence": [
+          "UPDATE app.judgment_change SET status = 'running', claimed_at = now() WHERE change_id = $1",
+          "commit",
+          "commit"
+        ],
+        "realDatabaseUsed": false
+      }
+    },
+    {
+      "id": "R15",
+      "title": "Scope 생성 응답: ID가 없어도 outbox done 처리",
+      "status": "PASS",
+      "evidence": {
+        "response": {},
+        "outcome": "done",
+        "localScopeId": null,
+        "markedDone": true,
+        "nextRunPicked": 0,
+        "outgoingCalls": 1,
+        "realDatabaseUsed": false
+      }
+    }
+  ],
+  "sourceSha256": {
+    "back/ingest/worker.py": "dbf91f4aedb2c9955b614b5b3877ce892c8953223a6a436c8f977e98b24bfdf7",
+    "back/ingest/cycles/workers/queries.py": "f71cdd7a9fc3d43e38fbd699fba0c9c06bb669383675f1f333263e029cde9822",
+    "back/app/core/contracts.py": "61d2bc4200fa06a88759f595a0a9afad7735ff44322b22c6ebdbb3c6ea31ad6d",
+    "back/ingest/cycles/workers/dfs.py": "76952bd28b5e150ffc74f48584ce3c39d6ff07e2a091d2b3780cf502aeaf9c1b",
+    "back/ingest/cycles/workers/service.py": "99933ad3b7948199af5f087ee11b2837ff1600f743a23093f26ff2a37cfeff12",
+    "back/ingest/cycles/watch/service.py": "0eda18bec430341a1ff9bb969c6061f3bc7765ea6e7efc4f2c8b079e968d7261"
+  }
+}

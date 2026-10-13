@@ -1,0 +1,1295 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GEO Hub 현재 소프트웨어 아키텍처 분석</title><style>
+:root{--ink:#182b3b;--muted:#586e7d;--accent:#086e75;--line:#d9e3e9;--bg:#eff4f7;--dark:#102d3e}*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:24px}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.85 "Malgun Gothic",system-ui,sans-serif;word-break:keep-all}a{color:var(--accent);text-underline-offset:3px}button{font:inherit;cursor:pointer}button:focus-visible,a:focus-visible{outline:3px solid #de9831;outline-offset:3px}header{background:var(--dark);color:white;padding:52px max(24px,calc((100vw - 1180px)/2)) 42px}header h1{font-size:37px;letter-spacing:-.045em;line-height:1.35;margin:14px 0}header p{max-width:850px;color:#c5dce6;margin:8px 0}.eyebrow{font-size:12px;letter-spacing:.16em;color:#72ddd1}.tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px}.tags span{font-size:12px;padding:4px 11px;border:1px solid #456271;border-radius:30px}.layout{max-width:1480px;margin:auto;display:grid;grid-template-columns:215px minmax(0,1fr);gap:26px;padding:28px 24px 70px}nav{position:sticky;top:20px;align-self:start;font-size:13px}nav strong{display:block;margin-bottom:10px}nav a{display:block;padding:6px 10px;border-left:2px solid #cfdee5;color:var(--muted);text-decoration:none}nav a:hover{background:white;color:var(--accent);border-color:var(--accent)}main{min-width:0}section{background:white;border:1px solid var(--line);border-radius:12px;padding:30px;margin-bottom:22px;scroll-margin-top:20px}h2{font-size:25px;letter-spacing:-.03em;line-height:1.45;margin:6px 0 20px}h3{font-size:18px;margin:22px 0 9px}p{margin:10px 0}.kicker{font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--accent)}.lead{font-size:18px}.callout{background:#edf6f5;border-left:4px solid #118579;padding:17px 20px;margin:20px 0;border-radius:0 7px 7px 0}.caption{font-size:12px;color:var(--muted)}.refs{white-space:nowrap;font-size:11px;display:inline-block;margin-left:4px}.refs a{padding:1px 4px;background:#e8f2f3;border-radius:3px;text-decoration:none}.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:20px 0}.cards.two{grid-template-columns:repeat(2,minmax(0,1fr))}.cards article{padding:18px;border:1px solid var(--line);border-radius:9px;background:#f8fafb}.cards h3{margin:0 0 9px;font-size:16px}.cards p{font-size:14px}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}.metrics div{background:#f0f6f8;border-radius:8px;padding:15px}.metrics b{display:block;font-size:32px;line-height:1.3;color:var(--accent)}.metrics span{font-size:12px;color:var(--muted)}.table-wrap{overflow-x:auto;margin:17px 0}table{border-collapse:collapse;width:100%;font-size:13px;min-width:670px}th,td{text-align:left;vertical-align:top;padding:12px 13px;border-bottom:1px solid var(--line)}th{background:#edf3f6;font-size:12px;color:#335467}td:first-child{font-weight:700;min-width:130px}code{font:12px/1.75 Consolas,monospace;overflow-wrap:anywhere;color:#35576c}pre{font:12px/1.75 Consolas,"Malgun Gothic",monospace;white-space:pre-wrap;overflow-wrap:anywhere;background:#f2f5f7;padding:16px;border-radius:7px;word-break:break-word}details{border:1px solid var(--line);border-radius:7px;padding:12px 15px;margin:10px 0}summary{cursor:pointer;font-size:13px}summary code{display:block;margin:4px 0 0 21px;color:var(--muted)}.source:target{border-color:var(--accent);background:#fbfefd}.flow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#f5f8fa;padding:20px;border-radius:10px}.flow span{background:white;border:1px solid #c7d8e1;padding:13px 16px;border-radius:7px;text-align:center;flex:1;min-width:125px;font-weight:700}.flow small{font-size:11px;color:var(--muted);font-weight:400}.flow b{color:var(--accent)}.tabs{display:flex;gap:9px;flex-wrap:wrap;margin:15px 0}.tabs button,.secondary{border:1px solid #bdd0d9;background:white;padding:8px 16px;border-radius:7px;font-size:13px;color:var(--ink)}.tabs button[aria-selected=true]{background:var(--accent);color:white;border-color:var(--accent)}.flow-panel{border:1px solid var(--line);padding:5px 22px 20px;border-radius:9px}.js .flow-panel[hidden]{display:none}.sequence{padding-left:26px}.sequence li{padding:9px 0 9px 10px}.sequence li::marker{color:var(--accent);font-weight:700}.sequence p{font-size:14px;margin:4px 0;color:#486070}.diagram{overflow:auto;background:#f7fafc;border:1px solid var(--line);border-radius:10px;padding:8px;margin-top:20px}.diagram svg{width:100%;min-width:750px;display:block}.node rect{fill:white;stroke:#b9ccd7;stroke-width:1.5}.node text{font:12px "Malgun Gothic",sans-serif;fill:#546d7d}.node .node-title{font-size:16px;fill:#203d50;font-weight:700}.node.accent rect{fill:#e9f5f3;stroke:#83b8b0}.node.legacy rect{fill:#fff7ea;stroke:#d7be92}.edge-label{font:12px "Malgun Gothic",sans-serif;fill:#63778a}.related{line-height:2.3;font-size:13px}footer{padding:10px 4px;font-size:12px;color:var(--muted)}@media(max-width:1100px){.layout{grid-template-columns:1fr;max-width:1200px}nav{position:static;display:flex;flex-wrap:wrap;gap:3px}nav strong{width:100%}nav a{padding:4px 9px}.cards{grid-template-columns:1fr}.cards.two{grid-template-columns:1fr}}@media(max-width:650px){header{padding:32px 20px}header h1{font-size:29px}.layout{padding:15px 12px}.metrics{grid-template-columns:repeat(2,1fr)}section{padding:21px 17px}h2{font-size:22px}.flow{gap:8px;padding:12px}.flow b{display:none}.flow span{min-width:140px}.tabs button{flex:1;white-space:nowrap;font-size:12px;padding:8px 10px}}@media print{body{background:white;font-size:10pt}header{background:white;color:var(--ink);padding:0 0 20px}header p,.eyebrow{color:var(--muted)}header h1{font-size:26px}.tags{display:none}.layout{display:block;padding:0}nav,.tabs,.secondary{display:none}section{border:0;border-radius:0;padding:12px 0;break-before:auto}h2,h3{break-after:avoid}.table-wrap{overflow:visible}table{min-width:0;font-size:9pt}tr{break-inside:avoid}.diagram svg{min-width:0}.js .flow-panel[hidden]{display:block!important}.flow-panel{margin:14px 0}details.source:not([open]){font-size:9pt}a{color:inherit}.metrics b{font-size:23px}pre{font-size:8pt}}
+</style></head><body><header><div class="eyebrow">GEO HUB · CURRENT SOFTWARE ARCHITECTURE</div><h1>현재 소프트웨어 아키텍처 분석</h1><p>실제 코드에서 읽은 구성, 데이터 흐름, 전환 상태와 개발 경계</p><p>분석일 2026-10-08 · 공유 저장소 HEAD 392ca454 · 소스 분석 / 운영 배포 미확인</p><div class="tags"><span>Next.js / BFF</span><span>FastAPI</span><span>PostgreSQL</span><span>Python ingest</span><span>legacy ↔ API 전환</span></div></header><div class="layout"><nav aria-label="문서 목차"><strong>목차</strong><a href="#overview">01 전체 구조</a><a href="#inventory">02 구성·책임</a><a href="#front">03 프런트·전환</a><a href="#backend">04 백엔드</a><a href="#data">05 데이터·DB</a><a href="#flows">06 요청·쓰기·적재</a><a href="#workers">07 워커·배치</a><a href="#cache">08 캐시·신선도</a><a href="#operations">09 인증·배포·운영</a><a href="#state">10 구현 상태</a><a href="#implications">11 구조의 영향</a><a href="#change-map">12 개발 위치</a><a href="#evidence">13 근거·관련 문서</a></nav><main><section id="overview"><div class="kicker">01 · ARCHITECTURE AT A GLANCE</div><h2>Next.js와 FastAPI 데이터 경로가 공존하는 전환 구조</h2>
+<p class="lead">현재 소스는 <strong>Next.js 풀스택 앱 + FastAPI 모듈형 모놀리스 + 별도 Python 적재 워커 + PostgreSQL</strong>로 구성된다. Next.js 안에 기존 데이터 조회·업무 코드가 남아 있고, 그룹별 플래그가 켜진 부분부터 FastAPI로 옮기는 구조다.</p>
+<div class="callout"><strong>이 문서의 ‘현재’는 로컬 공유 소스의 현재다.</strong> 2026-10-08에 HEAD <code>392ca454</code>를 분석했다. README는 2026-10-02 개발 리비전 <code>72c260a3</code>의 공유 스냅샷이라고 설명한다. 운영 환경변수·DB·트래픽·배포 이력은 조회하지 않았다. 따라서 특정 경로가 운영에서 활성화됐다고 단정하지 않는다. <span class="refs"><a href="#A01">A01</a> <a href="#A02">A02</a></span></div>
+<div class="diagram"><svg role="img" aria-labelledby="architecture-title architecture-desc" viewBox="0 0 1080 695" xmlns="http://www.w3.org/2000/svg"><title id="architecture-title">GEO Hub 구현 구조</title><desc id="architecture-desc">브라우저에서 Next.js로 진입하고, 데이터 함수는 기존 직접 조회 또는 FastAPI 경로를 선택한다. 별도 Python 워커가 Scope 데이터를 신규 DB에 적재한다.</desc><defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#63778a"/></marker></defs><g class="node "><rect x="25" y="22" width="240" height="96" rx="10"/><text x="43" y="51" class="node-title">브라우저</text><text x="43" y="75">대시보드 · 관리자 · 프로젝트</text><text x="43" y="97">HTML / RSC · /api/*</text></g><g class="node accent"><rect x="350" y="22" width="360" height="96" rx="10"/><text x="368" y="51" class="node-title">Next.js 서버 / BFF</text><text x="368" y="75">서버 페이지 · Server Actions · API Routes</text><text x="368" y="97">소스 어댑터 + 세션 + 화면 모델</text></g><g class="node "><rect x="800" y="22" width="250" height="96" rx="10"/><text x="818" y="51" class="node-title">Supabase Auth</text><text x="818" y="75">로그인·세션 / JWT</text><text x="818" y="97">FastAPI: JWKS로 검증</text></g><g class="node legacy"><rect x="50" y="217" width="330" height="96" rx="10"/><text x="68" y="246" class="node-title">기존 경로: legacy</text><text x="68" y="270">Drizzle repository · Scope mirror / summary</text><text x="68" y="292">GA4·Scope 등 서버 측 연동</text></g><g class="node accent"><rect x="580" y="217" width="380" height="96" rx="10"/><text x="598" y="246" class="node-title">새 경로: FastAPI</text><text x="598" y="270">68개 라우터 모듈 · 공통 auth / SQL 규칙</text><text x="598" y="292">service → queries / core → PostgreSQL</text></g><g class="node legacy"><rect x="50" y="419" width="330" height="96" rx="10"/><text x="68" y="448" class="node-title">기존 PostgreSQL 데이터 모델</text><text x="68" y="472">scope_* 미러 · 요약 · 운영 테이블</text><text x="68" y="494">크론 + TypeScript summary-runner</text></g><g class="node accent"><rect x="580" y="419" width="380" height="96" rx="10"/><text x="598" y="448" class="node-title">새 PostgreSQL 데이터 모델</text><text x="598" y="472">app / ing / rd / frz / ext / rcache</text><text x="598" y="494">API와 ingest 워커가 공유</text></g><g class="node "><rect x="50" y="545" width="330" height="96" rx="10"/><text x="68" y="574" class="node-title">Scope · DataForSEO</text><text x="68" y="598">측정 결과 / 키워드 수집</text><text x="68" y="620">외부 시스템</text></g><g class="node "><rect x="580" y="545" width="380" height="96" rx="10"/><text x="598" y="574" class="node-title">Python ingest 워커</text><text x="598" y="598">원본 적재 · 재판정 · 회차 · outbox</text><text x="598" y="620">별도 프로세스; DB 역할 loader</text></g><path d="M265 70 H350" fill="none" stroke="#63778a" stroke-width="2" marker-end="url(#arrow)"/><text x="284" y="58" class="edge-label">요청</text><path d="M710 70 H800" fill="none" stroke="#63778a" stroke-width="2" marker-end="url(#arrow)"/><text x="738" y="57" class="edge-label">인증</text><path d="M435 118 V166 H215 V217" fill="none" stroke="#63778a" stroke-width="2" marker-end="url(#arrow)"/><text x="227" y="155" class="edge-label">기본값 legacy</text><path d="M610 118 V166 H770 V217" fill="none" stroke="#63778a" stroke-width="2" marker-end="url(#arrow)"/><text x="652" y="155" class="edge-label">그룹별 api 선택</text><path d="M215 313 V419" fill="none" stroke="#63778a" stroke-width="2" marker-end="url(#arrow)"/><text x="230" y="368" class="edge-label">DB 직접 조회 / 저장</text><path d="M770 313 V419" fill="none" stroke="#63778a" stroke-width="2" marker-end="url(#arrow)"/><text x="785" y="368" class="edge-label">읽기·쓰기 역할 분리</text><path d="M770 545 V515" fill="none" stroke="#63778a" stroke-width="2" marker-end="url(#arrow)"/><text x="775" y="535" class="edge-label"></text><path d="M380 593 H580" fill="none" stroke="#63778a" stroke-width="2" marker-end="url(#arrow)" marker-start="url(#arrow)"/><text x="424" y="580" class="edge-label">pull / 외부 쓰기</text><text x="27" y="675" class="edge-label">논리 데이터 모델을 분리해 그렸다. 실제 인스턴스 수·접속 대상·활성 경로는 운영 설정 확인이 필요하다.</text></svg></div>
+<p class="caption">배포 단위와 데이터 의존을 보여 주는 논리도. 외부 GA4·OpenRouter 등의 상세 연결은 아래 책임 표와 흐름에서 구분한다. <span class="refs"><a href="#A02">A02</a> <a href="#A03">A03</a> <a href="#A09">A09</a> <a href="#A20">A20</a> <a href="#A21">A21</a></span></p>
+<details><summary>Mermaid 원본 보기</summary><pre>flowchart TB
+  Browser[브라우저] --&gt; Next[Next.js 서버 / BFF]
+  Next --&gt; Auth[Supabase Auth]
+  Next --&gt;|기본 legacy| Legacy[Drizzle / 미러 / 요약]
+  Next --&gt;|HGH_SOURCE 그룹 = api| API[FastAPI 모듈형 모놀리스]
+  Legacy --&gt; OldDB[(기존 PostgreSQL 모델)]
+  Cron[기존 크론 / summary-runner] --&gt; OldDB
+  API --&gt;|읽기| Read[(rd / frz / ext)]
+  API --&gt;|쓰기| App[(app / queue / outbox)]
+  App --&gt; Worker[Python ingest 워커]
+  Scope[Scope 측정 서비스] --&gt;|pull| Worker
+  Worker --&gt;|Scope outbox| Scope
+  Worker --&gt; Raw[(ing 원본)]
+  Worker --&gt; Read
+  API -.-&gt;|선택적 결과 캐시| Cache[(rcache)]
+  Next --&gt; GA4[기존 경로 GA4 조회]
+  API --&gt; LLM[보조 기능 OpenRouter]
+</pre><p><a href="../reports/%EB%B6%80%EB%A1%9D/GEO%20%ED%98%84%EC%9E%AC%20%EC%95%84%ED%82%A4%ED%85%8D%EC%B2%98.mmd">Mermaid 파일 열기</a></p></details>
+<div class="cards"><article><h3>프런트는 BFF도 담당</h3><p>UI만 제공하지 않는다. 인증·어댑터·서버 액션·API 라우트·기존 DB 조회가 함께 있다.</p></article><article><h3>백엔드는 모듈형 모놀리스</h3><p>여러 기능 모듈을 하나의 FastAPI 앱에 등록한다. 기능별로 독립 배포하는 마이크로서비스 구조가 아니다.</p></article><article><h3>조회용 모델을 별도로 만든다</h3><p>운영 쓰기와 분석 읽기를 분리한 CQRS 성격이 있다. PostgreSQL 큐·아웃박스로 비동기 반영한다.</p></article></div></section><section id="inventory"><div class="kicker">02 · CODE INVENTORY</div><h2>코드에서 집계한 구성과 책임</h2><div class="metrics"><div><b>68</b><span>등록 라우터 모듈</span></div><div><b>172</b><span>OpenAPI 경로</span></div><div><b>214</b><span>HTTP method + path</span></div><div><b>7 + 1</b><span>업무 그룹 + 세션 플래그</span></div></div><div class="table-wrap"><table><thead><tr><th>구성</th><th>현재 역할</th><th>주요 코드</th></tr></thead><tbody><tr><td>Next.js / React / TypeScript</td><td>잠금 파일: Next 15.5.25, React 19.2.6, TypeScript 5.9.3. 페이지·컴포넌트·BFF·기존 업무 데이터 계층.</td><td><code>front/app · front/lib</code> <span class="refs"><a href="#A02">A02</a> <a href="#A03">A03</a> <a href="#A38">A38</a></span></td></tr><tr><td>FastAPI / Python</td><td>Python ≥3.12. Pydantic 계약, SQLAlchemy async·asyncpg 기반 API. 한 앱 안에서 기능 모듈을 조립한다.</td><td><code>back/app/main.py · features · core</code> <span class="refs"><a href="#A09">A09</a> <a href="#A10">A10</a> <a href="#A39">A39</a></span></td></tr><tr><td>적재 워커</td><td>Scope 원본 pull, 규칙 기반 판정·조회 모델 생성, 회차, 큐, 외부 쓰기. API와 별도 프로세스.</td><td><code>back/ingest</code> <span class="refs"><a href="#A20">A20</a> <a href="#A21">A21</a></span></td></tr><tr><td>PostgreSQL 17 기준 DDL</td><td>현재 개발 DB·CI 참고본은 DB-v2.32.sql 적용. 역할·함수·트리거·파티션까지 업무 정합성에 참여.</td><td><code>back/db · back/migration</code> <span class="refs"><a href="#A27">A27</a> <a href="#A28">A28</a> <a href="#A31">A31</a></span></td></tr><tr><td>외부 서비스</td><td>Supabase Auth=인증, Scope=측정, GA4=웹 유입·전환, DataForSEO=키워드 수집, OpenRouter=일부 생성 기능.</td><td>각 경로의 서버 코드·워커가 연동 <span class="refs"><a href="#A15">A15</a> <a href="#A22">A22</a> <a href="#A23">A23</a> <a href="#A24">A24</a> <a href="#A34">A34</a></span></td></tr><tr><td>기존 배치</td><td>Next.js 크론 + TypeScript summary-runner가 남아 있다. Python 워커로 모두 대체됐다고 볼 수 없다.</td><td><code>front/vercel.json · front/ops/summary-runner</code> <span class="refs"><a href="#A25">A25</a> <a href="#A26">A26</a></span></td></tr></tbody></table></div><h3>기능 분류 수와 라우터 수는 서로 다른 수치다</h3><div class="table-wrap"><table><thead><tr><th>분야</th><th>등록 모듈 수</th><th>책임</th></tr></thead><tbody><tr><td>analytics</td><td>20</td><td>필터·KPI·언급·인용·답변·퍼널</td></tr><tr><td>catalog</td><td>2</td><td>카탈로그 조회</td></tr><tr><td>projects</td><td>16</td><td>프로젝트·설정·프롬프트·운영</td></tr><tr><td>intent</td><td>7</td><td>키워드·수집·초안 생성</td></tr><tr><td>admin</td><td>14</td><td>계정·표준·통합·엔티티 운영</td></tr><tr><td>qa</td><td>7</td><td>검수 콘솔</td></tr><tr><td>platform</td><td>1</td><td>세션 등 플랫폼 경계</td></tr><tr><td>ingest</td><td>1</td><td>적재 운영 조회</td></tr></tbody></table></div><p><code>taxonomy.json</code>은 72개 기능을 분류한다. 이 중 HTTP 라우터가 없는 적재 기능 5개를 빼고, 분류표에 없는 <code>admin.entities.versions</code> 라우터 1개를 더하면 68개다. 214개는 체크인된 OpenAPI의 메서드·경로 쌍을 집계한 값이며, 운영 API 실사 결과는 아니다. 과거 문서의 187개와 집계 기준을 혼용하지 않는다. <span class="refs"><a href="#A10">A10</a> <a href="#A36">A36</a> <a href="#A37">A37</a></span></p></section><section id="front"><div class="kicker">03 · FRONTEND AND BFF</div><h2>프런트엔드: 화면 계약을 유지하며 데이터 함수를 교체한다</h2>
+<p>브라우저는 Next.js의 페이지와 <code>/api/*</code>, Server Actions를 사용한다. 서버 전용 <code>lib/hgh</code> 클라이언트·어댑터가 FastAPI 응답을 기존 화면 모델로 바꾼다. API 경로에서도 페이지가 백엔드 응답을 그대로 표시하는 단순 프록시는 아니다. <span class="refs"><a href="#A02">A02</a> <a href="#A06">A06</a></span></p>
+<div class="table-wrap"><table><thead><tr><th>소스 플래그</th><th>대상</th><th>기본 동작</th></tr></thead><tbody><tr><td>HGH_SOURCE_G1</td><td>global 대시보드</td><td>미설정 또는 api 이외 값 → legacy</td></tr><tr><td>HGH_SOURCE_G2</td><td>global 분석(언급·인용·답변 등)</td><td>동일</td></tr><tr><td>HGH_SOURCE_G3</td><td>website 표면의 분석 그룹</td><td>동일</td></tr><tr><td>HGH_SOURCE_G4</td><td>global 퍼널</td><td>동일</td></tr><tr><td>HGH_SOURCE_G5</td><td>global 프롬프트 카탈로그</td><td>동일</td></tr><tr><td>HGH_SOURCE_G6</td><td>프로젝트 표면·프로젝트 기능·intent</td><td>동일</td></tr><tr><td>HGH_SOURCE_G7</td><td>admin · QA</td><td>동일</td></tr><tr><td>HGH_SOURCE_SESSION</td><td>사용자 세션·권한 정보 조회</td><td>legacy profiles 또는 API /v1/auth/me</td></tr></tbody></table></div>
+<p><code>sourceGroupFor(area, surface)</code>가 그룹을 결정한다. <strong>‘API 실패 시 legacy로 자동 재시도’하는 일반 전략이 아니라 설정에 따른 사전 선택</strong>이다. 일부 페이지의 오류→빈 값 처리는 별도 구현이므로 전환 플래그와 구분해야 한다. <span class="refs"><a href="#A02">A02</a> <a href="#A04">A04</a></span></p>
+<div class="cards two"><article><h3>legacy</h3><p>서버에서 Drizzle/postgres-js로 기존 DB에 연결한다. Scope 미러·요약 조회, 운영 repository, GA4 호출 등도 Next.js 데이터 계층 안에 있다. <code>SCOPE_MODE</code>는 별개 플래그이며 기본은 mock이다. 이 기본값만으로 실제 배포가 모의 데이터를 쓴다고 판단할 수는 없다.</p><span class="refs"><a href="#A03">A03</a> <a href="#A07">A07</a> <a href="#A08">A08</a> <a href="#A34">A34</a></span></article><article><h3>api</h3><p>서버에서 Bearer 토큰 또는 QA 인증을 전달한다. 읽기 중복 제거는 요청 범위이며, HTTP 요청은 <code>no-store</code>다. 제한된 GET 재시도·타임아웃·동시성 제어가 공통 클라이언트에 있다. 대시보드 어댑터는 먼저 필요한 네 호출을 묶고 나머지 섹션을 이어서 로드한다.</p><span class="refs"><a href="#A02">A02</a> <a href="#A06">A06</a></span></article></div>
+<p class="callout">세션 전환도 독립적이다. 업무 데이터는 새 API를 쓰면서 사용자 프로필은 legacy에서 읽는 조합이 가능하다. 이 조합을 지원하려면 계정·역할·스코프·프로젝트 멤버십의 기준 데이터가 일치해야 한다. 이는 코드 구조에서 도출한 전환 관리 과제다.</p></section><section id="backend"><div class="kicker">04 · BACKEND MODULES</div><h2>백엔드: 공통 규칙을 공유하는 기능 모듈</h2>
+<div class="flow"><span>router<br><small>경로·입력·인증 의존성</small></span><b>→</b><span>service<br><small>업무 규칙·응답 조립</small></span><b>→</b><span>queries + core<br><small>필터·지표·SQL</small></span><b>→</b><span>PostgreSQL<br><small>역할·트랜잭션</small></span></div>
+<p><code>main.py</code>가 <code>FEATURE_ROUTERS</code>를 동적으로 불러 한 앱에 등록한다. 기능 폴더는 대체로 <code>router.py / schemas.py / service.py / queries.py / tests / README</code>를 가진다. 공통 계층은 인증·필터·회차·지표 산식·SQL 경계·응답·페이지네이션·쓰기 계약을 제공한다. <span class="refs"><a href="#A09">A09</a> <a href="#A10">A10</a> <a href="#A11">A11</a></span></p>
+<div class="table-wrap"><table><thead><tr><th>경계</th><th>실제 처리</th><th>개발 시 의미</th></tr></thead><tbody><tr><td>인증·인가</td><td>Supabase JWT/JWKS → app.user_account → 역할·메뉴·운영자·데이터 스코프·프로젝트 접근</td><td>프런트의 메뉴 숨김만으로 권한을 보장하지 않는다. <span class="refs"><a href="#A15">A15</a></span></td></tr><tr><td>분석 컨텍스트</td><td>공통 필터 + 회차 창 + 권한 교집합을 만든 뒤 지표 SQL 조립</td><td>같은 필터처럼 보여도 surface·회차·프로필에 따라 모수가 달라진다. <span class="refs"><a href="#A11">A11</a> <a href="#A12">A12</a></span></td></tr><tr><td>응답 계약</td><td>정상 {data, meta}, 오류 {error:{code,message,details}}. 무시·제거 필터는 meta로 전달</td><td>누락·미측정·숨김을 숫자 0 하나로 합치지 않는 계약. <span class="refs"><a href="#A09">A09</a></span></td></tr><tr><td>페이지네이션</td><td>키셋 커서: 정렬 키·필터 해시·일부 목록의 generation. stale 409, invalid 422</td><td>API 기능이 있어도 프런트가 모든 페이지를 수집하면 전량 로딩 문제는 남는다. <span class="refs"><a href="#A17">A17</a> <a href="#A35">A35</a></span></td></tr><tr><td>SQL·지표</td><td>공통 measure/cycles/filters, 화이트리스트 기반 SQL 조립, 읽기 사실 표의 표면·기간 제한</td><td>지표 변경은 화면별 쿼리만 고치지 말고 공통 식·적재 투영을 함께 확인한다. <span class="refs"><a href="#A12">A12</a></span></td></tr><tr><td>외부 대기</td><td>CurrentUserDetached 등으로 계정 읽기 트랜잭션을 끝내고 외부 요청 수행</td><td>느린 LLM·외부 API 때문에 DB 연결을 계속 잡지 않도록 분리한다. <span class="refs"><a href="#A15">A15</a> <a href="#A24">A24</a></span></td></tr></tbody></table></div>
+<p>예: <code>GET /v1/kpi/summary</code>는 <code>CurrentUser + RoConn + SummaryQuery</code>를 받으며, <code>kpi_context()</code> 다음 <code>get_summary()</code>를 호출한다. 응답 모델과 결과 캐시 데코레이터도 이 경계에 붙어 있다. <span class="refs"><a href="#A11">A11</a></span></p></section><section id="data"><div class="kicker">05 · DATA ARCHITECTURE</div><h2>DB: 운영 원장, 적재 원본, 분석 조회, 발행값을 분리한다</h2>
+<div class="table-wrap"><table><thead><tr><th>스키마</th><th>역할</th><th>소유·사용 경계</th></tr></thead><tbody><tr><td>app</td><td>사용자·프로젝트·프롬프트·카탈로그·운영 설정·judgment_change·scope_outbox·감사</td><td>API의 운영 쓰기. DB 트리거가 일부 감사·재판정 요청을 생성. <span class="refs"><a href="#A16">A16</a></span></td></tr><tr><td>ing</td><td>Scope에서 받은 원본·분석 입력/결과, 적재·run 원장 등</td><td>loader가 적재. 원본 영역이라도 필요한 턴 단위 원문이 모두 있다는 뜻은 아니다. <span class="refs"><a href="#A20">A20</a> <a href="#A40">A40</a></span></td></tr><tr><td>rd</td><td>정수 키 차원, 답변·인용·언급 사실, 회차·세대, GA4·키워드 조회 모델</td><td>적재 워커가 투영하고 API가 조회. API 요청 처리에서 ing·rd를 직접 갱신하지 않는 계약. <span class="refs"><a href="#A12">A12</a> <a href="#A16">A16</a> <a href="#A22">A22</a> <a href="#A23">A23</a></span></td></tr><tr><td>frz</td><td>발행 시점의 세대·셀·보관 사실 행·카드 조회 뷰</td><td>일부 global/website 카드·추이에 적용. card·profile·회차 창 조건을 모두 만족해야 사용. <span class="refs"><a href="#A13">A13</a> <a href="#A28">A28</a></span></td></tr><tr><td>ext</td><td>외부 매핑·가져온 자료·DataForSEO 호출 기록 등</td><td>운영·수집 통합의 보조 데이터. <span class="refs"><a href="#A22">A22</a> <a href="#A28">A28</a></span></td></tr><tr><td>rcache</td><td>데이터 버전에 연동된 API 결과 캐시와 버전 카운터</td><td>선택 기능. app.result_cache_* 함수로 접근하는 경계가 있다. <span class="refs"><a href="#A18">A18</a> <a href="#A28">A28</a></span></td></tr><tr><td>mig / archive</td><td>이관 단계·보존 용도</td><td>일반 화면의 주 조회 모델과 구분. <span class="refs"><a href="#A28">A28</a></span></td></tr></tbody></table></div>
+<div class="callout"><strong>발행값은 단순한 응답 캐시와 다르다.</strong> <code>frz</code>는 발행 당시 값의 의미를 보존한다. 최신 규칙으로 갱신한 <code>rd</code>와 의도적으로 다를 수 있다. 조건이 안 맞으면 라이브 사실 표로 돌아가는 선택도 있으므로, 지표 차이를 볼 때 <code>card / profile / window / generation</code>을 함께 확인해야 한다. <span class="refs"><a href="#A13">A13</a></span></div>
+<h3>읽기·쓰기 연결을 역할별로 분리한다</h3>
+<div class="table-wrap"><table><thead><tr><th>역할 / 풀</th><th>트랜잭션</th><th>statement timeout</th><th>용도</th></tr></thead><tbody><tr><td>api_ro</td><td>REPEATABLE READ · read only</td><td>5초</td><td>일반 읽기·계정과 지표를 같은 스냅샷으로 조회</td></tr><tr><td>admin_long</td><td>REPEATABLE READ · read only</td><td>30초</td><td>장시간 관리자 읽기</td></tr><tr><td>api_rw</td><td>READ COMMITTED · write</td><td>10초</td><td>운영 쓰기·행위자 ID·감사</td></tr><tr><td>qa_gate</td><td>READ COMMITTED · write</td><td>5초</td><td>별도 검수 인증·세션 경계</td></tr><tr><td>loader</td><td>별도 asyncpg 연결·적재 트랜잭션</td><td>별도 적재 설정</td><td>ing·rd 적재 및 회차·큐 처리</td></tr></tbody></table></div>
+<p>API 풀은 종류별로 생성되며 기본 <code>pool_size=5, max_overflow=5</code>다. 실제 총 연결 수는 사용 중인 풀 수 × 프로세스/인스턴스 수의 영향을 받는다. 프런트 legacy 직접 DB 풀과 워커 연결도 별도로 합산해야 한다. 값은 코드 기본값이고 운영 연결 수를 측정한 결과는 아니다. <span class="refs"><a href="#A03">A03</a> <a href="#A14">A14</a> <a href="#A19">A19</a> <a href="#A20">A20</a></span></p>
+<p>이 구조는 쓰기 모델과 읽기 모델을 분리한 <strong>CQRS 성격</strong>으로 해석할 수 있다. 그러나 모든 변경을 불변 이벤트 로그로 재생하는 event sourcing이나 독립 메시지 브로커 기반 구조라고 볼 근거는 없다. 관찰된 큐·아웃박스는 PostgreSQL 테이블이다.</p></section><section id="flows"><div class="kicker">06 · END-TO-END FLOWS</div><h2>요청이 처리되는 세 가지 흐름</h2>
+<div class="tabs" role="tablist" aria-label="처리 흐름 선택"><button id="tab-read" role="tab" aria-selected="true" aria-controls="flow-read" data-panel="flow-read">① 화면 조회</button><button id="tab-write" role="tab" aria-selected="false" aria-controls="flow-write" data-panel="flow-write" tabindex="-1">② 설정 변경</button><button id="tab-ingest" role="tab" aria-selected="false" aria-controls="flow-ingest" data-panel="flow-ingest" tabindex="-1">③ 측정 데이터 적재</button></div>
+<div id="flow-read" class="flow-panel" role="tabpanel" aria-labelledby="tab-read"><h3>화면 조회: 데이터를 어디서 읽는지 먼저 결정</h3><ol class="sequence"><li><strong>브라우저 → Next.js</strong><p>로그인 쿠키·locale·페이지 접근을 처리한다. 서버 데이터 함수가 계정과 요청 필터를 확인한다.</p></li><li><strong>업무 그룹·surface로 source 선택</strong><p>legacy면 repository/미러/요약·기존 외부 연동을 사용한다. api면 서버 BFF 클라이언트를 호출한다.</p></li><li><strong>API 경로: 인증 → 읽기 컨텍스트 → SQL</strong><p>JWT 검증, DB 계정·권한·스코프, 회차·필터를 적용한다. 허용된 캐시 경로는 권한 검사 뒤 조회한다. 지표에 따라 rd 또는 frz를 선택한다.</p></li><li><strong>응답 → 어댑터 → 화면</strong><p>meta의 필터·억제·페이지 정보를 화면 모델로 변환한다. 첫 핵심 섹션과 나머지 스트리밍 섹션의 호출 시점이 다르다.</p></li></ol><span class="refs"><a href="#A02">A02</a> <a href="#A04">A04</a> <a href="#A06">A06</a> <a href="#A11">A11</a> <a href="#A13">A13</a> <a href="#A15">A15</a> <a href="#A18">A18</a></span></div>
+<div id="flow-write" class="flow-panel" role="tabpanel" aria-labelledby="tab-write"><h3>새 API 설정 변경: 저장 성공과 지표 반영 완료는 두 단계</h3><ol class="sequence"><li><strong>사용자 요청 → BFF → 쓰기 API</strong><p>역할·운영자 권한과 프로젝트 접근을 검사한다.</p></li><li><strong>하나의 DB 트랜잭션</strong><p>app 운영 행을 갱신한다. 변경 종류에 따라 코드 또는 트리거가 judgment_change를 남긴다. Scope 반영이 필요한 경우 scope_outbox도 같은 트랜잭션에 남긴다.</p></li><li><strong>API 응답 시점</strong><p>운영 데이터의 커밋이 끝난 시점이다. 외부 Scope 작업과 조회 모델 재판정까지 끝났다는 뜻은 아니다.</p></li><li><strong>워커가 후속 반영</strong><p>큐를 소비해 재판정·투영한다. outbox는 외부 요청을 트랜잭션 밖에서 수행하고 결과를 되쓴다. 외부 요청 본문의 op별 매핑 계약은 아직 미확정이다.</p></li></ol><p class="callout">화면에는 저장됨·반영 대기·반영 실패를 구분할 수 있는 작업 상태가 필요하다. 이는 현재 비동기 구조에서 도출한 UI/운영 계약이며, 모든 화면이 이미 이 상태를 표시한다는 뜻은 아니다.</p><span class="refs"><a href="#A14">A14</a> <a href="#A16">A16</a> <a href="#A20">A20</a> <a href="#A22">A22</a></span></div>
+<div id="flow-ingest" class="flow-panel" role="tabpanel" aria-labelledby="tab-ingest"><h3>측정 적재: Scope 결과를 Hub 조회 모델로 변환</h3><ol class="sequence"><li><strong>Scope → pull/sync</strong><p>프로젝트·run·job 데이터를 읽고 변경을 판정한다. 측정 실행 자체는 외부 Scope 책임이다.</p></li><li><strong>ing 원본 + rd 증분 투영</strong><p>적재 트랜잭션 안에서 원본 갱신과 규칙 기반 판정·차원·사실 행·세대를 연결한다. 잘못된 중간 상태가 정상 조회로 보이지 않도록 구성돼 있다.</p></li><li><strong>회차·발행 조건 처리</strong><p>원장과 시간 조건으로 회차를 갱신한다. 지원하는 조건에서는 발행 시점 동결 세대를 만든다.</p></li><li><strong>화면의 다음 조회에 반영</strong><p>API는 조회 모델·회차 상태를 읽는다. 수집 주기, 워커 작업 시간, 큐 적체, 캐시 및 발행값 선택이 최종 신선도에 관여한다.</p></li></ol><span class="refs"><a href="#A13">A13</a> <a href="#A20">A20</a> <a href="#A21">A21</a> <a href="#A22">A22</a></span></div></section><section id="workers"><div class="kicker">07 · BACKGROUND PROCESSING</div><h2>배치 경로가 둘이며, 새 워커에도 미완성 연결이 있다</h2>
+<div class="table-wrap"><table><thead><tr><th>실행체</th><th>정의된 주기 / 트리거</th><th>책임·제약</th></tr></thead><tbody><tr><td>Python queue</td><td>60초</td><td>재판정 큐 → DataForSEO(설정 시) → Scope outbox 순서. <span class="refs"><a href="#A21">A21</a> <a href="#A22">A22</a></span></td></tr><tr><td>Python pull</td><td>20분</td><td>프로젝트를 순환하며 Scope 데이터를 적재. 기본 패스 예산은 README에 15분으로 설명. <span class="refs"><a href="#A20">A20</a></span></td></tr><tr><td>Python cycles_tick</td><td>20분 + KST 날짜 변경 시 일일 작업</td><td>회차·노출·발행 판정, 파티션 선생성. <span class="refs"><a href="#A21">A21</a> <a href="#A22">A22</a></span></td></tr><tr><td>Python watch</td><td>별도 CLI 스케줄 6시간 전제</td><td>워커 프로세스와 분리한 감시. 실제 스케줄 등록 여부는 미확인. <span class="refs"><a href="#A20">A20</a> <a href="#A21">A21</a></span></td></tr><tr><td>Next.js cron</td><td>sync-mirror 20분 / ga4-prebuild 매일 / cycle-chain-watch 6시간</td><td>vercel.json에 정의된 기존 배치. 실제 활성 여부는 미확인. <span class="refs"><a href="#A25">A25</a></span></td></tr><tr><td>TypeScript summary-runner</td><td>systemd 30분 폴링 정의</td><td>기존 요약 생성·실패 알림. 새 Python 워커의 일부라고 합쳐 설명하지 않는다. <span class="refs"><a href="#A26">A26</a></span></td></tr></tbody></table></div>
+<p><strong>정의된 주기는 완료 시간 보장이 아니다.</strong> 새 Scheduler는 도래한 작업을 순서대로 <code>await</code>한다. 긴 pull이 실행되면 다음 queue 처리가 늦어질 수 있다. 기존 품질 보고서의 워커 항목과 함께 본다. <span class="refs"><a href="#A21">A21</a></span></p>
+<div class="cards two"><article><h3>GA4 읽기는 구현, 수집 연결은 별도</h3><p>FastAPI 전환율 서비스는 적재된 <code>rd.ga4_row</code>를 읽고 실시간 GA4를 호출하지 않는다. 반면 기존 프런트는 GA4 조회·캐시 코드가 있다. 새 워커는 <code>ga4_property / ga4_tracked_event</code> 큐를 소비하지 않으며 주석에 IG-4 소유 미정으로 남겨 두었다.</p><span class="refs"><a href="#A22">A22</a> <a href="#A23">A23</a> <a href="#A34">A34</a></span></article><article><h3>운영 동기화·Scope 쓰기 계약 공백</h3><p><code>app</code> 단방향 동기화 잡(Q15)은 README에 미구현으로 표시돼 있다. Scope outbox는 존재하지만 op별 요청 본문 매핑은 미확정이다. API 쓰기가 구현됐다는 사실만으로 외부 측정 시스템까지 연결이 완성됐다고 볼 수 없다.</p><span class="refs"><a href="#A20">A20</a></span></article></div></section><section id="cache"><div class="kicker">08 · FRESHNESS AND CACHING</div><h2>캐시·미러·발행값을 서로 다른 계층으로 관리한다</h2>
+<div class="table-wrap"><table><thead><tr><th>계층</th><th>목적 / 범위</th><th>현재 해석</th></tr></thead><tbody><tr><td>React cache / 요청 내 GET dedupe</td><td>동일 요청 안의 세션·API 중복 제거</td><td>사용자 간 공유 영구 캐시와 다름. <span class="refs"><a href="#A02">A02</a> <a href="#A04">A04</a></span></td></tr><tr><td>Next.js legacy 집계 캐시</td><td>미러 집계·요약 재사용, 태그 무효화; 미러 집계 TTL 7,200초</td><td>동기화·재검증과 연결된 별도 경로. <span class="refs"><a href="#A07">A07</a></span></td></tr><tr><td>기존 GA4 캐시</td><td>외부 보고서 요청 재사용</td><td>신규 rd.ga4_row 적재·조회와 운영 방식이 다름. <span class="refs"><a href="#A34">A34</a></span></td></tr><tr><td>FastAPI 결과 캐시</td><td>허용된 고비용 GET, 데이터 버전·스코프·빌드에 종속</td><td>HGH_RESULT_CACHE=1일 때 선택 적용, 기본 꺼짐. 권한 검사 후 lookup. <span class="refs"><a href="#A18">A18</a> <a href="#A19">A19</a></span></td></tr><tr><td>frz / 발행 회차</td><td>발행 당시 값을 보존하는 조회 모델</td><td>TTL 만료만으로 최신값으로 바꾸는 캐시가 아님. <span class="refs"><a href="#A13">A13</a></span></td></tr><tr><td>CloudFront</td><td>인프라의 API 앞단</td><td>저장소 정의에서는 응답 캐시 비활성. 애플리케이션 내부 캐시가 없다는 뜻은 아님. <span class="refs"><a href="#A30">A30</a></span></td></tr></tbody></table></div>
+<p>기존 설계의 ‘결과 캐시 없음’ 문장만으로 현재 구현을 설명하면 틀린다. 코드에는 선택적 결과 캐시와 동결 계층이 있다. 장애·수치 차이 분석 시 <strong>요청 경로 → 데이터 적재 시점 → 회차·발행 상태 → 데이터 세대 → 캐시 선택</strong>을 함께 기록하는 편이 적절하다. 마지막 문장은 운영 개선 제안이다.</p></section><section id="operations"><div class="kicker">09 · AUTH, DEPLOYMENT AND OPERATIONS</div><h2>인증 경계와 배포 정의: 구현과 운영 사실을 구분한다</h2>
+<h3>인증·인가</h3><p>일반 사용자는 Supabase Auth로 인증한다. FastAPI는 JWT를 먼저 검증하고 <code>app.user_account</code>의 역할·스코프를 적용한다. 외부 검수 콘솔은 Supabase 로그인 게이트가 아니라 별도 HMAC 쿠키·검수 세션과 <code>qa_gate</code> 경계다. 프런트 middleware는 <code>/api</code>를 matcher에서 제외하므로 API와 Server Action 자체의 인증 검사가 필요하다. <span class="refs"><a href="#A04">A04</a> <a href="#A05">A05</a> <a href="#A15">A15</a></span></p>
+<h3>저장소가 설명하는 배포 구조</h3><div class="flow"><span>Next.js<br><small>Vercel 설정</small></span><b>→</b><span>CloudFront<br><small>캐시 비활성</small></span><b>→</b><span>ALB<br><small>원본 비밀 헤더</small></span><b>→</b><span>private EC2<br><small>FastAPI</small></span><b>→</b><span>private RDS<br><small>PostgreSQL</small></span></div>
+<p>이는 README와 인프라 스크립트에서 확인한 기존 허브의 배포 의도다. <code>infra/userdata.sh</code>에는 실제 API 대신 임시 <code>python http.server</code>가 기동되는 초기 부팅 정의가 있다. 워커 주석의 ECS 실행 전제도 실제 ECS 배포를 증명하지 않는다. 최종 서비스 기동·워커 스케줄·인스턴스 수·DB 주소는 이 소스만으로 확정할 수 없다. <span class="refs"><a href="#A01">A01</a> <a href="#A21">A21</a> <a href="#A25">A25</a> <a href="#A29">A29</a> <a href="#A30">A30</a></span></p>
+<h3>오류·감사·상태 확인</h3><p>백엔드는 요청 ID를 응답·로그·감사에 연결하고 오류 봉투를 통일한다. 민감 조회의 접근 감사는 비동기 배치이며, 프로세스 크래시 시 수 초분 유실을 허용한다고 명시돼 있다. <code>/healthz</code>는 단순 <code>{ok:true}</code> 응답으로 DB·Scope·워커 상태를 검증하지 않는다. 따라서 readiness나 데이터 신선도 감시를 대신하지 못한다. <span class="refs"><a href="#A09">A09</a> <a href="#A16">A16</a></span></p>
+<h3>테스트와 계약</h3><p>소스에는 pytest·SQL 경계 검사·합성 PostgreSQL 17 픽스처·증분/일괄 투영 동치 시험, 프런트 타입·단위 시험과 OpenAPI 계약 드리프트 검사가 있다. 공유 저장소의 CI는 <code>ci/github-workflows</code>로 옮겨진 참고본이며 GitHub Actions가 자동 실행하는 경로가 아니다. 이번 작업에서는 앱 전체 시험을 실행하지 않고 문서의 근거·집계·링크를 검증했다. <span class="refs"><a href="#A01">A01</a> <a href="#A20">A20</a> <a href="#A31">A31</a> <a href="#A32">A32</a></span></p></section><section id="state"><div class="kicker">10 · IMPLEMENTATION STATUS</div><h2>현재 구현·전환 공백·향후 설계를 나눠 읽어야 한다</h2>
+<div class="table-wrap"><table><thead><tr><th>항목</th><th>판정</th><th>근거·의미</th></tr></thead><tbody><tr><td>Next.js UI/BFF + 직접 DB 경로</td><td>구현 확인</td><td>legacy 기본. 업무 그룹별 API 전환 코드도 존재. <span class="refs"><a href="#A02">A02</a> <a href="#A03">A03</a></span></td></tr><tr><td>FastAPI 모듈 + 신규 DB + ingest</td><td>구현 확인 / 배포 미확인</td><td>로컬 소스·계약·DDL·시험은 존재. 실제 운영 사용 범위는 별도 확인. <span class="refs"><a href="#A09">A09</a> <a href="#A20">A20</a> <a href="#A27">A27</a></span></td></tr><tr><td>기존→신규 운영 데이터 정합성</td><td>전환 공백</td><td>SESSION 포함 혼합 모드, app 단방향 동기화 Q15 미구현. <span class="refs"><a href="#A02">A02</a> <a href="#A04">A04</a> <a href="#A20">A20</a></span></td></tr><tr><td>신규 GA4 공급</td><td>연결 공백</td><td>조회 구현과 큐 생산은 있으나 이 워커는 관련 변경을 소비하지 않음. <span class="refs"><a href="#A22">A22</a> <a href="#A23">A23</a></span></td></tr><tr><td>Scope 쓰기 연동</td><td>일부 구현 / 계약 미확정</td><td>outbox 처리 존재, op별 본문 매핑은 후속 연동 단계. <span class="refs"><a href="#A20">A20</a> <a href="#A22">A22</a></span></td></tr><tr><td>일부 LLM 보조 기능</td><td>구현 확인</td><td>OpenRouter 공용 클라이언트·구조화 출력·타임아웃/재시도 경계. 독립 분석 엔진 완성과는 다름. <span class="refs"><a href="#A24">A24</a></span></td></tr><tr><td>S2W 독립 분석 엔진</td><td>설계 초안 / 미구현</td><td>ANALYSIS-ENGINE-DESIGN의 Python 통합·분석 버전 설계는 현재 런타임이 아님. <span class="refs"><a href="#A33">A33</a></span></td></tr><tr><td>10/7 원문 공급·Azure 방향</td><td>후속 인수 결정 / 이 코드와 별개</td><td>인수 기록은 HUB RDS ing 직접 읽기를 공급 경로로 확정. 접속·턴 원문·배포 실현 여부는 별도. <span class="refs"><a href="#A40">A40</a></span></td></tr></tbody></table></div>
+<p class="callout">현행 ingest는 외부 측정·분석 결과를 받아 Hub 규칙으로 정규화·재판정·집계한다. ‘분석 로직이 전혀 없다’고 표현하는 것도, ‘새 독립 의미 분석 엔진이 이미 있다’고 표현하는 것도 부정확하다. 새 AI 의미 판단 기능을 개발할 때는 사용자가 지정한 TypeSafe 규칙을 적용하되, 이번 문서 작성에서 기존 LLM 기능을 변경하지 않았다.</p></section><section id="implications"><div class="kicker">11 · ARCHITECTURAL IMPLICATIONS</div><h2>이 구조가 개발과 장애에 주는 영향</h2>
+<div class="table-wrap"><table><thead><tr><th>평가</th><th>근거가 되는 구조</th><th>실무상 의미</th></tr></thead><tbody><tr><td>강점: 공통 규칙의 중심이 있음</td><td>auth / filters / cycles / measure / write</td><td>권한·모수·지표의 기능별 차이를 줄일 수 있다. 변경 시 공통 계층 회귀 검증이 중요하다.</td></tr><tr><td>강점: 요청에서 무거운 적재를 분리</td><td>ing/rd + 독립 워커 + outbox</td><td>외부 측정 지연을 화면 요청에서 분리하고 재처리 가능성을 확보한다. 작업 상태·복구 계약은 별도 필요하다.</td></tr><tr><td>부담: 두 구현의 동시 유지</td><td>Next.js legacy + FastAPI API</td><td>같은 기능 수정이 두 경로에 필요할 수 있다. 전환 플래그·세션·프로필별 동치 확인 비용이 생긴다.</td></tr><tr><td>부담: 공유 DB가 결합 지점</td><td>API 풀 + loader + SQL 함수·트리거·파티션</td><td>독립 프로세스여도 DB 변경 영향은 넓다. API·DDL·적재·이관을 하나의 변경 단위로 검토해야 한다.</td></tr><tr><td>위험: 비동기 신선도와 발행값의 차이</td><td>queue 지연 + rd 재판정 + frz</td><td>저장 성공, 최신 분석 반영, 발행값 갱신을 구분하지 않으면 사용자가 불일치로 느낀다.</td></tr><tr><td>위험: UI에서 API 제약을 무력화</td><td>페이지별 API → 모든 페이지 수집 → 전체 rows 전달</td><td>서버 커서가 있어도 전송량·메모리·렌더링이 늘어난다. <a href="03%20%EC%86%8C%ED%94%84%ED%8A%B8%EC%9B%A8%EC%96%B4%20%ED%92%88%EC%A7%88%20%EC%A0%90%EA%B2%80.html#SW01">SW01~03 상세</a></td></tr><tr><td>위험: 실패가 정상 데이터처럼 보임</td><td>일부 빈 배열 fallback·저장 표시·부분 성공 처리</td><td>공통 오류 봉투만으로 UI 정합성은 보장되지 않는다. <a href="03%20%EC%86%8C%ED%94%84%ED%8A%B8%EC%9B%A8%EC%96%B4%20%ED%92%88%EC%A7%88%20%EC%A0%90%EA%B2%80.html#SW04">SW04~08 상세</a></td></tr><tr><td>위험: 작업 간 지연·재시도·복구</td><td>워커의 순차 루프·claim/상태 관리</td><td>DB 큐가 있어도 자동으로 정확히 한 번 처리가 보장되지 않는다. <a href="03%20%EC%86%8C%ED%94%84%ED%8A%B8%EC%9B%A8%EC%96%B4%20%ED%92%88%EC%A7%88%20%EC%A0%90%EA%B2%80.html#SW12">워커 SW12~15 상세</a></td></tr></tbody></table></div>
+<p>위 영향 평가는 코드 구조에서 도출한 분석이다. 실제 처리량·지연·비용·동시 접속 한계는 운영 측정 없이 수치로 확정하지 않았다. 기존 품질 점검의 재현 결과는 연결된 문서에서 범위와 함께 확인한다.</p></section><section id="change-map"><div class="kicker">12 · DEVELOPMENT MAP</div><h2>변경할 때 함께 봐야 할 코드</h2><div class="table-wrap"><table><thead><tr><th>작업</th><th>첫 진입점</th><th>함께 확인할 경계</th></tr></thead><tbody><tr><td>화면·대량 목록 개선</td><td>front/app의 페이지·컴포넌트 → lib/hgh/adapters → paginate</td><td>legacy repository, API cursor/meta, 필터·정렬·전체 선택·내보내기</td></tr><tr><td>새 API 기능</td><td>back/app/features/<domain>/<feature></td><td>FEATURE_ROUTERS, schemas, core 권한·필터, OpenAPI 재생성·프런트 어댑터</td></tr><tr><td>지표 산식 변경</td><td>back/app/core/measure · cycles · facts</td><td>ingest 투영·마이그레이션 시드·분모·프로필·동결값·기간 창·legacy 동치</td></tr><tr><td>프롬프트·설정 쓰기</td><td>기능 service + core/write + DB 트리거</td><td>app 커밋·큐 계약·재판정 대상·Scope outbox·상태 UI</td></tr><tr><td>수집·재판정·발행</td><td>back/ingest/pull · project · cycles</td><td>DB 원장·loader 권한·idempotency·작업 복구·증분/일괄 동치</td></tr><tr><td>권한·조직·프로젝트 접근</td><td>front/lib/auth + back/app/core/auth</td><td>SESSION 소스·app.user_account·프로젝트 멤버십·QA 별도 경계</td></tr><tr><td>DB 변경</td><td>back/db의 후속 patch와 합본 + migration</td><td>개발 DB·test dbforward·CI 참고본·API SQL·loader·동결 계층</td></tr><tr><td>배포 준비</td><td>README + infra + 실제 서비스 기동 설정</td><td>업무/SESSION 플래그·DB 역할·워커 스케줄·외부 공급·ready/freshness·CI 활성화</td></tr></tbody></table></div><h3>착수 때 먼저 확정할 세 가지</h3><ol><li><strong>이번 개발의 실행 경로:</strong> 업무 그룹·SESSION·프로필·캐시 설정을 개발 환경의 명시적 기준으로 고정한다.</li><li><strong>데이터 쓰기와 반영 책임:</strong> app 변경, 큐 소비, Scope 연동, GA4 적재, 발행값 관리 주체를 정한다.</li><li><strong>변경 단위의 완료 기준:</strong> API 성공뿐 아니라 화면 표시·반영 대기·실패·재시도·권한·데이터 세대까지 확인한다.</li></ol><p>이 항목들은 구현 착수를 위한 제안이며, 여기서 배포 설정을 변경하거나 운영 작업을 실행한 것은 아니다.</p></section><section id="evidence"><div class="kicker">13 · TRACEABLE EVIDENCE</div><h2>근거·검증·관련 문서</h2>
+<p>각 본문 근거 링크는 아래 소스 발췌로 이동한다. 전체 파일의 SHA-256, 행 범위, 라우터/계약 집계는 JSON 부록에 기록했다. 주석·README의 배포 설명은 운영 사실과 구분했으며, <code>_archive</code>를 현행 구현으로 사용하지 않았다.</p>
+<div class="related"><a href="../reports/%EB%B6%80%EB%A1%9D/GEO%20%EC%95%84%ED%82%A4%ED%85%8D%EC%B2%98%20%EA%B7%BC%EA%B1%B0.json">근거·집계 JSON</a> · <a href="../reports/%EB%B6%80%EB%A1%9D/GEO%20%EC%95%84%ED%82%A4%ED%85%8D%EC%B2%98%20%EB%AC%B8%EC%84%9C%20%EA%B2%80%EC%A6%9D.json">문서 검증 결과</a> · <a href="03%20%EC%86%8C%ED%94%84%ED%8A%B8%EC%9B%A8%EC%96%B4%20%ED%92%88%EC%A7%88%20%EC%A0%90%EA%B2%80.html">소프트웨어 품질 점검</a> · <a href="04%20%EC%B8%A1%EC%A0%95%20%EC%9C%A0%ED%9A%A8%EC%84%B1%20%EB%B6%84%EC%84%9D.html">측정 유효성 분석</a> · <a href="00%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0.html">개발 핵심 문서 안내</a></div>
+<p class="caption">검증: 소스 정적 분석·AST/JSON 집계·원본 지문·HTML 링크와 인터랙션 점검. 운영 DB 연결, 비밀값 조회, 배포 및 앱 코드 변경 없음. 전체 앱 통합 시험·운영 성능 시험은 이번 작업 범위가 아니다.</p>
+<p><button id="toggle-evidence" class="secondary">모든 근거 펼치기</button></p><details id="A01" class="source"><summary><b>A01</b> 공유 범위·배포 문서 <code>hmg-geo-hub-share/README.md</code></summary><p><a href="11%20%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8%20%EC%8B%A4%ED%96%89%20%EC%95%88%EB%82%B4.md">원본 파일 열기</a> · 92행 · SHA-256 <code>1b7dc6079fffa93421eb1253204f794bcf14a3e665c82fdeb2c4bd31c6b8555b</code></p><p class="caption">L1–38</p><pre>    1 | # HMG-GEO-HUB 외부 검토용 스냅샷
+    2 | 
+    3 | &gt; 이 레포는 **2026-10-02 기준 외부 검토·자문용 스냅샷**입니다. 개발 레포의 통합 브랜치
+    4 | &gt; 리비전 `72c260a3` 트리를 단일 커밋으로 옮긴 것이며, 커밋 이력은 포함하지 않습니다.
+    5 | &gt; 열람 권한은 읽기 전용입니다.
+    6 | 
+    7 | ## 검토 범위
+    8 | 
+    9 | 허브는 기존 HMG GEO 대시보드(Next.js 단일 앱)의 데이터 계층을 **DB(PostgreSQL 17) / Back(FastAPI) /
+   10 | Front(Next.js)** 3층으로 다시 짜는 재설계입니다. 아래를 중심으로 봐 주시면 됩니다.
+   11 | 
+   12 | | 경로 | 내용 |
+   13 | | --- | --- |
+   14 | | `back/app/` | 기능 모듈(라우터·스키마·서비스·쿼리·시험)과 공통 계층 `core/` |
+   15 | | `back/ingest/` | 적재 워커(측정 원천 pull, 판정, 읽기 투영, 회차·큐) |
+   16 | | `back/db/` | 확정 DDL 사슬(`DB-v2.N.sql` = 직전 합본 + `DB-v2.N-patch.sql`)과 스모크 |
+   17 | | `back/migration/` | 현행 미러에서 새 스키마로의 이관 도구(데이터는 레포에 없음) |
+   18 | | `back/CORE-REQUESTS/` | 기능 모듈이 공통 계층(`core/`)에 낸 요청과 처분 기록 |
+   19 | | `docs/design/`, `docs/spec/` | 설계 계약, DB·API 결정 기록, 기능·API 명세(HTML) |
+   20 | | `front/` | 현행 대시보드. 화면은 유지하고 서버 데이터 함수만 back API 호출로 교체하는 중 |
+   21 | | `infra/` | AWS CLI 구성 스크립트(상태·비밀 파일은 원본에도 커밋되지 않음) |
+   22 | | `ANALYSIS-ENGINE-DESIGN.md` | 분석 엔진 Python 통합·분석 버전 관리 **설계 초안**(검토 중, 미구현) |
+   23 | | `docs/interfaces/scope-measurement-interface-v0.1.md` | Scope 측정 연동 인터페이스 **v0.1 협의안**(측정 대상 관리·수동 측정·원문 조회 API, OpenSpec 변경안 포함) |
+   24 | 
+   25 | 읽는 순서 제안: 이 문서 → 아래 원본 README → `docs/design/DESIGN-CONTRACT.md` →
+   26 | `back/FEATURES.md` → `docs/design/db/DECISIONS.md` → `docs/design/api/DECISIONS-API.md` →
+   27 | `front/docs/qa/qa-matrix.md`(보안 경계 QA) → `ANALYSIS-ENGINE-DESIGN.md`.
+   28 | 
+   29 | ## 스냅샷에서 제외하거나 바꾼 것
+   30 | 
+   31 | 공유 범위를 맞추기 위해 아래를 정리했습니다. 실행 코드에 닿는 변경은 검수 콘솔 기본 비밀번호 문자열 치환(시험도 같은 값으로
+   32 | 일관 치환)과 CI 참고본 경로 변경(이를 읽는 시험 1건의 경로 포함)뿐입니다.
+   33 | 
+   34 | - **제외**: 사내 운영 문서(내부 회의록·인수인계 메모·비용 산정 자료), 고객사 협업 도구 연동 스크립트,
+   35 |   고객 산출물(성과 리포트·발행 템플릿)과 고객 배포용 매뉴얼 PDF, 운영 배포 워크플로, 사내 개발 도구 설정 파일.
+   36 | - **CI 정의**: `ci/github-workflows/` 에 참고본으로 옮겼습니다. 이 경로는 GitHub Actions 가 읽지 않으므로
+   37 |   이 레포에서는 실행되지 않으며, 러너 관련 서술만 일반 표기로 바꿨습니다.
+   38 | - **이름 변경**: 개발 도구용 안내 파일은 `front/docs/development-guide.md` 로 옮겼고, 설계 노트는</pre><p class="caption">L79–86</p><pre>   79 | | **stg** | `stg` | VPC 10.40/16, 이름 `HMG-GEO-HUB_stg_*` / `hmg-geo-hub-stg-*` |
+   80 | | **prod** | `main` | VPC 10.41/16, 이름 `HMG-GEO-HUB_prod_*` / `hmg-geo-hub-prod-*` (개설 후 정지 상태) |
+   81 | 
+   82 | - 작업 흐름: 기능 브랜치 → PR → `stg`(stg 배포·검증) → PR → `main`(prod 배포).
+   83 | - 경로 공통: CloudFront(캐시 끔, D8) → ALB(비밀 헤더 일치 시만 전달) → 프라이빗 EC2(FastAPI, SSM 관리) → 비공개 RDS.
+   84 | - 백엔드 기동(EC2): `cd back &amp;&amp; uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-config logging.json`. 로그 형식·요청 ID(`rid=`)·
+   85 |   접근 로그(`hgh.access`, uvicorn 자체 접근 로그는 끔)는 `back/logging.json` 이 정한다. `--forwarded-allow-ips=&#x27;*&#x27;` 는 쓰지 않는다(`HGH_TRUSTED_PROXY_HOPS=2`).</pre></details><details id="A02" class="source"><summary><b>A02</b> 소스 전환·BFF 클라이언트 <code>hmg-geo-hub-share/front/lib/hgh/client.ts</code></summary><p><a href="../../front/lib/hgh/client.ts">원본 파일 열기</a> · 827행 · SHA-256 <code>8ff8b8cb683428d87c31d330f427a1b2b626f3ab65d70f4be4e51925722e5769</code></p><p class="caption">L1–50</p><pre>    1 | import &quot;server-only&quot;;
+    2 | 
+    3 | // The one backend client (design 2.2). Server only: runs in server components, route
+    4 | // handlers and server actions; the browser keeps calling /api/* only.
+    5 | //
+    6 | //   const { query, cf } = toCommonQuery(filters, ctx);
+    7 | //   hghGet(&quot;/v1/kpi/summary&quot;, { query: withParams(query, { cycle_offset: 1 }), cf })
+    8 | //   hghPost(&quot;/v1/projects/{project_id}/members&quot;, { pathParams: { project_id }, body, retryOn401: true })
+    9 | //
+   10 | // Types come from lib/hgh/api-types.ts per (path, method): path params, the query object
+   11 | // (known parameter names and value types; required ones such as `surface` are enforced),
+   12 | // the JSON body and the 2xx JSON answer. `cf.&lt;uuid&gt;` custom-field filters are not in the
+   13 | // OpenAPI document; they travel in the separate `cf` field, allowed only on paths whose
+   14 | // query carries `surface` (CommonFilters).
+   15 | //
+   16 | // Contract:
+   17 | //   - Base URL HGH_API_BASE_URL (https; http only for localhost). Checked on the first
+   18 | //     call, not at import: legacy-source deployments (D8 default) may not set it.
+   19 | //   - No result cache (D8): every fetch is `cache: &quot;no-store&quot;`. The only sharing is
+   20 | //     in-request GET dedupe (lib/request-dedupe), allowed by design 3.2 (4).
+   21 | //   - Auth: Bearer &lt;Supabase access token&gt; from lib/hgh/auth (bound by U2), or the QA
+   22 | //     cookie, or none. A missing session token fails locally with 401 unauthenticated.
+   23 | //   - X-Request-Id (UUID v4) per HTTP attempt, echoed on HghApiError.requestId.
+   24 | //   - Errors: every non-2xx becomes HghApiError(status, code) from the envelope (errors.ts).
+   25 | //   - Timeouts per call class (HGH_TIMEOUTS). Timeout -&gt; 504 &quot;timeout&quot;, not retried.
+   26 | //   - Retries: GET only, once, 200 ms later, for connection errors and 503 auth_unavailable.
+   27 | //     Any method, once, after 401 token_expired/unauthenticated when the caller opted in
+   28 | //     with retryOn401 (route handlers, server actions: contexts that can write refreshed
+   29 | //     cookies). Writes are never retried otherwise.
+   30 | //   - D2 relay: `clientIp` + HGH_RELAY_SECRET add X-HGH-Client-IP and X-HGH-Relay-Secret
+   31 | //     so the backend can rate-limit by the real viewer IP instead of the Vercel egress IP.
+   32 | //     The backend trusts X-HGH-Client-IP only when the secret matches (backend request).
+   33 | //   - Path parameters: encodeURIComponent, and &quot;&quot;, &quot;.&quot; and &quot;..&quot; are refused (a dot segment
+   34 | //     would be normalised away by URL parsing and reach another route). The final URL path
+   35 | //     is checked against the intended one.
+   36 | //   - Local trace: with HGH_API_TRACE_FILE set (and not on Vercel), one JSONL line per HTTP
+   37 | //     attempt: ts, requestId, attempt, method, route, path, query, status, ms, code,
+   38 | //     bodySha256. Response bodies are never written; HGH_API_TRACE_SELECT names a JSON file
+   39 | //     {route: [json paths]} whose values (scalars and array lengths only) are added as
+   40 | //     `values` for the screen checks (design 5.3). Unset = no work at all.
+   41 | //   - Source flags (D8): hghSource(group) reads HGH_SOURCE_&lt;group&gt;=api|legacy, default legacy.
+   42 | //   - Header parameters: only where the OpenAPI operation declares them (If-Match on
+   43 | //     PATCH /v1/admin/users/{user_id}, U11; X-HGH-Timeout-Ms on the four LLM routes, the BFF&#x27;s
+   44 | //     wait so the backend bounds the LLM call to it: back/app/core/llm.py request_deadline),
+   45 | //     typed per path. Integer values travel as decimal strings. Names the client sets itself
+   46 | //     (Authorization, Cookie, Accept, Content-Type, X-Request-Id, relay headers) are refused.
+   47 | //   - Concurrency (G-25, D6): inside one server request (the React request cache scope, the
+   48 | //     same one the GET dedupe uses) at most HGH_MAX_CONCURRENT_CALLS HTTP exchanges are in
+   49 | //     flight; the next call waits for a slot, first come first served. The per-call timeout
+   50 | //     starts when the slot is granted. Outside a request scope (scripts, tests) no limit.</pre><p class="caption">L229–290</p><pre>  229 | export type HghSource = &quot;api&quot; | &quot;legacy&quot;;
+  230 | 
+  231 | /** Conversion groups (integrated design 6.2 S4..S10) + the session switch (U2). */
+  232 | export const HGH_SOURCE_GROUPS = [&quot;G1&quot;, &quot;G2&quot;, &quot;G3&quot;, &quot;G4&quot;, &quot;G5&quot;, &quot;G6&quot;, &quot;G7&quot;, &quot;SESSION&quot;] as const;
+  233 | export type HghSourceGroup = (typeof HGH_SOURCE_GROUPS)[number];
+  234 | 
+  235 | const warnedOnce = new Set&lt;string&gt;();
+  236 | function warnOnce(key: string, message: string): void {
+  237 |   if (warnedOnce.has(key)) return;
+  238 |   warnedOnce.add(key);
+  239 |   console.warn(message);
+  240 | }
+  241 | 
+  242 | /** HGH_SOURCE_&lt;group&gt; = api | legacy. Unset or anything else -&gt; legacy (warned once). */
+  243 | export function hghSource(group: HghSourceGroup, env: Env = process.env): HghSource {
+  244 |   const name = `HGH_SOURCE_${group}`;
+  245 |   const raw = env[name]?.trim().toLowerCase();
+  246 |   if (raw === &quot;api&quot;) return &quot;api&quot;;
+  247 |   if (raw &amp;&amp; raw !== &quot;legacy&quot;) warnOnce(name, `[hgh] ${name}=&quot;${raw}&quot; is not api|legacy; using legacy`);
+  248 |   return &quot;legacy&quot;;
+  249 | }
+  250 | 
+  251 | /** Adapter areas. Surface-bound areas switch with their surface&#x27;s group. */
+  252 | export type HghArea =
+  253 |   | &quot;dashboard&quot; // U5
+  254 |   | &quot;analysis&quot; // U6, U7: mentions, citations, answers
+  255 |   | &quot;funnel&quot; // U8: ACR, conversion
+  256 |   | &quot;prompts&quot; // U8: prompt catalog
+  257 |   | &quot;projects&quot; // U9
+  258 |   | &quot;intent&quot; // U10
+  259 |   | &quot;admin&quot; // U11
+  260 |   | &quot;qa&quot; // U12
+  261 |   | &quot;session&quot;; // U2
+  262 | 
+  263 | const GLOBAL_GROUP: Partial&lt;Record&lt;HghArea, HghSourceGroup&gt;&gt; = {
+  264 |   dashboard: &quot;G1&quot;,
+  265 |   analysis: &quot;G2&quot;,
+  266 |   funnel: &quot;G4&quot;,
+  267 |   prompts: &quot;G5&quot;,
+  268 | };
+  269 | 
+  270 | /**
+  271 |  * One flag per (area, surface): website surface = G3 and project surface = G6 for every
+  272 |  * analysis area (the website group converts as a surface, design 4.3); global analysis
+  273 |  * areas map to G1/G2/G4/G5; projects and intent = G6; admin and qa = G7.
+  274 |  */
+  275 | export function sourceGroupFor(area: HghArea, surface: Surface = &quot;global&quot;): HghSourceGroup {
+  276 |   switch (area) {
+  277 |     case &quot;projects&quot;:
+  278 |     case &quot;intent&quot;:
+  279 |       return &quot;G6&quot;;
+  280 |     case &quot;admin&quot;:
+  281 |     case &quot;qa&quot;:
+  282 |       return &quot;G7&quot;;
+  283 |     case &quot;session&quot;:
+  284 |       return &quot;SESSION&quot;;
+  285 |     default:
+  286 |       if (surface === &quot;website&quot;) return &quot;G3&quot;;
+  287 |       if (surface === &quot;project&quot;) return &quot;G6&quot;;
+  288 |       return GLOBAL_GROUP[area] ?? &quot;G1&quot;;
+  289 |   }
+  290 | }</pre></details><details id="A03" class="source"><summary><b>A03</b> 프런트 직접 DB 연결 <code>hmg-geo-hub-share/front/lib/db/index.ts</code></summary><p><a href="../../front/lib/db/index.ts">원본 파일 열기</a> · 67행 · SHA-256 <code>4e3f8da161fd0e346e3c1f6b54889ca15566c1b872d3c57c6b11d23c4ea3e5be</code></p><p class="caption">L1–13</p><pre>    1 | import &quot;server-only&quot;;
+    2 | import { drizzle } from &quot;drizzle-orm/postgres-js&quot;;
+    3 | import postgres from &quot;postgres&quot;;
+    4 | import * as schema from &quot;./schema&quot;;
+    5 | 
+    6 | // Server-only Postgres connection for Drizzle. Uses the standard connection
+    7 | // string (DATABASE_URL) — NOT supabase-js / PostgREST. The browser never reaches
+    8 | // this; all DB access flows through the repository layer (data-access-security).
+    9 | //
+   10 | // Lazy: the client is created on first use (not at import) so the module can be
+   11 | // bundled at build time without DATABASE_URL present. prepare:false is required
+   12 | // for Supabase&#x27;s transaction-mode (pooled) connection.
+   13 | let cached: ReturnType&lt;typeof drizzle&lt;typeof schema&gt;&gt; | null = null;</pre><p class="caption">L58–67</p><pre>   58 | export function getDb() {
+   59 |   if (cached) return cached;
+   60 |   const url = process.env.DATABASE_URL;
+   61 |   if (!url) {
+   62 |     throw new Error(&quot;DATABASE_URL is not set (server-only Postgres connection).&quot;);
+   63 |   }
+   64 |   const client = postgres(url, POOL_OPTIONS);
+   65 |   cached = drizzle(client, { schema });
+   66 |   return cached;
+   67 | }</pre></details><details id="A04" class="source"><summary><b>A04</b> 세션 전환 <code>hmg-geo-hub-share/front/lib/auth/session.ts</code></summary><p><a href="../../front/lib/auth/session.ts">원본 파일 열기</a> · 73행 · SHA-256 <code>6e2c2d99d7b3996f7dedd775886ba62c9630c1582f4bbca26bee1dc5243eb813</code></p><p class="caption">L1–73</p><pre>    1 | import &quot;server-only&quot;;
+    2 | import { cache } from &quot;react&quot;;
+    3 | import { createSupabaseServerClient } from &quot;@/utils/supabase/server&quot;;
+    4 | import { profileRepository } from &quot;@/lib/db/repositories/profiles&quot;;
+    5 | import { hghSource } from &quot;@/lib/hgh/client&quot;;
+    6 | import { getSessionFromApi } from &quot;@/lib/hgh/adapters/session&quot;;
+    7 | import { effectiveMenuGroups } from &quot;./menu-groups&quot;;
+    8 | import type { AllowedScope, Session, User } from &quot;./types&quot;;
+    9 | 
+   10 | // Resolves the authenticated user into our domain Session.
+   11 | //
+   12 | // Two sources behind one signature (D8 flag HGH_SOURCE_SESSION = api | legacy, default
+   13 | // legacy; read per request so a flag flip needs no code change):
+   14 | //   - api:    GET /v1/auth/me with the Supabase access token (lib/hgh/adapters/session.ts,
+   15 | //             field map in its header). The backend verifies the JWT against JWKS and owns
+   16 | //             role, operator, scope and menu groups.
+   17 | //   - legacy: identity from Supabase Auth, role + allowed scope from the server-controlled
+   18 | //             `profiles` table (NOT user_metadata). Kept unchanged as the rollback path until
+   19 | //             the closing clean-up (design 4.4).
+   20 | // Either way this is the single source feeding the route guard, the SNB and every scope
+   21 | // check, and &quot;no session&quot; is null (the (dash) layout sends it to /login).
+   22 | //
+   23 | // Wrapped in React cache(): within a single request the DashLayout, the page it
+   24 | // renders, and any nested layout each call getSession(). cache() collapses them
+   25 | // into ONE verification + ONE profile query (or ONE /v1/auth/me) per request.
+   26 | export const getSession = cache(async (): Promise&lt;Session | null&gt; =&gt;
+   27 |   hghSource(&quot;SESSION&quot;) === &quot;api&quot; ? getSessionFromApi() : getSessionLegacy(),
+   28 | );
+   29 | 
+   30 | // Legacy source (unchanged body of the previous getSession).
+   31 | //
+   32 | // Identity is verified via getClaims() rather than getUser(): with asymmetric
+   33 | // JWT signing keys the access token is validated locally (WebCrypto, no network);
+   34 | // only a legacy symmetric secret falls back to an Auth-server round-trip (same
+   35 | // cost as the old getUser()). Either way the JWT is securely verified: getClaims
+   36 | // is Supabase&#x27;s recommended server-side verification, equivalent to getUser.
+   37 | async function getSessionLegacy(): Promise&lt;Session | null&gt; {
+   38 |   const supabase = await createSupabaseServerClient();
+   39 |   const { data } = await supabase.auth.getClaims();
+   40 |   const claims = data?.claims;
+   41 |   if (!claims?.sub) return null;
+   42 | 
+   43 |   // Authenticated but no profile = no role assigned → no access.
+   44 |   const profile = await profileRepository.getByUserId(claims.sub);
+   45 |   if (!profile) return null;
+   46 | 
+   47 |   const scope: AllowedScope = {
+   48 |     all: profile.scopeAll,
+   49 |     brands: profile.brands ?? undefined,
+   50 |     regions: profile.regions ?? undefined,
+   51 |     countries: profile.countries ?? undefined,
+   52 |   };
+   53 | 
+   54 |   // vendor (외부 수행사) is operator-OFF permanently (scenario 3-2): normalize
+   55 |   // here regardless of the stored value so a mis-set profile can never grant a
+   56 |   // vendor cost-action authority. Defense-in-depth alongside the admin action&#x27;s
+   57 |   // write-time guard.
+   58 |   const operator =
+   59 |     profile.role === &quot;vendor&quot; ? &quot;none&quot; : profile.operator ?? &quot;none&quot;;
+   60 | 
+   61 |   // 메뉴 그룹 화이트리스트(좁히기 전용) — 로그인 착지(actions.ts)와 같은 함수.
+   62 |   const menuGroups = effectiveMenuGroups(profile.menuGroups, scope);
+   63 | 
+   64 |   const appUser: User = {
+   65 |     id: claims.sub,
+   66 |     email: claims.email ?? profile.email ?? &quot;&quot;,
+   67 |     role: profile.role,
+   68 |     scope,
+   69 |     operator,
+   70 |     menuGroups,
+   71 |   };
+   72 |   return { user: appUser };
+   73 | }</pre></details><details id="A05" class="source"><summary><b>A05</b> 미들웨어·별도 QA 경계 <code>hmg-geo-hub-share/front/middleware.ts</code></summary><p><a href="../../front/middleware.ts">원본 파일 열기</a> · 85행 · SHA-256 <code>a0d2d409c24fc638aef2c4622ad4ba8deb37d0274a22dbfd34ec93bcb9a22a7a</code></p><p class="caption">L9–14</p><pre>    9 | // Paths that don&#x27;t require a session (relative to the locale prefix).
+   10 | // /raw-data-qa 는 검수 콘솔 — GGMD 계정이 없는 외부 검수자가 쓰므로 Supabase 로그인
+   11 | // 게이트를 면제하고, 자체 쿠키 게이트(lib/qa/auth.ts)가 대신 막는다. 이 표면이
+   12 | // role 스코프 밖이라는 점은 의도된 트레이드오프이며 근거는
+   13 | // docs/specs/2026-09-04-raw-data-qa-console-design.md §3 에 있다.
+   14 | const PUBLIC_PATHS = [&quot;/login&quot;, &quot;/raw-data-qa&quot;];</pre><p class="caption">L50–85</p><pre>   50 |   // asymmetric signing keys — no Auth-server round-trip on the hot path that
+   51 |   // runs for EVERY navigation. It still refreshes the session (persisting
+   52 |   // cookies via the adapter above) when the access token is near expiry, and
+   53 |   // falls back to a network check only for legacy symmetric secrets.
+   54 |   const { data } = await supabase.auth.getClaims();
+   55 |   const user = data?.claims ?? null;
+   56 | 
+   57 |   // 3. Auth gate: unauthenticated users may only reach public paths.
+   58 |   const segments = req.nextUrl.pathname.split(&quot;/&quot;).filter(Boolean);
+   59 |   const locale = routing.locales.includes(
+   60 |     segments[0] as (typeof routing.locales)[number],
+   61 |   )
+   62 |     ? segments[0]
+   63 |     : routing.defaultLocale;
+   64 |   const rest = &quot;/&quot; + segments.slice(1).join(&quot;/&quot;);
+   65 |   const isPublic = PUBLIC_PATHS.some(
+   66 |     (p) =&gt; rest === p || rest.startsWith(p + &quot;/&quot;),
+   67 |   );
+   68 | 
+   69 |   if (!isPublic &amp;&amp; !user) {
+   70 |     const url = req.nextUrl.clone();
+   71 |     url.pathname = `/${locale}/login`;
+   72 |     return NextResponse.redirect(url);
+   73 |   }
+   74 | 
+   75 |   // 4. Expose the current pathname to server components (DashLayout) so the
+   76 |   // route-policy guard can decide without re-parsing the URL. Layout reads
+   77 |   // this with `headers().get(&quot;x-pathname&quot;)`.
+   78 |   res.headers.set(&quot;x-pathname&quot;, req.nextUrl.pathname);
+   79 | 
+   80 |   return res;
+   81 | }
+   82 | 
+   83 | export const config = {
+   84 |   matcher: [&quot;/((?!api|_next|_vercel|.*\\..*).*)&quot;],
+   85 | };</pre></details><details id="A06" class="source"><summary><b>A06</b> 대시보드 API 어댑터 <code>hmg-geo-hub-share/front/lib/hgh/adapters/dashboard.ts</code></summary><p><a href="../../front/lib/hgh/adapters/dashboard.ts">원본 파일 열기</a> · 842행 · SHA-256 <code>775250da116aa0f48a4e6e8117cfee9424d8df3f12ea9a5504aa81adbd317ef7</code></p><p class="caption">L1–39</p><pre>    1 | import &quot;server-only&quot;;
+    2 | 
+    3 | // Dashboard adapter (unit U5): the three dashboards (/dashboard, /website, /projects/[id]) on
+    4 | // the backend API, in the shapes their legacy view-models already produce. Design 3.3
+    5 | // &quot;대시보드&quot;, appendix A (/dashboard, /website, /projects/[id]), 3.5 #1 #2, decisions D5 D6 D8
+    6 | // D13. The screens branch per request on isAnalysisApi(&quot;dashboard&quot;, surface) (D8: global G1,
+    7 | // website G3, project G6, default legacy) and keep calling the legacy functions otherwise.
+    8 | //
+    9 | // Calls (one function per endpoint shape; D6 essentials reuse them, so the in-request GET
+   10 | // dedupe of lib/hgh/client folds a repeated call into one request):
+   11 | //   summary     GET /v1/kpi/summary            (project: by_funnel=true, BG-08 topics)
+   12 | //   brands      GET /v1/mentions/brands        top_n=20 sort=mentions include=hmg (BG-15);
+   13 | //                                              project with a designated target: full=true (BG-19)
+   14 | //   conversion  GET /v1/funnel/conversion      ⑦ GA4 directly (design 4.2): brand/country only,
+   15 | //                                              days=28 (BG-30); project: property_source=market
+   16 | //   trend       GET /v1/trend                  U4 fetchTrend (cycle for Δ, week for charts)
+   17 | //   brandTrend  GET /v1/trend dimension=brand  visibility, share_of_voice, position; top=20 plus
+   18 | //                                              the candidate brand keys (BG-11), split_own (D13)
+   19 | //   domains     GET /v1/citations/domains      limit=0 + competitor_sources (BG-20, competitor
+   20 | //                                              row) or limit=7 (composition)
+   21 | //   engines     GET /v1/kpi/engines part=all   engine consistency badge rows
+   22 | //   geo         GET /v1/geo                    GEO section
+   23 | //   dates       GET /v1/filters/dates family=all, options GET /v1/filters/options (U4)
+   24 | //   project     GET /v1/projects/{id} (the U2 gate call, shared), .../settings, .../prompt-candidates?limit=5
+   25 | //
+   26 | // D6 (first render = 4 calls). essentialsGate() starts (or joins) the surface&#x27;s four essential
+   27 | // calls and waits for all of them to settle; every other section loader waits on it before
+   28 | // issuing its own call. The gate and the calls are kept per request, failures included, so a
+   29 | // section that starts later never re-sends a failed essential call (U5 verification D3); the
+   30 | // shell calendar reads the kept dates call (loadEssentialFilterDates), the project tiles
+   31 | // (loadProjectOverview) the kept project and candidates calls, the competitor rows
+   32 | // (loadCompetitorSources) the kept brands call (U5 N2). Nothing else changes in the screens:
+   33 | // only the streaming order.
+   34 | //   global   summary, brands, conversion, dates     (header pill, cards, filter calendar)
+   35 | //   website  summary, brands, dates, options        (cards, filter bar)
+   36 | //   project  project detail, recent candidates, dates, options (tiles, panels, filter bar: the page
+   37 | //            shell); the KPI section (summary first) streams after them
+   38 | //
+   39 | // Shape rules (hand-checked in dashboard.test.ts, legacy parity in dashboard.parity.test.ts):</pre></details><details id="A07" class="source"><summary><b>A07</b> 기존 미러·요약 캐시 <code>hmg-geo-hub-share/front/lib/scope/server.ts</code></summary><p><a href="../../front/lib/scope/server.ts">원본 파일 열기</a> · 6,085행 · SHA-256 <code>e11e8676964a5961bef3a9845ea0f1e55823b834cbd6d316923e54e5c51ef846</code></p><p class="caption">L869–905</p><pre>  869 | // Filter-combo caching (서버 공유). The mirror aggregations run a DB GROUP BY;
+  870 | // distinct filter combos are few (KR×ChatGPT×evaluation, …), so we memoize each
+  871 | // in the Next Data Cache keyed by the filter set. On Vercel that cache is shared
+  872 | // across instances + persistent — a Redis-like, server-wide cache with no extra
+  873 | // infra — so a repeated filter combo skips the DB after the first hit. Auth +
+  874 | // per-user audit (enforce) stay OUTSIDE the cache. The mirror sync busts every
+  875 | // entry via revalidateTag(MIRROR_AGGREGATE_TAG) so fresh data shows immediately.
+  876 | export const MIRROR_AGGREGATE_TAG = &quot;mirror-aggregates&quot;;
+  877 | // 사실표(summary_*) 읽기 캐시 태그. 지금 사실표 캐시 셀은 전부 `mirrorCache` 로 감싸 있어
+  878 | // MIRROR_AGGREGATE_TAG 로도 함께 무효화되지만, 생성 러너의 무효화 계약(내부 라우트
+  879 | // `/api/internal/summary/published`)이 &quot;미러&quot;가 아니라 &quot;사실표&quot;를 가리키게 하려고 별도 이름을
+  880 | // 둔다 — 나중에 사실표 캐시를 미러와 분리해도 러너 쪽 계약이 그대로 유지된다.
+  881 | export const SUMMARY_TAG = &quot;summary-aggregates&quot;;
+  882 | // seconds — 안전망일 뿐, 실제 무효화는 미러 싱크의 revalidateTag 다. 2026-09-06 에
+  883 | // 30분→2시간으로 늘렸다: 커넥션 풀러(Supavisor 6543)가 CONNECTION_CLOSED 를 뿌린 사고
+  884 | // (프로덕션 /ko/website, 로그 104건 전부 같은 원인)의 완충 — TTL 이 길수록 DB 왕복이
+  885 | // 줄어 동시 커넥션 압력이 낮아진다. 신선도는 싱크 태그가 책임지므로 손해가 없다.
+  886 | export const MIRROR_CACHE_TTL = 7200;
+  887 | 
+  888 | // Lazily build the unstable_cache wrapper on first call, not at module load.
+  889 | // Some tests replace next/cache with a partial mock (only revalidatePath), so
+  890 | // calling unstable_cache at import time would crash any test that transitively
+  891 | // imports this gateway. The wrapper is still created once (memoized).
+  892 | function lazyCache&lt;A extends unknown[], R&gt;(
+  893 |   factory: () =&gt; (...args: A) =&gt; Promise&lt;R&gt;,
+  894 | ): (...args: A) =&gt; Promise&lt;R&gt; {
+  895 |   let fn: ((...args: A) =&gt; Promise&lt;R&gt;) | null = null;
+  896 |   return (...args: A) =&gt; (fn ??= factory())(...args);
+  897 | }
+  898 | 
+  899 | // ── 글로벌 ⑤ 분자: 공식(HMG) 그룹 키 목록 (제품 책임자 2026-09-29) ─────────────────────
+  900 | //
+  901 | // ⑤ &quot;AI 인용 점유율&quot; 의 글로벌 분자 = 출처 카테고리 `Official (HMG)` 인용 수. 분류는 JS
+  902 | // (`lib/kpi/official-hmg-citations.ts` — 인용 탭 카테고리 차트와 같은 함수·오버라이드)이고,
+  903 | // SQL 은 여기서 고른 키 목록에 대해 `= ANY($keys)` 만 본다(두 번째 분류 어휘를 만들지 않는다).
+  904 | //
+  905 | // 목록은 **필터와 무관한 상위집합**이다 — 그 집합이 읽을 수 있는 group_key 전수를 분류한다.</pre></details><details id="A08" class="source"><summary><b>A08</b> 기존 Scope mock/live 전환 <code>hmg-geo-hub-share/front/lib/scope/index.ts</code></summary><p><a href="../../front/lib/scope/index.ts">원본 파일 열기</a> · 34행 · SHA-256 <code>c626afa0992bfe52c9072a30d0d9bc62b26b588c45336d26dabd6248365069dc</code></p><p class="caption">L1–34</p><pre>    1 | import type { ScopeClient } from &quot;./client&quot;;
+    2 | import { MockScopeClient } from &quot;./mock&quot;;
+    3 | import { HttpScopeClient } from &quot;./http&quot;;
+    4 | 
+    5 | export type { ScopeClient } from &quot;./client&quot;;
+    6 | export * from &quot;./types&quot;;
+    7 | 
+    8 | let cached: ScopeClient | null = null;
+    9 | 
+   10 | // Selects the implementation by SCOPE_MODE (mock | live). Defaults to mock so
+   11 | // the app runs fully without a scope API key. Switching to live is env-only —
+   12 | // no code change (scope-gateway spec).
+   13 | export function getScopeClient(): ScopeClient {
+   14 |   if (cached) return cached;
+   15 | 
+   16 |   const mode = process.env.SCOPE_MODE ?? &quot;mock&quot;;
+   17 |   if (mode === &quot;live&quot;) {
+   18 |     const baseUrl = process.env.SCOPE_API_BASE;
+   19 |     const apiKey = process.env.SCOPE_API_KEY;
+   20 |     if (!baseUrl || !apiKey) {
+   21 |       throw new Error(
+   22 |         &quot;SCOPE_MODE=live requires SCOPE_API_BASE and SCOPE_API_KEY&quot;,
+   23 |       );
+   24 |     }
+   25 |     cached = new HttpScopeClient(baseUrl, apiKey);
+   26 |   } else {
+   27 |     cached = new MockScopeClient();
+   28 |   }
+   29 |   return cached;
+   30 | }
+   31 | 
+   32 | export function isMockMode(): boolean {
+   33 |   return (process.env.SCOPE_MODE ?? &quot;mock&quot;) !== &quot;live&quot;;
+   34 | }</pre></details><details id="A09" class="source"><summary><b>A09</b> FastAPI 조립·healthz <code>hmg-geo-hub-share/back/app/main.py</code></summary><p><a href="../../back/app/main.py">원본 파일 열기</a> · 91행 · SHA-256 <code>a726cdc39576ca221f68efbdddecb044437bd1ef99bcdc81baaf2df58ba17ee2</code></p><p class="caption">L57–91</p><pre>   57 |     return {&quot;openapi_url&quot;: &quot;/openapi.json&quot; if on else None, &quot;docs_url&quot;: &quot;/docs&quot; if on else None, &quot;redoc_url&quot;: &quot;/redoc&quot; if on else None}
+   58 | 
+   59 | 
+   60 | @asynccontextmanager
+   61 | async def lifespan(_: FastAPI) -&gt; AsyncIterator[None]:
+   62 |     settings = get_settings()
+   63 |     log.info(&quot;기동 %s&quot;, settings)
+   64 |     init_db(settings)
+   65 |     await get_verifier().preload()
+   66 |     writer = get_audit_writer() if settings.access_audit else None
+   67 |     if writer is not None:
+   68 |         writer.start()
+   69 |     try:
+   70 |         yield
+   71 |     finally:
+   72 |         if writer is not None:
+   73 |             await writer.stop()
+   74 |         await close_db()
+   75 | 
+   76 | 
+   77 | install_log_record_factory()                    # 모든 로그 레코드에 request_id(core.reqid)
+   78 | app = FastAPI(title=&quot;HMG-GEO-HUB API&quot;, version=&quot;0.1.0&quot;, lifespan=lifespan, description=API_DESCRIPTION,
+   79 |               generate_unique_id_function=stable_operation_id, **docs_urls(os.environ.get(&quot;HGH_ENV&quot;)))
+   80 | install_error_handlers(app)
+   81 | app.add_middleware(UploadLimitMiddleware)       # 업로드 본문 상한(core.config.upload_max_bytes): 폼 파싱 전에 끊는다
+   82 | app.add_middleware(RequestIdMiddleware)         # 가장 바깥(나중에 더한 미들웨어가 바깥): 업로드 상한 413·400 응답에도 X-Request-Id
+   83 | 
+   84 | 
+   85 | @app.get(&quot;/healthz&quot;, include_in_schema=False)
+   86 | async def healthz() -&gt; dict:
+   87 |     return {&quot;ok&quot;: True}
+   88 | 
+   89 | 
+   90 | for _fid, _mod in FEATURE_ROUTERS:
+   91 |     app.include_router(importlib.import_module(_mod).router)</pre></details><details id="A10" class="source"><summary><b>A10</b> 기능 라우터 레지스트리 <code>hmg-geo-hub-share/back/app/features/__init__.py</code></summary><p><a href="../../back/app/features/__init__.py">원본 파일 열기</a> · 71행 · SHA-256 <code>895815a9159f1ad44da680f0ef56d4ef8a3a6646f2d282abf8a2eac6668a7aef</code></p><p class="caption">L1–71</p><pre>    1 | &quot;&quot;&quot;기능 모듈 레지스트리: 대분류 → 도메인 → 최소 기능. taxonomy.json 에서 생성.&quot;&quot;&quot;
+    2 | FEATURE_ROUTERS = [
+    3 |     (&quot;analytics.filters.options&quot;, &quot;app.features.analytics.filters.options.router&quot;),
+    4 |     (&quot;analytics.filters.dates&quot;, &quot;app.features.analytics.filters.dates.router&quot;),
+    5 |     (&quot;analytics.kpi.summary&quot;, &quot;app.features.analytics.kpi.summary.router&quot;),
+    6 |     (&quot;analytics.kpi.compare&quot;, &quot;app.features.analytics.kpi.compare.router&quot;),
+    7 |     (&quot;analytics.kpi.engines&quot;, &quot;app.features.analytics.kpi.engines.router&quot;),
+    8 |     (&quot;analytics.trend.series&quot;, &quot;app.features.analytics.trend.series.router&quot;),
+    9 |     (&quot;analytics.mentions.brands&quot;, &quot;app.features.analytics.mentions.brands.router&quot;),
+   10 |     (&quot;analytics.mentions.types&quot;, &quot;app.features.analytics.mentions.types.router&quot;),
+   11 |     (&quot;analytics.mentions.prompts&quot;, &quot;app.features.analytics.mentions.prompts.router&quot;),
+   12 |     (&quot;analytics.citations.domains&quot;, &quot;app.features.analytics.citations.domains.router&quot;),
+   13 |     (&quot;analytics.citations.domain_detail&quot;, &quot;app.features.analytics.citations.domain_detail.router&quot;),
+   14 |     (&quot;analytics.citations.sources&quot;, &quot;app.features.analytics.citations.sources.router&quot;),
+   15 |     (&quot;analytics.citations.tone&quot;, &quot;app.features.analytics.citations.tone.router&quot;),
+   16 |     (&quot;analytics.citations.prompts&quot;, &quot;app.features.analytics.citations.prompts.router&quot;),
+   17 |     (&quot;analytics.citations.targets&quot;, &quot;app.features.analytics.citations.targets.router&quot;),
+   18 |     (&quot;analytics.geo.markets&quot;, &quot;app.features.analytics.geo.markets.router&quot;),
+   19 |     (&quot;analytics.answers.list&quot;, &quot;app.features.analytics.answers.list.router&quot;),
+   20 |     (&quot;analytics.answers.detail&quot;, &quot;app.features.analytics.answers.detail.router&quot;),
+   21 |     (&quot;analytics.funnel.acr&quot;, &quot;app.features.analytics.funnel.acr.router&quot;),
+   22 |     (&quot;analytics.funnel.conversion&quot;, &quot;app.features.analytics.funnel.conversion.router&quot;),
+   23 |     (&quot;catalog.prompts.catalog&quot;, &quot;app.features.catalog.prompts.catalog.router&quot;),
+   24 |     (&quot;catalog.prompts.history&quot;, &quot;app.features.catalog.prompts.history.router&quot;),
+   25 |     (&quot;projects.project.core&quot;, &quot;app.features.projects.project.core.router&quot;),
+   26 |     (&quot;projects.members.roster&quot;, &quot;app.features.projects.members.roster.router&quot;),
+   27 |     (&quot;projects.members.invites&quot;, &quot;app.features.projects.members.invites.router&quot;),
+   28 |     (&quot;projects.members.audit&quot;, &quot;app.features.projects.members.audit.router&quot;),
+   29 |     (&quot;projects.prompts.candidates&quot;, &quot;app.features.projects.prompts.candidates.router&quot;),
+   30 |     (&quot;projects.prompts.crud&quot;, &quot;app.features.projects.prompts.crud.router&quot;),
+   31 |     (&quot;projects.prompts.lifecycle&quot;, &quot;app.features.projects.prompts.lifecycle.router&quot;),
+   32 |     (&quot;projects.prompts.execute&quot;, &quot;app.features.projects.prompts.execute.router&quot;),
+   33 |     (&quot;projects.prompts.io&quot;, &quot;app.features.projects.prompts.io.router&quot;),
+   34 |     (&quot;projects.prompts.fields&quot;, &quot;app.features.projects.prompts.fields.router&quot;),
+   35 |     (&quot;projects.settings.overview&quot;, &quot;app.features.projects.settings.overview.router&quot;),
+   36 |     (&quot;projects.settings.engines&quot;, &quot;app.features.projects.settings.engines.router&quot;),
+   37 |     (&quot;projects.settings.owned_bases&quot;, &quot;app.features.projects.settings.owned_bases.router&quot;),
+   38 |     (&quot;projects.settings.tracked_urls&quot;, &quot;app.features.projects.settings.tracked_urls.router&quot;),
+   39 |     (&quot;projects.settings.tracked_targets&quot;, &quot;app.features.projects.settings.tracked_targets.router&quot;),
+   40 |     (&quot;projects.settings.scope_link&quot;, &quot;app.features.projects.settings.scope_link.router&quot;),
+   41 |     (&quot;intent.keywords.tracked&quot;, &quot;app.features.intent.keywords.tracked.router&quot;),
+   42 |     (&quot;intent.keywords.research&quot;, &quot;app.features.intent.keywords.research.router&quot;),
+   43 |     (&quot;intent.keywords.fetches&quot;, &quot;app.features.intent.keywords.fetches.router&quot;),
+   44 |     (&quot;intent.keywords.serp_drafts&quot;, &quot;app.features.intent.keywords.serp_drafts.router&quot;),
+   45 |     (&quot;intent.candidates.submit&quot;, &quot;app.features.intent.candidates.submit.router&quot;),
+   46 |     (&quot;intent.social.context_map&quot;, &quot;app.features.intent.social.context_map.router&quot;),
+   47 |     (&quot;intent.social.prompts&quot;, &quot;app.features.intent.social.prompts.router&quot;),
+   48 |     (&quot;admin.catalog.prompts&quot;, &quot;app.features.admin.catalog.prompts.router&quot;),
+   49 |     (&quot;admin.catalog.bulk&quot;, &quot;app.features.admin.catalog.bulk.router&quot;),
+   50 |     (&quot;admin.catalog.reference&quot;, &quot;app.features.admin.catalog.reference.router&quot;),
+   51 |     (&quot;admin.interest.keywords&quot;, &quot;app.features.admin.interest.keywords.router&quot;),
+   52 |     (&quot;admin.interest.sources&quot;, &quot;app.features.admin.interest.sources.router&quot;),
+   53 |     (&quot;admin.entities.registry&quot;, &quot;app.features.admin.entities.registry.router&quot;),
+   54 |     (&quot;admin.entities.versions&quot;, &quot;app.features.admin.entities.versions.router&quot;),
+   55 |     (&quot;admin.citation_sources.overrides&quot;, &quot;app.features.admin.citation_sources.overrides.router&quot;),
+   56 |     (&quot;admin.cycles.cycles&quot;, &quot;app.features.admin.cycles.cycles.router&quot;),
+   57 |     (&quot;admin.cycles.jobs&quot;, &quot;app.features.admin.cycles.jobs.router&quot;),
+   58 |     (&quot;admin.accounts.users&quot;, &quot;app.features.admin.accounts.users.router&quot;),
+   59 |     (&quot;admin.integrations.ga4&quot;, &quot;app.features.admin.integrations.ga4.router&quot;),
+   60 |     (&quot;admin.integrations.keyword_tools&quot;, &quot;app.features.admin.integrations.keyword_tools.router&quot;),
+   61 |     (&quot;admin.changes.queue&quot;, &quot;app.features.admin.changes.queue.router&quot;),
+   62 |     (&quot;qa.answers.list&quot;, &quot;app.features.qa.answers.list.router&quot;),
+   63 |     (&quot;qa.answers.detail&quot;, &quot;app.features.qa.answers.detail.router&quot;),
+   64 |     (&quot;qa.review.verdict&quot;, &quot;app.features.qa.review.verdict.router&quot;),
+   65 |     (&quot;qa.review.lock&quot;, &quot;app.features.qa.review.lock.router&quot;),
+   66 |     (&quot;qa.review.sessions&quot;, &quot;app.features.qa.review.sessions.router&quot;),
+   67 |     (&quot;qa.review.deltas&quot;, &quot;app.features.qa.review.deltas.router&quot;),
+   68 |     (&quot;qa.notes.notes&quot;, &quot;app.features.qa.notes.notes.router&quot;),
+   69 |     (&quot;platform.auth.session&quot;, &quot;app.features.platform.auth.session.router&quot;),
+   70 |     (&quot;ingest.pull.ops&quot;, &quot;ingest.pull.ops.router&quot;),
+   71 | ]</pre></details><details id="A11" class="source"><summary><b>A11</b> KPI 라우터의 실제 호출 사슬 <code>hmg-geo-hub-share/back/app/features/analytics/kpi/summary/router.py</code></summary><p><a href="../../back/app/features/analytics/kpi/summary/router.py">원본 파일 열기</a> · 47행 · SHA-256 <code>b3bcc2708f1242e7e41f1c1a9df0b72dcd71cf4d4fe1bb44c7b2108ddbd1689c</code></p><p class="caption">L1–47</p><pre>    1 | &quot;&quot;&quot;analytics.kpi.summary 요약 카드 라우터. 경로는 /v1 접두 포함 전체 경로.&quot;&quot;&quot;
+    2 | from datetime import date
+    3 | from typing import Annotated
+    4 | 
+    5 | from fastapi import APIRouter, Depends, Query, Request
+    6 | 
+    7 | from app.core.auth import CurrentUser
+    8 | from app.core.db import RoConn
+    9 | from app.core.envelope import Envelope, ListData
+   10 | from app.core.errors import ERROR_RESPONSES
+   11 | from app.core.result_cache import CachedRoute, result_cache
+   12 | 
+   13 | from .schemas import SummaryQuery, SummaryResponse, UnmeasuredPrompt, UnmeasuredQuery
+   14 | from .service import get_summary, get_unmeasured
+   15 | from .shared import kpi_context, kpi_today
+   16 | 
+   17 | router = APIRouter(tags=[&quot;analytics.kpi&quot;], route_class=CachedRoute)
+   18 | 
+   19 | 
+   20 | @router.get(&quot;/v1/kpi/summary&quot;, response_model=SummaryResponse, responses=ERROR_RESPONSES,
+   21 |             summary=&quot;M01~M05 카드 + 웹사이트 M06·M07·인용 정확도 + M12 모수 + A16 결손. 스냅샷(cycle_offset 0|1) 또는 기간 누적(round_date). 분자·분모 정수 쌍(P3), 웹사이트 발행 &quot;)
+   22 | @result_cache(key_deps={&quot;today&quot;: kpi_today})
+   23 | async def get_kpi_summary_0(
+   24 |     request: Request,
+   25 |     p: CurrentUser,
+   26 |     conn: RoConn,
+   27 |     q: Annotated[SummaryQuery, Query()],
+   28 |     today: Annotated[date | None, Depends(kpi_today)] = None,
+   29 | ) -&gt; SummaryResponse:
+   30 |     &quot;&quot;&quot;analytics.kpi.summary: 요약 카드(K-1). 명세: README.md, docs/design/api/모듈-KPI.md §2 K-1.&quot;&quot;&quot;
+   31 |     ctx = await kpi_context(conn, p, q, request)
+   32 |     return await get_summary(conn, ctx, cycle_offset=q.cycle_offset, today=today, by_funnel=q.by_funnel)
+   33 | 
+   34 | 
+   35 | @router.get(&quot;/v1/kpi/unmeasured-prompts&quot;, response_model=Envelope[ListData[UnmeasuredPrompt]], responses=ERROR_RESPONSES,
+   36 |             summary=&quot;측정 개요 카드의 미측정 프롬프트(적용 − 측정, K-1 과 같은 창·필터·술어). 상한 200, meta.page.total = 절단 전 수&quot;)
+   37 | @result_cache(key_deps={&quot;today&quot;: kpi_today})
+   38 | async def get_kpi_unmeasured_prompts_0(
+   39 |     request: Request,
+   40 |     p: CurrentUser,
+   41 |     conn: RoConn,
+   42 |     q: Annotated[UnmeasuredQuery, Query()],
+   43 |     today: Annotated[date | None, Depends(kpi_today)] = None,
+   44 | ) -&gt; Envelope[ListData[UnmeasuredPrompt]]:
+   45 |     &quot;&quot;&quot;analytics.kpi.summary: 미측정 프롬프트 목록(BG-04). 명세: README.md.&quot;&quot;&quot;
+   46 |     ctx = await kpi_context(conn, p, q, request)
+   47 |     return await get_unmeasured(conn, ctx, cycle_offset=q.cycle_offset, today=today, limit=q.limit, filters=q)</pre></details><details id="A12" class="source"><summary><b>A12</b> 공통 지표 규칙 <code>hmg-geo-hub-share/back/app/core/measure.py</code></summary><p><a href="../../back/app/core/measure.py">원본 파일 열기</a> · 1,607행 · SHA-256 <code>60202f00049a1b9296357991b8bcfb3a95323a99de015dd2c11be9b999726cfa</code></p><p class="caption">L1–49</p><pre>    1 | &quot;&quot;&quot;지표 SQL 빌더(모듈 간 순환을 끊는 중립 패키지). 기능 모듈은 지표 식을 다시 쓰지 않고 여기서 조립한다.
+    2 | 
+    3 | 정본 식
+    4 | - 언급 계열(M01~M04, G-03): rd.answer 당사 열(own_mask·ment_*·sent_*·own_rk_*) 을 관점 비트(own_bits)로 고른다. 모수 = std_in.
+    5 |   M04(D5) 다중 관점(HMG 전사) = 3사 순위 중 0 을 뺀 최솟값 LEAST(NULLIF(…)).
+    6 | - 인용 계열(M05, G-25): rd.answer 인용 수 열(cit_*)로 낸다. rd.citation 을 스캔하지 않는다. 모수 = cit_in ∧ 호스트 있는 인용.
+    7 |   M05 인용 점유율 분자(part &#x27;citations&#x27; 의 열 cit_m05, ratios() 가 이 열만 읽는다):
+    8 |     global          = 출처 카테고리 Official (HMG) 인용 수(동기화 S1 BE-4 = hmg-geo 2670a16 #320·#321 lib/kpi/official-hmg-citations.ts,
+    9 |                       제품 책임자 Q2 (a)): Σ rd.answer.cit_off(DB-v2.13 P71, 적재 시 rd.dim_source.category_key 로 센 답변 열). 관점 브랜드·국가·언어로
+   10 |                       좁히지 않는다(현행 분자는 그룹 키의 카테고리만 본다: 공식 도메인·공식 소셜·오버라이드, 브랜드 무관). 원소 스캔이면 같은 판정을
+   11 |                       rd.citation 원소에서 센다(OFFICIAL_SOURCES). 오버라이드 편집은 재판정(judgment_change &#x27;citation_override&#x27;) 뒤 반영된다.
+   12 |     website·project = 종전 표면 자사 판정 = cit_owned(아래 자사 식의 local 모드와 같은 값)
+   13 |   자사 cit_owned(QUERY-FIXES C-1·G-1 own_expr, C-3 프롬프트별 자사 인용·K-3 밖 소비는 종전 그대로):
+   14 |     website = (loc_owned ∨ tgt_hit) → cit_loc_tgt · project = loc_owned → cit_loc
+   15 |     global  = owner_key = ANY(허용 배열: 관점 브랜드의 app.owned_base, 국가·언어 필터로 좁히되 결과가 비면 안 좁힘)
+   16 |       · 안 좁힘(brand)          → Σ cit_own_{h,k,g}
+   17 |       · 국가 1개로 좁힘(country1) → Σ cit_own_{h,k,g}c   (답변 국가 = 선택 국가라 정확)
+   18 |       · 국가 2개 이상(countryN)  → cit_own_x = 0 인 답변은 Σ cit_own_*c, cit_own_x &gt; 0 인 답변만 rd.citation PK 조인으로 정확히 센다
+   19 |       · 언어로 좁힘(scan)        → rd.citation 스캔(글로벌 lang[] 은 K-1·K-2·K-3·T-1 지원 축(BG-01, KPI_SUPPORT): 언어를 고를 때만 이 경로)
+   20 | - M06·M07(A2): rd.answer tgt_cited·own_url_cited(측정 단위), 웹사이트 R09 발행 회차는 rd.report_unit_value 로 대체(url_rates).
+   21 |   분모 = cit_in 답변 중 website 는 web_reg(웹사이트 카탈로그 등록 프롬프트), project 는 게이트 없음(Q5: 적재 시 project_tracked_url·
+   22 |   project_owned_base 판정). global 은 M06·M07 대상이 아니다(web_reg 거짓이라 분모 0). 인용 정확도(K-1) = 타겟 ∧ 자사 / 자사(라이브).
+   23 |   프롬프트 단위(part &#x27;url_prompts&#x27;, 제품 결정 6 DC-02 현행 문구 유지): 같은 모수 답변의 서로 다른 prompt_key 수(측정 프롬프트)와 그중
+   24 |   tgt_cited·own_url_cited 답변이 하나라도 있는 프롬프트 수(현행 front aggregateWebsiteTargetHitRate = 답변 플래그를 프롬프트로 bool_or).
+   25 | - 출처 카테고리 축(source[]): 유효 카테고리 = coalesce(오버라이드, rd.dim_source.category_key)(CATEGORY_EXPR, 적재기 category_of 와 같은
+   26 |   우선순위)가 선택 집합인 출처로의 차원 세미조인. 답변 열(cit_*)은 출처 무관 합이라 출처 축이 있으면 인용 계열은 원소 스캔으로 센다.
+   27 | - M-1 경쟁사(QUERY-FIXES M-1): NOT (own_bit = ANY(:관점 비트)), 형제 HMG 브랜드는 경쟁 행에 남는다. 순위는 앱에서(LIMIT 금지).
+   28 | 
+   29 | 술어 규약(DESIGN-CONTRACT §3): WHERE 는 불리언·= ANY(상수 배열)만, 비트 식은 FILTER 안에서만. 사실 표 질의는 Window.where 3술어 필수.
+   30 | 열·식 조각은 이 파일의 화이트리스트에서만 고른다(사용자 문자열을 SQL 에 넣지 않는다).
+   31 | 
+   32 | D6 보장: 카드(group_by 없음)·추이(round_date·week·month)·엔진(engine)·국가(geo) 가 같은 빌더라 카드 = 버킷 합이다.
+   33 | 성능: count(DISTINCT) 는 병렬 집계를 막으므로 M12 측정 프롬프트 수(part &#x27;prompts&#x27;)는 별도 문장으로 분리한다.
+   34 | 
+   35 | 현행 프로필(core.profile, 제품 결정 19·23~25, WU-1 골격): MeasureScope.profile 의 스위치가 모수 술어 자리(mention_population·
+   36 | citation_population·scope_where(카드 경로 엔진)·m05_den_col)를 바꾼다. 전부 꺼짐(OFF)이면 이 자리들이 도입 전과 같은 문자열을 내어 문장·응답이 바이트 같다.
+   37 | 구현 전 스위치가 켜지면 core.profile.require_slot 이 NotImplementedError 로 막는다(조용히 옛 정의로 돌지 않게).
+   38 | 
+   39 | 이 파일의 빌더 층(plan_counts·merge_counts·*_sql)은 표준 라이브러리 + app.core.{codes,cycles,sqlb,profile} 만 쓴다(대조 러너 재사용).
+   40 | &quot;&quot;&quot;
+   41 | from __future__ import annotations
+   42 | 
+   43 | import re
+   44 | import unicodedata
+   45 | from collections.abc import Collection, Iterable, Sequence
+   46 | from dataclasses import dataclass, field, replace
+   47 | from datetime import date
+   48 | from typing import Any, Literal</pre></details><details id="A13" class="source"><summary><b>A13</b> 발행값·라이브 사실 표 선택 <code>hmg-geo-hub-share/back/app/core/facts.py</code></summary><p><a href="../../back/app/core/facts.py">원본 파일 열기</a> · 66행 · SHA-256 <code>4682303f72b65833b8c3bd8c2b994292ad2185ba0a259a7a70c86dbc60011fff</code></p><p class="caption">L1–65</p><pre>    1 | &quot;&quot;&quot;사실 표 이름 자리(동결 스냅샷 층 S0, 제품 결정 31). core·analytics 의 사실 표 SQL 은 표 이름을 여기서만 받는다.
+    2 | 
+    3 | 왜: 대시보드 카드 경로(요청 card=true)는 현행(hmg-geo 2670a16 + read_screens 14키)처럼 회차 생성(발행) 시점에 고정한 값을 읽어야 한다
+    4 | (notes/hgh-impl/wu12/card-snapshot-design.md). 고정 값은 rd 사실 표와 같은 열을 가진 동결 층(frz 스키마)에 담고, 읽기는 같은 SQL 에서
+    5 | 표 이름만 바꾼다. 그 치환이 한 곳에서 일어나도록 표 이름을 이 자리로 모은다.
+    6 | 
+    7 | S3(DB-v2.23)·S4(DB-v2.24): 카드 요청(MeasureScope.card = core.card_routes 의 card=true 요청) ∧ 현행 프로필 freeze_at_publish ∧ global·website
+    8 | ∧ 창 판정 통과(MeasureScope.frz_ok)면 카드 읽기 뷰(frz.card_*: 동결 회차 = 동결 셀·보관 행·in_full_cycle 셀·동결 카탈로그 비트)를 돌려준다.
+    9 | 글로벌 추이 격자(MeasureScope.frz_grid, 현행 X.trendGrid)는 in_full_cycle 게이트가 없는 frz.grid_* 를 쓴다. 스위치가 꺼져 있거나 카드가 아니면
+   10 | LIVE(도입 전과 바이트 같다).
+   11 | - 창 판정(S4, core.cycles.frz_judge → core.filters.ReadContext.card_window): 창 회차에 세대 없는 발행 회차(구멍)가 있으면 현행처럼 요청 전체를
+   12 |   미러로(lib/summary/read/cycle-set.ts:336-357·400-401) = 허브는 그 요청을 card=False 로 내려 비카드 경로로 처음부터 푼다. 그래서 카드 뷰에는
+   13 |   비동결 회차 갈래가 없다(P126). 기간 비교는 현행처럼 구멍을 누락 비중으로 센다(폴백 없음, 값 = 동결 회차만).
+   14 | - answer_stance·prompt 자리는 동결 대상이 아니다(카드 경로 7개는 스탠스를 읽지 않는다: 스탠스 문장은 analytics.mentions.types 뿐. 프롬프트 차원
+   15 |   판정은 동결 카탈로그 비트가 사실 행 bgrp 로 들어간다: core.measure.catalog_all_pred 의 동결 분기). 생성 시점 판정 중 사실 행 열이 아닌 것은
+   16 |   옆 표로 읽는다(S4): 웹 보고 유닛·⑥ 유닛 플래그·URL 인용률 job 플래그 = frz.card_web, 택소노미 축 = frz.card_axis, 브랜드 표시명 =
+   17 |   frz.card_brand_name(core.measure unit_gate_of·accuracy_counts_sql·frozen_taxon_pred·frozen_brand_names).
+   18 | 
+   19 | 규약
+   20 | - 자리는 rd.answer·rd.answer_brand·rd.answer_stance·rd.citation·rd.dim_prompt 다섯이다(카드 경로가 읽는 사실·프롬프트 차원).
+   21 |   그 밖의 rd 표(rd.job·rd.cycle·rd.dim_*·rd.web_report_prompt·rd.report_unit_value·rd.acr_*)는 동결 대상이 아니라 그대로 쓴다.
+   22 | - 인자 ms(core.measure.MeasureScope) 는 S3 의 판정 입력(card·profile·창)이다. 스코프가 없는 호출(답변 상세처럼 키로 찾는 문서형 읽기)은
+   23 |   fact_tables() 를 인자 없이 부른다 = 늘 LIVE.
+   24 | - 표준 라이브러리만 쓴다(core.measure 빌더를 대조 러너가 재사용).
+   25 | &quot;&quot;&quot;
+   26 | from __future__ import annotations
+   27 | 
+   28 | from dataclasses import dataclass
+   29 | from typing import Any
+   30 | 
+   31 | 
+   32 | @dataclass(frozen=True)
+   33 | class FactTables:
+   34 |     answer: str
+   35 |     answer_brand: str
+   36 |     answer_stance: str
+   37 |     citation: str
+   38 |     prompt: str
+   39 | 
+   40 | 
+   41 | LIVE = FactTables(answer=&quot;rd.answer&quot;, answer_brand=&quot;rd.answer_brand&quot;, answer_stance=&quot;rd.answer_stance&quot;,
+   42 |                   citation=&quot;rd.citation&quot;, prompt=&quot;rd.dim_prompt&quot;)
+   43 | CARD = FactTables(answer=&quot;frz.card_answer&quot;, answer_brand=&quot;frz.card_answer_brand&quot;, answer_stance=&quot;rd.answer_stance&quot;,
+   44 |                   citation=&quot;frz.card_citation&quot;, prompt=&quot;rd.dim_prompt&quot;)
+   45 | # 웹 카드 읽기 뷰(DB-v2.24 P127): 카드 뷰 열 + 웹 셀 판정 6열(unit_in·unit_owned·unit_target·url_registered·url_owned_hit·url_target_hit)
+   46 | CARD_WEB = FactTables(answer=&quot;frz.card_answer_w&quot;, answer_brand=&quot;frz.card_answer_brand_w&quot;, answer_stance=&quot;rd.answer_stance&quot;,
+   47 |                       citation=&quot;frz.card_citation_w&quot;, prompt=&quot;rd.dim_prompt&quot;)
+   48 | GRID = FactTables(answer=&quot;frz.grid_answer&quot;, answer_brand=&quot;frz.grid_answer_brand&quot;, answer_stance=&quot;rd.answer_stance&quot;,
+   49 |                   citation=&quot;frz.grid_citation&quot;, prompt=&quot;rd.dim_prompt&quot;)
+   50 | 
+   51 | 
+   52 | def frozen_read(ms: Any) -&gt; bool:
+   53 |     &quot;&quot;&quot;이 스코프가 동결 층을 읽나: 카드 요청 ∧ freeze_at_publish ∧ global·website ∧ 창 판정 통과(MeasureScope.frz_ok).
+   54 |     frz_ok 는 ReadContext.card_window(창 해석 → core.cycles 동결 판정)가 세운다: 창 회차에 세대 없는 회차(구멍)가 없을 때만 참이고,
+   55 |     구멍이 있으면 그 요청은 card=False 로 내려가 처음부터 비카드(현행 미러 폴백 대응) 경로를 탄다(S4).&quot;&quot;&quot;
+   56 |     return (ms is not None and bool(getattr(ms, &quot;card&quot;, False)) and bool(ms.profile.freeze_at_publish) and ms.sf in (1, 2)
+   57 |             and bool(getattr(ms, &quot;frz_ok&quot;, False)))
+   58 | 
+   59 | 
+   60 | def fact_tables(ms: Any = None) -&gt; FactTables:
+   61 |     &quot;&quot;&quot;이 읽기가 쓸 사실 표 이름. 동결 읽기(frozen_read)면 카드 뷰(글로벌 추이 격자 = 격자 뷰, website = 웹 카드 읽기 뷰), 그 밖 LIVE.&quot;&quot;&quot;
+   62 |     if not frozen_read(ms):
+   63 |         return LIVE
+   64 |     if getattr(ms, &quot;frz_grid&quot;, False):
+   65 |         return GRID</pre></details><details id="A14" class="source"><summary><b>A14</b> DB 역할·풀·트랜잭션 <code>hmg-geo-hub-share/back/app/core/db.py</code></summary><p><a href="../../back/app/core/db.py">원본 파일 열기</a> · 324행 · SHA-256 <code>bd23e59788113aed038e5691368b7ccf84dc884e2bd83c8e0457125c8ddf4250</code></p><p class="caption">L1–17</p><pre>    1 | &quot;&quot;&quot;DB 세션: 풀 4종(api_ro·api_rw·admin_long·qa_gate), 요청당 한 커넥션·한 트랜잭션.
+    2 | 
+    3 | 규약(전체-통합 §5 core.db, DESIGN-CONTRACT §5)
+    4 | - asyncpg + SQLAlchemy 2 Core(text). PgBouncer transaction 모드 호환: asyncpg statement_cache_size=0,
+    5 |   SQLAlchemy prepared_statement_cache_size=0, 이름 없는 충돌 방지 prepared statement 이름.
+    6 | - 커넥션 수: 읽기 요청 = api_ro 1(계정 조회와 지표가 의존성 캐시로 한 커넥션·한 트랜잭션을 공유),
+    7 |   쓰기 요청 = 계정 조회용 api_ro 1 + api_rw 1, 검수 요청 = qa_gate 1(core.auth.QaConn). 읽기는 READ ONLY REPEATABLE READ(한 스냅샷).
+    8 |   한 요청 안에서 같은 풀 커넥션을 둘 이상 열지 않고 문장은 순차 실행한다(병렬 커넥션 분할 금지).
+    9 | - 세션 GUC 는 set_config(…, true)(트랜잭션 로컬)만 쓴다. SET(세션) 금지: 풀 커넥션에 값이 새어 다음 요청에 남는다.
+   10 | - 롤: 풀 전용 URL 이 없으면 공용 URL 로 접속해 트랜잭션마다 set_config(&#x27;role&#x27;, &lt;풀 롤&gt;, true) 로 전환한다(롤 권한이 곧 경계).
+   11 |   롤 기본 설정(ALTER ROLE … SET)은 SET ROLE 로 상속되지 않으므로 statement_timeout·jit·plan_cache_mode 를 트랜잭션마다 명시한다.
+   12 | - 쓰기(api_rw)는 BEGIN 직후 set_config(&#x27;app.actor_id&#x27;, &lt;user uuid&gt;, true). app.actor() 가 미설정 쓰기를 거부한다(DB-v2 :96).
+   13 | - rd 를 읽는 쓰기 핸들러는 api_ro 로 먼저 읽고 api_rw 트랜잭션에서 app 만 쓴다(api_rw 는 rd USAGE 없음).
+   14 | - LLM·외부 호출은 커넥션을 쥔 채 하지 않는다(시그니처로 강제: 외부 호출 함수는 conn 인자를 받지 않는다).
+   15 |   그런 핸들러는 core.auth.CurrentUserDetached + RoSession(짧은 api_ro 트랜잭션을 여는 함수)으로 읽기 → (커넥션 없음) 외부 호출 → 쓰기.
+   16 | &quot;&quot;&quot;
+   17 | from __future__ import annotations</pre><p class="caption">L45–55</p><pre>   45 | 
+   46 | POOL_SPECS: dict[str, PoolSpec] = {
+   47 |     # DB-v2 §10: api_ro 롤 기본 5s·read_only·force_custom_plan·jit off 를 트랜잭션마다 재현한다.
+   48 |     # force_custom_plan 은 범용 계획 전환(같은 준비문 6번째 실행부터, 1년 창 2~5배 느림: stg 2026-10-01 실측) 방지의 한 겹이고, 다른 한 겹은
+   49 |     # asyncpg_url 의 준비문 재사용 금지다. 둘 다 tests/core/test_plan_cache_mode.py 가 단언한다(연결 시작 설정 server_settings 는 쓰지 않는다:
+   50 |     # PgBouncer transaction 모드는 모르는 시작 파라미터를 거부할 수 있고, 트랜잭션 로컬 값이 이미 같은 효과다).
+   51 |     &quot;api_ro&quot;: PoolSpec(&quot;api_ro&quot;, True, &quot;REPEATABLE READ&quot;, &quot;5s&quot;, ((&quot;jit&quot;, &quot;off&quot;), (&quot;plan_cache_mode&quot;, &quot;force_custom_plan&quot;))),
+   52 |     &quot;admin_long&quot;: PoolSpec(&quot;admin_long&quot;, True, &quot;REPEATABLE READ&quot;, &quot;30s&quot;, ((&quot;jit&quot;, &quot;off&quot;), (&quot;plan_cache_mode&quot;, &quot;force_custom_plan&quot;))),
+   53 |     &quot;api_rw&quot;: PoolSpec(&quot;api_rw&quot;, False, &quot;READ COMMITTED&quot;, &quot;10s&quot;, ((&quot;jit&quot;, &quot;off&quot;),)),
+   54 |     &quot;qa_gate&quot;: PoolSpec(&quot;qa_gate&quot;, False, &quot;READ COMMITTED&quot;, &quot;5s&quot;, ((&quot;jit&quot;, &quot;off&quot;),)),
+   55 | }</pre><p class="caption">L125–159</p><pre>  125 |     def assumes_role(self, pool: PoolName) -&gt; bool:
+  126 |         &quot;&quot;&quot;풀 전용 URL 이 있으면 그 로그인 롤이 곧 풀 롤이라 전환하지 않는다.&quot;&quot;&quot;
+  127 |         return self.settings.db_assume_role and pool not in self.settings.db_urls
+  128 | 
+  129 |     @asynccontextmanager
+  130 |     async def transaction(self, pool: PoolName, *, gucs: Mapping[str, str] | None = None) -&gt; AsyncIterator[AsyncConnection]:
+  131 |         &quot;&quot;&quot;풀 커넥션 1개 + 트랜잭션 1개. 정상 종료 시 COMMIT(읽기 전용이면 영향 없음), 예외 시 ROLLBACK.&quot;&quot;&quot;
+  132 |         spec = POOL_SPECS[pool]
+  133 |         async with self.engine(pool).connect() as raw:
+  134 |             conn = await raw.execution_options(isolation_level=spec.isolation, postgresql_readonly=spec.read_only)
+  135 |             async with conn.begin():
+  136 |                 settings: list[tuple[str, str]] = []
+  137 |                 if self.assumes_role(pool):
+  138 |                     settings.append((&quot;role&quot;, spec.role))
+  139 |                 settings.append((&quot;statement_timeout&quot;, spec.statement_timeout))
+  140 |                 settings.extend(spec.extra)
+  141 |                 for k, v in (gucs or {}).items():
+  142 |                     settings.append((k, v))
+  143 |                 await set_local(conn, settings)
+  144 |                 yield conn
+  145 | 
+  146 |     def read(self, pool: PoolName = &quot;api_ro&quot;) -&gt; Any:
+  147 |         if POOL_SPECS[pool].read_only is False:
+  148 |             raise ValueError(f&quot;{pool} 는 읽기 풀이 아니다&quot;)
+  149 |         return self.transaction(pool)
+  150 | 
+  151 |     def write(self, actor_id: UUID | str, *, actor_type: str = &quot;user&quot;, batch_id: UUID | str | None = None,
+  152 |               pool: PoolName = &quot;api_rw&quot;) -&gt; Any:
+  153 |         &quot;&quot;&quot;api_rw(또는 qa_gate) 쓰기 트랜잭션. 행위자 GUC 를 트랜잭션 로컬로 심는다.&quot;&quot;&quot;
+  154 |         if actor_type not in (&quot;user&quot;, &quot;system&quot;):
+  155 |             raise ValueError(&quot;actor_type 은 user|system&quot;)
+  156 |         gucs = {&quot;app.actor_id&quot;: str(UUID(str(actor_id))), &quot;app.actor_type&quot;: actor_type}
+  157 |         if batch_id is not None:
+  158 |             gucs[&quot;app.batch_id&quot;] = str(UUID(str(batch_id)))
+  159 |         return self.transaction(pool, gucs=gucs)</pre></details><details id="A15" class="source"><summary><b>A15</b> JWT·인가·QA <code>hmg-geo-hub-share/back/app/core/auth.py</code></summary><p><a href="../../back/app/core/auth.py">원본 파일 열기</a> · 960행 · SHA-256 <code>4569de5a1b7add2408a69de9febd055cf2fa6abef3d671a469d1fb6c5351f939</code></p><p class="caption">L1–23</p><pre>    1 | &quot;&quot;&quot;인증·인가: Supabase JWT(JWKS) 검증 → app.user_account 세션 사용자, 역할·메뉴·운영자 게이트, 데이터 스코프(default-deny),
+    2 | 프로젝트 접근, 검수(QA) 별도 게이트(Q17).
+    3 | 
+    4 | 사용 규칙
+    5 | - 토큰 검증(verified_subject)은 DB 커넥션을 여는 어떤 의존성보다 먼저 돈다(D-2): 무인증·토큰 오류 요청은 풀 커넥션 없이 401.
+    6 |   core.db 의 RoConn·AdminLongConn 은 Bearer 인증 요청 전용이다(커넥션을 열기 전에 같은 검증을 부른다).
+    7 | - 모든 /v1 읽기·쓰기 라우터는 CurrentUser(= Depends(get_principal)) 를 받는다. 역할 게이트는 require_role·require_menu_group 을
+    8 |   라우터 dependencies= 로 건다(좁히기 전용 AND, 상승 불가: route-policy groupAllowed 계승).
+    9 | - 데이터 스코프는 DataScope(principal, refs) 로만 계산한다. 요청 파라미터로 넓힐 수 없다. 교집합이 비면 403(default-deny).
+   10 | - 비용 액션(프로젝트 생성·수집·실행)은 require_operator 로 막는다(operator-policy 이식). global 운영자도 프로젝트가 보여야 한다
+   11 |   (스코프 안 ∨ 활성 멤버, 모듈-프로젝트 §7 &quot;global 스코프 대조&quot;).
+   12 | - 핸들러 안에서 표면 값에 따라 역할·메뉴를 가를 때는 check_role·check_menu_group(require_* 와 같은 판정·코드)을 부른다.
+   13 | - 외부 호출(LLM·Supabase·GA4·Scope 진단)을 기다리는 핸들러는 CurrentUserDetached 를 쓴다: 계정만 짧은 api_ro 트랜잭션에서 읽고
+   14 |   커넥션을 돌려준다. 필요한 읽기는 RoSession(core.db) 으로 짧게 연다(core.db 규약 &quot;외부 호출은 커넥션을 쥔 채 하지 않는다&quot;).
+   15 | - QA 콘솔 경로는 Supabase 세션이 아니라 require_qa_reviewer(HMAC 쿠키) 만 쓴다. role 스코프 밖이므로 qa_gate 풀로 격리한다.
+   16 |   읽기·쓰기 라우터는 QaLiveConn(쿠키 + 세션 행 존재 확인)을 쓴다. QaConn 은 이미 폐기된 세션도 받아야 하는 경로(로그아웃)만.
+   17 | - 클라이언트 IP 는 client_ip(request) 하나로 읽는다(core.config.trusted_proxy_hops, 배포 값은 배포 문서). 상한 버킷 키는 rate_key_ip.
+   18 |   신뢰 중계(BFF, 결정 D2): X-HGH-Relay-Secret 이 core.config.relay_secret(HGH_RELAY_SECRET)과 상수 시간 비교로 일치할 때만
+   19 |   X-HGH-Client-IP 를 쓴다(relay_client_ip). 미설정·불일치·형식 오류면 헤더를 무시하고 위 규칙 그대로다.
+   20 | - 테스트는 install_test_keys(kid→공개키)로 로컬 서명 키를 주입한다(local·test 환경에서만 허용).
+   21 | &quot;&quot;&quot;
+   22 | from __future__ import annotations</pre><p class="caption">L93–111</p><pre>   93 |             raise RuntimeError(&quot;테스트 서명 키 주입은 HGH_ENV local·test 에서만 허용&quot;)
+   94 |         for kid, k in keys.items():
+   95 |             self._static[kid] = (k.key if isinstance(k, jwt.PyJWK) else k, key_algorithm(k))
+   96 | 
+   97 |     async def preload(self) -&gt; None:
+   98 |         &quot;&quot;&quot;기동 시 JWKS 선로드(콜드 fetch 지연 제거). 실패는 경고만(요청 시 재시도).&quot;&quot;&quot;
+   99 |         if self._client is None:
+  100 |             return
+  101 |         try:
+  102 |             await asyncio.to_thread(self._client.get_signing_keys)
+  103 |         except Exception as e:  # noqa: BLE001
+  104 |             log.warning(&quot;JWKS 선로드 실패: %s&quot;, type(e).__name__)
+  105 | 
+  106 |     def _key_for(self, token: str) -&gt; tuple[Any, str]:
+  107 |         try:
+  108 |             header = jwt.get_unverified_header(token)
+  109 |         except (jwt.PyJWTError, TypeError, ValueError) as e:
+  110 |             raise errors.unauthenticated(&quot;토큰 형식 오류&quot;) from e
+  111 |         kid = header.get(&quot;kid&quot;)</pre></details><details id="A16" class="source"><summary><b>A16</b> 쓰기·큐·감사 <code>hmg-geo-hub-share/back/app/core/write.py</code></summary><p><a href="../../back/app/core/write.py">원본 파일 열기</a> · 326행 · SHA-256 <code>a5a1c82fedb2bde360ba49bea02d7bcd2c3ce9c3613ea7872911684da47db6ea</code></p><p class="caption">L1–28</p><pre>    1 | &quot;&quot;&quot;쓰기 공용: 재판정·운영 요청 큐(enqueue_change), Scope 아웃박스(enqueue_scope),
+    2 | 접근 감사(access_audit: 민감 조회만 비동기 배치, Q4). 계정 감사는 DB 트리거가 한다(아래 주석).
+    3 | 
+    4 | 사용 규칙
+    5 | - 쓰기 라우터는 RwConn(= Depends(get_rw_conn)) 하나로 app 만 쓴다. 트랜잭션 시작 시 app.actor_id 가 심겨 있다(app.actor()).
+    6 | - rd·ing 는 쓰지 않는다. 판정 입력이 바뀌면 같은 트랜잭션에서 enqueue_change 로 app.judgment_change 한 행을 남긴다
+    7 |   (예외: app.project 4열·app.prompt 는 DB 트리거가 남긴다: &#x27;catalog&#x27;·&#x27;prompt_kind&#x27; 와 트리거 소관 &#x27;project_setting&#x27; 을 앱이 직접 넣지 않는다).
+    8 | - Scope 반영이 필요한 변경은 같은 트랜잭션에서 enqueue_scope(app.scope_outbox). 외부 호출은 워커가 한다(요청 경로에서 Scope API 금지).
+    9 | - 접근 감사는 kind data_access·download·scope_call 만(api_read 기록 안 함). 응답을 기다리게 하지 않고 api_rw 배치로 쓴다.
+   10 |   프로세스 크래시 시 수 초분 유실 허용(Q4). app.access_audit_log 는 월 파티션이라 적재기 월간 잡이 leaf 를 미리 만든다.
+   11 |   계정 없는 검수자(Q17)는 access_audit_qa(actor_id = 검수 세션 id, actor_role = &#x27;vendor&#x27;(외부 검수자, DDL 없이 기존 역할 값),
+   12 |   detail.actor_kind = &#x27;qa_reviewer&#x27; + reviewer_name).
+   13 | - payload 는 kind 별 계약(core.contracts)으로 검증한다(생산자·ingest 소비자 한 벌). 계약 위반은 코드 결함(ValueError → 500).
+   14 | - 중복 판정(enqueue_change dedupe)
+   15 |     raise(기본)        같은 kind·주체(+ dedupe_key 가 payload 에 포함)의 pending·running 행이 있으면 409 duplicate_pending
+   16 |     coalesce_pending   같은 조건의 pending 행이 있으면 그 change_id 를 돌려주고 새 행을 넣지 않는다(running 이면 새 행: 적재기가 옛 상태를 읽었을 수 있다)
+   17 |                        주의: IG-2 재판정 워커는 행을 FOR UPDATE SKIP LOCKED 로 잡고 같은 트랜잭션에서 처리한 뒤 applied 로 바꾼다(처리 중에도
+   18 |                        다른 트랜잭션에는 pending). 행 잠금 없이 고르는 이 모드는 처리 중 행을 재사용해 편집이 묻힐 수 있으므로, 적재기가
+   19 |                        재판정하는 kind(project_owned_base·project_target_url·project_setting 등)에는 쓰지 않는다(off). api_rw 에 행 잠금
+   20 |                        권한(UPDATE 열 하나)을 주거나 SECURITY DEFINER 잠금 함수를 두면 풀린다(다음 DB 패치 후보).
+   21 |     coalesce_active    pending·running 행을 재사용(같은 요청이 진행 중이면 그 결과를 기다리면 된다: 유료 수집 중복 방지)
+   22 |     off                항상 새 행
+   23 |   raise·coalesce_* 는 트랜잭션 advisory 잠금(kind·주체·dedupe_key)으로 동시 요청을 직렬화한다. reusable(행 → bool) 을 주면 재사용
+   24 |   후보를 거른다(예: 요청자가 상태를 볼 수 있는 행만). enqueue_change_result 는 (change_id, created) 를 돌려준다.
+   25 | - enqueue_scope(supersede=ops): 같은 aggregate·id 의 미완료 행 중 op ∈ ops 를 done_at = now(), last_error = &#x27;superseded&#x27; 로 닫고
+   26 |   항상 새 행을 넣는다(순서가 의미 있는 토글: disable·enable). 기본은 같은 (aggregate, id, op) 미완료 행에 payload 병합.
+   27 | - 행 단위 부분 성공(bulk)은 savepoint(conn) 블록으로 감싼다(SQL 가드 G5 가 SAVEPOINT·RELEASE·ROLLBACK TO 만 허용).
+   28 | &quot;&quot;&quot;</pre></details><details id="A17" class="source"><summary><b>A17</b> 백엔드 커서 페이지네이션 <code>hmg-geo-hub-share/back/app/core/pagination.py</code></summary><p><a href="../../back/app/core/pagination.py">원본 파일 열기</a> · 213행 · SHA-256 <code>245c9a742a495bda0a31737406c0f60bd793527336259ad0ad87739d28b73fb4</code></p><p class="caption">L1–12</p><pre>    1 | &quot;&quot;&quot;키셋 페이지네이션(전체-통합 §5 core.pagination).
+    2 | 
+    3 | 커서 = base64url(JSON{v:1, sort, dir, key:[정렬값…, 고유키], fh: 필터 해시, g: generation(집계 순위 목록만)}).
+    4 | - 서버는 limit+1 행을 읽어 다음 페이지 유무를 판정한다(keyset_page).
+    5 | - 필터·정렬이 커서와 다르거나 변조·형식 오류면 422 cursor_invalid, generation 이 바뀌었으면 409 cursor_stale(첫 페이지부터 재조회).
+    6 | - decode_cursor 는 정렬 열 명세 types(date·timestamptz·int4·int8·text·numeric·uuid·bool)를 필수로 받아 키 원소 형·범위를 대조한다.
+    7 | - 결과 캐시가 없으므로(D8) 집계 목록은 페이지마다 재집계한다. 기본 limit 은 화면 요구(20~50)로 낮게 둔다.
+    8 | - 정렬 열은 호출자가 화이트리스트에서 고른 SQL 식만 keyset_predicate 에 넘긴다. NULL 정렬값은 COALESCE 센티넬로 바꿔 넣는다.
+    9 | &quot;&quot;&quot;
+   10 | from __future__ import annotations
+   11 | 
+   12 | import base64</pre><p class="caption">L27–32</p><pre>   27 | 
+   28 | 
+   29 | def _jsonable(v: Any) -&gt; Any:
+   30 |     if isinstance(v, (datetime, date)):
+   31 |         return {&quot;$d&quot;: v.isoformat(), &quot;$t&quot;: &quot;dt&quot; if isinstance(v, datetime) else &quot;d&quot;}
+   32 |     if isinstance(v, UUID):</pre></details><details id="A18" class="source"><summary><b>A18</b> 선택적 결과 캐시 <code>hmg-geo-hub-share/back/app/core/result_cache.py</code></summary><p><a href="../../back/app/core/result_cache.py">원본 파일 열기</a> · 466행 · SHA-256 <code>1772de32b59db82b6c2cc9dad946e393d462c530167ea38865a5dd6f70d0cb30</code></p><p class="caption">L1–36</p><pre>    1 | &quot;&quot;&quot;데이터 버전 기반 결과 캐시(제품 책임자 승인 2026-09-30, DB-v2.11 P66~P68). 결과가 (요청 쿼리, 해석된 계정 스코프, 데이터)만의 함수인 무거운
+    2 | 분석 GET 을 명시 허용 목록(ALLOWLIST)으로만 캐시한다. 결정·표 커버 근거: docs/design/api/DECISIONS-API.md &quot;결과 캐시&quot;.
+    3 | 
+    4 | 적용(라우터 계층, service·queries 불변)
+    5 |     router = APIRouter(tags=[...], route_class=CachedRoute)
+    6 | 
+    7 |     @router.get(&quot;/v1/trend&quot;, ...)
+    8 |     @result_cache()                         # 끝점 표식. CachedRoute 가 게이트 의존성을 라우트 dependencies 맨 앞에 끼운다
+    9 |     async def get_trend_0(...): ...
+   10 |   표식이 없는 끝점은 CachedRoute 에서도 APIRoute 와 같다. 표식 끝점의 (메서드, 경로)는 ALLOWLIST 에 있어야 한다(아니면 import 시 오류).
+   11 | 
+   12 | 한 요청의 흐름(HGH_RESULT_CACHE=1 일 때. 0 이면 게이트가 곧바로 돌아가 캐시 문장·헤더가 하나도 없다)
+   13 |   1) 게이트 의존성: 토큰 → 계정(CurrentUser) → 요청 커넥션(RoConn, 한 스냅샷). 표면 게이트(core.auth.surface_denial)가 거부면 캐시하지 않고
+   14 |      끝점이 원래대로 403 을 낸다. project 표면은 core.auth.resolve_project(level member)를 먼저 통과해야 한다(404·403 은 끝점이 낸다).
+   15 |   2) 접두 = sha256(JSON{판, 메서드, 라우트 템플릿, 경로 매개변수, 원문 쿼리(키 정렬, 같은 키 값 순서 유지), 해석된 스코프 서명, 끝점 추가 키, 빌드}).
+   16 |   3) app.result_cache_lookup(접두) 한 번: 같은 스냅샷의 데이터 버전을 읽고 키 = sha256(접두 || 버전) 행을 찾는다(SAVEPOINT 안: 캐시 쪽 오류가
+   17 |      요청 트랜잭션을 망가뜨리지 않는다). 적중이면 저장된 바이트를 그대로 200 으로 돌려준다(직렬화 생략, X-HGH-Cache: hit).
+   18 |   4) 미스: 같은 프로세스에서 같은 키를 계산 중인 요청이 있으면 그 결과를 기다려 받는다(single-flight). 아니면 끝점이 계산하고, FastAPI 가
+   19 |      만든 응답 바이트(200)를 응답 뒤 배경 작업으로 app.result_cache_put 에 저장한다(X-HGH-Cache: miss). 저장 실패는 경고 로그만.
+   20 |   키 공간 상한(저장하지 않는 요청): 끝점이 선언하지 않은 쿼리 파라미터가 하나라도 있으면(CommonFilters extra=&quot;ignore&quot; 라 값만 바꿔 키를
+   21 |      무한히 만들 수 있다) 캐시를 아예 거치지 않는다(조회·저장·헤더 없음, 응답은 그대로). cf.&lt;uuid&gt; 는 project 표면에서만 선언된 동적 키로 본다.
+   22 |      응답 meta.dropped_filters 가 비지 않은 요청(모르는·권한 밖 값)도 저장하지 않는다(값 문자열만 바꿔 키를 늘리는 같은 경로).
+   23 |   헤더 X-HGH-Cache 는 HGH_ENV=prod 에서 싣지 않는다(stg·local·test 만).
+   24 | 
+   25 | 키 요소(정확히)
+   26 |   - 원문 쿼리: request.query_params 전 항목. 기본값 적용·값 정렬은 하지 않는다(설계 편차: 값 순서가 응답에 드러나고
+   27 |     (meta.dropped_filters·요청 순서 목록) 명시 기본값과 생략의 동치를 모델 밖에서 재현하지 않는다. 데우기는 front 가 보내는 URL 그대로 부른다).
+   28 |   - 해석된 스코프 서명(scope_signature): DataScope.of(계정, 참조).for_surface(표면)의 all·brands(엄브렐러 제외, 계정 순서)·countries
+   29 |     (권역 전개·웹사이트 의사 코드 포함) + project 표면이면 ProjectAccess 전부 + /v1/geo 는 시장 지도 게이트(shows_geo_map) 값.
+   30 |     계정의 그 밖 속성(역할·운영자·메뉴·이메일·user_id)은 넣지 않는다: 게이트 판정은 조회 전에 끝나고, 캐시 대상 기능 코드가 계정 속성을
+   31 |     읽지 않는다는 것을 tests/core/test_result_cache.py 정적 검사가 지킨다.
+   32 |   - 데이터 버전(DB 가 계산, app.result_cache_version): 표면별 (generation, last_load_id, updated_at), max(judgment_change.change_id),
+   33 |     추적 표 카운터 합(rcache.tg_bump 트리거: app 11 + rd 차원·파생 15, DB-v2.11 P67), rd.today_kst().
+   34 |   - 빌드: HGH_BUILD_ID 또는 app 소스·잠금 파일 지문(build_id). 응답 형식이 코드 판마다 달라질 수 있다.
+   35 |   - 끝점 추가 키(key_deps): 끝점이 의존성으로 받는 값 중 결과를 바꾸는 것(KPI 기준일 kpi_today 교체 지점).
+   36 | &quot;&quot;&quot;</pre></details><details id="A19" class="source"><summary><b>A19</b> 백엔드 기본 설정 <code>hmg-geo-hub-share/back/app/core/config.py</code></summary><p><a href="../../back/app/core/config.py">원본 파일 열기</a> · 253행 · SHA-256 <code>58e9677b28d92877bb7457978092152001347c3cb31c7854f740d2fbd714b22f</code></p></details><details id="A20" class="source"><summary><b>A20</b> 적재 역할·미구현 경계 <code>hmg-geo-hub-share/back/ingest/README.md</code></summary><p><a href="../../back/ingest/README.md">원본 파일 열기</a> · 71행 · SHA-256 <code>010b97c00fa0337b4a9ee5e78006051589926ebfb737fabc6e25d299e6662ab3</code></p></details><details id="A21" class="source"><summary><b>A21</b> 워커 스케줄·순차 실행 <code>hmg-geo-hub-share/back/ingest/worker.py</code></summary><p><a href="../../back/ingest/worker.py">원본 파일 열기</a> · 135행 · SHA-256 <code>dbf91f4aedb2c9955b614b5b3877ce892c8953223a6a436c8f977e98b24bfdf7</code></p><p class="caption">L1–10</p><pre>    1 | &quot;&quot;&quot;워커 프로세스 진입점: python -m ingest.worker (loader 롤 직접 연결, ECS 서비스 1개).
+    2 | 
+    3 | 루프(모듈-적재-파이프라인.md §2)
+    4 |   pull         20분   ingest.pull.sync.run_pass(프로젝트 로테이션 1개씩, 패스 예산 15분)
+    5 |   queue        60초   judgment_change 소비(IG-2 재판정·IG-3 운영 요청) + dfs_fetch 빠른 경로 + 아웃박스 드레인
+    6 |   cycles_tick  20분   시간 기반 회차 판정(R01·R08·노출일), 하루 1회(KST 날짜가 바뀐 첫 틱) 파티션 선생성
+    7 | 감시(watch)는 이 프로세스가 아니라 별도 스케줄(python -m ingest.cli watch, 6시간)이다(워커가 죽어도 감시는 돈다).
+    8 | 
+    9 | Scheduler.step(now) 가 한 틱이다: 기한이 된 작업만 돌리고 다음 기한을 잡는다(로컬에서 한 틱씩 시험 가능, 시계 주입).
+   10 | 작업 하나의 예외는 기록하고 다른 작업을 막지 않는다.</pre><p class="caption">L45–60</p><pre>   45 |     async def step(self, now: dt.datetime) -&gt; list[str]:
+   46 |         &quot;&quot;&quot;기한이 된 작업을 순서대로 한 번씩. 반환 = 이번 틱에 돈 작업 이름.&quot;&quot;&quot;
+   47 |         ran: list[str] = []
+   48 |         kst_day = (now + dt.timedelta(hours=9)).date()
+   49 |         if self.daily is not None and self.last_daily != kst_day:
+   50 |             await self._run(&quot;daily&quot;, self.daily, now)
+   51 |             self.last_daily = kst_day
+   52 |             ran.append(&quot;daily&quot;)
+   53 |         for t in self.tasks:
+   54 |             if t.next_at is None or now &gt;= t.next_at:
+   55 |                 ok = await self._run(t.name, t.fn, now)
+   56 |                 t.runs += 1
+   57 |                 if not ok:
+   58 |                     t.errors += 1
+   59 |                 t.next_at = now + t.every
+   60 |                 ran.append(t.name)</pre><p class="caption">L83–106</p><pre>   83 |     async def pull(now: dt.datetime) -&gt; None:
+   84 |         await run_pass(db, source, now=now)
+   85 | 
+   86 |     async def queue(now: dt.datetime) -&gt; None:
+   87 |         await run_queue(db)
+   88 |         if dfs is not None:
+   89 |             await run_dfs(db, dfs, now=now)
+   90 |         await run_outbox(db, source, now=now)
+   91 | 
+   92 |     async def tick(now: dt.datetime) -&gt; None:
+   93 |         await cycles_tick(db, now=now)
+   94 | 
+   95 |     async def daily(now: dt.datetime) -&gt; None:
+   96 |         await cycles_tick(db, now=now, daily=True)
+   97 | 
+   98 |     return Scheduler(tasks=[Task(&quot;queue&quot;, dt.timedelta(seconds=60), queue), Task(&quot;pull&quot;, dt.timedelta(minutes=20), pull),
+   99 |                             Task(&quot;cycles_tick&quot;, dt.timedelta(minutes=20), tick)], daily=daily)
+  100 | 
+  101 | 
+  102 | async def run_forever(sched: Scheduler, stop: asyncio.Event, *, clock: Callable[[], dt.datetime] | None = None) -&gt; None:
+  103 |     clock = clock or (lambda: dt.datetime.now(dt.UTC))
+  104 |     while not stop.is_set():
+  105 |         now = clock()
+  106 |         await sched.step(now)</pre></details><details id="A22" class="source"><summary><b>A22</b> 큐·아웃박스·GA4 소비 제외 <code>hmg-geo-hub-share/back/ingest/cycles/workers/service.py</code></summary><p><a href="../../back/ingest/cycles/workers/service.py">원본 파일 열기</a> · 373행 · SHA-256 <code>99933ad3b7948199af5f087ee11b2837ff1600f743a23093f26ff2a37cfeff12</code></p><p class="caption">L1–14</p><pre>    1 | &quot;&quot;&quot;ingest.cycles.workers: 워커 루프의 한 틱 단위 함수(로컬에서 한 틱씩 시험 가능).
+    2 | 
+    3 |   cycles_tick(db, now, daily)     20분: 시간만 흘러 바뀌는 판정(R01 정온·재확인 창 종결, R08 발행, 노출일) → rd.cycle 투영·세대.
+    4 |                                    daily: rd 사실 표 leaf(표면별, 3개월 앞)·ing 원본·GA4·접근 감사(app.access_audit_log)·DataForSEO 월 leaf 선생성
+    5 |   run_queue(db, ..., limit)       60초: app.judgment_change 소비(FOR UPDATE SKIP LOCKED, change_id 순). 한 행 = 한 트랜잭션.
+    6 |                                    성공 applied(applied_load_id), 실패는 롤백 뒤 새 트랜잭션에서 failed·error, 상한 초과는 escalated_rebuild.
+    7 |   run_outbox(db, source, ...)     app.scope_outbox 드레인(Scope 쓰기, 외부 호출은 트랜잭션 밖). 생성 응답의 Scope id 를 app 에 되쓴다
+    8 |                                    (행위자 = 시스템 사용자, app.prompt 트리거가 감사·판정 큐를 남긴다).
+    9 |   run_dfs(db, dfs, ...)           dfs_fetch 빠른 경로: claim(running) → DataForSEO 호출(트랜잭션 밖) → ext.dfs_call·rd.kw_* 한 트랜잭션.
+   10 | 큐 kind 소유: IG-2 재판정 14종(+scope_prompt), IG-3 운영 4종(cycle_admin·report_publication·anchor_pin·answer_drop), dfs_fetch,
+   11 | 엔티티 버전 반영 entity_version(E4·E5, ingest.project.apply.ecat_engine: 한 처리 = 한 청크 트랜잭션, 남으면 행을 pending 으로 두고 다시 집는다).
+   12 | ga4_property·ga4_tracked_event 는 외부 적재(IG-4, 소유 미정)라 이 워커가 집지 않는다(대기 유지).
+   13 | &quot;&quot;&quot;
+   14 | from __future__ import annotations</pre></details><details id="A23" class="source"><summary><b>A23</b> 신규 GA4 조회는 적재 데이터 사용 <code>hmg-geo-hub-share/back/app/features/analytics/funnel/conversion/service.py</code></summary><p><a href="../../back/app/features/analytics/funnel/conversion/service.py">원본 파일 열기</a> · 424행 · SHA-256 <code>05c959a7fdf86010ff19a1e78a26c787e429fd6ceb21f6f9ae03b5bd0473612f</code></p><p class="caption">L1–23</p><pre>    1 | &quot;&quot;&quot;analytics.funnel.conversion 업무 규칙. 공통 술어는 app.core.cycles·app.core.measure 를 쓴다(모듈별 재구현 금지).
+    2 | 
+    3 | 규칙(모듈-AI-퍼널 §2.2·§5, FU-2, DECISIONS-API Q12)
+    4 | - 원천 = 적재된 GA4 보고서 원본 그레인 rd.ga4_row 만(실시간 GA4 호출 없음). Scope 측정과 조인하지 않는다.
+    5 | - 시장 카탈로그 = 코드 상수(MARKET_CATALOG, 현행 property-map.ts MAP 의 레거시 시장) ∪ app.ga4_property(brand·country 있는 행). app.ga4_market 신설 없음(Q12).
+    6 |   시장 = (브랜드, 국가). 스코프 게이트: 관점 브랜드(계정 브랜드 스코프 ∩ brand[]) × 유효 국가(계정 국가 스코프 ∩ country[]).
+    7 |   스코프 밖 시장은 coverage 에도 나오지 않는다.
+    8 | - 실데이터 = rd.ga4_dim_property 중 출처 registry·env 이고 status = active 인 속성(브랜드 비트·국가 키로 시장에 매칭). 나머지 시장은
+    9 |   coverage 에만(A12). project_override 출처는 프로젝트 자체 속성이라 global·website 에서 읽지 않는다.
+   10 |   시장당 속성 하나: active 우선, 같은 상태면 prop_key 가 작은 것(레지스트리 행은 property_id 순). 물리 순서와 무관하다.
+   11 |   상태 = 적재 투영(rd) 이 있으면 그 값, 없으면 레지스트리(app) 값, 둘 다 없으면 unmapped.
+   12 | - 빈 결과의 억제: 스코프 안 시장이 있는데 요청 필터가 다 걸러냈으면 억제 없는 빈 집합, 그 밖(스코프 안 active 없음)은 source_pending.
+   13 | - 날짜 = GA4 보고서 날짜(속성 시간대). from/to 가 없으면 to = 최신 적재일(report 1), from = to - 89.
+   14 | - engine[] = AI 유입 sessionSource 엔진(rd.dim_engine 코드 공간). 비면 전 AI 엔진. AI 코호트만 좁힌다.
+   15 | - device[]·visitor_type[] = 두 코호트 공통(rd.ga4_dim_value device·nvr). 적재 차원에 없는 값은 dropped 이고 결과는 빈 집합.
+   16 | - 분모 = 세션(G-12 a, activeUsers → sessions 정의 변경). 비율은 Ratio(정수 쌍)만, lift 는 프론트가 두 Ratio 로 계산한다.
+   17 | - 표면: global·website 같은 원천(속성은 브랜드 × 국가 단위). website 의 가상 지역 코드(HYUNDAI-N 등)는 core 가 사이트 브랜드 비트로 풀어
+   18 |   ctx.virtual_brand_bits 에 싣고, 시장도 그 비트의 브랜드로 좁힌다.
+   19 | - project 표면(BG-28, 현행 projects/[id]/ai-funnel/conversion/page.tsx:52-55): 시장 = 프로젝트 (브랜드, 국가) 하나. 속성 = 프로젝트 직접
+   20 |   지정(app.project.ga4_property_id) 우선, 없으면 그 시장의 레지스트리·env 속성(global 과 같은 선택 규칙). 브랜드 없는(엄브렐러) 프로젝트는
+   21 |   직접 지정이 없으면 unmapped. 게이트 = 활성 멤버 ∨ admin(현행 auth-and-locks.ts:34-35 notFound).
+   22 |   직접 지정은 &#x27;프로젝트 몫&#x27; 속성일 때만 쓴다(검증 D1, 현행과 다름): 적재 투영·레지스트리 행이 다른 시장에 귀속돼 있으면(브랜드·국가 불일치,
+   23 |   또는 레지스트리·env 출처인데 시장 미귀속) 읽지 않고 unmapped(property_id 없음)로 낸다. 그래야 Owner 가 설정만으로 다른 시장 GA4 수치를</pre></details><details id="A24" class="source"><summary><b>A24</b> 보조 LLM 클라이언트 <code>hmg-geo-hub-share/back/app/core/llm.py</code></summary><p><a href="../../back/app/core/llm.py">원본 파일 열기</a> · 207행 · SHA-256 <code>1a40715059ae676e398ee050a368d6bce722e0b739652ddee8c20bef5a3ca339</code></p><p class="caption">L1–21</p><pre>    1 | &quot;&quot;&quot;LLM(OpenRouter, OpenAI 호환 chat completions) 공용 클라이언트: 구조화 출력(json_schema strict) 1회 호출.
+    2 | 
+    3 | - 설정은 core.config(openrouter_api_key·openrouter_base_url·openrouter_model·openrouter_timeout_s). URL 은 base(…/api/v1)만 받고
+    4 |   경로 /chat/completions 는 여기서 붙인다(예전 기능별 HGH_OPENROUTER_URL 전체 URL 관례는 폐기: HGH_OPENROUTER_BASE_URL 하나).
+    5 | - 커넥션을 쥔 채 부르지 않는다: 이 모듈 함수는 DB 커넥션 인자를 받지 않는다(core.db 규약). 핸들러는 CurrentUserDetached 로 받는다.
+    6 | - 주입: 라우터는 LlmDep(= Depends(get_llm))로 받고, 테스트는 app.dependency_overrides[get_llm] 로 가짜를 넣는다.
+    7 | - 오류: LlmError(kind upstream|invalid|unconfigured). call_llm 이 API 오류로 바꾼다:
+    8 |     unconfigured → 503 llm_unavailable(키 미설정: 권한 검사가 끝난 뒤 호출 시점에만 드러난다)
+    9 |     upstream·invalid → 502 llm_failed(원문 응답·키 미노출)
+   10 | - 재시도: 429·5xx·타임아웃·전송 오류는 1회 재시도(1.5초 뒤). 호출별 timeout_s 로 설정값을 덮을 수 있다(운영자 키워드 도구 180초).
+   11 |   시도 하나는 timeout_s 를 넘지 못한다(asyncio.timeout 총량 상한: httpx timeout 은 연산별이라 느린 본문이 시도를 늘릴 수 있었다).
+   12 | - 요청 기한(D-7, 2026-09-30): LLM 라우트는 dependencies=[request_deadline(&lt;초&gt;)] 로 기한을 건다(도착 시각 + 라우트 상수, 요청 헤더
+   13 |   X-HGH-Timeout-Ms 가 있으면 min(상수, 헤더/1000 - HEADER_MARGIN_S)). get_llm 이 그 기한을 클라이언트에 싣고, 클라이언트는
+   14 |     시도마다 제한 = min(timeout_s, 남은 기한). 남은 기한 &lt; MIN_ATTEMPT_S 면 시도하지 않는다.
+   15 |     재시도 전에 남은 기한 - 대기(1.5초) &lt; MIN_ATTEMPT_S 면 재시도하지 않는다.
+   16 |     기한에 잘린 시도(제한이 남은 기한이었고 시간 초과)도 재시도하지 않는다.
+   17 |   세 경우 모두 LlmError(&#x27;deadline&#x27;) → 504 llm_timeout. 재시도까지 해서 실패한 429·5xx·전송 오류는 전과 같이 502 llm_failed.
+   18 |   라우트 상수는 프론트 BFF 대기와 맞춘다(front/lib/hgh/adapters): 키워드 도구 185초 → 175초, 소셜 프롬프트 생성 110초 → 105초,
+   19 |   SERP 초안 70초(external) → 65초. BFF 가 끊은 뒤 백엔드가 재시도로 과금하는 일이 없게 한다(known_diff U11-N9).
+   20 | &quot;&quot;&quot;
+   21 | from __future__ import annotations</pre></details><details id="A25" class="source"><summary><b>A25</b> 기존 크론 정의 <code>hmg-geo-hub-share/front/vercel.json</code></summary><p><a href="../../front/vercel.json">원본 파일 열기</a> · 14행 · SHA-256 <code>46a6ee4a96e028205e636916a94965523d9dc0dd813204dfff23d0a5644be15b</code></p><p class="caption">L1–14</p><pre>    1 | {
+    2 |   &quot;$schema&quot;: &quot;https://openapi.vercel.sh/vercel.json&quot;,
+    3 |   &quot;regions&quot;: [&quot;icn1&quot;],
+    4 |   &quot;git&quot;: {
+    5 |     &quot;deploymentEnabled&quot;: {
+    6 |       &quot;main&quot;: false
+    7 |     }
+    8 |   },
+    9 |   &quot;crons&quot;: [
+   10 |     { &quot;path&quot;: &quot;/api/cron/sync-mirror&quot;, &quot;schedule&quot;: &quot;*/20 * * * *&quot; },
+   11 |     { &quot;path&quot;: &quot;/api/cron/ga4-prebuild&quot;, &quot;schedule&quot;: &quot;0 18 * * *&quot; },
+   12 |     { &quot;path&quot;: &quot;/api/cron/cycle-chain-watch&quot;, &quot;schedule&quot;: &quot;0 */6 * * *&quot; }
+   13 |   ]
+   14 | }</pre></details><details id="A26" class="source"><summary><b>A26</b> 기존 요약 생성기 <code>hmg-geo-hub-share/front/ops/summary-runner/README.md</code></summary><p><a href="../../front/ops/summary-runner/README.md">원본 파일 열기</a> · 61행 · SHA-256 <code>cce52823b4695ce85073df8771d1dc63afb8e049b75e97bf1942791702eda6eb</code></p><p class="caption">L1–16</p><pre>    1 | # summary-runner — 사실표 생성 러너(EC2 ap-south-1) 런타임 파일
+    2 | 
+    3 | 정본 문서: `internal-kb/hmg-geo-summary-runner-ec2-plan-2026-09-10.md`.
+    4 | 프로비저닝(IAM·EC2·코드 전송)은 워크스페이스 `tools/hmg-summary-runner/`(AWS CLI) 가 담당하고,
+    5 | 이 디렉토리는 **러너 위에서 도는 것**만 담는다 — 번들에 실려 `/opt/hmg-runner/current/ops/summary-runner/` 로 배포된다.
+    6 | 
+    7 | | 파일 | 역할 |
+    8 | | --- | --- |
+    9 | | `install.sh` | systemd 유닛·타이머 설치(타이머 enable 은 옵션 — **실패 알림 도달 실증 뒤** 상시화) |
+   10 | | `hmg-summary.service` / `hmg-summary.timer` | 30분 폴링 유닛 |
+   11 | | `run-generate.sh` | 인스턴스 롤로 Secrets Manager 직독 → env 로만 → `npm run summary:generate -- --pending --yes --revalidate` (flock·값 미출력) |
+   12 | | `hmg-runner-failure@.service` / `notify-failure.sh` | **실패 알림**(2026-09-16). `OnFailure=` 가 부르고, Slack(운영 알림 채널)으로 1(주의) 등급 발송(2026-09-25 잔디에서 전환) |
+   13 | | `dryrun.sh` / `probe-e2e.sh` | 쓰기 0 성립 확인(툴체인·RTT·시크릿 도달·revalidate 라우트·읽기 전용 verify) |
+   14 | 
+   15 | 규약: 시크릿은 env 로만(argv·로그 금지), 원격 임시 경로 유니크, `DB_POOL_MAX=2`.</pre></details><details id="A27" class="source"><summary><b>A27</b> 현재 개발 DDL 적용 위치 <code>hmg-geo-hub-share/back/db/dev-db.sh</code></summary><p><a href="../../back/db/dev-db.sh">원본 파일 열기</a> · 57행 · SHA-256 <code>f20e7c645aaa97eab71652a483dd9673087caa80673f5d805487f36214c17ab3</code></p><p class="caption">L1–5</p><pre>    1 | #!/usr/bin/env bash
+    2 | # 로컬 개발·테스트 DB(PostgreSQL 17, 합성 데이터만). 기능 모듈 빌더가 공유하고, 각자 템플릿을 복제해 쓴다.
+    3 | #   up            컨테이너 기동(-m 4g, max_connections 500: 개발자 16명 동시 pytest × 풀 4종) + 템플릿 hmg_tpl 구성
+    4 | #                 (DB-v2.32 → 규칙·합성 픽스처 → rd 투영 seed-30·40). 이미 떠 있으면 템플릿만 재구성하고, 메모리 한도는 즉시 올리며
+    5 | #                 max_connections 가 500 미만이면 ALTER SYSTEM 으로 예약한다(적용은 restart 때, 다른 빌더 세션이 끊기므로 합의 후).</pre><p class="caption">L33–39</p><pre>   33 |     docker exec &quot;$NAME&quot; rm -rf /work &amp;&amp; docker exec &quot;$NAME&quot; mkdir -p /work
+   34 |     # 레포 back/ 구조 그대로 복사(\ir 상대 경로가 레포 기준)
+   35 |     docker cp &quot;$BACK/.&quot; &quot;$NAME:/work/back&quot;
+   36 |     run() { docker exec -w &quot;/work/back/$1&quot; &quot;$NAME&quot; psql -U postgres -X -q -d hmg_tpl -v ON_ERROR_STOP=1 -f &quot;$2&quot; &gt;/dev/null; }
+   37 |     run db DB-v2.32.sql                  # seed-40 이 rd.answer.cit_off(DB-v2.13)를, 적재기가 발행 게이트(DB-v2.14)를 쓴다. v2.15 열은 NULL(채우기 = fill-v215.sql), v2.16 보고서 유닛 표는 빈 표(채우기 = fill-v216.sql), v2.17 엔티티 버전은 비어 있다(v1 이관 = ecat-v1-cutover.sql), v2.25 엔티티 합계는 아래 재계산(= fill-v225.sql), v2.26 롤업 대표 표기 원장은 픽스처 적재 트리거가 채운다, v2.27·v2.28 동결 접기 보관 함수는 채우기 없음, v2.29 표시명 해시 키·v2.31 감사 권한·v2.32 카드 뷰 본문 교체는 채우기 없음, v2.30 창 판정 기초는 아래 전체 계산(= fill-v230.sql)
+   38 |     run tests/fixtures fixture-00-rules.sql
+   39 |     run tests/fixtures fixture-10-data.sql</pre></details><details id="A28" class="source"><summary><b>A28</b> DB 스키마·동결 계층 <code>hmg-geo-hub-share/back/db/DB-v2.32.sql</code></summary><p><a href="../../back/db/DB-v2.32.sql">원본 파일 열기</a> · 7,647행 · SHA-256 <code>028e7607ea21e7b4e742e5626d676e9f23623e3ee9d49e56b14f988b5f79f5c2</code></p><p class="caption">L20–25</p><pre>   20 | CREATE SCHEMA IF NOT EXISTS ing;
+   21 | CREATE SCHEMA IF NOT EXISTS rd;
+   22 | CREATE SCHEMA IF NOT EXISTS app;
+   23 | CREATE SCHEMA IF NOT EXISTS ext;
+   24 | CREATE SCHEMA IF NOT EXISTS mig;
+   25 | CREATE SCHEMA IF NOT EXISTS archive;</pre><p class="caption">L2354–2365</p><pre> 2354 |   END IF;
+ 2355 |   IF to_regnamespace(&#x27;rcache&#x27;) IS NOT NULL THEN
+ 2356 |     RAISE EXCEPTION &#x27;DB-v2.11 이미 적용됨(rcache 스키마 존재)&#x27;;
+ 2357 |   END IF;
+ 2358 | END $v$;
+ 2359 | 
+ 2360 | -- ── P66 ─────────────────────────────────────────────────────────────────────
+ 2361 | CREATE SCHEMA rcache;
+ 2362 | ALTER SCHEMA rcache OWNER TO hmg_owner;
+ 2363 | REVOKE ALL ON SCHEMA rcache FROM PUBLIC;
+ 2364 | COMMENT ON SCHEMA rcache IS &#x27;결과 캐시(core.result_cache). 풀 롤 USAGE 없음: app.result_cache_* SECURITY DEFINER 함수로만 접근(DB-v2.11 P66)&#x27;;</pre><p class="caption">L5150–5169</p><pre> 5150 |     RAISE EXCEPTION &#x27;DB-v2.20(rd.web_target_url) 이 먼저 적용돼야 한다&#x27;;
+ 5151 |   END IF;
+ 5152 |   IF to_regnamespace(&#x27;frz&#x27;) IS NOT NULL THEN
+ 5153 |     RAISE EXCEPTION &#x27;DB-v2.21 이미 적용됨(frz 스키마 존재)&#x27;;
+ 5154 |   END IF;
+ 5155 | END $v$;
+ 5156 | 
+ 5157 | -- ── P114 ─────────────────────────────────────────────────────────────────────
+ 5158 | CREATE SCHEMA frz;
+ 5159 | COMMENT ON SCHEMA frz IS &#x27;카드 경로 동결 층(결정 31·32): 회차 셀 집합·프롬프트 축·세대 + 생성 뒤 바뀐 답변의 옛 행 보관. DB-v2.21&#x27;;
+ 5160 | 
+ 5161 | CREATE TABLE frz.generation (
+ 5162 |   gen_key int4 GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+ 5163 |   cyc_key int4 NOT NULL,                                  -- rd.cycle.cyc_key(= ing.cycle.cyc_key). FK 없음(bulk 시드의 rd.cycle TRUNCATE 를 막지 않게)
+ 5164 |   surface int2 NOT NULL CHECK (surface IN (1, 2, 3)),
+ 5165 |   source text NOT NULL CHECK (source IN (&#x27;ops&#x27;, &#x27;hub&#x27;)),  -- ops = 운영 summary 활성 세대 이관, hub = 허브 발행(S2)
+ 5166 |   state text NOT NULL DEFAULT &#x27;building&#x27; CHECK (state IN (&#x27;building&#x27;, &#x27;active&#x27;, &#x27;retired&#x27;)),
+ 5167 |   ops_cycle_id uuid, ops_generation_id uuid, ops_generator_version text, ops_started_at timestamptz, ops_finished_at timestamptz,
+ 5168 |   judgment jsonb NOT NULL DEFAULT &#x27;{}&#x27;::jsonb,            -- 판정 입력 버전 포인터(ops: 운영 세대 id·스냅샷 md5, hub: ecat 활성 버전·rule_ver)
+ 5169 |   row_counts jsonb,                                       -- 세대 행 수(셀·프롬프트·보관 출처별)</pre></details><details id="A29" class="source"><summary><b>A29</b> 인프라 초기 부팅은 자리표시자 <code>hmg-geo-hub-share/infra/userdata.sh</code></summary><p><a href="../../infra/userdata.sh">원본 파일 열기</a> · 21행 · SHA-256 <code>7cb51ab64af26e760fabaf4b88ab2e9ab913d90bafb6d3e8e9a032868355f2c9</code></p><p class="caption">L1–21</p><pre>    1 | #!/bin/bash
+    2 | # HMG-GEO-HUB EC2 부트스트랩(AL2023 arm64). 비밀값 없음.
+    3 | set -euxo pipefail
+    4 | dnf -y install postgresql17 python3.12 python3.12-pip jq tar gzip
+    5 | mkdir -p /opt/hmg/health
+    6 | echo ok &gt; /opt/hmg/health/healthz
+    7 | cat &gt; /etc/systemd/system/hmg-health.service &lt;&lt;&#x27;UNIT&#x27;
+    8 | [Unit]
+    9 | Description=HMG-GEO-HUB placeholder health endpoint (:8000/healthz) until FastAPI app is deployed
+   10 | After=network-online.target
+   11 | [Service]
+   12 | WorkingDirectory=/opt/hmg/health
+   13 | ExecStart=/usr/bin/python3.12 -m http.server 8000 --bind 0.0.0.0
+   14 | Restart=always
+   15 | User=nobody
+   16 | [Install]
+   17 | WantedBy=multi-user.target
+   18 | UNIT
+   19 | systemctl daemon-reload
+   20 | systemctl enable --now hmg-health.service
+   21 | echo &quot;bootstrap done $(date -u +%FT%TZ)&quot; &gt; /opt/hmg/bootstrap.done</pre></details><details id="A30" class="source"><summary><b>A30</b> CloudFront 인프라 정의 <code>hmg-geo-hub-share/infra/60-cloudfront.sh</code></summary><p><a href="../../infra/60-cloudfront.sh">원본 파일 열기</a> · 39행 · SHA-256 <code>c0729ccfe825f04dd326007c92202671b015eeaecf9f4cdc5b5f7d6a12ffeaeb</code></p><p class="caption">L1–3</p><pre>    1 | #!/usr/bin/env bash
+    2 | # S6 CloudFront: 원본 = ALB(HTTP 80) + X-Origin-Verify 비밀 헤더, 캐시 끔(D8), 뷰어 HTTPS 리다이렉트.
+    3 | # 비밀값을 담은 설정 JSON 은 _secret(700)에 쓰고 file:// 로 넘긴 뒤 즉시 지운다.</pre><p class="caption">L16–27</p><pre>   16 | alb,vf,out,comment,cp,orp,env=sys.argv[1:8]
+   17 | v=open(vf).read().strip()
+   18 | oid=f&quot;HMG-GEO-HUB-{env}-alb-origin&quot;
+   19 | cfg={&quot;CallerReference&quot;:f&quot;HMG-GEO-HUB-{env}-cf-{int(time.time())}&quot;,&quot;Comment&quot;:comment,&quot;Enabled&quot;:True,&quot;PriceClass&quot;:&quot;PriceClass_200&quot;,
+   20 |  &quot;HttpVersion&quot;:&quot;http2and3&quot;,&quot;IsIPV6Enabled&quot;:True,
+   21 |  &quot;Origins&quot;:{&quot;Quantity&quot;:1,&quot;Items&quot;:[{&quot;Id&quot;:oid,&quot;DomainName&quot;:alb,
+   22 |    &quot;CustomOriginConfig&quot;:{&quot;HTTPPort&quot;:80,&quot;HTTPSPort&quot;:443,&quot;OriginProtocolPolicy&quot;:&quot;http-only&quot;,&quot;OriginReadTimeout&quot;:60,&quot;OriginKeepaliveTimeout&quot;:5,
+   23 |                          &quot;OriginSslProtocols&quot;:{&quot;Quantity&quot;:1,&quot;Items&quot;:[&quot;TLSv1.2&quot;]}},
+   24 |    &quot;CustomHeaders&quot;:{&quot;Quantity&quot;:1,&quot;Items&quot;:[{&quot;HeaderName&quot;:&quot;X-Origin-Verify&quot;,&quot;HeaderValue&quot;:v}]}}]},
+   25 |  &quot;DefaultCacheBehavior&quot;:{&quot;TargetOriginId&quot;:oid,&quot;ViewerProtocolPolicy&quot;:&quot;redirect-to-https&quot;,&quot;Compress&quot;:True,
+   26 |    &quot;CachePolicyId&quot;:cp,&quot;OriginRequestPolicyId&quot;:orp,
+   27 |    &quot;AllowedMethods&quot;:{&quot;Quantity&quot;:7,&quot;Items&quot;:[&quot;GET&quot;,&quot;HEAD&quot;,&quot;OPTIONS&quot;,&quot;PUT&quot;,&quot;POST&quot;,&quot;PATCH&quot;,&quot;DELETE&quot;],</pre></details><details id="A31" class="source"><summary><b>A31</b> 백엔드 CI 참고본 <code>hmg-geo-hub-share/ci/github-workflows/back-ci.yml</code></summary><p><a href="../../ci/github-workflows/back-ci.yml">원본 파일 열기</a> · 167행 · SHA-256 <code>cc563738ed66005fbf9807e24d9383b2cac0dc750ccb918fab29d57167970f3c</code></p><p class="caption">L1–7</p><pre>    1 | # back CI: ruff + pytest(SQL 경계 가드 포함)를 postgres:17 컨테이너 위 합성 개발 DB 로 돌린다.
+    2 | #   DB = DB-v2.32(원장 발행 게이트·현행 재현 되돌림 열·웹 보고서 유닛 표·엔티티 버전 모델·인용 출처 유형 답변 열·카드 동결 층·발행 생성기·카드 읽기 뷰·웹 셀 판정·택소노미 축·엔티티 목록 합계·롤업 대표 표기 원장·동결 접기 보관·표시명 해시 키·창 판정 기초·재동결 감사 권한·동결 카드 뷰 계획 안정화 포함) → 합성 픽스처(fixture-00·10) → rd 투영(seed-30·40) → 엔티티 합계·창 판정 기초 재계산 → check-expected 단언. 고객 데이터·비밀값 없음(로컬 전용 비밀번호 dev).
+    3 | #   seed-40 은 DB-v2.13(rd.answer.cit_off)을 선행 단언한다. 시험 픽스처(tests/dbforward.py)는 템플릿이 최신이면 아무것도 하지 않는다.
+    4 | #   기능 빌더의 SQL 은 tests/core/test_guards.py(정적)와 테스트 중 엔진 가드(HGH_SQL_GUARD, core.sqlguard)가 잡는다.
+    5 | #
+    6 | # 러너: 참고용 사본이다. 이 경로(ci/github-workflows/)는 GitHub Actions 가 읽지 않으므로 이 레포에서는 실행되지 않는다.
+    7 | #   원본 레포는 사내 전용 러너(macOS)에서 돌며, 아래 준비 단계(python·docker·캐시 경로)는 그 러너 기준이다.</pre><p class="caption">L122–132</p><pre>  122 |       - name: 개발 DB 구성(DB-v2.32 + 픽스처 + seed-30·40)
+  123 |         run: |
+  124 |           set -euo pipefail
+  125 |           docker exec &quot;$PG&quot; mkdir -p /work/back/tests /work/back/migration
+  126 |           docker cp db &quot;$PG:/work/back/db&quot;
+  127 |           docker cp tests/fixtures &quot;$PG:/work/back/tests/fixtures&quot;
+  128 |           docker cp migration/seed &quot;$PG:/work/back/migration/seed&quot;
+  129 |           q() { d=&quot;$1&quot;; shift; docker exec -i -w &quot;/work/back/$d&quot; &quot;$PG&quot; psql -U postgres -X -q -v ON_ERROR_STOP=1 -d hmg_core &quot;$@&quot;; }
+  130 |           $PSQL_ADMIN -c &quot;CREATE DATABASE hmg_core&quot;
+  131 |           q db -f DB-v2.32.sql
+  132 |           q tests/fixtures -f fixture-00-rules.sql</pre></details><details id="A32" class="source"><summary><b>A32</b> 프런트 CI 계약 생성 <code>hmg-geo-hub-share/ci/github-workflows/front-ci.yml</code></summary><p><a href="../../ci/github-workflows/front-ci.yml">원본 파일 열기</a> · 146행 · SHA-256 <code>261ce0838c84fcfaf22da383e1ca1e91fe45d21f0a7625cfb1619cf5bf12974b</code></p><p class="caption">L1–12</p><pre>    1 | # front CI: 타입·린트·단위 테스트·문자열 가드 + 백엔드 계약(OpenAPI) 드리프트 + 금지 import 가드.
+    2 | #   - back/** 변경에도 돈다: 백엔드 계약이 바뀌었는데 front/lib/hgh/{openapi.json,api-types.ts} 를 재생성하지
+    3 | #     않았으면 여기서 실패한다(재생성: node front/scripts/gen-api-types.mjs).
+    4 | #   - 비밀값·DB·외부 네트워크(레지스트리 제외) 불필요. OpenAPI 생성은 app.openapi() 만 부르고 설정을 읽지 않는다.
+    5 | #
+    6 | # 러너: 참고용 사본이다. 이 경로(ci/github-workflows/)는 GitHub Actions 가 읽지 않으므로 이 레포에서는 실행되지 않는다.
+    7 | #   원본 레포는 사내 전용 러너(macOS)에서 돌며, 아래 준비 단계(python·docker·캐시 경로)는 그 러너 기준이다.
+    8 | name: front-ci
+    9 | 
+   10 | on:
+   11 |   push:
+   12 |     branches: [stg, main]</pre><p class="caption">L100–121</p><pre>  100 |       # OpenAPI 출력은 fastapi·pydantic·starlette 판에 따라 달라진다. back 런타임 잠금(requirements.lock, 해시 고정, D-4)으로 설치해
+  101 |       # 드리프트 검사가 계약 변화만 잡게 한다(app.openapi() 는 런타임 의존성만 쓴다). back 의존성을 올리면 잠금과 스냅샷을 같은 커밋에.
+  102 |       - name: back 의존성(OpenAPI 생성용)
+  103 |         working-directory: back
+  104 |         run: |
+  105 |           python --version
+  106 |           python -m pip install -q --require-hashes -r requirements.lock   # 러너 준비 단계의 venv(RUNNER_TEMP)
+  107 | 
+  108 |       - name: OpenAPI 드리프트(back → openapi.json → api-types.ts)
+  109 |         env:
+  110 |           HGH_BACK_PYTHON: python
+  111 |         run: |
+  112 |           node scripts/gen-api-types.mjs
+  113 |           git diff --exit-code -- lib/hgh/openapi.json lib/hgh/api-types.ts
+  114 | 
+  115 |       # 정적 import 는 ESLint(no-restricted-imports, npm run lint 가 app·components·hooks·i18n·lib·utils·middleware.ts 전부를 본다)가
+  116 |       # import type 예외까지 정확히 막는다. 여기서는 한 번 더 막는다:
+  117 |       #   lib/hgh(테스트 제외: 옛 함수와의 대조 테스트 허용)의 옛 데이터 계층 런타임 로드 = 부수효과 import &quot;x&quot;·동적 import()·require()
+  118 |       #   (정적 import ... from 은 ESLint 몫: 여러 줄 import type 을 grep 이 오탐하지 않게 여기서 보지 않는다)
+  119 |       #   앱 코드의 e2e/ 참조 = 모든 형태(from·부수효과 import·import()·require(), 타입 import·재수출 포함)
+  120 |       - name: 금지 import 가드
+  121 |         run: |</pre></details><details id="A33" class="source"><summary><b>A33</b> 새 분석 엔진은 설계 초안 <code>hmg-geo-hub-share/ANALYSIS-ENGINE-DESIGN.md</code></summary><p><a href="10%20%EB%B6%84%EC%84%9D%20%EC%97%94%EC%A7%84%20%EC%84%A4%EA%B3%84%20%EC%B4%88%EC%95%88.md">원본 파일 열기</a> · 756행 · SHA-256 <code>fa96416cfe1133865fd1d552e81c980e3bce970d784587a10541bdaf9c8ef37c</code></p><p class="caption">L1–31</p><pre>    1 | ---
+    2 | type: specification
+    3 | title: hmg-geo-hub 분석 엔진 Python 통합·분석 버전 관리 설계 초안
+    4 | description: Scope 분석 파이프라인(scope-analysis lane·코어 lib/measurement-analysis)의 설계만 가져와 허브 백엔드에 Python으로 재구현하고, 프로젝트 단위 분석 버전 바인딩(결정 33~37)을 넣는 설계 초안. 단계 지도, 경계, 실행 구조, 컨텍스트, 데이터 모델, 동치·품질 검증, 버전 전환 절차, 결정 19·25 재정의, 작업 분해를 다룬다.
+    5 | tags: [hmg-geo-hub, analysis-engine, analysis-version, scope-analysis, python, llm, cutover]
+    6 | timestamp: 2026-10-02
+    7 | owner: 개발팀
+    8 | status: 검토중
+    9 | ---
+   10 | 
+   11 | # hmg-geo-hub 분석 엔진 Python 통합·분석 버전 관리 설계 초안
+   12 | 
+   13 | Scope 분석 엔진의 단계 구성, 프롬프트, 파서, 리졸버, 판정 규칙을 허브 백엔드(Python)에 다시 구현합니다. 분석 결과는 답변 × 분석 버전으로 함께 저장하고, 화면은 단위별(글로벌, 웹사이트, 고객 프로젝트 각각) 바인딩을 따라 rd 한 벌을 읽습니다. 발행된 회차는 발행 당시 버전으로 고정합니다.
+   14 | 
+   15 | - 작성: 기술 리드. 설계만 했고 코드, 리포, stg, 운영 어디에도 쓰지 않았습니다. DB 접속은 0회입니다.
+   16 | - 근거 코드
+   17 |   - 허브: 허브 리포(be/int4) = be/int4 `72c260a3`(읽기만).
+   18 |   - scope-analysis: `origin/main 10dd345`(벤더 핀 코어 `ec6bccb1`). 읽기 전용으로 확인했습니다.
+   19 |   - Scope 코어: `origin/main 50adc6cc`(2026-10-01 17:12 KST). 같은 방식으로 읽었습니다.
+   20 | - 표기
+   21 |   - **(사실)**: 작성 시점에 코드나 문서로 확인한 것입니다.
+   22 |   - **(추정)**: 계산이나 가정입니다.
+   23 |   - **(제안)**: 설계안입니다.
+   24 | 
+   25 | ---
+   26 | 
+   27 | ## 0. 결론 요약
+   28 | 
+   29 | **한 줄 권장안.** 허브 백엔드에 `analysis` 패키지를 새로 둡니다. Scope의 턴 분석 15단계와 답변 접기, ACR 집계를 Python으로 재구현합니다. 결과는 새 스키마 `an`에 `(ana_ver, job)` 키로 저장합니다. v0(Scope 분석 수신분)은 지금의 `ing.*`를 그대로 씁니다. 투영(rd)은 한 벌만 유지하고, 답변마다 `coalesce(회차 고정 버전, 단위 바인딩 버전)`의 결과를 읽습니다. 이 방식은 엔티티 버전 `ecat_ver`가 이미 쓰는 방식과 같습니다(`queries.py:861`).
+   30 | 
+   31 | 1. **설계만 가져오는 경계는 선명합니다.** 그대로 옮기는 것은 다음과 같습니다.</pre></details><details id="A34" class="source"><summary><b>A34</b> 기존 GA4 요청·캐시 <code>hmg-geo-hub-share/front/lib/ga4/conversion.ts</code></summary><p><a href="../../front/lib/ga4/conversion.ts">원본 파일 열기</a> · 853행 · SHA-256 <code>1491689f74a23d0be1e6fe171838aeaccfb51af336d80ee7313918bc82966ad3</code></p><p class="caption">L1–12</p><pre>    1 | import &quot;server-only&quot;;
+    2 | import { unstable_cache } from &quot;next/cache&quot;;
+    3 | import { splitFilterValues } from &quot;@/components/dash/filter-encoding&quot;;
+    4 | import { CONVERSION_PERIODS, DEFAULT_CONVERSION_DAYS } from &quot;./conversion-window&quot;;
+    5 | import { runReport, AI_CHANNEL_GROUP, isoToGa4, dateNDaysAgo, type GaReport } from &quot;./client&quot;;
+    6 | import { ga4TrackedEventRepository } from &quot;@/lib/db/repositories/ga4-tracked-events&quot;;
+    7 | 
+    8 | // 24h TTL — dev 단계 기본값. GA4 data updates ~1h이지만 개발 검증 단계에선
+    9 | // freshness보다 API 호출 절감이 우선. prod에선 ~6h로 좁힐 여지 있음.
+   10 | // 한 곳에서만 조정.
+   11 | export const GA4_CACHE_TTL_SECONDS = 24 * 60 * 60;
+   12 | export const GA4_CACHE_TAG = &quot;ga4&quot;;</pre><p class="caption">L469–480</p><pre>  469 | async function getAiConversionLiveInner(
+  470 |   propertyId: string,
+  471 |   days = 90,
+  472 |   filters?: ConversionFilters,
+  473 | ): Promise&lt;ConversionLive | null&gt; {
+  474 |   const range = dateNDaysAgo(days);
+  475 |   const spec = await resolveConvSpec(propertyId);
+  476 |   const [cohorts, trend, pages, byEngine] = await Promise.all([
+  477 |     fetchCohorts(propertyId, range, filters, spec),
+  478 |     fetchTrend(propertyId, range, filters, spec),
+  479 |     fetchPageSplit(propertyId, range, 12, filters, spec),
+  480 |     fetchEngineBreakdown(propertyId, range, filters, spec),</pre></details><details id="A35" class="source"><summary><b>A35</b> 기존 전량 페이지 수집 <code>hmg-geo-hub-share/front/lib/hgh/paginate.ts</code></summary><p><a href="../../front/lib/hgh/paginate.ts">원본 파일 열기</a> · 128행 · SHA-256 <code>0414cd2dd00568ba72641f1d860e541fda991eff7f805d204495e55e78bd8092</code></p><p class="caption">L61–102</p><pre>   61 | export async function fetchAllPages&lt;T&gt;(fetchPage: PageFetcher&lt;T&gt;, opts: FetchAllOptions): Promise&lt;FetchAllResult&lt;T&gt;&gt; {
+   62 |   const { maxPages } = opts;
+   63 |   if (!Number.isInteger(maxPages) || maxPages &lt; 1 || maxPages &gt; MAX_PAGES_CEILING) {
+   64 |     throw new RangeError(`fetchAllPages: maxPages must be an integer 1..${MAX_PAGES_CEILING}`);
+   65 |   }
+   66 |   let restarted = false;
+   67 |   for (;;) {
+   68 |     try {
+   69 |       return { ...(await onePass(fetchPage, maxPages, opts.onLimit ?? &quot;throw&quot;)), restarted };
+   70 |     } catch (e) {
+   71 |       if (isCursorStale(e) &amp;&amp; !restarted) {
+   72 |         restarted = true;
+   73 |         continue;
+   74 |       }
+   75 |       throw e;
+   76 |     }
+   77 |   }
+   78 | }
+   79 | 
+   80 | async function onePass&lt;T&gt;(fetchPage: PageFetcher&lt;T&gt;, maxPages: number, onLimit: &quot;throw&quot; | &quot;truncate&quot;) {
+   81 |   const items: T[] = [];
+   82 |   const seen = new Set&lt;string&gt;();
+   83 |   let cursor: string | null = null;
+   84 |   let total: number | null = null;
+   85 |   for (let pages = 1; ; pages += 1) {
+   86 |     const page = await fetchPage(cursor);
+   87 |     items.push(...page.items);
+   88 |     if (page.total !== undefined &amp;&amp; page.total !== null) total = page.total;
+   89 |     const next = page.nextCursor || null;
+   90 |     if (next === null) return { items, pages, total, truncated: false };
+   91 |     if (seen.has(next)) {
+   92 |       // The backend handed back a cursor it already gave: stop instead of looping.
+   93 |       throw new HghApiError(500, LOCAL_CODES.pageLimit, &quot;cursor repeated; pagination aborted&quot;);
+   94 |     }
+   95 |     seen.add(next);
+   96 |     if (pages &gt;= maxPages) {
+   97 |       if (onLimit === &quot;truncate&quot;) return { items, pages, total, truncated: true };
+   98 |       throw new HghApiError(500, LOCAL_CODES.pageLimit, `more than ${maxPages} pages`, { maxPages });
+   99 |     }
+  100 |     cursor = next;
+  101 |   }
+  102 | }</pre></details><details id="A36" class="source"><summary><b>A36</b> 생성된 API 계약 <code>hmg-geo-hub-share/front/lib/hgh/openapi.json</code></summary><p><a href="../../front/lib/hgh/openapi.json">원본 파일 열기</a> · 57,555행 · SHA-256 <code>78367e3e44b66fc9921736dd353bd5848c942764df8f83821194331d93c5aef8</code></p></details><details id="A37" class="source"><summary><b>A37</b> 기능 분류표 <code>hmg-geo-hub-share/back/taxonomy.json</code></summary><p><a href="../../back/taxonomy.json">원본 파일 열기</a> · 2,406행 · SHA-256 <code>bd013e3a2bd7d9968f08867225afa74e15907bf1c3947b9f2f0950f98b58c17b</code></p></details><details id="A38" class="source"><summary><b>A38</b> 잠긴 프런트 의존성 <code>hmg-geo-hub-share/front/package-lock.json</code></summary><p><a href="../../front/package-lock.json">원본 파일 열기</a> · 16,524행 · SHA-256 <code>c232aa3217f210a9f2169d2a65d73d49dff429141262227d499413e2eabd185b</code></p></details><details id="A39" class="source"><summary><b>A39</b> 백엔드 의존성 <code>hmg-geo-hub-share/back/pyproject.toml</code></summary><p><a href="../../back/pyproject.toml">원본 파일 열기</a> · 33행 · SHA-256 <code>ac849012c0d36fd0eef71be70538623ecd3c6081fdedf174ee6f5674928e0edd</code></p><p class="caption">L1–33</p><pre>    1 | [build-system]
+    2 | requires = [&quot;setuptools&gt;=68&quot;]
+    3 | build-backend = &quot;setuptools.build_meta&quot;
+    4 | 
+    5 | [tool.setuptools]
+    6 | packages = []          # 의존성 선언 전용. 설치는 잠금 파일(pip install --require-hashes -r requirements.lock | requirements-dev.lock, D-4). 코드는 pythonpath = [&quot;.&quot;] 로 import 한다
+    7 | 
+    8 | [project]
+    9 | name = &quot;hmg-geo-hub-back&quot;
+   10 | version = &quot;0.1.0&quot;
+   11 | requires-python = &quot;&gt;=3.12&quot;
+   12 | dependencies = [&quot;fastapi&gt;=0.115&quot;, &quot;uvicorn[standard]&gt;=0.30&quot;, &quot;pydantic&gt;=2.8&quot;, &quot;sqlalchemy[asyncio]&gt;=2.0&quot;, &quot;asyncpg&gt;=0.29&quot;, &quot;pyjwt[crypto]&gt;=2.9&quot;, &quot;httpx&gt;=0.27&quot;, &quot;boto3&gt;=1.35&quot;, &quot;python-multipart&gt;=0.0.9&quot;]
+   13 | 
+   14 | [project.optional-dependencies]
+   15 | dev = [&quot;pytest&gt;=8&quot;, &quot;pytest-asyncio&gt;=0.24&quot;, &quot;ruff&gt;=0.6&quot;, &quot;pglast&gt;=7,&lt;8&quot;, &quot;psycopg2-binary&gt;=2.9&quot;]   # pglast 7 = PostgreSQL 17 파서(SQL 경계 가드)
+   16 | 
+   17 | [tool.pytest.ini_options]
+   18 | pythonpath = [&quot;.&quot;]
+   19 | testpaths = [&quot;tests/core&quot;, &quot;app&quot;, &quot;ingest&quot;]
+   20 | asyncio_mode = &quot;auto&quot;
+   21 | asyncio_default_fixture_loop_scope = &quot;session&quot;
+   22 | asyncio_default_test_loop_scope = &quot;session&quot;
+   23 | filterwarnings = [&quot;ignore::DeprecationWarning:jwt.*&quot;]
+   24 | markers = [&quot;legacy_profile(spec): 그 시험 동안만 현행 프로필 교체(conftest._legacy_profile_marker, spec = off | implemented | 스위치 쉼표 목록)&quot;]
+   25 | 
+   26 | [tool.ruff]
+   27 | line-length = 140
+   28 | target-version = &quot;py312&quot;
+   29 | exclude = [&quot;tests/parity&quot;, &quot;migration&quot;, &quot;db&quot;]
+   30 | 
+   31 | [tool.ruff.lint]
+   32 | select = [&quot;E&quot;, &quot;F&quot;, &quot;W&quot;, &quot;UP&quot;, &quot;SIM&quot;, &quot;B&quot;, &quot;I&quot;]
+   33 | ignore = [&quot;B008&quot;, &quot;E501&quot;]   # B008: FastAPI Depends()·Query() 기본값 관례, E501: 기능 스텁 요약 문자열</pre></details><details id="A40" class="source"><summary><b>A40</b> 10/7 인수 결정 기록 <code>reports/HMG GEO 인수 올인원.md</code></summary><p><a href="01%20%EC%9D%B8%EC%88%98%20%EB%B2%94%EC%9C%84%EC%99%80%20%EA%B2%B0%EC%A0%95.md">원본 파일 열기</a> · 237행 · SHA-256 <code>e9dd3a1b83090ff12cc486a0e55a85015c82f51c9b4fd273e3460ede3452acbc</code></p><p class="caption">L11–19</p><pre>   11 | | 항목 | 상태 |
+   12 | |---|---|
+   13 | | 인수물 | hub-share 하나(협의 완료). front(현행 대시보드) + back(FastAPI, 운영 전) + DB(PG17 DDL) + 설계 문서. 9/22 zip은 참고본 |
+   14 | | 역할 | 측정(AI 질문·답변 수집) = 앤서 Scope / 분석·지표·화면·운영 = S2W |
+   15 | | **확정(10/7)** | **답변 원문 공급 = 앤서 HUB RDS `ing` 스키마를 S2W가 DB로 직접 읽기, 영구.** Scope 원문 API는 공급 경로 아님 |
+   16 | | 가장 큰 공백 | S2W 분석 엔진 없음(설계 초안만). 현재 분석값은 전부 앤서 Scope 계산분(v0) |
+   17 | | 최우선 블로커 | H2: `ing.answer`에 턴 단위 원문 없음 → 턴 기반 엔진 설계 불가. 앤서가 `ing.turn` 추가해야 함 |
+   18 | | 배포 전 막을 것 | 보안 수정 4건(front 미반영), 운영 배포 워크플로 없음, 테스트 실행 기록 0, 환경변수 약 110개 미정리 |
+   19 | | 남의 손 | 측정·엔진 추가·ingest·RDS 운영(앤서) / H-Cloud 런타임·SSO·외부 통신 허용(HMG·이노션) / AWS·Supabase·Vercel 계정 소유(확인 필요) |</pre></details></section><footer>이 문서는 개발·인수 검토를 위한 소스 기반 분석이다. 출처 지문과 집계는 부록에서 재확인할 수 있다.</footer></main></div><script>
+document.documentElement.classList.add('js');
+const tabs = [...document.querySelectorAll('[role="tab"]')];
+function activate(tab) {
+  tabs.forEach(t => { const on = t === tab; t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1; document.getElementById(t.dataset.panel).hidden = !on; });
+}
+tabs.forEach((tab, i) => {
+ tab.addEventListener('click', () => activate(tab));
+ tab.addEventListener('keydown', ev => { let n; if (ev.key === 'ArrowRight') n=(i+1)%tabs.length; if(ev.key === 'ArrowLeft') n=(i+tabs.length-1)%tabs.length; if(ev.key === 'Home') n=0; if(ev.key === 'End') n=tabs.length-1; if(n!==undefined){ev.preventDefault();activate(tabs[n]);tabs[n].focus();} });
+});
+activate(tabs[0]);
+function revealSource(){const id=decodeURIComponent(location.hash.slice(1));const el=document.getElementById(id);if(el?.matches('details')){el.open=true;requestAnimationFrame(()=>el.scrollIntoView({block:'start'}));}}
+window.addEventListener('hashchange',revealSource);revealSource();
+document.getElementById('toggle-evidence').addEventListener('click', ev => {const list=[...document.querySelectorAll('details.source')];const open=list.some(x=>!x.open);list.forEach(x=>x.open=open);ev.currentTarget.textContent=open?'모든 근거 접기':'모든 근거 펼치기';});
+</script></body></html>

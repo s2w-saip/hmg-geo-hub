@@ -1,0 +1,905 @@
+{
+  "analysis_date": "2026-10-08",
+  "scope": "local source snapshot; no production DB or live application verification",
+  "git_head": "392ca454a098365d772556cd980db3c870cf5592",
+  "upstream_snapshot_label": "72c260a3 (2026-10-02; README attribution)",
+  "original_sha256": "1520ef2f9783a96f243c1e10d60b83ff4cc8f70b1daf5b5d9aaf6f87dde268d1",
+  "counted_features": 72,
+  "scored_features": 62,
+  "score_sum": 168,
+  "average": 2.7096774193548385,
+  "scores": {
+    "3": 32,
+    "4": 7,
+    "2": 21,
+    "None": 10,
+    "1": 2
+  },
+  "structural_inventory": [
+    {
+      "id": "analytics.filters.options",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/analytics/filters/options",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 2
+    },
+    {
+      "id": "analytics.filters.dates",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/analytics/filters/dates",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "analytics.kpi.summary",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/analytics/kpi/summary",
+      "readme": true,
+      "python_files": 6,
+      "test_files": 6
+    },
+    {
+      "id": "analytics.kpi.compare",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/analytics/kpi/compare",
+      "readme": true,
+      "python_files": 6,
+      "test_files": 6
+    },
+    {
+      "id": "analytics.kpi.engines",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/analytics/kpi/engines",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "analytics.trend.series",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/analytics/trend/series",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 7
+    },
+    {
+      "id": "analytics.mentions.brands",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/analytics/mentions/brands",
+      "readme": true,
+      "python_files": 6,
+      "test_files": 6
+    },
+    {
+      "id": "analytics.mentions.types",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/analytics/mentions/types",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 2
+    },
+    {
+      "id": "analytics.mentions.prompts",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/analytics/mentions/prompts",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 3
+    },
+    {
+      "id": "analytics.citations.domains",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/analytics/citations/domains",
+      "readme": true,
+      "python_files": 6,
+      "test_files": 5
+    },
+    {
+      "id": "analytics.citations.domain_detail",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/analytics/citations/domain_detail",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 2
+    },
+    {
+      "id": "analytics.citations.sources",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/analytics/citations/sources",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 4
+    },
+    {
+      "id": "analytics.citations.tone",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/analytics/citations/tone",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 2
+    },
+    {
+      "id": "analytics.citations.prompts",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/analytics/citations/prompts",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 3
+    },
+    {
+      "id": "analytics.citations.targets",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/analytics/citations/targets",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 3
+    },
+    {
+      "id": "analytics.geo.markets",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/analytics/geo/markets",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 3
+    },
+    {
+      "id": "analytics.answers.list",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/analytics/answers/list",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "analytics.answers.detail",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/analytics/answers/detail",
+      "readme": true,
+      "python_files": 6,
+      "test_files": 1
+    },
+    {
+      "id": "analytics.funnel.acr",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/analytics/funnel/acr",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 6
+    },
+    {
+      "id": "analytics.funnel.conversion",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/analytics/funnel/conversion",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 5
+    },
+    {
+      "id": "catalog.prompts.catalog",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/catalog/prompts/catalog",
+      "readme": true,
+      "python_files": 7,
+      "test_files": 2
+    },
+    {
+      "id": "catalog.prompts.history",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/catalog/prompts/history",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 2
+    },
+    {
+      "id": "projects.project.core",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/projects/project/core",
+      "readme": true,
+      "python_files": 6,
+      "test_files": 4
+    },
+    {
+      "id": "projects.members.roster",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/projects/members/roster",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "projects.members.invites",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/projects/members/invites",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "projects.members.audit",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/projects/members/audit",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "projects.prompts.candidates",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/projects/prompts/candidates",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "projects.prompts.crud",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/projects/prompts/crud",
+      "readme": true,
+      "python_files": 6,
+      "test_files": 1
+    },
+    {
+      "id": "projects.prompts.lifecycle",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/projects/prompts/lifecycle",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "projects.prompts.execute",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/projects/prompts/execute",
+      "readme": true,
+      "python_files": 6,
+      "test_files": 1
+    },
+    {
+      "id": "projects.prompts.io",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/projects/prompts/io",
+      "readme": true,
+      "python_files": 6,
+      "test_files": 1
+    },
+    {
+      "id": "projects.prompts.fields",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/projects/prompts/fields",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "projects.settings.overview",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/projects/settings/overview",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "projects.settings.engines",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/projects/settings/engines",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "projects.settings.owned_bases",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/projects/settings/owned_bases",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "projects.settings.tracked_urls",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/projects/settings/tracked_urls",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "projects.settings.tracked_targets",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/projects/settings/tracked_targets",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "projects.settings.scope_link",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/projects/settings/scope_link",
+      "readme": true,
+      "python_files": 6,
+      "test_files": 1
+    },
+    {
+      "id": "intent.keywords.tracked",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/intent/keywords/tracked",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "intent.keywords.research",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/intent/keywords/research",
+      "readme": true,
+      "python_files": 6,
+      "test_files": 2
+    },
+    {
+      "id": "intent.keywords.fetches",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/intent/keywords/fetches",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "intent.keywords.serp_drafts",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/intent/keywords/serp_drafts",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "intent.candidates.submit",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/intent/candidates/submit",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "intent.social.context_map",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/intent/social/context_map",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "intent.social.prompts",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/intent/social/prompts",
+      "readme": true,
+      "python_files": 6,
+      "test_files": 1
+    },
+    {
+      "id": "admin.catalog.prompts",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/admin/catalog/prompts",
+      "readme": true,
+      "python_files": 6,
+      "test_files": 3
+    },
+    {
+      "id": "admin.catalog.bulk",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/admin/catalog/bulk",
+      "readme": true,
+      "python_files": 6,
+      "test_files": 1
+    },
+    {
+      "id": "admin.catalog.reference",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/admin/catalog/reference",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "admin.interest.keywords",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/admin/interest/keywords",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "admin.interest.sources",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/admin/interest/sources",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "admin.entities.registry",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/admin/entities/registry",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "admin.entities.versions",
+      "extra": true,
+      "module": "hmg-geo-hub-share/back/app/features/admin/entities/versions",
+      "readme": true,
+      "python_files": 6,
+      "test_files": 7
+    },
+    {
+      "id": "admin.citation_sources.overrides",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/admin/citation_sources/overrides",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 3
+    },
+    {
+      "id": "admin.cycles.cycles",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/admin/cycles/cycles",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "admin.cycles.jobs",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/admin/cycles/jobs",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "admin.accounts.users",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/admin/accounts/users",
+      "readme": true,
+      "python_files": 6,
+      "test_files": 1
+    },
+    {
+      "id": "admin.integrations.ga4",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/admin/integrations/ga4",
+      "readme": true,
+      "python_files": 6,
+      "test_files": 4
+    },
+    {
+      "id": "admin.integrations.keyword_tools",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/admin/integrations/keyword_tools",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "admin.changes.queue",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/admin/changes/queue",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "qa.answers.list",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/qa/answers/list",
+      "readme": true,
+      "python_files": 6,
+      "test_files": 1
+    },
+    {
+      "id": "qa.answers.detail",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/qa/answers/detail",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 2
+    },
+    {
+      "id": "qa.review.verdict",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/qa/review/verdict",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "qa.review.lock",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/qa/review/lock",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "qa.review.sessions",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/qa/review/sessions",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 2
+    },
+    {
+      "id": "qa.review.deltas",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/qa/review/deltas",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "qa.notes.notes",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/qa/notes/notes",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "platform.auth.session",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/app/features/platform/auth/session",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "ingest.pull.sync",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/ingest/pull/sync",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 5
+    },
+    {
+      "id": "ingest.pull.ops",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/ingest/pull/ops",
+      "readme": true,
+      "python_files": 5,
+      "test_files": 1
+    },
+    {
+      "id": "ingest.project.apply",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/ingest/project/apply",
+      "readme": true,
+      "python_files": 7,
+      "test_files": 21
+    },
+    {
+      "id": "ingest.cycles.ledger",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/ingest/cycles/ledger",
+      "readme": true,
+      "python_files": 3,
+      "test_files": 2
+    },
+    {
+      "id": "ingest.cycles.workers",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/ingest/cycles/workers",
+      "readme": true,
+      "python_files": 4,
+      "test_files": 2
+    },
+    {
+      "id": "ingest.cycles.watch",
+      "extra": false,
+      "module": "hmg-geo-hub-share/back/ingest/cycles/watch",
+      "readme": true,
+      "python_files": 2,
+      "test_files": 7
+    }
+  ],
+  "checks": [
+    {
+      "name": "actual_ratios_function",
+      "result": "pass",
+      "synthetic_input": true,
+      "output": {
+        "visibility": [
+          10,
+          100
+        ],
+        "share_of_voice": [
+          12,
+          40
+        ],
+        "sentiment": [
+          8,
+          12
+        ],
+        "position": [
+          10,
+          10
+        ],
+        "citation_share": [
+          8,
+          30
+        ],
+        "target_url_rate": [
+          5,
+          30
+        ],
+        "owned_url_rate": [
+          10,
+          30
+        ],
+        "citation_accuracy": [
+          5,
+          10
+        ],
+        "analysis_gap": [
+          10,
+          100
+        ]
+      }
+    },
+    {
+      "name": "actual_profile_module",
+      "result": "pass",
+      "default": "off",
+      "cell_rep_off_current": [
+        false,
+        true
+      ],
+      "alias_count_off_current": [
+        false,
+        true
+      ]
+    },
+    {
+      "name": "GA4_denominator_example",
+      "result": "pass",
+      "synthetic_input": true,
+      "events": 24,
+      "active_users": 20,
+      "sessions": 24,
+      "legacy_percent": 120.0,
+      "api_percent": 100.0
+    },
+    {
+      "name": "qa_review_direct_consumers",
+      "search_term": "qa_answer_review",
+      "roots": [
+        "back/app/features/analytics",
+        "back/ingest",
+        "back/app/core"
+      ],
+      "files": [],
+      "interpretation": "No direct table consumers found; static search is not proof about external systems."
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E01",
+      "title": "공유본 범위와 배포 검증의 한계",
+      "path": "hmg-geo-hub-share/README.md",
+      "start": 1,
+      "end": 30,
+      "sha256": "1b7dc6079fffa93421eb1253204f794bcf14a3e665c82fdeb2c4bd31c6b8555b"
+    },
+    {
+      "id": "E02",
+      "title": "화면 데이터 원천 스위치: 기본 legacy",
+      "path": "hmg-geo-hub-share/front/lib/hgh/client.ts",
+      "start": 242,
+      "end": 248,
+      "sha256": "8ff8b8cb683428d87c31d330f427a1b2b626f3ab65d70f4be4e51925722e5769"
+    },
+    {
+      "id": "E03",
+      "title": "백엔드 프로필 기본값: off",
+      "path": "hmg-geo-hub-share/back/app/core/profile.py",
+      "start": 264,
+      "end": 265,
+      "sha256": "836d1cee5d23fee4c259d0c252ef1e6343636b7efbf3f957d0bb7a0a120af27c"
+    },
+    {
+      "id": "E04",
+      "title": "대표 셀·분석 결손을 제어하는 실제 분기",
+      "path": "hmg-geo-hub-share/back/app/core/measure.py",
+      "start": 324,
+      "end": 357,
+      "sha256": "60202f00049a1b9296357991b8bcfb3a95323a99de015dd2c11be9b999726cfa"
+    },
+    {
+      "id": "E05",
+      "title": "KPI 분자·분모 정본",
+      "path": "hmg-geo-hub-share/back/app/core/measure.py",
+      "start": 812,
+      "end": 830,
+      "sha256": "60202f00049a1b9296357991b8bcfb3a95323a99de015dd2c11be9b999726cfa"
+    },
+    {
+      "id": "E06",
+      "title": "글로벌 인용 점유율과 표면별 소유 판정",
+      "path": "hmg-geo-hub-share/back/app/core/measure.py",
+      "start": 3,
+      "end": 26,
+      "sha256": "60202f00049a1b9296357991b8bcfb3a95323a99de015dd2c11be9b999726cfa"
+    },
+    {
+      "id": "E07",
+      "title": "별칭 중복 집계의 조건부 분기",
+      "path": "hmg-geo-hub-share/back/app/core/measure.py",
+      "start": 1413,
+      "end": 1427,
+      "sha256": "60202f00049a1b9296357991b8bcfb3a95323a99de015dd2c11be9b999726cfa"
+    },
+    {
+      "id": "E08",
+      "title": "웹 수집 모델 미고정 및 엔진 목록",
+      "path": "hmg-geo-hub-share/front/lib/scope/engines.ts",
+      "start": 1,
+      "end": 36,
+      "sha256": "d7c0bf32aaa151f9097c91eda3402dc38916a73cea96af235eadc2979b7f32c1"
+    },
+    {
+      "id": "E09",
+      "title": "GA4 레거시 분모와 이벤트 반복",
+      "path": "hmg-geo-hub-share/front/lib/ga4/conversion.ts",
+      "start": 235,
+      "end": 243,
+      "sha256": "1491689f74a23d0be1e6fe171838aeaccfb51af336d80ee7313918bc82966ad3"
+    },
+    {
+      "id": "E10",
+      "title": "GA4 새 백엔드 분모는 세션",
+      "path": "hmg-geo-hub-share/back/app/features/analytics/funnel/conversion/service.py",
+      "start": 3,
+      "end": 36,
+      "sha256": "05c959a7fdf86010ff19a1e78a26c787e429fd6ceb21f6f9ae03b5bd0473612f"
+    },
+    {
+      "id": "E11",
+      "title": "화면 어댑터가 인정하는 라벨 불일치",
+      "path": "hmg-geo-hub-share/front/lib/hgh/adapters/funnel.ts",
+      "start": 21,
+      "end": 36,
+      "sha256": "4469912eaa24a16ae0ac9c75f9a8619eafd186fd3d27575133d517d04a6ddbfa"
+    },
+    {
+      "id": "E12",
+      "title": "세션 수를 users 필드로 전달하는 코드",
+      "path": "hmg-geo-hub-share/front/lib/hgh/adapters/funnel.ts",
+      "start": 275,
+      "end": 310,
+      "sha256": "4469912eaa24a16ae0ac9c75f9a8619eafd186fd3d27575133d517d04a6ddbfa"
+    },
+    {
+      "id": "E13",
+      "title": "화면에 남은 활성사용자 문구",
+      "path": "hmg-geo-hub-share/front/messages/ko.json",
+      "start": 1316,
+      "end": 1322,
+      "sha256": "e2769d8fcf66afb40db57caf526fe25af3a624f78e0d23629eaa1b6a30eb16cf"
+    },
+    {
+      "id": "E14",
+      "title": "웹사이트 ACR의 정적 표본",
+      "path": "hmg-geo-hub-share/front/app/[locale]/(dash)/website/ai-funnel/acr/page.tsx",
+      "start": 10,
+      "end": 16,
+      "sha256": "10ddcc9421f97d2bd38ef7189bfc866f9ff5a3683d8ddb48300107d779de034e"
+    },
+    {
+      "id": "E15",
+      "title": "QA 판정 저장은 별도 검수 테이블",
+      "path": "hmg-geo-hub-share/back/app/features/qa/review/verdict/queries.py",
+      "start": 1,
+      "end": 18,
+      "sha256": "356222571e11196b9948193b1538cea70ca80edc680c1a1df0714848d7b66497"
+    },
+    {
+      "id": "E16",
+      "title": "분석 엔진은 설계 초안",
+      "path": "hmg-geo-hub-share/ANALYSIS-ENGINE-DESIGN.md",
+      "start": 13,
+      "end": 23,
+      "sha256": "fa96416cfe1133865fd1d552e81c980e3bce970d784587a10541bdaf9c8ef37c"
+    },
+    {
+      "id": "E17",
+      "title": "설계의 검증 대상은 원본 엔진과의 일치",
+      "path": "hmg-geo-hub-share/ANALYSIS-ENGINE-DESIGN.md",
+      "start": 452,
+      "end": 480,
+      "sha256": "fa96416cfe1133865fd1d552e81c980e3bce970d784587a10541bdaf9c8ef37c"
+    },
+    {
+      "id": "E18",
+      "title": "현재 ing 스키마의 답변·턴 관련 필드",
+      "path": "hmg-geo-hub-share/back/db/DB-v2.32.sql",
+      "start": 281,
+      "end": 305,
+      "sha256": "028e7607ea21e7b4e742e5626d676e9f23623e3ee9d49e56b14f988b5f79f5c2"
+    },
+    {
+      "id": "E19",
+      "title": "10월 7일 데이터 공급 결정",
+      "path": "reports/HMG GEO 인수 올인원.md",
+      "start": 207,
+      "end": 215,
+      "sha256": "e9dd3a1b83090ff12cc486a0e55a85015c82f51c9b4fd273e3460ede3452acbc"
+    },
+    {
+      "id": "E20",
+      "title": "URL 발행값·라이브 값과 프롬프트 보조 집계",
+      "path": "hmg-geo-hub-share/back/app/core/measure.py",
+      "start": 1137,
+      "end": 1177,
+      "sha256": "60202f00049a1b9296357991b8bcfb3a95323a99de015dd2c11be9b999726cfa"
+    },
+    {
+      "id": "E21",
+      "title": "언급 유형별 감성 매트릭스는 근사",
+      "path": "hmg-geo-hub-share/back/app/features/analytics/mentions/types/README.md",
+      "start": 19,
+      "end": 25,
+      "sha256": "9f083e4ade0ca061307a6e172d2335e1925496caf1a1575dca13db61ecfe38e1"
+    },
+    {
+      "id": "E22",
+      "title": "투영 동치·멱등과 버전 오버레이",
+      "path": "hmg-geo-hub-share/back/ingest/project/apply/README.md",
+      "start": 17,
+      "end": 41,
+      "sha256": "3d1f210185ed09d9f6da7bfa99399322b4cccaac20470e0bb2e151a8604da80e"
+    },
+    {
+      "id": "E23",
+      "title": "회차 발행 게이트의 범위와 예외",
+      "path": "hmg-geo-hub-share/back/ingest/cycles/ledger/README.md",
+      "start": 18,
+      "end": 32,
+      "sha256": "7e12849eebca580af79eefadad256e66a87ec2c348fbc706b7b0d2620b4611f0"
+    },
+    {
+      "id": "E24",
+      "title": "ACR 유효 반복 수를 집계하는 SQL",
+      "path": "hmg-geo-hub-share/back/app/features/analytics/funnel/acr/queries.py",
+      "start": 37,
+      "end": 57,
+      "sha256": "395acb4d53552bd8ce2572dd3fab8fd25382ef8d8676b8e8ca4e232f9fe3797a"
+    },
+    {
+      "id": "E25",
+      "title": "엔티티 버전은 API 모드에서만 활성",
+      "path": "hmg-geo-hub-share/front/lib/hgh/adapters/admin-entities.ts",
+      "start": 1,
+      "end": 20,
+      "sha256": "a9436318906a4361bb863f8acf21e4417dadafe22bea3f4ac30ac1297b721578"
+    },
+    {
+      "id": "E26",
+      "title": "분석은 규칙과 LLM의 혼합 파이프라인",
+      "path": "hmg-geo-hub-share/ANALYSIS-ENGINE-DESIGN.md",
+      "start": 118,
+      "end": 136,
+      "sha256": "fa96416cfe1133865fd1d552e81c980e3bce970d784587a10541bdaf9c8ef37c"
+    }
+  ],
+  "report_sha256": "aa48239b5a68118320619fad8efffb00f183544fa324db72da221e49add2e8e1",
+  "delivery_validation": {
+    "feature_rows": 73,
+    "ids_unique": true,
+    "links_checked": 180,
+    "relative_links_exist": true,
+    "script_syntax": "pass",
+    "isolated_filter_cases_passed": 5,
+    "browser_rendering": "not performed",
+    "production_db": "not accessed",
+    "application_test_suite": "not run"
+  }
+}

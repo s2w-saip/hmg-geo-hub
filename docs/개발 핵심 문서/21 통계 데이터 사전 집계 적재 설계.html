@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GEO HUB · 통계 데이터 사전 집계 적재 설계</title>
+<style>
+:root{--ink:#19353c;--muted:#536a72;--line:#d4e1e4;--accent:#087780;--bg:#edf3f4;--soft:#eaf5f3;--warn:#fff5de}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.8 "Malgun Gothic",system-ui,sans-serif;word-break:keep-all}main{max-width:1400px;margin:auto;padding:30px 24px 70px}header{padding:32px;background:#153d46;border-radius:14px;color:white}header a{color:#b2efeb}h1{font-size:32px;line-height:1.4;margin:8px 0 18px;letter-spacing:-.04em}h2{font-size:23px;margin:0 0 14px;letter-spacing:-.03em}h3{font-size:18px;margin:24px 0 10px}p{margin:10px 0}a{color:var(--accent);text-underline-offset:3px}section{background:white;border:1px solid var(--line);border-radius:10px;margin-top:20px;padding:26px;scroll-margin-top:18px}.eyebrow{font-size:12px;letter-spacing:.08em;color:#b5dfdf}.lead{font-size:20px;max-width:1060px}.meta,small{font-size:12px;color:var(--muted)}header .meta{color:#c9e3e5}nav{display:flex;flex-wrap:wrap;gap:7px 18px;margin-top:18px;font-size:13px}.note{background:var(--soft);border-left:4px solid var(--accent);padding:14px 18px;margin:16px 0}.warn{background:var(--warn);border-left-color:#b57d15}.table{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13px;min-width:820px}th,td{padding:13px 12px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}th{background:#eff5f6;font-weight:700}tbody tr:last-child td{border-bottom:0}td p{margin:0 0 7px}.inventory{min-width:1150px}.inventory td:first-child{width:15%}.inventory td:nth-child(2){width:21%}.inventory td:nth-child(3){width:30%}.inventory td:nth-child(4){width:22%}code{font:12px/1.8 Consolas,"Malgun Gothic",monospace;overflow-wrap:anywhere;white-space:normal;background:#f1f5f6;border-radius:3px;padding:1px 4px}pre{white-space:pre-wrap;word-break:break-word;background:#18343b;color:#e6f5f5;padding:20px;border-radius:7px;font:13px/1.8 Consolas,"Malgun Gothic",monospace}pre code{background:none;color:inherit;padding:0}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.card{border:1px solid var(--line);padding:17px;border-radius:8px;background:#f8fbfb}.card strong{display:block;margin-bottom:8px}.badge{display:inline-block;padding:2px 8px;border-radius:4px;background:#d8eeeb;color:#105a5b;font-size:11px;margin:3px 0}.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:18px 0}.flow div{padding:16px;border:1px solid var(--line);border-top:4px solid var(--accent);border-radius:6px;background:#f5fafa}.flow strong{display:block;font-size:14px}.flow span{display:block;font-size:12px;color:var(--muted);margin-top:7px}li{margin:7px 0}.sub{display:block;font-size:12px;color:var(--muted);margin-top:7px}footer{font-size:12px;color:var(--muted);margin-top:24px}.compact td,.compact th{padding:10px}details{border:1px solid var(--line);border-radius:6px;padding:12px 16px;margin-top:14px}summary{cursor:pointer;font-weight:700}@media(max-width:800px){main{padding:12px 10px 40px}header,section{padding:20px}h1{font-size:27px}.cards,.flow{grid-template-columns:1fr}.flow div{padding:12px}}@page{size:A4 landscape;margin:12mm}@media print{body{background:white;font-size:10px}main{padding:0;max-width:none}header{background:white;color:var(--ink);padding:0}header .meta,.eyebrow{color:var(--muted)}header a{color:var(--accent)}section{padding:12px 0;border:0;border-top:1px solid var(--line);border-radius:0}h1{font-size:24px}h2{font-size:18px}h3{font-size:14px}table,.inventory{min-width:0;font-size:9px}th,td{padding:7px 5px}tr{break-inside:avoid}thead{display:table-header-group}.table{overflow:visible}.note,.flow,.cards,pre{break-inside:avoid}nav,.print-hide{display:none}a{color:inherit}code{font-size:9px}}
+</style>
+</head>
+<body><main>
+<header>
+<div class="eyebrow">GEO HUB · DATABASE READ DESIGN · 2026-10-13</div>
+<h1>통계 데이터별 사전 집계·적재 설계</h1>
+<p class="lead">수집·재판정이 끝날 때 통계를 계산하고, 화면에서는 준비된 집계값과 필요한 식별자 집합을 읽습니다.</p>
+<p>기존 14개 지표 묶음과 키워드·상세 통계·측정 모수 보완 항목을 대상으로 저장 단위, 컬럼, 갱신 조건, 읽기 경로를 정리했습니다. 화면·산식·필터·권한·API 응답은 유지합니다.</p>
+<p class="meta">상태: 구현 전 설계 제안 · 기준 코드: 복사본 refactor/preserve-service / 15e0b1c · 운영 요청·DB 접속·DDL 적용 없음<br>새로 제시하는 <code>stat.*</code> 이름은 논리 설계용입니다. 기존 rd·frz·summary와 중복되는 저장소는 구현 시 재사용합니다.</p>
+<nav aria-label="문서 목차"><a href="#decision">설계 원칙</a><a href="#inventory">지표별 적재표</a><a href="#formulas">산식 보존</a><a href="#tables">테이블·키</a><a href="#filters">필터·권한</a><a href="#refresh">갱신·발행</a><a href="#read">조회 경로</a><a href="#rollout">구현·검증</a><a href="#evidence">코드 근거</a></nav>
+</header>
+
+<section id="decision"><h2>1. 권장 구조와 적용 범위</h2>
+<div class="cards"><div class="card"><strong>① 수집 결과와 통계를 분리</strong>기존 <code>ing → rd</code> 투영 뒤에 통계 빌드를 둡니다. API 요청 중 원문 언급·인용을 다시 결합해 통계를 만드는 작업을 워커로 옮깁니다.</div><div class="card"><strong>② 합계와 중복 제거를 구분</strong>횟수·분자·분모는 집계 테이블에 저장합니다. 프롬프트·답변·URL 고유 수는 식별자를 남겨 필터 적용 후 정확히 셉니다.</div><div class="card"><strong>③ 완성된 버전만 공개</strong>새 통계를 별도 세대에 적재하고 검증한 뒤 읽기 포인터를 전환합니다. 실패·늦은 데이터·재발행은 상태와 버전으로 관리합니다.</div></div>
+<div class="flow" aria-label="데이터 처리 순서"><div><strong>1 · 기존 수집·판정</strong><span>ing / rd / 판정 변경 큐</span></div><div><strong>2 · 입력 스냅샷 확보</strong><span>모수·회차·규칙 버전 고정</span></div><div><strong>3 · 통계 적재</strong><span>필터용 최소 행 + 합산용 집계</span></div><div><strong>4 · 검증·활성화</strong><span>동등성·누락·중복 검사</span></div><div><strong>5 · 기존 API 조회</strong><span>집계 합산·집합 병합·표시 정렬</span></div></div>
+<p><strong>처음부터 모든 필터 조합별 완성 응답을 저장하지 않습니다.</strong> 프롬프트×엔진×국가 등의 기본 셀과 자주 사용하는 상위 합계를 저장합니다. 여러 국가·엔진·기간을 합치는 요청은 작은 집계를 합산하고, 고유 수·순위처럼 필터에 따라 달라지는 결과만 조회 시 마무리합니다.</p>
+<p>따라서 목표는 <strong>반복되는 대형 사실 테이블 JOIN과 판정 계산을 조회 경로에서 제거</strong>하는 것입니다. 모든 요청을 단일 행 SELECT로 바꾸거나, 모든 JOIN·COUNT DISTINCT를 없앤다는 설계는 아닙니다. 상세·복합 필터에서는 범위가 제한된 얇은 투영을 읽으며 실제 효과는 실행 계획과 응답 시간을 측정해야 합니다.</p>
+<div class="note"><strong>기존 자산을 활용합니다.</strong> rd.answer의 언급·순위·인용 판정 열, rd.acr_cell/choice, rd.report_unit_value, frz와 기존 summary는 이미 계산 결과를 일부 보관합니다. 이 정의를 빌더에서 재사용하며 새로운 산식으로 다시 해석하지 않습니다. 특히 기본 프로필 off를 current로 바꾸거나, live 읽기를 임의로 동결 읽기로 전환하지 않습니다.</div>
+</section>
+
+<section id="inventory"><h2>2. 현재 화면에서 제공하는 통계별 적재표</h2>
+<p><code>C</code>는 공통 셀 키, <code>D</code>는 프롬프트를 제외한 상위 합계 키입니다. 정확한 구성은 <a href="#keys">3절 키 정의</a>에 있습니다. S01~S14는 <a href="20%20화면%20지표별%20JOIN과%20재집계%20분석.html">20번 분석 문서</a>의 J01~J14에 대응합니다. S15~S17은 저장된 수치와 상세·모수 계약을 빠뜨리지 않기 위한 보완입니다.</p>
+<div class="table"><table class="inventory"><thead><tr><th>화면·통계</th><th>저장 단위 / 제안 저장소</th><th>미리 적재할 값</th><th>조회 시 남는 작업·보존 규칙</th><th>갱신 시점</th></tr></thead><tbody>
+<tr id="s01"><td><strong>S01 · 요약 KPI / 엔진별 KPI</strong><span class="sub">노출률·점유율·우호도·우선 노출도·인용 점유율</span></td><td>C×관점 → <code>kpi_cell</code><br>D×관점 → <code>kpi_rollup</code></td><td><code>answers, tracked, own_mentions, total_mentions, sent_pos, sent_neg, sent_all, rank_sum, ranked</code>. 인용은 <code>cit_total, cit_m05, cit_owned</code>를 분리. 누락 분석용 <code>gap_answers, gap_base</code>도 보관.</td><td>같은 모수·관점 집계의 정수 합으로 기존 Ratio/RankAvg 조립. source[]·국가/언어별 자사 인용은 S03~S05의 소유자·출처 단위 값을 사용. 출처 없는 합계로 대체 금지.</td><td>수집 배치 완료, 답변 재판정, 대표 셀·게이트 변경, 해당 읽기 모드의 발행/재발행</td></tr>
+<tr id="s02"><td><strong>S02 · 언급 분석 / 경쟁 브랜드</strong><span class="sub">언급 수·노출·감성·평균 순위·복수 언급·유형</span></td><td>C×브랜드×경쟁 여부 → <code>brand_cell</code><br>당사 통합은 C×관점의 kpi_cell 별도</td><td>언급 합, 등장 답변 수, 순위 합·유효 순위 수, 감성별 합, 유형 5종 합, 복수 언급 답변·언급 합. <code>has_brand, has_multi</code>로 프롬프트 존재 보관. 표시 브랜드·별칭 규칙 버전 포함.</td><td>브랜드별 값 합산·비교·정렬. 등장 프롬프트는 기간·엔진을 넘겨 prompt_key를 중복 제거. 통합 HMG는 브랜드별 노출·순위를 합치지 않고 통합 관점 행 사용.</td><td>답변·언급 적재, 엔티티/별칭/표시명·경쟁 판정 변경</td></tr>
+<tr id="s03"><td><strong>S03 · 인용 도메인·출처 순위</strong><span class="sub">인용 수·점유율·커버리지·인용 프롬프트 수</span></td><td>C×출처×소유자×판정 구분 → <code>citation_cell</code><br>정확한 구성원 → <code>citation_member</code></td><td>인용 원소 수, <code>src_first</code> 합, 자사·타겟 수, 유효 카테고리, host 접기 키. prompt/answer/url 식별자와 loc_owned·tgt_hit을 유지.</td><td>권한·필터 후 출처 합산. 기존 src_first·host 접기 의미를 유지하고 프롬프트만 필요한 범위에서 중복 제거. 전체 순위·검색 후 match_rank·반올림 정렬 순서 보존. 전체 Top N만 저장하지 않음.</td><td>인용 적재, 도메인/출처 매핑, 카테고리 override, 소유 베이스·추적 URL 변경</td></tr>
+<tr id="s04"><td><strong>S04 · 답변 톤별 인용</strong><span class="sub">긍정·부정 인용 수 / URL 수 / 답변 수</span></td><td>인용 구성원에 관점별 톤 판정 부착<br><code>citation_cell / citation_member</code></td><td>답변의 관점 긍정·부정 합을 비교해 톤을 적재하고 인용 횟수를 합산. 양쪽 합이 같으면 어느 톤에도 포함하지 않음. URL·답변 식별자를 보존.</td><td>인용 수는 SUM, 고유 URL·답변은 선택 집합에서 DISTINCT. URL 일별 고유 수를 합산하지 않음. source[] 유무에 따른 기존 모수 차이도 빌드·조회 규칙에 반영.</td><td>감성 재판정, 관점 규칙 변경, 인용·출처 변경</td></tr>
+<tr id="s05"><td><strong>S05 · 인용 출처 카테고리·언급 유형</strong></td><td>C×출처/유효 카테고리×관점<br><code>citation_cell</code></td><td>카테고리별 인용 수와 당사 언급 유형 5종에 해당하는 인용 수. 유형은 답변 기준 플래그를 한 번 만든 뒤 인용에 부착. 여러 유형에 동시에 해당할 수 있음.</td><td>선택 카테고리·관점 합산. 카테고리 간 배타성은 정본 매핑대로, 유형은 합계가 전체와 같다고 강제하지 않음. 미계산 열을 0으로 처리하거나 요청 중 원문 JOIN으로 숨겨 보완하지 않음.</td><td>인용·언급 재판정, 카테고리 override, 유형 플래그 재생성</td></tr>
+<tr id="s06"><td><strong>S06 · 자사 인용/자사 미인용 프롬프트 분포</strong></td><td>C×출처×소유자<br><code>citation_cell</code> + 전체 모수의 <code>kpi_cell</code></td><td>프롬프트·엔진별 전체/자사 인용 수를 저장. 이 목록의 모수는 전체 인용이 1건 이상인 프롬프트. 전체 측정 모수는 kpi_cell에서 별도로 유지.</td><td>필터 후 cit_total > 0인 셀을 골라 prompt_key별 합·BOOL_OR로 버킷 구성. uncited는 인용은 있으나 자사 인용이 0인 경우이며, 인용 자체가 0인 프롬프트를 추가하지 않음. 검색·택소노미·표시 텍스트와 페이지네이션 유지.</td><td>답변·인용 적재, 카탈로그 연결·소유 판정 변경</td></tr>
+<tr id="s07"><td><strong>S07 · ACR 전체</strong><span class="sub">선택률·등장률·추이·배틀·차종 전환·국가×엔진</span></td><td>ACR 셀 → <code>acr_cell_fact</code><br>셀×수준×엔티티 → <code>acr_entity_fact</code><br>D×브랜드/차종 → 선택적 rollup</td><td>셀의 planned·valid_turn1·valid_acr 및 기존 결과 유형 수. 엔티티의 choice·appearance·조건부 선택 등, 소속 브랜드·keep·소유 판정. 브랜드 합산 시 같은 셀의 중복 엔티티를 먼저 접음.</td><td>선택률 choice/전체 valid_acr, coverage/전체 셀. 차종 분모는 기존 model 조회처럼 해당 차종 엔티티 행에 붙은 valid_acr의 합. 배틀은 국가 등 필터를 적용한 뒤 prompt×engine별 선택 합으로 승자와 기존 동률 규칙 결정.</td><td>ACR 수집 완료, 반복/셀 재판정, 엔티티·대표 셀 변경</td></tr>
+<tr id="s08"><td><strong>S08 · GA4 유입·전환</strong><span class="sub">AI/일반 요약·일별 추이·엔진·국가·페이지·이벤트 설정 수</span></td><td>속성×보고일×기기×신규/재방문×코호트×엔진 → <code>ga4_daily</code><br>위 키×페이지 → <code>ga4_page_daily</code><br>속성×일×이벤트 → <code>ga4_event_daily</code></td><td>세션·페이지뷰·전환 분자. key_events와 event_count 원합 및 적용된 conv_basis/이벤트 규칙 버전. 페이지 보고서와 전체 보고서의 측정치는 별도로 적재. 속성별 적재일·coverage 상태 메타도 보관.</td><td>정수 합산 후 전환/세션. 엔진 필터는 기존처럼 AI에만 적용; by_engine_all은 엔진 조건을 제외. 일반 세션은 report 1 비AI, AI는 report 2, 전체 전환은 report 3. 페이지는 report 4로 따로 읽음.</td><td>GA4 속성·날짜 배치 완료/재수집, 추적 이벤트·conv_basis·속성 매핑 변경</td></tr>
+<tr id="s09"><td><strong>S09 · GEO 국가별 현황</strong></td><td><code>kpi_cell/rollup</code>, <code>brand_cell</code>의 geo 축 재사용</td><td>별도 산식·중복 원천 테이블 없음. 국가별 KPI 합계와 경쟁 브랜드 비교용 원시 합계 저장.</td><td>국가별 그룹·필터 후 순위. GEO의 형제 HMG 브랜드 제외와 언급 화면의 경쟁사 규칙을 각각 유지. 전체 국가 Top N을 저장해 제한된 국가 요청에 재사용하지 않음.</td><td>S01·S02와 같은 빌드 세대</td></tr>
+<tr id="s10"><td><strong>S10 · 추이·이전 기간 비교</strong></td><td>S01~S08의 회차·날짜별 집계 + 회차 창 메타</td><td>각 날짜/회차의 원시 합계와 유효성·gap·노출 가능 상태. 별도 백분율 시계열을 정본으로 저장하지 않음.</td><td>기존 Window 해석으로 일·주·월/회차를 묶음. 이전 기간과 같은 모수·규칙으로 비교. 누락 회차를 0으로 만들거나 평균의 평균을 내지 않음. 기존 비교 억제·epoch 게이트 유지.</td><td>기반 집계 갱신, 회차 상태/노출일/대표 선택 변경</td></tr>
+<tr id="s11"><td><strong>S11 · 타겟·자사 URL 인용률 / 인용 정확도</strong></td><td>C의 <code>url_prompt_cell</code><br>필요한 answer 단위 <code>answer_fact</code><br>발행 단위 <code>report_value</code></td><td>측정 단위 url_den·tgt_hits·own_url_hits·tgt_own_hits. 프롬프트 단위 any_target·any_owned 플래그. 발행값은 rd.report_unit_value와 publication/unit/heading-pool 근거를 그대로 보관.</td><td>웹 UI의 프롬프트 단위 비율, 측정 단위 응답, 웹 특수 정확도 경로를 구분. R09 발행값 우선 조건과 live 전환 사유를 유지. 발행 유닛을 답변 수로 가중하지 않음.</td><td>인용·추적 URL·등록 상태 재판정, 발행/명시적 재발행</td></tr>
+<tr id="s12"><td><strong>S12 · 프로젝트 주제·퍼널 분포</strong></td><td><code>kpi_cell</code>의 prompt 존재 + 버전에 맞는 프롬프트 축</td><td>측정 프롬프트 식별자와 funnel 키. 미분류도 명시. 별도 비율·분포 원천을 만들지 않음.</td><td>필터 후 prompt_key를 한 번 세고 퍼널별 분배. 엔진·회차별 프롬프트 수의 합을 사용하지 않음. 기존 계약의 퍼널 합 = measured_prompts 검사.</td><td>측정 적재, 퍼널/카탈로그 연결 변경; live/frozen 정책 구분</td></tr>
+<tr id="s13"><td><strong>S13 · 검수 진행률</strong><span class="sub">전체·검수 완료·문제·노트 있는 답변</span></td><td>job 1개 → <code>app.qa_stat_job</code><br>자주 쓰는 권한·필터 축 → <code>app.qa_stat_counter</code></td><td>review 행 존재·issue 여부·note_count/has_note·원문 언급 존재, QA 필터 좌표 및 버전. 전체/완료/문제/노트 답변 카운터. 통계 세대와 별개인 현재 상태 저장.</td><td>일반 범위는 카운터; 검색·세부 축은 좁은 job 상태와 프롬프트 검색 색인으로 집계. reviewed는 리뷰 행 존재, notes는 노트 수가 아닌 노트가 있는 job 수. scoped와 전체 권한 범위를 별도로 적용.</td><td>검수 저장·삭제, 노트 생성·마지막 노트 삭제, job 상태·접근 범위 변경 시 같은 트랜잭션</td></tr>
+<tr id="s14"><td><strong>S14 · 소셜·컨텍스트 맵</strong></td><td>기존 ext.ctx_* 유지<br>스냅샷별 <code>social_snapshot_stat</code><br>필요 시 엔티티별 연결 수 부가 저장</td><td>기존 mention_count·sentiment·co_count는 재사용. contexts·conditions·drives·combinations·고유 host 수·max_co와 linked_count를 스냅샷 완료 시 계산.</td><td>산업·source에 맞는 활성 snapshot 선택 후 조회. 여러 snapshot의 고유 host 수를 더하지 않음. 새로운 NLP·AI 재분석은 이번 범위에 포함하지 않음.</td><td>스냅샷 전체 적재 성공 후 한 번, 스냅샷 정정 시 새 버전</td></tr>
+<tr id="s15"><td><strong>S15 · 키워드 검색량·경쟁도·CPC·SERP</strong><span class="badge">기존 저장값 재사용</span></td><td><code>rd.kw_volume_monthly / kw_serp / kw_suggestion</code></td><td>이미 적재된 키워드×지역×언어×월, 호출별 순위와 값 유지. 필요 시 최신 성공 call/관측 버전 포인터만 추가.</td><td>최신 성공 관측 선택·목록 검색·정렬. 경쟁도/CPC를 일괄 합산하지 않음. 임의 기간 사용자를 새로 추정하거나 외부 재요청하지 않음.</td><td>기존 키워드 수집 작업 성공 시; 신규 통계 재계산 워커 불필요</td></tr>
+<tr id="s16"><td><strong>S16 · 언급 프롬프트 / 도메인 상세 통계</strong></td><td><code>brand_cell, citation_cell, citation_member</code> 재사용</td><td>프롬프트별 언급 합, 출처별 URL/프롬프트/답변 구성원과 인용 합. 언급 브랜드 조건용 <code>answer_brand_member</code>를 좁은 세미조인에 사용.</td><td>선택 도메인·브랜드 내 집계 및 페이지네이션. 답변 본문·원문·목록 선택은 기존 상세 저장소에서 해당 페이지 키만 조회. 통계 전체를 내려받아 프런트에서 페이지를 자르지 않음.</td><td>해당 언급·인용 통계와 같은 세대</td></tr>
+<tr id="s17"><td><strong>S17 · 측정 모수·미측정·필터 옵션</strong></td><td><code>catalog_member</code> + <code>kpi_cell</code><br>회차/속성 준비 상태 메타</td><td>적용 카탈로그 행 식별자와 scope_prompt 연결, 등록/삭제 상태, 측정 존재·브랜드 언급 존재. 카탈로그 모수와 측정 모수를 별도로 유지.</td><td>applied·measured·브랜드 미언급·미측정 목록을 각 기존 단위로 산출. 1 scope_prompt에 카탈로그 여러 행이 있어도 측정 수는 중복하지 않음. 필터 옵션은 데이터 필터와 다른 축 제외 규칙을 적용.</td><td>측정·카탈로그·연결 변경, 회차 노출/숨김, GA4 속성 상태 변경</td></tr>
+</tbody></table></div>
+<p class="note"><strong>2026-10-13 후속 정정:</strong> S06의 “자사 미인용”은 인용 자체가 없는 상태와 다릅니다. 원본 SQL·응답 계약에 따라 인용이 1건 이상이면서 자사 인용은 0인 프롬프트로 명확히 했습니다. <a href="22%20원본%20통계%20SQL%20연산과%20JOIN%20복잡도.html">22 원본 SQL 복잡도 분석</a>에 근거를 남겼습니다.</p>
+<p class="meta">S15의 저장값, 원문 답변 상세, 관리 화면의 일반 목록은 대형 통계 큐브로 재작성하지 않습니다. 비활성 스탠스 카드를 새로 활성화하지 않습니다. S17은 모든 관리자 목록 COUNT를 미리 저장하겠다는 제안이 아닙니다.</p>
+</section>
+
+<section id="keys"><h2>3. 한 행의 단위와 버전</h2>
+<div class="table"><table><thead><tr><th>기호</th><th>구성</th><th>이렇게 나누는 이유</th></tr></thead><tbody>
+<tr><td><strong>G · 집계 세대</strong></td><td>source snapshot/build ID + metric_version + profile_signature + read_mode + 필요한 frz_generation/pub_id + 축·판정 버전</td><td>같은 원문이라도 off/current, card/grid/live, 대표 선택·발행 규칙이 다르면 다른 결과. 버전은 전역 latest 한 개로 뭉개지 않음.</td></tr>
+<tr><td><strong>P · 모집단 규칙</strong></td><td>mentions / citations / gap / URL / ACR 및 대표 선택 모드. 실제 물리 키는 <code>population_key</code></td><td>std_in·cit_in·web_reg·gap·대표 회차 규칙이 다르므로 공통 answer_count 하나로 모든 분모를 대신할 수 없음.</td></tr>
+<tr><td><strong>C · 필터 가능한 최소 집계 셀</strong></td><td><code>G, P, surface, project_key, cyc_key, round_date, bucket_date, prompt_key, engine_key, geo_key, lang_key, bgrp</code></td><td>표면·프로젝트·국가 권한과 프롬프트 필터를 잃지 않는 단위. bucket_date의 의미/시간대는 지표별 규칙에 고정하고 측정일·회차일·앵커일을 혼용하지 않음.</td></tr>
+<tr><td><strong>D · 상위 합계</strong></td><td>C에서 prompt_key 제외. 실제 선택 가능한 대표 집합이 확정된 경우에만 사용.</td><td>추가 프롬프트 필터가 없는 KPI·국가·엔진 조회 가속. 지원하지 않는 축을 무시하며 rollup을 읽는 것은 금지.</td></tr>
+<tr><td><strong>관점 / entity 구분</strong></td><td>당사 관점은 지원되는 브랜드 비트 집합을 <code>perspective_key</code>로 식별. 경쟁 브랜드는 brand_key 및 competitive 구분.</td><td>HMG 통합은 개별 브랜드 행의 합이 아님. 당사 3개 비트의 실제 사용 조합만 물리화(가능한 비어 있지 않은 집합은 최대 7개). 조회는 관점 1개를 명시해 중복 합산 방지.</td></tr>
+<tr><td><strong>통계 구성원 ID</strong></td><td>답변은 원천 PK <code>(surface, round_date, answer_key)</code>, 인용은 여기에 ord 추가. prompt_key/url_key/source_key는 정본 사전 키 유지.</td><td>해시만을 유일 키로 쓰지 않음. 원천의 복합 PK를 보존하여 파티션 간 충돌·중복을 막고 재적재·삭제 대상을 찾음.</td></tr>
+</tbody></table></div>
+<div class="note warn"><strong>대표 답변 선택은 먼저 확정해야 합니다.</strong> 요청 창 전체에서 최신 대표를 다시 고르는 경로는 회차별 대표 집계의 단순 합으로 만들 수 없습니다. answer_fact에 후보 식별자·시각·대표 게이트를 남기고, 기존 선택기를 적용한 후 합칩니다. 정확히 일치하는 사전 계산 창만 상위 rollup을 사용합니다.</div>
+</section>
+
+<section id="formulas"><h2>4. 반드시 그대로 유지할 산식과 비가산 값</h2>
+<div class="table"><table><thead><tr><th>항목</th><th>적재·조회 규칙</th><th>금지할 단순화</th></tr></thead><tbody>
+<tr><td>AI 노출률</td><td><code>Σ tracked / Σ answers</code>. 통합 관점은 답변 1개에서 선택 브랜드 중 하나라도 등장하면 1.</td><td>현대·기아·제네시스 노출 답변 수를 더해서 HMG 분자로 사용</td></tr>
+<tr><td>점유율 / 우호도 / 우선 노출도</td><td><code>Σ own_mentions / Σ total_mentions</code>, <code>Σ sent_pos / Σ sent_all</code>, <code>Σ rank_sum / Σ ranked</code>. 순위는 해당 답변의 선택 브랜드 중 0을 제외한 최솟값을 먼저 계산.</td><td>백분율 평균, 브랜드별 평균 순위의 평균. 순위 값은 백분율로 변환하지 않음.</td></tr>
+<tr><td>AI 인용 점유율 M05</td><td>global 분자는 Official(HMG) 카테고리 인용 수. 관점 브랜드/국가/언어로 소유자를 좁힌 cit_owned와 다름. website는 loc_owned OR tgt_hit, project는 loc_owned. 모집단 필터는 별도로 유지.</td><td>global cit_m05를 cit_owned로 대체. source[]가 있는데 출처 무관 cit_total 사용.</td></tr>
+<tr><td>글로벌 자사 인용</td><td>owner_key별 인용 합에 기존 owned_base 선택 규칙 적용. 국가·언어 선택으로 허용 소유자 집합이 비면 기존처럼 좁히지 않는 규칙도 보존.</td><td>답변 국가 = 소유 도메인 국가로 가정. 여러 국가의 국지 합만 더해 교차 인용 누락.</td></tr>
+<tr><td>웹 URL 비율·정확도</td><td>prompt 단위 BOOL_OR, 측정 단위 카운트, R09 발행 유닛 값을 구분. 라이브 정확도 기본은 target∧owned / owned, 웹 특수 경로는 기존 accuracy_counts_sql과 발행 선택기에 위임.</td><td>타겟 수 / 자사 수로 모든 live 경로 통일. 발행값을 원문 재계산값으로 자동 교체.</td></tr>
+<tr><td>고유 프롬프트·URL·답변</td><td>선택된 셀/인용 구성원의 정확한 ID 집합을 합친 후 COUNT DISTINCT. 단일 셀에서만 정확한 고유 수는 상위 합산 컬럼으로 취급하지 않음.</td><td>일별/국가별/엔진별 distinct count 합산, 정확한 수치를 근삿값으로 변경</td></tr>
+<tr><td>인용 도메인의 답변 수</td><td>현행 src_first 및 host-fold 합산 의미를 그대로 적재. 프롬프트 중복 제거와 톤별 고유 답변 수는 별개의 필드.</td><td>이름만 보고 모든 source_first_count를 전역 COUNT DISTINCT(answer)로 “교정”</td></tr>
+<tr><td>ACR</td><td>brand choice_share = choice / 전체 valid_acr; coverage = 등장 셀 / 전체 셀. 차종 전환율은 차종 엔티티 행에 붙은 valid_acr를 기존 표시명×소속 브랜드 그룹으로 합산. 같은 셀에 같은 표시명의 여러 엔티티가 있으면 현재 SQL의 기여 횟수를 보존하며, 별도 cells 값만 DISTINCT. 배틀 승자는 필터 후 계산.</td><td>차종 분모를 전체 반복 수로 통일. 국가별 승자만 저장한 뒤 다국가 승자 추정.</td></tr>
+<tr><td>GA4</td><td>각 report의 원천을 분리, property 보고 날짜 유지. users_day는 행 사이로 합산하지 않음(현재 전환 API의 반환 지표가 아님). 전환 이벤트/세션 비율이므로 원천 계약상 100% 초과 가능성도 허용.</td><td>report 1~5를 한꺼번에 SUM, 페이지 합을 전체 세션 대용으로 사용, 사용자를 일별 SUM, 전환 수≤세션 수 제약</td></tr>
+<tr><td>0·null·미측정·억제</td><td>값의 원합과 complete/empty/pending/unsupported 등 내부 준비 상태를 구분. API의 기존 null·suppressed·source·coverage 의미로 매핑.</td><td>적재 실패/대기/null을 0으로 채워 성공 응답 생성</td></tr>
+</tbody></table></div>
+<p>예를 들어 동일 프롬프트가 엔진 A와 B에서 측정되면 전체 프롬프트 수는 1입니다. 같은 답변에서 현대가 2위, 기아가 1위이면 통합 관점 순위는 1입니다. 이 두 사례가 그대로 나오는 저장 단위를 유지해야 합니다.</p>
+</section>
+
+<section id="tables"><h2>5. 서버팀이 구현할 테이블 계약</h2>
+<p>아래는 <strong>논리 테이블과 유일 키·주요 열의 설계</strong>입니다. 실행용 마이그레이션은 아닙니다. C/D의 차원은 기존 rd 사전 키 타입을 따르고, 누적 count/sum은 bigint를 기본으로 합니다. 원천에 소수가 있는 값은 원천 정밀도를 유지합니다. NULL·미상 차원과 “전체” 합계를 같은 키로 표현하지 않습니다.</p>
+<div class="table"><table><thead><tr><th>제안 저장소 / 유일 키</th><th>주요 열·역할</th><th>쓰기·조회 조건</th></tr></thead><tbody>
+<tr><td><code>stat.kpi_cell</code><br>PK: C + perspective_key</td><td>S01의 가산 열, 측정/언급/복수 언급 프롬프트 존재 플래그, 당사 관점의 multi_answers·multi_mentions 및 유형별 합. 인용과 언급 모집단을 population_key로 구분.</td><td>선택한 population·관점 1개씩 읽음. 분모 셀은 인용·언급이 0이어도 남김.</td></tr>
+<tr><td><code>stat.kpi_rollup</code><br>PK: D + perspective_key + rollup_kind</td><td>kpi_cell의 가산 열만 미리 SUM. 대표 선택 창과 지원 축을 명시한 eligibility 메타.</td><td>정확한 filter coverage를 통과한 요청만 사용. distinct 수는 셀/구성원에서 별도로 읽음.</td></tr>
+<tr><td><code>stat.answer_fact</code><br>PK: G + P + 원천 답변 PK</td><td>필터 좌표·대표 후보 시각/게이트·자사 비트·관점 계산에 필요한 좁은 숫자 열·URL 플래그. 본문 제외.</td><td>가변 대표 선택·정확한 답변 집합을 위한 보완 투영. 기존 rd/frz가 같은 불변성과 조회 비용을 충족하면 중복 저장 생략.</td></tr>
+<tr><td><code>stat.brand_cell</code><br>PK: C + brand_key + competitive</td><td>S02의 언급·감성·유형·순위 원합, 등장/복수 존재. 당사 통합 관점은 kpi_cell에 별도 적재.</td><td>프로필의 별칭/표시명 의미 반영. 여러 entity가 같은 브랜드로 접힐 때 답변·셀 등장 수 중복 방지.</td></tr>
+<tr><td><code>stat.answer_brand_member</code><br>PK: G + P + 답변 PK + brand_key + competitive</td><td>인용 도메인에서 특정 언급 브랜드 조건을 적용할 때 사용할 답변 집합.</td><td>EXISTS로 선택; 인용 행과 무제한 다대다 JOIN하지 않음. 이미 정확한 rd.answer_brand 경로면 재사용 검토.</td></tr>
+<tr><td><code>stat.citation_cell</code><br>PK: C + perspective_key + source_key + owner_key + category_key + loc_owned + tgt_hit</td><td>citations·source_first_count·유형별 인용 수·긍/부정 인용 수. category와 source_fold 매핑 버전은 G에 귀속.</td><td>source/owner 축을 지우고 합치기 전에 요청의 소유·출처 조건 적용. 같은 소유 판정 행만 합산.</td></tr>
+<tr><td><code>stat.citation_member</code><br>PK: G + P + 원천 인용 PK</td><td>C의 좌표, source/owner/url 키, source_first·소유·타겟 플래그, 관점별 톤·유형 판정. 판정 배열/비트의 물리 표현은 구현 시 고정하고 의미를 버전 관리.</td><td>URL·답변 exact distinct, 드릴다운, 선택 창 재구성에 사용. 원문 URL 문자열·답변 본문을 복사하지 않음.</td></tr>
+<tr><td><code>stat.url_prompt_cell</code><br>PK: C</td><td>적격 prompt 존재, any_target·any_owned, 필요한 정확도 판정 상태 및 측정 단위 원합.</td><td>엔진·회차를 합칠 때 prompt_key 기준 OR. any_target AND any_owned가 같은 답변의 교집합이라는 보장은 없으므로 answer 단위 tgt_own_hits는 따로 유지.</td></tr>
+<tr><td><code>stat.report_value</code><br>PK: G + 원천 report 단위 키</td><td>pub_id·round_date·file_seq·brand·국가/언어·heading pool·분자/분모·출처 메타.</td><td>rd.report_unit_value 및 frz 세대의 참조/불변 보관 재사용 우선. 해당 R09 범위만 조회.</td></tr>
+<tr><td><code>stat.acr_cell_fact</code><br>PK: G + P + acr_cell_key<br><code>stat.acr_entity_fact</code><br>PK: G + P + acr_cell_key + level + entity_key</td><td>셀 차원·반복 모수, 엔티티 선택 수·브랜드/소속/keep 판정. 차종 등장 셀의 denominator contribution을 미리 붙임.</td><td>레벨별 표를 먼저 접어 JOIN 증폭 방지. 브랜드별 등장 셀 count는 셀 ID별 한 번. 차종 분모는 엔티티 행별 기여를 보존하고 표시명 병합 시 임의로 중복 제거하지 않음. 원문 재분석 없음.</td></tr>
+<tr><td><code>stat.ga4_daily</code><br>PK: G + property + date + device + nvr + cohort + engine</td><td>sessions·page_views·conversions 및 검증용 key_events/event_count, 적용 규칙. cohort AI/일반, 미매핑 엔진 other의 기존 의미 보존.</td><td>property×date 단위 교체. 속성 source/project 선택은 기존 resolver 사용. report 2 세션과 report 3 전환을 먼저 각 grain으로 접은 후 결합.</td></tr>
+<tr><td><code>stat.ga4_page_daily</code><br>위 PK + page_key<br><code>stat.ga4_event_daily</code><br>PK: G + property + date + event_key</td><td>페이지별 세션·전환, 설정 화면용 이벤트 발생 수. 페이지 세션(event_key=0)과 전환 행을 각각 집계 후 결합.</td><td>페이지 행이 없는 세션/전환도 원래 의미대로 유지. 이벤트 설정 수는 report 3의 event_count를 전환 선택 여부와 무관하게 집계. 최근 90일(KST 오늘 기준) 창·정렬·미발생 추적 이벤트 0을 유지.</td></tr>
+<tr><td><code>stat.catalog_member / stat.prompt_axis</code><br>PK: axis_version + surface + project + catalog 행 ID / axis 식별자</td><td>scope_prompt 연결, 등록/삭제 상태·유효 시점, 다중 택소노미/커스텀 값. 프롬프트 텍스트는 기존 검색 저장소 재사용.</td><td>frozen 경로는 frz.prompt/axis 재사용, live는 현행 카탈로그 정책. 측정 집계에 JOIN하여 행을 곱하지 않고 EXISTS로 제한.</td></tr>
+<tr><td><code>app.qa_stat_job</code><br>PK: job_id<br><code>app.qa_stat_counter</code><br>PK: 통계 축 + 카운터 규칙 버전</td><td>job의 현재 필터 좌표·review 존재·issue·note_count·has_raw_mention. counter는 total/reviewed/issues/notes.</td><td>API 쓰기와 같은 DB 트랜잭션에서 현재 상태의 before/after 차이 반영. 통계 워커의 비동기 완료를 기다리지 않음.</td></tr>
+<tr><td><code>stat.social_snapshot_stat</code><br>PK: snapshot_id + 통계 규칙 버전</td><td>S14의 스냅샷 전체 수·고유 host·max_co. 엔티티별 linked_count는 기존 행의 보조 열 또는 별도 관계.</td><td>스냅샷 공개 전에 생성·검증. 활성 스냅샷 포인터와 함께 전환.</td></tr>
+</tbody></table></div>
+<h3>인덱스·파티션·용량의 출발점</h3>
+<p>공통 조회는 <code>(generation_id, population_key, surface, project_key, cyc_key, engine_key, geo_key)</code> 및 prompt/date 접근을 우선 후보로 삼습니다. 인용 구성원은 <code>(generation_id, source_key, prompt_key)</code>, <code>(generation_id, url_key)</code>, 답변 참조 인덱스를 검토합니다. GA4는 property·date 범위가 먼저 제한되어야 합니다. 모든 조합에 인덱스를 만들지 않고 대표 쿼리의 EXPLAIN으로 결정합니다.</p>
+<p>대형 member는 기존처럼 surface와 날짜 범위 분할을 우선 검토하고, 작은 요약표는 우선 비파티션으로 둡니다. 실제 unique/PK에는 파티션 키 제약을 반영한 DDL 검토가 필요합니다. 셀 수가 답변 수와 거의 같거나 관점·모드 복제로 커지면 그 rollup의 물리화 범위를 줄입니다. QA의 가변 상태 열에는 불필요한 covering index를 늘리지 않습니다.</p>
+<p class="meta">용량 추정은 실제 distinct(C)·인용 원소 수·ACR 엔티티 수·GA4 페이지 수에 사용 관점/프로필 수, 보존 세대 수, 인덱스 크기를 곱해 산정합니다. 운영 건수·증가율·디스크·목표 p95를 측정하지 않았으므로 용량과 지연 수치를 확정하지 않았습니다.</p>
+</section>
+
+<section id="filters"><h2>6. 필터와 권한을 잃지 않는 조회 규칙</h2>
+<div class="table"><table><thead><tr><th>조건</th><th>설계</th></tr></thead><tbody>
+<tr><td>국가·브랜드·프로젝트·표면 권한</td><td>기존 principal/scope resolver로 허용 집합을 먼저 계산. 권한으로 분리할 수 없는 상위 합계는 읽지 않음. 전체 통계를 읽은 뒤 화면에서 숨기는 방식 금지. 접근 권한 철회는 통계 재빌드와 무관하게 즉시 적용.</td></tr>
+<tr><td>택소노미·커스텀 필드·검색</td><td>기존 의미대로 조건을 적용해 적격 prompt_key 집합을 만들고 C에 EXISTS. 같은 프롬프트에 여러 카탈로그/태그가 있어도 가산 값이 배수로 늘지 않음. 축별 AND/OR와 삭제 카탈로그 포함 규칙 유지.</td></tr>
+<tr><td>기간·회차·대표 선택</td><td>현재 Window resolver가 선택한 family별 회차·날짜·숨김/노출 게이트를 그대로 사용. rollup이 표현하지 못하는 창/대표 조건은 answer_fact 등 좁은 투영으로 계산하고 그 경로의 비용을 별도 검증.</td></tr>
+<tr><td>source[]·관점·언급 브랜드</td><td>인용 category/owner 축과 answer_brand_member를 사용. M05와 자사 인용을 분리. 선택한 관점과 프로필에 준비된 집계가 없으면 다른 관점의 합계로 대체하지 않음.</td></tr>
+<tr><td>필터 옵션·0건 항목</td><td>옵션용 모수는 화면 데이터용 모수와 별도 계약. 예: ACR 언어 옵션은 언어·엔진·택소노미 필터 일부를 제외하며 국가 옵션은 계정 범위에 맞춤. QA 옵션의 현재 0건 항목과 GA4 미적재 시장도 유지.</td></tr>
+<tr><td>전체 합계·정렬·페이지</td><td>필터한 전체 결과에서 분모/순위를 결정한 후 검색·페이지 단계를 기존 순서대로 적용. page 크기나 Top N이 분모를 바꾸지 않음. 기존 반올림 기반 정렬·타이브레이커·커서·내보내기 계약 유지.</td></tr>
+<tr><td>캐시</td><td>기존 캐시 키에 release/generation, profile·metric_version, 권한 범위 버전 및 정규화 필터를 반영. GA4·QA를 임의 TTL로 묶지 않음. 캐시는 보조이며 준비되지 않은 집계를 완성시키는 수단이 아님.</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="refresh"><h2>7. 언제 계산하고, 어느 범위만 다시 적재할 것인가</h2>
+<div class="table"><table><thead><tr><th>발생 사건</th><th>빌드/교체 단위</th><th>반영할 지표</th><th>공개 규칙</th></tr></thead><tbody>
+<tr><td>수집 배치 성공 / 회차 마감</td><td>변경된 표면·프로젝트·회차. GA4는 property×date, 소셜은 snapshot</td><td>해당 S01~S12·S16~S17 및 독립 외부 지표</td><td>raw 저장만으로 완료 처리하지 않음. rd 투영·게이트·대표 선택까지 완료된 입력에서 빌드. 진행 중 회차의 live 갱신도 배치 완료 단위로 지원.</td></tr>
+<tr><td>답변·인용 정정/삭제, ACR 반복 변경</td><td>해당 답변의 이전·새 소속 회차, 대표 교체의 영향 회차</td><td>KPI·언급·인용·ACR·추이·URL·모수</td><td>영향 슬라이스를 새 세대로 교체. 사라진 행과 0건이 된 결과도 명시적으로 교체.</td></tr>
+<tr><td>출처 분류 override / 소유·추적 URL 변경</td><td>source_key·owner_key·project로 역추적한 회차</td><td>인용 분포·M05·자사 인용·URL·추이</td><td>판정 투영과 통계가 같은 버전이 될 때 전환. 기존 발행값을 자동 수정하지 않음.</td></tr>
+<tr><td>엔티티·별칭·통합 관점 규칙 변경</td><td>영향 브랜드/엔티티의 회차, 연결 ACR 셀</td><td>언급·순위·유형·톤·ACR·경쟁사</td><td>현재 rule_ver와 metric_version의 차이를 기록. 필요한 계열이 모두 준비되어야 해당 묶음 전환.</td></tr>
+<tr><td>카탈로그·퍼널·커스텀·등록/삭제 변경</td><td>옛·새 scope_prompt/project 연결 및 관련 회차</td><td>모수·필터·주제·URL 등록 게이트·대표 선택에 영향</td><td>단순 축 변경은 축 버전만 갱신 가능. 모수/게이트 변화는 기반 집계 재생성. live와 frozen의 기존 반영 시점 구분.</td></tr>
+<tr><td>회차 숨김·노출일·고정/드롭</td><td>창/세대 선택 메타, 필요 시 대표 셀</td><td>해당 family 전체</td><td>숨김/권한은 기존 조회 게이트에서 즉시 반영. 대표 집합이 바뀌면 재빌드; 누락 회차·비교 억제 의미 유지.</td></tr>
+<tr><td>발행 후 늦게 들어온 데이터</td><td>live의 영향 슬라이스 및 재발행 후보</td><td>원천에 영향받는 전체 통계</td><td>발행본은 유지하고 stale/재발행 대기 상태 기록. 기존 명시적 재발행 절차를 통과한 새 frz/pub 세대만 활성화.</td></tr>
+<tr><td>GA4 재수집·이벤트 기준 변경</td><td>해당 속성의 영향 날짜 전체. 규칙 변경이면 보존·노출 기간의 관련 날짜</td><td>요약·일별·엔진·시장·페이지·이벤트</td><td>덧셈 upsert가 아닌 날짜 슬라이스 교체. 늦은 GA4 정정도 반영. 전체/페이지 보고서 준비 상태와 coverage를 별도로 검증.</td></tr>
+<tr><td>QA 저장/노트 변경</td><td>job 현재 상태와 해당 카운터</td><td>S13</td><td>같은 트랜잭션. 노트 0→1은 notes +1, 1→2는 변동 없음, 마지막 삭제 1→0은 −1. 재시도에서 중복 가산 금지.</td></tr>
+<tr><td>소셜/키워드 수집 성공</td><td>snapshot 또는 성공 call/관측 버전</td><td>S14·S15</td><td>실패한 신규 결과로 성공한 기존 포인터를 덮지 않음. 스냅샷 내 통계·상세가 함께 준비된 후 공개.</td></tr>
+</tbody></table></div>
+<p><strong>초기 구현은 영향 회차/속성·날짜를 통째로 새로 계산하는 방식을 권장합니다.</strong> 수정·삭제·대표 교체·중복 제거가 많아 모든 KPI를 +1/−1 이벤트로 유지하면 복구가 복잡해집니다. 작은 QA 현재 상태 카운터만 트랜잭션 차등 갱신으로 시작하고, 나머지는 실제 빌드 병목이 확인된 계열부터 증분 최적화합니다.</p>
+
+<h3>실패·재시도·동시 실행을 처리하는 제어 테이블</h3>
+<div class="table"><table class="compact"><thead><tr><th>논리 저장소</th><th>필수 정보·키</th></tr></thead><tbody>
+<tr><td><code>stat.build</code></td><td>build_id PK, 대상 family/slice, 입력 snapshot·완료 watermark, profile/metric/axis 버전, frz/pub 참조, 상태 pending/running/validated/failed, 행 수·검증 결과·오류·시각. 유일 재시도 키 = 대상 slice + 동일 입력/규칙 버전. 재시도 attempt는 별도 기록.</td></tr>
+<tr><td><code>stat.release</code></td><td>release_id PK, read_mode·규칙 서명·기반 release·검증 완료 정보. 모든 활성 build의 조합을 나타내는 불변 manifest.</td></tr>
+<tr><td><code>stat.release_item</code></td><td>PK (release_id, family, slice_key). 어느 회차/GA4 날짜에 어느 build를 사용할지 명시. 빈 슬라이스도 완료된 empty 상태로 매핑하여 삭제를 표현.</td></tr>
+<tr><td><code>stat.active_release</code></td><td>PK (읽기 모드, 규칙 서명, 공개 범위), release_id 및 변경 버전. 기존 발행 메타/frz 포인터와 필요한 경우 같은 트랜잭션에서 전환. API 역할은 읽기만 허용.</td></tr>
+</tbody></table></div>
+<ol>
+<li><strong>입력 확정:</strong> 기존 수집/재판정 트랜잭션에 완료 이벤트를 내구성 있게 남깁니다. 기존 outbox·judgment_change 흐름에 연결하고 큐 전달 누락은 재조회로 복구합니다. 단순 MAX(load_id)는 커밋 순서나 전체 완료를 보장하지 않으므로 완료 집합/연속 적용 경계를 기록합니다.</li>
+<li><strong>일관된 추출:</strong> live rd는 갱신 가능한 테이블입니다. 여러 워커가 같은 load_id 이하를 읽는 것만으로 과거 상태가 복원되지 않습니다. 단일 일관된 DB 스냅샷에서 필요한 좁은 입력을 불변 staging으로 추출하거나 같은 snapshot을 공유합니다. 트랜잭션 장기 유지 비용을 측정하고, 이후 집계는 그 staging에서 수행합니다. frozen도 정확한 frz 세대를 고정합니다.</li>
+<li><strong>격리 적재:</strong> build_id 아래에 새 행을 작성합니다. 서로 독립적인 계열 작업도 하나의 입력 스냅샷과 의존성 manifest를 참조합니다. 재시도는 같은 출력의 교체/재개이며 기존 활성 통계에 SUM을 더하지 않습니다.</li>
+<li><strong>검증:</strong> 키 중복·필수 계열 누락·모수·원합·발행 출처·동등성 검사를 통과해야 validated. 유형 중복·GA4 이벤트 수 등 허용되는 관계에 잘못된 등식/상한 제약을 걸지 않습니다.</li>
+<li><strong>원자적 공개:</strong> 짧은 트랜잭션에서 기대하던 기존 release와 입력 버전을 확인한 뒤 새 manifest 포인터를 전환합니다. 독립 빌드가 먼저 공개되었다면 현재 manifest에 자기 변경을 다시 합쳐 검증하여 타 작업의 갱신을 잃지 않게 합니다. 오래된 빌드가 새로운 입력 버전을 덮지 못하게 합니다.</li>
+<li><strong>읽기·보존:</strong> API 요청 시작에 release_id를 한 번 고정하고 필요한 build를 읽습니다. 이전 세대는 진행 중 요청·커서·발행본·롤백 참조가 끝날 때까지 보존합니다. 해제되지 않은 frz/pub 참조는 정리하지 않습니다.</li>
+</ol>
+<div class="note warn"><strong>실패 시 동작:</strong> 실패한 build는 공개하지 않고 오류/재시도 상태를 기록합니다. 이전 정상 세대를 계속 보여줄 수 있는지는 기존 freshness·발행 계약에 따릅니다. 더 최신 상태가 필요하거나 최초 정상본이 없으면 기존 대기·오류 경로로 응답합니다. 실패를 empty/0/성공으로 바꾸거나 자동으로 대형 원문 JOIN을 실행하는 폴백은 두지 않습니다. 새로운 사용자 표시나 응답 필드가 필요하면 API 계약 변경으로 별도 다룹니다.</div>
+<p><strong>QA의 예외:</strong> 검수 리뷰·노트와 app.qa_stat_job/counter 갱신을 한 트랜잭션에 둡니다. job 단위 잠금·상태 버전을 사용해 before/after 차이를 한 번만 적용하고, 여러 카운터는 고정 순서로 잠급니다. loader의 job 수정도 같은 일관성 경계에서 투영해야 합니다. 정기 전체 대조/복구는 보완책이며 정상 요청의 즉시 일관성을 비동기 큐로 대체하지 않습니다.</p>
+</section>
+
+<section id="read"><h2>8. 기존 API에서 통계를 읽는 방법</h2>
+<pre><code>1. 기존 인증·권한·필터 해석 → 허용 표면/프로젝트/국가/관점 확정
+2. 기존 Window·profile·R09 선택 → live / card / grid / 발행값 경로 확정
+3. 같은 요청의 release와 축 버전 고정 → family별 build/slice 확보
+4. 조건이 완전히 맞는 상위 rollup 선택
+   프롬프트/출처/복합 조건이 있으면 셀·구성원 투영 선택
+5. 가산 값 SUM + 필요한 ID DISTINCT/BOOL_OR + 기존 순위·정렬
+6. 기존 Ratio / RankAvg / source / coverage / suppressed 응답으로 조립
+7. 정렬·커서·페이지·내보내기 계약 유지</code></pre>
+<div class="table"><table><thead><tr><th>현재 API</th><th>새 내부 읽기 경로</th></tr></thead><tbody>
+<tr><td><code>/v1/kpi/summary · engines · compare</code><br><code>/v1/geo · /v1/trend</code></td><td>kpi/brand/citation 집계 → 공통 지표 조립. URL은 R09 선택기가 지정한 report_value 또는 live URL 집계. 같은 숫자를 엔드포인트마다 다른 계산기로 만들지 않음.</td></tr>
+<tr><td><code>/v1/mentions/* · /v1/citations/*</code></td><td>brand/citation 셀 및 구성원 투영 → 기존 목록·상세/타겟 서비스 조립. 세부 답변/원문은 페이지 키만 기존 저장소로 배치 조회.</td></tr>
+<tr><td><code>/v1/funnel/acr</code></td><td>ACR 셀/엔티티의 저장된 카운트 → summary/trend/model/territory 구성. 국가 선택 후 배틀 승자 계산과 표시 사전의 작은 JOIN은 유지.</td></tr>
+<tr><td><code>/v1/funnel/conversion</code></td><td>ga4_daily/page_daily와 속성 coverage 메타. 대시보드가 일부 필드만 쓰더라도 기존 API 응답 필드는 유지하며 요약·페이지 내부 결과를 각각 재사용 가능하게 구성.</td></tr>
+<tr><td><code>/v1/qa/answers/progress</code><br><code>/v1/intent/social/context-map/*</code></td><td>현재 QA 상태/카운터, 선택된 social snapshot의 저장 통계. 수집 회차 통계의 캐시·발행 정책을 QA에 적용하지 않음.</td></tr>
+</tbody></table></div>
+<p><strong>혼합 세대 범위:</strong> 한 API 응답과 서버에서 한 번에 조립하는 화면 데이터는 동일한 release를 고정합니다. 브라우저가 별도 시점에 보내는 여러 API 요청까지 완전히 같은 세대로 묶으려면 기존 내부 BFF 요청 맥락에서 공유할 수 있는지 확인해야 합니다. 현재 계약만으로 화면 전체의 원자적 스냅샷을 보장한다고 주장하지 않습니다. GA4·소셜은 원래 수집 주기가 다르므로 동시 시각의 데이터라고 표현하지 않습니다.</p>
+<p><strong>페이지 안정성:</strong> 기존 커서가 입력 버전을 고정할 수 있으면 release 참조를 서버 내부에 유지합니다. 불가능하면 현행 커서의 변화 허용/무효화 계약을 유지하면서 경계 중복·누락을 검증합니다. 임의로 새 필수 cursor 파라미터를 요구하지 않습니다.</p>
+
+<h3>왜 전부 Materialized View로 만들지 않는가</h3>
+<p>PostgreSQL의 Materialized View는 결과를 실제 저장하지만, 기본 REFRESH는 정의 쿼리를 다시 실행해 내용을 교체합니다. CONCURRENTLY에는 이미 채워진 뷰와 전체 행을 대상으로 하는 적절한 UNIQUE 인덱스 등의 조건이 있습니다. <a href="https://www.postgresql.org/docs/17/rules-materializedviews.html">PostgreSQL 17 저장 뷰 설명</a> · <a href="https://www.postgresql.org/docs/17/sql-refreshmaterializedview.html">REFRESH 공식 문서</a>.</p>
+<p>GEO HUB에는 회차별 부분 재계산, 늦은 데이터, 발행본 보존, 여러 통계 계열의 함께 공개가 필요합니다. 따라서 <strong>기존 Python 워커가 관리하는 버전별 통계 테이블</strong>을 기본안으로 권장합니다. 작고 독립적인 전체 재계산 집계에는 MV를 사용할 수 있습니다. 새 OLAP DB·Redis·메시지 브로커를 이 설계만을 위해 필수 도입하지 않습니다.</p>
+</section>
+
+<section id="rollout"><h2>9. 구현 순서와 완료 기준</h2>
+<div class="table"><table><thead><tr><th>순서</th><th>작업</th><th>완료 산출물·검증</th></tr></thead><tbody>
+<tr><td>0 · 계약 고정</td><td>실제로 지원하는 API/legacy 모드·profile·회차/발행 조건을 목록화. 코드 정본과 기존 화면 응답의 기준 데이터를 확보.</td><td>지표별 numerator/denominator·필터·단위·null·source 메타 명세. 두 경로가 원래 다른 부분을 합의 없이 하나로 통일하지 않음.</td></tr>
+<tr><td>1 · 빌드 기반과 인용</td><td>입력 스냅샷·세대·manifest·교체/실패 처리, citation_cell/member와 필요한 answer/brand 투영.</td><td>S03~S06·S16·S11의 대형 JOIN 및 source/owner 필터 동등성. 가장 복잡한 소유·중복·톤 사례를 먼저 검증.</td></tr>
+<tr><td>2 · ACR / GA4</td><td>ACR 셀/엔티티 합산과 GA4 property×date 재적재. 두 계열은 독립 빌드.</td><td>전체 요약뿐 아니라 배틀·차종·territory, 전체/페이지/이벤트·coverage 일치. 재시도·정정·누락 보고서 검증.</td></tr>
+<tr><td>3 · KPI·언급·GEO·추이</td><td>기반 투영 위 kpi/brand 셀과 선택적 상위 rollup, URL/발행·카탈로그 모수 연결.</td><td>S01~S02·S09~S12·S17. 다중 관점·기간 비교·대표 선택·프롬프트 distinct·발행 우선 결과 일치.</td></tr>
+<tr><td>4 · QA / 소셜 / 기존 값</td><td>QA 트랜잭션 투영·카운터, 소셜 스냅샷 통계. 키워드는 최신 성공 관측 선택 확인.</td><td>저장 직후 진행률, 마지막 노트 삭제, 동시 검수·재시도 정합성. 소셜 통계/상세 snapshot 일치.</td></tr>
+<tr><td>5 · 그림자 비교와 전환</td><td>비운영 데이터에서 기존/새 read 결과 비교 후 내부 feature flag로 계열별 전환. 기존 API adapter 및 활성 legacy 소비 경로 모두 확인.</td><td>필터 조합·권한·페이지·내보내기 회귀 및 쿼리 계획/빌드 비용 측정. 차이가 있으면 원인을 해결한 뒤 전환. 기존 읽기 경로 제거는 안정화 후 별도 작업.</td></tr>
+</tbody></table></div>
+<h3>필수 동등성 사례</h3>
+<div class="table"><table class="compact"><thead><tr><th>검증 축</th><th>반드시 포함할 사례</th><th>통과 조건</th></tr></thead><tbody>
+<tr><td>모수·중복</td><td>같은 프롬프트의 여러 엔진/국가/회차, 같은 URL 반복, 다중 카탈로그/태그, 인용 0건, 등록만 있고 미측정</td><td>원합·정확한 ID 수·0/null·미측정 목록 일치. 누락 셀을 0으로 위장하지 않음.</td></tr>
+<tr><td>관점·출처</td><td>HMG 통합 노출·최소 순위, source category override, hostless, host-fold, 다국가/언어별 owned_base, 특정 언급 브랜드</td><td>분자·분모·도메인 답변 수·톤별 URL/답변 수가 기존과 동일.</td></tr>
+<tr><td>발행·시간</td><td>off/current, live/card/grid, 임의 기간 대표 선택, R09 발행값·live 사유, late·재발행·숨김, 시간대 경계</td><td>값과 source/publication/coverage/suppressed 메타 일치. 자동 재발행 없음.</td></tr>
+<tr><td>ACR·GA4</td><td>국가 합산 시 배틀 승자 반전, 동률, 복수 entity→동일 brand, 차종 일부 셀 등장, 보고서 간 중복 세션, tracked/key-event 전환</td><td>각 단위 분모·페이지와 전체·필터 옵션·by_engine_all·coverage 일치.</td></tr>
+<tr><td>쓰기·복구</td><td>같은 이벤트 재전달, 삭제로 0건, 빌드 중 장애, 동시 빌드·오래된 작업 후완료, 스냅샷 중 원천 수정, QA 동시 노트 변경</td><td>중복 가산·세대 혼합·갱신 유실 없음. 완료 전 비공개, 재시도 가능, 오류 상태 확인 가능.</td></tr>
+<tr><td>권한·목록</td><td>국가/프로젝트 권한 축소, 다중 필터, 검색·Top N·총건수·경계 커서·내보내기</td><td>비허용 데이터/합계 노출 없음. 기존 정렬과 조회 범위 유지.</td></tr>
+<tr><td>성능·운영성</td><td>같은 데이터/조건의 기존·신규 EXPLAIN, 동시 조회, 빌드/재빌드 중 조회, cold/warm 캐시</td><td>원문 사실 JOIN이 의도한 경로에서 제거되고 읽은 행·buffer·p95가 개선됨. 빌드 지연·디스크·WAL·입력 snapshot 유지 비용도 허용 범위인지 확인.</td></tr>
+</tbody></table></div>
+<p><strong>구현 전에 실측으로 확정할 항목:</strong> 실제 활성 읽기 프로필/소비 경로, 허용하는 live 통계 지연, 회차·GA4 날짜별 데이터량, 보존 세대 수, p95 목표, 부분 재빌드 최대 시간입니다. QA는 동기 일관성, 발행본은 재발행 전 유지, 집계 실패는 명시 상태라는 설계 원칙을 먼저 고정합니다. live 지연을 허용할 수 없는 경로는 새 원천 가시화와 통계 공개를 함께 맞추거나 그 경로를 기존 읽기에 남겨야 합니다.</p>
+<div class="note"><strong>이번 작업에서 한 것:</strong> 현재 코드에 근거한 저장·갱신·조회 설계와 정합성 검토입니다. 통계 테이블이나 워커를 구현·배포하지 않았고, 운영 DB/인증/외부 수집 API를 호출하지 않았습니다. 성능 개선 완료나 운영 결과 동등성 검증 완료를 의미하지 않습니다.</div>
+</section>
+
+<section id="evidence"><h2>10. 설계 근거와 연결 문서</h2>
+<p><a href="20%20화면%20지표별%20JOIN과%20재집계%20분석.html">20 화면 지표별 JOIN과 재집계 분석</a> · <a href="19%20API와%20DB%20조회%20성능%20잔여%20문제.html">19 API·DB 조회 잔여 문제</a> · <a href="18%20API%20호환성과%20실서버%20전환%20점검.html">18 API 호환성</a> · <a href="00%20시작하기.html">개발 문서 목록</a></p>
+<div class="table"><table class="compact"><thead><tr><th>코드 정본</th><th>설계에 반영한 내용</th></tr></thead><tbody>
+<tr><td><a href="../../back/app/core/measure.py">core/measure.py</a> · L1–26, L471, L486, L812</td><td>모수·관점·M05·URL·톤·정수 쌍 산식. HMG 최소 순위와 글로벌 소유 판정 예외.</td></tr>
+<tr><td><a href="../../back/app/core/facts.py">core/facts.py</a> · <a href="../../back/app/core/profile.py">core/profile.py</a> · <a href="../../back/app/core/cycles.py">core/cycles.py</a></td><td>live/card/grid·프로필 off 기본·회차/노출 선택. 동결 VIEW가 실제 집계 저장소를 뜻하지는 않음.</td></tr>
+<tr><td><a href="../../back/db/DB-v2.32.sql">DB-v2.32.sql</a> · L455, L479, L507, L655, L685, L708, L5155</td><td>기존 answer/brand/citation/ACR/GA4/report/frz 단위와 쓰기 경계. 원천의 복합 PK와 users_day 비가산 계약.</td></tr>
+<tr><td><a href="../../back/app/features/analytics/mentions/brands/queries.py">mentions/brands/queries.py</a> · L41, L63</td><td>브랜드×프롬프트 집계, 복수 언급·통합 관점 별도 계산.</td></tr>
+<tr><td><a href="../../back/app/features/analytics/citations/domains/queries.py">citations/domains/queries.py</a> · L93, L101<br><a href="../../back/app/features/analytics/citations/sources/queries.py">citations/sources/queries.py</a> · L204, L261</td><td>언급 브랜드 세미조인·host-fold·톤/유형·고유 URL·검색/순위.</td></tr>
+<tr><td><a href="../../back/app/features/analytics/funnel/acr/schemas.py">funnel/acr/schemas.py</a> · L28, L76, L104<br><a href="../../back/app/features/analytics/funnel/acr/queries.py">funnel/acr/queries.py</a></td><td>ACR 전체 반복·셀 모수, 차종 등장 셀 분모, 배틀·옵션의 필터 예외.</td></tr>
+<tr><td><a href="../../back/app/features/analytics/funnel/conversion/queries.py">funnel/conversion/queries.py</a> · L71, L88<br><a href="../../back/app/features/analytics/funnel/conversion/schemas.py">conversion/schemas.py</a> · L115, L149</td><td>GA4 report별 모수·페이지 분리, 속성 시간대·coverage·by_engine_all·이벤트 설정 수.</td></tr>
+<tr><td><a href="../../back/app/features/analytics/kpi/summary/schemas.py">kpi/summary/schemas.py</a> · L34, L40, L102</td><td>측정/적용 프롬프트, 퍼널 합, source/publication 및 URL 단위 계약.</td></tr>
+<tr><td><a href="../../back/app/features/qa/answers/list/queries.py">qa/answers/list/queries.py</a> · L55<br><a href="../../back/app/features/qa/answers/list/scope.py">qa/answers/list/scope.py</a> · L330</td><td>review 행 존재, issue, 노트 있는 job 수와 QA 검색·필터 의미.</td></tr>
+<tr><td><a href="../../back/app/features/intent/social/context_map/queries.py">social/context_map/queries.py</a> · L19<br><a href="../../back/app/features/intent/keywords/research/queries.py">keywords/research/queries.py</a></td><td>기존 저장 소셜 값·통계·연결 수, 키워드 저장값 재사용.</td></tr>
+<tr><td><a href="../../back/ingest/cycles/ledger/service.py">ingest/cycles/ledger/service.py</a><br><a href="../../back/ingest/frz/freeze.py">ingest/frz/freeze.py</a><br><a href="../../back/ingest/README.md">ingest/README.md</a></td><td>published late 데이터의 stale 처리, 재발행/재생성, 기존 판단 변경 큐·outbox 연계. 새 통계 워커는 이 흐름의 후속 작업.</td></tr>
+<tr><td><a href="../../front/lib/scope/server.ts">front/lib/scope/server.ts</a><br><a href="../../front/lib/db/repositories/summary-website-aggregates.ts">summary-website-aggregates.ts</a><br><a href="../../front/lib/db/repositories/scope-aggregates.ts">scope-aggregates.ts</a></td><td>활성 legacy/summary 읽기와 웹 prompt 단위 URL 값 보존. API만 바꾸고 다른 소비 경로를 남기는 전환 누락 방지.</td></tr>
+</tbody></table></div>
+<p class="meta">14개 기존 지표의 화면→서비스→SQL 근거 56개는 <a href="../reports/부록/화면%20지표%20JOIN%20분석.json">이전 정적 분석 JSON</a>에 보존되어 있습니다. 이번 문서의 구조·상대 링크·대응 범위 검증과 참조 파일 해시는 <a href="../reports/부록/통계%20사전%20집계%20설계%20검증.json">설계 문서 검증 기록</a>을 참조합니다. 이 기록은 구현 테스트나 운영 성능 측정이 아닙니다.</p>
+</section>
+<footer>GEO-HUB-renewal-temp-20261008 복사본에 작성한 후속 설계. 원본 프로젝트와 기존 검토 기록은 보존했습니다. 문서에 제시된 신규 이름·정책은 구현 전 제안이며 기존 서비스의 외부 동작 변경 승인이 아닙니다.</footer>
+</main></body></html>

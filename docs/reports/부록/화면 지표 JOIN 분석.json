@@ -1,0 +1,748 @@
+{
+  "date": "2026-10-13",
+  "code_head": "f33f7945a650b87c32ef1eb691f5d0494fc742f7",
+  "method": "Static source and UI call-chain inspection; no API/auth/DB query or mutation.",
+  "local_config_observation": {
+    "launcher_G1_to_G7": "api",
+    "backend_container_HGH_RESULT_CACHE": "unset",
+    "backend_container_HGH_LEGACY_PROFILE": "unset",
+    "runtime_request_trace": false
+  },
+  "limits": [
+    "No production deployment settings verified",
+    "No new timings or EXPLAIN measurements",
+    "Conditional paths depend on selected filters, profile, data and cache",
+    "Disabled stance card excluded from active metric findings"
+  ],
+  "rows": [
+    {
+      "id": "J01",
+      "screen": "대시보드·웹사이트·프로젝트 요약 / 엔진별 보조 지표",
+      "metrics": "AI 노출률·점유율·우호도·우선 노출도·인용 점유율, 측정 프롬프트 수",
+      "api": "/v1/kpi/summary · /v1/kpi/engines",
+      "work": "기본 경로는 rd.answer의 적재된 언급·감성·순위·인용 열을 SUM/COUNT한다. 측정 프롬프트 수는 별도 COUNT DISTINCT. card + freeze_at_publish + 창 판정을 통과하면 frz.card_* 일반 VIEW를 합산하므로 VIEW 내부 frz.cell·frz.prompt·rd.answer/보관행 등의 JOIN도 조회 시 수행된다. 국가/출처 조건에 따라 보조 조회가 추가된다.",
+      "legacy": "summary 계층 또는 미러 폴백. 미러는 답변 집합·scope_mentions·브랜드 이름·순위·인용을 연결해 계산하며 mirrorCache로 감싼다.",
+      "timing": "API 결과 캐시가 꺼져 있거나 미적중이면 계산. 동결 VIEW는 조건부이며 기본 프로필 off에서는 사용하지 않는다.",
+      "judgment": "조건부 다중 JOIN + 재집계",
+      "sources": [
+        "S01",
+        "S17",
+        "S15",
+        "S12",
+        "S13",
+        "S14",
+        "S18"
+      ]
+    },
+    {
+      "id": "J02",
+      "screen": "답변 분석 → 언급 / 대시보드 경쟁 브랜드",
+      "metrics": "브랜드별 언급 수·점유율·노출률·평균 등장 순위·우호도·복수 언급·유형 분포",
+      "api": "/v1/mentions/brands · /v1/mentions/types",
+      "work": "API는 rd.answer_brand의 적재된 rk·s_*·mention_count 등을 합산하고 일부 값은 브랜드×프롬프트 단위로 2단계 집계한다. 기본 live 경로에서 원문 언급을 여러 테이블과 다시 JOIN해 순위를 만드는 구조는 아니다. 동결 카드 경로와 필터의 참조 조건은 별도다.",
+      "legacy": "aggregateMentionsHeadlineSql은 언급↔답변 집합↔정규 브랜드 이름을 JOIN한 뒤 답변별 rank()를 계산하고 posagg·multi를 다시 JOIN한다. 여러 단계의 GROUP BY가 있다. 캐시 미적중·미러 폴백에서 실행.",
+      "timing": "API 캐시 미적중 시 집계. legacy는 결과 캐시 및 summary 선택 조건에 따라 원문 재계산 생략 가능.",
+      "judgment": "legacy 다중 JOIN / API 주로 저장 열 합산",
+      "sources": [
+        "S03",
+        "S19",
+        "S20",
+        "S21"
+      ]
+    },
+    {
+      "id": "J03",
+      "screen": "답변 분석 → 인용 / 대시보드 인용 경쟁 순위·출처 구성",
+      "metrics": "도메인별 인용 수·점유율·커버리지·인용 프롬프트 수·순위·경쟁 출처 합계",
+      "api": "/v1/citations/domains",
+      "work": "인용 사실을 출처×프롬프트 → 출처로 2단계 집계하고 rd.dim_source 및 app.citation_domain_override와 JOIN한다. 이후 총합 CTE와 CROSS JOIN해 점유율을 계산하고 row_number로 순위를 만든다. 페이지 행 LIMIT 이전에 모집단 집계가 필요하다.",
+      "legacy": "scope_citations↔scope_answers 및 프롬프트·URL 기준을 연결해 도메인·분류·엔진별 집계. summary 읽기 또는 미러 캐시 경로가 존재.",
+      "timing": "API 결과 캐시가 꺼져 있으면 페이지·검색·정렬 요청마다 이 SQL 경로가 실행된다. CTE MATERIALIZED는 해당 SQL 실행 안에서만 재사용한다.",
+      "judgment": "명시적 다중 JOIN + 2단계 집계 + 순위",
+      "sources": [
+        "S04",
+        "S22",
+        "S23",
+        "S24"
+      ]
+    },
+    {
+      "id": "J04",
+      "screen": "답변 분석 → 인용",
+      "metrics": "긍정·부정 답변이 인용한 URL 수·인용 수·답변 수",
+      "api": "/v1/citations/sources (tone) · /v1/citations/sources/tone",
+      "work": "답변의 감성 조건으로 ta 집합을 만들고 인용 사실과 JOIN한다. URL별 GROUP BY와 톤별 COUNT/SUM을 수행하며 답변 수와 합친다. source 필터 시 GROUPING SETS를 사용한다.",
+      "legacy": "감성별 답변 집합과 scope_citations를 JOIN하는 톤 집계. 별도 mirrorCache 사용.",
+      "timing": "인용 sources 요청에서 카테고리 집계와 함께 수행. 결과 캐시 미적중 시 반복.",
+      "judgment": "사실 데이터 JOIN + 중복 제거·집계",
+      "sources": [
+        "S25",
+        "S26",
+        "S28"
+      ]
+    },
+    {
+      "id": "J05",
+      "screen": "답변 분석 → 인용",
+      "metrics": "출처 카테고리 비중·엔진별 카테고리·언급 유형별 인용 분포",
+      "api": "/v1/citations/sources · /v1/citations/sources/types",
+      "work": "우선 rd.answer.cit_c1..13·t_own의 사전 계산 열을 합산한다. t_own 미채움이면 answer_brand 집계와 JOIN하는 jt 경로로 재시도하고, 카테고리 열 미채움 또는 재판정 전 오버라이드가 있으면 citation·유형 CTE·dim_source·override JOIN 경로로 폴백한다.",
+      "legacy": "유형별 답변 집합과 인용을 JOIN해 분류별로 집계하는 경로가 있으며 캐시로 감싼다.",
+      "timing": "결과 캐시 미적중 시 집계. 무거운 JOIN 폴백이 항상 실행되는 것은 아니다. 폴백 조건에서는 앞선 합산 후 추가 집계가 생긴다.",
+      "judgment": "사전 계산 우선 / JOIN 폴백 조건부",
+      "sources": [
+        "S27",
+        "S28"
+      ]
+    },
+    {
+      "id": "J06",
+      "screen": "인용 화면의 프롬프트 분포·인용/미인용 목록",
+      "metrics": "자사 인용 프롬프트 수·미인용 프롬프트 수·프롬프트별 인용 수",
+      "api": "/v1/citations/prompts",
+      "work": "프롬프트×엔진별 인용 합계와 조건부 보정 집합을 결합하고 프롬프트로 다시 접는다. dim_prompt·dim_taxon을 JOIN한 뒤 인용/미인용 버킷의 전체 건수와 페이지를 구한다.",
+      "legacy": "인용↔답변↔프롬프트를 연결해 인용 수와 소유 판정을 접는다.",
+      "timing": "API 결과 캐시 미적중 시 계산. 페이지 LIMIT만으로 앞선 전체 버킷 집계 비용은 없어지지 않는다.",
+      "judgment": "다중 JOIN + 그룹별 집계",
+      "sources": [
+        "S29",
+        "S24"
+      ]
+    },
+    {
+      "id": "J07",
+      "screen": "AI 퍼널 → ACR",
+      "metrics": "브랜드 선택률·등장/커버리지·추이·프롬프트×엔진 승자·차종 전환율·국가/엔진 점유 맵",
+      "api": "/v1/funnel/acr",
+      "work": "rd.acr_cell에서 대상 cells를 고른 뒤 acr_choice·dim_brand_name을 JOIN해 합산한다. 배틀은 브랜드별 합산 후 DISTINCT ON으로 승자를 고르고 dim_prompt와 연결한다. 차종은 acr_choice·dim_entity·dim_brand_name을 JOIN해 SUM 및 COUNT DISTINCT 후 비율로 정렬한다.",
+      "legacy": "scope_acr_rollups에 정규 브랜드 이름·scope_prompts 등을 연결해 브랜드·회차·프롬프트별로 재집계. mirrorCache 사용.",
+      "timing": "결과 캐시 미적중 시 한 ACR 요청에서 여러 지표용 SQL이 실행된다. 차종 LIMIT은 집계·정렬 이후다.",
+      "judgment": "명시적 다중 JOIN + 여러 집계 문장",
+      "sources": [
+        "S05",
+        "S30",
+        "S31",
+        "S32",
+        "S33"
+      ]
+    },
+    {
+      "id": "J08",
+      "screen": "대시보드 AI 유입 전환율 / AI 퍼널 유입·전환",
+      "metrics": "AI/일반 세션·전환 수·전환율·일별/국가별/엔진별 지표·페이지별 성과",
+      "api": "/v1/funnel/conversion",
+      "work": "적재된 rd.ga4_row와 ga4_dim_property를 JOIN하고 GROUPING SETS로 전환을 합산한다. 페이지별 성과는 속성 JOIN → 페이지별 합산 → ga4_dim_value JOIN → 정렬·LIMIT. 서비스가 세션·전환·페이지 SQL을 모두 실행한다.",
+      "legacy": "GA4 전용 조회·캐시 경로이며 API와 동일한 rd JOIN 경로로 취급하면 안 된다. legacy 전용 결과 캐시 기본 TTL은 24시간.",
+      "timing": "현재 API 결과 캐시 허용 목록 밖이다. 유효 데이터가 있는 요청마다 집계하며 대시보드 카드용 요청도 페이지별 집계를 수행한다. 카드 변환은 요약·커버리지·일부 추이만 사용한다.",
+      "judgment": "매 API 요청 집계 + 카드에 불필요한 페이지 집계",
+      "sources": [
+        "S39",
+        "S34",
+        "S35",
+        "S36",
+        "S37",
+        "S38",
+        "S40"
+      ]
+    },
+    {
+      "id": "J09",
+      "screen": "대시보드·웹사이트 국가별 GEO",
+      "metrics": "국가별 KPI·브랜드 점유율·경쟁 순위·최대 경쟁사",
+      "api": "/v1/geo",
+      "work": "당사 KPI는 answer를 geo별 합산, 경쟁사는 answer_brand를 geo×brand별 합산한 뒤 응답에서 순위를 만든다. 동결 카드 경로이면 사실 표 대신 JOIN VIEW를 읽는다. 이름 변경 분기에서는 해당 브랜드의 회차별 추가 집계가 있다.",
+      "legacy": "scope_mentions↔답변 집합↔브랜드 이름, scope_citations↔답변 집합을 연결해 국가별 집계한다. 결과 캐시 또는 summary 경로 사용.",
+      "timing": "캐시 미적중 시 계산. 기본 API 합산을 무조건 원문 다중 JOIN이라고 분류하지 않는다.",
+      "judgment": "legacy/동결 VIEW JOIN 조건부 + 국가별 재집계",
+      "sources": [
+        "S41",
+        "S19",
+        "S42",
+        "S12"
+      ]
+    },
+    {
+      "id": "J10",
+      "screen": "대시보드·언급·인용 추이 / 이전 기간 대비 증감",
+      "metrics": "회차·주별 KPI, 출처·카테고리 추이, 비교 기간 증감",
+      "api": "/v1/trend · /v1/kpi/compare",
+      "work": "일반 KPI는 기간·회차별 사실 열을 합산한다. 출처/카테고리 추이는 citation을 버킷×출처별로 집계 후 dim_source·override 및 상위 출처 CTE와 JOIN한다. 동결 격자·카드 경로는 frz VIEW가 추가된다.",
+      "legacy": "summary_trend 계층 우선 경로와 미러 폴백이 공존하며 요청 간 캐시가 있다. 모든 추이가 매번 원문에서 재생성되는 것은 아니다.",
+      "timing": "결과 캐시 미적중 시 현재 선택 기간에 대한 집계. 서로 다른 필터·기간은 별도 계산을 유발할 수 있다.",
+      "judgment": "출처 추이는 다중 JOIN / 일반 KPI는 조건부",
+      "sources": [
+        "S43",
+        "S44",
+        "S15",
+        "S12"
+      ]
+    },
+    {
+      "id": "J11",
+      "screen": "웹사이트 요약·인용 / 프로젝트 분석",
+      "metrics": "자사 URL 인용률·타겟 URL 인용률·AI 타겟 출처 인용률",
+      "api": "/v1/kpi/summary · 관련 trend/engines",
+      "work": "발행값을 읽을 수 있는 경우 report_unit_value↔report_publication을 선택·합산한다. 동결 웹 카드는 frz.card_*_w 내부 JOIN과 저장 판정 플래그를 사용한다. 비카드 accuracy 경로는 web_target_url→citation→answer 관계를 IN/CTE로 연결해 COUNT한다. 명시적 JOIN 외 세미조인 후보도 있다.",
+      "legacy": "발행·summary_url_hits의 저장 판정값을 우선 사용하고, 조건 미충족 시 미러에서 인용/타겟 관계를 판정하는 경로가 있다.",
+      "timing": "모드·기간·발행/동결 데이터 존재 여부에 따라 달라진다. 캐시와 저장값으로 원문 판정을 생략하는 경우를 구분해야 한다.",
+      "judgment": "발행값 / VIEW JOIN / 관계 집계의 조건부 분기",
+      "sources": [
+        "S02",
+        "S45",
+        "S46",
+        "S14",
+        "S47"
+      ]
+    },
+    {
+      "id": "J12",
+      "screen": "프로젝트 대시보드의 주제·퍼널 분포",
+      "metrics": "퍼널 단계별 측정 프롬프트 수",
+      "api": "/v1/kpi/summary?by_funnel=true",
+      "work": "선택 답변 사실과 dim_prompt를 JOIN해 funnel_key별 COUNT DISTINCT(prompt_key)를 계산한다. 프로젝트 대시보드 어댑터가 by_funnel을 요청한다.",
+      "legacy": "프롬프트 주제 집계 리더와 결과 캐시 사용.",
+      "timing": "by_funnel 요청이며 창이 비어 있지 않을 때 계산. 결과 캐시 적중 시 생략 가능.",
+      "judgment": "2개 관계 JOIN + COUNT DISTINCT",
+      "sources": [
+        "S49",
+        "S48"
+      ]
+    },
+    {
+      "id": "J13",
+      "screen": "원문 검수 → 답변 목록",
+      "metrics": "전체 건수·검수 완료·이상·노트 보유 건수·진행률",
+      "api": "/v1/qa/answers/progress",
+      "work": "rd.job LEFT JOIN app.qa_answer_review와 노트 EXISTS로 COUNT한다. scoped와 total을 각각 실행한다. 필터가 비어 결과 범위가 같아도 두 호출을 별도로 수행하는 코드다.",
+      "legacy": "답변·실행 분류 CTE·프롬프트·카탈로그·검수 결과의 다중 JOIN 후 COUNT. getProgress 결과는 30초 캐시.",
+      "timing": "API 서비스가 매 요청 계산을 명시한다. 분석 GET 결과 캐시 대상도 아니다. 빈 범위이면 SQL 생략.",
+      "judgment": "매 API 요청 2개 범위 집계 / legacy 다중 JOIN",
+      "sources": [
+        "S06",
+        "S50",
+        "S51",
+        "S52",
+        "S53"
+      ]
+    },
+    {
+      "id": "J14",
+      "screen": "고객 관심도 → 소셜 스크래핑",
+      "metrics": "언급 수·감성 분포·동시 언급 수 / 컨텍스트·조건·출처 총건수",
+      "api": "intent.social.context_map",
+      "work": "언급·감성·동시 언급은 ext.ctx_* 스냅샷의 저장값을 읽는다. 조합 이름을 붙일 때 entity를 두 번 JOIN할 수 있지만 동시 언급 원문을 요청마다 다시 계산하지 않는다. 상단 건수·출처 수는 별도 COUNT/COUNT DISTINCT.",
+      "legacy": "개별 경로 전체의 성능을 이번에 측정하지 않았다.",
+      "timing": "JOIN 존재와 원천 지표 재계산을 구분하기 위한 제외/대조 사례.",
+      "judgment": "핵심 값 사전 계산 / 건수만 재집계",
+      "sources": [
+        "S54"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "S01",
+      "path": "front/app/[locale]/(dash)/dashboard/page.tsx",
+      "line": 45,
+      "label": "대시보드 화면",
+      "anchor": "getLiveDashboard,",
+      "sha256": "8c6dc35c1c5d9c4dfa32d9000b138be450c19909891a0a8e7b63d441a372057e",
+      "same_as_original": true
+    },
+    {
+      "id": "S02",
+      "path": "front/app/[locale]/(dash)/website/_data/live.ts",
+      "line": 97,
+      "label": "웹사이트 카드 데이터 연결",
+      "anchor": "fetchWebsiteCitationAccuracy(filters),",
+      "sha256": "9510c57ff4397fbb6c9a76fca06ee9ac3ebee017b7eee044115caf1bfe12b585",
+      "same_as_original": true
+    },
+    {
+      "id": "S03",
+      "path": "front/app/[locale]/(dash)/standard/answer-analysis/mention/page.tsx",
+      "line": 408,
+      "label": "언급 화면의 데이터 호출",
+      "anchor": "const data = fetchStandardMentions(filters);",
+      "sha256": "50d9febe702e8ca267a2d5185296fd87d46489e83b2f3f579cf09739092d6f82",
+      "same_as_original": true
+    },
+    {
+      "id": "S04",
+      "path": "front/app/[locale]/(dash)/website/answer-analysis/citation/page.tsx",
+      "line": 232,
+      "label": "인용 화면의 API 호출",
+      "anchor": "[view, targetHitRate] = await Promise.all([loadCitationsView(filters, api.ctx), loadTargetHitRate(filters, api.ctx)]);",
+      "sha256": "9f755960ac2339c369374b9459cd1775cb6c6d8e4c7c7119f769091e0de1e62e",
+      "same_as_original": true
+    },
+    {
+      "id": "S05",
+      "path": "front/app/[locale]/(dash)/standard/ai-funnel/acr/page.tsx",
+      "line": 119,
+      "label": "ACR 화면의 API 호출",
+      "anchor": "loadAcrScreen(filters, { surface: \"global\", scope }),",
+      "sha256": "0259617803436fbdff58c6411bb2eddccee1021442159989ea10d27b77d366b2",
+      "same_as_original": true
+    },
+    {
+      "id": "S06",
+      "path": "front/app/[locale]/raw-data-qa/answers/page.tsx",
+      "line": 64,
+      "label": "검수 화면 진행률 호출",
+      "anchor": "qaApi.getProgress(filter),",
+      "sha256": "7fc22423d007a88771b906e750d88f63b50f502370c30bfd2ccd6fb1d3d97277",
+      "same_as_original": true
+    },
+    {
+      "id": "S07",
+      "path": "front/lib/scope/server.ts",
+      "line": 886,
+      "label": "legacy 결과 캐시 TTL",
+      "anchor": "export const MIRROR_CACHE_TTL = 7200;",
+      "sha256": "e11e8676964a5961bef3a9845ea0f1e55823b834cbd6d316923e54e5c51ef846",
+      "same_as_original": true
+    },
+    {
+      "id": "S08",
+      "path": "front/lib/scope/server.ts",
+      "line": 1034,
+      "label": "legacy 캐시 래퍼",
+      "anchor": "function mirrorCache<A extends unknown[], R>(",
+      "sha256": "e11e8676964a5961bef3a9845ea0f1e55823b834cbd6d316923e54e5c51ef846",
+      "same_as_original": true
+    },
+    {
+      "id": "S09",
+      "path": "back/app/core/result_cache.py",
+      "line": 78,
+      "label": "API 캐시 허용 목록",
+      "anchor": "ALLOWLIST: tuple[tuple[str, str], ...] = (",
+      "sha256": "1772de32b59db82b6c2cc9dad946e393d462c530167ea38865a5dd6f70d0cb30",
+      "same_as_original": true
+    },
+    {
+      "id": "S10",
+      "path": "back/app/core/config.py",
+      "line": 195,
+      "label": "API 캐시 기본 설정",
+      "anchor": "result_cache=(e.get(\"HGH_RESULT_CACHE\", \"0\").strip() == \"1\"),",
+      "sha256": "58e9677b28d92877bb7457978092152001347c3cb31c7854f740d2fbd714b22f",
+      "same_as_original": true
+    },
+    {
+      "id": "S11",
+      "path": "back/app/core/profile.py",
+      "line": 265,
+      "label": "동결 프로필 기본값",
+      "anchor": "DEFAULT_SPEC = \"off\"",
+      "sha256": "836d1cee5d23fee4c259d0c252ef1e6343636b7efbf3f957d0bb7a0a120af27c",
+      "same_as_original": true
+    },
+    {
+      "id": "S12",
+      "path": "back/app/core/facts.py",
+      "line": 60,
+      "label": "live·동결 VIEW 선택",
+      "anchor": "def fact_tables(ms: Any = None) -> FactTables:",
+      "sha256": "4682303f72b65833b8c3bd8c2b994292ad2185ba0a259a7a70c86dbc60011fff",
+      "same_as_original": true
+    },
+    {
+      "id": "S13",
+      "path": "back/db/DB-v2.32.sql",
+      "line": 7579,
+      "label": "카드 VIEW의 실제 JOIN 정의",
+      "anchor": "rd_from := format('FROM frz.cell c JOIN frz.prompt q ON q.gen_key = c.gen_key AND q.prompt_key = c.prompt_key AND q.in_full_cycle '",
+      "sha256": "028e7607ea21e7b4e742e5626d676e9f23623e3ee9d49e56b14f988b5f79f5c2",
+      "same_as_original": true
+    },
+    {
+      "id": "S14",
+      "path": "back/db/DB-v2.32.sql",
+      "line": 7617,
+      "label": "웹 카드 VIEW의 실제 JOIN 정의",
+      "anchor": "'SELECT %2$s, %5$s FROM frz.cell c '",
+      "sha256": "028e7607ea21e7b4e742e5626d676e9f23623e3ee9d49e56b14f988b5f79f5c2",
+      "same_as_original": true
+    },
+    {
+      "id": "S15",
+      "path": "back/app/core/measure.py",
+      "line": 567,
+      "label": "KPI 합계 SQL 생성",
+      "anchor": "def plan_counts(ms: MeasureScope, win: Window, *, group_by: Sequence[str] = (), split_at: date | None = None,",
+      "sha256": "60202f00049a1b9296357991b8bcfb3a95323a99de015dd2c11be9b999726cfa",
+      "same_as_original": true
+    },
+    {
+      "id": "S16",
+      "path": "back/app/core/measure.py",
+      "line": 833,
+      "label": "KPI 합계 SQL 실행",
+      "anchor": "async def fetch_counts(conn: Any, ms: MeasureScope, win: Window, *, group_by: Sequence[str] = (), split_at: date | None = None,",
+      "sha256": "60202f00049a1b9296357991b8bcfb3a95323a99de015dd2c11be9b999726cfa",
+      "same_as_original": true
+    },
+    {
+      "id": "S17",
+      "path": "back/app/features/analytics/kpi/summary/service.py",
+      "line": 166,
+      "label": "요약 KPI 서비스",
+      "anchor": "row = (await fetch_counts(conn, ms, win, parts=parts))[0]",
+      "sha256": "dec562b26cdfe4ba6150fd8dd78dd17919e6e2d0890da50317a9a4f8d11337d0",
+      "same_as_original": true
+    },
+    {
+      "id": "S18",
+      "path": "front/lib/db/repositories/scope-aggregates.ts",
+      "line": 2840,
+      "label": "legacy KPI 미러 집계",
+      "anchor": "export async function aggregateStandardFromMirror(",
+      "sha256": "abd3077888a5e4ff74806907b629387c0f024f11542ea2573c0cc5e4cf4cb91e",
+      "same_as_original": true
+    },
+    {
+      "id": "S19",
+      "path": "back/app/core/measure.py",
+      "line": 1409,
+      "label": "API 브랜드별 사전 계산 열 합산",
+      "anchor": "def competitor_rows_sql(ms: MeasureScope, win: Window, *, group_by: Sequence[str] = (), hmg_siblings: bool = True) -> Sql:",
+      "sha256": "60202f00049a1b9296357991b8bcfb3a95323a99de015dd2c11be9b999726cfa",
+      "same_as_original": true
+    },
+    {
+      "id": "S20",
+      "path": "back/app/features/analytics/mentions/brands/queries.py",
+      "line": 41,
+      "label": "브랜드·프롬프트별 2단계 집계",
+      "anchor": "def brand_extras_sql(ms: MeasureScope, win: Window) -> Sql:",
+      "sha256": "e51d38666c3d1f59d81cfd4b73b31aee3296ae2279afa6adfd5103332638c911",
+      "same_as_original": true
+    },
+    {
+      "id": "S21",
+      "path": "front/lib/db/repositories/scope-aggregates.ts",
+      "line": 5748,
+      "label": "legacy 언급·순위 JOIN 집계",
+      "anchor": "async function aggregateMentionsHeadlineSql(",
+      "sha256": "abd3077888a5e4ff74806907b629387c0f024f11542ea2573c0cc5e4cf4cb91e",
+      "same_as_original": true
+    },
+    {
+      "id": "S22",
+      "path": "back/app/features/analytics/citations/domains/queries.py",
+      "line": 204,
+      "label": "도메인별 집계·출처 JOIN·순위",
+      "anchor": "g AS MATERIALIZED (",
+      "sha256": "abb50f2dee410d033ea7f91be8955ac9409890990fa657a86c877cca16d33fc7",
+      "same_as_original": true
+    },
+    {
+      "id": "S23",
+      "path": "back/app/core/measure.py",
+      "line": 515,
+      "label": "출처 분류 오버라이드 JOIN",
+      "anchor": "OVERRIDE_JOIN = \"LEFT JOIN app.citation_domain_override o ON o.domain = ds.skey\"",
+      "sha256": "60202f00049a1b9296357991b8bcfb3a95323a99de015dd2c11be9b999726cfa",
+      "same_as_original": true
+    },
+    {
+      "id": "S24",
+      "path": "front/lib/db/repositories/scope-aggregates.ts",
+      "line": 6955,
+      "label": "legacy 인용 집계",
+      "anchor": "export async function aggregateCitationsFromMirror(",
+      "sha256": "abd3077888a5e4ff74806907b629387c0f024f11542ea2573c0cc5e4cf4cb91e",
+      "same_as_original": true
+    },
+    {
+      "id": "S25",
+      "path": "back/app/features/analytics/citations/sources/queries.py",
+      "line": 204,
+      "label": "답변 톤과 인용을 JOIN하는 집계",
+      "anchor": "def tone_sql(ctx: ReadContext, win: Window) -> Sql:",
+      "sha256": "c7687799b75e6c790bfe10ba1f33cffc6e2e489bc0b51fa80261f88cb9696b50",
+      "same_as_original": true
+    },
+    {
+      "id": "S26",
+      "path": "back/app/features/analytics/citations/sources/service.py",
+      "line": 85,
+      "label": "인용 화면의 톤 집계 실행",
+      "anchor": "t = q.tone_sql(rd.ctx, rd.win)",
+      "sha256": "19b212ea89606db2cc4be6b66fa5cb34d24cd920c77b2c9f5932eebc5f1565ec",
+      "same_as_original": true
+    },
+    {
+      "id": "S27",
+      "path": "back/app/features/analytics/citations/sources/service.py",
+      "line": 57,
+      "label": "사전 계산 열 우선·JOIN 폴백 선택",
+      "anchor": "async def _category_rows(conn: Any, rd: CitationRead) -> list[dict[str, Any]]:",
+      "sha256": "19b212ea89606db2cc4be6b66fa5cb34d24cd920c77b2c9f5932eebc5f1565ec",
+      "same_as_original": true
+    },
+    {
+      "id": "S28",
+      "path": "back/app/features/analytics/citations/sources/queries.py",
+      "line": 58,
+      "label": "카테고리·유형 JOIN 폴백",
+      "anchor": "def sources_sql(ctx: ReadContext, win: Window) -> Sql:",
+      "sha256": "c7687799b75e6c790bfe10ba1f33cffc6e2e489bc0b51fa80261f88cb9696b50",
+      "same_as_original": true
+    },
+    {
+      "id": "S29",
+      "path": "back/app/features/analytics/citations/prompts/queries.py",
+      "line": 37,
+      "label": "인용·미인용 프롬프트 집계",
+      "anchor": "def bucket_page_sql(plan: CountsPlan, *, owned: bool, q: str | None, cursor: Cursor | None, limit: int,",
+      "sha256": "ce5bb71a3a4219afd8ebf1a6253bad4422e8c21fd2f62918bdf569985c36c16d",
+      "same_as_original": true
+    },
+    {
+      "id": "S30",
+      "path": "back/app/features/analytics/funnel/acr/queries.py",
+      "line": 57,
+      "label": "ACR 브랜드 선택률",
+      "anchor": "def brands_sql(ms: MeasureScope, win: Window, *, limit: int) -> Sql:",
+      "sha256": "395acb4d53552bd8ce2572dd3fab8fd25382ef8d8676b8e8ca4e232f9fe3797a",
+      "same_as_original": true
+    },
+    {
+      "id": "S31",
+      "path": "back/app/features/analytics/funnel/acr/queries.py",
+      "line": 89,
+      "label": "ACR 프롬프트·엔진 승자 계산",
+      "anchor": "def battle_sql(ms: MeasureScope, win: Window) -> Sql:",
+      "sha256": "395acb4d53552bd8ce2572dd3fab8fd25382ef8d8676b8e8ca4e232f9fe3797a",
+      "same_as_original": true
+    },
+    {
+      "id": "S32",
+      "path": "back/app/features/analytics/funnel/acr/queries.py",
+      "line": 113,
+      "label": "ACR 차종·브랜드 다중 JOIN",
+      "anchor": "def models_sql(ms: MeasureScope, win: Window, *, limit: int) -> Sql:",
+      "sha256": "395acb4d53552bd8ce2572dd3fab8fd25382ef8d8676b8e8ca4e232f9fe3797a",
+      "same_as_original": true
+    },
+    {
+      "id": "S33",
+      "path": "back/app/features/analytics/funnel/acr/service.py",
+      "line": 232,
+      "label": "ACR 조회 시 각 집계 실행",
+      "anchor": "bq = q.brands_sql(ms, win, limit=params.top_brands)",
+      "sha256": "921c3cad76b0408f0b1c6bca9eb94c8a477f806393a8d66b97d0529255c97d08",
+      "same_as_original": true
+    },
+    {
+      "id": "S34",
+      "path": "back/app/features/analytics/funnel/conversion/queries.py",
+      "line": 88,
+      "label": "GA4 전환·속성 JOIN 집계",
+      "anchor": "def conversions_sql(props: Sequence[int], lo: date, hi: date, *, engine_keys: Sequence[int] | None,",
+      "sha256": "f4d5586b17c0438cc6c45c887a3c5a7a3a854b0d5bd30c38b9c08657ddae3e7e",
+      "same_as_original": true
+    },
+    {
+      "id": "S35",
+      "path": "back/app/features/analytics/funnel/conversion/queries.py",
+      "line": 104,
+      "label": "GA4 페이지별 3개 테이블 JOIN",
+      "anchor": "def pages_sql(props: Sequence[int], lo: date, hi: date, *, engine_keys: Sequence[int] | None,",
+      "sha256": "f4d5586b17c0438cc6c45c887a3c5a7a3a854b0d5bd30c38b9c08657ddae3e7e",
+      "same_as_original": true
+    },
+    {
+      "id": "S36",
+      "path": "back/app/features/analytics/funnel/conversion/service.py",
+      "line": 305,
+      "label": "전환 API의 페이지 집계 실행",
+      "anchor": "pq = q.pages_sql(active, lo, hi, **args, limit=params.page_limit)",
+      "sha256": "05c959a7fdf86010ff19a1e78a26c787e429fd6ceb21f6f9ae03b5bd0473612f",
+      "same_as_original": true
+    },
+    {
+      "id": "S37",
+      "path": "back/app/features/analytics/funnel/conversion/router.py",
+      "line": 21,
+      "label": "결과 캐시 표식 없는 전환 라우터",
+      "anchor": "router = APIRouter(tags=[\"analytics.funnel\"])",
+      "sha256": "4f9df456657f3f07bcb2b6d119fcb83ecc55996776ccf26f1090c6adecf58d05",
+      "same_as_original": true
+    },
+    {
+      "id": "S38",
+      "path": "front/lib/hgh/adapters/dashboard.ts",
+      "line": 430,
+      "label": "대시보드가 사용하는 GA4 응답 부분",
+      "anchor": "export function toTrafficConversionKpi(data: ApiConversionData): KpiSummary | null {",
+      "sha256": "775250da116aa0f48a4e6e8117cfee9424d8df3f12ea9a5504aa81adbd317ef7",
+      "same_as_original": true
+    },
+    {
+      "id": "S39",
+      "path": "front/lib/hgh/adapters/dashboard.ts",
+      "line": 202,
+      "label": "대시보드의 전환 API 호출",
+      "anchor": "export async function fetchTrafficConversion(",
+      "sha256": "775250da116aa0f48a4e6e8117cfee9424d8df3f12ea9a5504aa81adbd317ef7",
+      "same_as_original": true
+    },
+    {
+      "id": "S40",
+      "path": "front/lib/ga4/conversion.ts",
+      "line": 11,
+      "label": "legacy GA4 캐시",
+      "anchor": "export const GA4_CACHE_TTL_SECONDS = 24 * 60 * 60;",
+      "sha256": "7bdeb2eef7037ef80cf3b521012243c5d4e5eb6dfbe23b5901f6620c4c354557",
+      "same_as_original": false
+    },
+    {
+      "id": "S41",
+      "path": "back/app/features/analytics/geo/markets/service.py",
+      "line": 149,
+      "label": "GEO 국가별 KPI·경쟁사 집계",
+      "anchor": "counts = await fetch_counts(conn, ms, win, group_by=(\"geo\",), parts=(\"mentions\",) if website else (\"mentions\", \"citations\"))",
+      "sha256": "bc36173f8b864f9f5759c1a24b5778f52c74e0674b62d72c025d9ff5d4c15a7b",
+      "same_as_original": true
+    },
+    {
+      "id": "S42",
+      "path": "front/lib/db/repositories/scope-aggregates.ts",
+      "line": 11947,
+      "label": "legacy 국가별 JOIN 집계",
+      "anchor": "export async function aggregateGeoKpiFromMirror(",
+      "sha256": "abd3077888a5e4ff74806907b629387c0f024f11542ea2573c0cc5e4cf4cb91e",
+      "same_as_original": true
+    },
+    {
+      "id": "S43",
+      "path": "back/app/features/analytics/trend/series/queries.py",
+      "line": 138,
+      "label": "출처·카테고리 시계열 JOIN 집계",
+      "anchor": "def mix_counts_sql(ms: MeasureScope, win: Window, group: str, dimension: str, top: int) -> Sql:",
+      "sha256": "dd139ade0eadb9b2645f8bdb8bbe4c48b76f4d272426b268ebe7dca51da339a9",
+      "same_as_original": true
+    },
+    {
+      "id": "S44",
+      "path": "back/app/features/analytics/kpi/compare/queries.py",
+      "line": 3,
+      "label": "비교 지표의 회차별 재집계",
+      "anchor": "측정 합계는 core.measure.fetch_counts(group_by cycle), 스캔 창은 core.cycles.resolve_window, 누락 비중(Q2) 원장은",
+      "sha256": "01b04df9ad53376ee80e3b8f6376024817ab63b22cc79f53eea2bb500f574d7b",
+      "same_as_original": true
+    },
+    {
+      "id": "S45",
+      "path": "back/app/core/measure.py",
+      "line": 1295,
+      "label": "타겟 출처 인용률 계산 경로",
+      "anchor": "def accuracy_counts_sql(ms: MeasureScope, win: Window, *, mode: AccuracyMode, group_by: Sequence[str] = ()) -> Sql:",
+      "sha256": "60202f00049a1b9296357991b8bcfb3a95323a99de015dd2c11be9b999726cfa",
+      "same_as_original": true
+    },
+    {
+      "id": "S46",
+      "path": "back/app/core/measure.py",
+      "line": 863,
+      "label": "발행값 우선 읽기",
+      "anchor": "def report_values_sql(round_dates: Sequence[date], brands: Sequence[str], countries: Sequence[str] | None,",
+      "sha256": "60202f00049a1b9296357991b8bcfb3a95323a99de015dd2c11be9b999726cfa",
+      "same_as_original": true
+    },
+    {
+      "id": "S47",
+      "path": "front/lib/db/repositories/summary-website-aggregates.ts",
+      "line": 1273,
+      "label": "legacy 저장 URL 판정값 읽기",
+      "anchor": "export async function summaryWebsitePromptHitRates(",
+      "sha256": "cc6a0f663ba67a1689a62bbf85c04519c4bd0b87f9d61a115e594bd2f7fca36d",
+      "same_as_original": true
+    },
+    {
+      "id": "S48",
+      "path": "back/app/features/analytics/kpi/summary/queries.py",
+      "line": 45,
+      "label": "퍼널별 측정 프롬프트 JOIN 집계",
+      "anchor": "def funnel_measured_sql(ms: MeasureScope, win: Window) -> Sql:",
+      "sha256": "3871c26629817b302650079f292a5b45f754f735b6a7621b87a6605dd53f81aa",
+      "same_as_original": true
+    },
+    {
+      "id": "S49",
+      "path": "front/lib/hgh/adapters/dashboard.ts",
+      "line": 180,
+      "label": "프로젝트 대시보드 퍼널 요청",
+      "anchor": "return fetchKpiSummary(filters, { ...ctx, card: true, ...(ctx.surface === \"project\" ? { byFunnel: true } : {}) });",
+      "sha256": "775250da116aa0f48a4e6e8117cfee9424d8df3f12ea9a5504aa81adbd317ef7",
+      "same_as_original": true
+    },
+    {
+      "id": "S50",
+      "path": "back/app/features/qa/answers/list/queries.py",
+      "line": 55,
+      "label": "검수 JOIN·COUNT",
+      "anchor": "def progress_sql(r: QaResolved) -> Sql:",
+      "sha256": "9b5848c0d1c8a71d953a1364795f34f8072c7ed1281e7cee9b50a67420812bde",
+      "same_as_original": true
+    },
+    {
+      "id": "S51",
+      "path": "back/app/features/qa/answers/list/service.py",
+      "line": 128,
+      "label": "검수 scoped·total 매 요청 계산",
+      "anchor": "async def progress(conn: AsyncConnection, f: QaFilter) -> tuple[QaProgress, Any]:",
+      "sha256": "50120c5a9784da14bc5854e7969bc6c6d3cb1fa1975cdedaec3059fa100be83a",
+      "same_as_original": true
+    },
+    {
+      "id": "S52",
+      "path": "front/lib/db/repositories/qa-review.ts",
+      "line": 446,
+      "label": "legacy 검수 JOIN·COUNT",
+      "anchor": "async function countProgress(f: QaFilter): Promise<QaProgress> {",
+      "sha256": "650d82ce408eddbb48d841f6df79323e58ea784e3333946b83f112f8313950c8",
+      "same_as_original": true
+    },
+    {
+      "id": "S53",
+      "path": "front/lib/db/repositories/qa-review.ts",
+      "line": 482,
+      "label": "legacy 검수 30초 캐시",
+      "anchor": "{ revalidate: 30 },",
+      "sha256": "650d82ce408eddbb48d841f6df79323e58ea784e3333946b83f112f8313950c8",
+      "same_as_original": true
+    },
+    {
+      "id": "S54",
+      "path": "back/app/features/intent/social/context_map/queries.py",
+      "line": 19,
+      "label": "소셜 스냅샷 저장값·통계 조회",
+      "anchor": "STATS = \"\"\"",
+      "sha256": "d6a2853a5e389940db53813bb6dcaeee08013737dc472a28884dd118a63e2f86",
+      "same_as_original": true
+    },
+    {
+      "id": "S55",
+      "path": "front/app/[locale]/(dash)/standard/answer-analysis/_data/kpi-view.ts",
+      "line": 1401,
+      "label": "현재 비활성인 스탠스 카드",
+      "anchor": "export const STANCE_CARD_ENABLED = false;",
+      "sha256": "4aa30f541db4d3cc7dadf35c5605ad293207c39fcc6d6964ddf628f403fa3cd9",
+      "same_as_original": true
+    },
+    {
+      "id": "S56",
+      "path": "front/lib/hgh/client.ts",
+      "line": 243,
+      "label": "API/legacy 실행 경로 선택",
+      "anchor": "export function hghSource(group: HghSourceGroup, env: Env = process.env): HghSource {",
+      "sha256": "8ff8b8cb683428d87c31d330f427a1b2b626f3ab65d70f4be4e51925722e5769",
+      "same_as_original": true
+    }
+  ]
+}

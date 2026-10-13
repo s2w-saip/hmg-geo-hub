@@ -1,0 +1,17 @@
+flowchart TB
+  Browser[브라우저] --> Next[Next.js 서버 / BFF]
+  Next --> Auth[Supabase Auth]
+  Next -->|기본 legacy| Legacy[Drizzle / 미러 / 요약]
+  Next -->|HGH_SOURCE 그룹 = api| API[FastAPI 모듈형 모놀리스]
+  Legacy --> OldDB[(기존 PostgreSQL 모델)]
+  Cron[기존 크론 / summary-runner] --> OldDB
+  API -->|읽기| Read[(rd / frz / ext)]
+  API -->|쓰기| App[(app / queue / outbox)]
+  App --> Worker[Python ingest 워커]
+  Scope[Scope 측정 서비스] -->|pull| Worker
+  Worker -->|Scope outbox| Scope
+  Worker --> Raw[(ing 원본)]
+  Worker --> Read
+  API -.->|선택적 결과 캐시| Cache[(rcache)]
+  Next --> GA4[기존 경로 GA4 조회]
+  API --> LLM[보조 기능 OpenRouter]

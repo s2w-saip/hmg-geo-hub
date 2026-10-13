@@ -1,0 +1,1820 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GEO 소프트웨어 품질 점검</title><style>
+:root{--ink:#192a35;--muted:#5a6b75;--bg:#f1f4f5;--paper:#fff;--line:#d9e2e6;--accent:#086c78;--p1:#a52f38;--p2:#825207}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:24px}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.75 "Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif;word-break:keep-all}main{max-width:1240px;margin:auto;padding:32px 24px 70px}header{background:#173641;color:white;border-radius:14px;padding:32px}header p{max-width:980px}h1{font-size:34px;line-height:1.3;margin:8px 0 18px;letter-spacing:-.04em}h2{font-size:23px;margin:0 0 15px;line-height:1.45}h3{font-size:20px;margin:9px 0 7px;line-height:1.5}p{margin:10px 0}a{color:var(--accent);text-underline-offset:3px}header a{color:#b6e8e5}.eyebrow{font-size:12px;letter-spacing:.1em;color:#b6e8e5}.lead{font-size:20px}.meta{font-size:12px;color:#c9d9de}.muted,small{color:var(--muted);font-size:13px}nav{display:flex;flex-wrap:wrap;gap:10px 22px;padding:20px 0}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.stat{padding:18px;background:white;border:1px solid var(--line);border-radius:9px}.stat b{display:block;font-size:30px;line-height:1.4}.stat span{color:var(--muted);font-size:13px}section{background:white;border:1px solid var(--line);border-radius:12px;padding:26px;margin-top:20px}.notice{background:#e9f4f4;border-left:4px solid var(--accent);padding:16px 20px;margin:16px 0}.badge{display:inline-block;padding:2px 9px;font-size:12px;font-weight:700;border-radius:5px;white-space:nowrap}.p1{color:var(--p1);background:#fcebed}.p2{color:var(--p2);background:#fff2da}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:13px;min-width:640px}th,td{border-bottom:1px solid var(--line);text-align:left;vertical-align:top;padding:12px 10px}th{background:#f4f7f8;white-space:nowrap}.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}.flow div{border:1px solid var(--line);border-top:4px solid var(--accent);padding:16px;border-radius:6px}.flow b{display:block}.flow span{font-size:13px;color:var(--muted)}.finding{border-top:1px solid var(--line);padding:27px 0;scroll-margin-top:24px}.finding:last-child{padding-bottom:0}.finding-top{display:flex;gap:12px;align-items:center;font-size:12px;color:var(--muted)}.route{font:12px/1.8 Consolas,monospace;color:var(--muted);overflow-wrap:anywhere}.proof{padding:10px 14px;background:#f0f6f7;font-size:13px}dl{display:grid;grid-template-columns:112px 1fr;gap:12px 20px;margin:18px 0}dt{font-size:13px;font-weight:bold}dd{margin:0;font-size:14px}.refs{display:inline-flex;gap:7px;flex-wrap:wrap}.refs a{background:#eaf2f3;padding:2px 7px;border-radius:4px;font:12px/1.8 Consolas,monospace}.source-links{font-size:12px;color:var(--muted)}.filters{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin:18px 0}.filters label{font-size:12px;color:var(--muted)}input,select{display:block;margin-top:4px;padding:10px 12px;border:1px solid #b9cbd1;border-radius:6px;color:var(--ink);background:white;font:14px "Malgun Gothic",sans-serif}input{width:340px;max-width:100%}#visible-count{font-size:13px;padding-bottom:8px}details{border-top:1px solid var(--line);padding:14px 0}summary{cursor:pointer;font-weight:bold}summary span{display:block;font:12px/1.8 Consolas,monospace;overflow-wrap:anywhere;color:var(--muted)}details p{font-size:12px;overflow-wrap:anywhere}pre{font:12px/1.7 Consolas,"Malgun Gothic",monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;padding:16px;background:#f2f5f6}code{font:12px/1.7 Consolas,monospace;overflow-wrap:anywhere}li{margin:8px 0}footer{font-size:12px;color:var(--muted);margin-top:24px}[hidden]{display:none!important}a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:4px}
+@media(max-width:760px){main{padding:16px 12px 40px}header,section{padding:20px}h1{font-size:28px}h3{font-size:18px}.lead{font-size:17px}.stats,.flow{grid-template-columns:repeat(2,1fr)}dl{grid-template-columns:1fr;gap:4px}dd{margin-bottom:12px}.filters label:first-child{width:100%}input{width:100%}}
+@media print{body{background:white;font-size:11px}main{padding:0;max-width:none}header{background:white;color:var(--ink);padding:0 0 16px;border-radius:0}.meta,.eyebrow{color:var(--muted)}nav,.filters{display:none}section{padding:15px;border-radius:0}.finding{break-inside:auto}.finding h3,h2{break-after:avoid}tr{break-inside:avoid}table{min-width:0;font-size:10px}pre{font-size:9px}.stats{grid-template-columns:repeat(4,1fr)}.table-wrap{overflow:visible}.finding[hidden]{display:block!important}}
+</style></head><body><main>
+<header><div class="eyebrow">SOFTWARE REVIEW · 2026-10-08</div><h1>GEO 소프트웨어 품질 점검</h1>
+<p class="lead"><strong>대량 목록의 전량 로딩, 저장 실패의 미표시, 부분 성공·실패를 정상 결과와 구별하지 못하는 경로가 있다.</strong></p>
+<p>데이터 조회 → 화면 렌더링, 저장 → 부분 성공 → UI 갱신, 외부 오류 → fallback → 캐시뿐 아니라 백그라운드 작업의 중단·복구와 완료 판정까지 확인했다. 15개 발견 사항 중 7개를 우선 수정 대상으로 분류했다.</p>
+<p class="meta">대상: hmg-geo-hub-share · 로컬 HEAD 392ca454 · 정적 코드 점검 + 의존성을 모의한 소스 함수 실행<br>운영 DB·배포 환경 변수·실제 트래픽·브라우저 성능은 미측정. 제품 코드 변경 없음.</p></header>
+<nav aria-label="보고서 목차"><a href="#overview">발견 사항</a><a href="#volume">대량 목록 비교</a><a href="#details">상세 근거·수정 기준</a><a href="#verification">재현 결과</a><a href="#boundaries">판정 범위</a><a href="#sources">코드 발췌</a></nav>
+<div class="stats"><div class="stat"><b>15</b><span>소프트웨어 문제·위험 항목</span></div><div class="stat"><b>7 / 8</b><span>P1 우선 수정 / P2 개선</span></div><div class="stat"><b>15 / 15</b><span>모의 시나리오에서 문제 동작 재현</span></div><div class="stat"><b>47</b><span>코드 근거 묶음 · 원문 발췌 포함</span></div></div>
+
+<section id="overview"><h2>발견 사항</h2>
+<div class="notice"><strong>2차 점검에서 6개 추가: SW10~15.</strong> 작업 중단 뒤 running 회수 누락, 외부 생성 ID 없이 완료 처리, 일일 작업 실패 후 재시도 누락, 긴 pull에 의한 큐 지연, 캐시 복구 누락, GA4 호출의 자체 timeout 부재를 확인했다. 기존 9개 항목은 유지했다. <a href="#SW10">추가 항목부터 보기</a></div>
+<p><strong>먼저 QA 저장 상태와 일괄 작업의 부분 성공을 바로잡고, 지표 집계 실패를 정상 데이터와 분리하는 것이 좋다.</strong> 목록은 서버 페이지네이션으로 바꾸면 전량 로딩, 전체 DOM, 상한 초과 오류를 함께 해결할 수 있다. SW01~03은 같은 설계의 서로 다른 영향이므로 구현 과제로는 묶을 수 있다.</p>
+<p class="muted">P1: 잘못된 저장·완료 인식, 미복구 작업, 지표 의미 변경, 정상 데이터 증가에 의한 화면 실패. P2: 대량 성능, 장애 상태 식별, 실행 지연, 캐시·유지 작업 복구. 우선순위는 코드 영향 기준이며 발생 빈도 통계는 아니다.</p>
+<div class="table-wrap"><table><thead><tr><th>ID</th><th>우선순위</th><th>문제</th><th>적용 경로</th></tr></thead><tbody><tr><td><a href="#SW01">SW01</a></td><td><span class="badge p2">P2</span></td><td>50개씩 보이지만, 표준 프롬프트는 먼저 전량 조회한다</td><td>공통</td></tr><tr><td><a href="#SW02">SW02</a></td><td><span class="badge p2">P2</span></td><td>관리자·프로젝트 프롬프트는 전체 행을 한꺼번에 렌더링한다</td><td>공통</td></tr><tr><td><a href="#SW03">SW03</a></td><td><span class="badge p1">P1</span></td><td>관리자 10,001건·프로젝트 20,001건에서 목록 화면이 실패한다</td><td>API</td></tr><tr><td><a href="#SW04">SW04</a></td><td><span class="badge p1">P1</span></td><td>QA 판정 저장이 실패해도 이전 ‘저장됨’ 표시가 남는다</td><td>공통</td></tr><tr><td><a href="#SW05">SW05</a></td><td><span class="badge p1">P1</span></td><td>일괄 태깅은 일부만 저장돼도 전체 실패처럼 반환한다</td><td>API</td></tr><tr><td><a href="#SW06">SW06</a></td><td><span class="badge p1">P1</span></td><td>GA4 설정 조회 장애가 전환 지표의 집계 기준을 바꾼다</td><td>legacy</td></tr><tr><td><a href="#SW07">SW07</a></td><td><span class="badge p1">P1</span></td><td>일시적인 GA4 조회 실패가 24시간 재검증 캐시의 정상 결과가 된다</td><td>legacy</td></tr><tr><td><a href="#SW08">SW08</a></td><td><span class="badge p2">P2</span></td><td>관리자 조회 장애가 ‘데이터 없음’ 화면으로 바뀐다</td><td>공통</td></tr><tr><td><a href="#SW09">SW09</a></td><td><span class="badge p2">P2</span></td><td>QA 잠금 획득·갱신 실패를 알아도 편집 상태가 명확히 바뀌지 않는다</td><td>공통</td></tr><tr><td><a href="#SW10">SW10</a></td><td><span class="badge p1">P1</span></td><td>DataForSEO 작업이 중단되면 ‘실행 중’에 남고 재처리·큐 감시에서 빠진다</td><td>ingest</td></tr><tr><td><a href="#SW11">SW11</a></td><td><span class="badge p1">P1</span></td><td>Scope 생성 응답에 ID가 없어도 동기화 작업을 ‘완료’로 닫는다</td><td>ingest</td></tr><tr><td><a href="#SW12">SW12</a></td><td><span class="badge p2">P2</span></td><td>일일 작업이 실패해도 실행 날짜를 갱신해 당일 재시도를 막는다</td><td>ingest</td></tr><tr><td><a href="#SW13">SW13</a></td><td><span class="badge p2">P2</span></td><td>60초 주기의 큐 작업이 긴 동기화 작업 뒤에서 기다린다</td><td>ingest</td></tr><tr><td><a href="#SW14">SW14</a></td><td><span class="badge p2">P2</span></td><td>키워드 캐시는 DB 오류가 한 번 나면 프로세스가 살아 있는 동안 복구를 시도하지 않는다</td><td>legacy</td></tr><tr><td><a href="#SW15">SW15</a></td><td><span class="badge p2">P2</span></td><td>GA4 HTTP 호출에 자체 시간 제한이 없어 페이지·캐시 예열의 대기가 길어질 수 있다</td><td>legacy</td></tr></tbody></table></div>
+<div class="notice"><strong>legacy·API·ingest를 구분해야 한다.</strong> 프런트의 소스 선택 기본값은 legacy다. 표준 프롬프트는 G5, 전환 지표는 G4, 프로젝트는 G6, 관리자·QA는 G7로 전환된다. ingest는 Python 적재 워커가 실행되는 경우의 별도 경로다. 실제 배포 설정·워커 가동 여부는 확인하지 않았으므로 현재 운영 장애로 단정하지 않는다. <span class="refs"><a href="#S28">S28</a> <a href="#S23">S23</a> <a href="#S16">S16</a> <a href="#S32">S32</a></span></div>
+</section>
+
+<section id="volume"><h2>‘10,000개를 한 화면에 로드’하는가?</h2>
+<p><strong>전량 조회는 확인했다. 전체 행 렌더링 여부는 화면마다 다르다.</strong> 아래 상한은 정상적으로 커서가 진행되고 페이지가 최대 크기로 채워지는 경우다. 커서 재시작이 있으면 HTTP 요청 횟수는 더 늘어날 수 있다.</p>
+<div class="table-wrap"><table><thead><tr><th>화면</th><th>데이터 조회</th><th>화면 렌더링</th><th>API 경계값</th></tr></thead><tbody>
+<tr><td>표준 프롬프트</td><td>legacy: 범위 내 전량<br>API: 25,000 × 4페이지까지 합침</td><td>클라이언트에서 기본 50행 slice<br>조회·전송은 전량</td><td>최대 100,000행 수집 후에도 커서가 남으면 오류</td></tr>
+<tr><td>관리자 프롬프트</td><td>legacy: 삭제 포함 전량<br>API: 500 × 20페이지까지 합침</td><td>필터에 남은 모든 행을 map<br>페이지네이션·가상화 없음</td><td>10,000건 성공 → 10,001건 실패<br>삭제된 행도 상한에 포함</td></tr>
+<tr><td>프로젝트 프롬프트·후보</td><td>legacy: 목록별 전량<br>API: 목록별 500 × 40페이지까지 합침</td><td>필터에 남은 모든 행을 map<br>사용자 정의 열까지 함께 생성</td><td>프롬프트 또는 후보가 20,000건을 넘으면 페이지 로딩 실패 가능</td></tr>
+</tbody></table></div>
+<div class="flow" aria-label="표준 프롬프트 데이터 흐름"><div><b>① 서버에서 전량 조회</b><span>API에도 페이지는 있지만 끝까지 수집한다.</span></div><div><b>② 전체 rows 전달</b><span>클라이언트 컴포넌트 props에 담긴다.</span></div><div><b>③ 전체 배열 처리</b><span>필터·정렬·ID 연결 등을 수행한다.</span></div><div><b>④ 마지막에 50행 표시</b><span>표시 행 수만 줄어든다.</span></div></div>
+<p class="muted">10,001건은 재현용 데이터다. 현재 운영 데이터가 몇 건인지, 응답이 몇 MB인지, 렌더링에 몇 초가 걸리는지는 이번 분석에서 측정하지 않았다.</p></section>
+
+<section id="details"><h2>상세 근거와 수정 완료 기준</h2>
+<div class="filters"><label>내용 검색<input id="search" type="search" placeholder="예: 저장, GA4, 워커, 캐시"></label><label>우선순위<select id="priority"><option value="">전체</option><option>P1</option><option>P2</option></select></label><label>동작 경로<select id="mode"><option value="">전체</option><option value="legacy">legacy + 공통</option><option value="API">API + 공통</option><option value="ingest">ingest 워커</option></select></label><span id="visible-count" aria-live="polite"></span></div>
+<p id="no-results" hidden>조건에 맞는 항목이 없습니다.</p><article id="SW01" class="finding" data-priority="P2" data-mode="공통">
+      <div class="finding-top"><span class="badge p2">P2</span><span>SW01 · 대량 목록 · 공통</span></div>
+      <h3>50개씩 보이지만, 표준 프롬프트는 먼저 전량 조회한다</h3><p class="route">/standard/prompts</p>
+      <p class="proof">실제 어댑터 함수에 모의 10,001행을 넣어 전량 반환 확인 · UI 슬라이스는 정적 확인 (R01)</p><dl><dt>확인한 동작</dt><dd>legacy 쿼리는 스코프에 속한 전체 행을 LIMIT 없이 읽는다. API 경로는 all=true로 페이지당 25,000행을 요청하고 최대 4페이지를 합친다. 화면에는 전체 rows가 전달되고, 브라우저에서 필터·정렬 후 기본 50행을 slice한다.</dd><dt>발생 조건</dt><dd>계정이 조회 가능한 프롬프트 수가 늘어나면 발생한다. API의 정상 커서 진행 기준 상한은 25,000 × 4 = 100,000행이다. 실제 운영 행 수가 10,000건을 넘는지는 확인하지 않았다.</dd><dt>사용자 영향</dt><dd>첫 화면에 50행만 보여도 전체 데이터의 DB 조회·전송·직렬화 및 클라이언트 배열 처리가 필요하다. 데이터 증가에 따라 초기 진입과 검색·정렬 비용이 커진다.</dd><dt>판정의 범위</dt><dd>클라이언트 페이지네이션은 있다. 따라서 ‘한 화면에 표준 프롬프트 10,000행을 모두 그린다’는 설명은 부정확하다. 확인한 문제는 전량 로딩이다. 응답 크기·초 단위 지연·메모리 사용량은 실측하지 않았다.</dd><dt>수정 방향</dt><dd>목록 화면에서 all=true와 fetchAllPages를 제거하고 검색·정렬·필터·커서를 서버에 전달한다. 전체 엑셀 내보내기는 별도 다운로드 경로로 둔다.</dd><dt>완료 확인 기준</dt><dd>10,001행 데이터에서도 초기 목록 응답은 선택한 pageSize 이하이며, 다음 페이지 이동 때만 추가 조회된다. 검색·정렬 결과와 전체 건수는 서버 기준으로 일치해야 한다.</dd></dl><p class="source-links">코드 근거 <span class="refs"><a href="#S01">S01</a> <a href="#S02">S02</a> <a href="#S03">S03</a> <a href="#S04">S04</a> <a href="#S05">S05</a></span></p></article><article id="SW02" class="finding" data-priority="P2" data-mode="공통">
+      <div class="finding-top"><span class="badge p2">P2</span><span>SW02 · 대량 목록 · 공통</span></div>
+      <h3>관리자·프로젝트 프롬프트는 전체 행을 한꺼번에 렌더링한다</h3><p class="route">/admin/standards/prompts · /projects/[id]/prompt</p>
+      <p class="proof">조회 함수 → 페이지 props → tbody의 sorted.map 호출 연결 확인 (정적)</p><dl><dt>확인한 동작</dt><dd>관리자 목록과 프로젝트 프롬프트 목록은 sorted.map으로 필터에 남은 모든 행을 만든다. 후보 목록도 같은 구조다. 페이지 단위 slice나 가상 스크롤이 없다. API도 페이지들을 모두 모아 전달하고 legacy는 LIMIT 없는 쿼리로 읽는다.</dd><dt>발생 조건</dt><dd>필터에 많은 행이 남는 경우다. 예를 들어 관리자 API는 상한 이내의 10,000행이 모두 활성 행이면 10,000개 tr을 만든다. 프로젝트 프롬프트는 10,001행도 조회 상한 20,000행 이내라 같은 전체 렌더링 경로를 탄다.</dd><dt>사용자 영향</dt><dd>행마다 셀·배지·체크박스·편집 UI가 늘어나 초기 렌더링, 정렬, 선택 변경 때 브라우저가 처리할 작업이 커진다. 프로젝트의 사용자 정의 열 수가 늘면 셀 수도 함께 늘어난다.</dd><dt>판정의 범위</dt><dd>성능 병목을 만드는 구조를 확인한 것으로, 특정 브라우저에서 멈춤이나 OOM이 발생했다는 실측 결과는 아니다. 필터나 삭제됨 탭에 따라 실제 렌더링 행 수는 줄어든다.</dd><dt>수정 방향</dt><dd>서버 페이지네이션을 먼저 적용한다. 한 페이지도 큰 경우에는 행 가상화를 추가한다. 전체 선택은 ‘현재 페이지’와 ‘검색 결과 전체’를 구분해 서버 작업으로 처리한다.</dd><dt>완료 확인 기준</dt><dd>10,000행 이상의 모의 데이터에서도 DOM 행 수가 pageSize 또는 가상화 창 크기로 제한되고, 전체 선택·필터·내보내기의 대상 범위가 명확해야 한다.</dd></dl><p class="source-links">코드 근거 <span class="refs"><a href="#S06">S06</a> <a href="#S07">S07</a> <a href="#S08">S08</a> <a href="#S09">S09</a> <a href="#S10">S10</a> <a href="#S11">S11</a> <a href="#S12">S12</a> <a href="#S31">S31</a></span></p></article><article id="SW03" class="finding" data-priority="P1" data-mode="API">
+      <div class="finding-top"><span class="badge p1">P1</span><span>SW03 · 대량 목록 · API</span></div>
+      <h3>관리자 10,001건·프로젝트 20,001건에서 목록 화면이 실패한다</h3><p class="route">관리자 카탈로그: G7=api · 프로젝트 프롬프트: G6=api</p>
+      <p class="proof">실제 fetchAllPages와 호출자 상수로 경계값 재현 (R02·R03)</p><dl><dt>확인한 동작</dt><dd>관리자 카탈로그는 500행 × 최대 20페이지, 프로젝트 프롬프트·후보 목록은 각각 500행 × 최대 40페이지를 전부 수집한다. 마지막 허용 페이지에도 nextCursor가 남으면 fetchAllPages가 로컬 HghApiError(500)를 던진다. 페이지 호출자는 이를 오류 화면으로 전달한다.</dd><dt>발생 조건</dt><dd>관리자 카탈로그 10,000건은 20회 조회 후 성공하지만 10,001건은 20회 조회 후 실패한다. 프로젝트 프롬프트는 20,001건에서 40회 후 실패한다. 관리자 조회에는 soft-delete된 행도 포함되므로 활성 행 수만 보면 임계값을 놓칠 수 있다.</dd><dt>사용자 영향</dt><dd>정상적인 데이터 증가만으로 목록 페이지를 열 수 없게 된다. 부분 데이터를 탐색하거나 다음 페이지로 이동하는 대체 경로도 제공되지 않는다.</dd><dt>판정의 범위</dt><dd>API 전환 경로에 한정된다. 이는 조용히 일부 데이터를 누락하는 버그가 아니라 명시적인 실패다. 커서 반복·무한 조회를 차단하는 helper의 보호 자체는 필요하며 상한만 늘리는 방식은 해결책이 아니다.</dd><dt>수정 방향</dt><dd>화면에서는 fetchPageOrRestart 등 한 페이지 조회 방식을 사용하고 nextCursor를 UI에 전달한다. 전체 수집이 필요한 작업은 진행률·중단·결과 다운로드를 갖춘 별도 작업으로 옮긴다.</dd><dt>완료 확인 기준</dt><dd>10,000/10,001행과 20,000/20,001행 양쪽에서 첫 페이지가 정상 표시된다. 마지막 페이지까지 중복·누락 없이 이동하고, 데이터 세대 변경 시 커서 재시작이 안내된다.</dd></dl><p class="source-links">코드 근거 <span class="refs"><a href="#S06">S06</a> <a href="#S07">S07</a> <a href="#S09">S09</a> <a href="#S13">S13</a></span></p></article><article id="SW04" class="finding" data-priority="P1" data-mode="공통">
+      <div class="finding-top"><span class="badge p1">P1</span><span>SW04 · 저장·정합성 · 공통</span></div>
+      <h3>QA 판정 저장이 실패해도 이전 ‘저장됨’ 표시가 남는다</h3><p class="route">/raw-data-qa/answers/[jobId]</p>
+      <p class="proof">실제 save·setFlag 함수로 성공 → 수정 → HTTP 401·422·500 시나리오 재현 (R04)</p><dl><dt>확인한 동작</dt><dd>save는 409 충돌과 res.ok만 처리한다. 그 외 HTTP 오류에서는 에러 메시지를 만들지 않고 saving만 false로 바뀐다. 성공 시 설정한 savedAt은 이후 판정을 수정해도 지워지지 않으며, 하단 바는 savedAt이 있으면 계속 ‘저장됨’을 표시한다.</dd><dt>발생 조건</dt><dd>한 번 저장한 뒤 판정을 변경하고, 다음 PUT /api/qa/review가 세션 만료·검증 오류·서버 오류로 실패하는 경우다. 첫 저장부터 실패해도 사용자에게 저장 실패 안내가 없다.</dd><dt>사용자 영향</dt><dd>사용자가 최신 변경까지 저장됐다고 오인한 채 다음 항목으로 이동할 수 있다. 서버에 반영되지 않은 판정 변경이 사라진다. 네트워크 reject는 로컬에서 잡지 않으며 단축키는 void save()를 호출한다.</dd><dt>판정의 범위</dt><dd>409 충돌은 잠금 상실·읽기 전용 상태로 처리한다. 문제는 나머지 실패와 수정 상태 관리다. 데이터 손실 사례를 운영에서 확인한 것은 아니며, 모의 HTTP 응답으로 저장 핸들러 동작을 재현했다.</dd><dt>수정 방향</dt><dd>저장 상태를 idle/dirty/saving/saved/error로 관리하고 변경 즉시 dirty로 전환한다. 모든 non-2xx와 네트워크 예외를 사용자에게 표시한다. 실패 시 입력을 유지하고 재시도를 제공하며 미저장 상태의 이동을 보호한다.</dd><dt>완료 확인 기준</dt><dd>저장 성공 후 수정하면 즉시 미저장 표시로 바뀐다. 401·403·422·500·네트워크 오류 모두 명확한 실패 안내가 나타나고 ‘저장됨’이 남지 않아야 한다. 409 잠금 상실 처리도 유지한다.</dd></dl><p class="source-links">코드 근거 <span class="refs"><a href="#S14">S14</a> <a href="#S15">S15</a> <a href="#S16">S16</a></span></p></article><article id="SW05" class="finding" data-priority="P1" data-mode="API">
+      <div class="finding-top"><span class="badge p1">P1</span><span>SW05 · 저장·정합성 · API</span></div>
+      <h3>일괄 태깅은 일부만 저장돼도 전체 실패처럼 반환한다</h3><p class="route">/projects/[id]/prompt · G6=api</p>
+      <p class="proof">실제 chunk·일괄 저장 함수에 1,001개 ID와 두 번째 요청 실패 주입 (R06)</p><dl><dt>확인한 동작</dt><dd>선택 ID를 1,000개씩 나눠 순차 POST한다. 각 백엔드 요청은 별도 DB 트랜잭션이다. 뒤 청크가 실패하면 즉시 실패 결과만 반환하고 앞 청크의 성공 건수·ID를 버린다. 서버 액션은 r.ok일 때만 revalidatePath를 실행하고 UI도 성공할 때만 값을 갱신한다.</dd><dt>발생 조건</dt><dd>1,001건을 선택해 첫 1,000건 요청은 성공하고 나머지 1건 요청이 거절되거나 실패하는 경우다. 모의 저장소에서 1,000건 변경 후 {ok:false,error:…}만 반환되는 것을 확인했다.</dd><dt>사용자 영향</dt><dd>실제 서버에는 일부 값이 바뀌었지만 화면에는 실패 알림과 이전 값이 남을 수 있다. 사용자는 어느 행이 적용됐는지 판단할 수 없고, 재시도 범위도 알 수 없다.</dd><dt>판정의 범위</dt><dd>한 청크 안의 검증과 쓰기는 트랜잭션으로 묶여 있다. 문제는 여러 HTTP 요청을 합친 사용자 작업의 부분 성공 표현이다. 같은 태그값 UPSERT 재시도가 곧바로 중복 행을 만든다고 단정하지 않는다.</dd><dt>수정 방향</dt><dd>원자적인 서버 일괄 작업으로 만들거나, 작업 ID와 청크별 상태를 저장하고 적용/실패/미시도 ID 및 건수를 반환한다. 부분 성공에서도 화면을 갱신하고 남은 항목만 재시도할 수 있게 한다.</dd><dt>완료 확인 기준</dt><dd>두 번째 청크 실패 주입 시 전부 롤백되거나, 적용 1,000건·실패/미처리 1건이 정확히 표시된다. 새로고침 전후 UI와 DB가 일치하고 재시도 결과도 추적 가능해야 한다.</dd></dl><p class="source-links">코드 근거 <span class="refs"><a href="#S09">S09</a> <a href="#S10">S10</a> <a href="#S17">S17</a> <a href="#S18">S18</a> <a href="#S19">S19</a> <a href="#S20">S20</a></span></p></article><article id="SW06" class="finding" data-priority="P1" data-mode="legacy">
+      <div class="finding-top"><span class="badge p1">P1</span><span>SW06 · 저장·정합성 · legacy</span></div>
+      <h3>GA4 설정 조회 장애가 전환 지표의 집계 기준을 바꾼다</h3><p class="route">/standard/ai-funnel/conversion의 legacy 경로 · 동일 GA4 helper 호출부</p>
+      <p class="proof">실제 설정 해석·집계 함수에 설정 DB 오류 주입 (R07)</p><dl><dt>확인한 동작</dt><dd>resolveConvSpec은 선택 이벤트 설정 조회가 실패해도 null을 반환한다. null은 ‘설정 없음 → GA4 keyEvents 사용’과 같은 값이다. 정상이라면 선택 이벤트의 eventCount로 덮어쓰지만, 설정 조회 장애 때는 기본 keyEvents를 사용한다. 다국가 설정 조회도 실패를 빈 Map으로 바꾼다.</dd><dt>발생 조건</dt><dd>예를 들어 test_drive만 선택된 속성에서 GA4 API는 정상이나 설정 DB가 실패하는 경우다. 모의 응답에서 사용자는 20명으로 동일한데 분자가 선택 이벤트 2건에서 keyEvents 12건으로 바뀌었다.</dd><dt>사용자 영향</dt><dd>장애가 ‘측정 불가’로 드러나는 대신 의미가 다른 숫자로 표시된다. 동일한 KPI 이름으로 비교할 수 없는 값이 제공되며, 이 정상 반환 값은 캐시 저장 대상도 된다.</dd><dt>판정의 범위</dt><dd>예시 2건·12건은 재현용 값이다. 실제 지표 오류량을 측정한 것이 아니다. 설정이 원래 없는 속성의 keyEvents 기본값 사용은 정상 동작이며, 이 결함은 설정 조회 실패를 정상 미설정과 구별하지 않는 데 있다. 새 G4 API 경로에 같은 결함이 있다고 일반화하지 않는다.</dd><dt>수정 방향</dt><dd>설정 없음과 조회 실패를 구분하는 결과 타입을 사용한다. 실패 시 지표를 오류/미확인으로 표시하거나 마지막 정상 설정과 시각을 함께 사용한다. 집계 기준을 바꾼 fallback을 정상 KPI로 캐시하지 않는다.</dd><dt>완료 확인 기준</dt><dd>선택 이벤트 설정이 존재하는 상태에서 DB 오류를 주입해도 기본 keyEvents로 바뀌지 않는다. 데이터 옆에 사용한 이벤트 설정 버전과 데이터 상태를 확인할 수 있어야 한다.</dd></dl><p class="source-links">코드 근거 <span class="refs"><a href="#S21">S21</a> <a href="#S22">S22</a> <a href="#S23">S23</a></span></p></article><article id="SW07" class="finding" data-priority="P1" data-mode="legacy">
+      <div class="finding-top"><span class="badge p1">P1</span><span>SW07 · 저장·정합성 · legacy</span></div>
+      <h3>일시적인 GA4 조회 실패가 24시간 재검증 캐시의 정상 결과가 된다</h3><p class="route">지역·HQ 전환 집계 · getAiTrafficConversionRollup</p>
+      <p class="proof">실제 집계 함수를 실행해 부분/전체 실패의 정상 반환 및 cache 옵션 확인 (R08)</p><dl><dt>확인한 동작</dt><dd>국가별 fetchCohorts 예외를 로그와 null로 바꾼 뒤 성공한 국가만 합산한다. 전부 실패해도 measuredMarkets=0, totalAiUsers=0인 객체를 반환한다. 이 함수는 revalidate=86,400초인 unstable_cache 내부에서 실행된다.</dd><dt>발생 조건</dt><dd>캐시를 채우거나 갱신하는 시점에 하나 이상의 GA4 속성이 timeout 등으로 실패하는 경우다. 모의 2개 국가 중 1개 실패 시 1/2 커버리지 결과, 전부 실패 시 0/2와 0 합계를 정상 반환했다.</dd><dt>사용자 영향</dt><dd>불완전한 집계가 성공한 캐시 값으로 취급되어, 외부 API가 복구되어도 후속 조회에서 바로 재시도되지 않을 수 있다. 국가 구성과 합계가 바뀐 결과를 사용자가 정상 집계와 혼동할 여지가 있다.</dd><dt>판정의 범위</dt><dd>완전히 숨겨진 실패는 아니다. 서버 warning과 measured/total 커버리지가 존재한다. 다만 실패 국가·이유가 반환되지 않는다. 24시간은 코드의 재검증 설정이며 실제 캐시 보존 시간을 실측한 값이 아니다. 태그 무효화·배포 등은 더 빨리 갱신시킬 수 있다. 국가 단일 조회는 예외를 캐시 밖에서 잡는 보호가 이미 있다.</dd><dt>수정 방향</dt><dd>국가별 성공·실패와 마지막 성공 시각을 반환한다. 정상 집계 캐시와 장애 결과를 분리하고, 실패 국가를 짧은 간격으로 재시도하거나 마지막 정상 집계를 stale 표시와 함께 제공한다.</dd><dt>완료 확인 기준</dt><dd>첫 요청에서 1개 국가 실패 후 복구시킨 테스트에서 24시간을 기다리지 않고 정상 커버리지로 회복한다. 전체 실패를 정상 0으로 캐시하지 않고, 부분 집계임을 화면에서 구분할 수 있어야 한다.</dd></dl><p class="source-links">코드 근거 <span class="refs"><a href="#S21">S21</a> <a href="#S22">S22</a> <a href="#S23">S23</a> <a href="#S24">S24</a></span></p></article><article id="SW08" class="finding" data-priority="P2" data-mode="공통">
+      <div class="finding-top"><span class="badge p2">P2</span><span>SW08 · 오류 가시성 · 공통</span></div>
+      <h3>관리자 조회 장애가 ‘데이터 없음’ 화면으로 바뀐다</h3><p class="route">/admin/standards/citation-sources · /admin/standards/entities(legacy)</p>
+      <p class="proof">degradeRead의 500→빈 배열 동작, 페이지 전달 및 empty 렌더링 확인 (R09 + 정적)</p><dl><dt>확인한 동작</dt><dd>인용 출처 페이지는 legacy DB 실패를 catch(()=&gt;[])로 바꾸고 API의 일반 서버 오류도 degradeRead(e,[])로 바꾼다. DomainList는 전달받은 배열이 비면 빈 목록 문구를 보여준다. legacy 엔터티 목록도 동일한 빈 배열 fallback을 사용한다.</dd><dt>발생 조건</dt><dd>DB 접속 오류, backend 500 등으로 목록 읽기가 실패했을 때다. 실제 데이터가 존재하더라도 페이지에 전달되는 값은 []가 된다.</dd><dt>사용자 영향</dt><dd>사용자는 ‘아직 등록된 데이터가 없음’과 ‘조회할 수 없음’을 구별하지 못한다. 데이터 누락으로 오인하거나 장애를 인지하지 못해 재시도·조치가 늦어진다.</dd><dt>판정의 범위</dt><dd>API 경로는 console.warn을 남기므로 로그까지 완전히 없는 silent failure는 아니다. 인증/권한 오류 401·403, 404 및 로컬 오류는 다시 throw한다. 엔터티 API 경로 전체에 이 결함이 있다고 보지는 않는다.</dd><dt>수정 방향</dt><dd>rows와 함께 status/error/lastSuccessfulAt을 전달한다. 빈 결과, 로딩 실패, 마지막 정상 데이터 표시를 분리하고 조회 실패 시 재시도 버튼과 요청 식별자를 제공한다.</dd><dt>완료 확인 기준</dt><dd>성공+빈 배열과 HTTP 500이 서로 다른 화면을 보여야 한다. 오류 상태에서는 ‘0건’이 확정 결과로 표시되지 않으며, API 경로의 인증 오류 처리도 유지된다.</dd></dl><p class="source-links">코드 근거 <span class="refs"><a href="#S06">S06</a> <a href="#S25">S25</a> <a href="#S26">S26</a> <a href="#S27">S27</a></span></p></article><article id="SW09" class="finding" data-priority="P2" data-mode="공통">
+      <div class="finding-top"><span class="badge p2">P2</span><span>SW09 · 오류 가시성 · 공통</span></div>
+      <h3>QA 잠금 획득·갱신 실패를 알아도 편집 상태가 명확히 바뀌지 않는다</h3><p class="route">/raw-data-qa/answers/[jobId]</p>
+      <p class="proof">실제 잠금 획득 요청 처리에 HTTP 500 주입 (R05)</p><dl><dt>확인한 동작</dt><dd>readOnly의 초기값은 false다. 잠금 획득은 409+heldBy만 읽기 전용으로 바꾸고 500·네트워크 실패는 무시한다. heartbeat도 HTTP 상태를 검사하지 않으며 catch가 비어 있다. held=false를 받으면 lockLost만 켜고 readOnly는 바꾸지 않는다.</dd><dt>발생 조건</dt><dd>페이지 진입 시 잠금 API가 실패하거나, 편집 중 세션/네트워크 문제로 heartbeat가 실패하는 경우다.</dd><dt>사용자 영향</dt><dd>잠금 보유 여부를 확인하지 못한 상태에서 사용자가 계속 편집할 수 있다. 저장 단계에 이르러서야 충돌이나 실패를 알게 되며 SW04의 저장 오류 미표시와 겹치면 원인을 더 파악하기 어렵다.</dd><dt>판정의 범위</dt><dd>서버는 저장 직전에 락을 재확인한다. 이 결과만으로 동시 수정에 따른 DB 덮어쓰기나 권한 우회를 주장하지 않는다. 초기 fetch와 heartbeat의 화면 상태 관리 문제다.</dd><dt>수정 방향</dt><dd>잠금 상태를 acquiring/held/lost/error로 관리한다. held 확인 전과 상실 후의 편집 정책을 명시하고, 실패 시 편집 내용을 보존한 채 재획득·복사·재시도 경로를 제공한다.</dd><dt>완료 확인 기준</dt><dd>초기 500·네트워크 실패 및 heartbeat의 held=false를 주입했을 때 화면 상태와 저장 가능 여부가 일관되게 바뀐다. 보존한 입력을 잠금 재획득 후 안전하게 저장할 수 있어야 한다.</dd></dl><p class="source-links">코드 근거 <span class="refs"><a href="#S14">S14</a> <a href="#S15">S15</a> <a href="#S16">S16</a></span></p></article><article id="SW10" class="finding" data-priority="P1" data-mode="ingest">
+      <div class="finding-top"><span class="badge p1">P1</span><span>SW10 · 백그라운드 작업 · ingest</span></div>
+      <h3>DataForSEO 작업이 중단되면 ‘실행 중’에 남고 재처리·큐 감시에서 빠진다</h3><p class="route">ingest.worker → queue → run_dfs · API의 키워드 수집 요청</p>
+      <p class="proof">실제 run_dfs에 claim 커밋 후 CancelledError 주입, 재실행과 감시 SQL 확인 (R14)</p><dl><dt>확인한 동작</dt><dd>run_dfs는 pending 행을 선택해 running으로 바꾸고 먼저 커밋한다. 그 뒤 외부 호출을 트랜잭션 밖에서 실행한다. 강제 중단·취소로 완료/실패 처리까지 도달하지 못하면 running이 남는다. 다음 호출의 CLAIM은 pending만 선택한다. 큐 감시 QUERY도 failed·escalated_rebuild·pending만 조회해 이 running 행을 제외한다.</dd><dt>발생 조건</dt><dd>DataForSEO 호출 또는 후속 저장 전 워커가 강제 종료되거나 태스크가 취소되는 경우다. 모의 트랜잭션에 running 커밋 후 취소를 주입하니 다음 run_dfs가 0건을 선택했다.</dd><dt>사용자 영향</dt><dd>수집 요청이 끝나지 않고 실행 중 상태로 남을 수 있다. 같은 요청을 다시 제출해도 pending/running 중복 합치기가 기존 change_id를 돌려주는 경로가 있어 재요청만으로 회복되지 않을 수 있다. 큐 적체 경보도 해당 running을 세지 않는다.</dd><dt>판정의 범위</dt><dd>일반 Exception은 failed로 기록하는 처리가 있다. 재현은 취소와 커밋 경계를 모의한 것이며 실제 프로세스 kill이나 PostgreSQL 재시작 시험은 아니다. 제공된 정기 소비·감시 경로에서 running 회수 처리를 찾지 못했다. 관리자 목록으로 상태를 직접 조회하는 것은 가능하다.</dd><dt>수정 방향</dt><dd>claim에 lease_until·attempt·worker 토큰을 두고 오래된 running을 회수한다. 완료 처리는 현재 lease 소유자를 검증하고 중복 외부 호출 정책을 정한다. 큐 감시에 오래된 running도 포함한다.</dd><dt>완료 확인 기준</dt><dd>claim 커밋 직후와 외부 호출 직후에 워커를 중단·재시작하는 통합 시험에서 요청이 재개되거나 명시적 실패로 전환된다. 오래된 running은 감시에서 검출되고 같은 요청 재제출이 영구 대기로 합쳐지지 않아야 한다.</dd></dl><p class="source-links">코드 근거 <span class="refs"><a href="#S35">S35</a> <a href="#S36">S36</a> <a href="#S37">S37</a> <a href="#S38">S38</a></span></p></article><article id="SW11" class="finding" data-priority="P1" data-mode="ingest">
+      <div class="finding-top"><span class="badge p1">P1</span><span>SW11 · 백그라운드 작업 · ingest</span></div>
+      <h3>Scope 생성 응답에 ID가 없어도 동기화 작업을 ‘완료’로 닫는다</h3><p class="route">ingest.worker → run_outbox → Scope 프로젝트·프롬프트 생성</p>
+      <p class="proof">실제 outbox 함수에 ID 없는 성공 응답 {} 주입 (R15)</p><dl><dt>확인한 동작</dt><dd>HTTP 어댑터는 성공 JSON을 그대로 돌려준다. run_outbox는 생성 응답에서 project_id/prompt_id를 읽어 값이 있을 때만 로컬 scope ID를 갱신한다. 값이 없어도 OUTBOX_DONE은 무조건 실행한다. 완료된 행은 다음 OUTBOX_CLAIM에서 제외된다.</dd><dt>발생 조건</dt><dd>외부 서버가 2xx를 반환했지만 빈 객체, 누락된 생성 ID, 예상과 다른 응답 형태를 주는 경우다. 모의 응답 {}에서 scope ID는 null인데 outbox 상태는 done이 되었다.</dd><dt>사용자 영향</dt><dd>외부 생성과 로컬 연결이 성립하지 않았는데 동기화가 완료된 것으로 기록된다. 후속 갱신은 Scope ID를 기다리며 실패하거나 대기할 수 있고, 생성 작업 자체는 자동 재처리 대상에서 빠진다.</dd><dt>판정의 범위</dt><dd>정상 ID 응답과 일반 호출 예외에는 각각 되쓰기·백오프 경로가 있다. 실제 Scope가 이런 응답을 반환했다는 증거는 없으며 응답 계약 위반을 주입해 검증했다. 빈 ID의 완료 처리 문제이며 외부 중복 생성이 운영에서 발생했다고 주장하지 않는다.</dd><dt>수정 방향</dt><dd>생성 응답의 필수 UUID를 검증하고 로컬 연결 성공까지 완료 조건으로 둔다. 응답이 불명확하면 별도 확인 필요 상태로 보존하고, 외부 조회·멱등 키 등으로 실제 생성 여부를 확인한 뒤 재시도한다.</dd><dt>완료 확인 기준</dt><dd>빈 객체·ID 누락·잘못된 UUID 응답 모두 done으로 종료되지 않는다. 정상 응답은 ID 되쓰기와 완료가 같은 로컬 트랜잭션으로 처리되고, 미확인 응답의 재처리는 중복 생성을 방지해야 한다.</dd></dl><p class="source-links">코드 근거 <span class="refs"><a href="#S39">S39</a> <a href="#S36">S36</a> <a href="#S40">S40</a></span></p></article><article id="SW12" class="finding" data-priority="P2" data-mode="ingest">
+      <div class="finding-top"><span class="badge p2">P2</span><span>SW12 · 백그라운드 작업 · ingest</span></div>
+      <h3>일일 작업이 실패해도 실행 날짜를 갱신해 당일 재시도를 막는다</h3><p class="route">ingest.worker.Scheduler.daily → cycles_tick(daily=True)</p>
+      <p class="proof">실제 Scheduler에 첫 일일 작업만 실패 주입, 같은 날과 다음 날 시각으로 실행 (R12)</p><dl><dt>확인한 동작</dt><dd>Scheduler.step은 _run의 성공 여부를 확인하지 않고 last_daily=kst_day를 기록한다. _run은 예외를 로그에 남기고 False를 반환하므로 실패가 밖으로 전파되지 않는다. 이후 같은 프로세스의 같은 KST 날짜에서는 daily가 호출되지 않는다.</dd><dt>발생 조건</dt><dd>그날 첫 일일 실행 때 DB 일시 장애 등으로 실패하고 프로세스가 계속 살아 있는 경우다. 모의 시각으로 1분·1시간 뒤 다시 실행해도 재시도하지 않고 다음 날에야 실행했다.</dd><dt>사용자 영향</dt><dd>실패한 일일 유지 작업의 복구가 다음 날까지 지연될 수 있다. 현재 daily에는 월별 파티션 선생성이 포함되며, 일반 20분 cycles_tick은 daily=False라 이를 대신하지 않는다.</dd><dt>판정의 범위</dt><dd>실패 로그는 존재하며 ‘아무 기록도 없는 실패’는 아니다. 파티션을 3개월 앞까지 준비하므로 한 번 실패했다고 곧바로 적재가 멈추는 것은 아니다. 프로세스를 재시작하면 메모리의 last_daily가 초기화되어 다시 시도할 수 있다.</dd><dt>수정 방향</dt><dd>성공한 경우에만 last_daily를 확정한다. 실패 시 짧은 백오프와 마지막 성공 시각·연속 실패 횟수를 관리하고, 파티션 확보 범위가 임계값 아래로 내려가면 알린다.</dd><dt>완료 확인 기준</dt><dd>첫 daily 실패 후 같은 날 DB가 복구되면 설정한 백오프 뒤 다시 실행된다. 성공 후에는 같은 날짜에 불필요하게 반복하지 않고 KST 날짜 경계도 유지한다.</dd></dl><p class="source-links">코드 근거 <span class="refs"><a href="#S32">S32</a> <a href="#S46">S46</a></span></p></article><article id="SW13" class="finding" data-priority="P2" data-mode="ingest">
+      <div class="finding-top"><span class="badge p2">P2</span><span>SW13 · 백그라운드 작업 · ingest</span></div>
+      <h3>60초 주기의 큐 작업이 긴 동기화 작업 뒤에서 기다린다</h3><p class="route">ingest.worker의 단일 Scheduler: queue → pull → cycles_tick</p>
+      <p class="proof">실제 Scheduler에서 pull을 제어된 대기로 묶고 작업 호출 순서 확인 (R13)</p><dl><dt>확인한 동작</dt><dd>Scheduler.step은 작업을 순서대로 await하고 run_forever도 step 전체가 끝나야 다음 주기로 넘어간다. queue는 60초, pull은 20분 간격이지만 독립 실행되지 않는다. pull의 기본 예산은 900초이며, 그마저 run 사이에서만 검사한다. 앞선 프롬프트/회차 목록 읽기와 진행 중 run에 대한 전체 deadline은 이 경로에 없다.</dd><dt>발생 조건</dt><dd>한 pull이 여러 페이지·회차를 읽거나 외부 응답이 느려 오래 실행되는 경우다. 15분을 가정한 모의 시간에서 queue의 60초 기한이 지나도 pull을 풀어주기 전에는 다음 queue가 실행되지 않았다.</dd><dt>사용자 영향</dt><dd>재판정 큐, DataForSEO 수집, Scope 변경 반영 및 회차 처리가 pull 실행 시간에 묶인다. ‘60초 주기’ 설정만으로 짧은 반영 지연을 기대할 수 없고, 한 작업 지연이 다른 작업 지연으로 전파된다.</dd><dt>판정의 범위</dt><dd>동시 워커 증설은 DB 잠금과 외부 서비스 제한을 함께 설계해야 한다. 단일 실행 자체가 항상 잘못된 것은 아니지만 서로 다른 주기의 작업 사이에 실행 격리가 없다. 실제 15분 지연을 관측한 것이 아니며, 900초도 엄격한 최대 실행 시간은 아니다.</dd><dt>수정 방향</dt><dd>작업 종류별 실행 루프를 분리하거나 pull을 짧은 청크 단위로 양보시킨다. DB·외부 호출에 전파되는 전체 deadline과 작업별 동시 실행 방지, 큐 대기 시간 지표를 둔다.</dd><dt>완료 확인 기준</dt><dd>pull을 의도적으로 지연시켜도 queue는 정한 지연 허용 범위 안에서 실행된다. 전체 deadline 초과 시 안전하게 중단·재개되고, 같은 프로젝트 중복 처리와 DB 부하 증가도 통합 시험으로 확인한다.</dd></dl><p class="source-links">코드 근거 <span class="refs"><a href="#S32">S32</a> <a href="#S33">S33</a> <a href="#S34">S34</a> <a href="#S40">S40</a></span></p></article><article id="SW14" class="finding" data-priority="P2" data-mode="legacy">
+      <div class="finding-top"><span class="badge p2">P2</span><span>SW14 · 캐시·외부 호출 · legacy</span></div>
+      <h3>키워드 캐시는 DB 오류가 한 번 나면 프로세스가 살아 있는 동안 복구를 시도하지 않는다</h3><p class="route">legacy 키워드 insight·related·search → lib/keyword/cache.ts</p>
+      <p class="proof">실제 캐시 wrapper와 getKeywordInsight에 1회 읽기/쓰기 오류 후 DB 복구 주입 (R10)</p><dl><dt>확인한 동작</dt><dd>모듈 전역 cacheDisabled가 읽기 또는 쓰기 예외에서 true가 된다. 이후 cacheGet은 DB를 확인하지 않고 null, cacheSet은 즉시 반환한다. 이 값을 되돌리는 시간 제한이나 재확인 경로가 없다.</dd><dt>발생 조건</dt><dd>테이블 미설치뿐 아니라 일시적인 연결 실패·timeout·쓰기 오류 한 번에도 발생한다. 모의 DB가 첫 요청 후 정상으로 돌아왔는데 동일 입력을 3회 처리하는 동안 DB 읽기는 첫 1회뿐이고 계산은 3회 반복됐다.</dd><dt>사용자 영향</dt><dd>같은 서버 프로세스에서 키워드 캐시가 지속적으로 우회된다. insight는 검색량·SERP 조회와 프롬프트 생성을 다시 수행하므로 응답 시간과 외부 호출량이 증가할 수 있다. 연관어 검색도 같은 wrapper를 사용한다.</dd><dt>판정의 범위</dt><dd>서버 warning은 남고 기능은 실시간 재계산으로 계속 동작한다. 모든 인스턴스의 캐시가 영구적으로 망가지는 것은 아니며, 해당 모듈 인스턴스가 재시작·교체되면 초기화된다. 외부 호출 비용이나 실제 지연 증가는 측정하지 않았다.</dd><dt>수정 방향</dt><dd>테이블 미설치와 일시적 오류를 구분하고, 일정 시간 후 제한된 재확인 요청으로 캐시 사용을 복구한다. 실패·우회·복구 횟수를 기록하며 복구 직후 요청이 몰리지 않도록 한다.</dd><dt>완료 확인 기준</dt><dd>읽기와 쓰기 각각 1회 실패 후 DB를 복구했을 때 재확인 시점 뒤부터 동일 키를 캐시에서 읽는다. 재계산 결과도 다시 저장되고 서버 재시작이 복구의 필수 조건이 아니어야 한다.</dd></dl><p class="source-links">코드 근거 <span class="refs"><a href="#S41">S41</a> <a href="#S42">S42</a> <a href="#S43">S43</a></span></p></article><article id="SW15" class="finding" data-priority="P2" data-mode="legacy">
+      <div class="finding-top"><span class="badge p2">P2</span><span>SW15 · 캐시·외부 호출 · legacy</span></div>
+      <h3>GA4 HTTP 호출에 자체 시간 제한이 없어 페이지·캐시 예열의 대기가 길어질 수 있다</h3><p class="route">lib/ga4/client.ts의 runReport → 전환 페이지·GA4 prebuild cron</p>
+      <p class="proof">실제 runReport에 응답을 보류한 모의 fetch 주입, signal 미전달 확인 (R11)</p><dl><dt>확인한 동작</dt><dd>runReport는 fetch와 응답 본문 읽기에 AbortSignal이나 자체 deadline을 전달하지 않는다. 재시도는 HTTP 응답을 받은 후의 일부 상태 코드에만 적용된다. GA4 예열 cron은 시장별 Promise.all을 순차 await하므로 한 시장이 지연되면 후속 시장으로 넘어가지 못한다.</dd><dt>발생 조건</dt><dd>연결 후 응답 헤더 또는 본문이 오래 오지 않는 경우다. 모의 fetch가 대기하는 동안 자체 취소 없이 pending을 유지했고, 시험에서 응답을 풀어주어야 완료됐다.</dd><dt>사용자 영향</dt><dd>전환 화면의 cold 조회나 예열 작업이 외부 호출 대기 때문에 실행 예산을 소모할 수 있다. 예열에는 maxDuration=300 설정이 있지만 개별 시장 호출을 미리 끊거나 남은 시장에 예산을 분배하지 않는다.</dd><dt>판정의 범위</dt><dd>‘무한 대기’라고 단정하지 않는다. 런타임·네트워크 계층·배포 플랫폼의 timeout은 존재할 수 있다. 이번 시험의 20ms 감시 타이머는 재현 도구의 관찰 장치이며 운영 성능 기준이 아니다. 새 HGH API 클라이언트에는 timeout·읽기 재시도 제어가 있으므로 모든 API 호출의 공통 결함은 아니다.</dd><dt>수정 방향</dt><dd>fetch부터 본문 파싱까지 적용되는 요청별 timeout과 전체 호출 예산을 둔다. 예열은 남은 예산을 확인하고 실패 시장을 기록해 다음 실행에서 재시도한다. GET/읽기 요청 재시도는 남은 예산 안에서만 수행한다.</dd><dt>완료 확인 기준</dt><dd>응답 헤더 지연·본문 지연·429/5xx를 각각 주입해 정해진 시간 안에 실패 상태를 반환하는지 확인한다. 한 시장 장애가 모든 후속 시장 예열을 막지 않아야 하며 중단된 요청을 취소해야 한다.</dd></dl><p class="source-links">코드 근거 <span class="refs"><a href="#S44">S44</a> <a href="#S45">S45</a> <a href="#S23">S23</a> <a href="#S47">S47</a></span></p></article></section>
+
+<section id="verification"><h2>재현 결과</h2><p>원본 TypeScript 함수는 Node의 타입 제거 기능으로, Python 워커는 원본 모듈·AST에서 추출한 함수를 실행했다. 요청 계약은 실제 Pydantic 모델을 사용하고 fetch·저장소·DB 트랜잭션·외부 서비스·시계는 필요한 경계에서 모의했다. <strong>PASS는 문제가 해결됐다는 뜻이 아니라, 기술한 문제 동작에 대한 assertion이 성립했다는 뜻이다.</strong></p>
+<div class="table-wrap"><table><thead><tr><th>ID</th><th>검증 시나리오</th><th>결과</th></tr></thead><tbody><tr><td>R01</td><td>표준 카탈로그: 10,001건 전량 반환</td><td>문제 동작 재현</td></tr><tr><td>R02</td><td>관리자 목록: 10,000건 성공 / 10,001건 실패</td><td>문제 동작 재현</td></tr><tr><td>R03</td><td>프로젝트 프롬프트 목록: 20,001건에서 실패</td><td>문제 동작 재현</td></tr><tr><td>R04</td><td>QA 저장: 401·422·500을 무시하고 이전 savedAt 유지</td><td>문제 동작 재현</td></tr><tr><td>R05</td><td>QA 잠금: 서버 500 응답 후에도 편집 가능 상태 유지</td><td>문제 동작 재현</td></tr><tr><td>R06</td><td>일괄 태깅: 1,001건 중 첫 1,000건 성공 후 두 번째 청크 실패</td><td>문제 동작 재현</td></tr><tr><td>R07</td><td>GA4 설정 DB 장애: 선택 이벤트 2건 → 기본 keyEvents 12건</td><td>문제 동작 재현</td></tr><tr><td>R08</td><td>GA4 지역 집계: 일부·전부 실패해도 정상 반환, 캐시 TTL 86,400초</td><td>문제 동작 재현</td></tr><tr><td>R09</td><td>관리자 조회: 500 응답을 빈 배열로 축소, 인증 오류는 다시 throw</td><td>문제 동작 재현</td></tr><tr><td>R10</td><td>키워드 캐시: 일시적 DB 오류 후 복구되어도 캐시 재사용 중단</td><td>문제 동작 재현</td></tr><tr><td>R11</td><td>GA4 runReport: 응답 지연 시 자체 timeout·취소 signal 없음</td><td>문제 동작 재현</td></tr><tr><td>R12</td><td>일일 작업: 실패해도 당일 완료로 기록하여 같은 날 재시도하지 않음</td><td>문제 동작 재현</td></tr><tr><td>R13</td><td>60초 큐 작업: 긴 pull이 끝날 때까지 다음 실행과 회차 처리가 막힘</td><td>문제 동작 재현</td></tr><tr><td>R14</td><td>DataForSEO 작업: claim 커밋 뒤 중단되면 running에 남고 다음 소비에서 제외</td><td>문제 동작 재현</td></tr><tr><td>R15</td><td>Scope 생성 응답: ID가 없어도 outbox done 처리</td><td>문제 동작 재현</td></tr></tbody></table></div>
+<p class="muted">실행 환경: v22.18.0 · 실행 시각(UTC): 2026-10-08T03:49:36.052Z. R02·R03은 공통 페이지 수집 helper와 호출자 상수의 조합 검증이며 전체 페이지 E2E 실행이 아니다. R08은 캐시 콜백의 정상 반환과 86,400초 설정을 확인했으며 실제 Next 캐시 수명은 측정하지 않았다. React 렌더링과 DB 트랜잭션 연결은 소스 추적으로 확인했다.</p>
+<p class="muted">Python: 3.12.10 · 실행 시각(UTC): 2026-10-08T03:49:36.566781+00:00. R12·R13은 모의 시각·대기 제어를 사용했고 실제로 하루나 15분을 기다리지 않았다. R14·R15는 DB 트랜잭션 모형을 사용했으며 실제 PostgreSQL·ECS 종료·외부 Scope와의 통합 시험은 아니다. R11의 20ms는 모의 응답의 pending 여부를 관찰하는 시험용 타이머다.</p>
+<p><a href="../reports/%EB%B6%80%EB%A1%9D/verify_software_risks.mjs">재현 스크립트</a> · <a href="../reports/%EB%B6%80%EB%A1%9D/GEO%20%EC%86%8C%ED%94%84%ED%8A%B8%EC%9B%A8%EC%96%B4%20%EC%A0%90%EA%B2%80%20%EC%9E%AC%ED%98%84.json">재현 결과 JSON·소스 SHA-256</a> · <a href="../reports/%EB%B6%80%EB%A1%9D/build_software_audit.py">보고서 생성 스크립트</a></p>
+<p><a href="../reports/%EB%B6%80%EB%A1%9D/verify_worker_risks.py">워커 재현 스크립트</a> · <a href="../reports/%EB%B6%80%EB%A1%9D/GEO%20%EB%B0%B1%EA%B7%B8%EB%9D%BC%EC%9A%B4%EB%93%9C%20%EC%9E%91%EC%97%85%20%EC%A0%90%EA%B2%80%20%EC%9E%AC%ED%98%84.json">워커 재현 결과 JSON·소스 SHA-256</a> · <a href="../reports/%EB%B6%80%EB%A1%9D/software_audit_extension.py">2차 점검 항목·근거</a></p>
+<pre>node --disable-warning=ExperimentalWarning reports/부록/verify_software_risks.mjs
+python -X utf8 reports/부록/verify_worker_risks.py
+python -X utf8 reports/부록/build_software_audit.py</pre></section>
+
+<section id="boundaries"><h2>문제로 단정하지 않은 부분</h2>
+<ul>
+<li><strong>컨텍스트맵 목록:</strong> 기본 50, 최대 200행의 서버 페이지네이션과 상세 분리 경로가 있다. 과거 전량 로딩을 설명하는 주석이나 내보내기용 전량 조회를 현재 화면 결함으로 세지 않았다. <span class="refs"><a href="#S29">S29</a></span></li>
+<li><strong>프로젝트 홈의 N+1 조회:</strong> 현재는 이름·권한·멤버 수·프롬프트 수를 4개 일괄 조회로 묶는다. 과거 60회 이상 조회를 언급한 주석을 현행 문제로 보지 않았다. <span class="refs"><a href="#S30">S30</a></span></li>
+<li><strong>fetchAllPages의 보호:</strong> 최대 페이지 수, 반복 커서 차단, stale 커서의 1회 재시작은 있다. 문제는 큰 화면 목록이 이 함수를 사용해 전량을 소비하는 데 있다. <span class="refs"><a href="#S13">S13</a></span></li>
+<li><strong>QA 서버의 저장 잠금:</strong> 저장 직전에 소유권을 재확인한다. 클라이언트 잠금 상태 문제가 곧바로 동시 쓰기 허용을 의미하지 않는다. <span class="refs"><a href="#S16">S16</a></span></li>
+<li><strong>HGH HTTP 클라이언트:</strong> 요청 timeout과 읽기 요청에 대한 제한된 재시도가 있다. 저장 요청을 일반 네트워크 실패 때 무조건 재전송하는 구조로 보지 않았다. GA4의 별도 클라이언트와 구분했다. <span class="refs"><a href="#S47">S47</a></span></li>
+<li><strong>접근 감사 로그 유실:</strong> AccessAuditWriter는 메모리 버퍼 초과나 DB 배치 실패 시 버리도록 명시적으로 설계됐다. 버퍼 기본 상한은 20,000건이고 배치 실패는 warning을 남긴다. 이는 ‘Q4 유실 허용’이라는 설계 선택이므로 신규 결함 수에 넣지 않았다. 감사 기록의 누락 없는 보존이 요구된다면 영속 큐·재시도·유실 지표가 별도 과제다. <span class="refs"><a href="#S19">S19</a></span></li>
+</ul>
+<h3>이번 점검의 범위</h3><p>요청한 대량 로딩과 silent failure를 중심으로 <code>hmg-geo-hub-share</code>의 실제 호출 경로를 확인했다. <code>_archive</code>를 현행 구현으로 취급하지 않았다. 이 보고서는 전체 보안 감사나 운영 성능 인증이 아니다. 운영에서의 발생 여부를 확정하려면 활성 소스 플래그, 스코프별 행 수, 응답 크기·시간, DOM 수, DB 실행 계획, 오류 로그와 캐시 상태를 해당 배포에서 확인해야 한다.</p>
+<p>수정 순서는 ① 저장 오류·부분 성공 및 잘못된 작업 완료/미복구 상태(SW04·05·10·11), ② GA4 실패/정상 결과 분리(SW06·07, legacy 사용 시), ③ 서버 페이지네이션과 목록 화면 전환(SW01~03), ④ 실패 복구·시간 예산·상태 가시성(SW08·09·12~15)을 제안한다. 실제 사용 경로부터 적용하며, 관리자 목록이 이미 상한에 가까우면 ③을 앞당긴다.</p>
+<p><a href="04%20%EC%B8%A1%EC%A0%95%20%EC%9C%A0%ED%9A%A8%EC%84%B1%20%EB%B6%84%EC%84%9D.html">기존 측정 유효성 분석 보고서</a>와 별도로, 이번 보고서는 프로그램의 조회·저장·오류 처리 동작을 다룬다.</p></section>
+
+<section id="sources"><h2>코드 근거</h2><p class="muted">각 S 번호를 누르면 해당 근거가 펼쳐진다. 원본 파일의 줄 번호를 유지한 발췌다. 재현 스크립트가 사용한 소스는 JSON에 SHA-256으로 기록했다.</p><details id="S01"><summary>S01 <span>front/lib/hgh/adapters/catalog.ts · L83–85, L120–132</span></summary><p><a href="../../front/lib/hgh/adapters/catalog.ts">원본 파일 열기</a> · SHA-256 <code>43f4be588b69084c139aca131d5293bb63075844ee18dae28df57b1a2865f76f</code></p><pre>  83 | /** Rows per /v1/prompts page in all mode (backend GLOBAL_ALL_MAX) and the page cap of the read. */
+  84 | export const GLOBAL_ALL_PAGE_ROWS = 25_000;
+  85 | export const GLOBAL_CATALOG_MAX_PAGES = 4;
+
+    …
+
+ 120 | export async function listStandardCatalogApi(): Promise&lt;{ rows: StandardCatalogRow[] }&gt; {
+ 121 |   const res = await fetchAllPages(
+ 122 |     async (cursor) =&gt; {
+ 123 |       const r = await hghGet(&quot;/v1/prompts&quot;, {
+ 124 |         query: { surface: &quot;global&quot;, all: true, ...(cursor ? { cursor } : {}) },
+ 125 |       });
+ 126 |       const info = pageInfo(r.meta);
+ 127 |       return { items: r.data.items.filter(isGlobalRow), nextCursor: info.nextCursor, total: info.total };
+ 128 |     },
+ 129 |     { maxPages: GLOBAL_CATALOG_MAX_PAGES },
+ 130 |   );
+ 131 |   return { rows: res.items.map(toStandardCatalogRow) };
+ 132 | }</pre></details><details id="S02"><summary>S02 <span>back/app/features/catalog/prompts/catalog/service.py · L65–68, L194–206</span></summary><p><a href="../../back/app/features/catalog/prompts/catalog/service.py">원본 파일 열기</a> · SHA-256 <code>8973a6768c3881ab3dba64a7b906a82d929e2e477042fcb8ad09fe39164734e9</code></p><pre>  65 | # 전량 모드(all=true) 한 응답 상한(BG-34). 현행 2,431행(front website/prompts/page.tsx:36 주석 시점)·10배 약 2.4만 행을 한 번에 담는다.
+  66 | # 무상한 금지(1초 목표·응답 크기): 넘으면 keyset 과 같은 next_cursor 로 이어 받는다. EXPLAIN 근거는 README &#x27;구현 요약&#x27;.
+  67 | GLOBAL_ALL_MAX = 25_000
+  68 | 
+
+    …
+
+ 194 |     # limit 형식(1~500)은 전량 모드에서도 검증한다(-5·501 은 422, 검증 m-1). 전량 모드는 그 값을 쓰지 않고 상한 고정 + meta.ignored_filters
+ 195 |     limit = clamp_limit(q.limit, GLOBAL_LIMIT_DEFAULT)
+ 196 |     if q.all:
+ 197 |         limit = GLOBAL_ALL_MAX
+ 198 |     fh = _fh(q)
+ 199 |     cur = decode_cursor(q.cursor, sort=&quot;catalog&quot;, dir=&quot;asc&quot;, fh=fh, types=Q.GLOBAL_SORT_TYPES)
+ 200 |     total = int(await fetch_val(conn, Q.global_count(where), b.params) or 0)
+ 201 |     pred = keyset_predicate(Q.GLOBAL_SORT_COLS, &quot;asc&quot;, cur, b)
+ 202 |     page_where = [*where, pred] if pred else where
+ 203 |     rows = await fetch_keyset(conn, Q.global_select(page_where, presence_sql) + f&quot; LIMIT {b.v(limit + 1)}&quot;, b.params, cursor=cur)
+ 204 |     page, nxt = keyset_page(rows, limit, _global_key, sort=&quot;catalog&quot;, dir=&quot;asc&quot;, fh=fh)
+ 205 |     return CatalogEnvelope(data=ListData(items=[_global_row(r) for r in page]),
+ 206 |                            meta=_meta(q, ctx, generation=None, page=Page(next_cursor=nxt, limit=limit, total=total)))</pre></details><details id="S03"><summary>S03 <span>front/app/[locale]/(dash)/standard/prompts/_components/prompt-list-readonly.tsx · L67–68, L447–460</span></summary><p><a href="../../front/app/%5Blocale%5D/%28dash%29/standard/prompts/_components/prompt-list-readonly.tsx">원본 파일 열기</a> · SHA-256 <code>71bbc7a5b119537866d2f2aba9c4349035c9f776d659105642a1ea4a9388d3ef</code></p><pre>  67 | const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
+  68 | const DEFAULT_PAGE_SIZE = 50;
+
+    …
+
+ 447 |   // ── 클라이언트 페이지네이션 (2026-08-18 요청). 데이터는 이미 전량 클라이언트에
+ 448 |   // 있으므로(스코프 계정당 수백 행) URL 왕복 없이 상태로만 나눈다. 필터·검색·정렬이
+ 449 |   // 바뀌면 1페이지로 — 그대로 두면 빈 페이지가 뜬다(website prompt-table 선례).
+ 450 |   const [pageSize, setPageSize] = useState&lt;number&gt;(DEFAULT_PAGE_SIZE);
+ 451 |   const [page, setPage] = useState(1);
+ 452 |   const pages = Math.max(1, Math.ceil(sorted.length / pageSize));
+ 453 |   const sortedKey = sorted.map((r) =&gt; r.id).join(&quot;|&quot;);
+ 454 |   useEffect(() =&gt; {
+ 455 |     setPage(1);
+ 456 |   }, [sortedKey, pageSize]);
+ 457 |   const safePage = Math.min(page, pages);
+ 458 |   const pageRows = useMemo(
+ 459 |     () =&gt; sorted.slice((safePage - 1) * pageSize, safePage * pageSize),
+ 460 |     [sorted, safePage, pageSize],</pre></details><details id="S04"><summary>S04 <span>front/lib/db/repositories/standards.ts · L160–195, L317–347</span></summary><p><a href="../../front/lib/db/repositories/standards.ts">원본 파일 열기</a> · SHA-256 <code>90f0a939652d4c37cfc0cbe40ed3a2dd7e759816000a6f29ad80618ff66377c9</code></p><pre> 160 | export async function listStandardCatalog(opts?: { includeDeleted?: boolean }): Promise&lt;{
+ 161 |   rows: StandardCatalogRow[];
+ 162 |   stats: StandardCatalogStats;
+ 163 | }&gt; {
+ 164 |   const db = getDb();
+ 165 |   const rows = await db
+ 166 |     .select({
+ 167 |       id: prompts.id,
+ 168 |       text: prompts.text,
+ 169 |       promptType: prompts.promptType,
+ 170 |       category: prompts.category,
+ 171 |       brand: prompts.brand,
+ 172 |       brandPresence: prompts.brandPresence,
+ 173 |       listType: prompts.listType,
+ 174 |       depth1: prompts.depth1,
+ 175 |       depth2: prompts.depth2,
+ 176 |       depth3: prompts.depth3,
+ 177 |       depth4: prompts.depth4,
+ 178 |       funnelStage: prompts.funnelStage,
+ 179 |       kind: prompts.kind,
+ 180 |       lang: prompts.lang,
+ 181 |       regions: prompts.regions,
+ 182 |       scopePromptId: prompts.scopePromptId,
+ 183 |       scopeText: scopePrompts.text,
+ 184 |       deletedAt: prompts.deletedAt,
+ 185 |     })
+ 186 |     .from(prompts)
+ 187 |     .leftJoin(scopePrompts, eq(prompts.scopePromptId, scopePrompts.promptId))
+ 188 |     .where(
+ 189 |       and(
+ 190 |         eq(prompts.projectId, STANDARD_ROOT_PROJECT_ID),
+ 191 |         opts?.includeDeleted ? undefined : isNull(prompts.deletedAt),
+ 192 |       ),
+ 193 |     )
+ 194 |     .orderBy(asc(prompts.depth1), asc(prompts.depth2), asc(prompts.depth3), asc(prompts.text));
+ 195 | 
+
+    …
+
+ 317 |   const rows = await db
+ 318 |     .select({
+ 319 |       id: prompts.id,
+ 320 |       text: prompts.text,
+ 321 |       promptType: prompts.promptType,
+ 322 |       category: prompts.category,
+ 323 |       brand: prompts.brand,
+ 324 |       brandPresence: prompts.brandPresence,
+ 325 |       listType: prompts.listType,
+ 326 |       depth1: prompts.depth1,
+ 327 |       depth2: prompts.depth2,
+ 328 |       depth3: prompts.depth3,
+ 329 |       depth4: prompts.depth4,
+ 330 |       funnelStage: prompts.funnelStage,
+ 331 |       kind: prompts.kind,
+ 332 |       lang: prompts.lang,
+ 333 |       regions: prompts.regions,
+ 334 |       scopePromptId: prompts.scopePromptId,
+ 335 |       scopeText: scopePrompts.text,
+ 336 |       deletedAt: prompts.deletedAt,
+ 337 |     })
+ 338 |     .from(prompts)
+ 339 |     .leftJoin(scopePrompts, eq(prompts.scopePromptId, scopePrompts.promptId))
+ 340 |     .where(where)
+ 341 |     .orderBy(asc(prompts.depth1), asc(prompts.depth2), asc(prompts.depth3), asc(prompts.text));
+ 342 | 
+ 343 |   // Hide hand-curated multi-brand &quot;잘못&quot; rows (backend-only list).
+ 344 |   const visible = (rows as StandardCatalogRow[]).filter(
+ 345 |     (r) =&gt; !isExcludedStandardPrompt(r),
+ 346 |   );
+ 347 |   return { rows: visible };</pre></details><details id="S05"><summary>S05 <span>front/app/[locale]/(dash)/standard/prompts/page.tsx · L43–80, L103–113</span></summary><p><a href="../../front/app/%5Blocale%5D/%28dash%29/standard/prompts/page.tsx">원본 파일 열기</a> · SHA-256 <code>ebc85d53a22091220e2abc1c5fff22c325dc05b6cd28c9e2d65ddf46efb001cb</code></p><pre>  43 |   const scope = session.user.scope;
+  44 |   const { tab } = await searchParams;
+  45 |   const { rows, from, to, auditRows } = isAnalysisApi(&quot;prompts&quot;, &quot;global&quot;)
+  46 |     ? await loadApi()
+  47 |     : await loadLegacy();
+  48 | 
+  49 |   // Backend API source (HGH_SOURCE_G5=api, unit U8, lib/hgh/adapters/catalog.ts): three calls
+  50 |   // in parallel (D6): GET /v1/prompts?surface=global&amp;all=true (BG-34, the whole scoped root
+  51 |   // catalog), GET /v1/filters/dates (collection period header: first measured round .. latest
+  52 |   // round, known_diff U8-N10/DC-07) and GET /v1/prompts/history (90-day window, first 500).
+  53 |   async function loadApi() {
+  54 |     try {
+  55 |       const [catalog, period, audit] = await Promise.all([
+  56 |         listStandardCatalogApi(),
+  57 |         standardCollectionPeriodApi(),
+  58 |         listGlobalAuditApi(),
+  59 |       ]);
+  60 |       return { rows: catalog.rows, from: period.from, to: period.to, auditRows: audit };
+  61 |     } catch (e) {
+  62 |       throwForPage(e, locale);
+  63 |     }
+  64 |   }
+  65 | 
+  66 |   async function loadLegacy() {
+  67 |     // 변경 이력(catalog-prompt-audit)은 뷰어와 같은 브랜드 스코프 술어로 90일 창.
+  68 |     const AUDIT_WINDOW_DAYS = 90;
+  69 |     const [{ rows }, collection, auditRows] = await Promise.all([
+  70 |       listStandardCatalogScoped(scope),
+  71 |       standardCollectionDates(scope),
+  72 |       promptAuditLogRepository.listGlobalScoped({
+  73 |         scope,
+  74 |         from: new Date(Date.now() - AUDIT_WINDOW_DAYS * 24 * 60 * 60 * 1000),
+  75 |       }),
+  76 |     ]);
+  77 |     // 수집 기간 헤더 (2026-07-23 피드백 ③): 계정 scope 범위의 completed 답변
+  78 |     // measured_at min~max. UTC 달력일 — 측정 타임스탬프 저장 기준과 동일.
+  79 |     const day = (d: Date | null) =&gt; (d ? d.toISOString().slice(0, 10) : null);
+  80 |     return { rows, from: day(collection.firstMeasuredAt), to: day(collection.lastMeasuredAt), auditRows };
+
+    …
+
+ 103 |         &lt;TabsContent value=&quot;catalog&quot; className=&quot;mt-0&quot;&gt;
+ 104 |           &lt;SectionCard title={t(&quot;count&quot;, { count: rows.length })}&gt;
+ 105 |             &lt;StandardPromptReadonlyList
+ 106 |               rows={rows}
+ 107 |               scopeAll={scope.all}
+ 108 |               scopeRole={session.user.role}
+ 109 |               scopeBrands={scope.brands ?? []}
+ 110 |               scopeRegions={scope.regions ?? []}
+ 111 |               // 글로벌 표면 기준 — 전용 사이트 계정은 그 사이트의 글로벌 시장(N = US·KR).
+ 112 |               scopeCountries={scopeForGeoSurface(scope, &quot;standard&quot;).countries ?? []}
+ 113 |             /&gt;</pre></details><details id="S06"><summary>S06 <span>front/lib/hgh/adapters/admin.ts · L193–198, L219–221, L421–422, L458–470</span></summary><p><a href="../../front/lib/hgh/adapters/admin.ts">원본 파일 열기</a> · SHA-256 <code>d3653e716460e07ff847461bcde5fe6d5e1f34c1c4fcd7a036cb8f8eb5629433</code></p><pre> 193 | export function degradeRead&lt;T&gt;(e: unknown, empty: T): T {
+ 194 |   if (!isHghApiError(e)) throw e;
+ 195 |   if (LOCAL_FAULTS.has(e.code) || e.status === 401 || e.status === 403 || e.status === 404) throw e;
+ 196 |   console.warn(describeHghError(e));
+ 197 |   return empty;
+ 198 | }
+
+    …
+
+ 219 | async function allPages&lt;T&gt;(fetchPage: (cursor: string | null) =&gt; Promise&lt;CursorPage&lt;T&gt;&gt;, maxPages: number): Promise&lt;T[]&gt; {
+ 220 |   return (await fetchAllPages(fetchPage, { maxPages })).items;
+ 221 | }
+
+    …
+
+ 421 | export const CATALOG_PAGE_LIMIT = 500;
+ 422 | export const CATALOG_MAX_PAGES = 20;
+
+    …
+
+ 458 | /** Whole root catalog including soft-deleted rows (the admin &quot;삭제됨&quot; view). */
+ 459 | export async function listAdminCatalog(): Promise&lt;{ rows: StandardCatalogRow[]; stats: StandardCatalogStats }&gt; {
+ 460 |   let stats: StandardCatalogStats | null = null;
+ 461 |   const rows = await allPages(async (cursor) =&gt; {
+ 462 |     const res = await hghGet(&quot;/v1/admin/catalog/prompts&quot;, {
+ 463 |       query: { include_deleted: true, limit: CATALOG_PAGE_LIMIT, ...(cursor ? { cursor } : {}) },
+ 464 |       timeoutClass: &quot;adminLong&quot;,
+ 465 |     });
+ 466 |     if (!cursor || !stats) stats = toCatalogStats(res.data.stats);
+ 467 |     return { items: res.data.items.map(toCatalogRow), nextCursor: pageInfo(res.meta).nextCursor };
+ 468 |   }, CATALOG_MAX_PAGES);
+ 469 |   return { rows, stats: stats ?? { total: 0, tracked: 0, untracked: 0, scopeOrphans: 0, acr: 0, deleted: 0 } };
+ 470 | }</pre></details><details id="S07"><summary>S07 <span>front/app/[locale]/(dash)/admin/standards/prompts/page.tsx · L45–58, L66–71</span></summary><p><a href="../../front/app/%5Blocale%5D/%28dash%29/admin/standards/prompts/page.tsx">원본 파일 열기</a> · SHA-256 <code>0cbc71480b3be1bf24a6ce7f027092f0bb2077ca78158773cae2dd1fa9fe9736</code></p><pre>  45 |   let rows: StandardCatalogRow[];
+  46 |   let stats: StandardCatalogStats;
+  47 |   let markets: string[];
+  48 |   if (api.isAdminApi()) {
+  49 |     [{ rows, stats }, markets] = await Promise.all([api.listAdminCatalog(), api.catalogMarketVocabularyForScreen()]).catch((e) =&gt;
+  50 |       throwForPage(e, locale),
+  51 |     );
+  52 |   } else {
+  53 |     // includeDeleted: admin은 &quot;삭제됨&quot; 뷰에서 soft-delete 행을 보고 복원할 수 있다.
+  54 |     ({ rows, stats } = await listStandardCatalog({ includeDeleted: true }));
+  55 |     // 시장 어휘는 하드코딩하지 않고 **루트 프로젝트 실황**에서 온다 — scope 의
+  56 |     // 검증(어휘 밖 400)과 같은 상한이라 화면과 서버 검증이 갈리지 않는다.
+  57 |     markets = await getStandardMarketVocabulary();
+  58 |   }
+
+    …
+
+  66 |       &lt;SectionCard
+  67 |         title={t(&quot;list.title&quot;)}
+  68 |         description={t(&quot;list.description&quot;, { count: rows.length })}
+  69 |       &gt;
+  70 |         &lt;StandardPromptList rows={rows} stats={stats} markets={markets} /&gt;
+  71 |       &lt;/SectionCard&gt;</pre></details><details id="S08"><summary>S08 <span>front/app/[locale]/(dash)/admin/standards/prompts/_components/prompt-list.tsx · L173–187, L411–424</span></summary><p><a href="../../front/app/%5Blocale%5D/%28dash%29/admin/standards/prompts/_components/prompt-list.tsx">원본 파일 열기</a> · SHA-256 <code>81b4289d5b6472896ebe311ef4c4e0c766dd8a2022035104d03a6698068c1ccb</code></p><pre> 173 |   const filtered = useMemo(() =&gt; {
+ 174 |     return rows.filter((r) =&gt; {
+ 175 |       if (view === &quot;active&quot; ? r.deletedAt !== null : r.deletedAt === null) return false;
+ 176 |       if (depth1Filter !== &quot;all&quot; &amp;&amp; r.depth1 !== depth1Filter) return false;
+ 177 |       if (funnelFilter !== &quot;all&quot; &amp;&amp; r.funnelStage !== funnelFilter) return false;
+ 178 |       if (trackFilter === &quot;tracked&quot; &amp;&amp; r.scopePromptId === null) return false;
+ 179 |       if (trackFilter === &quot;untracked&quot; &amp;&amp; r.scopePromptId !== null) return false;
+ 180 |       if (kindFilter !== &quot;all&quot; &amp;&amp; r.kind !== kindFilter) return false;
+ 181 |       return true;
+ 182 |     });
+ 183 |   }, [rows, view, depth1Filter, funnelFilter, trackFilter, kindFilter]);
+ 184 | 
+ 185 |   const { sorted, headerProps } = useSortableTable&lt;StandardPromptRow, SortKey&gt;(
+ 186 |     filtered,
+ 187 |     {
+
+    …
+
+ 411 |             &lt;tbody&gt;
+ 412 |               {sorted.map((r) =&gt; (
+ 413 |                 &lt;tr key={r.id} className=&quot;border-t border-border first:border-t-0 align-top&quot;&gt;
+ 414 |                   &lt;td className=&quot;px-3 py-3 text-sm text-foreground&quot;&gt;{r.text}&lt;/td&gt;
+ 415 |                   &lt;td className=&quot;px-3 py-3&quot;&gt;
+ 416 |                     {r.brand ? (
+ 417 |                       &lt;Badge variant=&quot;outline&quot; className=&quot;text-[10px]&quot;&gt;{r.brand}&lt;/Badge&gt;
+ 418 |                     ) : (
+ 419 |                       &lt;span className=&quot;text-xs text-muted-foreground&quot;&gt;—&lt;/span&gt;
+ 420 |                     )}
+ 421 |                   &lt;/td&gt;
+ 422 |                   &lt;td className=&quot;px-3 py-3&quot;&gt;
+ 423 |                     {r.depth1 || r.listType ? (
+ 424 |                       &lt;div className=&quot;flex flex-col items-start gap-1&quot;&gt;</pre></details><details id="S09"><summary>S09 <span>front/lib/hgh/adapters/projects.ts · L187–197, L674–718, L1521–1546</span></summary><p><a href="../../front/lib/hgh/adapters/projects.ts">원본 파일 열기</a> · SHA-256 <code>f41ff7cd4f73891fa62ae893efbbaae179723d7267ace37cc422bcd0893e5033</code></p><pre> 187 | export const PAGE = {
+ 188 |   projects: { limit: 100, maxPages: 20 },
+ 189 |   candidates: { limit: 500, maxPages: 40 },
+ 190 |   prompts: { limit: 500, maxPages: 40 },
+ 191 |   trackedUrls: { limit: 500, maxPages: 20 },
+ 192 |   engineHistory: { limit: 200, maxPages: 10 },
+ 193 |   audit: { limit: 20 },
+ 194 | } as const;
+ 195 | 
+ 196 | /** Backend body limits (CandidateIds 500, BulkSet 1000): bigger selections go in chunks. */
+ 197 | export const CHUNK = { candidateIds: 500, bulkPromptIds: 1000 } as const;
+
+    …
+
+ 674 | async function allCandidates(id: string): Promise&lt;ApiCandidateItem[]&gt; {
+ 675 |   const res = await fetchAllPages&lt;ApiCandidateItem&gt;(
+ 676 |     async (cursor) =&gt; {
+ 677 |       const r = await hghGet(&quot;/v1/projects/{project_id}/prompt-candidates&quot;, {
+ 678 |         pathParams: { project_id: id },
+ 679 |         query: { limit: PAGE.candidates.limit, cursor },
+ 680 |       });
+ 681 |       return { items: r.data.items, nextCursor: nextCursorOf(r.data, r.meta) };
+ 682 |     },
+ 683 |     { maxPages: PAGE.candidates.maxPages },
+ 684 |   );
+ 685 |   return res.items;
+ 686 | }
+ 687 | 
+ 688 | async function allPrompts(id: string): Promise&lt;ApiPromptItem[]&gt; {
+ 689 |   const res = await fetchAllPages&lt;ApiPromptItem&gt;(
+ 690 |     async (cursor) =&gt; {
+ 691 |       const r = await hghGet(&quot;/v1/projects/{project_id}/prompts&quot;, {
+ 692 |         pathParams: { project_id: id },
+ 693 |         query: { limit: PAGE.prompts.limit, cursor },
+ 694 |       });
+ 695 |       return { items: r.data.items, nextCursor: nextCursorOf(r.data, r.meta) };
+ 696 |     },
+ 697 |     { maxPages: PAGE.prompts.maxPages },
+ 698 |   );
+ 699 |   return res.items;
+ 700 | }
+ 701 | 
+ 702 | export async function loadPromptPage(locale: string, id: string, isAdmin: boolean): Promise&lt;PromptPageData&gt; {
+ 703 |   const access = await requireProjectAccess(locale, id, isAdmin);
+ 704 |   try {
+ 705 |     const [candidates, prompts, fields] = await Promise.all([
+ 706 |       allCandidates(id),
+ 707 |       allPrompts(id),
+ 708 |       hghGet(&quot;/v1/projects/{project_id}/prompt-fields&quot;, { pathParams: { project_id: id } }),
+ 709 |     ]);
+ 710 |     return {
+ 711 |       canEdit: access.canEdit,
+ 712 |       candidates: candidates.map(toCandidateRow),
+ 713 |       prompts: toPromptRows(prompts),
+ 714 |       customFields: fields.data.items.map(toCustomFieldRow),
+ 715 |     };
+ 716 |   } catch (e) {
+ 717 |     throwForPage(e, locale, { permission: &quot;not-found&quot; });
+ 718 |   }
+
+    …
+
+1521 | export async function setPromptCustomFieldValueBulk(
+1522 |   projectId: string,
+1523 |   promptIds: string[],
+1524 |   fieldId: string,
+1525 |   value: string,
+1526 | ): Promise&lt;ActionResult&lt;{ count: number }&gt;&gt; {
+1527 |   const stored = value.trim();
+1528 |   if (!stored) return { ok: false, error: &quot;값을 입력해주세요&quot; };
+1529 |   const ids = [...new Set(promptIds)];
+1530 |   if (ids.length === 0) return { ok: false, error: &quot;프롬프트를 선택해주세요&quot; };
+1531 |   let count = 0;
+1532 |   for (const part of chunk(ids, CHUNK.bulkPromptIds)) {
+1533 |     const r = await run(
+1534 |       () =&gt;
+1535 |         hghPost(&quot;/v1/projects/{project_id}/prompt-fields/{field_id}/bulk-set&quot;, {
+1536 |           ...W,
+1537 |           pathParams: { project_id: projectId, field_id: fieldId },
+1538 |           body: { value: stored, prompt_ids: part },
+1539 |         }),
+1540 |       {},
+1541 |     );
+1542 |     if (!r.ok) return r;
+1543 |     count += r.value!.data.count;
+1544 |   }
+1545 |   return { ok: true, value: { count } };
+1546 | }</pre></details><details id="S10"><summary>S10 <span>front/app/[locale]/(dash)/projects/[id]/prompt/_components/prompt-list.tsx · L281–299, L620–644</span></summary><p><a href="../../front/app/%5Blocale%5D/%28dash%29/projects/%5Bid%5D/prompt/_components/prompt-list.tsx">원본 파일 열기</a> · SHA-256 <code>cb7c0d652de0fbe0d47fe6ec15a3cb3d3ba6951e3bc55cacab08b6fa691dc109</code></p><pre> 281 |   function onBulkApply() {
+ 282 |     const ids = [...selected];
+ 283 |     const value = bulkValue.trim();
+ 284 |     if (!bulkFieldId || !value || ids.length === 0) return;
+ 285 |     startTransition(async () =&gt; {
+ 286 |       const r = await setPromptCustomFieldValueBulk(projectId, ids, bulkFieldId, value);
+ 287 |       if (!r.ok) {
+ 288 |         toast.error(r.error);
+ 289 |         return;
+ 290 |       }
+ 291 |       setValueOverlay((prev) =&gt; {
+ 292 |         const next = { ...prev };
+ 293 |         for (const id of ids) next[id] = { ...next[id], [bulkFieldId]: value };
+ 294 |         return next;
+ 295 |       });
+ 296 |       toast.success(t(&quot;bulk.applied&quot;, { count: r.value.count }));
+ 297 |       setBulkValue(&quot;&quot;);
+ 298 |       setSelected(new Set());
+ 299 |     });
+
+    …
+
+ 620 |                 {sorted.length === 0 ? (
+ 621 |                   &lt;tr&gt;
+ 622 |                     &lt;td
+ 623 |                       colSpan={columns.length + (canEdit ? 2 : 0)}
+ 624 |                       className=&quot;px-4 py-6 text-center text-sm text-muted-foreground&quot;
+ 625 |                     &gt;
+ 626 |                       {t(&quot;noMatch&quot;)}
+ 627 |                     &lt;/td&gt;
+ 628 |                   &lt;/tr&gt;
+ 629 |                 ) : (
+ 630 |                   sorted.map((p) =&gt; (
+ 631 |                     &lt;tr key={p.id} className=&quot;border-b border-border/60 last:border-0&quot;&gt;
+ 632 |                       {canEdit ? (
+ 633 |                         &lt;td className=&quot;sticky left-0 z-10 bg-card px-3 py-2 align-top&quot;&gt;
+ 634 |                           &lt;Checkbox
+ 635 |                             checked={selected.has(p.id)}
+ 636 |                             onCheckedChange={(v) =&gt; toggleSelect(p.id, v === true)}
+ 637 |                             aria-label={t(&quot;bulk.selectOne&quot;)}
+ 638 |                           /&gt;
+ 639 |                         &lt;/td&gt;
+ 640 |                       ) : null}
+ 641 |                       {columns.map((col, i) =&gt; (
+ 642 |                         &lt;td
+ 643 |                           key={col.key}
+ 644 |                           className={`px-3 py-2 align-top ${i === 0 ? &quot;sticky left-8 z-10 min-w-[16rem] max-w-[28rem] bg-card&quot; : &quot;&quot;}`}</pre></details><details id="S11"><summary>S11 <span>front/lib/db/repositories/prompts.ts · L58–64, L230–236</span></summary><p><a href="../../front/lib/db/repositories/prompts.ts">원본 파일 열기</a> · SHA-256 <code>796fb6e688ea7c0a79d77c315c6fb99bb72f442070f8cf7380ab55b0f3512426</code></p><pre>  58 |   async listForProject(projectId) {
+  59 |     return getDb()
+  60 |       .select()
+  61 |       .from(promptCandidates)
+  62 |       .where(eq(promptCandidates.projectId, projectId))
+  63 |       .orderBy(desc(promptCandidates.createdAt));
+  64 |   },
+
+    …
+
+ 230 |   async listForProject(projectId) {
+ 231 |     return getDb()
+ 232 |       .select()
+ 233 |       .from(prompts)
+ 234 |       .where(eq(prompts.projectId, projectId))
+ 235 |       .orderBy(asc(prompts.createdAt));
+ 236 |   },</pre></details><details id="S12"><summary>S12 <span>front/app/[locale]/(dash)/projects/[id]/prompt/page.tsx · L38–41, L79–88, L103–108</span></summary><p><a href="../../front/app/%5Blocale%5D/%28dash%29/projects/%5Bid%5D/prompt/page.tsx">원본 파일 열기</a> · SHA-256 <code>6a827d7f74e0966f50704cbc6977058ad1a5bdf88d3300dbd3db54086f7c95c9</code></p><pre>  38 |   const { canEdit, candidates, prompts, customFields } = isProjectsApi()
+  39 |     ? await loadPromptPage(locale, id, isAdmin)
+  40 |     : await legacyPromptPage(id, session.user.id, isAdmin);
+  41 | 
+
+    …
+
+  79 |         &lt;PromptList
+  80 |           projectId={id}
+  81 |           prompts={prompts}
+  82 |           customFields={customFields}
+  83 |           canEdit={canEdit}
+  84 |           locale={locale}
+  85 |         /&gt;
+  86 |       &lt;/SectionCard&gt;
+  87 |     &lt;/div&gt;
+  88 |   );
+
+    …
+
+ 103 |   const [candidatesRaw, promptsRaw, customFieldsRaw, customValuesRaw] = await Promise.all([
+ 104 |     promptCandidateRepository.listForProject(id),
+ 105 |     promptRepository.listForProject(id),
+ 106 |     projectCustomFieldRepository.listForProject(id),
+ 107 |     projectCustomFieldRepository.listValuesForProject(id),
+ 108 |   ]);</pre></details><details id="S13"><summary>S13 <span>front/lib/hgh/paginate.ts · L61–77, L80–102</span></summary><p><a href="../../front/lib/hgh/paginate.ts">원본 파일 열기</a> · SHA-256 <code>0414cd2dd00568ba72641f1d860e541fda991eff7f805d204495e55e78bd8092</code></p><pre>  61 | export async function fetchAllPages&lt;T&gt;(fetchPage: PageFetcher&lt;T&gt;, opts: FetchAllOptions): Promise&lt;FetchAllResult&lt;T&gt;&gt; {
+  62 |   const { maxPages } = opts;
+  63 |   if (!Number.isInteger(maxPages) || maxPages &lt; 1 || maxPages &gt; MAX_PAGES_CEILING) {
+  64 |     throw new RangeError(`fetchAllPages: maxPages must be an integer 1..${MAX_PAGES_CEILING}`);
+  65 |   }
+  66 |   let restarted = false;
+  67 |   for (;;) {
+  68 |     try {
+  69 |       return { ...(await onePass(fetchPage, maxPages, opts.onLimit ?? &quot;throw&quot;)), restarted };
+  70 |     } catch (e) {
+  71 |       if (isCursorStale(e) &amp;&amp; !restarted) {
+  72 |         restarted = true;
+  73 |         continue;
+  74 |       }
+  75 |       throw e;
+  76 |     }
+  77 |   }
+
+    …
+
+  80 | async function onePass&lt;T&gt;(fetchPage: PageFetcher&lt;T&gt;, maxPages: number, onLimit: &quot;throw&quot; | &quot;truncate&quot;) {
+  81 |   const items: T[] = [];
+  82 |   const seen = new Set&lt;string&gt;();
+  83 |   let cursor: string | null = null;
+  84 |   let total: number | null = null;
+  85 |   for (let pages = 1; ; pages += 1) {
+  86 |     const page = await fetchPage(cursor);
+  87 |     items.push(...page.items);
+  88 |     if (page.total !== undefined &amp;&amp; page.total !== null) total = page.total;
+  89 |     const next = page.nextCursor || null;
+  90 |     if (next === null) return { items, pages, total, truncated: false };
+  91 |     if (seen.has(next)) {
+  92 |       // The backend handed back a cursor it already gave: stop instead of looping.
+  93 |       throw new HghApiError(500, LOCAL_CODES.pageLimit, &quot;cursor repeated; pagination aborted&quot;);
+  94 |     }
+  95 |     seen.add(next);
+  96 |     if (pages &gt;= maxPages) {
+  97 |       if (onLimit === &quot;truncate&quot;) return { items, pages, total, truncated: true };
+  98 |       throw new HghApiError(500, LOCAL_CODES.pageLimit, `more than ${maxPages} pages`, { maxPages });
+  99 |     }
+ 100 |     cursor = next;
+ 101 |   }
+ 102 | }</pre></details><details id="S14"><summary>S14 <span>front/app/[locale]/raw-data-qa/answers/[jobId]/_components/detail-shell.tsx · L46–50, L58–86, L115–137, L156–177</span></summary><p><a href="../../front/app/%5Blocale%5D/raw-data-qa/answers/%5BjobId%5D/_components/detail-shell.tsx">원본 파일 열기</a> · SHA-256 <code>cc4b318e6361f38a3f60dc3218c0c239d2834bbfbfe143e30cf6c4834b840d68</code></p><pre>  46 |   const [lockHolder, setLockHolder] = useState&lt;string | null&gt;(null);
+  47 |   const [readOnly, setReadOnly] = useState(false);
+  48 |   const [lockLost, setLockLost] = useState(false);
+  49 |   const [saving, setSaving] = useState(false);
+  50 |   const [savedAt, setSavedAt] = useState&lt;string | null&gt;(null);
+
+    …
+
+  58 |     fetch(&quot;/api/qa/lock&quot;, {
+  59 |       method: &quot;POST&quot;,
+  60 |       headers: { &quot;Content-Type&quot;: &quot;application/json&quot; },
+  61 |       body: JSON.stringify({ jobId }),
+  62 |     })
+  63 |       .then(async (res) =&gt; {
+  64 |         const data = (await res.json().catch(() =&gt; ({}))) as {
+  65 |           ok?: boolean;
+  66 |           heldBy?: { reviewerName: string };
+  67 |         };
+  68 |         if (!alive) return;
+  69 |         if (res.status === 409 &amp;&amp; data.heldBy) {
+  70 |           setReadOnly(true);
+  71 |           setLockHolder(data.heldBy.reviewerName);
+  72 |         }
+  73 |       })
+  74 |       .catch(() =&gt; {});
+  75 | 
+  76 |     const beat = setInterval(() =&gt; {
+  77 |       fetch(&quot;/api/qa/lock&quot;, {
+  78 |         method: &quot;PATCH&quot;,
+  79 |         headers: { &quot;Content-Type&quot;: &quot;application/json&quot; },
+  80 |         body: JSON.stringify({ jobId }),
+  81 |       })
+  82 |         .then((r) =&gt; r.json())
+  83 |         .then((d: { held?: boolean }) =&gt; {
+  84 |           if (alive &amp;&amp; d.held === false) setLockLost(true);
+  85 |         })
+  86 |         .catch(() =&gt; {});
+
+    …
+
+ 115 |   const save = useCallback(async () =&gt; {
+ 116 |     if (readOnly || saving) return;
+ 117 |     setSaving(true);
+ 118 |     try {
+ 119 |       const res = await fetch(&quot;/api/qa/review&quot;, {
+ 120 |         method: &quot;PUT&quot;,
+ 121 |         headers: { &quot;Content-Type&quot;: &quot;application/json&quot; },
+ 122 |         body: JSON.stringify({ jobId, sectionFlags: flags }),
+ 123 |       });
+ 124 |       if (res.status === 409) {
+ 125 |         setLockLost(true);
+ 126 |         setReadOnly(true);
+ 127 |         return;
+ 128 |       }
+ 129 |       if (res.ok) {
+ 130 |         setSavedAt(new Date().toISOString());
+ 131 |         // 목록의 진행률·상태가 이 저장을 반영하도록.
+ 132 |         router.refresh();
+ 133 |       }
+ 134 |     } finally {
+ 135 |       setSaving(false);
+ 136 |     }
+ 137 |   }, [flags, jobId, readOnly, saving, router]);
+
+    …
+
+ 156 |       const key = e.key.toLowerCase();
+ 157 |       if (key === &quot;j&quot; &amp;&amp; navRef.current.nextHref) {
+ 158 |         e.preventDefault();
+ 159 |         router.push(navRef.current.nextHref);
+ 160 |       } else if (key === &quot;k&quot; &amp;&amp; navRef.current.prevHref) {
+ 161 |         e.preventDefault();
+ 162 |         router.push(navRef.current.prevHref);
+ 163 |       } else if (key === &quot;o&quot;) {
+ 164 |         e.preventDefault();
+ 165 |         void save();
+ 166 |       } else if (key === &quot;n&quot;) {
+ 167 |         e.preventDefault();
+ 168 |         setNoteTarget({ kind: &quot;answer&quot;, key: null, label: null });
+ 169 |       }
+ 170 |     }
+ 171 |     window.addEventListener(&quot;keydown&quot;, onKey);
+ 172 |     return () =&gt; window.removeEventListener(&quot;keydown&quot;, onKey);
+ 173 |   }, [router, save]);
+ 174 | 
+ 175 |   const setFlag = (key: QaSectionKey, value: &quot;ok&quot; | &quot;issue&quot;) =&gt;
+ 176 |     // 같은 값을 다시 누르면 미판정으로 되돌린다 — 잘못 누른 것을 취소할 길이 필요하다.
+ 177 |     setFlags((prev) =&gt; ({ ...prev, [key]: prev[key] === value ? undefined : value }));</pre></details><details id="S15"><summary>S15 <span>front/app/[locale]/raw-data-qa/answers/[jobId]/_components/verdict-bar.tsx · L44–54, L68–74</span></summary><p><a href="../../front/app/%5Blocale%5D/raw-data-qa/answers/%5BjobId%5D/_components/verdict-bar.tsx">원본 파일 열기</a> · SHA-256 <code>5d430d510295e6c38fc1ca639a16f1f6488484d8388f656e701a11b018e05fd3</code></p><pre>  44 |         &lt;Button
+  45 |           onClick={onSave}
+  46 |           disabled={readOnly || saving}
+  47 |           className={cn(hasIssue &amp;&amp; &quot;bg-destructive hover:bg-destructive/90&quot;)}
+  48 |         &gt;
+  49 |           {saving
+  50 |             ? t(&quot;common.saving&quot;)
+  51 |             : hasIssue
+  52 |               ? t(&quot;detail.markIssue&quot;)
+  53 |               : t(&quot;detail.markReviewed&quot;)}
+  54 |         &lt;/Button&gt;
+
+    …
+
+  68 |         {savedAt ? (
+  69 |           &lt;span className=&quot;text-sm text-brand-500&quot;&gt;{t(&quot;detail.saved&quot;)}&lt;/span&gt;
+  70 |         ) : reviewedBy ? (
+  71 |           &lt;span className=&quot;text-sm text-muted-foreground&quot;&gt;
+  72 |             {t(&quot;detail.reviewedBy&quot;, { name: reviewedBy.name, at: reviewedBy.at })}
+  73 |           &lt;/span&gt;
+  74 |         ) : null}</pre></details><details id="S16"><summary>S16 <span>front/app/api/qa/review/route.ts · L9–38</span></summary><p><a href="../../front/app/api/qa/review/route.ts">원본 파일 열기</a> · SHA-256 <code>5ad7c45157cce9d121bced42e3929f2e141489aff3fbc1990268a6069e1c38c8</code></p><pre>   9 | // HGH_SOURCE_G7=api 면 PUT /v1/qa/answers/{id}/review 로 중계한다(락 재확인은 백엔드,
+  10 | // 409 lock_lost → 현행 본문 {error:&quot;lock-lost&quot;, heldBy}).
+  11 | 
+  12 | export async function PUT(req: NextRequest) {
+  13 |   if (qaApiSource()) return qaApiRoutes.reviewPut(req);
+  14 |   const g = await guard();
+  15 |   if (!g.ok) return g.response;
+  16 | 
+  17 |   const body = await readJson(req);
+  18 |   const jobId = str(body.jobId);
+  19 |   if (!jobId) return NextResponse.json({ error: &quot;jobId required&quot; }, { status: 400 });
+  20 | 
+  21 |   // 저장 직전에 락 소유를 다시 확인한다. 상세를 열어둔 채 3분 넘게 자리를 비우면
+  22 |   // TTL 이 만료돼 다른 검수자가 가져갔을 수 있고, 그 상태로 덮어쓰면 남의 작업이
+  23 |   // 조용히 사라진다.
+  24 |   const lock = await acquireLock(jobId, g.reviewer.sessionId, g.reviewer.name);
+  25 |   if (!lock.ok) {
+  26 |     return NextResponse.json(
+  27 |       { error: &quot;lock-lost&quot;, heldBy: { reviewerName: lock.heldBy.reviewerName } },
+  28 |       { status: 409 },
+  29 |     );
+  30 |   }
+  31 | 
+  32 |   const { status } = await upsertReview({
+  33 |     jobId,
+  34 |     sectionFlags: readSectionFlags(body.sectionFlags),
+  35 |     reviewerName: g.reviewer.name,
+  36 |     sessionId: g.reviewer.sessionId,
+  37 |   });
+  38 |   return NextResponse.json({ status, reviewerName: g.reviewer.name });</pre></details><details id="S17"><summary>S17 <span>front/app/[locale]/(dash)/projects/[id]/prompt/_actions.ts · L876–898</span></summary><p><a href="../../front/app/%5Blocale%5D/%28dash%29/projects/%5Bid%5D/prompt/_actions.ts">원본 파일 열기</a> · SHA-256 <code>1385112fe194194b46c230df56f3cdc0ac822350968218c2fac60eb16252e1dc</code></p><pre> 876 | // 일괄 태깅 — 여러 프롬프트에 같은 태그값을 한 번에 부여. requireOwner + 각
+ 877 | // 프롬프트의 프로젝트 소속(IDOR)을 모두 검증한 뒤 단일 upsert 로 적용한다.
+ 878 | export async function setPromptCustomFieldValueBulk(
+ 879 |   projectId: string,
+ 880 |   promptIds: string[],
+ 881 |   fieldId: string,
+ 882 |   value: string,
+ 883 | ): Promise&lt;ActionResult&lt;{ count: number }&gt;&gt; {
+ 884 |   if (api.isProjectsApi()) {
+ 885 |     const r = await api.setPromptCustomFieldValueBulk(projectId, promptIds, fieldId, value);
+ 886 |     if (r.ok) revalidatePath(`/projects/${projectId}/prompt`);
+ 887 |     return r;
+ 888 |   }
+ 889 |   await requireOwner(projectId);
+ 890 |   await assertFieldInProject(projectId, fieldId);
+ 891 |   const stored = value.trim();
+ 892 |   if (!stored) return { ok: false, error: &quot;값을 입력해주세요&quot; };
+ 893 |   const ids = [...new Set(promptIds)];
+ 894 |   if (ids.length === 0) return { ok: false, error: &quot;프롬프트를 선택해주세요&quot; };
+ 895 |   await Promise.all(ids.map((id) =&gt; assertPromptInProject(projectId, id)));
+ 896 |   await projectCustomFieldRepository.setValueBulk(ids, fieldId, stored);
+ 897 |   revalidatePath(`/projects/${projectId}/prompt`);
+ 898 |   return { ok: true, value: { count: ids.length } };</pre></details><details id="S18"><summary>S18 <span>back/app/features/projects/prompts/fields/service.py · L67–87</span></summary><p><a href="../../back/app/features/projects/prompts/fields/service.py">원본 파일 열기</a> · SHA-256 <code>40b28989ac8c30ce0700d178ccc13817229798d9077bd72e87ed071c6ac21a6c</code></p><pre>  67 | async def _assert_prompts(rw: AsyncConnection, project_id: uuid.UUID, prompt_ids: list[uuid.UUID]) -&gt; None:
+  68 |     rows = await fetch_all(rw, q.LIVE_PROMPTS_SQL, {&quot;pid&quot;: project_id, &quot;ids&quot;: [str(x) for x in prompt_ids]})
+  69 |     if len(rows) != len(set(prompt_ids)):
+  70 |         raise errors.not_found(&quot;프롬프트 없음&quot;, code=&quot;prompt_not_found&quot;)
+  71 | 
+  72 | 
+  73 | async def set_values(rw: AsyncConnection, project_id: uuid.UUID, field_id: uuid.UUID, prompt_ids: list[uuid.UUID], value: str) -&gt; int:
+  74 |     &quot;&quot;&quot;태그값 UPSERT(여러 프롬프트). 가져오기(io)도 이 함수를 쓴다. 소속 확인은 호출자 몫이 아니라 여기서 한다.&quot;&quot;&quot;
+  75 |     await _assert_field(rw, project_id, field_id)
+  76 |     await _assert_prompts(rw, project_id, prompt_ids)
+  77 |     await rw.execute(text(q.UPSERT_SQL), {&quot;pid&quot;: project_id, &quot;fid&quot;: field_id, &quot;v&quot;: value, &quot;ids&quot;: [str(x) for x in prompt_ids]})
+  78 |     return len(set(prompt_ids))
+  79 | 
+  80 | 
+  81 | async def set_value(rw: AsyncConnection, project_id: uuid.UUID, prompt_id: uuid.UUID, field_id: uuid.UUID, value: str) -&gt; ValueResult:
+  82 |     await set_values(rw, project_id, field_id, [prompt_id], value)
+  83 |     return ValueResult(prompt_id=prompt_id, field_id=field_id, value=value)
+  84 | 
+  85 | 
+  86 | async def bulk_set(rw: AsyncConnection, project_id: uuid.UUID, field_id: uuid.UUID, prompt_ids: list[uuid.UUID], value: str) -&gt; BulkResult:
+  87 |     return BulkResult(field_id=field_id, count=await set_values(rw, project_id, field_id, prompt_ids, value))</pre></details><details id="S19"><summary>S19 <span>back/app/core/write.py · L67–74, L210–238, L268–280</span></summary><p><a href="../../back/app/core/write.py">원본 파일 열기</a> · SHA-256 <code>a5a1c82fedb2bde360ba49bea02d7bcd2c3ce9c3613ea7872911684da47db6ea</code></p><pre>  67 | # ── 쓰기 트랜잭션 의존성 ──
+  68 | async def get_rw_conn(p: CurrentUser) -&gt; AsyncIterator[AsyncConnection]:
+  69 |     &quot;&quot;&quot;api_rw 트랜잭션(행위자 = 세션 사용자). 핸들러가 정상 반환하면 응답 전에 COMMIT 된다(scope=&#x27;function&#x27;).&quot;&quot;&quot;
+  70 |     async with get_db().write(p.user_id) as conn:
+  71 |         yield conn
+  72 | 
+  73 | 
+  74 | RwConn = Annotated[AsyncConnection, Depends(get_rw_conn, scope=&quot;function&quot;)]
+
+    …
+
+ 210 | class AccessAuditWriter:
+ 211 |     &quot;&quot;&quot;프로세스 내 버퍼 + 백그라운드 태스크. ≤ flush_s 초 또는 batch 건 중 먼저 도달 시 한 트랜잭션 벌크 INSERT.
+ 212 |     실패한 배치는 로그만 남기고 버린다(요청 경로를 막지 않는다, Q4 유실 허용).&quot;&quot;&quot;
+ 213 | 
+ 214 |     def __init__(self, *, flush_s: float = 2.0, batch: int = 500, max_buffer: int = 20_000):
+ 215 |         self.flush_s, self.batch, self.max_buffer = flush_s, batch, max_buffer
+ 216 |         self._buf: list[AuditEvent] = []
+ 217 |         self._task: asyncio.Task[None] | None = None
+ 218 |         self._wake = asyncio.Event()
+ 219 |         self._stopping = False
+ 220 |         self.dropped = 0
+ 221 |         self.written = 0
+ 222 | 
+ 223 |     def record(self, p: Principal, kind: AuditKind, action: str, *, target: str | None = None,
+ 224 |                detail: dict[str, Any] | None = None, request_id: uuid.UUID | None = None) -&gt; None:
+ 225 |         self.record_actor(p.user_id, p.role, kind, action, target=target, detail=detail, request_id=request_id)
+ 226 | 
+ 227 |     def record_actor(self, actor_id: uuid.UUID, actor_role: str, kind: AuditKind, action: str, *, target: str | None = None,
+ 228 |                      detail: dict[str, Any] | None = None, request_id: uuid.UUID | None = None) -&gt; None:
+ 229 |         if kind not in (&quot;data_access&quot;, &quot;download&quot;, &quot;scope_call&quot;):
+ 230 |             raise ValueError(&quot;접근 감사는 data_access·download·scope_call 만(Q4: api_read 기록 안 함)&quot;)
+ 231 |         if len(self._buf) &gt;= self.max_buffer:
+ 232 |             self.dropped += 1
+ 233 |             return
+ 234 |         if request_id is None:                            # 요청 경로의 기록은 그 요청의 X-Request-Id(core.reqid)를 같이 남긴다
+ 235 |             from app.core.reqid import current_request_id
+ 236 | 
+ 237 |             request_id = current_request_id()
+ 238 |         self._buf.append(AuditEvent(actor_id, actor_role, kind, action[:200], target[:500] if target else None, detail, request_id))
+
+    …
+
+ 268 |     async def flush(self) -&gt; int:
+ 269 |         n_total = 0
+ 270 |         while self._buf:
+ 271 |             chunk, self._buf = self._buf[: self.batch], self._buf[self.batch:]
+ 272 |             try:
+ 273 |                 async with get_db().transaction(&quot;api_rw&quot;) as conn:
+ 274 |                     await conn.execute(_audit_insert(), _audit_params(chunk))
+ 275 |                 self.written += len(chunk)
+ 276 |                 n_total += len(chunk)
+ 277 |             except Exception as e:  # noqa: BLE001
+ 278 |                 self.dropped += len(chunk)
+ 279 |                 log.warning(&quot;접근 감사 배치 %d건 유실: %s&quot;, len(chunk), type(e).__name__)
+ 280 |         return n_total</pre></details><details id="S20"><summary>S20 <span>back/app/core/db.py · L130–144</span></summary><p><a href="../../back/app/core/db.py">원본 파일 열기</a> · SHA-256 <code>bd23e59788113aed038e5691368b7ccf84dc884e2bd83c8e0457125c8ddf4250</code></p><pre> 130 |     async def transaction(self, pool: PoolName, *, gucs: Mapping[str, str] | None = None) -&gt; AsyncIterator[AsyncConnection]:
+ 131 |         &quot;&quot;&quot;풀 커넥션 1개 + 트랜잭션 1개. 정상 종료 시 COMMIT(읽기 전용이면 영향 없음), 예외 시 ROLLBACK.&quot;&quot;&quot;
+ 132 |         spec = POOL_SPECS[pool]
+ 133 |         async with self.engine(pool).connect() as raw:
+ 134 |             conn = await raw.execution_options(isolation_level=spec.isolation, postgresql_readonly=spec.read_only)
+ 135 |             async with conn.begin():
+ 136 |                 settings: list[tuple[str, str]] = []
+ 137 |                 if self.assumes_role(pool):
+ 138 |                     settings.append((&quot;role&quot;, spec.role))
+ 139 |                 settings.append((&quot;statement_timeout&quot;, spec.statement_timeout))
+ 140 |                 settings.extend(spec.extra)
+ 141 |                 for k, v in (gucs or {}).items():
+ 142 |                     settings.append((k, v))
+ 143 |                 await set_local(conn, settings)
+ 144 |                 yield conn</pre></details><details id="S21"><summary>S21 <span>front/lib/ga4/conversion.ts · L8–12, L250–265, L288–325, L469–480, L507–524</span></summary><p><a href="../../front/lib/ga4/conversion.ts">원본 파일 열기</a> · SHA-256 <code>1491689f74a23d0be1e6fe171838aeaccfb51af336d80ee7313918bc82966ad3</code></p><pre>   8 | // 24h TTL — dev 단계 기본값. GA4 data updates ~1h이지만 개발 검증 단계에선
+   9 | // freshness보다 API 호출 절감이 우선. prod에선 ~6h로 좁힐 여지 있음.
+  10 | // 한 곳에서만 조정.
+  11 | export const GA4_CACHE_TTL_SECONDS = 24 * 60 * 60;
+  12 | export const GA4_CACHE_TAG = &quot;ga4&quot;;
+
+    …
+
+ 250 | // ── Conversion numerator definition (WBS 1.2.x) ─────────────────────────────
+ 251 | //
+ 252 | // A property&#x27;s &quot;전환&quot; numerator is EITHER the GA4 key events metric (default,
+ 253 | // unchanged) OR the eventCount of an admin-selected eventName set
+ 254 | // (ga4_tracked_events). ConvSpec = the selected names, or null for the key-
+ 255 | // events fallback. Resolved once per property and threaded to every fetch.
+ 256 | export type ConvSpec = string[] | null;
+ 257 | 
+ 258 | async function resolveConvSpec(propertyId: string): Promise&lt;ConvSpec&gt; {
+ 259 |   try {
+ 260 |     const names = await ga4TrackedEventRepository.listForProperty(propertyId);
+ 261 |     return names.length ? names : null;
+ 262 |   } catch {
+ 263 |     // DB unreachable → fall back to key events rather than failing the KPI.
+ 264 |     return null;
+ 265 |   }
+
+    …
+
+ 288 | async function fetchCohortMap(
+ 289 |   propertyId: string,
+ 290 |   range: { start: string; end: string },
+ 291 |   exprs: object[],
+ 292 |   dims: { name: string }[],
+ 293 |   limit: number | undefined,
+ 294 |   spec: ConvSpec,
+ 295 | ): Promise&lt;Map&lt;string, CohortRow&gt;&gt; {
+ 296 |   const baseFilter = toFilter(exprs);
+ 297 |   const usersRep = await runReport(propertyId, {
+ 298 |     dateRanges: [{ startDate: range.start, endDate: range.end }],
+ 299 |     ...(dims.length ? { dimensions: dims } : {}),
+ 300 |     metrics: METRICS as unknown as Record&lt;string, unknown&gt;[],
+ 301 |     ...(baseFilter ? { dimensionFilter: baseFilter } : {}),
+ 302 |     ...(limit ? { limit } : {}),
+ 303 |   });
+ 304 |   const map = new Map&lt;string, CohortRow&gt;();
+ 305 |   for (const r of usersRep.rows ?? []) {
+ 306 |     map.set(rowKey(r), {
+ 307 |       users: num(r.metricValues?.[0].value),
+ 308 |       keyEvents: num(r.metricValues?.[1].value),
+ 309 |     });
+ 310 |   }
+ 311 |   if (spec) {
+ 312 |     const convFilter = toFilter([...exprs, eventNameExpr(spec)]);
+ 313 |     const convRep = await runReport(propertyId, {
+ 314 |       dateRanges: [{ startDate: range.start, endDate: range.end }],
+ 315 |       ...(dims.length ? { dimensions: dims } : {}),
+ 316 |       metrics: [{ name: &quot;eventCount&quot; }] as unknown as Record&lt;string, unknown&gt;[],
+ 317 |       ...(convFilter ? { dimensionFilter: convFilter } : {}),
+ 318 |       ...(limit ? { limit } : {}),
+ 319 |     });
+ 320 |     const conv = new Map&lt;string, number&gt;();
+ 321 |     for (const r of convRep.rows ?? []) conv.set(rowKey(r), num(r.metricValues?.[0].value));
+ 322 |     for (const [key, row] of map) row.keyEvents = conv.get(key) ?? 0;
+ 323 |   }
+ 324 |   return map;
+ 325 | }
+
+    …
+
+ 469 | async function getAiConversionLiveInner(
+ 470 |   propertyId: string,
+ 471 |   days = 90,
+ 472 |   filters?: ConversionFilters,
+ 473 | ): Promise&lt;ConversionLive | null&gt; {
+ 474 |   const range = dateNDaysAgo(days);
+ 475 |   const spec = await resolveConvSpec(propertyId);
+ 476 |   const [cohorts, trend, pages, byEngine] = await Promise.all([
+ 477 |     fetchCohorts(propertyId, range, filters, spec),
+ 478 |     fetchTrend(propertyId, range, filters, spec),
+ 479 |     fetchPageSplit(propertyId, range, 12, filters, spec),
+ 480 |     fetchEngineBreakdown(propertyId, range, filters, spec),
+
+    …
+
+ 507 | export async function getAiConversionLive(
+ 508 |   propertyId: string,
+ 509 |   days = 90,
+ 510 |   filters?: ConversionFilters,
+ 511 | ): Promise&lt;ConversionLive | null&gt; {
+ 512 |   try {
+ 513 |     return await unstable_cache(
+ 514 |       () =&gt; getAiConversionLiveInner(propertyId, days, filters),
+ 515 |       [&quot;ga4-conv-live&quot;, propertyId, String(days), filterKey(filters)],
+ 516 |       { revalidate: GA4_CACHE_TTL_SECONDS, tags: [GA4_CACHE_TAG] },
+ 517 |     )();
+ 518 |   } catch (err) {
+ 519 |     console.warn(
+ 520 |       `[ga4] getAiConversionLive failed for property=${propertyId}:`,
+ 521 |       err instanceof Error ? err.message : err,
+ 522 |     );
+ 523 |     return null;
+ 524 |   }</pre></details><details id="S22"><summary>S22 <span>front/lib/ga4/conversion.ts · L539–584, L612–645</span></summary><p><a href="../../front/lib/ga4/conversion.ts">원본 파일 열기</a> · SHA-256 <code>1491689f74a23d0be1e6fe171838aeaccfb51af336d80ee7313918bc82966ad3</code></p><pre> 539 | async function getAiTrafficConversionRollupInner(
+ 540 |   markets: { brand: string; country: string; propertyId: string | null }[],
+ 541 |   days = 28,
+ 542 |   filters?: ConversionFilters,
+ 543 | ): Promise&lt;AiTrafficConversionRollup | null&gt; {
+ 544 |   const totalMarkets = markets.length;
+ 545 |   if (totalMarkets === 0) return null;
+ 546 |   const mapped = markets.filter(
+ 547 |     (m): m is { brand: string; country: string; propertyId: string } =&gt;
+ 548 |       m.propertyId !== null,
+ 549 |   );
+ 550 |   if (mapped.length === 0) {
+ 551 |     return {
+ 552 |       aiConvRate: 0,
+ 553 |       humanConvRate: 0,
+ 554 |       lift: 0,
+ 555 |       measuredMarkets: 0,
+ 556 |       totalMarkets,
+ 557 |       totalAiUsers: 0,
+ 558 |       totalHumanUsers: 0,
+ 559 |       totalAiKeyEvents: 0,
+ 560 |       totalHumanKeyEvents: 0,
+ 561 |       byCountry: [],
+ 562 |     };
+ 563 |   }
+ 564 |   const range = dateNDaysAgo(days);
+ 565 |   const specByProp = await ga4TrackedEventRepository
+ 566 |     .listForProperties(mapped.map((m) =&gt; m.propertyId))
+ 567 |     .catch(() =&gt; new Map&lt;string, string[]&gt;());
+ 568 |   const perCountry = await Promise.all(
+ 569 |     mapped.map(async (m) =&gt; {
+ 570 |       try {
+ 571 |         const names = specByProp.get(m.propertyId);
+ 572 |         const spec: ConvSpec = names &amp;&amp; names.length ? names : null;
+ 573 |         const c = await fetchCohorts(m.propertyId, range, filters, spec);
+ 574 |         return { ...m, cohorts: c };
+ 575 |       } catch (err) {
+ 576 |         console.warn(
+ 577 |           `[ga4] rollup fetch failed for property=${m.propertyId} (${m.brand}/${m.country}):`,
+ 578 |           err instanceof Error ? err.message : err,
+ 579 |         );
+ 580 |         return null;
+ 581 |       }
+ 582 |     }),
+ 583 |   );
+ 584 |   const ok = perCountry.filter(&lt;T&gt;(x: T | null): x is T =&gt; x !== null);
+
+    …
+
+ 612 |   const aiConvRate = pct(totalAiKey, totalAiUsers);
+ 613 |   const humanConvRate = pct(totalHumanKey, totalHumanUsers);
+ 614 |   return {
+ 615 |     aiConvRate,
+ 616 |     humanConvRate,
+ 617 |     lift: Math.round((aiConvRate - humanConvRate) * 10) / 10,
+ 618 |     measuredMarkets: byCountry.length,
+ 619 |     totalMarkets,
+ 620 |     totalAiUsers,
+ 621 |     totalHumanUsers,
+ 622 |     totalAiKeyEvents: totalAiKey,
+ 623 |     totalHumanKeyEvents: totalHumanKey,
+ 624 |     byCountry,
+ 625 |   };
+ 626 | }
+ 627 | 
+ 628 | export async function getAiTrafficConversionRollup(
+ 629 |   markets: { brand: string; country: string; propertyId: string | null }[],
+ 630 |   days = 28,
+ 631 |   filters?: ConversionFilters,
+ 632 | ): Promise&lt;AiTrafficConversionRollup | null&gt; {
+ 633 |   if (markets.length === 0) return null;
+ 634 |   const mappedKey = markets
+ 635 |     .filter((m) =&gt; m.propertyId)
+ 636 |     .map((m) =&gt; m.propertyId!)
+ 637 |     .sort()
+ 638 |     .join(&quot;,&quot;);
+ 639 |   const totalKey = `t${markets.length}`;
+ 640 |   return unstable_cache(
+ 641 |     () =&gt; getAiTrafficConversionRollupInner(markets, days, filters),
+ 642 |     [&quot;ga4-rollup&quot;, mappedKey, totalKey, String(days), filterKey(filters)],
+ 643 |     { revalidate: GA4_CACHE_TTL_SECONDS, tags: [GA4_CACHE_TAG] },
+ 644 |   )();
+ 645 | }</pre></details><details id="S23"><summary>S23 <span>front/app/[locale]/(dash)/standard/ai-funnel/conversion/page.tsx · L52–59, L73–98</span></summary><p><a href="../../front/app/%5Blocale%5D/%28dash%29/standard/ai-funnel/conversion/page.tsx">원본 파일 열기</a> · SHA-256 <code>ffc23b0e038659764c3c8038a21c994a680ccdb31b02434e05f717f2baa5a35a</code></p><pre>  52 |   const { catalogRows, geographyOptions, markets, isCountryLeaf, singlePropertyId, liveData, rollupData, visitsData } =
+  53 |     isAnalysisApi(&quot;funnel&quot;, &quot;global&quot;)
+  54 |       ? await loadApi()
+  55 |       : await loadLegacy();
+  56 |   const isUnmappedCountry = isCountryLeaf &amp;&amp; !singlePropertyId;
+  57 | 
+  58 |   // Backend API source (HGH_SOURCE_G4=api, unit U8): GET /v1/funnel/conversion once (markets,
+  59 |   // live, rollup and visits from one answer, rules C1..C7) + GET /v1/filters/options for the
+
+    …
+
+  73 |   async function loadLegacy() {
+  74 |     const [catalogRows, geographyOptions] = await Promise.all([
+  75 |       listCatalogTaxonomy(),
+  76 |       listMeasuredRegions(session?.user.scope, undefined, true),
+  77 |     ]);
+  78 |     const markets = await resolveProperties(
+  79 |       session?.user.scope,
+  80 |       geoFilter.length ? { region: geoFilter } : undefined,
+  81 |     );
+  82 |     const isCountryLeaf = markets.length === 1;
+  83 |     const singlePropertyId = isCountryLeaf
+  84 |       ? markets[0].propertyId
+  85 |       : await resolveProperty(session?.user.scope, geoFilter.length ? { region: geoFilter } : undefined);
+  86 |     const [liveData, rollupData, visitsData] = await Promise.all([
+  87 |       isCountryLeaf &amp;&amp; singlePropertyId
+  88 |         ? getAiConversionLive(singlePropertyId, days, filters)
+  89 |         : Promise.resolve(null),
+  90 |       !isCountryLeaf &amp;&amp; markets.length &gt; 0
+  91 |         ? getAiTrafficConversionRollup(markets, days, filters)
+  92 |         : Promise.resolve(null),
+  93 |       // sub-KPI: AI 유입 방문 수 (sessions/회) — country-leaf live only.
+  94 |       isCountryLeaf &amp;&amp; singlePropertyId
+  95 |         ? getAiVisitsLive(singlePropertyId, days, filters)
+  96 |         : Promise.resolve(null),
+  97 |     ]);
+  98 |     return { catalogRows, geographyOptions, markets, isCountryLeaf, singlePropertyId, liveData, rollupData, visitsData };</pre></details><details id="S24"><summary>S24 <span>front/lib/ga4/tracked-events-service.ts · L50–59</span></summary><p><a href="../../front/lib/ga4/tracked-events-service.ts">원본 파일 열기</a> · SHA-256 <code>ce2c2a55bda5d05c98e579f7fb5762bd7e5ed6140bb2ea163120d624c6314887</code></p><pre>  50 | // 선택을 통째로 교체(빈 배열이면 해제 → key events fallback) + GA4 집계 캐시 무효화.
+  51 | export async function saveEventsForProperty(
+  52 |   propertyId: string,
+  53 |   eventNames: string[],
+  54 |   createdBy: string,
+  55 | ): Promise&lt;void&gt; {
+  56 |   const names = (eventNames ?? []).map((n) =&gt; String(n).trim()).filter(Boolean);
+  57 |   await ga4TrackedEventRepository.replaceForProperty(propertyId, names, createdBy);
+  58 |   revalidateTag(GA4_CACHE_TAG);
+  59 | }</pre></details><details id="S25"><summary>S25 <span>front/app/[locale]/(dash)/admin/standards/citation-sources/page.tsx · L39–55</span></summary><p><a href="../../front/app/%5Blocale%5D/%28dash%29/admin/standards/citation-sources/page.tsx">원본 파일 열기</a> · SHA-256 <code>7d194d10538efff8ef86e3dd06256fd5b8579b0e0eaea5f40ca864a912992840</code></p><pre>  39 |   const apiSource = api.isAdminApi();
+  40 |   const rows: api.AdminCurationRow[] = apiSource
+  41 |     ? await api.listCitationCuration(CURATION_LIMIT).catch((e) =&gt; {
+  42 |         try {
+  43 |           return api.degradeRead(e, [] as api.AdminCurationRow[]);
+  44 |         } catch (err) {
+  45 |           throwForPage(err, locale);
+  46 |         }
+  47 |       })
+  48 |     : await citationOverrideRepository.listDomainCuration(CURATION_LIMIT).catch(() =&gt; []);
+  49 | 
+  50 |   return (
+  51 |     &lt;div className=&quot;flex animate-fade-in flex-col gap-6&quot;&gt;
+  52 |       &lt;PageHeader title={t(&quot;title&quot;)} description={t(&quot;subtitle&quot;)} /&gt;
+  53 |       &lt;SectionCard title={t(&quot;list.title&quot;)} description={t(&quot;list.description&quot;)}&gt;
+  54 |         &lt;DomainList rows={rows} limit={CURATION_LIMIT} source={apiSource ? &quot;api&quot; : &quot;legacy&quot;} /&gt;
+  55 |       &lt;/SectionCard&gt;</pre></details><details id="S26"><summary>S26 <span>front/app/[locale]/(dash)/admin/standards/citation-sources/_components/domain-list.tsx · L264–274</span></summary><p><a href="../../front/app/%5Blocale%5D/%28dash%29/admin/standards/citation-sources/_components/domain-list.tsx">원본 파일 열기</a> · SHA-256 <code>39501b5ea23aba1f27296a0c102c98b82ee16c72143f0fd37239d2a3658dd590</code></p><pre> 264 |             &lt;/TableRow&gt;
+ 265 |           ))}
+ 266 |         &lt;/TableBody&gt;
+ 267 |       &lt;/Table&gt;
+ 268 |       {sorted.length === 0 ? (
+ 269 |         &lt;p className=&quot;rounded-md border border-dashed border-border px-3 py-6 text-center text-xs text-muted-foreground&quot;&gt;
+ 270 |           {t(&quot;empty&quot;)}
+ 271 |         &lt;/p&gt;
+ 272 |       ) : null}
+ 273 |       &lt;p className=&quot;text-[11px] text-muted-foreground&quot;&gt;
+ 274 |         {t(dataSource === &quot;api&quot; ? &quot;hintApi&quot; : &quot;hint&quot;, { limit })}</pre></details><details id="S27"><summary>S27 <span>front/app/[locale]/(dash)/admin/standards/entities/page.tsx · L102–109</span></summary><p><a href="../../front/app/%5Blocale%5D/%28dash%29/admin/standards/entities/page.tsx">원본 파일 열기</a> · SHA-256 <code>2f529150ed22c5e6654a0a1789c1bc188c7a34b1552722e9d073b4e0f9403ddf</code></p><pre> 102 |   const rows = await listDiscoveredBrands().catch(() =&gt; []);
+ 103 |   return (
+ 104 |     &lt;div className=&quot;flex animate-fade-in flex-col gap-6&quot;&gt;
+ 105 |       &lt;PageHeader title={t(&quot;title&quot;)} description={t(&quot;subtitle&quot;)} /&gt;
+ 106 |       &lt;SectionCard title={t(&quot;catalog.title&quot;)} description={t(&quot;catalog.description&quot;)}&gt;
+ 107 |         &lt;EntityCatalog rows={rows} source=&quot;legacy&quot; /&gt;
+ 108 |       &lt;/SectionCard&gt;
+ 109 |     &lt;/div&gt;</pre></details><details id="S28"><summary>S28 <span>front/lib/hgh/client.ts · L242–249, L275–300</span></summary><p><a href="../../front/lib/hgh/client.ts">원본 파일 열기</a> · SHA-256 <code>8ff8b8cb683428d87c31d330f427a1b2b626f3ab65d70f4be4e51925722e5769</code></p><pre> 242 | /** HGH_SOURCE_&lt;group&gt; = api | legacy. Unset or anything else -&gt; legacy (warned once). */
+ 243 | export function hghSource(group: HghSourceGroup, env: Env = process.env): HghSource {
+ 244 |   const name = `HGH_SOURCE_${group}`;
+ 245 |   const raw = env[name]?.trim().toLowerCase();
+ 246 |   if (raw === &quot;api&quot;) return &quot;api&quot;;
+ 247 |   if (raw &amp;&amp; raw !== &quot;legacy&quot;) warnOnce(name, `[hgh] ${name}=&quot;${raw}&quot; is not api|legacy; using legacy`);
+ 248 |   return &quot;legacy&quot;;
+ 249 | }
+
+    …
+
+ 275 | export function sourceGroupFor(area: HghArea, surface: Surface = &quot;global&quot;): HghSourceGroup {
+ 276 |   switch (area) {
+ 277 |     case &quot;projects&quot;:
+ 278 |     case &quot;intent&quot;:
+ 279 |       return &quot;G6&quot;;
+ 280 |     case &quot;admin&quot;:
+ 281 |     case &quot;qa&quot;:
+ 282 |       return &quot;G7&quot;;
+ 283 |     case &quot;session&quot;:
+ 284 |       return &quot;SESSION&quot;;
+ 285 |     default:
+ 286 |       if (surface === &quot;website&quot;) return &quot;G3&quot;;
+ 287 |       if (surface === &quot;project&quot;) return &quot;G6&quot;;
+ 288 |       return GLOBAL_GROUP[area] ?? &quot;G1&quot;;
+ 289 |   }
+ 290 | }
+ 291 | 
+ 292 | // ── client IP relay (D2) ─────────────────────────────────────────────────────
+ 293 | 
+ 294 | function validIp(v: string | null | undefined): string | null {
+ 295 |   const s = v?.trim();
+ 296 |   return s &amp;&amp; s.length &lt;= 64 &amp;&amp; isIP(s) ? s : null;
+ 297 | }
+ 298 | 
+ 299 | /**
+ 300 |  * The viewer IP as Vercel reports it: x-real-ip, else the leftmost x-forwarded-for.</pre></details><details id="S29"><summary>S29 <span>front/lib/db/repositories/scope-context-map.ts · L50–51, L114–121, L220–239</span></summary><p><a href="../../front/lib/db/repositories/scope-context-map.ts">원본 파일 열기</a> · SHA-256 <code>13a629b909355647e6daf0c46e63a6cfff4a7338de8cca34db4871c2fcbab521</code></p><pre>  50 | const MAX_PAGE_SIZE = 200;
+  51 | const DEFAULT_PAGE_SIZE = 50;
+
+    …
+
+ 114 | export function clampPaging(
+ 115 |   page: number,
+ 116 |   size: number,
+ 117 | ): { page: number; size: number; offset: number } {
+ 118 |   const s = Math.min(Math.max(Math.trunc(size) || DEFAULT_PAGE_SIZE, 1), MAX_PAGE_SIZE);
+ 119 |   const p = Math.max(Math.trunc(page) || 0, 0);
+ 120 |   return { page: p, size: s, offset: p * s };
+ 121 | }
+
+    …
+
+ 220 | 
+ 221 |   async listCombinations(q) {
+ 222 |     const db = getDb();
+ 223 |     const { page, size, offset } = clampPaging(q.page, q.size);
+ 224 |     const search = q.search?.trim();
+ 225 | 
+ 226 |     // Condition names come from a JOIN. The old code resolved them from a Map
+ 227 |     // of all 200 loaded conditions — which silently depended on nothing being
+ 228 |     // paged. Once a page holds 50 conditions, that Map would miss most names.
+ 229 |     const a = sql`a`;
+ 230 |     const b = sql`b`;
+ 231 |     const searchClause = search
+ 232 |       ? sql`and (a.canonical_name ilike ${likePattern(search)} escape &#x27;\\&#x27;
+ 233 |               or b.canonical_name ilike ${likePattern(search)} escape &#x27;\\&#x27;)`
+ 234 |       : sql``;
+ 235 |     const dir = q.dir === &quot;asc&quot; ? sql`asc` : sql`desc`;
+ 236 | 
+ 237 |     const [rows, countRows, maxRows] = await Promise.all([
+ 238 |       db.execute(sql`
+ 239 |         select c.cond_a, c.cond_b, c.co_count,</pre></details><details id="S30"><summary>S30 <span>front/app/[locale]/(dash)/projects/page.tsx · L102–118</span></summary><p><a href="../../front/app/%5Blocale%5D/%28dash%29/projects/page.tsx">원본 파일 열기</a> · SHA-256 <code>2023186310077a3e77dae8610c86a88d4f68bd695ebad546dbc467e021336376</code></p><pre> 102 |   ]);
+ 103 | 
+ 104 |   // Everything below is deliberately batched: with per-project round-trips
+ 105 |   // (one getById per pending invite + three queries per project) 21 projects
+ 106 |   // meant 60+ queries, and the DB sits a region away from the Vercel
+ 107 |   // function, so round-trip count converts directly into page latency.
+ 108 |   // Four IN/GROUP BY queries in one parallel wave replace all of it — the
+ 109 |   // UI only consumes role badges + counts, never the full member/prompt rows.
+ 110 |   const projectIds = projectList.map((p) =&gt; p.id);
+ 111 |   const pendingProjectIds = [...new Set(pendingRaw.map((p) =&gt; p.projectId))];
+ 112 |   const [pendingProjectNames, memberships, memberCounts, promptCounts] =
+ 113 |     await Promise.all([
+ 114 |       projectRepository.getNamesByIds(pendingProjectIds),
+ 115 |       projectMemberRepository.getRolesForProjects(userId, projectIds),
+ 116 |       projectMemberRepository.countActiveMembersByProject(projectIds),
+ 117 |       promptRepository.countByProject(projectIds),
+ 118 |     ]);</pre></details><details id="S31"><summary>S31 <span>front/app/[locale]/(dash)/projects/[id]/prompt/_components/candidate-list.tsx · L170–186</span></summary><p><a href="../../front/app/%5Blocale%5D/%28dash%29/projects/%5Bid%5D/prompt/_components/candidate-list.tsx">원본 파일 열기</a> · SHA-256 <code>b3b8911b9da9a26d8a029e28ae0ff63fb1617ef62a3e12f737f2382966fefd7b</code></p><pre> 170 |             &lt;/Button&gt;
+ 171 |           &lt;/div&gt;
+ 172 |         ) : null}
+ 173 |       &lt;/div&gt;
+ 174 |       &lt;ul className=&quot;flex flex-col divide-y divide-border rounded-md border border-border bg-card&quot;&gt;
+ 175 |         {sorted.map((c) =&gt; (
+ 176 |           &lt;li key={c.id} className=&quot;flex items-start gap-3 px-4 py-3&quot;&gt;
+ 177 |             {canEdit ? (
+ 178 |               &lt;Checkbox
+ 179 |                 checked={selected.has(c.id)}
+ 180 |                 onCheckedChange={() =&gt; toggle(c.id)}
+ 181 |                 aria-label={t(&quot;apply&quot;)}
+ 182 |                 className=&quot;mt-1&quot;
+ 183 |               /&gt;
+ 184 |             ) : null}
+ 185 |             &lt;div className=&quot;flex min-w-0 flex-1 flex-col gap-1&quot;&gt;
+ 186 |               &lt;span className=&quot;text-sm text-foreground&quot;&gt;{c.text}&lt;/span&gt;</pre></details><details id="S32"><summary>S32 <span>back/ingest/worker.py · L39–76, L79–109</span></summary><p><a href="../../back/ingest/worker.py">원본 파일 열기</a> · SHA-256 <code>dbf91f4aedb2c9955b614b5b3877ce892c8953223a6a436c8f977e98b24bfdf7</code></p><pre>  39 | @dataclass
+  40 | class Scheduler:
+  41 |     tasks: list[Task] = field(default_factory=list)
+  42 |     daily: Job | None = None
+  43 |     last_daily: dt.date | None = None
+  44 | 
+  45 |     async def step(self, now: dt.datetime) -&gt; list[str]:
+  46 |         &quot;&quot;&quot;기한이 된 작업을 순서대로 한 번씩. 반환 = 이번 틱에 돈 작업 이름.&quot;&quot;&quot;
+  47 |         ran: list[str] = []
+  48 |         kst_day = (now + dt.timedelta(hours=9)).date()
+  49 |         if self.daily is not None and self.last_daily != kst_day:
+  50 |             await self._run(&quot;daily&quot;, self.daily, now)
+  51 |             self.last_daily = kst_day
+  52 |             ran.append(&quot;daily&quot;)
+  53 |         for t in self.tasks:
+  54 |             if t.next_at is None or now &gt;= t.next_at:
+  55 |                 ok = await self._run(t.name, t.fn, now)
+  56 |                 t.runs += 1
+  57 |                 if not ok:
+  58 |                     t.errors += 1
+  59 |                 t.next_at = now + t.every
+  60 |                 ran.append(t.name)
+  61 |         return ran
+  62 | 
+  63 |     async def _run(self, name: str, fn: Job, now: dt.datetime) -&gt; bool:
+  64 |         try:
+  65 |             await fn(now)
+  66 |             return True
+  67 |         except Exception as e:  # noqa: BLE001  한 작업의 실패가 루프를 멈추지 않는다
+  68 |             log.exception(&quot;워커 작업 %s 실패&quot;, name)
+  69 |             for t in self.tasks:
+  70 |                 if t.name == name:
+  71 |                     t.last_error = str(e)[:500]
+  72 |             return False
+  73 | 
+  74 |     def next_due(self, now: dt.datetime) -&gt; dt.datetime:
+  75 |         dues = [t.next_at for t in self.tasks if t.next_at is not None]
+  76 |         return min(dues) if dues else now
+
+    …
+
+  79 | def build_scheduler(db: Any, source: Any, dfs: Any | None) -&gt; Scheduler:
+  80 |     from ingest.cycles.workers.service import cycles_tick, run_dfs, run_outbox, run_queue
+  81 |     from ingest.pull.sync.service import run_pass
+  82 | 
+  83 |     async def pull(now: dt.datetime) -&gt; None:
+  84 |         await run_pass(db, source, now=now)
+  85 | 
+  86 |     async def queue(now: dt.datetime) -&gt; None:
+  87 |         await run_queue(db)
+  88 |         if dfs is not None:
+  89 |             await run_dfs(db, dfs, now=now)
+  90 |         await run_outbox(db, source, now=now)
+  91 | 
+  92 |     async def tick(now: dt.datetime) -&gt; None:
+  93 |         await cycles_tick(db, now=now)
+  94 | 
+  95 |     async def daily(now: dt.datetime) -&gt; None:
+  96 |         await cycles_tick(db, now=now, daily=True)
+  97 | 
+  98 |     return Scheduler(tasks=[Task(&quot;queue&quot;, dt.timedelta(seconds=60), queue), Task(&quot;pull&quot;, dt.timedelta(minutes=20), pull),
+  99 |                             Task(&quot;cycles_tick&quot;, dt.timedelta(minutes=20), tick)], daily=daily)
+ 100 | 
+ 101 | 
+ 102 | async def run_forever(sched: Scheduler, stop: asyncio.Event, *, clock: Callable[[], dt.datetime] | None = None) -&gt; None:
+ 103 |     clock = clock or (lambda: dt.datetime.now(dt.UTC))
+ 104 |     while not stop.is_set():
+ 105 |         now = clock()
+ 106 |         await sched.step(now)
+ 107 |         wait = max(1.0, (sched.next_due(clock()) - clock()).total_seconds())
+ 108 |         with contextlib.suppress(TimeoutError):
+ 109 |             await asyncio.wait_for(stop.wait(), timeout=min(wait, 60.0))</pre></details><details id="S33"><summary>S33 <span>back/ingest/common/config.py · L30–41</span></summary><p><a href="../../back/ingest/common/config.py">원본 파일 열기</a> · SHA-256 <code>4fa32c246c28509e956cf5c15f019e5ff2050fa89b6a1159c3f91850c90281e5</code></p><pre>  30 |     db_role: str | None = None
+  31 |     statement_timeout: str = &quot;180s&quot;
+  32 |     scope_api_url: str | None = None
+  33 |     scope_api_key: SecretStr | None = None
+  34 |     dfs_api_url: str | None = None
+  35 |     dfs_login: SecretStr | None = None
+  36 |     dfs_password: SecretStr | None = None
+  37 |     system_actor: uuid.UUID | None = None
+  38 |     pass_budget_s: int = 900
+  39 |     recheck_max_runs: int = 25
+  40 |     escalate_answers: int = 200_000
+  41 |     gate_chunk: int = 50_000</pre></details><details id="S34"><summary>S34 <span>back/ingest/pull/sync/service.py · L185–224</span></summary><p><a href="../../back/ingest/pull/sync/service.py">원본 파일 열기</a> · SHA-256 <code>71be9978f792c5b90d83526682b44da9362dd0fc4dad9aa967dff8621903eb7e</code></p><pre> 185 | async def run_pass(db: LoaderDB, source: ScopeSource, *, project: Any = None, force: bool = False, max_runs: int | None = None,
+ 186 |                    now: dt.datetime | None = None, settings: IngestSettings | None = None, alerts: AlertSink | None = None) -&gt; PassReport:
+ 187 |     &quot;&quot;&quot;pull 패스 1회(프로젝트 1개). 워커 루프·CLI 가 같은 함수를 부른다.&quot;&quot;&quot;
+ 188 |     s = settings or get_ingest_settings()
+ 189 |     alerts = alerts or get_alert_sink()
+ 190 |     rep = PassReport()
+ 191 |     t0 = time.monotonic()
+ 192 |     rep.registered = await register_projects(db)
+ 193 |     cur = await lease(db, project)
+ 194 |     if cur is None:
+ 195 |         rep.error = &quot;no_cursor&quot; if project is not None else None
+ 196 |         return rep
+ 197 |     pid = cur[&quot;scope_project_id&quot;]
+ 198 |     rep.scope_project_id = pid
+ 199 |     err: str | None = None
+ 200 |     try:
+ 201 |         rep.prompts_changed = await sync_prompts(db, source, cur)
+ 202 |         scope_runs = await source.list_runs(str(pid))
+ 203 |         async with db.session() as conn:
+ 204 |             ing_runs = {r[&quot;run_id&quot;]: r for r in await conn.fetch(q.RUNS_OF_PROJECT, pid)}
+ 205 |         now_ = now or dt.datetime.now(dt.UTC)
+ 206 |         cands = _run_candidates(scope_runs, ing_runs, now=now_, force=force, recheck_cap=s.recheck_max_runs)
+ 207 |         rep.skipped_runs = len(scope_runs) - len(cands)
+ 208 |         if max_runs is not None:
+ 209 |             cands = cands[:max_runs]
+ 210 |         for kind, r in cands:
+ 211 |             if time.monotonic() - t0 &gt; s.pass_budget_s:
+ 212 |                 log.info(&quot;패스 예산 소진: 남은 run %d 은 다음 패스&quot;, len(cands))
+ 213 |                 break
+ 214 |             out = await load_run(db, source, pid, cur[&quot;surface&quot;], r, kind=kind, force=force, settings=s, alerts=alerts, now=now_)
+ 215 |             rep.runs.append(out)
+ 216 |             if out.status == &quot;failed&quot;:
+ 217 |                 err = out.error
+ 218 |     except ScopeError as e:
+ 219 |         err = describe_error(e)
+ 220 |     except Exception as e:  # noqa: BLE001  커서에 사유를 남기고 다음 패스로(워커를 죽이지 않는다)
+ 221 |         err = describe_error(e)
+ 222 |         log.exception(&quot;pull 패스 실패 project=%s&quot;, pid)
+ 223 |     async with db.session() as conn, db.tx(conn):
+ 224 |         await conn.execute(q.CURSOR_DONE, pid, err)</pre></details><details id="S35"><summary>S35 <span>back/ingest/cycles/workers/service.py · L332–373</span></summary><p><a href="../../back/ingest/cycles/workers/service.py">원본 파일 열기</a> · SHA-256 <code>99933ad3b7948199af5f087ee11b2837ff1600f743a23093f26ff2a37cfeff12</code></p><pre> 332 | async def run_dfs(db: LoaderDB, dfs: DfsSource, *, limit: int = 5, now: dt.datetime | None = None) -&gt; list[QueueOutcome]:
+ 333 |     &quot;&quot;&quot;dfs_fetch 빠른 경로: 요청 1건 = DataForSEO 호출 여러 번(트랜잭션 밖, core.contracts.DfsFetch.endpoints × term) → 한 트랜잭션에
+ 334 |     ext.dfs_call·rd.kw_* 전부. 호출 하나라도 HTTP 오류면 그 요청 전체를 실패로 둔다(부분 적재 없음).&quot;&quot;&quot;
+ 335 |     out: list[QueueOutcome] = []
+ 336 |     async with db.session() as conn:
+ 337 |         for _ in range(limit):
+ 338 |             async with db.tx(conn):
+ 339 |                 row = await conn.fetchrow(q.CLAIM, [&quot;dfs_fetch&quot;], [])
+ 340 |                 if row is None:
+ 341 |                     break
+ 342 |                 await conn.execute(q.RUNNING, row[&quot;change_id&quot;])
+ 343 |             cid = int(row[&quot;change_id&quot;])
+ 344 |             try:
+ 345 |                 p = row[&quot;payload&quot;] if isinstance(row[&quot;payload&quot;], dict) else json.loads(row[&quot;payload&quot;] or &quot;null&quot;)
+ 346 |                 only: tuple[str, ...] | None = None
+ 347 |                 legacy = legacy_dfs(p, list(row[&quot;subject_texts&quot;] or []))
+ 348 |                 if legacy is not None:                               # 옛 형식(전환 전 적재된 행): 1회 변환(검증 m-6)
+ 349 |                     p, only = legacy
+ 350 |                     log.warning(&quot;dfs_fetch %s: 옛 payload(endpoint=%s)를 새 계약으로 변환해 처리&quot;, cid, only[0])
+ 351 |                 d = parse_change(&quot;dfs_fetch&quot;, p)
+ 352 |                 calls = []
+ 353 |                 for endpoint, keywords, req in plan_calls(d, only):
+ 354 |                     status, body, cost = await dfs.call(endpoint, req)        # 트랜잭션 밖
+ 355 |                     calls.append((endpoint, keywords, req, status, body, cost))
+ 356 |                 at = now or dt.datetime.now(dt.UTC)
+ 357 |                 async with db.tx(conn):
+ 358 |                     ctx = await begin_load(conn, &quot;dfs&quot;, scope_ref={&quot;source&quot;: &quot;dfs_fetch&quot;, &quot;change_ids&quot;: [cid], &quot;fetch&quot;: d.fetch})
+ 359 |                     for endpoint, keywords, req, status, body, cost in calls:
+ 360 |                         await write_dfs(conn, endpoint=endpoint, keywords=keywords, loc=d.location_code, lang=d.language_code, request=req,
+ 361 |                                         status=status, body=body, cost=cost, requested_by=row[&quot;requested_by&quot;],
+ 362 |                                         project_id=str(d.project_id) if d.project_id else None, now=at)
+ 363 |                         if status &gt;= 400:
+ 364 |                             raise RuntimeError(f&quot;DataForSEO HTTP {status} ({endpoint})&quot;)
+ 365 |                     await finalize(conn, ctx)
+ 366 |                     await conn.execute(q.APPLIED, cid, ctx.load_id)
+ 367 |                 out.append(QueueOutcome(cid, &quot;dfs_fetch&quot;, &quot;applied&quot;, ctx.load_id))
+ 368 |             except Exception as e:  # noqa: BLE001
+ 369 |                 msg = describe_error(e)
+ 370 |                 async with db.tx(conn):
+ 371 |                     await conn.execute(q.FAILED, cid, msg)
+ 372 |                 out.append(QueueOutcome(cid, &quot;dfs_fetch&quot;, &quot;failed&quot;, error=msg))
+ 373 |     return out</pre></details><details id="S36"><summary>S36 <span>back/ingest/cycles/workers/queries.py · L3–14, L27–32, L35–57</span></summary><p><a href="../../back/ingest/cycles/workers/queries.py">원본 파일 열기</a> · SHA-256 <code>f71cdd7a9fc3d43e38fbd699fba0c9c06bb669383675f1f333263e029cde9822</code></p><pre>   3 | # ── judgment_change 큐(FOR UPDATE SKIP LOCKED, change_id 순) ──
+   4 | CLAIM = &quot;&quot;&quot;
+   5 | SELECT change_id, kind, subject_uuids, subject_texts, payload, requested_by, status
+   6 |   FROM app.judgment_change
+   7 |  WHERE status = &#x27;pending&#x27; AND kind = ANY($1::text[]) AND NOT (change_id = ANY($2::bigint[]))
+   8 |  ORDER BY change_id
+   9 |  FOR UPDATE SKIP LOCKED LIMIT 1
+  10 | &quot;&quot;&quot;
+  11 | CLAIM_ONE = &quot;&quot;&quot;
+  12 | SELECT change_id, kind, subject_uuids, subject_texts, payload, requested_by, status
+  13 |   FROM app.judgment_change WHERE change_id = $1 AND status IN (&#x27;pending&#x27;, &#x27;running&#x27;) FOR UPDATE SKIP LOCKED
+  14 | &quot;&quot;&quot;
+
+    …
+
+  27 | FAILED = &quot;UPDATE app.judgment_change SET status = &#x27;failed&#x27;, claimed_at = coalesce(claimed_at, now()), error = $2 WHERE change_id = $1&quot;
+  28 | ESCALATED = &quot;&quot;&quot;
+  29 | UPDATE app.judgment_change SET status = &#x27;escalated_rebuild&#x27;, claimed_at = coalesce(claimed_at, now()), error = $2 WHERE change_id = $1
+  30 | &quot;&quot;&quot;
+  31 | RUNNING = &quot;UPDATE app.judgment_change SET status = &#x27;running&#x27;, claimed_at = now() WHERE change_id = $1&quot;
+  32 | PENDING_COUNT = &quot;SELECT count(*) FROM app.judgment_change WHERE status = &#x27;pending&#x27; AND kind = ANY($1::text[])&quot;
+
+    …
+
+  35 | OUTBOX_CLAIM = &quot;&quot;&quot;
+  36 | UPDATE app.scope_outbox o SET next_attempt_at = now() + interval &#x27;5 minutes&#x27;
+  37 |  WHERE o.outbox_id IN (SELECT outbox_id FROM app.scope_outbox WHERE done_at IS NULL AND next_attempt_at &lt;= coalesce($1::timestamptz, now())
+  38 |                         ORDER BY outbox_id FOR UPDATE SKIP LOCKED LIMIT $2)
+  39 | RETURNING o.outbox_id, o.aggregate, o.aggregate_id, o.op, o.payload, o.attempts
+  40 | &quot;&quot;&quot;
+  41 | # done_at IS NULL: 처리 중 API 가 같은 대상 토글을 superseded 로 닫았으면 그 표시를 덮지 않는다(pj-prompts §6 ④)
+  42 | OUTBOX_DONE = &quot;UPDATE app.scope_outbox SET done_at = now(), last_error = NULL WHERE outbox_id = $1 AND done_at IS NULL&quot;
+  43 | OUTBOX_FAIL = &quot;&quot;&quot;
+  44 | UPDATE app.scope_outbox SET attempts = attempts + 1, last_error = $2,
+  45 |        next_attempt_at = now() + make_interval(mins =&gt; least(power(2, least(attempts, 10))::int, 1440))
+  46 |  WHERE outbox_id = $1 AND done_at IS NULL RETURNING attempts
+  47 | &quot;&quot;&quot;
+  48 | PROJECT_SCOPE_ID = &quot;SELECT scope_project_id FROM app.project WHERE project_id = $1&quot;
+  49 | PROMPT_SCOPE_IDS = &quot;&quot;&quot;
+  50 | SELECT p.scope_prompt_id, pr.scope_project_id FROM app.prompt p JOIN app.project pr ON pr.project_id = p.project_id WHERE p.prompt_id = $1
+  51 | &quot;&quot;&quot;
+  52 | SET_PROJECT_SCOPE = &quot;&quot;&quot;
+  53 | UPDATE app.project SET scope_project_id = $2, updated_at = now() WHERE project_id = $1 AND scope_project_id IS DISTINCT FROM $2
+  54 | &quot;&quot;&quot;
+  55 | SET_PROMPT_SCOPE = &quot;&quot;&quot;
+  56 | UPDATE app.prompt SET scope_prompt_id = $2, updated_by = app.actor(), updated_at = now() WHERE prompt_id = $1 AND scope_prompt_id IS DISTINCT FROM $2
+  57 | &quot;&quot;&quot;</pre></details><details id="S37"><summary>S37 <span>back/ingest/cycles/watch/service.py · L128–134, L790–799</span></summary><p><a href="../../back/ingest/cycles/watch/service.py">원본 파일 열기</a> · SHA-256 <code>0eda18bec430341a1ff9bb969c6061f3bc7765ea6e7efc4f2c8b079e968d7261</code></p><pre> 128 | LOAD_FAILURES = &quot;SELECT count(*) FROM ing.load WHERE status = &#x27;failed&#x27; AND started_at &gt; $1::timestamptz - interval &#x27;6 hours&#x27;&quot;
+ 129 | QUEUE = &quot;&quot;&quot;
+ 130 | SELECT count(*) FILTER (WHERE status IN (&#x27;failed&#x27;, &#x27;escalated_rebuild&#x27;) AND requested_at &gt; $1::timestamptz - interval &#x27;6 hours&#x27;) AS bad,
+ 131 |        count(*) FILTER (WHERE status = &#x27;pending&#x27; AND requested_at &lt; $1::timestamptz - interval &#x27;1 hour&#x27;
+ 132 |                               AND kind NOT IN (&#x27;ga4_property&#x27;, &#x27;ga4_tracked_event&#x27;)) AS stale
+ 133 |   FROM app.judgment_change WHERE status IN (&#x27;failed&#x27;, &#x27;escalated_rebuild&#x27;, &#x27;pending&#x27;)
+ 134 | &quot;&quot;&quot;
+
+    …
+
+ 790 |                 rep.findings.append(Finding(&quot;load_failures&quot;, 1, &quot;code&quot;, f&quot;최근 6시간 실패 적재 {n}건&quot;, {&quot;failed&quot;: n}))
+ 791 |         if &quot;queue&quot; in on:
+ 792 |             qrow = await conn.fetchrow(QUEUE, now)
+ 793 |             rep.checked.append(&quot;queue&quot;)
+ 794 |             if qrow and qrow[&quot;bad&quot;]:
+ 795 |                 rep.findings.append(Finding(&quot;queue&quot;, 1, &quot;code&quot;, f&quot;판정 입력 큐 실패·이관 {qrow[&#x27;bad&#x27;]}건(최근 6시간)&quot;, {&quot;bad&quot;: qrow[&quot;bad&quot;]}))
+ 796 |             if qrow and qrow[&quot;stale&quot;]:
+ 797 |                 rep.findings.append(Finding(&quot;queue&quot;, 1, &quot;live&quot;, f&quot;판정 입력 큐 1시간 넘은 대기 {qrow[&#x27;stale&#x27;]}건&quot;, {&quot;stale&quot;: qrow[&quot;stale&quot;]}))
+ 798 |         if &quot;projection_gap&quot; in on:
+ 799 |             rep.checked.append(&quot;projection_gap&quot;)</pre></details><details id="S38"><summary>S38 <span>back/app/features/intent/keywords/fetches/service.py · L6–13, L97–108</span></summary><p><a href="../../back/app/features/intent/keywords/fetches/service.py">원본 파일 열기</a> · SHA-256 <code>05275f9442a2cd1f5c55fcd5fc2e753f88bfbda90d8c105838997609ed7e7d1d</code></p><pre>   6 |   2) 신선도(api_ro, force 면 건너뜀): term 별 최신 관측. insight = 검색량·SERP 둘 다 24시간 안, related = 최신 연관어 호출이 7일 안,
+   7 |      search = seed 행을 포함한 최신 연관어 호출이 7일 안(rd.kw_suggestion.observed_at, DB-v2.6 P43). 신선한 term 은 빠진다.
+   8 |   3) 신선하지 않은 term 만 app.judgment_change(&#x27;dfs_fetch&#x27;) 1행(core.write.enqueue_change_result, 같은 트랜잭션).
+   9 |      payload = core.contracts DfsFetch{fetch, terms, location_code, language_code, country, depth, project_id, force},
+  10 |      subject_texts = 정렬된 DB 정본 정규화(app.term_norm, core.kw.db_term_norms). 같은 요청 = 같은 (fetch, location_code, language_code, subject_texts)의 pending·running 행
+  11 |      (dedupe=&quot;coalesce_active&quot; + dedupe_key: 국가·종류가 다른 대기 행에 묻히지 않는다, 검증 D1). 동시 요청은 core 가 advisory 잠금으로
+  12 |      직렬화한다. 재사용 후보는 요청자가 상태 조회로 볼 수 있는 행만(reusable = _visible, 검증 D4). 재사용이면 202 pending + 기존 change_id.
+  13 | 적재기(ingest dfs_fetch 빠른 경로)가 claim → ext.dfs_call·rd.kw_* 적재 → status 전이. API 는 외부 서비스를 부르지 않는다.
+
+    …
+
+  97 |     payload: dict[str, Any] = {&quot;fetch&quot;: body.kind, &quot;terms&quot;: targets, &quot;location_code&quot;: preset.location_code,
+  98 |                                &quot;language_code&quot;: preset.language_code, &quot;country&quot;: preset.id, &quot;depth&quot;: SERP_DEPTH,
+  99 |                                &quot;project_id&quot;: str(body.project_id) if body.project_id else None, &quot;force&quot;: body.force}
+ 100 |     subjects = sorted({norms[t] for t in targets})
+ 101 | 
+ 102 |     async def reusable(row: dict[str, Any]) -&gt; bool:
+ 103 |         return await _visible(conn, p, row)
+ 104 |     res = await enqueue_change_result(
+ 105 |         rw, &quot;dfs_fetch&quot;, payload=payload, subject_texts=subjects, dedupe=&quot;coalesce_active&quot;,
+ 106 |         dedupe_key={&quot;fetch&quot;: body.kind, &quot;location_code&quot;: preset.location_code, &quot;language_code&quot;: preset.language_code},
+ 107 |         reusable=reusable)
+ 108 |     return FetchAccepted(status=&quot;queued&quot; if res.created else &quot;pending&quot;, change_id=res.change_id, terms=targets, fresh_terms=fresh), 202</pre></details><details id="S39"><summary>S39 <span>back/ingest/cycles/workers/service.py · L275–311, L314–326</span></summary><p><a href="../../back/ingest/cycles/workers/service.py">원본 파일 열기</a> · SHA-256 <code>99933ad3b7948199af5f087ee11b2837ff1600f743a23093f26ff2a37cfeff12</code></p><pre> 275 | async def run_outbox(db: LoaderDB, source: Any, *, limit: int = 20, now: dt.datetime | None = None,
+ 276 |                      system_actor: uuid.UUID | None = None) -&gt; list[OutboxOutcome]:
+ 277 |     actor = system_actor or get_ingest_settings().system_actor
+ 278 |     out: list[OutboxOutcome] = []
+ 279 |     async with db.session() as conn:
+ 280 |         async with db.tx(conn):                                            # 임대(5분): 트랜잭션을 쥔 채 외부 호출하지 않는다
+ 281 |             rows = sorted(await conn.fetch(q.OUTBOX_CLAIM, now, limit), key=lambda r: r[&quot;outbox_id&quot;])   # 같은 대상은 생성 → 갱신 순서
+ 282 |         for r in rows:
+ 283 |             payload = r[&quot;payload&quot;] if isinstance(r[&quot;payload&quot;], dict) else json.loads(r[&quot;payload&quot;])
+ 284 |             try:
+ 285 |                 parse_outbox(r[&quot;aggregate&quot;], r[&quot;op&quot;], payload)       # core.contracts(생산자와 같은 계약)
+ 286 |                 payload = await _fill_scope_ids(conn, r[&quot;aggregate&quot;], r[&quot;aggregate_id&quot;], payload)
+ 287 |                 need = {&quot;project&quot;: [&quot;scope_project_id&quot;], &quot;schedule&quot;: [&quot;scope_project_id&quot;],
+ 288 |                         &quot;prompt&quot;: [&quot;scope_project_id&quot;, &quot;scope_prompt_id&quot;]}.get(r[&quot;aggregate&quot;], [])
+ 289 |                 if r[&quot;op&quot;] == &quot;create&quot;:
+ 290 |                     need = [&quot;scope_project_id&quot;] if r[&quot;aggregate&quot;] == &quot;prompt&quot; else []
+ 291 |                 missing = [k for k in need if not payload.get(k)]
+ 292 |                 if missing:                                # 선행 생성(아웃박스 앞 행)이 아직 Scope id 를 되쓰지 않았다: 백오프 후 재시도
+ 293 |                     raise RuntimeError(f&quot;Scope id 대기: {&#x27;,&#x27;.join(missing)}&quot;)
+ 294 |                 resp = await source.write(r[&quot;aggregate&quot;], r[&quot;op&quot;], str(r[&quot;aggregate_id&quot;]), payload)
+ 295 |                 async with db.tx(conn):
+ 296 |                     if r[&quot;op&quot;] == &quot;create&quot; and r[&quot;aggregate&quot;] in (&quot;project&quot;, &quot;prompt&quot;):
+ 297 |                         if actor is None:
+ 298 |                             raise RuntimeError(&quot;HGH_INGEST_SYSTEM_ACTOR 미설정: Scope id 되쓰기 행위자 없음&quot;)
+ 299 |                         await conn.execute(q.SYSTEM_ACTOR, str(actor))
+ 300 |                         new_id = (resp or {}).get(&quot;project_id&quot; if r[&quot;aggregate&quot;] == &quot;project&quot; else &quot;prompt_id&quot;)
+ 301 |                         if new_id:
+ 302 |                             sql = q.SET_PROJECT_SCOPE if r[&quot;aggregate&quot;] == &quot;project&quot; else q.SET_PROMPT_SCOPE
+ 303 |                             await conn.execute(sql, r[&quot;aggregate_id&quot;], uuid.UUID(str(new_id)))
+ 304 |                     await conn.execute(q.OUTBOX_DONE, r[&quot;outbox_id&quot;])
+ 305 |                 out.append(OutboxOutcome(int(r[&quot;outbox_id&quot;]), &quot;done&quot;))
+ 306 |             except Exception as e:  # noqa: BLE001  재시도(지수 백오프). 오류는 코드·경로만(비밀 없음)
+ 307 |                 msg = describe_error(e)
+ 308 |                 async with db.tx(conn):
+ 309 |                     await conn.execute(q.OUTBOX_FAIL, r[&quot;outbox_id&quot;], msg)
+ 310 |                 out.append(OutboxOutcome(int(r[&quot;outbox_id&quot;]), &quot;failed&quot;, msg))
+ 311 |     return out
+
+    …
+
+ 314 | async def _fill_scope_ids(conn: asyncpg.Connection, aggregate: str, aggregate_id: Any, payload: dict[str, Any]) -&gt; dict[str, Any]:
+ 315 |     &quot;&quot;&quot;갱신·삭제 페이로드에 Scope id 가 없으면 app 에서 채운다(생성 직후 같은 대상의 갱신이 줄 선 경우).&quot;&quot;&quot;
+ 316 |     p = dict(payload)
+ 317 |     if aggregate in (&quot;project&quot;, &quot;schedule&quot;) and not p.get(&quot;scope_project_id&quot;):
+ 318 |         p[&quot;scope_project_id&quot;] = await conn.fetchval(q.PROJECT_SCOPE_ID, aggregate_id)
+ 319 |     if aggregate == &quot;prompt&quot; and (not p.get(&quot;scope_prompt_id&quot;) or not p.get(&quot;scope_project_id&quot;)):
+ 320 |         row = await conn.fetchrow(q.PROMPT_SCOPE_IDS, aggregate_id)
+ 321 |         if row:
+ 322 |             p.setdefault(&quot;scope_prompt_id&quot;, row[&quot;scope_prompt_id&quot;])
+ 323 |             p.setdefault(&quot;scope_project_id&quot;, row[&quot;scope_project_id&quot;])
+ 324 |             p[&quot;scope_prompt_id&quot;] = p[&quot;scope_prompt_id&quot;] or row[&quot;scope_prompt_id&quot;]
+ 325 |             p[&quot;scope_project_id&quot;] = p[&quot;scope_project_id&quot;] or row[&quot;scope_project_id&quot;]
+ 326 |     return {k: (str(v) if isinstance(v, uuid.UUID) else v) for k, v in p.items()}</pre></details><details id="S40"><summary>S40 <span>back/ingest/pull/sync/source.py · L63–91, L110–126</span></summary><p><a href="../../back/ingest/pull/sync/source.py">원본 파일 열기</a> · SHA-256 <code>c351f6b918db36191c4f5bda8fd2c6a94ee2705730bb04509de8965285c20816</code></p><pre>  63 |     async def _req(self, method: str, path: str, *, params: dict[str, Any] | None = None, body: Any = None) -&gt; Any:
+  64 |         q = {k: v for k, v in (params or {}).items() if v not in (None, &quot;&quot;)}
+  65 |         delay = 1.0
+  66 |         for attempt in range(self._retries + 1):
+  67 |             r = await self._client.request(method, self._base + path, params=q, json=body, headers=self._headers)
+  68 |             if (r.status_code == 429 or r.status_code &gt;= 500) and attempt &lt; self._retries:
+  69 |                 await asyncio.sleep(delay)
+  70 |                 delay = min(delay * 2, 30.0)
+  71 |                 continue
+  72 |             if r.status_code &gt;= 400:
+  73 |                 code = None
+  74 |                 try:
+  75 |                     code = (r.json().get(&quot;error&quot;) or {}).get(&quot;code&quot;)
+  76 |                 except Exception:  # noqa: BLE001  오류 본문이 JSON 이 아니면 코드 없음
+  77 |                     code = None
+  78 |                 raise ScopeError(r.status_code, path, code)
+  79 |             return None if r.status_code == 204 else r.json()
+  80 |         raise ScopeError(599, path, &quot;retries_exhausted&quot;)
+  81 | 
+  82 |     async def _pages(self, path: str, params: dict[str, Any]) -&gt; list[dict[str, Any]]:
+  83 |         out: list[dict[str, Any]] = []
+  84 |         cursor: str | None = None
+  85 |         for _ in range(10_000):
+  86 |             page = await self._req(&quot;GET&quot;, path, params={**params, &quot;cursor&quot;: cursor})
+  87 |             out.extend(page.get(&quot;data&quot;) or [])
+  88 |             cursor = page.get(&quot;next_cursor&quot;)
+  89 |             if not cursor:
+  90 |                 return out
+  91 |         raise ScopeError(599, path, &quot;page_cap&quot;)
+
+    …
+
+ 110 |     async def write(self, aggregate: str, op: str, aggregate_id: str, payload: dict[str, Any]) -&gt; dict[str, Any]:
+ 111 |         &quot;&quot;&quot;아웃박스 반영. op: create|update|delete (project·prompt), put (schedule).&quot;&quot;&quot;
+ 112 |         if aggregate == &quot;project&quot;:
+ 113 |             if op == &quot;create&quot;:
+ 114 |                 return await self._req(&quot;POST&quot;, &quot;/projects&quot;, body=payload)
+ 115 |             if op == &quot;delete&quot;:
+ 116 |                 return await self._req(&quot;DELETE&quot;, f&quot;/projects/{payload[&#x27;scope_project_id&#x27;]}&quot;) or {}
+ 117 |             return await self._req(&quot;PATCH&quot;, f&quot;/projects/{payload[&#x27;scope_project_id&#x27;]}&quot;, body=payload.get(&quot;body&quot;, payload))
+ 118 |         if aggregate == &quot;prompt&quot;:
+ 119 |             pid = payload[&quot;scope_project_id&quot;]
+ 120 |             if op == &quot;create&quot;:
+ 121 |                 return await self._req(&quot;POST&quot;, f&quot;/projects/{pid}/prompts&quot;, body=payload.get(&quot;body&quot;, payload))
+ 122 |             if op == &quot;delete&quot;:
+ 123 |                 return await self._req(&quot;DELETE&quot;, f&quot;/projects/{pid}/prompts/{payload[&#x27;scope_prompt_id&#x27;]}&quot;) or {}
+ 124 |             return await self._req(&quot;PATCH&quot;, f&quot;/projects/{pid}/prompts/{payload[&#x27;scope_prompt_id&#x27;]}&quot;, body=payload.get(&quot;body&quot;, payload))
+ 125 |         if aggregate == &quot;schedule&quot;:
+ 126 |             return await self._req(&quot;PUT&quot;, f&quot;/projects/{payload[&#x27;scope_project_id&#x27;]}/schedule&quot;, body=payload.get(&quot;body&quot;, payload))</pre></details><details id="S41"><summary>S41 <span>front/lib/keyword/cache.ts · L4–44</span></summary><p><a href="../../front/lib/keyword/cache.ts">원본 파일 열기</a> · SHA-256 <code>bc265ec4f61283ba1f00ef54fd411a0d075469182fb528a4130b46f42d4968cd</code></p><pre>   4 | // Best-effort wrapper over keyword_cache. If the table is missing (migration not
+   5 | // applied) or any DB op fails, caching disables itself and callers recompute
+   6 | // live — the feature works with or without the migration.
+   7 | 
+   8 | let cacheDisabled = false;
+   9 | 
+  10 | export async function cacheGet&lt;T&gt;(key: string): Promise&lt;T | null&gt; {
+  11 |   if (cacheDisabled) return null;
+  12 |   try {
+  13 |     return (await keywordCacheRepository.get(key)) as T | null;
+  14 |   } catch (err) {
+  15 |     cacheDisabled = true;
+  16 |     console.warn(
+  17 |       &quot;[keyword] cache unavailable — recomputing live:&quot;,
+  18 |       err instanceof Error ? err.message : err,
+  19 |     );
+  20 |     return null;
+  21 |   }
+  22 | }
+  23 | 
+  24 | export async function cacheSet(
+  25 |   key: string,
+  26 |   value: unknown,
+  27 |   ttlMs: number,
+  28 | ): Promise&lt;void&gt; {
+  29 |   if (cacheDisabled) return;
+  30 |   try {
+  31 |     await keywordCacheRepository.set(key, value, new Date(Date.now() + ttlMs));
+  32 |   } catch (err) {
+  33 |     cacheDisabled = true;
+  34 |     console.warn(
+  35 |       &quot;[keyword] cache write failed — caching disabled:&quot;,
+  36 |       err instanceof Error ? err.message : err,
+  37 |     );
+  38 |   }
+  39 | }
+  40 | 
+  41 | export const TTL = {
+  42 |   insight: 24 * 60 * 60 * 1000, // 24h (SERP + prompts change ~daily)
+  43 |   related: 7 * 24 * 60 * 60 * 1000, // 7d (suggestions change slowly)
+  44 | };</pre></details><details id="S42"><summary>S42 <span>front/lib/keyword/insight.ts · L92–107, L120–135, L159–169</span></summary><p><a href="../../front/lib/keyword/insight.ts">원본 파일 열기</a> · SHA-256 <code>fd733da6dc654b9d78a127469d7d9e47847d562faeabe6bc436b340891333f42</code></p><pre>  92 | async function computeKeywordInsight(
+  93 |   term: string,
+  94 |   locationCode: number,
+  95 |   languageCode: string,
+  96 | ): Promise&lt;KeywordInsight&gt; {
+  97 |   // Volume (cached → monthly_searches) + SERP in parallel; SERP feeds the LLM.
+  98 |   const [volumes, serpRaw] = await Promise.all([
+  99 |     getKeywordVolumes([term], locationCode, languageCode),
+ 100 |     fetchSerpOrganic(term, locationCode, languageCode, 10),
+ 101 |   ]);
+ 102 | 
+ 103 |   const monthly = volumes[0]?.monthly_searches ?? [];
+ 104 |   const trend = buildMonthlyTrend(monthly);
+ 105 | 
+ 106 |   const serpTop = serpRaw.slice(0, MAX_SERP_ROWS);
+ 107 |   const prompts = await draftPrompts(term, serpTop);
+
+    …
+
+ 120 | export async function getKeywordInsight(
+ 121 |   term: string,
+ 122 |   locationCode: number,
+ 123 |   languageCode: string,
+ 124 |   opts?: { fresh?: boolean },
+ 125 | ): Promise&lt;KeywordInsight&gt; {
+ 126 |   const key = cacheKey(&quot;insight&quot;, term, locationCode, languageCode);
+ 127 |   // `fresh` (the &quot;재생성&quot; button) bypasses the read but still refreshes the cache.
+ 128 |   if (!opts?.fresh) {
+ 129 |     const cached = await cacheGet&lt;KeywordInsight&gt;(key);
+ 130 |     if (cached) return cached;
+ 131 |   }
+ 132 |   const result = await computeKeywordInsight(term, locationCode, languageCode);
+ 133 |   await cacheSet(key, result, TTL.insight);
+ 134 |   return result;
+ 135 | }
+
+    …
+
+ 159 | export async function getRelatedKeywords(
+ 160 |   term: string,
+ 161 |   locationCode: number,
+ 162 |   languageCode: string,
+ 163 | ): Promise&lt;{ foundCount: number; items: RelatedItem[] }&gt; {
+ 164 |   const key = cacheKey(&quot;related&quot;, term, locationCode, languageCode);
+ 165 |   const cached = await cacheGet&lt;{ foundCount: number; items: RelatedItem[] }&gt;(key);
+ 166 |   if (cached) return cached;
+ 167 |   const result = await computeRelatedKeywords(term, locationCode, languageCode);
+ 168 |   await cacheSet(key, result, TTL.related);
+ 169 |   return result;</pre></details><details id="S43"><summary>S43 <span>front/app/api/keyword/insight/route.ts · L53–77</span></summary><p><a href="../../front/app/api/keyword/insight/route.ts">원본 파일 열기</a> · SHA-256 <code>3a13f954c955acfb66fdb5eeba8aa5dda5fa5c473010a6701bbe1286dbe0e510</code></p><pre>  53 | export async function POST(req: NextRequest) {
+  54 |   const startedAt = Date.now();
+  55 |   try {
+  56 |     const user = await requireUser();
+  57 | 
+  58 |     const body = await req.json().catch(() =&gt; ({}));
+  59 |     const gate = await keywordRouteGate(user, body?.projectId, legacyKeywordProjectAllowed);
+  60 |     if (!gate.ok) return gate.response as NextResponse;
+  61 |     const keyword = typeof body?.keyword === &quot;string&quot; ? body.keyword.trim() : &quot;&quot;;
+  62 |     if (!keyword) {
+  63 |       return NextResponse.json({ error: &quot;keyword is required&quot; }, { status: 400 });
+  64 |     }
+  65 |     if (isIntentApi()) return await apiInsight(body ?? {}, keyword, gate.projectId, startedAt);
+  66 | 
+  67 |     const preset =
+  68 |       getPresetById(String(body?.country ?? &quot;kr&quot;).toLowerCase()) ??
+  69 |       getPresetById(&quot;kr&quot;)!;
+  70 | 
+  71 |     const insight = await getKeywordInsight(
+  72 |       keyword,
+  73 |       preset.location_code,
+  74 |       preset.language_code,
+  75 |       { fresh: body?.fresh === true },
+  76 |     );
+  77 |     return NextResponse.json({ success: true, insight });</pre></details><details id="S44"><summary>S44 <span>front/lib/ga4/client.ts · L19–48</span></summary><p><a href="../../front/lib/ga4/client.ts">원본 파일 열기</a> · SHA-256 <code>ab302bcd8fdcf9dfd6d8bd53f07c677b00f062cae84a9309b446c61ad95d15e0</code></p><pre>  19 | const RETRYABLE = new Set([429, 500, 502, 503, 504]);
+  20 | const sleep = (ms: number) =&gt; new Promise((r) =&gt; setTimeout(r, ms));
+  21 | 
+  22 | export async function runReport(
+  23 |   propertyId: string,
+  24 |   body: RunReportBody,
+  25 | ): Promise&lt;GaReport&gt; {
+  26 |   const token = await getGa4AccessToken();
+  27 |   if (!token) throw new Error(&quot;GA4: no OAuth credentials configured&quot;);
+  28 |   const url = `https://analyticsdata.googleapis.com/v1beta/properties/${propertyId}:runReport`;
+  29 |   const maxAttempts = 4;
+  30 |   for (let attempt = 1; ; attempt++) {
+  31 |     const res = await fetch(url, {
+  32 |       method: &quot;POST&quot;,
+  33 |       headers: {
+  34 |         Authorization: `Bearer ${token}`,
+  35 |         &quot;Content-Type&quot;: &quot;application/json&quot;,
+  36 |       },
+  37 |       body: JSON.stringify(body),
+  38 |     });
+  39 |     if (res.ok) return res.json() as Promise&lt;GaReport&gt;;
+  40 |     const detail = await res.text();
+  41 |     if (RETRYABLE.has(res.status) &amp;&amp; attempt &lt; maxAttempts) {
+  42 |       const waitMs = Math.min(8000, 1000 * 2 ** (attempt - 1));
+  43 |       await sleep(waitMs);
+  44 |       continue;
+  45 |     }
+  46 |     throw new Error(`GA4 runReport ${propertyId} failed (${res.status}): ${detail}`);
+  47 |   }
+  48 | }</pre></details><details id="S45"><summary>S45 <span>front/app/api/cron/ga4-prebuild/route.ts · L38–43, L59–77, L88–95</span></summary><p><a href="../../front/app/api/cron/ga4-prebuild/route.ts">원본 파일 열기</a> · SHA-256 <code>c5c7c4482b7eedb6560e05dc255ffe0fea27eb3cd1c67a446d4fa8f50edfa6bf</code></p><pre>  38 | export const dynamic = &quot;force-dynamic&quot;;
+  39 | export const maxDuration = 300;
+  40 | 
+  41 | export async function GET(req: Request): Promise&lt;Response&gt; {
+  42 |   const denied = requireCronSecret(req);
+  43 |   if (denied) return denied;
+
+    …
+
+  59 |   const markets = await getAllMappedMarkets();
+  60 |   const results: Array&lt;{
+  61 |     brand: string;
+  62 |     country: string;
+  63 |     kpiOk: boolean;
+  64 |     liveOk: boolean;
+  65 |   }&gt; = [];
+  66 |   for (const m of markets) {
+  67 |     const [kpi, live] = await Promise.all([
+  68 |       getAiTrafficConversionKpi(m.propertyId, 28),
+  69 |       getAiConversionLive(m.propertyId, 90),
+  70 |     ]);
+  71 |     results.push({
+  72 |       brand: m.brand,
+  73 |       country: m.country,
+  74 |       kpiOk: kpi !== null,
+  75 |       liveOk: live !== null,
+  76 |     });
+  77 |   }
+
+    …
+
+  88 |   return Response.json({
+  89 |     ok: true,
+  90 |     refreshed: results.length,
+  91 |     markets: results,
+  92 |     envSeen,
+  93 |     cycleChainCrossCheck,
+  94 |     at: new Date().toISOString(),
+  95 |   });</pre></details><details id="S46"><summary>S46 <span>back/ingest/cycles/workers/service.py · L82–100</span></summary><p><a href="../../back/ingest/cycles/workers/service.py">원본 파일 열기</a> · SHA-256 <code>99933ad3b7948199af5f087ee11b2837ff1600f743a23093f26ff2a37cfeff12</code></p><pre>  82 | async def ensure_partitions(conn: asyncpg.Connection, today: dt.date, ahead: int = 3) -&gt; int:
+  83 |     &quot;&quot;&quot;leaf 선생성(RANGE 파티션, DEFAULT 없음: 없으면 첫 INSERT 부터 실패). 반환 = 새로 생긴 leaf 수.&quot;&quot;&quot;
+  84 |     before = int(await conn.fetchval(q.LEAF_COUNT))
+  85 |     for m in _months(today, ahead):
+  86 |         for s in (1, 2, 3):
+  87 |             await conn.execute(&quot;SELECT rd.ensure_leaf($1::int2, $2::date)&quot;, s, m)
+  88 |         for parent in q.MONTH_PARENTS:
+  89 |             await conn.execute(&quot;SELECT rd.ensure_month_leaf($1::regclass, $2::date)&quot;, parent, m)
+  90 |         await conn.execute(&quot;SELECT rd.ensure_hub_match_leaf($1::date)&quot;, m)      # ing.hub_match 월 leaf(DB-v2.17 P100)
+  91 |     return int(await conn.fetchval(q.LEAF_COUNT)) - before
+  92 | 
+  93 | 
+  94 | async def cycles_tick(db: LoaderDB, *, now: dt.datetime | None = None, daily: bool = False) -&gt; TickReport:
+  95 |     now = now or dt.datetime.now(dt.UTC)
+  96 |     rep = TickReport()
+  97 |     async with db.session() as conn:
+  98 |         if daily:
+  99 |             async with db.tx(conn):
+ 100 |                 rep.leaves_created = await ensure_partitions(conn, (now + dt.timedelta(hours=9)).date())</pre></details><details id="S47"><summary>S47 <span>front/lib/hgh/client.ts · L681–686, L744–761, L788–807</span></summary><p><a href="../../front/lib/hgh/client.ts">원본 파일 열기</a> · SHA-256 <code>8ff8b8cb683428d87c31d330f427a1b2b626f3ab65d70f4be4e51925722e5769</code></p><pre> 681 |     // G-25/D6: one request slot per HTTP exchange. Waiting in the queue is not part of the call:
+ 682 |     // the timeout and the traced ms start once the slot is granted. The caller&#x27;s abort while
+ 683 |     // queued rejects here with its reason, before any fetch.
+ 684 |     const slot = limiter ? await limiter.acquire(opts.signal) : null;
+ 685 |     const timeoutSignal = AbortSignal.timeout(timeoutMs);
+ 686 |     const signal = opts.signal ? AbortSignal.any([timeoutSignal, opts.signal]) : timeoutSignal;
+
+    …
+
+ 744 |     if (!res) {
+ 745 |       if (opts.signal?.aborted) {
+ 746 |         await trace(0, { code: &quot;aborted&quot; });
+ 747 |         throw opts.signal.reason ?? fetchError;
+ 748 |       }
+ 749 |       if (timeoutSignal.aborted) {
+ 750 |         await trace(0, { code: LOCAL_CODES.timeout });
+ 751 |         throw new HghApiError(504, LOCAL_CODES.timeout, `no response within ${timeoutMs} ms`, undefined, ctx);
+ 752 |       }
+ 753 |       await trace(0, { code: LOCAL_CODES.network });
+ 754 |       if (method === &quot;get&quot; &amp;&amp; !transientRetried) {
+ 755 |         transientRetried = true;
+ 756 |         await sleep(RETRY_DELAY_MS);
+ 757 |         continue;
+ 758 |       }
+ 759 |       throw new HghApiError(502, LOCAL_CODES.network, &quot;backend unreachable&quot;, undefined, ctx);
+ 760 |     }
+ 761 |     if (bodyError) throw bodyError.err;
+
+    …
+
+ 788 |     if (res.status === 503 &amp;&amp; detail.code === &quot;auth_unavailable&quot; &amp;&amp; method === &quot;get&quot; &amp;&amp; !transientRetried) {
+ 789 |       transientRetried = true;
+ 790 |       await sleep(RETRY_DELAY_MS);
+ 791 |       continue;
+ 792 |     }
+ 793 |     if (
+ 794 |       res.status === 401 &amp;&amp;
+ 795 |       opts.retryOn401 &amp;&amp;
+ 796 |       authMode === &quot;session&quot; &amp;&amp;
+ 797 |       !authRetried &amp;&amp;
+ 798 |       (detail.code === &quot;token_expired&quot; || detail.code === &quot;unauthenticated&quot;)
+ 799 |     ) {
+ 800 |       authRetried = true;
+ 801 |       const fresh = await refreshAccessToken();
+ 802 |       if (fresh) {
+ 803 |         auth = { name: &quot;Authorization&quot;, value: `Bearer ${fresh}` };
+ 804 |         continue;
+ 805 |       }
+ 806 |     }
+ 807 |     throw new HghApiError(res.status, detail.code, detail.message, detail.details, ctx);</pre></details></section>
+<footer>GEO 소프트웨어 품질 점검 · 2026-10-08 · 정적 분석과 모의 의존성 재현 · 제품 코드 수정 없음</footer>
+</main><script>
+const search = document.getElementById('search');
+const priority = document.getElementById('priority');
+const mode = document.getElementById('mode');
+const findings = [...document.querySelectorAll('.finding')];
+function filterFindings(){
+  const query = search.value.trim().toLowerCase();
+  let shown = 0;
+  findings.forEach(el => {
+    const ok = (!priority.value || el.dataset.priority === priority.value)
+      && (!mode.value || el.dataset.mode === mode.value || (mode.value !== 'ingest' && el.dataset.mode === '공통'))
+      && (!query || el.textContent.toLowerCase().includes(query));
+    el.hidden = !ok;
+    if(ok) shown++;
+  });
+  document.getElementById('visible-count').textContent = shown + ' / ' + findings.length + '개 항목';
+  document.getElementById('no-results').hidden = shown !== 0;
+}
+[search,priority,mode].forEach(el => el.addEventListener('input',filterFindings));
+function revealAnchor(){
+  const id = decodeURIComponent(location.hash.slice(1));
+  const target = document.getElementById(id);
+  if(!target) return;
+  if(target.classList.contains('finding') && target.hidden){search.value='';priority.value='';mode.value='';filterFindings();}
+  if(target.tagName === 'DETAILS') target.open = true;
+  target.scrollIntoView({block:'start'});
+}
+window.addEventListener('hashchange',revealAnchor);
+window.addEventListener('beforeprint',()=>document.querySelectorAll('details').forEach(el=>el.open=true));
+filterFindings();
+if(location.hash) revealAnchor();
+</script></body></html>

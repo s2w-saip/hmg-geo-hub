@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GEO HUB 내부 리팩토링 진행</title>
+<style>body{max-width:960px;margin:36px auto;padding:0 22px;color:#223244;font:15px/1.8 system-ui,"Malgun Gothic",sans-serif}h1{font-size:28px}h2{font-size:20px;margin-top:28px}table{border-collapse:collapse;width:100%;font-size:14px}th,td{padding:12px;border:1px solid #dce3e9;text-align:left;vertical-align:top}th{background:#f3f6f8}.note{padding:16px;background:#eef5ff;border-left:4px solid #3970a6}pre{padding:16px;background:#f3f6f8;overflow:auto;font-size:12px}a{color:#225ba5}code{overflow-wrap:anywhere}small{color:#607181}@media print{body{margin:0;font-size:11px}h1{font-size:21px}table{font-size:10px}pre{white-space:pre-wrap}}</style>
+</head>
+<body>
+<h1>GEO HUB 내부 리팩토링 진행</h1>
+<p>2026-10-08 · <code>refactor/preserve-service</code> · 기존 서비스 유지</p>
+<p class="note">기능·디자인을 유지한 내부 개선입니다. 새 UI를 만들었던 별도 구현과 그 시험 결과는 포함하지 않습니다. 실제 작업 대상은 <code>hmg-geo-hub-share/front</code>의 기존 QA 상세 화면입니다.</p>
+<h2>1차 수정: QA 판정 저장·잠금</h2>
+<table><thead><tr><th>기존 문제</th><th>수정 동작</th></tr></thead><tbody>
+<tr><td>저장 401·422·500을 무시하거나 네트워크 오류를 처리하지 못함. 이전 저장 성공 표시가 남음.</td><td>실패를 기존 경고 영역에 표시하고 입력을 유지합니다. 저장 시작·추가 편집 시 이전 성공 표시를 해제합니다. 서버가 현재 판정의 저장을 확인한 경우에만 성공 표시와 새로고침을 수행합니다.</td></tr>
+<tr><td>잠금 응답 전 또는 오류 발생 후에도 편집 가능. heartbeat의 held=false는 경고만 표시함.</td><td>잠금 확인 전·실패·상실 시 읽기 전용입니다. heartbeat 실패를 처리하고, 이미 열린 노트의 저장 버튼과 N 단축키도 읽기 전용 상태를 따릅니다.</td></tr>
+<tr><td>빠른 중복 저장 및 요청 중 추가 편집으로 화면의 저장 상태가 실제 요청과 어긋날 수 있음.</td><td>동일 시점의 중복 요청을 차단합니다. 저장 요청에 실린 판정과 이후 편집을 구분하여 최신 입력을 잘못 저장 완료로 표시하지 않습니다.</td></tr>
+<tr><td>응답 대기 중 화면 이동·이전 답변 상태 재사용·지연 응답 문제.</td><td>이탈 시 요청과 heartbeat를 정리하고 늦은 응답을 무시합니다. 답변 ID가 바뀌면 검수 상태를 분리합니다. 요청은 15초 후 실패 처리하며 쓰기 요청을 자동 재시도하지 않습니다.</td></tr>
+</tbody></table>
+<p>통신·상태 처리는 <a href="../../front/lib/qa/review-session.ts">review-session.ts</a>로 분리했습니다. 기존 API 경로·요청 본문·판정 파생 규칙·30초 heartbeat·서버의 최종 잠금 검증은 유지합니다. 노트 작성 API의 저장 로직 자체는 이번 수정 대상에 포함하지 않았습니다.</p>
+<h2>기능·디자인 보존 확인</h2>
+<ul>
+<li>편집한 TSX 3개 파일의 JSX 태그 순서와 className을 이전 커밋과 AST로 대조해 일치함을 확인했습니다. 메뉴·레이아웃·CSS 파일·기존 한국어/영어 문구는 유지했습니다.</li>
+<li>누락된 저장 실패·잠금 확인 실패를 알리는 한국어/영어 메시지만 각각 2개 추가했습니다. 새로운 정상 화면이나 UI 컴포넌트는 추가하지 않았습니다.</li>
+<li>기존 패키지 및 잠금 파일을 그대로 사용합니다. 원본 분석 작업 공간·백엔드·DB 스키마·지표 계산식은 수정하지 않았습니다.</li>
+</ul>
+<h2>검증 결과</h2>
+<p><strong>136개 통과:</strong> 신규 상태 처리 회귀 시험 31개 + 기존 QA 인증·필터·속도 제한·라우트·API 어댑터·legacy/API 동등성 시험 105개. 전체 프런트 TypeScript 검사와 변경 파일 ESLint 검사도 통과했습니다.</p>
+<p>신규 시험은 실제 상태 처리 모듈에 모의 HTTP 응답과 가상 시간을 적용합니다. 401·403·409·422·500, 네트워크 오류, 잘못된 성공 응답, 15초 타임아웃, 중복 저장, 저장 중 추가 편집, 잠금 상실 후 지연 응답, 이탈 후 응답을 검증했습니다.</p>
+<pre>cd hmg-geo-hub-share/front
+npm ci
+npm test -- lib/qa lib/hgh/adapters/qa.test.ts lib/hgh/adapters/qa.parity.test.ts test/qa-route-public.test.ts
+npm run typecheck</pre>
+<p>이번 기록에는 실제 운영 DB·SSO·브라우저 전체 E2E·성능 부하 시험 결과가 없습니다. JSX 구조 대조는 화면 스크린샷 동등성 시험을 대신하지 않습니다.</p>
+<h2>남은 작업</h2>
+<ol>
+<li>기존 QA 화면에서 실서비스 환경의 저장·잠금·화면 이동을 검증하고, 노트 생성·수정의 오류 처리도 같은 기준으로 점검합니다.</li>
+<li>표준·관리자·프로젝트 프롬프트의 전체 목록 선조회를 개선합니다. 기존 검색·정렬·선택·건수·내보내기 결과 동등성을 먼저 고정합니다.</li>
+<li>조회 실패를 빈 배열이나 기본 GA4 지표로 바꾸는 경로를 실제 실패로 전달하도록 개선합니다.</li>
+</ol>
+<p><a href="03 소프트웨어 품질 점검.html">기존 문제 분석</a> · <a href="../../README.md">작업 저장소 안내</a></p>
+</body></html>

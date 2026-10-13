@@ -1,0 +1,456 @@
+{
+  "createdOn": "2026-10-08",
+  "timezone": "Asia/Seoul",
+  "repositoryHead": "392ca454a098365d772556cd980db3c870cf5592",
+  "selection": "Development entry set: 15 documents, excluding archive, meeting-only notes and duplicate summaries.",
+  "copyPolicy": "Originals untouched. Prose preserved; resolvable relative links rebased. Code, appendices and execution helpers remain in the adjacent workspace. Not a standalone source-code bundle.",
+  "documents": [
+    {
+      "file": "01 인수 범위와 결정.md",
+      "source": "reports/HMG GEO 인수 올인원.md",
+      "category": "프로젝트 범위",
+      "documentStatus": "2026-10-07 인수 정리",
+      "purpose": "역할 분담, 10/7 공급 방식 결정, 미결 항목과 외부 의존을 먼저 읽는다.",
+      "sourceSha256": "e9dd3a1b83090ff12cc486a0e55a85015c82f51c9b4fd273e3460ede3452acbc",
+      "collectedSha256": "e9dd3a1b83090ff12cc486a0e55a85015c82f51c9b4fd273e3460ede3452acbc",
+      "sizeBytes": 19746,
+      "relativeLinkRewrites": [],
+      "preexistingMissingReferences": []
+    },
+    {
+      "file": "02 기능 명세.html",
+      "source": "hmg-geo-hub-share/docs/spec/functional-spec.html",
+      "category": "기능 기준",
+      "documentStatus": "기존 허브 기능 명세",
+      "purpose": "공통 필터, 회차·노출 규칙, 지표 산식, 권한과 전환 기준을 확인한다.",
+      "sourceSha256": "21f8e963fdcfa4252fc66c585814f2f3c8c42a9fdbb4403e495ed8bc46462f65",
+      "collectedSha256": "21f8e963fdcfa4252fc66c585814f2f3c8c42a9fdbb4403e495ed8bc46462f65",
+      "sizeBytes": 164571,
+      "relativeLinkRewrites": [],
+      "preexistingMissingReferences": []
+    },
+    {
+      "file": "03 소프트웨어 품질 점검.html",
+      "source": "reports/GEO 소프트웨어 품질 점검.html",
+      "category": "개선 작업",
+      "documentStatus": "2026-10-08 · 15개 항목",
+      "purpose": "페이지네이션, 저장 실패, 부분 성공, 워커 복구 등의 코드 근거와 완료 기준을 작업에 반영한다.",
+      "sourceSha256": "7683d3ea0b094dd7282600a4abbcaaad03f9491c7d9b10a1606249f3620e3f06",
+      "collectedSha256": "2ea19e3f1ebd51c07d7c9c9035bbf349d8d23a7167e66c8a1e6ea404d8190a1b",
+      "sizeBytes": 168486,
+      "relativeLinkRewrites": [
+        {
+          "from": "%EB%B6%80%EB%A1%9D/verify_software_risks.mjs",
+          "to": "../reports/%EB%B6%80%EB%A1%9D/verify_software_risks.mjs"
+        },
+        {
+          "from": "%EB%B6%80%EB%A1%9D/GEO%20%EC%86%8C%ED%94%84%ED%8A%B8%EC%9B%A8%EC%96%B4%20%EC%A0%90%EA%B2%80%20%EC%9E%AC%ED%98%84.json",
+          "to": "../reports/%EB%B6%80%EB%A1%9D/GEO%20%EC%86%8C%ED%94%84%ED%8A%B8%EC%9B%A8%EC%96%B4%20%EC%A0%90%EA%B2%80%20%EC%9E%AC%ED%98%84.json"
+        },
+        {
+          "from": "%EB%B6%80%EB%A1%9D/build_software_audit.py",
+          "to": "../reports/%EB%B6%80%EB%A1%9D/build_software_audit.py"
+        },
+        {
+          "from": "%EB%B6%80%EB%A1%9D/verify_worker_risks.py",
+          "to": "../reports/%EB%B6%80%EB%A1%9D/verify_worker_risks.py"
+        },
+        {
+          "from": "%EB%B6%80%EB%A1%9D/GEO%20%EB%B0%B1%EA%B7%B8%EB%9D%BC%EC%9A%B4%EB%93%9C%20%EC%9E%91%EC%97%85%20%EC%A0%90%EA%B2%80%20%EC%9E%AC%ED%98%84.json",
+          "to": "../reports/%EB%B6%80%EB%A1%9D/GEO%20%EB%B0%B1%EA%B7%B8%EB%9D%BC%EC%9A%B4%EB%93%9C%20%EC%9E%91%EC%97%85%20%EC%A0%90%EA%B2%80%20%EC%9E%AC%ED%98%84.json"
+        },
+        {
+          "from": "%EB%B6%80%EB%A1%9D/software_audit_extension.py",
+          "to": "../reports/%EB%B6%80%EB%A1%9D/software_audit_extension.py"
+        },
+        {
+          "from": "GEO%20%EC%8B%A4%EC%A0%9C%20%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8%20%EC%B8%A1%EC%A0%95%20%EC%9C%A0%ED%9A%A8%EC%84%B1%20%EB%B6%84%EC%84%9D.html",
+          "to": "04%20%EC%B8%A1%EC%A0%95%20%EC%9C%A0%ED%9A%A8%EC%84%B1%20%EB%B6%84%EC%84%9D.html"
+        }
+      ],
+      "preexistingMissingReferences": []
+    },
+    {
+      "file": "04 측정 유효성 분석.html",
+      "source": "reports/GEO 실제 프로젝트 측정 유효성 분석.html",
+      "category": "지표 검증",
+      "documentStatus": "2026-10-08 코드 대조",
+      "purpose": "지표가 실제로 무엇을 측정하는지와 해석·품질 검증의 한계를 확인한다.",
+      "sourceSha256": "aa48239b5a68118320619fad8efffb00f183544fa324db72da221e49add2e8e1",
+      "collectedSha256": "5c47c0d515195b288ffe8e58c3f13f49a68e0faef39f41aa580b76343a5528b7",
+      "sizeBytes": 133307,
+      "relativeLinkRewrites": [
+        {
+          "from": "GEO%20기능별%20측정%20유효성%20점수.html",
+          "to": "../reports/GEO%20%EA%B8%B0%EB%8A%A5%EB%B3%84%20%EC%B8%A1%EC%A0%95%20%EC%9C%A0%ED%9A%A8%EC%84%B1%20%EC%A0%90%EC%88%98.html"
+        },
+        {
+          "from": "부록/GEO%20프로젝트%20분석%20검증.json",
+          "to": "../reports/%EB%B6%80%EB%A1%9D/GEO%20%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8%20%EB%B6%84%EC%84%9D%20%EA%B2%80%EC%A6%9D.json"
+        },
+        {
+          "from": "../hmg-geo-hub-share/README.md",
+          "to": "11%20%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8%20%EC%8B%A4%ED%96%89%20%EC%95%88%EB%82%B4.md"
+        },
+        {
+          "from": "../hmg-geo-hub-share/ANALYSIS-ENGINE-DESIGN.md",
+          "to": "10%20%EB%B6%84%EC%84%9D%20%EC%97%94%EC%A7%84%20%EC%84%A4%EA%B3%84%20%EC%B4%88%EC%95%88.md"
+        },
+        {
+          "from": "../hmg-geo-hub-share/ANALYSIS-ENGINE-DESIGN.md",
+          "to": "10%20%EB%B6%84%EC%84%9D%20%EC%97%94%EC%A7%84%20%EC%84%A4%EA%B3%84%20%EC%B4%88%EC%95%88.md"
+        },
+        {
+          "from": "../reports/HMG%20GEO%20%EC%9D%B8%EC%88%98%20%EC%98%AC%EC%9D%B8%EC%9B%90.md",
+          "to": "01%20%EC%9D%B8%EC%88%98%20%EB%B2%94%EC%9C%84%EC%99%80%20%EA%B2%B0%EC%A0%95.md"
+        },
+        {
+          "from": "../hmg-geo-hub-share/ANALYSIS-ENGINE-DESIGN.md",
+          "to": "10%20%EB%B6%84%EC%84%9D%20%EC%97%94%EC%A7%84%20%EC%84%A4%EA%B3%84%20%EC%B4%88%EC%95%88.md"
+        }
+      ],
+      "preexistingMissingReferences": []
+    },
+    {
+      "file": "05 데이터 이관 검토.html",
+      "source": "reports/마이그레이션 테이블 더블체크.html",
+      "category": "데이터 이관",
+      "documentStatus": "2026-10-07 검토 v2",
+      "purpose": "재생성할 수 없는 운영 데이터, 시드 누락과 DB 밖 자산을 확인한다.",
+      "sourceSha256": "af210f56b173b98719fa23f1174168a81b11d300be46f1489f8e660e0f2dcb6d",
+      "collectedSha256": "dce91fa6fbce51750abd42fb8f73d39449813db6c5b4f38215dbe6f5f20ce06a",
+      "sizeBytes": 39951,
+      "relativeLinkRewrites": [
+        {
+          "from": "부록/마이그레이션 부록 A 전수 매트릭스.md",
+          "to": "../reports/%EB%B6%80%EB%A1%9D/%EB%A7%88%EC%9D%B4%EA%B7%B8%EB%A0%88%EC%9D%B4%EC%85%98%20%EB%B6%80%EB%A1%9D%20A%20%EC%A0%84%EC%88%98%20%EB%A7%A4%ED%8A%B8%EB%A6%AD%EC%8A%A4.md"
+        },
+        {
+          "from": "부록/마이그레이션 부록 B HUB 매핑.md",
+          "to": "../reports/%EB%B6%80%EB%A1%9D/%EB%A7%88%EC%9D%B4%EA%B7%B8%EB%A0%88%EC%9D%B4%EC%85%98%20%EB%B6%80%EB%A1%9D%20B%20HUB%20%EB%A7%A4%ED%95%91.md"
+        },
+        {
+          "from": "부록/마이그레이션 부록 C DB밖 자산.md",
+          "to": "../reports/%EB%B6%80%EB%A1%9D/%EB%A7%88%EC%9D%B4%EA%B7%B8%EB%A0%88%EC%9D%B4%EC%85%98%20%EB%B6%80%EB%A1%9D%20C%20DB%EB%B0%96%20%EC%9E%90%EC%82%B0.md"
+        },
+        {
+          "from": "부록/마이그레이션 테이블 더블체크.md",
+          "to": "../reports/%EB%B6%80%EB%A1%9D/%EB%A7%88%EC%9D%B4%EA%B7%B8%EB%A0%88%EC%9D%B4%EC%85%98%20%ED%85%8C%EC%9D%B4%EB%B8%94%20%EB%8D%94%EB%B8%94%EC%B2%B4%ED%81%AC.md"
+        }
+      ],
+      "preexistingMissingReferences": []
+    },
+    {
+      "file": "06 데이터 공급 및 이관 원문.pdf",
+      "source": "데이터 및 마이그레이션-2026-10-06.pdf",
+      "category": "공급자 원문",
+      "documentStatus": "2026-10-06 원문",
+      "purpose": "공급자가 제시한 데이터·이관 범위를 01·05 문서와 함께 대조한다.",
+      "sourceSha256": "1ba0d5ffc19719cf62b0ef1afea56217f6f9c6b03be44b5fa1732929450ce7d5",
+      "collectedSha256": "1ba0d5ffc19719cf62b0ef1afea56217f6f9c6b03be44b5fa1732929450ce7d5",
+      "sizeBytes": 855827,
+      "relativeLinkRewrites": [],
+      "preexistingMissingReferences": []
+    },
+    {
+      "file": "07 공통 설계 계약.md",
+      "source": "hmg-geo-hub-share/docs/design/DESIGN-CONTRACT.md",
+      "category": "구현 기준",
+      "documentStatus": "기존 허브 계약 v2",
+      "purpose": "읽기·쓰기 스키마, API 공통 응답, 필터와 모듈 경계를 확인한다.",
+      "sourceSha256": "763d870e5222aed4aef70525274844dcc5b94205136fb4e9b8db9ae1bb83d18b",
+      "collectedSha256": "763d870e5222aed4aef70525274844dcc5b94205136fb4e9b8db9ae1bb83d18b",
+      "sizeBytes": 9896,
+      "relativeLinkRewrites": [],
+      "preexistingMissingReferences": []
+    },
+    {
+      "file": "08 API 설계 결정.md",
+      "source": "hmg-geo-hub-share/docs/design/api/DECISIONS-API.md",
+      "category": "API 기준",
+      "documentStatus": "후속 변경 결정 포함",
+      "purpose": "서버 페이지네이션, 오류·권한, 비동기 작업과 결과 캐시의 후속 결정을 확인한다.",
+      "sourceSha256": "7301327a00e8892329aee4ca5067ba35376b7df4184288c1142675b7b706a794",
+      "collectedSha256": "071b6f041d7d30a9940a3d202c46772c0cbf65f9d4e898f95af36a082057aac7",
+      "sizeBytes": 120821,
+      "relativeLinkRewrites": [
+        {
+          "from": "전체-통합.md",
+          "to": "../hmg-geo-hub-share/docs/design/api/%EC%A0%84%EC%B2%B4-%ED%86%B5%ED%95%A9.md"
+        }
+      ],
+      "preexistingMissingReferences": []
+    },
+    {
+      "file": "09 DB 설계 결정.md",
+      "source": "hmg-geo-hub-share/docs/design/db/DECISIONS.md",
+      "category": "DB 기준",
+      "documentStatus": "DB 설계 결정·후속 기록",
+      "purpose": "행의 단위, 인덱스·파티션, 데이터 정합성과 성능 결정의 이유를 확인한다.",
+      "sourceSha256": "0892a58761db80afbd2dad8ba75e3409a85feed8176d85e1a1bbace9f8bfcf3c",
+      "collectedSha256": "31d1e6434a85851e53d6fe6d575d90e0b2b85c64a578805074303d1acc8129ab",
+      "sizeBytes": 41083,
+      "relativeLinkRewrites": [
+        {
+          "from": "DB-보정.md",
+          "to": "../hmg-geo-hub-share/docs/design/db/DB-%EB%B3%B4%EC%A0%95.md"
+        },
+        {
+          "from": "DDL-VERIFY.md",
+          "to": "../hmg-geo-hub-share/docs/design/db/DDL-VERIFY.md"
+        }
+      ],
+      "preexistingMissingReferences": [
+        "DB-v2.sql"
+      ]
+    },
+    {
+      "file": "10 분석 엔진 설계 초안.md",
+      "source": "hmg-geo-hub-share/ANALYSIS-ENGINE-DESIGN.md",
+      "category": "신규 분석 엔진",
+      "documentStatus": "검토 중 · 미구현 초안",
+      "purpose": "분석 단계, 턴 원문, 버전 관리, 동치·품질 검증과 작업 분해의 출발점으로 사용한다.",
+      "sourceSha256": "fa96416cfe1133865fd1d552e81c980e3bce970d784587a10541bdaf9c8ef37c",
+      "collectedSha256": "fa96416cfe1133865fd1d552e81c980e3bce970d784587a10541bdaf9c8ef37c",
+      "sizeBytes": 81125,
+      "relativeLinkRewrites": [],
+      "preexistingMissingReferences": []
+    },
+    {
+      "file": "11 프로젝트 실행 안내.md",
+      "source": "hmg-geo-hub-share/README.md",
+      "category": "개발 환경",
+      "documentStatus": "공유 스냅샷 README",
+      "purpose": "저장소 구성, 스냅샷에서 제외된 자료, 프런트·백엔드 실행 및 검증 명령을 확인한다.",
+      "sourceSha256": "1b7dc6079fffa93421eb1253204f794bcf14a3e665c82fdeb2c4bd31c6b8555b",
+      "collectedSha256": "781fbf3bbd9e3b96d03d5c61b8f11809b04cf1594685db9a5105d576db879119",
+      "sizeBytes": 7936,
+      "relativeLinkRewrites": [
+        {
+          "from": "back/FEATURES.md",
+          "to": "../hmg-geo-hub-share/back/FEATURES.md"
+        }
+      ],
+      "preexistingMissingReferences": []
+    },
+    {
+      "file": "12 백엔드 테스트 안내.md",
+      "source": "hmg-geo-hub-share/back/tests/README.md",
+      "category": "검증 방법",
+      "documentStatus": "PG17 합성 픽스처",
+      "purpose": "개발 DB와 pytest 실행, 권한·SQL 경계 가드, 픽스처 사용 방법을 확인한다.",
+      "sourceSha256": "5bbce693085b6887d9c7e5fd65fb4c21d65998501c23b18ce67ca99060ae36b3",
+      "collectedSha256": "5bbce693085b6887d9c7e5fd65fb4c21d65998501c23b18ce67ca99060ae36b3",
+      "sizeBytes": 10925,
+      "relativeLinkRewrites": [],
+      "preexistingMissingReferences": []
+    },
+    {
+      "file": "13 현재 소프트웨어 아키텍처.html",
+      "source": "reports/GEO 현재 소프트웨어 아키텍처 분석.html",
+      "category": "현재 구조",
+      "documentStatus": "2026-10-08 코드 기반",
+      "purpose": "전체 구조도, legacy/API 전환, DB·워커·외부 연동의 경계와 미완성 연결을 파악한다.",
+      "sourceSha256": "417af4b0bad2354ce3e999bbd3cdc8a62a6289df563bd390a120f56120383bfa",
+      "collectedSha256": "1af8b8aca2184efd4c86c3ba4f31ce30fc1a0a2ebc6bf31f4ac7269c6ac9e01f",
+      "sizeBytes": 175617,
+      "relativeLinkRewrites": [
+        {
+          "from": "%EB%B6%80%EB%A1%9D/GEO%20%ED%98%84%EC%9E%AC%20%EC%95%84%ED%82%A4%ED%85%8D%EC%B2%98.mmd",
+          "to": "../reports/%EB%B6%80%EB%A1%9D/GEO%20%ED%98%84%EC%9E%AC%20%EC%95%84%ED%82%A4%ED%85%8D%EC%B2%98.mmd"
+        },
+        {
+          "from": "GEO%20%EC%86%8C%ED%94%84%ED%8A%B8%EC%9B%A8%EC%96%B4%20%ED%92%88%EC%A7%88%20%EC%A0%90%EA%B2%80.html#SW01",
+          "to": "03%20%EC%86%8C%ED%94%84%ED%8A%B8%EC%9B%A8%EC%96%B4%20%ED%92%88%EC%A7%88%20%EC%A0%90%EA%B2%80.html#SW01"
+        },
+        {
+          "from": "GEO%20%EC%86%8C%ED%94%84%ED%8A%B8%EC%9B%A8%EC%96%B4%20%ED%92%88%EC%A7%88%20%EC%A0%90%EA%B2%80.html#SW04",
+          "to": "03%20%EC%86%8C%ED%94%84%ED%8A%B8%EC%9B%A8%EC%96%B4%20%ED%92%88%EC%A7%88%20%EC%A0%90%EA%B2%80.html#SW04"
+        },
+        {
+          "from": "GEO%20%EC%86%8C%ED%94%84%ED%8A%B8%EC%9B%A8%EC%96%B4%20%ED%92%88%EC%A7%88%20%EC%A0%90%EA%B2%80.html#SW12",
+          "to": "03%20%EC%86%8C%ED%94%84%ED%8A%B8%EC%9B%A8%EC%96%B4%20%ED%92%88%EC%A7%88%20%EC%A0%90%EA%B2%80.html#SW12"
+        },
+        {
+          "from": "%EB%B6%80%EB%A1%9D/GEO%20%EC%95%84%ED%82%A4%ED%85%8D%EC%B2%98%20%EA%B7%BC%EA%B1%B0.json",
+          "to": "../reports/%EB%B6%80%EB%A1%9D/GEO%20%EC%95%84%ED%82%A4%ED%85%8D%EC%B2%98%20%EA%B7%BC%EA%B1%B0.json"
+        },
+        {
+          "from": "%EB%B6%80%EB%A1%9D/GEO%20%EC%95%84%ED%82%A4%ED%85%8D%EC%B2%98%20%EB%AC%B8%EC%84%9C%20%EA%B2%80%EC%A6%9D.json",
+          "to": "../reports/%EB%B6%80%EB%A1%9D/GEO%20%EC%95%84%ED%82%A4%ED%85%8D%EC%B2%98%20%EB%AC%B8%EC%84%9C%20%EA%B2%80%EC%A6%9D.json"
+        },
+        {
+          "from": "GEO%20%EC%86%8C%ED%94%84%ED%8A%B8%EC%9B%A8%EC%96%B4%20%ED%92%88%EC%A7%88%20%EC%A0%90%EA%B2%80.html",
+          "to": "03%20%EC%86%8C%ED%94%84%ED%8A%B8%EC%9B%A8%EC%96%B4%20%ED%92%88%EC%A7%88%20%EC%A0%90%EA%B2%80.html"
+        },
+        {
+          "from": "GEO%20%EC%8B%A4%EC%A0%9C%20%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8%20%EC%B8%A1%EC%A0%95%20%EC%9C%A0%ED%9A%A8%EC%84%B1%20%EB%B6%84%EC%84%9D.html",
+          "to": "04%20%EC%B8%A1%EC%A0%95%20%EC%9C%A0%ED%9A%A8%EC%84%B1%20%EB%B6%84%EC%84%9D.html"
+        },
+        {
+          "from": "../%EA%B0%9C%EB%B0%9C%20%ED%95%B5%EC%8B%AC%20%EB%AC%B8%EC%84%9C/00%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0.html",
+          "to": "00%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0.html"
+        },
+        {
+          "from": "../hmg-geo-hub-share/README.md",
+          "to": "11%20%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8%20%EC%8B%A4%ED%96%89%20%EC%95%88%EB%82%B4.md"
+        },
+        {
+          "from": "../hmg-geo-hub-share/ANALYSIS-ENGINE-DESIGN.md",
+          "to": "10%20%EB%B6%84%EC%84%9D%20%EC%97%94%EC%A7%84%20%EC%84%A4%EA%B3%84%20%EC%B4%88%EC%95%88.md"
+        },
+        {
+          "from": "HMG%20GEO%20%EC%9D%B8%EC%88%98%20%EC%98%AC%EC%9D%B8%EC%9B%90.md",
+          "to": "01%20%EC%9D%B8%EC%88%98%20%EB%B2%94%EC%9C%84%EC%99%80%20%EA%B2%B0%EC%A0%95.md"
+        }
+      ],
+      "preexistingMissingReferences": []
+    },
+    {
+      "file": "14 전면 재설계 아키텍처 검토.html",
+      "source": "reports/GEO 전면 재설계 아키텍처 검토.html",
+      "category": "재설계 결정",
+      "documentStatus": "2026-10-08 · 3회 검토 + 초기 Next 근거 반영",
+      "purpose": "SPA 우선 추천을 철회하고 BFF 귀속·독립 API 필요성부터 네 구성을 비교한다. 22개 결정·실증 조건과 기존 합의·데이터·실패/복구 계약을 함께 검토한다.",
+      "sourceSha256": "ab54af991de5766de21ca11a7f3b7880effa232118ebebd3cb79e420a93a1819",
+      "collectedSha256": "91dc04ac3bc17eb9704f5d161a92da28f3c830f3fe2ec0f09eb4ea612320a817",
+      "sizeBytes": 136543,
+      "relativeLinkRewrites": [
+        {
+          "from": "%EB%B6%80%EB%A1%9D/GEO%20%EC%9E%AC%EC%84%A4%EA%B3%84%203%ED%9A%8C%20%EC%9E%AC%EA%B2%80%ED%86%A0%20%EA%B8%B0%EB%A1%9D.html",
+          "to": "../reports/%EB%B6%80%EB%A1%9D/GEO%20%EC%9E%AC%EC%84%A4%EA%B3%84%203%ED%9A%8C%20%EC%9E%AC%EA%B2%80%ED%86%A0%20%EA%B8%B0%EB%A1%9D.html"
+        },
+        {
+          "from": "GEO%20HUB%20%EA%B5%AC%EC%84%B1%EC%95%88%EB%B3%84%20%EA%B8%B0%EC%88%A0%20%EC%8A%A4%ED%83%9D%20%EA%B8%B0%ED%9A%8D.html",
+          "to": "15%20%EA%B5%AC%EC%84%B1%EC%95%88%EB%B3%84%20%EA%B8%B0%EC%88%A0%20%EC%8A%A4%ED%83%9D%20%EA%B8%B0%ED%9A%8D.html"
+        },
+        {
+          "from": "GEO%20%ED%98%84%EC%9E%AC%20%EC%86%8C%ED%94%84%ED%8A%B8%EC%9B%A8%EC%96%B4%20%EC%95%84%ED%82%A4%ED%85%8D%EC%B2%98%20%EB%B6%84%EC%84%9D.html",
+          "to": "13%20%ED%98%84%EC%9E%AC%20%EC%86%8C%ED%94%84%ED%8A%B8%EC%9B%A8%EC%96%B4%20%EC%95%84%ED%82%A4%ED%85%8D%EC%B2%98.html"
+        },
+        {
+          "from": "HMG%20GEO%20%EC%9D%B8%EC%88%98%20%EC%98%AC%EC%9D%B8%EC%9B%90.md",
+          "to": "01%20%EC%9D%B8%EC%88%98%20%EB%B2%94%EC%9C%84%EC%99%80%20%EA%B2%B0%EC%A0%95.md"
+        },
+        {
+          "from": "../hmg-geo-hub-share/docs/spec/functional-spec.html",
+          "to": "02%20%EA%B8%B0%EB%8A%A5%20%EB%AA%85%EC%84%B8.html"
+        },
+        {
+          "from": "GEO%20%EC%8B%A4%EC%A0%9C%20%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8%20%EC%B8%A1%EC%A0%95%20%EC%9C%A0%ED%9A%A8%EC%84%B1%20%EB%B6%84%EC%84%9D.html",
+          "to": "04%20%EC%B8%A1%EC%A0%95%20%EC%9C%A0%ED%9A%A8%EC%84%B1%20%EB%B6%84%EC%84%9D.html"
+        },
+        {
+          "from": "../hmg-geo-hub-share/ANALYSIS-ENGINE-DESIGN.md",
+          "to": "10%20%EB%B6%84%EC%84%9D%20%EC%97%94%EC%A7%84%20%EC%84%A4%EA%B3%84%20%EC%B4%88%EC%95%88.md"
+        },
+        {
+          "from": "../hmg-geo-hub-share/docs/design/DESIGN-CONTRACT.md",
+          "to": "07%20%EA%B3%B5%ED%86%B5%20%EC%84%A4%EA%B3%84%20%EA%B3%84%EC%95%BD.md"
+        },
+        {
+          "from": "%EB%B6%80%EB%A1%9D/GEO%20Next%20%EC%9D%98%EC%A1%B4%EC%84%B1%20%EC%A1%B0%EC%82%AC.json",
+          "to": "../reports/%EB%B6%80%EB%A1%9D/GEO%20Next%20%EC%9D%98%EC%A1%B4%EC%84%B1%20%EC%A1%B0%EC%82%AC.json"
+        },
+        {
+          "from": "HMG%20GEO%20%EC%9D%B8%EC%88%98%20%EC%98%AC%EC%9D%B8%EC%9B%90.md",
+          "to": "01%20%EC%9D%B8%EC%88%98%20%EB%B2%94%EC%9C%84%EC%99%80%20%EA%B2%B0%EC%A0%95.md"
+        },
+        {
+          "from": "%EB%B6%80%EB%A1%9D/GEO%20%EC%9E%AC%EC%84%A4%EA%B3%84%20%EA%B2%80%ED%86%A0%20%EA%B7%BC%EA%B1%B0.json",
+          "to": "../reports/%EB%B6%80%EB%A1%9D/GEO%20%EC%9E%AC%EC%84%A4%EA%B3%84%20%EA%B2%80%ED%86%A0%20%EA%B7%BC%EA%B1%B0.json"
+        },
+        {
+          "from": "%EB%B6%80%EB%A1%9D/GEO%20%EC%9E%AC%EC%84%A4%EA%B3%84%203%ED%9A%8C%20%EC%9E%AC%EA%B2%80%ED%86%A0%20%EA%B8%B0%EB%A1%9D.html",
+          "to": "../reports/%EB%B6%80%EB%A1%9D/GEO%20%EC%9E%AC%EC%84%A4%EA%B3%84%203%ED%9A%8C%20%EC%9E%AC%EA%B2%80%ED%86%A0%20%EA%B8%B0%EB%A1%9D.html"
+        },
+        {
+          "from": "%EB%B6%80%EB%A1%9D/GEO%20Next%20%EC%84%A0%EC%A0%95%20%EA%B7%BC%EA%B1%B0%20%EC%9E%AC%EA%B2%80%ED%86%A0.json",
+          "to": "../reports/%EB%B6%80%EB%A1%9D/GEO%20Next%20%EC%84%A0%EC%A0%95%20%EA%B7%BC%EA%B1%B0%20%EC%9E%AC%EA%B2%80%ED%86%A0.json"
+        },
+        {
+          "from": "../%EA%B0%9C%EB%B0%9C%20%ED%95%B5%EC%8B%AC%20%EB%AC%B8%EC%84%9C/00%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0.html",
+          "to": "00%20%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0.html"
+        },
+        {
+          "from": "../hmg-geo-hub-share/docs/design/api/DECISIONS-API.md",
+          "to": "08%20API%20%EC%84%A4%EA%B3%84%20%EA%B2%B0%EC%A0%95.md"
+        },
+        {
+          "from": "GEO%20%ED%98%84%EC%9E%AC%20%EC%86%8C%ED%94%84%ED%8A%B8%EC%9B%A8%EC%96%B4%20%EC%95%84%ED%82%A4%ED%85%8D%EC%B2%98%20%EB%B6%84%EC%84%9D.html",
+          "to": "13%20%ED%98%84%EC%9E%AC%20%EC%86%8C%ED%94%84%ED%8A%B8%EC%9B%A8%EC%96%B4%20%EC%95%84%ED%82%A4%ED%85%8D%EC%B2%98.html"
+        },
+        {
+          "from": "GEO%20%EC%86%8C%ED%94%84%ED%8A%B8%EC%9B%A8%EC%96%B4%20%ED%92%88%EC%A7%88%20%EC%A0%90%EA%B2%80.html",
+          "to": "03%20%EC%86%8C%ED%94%84%ED%8A%B8%EC%9B%A8%EC%96%B4%20%ED%92%88%EC%A7%88%20%EC%A0%90%EA%B2%80.html"
+        },
+        {
+          "from": "GEO%20%EC%8B%A4%EC%A0%9C%20%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8%20%EC%B8%A1%EC%A0%95%20%EC%9C%A0%ED%9A%A8%EC%84%B1%20%EB%B6%84%EC%84%9D.html",
+          "to": "04%20%EC%B8%A1%EC%A0%95%20%EC%9C%A0%ED%9A%A8%EC%84%B1%20%EB%B6%84%EC%84%9D.html"
+        },
+        {
+          "from": "HMG%20GEO%20%EC%9D%B8%EC%88%98%20%EC%98%AC%EC%9D%B8%EC%9B%90.md",
+          "to": "01%20%EC%9D%B8%EC%88%98%20%EB%B2%94%EC%9C%84%EC%99%80%20%EA%B2%B0%EC%A0%95.md"
+        },
+        {
+          "from": "%EB%A7%88%EC%9D%B4%EA%B7%B8%EB%A0%88%EC%9D%B4%EC%85%98%20%ED%85%8C%EC%9D%B4%EB%B8%94%20%EB%8D%94%EB%B8%94%EC%B2%B4%ED%81%AC.html",
+          "to": "05%20%EB%8D%B0%EC%9D%B4%ED%84%B0%20%EC%9D%B4%EA%B4%80%20%EA%B2%80%ED%86%A0.html"
+        },
+        {
+          "from": "../hmg-geo-hub-share/docs/spec/functional-spec.html",
+          "to": "02%20%EA%B8%B0%EB%8A%A5%20%EB%AA%85%EC%84%B8.html"
+        },
+        {
+          "from": "../hmg-geo-hub-share/ANALYSIS-ENGINE-DESIGN.md",
+          "to": "10%20%EB%B6%84%EC%84%9D%20%EC%97%94%EC%A7%84%20%EC%84%A4%EA%B3%84%20%EC%B4%88%EC%95%88.md"
+        },
+        {
+          "from": "../hmg-geo-hub-share/docs/design/DESIGN-CONTRACT.md",
+          "to": "07%20%EA%B3%B5%ED%86%B5%20%EC%84%A4%EA%B3%84%20%EA%B3%84%EC%95%BD.md"
+        },
+        {
+          "from": "%EB%B6%80%EB%A1%9D/GEO%20Next%20%EC%9D%98%EC%A1%B4%EC%84%B1%20%EC%A1%B0%EC%82%AC.json",
+          "to": "../reports/%EB%B6%80%EB%A1%9D/GEO%20Next%20%EC%9D%98%EC%A1%B4%EC%84%B1%20%EC%A1%B0%EC%82%AC.json"
+        }
+      ],
+      "preexistingMissingReferences": []
+    },
+    {
+      "file": "15 구성안별 기술 스택 기획.html",
+      "source": "reports/GEO HUB 구성안별 기술 스택 기획.html",
+      "category": "신규 개발 스택",
+      "documentStatus": "2026-10-08 · 스택 기획 3회 검토 완료",
+      "purpose": "Python·TypeScript 운영 가능 조건에서 A Next+FastAPI+Python 워커 우선 실증, B SPA+API 내 BFF 비교. 네 구성의 라이브러리·세션·작업·배포·비용·착수 순서를 구체화한다.",
+      "sourceSha256": "862627054c855834b567a298f9596d3e35e44e93a2ee69239446a800bd0e302e",
+      "collectedSha256": "0ef0d99b021b70e3f8ad495e2342da1f0b00315d8ab820a92525ad41f62a48dc",
+      "sizeBytes": 63536,
+      "relativeLinkRewrites": [
+        {
+          "from": "GEO%20%EC%A0%84%EB%A9%B4%20%EC%9E%AC%EC%84%A4%EA%B3%84%20%EC%95%84%ED%82%A4%ED%85%8D%EC%B2%98%20%EA%B2%80%ED%86%A0.html",
+          "to": "14%20%EC%A0%84%EB%A9%B4%20%EC%9E%AC%EC%84%A4%EA%B3%84%20%EC%95%84%ED%82%A4%ED%85%8D%EC%B2%98%20%EA%B2%80%ED%86%A0.html"
+        },
+        {
+          "from": "../hmg-geo-hub-share/docs/design/api/DECISIONS-API.md",
+          "to": "08%20API%20%EC%84%A4%EA%B3%84%20%EA%B2%B0%EC%A0%95.md"
+        },
+        {
+          "from": "HMG%20GEO%20%EC%9D%B8%EC%88%98%20%EC%98%AC%EC%9D%B8%EC%9B%90.md",
+          "to": "01%20%EC%9D%B8%EC%88%98%20%EB%B2%94%EC%9C%84%EC%99%80%20%EA%B2%B0%EC%A0%95.md"
+        },
+        {
+          "from": "../hmg-geo-hub-share/docs/design/DESIGN-CONTRACT.md",
+          "to": "07%20%EA%B3%B5%ED%86%B5%20%EC%84%A4%EA%B3%84%20%EA%B3%84%EC%95%BD.md"
+        },
+        {
+          "from": "%EB%B6%80%EB%A1%9D/GEO%20Next%20%EC%9D%98%EC%A1%B4%EC%84%B1%20%EC%A1%B0%EC%82%AC.json",
+          "to": "../reports/%EB%B6%80%EB%A1%9D/GEO%20Next%20%EC%9D%98%EC%A1%B4%EC%84%B1%20%EC%A1%B0%EC%82%AC.json"
+        },
+        {
+          "from": "../hmg-geo-hub-share/docs/design/api/DECISIONS-API.md",
+          "to": "08%20API%20%EC%84%A4%EA%B3%84%20%EA%B2%B0%EC%A0%95.md"
+        }
+      ],
+      "preexistingMissingReferences": []
+    }
+  ]
+}

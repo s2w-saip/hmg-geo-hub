@@ -1,0 +1,10 @@
+{
+  "mode": "qa",
+  "date": "2026-10-08T15:50:39.337Z",
+  "passed": [
+    "QA: failed save shows error, retains verdict and never shows saved",
+    "QA: successful retry persists verdict after reload",
+    "QA: heartbeat failure disables editing while keeping current verdict",
+    "QA: failed initial lock blocks save and note shortcut"
+  ]
+}

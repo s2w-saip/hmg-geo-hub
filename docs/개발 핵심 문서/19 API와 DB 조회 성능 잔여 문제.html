@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GEO HUB — API와 DB 조회 성능 잔여 문제</title>
+<style>
+:root{--ink:#19333d;--muted:#556c76;--line:#d5e0e5;--accent:#096c75;--bg:#f0f5f7}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.75 "Malgun Gothic",system-ui,sans-serif;word-break:keep-all}main{max-width:1220px;margin:auto;padding:32px 24px 60px}header{background:#173d46;color:white;padding:28px;border-radius:12px}h1{font-size:29px;margin:8px 0 14px}h2{font-size:21px;margin:0 0 14px}p{margin:10px 0}section{background:white;border:1px solid var(--line);border-radius:10px;margin-top:20px;padding:24px}a{color:var(--accent);text-underline-offset:3px}.meta,small{font-size:12px;color:var(--muted)}header .meta{color:#c8e0e4}.lead{font-size:19px}.note{padding:14px 18px;background:#fff4df;border-left:4px solid #cb8a24;margin-top:16px}.scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:14px}th,td{border:1px solid var(--line);padding:12px;vertical-align:top;text-align:left}th{background:#eaf2f4}td:first-child{min-width:145px}code{font-size:12px;background:#edf2f5;padding:2px 4px;overflow-wrap:anywhere}li{margin:8px 0}.sources li{font-size:13px;overflow-wrap:anywhere}.badge{font-weight:700;color:#915300}@media print{body{background:white;font-size:11px}main{max-width:none;padding:0}header{background:white;color:var(--ink);border:1px solid var(--line)}header .meta{color:var(--muted)}section{padding:15px;break-inside:auto}.scroll{overflow:visible}table{font-size:10px}tr{break-inside:avoid}a{color:inherit}@page{size:A4 landscape;margin:12mm}}
+</style>
+</head>
+<body><main>
+<header>
+<div class="meta">후속 코드 점검 · 2026-10-13 · 복사본 refactor/preserve-service · 점검 기준 ec3f3f6</div>
+<h1>API와 DB 조회 문제는 모두 해결됐는가?</h1>
+<p class="lead"><strong>아니다. 주요 목록의 반환량과 화면 렌더링은 개선했지만, DB 집계 비용·요청 간 재계산·일부 대량 누적 조회는 남아 있다.</strong></p>
+<p>17번의 완료 표시는 SW01~15 수정·검증 범위에 대한 것이다. 전체 API·DB 성능 문제의 해소나 운영 성능 검증을 의미하지 않는다. 이 문서는 그 범위를 보완하는 후속 기록이다.</p>
+<p class="meta">운영 API·인증·DB 요청 0건. 복사본 소스와 로컬 Docker 설정만 읽었다. 서비스 코드·DB·캐시 설정은 변경하지 않았다.</p>
+</header>
+<section>
+<h2>화면과 읽기 경로별 판정</h2>
+<div class="scroll"><table>
+<thead><tr><th>화면 / 경로</th><th>현재 반영된 개선</th><th>남은 문제와 영향</th><th>판정 / 근거</th></tr></thead>
+<tbody>
+<tr><td>표준·관리자 프롬프트 목록</td><td>신규 화면 조회 API 및 legacy SQL에서 필터·정렬 후 LIMIT/OFFSET으로 본문 행을 제한한다. 기존 화면별 DOM 제한·내보내기는 17번에서 검증했다.</td><td>매 조회마다 총건수, 분류별 DISTINCT 옵션, 국가 옵션을 범위 전체 대상으로 계산한다. 관리자 통계도 별도로 구한다. 반환 행 수가 적어도 DB에서 처리할 행 수는 많을 수 있다.</td><td><span class="badge">부분 해결</span><br><a href="#s1">[1]</a> API와 직접 DB 경로 모두 해당.</td></tr>
+<tr><td>프로젝트 프롬프트·후보 목록</td><td>본문 행은 페이지 단위, 본문에 붙이는 태그는 해당 페이지 ID만 조회한다. 전체 선택은 ID 전용 조회를 사용한다.</td><td>총건수·열 표시·초안 수는 매번 집계한다. 프롬프트 페이지의 태그 후보 값은 프로젝트 전체 DISTINCT 값이며 별도 개수 제한이 없다. 고유 태그가 많으면 응답 크기도 계속 커진다. 깊은 OFFSET 및 사용자 정의 필드 정렬 비용은 실행계획 확인이 필요하다.</td><td><span class="badge">부분 해결</span><br><a href="#s2">[2]</a> DB 연산량과 부가 데이터 크기까지 제한된 것은 아니다.</td></tr>
+<tr><td>대시보드 KPI·분석 조회</td><td>일부 계산 결과를 담은 읽기용 데이터와 발행 스냅샷을 사용한다. 동일 요청 안에서는 프런트의 일부 호출을 재사용한다.</td><td>KPI 서비스는 fetch_counts·prompt_counts를 호출해 SUM·COUNT·COUNT DISTINCT 등을 수행한다. 결과 캐시를 사용하지 않거나 적중하지 않는 요청은 해당 계산 경로를 실행한다. 새로고침 간 재계산을 모두 제거한 구조는 아니다.</td><td><span class="badge">미해결 항목 존재</span><br><a href="#s3">[3]</a> 발행 스냅샷은 모든 API 응답의 사전 계산을 뜻하지 않는다.</td></tr>
+<tr><td>백엔드 결과 캐시</td><td>권한·필터·데이터 버전을 반영한 결과 캐시가 이미 있다. 명시된 분석 GET 18개를 지원하며, 적중 시 응답을 재사용한다.</td><td>HGH_RESULT_CACHE 기본값은 0이다. 실행 중인 로컬 백엔드 컨테이너에도 변수가 설정되어 있지 않다. 신규 POST /screen 4개는 이 캐시 허용 목록에 없다. 운영 활성화 여부와 적중률은 확인하지 않았다.</td><td><span class="badge">구현 있음 / 기본 비활성</span><br><a href="#s4">[4]</a> 캐시 활성화만으로 최초 요청·새 필터의 계산 비용이 사라지지는 않는다.</td></tr>
+<tr><td>프로젝트 소셜 스크래핑</td><td>컨텍스트 목록 자체는 첫 페이지를 읽는다.</td><td>‘이미 추가됨’ 표시를 위해 후보 API를 500건씩 최대 20페이지, 즉 1만 건까지 순차 누적 조회한 뒤 텍스트를 화면에 전달한다. 상한 도달 시 truncated 정보를 버린다. 1만 건 밖 후보와 동일한 생성 문구가 있으면 추가됨 표시가 누락될 수 있다.</td><td><span class="badge">대량 조회·정보 누락 잔존</span><br><a href="#s5">[5]</a> API 모드 실제 페이지에서 호출한다. 중복 저장 발생 자체를 검증한 것은 아니다.</td></tr>
+<tr><td>고객 관심도 → Google 키워드</td><td>개별 API 요청은 500건으로 제한한다.</td><td>첫 화면용 탭 목록을 최대 4페이지, 2천 건까지 누적한다. 초과 시 서버 경고 로그만 남기고 잘린 목록을 반환한다. 페이지 단위 API가 있어도 프런트가 누적 조회하면 초기 로딩 부담과 일부 탭 누락이 남는다.</td><td><span class="badge">누적 조회·잘림 잔존</span><br><a href="#s6">[6]</a> API 모드 실제 페이지 경로 확인.</td></tr>
+<tr><td>DB Read 계층 전체</td><td>rd 사실 테이블은 표면·날짜 파티션과 인덱스를 가진다. 조회 범위 조건, 적재 시 계산한 열, 일부 보고서 발행값과 frz 동결 읽기도 존재한다.</td><td>읽기 전용 트랜잭션·커넥션 풀은 집계 결과를 자동으로 캐시하지 않는다. 읽기용 테이블을 쓰더라도 필터 범위의 사실 행을 합산하는 SQL은 남는다. 실제 스캔량·정렬·인덱스 선택은 운영 규모 데이터로 검증해야 한다.</td><td><span class="badge">기반 최적화 존재 / 전체 보증 불가</span><br><a href="#s7">[7]</a> ‘항상 테이블 전체 스캔’으로 단정하지 않는다.</td></tr>
+</tbody></table></div>
+<div class="note"><strong>반환량과 DB 작업량은 다르다.</strong> 50행을 보내더라도 총건수 계산·전체 옵션 수집·정렬을 위해 많은 행을 처리할 수 있다. COUNT나 순차 스캔 자체가 항상 잘못된 것은 아니다. 현재 판정은 구조상 남은 작업과 위험이며 실제 지연 크기는 측정하지 않았다.</div>
+</section>
+<section>
+<h2>이번 리팩토링에서 바뀐 범위</h2>
+<p>기준 복사본 f6f6f54와 점검 기준 ec3f3f6를 비교하면 <code>back/app/core</code>, <code>back/app/features/analytics</code>, <code>back/db</code>에 변경이 없다. 기존 읽기 모델·분석 집계·결과 캐시는 인수한 구현을 유지했다. 신규 화면 조회 API 4개가 추가되었다는 사실만으로 이 영역까지 최적화됐다고 판단할 수 없다.</p>
+<p>프런트 API 클라이언트는 <code>cache: "no-store"</code>를 사용한다. 대시보드 React cache의 공유 범위는 같은 요청 안이며 사용자 새로고침 간 공용 결과 캐시가 아니다. 백엔드 결과 캐시와 구분해야 한다. API/legacy 전환 설정에 따라 직접 DB 조회 또는 FastAPI를 사용하므로 실제 배포 경로도 함께 확인해야 한다.</p>
+<p>로컬 Next 개발 실행에서 production 실행으로 바꿔 빨라진 결과는 빌드·프런트 실행 방식의 개선 증거다. 운영 DB 집계 최적화가 끝났다는 근거로 사용하지 않는다.</p>
+<p>전체 내보내기와 전체 선택은 사용자가 요청한 전체 작업이다. 본문 전체를 첫 화면에서 자동 로드하는 문제와 구분하며, 기존 기능을 없애거나 임의로 결과를 자르지 않는다.</p>
+</section>
+<section>
+<h2>서버팀 전달 및 후속 개발 범위</h2>
+<ol>
+<li><strong>신규 조회 API 4개:</strong> DB 수준 페이지네이션·전체 범위 필터/정렬·정확한 총건수·권한을 유지한다. 필터 옵션과 태그 후보를 매 페이지 다시 계산하지 않도록 변경 감지와 재사용 전략을 설계한다. 태그 후보를 임의로 잘라 기존 동작을 바꾸지 않는다.</li>
+<li><strong>남은 대량 조회:</strong> 소셜 스크래핑은 표시할 생성 문구의 후보 등록 여부만 일괄 확인하는 방식 등을 검토한다. Google 키워드 탭도 기존 접근·선택 기능을 보존하면서 조회를 분리한다. 두 경로 모두 잘림을 정상 전체 결과로 취급하는 동작부터 해결한다.</li>
+<li><strong>대시보드:</strong> 기존 결과 캐시의 사용 조건·권한 키·적재/검수/설정 변경 시 무효화를 검증한다. 미적중 요청의 비용을 측정한 뒤 필요한 지표만 사전 집계하거나 기존 발행값을 재사용한다. 지표의 모수·기간·브랜드·회차 규칙은 유지한다.</li>
+<li><strong>완료 판정:</strong> 운영을 대표하는 비운영 데이터에서 첫 요청·반복 요청·필터 변경·깊은 페이지·동시 요청을 비교한다. SQL 실행계획, 처리 행 수, 버퍼 읽기, 정렬 비용, API 지연 분포, 응답 크기, 캐시 적중과 변경 반영을 확인한다. 허용 지연 목표를 정하고 기존 결과와 동등성도 검증한다.</li>
+</ol>
+<p class="meta">위 항목은 후속 작업 제안이다. 이번 점검에서는 캐시 활성화·API 변경·DDL 변경·성능 부하 시험을 수행하지 않았다. 실제 서버 반영과 운영 성능은 미검증이다.</p>
+</section>
+<section>
+<h2>코드 근거와 확인 방법</h2>
+<p>본문의 행 번호는 ec3f3f6 기준이다. 링크는 복사본의 실제 소스 파일을 가리킨다.</p>
+<ol class="sources">
+<li id="s1"><a href="../../back/app/features/catalog/prompts/catalog/screen.py">catalog/screen.py</a> 136~173행: COUNT, DISTINCT 옵션, LIMIT/OFFSET, 관리자 통계. <a href="../../front/lib/db/repositories/catalog-page.ts">catalog-page.ts</a> 52~89행: legacy 동일 성격의 집계.</li>
+<li id="s2"><a href="../../back/app/features/projects/prompts/screen.py">projects/prompts/screen.py</a> 41~76·89~94행: 메타 집계·페이지·전체 태그 후보. <a href="../../front/lib/db/repositories/project-prompt-page.ts">project-prompt-page.ts</a>: 직접 DB 경로.</li>
+<li id="s3"><a href="../../back/app/features/analytics/kpi/summary/service.py">KPI summary/service.py</a> 155~167행, <a href="../../back/app/core/measure.py">core/measure.py</a> 569~699·833~842행: 집계 SQL 생성·실행. <a href="../../front/lib/hgh/client.ts">client.ts</a> 715행, <a href="../../front/lib/hgh/adapters/dashboard.ts">dashboard.ts</a> 284~298행: no-store·요청 내부 공유.</li>
+<li id="s4"><a href="../../back/app/core/config.py">core/config.py</a> 86·195행: 기본 비활성. <a href="../../back/app/core/result_cache.py">core/result_cache.py</a> 78~97·315행: GET 허용 목록·설정 게이트. <a href="../../back/app/features/analytics/kpi/summary/router.py">KPI router.py</a> 22행: 결과 캐시 표식. 로컬 docker inspect에서 캐시 변수의 설정 여부만 확인했다.</li>
+<li id="s5"><a href="../../front/lib/hgh/adapters/intent.ts">intent.ts</a> 822~858행: 500 × 20페이지·truncated 미전달. <a href="../../front/app/[locale]/(dash)/projects/[id]/intent/social-scraping/page.tsx">소셜 스크래핑 page.tsx</a> 74~89행: 실제 호출. <a href="../../front/components/social-scraping/context-map-view.tsx">context-map-view.tsx</a> 1155행: 받은 텍스트로 ‘이미 추가됨’ 결정.</li>
+<li id="s6"><a href="../../front/lib/hgh/adapters/intent.ts">intent.ts</a> 591~609행: 500 × 4페이지·경고 후 배열 반환. <a href="../../front/app/[locale]/(dash)/customer-interest/google-keywords/page.tsx">Google 키워드 page.tsx</a> 35행: 실제 호출. <a href="../../front/lib/hgh/paginate.ts">paginate.ts</a>: 상한 도달 시 truncate 동작.</li>
+<li id="s7"><a href="../../back/db/DB-v2.32.sql">DB-v2.32.sql</a> 455~532·708행: 파티션·인덱스·보고서 값. <a href="../../back/app/core/facts.py">core/facts.py</a> 41~67행: live/동결 테이블 선택. <a href="../../back/app/core/cycles.py">core/cycles.py</a> 122행: 범위 조건. <a href="../../back/app/core/db.py">core/db.py</a> 51·146행: 읽기 전용 트랜잭션.</li>
+</ol>
+<p class="meta">검증 범위: 소스·실제 페이지 호출 경로 추적, 기준 커밋과 디렉터리 diff, 로컬 컨테이너 설정 확인. 잔여 문제는 정적 코드 근거이며 새 런타임 재현이나 운영 EXPLAIN 결과로 표시하지 않았다.</p>
+<p><a href="00%20시작하기.html">개발 문서 목록</a> · <a href="17%20화면별%20내부%20리팩토링%20점검표.html">17 화면별 수정·검증</a> · <a href="18%20API%20호환성과%20실서버%20전환%20점검.html">18 API 호환성과 실서버 전환</a></p>
+</section>
+</main></body></html>

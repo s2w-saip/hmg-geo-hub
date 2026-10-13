@@ -1,0 +1,52 @@
+{
+  "date": "2026-10-13 KST",
+  "comparison": {
+    "original_commit": "392ca454a098365d772556cd980db3c870cf5592",
+    "copy_commit": "7fedc29aed4316950c08c3739bc4977bf028fa0a"
+  },
+  "existing_operations": 214,
+  "current_operations": 218,
+  "removed_operations": [],
+  "changed_existing_operations": [],
+  "added_operations": [
+    {
+      "method": "POST",
+      "path": "/v1/admin/catalog/prompts/screen"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/projects/{project_id}/prompt-candidates/screen"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/projects/{project_id}/prompts/screen"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/prompts/screen"
+    }
+  ],
+  "existing_schemas": 602,
+  "current_schemas": 612,
+  "removed_schemas": [],
+  "changed_existing_schemas": [],
+  "runtime_export_check": {
+    "original_matches_committed_openapi": true,
+    "copy_matches_committed_openapi": true,
+    "method": "Both apps imported in a local Docker container with --network none and readonly source mounts. No lifespan, DB or HTTP requests."
+  },
+  "source_check": {
+    "existing_backend_app_files_compared": 658,
+    "changed_existing_function_or_class_definitions": 0,
+    "changed_existing_next_api_files": 0,
+    "changed_auth_files": 0,
+    "db_ddl_changes": 0
+  },
+  "local_preview": {
+    "compiled_files_containing_mock_auth_url": 4,
+    "requires_production_rebuild": true,
+    "external_fetch_blocker": "e2e/lib/no-egress.cjs preloaded by the local launcher; exclude from real connection launch"
+  },
+  "production_calls": 0,
+  "verdict": "Existing API contracts are unchanged, but the new frontend requires four added endpoints in API mode. Repointing to an unchanged old backend is insufficient. Actual deployed server version, DB, credentials and integrations were not verified."
+}

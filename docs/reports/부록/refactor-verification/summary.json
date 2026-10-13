@@ -1,0 +1,487 @@
+{
+  "date": "2026-10-09 KST",
+  "scope": "Independent copy only; original Git clean. No production writes or external API/auth calls.",
+  "frontend": {
+    "baseline_commit": "f6f6f54",
+    "baseline": {
+      "passed": 8244,
+      "failed": 88,
+      "skipped": 148,
+      "total": 8480
+    },
+    "current": {
+      "passed": 8310,
+      "failed": 88,
+      "skipped": 151,
+      "total": 8549
+    },
+    "new_failures": [],
+    "baseline_failures": [
+      {
+        "file": "test/hgh-known-upstream-failures.test.ts",
+        "test": "hub known upstream failures lib/period/trend-grid-wiring.test.ts: names one test, in its file only"
+      },
+      {
+        "file": "test/hgh-known-upstream-failures.test.ts",
+        "test": "hub known upstream failures lib/scope/mirror-cache-cycle-mode.test.ts: names one test, in its file only"
+      },
+      {
+        "file": "test/hgh-known-upstream-failures.test.ts",
+        "test": "hub known upstream failures lib/summary/health/url-hits-coverage.test.ts: names one test, in its file only"
+      },
+      {
+        "file": "test/hgh-known-upstream-failures.test.ts",
+        "test": "hub known upstream failures lib/db/repositories/trend-grid-body-window.sql.test.ts: names one test, in its file only"
+      },
+      {
+        "file": "test/hgh-known-upstream-failures.test.ts",
+        "test": "hub known upstream failures app/[locale]/(dash)/standard/answer-analysis/_components/citations-standard-view.category-competitor.test.tsx: names one test, in its file only"
+      },
+      {
+        "file": "test/hgh-known-upstream-failures.test.ts",
+        "test": "hub known upstream failures app/[locale]/(dash)/standard/answer-analysis/_data/overview-read-filters.test.ts: names one test, in its file only"
+      },
+      {
+        "file": "components/dash/filter-draft-actions.test.ts",
+        "test": "패널 배선 — commit 지점은 `적용` 하나뿐 패널은 commit 을 **정의만** 하고 직접 부르지 않는다 (호출권은 팩토리의 apply)"
+      },
+      {
+        "file": "components/dash/trend-gap-band.render.test.tsx",
+        "test": "CategoryCompositionTrend — 갭 툴팁 배선 차트 블록을 찾았다"
+      },
+      {
+        "file": "components/dash/trend-gap-band.render.test.tsx",
+        "test": "CategoryCompositionTrend — 갭 툴팁 배선 filterNull={false} + GapAwareTooltip — 전 시리즈 null 인 갭 슬롯이 걷히지 않게"
+      },
+      {
+        "file": "components/dash/trend-gap-band.render.test.tsx",
+        "test": "CategoryCompositionTrend — 갭 툴팁 배선 음영은 Area 보다 **먼저** 선언된다 — 뒤에 깔려야 값을 가리지 않는다"
+      },
+      {
+        "file": "components/dash/trend-gap-band.render.test.tsx",
+        "test": "CategoryCompositionTrend — 갭 툴팁 배선 밴드는 Area **뒤에** 선언된다 — 같은 층에서는 삽입 순서가 위아래를 정한다"
+      },
+      {
+        "file": "lib/answer-sentiment/stance-evidence.test.ts",
+        "test": "getMirrorAnswerBody — 대조 배선 evidenceMatch 는 미러 원문(text)을 넣어 계산한다 — 오프셋 존재로 판정하지 않는다"
+      },
+      {
+        "file": "lib/answer-sentiment/stance-evidence.test.ts",
+        "test": "getMirrorAnswerBody — 대조 배선 턴도 함께 넘긴다 — turn>0 을 unavailable 로 떨어뜨리는 유일한 입력"
+      },
+      {
+        "file": "lib/db/schema.migration-0065.test.ts",
+        "test": "0065 — 집계층 스키마 개정 additive-only — DROP·TRUNCATE·RENAME 이 실행 경로에 없다"
+      },
+      {
+        "file": "lib/db/schema.migration-0065.test.ts",
+        "test": "0065 — 집계층 스키마 개정 `IF NOT EXISTS` 를 쓰지 않는다 — 락을 먼저 잡기 때문"
+      },
+      {
+        "file": "lib/db/schema.migration-0065.test.ts",
+        "test": "0065 — 집계층 스키마 개정 트랜잭션 블록 밖 적용을 막는 가드가 lock_timeout 직후에 있다"
+      },
+      {
+        "file": "lib/db/schema.migration-0066.test.ts",
+        "test": "0066 — 집계층 키 확장 tx 안에서 돌 수 있고 lock_timeout·tx 가드가 첫 DDL 앞에 있다"
+      },
+      {
+        "file": "lib/db/schema.migration-0066.test.ts",
+        "test": "0066 — 집계층 키 확장 TRUNCATE 대상이 집계층 4표뿐이다 — 세부층·원장에 번지면 안 된다"
+      },
+      {
+        "file": "lib/db/schema.migration-0066.test.ts",
+        "test": "0066 — 집계층 키 확장 PK 4개의 컬럼 목록이 순서까지 고정돼 있다"
+      },
+      {
+        "file": "lib/db/schema.migration-0067.test.ts",
+        "test": "0067 — PR③ 위생 tx 안에서 돌 수 있고 lock_timeout·tx 가드가 첫 DDL 앞에 있다"
+      },
+      {
+        "file": "lib/db/schema.migration-0067.test.ts",
+        "test": "0067 — PR③ 위생 additive-only — DROP·TRUNCATE·UPDATE 가 실행 경로에 하나도 없다"
+      },
+      {
+        "file": "lib/db/schema.migration-0067.test.ts",
+        "test": "0067 — PR③ 위생 인덱스를 만들지도 지우지도 않는다 — 재실측 근거가 파일에 남아 있다"
+      },
+      {
+        "file": "lib/db/schema.migration-0068.test.ts",
+        "test": "0068 — PR④ A2 커버링 인덱스 tx 안에서 돌 수 있고 lock_timeout·tx 가드가 첫 DDL 앞에 있다"
+      },
+      {
+        "file": "lib/db/schema.migration-0068.test.ts",
+        "test": "0068 — PR④ A2 커버링 인덱스 값 무변경 — 인덱스와 ANALYZE 말고는 아무것도 하지 않는다"
+      },
+      {
+        "file": "lib/db/schema.migration-0068.test.ts",
+        "test": "0068 — PR④ A2 커버링 인덱스 부분 술어에는 **리터럴 게이트만** 들어간다 (파라미터 컬럼 금지)"
+      },
+      {
+        "file": "lib/db/schema.migration-0069.test.ts",
+        "test": "0069 — 집계층 경쟁 순위 2컬럼 tx 안에서 돌 수 있고 lock_timeout·tx 가드가 첫 DDL 앞에 있다"
+      },
+      {
+        "file": "lib/db/schema.migration-0069.test.ts",
+        "test": "0069 — 집계층 경쟁 순위 2컬럼 additive-only — DROP·TRUNCATE·UPDATE·ALTER TYPE 이 실행 경로에 하나도 없다"
+      },
+      {
+        "file": "lib/db/schema.migration-0070.test.ts",
+        "test": "0070 — 회차 원장 숨김 tx 안에서 돌 수 있고 lock_timeout·tx 가드가 첫 DDL 앞에 있다"
+      },
+      {
+        "file": "lib/db/schema.migration-0070.test.ts",
+        "test": "0070 — 회차 원장 숨김 `IF NOT EXISTS` 를 쓰지 않는다 — 락을 먼저 잡기 때문"
+      },
+      {
+        "file": "lib/db/schema.migration-0070.test.ts",
+        "test": "0070 — 회차 원장 숨김 additive-only — DROP·TRUNCATE·UPDATE 가 실행 경로에 하나도 없다"
+      },
+      {
+        "file": "lib/db/schema.migration-0071.test.ts",
+        "test": "0071 — 회차 숨김 범위 tx 안에서 돌 수 있고 lock_timeout·tx 가드가 첫 DDL 앞에 있다"
+      },
+      {
+        "file": "lib/db/schema.migration-0071.test.ts",
+        "test": "0071 — 회차 숨김 범위 `IF NOT EXISTS` 를 쓰지 않는다 — 락을 먼저 잡기 때문"
+      },
+      {
+        "file": "lib/db/schema.migration-0071.test.ts",
+        "test": "0071 — 회차 숨김 범위 additive-only — DROP·TRUNCATE·UPDATE 가 실행 경로에 하나도 없다"
+      },
+      {
+        "file": "lib/db/schema.migration-0072.test.ts",
+        "test": "0072 — 답변 단위 브랜드 스탠스 미러 additive-only — 기존 테이블 ALTER·DROP·TRUNCATE 가 실행 경로에 없다"
+      },
+      {
+        "file": "lib/db/schema.migration-0072.test.ts",
+        "test": "0072 — 답변 단위 브랜드 스탠스 미러 드롭 레지스트리에 등재 — 스탠스가 **먼저**, 0054 의 삭제 3개는 그대로"
+      },
+      {
+        "file": "lib/db/schema.migration-0080.test.ts",
+        "test": "0080 — 발행 리포트 사실표 tx 안에서 돌 수 있고 lock_timeout·tx 가드가 첫 DDL 앞에 있다"
+      },
+      {
+        "file": "lib/period/anchor-axis-cache-key.test.ts",
+        "test": "미러 집계 셀 — 축 on 에서만 셀이 갈린다 축 on 은 [축 조각, (회차 조각)] 을 가진 **다른 셀**이다 — 회차 조각은 셀 모드를 따른다"
+      },
+      {
+        "file": "lib/period/anchor-axis-wiring.test.ts",
+        "test": "플래그 → 달력 (스펙 §5.1) OverviewFilters 가 prop 을 패널까지 중계한다"
+      },
+      {
+        "file": "lib/period/anchor-axis-wiring.test.ts",
+        "test": "플래그 → 달력 (스펙 §5.1) AnalysisFilterBar 가 prop 을 패널까지 중계한다"
+      },
+      {
+        "file": "lib/period/anchor-axis-wiring.test.ts",
+        "test": "플래그 → 달력 (스펙 §5.1) WebsiteFilters 가 prop 을 패널까지 중계한다"
+      },
+      {
+        "file": "lib/period/anchor-axis-wiring.test.ts",
+        "test": "플래그 → 달력 (스펙 §5.1) MentionsView 가 prop 을 패널까지 중계한다"
+      },
+      {
+        "file": "lib/period/anchor-axis-wiring.test.ts",
+        "test": "플래그 → 달력 (스펙 §5.1) CitationsView 가 prop 을 패널까지 중계한다"
+      },
+      {
+        "file": "lib/period/anchor-axis-wiring.test.ts",
+        "test": "플래그 → 달력 (스펙 §5.1) AcrLiveView 가 prop 을 패널까지 중계한다"
+      },
+      {
+        "file": "lib/period/anchor-axis-wiring.test.ts",
+        "test": "플래그 → 달력 (스펙 §5.1) WebsitePromptFilters 가 prop 을 패널까지 중계한다"
+      },
+      {
+        "file": "lib/period/anchor-axis-wiring.test.ts",
+        "test": "플래그 → 달력 (스펙 §5.1) 필터 패널을 그리는 파일은 전부 selectableDates 를 넘기거나 면제 목록에 있다"
+      },
+      {
+        "file": "lib/period/anchor-axis-wiring.test.ts",
+        "test": "round_date 리터럴 단일화 순환이 없다 — 정본 모듈은 drizzle 만 import 한다"
+      },
+      {
+        "file": "lib/period/trend-grid-wiring.test.ts",
+        "test": "미러 추이 — 모든 allRuns 진입점이 판정을 확정한다 지역 스코핑 술어의 **정의**는 한 벌이다 (접두 판본은 감싸기만 한다)"
+      },
+      {
+        "file": "lib/period/trend-grid-wiring.test.ts",
+        "test": "dim 조인 조각과 caJoined 는 같은 호출부에서 함께 쓴다 `caJoined`·`svJoined` 는 `trendMirrorJoins()` 한 곳에서만 온다"
+      },
+      {
+        "file": "lib/period/trend-grid-wiring.test.ts",
+        "test": "격자에 갇히는 리더의 창 바닥 (통합 B1) 세 호출부가 `true` 를 명시한다"
+      },
+      {
+        "file": "lib/public-suffix/index.test.ts",
+        "test": "upstream PSL test vectors registrableDomain matches every vector except the enumerated PRIVATE-section ones"
+      },
+      {
+        "file": "lib/scope/anchor-root.test.ts",
+        "test": "경로 배선 — 어느 판을 쓰는지 관제는 적용 **직전에** 막는다 (여기서 던지면 크론 라우트가 죽는다)"
+      },
+      {
+        "file": "lib/scope/paging.call-sites.test.ts",
+        "test": "회귀 그물 — 커서 페이징은 공용 헬퍼 밖에 존재하지 않는다 허용 목록 밖의 파일은 next_cursor 를 직접 다루지 않는다"
+      },
+      {
+        "file": "lib/scope/paging.call-sites.test.ts",
+        "test": "회귀 그물 — 커서 페이징은 공용 헬퍼 밖에 존재하지 않는다 상한 있는 for 루프 + next_cursor(=조용한 절단)의 모양이 남아 있지 않다"
+      },
+      {
+        "file": "lib/scope/paging.call-sites.test.ts",
+        "test": "회귀 그물 — 커서 페이징은 공용 헬퍼 밖에 존재하지 않는다 프롬프트를 페이징하는 파일은 전부 pageAll 을 import 한다"
+      },
+      {
+        "file": "lib/scope/server.fallback-destination.test.ts",
+        "test": "집계층 게이트는 `agg-*` 를 모드에 맞는 목적지로 보낸다 viaTrend: onDetail 인자를 받고, agg 판정 분기가 aggFallback() 로 간다"
+      },
+      {
+        "file": "lib/scope/server.fallback-destination.test.ts",
+        "test": "집계층 게이트는 `agg-*` 를 모드에 맞는 목적지로 보낸다 viaGlobalS1: onDetail 인자를 받고, agg 판정 분기가 aggFallback() 로 간다"
+      },
+      {
+        "file": "lib/scope/server.fallback-destination.test.ts",
+        "test": "집계층 게이트는 `agg-*` 를 모드에 맞는 목적지로 보낸다 viaGlobalTrend: onDetail 인자를 받고, agg 판정 분기가 aggFallback() 로 간다"
+      },
+      {
+        "file": "lib/scope/server.gap-wiring.test.ts",
+        "test": "0071 — 갭 키 계열 배선 4-KPI 탭 3종은 언급 계열이고 갭 키·자리 목록이 같은 스코프를 본다"
+      },
+      {
+        "file": "lib/scope/server.gap-wiring.test.ts",
+        "test": "0071 — 갭 키 계열 배선 브랜드 추이는 4-KPI 탭 호출에만 격자를 얹는다"
+      },
+      {
+        "file": "lib/scope/server.gap-wiring.test.ts",
+        "test": "격자 배선 전수 async function fetchStandardTrendImpl( 는 단위를 입구에 넘긴다"
+      },
+      {
+        "file": "lib/scope/server.gap-wiring.test.ts",
+        "test": "격자 배선 전수 export async function fetchWebsiteTrend( 는 단위를 입구에 넘긴다"
+      },
+      {
+        "file": "lib/scope/server.gap-wiring.test.ts",
+        "test": "격자 배선 전수 export async function fetchProjectTrend( 는 단위를 입구에 넘긴다"
+      },
+      {
+        "file": "lib/scope/server.gap-wiring.test.ts",
+        "test": "격자 배선 전수 export async function fetchWebsiteCitationAccuracyTrend( 는 단위를 입구에 넘긴다"
+      },
+      {
+        "file": "lib/scope/server.gap-wiring.test.ts",
+        "test": "격자 배선 전수 export async function fetchProjectCitationAccuracyTrend( 는 단위를 입구에 넘긴다"
+      },
+      {
+        "file": "lib/scope/server.global-trend-fleet-visible.test.ts",
+        "test": "viaGlobalSeries — 추이 회차 집합은 대표만 ② 캐시 키·접기 검사도 거른 뒤 집합을 넘긴다"
+      },
+      {
+        "file": "lib/scope/server.global-trend-fleet-visible.test.ts",
+        "test": "viaGlobalSeries — 추이 회차 집합은 대표만 ③″ 인용·누적 게이트는 이 규칙을 안 탄다"
+      },
+      {
+        "file": "lib/scope/server.period-route.test.ts",
+        "test": "기간 경로 스위치 배선 두 게이트가 **화면 키로** 판정한다: 게이트 단위 판정 금지"
+      },
+      {
+        "file": "lib/scope/server.website-subkpis-budget.test.ts",
+        "test": "A4 — 무예산 Sub-KPI 미러 호출부는 명시 이월분뿐이다 예산이 없는 호출부 = 이월 목록과 정확히 같다"
+      },
+      {
+        "file": "lib/scope/server.website-url-rates-summary.test.ts",
+        "test": "websiteTargetHitRateLive: 사실표 우선·미러 폴백 유닛 자사 판정이 꺼져 있으면 게이트를 묻지도 않고 **종전 미러 셀**로 간다"
+      },
+      {
+        "file": "scripts/db/answer-cycle-anchors-sql.pglite.test.ts",
+        "test": "변이 검증 — 이 테스트가 실제로 그 두 결함을 잡는가 `min(uuid)` 로 되돌리면 dry-run 과 refresh 가 둘 다 실패한다"
+      },
+      {
+        "file": "scripts/db/backfill-answer-cycle-anchors.test.ts",
+        "test": "BLOCK-1 — 하한 단언은 rowcount 가 아니라 배치 후 상태다 상태 질의는 '대상 job 이 전부 있고 파생 키가 맞는가' 를 센다"
+      },
+      {
+        "file": "scripts/db/backfill-answer-cycle-anchors.test.ts",
+        "test": "BLOCK-3 — 출처 없는 답변은 시작 전에 끊는다 배치 단언도 출처 없는 행을 기대 집합에서 뺀다"
+      },
+      {
+        "file": "lib/db/migrations/0077_scope_answer_cycle_anchors.sql.test.ts",
+        "test": "③ 노출 게이트 (스펙 §3.3 + §9 노출) 숨김은 이 테이블에 복사하지 않는다 (R3) — 컬럼도 값도 없다"
+      },
+      {
+        "file": "lib/db/migrations/0077_scope_answer_cycle_anchors.sql.test.ts",
+        "test": "정규 요일 귀속 — 회차를 표면의 정규 요일 자리에 앉힌다 schema.ts 가 매핑 표와 round_date 를 안다 (db:drift 기준선)"
+      },
+      {
+        "file": "lib/db/migrations/0078_answer_cycle_anchor_hot_path.pglite.test.ts",
+        "test": "롤백 SQL 붙여넣은 0077 함수 본문이 0077 파일과 **문자 단위로** 같다"
+      },
+      {
+        "file": "lib/db/repositories/scope-aggregates.answer-body-spans.test.ts",
+        "test": "getMirrorAnswerBody — 감성 span 읽기 경로 발생 테이블은 프로브 뒤에만 읽는다"
+      },
+      {
+        "file": "lib/db/repositories/scope-aggregates.answer-body-spans.test.ts",
+        "test": "getMirrorAnswerBody — 감성 span 읽기 경로 당사 판정은 trackedIds 를 재사용한다"
+      },
+      {
+        "file": "lib/db/repositories/scope-aggregates.answer-body-spans.test.ts",
+        "test": "getMirrorAnswerBody — 감성 span 읽기 경로 sentiment 는 발생이 있을 때만 실린다"
+      },
+      {
+        "file": "lib/db/repositories/scope-aggregates.column-availability.test.ts",
+        "test": "진입점 계약 — export 된 async 함수는 전부 ensure 를 먼저 await 한다 excludeHiddenCycleRuns 은 SQL 을 만들기 전에 ensureColumnAvailability 를 await 한다"
+      },
+      {
+        "file": "lib/db/repositories/scope-aggregates.column-availability.test.ts",
+        "test": "진입점 계약 — export 된 async 함수는 전부 ensure 를 먼저 await 한다 trendWeekKey 은 SQL 을 만들기 전에 ensureColumnAvailability 를 await 한다"
+      },
+      {
+        "file": "lib/db/repositories/scope-aggregates.column-availability.test.ts",
+        "test": "진입점 계약 — export 된 async 함수는 전부 ensure 를 먼저 await 한다 standardCollectionDates 은 SQL 을 만들기 전에 ensureColumnAvailability 를 await 한다"
+      },
+      {
+        "file": "lib/db/repositories/scope-aggregates.column-availability.test.ts",
+        "test": "앵커 축 계약 — 축을 쓰는 진입점은 ensureAnchorAxis 를 먼저 await 한다 excludeHiddenCycleRuns 은 SQL 을 만들기 전에 ensureAnchorAxis 를 await 한다"
+      },
+      {
+        "file": "lib/db/repositories/scope-aggregates.column-availability.test.ts",
+        "test": "앵커 축 계약 — 축을 쓰는 진입점은 ensureAnchorAxis 를 먼저 await 한다 trendWeekKey 은 SQL 을 만들기 전에 ensureAnchorAxis 를 await 한다"
+      },
+      {
+        "file": "lib/db/repositories/scope-aggregates.column-availability.test.ts",
+        "test": "앵커 축 계약 — 축을 쓰는 진입점은 ensureAnchorAxis 를 먼저 await 한다 standardCollectionDates 은 SQL 을 만들기 전에 ensureAnchorAxis 를 await 한다"
+      },
+      {
+        "file": "lib/db/repositories/scope-aggregates.hidden-cycle.test.ts",
+        "test": "리더 → 계열 매핑 (§4-1) export async function aggregateStandardTrendFromMirror( → mention"
+      },
+      {
+        "file": "lib/db/repositories/trend-grid-body-window.sql.test.ts",
+        "test": "배선 — 헬퍼가 읽기 필터를 건드리지 않는다 헬퍼 안에서 `withTrendGridWindow` 를 쓰지 않는다 (회귀의 직접 원인)"
+      },
+      {
+        "file": "app/[locale]/(dash)/website/website-summary-deferred.test.tsx",
+        "test": "WebsiteSummarySection — 타일이 기다리는 read (PR③-a) `live` 하나만 await 한다 — Promise.all 로 되돌리면 깨진다"
+      },
+      {
+        "file": "app/[locale]/(dash)/website/website-summary-deferred.test.tsx",
+        "test": "WebsiteSummarySection — 타일이 기다리는 read (PR③-a) `subKpis`·`trend` 는 지연 맵 안에서만 소비된다"
+      }
+    ],
+    "final_targeted_passed": 87,
+    "native_postgresql_tests_passed": 3,
+    "typecheck": "passed",
+    "changed_file_eslint": "passed"
+  },
+  "backend": {
+    "catalog_admin_project_passed": 257,
+    "workers_watch_pull_passed": 93,
+    "final_changed_subset_passed": 24,
+    "ruff": "passed",
+    "generated_openapi_and_types": "matched"
+  },
+  "browser_scenarios": {
+    "browser-standard-results.json": {
+      "mode": "standard",
+      "date": "2026-10-08T15:43:06.857Z",
+      "passed": [
+        "Standard: 12005 matching rows; 50 mounted rows; global text sort and page two",
+        "Standard: page size resets page; draft filter waits for Apply; correct total",
+        "Standard: downloaded XLSX contains all 12005 rows in sorted order"
+      ],
+      "errors": []
+    },
+    "browser-admin-results.json": {
+      "mode": "admin",
+      "date": "2026-10-08T15:44:04.916Z",
+      "passed": [
+        "Admin: 12005 rows; deep scroll reaches final row; <=200 mounted rows",
+        "Admin: CSV contains all 12005 filtered rows",
+        "Admin: deleted view and restore control remain available"
+      ],
+      "errors": []
+    },
+    "browser-project-results.json": {
+      "mode": "project",
+      "date": "2026-10-08T15:49:13.876Z",
+      "passed": [
+        "Project: select all includes 25002 rows, including rows not mounted",
+        "Project: global text sorting and deep scroll reach row 25001; <=200 mounted",
+        "Project: unsaved tag survives row unmount/remount"
+      ],
+      "errors": []
+    },
+    "browser-qa-results.json": {
+      "mode": "qa",
+      "date": "2026-10-08T15:50:39.337Z",
+      "passed": [
+        "QA: failed save shows error, retains verdict and never shows saved",
+        "QA: successful retry persists verdict after reload",
+        "QA: heartbeat failure disables editing while keeping current verdict",
+        "QA: failed initial lock blocks save and note shortcut"
+      ]
+    },
+    "browser-final-results.json": {
+      "date": "2026-10-08T16:06:29.698Z",
+      "passed": [
+        "standard/prompts: Korean browser reload uses ko collation",
+        "admin/standards/prompts: Korean browser reload uses ko collation",
+        "citation-sources: normal read, injected 503 visible, retry recovers",
+        "entities: normal read, injected 503 visible, retry recovers",
+        "Bulk: second chunk fails; 1000 confirmed, 24002 selected, input retained",
+        "Bulk: retry remaining 24002 succeeds and selection clears"
+      ]
+    }
+  },
+  "visual_comparison": [
+    {
+      "screen": "standard",
+      "baseline": "standard-baseline.png",
+      "current": "standard-current.png",
+      "identical_capture": true,
+      "sha256": [
+        "6de804fb05951431604d6eb0de113c791fe2c6177d401e014bd6440743f13564",
+        "6de804fb05951431604d6eb0de113c791fe2c6177d401e014bd6440743f13564"
+      ]
+    },
+    {
+      "screen": "admin",
+      "baseline": "admin-baseline.png",
+      "current": "admin-current.png",
+      "identical_capture": true,
+      "sha256": [
+        "7e281d66baab8411657561c2fdbbd06faa5d57e6c94a74e2b09b80c14535782d",
+        "7e281d66baab8411657561c2fdbbd06faa5d57e6c94a74e2b09b80c14535782d"
+      ]
+    },
+    {
+      "screen": "project",
+      "baseline": "project-baseline.png",
+      "current": "project-current.png",
+      "identical_capture": true,
+      "sha256": [
+        "79b72c8ccb8931adadd2a6fcae082127094400a6f857f767c3a1ae46d42a2039",
+        "79b72c8ccb8931adadd2a6fcae082127094400a6f857f767c3a1ae46d42a2039"
+      ]
+    }
+  ],
+  "local_services": {
+    "next": "127.0.0.1:3130",
+    "backend": "127.0.0.1:18080",
+    "postgres": "127.0.0.1:25432 / hmg_preserve_browser",
+    "mock_auth": "127.0.0.1:54399",
+    "password_logins": 1,
+    "jwks_reads": 24,
+    "production_auth_requests": 0,
+    "stopped_at_initial_verification": true,
+    "current_mode": "Running again at user request; next start at 3130. See performance.json."
+  },
+  "not_executed": [
+    "Production DB / deployment",
+    "Live GA4, Scope, DataForSEO calls",
+    "Production ICU collation availability"
+  ],
+  "followup_performance": "performance.json"
+}

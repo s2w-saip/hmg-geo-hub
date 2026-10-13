@@ -1,0 +1,223 @@
+{
+  "createdAt": "2026-10-08T03:49:36.052Z",
+  "nodeVersion": "v22.18.0",
+  "method": "Unmodified source fragments executed after Node TypeScript type stripping; external dependencies are mocks. Static checks connect handlers to UI. Not E2E, load, production DB, or live network testing.",
+  "scope": "hmg-geo-hub-share, local source snapshot",
+  "summary": {
+    "total": 11,
+    "passed": 11
+  },
+  "checks": [
+    {
+      "id": "R01",
+      "title": "표준 카탈로그: 10,001건 전량 반환",
+      "status": "PASS",
+      "evidence": {
+        "fixtureRows": 10001,
+        "returnedRows": 10001,
+        "apiCalls": 1,
+        "allParameter": true,
+        "uiDefaultPageSizeSource": 50,
+        "uiRenderedInBrowser": false
+      }
+    },
+    {
+      "id": "R02",
+      "title": "관리자 목록: 10,000건 성공 / 10,001건 실패",
+      "status": "PASS",
+      "evidence": {
+        "atLimit": {
+          "calls": 20,
+          "returnedRows": 10000,
+          "error": null
+        },
+        "overLimit": {
+          "calls": 20,
+          "returnedRows": null,
+          "error": "more than 20 pages",
+          "status": 500,
+          "code": "mock_local_page_limit"
+        },
+        "transport": "synthetic page fetcher; real pagination helper and caller constants"
+      }
+    },
+    {
+      "id": "R03",
+      "title": "프로젝트 프롬프트 목록: 20,001건에서 실패",
+      "status": "PASS",
+      "evidence": {
+        "fixtureRows": 20001,
+        "calls": 40,
+        "returnedRows": null,
+        "error": "more than 40 pages",
+        "status": 500,
+        "code": "mock_local_page_limit"
+      }
+    },
+    {
+      "id": "R04",
+      "title": "QA 저장: 401·422·500을 무시하고 이전 savedAt 유지",
+      "status": "PASS",
+      "evidence": {
+        "ignoredStatuses": [
+          401,
+          422,
+          500
+        ],
+        "savedIndicatorConditionStillTrue": true,
+        "refreshes": 1,
+        "networkErrorPropagatedWithoutLocalHandler": true,
+        "reactRenderingTested": false
+      }
+    },
+    {
+      "id": "R05",
+      "title": "QA 잠금: 서버 500 응답 후에도 편집 가능 상태 유지",
+      "status": "PASS",
+      "evidence": {
+        "lockHttpStatus": 500,
+        "readOnlyAfterResponse": false,
+        "backendSaveLockProtection": "separate; this test does not claim concurrent writes bypass the lock"
+      }
+    },
+    {
+      "id": "R06",
+      "title": "일괄 태깅: 1,001건 중 첫 1,000건 성공 후 두 번째 청크 실패",
+      "status": "PASS",
+      "evidence": {
+        "selectedRows": 1001,
+        "mockCommittedRows": 1000,
+        "apiCalls": 2,
+        "returned": {
+          "ok": false,
+          "error": "second chunk rejected"
+        },
+        "realDatabaseUsed": false
+      }
+    },
+    {
+      "id": "R07",
+      "title": "GA4 설정 DB 장애: 선택 이벤트 2건 → 기본 keyEvents 12건",
+      "status": "PASS",
+      "evidence": {
+        "healthy": {
+          "spec": [
+            "test_drive"
+          ],
+          "users": 20,
+          "keyEvents": 2
+        },
+        "failedConfig": {
+          "spec": null,
+          "users": 20,
+          "keyEvents": 12
+        },
+        "reportCalls": 3,
+        "note": "Counts are synthetic. This verifies switching the numerator, not production GA4 values."
+      }
+    },
+    {
+      "id": "R08",
+      "title": "GA4 지역 집계: 일부·전부 실패해도 정상 반환, 캐시 TTL 86,400초",
+      "status": "PASS",
+      "evidence": {
+        "partial": {
+          "aiConvRate": 20,
+          "humanConvRate": 10,
+          "lift": 10,
+          "measuredMarkets": 1,
+          "totalMarkets": 2,
+          "totalAiUsers": 10,
+          "totalHumanUsers": 20,
+          "totalAiKeyEvents": 2,
+          "totalHumanKeyEvents": 2,
+          "byCountry": [
+            {
+              "brand": "brand",
+              "country": "AA",
+              "aiConvRate": 20,
+              "humanConvRate": 10,
+              "lift": 10,
+              "aiUsers": 10,
+              "humanUsers": 20
+            }
+          ]
+        },
+        "failedAll": {
+          "aiConvRate": 0,
+          "humanConvRate": 0,
+          "lift": 0,
+          "measuredMarkets": 0,
+          "totalMarkets": 2,
+          "totalAiUsers": 0,
+          "totalHumanUsers": 0,
+          "totalAiKeyEvents": 0,
+          "totalHumanKeyEvents": 0,
+          "byCountry": []
+        },
+        "cacheRevalidateSeconds": 86400,
+        "warningCount": 3,
+        "actualNextCacheLifecycleTested": false
+      }
+    },
+    {
+      "id": "R09",
+      "title": "관리자 조회: 500 응답을 빈 배열로 축소, 인증 오류는 다시 throw",
+      "status": "PASS",
+      "evidence": {
+        "backendStatus": 500,
+        "returnedRows": 0,
+        "serverWarnings": 1,
+        "authErrorsRethrown": true,
+        "note": "Silent to the page user; API path does retain a server warning."
+      }
+    },
+    {
+      "id": "R10",
+      "title": "키워드 캐시: 일시적 DB 오류 후 복구되어도 캐시 재사용 중단",
+      "status": "PASS",
+      "evidence": [
+        {
+          "failedOperation": "get",
+          "repositoryReads": 1,
+          "repositoryWrites": 0,
+          "repeatedComputations": 3,
+          "databaseRecoveredAfterFirstRequest": true
+        },
+        {
+          "failedOperation": "set",
+          "repositoryReads": 1,
+          "repositoryWrites": 1,
+          "repeatedComputations": 3,
+          "databaseRecoveredAfterFirstRequest": true
+        }
+      ]
+    },
+    {
+      "id": "R11",
+      "title": "GA4 runReport: 응답 지연 시 자체 timeout·취소 signal 없음",
+      "status": "PASS",
+      "evidence": {
+        "fetchSignalProvided": false,
+        "testWatchdogMs": 20,
+        "outcome": "still-pending-at-test-watchdog",
+        "releasedAndCompletedAfterObservation": true,
+        "note": "Synthetic pending fetch. This does not measure real provider latency or override platform/network timeouts."
+      }
+    }
+  ],
+  "sourceSha256": {
+    "front/lib/hgh/paginate.ts": "0414cd2dd00568ba72641f1d860e541fda991eff7f805d204495e55e78bd8092",
+    "front/lib/hgh/adapters/catalog.ts": "43f4be588b69084c139aca131d5293bb63075844ee18dae28df57b1a2865f76f",
+    "front/app/[locale]/(dash)/standard/prompts/_components/prompt-list-readonly.tsx": "71bbc7a5b119537866d2f2aba9c4349035c9f776d659105642a1ea4a9388d3ef",
+    "front/lib/hgh/adapters/admin.ts": "d3653e716460e07ff847461bcde5fe6d5e1f34c1c4fcd7a036cb8f8eb5629433",
+    "front/lib/hgh/adapters/projects.ts": "f41ff7cd4f73891fa62ae893efbbaae179723d7267ace37cc422bcd0893e5033",
+    "front/app/[locale]/raw-data-qa/answers/[jobId]/_components/detail-shell.tsx": "cc4b318e6361f38a3f60dc3218c0c239d2834bbfbfe143e30cf6c4834b840d68",
+    "front/app/[locale]/raw-data-qa/answers/[jobId]/_components/verdict-bar.tsx": "5d430d510295e6c38fc1ca639a16f1f6488484d8388f656e701a11b018e05fd3",
+    "front/app/[locale]/(dash)/projects/[id]/prompt/_actions.ts": "1385112fe194194b46c230df56f3cdc0ac822350968218c2fac60eb16252e1dc",
+    "front/lib/ga4/conversion.ts": "1491689f74a23d0be1e6fe171838aeaccfb51af336d80ee7313918bc82966ad3",
+    "front/lib/keyword/cache.ts": "bc265ec4f61283ba1f00ef54fd411a0d075469182fb528a4130b46f42d4968cd",
+    "front/lib/keyword/insight.ts": "fd733da6dc654b9d78a127469d7d9e47847d562faeabe6bc436b340891333f42",
+    "front/lib/ga4/client.ts": "ab302bcd8fdcf9dfd6d8bd53f07c677b00f062cae84a9309b446c61ad95d15e0"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "mode": "admin",
+  "date": "2026-10-08T15:44:04.916Z",
+  "passed": [
+    "Admin: 12005 rows; deep scroll reaches final row; <=200 mounted rows",
+    "Admin: CSV contains all 12005 filtered rows",
+    "Admin: deleted view and restore control remain available"
+  ],
+  "errors": []
+}

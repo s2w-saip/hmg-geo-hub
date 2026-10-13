@@ -1,0 +1,195 @@
+{
+  "date": "2026-10-13T04:13:08.511647+00:00",
+  "status": "design_only_not_implemented",
+  "code_head": "15e0b1ce0a18a2db3bf3a9f62c6ea26dff836c55",
+  "method": "Static HTML structure, local references, 17-group inventory coverage and source-backed design review. No application/API/auth/DB requests or mutations. Public PostgreSQL documentation read only.",
+  "checks": [
+    {
+      "path": "개발 핵심 문서/21 통계 데이터 사전 집계 적재 설계.html",
+      "balanced_html": true,
+      "unique_ids": true,
+      "link_count": 42,
+      "tables": 11,
+      "broken_local_links": []
+    },
+    {
+      "path": "개발 핵심 문서/00 시작하기.html",
+      "balanced_html": true,
+      "unique_ids": true,
+      "link_count": 41,
+      "tables": 1,
+      "broken_local_links": "Historical links outside this edit were not asserted; new report link verified."
+    }
+  ],
+  "coverage": {
+    "previous_audit_groups": 14,
+    "supplemental_groups": 3,
+    "group_ids": [
+      "S01",
+      "S02",
+      "S03",
+      "S04",
+      "S05",
+      "S06",
+      "S07",
+      "S08",
+      "S09",
+      "S10",
+      "S11",
+      "S12",
+      "S13",
+      "S14",
+      "S15",
+      "S16",
+      "S17"
+    ]
+  },
+  "design_reviews": [
+    {
+      "area": "Metric semantics",
+      "changes": [
+        "Explicit global M05 vs owned citation distinction",
+        "HMG answer-level union exposure and minimum nonzero rank",
+        "Separate prompt, answer and published-unit URL counts",
+        "ACR model denominator preserves per-entity-row contributions under display-name grouping; distinct cells remains separate",
+        "GA4 total/page/event report boundaries and nonadditive users retained"
+      ]
+    },
+    {
+      "area": "Consistency and lifecycle",
+      "changes": [
+        "Consistent extraction snapshot rather than max load ID filtering",
+        "Versioned slices, empty replacement and atomic manifest activation",
+        "CAS/rebase to avoid lost updates between independent builds",
+        "Published late data waits for existing republication path",
+        "QA state and counters updated in same transaction"
+      ]
+    },
+    {
+      "area": "Compatibility and implementation boundary",
+      "changes": [
+        "Live/card/grid/profile routing preserved",
+        "Permissions before aggregation; rollup eligibility requires all filters represented",
+        "Per-request consistency distinguished from separate browser requests",
+        "Internal failure states do not add public API fields implicitly",
+        "No application, database schema or worker changes in this task"
+      ]
+    }
+  ],
+  "not_performed": [
+    "Implementation or SQL migration execution",
+    "Database EXPLAIN or timing tests",
+    "Production deployment or production API access",
+    "Browser visual rendering"
+  ],
+  "source_files": [
+    {
+      "path": "hmg-geo-hub-share/back/app/core/measure.py",
+      "sha256": "60202f00049a1b9296357991b8bcfb3a95323a99de015dd2c11be9b999726cfa"
+    },
+    {
+      "path": "hmg-geo-hub-share/back/app/core/facts.py",
+      "sha256": "4682303f72b65833b8c3bd8c2b994292ad2185ba0a259a7a70c86dbc60011fff"
+    },
+    {
+      "path": "hmg-geo-hub-share/back/app/core/profile.py",
+      "sha256": "836d1cee5d23fee4c259d0c252ef1e6343636b7efbf3f957d0bb7a0a120af27c"
+    },
+    {
+      "path": "hmg-geo-hub-share/back/app/core/cycles.py",
+      "sha256": "759d8f98c628a5b1650e8a9e31bccf73d9ba1afc10abfd4ca397bf8fe81f05df"
+    },
+    {
+      "path": "hmg-geo-hub-share/back/db/DB-v2.32.sql",
+      "sha256": "028e7607ea21e7b4e742e5626d676e9f23623e3ee9d49e56b14f988b5f79f5c2"
+    },
+    {
+      "path": "hmg-geo-hub-share/back/app/features/analytics/mentions/brands/queries.py",
+      "sha256": "e51d38666c3d1f59d81cfd4b73b31aee3296ae2279afa6adfd5103332638c911"
+    },
+    {
+      "path": "hmg-geo-hub-share/back/app/features/analytics/citations/domains/queries.py",
+      "sha256": "abb50f2dee410d033ea7f91be8955ac9409890990fa657a86c877cca16d33fc7"
+    },
+    {
+      "path": "hmg-geo-hub-share/back/app/features/analytics/citations/sources/queries.py",
+      "sha256": "c7687799b75e6c790bfe10ba1f33cffc6e2e489bc0b51fa80261f88cb9696b50"
+    },
+    {
+      "path": "hmg-geo-hub-share/back/app/features/analytics/funnel/acr/schemas.py",
+      "sha256": "0a1fff7ede9b8332f6c508d7011bf41fdd8c1d6fea4c9c6012272bcc7cfaaebc"
+    },
+    {
+      "path": "hmg-geo-hub-share/back/app/features/analytics/funnel/acr/queries.py",
+      "sha256": "395acb4d53552bd8ce2572dd3fab8fd25382ef8d8676b8e8ca4e232f9fe3797a"
+    },
+    {
+      "path": "hmg-geo-hub-share/back/app/features/analytics/funnel/conversion/queries.py",
+      "sha256": "f4d5586b17c0438cc6c45c887a3c5a7a3a854b0d5bd30c38b9c08657ddae3e7e"
+    },
+    {
+      "path": "hmg-geo-hub-share/back/app/features/analytics/funnel/conversion/schemas.py",
+      "sha256": "9719e376ed6ef9385be9d9f4feb2e0500cfa626225dcd8d98b040ca1464d81ba"
+    },
+    {
+      "path": "hmg-geo-hub-share/back/app/features/analytics/kpi/summary/schemas.py",
+      "sha256": "45f5105c16b2fd4abad6f99cae671b2b914c2e010fc5e3f3a3f17024a18f433a"
+    },
+    {
+      "path": "hmg-geo-hub-share/back/app/features/qa/answers/list/queries.py",
+      "sha256": "9b5848c0d1c8a71d953a1364795f34f8072c7ed1281e7cee9b50a67420812bde"
+    },
+    {
+      "path": "hmg-geo-hub-share/back/app/features/qa/answers/list/scope.py",
+      "sha256": "4252262fe8d04cfb622e103dacf71df28495d3f4c639bef95c12e64b9ee06683"
+    },
+    {
+      "path": "hmg-geo-hub-share/back/app/features/intent/social/context_map/queries.py",
+      "sha256": "d6a2853a5e389940db53813bb6dcaeee08013737dc472a28884dd118a63e2f86"
+    },
+    {
+      "path": "hmg-geo-hub-share/back/app/features/intent/keywords/research/queries.py",
+      "sha256": "31fc54a2abba1ef808094db52cbcfc84474e454c9c44acb6596a6b41d580e838"
+    },
+    {
+      "path": "hmg-geo-hub-share/back/ingest/cycles/ledger/service.py",
+      "sha256": "2384accbc33c9f22cf2b8e9d18c4cd7264e457803f8c4df5c14dbbe29f68d236"
+    },
+    {
+      "path": "hmg-geo-hub-share/back/ingest/frz/freeze.py",
+      "sha256": "8374aab7aafe1499190d470642d2b114373a31b821de88a4f21866fcba7139a3"
+    },
+    {
+      "path": "hmg-geo-hub-share/back/ingest/README.md",
+      "sha256": "010b97c00fa0337b4a9ee5e78006051589926ebfb737fabc6e25d299e6662ab3"
+    },
+    {
+      "path": "hmg-geo-hub-share/front/lib/scope/server.ts",
+      "sha256": "e11e8676964a5961bef3a9845ea0f1e55823b834cbd6d316923e54e5c51ef846"
+    },
+    {
+      "path": "hmg-geo-hub-share/front/lib/db/repositories/summary-website-aggregates.ts",
+      "sha256": "cc6a0f663ba67a1689a62bbf85c04519c4bd0b87f9d61a115e594bd2f7fca36d"
+    },
+    {
+      "path": "hmg-geo-hub-share/front/lib/db/repositories/scope-aggregates.ts",
+      "sha256": "abd3077888a5e4ff74806907b629387c0f024f11542ea2573c0cc5e4cf4cb91e"
+    }
+  ],
+  "public_sources": [
+    "https://www.postgresql.org/docs/17/rules-materializedviews.html",
+    "https://www.postgresql.org/docs/17/sql-refreshmaterializedview.html"
+  ],
+  "followup_correction": {
+    "date": "2026-10-13",
+    "detail": "S06 uncited: cit_total > 0 and owned citations = 0. Excludes prompts with no citations.",
+    "evidence": "reports/부록/원본 통계 SQL 복잡도.json",
+    "html_validation": {
+      "path": "개발 핵심 문서/21 통계 데이터 사전 집계 적재 설계.html",
+      "balanced_html": true,
+      "metric_groups": 17,
+      "valid_links": 43,
+      "tables": 11
+    }
+  }
+}

@@ -1,0 +1,1102 @@
+{
+  "reviewedOn": "2026-10-08",
+  "repositoryHead": "392ca454a098365d772556cd980db3c870cf5592",
+  "status": "Three reviews preserved; original Next/BFF decision reassessed; SPA preference withdrawn; no application PoC executed.",
+  "report": "reports\\GEO 전면 재설계 아키텍처 검토.html",
+  "reportSha256": "ab54af991de5766de21ca11a7f3b7880effa232118ebebd3cb79e420a93a1819",
+  "localSources": [
+    {
+      "path": "hmg-geo-hub-share/docs/design/api/DECISIONS-API.md",
+      "title": "9/30 제한적 백엔드 결과 캐시 승인",
+      "sha256": "7301327a00e8892329aee4ca5067ba35376b7df4184288c1142675b7b706a794"
+    },
+    {
+      "path": "reports/GEO 현재 소프트웨어 아키텍처 분석.html",
+      "title": "현재 구조 분석",
+      "sha256": "417af4b0bad2354ce3e999bbd3cdc8a62a6289df563bd390a120f56120383bfa"
+    },
+    {
+      "path": "reports/GEO 소프트웨어 품질 점검.html",
+      "title": "품질 문제·모의 재현",
+      "sha256": "7683d3ea0b094dd7282600a4abbcaaad03f9491c7d9b10a1606249f3620e3f06"
+    },
+    {
+      "path": "reports/GEO 실제 프로젝트 측정 유효성 분석.html",
+      "title": "지표·측정 유효성",
+      "sha256": "aa48239b5a68118320619fad8efffb00f183544fa324db72da221e49add2e8e1"
+    },
+    {
+      "path": "reports/HMG GEO 인수 올인원.md",
+      "title": "인수 범위·후속 결정",
+      "sha256": "e9dd3a1b83090ff12cc486a0e55a85015c82f51c9b4fd273e3460ede3452acbc"
+    },
+    {
+      "path": "reports/마이그레이션 테이블 더블체크.html",
+      "title": "이관·보존 자료",
+      "sha256": "af210f56b173b98719fa23f1174168a81b11d300be46f1489f8e660e0f2dcb6d"
+    },
+    {
+      "path": "hmg-geo-hub-share/docs/spec/functional-spec.html",
+      "title": "기능·과거 비기능 요구",
+      "sha256": "21f8e963fdcfa4252fc66c585814f2f3c8c42a9fdbb4403e495ed8bc46462f65"
+    },
+    {
+      "path": "hmg-geo-hub-share/ANALYSIS-ENGINE-DESIGN.md",
+      "title": "기존 엔진 설계 초안",
+      "sha256": "fa96416cfe1133865fd1d552e81c980e3bce970d784587a10541bdaf9c8ef37c"
+    },
+    {
+      "path": "hmg-geo-hub-share/front/package.json",
+      "title": "프런트 의존성",
+      "sha256": "93718de210522f71ddb686ee0109f71ebbcd2423bfd34088f769fcf1bc691bac"
+    },
+    {
+      "path": "hmg-geo-hub-share/back/pyproject.toml",
+      "title": "백엔드 의존성",
+      "sha256": "ac849012c0d36fd0eef71be70538623ecd3c6081fdedf174ee6f5674928e0edd"
+    },
+    {
+      "path": "hmg-geo-hub-share/front/openspec/changes/archive/2026-05-22-setup-frontend-scaffold/design.md",
+      "title": "5/22 초기 선정 결정",
+      "sha256": "61a80a96a96e3a239013d680a9a2ef6149c3b0d75f732762f2c7aab50a0cf6a3"
+    },
+    {
+      "path": "hmg-geo-hub-share/front/openspec/changes/archive/2026-05-22-setup-frontend-scaffold/proposal.md",
+      "title": "5/22 구축 범위·미완료 자산",
+      "sha256": "8422597b4401caa693a72dd1fddfc77e35c1a654fc5585c780007ba03b7f1dff"
+    },
+    {
+      "path": "hmg-geo-hub-share/front/README.md",
+      "title": "초기 제품 정체성·재사용 목적",
+      "sha256": "8fdf3cd81b4b85adfc5f7bab8ba373d139044a390070c86b22f9fdcf5e2aeac6"
+    },
+    {
+      "path": "hmg-geo-hub-share/docs/design/DESIGN-CONTRACT.md",
+      "title": "9/28 기존 프런트 유지 결정",
+      "sha256": "763d870e5222aed4aef70525274844dcc5b94205136fb4e9b8db9ae1bb83d18b"
+    },
+    {
+      "path": "hmg-geo-hub-share/front/lib/auth/actions.ts",
+      "title": "로그인·로그아웃 Server Actions",
+      "sha256": "68714bc1f2d373757a6b02c74c69175dccc7daf31984613d48a1874409534375"
+    },
+    {
+      "path": "hmg-geo-hub-share/front/middleware.ts",
+      "title": "브라우저 세션 갱신·로케일 처리",
+      "sha256": "a0d2d409c24fc638aef2c4622ad4ba8deb37d0274a22dbfd34ec93bcb9a22a7a"
+    },
+    {
+      "path": "hmg-geo-hub-share/front/lib/auth/session.ts",
+      "title": "legacy/API 세션 공급 분기",
+      "sha256": "6e2c2d99d7b3996f7dedd775886ba62c9630c1582f4bbca26bee1dc5243eb813"
+    },
+    {
+      "path": "hmg-geo-hub-share/front/lib/hgh/auth.ts",
+      "title": "서버의 토큰 추출·갱신·QA 쿠키",
+      "sha256": "8a6dfa7242e588fa7102fd6769afd4acc846a63b049e01ca38b766ba5d00afb2"
+    },
+    {
+      "path": "hmg-geo-hub-share/front/lib/hgh/client.ts",
+      "title": "백엔드 중계·오류·시간제한·동시성",
+      "sha256": "8ff8b8cb683428d87c31d330f427a1b2b626f3ab65d70f4be4e51925722e5769"
+    },
+    {
+      "path": "hmg-geo-hub-share/front/app/[locale]/(dash)/dashboard/page.tsx",
+      "title": "서버 페이지·초기 데이터·Suspense",
+      "sha256": "8c6dc35c1c5d9c4dfa32d9000b138be450c19909891a0a8e7b63d441a372057e"
+    },
+    {
+      "path": "hmg-geo-hub-share/front/app/api/scope/projects/route.ts",
+      "title": "서버 Scope 중계 예",
+      "sha256": "c4f89f537f21279f0a645c7158edfd9208a8f29ca877f3a56305d3c256148e7b"
+    },
+    {
+      "path": "hmg-geo-hub-share/back/app/core/auth.py",
+      "title": "API Bearer 검증·인가·QA 별도 경계",
+      "sha256": "4569de5a1b7add2408a69de9febd055cf2fa6abef3d671a469d1fb6c5351f939"
+    },
+    {
+      "path": "hmg-geo-hub-share/back/app/features/platform/auth/session/README.md",
+      "title": "GET /v1/auth/me의 역할",
+      "sha256": "9896bd8a4907c25fa69fffcfaf97b2afa3d121dd21710f1f44f56142ce44c638"
+    },
+    {
+      "path": "reports/부록/GEO Next 의존성 조사.json",
+      "title": "Next 결합 정적 조사 목록",
+      "sha256": "b7f09aa1f3f6a8d056f9728dd88acd58ae43c50ec21aa56d7472ec19bfc24be3"
+    }
+  ],
+  "webSources": [
+    {
+      "id": "W01",
+      "title": "Next.js: SPA 지원",
+      "url": "https://nextjs.org/docs/app/guides/single-page-applications",
+      "accessedOn": "2026-10-08",
+      "use": "SPA·서버 렌더링을 함께 지원한다. 내부 서비스라는 이유만으로 부적합하다고 단정하지 않는 근거."
+    },
+    {
+      "id": "W02",
+      "title": "Next.js: 자체 호스팅",
+      "url": "https://nextjs.org/docs/app/guides/self-hosting",
+      "accessedOn": "2026-10-08",
+      "use": "자체 배포와 여러 인스턴스의 캐시 조정 등 운영 항목."
+    },
+    {
+      "id": "W03",
+      "title": "React: 앱 시작하기",
+      "url": "https://react.dev/learn/creating-a-react-app",
+      "accessedOn": "2026-10-08",
+      "use": "프레임워크 사용 권고와 선택지."
+    },
+    {
+      "id": "W04",
+      "title": "React: 직접 구성할 때의 책임",
+      "url": "https://react.dev/learn/build-a-react-app-from-scratch",
+      "accessedOn": "2026-10-08",
+      "use": "Vite는 빌드 도구이며 라우팅·데이터 로딩 등 앱 구성 책임은 별도."
+    },
+    {
+      "id": "W05",
+      "title": "React Router: 모드 선택",
+      "url": "https://reactrouter.com/start/modes",
+      "accessedOn": "2026-10-08",
+      "use": "Framework 모드의 Vite 통합·SPA/SSR/정적 렌더링 선택."
+    },
+    {
+      "id": "W06",
+      "title": "TanStack Query: 서버 상태",
+      "url": "https://tanstack.com/query/latest/docs/framework/react/overview",
+      "accessedOn": "2026-10-08",
+      "use": "조회·캐시·동기화·서버 상태의 책임."
+    },
+    {
+      "id": "W07",
+      "title": "TanStack Table: 페이지네이션",
+      "url": "https://tanstack.com/table/latest/docs/framework/react/guide/pagination",
+      "accessedOn": "2026-10-08",
+      "use": "서버 페이지네이션과 클라이언트 페이지네이션의 선택."
+    },
+    {
+      "id": "W08",
+      "title": "TanStack Table: 가상화",
+      "url": "https://tanstack.com/table/latest/docs/framework/react/guide/virtualization",
+      "accessedOn": "2026-10-08",
+      "use": "가상화는 서버 페이지네이션·필터·정렬을 대신하지 않는다."
+    },
+    {
+      "id": "W09",
+      "title": "AG Grid: 제품·라이선스 구분",
+      "url": "https://github.com/ag-grid/ag-grid",
+      "accessedOn": "2026-10-08",
+      "use": "Community와 Enterprise 기능·라이선스가 다름. 계약 금액은 이 문서에서 확정하지 않음."
+    },
+    {
+      "id": "W10",
+      "title": "Radix: 접근성",
+      "url": "https://www.radix-ui.com/primitives/docs/overview/accessibility",
+      "accessedOn": "2026-10-08",
+      "use": "포커스·키보드·ARIA 기반 구성요소의 구현 범위."
+    },
+    {
+      "id": "W11",
+      "title": "ECharts: 렌더러 선택",
+      "url": "https://echarts.apache.org/handbook/en/best-practices/canvas-vs-svg/",
+      "accessedOn": "2026-10-08",
+      "use": "Canvas/SVG 선택을 실제 차트 조건으로 검토."
+    },
+    {
+      "id": "W12",
+      "title": "FastAPI: 기능",
+      "url": "https://fastapi.tiangolo.com/features/",
+      "accessedOn": "2026-10-08",
+      "use": "OpenAPI·검증·의존성 구성."
+    },
+    {
+      "id": "W13",
+      "title": "FastAPI: BackgroundTasks",
+      "url": "https://fastapi.tiangolo.com/tutorial/background-tasks/",
+      "accessedOn": "2026-10-08",
+      "use": "응답 후 실행과 무거운 분산 작업 처리의 경계."
+    },
+    {
+      "id": "W14",
+      "title": "NestJS 공식 문서",
+      "url": "https://docs.nestjs.com/",
+      "accessedOn": "2026-10-08",
+      "use": "Node/TypeScript 기반 서버 프레임워크 대안."
+    },
+    {
+      "id": "W15",
+      "title": "Django REST framework: Quickstart",
+      "url": "https://www.django-rest-framework.org/tutorial/quickstart/",
+      "accessedOn": "2026-10-08",
+      "use": "Django 기반 API 대안."
+    },
+    {
+      "id": "W16",
+      "title": "SQLAlchemy Core",
+      "url": "https://docs.sqlalchemy.org/en/20/core/",
+      "accessedOn": "2026-10-08",
+      "use": "DB 연결·트랜잭션·SQL 표현식 계층. ORM과 선택적으로 조합."
+    },
+    {
+      "id": "W17",
+      "title": "Alembic",
+      "url": "https://alembic.sqlalchemy.org/en/latest/",
+      "accessedOn": "2026-10-08",
+      "use": "마이그레이션 관리 도구."
+    },
+    {
+      "id": "W18",
+      "title": "PostgreSQL 17: SELECT / 잠금",
+      "url": "https://www.postgresql.org/docs/17/sql-select.html",
+      "accessedOn": "2026-10-08",
+      "use": "기존 PG 17 기준으로 확인. SKIP LOCKED 등 큐 소비에 활용 가능한 원시 기능."
+    },
+    {
+      "id": "W19",
+      "title": "PostgreSQL 17: Row Security",
+      "url": "https://www.postgresql.org/docs/17/ddl-rowsecurity.html",
+      "accessedOn": "2026-10-08",
+      "use": "기존 PG 17 기준. RLS 정책·기본 거부·소유자/BYPASSRLS 예외."
+    },
+    {
+      "id": "W20",
+      "title": "ClickHouse: OLAP",
+      "url": "https://clickhouse.com/docs/get-started/about/intro",
+      "accessedOn": "2026-10-08",
+      "use": "열 지향 분석 저장소의 성격. GEO 실측 성능 근거로 사용하지 않음."
+    },
+    {
+      "id": "W21",
+      "title": "Temporal: Workflow Execution",
+      "url": "https://docs.temporal.io/workflow-execution",
+      "accessedOn": "2026-10-08",
+      "use": "워크플로 상태의 지속·복구·재생."
+    },
+    {
+      "id": "W22",
+      "title": "Temporal: Activities",
+      "url": "https://docs.temporal.io/activities",
+      "accessedOn": "2026-10-08",
+      "use": "외부 작업 재시도와 멱등성·체크포인트 책임."
+    },
+    {
+      "id": "W23",
+      "title": "Azure Durable Functions",
+      "url": "https://learn.microsoft.com/en-us/azure/durable-task/durable-functions/durable-functions-overview",
+      "accessedOn": "2026-10-08",
+      "use": "상태를 보존하는 워크플로 대안."
+    },
+    {
+      "id": "W24",
+      "title": "Celery: Tasks",
+      "url": "https://docs.celeryq.dev/en/stable/userguide/tasks.html",
+      "accessedOn": "2026-10-08",
+      "use": "작업 재시도·승인 시점·멱등성의 책임."
+    },
+    {
+      "id": "W25",
+      "title": "Apache Airflow",
+      "url": "https://airflow.apache.org/docs/apache-airflow/stable/index.html",
+      "accessedOn": "2026-10-08",
+      "use": "배치 워크플로 운영 대안."
+    },
+    {
+      "id": "W26",
+      "title": "Azure Container Apps",
+      "url": "https://learn.microsoft.com/en-us/azure/container-apps/overview",
+      "accessedOn": "2026-10-08",
+      "use": "API·백그라운드 처리·컨테이너 배포 대안."
+    },
+    {
+      "id": "W27",
+      "title": "OpenTelemetry: Signals",
+      "url": "https://opentelemetry.io/docs/concepts/signals/",
+      "accessedOn": "2026-10-08",
+      "use": "로그·메트릭·트레이스의 관측 기반."
+    },
+    {
+      "id": "W28",
+      "title": "OpenID Connect Core",
+      "url": "https://openid.net/specs/openid-connect-core-1_0.html",
+      "accessedOn": "2026-10-08",
+      "use": "외부 IdP와 애플리케이션의 인증 경계."
+    },
+    {
+      "id": "W29",
+      "title": "OAuth Security BCP / RFC 9700",
+      "url": "https://www.rfc-editor.org/rfc/rfc9700.html",
+      "accessedOn": "2026-10-08",
+      "use": "Authorization Code·PKCE 등 인증 설계 검토 기준."
+    },
+    {
+      "id": "W30",
+      "title": "Authlib 문서",
+      "url": "https://docs.authlib.org/en/latest/",
+      "accessedOn": "2026-10-08",
+      "use": "인증 프로토콜을 직접 재구현하지 않을 때의 Python 후보."
+    },
+    {
+      "id": "W31",
+      "title": "TypeSafe: Choice",
+      "url": "https://docs.typesafe.ai/primitives/choice",
+      "accessedOn": "2026-10-08",
+      "use": "정해진 후보 선택과 분포·confidence."
+    },
+    {
+      "id": "W32",
+      "title": "TypeSafe: Noul",
+      "url": "https://docs.typesafe.ai/primitives/noul",
+      "accessedOn": "2026-10-08",
+      "use": "예/아니오의 확률. 별도 confidence 없음."
+    },
+    {
+      "id": "W33",
+      "title": "TypeSafe: Score",
+      "url": "https://docs.typesafe.ai/primitives/score",
+      "accessedOn": "2026-10-08",
+      "use": "설명된 순서형 수준에 대한 정도 판단."
+    },
+    {
+      "id": "W34",
+      "title": "TypeSafe: API",
+      "url": "https://docs.typesafe.ai/api",
+      "accessedOn": "2026-10-08",
+      "use": "현재 API 계약과 모델 확인의 기준."
+    },
+    {
+      "id": "W35",
+      "title": "TypeSafe: Python SDK",
+      "url": "https://docs.typesafe.ai/sdk/python",
+      "accessedOn": "2026-10-08",
+      "use": "Python 통합 경계."
+    },
+    {
+      "id": "W36",
+      "title": "TypeSafe: JavaScript SDK",
+      "url": "https://docs.typesafe.ai/sdk/javascript",
+      "accessedOn": "2026-10-08",
+      "use": "Node 런타임 대안에서도 의미 판단을 연결할 수 있는 근거."
+    },
+    {
+      "id": "W37",
+      "title": "TypeSafe: 인용 검증 예제",
+      "url": "https://docs.typesafe.ai/cookbooks/citation_check",
+      "accessedOn": "2026-10-08",
+      "use": "주장과 근거를 분리해 검증하는 설계 참고."
+    },
+    {
+      "id": "W38",
+      "title": "RFC 9457: HTTP API 오류",
+      "url": "https://www.rfc-editor.org/rfc/rfc9457.html",
+      "accessedOn": "2026-10-08",
+      "use": "오류 응답의 Problem Details 형식. 아래 상태·코드는 GEO 제안이며 RFC 고유 필드가 아님."
+    },
+    {
+      "id": "W39",
+      "title": "Next.js: BFF",
+      "url": "https://nextjs.org/docs/app/guides/backend-for-frontend",
+      "accessedOn": "2026-10-08",
+      "use": "HTTP 서버 계층·인증 책임·자기 Route Handler 재호출 비용·배포 실행 제약."
+    },
+    {
+      "id": "W40",
+      "title": "Next.js: 정적 export",
+      "url": "https://nextjs.org/docs/app/guides/static-exports",
+      "accessedOn": "2026-10-08",
+      "use": "정적 배포 지원과 쿠키·동적 처리·Server Actions 등 제한."
+    },
+    {
+      "id": "W41",
+      "title": "React Router: SPA 모드",
+      "url": "https://reactrouter.com/how-to/spa",
+      "accessedOn": "2026-10-08",
+      "use": "런타임 SSR 비활성과 빌드 시 root 렌더링의 차이."
+    },
+    {
+      "id": "W42",
+      "title": "FastAPI: 응답 쿠키",
+      "url": "https://fastapi.tiangolo.com/advanced/response-cookies/",
+      "accessedOn": "2026-10-08",
+      "use": "API에 브라우저 세션 경계를 구현할 수 있는 원시 기능. 로그인/보안 구현 완료의 근거는 아님."
+    }
+  ],
+  "decisions": [
+    {
+      "id": "ADR01",
+      "topic": "웹 프레임워크·렌더링",
+      "proposal": "SPA 우선 철회; A Next/BFF+API와 B SPA+API 내 BFF 비교",
+      "status": "미결·후속 근거 반영",
+      "gate": "P1/P6·BFF 위치·업무/총비용"
+    },
+    {
+      "id": "ADR02",
+      "topic": "UI 프레임워크",
+      "proposal": "React 유지 후보, 팀 역량에 따라 대안 비교",
+      "status": "조건부 추천",
+      "gate": "팀·재사용 비용"
+    },
+    {
+      "id": "ADR03",
+      "topic": "서비스 분할",
+      "proposal": "도메인 모듈+별도 worker pools; API 독립 배포는 선택",
+      "status": "논리 경계 추천·배포 미결",
+      "gate": "언어·팀·확장·클라이언트·A~D 비교"
+    },
+    {
+      "id": "ADR04",
+      "topic": "API 언어",
+      "proposal": "Python 허용→FastAPI, Node 제약→Node API",
+      "status": "미결",
+      "gate": "배포·팀·P6"
+    },
+    {
+      "id": "ADR05",
+      "topic": "BFF",
+      "proposal": "Next / 도메인 API 내 / 별도 BFF 중 소유 위치 선결",
+      "status": "미결·기능 필요",
+      "gate": "현 Next 세션 책임 인수·P1/P6"
+    },
+    {
+      "id": "ADR06",
+      "topic": "API 스타일",
+      "proposal": "REST+OpenAPI 우선",
+      "status": "우선 추천",
+      "gate": "클라이언트 계약·조회 비용"
+    },
+    {
+      "id": "ADR07",
+      "topic": "상태 관리",
+      "proposal": "서버 Query / 공유 URL / 로컬 UI 분리",
+      "status": "우선 추천",
+      "gate": "P1·권한 캐시 격리"
+    },
+    {
+      "id": "ADR08",
+      "topic": "표·가상화",
+      "proposal": "서버 페이지 + Table; 고급 grid 조건부",
+      "status": "조건부 추천",
+      "gate": "P1·고급 편집·라이선스"
+    },
+    {
+      "id": "ADR09",
+      "topic": "차트",
+      "proposal": "Recharts 유지 vs ECharts 비교; 그래프는 필요 화면만",
+      "status": "미결",
+      "gate": "차트 유형·브라우저 실측"
+    },
+    {
+      "id": "ADR10",
+      "topic": "저장소",
+      "proposal": "PG+객체 저장소; OLAP 조건부",
+      "status": "조건부 추천",
+      "gate": "P2·복구 비용"
+    },
+    {
+      "id": "ADR11",
+      "topic": "버전·발행",
+      "proposal": "원문/분석/지표/발행 분리",
+      "status": "우선 추천",
+      "gate": "보존·재분석 노출 정책"
+    },
+    {
+      "id": "ADR12",
+      "topic": "작업 실행",
+      "proposal": "단순 큐와 동일 복구 계약 비교; 복잡 작업 Temporal/Durable",
+      "status": "미결",
+      "gate": "P3·관리형 허용·운영 비용"
+    },
+    {
+      "id": "ADR13",
+      "topic": "의미 판단",
+      "proposal": "TypeSafe Choice/Noul/Score, 고정 버전·저장 재사용",
+      "status": "사용자 규칙",
+      "gate": "P4·외부 통신·데이터 조건"
+    },
+    {
+      "id": "ADR14",
+      "topic": "원문 공급",
+      "proposal": "RDS 읽기를 intake 어댑터에 격리",
+      "status": "기존 합의 기반 제안",
+      "gate": "H1/H2·P5"
+    },
+    {
+      "id": "ADR15",
+      "topic": "인증",
+      "proposal": "고객 OIDC 중심, GEO 인가 별도",
+      "status": "조건부 추천",
+      "gate": "P6·외부 검수자·계정 이관"
+    },
+    {
+      "id": "ADR16",
+      "topic": "DB 접근",
+      "proposal": "표준 드라이버/트랜잭션·명시 SQL·migration owner 하나",
+      "status": "우선 추천",
+      "gate": "API 언어·P2"
+    },
+    {
+      "id": "ADR17",
+      "topic": "캐시",
+      "proposal": "9/30 승인 범위·기본 비활성 구분; 추가 범위는 실측·ADR",
+      "status": "조건부 추천",
+      "gate": "P2·권한/세대 격리·신선도"
+    },
+    {
+      "id": "ADR18",
+      "topic": "검색·벡터",
+      "proposal": "필수 기본 제외",
+      "status": "보류",
+      "gate": "실제 검색/RAG 요구와 품질"
+    },
+    {
+      "id": "ADR19",
+      "topic": "배포",
+      "proposal": "Azure 방향 합의, 구체 실행 제품·런타임은 미결",
+      "status": "기존 방향·제품 미결",
+      "gate": "H-Cloud 적용 범위·P6"
+    },
+    {
+      "id": "ADR20",
+      "topic": "관측·복구",
+      "proposal": "업무 상태+trace+backup 복원",
+      "status": "우선 추천",
+      "gate": "P3/P6·SLO·RPO/RTO"
+    },
+    {
+      "id": "ADR21",
+      "topic": "호환·컷오버",
+      "proposal": "의미 보존/새 정의를 분리, 한 쓰기 정본",
+      "status": "미결",
+      "gate": "제품 범위·고객 발행 약속"
+    },
+    {
+      "id": "ADR22",
+      "topic": "의존성 정책",
+      "proposal": "잠금·업데이트·SBOM·소유자·교체비용 관리",
+      "status": "우선 추천",
+      "gate": "라이선스·배포·보안 유지 책임"
+    }
+  ],
+  "dependencies": [
+    {
+      "scope": "front runtime",
+      "name": "@radix-ui/react-checkbox",
+      "declared": "^1.3.3",
+      "category": "UI primitives",
+      "review": "단일 UI 체계로 정리; 통합/개별 import와 실제 번들 확인"
+    },
+    {
+      "scope": "front runtime",
+      "name": "@radix-ui/react-dialog",
+      "declared": "^1.1.15",
+      "category": "UI primitives",
+      "review": "단일 UI 체계로 정리; 통합/개별 import와 실제 번들 확인"
+    },
+    {
+      "scope": "front runtime",
+      "name": "@radix-ui/react-dropdown-menu",
+      "declared": "^2.1.16",
+      "category": "UI primitives",
+      "review": "단일 UI 체계로 정리; 통합/개별 import와 실제 번들 확인"
+    },
+    {
+      "scope": "front runtime",
+      "name": "@radix-ui/react-label",
+      "declared": "^2.1.8",
+      "category": "UI primitives",
+      "review": "단일 UI 체계로 정리; 통합/개별 import와 실제 번들 확인"
+    },
+    {
+      "scope": "front runtime",
+      "name": "@radix-ui/react-popover",
+      "declared": "^1.1.15",
+      "category": "UI primitives",
+      "review": "단일 UI 체계로 정리; 통합/개별 import와 실제 번들 확인"
+    },
+    {
+      "scope": "front runtime",
+      "name": "@radix-ui/react-select",
+      "declared": "^2.2.6",
+      "category": "UI primitives",
+      "review": "단일 UI 체계로 정리; 통합/개별 import와 실제 번들 확인"
+    },
+    {
+      "scope": "front runtime",
+      "name": "@radix-ui/react-slot",
+      "declared": "^1.2.4",
+      "category": "UI primitives",
+      "review": "단일 UI 체계로 정리; 통합/개별 import와 실제 번들 확인"
+    },
+    {
+      "scope": "front runtime",
+      "name": "@radix-ui/react-tabs",
+      "declared": "^1.1.13",
+      "category": "UI primitives",
+      "review": "단일 UI 체계로 정리; 통합/개별 import와 실제 번들 확인"
+    },
+    {
+      "scope": "front runtime",
+      "name": "@radix-ui/react-tooltip",
+      "declared": "^1.2.8",
+      "category": "UI primitives",
+      "review": "단일 UI 체계로 정리; 통합/개별 import와 실제 번들 확인"
+    },
+    {
+      "scope": "front runtime",
+      "name": "@supabase/ssr",
+      "declared": "^0.10.3",
+      "category": "Supabase 인증/연결",
+      "review": "OIDC·계정 이관·외부 사용자 요구로 유지/중계/제거 결정"
+    },
+    {
+      "scope": "front runtime",
+      "name": "@supabase/supabase-js",
+      "declared": "^2.106.1",
+      "category": "Supabase 인증/연결",
+      "review": "OIDC·계정 이관·외부 사용자 요구로 유지/중계/제거 결정"
+    },
+    {
+      "scope": "front runtime",
+      "name": "class-variance-authority",
+      "declared": "^0.7.1",
+      "category": "스타일",
+      "review": "디자인 시스템 선택 후 필요한 조합만 유지"
+    },
+    {
+      "scope": "front runtime",
+      "name": "clsx",
+      "declared": "^2.1.1",
+      "category": "스타일",
+      "review": "디자인 시스템 선택 후 필요한 조합만 유지"
+    },
+    {
+      "scope": "front runtime",
+      "name": "cytoscape",
+      "declared": "^3.30.2",
+      "category": "관계 그래프",
+      "review": "필요 화면을 확인하고 엔진 중복 축소; lazy load 후보"
+    },
+    {
+      "scope": "front runtime",
+      "name": "cytoscape-fcose",
+      "declared": "^2.2.0",
+      "category": "관계 그래프",
+      "review": "필요 화면을 확인하고 엔진 중복 축소; lazy load 후보"
+    },
+    {
+      "scope": "front runtime",
+      "name": "d3",
+      "declared": "^7.9.0",
+      "category": "차트/지도",
+      "review": "Recharts 유지/ECharts 통합/독자 d3 필요분 비교; 의미·접근성·전송량 검증"
+    },
+    {
+      "scope": "front runtime",
+      "name": "d3-geo",
+      "declared": "^3.1.1",
+      "category": "차트/지도",
+      "review": "Recharts 유지/ECharts 통합/독자 d3 필요분 비교; 의미·접근성·전송량 검증"
+    },
+    {
+      "scope": "front runtime",
+      "name": "d3-sankey",
+      "declared": "^0.12.3",
+      "category": "차트/지도",
+      "review": "Recharts 유지/ECharts 통합/독자 d3 필요분 비교; 의미·접근성·전송량 검증"
+    },
+    {
+      "scope": "front runtime",
+      "name": "drizzle-orm",
+      "declared": "^0.45.2",
+      "category": "웹 앱의 DB 결합",
+      "review": "브라우저에서 제외; API 또는 Next application 서버 모듈에 소유권 명시"
+    },
+    {
+      "scope": "front runtime",
+      "name": "exceljs",
+      "declared": "^4.4.0",
+      "category": "내보내기",
+      "review": "서버 export worker 중심으로 검토; 대량 생성·수식·메모리 시험"
+    },
+    {
+      "scope": "front runtime",
+      "name": "framer-motion",
+      "declared": "^12.40.0",
+      "category": "모션",
+      "review": "기본 CSS로 충분하면 제외; 실제 인터랙션 편익 확인"
+    },
+    {
+      "scope": "front runtime",
+      "name": "google-auth-library",
+      "declared": "^10.7.0",
+      "category": "Google 연동",
+      "review": "GA4 서버 커넥터에서만 유지 후보; API 언어에 따라 SDK 교체"
+    },
+    {
+      "scope": "front runtime",
+      "name": "lucide-react",
+      "declared": "^0.468.0",
+      "category": "UI 표현",
+      "review": "재사용 후보. 핵심 아키텍처보다 접근성·번들·제품 요구로 선택"
+    },
+    {
+      "scope": "front runtime",
+      "name": "next",
+      "declared": "^15.3.0",
+      "category": "Next 결합",
+      "review": "Next 유지·축소와 SPA 이전 비교; 라우팅/i18n·세션·서버 기능 이관 비용 포함"
+    },
+    {
+      "scope": "front runtime",
+      "name": "next-intl",
+      "declared": "^4.1.0",
+      "category": "Next 결합",
+      "review": "Next 유지·축소와 SPA 이전 비교; 라우팅/i18n·세션·서버 기능 이관 비용 포함"
+    },
+    {
+      "scope": "front runtime",
+      "name": "postgres",
+      "declared": "^3.4.9",
+      "category": "웹 앱의 DB 결합",
+      "review": "브라우저에서 제외; API 또는 Next application 서버 모듈에 소유권 명시"
+    },
+    {
+      "scope": "front runtime",
+      "name": "pretendard",
+      "declared": "^1.3.9",
+      "category": "UI 표현",
+      "review": "재사용 후보. 핵심 아키텍처보다 접근성·번들·제품 요구로 선택"
+    },
+    {
+      "scope": "front runtime",
+      "name": "radix-ui",
+      "declared": "^1.4.3",
+      "category": "UI primitives",
+      "review": "단일 UI 체계로 정리; 통합/개별 import와 실제 번들 확인"
+    },
+    {
+      "scope": "front runtime",
+      "name": "react",
+      "declared": "^19.1.0",
+      "category": "UI 코어",
+      "review": "React 선택 시 유지 후보; 현재 사용만으로 확정하지 않음"
+    },
+    {
+      "scope": "front runtime",
+      "name": "react-dom",
+      "declared": "^19.1.0",
+      "category": "UI 코어",
+      "review": "React 선택 시 유지 후보; 현재 사용만으로 확정하지 않음"
+    },
+    {
+      "scope": "front runtime",
+      "name": "react-force-graph-2d",
+      "declared": "^1.29.1",
+      "category": "관계 그래프",
+      "review": "필요 화면을 확인하고 엔진 중복 축소; lazy load 후보"
+    },
+    {
+      "scope": "front runtime",
+      "name": "react-markdown",
+      "declared": "^10.1.0",
+      "category": "본문 렌더링",
+      "review": "문서/답변 보기 재사용 후보; HTML·링크 정책과 버전 검증"
+    },
+    {
+      "scope": "front runtime",
+      "name": "recharts",
+      "declared": "^3.8.1",
+      "category": "차트/지도",
+      "review": "Recharts 유지/ECharts 통합/독자 d3 필요분 비교; 의미·접근성·전송량 검증"
+    },
+    {
+      "scope": "front runtime",
+      "name": "remark-breaks",
+      "declared": "^4.0.0",
+      "category": "본문 렌더링",
+      "review": "문서/답변 보기 재사용 후보; HTML·링크 정책과 버전 검증"
+    },
+    {
+      "scope": "front runtime",
+      "name": "remark-gfm",
+      "declared": "^4.0.1",
+      "category": "본문 렌더링",
+      "review": "문서/답변 보기 재사용 후보; HTML·링크 정책과 버전 검증"
+    },
+    {
+      "scope": "front runtime",
+      "name": "sonner",
+      "declared": "^2.0.7",
+      "category": "UI 표현",
+      "review": "재사용 후보. 핵심 아키텍처보다 접근성·번들·제품 요구로 선택"
+    },
+    {
+      "scope": "front runtime",
+      "name": "tailwind-merge",
+      "declared": "^3.6.0",
+      "category": "스타일",
+      "review": "디자인 시스템 선택 후 필요한 조합만 유지"
+    },
+    {
+      "scope": "front runtime",
+      "name": "topojson-client",
+      "declared": "^3.1.0",
+      "category": "차트/지도",
+      "review": "Recharts 유지/ECharts 통합/독자 d3 필요분 비교; 의미·접근성·전송량 검증"
+    },
+    {
+      "scope": "front runtime",
+      "name": "tw-animate-css",
+      "declared": "^1.4.0",
+      "category": "모션",
+      "review": "기본 CSS로 충분하면 제외; 실제 인터랙션 편익 확인"
+    },
+    {
+      "scope": "front runtime",
+      "name": "world-atlas",
+      "declared": "^2.0.2",
+      "category": "차트/지도",
+      "review": "Recharts 유지/ECharts 통합/독자 d3 필요분 비교; 의미·접근성·전송량 검증"
+    },
+    {
+      "scope": "front dev",
+      "name": "@electric-sql/pglite",
+      "declared": "^0.5.8",
+      "category": "DB 모의 시험",
+      "review": "빠른 단위 보조용. 운영 PG 권한/락/계획 시험을 대체하지 않음"
+    },
+    {
+      "scope": "front dev",
+      "name": "@eslint/eslintrc",
+      "declared": "^3.2.0",
+      "category": "정적 검사",
+      "review": "선정 스택의 검사 체계로 정리"
+    },
+    {
+      "scope": "front dev",
+      "name": "@playwright/test",
+      "declared": "1.63.0",
+      "category": "UI 검증",
+      "review": "재사용 후보; 실제 사용자 여정·실패·권한 검증 중심"
+    },
+    {
+      "scope": "front dev",
+      "name": "@tailwindcss/postcss",
+      "declared": "^4.0.0",
+      "category": "스타일",
+      "review": "디자인 시스템 선택 후 필요한 조합만 유지"
+    },
+    {
+      "scope": "front dev",
+      "name": "@types/cytoscape",
+      "declared": "^3.21.9",
+      "category": "개발 타입",
+      "review": "해당 런타임 라이브러리 채택 여부에 따라 선택"
+    },
+    {
+      "scope": "front dev",
+      "name": "@types/d3",
+      "declared": "^7.4.3",
+      "category": "개발 타입",
+      "review": "해당 런타임 라이브러리 채택 여부에 따라 선택"
+    },
+    {
+      "scope": "front dev",
+      "name": "@types/d3-sankey",
+      "declared": "^0.12.4",
+      "category": "개발 타입",
+      "review": "해당 런타임 라이브러리 채택 여부에 따라 선택"
+    },
+    {
+      "scope": "front dev",
+      "name": "@types/node",
+      "declared": "^22.10.0",
+      "category": "개발 타입",
+      "review": "해당 런타임 라이브러리 채택 여부에 따라 선택"
+    },
+    {
+      "scope": "front dev",
+      "name": "@types/react",
+      "declared": "^19.0.0",
+      "category": "개발 타입",
+      "review": "해당 런타임 라이브러리 채택 여부에 따라 선택"
+    },
+    {
+      "scope": "front dev",
+      "name": "@types/react-dom",
+      "declared": "^19.0.0",
+      "category": "개발 타입",
+      "review": "해당 런타임 라이브러리 채택 여부에 따라 선택"
+    },
+    {
+      "scope": "front dev",
+      "name": "@types/topojson-client",
+      "declared": "^3.1.5",
+      "category": "개발 타입",
+      "review": "해당 런타임 라이브러리 채택 여부에 따라 선택"
+    },
+    {
+      "scope": "front dev",
+      "name": "drizzle-kit",
+      "declared": "^0.31.10",
+      "category": "웹 앱의 DB 결합",
+      "review": "브라우저에서 제외; API 또는 Next application 서버 모듈에 소유권 명시"
+    },
+    {
+      "scope": "front dev",
+      "name": "eslint",
+      "declared": "^9.17.0",
+      "category": "정적 검사",
+      "review": "선정 스택의 검사 체계로 정리"
+    },
+    {
+      "scope": "front dev",
+      "name": "eslint-config-next",
+      "declared": "^15.3.0",
+      "category": "Next 결합",
+      "review": "Next 유지·축소와 SPA 이전 비교; 라우팅/i18n·세션·서버 기능 이관 비용 포함"
+    },
+    {
+      "scope": "front dev",
+      "name": "openapi-typescript",
+      "declared": "7.13.0",
+      "category": "API 계약",
+      "review": "REST/OpenAPI 선택 시 유지 후보; 생성물 drift 검사"
+    },
+    {
+      "scope": "front dev",
+      "name": "tailwindcss",
+      "declared": "^4.0.0",
+      "category": "스타일",
+      "review": "디자인 시스템 선택 후 필요한 조합만 유지"
+    },
+    {
+      "scope": "front dev",
+      "name": "tsx",
+      "declared": "^4.22.3",
+      "category": "TS 도구",
+      "review": "TS 영역에 유지 후보; 빌드·운영 실행 경로 분리"
+    },
+    {
+      "scope": "front dev",
+      "name": "typescript",
+      "declared": "^5.7.0",
+      "category": "TS 도구",
+      "review": "TS 영역에 유지 후보; 빌드·운영 실행 경로 분리"
+    },
+    {
+      "scope": "front dev",
+      "name": "vitest",
+      "declared": "^3.2.4",
+      "category": "UI 검증",
+      "review": "재사용 후보; 실제 사용자 여정·실패·권한 검증 중심"
+    },
+    {
+      "scope": "back runtime",
+      "name": "fastapi",
+      "declared": "fastapi>=0.115",
+      "category": "Python API 기반",
+      "review": "Python 선택 시 재사용 후보; 버전·배포 호환 재검증"
+    },
+    {
+      "scope": "back runtime",
+      "name": "uvicorn",
+      "declared": "uvicorn[standard]>=0.30",
+      "category": "Python API 기반",
+      "review": "Python 선택 시 재사용 후보; 버전·배포 호환 재검증"
+    },
+    {
+      "scope": "back runtime",
+      "name": "pydantic",
+      "declared": "pydantic>=2.8",
+      "category": "Python API 기반",
+      "review": "Python 선택 시 재사용 후보; 버전·배포 호환 재검증"
+    },
+    {
+      "scope": "back runtime",
+      "name": "sqlalchemy",
+      "declared": "sqlalchemy[asyncio]>=2.0",
+      "category": "DB 접근",
+      "review": "런타임별 서버 계층으로 통합; 드라이버 중복 역할 확인"
+    },
+    {
+      "scope": "back runtime",
+      "name": "asyncpg",
+      "declared": "asyncpg>=0.29",
+      "category": "DB 접근",
+      "review": "런타임별 서버 계층으로 통합; 드라이버 중복 역할 확인"
+    },
+    {
+      "scope": "back runtime",
+      "name": "pyjwt",
+      "declared": "pyjwt[crypto]>=2.9",
+      "category": "인증",
+      "review": "OIDC 라이브러리 경계 안에서 역할 재검토; 프로토콜 자체 구현 최소화"
+    },
+    {
+      "scope": "back runtime",
+      "name": "httpx",
+      "declared": "httpx>=0.27",
+      "category": "외부 HTTP",
+      "review": "서버 연동 재사용 후보; timeout·retry·quota 정책은 제품 소유"
+    },
+    {
+      "scope": "back runtime",
+      "name": "boto3",
+      "declared": "boto3>=1.35",
+      "category": "클라우드 SDK",
+      "review": "AWS 연결 어댑터에만 유지; Azure라고 자동 제거하지 않음"
+    },
+    {
+      "scope": "back runtime",
+      "name": "python-multipart",
+      "declared": "python-multipart>=0.0.9",
+      "category": "업로드",
+      "review": "실제 multipart 경로가 있을 때; 크기·유형·보안 정책 포함"
+    },
+    {
+      "scope": "back dev",
+      "name": "pytest",
+      "declared": "pytest>=8",
+      "category": "Python 검증 도구",
+      "review": "Python·PG 선택 시 유지 후보; 실제 DB 시험과 parser 버전 정렬"
+    },
+    {
+      "scope": "back dev",
+      "name": "pytest-asyncio",
+      "declared": "pytest-asyncio>=0.24",
+      "category": "Python 검증 도구",
+      "review": "Python·PG 선택 시 유지 후보; 실제 DB 시험과 parser 버전 정렬"
+    },
+    {
+      "scope": "back dev",
+      "name": "ruff",
+      "declared": "ruff>=0.6",
+      "category": "Python 검증 도구",
+      "review": "Python·PG 선택 시 유지 후보; 실제 DB 시험과 parser 버전 정렬"
+    },
+    {
+      "scope": "back dev",
+      "name": "pglast",
+      "declared": "pglast>=7,<8",
+      "category": "Python 검증 도구",
+      "review": "Python·PG 선택 시 유지 후보; 실제 DB 시험과 parser 버전 정렬"
+    },
+    {
+      "scope": "back dev",
+      "name": "psycopg2-binary",
+      "declared": "psycopg2-binary>=2.9",
+      "category": "DB 접근",
+      "review": "런타임별 서버 계층으로 통합; 드라이버 중복 역할 확인"
+    }
+  ],
+  "notPerformed": [
+    "Application implementation",
+    "Performance benchmark",
+    "Production access",
+    "Paid AI requests",
+    "Deployment",
+    "Dependency installation"
+  ]
+}

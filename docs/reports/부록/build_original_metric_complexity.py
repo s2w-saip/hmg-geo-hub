@@ -1,0 +1,264 @@
+"""Build an HTML/JSON static audit from the read-only original source. No DB access."""
+from __future__ import annotations
+
+import hashlib
+import json
+import subprocess
+from html import escape
+from pathlib import Path
+from urllib.parse import quote
+
+ROOT = Path(__file__).resolve().parents[2]
+ORIGINAL = ROOT.parent / "HMG-GEO_scope-analysis_20260922" / "hmg-geo-hub-share"
+OUT = ROOT / "개발 핵심 문서/22 원본 통계 SQL 연산과 JOIN 복잡도.html"
+EVIDENCE = ROOT / "reports/부록/원본 통계 SQL 복잡도.json"
+SOURCES = {}
+
+
+def source(path, needle):
+    p = ORIGINAL / path
+    data = p.read_bytes()
+    lines = data.decode("utf-8-sig").splitlines()
+    matches = [i + 1 for i, line in enumerate(lines) if needle in line]
+    assert matches, (path, needle)
+    key = f"{path}:{matches[0]}"
+    if key not in SOURCES:
+        SOURCES[key] = dict(id=f"Q{len(SOURCES) + 1:02}", path=path, line=matches[0],
+                            anchor=lines[matches[0] - 1].strip(), sha256=hashlib.sha256(data).hexdigest())
+    return SOURCES[key]["id"]
+
+
+CORE = "back/app/core/measure.py"
+ANA = "back/app/features/analytics/"
+refs = {
+    "kpi": source(CORE, "def plan_counts("),
+    "brand": source(CORE, "def competitor_rows_sql("),
+    "brand_extra": source(ANA + "mentions/brands/queries.py", "def brand_extras_sql("),
+    "domain": source(ANA + "citations/domains/queries.py", "def domains_sql("),
+    "summary_cols": source(ANA + "citations/domains/queries.py", "_SUMMARY_COLS ="),
+    "override": source(CORE, "OVERRIDE_JOIN ="),
+    "tone": source(ANA + "citations/sources/queries.py", "def tone_sql("),
+    "source_ans": source(ANA + "citations/sources/queries.py", "def sources_ans_sql("),
+    "source_scan": source(ANA + "citations/sources/queries.py", "def sources_sql("),
+    "source_retry": source(ANA + "citations/sources/service.py", "async def _category_rows("),
+    "prompt_cit": source(ANA + "citations/prompts/queries.py", "def bucket_page_sql("),
+    "uncited": source(ANA + "citations/prompts/schemas.py", "uncited = 인용은 있으나 자사 0"),
+    "acr_brand": source(ANA + "funnel/acr/queries.py", "def brands_sql("),
+    "acr_battle": source(ANA + "funnel/acr/queries.py", "def battle_sql("),
+    "acr_model": source(ANA + "funnel/acr/queries.py", "def models_sql("),
+    "ga4": source(ANA + "funnel/conversion/queries.py", "def conversions_sql("),
+    "ga4_page": source(ANA + "funnel/conversion/queries.py", "def pages_sql("),
+    "ga4_call": source(ANA + "funnel/conversion/service.py", "sq = q.sessions_sql("),
+    "geo": source(ANA + "geo/markets/service.py", "counts = await fetch_counts("),
+    "trend": source(ANA + "trend/series/queries.py", "def mix_counts_sql("),
+    "url": source(CORE, "def accuracy_counts_sql("),
+    "report": source(CORE, "def report_values_sql("),
+    "topic": source(ANA + "kpi/summary/queries.py", "def funnel_measured_sql("),
+    "qa": source("back/app/features/qa/answers/list/queries.py", "def progress_sql("),
+    "qa_twice": source("back/app/features/qa/answers/list/service.py", "async def progress("),
+    "social": source("back/app/features/intent/social/context_map/queries.py", "STATS ="),
+    "keyword": source("back/app/features/intent/keywords/research/queries.py", "TREND ="),
+    "detail": source(ANA + "citations/domain_detail/queries.py", "def detail_sql("),
+    "prompt_brand": source(ANA + "mentions/prompts/queries.py", "def page_sql("),
+    "unmeasured": source(ANA + "kpi/summary/queries.py", "def unmeasured_sql("),
+    "legacy_brand": source("front/lib/db/repositories/scope-aggregates.ts", "async function aggregateMentionsHeadlineSql("),
+    "legacy_qa": source("front/lib/db/repositories/qa-review.ts", "const RUN_SURFACE_CTE ="),
+    "legacy_qa_from": source("front/lib/db/repositories/qa-review.ts", "const ANSWER_FROM ="),
+    "legacy_summary": source("front/lib/db/repositories/scope-aggregates.ts", "export async function aggregateStandardFromMirror("),
+    "legacy_cache": source("front/lib/scope/server.ts", "export const MIRROR_CACHE_TTL ="),
+    "facts": source("back/app/core/facts.py", "def fact_tables("),
+    "cache_config": source("back/app/core/config.py", 'result_cache=(e.get("HGH_RESULT_CACHE"'),
+}
+# The final DDL definitions override earlier definitions in the cumulative script.
+ddl = (ORIGINAL / "back/db/DB-v2.32.sql").read_text(encoding="utf-8-sig").splitlines()
+for name, needle in [("view", "rd_from := format('FROM frz.cell c JOIN frz.prompt"),
+                     ("view_web", "'SELECT %2$s, %5$s FROM frz.cell c '")]:
+    line = max(i + 1 for i, text in enumerate(ddl) if needle in text)
+    key = f"back/db/DB-v2.32.sql:{line}"
+    SOURCES[key] = dict(id=f"Q{len(SOURCES) + 1:02}", path="back/db/DB-v2.32.sql", line=line,
+                        anchor=ddl[line - 1].strip(), sha256=hashlib.sha256((ORIGINAL / "back/db/DB-v2.32.sql").read_bytes()).hexdigest())
+    refs[name] = SOURCES[key]["id"]
+
+
+def row(id, metric, joins, tables, operations, pressure, level, ref_names):
+    return dict(id=id, metric=metric, joins=joins, tables=tables, operations=operations,
+                pressure=pressure, level=level, sources=[refs[k] for k in ref_names])
+
+
+rows = [
+    row("S01", "요약·엔진별 KPI: 노출률·점유율·우호도·평균 순위·인용 점유율",
+        "기본 합계 SQL 본체 0 JOIN. 공통 필터/인용 보정/동결 VIEW는 별도.",
+        "rd.answer; 조건부 rd.citation·출처/소유 사전, frz.*",
+        "답변별 판정 열을 다수 SUM/COUNT FILTER. 순위는 관점별 최소 유효 순위. 측정 프롬프트 COUNT DISTINCT는 별도 문장.",
+        "기본 판정은 이미 적재됨. 그러나 선택 기간의 답변 합계를 다시 읽고, 프롬프트 수·인용 보정을 추가 조회할 수 있음.",
+        "중간 / 조건부 높음", ["kpi", "facts"]),
+    row("S02", "언급: 브랜드별 언급·노출·감성·순위·유형·복수 언급",
+        "API 핵심 합계·extras 본체 0 JOIN. legacy 브랜드 핵심 SQL 4 JOIN(CTE 포함, 입력 집합/이름 해석 내부 제외).",
+        "API rd.answer_brand·rd.answer. legacy scope_mentions·_answer_set·names/posagg/multi",
+        "API: 브랜드×프롬프트 → 브랜드의 2단계 GROUP BY. legacy: 6개 상위 CTE, 핵심 본체 5개 GROUP BY와 답변별 RANK(), DISTINCT 답변/프롬프트.",
+        "API는 저장된 순위 합산. legacy 미러는 답변별 순위와 복수 언급을 재구성하고 집계 CTE를 다시 결합.",
+        "API 중간 / legacy 매우 높음", ["brand", "brand_extra", "legacy_brand"]),
+    row("S03", "인용 도메인 순위·점유율·커버리지",
+        "기본 목록 SQL 5 JOIN: 출처·override·총합 CROSS·브랜드 이름 2회. 경쟁사 출처 목록 옵션 +1; host-fold/필터는 추가.",
+        "rd.citation, rd.dim_source, app.citation_domain_override, rd.dim_brand_name + 집계 CTE",
+        "6개 상위 CTE. 출처×프롬프트 → 출처 집계, 전체·경쟁사 합계, ROW_NUMBER 2회(rank/match_rank), 반올림 비율·정렬·JSON 집계.",
+        "LIMIT 이전에 필터 범위의 전체 인용을 접고 분모·순위를 계산. 20행을 보여줘도 원천 작업량이 20행으로 제한되지 않음.",
+        "매우 높음", ["domain", "summary_cols", "override"]),
+    row("S04", "긍정·부정 답변의 인용 수·URL 수·답변 수",
+        "source 필터 없는 본체 2 JOIN: 답변↔인용 1 + 톤 합계 CROSS 1. source 분기 본체 1 JOIN + 필터 내부 참조.",
+        "rd.answer, rd.citation + ta/u/t/n CTE",
+        "관점별 긍정·부정 조건 → URL별 GROUP BY → 톤별 재집계. 답변 수는 별도 계산. 출처 필터 분기는 GROUPING SETS(URL, 답변).",
+        "답변과 인용의 넓은 집합을 연결하고 URL·답변을 서로 다른 단위로 중복 제거해야 함.",
+        "높음", ["tone"]),
+    row("S05", "출처 카테고리·인용의 언급 유형 분포",
+        "정상: 사실 집계 0 JOIN + override 상태 확인 서브쿼리 1 JOIN. 유형 미채움: 여기에 1 JOIN 추가. 원소 폴백: 3 JOIN.",
+        "rd.answer, rd.answer_brand, rd.citation, rd.dim_source, app.citation_domain_override(분기별 상이)",
+        "정상은 카테고리 13개 및 유형 5×13개 조건부 합. 폴백은 답변 유형 BOOL_OR → 엔진×출처 GROUP BY → 카테고리 GROUPING SETS.",
+        "_category_rows가 같은 요청에서 정상→유형 보완→원소 경로로 최대 3번 집계 가능. /sources 응답은 톤 집계도 별도 실행.",
+        "중간 / 폴백 높음", ["source_ans", "source_scan", "source_retry"]),
+    row("S06", "자사 인용 / 자사 미인용 프롬프트 분포",
+        "외부 조립 SQL 3 JOIN: 주 집계↔교차 보정, prompt, taxon. 내부 main/cross/scan의 추가 작업은 별도.",
+        "rd.answer 또는 rd.citation, rd.dim_prompt, rd.dim_taxon + m/x/pe/pr/c/b CTE",
+        "프롬프트×엔진 인용 집계 → 프롬프트 재집계, 자사 여부·엔진 배열, 버킷/검색 총건수, 정렬·페이지. cross 보정은 조건부.",
+        "목록 페이지 전에 버킷 전체를 집계. uncited는 인용 자체가 0인 프롬프트가 아니라 인용은 있고 자사 인용이 0인 프롬프트.",
+        "높음", ["prompt_cit", "uncited"]),
+    row("S07", "ACR: 선택률·등장률·배틀·차종 전환·추이·territory",
+        "대표 SQL별: 브랜드 2 JOIN / 배틀 4 JOIN / 차종 3 JOIN. 서로 별도 SQL이며 하나의 9-JOIN 쿼리가 아님.",
+        "rd.acr_cell, rd.acr_choice, rd.dim_brand_name, rd.dim_entity, rd.dim_prompt",
+        "브랜드 합산·COUNT DISTINCT(cell), 배틀 prompt×engine×brand 합산 후 DISTINCT ON 승자, 차종 분자/등장 행의 valid_acr 합 및 비율 정렬.",
+        "이미 저장된 ACR 결과를 읽지만 여러 출력별로 셀/choice 집계를 반복. 국가 필터 후 승자와 차종별 분모를 재구성.",
+        "매우 높음", ["acr_brand", "acr_battle", "acr_model"]),
+    row("S08", "GA4: AI/일반 유입·전환·일별·국가·엔진·페이지",
+        "대표 SQL별: 세션 0 JOIN / 전환 1 JOIN / 페이지 2 JOIN.",
+        "rd.ga4_row, rd.ga4_dim_property, rd.ga4_dim_value",
+        "세션과 전환 각각 날짜·속성·엔진·전체의 GROUPING SETS 4종. 전환은 property별 기준 CASE. 페이지는 조건부 SUM → 이름 JOIN → 정렬·LIMIT.",
+        "세션·전환·페이지 3개 주요 집계 SQL을 별도 실행. 엔진 필터 없는 비교값 등의 추가 조회도 가능. 대시보드 카드만 소비해도 페이지 집계가 실행되는 경로.",
+        "높음", ["ga4", "ga4_page", "ga4_call"]),
+    row("S09", "국가별 GEO KPI·경쟁사 순위",
+        "live 핵심 answer/answer_brand 합계 본체 각각 0 JOIN. 동결 VIEW·조건부 이름/회차 보정 별도.",
+        "rd.answer, rd.answer_brand; 동결이면 frz.card_*",
+        "국가별 KPI 합산 + 국가×브랜드 합산 후 앱에서 경쟁사 순위. 이름 변경 분기는 회차별 추가 집계.",
+        "대시보드 전체와 유사한 원천을 국가별로 다시 합산. legacy에서는 언급·답변·브랜드 이름과 인용의 JOIN이 추가됨.",
+        "중간 / 조건부 높음", ["geo", "brand", "facts"]),
+    row("S10", "추이·이전 기간 대비 증감",
+        "일반 KPI 본체 0 JOIN. 카테고리 추이 2 JOIN / 출처 Top N 추이 3 JOIN(CTE 참조 포함).",
+        "rd.answer/answer_brand/citation, rd.dim_source, app.citation_domain_override, per/tot CTE",
+        "시간 버킷×출처 집계 → 버킷 합계/카테고리 합계. 출처별 기간 합계·Top N 경계 정렬 후 다시 연결, UNION ALL. 비교는 창별 합계 구성.",
+        "조회 기간이 길면 버킷·출처 그룹과 입력 행이 증가. 동결 grid/card VIEW와 대표/회차 선택이 추가될 수 있음.",
+        "중간~높음", ["trend", "kpi", "facts"]),
+    row("S11", "URL 인용률·정확도 / 웹 발행 지표",
+        "발행값 경로 2 JOIN + web_unit EXISTS(국가 조건이면 country EXISTS). 화면 정확도 경로는 명시적 JOIN 0이지만 3개 테이블을 IN으로 연결.",
+        "rd.report_unit_value, app.report_publication, rd.web_unit; 또는 rd.web_target_url → rd.citation → rd.answer",
+        "발행 유닛 선택 → heading pool BOOL_OR/BOOL_AND → 회차 합산. live 웹 정확도는 대상 URL 집합 → DISTINCT 인용 답변 → 답변 COUNT FILTER.",
+        "발행값은 작은 저장 수치 합산. live 정확도는 두 MATERIALIZED CTE와 집합 포함 판정이 필요. prompt 단위 URL 비율은 별도 DISTINCT/OR.",
+        "발행 중간 / live 높음", ["report", "url"]),
+    row("S12", "프로젝트 주제·퍼널별 측정 프롬프트 수",
+        "대표 집계 SQL 1 JOIN.", "rd.answer ↔ rd.dim_prompt",
+        "funnel_key GROUP BY + COUNT DISTINCT(prompt_key).",
+        "JOIN은 하나지만 답변이 엔진·회차별로 반복되므로 프롬프트 중복 제거가 필요. summary?by_funnel=true에서 추가 실행.",
+        "중간", ["topic"]),
+    row("S13", "검수: 전체·검수 완료·문제·노트 답변 수",
+        "API 집계 1 JOIN + 노트 EXISTS. scoped/total로 두 번 호출. legacy 공통 FROM+CTE는 6 JOIN·7개 실제 테이블, 노트는 추가 참조.",
+        "API rd.job, app.qa_answer_review, app.qa_review_note. legacy scope_answers/runs/prompts, website_sites, projects, prompts, qa_answer_reviews",
+        "COUNT, COUNT FILTER, 노트 존재 검사. 검색/검수자/상태/원문 언급 유무 등의 필터가 추가될 수 있음.",
+        "API가 필터 집계와 전체 집계를 각각 수행. 비어 있는 필터에서는 같은 범위라도 두 호출. legacy는 30초 캐시 적용 경로.",
+        "API 중간 / legacy 높음", ["qa", "qa_twice", "legacy_qa", "legacy_qa_from"]),
+    row("S14", "소셜: 언급·감성·동시 언급·컨텍스트/출처 수",
+        "상단 통계 0 JOIN·5개 집계 서브쿼리. 조합 이름 연결 2 JOIN(동일 entity 표 2회).",
+        "ext.ctx_entity/drive/combination/domain(통계는 4종 표), ext.ctx_snapshot",
+        "저장된 mention/sentiment/co_count 직접 조회. 상단 COUNT 4개 + COUNT DISTINCT(host) 1개, 별도 MAX(co_count). 일부 연결 수는 상관 COUNT.",
+        "원문 NLP 재분석은 없음. 반복 건수/출처 중복 제거·연결 수 계산은 남음. 스냅샷 크기에 따라 비용 달라짐.",
+        "낮음~중간", ["social"]),
+    row("S15", "키워드: 검색량·경쟁도·CPC·SERP",
+        "월별 지표 0 JOIN. SERP 2 JOIN(하나는 LATERAL). 연관어 2 JOIN.",
+        "rd.kw_volume_monthly, rd.kw_serp/suggestion, rd.dim_keyword, app.kw_prompt_draft",
+        "월별 저장값 최근 12행. 최신 call_id 선택, 순위 정렬, 행별 최신 초안 LIMIT 1. 별도 목록은 정규화 키 그룹·총건수 계산.",
+        "지표 자체를 다시 계산하지 않음. 범위가 좁은 최신 관측/문자열·목록 조회가 중심.",
+        "낮음~중간", ["keyword"]),
+    row("S16", "도메인 상세 / 브랜드별 언급 프롬프트",
+        "도메인 상세 본체 7 JOIN·9 CTE. 언급 프롬프트 페이지 본체 2 JOIN.",
+        "rd.citation, rd.dim_url, app.owned_base, rd.dim_prompt, rd.dim_taxon, rd.job + 집계 CTE; 언급은 rd.answer_brand",
+        "도메인: URL별/프롬프트별/답변별 GROUP BY, DISTINCT 엔진 배열, 정렬 배열·ROW_NUMBER, 총건수·표본 JSON. 언급: SUM + 두 전체 창 집계 + DISTINCT 엔진.",
+        "도메인 필터로 입력은 줄지만 여러 형태의 집계가 반복됨. 7 JOIN이 전부 대형 원천끼리의 JOIN인 것은 아님. 표본 제한 전에 전체 URL/프롬프트 집계 필요.",
+        "높음", ["detail", "prompt_brand"]),
+    row("S17", "적용·측정·미측정 프롬프트 / 필터 모수",
+        "범위별 가변. 미측정 본체는 prompt JOIN + NOT EXISTS; 적용 집합·대표행 LATERAL·카탈로그 JOIN 추가.",
+        "rd.answer, rd.dim_prompt, rd.catalog_entry, app.prompt 또는 프로젝트/웹 등록 테이블",
+        "측정 DISTINCT 집합, 적용 집합과 차집합, 권한을 통과한 대표 카탈로그 행 선택, COUNT OVER 및 정렬. 옵션은 별도 축 제외 규칙.",
+        "캐시할 수 있는 단일 전역 COUNT가 아님. 카탈로그 중복·시장/프로젝트 권한과 필터마다 집합을 다시 정해야 함.",
+        "중간~높음", ["unmeasured"]),
+]
+
+by_id = {s["id"]: s for s in SOURCES.values()}
+
+
+def link(sid):
+    s = by_id[sid]
+    href = "../../HMG-GEO_scope-analysis_20260922/hmg-geo-hub-share/" + quote(s["path"], safe="/")
+    return f'<a href="{href}">{escape(sid)} · {escape(s["path"].split("/")[-1])}:{s["line"]}</a>'
+
+
+tbody = "".join(
+    f'<tr id="{r["id"]}"><td><strong>{r["id"]} · {escape(r["metric"])}</strong><span class="level">{escape(r["level"])}</span></td>'
+    f'<td>{escape(r["joins"])}<small>{escape(r["tables"])}</small></td><td>{escape(r["operations"])}</td>'
+    f'<td>{escape(r["pressure"])}<small>{" · ".join(link(k) for k in r["sources"])}</small></td></tr>'
+    for r in rows
+)
+html = """<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GEO HUB · 원본 통계 SQL 연산과 JOIN 복잡도</title><style>
+:root{--ink:#19353c;--muted:#586e76;--line:#d5e1e4;--accent:#087780}*{box-sizing:border-box}body{margin:0;background:#edf3f4;color:var(--ink);font:15px/1.8 "Malgun Gothic",system-ui,sans-serif;word-break:keep-all}main{max-width:1500px;margin:auto;padding:28px 24px 60px}header{background:#163d46;color:white;padding:30px;border-radius:12px}h1{font-size:30px;line-height:1.4;margin:8px 0 16px}h2{font-size:22px;margin:0 0 15px}p{margin:10px 0}.meta{font-size:12px;color:var(--muted)}header .meta{color:#c7e2e3}section{padding:25px;background:white;margin-top:20px;border:1px solid var(--line);border-radius:9px}a{color:var(--accent);text-underline-offset:3px}.table{overflow:auto}table{width:100%;min-width:1140px;border-collapse:collapse;font-size:13px}th,td{padding:14px 12px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}th{background:#eef5f6}td:first-child{width:20%}td:nth-child(2){width:27%}td:nth-child(3){width:25%}small{display:block;margin-top:10px;font-size:11px;color:var(--muted);overflow-wrap:anywhere}.level{display:block;margin-top:8px;font-size:12px;color:#0d7477;font-weight:bold}code{font:12px/1.7 Consolas,monospace;background:#edf4f5;padding:1px 4px;overflow-wrap:anywhere}.note{padding:15px 18px;background:#eaf5f2;border-left:4px solid var(--accent);margin:16px 0}.warn{background:#fff5df;border-left-color:#b9821a}li{margin:8px 0}.trace{background:#183d46;color:#e6f4f5;padding:18px;line-height:2;border-radius:8px}.trace strong{color:#b7ebe5}@media(max-width:800px){main{padding:12px}header,section{padding:18px}h1{font-size:26px}}@page{size:A4 landscape;margin:12mm}@media print{body{background:white;font-size:10px}main{padding:0}header{background:white;color:var(--ink);padding:0}header .meta{color:var(--muted)}section{padding:12px 0;border:0;border-top:1px solid var(--line)}table{min-width:0;font-size:9px}td,th{padding:7px 5px}.table{overflow:visible}tr{break-inside:avoid}thead{display:table-header-group}small{font-size:8px}h2{font-size:17px}.trace{background:#eff5f5;color:var(--ink)}.trace strong{color:var(--ink)}}
+</style></head><body><main>
+<header><div class="meta">ORIGINAL SQL STRUCTURE · 2026-10-13</div><h1>원본 통계 계산에는 얼마나 많은 연산이 필요한가</h1>
+<p>17개 통계 묶음의 대표 SQL을 읽어 JOIN, 집계 단계, 중복 제거, 정렬, 반복 호출을 구분했습니다. 가장 복잡한 구조는 인용 순위·상세, ACR, legacy 언급입니다.</p>
+<p class="meta">근거: 원본 hmg-geo-hub-share / 392ca45 · 정적 소스 분석 · 운영 DB 접속·SQL 실행·성능 측정 없음<br>문서는 리뉴얼 복사본에만 작성. 표의 링크는 비교 근거인 원본 코드를 가리킵니다.</p></header>
+<section><h2>숫자를 읽는 기준</h2><ul>
+<li><strong>JOIN 수는 대표 SQL 분기의 명시적 JOIN 개수</strong>입니다. LEFT/CROSS/LATERAL 및 CTE와의 결합도 포함합니다. 실제 테이블 종류 수나 DB 실행 계획의 Join 노드 수와 같지 않습니다.</li>
+<li>동적으로 붙는 공통 권한·프롬프트·출처 필터와 VIEW 내부는 별도로 표시했습니다. 한 엔드포인트의 모든 분기를 합친 고정 총량이나 상한이 아닙니다. 명시적 JOIN이 0이어도 EXISTS/IN·서브쿼리·집계 작업이 있습니다.</li>
+<li><strong>복잡도는 SQL 구조에 대한 정성 평가</strong>입니다. 실제 지연 시간·디스크 읽기·전체 테이블 스캔 여부는 운영 건수, 선택 범위, 인덱스, 통계, 캐시와 EXPLAIN 없이는 확정할 수 없습니다.</li>
+<li>“조회 시 계산”은 해당 경로가 실행되는 경우입니다. API/legacy 분기와 결과 캐시·기존 summary 적중에 따라 생략될 수 있습니다. 운영 설정이나 실행 빈도는 이번에 확인하지 않았습니다.</li>
+</ul></section>
+<section><h2>지표별 연산·JOIN 비교</h2><p>번호는 <a href="21%20통계%20데이터%20사전%20집계%20적재%20설계.html">21번 사전 집계 설계</a>와 대응합니다. 공통 필터/VIEW를 제외한 본체 기준이며, 추가 조건은 두 번째 열에 명시했습니다.</p>
+<div class="table"><table><thead><tr><th>통계 · 구조 복잡도</th><th>JOIN 수와 연결 대상</th><th>집계·중복 제거·정렬</th><th>조회 비용이 생기는 지점 / 근거</th></tr></thead><tbody>""" + tbody + """</tbody></table></div></section>
+<section><h2>JOIN보다 더 중요한 세 가지</h2>
+<div class="trace"><strong>인용 순위</strong><br>선택 범위의 인용 → 출처×프롬프트 집계 → 출처별 합계 → 분류·전체 분모 → 전체 순위 → 검색 후 순위 → 페이지 LIMIT<br><strong>웹 URL 정확도</strong><br>타겟 URL 집합 → 해당 URL을 인용한 답변 DISTINCT → 전체 답변의 포함 여부 판정 → 분자·분모 COUNT<br><strong>ACR 배틀</strong><br>적격 셀 → 셀별 선택 결과 → 국가 등을 합쳐 prompt×engine×brand 합산 → 최고 선택 브랜드 → 프롬프트 이름·화면 행</div>
+<p>페이지 행 수를 줄이는 것과 통계 계산량을 줄이는 것은 별개의 작업입니다. 중간 집합이 큰 집계·정렬·중복 제거를 먼저 처리하면 마지막 LIMIT는 응답 크기를 줄여도 그 앞의 계산을 없애지 못합니다.</p>
+<p>반대로 이미 작은 집계에 브랜드 이름을 붙이는 JOIN은 원천 답변과 인용을 연결하는 JOIN보다 영향이 작을 수 있습니다. 따라서 S16의 7 JOIN을 S04의 2 JOIN보다 반드시 느리다고 해석해서는 안 됩니다.</p>
+</section>
+<section><h2>코드 겉면에서 보이지 않는 추가 작업</h2>
+<ul><li><strong>동결 일반 VIEW:</strong> 최신 DDL의 frz.card_*는 frz.cell↔frz.prompt↔rd 사실/keep 사실의 2 JOIN 갈래를 UNION ALL로 구성합니다. surface 조건에 따라 가지치기될 수 있고 세대/보관 여부 서브쿼리도 있습니다. frz.card_*_w는 cell↔rd/keep + cell_web의 갈래별 2 JOIN과 UNION ALL입니다. 두 경우 모두 최종 KPI 합계가 저장된 단일 행 테이블은 아닙니다. """ + link(refs["view"]) + " · " + link(refs["view_web"]) + """</li>
+<li><strong>공통 필터:</strong> 카탈로그·커스텀·권한·출처 조건은 EXISTS/IN이나 사전 키 집합으로 들어갑니다. 대표 본체의 0 JOIN 표기를 “한 테이블만 읽음”으로 해석하지 않습니다.</li>
+<li><strong>legacy 입력 집합:</strong> _answer_set 자체를 만드는 단계에 회차·대표 답변 선택이 포함될 수 있습니다. S02의 4 JOIN은 그 준비 단계와 names SQL 조각 내부를 제외한 브랜드 집계 본체입니다.</li>
+<li><strong>반복 실행:</strong> S05 카테고리의 최대 3회 집계 재시도, S08의 세션/전환/페이지별 집계, S13 scoped/total 두 호출은 JOIN 개수와 별도의 비용입니다.</li></ul>
+</section>
+<section><h2>API와 legacy를 구분해야 하는 이유</h2><p>원본에는 두 경로가 함께 있습니다. API 언급/기본 KPI는 rd의 사전 판정 열을 읽는 비중이 높고, legacy 미러는 scope_* 원문과 대표 집합을 더 많이 결합합니다. legacy도 summary 저장값이나 캐시를 쓰면 그 계산을 매번 하지 않습니다.</p>
+<p>대표적으로 legacy 언급은 핵심 브랜드 집계만 4 JOIN·6개 CTE·5개 GROUP BY·RANK()가 있고, API 브랜드 집계는 기본 사실 합산 본체에 JOIN이 없습니다. legacy QA는 공통 FROM+CTE에서 6 JOIN·7개 실제 테이블을 연결하지만 API QA는 job↔review 1 JOIN과 노트 EXISTS로 계산합니다.</p>
+<p class="meta">근거: """ + link(refs["legacy_brand"]) + " · " + link(refs["legacy_qa"]) + " · " + link(refs["legacy_qa_from"]) + " · " + link(refs["legacy_cache"]) + " · " + link(refs["cache_config"]) + """</p></section>
+<section><h2>사전 집계 우선순위에 주는 의미</h2><ol>
+<li><strong>인용 순위·톤·유형·상세:</strong> 인용×답변 결합, 출처/프롬프트 재집계와 고유 수 산출을 먼저 수집 후 작업으로 옮깁니다. 최종 검색·정렬·필터별 정확한 집합 계산은 유지합니다.</li>
+<li><strong>ACR·GA4:</strong> 화면의 여러 영역에서 반복되는 셀/보고서 합계를 저장합니다. ACR 필터별 승자와 차종 분모, GA4 전체/페이지 보고서의 의미를 보존합니다.</li>
+<li><strong>KPI·국가·추이·검수:</strong> JOIN이 적더라도 같은 범위의 반복 SUM/COUNT/DISTINCT를 줄입니다. QA는 수집 완료가 아니라 검수 쓰기 시점의 상태 갱신이 필요합니다.</li>
+<li><strong>소셜·키워드:</strong> 이미 적재된 지표는 유지하고 부가 COUNT·최신 관측 선택을 개선합니다. 원문 지표 재계산 제거를 주요 효과로 주장하지 않습니다.</li></ol>
+<div class="note">위 순서는 구조 분석에 따른 구현 후보입니다. 실제 우선순위는 요청 빈도 × 선택 범위 × 실행 비용으로 확정해야 합니다. 느린 쿼리 로그와 대표 조건의 EXPLAIN (ANALYZE, BUFFERS)은 대표성 있는 비운영 환경에서 수행할 후속 검증이며 이번에는 실행하지 않았습니다.</div>
+</section>
+<section><h2>설계 문서 정정과 확인 범위</h2><div class="note warn"><strong>S06 의미 정정:</strong> 원본 계약의 uncited는 “인용은 있지만 자사 인용이 0인 프롬프트”입니다. 실제 SQL은 cit_total &gt; 0인 셀을 고릅니다. 21번 문서의 S06에서 인용 자체가 0인 프롬프트를 이 버킷에 포함하도록 읽힐 수 있던 설명을 수정했습니다. 전체 측정 모수·미측정은 S01/S17에서 별도로 관리합니다. """ + link(refs["uncited"]) + """</div>
+<p>읽기 전용 소스 분석과 HTML/상대 링크 검사만 수행했습니다. 원본 코드·복사본 애플리케이션·DB 스키마를 변경하지 않았고, 운영·인증·외부 수집 API를 호출하지 않았습니다.</p>
+<p><a href="../reports/부록/원본%20통계%20SQL%20복잡도.json">지표별 구조·원본 파일 해시·검증 JSON</a> · <a href="../reports/부록/build_original_metric_complexity.py">문서 생성 스크립트</a> · <a href="20%20화면%20지표별%20JOIN과%20재집계%20분석.html">20 화면→SQL 경로 분석</a> · <a href="21%20통계%20데이터%20사전%20집계%20적재%20설계.html">21 적재 설계</a> · <a href="00%20시작하기.html">문서 목록</a></p>
+</section></main></body></html>
+"""
+
+
+def main():
+    assert len(rows) == 17 and len({r["id"] for r in rows}) == 17
+    OUT.write_text(html, encoding="utf-8", newline="\n")
+    record = dict(date="2026-10-13", original_head=subprocess.check_output(
+        ["git", "rev-parse", "HEAD"], cwd=ORIGINAL, text=True).strip(),
+        method="Static inspection and manual counting of representative SQL branches, including explicit CTE/CROSS/LATERAL joins. Not an execution plan or total endpoint join count.",
+        executed_database_queries=0, api_requests=0, runtime_timings_measured=False,
+        rows=rows, sources=list(SOURCES.values()),
+        correction="Report 21 S06: uncited requires citations > 0 and owned citations = 0; zero-citation prompts are not in that bucket.")
+    EVIDENCE.write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
+    print(f"Built {len(rows)} metric groups, {len(SOURCES)} source anchors.")
+
+
+if __name__ == "__main__":
+    main()

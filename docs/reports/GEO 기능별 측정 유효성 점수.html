@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GEO 기능별 측정 유효성 점수</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+  /* Layout: summary tiles, one filter bar, one reference table grouped by category. Same tokens as the sibling report "GEO 도구 기능 보유 현황". */
+  :root {
+    --bg: #f7f7f4;
+    --surface: #fdfdfb;
+    --ink: #121311;
+    --ink-2: #4f524c;
+    --muted: #868a80;
+    --line: #e2e3dc;
+    --line-strong: #c9cbc2;
+    --accent: #2a5db0;
+    --accent-soft: #e8eef9;
+    --good: #0f8a3a;      --good-soft: #e3f3e8;
+    --most: #5c8a00;      --most-soft: #ecf3d6;
+    --some: #a86a00;      --some-soft: #fbf0d9;
+    --none: #b8322f;      --none-soft: #fae6e4;
+    --off: #868a80;       --off-soft: #ecece6;
+    --font: "IBM Plex Sans KR", system-ui, -apple-system, "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, "D2Coding", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #101211; --surface: #181a19; --ink: #f2f2ee; --ink-2: #c4c6bd; --muted: #8b8e86;
+      --line: #2b2e2b; --line-strong: #3b3e3a; --accent: #6f9ae6; --accent-soft: #1d2a40;
+      --good: #4fc26f; --good-soft: #15301d; --most: #a9c65a; --most-soft: #26330f; --some: #e0a93c; --some-soft: #3a2d10; --none: #ef7a76; --none-soft: #3f1c1b;
+      --off: #8b8e86; --off-soft: #262926;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #101211; --surface: #181a19; --ink: #f2f2ee; --ink-2: #c4c6bd; --muted: #8b8e86;
+    --line: #2b2e2b; --line-strong: #3b3e3a; --accent: #6f9ae6; --accent-soft: #1d2a40;
+    --good: #4fc26f; --good-soft: #15301d; --most: #a9c65a; --most-soft: #26330f; --some: #e0a93c; --some-soft: #3a2d10; --none: #ef7a76; --none-soft: #3f1c1b;
+    --off: #8b8e86; --off-soft: #262926;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 14.5px; line-height: 1.55; word-break: keep-all; padding-inline: 16px; padding-block: 28px 64px; }
+  .wrap { max-width: 1320px; margin: 0 auto; display: grid; gap: 18px; }
+  h1, h2, p { margin: 0; }
+  h1 { font-size: 27px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.25; text-wrap: balance; }
+  .eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+  .lead { color: var(--ink-2); max-width: 78ch; margin-top: 10px; }
+  .lead strong { color: var(--ink); font-weight: 600; }
+  .basis { color: var(--muted); font-size: 12.5px; margin-top: 8px; max-width: 110ch; }
+  .num { font-variant-numeric: tabular-nums; }
+  code { font-family: var(--mono); font-size: 0.92em; }
+
+  .summary { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
+  .tile { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 2px; border-left: 4px solid var(--c); }
+  .tile .k { font-size: 12.5px; color: var(--ink-2); font-weight: 600; }
+  .tile .v { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+  .tile .v small { font-size: 14px; font-weight: 500; color: var(--muted); margin-left: 3px; letter-spacing: 0; }
+  .tile .d { font-size: 12px; color: var(--muted); }
+
+  .rubric { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 20px; }
+  .rubric h2 { font-size: 15px; margin-bottom: 8px; }
+  .rubric dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; align-items: baseline; font-size: 13.5px; color: var(--ink-2); }
+  .rubric dt { margin: 0; }
+  .rubric dd { margin: 0; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; }
+  .seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 8px; overflow: hidden; }
+  .seg button { font: inherit; font-size: 13px; padding: 7px 12px; border: 0; background: transparent; color: var(--ink-2); cursor: pointer; }
+  .seg button + button { border-left: 1px solid var(--line-strong); }
+  .seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--ink); font-weight: 600; }
+  .seg button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .controls label { font-size: 12.5px; color: var(--ink-2); font-weight: 600; margin-right: 6px; }
+  .controls select, .controls input { font: inherit; font-size: 13px; color: var(--ink); background: var(--bg); border: 1px solid var(--line-strong); border-radius: 6px; padding: 6px 9px; }
+  .controls input { min-width: 200px; }
+  .controls input#pid { min-width: 300px; font-family: var(--mono); font-size: 12.5px; }
+  .count { margin-left: auto; font-size: 12.5px; color: var(--muted); }
+  .pid-state { font-size: 12px; color: var(--muted); margin-left: 8px; }
+
+  .tbl-wrap { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 980px; }
+  thead th { position: sticky; top: 0; background: var(--surface); z-index: 1; text-align: left; font-size: 12px; font-weight: 600; color: var(--ink-2); letter-spacing: 0.02em; padding: 10px 12px; border-bottom: 1px solid var(--line-strong); }
+  tbody td { padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; font-size: 13.5px; }
+  tbody tr:last-child td { border-bottom: 0; }
+  tr.group td { background: var(--bg); font-weight: 700; font-size: 13px; color: var(--ink); padding: 9px 12px; border-bottom: 1px solid var(--line-strong); }
+  tr.group td span { color: var(--muted); font-weight: 400; margin-left: 8px; font-size: 12px; }
+  td.item { width: 21%; }
+  td.item .nm { font-weight: 600; }
+  td.item .fid { display: block; font-family: var(--mono); font-size: 11.5px; color: var(--muted); margin-top: 2px; overflow-wrap: anywhere; }
+  td.score { width: 86px; white-space: nowrap; }
+  td.why { color: var(--ink-2); width: 37%; }
+  td.links { width: 34%; }
+  .badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 0 6px; border-radius: 4px; border: 1px solid var(--line-strong); color: var(--ink-2); margin-left: 6px; vertical-align: 1px; white-space: nowrap; }
+
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px 2px 7px; border-radius: 999px; font-size: 12.5px; font-weight: 600; color: var(--ink); background: var(--p-soft); }
+  .pill i { width: 9px; height: 9px; border-radius: 50%; background: var(--p); display: inline-block; }
+  .pill.s5, .pill.s4 { --p: var(--good); --p-soft: var(--good-soft); }
+  .pill.s3 { --p: var(--most); --p-soft: var(--most-soft); }
+  .pill.s2 { --p: var(--some); --p-soft: var(--some-soft); }
+  .pill.s1 { --p: var(--none); --p-soft: var(--none-soft); }
+  .pill.s0 { --p: var(--off); --p-soft: var(--off-soft); color: var(--ink-2); }
+  .pill.s0 i { background: transparent; border: 2px solid var(--p); width: 7px; height: 7px; }
+
+  .lks { display: flex; flex-wrap: wrap; gap: 5px 6px; }
+  a.lk { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 12px; line-height: 1.5; padding: 1px 8px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--accent); text-decoration: none; overflow-wrap: anywhere; }
+  a.lk:hover { background: var(--accent-soft); border-color: var(--accent); }
+  a.lk.dyn { border-style: dashed; }
+  a.lk .tag { font-family: var(--font); font-size: 10.5px; color: var(--muted); white-space: nowrap; }
+  .nolink { color: var(--muted); font-size: 12.5px; }
+  .empty { padding: 28px; text-align: center; color: var(--muted); }
+
+  .notes { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 20px; color: var(--ink-2); font-size: 13.5px; }
+  .notes h2 { font-size: 15px; color: var(--ink); margin-bottom: 8px; }
+  .notes ul { margin: 0; padding-left: 18px; display: grid; gap: 5px; }
+  .notes li strong { color: var(--ink); font-weight: 600; }
+  .notes p.sub { color: var(--muted); font-size: 12.5px; margin-bottom: 8px; }
+  footer { color: var(--muted); font-size: 12px; }
+  @media (max-width: 1100px) { .summary { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (max-width: 720px) {
+    .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .count { margin-left: 0; width: 100%; }
+    .controls input, .controls input#pid { min-width: 0; width: 100%; }
+    .rubric dl { grid-template-columns: 1fr; gap: 2px; }
+    .rubric dd { margin-bottom: 6px; }
+  }
+  @media print {
+    body { background: #fff; padding: 0; }
+    .controls { display: none; }
+    .tbl-wrap, .tile, .notes, .rubric { border-color: #ccc; }
+    thead th { position: static; }
+  }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <p class="eyebrow">기능 점검 · 2026-10-08</p>
+    <h1>GEO 기능별 측정 유효성 점수</h1>
+    <p class="lead">hmg-geo-hub가 제공하는 기능 72개를 기능 단위로 나열하고, 각 기능이 GEO 성과를 얼마나 믿을 만하게 재도록 구현됐는지 5점 만점으로 매겼습니다. <strong>측정과 무관한 10개를 뺀 62개의 평균은 2.7점이고 5점은 없습니다.</strong> 산식과 적재 파이프라인은 탄탄하지만, 숫자를 얼마나 믿을지에 대한 근거(오차, 판정 정확도, 모델 고정)가 전 기능에 걸쳐 비어 있습니다.</p>
+    <p class="basis">기준: hub-share 스냅샷 72c260a3(2026-10-02). 기능 목록과 화면 경로는 <code>back/taxonomy.json</code>, 근거는 <code>back/app/core/measure.py</code>·<code>profile.py</code>, 기능별 README, 적재 판정 SQL(<code>back/migration/seed/seed-40-facts.sql</code>)을 읽고 매겼습니다. 화면에 붙어 운영 중인 것은 front 레거시 경로이고 back(FastAPI)은 스테이징 단계라, back에만 있는 기능은 <span class="badge" style="margin-left:0">stg</span> 로 표시했습니다. 점수는 아래 기준에 따른 판단값입니다.</p>
+  </header>
+
+  <section class="summary" aria-label="요약" id="summary"></section>
+
+  <section class="rubric" aria-label="채점 기준">
+    <h2>채점 기준</h2>
+    <dl>
+      <dt><span class="pill s5"><i></i>5 / 5</span></dt><dd>정의·모수·원천이 타당하고 오차·검증 근거까지 있음 (해당 기능 없음)</dd>
+      <dt><span class="pill s4"><i></i>4 / 5</span></dt><dd>정의·모수가 명확하고 실데이터로 동작. 신뢰도 근거만 없음</dd>
+      <dt><span class="pill s3"><i></i>3 / 5</span></dt><dd>동작하지만 해석 한계가 뚜렷하거나, 측정을 간접 지원</dd>
+      <dt><span class="pill s2"><i></i>2 / 5</span></dt><dd>측정과의 연결이 약하거나 범위 제한·운영 전</dd>
+      <dt><span class="pill s1"><i></i>1 / 5</span></dt><dd>정적 스냅샷·샘플 수준이거나 기여가 거의 없음</dd>
+      <dt><span class="pill s0"><i></i>제외</span></dt><dd>측정과 무관한 권한·협업 장치</dd>
+    </dl>
+  </section>
+
+  <section class="controls" aria-label="필터">
+    <div>
+      <label id="lbl-score">점수</label>
+      <span class="seg" role="group" aria-labelledby="lbl-score" id="seg-score"></span>
+    </div>
+    <div>
+      <label for="cat">대분류</label>
+      <select id="cat"></select>
+    </div>
+    <div>
+      <label for="q">검색</label>
+      <input id="q" type="search" placeholder="기능 이름, id, 경로, 근거">
+    </div>
+    <div>
+      <label for="pid">프로젝트 ID</label>
+      <input id="pid" type="text" spellcheck="false" autocomplete="off" placeholder="ID 또는 프로젝트 화면 주소 붙여넣기">
+      <span class="pid-state" id="pid-state"></span>
+    </div>
+    <span class="count num" id="count"></span>
+  </section>
+
+  <section class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th>기능</th><th>점수</th><th>근거</th><th>화면 바로가기</th></tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </section>
+
+  <section class="notes">
+    <h2>5점이 없는 이유</h2>
+    <ul>
+      <li><strong>표본.</strong> 표준 지표는 회차·질문·엔진·국가 셀마다 답변 1건으로 계산하고(<code>profile.py</code> cell_rep), 오차 범위나 유의성을 다루는 코드가 back·front·docs 어디에도 없습니다. 전사 합계는 셀이 수만 개라 안정적이지만, 국가·질문으로 쪼갠 화면은 변동이 노이즈인지 구분할 수 없습니다.</li>
+      <li><strong>판정.</strong> 언급·감성·유형·ACR 선택은 Scope 분석 결과를 받아 투영만 합니다. 허브 자체 분석 엔진은 설계 초안(<code>ANALYSIS-ENGINE-DESIGN.md</code>)뿐이고, 계획된 검증도 사람 라벨 대비가 아니라 원본 구현과 같은 값이 나오는지입니다. 10-07 미팅 결정대로 분석을 S2W가 맡으면 이 항목이 인수 후 가장 먼저 걸립니다.</li>
+      <li><strong>재현성.</strong> ChatGPT·Gemini는 웹 화면 수집이라 모델이 고정되지 않습니다(<code>front/lib/scope/engines.ts</code>). 모델 식별자는 답변 상세 표시에만 쓰이고, 추이에서 기준선을 나누지 않습니다.</li>
+      <li><strong>지표 정의.</strong> 우선 노출도는 답변 안 등장 위치 순위의 평균인데, 언급된 답변만 분모에 들어갑니다(<code>seed-40-facts.sql</code> 418~434행). 노출률이 낮아도 순위는 좋게 나올 수 있습니다. 산식 정본은 <code>measure.py</code> 812~830행입니다.</li>
+      <li><strong>레거시 재현.</strong> back의 현행 프로필은 운영 값과 완전히 같게 하려고 레거시 결함(별칭 중복 집계 등)까지 재현하도록 결정돼 있습니다.</li>
+    </ul>
+  </section>
+
+  <section class="notes">
+    <h2>링크 안내</h2>
+    <p class="sub">front 코드를 읽고 정리한 내용이며, 운영 사이트에서 직접 열어 확인하지는 않았습니다.</p>
+    <ul>
+      <li>링크 주소는 <code>https://hmg-geo.vercel.app</code> 뒤에 화면 경로를 붙인 것이고 새 탭으로 열립니다. 언어 접두사 없이 들어가면 앱이 <code>/ko</code> 또는 <code>/en</code> 주소로 넘깁니다. 로그인이 필요합니다.</li>
+      <li>점선 테두리 링크는 <code>[id]</code> 같은 자리가 있는 경로입니다. 위 프로젝트 ID 칸에 ID나 프로젝트 화면 주소를 넣으면 그 프로젝트 화면으로 바로 가고, 비워 두면 프로젝트 목록(<code>/projects</code>)으로 갑니다. <code>[jobId]</code> 경로는 검수 목록으로, <code>[scopeId]</code> 경로는 프로젝트 목록으로 연결됩니다.</li>
+      <li>검수 콘솔(<code>/raw-data-qa</code>) 링크는 대시보드에 로그인된 상태에서 여십시오. 언어 접두사 없는 주소는 미들웨어가 공개 경로로 인식하지 못해, 로그인하지 않은 상태면 로그인 화면으로 넘어갑니다(<code>front/middleware.ts</code>).</li>
+      <li>「메뉴 숨김」 표시는 사이드바에는 없지만 주소로는 열리는 화면입니다. 그중 <code>/website/ai-funnel/acr</code> 본문은 정적 표본입니다.</li>
+      <li>「화면 없음」은 워커나 API로만 제공되는 기능입니다. 「분류표 밖」은 레포에는 있지만 72개 분류표에 없는 모듈이며 합계와 평균에서 뺐습니다.</li>
+    </ul>
+  </section>
+
+  <footer>작성 2026-10-08 · 대상 hmg-geo-hub-share 72c260a3 · 기능 72개 + 분류표 밖 1개 · 화면 링크 184개</footer>
+</main>
+
+<script>
+  const BASE = "https://hmg-geo.vercel.app";
+  const ROWS = [{"id": "analytics.filters.options", "cat": "analytics", "catKo": "분석 조회", "domKo": "필터", "name": "필터 옵션", "score": 3, "stg": false, "extra": false, "why": "실제로 측정된 브랜드·국가·언어 조합만 선택지로 내고, 적용되지 않은 필터 축은 응답에 따로 알려 줍니다. 지표 값에는 간접 기여.", "routes": ["/dashboard", "/projects/[id]", "/projects/[id]/analysis/citation", "/projects/[id]/analysis/mention", "/standard/ai-funnel/acr", "/standard/ai-funnel/conversion", "/standard/ai-funnel/visibility", "/standard/answer-analysis/citation", "/standard/answer-analysis/mention", "/website", "/website/ai-funnel/acr", "/website/ai-funnel/conversion", "/website/answer-analysis/citation", "/website/answer-analysis/mention", "/website/prompts"]}, {"id": "analytics.filters.dates", "cat": "analytics", "catKo": "분석 조회", "domKo": "필터", "name": "선택 가능 날짜·기준일", "score": 3, "stg": false, "extra": false, "why": "노출된 회차의 날짜만 고를 수 있고, 언급·인용 계열별 숨김을 따로 반영합니다. 지표 값에는 간접 기여.", "routes": ["/dashboard", "/projects/[id]", "/projects/[id]/analysis/citation", "/projects/[id]/analysis/mention", "/standard/ai-funnel/acr", "/standard/answer-analysis/citation", "/standard/answer-analysis/mention", "/standard/prompts", "/website", "/website/ai-funnel/acr", "/website/answer-analysis/citation", "/website/answer-analysis/mention", "/website/prompts"]}, {"id": "analytics.kpi.summary", "cat": "analytics", "catKo": "분석 조회", "domKo": "KPI", "name": "요약 카드", "score": 4, "stg": false, "extra": false, "why": "7개 지표를 분자·분모 정수 쌍으로 내고 분석 결손 건수도 같이 보여 줍니다. 감점: 글로벌 인용 점유율의 분자가 브랜드 구분 없는 Official(HMG) 카테고리 전체이고, 웹사이트 URL 인용률은 리포트 발행값과 라이브 값이 섞입니다.", "routes": ["/dashboard", "/projects/[id]", "/projects/[id]/analysis/mention", "/standard/answer-analysis/citation", "/standard/answer-analysis/mention", "/website", "/website/answer-analysis/mention"]}, {"id": "analytics.kpi.compare", "cat": "analytics", "catKo": "분석 조회", "domKo": "KPI", "name": "기간 비교 Δ", "score": 3, "stg": false, "extra": false, "why": "직전 기간 대비 증감과 누락 비중을 함께 줍니다. 감점: 증감이 노이즈인지 판단할 기준이 없고, 회차 원장이 필터와 무관한 전체 기준이라 좁혀 본 화면과 어긋납니다.", "routes": ["/dashboard", "/standard/answer-analysis/citation", "/standard/answer-analysis/mention", "/website"]}, {"id": "analytics.kpi.engines", "cat": "analytics", "catKo": "분석 조회", "domKo": "KPI", "name": "엔진별 서브 지표", "score": 3, "stg": false, "extra": false, "why": "엔진별 합이 요약 카드와 같도록 테스트로 고정돼 있습니다. 감점: 일관성 배지가 최솟값 ÷ 최댓값 한 줄이고, 웹 화면 수집(ChatGPT·Gemini)과 API 수집(DeepSeek)을 구분 없이 나란히 놓습니다.", "routes": ["/projects/[id]", "/projects/[id]/analysis/mention", "/standard/answer-analysis/mention", "/website", "/website/answer-analysis/mention"]}, {"id": "analytics.trend.series", "cat": "analytics", "catKo": "분석 조회", "domKo": "추이", "name": "지표 추이", "score": 4, "stg": false, "extra": false, "why": "버킷마다 값이 빈 이유(답변 없음·분석 대기·숨김·수집 오류)와 측정 일수를 같이 줍니다. 감점: 모델이 바뀐 시점을 표시하지 않아 추이 변화의 원인을 가릴 수 없습니다.", "routes": ["/dashboard", "/projects/[id]", "/projects/[id]/analysis/citation", "/projects/[id]/analysis/mention", "/standard/answer-analysis/citation", "/standard/answer-analysis/mention", "/website", "/website/answer-analysis/citation", "/website/answer-analysis/mention"]}, {"id": "analytics.mentions.brands", "cat": "analytics", "catKo": "분석 조회", "domKo": "언급", "name": "브랜드·경쟁사 비교", "score": 3, "stg": false, "extra": false, "why": "비경쟁 브랜드 제외, 형제 브랜드 처리 규칙이 명확합니다. 감점: 브랜드 귀속이 엔티티 카탈로그 품질에 좌우되고, 현행 재현 프로필은 별칭 수만큼 노출 답변을 중복 집계합니다.", "routes": ["/dashboard", "/projects/[id]", "/projects/[id]/analysis/mention", "/standard/answer-analysis/mention", "/website", "/website/answer-analysis/mention"]}, {"id": "analytics.mentions.types", "cat": "analytics", "catKo": "분석 조회", "domKo": "언급", "name": "언급 유형·태도", "score": 3, "stg": false, "extra": false, "why": "언급 유형 5종과 감성 매트릭스, 스탠스를 냅니다. 감점: README가 '근사, 유형 간 합산 금지'로 적고 있고 판정은 전부 LLM입니다.", "routes": ["/projects/[id]/analysis/mention", "/standard/answer-analysis/mention", "/website/answer-analysis/mention"]}, {"id": "analytics.mentions.prompts", "cat": "analytics", "catKo": "분석 조회", "domKo": "언급", "name": "프롬프트별 언급", "score": 3, "stg": false, "extra": false, "why": "질문별로 답변 원문까지 내려가 볼 수 있어 확인 용도로는 유효합니다. 감점: 질문 단위는 답변 1건이라 수치로 읽기에는 약합니다.", "routes": ["/projects/[id]/analysis/mention", "/standard/answer-analysis/mention", "/website/answer-analysis/mention"]}, {"id": "analytics.citations.domains", "cat": "analytics", "catKo": "분석 조회", "domKo": "인용", "name": "인용 도메인 순위", "score": 4, "stg": false, "extra": false, "why": "인용 URL이라는 사실 데이터를 세기 때문에 LLM 판정이 끼지 않습니다. 감점: 등록 도메인 판정이 공개 접미사 목록 근사입니다.", "routes": ["/dashboard", "/projects/[id]", "/projects/[id]/analysis/citation", "/projects/[id]/analysis/mention", "/standard/answer-analysis/citation", "/standard/answer-analysis/mention", "/website", "/website/answer-analysis/citation", "/website/answer-analysis/mention"]}, {"id": "analytics.citations.domain_detail", "cat": "analytics", "catKo": "분석 조회", "domKo": "인용", "name": "도메인 드릴다운", "score": 3, "stg": false, "extra": false, "why": "도메인별로 URL 10개·질문 12개·답변 8개까지 보여 주는 보조 화면입니다.", "routes": ["/projects/[id]/analysis/citation", "/projects/[id]/analysis/mention", "/standard/answer-analysis/citation", "/standard/answer-analysis/mention", "/website/answer-analysis/citation", "/website/answer-analysis/mention"]}, {"id": "analytics.citations.sources", "cat": "analytics", "catKo": "분석 조회", "domKo": "인용", "name": "출처 카테고리", "score": 3, "stg": false, "extra": false, "why": "13개 카테고리 분포를 냅니다. 감점: 분류가 로컬 규칙과 운영자 교정에 의존하고, 분류 정확도를 점검하는 장치가 없습니다.", "routes": ["/projects/[id]/analysis/citation", "/standard/answer-analysis/citation", "/standard/answer-analysis/citation/tone-urls", "/website/answer-analysis/citation"]}, {"id": "analytics.citations.tone", "cat": "analytics", "catKo": "분석 조회", "domKo": "인용", "name": "답변 톤별 인용", "score": 2, "stg": false, "extra": false, "why": "답변 전체의 톤과 인용 URL을 묶어 보여 줄 뿐, 그 URL이 톤의 근거인지는 확인하지 않습니다(인용 페이지 본문 미분석).", "routes": ["/standard/answer-analysis/citation/tone-urls"]}, {"id": "analytics.citations.prompts", "cat": "analytics", "catKo": "분석 조회", "domKo": "인용", "name": "프롬프트별 인용", "score": 3, "stg": false, "extra": false, "why": "질문별 인용 수와 자사 인용·미인용 구분을 냅니다. 감점: 질문 단위는 답변 1건이라는 한계가 같습니다.", "routes": ["/projects/[id]/analysis/citation", "/standard/answer-analysis/citation", "/standard/answer-analysis/citation/prompts", "/website/answer-analysis/citation"]}, {"id": "analytics.citations.targets", "cat": "analytics", "catKo": "분석 조회", "domKo": "인용", "name": "타겟·자사 URL 인용률", "score": 3, "stg": false, "extra": false, "why": "지정한 타겟 URL과 자사 URL이 인용된 답변 비율입니다. 감점: 분모가 화면마다 다르고(웹사이트는 등록 질문, 프로젝트는 전체) 글로벌은 지원하지 않으며, 발행된 회차는 리포트 값으로 대체됩니다.", "routes": ["/website/answer-analysis/citation"]}, {"id": "analytics.geo.markets", "cat": "analytics", "catKo": "분석 조회", "domKo": "국가별", "name": "국가별 현황", "score": 3, "stg": false, "extra": false, "why": "국가별 5개 지표와 최대 경쟁사를 냅니다. 감점: 국가로 쪼개면 셀 수가 크게 줄어드는데 표본 크기를 보여 주지 않고, 웹사이트는 언급 수 지표만 채웁니다.", "routes": ["/dashboard", "/website"]}, {"id": "analytics.answers.list", "cat": "analytics", "catKo": "분석 조회", "domKo": "답변 드릴다운", "name": "답변 목록", "score": 2, "stg": true, "extra": false, "why": "조건에 맞는 답변 목록을 내는 API입니다. 붙어 있는 화면이 없습니다.", "routes": []}, {"id": "analytics.answers.detail", "cat": "analytics", "catKo": "분석 조회", "domKo": "답변 드릴다운", "name": "답변 상세", "score": 4, "stg": false, "extra": false, "why": "지표에서 답변 원문, 인용, 모델 식별자까지 내려가 확인할 수 있어 숫자를 검증할 길을 열어 줍니다.", "routes": ["/projects/[id]/analysis/citation", "/projects/[id]/analysis/mention", "/standard/answer-analysis/citation", "/standard/answer-analysis/citation/prompts", "/standard/answer-analysis/mention", "/website/answer-analysis/citation", "/website/answer-analysis/mention"]}, {"id": "analytics.funnel.acr", "cat": "analytics", "catKo": "분석 조회", "domKo": "AI 퍼널", "name": "AI 선택률(ACR)", "score": 3, "stg": false, "extra": false, "why": "2턴 대화를 10회 반복해 최종 선택 비율을 재는, 유일하게 반복 측정이 들어간 지표입니다. 감점: 웹사이트 화면은 정적 표본입니다.", "routes": ["/standard/ai-funnel/acr", "/website/ai-funnel/acr"]}, {"id": "analytics.funnel.conversion", "cat": "analytics", "catKo": "분석 조회", "domKo": "AI 퍼널", "name": "AI 유입·전환(GA4)", "score": 3, "stg": false, "extra": false, "why": "GA4의 AI 유입 채널에서 주요 이벤트 수 ÷ 활성 사용자로 전환율을 내고 비AI 유입과 비교합니다. 감점: Scope 측정과 연결되지 않고, Google AI Overviews 유입이 빠지며, 엔진 분해가 2종이고 표본이 작습니다(Kia 이탈리아 기준 엔진별 하루 1~12명).", "routes": ["/dashboard", "/projects/[id]/ai-funnel/conversion", "/standard/ai-funnel/conversion", "/website/ai-funnel/conversion"]}, {"id": "catalog.prompts.catalog", "cat": "catalog", "catKo": "프롬프트 카탈로그", "domKo": "프롬프트", "name": "카탈로그·측정 메타", "score": 3, "stg": false, "extra": false, "why": "표준 질문과 분류 체계(퍼널·브랜드 포함 여부·유형·깊이), 측정 여부를 냅니다. 감점: 질문 세트가 실제 사용자 질의를 대표한다는 근거는 없습니다.", "routes": ["/standard/prompts", "/website/prompts"]}, {"id": "catalog.prompts.history", "cat": "catalog", "catKo": "프롬프트 카탈로그", "domKo": "프롬프트", "name": "변경 이력", "score": 4, "stg": false, "extra": false, "why": "질문 세트가 언제 어떻게 바뀌었는지 감사 기록으로 남깁니다. 레거시 대시보드는 추이 차트에 변경 시점 마커까지 표시합니다.", "routes": ["/admin/standards/prompts", "/standard/prompts"]}, {"id": "projects.project.core", "cat": "projects", "catKo": "프로젝트", "domKo": "프로젝트", "name": "프로젝트 CRUD", "score": null, "stg": false, "extra": false, "why": "측정 단위(브랜드 × 국가)를 담는 컨테이너입니다.", "routes": ["/projects", "/projects/[id]", "/projects/[id]/ai-funnel/acr", "/projects/[id]/ai-funnel/conversion", "/projects/[id]/ai-funnel/visibility", "/projects/[id]/analysis/citation", "/projects/[id]/analysis/mention", "/projects/[id]/intent/google-keyword", "/projects/[id]/intent/social-scraping", "/projects/[id]/member", "/projects/[id]/prompt", "/projects/[id]/setting", "/projects/by-scope/[scopeId]", "/projects/new"]}, {"id": "projects.members.roster", "cat": "projects", "catKo": "프로젝트", "domKo": "멤버", "name": "멤버 목록·역할", "score": null, "stg": false, "extra": false, "why": "프로젝트 멤버와 역할 관리입니다.", "routes": ["/projects/[id]", "/projects/[id]/member"]}, {"id": "projects.members.invites", "cat": "projects", "catKo": "프로젝트", "domKo": "멤버", "name": "초대 수락·거절", "score": null, "stg": false, "extra": false, "why": "프로젝트 초대 수락·거절입니다.", "routes": ["/projects"]}, {"id": "projects.members.audit", "cat": "projects", "catKo": "프로젝트", "domKo": "멤버", "name": "멤버 감사", "score": null, "stg": false, "extra": false, "why": "멤버 변경 감사 기록입니다.", "routes": ["/projects/[id]/member"]}, {"id": "projects.prompts.candidates", "cat": "projects", "catKo": "프로젝트", "domKo": "프로젝트 프롬프트", "name": "후보 풀", "score": 2, "stg": false, "extra": false, "why": "키워드·소셜 화면에서 넘어온 질문 후보를 프로젝트 질문으로 올리는 대기열입니다. 판정 입력이 아닙니다.", "routes": ["/projects/[id]", "/projects/[id]/intent/social-scraping", "/projects/[id]/prompt"]}, {"id": "projects.prompts.crud", "cat": "projects", "catKo": "프로젝트", "domKo": "프로젝트 프롬프트", "name": "프롬프트 CRUD", "score": 3, "stg": false, "extra": false, "why": "프로젝트 질문을 등록·수정합니다. 문구·언어·국가는 초안일 때만 고칠 수 있어 측정 중인 질문의 시계열이 깨지지 않습니다.", "routes": ["/projects/[id]", "/projects/[id]/prompt"]}, {"id": "projects.prompts.lifecycle", "cat": "projects", "catKo": "프로젝트", "domKo": "프로젝트 프롬프트", "name": "일시정지·재개·삭제 영향", "score": 3, "stg": false, "extra": false, "why": "질문을 멈추거나 지우기 전에 영향받는 답변·언급·인용 수를 미리 보여 줍니다.", "routes": ["/projects/[id]/prompt"]}, {"id": "projects.prompts.execute", "cat": "projects", "catKo": "프로젝트", "domKo": "프로젝트 프롬프트", "name": "측정 실행", "score": 2, "stg": false, "extra": false, "why": "초안 질문의 측정을 Scope에 요청합니다(아웃박스 경유). 감점: Scope 쓰기 본문 계약이 미확정이고 수동 측정 한도는 협의 중입니다.", "routes": ["/projects/[id]/prompt"]}, {"id": "projects.prompts.io", "cat": "projects", "catKo": "프로젝트", "domKo": "프로젝트 프롬프트", "name": "가져오기·내보내기", "score": 2, "stg": false, "extra": false, "why": "질문 엑셀 가져오기·내보내기. 입력 편의 기능입니다.", "routes": ["/projects/[id]/prompt"]}, {"id": "projects.prompts.fields", "cat": "projects", "catKo": "프로젝트", "domKo": "프로젝트 프롬프트", "name": "커스텀 필드", "score": 2, "stg": false, "extra": false, "why": "프로젝트 화면 필터에 쓰는 사용자 정의 분류입니다. README가 판정 입력이 아니라고 명시합니다.", "routes": ["/projects/[id]/prompt"]}, {"id": "projects.settings.overview", "cat": "projects", "catKo": "프로젝트", "domKo": "프로젝트 설정", "name": "설정 묶음", "score": null, "stg": false, "extra": false, "why": "프로젝트 설정을 한 번에 조회하는 묶음입니다.", "routes": ["/projects/[id]", "/projects/[id]/analysis/mention", "/projects/[id]/setting"]}, {"id": "projects.settings.engines", "cat": "projects", "catKo": "프로젝트", "domKo": "프로젝트 설정", "name": "AI 엔진", "score": 2, "stg": false, "extra": false, "why": "측정할 AI 엔진을 고르고 변경 이력을 남깁니다. 감점: 선택지가 ChatGPT·Gemini·DeepSeek 3종뿐입니다.", "routes": ["/projects/[id]/setting"]}, {"id": "projects.settings.owned_bases", "cat": "projects", "catKo": "프로젝트", "domKo": "프로젝트 설정", "name": "소유 베이스 URL", "score": 3, "stg": false, "extra": false, "why": "자사 인용 판정의 기준이 되는 자사 URL 범위입니다. 바꾸면 재판정 요청이 들어가 지표에 반영됩니다.", "routes": ["/projects/[id]/setting"]}, {"id": "projects.settings.tracked_urls", "cat": "projects", "catKo": "프로젝트", "domKo": "프로젝트 설정", "name": "추적 URL", "score": 3, "stg": false, "extra": false, "why": "타겟 URL 인용률의 기준 목록입니다(엑셀 지원). 편집마다 재판정 요청이 들어갑니다.", "routes": ["/projects/[id]/setting"]}, {"id": "projects.settings.tracked_targets", "cat": "projects", "catKo": "프로젝트", "domKo": "프로젝트 설정", "name": "추적 대상(별칭·경쟁사·차종)", "score": 3, "stg": false, "extra": false, "why": "브랜드 별칭·경쟁사·차종 목록으로, 언급 귀속과 경쟁사 비교의 기준입니다. 편집하면 재판정 요청이 들어갑니다.", "routes": ["/projects/[id]/setting"]}, {"id": "projects.settings.scope_link", "cat": "projects", "catKo": "프로젝트", "domKo": "프로젝트 설정", "name": "Scope 연결 진단", "score": 2, "stg": false, "extra": false, "why": "프로젝트와 Scope의 연결 상태를 진단합니다. 운영 점검용입니다.", "routes": ["/projects/[id]/setting"]}, {"id": "intent.keywords.tracked", "cat": "intent", "catKo": "고객 관심", "domKo": "키워드", "name": "추적 키워드", "score": 2, "stg": false, "extra": false, "why": "프로젝트가 추적할 구글 검색어 목록입니다. 검색 수요는 AI 질의량이 아닌 대리값이라, 성과 측정이 아니라 질문 발굴용입니다.", "routes": ["/projects/[id]/intent/google-keyword"]}, {"id": "intent.keywords.research", "cat": "intent", "catKo": "고객 관심", "domKo": "키워드", "name": "인사이트·연관어·조회", "score": 2, "stg": false, "extra": false, "why": "구글 월별 검색량·검색 결과·연관어를 조회합니다(DataForSEO). 검색 수요 대리값이며 질문 발굴용입니다.", "routes": ["/customer-interest/google-keywords", "/projects/[id]/intent/google-keyword"]}, {"id": "intent.keywords.fetches", "cat": "intent", "catKo": "고객 관심", "domKo": "키워드", "name": "수집 요청(비동기)", "score": 2, "stg": false, "extra": false, "why": "검색량·연관어 수집을 비동기로 요청합니다. 질문 발굴 보조 기능입니다.", "routes": ["/customer-interest/google-keywords", "/projects/[id]/intent/google-keyword"]}, {"id": "intent.keywords.serp_drafts", "cat": "intent", "catKo": "고객 관심", "domKo": "키워드", "name": "SERP 프롬프트 초안", "score": 2, "stg": false, "extra": false, "why": "검색 결과를 바탕으로 LLM이 질문 초안을 만듭니다. 질문 발굴용입니다.", "routes": ["/projects/[id]/intent/google-keyword"]}, {"id": "intent.candidates.submit", "cat": "intent", "catKo": "고객 관심", "domKo": "후보 풀", "name": "후보 등록(공용)", "score": 2, "stg": false, "extra": false, "why": "키워드·소셜 화면에서 질문 후보를 후보 풀에 등록합니다.", "routes": ["/projects/[id]/intent/google-keyword", "/projects/[id]/intent/social-scraping"]}, {"id": "intent.social.context_map", "cat": "intent", "catKo": "고객 관심", "domKo": "소셜·컨텍스트 맵", "name": "컨텍스트 맵 조회·내보내기", "score": 1, "stg": false, "extra": false, "why": "Scope가 넘겨 준 구매 맥락 코퍼스의 정적 스냅샷을 열람합니다. 스크레이핑을 직접 실행하는 기능이 아닙니다.", "routes": ["/projects/[id]/intent/social-scraping"]}, {"id": "intent.social.prompts", "cat": "intent", "catKo": "고객 관심", "domKo": "소셜·컨텍스트 맵", "name": "생성 프롬프트", "score": 2, "stg": false, "extra": false, "why": "맥락 신호를 LLM으로 질문 후보로 바꿉니다. 기존 질문과의 근사 중복 표시는 있지만 대표성 기준은 없습니다.", "routes": ["/projects/[id]/intent/social-scraping"]}, {"id": "admin.catalog.prompts", "cat": "admin", "catKo": "운영 관리", "domKo": "표준 카탈로그", "name": "표준 프롬프트 CRUD", "score": 3, "stg": false, "extra": false, "why": "표준 질문을 등록·수정하면 감사 기록과 재판정 요청이 자동으로 남고, Scope에도 반영 요청이 들어갑니다.", "routes": ["/admin/standards/prompts"]}, {"id": "admin.catalog.bulk", "cat": "admin", "catKo": "운영 관리", "domKo": "표준 카탈로그", "name": "일괄 편집·가져오기·내보내기", "score": 2, "stg": false, "extra": false, "why": "표준 질문 일괄 편집과 엑셀 가져오기·내보내기. 입력 편의 기능입니다.", "routes": ["/admin/standards/prompts"]}, {"id": "admin.catalog.reference", "cat": "admin", "catKo": "운영 관리", "domKo": "표준 카탈로그", "name": "택소노미·시장", "score": 2, "stg": false, "extra": false, "why": "분류 체계와 시장 어휘를 조회합니다. 입력 보조입니다.", "routes": ["/admin/standards/prompts"]}, {"id": "admin.interest.keywords", "cat": "admin", "catKo": "운영 관리", "domKo": "고객 관심 원천", "name": "표준 키워드", "score": 2, "stg": false, "extra": false, "why": "표준 화면에 보일 키워드 목록을 관리합니다. 판정 입력이 아닙니다.", "routes": ["/admin/standards/customer-interest"]}, {"id": "admin.interest.sources", "cat": "admin", "catKo": "운영 관리", "domKo": "고객 관심 원천", "name": "표준 출처", "score": 1, "stg": false, "extra": false, "why": "표준 출처 URL 목록의 단순 등록·삭제입니다. 판정 입력이 아닙니다.", "routes": ["/admin/standards/customer-interest"]}, {"id": "admin.entities.registry", "cat": "admin", "catKo": "운영 관리", "domKo": "엔티티", "name": "엔티티 레지스트리", "score": 3, "stg": false, "extra": false, "why": "엔티티의 자사·경쟁·제외 역할을 정해 언급 귀속의 기준을 만듭니다. 감점: 레거시 화면은 역할 지정만 됩니다.", "routes": ["/admin/standards/entities"]}, {"id": "admin.entities.versions", "cat": "admin", "catKo": "운영 관리", "domKo": "엔티티", "name": "엔티티 버전 관리", "score": 4, "stg": false, "extra": true, "why": "엔티티 변경을 버전으로 묶어, 반영 전에 지표 전후 차이를 미리 보고 검증·승인·되돌리기까지 합니다. API 연결 모드에서만 동작하고 레거시 모드에서는 꺼져 있습니다.", "routes": ["/admin/standards/entities/versions", "/admin/standards/entities/draft", "/admin/standards/entities/review", "/admin/standards/entities/audit"]}, {"id": "admin.citation_sources.overrides", "cat": "admin", "catKo": "운영 관리", "domKo": "인용 출처", "name": "도메인 카테고리 오버라이드", "score": 3, "stg": false, "extra": false, "why": "도메인 카테고리를 사람이 교정하면 재판정으로 반영됩니다. 감점: 체계적인 정확도 점검은 없습니다.", "routes": ["/admin/standards/citation-sources"]}, {"id": "admin.cycles.cycles", "cat": "admin", "catKo": "운영 관리", "domKo": "회차 운영", "name": "회차 숨김·마감·노출일", "score": 3, "stg": true, "extra": false, "why": "문제가 있는 회차를 숨기거나 마감·노출일을 조정해 지표에서 빼는 API입니다. 붙어 있는 화면이 없습니다.", "routes": []}, {"id": "admin.cycles.jobs", "cat": "admin", "catKo": "운영 관리", "domKo": "회차 운영", "name": "측정 앵커 고정·드롭", "score": 3, "stg": true, "extra": false, "why": "개별 측정의 기준 시각을 고정하거나 불량 답변을 사유와 함께 제외하는 API입니다. 붙어 있는 화면이 없습니다.", "routes": []}, {"id": "admin.accounts.users", "cat": "admin", "catKo": "운영 관리", "domKo": "계정·권한", "name": "계정 CRUD·감사", "score": null, "stg": false, "extra": false, "why": "계정과 권한 관리입니다.", "routes": ["/admin"]}, {"id": "admin.integrations.ga4", "cat": "admin", "catKo": "운영 관리", "domKo": "외부 연동", "name": "GA4 속성", "score": 2, "stg": false, "extra": false, "why": "GA4 속성을 브랜드·국가에 매핑하고 전환으로 셀 이벤트를 정합니다. 전환율 지표의 전제이지만, 속성마다 이벤트 구성이 달라 시장 간 비교는 어렵습니다.", "routes": ["/admin/ga4", "/projects/[id]/ai-funnel/conversion", "/website/ai-funnel/conversion"]}, {"id": "admin.integrations.keyword_tools", "cat": "admin", "catKo": "운영 관리", "domKo": "외부 연동", "name": "키워드 도구", "score": 2, "stg": false, "extra": false, "why": "검색량 조회와 LLM 기반 키워드 ↔ 질문 변환 도구입니다. 질문 발굴용입니다.", "routes": ["/admin/keyword-tools"]}, {"id": "admin.changes.queue", "cat": "admin", "catKo": "운영 관리", "domKo": "변경 요청 큐", "name": "재판정·운영 요청 조회", "score": 3, "stg": false, "extra": false, "why": "재판정·운영 요청이 언제 들어가고 반영됐는지 조회합니다. 지표가 왜 바뀌었는지 추적하는 근거입니다.", "routes": ["/admin/keyword-tools"]}, {"id": "qa.answers.list", "cat": "qa", "catKo": "검수 콘솔", "domKo": "검수 대상", "name": "목록·진행률·이웃·필터", "score": 3, "stg": false, "extra": false, "why": "검수 대상 답변 목록과 진행률을 냅니다. 사람이 원문을 대조하는 출발점입니다.", "routes": ["/raw-data-qa/answers", "/raw-data-qa/answers/[jobId]"]}, {"id": "qa.answers.detail", "cat": "qa", "catKo": "검수 콘솔", "domKo": "검수 대상", "name": "검수 상세", "score": 3, "stg": false, "extra": false, "why": "답변 원문·질문·언급·인용·ACR을 한 화면에서 대조할 수 있습니다.", "routes": ["/raw-data-qa/answers/[jobId]"]}, {"id": "qa.review.verdict", "cat": "qa", "catKo": "검수 콘솔", "domKo": "판정", "name": "판정 저장", "score": 2, "stg": false, "extra": false, "why": "섹션별 ok/issue 판정만 저장합니다. 적재·분석 조회 코드 어디서도 이 값을 읽지 않아, 지표 보정이나 정확도 산출로 이어지지 않습니다.", "routes": ["/raw-data-qa/answers/[jobId]"]}, {"id": "qa.review.lock", "cat": "qa", "catKo": "검수 콘솔", "domKo": "판정", "name": "답변 락", "score": null, "stg": false, "extra": false, "why": "동시 검수 충돌을 막는 잠금 장치입니다.", "routes": ["/raw-data-qa/answers/[jobId]"]}, {"id": "qa.review.sessions", "cat": "qa", "catKo": "검수 콘솔", "domKo": "판정", "name": "검수 세션", "score": null, "stg": false, "extra": false, "why": "검수자 입장과 세션 관리입니다.", "routes": ["/raw-data-qa", "/raw-data-qa/answers", "/raw-data-qa/answers/[jobId]", "/raw-data-qa/notes"]}, {"id": "qa.review.deltas", "cat": "qa", "catKo": "검수 콘솔", "domKo": "판정", "name": "변경 알림", "score": null, "stg": false, "extra": false, "why": "검수 목록 변경 알림입니다.", "routes": ["/raw-data-qa/answers"]}, {"id": "qa.notes.notes", "cat": "qa", "catKo": "검수 콘솔", "domKo": "노트", "name": "노트 작성·조회·내보내기", "score": 2, "stg": false, "extra": false, "why": "검수 메모를 남기고 내보냅니다. 판정과 마찬가지로 지표로 이어지는 경로가 없습니다.", "routes": ["/raw-data-qa/answers/[jobId]", "/raw-data-qa/notes"]}, {"id": "platform.auth.session", "cat": "platform", "catKo": "플랫폼", "domKo": "인증", "name": "세션·스코프", "score": null, "stg": false, "extra": false, "why": "로그인 세션과 권한 범위 조회입니다.", "routes": ["/"]}, {"id": "ingest.pull.sync", "cat": "ingest", "catKo": "적재 파이프라인(워커)", "domKo": "Scope pull·쓰기 스키마", "name": "20분 pull·CLI", "score": 3, "stg": true, "extra": false, "why": "Scope에서 20분마다 원문을 당겨 옵니다. 같은 내용은 다시 쓰지 않고 중단 지점부터 이어받습니다. 감점: Scope 쓰기 본문 계약이 미확정입니다.", "routes": []}, {"id": "ingest.pull.ops", "cat": "ingest", "catKo": "적재 파이프라인(워커)", "domKo": "Scope pull·쓰기 스키마", "name": "적재 운영 조회", "score": 3, "stg": true, "extra": false, "why": "적재 상태·밀린 작업·적재 이력을 조회합니다.", "routes": []}, {"id": "ingest.project.apply", "cat": "ingest", "catKo": "적재 파이프라인(워커)", "domKo": "판정·읽기 투영", "name": "판정·투영·재판정", "score": 4, "stg": true, "extra": false, "why": "받은 분석 결과를 지표용 표로 투영합니다. 증분 적재 결과를 일괄 적재와 행 단위로 대조하는 테스트와 합계 단언이 있습니다.", "routes": []}, {"id": "ingest.cycles.ledger", "cat": "ingest", "catKo": "적재 파이프라인(워커)", "domKo": "회차·큐·아웃박스", "name": "회차 귀속·재평가", "score": 4, "stg": true, "extra": false, "why": "측정을 회차에 귀속하고, 계획한 측정이 빠짐없이 들어오고 분석 비율이 기준 이상일 때만 회차를 발행합니다.", "routes": []}, {"id": "ingest.cycles.workers", "cat": "ingest", "catKo": "적재 파이프라인(워커)", "domKo": "회차·큐·아웃박스", "name": "cycles_tick·queue·outbox·dfs_fetch", "score": 3, "stg": true, "extra": false, "why": "회차 재평가, 재판정 큐, Scope 반영, 키워드 수집을 돌리는 워커입니다.", "routes": []}, {"id": "ingest.cycles.watch", "cat": "ingest", "catKo": "적재 파이프라인(워커)", "domKo": "회차·큐·아웃박스", "name": "감시 태스크", "score": 3, "stg": true, "extra": false, "why": "적재 지연·실패·투영 누락 등 9가지를 6시간마다 점검해 알립니다. 감점: 지표 급변 감지는 없습니다.", "routes": []}];
+  const HIDDEN = new Set(["/standard/ai-funnel/visibility", "/customer-interest", "/customer-interest/google-keywords", "/customer-interest/social-scraping", "/website/ai-funnel/acr", "/projects/new"]);
+  const SCORE_VAR = { 4: "--good", 3: "--most", 2: "--some", 1: "--none" };
+
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const $ = (id) => document.getElementById(id);
+
+  // ── project id (fills the [id] slot of project routes) ──
+  function parsePid(v) {
+    v = (v || "").trim();
+    const m = v.match(/projects\/([^\/?#\s]+)/);
+    if (m) return m[1] === "new" || m[1] === "by-scope" ? "" : m[1];
+    return v.replace(/[\/\s]/g, "");
+  }
+  let pid = "";
+  try { pid = parsePid(localStorage.getItem("hmg-geo-pid") || ""); } catch (e) { /* storage unavailable */ }
+
+  function linkFor(route) {
+    if (route.includes("[id]")) {
+      return pid
+        ? { href: BASE + route.replace("[id]", encodeURIComponent(pid)), dyn: true, title: "입력한 프로젝트 화면으로 이동" }
+        : { href: BASE + "/projects", dyn: true, title: "프로젝트 ID가 비어 있어 프로젝트 목록으로 이동" };
+    }
+    if (route.includes("[jobId]")) return { href: BASE + "/raw-data-qa/answers", dyn: true, title: "답변 ID가 필요한 화면이라 검수 목록으로 이동" };
+    if (route.includes("[scopeId]")) return { href: BASE + "/projects", dyn: true, title: "Scope ID가 필요한 화면이라 프로젝트 목록으로 이동" };
+    return { href: BASE + route, dyn: false, title: BASE + route };
+  }
+
+  // ── summary tiles ──
+  const counted = ROWS.filter((r) => !r.extra);
+  const scored = counted.filter((r) => r.score !== null);
+  const avg = scored.reduce((a, r) => a + r.score, 0) / scored.length;
+  const nOf = (k) => scored.filter((r) => r.score === k).length;
+  const excluded = counted.length - scored.length;
+  $("summary").innerHTML = [
+    { k: "평균", v: avg.toFixed(1) + "<small>/ 5</small>", d: "채점한 " + scored.length + "개 기준", c: "var(--accent)" },
+    { k: "4점", v: nOf(4), d: "정의 명확, 실데이터 동작", c: "var(--good)" },
+    { k: "3점", v: nOf(3), d: "해석 한계 또는 간접 지원", c: "var(--most)" },
+    { k: "2점", v: nOf(2), d: "연결 약함, 범위 제한", c: "var(--some)" },
+    { k: "1점", v: nOf(1), d: "정적 스냅샷 수준", c: "var(--none)" },
+    { k: "채점 제외", v: excluded, d: "측정 무관(권한·협업)", c: "var(--off)" },
+  ].map((t) => `<div class="tile" style="--c:${t.c}"><span class="k">${t.k}</span><span class="v num">${t.v}</span><span class="d">${t.d}</span></div>`).join("");
+
+  // ── filters ──
+  const state = { score: "all", cat: "all", q: "" };
+  const SCORE_OPTS = [["all", "전체"], ["4", "4점"], ["3", "3점"], ["2", "2점"], ["1", "1점"], ["x", "제외"]];
+  $("seg-score").innerHTML = SCORE_OPTS.map(([v, l]) => `<button type="button" data-v="${v}" aria-pressed="${v === "all"}">${l}</button>`).join("");
+  $("seg-score").addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    state.score = b.dataset.v;
+    for (const x of $("seg-score").children) x.setAttribute("aria-pressed", String(x === b));
+    render();
+  });
+  const cats = [];
+  for (const r of ROWS) if (!cats.some((c) => c[0] === r.cat)) cats.push([r.cat, r.catKo]);
+  $("cat").innerHTML = `<option value="all">전체</option>` + cats.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("");
+  $("cat").addEventListener("change", (e) => { state.cat = e.target.value; render(); });
+  $("q").addEventListener("input", (e) => { state.q = e.target.value.trim().toLowerCase(); render(); });
+  $("pid").value = pid;
+  $("pid").addEventListener("input", (e) => {
+    pid = parsePid(e.target.value);
+    try { localStorage.setItem("hmg-geo-pid", pid); } catch (err) { /* storage unavailable */ }
+    render();
+  });
+
+  function pill(r) {
+    if (r.score === null) return `<span class="pill s0"><i></i>제외</span>`;
+    return `<span class="pill s${r.score}"><i></i><span class="num">${r.score} / 5</span></span>`;
+  }
+  function links(r) {
+    if (!r.routes.length) return `<span class="nolink">화면 없음 (워커·API 전용)</span>`;
+    return `<div class="lks">` + r.routes.map((route) => {
+      const l = linkFor(route);
+      const tag = HIDDEN.has(route) ? `<span class="tag">메뉴 숨김</span>` : "";
+      return `<a class="lk${l.dyn ? " dyn" : ""}" href="${esc(l.href)}" target="_blank" rel="noopener noreferrer" title="${esc(l.title)}">${esc(route)}${tag}</a>`;
+    }).join("") + `</div>`;
+  }
+  function matches(r) {
+    if (state.cat !== "all" && r.cat !== state.cat) return false;
+    if (state.score === "x" && r.score !== null) return false;
+    if (state.score !== "all" && state.score !== "x" && String(r.score) !== state.score) return false;
+    if (state.q) {
+      const hay = (r.name + " " + r.id + " " + r.domKo + " " + r.catKo + " " + r.why + " " + r.routes.join(" ")).toLowerCase();
+      if (!hay.includes(state.q)) return false;
+    }
+    return true;
+  }
+  function render() {
+    const vis = ROWS.filter(matches);
+    let html = "";
+    for (const [cat, catKo] of cats) {
+      const rows = vis.filter((r) => r.cat === cat);
+      if (!rows.length) continue;
+      const all = counted.filter((r) => r.cat === cat);
+      const sc = all.filter((r) => r.score !== null);
+      const meta = all.length + "개" + (sc.length ? " · 평균 " + (sc.reduce((a, r) => a + r.score, 0) / sc.length).toFixed(1) : " · 채점 제외");
+      html += `<tr class="group"><td colspan="4">${esc(catKo)}<span class="num">${meta}</span></td></tr>`;
+      for (const r of rows) {
+        const badges = (r.stg ? `<span class="badge" title="back에만 있고 스테이징 단계">stg</span>` : "") + (r.extra ? `<span class="badge" title="72개 분류표에 없는 모듈, 합계 제외">분류표 밖</span>` : "");
+        html += `<tr>
+          <td class="item"><span class="nm">${esc(r.name)}</span>${badges}<span class="fid">${esc(r.id)}</span></td>
+          <td class="score">${pill(r)}</td>
+          <td class="why">${esc(r.why)}</td>
+          <td class="links">${links(r)}</td>
+        </tr>`;
+      }
+    }
+    $("rows").innerHTML = html || `<tr><td colspan="4" class="empty">조건에 맞는 기능이 없습니다.</td></tr>`;
+    $("count").textContent = vis.length + " / " + ROWS.length + "개 표시";
+    $("pid-state").textContent = pid ? "[id] 자리에 적용됨" : "비어 있으면 프로젝트 목록으로 이동";
+  }
+  render();
+</script>
+</body>
+</html>

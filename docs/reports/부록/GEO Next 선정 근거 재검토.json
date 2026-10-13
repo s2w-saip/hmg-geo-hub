@@ -1,0 +1,126 @@
+{
+  "date": "2026-10-08",
+  "kind": "초기 선정 근거 발견 후 추가 재검토",
+  "status": "본문 반영 완료",
+  "supersedes": "기존 3회 검토의 SPA 우선 비교 추천. 기존 검토 이력과 데이터·권한·발행·복구 계약은 보존.",
+  "findings": [
+    {
+      "id": "N01",
+      "problem": "2026-05-22 초기 선정·Vite SPA 기각 기록이 추천 근거에서 빠졌다.",
+      "change": "BFF를 두 번째 서비스 없이 제공하려는 결정과 Scope 스택 정렬 목적을 원문으로 대조. 당시 판단의 타당성과 현재 전제의 변화를 구분.",
+      "sections": [
+        "stance",
+        "next"
+      ]
+    },
+    {
+      "id": "N02",
+      "problem": "별도 API 존재를 브라우저 BFF 책임 이전 완료로 취급할 수 있었다.",
+      "change": "현재 Next의 로그인·쿠키 갱신·토큰 중계와 FastAPI Bearer 검증/권한 제공을 구분. API 통합형 SPA안은 API의 세션·CSRF·인가·다운로드 경계 인수가 선행됨을 명시.",
+      "sections": [
+        "next",
+        "security"
+      ]
+    },
+    {
+      "id": "N03",
+      "problem": "프레임워크·렌더링·BFF 배치·별도 API 배포를 한 선택처럼 비교했다.",
+      "change": "Next+BFF+별도 API, SPA+API 내 BFF, SPA+별도 BFF+API, Next 내 웹 API+워커의 네 구성을 비교. 정적 Next도 가능하지만 현 서버 기능을 그대로 export할 수 없음을 명시.",
+      "sections": [
+        "next",
+        "topology",
+        "backend"
+      ]
+    },
+    {
+      "id": "N04",
+      "problem": "SPA 전환 비용과 Next 유지 시 제거할 결합의 책임표가 부족했다.",
+      "change": "서버 액션·Route Handler·비동기 페이지의 파일 목록과 실제 인증/중계 코드를 확인. 공통 업무 계층·권한 정본·쿠키/토큰·오류/재시도·캐시·다국어의 책임 이전과 검증 항목을 추가.",
+      "sections": [
+        "next",
+        "ui",
+        "migration"
+      ]
+    },
+    {
+      "id": "N05",
+      "problem": "SPA를 기본 승자로 두는 결론과 실증 조건이 남아 있었다.",
+      "change": "SPA 우선 추천 철회. BFF 귀속 먼저 결정하고 Next BFF 축소안과 API 통합 SPA안을 같은 보안·업무 조건으로 비교. 별도 API 필요성도 TS 팀/조직/운영 조건으로 재평가.",
+      "sections": [
+        "stance",
+        "poc",
+        "decisions",
+        "explorer"
+      ]
+    },
+    {
+      "id": "N06",
+      "problem": "추가 근거에 따른 추천 변경을 기존 3회 이력과 구분하고 요약·도식·조건 도구에도 연결해야 한다.",
+      "change": "원래 3회 스냅샷을 유지하고 후속 개정의 입력/출력 hash를 별도 연결. 본문·개발 사본·조건 도구·A4 한장 요약을 갱신하고 문서 검증과 미실행 PoC를 구분.",
+      "sections": [
+        "stance",
+        "target",
+        "explorer",
+        "evidence"
+      ]
+    }
+  ],
+  "inputSha256": "489a7a6868c8a8492f8dd454e19d27cc1cc0bb52d713d4a6fa47222e44cd0355",
+  "reportSha256": "898ae17318e79f2e34ca8ae7e9196a65769e3b44590d8791417b903168c1c731",
+  "snapshot": "reports\\부록\\재설계 재검토 이력\\04 Next 초기근거 반영.html",
+  "sources": [
+    {
+      "path": "hmg-geo-hub-share/front/openspec/changes/archive/2026-05-22-setup-frontend-scaffold/design.md",
+      "sha256": "61a80a96a96e3a239013d680a9a2ef6149c3b0d75f732762f2c7aab50a0cf6a3"
+    },
+    {
+      "path": "hmg-geo-hub-share/front/openspec/changes/archive/2026-05-22-setup-frontend-scaffold/proposal.md",
+      "sha256": "8422597b4401caa693a72dd1fddfc77e35c1a654fc5585c780007ba03b7f1dff"
+    },
+    {
+      "path": "hmg-geo-hub-share/front/README.md",
+      "sha256": "8fdf3cd81b4b85adfc5f7bab8ba373d139044a390070c86b22f9fdcf5e2aeac6"
+    },
+    {
+      "path": "hmg-geo-hub-share/docs/design/DESIGN-CONTRACT.md",
+      "sha256": "763d870e5222aed4aef70525274844dcc5b94205136fb4e9b8db9ae1bb83d18b"
+    },
+    {
+      "path": "hmg-geo-hub-share/front/lib/auth/actions.ts",
+      "sha256": "68714bc1f2d373757a6b02c74c69175dccc7daf31984613d48a1874409534375"
+    },
+    {
+      "path": "hmg-geo-hub-share/front/middleware.ts",
+      "sha256": "a0d2d409c24fc638aef2c4622ad4ba8deb37d0274a22dbfd34ec93bcb9a22a7a"
+    },
+    {
+      "path": "hmg-geo-hub-share/front/lib/auth/session.ts",
+      "sha256": "6e2c2d99d7b3996f7dedd775886ba62c9630c1582f4bbca26bee1dc5243eb813"
+    },
+    {
+      "path": "hmg-geo-hub-share/front/lib/hgh/auth.ts",
+      "sha256": "8a6dfa7242e588fa7102fd6769afd4acc846a63b049e01ca38b766ba5d00afb2"
+    },
+    {
+      "path": "hmg-geo-hub-share/front/lib/hgh/client.ts",
+      "sha256": "8ff8b8cb683428d87c31d330f427a1b2b626f3ab65d70f4be4e51925722e5769"
+    },
+    {
+      "path": "hmg-geo-hub-share/front/app/[locale]/(dash)/dashboard/page.tsx",
+      "sha256": "8c6dc35c1c5d9c4dfa32d9000b138be450c19909891a0a8e7b63d441a372057e"
+    },
+    {
+      "path": "hmg-geo-hub-share/front/app/api/scope/projects/route.ts",
+      "sha256": "c4f89f537f21279f0a645c7158edfd9208a8f29ca877f3a56305d3c256148e7b"
+    },
+    {
+      "path": "hmg-geo-hub-share/back/app/core/auth.py",
+      "sha256": "4569de5a1b7add2408a69de9febd055cf2fa6abef3d671a469d1fb6c5351f939"
+    },
+    {
+      "path": "hmg-geo-hub-share/back/app/features/platform/auth/session/README.md",
+      "sha256": "9896bd8a4907c25fa69fffcfaf97b2afa3d121dd21710f1f44f56142ce44c638"
+    }
+  ],
+  "verification": "정적 문서·브라우저 결과는 GEO 재설계 검토 문서 검증.json. A~D 앱 구현·보안/성능 PoC는 미실행."
+}

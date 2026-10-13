@@ -1,0 +1,10 @@
+{
+  "mode": "project",
+  "date": "2026-10-08T15:49:13.876Z",
+  "passed": [
+    "Project: select all includes 25002 rows, including rows not mounted",
+    "Project: global text sorting and deep scroll reach row 25001; <=200 mounted",
+    "Project: unsaved tag survives row unmount/remount"
+  ],
+  "errors": []
+}

@@ -1,0 +1,10 @@
+{
+  "mode": "standard",
+  "date": "2026-10-08T15:43:06.857Z",
+  "passed": [
+    "Standard: 12005 matching rows; 50 mounted rows; global text sort and page two",
+    "Standard: page size resets page; draft filter waits for Apply; correct total",
+    "Standard: downloaded XLSX contains all 12005 rows in sorted order"
+  ],
+  "errors": []
+}

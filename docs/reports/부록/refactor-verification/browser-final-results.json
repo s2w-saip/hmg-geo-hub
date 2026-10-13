@@ -1,0 +1,11 @@
+{
+  "date": "2026-10-08T16:06:29.698Z",
+  "passed": [
+    "standard/prompts: Korean browser reload uses ko collation",
+    "admin/standards/prompts: Korean browser reload uses ko collation",
+    "citation-sources: normal read, injected 503 visible, retry recovers",
+    "entities: normal read, injected 503 visible, retry recovers",
+    "Bulk: second chunk fails; 1000 confirmed, 24002 selected, input retained",
+    "Bulk: retry remaining 24002 succeeds and selection clears"
+  ]
+}
