@@ -102,6 +102,19 @@ async def test_filter_details(client_as):
     assert r.json()["data"]["by_country"] is None                              # active 속성 1개면 국가별 표 없음
 
 
+async def test_include_pages_false_skips_page_table_only(client_as, monkeypatch):
+    """대시보드 ⑦ 카드 호출(include_pages=false): 페이지별 집계 문장을 실행하지 않고 pages = [], 나머지 data·meta 는 기본 호출과 같다."""
+    from app.features.analytics.funnel.conversion import service
+    full = (await _get(client_as, ADMIN, surface="global")).json()
+
+    def no_pages(*a, **k):
+        raise AssertionError("pages_sql must not run when include_pages=false")
+    monkeypatch.setattr(service.q, "pages_sql", no_pages)
+    card = (await _get(client_as, ADMIN, surface="global", include_pages="false")).json()
+    assert card["data"]["pages"] == [] and full["data"]["pages"] != []
+    assert {**card["data"], "pages": full["data"]["pages"]} == full["data"] and card["meta"] == full["meta"]
+
+
 async def test_website_surface_same_source(client_as):
     r = await _get(client_as, ADMIN, surface="website")
     assert r.status_code == 200 and r.json()["meta"]["surface"] == "website" and _pair(r.json()["data"]) == (35, 7, 350, 17)

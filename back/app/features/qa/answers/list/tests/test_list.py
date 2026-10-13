@@ -208,6 +208,29 @@ async def test_progress_empty_filter(client_as):
     assert r.json()["meta"]["dropped_filters"] == {"engine": ["nope"]}
 
 
+async def test_progress_counts_once_when_filter_does_not_narrow(client_as, monkeypatch):
+    """필터가 범위를 좁히지 않으면 같은 집계를 한 번만 실행한다. 좁히거나 빈 범위(empty)면 total 을 따로 센다."""
+    from app.features.qa.answers.list import service as svc
+    ran: list[object] = []
+    counts = svc._counts
+
+    async def spy(conn, r):
+        ran.append(r)
+        return await counts(conn, r)
+    monkeypatch.setattr(svc, "_counts", spy)
+    rv = await reviewer()
+    async with qa_client(client_as, rv) as c:
+        whole = (await c.get("/v1/qa/answers/progress")).json()["data"]
+        n_whole = len(ran)
+        narrowed = (await c.get("/v1/qa/answers/progress", params={"engine": "gemini"})).json()["data"]
+        n_narrowed = len(ran) - n_whole
+        empty = (await c.get("/v1/qa/answers/progress", params={"engine": "nope"})).json()["data"]
+    assert (n_whole, n_narrowed, len(ran) - n_whole - n_narrowed) == (1, 2, 2)
+    # 재사용한 total(whole) = 따로 센 total(narrowed·empty)
+    assert whole["scoped"] == whole["total"] == narrowed["total"] == empty["total"]
+    assert empty["scoped"] == {"total": 0, "reviewed": 0, "issues": 0, "notes": 0}
+
+
 # ── 이웃 ──
 async def test_neighbors_follow_list_order(client_as):
     rv = await reviewer()

@@ -302,10 +302,12 @@ async def build(conn: Any, ctx: ReadContext, params: ConversionParams) -> Envelo
 
     sq = q.sessions_sql(active, lo, hi, **args)
     cq = q.conversions_sql(active, lo, hi, **args)
-    pq = q.pages_sql(active, lo, hi, **args, limit=params.page_limit)
     srows = await fetch_all(conn, sq.text, sq.params)
     crows = await fetch_all(conn, cq.text, cq.params)
-    prows = await fetch_all(conn, pq.text, pq.params)
+    prows: list[dict[str, Any]] = []
+    if params.include_pages:                                             # 카드 호출(false)은 페이지별 집계 문장을 건너뛴다
+        pq = q.pages_sql(active, lo, hi, **args, limit=params.page_limit)
+        prows = await fetch_all(conn, pq.text, pq.params)
 
     # (코호트, 묶음 종류, 키) → 값. 코호트 ai = report 2 / is_ai, human = report 1 / NOT is_ai
     sess: dict[tuple[str, int, Any], int] = {}

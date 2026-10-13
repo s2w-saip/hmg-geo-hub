@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { usePagedQuery } from "@/hooks/use-paged-query";
 import { useWindowedRows } from "@/hooks/use-windowed-rows";
-import type { ProjectPageQuery, RemoteProjectRows } from "@/lib/projects/prompt-page";
+import { reuseProjectValues, type ProjectPageQuery, type RemoteProjectRows } from "@/lib/projects/prompt-page";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -125,7 +125,9 @@ export function PromptList({
   const [rowCount, setRowCount] = useState(remote?.initial.total ?? prompts.length);
   const windowed = useWindowedRows(rowCount, JSON.stringify(sort), 56, !!remote);
   const readQuery: ProjectPageQuery = { sort: sort.key, direction: sort.dir, offset: windowed.start, limit: windowed.limit };
-  const page = usePagedQuery(remote?.initial, remote?.load, readQuery);
+  // Tag value suggestions are project-wide: page and sort reads carry the render's values (a write re-renders a new remote).
+  const load = useMemo(() => (remote ? reuseProjectValues(remote) : undefined), [remote]);
+  const page = usePagedQuery(remote?.initial, load, readQuery);
   useEffect(() => { if (page.data) setRowCount(page.data.total); }, [page.data]);
   const sourcePrompts = page.data?.rows ?? prompts;
   // 일괄 태깅 — 선택된 프롬프트 id 집합 + 적용할 태그/값.

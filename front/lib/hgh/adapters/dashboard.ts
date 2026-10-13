@@ -198,6 +198,8 @@ export async function fetchCardBrands(
  * ⑦ GET /v1/funnel/conversion (design 4.2: the dashboard adapter calls it directly). Only the
  * market axes the legacy tile used are sent (global: URL brand and country; project: country),
  * no period (the tile had its own window) and no engine (the legacy tile ignored it).
+ * include_pages=false: the tile reads summary, coverage and trend only (toTrafficConversionKpi),
+ * so the backend skips the per-page aggregation (a backend without the flag ignores it).
  */
 export async function fetchTrafficConversion(
   filters: StandardFilters,
@@ -207,8 +209,8 @@ export async function fetchTrafficConversion(
   const { query } = analysisQuery(marketOnly, { surface: ctx.surface, projectId: ctx.projectId, scope: ctx.scope });
   const extra =
     ctx.surface === "project"
-      ? { days: CONVERSION_DAYS, property_source: "market" as const }
-      : { days: CONVERSION_DAYS };
+      ? { days: CONVERSION_DAYS, property_source: "market" as const, include_pages: false }
+      : { days: CONVERSION_DAYS, include_pages: false };
   const res = await hghGet("/v1/funnel/conversion", { query: withParams(query, extra) });
   return { data: res.data, meta: res.meta };
 }

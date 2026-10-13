@@ -60,6 +60,32 @@ async def test_sort_keeps_empty_tags_last_and_rejects_other_project_fields(env, 
         assert response.status_code == 404
 
 
+async def test_include_values_false_skips_project_tag_values(env, client_as, monkeypatch):
+    """include_values=false: 행·건수·열 표시·초안 수는 같고, 프로젝트 전체 태그 값 집계는 실행하지 않는다(values = null)."""
+    from app.features.projects.prompts import screen
+    pid = await env.mk_project()
+    a = await env.mk_prompt("Alpha", project_id=pid)
+    await env.mk_prompt("beta", project_id=pid)
+    field = await env.mk_field("tag", project_id=pid)
+    await env.set_tag(a, field, "A", project_id=pid)
+    seen: list[str] = []
+    fetch_all = screen.fetch_all
+
+    async def spy(conn, sql, params=None):
+        seen.append(sql)
+        return await fetch_all(conn, sql, params)
+    async with client_as(env.owner) as client:
+        url = f"/v1/projects/{pid}/prompts/screen"
+        full = (await client.post(url, json={"limit": 1, "offset": 1})).json()["data"]
+        monkeypatch.setattr(screen, "fetch_all", spy)
+        response = await client.post(url, json={"limit": 1, "offset": 1, "include_values": False})
+    assert response.status_code == 200, response.text
+    rows = response.json()["data"]
+    assert full["values"] == {str(field): ["A"]} and rows["values"] is None
+    assert {**rows, "values": full["values"]} == full
+    assert seen and not any("prompt_custom_field_value v" in sql for sql in seen)
+
+
 async def test_screen_reads_require_active_membership(env, client_as):
     pid = await env.mk_project()
     for suffix in ("prompts", "prompt-candidates"):

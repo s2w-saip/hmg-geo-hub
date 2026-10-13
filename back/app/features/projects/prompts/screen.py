@@ -20,6 +20,9 @@ class ProjectScreenQuery(BaseModel):
     direction: Literal["asc", "desc"] | None = None
     collation: Literal["ko", "en"] = "en"
     ids_only: bool = False
+    include_values: bool = Field(True, description=(
+        "false = 태그 값 제안(values) 집계를 건너뛰고 null. values 는 프로젝트 전체 값이라 페이지·정렬과 무관하므로 "
+        "화면이 첫 응답 값을 재사용한다"))
 
 
 class ProjectScreenPage[T](BaseModel):
@@ -31,7 +34,7 @@ class ProjectScreenPage[T](BaseModel):
     show_brand: bool = False
     show_category: bool = False
     draft_count: int = 0
-    values: dict[str, list[str]] = Field(default_factory=dict)
+    values: dict[str, list[str]] | None = Field(default_factory=dict, description="태그별 사용 값(include_values=false 면 null)")
 
 
 async def prompt_screen(conn, project_id: uuid.UUID, query: ProjectScreenQuery) -> ProjectScreenPage[PromptItem]:
@@ -65,15 +68,16 @@ async def prompt_screen(conn, project_id: uuid.UUID, query: ProjectScreenQuery) 
             order = f"({expr} = '') ASC, {expr} COLLATE \"C\" {query.direction.upper()}, " + order
     select = "p.prompt_id" if query.ids_only else PROMPT_COLS
     rows = await fetch_all(conn, f"SELECT {select} FROM app.prompt p WHERE {where} ORDER BY {order} LIMIT {b.v(query.limit, 'int4')} OFFSET {b.v(offset, 'int4')}", b.params)
-    values = {}
-    if not query.ids_only:
+    values: dict[str, list[str]] = {}
+    if not query.ids_only and query.include_values:
         for row in await fetch_all(conn, "SELECT v.field_id, array_agg(DISTINCT v.value) AS values FROM app.prompt_custom_field_value v"
                                    " JOIN app.prompt p ON p.prompt_id = v.prompt_id AND p.project_id = v.project_id"
                                    f" WHERE {where} AND v.value <> '' GROUP BY v.field_id", b.params):
             values[str(row["field_id"])] = row["values"]
     tags = {} if query.ids_only else await tags_for(conn, project_id, [row["prompt_id"] for row in rows])
     return ProjectScreenPage(rows=[] if query.ids_only else [prompt_item(row, tags) for row in rows], ids=[row["prompt_id"] for row in rows] if query.ids_only else [],
-                             total=total, offset=offset, limit=query.limit, values=values, show_brand=meta["show_brand"], show_category=meta["show_category"], draft_count=meta["draft_count"])
+                             total=total, offset=offset, limit=query.limit, values=values if query.include_values or query.ids_only else None,
+                             show_brand=meta["show_brand"], show_category=meta["show_category"], draft_count=meta["draft_count"])
 
 
 async def candidate_screen(conn, project_id: uuid.UUID, query: ProjectScreenQuery) -> ProjectScreenPage[CandidateItem]:

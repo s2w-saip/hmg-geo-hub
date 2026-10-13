@@ -4,7 +4,7 @@ import { SectionCard } from "@/components/section-card";
 import { PageHeader } from "@/components/page-header";
 import { getSession } from "@/lib/auth/session";
 import { canAccessAdmin } from "@/lib/auth/scope-policy";
-import { loadCatalogPage } from "../../../standard/prompts/_page-actions";
+import { loadCatalogPage, loadCatalogRows } from "../../../standard/prompts/_page-actions";
 import * as api from "@/lib/hgh/adapters/admin";
 import { throwForPage } from "@/lib/hgh/errors";
 import { StandardPromptList } from "./_components/prompt-list";
@@ -53,7 +53,7 @@ export default async function AdminStandardPromptsPage({
         title={t("list.title")}
         description={t("list.description", { count: catalog.count })}
       >
-        <StandardPromptList rows={catalog.rows} stats={catalog.stats} markets={markets} remote={{ initial: catalog, load: loadCatalogPage.bind(null, true) }} />
+        <StandardPromptList rows={catalog.rows} stats={catalog.stats} markets={markets} remote={{ initial: catalog, load: loadCatalogPage.bind(null, true), rows: loadCatalogRows.bind(null, true) }} />
       </SectionCard>
     </div>
   );

@@ -7,7 +7,7 @@ import { UnauthorizedError } from "@/lib/auth/errors";
 import { effectiveScopeCountries } from "@/lib/rhq";
 import { UMBRELLA_BRAND } from "@/lib/scope/brand-presence";
 import { EXCLUDED_STANDARD_PROMPT_IDS, EXCLUDED_STANDARD_PROMPT_TEXTS } from "@/lib/scope/standard-prompt-exclusions";
-import { catalogPageQuery, type CatalogPage, type CatalogPageQuery } from "@/lib/standards/catalog-page";
+import { catalogPageQuery, type CatalogPage, type CatalogPageQuery, type CatalogRowsPage } from "@/lib/standards/catalog-page";
 import { normalizeMarket } from "@/lib/standards/prompt-markets";
 import { catalogMarketScopeCondition, STANDARD_ROOT_PROJECT_ID, type StandardCatalogRow } from "./standards";
 
@@ -22,10 +22,11 @@ const markets = sql`ARRAY(SELECT DISTINCT ${normalizedMarket} FROM unnest(${prom
 const presence = sql`coalesce(${prompts.brandPresence}, CASE WHEN ${prompts.brand} = ${UMBRELLA_BRAND} THEN 'unbranded' WHEN ${prompts.brand} IS NOT NULL THEN 'branded' END)`;
 const present = (value: string | undefined) => value && value !== "all";
 
-export async function readCatalogPage(scope: AllowedScope | null | undefined, input: CatalogPageQuery, admin = false): Promise<CatalogPage> {
+type Query = Required<CatalogPageQuery>;
+
+/** base = account scope (counts, facets, stats); where = base + the applied filters and search (total, rows). */
+function conditions(scope: AllowedScope | null | undefined, q: Query, admin: boolean): { base: SQL[]; where: SQL[] } {
   if (!scope) throw new UnauthorizedError();
-  const q = catalogPageQuery(input);
-  const db = getDb();
   const base: SQL[] = [eq(prompts.projectId, STANDARD_ROOT_PROJECT_ID)];
   if (!admin) {
     base.push(isNull(prompts.deletedAt));
@@ -49,8 +50,31 @@ export async function readCatalogPage(scope: AllowedScope | null | undefined, in
   if (["unmeasured", "untracked"].includes(q.filters.status ?? "")) where.push(isNull(prompts.scopePromptId));
   if (present(q.filters.market)) where.push(sql`${normalizeMarket(q.filters.market!)} = ANY(${markets})`);
   if (q.search.trim()) where.push(sql`strpos(lower(${prompts.text}), ${q.search.trim().toLowerCase()}) > 0`);
+  return { base, where };
+}
+
+async function rowsPage(q: Query, where: SQL[]): Promise<CatalogRowsPage> {
+  const db = getDb();
   const [{ total }] = await db.select({ total: sql<number>`count(*)::int` }).from(prompts).where(and(...where));
   const offset = Math.min(q.offset, Math.max(0, Math.floor((total - 1) / q.limit) * q.limit));
+  const sorters: Record<string, SQL> = Object.fromEntries(Object.entries(axes).map(([key, column]) => [key, sql`coalesce(${column}, '~')`]));
+  Object.assign(sorters, { text: sql`${prompts.text}`, brand: sql`coalesce(${prompts.brand}, '')`, presence: sql`coalesce(${presence}, '~')`,
+    kind: sql`CASE WHEN ${prompts.kind} = 'acr' THEN 1 ELSE 0 END`, status: sql`(${prompts.scopePromptId} IS NOT NULL)`, tracked: sql`(${prompts.scopePromptId} IS NOT NULL)` });
+  if (q.sort === "market") {
+    const first = sql`(SELECT code FROM unnest(${markets}) code ORDER BY (code LIKE 'x:%'), code LIMIT 1)`;
+    sorters.market = sql`coalesce(${JSON.stringify(q.market_labels)}::jsonb ->> ${first}, ${first}, '~')`;
+  }
+  const collation = q.collation === "ko" ? sql`COLLATE "ko-x-icu"` : sql`COLLATE "en-x-icu"`;
+  const numeric = ["kind", "status", "tracked"].includes(q.sort);
+  const order = sql`${sorters[q.sort]} ${numeric ? sql`` : collation} ${q.asc ? sql`ASC` : sql`DESC`}`;
+  const rows = await db.select(selection).from(prompts).leftJoin(scopePrompts, eq(prompts.scopePromptId, scopePrompts.promptId))
+    .where(and(...where)).orderBy(order, asc(prompts.depth1), asc(prompts.depth2), asc(prompts.depth3), asc(prompts.text), asc(prompts.id)).limit(q.limit).offset(offset);
+  return { rows: rows as StandardCatalogRow[], total, offset, limit: q.limit };
+}
+
+/** Scope metadata: depends on the scope (base) and the draft only. */
+async function scopeMeta(q: Query, base: SQL[], admin: boolean): Promise<Pick<CatalogPage, "count" | "facets" | "columns" | "stats">> {
+  const db = getDb();
   const facetSelect: Record<string, SQL> = { count: sql`count(*)::int` };
   const parents: SQL[] = [];
   for (const key of ["listType", "depth1", "depth2", "depth3", "depth4", "funnel", "lang"] as const) {
@@ -68,18 +92,6 @@ export async function readCatalogPage(scope: AllowedScope | null | undefined, in
   facets.market = [...allMarkets].filter(c => !c.startsWith("x:")).sort().concat([...allMarkets].filter(c => ["x:WW", "x:EU", "x:ME"].includes(c)).sort());
   facets.marketSort = [...allMarkets].sort();
   const columns = Object.keys(meta).filter(k => k.startsWith("has_") && meta[k]).map(k => k.slice(4));
-  const sorters: Record<string, SQL> = Object.fromEntries(Object.entries(axes).map(([key, column]) => [key, sql`coalesce(${column}, '~')`]));
-  Object.assign(sorters, { text: sql`${prompts.text}`, brand: sql`coalesce(${prompts.brand}, '')`, presence: sql`coalesce(${presence}, '~')`,
-    kind: sql`CASE WHEN ${prompts.kind} = 'acr' THEN 1 ELSE 0 END`, status: sql`(${prompts.scopePromptId} IS NOT NULL)`, tracked: sql`(${prompts.scopePromptId} IS NOT NULL)` });
-  if (q.sort === "market") {
-    const first = sql`(SELECT code FROM unnest(${markets}) code ORDER BY (code LIKE 'x:%'), code LIMIT 1)`;
-    sorters.market = sql`coalesce(${JSON.stringify(q.market_labels)}::jsonb ->> ${first}, ${first}, '~')`;
-  }
-  const collation = q.collation === "ko" ? sql`COLLATE "ko-x-icu"` : sql`COLLATE "en-x-icu"`;
-  const numeric = ["kind", "status", "tracked"].includes(q.sort);
-  const order = sql`${sorters[q.sort]} ${numeric ? sql`` : collation} ${q.asc ? sql`ASC` : sql`DESC`}`;
-  const rows = await db.select(selection).from(prompts).leftJoin(scopePrompts, eq(prompts.scopePromptId, scopePrompts.promptId))
-    .where(and(...where)).orderBy(order, asc(prompts.depth1), asc(prompts.depth2), asc(prompts.depth3), asc(prompts.text), asc(prompts.id)).limit(q.limit).offset(offset);
   let stats: CatalogPage["stats"] = null;
   if (admin) {
     const [s] = await db.select({ total: sql<number>`count(*) FILTER (WHERE ${prompts.deletedAt} IS NULL)::int`,
@@ -89,5 +101,18 @@ export async function readCatalogPage(scope: AllowedScope | null | undefined, in
     const [o] = await db.select({ count: sql<number>`count(*)::int` }).from(scopePrompts).leftJoin(prompts, eq(prompts.scopePromptId, scopePrompts.promptId)).where(isNull(prompts.id));
     stats = { ...s, untracked: s.total - s.tracked, scopeOrphans: o.count };
   }
-  return { rows: rows as StandardCatalogRow[], total, count: Number(meta.count), offset, limit: q.limit, facets, columns, stats };
+  return { count: Number(meta.count), facets, columns, stats };
+}
+
+export async function readCatalogPage(scope: AllowedScope | null | undefined, input: CatalogPageQuery, admin = false): Promise<CatalogPage> {
+  const q = catalogPageQuery(input);
+  const { base, where } = conditions(scope, q, admin);
+  const page = await rowsPage(q, where);
+  return { ...page, ...(await scopeMeta(q, base, admin)) };
+}
+
+/** Rows and the filtered total only: no facet, market, column or stats statements (reuseCatalogMeta keeps the last ones). */
+export async function readCatalogRows(scope: AllowedScope | null | undefined, input: CatalogPageQuery, admin = false): Promise<CatalogRowsPage> {
+  const q = catalogPageQuery(input);
+  return rowsPage(q, conditions(scope, q, admin).where);
 }

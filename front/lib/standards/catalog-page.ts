@@ -25,7 +25,39 @@ export type CatalogPage = {
   stats?: StandardCatalogStats | null;
 };
 export type CatalogPageLoader = (query: CatalogPageQuery) => Promise<CatalogPage>;
-export type RemoteCatalog = { initial: CatalogPage; load: CatalogPageLoader };
+/** A page without the scope metadata (count, facets, columns, stats): rows and the filtered total only. */
+export type CatalogRowsPage = Pick<CatalogPage, "rows" | "total" | "offset" | "limit">;
+export type CatalogRowsLoader = (query: CatalogPageQuery) => Promise<CatalogRowsPage>;
+/** initial = the server render's page (default draft); rows = optional rows-only read used by reuseCatalogMeta. */
+export type RemoteCatalog = { initial: CatalogPage; load: CatalogPageLoader; rows?: CatalogRowsLoader };
+
+type CatalogMeta = Pick<CatalogPage, "count" | "facets" | "columns" | "stats">;
+const metaOf = (page: CatalogPage): CatalogMeta => ({ count: page.count, facets: page.facets, columns: page.columns, stats: page.stats });
+// The draft is the only query input the metadata depends on ("all" = not set).
+const draftKey = (draft: CatalogFilters | undefined) =>
+  JSON.stringify(Object.entries(draft ?? {}).filter(([, value]) => value !== "all").sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
+
+/**
+ * The page loader a list screen reads through. count, facets, columns and the admin stats are computed over the
+ * account scope and the draft filters only (never the applied filters, search, sort or page), so a read with the
+ * draft of the last metadata reuses it and asks the server for rows and total only (the original screen also built
+ * its options once per visit). A write re-renders the page with a new remote, which starts over from its initial.
+ */
+export function reuseCatalogMeta(remote: RemoteCatalog): CatalogPageLoader {
+  const { rows } = remote;
+  if (!rows) return remote.load;
+  let last = { key: draftKey({}), meta: metaOf(remote.initial) };
+  return async (query) => {
+    const key = draftKey(query.draft);
+    if (key === last.key) {
+      const meta = last.meta;
+      return { ...(await rows(query)), ...meta };
+    }
+    const page = await remote.load(query);
+    last = { key, meta: metaOf(page) };
+    return page;
+  };
+}
 
 export function catalogPageQuery(input: CatalogPageQuery): Required<CatalogPageQuery> {
   const q = { filters: {}, draft: {}, search: "", sort: "depth1" as CatalogSort, asc: true, offset: 0, limit: 50, collation: "en" as const, market_labels: {}, ...input };
@@ -41,7 +73,7 @@ export function catalogPageQuery(input: CatalogPageQuery): Required<CatalogPageQ
 }
 
 /** Only an explicit export loads all matching pages. A failed page rejects the entire export. */
-export async function exportCatalogPages(load: CatalogPageLoader, query: CatalogPageQuery): Promise<StandardCatalogRow[]> {
+export async function exportCatalogPages(load: CatalogRowsLoader, query: CatalogPageQuery): Promise<StandardCatalogRow[]> {
   const rows: StandardCatalogRow[] = [];
   const seen = new Set<string>();
   let expected: number | undefined;

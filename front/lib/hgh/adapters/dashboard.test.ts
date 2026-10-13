@@ -473,14 +473,17 @@ describe("queries: one filter serializer, feature params apart, scope values nev
     expect(q(calls[1]).country).toBeUndefined();
   });
 
-  it("⑦ sends market axes only (no period, no engine), days=28; project: property_source=market", async () => {
+  it("⑦ sends market axes only (no period, no engine), days=28; project: property_source=market; no page table", async () => {
     routes["/v1/funnel/conversion"] = () => json({ data: conversion({ total: 1, measured: 1, conv: 1, sessions: 2 }), meta: meta() });
     await D.fetchTrafficConversion(filters, { surface: "global", scope: { all: true } });
     await D.fetchTrafficConversion({ ...filters, region: ["DE"] }, { surface: "project", projectId: PID, scope: null });
+    // include_pages=false: the tile never reads data.pages, so the backend skips that aggregation.
     const g = q(calls[0]);
-    expect(g).toEqual({ surface: ["global"], brand: ["HMG", "Kia"], country: ["DE", "FR"], days: ["28"] });
+    expect(g).toEqual({ surface: ["global"], brand: ["HMG", "Kia"], country: ["DE", "FR"], days: ["28"], include_pages: ["false"] });
     const p = q(calls[1]);
-    expect(p).toEqual({ surface: ["project"], project_id: [PID], country: ["DE"], days: ["28"], property_source: ["market"] });
+    expect(p).toEqual({
+      surface: ["project"], project_id: [PID], country: ["DE"], days: ["28"], property_source: ["market"], include_pages: ["false"],
+    });
   });
 
   it("project: custom fields travel as cf.<uuid>; a designated target reads every brand row (full)", async () => {

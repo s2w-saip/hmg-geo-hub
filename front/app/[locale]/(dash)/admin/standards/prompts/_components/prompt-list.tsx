@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useWindowedRows } from "@/hooks/use-windowed-rows";
 import { usePagedQuery } from "@/hooks/use-paged-query";
-import { exportCatalogPages, type CatalogPageQuery, type RemoteCatalog } from "@/lib/standards/catalog-page";
+import { exportCatalogPages, reuseCatalogMeta, type CatalogPageQuery, type RemoteCatalog } from "@/lib/standards/catalog-page";
 import { useTranslations } from "next-intl";
 import {
   Zap,
@@ -217,7 +217,9 @@ export function StandardPromptList({
   const windowed = useWindowedRows(metadata?.total ?? sorted.length, resetKey, 96, !!remote);
   const readQuery: CatalogPageQuery = { filters, sort: sortKey, asc, offset: windowed.start, limit: windowed.limit,
     collation: Intl.Collator().resolvedOptions().locale.startsWith("ko") ? "ko" : "en" };
-  const page = usePagedQuery(remote?.initial, remote?.load, readQuery, readQuery.collation === "ko");
+  // Same draft → rows and total only; facets and stats stay from the last read (a write re-renders a new remote).
+  const load = useMemo(() => (remote ? reuseCatalogMeta(remote) : undefined), [remote]);
+  const page = usePagedQuery(remote?.initial, load, readQuery, readQuery.collation === "ko");
   useEffect(() => { if (page.data) setMetadata(page.data); }, [page.data]);
   const visible = page.data?.rows ?? sorted;
   const total = page.data?.total ?? sorted.length;
@@ -228,7 +230,7 @@ export function StandardPromptList({
   async function onExport() {
     setExporting(true);
     try {
-    const exportRows = remote ? await exportCatalogPages(remote.load, readQuery) : sorted;
+    const exportRows = remote ? await exportCatalogPages(remote.rows ?? remote.load, readQuery) : sorted;
     downloadCsv(
       `standard-prompts-${dateStamp()}`,
       [

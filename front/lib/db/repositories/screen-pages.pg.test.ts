@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 
 const state = vi.hoisted(() => ({ db: null as unknown }));
 vi.mock("@/lib/db", () => ({ getDb: () => state.db }));
-const { readCatalogPage } = await import("./catalog-page");
+const { readCatalogPage, readCatalogRows } = await import("./catalog-page");
 const { readProjectPromptPage, readProjectCandidatePage } = await import("./project-prompt-page");
 const { STANDARD_ROOT_PROJECT_ID: root } = await import("./standards");
 const { exportCatalogPages } = await import("@/lib/standards/catalog-page");
@@ -63,6 +63,17 @@ describe.skipIf(!url)("native PostgreSQL screen reads (ICU and large catalogs)",
     expect(exported).toHaveLength(12005);
     expect(new Set(exported.map(r => r.id)).size).toBe(12005);
   }, 30000);
+  it("rows-only reads return the full read's rows and total without the scope metadata (standard and admin)", async () => {
+    const cases = [
+      [{ all: false, brands: ["Hyundai"], countries: ["KR"] }, { filters: { depth2: "a" }, search: "catalog 1", sort: "text" as const, offset: 100 }, false],
+      [{ all: true }, { sort: "text" as const, asc: false, offset: 12000 }, true],
+    ] as const;
+    for (const [scope, q, admin] of cases) {
+      const full = await readCatalogPage(scope, q, admin);
+      expect(await readCatalogRows(scope, q, admin)).toEqual({ rows: full.rows, total: full.total, offset: full.offset, limit: full.limit });
+      expect(full.total).toBeGreaterThan(0);
+    }
+  }, 30000);
   it("sorts Unicode like the existing browser comparator in both supported collations", async () => {
     const words = ["sort 사과", "sort 가방", "sort Apple", "sort Zebra", "sort ä", "sort 10", "sort 2"];
     for (const text of words) await client`INSERT INTO prompts(project_id,text) VALUES(${root},${text})`;
@@ -82,6 +93,10 @@ describe.skipIf(!url)("native PostgreSQL screen reads (ICU and large catalogs)",
     const tagSort = await readProjectPromptPage(project, { sort: field, direction: "desc" });
     expect(tagSort.rows[0].text).toBe("project 25001");
     expect(tagSort.rows[0].customValues[field]).toBe("rare-tag");
+    // include_values=false: same rows, totals and columns; only the project-wide suggestions are left out.
+    const deep = { sort: field, direction: "desc" as const, offset: 400 };
+    const withValues = await readProjectPromptPage(project, deep);
+    expect(await readProjectPromptPage(project, { ...deep, include_values: false })).toEqual({ ...withValues, values: {} });
     const candidate = await readProjectCandidatePage(project, { sort: "oldest", offset: 25000, limit: 200 });
     expect(candidate.rows[0].text).toBe("candidate 25001");
     const selected: string[] = [];

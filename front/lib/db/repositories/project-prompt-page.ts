@@ -44,7 +44,8 @@ export async function readProjectPromptPage(id: string, input: ProjectPageQuery)
     .where(and(eq(projectCustomFields.projectId, id), inArray(promptCustomFieldValues.promptId, rows.map(r => r.id)))) : [];
   const tagMap = new Map<string, Record<string, string>>();
   for (const tag of tags) { const values = tagMap.get(tag.promptId) ?? {}; values[tag.fieldId] = tag.value; tagMap.set(tag.promptId, values); }
-  const suggestions = await db.select({ fieldId: promptCustomFieldValues.fieldId, values: sql<string[]>`array_agg(DISTINCT ${promptCustomFieldValues.value}) FILTER (WHERE ${promptCustomFieldValues.value} <> '')` })
+  // Project-wide tag value suggestions: skipped when the list already holds them (include_values=false).
+  const suggestions = !q.include_values ? [] : await db.select({ fieldId: promptCustomFieldValues.fieldId, values: sql<string[]>`array_agg(DISTINCT ${promptCustomFieldValues.value}) FILTER (WHERE ${promptCustomFieldValues.value} <> '')` })
     .from(promptCustomFieldValues).innerJoin(projectCustomFields, eq(projectCustomFields.id, promptCustomFieldValues.fieldId))
     .innerJoin(prompts, eq(prompts.id, promptCustomFieldValues.promptId)).where(and(where, eq(projectCustomFields.projectId, id))).groupBy(promptCustomFieldValues.fieldId);
   return { ...meta, rows: rows.map(row => ({ ...row, customValues: tagMap.get(row.id) ?? {} })), ids: [], offset, limit: q.limit,

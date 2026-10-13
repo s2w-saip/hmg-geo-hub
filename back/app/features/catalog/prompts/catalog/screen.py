@@ -47,6 +47,9 @@ class CatalogScreenQuery(BaseModel):
     limit: int = Field(50, ge=1, le=500)
     collation: Literal["en", "ko"] = "en"
     market_labels: dict[str, str] = Field(default_factory=dict, max_length=400)
+    include_meta: bool = Field(True, description=(
+        "false = rows·total 만 계산한다(count·facets·columns·stats 는 null). 이 값들은 범위와 draft 에만 의존하므로 "
+        "같은 draft 의 페이지 넘김·필터·검색·정렬·내보내기는 직전 값을 재사용한다"))
 
 
 class CatalogScreenRow(BaseModel):
@@ -73,11 +76,11 @@ class CatalogScreenRow(BaseModel):
 class CatalogScreenPage(BaseModel):
     rows: list[CatalogScreenRow]
     total: int
-    count: int
+    count: int | None = Field(None, description="범위 전체 건수(include_meta=false 면 null)")
     offset: int
     limit: int
-    facets: dict[str, list[str]]
-    columns: list[str]
+    facets: dict[str, list[str]] | None = Field(None, description="필터 선택지(include_meta=false 면 null)")
+    columns: list[str] | None = Field(None, description="값이 있는 분류 열(include_meta=false 면 null)")
     stats: CatalogStats | None = None
 
 
@@ -136,22 +139,28 @@ async def catalog_screen(conn, principal, request: CatalogScreenQuery, *, admin=
     total = int(await fetch_val(conn, f"SELECT count(*) FROM app.prompt p WHERE {filtered}", b.params))
     offset = min(request.offset, max(0, (total - 1) // request.limit * request.limit))
 
-    facets = []
-    parents = []
-    for key in ("listType", "depth1", "depth2", "depth3", "depth4", "funnel", "lang"):
-        col = AXES[key]
-        restrict = " AND " + " AND ".join(parents) if parents and key.startswith("depth") else ""
-        facets.append(f"array_agg(DISTINCT p.{col}) FILTER (WHERE p.{col} IS NOT NULL AND p.{col} <> ''{restrict}) AS \"{key}\"")
-        if key in ("listType", "depth1", "depth2", "depth3") and getattr(request.draft, key) != "all":
-            parents.append(f"p.{col} = {b.v(getattr(request.draft, key))}")
-    flags = ", ".join(f"bool_or(p.{AXES[key]} IS NOT NULL AND p.{AXES[key]} <> '') AS \"has_{key}\"" for key in ("listType", "depth1", "depth2", "depth3", "depth4"))
-    meta = await fetch_one(conn, f"SELECT count(*) AS count, {', '.join(facets)}, {flags} FROM app.prompt p WHERE {base_where}", b.params)
-    markets = await fetch_all(conn, f"SELECT DISTINCT {NORMAL_MARKET} AS code FROM app.prompt p CROSS JOIN LATERAL unnest(p.regions) m WHERE {base_where} AND btrim(m) <> ''", b.params)
-    options = {key: sorted(meta[key] or []) for key in ("listType", "depth1", "depth2", "depth3", "depth4", "funnel", "lang")}
-    codes = {r["code"] for r in markets}
-    options["market"] = sorted(c for c in codes if not c.startswith("x:")) + sorted(c for c in codes if c in ("x:WW", "x:EU", "x:ME"))
-    options["marketSort"] = sorted(codes)
-    columns = [key[4:] for key, value in meta.items() if key.startswith("has_") and value]
+    # 범위(base)·draft 에만 의존하는 메타: include_meta=false 면 계산하지 않는다(화면이 같은 draft 의 직전 값을 쓴다).
+    count: int | None = None
+    options: dict[str, list[str]] | None = None
+    columns: list[str] | None = None
+    if request.include_meta:
+        facets = []
+        parents = []
+        for key in ("listType", "depth1", "depth2", "depth3", "depth4", "funnel", "lang"):
+            col = AXES[key]
+            restrict = " AND " + " AND ".join(parents) if parents and key.startswith("depth") else ""
+            facets.append(f"array_agg(DISTINCT p.{col}) FILTER (WHERE p.{col} IS NOT NULL AND p.{col} <> ''{restrict}) AS \"{key}\"")
+            if key in ("listType", "depth1", "depth2", "depth3") and getattr(request.draft, key) != "all":
+                parents.append(f"p.{col} = {b.v(getattr(request.draft, key))}")
+        flags = ", ".join(f"bool_or(p.{AXES[key]} IS NOT NULL AND p.{AXES[key]} <> '') AS \"has_{key}\"" for key in ("listType", "depth1", "depth2", "depth3", "depth4"))
+        meta = await fetch_one(conn, f"SELECT count(*) AS count, {', '.join(facets)}, {flags} FROM app.prompt p WHERE {base_where}", b.params)
+        markets = await fetch_all(conn, f"SELECT DISTINCT {NORMAL_MARKET} AS code FROM app.prompt p CROSS JOIN LATERAL unnest(p.regions) m WHERE {base_where} AND btrim(m) <> ''", b.params)
+        count = int(meta["count"])
+        options = {key: sorted(meta[key] or []) for key in ("listType", "depth1", "depth2", "depth3", "depth4", "funnel", "lang")}
+        codes = {r["code"] for r in markets}
+        options["market"] = sorted(c for c in codes if not c.startswith("x:")) + sorted(c for c in codes if c in ("x:WW", "x:EU", "x:ME"))
+        options["marketSort"] = sorted(codes)
+        columns = [key[4:] for key, value in meta.items() if key.startswith("has_") and value]
 
     sorts = {key: f"coalesce(p.{col}, '~')" for key, col in AXES.items()}
     sorts |= {"text": "p.text", "brand": "coalesce(p.brand_code, '')", "presence": f"coalesce({presence}, '~')",
@@ -169,8 +178,8 @@ async def catalog_screen(conn, principal, request: CatalogScreenQuery, *, admin=
     rows = await fetch_all(conn, "SELECT p.*, dp.text AS scope_text FROM app.prompt p LEFT JOIN rd.dim_prompt dp ON dp.prompt_id = p.scope_prompt_id"
                            f" WHERE {filtered} ORDER BY {order} LIMIT {b.v(request.limit, 'int4')} OFFSET {b.v(offset, 'int4')}", b.params)
     stats = None
-    if admin:
+    if admin and request.include_meta:
         stat_page, _ = await admin_svc.list_catalog(conn, q_text=None, kind=None, include_deleted=True, axes={}, cursor=None, limit=1)
         stats = stat_page.stats
-    return CatalogScreenPage(rows=[row_model(r) for r in rows], total=total, count=int(meta["count"]), offset=offset, limit=request.limit,
+    return CatalogScreenPage(rows=[row_model(r) for r in rows], total=total, count=count, offset=offset, limit=request.limit,
                              facets=options, columns=columns, stats=stats)

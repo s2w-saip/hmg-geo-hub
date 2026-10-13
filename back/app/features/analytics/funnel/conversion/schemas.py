@@ -24,6 +24,9 @@ class ConversionParams(CommonFilters):
     device: list[Literal["mobile", "desktop", "tablet"]] = Field(default_factory=list, max_length=3, description="기기(두 코호트 공통)")
     visitor_type: list[Literal["new", "returning"]] = Field(default_factory=list, max_length=2, description="신규·재방문(두 코호트 공통)")
     page_limit: int = Field(15, ge=1, le=50, description="페이지별 표 행 수 상한")
+    include_pages: bool = Field(True, description=(
+        "false = 페이지별 표(data.pages)를 계산하지 않고 빈 배열로 둔다. 요약·커버리지·추이만 쓰는 대시보드 ⑦ 카드용 "
+        "(현행 프런트 dashboard.ts toTrafficConversionKpi). 다른 필드 값은 같다"))
     days: int | None = Field(None, description="최신 적재일 기준 상대 창 길이(7·28·90, BG-30). from/to 와 함께 줄 수 없다. 둘 다 없으면 90")
     property_source: Literal["project", "market"] | None = Field(None, description=(
         "project 표면 전용 속성 선택(검증 D3). 생략·project = 프로젝트 직접 지정 우선(전환 화면 page.tsx:52-55), "

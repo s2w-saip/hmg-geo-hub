@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { exportCatalogPages, type CatalogPageQuery, type RemoteCatalog } from "@/lib/standards/catalog-page";
+import { exportCatalogPages, reuseCatalogMeta, type CatalogPageQuery, type RemoteCatalog } from "@/lib/standards/catalog-page";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -472,18 +472,20 @@ export function StandardPromptReadonlyList({
     collation: Intl.Collator().resolvedOptions().locale.startsWith("ko") ? "ko" : "en",
     market_labels: Object.fromEntries((remotePage?.facets.marketSort ?? marketOptions).map(code => [code, marketLabel(code)])) };
   const readKey = JSON.stringify(readQuery);
+  // Same draft → rows and total only; facets stay from the last read.
+  const load = useMemo(() => (remote ? reuseCatalogMeta(remote) : undefined), [remote]);
   useEffect(() => {
-    if (!remote) return;
+    if (!load) return;
     // Initial SQL uses English ICU. Match the browser's existing Korean comparator after hydration.
     if (firstRead.current) { firstRead.current = false; if (JSON.parse(readKey).collation !== "ko") return; }
     let active = true;
     const timer = setTimeout(() => {
-      remote.load(JSON.parse(readKey)).then(result => {
+      load(JSON.parse(readKey)).then(result => {
         if (active) { setRemotePage(result); setReadError(null); }
       }).catch(error => { if (active) setReadError(error instanceof Error ? error : new Error("Catalog read failed")); });
     }, 120);
     return () => { active = false; clearTimeout(timer); };
-  }, [readKey, remote]);
+  }, [readKey, load]);
 
   // ── 엑셀 내보내기 ────────────────────────────────────────────────────────
   // Export follows every filtered page in server order, never only visible rows.
@@ -515,7 +517,7 @@ export function StandardPromptReadonlyList({
         statusMeasured: t("statusMeasured"),
         statusUnmeasured: t("statusUnmeasured"),
       };
-      const exportRows = remote ? await exportCatalogPages(remote.load, readQuery) : sorted;
+      const exportRows = remote ? await exportCatalogPages(remote.rows ?? remote.load, readQuery) : sorted;
       const columnRows = remotePage ? [Object.fromEntries(remotePage.columns.map(key => [key, "present"]))] as unknown as StandardPromptViewRow[] : rows;
       const sheet = buildStandardPromptSheet(exportRows, columnRows, labels, {
         market: marketLabel,

@@ -66,6 +66,27 @@ async def test_filtering_does_not_shrink_option_population_and_search_is_literal
         assert data["facets"] == before.json()["data"]["facets"]
 
 
+@pytest.mark.parametrize("path", ["/v1/prompts/screen", "/v1/admin/catalog/prompts/screen"])
+async def test_include_meta_false_reads_rows_and_total_only(client_as, monkeypatch, path):
+    """include_meta=false: rows·total·offset 는 기본 호출과 같고, 범위·draft 메타(count·facets·columns·관리자 stats)는 계산하지 않는다."""
+    from app.features.admin.catalog.prompts import service as admin_svc
+    from app.features.catalog.prompts.catalog import screen
+    body = {"sort": "text", "asc": False, "offset": 1, "limit": 3}          # 기본 픽스처만으로 행이 있는 범위(다른 테스트 데이터에 기대지 않는다)
+    async with client_as(ADMIN) as client:
+        full = (await client.post(path, json=body)).json()["data"]
+
+        def not_called(*a, **k):
+            raise AssertionError("scope metadata must not be computed when include_meta=false")
+        monkeypatch.setattr(screen, "fetch_one", not_called)            # 패싯·열·count 문장
+        monkeypatch.setattr(admin_svc, "list_catalog", not_called)      # 관리자 통계
+        response = await client.post(path, json={**body, "include_meta": False})
+    assert response.status_code == 200, response.text
+    rows = response.json()["data"]
+    assert full["facets"] is not None and full["count"] is not None and full["total"] > 0
+    assert {k: rows[k] for k in ("rows", "total", "offset", "limit")} == {k: full[k] for k in ("rows", "total", "offset", "limit")}
+    assert (rows["count"], rows["facets"], rows["columns"], rows["stats"]) == (None, None, None, None)
+
+
 @pytest.mark.parametrize("body", [{"limit": 0}, {"limit": 501}, {"offset": -1}, {"sort": "text; SELECT 1"}, {"collation": "x"}])
 async def test_paging_parameters_are_bounded_and_sort_is_whitelisted(client_as, body):
     async with client_as(ADMIN) as client:

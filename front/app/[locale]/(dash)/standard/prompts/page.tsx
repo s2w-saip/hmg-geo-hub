@@ -9,7 +9,7 @@ import { promptAuditLogRepository } from "@/lib/db/repositories/prompt-audit-log
 import { standardCollectionDates } from "@/lib/db/repositories/scope-aggregates";
 import { isAnalysisApi } from "@/lib/hgh/adapters/filters";
 import { listGlobalAuditApi, standardCollectionPeriodApi } from "@/lib/hgh/adapters/catalog";
-import { loadCatalogPage } from "./_page-actions";
+import { loadCatalogPage, loadCatalogRows } from "./_page-actions";
 import { throwForPage } from "@/lib/hgh/errors";
 import { StandardPromptReadonlyList } from "./_components/prompt-list-readonly";
 import { AuditHistoryView } from "./_components/audit-history-view";
@@ -102,7 +102,7 @@ export default async function StandardPromptsPage({
           <SectionCard title={t("count", { count: catalog.count })}>
             <StandardPromptReadonlyList
               rows={catalog.rows}
-              remote={{ initial: catalog, load: loadCatalogPage.bind(null, false) }}
+              remote={{ initial: catalog, load: loadCatalogPage.bind(null, false), rows: loadCatalogRows.bind(null, false) }}
               scopeAll={scope.all}
               scopeRole={session.user.role}
               scopeBrands={scope.brands ?? []}

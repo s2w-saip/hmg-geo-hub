@@ -125,12 +125,19 @@ async def _counts(conn: AsyncConnection, r: QaResolved) -> QaProgressCounts:
     return QaProgressCounts(**{k: int(row.get(k) or 0) for k in ("total", "reviewed", "issues", "notes")})
 
 
+def _same_counts(a: QaResolved, b: QaResolved) -> bool:
+    """두 범위의 집계 SQL·바인드가 같으면 같은 수다. 빈 범위(empty) 판정은 SQL 밖이라 둘 다 비지 않았을 때만 비교한다."""
+    return not (a.empty or b.empty or not a.surfaces or not b.surfaces) and Q.progress_sql(a) == Q.progress_sql(b)
+
+
 async def progress(conn: AsyncConnection, f: QaFilter) -> tuple[QaProgress, Any]:
-    """scoped = 요청 필터, total = 서버 검수 범위 전체. 매 요청 계산(현행 unstable_cache 30초 제거, D8)."""
+    """scoped = 요청 필터, total = 서버 검수 범위 전체. 매 요청 계산(현행 unstable_cache 30초 제거, D8).
+    요청 필터가 범위를 좁히지 않으면(필터 없음 등) 같은 집계를 두 번 돌리지 않고 scoped 를 total 로 쓴다."""
     refs = await load_qa_refs(conn)
     r = resolve_filter(f, refs)
+    whole = resolve_filter(QaFilter(), refs)
     scoped = await _counts(conn, r)
-    total = await _counts(conn, resolve_filter(QaFilter(), refs))
+    total = scoped if _same_counts(r, whole) else await _counts(conn, whole)
     return QaProgress(scoped=scoped, total=total), qa_meta(r)
 
 

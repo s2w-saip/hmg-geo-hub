@@ -3179,25 +3179,49 @@
    "CatalogScreenPage": {
     "properties": {
      "columns": {
-      "items": {
-       "type": "string"
-      },
-      "title": "Columns",
-      "type": "array"
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "값이 있는 분류 열(include_meta=false 면 null)",
+      "title": "Columns"
      },
      "count": {
-      "title": "Count",
-      "type": "integer"
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "범위 전체 건수(include_meta=false 면 null)",
+      "title": "Count"
      },
      "facets": {
-      "additionalProperties": {
-       "items": {
-        "type": "string"
+      "anyOf": [
+       {
+        "additionalProperties": {
+         "items": {
+          "type": "string"
+         },
+         "type": "array"
+        },
+        "type": "object"
        },
-       "type": "array"
-      },
-      "title": "Facets",
-      "type": "object"
+       {
+        "type": "null"
+       }
+      ],
+      "description": "필터 선택지(include_meta=false 면 null)",
+      "title": "Facets"
      },
      "limit": {
       "title": "Limit",
@@ -3232,11 +3256,8 @@
     "required": [
      "rows",
      "total",
-     "count",
      "offset",
-     "limit",
-     "facets",
-     "columns"
+     "limit"
     ],
     "title": "CatalogScreenPage",
     "type": "object"
@@ -3263,6 +3284,12 @@
      },
      "filters": {
       "$ref": "#/components/schemas/CatalogScreenFilters"
+     },
+     "include_meta": {
+      "default": true,
+      "description": "false = rows·total 만 계산한다(count·facets·columns·stats 는 null). 이 값들은 범위와 draft 에만 의존하므로 같은 draft 의 페이지 넘김·필터·검색·정렬·내보내기는 직전 값을 재사용한다",
+      "title": "Include Meta",
+      "type": "boolean"
      },
      "limit": {
       "default": 50,
@@ -16548,14 +16575,22 @@
       "type": "integer"
      },
      "values": {
-      "additionalProperties": {
-       "items": {
-        "type": "string"
+      "anyOf": [
+       {
+        "additionalProperties": {
+         "items": {
+          "type": "string"
+         },
+         "type": "array"
+        },
+        "type": "object"
        },
-       "type": "array"
-      },
-      "title": "Values",
-      "type": "object"
+       {
+        "type": "null"
+       }
+      ],
+      "description": "태그별 사용 값(include_values=false 면 null)",
+      "title": "Values"
      }
     },
     "required": [
@@ -16612,14 +16647,22 @@
       "type": "integer"
      },
      "values": {
-      "additionalProperties": {
-       "items": {
-        "type": "string"
+      "anyOf": [
+       {
+        "additionalProperties": {
+         "items": {
+          "type": "string"
+         },
+         "type": "array"
+        },
+        "type": "object"
        },
-       "type": "array"
-      },
-      "title": "Values",
-      "type": "object"
+       {
+        "type": "null"
+       }
+      ],
+      "description": "태그별 사용 값(include_values=false 면 null)",
+      "title": "Values"
      }
     },
     "required": [
@@ -16661,6 +16704,12 @@
      "ids_only": {
       "default": false,
       "title": "Ids Only",
+      "type": "boolean"
+     },
+     "include_values": {
+      "default": true,
+      "description": "false = 태그 값 제안(values) 집계를 건너뛰고 null. values 는 프로젝트 전체 값이라 페이지·정렬과 무관하므로 화면이 첫 응답 값을 재사용한다",
+      "title": "Include Values",
       "type": "boolean"
      },
      "limit": {
@@ -42116,6 +42165,18 @@
        "minimum": 1,
        "title": "Page Limit",
        "type": "integer"
+      }
+     },
+     {
+      "description": "false = 페이지별 표(data.pages)를 계산하지 않고 빈 배열로 둔다. 요약·커버리지·추이만 쓰는 대시보드 ⑦ 카드용 (현행 프런트 dashboard.ts toTrafficConversionKpi). 다른 필드 값은 같다",
+      "in": "query",
+      "name": "include_pages",
+      "required": false,
+      "schema": {
+       "default": true,
+       "description": "false = 페이지별 표(data.pages)를 계산하지 않고 빈 배열로 둔다. 요약·커버리지·추이만 쓰는 대시보드 ⑦ 카드용 (현행 프런트 dashboard.ts toTrafficConversionKpi). 다른 필드 값은 같다",
+       "title": "Include Pages",
+       "type": "boolean"
       }
      },
      {

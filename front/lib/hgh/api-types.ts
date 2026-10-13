@@ -4403,14 +4403,23 @@ export interface components {
         };
         /** CatalogScreenPage */
         CatalogScreenPage: {
-            /** Columns */
-            columns: string[];
-            /** Count */
-            count: number;
-            /** Facets */
-            facets: {
+            /**
+             * Columns
+             * @description 값이 있는 분류 열(include_meta=false 면 null)
+             */
+            columns?: string[] | null;
+            /**
+             * Count
+             * @description 범위 전체 건수(include_meta=false 면 null)
+             */
+            count?: number | null;
+            /**
+             * Facets
+             * @description 필터 선택지(include_meta=false 면 null)
+             */
+            facets?: {
                 [key: string]: string[];
-            };
+            } | null;
             /** Limit */
             limit: number;
             /** Offset */
@@ -4436,6 +4445,12 @@ export interface components {
             collation: "en" | "ko";
             draft?: components["schemas"]["CatalogScreenFilters"];
             filters?: components["schemas"]["CatalogScreenFilters"];
+            /**
+             * Include Meta
+             * @description false = rows·total 만 계산한다(count·facets·columns·stats 는 null). 이 값들은 범위와 draft 에만 의존하므로 같은 draft 의 페이지 넘김·필터·검색·정렬·내보내기는 직전 값을 재사용한다
+             * @default true
+             */
+            include_meta: boolean;
             /**
              * Limit
              * @default 50
@@ -9292,10 +9307,13 @@ export interface components {
             show_category: boolean;
             /** Total */
             total: number;
-            /** Values */
+            /**
+             * Values
+             * @description 태그별 사용 값(include_values=false 면 null)
+             */
             values?: {
                 [key: string]: string[];
-            };
+            } | null;
         };
         /** ProjectScreenPage[PromptItem] */
         ProjectScreenPage_PromptItem_: {
@@ -9324,10 +9342,13 @@ export interface components {
             show_category: boolean;
             /** Total */
             total: number;
-            /** Values */
+            /**
+             * Values
+             * @description 태그별 사용 값(include_values=false 면 null)
+             */
             values?: {
                 [key: string]: string[];
-            };
+            } | null;
         };
         /** ProjectScreenQuery */
         ProjectScreenQuery: {
@@ -9344,6 +9365,12 @@ export interface components {
              * @default false
              */
             ids_only: boolean;
+            /**
+             * Include Values
+             * @description false = 태그 값 제안(values) 집계를 건너뛰고 null. values 는 프로젝트 전체 값이라 페이지·정렬과 무관하므로 화면이 첫 응답 값을 재사용한다
+             * @default true
+             */
+            include_values: boolean;
             /**
              * Limit
              * @default 200
@@ -21167,6 +21194,8 @@ export interface operations {
                 visitor_type?: ("new" | "returning")[];
                 /** @description 페이지별 표 행 수 상한 */
                 page_limit?: number;
+                /** @description false = 페이지별 표(data.pages)를 계산하지 않고 빈 배열로 둔다. 요약·커버리지·추이만 쓰는 대시보드 ⑦ 카드용 (현행 프런트 dashboard.ts toTrafficConversionKpi). 다른 필드 값은 같다 */
+                include_pages?: boolean;
                 /** @description 최신 적재일 기준 상대 창 길이(7·28·90, BG-30). from/to 와 함께 줄 수 없다. 둘 다 없으면 90 */
                 days?: number | null;
                 /** @description project 표면 전용 속성 선택(검증 D3). 생략·project = 프로젝트 직접 지정 우선(전환 화면 page.tsx:52-55), market = 직접 지정을 건너뛰고 프로젝트 (브랜드, 국가) 시장 속성만(프로젝트 대시보드 ⑦ live.ts:219-231). 다른 표면에서 주면 422 */
