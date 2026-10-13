@@ -115,7 +115,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Read Admin Screen */
-        post: operations["readAdminPromptScreen"];
+        post: operations["post_v1_admin_catalog_prompts_screen"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2331,7 +2331,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Read Candidate Screen */
-        post: operations["readProjectCandidateScreen"];
+        post: operations["post_v1_projects_by_project_id_prompt_candidates_screen"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2543,7 +2543,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Read Prompt Screen */
-        post: operations["readProjectPromptScreen"];
+        post: operations["post_v1_projects_by_project_id_prompts_screen"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2919,7 +2919,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Read Standard Screen */
-        post: operations["readStandardPromptScreen"];
+        post: operations["post_v1_prompts_screen"];
         delete?: never;
         options?: never;
         head?: never;
@@ -13625,7 +13625,7 @@ export interface operations {
             };
         };
     };
-    readAdminPromptScreen: {
+    post_v1_admin_catalog_prompts_screen: {
         parameters: {
             query?: never;
             header?: never;
@@ -24871,7 +24871,7 @@ export interface operations {
             };
         };
     };
-    readProjectCandidateScreen: {
+    post_v1_projects_by_project_id_prompt_candidates_screen: {
         parameters: {
             query?: never;
             header?: never;
@@ -25874,7 +25874,7 @@ export interface operations {
             };
         };
     };
-    readProjectPromptScreen: {
+    post_v1_projects_by_project_id_prompts_screen: {
         parameters: {
             query?: never;
             header?: never;
@@ -27941,7 +27941,7 @@ export interface operations {
             };
         };
     };
-    readStandardPromptScreen: {
+    post_v1_prompts_screen: {
         parameters: {
             query?: never;
             header?: never;

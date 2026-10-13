@@ -24,7 +24,7 @@ from .schemas import Q_PATTERN, Created, ManualAdd, PromptItem, PromptKind, Prom
 router = APIRouter(tags=["projects.prompts"], dependencies=ROUTER_DEPS, responses=ERROR_RESPONSES)
 
 
-@router.post("/v1/projects/{project_id}/prompts/screen", response_model=Envelope[ProjectScreenPage[PromptItem]], operation_id="readProjectPromptScreen")
+@router.post("/v1/projects/{project_id}/prompts/screen", response_model=Envelope[ProjectScreenPage[PromptItem]])
 async def read_prompt_screen(project_id: uuid.UUID, body: ProjectScreenQuery, p: CurrentUser, conn: RoConn) -> Envelope[ProjectScreenPage[PromptItem]]:
     await project_gate(conn, p, project_id, "active_member")
     return Envelope(data=await prompt_screen(conn, project_id, body), meta=crud_meta(surface="project"))

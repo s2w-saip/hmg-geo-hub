@@ -27388,7 +27388,7 @@
   },
   "/v1/admin/catalog/prompts/screen": {
    "post": {
-    "operationId": "readAdminPromptScreen",
+    "operationId": "post_v1_admin_catalog_prompts_screen",
     "requestBody": {
      "content": {
       "application/json": {
@@ -49495,7 +49495,7 @@
   },
   "/v1/projects/{project_id}/prompt-candidates/screen": {
    "post": {
-    "operationId": "readProjectCandidateScreen",
+    "operationId": "post_v1_projects_by_project_id_prompt_candidates_screen",
     "parameters": [
      {
       "in": "path",
@@ -50894,7 +50894,7 @@
   },
   "/v1/projects/{project_id}/prompts/screen": {
    "post": {
-    "operationId": "readProjectPromptScreen",
+    "operationId": "post_v1_projects_by_project_id_prompts_screen",
     "parameters": [
      {
       "in": "path",
@@ -54360,7 +54360,7 @@
   },
   "/v1/prompts/screen": {
    "post": {
-    "operationId": "readStandardPromptScreen",
+    "operationId": "post_v1_prompts_screen",
     "requestBody": {
      "content": {
       "application/json": {

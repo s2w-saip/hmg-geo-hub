@@ -19,7 +19,7 @@ from app.features.catalog.prompts.catalog.service import CatalogEnvelope, list_c
 router = APIRouter(tags=["catalog.prompts"])
 
 
-@router.post("/v1/prompts/screen", response_model=Envelope[CatalogScreenPage], operation_id="readStandardPromptScreen", responses=ERROR_RESPONSES)
+@router.post("/v1/prompts/screen", response_model=Envelope[CatalogScreenPage], responses=ERROR_RESPONSES)
 async def read_standard_screen(p: CurrentUser, conn: RoConn, body: CatalogScreenQuery) -> Envelope[CatalogScreenPage]:
     return Envelope(data=await catalog_screen(conn, p, body), meta=build_meta(mode="catalog", surface="global"))
 
