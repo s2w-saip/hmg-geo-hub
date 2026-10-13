@@ -198,6 +198,11 @@ export type GeneratedPrompt = {
   // pool) when it clears the similarity threshold. Computed at read time
   // (lib/social-scraping/similarity.ts) — never persisted.
   similarTo?: { text: string; score: number; kind: "prompt" | "candidate" } | null;
+  // API source only: the backend found this exact question in the project's
+  // candidate pool when it served the row (in_candidate_pool, read time, never
+  // persisted) — the catalog renders it "이미 추가됨" without the page reading
+  // the whole pool. Legacy marks the same rows from addedTexts instead.
+  inCandidatePool?: boolean;
   // "composed" = the user hand-picked the seeds (구성 flow). Absent = auto
   // batch (initial generation / "더 생성"). Persisted in the cache blob so the
   // distinction survives revisits; the catalog renders it as a badge.

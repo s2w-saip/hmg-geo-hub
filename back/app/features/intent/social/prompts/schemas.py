@@ -29,6 +29,8 @@ class GeneratedPrompt(BaseModel):
     model: str | None
     generated_at: datetime
     similar_to: SimilarTo | None
+    in_candidate_pool: bool = Field(description="question 과 같은 텍스트가 프로젝트 후보 풀(app.prompt_candidate)에 있음(조회 시 계산, 저장 안 함). "
+                                                "화면 '이미 추가됨' 판정 — 프런트가 후보 풀 전체를 읽지 않게 한다")
 
 
 class ComboPick(BaseModel):

@@ -7255,6 +7255,11 @@ export interface components {
              * Format: date-time
              */
             generated_at: string;
+            /**
+             * In Candidate Pool
+             * @description question 과 같은 텍스트가 프로젝트 후보 풀(app.prompt_candidate)에 있음(조회 시 계산, 저장 안 함). 화면 '이미 추가됨' 판정 — 프런트가 후보 풀 전체를 읽지 않게 한다
+             */
+            in_candidate_pool: boolean;
             /** Layer */
             layer: ("L1-context" | "L2-condition" | "L3-intersection") | null;
             /** Model */

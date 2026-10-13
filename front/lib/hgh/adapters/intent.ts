@@ -106,7 +106,7 @@ import type {
 import type { components } from "../api-types";
 import { HGH_TIMEOUTS, hghDelete, hghGet, hghPost, hghSource, sourceGroupFor, type HghSource } from "../client";
 import { errorKindOf, HghApiError, hghErrorResponse, isHghApiError } from "../errors";
-import { fetchAllPages, fetchPageOrRestart, pageInfo, type CursorPage } from "../paginate";
+import { fetchAllPages, fetchPageOrRestart, MAX_PAGES_CEILING, pageInfo, type CursorPage } from "../paginate";
 import { relayDownload } from "../relay";
 import { fetchProjectGate } from "./project-gate";
 
@@ -587,8 +587,12 @@ export async function listTrackedKeywordTabs(projectId: string): Promise<Keyword
   return res.data.items.map((k) => ({ id: k.keyword_id, label: k.term }));
 }
 
-/** Most standard keyword pages read (500 per page, backend maximum). */
-export const STANDARD_KEYWORD_MAX_PAGES = 4;
+/**
+ * Most standard keyword pages read (500 per page, backend maximum). The tabs are the whole
+ * managed list, so a longer list fails the page (fetchAllPages throws) instead of dropping
+ * tabs: the old 4-page cap returned the first 2,000 as if they were all of them.
+ */
+export const STANDARD_KEYWORD_MAX_PAGES = MAX_PAGES_CEILING;
 
 /** Standard screen tabs (BG-41, U10-N10): managed keywords, newest first, tab id = keyword_id. */
 export async function listStandardKeywordTabs(): Promise<KeywordTab[]> {
@@ -603,9 +607,8 @@ export async function listStandardKeywordTabs(): Promise<KeywordTab[]> {
         total: pageInfo(res.meta).total,
       };
     },
-    { maxPages: STANDARD_KEYWORD_MAX_PAGES, onLimit: "truncate" },
+    { maxPages: STANDARD_KEYWORD_MAX_PAGES },
   );
-  if (all.truncated) console.warn(`[hgh] standard keywords truncated at ${all.items.length} of ${all.total ?? "?"}`);
   return all.items;
 }
 
@@ -804,6 +807,7 @@ export function toGeneratedPrompt(p: ApiGeneratedPrompt): GeneratedPrompt {
   // Legacy annotateSimilar leaves the field out when nothing clears the threshold.
   if (p.similar_to) out.similarTo = { text: p.similar_to.text, score: p.similar_to.score, kind: p.similar_to.kind };
   if (p.origin === "composed") out.origin = "composed";
+  if (p.in_candidate_pool) out.inCandidatePool = true;
   return out;
 }
 
@@ -814,31 +818,15 @@ export interface SocialScrapingPageData {
     conditions: Paged<ConditionListRow>;
     combinations: Paged<CombinationListRow>;
   };
+  /** "이미 추가됨" travels on each prompt (inCandidatePool), not as a copy of the whole candidate pool. */
   generatedPrompts: GeneratedPrompt[] | undefined;
-  addedTexts: string[];
-}
-
-/** Candidate pool pages read for the "이미 추가됨" marks (500 per page). */
-export const CANDIDATE_MAX_PAGES = 20;
-
-export async function listCandidateTexts(projectId: string): Promise<string[]> {
-  const all = await fetchAllPages<string>(
-    async (cursor) => {
-      const res = await hghGet("/v1/projects/{project_id}/prompt-candidates", {
-        pathParams: { project_id: projectId },
-        query: { cursor, limit: 500 },
-      });
-      const p = pageInfo(res.meta);
-      return { items: res.data.items.map((c) => c.text), nextCursor: p.nextCursor, total: p.total };
-    },
-    { maxPages: CANDIDATE_MAX_PAGES, onLimit: "truncate" },
-  );
-  return all.items;
 }
 
 /**
  * The social-scraping page's first render (D6 (b)): the four context-map reads the screen
- * cannot draw without, then the project's candidate texts and generated prompts.
+ * cannot draw without, then the project's generated prompts. The backend marks the rows
+ * already in the candidate pool, so the page no longer pages through the pool (it read at
+ * most 20 x 500 texts and silently missed the rest).
  */
 export async function loadSocialScrapingPage(projectId: string, pageSize = 50): Promise<SocialScrapingPageData> {
   const first = { dir: "desc" as const, page: 0, size: pageSize };
@@ -848,16 +836,12 @@ export async function loadSocialScrapingPage(projectId: string, pageSize = 50): 
     fetchContextMapPage("conditions", { ...first, sort: "mentions" }),
     fetchContextMapPage("combinations", { ...first, sort: "cooccurrence" }),
   ]);
-  const [addedTexts, prompts] = await Promise.all([
-    listCandidateTexts(projectId),
-    hghGet("/v1/intent/social/prompts", { query: { project_id: projectId } }),
-  ]);
+  const prompts = await hghGet("/v1/intent/social/prompts", { query: { project_id: projectId } });
   const generated = prompts.data.items.map(toGeneratedPrompt);
   return {
     stats,
     initialPages: { contexts, conditions, combinations },
     generatedPrompts: generated.length > 0 ? generated : undefined,
-    addedTexts,
   };
 }
 

@@ -8,6 +8,7 @@ INSERT … ON CONFLICT (project_id, seed_key) DO NOTHING(api_rw 짧은 트랜잭
 - selected: 현행 buildSelectionSeeds(id 는 서버가 스냅샷에서 다시 해석, 모르는 id 는 무시). origin = composed.
 - 삭제: removed_at 소프트 삭제. seed_key 는 제외 집합에 남아 같은 시드가 다시 생성되지 않는다.
 - similar_to: 조회할 때 app.prompt(삭제 제외)·app.prompt_candidate 텍스트와 bigram 코사인(저장 안 함).
+- in_candidate_pool: 같은 조회의 app.prompt_candidate 텍스트와 정확히 같음(현행 화면 '이미 추가됨' = 후보 풀 텍스트 집합 포함, 저장 안 함).
 """
 from __future__ import annotations
 
@@ -36,18 +37,23 @@ async def existing_texts(conn: AsyncConnection, project_id: uuid.UUID) -> list[t
     return [(r["text"], r["kind"]) for r in await fetch_all(conn, q.EXISTING_TEXTS, {"pid": project_id})]
 
 
-def to_model(r: dict[str, Any], existing: list[tuple[str, str]]) -> GeneratedPrompt:
+def candidate_texts(existing: list[tuple[str, str]]) -> frozenset[str]:
+    return frozenset(t for t, kind in existing if kind == "candidate")
+
+
+def to_model(r: dict[str, Any], existing: list[tuple[str, str]], candidates: frozenset[str]) -> GeneratedPrompt:
     sim = sd.most_similar(r["text"], existing)
     return GeneratedPrompt(prompt_id=r["prompt_id"], seed_key=r["seed_key"], question=r["text"], layer=r["layer"],
                            funnel_stage=r["funnel_stage"], source_label=r["source_label"], priority=r["priority"], origin=r["origin"],
                            batch_no=r["batch_no"], model=r["model"], generated_at=r["generated_at"],
-                           similar_to=SimilarTo(**sim) if sim else None)
+                           similar_to=SimilarTo(**sim) if sim else None, in_candidate_pool=r["text"] in candidates)
 
 
 async def list_prompts(conn: AsyncConnection, project_id: uuid.UUID) -> list[GeneratedPrompt]:
     rows = await fetch_all(conn, q.LIST, {"pid": project_id})
     ex = await existing_texts(conn, project_id) if rows else []
-    return [to_model(r, ex) for r in rows]
+    cands = candidate_texts(ex)
+    return [to_model(r, ex, cands) for r in rows]
 
 
 async def _seed_pool(conn: AsyncConnection, snap: int) -> dict[str, list[dict[str, Any]]]:
@@ -126,9 +132,10 @@ async def generate(open_ro: RoOpener, llm: LlmClient, p: Principal, project_id: 
             "labels": [s.source_label for s, _, _ in fresh], "layers": [s.layer for s, _, _ in fresh],
             "funnels": [f for _, _, f in fresh], "priorities": [s.priority for s, _, _ in fresh], "keys": [s.key for s, _, _ in fresh]})
         ex = await existing_texts(rw, acc.project_id)
+    cands = candidate_texts(ex)
     rank = {s.key: i for i, (s, _, _) in enumerate(fresh)}
     rows.sort(key=lambda r: rank.get(r["seed_key"], 0))
-    return GenerateOut(prompts=[to_model(r, ex) for r in rows], exhausted=False, skipped_existing=skipped + len(fresh) - len(rows))
+    return GenerateOut(prompts=[to_model(r, ex, cands) for r in rows], exhausted=False, skipped_existing=skipped + len(fresh) - len(rows))
 
 
 async def remove(rw: AsyncConnection, project_id: uuid.UUID, ids: list[uuid.UUID]) -> int:

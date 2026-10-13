@@ -180,6 +180,9 @@ async def test_list_similarity_and_soft_delete(client_as, world):
         async with client_as(HQ_HYUNDAI) as c:           # 자기 준비: 자동 배치 2회로 15행(배치 1 = 11, 배치 2 = 4)
             b1, b2 = await _generate_two_batches(c, pr.own)
         assert (b1.status_code, b2.status_code) == (200, 200)
+        # 생성 응답의 '이미 추가됨': 후보와 정확히 같은 '출퇴근 추천해줘'(C3 맥락)만. 비슷한 '주말 가족 여행 추천해줘' 는 아님
+        generated = [*b1.json()["data"]["prompts"], *b2.json()["data"]["prompts"]]
+        assert {p["seed_key"] for p in generated if p["in_candidate_pool"]} == {f"l1-{w.ctx[2]}"}
         async with client_as(VENDOR) as c:
             assert (await c.get(URL, params={"project_id": str(CUST_PROJECT)})).json()["data"]["items"] == []
         async with client_as(HQ_HYUNDAI) as c:
@@ -190,6 +193,8 @@ async def test_list_similarity_and_soft_delete(client_as, world):
             assert sims[f"l1-{C1}"] == {"text": "주말 가족 여행 차 추천해줘", "score": round(8 / math.sqrt(90), 4), "kind": "candidate"}
             # '출퇴근 추천해줘' 는 후보와 정확히 같아(추가됨 상태) 제외, 다른 후보와는 3/√60≈0.39 < 0.5
             assert f"l1-{w.ctx[2]}" not in sims and f"l2-{w.cond[3]}" not in sims
+            # 목록의 '이미 추가됨' = 후보 풀 텍스트와 정확히 같은 행(현행 addedTexts 포함 판정)
+            assert {i["seed_key"] for i in items if i["in_candidate_pool"]} == {f"l1-{w.ctx[2]}"}
             target = next(i["prompt_id"] for i in items if i["seed_key"] == f"l1-{C1}")
             d1 = await c.request("DELETE", URL, params={"project_id": str(pr.own), "ids": [target]})
             d2 = await c.request("DELETE", URL, params={"project_id": str(pr.own), "ids": [target]})

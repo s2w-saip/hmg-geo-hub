@@ -251,10 +251,13 @@ describe("context map conversions", () => {
       model: null,
       generated_at: "2026-09-01T00:00:00Z",
       similar_to: null,
+      in_candidate_pool: false,
     };
     expect(I.toGeneratedPrompt(base)).toEqual({
       id: base.prompt_id, question: "q?", layer: "L1-context", funnelStage: "consideration", sourceLabel: "", priority: 0,
     });
+    // Backend "already in the candidate pool" mark -> the catalog's "이미 추가됨" (left out when false, like legacy rows).
+    expect(I.toGeneratedPrompt({ ...base, in_candidate_pool: true }).inCandidatePool).toBe(true);
     expect(
       I.toGeneratedPrompt({ ...base, layer: "L3-intersection", funnel_stage: "purchase", source_label: "A x B", priority: 88, origin: "composed", similar_to: { text: "t", score: 0.7, kind: "prompt" } }),
     ).toEqual({
@@ -580,6 +583,37 @@ describe("fetchContextMapPage", () => {
   });
 });
 
+describe("listStandardKeywordTabs", () => {
+  const kw = (n: number) => ({
+    keyword_id: `k${n}`, keyword_ids: [`k${n}`], term: `t${n}`, source_type: "google_keyword", brand_codes: [null], created_at: "x", updated_at: "x",
+  });
+  // Keyset pages of 500 (backend maximum); the cursor here is the next offset.
+  const pages = (total: number) => (c: Call) => {
+    const o = Number(c.query.cursor?.[0] ?? 0);
+    const n = Math.min(500, total - o);
+    const next = o + n < total ? String(o + n) : null;
+    return env(
+      { source_type: "google_keyword", items: Array.from({ length: n }, (_, i) => kw(o + i)) },
+      { mode: "catalog", page: { limit: 500, next_cursor: next, total } },
+    );
+  };
+
+  it("every managed keyword becomes a tab, past the old 2,000 cap, newest-first order kept", async () => {
+    install({ "GET /v1/intent/standard-keywords": pages(2_600) });
+    const tabs = await I.listStandardKeywordTabs();
+    expect(tabs).toHaveLength(2_600);
+    expect([tabs[0], tabs[2_599]]).toEqual([{ id: "k0", label: "t0" }, { id: "k2599", label: "t2599" }]);
+    expect(calls).toHaveLength(6);
+    expect(calls.every((c) => c.query.limit?.[0] === "500" && c.query.source_type?.[0] === "google_keyword")).toBe(true);
+  });
+
+  it("a list beyond the page ceiling fails loudly instead of returning a cut list", async () => {
+    install({ "GET /v1/intent/standard-keywords": pages(500 * I.STANDARD_KEYWORD_MAX_PAGES + 1) });
+    await expect(I.listStandardKeywordTabs()).rejects.toMatchObject({ status: 500, code: "page_limit_exceeded" });
+    expect(calls).toHaveLength(I.STANDARD_KEYWORD_MAX_PAGES);
+  });
+});
+
 // ── actions ─────────────────────────────────────────────────────────────────
 
 describe("action bodies (error mapping)", () => {
@@ -663,6 +697,7 @@ describe("action bodies (error mapping)", () => {
     const gp: S["GeneratedPrompt"] = {
       prompt_id: "a0000000-0000-4000-8000-000000000001", seed_key: "l1-x", question: "q?", layer: "L2-condition", funnel_stage: "awareness",
       source_label: "Family", priority: 80, origin: null, batch_no: 2, model: "m", generated_at: "2026-09-01T00:00:00Z", similar_to: null,
+      in_candidate_pool: true,
     };
     install({
       "POST /v1/intent/social/prompts": [
@@ -676,7 +711,8 @@ describe("action bodies (error mapping)", () => {
     });
     expect(await I.apiGenerateMoreSocialPrompts(PID, msg)).toEqual({
       ok: true,
-      value: { exhausted: false, prompts: [{ id: gp.prompt_id, question: "q?", layer: "L2-condition", funnelStage: "awareness", sourceLabel: "Family", priority: 80 }] },
+      // A "더 생성" row already in the candidate pool keeps the mark (rows appended after the first render).
+      value: { exhausted: false, prompts: [{ id: gp.prompt_id, question: "q?", layer: "L2-condition", funnelStage: "awareness", sourceLabel: "Family", priority: 80, inCandidatePool: true }] },
     });
     expect(calls[0].body).toEqual({ mode: "more" });
     expect(calls[0].headers.get("x-hgh-timeout-ms")).toBe(String(I.SOCIAL_GENERATE_TIMEOUT_MS));

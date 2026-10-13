@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { isValidElement, type ReactElement, type ReactNode } from "react";
+import type { GeneratedPrompt } from "@/components/social-scraping/types";
 
 // Legacy <-> API parity for customer interest (unit U10).
 //
@@ -88,6 +89,7 @@ vi.mock("next-intl/server", async () => {
 
 const { bindHghAuth } = await import("../auth");
 const { annotateSimilar } = await import("@/lib/social-scraping/similarity");
+const { isAlreadyAdded } = await import("@/lib/social-scraping/catalog-added");
 const { UnauthorizedError } = await import("@/lib/auth/errors");
 const insightRoute = await import("@/app/api/keyword/insight/route");
 const relatedRoute = await import("@/app/api/keyword/related/route");
@@ -458,6 +460,7 @@ class BackendModel {
       prompt_id: g.apiId, seed_key: g.seedId, question: g.question, layer: g.layer, funnel_stage: g.funnel, source_label: g.label,
       priority: g.priority, origin: g.origin ?? null, batch_no: 1, model: "m", generated_at: "2026-09-05T00:00:00Z",
       similar_to: sim ? { text: sim.text, score: sim.score, kind: sim.kind } : null,
+      in_candidate_pool: this.candidates.some((c) => c.text === g.question),
     };
   }
 
@@ -779,12 +782,20 @@ describe("pages", () => {
     });
   });
 
-  it("social-scraping: stats, first pages, candidate texts and generated prompts (D6)", async () => {
+  it("social-scraping: stats, first pages, generated prompts and their 이미 추가됨 marks (D6)", async () => {
     const { legacy, api } = await parity(
       async (s) => {
         asSource(s, "owner");
-        const props = findProps(await SocialPage(params), SocialScrapingFlow)!;
-        return { ...props, addedTexts: [...(props.addedTexts as string[])].sort() };
+        const { addedTexts, generatedPrompts, ...props } = findProps(await SocialPage(params), SocialScrapingFlow)!;
+        // The screen property is the catalog's mark per row (the same isAlreadyAdded the table calls): legacy hands over
+        // the whole candidate pool (addedTexts), the API marks each row (inCandidatePool) instead of paging the pool.
+        const added = new Set((addedTexts as string[] | undefined) ?? []);
+        const rows = (generatedPrompts as GeneratedPrompt[] | undefined) ?? [];
+        return {
+          ...props,
+          generatedPrompts: rows.map(({ inCandidatePool: _mark, ...p }) => p),
+          addedMarks: rows.map((p) => isAlreadyAdded(added, p)),
+        };
       },
       {
         // D5 / C3: the API pages carry their cursor (null: everything fits one page).
@@ -797,16 +808,18 @@ describe("pages", () => {
         "generatedPrompts[2].id": "U10-N6",
       },
     );
-    // Order of the candidate texts is not a screen property (a set of "이미 추가됨" marks): sorted above.
     expect((api.generatedPrompts as { id: string }[]).map((p) => p.id)).toEqual([u(0x601), u(0x602), u(0x603)]);
     expect((legacy.generatedPrompts as { similarTo: unknown }[])[0].similarTo).not.toBeNull();
+    // Both a marked row (exactly a candidate text) and unmarked rows are covered.
+    expect(api.addedMarks).toEqual([true, false, false]);
     expect(model.calls.slice(0, 4).sort()).toEqual([
       "GET /v1/intent/social/context-map/combinations",
       "GET /v1/intent/social/context-map/conditions",
       "GET /v1/intent/social/context-map/contexts",
       "GET /v1/intent/social/context-map/stats",
     ]);
-    expect(model.calls.slice(4).sort()).toEqual([`GET /v1/intent/social/prompts`, `GET /v1/projects/${PID}/prompt-candidates`]);
+    // The candidate pool is no longer paged through for the marks.
+    expect(model.calls.slice(4)).toEqual([`GET /v1/intent/social/prompts`]);
   });
 
   it("customer-interest google keywords: managed standard keywords replace the sample (U10-N10)", async () => {

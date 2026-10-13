@@ -11098,6 +11098,11 @@
       "title": "Generated At",
       "type": "string"
      },
+     "in_candidate_pool": {
+      "description": "question 과 같은 텍스트가 프로젝트 후보 풀(app.prompt_candidate)에 있음(조회 시 계산, 저장 안 함). 화면 '이미 추가됨' 판정 — 프런트가 후보 풀 전체를 읽지 않게 한다",
+      "title": "In Candidate Pool",
+      "type": "boolean"
+     },
      "layer": {
       "anyOf": [
        {
@@ -11196,7 +11201,8 @@
      "batch_no",
      "model",
      "generated_at",
-     "similar_to"
+     "similar_to",
+     "in_candidate_pool"
     ],
     "title": "GeneratedPrompt",
     "type": "object"

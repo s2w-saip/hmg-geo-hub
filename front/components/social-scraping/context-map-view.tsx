@@ -38,6 +38,7 @@ import { SortableHeader } from "@/components/ui/sortable-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSortableTable } from "@/hooks/use-sortable-table";
 import { cn } from "@/lib/utils";
+import { isAlreadyAdded } from "@/lib/social-scraping/catalog-added";
 import { getGeneratedPrompts } from "./sample-data";
 import {
   pageSampleCombinations,
@@ -1153,10 +1154,10 @@ function CatalogTable({
   const t = useTranslations("socialScraping.contextMap");
   // Texts already in the candidate pool → rendered "이미 추가됨", not sendable.
   const [added, setAdded] = useState<Set<string>>(() => new Set(addedTexts ?? []));
-  const isAdded = (p: GeneratedPrompt) => added.has(p.question);
+  const isAdded = (p: GeneratedPrompt) => isAlreadyAdded(added, p);
 
   const [selected, setSelected] = useState<Set<string>>(
-    () => new Set(prompts.filter((p) => !added.has(p.question)).map((p) => p.id)),
+    () => new Set(prompts.filter((p) => !isAlreadyAdded(added, p)).map((p) => p.id)),
   );
   const [sent, setSent] = useState(false);
   // Last generation attempt failed → the empty state explains + points at 재시도.
@@ -1171,7 +1172,7 @@ function CatalogTable({
     for (const p of fresh) knownIds.current.add(p.id);
     setSelected((prev) => {
       const next = new Set(prev);
-      for (const p of fresh) if (!added.has(p.question)) next.add(p.id);
+      for (const p of fresh) if (!isAlreadyAdded(added, p)) next.add(p.id);
       return next;
     });
     setSent(false);

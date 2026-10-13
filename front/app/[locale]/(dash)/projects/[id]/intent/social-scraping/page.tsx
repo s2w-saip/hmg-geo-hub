@@ -40,8 +40,8 @@ export const maxDuration = 120;
 //
 // Sources (D8): the gate follows HGH_SOURCE_SESSION (api = GET /v1/projects/{id}, unit U2);
 // the data follows HGH_SOURCE_G6 (unit U10): api = lib/hgh/adapters/intent.ts
-// loadSocialScrapingPage (D6 (b): stats + the three first pages, then candidate texts and the
-// project's generated prompts with server-computed similarity); legacy = the repositories below.
+// loadSocialScrapingPage (D6 (b): stats + the three first pages, then the project's generated
+// prompts with server-computed similarity and "이미 추가됨" marks); legacy = the repositories below.
 const PAGE_SIZE = 50;
 
 export default async function ProjectIntentSocialScrapingPage({
@@ -87,7 +87,6 @@ export default async function ProjectIntentSocialScrapingPage({
           stats={data.stats}
           initialPages={data.initialPages}
           generatedPrompts={data.generatedPrompts}
-          addedTexts={data.addedTexts}
         />
       </div>
     );
