@@ -12,6 +12,11 @@ import uuid
 import asyncpg
 import pytest
 
+from app.features.admin.entities.versions.tests.test_ad_entities_versions import (  # noqa: F401  (ecat 픽스처 재사용)
+    CLEANUP,
+    _x,
+    ecat,
+)
 from tests.support import ADMIN, DB_URL, HQ_HYUNDAI, KIA_EU, KIA_US, SUSPENDED, VENDOR, load_named_sql, needs_db
 
 U = "/v1/admin/entities"
@@ -234,3 +239,83 @@ async def test_set_role_404_and_forbidden(client_as):
     async with client_as(HQ_HYUNDAI) as c:
         fb = await c.put(f"{U}/{TOYOTA}", json={"role": "excluded"})
     assert nf.status_code == 404 and bad.status_code == 422 and fb.status_code == 403
+
+
+# ── B081 메뉴 게이트 · B088 fields=names · B083 활성 스냅샷 메모 ──
+async def test_list_menu_gate(client_as):
+    """B081: 목록 GET 은 legacy 페이지 게이트(route-policy /admin = group admin)와 같게 메뉴 그룹 admin 도 본다(롤백 전용 준비).
+    admin 메뉴 없는 admin = 403 menu_forbidden(본문에 행 없음), admin 메뉴 admin = 200. 역할 PUT 은 legacy 액션처럼 role 만(본문 검증 422 까지 간다)."""
+    from tests.support import Sql, Update, staged
+
+    actor = Sql("SELECT set_config('app.actor_id', $1, true)", (str(ADMIN),))      # 계정 쓰기 = 감사 트리거 행위자 필수
+    async with staged(actor, Update("app.user_account", {"user_id": ADMIN}, {"menu_groups": ["standard"]})), client_as(ADMIN) as c:
+        r = await c.get(U, params={"surface": "global"})
+        w = await c.put(f"{U}/{TOYOTA}", json={})
+    assert r.status_code == 403 and r.json()["error"]["code"] == "menu_forbidden" and "items" not in r.text
+    assert w.status_code == 422
+    async with staged(actor, Update("app.user_account", {"user_id": ADMIN}, {"menu_groups": ["admin"]})), client_as(ADMIN) as c:
+        r = await c.get(U, params={"surface": "global"})
+    assert r.status_code == 200 and "items" in r.json()["data"]
+
+
+def _no_own(rows: list[dict]) -> list[dict]:
+    return [{k: v for k, v in r.items() if k != "own_brand"} for r in rows]
+
+
+async def _pages(c, params: dict) -> tuple[list[dict], int]:
+    got, cursor, n = [], None, 0
+    for _ in range(30):
+        body = (await c.get(U, params={**params, **({"cursor": cursor} if cursor else {})})).json()
+        got += body["data"]["items"]
+        n += 1
+        cursor = body["meta"]["page"]["next_cursor"]
+        if not cursor:
+            break
+    return got, n
+
+
+async def test_fields_names_skips_attribution_only(client_as, monkeypatch):
+    """B088: fields=names(검토함 병합 후보) = 행·순서·이름·유형·역할·수치·커서는 full 과 같고, 유효 귀속 판정(active_own_brands)은 돌지 않는다
+    (own_brand null). 기본(full)은 종전 그대로 귀속을 붙인다."""
+    from app.features.admin.entities.versions import service as vsvc
+
+    async with client_as(ADMIN) as c:
+        full = (await c.get(U, params={"surface": "global", "limit": 500})).json()["data"]["items"]
+
+        async def boom(*_a, **_k):
+            raise AssertionError("fields=names 는 귀속 판정을 하지 않는다")
+        monkeypatch.setattr(vsvc, "active_own_brands", boom)
+        names = (await c.get(U, params={"surface": "global", "limit": 500, "fields": "names"})).json()["data"]["items"]
+        paged, _ = await _pages(c, {"surface": "global", "limit": 3, "fields": "names"})
+        bad = await c.get(U, params={"surface": "global", "fields": "all"})
+    assert len(full) >= 8 and any(r["own_brand"] for r in full)
+    assert _no_own(names) == _no_own(full) and _no_own(paged) == _no_own(full)
+    assert all(r["own_brand"] is None for r in names + paged)
+    assert bad.status_code == 422
+
+
+async def test_active_snapshot_read_once_across_pages(ecat, client_as, monkeypatch):  # noqa: F811  (ecat 픽스처)
+    """B083: 활성 버전 내용(ENTITIES_OF·SURFACES_OF)은 버전 키 메모라 페이지마다 다시 읽지 않는다(버전 행 VERSIONS 만 페이지마다).
+    페이지로 나눠 받은 행·귀속 = 한 번에 받은 것. 같은 번호로 다시 만든 버전(정리 뒤 재이관)은 키가 갈려 다시 읽는다."""
+    from app.features.admin.entities.versions import queries as vq
+    from app.features.admin.entities.versions import service as vsvc
+
+    seen: list[str] = []
+    real = vsvc.fetch_all
+
+    async def spy(conn, sql, params=None):
+        seen.append(sql)
+        return await real(conn, sql, params)
+    monkeypatch.setattr(vsvc, "fetch_all", spy)
+    vsvc._ACTIVE_SNAPSHOT.clear()
+    async with client_as(ADMIN) as c:
+        full = (await c.get(U, params={"surface": "global", "limit": 500})).json()["data"]["items"]
+        paged, pages = await _pages(c, {"surface": "global", "limit": 3})
+    assert pages >= 3 and paged == full
+    assert seen.count(vq.ENTITIES_OF) == 1 and seen.count(vq.SURFACES_OF) == 1          # 첫 페이지 한 번뿐(종전 = 페이지마다)
+    assert seen.count(vq.VERSIONS) == 1 + pages
+    await _x(CLEANUP)
+    await _x("SELECT app.ecat_cutover_v1($1, 'E6 시험')", ADMIN)                         # 같은 v1, 다른 created_at·activated_at
+    async with client_as(ADMIN) as c:
+        again = (await c.get(U, params={"surface": "global", "limit": 500})).json()["data"]["items"]
+    assert seen.count(vq.ENTITIES_OF) == 2 and again == full

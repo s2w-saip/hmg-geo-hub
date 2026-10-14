@@ -593,3 +593,114 @@ async def test_mention_samples(ecat, client_as):
     assert d["surfaces"] == [{"surface": "Hyundai", "n": 1}]
     assert len(flt.json()["data"]["items"]) == len(d["items"]) and none.json()["data"]["items"] == []
     assert nf.status_code == 404 and _code(nf) == "ECAT_UNKNOWN_ENTITY"
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# 선택 파라미터(기본값 = 종전 응답): 목록 view=gate(B084)·초안 쓰기 return=minimal(B085)·상세 1회 읽기(B086)·상세 view=lint(B087)
+# ════════════════════════════════════════════════════════════════════════════
+@pytest.fixture
+def sql_seen(monkeypatch):
+    """versions.service 가 fetch_all 로 실행한 SQL(문장 상수 그대로)."""
+    from app.features.admin.entities.versions import service as vsvc
+
+    seen: list[str] = []
+    real = vsvc.fetch_all
+
+    async def spy(conn, sql, params=None):
+        seen.append(sql)
+        return await real(conn, sql, params)
+    monkeypatch.setattr(vsvc, "fetch_all", spy)
+    return seen
+
+
+async def test_versions_gate_view(ecat, client_as, sql_seen):
+    """B084: view=gate = 활성·초안 번호만(items = []): 버전 행·행별 count·최근 반영(VERSIONS·LAST_APPLY_OF)을 읽지 않는다. 번호는 기본 목록과 같다."""
+    from app.features.admin.entities.versions import queries as vq
+
+    async with client_as(ADMIN) as c:
+        g0 = (await c.get(V, params={"view": "gate"})).json()["data"]
+        ver = (await c.post(V, json={"title": "게이트"})).json()["data"]["version"]["ver"]
+        sql_seen.clear()
+        g1 = (await c.get(V, params={"view": "gate", "status": "draft", "limit": 1})).json()["data"]
+        gate_sql = list(sql_seen)
+        full = (await c.get(V)).json()["data"]
+        bad = await c.get(V, params={"view": "all"})
+    assert g0 == {"items": [], "active_ver": 1, "draft_ver": None}
+    assert g1 == {"items": [], "active_ver": full["active_ver"], "draft_ver": full["draft_ver"]} and full["draft_ver"] == ver
+    assert [i["ver"] for i in full["items"]] == [ver, 1]                                    # 기본(full) 목록은 종전 그대로
+    assert vq.VERSIONS not in gate_sql and vq.LAST_APPLY_OF not in gate_sql
+    assert bad.status_code == 422
+
+
+async def test_draft_write_return_minimal(ecat, client_as, sql_seen):
+    """B085: 초안 생성·수정 return=minimal = 버전 요약(version)만(값은 상세의 version 과 같다), content_md5·lint null, entities·surfaces [].
+    쓰기·감사는 기본과 같고, 응답용 내용·귀속 조회(ENTITIES_OF·DIM_ENTITIES·OWN_BRANDS)는 하지 않는다."""
+    from app.features.admin.entities.versions import queries as vq
+
+    async with client_as(ADMIN) as c:
+        k = Calls(c)
+        sql_seen.clear()
+        r = (await k.w("POST", f"{V}?return=minimal", {"title": " 최소 ", "reason": "시험"})).json()["data"]
+        post_sql = list(sql_seen)
+        ver = r["version"]["ver"]
+        full = (await c.get(f"{V}/{ver}")).json()["data"]
+        sql_seen.clear()
+        p = (await k.w("PATCH", f"{V}/{ver}?return=minimal", {"title": "최소 2"})).json()["data"]
+        patch_sql = list(sql_seen)
+        same = await k.w("PATCH", f"{V}/{ver}?return=minimal", {"title": "최소 2"}, ok=False)    # 변경 없음 = 200, 감사 없음
+        full2 = (await c.get(f"{V}/{ver}")).json()["data"]
+        bad = await c.post(f"{V}?return=none", json={"title": "x"})
+    assert r == {"version": full["version"], "content_md5": None, "entities": [], "surfaces": [], "lint": None}
+    assert r["version"]["title"] == "최소" and r["version"]["status"] == "draft" and r["version"]["entity_rows"] == len(full["entities"]) == 7
+    assert p == {"version": full2["version"], "content_md5": None, "entities": [], "surfaces": [], "lint": None}
+    assert p["version"]["title"] == "최소 2" and same.status_code == 200 and same.json()["data"]["version"] == full2["version"]
+    for sql in (vq.ENTITIES_OF, vq.SURFACES_OF, vq.DIM_ENTITIES, vq.OWN_BRANDS):
+        assert sql not in post_sql and sql not in patch_sql
+    assert bad.status_code == 422
+    acts = [x["action"] for x in await _q("SELECT action FROM app.ecat_audit_log ORDER BY audit_id")]
+    assert acts == ["draft.create", "draft.update"]
+
+
+async def test_version_detail_reads_content_once(ecat, client_as, sql_seen):
+    """B086: 버전 상세는 덮어쓰기·표면 행(ENTITIES_OF·SURFACES_OF)을 한 번씩만 읽는다(린트 판정 스냅샷도 그 행에서). 값은 종전 시험들이 지킨다."""
+    from app.features.admin.entities.versions import queries as vq
+
+    async with client_as(ADMIN) as c:
+        sql_seen.clear()
+        d = (await c.get(f"{V}/1")).json()["data"]
+    assert len(d["entities"]) == 7 and d["version"]["entity_rows"] == 7
+    assert sql_seen.count(vq.ENTITIES_OF) == 1 and sql_seen.count(vq.SURFACES_OF) == 1
+
+
+async def test_version_lint_view(ecat, client_as, sql_seen):
+    """B087: view=lint = 버전 요약·현재 내용 지문·마지막 린트(낡음 표시 포함)는 기본 상세와 같고 entities·surfaces = []. 귀속·차원 조회 없음.
+    활성(린트 없음)·초안(린트 뒤 편집 = stale)·폐기(행 수를 세는 길) 모두 같다."""
+    from app.features.admin.entities.versions import queries as vq
+
+    async with client_as(ADMIN) as c:
+        k = Calls(c)
+        ver = (await k.w("POST", V, {"title": "린트 보기"})).json()["data"]["version"]["ver"]
+        await k.w("POST", f"{V}/{ver}/surfaces", {"entity_id": str(HYUNDAI), "surface": "N", "action": "add"})
+        await k.w("POST", f"{V}/{ver}/lint")
+        got = {}
+        for name in ("active", "linted"):
+            sql_seen.clear()
+            got[name] = ((await c.get(f"{V}/{1 if name == 'active' else ver}", params={"view": "lint"})).json()["data"], list(sql_seen))
+        await k.w("PUT", f"{V}/{ver}/entities/{APPLE}", {"role": "removed"})                  # 린트 뒤 편집 = stale
+        got["stale"] = ((await c.get(f"{V}/{ver}", params={"view": "lint"})).json()["data"], [])
+        full = {"active": (await c.get(f"{V}/1")).json()["data"]}
+        full["stale"] = (await c.get(f"{V}/{ver}")).json()["data"]
+        await k.w("POST", f"{V}/{ver}/discard", {})
+        got["discarded"] = ((await c.get(f"{V}/{ver}", params={"view": "lint"})).json()["data"], [])
+        full["discarded"] = (await c.get(f"{V}/{ver}")).json()["data"]
+        bad = await c.get(f"{V}/1", params={"view": "entities"})
+    linted = got["linted"][0]
+    assert linted["lint"]["blocked"] and not linted["lint"]["stale"] and linted["entities"] == [] and linted["surfaces"] == []
+    for name in ("active", "stale", "discarded"):
+        lv, fv = got[name][0], full[name]
+        assert lv == {**fv, "entities": [], "surfaces": []}, name
+    assert full["active"]["lint"] is None and full["stale"]["lint"]["stale"] is True and full["discarded"]["version"]["status"] == "discarded"
+    for name in ("active", "linted"):
+        for sql in (vq.ENTITIES_OF, vq.SURFACES_OF, vq.DIM_ENTITIES, vq.OWN_BRANDS):
+            assert sql not in got[name][1], (name, sql)
+    assert bad.status_code == 422

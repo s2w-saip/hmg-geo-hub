@@ -14,6 +14,8 @@ import { isHghApiError, throwForPage } from "@/lib/hgh/errors";
 //   ready       versions exist: the version screens are shown.
 //   unavailable the versions read failed otherwise (5xx, timeout): the pages show a notice
 //               instead of the old role editor, whose PUT is refused after the cutover.
+// view "gate" reads the active and draft numbers only (GET .../versions?view=gate, versions.items = []) for
+// pages that never list versions; the default ("full") reads the version list as before.
 
 export type EcatGate =
   | { kind: "legacy" }
@@ -27,10 +29,10 @@ export async function requireAdminPage(locale: string): Promise<void> {
   if (!canAccessAdmin(session.user)) redirect(`/${locale}/dashboard`);
 }
 
-export async function ecatGate(locale: string): Promise<EcatGate> {
+export async function ecatGate(locale: string, view: "full" | "gate" = "full"): Promise<EcatGate> {
   if (!isAdminApi()) return { kind: "legacy" };
   try {
-    const versions = await ecat.listVersions();
+    const versions = view === "gate" ? await ecat.listVersionNumbers() : await ecat.listVersions();
     return versions.activeVer == null ? { kind: "precutover" } : { kind: "ready", versions };
   } catch (e) {
     if (isHghApiError(e) && e.status === 404) return { kind: "precutover" };

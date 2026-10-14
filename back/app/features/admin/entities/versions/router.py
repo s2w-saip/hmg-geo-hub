@@ -1,6 +1,7 @@
 """admin.entities.versions 엔티티 버전 관리 라우터(E6). 경로는 /v1 접두 포함 전체 경로. 전 엔드포인트 admin 전용 + 메뉴 admin.
 
 읽기(api_ro): 버전 목록·상세·비교, 반영 목록·상세(미리보기 결과 포함), 검토 대기함, 감사, 언급 표본(기간을 주면 admin_long).
+  선택 파라미터(기본값 = 종전 응답): 목록 view=gate(활성·초안 번호만), 상세 view=lint(요약·지문·린트만), 초안 생성·수정 return=minimal(요약만).
 쓰기(api_rw, 같은 트랜잭션 감사 app.ecat_audit_log): 초안 생성·수정·폐기, 초안 엔티티·표면 편집, 린트·L2 확인, 반영 요청(범위 선택)·
 재미리보기·승인·거절·재개·포기·되돌리기, 검토 대기함 처리. 업무 규칙과 오류 코드는 service 머리 주석.
 """
@@ -59,30 +60,41 @@ R = "/v1/admin/entities/review"
 Ver = Annotated[int, Path(ge=1, le=2_147_483_647)]
 ApplyId = Annotated[int, Path(ge=1, le=9_223_372_036_854_775_807)]
 Limit = Annotated[int, Query(ge=1, le=500, description="기본 100, 최대 500")]
+WriteReturn = Annotated[Literal["full", "minimal"], Query(alias="return", description=(
+    "full(기본) = 종전 버전 상세 전체. minimal = 버전 요약(version)만: content_md5·lint = null, entities·surfaces = [](화면이 번호만 쓰고 다시 읽을 때)"))]
 
 
 # ── 버전 ──
 @router.get(V, summary="엔티티 버전 목록(최신순) + 활성·초안 번호. 버전마다 덮어쓰기 행 수·표면 수·최근 반영", response_model=Envelope[VersionList])
-async def get_versions(ro: RoConn, status: Annotated[VersionStatus | None, Query()] = None, limit: Limit = 100) -> Envelope[VersionList]:
-    items, active, draft = await svc.list_versions(ro, status=status, limit=limit)
+async def get_versions(ro: RoConn, status: Annotated[VersionStatus | None, Query()] = None, limit: Limit = 100,
+                       view: Annotated[Literal["full", "gate"], Query(description=(
+                           "full(기본) = 종전 목록. gate = 활성·초안 번호만(items = [], status·limit 무시): 하위 화면 게이트 용도"))] = "full",
+                       ) -> Envelope[VersionList]:
+    items, active, draft = await svc.list_versions(ro, status=status, limit=limit, gate=view == "gate")
     return Envelope[VersionList](data=VersionList(items=items, active_ver=active, draft_ver=draft), meta=build_meta(mode="admin"))
 
 
 @router.post(V, summary="초안 생성(활성 버전 복사). 초안이 있으면 409 ECAT_DRAFT_EXISTS, 활성 없음(v1 이관 전) 409 ECAT_NO_ACTIVE",
              response_model=Envelope[VersionDetail])
-async def post_versions(body: DraftCreateBody, ro: RoConn, rw: RwConn) -> Envelope[VersionDetail]:
-    return Envelope[VersionDetail](data=await svc.create_draft(ro, rw, title=body.title, reason=body.reason), meta=build_meta(mode="crud"))
+async def post_versions(body: DraftCreateBody, ro: RoConn, rw: RwConn, return_: WriteReturn = "full") -> Envelope[VersionDetail]:
+    data = await svc.create_draft(ro, rw, title=body.title, reason=body.reason, minimal=return_ == "minimal")
+    return Envelope[VersionDetail](data=data, meta=build_meta(mode="crud"))
 
 
 @router.get(V + "/{ver}", summary="버전 상세: 덮어쓰기 엔티티(관측 대표 표기·표시 브랜드 포함)·켠 표면·마지막 린트(낡음 표시)·내용 지문",
             response_model=Envelope[VersionDetail])
-async def get_version(ver: Ver, ro: RoConn) -> Envelope[VersionDetail]:
-    return Envelope[VersionDetail](data=await svc.version_detail(ro, ver), meta=build_meta(mode="admin"))
+async def get_version(ver: Ver, ro: RoConn,
+                      view: Annotated[Literal["full", "lint"], Query(description=(
+                          "full(기본) = 종전 상세. lint = 버전 요약·content_md5·lint 만(값은 full 과 같다), entities·surfaces = [](반영 상세 화면 보조)"))] = "full",
+                      ) -> Envelope[VersionDetail]:
+    data = await (svc.version_lint(ro, ver) if view == "lint" else svc.version_detail(ro, ver))
+    return Envelope[VersionDetail](data=data, meta=build_meta(mode="admin"))
 
 
 @router.patch(V + "/{ver}", summary="초안 제목·사유 수정(초안만, 409 ECAT_VERSION_STATE)", response_model=Envelope[VersionDetail])
-async def patch_version(ver: Ver, body: DraftPatchBody, ro: RoConn, rw: RwConn) -> Envelope[VersionDetail]:
-    data = await svc.patch_draft(ro, rw, ver, title=body.title, reason=body.reason, fields=set(body.model_fields_set))
+async def patch_version(ver: Ver, body: DraftPatchBody, ro: RoConn, rw: RwConn, return_: WriteReturn = "full") -> Envelope[VersionDetail]:
+    data = await svc.patch_draft(ro, rw, ver, title=body.title, reason=body.reason, fields=set(body.model_fields_set),
+                                 minimal=return_ == "minimal")
     return Envelope[VersionDetail](data=data, meta=build_meta(mode="crud"))
 
 

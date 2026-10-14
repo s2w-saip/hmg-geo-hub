@@ -8,6 +8,8 @@
 - 수치 = 엔티티별 전 기간 합계(rd.entity_mention_total, 운영 listDiscoveredBrands 정의). 창·게이트와 무관하고 meta.source.count_grain
   = 'entity_all_time' 으로 드러낸다.
 - 관리자는 전량을 본다(스코프 교집합 없음). 공통 필터 중 지원 축은 없다(surface·period 는 이 엔드포인트의 필수·기간 인자).
+- 유효 귀속(own_brand) = versions.service.active_own_brands(활성 버전 스냅샷은 버전 키로 메모, B083). own_brand=False(fields=names,
+  이름·유형만 쓰는 검토함 병합 후보, B088)면 판정하지 않는다(null). 행·순서·수치·커서는 같다.
 
 쓰기(판정 입력: 전 화면 당사 판정의 원천)
 - own·excluded = app.entity_registry upsert, competitor = 행 삭제(파생 기본값). 같은 트랜잭션에서
@@ -76,12 +78,14 @@ def list_sql(win: Window, *, role: str | None, q_text: str | None, sort: str, cu
 
 
 async def list_entities(ro: AsyncConnection, *, surface: str, date_from: date | None, date_to: date | None, role: str | None,
-                        q_text: str | None, sort: str, cursor: str | None, limit: int | None) -> tuple[EntityList, Window, Page, str]:
-    """(목록, 창, 페이지, 풀 이름). 기본 창은 요청 공용 api_ro, 기간을 주면 admin_long 트랜잭션 하나에서 창 해석·집계."""
+                        q_text: str | None, sort: str, cursor: str | None, limit: int | None,
+                        own_brand: bool = True) -> tuple[EntityList, Window, Page, str]:
+    """(목록, 창, 페이지, 풀 이름). 기본 창은 요청 공용 api_ro, 기간을 주면 admin_long 트랜잭션 하나에서 창 해석·집계.
+    own_brand=False = 유효 귀속 판정 생략(own_brand null, fields=names)."""
     check_period(date_from, date_to)
     n = clamp_limit(limit, default=100)
     args = {"surface": surface, "date_from": date_from, "date_to": date_to, "role": role, "q_text": q_text, "sort": sort,
-            "cursor": cursor, "n": n}
+            "cursor": cursor, "n": n, "own_brand": own_brand}
     if date_from is None:
         data, win, page = await _list_on(ro, **args)
         return data, win, page, "api_ro"
@@ -91,7 +95,7 @@ async def list_entities(ro: AsyncConnection, *, surface: str, date_from: date | 
 
 
 async def _list_on(conn: AsyncConnection, *, surface: str, date_from: date | None, date_to: date | None, role: str | None,
-                   q_text: str | None, sort: str, cursor: str | None, n: int) -> tuple[EntityList, Window, Page]:
+                   q_text: str | None, sort: str, cursor: str | None, n: int, own_brand: bool) -> tuple[EntityList, Window, Page]:
     win = await window_for(conn, surface, date_from, date_to)
     cols, dir_, types, keys = q.SORTS[sort]
     fh = filter_hash({"s": surface, "f": date_from, "t": date_to, "role": role, "q": q_text})
@@ -102,7 +106,7 @@ async def _list_on(conn: AsyncConnection, *, surface: str, date_from: date | Non
     # 유효 귀속 = 드로어와 같은 RollupRule 판정(검증 5차 CE25). 함수 안 import = 순환 회피(versions 가 registry 를 쓴다)
     from app.features.admin.entities.versions.service import active_own_brands
 
-    own = await active_own_brands(conn, [r["entity_id"] for r in page])
+    own = await active_own_brands(conn, [r["entity_id"] for r in page]) if own_brand else {}
     items = [EntityRow(entity_id=r["entity_id"], entity_type=r["entity_type"], name=r["name"], brand_name=r["brand_name"],
                        role=r["role"], brand_code=r["brand_code"], registered=r["registered"], answers=int(r["answers"]),
                        mentions=int(r["mentions"]), updated_at=r["updated_at"], own_brand=own.get(str(r["entity_id"]))) for r in page]

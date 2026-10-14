@@ -315,6 +315,41 @@ describe("request shapes", () => {
       "GET /v1/admin/entities/applies?limit=50 null",
     ]);
   });
+  it("gate numbers, lint view, minimal draft writes and merge-candidate names (optional params; defaults unchanged)", async () => {
+    const lint = { blocked: true, counts: { L1: 1 }, escalated: 0, findings: [], acked: [], unacked: [], stale: false, content_md5: "ab" };
+    const row = (n: number) => ({ entity_id: U(n), name: `e${n}`, entity_type: n % 2 ? "Brand" : "Product", role: "competitor", registered: false,
+      brand_code: null, brand_name: null, answers: 10 - n, mentions: 10 - n, updated_at: null, own_brand: null });
+    mock((c) => {
+      if (c.path === "/v1/admin/entities/versions" && c.method === "GET") {
+        return data({ active_ver: 2, draft_ver: 3, items: c.query.includes("view=gate") ? [] : [summary(3, "draft"), summary(2, "active")] });
+      }
+      if (c.path === "/v1/admin/entities/versions" || c.path === "/v1/admin/entities/versions/3") {
+        return data({ version: summary(3, "draft"), content_md5: c.method === "GET" ? "ab" : null, entities: [], surfaces: [], lint: c.method === "GET" ? lint : null });
+      }
+      if (c.path === "/v1/admin/entities") return data({ items: [row(1), row(2)] });
+      return fail(404, "not_found");
+    });
+    expect(await e.listVersionNumbers()).toEqual({ activeVer: 2, draftVer: 3, items: [] });
+    expect((await e.listVersions()).items.map((v) => v.ver)).toEqual([3, 2]);
+    const lv = await e.getVersionLint(3);
+    expect(lv).toEqual({ version: e.toVersionSummary(summary(3, "draft") as never), contentMd5: "ab", lint: e.toLint(lint as never) });
+    expect(lv.lint?.blocked).toBe(true);
+    expect(await e.createDraft("t", null)).toEqual({ ok: true, value: { version: e.toVersionSummary(summary(3, "draft") as never) } });
+    expect(await e.patchDraft(3, "t2", "r")).toEqual({ ok: true, value: { version: e.toVersionSummary(summary(3, "draft") as never) } });
+    // merge candidates: the same rows (names, types) as the default list, only the attribution is skipped by the backend
+    const names = await e.listEntityRows({ fields: "names" });
+    const all = await e.listEntityRows();
+    expect(names.map((r) => [r.entity_id, r.name, r.entity_type])).toEqual(all.map((r) => [r.entity_id, r.name, r.entity_type]));
+    expect(calls.map((c) => `${c.method} ${c.path}${c.query} ${JSON.stringify(c.body ?? null)}`)).toEqual([
+      "GET /v1/admin/entities/versions?view=gate null",
+      "GET /v1/admin/entities/versions?limit=100 null",
+      "GET /v1/admin/entities/versions/3?view=lint null",
+      'POST /v1/admin/entities/versions?return=minimal {"title":"t","reason":null}',
+      'PATCH /v1/admin/entities/versions/3?return=minimal {"title":"t2","reason":"r"}',
+      "GET /v1/admin/entities?fields=names&limit=500&sort=answers_desc&surface=global null",
+      "GET /v1/admin/entities?limit=500&sort=answers_desc&surface=global null",
+    ]);
+  });
 });
 
 // ── errors ──────────────────────────────────────────────────────────────────

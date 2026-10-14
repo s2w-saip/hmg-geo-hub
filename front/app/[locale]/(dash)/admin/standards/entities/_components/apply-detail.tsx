@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SectionCard } from "@/components/section-card";
 import { APPLY_POLL_MAX, APPLY_POLL_MS, isApplyBusy } from "@/lib/hgh/ecat-model";
-import type { AbandonPinsView, ApplyDetailView, LintView } from "@/lib/hgh/adapters/admin-entities";
+import type { AbandonPinsView, ApplyDetailView, EcatResult, LintView } from "@/lib/hgh/adapters/admin-entities";
 import { applyStepAction, getApplyAction } from "../_ecat-actions";
 import { ApplyStatusBadge, ECAT_BASE, fmtInt, fmtTime, Notice, shortId } from "./ecat-shared";
 import { PreviewPanel } from "./preview-view";
@@ -22,10 +22,35 @@ import { PreviewPanel } from "./preview-view";
 // ECAT_EXPOSED_REQUIRES_APPROVAL); an unexposed-only range is approved by the requesting admin.
 // "Preview again" follows the draft lint: a current lint with L1 / L3 disables it (the backend would answer
 // ECAT_LINT_BLOCKED). Hidden role changes take effect on every period at once, whatever the range.
+// Polling stops with the pollStopped notice after APPLY_POLL_MAX polls, after APPLY_POLL_FAIL_MAX failed reads in a
+// row, or at once when the read throws (401 / 403 refusals): a failing read no longer polls on without a word.
 
 type Step = "preview" | "approve" | "reject" | "resume" | "abandon" | "rollback";
 
 const PINS_SHOWN = 20;
+
+/** Failed apply reads in a row after which the page stops polling and shows pollStopped. */
+export const APPLY_POLL_FAIL_MAX = 3;
+
+export interface ApplyPollStep {
+  /** The fresh detail (null when the read failed). */
+  detail: ApplyDetailView | null;
+  /** Failed reads in a row so far. */
+  fails: number;
+  /** Stop polling (the page shows pollStopped). */
+  stop: boolean;
+}
+
+/** One poll of the apply detail: a refused read (the action throws) stops at once, a failed one after APPLY_POLL_FAIL_MAX in a row. */
+export async function pollApplyOnce(read: () => Promise<EcatResult<ApplyDetailView>>, fails: number): Promise<ApplyPollStep> {
+  try {
+    const r = await read();
+    if (r.ok) return { detail: r.value, fails: 0, stop: false };
+    return { detail: null, fails: fails + 1, stop: fails + 1 >= APPLY_POLL_FAIL_MAX };
+  } catch {
+    return { detail: null, fails: fails + 1, stop: true };
+  }
+}
 
 /** Which cycles an abandon pins (before: planned, after: measured) and what that means for later applies (review N2). */
 export function AbandonPinsNotice({ pins }: { pins: AbandonPinsView }) {
@@ -74,24 +99,28 @@ export function ApplyDetail({
   const [ask, setAsk] = useState<Step | null>(null);
   const [reason, setReason] = useState("");
   const [polls, setPolls] = useState(0);
+  const [pollFailed, setPollFailed] = useState(false);
+  const fails = useRef(0);
   const busy = isApplyBusy(d);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!busy || polls >= APPLY_POLL_MAX) return;
+    if (!busy || pollFailed || polls >= APPLY_POLL_MAX) return;
     timer.current = setTimeout(async () => {
-      const r = await getApplyAction(d.applyId);
-      if (r.ok) {
+      const s = await pollApplyOnce(() => getApplyAction(d.applyId), fails.current);
+      fails.current = s.fails;
+      if (s.detail) {
         const wasBusy = isApplyBusy(d);
-        setD(r.value);
-        if (wasBusy && !isApplyBusy(r.value)) router.refresh();
+        setD(s.detail);
+        if (wasBusy && !isApplyBusy(s.detail)) router.refresh();
       }
-      setPolls((n) => n + 1);
+      if (s.stop) setPollFailed(true);
+      else setPolls((n) => n + 1);
     }, APPLY_POLL_MS);
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [busy, polls, d, router]);
+  }, [busy, pollFailed, polls, d, router]);
 
   function run(step: Step, why: string | null) {
     start(async () => {
@@ -109,6 +138,8 @@ export function ApplyDetail({
       }
       setD(r.value);
       setPolls(0);
+      fails.current = 0;
+      setPollFailed(false);
       toast.success(t(`done.${step}`));
       router.refresh();
     });
@@ -177,7 +208,7 @@ export function ApplyDetail({
               {d.canApprove ? t("approverYou") : t("approverOther")}
             </Notice>
           ) : null}
-          {busy && polls >= APPLY_POLL_MAX ? <Notice>{t("pollStopped")}</Notice> : null}
+          {busy && (pollFailed || polls >= APPLY_POLL_MAX) ? <Notice>{t("pollStopped")}</Notice> : null}
           {hiddenCount > 0 ? (
             <Notice tone="warn" testId="ecat-apply-hidden-notice">
               {t("hiddenNotice", { count: hiddenCount })}

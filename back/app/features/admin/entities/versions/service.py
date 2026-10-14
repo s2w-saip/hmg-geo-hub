@@ -194,9 +194,25 @@ async def _summaries(conn: AsyncConnection, rows: list[dict[str, Any]]) -> list[
     return out
 
 
-async def list_versions(ro: AsyncConnection, *, status: str | None, limit: int) -> tuple[list[VersionSummary], int | None, int | None]:
+async def list_versions(ro: AsyncConnection, *, status: str | None, limit: int,
+                        gate: bool = False) -> tuple[list[VersionSummary], int | None, int | None]:
+    """gate = 활성·초안 번호만(view=gate, B084: 버전 행·행별 수·최근 반영을 읽지 않는다, items = []). 하위 화면 게이트 용도."""
+    if gate:
+        return [], await _active(ro), await _draft(ro)
     rows = await fetch_all(ro, q.VERSIONS, {"status": status, "lim": limit})
     return await _summaries(ro, rows), await _active(ro), await _draft(ro)
+
+
+async def _summary_only(c: AsyncConnection, v: Mapping[str, Any]) -> VersionSummary:
+    """버전 요약만(version_detail 의 version 과 같은 값), 덮어쓰기·표면 행을 읽지 않고. 활성·초안은 상태마다 1개(DB 고유 색인
+    ecat_version_one_active·one_draft)라 목록 질의(VERSIONS, 행별 count)를 그 상태로 좁혀 행 수를 받는다. 보관·폐기는 행을 센다."""
+    ver = int(v["ver"])
+    if v["status"] in ("active", "draft"):
+        rows = await fetch_all(c, q.VERSIONS, {"status": v["status"], "lim": 1})
+        if rows and int(rows[0]["ver"]) == ver:
+            return (await _summaries(c, rows))[0]
+    ents, surfs = await _entities(c, ver), await _surfaces(c, ver)
+    return (await _summaries(c, [{**v, "entity_rows": len(ents), "surface_rows": len(surfs)}]))[0]
 
 
 async def _entities(conn: AsyncConnection, ver: int) -> list[dict[str, Any]]:
@@ -280,15 +296,37 @@ def _with_own(cfg: LintConfig, labels: Mapping[str, str]) -> LintConfig:
     return dataclasses.replace(cfg, tracked_entity_ids=frozenset(cfg.tracked_entity_ids) | frozenset(labels))
 
 
+# 활성 버전 스냅샷 메모(B083). 관리 목록은 페이지(최대 500행)마다 같은 활성 버전 내용(ENTITIES_OF·SURFACES_OF)을 다시 읽었다. 초안이 아닌 버전의
+# 내용은 불변(DB 트리거 tg_ecat_draft_only·tg_ecat_version_guard: 바뀌면 새 버전)이라 버전 행 지문(ver·created_at·activated_at·행 수)을 키로
+# 프로세스 안에 하나만 둔다. 같은 번호로 다시 만든 버전(정리 뒤 재이관)은 created_at·activated_at 이 달라 키가 갈린다.
+# 자사 브랜드(app.brand)·린트 설정(app.rule_param)·차원 귀속은 바뀔 수 있어 메모하지 않고 요청마다 읽는다.
+_ACTIVE_SNAPSHOT: dict[tuple[Any, ...], VersionSnapshot] = {}
+
+
+async def _active_snapshot(conn: AsyncConnection) -> VersionSnapshot:
+    """활성 버전 스냅샷(없으면 빈 버전). 버전 행 1문장(VERSIONS status=active) + 메모가 없을 때만 내용 2문장."""
+    rows = await fetch_all(conn, q.VERSIONS, {"status": "active", "lim": 1})
+    if not rows:
+        return VersionSnapshot()
+    r = rows[0]
+    key = (int(r["ver"]), r["created_at"], r["activated_at"], int(r["entity_rows"] or 0), int(r["surface_rows"] or 0))
+    snap = _ACTIVE_SNAPSHOT.get(key)
+    if snap is None:
+        snap = await _snapshot(conn, int(r["ver"]))
+        _ACTIVE_SNAPSHOT.clear()
+        _ACTIVE_SNAPSHOT[key] = snap
+    return snap
+
+
 async def active_own_brands(conn: AsyncConnection, ids: Iterable[Any]) -> dict[str, str | None]:
     """엔티티별 유효 귀속 자사 브랜드(활성 버전 기준). 관리 목록 배지(admin.entities.registry)와 버전 상세 드로어(effective_own_brand)가 같은
     판정을 쓴다: RollupRule.entity_own(활성 버전 행 = 제거·병합·모 브랜드 덮어쓰기, 그 밖은 투영 차원의 표시 브랜드 = 덮어쓰기 없는 원본 쌍의
-    접두 교정·롤업·별칭 결과). 활성 버전이 없으면(이관 전) 빈 버전으로 본다(차원만). conn 은 app·rd 를 읽을 수 있는 읽기 커넥션."""
+    접두 교정·롤업·별칭 결과). 활성 버전이 없으면(이관 전) 빈 버전으로 본다(차원만). conn 은 app·rd 를 읽을 수 있는 읽기 커넥션.
+    활성 버전 스냅샷은 버전 키 메모(_active_snapshot)를 쓴다."""
     ids = sorted({str(i) for i in ids if i is not None})
     if not ids:
         return {}
-    active = await _active(conn)
-    snap = await _snapshot(conn, active) if active is not None else VersionSnapshot()
+    snap = await _active_snapshot(conn)
     scope, labels = await _own_scope(conn, ids)
     rups = await _rollup_sets(conn, removed_ids(snap), ids)
     rule = RollupRule(snap, tracked_ids(snap, _with_own(await lint_config(conn), labels)))
@@ -301,7 +339,8 @@ async def active_own_brands(conn: AsyncConnection, ids: Iterable[Any]) -> dict[s
 
 async def version_detail(ro: AsyncConnection, ver: int, *, conn: AsyncConnection | None = None) -> VersionDetail:
     """conn = 버전 표를 읽을 커넥션(쓰기 뒤 같은 트랜잭션 결과를 돌려줄 때 rw). rd 차원은 항상 ro.
-    엔티티 행마다 이 버전 기준 유효 귀속(effective_own_brand, RollupRule.entity_own)을 붙인다."""
+    엔티티 행마다 이 버전 기준 유효 귀속(effective_own_brand, RollupRule.entity_own)을 붙인다.
+    린트 판정용 스냅샷은 본문용으로 읽은 행에서 만든다(ENTITIES_OF·SURFACES_OF 1회씩, B086)."""
     c = conn or ro
     v = await _version(c, ver)
     ents = await _entities(c, ver)
@@ -309,7 +348,7 @@ async def version_detail(ro: AsyncConnection, ver: int, *, conn: AsyncConnection
     md5 = await fetch_val(c, q.CONTENT_MD5, {"ver": ver})
     dims = await _dims(ro, [e["entity_id"] for e in ents])
     summ = (await _summaries(c, [{**v, "entity_rows": len(ents), "surface_rows": len(surfs)}]))[0]
-    snap = await _snapshot(c, ver)
+    snap = _snapshot_of(ents, surfs)
     scope, labels = await _own_scope(ro, [e["entity_id"] for e in ents])
     rups = await _rollup_sets(ro, removed_ids(snap), [e["entity_id"] for e in ents])
     rule = RollupRule(snap, tracked_ids(snap, _with_own(await lint_config(c), labels)))
@@ -321,6 +360,22 @@ async def version_detail(ro: AsyncConnection, ver: int, *, conn: AsyncConnection
         out.append(o)
     return VersionDetail(version=summ, content_md5=md5, entities=out, surfaces=[_surface_item(s) for s in surfs],
                          lint=_lint_state(v["lint"], md5))
+
+
+async def version_lint(ro: AsyncConnection, ver: int) -> VersionDetail:
+    """view=lint(B087, 반영 상세 화면 보조): 버전 요약·현재 내용 지문·마지막 린트만(값은 version_detail 과 같다). 덮어쓰기 엔티티·표면 목록은
+    비운다([]): 귀속 판정·차원·롤업 조회를 하지 않는다."""
+    v = await _version(ro, ver)
+    md5 = await fetch_val(ro, q.CONTENT_MD5, {"ver": ver})
+    return VersionDetail(version=await _summary_only(ro, v), content_md5=md5, entities=[], surfaces=[], lint=_lint_state(v["lint"], md5))
+
+
+async def _written(ro: AsyncConnection, rw: AsyncConnection, ver: int, minimal: bool) -> VersionDetail:
+    """초안 생성·수정 응답. minimal(return=minimal, B085) = 버전 요약만(content_md5·lint null, entities·surfaces []): 화면은 번호만 쓰고
+    router.refresh 로 다시 읽는다. 기본 = 종전 version_detail 전체."""
+    if not minimal:
+        return await version_detail(ro, ver, conn=rw)
+    return VersionDetail(version=await _summary_only(rw, await _version(rw, ver)), content_md5=None, entities=[], surfaces=[], lint=None)
 
 
 def _ent_key(r: Mapping[str, Any]) -> dict[str, Any]:
@@ -385,7 +440,7 @@ async def _new_draft(rw: AsyncConnection, *, based_on: int, copy_from: int, titl
     return ver, ne, ns
 
 
-async def create_draft(ro: AsyncConnection, rw: AsyncConnection, *, title: str, reason: str | None) -> VersionDetail:
+async def create_draft(ro: AsyncConnection, rw: AsyncConnection, *, title: str, reason: str | None, minimal: bool = False) -> VersionDetail:
     active = await _active(rw)
     if active is None:
         raise errors.conflict("ECAT_NO_ACTIVE", "활성 엔티티 버전이 없다(v1 이관 전: 명부는 기존 화면으로 편집)")
@@ -393,11 +448,11 @@ async def create_draft(ro: AsyncConnection, rw: AsyncConnection, *, title: str, 
     ver, ne, ns = await _new_draft(rw, based_on=active, copy_from=active, title=t or "", reason=clean_text(reason, field="reason", max_len=2000),
                                    origin="admin")
     await audit(rw, "draft.create", ver=ver, detail={"based_on": active, "title": t, "entities": ne, "surfaces": ns})
-    return await version_detail(ro, ver, conn=rw)
+    return await _written(ro, rw, ver, minimal)
 
 
 async def patch_draft(ro: AsyncConnection, rw: AsyncConnection, ver: int, *, title: str | None, reason: str | None,
-                      fields: set[str]) -> VersionDetail:
+                      fields: set[str], minimal: bool = False) -> VersionDetail:
     v = await _require_draft(rw, ver)
     new_title = clean_text(title, field="title", max_len=200, required=True) if "title" in fields else v["title"]
     new_reason = clean_text(reason, field="reason", max_len=2000) if "reason" in fields else v["reason"]
@@ -406,7 +461,7 @@ async def patch_draft(ro: AsyncConnection, rw: AsyncConnection, ver: int, *, tit
             await fetch_one(rw, q.UPDATE_DRAFT_META, {"ver": ver, "title": new_title, "reason": new_reason})
         await audit(rw, "draft.update", ver=ver, detail={"old": {"title": v["title"], "reason": v["reason"]},
                                                          "new": {"title": new_title, "reason": new_reason}})
-    return await version_detail(ro, ver, conn=rw)
+    return await _written(ro, rw, ver, minimal)
 
 
 async def discard_draft(rw: AsyncConnection, ver: int, *, reason: str | None) -> DraftWrite:
@@ -593,14 +648,19 @@ async def remove_surface(rw: AsyncConnection, ver: int, surface_id: int) -> Surf
 # ════════════════════════════════════════════════════════════════════════════
 # 린트
 # ════════════════════════════════════════════════════════════════════════════
+def _snapshot_of(ents: Iterable[Mapping[str, Any]], surfs: Iterable[Mapping[str, Any]]) -> VersionSnapshot:
+    """ENTITIES_OF·SURFACES_OF 행 → 린트 스냅샷(이미 읽은 행을 다시 읽지 않게 분리)."""
+    return VersionSnapshot(
+        entities=tuple(EntityRow(entity_id=str(e["entity_id"]), role=e["role"], name=e["name"] or "", brand_code=e["brand_code"],
+                                 merge_into=_s(e["merge_into"]), parent_brand_id=_s(e["parent_brand_id"])) for e in ents),
+        surfaces=tuple(SurfaceRow(surface_id=int(s["surface_id"]), entity_id=_s(s["entity_id"]), surface=s["surface"], action=s["action"],
+                                  lang=s["lang"]) for s in surfs))
+
+
 async def _snapshot(conn: AsyncConnection, ver: int | None) -> VersionSnapshot:
     if ver is None:
         return VersionSnapshot()
-    ents = tuple(EntityRow(entity_id=str(e["entity_id"]), role=e["role"], name=e["name"] or "", brand_code=e["brand_code"],
-                           merge_into=_s(e["merge_into"]), parent_brand_id=_s(e["parent_brand_id"])) for e in await _entities(conn, ver))
-    surfs = tuple(SurfaceRow(surface_id=int(s["surface_id"]), entity_id=_s(s["entity_id"]), surface=s["surface"], action=s["action"],
-                             lang=s["lang"]) for s in await _surfaces(conn, ver))
-    return VersionSnapshot(entities=ents, surfaces=surfs)
+    return _snapshot_of(await _entities(conn, ver), await _surfaces(conn, ver))
 
 
 def _uuid_str(x: Any) -> str | None:

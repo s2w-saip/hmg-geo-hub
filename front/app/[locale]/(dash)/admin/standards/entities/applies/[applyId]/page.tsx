@@ -15,15 +15,16 @@ export default async function EntityApplyPage({ params }: { params: Promise<{ lo
   await requireAdminPage(locale);
   const id = Number(applyId);
   if (!Number.isInteger(id) || id <= 0 || id >= 2_147_483_647) notFound();
-  const gate = await ecatGate(locale);
+  const gate = await ecatGate(locale, "gate");
   if (gate.kind !== "ready") return <EcatShell gate={gate} title={t("applyDetail.pageTitle")} />;
 
   const detail = await ecat.getApply(id).catch((e) => throwForPage(e, locale));
   // The draft's lint gates "preview again" (the backend re-lints and answers ECAT_LINT_BLOCKED). A rollback draft is
   // exempt while it keeps the previous content, so its lint does not gate the button. The diff against the version
   // the request started from lists hidden role changes when the preview does not (hidden applies to every period).
+  // Only the version status, origin and lint are read here (view=lint: no override rows, no attribution).
   const [version, diff] = await Promise.all([
-    ecat.getVersion(detail.ver).catch(() => null),
+    ecat.getVersionLint(detail.ver).catch(() => null),
     detail.fromVer != null && detail.fromVer !== detail.ver ? ecat.getVersionDiff(detail.ver, detail.fromVer).catch(() => null) : null,
   ]);
   const lint = version && version.version.status === "draft" && version.version.origin !== "rollback" ? version.lint : null;

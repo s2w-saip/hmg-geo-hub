@@ -12,9 +12,12 @@ import "server-only";
 //                 real role comes from the version detail rows (mergeEntityRows).
 //   draft page    GET .../versions (numbers) + GET .../versions/{draft} + GET .../versions/{draft}/diff
 //   versions page GET .../versions + GET .../applies
-//   apply page    GET .../applies/{id} (polled by the client while a preview or an apply runs)
-//   review page   GET .../review?status=&kind=&q=
+//   apply page    GET .../versions?view=gate (numbers only) + GET .../applies/{id} (polled by the client while a
+//                 preview or an apply runs) + GET .../versions/{ver}?view=lint (summary and lint only)
+//   review page   GET .../versions?view=gate + GET .../review?status=&kind=&q= + GET /v1/admin/entities?fields=names
+//                 (merge target names: no own-brand attribution)
 //   audit page    GET .../audit?before_id=
+// Draft create / title edit ask return=minimal: the screens only read the version number and refresh.
 //
 // Errors: writes answer {ok:false, errorKey} where errorKey is a key under adminEcat.errors
 // (i18n, never a backend message). 401 and 403 throw UnauthorizedError except
@@ -186,6 +189,12 @@ export async function listVersions(limit = 100): Promise<VersionsView> {
   };
 }
 
+/** Active and draft numbers only (view=gate: the backend reads no version rows, counts or last applies). items stays empty. */
+export async function listVersionNumbers(): Promise<VersionsView> {
+  const res = await hghGet("/v1/admin/entities/versions", { query: { view: "gate" } });
+  return { activeVer: res.data.active_ver ?? null, draftVer: res.data.draft_ver ?? null, items: [] };
+}
+
 export interface EntityOverrideView {
   entityId: string;
   origin: "scope" | "hub";
@@ -316,6 +325,14 @@ export async function getVersion(ver: number): Promise<VersionDetailView> {
   return toVersionDetail(res.data);
 }
 
+export type VersionLintView = Pick<VersionDetailView, "version" | "contentMd5" | "lint">;
+
+/** Summary, content fingerprint and last lint of a version (view=lint: no override rows, no attribution). */
+export async function getVersionLint(ver: number): Promise<VersionLintView> {
+  const res = await hghGet("/v1/admin/entities/versions/{ver}", { pathParams: { ver }, query: { view: "lint" } });
+  return { version: toVersionSummary(res.data.version), contentMd5: res.data.content_md5 ?? null, lint: toLint(res.data.lint) };
+}
+
 export interface VersionDiffView {
   ver: number;
   against: number | null;
@@ -357,17 +374,27 @@ export async function getVersionDiff(ver: number, against?: number | null): Prom
 
 // ── version writes ──────────────────────────────────────────────────────────
 
-export function createDraft(title: string, reason: string | null): Promise<EcatResult<VersionDetailView>> {
+/** Draft create / edit result: the version summary only (return=minimal; the screens refresh for the rest). */
+export interface VersionWriteView {
+  version: VersionSummaryView;
+}
+
+export function createDraft(title: string, reason: string | null): Promise<EcatResult<VersionWriteView>> {
   return attempt(async () => {
-    const res = await hghPost("/v1/admin/entities/versions", { body: { title, reason }, retryOn401: true });
-    return toVersionDetail(res.data);
+    const res = await hghPost("/v1/admin/entities/versions", { query: { return: "minimal" }, body: { title, reason }, retryOn401: true });
+    return { version: toVersionSummary(res.data.version) };
   });
 }
 
-export function patchDraft(ver: number, title: string | null, reason: string | null): Promise<EcatResult<VersionDetailView>> {
+export function patchDraft(ver: number, title: string | null, reason: string | null): Promise<EcatResult<VersionWriteView>> {
   return attempt(async () => {
-    const res = await hghPatch("/v1/admin/entities/versions/{ver}", { pathParams: { ver }, body: { title, reason }, retryOn401: true });
-    return toVersionDetail(res.data);
+    const res = await hghPatch("/v1/admin/entities/versions/{ver}", {
+      pathParams: { ver },
+      query: { return: "minimal" },
+      body: { title, reason },
+      retryOn401: true,
+    });
+    return { version: toVersionSummary(res.data.version) };
   });
 }
 
@@ -1160,11 +1187,18 @@ export async function listAudit(opts: { beforeId?: number | null; limit?: number
 export const ENTITY_LIST_LIMIT = 500;
 export const ENTITY_LIST_MAX_PAGES = 10;
 
-export async function listEntityRows(): Promise<S["EntityRow"][]> {
+/** All entity list pages. fields "names" = rows for name pickers (merge targets): the backend skips the own-brand attribution (own_brand null). */
+export async function listEntityRows(opts: { fields?: "names" } = {}): Promise<S["EntityRow"][]> {
   const r = await fetchAllPages(
     async (cursor) => {
       const res = await hghGet("/v1/admin/entities", {
-        query: { surface: "global", sort: "answers_desc", limit: ENTITY_LIST_LIMIT, ...(cursor ? { cursor } : {}) },
+        query: {
+          surface: "global",
+          sort: "answers_desc",
+          limit: ENTITY_LIST_LIMIT,
+          ...(opts.fields ? { fields: opts.fields } : {}),
+          ...(cursor ? { cursor } : {}),
+        },
         timeoutClass: "adminLong",
       });
       return { items: res.data.items, nextCursor: pageInfo(res.meta).nextCursor };
