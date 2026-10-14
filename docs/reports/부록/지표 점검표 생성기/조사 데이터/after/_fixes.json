@@ -1750,6 +1750,116 @@
     ]
    },
    "by": "d71e66b"
+  },
+  {
+   "surface": "admin",
+   "endpoint": "GET /v1/admin/entities/versions",
+   "set": {
+    "f8": [
+     "y",
+     "view=gate(활성·초안 번호만, ACTIVE·DRAFT 2문장)를 메인·초안·감사·검토·반영 화면 게이트가 모두 사용. 전체 목록(VERSIONS·LAST_APPLY_OF)은 버전 화면만",
+     "4(view=gate 2)"
+    ]
+   },
+   "by": "1b2049e"
+  },
+  {
+   "surface": "admin",
+   "endpoint": "POST /v1/admin/catalog/prompts/screen",
+   "set": {
+    "f8": [
+     "y",
+     "stats 분리(catalog_stats) + CSV 내보내기 5,000행 묶음(include_meta=false, 호출 1/10). 관리자 SSR 도 브라우저 collation 으로 읽어 하이드레이션 재조회는 정렬이 다를 때만",
+     "9 (메타 없음 4)"
+    ],
+    "f9": [
+     "y",
+     "오프셋 윈도우(limit≤500)·total 노출, 내보내기는 5,000행 묶음 반복으로 전량+정합 검사"
+    ]
+   },
+   "by": "1b2049e · d572093"
+  },
+  {
+   "surface": "project",
+   "endpoint": "GET /v1/projects/{project_id}",
+   "set": {
+    "f8": [
+     "n",
+     "BFF 단독 게이트(filters/options·인용·키워드 라우트)는 fetchProjectGate 기본 view=gate. 페이지 렌더 게이트는 레이아웃·홈 타일·설정 상세·언급 지정 브랜드와 요청 내 1콜 공유라 full 유지(레이아웃이 리프를 몰라 전환 시 홈·설정·언급 +3). 드릴다운 라우트 게이트는 아직 full",
+     "6 / view=gate 3"
+    ]
+   },
+   "by": "62b8f99"
+  },
+  {
+   "surface": "project_ops_interest",
+   "endpoint": "GET /v1/projects/{project_id}",
+   "set": {
+    "f8": [
+     "n",
+     "fetchProjectGate 기본 view=gate(키워드 /api 라우트 등 단독 게이트), 프롬프트 탭 서버 액션 경량(P3). 멤버·설정·프롬프트·의도 페이지 렌더 게이트는 레이아웃과 1콜 공유라 full 유지. 재처리 권한 확인은 아직 full",
+     "5 / view=gate 2"
+    ]
+   },
+   "by": "62b8f99"
+  },
+  {
+   "surface": "project_ops_interest",
+   "endpoint": "POST /v1/intent/keywords",
+   "set": {
+    "f8": [
+     "y",
+     "관련어 선택 추가·검색 결과 저장이 서버 액션 1회(addTrackedKeywords) → items[] 100행당 1요청, 행별 결과·문구는 단건 N회와 동일(intent.parity)",
+     "N+2 (+공통 2), 100행 초과 시 100행마다 +2"
+    ]
+   },
+   "by": "8a6a906"
+  },
+  {
+   "surface": "global",
+   "endpoint": "GET /v1/citations/sources/tone",
+   "set": {
+    "f8": [
+     "y",
+     "화면 안 커서·검색 이동(Sec-Fetch-Dest empty)은 with_counts 생략 → 화면이 받은 탭 카운트 재사용(ref + 탭 sessionStorage, 카운트는 q 무관 BG-27), 첫 페이지·문서 요청은 종전대로 함께 셈. URL 계약 불변",
+     "3 첫 페이지 / 2 커서·검색 이동 (+공통 3)"
+    ]
+   },
+   "by": "8a6a906"
+  },
+  {
+   "surface": "project",
+   "endpoint": "GET /v1/mentions/brands",
+   "set": {
+    "f8": [
+     "n",
+     "언급 화면 B1 include=multi 생략(순위표 multiToggle 꺼짐 — 값 동일 증명). 남음: 홈 #16 은 경쟁사 mentions 만 쓰는데 당사 감성·행별 노출·평균 순위까지 계산, 지정 브랜드 시 full=true",
+     "8(언급)/6(홈)"
+    ]
+   },
+   "by": "8a6a906"
+  },
+  {
+   "surface": "existing3",
+   "endpoint": "GET /v1/kpi/summary (분석, +cycle_offset=1)",
+   "set": {
+    "f6": [
+     "y",
+     "히어로 실패 → 기존 kpi.degraded 한 줄(노출률·점유율 c18c0d1, 우선 노출도 3f16f64: summary·overview·trend 표식)"
+    ]
+   },
+   "by": "c18c0d1 · 3f16f64"
+  },
+  {
+   "surface": "existing3",
+   "endpoint": "GET /v1/kpi/engines part=all (+cycle_offset=1)",
+   "set": {
+    "f6": [
+     "y",
+     "loadEngineKpiTrend 실패 → 엔진·추이 자리 'degraded' 문구, 우호도 히어로 실패 → 히어로 아래 기존 kpi.degraded 한 줄(빈 Sub KPI 와 구분)"
+    ]
+   },
+   "by": "3f16f64"
   }
  ]
 }
