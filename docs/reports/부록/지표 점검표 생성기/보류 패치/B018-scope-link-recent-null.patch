@@ -1,0 +1,112 @@
+--- a/back/app/features/projects/settings/scope_link/schemas.py
++++ b/back/app/features/projects/settings/scope_link/schemas.py
+@@ -43,7 +43,8 @@
+     pending: int = Field(description="프로젝트·스케줄 아웃박스 미완료 행")
+     erroring: int = Field(description="미완료 중 last_error 가 있는 행")
+     prompt_pending: int = Field(description="이 프로젝트 프롬프트 아웃박스 미완료 행")
+-    recent: list[OutboxRow]
++    recent: list[OutboxRow] | None = Field(description=(
++        "최근 아웃박스 10행. include_recent=false 면 읽지 않아 null(B018: 요청하지 않은 목록. 빈 목록 [] = 읽었는데 행 없음)"))
+ 
+ 
+ class ScopeLink(BaseModel):
+--- a/back/app/features/projects/settings/scope_link/service.py
++++ b/back/app/features/projects/settings/scope_link/service.py
+@@ -33,7 +33,7 @@
+ 
+ 
+ async def diagnose(ro: AsyncConnection, p: Principal, project_id: uuid.UUID, *, include_recent: bool = True) -> dict[str, Any]:
+-    """include_recent=False 면 최근 아웃박스 10행(OUTBOX_RECENT)을 읽지 않고 outbox.recent = [](건수·상태는 같다)."""
++    """include_recent=False 면 최근 아웃박스 10행(OUTBOX_RECENT)을 읽지 않고 outbox.recent = null(건수·상태는 같다)."""
+     acc, _ = await project_access(ro, p, project_id, "active_member")  # 라우터가 admin 을 먼저 거른다. 없음·루트 404
+     sp = acc.scope_project_id                                            # 접근 판정이 읽은 프로젝트 행 값(재조회하지 않는다)
+     keys = list(acc.project_keys)
+@@ -49,7 +49,7 @@
+                     "failed": int(j["failed"]), "served_ratio": ratio(j["served"], j["total"]), "last_measured_at": j["last_measured_at"]}
+     ob = await fetch_one(ro, Q.OUTBOX_COUNTS, {"pid": project_id}) or {"pending": 0, "erroring": 0, "pending_create": 0}
+     prompt_pending = await fetch_one(ro, Q.PROMPT_OUTBOX_PENDING, {"pid": project_id})
+-    recent = await fetch_all(ro, Q.OUTBOX_RECENT, {"pid": project_id}) if include_recent else []
++    recent = await fetch_all(ro, Q.OUTBOX_RECENT, {"pid": project_id}) if include_recent else None
+     return {"project_id": project_id, "scope_project_id": sp, "linked": sp is not None, "state": link_state(sp is not None, ob, jobs),
+             "latest_round": latest, "jobs": jobs,
+             "outbox": {"pending": int(ob["pending"]), "erroring": int(ob["erroring"]),
+--- a/back/app/features/projects/settings/scope_link/router.py
++++ b/back/app/features/projects/settings/scope_link/router.py
+@@ -28,7 +28,7 @@
+ async def get_projects_by_id_settings_scope_link_0(project_id: uuid.UUID, request: Request, p: CurrentUserDetached,
+                                                    open_ro: RoSession, probe: ScopeProbe = Depends(get_scope_probe),
+                                                    include_recent: Annotated[bool, Query(description=(
+-                                                       "false = 최근 아웃박스 10행을 읽지 않는다(outbox.recent = 빈 목록, 건수·상태는 같다). 건수·상태만 쓰는 화면용"))] = True,
++                                                       "false = 최근 아웃박스 10행을 읽지 않는다(outbox.recent = null, 건수·상태는 같다). 건수·상태만 쓰는 화면용"))] = True,
+                                                    ) -> Envelope[ScopeLink]:
+     check_admin(p)                                  # core require_admin 과 같은 판정·코드(요청 커넥션 없이)
+     async with open_ro() as ro:
+--- a/back/app/features/projects/settings/scope_link/tests/test_scope_link.py
++++ b/back/app/features/projects/settings/scope_link/tests/test_scope_link.py
+@@ -96,29 +96,30 @@
+     finally:
+         app.dependency_overrides.pop(get_scope_probe, None)
+         await purge(pr["project_id"])
+-
+-
+-@needs_db
+-async def test_include_recent_false_skips_recent_rows(client_as):
+-    """B018: include_recent=false 는 최근 아웃박스 10행 문장을 실행하지 않고 recent = [](상태·건수·회차는 같다).
+-    scope_project_id 는 접근 판정이 읽은 프로젝트 행 값을 쓴다(프로젝트 재조회 문장 없음)."""
+-    from tests.core.rcache_calls import Stmts
+-    pr = await create_project(client_as, name=uniq("sl3"))
+-    pid = uuid.UUID(pr["project_id"])
+-    url = f"/v1/projects/{pid}/settings/scope-link"
+-    try:
+-        async with client_as(ADMIN) as c:
+-            full = (await c.get(url)).json()["data"]
+-            with Stmts() as s:
+-                r = await c.get(url, params={"include_recent": "false"})
+-            linked = (await c.get(f"/v1/projects/{CUST_PROJECT}/settings/scope-link", params={"include_recent": "false"})).json()["data"]
+-        assert r.status_code == 200, r.text
+-        light = r.json()["data"]
+-        assert [o["op"] for o in full["outbox"]["recent"]] == ["set_targets", "create"] and light["outbox"]["recent"] == []
+-        assert {**light, "outbox": {**light["outbox"], "recent": full["outbox"]["recent"]}} == full
+-        assert not any("ORDER BY o.created_at DESC, o.outbox_id DESC" in x for x in s.seen)
+-        assert not any("SELECT scope_project_id FROM app.project" in x for x in s.seen)
+-        sp = await fetch("SELECT scope_project_id FROM app.project WHERE project_id = $1", CUST_PROJECT)
+-        assert linked["linked"] and linked["scope_project_id"] == str(sp[0]["scope_project_id"])
+-    finally:
+-        await purge(pid)
++
++
++@needs_db
++async def test_include_recent_false_skips_recent_rows(client_as):
++    """B018: include_recent=false 는 최근 아웃박스 10행 문장을 실행하지 않고 recent = null(상태·건수·회차는 같다).
++    null = 읽지 않음(빈 목록 [] = 읽었는데 행 없음과 구별).
++    scope_project_id 는 접근 판정이 읽은 프로젝트 행 값을 쓴다(프로젝트 재조회 문장 없음)."""
++    from tests.core.rcache_calls import Stmts
++    pr = await create_project(client_as, name=uniq("sl3"))
++    pid = uuid.UUID(pr["project_id"])
++    url = f"/v1/projects/{pid}/settings/scope-link"
++    try:
++        async with client_as(ADMIN) as c:
++            full = (await c.get(url)).json()["data"]
++            with Stmts() as s:
++                r = await c.get(url, params={"include_recent": "false"})
++            linked = (await c.get(f"/v1/projects/{CUST_PROJECT}/settings/scope-link", params={"include_recent": "false"})).json()["data"]
++        assert r.status_code == 200, r.text
++        light = r.json()["data"]
++        assert [o["op"] for o in full["outbox"]["recent"]] == ["set_targets", "create"] and light["outbox"]["recent"] is None
++        assert {**light, "outbox": {**light["outbox"], "recent": full["outbox"]["recent"]}} == full
++        assert not any("ORDER BY o.created_at DESC, o.outbox_id DESC" in x for x in s.seen)
++        assert not any("SELECT scope_project_id FROM app.project" in x for x in s.seen)
++        sp = await fetch("SELECT scope_project_id FROM app.project WHERE project_id = $1", CUST_PROJECT)
++        assert linked["linked"] and linked["scope_project_id"] == str(sp[0]["scope_project_id"])
++    finally:
++        await purge(pid)
+--- a/back/app/features/projects/settings/scope_link/README.md
++++ b/back/app/features/projects/settings/scope_link/README.md
+@@ -14,5 +14,6 @@
+ - `router.py` 엔드포인트(APIRouter) · `schemas.py` 요청·응답(Pydantic) · `service.py` 업무 규칙 · `queries.py` 읽기 스키마 SQL(rd·app·ext) · `tests/`
+ 
+ ## 선택 파라미터(백로그 P1~P12, 2026-10-14). 전부 선택 인자: 주지 않으면 응답 모양·값·문장이 종전과 같다
+-- `include_recent=false`(B018): 최근 아웃박스 10행(OUTBOX_RECENT)을 읽지 않고 `outbox.recent` = [](건수·상태·회차는 같다). 설정 화면 진단 블록
++- `include_recent=false`(B018): 최근 아웃박스 10행(OUTBOX_RECENT)을 읽지 않고 `outbox.recent` = null(P13d: 요청하지 않은 목록, 빈 목록 [] 은
++  읽었는데 행이 없음. 건수·상태·회차는 같다). 설정 화면 진단 블록
+   (front `loadScopeLink`)이 보낸다. scope_project_id 는 접근 판정이 읽은 프로젝트 행 값을 쓴다(재조회 문장 없음).

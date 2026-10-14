@@ -1,0 +1,105 @@
+--- a/back/app/features/analytics/filters/options/service.py
++++ b/back/app/features/analytics/filters/options/service.py
+@@ -15,7 +15,9 @@
+ - 현행 프로필 filter_options(F1W4, WU-8): 켜지면 글로벌·웹사이트 국가·매트릭스·언어·엔진을 운영 hmg-geo 2670a16 + read_screens 14키 규칙으로
+   낸다(build_legacy_global·build_legacy_website·default_engines). 스코프 교집합(관점 브랜드·스코프 국가·전용 사이트 코드)은 그대로 건다. project 무변경.
+ - geo_only(B095, 선택): 국가 옵션만 쓰는 전환 화면용. 카탈로그 택소노미(TAXON·CATALOG 문장)·커스텀 필드 문장을 건너뛰고 그 필드는 null.
+-  다른 필드·meta 는 기본 호출과 같다(현행 프로필 경로 포함).
++  매트릭스 문장은 국가 열 조합(project_key·geo_key·cat_mask)만 센다(queries geo_only): geo_matrix 는 (브랜드, 국가) 행에 lang = null,
++  languages = [], engines = [](현행 프로필 엔진 = 정적 기본 엔진은 그대로). regions·브랜드 좁힘·meta 는 기본 호출과 같다
++  (현행 프로필 웹사이트는 매트릭스 문장이 없어 종전 그대로).
+ """
+ from __future__ import annotations
+ 
+@@ -149,7 +151,7 @@
+         hidden = set(refs.hidden_markets.get("website", frozenset())) if ctx.surface == "website" else set()
+         allowed = None
+     for r in rows:
+-        lang = lang_of.get(int(r["lang_key"])) or None
++        lang = (lang_of.get(int(r["lang_key"])) or None) if "lang_key" in r else None   # geo_only 행(B095)은 언어·엔진 열이 없다
+         if ctx.surface == "website":
+             site = sites.get(int(r["project_key"]))
+             c = by_geo.get(site.site_geo_key) if site else None
+@@ -161,7 +163,8 @@
+             continue
+         assert c is not None
+         countries[c.code] = c
+-        engines.add(int(r["engine_key"]))
++        if "engine_key" in r:
++            engines.add(int(r["engine_key"]))
+         for br in brands:
+             combos.add((br, c.code, lang))
+     if ctx.surface == "website":        # 브랜드 가상 코드(현행 withWebsiteBrandGeoCombos): 그 브랜드 사이트 행마다 region 을 가상 코드로 바꾼 행
+@@ -321,7 +324,8 @@
+     """include: 'source_categories' 가 있을 때만 출처 카테고리를 계산한다(창 안 인용 스캔, 옵션 서버 시간의 대부분). 없으면 data 값 null,
+     meta.suppressed 에도 적지 않는다(null 자체가 '요청하지 않음'). 그 밖의 필드 값은 include 와 무관하다.
+     geo_only(B095): 국가 옵션만 쓰는 화면(전환)용. 카탈로그 택소노미·커스텀 필드 문장을 건너뛰고 catalog·custom_fields = null(같은 규칙:
+-    null = 요청하지 않음, 억제 표식 없음). 매트릭스·국가·언어·엔진은 같은 매트릭스 문장의 결과라 그대로 낸다."""
++    null = 요청하지 않음, 억제 표식 없음). 매트릭스 문장은 국가 열 조합만 센다: regions·(브랜드, 국가) 매트릭스는 같고 lang = null,
++    languages·측정 엔진은 빈 목록(현행 프로필 엔진 = 정적 기본 엔진은 그대로)."""
+     ctx = await resolve_read_context(conn, principal, filters, support=OPTIONS_SUPPORT, custom_fields=custom_fields)
+     win = await ctx.window(conn)
+     refs = ctx.refs
+@@ -351,7 +355,7 @@
+             suppressed[k] = reason
+     else:
+         if not (legacy and ctx.surface == "website"):
+-            m = q.legacy_global_sql(ms, win) if legacy else q.matrix_sql(ms, win)
++            m = q.legacy_global_sql(ms, win, geo_only=geo_only) if legacy else q.matrix_sql(ms, win, geo_only=geo_only)
+             rows = await fetch_all(conn, m.text, m.params)
+         if want_sources and win.cyc_keys("citations"):
+             s = q.source_categories_sql(ms, win)
+--- a/back/app/features/analytics/filters/options/schemas.py
++++ b/back/app/features/analytics/filters/options/schemas.py
+@@ -84,7 +84,8 @@
+         "추가로 계산할 필드. source_categories = 출처 카테고리(창 안 인용 스캔, 옵션 서버 시간의 대부분). 주지 않으면 그 필드는 null"))
+     geo_only: bool = Field(False, description=(
+         "B095: true = 국가 옵션만 쓰는 화면(전환). 카탈로그 택소노미(global = rd.dim_taxon·카탈로그 2문장, project = 프로젝트 프롬프트)와 "
+-        "커스텀 필드 문장을 돌리지 않고 catalog·custom_fields 를 null 로 둔다. geo_matrix·regions·languages·engines·meta 는 같다"))
++        "커스텀 필드 문장을 돌리지 않고 catalog·custom_fields 를 null 로 둔다. 매트릭스 문장은 국가 열 조합만 센다: regions·meta 와 "
++        "geo_matrix 의 (brand, region) 은 같고 lang = null, languages = [], engines = [](현행 프로필 엔진 = 정적 기본 엔진은 그대로)"))
+ 
+ 
+ class OptionsData(BaseModel):
+--- a/back/app/features/analytics/filters/options/tests/test_legacy_switch.py
++++ b/back/app/features/analytics/filters/options/tests/test_legacy_switch.py
+@@ -338,7 +338,8 @@
+ ])
+ async def test_geo_only_skips_catalog_and_custom_fields(client_as, legacy, monkeypatch, uid, params, spec):
+     """geo_only=true: 카탈로그 택소노미(TAXON·CATALOG)·커스텀 필드 문장을 돌리지 않고 catalog·custom_fields = null.
+-    geo_matrix·regions·languages·engines·source_categories·meta 는 기본 호출과 같다(현행 프로필 경로 포함)."""
++    매트릭스 문장은 국가 열 조합만 센다: regions·source_categories·meta 와 geo_matrix 의 (brand, region) 은 기본 호출과 같고 lang = null,
++    languages = [], 측정 엔진 = [](현행 프로필 엔진 = 정적 기본 엔진 그대로). 현행 프로필 웹사이트(등록 사이트, 매트릭스 문장 없음)는 종전 그대로."""
+     from app.features.analytics.filters.options import service as S
+ 
+     if spec:
+@@ -358,7 +359,15 @@
+     r = await _get(client_as, uid, **params, geo_only="true")
+     assert r.status_code == 200, r.text
+     assert not skipped & set(seen), seen
+-    assert r.json()["data"] == {**full["data"], "catalog": None, "custom_fields": None} and r.json()["meta"] == full["meta"]
++    want = {**full["data"], "catalog": None, "custom_fields": None}
++    if not (spec and params["surface"] == "website"):
++        pairs = sorted({(x["brand"], x["region"]) for x in full["data"]["geo_matrix"]}, key=lambda t: (t[1], "", t[0] or ""))
++        assert pairs and len(pairs) <= len(full["data"]["geo_matrix"])
++        want.update(geo_matrix=[{"brand": b, "region": g, "lang": None} for b, g in pairs], languages=[])
++        if not spec:
++            want["engines"] = []
++    assert r.json()["data"] == want and r.json()["meta"] == full["meta"]
++    assert _codes(r.json()["data"]["regions"]) == _codes(full["data"]["regions"])
+ 
+ 
+ @needs_db
+--- a/back/app/features/analytics/filters/options/README.md
++++ b/back/app/features/analytics/filters/options/README.md
+@@ -86,6 +86,7 @@
+ ## 선택 파라미터(백로그 P1~P12, 2026-10-14). 전부 선택 인자: 주지 않으면 응답 모양·값·문장이 종전과 같다
+ - `geo_only`(B095): true = 국가 옵션만 쓰는 화면(표준·웹사이트 전환 화면, front `loadPanelOptions({geoOnly: true})`). 카탈로그 택소노미
+   (global = TAXON·CATALOG 2문장, project = 프로젝트 프롬프트)와 커스텀 필드 문장을 돌리지 않고 `catalog`·`custom_fields` = null.
+-  geo_matrix·regions·languages·engines·meta 는 기본 호출과 같다(현행 프로필 경로 포함).
+-- 매트릭스 문장 빌더 `queries.matrix_sql`·`legacy_global_sql` 은 `geo_only=True` 로 국가 열 조합(project_key·geo_key·cat_mask)만 묶을 수 있다
+-  (P13d, 세 열 조합 = 전 열 문장의 투영: `test_geo_only_matrix_columns_are_the_projection`). 서비스는 아직 기본 문장을 쓴다.
++  매트릭스 문장은 국가 열 조합(project_key·geo_key·cat_mask)만 묶는다(P13d, 세 열 조합 = 전 열 문장의 투영:
++  `test_geo_only_matrix_columns_are_the_projection`): regions·meta 와 geo_matrix 의 (brand, region) 은 기본 호출과 같고 lang = null,
++  languages = [], engines = [](현행 프로필 엔진 = 정적 기본 엔진은 그대로). 현행 프로필 웹사이트(등록 사이트, 매트릭스 문장 없음)는 종전 그대로.
++  전환 화면은 국가 목록(regionOptionsOf = 매트릭스의 (brand, region))만 쓴다.

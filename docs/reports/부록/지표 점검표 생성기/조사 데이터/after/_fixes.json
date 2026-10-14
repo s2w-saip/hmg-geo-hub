@@ -1947,6 +1947,53 @@
     ]
    },
    "by": "f703207"
+  },
+  {
+   "surface": "website",
+   "endpoint": "GET /v1/geo",
+   "set": {
+    "f8": [
+     "y",
+     "웹사이트 사실 집계 = SOV 열만(core part 'sov'·brand_rows(mentions_only)), 노출·감성·순위 열 미계산, 응답 바이트 동일(LIVE·동결 카드·G20)",
+     "6"
+    ]
+   },
+   "by": "e88900c"
+  },
+  {
+   "surface": "project",
+   "endpoint": "GET /v1/answers/{job_id}",
+   "set": {
+    "f10": [
+     "y",
+     "project_id = 게이트 프로젝트(legacy run 소속) + URL 국가 gate_country = legacy region IN f.region(프로필 스코프 없이)"
+    ]
+   },
+   "by": "e88900c"
+  },
+  {
+   "surface": "global",
+   "endpoint": "GET /v1/funnel/conversion",
+   "set": {
+    "f8": [
+     "y",
+     "롤업 rollup_lite: 페이지·엔진 비교 문장 생략 + 세션·전환 GROUPING SETS 는 (속성)·(전체)만",
+     "5 (롤업) / 6"
+    ]
+   },
+   "by": "e88900c"
+  },
+  {
+   "surface": "website",
+   "endpoint": "GET /v1/funnel/conversion",
+   "set": {
+    "f8": [
+     "y",
+     "rollup_lite: 페이지·엔진 비교 생략 + 날짜·엔진 GROUPING SET 생략",
+     "5 (롤업) / 6"
+    ]
+   },
+   "by": "e88900c"
   }
  ]
 }
