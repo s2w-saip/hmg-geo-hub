@@ -44,12 +44,6 @@ import { requestDeduped } from "@/lib/request-dedupe";
 import type { AllowedScope } from "@/lib/auth/types";
 import { DELTA_TREND_WINDOW_DAYS } from "@/lib/scope/kpi-tab-budget";
 import type { StandardTrendBucket } from "@/lib/db/repositories/scope-aggregates";
-import { resolveProperty, resolveProperties } from "@/lib/ga4/property-map";
-import {
-  getAiTrafficConversionKpi,
-  getAiTrafficConversionRollup,
-  getAiVisitsKpi,
-} from "@/lib/ga4/conversion";
 import type { KpiSummary } from "./sample";
 import { isAnalysisApi } from "@/lib/hgh/adapters/filters";
 import { degradeOnApiFailure } from "@/lib/scope/degrade-registry";
@@ -436,63 +430,18 @@ async function getLiveDashboardImpl(
     return degradeOnApiFailure("standardAggregates", () => loadLiveDashboard(filters ?? {}, ctx));
   }
   // GEO 경쟁 집계는 여기서 부르지 않는다 — ④ GEO 전용 페처(getLiveGeo)로 분리.
-  // ⑦ AI 유입 전환율은 GA4 'AI Assistant' 채널 활성사용자 기반.
-  //   - country-leaf scope (1국)   → single property, AI 비율 그대로
-  //   - region / HQ (N국)          → N개 property 활성사용자 가중 합산 + 커버리지
-  // resolveProperties()가 scope 안에 들어오는 모든 (brand, country) 카탈로그를
-  // 돌려주므로 측정 N국 / 총 M국이 "측정 대기" 진척으로 자연스럽게 잡힌다.
-  const session = await getSession();
-  const markets = await resolveProperties(session?.user.scope, filters);
-  const isCountryLeaf = markets.length === 1;
-  const singlePropertyId =
-    isCountryLeaf ? markets[0].propertyId : await resolveProperty(session?.user.scope, filters);
-  const [agg, aiTrafficCountry, aiTrafficRollup, aiVisits] =
-    await Promise.all([
-      fetchStandardAggregates(filters),
-      isCountryLeaf && singlePropertyId
-        ? getAiTrafficConversionKpi(singlePropertyId)
-        : Promise.resolve(null),
-      !isCountryLeaf && markets.length > 0
-        ? getAiTrafficConversionRollup(markets)
-        : Promise.resolve(null),
-      // sub-KPI: AI 유입 방문 수 (sessions) + 일별 추이 — country-leaf only.
-      isCountryLeaf && singlePropertyId
-        ? getAiVisitsKpi(singlePropertyId)
-        : Promise.resolve(null),
-    ]);
+  // ⑦ AI 유입 전환율(GA4)도 부르지 않는다(2026-10-14): Overview 개편(2026-09-02) 이후
+  // 이 화면은 OVERVIEW_KPI_KEYS 5종만 그려 ⑦ 을 표시하지 않는데, 종전에는 ga4_properties
+  // 조회와 GA4 Data API 호출이 카드·GEO 와 같은 Promise.all 에서 매 렌더 기다려졌다.
+  // ⑦ 카드는 프로젝트 홈(projects/[id]/_data/live.ts)에 남아 있다.
+  const agg = await fetchStandardAggregates(filters);
   if (!agg || agg.totalAnswers === 0) return null;
 
-  // ①~⑤ 미러 KPI (표준·프로젝트 공유 산식). ⑦(GA4)는 아래에서 덧붙임.
-  const kpis: KpiSummary[] = [
-    ...buildMirrorKpis(agg),
-    // ⑥ AI 타겟 URL 인용률 — 2026-06-22: 표준 대시보드에서 삭제 (프로젝트
-    //    대시보드에서는 유지). 표준은 프롬프트별 target URL 라벨링 부재로
-    //    의미 있는 측정 불가. 프로젝트 KPI(getProjectKpis)는 별도로 emit.
-    // ⑦ AI 유입 전환율 — country는 single 비율, region/HQ는 활성사용자 가중
-    // 합산 + 커버리지 (측정 N / 총 M국). 매핑 0개면 null = "측정 대기".
-    {
-      key: "trafficConversion",
-      value: aiTrafficCountry?.aiConvRate ?? aiTrafficRollup?.aiConvRate ?? null,
-      delta: null,
-      direction: "flat",
-      // 분자 = key events, 분모 = AI 채널 활성사용자. country-leaf 는 단일 property,
-      // region/HQ 는 활성사용자 가중 합산(rollup). 매핑 0개면 undefined.
-      ratio: aiTrafficCountry
-        ? { numerator: aiTrafficCountry.aiKeyEvents, denominator: aiTrafficCountry.aiUsers }
-        : aiTrafficRollup
-          ? {
-              numerator: aiTrafficRollup.totalAiKeyEvents,
-              denominator: aiTrafficRollup.totalAiUsers,
-            }
-          : undefined,
-      coverage: aiTrafficRollup
-        ? { measured: aiTrafficRollup.measuredMarkets, total: aiTrafficRollup.totalMarkets }
-        : undefined,
-      // 일별 방문 수(GA4) sparkline. 방문 수 '숫자'의 지면은 AI퍼널 > 전환의
-      // VisitsView 라 카드에는 추세선만 남긴다.
-      sparkline: aiVisits ? aiVisits.trend.map((p) => p.sessions) : undefined,
-    },
-  ];
+  // ①~⑤ 미러 KPI (표준·프로젝트 공유 산식).
+  // ⑥ AI 타겟 URL 인용률 — 2026-06-22: 표준 대시보드에서 삭제 (프로젝트
+  //    대시보드에서는 유지). 표준은 프롬프트별 target URL 라벨링 부재로
+  //    의미 있는 측정 불가. 프로젝트 KPI(getProjectKpis)는 별도로 emit.
+  const kpis: KpiSummary[] = buildMirrorKpis(agg);
 
   // 표준 대시보드는 타겟 지정 개념이 없어 항상 자동(SOV 1위) 분모.
   return { kpis: applyCompetitorSov(kpis, agg) };

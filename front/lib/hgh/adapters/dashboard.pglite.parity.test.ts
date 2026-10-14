@@ -277,16 +277,6 @@ function backendBrands(world: Answer[]): S["BrandsData"] {
 
 const meta = (): S["Meta"] => ({ mode: "snapshot", as_of: "2026-09-28", cycles: ["2026-09-28"] });
 const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
-const noConversion: S["ConversionData"] = {
-  coverage: { total_markets: 0, measured_markets: 0, markets: [] },
-  summary: { ai: { conversions: 0, sessions: 0, page_views: 0, conv: { num: 0, den: 0 } }, human: { conversions: 0, sessions: 0, conv: { num: 0, den: 0 } } },
-  trend: [],
-  by_engine: [],
-  by_country: null,
-  pages: [],
-  period: { from: null, to: null },
-};
-
 /** Paths where a and b differ (undefined on both sides is equal). */
 function diff(a: unknown, b: unknown, p = ""): string[] {
   if (Object.is(a, b)) return [];
@@ -344,12 +334,9 @@ async function bothSides(world: Answer[]) {
   vi.stubEnv("HGH_SOURCE_G1", "api");
   routes["/v1/kpi/summary"] = () => json({ data: backendSummary(world, prefixes), meta: meta() });
   routes["/v1/mentions/brands"] = () => json({ data: backendBrands(world), meta: meta() });
-  routes["/v1/funnel/conversion"] = () => json({ data: noConversion, meta: meta() });
   const api = await withRequestScope(() => dashLive.getLiveDashboard({}));
   return { legacy, api, prefixes };
 }
-
-const COPY_ONLY = { path: /^kpis\.5\.copyVariant$/, reason: "DC-03 wording on the api ⑦ card (u5 messages); no GA4 market on either side" };
 
 describe("global cards on the real legacy SQL reader (PGlite) vs HGH_SOURCE_G1=api", () => {
   it("default engines only: ①~⑤ values, ratios and KPI #16 are equal", async () => {
@@ -364,13 +351,12 @@ describe("global cards on the real legacy SQL reader (PGlite) vs HGH_SOURCE_G1=a
     expect([card("visibility")?.value, card("position")?.value, card("citationShare")?.value, card("sentiment")?.value]).toEqual([66.7, 1.8, 57.1, 75]);
     // KPI #16: own mentions 8 / Toyota 4 x 100
     expect(card("shareOfVoice")?.competitorSov).toEqual({ brand: "Toyota", value: 200 });
-    expectOnlyKnown(legacy, api, [COPY_ONLY]);
+    expectOnlyKnown(legacy, api, []);
   });
 
   it("a non-default engine answer: the differences are exactly DC-01 (legacy counts every engine)", async () => {
     const { legacy, api } = await bothSides([...BASE_ANSWERS, CLAUDE_ANSWER]);
     expectOnlyKnown(legacy, api, [
-      COPY_ONLY,
       { path: /^kpis\.0\.(value|ratio\.(numerator|denominator))$/, reason: "DC-01: visibility 5/7 (every engine) vs 4/6 (default engines)" },
       { path: /^kpis\.1\.(value|ratio\.(numerator|denominator))$/, reason: "DC-01: share of voice with the claude mentions" },
       { path: /^kpis\.1\.competitorSov\.value$/, reason: "DC-01: KPI #16 numerator with the claude mentions (12 / 4 vs 8 / 4)" },

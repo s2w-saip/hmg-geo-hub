@@ -334,11 +334,12 @@ describe("request scope: at most HGH_MAX_CONCURRENT_CALLS backend calls in fligh
     );
     expect(out).toHaveLength(9);
     expect(maxInFlight).toBe(4);
-    // the four essentials went out first (kept promises: each sent once), then the sections
+    // the three global essentials went out first (kept promises: each sent once), then the sections
     const paths = started.map((k) => k.split("?")[0]);
-    expect(new Set(paths.slice(0, 4))).toEqual(new Set(["/v1/kpi/summary", "/v1/mentions/brands", "/v1/funnel/conversion", "/v1/filters/dates"]));
+    expect(new Set(paths.slice(0, 3))).toEqual(new Set(["/v1/kpi/summary", "/v1/mentions/brands", "/v1/filters/dates"]));
+    expect(paths).not.toContain("/v1/funnel/conversion");
     expect(paths.filter((p) => p === "/v1/filters/dates")).toHaveLength(1);
-    expect(started).toHaveLength(4 + sections.length);
+    expect(started).toHaveLength(3 + sections.length);
   });
 });
 

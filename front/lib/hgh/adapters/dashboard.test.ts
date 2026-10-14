@@ -168,7 +168,7 @@ const q = (u: URL) => Object.fromEntries([...new Set(u.searchParams.keys())].map
 
 // ── conversions (hand-computed) ──────────────────────────────────────────────
 
-describe("⑦ toTrafficConversionKpi / dashboardConversionKpi", () => {
+describe("⑦ toTrafficConversionKpi (project home tile)", () => {
   it("one market: pct(conversions, sessions), ratio, sparkline of AI sessions", () => {
     // 7 / 160 = 0.04375 -> Math.round(43.75) / 10 = 4.4
     expect(D.toTrafficConversionKpi(conversion({ total: 1, measured: 1, conv: 7, sessions: 160, trend: [3, 5, 8] }))).toEqual({
@@ -204,9 +204,8 @@ describe("⑦ toTrafficConversionKpi / dashboardConversionKpi", () => {
     });
     expect(D.toTrafficConversionKpi(conversion({ total: 3, measured: 0, conv: 0, sessions: 0 }))?.value).toBe(0);
   });
-  it("no market reached: null (project: tile left out); dashboard card is 측정 대기", () => {
+  it("no market reached: null (the tile is left out)", () => {
     expect(D.toTrafficConversionKpi(conversion({ total: 0, measured: 0, conv: 0, sessions: 0 }))).toBeNull();
-    expect(D.dashboardConversionKpi(null)).toEqual({ key: "trafficConversion", value: null, delta: null, direction: "flat", copyVariant: "api" });
   });
 });
 
@@ -601,14 +600,14 @@ describe("WU-3 card=true: the calls whose legacy reader was the summary tables (
 
 // ── D6 first render ──────────────────────────────────────────────────────────
 
-describe("D6: sections wait for the four essential calls, which are requested once", () => {
+describe("D6: sections wait for the essential calls, which are requested once", () => {
   function gate() {
     let open!: () => void;
     const p = new Promise<void>((r) => (open = r));
     return { p, open };
   }
 
-  it("global: summary, brands, conversion, dates first; GEO only after all settled; no duplicate requests", async () => {
+  it("global: summary, brands, dates first (no ⑦ conversion); GEO only after all settled; no duplicate requests", async () => {
     const hold = gate();
     const slow = (body: unknown): Route => async () => {
       await hold.p;
@@ -616,7 +615,6 @@ describe("D6: sections wait for the four essential calls, which are requested on
     };
     routes["/v1/kpi/summary"] = slow({ data: summary(), meta: meta() });
     routes["/v1/mentions/brands"] = slow({ data: brands([]), meta: meta() });
-    routes["/v1/funnel/conversion"] = slow({ data: conversion({ total: 0, measured: 0, conv: 0, sessions: 0 }), meta: meta() });
     routes["/v1/filters/dates"] = slow({ data: { dates: [], dates_truncated: false, first_measured_date: null, latest_round_date: null, presets: [] }, meta: meta() });
     routes["/v1/geo"] = () => json({ data: { active_brand: null, own_label: "HMG", pending: [], markets: [] }, meta: meta() });
     const ctx = { surface: "global" as const, scope: null };
@@ -625,19 +623,18 @@ describe("D6: sections wait for the four essential calls, which are requested on
       const cards = D.loadLiveDashboard({}, ctx); // the card section joins the same essential calls
       await new Promise((r) => setTimeout(r, 10));
       expect(calls.map((u) => u.pathname).sort()).toEqual(
-        ["/v1/filters/dates", "/v1/funnel/conversion", "/v1/kpi/summary", "/v1/mentions/brands"].sort(),
+        ["/v1/filters/dates", "/v1/kpi/summary", "/v1/mentions/brands"].sort(),
       );
       hold.open();
       await Promise.all([geo, cards]);
     });
     expect(calls.map((u) => u.pathname).filter((p) => p === "/v1/geo")).toHaveLength(1);
-    expect(calls).toHaveLength(5);
+    expect(calls).toHaveLength(4);
   });
 
   it("an essential call failing does not block the deferred sections", async () => {
     routes["/v1/kpi/summary"] = () => errorBody(503, "upstream");
     routes["/v1/mentions/brands"] = () => json({ data: brands([]), meta: meta() });
-    routes["/v1/funnel/conversion"] = () => json({ data: conversion({ total: 0, measured: 0, conv: 0, sessions: 0 }), meta: meta() });
     routes["/v1/filters/dates"] = () => json({ data: { dates: [], dates_truncated: false, first_measured_date: null, latest_round_date: null, presets: [] }, meta: meta() });
     routes["/v1/geo"] = () => json({ data: { active_brand: null, own_label: "HMG", pending: [], markets: [] }, meta: meta() });
     const ctx = { surface: "global" as const, scope: null };
@@ -645,10 +642,10 @@ describe("D6: sections wait for the four essential calls, which are requested on
     expect(g.markets).toEqual([]);
   });
 
-  it("website and project essentials", () => {
-    const names = (s: "website" | "project") =>
+  it("global, website and project essentials", () => {
+    const names = (s: "global" | "website" | "project") =>
       D.essentialCalls({}, s === "project" ? { surface: s, projectId: PID, scope: null } : { surface: s, scope: null }).length;
-    expect([names("website"), names("project")]).toEqual([4, 4]);
+    expect([names("global"), names("website"), names("project")]).toEqual([3, 4, 4]);
   });
 });
 
@@ -667,14 +664,13 @@ describe("error mapping", () => {
     await expect(D.orNullOnTransient(Promise.reject(new HghApiError(403, "role_forbidden", "x")))).rejects.toMatchObject({ status: 403 });
   });
 
-  it("cards: brand rows failing drops KPI #16 only, GA4 failing blanks ⑦ only; summary 403 is raised", async () => {
+  it("cards: brand rows failing drops KPI #16 only (⑦ is not read); summary 403 is raised", async () => {
     routes["/v1/kpi/summary"] = () => json({ data: summary(), meta: meta() });
     routes["/v1/mentions/brands"] = () => errorBody(503, "upstream");
-    routes["/v1/funnel/conversion"] = () => errorBody(504, "timeout");
     const live = await D.loadLiveDashboard({}, { surface: "global", scope: null });
-    expect(live?.kpis.map((k) => k.key)).toEqual(["visibility", "shareOfVoice", "sentiment", "position", "citationShare", "trafficConversion"]);
+    expect(live?.kpis.map((k) => k.key)).toEqual(["visibility", "shareOfVoice", "sentiment", "position", "citationShare"]);
     expect(live?.kpis.find((k) => k.key === "shareOfVoice")?.competitorSov).toBeUndefined();
-    expect(live?.kpis.find((k) => k.key === "trafficConversion")?.value).toBeNull();
+    expect(calls.map((u) => u.pathname)).not.toContain("/v1/funnel/conversion");
     routes["/v1/kpi/summary"] = () => errorBody(403, "menu_forbidden");
     await expect(D.loadLiveDashboard({}, { surface: "global", scope: null })).rejects.toMatchObject({ status: 403, code: "menu_forbidden" });
     routes["/v1/kpi/summary"] = () => json({ data: summary(), meta: meta() });
@@ -684,7 +680,6 @@ describe("error mapping", () => {
 
   it("empty state: no answers or a whole-answer suppression -> null (legacy agg null / totalAnswers 0)", async () => {
     routes["/v1/mentions/brands"] = () => json({ data: brands([]), meta: meta() });
-    routes["/v1/funnel/conversion"] = () => json({ data: conversion({ total: 0, measured: 0, conv: 0, sessions: 0 }), meta: meta() });
     routes["/v1/kpi/summary"] = () => json({ data: summary({ params: { answers: 0, applied_prompts: 1, measured_prompts: 0, prompts_without_brand: null, measured_by_funnel: null } }), meta: meta() });
     expect(await D.loadLiveDashboard({}, { surface: "global", scope: null })).toBeNull();
     routes["/v1/kpi/summary"] = () => json({ data: summary(), meta: meta({ suppressed: { "*": "no_active_snapshot" } }) });

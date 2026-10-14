@@ -11,8 +11,10 @@ import "server-only";
 //   summary     GET /v1/kpi/summary            (project: by_funnel=true, BG-08 topics)
 //   brands      GET /v1/mentions/brands        top_n=20 sort=mentions include=hmg (BG-15);
 //                                              project with a designated target: full=true (BG-19)
-//   conversion  GET /v1/funnel/conversion      ⑦ GA4 directly (design 4.2): brand/country only,
-//                                              days=28 (BG-30); project: property_source=market
+//   conversion  GET /v1/funnel/conversion      ⑦ GA4 directly (design 4.2): project home only
+//                                              (property_source=market). The global dashboard no
+//                                              longer calls it (2026-10-14): Overview renders the five
+//                                              OVERVIEW_KPI_KEYS only, so ⑦ was fetched but never shown
 //   trend       GET /v1/trend                  U4 fetchTrend (cycle for Δ, week for charts)
 //   brandTrend  GET /v1/trend dimension=brand  visibility, share_of_voice, position; top=20 plus
 //                                              the candidate brand keys (BG-11), split_own (D13)
@@ -23,7 +25,7 @@ import "server-only";
 //   dates       GET /v1/filters/dates family=all, options GET /v1/filters/options (U4)
 //   project     GET /v1/projects/{id} (the U2 gate call, shared), .../settings, .../prompt-candidates?limit=5
 //
-// D6 (first render = 4 calls). essentialsGate() starts (or joins) the surface's four essential
+// D6 (first render = 3-4 calls). essentialsGate() starts (or joins) the surface's essential
 // calls and waits for all of them to settle; every other section loader waits on it before
 // issuing its own call. The gate and the calls are kept per request, failures included, so a
 // section that starts later never re-sends a failed essential call (U5 verification D3); the
@@ -31,7 +33,7 @@ import "server-only";
 // (loadProjectOverview) the kept project and candidates calls, the competitor rows
 // (loadCompetitorSources) the kept brands call (U5 N2). Nothing else changes in the screens:
 // only the streaming order.
-//   global   summary, brands, conversion, dates     (header pill, cards, filter calendar)
+//   global   summary, brands, dates                 (header pill, cards, filter calendar)
 //   website  summary, brands, dates, options        (cards, filter bar)
 //   project  project detail, recent candidates, dates, options (tiles, panels, filter bar: the page
 //            shell); the KPI section (summary first) streams after them
@@ -39,9 +41,10 @@ import "server-only";
 // Shape rules (hand-checked in dashboard.test.ts, legacy parity in dashboard.parity.test.ts):
 //   ①~⑤ cards        U4 toMirrorKpis; KPI #16 U4 applyCompetitorSovFromBrands (HMG siblings by
 //                    is_hmg_own, never by name)
-//   ⑦ conversion     total_markets 0 -> value null; 1 -> pct(ai.conv) with sessions > 0 (else
-//                    null), ratio {conversions, sessions}, sparkline = trend[].ai_sessions;
-//                    > 1 -> pct(ai.conv) (0 when no sessions, legacy rollup), ratio, coverage
+//   ⑦ conversion     (project home) total_markets 0 -> value null; 1 -> pct(ai.conv) with
+//                    sessions > 0 (else null), ratio {conversions, sessions}, sparkline =
+//                    trend[].ai_sessions; > 1 -> pct(ai.conv) (0 when no sessions, legacy rollup),
+//                    ratio, coverage
 //   competitor rows  BrandItem -> CompetitorBrandValue {name, mentions, pct(share), pct(exposure),
 //                    rankAvg(avg_rank), is_own || is_hmg_own, sentiment, brand_key}; citation row
 //                    from competitor_sources as official-competitor domain rows (share = pct of
@@ -351,7 +354,7 @@ function keptCandidates(projectId: string): Promise<ApiCandidateItem[]> {
   return keptCall(essentialKey("candidates", { surface: "project", projectId }, null), () => fetchRecentCandidates(projectId));
 }
 
-/** The four first-render calls of a dashboard surface (see header). */
+/** The first-render calls of a dashboard surface (see header). */
 export function essentialCalls(filters: StandardFilters, ctx: DashboardCtx): EssentialCall[] {
   const k = (name: string, input: unknown) => essentialKey(name, ctx, input);
   const read = { filters, scope: ctx.scope ?? null, customFields: ctx.customFields ?? null };
@@ -364,12 +367,7 @@ export function essentialCalls(filters: StandardFilters, ctx: DashboardCtx): Ess
   const brands = () => keptCardBrands(filters, ctx);
   switch (ctx.surface) {
     case "global":
-      return [
-        summary,
-        brands,
-        () => keptCall(k("conversion", [filters.brand ?? null, filters.region ?? null]), () => fetchTrafficConversion(filters, ctx)),
-        dates,
-      ];
+      return [summary, brands, dates];
     case "website":
       return [summary, brands, dates, options];
     case "project":
@@ -426,8 +424,8 @@ export async function loadEssentialFilterDates(ctx: DashboardCtx): Promise<Filte
 const pctOf = (num: number, den: number): number => pct1OrZero({ num, den });
 
 /**
- * ⑦ trafficConversion card (legacy getLiveDashboardImpl rules; see header). Returns null when
- * the scope reaches no GA4 market at all (project: the tile is left out).
+ * ⑦ trafficConversion card of the project home (legacy GA4 card rules; see header). Returns null
+ * when the scope reaches no GA4 market at all (the tile is left out).
  */
 export function toTrafficConversionKpi(data: ApiConversionData): KpiSummary | null {
   const total = data.coverage.total_markets;
@@ -451,11 +449,6 @@ export function toTrafficConversionKpi(data: ApiConversionData): KpiSummary | nu
     ratio: { numerator: ai.conversions, denominator: ai.sessions },
     coverage: { measured, total },
   };
-}
-
-/** Dashboard ⑦ as the legacy global card: always present, "측정 대기" when no market is reached. */
-export function dashboardConversionKpi(data: ApiConversionData | null): KpiSummary {
-  return (data && toTrafficConversionKpi(data)) ?? { key: "trafficConversion", value: null, delta: null, direction: "flat", copyVariant: "api" };
 }
 
 // ── competitor rows ──────────────────────────────────────────────────────────
@@ -655,18 +648,17 @@ export async function orNullOnTransient<T>(p: Promise<T>): Promise<T | null> {
 }
 
 /**
- * Global dashboard (legacy getLiveDashboard): ①~⑤ + ⑦, KPI #16 automatic. The summary decides
- * the empty state (its failure is the caller's to degrade); a transient failure of the brand
- * rows only drops KPI #16 and of the GA4 read only blanks ⑦ (the legacy GA4 reader returned null).
+ * Global dashboard (legacy getLiveDashboard): ①~⑤, KPI #16 automatic. The summary decides the
+ * empty state (its failure is the caller's to degrade); a transient failure of the brand rows only
+ * drops KPI #16. ⑦ is not read: the Overview cards render OVERVIEW_KPI_KEYS only (see header).
  */
 export async function loadLiveDashboard(filters: StandardFilters, ctx: DashboardCtx): Promise<LiveDashboard | null> {
-  const [summary, brands, conversion] = await Promise.all([
+  const [summary, brands] = await Promise.all([
     fetchDashboardSummary(filters, ctx),
     orNullOnTransient(fetchCardBrands(filters, ctx)),
-    orNullOnTransient(fetchTrafficConversion(filters, ctx)),
   ]);
   if (summaryIsEmpty(summary.data, summary.meta)) return null;
-  const cards = [...toMirrorKpis(summary.data, summary.meta), dashboardConversionKpi(conversion?.data ?? null)];
+  const cards = toMirrorKpis(summary.data, summary.meta);
   if (!brands) return { kpis: cards };
   return {
     kpis: applyCompetitorSovFromBrands(cards, summary.data.share_of_voice?.num ?? 0, brands.data.brands),

@@ -226,29 +226,29 @@ function conversion(total: number, measured: number, conv: number, sessions: num
 // ── global cards ─────────────────────────────────────────────────────────────
 
 describe("global cards: getLiveDashboard legacy vs HGH_SOURCE_G1=api", () => {
-  it("①~⑤, KPI #16 equal; ⑦ differs only by the GA4 denominator (DC-03)", async () => {
-    // legacy world: one GA4 market, 7 key events over 120 AI active users, daily sessions 3,5
+  it("①~⑤, KPI #16 equal; neither path reads or returns ⑦ (Overview renders OVERVIEW_KPI_KEYS only)", async () => {
     vi.mocked(server.fetchStandardAggregates).mockResolvedValue(legacyAgg());
-    vi.mocked(ga4Map.resolveProperties).mockResolvedValue([{ brand: "Kia", country: "DE", propertyId: "p1" }]);
-    vi.mocked(ga4.getAiTrafficConversionKpi).mockResolvedValue({ propertyId: "p1", aiConvRate: pct(7, 120), humanConvRate: 0, lift: 0, aiKeyEvents: 7, aiUsers: 120 });
-    vi.mocked(ga4.getAiVisitsKpi).mockResolvedValue({ trend: [{ sessions: 3 }, { sessions: 5 }] } as never);
     const legacy = await withRequestScope(() => dashLive.getLiveDashboard({}));
 
     vi.stubEnv("HGH_SOURCE_G1", "api");
     routes["/v1/kpi/summary"] = () => json({ data: apiSummary(), meta: meta() });
     routes["/v1/mentions/brands"] = () => json({ data: apiBrands(), meta: meta() });
-    // the same market over sessions: 7 conversions / 160 AI sessions
-    routes["/v1/funnel/conversion"] = () => json({ data: conversion(1, 1, 7, 160, [3, 5]), meta: meta() });
     const api = await withRequestScope(() => dashLive.getLiveDashboard({}));
 
     expect(legacy).not.toBeNull();
-    expectOnlyKnown(legacy, api, [
-      { path: /^kpis\.5\.value$/, reason: "DC-03: ⑦ = conversions / sessions (legacy / active users): 5.8 vs 4.4" },
-      { path: /^kpis\.5\.ratio\.denominator$/, reason: "DC-03: ⑦ denominator sessions 160 (legacy active users 120)" },
-      { path: /^kpis\.5\.copyVariant$/, reason: "DC-03 wording: the tile labels the denominator 'AI 채널 세션' (dashboard.kpi.api.*, u5 messages)" },
-    ]);
+    expectOnlyKnown(legacy, api, []);
     // KPI #16 by hand: own mentions 333 / Toyota 120 x 100 = 277.5
     expect(api?.kpis.find((k) => k.key === "shareOfVoice")?.competitorSov).toEqual({ brand: "Toyota", value: 277.5 });
+    // ⑦ was fetched on every render but never shown (2026-10-14): no GA4 property lookup or
+    // Data API call on the legacy path, no /v1/funnel/conversion on the api path.
+    for (const r of [legacy, api]) expect(r?.kpis.map((k) => k.key)).not.toContain("trafficConversion");
+    expect(ga4Map.resolveProperties).not.toHaveBeenCalled();
+    expect(ga4Map.resolveProperty).not.toHaveBeenCalled();
+    expect(ga4.getAiTrafficConversionKpi).not.toHaveBeenCalled();
+    expect(ga4.getAiTrafficConversionRollup).not.toHaveBeenCalled();
+    expect(ga4.getAiVisitsKpi).not.toHaveBeenCalled();
+    const paths = vi.mocked(fetch).mock.calls.map(([input]) => new URL(String(input)).pathname);
+    expect(paths).not.toContain("/v1/funnel/conversion");
   });
 });
 
