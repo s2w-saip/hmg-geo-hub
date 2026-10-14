@@ -241,6 +241,8 @@ describe("F2: project page gate (demo admin-only, SESSION source)", () => {
     projectStatus = 404;
     expect((await GET(req(q))).status).toBe(404);
     expect(apiSeen.map((u) => new URL(u).pathname)).toEqual([`/v1/projects/${PID}`]);
+    // the gate runs alone in the route: the light read (view=gate, same decision and 404, no detail summary)
+    expect(apiSeen.map((u) => new URL(u).searchParams.getAll("view"))).toEqual([["gate"]]);
     expect(st.calls).toHaveLength(0);
     projectStatus = 200;
     apiSeen.length = 0;

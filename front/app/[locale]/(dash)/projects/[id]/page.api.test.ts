@@ -140,6 +140,8 @@ describe("/projects/[id] api sources", () => {
     expect(hits.map((u) => u.pathname).sort()).toEqual(
       ["/v1/filters/dates", "/v1/filters/options", `/v1/projects/${PID}`, `/v1/projects/${PID}/prompt-candidates`].sort(),
     );
+    // B020: the home keeps the full read (no view=gate): the page gate and the tiles share that one call
+    expect(hits.filter((u) => u.pathname === `/v1/projects/${PID}`).map((u) => u.search)).toEqual([""]);
     // the session scope (brands Kia, countries DE) is never sent
     for (const u of hits) {
       expect(u.searchParams.getAll("brand"), u.pathname).toEqual([]);

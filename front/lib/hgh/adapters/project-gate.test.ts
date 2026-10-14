@@ -124,9 +124,15 @@ describe("mapping (ProjectDetail -> GateProject)", () => {
 });
 
 describe("fetchProjectGate", () => {
-  it("200 -> project, one GET /v1/projects/{id} with the session Bearer", async () => {
-    respond(ok());
+  it("200 -> project, one GET /v1/projects/{id}?view=gate (the light read is the default: its callers run alone)", async () => {
+    respond(ok(detail({ effective_engines: null, prompt_counts: null, recent_prompts: null })));
     await expect(fetchProjectGate(PID)).resolves.toMatchObject({ id: PID, country: "US" });
+    expect(calls).toEqual([`https://api.hgh.test/v1/projects/${PID}?view=gate`]);
+  });
+
+  it("{ light: false } -> the full GET /v1/projects/{id}, same project as the light read", async () => {
+    respond(ok());
+    await expect(fetchProjectGate(PID, { light: false })).resolves.toEqual(toGateProject(detail()));
     expect(calls).toEqual([`https://api.hgh.test/v1/projects/${PID}`]);
   });
 
@@ -136,9 +142,27 @@ describe("fetchProjectGate", () => {
     expect(calls).toEqual([`https://api.hgh.test/v1/projects/${PID}?view=gate`]);
     calls.length = 0;
     await withRequestScope(async () => {
-      await Promise.all([fetchProjectGate(PID, { light: true }), requireProjectPage("ko", PID, { light: true })]);
+      await Promise.all([fetchProjectGate(PID), fetchProjectGate(PID, { light: true }), requireProjectPage("ko", PID, { light: true })]);
     });
     expect(calls).toEqual([`https://api.hgh.test/v1/projects/${PID}?view=gate`]);
+    calls.length = 0;
+    await withRequestScope(async () => {
+      await Promise.all([fetchProjectGate(PID), requireProjectPage("ko", PID)]);
+    });
+    expect(calls.sort()).toEqual([`https://api.hgh.test/v1/projects/${PID}`, `https://api.hgh.test/v1/projects/${PID}?view=gate`]);
+  });
+
+  it("retryOn401 (route handlers, e.g. the brand drilldown routes): one refresh and one retry after 401 token_expired; without it the 401 is thrown", async () => {
+    const FRESH = "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJ2In0.c2ln";
+    bindHghAuth({ getAccessToken: async () => TOKEN, refreshAccessToken: async () => FRESH });
+    let n = 0;
+    respond(() => (n++ === 0 ? err(401, "token_expired")() : ok()()));
+    await expect(fetchProjectGate(PID, { retryOn401: true })).resolves.toMatchObject({ id: PID });
+    expect(calls).toEqual([`https://api.hgh.test/v1/projects/${PID}?view=gate`, `https://api.hgh.test/v1/projects/${PID}?view=gate`]);
+    calls.length = 0;
+    n = 0;
+    await expect(fetchProjectGate(PID)).rejects.toMatchObject({ status: 401, code: "token_expired" });
+    expect(calls).toHaveLength(1);
   });
 
   it("404 (missing, out of scope, non-member, pending) -> null", async () => {
@@ -159,19 +183,20 @@ describe("fetchProjectGate", () => {
     await expect(fetchProjectGate(PID)).rejects.toMatchObject({ status: 500 });
   });
 
-  it("layout + project layout + leaf gate in one request share one backend call", async () => {
+  it("layout + project layout + leaf gate in one request share one backend call (the full read the page's own detail reads share)", async () => {
     respond(ok());
     await withRequestScope(async () => {
-      await Promise.all([fetchProjectGate(PID), projectMetaForSnb(PID, "ko"), requireProjectPage("ko", PID)]);
+      await Promise.all([projectMetaForSnb(PID, "ko"), requireProjectPage("ko", PID), requireProjectPage("ko", PID), fetchProjectGate(PID, { light: false })]);
     });
-    expect(calls).toHaveLength(1);
+    expect(calls).toEqual([`https://api.hgh.test/v1/projects/${PID}`]);
   });
 });
 
 describe("requireProjectPage: same outcome as the legacy page gates", () => {
-  it("visible -> the project", async () => {
+  it("visible -> the project (full read by default: a page render shares it with the layouts)", async () => {
     respond(ok());
     await expect(requireProjectPage("ko", PID)).resolves.toMatchObject({ id: PID });
+    expect(calls).toEqual([`https://api.hgh.test/v1/projects/${PID}`]);
   });
 
   it("404 -> notFound()", async () => {
@@ -228,9 +253,10 @@ describe("requireProjectPage: same outcome as the legacy page gates", () => {
 });
 
 describe("projectMetaForSnb: the (dash) layout header", () => {
-  it("visible -> meta; hidden or non-uuid -> null", async () => {
+  it("visible -> meta (full read, shared with the project layout and the leaf gate); hidden or non-uuid -> null", async () => {
     respond(ok());
     await expect(projectMetaForSnb(PID, "ko")).resolves.toMatchObject({ id: PID, name: "Kia US" });
+    expect(calls).toEqual([`https://api.hgh.test/v1/projects/${PID}`]);
     respond(err(404, "not_found"));
     await expect(projectMetaForSnb(PID, "ko")).resolves.toBeNull();
     await expect(projectMetaForSnb("by-scope", "ko")).resolves.toBeNull();

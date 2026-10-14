@@ -2,11 +2,18 @@ import "server-only";
 
 // The one project gate (unit U2, design 1.3 and appendix E "공용: 대시 레이아웃·프로젝트
 // 레이아웃"): GET /v1/projects/{project_id} decides, the front only maps the answer.
-// Light read (B020, opt-in { light: true }): GET /v1/projects/{project_id}?view=gate, the same access
-// decision and 404s without the detail summary statements (prompt counts, recent prompts, default
-// engines); every field this gate maps is in it. Gates that run alone in their request (server
-// actions) take it; a page render keeps the full call it shares with the (dash) and project layouts
-// (the home tiles read the summary of that same call).
+// Light read (B020): GET /v1/projects/{project_id}?view=gate, the same access decision and 404s
+// without the detail summary statements (prompt counts, recent prompts, default engines); every field
+// this gate maps is in it. Defaults (B020 follow-up):
+//   fetchProjectGate     light. Its callers are gates that run alone in their request (route
+//                        handlers: filters/options, citations, intent keyword routes), so the summary
+//                        statements are pure cost there.
+//   requireProjectPage,  full. In a page render they share ONE in-request call with the (dash) and
+//   projectMetaForSnb    project layouts and with the pages that read the full detail themselves (home
+//                        tiles dashboard.ts fetchProjectDetail, setting projects.ts projectDetail,
+//                        mention mentions.ts loadDesignatedTargetBrand). The layouts cannot tell which
+//                        leaf renders, so a light read there would add a second call on those pages.
+//                        A page gate that runs alone (prompt tab server actions) passes { light: true }.
 // Selected by its callers when HGH_SOURCE_SESSION=api (D8); the legacy repository gates
 // stay in those files as the rollback path.
 //
@@ -52,8 +59,13 @@ export type ProjectDetail = components["schemas"]["ProjectDetail"];
 export const GATE_QUERY = { view: "gate" } as const;
 
 export interface GateReadOptions {
-  /** view=gate: same decision, no summary statements. For gates that run alone in their request. */
+  /**
+   * view=gate: same decision, no summary statements. Default true for fetchProjectGate (gates that run
+   * alone in their request), false for requireProjectPage (page renders share the full call).
+   */
   light?: boolean;
+  /** Retry once after a 401 token refresh (route handlers, server actions). Not part of the dedupe key. */
+  retryOn401?: boolean;
 }
 
 export interface GateProject {
@@ -95,14 +107,19 @@ export function toGateProject(d: ProjectDetail): GateProject {
 }
 
 /**
- * GET /v1/projects/{id} (light: ?view=gate) for the current session. null when the backend hides the
- * project (404) or the id is not a uuid. Every other failure is thrown as HghApiError. In-request
- * dedupe (client) makes the (dash) layout, the project layout and the leaf gate share one call.
+ * GET /v1/projects/{id}?view=gate (light, the default; { light: false } = the full read) for the current
+ * session. null when the backend hides the project (404) or the id is not a uuid. Every other failure is
+ * thrown as HghApiError. In-request dedupe (client) makes reads of the same view share one call.
  */
 export async function fetchProjectGate(id: string, opts: GateReadOptions = {}): Promise<GateProject | null> {
   if (!isProjectId(id)) return null;
+  const light = opts.light ?? true;
   try {
-    const res = await hghGet("/v1/projects/{project_id}", { pathParams: { project_id: id }, ...(opts.light ? { query: GATE_QUERY } : {}) });
+    const res = await hghGet("/v1/projects/{project_id}", {
+      pathParams: { project_id: id },
+      ...(light ? { query: GATE_QUERY } : {}),
+      ...(opts.retryOn401 ? { retryOn401: true } : {}),
+    });
     return toGateProject(res.data);
   } catch (e) {
     if (isHghApiError(e) && e.status === 404) return null;
@@ -110,11 +127,14 @@ export async function fetchProjectGate(id: string, opts: GateReadOptions = {}): 
   }
 }
 
-/** Page gate: the project, or the same redirect / notFound the legacy page gates produced. */
+/**
+ * Page gate: the project, or the same redirect / notFound the legacy page gates produced. Full read by
+ * default (shared with the layouts and the page's own detail reads); { light: true } when it runs alone.
+ */
 export async function requireProjectPage(locale: string, id: string, opts: GateReadOptions = {}): Promise<GateProject> {
   let project: GateProject | null;
   try {
-    project = await fetchProjectGate(id, opts);
+    project = await fetchProjectGate(id, { ...opts, light: opts.light ?? false });
   } catch (e) {
     throwForPage(e, locale, { permission: "not-found" });
   }
@@ -136,7 +156,8 @@ export function toSnbMeta(p: GateProject): ProjectMetaForSnb {
  */
 export async function projectMetaForSnb(id: string, locale: string): Promise<ProjectMetaForSnb | null> {
   try {
-    const project = await fetchProjectGate(id);
+    // Full read: the same in-request call as the project layout and the leaf page gate (see header).
+    const project = await fetchProjectGate(id, { light: false });
     return project ? toSnbMeta(project) : null;
   } catch (e) {
     if (!isHghApiError(e)) throw e;

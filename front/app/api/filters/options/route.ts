@@ -43,9 +43,10 @@ import { cachedMembership, cachedProjectById } from "@/lib/db/repositories/reque
 //                   screen family ((dash)/layout.tsx:146, website/prompts/export/route.ts:49)
 //                                                                          -> 403 forbidden
 //   4. project      the project pages' gate: demo project admin-only (project layout), then
-//                   HGH_SOURCE_SESSION=api -> GET /v1/projects/{id} (404 for all but admin and
-//                   active members), legacy -> project exists and (admin or active member), the
-//                   leaf page gate                                         -> 404 not_found
+//                   HGH_SOURCE_SESSION=api -> GET /v1/projects/{id}?view=gate (the light gate read,
+//                   B020: same decision, 404 for all but admin and active members), legacy ->
+//                   project exists and (admin or active member), the leaf page gate
+//                                                                          -> 404 not_found
 // The panel sends the applied URL values that shape the options (time: the options window =
 // the data window; brand: the legacy lists were narrowed by the applied brand; engine, project
 // only: the legacy project engine list depends on it, see legacyOptions). Scope comes from the
@@ -72,7 +73,8 @@ type SessionUser = NonNullable<Awaited<ReturnType<typeof getSession>>>["user"];
 /** The project pages' gate (see header 4). */
 async function projectPageAllowed(id: string, user: SessionUser): Promise<boolean> {
   if (isDemoProject(id) && user.role !== "admin") return false;
-  if (hghSource("SESSION") === "api") return (await fetchProjectGate(id)) !== null;
+  // The gate runs alone in this request: the light read (no detail summary statements).
+  if (hghSource("SESSION") === "api") return (await fetchProjectGate(id, { light: true })) !== null;
   const [project, membership] = await Promise.all([cachedProjectById(id), cachedMembership(id, user.id)]);
   if (!project) return false;
   return user.role === "admin" || membership?.status === "active";
