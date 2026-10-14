@@ -1140,6 +1140,616 @@
     ]
    },
    "by": "cd7b77c"
+  },
+  {
+   "surface": "existing3",
+   "endpoint": "GET /v1/trend dimension=source top=15",
+   "set": {
+    "f6": [
+     "y",
+     "실패 → 추이 카드 kpi.degraded 지연 안내"
+    ]
+   },
+   "by": "c62b2b1"
+  },
+  {
+   "surface": "existing3",
+   "endpoint": "GET /v1/trend dimension=category top=13",
+   "set": {
+    "f6": [
+     "y",
+     "dims 블록 실패 → 구성 추이 자리 지연 안내"
+    ],
+    "f8": [
+     "n",
+     "source 호출 dims 블록으로 합침. 남음: citation_presence 별도 스캔",
+     "0 (source 호출에 포함)"
+    ]
+   },
+   "by": "c62b2b1"
+  },
+  {
+   "surface": "existing3",
+   "endpoint": "GET /v1/citations/prompts owned=true limit=1",
+   "set": {
+    "f6": [
+     "y",
+     "split 실패 → 타일 자리 지연 안내"
+    ],
+    "f8": [
+     "y",
+     "include_refs=false·fields=text",
+     "2"
+    ],
+    "f9": [
+     "y",
+     "limit 1"
+    ]
+   },
+   "by": "c62b2b1"
+  },
+  {
+   "surface": "existing3",
+   "endpoint": "GET /v1/citations/domains limit=200 competitor_sources",
+   "set": {
+    "f8": [
+     "n",
+     "경쟁사 합 끔·match_rank 재사용. 남음: 요약 own FILTER, t.total 중복",
+     "3"
+    ],
+    "f9": [
+     "n",
+     "첫 페이지 100행 = 표. 남음: competitor_sources truncated 미표시"
+    ]
+   },
+   "by": "c62b2b1"
+  },
+  {
+   "surface": "existing3",
+   "endpoint": "ROUTE /api/citations/domains → GET /v1/citations/domains (q·sort·cursor)",
+   "set": {
+    "f8": [
+     "n",
+     "경쟁사 합 끔. 남음: 검색·정렬마다 전 출처 재집계",
+     "3/요청"
+    ]
+   },
+   "by": "c62b2b1"
+  },
+  {
+   "surface": "existing3",
+   "endpoint": "ROUTE /api/citations/domains/{skey} → GET /v1/citations/domains/{skey}",
+   "set": {
+    "f9": [
+     "n",
+     "URL·프롬프트 절단 고지. 남음: 답변 참조 8 상한(API total 없음)"
+    ]
+   },
+   "by": "c62b2b1"
+  },
+  {
+   "surface": "existing3",
+   "endpoint": "CLIENT xlsx export (도메인 인용 순위)",
+   "set": {
+    "f7": [
+     "y",
+     "실패 토스트, 생성 중 비활성"
+    ]
+   },
+   "by": "c62b2b1"
+  },
+  {
+   "surface": "existing3",
+   "endpoint": "AXCOMMON",
+   "set": {
+    "f6": [
+     "n",
+     "인용 화면 보조 라벨 지연 안내. 남음: 언급 화면(P5)·filterNotices"
+    ]
+   },
+   "by": "c62b2b1"
+  },
+  {
+   "surface": "global",
+   "endpoint": "GET /v1/citations/prompts",
+   "set": {
+    "f8": [
+     "n",
+     "fields=text. 남음: main 의 cit_target·cit_m05 열",
+     "3 (+공통 3)"
+    ]
+   },
+   "by": "c62b2b1"
+  },
+  {
+   "surface": "website",
+   "endpoint": "AWCOMMON",
+   "set": {
+    "f6": [
+     "n",
+     "인용 화면 지연 안내. 남음: 개요·언급 라벨 미독"
+    ]
+   },
+   "by": "c62b2b1"
+  },
+  {
+   "surface": "website",
+   "endpoint": "GET /v1/citations/domains",
+   "set": {
+    "f6": [
+     "n",
+     "인용 화면·드릴다운 해소. 남음: 개요 도넛 무고지"
+    ],
+    "f8": [
+     "n",
+     "인용 화면 경쟁사 합 끔. 남음: 개요 도넛 여분 계산",
+     "3"
+    ]
+   },
+   "by": "c62b2b1"
+  },
+  {
+   "surface": "website",
+   "endpoint": "GET /v1/citations/sources",
+   "set": {
+    "f6": [
+     "y",
+     "실패 → 지연 안내 카드"
+    ],
+    "f8": [
+     "y",
+     "include_tone=false·include_types=false",
+     "2"
+    ]
+   },
+   "by": "c62b2b1"
+  },
+  {
+   "surface": "website",
+   "endpoint": "GET /v1/citations/prompts",
+   "set": {
+    "f6": [
+     "y",
+     "split 실패 → 지연 안내"
+    ],
+    "f8": [
+     "y",
+     "both_buckets 한 호출",
+     "3"
+    ]
+   },
+   "by": "c62b2b1"
+  },
+  {
+   "surface": "website",
+   "endpoint": "GET /v1/trend (dimension=source|category)",
+   "set": {
+    "f6": [
+     "y",
+     "추이·구성 추이 지연 안내"
+    ],
+    "f8": [
+     "y",
+     "dims 한 호출",
+     "3"
+    ]
+   },
+   "by": "c62b2b1"
+  },
+  {
+   "surface": "website",
+   "endpoint": "GET /v1/citations/domains/{skey}",
+   "set": {
+    "f9": [
+     "n",
+     "URL·프롬프트 절단 고지. 남음: 답변 참조 8"
+    ]
+   },
+   "by": "c62b2b1"
+  },
+  {
+   "surface": "website",
+   "endpoint": "GET /v1/citations/domains/export",
+   "set": {
+    "f7": [
+     "n",
+     "fetch→blob·실패 토스트·비활성. 남음: 5,000행 잘림 고지(UI 결정)"
+    ]
+   },
+   "by": "c62b2b1"
+  },
+  {
+   "surface": "project",
+   "endpoint": "GET /v1/citations/domains",
+   "set": {
+    "f6": [
+     "n",
+     "인용 화면 지연 안내. 남음: 홈 구성 무고지"
+    ]
+   },
+   "by": "c62b2b1"
+  },
+  {
+   "surface": "project",
+   "endpoint": "GET /v1/citations/sources",
+   "set": {
+    "f6": [
+     "y",
+     "실패 → 지연 안내 카드"
+    ],
+    "f8": [
+     "y",
+     "include_tone=false·include_types=false",
+     "2"
+    ]
+   },
+   "by": "c62b2b1"
+  },
+  {
+   "surface": "project",
+   "endpoint": "GET /v1/citations/prompts",
+   "set": {
+    "f6": [
+     "y",
+     "split 실패 → 지연 안내"
+    ],
+    "f8": [
+     "y",
+     "both_buckets 한 호출",
+     "3"
+    ]
+   },
+   "by": "c62b2b1"
+  },
+  {
+   "surface": "project",
+   "endpoint": "GET /v1/trend (dimension=source|category)",
+   "set": {
+    "f6": [
+     "y",
+     "지연 안내"
+    ],
+    "f8": [
+     "y",
+     "dims 한 호출",
+     "3"
+    ]
+   },
+   "by": "c62b2b1"
+  },
+  {
+   "surface": "project",
+   "endpoint": "GET /v1/citations/domains/{skey}",
+   "set": {
+    "f9": [
+     "n",
+     "URL·프롬프트 절단 고지. 남음: 답변 참조 8"
+    ]
+   },
+   "by": "c62b2b1"
+  },
+  {
+   "surface": "project",
+   "endpoint": "GET /v1/citations/domains/export",
+   "set": {
+    "f6": [
+     "y",
+     "fetch 다운로드 실패 시 화면 유지 + 토스트"
+    ],
+    "f7": [
+     "n",
+     "JSON 화면 이동·연타 해소. 남음: 5,000행 잘림 고지(UI 결정)"
+    ]
+   },
+   "by": "c62b2b1"
+  },
+  {
+   "surface": "existing3",
+   "endpoint": "GET /v1/kpi/summary (분석, +cycle_offset=1)",
+   "set": {
+    "f6": [
+     "y",
+     "히어로 실패 → 기존 kpi.degraded 한 줄"
+    ]
+   },
+   "by": "c18c0d1"
+  },
+  {
+   "surface": "existing3",
+   "endpoint": "GET /v1/mentions/brands full=true split_own include=multi,prompts,types",
+   "set": {
+    "f6": [
+     "y",
+     "실패 → 공통 하단 PendingCard"
+    ],
+    "f9": [
+     "y",
+     "절단 시 '{total}개 중 {shown}개' 한 줄"
+    ]
+   },
+   "by": "c18c0d1"
+  },
+  {
+   "surface": "existing3",
+   "endpoint": "GET /v1/mentions/brands group_by=engine top_n=30",
+   "set": {
+    "f6": [
+     "y",
+     "실패 → trendDegraded 고지"
+    ],
+    "f8": [
+     "y",
+     "engine_only=true",
+     "3"
+    ]
+   },
+   "by": "c18c0d1"
+  },
+  {
+   "surface": "existing3",
+   "endpoint": "GET /v1/mentions/types",
+   "set": {
+    "f6": [
+     "y",
+     "실패 → 유형 막대 자리 kpi.degraded"
+    ],
+    "f8": [
+     "y",
+     "include_stance=false",
+     "3"
+    ]
+   },
+   "by": "c18c0d1"
+  },
+  {
+   "surface": "existing3",
+   "endpoint": "GET /v1/trend dimension=type",
+   "set": {
+    "f6": [
+     "y",
+     "실패 → degradedTrend"
+    ],
+    "f8": [
+     "y",
+     "엔진 호출 dims 블록",
+     "0 (엔진 요청에 합류)"
+    ]
+   },
+   "by": "c18c0d1"
+  },
+  {
+   "surface": "existing3",
+   "endpoint": "GET /v1/trend dimension=engine",
+   "set": {
+    "f8": [
+     "y",
+     "engine+type 한 요청",
+     "1 요청"
+    ]
+   },
+   "by": "c18c0d1"
+  },
+  {
+   "surface": "existing3",
+   "endpoint": "GET /v1/kpi/engines part=all (+cycle_offset=1)",
+   "set": {
+    "f8": [
+     "y",
+     "part=sov",
+     "2"
+    ]
+   },
+   "by": "c18c0d1"
+  },
+  {
+   "surface": "existing3",
+   "endpoint": "CLIENT xlsx export (브랜드 언급 순위)",
+   "set": {
+    "f7": [
+     "y",
+     "실패 토스트, 생성 중 비활성"
+    ]
+   },
+   "by": "c18c0d1"
+  },
+  {
+   "surface": "website",
+   "endpoint": "GET /v1/mentions/types",
+   "set": {
+    "f6": [
+     "y",
+     "실패 → 유형 카드 kpi.degraded"
+    ]
+   },
+   "by": "c18c0d1"
+  },
+  {
+   "surface": "website",
+   "endpoint": "GET /v1/trend (dimension=brand)",
+   "set": {
+    "f6": [
+     "y",
+     "trendDegraded → kpi.degradedTrend"
+    ],
+    "f8": [
+     "y",
+     "measured_days=false·share_of_voice",
+     "5"
+    ],
+    "f9": [
+     "y",
+     "차트가 그리는 계열만"
+    ]
+   },
+   "by": "c18c0d1"
+  },
+  {
+   "surface": "website",
+   "endpoint": "GET /v1/mentions/brands",
+   "set": {
+    "f9": [
+     "y",
+     "절단 시 한 줄 고지"
+    ]
+   },
+   "by": "c18c0d1"
+  },
+  {
+   "surface": "website",
+   "endpoint": "CLIENT xlsx export (브랜드 순위)",
+   "set": {
+    "f7": [
+     "y",
+     "실패 토스트 + 비활성"
+    ]
+   },
+   "by": "c18c0d1"
+  },
+  {
+   "surface": "project",
+   "endpoint": "GET /v1/mentions/types",
+   "set": {
+    "f6": [
+     "y",
+     "실패 → 유형 카드 kpi.degraded"
+    ]
+   },
+   "by": "c18c0d1"
+  },
+  {
+   "surface": "project",
+   "endpoint": "GET /v1/trend (dimension=brand)",
+   "set": {
+    "f8": [
+     "y",
+     "measured_days=false·share_of_voice",
+     "6"
+    ]
+   },
+   "by": "c18c0d1"
+  },
+  {
+   "surface": "project",
+   "endpoint": "CLIENT xlsx export (브랜드 순위)",
+   "set": {
+    "f7": [
+     "y",
+     "실패 토스트 + 비활성"
+    ]
+   },
+   "by": "c18c0d1"
+  },
+  {
+   "surface": "existing3",
+   "endpoint": "GET /v1/geo card=true",
+   "set": {
+    "f6": [
+     "y",
+     "5xx → degradeOnApiFailure → GeoSection DegradeNotice, 4xx → 오류 경계"
+    ]
+   },
+   "by": "d71e66b"
+  },
+  {
+   "surface": "existing3",
+   "endpoint": "GET /v1/kpi/summary card=true",
+   "set": {
+    "f8": [
+     "y",
+     "parts=urls: 카드가 읽는 값만",
+     "2 (+조건부 1~2)"
+    ]
+   },
+   "by": "d71e66b"
+  },
+  {
+   "surface": "existing3",
+   "endpoint": "GET /v1/trend card=true bucket=cycle dimension=none",
+   "set": {
+    "f9": [
+     "y",
+     "클라이언트 카드로는 스파크라인 5점만 직렬화"
+    ]
+   },
+   "by": "d71e66b"
+  },
+  {
+   "surface": "existing3",
+   "endpoint": "GET /v1/trend card=true dimension=brand top=20 brand_key",
+   "set": {
+    "f9": [
+     "y",
+     "top=1 + 카드 후보 brand_key 만"
+    ]
+   },
+   "by": "d71e66b"
+  },
+  {
+   "surface": "website",
+   "endpoint": "GET /v1/geo",
+   "set": {
+    "f6": [
+     "y",
+     "5xx → 빈 지도 대신 DegradeNotice, 4xx 오류 경계"
+    ]
+   },
+   "by": "d71e66b"
+  },
+  {
+   "surface": "website",
+   "endpoint": "GET /v1/trend",
+   "set": {
+    "f8": [
+     "y",
+     "M06·M07 미요청",
+     "2"
+    ]
+   },
+   "by": "d71e66b"
+  },
+  {
+   "surface": "project",
+   "endpoint": "GET /v1/funnel/conversion",
+   "set": {
+    "f6": [
+     "y",
+     "홈 ⑦ 일시 실패 → '답변의 전환' 고지"
+    ],
+    "f8": [
+     "y",
+     "홈 summary_only=true",
+     "4(홈)/7~10(화면)"
+    ]
+   },
+   "by": "d71e66b"
+  },
+  {
+   "surface": "project",
+   "endpoint": "GET /v1/projects/{project_id}/prompt-candidates",
+   "set": {
+    "f8": [
+     "y",
+     "include_total=false",
+     "1"
+    ]
+   },
+   "by": "d71e66b"
+  },
+  {
+   "surface": "project",
+   "endpoint": "GET /v1/projects/{project_id}/settings",
+   "set": {
+    "f8": [
+     "y",
+     "view=card",
+     "6 (종전 7)"
+    ],
+    "f9": [
+     "y",
+     "카드가 쓰는 행만"
+    ]
+   },
+   "by": "d71e66b"
   }
  ]
 }
