@@ -170,4 +170,18 @@ describe("standard mention page, api source", () => {
     // the account's brand lock is never sent
     expect(log.some((u) => u.searchParams.getAll("brand").length > 0)).toBe(false);
   });
+
+  // P5 leftover: the favorability / first-rank tabs get the hero degrade mark like the exposure tab
+  // (B034). Outside a request scope there is no mark: false (the scoped marks are in kpi-tab.test.ts).
+  it.each([
+    ["favorability", "FavorabilityKpiTab", "subKpis"],
+    ["first-rank", "FirstRankKpiTab", "firstPosition"],
+  ])("kpi=%s: heroDegraded follows the hero read", async (kpi, name, source) => {
+    const tree = await Page({ params: Promise.resolve({ locale: "ko" }), searchParams: Promise.resolve({ kpi }) });
+    const tab = (await collect(tree)).get(name)!;
+    expect(tab.heroDegraded).toBeInstanceOf(Promise);
+    await tab[source];
+    expect(await tab.heroDegraded).toBe(false);
+    expect(st.legacy).toEqual([]);
+  });
 });

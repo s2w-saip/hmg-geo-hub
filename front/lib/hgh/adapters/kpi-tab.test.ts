@@ -756,6 +756,40 @@ describe("loaders: queries and period rules", () => {
     });
   });
 
+  it("P5 leftover: wasFirstPositionHeroDegraded reads the trend / summary / overview marks under the brand rows", async () => {
+    const ok = vi.mocked(fetch).getMockImplementation()!;
+    const failWhen = (hit: (u: URL) => boolean) =>
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (u: string, init?: RequestInit) =>
+          hit(new URL(String(u)))
+            ? new Response(JSON.stringify({ error: { code: "upstream", message: "x" } }), { status: 503, headers: { "content-type": "application/json" } })
+            : ok(u, init),
+        ),
+      );
+    await withRequestScope(async () => {
+      expect(await K.loadFirstPosition({}, ctx)).not.toBeNull();
+      expect(K.wasFirstPositionHeroDegraded()).toBe(false);
+    });
+    for (const hit of [
+      (u: URL) => u.pathname === "/v1/kpi/summary",
+      (u: URL) => u.pathname === "/v1/trend" && u.searchParams.get("dimension") === "brand",
+      (u: URL) => u.pathname === "/v1/trend" && u.searchParams.get("dimension") !== "brand",
+    ]) {
+      failWhen(hit);
+      await withRequestScope(async () => {
+        expect(await K.loadFirstPosition({}, ctx)).not.toBeNull();
+        expect(K.wasFirstPositionHeroDegraded()).toBe(true);
+      });
+    }
+    // the brand rows failing: the tab's own null (chart notice), not the hero mark
+    failWhen((u) => u.pathname === "/v1/mentions/brands");
+    await withRequestScope(async () => {
+      expect(await K.loadFirstPosition({}, ctx)).toBeNull();
+      expect(K.wasFirstPositionHeroDegraded()).toBe(false);
+    });
+  });
+
   it("hero prev: period -> null without a call; snapshot -> cycle_offset=1, asOf = meta.as_of", async () => {
     expect(await withRequestScope(() => K.loadKpiHeroSubKpisPrev({ dateFrom: "2026-09-01", dateTo: "2026-09-15" }, ctx, "sov"))).toBeNull();
     expect(log).toHaveLength(0);

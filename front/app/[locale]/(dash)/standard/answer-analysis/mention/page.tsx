@@ -81,6 +81,7 @@ import {
   loadKpiHeroSubKpisPrev,
   loadStanceDist,
   loadTypeKpi,
+  wasFirstPositionHeroDegraded,
   wasKpiTabDegraded,
 } from "@/lib/hgh/adapters/kpi-tab";
 import { isAnalysisApi, loadFilterDates, loadPanelOptions } from "@/lib/hgh/adapters/filters";
@@ -375,13 +376,16 @@ async function MentionsKpiBody({
     }
     // api: competitorValues null, the competitor rows and their values come from the same
     // /v1/mentions/brands (M-1) source, so there is nothing to overlay (U6-N6).
+    // heroDegraded: B034 pattern of the exposure/SOV tab (the mark is valid after the read settled).
+    const firstPosition = loadFirstPosition(filters, api);
     return (
       <>
         <FirstRankKpiTab
-          firstPosition={loadFirstPosition(filters, api)}
+          firstPosition={firstPosition}
           competitorValues={null}
           periodCompare={periodCompare}
           periodDays={periodDays}
+          heroDegraded={firstPosition.then(() => wasFirstPositionHeroDegraded())}
         />
         {monthLine}
       </>
@@ -390,10 +394,12 @@ async function MentionsKpiBody({
   if (tab === "favorability") {
     if (api) {
       const prevApi = loadKpiHeroSubKpisPrev(filters, api, "favorability");
+      const subKpisApi = loadKpiHeroSubKpis(filters, api, "favorability");
       return (
         <>
           <FavorabilityKpiTab
-            subKpis={loadKpiHeroSubKpis(filters, api, "favorability")}
+            subKpis={subKpisApi}
+            heroDegraded={subKpisApi.then(() => wasKpiTabDegraded("hero"))}
             prevSubKpis={prevApi.then((p) => p?.sub ?? null)}
             prevBasisDate={prevApi.then((p) => p?.asOf ?? null)}
             engineTrend={loadEngineKpiTrend(filters, api)}

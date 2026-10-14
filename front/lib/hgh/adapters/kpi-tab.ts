@@ -138,9 +138,25 @@ export const KPI_TAB_ENGINE_PART: EnginesPart = "sov";
  */
 export const KPI_TAB_DEGRADE_LABELS = { hero: "standardKpiHero", types: "standardKpiTypes" } as const;
 
+/** The first-rank reads under the brand rows (trend, summary, overview), see wasFirstPositionHeroDegraded. */
+const FIRST_POSITION_HERO_LABELS = [
+  "standardKpiFirstPosition.trend",
+  "standardKpiFirstPosition.summary",
+  "standardKpiFirstPosition.overview",
+] as const;
+
 /** Was that KPI tab read a transient failure in this request (degrade mark)? */
 export function wasKpiTabDegraded(which: keyof typeof KPI_TAB_DEGRADE_LABELS): boolean {
   return wasDegraded(KPI_TAB_DEGRADE_LABELS[which]);
+}
+
+/**
+ * First-rank hero: the average position and Δ come from the summary and overview reads, the best
+ * rank and the fallback series from the brand trend (loadFirstPosition). Read after it settled. A
+ * failed brand-row read is not here: then loadFirstPosition is null and the tab already says so.
+ */
+export function wasFirstPositionHeroDegraded(): boolean {
+  return FIRST_POSITION_HERO_LABELS.some(wasDegraded);
 }
 
 /** Legacy mirror percent: Math.round(n/d*1000)/10, d 0 -> null (scope-aggregates pctOrNull). */
@@ -467,10 +483,11 @@ export async function loadFirstPosition(filters: StandardFilters, ctx: MentionsC
   startEssentials(filters, ctx);
   const brands = await degradeOnApiFailure("standardKpiFirstPosition", () => fetchMentionBrands(filters, ctx));
   if (!brands) return null;
+  const [trendLabel, summaryLabel, overviewLabel] = FIRST_POSITION_HERO_LABELS;
   const [trend, summary, overview] = await Promise.all([
-    degradeOnApiFailure("standardKpiFirstPosition.trend", () => afterEssentials(filters, ctx, () => fetchBrandTrend(filters, ctx))),
-    degradeOnApiFailure("standardKpiFirstPosition.summary", () => fetchMentionSummary(filters, ctx)),
-    degradeOnApiFailure("standardKpiFirstPosition.overview", () => fetchOverviewTrend(filters, ctx)),
+    degradeOnApiFailure(trendLabel, () => afterEssentials(filters, ctx, () => fetchBrandTrend(filters, ctx))),
+    degradeOnApiFailure(summaryLabel, () => fetchMentionSummary(filters, ctx)),
+    degradeOnApiFailure(overviewLabel, () => fetchOverviewTrend(filters, ctx)),
   ]);
   return toFirstPositionResultApi({ trend, brands, summary, overview });
 }
