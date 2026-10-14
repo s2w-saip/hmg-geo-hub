@@ -1084,16 +1084,22 @@ export function toToneUrlRow(r: ApiToneRow, groupBy: "url" | "source"): Citation
   };
 }
 
-/** Tone sub page (with_counts: the two tab counts in the same answer, BG-27). null = degrade. */
+/**
+ * Tone sub page (with_counts: the two tab counts in the same answer, BG-27). page null = degrade.
+ * withCounts=false (B045, default true): the counts are not asked (they ignore q, cursor, tone and
+ * group_by: same filters, same counts) and come back null = "reuse the counts already shown"; a
+ * degraded read still answers the degrade counts (null, null) as before.
+ */
 export async function loadToneUrlPage(
   filters: StandardFilters,
   ctx: CitationsContext,
-  req: SubpageRequest & { tone: CitationTone; byDomain: boolean },
-): Promise<{ page: CursorPageOf<CitationToneUrlPage> | null; counts: { positive: number | null; negative: number | null } }> {
+  req: SubpageRequest & { tone: CitationTone; byDomain: boolean; withCounts?: boolean },
+): Promise<{ page: CursorPageOf<CitationToneUrlPage> | null; counts: { positive: number | null; negative: number | null } | null }> {
   const groupBy = req.byDomain ? "source" : "url";
+  const withCounts = req.withCounts !== false;
   const got = await degradeOnApiFailure("citationToneUrls", () =>
     pageOrFirst(req.cursor, (cursor) =>
-      fetchCitationTone(filters, ctx, { tone: req.tone, groupBy, limit: SUBPAGE_SIZE, q: req.q, cursor, withCounts: true }),
+      fetchCitationTone(filters, ctx, { tone: req.tone, groupBy, limit: SUBPAGE_SIZE, q: req.q, cursor, withCounts }),
     ),
   );
   if (!got) return { page: null, counts: { positive: null, negative: null } };
@@ -1107,7 +1113,7 @@ export async function loadToneUrlPage(
       pageSize: info.limit ?? SUBPAGE_SIZE,
       nextCursor: info.nextCursor,
     },
-    counts: { positive: res.data.counts?.positive ?? null, negative: res.data.counts?.negative ?? null },
+    counts: withCounts ? { positive: res.data.counts?.positive ?? null, negative: res.data.counts?.negative ?? null } : null,
   };
 }
 
@@ -1229,7 +1235,8 @@ export type RouteGate = { ok: true } | { ok: false; status: 403 | 404 };
  * The route gate, applied before any read on BOTH sources (U4 F1): the (dash) place gate of the
  * screen family (canReadAnalysis, 403), then on project the project page gate (demo project admin
  * only; HGH_SOURCE_SESSION=api -> GET /v1/projects/{id}, legacy -> the injected repository check;
- * 404). A 401 or 5xx of the api project gate is thrown.
+ * 404). A 401 or 5xx of the api project gate is thrown. The api read is the light one (?view=gate:
+ * same decision and errors, no detail summary): the route handler runs it alone.
  */
 export async function citationRouteGate(
   user: CitationRouteUser,
@@ -1244,7 +1251,7 @@ export async function citationRouteGate(
     if (isDemoProject(id) && user.role !== "admin") return { ok: false, status: 404 };
     if (hghSource("SESSION") === "api") {
       try {
-        return (await fetchProjectGate(id)) ? { ok: true } : { ok: false, status: 404 };
+        return (await fetchProjectGate(id, { light: true })) ? { ok: true } : { ok: false, status: 404 };
       } catch (e) {
         if (isHghApiError(e) && e.status === 403) {
           return { ok: false, status: errorKindOf(e.status, e.code) === "forbidden" ? 403 : 404 };

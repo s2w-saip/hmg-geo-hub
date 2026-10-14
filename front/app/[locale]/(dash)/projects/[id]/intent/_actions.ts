@@ -33,6 +33,7 @@ import {
   apiAddCandidate,
   apiAddCandidates,
   apiAddTrackedKeyword,
+  apiAddTrackedKeywords,
   apiGenerateMoreSocialPrompts,
   apiGenerateSelectedSocialPrompts,
   apiRemoveSocialPrompts,
@@ -481,6 +482,22 @@ export async function addTrackedKeyword(
     }
     throw e;
   }
+}
+
+// Several keywords at once (관련 검색어 선택 추가 · 검색 결과 저장, B065): one action instead of
+// one action per keyword. The answer per input, in input order, is what addTrackedKeyword answers
+// for it alone. API source: apiAddTrackedKeywords (one items[] request per 100 rows). Legacy: the
+// single add above, row by row as the screens did (a throw still stops at that row).
+export async function addTrackedKeywords(
+  projectId: string,
+  inputs: Array<{ term: string; country?: string | null }>,
+): Promise<ActionResult<{ id: string }>[]> {
+  if (isIntentApi()) {
+    return apiAddTrackedKeywords(projectId, inputs, await intentActionMessages());
+  }
+  const out: ActionResult<{ id: string }>[] = [];
+  for (const input of inputs) out.push(await addTrackedKeyword(projectId, input));
+  return out;
 }
 
 export async function removeTrackedKeyword(

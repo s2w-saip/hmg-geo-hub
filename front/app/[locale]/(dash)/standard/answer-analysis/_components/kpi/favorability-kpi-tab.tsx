@@ -77,6 +77,12 @@ type TabProps = {
   periodCompare?: readonly CompareResult[] | null;
   /** 선택된 구간의 길이(일) — 억제 캡션 입력. */
   periodDays?: number;
+  /**
+   * `subKpis` 의 빈 값이 **일시 실패**인가(= 측정 없음이 아니라 지연, mention-kpi-tab 과 같은 짝).
+   * 판정은 서버의 요청 스코프 표식(wasKpiTabDegraded("hero"))이라 페이지가 같은 집계 뒤에 이어 붙여
+   * 넘긴다. 참이면 히어로 아래에 기존 degraded 문구 한 줄. 미전달이면 종전 그대로다.
+   */
+  heroDegraded?: Awaitable<boolean>;
 };
 
 export function FavorabilityKpiTab({
@@ -90,6 +96,7 @@ export function FavorabilityKpiTab({
   initialCounts,
   periodCompare,
   periodDays,
+  heroDegraded,
 }: TabProps) {
   const t = useTranslations("answerAnalysis.mentions");
   const [signal, setSignal] = useState<{ signal: string; label: string } | null>(null);
@@ -105,6 +112,7 @@ export function FavorabilityKpiTab({
           prevSubKpis={prevSubKpis}
           prevBasisDate={prevBasisDate}
           engineTrend={engineTrend}
+          heroDegraded={heroDegraded}
         />
       </Suspense>
 
@@ -157,12 +165,15 @@ function FavorabilityHero({
   engineTrend,
   periodCompare,
   periodDays,
+  heroDegraded,
 }: Pick<
   TabProps,
-  "subKpis" | "prevSubKpis" | "prevBasisDate" | "engineTrend" | "periodCompare" | "periodDays"
+  "subKpis" | "prevSubKpis" | "prevBasisDate" | "engineTrend" | "periodCompare" | "periodDays" | "heroDegraded"
 >) {
   const t = useTranslations("answerAnalysis.mentions.kpi");
   const sub = useAwaited(subKpis);
+  // `undefined` 면 `use()` 를 부르지 않는다(mention-kpi-tab 의 heroDegraded 와 같은 이유).
+  const degraded = useAwaited(heroDegraded ?? false);
   const hero = useMemo(() => favorabilityHero(sub), [sub]);
   return (
     <>
@@ -203,6 +214,9 @@ function FavorabilityHero({
           <HeroTrend engineTrend={engineTrend} />
         </Suspense>
       </div>
+      {/* 비율 집계가 일시 실패했으면 "—" 가 "측정 없음"으로 읽히지 않게 기존 degraded 문구를 히어로
+          아래 캡션 자리에 한 줄 둔다(mention-kpi-tab 과 같은 마크업). 정상 경로에서는 아무것도 없다. */}
+      {degraded ? <p className="-mt-4 text-[11px] text-muted-foreground">{t("degraded")}</p> : null}
       <Suspense fallback={null}>
         <DeltaBasis prevBasisDate={prevBasisDate} engineTrend={engineTrend} />
       <Suspense fallback={null}>

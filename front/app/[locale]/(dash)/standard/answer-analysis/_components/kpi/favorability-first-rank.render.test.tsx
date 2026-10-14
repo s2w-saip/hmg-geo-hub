@@ -204,3 +204,47 @@ describe("FirstRankKpiTab", () => {
     expect(html).toContain(ko.answerAnalysis.mentions.kpi.firstRank.table.empty);
   });
 });
+
+// P5 leftover (B034 pattern of mention-kpi-tab): a hero read that failed for a moment says so with
+// the existing kpi.degraded line under the hero, instead of reading as "no measurement". The flag
+// is the page's request-scope mark (wasKpiTabDegraded), handed in as a value or a promise.
+describe("hero degraded line (favorability / first rank)", () => {
+  const degraded = ko.answerAnalysis.mentions.kpi.degraded;
+  const heroCaption = `<p class="-mt-4 text-[11px] text-muted-foreground">${degraded}</p>`;
+  const count = (html: string, s: string) => html.split(s).length - 1;
+  const fav = (extra: { heroDegraded?: boolean; subKpis?: StandardSubKpis }) => (
+    <FavorabilityKpiTab
+      subKpis={extra.subKpis ?? SUB} prevSubKpis={PREV} prevBasisDate="2026-08-31" engineTrend={TREND}
+      sentimentTotals={{ positive: 552, neutral: 300, mixed: 20, negative: 128 }}
+      stanceDist={null} typeKpi={TYPE}
+      {...("heroDegraded" in extra ? { heroDegraded: extra.heroDegraded } : {})}
+    />
+  );
+
+  it("not passed or false: markup is byte-equal to before (no line)", () => {
+    expect(render(fav({ heroDegraded: false }))).toBe(render(fav({})));
+    expect(render(fav({}))).not.toContain(heroCaption);
+    expect(render(<FirstRankKpiTab firstPosition={FP} heroDegraded={false} />)).toBe(render(<FirstRankKpiTab firstPosition={FP} />));
+    expect(render(<FirstRankKpiTab firstPosition={FP} />)).not.toContain(heroCaption);
+  });
+
+  it("favorability: the empty ratio cards ('—') get the existing degraded line right after the hero", () => {
+    const empty: StandardSubKpis = { rows: [], promptsWithoutBrand: null, measuredPrompts: null };
+    const html = render(fav({ subKpis: empty, heroDegraded: true }));
+    expect(count(html, heroCaption)).toBe(1);
+    // the line sits between the hero box and the first section below it (the distribution card)
+    expect(html.indexOf(heroCaption)).toBeGreaterThan(html.indexOf('data-tone="negative"'));
+    expect(html.indexOf(heroCaption)).toBeLessThan(html.indexOf('data-type-sentiment-track="all"'));
+    // values are untouched when the flag is on with real values
+    expect(render(fav({ heroDegraded: true }))).toContain("55.2%");
+  });
+
+  it("first rank: the line under the hero, before the Δ basis caption; once only when the whole source failed", () => {
+    const html = render(<FirstRankKpiTab firstPosition={FP} heroDegraded />);
+    expect(count(html, heroCaption)).toBe(1);
+    expect(html.indexOf(heroCaption)).toBeLessThan(html.indexOf(ko.answerAnalysis.mentions.kpi.firstRank.deltaBasis));
+    expect(html.replace(heroCaption, "")).toBe(render(<FirstRankKpiTab firstPosition={FP} />));
+    // fp null: the chart slot already says degraded; the hero line is not repeated
+    expect(render(<FirstRankKpiTab firstPosition={null} heroDegraded />)).toBe(render(<FirstRankKpiTab firstPosition={null} />));
+  });
+});

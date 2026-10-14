@@ -164,6 +164,8 @@ export type GateResult = { ok: true } | { ok: false; status: 403 | 404 };
  * project admin-only, then the project itself: HGH_SOURCE_SESSION=api -> GET /v1/projects/{id}
  * (admin or active member, everyone else 404), legacy -> `legacyAllowed` (the leaf page gate:
  * project exists and admin or active member). Errors other than 404 are thrown (HghApiError).
+ * The api read is the light one (?view=gate: same decision and 404s, no detail summary): the route
+ * handler runs it alone and reads nothing else of the detail.
  */
 export async function projectRouteGate(
   user: GateUser,
@@ -173,7 +175,8 @@ export async function projectRouteGate(
   if (!canAccessRoute(user.role, INTENT_ROUTE_PATHS.project, user.menuGroups ?? null)) return { ok: false, status: 403 };
   if (!isUuid(projectId)) return { ok: false, status: 404 };
   if (isDemoProject(projectId) && user.role !== "admin") return { ok: false, status: 404 };
-  const allowed = hghSource("SESSION") === "api" ? (await fetchProjectGate(projectId)) !== null : await legacyAllowed();
+  const allowed =
+    hghSource("SESSION") === "api" ? (await fetchProjectGate(projectId, { light: true })) !== null : await legacyAllowed();
   return allowed ? { ok: true } : { ok: false, status: 404 };
 }
 

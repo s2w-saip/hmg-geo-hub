@@ -157,6 +157,12 @@ type TabProps = {
   periodCompare?: readonly CompareResult[] | null;
   /** 선택된 구간의 길이(일) — 억제 캡션 입력. */
   periodDays?: number;
+  /**
+   * 히어로 값(평균 순위·Δ)을 받치는 집계 일부가 **일시 실패**했는가(= 측정 없음이 아니라 지연,
+   * mention-kpi-tab 과 같은 짝). 판정은 서버의 요청 스코프 표식이라 페이지가 같은 집계 뒤에 이어
+   * 붙여 넘긴다. 참이면 히어로 아래에 기존 degraded 문구 한 줄. 미전달이면 종전 그대로다.
+   */
+  heroDegraded?: Awaitable<boolean>;
 };
 
 export function FirstRankKpiTab({
@@ -167,6 +173,7 @@ export function FirstRankKpiTab({
   initialCompetitors,
   periodCompare,
   periodDays,
+  heroDegraded,
 }: TabProps) {
   return (
     <TooltipProvider delayDuration={200}>
@@ -177,6 +184,7 @@ export function FirstRankKpiTab({
             competitorValues={competitorValues}
             periodCompare={periodCompare}
             periodDays={periodDays}
+            heroDegraded={heroDegraded}
           />
         </Suspense>
         <Suspense fallback={<KpiSectionSkeleton />}>
@@ -250,10 +258,13 @@ function RankHero({
   competitorValues,
   periodCompare,
   periodDays,
-}: Pick<TabProps, "firstPosition" | "competitorValues" | "periodCompare" | "periodDays">) {
+  heroDegraded,
+}: Pick<TabProps, "firstPosition" | "competitorValues" | "periodCompare" | "periodDays" | "heroDegraded">) {
   const t = useTranslations("answerAnalysis.mentions.kpi");
   const tUnit = useTranslations("metricUnit");
   const fp = useFirstPosition(firstPosition, competitorValues);
+  // `undefined` 면 `use()` 를 부르지 않는다(mention-kpi-tab 의 heroDegraded 와 같은 이유).
+  const degraded = useAwaited(heroDegraded ?? false);
   // 같은 프라미스라 `use()` 는 useFirstPosition 안의 것과 같은 값을 돌려준다(재요청 없음).
   const values = useAwaited(competitorValues ?? null);
   const hero = useMemo(() => firstRankHero(fp), [fp]);
@@ -315,6 +326,10 @@ function RankHero({
           </Suspense>
         )}
       </div>
+      {/* 히어로 집계 일부가 일시 실패했으면 "측정 없음"·빈 Δ 로 읽히지 않게 기존 degraded 문구를 히어로
+          아래 캡션 자리에 한 줄 둔다(mention-kpi-tab 과 같은 마크업). 원천 전체가 실패(fp null)면
+          차트 자리가 이미 같은 문구를 내므로 한 번만. 정상 경로에서는 아무것도 없다. */}
+      {degraded && fp != null ? <p className="-mt-4 text-[11px] text-muted-foreground">{t("degraded")}</p> : null}
       <p className="-mt-4 text-[11px] text-muted-foreground">
         {t("firstRank.deltaBasis")}
       </p>

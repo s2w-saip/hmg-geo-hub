@@ -8,13 +8,14 @@ const actions = vi.hoisted(() => ({
   addCandidate: vi.fn(),
   addCandidates: vi.fn(),
   addTrackedKeyword: vi.fn(),
+  addTrackedKeywords: vi.fn(),
   removeTrackedKeyword: vi.fn(),
   removeTrackedKeywords: vi.fn(),
 }));
 vi.mock("../_actions", () => actions);
 
 const { GoogleKeywordView, addSerpRowsAsCandidates, rollbackOnThrow } = await import("./google-keyword-view");
-const { withBusy } = await import("./keyword-search-start");
+const { saveTrackedTerms, withBusy } = await import("./keyword-search-start");
 
 function render(ui: React.ReactNode) {
   return renderToStaticMarkup(
@@ -95,6 +96,41 @@ describe("keyword writes recover their state when the server action throws", () 
     tabs = ["a"];
     await expect(rollbackOnThrow(async () => ({ ok: false, error: "x" }), restore)).resolves.toEqual({ ok: false, error: "x" });
     expect(tabs).toEqual(["a"]); // ok:false keeps the caller's own rollback path
+  });
+});
+
+describe("several keywords to tabs (관련 검색어 선택 추가 · 검색 결과 저장, B065)", () => {
+  it("ONE action for all terms (not one per keyword); saved rows become tabs in order, each refused row reports its own text", async () => {
+    actions.addTrackedKeyword.mockClear();
+    actions.addTrackedKeywords.mockResolvedValue([
+      { ok: true, value: { id: "k1" } },
+      { ok: false, error: "이미 추가된 키워드입니다" },
+      { ok: true, value: { id: "k3" } },
+      { ok: false, error: "잠시 후 다시 시도해주세요" },
+    ]);
+    const errors: string[] = [];
+    await expect(saveTrackedTerms("p1", ["suv", "ev3", "캐스퍼", "ioniq"], "KR", (e) => errors.push(e))).resolves.toEqual([
+      { id: "k1", label: "suv" },
+      { id: "k3", label: "캐스퍼" },
+    ]);
+    expect(actions.addTrackedKeywords).toHaveBeenCalledTimes(1);
+    expect(actions.addTrackedKeywords).toHaveBeenCalledWith("p1", [
+      { term: "suv", country: "KR" },
+      { term: "ev3", country: "KR" },
+      { term: "캐스퍼", country: "KR" },
+      { term: "ioniq", country: "KR" },
+    ]);
+    expect(actions.addTrackedKeyword).not.toHaveBeenCalled();
+    expect(errors).toEqual(["이미 추가된 키워드입니다", "잠시 후 다시 시도해주세요"]);
+  });
+
+  it("a throw of the action (operator authority) propagates as before, so withBusy still clears the flag", async () => {
+    class UnauthorizedError extends Error {}
+    const thrown = new UnauthorizedError("intent collection requires operator authority");
+    actions.addTrackedKeywords.mockRejectedValue(thrown);
+    const flags: boolean[] = [];
+    await expect(withBusy((b) => flags.push(b), () => saveTrackedTerms("p1", ["suv"], "KR", () => undefined))).rejects.toBe(thrown);
+    expect(flags).toEqual([true, false]);
   });
 });
 

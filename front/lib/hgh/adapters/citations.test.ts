@@ -847,6 +847,21 @@ describe("sub pages (cursor, D5)", () => {
     expect(r.counts).toEqual({ positive: 4, negative: 1 });
     expect(paths()).not.toContain("/v1/citations/sources");
   });
+
+  it("tone B045: withCounts=false skips the counts (null = reuse the shown ones), the page is the same; a 503 keeps the degrade counts", async () => {
+    const req = { tone: "positive" as const, byDomain: false, q: "ev", page: 2, cursor: "c1" };
+    const counted = await C.loadToneUrlPage({}, G, req);
+    const skipped = await C.loadToneUrlPage({}, G, { ...req, withCounts: false });
+    expect(calls("/v1/citations/sources/tone").map((q) => [q.get("cursor"), q.get("q"), q.get("with_counts")])).toEqual([
+      ["c1", "ev", "true"],
+      ["c1", "ev", null],
+    ]);
+    expect(skipped.page).toEqual(counted.page);
+    expect(skipped.counts).toBeNull();
+    expect(counted.counts).toEqual({ positive: 4, negative: 1 });
+    handler = () => fail(503, "upstream");
+    expect(await C.loadToneUrlPage({}, G, { ...req, withCounts: false })).toEqual({ page: null, counts: { positive: null, negative: null } });
+  });
 });
 
 describe("route gate (both sources, before any read)", () => {
@@ -875,6 +890,8 @@ describe("route gate (both sources, before any read)", () => {
     handler = () => fail(404, "not_found");
     expect(await C.citationRouteGate(user({ role: "vendor" }), "project", PROJECT, repo)).toEqual({ ok: false, status: 404 });
     expect(paths()).toEqual([`/v1/projects/${PROJECT}`]);
+    // the light gate (view=gate: same decision and errors, no detail summary statements)
+    expect(log[0].url.searchParams.getAll("view")).toEqual(["gate"]);
     // a 403 of the project gate is not a place-gate 403: hidden as 404 (project_forbidden) or kept (menu)
     handler = () => fail(403, "not_member");
     expect(await C.citationRouteGate(user({ role: "vendor" }), "project", PROJECT, repo)).toEqual({ ok: false, status: 404 });

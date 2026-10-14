@@ -329,8 +329,8 @@ describe("Sub KPI (B-3)", () => {
   });
 });
 
-describe("B036 website brand rows without the multi extras", () => {
-  it("the website table values (multi toggle off) are the same without include=multi", () => {
+describe("B036 website / project brand rows without the multi extras", () => {
+  it("the website and project table values (multi toggle off) are the same without include=multi", () => {
     for (const row of BRANDS.brands) {
       const withMulti = M.toMentionsBrandLive(row);
       const without = M.toMentionsBrandLive({ ...row, multi: undefined });
@@ -415,22 +415,49 @@ describe("loaders: queries, filter consistency, D6 order", () => {
     ]);
   });
 
-  it("B036: the website B1 drops include=multi (no multi toggle there); global and project keep it", async () => {
+  it("B036: the website and project B1 drop include=multi (MentionsView: no multi toggle); global keeps it", async () => {
     await M.fetchMentionBrands({}, { surface: "website", scope: null });
     await M.fetchMentionBrands({}, { surface: "project", projectId: PROJECT, scope: null });
-    const [web, proj] = log.map((u) => u.searchParams);
-    expect([web.get("full"), web.get("split_own"), web.get("sort"), web.get("top_n"), web.getAll("include")]).toEqual([
-      "true",
-      "true",
-      "mentions",
-      "100",
-      ["prompts", "types"],
-    ]);
-    expect(proj.getAll("include")).toEqual(["multi", "prompts", "types"]);
+    await M.fetchMentionBrands({}, { surface: "global", scope: null });
+    const [web, proj, glob] = log.map((u) => u.searchParams);
+    for (const q of [web, proj]) {
+      expect([q.get("full"), q.get("split_own"), q.get("sort"), q.get("top_n"), q.getAll("include")]).toEqual([
+        "true",
+        "true",
+        "mentions",
+        "100",
+        ["prompts", "types"],
+      ]);
+    }
+    expect(glob.getAll("include")).toEqual(["multi", "prompts", "types"]);
+    expect(M.brandsTableOf({ surface: "project" })).toBe(M.brandsTableOf({ surface: "website" }));
     // engine_only is sent with group_by only
     log.length = 0;
     await M.fetchMentionBrands({}, { surface: "global", scope: null }, { ...M.BRANDS_TABLE, engine_only: true });
     expect(log[0].searchParams.has("engine_only")).toBe(false);
+  });
+
+  it("P13 project body: read without include=multi it equals the body read with it, except the never-shown multi extras", async () => {
+    const ctx = { surface: "project" as const, projectId: PROJECT, scope: null };
+    // The backend adds `multi` to the rows only when include=multi is asked (mentions/brands service).
+    const noMulti = { ...BRANDS, brands: BRANDS.brands.map(({ multi: _m, ...b }) => b) };
+    const backend = (honourInclude: boolean) => (u: URL) =>
+      u.pathname === "/v1/mentions/brands"
+        ? { body: { data: !honourInclude || u.searchParams.getAll("include").includes("multi") ? BRANDS : noMulti, meta: meta() } }
+        : defaultHandler(u);
+    stubFetch(backend(false), log); // before: the rows came with multi (include=multi was sent)
+    const before = await withRequestScope(() => M.loadMentionsLive({}, ctx));
+    log.length = 0;
+    stubFetch(backend(true), log); // now
+    const after = await withRequestScope(() => M.loadMentionsLive({}, ctx));
+    expect(log.filter((u) => u.pathname === "/v1/mentions/brands").map((u) => u.searchParams.getAll("include"))).toEqual([["prompts", "types"]]);
+    expect(before!.brands.some((b) => b.multi)).toBe(true);
+    expect(after!.brands.every((b) => b.multi === undefined)).toBe(true);
+    const withoutMulti = <T extends { brands: { multi?: unknown }[] }>(d: T) => ({ ...d, brands: d.brands.map((b) => ({ ...b, multi: undefined })) });
+    expect(withoutMulti(after!)).toEqual(withoutMulti(before!));
+    // The table cells and its Excel export (brandRowValues, multi toggle off) are the same values.
+    const opts = { multi: false, multiTotalMentions: 0, totalAnswers: after!.summary.totalAnswers ?? null };
+    after!.brands.forEach((b, i) => expect(brandRowValues(b, opts)).toEqual(brandRowValues(before!.brands[i], opts)));
   });
 
   it("B036/B037/B4: website screen calls — engines part=exposure, types without stance, summary parts=measured, chart-only brand trend", async () => {

@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { PageHeader } from "@/components/page-header";
 import { fetchStandardCitationToneSummary, fetchStandardCitationToneUrls } from "@/lib/scope/server";
@@ -16,6 +17,11 @@ export const maxDuration = 120;
 // with with_counts: rows and both tab counts in one answer, BG-27; keyset cursor in the URL: D5,
 // U7-N7); legacy (default) -> the readers below, unchanged. DC-10: the tone lists and counts apply
 // the source category filter.
+//
+// B045: 탭 카운트는 검색어·커서·탭·도메인 보기와 무관하다(같은 필터면 같은 값, BG-27). 화면 안의
+// 커서·검색 이동(클라이언트 전이)은 카운트를 다시 세지 않고(with_counts 생략 → counts null) 화면이
+// 이미 받은 카운트를 다시 쓴다(CitationToneUrlsPage). 문서 요청(새로고침·직접 연 URL)은 화면에
+// 받아 둔 값이 없을 수 있으므로 종전대로 함께 센다. URL 계약은 그대로다.
 export default async function CitationToneUrlsRoute({
   params,
   searchParams,
@@ -38,12 +44,15 @@ export default async function CitationToneUrlsRoute({
   const byDomain = one(sp.by) === "domain";
 
   if (isCitationsApi("global")) {
+    const cursor = readCursorParam(sp.cursor);
+    // B045: 커서·검색 이동이 화면 안의 전이일 때만 카운트를 생략한다(화면이 받은 값을 다시 쓴다).
+    const reuseCounts = Boolean(cursor || q.trim()) && (await isClientNavigation());
     let res: Awaited<ReturnType<typeof loadToneUrlPage>>;
     try {
       res = await loadToneUrlPage(
         filters,
         { surface: "global", scope: session?.user.scope ?? null },
-        { tone, byDomain, q, page, cursor: readCursorParam(sp.cursor) },
+        { tone, byDomain, q, page, cursor, withCounts: !reuseCounts },
       );
     } catch (e) {
       throwForPage(e, locale);
@@ -71,4 +80,12 @@ export default async function CitationToneUrlsRoute({
       />
     </div>
   );
+}
+
+/**
+ * 이 렌더가 화면 안의 클라이언트 전이(라우터의 fetch: Sec-Fetch-Dest "empty")인가. 문서 요청
+ * (navigate·document)이거나 헤더가 없으면(구형 브라우저 등) false — 그때는 종전대로 카운트를 센다.
+ */
+async function isClientNavigation(): Promise<boolean> {
+  return (await headers()).get("sec-fetch-dest") === "empty";
 }

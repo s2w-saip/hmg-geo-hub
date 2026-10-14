@@ -1230,7 +1230,7 @@ describe("intent actions", () => {
 
   it("tracked keywords, several at once: one api request answers what the legacy single adds answered (same resulting tabs)", async () => {
     const inputs = [{ term: "  아이오닉 5 " }, { term: "   " }, { term: "EV9", country: "KR" }, { term: "캐스퍼" }];
-    await parity(async (s) => {
+    const { legacy } = await parity(async (s) => {
       asSource(s, "owner");
       const results = [];
       if (s === "legacy") {
@@ -1240,6 +1240,19 @@ describe("intent actions", () => {
       }
       return { results: results.map((r) => (r.ok ? "ok" : r.error)), tabs: await tabsNow() };
     });
+    expect(model.calls.filter((c) => c === "POST /v1/intent/keywords")).toHaveLength(1);
+
+    // B065: the screens' one action (addTrackedKeywords) answers the same on both sources, and the
+    // same as the single adds above (row results and resulting tabs); api = one request.
+    await seedLegacy();
+    model = new BackendModel();
+    const viaAction = await parity(async (s) => {
+      asSource(s, "owner");
+      const results = await actions.addTrackedKeywords(PID, inputs);
+      return { results: results.map((r) => (r.ok ? "ok" : r.error)), tabs: await tabsNow() };
+    });
+    expect(viaAction.legacy).toEqual(legacy);
+    expect(legacy.results).toEqual(["ok", "키워드를 입력해주세요", "ok", "ok"]);
     expect(model.calls.filter((c) => c === "POST /v1/intent/keywords")).toHaveLength(1);
   });
 
@@ -1275,6 +1288,7 @@ describe("intent actions", () => {
       const out: string[] = [];
       const writes = [
         () => actions.addTrackedKeyword(PID, { term: "x" }),
+        () => actions.addTrackedKeywords(PID, [{ term: "x" }, { term: "y" }]),
         () => actions.removeTrackedKeywords(PID, [TRACKED[0].id]),
         () => actions.addCandidate(PID, "google_keyword", "x", null),
         () => actions.addCandidates(PID, "social_scraping", [{ text: "x" }]),

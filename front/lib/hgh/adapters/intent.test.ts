@@ -904,6 +904,9 @@ describe("place gates (U10-N12)", () => {
     expect(await I.projectRouteGate(user("hq"), PID, legacyYes)).toEqual({ ok: false, status: 404 });
     expect(await I.projectRouteGate(user("hq"), PID, legacyNo)).toEqual({ ok: true });
     expect(legacyNo).toHaveBeenCalledTimes(1);
+    // The route handler reads the light gate (view=gate: same decision and 404, no detail summary).
+    const gateCalls = calls.filter((c) => c.path === `/v1/projects/${PID}`);
+    expect(gateCalls.map((c) => c.query)).toEqual([{ view: ["gate"] }, { view: ["gate"] }]);
   });
 
   it("flag: HGH_SOURCE_G6 decides, default legacy", () => {

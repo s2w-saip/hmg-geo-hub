@@ -50,7 +50,7 @@ import {
   removeTrackedKeyword,
   removeTrackedKeywords,
 } from "../_actions";
-import { KeywordSearchStart, withBusy } from "./keyword-search-start";
+import { KeywordSearchStart, saveTrackedTerms, withBusy } from "./keyword-search-start";
 import { nextActiveAfterRemoval, restoreHidden } from "./keyword-selection";
 
 // Google Keyword 분기 — wired to live data (2026-06):
@@ -445,15 +445,9 @@ export function GoogleKeywordView({
   async function addSelectedRelated() {
     const terms = [...checkedRelated].filter((term) => !existingLabels.has(term));
     if (terms.length === 0) return;
-    const created = await withBusy(setSavingKeyword, async () => {
-      const out: Tab[] = [];
-      for (const term of terms) {
-        const res = await addTrackedKeyword(projectId, { term, country });
-        if (res.ok) out.push({ id: res.value.id, label: term });
-        else toast.error(res.error);
-      }
-      return out;
-    });
+    const created: Tab[] = await withBusy(setSavingKeyword, () =>
+      saveTrackedTerms(projectId, terms, country, (e) => toast.error(e)),
+    );
     if (created.length === 0) return;
     setTabs((prev) => [...prev, ...created]);
     setActive(created[created.length - 1].id);

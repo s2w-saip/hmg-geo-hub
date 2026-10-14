@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { type SearchIntent } from "../_data/sample";
-import { addTrackedKeyword } from "../_actions";
+import { addTrackedKeywords } from "../_actions";
 
 const INTENT_TONE: Record<SearchIntent, string> = {
   transactional: "bg-emerald-50 text-emerald-700",
@@ -40,6 +40,27 @@ export async function withBusy<T>(setBusy: (busy: boolean) => void, write: () =>
   } finally {
     setBusy(false);
   }
+}
+
+/**
+ * Saves several keywords as tabs in ONE server action (B065; the API source sends one request per
+ * 100 rows) instead of one action per keyword. Each row is handled as before: a saved row becomes a
+ * tab (input order), a refused row reports its own error text (same messages, same order). A throw
+ * (401 / 403 / 404 -> UnauthorizedError) propagates as before.
+ */
+export async function saveTrackedTerms(
+  projectId: string,
+  terms: readonly string[],
+  country: string,
+  onRowError: (message: string) => void,
+): Promise<{ id: string; label: string }[]> {
+  const results = await addTrackedKeywords(projectId, terms.map((term) => ({ term, country })));
+  const out: { id: string; label: string }[] = [];
+  results.forEach((res, i) => {
+    if (res.ok) out.push({ id: res.value.id, label: terms[i] });
+    else onRowError(res.error);
+  });
+  return out;
 }
 
 // Empty-state Google Keyword search — shown instead of the full trend/SERP
@@ -100,15 +121,7 @@ export function KeywordSearchStart({
   async function onSaveSelected() {
     const terms = [...checked];
     if (terms.length === 0) return;
-    const created = await withBusy(setSaving, async () => {
-      const out: { id: string; label: string }[] = [];
-      for (const term of terms) {
-        const res = await addTrackedKeyword(projectId, { term, country });
-        if (res.ok) out.push({ id: res.value.id, label: term });
-        else toast.error(res.error);
-      }
-      return out;
-    });
+    const created = await withBusy(setSaving, () => saveTrackedTerms(projectId, terms, country, (e) => toast.error(e)));
     if (created.length > 0) {
       toast.success(t("keywordAdded"));
       onSaved(created);

@@ -16,8 +16,9 @@ import "server-only";
 //
 // Calls (one set per screen; identical queries are shared in the request by the client dedupe):
 //   B1 GET /v1/mentions/brands  full=true, sort=mentions, split_own=true (D13),
-//                               include=multi,prompts,types (BG-12, BG-13, BG-14); the website
-//                               screen sends include=prompts,types (its table has no multi toggle, B036)
+//                               include=multi,prompts,types (BG-12, BG-13, BG-14); the website and
+//                               project screens send include=prompts,types (their table has no multi
+//                               toggle, B036)
 //   B2 GET /v1/mentions/types   (typeTotals; merged perspective = legacy tracked rollup),
 //                               include_stance=false unless the stance card reads it (B036)
 //   B3 GET /v1/trend            bucket=cycle, dimension=brand, metrics=visibility,share_of_voice,
@@ -134,15 +135,16 @@ export const BRANDS_TABLE = {
 } as const;
 
 /**
- * B1 of the website screen (B036): its brand table has no multi-mention toggle (BrandRankTable
- * multiToggle off, the multi values are never shown), so the multi extras are not requested.
- * Every other option and so every shown value is the same as BRANDS_TABLE.
+ * B1 of the website and project screens (B036; project since P13): both draw MentionsView, whose
+ * brand table has no multi-mention toggle (BrandRankTable multiToggle off, the multi values are
+ * never shown or exported; the Sub KPI multi card reads B5), so the multi extras are not
+ * requested. Every other option and so every shown value is the same as BRANDS_TABLE.
  */
-export const WEBSITE_BRANDS_TABLE = { ...BRANDS_TABLE, include: ["prompts", "types"] } as const;
+export const VIEW_BRANDS_TABLE = { ...BRANDS_TABLE, include: ["prompts", "types"] } as const;
 
 /** The B1 options of a screen (every B1 call of one screen must use the same set). */
 export function brandsTableOf(ctx: Pick<MentionsContext, "surface">): BrandsRequest {
-  return ctx.surface === "website" ? WEBSITE_BRANDS_TABLE : BRANDS_TABLE;
+  return ctx.surface === "website" || ctx.surface === "project" ? VIEW_BRANDS_TABLE : BRANDS_TABLE;
 }
 
 export interface BrandsRequest {

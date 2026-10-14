@@ -2,8 +2,15 @@
 
 // 하위 페이지 — 긍정/부정 답변에 인용된 URL(디자인 585:1820). 탭(`tone`)·검색(`q`)·
 // 도메인별 보기(`by=domain`)·페이지(`page`)는 URL 이 소유한다.
+//
+// B045: 탭 카운트는 탭·검색·페이지·커서·도메인 보기와 무관하다(같은 필터면 같은 값, BG-27). 서버는
+// 화면 안의 커서·검색 이동에는 카운트를 다시 세지 않고 `counts` 를 null 로 넘긴다 → 이 화면이 같은
+// 필터로 받은 마지막 카운트를 그대로 그린다(마운트 동안은 ref, 뒤로·앞으로 가기로 다시 마운트되면
+// 탭 단위 sessionStorage). 기억이 없으면 종전 degrade 표기("—")다. URL 계약은 그대로다.
 
 import Link from "next/link";
+import { useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import {
@@ -18,13 +25,74 @@ import { pageWindow } from "../_data/citation-view";
 import { categoryColor } from "./citations-view";
 import { Pager, SubpageSearchBox, TabLink, useCursorPaging, useSubpageNav, type CursorAware } from "./citation-prompts-page";
 
+/** 두 톤 탭의 카운트. 값 null = 일시 실패("—"). */
+export type ToneCounts = { positive: number | null; negative: number | null };
+
 type ToneUrlsProps = {
   tone: CitationTone;
   page: CursorAware<CitationToneUrlPage> | null;
   q: string;
   byDomain: boolean;
-  counts: { positive: number | null; negative: number | null };
+  /** null = 서버가 세지 않았다(B045): 같은 필터로 이미 받은 카운트를 다시 쓴다. */
+  counts: ToneCounts | null;
 };
+
+const NO_COUNTS: ToneCounts = { positive: null, negative: null };
+const COUNTS_STORE_PREFIX = "hgh.toneUrlCounts:";
+
+/** 카운트를 정하는 URL 부분(필터). 탭·검색·페이지·커서·도메인 보기는 빼고 정렬한다. */
+export function toneCountsKey(search: string): string {
+  const p = new URLSearchParams(search);
+  for (const k of ["tone", "q", "page", "by", "cursor"]) p.delete(k);
+  p.sort();
+  return p.toString();
+}
+
+function countsStore(): Storage | null {
+  if (typeof window === "undefined") return null; // 서버 렌더에서는 기억을 읽지도 쓰지도 않는다
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
+/** 받은 카운트를 탭 단위로 기억한다(둘 다 숫자일 때만 — degrade 값으로 좋은 기억을 덮지 않는다). */
+export function rememberToneCounts(key: string, counts: ToneCounts): void {
+  if (typeof counts.positive !== "number" || typeof counts.negative !== "number") return;
+  try {
+    countsStore()?.setItem(COUNTS_STORE_PREFIX + key, JSON.stringify(counts));
+  } catch {
+    // 저장 불가(차단·용량): 마운트 동안의 ref 기억만 남는다.
+  }
+}
+
+export function recallToneCounts(key: string): ToneCounts | null {
+  try {
+    const raw = countsStore()?.getItem(COUNTS_STORE_PREFIX + key);
+    if (!raw) return null;
+    const v = JSON.parse(raw) as Partial<Record<keyof ToneCounts, unknown>>;
+    return typeof v.positive === "number" && typeof v.negative === "number" ? { positive: v.positive, negative: v.negative } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 그릴 카운트: 서버 값, 없으면(null) 같은 필터로 받은 마지막 값, 그것도 없으면 "—". */
+function useShownToneCounts(served: ToneCounts | null): ToneCounts {
+  const sp = useSearchParams();
+  const key = toneCountsKey(sp.toString());
+  const last = useRef<{ key: string; counts: ToneCounts } | null>(null);
+  if (served && typeof served.positive === "number" && typeof served.negative === "number") {
+    last.current = { key, counts: served };
+  }
+  useEffect(() => {
+    if (served) rememberToneCounts(key, served);
+  }, [key, served]);
+  if (served) return served;
+  if (last.current?.key === key) return last.current.counts;
+  return recallToneCounts(key) ?? NO_COUNTS;
+}
 
 export function CitationToneUrlsPage(props: ToneUrlsProps) {
   // 검색·탭·도메인 스위치·페이저가 **한 transition** 을 공유한다 → 왕복 동안 목록이
@@ -36,7 +104,8 @@ export function CitationToneUrlsPage(props: ToneUrlsProps) {
   );
 }
 
-function ToneUrlsView({ tone, page, q, byDomain, counts }: ToneUrlsProps) {
+function ToneUrlsView({ tone, page, q, byDomain, counts: served }: ToneUrlsProps) {
+  const counts = useShownToneCounts(served);
   const t = useTranslations("answerAnalysis.citations.v2.toneUrlsPage");
   const tKpi = useTranslations("answerAnalysis.mentions.kpi");
   const tCat = useTranslations("citationCategories");
