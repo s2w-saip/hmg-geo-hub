@@ -1,0 +1,5140 @@
+{
+ "declared": [
+  {
+   "id": "DC-01",
+   "title": "엔진 미선택 시 기본 엔진만 집계",
+   "theme": "엔진 범위",
+   "legacy": "대시보드 카드 경로(집계층: ①~⑤ 카드·GEO·엔진 배지·경쟁사 행·도메인·추이·기간 비교)는 엔진을 고르지 않으면 전 엔진(옵트인 엔진 포함)을 합산. 답변분석 화면(미러 앵커 경로)은 앵커 축 on 이면 기본 엔진만(anchorDefaultEngineScope).",
+   "api": "엔진 미선택 = 기본 엔진만(core.measure.scope_where a.dflt). 현행 프로필 summary_all_engines 를 켜면 card=true 호출만 전 엔진. 프로필 기본값 off.",
+   "effect": "엔진 필터를 안 건 기본 화면에서 비기본(옵트인) 엔진 답변이 빠져 노출률·점유율·우호도·평균 순위·인용 점유율·경쟁사 행·GEO·기간 비교 값이 달라짐(옵트인 엔진 답변이 있는 표면·프로젝트일수록 큼). /website/prompts 의 답변 수·엔진·최근 측정도 기본 엔진만 셈.",
+   "routes": [
+    "/dashboard",
+    "/website",
+    "/projects/[id]",
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention",
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation",
+    "/standard/ai-funnel/acr",
+    "/website/ai-funnel/acr",
+    "/projects/[id]/ai-funnel/acr",
+    "/website/prompts"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/dashboard.ts:81-82",
+    "front/lib/hgh/adapters/summary.ts:31",
+    "front/lib/hgh/adapters/mentions.ts:52",
+    "front/lib/hgh/adapters/kpi-tab.ts:45",
+    "front/lib/hgh/adapters/compare.ts:37-44",
+    "front/lib/hgh/adapters/funnel.ts:22",
+    "front/lib/hgh/adapters/catalog.ts:29-30",
+    "back/app/core/measure.py:187-197",
+    "back/app/core/profile.py:77-83 (summary_all_engines)",
+    "back/app/core/profile.py:264-265 (DEFAULT_SPEC='off')",
+    "front/lib/period/anchor-axis.ts:130-145",
+    "survey after/existing3 GET /v1/kpi/summary card=true · website AWCOMMON"
+   ],
+   "product_decision": false,
+   "decision_ref": "차이 자체는 설계 DC 목록(front-adapter-plan 3.6(나))의 엔지니어링 선택. 이후 제품 결정 19·23~25(2026-10-01, back/app/core/profile.py:3 '같은 데이터·같은 회차에서 운영과 값이 완전히 같게, 예외 없음') 가 값 동일을 요구해 summary_all_engines(WU-3)를 구현.",
+   "effort": "S(카드 경로: HGH_LEGACY_PROFILE 에 summary_all_engines) / M(운영 앵커 축이 off 였다면 답변분석 경로도 전 엔진으로)",
+   "files": [
+    "배포 env HGH_LEGACY_PROFILE",
+    "back/app/core/measure.py scope_where(답변분석까지 맞출 때만)"
+   ],
+   "risk": "운영 read_screens(X.answerAnchor) 상태가 미확인이라 답변분석 화면의 legacy 엔진 범위가 확정되지 않음. 스위치를 켜면 카드와 답변분석의 엔진 범위가 legacy 처럼 다시 갈림(의도된 재현).",
+   "recommendation": "match legacy",
+   "reason": "제품 결정 19·23~25 와 서비스 보존 규칙이 값 동일을 요구하고, 카드 경로는 이미 구현된 env 스위치 하나로 맞춰진다.",
+   "impact": "high",
+   "product_decision_direction": "requires_match"
+  },
+  {
+   "id": "U4-N11",
+   "title": "프로젝트 엔진 옵션 = 창 안에서 측정된 엔진",
+   "theme": "엔진 범위",
+   "legacy": "엔진을 안 골랐으면 엔진 옵션도 기본 엔진만(anchorDefaultEngineScope, 앵커 축 on).",
+   "api": "옵션 창(스냅샷/기간)에서 측정된 엔진 전부.",
+   "effect": "프로젝트 필터 패널 엔진 목록에 비기본 엔진이 추가로 보임(DC-01 과 묶인 차이).",
+   "routes": [
+    "/projects/[id]",
+    "/projects/[id]/analysis/mention",
+    "/projects/[id]/analysis/citation",
+    "/projects/[id]/ai-funnel/conversion"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/filters.ts:57-58",
+    "survey after/project GET /v1/filters/options"
+   ],
+   "product_decision": false,
+   "decision_ref": "U4 번호(A4 고지 목록), 엔지니어링",
+   "effort": "S",
+   "files": [
+    "front/lib/hgh/adapters/filters.ts"
+   ],
+   "risk": "낮음",
+   "recommendation": "match legacy",
+   "reason": "옵션 목록 한 곳의 어댑터 필터로 맞출 수 있고 DC-01 처리 방향과 같이 가야 한다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "Q1",
+   "title": "기본 스냅샷 = 함대 최신 노출 회차 하루",
+   "theme": "기간·창·스냅샷·Δ",
+   "legacy": "기간 미지정 화면: 웹사이트 미러는 사이트(프로젝트)별 최신 답변 + 7일 floor, 프로젝트는 셀별 최신(perProjectLatestAnswerIds).",
+   "api": "허용 프로젝트들의 최신 노출 round_date 하나의 회차만(core.cycles.resolve_window). 그날 회차가 없는 사이트·프로젝트는 스냅샷에서 빠짐(로그만 남김). 카드 경로는 card_slot_rep 스위치로 현행 자리 대표 재현 가능.",
+   "effect": "웹사이트 답변분석·프로젝트 화면 기본값에서 최신 회차가 늦거나 빠진 사이트의 답변이 빠져 카드·언급·인용 값과 사이트 수가 달라짐. 프로젝트는 셀별 최신 대신 최신 회차 하나.",
+   "routes": [
+    "/website",
+    "/website/answer-analysis/mention",
+    "/website/answer-analysis/citation",
+    "/projects/[id]",
+    "/projects/[id]/analysis/mention",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "docs/design/api/DECISIONS-API.md:7 (Q1)",
+    "back/app/core/cycles.py:169-181",
+    "back/app/core/cycles.py:382-383",
+    "survey after/website AWCOMMON",
+    "survey after/project GET /v1/kpi/summary · GET /v1/mentions/brands"
+   ],
+   "product_decision": true,
+   "decision_ref": "DECISIONS-API Q1(2026-09-27~28, 제품 책임자: 함대 규칙 권장안 채택). 이후 제품 결정 19·23~25(2026-10-01, back/app/core/profile.py:3 '같은 데이터·같은 회차에서 운영과 값이 완전히 같게, 예외 없음') 와 충돌 — 카드 경로만 card_slot_rep 로 재현, 답변분석 미러 경로는 스위치 없음.",
+   "effort": "L",
+   "files": [
+    "back/app/core/cycles.py resolve_window(사이트·프로젝트별 최신 + 7일 floor 모드)",
+    "back/app/features/analytics/* 테스트",
+    "front 무변경"
+   ],
+   "risk": "높음: 웹사이트·프로젝트 전 기본 화면 값. 프로젝트별 최신은 DISTINCT ON 성능 비용.",
+   "recommendation": "match legacy",
+   "reason": "19·25 가 Q1 보다 나중의 '예외 없음' 결정이라 맞추는 쪽이 원칙이며, Q1 을 유지하려면 제품 책임자 재확인이 필요하다.",
+   "impact": "high",
+   "product_decision_direction": "conflict"
+  },
+  {
+   "id": "DC-05",
+   "title": "Δ(직전 대비) 기준 = 직전 회차",
+   "theme": "기간·창·스냅샷·Δ",
+   "legacy": "대시보드 카드 Δ = 최근 30일 day 롤업의 마지막 두 값(집계층을 읽으면 회차 축이라 사실상 직전 회차, 미러로 떨어지면 직전 측정일). 언급 화면 Sub KPI Δ = 직전 측정일. KPI 탭 기간 모드 prev = 첫 측정일까지 누적.",
+   "api": "모든 Δ = bucket=cycle 마지막 두 값(직전 회차). KPI 탭 기간 모드는 prev 없음(회차 Δ 로 대체).",
+   "effect": "언급 화면 Sub KPI·엔진 행 Δ 숫자가 달라짐(한 회차가 여러 날에 걸쳐 수집되면 legacy 는 같은 회차 안의 날짜끼리 비교). 대시보드 카드 Δ 는 legacy 가 집계층을 읽는 한 같음.",
+   "routes": [
+    "/dashboard",
+    "/website",
+    "/projects/[id]",
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/trend.ts:54-55",
+    "front/lib/hgh/adapters/mentions.ts:53",
+    "front/lib/hgh/adapters/kpi-tab.ts:46-47",
+    "front/lib/kpi/overview-card-values.ts:133-149",
+    "front/app/[locale]/(dash)/dashboard/page.tsx:387-389",
+    "survey after/existing3 GET /v1/kpi/engines · website GET /v1/kpi/engines"
+   ],
+   "product_decision": false,
+   "decision_ref": "설계 DC 목록(엔지니어링)",
+   "effort": "M",
+   "files": [
+    "back/app/features/analytics/kpi/engines (직전 측정일 비교)",
+    "back/app/features/analytics/kpi/summary",
+    "front/lib/hgh/adapters/mentions.ts",
+    "front/lib/hgh/adapters/kpi-tab.ts"
+   ],
+   "risk": "중간. legacy 직전 측정일 Δ 는 회차 내 다일 수집 탓에 노이즈가 큼(맞추면 그 노이즈도 재현).",
+   "recommendation": "match legacy",
+   "reason": "19·25 상 언급 화면 Δ 정의도 운영과 같아야 하고, 대시보드 카드는 이미 같아서 범위가 언급·KPI 탭으로 한정된다.",
+   "impact": "medium",
+   "product_decision_direction": null
+  },
+  {
+   "id": "DC-07",
+   "title": "수집 기간 시작일 = 함대 첫 측정 회차",
+   "theme": "기간·창·스냅샷·Δ",
+   "legacy": "계정 스코프로 좁힌 첫 완료 답변일.",
+   "api": "함대 전체 first_measured_date(스코프 무관).",
+   "effect": "브랜드·국가 스코프 계정에서 '수집 기간' 시작일·달력 하한이 더 이른 날로 보일 수 있음.",
+   "routes": [
+    "/standard/prompts",
+    "/website/prompts",
+    "/dashboard",
+    "/website",
+    "/projects/[id]"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/filters.ts:43-45",
+    "front/lib/hgh/adapters/catalog.ts:33-34",
+    "survey after/global GET /v1/filters/dates"
+   ],
+   "product_decision": false,
+   "decision_ref": "설계 DC 목록(엔지니어링)",
+   "effort": "M",
+   "files": [
+    "back/app/features/analytics/filters/dates (스코프 반영 first_measured_date)"
+   ],
+   "risk": "낮음",
+   "recommendation": "match legacy",
+   "reason": "표시값 차이이고 백엔드 한 곳에서 스코프를 반영하면 된다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "DC-09",
+   "title": "ACR 추이 = 게이트 통과 최근 12회차",
+   "theme": "기간·창·스냅샷·Δ",
+   "legacy": "측정일(day) 버킷, 전 이력. territory 행은 측정일 단위.",
+   "api": "round_date 버킷, 최근 12회차(trend_cycles 기본 12). territory 행은 ACR 셀 단위.",
+   "effect": "ACR 추이 차트 x축이 '일'에서 '회차'로, 길이가 전 이력에서 12회차로 바뀜. 같은 날 여러 회차·회차 내 다일 수집이면 점 값도 달라짐.",
+   "routes": [
+    "/standard/ai-funnel/acr",
+    "/website/ai-funnel/acr",
+    "/projects/[id]/ai-funnel/acr"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/funnel.ts:25-26",
+    "back/app/features/analytics/funnel/acr/schemas.py:4,15",
+    "back/app/features/analytics/funnel/acr/service.py:10",
+    "docs/design/api/DECISIONS-API.md:18 (Q12)",
+    "docs/design/api/모듈-AI-퍼널.md 9절 열린 질문 1"
+   ],
+   "product_decision": true,
+   "decision_ref": "DECISIONS-API Q12(제품 책임자: ACR 추이 기본 12회차, 권장안). 전 이력은 설계 문서상 10배 비용 위험.",
+   "effort": "L",
+   "files": [
+    "back/app/features/analytics/funnel/acr/service.py·queries.py(일 버킷·전 이력)",
+    "front/lib/hgh/adapters/funnel.ts"
+   ],
+   "risk": "전 이력 일 버킷은 성능 위험 10배(모듈-AI-퍼널 9절).",
+   "recommendation": "accept",
+   "reason": "제품 책임자 결정 Q12 이고, 수용하면 U8-N20 추이 안내 문구('일별'→'회차별') 교체가 필수다.",
+   "impact": "medium",
+   "product_decision_direction": "keeps_difference"
+  },
+  {
+   "id": "DC-16",
+   "title": "기간 비교 칩 항상 표시·최신 회차일 항상 제공",
+   "theme": "기간·창·스냅샷·Δ",
+   "legacy": "기간 비교(S1.periodCompare)가 꺼져 있거나 비교 창 끝 cur.hi < 2026-09-08 이면 비교 없음(null → 종전 Δ 유지). fetchLatestAnchorDay 는 스위치 off 면 null.",
+   "api": "프로필 off(기본)에서는 적용일 게이트 없이 기간 양 끝만 있으면 항상 비교 칩. latest_round_date 항상 설정.",
+   "effect": "기간을 지정하면 legacy 에서 안 보이던 기간 비교 칩(△/▽ pp)이 대시보드·웹사이트·언급·인용 화면에 나타남(2026-09-08 이전 기간 포함). 날짜 프리셋 끝점이 생김.",
+   "routes": [
+    "/dashboard",
+    "/website",
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/compare.ts:23-28",
+    "front/lib/hgh/adapters/filters.ts:41-42,49",
+    "back/app/core/profile.py:166-169 (compare_epoch_gate)",
+    "back/app/features/analytics/kpi/compare/README.md:28",
+    "survey after/existing3 GET /v1/kpi/compare · website GET /v1/kpi/compare"
+   ],
+   "product_decision": false,
+   "decision_ref": "차이는 엔지니어링(설계 DC 목록). 제품 결정 19·24·25 가 compare_epoch_gate(WU-9)로 재현을 결정.",
+   "effort": "S",
+   "files": [
+    "배포 env HGH_LEGACY_PROFILE(compare_epoch_gate·compare_suppress·compare_cycle_set)",
+    "front/lib/hgh/adapters/filters.ts(운영 S1.periodCompare 가 off 면 latest_round_date → null)"
+   ],
+   "risk": "운영 S1.periodCompare 상태가 문서마다 다름(백엔드 = 14키에 포함, Before 조사 = off).",
+   "recommendation": "match legacy",
+   "reason": "스위치가 이미 구현돼 있고 칩 출현은 사용자가 바로 알아챈다.",
+   "impact": "high",
+   "product_decision_direction": "requires_match"
+  },
+  {
+   "id": "U4-N1",
+   "title": "현행이 못 읽던 필터 조합의 기간 비교 Δ 억제 해제",
+   "theme": "기간·창·스냅샷·Δ",
+   "legacy": "depth2·3 택소노미, admin 다중(전체 아님) 자사 브랜드 조합은 모든 지표 Δ '―'.",
+   "api": "프로필 off 면 그 조합에도 Δ 값을 냄(compare_suppress 켜면 'unsupported' → '―').",
+   "effect": "해당 필터 조합에서 legacy '―' 자리에 Δ 숫자가 보임.",
+   "routes": [
+    "/dashboard",
+    "/website",
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/compare.ts:29-31",
+    "back/app/core/profile.py:170-173 (compare_suppress)"
+   ],
+   "product_decision": false,
+   "decision_ref": "엔지니어링. 제품 결정 19·23~25(2026-10-01, back/app/core/profile.py:3 '같은 데이터·같은 회차에서 운영과 값이 완전히 같게, 예외 없음') 로 compare_suppress 구현",
+   "effort": "S",
+   "files": [
+    "배포 env HGH_LEGACY_PROFILE"
+   ],
+   "risk": "낮음",
+   "recommendation": "match legacy",
+   "reason": "env 스위치 하나로 해결된다.",
+   "impact": "low",
+   "product_decision_direction": "requires_match"
+  },
+  {
+   "id": "DC-22",
+   "title": "웹사이트 달력이 브랜드·국가로 좁혀지지 않음",
+   "theme": "기간·창·스냅샷·Δ",
+   "legacy": "앵커 축 on 이면 선택 가능일을 선택 브랜드·국가 기준으로 좁힘(운영 축 off 였다면 달력 제한 자체가 없음).",
+   "api": "표면 전체의 게이트 회차 날짜(/v1/filters/dates 는 값 축을 받지 않음).",
+   "effect": "웹사이트에서 국가를 고르면 그 국가에 회차가 없는 날짜도 선택 가능 → 빈 결과. 운영이 축 off 였다면 반대로 API 가 달력을 회차 날짜로 제한.",
+   "routes": [
+    "/website",
+    "/website/answer-analysis/mention",
+    "/website/answer-analysis/citation"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/filters.ts:36-37,49",
+    "survey after/website GET /v1/filters/dates"
+   ],
+   "product_decision": false,
+   "decision_ref": "설계 DC 목록(엔지니어링)",
+   "effort": "M",
+   "files": [
+    "back/app/features/analytics/filters/dates(brand·country 축)",
+    "front/lib/hgh/adapters/filters.ts"
+   ],
+   "risk": "운영 X.answerAnchor 상태에 따라 맞출 방향이 달라짐.",
+   "recommendation": "match legacy",
+   "reason": "지금은 운영의 어느 상태(축 on·off)와도 다르므로 운영 값을 확인해 한쪽으로 맞춰야 한다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U4-N12",
+   "title": "날짜 프리셋 끝점 = 화면 카드 계열의 최신 회차일",
+   "theme": "기간·창·스냅샷·Δ",
+   "legacy": "기간 비교 창 끝 하나의 값(모든 계열 공통, 스위치 off 면 null).",
+   "api": "화면 계열(언급/인용)별 latest_round_date.",
+   "effect": "'최근 7·14·30일' 프리셋 끝 날짜가 인용 숨김 회차가 있을 때 인용 화면과 언급 화면에서 달라짐.",
+   "routes": [
+    "/dashboard",
+    "/website",
+    "/projects/[id]",
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention",
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/filters.ts:59-60",
+    "survey after/existing3 GET /v1/filters/dates family=mentions|citations"
+   ],
+   "product_decision": false,
+   "decision_ref": "U4 번호(엔지니어링)",
+   "effort": "S",
+   "files": [
+    "front/lib/hgh/adapters/filters.ts(family=all 사용)"
+   ],
+   "risk": "낮음",
+   "recommendation": "match legacy",
+   "reason": "어댑터 한 곳에서 계열 무관 값으로 바꾸면 된다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U8-N5",
+   "title": "GA4 7/28일 창 끝 = 최신 적재일",
+   "theme": "기간·창·스냅샷·Δ",
+   "legacy": "GA4 '{N}daysAgo'..'today' 실시간 조회(N+1 달력일, 오늘 부분일 포함).",
+   "api": "[최신 적재일-(N-1), 최신 적재일] N일(적재 원천 rd.ga4_row).",
+   "effect": "전환·방문 화면과 프로젝트 ⑦ 값이 적재 지연만큼 이전 기간 기준이고 하루 짧음.",
+   "routes": [
+    "/standard/ai-funnel/conversion",
+    "/website/ai-funnel/conversion",
+    "/projects/[id]/ai-funnel/conversion",
+    "/projects/[id]"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/funnel.ts:37",
+    "docs/design/api/모듈-AI-퍼널.md:235-237 (DC-5 설계 합의)",
+    "back/app/features/analytics/funnel/conversion/README.md:42"
+   ],
+   "product_decision": false,
+   "decision_ref": "모듈-AI-퍼널 8절 DC-5 '설계 합의'(엔지니어링)",
+   "effort": "L",
+   "files": [
+    "ingest(동료 소관) GA4 창 합계 적재",
+    "back/app/features/analytics/funnel/conversion"
+   ],
+   "risk": "ingest 는 범위 밖 블랙박스.",
+   "recommendation": "accept",
+   "reason": "적재 원천 구조상 오늘을 실시간으로 읽을 수 없어 맞추려면 ingest 변경이 필요하다; 화면에 기준일 표기를 권장.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U8-N10",
+   "title": "프롬프트 화면 수집 기간 = 게이트 회차 날짜",
+   "theme": "기간·창·스냅샷·Δ",
+   "legacy": "완료 답변 measured_at 최소·최대의 UTC 일.",
+   "api": "first_measured_date..latest_round_date(게이트 통과 회차).",
+   "effect": "/standard/prompts 의 수집 기간 표시가 하루 이상 달라질 수 있음(UTC/KST·미발행 회차).",
+   "routes": [
+    "/standard/prompts"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/catalog.ts:36-37",
+    "survey after/global GET /v1/filters/dates"
+   ],
+   "product_decision": false,
+   "decision_ref": "U8 번호, 설계 G20(엔지니어링)",
+   "effort": "M",
+   "files": [
+    "back/app/features/analytics/filters/dates 또는 catalog/prompts"
+   ],
+   "risk": "낮음",
+   "recommendation": "match legacy",
+   "reason": "화면에 그대로 찍히는 기간 값이라 보존 규칙 대상이다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U8-N11",
+   "title": "변경 이력 창 90일 = KST 달력일",
+   "theme": "기간·창·스냅샷·Δ",
+   "legacy": "now − 90×24h.",
+   "api": "KST 달력 90일.",
+   "effect": "이력 탭 경계 시각 근처 항목이 하나 더 보이거나 덜 보일 수 있음.",
+   "routes": [
+    "/standard/prompts"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/catalog.ts:38",
+    "survey after/global GET /v1/prompts/history"
+   ],
+   "product_decision": false,
+   "decision_ref": "U8 번호(엔지니어링)",
+   "effort": "S",
+   "files": [
+    "back/app/features/catalog/prompts/history DEFAULT_DAYS 계산"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "화면 문구가 '최근 90일'이라 KST 달력일이 오히려 맞고 차이는 경계 몇 시간이다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U8-N19",
+   "title": "/website/prompts 최근 측정 = 회차 날짜(시각 없음)",
+   "theme": "기간·창·스냅샷·Δ",
+   "legacy": "ISO 타임스탬프(max(COALESCE(cycle_anchor_at, measured_at))).",
+   "api": "YYYY-MM-DD round_date. 같은 날 행은 id 순.",
+   "effect": "최근 측정 열에서 시각이 사라지고 '최근 측정' 정렬 시 같은 날 행 순서가 바뀜.",
+   "routes": [
+    "/website/prompts"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/catalog.ts:50-54",
+    "survey after/website GET /v1/prompts"
+   ],
+   "product_decision": false,
+   "decision_ref": "U8 번호, 설계 G23(엔지니어링)",
+   "effort": "M",
+   "files": [
+    "back/app/features/catalog/prompts/catalog(렌즈 시각·정렬)"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "KST 날짜는 같고 앵커 축 on 경로는 이미 날짜 표기였다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U7-N1",
+   "title": "인용 화면 기준 시점 = 답변 집합의 회차일",
+   "theme": "기간·창·스냅샷·Δ",
+   "legacy": "최신 measured_at 시각.",
+   "api": "meta.as_of(회차 날짜).",
+   "effect": "인용 화면 기준 표기가 시각이 아닌 회차 날짜로 보임.",
+   "routes": [
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/citations.ts:77",
+    "survey after/existing3 GET /v1/citations/domains"
+   ],
+   "product_decision": false,
+   "decision_ref": "U7 번호(엔지니어링)",
+   "effort": "M",
+   "files": [
+    "back citations 응답에 최신 측정 시각 추가 + front citations.ts"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "API 에 시각 정보가 없고 회차 날짜가 다른 화면들과 같은 기준이다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U6-N4",
+   "title": "KPI 탭 latestMeasuredAt = 회차 날짜",
+   "theme": "기간·창·스냅샷·Δ",
+   "legacy": "마지막 측정 시각.",
+   "api": "meta.as_of 회차 날짜.",
+   "effect": "화면에 표시하지 않음(사용자 영향 없음).",
+   "routes": [
+    "/standard/answer-analysis/mention"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/kpi-tab.ts:56-57"
+   ],
+   "product_decision": false,
+   "decision_ref": "U6 번호(엔지니어링)",
+   "effort": "S",
+   "files": [
+    "front/lib/hgh/adapters/kpi-tab.ts"
+   ],
+   "risk": "없음",
+   "recommendation": "accept",
+   "reason": "표시되지 않는 필드다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U4-N3",
+   "title": "추이 버킷 firstAt/lastAt 없음·lastMeasuredAt = 회차일",
+   "theme": "기간·창·스냅샷·Δ",
+   "legacy": "버킷별 첫/마지막 측정 시각, lastMeasuredAt = 시각.",
+   "api": "firstAt/lastAt null, lastMeasuredAt = 값 있는 마지막 자리의 회차 날짜.",
+   "effect": "추이 툴팁·'최근 측정' 표기가 시각 대신 날짜로(표시되는 곳만).",
+   "routes": [
+    "/dashboard",
+    "/website",
+    "/projects/[id]",
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention",
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/trend.ts:63-64"
+   ],
+   "product_decision": false,
+   "decision_ref": "U4 번호(엔지니어링)",
+   "effort": "M",
+   "files": [
+    "back trend 응답에 시각 추가",
+    "front/lib/hgh/adapters/trend.ts"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "API 에 시각 원천이 없고 회차 날짜가 축 라벨과 같다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U6-N5",
+   "title": "KPI 탭 추이 firstAt/lastAt 없음",
+   "theme": "기간·창·스냅샷·Δ",
+   "legacy": "버킷 시각 있음.",
+   "api": "null; 커버리지 라벨은 측정 일수만 사용.",
+   "effect": "커버리지 라벨은 같음(사용자 영향 거의 없음).",
+   "routes": [
+    "/standard/answer-analysis/mention"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/kpi-tab.ts:58-59",
+    "survey after/existing3 GET /v1/trend dimension=none"
+   ],
+   "product_decision": false,
+   "decision_ref": "U6 번호(엔지니어링)",
+   "effort": "S",
+   "files": [
+    "front/lib/hgh/adapters/kpi-tab.ts"
+   ],
+   "risk": "없음",
+   "recommendation": "accept",
+   "reason": "라벨이 측정 일수만 쓰므로 보이는 차이가 없다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U4-N4",
+   "title": "갭 자리도 원장 회차 날짜 유지",
+   "theme": "기간·창·스냅샷·Δ",
+   "legacy": "빈 점은 bucketStart 만.",
+   "api": "갭 자리에 원장 round date.",
+   "effect": "x축 라벨은 같은 날짜(보이는 차이 없음).",
+   "routes": [
+    "/dashboard",
+    "/website",
+    "/projects/[id]",
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention",
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/trend.ts:65-66"
+   ],
+   "product_decision": false,
+   "decision_ref": "U4 번호(엔지니어링)",
+   "effort": "S",
+   "files": [
+    "front/lib/hgh/adapters/trend.ts"
+   ],
+   "risk": "없음",
+   "recommendation": "accept",
+   "reason": "라벨이 같아 사용자 영향이 없다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "S1-N2",
+   "title": "대시보드 카드 스파크라인 점 라벨 = 회차 날짜",
+   "theme": "기간·창·스냅샷·Δ",
+   "legacy": "버킷 앵커 시각의 KST 날짜로 라벨.",
+   "api": "버킷 키(회차 날짜)로 라벨.",
+   "effect": "회차가 앵커와 다른 날로 귀속된 경우에만 스파크라인 툴팁 날짜가 하루 달라짐.",
+   "routes": [
+    "/dashboard"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/trend.ts:72-79"
+   ],
+   "product_decision": false,
+   "decision_ref": "동기화 S1(엔지니어링)",
+   "effort": "S",
+   "files": [
+    "front/lib/hgh/adapters/trend.ts(toLiveTrend 에 cycleAnchorAt 복사)"
+   ],
+   "risk": "낮음",
+   "recommendation": "match legacy",
+   "reason": "어댑터에서 앵커 시각을 복사하면 되는 작은 작업이다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U8-N1",
+   "title": "ACR 추이 셀 없는 회차 제외",
+   "theme": "기간·창·스냅샷·Δ",
+   "legacy": "일 버킷은 데이터 있는 날만 존재.",
+   "api": "ACR 셀 없는 회차(den 0) 제외.",
+   "effect": "legacy 와 같은 성질(점 없는 자리 생략).",
+   "routes": [
+    "/standard/ai-funnel/acr",
+    "/website/ai-funnel/acr",
+    "/projects/[id]/ai-funnel/acr"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/funnel.ts:28-29"
+   ],
+   "product_decision": false,
+   "decision_ref": "U8 번호(엔지니어링)",
+   "effort": "S",
+   "files": [
+    "front/lib/hgh/adapters/funnel.ts"
+   ],
+   "risk": "없음",
+   "recommendation": "accept",
+   "reason": "보이는 결과가 legacy 와 같다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U4-N13",
+   "title": "웹사이트 M06/M07 발행값은 회차 버킷에서만",
+   "theme": "기간·창·스냅샷·Δ",
+   "legacy": "웹사이트 추이는 M06/M07 을 그리지 않음.",
+   "api": "주 버킷은 라이브 값, 회차 버킷만 발행값.",
+   "effect": "웹사이트 추이에 M06/M07 선이 없어 보이는 차이 없음.",
+   "routes": [
+    "/website"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/trend.ts:69-70",
+    "back/app/features/analytics/trend/series/service.py:20-25"
+   ],
+   "product_decision": false,
+   "decision_ref": "U4 번호(엔지니어링)",
+   "effort": "S",
+   "files": [
+    "-"
+   ],
+   "risk": "없음",
+   "recommendation": "accept",
+   "reason": "화면에 그려지지 않는 계열이다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "DC-08",
+   "title": "추이 창·시리즈 선정 규칙",
+   "theme": "추이 시리즈·순위·정렬",
+   "legacy": "창 = 주 격자 13자리(120일; X.trendGrid 면 원장 자리 최신 13개·자리 대표 회차·미발행 자리 갭). 시리즈 = 주마다 상위 10 의 합집합(최대 15). 같은 주 두 회차는 접음.",
+   "api": "기본 창 12 버킷(회차 12자리, Q9). 시리즈 = 창 전체 합계 상위 N(언급 10·출처 15·카테고리 13). 같은 round_date 회차 전부 합산, 같은 주 두 회차 접지 않음. trend_grid 를 켜면 global·website bucket=cycle 만 x축·자리 대표가 현행 격자.",
+   "effect": "모든 추이 차트에서 점 개수(13→12)·그려지는 브랜드/도메인·점 값이 달라짐. 웹사이트는 off 값이 on 의 2배인 사례(test_trend_grid).",
+   "routes": [
+    "/dashboard",
+    "/website",
+    "/projects/[id]",
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention",
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/trend.ts:56-60",
+    "front/lib/hgh/adapters/mentions.ts:54-55",
+    "front/lib/hgh/adapters/kpi-tab.ts:48",
+    "front/lib/hgh/adapters/citations.ts:67-68",
+    "back/app/core/profile.py:128-131 (trend_grid)",
+    "back/app/features/analytics/trend/series/service.py:4-11,437",
+    "docs/design/api/DECISIONS-API.md:15 (Q9)",
+    "survey after/website GET /v1/trend ×3"
+   ],
+   "product_decision": true,
+   "decision_ref": "창 길이는 DECISIONS-API Q9(제품 책임자: T-1 기본 12개). 이후 제품 결정 19·23~25(2026-10-01, back/app/core/profile.py:3 '같은 데이터·같은 회차에서 운영과 값이 완전히 같게, 예외 없음') 로 현행 격자 재현(trend_grid, WU-6). 시리즈 선정 규칙은 엔지니어링.",
+   "effort": "S(x축: HGH_LEGACY_PROFILE trend_grid) + M(시리즈 선정·프로젝트/주 버킷 120일 창)",
+   "files": [
+    "배포 env HGH_LEGACY_PROFILE",
+    "back/app/features/analytics/trend/series/service.py _series_brand·_series_mix(주별 상위 10 합집합 ≤15)",
+    "front/lib/hgh/adapters/trend.ts"
+   ],
+   "risk": "높음: 전 화면 추이. trend_grid 는 프로젝트·주 버킷 차트를 덮지 않음.",
+   "recommendation": "match legacy",
+   "reason": "19·25 가 Q9 를 대체했고 x축은 스위치로, 시리즈 선정은 백엔드 함수 하나로 맞출 수 있다.",
+   "impact": "high",
+   "product_decision_direction": "conflict"
+  },
+  {
+   "id": "U8-N22",
+   "title": "ACR 추이에서 행 없는 회차의 시리즈 브랜드 = 0%",
+   "theme": "추이 시리즈·순위·정렬",
+   "legacy": "그날 키를 빼고 선은 점을 건너뜀(connectNulls).",
+   "api": "모든 시리즈 브랜드에 num 0 → 0% 점.",
+   "effect": "ACR 추이 선이 0% 로 떨어지는 점이 생김.",
+   "routes": [
+    "/standard/ai-funnel/acr",
+    "/website/ai-funnel/acr",
+    "/projects/[id]/ai-funnel/acr"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/funnel.ts:69-71",
+    "survey after/global GET /v1/funnel/acr"
+   ],
+   "product_decision": false,
+   "decision_ref": "U8 번호(엔지니어링, parity 시험에서 발견)",
+   "effort": "S",
+   "files": [
+    "front/lib/hgh/adapters/funnel.ts(셀 0 이면 null)"
+   ],
+   "risk": "낮음",
+   "recommendation": "match legacy",
+   "reason": "어댑터에서 셀 없는 점을 null 로 두면 끝난다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U7-N6",
+   "title": "도메인 이름 정렬 = 백엔드 skey 순",
+   "theme": "추이 시리즈·순위·정렬",
+   "legacy": "localeCompare.",
+   "api": "백엔드 skey 정렬(콜레이션).",
+   "effect": "대소문자·비ASCII 도메인 정렬 순서가 일부 다름.",
+   "routes": [
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/citations.ts:86-87",
+    "survey after/existing3 ROUTE /api/citations/domains"
+   ],
+   "product_decision": false,
+   "decision_ref": "U7 번호(엔지니어링)",
+   "effort": "M",
+   "files": [
+    "back/app/features/analytics/citations/domains 정렬 콜레이션"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "이름순 정렬의 일부 순서만 다르고 서버 정렬이 전 행 대상이라 더 정확하다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U7-N10",
+   "title": "드릴다운 URL 10개 상한의 동률 처리",
+   "theme": "추이 시리즈·순위·정렬",
+   "legacy": "인용 수 동률이면 url 이 작은 것을 남김.",
+   "api": "url_hash 가 작은 것을 남김(표시 순서는 legacy 와 같음).",
+   "effect": "동률 경계에서 다른 URL 이 10개 안에 들어갈 수 있음.",
+   "routes": [
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/citations.ts:94-96"
+   ],
+   "product_decision": false,
+   "decision_ref": "U7 번호(엔지니어링)",
+   "effort": "S",
+   "files": [
+    "back/app/features/analytics/citations/domain_detail/queries.py ORDER BY"
+   ],
+   "risk": "낮음",
+   "recommendation": "match legacy",
+   "reason": "정렬 키 한 줄 변경으로 맞춰진다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U6-N15",
+   "title": "브랜드 드릴다운 답변 참조 위치 = 경쟁 브랜드 순위",
+   "theme": "추이 시리즈·순위·정렬",
+   "legacy": "그 답변에서 브랜드 첫 행의 원 avg_position.",
+   "api": "답변 안 경쟁 브랜드 중 best avg_position 기준 순위(rd.answer_brand.rk).",
+   "effect": "드릴다운 답변 목록의 '위치' 숫자가 달라짐.",
+   "routes": [
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/drilldown.ts:58-60",
+    "survey after/existing3 GET /v1/mentions/prompts mode=brand"
+   ],
+   "product_decision": false,
+   "decision_ref": "U6 번호(엔지니어링)",
+   "effort": "M",
+   "files": [
+    "back/app/features/analytics/mentions/prompts"
+   ],
+   "risk": "중간",
+   "recommendation": "match legacy",
+   "reason": "19·25 상 드릴다운 수치도 운영과 같아야 하며 백엔드 한 기능에서 처리된다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U10-N6",
+   "title": "소셜 프롬프트 id·정렬·기본값",
+   "theme": "추이 시리즈·순위·정렬",
+   "legacy": "seed id, 캐시 추가 순, null 그대로.",
+   "api": "백엔드 prompt_id, batch·priority desc, null → 기본값(L1-context·consideration·''·0), 종류별 50 상한.",
+   "effect": "소셜 스크래핑 생성 프롬프트 목록 순서와 빈 칸 표시가 달라짐.",
+   "routes": [
+    "/projects/[id]/intent/social-scraping"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/intent.ts:50-55",
+    "survey after/project_ops_interest GET /v1/intent/social/prompts"
+   ],
+   "product_decision": false,
+   "decision_ref": "U10 번호(엔지니어링)",
+   "effort": "M",
+   "files": [
+    "back/app/features/intent/social/prompts",
+    "front/lib/hgh/adapters/intent.ts"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "생성 결과 목록이라 순서 차이의 영향이 작고 백엔드가 중복·락 문제를 없앴다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U10-N7",
+   "title": "컨텍스트 맵 목록 키셋 커서·동률 id 순·검색 100자",
+   "theme": "추이 시리즈·순위·정렬",
+   "legacy": "페이지 오프셋, 동률 순서 미정, 검색 길이 무제한.",
+   "api": "키셋 커서(다음·이전), 동률 id 순, 검색 100자 절단·제어문자 제거.",
+   "effect": "쪽 번호 이동이 없어지고 동률 행 순서가 고정됨.",
+   "routes": [
+    "/projects/[id]/intent/social-scraping"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/intent.ts:62-64"
+   ],
+   "product_decision": true,
+   "decision_ref": "DECISIONS-API Q19(서버 페이징, 제품 책임자) + D5(커서)",
+   "effort": "L",
+   "files": [
+    "back/app/features/intent/social/context_map(오프셋 페이징)"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "Q19 서버 페이징 결정에 따른 것이고 오프셋 복귀는 백엔드 계약 변경이다.",
+   "impact": "low",
+   "product_decision_direction": "keeps_difference"
+  },
+  {
+   "id": "S1-BEC-2",
+   "title": "글로벌 국가 목록 순서 = 정렬",
+   "theme": "추이 시리즈·순위·정렬",
+   "legacy": "계정 순서 + 시장 순서.",
+   "api": "정렬(값 집합은 같음).",
+   "effect": "국가 칩·옵션 순서만 다름.",
+   "routes": [
+    "/dashboard",
+    "/website",
+    "/projects/[id]",
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention",
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "docs/design/api/DECISIONS-API.md:336 (고지 목록 2)"
+   ],
+   "product_decision": false,
+   "decision_ref": "동기화 S1 BE-C 고지 목록(엔지니어링)",
+   "effort": "S",
+   "files": [
+    "back/app/core/auth.py global_scope_countries"
+   ],
+   "risk": "없음",
+   "recommendation": "accept",
+   "reason": "값 집합이 같고 순서만 다르다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "DC-04",
+   "title": "admin 브랜드 선택 = 관점(당사) 전환",
+   "theme": "국가·권한·스코프",
+   "legacy": "admin 이 brand[] 를 고르면 값만 그 브랜드 프롬프트로 좁히고 당사(tracked)는 HMG 롤업 그대로, 라벨 'HMG'.",
+   "api": "고른 브랜드가 관점 브랜드(당사)가 됨. 글로벌 모수에 엄브렐러 공통 행 포함 규칙이 관점 기준으로 바뀜.",
+   "effect": "admin 이 브랜드를 고르면 당사 노출률·점유율·우호도·순위와 GEO 라벨이 그 브랜드 기준으로 바뀜(legacy 는 HMG 3사 합).",
+   "routes": [
+    "/dashboard",
+    "/website",
+    "/projects/[id]",
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention",
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/summary.ts:35",
+    "front/lib/hgh/adapters/dashboard.ts:88,92-94",
+    "back/app/core/filters.py:445-455,744-751"
+   ],
+   "product_decision": false,
+   "decision_ref": "설계 DC 목록(엔지니어링)",
+   "effort": "M",
+   "files": [
+    "back/app/core/filters.py _viewpoint(admin brand[] = 모수만 좁히기)",
+    "front/lib/hgh/adapters/summary.ts·dashboard.ts"
+   ],
+   "risk": "중간(admin 화면만).",
+   "recommendation": "match legacy",
+   "reason": "19·25 의 값 동일 원칙에 해당하고 영향이 admin 으로 한정돼 백엔드 한 곳에서 처리된다.",
+   "impact": "medium",
+   "product_decision_direction": null
+  },
+  {
+   "id": "SESSION-N1",
+   "title": "비어 있지 않은 브랜드 스코프에서 엄브렐러(HMG) 제거",
+   "theme": "국가·권한·스코프",
+   "legacy": "[HMG, Kia] 계정은 HMG 태그 프로젝트·HMG 옵션을 봄.",
+   "api": "/v1/auth/me 브랜드 목록에서 엄브렐러가 빠져 HMG 태그 프로젝트·HMG 옵션이 사라지고 브랜드 칩이 Kia 로 고정.",
+   "effect": "해당 형태 계정의 프로젝트 목록·브랜드 옵션이 좁아짐.",
+   "routes": [
+    "/projects",
+    "/dashboard",
+    "/website",
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/session.ts:69-75",
+    "survey after/qa_nonscreen GET /v1/auth/me"
+   ],
+   "product_decision": false,
+   "decision_ref": "엔지니어링(session.ts '알려진 남은 차이')",
+   "effort": "M",
+   "files": [
+    "back /v1/auth/me 에 원 계정 brands 추가(account_countries 처럼)",
+    "front/lib/hgh/adapters/session.ts"
+   ],
+   "risk": "낮음~중간(해당 계정 수 미확인).",
+   "recommendation": "match legacy",
+   "reason": "권한 보존 규칙상 좁힘도 변경이며 account_countries 와 같은 방식으로 원값을 내면 된다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "SESSION-N2",
+   "title": "국가로 안 풀리는 권역 계정 거부(403 no_country_scope)",
+   "theme": "국가·권한·스코프",
+   "legacy": "국가 조건 없이 전체를 봄.",
+   "api": "403 no_country_scope → /no-access, 생성 국가가 ZZ 가 될 상황이면 operator → none.",
+   "effect": "그런 계정은 글로벌·웹사이트 화면 접근이 막힘(stg 해당 계정 0).",
+   "routes": [
+    "/dashboard",
+    "/website",
+    "/standard/answer-analysis/mention",
+    "/projects/new"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/session.ts:69-75",
+    "back/app/core/filters.py:637-638",
+    "docs/design/api/DECISIONS-API.md:42",
+    "survey after/global AGCOMMON"
+   ],
+   "product_decision": false,
+   "decision_ref": "엔지니어링(fail-closed, DECISIONS-API 반영 기록)",
+   "effort": "M",
+   "files": [
+    "back/app/core/filters.py resolve_read_context"
+   ],
+   "risk": "보안: legacy 는 설정 오류 계정에 전체를 열어 줌.",
+   "recommendation": "accept",
+   "reason": "설정이 깨진 계정에 전 데이터를 여는 것은 보안 결함이라 거부가 맞다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "결정2-403",
+   "title": "웹사이트 국가 교집합이 비면 403",
+   "theme": "국가·권한·스코프",
+   "legacy": "빈 화면(사이트 0).",
+   "api": "403 no_country_scope → /no-access.",
+   "effect": "그 계정은 빈 웹사이트 화면 대신 접근 불가 화면을 봄(stg 해당 0).",
+   "routes": [
+    "/website",
+    "/website/answer-analysis/mention",
+    "/website/answer-analysis/citation"
+   ],
+   "evidence": [
+    "docs/design/api/DECISIONS-API.md:268 (결정 2)",
+    "back/app/core/filters.py:637-638",
+    "survey after/website AWCOMMON"
+   ],
+   "product_decision": true,
+   "decision_ref": "제품 결정 2(2026-09-30, website 표면 국가 스코프 = 현행 effectiveCountries, 교집합 공집합은 403)",
+   "effort": "S",
+   "files": [
+    "front 오류 매핑(403 no_country_scope → 빈 화면) 또는 back 200 빈 결과"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "제품 결정 2 에 명시된 동작이고 해당 계정이 없다.",
+   "impact": "low",
+   "product_decision_direction": "keeps_difference"
+  },
+  {
+   "id": "U4-N8",
+   "title": "실패 답변만 있는 국가는 옵션에서 제외",
+   "theme": "국가·권한·스코프",
+   "legacy": "listMeasuredRegions 는 상태 술어 없음(실패 답변 국가도 옵션).",
+   "api": "완료 답변 국가만.",
+   "effect": "필터 국가 목록에서 일부 국가가 빠짐(선택해도 값이 없던 국가).",
+   "routes": [
+    "/dashboard",
+    "/website",
+    "/projects/[id]",
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention",
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/filters.ts:51-52",
+    "survey after/global GET /v1/filters/options"
+   ],
+   "product_decision": false,
+   "decision_ref": "U4 번호(엔지니어링)",
+   "effort": "S",
+   "files": [
+    "배포 env HGH_LEGACY_PROFILE filter_options"
+   ],
+   "risk": "낮음",
+   "recommendation": "match legacy",
+   "reason": "filter_options 스위치를 켜면 되돌아간다.",
+   "impact": "low",
+   "product_decision_direction": "requires_match"
+  },
+  {
+   "id": "U4-N9",
+   "title": "브랜드 NULL 루트 프롬프트 = 공통 행",
+   "theme": "국가·권한·스코프",
+   "legacy": "brand IN (<브랜드>, HMG) 로 NULL 브랜드 프롬프트 탈락.",
+   "api": "NULL 브랜드 프롬프트를 공통 행으로 보고 브랜드 선택 시에도 그 국가·언어 유지.",
+   "effect": "브랜드 선택 시 국가·언어 옵션이 legacy 보다 많을 수 있음.",
+   "routes": [
+    "/dashboard",
+    "/website",
+    "/projects/[id]",
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention",
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/filters.ts:53-54",
+    "survey after/global GET /v1/filters/options"
+   ],
+   "product_decision": false,
+   "decision_ref": "U4 번호(엔지니어링)",
+   "effort": "M",
+   "files": [
+    "back/app/features/analytics/filters/options",
+    "front/lib/hgh/adapters/filters.ts optionBrandsFor"
+   ],
+   "risk": "낮음",
+   "recommendation": "match legacy",
+   "reason": "옵션 차이로 보존 규칙 대상이며 어댑터 좁힘 규칙에서 NULL 을 빼면 된다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U4-N10",
+   "title": "프로젝트 지역 옵션 = 프로젝트 측정 국가",
+   "theme": "국가·권한·스코프",
+   "legacy": "계정 스코프의 전 미러 측정 국가(프로젝트와 무관).",
+   "api": "그 프로젝트에서 측정된 국가.",
+   "effect": "프로젝트 필터 국가 목록이 줄어듦(빠지는 국가는 선택해도 결과가 비던 국가).",
+   "routes": [
+    "/projects/[id]",
+    "/projects/[id]/analysis/mention",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/filters.ts:55-56",
+    "survey after/project GET /v1/filters/options"
+   ],
+   "product_decision": false,
+   "decision_ref": "U4 번호(엔지니어링)",
+   "effort": "M",
+   "files": [
+    "back/app/features/analytics/filters/options(project 표면)"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "빠지는 옵션은 프로젝트에서 항상 빈 결과를 내던 값이다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "S1-N1",
+   "title": "글로벌 국가 옵션에서 ID(인도네시아) 숨김",
+   "theme": "국가·권한·스코프",
+   "legacy": "ID 를 다시 제공(hmg-geo #302 가 숨김 목록을 비움).",
+   "api": "app.hidden_market('global','ID') 로 숨김(BE-2 전까지).",
+   "effect": "글로벌 필터 국가 목록에 인도네시아가 없음.",
+   "routes": [
+    "/dashboard",
+    "/standard/answer-analysis/mention",
+    "/standard/answer-analysis/citation",
+    "/standard/ai-funnel/acr"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/filters.ts:62-64",
+    "survey after/global GET /v1/filters/options"
+   ],
+   "product_decision": false,
+   "decision_ref": "동기화 S1 임시 차이(BE-2 대기)",
+   "effort": "S",
+   "files": [
+    "DB app.hidden_market 행 삭제(BE-2)"
+   ],
+   "risk": "낮음",
+   "recommendation": "match legacy",
+   "reason": "BE-2 반영(행 하나 삭제)으로 끝나는 임시 차이다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "S1-BEC-4",
+   "title": "스코프 밖 요청 국가 = 빈 결과",
+   "theme": "국가·권한·스코프",
+   "legacy": "readStandardFilters 가 스코프 밖 국가를 버리고 스코프 전체로 되돌림.",
+   "api": "dropped + 그 축 결과 0(빈 화면).",
+   "effect": "다른 국가가 든 공유 URL 을 열면 legacy 는 자기 스코프 전체, API 는 빈 화면.",
+   "routes": [
+    "/dashboard",
+    "/website",
+    "/projects/[id]",
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention",
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "docs/design/api/DECISIONS-API.md:338 (고지 목록 4)",
+    "front/lib/hgh/query.ts:5-8"
+   ],
+   "product_decision": false,
+   "decision_ref": "동기화 S1 BE-C 고지 목록(엔지니어링)",
+   "effort": "S",
+   "files": [
+    "front/lib/hgh/query.ts(스코프 밖 국가 제거 후 전송)"
+   ],
+   "risk": "중간",
+   "recommendation": "match legacy",
+   "reason": "front 직렬화 한 곳에서 스코프 밖 값을 빼면 legacy 와 같아진다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "결정7",
+   "title": "택소노미 축을 관점 카탈로그 행으로 한정",
+   "theme": "국가·권한·스코프",
+   "legacy": "브랜드 스코프 계정이 타 브랜드 카탈로그 행에만 있는 값을 주면 prompt_key 를 공유하는 데이터가 나옴.",
+   "api": "관점 행에 없는 값 = dropped(결과 0).",
+   "effect": "그 조합에서 legacy 는 값, API 는 0(관리자는 같음).",
+   "routes": [
+    "/dashboard",
+    "/website",
+    "/projects/[id]",
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention",
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "docs/design/api/DECISIONS-API.md:273 (결정 7)"
+   ],
+   "product_decision": true,
+   "decision_ref": "제품 결정 7(2026-09-30, KPI 택소노미 선택지·축 관점 브랜드 한정)",
+   "effort": "M",
+   "files": [
+    "back/app/core/filters.py _taxonomy_prompt_keys_global"
+   ],
+   "risk": "보안(값 존재·연결 오라클 차단).",
+   "recommendation": "accept",
+   "reason": "제품 결정 7 이고 정보 노출 경로를 막는다.",
+   "impact": "low",
+   "product_decision_direction": "keeps_difference"
+  },
+  {
+   "id": "결정3",
+   "title": "계정 국가 표기 정본화",
+   "theme": "국가·권한·스코프",
+   "legacy": "정확 일치 비교라 표기가 어긋난 계정은 데이터를 못 봄.",
+   "api": "정본 표기로 비교해 보여 줌.",
+   "effect": "표기가 어긋난 계정이 데이터를 보게 됨(넓어짐, stg 0).",
+   "routes": [
+    "/dashboard",
+    "/website",
+    "/projects/[id]",
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention",
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "docs/design/api/DECISIONS-API.md:270 (결정 3)"
+   ],
+   "product_decision": true,
+   "decision_ref": "제품 결정 3(2026-09-30)",
+   "effort": "S",
+   "files": [
+    "back/app/core/auth.py"
+   ],
+   "risk": "없음(stg 대상 0).",
+   "recommendation": "accept",
+   "reason": "제품 결정이고 해당 계정이 없다.",
+   "impact": "low",
+   "product_decision_direction": "keeps_difference"
+  },
+  {
+   "id": "U5-N4",
+   "title": "프로젝트 ⑦: URL 국가가 프로젝트와 다르면 타일 없음",
+   "theme": "국가·권한·스코프",
+   "legacy": "선택 국가의 GA4 속성을 찾아 ⑦ 표시.",
+   "api": "백엔드 시장 = 프로젝트 자기 시장 → 타일 없음.",
+   "effect": "프로젝트 홈에서 다른 국가를 고르면 ⑦ 타일이 사라짐.",
+   "routes": [
+    "/projects/[id]"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/dashboard.ts:99-100",
+    "survey after/project GET /v1/funnel/conversion"
+   ],
+   "product_decision": false,
+   "decision_ref": "U5 번호(엔지니어링)",
+   "effort": "M",
+   "files": [
+    "back/app/features/analytics/funnel/conversion(project 표면 국가 축)",
+    "front/app/[locale]/(dash)/projects/[id]/_data/live.ts"
+   ],
+   "risk": "낮음",
+   "recommendation": "match legacy",
+   "reason": "보존 규칙상 표시되던 타일이 사라지면 안 되며 빈도가 낮아 백엔드 한 축 추가로 충분하다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U6-N8",
+   "title": "다른 프로젝트 id 로 요청한 프로젝트 답변 원문 제공",
+   "theme": "국가·권한·스코프",
+   "legacy": "요청 프로젝트의 run 소속 답변만(fetchProjectAnswerBody).",
+   "api": "job 의 소속 프로젝트를 찾아 그 프로젝트 member 수준(스코프 안 비멤버 포함)으로 판정; ?projectId 와 대조하지 않음.",
+   "effect": "프로젝트 A 활성 멤버가 스코프 안 비멤버 프로젝트 B 의 job_id 로 B 답변 원문을 열 수 있음(조사가 확인, 선언은 '넓어지지 않음'이라고 적음).",
+   "routes": [
+    "/projects/[id]/analysis/mention",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/answers.ts:33-35",
+    "back/app/features/analytics/answers/detail/service.py:135-146",
+    "front/app/api/scope/answer/route.ts:58-101",
+    "survey after/project GET /v1/answers/{job_id}"
+   ],
+   "product_decision": false,
+   "decision_ref": "U6 번호(엔지니어링) — 선언 내용이 실제 동작과 다름",
+   "effort": "S",
+   "files": [
+    "back/app/features/analytics/answers/detail/service.py(요청 project_id 와 job 소속 대조 또는 active_member)",
+    "front/lib/hgh/adapters/answers.ts(project_id 전달)"
+   ],
+   "risk": "높음(권한 확대).",
+   "recommendation": "match legacy",
+   "reason": "선언과 달리 접근이 넓어지므로 요청 프로젝트와 job 소속을 대조해 legacy 범위로 되돌려야 한다.",
+   "impact": "medium",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U6-N11",
+   "title": "프로젝트 드릴다운 인용 탭이 프로젝트 데이터를 읽음",
+   "theme": "국가·권한·스코프",
+   "legacy": "표준 루트 데이터를 읽음(계정 스코프·태그 미적용 — legacy 결함).",
+   "api": "그 프로젝트 데이터.",
+   "effect": "프로젝트 언급 드릴다운 '인용' 탭 도메인·수치가 프로젝트 기준으로 바뀜.",
+   "routes": [
+    "/projects/[id]/analysis/mention"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/drilldown.ts:45-46",
+    "survey after/project GET /v1/citations/domains (mention_brand)"
+   ],
+   "product_decision": false,
+   "decision_ref": "U6 번호(설계 3.5 #4, legacy 결함 수정)",
+   "effort": "M",
+   "files": [
+    "back/app/features/analytics/citations/domains(project 표면에서 루트 읽기)"
+   ],
+   "risk": "legacy 는 다른 데이터(표준 루트)를 보여 주던 결함.",
+   "recommendation": "accept",
+   "reason": "프로젝트 화면에 다른 데이터를 보여 주던 결함이라 재현할 가치가 없다(19·25 '결함까지 재현'과 충돌하므로 고지 필요).",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U8-N2",
+   "title": "ACR 프롬프트 수 = 계정 스코프 카탈로그 수",
+   "theme": "국가·권한·스코프",
+   "legacy": "스코프 없는 루트 카탈로그 전체 수.",
+   "api": "계정 스코프의 catalog_acr_prompts.",
+   "effect": "브랜드·국가 스코프 계정의 ACR 화면 프롬프트 수가 작아짐.",
+   "routes": [
+    "/standard/ai-funnel/acr",
+    "/website/ai-funnel/acr",
+    "/projects/[id]/ai-funnel/acr"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/funnel.ts:30-31",
+    "survey after/global GET /v1/funnel/acr"
+   ],
+   "product_decision": false,
+   "decision_ref": "U8 번호, 설계 G4(엔지니어링)",
+   "effort": "S",
+   "files": [
+    "back/app/features/analytics/funnel/acr service(스코프 무관 수)"
+   ],
+   "risk": "낮음",
+   "recommendation": "match legacy",
+   "reason": "화면에 찍히는 수치라 운영과 같아야 하고 백엔드 집계 한 줄 변경이다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U8-N12",
+   "title": "스코프 밖 프롬프트 타임라인 = 빈 목록(양 원천)",
+   "theme": "국가·권한·스코프",
+   "legacy": "U8 이전 legacy 액션은 스코프 무관하게 읽음.",
+   "api": "양 원천 모두 스코프 밖이면 빈 목록.",
+   "effect": "스코프 밖 프롬프트 변경 이력이 안 보임(legacy 경로도 이미 바뀜 — 운영 대비 변경).",
+   "routes": [
+    "/standard/prompts",
+    "/admin/standards/prompts"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/catalog.ts:39-41"
+   ],
+   "product_decision": false,
+   "decision_ref": "U8 번호(보안 정합, 양 원천 공통)",
+   "effort": "S",
+   "files": [
+    "front/app/[locale]/(dash)/standard/prompts/_actions.ts"
+   ],
+   "risk": "보안",
+   "recommendation": "accept",
+   "reason": "스코프 밖 데이터 노출을 막는 수정이다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U8-N14",
+   "title": "타임라인 액션에 메뉴 그룹 검사(양 원천)",
+   "theme": "국가·권한·스코프",
+   "legacy": "원본 액션은 역할만 확인.",
+   "api": "역할 + 메뉴 그룹(3인자 라우트 검사).",
+   "effect": "메뉴 그룹이 없는 계정이 액션을 직접 부르면 거부(화면 게이트와 같아짐).",
+   "routes": [
+    "/standard/prompts",
+    "/admin/standards/prompts"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/catalog.ts:45-47",
+    "survey after/global ACTION fetchPromptAuditTimeline"
+   ],
+   "product_decision": false,
+   "decision_ref": "U8 번호(권한 정합, 양 원천 공통)",
+   "effort": "S",
+   "files": [
+    "front/app/[locale]/(dash)/standard/prompts/_actions.ts"
+   ],
+   "risk": "보안",
+   "recommendation": "accept",
+   "reason": "페이지 게이트와 같은 판정으로 맞춘 것이다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U8-N21",
+   "title": "admin 타임라인은 G7(관리 카탈로그) 원천",
+   "theme": "국가·권한·스코프",
+   "legacy": "표준 화면에서 열면 표준 원천.",
+   "api": "관리 메뉴 있는 admin 은 /standard/prompts 에서 열어도 G7 원천; 표준 메뉴 없는 admin 도 열람.",
+   "effect": "G5·G7 을 따로 전환하면 admin 의 한 다이얼로그만 원천이 섞임.",
+   "routes": [
+    "/standard/prompts",
+    "/admin/standards/prompts"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/catalog.ts:55-60",
+    "survey after/global GET /v1/admin/catalog/prompts/{id}/history"
+   ],
+   "product_decision": false,
+   "decision_ref": "U8 번호(운영 전환 순서)",
+   "effort": "S",
+   "files": [
+    "운영 절차: G5·G7 동시 전환"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "전환 순서로 해결되는 운영 문제다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U8-N9",
+   "title": "전환 이벤트 다이얼로그 원천 = 호출 위치",
+   "theme": "국가·권한·스코프",
+   "legacy": "단일 원천.",
+   "api": "프로젝트면 G6, admin(관리 메뉴)이면 G7, 그 밖 G3 — 웹사이트 전환 화면의 admin 도 G7.",
+   "effect": "G3·G7 을 따로 전환하면 admin 의 이 다이얼로그만 원천이 섞임.",
+   "routes": [
+    "/standard/ai-funnel/conversion",
+    "/website/ai-funnel/conversion",
+    "/projects/[id]/ai-funnel/conversion"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/funnel.ts:51-56",
+    "survey after/website GET /v1/funnel/conversion/events"
+   ],
+   "product_decision": false,
+   "decision_ref": "U8 번호(운영 전환 순서)",
+   "effort": "S",
+   "files": [
+    "운영 절차: G3·G7 동시 전환"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "전환 순서로 해결되는 운영 문제다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U8-N15",
+   "title": "웹사이트 ACR(정적 표본) 옵션 = 웹사이트 표면",
+   "theme": "국가·권한·스코프",
+   "legacy": "표준 카탈로그 택소노미와 글로벌 측정 국가.",
+   "api": "카탈로그 축 없음, 웹사이트 측정 국가.",
+   "effect": "웹사이트 ACR 필터에서 카탈로그 축이 사라지고 국가 목록이 바뀜(본문은 정적 표본).",
+   "routes": [
+    "/website/ai-funnel/acr"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/funnel.ts:57-60",
+    "survey after/website GET /v1/filters/options"
+   ],
+   "product_decision": false,
+   "decision_ref": "U8 번호(엔지니어링)",
+   "effort": "S",
+   "files": [
+    "front/lib/hgh/adapters/funnel.ts"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "본문이 정적 표본이라 값 영향이 없고 웹사이트 기준이 더 맞다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U8-N17",
+   "title": "웹사이트 전환 국가 옵션 = 웹사이트 표면 국가",
+   "theme": "국가·권한·스코프",
+   "legacy": "글로벌 측정 국가.",
+   "api": "웹사이트 표면 국가(가상 사이트 코드 포함).",
+   "effect": "웹사이트 전환 화면 국가 목록이 바뀜.",
+   "routes": [
+    "/website/ai-funnel/conversion"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/funnel.ts:64-65"
+   ],
+   "product_decision": false,
+   "decision_ref": "U8 번호(엔지니어링)",
+   "effort": "S",
+   "files": [
+    "front/lib/hgh/adapters/funnel.ts"
+   ],
+   "risk": "낮음",
+   "recommendation": "match legacy",
+   "reason": "옵션 목록 보존 규칙 대상이고 어댑터에서 글로벌 옵션을 쓰면 된다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U9-N1",
+   "title": "admin 프로젝트 목록에서 표준 루트 제외",
+   "theme": "국가·권한·스코프",
+   "legacy": "listAll 이 standard root 행도 표시.",
+   "api": "kind='customer' 만.",
+   "effect": "admin /projects 목록에서 표준 루트 행이 사라짐.",
+   "routes": [
+    "/projects"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/projects.ts:74-75",
+    "survey after/project GET /v1/projects"
+   ],
+   "product_decision": false,
+   "decision_ref": "U9 번호(엔지니어링)",
+   "effort": "S",
+   "files": [
+    "back/app/features/projects/project/core/queries.py:16"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "루트는 고객 프로젝트가 아니고 열어도 프로젝트 화면이 성립하지 않는다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U9-N2",
+   "title": "by-scope: 볼 수 없는 사이트 = 404",
+   "theme": "국가·권한·스코프",
+   "legacy": "/website 로 보내 그 화면이 좁히게 함, 잘못된 id 는 DB 오류.",
+   "api": "404(notFound).",
+   "effect": "권한 밖 사이트 링크가 404 로 보임.",
+   "routes": [
+    "/projects/by-scope/[scopeId]"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/projects.ts:76-78"
+   ],
+   "product_decision": false,
+   "decision_ref": "U9 번호(bg-projects DECISIONS-API B-1)",
+   "effort": "S",
+   "files": [
+    "front/app/[locale]/(dash)/projects/by-scope/[scopeId]/page.tsx"
+   ],
+   "risk": "보안",
+   "recommendation": "accept",
+   "reason": "존재 은폐 계약에 맞는 처리다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U9-N15",
+   "title": "uuid 아닌 프로젝트 id = 조회 없이 notFound",
+   "theme": "국가·권한·스코프",
+   "legacy": "DB 조회 후 판정.",
+   "api": "조회 없이 notFound.",
+   "effect": "보이는 결과 같음.",
+   "routes": [
+    "/projects/[id]/member",
+    "/projects/[id]/setting",
+    "/projects/[id]/prompt"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/projects.ts:117-118"
+   ],
+   "product_decision": false,
+   "decision_ref": "U9 번호",
+   "effort": "S",
+   "files": [
+    "-"
+   ],
+   "risk": "없음",
+   "recommendation": "accept",
+   "reason": "사용자에게 보이는 결과가 같다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U10-N12",
+   "title": "키워드·컨텍스트 맵 라우트 장소 게이트(양 원천)",
+   "theme": "국가·권한·스코프",
+   "legacy": "U10 이전 legacy 라우트는 아무 세션이나 실시간 DataForSEO+LLM·미러에 닿음.",
+   "api": "양 원천 모두 프로젝트 페이지 게이트·ROUTES 규칙 선검사.",
+   "effect": "권한 없는 세션이 키워드·컨텍스트 맵 라우트를 직접 부르면 거부(운영 대비 변경).",
+   "routes": [
+    "/projects/[id]/intent/google-keyword",
+    "/projects/[id]/intent/social-scraping",
+    "/customer-interest/google-keywords"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/intent.ts:75-80"
+   ],
+   "product_decision": false,
+   "decision_ref": "U10 번호(검증 D1/D3, 보안)",
+   "effort": "S",
+   "files": [
+    "front/app/api/keyword/*",
+    "front/app/api/context-map/*"
+   ],
+   "risk": "보안",
+   "recommendation": "accept",
+   "reason": "무단 외부 API 호출을 막는 보안 수정이다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U11-N1",
+   "title": "계정 생성 시 역할·범위 입력",
+   "theme": "국가·권한·스코프",
+   "legacy": "이메일만 받아 role=country·범위 없음으로 생성.",
+   "api": "역할·운영 권한·범위를 받아 검증(D10).",
+   "effect": "관리자 계정 생성 폼에 역할·범위 입력이 추가됨.",
+   "routes": [
+    "/admin"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/admin.ts:78-79",
+    "survey after/admin POST /v1/admin/users"
+   ],
+   "product_decision": false,
+   "decision_ref": "설계 결정 D10(엔지니어링; 보안 수정 '담당 범위 없는 계정 로그인 허용'과 같은 축)",
+   "effort": "M",
+   "files": [
+    "front/app/[locale]/(dash)/admin/_components/create-user-form.tsx",
+    "back/app/features/admin/accounts/users"
+   ],
+   "risk": "보안",
+   "recommendation": "accept",
+   "reason": "범위 없는 계정 생성은 보안 4건 중 하나와 같은 결함이라 되살리지 않는 것이 맞다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "AF-DC-1",
+   "title": "프로젝트 직접 지정 GA4 속성의 타 시장 귀속 차단",
+   "theme": "국가·권한·스코프",
+   "legacy": "Owner 가 설정만으로 다른 시장 속성 수치를 읽고 추적 이벤트를 바꿀 수 있음.",
+   "api": "project 표면은 unmapped 로 내고 비관리자 이벤트 경로 404.",
+   "effect": "그런 프로젝트의 전환 화면·이벤트 다이얼로그가 비거나 404.",
+   "routes": [
+    "/projects/[id]/ai-funnel/conversion",
+    "/projects/[id]"
+   ],
+   "evidence": [
+    "docs/design/api/모듈-AI-퍼널.md:228-229 (DC-1)",
+    "back/app/features/analytics/funnel/conversion/README.md:39"
+   ],
+   "product_decision": false,
+   "decision_ref": "모듈-AI-퍼널 8절 DC-1 '보안 축소'(엔지니어링)",
+   "effort": "M",
+   "files": [
+    "back/app/features/analytics/funnel/conversion"
+   ],
+   "risk": "보안",
+   "recommendation": "accept",
+   "reason": "타 시장 데이터 무단 열람·변경을 막는다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "AF-DC-4",
+   "title": "레지스트리 unmapped 시장 속성 비노출",
+   "theme": "국가·권한·스코프",
+   "legacy": "resolveProperties 가 상태를 안 봐 웹사이트 다이얼로그가 열림.",
+   "api": "coverage.property_id null, 비관리자 이벤트 경로 404.",
+   "effect": "unmapped 시장의 전환 이벤트 다이얼로그가 열리지 않음.",
+   "routes": [
+    "/website/ai-funnel/conversion"
+   ],
+   "evidence": [
+    "docs/design/api/모듈-AI-퍼널.md:233-234 (DC-4)",
+    "back/app/features/analytics/funnel/conversion/README.md:38",
+    "survey after/website GET /v1/funnel/conversion"
+   ],
+   "product_decision": false,
+   "decision_ref": "모듈-AI-퍼널 DC-4 '의도된 축소'(엔지니어링)",
+   "effort": "S",
+   "files": [
+    "back/app/features/analytics/funnel/conversion service"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "매핑 없는 속성 편집을 막는 의도된 축소다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "DC-06",
+   "title": "웹사이트 필터 옵션 = 측정 답변 기준",
+   "theme": "국가·권한·스코프",
+   "legacy": "국가·언어·매트릭스·브랜드 옵션 = 등록 사이트·프롬프트 카탈로그(측정 무관), 엔진 옵션 = 기본 엔진 목록.",
+   "api": "옵션 창(최신 회차 스냅샷 또는 화면 기간) 안 측정 답변의 사이트 국가·언어, hidden_market 제외. filter_options 스위치를 켜면 현행 규칙.",
+   "effect": "등록됐지만 측정 안 된(또는 창 밖) 사이트의 국가·언어·브랜드가 웹사이트 필터와 /website/prompts 옵션에서 빠짐.",
+   "routes": [
+    "/website",
+    "/website/answer-analysis/mention",
+    "/website/answer-analysis/citation",
+    "/website/prompts",
+    "/website/ai-funnel/conversion"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/filters.ts:47-49",
+    "front/lib/hgh/adapters/catalog.ts:31-32",
+    "back/app/core/profile.py:162-165 (filter_options)",
+    "back/app/features/analytics/filters/options/README.md:54-55",
+    "survey after/website GET /v1/filters/options"
+   ],
+   "product_decision": false,
+   "decision_ref": "설계 DC 목록(엔지니어링). 제품 결정 19·23~25(2026-10-01, back/app/core/profile.py:3 '같은 데이터·같은 회차에서 운영과 값이 완전히 같게, 예외 없음') 로 filter_options(WU-8) 구현",
+   "effort": "S",
+   "files": [
+    "배포 env HGH_LEGACY_PROFILE filter_options"
+   ],
+   "risk": "낮음; stg 는 이미 켬.",
+   "recommendation": "match legacy",
+   "reason": "env 스위치로 현행 옵션 규칙이 그대로 돌아온다.",
+   "impact": "medium",
+   "product_decision_direction": "requires_match"
+  },
+  {
+   "id": "U6-N1",
+   "title": "언급 브랜드 전량 목록 2,000행 상한",
+   "theme": "목록 상한·페이지",
+   "legacy": "모든 브랜드 행.",
+   "api": "경쟁 브랜드 2,000행까지(data.truncated 설정), 표는 첫 2,000행.",
+   "effect": "브랜드가 2,000개를 넘는 조건(글로벌 장기 기간 등)에서 언급 표 하단 브랜드가 사라짐. 화면에 절단 안내 없음(조사 확인).",
+   "routes": [
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/mentions.ts:58-59",
+    "survey after/existing3 GET /v1/mentions/brands full=true · website GET /v1/mentions/brands"
+   ],
+   "product_decision": false,
+   "decision_ref": "U6 번호, BG-19(엔지니어링)",
+   "effort": "M",
+   "files": [
+    "back/app/features/analytics/mentions/brands(full 상한·커서)",
+    "front/lib/hgh/adapters/mentions.ts(전 페이지 읽기)"
+   ],
+   "risk": "중간: 합성 데이터 기준 엔티티 2,008개라 실제로 넘을 수 있음.",
+   "recommendation": "match legacy",
+   "reason": "보존 규칙이 목록 전체·총계 유지를 요구하고, 커서로 끝까지 읽으면 되는 작업이다.",
+   "impact": "medium",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U6-N9",
+   "title": "신호 프롬프트 목록 상위 50·답변 6",
+   "theme": "목록 상한·페이지",
+   "legacy": "상위 50·답변 참조 6(같은 상한).",
+   "api": "같은 상한, share 분모는 전 프롬프트(다이얼로그 미표시).",
+   "effect": "보이는 차이 없음.",
+   "routes": [
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/drilldown.ts:41-42"
+   ],
+   "product_decision": false,
+   "decision_ref": "U6 번호",
+   "effort": "S",
+   "files": [
+    "-"
+   ],
+   "risk": "없음",
+   "recommendation": "accept",
+   "reason": "표시되지 않는 값만 다르다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U6-N10",
+   "title": "도메인 상세 상한(URL 10·프롬프트 100·답변 20)",
+   "theme": "목록 상한·페이지",
+   "legacy": "URL 10, 모든 프롬프트·모든 답변 참조.",
+   "api": "URL 10, 프롬프트 100, 프롬프트당 답변 20(프롬프트 열 수는 전체 수 유지).",
+   "effect": "언급 드릴다운 도메인 펼침에서 프롬프트·답변 참조가 잘릴 수 있음.",
+   "routes": [
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/drilldown.ts:43-44",
+    "survey after/existing3 GET /v1/citations/domains/{skey} mention_brand"
+   ],
+   "product_decision": false,
+   "decision_ref": "U6 번호(엔지니어링, 성능)",
+   "effort": "M",
+   "files": [
+    "back/app/features/analytics/citations/domain_detail(상한·커서)",
+    "front/lib/hgh/adapters/drilldown.ts"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "열 수(총계)는 유지되고 무제한 응답은 성능 위험이다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U6-N13",
+   "title": "미측정 프롬프트 행 id 체계",
+   "theme": "목록 상한·페이지",
+   "legacy": "카탈로그 행 id.",
+   "api": "글로벌 카탈로그 행 id·프로젝트 프롬프트 id·Scope 프롬프트 id(표면별), total 은 200 상한 전 값.",
+   "effect": "보이는 차이 없음(total 같음).",
+   "routes": [
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/drilldown.ts:52-54"
+   ],
+   "product_decision": false,
+   "decision_ref": "U6 번호",
+   "effort": "S",
+   "files": [
+    "-"
+   ],
+   "risk": "없음",
+   "recommendation": "accept",
+   "reason": "id 는 화면에 표시되지 않는다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U7-N2",
+   "title": "모든 도메인 행에 드릴다운",
+   "theme": "목록 상한·페이지",
+   "legacy": "상위 80 도메인과 공식 꼬리만 URL·프롬프트 인라인, 나머지 '상위 도메인에만 표시'.",
+   "api": "모든 행을 열 때 로드.",
+   "effect": "하위 도메인 행도 펼치면 URL·프롬프트가 보임(안내 문구 사라짐).",
+   "routes": [
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/citations.ts:78-79"
+   ],
+   "product_decision": false,
+   "decision_ref": "U7 번호(설계 3.5 #6)",
+   "effort": "M",
+   "files": [
+    "front/lib/hgh/adapters/citations.ts"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "정보가 늘기만 하고 기존 행 값은 같다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U7-N3",
+   "title": "경쟁사 옵션 500개 상한",
+   "theme": "목록 상한·페이지",
+   "legacy": "캐시 슬림 표의 공식 경쟁 도메인 전부(1,500~2,000).",
+   "api": "500 출처(BG-20).",
+   "effect": "경쟁사 선택 목록 하위 항목이 빠질 수 있음(관측 사용량은 수십 개).",
+   "routes": [
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/citations.ts:80-81"
+   ],
+   "product_decision": false,
+   "decision_ref": "U7 번호, BG-20(엔지니어링)",
+   "effort": "S",
+   "files": [
+    "back/app/features/analytics/citations/domains competitor_sources limit"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "실사용 선택이 수십 개라 영향이 없다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U7-N4",
+   "title": "웹사이트·프로젝트 도메인 표 첫 200행 + 더 보기",
+   "theme": "목록 상한·페이지",
+   "legacy": "모든 행 1회 로드(캐시 1.5MB 초과 시 무고지 절단).",
+   "api": "첫 200행 + '더 보기'(커서), 검색·정렬·내보내기는 서버가 전 행 대상.",
+   "effect": "표에 '더 보기' 버튼이 생김. 내보내기 '#' 열은 match_rank.",
+   "routes": [
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/citations.ts:82-83",
+    "survey after/project GET /v1/citations/domains · /export"
+   ],
+   "product_decision": false,
+   "decision_ref": "U7 번호, D5(엔지니어링)",
+   "effort": "L",
+   "files": [
+    "front citation-domain-table(전량 로드)",
+    "back citations/domains"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "검색·정렬·내보내기가 전 행 기준으로 유지돼 보존 규칙을 지키고 legacy 의 무고지 절단도 없앤다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U7-N5",
+   "title": "표준 도메인 표 검색·정렬이 전 출처 대상",
+   "theme": "목록 상한·페이지",
+   "legacy": "캐시 슬림된 1,500~2,000행 안에서 검색·정렬.",
+   "api": "백엔드가 전 출처 대상(표는 상위 100).",
+   "effect": "검색 결과에 legacy 에 없던 하위 도메인이 나올 수 있음.",
+   "routes": [
+    "/standard/answer-analysis/citation"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/citations.ts:84-85"
+   ],
+   "product_decision": false,
+   "decision_ref": "U7 번호",
+   "effort": "M",
+   "files": [
+    "back citations/domains q·sort"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "legacy 의 절단이 만든 누락을 없애는 쪽이다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U7-N7",
+   "title": "인용 하위 페이지 커서 페이징(이전·다음만)",
+   "theme": "목록 상한·페이지",
+   "legacy": "페이지 번호 이동.",
+   "api": "다음·이전만(이전 = 클라이언트 보관 커서, 직접 진입 시 첫 쪽).",
+   "effect": "프롬프트·톤 URL 하위 페이지에서 쪽 번호 점프가 없어짐.",
+   "routes": [
+    "/standard/answer-analysis/citation/prompts",
+    "/standard/answer-analysis/citation/tone-urls"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/citations.ts:88-89"
+   ],
+   "product_decision": false,
+   "decision_ref": "U7 번호, D5(엔지니어링)",
+   "effort": "L",
+   "files": [
+    "back citations/prompts·sources/tone(오프셋)",
+    "front citation-prompts-page"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "커서 계약 변경은 백엔드 전반에 걸리고 영향은 쪽 이동 방식뿐이다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U7-N12",
+   "title": "맞지 않는 커서 → 1쪽",
+   "theme": "목록 상한·페이지",
+   "legacy": "오류.",
+   "api": "409/422 cursor_* 면 1쪽을 읽음.",
+   "effect": "실패 대신 첫 쪽이 보임.",
+   "routes": [
+    "/standard/answer-analysis/citation/prompts",
+    "/standard/answer-analysis/citation/tone-urls"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/citations.ts:99-100"
+   ],
+   "product_decision": false,
+   "decision_ref": "U7 번호(오류 경로)",
+   "effort": "S",
+   "files": [
+    "-"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "실패 경로 개선이다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U7-N14",
+   "title": "?competitor= 100개 초과분 무시",
+   "theme": "목록 상한·페이지",
+   "legacy": "개수 제한 없이 적용.",
+   "api": "URL 순서 첫 100개만.",
+   "effect": "100개 넘게 고른 경우만 영향(관측 사용량 수십).",
+   "routes": [
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/citations.ts:105-107"
+   ],
+   "product_decision": false,
+   "decision_ref": "U7 번호(백엔드 상한)",
+   "effort": "S",
+   "files": [
+    "back CommonFilters competitor[] 상한"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "실사용 범위 밖이다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U8-N6",
+   "title": "전환 페이지 표 = AI 세션순 15행 중 12",
+   "theme": "목록 상한·페이지",
+   "legacy": "AI 활성 사용자순 12행.",
+   "api": "AI 세션순 한 목록 15행 중 첫 12(방문 표도 같은 목록).",
+   "effect": "페이지별 전환 표에 오르는 페이지와 순서가 바뀜.",
+   "routes": [
+    "/standard/ai-funnel/conversion",
+    "/website/ai-funnel/conversion",
+    "/projects/[id]/ai-funnel/conversion"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/funnel.ts:38-39"
+   ],
+   "product_decision": false,
+   "decision_ref": "U8 번호(DC-03 종속)",
+   "effort": "L",
+   "files": [
+    "DC-03 과 같음"
+   ],
+   "risk": "중간",
+   "recommendation": "match legacy",
+   "reason": "DC-03(분모)을 맞추면 함께 해소된다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U8-N13",
+   "title": "/website/prompts 커서 페이징",
+   "theme": "목록 상한·페이지",
+   "legacy": "?page 번호, 범위 초과 시 마지막 쪽.",
+   "api": "다음 = 커서, 이전 = 이력, 점프 없음, 낡은 커서는 1쪽.",
+   "effect": "웹사이트 프롬프트 목록에서 쪽 번호 이동이 없어짐.",
+   "routes": [
+    "/website/prompts"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/catalog.ts:42-44",
+    "survey after/website GET /v1/prompts"
+   ],
+   "product_decision": true,
+   "decision_ref": "DECISIONS-API Q19(P-1 서버 페이징, 제품 책임자) + D5",
+   "effort": "L",
+   "files": [
+    "back catalog/prompts(오프셋)"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "제품 책임자 결정 Q19 에 따른 것이다.",
+   "impact": "low",
+   "product_decision_direction": "keeps_difference"
+  },
+  {
+   "id": "U10-N14",
+   "title": "키워드 검색어 40개 상한(양 원천)",
+   "theme": "목록 상한·페이지",
+   "legacy": "U10 이전 legacy 는 상한 없음.",
+   "api": "고유 검색어 40개, 넘으면 400.",
+   "effect": "40개 넘게 넣으면 오류(운영 대비 변경).",
+   "routes": [
+    "/projects/[id]/intent/google-keyword"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/intent.ts:81-83"
+   ],
+   "product_decision": false,
+   "decision_ref": "U10 번호(검증 D2)",
+   "effort": "S",
+   "files": [
+    "front/app/api/keyword/search/route.ts"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "외부 유료 API 남용을 막는 상한이다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U9-N14",
+   "title": "xlsx 가져오기 서버 규칙·5MB/5,000행·URL 키",
+   "theme": "목록 상한·페이지",
+   "legacy": "브라우저 규칙, 상한 없음, 추적 URL 행 키 = uuid id 열.",
+   "api": "같은 규칙을 서버에서, 5MB·5,000행 명시 문구, uuid id 열 행은 URL 로 매칭. 내보내기 열 = url_norm·url·label.",
+   "effect": "큰 파일이 거부되고, 옛 내보내기 파일의 id 열은 URL 로 매칭됨.",
+   "routes": [
+    "/projects/[id]/prompt",
+    "/projects/[id]/setting"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/projects.ts:114-116",
+    "survey after/project_ops_interest POST .../import · tracked-urls/export"
+   ],
+   "product_decision": false,
+   "decision_ref": "U9 번호(gap G15·CK-14)",
+   "effort": "M",
+   "files": [
+    "back/app/features/projects/prompts/io",
+    "back projects settings tracked-urls"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "같은 규칙이고 상한은 서버 보호용이다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "DC-03",
+   "title": "GA4 전환율 분모 = 세션",
+   "theme": "지표 정의·모수",
+   "legacy": "AI 채널 활성 사용자(GA4 activeUsers 실시간 조회).",
+   "api": "세션(적재 rd.ga4_row 합산; 사용자 수는 행 합산 불가라 미제공).",
+   "effect": "AI 전환율·일반 전환율·전환 격차·엔진별·페이지별 값이 크게 달라짐(세션 ≥ 사용자라 전환율이 낮아짐). 전환 화면 라벨은 '활성 사용자' 그대로(U8-N3), 프로젝트 ⑦ 타일은 'AI 채널 세션' 문구로 바뀜.",
+   "routes": [
+    "/standard/ai-funnel/conversion",
+    "/website/ai-funnel/conversion",
+    "/projects/[id]/ai-funnel/conversion",
+    "/projects/[id]"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/funnel.ts:23-24",
+    "front/lib/hgh/adapters/dashboard.ts:84-87",
+    "docs/design/api/DECISIONS-API.md:272 (결정 6(b))",
+    "back/CORE-REQUESTS/bg-funnel.md 1절",
+    "survey after/global GET /v1/funnel/conversion"
+   ],
+   "product_decision": false,
+   "decision_ref": "제품 결정 6(b)(2026-09-30): ⑦ 분모 = 활성 사용자 유지 — 적재 데이터에 없어 구현 멈춤. 앞선 설계 G-12(a)(DDL v2)는 세션.",
+   "effort": "L",
+   "files": [
+    "ingest(동료 소관): rd.ga4 창 합계 표 DDL + GA4 창 runReport",
+    "back/app/features/analytics/funnel/conversion(users_window)",
+    "front/lib/hgh/adapters/funnel.ts·dashboard.ts"
+   ],
+   "risk": "높음: 전환 값 전체. ingest 블로커.",
+   "recommendation": "match legacy",
+   "reason": "제품 결정 6(b)가 활성 사용자를 택했으므로 맞추되, 적재가 준비되기 전에 G3/G4/G6 를 api 로 바꾸면 U8-N3 재라벨이 필수다.",
+   "impact": "high",
+   "product_decision_direction": "requires_match"
+  },
+  {
+   "id": "DC-10",
+   "title": "출처 필터의 톤 적용·자사 프롬프트 판정 단위",
+   "theme": "지표 정의·모수",
+   "legacy": "?source= 카테고리 필터를 톤 타일·톤 URL 목록에 적용 안 함. 프롬프트 분할(자사/미인용)의 자사 판정은 도메인 단위로 접어서.",
+   "api": "톤 타일·목록·카운트에 source[] 적용. 자사 판정 = 인용 행 단위.",
+   "effect": "출처 카테고리를 고르면 톤 타일 수·톤 URL 목록이 줄어듦. 자사 인용 프롬프트 수가 달라질 수 있음.",
+   "routes": [
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation",
+    "/standard/answer-analysis/citation/prompts",
+    "/standard/answer-analysis/citation/tone-urls"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/citations.ts:68-69",
+    "front/app/[locale]/(dash)/standard/answer-analysis/citation/tone-urls/page.tsx:17",
+    "back/app/features/analytics/citations/sources/README.md:25",
+    "survey after/global GET /v1/citations/prompts · /sources/tone"
+   ],
+   "product_decision": false,
+   "decision_ref": "모듈-인용 §8 열린 질문 1 권장안(엔지니어링, A4 고지 대상)",
+   "effort": "M",
+   "files": [
+    "back/app/features/analytics/citations/sources·tone(톤에 source[] 미적용)",
+    "back/app/features/analytics/citations/prompts(도메인 접기 판정)"
+   ],
+   "risk": "중간",
+   "recommendation": "match legacy",
+   "reason": "19·25 상 필터 적용 범위도 운영과 같아야 하며 권장안 수준의 선택이었다.",
+   "impact": "medium",
+   "product_decision_direction": null
+  },
+  {
+   "id": "DC-23",
+   "title": "프로젝트 ⑥ 자사 판정 = 백엔드 owned base 전체",
+   "theme": "지표 정의·모수",
+   "legacy": "유효 owned base 하나로 화면에서 판정.",
+   "api": "적재 시 owned base 전체로 판정(loc_owned).",
+   "effect": "⑥ 카드는 유효 base 가 정확히 1개일 때만 보여 평소 값은 같음; base 편집 직후 재판정 전까지 다를 수 있음.",
+   "routes": [
+    "/projects/[id]",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/dashboard.ts:90",
+    "front/app/[locale]/(dash)/projects/[id]/_data/live.ts:343-353"
+   ],
+   "product_decision": false,
+   "decision_ref": "설계 DC 목록(엔지니어링)",
+   "effort": "M",
+   "files": [
+    "back 적재 판정(ingest 범위)"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "카드 표시 조건상 평소 값이 같다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U4-N5",
+   "title": "언급 계열만 숨긴 회차 = 자리 전체 갭",
+   "theme": "지표 정의·모수",
+   "legacy": "해당 어휘 없음(hidden_scope 3 없음).",
+   "api": "자리 전체 갭 → 그 자리 인용 값도 버림.",
+   "effect": "언급만 숨긴 회차에서 인용 추이 점이 사라짐.",
+   "routes": [
+    "/dashboard",
+    "/website",
+    "/projects/[id]",
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention",
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/trend.ts:67-68"
+   ],
+   "product_decision": false,
+   "decision_ref": "U4 번호(엔지니어링)",
+   "effort": "S",
+   "files": [
+    "front/lib/hgh/adapters/trend.ts(인용 계열 값 유지)"
+   ],
+   "risk": "낮음",
+   "recommendation": "match legacy",
+   "reason": "어댑터에서 인용 값을 남기면 되는 작은 작업이다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U4-N6",
+   "title": "④ 카드 비율 분자 = 실제 순위 합",
+   "theme": "지표 정의·모수",
+   "legacy": "round(평균×수)로 재유도(수 > 10 이면 반올림 오차, 105/20 → 106).",
+   "api": "실제 순위 합(값 자체는 round1(합/수)로 같음).",
+   "effect": "④ 카드 아래 정의 문구의 분자 숫자가 1 정도 다를 수 있음.",
+   "routes": [
+    "/dashboard",
+    "/website",
+    "/projects/[id]"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/summary.ts:39-41"
+   ],
+   "product_decision": false,
+   "decision_ref": "U4 번호(엔지니어링)",
+   "effort": "S",
+   "files": [
+    "front/lib/hgh/adapters/summary.ts"
+   ],
+   "risk": "낮음",
+   "recommendation": "match legacy",
+   "reason": "어댑터 한 줄로 legacy 표기를 재현할 수 있다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U4-N7",
+   "title": "숨김 회차 = null 카드('측정 대기')",
+   "theme": "지표 정의·모수",
+   "legacy": "숨김 회차를 서빙하지 않아(인용 숨김이면 인용 화면은 그 앞 회차) 이런 상태가 없음.",
+   "api": "meta.suppressed hidden 이면 값 null '측정 대기'.",
+   "effect": "최신 회차가 계열 숨김이면 카드가 '측정 대기'로 비어 보임(legacy 는 직전 회차 값).",
+   "routes": [
+    "/dashboard",
+    "/website",
+    "/projects/[id]",
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/summary.ts:42-43",
+    "front/lib/db/repositories/scope-aggregates.ts:2015-2035"
+   ],
+   "product_decision": false,
+   "decision_ref": "U4 번호(엔지니어링)",
+   "effort": "M",
+   "files": [
+    "back/app/core/cycles.py(계열별 숨김 시 직전 회차 선택)"
+   ],
+   "risk": "중간",
+   "recommendation": "match legacy",
+   "reason": "보이던 값이 비면 안 되므로 계열별 직전 회차 규칙을 백엔드에 둔다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U5-N2",
+   "title": "출처 구성 '기타' 비중 반올림",
+   "theme": "지표 정의·모수",
+   "legacy": "나머지 행의 반올림 비중 합.",
+   "api": "pct(나머지 인용, 전체 인용).",
+   "effect": "'기타' 비중이 반올림 차이(0.1pp)만큼 다를 수 있음.",
+   "routes": [
+    "/dashboard",
+    "/website",
+    "/projects/[id]"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/dashboard.ts:95-96"
+   ],
+   "product_decision": false,
+   "decision_ref": "U5 번호",
+   "effort": "S",
+   "files": [
+    "front/lib/hgh/adapters/dashboard.ts toSourceSlices"
+   ],
+   "risk": "낮음",
+   "recommendation": "match legacy",
+   "reason": "어댑터 한 함수로 legacy 합산식을 재현할 수 있다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U5-N3",
+   "title": "대시보드 카드 스파크라인 = 회차 버킷",
+   "theme": "지표 정의·모수",
+   "legacy": "주 버킷 추이.",
+   "api": "Δ 와 같은 bucket=cycle 추이(호출 하나).",
+   "effect": "한 주에 회차가 둘이면 점이 둘로 보임(주 1회면 같음).",
+   "routes": [
+    "/dashboard"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/dashboard.ts:97-98",
+    "front/app/[locale]/(dash)/dashboard/page.tsx:387-390"
+   ],
+   "product_decision": false,
+   "decision_ref": "U5 번호(설계: 호출 하나)",
+   "effort": "S",
+   "files": [
+    "front/app/[locale]/(dash)/dashboard/page.tsx(스파크라인용 week 호출)"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "주 1회 회차에서는 값이 같고 호출 예산을 아낀다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U6-N3",
+   "title": "파서 미해석 브랜드(brand_key 0) 행 제외",
+   "theme": "지표 정의·모수",
+   "legacy": "표시명이 있으면 이름 없는 행으로 유지.",
+   "api": "표 행 아님(백엔드 규칙 F03).",
+   "effect": "언급 표에서 일부 행이 사라지고 브랜드 수가 줄 수 있음.",
+   "routes": [
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/mentions.ts:61-62",
+    "survey after/existing3 GET /v1/mentions/brands"
+   ],
+   "product_decision": false,
+   "decision_ref": "U6 번호(엔지니어링)",
+   "effort": "M",
+   "files": [
+    "back/app/features/analytics/mentions/brands service.py:240"
+   ],
+   "risk": "낮음~중간",
+   "recommendation": "match legacy",
+   "reason": "19·25 상 표 행·브랜드 수도 운영과 같아야 한다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U6-N14",
+   "title": "브랜드 드릴다운 답변 참조 값 = 답변 내 브랜드 합계",
+   "theme": "지표 정의·모수",
+   "legacy": "답변에서 그 브랜드의 첫 언급 행 값.",
+   "api": "브랜드 행 + 롤업 제품 합계(rd.answer_brand.mention_count).",
+   "effect": "드릴다운 답변 목록의 언급 수가 커질 수 있음(프롬프트 수는 같음).",
+   "routes": [
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/drilldown.ts:55-57"
+   ],
+   "product_decision": false,
+   "decision_ref": "U6 번호(엔지니어링)",
+   "effort": "M",
+   "files": [
+    "back/app/features/analytics/mentions/prompts"
+   ],
+   "risk": "중간",
+   "recommendation": "match legacy",
+   "reason": "19·25 상 드릴다운 수치도 운영과 같아야 한다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U6-N16",
+   "title": "신호 목록 퍼널 = 카탈로그 퍼널",
+   "theme": "지표 정의·모수",
+   "legacy": "scope_prompts.funnel_stage(legacy 어휘, 자주 null).",
+   "api": "카탈로그 퍼널(다른 화면과 같음).",
+   "effect": "신호 다이얼로그 퍼널 열이 비어 있던 곳에 값이 생김.",
+   "routes": [
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/drilldown.ts:61-62"
+   ],
+   "product_decision": false,
+   "decision_ref": "U6 번호(엔지니어링)",
+   "effort": "M",
+   "files": [
+    "back/app/features/analytics/mentions/prompts"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "legacy 는 대부분 null 이었고 다른 화면과 같은 기준이 된다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U7-N11",
+   "title": "여러 발행 보고서의 웹사이트 카드 라벨",
+   "theme": "지표 정의·모수",
+   "legacy": "발행물 하나만 읽음.",
+   "api": "첫 보고서 회차 라벨 + 사이트 수 합.",
+   "effect": "여러 보고서가 겹친 경우만 카드 각주가 다름.",
+   "routes": [
+    "/website",
+    "/website/answer-analysis/citation"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/citations.ts:97-98"
+   ],
+   "product_decision": false,
+   "decision_ref": "U7 번호",
+   "effort": "M",
+   "files": [
+    "front/lib/hgh/adapters/citations.ts"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "드문 조합이고 합산이 더 정확하다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U7-N13",
+   "title": "출처 필터 시 자사·미인용 프롬프트 카드",
+   "theme": "지표 정의·모수",
+   "legacy": "SQL 분할을 건너뛰고 상위 80 도메인 promptList 로 근사.",
+   "api": "전 인용 행에 source[] 로 분할(C-3).",
+   "effect": "?source= 를 건 웹사이트·프로젝트 인용 화면 카드 수·상위 5 목록이 달라짐.",
+   "routes": [
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/citations.ts:101-104"
+   ],
+   "product_decision": false,
+   "decision_ref": "U7 번호(legacy 근사 결함)",
+   "effort": "M",
+   "files": [
+    "back citations/prompts"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "legacy 는 상위 80 도메인만 본 근사치였다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U8-N4",
+   "title": "방문 화면 고유 방문자·방문 빈도 카드·사용자 열 숨김",
+   "theme": "지표 정의·모수",
+   "legacy": "표시.",
+   "api": "숨김(API 에 사용자 수 없음, BG-32 미제공).",
+   "effect": "AI 방문 화면에서 카드 2개와 사용자 열이 사라짐.",
+   "routes": [
+    "/standard/ai-funnel/conversion",
+    "/website/ai-funnel/conversion",
+    "/projects/[id]/ai-funnel/conversion"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/funnel.ts:35-36",
+    "back/CORE-REQUESTS/bg-funnel.md 1절"
+   ],
+   "product_decision": false,
+   "decision_ref": "제품 결정 G-12 대기(보류) — 카드 숨김은 front-adapter-plan 3.5 #9 원안",
+   "effort": "L",
+   "files": [
+    "ingest 창 사용자 수 적재(BG-32)",
+    "back funnel/conversion",
+    "front visits-view"
+   ],
+   "risk": "중간; ingest 블로커.",
+   "recommendation": "match legacy",
+   "reason": "보이던 카드가 사라지는 기능 변경이라 보존 규칙상 BG-32 로 되살려야 하며 DC-03 과 같은 적재 작업으로 묶인다.",
+   "impact": "medium",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U8-N7",
+   "title": "시장 상태 = coverage status",
+   "theme": "지표 정의·모수",
+   "legacy": "GA4 호출 실패를 '측정 대기'로.",
+   "api": "pending_grant = '측정 대기', unmapped 시장은 속성 없음.",
+   "effect": "'측정 대기' 표시 조건이 바뀜(호출 실패는 오류 경계로).",
+   "routes": [
+    "/standard/ai-funnel/conversion",
+    "/website/ai-funnel/conversion",
+    "/projects/[id]/ai-funnel/conversion"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/funnel.ts:40-41"
+   ],
+   "product_decision": false,
+   "decision_ref": "U8 번호",
+   "effort": "S",
+   "files": [
+    "front/lib/hgh/adapters/funnel.ts"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "상태 원천이 명시적이 되고 실패가 대기로 가려지지 않는다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U8-N16",
+   "title": "엔진 필터 시 비교 코호트 = 비AI 만",
+   "theme": "지표 정의·모수",
+   "legacy": "전체 − 선택 엔진(다른 AI 엔진이 '사람'에 포함 — 결함).",
+   "api": "비AI 트래픽만.",
+   "effect": "엔진 필터를 걸면 일반 전환율·격차·추이가 달라짐(필터 없으면 같음).",
+   "routes": [
+    "/standard/ai-funnel/conversion",
+    "/website/ai-funnel/conversion",
+    "/projects/[id]/ai-funnel/conversion"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/funnel.ts:61-63"
+   ],
+   "product_decision": false,
+   "decision_ref": "U8 번호(legacy 계산 결함 수정)",
+   "effort": "S",
+   "files": [
+    "back funnel/conversion 코호트 식"
+   ],
+   "risk": "중간",
+   "recommendation": "accept",
+   "reason": "legacy 는 다른 AI 엔진을 사람으로 센 결함이다(19·25 '결함까지 재현'과 충돌하므로 고지 필요).",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U9-N9",
+   "title": "프롬프트 수명 영향 수 단위·측정된 프롬프트 삭제 거부",
+   "theme": "지표 정의·모수",
+   "legacy": "scope_answers·mentions·citations 원시 행 수, 상태 무관 삭제.",
+   "api": "served 답변·브랜드 언급 행 수, 측정된(발행) 프롬프트 삭제는 409 prompt_not_deletable 새 문구.",
+   "effect": "삭제 확인 다이얼로그 숫자가 달라지고 측정된 프롬프트는 삭제가 막힘.",
+   "routes": [
+    "/projects/[id]/prompt"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/projects.ts:101-103",
+    "survey after/project_ops_interest lifecycle-impact · DELETE prompts"
+   ],
+   "product_decision": false,
+   "decision_ref": "U9 번호(모듈-프로젝트 §9)",
+   "effort": "M",
+   "files": [
+    "back/app/features/projects/prompts"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "측정 이력 손실을 막는 안전장치다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "TS-V3",
+   "title": "유형 추이 분자 = competitive 당사 행만(BG-07)",
+   "theme": "지표 정의·모수",
+   "legacy": "당사 롤업 행 전부(비경쟁 표기 포함)의 유형 bool_or.",
+   "api": "competitive 당사 행만(M-2 와 같은 술어) → 분자가 현행 이하.",
+   "effect": "KPI 탭 유형 추이 값이 낮아질 수 있음.",
+   "routes": [
+    "/standard/answer-analysis/mention"
+   ],
+   "evidence": [
+    "back/app/features/analytics/trend/series/README.md:51-56 (V3·D4)"
+   ],
+   "product_decision": false,
+   "decision_ref": "back known_diff 후보(A4 고지, 엔지니어링)",
+   "effort": "M",
+   "files": [
+    "back/app/features/analytics/trend/series/queries.py type_counts_sql(b.competitive)"
+   ],
+   "risk": "낮음",
+   "recommendation": "match legacy",
+   "reason": "19·25 대상 값 차이이고 술어 하나다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "TS-V4",
+   "title": "측정 일수 = 버킷 답변 전부·엔진 합집합·KST(BG-10)",
+   "theme": "지표 정의·모수",
+   "legacy": "셀 대표 1건의 엔진별 측정 일수 max(DB 세션 TZ).",
+   "api": "버킷 답변 전부, 엔진 합집합, KST 날짜 → 현행 이상.",
+   "effect": "KPI 탭 커버리지 라벨 'N일 측정'이 커질 수 있음.",
+   "routes": [
+    "/standard/answer-analysis/mention"
+   ],
+   "evidence": [
+    "back/app/features/analytics/trend/series/README.md:57"
+   ],
+   "product_decision": false,
+   "decision_ref": "back known_diff 후보(엔지니어링)",
+   "effort": "M",
+   "files": [
+    "back/app/features/analytics/trend/series/queries.py measured_days_sql"
+   ],
+   "risk": "낮음",
+   "recommendation": "match legacy",
+   "reason": "라벨 값 차이이고 README 가 추가형 필드 방안을 이미 적어 둠.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "KS-R4",
+   "title": "미측정 프롬프트 = 한 키 한 행",
+   "theme": "지표 정의·모수",
+   "legacy": "카탈로그 행 단위(같은 prompt_key 에 브랜드 행 둘이면 두 행, total = 행 수).",
+   "api": "서로 다른 키 단위(total = applied − measured).",
+   "effect": "미측정 프롬프트 다이얼로그 행 수·total 이 줄 수 있음.",
+   "routes": [
+    "/standard/answer-analysis/mention"
+   ],
+   "evidence": [
+    "back/app/features/analytics/kpi/summary/README.md:57-59"
+   ],
+   "product_decision": false,
+   "decision_ref": "back known_diff(R4, 엔지니어링)",
+   "effort": "M",
+   "files": [
+    "back/app/features/analytics/kpi/summary(unmeasured)"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "카드의 applied·measured 와 단위를 맞춘 정합이며 같은 프롬프트 중복 표시를 없앤다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "DC-14",
+   "title": "인용 출처 교정 화면 가중치 = 최신 노출 회차",
+   "theme": "지표 정의·모수",
+   "legacy": "전 기간 미러 인용 수, 저장 즉시 재분류.",
+   "api": "글로벌 최신 노출 회차 인용 수, 저장은 적재기 비동기 반영(대기 중 재편집 409).",
+   "effect": "관리자 인용 출처 화면의 인용 수가 작아지고, 저장 뒤 인용 화면 반영이 늦음.",
+   "routes": [
+    "/admin/standards/citation-sources"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/admin.ts:74-75",
+    "survey after/admin GET/PUT /v1/admin/citation-overrides"
+   ],
+   "product_decision": false,
+   "decision_ref": "설계 DC 목록(엔지니어링)",
+   "effort": "M",
+   "files": [
+    "back/app/features/admin/citation_sources/overrides(전 기간 수, DC-13 과 같은 방식)"
+   ],
+   "risk": "중간",
+   "recommendation": "match legacy",
+   "reason": "엔티티 화면(DC-13)은 이미 전 기간으로 되돌렸으므로 같은 방식으로 수치를 맞추고 비동기 반영만 수용한다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "PROF-cell_rep",
+   "title": "모수 = 회차 셀 대표 1건(A1)",
+   "theme": "현행 재현 스위치(백엔드 프로필)",
+   "legacy": "회차·프롬프트·엔진·지역 셀마다 대표 답변 1건만 모수(자식 표 포함).",
+   "api": "프로필 off: 셀의 답변 전부.",
+   "effect": "재실행·중복 답변이 있는 셀에서 노출률·점유율·인용 지표 분모·분자가 달라짐(전 분석 화면).",
+   "routes": [
+    "/dashboard",
+    "/website",
+    "/projects/[id]",
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention",
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation",
+    "/standard/ai-funnel/acr",
+    "/website/ai-funnel/acr",
+    "/projects/[id]/ai-funnel/acr"
+   ],
+   "evidence": [
+    "back/app/core/profile.py:37-41",
+    "back/app/core/profile.py:229-246 (IMPLEMENTED)"
+   ],
+   "product_decision": false,
+   "decision_ref": "차이 = 현행 프로필 기본값 off(엔지니어링 상태). 반대 방향 결정: 제품 결정 19·23~25(2026-10-01, back/app/core/profile.py:3 '같은 데이터·같은 회차에서 운영과 값이 완전히 같게, 예외 없음') → 스위치로 재현하기로 결정됨.",
+   "effort": "S(DB-v2.15 is_rep 열이 채워져 있으면 env)",
+   "files": [
+    "배포 env HGH_LEGACY_PROFILE"
+   ],
+   "risk": "높음: 전 화면 값. stg 는 이미 켬.",
+   "recommendation": "match legacy",
+   "reason": "제품 결정으로 재현이 정해졌고 구현이 끝나 env 로 켜면 된다.",
+   "impact": "high",
+   "product_decision_direction": "requires_match"
+  },
+  {
+   "id": "PROF-rep_pick_latest_first",
+   "title": "셀 대표 선정 = 서빙 답변 중 최신 우선(A1)",
+   "theme": "현행 재현 스위치(백엔드 프로필)",
+   "legacy": "게이트 전에 measured_at DESC NULLS FIRST 1건을 굳히고 그 답변이 부적격이면 셀 대표 없음.",
+   "api": "off: 적격 후보 안 최신.",
+   "effect": "대표가 바뀌는 셀의 값이 달라짐.",
+   "routes": [
+    "/dashboard",
+    "/website",
+    "/projects/[id]",
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention",
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "back/app/core/profile.py:42-47"
+   ],
+   "product_decision": false,
+   "decision_ref": "차이 = 현행 프로필 기본값 off(엔지니어링 상태). 반대 방향 결정: 제품 결정 19·23~25(2026-10-01, back/app/core/profile.py:3 '같은 데이터·같은 회차에서 운영과 값이 완전히 같게, 예외 없음') → 스위치로 재현하기로 결정됨.",
+   "effort": "M(투영 스위치: 재투영 필요)",
+   "files": [
+    "배포 env",
+    "ingest.project.apply REP_UPDATE",
+    "back/migration/fill-v215-rep.sql"
+   ],
+   "risk": "재투영 운영 작업.",
+   "recommendation": "match legacy",
+   "reason": "결정 사항이고 catalog_incl_deleted·cell_rep 조합에 필수다.",
+   "impact": "low",
+   "product_decision_direction": "requires_match"
+  },
+  {
+   "id": "PROF-rep_round_date_cell",
+   "title": "답변분석 대표 = round_date 셀 규칙(A1·R04CIT)",
+   "theme": "현행 재현 스위치(백엔드 프로필)",
+   "legacy": "답변분석 경로 대표 = round_date 마다 셀 1건(인용 숨김 회차 제외 보정 포함).",
+   "api": "off: hub 대표 규칙.",
+   "effect": "답변분석 화면 값이 대표 차이만큼 달라짐.",
+   "routes": [
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention",
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "back/app/core/profile.py:48-58"
+   ],
+   "product_decision": false,
+   "decision_ref": "차이 = 현행 프로필 기본값 off(엔지니어링 상태). 반대 방향 결정: 제품 결정 19·23~25(2026-10-01, back/app/core/profile.py:3 '같은 데이터·같은 회차에서 운영과 값이 완전히 같게, 예외 없음') → 스위치로 재현하기로 결정됨.",
+   "effort": "L(재투영 + freeze_at_publish 필요)",
+   "files": [
+    "배포 env",
+    "ingest 투영 훅",
+    "back/migration/fill-v219-rep.sql"
+   ],
+   "risk": "동결 층 의존.",
+   "recommendation": "match legacy",
+   "reason": "결정 사항이며 freeze_at_publish 와 함께 켜야 한다.",
+   "impact": "low",
+   "product_decision_direction": "requires_match"
+  },
+  {
+   "id": "PROF-acr_iter_unfolded",
+   "title": "분석 없는 ACR 반복 job 을 접지 않음(A15)",
+   "theme": "현행 재현 스위치(백엔드 프로필)",
+   "legacy": "셀 대표로 뽑히면 반복 순번과 무관하게 모수.",
+   "api": "off: acr_in 술어로 접음.",
+   "effect": "ACR·언급 모수가 달라짐.",
+   "routes": [
+    "/dashboard",
+    "/website",
+    "/projects/[id]",
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention",
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation",
+    "/standard/ai-funnel/acr",
+    "/website/ai-funnel/acr",
+    "/projects/[id]/ai-funnel/acr"
+   ],
+   "evidence": [
+    "back/app/core/profile.py:59-63"
+   ],
+   "product_decision": false,
+   "decision_ref": "차이 = 현행 프로필 기본값 off(엔지니어링 상태). 반대 방향 결정: 제품 결정 19·23~25(2026-10-01, back/app/core/profile.py:3 '같은 데이터·같은 회차에서 운영과 값이 완전히 같게, 예외 없음') → 스위치로 재현하기로 결정됨.",
+   "effort": "S(cell_rep 필요)",
+   "files": [
+    "배포 env"
+   ],
+   "risk": "낮음",
+   "recommendation": "match legacy",
+   "reason": "결정 사항이고 env 로 켠다.",
+   "impact": "low",
+   "product_decision_direction": "requires_match"
+  },
+  {
+   "id": "PROF-gap_in_population",
+   "title": "분석 결손 답변을 언급 모수에 포함(A16)",
+   "theme": "현행 재현 스위치(백엔드 프로필)",
+   "legacy": "분석 결손 답변을 언급 0 으로 모수에 넣음.",
+   "api": "off: 뺌.",
+   "effect": "노출률 분모가 커져 값이 낮아질 수 있음.",
+   "routes": [
+    "/dashboard",
+    "/website",
+    "/projects/[id]",
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention",
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "back/app/core/profile.py:64-68"
+   ],
+   "product_decision": false,
+   "decision_ref": "차이 = 현행 프로필 기본값 off(엔지니어링 상태). 반대 방향 결정: 제품 결정 19·23~25(2026-10-01, back/app/core/profile.py:3 '같은 데이터·같은 회차에서 운영과 값이 완전히 같게, 예외 없음') → 스위치로 재현하기로 결정됨.",
+   "effort": "S(cell_rep 필요)",
+   "files": [
+    "배포 env"
+   ],
+   "risk": "중간",
+   "recommendation": "match legacy",
+   "reason": "결정 사항이고 env 로 켠다.",
+   "impact": "low",
+   "product_decision_direction": "requires_match"
+  },
+  {
+   "id": "PROF-card_slot_rep",
+   "title": "카드 기간 창 = 자리마다 대표 회차 1개(R04CIT)",
+   "theme": "현행 재현 스위치(백엔드 프로필)",
+   "legacy": "카드 경로 기간 창은 자리(round_date)마다 언급·인용 대표 회차 하나, 글로벌은 완결성 < 0.9 자리 제외.",
+   "api": "off: 창 안 회차 전부.",
+   "effect": "대시보드 기간 카드 값이 달라짐(같은 자리 둘째·셋째 회차 포함 여부).",
+   "routes": [
+    "/dashboard",
+    "/website"
+   ],
+   "evidence": [
+    "back/app/core/profile.py:69-76"
+   ],
+   "product_decision": false,
+   "decision_ref": "차이 = 현행 프로필 기본값 off(엔지니어링 상태). 반대 방향 결정: 제품 결정 19·23~25(2026-10-01, back/app/core/profile.py:3 '같은 데이터·같은 회차에서 운영과 값이 완전히 같게, 예외 없음') → 스위치로 재현하기로 결정됨.",
+   "effort": "S",
+   "files": [
+    "배포 env"
+   ],
+   "risk": "중간",
+   "recommendation": "match legacy",
+   "reason": "결정 사항이고 env 로 켠다.",
+   "impact": "medium",
+   "product_decision_direction": "requires_match"
+  },
+  {
+   "id": "PROF-catalog_incl_deleted",
+   "title": "글로벌 카탈로그 모집단에 소프트 삭제 행 포함(A41)",
+   "theme": "현행 재현 스위치(백엔드 프로필)",
+   "legacy": "삭제된 프롬프트의 답변도 모수에 남음(stg 103개·9,304 답변).",
+   "api": "off: 삭제 행 제외.",
+   "effect": "글로벌 전 지표 값이 달라짐(2026-08-18 삭제분 답변 포함 여부).",
+   "routes": [
+    "/dashboard",
+    "/standard/answer-analysis/mention",
+    "/standard/answer-analysis/citation",
+    "/standard/ai-funnel/acr"
+   ],
+   "evidence": [
+    "back/app/core/profile.py:84-92"
+   ],
+   "product_decision": false,
+   "decision_ref": "차이 = 현행 프로필 기본값 off(엔지니어링 상태). 반대 방향 결정: 제품 결정 19·23~25(2026-10-01, back/app/core/profile.py:3 '같은 데이터·같은 회차에서 운영과 값이 완전히 같게, 예외 없음') → 스위치로 재현하기로 결정됨.",
+   "effort": "S(DB-v2.15 열 필요)",
+   "files": [
+    "배포 env"
+   ],
+   "risk": "높음: 글로벌 값. stg 는 이미 켬.",
+   "recommendation": "match legacy",
+   "reason": "결정 사항이고 env 로 켠다.",
+   "impact": "high",
+   "product_decision_direction": "requires_match"
+  },
+  {
+   "id": "PROF-display_name_latin",
+   "title": "롤업 대표 표기 = 라틴 우선·ICU 정렬(NAME)",
+   "theme": "현행 재현 스위치(백엔드 프로필)",
+   "legacy": "ICU en-US 콜레이션 라틴 우선 → 'KGM' 표기, 대소문자 다른 표기는 두 행.",
+   "api": "off: DB 기본 콜레이션(stg 는 'KG모빌리티').",
+   "effect": "브랜드 표시명·행 분리가 달라짐(경쟁사·언급 표).",
+   "routes": [
+    "/dashboard",
+    "/website",
+    "/projects/[id]",
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention",
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "back/app/core/profile.py:93-102"
+   ],
+   "product_decision": false,
+   "decision_ref": "차이 = 현행 프로필 기본값 off(엔지니어링 상태). 반대 방향 결정: 제품 결정 19·23~25(2026-10-01, back/app/core/profile.py:3 '같은 데이터·같은 회차에서 운영과 값이 완전히 같게, 예외 없음') → 스위치로 재현하기로 결정됨.",
+   "effort": "M(투영: dim_brand_name 재시드)",
+   "files": [
+    "배포 env",
+    "ingest.project.apply _ig_names",
+    "seed-3x-common"
+   ],
+   "risk": "재투영.",
+   "recommendation": "match legacy",
+   "reason": "결정 사항이다.",
+   "impact": "low",
+   "product_decision_direction": "requires_match"
+  },
+  {
+   "id": "PROF-brand_exposure_per_alias",
+   "title": "브랜드 노출 답변을 별칭 id 단위로 셈(G20)",
+   "theme": "현행 재현 스위치(백엔드 프로필)",
+   "legacy": "(답변, 롤업 id) 단위로 세 별칭 수만큼 중복(legacy 결함).",
+   "api": "off: 답변당 1.",
+   "effect": "경쟁사 노출 답변 수·노출률이 legacy 에서 더 큼.",
+   "routes": [
+    "/dashboard",
+    "/website",
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention"
+   ],
+   "evidence": [
+    "back/app/core/profile.py:103-108"
+   ],
+   "product_decision": false,
+   "decision_ref": "차이 = 현행 프로필 기본값 off(엔지니어링 상태). 반대 방향 결정: 제품 결정 19·23~25(2026-10-01, back/app/core/profile.py:3 '같은 데이터·같은 회차에서 운영과 값이 완전히 같게, 예외 없음') — '결함까지 재현' → 스위치로 재현하기로 결정됨.",
+   "effort": "S",
+   "files": [
+    "배포 env"
+   ],
+   "risk": "중간",
+   "recommendation": "match legacy",
+   "reason": "결정이 결함 재현까지 명시했다.",
+   "impact": "low",
+   "product_decision_direction": "requires_match"
+  },
+  {
+   "id": "PROF-m05_den_hostless",
+   "title": "⑤ 분모에 호스트 없는 인용 포함(G21A)",
+   "theme": "현행 재현 스위치(백엔드 프로필)",
+   "legacy": "⑤ 인용 점유율·GEO 국가 분모 = 도메인 NULL 인용 포함.",
+   "api": "off: 제외 → ⑤ 값이 legacy 보다 높음.",
+   "effect": "⑤ 인용 점유율 카드·GEO 값이 달라짐.",
+   "routes": [
+    "/dashboard",
+    "/website",
+    "/projects/[id]",
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "back/app/core/profile.py:109-114"
+   ],
+   "product_decision": false,
+   "decision_ref": "차이 = 현행 프로필 기본값 off(엔지니어링 상태). 반대 방향 결정: 제품 결정 19·23~25(2026-10-01, back/app/core/profile.py:3 '같은 데이터·같은 회차에서 운영과 값이 완전히 같게, 예외 없음') → 스위치로 재현하기로 결정됨.",
+   "effort": "S(DB-v2.15 cit_n_all 필요)",
+   "files": [
+    "배포 env"
+   ],
+   "risk": "중간",
+   "recommendation": "match legacy",
+   "reason": "결정 사항이고 env 로 켠다.",
+   "impact": "medium",
+   "product_decision_direction": "requires_match"
+  },
+  {
+   "id": "PROF-cit_hostless_per_row",
+   "title": "호스트 없는 인용 = 인용 행 자신 기준(G21A)",
+   "theme": "현행 재현 스위치(백엔드 프로필)",
+   "legacy": "인용 행 도메인이 NULL 이면 그룹 키 ''(도메인 목록 제외, ⑤ 분모 포함).",
+   "api": "off: URL 최빈 도메인으로 출처를 붙임.",
+   "effect": "도메인 목록 인용 수·⑤ 값이 달라짐.",
+   "routes": [
+    "/dashboard",
+    "/website",
+    "/projects/[id]",
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "back/app/core/profile.py:115-120"
+   ],
+   "product_decision": false,
+   "decision_ref": "차이 = 현행 프로필 기본값 off(엔지니어링 상태). 반대 방향 결정: 제품 결정 19·23~25(2026-10-01, back/app/core/profile.py:3 '같은 데이터·같은 회차에서 운영과 값이 완전히 같게, 예외 없음') → 스위치로 재현하기로 결정됨.",
+   "effort": "M(투영)",
+   "files": [
+    "배포 env",
+    "ingest 인용 판정",
+    "seed-40 §6"
+   ],
+   "risk": "재투영.",
+   "recommendation": "match legacy",
+   "reason": "결정 사항이다.",
+   "impact": "low",
+   "product_decision_direction": "requires_match"
+  },
+  {
+   "id": "PROF-web_owned_target_base",
+   "title": "웹사이트 자사 판정의 타겟 base NORM(OWN4)",
+   "theme": "현행 재현 스위치(백엔드 프로필)",
+   "legacy": "인용 base NORM(쿼리 제거) ∈ 유닛 타겟 base NORM.",
+   "api": "off: 쿼리 보존 NORM → 쿼리 붙은 타겟 인용을 자사에서 뺌(C08 881 대 877).",
+   "effect": "웹사이트 자사 URL 인용률이 조금 달라짐.",
+   "routes": [
+    "/website",
+    "/website/answer-analysis/citation"
+   ],
+   "evidence": [
+    "back/app/core/profile.py:121-127"
+   ],
+   "product_decision": false,
+   "decision_ref": "차이 = 현행 프로필 기본값 off(엔지니어링 상태). 반대 방향 결정: 제품 결정 19·23~25(2026-10-01, back/app/core/profile.py:3 '같은 데이터·같은 회차에서 운영과 값이 완전히 같게, 예외 없음') → 스위치로 재현하기로 결정됨.",
+   "effort": "M(투영)",
+   "files": [
+    "배포 env",
+    "ingest 인용 판정"
+   ],
+   "risk": "재투영.",
+   "recommendation": "match legacy",
+   "reason": "결정 사항이다.",
+   "impact": "low",
+   "product_decision_direction": "requires_match"
+  },
+  {
+   "id": "PROF-web_url_rate",
+   "title": "웹사이트 URL 인용률 발행값 라우팅(A2)",
+   "theme": "현행 재현 스위치(백엔드 프로필)",
+   "legacy": "X.reportTruth: 폴백 축이면 라이브, 기간은 하루일 때만 회차 발행값 등.",
+   "api": "off: 새 라우팅.",
+   "effect": "웹사이트 자사·타겟 URL 카드가 발행값/라이브 중 어느 쪽인지와 값이 달라짐.",
+   "routes": [
+    "/website",
+    "/website/answer-analysis/citation"
+   ],
+   "evidence": [
+    "back/app/core/profile.py:132-138"
+   ],
+   "product_decision": false,
+   "decision_ref": "차이 = 현행 프로필 기본값 off(엔지니어링 상태). 반대 방향 결정: 제품 결정 19·23~25(2026-10-01, back/app/core/profile.py:3 '같은 데이터·같은 회차에서 운영과 값이 완전히 같게, 예외 없음') → 스위치로 재현하기로 결정됨.",
+   "effort": "S",
+   "files": [
+    "배포 env"
+   ],
+   "risk": "중간",
+   "recommendation": "match legacy",
+   "reason": "결정 사항이고 env 로 켠다.",
+   "impact": "low",
+   "product_decision_direction": "requires_match"
+  },
+  {
+   "id": "PROF-web_geo_answer_region",
+   "title": "웹사이트 국가 경쟁 축 표식(GEOAX)",
+   "theme": "현행 재현 스위치(백엔드 프로필)",
+   "legacy": "사이트 국가(사이트 없는 프롬프트만 답변 region).",
+   "api": "web_registered_only 모수 위에서는 같음.",
+   "effect": "단독 영향 없음(web_registered_only 요구 표식).",
+   "routes": [
+    "/website"
+   ],
+   "evidence": [
+    "back/app/core/profile.py:139-145"
+   ],
+   "product_decision": false,
+   "decision_ref": "차이 = 현행 프로필 기본값 off(엔지니어링 상태). 반대 방향 결정: 제품 결정 19·23~25(2026-10-01, back/app/core/profile.py:3 '같은 데이터·같은 회차에서 운영과 값이 완전히 같게, 예외 없음') → 스위치로 재현하기로 결정됨.",
+   "effort": "S",
+   "files": [
+    "배포 env"
+   ],
+   "risk": "없음",
+   "recommendation": "match legacy",
+   "reason": "web_registered_only 와 함께 켜는 표식이다.",
+   "impact": "low",
+   "product_decision_direction": "requires_match"
+  },
+  {
+   "id": "PROF-web_registered_only",
+   "title": "웹 카드 모수 = 보고서 유닛 소속 프롬프트(WEBREG16)",
+   "theme": "현행 재현 스위치(백엔드 프로필)",
+   "legacy": "카드 경로 모수 = report_fs 있는 유닛 소속 프롬프트만.",
+   "api": "off: 전 프롬프트.",
+   "effect": "웹사이트 대시보드 카드 값이 달라짐.",
+   "routes": [
+    "/website"
+   ],
+   "evidence": [
+    "back/app/core/profile.py:146-151"
+   ],
+   "product_decision": false,
+   "decision_ref": "차이 = 현행 프로필 기본값 off(엔지니어링 상태). 반대 방향 결정: 제품 결정 19·23~25(2026-10-01, back/app/core/profile.py:3 '같은 데이터·같은 회차에서 운영과 값이 완전히 같게, 예외 없음') → 스위치로 재현하기로 결정됨.",
+   "effort": "S(DB-v2.16 표 채움 필요)",
+   "files": [
+    "배포 env",
+    "fill-v216.sql"
+   ],
+   "risk": "중간",
+   "recommendation": "match legacy",
+   "reason": "결정 사항이다.",
+   "impact": "medium",
+   "product_decision_direction": "requires_match"
+  },
+  {
+   "id": "PROF-web_accuracy_flat",
+   "title": "웹 ⑥ 인용 정확도 = 현행 정의(CACC6)",
+   "theme": "현행 재현 스위치(백엔드 프로필)",
+   "legacy": "분자 = 같은 보고서 유닛 프롬프트 전체 타겟 중 하나라도 인용, 기간 카드 모수 = 비카드.",
+   "api": "off: 자기 프롬프트 타겟 ∧ 자사.",
+   "effect": "웹사이트 ⑥ 카드·추이 값이 달라짐.",
+   "routes": [
+    "/website"
+   ],
+   "evidence": [
+    "back/app/core/profile.py:152-161"
+   ],
+   "product_decision": false,
+   "decision_ref": "차이 = 현행 프로필 기본값 off(엔지니어링 상태). 반대 방향 결정: 제품 결정 19·23~25(2026-10-01, back/app/core/profile.py:3 '같은 데이터·같은 회차에서 운영과 값이 완전히 같게, 예외 없음') → 스위치로 재현하기로 결정됨.",
+   "effort": "L(freeze_at_publish 필요)",
+   "files": [
+    "배포 env",
+    "frz.card_web"
+   ],
+   "risk": "동결 층 의존.",
+   "recommendation": "match legacy",
+   "reason": "결정 사항이다.",
+   "impact": "low",
+   "product_decision_direction": "requires_match"
+  },
+  {
+   "id": "PROF-card_brand_cap",
+   "title": "카드 브랜드 목록 상위 200(BRANDCAP)",
+   "theme": "현행 재현 스위치(백엔드 프로필)",
+   "legacy": "카드 경로 브랜드 = 상위 200행(잘린 몫은 잔여, 합계 유지).",
+   "api": "off: 상한 없음.",
+   "effect": "대시보드 경쟁사 후보·#16 계산 모집단이 달라질 수 있음.",
+   "routes": [
+    "/dashboard",
+    "/website"
+   ],
+   "evidence": [
+    "back/app/core/profile.py:174-179"
+   ],
+   "product_decision": false,
+   "decision_ref": "차이 = 현행 프로필 기본값 off(엔지니어링 상태). 반대 방향 결정: 제품 결정 19·23~25(2026-10-01, back/app/core/profile.py:3 '같은 데이터·같은 회차에서 운영과 값이 완전히 같게, 예외 없음') → 스위치로 재현하기로 결정됨.",
+   "effort": "S",
+   "files": [
+    "배포 env"
+   ],
+   "risk": "낮음",
+   "recommendation": "match legacy",
+   "reason": "결정 사항이고 env 로 켠다.",
+   "impact": "low",
+   "product_decision_direction": "requires_match"
+  },
+  {
+   "id": "PROF-compare_cycle_set",
+   "title": "기간 비교 창 회차 = 노출 발행 회차 전부(F07)",
+   "theme": "현행 재현 스위치(백엔드 프로필)",
+   "legacy": "글로벌은 자리 병합으로 비서빙이 된 회차도 포함.",
+   "api": "off: 서빙 회차만.",
+   "effect": "글로벌 기간 비교 Δ 값이 달라짐.",
+   "routes": [
+    "/dashboard",
+    "/website"
+   ],
+   "evidence": [
+    "back/app/core/profile.py:180-185"
+   ],
+   "product_decision": false,
+   "decision_ref": "차이 = 현행 프로필 기본값 off(엔지니어링 상태). 반대 방향 결정: 제품 결정 19·23~25(2026-10-01, back/app/core/profile.py:3 '같은 데이터·같은 회차에서 운영과 값이 완전히 같게, 예외 없음') → 스위치로 재현하기로 결정됨.",
+   "effort": "S",
+   "files": [
+    "배포 env"
+   ],
+   "risk": "낮음",
+   "recommendation": "match legacy",
+   "reason": "결정 사항이고 env 로 켠다.",
+   "impact": "low",
+   "product_decision_direction": "requires_match"
+  },
+  {
+   "id": "PROF-freeze_at_publish",
+   "title": "카드 값 = 발행 시점 동결값(GEN)",
+   "theme": "현행 재현 스위치(백엔드 프로필)",
+   "legacy": "대시보드 카드는 발행(생성) 시점에 고정한 집계층 값(생성 뒤 바뀐 답변은 옛 행).",
+   "api": "off: 조회 시점 rd 재계산.",
+   "effect": "발행 뒤 답변·판정이 바뀐 회차의 대시보드 카드·추이 값이 달라짐.",
+   "routes": [
+    "/dashboard",
+    "/website"
+   ],
+   "evidence": [
+    "back/app/core/profile.py:186-199",
+    "back/app/core/card_routes.py:1-4"
+   ],
+   "product_decision": false,
+   "decision_ref": "차이 = 현행 프로필 기본값 off(엔지니어링 상태). 반대 방향 결정: 제품 결정 19·23~25(2026-10-01, back/app/core/profile.py:3 '같은 데이터·같은 회차에서 운영과 값이 완전히 같게, 예외 없음') + 제품 결정 31·32(동결 층) → 스위치로 재현하기로 결정됨.",
+   "effort": "L(frz 동결 층 이관·발행 생성기 가동 필요)",
+   "files": [
+    "배포 env",
+    "ingest.frz(S1 이관·S2 생성기)"
+   ],
+   "risk": "높음: 동결 층이 비면 켤 수 없음.",
+   "recommendation": "match legacy",
+   "reason": "결정 사항이나 동결 층 적재가 선행돼야 한다.",
+   "impact": "high",
+   "product_decision_direction": "requires_match"
+  },
+  {
+   "id": "PROF-resub_phantom_exclude",
+   "title": "답변 회차 = run 원장 멤버십(RESUB)",
+   "theme": "현행 재현 스위치(백엔드 프로필)",
+   "legacy": "앵커 표 cycle_id = run 수준 원장 멤버십(재제출 유령 회차 포함).",
+   "api": "off: hub 코호트 규칙.",
+   "effect": "재제출·pin 답변이 다른 회차에 귀속돼 회차별 값이 달라짐.",
+   "routes": [
+    "/dashboard",
+    "/website",
+    "/projects/[id]",
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention",
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "back/app/core/profile.py:200-208"
+   ],
+   "product_decision": false,
+   "decision_ref": "차이 = 현행 프로필 기본값 off(엔지니어링 상태). 반대 방향 결정: 제품 결정 19·23~25(2026-10-01, back/app/core/profile.py:3 '같은 데이터·같은 회차에서 운영과 값이 완전히 같게, 예외 없음') — 'RESUB 결함까지 재현' → 스위치로 재현하기로 결정됨.",
+   "effort": "M(투영: reproject-attrib-member.py 1회)",
+   "files": [
+    "배포 env",
+    "back/migration/reproject-attrib-member.py"
+   ],
+   "risk": "재투영.",
+   "recommendation": "match legacy",
+   "reason": "결정 사항이다.",
+   "impact": "low",
+   "product_decision_direction": "requires_match"
+  },
+  {
+   "id": "PROF-domains_card_by_host",
+   "title": "카드 도메인 목록 = 호스트 단위(F04)",
+   "theme": "현행 재현 스위치(백엔드 프로필)",
+   "legacy": "공식 소셜 계정 그룹 키를 도메인 행에 합침(facebook.com 2,570).",
+   "api": "off: 출처 그룹 키 단위(2,567).",
+   "effect": "대시보드 출처 구성·경쟁사 인용 행 수치가 조금 다름(라벨 중복은 미선언 버그 참조).",
+   "routes": [
+    "/dashboard",
+    "/website"
+   ],
+   "evidence": [
+    "back/app/core/profile.py:209-215"
+   ],
+   "product_decision": false,
+   "decision_ref": "차이 = 현행 프로필 기본값 off(엔지니어링 상태). 반대 방향 결정: 제품 결정 19·23~25(2026-10-01, back/app/core/profile.py:3 '같은 데이터·같은 회차에서 운영과 값이 완전히 같게, 예외 없음') → 스위치로 재현하기로 결정됨.",
+   "effort": "S",
+   "files": [
+    "배포 env"
+   ],
+   "risk": "낮음",
+   "recommendation": "match legacy",
+   "reason": "결정 사항이고 env 로 켠다.",
+   "impact": "low",
+   "product_decision_direction": "requires_match"
+  },
+  {
+   "id": "PROF-brand_card_fold",
+   "title": "동결 층 브랜드 접기(G01CF)",
+   "theme": "현행 재현 스위치(백엔드 프로필)",
+   "legacy": "운영 summary 세부층처럼 (답변, 롤업 id, 표시명)으로 접어 경쟁 판정·순위.",
+   "api": "off: 언급 행 단위.",
+   "effect": "동결 카드의 경쟁사 순위·점유율 일부가 달라짐(Smart 사례).",
+   "routes": [
+    "/dashboard",
+    "/website"
+   ],
+   "evidence": [
+    "back/app/core/profile.py:216-225"
+   ],
+   "product_decision": false,
+   "decision_ref": "차이 = 현행 프로필 기본값 off(엔지니어링 상태). 반대 방향 결정: 제품 결정 19·23~25(2026-10-01, back/app/core/profile.py:3 '같은 데이터·같은 회차에서 운영과 값이 완전히 같게, 예외 없음') → 스위치로 재현하기로 결정됨.",
+   "effort": "L(freeze: 동결 세대 재생성)",
+   "files": [
+    "ingest.frz.fold"
+   ],
+   "risk": "동결 층 의존.",
+   "recommendation": "match legacy",
+   "reason": "결정 사항이다.",
+   "impact": "low",
+   "product_decision_direction": "requires_match"
+  },
+  {
+   "id": "U5-N1",
+   "title": "GEO '당사' 라벨 = 백엔드 own_label",
+   "theme": "라벨·표기·형식",
+   "legacy": "여러 브랜드 스코프 계정은 브랜드명을 이어 붙임('Hyundai, Kia'); admin 이 한 브랜드를 골라도 'HMG'.",
+   "api": "'HMG'(다중) / 고른 브랜드명(admin).",
+   "effect": "GEO 섹션 당사 라벨 문구가 바뀜.",
+   "routes": [
+    "/dashboard",
+    "/website"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/dashboard.ts:92-94",
+    "survey after/existing3 GET /v1/geo card=true · website GET /v1/geo"
+   ],
+   "product_decision": false,
+   "decision_ref": "U5 번호(엔지니어링)",
+   "effort": "S",
+   "files": [
+    "front/lib/hgh/adapters/dashboard.ts(세션 스코프 브랜드로 라벨 조립)"
+   ],
+   "risk": "낮음",
+   "recommendation": "match legacy",
+   "reason": "문구 보존 규칙 대상이고 어댑터에서 조립하면 된다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U7-N8",
+   "title": "웹사이트 URL 카드 각주가 항상 원천(발행/라이브) 명시",
+   "theme": "라벨·표기·형식",
+   "legacy": "report-truth 스위치 off 동안 각주 없음.",
+   "api": "항상 발행·라이브 원천 각주.",
+   "effect": "웹사이트 자사·타겟 URL 카드에 각주가 추가로 보임.",
+   "routes": [
+    "/website",
+    "/website/answer-analysis/citation"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/citations.ts:90-91"
+   ],
+   "product_decision": false,
+   "decision_ref": "U7 번호",
+   "effort": "S",
+   "files": [
+    "front/lib/hgh/adapters/citations.ts·summary.ts(운영 스위치 상태에 맞춰 각주 숨김)"
+   ],
+   "risk": "낮음",
+   "recommendation": "match legacy",
+   "reason": "문구 추가는 보존 규칙 위반이고 어댑터에서 숨기면 된다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U8-N3",
+   "title": "전환 화면 라벨 '활성 사용자'인데 값은 세션",
+   "theme": "라벨·표기·형식",
+   "legacy": "라벨·값 모두 활성 사용자.",
+   "api": "값은 세션(DC-03), 라벨은 공용 메시지라 '활성 사용자' 그대로.",
+   "effect": "전환 화면이 세션 값을 '활성 사용자'로 잘못 표기.",
+   "routes": [
+    "/standard/ai-funnel/conversion",
+    "/website/ai-funnel/conversion",
+    "/projects/[id]/ai-funnel/conversion"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/funnel.ts:32-34"
+   ],
+   "product_decision": false,
+   "decision_ref": "U8 번호 — 컷오버 체크리스트 필수 단계",
+   "effort": "S(재라벨) / L(DC-03 일치)",
+   "files": [
+    "messages aiFunnelView.conversion.*(api 전용 키)",
+    "DC-03 작업"
+   ],
+   "risk": "높음: 잘못된 정의 표기.",
+   "recommendation": "match legacy",
+   "reason": "DC-03 을 맞추면 해소되고, 그 전에 G3/G4/G6 를 api 로 바꾼다면 재라벨이 필수다.",
+   "impact": "medium",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U8-N20",
+   "title": "ACR 추이 안내 '일별' 문구 그대로",
+   "theme": "라벨·표기·형식",
+   "legacy": "일별 최종 추천 선택률(값도 일 버킷).",
+   "api": "값은 회차 버킷(DC-09)인데 문구는 '일별'.",
+   "effect": "ACR 추이 안내가 실제 버킷과 다름.",
+   "routes": [
+    "/standard/ai-funnel/acr",
+    "/website/ai-funnel/acr",
+    "/projects/[id]/ai-funnel/acr"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/funnel.ts:66-68"
+   ],
+   "product_decision": false,
+   "decision_ref": "U8 번호 — G4 전환 필수 단계",
+   "effort": "S",
+   "files": [
+    "messages aiFunnelView.acr.trend.hint(api 전용 키 '회차별')"
+   ],
+   "risk": "중간",
+   "recommendation": "accept",
+   "reason": "DC-09(Q12)를 수용하므로 문구를 '회차별'로 바꾸는 쪽이 맞고 그 교체가 필수다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U8-N18",
+   "title": "변경 이력 행 id = 정수 audit_id 문자열",
+   "theme": "라벨·표기·형식",
+   "legacy": "audit uuid.",
+   "api": "String(audit_id).",
+   "effect": "React key 뿐, 화면 표시 없음.",
+   "routes": [
+    "/standard/prompts"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/catalog.ts:48-49"
+   ],
+   "product_decision": false,
+   "decision_ref": "U8 번호",
+   "effort": "S",
+   "files": [
+    "-"
+   ],
+   "risk": "없음",
+   "recommendation": "accept",
+   "reason": "보이지 않는다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U6-N7",
+   "title": "답변 모달 인용 category = slug",
+   "theme": "라벨·표기·형식",
+   "legacy": "Scope 분류 라벨.",
+   "api": "카테고리 slug.",
+   "effect": "모달이 읽지 않음(영향 없음).",
+   "routes": [
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention",
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/answers.ts:31-32"
+   ],
+   "product_decision": false,
+   "decision_ref": "U6 번호",
+   "effort": "S",
+   "files": [
+    "-"
+   ],
+   "risk": "없음",
+   "recommendation": "accept",
+   "reason": "화면에서 쓰지 않는 필드다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U10-N9",
+   "title": "컨텍스트 맵 내보내기 시트명·헤더 = 백엔드",
+   "theme": "라벨·표기·형식",
+   "legacy": "front 메시지.",
+   "api": "백엔드 EXPORT_LABELS(오늘은 messages 와 같음), 언어 = body lang, 파일명 헤더 = 백엔드.",
+   "effect": "오늘은 같음(이후 문구가 갈릴 위험).",
+   "routes": [
+    "/projects/[id]/intent/social-scraping"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/intent.ts:67-70"
+   ],
+   "product_decision": false,
+   "decision_ref": "U10 번호(gap G14)",
+   "effort": "S",
+   "files": [
+    "-"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "현재 값이 같다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U10-N11",
+   "title": "액션 오류 문구 = 메시지 파일(en 은 영어)",
+   "theme": "라벨·표기·형식",
+   "legacy": "한국어 하드코딩.",
+   "api": "projectDetail.intent.actionErrors(ko = legacy 문구).",
+   "effect": "영어 화면에서만 영어로 보임.",
+   "routes": [
+    "/projects/[id]/intent/google-keyword",
+    "/projects/[id]/intent/social-scraping"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/intent.ts:73-74"
+   ],
+   "product_decision": false,
+   "decision_ref": "U10 번호",
+   "effort": "S",
+   "files": [
+    "-"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "한국어는 같고 영어 화면 개선이다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U5-N5",
+   "title": "프로젝트 타일 '마지막 AI 호출' = 백엔드 시계",
+   "theme": "라벨·표기·형식",
+   "legacy": "같은 정의, front 계산.",
+   "api": "ProjectDetail.last_run_at.",
+   "effect": "보이는 차이 거의 없음.",
+   "routes": [
+    "/projects/[id]"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/dashboard.ts:101-102"
+   ],
+   "product_decision": false,
+   "decision_ref": "U5 번호",
+   "effort": "S",
+   "files": [
+    "-"
+   ],
+   "risk": "없음",
+   "recommendation": "accept",
+   "reason": "정의가 같다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U5-N7",
+   "title": "웹사이트 구성 토픽 = []",
+   "theme": "라벨·표기·형식",
+   "legacy": "계산 후 버림(showTopics=false).",
+   "api": "[]",
+   "effect": "보이는 차이 없음.",
+   "routes": [
+    "/website"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/dashboard.ts:109-110"
+   ],
+   "product_decision": false,
+   "decision_ref": "U5 번호",
+   "effort": "S",
+   "files": [
+    "-"
+   ],
+   "risk": "없음",
+   "recommendation": "accept",
+   "reason": "화면이 그리지 않는다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U9-N4",
+   "title": "URL 오류 문구 통합",
+   "theme": "라벨·표기·형식",
+   "legacy": "'http(s):// URL만 등록할 수 있어요'와 형식 오류를 구분, 도메인 이전 안내 표시.",
+   "api": "'올바른 URL 형식이 아닙니다' 한 문구, 도메인 이전 안내 없음(도메인은 owned base 에서 파생).",
+   "effect": "owned base·추적 URL 입력 오류 문구가 바뀜.",
+   "routes": [
+    "/projects/[id]/setting"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/projects.ts:83-86"
+   ],
+   "product_decision": false,
+   "decision_ref": "U9 번호",
+   "effort": "S",
+   "files": [
+    "front/lib/hgh/adapters/projects.ts(전송 전 http(s) 검사로 legacy 문구)"
+   ],
+   "risk": "낮음",
+   "recommendation": "match legacy",
+   "reason": "문구 보존 규칙 대상이고 전송 전 검사 한 줄로 구분할 수 있다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U9-N11",
+   "title": "pending 멤버 관련 문구",
+   "theme": "라벨·표기·형식",
+   "legacy": "pending 강등 = 'Viewer는 이미 Viewer입니다', pending removeMember 감사 = remove.",
+   "api": "'활성 상태의 멤버만 위임 가능합니다', 감사 = cancel_invite.",
+   "effect": "멤버 화면 일부 오류 문구·감사 기록 종류가 바뀜.",
+   "routes": [
+    "/projects/[id]/member"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/projects.ts:106-108"
+   ],
+   "product_decision": false,
+   "decision_ref": "U9 번호",
+   "effort": "S",
+   "files": [
+    "front/lib/hgh/adapters/projects.ts 오류표"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "새 문구가 상태를 정확히 말하고 감사 기록도 실제 동작과 맞는다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "PC-6",
+   "title": "국가·언어 표시명 = 백엔드 고정 표",
+   "theme": "라벨·표기·형식",
+   "legacy": "front Intl.DisplayNames.",
+   "api": "names_data 표 + 조립 규칙(Intl 표본 대조 불일치 0, 변이·확장 하위 태그는 코드 그대로).",
+   "effect": "드문 언어 태그만 표시명이 코드로 보일 수 있음(웹사이트 프롬프트 xlsx).",
+   "routes": [
+    "/website/prompts"
+   ],
+   "evidence": [
+    "back/app/features/catalog/prompts/catalog/README.md:61-69 (다른 점 6)"
+   ],
+   "product_decision": false,
+   "decision_ref": "back 명세 차이(테크 리드 확인 대상)",
+   "effort": "S",
+   "files": [
+    "-"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "대조 불일치가 0 이다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "DC-20",
+   "title": "GA4 속성 행 'unmapped' 의미 변경",
+   "theme": "라벨·표기·형식",
+   "legacy": "unmapped = 속성 id 아직 모름.",
+   "api": "속성 행의 unmapped = 브랜드×국가 매핑 없음(속성 없는 시장 행은 legacy 의미).",
+   "effect": "관리자 GA4 화면 상태 배지 뜻이 행 종류에 따라 달라짐.",
+   "routes": [
+    "/admin/ga4"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/admin.ts:76-77",
+    "survey after/admin GET /v1/admin/ga4/properties"
+   ],
+   "product_decision": false,
+   "decision_ref": "설계 DC 목록(엔지니어링)",
+   "effort": "S",
+   "files": [
+    "front admin/ga4 화면 범례"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "관리자 전용이고 범례로 설명하면 된다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U10-N2",
+   "title": "SERP 프롬프트 초안 실패 처리",
+   "theme": "라벨·표기·형식",
+   "legacy": "LLM 실패 시 키워드 자체를 초안으로 저장.",
+   "api": "저장 안 하고 키워드를 프롬프트로 표시(같은 글자), 다음 로드에 재시도.",
+   "effect": "보이는 글자는 같음.",
+   "routes": [
+    "/projects/[id]/intent/google-keyword"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/intent.ts:40-43"
+   ],
+   "product_decision": false,
+   "decision_ref": "U10 번호",
+   "effort": "S",
+   "files": [
+    "-"
+   ],
+   "risk": "없음",
+   "recommendation": "accept",
+   "reason": "화면 결과가 같다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U10-N3",
+   "title": "연관·검색 foundCount = DataForSEO total_count",
+   "theme": "라벨·표기·형식",
+   "legacy": "legacy 계산(저장 개수 폴백 포함).",
+   "api": "total_count, 없으면 저장 개수(legacy 폴백과 같음).",
+   "effect": "보이는 차이 거의 없음.",
+   "routes": [
+    "/projects/[id]/intent/google-keyword"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/intent.ts:44-45"
+   ],
+   "product_decision": false,
+   "decision_ref": "U10 번호, BG-39",
+   "effort": "S",
+   "files": [
+    "-"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "같은 원천 값이다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U11-N8",
+   "title": "키워드 라우트 500 본문 details = 오류 코드",
+   "theme": "라벨·표기·형식",
+   "legacy": "err.message.",
+   "api": "백엔드·로컬 오류 코드(메시지는 서버 로그만).",
+   "effect": "오류 시 응답 본문만 다름.",
+   "routes": [
+    "/admin/keyword-tools"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/admin.ts:95-97"
+   ],
+   "product_decision": false,
+   "decision_ref": "U11 번호(보안: 메시지 비노출)",
+   "effort": "S",
+   "files": [
+    "-"
+   ],
+   "risk": "없음",
+   "recommendation": "accept",
+   "reason": "내부 메시지 노출을 막는다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "DC-15",
+   "title": "키워드 데이터 = 저장분, 수집은 운영자만",
+   "theme": "쓰기 반영·비동기·외부 연동",
+   "legacy": "누구나 요청 안에서 실시간 DataForSEO + LLM 호출.",
+   "api": "저장 데이터만 읽고, admin·운영자(전역 또는 배정 프로젝트·국가)만 수집 요청.",
+   "effect": "비운영자는 아직 수집 안 된 키워드의 추이·SERP·연관 키워드가 비어 보이거나 옛 사본을 봄.",
+   "routes": [
+    "/projects/[id]/intent/google-keyword",
+    "/customer-interest/google-keywords"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/intent.ts:34-37",
+    "docs/design/api/DECISIONS-API.md:19 (Q13)",
+    "survey after/project_ops_interest GET /v1/intent/insight"
+   ],
+   "product_decision": true,
+   "decision_ref": "DECISIONS-API Q13(제품 책임자: 키워드 실시간 조회 운영자 전용)",
+   "effort": "L",
+   "files": [
+    "back intent(동기 DataForSEO 호출 경로 신설)",
+    "front/lib/hgh/adapters/intent.ts"
+   ],
+   "risk": "높음: 고객 계정 체감. 전환 전 운영자 선수집이 필요.",
+   "recommendation": "accept",
+   "reason": "제품 책임자 결정 Q13 이며, 대신 전환 전에 주요 키워드를 운영자가 미리 수집해야 한다.",
+   "impact": "high",
+   "product_decision_direction": "keeps_difference"
+  },
+  {
+   "id": "DC-18",
+   "title": "카탈로그 쓰기의 Scope 반영 = 아웃박스 비동기",
+   "theme": "쓰기 반영·비동기·외부 연동",
+   "legacy": "트랜잭션 안에서 Scope PATCH, 실패하면 로컬 롤백.",
+   "api": "아웃박스 비동기, Scope 실패가 로컬을 롤백하지 않음, 삭제 행 편집은 409('삭제된 행은 편집할 수 없습니다').",
+   "effect": "관리자 카탈로그 저장이 즉시 성공으로 보이고 Scope 반영은 나중에 됨.",
+   "routes": [
+    "/admin/standards/prompts"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/admin.ts:66-68",
+    "survey after/admin PATCH /v1/admin/catalog/prompts/*"
+   ],
+   "product_decision": false,
+   "decision_ref": "설계 DC 목록(엔지니어링, 아웃박스 설계)",
+   "effort": "L",
+   "files": [
+    "back admin/catalog(동기 Scope 호출)"
+   ],
+   "risk": "중간: Scope 실패가 조용히 남을 수 있어 아웃박스 감시 필요.",
+   "recommendation": "accept",
+   "reason": "외부 호출을 트랜잭션에 묶지 않는 백엔드 설계라 되돌리면 비용이 크다; 반영 대기 표시와 실패 감시를 붙인다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "DC-13",
+   "title": "엔티티 역할 변경의 KPI 반영 = 적재기 재구축 뒤",
+   "theme": "쓰기 반영·비동기·외부 연동",
+   "legacy": "즉시 반영 + 캐시 무효화.",
+   "api": "적재기 재구축 뒤 반영(수치는 엔티티별 전 기간으로 legacy 와 같게 되돌림).",
+   "effect": "엔티티 화면에서 역할을 바꿔도 KPI 화면에 바로 반영되지 않음.",
+   "routes": [
+    "/admin/standards/entities"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/admin.ts:71-73",
+    "front/lib/hgh/adapters/admin.ts:1005",
+    "back/app/features/admin/entities/registry/README.md:23-26"
+   ],
+   "product_decision": false,
+   "decision_ref": "설계 DC 목록(엔지니어링)",
+   "effort": "L",
+   "files": [
+    "back admin/entities(동기 재판정)"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "수치 정의는 이미 legacy 와 같고 반영 시점만 적재 주기에 따른다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U8-N8",
+   "title": "전환 이벤트 수 = 적재 보고서, 저장 = 대기열",
+   "theme": "쓰기 반영·비동기·외부 연동",
+   "legacy": "실시간 GA4, 저장 즉시 반영.",
+   "api": "적재 events 보고서(적재 지연만큼 최근 일 누락), 저장은 판정 대기열 → 다음 적재 뒤 수치 반영, 레지스트리 밖 속성 404.",
+   "effect": "이벤트 다이얼로그 숫자가 늦고, 저장 직후 전환 수치가 안 바뀜(다이얼로그는 아직 'saved' 토스트).",
+   "routes": [
+    "/standard/ai-funnel/conversion",
+    "/website/ai-funnel/conversion",
+    "/projects/[id]/ai-funnel/conversion",
+    "/admin/ga4"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/funnel.ts:42-50",
+    "survey after/admin GET/PUT .../events · website GET/PUT /v1/funnel/conversion/events"
+   ],
+   "product_decision": false,
+   "decision_ref": "U8 번호, 설계 G13·G14(엔지니어링)",
+   "effort": "L",
+   "files": [
+    "back funnel/conversion/events(실시간 GA4)",
+    "components/dash/ga4-events-dialog.tsx(savedPending 표시)"
+   ],
+   "risk": "중간",
+   "recommendation": "accept",
+   "reason": "적재 구조상 불가피하며 다이얼로그에 '반영 대기' 문구 한 줄을 붙이는 조건으로 수용한다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U9-N3",
+   "title": "새 프로젝트 검증 서버 이동·Scope 연결 비동기",
+   "theme": "쓰기 반영·비동기·외부 연동",
+   "legacy": "브라우저 검증, 'scope 연결 실패' 분기, 생성 즉시 scope_project_id.",
+   "api": "서버 검증(잘못된 도메인 거부), 아웃박스로 Scope 연결(직후 scope_project_id null).",
+   "effect": "잘못된 도메인이 거부되고 생성 직후 Scope 연결 정보가 비어 있음.",
+   "routes": [
+    "/projects/new"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/projects.ts:79-82"
+   ],
+   "product_decision": false,
+   "decision_ref": "U9 번호",
+   "effort": "L",
+   "files": [
+    "back projects(동기 Scope)"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "검증 강화와 비동기 연결은 백엔드 설계에 따른 것이다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U9-N5",
+   "title": "추적 엔티티 쓰기 재처리 수 항상 0",
+   "theme": "쓰기 반영·비동기·외부 연동",
+   "legacy": "'N건 재분석' 다이얼로그.",
+   "api": "재판정은 judgment_change 로 자동, reprocessable 0, 다이얼로그 안 열림.",
+   "effect": "경쟁사·차종 등 저장 뒤 재분석 다이얼로그가 사라짐.",
+   "routes": [
+    "/projects/[id]/setting"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/projects.ts:87-90"
+   ],
+   "product_decision": false,
+   "decision_ref": "U9 번호",
+   "effort": "L",
+   "files": [
+    "back 재처리 대상 계산"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "재판정이 자동이라 수동 단계가 필요 없다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U9-N7",
+   "title": "엔진 저장 = 측정 반영 대기 토스트",
+   "theme": "쓰기 반영·비동기·외부 연동",
+   "legacy": "saved / savedNotPushed 토스트.",
+   "api": "pushed=true·queued=true → '저장됨(측정 반영 대기)'.",
+   "effect": "엔진 설정 저장 토스트 문구가 바뀜.",
+   "routes": [
+    "/projects/[id]/setting"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/projects.ts:93-98"
+   ],
+   "product_decision": false,
+   "decision_ref": "U9 번호",
+   "effort": "S",
+   "files": [
+    "-"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "실제로 비동기라 정확한 안내다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U9-N10",
+   "title": "일시정지·재개·영구 삭제·실행 = 비동기",
+   "theme": "쓰기 반영·비동기·외부 연동",
+   "legacy": "동기 Scope 호출, 'scope 반영 실패' 분기.",
+   "api": "아웃박스 비동기, 실패 분기 없음, 재개 시 미발행 행은 queued 유지(영구 삭제는 soft delete).",
+   "effect": "프롬프트 운영 버튼 결과가 '반영 대기'로 바뀌고 실패 문구가 사라짐(재개 오버레이 불일치는 미선언 버그).",
+   "routes": [
+    "/projects/[id]/prompt"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/projects.ts:104-105",
+    "survey after/project_ops_interest pause·resume·hard-delete·execute"
+   ],
+   "product_decision": false,
+   "decision_ref": "U9 번호",
+   "effort": "L",
+   "files": [
+    "back projects/prompts(동기 Scope)"
+   ],
+   "risk": "중간",
+   "recommendation": "accept",
+   "reason": "아웃박스 설계에 따른 것이며 상태 표시 버그만 고친다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U9-N8",
+   "title": "경쟁사 별칭 원천 = project_tracked_competitor",
+   "theme": "쓰기 반영·비동기·외부 연동",
+   "legacy": "병합 tracked_brands 행 우선.",
+   "api": "project_tracked_competitor 만.",
+   "effect": "이관 데이터에서 별칭이 다르게 보일 수 있음(새 쓰기는 같음).",
+   "routes": [
+    "/projects/[id]/setting"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/projects.ts:99-100"
+   ],
+   "product_decision": false,
+   "decision_ref": "U9 번호(gap G7·CK-20)",
+   "effort": "M",
+   "files": [
+    "이관 스크립트 별칭 병합 또는 back settings 읽기"
+   ],
+   "risk": "중간: 이관 대조 전 미확인.",
+   "recommendation": "accept",
+   "reason": "새 쓰기는 같으므로 이관 데이터 대조로 차이를 없애는 쪽이 싸다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U11-N4",
+   "title": "키워드 검색량: 미수집분은 pending",
+   "theme": "쓰기 반영·비동기·외부 연동",
+   "legacy": "DataForSEO 인라인 호출, competition 기본 'LOW'.",
+   "api": "변경 큐를 제한 시간까지 폴링, 남은 것은 pending 목록, competition 없으면 null, 1,000개 상한.",
+   "effect": "검색량 도구에서 일부 키워드가 '대기'로 빠지고 경쟁도가 비어 보일 수 있음.",
+   "routes": [
+    "/admin/keyword-tools"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/admin.ts:84-87"
+   ],
+   "product_decision": false,
+   "decision_ref": "U11 번호(Q13 계열)",
+   "effort": "L",
+   "files": [
+    "back keyword_tools(동기 DataForSEO)"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "외부 호출을 큐로 돌린 설계이고 관리자 전용이다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U11-N9",
+   "title": "키워드 LLM 대기 185초·1회 시도",
+   "theme": "쓰기 반영·비동기·외부 연동",
+   "legacy": "180초 단일 abort.",
+   "api": "BFF 185초(LLM 1회 + 여유), 백엔드가 그 기한 안에 재시도 포함 제한.",
+   "effect": "같은 체감.",
+   "routes": [
+    "/admin/keyword-tools"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/admin.ts:98-108"
+   ],
+   "product_decision": false,
+   "decision_ref": "U11 번호(결정 option 2)",
+   "effort": "S",
+   "files": [
+    "-"
+   ],
+   "risk": "없음",
+   "recommendation": "accept",
+   "reason": "legacy 와 같은 대기 시간이다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U10-N1",
+   "title": "수집 시간 초과 시 저장 사본 또는 502",
+   "theme": "쓰기 반영·비동기·외부 연동",
+   "legacy": "실시간 호출 결과.",
+   "api": "COLLECT_BUDGET_MS 안에 안 끝나면 저장 사본, 없으면 502(재시도 버튼).",
+   "effect": "느린 수집에서 옛 사본이나 오류 상태가 보임.",
+   "routes": [
+    "/projects/[id]/intent/google-keyword"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/intent.ts:38-39"
+   ],
+   "product_decision": false,
+   "decision_ref": "U10 번호(gap G9)",
+   "effort": "S",
+   "files": [
+    "-"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "DC-15 설계의 실패 경로다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U10-N5",
+   "title": "후보 단건 추가도 동일 텍스트 중복 제거",
+   "theme": "쓰기 반영·비동기·외부 연동",
+   "legacy": "단건은 중복 삽입.",
+   "api": "프로젝트 풀 동일 텍스트면 건너뛰고 ok(id '').",
+   "effect": "중복 후보가 안 생김.",
+   "routes": [
+    "/projects/[id]/intent/google-keyword",
+    "/projects/[id]/intent/social-scraping"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/intent.ts:48-49"
+   ],
+   "product_decision": false,
+   "decision_ref": "U10 번호",
+   "effort": "S",
+   "files": [
+    "-"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "중복 데이터 방지다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U10-N8",
+   "title": "활성 스냅샷 없을 때 컨텍스트 맵",
+   "theme": "쓰기 반영·비동기·외부 연동",
+   "legacy": "미러가 늘 행을 가짐.",
+   "api": "통계 0·빈 목록, 상세 404, 내보내기 409.",
+   "effect": "스냅샷 적재 전에는 화면이 비어 보임.",
+   "routes": [
+    "/projects/[id]/intent/social-scraping"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/intent.ts:65-66"
+   ],
+   "product_decision": false,
+   "decision_ref": "U10 번호(gap G13)",
+   "effort": "L",
+   "files": [
+    "ingest 스냅샷 적재(범위 밖)"
+   ],
+   "risk": "중간",
+   "recommendation": "accept",
+   "reason": "적재 상태를 정직하게 보여 주는 것이고 해결은 적재 쪽이다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U10-N10",
+   "title": "표준 키워드 화면 = 관리 표준 키워드 목록",
+   "theme": "쓰기 반영·비동기·외부 연동",
+   "legacy": "고정 샘플 5종.",
+   "api": "관리되는 표준 키워드 목록(브랜드 스코프, 최신순, BG-41).",
+   "effect": "고객관심 구글 키워드 탭 내용이 샘플에서 실제 목록으로 바뀜.",
+   "routes": [
+    "/customer-interest/google-keywords"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/intent.ts:71-72",
+    "survey after/project_ops_interest GET /v1/intent/standard-keywords"
+   ],
+   "product_decision": false,
+   "decision_ref": "U10 번호, BG-41(엔지니어링)",
+   "effort": "S",
+   "files": [
+    "front/lib/hgh/adapters/intent.ts(샘플 유지)"
+   ],
+   "risk": "중간: 기능 변경 — 제품 확인 필요.",
+   "recommendation": "accept",
+   "reason": "자리표시 샘플을 실제 관리 데이터로 채운 것이지만 보존 규칙상 제품 책임자 확인 후 수용한다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U9-C2",
+   "title": "관리자 Scope 연결 진단 블록",
+   "theme": "쓰기 반영·비동기·외부 연동",
+   "legacy": "라이브 언급·인용 probe.",
+   "api": "DB 연결 상태(state·회차·job·outbox).",
+   "effect": "admin 프로젝트 설정의 진단 블록 내용이 바뀜.",
+   "routes": [
+    "/projects/[id]/setting"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/projects.ts:56",
+    "survey after/project_ops_interest GET .../settings/scope-link"
+   ],
+   "product_decision": false,
+   "decision_ref": "설계 3.5 #11 컴포넌트 변경 C2",
+   "effort": "M",
+   "files": [
+    "front setting/page.tsx"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "admin 진단용이고 새 구조의 상태를 보여 준다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "DC-19",
+   "title": "계정 수정 If-Match·참조 있는 계정 삭제 거부",
+   "theme": "오류·상태 코드·검증",
+   "legacy": "버전 검사 없이 저장, 참조가 있어도 삭제.",
+   "api": "If-Match 필수(낡은 다이얼로그 = rowVersionConflict), 참조 계정은 409 user_referenced(정지로 안내), 정지 상태 신설.",
+   "effect": "관리자가 동시에 편집하면 충돌 안내가 뜨고, 참조 있는 계정은 삭제 대신 정지만 가능.",
+   "routes": [
+    "/admin"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/admin.ts:69-70",
+    "survey after/admin PATCH·DELETE /v1/admin/users/{user_id}"
+   ],
+   "product_decision": false,
+   "decision_ref": "설계 DC 목록(엔지니어링)",
+   "effort": "M",
+   "files": [
+    "back admin/accounts/users"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "감사 기록 고아화와 동시 편집 덮어쓰기를 막는다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U5-N6",
+   "title": "보조 조회 일시 실패 시 그 부분만 비움",
+   "theme": "오류·상태 코드·검증",
+   "legacy": "섹션 전체 실패(GA4 는 null).",
+   "api": "#16 브랜드·GA4·엔진 배지·구성·GEO 의 5xx·시간초과는 그 부분만 비우고 카드 유지(웹사이트는 legacy degrade 와 같음).",
+   "effect": "실패 시 화면 일부만 비어 보임.",
+   "routes": [
+    "/dashboard",
+    "/website",
+    "/projects/[id]"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/dashboard.ts:103-108"
+   ],
+   "product_decision": false,
+   "decision_ref": "U5 번호(실패 경로)",
+   "effort": "S",
+   "files": [
+    "-"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "보존 규칙이 허용하는 실패 경로 개선이다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U9-N6",
+   "title": "낡은 브랜드 기준 별칭 저장 = 409 안내",
+   "theme": "오류·상태 코드·검증",
+   "legacy": "별칭을 조용히 삭제.",
+   "api": "'프로젝트 브랜드가 바뀌었습니다…' 409.",
+   "effect": "데이터 손실 대신 안내가 뜸.",
+   "routes": [
+    "/projects/[id]/setting"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/projects.ts:91-92"
+   ],
+   "product_decision": false,
+   "decision_ref": "U9 번호",
+   "effort": "S",
+   "files": [
+    "-"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "조용한 데이터 손실을 막는다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U9-N12",
+   "title": "빈 입력 검사가 권한 검사보다 먼저",
+   "theme": "오류·상태 코드·검증",
+   "legacy": "권한 오류 throw.",
+   "api": "빈 입력 문구.",
+   "effect": "위조 요청에서만 차이(화면은 viewer 에게 컨트롤을 안 줌).",
+   "routes": [
+    "/projects/[id]/setting",
+    "/projects/[id]/member",
+    "/projects/[id]/prompt"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/projects.ts:109-111"
+   ],
+   "product_decision": false,
+   "decision_ref": "U9 번호",
+   "effort": "S",
+   "files": [
+    "-"
+   ],
+   "risk": "없음",
+   "recommendation": "accept",
+   "reason": "정상 화면 흐름에 영향이 없다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U9-N13",
+   "title": "모르는 브랜드 지정 시 이전 대상 유지",
+   "theme": "오류·상태 코드·검증",
+   "legacy": "대상 지정 해제.",
+   "api": "이전 지정 유지 + '해당 브랜드를 찾을 수 없습니다'.",
+   "effect": "잘못된 지정이 기존 대상을 지우지 않음.",
+   "routes": [
+    "/projects/[id]/setting"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/projects.ts:112-113"
+   ],
+   "product_decision": false,
+   "decision_ref": "U9 번호",
+   "effort": "S",
+   "files": [
+    "-"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "실수로 설정이 지워지는 것을 막는다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U9-N16",
+   "title": "중복 추가 = legacy 문구로 응답",
+   "theme": "오류·상태 코드·검증",
+   "legacy": "drizzle 오류 래핑으로 throw(문구 분기가 안 맞음 — legacy 결함).",
+   "api": "'이미 추가된 브랜드입니다' 등 문구.",
+   "effect": "중복 추가 시 오류 화면 대신 안내 문구.",
+   "routes": [
+    "/projects/[id]/setting",
+    "/projects/[id]/prompt"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/projects.ts:119-122"
+   ],
+   "product_decision": false,
+   "decision_ref": "U9 번호(legacy 결함 수정)",
+   "effort": "S",
+   "files": [
+    "-"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "legacy 가 의도했던 문구가 제대로 나오는 수정이다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U10-N4",
+   "title": "추적 키워드 국가 = DataForSEO 프리셋 30개만",
+   "theme": "오류·상태 코드·검증",
+   "legacy": "아무 문자열 저장.",
+   "api": "422 unknown_country → '지원하지 않는 국가입니다'.",
+   "effect": "프리셋 밖 국가 입력이 거부됨.",
+   "routes": [
+    "/projects/[id]/intent/google-keyword"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/intent.ts:46-47"
+   ],
+   "product_decision": false,
+   "decision_ref": "U10 번호",
+   "effort": "S",
+   "files": [
+    "-"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "수집할 수 없는 국가를 저장하지 않는다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U10-N13",
+   "title": "중복 추적 키워드 = 409 안내",
+   "theme": "오류·상태 코드·검증",
+   "legacy": "정확 일치 비교, 현재는 중복 시 throw.",
+   "api": "정규화(NFC·대소문자)·유효 국가 기준 '이미 추가된 키워드입니다'.",
+   "effect": "대소문자 변형 중복이 안내와 함께 거부됨.",
+   "routes": [
+    "/projects/[id]/intent/google-keyword"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/intent.ts:56-61"
+   ],
+   "product_decision": false,
+   "decision_ref": "U10 번호",
+   "effort": "S",
+   "files": [
+    "-"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "legacy throw 결함을 안내로 바꾼다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U11-N2",
+   "title": "엔티티 자사 지정에 브랜드 코드 필수",
+   "theme": "오류·상태 코드·검증",
+   "legacy": "브랜드 없이 자사 지정.",
+   "api": "행에서 브랜드 선택(기본 = 귀속 브랜드), 없으면 brand_required.",
+   "effect": "엔티티 화면에 브랜드 선택 칸이 추가됨.",
+   "routes": [
+    "/admin/standards/entities"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/admin.ts:80-81"
+   ],
+   "product_decision": false,
+   "decision_ref": "U11 번호",
+   "effort": "S",
+   "files": [
+    "-"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "자사 귀속을 명확히 하는 검증이다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U11-N3",
+   "title": "다른 속성에 매핑된 GA4 시장 등록 거부",
+   "theme": "오류·상태 코드·검증",
+   "legacy": "브랜드×국가 upsert 로 속성을 조용히 교체.",
+   "api": "409 market_taken.",
+   "effect": "잘못된 매핑 교체가 거부됨.",
+   "routes": [
+    "/admin/ga4"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/admin.ts:82-83"
+   ],
+   "product_decision": false,
+   "decision_ref": "U11 번호",
+   "effort": "S",
+   "files": [
+    "-"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "조용한 데이터 교체를 막는다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U11-N5",
+   "title": "미사용 프롬프트 활성 토글 거부",
+   "theme": "오류·상태 코드·검증",
+   "legacy": "toggleStandardPromptEnabled 동작.",
+   "api": "api 원천은 거부(soft delete/restore 로 대체).",
+   "effect": "화면에 연결되지 않아 영향 없음.",
+   "routes": [
+    "/admin/standards/prompts"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/admin.ts:88-89"
+   ],
+   "product_decision": false,
+   "decision_ref": "U11 번호",
+   "effort": "S",
+   "files": [
+    "-"
+   ],
+   "risk": "없음",
+   "recommendation": "accept",
+   "reason": "화면에 연결되지 않은 함수다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U11-N6",
+   "title": "정지 계정 배지",
+   "theme": "오류·상태 코드·검증",
+   "legacy": "상태 없음.",
+   "api": "목록에 정지 배지.",
+   "effect": "관리자 계정 목록에 배지가 보임.",
+   "routes": [
+    "/admin"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/admin.ts:90"
+   ],
+   "product_decision": false,
+   "decision_ref": "U11 번호(DC-19 동반)",
+   "effort": "S",
+   "files": [
+    "-"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "DC-19 정지 상태를 보여 주는 표시다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "U11-N7",
+   "title": "GA4 읽기 실패 시 env 가져오기 섹션 숨김",
+   "theme": "오류·상태 코드·검증",
+   "legacy": "실패해도 [] 로 전 env 시장을 '미등록'으로 노출.",
+   "api": "속성·시장 읽기 5xx 면 섹션 숨김.",
+   "effect": "실패 시 잘못된 가져오기 버튼이 안 보임.",
+   "routes": [
+    "/admin/ga4"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/admin.ts:91-94"
+   ],
+   "product_decision": false,
+   "decision_ref": "U11 번호(실패 경로)",
+   "effort": "S",
+   "files": [
+    "-"
+   ],
+   "risk": "낮음",
+   "recommendation": "accept",
+   "reason": "실패를 빈 목록으로 가리던 동작을 고친다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "DC-17",
+   "title": "QA 보안 강화(기본 비밀번호 없음·작성자만 수정 등)",
+   "theme": "검수 콘솔(QA)",
+   "legacy": "미설정 시 코드 기본 비밀번호, 노트는 누구나 수정·삭제, 로그아웃은 쿠키만 삭제, 검수 범위 front 설정, CSV 수식 접두 없음.",
+   "api": "기본 비밀번호 없음, 본문·severity 수정·삭제는 작성자만(403), 로그아웃이 락 해제·세션 폐기, 범위 = 서버 HGH_QA_SURFACES·SINCE, CSV =+-@ 접두·surface 'global'·ISO 오프셋·CRLF.",
+   "effect": "다른 검수자 노트 수정이 막히고 CSV 형식이 조금 바뀜.",
+   "routes": [
+    "/raw-data-qa",
+    "/raw-data-qa/answers",
+    "/raw-data-qa/notes"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/qa.ts:44-47",
+    "docs/design/api/DECISIONS-API.md:23 (Q17)",
+    "survey after/qa_nonscreen POST /v1/qa/sessions · PATCH notes · export"
+   ],
+   "product_decision": true,
+   "decision_ref": "DECISIONS-API Q17(제품 책임자: QA 별도 게이트, 노트 수정·삭제 작성자 제한) + 보안 수정",
+   "effort": "M",
+   "files": [
+    "back qa",
+    "front/lib/qa"
+   ],
+   "risk": "보안",
+   "recommendation": "accept",
+   "reason": "제품 책임자 결정 Q17 이고 보안 수정이다.",
+   "impact": "low",
+   "product_decision_direction": "keeps_difference"
+  },
+  {
+   "id": "BG-46",
+   "title": "QA 답변 runId·region null, ACR 행 키 변경",
+   "theme": "검수 콘솔(QA)",
+   "legacy": "runId·region 표시, ACR 행 = legacy 키.",
+   "api": "백엔드 R1 전까지 null, ACR 행 키 'acr_cell:<key>'(R2 전).",
+   "effect": "검수 상세에서 run·지역이 비고, legacy 에서 쓴 ACR 노트가 새 행에 안 붙음.",
+   "routes": [
+    "/raw-data-qa/answers/[jobId]"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/qa.ts:48-51",
+    "survey after/qa_nonscreen GET /v1/qa/answers/{job_id}"
+   ],
+   "product_decision": false,
+   "decision_ref": "core 요청 R1·R2 대기(엔지니어링)",
+   "effort": "M",
+   "files": [
+    "back qa/answers(run_id·region·prompt_run_id 제공)",
+    "노트 키 이관 매핑"
+   ],
+   "risk": "중간",
+   "recommendation": "match legacy",
+   "reason": "백엔드 필드 추가(R1·R2)는 추가형이라 어댑터 변경 없이 맞춰진다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "QA-NOTES",
+   "title": "인용 노트 키·필터 옵션·동률 정렬",
+   "theme": "검수 콘솔(QA)",
+   "legacy": "인용 노트 키 = scope_citations.id, 노트 JSON sessionId, 필터 옵션 = 답변 있는 값, 동률 = legacy 순.",
+   "api": "키 'job_id:ord', sessionId 없음, 옵션 = 차원 표(0건 값 포함), 동률 = answer_key.",
+   "effect": "legacy 인용 노트가 새 키에 안 붙어 노트 수가 달라지고 필터에 0건 값이 섞임.",
+   "routes": [
+    "/raw-data-qa/answers",
+    "/raw-data-qa/answers/[jobId]",
+    "/raw-data-qa/notes"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/qa.ts:52-54",
+    "survey after/qa_nonscreen GET .../notes · /v1/qa/filters"
+   ],
+   "product_decision": false,
+   "decision_ref": "qa.ts 선언(엔지니어링)",
+   "effort": "M",
+   "files": [
+    "노트 키 이관 매핑(scope_citations.id → job_id:ord)",
+    "back qa/filters(답변 있는 값만)"
+   ],
+   "risk": "중간: 검수 이력 단절.",
+   "recommendation": "match legacy",
+   "reason": "검수 이력 연속성이 필요하므로 키 이관과 옵션 필터로 맞춘다.",
+   "impact": "low",
+   "product_decision_direction": null
+  },
+  {
+   "id": "QA-DATES",
+   "title": "QA 날짜 필터 = KST 날짜",
+   "theme": "검수 콘솔(QA)",
+   "legacy": "SQL UTC 날짜.",
+   "api": "측정의 KST 날짜(00:00~09:00 KST 측정분이 다른 날로).",
+   "effect": "날짜 필터 결과·이웃 답변·진행률이 경계에서 달라짐.",
+   "routes": [
+    "/raw-data-qa/answers",
+    "/raw-data-qa/notes"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/qa.ts:55-56",
+    "survey after/qa_nonscreen GET /v1/qa/answers · progress · neighbors"
+   ],
+   "product_decision": false,
+   "decision_ref": "qa.ts 선언(백엔드 열린 질문)",
+   "effort": "S",
+   "files": [
+    "back qa scope.py:45,264-266(UTC 날짜)"
+   ],
+   "risk": "낮음",
+   "recommendation": "match legacy",
+   "reason": "필터 동작 보존 규칙 대상이며 열린 질문이라 legacy 기준으로 두는 편이 안전하다.",
+   "impact": "low",
+   "product_decision_direction": null
+  }
+ ],
+ "undeclared": [
+  {
+   "title": "답변 원문 모달: 백엔드 5xx 가 '원문 없음'으로 보이고 재시도 불가",
+   "routes": [
+    "/standard/answer-analysis/mention",
+    "/standard/answer-analysis/citation",
+    "/website/answer-analysis/mention",
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/mention",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "front/app/api/scope/answer/route.ts:108-113 (5xx → hghErrorResponse JSON)",
+    "front/app/[locale]/(dash)/standard/answer-analysis/_components/answer-modal.tsx:150-165 (r.ok 미확인 → available 없음 → unavailable)",
+    "front/lib/hgh/adapters/answers.ts:26-28 (헤더는 '5xx → thrown')",
+    "survey after/global·website GET /v1/answers/{job_id} f6·f10"
+   ],
+   "effect": "legacy 는 5xx 가 JSON 파싱 실패 → 모달 오류 상태(다시 열면 재시도). API 경로는 오류 JSON 이 정상 파싱돼 '원문 없음'으로 굳고 같은 답변은 다시 요청하지 않음 — 장애가 '데이터 없음'으로 가려짐.",
+   "suggested_fix": "모달에서 r.ok 를 확인해 non-2xx 는 error 상태로 보내거나, 라우트가 5xx 를 legacy 처럼 throw(보존 규칙: 기존 오류 경로 사용).",
+   "severity": "medium",
+   "status": "open"
+  },
+  {
+   "title": "프로젝트 답변 원문을 다른 프로젝트 id 로 교차 열람",
+   "routes": [
+    "/projects/[id]/analysis/mention",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "back/app/features/analytics/answers/detail/service.py:135-146 (job 소속 프로젝트를 LOCATE 후 member 수준 판정)",
+    "front/app/api/scope/answer/route.ts:58-101 (라우트 게이트는 ?projectId 의 활성 멤버만 확인)",
+    "front/lib/hgh/adapters/answers.ts:33-35 (U6-N8 '넓어지지 않음' 선언)",
+    "survey after/project GET /v1/answers/{job_id}"
+   ],
+   "effect": "프로젝트 A 활성 멤버가 스코프 안 비멤버 프로젝트 B 의 job_id 를 넣으면 B 답변 원문을 읽음. legacy 는 요청 프로젝트 run 소속만. 선언(U6-N8)은 확대 없음이라고 적었으나 실제로는 확대.",
+   "suggested_fix": "AN-2 요청에 project_id 를 보내 job 소속과 대조하거나 project 표면 원문은 active_member 수준으로 판정.",
+   "severity": "high",
+   "status": "open",
+   "related_declared": "U6-N8"
+  },
+  {
+   "title": "컨텍스트 맵 API 가 인증만 확인(역할·메뉴·프로젝트 게이트 없음)",
+   "routes": [
+    "/projects/[id]/intent/social-scraping"
+   ],
+   "evidence": [
+    "back/app/features/intent/social/context_map/router.py:1-3 ('인증 사용자면 누구나')",
+    "front/lib/hgh/adapters/intent.ts:75-80 (U10-N12 '백엔드도 같게 집행' 선언)",
+    "survey after/project_ops_interest GET /v1/intent/social/context-map/*"
+   ],
+   "effect": "BFF 는 프로젝트 게이트를 먼저 걸지만, 백엔드를 직접 부르면 website·vendor 계정도 컨텍스트 맵 통계·목록·상세·내보내기를 읽음(코퍼스 전역 데이터). 선언과 실제가 다름.",
+   "suggested_fix": "context_map 라우터에 프로젝트 ROUTES 와 같은 역할·메뉴 게이트(require_surface('project') 수준) 추가.",
+   "severity": "medium",
+   "status": "open",
+   "related_declared": "U10-N12"
+  },
+  {
+   "title": "고객관심 추적 키워드·소셜 프롬프트 API 가 member 수준(스코프 안 비멤버 허용)",
+   "routes": [
+    "/projects/[id]/intent/google-keyword",
+    "/projects/[id]/intent/social-scraping"
+   ],
+   "evidence": [
+    "back/app/features/intent/keywords/tracked/router.py:30-40 (표면 게이트 project + resolve_project member)",
+    "back/app/features/intent/social/prompts/router.py:34-38 (resolve_project ... \"member\")",
+    "survey after/project_ops_interest GET /v1/intent/keywords · /social/prompts"
+   ],
+   "effect": "화면 게이트는 활성 멤버인데 백엔드는 스코프 안 비멤버도 직접 API 로 프로젝트 추적 키워드·생성 프롬프트를 읽음.",
+   "suggested_fix": "해당 GET 의 resolve_project level 을 active_member 로.",
+   "severity": "medium",
+   "status": "open"
+  },
+  {
+   "title": "관리 API 일부가 메뉴 그룹 admin 을 검사하지 않음",
+   "routes": [
+    "/admin/standards/customer-interest",
+    "/admin/standards/entities"
+   ],
+   "evidence": [
+    "back/app/features/admin/interest/keywords/router.py:22",
+    "back/app/features/admin/interest/sources/router.py:22",
+    "back/app/features/admin/entities/registry/router.py:26",
+    "survey after/admin AACOMMON · GET /v1/admin/interest/* · /v1/admin/entities"
+   ],
+   "effect": "다른 /v1/admin 은 role∧menu admin 인데 이 셋은 require_admin 만 → 메뉴 그룹이 좁혀진 admin 도 직접 API 로 읽기·쓰기 가능(legacy 페이지 게이트는 role∧menu).",
+   "suggested_fix": "세 라우터에 require_menu_group('admin') 추가(다른 관리 라우터와 같게).",
+   "severity": "medium",
+   "status": "open"
+  },
+  {
+   "title": "답변 원문 접근 게이트가 화면 URL 필터를 보지 않음",
+   "routes": [
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention"
+   ],
+   "evidence": [
+    "back/app/features/analytics/answers/detail/queries.py:23-37,261-275",
+    "front/app/api/scope/answer/route.ts:77-93 (legacy 는 URL 필터를 IDOR 게이트로 사용)",
+    "survey after/existing3·global·website GET /v1/answers/{job_id}"
+   ],
+   "effect": "legacy 는 region·brand 등 화면 필터 밖 답변을 막았는데, API 는 계정 스코프 안이면 필터 밖 답변도 보여 줌(스코프 밖은 아님).",
+   "suggested_fix": "의도라면 선언에 추가, 아니면 백엔드에 화면 필터를 접근 술어로 전달.",
+   "severity": "low",
+   "status": "open"
+  },
+  {
+   "title": "브랜드 스코프가 엄브렐러(HMG)뿐인 계정 403",
+   "routes": [
+    "/dashboard",
+    "/website",
+    "/standard/answer-analysis/mention"
+   ],
+   "evidence": [
+    "back/app/core/filters.py:445-449,748 (no_brand_scope)",
+    "survey after/global AGCOMMON · website AWCOMMON"
+   ],
+   "effect": "legacy 는 공통 행만 보여 줬는데 API 는 403 no_brand_scope → /no-access(stg 해당 계정 0).",
+   "suggested_fix": "엄브렐러 전용 스코프는 공통 행만 모수로 두고 200 을 내거나, 의도라면 session.ts 선언에 추가.",
+   "severity": "low",
+   "status": "open"
+  },
+  {
+   "title": "언급 드릴다운 도메인 행 이름이 그룹 키 대신 표시 호스트",
+   "routes": [
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/drilldown.ts:278-281 (domain: r.domain)",
+    "front/lib/hgh/adapters/citations.ts:234 (인용 화면은 r.skey)",
+    "back/app/features/analytics/citations/domains/queries.py:108-110",
+    "survey after/website GET /v1/citations/domains ①"
+   ],
+   "effect": "공식 소셜 계정 행(host+path)이 같은 호스트 일반 행과 같은 이름으로 나오고 행 key·펼침 상태가 겹침(stg 공존 9건).",
+   "suggested_fix": "toCitationDomain 의 domain 을 r.skey 로(인용 어댑터와 같게).",
+   "severity": "medium",
+   "status": "open"
+  },
+  {
+   "title": "대시보드 출처 구성 도넛: 그룹 키 단위 상위 7인데 라벨 = 도메인",
+   "routes": [
+    "/dashboard",
+    "/website"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/dashboard.ts:587-593 (domain: d.domain)",
+    "back/app/core/profile.py:209-215 (domains_card_by_host 기본 off)",
+    "survey after/website GET /v1/citations/domains ②"
+   ],
+   "effect": "프로필 off 면 같은 호스트의 소셜 그룹 조각이 같은 라벨로 중복·분할돼 보임.",
+   "suggested_fix": "domains_card_by_host 를 켜거나 어댑터에서 라벨을 skey 로/같은 호스트를 합산.",
+   "severity": "medium",
+   "status": "open",
+   "related_declared": "PROF-domains_card_by_host"
+  },
+  {
+   "title": "웹사이트 추이: ⑥ 선 실패가 추이 전체 실패",
+   "routes": [
+    "/website"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/trend.ts:36-43 (WEBSITE_TREND_METRICS 에 citation_accuracy 동봉)",
+    "survey after/website GET /v1/trend"
+   ],
+   "effect": "legacy 는 ⑥ 정확도 선만 조용히 빠졌는데 API 는 같은 호출이라 ⑥ 실패 시 추이 차트 전체가 실패.",
+   "suggested_fix": "⑥ 계열을 별도 호출로 분리하거나 실패 시 ⑥ 없이 재요청.",
+   "severity": "low",
+   "status": "open"
+  },
+  {
+   "title": "웹사이트·프로젝트 인용 도메인 xlsx 형식·오류 계약",
+   "routes": [
+    "/website/answer-analysis/citation",
+    "/projects/[id]/analysis/citation"
+   ],
+   "evidence": [
+    "back/app/core/xlsx.py:694-697 (pct1 float 셀)",
+    "back/app/features/analytics/citations/domains/service.py:99-109 (CATEGORY_LABELS 사본)",
+    "survey after/website GET /v1/citations/domains/export"
+   ],
+   "effect": "점유율·커버리지가 숫자 셀(legacy 문자열 toFixed(1)), 카테고리 라벨이 백엔드 하드코딩 사본이라 front 메시지와 어긋날 수 있음, 실패 시 'JSON 화면 이동'(legacy 실패 무시).",
+   "suggested_fix": "문자열 셀로 맞추고 라벨을 메시지와 같은 원천으로, 실패는 토스트로.",
+   "severity": "low",
+   "status": "open"
+  },
+  {
+   "title": "웹사이트 프롬프트 xlsx 오류 응답 계약",
+   "routes": [
+    "/website/prompts"
+   ],
+   "evidence": [
+    "front/app/api/website/prompts/export/route.ts:140-144 (legacy 500 {error:'export failed'})",
+    "survey after/website GET /v1/prompts (format=xlsx)"
+   ],
+   "effect": "legacy 는 실패 시 항상 500 {error:'export failed'}, API 는 백엔드 상태(401·403·404·422·5xx)와 {error:{code,requestId}} 전달.",
+   "suggested_fix": "라우트에서 legacy 응답 모양으로 매핑(로그에 코드 유지).",
+   "severity": "low",
+   "status": "open"
+  },
+  {
+   "title": "프로젝트 ⑥ 추이 선·Δ 를 M06/M07 분자 비로 근사",
+   "routes": [
+    "/projects/[id]"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/trend.ts:41-43 (project 는 round1(100·M06.num/M07.num))",
+    "survey after/project GET /v1/trend"
+   ],
+   "effect": "legacy 는 ⑥ 인용 정확도 추이를 별도 리더로 계산했는데 API 프로젝트 경로는 M06/M07 분자 비로 근사 → ⑥ 선과 카드 Δ 가 다를 수 있음.",
+   "suggested_fix": "프로젝트 추이에도 citation_accuracy 계열을 요청(웹사이트와 같게).",
+   "severity": "medium",
+   "status": "open"
+  },
+  {
+   "title": "언급 브랜드 전량 상한 초과 시 화면 안내 없음",
+   "routes": [
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/mentions.ts:58-59 (data.truncated 설정)",
+    "survey after/website GET /v1/mentions/brands (truncated 미전달)"
+   ],
+   "effect": "2,000행을 넘으면 잘린 목록이 아무 안내 없이 전체처럼 보임.",
+   "suggested_fix": "U6-N1 을 맞추거나 최소한 truncated 를 화면 각주로 전달.",
+   "severity": "medium",
+   "status": "open",
+   "related_declared": "U6-N1"
+  },
+  {
+   "title": "프로젝트 프롬프트 재개: 낙관 오버레이 'done' vs 서버 'queued'",
+   "routes": [
+    "/projects/[id]/prompt"
+   ],
+   "evidence": [
+    "back/app/features/projects/prompts/lifecycle/service.py:6 (resume: Scope 미발행 행은 queued)",
+    "front/app/[locale]/(dash)/projects/[id]/prompt/_components/prompt-list.tsx:175-197,842 (statusOverlay, 재개 = 'done')",
+    "survey after/project_ops_interest POST .../resume"
+   ],
+   "effect": "재개 뒤 화면은 '완료'로 보이는데 실제 상태는 대기 — 새로고침 뒤에도 오버레이가 남아 상태 표시가 틀림.",
+   "suggested_fix": "응답 status 로 오버레이를 정하거나 revalidate 뒤 오버레이 제거.",
+   "severity": "medium",
+   "status": "open",
+   "related_declared": "U9-N10"
+  },
+  {
+   "title": "프로젝트 엔진 설정: 백엔드 어휘 밖 엔진이 조용히 빠짐(저장 시 삭제 위험)",
+   "routes": [
+    "/projects/[id]/setting"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/projects.ts:543 (normalizeAiEngines 표시)",
+    "front/lib/hgh/adapters/projects.ts:1031 (저장 전 normalizeAiEngines)",
+    "survey after/project_ops_interest GET .../settings · PUT .../settings/engines"
+   ],
+   "effect": "AI_ENGINE_IDS 에 없는 엔진은 표시에서 빠지고, 저장하면 그 엔진이 요청에서 제거돼 설정이 지워질 수 있음.",
+   "suggested_fix": "모르는 엔진을 보존해 그대로 다시 보내거나 백엔드 어휘와 AI_ENGINE_IDS 를 맞춤.",
+   "severity": "medium",
+   "status": "open"
+  },
+  {
+   "title": "프로젝트 프롬프트 생성 새 입력 상한",
+   "routes": [
+    "/projects/[id]/prompt"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/projects.ts:1378-1384",
+    "survey after/project_ops_interest POST .../prompts"
+   ],
+   "effect": "1,000줄·줄당 4,000자·제어 문자 포함 시 422(too_many_lines·text_too_long·invalid_text) — legacy 는 상한 없음.",
+   "suggested_fix": "의도라면 선언(U9)에 추가하고 문구 확인, 아니면 상한 완화.",
+   "severity": "low",
+   "status": "open"
+  },
+  {
+   "title": "GA4 속성 삭제가 추적 전환 이벤트까지 삭제(안내 없음)",
+   "routes": [
+    "/admin/ga4"
+   ],
+   "evidence": [
+    "back/app/features/admin/integrations/ga4/service.py:203-211",
+    "survey after/admin DELETE /v1/admin/ga4/properties/{property_id}"
+   ],
+   "effect": "legacy 는 레지스트리 행만 삭제했는데 API 는 app.ga4_tracked_event 도 지우고 재투영; 응답 removed_tracked_events 를 어댑터가 버려 관리자에게 안내 없음.",
+   "suggested_fix": "legacy 처럼 이벤트를 남기거나, 확인 다이얼로그에 삭제될 이벤트 수를 보여 줌.",
+   "severity": "medium",
+   "status": "open"
+  },
+  {
+   "title": "GA4 대기 중 재저장 409 duplicate_pending(새 오류)",
+   "routes": [
+    "/admin/ga4",
+    "/website/ai-funnel/conversion"
+   ],
+   "evidence": [
+    "back/app/features/admin/integrations/ga4/service.py:147-149,166-170",
+    "survey after/admin PUT /v1/admin/ga4/properties/{id} · website PUT .../events"
+   ],
+   "effect": "추가 직후 검증·이벤트 재저장이 대기 중이면 409 로 거절(legacy 없음).",
+   "suggested_fix": "선언에 추가하고 문구를 '반영 대기 중' 안내로.",
+   "severity": "low",
+   "status": "open"
+  },
+  {
+   "title": "고객관심 키워드·출처·카탈로그 라벨 브랜드 사전 검증",
+   "routes": [
+    "/admin/standards/customer-interest",
+    "/admin/standards/prompts"
+   ],
+   "evidence": [
+    "survey after/admin POST /v1/admin/interest/keywords · sources · PATCH catalog labels"
+   ],
+   "effect": "legacy 는 브랜드를 자유 텍스트로 저장했는데 API 는 app.brand FK 검증(미등록 브랜드 422 unknown_brand, '라벨 값이 올바르지 않습니다').",
+   "suggested_fix": "의도라면 U11 선언에 추가.",
+   "severity": "low",
+   "status": "open"
+  },
+  {
+   "title": "관리 쓰기 전반 role∧menu admin 요구",
+   "routes": [
+    "/admin",
+    "/admin/ga4",
+    "/admin/standards/prompts",
+    "/admin/standards/citation-sources"
+   ],
+   "evidence": [
+    "survey after/admin PATCH·DELETE users · ga4 · catalog · citation-overrides"
+   ],
+   "effect": "legacy 서버 액션은 role 만 검사 → 메뉴 그룹이 좁힌 admin 이 액션을 직접 부르면 이제 거부(페이지 게이트와는 같음).",
+   "suggested_fix": "선언에 추가(권한 정합).",
+   "severity": "low",
+   "status": "open"
+  },
+  {
+   "title": "QA 판정·노트·진행률 미이관 → 0 에서 재시작",
+   "routes": [
+    "/raw-data-qa",
+    "/raw-data-qa/answers",
+    "/raw-data-qa/notes"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/qa.parity.test.ts:20-21 (백엔드 이관이 qa_answer_reviews·qa_review_notes 를 옮기지 않음)",
+    "survey after/qa_nonscreen GET /v1/qa/answers/progress"
+   ],
+   "effect": "legacy 검수 판정·노트가 새 저장소로 옮겨지지 않아 전환 시 진행률이 0, 기존 노트가 안 보임.",
+   "suggested_fix": "검수 판정·노트 이관 스크립트(키 매핑 포함) 작성 후 전환.",
+   "severity": "high",
+   "status": "open"
+  },
+  {
+   "title": "QA 모집단 = rd.job 전체(비완료·드롭 포함)",
+   "routes": [
+    "/raw-data-qa",
+    "/raw-data-qa/answers"
+   ],
+   "evidence": [
+    "back/app/features/qa/answers/list/scope.py:83-86 (get_qa_scope 서버 고정 범위)",
+    "survey after/qa_nonscreen GET /v1/qa/answers · progress"
+   ],
+   "effect": "검수 대상·진행률 분모에 비완료·드롭 답변이 섞여 legacy 와 숫자가 다름.",
+   "suggested_fix": "legacy 와 같은 완료 답변 모집단으로 제한하거나 선언에 추가.",
+   "severity": "medium",
+   "status": "open"
+  },
+  {
+   "title": "QA ACR 연결 = rd.acr_cell_job 정확 연결",
+   "routes": [
+    "/raw-data-qa/answers/[jobId]"
+   ],
+   "evidence": [
+    "back/app/features/qa/answers/detail/queries.py:268",
+    "survey after/qa_nonscreen GET /v1/qa/answers/{job_id}"
+   ],
+   "effect": "legacy 는 4축 근사로 ACR 셀을 붙였고 API 는 정확 연결 → 상세의 ACR 값이 다를 수 있음.",
+   "suggested_fix": "선언에 추가(개선이므로 수용 권장).",
+   "severity": "low",
+   "status": "open"
+  },
+  {
+   "title": "QA 로그인 전역 60회/분 상한",
+   "routes": [
+    "/raw-data-qa"
+   ],
+   "evidence": [
+    "back/app/features/qa/review/sessions/service.py:7,49 (GLOBAL_ATTEMPTS_PER_MINUTE = 60)",
+    "survey after/qa_nonscreen POST /v1/qa/sessions"
+   ],
+   "effect": "짧은 시간에 로그인 시도가 몰리면 거절(legacy 없음).",
+   "suggested_fix": "DC-17 선언에 추가.",
+   "severity": "low",
+   "status": "open"
+  },
+  {
+   "title": "달력 선택 가능일을 항상 게이트 회차 날짜로 제한",
+   "routes": [
+    "/standard/ai-funnel/acr",
+    "/projects/[id]",
+    "/website"
+   ],
+   "evidence": [
+    "front/lib/hgh/adapters/filters.ts:38-40",
+    "survey after/global GET /v1/filters/dates (ACR) · project GET /v1/filters/dates · website GET /v1/filters/dates"
+   ],
+   "effect": "Before 조사 기준 운영은 앵커 축 off 라 자유 달력이었는데 API 는 늘 회차 날짜만 고를 수 있음(운영 X.answerAnchor 가 on 이면 차이 없음).",
+   "suggested_fix": "운영 read_screens 를 확인해 off 면 어댑터에서 selectableDates 를 비움.",
+   "severity": "medium",
+   "status": "open"
+  },
+  {
+   "title": "브랜드 드릴다운 '프롬프트' 탭 항상 422 → 빈 목록",
+   "routes": [
+    "/standard/answer-analysis/mention",
+    "/website/answer-analysis/mention",
+    "/projects/[id]/analysis/mention"
+   ],
+   "evidence": [
+    "survey after/website GET /v1/mentions/prompts",
+    "커밋 bc56c66(terms 를 answer_key 1000개씩 나눠 읽고 곱 상한 422 제거)",
+    "docs/reports/부록/지표 점검표 생성기/조사 데이터/after/_fixes.json"
+   ],
+   "effect": "front mode=brand 요청(terms·limit 200·answers_limit 50)이 백엔드 곱 상한 1,000 에 걸려 늘 422 → 프롬프트 탭이 비어 보였음.",
+   "suggested_fix": "해결됨(2026-10-14 bc56c66).",
+   "severity": "high",
+   "status": "fixed"
+  }
+ ],
+ "notes": [
+  "기준: 레포 hmg-geo-hub-renewal main a5d5a80(2026-10-14). 근거 경로는 레포 루트 기준 상대 경로. 조사 자료 = docs/reports/부록/지표 점검표 생성기/조사 데이터/after/*.json 의 f10('n' 185건, 그중 DC/U 번호 없이 적힌 31건).",
+  "선언 범위: front 어댑터 머리 주석(DC-xx·U4~U11-Nxx·S1-Nx·BG-46·qa.ts Notes/Dates·session.ts 남은 차이), back/app/core/profile.py 현행 재현 스위치 27개(DC 와 겹치는 summary_all_engines=DC-01, trend_grid=DC-08, filter_options=DC-06·U4-N8, compare_epoch_gate=DC-16, compare_suppress=U4-N1 은 DC 항목에 합침 → 별도 22개), back README known_diff(TS-V3·TS-V4·KS-R4·PC-6), 모듈-AI-퍼널 8절(AF-DC-1·AF-DC-4), DECISIONS-API(Q1·결정 2·3·7·S1 BE-C 고지 2·4). 번호 없는 선언은 SESSION-·QA-·PC-·KS-·TS-·S1-BEC- 접두로 임시 id 를 붙임.",
+  "해소돼 결정이 필요 없는 선언(표에서 제외): DC-02(제품 결정 6(a) '현행 문구 유지', K-1 url_prompts), DC-11(상류 d175da4 로 같은 기준), DC-12(D13 split_own 으로 차이 없음), DC-21(상류 6bc5c54 로 같은 정의), U4-N2(어댑터가 legacy deltaOf 로 재계산), U6-N12(대조 결과 차이 없음), U7-N9(의도적으로 legacy 값 유지), AF-DC-2(현행과 같음), AF-DC-3(property_source=market 으로 해소), AF-DC-5(= U8-N5 와 같은 항목).",
+  "가장 큰 결정 변수 1 — 현행 프로필: 제품 결정 19·23~25(2026-10-01)는 '같은 데이터·같은 회차에서 운영과 값이 완전히 같게, 예외 없음(결함까지 재현)'이고 최종 기본값을 current 로 정했지만, 스위치 27개가 모두 IMPLEMENTED 인데도 DEFAULT_SPEC 은 아직 'off'(back/app/core/profile.py:229-246·264-265, config.py:88). stg 는 부분 프로필(compare_*·trend_grid·cell_rep·rep_pick_latest_first·acr_iter_unfolded·gap_in_population·catalog_incl_deleted·display_name_latin·brand_exposure_per_alias·filter_options), 운영 값은 미확인. HGH_LEGACY_PROFILE=current 로 두면 '현행 재현 스위치' 22개와 DC-01(카드)·DC-06·DC-08(x축)·DC-16·U4-N1·U4-N8 이 한 번에 legacy 쪽으로 감(단 freeze_at_publish·rep_round_date_cell·web_accuracy_flat·brand_card_fold 는 동결 층 적재, 투영 스위치는 재투영이 선행).",
+  "가장 큰 결정 변수 2 — 운영 read_screens 상태가 문서마다 다름: 백엔드 문서는 '2670a16 + read_screens 14키(축 on)'(X.answerAnchor·S1.periodCompare 포함), Before 조사(website·project.json)는 '운영 스위치 off(S1.periodCompare·X.answerAnchor)'. 이 값에 따라 DC-01(답변분석 화면)·DC-16(최신 회차일)·DC-22·U4-N12·미선언 '달력 회차 제한'의 legacy 기준이 바뀌므로 운영 summary_settings.read_screens 한 행을 먼저 확인해야 함.",
+  "권고 원칙: ① 값·정의·옵션·문구 차이 = match legacy(제품 결정 19·23~25 + 서비스 보존 규칙). ② legacy 가 다른 데이터를 보여 주던 명백한 결함(U6-N11·U7-N13·U8-N16)은 accept 하되 19·25 의 '결함까지 재현' 문구와 충돌하므로 제품 책임자 고지. ③ 보안·권한 좁힘, 실패 경로 개선, 화면에 안 보이는 내부 차이 = accept. ④ 아웃박스·적재 구조에서 오는 비동기(DC-18·U8-N8 등)와 제품 책임자 결정(Q12·Q13·Q17·Q19) = accept(조건: 반영 대기 안내·선수집). ⑤ 'match legacy' 인데 effort L 인 DC-03·U8-N4·Q1·DC-08 시리즈·freeze 계열은 ingest·동결 층 일정에 묶임.",
+  "중복·연동: U8-N3 은 DC-03 결정에 종속(맞추면 해소, 아니면 재라벨 필수), U8-N6 도 DC-03 종속, U8-N20 은 DC-09 수용 시 재라벨 필수. U6-N8 과 U10-N12 는 선언 내용이 실제 동작과 달라 미선언 목록에도 버그로 올림.",
+  "미선언 목록은 f10 'n' 사유 중 번호 없이 적힌 31건과, 번호를 단 사유 안에 덧붙은 선언 밖 차이를 모은 것(중복 병합 후 27건). 1건(브랜드 드릴다운 422)은 bc56c66 으로 해결돼 status=fixed. 글로벌 대시보드 숨은 GA4 호출(6755e94)은 화면 값 차이가 아니라 제외.",
+  "주의(동시 작업): 이 분석 중 다른 세션이 레포를 바꿈 — HEAD 가 a5d5a80 → 69588b7(문서·_parity_results.json 만)로 움직였고, 미커밋 변경 58개 파일(back analytics/answers/detail·intent/keywords/tracked·admin/accounts/users·admin/integrations/ga4·citations/sources·domains·mentions/prompts·projects/*, front lib/hgh/adapters/summary.ts(B089 parts), projects prompt-list·raw-data-qa 컴포넌트 등)이 진행 중. 이 표는 커밋 a5d5a80 + 읽은 시점 작업 트리 기준이며, 미선언 버그 일부(답변 원문 교차 열람·추적 키워드 member 수준·재개 오버레이·QA 등)는 그 미커밋 변경으로 이미 고쳐지고 있을 수 있으니 조치 전 재확인 필요. 이 작업은 레포를 수정하지 않음(읽기 전용).",
+  "effort 기준: S = env 스위치·어댑터 한 곳·문구(1일 이내), M = 백엔드 기능 모듈 1~2개 + 시험(1~3일), L = DDL·ingest·동결 층·외부 연동 구조 변경 또는 범위 밖 팀 의존(3일 초과·블로커)."
+ ]
+}

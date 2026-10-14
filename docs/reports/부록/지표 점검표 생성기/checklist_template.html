@@ -75,6 +75,9 @@ td.pc .arr{color:#9fb3ba;font-size:11px;margin:0 3px}
 td.pc.ty{background:#eef8f1} td.pc.tn{background:#fdf0ee} td.pc.tu{background:#f6f7f8} td.pc.tx{background:#fff}
 td.pc.cnt{font-size:13px;font-weight:700}
 tr.screen td.pc.ty{background:#dff1e6} tr.screen td.pc.tn{background:#f8dfdb}
+
+table.f10 td.rdcell{white-space:nowrap} label.rd{margin-right:8px;cursor:pointer}
+table.f10 td:nth-child(2){min-width:360px}
 </style>
 </head>
 <body><main>
@@ -93,6 +96,8 @@ tr.screen td.pc.ty{background:#dff1e6} tr.screen td.pc.tn{background:#f8dfdb}
 </header>
 
 {{PROGRESS}}
+
+{{F10}}
 
 <section>
 <h2>화면별 점검표</h2>
@@ -296,6 +301,40 @@ F2 32/46 · F3 64/2 · F4 52/14 · F6 95/1 · F7 21/5 · F8 38/78 · F9 22/24.<b
 
 <script>
 function toggleScreen(i) { var t = document.getElementById('scr-' + i); if (t) t.classList.toggle('open'); }
+
+var F10_KEY = 'hgh-f10-decisions-v1';
+function f10Load() { try { return JSON.parse(localStorage.getItem(F10_KEY) || '{}'); } catch (e) { return {}; } }
+function f10Save(d) { try { localStorage.setItem(F10_KEY, JSON.stringify(d)); } catch (e) {} f10Count(); }
+function f10Count() {
+  var all = document.querySelectorAll('#f10 input[type=radio][value=accept]').length;
+  var done = document.querySelectorAll('#f10 input[type=radio]:checked').length;
+  var el = document.getElementById('f10-count'); if (el) el.textContent = '결정 ' + done + ' / ' + all;
+}
+function f10Fill() {
+  var d = f10Load();
+  document.querySelectorAll('#f10 input[type=radio]').forEach(function (r) {
+    var id = r.name.slice(4);
+    if (!d[id] && r.value === r.dataset.rec) { r.checked = true; d[id] = r.value; }
+  });
+  f10Save(d);
+}
+function f10Copy() {
+  var d = {};
+  document.querySelectorAll('#f10 input[type=radio]:checked').forEach(function (r) { d[r.name.slice(4)] = r.value; });
+  var txt = JSON.stringify(d);
+  if (navigator.clipboard) { navigator.clipboard.writeText(txt).then(function () { alert('결정 ' + Object.keys(d).length + '건을 복사했습니다. 채팅에 붙여 주세요.'); }); }
+  else { prompt('복사해서 채팅에 붙여 주세요', txt); }
+}
+document.addEventListener('DOMContentLoaded', function () {
+  var d = f10Load();
+  document.querySelectorAll('#f10 input[type=radio]').forEach(function (r) {
+    var id = r.name.slice(4);
+    if (d[id] && r.value === d[id]) r.checked = true;
+    r.addEventListener('change', function () { var x = f10Load(); x[id] = r.value; f10Save(x); });
+  });
+  f10Count();
+});
+
 function toggleAll(open) { document.querySelectorAll('tbody.scr').forEach(function (t) { t.classList.toggle('open', open); }); }
 </script>
 </main></body></html>

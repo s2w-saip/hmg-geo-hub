@@ -90,8 +90,18 @@ _pr = os.path.join(AFTER_DIR, "_parity_results.json")  # ref -> pass | fail | mi
 PARITY = json.load(open(_pr, encoding="utf-8")) if os.path.exists(_pr) else {}
 _fx = os.path.join(AFTER_DIR, "_fixes.json")  # corrections for fixes made after the agents measured
 if os.path.exists(_fx):
-    for ak in json.load(open(_fx, encoding="utf-8")).get("area_keys", []):
+    _fxd = json.load(open(_fx, encoding="utf-8"))
+    for ak in _fxd.get("area_keys", []):
         AFTER_KEY_OVERRIDE[(ak["route"], ak["label"])] = ak["api_keys"]
+    # endpoint verdict updates after a fix: {"surface", "endpoint", "set": {"f6": [...], ...}, "by": "<commit>"}
+    for es in _fxd.get("endpoint_set", []):
+        ns_tab = AFN_NS.setdefault(es["surface"], {})
+        if es["endpoint"] not in ns_tab:
+            after_conflicts.append(f"fix for unknown endpoint {es['surface']}:{es['endpoint']}")
+            continue
+        ns_tab[es["endpoint"]] = {**ns_tab[es["endpoint"]], **es["set"]}
+        if AFN.get(es["endpoint"]) is not None and es["surface"] == next((k for k, v in AFN_NS.items() if es["endpoint"] in v), None):
+            AFN[es["endpoint"]] = ns_tab[es["endpoint"]]
 for s_ in SCREENS:  # noqa: F821
     s_["acommon"] = AFTER_COMMON.get(s_.get("survey", "existing3"))
     s_["ans"] = s_.get("survey", "existing3")
@@ -389,11 +399,53 @@ progress_html = (f'<section>\n<h2>진행 현황 <span class="muted small">완료
                  '<div class="scroll"><table class="progress"><thead><tr><th>상태</th><th>항목</th><th>대상 · 판정 요소</th><th>비고</th></tr></thead><tbody>\n'
                  + "\n".join(prow) + '\n</tbody></table></div>\n</section>')
 
+# ── F10 decision section ──
+F10_PATH = os.path.join(SURVEY_DIR, "f10_differences.json")
+F10_DEC_PATH = os.path.join(SURVEY_DIR, "f10_decisions.json")  # {"<id>": "accept" | "match"} once the user decides
+f10_html = ""
+if os.path.exists(F10_PATH):
+    f10 = json.load(open(F10_PATH, encoding="utf-8"))
+    f10dec = json.load(open(F10_DEC_PATH, encoding="utf-8")) if os.path.exists(F10_DEC_PATH) else {}
+    themes = {}
+    for it in f10["declared"]:
+        themes.setdefault(it["theme"], []).append(it)
+    blocks = []
+    for th, lst in sorted(themes.items(), key=lambda kv: -len(kv[1])):
+        n_acc = sum(1 for i in lst if i["recommendation"] == "accept")
+        n_dec = sum(1 for i in lst if i["id"] in f10dec)
+        trs = []
+        for i in lst:
+            rec = "match" if i["recommendation"].startswith("match") else "accept"
+            rec_lab = "legacy 맞춤" if rec == "match" else "수용"
+            cur = f10dec.get(i["id"], "")
+            tip = f"legacy: {i['legacy']}\nAPI: {i['api']}\n근거: {', '.join(i['evidence']) if isinstance(i['evidence'], list) else i['evidence']}"
+            pd = "제품 결정" if i.get("product_decision") else ""
+            imp = {"high": "높음", "medium": "중간", "low": "낮음"}.get(i.get("impact", ""), i.get("impact", ""))
+            radios = "".join(
+                f'<label class="rd"><input type="radio" name="f10-{esc(i["id"])}" value="{v}" data-rec="{rec}"{" checked" if cur == v else ""}> {lab}</label>'
+                for v, lab in (("accept", "수용"), ("match", "legacy 맞춤")))
+            trs.append(
+                f'<tr><td class="id">{esc(i["id"])}</td><td title="{esc(tip)}"><strong>{esc(i["title"])}</strong><span class="val">{esc(i["effect"])}</span></td>'
+                f'<td class="small">{esc(imp)}</td><td class="small">{esc(str(i.get("effort", ""))[:40])}</td><td class="small">{pd}</td>'
+                f'<td class="small"><strong>{rec_lab}</strong><span class="val">{esc(i.get("reason", ""))}</span></td><td class="small rdcell">{radios}</td></tr>')
+        blocks.append(
+            f'<details class="sec"><summary>{esc(th)} <span class="muted small">{len(lst)}건 · 추천 수용 {n_acc} / 맞춤 {len(lst) - n_acc} · 결정 {n_dec}</span></summary>'
+            f'<div class="secbody"><div class="scroll"><table class="f10"><thead><tr><th>ID</th><th>차이 (마우스를 올리면 legacy·API 동작)</th><th>영향</th><th>맞추는 노력</th><th></th><th>추천</th><th>결정</th></tr></thead><tbody>'
+            + "\n".join(trs) + '</tbody></table></div></div></details>')
+    n_total = len(f10["declared"])
+    n_acc_all = sum(1 for i in f10["declared"] if i["recommendation"] == "accept")
+    f10_html = (
+        f'<section id="f10">\n<h2>F10 결정 — 선언된 계약 차이 {n_total}건 <span class="muted small">추천 수용 {n_acc_all} · legacy 맞춤 {n_total - n_acc_all} · 결정 {len(f10dec)}</span></h2>\n'
+        '<p class="small">항목마다 <b>수용</b>(API 동작 유지) 또는 <b>legacy 맞춤</b>을 고르면 이 브라우저에 저장됩니다. 다 고르면 <b>결정 복사</b>를 눌러 채팅에 붙여 주세요. '
+        '<b>현행 재현 스위치</b> 22건은 배포 env <code>HGH_LEGACY_PROFILE=current</code> 하나로 함께 맞출 수 있습니다(일부는 동결 층 적재·재투영 선행).</p>'
+        '<div class="toolbar"><button type="button" onclick="f10Fill()">추천대로 채우기</button><button type="button" onclick="f10Copy()">결정 복사</button>'
+        '<span id="f10-count" class="muted small"></span></div>\n' + "\n".join(blocks) + "\n</section>")
+
 total = sum(counts.values())
 TEMPLATE = open(TEMPLATE_PATH, encoding="utf-8").read()
 out = TEMPLATE
 for k, v in {
-    "{{ROWS}}": "\n".join(screen_blocks), "{{PROGRESS}}": progress_html, "{{BEFORE_ROWS}}": "\n".join(brows), "{{K_ROWS}}": "\n".join(krows),
+    "{{ROWS}}": "\n".join(screen_blocks), "{{PROGRESS}}": progress_html, "{{F10}}": f10_html, "{{BEFORE_ROWS}}": "\n".join(brows), "{{K_ROWS}}": "\n".join(krows),
     "{{WORK_ROWS}}": "\n".join(wrows), "{{N_WORK}}": str(len(WORK)), "{{N_WORK_IN}}": str(w_in), "{{N_WORK_OUT}}": str(w_out),
     "{{N_FNS}}": str(len(used_fns)), "{{N_AREAS}}": str(n_areas), "{{N_SCREENS}}": str(n_screens),
     "{{Y}}": str(counts["y"]), "{{N}}": str(counts["n"]), "{{U}}": str(counts["u"]), "{{TOTAL}}": str(total),
