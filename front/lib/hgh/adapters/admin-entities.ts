@@ -6,17 +6,17 @@ import "server-only";
 // source (HGH_SOURCE_G7 = api) has versions; the legacy source keeps the old catalog screen.
 //
 // Reads
-//   list page     GET /v1/admin/entities (default period, all pages) + GET .../versions, then the
-//                 active and draft version details in parallel. The list endpoint projects the
-//                 ACTIVE version onto the old role vocabulary (removed shows as competitor), so the
+//   list page     GET /v1/admin/entities (default period, all pages) + GET .../versions?view=gate (numbers
+//                 only), then the active and draft version details in parallel. The list endpoint projects
+//                 the ACTIVE version onto the old role vocabulary (removed shows as competitor), so the
 //                 real role comes from the version detail rows (mergeEntityRows).
-//   draft page    GET .../versions (numbers) + GET .../versions/{draft} + GET .../versions/{draft}/diff
+//   draft page    GET .../versions?view=gate (numbers) + GET .../versions/{draft} + GET .../versions/{draft}/diff
 //   versions page GET .../versions + GET .../applies
 //   apply page    GET .../versions?view=gate (numbers only) + GET .../applies/{id} (polled by the client while a
 //                 preview or an apply runs) + GET .../versions/{ver}?view=lint (summary and lint only)
 //   review page   GET .../versions?view=gate + GET .../review?status=&kind=&q= + GET /v1/admin/entities?fields=names
 //                 (merge target names: no own-brand attribution)
-//   audit page    GET .../audit?before_id=
+//   audit page    GET .../versions?view=gate + GET .../audit?before_id=
 // Draft create / title edit ask return=minimal: the screens only read the version number and refresh.
 //
 // Errors: writes answer {ok:false, errorKey} where errorKey is a key under adminEcat.errors

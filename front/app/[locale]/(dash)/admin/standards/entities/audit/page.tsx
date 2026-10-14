@@ -6,7 +6,7 @@ import { AuditLog } from "../_components/audit-log";
 import { EcatShell } from "../_components/ecat-shell";
 import { ecatGate, requireAdminPage } from "../_ecat-data";
 
-// Entity versioning audit history (E7). Reads: versions (gate), then one audit page.
+// Entity versioning audit history (E7). Reads: the version numbers (gate, versions?view=gate), then one audit page.
 
 const LIMIT = 100;
 
@@ -22,7 +22,7 @@ export default async function EntityAuditPage({
   setRequestLocale(locale);
   const t = await getTranslations("adminEcat");
   await requireAdminPage(locale);
-  const gate = await ecatGate(locale);
+  const gate = await ecatGate(locale, "gate");
   if (gate.kind !== "ready") return <EcatShell gate={gate} title={t("audit.pageTitle")} />;
 
   const raw = Array.isArray(sp.before_id) ? sp.before_id[0] : sp.before_id;

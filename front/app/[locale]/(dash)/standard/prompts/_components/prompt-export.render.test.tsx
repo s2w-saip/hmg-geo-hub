@@ -104,4 +104,19 @@ describe("paged export keeps all filtered rows", () => {
     expect(exported).toEqual(all);
     expect(calls).toEqual(Array.from({ length: 25 }, (_, i) => i * 500));
   });
+
+  it("the lists export through their rows-only reader in 5,000-row batches (B078): the same rows in the same order", async () => {
+    const { CATALOG_EXPORT_PAGE_SIZE, exportCatalogPages } = await import("@/lib/standards/catalog-page");
+    const all = Array.from({ length: 12005 }, (_, i) => row(i));
+    const calls: [number, number][] = [];
+    // Rows-only reads (include_meta=false): rows and the filtered total, no count, facets or columns.
+    const exported = await exportCatalogPages(async q => {
+      calls.push([q.offset!, q.limit!]);
+      expect(q.search).toBe("prompt");
+      expect(q.sort).toBe("text");
+      return { rows: all.slice(q.offset, q.offset! + q.limit!) as never[], total: all.length, offset: q.offset!, limit: q.limit! };
+    }, { search: "prompt", sort: "text", offset: 100, limit: 50 }, CATALOG_EXPORT_PAGE_SIZE);
+    expect(exported).toEqual(all);
+    expect(calls).toEqual([[0, 5000], [5000, 5000], [10000, 5000]]);
+  });
 });

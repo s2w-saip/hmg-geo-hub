@@ -20,8 +20,8 @@ import { draftChangeCount, ecatGate, requireAdminPage } from "./_ecat-data";
 // needs (U11-N2). Failed reads reach the existing dashboard error boundary.
 // E7 (entity versioning): once an active version exists the page becomes the version manager:
 // the list (GET /v1/admin/entities + active and draft version rows, the real role incl. hidden
-// and removed), the draft bar and the entity drawer. Reads: versions and the list together, then
-// the active and draft details together (two round trips, at most four calls).
+// and removed), the draft bar and the entity drawer. Reads: the version numbers (versions?view=gate)
+// and the list together, then the active and draft details together (two round trips, at most four calls).
 export default async function AdminStandardEntitiesPage({
   params,
 }: {
@@ -36,7 +36,7 @@ export default async function AdminStandardEntitiesPage({
   const apiSource = api.isAdminApi();
   if (apiSource) {
     const [gate, list] = await Promise.all([
-      ecatGate(locale),
+      ecatGate(locale, "gate"),
       ecat.listEntityRows().catch((e) => {
         throwForPage(e, locale);
       }),

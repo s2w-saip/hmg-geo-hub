@@ -7,14 +7,14 @@ import { EcatShell } from "../_components/ecat-shell";
 import { ecatGate, namesOf, requireAdminPage } from "../_ecat-data";
 
 // Draft editing (E7, design 7절 초안 편집): the one open draft (decision 29), its change list
-// against the version it was based on, lint and the apply request. Reads: versions, then the
-// draft detail and its diff together.
+// against the version it was based on, lint and the apply request. Reads: the version numbers
+// (versions?view=gate), then the draft detail and its diff together.
 export default async function EntityDraftPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("adminEcat");
   await requireAdminPage(locale);
-  const gate = await ecatGate(locale);
+  const gate = await ecatGate(locale, "gate");
   if (gate.kind !== "ready") return <EcatShell gate={gate} title={t("draft.pageTitle")} />;
 
   const { activeVer, draftVer } = gate.versions;
