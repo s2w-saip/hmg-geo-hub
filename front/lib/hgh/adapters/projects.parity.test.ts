@@ -104,7 +104,7 @@ const { TrackedEntitiesPanel } = await import("@/app/[locale]/(dash)/projects/[i
 const { DangerZone } = await import("@/app/[locale]/(dash)/projects/[id]/setting/_components/danger-zone");
 const { CandidateList } = await import("@/app/[locale]/(dash)/projects/[id]/prompt/_components/candidate-list");
 const { ManualPromptInput } = await import("@/app/[locale]/(dash)/projects/[id]/prompt/_components/manual-input");
-const { PromptList } = await import("@/app/[locale]/(dash)/projects/[id]/prompt/_components/prompt-list");
+const { PromptList, usedTagFieldIds } = await import("@/app/[locale]/(dash)/projects/[id]/prompt/_components/prompt-list");
 
 // ── WORLD ───────────────────────────────────────────────────────────────────
 
@@ -808,6 +808,24 @@ describe("/projects/[id]/setting", () => {
     expect(await view("legacy", OUTSIDER)).toEqual({ thrown: "NOT_FOUND" });
     expect(await view("api", OUTSIDER)).toEqual({ thrown: "NOT_FOUND" });
   });
+  it("admin, Scope-link diagnostic unavailable (5xx): the legacy block in its error state, rest of the page unchanged (B018)", async () => {
+    const legacy = (await view("legacy", ADMIN)) as { scopeKeys: string[] } & Record<string, unknown>;
+    const apiOk = (await view("api", ADMIN)) as { scopeKeys: string[] } & Record<string, unknown>;
+    vi.stubGlobal("fetch", async (input: string, init: RequestInit = {}) => {
+      const url = new URL(String(input));
+      return url.pathname.endsWith("/settings/scope-link") ? fail(503, "unavailable") : backend(String(init.method ?? "GET"), url.pathname, url.searchParams);
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const apiDown = (await view("api", ADMIN)) as { scopeKeys: string[] } & Record<string, unknown>;
+    warn.mockRestore();
+    // The legacy probe reported a failed call inside the block: overall "error", both rows "error".
+    const legacyFailed = legacy.scopeKeys
+      .map((k) => k.replace(/\.overall\.healthy$/, ".overall.error").replace(/\.state\.ok$/, ".state.error").replace(/\.fix\.healthy$/, ".fix.error"))
+      .sort();
+    expect(apiDown.scopeKeys).toEqual(legacyFailed);
+    expect(apiDown.scopeKeys).toContain("scopeLink.analysisProbe.overall.error");
+    expectDiff(without(apiOk, "scopeKeys"), without(apiDown, "scopeKeys"), {});
+  });
 });
 
 function pagingProps(props: Record<string, unknown>) {
@@ -832,7 +850,21 @@ describe("/projects/[id]/prompt", () => {
     expect((legacy.candidates.candidates as Array<{ id: string }>).map((c) => c.id)).toEqual([u(0x401), u(0x400)]);
     expect(legacy.manual).toBe(1);
     expect((await view("legacy", VIEWER)) as Record<string, unknown>).toMatchObject({ manual: 0 });
-    for (const account of [OWNER, VIEWER, ADMIN]) expectDiff(await view("legacy", account), await view("api", account), {});
+    for (const account of [OWNER, VIEWER, ADMIN]) {
+      expectDiff(await view("legacy", account), await view("api", account), {
+        // B016: the server's project-wide value count rides on the api rows (the list reads 200 rows at a
+        // time); legacy rows have none and keep the loaded-rows rule.
+        "^\\.list\\.customFields\\[\\d\\]\\.valueCount$": "B016: value_count kept for the tag-column delete confirmation",
+      });
+    }
+    const api = (await view("api", OWNER)) as Record<string, Record<string, unknown>>;
+    type Fields = Parameters<typeof usedTagFieldIds>[0];
+    type Rows = Parameters<typeof usedTagFieldIds>[1];
+    expect((api.list.customFields as Fields).map((f) => [f.label, f.valueCount])).toEqual([["Segment", 1], ["Old", 0]]);
+    // Every row of this world is loaded, so the delete confirmation picks the same columns on both sources.
+    const used = (v: Record<string, Record<string, unknown>>) => usedTagFieldIds(v.list.customFields as Fields, v.list.prompts as Rows);
+    expect(used(api)).toEqual(used(legacy));
+    expect(used(api)).toEqual(new Set([u(0x600)]));
   });
   it("pending invitee: notFound on both (PJ-3 active members only)", async () => {
     expect(await view("legacy", INVITEE)).toEqual({ thrown: "NOT_FOUND" });

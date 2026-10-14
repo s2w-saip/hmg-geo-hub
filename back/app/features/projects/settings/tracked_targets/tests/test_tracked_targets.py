@@ -81,3 +81,23 @@ async def test_no_brand_and_permissions(client_as):
         assert await fetchval("SELECT count(*) FROM app.project_tracked_competitor WHERE project_id = $1", uuid.UUID(pid)) == 0
     finally:
         await purge(pid)
+
+
+async def test_rebuild_is_one_upsert_per_write(client_as):
+    """B024: 경쟁사·차종 쓰기의 추적 브랜드 재구성은 정본 수와 무관하게 upsert 1문장(정본별 문장 없음). 결과 행은 같은 규칙."""
+    from tests.core.rcache_calls import Stmts
+    pr = await create_project(client_as, name=uniq("tt3"), brand_code="Hyundai")
+    pid = uuid.UUID(pr["project_id"])
+    base = f"/v1/projects/{pid}/settings"
+    try:
+        async with client_as(ADMIN) as c:
+            await c.post(f"{base}/competitors", json={"brand_name": "BMW"})
+            with Stmts() as comp:
+                assert (await c.post(f"{base}/competitors", json={"brand_name": "Toyota", "aliases": ["도요타"]})).status_code == 201
+            with Stmts() as veh:
+                assert (await c.post(f"{base}/vehicles", json={"brand": "Honda", "model": "CR-V"})).status_code == 201
+        for s in (comp, veh):
+            assert len([x for x in s.seen if "INSERT INTO app.project_tracked_brand" in x]) == 1
+        assert await _brands(pid) == {"Hyundai": ["Hyundai"], "BMW": ["BMW"], "Toyota": ["Toyota", "도요타"], "Honda": ["Honda"]}
+    finally:
+        await purge(pid)

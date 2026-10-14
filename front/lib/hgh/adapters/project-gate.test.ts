@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api-types";
 
-// Unit tests of the one project gate (GET /v1/projects/{id}). API mocked at fetch, token
+// Unit tests of the one project gate (GET /v1/projects/{id}; light read ?view=gate). API mocked at fetch, token
 // injected through the lib/hgh/auth test seam. The legacy <-> api parity of the pages that
 // use it is in app/[locale]/(dash)/projects/[id]/project-gate.test.ts and
 // app/[locale]/(dash)/layout.test.ts.
@@ -111,6 +111,12 @@ describe("mapping (ProjectDetail -> GateProject)", () => {
     expect(canEditConversion({ ...p, myRole: null }, false)).toBe(false);
   });
 
+  it("the light gate view (B020: summary and effective_engines null) maps to the same GateProject as the full answer", () => {
+    const full = detail({ prompt_counts: { draft: 1, queued: 0, running: 0, done: 2, failed: 0, paused: 0 }, candidate_count: 4, target_brand: "BMW" });
+    const light = detail({ effective_engines: null, prompt_counts: null, candidate_count: null, recent_prompts: null, target_brand: "BMW" });
+    expect(toGateProject(light)).toEqual(toGateProject(full));
+  });
+
   it("only uuids are project ids", () => {
     expect(isProjectId(PID)).toBe(true);
     for (const x of ["new", "by-scope", "..", "", `${PID}x`]) expect(isProjectId(x)).toBe(false);
@@ -122,6 +128,17 @@ describe("fetchProjectGate", () => {
     respond(ok());
     await expect(fetchProjectGate(PID)).resolves.toMatchObject({ id: PID, country: "US" });
     expect(calls).toEqual([`https://api.hgh.test/v1/projects/${PID}`]);
+  });
+
+  it("light (B020): GET /v1/projects/{id}?view=gate, same project; light reads share one call, the full read stays its own", async () => {
+    respond(ok(detail({ effective_engines: null, prompt_counts: null, recent_prompts: null })));
+    await expect(fetchProjectGate(PID, { light: true })).resolves.toEqual(toGateProject(detail()));
+    expect(calls).toEqual([`https://api.hgh.test/v1/projects/${PID}?view=gate`]);
+    calls.length = 0;
+    await withRequestScope(async () => {
+      await Promise.all([fetchProjectGate(PID, { light: true }), requireProjectPage("ko", PID, { light: true })]);
+    });
+    expect(calls).toEqual([`https://api.hgh.test/v1/projects/${PID}?view=gate`]);
   });
 
   it("404 (missing, out of scope, non-member, pending) -> null", async () => {
@@ -188,6 +205,20 @@ describe("requireProjectPage: same outcome as the legacy page gates", () => {
   it("403 other -> notFound() (project pages never confirm existence)", async () => {
     respond(err(403, "owner_only"));
     await expect(requireProjectPage("ko", PID)).rejects.toThrow("NOT_FOUND");
+  });
+
+  it("light read: the same outcome for every status (404, 401, 403 surface / other, 5xx)", async () => {
+    for (const [status, code, outcome] of [
+      [404, "not_found", "NOT_FOUND"],
+      [401, "token_expired", "REDIRECT:/ko/login"],
+      [403, "menu_forbidden", "REDIRECT:/ko/no-access"],
+      [403, "owner_only", "NOT_FOUND"],
+    ] as const) {
+      respond(err(status, code));
+      await expect(requireProjectPage("ko", PID, { light: true })).rejects.toThrow(outcome);
+    }
+    respond(err(503, "unavailable"));
+    await expect(requireProjectPage("ko", PID, { light: true })).rejects.toMatchObject({ status: 503 });
   });
 
   it("5xx -> thrown to the error boundary", async () => {

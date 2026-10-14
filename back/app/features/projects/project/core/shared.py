@@ -14,6 +14,7 @@ DB 오류 판별 = core.errors(db_error_info·from_db_error), 멤버 전용 게�
 """
 from __future__ import annotations
 
+import json
 import uuid
 from typing import Any
 
@@ -157,14 +158,22 @@ async def rebuild_tracked_brand(rw: AsyncConnection, project_id: uuid.UUID) -> l
         if r["canonical_name"] in merged:
             push(r["canonical_name"], r["aliases"])
     names = list(merged)
-    for n in names:                    # 프로젝트당 정본 수십 개 이하(현행도 행별 upsert)
-        await rw.execute(_text("""
-            INSERT INTO app.project_tracked_brand (project_id, canonical_name, aliases) VALUES (:pid, :n, CAST(:a AS text[]))
-            ON CONFLICT (project_id, canonical_name) DO UPDATE SET aliases = EXCLUDED.aliases"""),
-            {"pid": project_id, "n": n, "a": list(merged[n])})
+    if names:                          # 정본별 upsert 를 한 문장으로(현행은 행별 upsert). 별칭 목록은 길이가 달라 jsonb 배열로 넘긴다
+        await rw.execute(_text(UPSERT_TRACKED_BRANDS),
+                         {"pid": project_id, "rows": json.dumps([[n, list(merged[n])] for n in names], ensure_ascii=False)})
     await rw.execute(_text("DELETE FROM app.project_tracked_brand WHERE project_id = :pid AND NOT (canonical_name = ANY(CAST(:names AS text[])))"),
                      {"pid": project_id, "names": names})
     return [{"canonical_name": n, "aliases": list(merged[n])} for n in names]
+
+
+# [[정본, [별칭…]], …] → 정본마다 1행 upsert(입력 순서·별칭 순서 유지, 정본은 merged 키라 중복 없음).
+UPSERT_TRACKED_BRANDS = """
+INSERT INTO app.project_tracked_brand (project_id, canonical_name, aliases)
+SELECT :pid, r.value->>0,
+       ARRAY(SELECT a.value FROM jsonb_array_elements_text(r.value->1) WITH ORDINALITY AS a(value, i) ORDER BY a.i)
+  FROM jsonb_array_elements(CAST(:rows AS jsonb)) WITH ORDINALITY AS r(value, i)
+ ORDER BY r.i
+ON CONFLICT (project_id, canonical_name) DO UPDATE SET aliases = EXCLUDED.aliases"""
 
 
 def _text(sql: str) -> Any:

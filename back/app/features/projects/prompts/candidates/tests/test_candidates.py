@@ -46,6 +46,25 @@ async def test_list_shape_order_pagination(env, client_as):
             assert (await c.get(url(pid))).status_code == code, uid
 
 
+async def test_list_include_total_false_skips_count(env, client_as):
+    """include_total=false: 행·커서·limit 은 기본과 같고 total 만 null, 후보 COUNT 문장을 실행하지 않는다(B023)."""
+    from tests.core.rcache_calls import Stmts
+    pid = await env.mk_project()
+    for i in range(3):
+        await env.mk_candidate(f"t{i}", project_id=pid, created_at=T0 + timedelta(minutes=i))
+    async with client_as(env.owner) as c:
+        full = await c.get(url(pid), params={"limit": 2})
+        with Stmts() as s:
+            light = await c.get(url(pid), params={"limit": 2, "include_total": "false"})
+        nxt_full = await c.get(url(pid), params={"limit": 2, "cursor": full.json()["data"]["next_cursor"]})
+        nxt_light = await c.get(url(pid), params={"limit": 2, "include_total": "false", "cursor": light.json()["data"]["next_cursor"]})
+    assert light.status_code == 200, light.text
+    assert light.json()["data"] == full.json()["data"]
+    assert full.json()["meta"]["page"] == {**light.json()["meta"]["page"], "total": 3} and light.json()["meta"]["page"]["total"] is None
+    assert nxt_light.json()["data"] == nxt_full.json()["data"]
+    assert not any("count(*)" in x and "prompt_candidate" in x for x in s.seen)
+
+
 async def test_select_promotes_and_keeps_pool(env, client_as):
     pid = await env.mk_project()
     c1 = await env.mk_candidate("cand one", project_id=pid, created_at=T0)

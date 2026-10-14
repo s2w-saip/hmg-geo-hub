@@ -16,7 +16,8 @@ import { listProjectOwnedBases } from "@/lib/db/repositories/project-owned-bases
 import {
   isProjectsApi,
   loadSettingsPage,
-  type ScopeLinkView,
+  SCOPE_LINK_ERROR,
+  type ScopeLinkDiagnostic,
   type SettingsPageData,
 } from "@/lib/hgh/adapters/projects";
 import { GeneralForm } from "./_components/general-form";
@@ -29,6 +30,14 @@ import { effectiveAiEngines } from "@/lib/scope/engines";
 import { canOperateProject } from "@/lib/auth/operator-policy";
 
 type LegacyDiagnostic = Awaited<ReturnType<typeof diagnoseProjectAnalysisConnection>>;
+type ProbeView = {
+  overall: LegacyDiagnostic["overall"];
+  mention: { state: LegacyDiagnostic["mention"]["state"] };
+  citation: { state: LegacyDiagnostic["citation"]["state"] };
+};
+
+// API 진단 일시 실패: legacy probe 가 호출 오류를 블록 안 오류 상태로 그리던 것과 같은 상태(기존 analysisProbe error 문구).
+const PROBE_ERROR: ProbeView = { overall: "error", mention: { state: "error" }, citation: { state: "error" } };
 
 // Project detail > Setting (Task E + D).
 // Owner-only edit + delete. Viewer/non-member gets notFound() per the
@@ -39,7 +48,8 @@ type LegacyDiagnostic = Awaited<ReturnType<typeof diagnoseProjectAnalysisConnect
 // through lib/hgh/adapters/projects.ts; legacy keeps the repository reads. Both fill one
 // SettingsPageData, rendered by the same JSX. Only the admin Scope-link diagnostic differs: the API
 // gives one link state with job and outbox counts instead of the live mention/citation probes
-// (design 3.5 #11, component change C2), so that block has one rendering per source.
+// (design 3.5 #11, component change C2), so that block has one rendering per source. A transient
+// failure of the API diagnostic draws the legacy block's error state (as a failed legacy probe did).
 export default async function ProjectSettingPage({
   params,
 }: {
@@ -54,12 +64,16 @@ export default async function ProjectSettingPage({
   const isAdmin = session.user.role === "admin";
 
   let data: SettingsPageData;
-  let legacyDiagnostic: LegacyDiagnostic | null = null;
-  let apiDiagnostic: ScopeLinkView | null = null;
+  let legacyDiagnostic: ProbeView | null = null;
+  let apiDiagnostic: ScopeLinkDiagnostic | null = null;
   if (isProjectsApi()) {
     const loaded = await loadSettingsPage(locale, id, isAdmin);
     data = loaded.data;
     apiDiagnostic = loaded.diagnostic;
+    if (apiDiagnostic === SCOPE_LINK_ERROR) {
+      legacyDiagnostic = PROBE_ERROR;
+      apiDiagnostic = null;
+    }
   } else {
     const legacy = await legacySettingsPage(id, session.user, isAdmin);
     data = legacy.data;

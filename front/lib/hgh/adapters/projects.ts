@@ -20,10 +20,13 @@ import "server-only";
 //   member                 gate GET /v1/projects/{id} + GET …/members + GET …/member-audit?limit=20.
 //   setting                gate + GET …/settings + …/settings/tracked-urls (cursor, limit 500) +
 //                          …/settings/engines/history (cursor, limit 200); admin only, after
-//                          those four: …/settings/scope-link.
+//                          those four: …/settings/scope-link?include_recent=false (the block shows
+//                          counts and state only, not the recent outbox rows).
 //   prompt                 gate + …/prompt-candidates (limit 500) + …/prompts (limit 500) + …/prompt-fields.
 // The gate is lib/hgh/adapters/project-gate (U2): admin or active member, else notFound(). The
-// raw ProjectDetail the setting page needs is the same in-request deduped GET.
+// raw ProjectDetail the setting page needs is the same in-request deduped GET. The prompt tab's paged
+// reads (server actions alone in their request) take the light view (GET /v1/projects/{id}?view=gate,
+// B020/B021) through requireProjectAccess { light: true }.
 //
 // Field maps (API -> screen prop; legacy source in brackets)
 //   ProjectListItem -> ProjectRow   project_id->id, brand_code->brand, country_code->country,
@@ -52,8 +55,12 @@ import "server-only";
 //   PromptItem -> PromptRow         id = prompt_id, promptType = prompt_type, brand = brand_code,
 //                                   scopePromptId = scope_prompt_id, customValues = tags; API order
 //                                   created_at DESC reversed to the legacy ASC
-//   FieldItem -> CustomFieldRow     id = field_id (value_count dropped: the list counts values itself)
-//   ScopeLink -> ScopeLinkView      admin diagnostic block (component change C2, design 3.5 #11)
+//   FieldItem -> CustomFieldRow     id = field_id, valueCount = value_count (project-wide; the list
+//                                   holds 200 rows at a time, so the tag-column delete confirmation
+//                                   reads it with the loaded rows; legacy rows have no count)
+//   ScopeLink -> ScopeLinkView      admin diagnostic block (component change C2, design 3.5 #11); a
+//                                   transient failure -> SCOPE_LINK_ERROR, drawn as the block's
+//                                   existing error state (legacy probe errors showed inside the block)
 // All timestamps are re-serialized with Date#toISOString, the legacy string form.
 //
 // Writes keep the legacy ActionResult shapes and messages. Error rule (appendix E common part):
@@ -106,9 +113,10 @@ import "server-only";
 //   U9-N11 cancelInvite / removeMember on a pending row both remove the invitation; removeMember of a
 //          pending row is audited as cancel_invite (legacy: remove). demote of a pending member
 //          answers "활성 상태의 멤버만 위임 가능합니다" (legacy: "Viewer는 이미 Viewer입니다").
-//   U9-N12 empty-input checks (empty URL, label, value, id list) and the cancelInvite "pending only"
-//          check run before the backend's permission check, so a viewer's forged request can get that
-//          message instead of a thrown error (the screens never offer these controls to viewers).
+//   U9-N12 empty-input checks (empty URL, label, value, id list) run before the backend's permission
+//          check, so a viewer's forged request can get that message instead of a thrown error (the
+//          screens never offer these controls to viewers). cancelInvite's "pending only" check is the
+//          backend's (DELETE ?expect=pending), after its owner check, in legacy order.
 //   U9-N13 setTargetCompetitor with an unknown brand keeps the previous target and answers
 //          "해당 브랜드를 찾을 수 없습니다" (legacy cleared the target).
 //   U9-N14 xlsx import: the rules run on the server (same rules, back/app/features/projects/prompts/io
@@ -149,7 +157,7 @@ import { pct1OrNull } from "../convert";
 import { describeHghError, isHghApiError, LOCAL_CODES, throwForPage, type HghApiError } from "../errors";
 import { fetchAllPages, pageInfo, type CursorPage } from "../paginate";
 import { relayUpload, uploadLimitBytes } from "../relay";
-import { isProjectId, requireProjectPage, type GateProject } from "./project-gate";
+import { isProjectId, requireProjectPage, type GateProject, type GateReadOptions } from "./project-gate";
 
 type S = components["schemas"];
 export type ApiProjectListItem = S["ProjectListItem"];
@@ -407,9 +415,9 @@ export interface ProjectPageAccess {
   canEdit: boolean;
 }
 
-/** The U2 page gate plus the legacy canEdit rule (admin or active Owner). */
-export async function requireProjectAccess(locale: string, id: string, isAdmin: boolean): Promise<ProjectPageAccess> {
-  const gate = await requireProjectPage(locale, id);
+/** The U2 page gate plus the legacy canEdit rule (admin or active Owner). light: the view=gate read (server actions). */
+export async function requireProjectAccess(locale: string, id: string, isAdmin: boolean, opts: GateReadOptions = {}): Promise<ProjectPageAccess> {
+  const gate = await requireProjectPage(locale, id, opts);
   return { gate, isAdmin, canEdit: isAdmin || gate.myRole === "owner" };
 }
 
@@ -466,6 +474,10 @@ export async function loadMemberPage(locale: string, id: string, isAdmin: boolea
 // ── setting page ────────────────────────────────────────────────────────────
 
 export type ScopeLinkState = ApiScopeLink["state"];
+
+/** Transient failure of the admin Scope-link diagnostic: the page draws the block's existing error state. */
+export const SCOPE_LINK_ERROR = "error";
+export type ScopeLinkDiagnostic = ScopeLinkView | typeof SCOPE_LINK_ERROR;
 
 export interface ScopeLinkView {
   state: ScopeLinkState;
@@ -539,12 +551,14 @@ export function toSettingsPageData(
       domain: bundle.domain ?? detail.domain ?? null,
     },
     canEdit: bundle.can_edit,
-    canEditEngines: bundle.engines.can_edit ?? false,
-    engines: { initial: normalizeAiEngines(bundle.engines.effective), explicit: bundle.engines.stored != null },
+    canEditEngines: bundle.engines?.can_edit ?? false,
+    engines: { initial: normalizeAiEngines(bundle.engines?.effective ?? []), explicit: bundle.engines?.stored != null },
+    // The settings page reads the full bundle (no ?view): engines, brand_aliases and vehicles are present
+    // (they are null only on the home card view).
     engineHistory: history.map((h) => ({ id: h.history_id, engines: [...h.engines], changedAt: isoLegacy(h.changed_at) })),
     ownedBases: bundle.owned_bases.map((b) => ({ id: b.base_norm, baseUrl: b.base_url, label: b.label ?? null })),
     trackedUrls: trackedUrls.map((u) => ({ id: u.url_norm, url: u.url, label: u.label ?? null })),
-    ownBrandAliases: detail.brand_code ? [...(bundle.brand_aliases.aliases ?? [])] : [],
+    ownBrandAliases: detail.brand_code ? [...(bundle.brand_aliases?.aliases ?? [])] : [],
     designatedBrands: bundle.competitors.map((c) => ({
       id: c.brand_name,
       brandName: c.brand_name,
@@ -552,7 +566,7 @@ export function toSettingsPageData(
       notes: c.notes ?? null,
       isTarget: c.is_target ?? false,
     })),
-    vehicles: bundle.vehicles.map((v) => ({
+    vehicles: (bundle.vehicles ?? []).map((v) => ({
       id: vehicleId(v.brand, v.model),
       brand: v.brand,
       model: v.model,
@@ -595,24 +609,30 @@ async function allEngineHistory(id: string): Promise<ApiEngineHistoryEntry[]> {
 }
 
 /**
- * Admin Scope-link diagnostic. A transient failure degrades to "no diagnostic" (one log line), as
- * the legacy probe reported its own errors inside the block instead of failing the page.
+ * Admin Scope-link diagnostic (include_recent=false: the block shows counts and state, never the recent
+ * outbox rows). A transient failure answers SCOPE_LINK_ERROR (one log line): the page draws the
+ * block's error state, as the legacy probe reported its own errors inside the block instead of
+ * failing the page.
  */
-export async function loadScopeLink(id: string): Promise<ScopeLinkView | null> {
+export async function loadScopeLink(id: string): Promise<ScopeLinkDiagnostic> {
   try {
-    const r = await hghGet("/v1/projects/{project_id}/settings/scope-link", { pathParams: { project_id: id } });
+    const r = await hghGet("/v1/projects/{project_id}/settings/scope-link", {
+      pathParams: { project_id: id },
+      query: { include_recent: false },
+    });
     return toScopeLinkView(r.data);
   } catch (e) {
     if (!isHghApiError(e) || e.code === LOCAL_CODES.config) throw e;
     console.warn(describeHghError(e));
-    return null;
+    return SCOPE_LINK_ERROR;
   }
 }
 
 export interface SettingsPageLoad {
   data: SettingsPageData;
   isAdmin: boolean;
-  diagnostic: ScopeLinkView | null;
+  /** null for non-admins (no block content). */
+  diagnostic: ScopeLinkDiagnostic | null;
 }
 
 export async function loadSettingsPage(locale: string, id: string, isAdmin: boolean): Promise<SettingsPageLoad> {
@@ -661,7 +681,7 @@ export function toPromptRows(items: readonly ApiPromptItem[], reverse = true): P
 }
 
 export function toCustomFieldRow(f: ApiFieldItem): CustomFieldRow {
-  return { id: f.field_id, label: f.label, archived: f.archived };
+  return { id: f.field_id, label: f.label, archived: f.archived, valueCount: f.value_count };
 }
 
 export interface PromptPageData {
@@ -853,24 +873,26 @@ export const REMOVE_ERRORS: ErrorTable = {
   unprocessable: MEMBER_NOT_FOUND,
 };
 
+export const CANCEL_INVITE_ERRORS: ErrorTable = {
+  ...REMOVE_ERRORS,
+  not_pending: "대기 중인 초대만 취소할 수 있습니다",
+};
+
 /**
- * cancelInvite: the API deletes pending and active rows alike, so the legacy "pending only" check
- * reads the roster first (owner-readable) and keeps the legacy messages.
+ * cancelInvite: DELETE ?expect=pending. The backend checks "pending only" on the target row it locks
+ * for the delete (roster/service.py remove, FOR UPDATE), after the owner check (legacy requireOwner
+ * order), so an invitation accepted in the meantime is never removed as an active member. 409
+ * not_pending -> the legacy "pending only" message, 404 member_not_found -> "not found".
  */
 export async function cancelInvite(projectId: string, userId: string): Promise<ActionResult> {
-  const roster = await run(
-    // Same refresh-and-retry as every other server-action call (verification D1): an expired
-    // access token must not end the action here while the DELETE below would have refreshed.
-    () => hghGet("/v1/projects/{project_id}/members", { ...W, pathParams: pid(projectId), dedupe: false }),
-    {},
-  );
-  if (!roster.ok) return roster;
-  const target = roster.value!.data.items.find((m) => m.user_id === userId);
-  if (!target) return { ok: false, error: MEMBER_NOT_FOUND };
-  if (target.status !== "pending") return { ok: false, error: "대기 중인 초대만 취소할 수 있습니다" };
   const r = await run(
-    () => hghDelete("/v1/projects/{project_id}/members/{user_id}", { ...W, pathParams: { project_id: projectId, user_id: userId } }),
-    REMOVE_ERRORS,
+    () =>
+      hghDelete("/v1/projects/{project_id}/members/{user_id}", {
+        ...W,
+        pathParams: { project_id: projectId, user_id: userId },
+        query: { expect: "pending" },
+      }),
+    CANCEL_INVITE_ERRORS,
   );
   return r.ok ? { ok: true, value: undefined } : r;
 }

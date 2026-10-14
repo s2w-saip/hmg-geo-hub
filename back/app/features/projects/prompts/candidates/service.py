@@ -19,14 +19,15 @@ from .schemas import CandidateItem, CandidateList, DeleteResult, SelectResult
 
 
 async def list_candidates(conn: AsyncConnection, project_id: uuid.UUID, cursor: str | None,
-                          limit: int | None) -> tuple[CandidateList, int, int]:
+                          limit: int | None, *, include_total: bool = True) -> tuple[CandidateList, int | None, int]:
+    """키셋 목록. include_total=False 면 COUNT 를 건너뛰고 total = None(행·커서는 같다)."""
     lim = clamp_limit(limit, default=200)
     fh = filter_hash({"project": str(project_id)})
     cur = decode_cursor(cursor, sort=q.LIST_SORT, dir="desc", fh=fh, types=q.LIST_KEY_TYPES)
     sql, params = q.list_sql(project_id, cur, lim)
     rows = await fetch_keyset(conn, sql, params)
     page, nxt = keyset_page(rows, lim, lambda r: (r["created_at"], r["candidate_id"]), sort=q.LIST_SORT, dir="desc", fh=fh)
-    total = int(await fetch_val(conn, q.COUNT_SQL, {"pid": project_id}) or 0)
+    total = int(await fetch_val(conn, q.COUNT_SQL, {"pid": project_id}) or 0) if include_total else None
     return CandidateList(items=[CandidateItem(**r) for r in page], next_cursor=nxt), total, lim
 
 

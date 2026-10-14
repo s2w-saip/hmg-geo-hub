@@ -136,3 +136,32 @@ async def test_concurrent_execute_is_serialized(env, client_as):
     n = await env.val("SELECT count(*) FROM app.access_audit_log WHERE kind = 'scope_call' AND action = 'projects.prompts.execute' "
                       "AND target = $1", str(pid))
     assert n == 1                                                                   # 거부된 두 번째는 scope_call 감사 없음
+
+
+async def test_execute_batches_outbox_rows(env, client_as):
+    """B025: 기본 publisher 는 대상 N개의 발행 요청을 일괄 문장으로 적재한다(행마다 UPDATE·INSERT → 병합 1 + INSERT 1).
+    결과는 행별 enqueue_scope 와 같다: 미완료 create 가 있던 draft 는 그 행 payload 를 최신으로(새 행 없음), 나머지는 대상 순서대로 새 행."""
+    import json
+
+    from tests.core.rcache_calls import Stmts
+    pid = await env.mk_project()
+    ids = [await env.mk_prompt(f"bulk {i}", project_id=pid) for i in range(6)]
+    await env.conn.execute("INSERT INTO app.scope_outbox (aggregate, aggregate_id, op, payload) VALUES ('prompt', $1, 'create', $2)",
+                           ids[2], f'{{"project_id": "{pid}", "text": "stale"}}')
+    old = await env.val("SELECT outbox_id FROM app.scope_outbox WHERE aggregate = 'prompt' AND aggregate_id = $1", ids[2])
+    order = [r["prompt_id"] for r in await env.q("SELECT prompt_id FROM app.prompt WHERE project_id = $1 ORDER BY created_at, prompt_id", pid)]
+    async with client_as(env.op) as c:
+        with Stmts() as s:
+            r = await c.post(url(pid))
+    assert r.status_code == 202, r.text
+    assert r.json()["data"] == {"queued": 6, "recovered": 0, "skipped_pending": 0, "propagation": "pending"}
+    rows = await env.q("SELECT outbox_id, aggregate_id, op, payload, done_at FROM app.scope_outbox "
+                       "WHERE aggregate = 'prompt' AND aggregate_id = ANY($1::uuid[]) ORDER BY outbox_id", ids)
+    assert [x["aggregate_id"] for x in rows] == [ids[2]] + [i for i in order if i != ids[2]]
+    assert rows[0]["outbox_id"] == old and all(x["op"] == "create" and x["done_at"] is None for x in rows)
+    texts = {x["aggregate_id"]: json.loads(x["payload"]) for x in rows}
+    assert all(texts[i]["text"] == f"bulk {ids.index(i)}" and texts[i]["project_id"] == str(pid) and texts[i]["scope_prompt_id"] is None
+               for i in ids)
+    assert {x["status"] for x in await env.q("SELECT status FROM app.prompt WHERE project_id = $1", pid)} == {"queued"}
+    writes = [x for x in s.seen if "app.scope_outbox" in x and x.lstrip().startswith(("INSERT", "UPDATE"))]
+    assert len(writes) == 2

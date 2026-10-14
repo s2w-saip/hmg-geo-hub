@@ -159,6 +159,42 @@ async def test_detail_visibility(client_as):
         assert (await c.get("/v1/projects/not-a-uuid")).status_code == 422
 
 
+async def test_detail_view_gate(client_as):
+    """view=gate(B020): 같은 접근 판정(비멤버·루트·미지 404, viewer 통과)으로 게이트 필드는 full 과 같고, effective_engines·요약 필드는 null,
+    target_brand 만 같은 문장에서 채운다. 기본 엔진·요약(상태별 수·최근 프롬프트) 문장을 실행하지 않는다."""
+    from tests.core.rcache_calls import Stmts
+    pr = await create_project(client_as, name=uniq("gt"), brand_code="Kia")
+    pid = pr["project_id"]
+    summary = ("prompt_counts", "candidate_count", "active_member_count", "last_run_at", "recent_prompts")
+    light = ("effective_engines", "target_brand", *summary)
+    try:
+        async with client_as(ADMIN) as c:
+            await c.post(f"/v1/projects/{pid}/settings/competitors", json={"brand_name": "BMW"})
+            await c.put(f"/v1/projects/{pid}/settings/competitors/target", json={"brand_name": "BMW"})
+            full = (await c.get(f"/v1/projects/{pid}")).json()["data"]
+            with Stmts() as s:
+                r = await c.get(f"/v1/projects/{pid}", params={"view": "gate"})
+            assert (await c.get(f"/v1/projects/{pid}", params={"view": "summary"})).status_code == 422
+        assert r.status_code == 200, r.text
+        gate = r.json()["data"]
+        assert {k: v for k, v in gate.items() if k not in light} == {k: v for k, v in full.items() if k not in light}
+        assert gate["target_brand"] == full["target_brand"] == "BMW" and gate["my_role"] == "owner"
+        assert gate["effective_engines"] is None and all(gate[k] is None for k in summary)
+        assert full["effective_engines"] == ["chatgpt"] and full["prompt_counts"] is not None and full["recent_prompts"] == []
+        assert not any("WHERE key = 'default_engines'" in x or "n_draft" in x or "ORDER BY p.updated_at DESC" in x for x in s.seen)
+        async with client_as(VENDOR) as c:                     # 활성 viewer(고객 프로젝트): 게이트 필드 동일
+            vf = (await c.get(f"/v1/projects/{CUST_PROJECT}")).json()["data"]
+            vg = (await c.get(f"/v1/projects/{CUST_PROJECT}", params={"view": "gate"})).json()["data"]
+        assert {k: v for k, v in vg.items() if k not in light} == {k: v for k, v in vf.items() if k not in light}
+        assert vg["my_role"] == "viewer" and vg["target_brand"] == vf["target_brand"]
+        for uid, x in ((HQ_HYUNDAI, CUST_PROJECT), (KIA_US, CUST_PROJECT), (ADMIN, ROOT_PROJECT), (ADMIN, uuid.uuid4())):
+            async with client_as(uid) as c:
+                r = await c.get(f"/v1/projects/{x}", params={"view": "gate"})
+            assert r.status_code == 404 and r.json()["error"]["code"] == "not_found", (uid, x)
+    finally:
+        await purge(pid)
+
+
 # ── 수정 ────────────────────────────────────────────────────────────────────────
 async def test_patch_brand_rebuilds_tracked_and_enqueues(client_as):
     pr = await create_project(client_as, name=uniq("pt"), brand_code="Hyundai")
@@ -177,6 +213,32 @@ async def test_patch_brand_rebuilds_tracked_and_enqueues(client_as):
         up = await fetch("SELECT payload->>'name' AS name, payload->>'brand_code' AS brand FROM app.scope_outbox "
                          "WHERE aggregate_id = $1 AND op = 'update' AND done_at IS NULL", pid)
         assert up == [{"name": d["name"], "brand": "Kia"}]
+    finally:
+        await purge(pid)
+
+
+async def test_rebuild_tracked_brand_one_upsert(client_as):
+    """B024: 추적 브랜드 재구성은 정본이 여럿이어도 upsert 1문장. 결과 행(정본·별칭 순서)·재판정 큐는 행별 upsert 때와 같다."""
+    from tests.core.rcache_calls import Stmts
+    pr = await create_project(client_as, name=uniq("tb"), brand_code="Kia")
+    pid = uuid.UUID(pr["project_id"])
+    base = f"/v1/projects/{pid}/settings"
+    try:
+        async with client_as(ADMIN) as c:
+            await c.put(f"{base}/brand-aliases", json={"brand_code": "Kia", "aliases": ["기아"]})
+            await c.post(f"{base}/competitors", json={"brand_name": "BMW", "aliases": ["비엠더블유", "BMW AG"]})
+            await c.post(f"{base}/competitors", json={"brand_name": "Audi"})
+            await c.post(f"{base}/vehicles", json={"brand": "Toyota", "model": "RAV4"})
+            jc0 = await fetchval("SELECT count(*) FROM app.judgment_change WHERE kind = 'project_setting' AND $1 = ANY(subject_uuids)", pid)
+            with Stmts() as s:
+                r = await c.patch(f"/v1/projects/{pid}", json={"brand_code": "Hyundai"})
+        assert r.status_code == 200, r.text
+        assert len([x for x in s.seen if "INSERT INTO app.project_tracked_brand" in x]) == 1
+        tb = {t["canonical_name"]: t["aliases"] for t in await fetch(
+            "SELECT canonical_name, aliases FROM app.project_tracked_brand WHERE project_id = $1", pid)}
+        assert tb == {"Hyundai": ["Hyundai"], "BMW": ["BMW", "비엠더블유", "BMW AG"], "Audi": ["Audi"], "Toyota": ["Toyota"]}
+        assert await fetchval("SELECT count(*) FROM app.judgment_change WHERE kind = 'project_setting' AND $1 = ANY(subject_uuids)",
+                              pid) == jc0 + 1                   # 트리거 1건(재구성은 큐를 더하지 않는다)
     finally:
         await purge(pid)
 

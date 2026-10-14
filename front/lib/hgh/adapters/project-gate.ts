@@ -2,6 +2,11 @@ import "server-only";
 
 // The one project gate (unit U2, design 1.3 and appendix E "공용: 대시 레이아웃·프로젝트
 // 레이아웃"): GET /v1/projects/{project_id} decides, the front only maps the answer.
+// Light read (B020, opt-in { light: true }): GET /v1/projects/{project_id}?view=gate, the same access
+// decision and 404s without the detail summary statements (prompt counts, recent prompts, default
+// engines); every field this gate maps is in it. Gates that run alone in their request (server
+// actions) take it; a page render keeps the full call it shares with the (dash) and project layouts
+// (the home tiles read the summary of that same call).
 // Selected by its callers when HGH_SOURCE_SESSION=api (D8); the legacy repository gates
 // stay in those files as the rollback path.
 //
@@ -43,6 +48,14 @@ import { describeHghError, errorKindOf, isHghApiError, throwForPage } from "../e
 
 export type ProjectDetail = components["schemas"]["ProjectDetail"];
 
+/** Query of the light gate read (view=gate). Other gate-only reads pass the same object so the in-request dedupe shares the call. */
+export const GATE_QUERY = { view: "gate" } as const;
+
+export interface GateReadOptions {
+  /** view=gate: same decision, no summary statements. For gates that run alone in their request. */
+  light?: boolean;
+}
+
 export interface GateProject {
   id: string;
   name: string;
@@ -82,14 +95,14 @@ export function toGateProject(d: ProjectDetail): GateProject {
 }
 
 /**
- * GET /v1/projects/{id} for the current session. null when the backend hides the project
- * (404) or the id is not a uuid. Every other failure is thrown as HghApiError. In-request
+ * GET /v1/projects/{id} (light: ?view=gate) for the current session. null when the backend hides the
+ * project (404) or the id is not a uuid. Every other failure is thrown as HghApiError. In-request
  * dedupe (client) makes the (dash) layout, the project layout and the leaf gate share one call.
  */
-export async function fetchProjectGate(id: string): Promise<GateProject | null> {
+export async function fetchProjectGate(id: string, opts: GateReadOptions = {}): Promise<GateProject | null> {
   if (!isProjectId(id)) return null;
   try {
-    const res = await hghGet("/v1/projects/{project_id}", { pathParams: { project_id: id } });
+    const res = await hghGet("/v1/projects/{project_id}", { pathParams: { project_id: id }, ...(opts.light ? { query: GATE_QUERY } : {}) });
     return toGateProject(res.data);
   } catch (e) {
     if (isHghApiError(e) && e.status === 404) return null;
@@ -98,10 +111,10 @@ export async function fetchProjectGate(id: string): Promise<GateProject | null> 
 }
 
 /** Page gate: the project, or the same redirect / notFound the legacy page gates produced. */
-export async function requireProjectPage(locale: string, id: string): Promise<GateProject> {
+export async function requireProjectPage(locale: string, id: string, opts: GateReadOptions = {}): Promise<GateProject> {
   let project: GateProject | null;
   try {
-    project = await fetchProjectGate(id);
+    project = await fetchProjectGate(id, opts);
   } catch (e) {
     throwForPage(e, locale, { permission: "not-found" });
   }

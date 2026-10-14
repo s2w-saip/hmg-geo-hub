@@ -125,3 +125,68 @@ async def test_export_and_import(client_as):
             assert (await c.get(f"/v1/projects/{pid}/settings/tracked-urls/export")).status_code == 404
     finally:
         await purge(pid)
+
+
+async def _urls(pid) -> dict[str, tuple[str, str | None]]:
+    return {r["url_norm"]: (r["url"], r["label"]) for r in
+            await fetch("SELECT url_norm, url, label FROM app.project_tracked_url WHERE project_id = $1", pid)}
+
+
+async def test_import_rows_in_order_with_bulk_writes(client_as):
+    """B026: 행 규칙은 시트 행 순서대로 적용한 결과와 같다(앞 행의 추가·수정이 뒤 행 판정에 보인다). 판정은 메모리에서, 쓰기는
+    추적 URL 표에 SELECT 1 + UPDATE 1 + INSERT 1 문장(행마다 EXISTS·UPDATE|INSERT 없음). 권한 판정은 1회."""
+    from tests.core.rcache_calls import Stmts
+    pr = await create_project(client_as, name=uniq("tb1"))
+    pid = uuid.UUID(pr["project_id"])
+    try:
+        async with client_as(ADMIN) as c:
+            await c.post(f"/v1/projects/{pid}/settings/tracked-urls", json={"url": "https://ex.com/k", "label": "old"})
+            await c.post(f"/v1/projects/{pid}/settings/tracked-urls", json={"url": "https://ex.com/m"})
+            body = excel_like([["url_norm", "url", "label"],
+                               ["", "https://ex.com/n1", "one"],                 # 2 추가
+                               ["ex.com/n1", "", "uno"],                         # 3 방금 추가한 행 수정
+                               ["ex.com/k", "https://ex.com/k2", "kk"],          # 4 키 변경 k → k2
+                               ["", "https://ex.com/k", ""],                     # 5 비워진 k 로 추가
+                               ["", "https://www.ex.com/m/", ""],                # 6 이미 있음 → 건너뜀
+                               ["ex.com/m", "", ""],                             # 7 변경 없음 → 건너뜀(경고 없음)
+                               ["ex.com/k", "", "again"]])                       # 8 5행이 추가한 k 수정
+            with Stmts() as s:
+                r = await c.post(f"/v1/projects/{pid}/settings/tracked-urls/import", content=body, headers={"content-type": XLSX})
+        assert r.status_code == 200, r.text
+        d = r.json()["data"]
+        assert (d["created"], d["updated"], d["skipped"]) == (2, 3, 2) and d["warnings"] == ["행 6: 이미 등록된 URL 이라 건너뜀"]
+        assert await _urls(pid) == {"ex.com/n1": ("https://ex.com/n1", "uno"), "ex.com/k2": ("https://ex.com/k2", "kk"),
+                                    "ex.com/k": ("https://ex.com/k", "again"), "ex.com/m": ("https://ex.com/m", None)}
+        assert len([x for x in s.seen if "app.project_tracked_url" in x]) == 3
+        assert len([x for x in s.seen if "m.status::text AS member_status" in x]) == 1       # core resolve_project(권한 판정) 1회
+    finally:
+        await purge(pid)
+
+
+async def test_import_key_handover_keeps_row_order_semantics(client_as):
+    """B026: 시작 시점에 있던 키를 다른 행이 넘겨받는 수정(b → b2 뒤 a → b)도 행 순서대로 적용한 결과와 같다(행별 문장 경로)."""
+    pr = await create_project(client_as, name=uniq("tb2"))
+    pid = uuid.UUID(pr["project_id"])
+    try:
+        async with client_as(ADMIN) as c:
+            for u, lab in (("https://ex.com/a", None), ("https://ex.com/b", None), ("https://ex.com/c", "c")):
+                await c.post(f"/v1/projects/{pid}/settings/tracked-urls", json={"url": u, "label": lab})
+            body = excel_like([["url_norm", "url", "label"],
+                               ["ex.com/b", "https://ex.com/b2", ""],            # 2 b → b2
+                               ["ex.com/a", "https://ex.com/b", "x"],            # 3 a → b(2행이 비운 키)
+                               ["", "https://ex.com/a", "new a"],                # 4 비워진 a 로 추가
+                               ["ex.com/a", "", "again"],                        # 5 4행이 추가한 a 수정
+                               ["", "https://ex.com/c", ""],                     # 6 이미 있음 → 건너뜀
+                               ["ex.com/zz", "", ""],                            # 7 없는 키 → 건너뜀
+                               ["ex.com/c", "https://ex.com/b2", ""]])           # 8 2행이 만든 b2 와 겹침 → 건너뜀
+            r = await c.post(f"/v1/projects/{pid}/settings/tracked-urls/import", content=body, headers={"content-type": XLSX})
+        assert r.status_code == 200, r.text
+        d = r.json()["data"]
+        assert (d["created"], d["updated"], d["skipped"]) == (1, 3, 3)
+        assert d["warnings"] == ["행 6: 이미 등록된 URL 이라 건너뜀",
+                                 "행 7: url_norm 을 이 프로젝트에서 찾을 수 없어 건너뜀(신규는 url_norm 칸을 비운다)",
+                                 "행 8: 이미 등록된 URL 이라 건너뜀"]
+        assert await _urls(pid) == {"ex.com/b2": ("https://ex.com/b2", None), "ex.com/b": ("https://ex.com/b", "x"),
+                                    "ex.com/a": ("https://ex.com/a", "again"), "ex.com/c": ("https://ex.com/c", "c")}
+    finally:
+        await purge(pid)

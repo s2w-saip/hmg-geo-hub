@@ -96,3 +96,29 @@ async def test_injected_probe(client_as):
     finally:
         app.dependency_overrides.pop(get_scope_probe, None)
         await purge(pr["project_id"])
+
+
+@needs_db
+async def test_include_recent_false_skips_recent_rows(client_as):
+    """B018: include_recent=false 는 최근 아웃박스 10행 문장을 실행하지 않고 recent = [](상태·건수·회차는 같다).
+    scope_project_id 는 접근 판정이 읽은 프로젝트 행 값을 쓴다(프로젝트 재조회 문장 없음)."""
+    from tests.core.rcache_calls import Stmts
+    pr = await create_project(client_as, name=uniq("sl3"))
+    pid = uuid.UUID(pr["project_id"])
+    url = f"/v1/projects/{pid}/settings/scope-link"
+    try:
+        async with client_as(ADMIN) as c:
+            full = (await c.get(url)).json()["data"]
+            with Stmts() as s:
+                r = await c.get(url, params={"include_recent": "false"})
+            linked = (await c.get(f"/v1/projects/{CUST_PROJECT}/settings/scope-link", params={"include_recent": "false"})).json()["data"]
+        assert r.status_code == 200, r.text
+        light = r.json()["data"]
+        assert [o["op"] for o in full["outbox"]["recent"]] == ["set_targets", "create"] and light["outbox"]["recent"] == []
+        assert {**light, "outbox": {**light["outbox"], "recent": full["outbox"]["recent"]}} == full
+        assert not any("ORDER BY o.created_at DESC, o.outbox_id DESC" in x for x in s.seen)
+        assert not any("SELECT scope_project_id FROM app.project" in x for x in s.seen)
+        sp = await fetch("SELECT scope_project_id FROM app.project WHERE project_id = $1", CUST_PROJECT)
+        assert linked["linked"] and linked["scope_project_id"] == str(sp[0]["scope_project_id"])
+    finally:
+        await purge(pid)

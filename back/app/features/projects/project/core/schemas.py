@@ -55,8 +55,10 @@ class RecentPrompt(BaseModel):
 
 
 class ProjectDetail(Project):
+    effective_engines: list[str] | None = Field(  # type: ignore[assignment]
+        description="실제 측정 엔진(ai_engines NULL 이면 기본 엔진). GET /v1/projects/{id}?view=gate 는 기본 엔진을 읽지 않아 null")
     scope_linked: bool = Field(description="scope_project_id 유무(실제 진단은 GET /settings/scope-link, admin)")
-    # ── 요약(BG-38, 추가형 선택 필드). GET /v1/projects/{id} 만 채운다(POST·PATCH 응답은 null) ──
+    # ── 요약(BG-38, 추가형 선택 필드). GET /v1/projects/{id} 만 채운다(POST·PATCH 응답·view=gate 는 null, view=gate 의 target_brand 는 채운다) ──
     prompt_counts: PromptStatusCounts | None = Field(None, description="삭제되지 않은 프롬프트 상태별 개수(합 = 프롬프트 수)")
     candidate_count: int | None = Field(None, description="프롬프트 후보 수(app.prompt_candidate)")
     active_member_count: int | None = Field(None, description="활성 멤버 수")

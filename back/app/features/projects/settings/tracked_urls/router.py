@@ -75,6 +75,7 @@ async def post_projects_by_id_settings_tracked_urls_import_4(project_id: uuid.UU
                                                              rw: RwConn) -> Envelope[TrackedUrlImport]:
     # 권한 판정을 본문(최대 5MB)을 읽기 전에 한다: viewer 403·비멤버 404 는 업로드를 받지 않는다(검증 D7).
     # 그래서 UploadFile 인자(FastAPI 가 핸들러 전에 폼을 읽는다) 대신 판정 뒤 core.upload.read_upload_request 로 읽는다.
+    # 판정은 여기 한 번이다(S.import_xlsx 는 다시 판정하지 않는다).
     await project_access(ro, p, project_id, "owner")
     data = await read_upload_request(request, max_bytes=S.MAX_UPLOAD)
     out = await S.import_xlsx(ro, rw, p, project_id, data)

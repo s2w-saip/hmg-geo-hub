@@ -14,6 +14,9 @@ export type CustomFieldRow = {
   id: string;
   label: string;
   archived: boolean;
+  // 서버가 센 프로젝트 전체 값 수(API 원천만). 목록은 한 번에 200행만 들고 있어
+  // 완전삭제 확인은 이 값을 함께 본다. legacy 원천은 없음(undefined) → 로드된 행만.
+  valueCount?: number;
 };
 
 export type CustomFieldValueRow = {

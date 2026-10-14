@@ -1,8 +1,8 @@
 """Paged reads for existing project prompt/candidate screens, with project-wide column metadata."""
 import uuid
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.core import errors
 from app.core.db import fetch_all, fetch_one, fetch_val
@@ -11,11 +11,14 @@ from app.features.projects.prompts.candidates.schemas import CandidateItem
 from app.features.projects.prompts.crud.common import PROMPT_COLS, prompt_item, tags_for
 from app.features.projects.prompts.crud.schemas import PromptItem
 
+ROWS_MAX = 500            # 행 읽기 한 번의 상한
+IDS_ONLY_MAX = 5000       # ids_only(전체 선택 id 묶음) 한 번의 상한: id 만 읽어 응답이 작다(500 씩 순차 호출을 1~수 회로)
+
 
 class ProjectScreenQuery(BaseModel):
     model_config = ConfigDict(extra="forbid")
     offset: int = Field(0, ge=0, le=10_000_000)
-    limit: int = Field(200, ge=1, le=500)
+    limit: int = Field(200, ge=1, le=IDS_ONLY_MAX, description=f"행 읽기 1~{ROWS_MAX}, ids_only=true(프롬프트)면 1~{IDS_ONLY_MAX}")
     sort: str = Field("", max_length=36)
     direction: Literal["asc", "desc"] | None = None
     collation: Literal["ko", "en"] = "en"
@@ -23,6 +26,12 @@ class ProjectScreenQuery(BaseModel):
     include_values: bool = Field(True, description=(
         "false = 태그 값 제안(values) 집계를 건너뛰고 null. values 는 프로젝트 전체 값이라 페이지·정렬과 무관하므로 "
         "화면이 첫 응답 값을 재사용한다"))
+
+    @model_validator(mode="after")
+    def _limit(self) -> Self:
+        if not self.ids_only and self.limit > ROWS_MAX:
+            raise ValueError(f"limit 은 1~{ROWS_MAX}(ids_only 면 1~{IDS_ONLY_MAX})")
+        return self
 
 
 class ProjectScreenPage[T](BaseModel):
@@ -81,6 +90,8 @@ async def prompt_screen(conn, project_id: uuid.UUID, query: ProjectScreenQuery) 
 
 
 async def candidate_screen(conn, project_id: uuid.UUID, query: ProjectScreenQuery) -> ProjectScreenPage[CandidateItem]:
+    if query.limit > ROWS_MAX:          # 후보 화면은 ids_only 묶음이 없다(행을 읽는다): 행 읽기 상한 그대로
+        raise errors.unprocessable(f"limit 은 1~{ROWS_MAX}", details={"field": "limit"})
     sorts = {"": "c.created_at DESC", "newest": "c.created_at DESC", "oldest": "c.created_at ASC", "text": "c.text", "source": "c.source"}
     if query.sort not in sorts:
         raise errors.unprocessable("Invalid candidate sort")

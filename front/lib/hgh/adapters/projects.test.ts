@@ -345,6 +345,20 @@ describe("mappers (hand-computed)", () => {
     ).toEqual({ id: PID, source: "google_keyword", sourceKeyword: null, text: "q", createdAt: "2026-06-01T00:00:00.000Z" });
   });
 
+  it("tag field: value_count kept as valueCount (project-wide; the prompt list holds 200 rows at a time)", () => {
+    expect(P.toCustomFieldRow({ field_id: PID2, label: "Tag", archived: false, value_count: 3, created_at: "2026-06-01T00:00:00Z" })).toEqual({
+      id: PID2,
+      label: "Tag",
+      archived: false,
+      valueCount: 3,
+    });
+  });
+
+  it("settings bundle: the card-view nulls (engines, aliases, vehicles) never reach the page as values", () => {
+    const d = P.toSettingsPageData(detail(), bundle({ engines: null, brand_aliases: null, vehicles: null }), [], []);
+    expect(d).toMatchObject({ canEditEngines: false, engines: { initial: [], explicit: false }, ownBrandAliases: [], vehicles: [] });
+  });
+
   it("vehicle composite id round trip; malformed ids are rejected", () => {
     expect(P.splitVehicleId(P.vehicleId("Kia", "EV 9"))).toEqual({ brand: "Kia", model: "EV 9" });
     expect(P.splitVehicleId("Kia")).toBeNull();
@@ -474,16 +488,18 @@ describe("readers", () => {
     expect(r.diagnostic).toBeNull();
   });
 
-  it("setting page, admin: scope-link after the first four; a transient failure degrades to no diagnostic", async () => {
+  it("setting page, admin: scope-link (counts only, include_recent=false) after the first four; a transient failure is the block's error state", async () => {
     settingsWorld();
     const r = await withRequestScope(() => P.loadSettingsPage("ko", PID, true));
-    expect(callKeys().at(-1)).toBe(`GET /v1/projects/${PID}/settings/scope-link`);
-    expect(r.diagnostic).toBeNull();
+    expect(callKeys().at(-1)).toBe(`GET /v1/projects/${PID}/settings/scope-link?include_recent=false`);
+    // Legacy probe failures showed inside the block ("공개 API 오류"), not as a missing block (B018).
+    expect(r.diagnostic).toBe(P.SCOPE_LINK_ERROR);
+    expect(r.data.project.name).toBe("Kia US");
     settingsWorld(() =>
       ok({ project_id: PID, linked: false, state: "unlinked", outbox: { pending: 0, erroring: 0, prompt_pending: 0, recent: [] } }),
     );
     const r2 = await withRequestScope(() => P.loadSettingsPage("ko", PID, true));
-    expect(r2.diagnostic?.state).toBe("unlinked");
+    expect(r2.diagnostic).toMatchObject({ state: "unlinked" });
   });
 
   it("prompt page: gate + candidates + prompts + fields (limits 500), viewer read-only", async () => {
@@ -503,7 +519,7 @@ describe("readers", () => {
       `GET /v1/projects/${PID}/prompt-fields`,
       `GET /v1/projects/${PID}/prompts?limit=500`,
     ]);
-    expect(d).toEqual({ canEdit: false, candidates: [], prompts: [], customFields: [{ id: PID2, label: "Tag", archived: false }] });
+    expect(d).toEqual({ canEdit: false, candidates: [], prompts: [], customFields: [{ id: PID2, label: "Tag", archived: false, valueCount: 3 }] });
   });
 });
 
@@ -641,37 +657,46 @@ describe("write requests (method, path, body) and success values", () => {
     await expect(P.createProject(fd([["name", "n"], ["country", "US"], ["aiEngines", "chatgpt"]]))).resolves.toEqual(E("프로젝트 생성 권한(운영자)이 없습니다"));
   });
 
-  it("cancelInvite reads the roster first: pending -> DELETE; active -> legacy message, no DELETE; missing -> not found", async () => {
-    const roster = (status: "pending" | "active") => ({
-      items: [{ user_id: UID, email: "x@y.z", role: "viewer", status, invited_at: "2026-06-01T00:00:00Z", invited_by: UID }],
-    });
-    serve((r) => (r.method === "GET" ? ok(roster("pending")) : noContent()));
+  // B017: one DELETE ?expect=pending; the backend checks "pending only" on the row it locks for the
+  // delete, so an invitation accepted between the screen and the click is never removed as an active
+  // member. Same three outcomes as the legacy roster check (pending -> removed, active -> legacy
+  // message, missing -> not found), no roster read.
+  it("cancelInvite: DELETE ?expect=pending only; pending -> ok, active (409 not_pending) -> legacy message, missing -> not found", async () => {
+    // The backend model: the row's status decides at delete time (roster/service.py remove, expect=pending).
+    const world = (status: "pending" | "active" | null) =>
+      serve((r) => {
+        if (r.method !== "DELETE" || r.query.get("expect") !== "pending") return err(400, "unexpected_call");
+        if (status === null) return err(404, "member_not_found");
+        return status === "pending" ? noContent() : err(409, "not_pending", { status });
+      });
+    world("pending");
     await expect(P.cancelInvite(PID, UID)).resolves.toEqual({ ok: true, value: undefined });
-    expect(callKeys()).toEqual([`GET /v1/projects/${PID}/members`, `DELETE /v1/projects/${PID}/members/${UID}`]);
+    expect(callKeys()).toEqual([`DELETE /v1/projects/${PID}/members/${UID}?expect=pending`]);
     calls.length = 0;
-    serve((r) => (r.method === "GET" ? ok(roster("active")) : noContent()));
+    // Accepted between render and click: the DELETE refuses instead of removing an active member.
+    world("active");
     await expect(P.cancelInvite(PID, UID)).resolves.toEqual(E("대기 중인 초대만 취소할 수 있습니다"));
-    expect(calls.map((c) => c.method)).toEqual(["GET"]);
+    expect(calls.map((c) => c.method)).toEqual(["DELETE"]);
+    world(null);
     await expect(P.cancelInvite(PID, PID2)).resolves.toEqual(E("해당 멤버를 찾을 수 없습니다"));
+    serve(() => err(422, "unprocessable"));
+    await expect(P.cancelInvite(PID, "not-a-uuid")).resolves.toEqual(E("해당 멤버를 찾을 수 없습니다"));
+    // Legacy order: requireOwner threw before the pending check; the backend checks the owner first too.
     serve(() => err(403, "owner_only"));
     await expect(P.cancelInvite(PID, UID)).rejects.toBeInstanceOf(UnauthorizedError);
   });
 
-  // Verification D1: the roster read refreshes on 401 token_expired like every other action call.
-  it("cancelInvite: 401 token_expired on the roster read refreshes and retries once, then DELETE", async () => {
-    let gets = 0;
-    serve((r) => {
-      if (r.method !== "GET") return noContent();
-      gets += 1;
-      return gets === 1
-        ? err(401, "token_expired")
-        : ok({ items: [{ user_id: UID, email: "x@y.z", role: "viewer", status: "pending", invited_at: "2026-06-01T00:00:00Z", invited_by: UID }] });
+  // Verification D1: the action call refreshes on 401 token_expired like every other action call.
+  it("cancelInvite: 401 token_expired refreshes and retries the DELETE once", async () => {
+    let n = 0;
+    serve(() => {
+      n += 1;
+      return n === 1 ? err(401, "token_expired") : noContent();
     });
     await expect(P.cancelInvite(PID, UID)).resolves.toEqual({ ok: true, value: undefined });
     expect(callKeys()).toEqual([
-      `GET /v1/projects/${PID}/members`,
-      `GET /v1/projects/${PID}/members`,
-      `DELETE /v1/projects/${PID}/members/${UID}`,
+      `DELETE /v1/projects/${PID}/members/${UID}?expect=pending`,
+      `DELETE /v1/projects/${PID}/members/${UID}?expect=pending`,
     ]);
   });
 

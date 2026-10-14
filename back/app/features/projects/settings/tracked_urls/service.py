@@ -150,14 +150,37 @@ async def export_rows(ro: AsyncConnection, p: Principal, project_id: uuid.UUID) 
     return await fetch_all(ro, Q.ALL, {"pid": project_id})
 
 
+_DUPLICATE = "이미 등록된 URL 이라 건너뜀"
+
+
+@dataclass
+class _Slot:
+    """가져오기 판정 중 정본 행 1개의 현재 값. orig = 가져오기 전 url_norm(None = 이 가져오기가 추가한 행), rows = 반영된 시트 행."""
+    url: str
+    url_norm: str
+    label: str | None
+    orig: str | None
+    rows: list[tuple[int, str]]                 # (시트 행 번호, 'created' | 'updated')
+
+
 async def import_xlsx(ro: AsyncConnection, rw: AsyncConnection, p: Principal, project_id: uuid.UUID, data: bytes) -> dict[str, Any]:
-    await project_access(ro, p, project_id, "owner")
+    """권한(Owner·admin)은 라우터가 본문을 읽기 전에 한 번 판정한다(검증 D7). 여기서는 다시 판정하지 않는다.
+
+    행 규칙은 시트 행 순서대로 적용한 결과와 같다(앞 행의 추가·수정이 뒤 행 판정에 보인다). 판정은 프로젝트 잠금 뒤 읽은 현재 행으로
+    메모리에서 끝내고, 결과는 정본 행별 최종 값으로 UPDATE 1문장·INSERT 1문장에 쓴다(행마다 EXISTS·UPDATE|INSERT 하던 N+1 제거, B026).
+    url_norm 을 서로 넘겨받는 수정(a→b 와 b→c 처럼 시작 시점에 있던 키로 바꾸는 수정)이 있으면 한 문장 안 순서에 따라 고유 키가 잠시
+    겹칠 수 있어, 그때만 판정한 순서대로 행별 문장을 쓴다(종전과 같은 문장)."""
     try:
         rows, warnings = await run_in_threadpool(parse_workbook, data)      # 압축 해제·XML 파싱은 이벤트 루프 밖
     except XlsxError as e:
         raise errors.unprocessable(str(e), code=e.code, details=e.details()) from e
     if await fetch_one(rw, Q.LOCK_PROJECT, {"pid": project_id}) is None:
         raise errors.not_found("프로젝트 없음")
+    state: dict[str, _Slot] = {r["url_norm"]: _Slot(r["url"], r["url_norm"], r["label"], r["url_norm"], [])
+                               for r in await fetch_all(rw, Q.ALL, {"pid": project_id})}
+    before = {s.orig: (s.url, s.url_norm, s.label) for s in state.values()}
+    notes: list[tuple[int, str]] = []                                     # (시트 행 번호, 경고): 끝에서 행 순서로 붙인다
+    ops: list[tuple[str, dict[str, Any], int]] = []                      # 판정 순서의 행별 쓰기(겹침 대비 대체 경로)
     created = updated = skipped = 0
     for r in rows:
         new: tuple[str, str] | None = None
@@ -166,36 +189,68 @@ async def import_xlsx(ro: AsyncConnection, rw: AsyncConnection, p: Principal, pr
                 new = _validated(r.url)
             except errors.ApiError as e:
                 skipped += 1
-                warnings.append(f"행 {r.row_number}: {e.message}, 건너뜀")
+                notes.append((r.row_number, f"행 {r.row_number}: {e.message}, 건너뜀"))
                 continue
         label = r.label.strip() or None if r.label is not None else None
         if r.url_norm:
-            cur = await fetch_one(rw, Q.EXISTS, {"pid": project_id, "norm": r.url_norm})
+            cur = state.get(r.url_norm)
             if cur is None:
                 skipped += 1
-                warnings.append(f"행 {r.row_number}: url_norm 을 이 프로젝트에서 찾을 수 없어 건너뜀(신규는 url_norm 칸을 비운다)")
+                notes.append((r.row_number, f"행 {r.row_number}: url_norm 을 이 프로젝트에서 찾을 수 없어 건너뜀(신규는 url_norm 칸을 비운다)"))
                 continue
-            url, norm = new if new else (cur["url"], cur["url_norm"])
-            lab = label if r.has_label else cur["label"]
-            if (url, norm, lab) == (cur["url"], cur["url_norm"], cur["label"]):
+            url, norm = new if new else (cur.url, cur.url_norm)
+            lab = label if r.has_label else cur.label
+            if (url, norm, lab) == (cur.url, cur.url_norm, cur.label):
                 skipped += 1
                 continue
-            if await fetch_one(rw, Q.UPDATE, {"pid": project_id, "norm": r.url_norm, "new_norm": norm, "url": url, "label": lab}) is None:
+            if norm != r.url_norm and norm in state:                     # Q.UPDATE 의 NOT EXISTS 와 같은 판정
                 skipped += 1
-                warnings.append(f"행 {r.row_number}: 이미 등록된 URL 이라 건너뜀")
+                notes.append((r.row_number, f"행 {r.row_number}: {_DUPLICATE}"))
                 continue
+            ops.append((Q.UPDATE, {"pid": project_id, "norm": r.url_norm, "new_norm": norm, "url": url, "label": lab}, r.row_number))
+            del state[r.url_norm]
+            state[norm] = _Slot(url, norm, lab, cur.orig, [*cur.rows, (r.row_number, "updated")])
             updated += 1
         else:
             if new is None:
                 skipped += 1
-                warnings.append(f"행 {r.row_number}: url_norm·url 이 없어 건너뜀")
+                notes.append((r.row_number, f"행 {r.row_number}: url_norm·url 이 없어 건너뜀"))
                 continue
-            ins = await fetch_one(rw, Q.INSERT, {"pid": project_id, "url": new[0], "norm": new[1], "label": label, "uid": p.user_id})
-            if ins is None:
+            if new[1] in state:                                          # Q.INSERT 의 ON CONFLICT DO NOTHING 과 같은 판정
                 skipped += 1
-                warnings.append(f"행 {r.row_number}: 이미 등록된 URL 이라 건너뜀")
+                notes.append((r.row_number, f"행 {r.row_number}: {_DUPLICATE}"))
                 continue
+            ops.append((Q.INSERT, {"pid": project_id, "url": new[0], "norm": new[1], "label": label, "uid": p.user_id}, r.row_number))
+            state[new[1]] = _Slot(new[0], new[1], label, None, [(r.row_number, "created")])
             created += 1
+    upd = [s for s in state.values() if s.orig is not None and (s.url, s.url_norm, s.label) != before[s.orig]]
+    ins = [s for s in state.values() if s.orig is None]
+    renamed_from = {s.orig for s in upd if s.url_norm != s.orig}
+    failed: list[int] = []                                               # 판정 뒤 다른 쓰기와 엇갈려 반영되지 않은 시트 행
+    if any(s.url_norm in renamed_from for s in upd):
+        for sql, params, n in ops:
+            if await fetch_one(rw, sql, params) is None:
+                failed.append(n)
+    else:
+        if upd:
+            done = {r["norm"] for r in await fetch_all(rw, Q.BULK_UPDATE, {
+                "pid": project_id, "norms": [s.orig for s in upd], "new_norms": [s.url_norm for s in upd],
+                "urls": [s.url for s in upd], "labels": [s.label for s in upd]})}
+            failed += [n for s in upd if s.orig not in done for n, _ in s.rows]
+        if ins:
+            done = {r["url_norm"] for r in await fetch_all(rw, Q.BULK_INSERT, {
+                "pid": project_id, "uid": p.user_id, "urls": [s.url for s in ins], "norms": [s.url_norm for s in ins],
+                "labels": [s.label for s in ins]})}
+            failed += [n for s in ins if s.url_norm not in done for n, _ in s.rows]
+    kinds = {n: kind for s in state.values() for n, kind in s.rows}
+    for n in failed:                                                     # 종전 행별 문장이 RETURNING 없이 끝난 경우와 같은 처리
+        if kinds[n] == "created":
+            created -= 1
+        else:
+            updated -= 1
+        skipped += 1
+        notes.append((n, f"행 {n}: {_DUPLICATE}"))
+    warnings += [w for _, w in sorted(notes, key=lambda x: x[0])]
     cid = await _enqueue(rw, project_id, "import", {"created": created, "updated": updated}) if created or updated else None
     return {"created": created, "updated": updated, "skipped": skipped, "warnings": warnings, "change_id": cid,
             "propagation": "pending" if cid else "none"}

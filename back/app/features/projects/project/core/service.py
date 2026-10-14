@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import re
 import uuid
-from typing import Any
+from typing import Any, Literal
 
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncConnection
@@ -27,6 +27,7 @@ from app.core.urls import canonical_http_url, normalize_url_for_match
 from app.core.write import access_audit, enqueue_scope
 from app.features.projects.project.core import queries as Q
 from app.features.projects.project.core.shared import (
+    PROJECT_COLS,
     default_engines,
     engine_vocab,
     normalize_engines,
@@ -107,8 +108,33 @@ async def list_projects(ro: AsyncConnection, p: Principal, q: str | None, cursor
 
 
 # ── 상세 ────────────────────────────────────────────────────────────────────────
-async def get_project(ro: AsyncConnection, p: Principal, project_id: uuid.UUID) -> dict[str, Any]:
+DetailView = Literal["full", "gate"]
+
+# view=gate 행: DETAIL 과 같은 행 + target_brand(지정 비교 브랜드, tracked_competitor_one_target 1행 색인 조회).
+# 프로젝트 화면 게이트(front project-gate)는 이름·역할만 쓰지만, 언급 화면 getTargetBrand 가 같은 호출을 공유할 수 있게
+# 같은 문장에서 이 한 값만 채운다(요약의 나머지 문장은 읽지 않는다).
+GATE_DETAIL = f"""
+SELECT {PROJECT_COLS}, me.role::text AS my_role,
+       (SELECT t.brand_name FROM app.project_tracked_competitor t WHERE t.project_id = p.project_id AND t.is_target LIMIT 1) AS target_brand
+  FROM app.project p
+  LEFT JOIN app.project_member me ON me.project_id = p.project_id AND me.user_id = :uid AND me.status = 'active'
+ WHERE p.project_id = :pid AND p.kind = 'customer'
+"""
+
+
+async def get_project(ro: AsyncConnection, p: Principal, project_id: uuid.UUID, view: DetailView = "full") -> dict[str, Any]:
+    """상세. view=full(기본) = 일반 설정 + 요약(detail_summary). view=gate = 게이트용 경량 조회: 접근 판정 + 프로젝트 행(+ target_brand)만,
+    기본 엔진(effective_engines)·요약 필드는 null(같은 게이트·같은 404)."""
     await project_access(ro, p, project_id, "active_member")   # 없음·루트·비가시·비멤버(admin 제외) 404(검증 D1)
+    if view == "gate":
+        r = await fetch_one(ro, GATE_DETAIL, {"pid": project_id, "uid": p.user_id})
+        if r is None:
+            raise errors.not_found("프로젝트 없음")
+        o = _project_out(r, [])
+        o["effective_engines"] = None
+        o["scope_linked"] = r["scope_project_id"] is not None
+        o["target_brand"] = r["target_brand"]
+        return o
     r = await fetch_one(ro, Q.DETAIL, {"pid": project_id, "uid": p.user_id})
     if r is None:
         raise errors.not_found("프로젝트 없음")

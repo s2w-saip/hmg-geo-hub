@@ -23,3 +23,23 @@ SELECT p.prompt_id, p.text, p.kind, p.brand_code, p.category, p.lang, p.regions,
 MARK_QUEUED_SQL = """
 UPDATE app.prompt p SET status = 'queued', updated_by = app.actor(), updated_at = now()
  WHERE p.project_id = :pid AND p.prompt_id = ANY(CAST(:ids AS uuid[])) AND p.status = 'draft'"""
+
+# 발행 요청 일괄 적재(OutboxPublisher 기본 경로 = core.write.enqueue_scope(prompt, create) 의 행별 동작을 묶은 것, B025).
+# 1) 미완료 create 가 이미 있는 대상(TARGETS_SQL.pending): 그 중 가장 최근 행 payload 를 최신으로(enqueue_scope 의 병합과 같다).
+#    잠금 대기 중 워커가 끝낸 행(done_at)은 갱신하지 않고 아래 INSERT 로 넘긴다(enqueue_scope 의 FOR UPDATE 재평가와 같은 결과).
+# 2) 나머지는 대상 순서(ord)대로 새 행(outbox_id 가 행별 적재와 같은 순서로 붙는다).
+OUTBOX_MERGE_CREATE_SQL = """
+UPDATE app.scope_outbox o SET payload = CAST(x.pl AS jsonb), next_attempt_at = now()
+  FROM (SELECT t.id, t.pl,
+               (SELECT o2.outbox_id FROM app.scope_outbox o2
+                 WHERE o2.aggregate = 'prompt' AND o2.aggregate_id = t.id AND o2.op = 'create' AND o2.done_at IS NULL
+                 ORDER BY o2.outbox_id DESC LIMIT 1) AS oid
+          FROM unnest(CAST(:ids AS uuid[]), CAST(:pls AS text[])) AS t(id, pl)) x
+ WHERE o.outbox_id = x.oid AND o.done_at IS NULL
+RETURNING o.aggregate_id"""
+
+OUTBOX_INSERT_CREATE_SQL = """
+INSERT INTO app.scope_outbox (aggregate, aggregate_id, op, payload)
+SELECT 'prompt', t.id, 'create', CAST(t.pl AS jsonb)
+  FROM unnest(CAST(:ids AS uuid[]), CAST(:pls AS text[])) WITH ORDINALITY AS t(id, pl, ord)
+ ORDER BY t.ord"""

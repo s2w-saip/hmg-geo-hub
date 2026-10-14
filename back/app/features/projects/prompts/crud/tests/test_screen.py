@@ -100,3 +100,33 @@ async def test_screen_reads_require_active_membership(env, client_as):
         async with client_as(ADMIN) as client:
             response = await client.post(f"/v1/projects/{pid}/{suffix}/screen", json={})
             assert response.status_code == 200, response.text
+
+
+async def test_ids_only_takes_five_thousand_ids_like_ten_pages_of_500(env, client_as):
+    """B021: ids_only(전체 선택 id 묶음)는 limit 5,000 까지 받는다. 한 번에 읽은 id = 500 씩 10번 읽은 id(같은 순서·같은 total).
+    행 읽기는 500 상한 그대로(501 → 422), ids_only 도 5,001 은 422, 후보 화면은 ids_only 여도 500 상한."""
+    pid = await env.mk_project()
+    seed = Sql(f"""
+      SELECT set_config('app.actor_id', '{env.owner}', true);
+      INSERT INTO app.prompt (project_id, text, created_by, created_at)
+      SELECT '{pid}', 'ids-' || lpad(n::text, 5, '0'), app.actor(), '2026-01-01'::timestamptz + (n % 97) * interval '1 second'
+      FROM generate_series(1, 5200) n;
+    """)
+    async with staged(seed), client_as(env.owner) as client:
+        url = f"/v1/projects/{pid}/prompts/screen"
+        for sort in ({}, {"sort": "text", "direction": "desc"}):
+            big = await client.post(url, json={"limit": 5000, "ids_only": True, **sort})
+            assert big.status_code == 200, big.text
+            one = big.json()["data"]
+            paged: list[str] = []
+            for offset in range(0, 5000, 500):
+                page = (await client.post(url, json={"offset": offset, "limit": 500, "ids_only": True, **sort})).json()["data"]
+                assert page["total"] == one["total"] == 5200 and page["offset"] == offset
+                paged += page["ids"]
+            assert one["ids"] == paged and len(set(paged)) == 5000 and one["rows"] == []
+            tail = (await client.post(url, json={"offset": 5000, "limit": 5000, "ids_only": True, **sort})).json()["data"]
+            assert tail["offset"] == 5000 and len(tail["ids"]) == 200 and not set(tail["ids"]) & set(one["ids"])
+        assert (await client.post(url, json={"limit": 501})).status_code == 422
+        assert (await client.post(url, json={"limit": 5001, "ids_only": True})).status_code == 422
+        r = await client.post(f"/v1/projects/{pid}/prompt-candidates/screen", json={"limit": 501, "ids_only": True})
+        assert r.status_code == 422

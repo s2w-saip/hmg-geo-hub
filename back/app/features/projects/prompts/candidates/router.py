@@ -34,9 +34,12 @@ async def get_projects_by_id_prompt_candidates_0(
     project_id: uuid.UUID, request: Request, p: CurrentUser, conn: RoConn,
     cursor: Annotated[str | None, Query(max_length=4096)] = None,
     limit: Annotated[int | None, Query(ge=1, le=500)] = None,
+    include_total: Annotated[bool, Query(description=(
+        "false = 전체 건수(COUNT) 를 세지 않고 meta.page.total = null(행·커서는 같다). 건수를 따로 아는 화면(홈 타일은 상세 "
+        "candidate_count)용"))] = True,
 ) -> Envelope[CandidateList]:
     await project_gate(conn, p, project_id, "active_member")      # 멤버 전용 읽기(front prompt/page.tsx:43, 메인 정정 2026-09-28)
-    data, total, lim = await service.list_candidates(conn, project_id, cursor, limit)
+    data, total, lim = await service.list_candidates(conn, project_id, cursor, limit, include_total=include_total)
     meta = crud_meta(request.query_params, surface="project", consumed=PJ3_CONSUMED)
     meta.page = Page(next_cursor=data.next_cursor, limit=lim, total=total)
     return Envelope[CandidateList](data=data, meta=meta)

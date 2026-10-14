@@ -6,8 +6,9 @@ core.auth.CurrentUserDetached(계정만 짧은 api_ro 트랜잭션에서 읽고 
 admin 게이트도 CurrentUser 를 여는 require_admin 의존성 대신 핸들러 안에서 core.auth.check_admin(같은 판정·코드 403 admin_only)으로 건다.
 """
 import uuid
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 
 from app.core.auth import CurrentUserDetached, check_admin
 from app.core.db import RoSession
@@ -25,11 +26,13 @@ router = APIRouter(tags=["projects.settings"], responses=ERROR_RESPONSES)
 @router.get("/v1/projects/{project_id}/settings/scope-link", response_model=Envelope[ScopeLink],
             summary="Scope 연결 진단(admin): outbox 대기·오류, 최신 회차 job/served 수. 라이브 Scope 호출 없음")
 async def get_projects_by_id_settings_scope_link_0(project_id: uuid.UUID, request: Request, p: CurrentUserDetached,
-                                                   open_ro: RoSession, probe: ScopeProbe = Depends(get_scope_probe)
+                                                   open_ro: RoSession, probe: ScopeProbe = Depends(get_scope_probe),
+                                                   include_recent: Annotated[bool, Query(description=(
+                                                       "false = 최근 아웃박스 10행을 읽지 않는다(outbox.recent = 빈 목록, 건수·상태는 같다). 건수·상태만 쓰는 화면용"))] = True,
                                                    ) -> Envelope[ScopeLink]:
     check_admin(p)                                  # core require_admin 과 같은 판정·코드(요청 커넥션 없이)
     async with open_ro() as ro:
-        out = await S.diagnose(ro, p, project_id)
+        out = await S.diagnose(ro, p, project_id, include_recent=include_recent)
     live = None
     if out["scope_project_id"] is not None:        # 외부 호출(어댑터를 켰을 때): 커넥션을 쥐지 않은 상태
         live = await probe.probe(out["scope_project_id"])

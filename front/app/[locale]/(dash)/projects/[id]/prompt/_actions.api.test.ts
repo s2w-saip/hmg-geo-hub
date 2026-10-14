@@ -122,6 +122,16 @@ describe("prompt actions on the api source", () => {
     expect(h.revalidate).toEqual([TAB, TAB, TAB, TAB]);
   });
 
+  // B019: an unpublished row resumes to 'queued' on the backend (lifecycle/service.py resume). The action
+  // revalidates the tab on success, so the re-rendered list carries the server status; the list's
+  // 'done' overlay applies only while the row still shows 'paused' (prompt-list applyStatusOverlay).
+  it("resume of an unpublished prompt: backend answers queued; ok + the prompt tab revalidated (the list then shows the server status)", async () => {
+    answer = () => data({ prompt_id: Q, status: "queued", propagation: "pending", outbox_id: 9 });
+    await expect(A.resumePrompt(PID, Q)).resolves.toEqual({ ok: true, value: undefined });
+    expect(calls.map(key)).toEqual([`POST ${P(`/prompts/${Q}/resume`)}`]);
+    expect(h.revalidate).toEqual([TAB]);
+  });
+
   it("executePrompts: 202 -> revalidate + redirect to the analysis tab; 409 -> legacy message, no redirect", async () => {
     answer = () => data({ queued: 2, recovered: 0, skipped_pending: 0, propagation: "pending" }, 202);
     await expect(A.executePrompts(PID, "ko")).rejects.toThrow(`REDIRECT:/ko/projects/${PID}/analysis`);

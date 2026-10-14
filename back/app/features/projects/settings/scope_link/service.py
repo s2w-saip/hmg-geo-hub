@@ -12,7 +12,6 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncConnection
 
-from app.core import errors
 from app.core.auth import Principal
 from app.core.codes import CYCLE_STATUS
 from app.core.db import fetch_all, fetch_one
@@ -33,12 +32,10 @@ def link_state(linked: bool, ob: dict[str, Any], jobs: dict[str, Any] | None) ->
     return "healthy" if jobs["served"] == jobs["total"] else "partial"
 
 
-async def diagnose(ro: AsyncConnection, p: Principal, project_id: uuid.UUID) -> dict[str, Any]:
+async def diagnose(ro: AsyncConnection, p: Principal, project_id: uuid.UUID, *, include_recent: bool = True) -> dict[str, Any]:
+    """include_recent=False 면 최근 아웃박스 10행(OUTBOX_RECENT)을 읽지 않고 outbox.recent = [](건수·상태는 같다)."""
     acc, _ = await project_access(ro, p, project_id, "active_member")  # 라우터가 admin 을 먼저 거른다. 없음·루트 404
-    pr = await fetch_one(ro, Q.PROJECT, {"pid": project_id})
-    if pr is None:
-        raise errors.not_found("프로젝트 없음")
-    sp = pr["scope_project_id"]
+    sp = acc.scope_project_id                                            # 접근 판정이 읽은 프로젝트 행 값(재조회하지 않는다)
     keys = list(acc.project_keys)
     latest = jobs = None
     if keys:
@@ -52,7 +49,7 @@ async def diagnose(ro: AsyncConnection, p: Principal, project_id: uuid.UUID) -> 
                     "failed": int(j["failed"]), "served_ratio": ratio(j["served"], j["total"]), "last_measured_at": j["last_measured_at"]}
     ob = await fetch_one(ro, Q.OUTBOX_COUNTS, {"pid": project_id}) or {"pending": 0, "erroring": 0, "pending_create": 0}
     prompt_pending = await fetch_one(ro, Q.PROMPT_OUTBOX_PENDING, {"pid": project_id})
-    recent = await fetch_all(ro, Q.OUTBOX_RECENT, {"pid": project_id})
+    recent = await fetch_all(ro, Q.OUTBOX_RECENT, {"pid": project_id}) if include_recent else []
     return {"project_id": project_id, "scope_project_id": sp, "linked": sp is not None, "state": link_state(sp is not None, ob, jobs),
             "latest_round": latest, "jobs": jobs,
             "outbox": {"pending": int(ob["pending"]), "erroring": int(ob["erroring"]),

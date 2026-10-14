@@ -52,3 +52,45 @@ async def test_legacy_null_engines_effective_default(client_as):
     assert [b["base_norm"] for b in d["owned_bases"]] == ["mybrand.example.com/news"] and d["tracked_url_count"] == 1
     async with client_as(ADMIN) as c:
         assert (await c.get(f"/v1/projects/{uuid.uuid4()}/settings")).status_code == 404
+
+
+async def test_view_card_and_statements(client_as):
+    """B022: 프로젝트 행·추적 URL 건수·별칭 행·기본 엔진은 한 문장(프로젝트 재조회·건수·별칭 문장 따로 없음).
+    view=card(홈 KPI 카드) = 카드가 쓰는 값만: domain·owned_bases·tracked_url_count·권한 필드는 full 과 같고, 경쟁사는 지정 비교 브랜드 행만,
+    engines·brand_aliases·vehicles 는 null. 차종·경쟁사 전체 목록 문장을 실행하지 않는다."""
+    from tests.core.rcache_calls import Stmts
+    pr = await create_project(client_as, name=uniq("ovc"), brand_code="Kia", country_code="DE", domain="https://kia.example.com/de")
+    pid = pr["project_id"]
+    base = f"/v1/projects/{pid}/settings"
+    try:
+        async with client_as(ADMIN) as c:
+            await c.put(f"{base}/brand-aliases", json={"brand_code": "Kia", "aliases": ["기아"]})
+            for name in ("BMW", "Audi"):
+                await c.post(f"{base}/competitors", json={"brand_name": name})
+            await c.put(f"{base}/competitors/target", json={"brand_name": "BMW"})
+            await c.post(f"{base}/vehicles", json={"brand": "Kia", "model": "EV9"})
+            await c.post(f"{base}/tracked-urls", json={"url": "https://kia.example.com/de/ev9"})
+            with Stmts() as full_sql:
+                full = (await c.get(base)).json()["data"]
+            with Stmts() as card_sql:
+                r = await c.get(base, params={"view": "card"})
+            assert (await c.get(base, params={"view": "page"})).status_code == 422
+        assert r.status_code == 200, r.text
+        card = r.json()["data"]
+        same = ("project_id", "domain", "my_role", "can_edit", "owned_bases", "tracked_url_count")
+        assert {k: card[k] for k in same} == {k: full[k] for k in same} and full["tracked_url_count"] == 1
+        assert [x["brand_name"] for x in full["competitors"]] == ["Audi", "BMW"]
+        assert card["competitors"] == [x for x in full["competitors"] if x["is_target"]]
+        assert card["engines"] is None and card["brand_aliases"] is None and card["vehicles"] is None
+        assert full["brand_aliases"] == {"brand_code": "Kia", "aliases": ["기아"]} and [v["model"] for v in full["vehicles"]] == ["EV9"]
+        bundle_sql = [x for x in full_sql.seen if "app.project_tracked_url" in x]
+        assert len(bundle_sql) == 1 and "app.project_tracked_brand" in bundle_sql[0] and "app.rule_param" in bundle_sql[0]
+        assert not any("SELECT domain, brand_code, ai_engines FROM app.project" in x for x in full_sql.seen)
+        assert not any("app.project_tracked_vehicle" in x for x in card_sql.seen)
+        comp_sql = [x for x in card_sql.seen if "FROM app.project_tracked_competitor c" in x]
+        assert len(comp_sql) == 1 and "AND c.is_target ORDER BY" in comp_sql[0]
+        for uid in (HQ_HYUNDAI, KIA_US):
+            async with client_as(uid) as c:
+                assert (await c.get(base, params={"view": "card"})).status_code == 404, uid
+    finally:
+        await purge(pid)

@@ -64,8 +64,12 @@ async def get_projects_by_scope(scope_project_id: uuid.UUID, request: Request, p
 
 @router.get("/v1/projects/{project_id}", response_model=Envelope[ProjectDetail],
             summary="상세(일반 설정 + my_role + scope_linked). 비멤버 404")
-async def get_projects_by_id_2(project_id: uuid.UUID, request: Request, p: CurrentUser, ro: RoConn) -> Envelope[ProjectDetail]:
-    out = await S.get_project(ro, p, project_id)
+async def get_projects_by_id_2(project_id: uuid.UUID, request: Request, p: CurrentUser, ro: RoConn,
+                               view: Annotated[S.DetailView, Query(description=(
+                                   "full(기본) = 상세 + 요약(BG-38). gate = 프로젝트 게이트용 경량 조회: 같은 접근 판정·같은 404, "
+                                   "effective_engines·요약 필드(target_brand 제외)는 읽지 않고 null"))] = "full",
+                               ) -> Envelope[ProjectDetail]:
+    out = await S.get_project(ro, p, project_id, view)
     return Envelope[ProjectDetail](data=ProjectDetail(**out), meta=crud_meta(request.query_params, surface="project", consumed=CRUD_CONSUMED))
 
 

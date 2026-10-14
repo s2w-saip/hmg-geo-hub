@@ -36,7 +36,7 @@ const A = await import("./_actions");
 
 const PID = "c0000000-0000-4000-8000-000000000003";
 const UID = "a0000000-0000-4000-8000-000000000001";
-const calls: { method: string; path: string; body: unknown }[] = [];
+const calls: { method: string; path: string; search: string; body: unknown }[] = [];
 let answer: (method: string, path: string) => Response = () => new Response(null, { status: 204 });
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 
@@ -49,8 +49,9 @@ beforeEach(() => {
   bindHghAuth({ getAccessToken: async () => "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJ1In0.c2ln" });
   vi.stubGlobal("fetch", async (input: string, init: RequestInit = {}) => {
     const method = String(init.method ?? "GET");
-    const path = new URL(String(input)).pathname;
-    calls.push({ method, path, body: typeof init.body === "string" ? JSON.parse(init.body) : init.body });
+    const url = new URL(String(input));
+    const path = url.pathname;
+    calls.push({ method, path, search: url.search, body: typeof init.body === "string" ? JSON.parse(init.body) : init.body });
     return answer(method, path);
   });
   answer = () => new Response(null, { status: 204 });
@@ -65,7 +66,7 @@ describe("member actions on the api source", () => {
   it("inviteMember: POST …/members {email}; revalidates the member tab on success only", async () => {
     answer = () => json(201, { data: { user_id: UID, email: "a@b.c", role: "viewer", status: "pending", invited_at: "2026-06-01T00:00:00Z", invited_by: UID }, meta: { mode: "crud" } });
     await expect(A.inviteMember(PID, "a@b.c")).resolves.toEqual({ ok: true, value: undefined });
-    expect(calls).toEqual([{ method: "POST", path: `/v1/projects/${PID}/members`, body: { email: "a@b.c" } }]);
+    expect(calls).toEqual([{ method: "POST", path: `/v1/projects/${PID}/members`, search: "", body: { email: "a@b.c" } }]);
     expect(h.revalidate).toEqual([`/projects/${PID}/member`]);
     h.revalidate.length = 0;
     answer = () => json(404, { error: { code: "invitee_not_found", message: "m" } });
@@ -73,19 +74,22 @@ describe("member actions on the api source", () => {
     expect(h.revalidate).toEqual([]);
   });
 
-  it("cancelInvite / removeMember address /members/{user_id}", async () => {
-    answer = (method) =>
-      method === "GET"
-        ? json(200, { data: { items: [{ user_id: UID, email: "a@b.c", role: "viewer", status: "pending", invited_at: "2026-06-01T00:00:00Z", invited_by: UID }] }, meta: { mode: "crud" } })
-        : new Response(null, { status: 204 });
+  it("cancelInvite / removeMember address /members/{user_id}; cancelInvite is one DELETE ?expect=pending (no roster read)", async () => {
     await expect(A.cancelInvite(PID, UID)).resolves.toEqual({ ok: true, value: undefined });
     await expect(A.removeMember(PID, UID)).resolves.toEqual({ ok: true, value: undefined });
-    expect(calls.map((c) => `${c.method} ${c.path}`)).toEqual([
-      `GET /v1/projects/${PID}/members`,
-      `DELETE /v1/projects/${PID}/members/${UID}`,
+    expect(calls.map((c) => `${c.method} ${c.path}${c.search}`)).toEqual([
+      `DELETE /v1/projects/${PID}/members/${UID}?expect=pending`,
       `DELETE /v1/projects/${PID}/members/${UID}`,
     ]);
     expect(h.revalidate).toEqual([`/projects/${PID}/member`, `/projects/${PID}/member`]);
+  });
+
+  it("cancelInvite on an invitation accepted in the meantime: 409 not_pending -> legacy message, no revalidate", async () => {
+    answer = () => json(409, { error: { code: "not_pending", message: "m", details: { status: "active" } } });
+    await expect(A.cancelInvite(PID, UID)).resolves.toEqual({ ok: false, error: "대기 중인 초대만 취소할 수 있습니다" });
+    answer = () => json(404, { error: { code: "member_not_found", message: "m" } });
+    await expect(A.cancelInvite(PID, UID)).resolves.toEqual({ ok: false, error: "해당 멤버를 찾을 수 없습니다" });
+    expect(h.revalidate).toEqual([]);
   });
 
   it("acceptInvite / rejectInvite: the pending row's id is the project id; revalidate /projects", async () => {

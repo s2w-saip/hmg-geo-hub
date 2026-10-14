@@ -98,6 +98,33 @@ const STATUS_ORDER: Record<PromptStatus, number> = {
 type SortDir = "asc" | "desc" | null;
 type SortState = { key: string; dir: SortDir };
 
+// 라이프사이클 상태 낙관 오버레이 — from = 액션 당시 서버 행 상태. 서버 행이 아직 from 일 때만
+// 덮고, revalidate 로 서버 결과(재개 시 미발행 행은 queued)가 오면 오버레이는 더 이상 적용되지 않는다.
+export type StatusOverlay = Record<string, { status: PromptStatus; from: PromptStatus }>;
+
+export function applyStatusOverlay(rows: PromptRow[], overlay: StatusOverlay): PromptRow[] {
+  return rows.map((p) => {
+    const o = overlay[p.id];
+    return o && o.from === p.status ? { ...p, status: o.status } : p;
+  });
+}
+
+// 완전삭제 확인 대상 태그 열 = 서버 valueCount > 0(창 밖 행 포함) ∪ 로드된 행의 값 ∪ 낙관 편집 값.
+// valueCount 가 없는 원천(legacy)은 종전처럼 로드된 행만 본다.
+export function usedTagFieldIds(
+  fields: readonly CustomFieldRow[],
+  rows: readonly PromptRow[],
+  pending: Record<string, Record<string, string | null>> = {},
+): Set<string> {
+  const s = new Set<string>();
+  for (const f of fields) if ((f.valueCount ?? 0) > 0) s.add(f.id);
+  for (const p of rows)
+    for (const [fid, v] of Object.entries(p.customValues)) if (v) s.add(fid);
+  for (const patch of Object.values(pending))
+    for (const [fid, v] of Object.entries(patch)) if (v) s.add(fid);
+  return s;
+}
+
 // 적용된 프롬프트 — 엑셀형 테이블(프롬프트=행 · 태그=열). 헤더 클릭 3단계 정렬
 // (오름→내림→해제), 커스텀 태그는 "+ 열"로 추가(=태그 생성)·헤더 ×로 삭제,
 // 셀은 인라인 편집(datalist 재사용)+일괄 태깅+상태무관. 브랜드/카테고리는 값이
@@ -145,9 +172,7 @@ export function PromptList({
   const [removedPromptIds, setRemovedPromptIds] = useState<Set<string>>(new Set());
   // 라이프사이클(측정 중지/재개/완전 삭제) 팝업 대상 + 상태 낙관적 오버레이.
   const [lifecycleTarget, setLifecycleTarget] = useState<PromptRow | null>(null);
-  const [statusOverlay, setStatusOverlay] = useState<
-    Record<string, PromptStatus>
-  >({});
+  const [statusOverlay, setStatusOverlay] = useState<StatusOverlay>({});
 
   const activeCustomFields = useMemo(() => {
     const base = customFields.filter((f) => !f.archived);
@@ -169,9 +194,7 @@ export function PromptList({
       ? sourcePrompts.filter((p) => !removedPromptIds.has(p.id))
       : sourcePrompts;
     if (Object.keys(statusOverlay).length > 0) {
-      base = base.map((p) =>
-        statusOverlay[p.id] ? { ...p, status: statusOverlay[p.id] } : p,
-      );
+      base = applyStatusOverlay(base, statusOverlay);
     }
     if (Object.keys(valueOverlay).length === 0) return base;
     return base.map((p) => {
@@ -376,12 +399,10 @@ export function PromptList({
   }
 
   // 열별 사용 여부(삭제 가드) — 값이 하나라도 있으면 완전삭제 불가(보관/미사용만 삭제).
-  const usedFieldIds = useMemo(() => {
-    const s = new Set<string>();
-    for (const p of effectivePrompts)
-      for (const [fid, v] of Object.entries(p.customValues)) if (v) s.add(fid);
-    return s;
-  }, [effectivePrompts]);
+  const usedFieldIds = useMemo(
+    () => usedTagFieldIds(customFields, effectivePrompts, valueOverlay),
+    [customFields, effectivePrompts, valueOverlay],
+  );
 
   function SortIcon({ colKey }: { colKey: string }) {
     if (sort.key !== colKey || !sort.dir)
@@ -761,9 +782,10 @@ export function PromptList({
             projectId={projectId}
             prompt={lifecycleTarget}
             onClose={() => setLifecycleTarget(null)}
-            onStatusChange={(id, status) =>
-              setStatusOverlay((prev) => ({ ...prev, [id]: status }))
-            }
+            onStatusChange={(id, status) => {
+              const from = sourcePrompts.find((p) => p.id === id)?.status;
+              if (from) setStatusOverlay((prev) => ({ ...prev, [id]: { status, from } }));
+            }}
             onDeleted={(id) =>
               setRemovedPromptIds((prev) => new Set(prev).add(id))
             }
