@@ -397,7 +397,9 @@ class BackendModel {
       status: "draft", tracked: c.scopePromptId !== null, created_at: apiTs(T(1)), updated_at: apiTs(T(1)), outbox_pending: false, outbox_error: null,
     };
   }
-  write(data: Json) {
+  write(data: Json, minimal = false) {
+    // return=minimal (B075): no prompt re-read, no change ids; propagation from the outbox row.
+    if (minimal) return ok(env({ applied: true, change_id: null, change_ids: [], outbox_id: 1, propagation: "pending", warnings: [], prompt: null }));
     return ok(env({ applied: true, change_id: 1, change_ids: [1], outbox_id: 1, propagation: "pending", warnings: [], ...data }));
   }
 
@@ -487,12 +489,12 @@ class BackendModel {
       if (m === "DELETE") {
         if (c.deletedAt) return err(409, "state_mismatch");
         c.deletedAt = T(20);
-        return this.write({ prompt: this.catalogItem(c) });
+        return this.write({ prompt: this.catalogItem(c) }, url.searchParams.get("return") === "minimal");
       }
       if (op === "restore") {
         if (!c.deletedAt) return err(409, "state_mismatch");
         c.deletedAt = null;
-        return this.write({ prompt: this.catalogItem(c) });
+        return this.write({ prompt: this.catalogItem(c) }, url.searchParams.get("return") === "minimal");
       }
       if (c.deletedAt) return err(409, "state_mismatch");
       if (op === "kind") c.kind = String(body.kind);
@@ -509,7 +511,7 @@ class BackendModel {
         }
         if ("lang" in body) c.lang = body.lang as string | null;
       }
-      return this.write({ prompt: this.catalogItem(c) });
+      return this.write({ prompt: this.catalogItem(c) }, url.searchParams.get("return") === "minimal");
     }
 
     // interest
@@ -623,7 +625,11 @@ class BackendModel {
       tracked_events: 0, loaded: false, conv_basis: null, pending: [], project_overrides: [], updated_at: apiTs(T(1)), updated_by: null, updated_by_email: null,
     });
     if (p === "/v1/admin/ga4/properties" && m === "GET") {
-      return ok(env({ items: [...this.props].sort((a, b) => pgAsc(a.brand, b.brand) || pgAsc(a.country, b.country)).map(propItem) }));
+      // fields=registry (B072): the registry columns only, the rest null
+      const registry = url.searchParams.get("fields") === "registry";
+      const item = (x: BackendModel["props"][number]) =>
+        registry ? { ...propItem(x), tracked_events: null, loaded: null, conv_basis: null, pending: null, project_overrides: null } : propItem(x);
+      return ok(env({ items: [...this.props].sort((a, b) => pgAsc(a.brand, b.brand) || pgAsc(a.country, b.country)).map(item) }));
     }
     if (p === "/v1/admin/ga4/markets" && m === "GET") {
       return ok(env({ items: [...this.markets].sort((a, b) => pgAsc(a.brand, b.brand) || pgAsc(a.country, b.country)).map((x) => ({ brand_code: x.brand, country_code: x.country, note: null, updated_at: apiTs(T(1)), updated_by: null, updated_by_email: null })) }));
@@ -660,7 +666,8 @@ class BackendModel {
         if (body.verify) Object.assign(next, { status: "active", verifiedAt: new Date().toISOString() });
         if (!cur) this.props.push(next);
         this.markets = this.markets.filter((x) => !(x.brand === brand && x.country === country));
-        return ok(env({ property: propItem(next), verified: body.verify ? true : null, change_id: 5, propagation: "pending", pending_market_cleared: false }));
+        const minimal = url.searchParams.get("return") === "minimal"; // B072: no property re-read
+        return ok(env({ property: minimal ? null : propItem(next), verified: body.verify ? true : null, change_id: 5, propagation: "pending", pending_market_cleared: false }));
       }
       if (m === "DELETE") {
         if (!cur) return err(404, "not_found");
@@ -1143,13 +1150,11 @@ describe("permissions (both sources)", () => {
     model.handle = orig;
   });
 
-  it("api: entity and citation 5xx propagate instead of becoming empty success", async () => {
+  it("api: entity, citation and GA4 registry 5xx propagate instead of becoming empty success", async () => {
     model.handle = async () => err(503, "unavailable");
     await expect(entitiesScreen("api")).rejects.toMatchObject({ status: 503 });
     await expect(citationScreen("api")).rejects.toMatchObject({ status: 503 });
-    const ga4 = await ga4Screen("api");
-    expect(ga4.rows).toEqual([]);
-    expect(ga4.overrides).toEqual([]);
+    await expect(ga4Screen("api")).rejects.toMatchObject({ status: 503 });
   });
 });
 
@@ -1174,7 +1179,7 @@ describe("partial backend failures degrade per part, as legacy (M1, M5)", () => 
     await expect(catalogScreen("api")).rejects.toMatchObject({ status: 503 });
   });
 
-  it("GA4: failed overrides alone keep the registry and the import list; a failed registry part hides the import list (U11-N7)", async () => {
+  it("GA4: failed overrides alone keep the registry and the import list; a failed registry part errors the page (U11-N7)", async () => {
     const legacy = await ga4Screen("legacy");
     failPath("/v1/admin/ga4/project-overrides");
     const noOverrides = await ga4Screen("api");
@@ -1184,13 +1189,9 @@ describe("partial backend failures degrade per part, as legacy (M1, M5)", () => 
     for (const part of ["/v1/admin/ga4/properties", "/v1/admin/ga4/markets"]) {
       model = new BackendModel();
       failPath(part);
-      const screen = await ga4Screen("api");
-      // The other registry part and the overrides still render.
-      expect(diffPaths(legacy.overrides, screen.overrides)).toEqual([]);
-      expect((screen.rows as unknown[]).length).toBeGreaterThan(0);
-      // "Not registered" is unknown: no env market is offered for import (it could only fail
-      // with market_taken or duplicate a row).
-      expect(screen.legacy).toEqual([]);
+      // "Not registered" is unknown: the page's error boundary instead of an empty registry that
+      // would offer every env market for import (it could only fail with market_taken or duplicate a row).
+      await expect(ga4Screen("api")).rejects.toMatchObject({ status: 503 });
     }
   });
 });

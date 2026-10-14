@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { exportCatalogPages, reuseCatalogMeta, type CatalogPageQuery, type RemoteCatalog } from "@/lib/standards/catalog-page";
+import { CATALOG_EXPORT_PAGE_SIZE, collationOf, exportCatalogPages, rereadAfterHydration, reuseCatalogMeta, type CatalogPageQuery, type RemoteCatalog } from "@/lib/standards/catalog-page";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -469,15 +469,16 @@ export function StandardPromptReadonlyList({
   const rangeTo = Math.min(rangeFrom + pageRows.length - 1, total);
   const readQuery: CatalogPageQuery = { filters: applied, draft, search: query, sort: sortKey, asc,
     offset: (safePage - 1) * pageSize, limit: pageSize,
-    collation: Intl.Collator().resolvedOptions().locale.startsWith("ko") ? "ko" : "en",
+    collation: collationOf(Intl.Collator().resolvedOptions().locale),
     market_labels: Object.fromEntries((remotePage?.facets.marketSort ?? marketOptions).map(code => [code, marketLabel(code)])) };
   const readKey = JSON.stringify(readQuery);
   // Same draft → rows and total only; facets stay from the last read.
   const load = useMemo(() => (remote ? reuseCatalogMeta(remote) : undefined), [remote]);
+  const initialCollation = remote?.initial.collation;
   useEffect(() => {
     if (!load) return;
-    // Initial SQL uses English ICU. Match the browser's existing Korean comparator after hydration.
-    if (firstRead.current) { firstRead.current = false; if (JSON.parse(readKey).collation !== "ko") return; }
+    // The server read sorted with the browser's language (Accept-Language). Re-read only when the browser's comparator differs.
+    if (firstRead.current) { firstRead.current = false; if (!rereadAfterHydration({ collation: initialCollation }, JSON.parse(readKey).collation)) return; }
     let active = true;
     const timer = setTimeout(() => {
       load(JSON.parse(readKey)).then(result => {
@@ -485,7 +486,7 @@ export function StandardPromptReadonlyList({
       }).catch(error => { if (active) setReadError(error instanceof Error ? error : new Error("Catalog read failed")); });
     }, 120);
     return () => { active = false; clearTimeout(timer); };
-  }, [readKey, load]);
+  }, [readKey, load, initialCollation]);
 
   // ── 엑셀 내보내기 ────────────────────────────────────────────────────────
   // Export follows every filtered page in server order, never only visible rows.
@@ -517,7 +518,10 @@ export function StandardPromptReadonlyList({
         statusMeasured: t("statusMeasured"),
         statusUnmeasured: t("statusUnmeasured"),
       };
-      const exportRows = remote ? await exportCatalogPages(remote.rows ?? remote.load, readQuery) : sorted;
+      // A rows-only reader takes large batches (fewer reads); the full-page loader keeps 500-row pages.
+      const exportRows = remote
+        ? await (remote.rows ? exportCatalogPages(remote.rows, readQuery, CATALOG_EXPORT_PAGE_SIZE) : exportCatalogPages(remote.load, readQuery))
+        : sorted;
       const columnRows = remotePage ? [Object.fromEntries(remotePage.columns.map(key => [key, "present"]))] as unknown as StandardPromptViewRow[] : rows;
       const sheet = buildStandardPromptSheet(exportRows, columnRows, labels, {
         market: marketLabel,

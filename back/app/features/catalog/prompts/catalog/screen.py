@@ -5,7 +5,7 @@ import json
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.core import errors
 from app.core.codes import load_refs
@@ -18,6 +18,11 @@ AXES = {"listType": "list_type", "depth1": "depth1", "depth2": "depth2", "depth3
         "funnel": "funnel_stage", "kind": "kind", "lang": "lang"}
 NORMAL_MARKET = "CASE WHEN lower(btrim(m)) LIKE 'x:%' THEN 'x:' || upper(substr(btrim(m), 3)) ELSE upper(btrim(m)) END"
 MARKETS = f"ARRAY(SELECT DISTINCT {NORMAL_MARKET} FROM unnest(p.regions) m WHERE btrim(m) <> '' ORDER BY 1)"
+SCREEN_LIMIT_MAX = 500          # 메타 포함 화면 읽기 한 페이지 상한(종전)
+ROWS_LIMIT_MAX = 5_000          # include_meta=false(행·total 만) 한 페이지 상한: 내보내기 묶음(B078)
+# row_fields=list(목록·내보내기 화면 열만): rd.dim_prompt 조인·prompt_type·category 없이 같은 행·순서(B077)
+LIST_COLS = ("p.prompt_id, p.text, p.brand_code, p.brand_presence, p.list_type, p.depth1, p.depth2, p.depth3, p.depth4, "
+             "p.funnel_stage, p.kind, p.lang, p.regions, p.scope_prompt_id, p.deleted_at")
 
 
 class CatalogScreenFilters(BaseModel):
@@ -44,12 +49,21 @@ class CatalogScreenQuery(BaseModel):
     sort: Literal["text", "brand", "presence", "listType", "depth1", "depth2", "depth3", "depth4", "funnel", "kind", "market", "lang", "status", "tracked"] = "depth1"
     asc: bool = True
     offset: int = Field(0, ge=0, le=10_000_000)
-    limit: int = Field(50, ge=1, le=500)
+    limit: int = Field(50, ge=1, le=ROWS_LIMIT_MAX, description="기본 50, 최대 500(include_meta=false 면 최대 5,000: 내보내기 묶음)")
     collation: Literal["en", "ko"] = "en"
     market_labels: dict[str, str] = Field(default_factory=dict, max_length=400)
     include_meta: bool = Field(True, description=(
         "false = rows·total 만 계산한다(count·facets·columns·stats 는 null). 이 값들은 범위와 draft 에만 의존하므로 "
         "같은 draft 의 페이지 넘김·필터·검색·정렬·내보내기는 직전 값을 재사용한다"))
+    row_fields: Literal["full", "list"] = Field("full", description=(
+        "list = 목록·내보내기 화면이 쓰는 열만 읽는다(scopeText·promptType·category 는 null, rd.dim_prompt 조인 생략). "
+        "행·순서·나머지 값은 full 과 같다. 기본 full = 종전"))
+
+    @model_validator(mode="after")
+    def _limit_bound(self) -> CatalogScreenQuery:
+        if self.include_meta and self.limit > SCREEN_LIMIT_MAX:
+            raise ValueError(f"limit 은 최대 {SCREEN_LIMIT_MAX}(include_meta=false 면 {ROWS_LIMIT_MAX})")
+        return self
 
 
 class CatalogScreenRow(BaseModel):
@@ -175,11 +189,16 @@ async def catalog_screen(conn, principal, request: CatalogScreenQuery, *, admin=
     order += " ASC" if request.asc else " DESC"
     # Stable ties retain the former catalog feed's ordering.
     order += ", p.depth1, p.depth2, p.depth3, left(p.text, 256), p.prompt_id"
-    rows = await fetch_all(conn, "SELECT p.*, dp.text AS scope_text FROM app.prompt p LEFT JOIN rd.dim_prompt dp ON dp.prompt_id = p.scope_prompt_id"
-                           f" WHERE {filtered} ORDER BY {order} LIMIT {b.v(request.limit, 'int4')} OFFSET {b.v(offset, 'int4')}", b.params)
+    if request.row_fields == "list":
+        select = f"SELECT {LIST_COLS} FROM app.prompt p"
+    else:
+        select = "SELECT p.*, dp.text AS scope_text FROM app.prompt p LEFT JOIN rd.dim_prompt dp ON dp.prompt_id = p.scope_prompt_id"
+    rows = await fetch_all(conn, f"{select} WHERE {filtered} ORDER BY {order} LIMIT {b.v(request.limit, 'int4')} OFFSET {b.v(offset, 'int4')}",
+                           b.params)
     stats = None
     if admin and request.include_meta:
-        stat_page, _ = await admin_svc.list_catalog(conn, q_text=None, kind=None, include_deleted=True, axes={}, cursor=None, limit=1)
-        stats = stat_page.stats
+        # 루트 전체 통계만(목록 행·outbox 표시·루트 재조회 없이 STATS·SCOPE_ORPHANS): 종전 list_catalog(limit=1).stats 와 같은 값
+        rk, _ = await admin_svc.root_dim(conn)
+        stats = await admin_svc.catalog_stats(conn, root, rk, include_deleted=True)
     return CatalogScreenPage(rows=[row_model(r) for r in rows], total=total, count=count, offset=offset, limit=request.limit,
                              facets=options, columns=columns, stats=stats)

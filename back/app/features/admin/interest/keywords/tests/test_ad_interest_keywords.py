@@ -29,6 +29,22 @@ async def test_access(client_as, uid, status):
     assert r.status_code == status
 
 
+async def test_list_menu_gate(client_as):
+    """B068: 목록 GET 은 legacy 페이지 게이트(route-policy /admin = group admin)와 같게 메뉴 그룹 admin 도 본다(롤백 전용 준비).
+    admin 메뉴 없는 admin = 403 menu_forbidden, admin 메뉴 admin = 200. 쓰기는 legacy 액션처럼 role 만(본문 검증 422 까지 간다, 쓰지 않음)."""
+    from tests.support import Sql, Update, staged
+
+    actor = Sql("SELECT set_config('app.actor_id', $1, true)", (str(ADMIN),))      # 계정 쓰기 = 감사 트리거 행위자 필수
+    async with staged(actor, Update("app.user_account", {"user_id": ADMIN}, {"menu_groups": ["standard"]})), client_as(ADMIN) as c:
+        r = await c.get(U)
+        w = await c.post(U, json={})
+    assert r.status_code == 403 and r.json()["error"]["code"] == "menu_forbidden" and "items" not in r.text
+    assert w.status_code == 422
+    async with staged(actor, Update("app.user_account", {"user_id": ADMIN}, {"menu_groups": ["admin"]})), client_as(ADMIN) as c:
+        r = await c.get(U)
+    assert r.status_code == 200 and "items" in r.json()["data"]
+
+
 async def test_non_admin_cannot_write(client_as):
     tag = uuid.uuid4().hex[:8]
     async with client_as(HQ_HYUNDAI) as c:

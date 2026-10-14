@@ -27,11 +27,48 @@ const XLSX_MIME =
 // 프리뷰(변경 대조) → 청크 적용(진행률·실패 재시도). 585행 × Scope PATCH를 한
 // 액션에 못 태우므로(서버리스 타임아웃) 클라이언트가 CHUNK 단위로 순차 호출한다.
 const CHUNK = 25;
+// 청크 액션이 던졌을 때(세션 만료·권한·전송 실패) 남은 행에 붙이는 문구 — 액션의 기존 적용 실패 문구와 같다.
+const APPLY_FAILED = "적용에 실패했습니다";
 
 type ApplyState =
   | { phase: "idle" }
   | { phase: "applying"; done: number; total: number }
   | { phase: "done"; applied: number; failed: { id: string; error: string }[] };
+
+type ChunkResult = Awaited<ReturnType<typeof applyStandardCatalogChunk>>;
+
+/**
+ * 청크 순차 적용. 액션이 청크를 거부하거나(ok:false) 던지면(세션 만료·권한·전송 실패) 남은 항목을 전부 실패로 남기고
+ * 끝낸다 — 어느 쪽이든 결과를 돌려주므로 화면은 "적용 중" 에 멈추지 않고 실패 행 표시·닫기·실패분 재시도로 간다.
+ */
+export async function applyInChunks(
+  items: CatalogBulkItem[],
+  batchId: string,
+  applyChunk: (chunk: CatalogBulkItem[], batchId: string) => Promise<ChunkResult>,
+  onProgress: (done: number, total: number) => void,
+): Promise<{ applied: number; failed: { id: string; error: string }[] }> {
+  let applied = 0;
+  const failed: { id: string; error: string }[] = [];
+  for (let i = 0; i < items.length; i += CHUNK) {
+    const chunk = items.slice(i, i + CHUNK);
+    onProgress(i, items.length);
+    let r: ChunkResult;
+    try {
+      r = await applyChunk(chunk, batchId);
+    } catch (err) {
+      console.error("[admin/standards/prompts] bulk apply failed:", err);
+      r = { ok: false, error: APPLY_FAILED };
+    }
+    if (!r.ok) {
+      // 청크 자체가 거부된 경우(권한 등) — 남은 항목 전부 실패 처리.
+      for (const it of items.slice(i)) failed.push({ id: it.id, error: r.error });
+      break;
+    }
+    applied += r.value.applied;
+    failed.push(...r.value.failed);
+  }
+  return { applied, failed };
+}
 
 export function CatalogIo() {
   const t = useTranslations("adminStandardPrompts.io");
@@ -82,20 +119,9 @@ export function CatalogIo() {
   }
 
   async function applyItems(items: CatalogBulkItem[], batchId: string) {
-    let applied = 0;
-    const failed: { id: string; error: string }[] = [];
-    for (let i = 0; i < items.length; i += CHUNK) {
-      const chunk = items.slice(i, i + CHUNK);
-      setApply({ phase: "applying", done: i, total: items.length });
-      const r = await applyStandardCatalogChunk(chunk, batchId);
-      if (!r.ok) {
-        // 청크 자체가 거부된 경우(권한 등) — 남은 항목 전부 실패 처리.
-        for (const it of items.slice(i)) failed.push({ id: it.id, error: r.error });
-        break;
-      }
-      applied += r.value.applied;
-      failed.push(...r.value.failed);
-    }
+    const { applied, failed } = await applyInChunks(items, batchId, applyStandardCatalogChunk, (done, total) =>
+      setApply({ phase: "applying", done, total }),
+    );
     setApply({ phase: "done", applied, failed });
   }
 

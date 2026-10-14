@@ -88,11 +88,11 @@ def _item(r: dict[str, Any], last: Any = None) -> UserItem:
                     menu_groups=list(r["menu_groups"]) if r["menu_groups"] else None, last_sign_in_at=last)
 
 
-async def _sign_ins(auth: AuthAdmin, ids: list[uuid.UUID], suppressed: dict[str, str]) -> dict[uuid.UUID, Any]:
+async def _sign_ins(auth: AuthAdmin, ids: list[uuid.UUID], suppressed: dict[str, str], *, reuse: bool = False) -> dict[uuid.UUID, Any]:
     if not ids:
         return {}
     try:
-        return await auth.last_sign_in(ids)
+        return await auth.last_sign_in(ids, reuse=reuse)
     except AuthAdminError as e:
         suppressed["last_sign_in_at"] = "auth_admin_unconfigured" if e.kind == "unconfigured" else "upstream_unavailable"
         log.warning("최근 로그인 조회 실패: %s", e.kind)
@@ -116,7 +116,8 @@ async def list_users(open_ro: RoOpener, auth: AuthAdmin, *, role: str | None, op
             "pat": _escape_like(q.strip()) if q and q.strip() else None, "lim": limit + 1})
     page, nxt = keyset_page(rows, limit, lambda r: (r["created_at"], r["user_id"]), sort=LIST_SORT, dir="desc", fh=fh)
     suppressed: dict[str, str] = {}
-    last = await _sign_ins(auth, [r["user_id"] for r in page], suppressed)
+    # 커서 있는 이어지는 페이지는 첫 페이지가 시작한 Supabase 스캔을 이어 쓴다(페이지마다 처음부터 재스캔하지 않음, 값 동일)
+    last = await _sign_ins(auth, [r["user_id"] for r in page], suppressed, reuse=cursor is not None)
     return [_item(r, last.get(r["user_id"])) for r in page], build_meta(mode="crud", suppressed=suppressed,
                                                                         page=Page(next_cursor=nxt, limit=limit))
 
@@ -322,9 +323,10 @@ async def delete_user(open_ro: RoOpener, p: Principal, auth: AuthAdmin, user_id:
             if gone is None:
                 raise errors.not_found("계정 없음")
             orphans = [r["p"] for r in await fetch_all(conn, queries.ORPHANS_SQL, {"pids": [str(x) for x in owned]})] if owned else []
-            for pid in orphans:                                       # Owner 0명 프로젝트는 삭제한 admin 이 승계(2026-07-02 결정)
-                await conn.execute(_text(queries.SUCCEED_SQL), {"pid": pid, "actor": p.user_id})
-                await conn.execute(_text(queries.MEMBER_AUDIT_SQL), {"pid": pid, "actor": p.user_id,
+            if orphans:                                               # Owner 0명 프로젝트는 삭제한 admin 이 승계(2026-07-02 결정), 고아 전부를 문장 2개로
+                pids = [str(x) for x in orphans]
+                await conn.execute(_text(queries.SUCCEED_SQL), {"pids": pids, "actor": p.user_id})
+                await conn.execute(_text(queries.MEMBER_AUDIT_SQL), {"pids": pids, "actor": p.user_id,
                                                                       "ctx": f"orphan-succession (deleted user {user_id})"})
     except DBAPIError as e:
         log.error("인증 계정 삭제 후 앱 계정 삭제 실패: user_id=%s", user_id)

@@ -222,14 +222,20 @@ async def list_catalog(ro: AsyncConnection, *, q_text: str | None, kind: str | N
     sql = f"{q.LIST_SELECT}\n WHERE {' AND '.join(where)}\n ORDER BY {', '.join(q.SORT_EXPRS)}\n LIMIT {b.v(n + 1, 'int4')}"
     rows = await fetch_keyset(ro, sql, b.params)
     page, nxt = keyset_page(rows, n, lambda r: [r[f"k{i}"] for i in range(len(q.SORT_EXPRS))], sort="catalog", dir="asc", fh=fh)
+    stats = await catalog_stats(ro, root, rk, include_deleted=include_deleted)
+    return CatalogListData(items=[to_model(r) for r in page], stats=stats), Page(next_cursor=nxt, limit=n)
+
+
+async def catalog_stats(ro: AsyncConnection, root: uuid.UUID, rk: int | None, *, include_deleted: bool) -> CatalogStats:
+    """루트 카탈로그 전체 통계(STATS·SCOPE_ORPHANS 두 문장). rk = root_dim 의 루트 project_key(적재 전 None → orphans 0).
+    목록(list_catalog)과 관리 카탈로그 화면 stats(catalog.prompts.catalog.screen)가 같이 쓴다."""
     st = await fetch_one(ro, q.STATS_SQL, {"root": root}) or {}
     orphans = 0
     if rk is not None:
         orphans = int((await fetch_one(ro, q.SCOPE_ORPHANS_SQL, {"rk": rk}) or {}).get("n") or 0)
     total, tracked = int(st.get("total") or 0), int(st.get("tracked") or 0)
-    stats = CatalogStats(total=total, tracked=tracked, untracked=total - tracked, scope_orphans=orphans, acr=int(st.get("acr") or 0),
-                         deleted=int(st.get("deleted") or 0) if include_deleted else 0)
-    return CatalogListData(items=[to_model(r) for r in page], stats=stats), Page(next_cursor=nxt, limit=n)
+    return CatalogStats(total=total, tracked=tracked, untracked=total - tracked, scope_orphans=orphans, acr=int(st.get("acr") or 0),
+                        deleted=int(st.get("deleted") or 0) if include_deleted else 0)
 
 
 async def detail(ro: AsyncConnection, prompt_id: uuid.UUID) -> CatalogPromptDetail:

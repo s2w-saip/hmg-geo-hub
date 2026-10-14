@@ -40,6 +40,7 @@ from .schemas import (
     EventsData,
     EventsPut,
     EventsWritten,
+    Ga4Fields,
     Ga4Property,
     MarketDeleted,
     MarketPut,
@@ -90,8 +91,20 @@ def _prop(r: dict[str, Any], dim: dict[str, Any] | None, pending: list[PendingCh
                        project_overrides=[ProjectOverride(**x) for x in ov], pending=pending)
 
 
+def _registry_prop(r: dict[str, Any]) -> Ga4Property:
+    """fields=registry 행: 화면 표 열만(추적 이벤트 수·적재 투영·전환 기준·프로젝트 직접 지정·대기 요청은 null)."""
+    return Ga4Property(property_id=r["property_id"], brand_code=r["brand_code"], country_code=r["country_code"], status=r["status"],
+                       verified_at=r["verified_at"], updated_by=r["updated_by"], updated_by_email=r["updated_by_email"], updated_at=r["updated_at"],
+                       tracked_events=None, loaded=None, conv_basis=None, project_overrides=None, pending=None)
+
+
 # ── 읽기 ──
-async def list_properties(ro: AsyncConnection, *, brand: str | None, country: str | None, status: str | None) -> list[Ga4Property]:
+async def list_properties(ro: AsyncConnection, *, brand: str | None, country: str | None, status: str | None,
+                          fields: Ga4Fields = "full") -> list[Ga4Property]:
+    if fields == "registry":                              # 화면 표 열만: 상관 서브쿼리·적재 투영(DIMS)·대기 요청(PENDING) 문장을 건너뛴다
+        rows = await fetch_all(ro, queries.REGISTRY_SQL, {"pid": None, "brand": brand, "country": country.upper() if country else None,
+                                                          "status": status})
+        return [_registry_prop(r) for r in rows]
     rows = await _app_rows(ro, brand=brand, country=country.upper() if country else None, status=status)
     pids = [r["property_id"] for r in rows]
     dims, pend = await _dims(ro, pids), await _pending(ro, pids)
@@ -141,8 +154,12 @@ async def list_project_overrides(ro: AsyncConnection, *, property_id: str | None
 
 
 # ── 쓰기 ──
-async def put_property(open_ro: RoOpener, p: Principal, ga4: Ga4Access, pid: str, body: PropertyPut) -> PropertyWritten:
+async def put_property(open_ro: RoOpener, p: Principal, ga4: Ga4Access, pid: str, body: PropertyPut, *,
+                       minimal: bool = False) -> PropertyWritten:
+    """minimal=True(return=minimal): 쓰기·판정 요청은 같고 응답용 재조회(LIST·PENDING·DIMS)만 생략한다(property = null)."""
     verified: bool | None = None
+    row: dict[str, Any] | None = None
+    pend: list[PendingChange] = []
     async with open_ro() as ro:                          # 짧은 api_ro(외부 확인 전에 반납)
         waiting = [pc for pc in (await _pending(ro, [pid])).get(pid, []) if pc.kind == "ga4_property"]
     if waiting:                                           # 대기 요청이 있으면 외부 확인 전에 거절(쓰기 때 enqueue_change 가 다시 막는다)
@@ -187,15 +204,19 @@ async def put_property(open_ro: RoOpener, p: Principal, ga4: Ga4Access, pid: str
                     "op": "upsert", "property_id": pid,
                     "old": None if old is None else {k: old[k] for k in ("brand_code", "country_code", "status")},
                     "new": {"brand_code": body.brand_code, "country_code": body.country_code, "status": status}})
-            row = (await _app_rows(rw, pid=pid))[0]
-            pend = (await _pending(rw, [pid])).get(pid, [])
+            if not minimal:
+                row = (await _app_rows(rw, pid=pid))[0]
+                pend = (await _pending(rw, [pid])).get(pid, [])
     except DBAPIError as e:
         if errors.db_error_info(e)[0] == "23503":
             raise errors.unprocessable("알 수 없는 brand_code", code="unknown_brand", details={"field": "brand_code"}) from e
         raise (errors.from_db_error(e, messages=_DB_CODES, write=True) or e) from e
-    async with open_ro() as ro:                          # rd 투영(api_rw 는 rd 권한 없음)
-        dim = (await _dims(ro, [pid])).get(pid)
-    return PropertyWritten(property=_prop(row, dim, pend), verified=verified, change_id=change_id,
+    prop: Ga4Property | None = None
+    if row is not None:
+        async with open_ro() as ro:                      # rd 투영(api_rw 는 rd 권한 없음)
+            dim = (await _dims(ro, [pid])).get(pid)
+        prop = _prop(row, dim, pend)
+    return PropertyWritten(property=prop, verified=verified, change_id=change_id,
                            propagation="pending" if change_id is not None else "none", pending_market_cleared=cleared)
 
 

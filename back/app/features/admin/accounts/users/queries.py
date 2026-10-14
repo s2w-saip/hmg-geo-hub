@@ -80,14 +80,17 @@ ORPHANS_SQL = """
 SELECT p FROM unnest(CAST(:pids AS uuid[])) p
  WHERE NOT EXISTS (SELECT 1 FROM app.project_member m WHERE m.project_id = p AND m.role = 'owner' AND m.status = 'active')
 """
+# Owner 승계: 고아 프로젝트 전부(:pids, 중복 없음)를 문장 하나씩(멤버 INSERT 1 + 감사 INSERT 1). 감사 행 순서 = :pids 순서(종전 반복과 같다)
 SUCCEED_SQL = """
 INSERT INTO app.project_member (project_id, user_id, role, status, invited_by, accepted_at)
-VALUES (CAST(:pid AS uuid), CAST(:actor AS uuid), 'owner', 'active', CAST(:actor AS uuid), now())
+SELECT t.p, CAST(:actor AS uuid), CAST('owner' AS app.member_role), CAST('active' AS app.member_status), CAST(:actor AS uuid), now()
+  FROM unnest(CAST(:pids AS uuid[])) WITH ORDINALITY t(p, o) ORDER BY t.o
 ON CONFLICT (project_id, user_id) DO UPDATE SET role = 'owner', status = 'active', accepted_at = coalesce(app.project_member.accepted_at, now())
 """
 MEMBER_AUDIT_SQL = """
 INSERT INTO app.member_audit_log (project_id, actor_id, target_user_id, action, context)
-VALUES (CAST(:pid AS uuid), CAST(:actor AS uuid), CAST(:actor AS uuid), 'promote', :ctx)
+SELECT t.p, CAST(:actor AS uuid), CAST(:actor AS uuid), 'promote', CAST(:ctx AS text)
+  FROM unnest(CAST(:pids AS uuid[])) WITH ORDINALITY t(p, o) ORDER BY t.o
 """
 
 AUDIT_EXISTS_SQL = """

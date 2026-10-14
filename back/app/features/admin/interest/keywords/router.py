@@ -1,6 +1,7 @@
 """admin.interest.keywords 표준 키워드 라우터. 경로는 /v1 접두 포함 전체 경로. admin 전용(AD-1b).
 
 읽기 = api_ro, 쓰기 = api_rw(RwConn). 목록은 소규모 원천 표(수십~수백 행)라 페이지네이션 없이 전량을 준다(현행 동일).
+목록 GET 은 메뉴 그룹 admin 도 본다(legacy 페이지 게이트 route-policy /admin = group admin 동등). 쓰기는 legacy 액션처럼 role 만.
 """
 from __future__ import annotations
 
@@ -9,7 +10,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, Request
 
-from app.core.auth import require_admin
+from app.core.auth import require_admin, require_menu_group
 from app.core.db import RoConn
 from app.core.envelope import Envelope, build_meta, crud_meta
 from app.core.errors import ERROR_RESPONSES
@@ -22,7 +23,8 @@ from app.features.admin.interest.keywords.schemas import Keyword, KeywordCreate,
 router = APIRouter(tags=["admin.interest"], dependencies=[require_admin], responses=ERROR_RESPONSES)
 
 
-@router.get("/v1/admin/interest/keywords", summary="고객 관심 키워드 목록(app.standard_keyword)", response_model=Envelope[KeywordList])
+@router.get("/v1/admin/interest/keywords", summary="고객 관심 키워드 목록(app.standard_keyword)", response_model=Envelope[KeywordList],
+            dependencies=[require_menu_group("admin")])
 async def get_admin_interest_keywords_0(
         request: Request, ro: RoConn,
         source_type: Annotated[SourceType | None, Query()] = None,

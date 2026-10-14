@@ -19,7 +19,7 @@ from sqlalchemy.exc import DBAPIError
 from app.core.auth import principal_from_row
 from app.core.config import Settings
 from app.core.db import get_db
-from app.features.admin.accounts.users import queries, service
+from app.features.admin.accounts.users import adapters, queries, service
 from app.features.admin.accounts.users.adapters import AuthAdminError, SupabaseAuthAdmin, get_auth_admin
 from app.features.admin.accounts.users.schemas import UserPatch
 from tests.support import ADMIN, CUST_PROJECT, DB_URL, HQ_HYUNDAI, KIA_US, VENDOR, needs_db
@@ -42,6 +42,7 @@ class FakeAuth:
         self.fail_sign = False
         self.force_id: uuid.UUID | None = None
         self.sign: dict[uuid.UUID, datetime] = {}
+        self.reuse: list[bool] = []                                 # last_sign_in 호출마다 reuse(이어지는 페이지) 값
 
     async def create_user(self, email: str, password: str) -> uuid.UUID:
         self.ro_at_call.append(("create", _ro_checked_out()))
@@ -57,8 +58,9 @@ class FakeAuth:
             raise AuthAdminError(self.fail_delete)  # type: ignore[arg-type]
         self.deleted.append(user_id)
 
-    async def last_sign_in(self, user_ids: list[uuid.UUID]) -> dict[uuid.UUID, datetime | None]:
+    async def last_sign_in(self, user_ids: list[uuid.UUID], *, reuse: bool = False) -> dict[uuid.UUID, datetime | None]:
         self.ro_at_call.append(("last_sign_in", _ro_checked_out()))
+        self.reuse.append(reuse)
         if self.fail_sign:
             raise AuthAdminError("upstream")
         return {u: self.sign.get(u) for u in user_ids}
@@ -131,9 +133,13 @@ async def test_list_filters_pagination(client_as, env):
         r = await c.get(BASE, params={"q": "%", "surface": "global", "from": "2026-01-01"})
         assert r.json()["data"]["items"] == [] and r.json()["meta"]["ignored_filters"] == ["period", "surface"]
         # 키셋: 2건을 1건씩
+        fake.reuse.clear()
         r1 = (await c.get(BASE, params={"q": "t-kia", "limit": 1})).json()
         r2 = (await c.get(BASE, params={"q": "t-kia", "limit": 1, "cursor": r1["meta"]["page"]["next_cursor"]})).json()
         assert {r1["data"]["items"][0]["email"], r2["data"]["items"][0]["email"]} == set(emails)
+        assert fake.reuse == [False, True]                                       # B070: 커서 페이지만 첫 페이지의 스캔을 이어 쓴다
+        assert {i["email"]: i["last_sign_in_at"] for i in r1["data"]["items"] + r2["data"]["items"]} == {
+            e: emails[e]["last_sign_in_at"] for e in emails}                     # 값은 한 페이지로 읽은 것과 같다
         assert r2["meta"]["page"]["next_cursor"] is None
         r = await c.get(BASE, params={"q": "t-hq", "limit": 1, "cursor": r1["meta"]["page"]["next_cursor"]})
         assert r.status_code == 422 and r.json()["error"]["code"] == "cursor_invalid"
@@ -417,6 +423,46 @@ async def test_delete(client_as, env):
 
 
 @needs_db
+async def test_b071_succession_batched(client_as, env):
+    """B071: Owner 승계는 고아 프로젝트 수와 무관하게 멤버 INSERT 1 + 감사 INSERT 1 문장. 결과·멤버 행·감사 행(순서·내용)은 종전 반복과 같다.
+    둘째 프로젝트는 ADMIN 이 이미 viewer(pending) 멤버라 ON CONFLICT 갱신 경로를 탄다."""
+    from tests.core.rcache_calls import Stmts
+
+    own = env["owner"]
+    p2 = await own.fetchval("INSERT INTO app.project (kind, name, country_code, created_by) VALUES ('customer', $1, 'US', $2) "
+                            "RETURNING project_id", f"{env['tag']}-b071", ADMIN)
+    try:
+        async with client_as(ADMIN) as c:
+            o = await _create(c, env, "b071")
+        oid = uuid.UUID(o["user_id"])
+        for pid in (CUST_PROJECT, p2):
+            await own.execute("INSERT INTO app.project_member (project_id, user_id, role, status, invited_by, accepted_at) "
+                              "VALUES ($1, $2, 'owner', 'active', $3, now())", pid, oid, ADMIN)
+        await own.execute("INSERT INTO app.project_member (project_id, user_id, role, status, invited_by) "
+                          "VALUES ($1, $2, 'viewer', 'pending', $2)", p2, ADMIN)
+        a0 = await own.fetchval("SELECT coalesce(max(audit_id), 0) FROM app.member_audit_log")
+        with Stmts() as st:
+            async with client_as(ADMIN) as c:
+                r = await c.delete(f"{BASE}/{oid}")
+        assert r.status_code == 200, r.text
+        got = r.json()["data"]
+        assert got["user_id"] == str(oid) and got["deleted"] is True
+        assert sorted(got["succeeded_projects"]) == sorted([str(CUST_PROJECT), str(p2)])
+        assert sum("INSERT INTO app.project_member" in q for q in st.seen) == 1
+        assert sum("INSERT INTO app.member_audit_log" in q for q in st.seen) == 1
+        for pid in (CUST_PROJECT, p2):
+            m = await own.fetchrow("SELECT role::text AS role, status::text AS status, accepted_at IS NOT NULL AS acc "
+                                   "FROM app.project_member WHERE project_id = $1 AND user_id = $2", pid, ADMIN)
+            assert (m["role"], m["status"], m["acc"]) == ("owner", "active", True)
+        rows = await own.fetch("SELECT project_id, actor_id, target_user_id, action FROM app.member_audit_log "
+                               "WHERE audit_id > $1 AND context = $2 ORDER BY audit_id", a0, f"orphan-succession (deleted user {oid})")
+        assert [x["project_id"] for x in rows] == [uuid.UUID(x) for x in got["succeeded_projects"]]       # 감사 순서 = 응답 순서
+        assert all((x["actor_id"], x["target_user_id"], x["action"]) == (ADMIN, ADMIN, "promote") for x in rows)
+    finally:
+        await own.execute("DELETE FROM app.project WHERE project_id = $1", p2)
+
+
+@needs_db
 async def test_r2_supabase_calls_hold_no_ro_connection(client_as, env):
     """ad-ops R2 회귀: Supabase 호출(최근 로그인·생성·삭제) 시점에 요청이 api_ro 커넥션을 쥐지 않는다(CurrentUserDetached + RoSession)."""
     fake = env["fake"]
@@ -509,6 +555,60 @@ async def test_supabase_adapter_requests():
     assert await a.last_sign_in([uid, other]) == {uid: None}
     assert all(s[3] == "svc-key" and s[4] == "Bearer svc-key" for s in seen)
     assert seen[0][:2] == ("POST", "/auth/v1/admin/users") and seen[-1][2] == {"page": "1", "per_page": "1000"}
+
+
+async def test_b070_sign_in_scan_reused_across_pages(monkeypatch):
+    """B070: 계정 목록 이어지는 페이지(reuse=True)는 첫 페이지가 시작한 Supabase 목록 스캔을 이어 쓴다(처음부터 재스캔하지 않음).
+    값은 페이지마다 새로 스캔한 것과 같다. 첫 페이지(reuse=False)·SCAN_TTL_S 경과·생성·삭제 뒤에는 새로 스캔한다."""
+    users = [uuid.UUID(int=i + 1) for i in range(5)]
+    signs = {u: (f"2026-09-0{i + 1}T00:00:00Z" if i % 2 == 0 else None) for i, u in enumerate(users)}
+    calls: list[int] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        if req.method != "GET":
+            return httpx.Response(200, json={"id": str(users[0])})
+        page = int(req.url.params["page"])
+        calls.append(page)
+        chunk = users[(page - 1) * 2: page * 2]                       # PER_PAGE 2 → [u0,u1] [u2,u3] [u4]
+        return httpx.Response(200, json={"users": [{"id": str(u), "last_sign_in_at": signs[u]} for u in chunk]})
+
+    def adapter() -> SupabaseAuthAdmin:                                # 요청마다 새 어댑터(get_auth_admin 과 같다)
+        a = _adapter(handler)
+        a.PER_PAGE = 2
+        return a
+
+    def expect(ids):
+        return {u: adapters._ts(signs[u]) for u in ids if u in signs}
+
+    ghost = uuid.uuid4()
+    adapters.clear_scans()
+    try:
+        assert await adapter().last_sign_in(users[:3]) == expect(users[:3]) and calls == [1, 2]
+        assert await adapter().last_sign_in([users[3], users[0]], reuse=True) == expect([users[3], users[0]]) and calls == [1, 2]
+        assert await adapter().last_sign_in([users[4], ghost], reuse=True) == expect([users[4]]) and calls == [1, 2, 3]
+        assert await adapter().last_sign_in([ghost, uuid.uuid4()], reuse=True) == {} and calls == [1, 2, 3]       # 끝까지 읽음
+        # 첫 페이지(reuse=False)는 새로 스캔
+        assert await adapter().last_sign_in(users[:2]) == expect(users[:2]) and calls == [1, 2, 3, 1]
+        # 종전(페이지마다 처음부터): 같은 세 페이지 요청이면 [1,2] + [1,2] + [1,2,3] = 7회 → 이어 쓰기 3회
+        calls.clear()
+        adapters.clear_scans()
+        for ids, reuse in ((users[:2], False), (users[2:4], True), ([users[4], ghost], True)):     # 한 id 는 단건 조회라 둘씩
+            assert await adapter().last_sign_in(ids, reuse=reuse) == expect(ids)
+        assert calls == [1, 2, 3]
+        # TTL 경과 → 새로 스캔
+        calls.clear()
+        t0 = adapters._now()
+        monkeypatch.setattr(adapters, "_now", lambda: t0 + SupabaseAuthAdmin.SCAN_TTL_S + 1)
+        assert await adapter().last_sign_in(users[:2], reuse=True) == expect(users[:2]) and calls == [1]
+        monkeypatch.undo()
+        # 생성·삭제는 스캔을 버린다
+        calls.clear()
+        await adapter().create_user("a@b.c", "pw")
+        assert await adapter().last_sign_in(users[:2], reuse=True) == expect(users[:2]) and calls == [1]
+        await adapter().delete_user(users[4])
+        assert await adapter().last_sign_in(users[:2], reuse=True) == expect(users[:2]) and calls == [1, 1]
+    finally:
+        adapters.clear_scans()
 
 
 async def test_supabase_adapter_errors():

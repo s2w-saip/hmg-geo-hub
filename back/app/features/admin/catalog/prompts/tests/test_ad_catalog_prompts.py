@@ -342,3 +342,49 @@ async def test_detail_shows_pending(client_as):
     d = r.json()["data"]
     assert {x["kind"] for x in d["pending_changes"]} == {"catalog"} and len(d["pending_changes"]) >= 2   # 준비 INSERT + 라벨 수정
     assert [x["op"] for x in d["pending_outbox"]] == []                   # funnel_stage 는 Scope 에 보이지 않는 필드
+
+
+async def test_b075_return_minimal_writes_same_without_response_reads(client_as):
+    """B075: return=minimal 은 쓰기·트리거(감사·재판정 요청)·outbox 가 기본(full)과 같고, 응답용 재조회(OUTBOX_FLAGS·TX_CHANGES)만 생략한다.
+    prompt·change_id 는 null, change_ids 는 [], propagation 은 outbox 기준. 기본값은 종전(full)."""
+    from tests.core.rcache_calls import Stmts
+
+    def response_reads(seen):                    # OUTBOX_FLAGS(outbox 표시 열)·TX_CHANGES(이번 트랜잭션 재판정 요청) 문장 수
+        return sum("AS outbox_pending" in q or "requested_at = now()" in q for q in seen)
+
+    a = await _new_tracked(f"min-a-{uuid.uuid4().hex[:6]}")
+    b = await _new_tracked(f"min-b-{uuid.uuid4().hex[:6]}")
+    calls = [("PATCH", "kind", {"kind": "acr"}), ("PATCH", "text", {"text": "새 본문 min"}), ("PATCH", "labels", {"funnel_stage": "F9"}),
+             ("PATCH", "regions", {"lang": "en"}), ("DELETE", "", None), ("POST", "restore", None)]
+
+    async def state(pid):
+        return (await _val("SELECT row_to_json(x)::text FROM (SELECT text, kind, funnel_stage, lang, deleted_at IS NULL AS live "
+                           "FROM app.prompt WHERE prompt_id = $1) x", pid),
+                await _val("SELECT array_agg(event_type ORDER BY audit_id) FROM app.prompt_audit_log WHERE prompt_id = $1", pid),
+                await _val("SELECT array_agg(kind ORDER BY change_id) FROM app.judgment_change WHERE payload->>'prompt_id' = $1", str(pid)),
+                await _val("SELECT array_agg(op || ':' || (payload->>'kind') || ':' || (payload->>'enabled') ORDER BY outbox_id) "
+                           "FROM app.scope_outbox WHERE aggregate = 'prompt' AND aggregate_id = $1", pid))
+
+    async with client_as(ADMIN) as c:
+        for method, op, body in calls:
+            url = f"{BASE}/{a}" + (f"/{op}" if op else "")
+            with Stmts() as sf:
+                full = await c.request(method, url, json=body)
+            with Stmts() as st:
+                mini = await c.request(method, f"{BASE}/{b}" + (f"/{op}" if op else ""), params={"return": "minimal"}, json=body)
+            assert full.status_code == 200 and mini.status_code == 200, (op, mini.text)
+            fd, md = full.json()["data"], mini.json()["data"]
+            assert fd["prompt"] is not None and md["prompt"] is None and md["change_id"] is None and md["change_ids"] == []
+            assert (md["applied"], md["warnings"], md["outbox_id"] is not None) == (fd["applied"], fd["warnings"], fd["outbox_id"] is not None)
+            assert md["propagation"] == ("pending" if md["outbox_id"] is not None else "none")
+            assert response_reads(st.seen) == 0 and response_reads(sf.seen) == 2, op       # full = 2문장(종전), minimal = 0
+        # 결과 상태(행·감사·재판정 요청·outbox)는 full 로 쓴 행과 같다
+        sa, sb = await state(a), await state(b)
+        assert sa[0].replace("min-a", "") == sb[0].replace("min-a", "") and sa[1:] == sb[1:]
+        # 변경 없는 요청·dry_run 도 minimal
+        same = await c.patch(f"{BASE}/{b}/kind", params={"return": "minimal"}, json={"kind": "acr"})
+        dry = await c.patch(f"{BASE}/{b}/kind", params={"return": "minimal"}, json={"kind": "single", "dry_run": True})
+        bad = await c.patch(f"{BASE}/{b}/kind", params={"return": "none"}, json={"kind": "acr"})
+    assert same.json()["data"]["applied"] is False and same.json()["data"]["propagation"] == "none"
+    assert dry.json()["data"]["prompt"] is None and dry.json()["data"]["applied"] is False
+    assert bad.status_code == 422

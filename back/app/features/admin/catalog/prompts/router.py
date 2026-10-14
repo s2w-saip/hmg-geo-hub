@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query, Request
 
@@ -41,6 +41,10 @@ router = APIRouter(tags=["admin.catalog"], dependencies=[require_admin, require_
 # 목록이 지원하는 공통 필터 축(app.prompt 열 대응). 그 밖의 공통 축은 meta.ignored_filters.
 LIST_AXES = ("brand", "funnel", "brand_presence", "list_type", "depth1", "depth2", "depth3")
 ACR_WARNING = "acr_measurement_cost"     # single→acr: 다음 측정부터 2턴 × acr_iterations(기본 10) 측정, 셀당 약 20배
+# 쓰기 응답 범위(B075). minimal = 응답용 재조회 2문장(prompt 의 outbox 표시·이번 쓰기의 change_ids) 생략. 쓰기·트리거·outbox 는 같다.
+WriteReturn = Annotated[Literal["full", "minimal"], Query(
+    alias="return", description="minimal = 응답용 재조회 생략: prompt·change_id 는 null, change_ids 는 [], propagation 은 이번 쓰기의 "
+                                "outbox 행만 본다(재판정 요청은 GET 상세 pending_changes). 기본 full = 종전")]
 
 
 @router.post("/v1/admin/catalog/prompts/screen", response_model=Envelope[CatalogScreenPage])
@@ -49,9 +53,13 @@ async def read_admin_screen(ro: RoConn, body: CatalogScreenQuery) -> Envelope[Ca
 
 
 async def _write_result(rw: RwConn, new: dict, changes: dict, change_ids: list[int], outbox: int | None, *,
-                        warnings: list[str] | None = None) -> PromptWriteResult:
+                        warnings: list[str] | None = None, minimal: bool = False) -> PromptWriteResult:
     """쓰기 응답. prompt 의 outbox_pending·outbox_error 는 목록·상세와 같은 술어로 쓰기 트랜잭션 안에서 채운다(검증 D4:
-    null 을 false 로 읽는 어댑터가 '대기 없음' 으로 보이지 않게). 변경 없는 요청(applied=false)도 기존 대기 행을 그대로 보인다."""
+    null 을 false 로 읽는 어댑터가 '대기 없음' 으로 보이지 않게). 변경 없는 요청(applied=false)도 기존 대기 행을 그대로 보인다.
+    minimal(return=minimal): prompt 재조회(outbox 표시)를 하지 않는다(호출부는 change_ids 조회도 건너뛴다)."""
+    if minimal:
+        return PromptWriteResult(prompt=None, change_id=None, change_ids=[], outbox_id=outbox,
+                                 propagation="pending" if outbox is not None else "none", applied=bool(changes), warnings=warnings or [])
     pending = bool(change_ids) or outbox is not None
     flags = await svc.outbox_flags(rw, uuid.UUID(str(new["prompt_id"])))
     return PromptWriteResult(prompt=svc.to_model({**new, **flags}), change_id=change_ids[0] if change_ids else None,
@@ -109,18 +117,20 @@ async def get_admin_catalog_prompts_by_id_2(prompt_id: uuid.UUID, ro: RoConn) ->
 
 
 @router.patch("/v1/admin/catalog/prompts/{prompt_id:uuid}/text", summary="본문 수정 + outbox", response_model=Envelope[PromptWriteResult])
-async def patch_admin_catalog_prompts_by_id_text_3(prompt_id: uuid.UUID, body: TextBody, rw: RwConn) -> Envelope[PromptWriteResult]:
+async def patch_admin_catalog_prompts_by_id_text_3(prompt_id: uuid.UUID, body: TextBody, rw: RwConn,
+                                                   ret: WriteReturn = "full") -> Envelope[PromptWriteResult]:
     text = svc.text_or_422(body.text)
     root = await svc.root_project_id(rw)
     new, _, changes, outbox = await svc.apply_patch(rw, root=root, prompt_id=prompt_id, patch={"text": text})
-    ids = await svc.tx_change_ids(rw, prompt_id) if changes else []
-    return Envelope[PromptWriteResult](data=await _write_result(rw, new, changes, ids, outbox), meta=build_meta(mode="crud"))
+    minimal = ret == "minimal"
+    ids = await svc.tx_change_ids(rw, prompt_id) if changes and not minimal else []
+    return Envelope[PromptWriteResult](data=await _write_result(rw, new, changes, ids, outbox, minimal=minimal), meta=build_meta(mode="crud"))
 
 
 @router.patch("/v1/admin/catalog/prompts/{prompt_id:uuid}/labels", summary="택소노미 라벨 수정(트리거가 judgment_change catalog)",
               response_model=Envelope[PromptWriteResult])
-async def patch_admin_catalog_prompts_by_id_labels_4(prompt_id: uuid.UUID, body: LabelsBody, ro: RoConn, rw: RwConn
-                                                     ) -> Envelope[PromptWriteResult]:
+async def patch_admin_catalog_prompts_by_id_labels_4(prompt_id: uuid.UUID, body: LabelsBody, ro: RoConn, rw: RwConn,
+                                                     ret: WriteReturn = "full") -> Envelope[PromptWriteResult]:
     fields = [f for f in LABEL_FIELDS if f in body.model_fields_set]
     if not fields:
         raise errors.unprocessable("바꿀 라벨이 없다", details={"field": "body"})
@@ -128,14 +138,15 @@ async def patch_admin_catalog_prompts_by_id_labels_4(prompt_id: uuid.UUID, body:
     svc.labels_or_422(labels, await svc.known_brands(ro))
     root = await svc.root_project_id(rw)
     new, _, changes, outbox = await svc.apply_patch(rw, root=root, prompt_id=prompt_id, patch=labels)
-    ids = await svc.tx_change_ids(rw, prompt_id) if changes else []
-    return Envelope[PromptWriteResult](data=await _write_result(rw, new, changes, ids, outbox), meta=build_meta(mode="crud"))
+    minimal = ret == "minimal"
+    ids = await svc.tx_change_ids(rw, prompt_id) if changes and not minimal else []
+    return Envelope[PromptWriteResult](data=await _write_result(rw, new, changes, ids, outbox, minimal=minimal), meta=build_meta(mode="crud"))
 
 
 @router.patch("/v1/admin/catalog/prompts/{prompt_id:uuid}/regions",
               summary="시장·언어 수정 + outbox. 어휘 = rd.dim_project.regions(제안 채택)", response_model=Envelope[PromptWriteResult])
-async def patch_admin_catalog_prompts_by_id_regions_5(prompt_id: uuid.UUID, body: RegionsBody, ro: RoConn, rw: RwConn
-                                                      ) -> Envelope[PromptWriteResult]:
+async def patch_admin_catalog_prompts_by_id_regions_5(prompt_id: uuid.UUID, body: RegionsBody, ro: RoConn, rw: RwConn,
+                                                      ret: WriteReturn = "full") -> Envelope[PromptWriteResult]:
     given = body.model_fields_set & {"regions", "lang"}
     if not given:
         raise errors.unprocessable("regions·lang 중 하나는 필요", details={"field": "body"})
@@ -147,15 +158,18 @@ async def patch_admin_catalog_prompts_by_id_regions_5(prompt_id: uuid.UUID, body
         patch["lang"] = svc.lang_or_422(body.lang)
     root = await svc.root_project_id(rw)
     new, _, changes, outbox = await svc.apply_patch(rw, root=root, prompt_id=prompt_id, patch=patch)
-    ids = await svc.tx_change_ids(rw, prompt_id) if changes else []
-    return Envelope[PromptWriteResult](data=await _write_result(rw, new, changes, ids, outbox), meta=build_meta(mode="crud"))
+    minimal = ret == "minimal"
+    ids = await svc.tx_change_ids(rw, prompt_id) if changes and not minimal else []
+    return Envelope[PromptWriteResult](data=await _write_result(rw, new, changes, ids, outbox, minimal=minimal), meta=build_meta(mode="crud"))
 
 
 @router.patch("/v1/admin/catalog/prompts/{prompt_id:uuid}/kind", summary="single↔acr 전환(트리거가 prompt_kind) + outbox, dry_run",
               response_model=Envelope[PromptWriteResult])
-async def patch_admin_catalog_prompts_by_id_kind_6(prompt_id: uuid.UUID, body: KindBody, rw: RwConn) -> Envelope[PromptWriteResult]:
+async def patch_admin_catalog_prompts_by_id_kind_6(prompt_id: uuid.UUID, body: KindBody, rw: RwConn,
+                                                   ret: WriteReturn = "full") -> Envelope[PromptWriteResult]:
     root = await svc.root_project_id(rw)
     warnings = [ACR_WARNING] if body.kind == "acr" else []
+    minimal = ret == "minimal"
     if body.dry_run:
         row = await svc.lock_row(rw, root, prompt_id)
         if row is None:
@@ -163,25 +177,29 @@ async def patch_admin_catalog_prompts_by_id_kind_6(prompt_id: uuid.UUID, body: K
         if row["deleted_at"] is not None:
             raise errors.conflict("state_mismatch", "삭제된 행", {"deleted": True})
         changes = svc.diff(row, {"kind": body.kind})
-        res = await _write_result(rw, row, {}, [], None, warnings=warnings if changes else [])
+        res = await _write_result(rw, row, {}, [], None, warnings=warnings if changes else [], minimal=minimal)
         return Envelope[PromptWriteResult](data=res, meta=build_meta(mode="crud"))
     new, _, changes, outbox = await svc.apply_patch(rw, root=root, prompt_id=prompt_id, patch={"kind": body.kind})
-    ids = await svc.tx_change_ids(rw, prompt_id) if changes else []
-    return Envelope[PromptWriteResult](data=await _write_result(rw, new, changes, ids, outbox, warnings=warnings if changes else []),
+    ids = await svc.tx_change_ids(rw, prompt_id) if changes and not minimal else []
+    return Envelope[PromptWriteResult](data=await _write_result(rw, new, changes, ids, outbox, warnings=warnings if changes else [],
+                                                                minimal=minimal),
                                        meta=build_meta(mode="crud"))
 
 
 @router.delete("/v1/admin/catalog/prompts/{prompt_id:uuid}", summary="소프트삭제 + outbox", response_model=Envelope[PromptWriteResult])
-async def delete_admin_catalog_prompts_by_id_7(prompt_id: uuid.UUID, rw: RwConn) -> Envelope[PromptWriteResult]:
+async def delete_admin_catalog_prompts_by_id_7(prompt_id: uuid.UUID, rw: RwConn, ret: WriteReturn = "full") -> Envelope[PromptWriteResult]:
     root = await svc.root_project_id(rw)
     new, _, changes, outbox = await svc.apply_patch(rw, root=root, prompt_id=prompt_id, patch={}, deleted_at="delete")
-    ids = await svc.tx_change_ids(rw, prompt_id)
-    return Envelope[PromptWriteResult](data=await _write_result(rw, new, changes, ids, outbox), meta=build_meta(mode="crud"))
+    minimal = ret == "minimal"
+    ids = [] if minimal else await svc.tx_change_ids(rw, prompt_id)
+    return Envelope[PromptWriteResult](data=await _write_result(rw, new, changes, ids, outbox, minimal=minimal), meta=build_meta(mode="crud"))
 
 
 @router.post("/v1/admin/catalog/prompts/{prompt_id:uuid}/restore", summary="복원 + outbox", response_model=Envelope[PromptWriteResult])
-async def post_admin_catalog_prompts_by_id_restore_8(prompt_id: uuid.UUID, rw: RwConn) -> Envelope[PromptWriteResult]:
+async def post_admin_catalog_prompts_by_id_restore_8(prompt_id: uuid.UUID, rw: RwConn,
+                                                     ret: WriteReturn = "full") -> Envelope[PromptWriteResult]:
     root = await svc.root_project_id(rw)
     new, _, changes, outbox = await svc.apply_patch(rw, root=root, prompt_id=prompt_id, patch={}, deleted_at="restore")
-    ids = await svc.tx_change_ids(rw, prompt_id)
-    return Envelope[PromptWriteResult](data=await _write_result(rw, new, changes, ids, outbox), meta=build_meta(mode="crud"))
+    minimal = ret == "minimal"
+    ids = [] if minimal else await svc.tx_change_ids(rw, prompt_id)
+    return Envelope[PromptWriteResult](data=await _write_result(rw, new, changes, ids, outbox, minimal=minimal), meta=build_meta(mode="crud"))

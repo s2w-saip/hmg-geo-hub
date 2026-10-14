@@ -7,12 +7,9 @@ app.ga4_property·app.ga4_tracked_event 는 설정 원본(쓰기 api_rw), 적재
 TODAY_SQL = "SELECT rd.today_kst() AS today"
 
 # app 만 읽는다(쓰기 트랜잭션 api_rw 에서도 같은 문장으로 응답을 만든다: api_rw 는 rd 권한 없음). rd 투영은 DIMS_SQL(api_ro).
-LIST_SQL = """
-SELECT g.property_id, g.brand_code, g.country_code, g.status, g.verified_at, g.updated_by, u.email::text AS updated_by_email, g.updated_at,
-       (SELECT count(*) FROM app.ga4_tracked_event t WHERE t.property_id = g.property_id)::int AS tracked_events,
-       coalesce((SELECT json_agg(json_build_object('project_id', p.project_id, 'name', p.name, 'brand_code', p.brand_code,
-                                                   'country_code', p.country_code) ORDER BY p.name, p.project_id)
-                   FROM app.project p WHERE p.ga4_property_id = g.property_id), '[]') AS project_overrides
+_LIST_COLS = """
+SELECT g.property_id, g.brand_code, g.country_code, g.status, g.verified_at, g.updated_by, u.email::text AS updated_by_email, g.updated_at"""
+_LIST_FROM = """
   FROM app.ga4_property g
   LEFT JOIN app.user_account u ON u.user_id = g.updated_by
  WHERE (CAST(:pid AS text) IS NULL OR g.property_id = CAST(:pid AS text))
@@ -21,6 +18,13 @@ SELECT g.property_id, g.brand_code, g.country_code, g.status, g.verified_at, g.u
    AND (CAST(:status AS text) IS NULL OR g.status = CAST(:status AS text))
  ORDER BY g.brand_code NULLS LAST, g.country_code NULLS LAST, g.property_id
 """
+LIST_SQL = _LIST_COLS + """,
+       (SELECT count(*) FROM app.ga4_tracked_event t WHERE t.property_id = g.property_id)::int AS tracked_events,
+       coalesce((SELECT json_agg(json_build_object('project_id', p.project_id, 'name', p.name, 'brand_code', p.brand_code,
+                                                   'country_code', p.country_code) ORDER BY p.name, p.project_id)
+                   FROM app.project p WHERE p.ga4_property_id = g.property_id), '[]') AS project_overrides""" + _LIST_FROM
+# fields=registry(화면 표 열만): 추적 이벤트 수·프로젝트 직접 지정 상관 서브쿼리 없이 같은 행·순서
+REGISTRY_SQL = _LIST_COLS + _LIST_FROM
 
 # 프로젝트 직접 지정 전체(BG-43, 현행 ga4/page.tsx:53-61 = projectRepository.listAll 중 ga4PropertyId 있는 것, createdAt DESC).
 # 레지스트리(app.ga4_property)에 없는 속성을 지정한 프로젝트도 포함한다(registered 거짓). app 만 읽는다.

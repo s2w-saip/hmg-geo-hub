@@ -239,6 +239,49 @@ async def test_r2_detached_put_gate(client_as, env):
 
 
 @needs_db
+async def test_b072_registry_fields_and_minimal_put(client_as, env):
+    """B072: GET fields=registry 는 화면 표 열만(같은 행·순서·값, 추적 수·적재 투영·직접 지정·대기 요청은 null, 그 문장 없음).
+    PUT return=minimal 은 쓰기·판정 요청이 같고 응답 property 재조회(LIST·PENDING·DIMS)만 생략. 기본값은 종전(full)."""
+    from tests.core.rcache_calls import Stmts
+
+    p1, p2 = env["pids"][:2]
+    own = env["owner"]
+    async with client_as(ADMIN) as c:
+        with Stmts() as st_min:
+            rm = await c.put(f"{BASE}/{p1}", params={"return": "minimal"}, json={"brand_code": "Kia", "country_code": "de"})
+        with Stmts() as st_full:
+            rf = await c.put(f"{BASE}/{p2}", json={"brand_code": "Genesis", "country_code": "KR"})
+        assert rm.status_code == 200 and rf.status_code == 200, (rm.text, rf.text)
+        dm, df = rm.json()["data"], rf.json()["data"]
+        assert dm["property"] is None and df["property"]["property_id"] == p2 and df["property"]["tracked_events"] == 0
+        assert (dm["verified"], dm["propagation"], dm["pending_market_cleared"]) == (df["verified"], df["propagation"], False) == (None, "pending", False)
+        pl = json.loads(await own.fetchval("SELECT payload FROM app.judgment_change WHERE change_id = $1", dm["change_id"]))
+        assert pl["old"] is None and pl["new"] == {"brand_code": "Kia", "country_code": "DE", "status": "pending_grant"}
+        assert await own.fetchval("SELECT status FROM app.ga4_property WHERE property_id = $1", p1) == "pending_grant"
+        assert not any("json_agg" in q or "rd.ga4_dim_property" in q for q in st_min.seen)
+        assert sum("FROM app.judgment_change j" in q for q in st_min.seen) == 1                     # 외부 확인 전 대기 검사만
+        assert any("json_agg" in q for q in st_full.seen) and any("rd.ga4_dim_property" in q for q in st_full.seen)
+        assert sum("FROM app.judgment_change j" in q for q in st_full.seen) == 2
+        # 목록: registry 는 같은 행·순서·화면 열 값
+        full = (await c.get(BASE)).json()["data"]["items"]
+        with Stmts() as st_reg:
+            rr = await c.get(BASE, params={"fields": "registry"})
+        assert rr.status_code == 200 and rr.json()["meta"]["ignored_filters"] == []
+        reg = rr.json()["data"]["items"]
+        keep = ("property_id", "brand_code", "country_code", "status", "verified_at", "updated_by", "updated_by_email", "updated_at")
+        assert [{k: i[k] for k in keep} for i in reg] == [{k: i[k] for k in keep} for i in full]
+        assert {p1, p2} <= {i["property_id"] for i in reg}
+        assert all((i["tracked_events"], i["loaded"], i["conv_basis"], i["project_overrides"], i["pending"]) == (None,) * 5 for i in reg)
+        assert not any("json_agg" in q or "rd.ga4_dim_property" in q or "app.judgment_change" in q for q in st_reg.seen)
+        # 필터도 같은 행
+        rk = (await c.get(BASE, params={"fields": "registry", "brand_code": "Kia", "country_code": "de"})).json()["data"]["items"]
+        assert [i["property_id"] for i in rk if i["property_id"] in env["pids"]] == [p1]
+        for bad in ({"fields": "all"},):
+            assert (await c.get(BASE, params=bad)).status_code == 422
+        assert (await c.put(f"{BASE}/{p1}", params={"return": "none"}, json={})).status_code == 422
+
+
+@needs_db
 async def test_events(client_as, env):
     pid = env["pids"][2]
     own = env["owner"]

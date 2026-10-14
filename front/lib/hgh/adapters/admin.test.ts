@@ -35,7 +35,6 @@ const { summarizeKeywordSearchVolume } = await import("@/lib/keyword/dataforseo"
 const a = await import("./admin");
 const volumeRoute = await import("@/app/api/keyword/volume/route");
 const toPromptRoute = await import("@/app/api/keyword/to-prompt/route");
-const promptToVolumeRoute = await import("@/app/api/keyword/prompt-to-volume/route");
 
 const TOKEN = "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJ1In0.c2ln";
 const U = (n: number) => `00000000-0000-4000-8000-${n.toString(16).padStart(12, "0")}`;
@@ -320,6 +319,24 @@ describe("catalog", () => {
     expect(await a.catalogMarketVocabulary()).toEqual(["KR", "x:EU"]);
   });
 
+  it("writes ask for the minimal answer (return=minimal): the actions read the status only", async () => {
+    mock(() => data({ prompt: null, change_id: null, change_ids: [], outbox_id: null, propagation: "none", applied: true, warnings: [] }));
+    expect(await a.setCatalogKind(U(1), "acr")).toEqual({ ok: true, value: undefined });
+    expect(await a.updateCatalogText(U(1), "x")).toEqual({ ok: true, value: undefined });
+    expect(await a.updateCatalogLabels(U(1), { brand: "Kia" })).toEqual({ ok: true, value: undefined });
+    expect(await a.updateCatalogRegions(U(1), { lang: "en" })).toEqual({ ok: true, value: undefined });
+    expect(await a.softDeleteCatalogPrompt(U(1))).toEqual({ ok: true, value: undefined });
+    expect(await a.restoreCatalogPrompt(U(1))).toEqual({ ok: true, value: undefined });
+    expect(calls.map((c) => `${c.method} ${c.path}${c.query}`)).toEqual([
+      `PATCH /v1/admin/catalog/prompts/${U(1)}/kind?return=minimal`,
+      `PATCH /v1/admin/catalog/prompts/${U(1)}/text?return=minimal`,
+      `PATCH /v1/admin/catalog/prompts/${U(1)}/labels?return=minimal`,
+      `PATCH /v1/admin/catalog/prompts/${U(1)}/regions?return=minimal`,
+      `DELETE /v1/admin/catalog/prompts/${U(1)}?return=minimal`,
+      `POST /v1/admin/catalog/prompts/${U(1)}/restore?return=minimal`,
+    ]);
+  });
+
   it("delete / restore absorb state_mismatch; other codes give the legacy messages", async () => {
     mock(() => fail(409, "state_mismatch"));
     expect(await a.softDeleteCatalogPrompt(U(1))).toEqual({ ok: true, value: undefined });
@@ -428,6 +445,8 @@ describe("interest, entities, citation overrides, GA4", () => {
       "DELETE /v1/admin/ga4/markets/Kia/US null",
       "DELETE /v1/admin/ga4/properties/7 null",
     ]);
+    // Property PUTs ask for the minimal answer (only `verified` is read); the lookup reads the registry columns.
+    expect(calls.map((c) => c.query)).toEqual(["", "?return=minimal", "?return=minimal", "?fields=registry", "?return=minimal", "", ""]);
     calls = [];
     expect(await a.removeGa4Row("some-legacy-uuid")).toEqual({ ok: false, error: "매핑을 찾을 수 없습니다. 목록을 새로 고쳐 주세요" });
     expect(calls).toEqual([]);
@@ -437,6 +456,31 @@ describe("interest, entities, citation overrides, GA4", () => {
     expect(await a.verifyGa4Property("7", { brand: "Kia", countryCode: "US" })).toEqual({ ok: false, error: "검증 실패: GA4 읽기 권한을 확인하세요" });
     mock(() => fail(404, "not_found"));
     expect(await a.removeGa4Row("p:7")).toEqual({ ok: true, value: undefined });
+  });
+
+  it("GA4 registry: registry columns only; a properties or markets 5xx errors the page, overrides alone degrade (U11-N7)", async () => {
+    const prop = { property_id: "7", brand_code: "Kia", country_code: "US", status: "active", verified_at: null };
+    const answer = (c: Call) =>
+      c.path === "/v1/admin/ga4/properties"
+        ? data({ items: [prop] })
+        : c.path === "/v1/admin/ga4/markets"
+          ? data({ items: [{ brand_code: "Genesis", country_code: "KR" }] })
+          : data({ items: [{ project_id: U(5), name: "p", brand_code: null, country_code: "US", property_id: "7" }] }, { page: { next_cursor: null } });
+    mock(answer);
+    const ok = await withRequestScope(() => a.listGa4Registry());
+    expect(ok.rows.map((r) => r.id)).toEqual(["m:Genesis:KR", "p:7"]);
+    expect(ok.overrides.map((r) => r.id)).toEqual([U(5)]);
+    expect(calls.find((c) => c.path === "/v1/admin/ga4/properties")?.query).toBe("?fields=registry");
+    for (const part of ["/v1/admin/ga4/properties", "/v1/admin/ga4/markets"]) {
+      mock((c) => (c.path === part ? fail(503, "unavailable") : answer(c)));
+      await expect(withRequestScope(() => a.listGa4Registry())).rejects.toMatchObject({ status: 503 });
+    }
+    mock((c) => (c.path === "/v1/admin/ga4/project-overrides" ? fail(503, "unavailable") : answer(c)));
+    const noOverrides = await withRequestScope(() => a.listGa4Registry());
+    expect(noOverrides).toEqual({ rows: ok.rows, overrides: [] });
+    // A session fault anywhere still wins over a registry 5xx.
+    mock((c) => (c.path === "/v1/admin/ga4/project-overrides" ? fail(401, "unauthenticated") : c.path === "/v1/admin/ga4/markets" ? fail(503, "unavailable") : answer(c)));
+    await expect(withRequestScope(() => a.listGa4Registry())).rejects.toMatchObject({ status: 401 });
   });
 
   it("degradeRead: 5xx -> empty, 401/403/404 and local faults rethrown", () => {
@@ -469,7 +513,7 @@ describe("keyword tools", () => {
   it("queued volume: polls the change until applied, then asks once more", async () => {
     let posts = 0;
     mock((c) => {
-      if (c.method === "GET") return data({ change_id: 5, status: "applied", kind: "dfs_fetch", requested_at: "2026-09-29T00:00:00Z" });
+      if (c.method === "GET") return data({ items: [] }, { page: { next_cursor: null, limit: 200 } }); // no open request left: 5 is done
       posts += 1;
       return posts === 1
         ? json(202, { data: { fetch: fetchState("queued", { change_id: 5, pending_terms: ["a"] }), keywords: [], missing: ["a"], summary: {}, location_code: 1, language_code: "ko" }, meta: { mode: "external" } })
@@ -478,87 +522,76 @@ describe("keyword tools", () => {
     const out = await a.lookupKeywordVolumes(["a"]);
     expect(calls.map((c) => `${c.method} ${c.path}`)).toEqual([
       "POST /v1/admin/keyword-tools/volume",
-      "GET /v1/admin/changes/5",
+      "GET /v1/admin/changes",
       "POST /v1/admin/keyword-tools/volume",
     ]);
     expect(out).toMatchObject({ pending: [], keywords: [{ keyword: "a", search_volume: 5 }] });
   });
 
-  it("queued prompt-to-volume: one LLM POST, then the SAME keywords re-read with POST .../volume (M2)", async () => {
-    // Probe P2 of the verification: a second prompt-to-volume POST would bill the LLM again and
-    // could extract other keywords ([beta]), throwing away the collected alpha volume.
-    let extractions = 0;
-    mock((c) => {
-      if (c.method === "GET") return data({ change_id: 7, status: "applied", kind: "dfs_fetch", requested_at: "2026-09-29T00:00:00Z" });
-      if (c.path.endsWith("/prompt-to-volume")) {
-        extractions += 1;
-        const kw = extractions === 1 ? "alpha" : "beta";
-        return json(202, {
-          data: { fetch: fetchState("queued", { change_id: 7, pending_terms: [kw] }), keywords: [kw], volume: null, volumes: [], language_code: "ko", location_code: 2410 },
-          meta: { mode: "external" },
-        });
-      }
-      return data({ fetch: fetchState("fresh"), keywords: [vol("alpha", 40)], missing: [], summary: {}, location_code: 2410, language_code: "ko" });
-    });
-    const out = await a.promptToVolume("p", 2410, "ko");
-    expect(calls.map((c) => `${c.method} ${c.path}`)).toEqual([
-      "POST /v1/admin/keyword-tools/prompt-to-volume",
-      "GET /v1/admin/changes/7",
-      "POST /v1/admin/keyword-tools/volume",
-    ]);
-    expect(extractions).toBe(1);
-    expect(calls[2].body).toEqual({ keywords: ["alpha"], force: false, location_code: 2410, language_code: "ko" });
-    expect(out).toEqual({ volume: 40, keywords: ["alpha"], debug: { extractedKeywords: ["alpha"], volumes: [{ keyword: "alpha", volume: 40 }] } });
-    // A re-read that is still pending keeps the pending terms; zero volume reads as null (legacy).
-    mock((c) =>
-      c.method === "GET"
-        ? data({ change_id: 7, status: "applied", kind: "dfs_fetch", requested_at: "2026-09-29T00:00:00Z" })
-        : c.path.endsWith("/prompt-to-volume")
-          ? json(202, { data: { fetch: fetchState("queued", { change_id: 7, pending_terms: ["a", "b"] }), keywords: ["a", "b"], volume: null, volumes: [], language_code: "ko", location_code: 1 }, meta: { mode: "external" } })
-          : json(202, { data: { fetch: fetchState("pending", { pending_terms: ["b"] }), keywords: [vol("a", 0)], missing: ["b"], summary: {}, location_code: 1, language_code: "ko" }, meta: { mode: "external" } }),
-    );
-    expect(await a.promptToVolume("p")).toEqual({
-      volume: null, keywords: ["a", "b"], debug: { extractedKeywords: ["a", "b"], volumes: [{ keyword: "a", volume: 0 }] }, pending: ["b"],
-    });
-  });
-
-  it("LLM calls wait KEYWORD_LLM_TIMEOUT_MS (above ONE backend LLM attempt, 180 s; not its retry, U11-N9); routes' maxDuration covers it (M3)", async () => {
+  it("the LLM call waits KEYWORD_LLM_TIMEOUT_MS (above ONE backend LLM attempt, 180 s; not its retry, U11-N9); the route's maxDuration covers it (M3)", async () => {
     expect(a.KEYWORD_LLM_TIMEOUT_MS).toBeGreaterThan(180_000);
     // U11-N9 (declared): the backend retries once (180 + 1.5 + 180 s worst case); the BFF waits
     // for the first attempt only. Covering the retry would change the declaration.
     expect(a.KEYWORD_LLM_TIMEOUT_MS).toBeLessThan(180_000 + 1_500 + 180_000);
     const spy = vi.spyOn(AbortSignal, "timeout");
     try {
-      mock((c) =>
-        c.path.endsWith("/to-prompt")
-          ? data({ questions: [], total_questions: 0, source_keywords: 1, failed_batches: 0 })
-          : data({ fetch: fetchState("fresh"), keywords: ["k"], volume: 1, volumes: [vol("k", 1)], language_code: "ko", location_code: 1 }),
-      );
+      mock(() => data({ questions: [], total_questions: 0, source_keywords: 1, failed_batches: 0 }));
       await a.keywordsToPrompts(["k"], undefined, 10);
-      await a.promptToVolume("p");
-      expect(spy.mock.calls.map((c) => c[0])).toEqual([a.KEYWORD_LLM_TIMEOUT_MS, a.KEYWORD_LLM_TIMEOUT_MS]);
-      // D-7: both LLM calls tell the backend the same wait (it bounds the call, retry included)
+      expect(spy.mock.calls.map((c) => c[0])).toEqual([a.KEYWORD_LLM_TIMEOUT_MS]);
+      // D-7: the LLM call tells the backend the same wait (it bounds the call, retry included)
       expect(calls.map((c) => [c.path, c.headers.get("x-hgh-timeout-ms")])).toEqual([
         ["/v1/admin/keyword-tools/to-prompt", String(a.KEYWORD_LLM_TIMEOUT_MS)],
-        ["/v1/admin/keyword-tools/prompt-to-volume", String(a.KEYWORD_LLM_TIMEOUT_MS)],
       ]);
     } finally {
       spy.mockRestore();
     }
-    // Route budget: to-prompt = one LLM call; prompt-to-volume = LLM call + collection wait + one
-    // volume re-read (external class, 70 s).
+    // Route budget: to-prompt = one LLM call.
     expect(toPromptRoute.maxDuration * 1000).toBeGreaterThan(a.KEYWORD_LLM_TIMEOUT_MS);
-    expect(promptToVolumeRoute.maxDuration * 1000).toBeGreaterThan(a.KEYWORD_LLM_TIMEOUT_MS + a.KEYWORD_POLL_BUDGET_MS + 70_000);
   });
 
   it("waitForChanges: gives up at the budget (false), 404 counts as done, other errors propagate", async () => {
-    mock(() => data({ change_id: 1, status: "pending" }));
+    const open = (ids: number[], next: string | null = null) =>
+      data({ items: ids.map((change_id) => ({ change_id, status: "pending", kind: "dfs_fetch", requested_at: "2026-09-29T00:00:00Z" })) }, { page: { next_cursor: next, limit: 200 } });
+    mock(() => open([1]));
     expect(await a.waitForChanges([1], 30, 10)).toBe(false);
     expect(calls.length).toBeGreaterThanOrEqual(2);
-    mock(() => fail(404, "not_found"));
+    // One list read per round answers every id (not one GET per id): an id that is not open is done
+    // (the per-id rule: applied / failed / escalated_rebuild, or 404).
+    calls = [];
+    mock(() => open([3]));
     expect(await a.waitForChanges([1, 2], 30, 10)).toBe(true);
+    expect(calls.map((c) => `${c.method} ${c.path}`)).toEqual(["GET /v1/admin/changes"]);
+    expect(new URLSearchParams(calls[0].query).getAll("kind")).toEqual(["dfs_fetch"]);
+    expect(new URLSearchParams(calls[0].query).getAll("status").sort()).toEqual(["pending", "running"]);
     mock(() => fail(500, "internal"));
     await expect(a.waitForChanges([1], 30, 10)).rejects.toMatchObject({ status: 500 });
+  });
+
+  it("waitForChanges: reads the next page only while a waited id may be further down; past the cap per id", async () => {
+    // Page 1 lists 900..700 open (change_id desc) with more pages: 5 may be further down -> page 2.
+    calls = [];
+    mock((c) =>
+      c.query.includes("cursor=")
+        ? data({ items: [] }, { page: { next_cursor: null, limit: 200 } })
+        : data({ items: [{ change_id: 900, status: "pending" }, { change_id: 700, status: "running" }] }, { page: { next_cursor: "c2", limit: 200 } }),
+    );
+    expect(await a.waitForChanges([5, 800], 30, 10)).toBe(true);
+    expect(calls.map((c) => (c.query.includes("cursor=") ? "page2" : "page1"))).toEqual(["page1", "page2"]);
+    // 900 open on page 1, nothing below it waited: no second page.
+    calls = [];
+    expect(await a.waitForChanges([900], 30, 10)).toBe(false);
+    expect(calls.every((c) => !c.query.includes("cursor="))).toBe(true);
+    // Every page full and below the waited id: past the page cap the id is read on its own (404 = done).
+    calls = [];
+    let n = 10_000;
+    mock((c) =>
+      c.path === "/v1/admin/changes"
+        ? data({ items: [{ change_id: (n -= 10), status: "pending" }] }, { page: { next_cursor: `c${n}`, limit: 200 } })
+        : fail(404, "not_found"),
+    );
+    expect(await a.waitForChanges([5], 30, 10)).toBe(true);
+    expect(calls.filter((c) => c.path === "/v1/admin/changes")).toHaveLength(10);
+    expect(calls.at(-1)?.path).toBe("/v1/admin/changes/5");
   });
 
   it("route error bodies: bad input 400, auth as is, everything else 500 with the code only", () => {
@@ -580,7 +613,7 @@ describe("keyword tools", () => {
 const post = (path: string, body: unknown) =>
   new Request(`http://front.test${path}`, { method: "POST", body: JSON.stringify(body), headers: { "content-type": "application/json" } }) as never;
 
-describe("/api/keyword/{volume,to-prompt,prompt-to-volume} routes", () => {
+describe("/api/keyword/{volume,to-prompt} routes", () => {
   it("both sources: no session 401, non-admin or admin without the admin menu 403, before any backend or legacy call", async () => {
     mock(() => data({}));
     for (const source of ["legacy", "api"]) {
@@ -593,7 +626,6 @@ describe("/api/keyword/{volume,to-prompt,prompt-to-volume} routes", () => {
         st.session = session;
         expect((await volumeRoute.POST(post("/api/keyword/volume", { keywords: ["a"] }))).status).toBe(status);
         expect((await toPromptRoute.POST(post("/api/keyword/to-prompt", { keywords: ["a"] }))).status).toBe(status);
-        expect((await promptToVolumeRoute.POST(post("/api/keyword/prompt-to-volume", { promptText: "p" }))).status).toBe(status);
       }
     }
     expect(calls).toEqual([]);
@@ -613,17 +645,11 @@ describe("/api/keyword/{volume,to-prompt,prompt-to-volume} routes", () => {
     expect(st.legacyVolumeCalls).toBe(0);
   });
 
-  it("api to-prompt and prompt-to-volume: legacy body shapes; backend failure -> 500 with the code, no message leak", async () => {
-    mock((c) =>
-      c.path.endsWith("/to-prompt")
-        ? data({ questions: [{ original_input: "k", question: "q?", search_intent: "commercial", volume: null }], total_questions: 1, source_keywords: 1, failed_batches: 0 })
-        : data({ fetch: fetchState("fresh"), keywords: ["k1"], volume: 12, volumes: [vol("k1", 12)], language_code: "ko", location_code: 1 }),
-    );
+  it("api to-prompt: legacy body shape; backend failure -> 500 with the code, no message leak", async () => {
+    mock(() => data({ questions: [{ original_input: "k", question: "q?", search_intent: "commercial", volume: null }], total_questions: 1, source_keywords: 1, failed_batches: 0 }));
     const tp = await (await toPromptRoute.POST(post("/api/keyword/to-prompt", { keywords: ["k"], keywordVolumeMap: { k: 3 }, maxQuestions: 900 }))).json();
     expect(tp).toEqual({ success: true, data: { questions: [{ originalInput: "k", question: "q?", searchIntent: "commercial", volume: null }], totalQuestions: 1, sourceKeywords: 1 } });
     expect(calls[0].body).toEqual({ keywords: ["k"], keyword_volume_map: { k: 3 }, max_questions: 500 });
-    const pv = await (await promptToVolumeRoute.POST(post("/api/keyword/prompt-to-volume", { promptText: "p" }))).json();
-    expect(pv).toEqual({ volume: 12, keywords: ["k1"], debug: { extractedKeywords: ["k1"], volumes: [{ keyword: "k1", volume: 12 }] } });
     mock(() => fail(502, "llm_failed"));
     const bad = await toPromptRoute.POST(post("/api/keyword/to-prompt", { keywords: ["k"] }));
     expect(bad.status).toBe(500);
@@ -638,7 +664,6 @@ describe("/api/keyword/{volume,to-prompt,prompt-to-volume} routes", () => {
       for (const [res, generic] of [
         [await volumeRoute.POST(post("/api/keyword/volume", { keywords: ["a"] })), "Failed to fetch keyword volumes"],
         [await toPromptRoute.POST(post("/api/keyword/to-prompt", { keywords: ["a"] })), "Failed to generate prompts"],
-        [await promptToVolumeRoute.POST(post("/api/keyword/prompt-to-volume", { promptText: "p" })), "Failed to fetch search volume"],
       ] as const) {
         expect(res.status).toBe(500);
         const text = await res.text();

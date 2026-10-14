@@ -27,9 +27,10 @@ import "server-only";
 //   /admin/standards/entities      GET /v1/admin/entities?surface=global&sort=answers_desc&limit=500
 //                                  to the end (maxPages 10). Counts = per entity, all time (legacy listDiscoveredBrands).
 //   /admin/standards/citation-sources  GET /v1/admin/citation-overrides/candidates?surface=global&limit=500.
-//   /admin/ga4                     GET /v1/admin/ga4/properties + /markets + /project-overrides (cursor).
-//                                  The three parts degrade separately (5xx -> empty part), as legacy's
-//                                  two independent .catch(() => []) did; see U11-N7 for the import list.
+//   /admin/ga4                     GET /v1/admin/ga4/properties?fields=registry + /markets +
+//                                  /project-overrides (cursor). A properties or markets failure errors
+//                                  the page (U11-N7); the project overrides degrade alone (5xx -> []),
+//                                  as legacy's project list .catch(() => []) did.
 //
 // Field maps (API -> screen prop; legacy source in brackets)
 //   UserItem -> UserRow            user_id->id, scope_* [] -> null (legacy stores empty as null),
@@ -88,14 +89,15 @@ import "server-only";
 //   U11-N5 toggleStandardPromptEnabled (deprecated, not wired to any screen) has no backend
 //          operation; the api source refuses it (soft delete / restore replace it).
 //   U11-N6 the account list shows suspended accounts with a badge (legacy had no status).
-//   U11-N7 GA4: when the properties or markets read fails (5xx), the legacy env import section is
-//          hidden (legacy listed every env market as "not registered" with an import button; the
-//          import could then only fail with market_taken or duplicate a row). Overrides failing
-//          alone keeps the registry and the import section.
+//   U11-N7 GA4: when the properties or markets read fails (5xx), the page shows its error boundary,
+//          as the entity and citation pages (legacy read the registry as empty and listed every env
+//          market as "not registered" with an import button; the import could then only fail with
+//          market_taken or duplicate a row). Overrides failing alone keeps the registry and the
+//          import section.
 //   U11-N8 keyword routes: a 500 body carries the error code in `details` (backend code, or the
 //          local fault code client_config / auth_unbound, or "internal"); legacy put err.message
 //          there. The message is logged server-side only.
-//   U11-N9 keyword to-prompt / prompt-to-volume: the BFF waits up to KEYWORD_LLM_TIMEOUT_MS (185 s:
+//   U11-N9 keyword to-prompt: the BFF waits up to KEYWORD_LLM_TIMEOUT_MS (185 s:
 //          ONE backend LLM attempt, LLM_TIMEOUT_S 180 s + margin, as legacy's single 180 s abort).
 //          The backend LLM client (back/app/core/llm.py:69-84) retries once 1.5 s after a timeout,
 //          429 or 5xx, so its worst case is about 361.5 s (180 + 1.5 + 180; the httpx timeout is
@@ -104,8 +106,6 @@ import "server-only";
 //          is not raised (decision: option 2); the calls send X-HGH-Timeout-Ms = 185 s (D-7) and
 //          the backend bounds the whole call, retries included, by that deadline (llm.py
 //          request_deadline), so the retry no longer runs past the BFF's wait.
-//          prompt-to-volume makes one LLM call per request as legacy (a queued collection is
-//          re-read with POST .../volume).
 import { UnauthorizedError } from "@/lib/auth/errors";
 import { canAccessRoute } from "@/lib/auth/route-policy";
 import type { MenuGroup, OperatorScope, Role } from "@/lib/auth/types";
@@ -499,6 +499,9 @@ const MSG = {
   unsupported: "더 이상 지원하지 않는 작업입니다",
 } as const;
 
+/** Catalog writes ask for the minimal answer: the actions use the status only (no prompt re-read on the backend). */
+const MINIMAL = { return: "minimal" } as const;
+
 const CATALOG_ERRORS: CodeTable = {
   "404": MSG.notFound,
   "409:state_mismatch": MSG.deletedRow,
@@ -510,7 +513,7 @@ const CATALOG_ERRORS: CodeTable = {
 
 export async function setCatalogKind(id: string, kind: "single" | "acr"): Promise<ActionResult> {
   try {
-    await hghPatch("/v1/admin/catalog/prompts/{prompt_id}/kind", { pathParams: { prompt_id: id }, body: { kind, dry_run: false }, retryOn401: true });
+    await hghPatch("/v1/admin/catalog/prompts/{prompt_id}/kind", { pathParams: { prompt_id: id }, query: MINIMAL, body: { kind, dry_run: false }, retryOn401: true });
     return OK;
   } catch (e) {
     return { ok: false, error: writeFailure(e, { ...CATALOG_ERRORS, "404": MSG.kindNotFound }, MSG.kindFailed) };
@@ -519,7 +522,7 @@ export async function setCatalogKind(id: string, kind: "single" | "acr"): Promis
 
 export async function updateCatalogText(id: string, text: string): Promise<ActionResult> {
   try {
-    await hghPatch("/v1/admin/catalog/prompts/{prompt_id}/text", { pathParams: { prompt_id: id }, body: { text }, retryOn401: true });
+    await hghPatch("/v1/admin/catalog/prompts/{prompt_id}/text", { pathParams: { prompt_id: id }, query: MINIMAL, body: { text }, retryOn401: true });
     return OK;
   } catch (e) {
     return { ok: false, error: writeFailure(e, { ...CATALOG_ERRORS, "422:unprocessable": MSG.emptyText }, MSG.saveFailed) };
@@ -561,7 +564,7 @@ export async function updateCatalogLabels(id: string, labels: CatalogLabels): Pr
   const body = toApiLabels(labels);
   if (Object.keys(body).length === 0) return OK; // legacy: no change -> ok, and an empty body is 422
   try {
-    await hghPatch("/v1/admin/catalog/prompts/{prompt_id}/labels", { pathParams: { prompt_id: id }, body, retryOn401: true });
+    await hghPatch("/v1/admin/catalog/prompts/{prompt_id}/labels", { pathParams: { prompt_id: id }, query: MINIMAL, body, retryOn401: true });
     return OK;
   } catch (e) {
     return { ok: false, error: writeFailure(e, CATALOG_ERRORS, MSG.saveFailed) };
@@ -592,7 +595,7 @@ export async function updateCatalogRegions(id: string, patch: CatalogRegionsPatc
   }
   if (Object.keys(body).length === 0) return OK;
   try {
-    await hghPatch("/v1/admin/catalog/prompts/{prompt_id}/regions", { pathParams: { prompt_id: id }, body, retryOn401: true });
+    await hghPatch("/v1/admin/catalog/prompts/{prompt_id}/regions", { pathParams: { prompt_id: id }, query: MINIMAL, body, retryOn401: true });
     return OK;
   } catch (e) {
     if (isApi(e, 422, "region_out_of_vocabulary") && body.regions) {
@@ -652,7 +655,7 @@ export async function bulkCatalogRegions(
 
 export async function softDeleteCatalogPrompt(id: string): Promise<ActionResult> {
   try {
-    await hghDelete("/v1/admin/catalog/prompts/{prompt_id}", { pathParams: { prompt_id: id }, retryOn401: true });
+    await hghDelete("/v1/admin/catalog/prompts/{prompt_id}", { pathParams: { prompt_id: id }, query: MINIMAL, retryOn401: true });
     return OK;
   } catch (e) {
     if (isApi(e, 409, "state_mismatch")) return OK; // already deleted: legacy no-op
@@ -662,7 +665,7 @@ export async function softDeleteCatalogPrompt(id: string): Promise<ActionResult>
 
 export async function restoreCatalogPrompt(id: string): Promise<ActionResult> {
   try {
-    await hghPost("/v1/admin/catalog/prompts/{prompt_id}/restore", { pathParams: { prompt_id: id }, retryOn401: true });
+    await hghPost("/v1/admin/catalog/prompts/{prompt_id}/restore", { pathParams: { prompt_id: id }, query: MINIMAL, retryOn401: true });
     return OK;
   } catch (e) {
     if (isApi(e, 409, "state_mismatch")) return OK; // already active: legacy no-op
@@ -1192,15 +1195,16 @@ export const GA4_OVERRIDES_MAX_PAGES = 10;
 
 /**
  * Registry rows (properties + property-less markets, brand then country) and project overrides.
- * The three reads degrade independently, as legacy did (registry list and project list each
- * `.catch(() => [])`): a failed part reads as empty (degradeRead: 401 / 403 / 404 and local
- * faults still throw). `registryComplete` is false when properties or markets failed; the page
- * then hides the legacy env import section, since "not registered" is unknown and an import
- * could only fail (market_taken) or duplicate a row.
+ * A failed properties or markets read is thrown (the page maps it with throwForPage: its error
+ * boundary), as the entity and citation pages: an empty registry would read as "nothing
+ * registered" and offer every env market for import, which could only fail (market_taken) or
+ * duplicate a row (U11-N7). The project overrides still degrade alone, as legacy's project list
+ * `.catch(() => [])` (degradeRead: 401 / 403 / 404 and local faults still throw). The property
+ * list asks for the registry columns only (fields=registry: the row map reads five fields).
  */
-export async function listGa4Registry(): Promise<{ rows: AdminGa4Row[]; overrides: AdminGa4OverrideRow[]; registryComplete: boolean }> {
+export async function listGa4Registry(): Promise<{ rows: AdminGa4Row[]; overrides: AdminGa4OverrideRow[] }> {
   const [props, markets, overrides] = await Promise.allSettled([
-    hghGet("/v1/admin/ga4/properties"),
+    hghGet("/v1/admin/ga4/properties", { query: { fields: "registry" } }),
     hghGet("/v1/admin/ga4/markets"),
     allPages(async (cursor) => {
       const res = await hghGet("/v1/admin/ga4/project-overrides", {
@@ -1211,16 +1215,13 @@ export async function listGa4Registry(): Promise<{ rows: AdminGa4Row[]; override
   ]);
   // Fatal reasons first (any part), so a session / permission fault is never read as "empty".
   for (const r of [props, markets, overrides]) if (r.status === "rejected") degradeRead(r.reason, null);
-  const propRows = props.status === "fulfilled" ? props.value.data.items.map(toGa4PropertyRow) : [];
-  const marketRows = markets.status === "fulfilled" ? markets.value.data.items.map(toGa4MarketRow) : [];
-  const rows = [...propRows, ...marketRows].sort(
+  // The registry parts are not degraded (U11-N7): their failure is the page's.
+  if (props.status === "rejected") throw props.reason;
+  if (markets.status === "rejected") throw markets.reason;
+  const rows = [...props.value.data.items.map(toGa4PropertyRow), ...markets.value.data.items.map(toGa4MarketRow)].sort(
     (a, b) => cmp(a.brand, b.brand) || cmp(a.countryCode, b.countryCode) || cmp(a.id, b.id),
   );
-  return {
-    rows,
-    overrides: overrides.status === "fulfilled" ? overrides.value : [],
-    registryComplete: props.status === "fulfilled" && markets.status === "fulfilled",
-  };
+  return { rows, overrides: overrides.status === "fulfilled" ? overrides.value : [] };
 }
 
 const GA4_ERRORS: CodeTable = {
@@ -1237,6 +1238,7 @@ export async function putGa4Mapping(brand: string, countryCode: string, property
     if (propertyId) {
       await hghPut("/v1/admin/ga4/properties/{property_id}", {
         pathParams: { property_id: propertyId },
+        query: MINIMAL,
         body: { brand_code: brand, country_code: countryCode, verify: false },
         retryOn401: true,
       });
@@ -1256,6 +1258,7 @@ export async function putGa4Mapping(brand: string, countryCode: string, property
 /**
  * verify=true PUT. The body replaces the mapping, so brand and country go with it: from the
  * caller's row, else looked up in the property list (a property unknown there -> not found).
+ * Only `verified` of the answer is read (return=minimal: no property re-read on the backend).
  */
 export async function verifyGa4Property(
   propertyId: string,
@@ -1264,13 +1267,14 @@ export async function verifyGa4Property(
   try {
     let m = market ?? null;
     if (!m) {
-      const list = await hghGet("/v1/admin/ga4/properties");
+      const list = await hghGet("/v1/admin/ga4/properties", { query: { fields: "registry" } });
       const hit = list.data.items.find((p) => p.property_id === propertyId);
       if (!hit) return { ok: false, error: GA4_ERRORS["404"] };
       m = { brand: hit.brand_code ?? "", countryCode: hit.country_code ?? "" };
     }
     const res = await hghPut("/v1/admin/ga4/properties/{property_id}", {
       pathParams: { property_id: propertyId },
+      query: MINIMAL,
       body: { brand_code: m.brand || null, country_code: m.countryCode || null, verify: true },
       timeoutClass: "external",
       retryOn401: true,
@@ -1305,7 +1309,7 @@ export async function removeGa4Row(id: string): Promise<ActionResult> {
   }
 }
 
-// ── keyword tools (/api/keyword/{volume,to-prompt,prompt-to-volume}) ───────
+// ── keyword tools (/api/keyword/{volume,to-prompt}) ─────────────────────────
 
 export interface KeywordVolumeRow {
   keyword: string;
@@ -1376,7 +1380,7 @@ export function summarizeVolumes(rows: KeywordVolumeRow[]): KeywordVolumeSummary
 }
 
 /**
- * Screen gate of the keyword tools, applied by /api/keyword/{volume,to-prompt,prompt-to-volume}
+ * Screen gate of the keyword tools, applied by /api/keyword/{volume,to-prompt}
  * on both sources before anything else (the page's route-policy check: role admin AND the
  * account's menu groups; U4 F1 lesson: a relay route gates like its screen).
  */
@@ -1385,36 +1389,75 @@ export function canUseKeywordTools(user: { role: Role; menuGroups?: readonly Men
 }
 
 /**
- * BFF timeout of the two LLM calls (to-prompt, prompt-to-volume): the backend's LLM cap for ONE
+ * BFF timeout of the LLM call (to-prompt): the backend's LLM cap for ONE
  * attempt (LLM_TIMEOUT_S = 180, the legacy OpenRouter abort) plus a margin. It covers the first
  * attempt only: the backend client retries once after a timeout, 429 or 5xx (1.5 s later, worst
- * case about 361.5 s in all). The calls also send it as X-HGH-Timeout-Ms (D-7), so the backend
+ * case about 361.5 s in all). The call also sends it as X-HGH-Timeout-Ms (D-7), so the backend
  * bounds the whole LLM call, retry included, to this value minus its 2 s margin and no retry
- * runs on after the BFF gave up (U11-N9). The routes' maxDuration sits above this value.
+ * runs on after the BFF gave up (U11-N9). The route's maxDuration sits above this value.
  */
 export const KEYWORD_LLM_TIMEOUT_MS = 185_000;
 
 /** Longest wait inside one route call for queued DataForSEO collection (U11-N4). */
 export const KEYWORD_POLL_BUDGET_MS = 20_000;
 export const KEYWORD_POLL_INTERVAL_MS = 1_500;
+/** One page of open collection requests per poll round; more pages only while a waited id may lie further down. */
+export const KEYWORD_POLL_PAGE_LIMIT = 200;
+const KEYWORD_POLL_MAX_PAGES = 10;
 const DONE = new Set(["applied", "failed", "escalated_rebuild"]);
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** One change by id: done when applied / failed / escalated_rebuild, or gone (404). */
+async function changeDone(id: number): Promise<boolean> {
+  try {
+    const res = await hghGet("/v1/admin/changes/{change_id}", { pathParams: { change_id: id }, dedupe: false });
+    return DONE.has(res.data.status);
+  } catch (e) {
+    if (isApi(e, 404)) return true;
+    throw e;
+  }
+}
+
+/**
+ * Ids among `ids` still open (pending / running). One GET /v1/admin/changes of the open keyword
+ * collection requests (kind dfs_fetch, change_id desc) answers every id at once: an id not listed
+ * is done, the same rule as the per-id read (DONE or 404). The next page is read only while a
+ * waited id is below the last listed one; past the page cap the rest is read per id.
+ */
+async function openChanges(ids: Set<number>): Promise<Set<number>> {
+  const readPage = async (cursor: string | null) => {
+    const res = await hghGet("/v1/admin/changes", {
+      query: { kind: ["dfs_fetch"], status: ["pending", "running"], limit: KEYWORD_POLL_PAGE_LIMIT, ...(cursor ? { cursor } : {}) },
+      dedupe: false,
+    });
+    return { ids: res.data.items.map((c) => c.change_id), next: pageInfo(res.meta).nextCursor };
+  };
+  const listed = new Set<number>();
+  let cursor: string | null = null;
+  let floor = Number.POSITIVE_INFINITY;
+  for (let page = 0; page < KEYWORD_POLL_MAX_PAGES; page++) {
+    const read = await readPage(cursor);
+    for (const id of read.ids) {
+      listed.add(id);
+      floor = Math.min(floor, id);
+    }
+    cursor = read.next;
+    if (!cursor || ![...ids].some((id) => id < floor && !listed.has(id))) {
+      return new Set([...ids].filter((id) => listed.has(id)));
+    }
+  }
+  const open = new Set<number>();
+  for (const id of ids) if (listed.has(id) || (id < floor && !(await changeDone(id)))) open.add(id);
+  return open;
+}
+
 /** Poll the change queue until every id is done or the budget runs out. True when all are done. */
 export async function waitForChanges(ids: number[], budgetMs = KEYWORD_POLL_BUDGET_MS, intervalMs = KEYWORD_POLL_INTERVAL_MS): Promise<boolean> {
-  const pending = new Set(ids);
+  let pending = new Set(ids);
   const deadline = Date.now() + budgetMs;
   while (pending.size > 0) {
-    for (const id of [...pending]) {
-      try {
-        const res = await hghGet("/v1/admin/changes/{change_id}", { pathParams: { change_id: id }, dedupe: false });
-        if (DONE.has(res.data.status)) pending.delete(id);
-      } catch (e) {
-        if (isApi(e, 404)) pending.delete(id);
-        else throw e;
-      }
-    }
+    pending = await openChanges(pending);
     if (pending.size === 0) return true;
     if (Date.now() + intervalMs > deadline) return false;
     await wait(intervalMs);
@@ -1484,63 +1527,6 @@ export async function keywordsToPrompts(
     volume: q.volume ?? null,
   }));
   return { questions, totalQuestions: res.data.total_questions, sourceKeywords: res.data.source_keywords };
-}
-
-export interface PromptVolume {
-  volume: number | null;
-  keywords: string[];
-  debug?: { extractedKeywords: string[]; volumes: Array<{ keyword: string; volume: number }> };
-  pending?: string[];
-}
-
-/**
- * POST …/prompt-to-volume once (LLM extraction + volume lookup on the backend). When collection
- * was queued, wait (bounded) and re-read the volumes of the SAME extracted keywords with POST
- * …/volume (no LLM): posting prompt-to-volume again would bill the LLM twice and could extract
- * different keywords, throwing away the volumes just collected.
- */
-export async function promptToVolume(promptText: string, locationCode?: number, languageCode?: string): Promise<PromptVolume> {
-  const res = await hghPost("/v1/admin/keyword-tools/prompt-to-volume", {
-    body: {
-      prompt_text: promptText,
-      force: false,
-      ...(locationCode !== undefined ? { location_code: locationCode } : {}),
-      ...(languageCode !== undefined ? { language_code: languageCode } : {}),
-    },
-    timeoutMs: KEYWORD_LLM_TIMEOUT_MS,
-    header: { "X-HGH-Timeout-Ms": KEYWORD_LLM_TIMEOUT_MS },
-    retryOn401: true,
-  });
-  const d = res.data;
-  if (d.keywords.length === 0) return { volume: null, keywords: [] };
-  let items = d.volumes;
-  let fetch = d.fetch;
-  if (fetch.status !== "fresh") {
-    const ids = changeIds(fetch);
-    if (ids.length > 0 && (await waitForChanges(ids))) {
-      const again = await hghPost("/v1/admin/keyword-tools/volume", {
-        body: { keywords: d.keywords, force: false, location_code: d.location_code, language_code: d.language_code },
-        timeoutClass: "external",
-        retryOn401: true,
-      });
-      items = again.data.keywords;
-      fetch = again.data.fetch;
-    }
-  }
-  const volumes = items.map(toVolumeRow);
-  const pending = fetch.status === "fresh" ? [] : [...(fetch.pending_terms ?? [])];
-  if (volumes.length === 0) return { volume: null, keywords: d.keywords, ...(pending.length ? { pending } : {}) };
-  // The backend's rule (max search volume, 0 -> null), recomputed on whichever volume set is used.
-  const top = Math.max(...volumes.map((v) => v.search_volume));
-  return {
-    volume: top > 0 ? top : null,
-    keywords: d.keywords,
-    debug: {
-      extractedKeywords: d.keywords,
-      volumes: volumes.map((v) => ({ keyword: v.keyword, volume: v.search_volume })),
-    },
-    ...(pending.length ? { pending } : {}),
-  };
 }
 
 /**

@@ -23,6 +23,7 @@ from .schemas import (
     EventsData,
     EventsPut,
     EventsWritten,
+    Ga4Fields,
     Ga4Property,
     MarketDeleted,
     MarketPut,
@@ -33,6 +34,7 @@ from .schemas import (
     PropertyPut,
     PropertyWritten,
     PropStatus,
+    WriteReturn,
 )
 
 router = APIRouter(tags=["admin.integrations"], responses=ERROR_RESPONSES)
@@ -50,9 +52,11 @@ async def get_admin_ga4_properties_0(
     brand_code: Annotated[str | None, Query(max_length=50)] = None,
     country_code: Annotated[str | None, Query(min_length=2, max_length=2)] = None,
     status: Annotated[PropStatus | None, Query()] = None,
+    fields: Annotated[Ga4Fields, Query(description="registry = 화면 표 열만(tracked_events·loaded·conv_basis·project_overrides·pending 은 "
+                                                   "계산하지 않고 null). 기본 full = 종전")] = "full",
 ) -> Envelope[ListData[Ga4Property]]:
-    """브랜드·국가 순. 추적 이벤트 수·적재 투영 여부·프로젝트 직접 지정·대기 요청을 함께 낸다."""
-    items = await service.list_properties(conn, brand=brand_code, country=country_code, status=status)
+    """브랜드·국가 순. 추적 이벤트 수·적재 투영 여부·프로젝트 직접 지정·대기 요청을 함께 낸다(fields=registry 면 생략)."""
+    items = await service.list_properties(conn, brand=brand_code, country=country_code, status=status, fields=fields)
     return Envelope[ListData[Ga4Property]](data=ListData[Ga4Property](items=items), meta=crud_meta(request.query_params, mode="admin"))
 
 
@@ -72,10 +76,13 @@ async def get_admin_ga4_project_overrides_5(
 
 
 @router.put("/v1/admin/ga4/properties/{property_id}", summary="(단위 설계 필요) GA4 속성 등록·수정(브랜드·국가 매핑) + judgment_change(ga4_property)")
-async def put_admin_ga4_properties_by_id_1(p: AdminDetached, open_ro: RoSession, ga4: Ga4AccessDep, property_id: PropertyId,
-                                           body: PropertyPut) -> Envelope[PropertyWritten]:
+async def put_admin_ga4_properties_by_id_1(
+    p: AdminDetached, open_ro: RoSession, ga4: Ga4AccessDep, property_id: PropertyId, body: PropertyPut,
+    ret: Annotated[WriteReturn, Query(alias="return", description="minimal = 응답 property 재조회 생략(null). 기본 full = 종전")] = "full",
+) -> Envelope[PropertyWritten]:
     """verify=true 면 GA4 읽기 권한 확인 후 active(실패면 저장 안 함). 같은 브랜드·국가가 다른 속성에 있으면 409 market_taken."""
-    return Envelope[PropertyWritten](data=await service.put_property(open_ro, p, ga4, property_id, body), meta=build_meta(mode="admin"))
+    data = await service.put_property(open_ro, p, ga4, property_id, body, minimal=ret == "minimal")
+    return Envelope[PropertyWritten](data=data, meta=build_meta(mode="admin"))
 
 
 @router.delete("/v1/admin/ga4/properties/{property_id}", dependencies=GATE, summary="(단위 설계 필요) GA4 속성 삭제")

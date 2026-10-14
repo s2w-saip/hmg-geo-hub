@@ -9,6 +9,8 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 PropStatus = Literal["active", "pending_grant", "unmapped"]
+Ga4Fields = Literal["full", "registry"]          # 속성 목록 열 범위(registry = 화면 표 열만, 기본 full = 종전)
+WriteReturn = Literal["full", "minimal"]         # PUT 응답 범위(minimal = property 재조회 생략, 기본 full = 종전)
 ConvBasis = Literal["key_events", "tracked_events"]
 CONV_BASIS: dict[int, ConvBasis] = {1: "key_events", 2: "tracked_events"}
 PROPERTY_ID_RE = re.compile(r"^\d{1,20}$")                       # 현행 upsertGa4Mapping: 숫자만
@@ -52,11 +54,12 @@ class Ga4Property(BaseModel):
     updated_by: uuid.UUID | None = None
     updated_by_email: str | None = None
     updated_at: datetime
-    tracked_events: int = Field(description="추적(전환) 이벤트 수. 0 이면 key events 폴백")
-    loaded: bool = Field(description="적재기가 rd.ga4_dim_property 에 투영했는지(GA4 행 적재 대상)")
+    tracked_events: int | None = Field(description="추적(전환) 이벤트 수. 0 이면 key events 폴백(fields=registry 면 null)")
+    loaded: bool | None = Field(description="적재기가 rd.ga4_dim_property 에 투영했는지(GA4 행 적재 대상, fields=registry 면 null)")
     conv_basis: ConvBasis | None = Field(None, description="적재된 전환 기준(1 key events 폴백, 2 추적 이벤트)")
-    project_overrides: list[ProjectOverride] = Field(default_factory=list, description="이 속성을 직접 지정한 고객 프로젝트(읽기 전용)")
-    pending: list[PendingChange] = Field(default_factory=list)
+    project_overrides: list[ProjectOverride] | None = Field(default_factory=list,
+                                                            description="이 속성을 직접 지정한 고객 프로젝트(읽기 전용, fields=registry 면 null)")
+    pending: list[PendingChange] | None = Field(default_factory=list, description="대기·실행 중 요청(fields=registry 면 null)")
 
 
 class PropertyPut(BaseModel):
@@ -84,7 +87,7 @@ class PropertyPut(BaseModel):
 
 
 class PropertyWritten(BaseModel):
-    property: Ga4Property
+    property: Ga4Property | None = Field(description="저장 뒤 속성 행(return=minimal 면 null: 응답용 재조회 생략)")
     verified: bool | None = Field(None, description="verify 요청 결과(요청 안 했으면 null)")
     change_id: int | None = None
     propagation: Literal["pending", "none"]

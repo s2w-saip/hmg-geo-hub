@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { NextIntlClientProvider } from "next-intl";
 import ko from "@/messages/ko.json";
@@ -12,6 +12,7 @@ import {
   type FilterState,
   type StandardPromptViewRow,
 } from "./prompt-list-readonly";
+import { collationOf, rereadAfterHydration, type CatalogPage } from "@/lib/standards/catalog-page";
 
 // 대상 시장·언어·측정 상태 컬럼의 렌더 실측 (H4 수용 기준 1·2·3·5·6).
 // 정적 검사가 아니라 실제 렌더러(react-dom/server)로 마크업을 뽑아 확인한다.
@@ -189,5 +190,45 @@ describe("filterRows — 시장·언어·상태 3축 필터 (수용 기준 4)", 
     expect(
       filterRows(ROWS, F({ market: "CN", status: STATUS_MEASURED }), ""),
     ).toHaveLength(0);
+  });
+});
+
+describe("remote first page — server render order (B077)", () => {
+  // The server render reads with the browser's collation (Accept-Language). Korean ICU puts Hangul
+  // before Latin, English ICU the other way round: the first render must already be the order the
+  // former hydration re-read (collation ko) produced, and no re-read is needed.
+  const texts = ["b row", "가 행", "a row", "나 행"];
+  const koOrder = [...texts].sort(new Intl.Collator("ko").compare);
+  const enOrder = [...texts].sort(new Intl.Collator("en").compare);
+  const page = (order: string[], collation: "ko" | "en"): CatalogPage => ({
+    rows: order.map((text) => ({ ...row({ text }), id: `id-${text}` })) as unknown as CatalogPage["rows"],
+    total: order.length, count: order.length, offset: 0, limit: 50, facets: {}, columns: [], collation,
+  });
+  function renderRemote(initial: CatalogPage) {
+    const load = vi.fn(), rows = vi.fn();
+    const html = renderToStaticMarkup(
+      <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
+        <StandardPromptReadonlyList rows={initial.rows as unknown as StandardPromptViewRow[]} remote={{ initial, load, rows }}
+          scopeAll scopeRole="admin" scopeBrands={[]} scopeRegions={[]} scopeCountries={[]} />
+      </NextIntlClientProvider>,
+    );
+    return { html, load, rows };
+  }
+  const shown = (html: string) => texts.map((t) => [t, html.indexOf(t)] as const).sort((a, b) => a[1] - b[1]).map(([t]) => t);
+
+  it("a Korean browser: the first render is the Korean ICU order and it is not read again", () => {
+    expect(koOrder).not.toEqual(enOrder);
+    const { html, load, rows } = renderRemote(page(koOrder, "ko"));
+    expect(shown(html)).toEqual(koOrder);
+    expect(load).not.toHaveBeenCalled();
+    expect(rows).not.toHaveBeenCalled();
+    expect(rereadAfterHydration({ collation: "ko" }, collationOf("ko-KR"))).toBe(false);
+  });
+
+  it("a browser other than the request's language still re-reads (the final order is the browser's, as before)", () => {
+    const { html } = renderRemote(page(enOrder, "en"));
+    expect(shown(html)).toEqual(enOrder);
+    expect(rereadAfterHydration({ collation: "en" }, collationOf("ko-KR"))).toBe(true);
+    expect(rereadAfterHydration({ collation: "en" }, collationOf("en-US"))).toBe(false);
   });
 });
