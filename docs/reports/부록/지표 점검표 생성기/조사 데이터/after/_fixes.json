@@ -1860,6 +1860,93 @@
     ]
    },
    "by": "3f16f64"
+  },
+  {
+   "surface": "project",
+   "endpoint": "GET /v1/projects/{project_id}",
+   "set": {
+    "f8": [
+     "n",
+     "BFF 단독 게이트 전부 view=gate: filters/options·인용·키워드 + 드릴다운 4라우트(brand-mention-prompts·signal-prompts·brand-citations·answer, 401 재시도 유지). 페이지 렌더 게이트는 레이아웃·홈 타일·설정 상세·언급 지정 브랜드와 요청 내 1콜 공유라 full 유지(전환은 (dash)/layout.tsx·mentions.ts 필요)",
+     "6 / view=gate 3"
+    ]
+   },
+   "by": "f703207"
+  },
+  {
+   "surface": "project_ops_interest",
+   "endpoint": "GET /v1/projects/{project_id}",
+   "set": {
+    "f8": [
+     "n",
+     "단독 게이트 전부 view=gate: 키워드 /api 라우트, 프롬프트 탭 서버 액션(P3), 재처리 권한 확인(P13e). 멤버·설정·프롬프트·의도 페이지 렌더 게이트는 레이아웃과 1콜 공유라 full 유지",
+     "5 / view=gate 2"
+    ]
+   },
+   "by": "f703207"
+  },
+  {
+   "surface": "project_ops_interest",
+   "endpoint": "POST /v1/projects/{project_id}/prompts/{prompt_id}/resume",
+   "set": {
+    "f7": [
+     "y",
+     "행 잠금 + outbox(prompt:enable) supersede 한 트랜잭션, 다이얼로그 pending 비활성, 응답 status(done/미발행 queued)를 오버레이에 즉시 표시(B019). (메모: 워커 반영 실패는 admin 진단에서만)"
+    ],
+    "f10": [
+     "n",
+     "U9-N10 선언 차이 남음(동기 Scope 반영 분기 없음). 오버레이는 응답 서버 상태로 즉시 표시(P13e)"
+    ]
+   },
+   "by": "f703207"
+  },
+  {
+   "surface": "project_ops_interest",
+   "endpoint": "PUT /v1/projects/{project_id}/settings/engines",
+   "set": {
+    "f7": [
+     "y",
+     "ai_engines·이력·outbox 한 트랜잭션, 같은 값이면 no-op, 저장 버튼 pending. 어휘 밖 엔진은 kept 로 그대로 돌려보내 보존(#16, api·legacy — legacy 는 이미 저장된 코드만)"
+    ],
+    "f10": [
+     "n",
+     "U9-N7: pushed=true·queued=true 고정(스케줄은 outbox), savedQueued 토스트. 카탈로그 밖 엔진 조용한 제거는 해소(P13e kept 왕복)"
+    ]
+   },
+   "by": "f703207"
+  },
+  {
+   "surface": "project_ops_interest",
+   "endpoint": "GET /v1/projects/{project_id}/settings",
+   "set": {
+    "f10": [
+     "n",
+     "U9-N8: 경쟁사 별칭을 project_tracked_competitor 에서만, owned base id=base_norm·차종 합성 키, engines.can_edit 신설. 어휘 밖 엔진은 컨트롤 없이 engines.kept 로 보존(#16 해소, allowed 안 코드만)"
+    ]
+   },
+   "by": "f703207"
+  },
+  {
+   "surface": "website",
+   "endpoint": "GET /v1/mentions/prompts",
+   "set": {
+    "f9": [
+     "y",
+     "signal 50행 1요청, 잘리면 meta.page.total → 다이얼로그 기존 '{total}개 중 {shown}개 표시'(B008); brand 2,000행 1요청 + 같은 고지. 메모: 답변 참조 상한(signal 6 = 레거시 한도, brand 50) 무고지"
+    ]
+   },
+   "by": "f703207"
+  },
+  {
+   "surface": "project",
+   "endpoint": "GET /v1/mentions/prompts",
+   "set": {
+    "f9": [
+     "y",
+     "signal 50행 1요청, 잘리면 total → '{total}개 중 {shown}개 표시'(B008); brand 2,000행 1요청 + 같은 고지. 메모: 답변 참조 상한(signal 6 = 레거시 한도, brand 50) 무고지"
+    ]
+   },
+   "by": "f703207"
   }
  ]
 }
