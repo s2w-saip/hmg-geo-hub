@@ -86,6 +86,8 @@ for key in SURVEY_ORDER:
         AFTER_KEY_OVERRIDE[(ak["route"], ak["label"])] = ak["api_keys"]
     if AFTER_COMMON.get(key) not in AFN:
         AFTER_COMMON.pop(key, None)
+_pr = os.path.join(AFTER_DIR, "_parity_results.json")  # ref -> pass | fail | missing | skipped (test runs)
+PARITY = json.load(open(_pr, encoding="utf-8")) if os.path.exists(_pr) else {}
 _fx = os.path.join(AFTER_DIR, "_fixes.json")  # corrections for fixes made after the agents measured
 if os.path.exists(_fx):
     for ak in json.load(open(_fx, encoding="utf-8")).get("area_keys", []):
@@ -174,7 +176,15 @@ def after_cell(keys, factor, acommon, write=False, ns=None):
     ks = own + ([acommon] if acommon and acommon in table and not write else [])
     if factor == "F5":
         no_test = [k for k in own if not table[k].get("parity")]
-        return ("n", f"시험 없음 {len(no_test)}") if no_test else ("u", "시험 있음·미실행")
+        if no_test:
+            return "n", f"시험 없음 {len(no_test)}"
+        refs = [r for k in own for r in table[k].get("parity")]
+        res = [PARITY.get(r) for r in refs]
+        if "fail" in res:
+            return "n", f"시험 실패 {res.count('fail')}"
+        if not PARITY or any(x in (None, "missing", "skipped") for x in res):
+            return "u", "시험 있음·미실행" if not PARITY else "일부 시험 미확인"
+        return "y", f"시험 통과 {len(res)}"
     if factor == "F10":
         vals = [table[k].get("f10") for k in ks]
         if any(v is None for v in vals):
@@ -366,7 +376,7 @@ for wid, title, docs, targets, status, factors in WORK:
     ftxt = " · ".join(esc(f.replace("DONE", "완료")) for f in factors)
     wrows.append(f'<tr><td class="id">{wid}</td><td class="small">{esc(title)}</td><td class="small">{esc(docs)}</td><td class="small">{"<br>".join(tnames)}</td><td class="small">{esc(status)}</td><td class="small">{ftxt}</td><td>{wjudge}</td></tr>')
 
-ST = {"done": ("☑ 완료", "done"), "next": ("☐ 다음", "next"), "decide": ("⚠ 결정 필요", "decide")}
+ST = {"done": ("☑ 완료", "done"), "doing": ("◐ 진행 중", "doing"), "next": ("☐ 다음", "next"), "decide": ("⚠ 결정 필요", "decide")}
 prow = []
 for st, title, target, note in PROGRESS:
     lab, cls = ST[st]
@@ -374,7 +384,8 @@ for st, title, target, note in PROGRESS:
 n_done = sum(1 for x in PROGRESS if x[0] == "done")
 n_next = sum(1 for x in PROGRESS if x[0] == "next")
 n_dec = sum(1 for x in PROGRESS if x[0] == "decide")
-progress_html = (f'<section>\n<h2>진행 현황 <span class="muted small">완료 {n_done} · 다음 {n_next} · 결정 필요 {n_dec}</span></h2>\n'
+n_doing = sum(1 for x in PROGRESS if x[0] == "doing")
+progress_html = (f'<section>\n<h2>진행 현황 <span class="muted small">완료 {n_done} · 진행 중 {n_doing} · 다음 {n_next} · 결정 필요 {n_dec}</span></h2>\n'
                  '<div class="scroll"><table class="progress"><thead><tr><th>상태</th><th>항목</th><th>대상 · 판정 요소</th><th>비고</th></tr></thead><tbody>\n'
                  + "\n".join(prow) + '\n</tbody></table></div>\n</section>')
 
