@@ -641,6 +641,505 @@
     ]
    },
    "by": "22a6843"
+  },
+  {
+   "surface": "admin",
+   "endpoint": "GET /v1/admin/interest/keywords",
+   "set": {
+    "f10": [
+     "y",
+     "목록 GET role∧menu = legacy 페이지 게이트, 쓰기는 role 만"
+    ]
+   },
+   "by": "50424c2"
+  },
+  {
+   "surface": "admin",
+   "endpoint": "GET /v1/admin/interest/sources",
+   "set": {
+    "f10": [
+     "y",
+     "목록 GET 메뉴 검사 추가 = legacy 페이지 게이트"
+    ]
+   },
+   "by": "50424c2"
+  },
+  {
+   "surface": "admin",
+   "endpoint": "AACOMMON",
+   "set": {
+    "f10": [
+     "n",
+     "interest·registry 메뉴 검사 해소. 남은 차이 = 정지 계정 401 등 선언 차이"
+    ]
+   },
+   "by": "50424c2"
+  },
+  {
+   "surface": "admin",
+   "endpoint": "GET /v1/admin/ga4/properties",
+   "set": {
+    "f6": [
+     "y",
+     "5xx → throwForPage 오류 경계"
+    ],
+    "f8": [
+     "y",
+     "fields=registry 1문장",
+     "1"
+    ],
+    "f10": [
+     "n",
+     "DC-20 unmapped 의미·행 id 체계 선언 차이 남음"
+    ]
+   },
+   "by": "50424c2"
+  },
+  {
+   "surface": "admin",
+   "endpoint": "GET /v1/admin/ga4/markets",
+   "set": {
+    "f6": [
+     "y",
+     "5xx → 오류 경계"
+    ],
+    "f10": [
+     "y",
+     "legacy 의미 유지, 권한 = 페이지 게이트"
+    ]
+   },
+   "by": "50424c2"
+  },
+  {
+   "surface": "admin",
+   "endpoint": "PAGE GA4 env 매핑 − 레지스트리(legacyEnvMarkets)",
+   "set": {
+    "f6": [
+     "y",
+     "레지스트리 실패는 오류 경계(섹션 숨김 제거)"
+    ],
+    "f10": [
+     "y",
+     "env 등록 대기 섹션 legacy 동일"
+    ]
+   },
+   "by": "50424c2"
+  },
+  {
+   "surface": "admin",
+   "endpoint": "PUT /v1/admin/ga4/properties/{property_id}",
+   "set": {
+    "f8": [
+     "y",
+     "return=minimal",
+     "6~9"
+    ]
+   },
+   "by": "50424c2"
+  },
+  {
+   "surface": "admin",
+   "endpoint": "GET /v1/admin/users",
+   "set": {
+    "f8": [
+     "y",
+     "이어지는 페이지는 첫 스캔 이어 쓰기",
+     "페이지당 1 SQL + Supabase"
+    ]
+   },
+   "by": "50424c2"
+  },
+  {
+   "surface": "admin",
+   "endpoint": "DELETE /v1/admin/users/{user_id}",
+   "set": {
+    "f8": [
+     "y",
+     "Owner 승계 2문장",
+     "5~8"
+    ]
+   },
+   "by": "50424c2"
+  },
+  {
+   "surface": "admin",
+   "endpoint": "GET /v1/admin/changes/{change_id}",
+   "set": {
+    "f8": [
+     "y",
+     "라운드당 목록 1회",
+     "폴링당 1"
+    ]
+   },
+   "by": "50424c2"
+  },
+  {
+   "surface": "admin",
+   "endpoint": "DELETE /v1/admin/catalog/prompts/{prompt_id}",
+   "set": {
+    "f8": [
+     "y",
+     "return=minimal",
+     "4~5"
+    ]
+   },
+   "by": "50424c2"
+  },
+  {
+   "surface": "admin",
+   "endpoint": "PATCH /v1/admin/catalog/prompts/{prompt_id}/kind",
+   "set": {
+    "f8": [
+     "y",
+     "return=minimal",
+     "2~5"
+    ]
+   },
+   "by": "50424c2"
+  },
+  {
+   "surface": "admin",
+   "endpoint": "PATCH /v1/admin/catalog/prompts/{prompt_id}/labels",
+   "set": {
+    "f8": [
+     "y",
+     "return=minimal",
+     "3~6"
+    ]
+   },
+   "by": "50424c2"
+  },
+  {
+   "surface": "admin",
+   "endpoint": "PATCH /v1/admin/catalog/prompts/{prompt_id}/regions",
+   "set": {
+    "f8": [
+     "y",
+     "return=minimal",
+     "2~6"
+    ]
+   },
+   "by": "50424c2"
+  },
+  {
+   "surface": "admin",
+   "endpoint": "PATCH /v1/admin/catalog/prompts/{prompt_id}/text",
+   "set": {
+    "f8": [
+     "y",
+     "return=minimal",
+     "2~5"
+    ]
+   },
+   "by": "50424c2"
+  },
+  {
+   "surface": "admin",
+   "endpoint": "POST /v1/admin/catalog/prompts/{prompt_id}/restore",
+   "set": {
+    "f8": [
+     "y",
+     "return=minimal",
+     "4~5"
+    ]
+   },
+   "by": "50424c2"
+  },
+  {
+   "surface": "admin",
+   "endpoint": "POST /v1/admin/catalog/prompts/screen",
+   "set": {
+    "f8": [
+     "y",
+     "stats 분리(catalog_stats)",
+     "9 (메타 없음 4)"
+    ]
+   },
+   "by": "50424c2"
+  },
+  {
+   "surface": "admin",
+   "endpoint": "POST /v1/admin/catalog/prompts/bulk/apply",
+   "set": {
+    "f7": [
+     "n",
+     "'적용 중' 고착 해소. 남음: 버전 검사 없음·Scope 대기 미노출(결정)"
+    ]
+   },
+   "by": "50424c2"
+  },
+  {
+   "surface": "global",
+   "endpoint": "POST /v1/prompts/screen",
+   "set": {
+    "f8": [
+     "y",
+     "row_fields=list, collation 재조회는 다를 때만",
+     "5 / 3 (+공통 3)"
+    ]
+   },
+   "by": "50424c2"
+  },
+  {
+   "surface": "global",
+   "endpoint": "CLIENT xlsx 내보내기 → POST /v1/prompts/screen 500행 반복",
+   "set": {
+    "f8": [
+     "y",
+     "5,000행 묶음(호출 1/10)",
+     "⌈N/5000⌉×6"
+    ]
+   },
+   "by": "50424c2"
+  },
+  {
+   "surface": "qa_nonscreen",
+   "endpoint": "POST /v1/admin/keyword-tools/prompt-to-volume",
+   "set": {
+    "f3": [
+     "skip",
+     "BFF 라우트 제거"
+    ],
+    "f4": [
+     "skip",
+     "라우트 제거"
+    ],
+    "f6": [
+     "skip",
+     "라우트 제거"
+    ],
+    "f8": [
+     "skip",
+     "라우트 제거"
+    ],
+    "f10": [
+     "skip",
+     "라우트 제거"
+    ]
+   },
+   "by": "50424c2"
+  },
+  {
+   "surface": "project_ops_interest",
+   "endpoint": "DELETE /v1/projects/{project_id}/prompt-fields/{field_id}",
+   "set": {
+    "f7": [
+     "y",
+     "강제 삭제 확인 = 서버 value_count ∪ 로드 행 ∪ 방금 저장한 값"
+    ]
+   },
+   "by": "cd7b77c"
+  },
+  {
+   "surface": "project_ops_interest",
+   "endpoint": "GET /v1/projects/{project_id}/prompt-fields",
+   "set": {
+    "f8": [
+     "y",
+     "value_count 보존해 삭제 확인에 사용",
+     "2 (+공통 3)"
+    ]
+   },
+   "by": "cd7b77c"
+  },
+  {
+   "surface": "project_ops_interest",
+   "endpoint": "DELETE /v1/projects/{project_id}/members/{user_id}",
+   "set": {
+    "f7": [
+     "y",
+     "DELETE ?expect=pending 1회 — 수락 경합 시 409 not_pending, 활성 멤버 제거 없음"
+    ],
+    "f8": [
+     "y",
+     "명부 선조회 제거",
+     "4 (+공통 3)"
+    ]
+   },
+   "by": "cd7b77c"
+  },
+  {
+   "surface": "project_ops_interest",
+   "endpoint": "GET /v1/projects/{project_id}/members",
+   "set": {
+    "f8": [
+     "y",
+     "cancelInvite 명부 재조회 제거",
+     "2 (+공통 3)"
+    ]
+   },
+   "by": "cd7b77c"
+  },
+  {
+   "surface": "project_ops_interest",
+   "endpoint": "GET /v1/projects/{project_id}/settings/scope-link",
+   "set": {
+    "f6": [
+     "y",
+     "일시 실패 → 블록 안 기존 오류 상태"
+    ],
+    "f8": [
+     "y",
+     "include_recent=false, 게이트 행 재사용",
+     "6 (+공통 2)"
+    ]
+   },
+   "by": "cd7b77c"
+  },
+  {
+   "surface": "project_ops_interest",
+   "endpoint": "POST /v1/projects/{project_id}/prompts/{prompt_id}/resume",
+   "set": {
+    "f10": [
+     "n",
+     "U9-N10 선언 차이 남음. 오버레이는 revalidate 뒤 서버 상태로 교체"
+    ]
+   },
+   "by": "cd7b77c"
+  },
+  {
+   "surface": "project_ops_interest",
+   "endpoint": "GET /v1/projects/{project_id}",
+   "set": {
+    "f8": [
+     "n",
+     "view=gate 추가, 프롬프트 탭 서버 액션만 경량. 기본 전환은 정리 묶음",
+     "5 / view=gate 2"
+    ]
+   },
+   "by": "cd7b77c"
+  },
+  {
+   "surface": "project_ops_interest",
+   "endpoint": "POST /v1/projects/{project_id}/prompt-candidates/screen",
+   "set": {
+    "f8": [
+     "y",
+     "서버 액션 게이트 경량",
+     "3 (+공통 3)"
+    ]
+   },
+   "by": "cd7b77c"
+  },
+  {
+   "surface": "project_ops_interest",
+   "endpoint": "POST /v1/projects/{project_id}/prompts/screen",
+   "set": {
+    "f8": [
+     "y",
+     "경량 게이트 + ids_only 5,000건/호출",
+     "5 (+공통 3)"
+    ]
+   },
+   "by": "cd7b77c"
+  },
+  {
+   "surface": "project_ops_interest",
+   "endpoint": "GET /v1/projects/{project_id}/settings",
+   "set": {
+    "f8": [
+     "y",
+     "설정 묶음 한 문장",
+     "5 (+공통 3)"
+    ]
+   },
+   "by": "cd7b77c"
+  },
+  {
+   "surface": "project_ops_interest",
+   "endpoint": "PATCH /v1/projects/{project_id}",
+   "set": {
+    "f8": [
+     "y",
+     "재구성 upsert 1문장",
+     "4 (+공통 3)"
+    ]
+   },
+   "by": "cd7b77c"
+  },
+  {
+   "surface": "project_ops_interest",
+   "endpoint": "PUT /v1/projects/{project_id}/settings/brand-aliases",
+   "set": {
+    "f8": [
+     "y",
+     "재구성 upsert 1문장",
+     "11 (+공통 3)"
+    ]
+   },
+   "by": "cd7b77c"
+  },
+  {
+   "surface": "project_ops_interest",
+   "endpoint": "POST /v1/projects/{project_id}/settings/competitors",
+   "set": {
+    "f8": [
+     "y",
+     "재구성 upsert 1문장",
+     "10 (+공통 3)"
+    ]
+   },
+   "by": "cd7b77c"
+  },
+  {
+   "surface": "project_ops_interest",
+   "endpoint": "DELETE /v1/projects/{project_id}/settings/competitors",
+   "set": {
+    "f8": [
+     "y",
+     "재구성 upsert 1문장",
+     "10 (+공통 3)"
+    ]
+   },
+   "by": "cd7b77c"
+  },
+  {
+   "surface": "project_ops_interest",
+   "endpoint": "POST /v1/projects/{project_id}/settings/vehicles",
+   "set": {
+    "f8": [
+     "y",
+     "재구성 upsert 1문장",
+     "10~11 (+공통 3)"
+    ]
+   },
+   "by": "cd7b77c"
+  },
+  {
+   "surface": "project_ops_interest",
+   "endpoint": "DELETE /v1/projects/{project_id}/settings/vehicles",
+   "set": {
+    "f8": [
+     "y",
+     "재구성 upsert 1문장",
+     "10 (+공통 3)"
+    ]
+   },
+   "by": "cd7b77c"
+  },
+  {
+   "surface": "project_ops_interest",
+   "endpoint": "POST /v1/projects/{project_id}/prompts/execute",
+   "set": {
+    "f8": [
+     "y",
+     "outbox 병합 0~1 + INSERT 1",
+     "4~8 (+공통 3)"
+    ]
+   },
+   "by": "cd7b77c"
+  },
+  {
+   "surface": "project_ops_interest",
+   "endpoint": "POST /v1/projects/{project_id}/settings/tracked-urls/import",
+   "set": {
+    "f8": [
+     "y",
+     "권한 1회 + UPDATE 1·INSERT 1",
+     "4~7 (+공통 3)"
+    ]
+   },
+   "by": "cd7b77c"
   }
  ]
 }
