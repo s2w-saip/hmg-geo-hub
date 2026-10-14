@@ -1,11 +1,646 @@
 {
-  "notes": [
-    "에이전트 측정 이후 main 작업 트리에 들어간 수정을 반영하는 보정. 에이전트 원본(after/*.json)은 그대로 두고 이 파일이 마지막에 덮어쓴다.",
-    "2026-10-14 대시보드 숨은 GA4 조회 제거: 글로벌 대시보드 api 경로가 GET /v1/funnel/conversion 을 더 부르지 않는다(lib/hgh/adapters/dashboard.ts essentialCalls·loadLiveDashboard). KPI 카드 영역에서 키를 빼고, 숨은 계산 영역은 호출 없음.",
-    "2026-10-14 브랜드 드릴다운 terms 422: back mentions/prompts 가 terms 를 answer_key 1000개씩 나눠 읽고 요청 단계 곱 상한 422 를 뺐다. 기존 판정(f6 r.ok 미확인·f9 2,000행 절단·f10 선언 차이)은 그대로라 칸 변화는 없다."
-  ],
-  "area_keys": [
-    {"route": "/ko/dashboard", "label": "KPI 카드 5개", "api_keys": ["GET /v1/kpi/summary card=true", "GET /v1/mentions/brands card=true top_n=20 include=hmg"]},
-    {"route": "/ko/dashboard", "label": "숨은 계산: AI 유입 전환(GA4)", "api_keys": []}
-  ]
+ "notes": [
+  "에이전트 측정 이후 main 작업 트리에 들어간 수정을 반영하는 보정. 에이전트 원본(after/*.json)은 그대로 두고 이 파일이 마지막에 덮어쓴다.",
+  "2026-10-14 대시보드 숨은 GA4 조회 제거: 글로벌 대시보드 api 경로가 GET /v1/funnel/conversion 을 더 부르지 않는다(lib/hgh/adapters/dashboard.ts essentialCalls·loadLiveDashboard). KPI 카드 영역에서 키를 빼고, 숨은 계산 영역은 호출 없음.",
+  "2026-10-14 브랜드 드릴다운 terms 422: back mentions/prompts 가 terms 를 answer_key 1000개씩 나눠 읽고 요청 단계 곱 상한 422 를 뺐다. 기존 판정(f6 r.ok 미확인·f9 2,000행 절단·f10 선언 차이)은 그대로라 칸 변화는 없다."
+ ],
+ "area_keys": [
+  {
+   "route": "/ko/dashboard",
+   "label": "KPI 카드 5개",
+   "api_keys": [
+    "GET /v1/kpi/summary card=true",
+    "GET /v1/mentions/brands card=true top_n=20 include=hmg"
+   ]
+  },
+  {
+   "route": "/ko/dashboard",
+   "label": "숨은 계산: AI 유입 전환(GA4)",
+   "api_keys": []
+  }
+ ],
+ "endpoint_set": [
+  {
+   "surface": "qa_nonscreen",
+   "endpoint": "POST /v1/qa/answers/{job_id}/notes",
+   "set": {
+    "f7": [
+     "y",
+     "note-dialog createNote: HTTP 오류·네트워크·15초 타임아웃 → 다이얼로그 유지·입력 보존·saveFailed alert, 연타 busy. 잔여: POST 멱등 키 없음"
+    ]
+   },
+   "by": "5a07a22"
+  },
+  {
+   "surface": "qa_nonscreen",
+   "endpoint": "PATCH /v1/qa/notes/{note_id}",
+   "set": {
+    "f7": [
+     "y",
+     "note-list patchNoteResolved: 실패 → saveFailed alert, 행 단위 busy, 성공은 서버 resolvedAt·resolvedBy 로 갱신"
+    ]
+   },
+   "by": "5a07a22"
+  },
+  {
+   "surface": "qa_nonscreen",
+   "endpoint": "GET /v1/qa/notes/export",
+   "set": {
+    "f6": [
+     "y",
+     "downloadNotesCsv: r.ok 일 때만 저장, 오류는 기존 exportFailed alert"
+    ]
+   },
+   "by": "5a07a22"
+  },
+  {
+   "surface": "qa_nonscreen",
+   "endpoint": "JOB back/app access-audit-writer",
+   "set": {
+    "f7": [
+     "y",
+     "실패 배치 재큐·백오프 재시도(60초 상한), 22/23·상한 초과만 dropped+로그"
+    ]
+   },
+   "by": "5a07a22"
+  },
+  {
+   "surface": "website",
+   "endpoint": "PUT /v1/funnel/conversion/events",
+   "set": {
+    "f7": [
+     "n",
+     "반영 대기 notice 토스트 해소. 잔여: 버전·ETag 없음, 409 일반 실패 문구, 15초 타임아웃 뒤 커밋 가능"
+    ]
+   },
+   "by": "5a07a22"
+  },
+  {
+   "surface": "project",
+   "endpoint": "PUT /v1/funnel/conversion/events",
+   "set": {
+    "f7": [
+     "n",
+     "반영 대기 notice 토스트 해소. 잔여: 선택 집합 교체에 버전·ETag 없음"
+    ]
+   },
+   "by": "5a07a22"
+  },
+  {
+   "surface": "qa_nonscreen",
+   "endpoint": "ROUTE GET /api/scope/projects(front 유지)",
+   "set": {
+    "f3": [
+     "skip",
+     "라우트 삭제"
+    ],
+    "f6": [
+     "skip",
+     "라우트 삭제"
+    ],
+    "f8": [
+     "y",
+     "라우트 삭제",
+     "0"
+    ],
+    "f10": [
+     "skip",
+     "라우트 삭제(권한 미적용 결함 제거)"
+    ]
+   },
+   "by": "5a07a22"
+  },
+  {
+   "surface": "existing3",
+   "endpoint": "GET /v1/answers/{job_id}",
+   "set": {
+    "f6": [
+     "y",
+     "answer-modal r.ok 확인: 401·5xx → loadError, 403·404 → 원문 없음"
+    ],
+    "f10": [
+     "y",
+     "URL 필터 게이트(gate_country·gate_brand) = legacy 본문 게이트, 5xx 오류 계약 복원"
+    ]
+   },
+   "by": "5eefc83"
+  },
+  {
+   "surface": "global",
+   "endpoint": "GET /v1/answers/{job_id}",
+   "set": {
+    "f2": [
+     12,
+     0,
+     0,
+     0,
+     "bundle_sql lite: 카탈로그 LEFT⋈5 생략"
+    ],
+    "f6": [
+     "y",
+     "r.ok 확인: 401·5xx → 오류 상태"
+    ],
+    "f8": [
+     "y",
+     "lite=true: 카탈로그·미사용 헤더·인용 필드 미계산",
+     "3 (+공통 3)"
+    ],
+    "f10": [
+     "y",
+     "5xx 오류 계약 복원, URL 국가·브랜드 게이트 = legacy 게이트"
+    ]
+   },
+   "by": "5eefc83"
+  },
+  {
+   "surface": "website",
+   "endpoint": "GET /v1/answers/{job_id}",
+   "set": {
+    "f6": [
+     "y",
+     "r.ok 확인: 401·5xx → 오류 상태"
+    ],
+    "f10": [
+     "y",
+     "5xx 오류 계약 복원, gate_brand = legacy 사이트 게이트"
+    ]
+   },
+   "by": "5eefc83"
+  },
+  {
+   "surface": "project",
+   "endpoint": "GET /v1/answers/{job_id}",
+   "set": {
+    "f6": [
+     "y",
+     "r.ok 확인: 401·5xx → 오류 상태"
+    ],
+    "f10": [
+     "y",
+     "project_id = 게이트 프로젝트, 다른 프로젝트 job → 404 (legacy run 소속 게이트)"
+    ]
+   },
+   "by": "5eefc83"
+  },
+  {
+   "surface": "admin",
+   "endpoint": "AACOMMON",
+   "set": {
+    "f10": [
+     "n",
+     "registry GET 메뉴 그룹 검사 추가로 legacy 게이트와 같아짐. 남은 차이 = 선언 차이(F10 결정 대기)"
+    ]
+   },
+   "by": "5f0a386"
+  },
+  {
+   "surface": "admin",
+   "endpoint": "GET /v1/admin/entities",
+   "set": {
+    "f10": [
+     "n",
+     "GET 메뉴 그룹 검사 추가. 남은 차이 = 선언 차이 U11-N2"
+    ],
+    "f8": [
+     "n",
+     "활성 스냅샷 메모·fields=names 추가. 남음: 메인 화면 미사용(entities/page.tsx)",
+     "페이지당 ≈7~8"
+    ]
+   },
+   "by": "5f0a386"
+  },
+  {
+   "surface": "admin",
+   "endpoint": "GET /v1/admin/entities/applies/{apply_id} (폴링)",
+   "set": {
+    "f6": [
+     "y",
+     "연속 실패 3회·401/403 시 폴링 중단 + 기존 pollStopped 고지"
+    ]
+   },
+   "by": "5f0a386"
+  },
+  {
+   "surface": "admin",
+   "endpoint": "GET /v1/admin/entities/versions",
+   "set": {
+    "f8": [
+     "n",
+     "view=gate 추가(검토·반영 화면 사용). 남음: 메인·초안·감사 화면",
+     "4(view=gate 2)"
+    ]
+   },
+   "by": "5f0a386"
+  },
+  {
+   "surface": "admin",
+   "endpoint": "POST /v1/admin/entities/versions",
+   "set": {
+    "f8": [
+     "y",
+     "return=minimal 사용",
+     "≈9~10"
+    ]
+   },
+   "by": "5f0a386"
+  },
+  {
+   "surface": "admin",
+   "endpoint": "PATCH /v1/admin/entities/versions/{ver}",
+   "set": {
+    "f8": [
+     "y",
+     "return=minimal 사용",
+     "≈5~6"
+    ]
+   },
+   "by": "5f0a386"
+  },
+  {
+   "surface": "admin",
+   "endpoint": "GET /v1/admin/entities/versions/{ver}",
+   "set": {
+    "f8": [
+     "y",
+     "린트 스냅샷을 읽은 행에서 생성, ENTITIES_OF·SURFACES_OF 1회씩",
+     "≈9~10"
+    ]
+   },
+   "by": "5f0a386"
+  },
+  {
+   "surface": "admin",
+   "endpoint": "GET /v1/admin/entities/versions/{ver} (반영 상세 보조)",
+   "set": {
+    "f8": [
+     "y",
+     "view=lint 사용",
+     "≈5"
+    ]
+   },
+   "by": "5f0a386"
+  },
+  {
+   "surface": "admin",
+   "endpoint": "GET /v1/admin/entities (병합 후보)",
+   "set": {
+    "f8": [
+     "y",
+     "fields=names 사용(귀속 판정 생략)",
+     "페이지당 ≈3~4"
+    ]
+   },
+   "by": "5f0a386"
+  },
+  {
+   "surface": "project_ops_interest",
+   "endpoint": "GET /v1/intent/keywords",
+   "set": {
+    "f8": [
+     "y",
+     "탭 목록이 include_volume=false 로 검색량 LATERAL 생략",
+     "2 (+공통 3)"
+    ]
+   },
+   "by": "aa397c0"
+  },
+  {
+   "surface": "project_ops_interest",
+   "endpoint": "GET /v1/intent/fetches/{change_id}",
+   "set": {
+    "f8": [
+     "y",
+     "폴링이 대기 change 를 GET /v1/intent/fetches?ids 한 요청으로",
+     "폴링당 1요청"
+    ]
+   },
+   "by": "aa397c0"
+  },
+  {
+   "surface": "project_ops_interest",
+   "endpoint": "GET /v1/intent/social/context-map/combinations",
+   "set": {
+    "f8": [
+     "y",
+     "total·MAX_CO 첫 페이지만 계산, 커서로 재사용",
+     "첫 페이지 4, 다음 2 (+공통 2)"
+    ]
+   },
+   "by": "aa397c0"
+  },
+  {
+   "surface": "project_ops_interest",
+   "endpoint": "POST /v1/intent/candidates",
+   "set": {
+    "f8": [
+     "y",
+     "SERP 선택 추가가 일괄 addCandidates 1회",
+     "5 (+공통 2)/200행"
+    ],
+    "f7": [
+     "y",
+     "행 잠금 직렬화 + dedupe, SERP 일괄 1트랜잭션"
+    ]
+   },
+   "by": "aa397c0"
+  },
+  {
+   "surface": "project_ops_interest",
+   "endpoint": "GET /v1/intent/lookup",
+   "set": {
+    "f8": [
+     "n",
+     "검색어별 N+1 은 한 문장으로 해소. 남음: 화면 게이트 GET(P3 B020)",
+     "5 (+공통 3)/청크"
+    ]
+   },
+   "by": "aa397c0"
+  },
+  {
+   "surface": "project_ops_interest",
+   "endpoint": "POST /v1/intent/keywords",
+   "set": {
+    "f7": [
+     "n",
+     "throw 시 버튼 고정 해소(B061). 남음: 403 고지(B148 결정)"
+    ],
+    "f8": [
+     "n",
+     "items[] 일괄 본문·어댑터 준비, 화면 연결은 _actions.ts 필요",
+     "3N (+공통 2)"
+    ]
+   },
+   "by": "aa397c0"
+  },
+  {
+   "surface": "project_ops_interest",
+   "endpoint": "DELETE /v1/intent/keywords",
+   "set": {
+    "f7": [
+     "n",
+     "throw 시 낙관 삭제 원복(B061). 남음: 403 무고지(B148 결정)"
+    ]
+   },
+   "by": "aa397c0"
+  },
+  {
+   "surface": "existing3",
+   "endpoint": "GET /v1/mentions/prompts mode=brand",
+   "set": {
+    "f6": [
+     "y",
+     "r.ok 확인 → 5xx·403·400 promptsError, 404 만 '없음'"
+    ],
+    "f8": [
+     "y",
+     "limit=2000 한 번 조회(커서 10회 제거)",
+     "5 (+terms 배치)"
+    ],
+    "f9": [
+     "y",
+     "2,000 초과 시 기존 '{total}개 중 {shown}개' 한 줄"
+    ]
+   },
+   "by": "650a33a"
+  },
+  {
+   "surface": "existing3",
+   "endpoint": "GET /v1/citations/domains card=true limit=0 competitor_sources",
+   "set": {
+    "f9": [
+     "y",
+     "카드 경로 competitor_sources 상한 없음, truncated=false"
+    ]
+   },
+   "by": "650a33a"
+  },
+  {
+   "surface": "website",
+   "endpoint": "GET /v1/mentions/prompts",
+   "set": {
+    "f6": [
+     "y",
+     "브랜드 드릴다운 r.ok 확인, 404 만 '없음'"
+    ],
+    "f8": [
+     "y",
+     "brand 한 번 조회, signal lite",
+     "3 (signal) / 5 (brand)"
+    ]
+   },
+   "by": "650a33a"
+  },
+  {
+   "surface": "website",
+   "endpoint": "GET /v1/citations/domains",
+   "set": {
+    "f9": [
+     "y",
+     "언급 드릴다운 절단 시 total 고지, 나머지 유계"
+    ]
+   },
+   "by": "650a33a"
+  },
+  {
+   "surface": "website",
+   "endpoint": "GET /v1/citations/domains/{skey}",
+   "set": {
+    "f6": [
+     "y",
+     "언급 드릴다운 403 → 오류 문구, 404 만 빈 목록"
+    ]
+   },
+   "by": "650a33a"
+  },
+  {
+   "surface": "website",
+   "endpoint": "GET /v1/citations/domains/export",
+   "set": {
+    "f8": [
+     "y",
+     "export 경쟁사 합·자사/타겟 FILTER 생략",
+     "3"
+    ]
+   },
+   "by": "650a33a"
+  },
+  {
+   "surface": "project",
+   "endpoint": "GET /v1/citations/domains (mention_brand)",
+   "set": {
+    "f6": [
+     "y",
+     "403·422·5xx → 오류 상태"
+    ],
+    "f8": [
+     "y",
+     "limit=2000 한 번 조회 + 경쟁사 합 생략",
+     "4"
+    ],
+    "f9": [
+     "y",
+     "절단 시 total 고지"
+    ]
+   },
+   "by": "650a33a"
+  },
+  {
+   "surface": "project",
+   "endpoint": "GET /v1/mentions/prompts",
+   "set": {
+    "f6": [
+     "y",
+     "403 → 오류 상태, 404 만 '없음'"
+    ],
+    "f8": [
+     "y",
+     "brand 한 번 조회, signal lite",
+     "3/5"
+    ]
+   },
+   "by": "650a33a"
+  },
+  {
+   "surface": "project",
+   "endpoint": "GET /v1/citations/domains/{skey} (mention_brand)",
+   "set": {
+    "f6": [
+     "y",
+     "403 → 오류 상태, 404 만 빈 목록"
+    ]
+   },
+   "by": "650a33a"
+  },
+  {
+   "surface": "project",
+   "endpoint": "GET /v1/citations/domains/export",
+   "set": {
+    "f8": [
+     "y",
+     "경쟁사 합 생략, match_rank = rank 재사용",
+     "3"
+    ]
+   },
+   "by": "650a33a"
+  },
+  {
+   "surface": "qa_nonscreen",
+   "endpoint": "GET /v1/kpi/unmeasured-prompts",
+   "set": {
+    "f8": [
+     "y",
+     "front 호출부 삭제(도달 불가 다이얼로그 정리)"
+    ]
+   },
+   "by": "650a33a"
+  },
+  {
+   "surface": "existing3",
+   "endpoint": "GET /v1/citations/sources",
+   "set": {
+    "f8": [
+     "y",
+     "톤 답변 수를 FILTER 로 옮겨 rd.answer 스캔 3→2",
+     "6"
+    ]
+   },
+   "by": "0c3b0a9"
+  },
+  {
+   "surface": "existing3",
+   "endpoint": "GET /v1/trend card=true dimension=brand top=20 brand_key",
+   "set": {
+    "f8": [
+     "y",
+     "base·비트 합계 한 문장, 경쟁 행 후보만 전송",
+     "6 (단일 관점 5)"
+    ]
+   },
+   "by": "0c3b0a9"
+  },
+  {
+   "surface": "existing3",
+   "endpoint": "GET /v1/trend dimension=brand top=10 split_own",
+   "set": {
+    "f8": [
+     "y",
+     "base·비트 합계 이중 스캔 제거, 경쟁 행 후보만",
+     "7 (단일 6)"
+    ]
+   },
+   "by": "0c3b0a9"
+  },
+  {
+   "surface": "website",
+   "endpoint": "GET /v1/trend",
+   "set": {
+    "f8": [
+     "n",
+     "url_rates 재집계 제거(4→3). 남음: 화면 미사용 M06·M07(P4)",
+     "3"
+    ]
+   },
+   "by": "0c3b0a9"
+  },
+  {
+   "surface": "existing3",
+   "endpoint": "GET /v1/kpi/summary (분석, +cycle_offset=1)",
+   "set": {
+    "f8": [
+     "y",
+     "분석 호출이 parts=gap·measured·urls → 적용 프롬프트 문장 생략",
+     "3"
+    ]
+   },
+   "by": "22a6843"
+  },
+  {
+   "surface": "website",
+   "endpoint": "GET /v1/kpi/compare",
+   "set": {
+    "f8": [
+     "y",
+     "언급 계열만 요청 시 인용 계열 원장 문장 생략",
+     "5"
+    ]
+   },
+   "by": "22a6843"
+  },
+  {
+   "surface": "global",
+   "endpoint": "GET /v1/filters/options",
+   "set": {
+    "f8": [
+     "y",
+     "전환 화면 geo_only=true → TAXON·CATALOG 2문장 생략",
+     "2 (전환) / 4"
+    ]
+   },
+   "by": "22a6843"
+  },
+  {
+   "surface": "global",
+   "endpoint": "GET /v1/funnel/conversion",
+   "set": {
+    "f8": [
+     "n",
+     "롤업은 rollup_lite 로 페이지·엔진 비교 문장 생략. 남음: sessions·conversions 문장 안 날짜·엔진 GROUPING SET(queries.py)",
+     "5 (롤업) / 6"
+    ]
+   },
+   "by": "22a6843"
+  },
+  {
+   "surface": "website",
+   "endpoint": "GET /v1/funnel/conversion",
+   "set": {
+    "f8": [
+     "n",
+     "rollup_lite 적용. 남음: 날짜·엔진 GROUPING SET(queries.py)",
+     "5 (롤업) / 6"
+    ]
+   },
+   "by": "22a6843"
+  }
+ ]
 }
