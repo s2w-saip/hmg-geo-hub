@@ -36,6 +36,7 @@ import { loadFilterDates, loadPanelOptions } from "@/lib/hgh/adapters/filters";
 import {
   afterCitationEssentials,
   citationRouteQuery,
+  citationsDegraded,
   isCitationsApi,
   loadCitationsAsOf,
   loadCitationsView,
@@ -233,6 +234,9 @@ async function CitationsData({
     } catch (e) {
       throwForPage(e, locale);
     }
+    // P6 B042: 이 요청에서 loadCitationsView 가 남긴 degrade 표식(5xx·시간 초과) — 그 블록은
+    // '데이터 없음'·'준비 중'·숨김 대신 기존 지연 안내를 낸다. 뷰가 끝난 뒤라 판정이 유효하다.
+    const degraded = citationsDegraded("website");
     return (
       <>
         <CitationsView
@@ -244,6 +248,8 @@ async function CitationsData({
           targetHitRate={targetHitRate}
           hideFilterPanel
           tableSource={view.table ? { query: api.tableQuery, ...view.table } : null}
+          dataDegraded={degraded.data}
+          degradedSections={degraded}
         />
         <SectionDoneMarker id="website-citation:data" />
       </>

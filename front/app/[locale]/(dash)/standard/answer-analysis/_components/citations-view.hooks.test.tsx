@@ -14,6 +14,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 //      the default order every further "load more" reused the stale server cursor
 //   D3 a double click appended the same page twice; a "load more" answer that arrived after a
 //      switch to search overwrote the search state
+// P6:
+//   B047 an opened row keeps the counts before the detail caps (urlTotal / promptTotal) for the
+//        truncation line, only when the route sends them
+//   B048/B049 the export buttons run one export at a time, a failure becomes the existing toast
+//        (no raw JSON page, no silent failure), and the API file keeps its Content-Disposition name
 
 type Deps = readonly unknown[] | undefined;
 type Slot = { v?: unknown; deps?: Deps; cleanup?: (() => void) | void };
@@ -106,8 +111,17 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: () => {}, push: () => {} }),
 }));
 vi.mock("server-only", () => ({}));
+// The export notice reads a message key and raises a toast: both are swapped for recorders here.
+const toastError = vi.hoisted(() => vi.fn());
+vi.mock("sonner", () => ({ toast: { error: toastError } }));
+vi.mock("next-intl", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("next-intl")>();
+  return { ...actual, useTranslations: (ns: string) => (key: string) => `${ns}.${key}` };
+});
 
-const { useDomainDetail, useServerDomainTable } = await import("./citations-view");
+const { downloadDomainExport, runExportTask, useDomainDetail, useExportFailedNotice, useExportTask, useServerDomainTable } = await import(
+  "./citations-view"
+);
 const { domainDetailUrl } = await import("../_data/citation-view");
 
 // ── a controllable fetch: every call waits until the test answers it; abort rejects it ──
@@ -315,5 +329,87 @@ describe("useServerDomainTable: one 'load more' at a time, stale answers dropped
     h.result.current.loadMore();
     await flush();
     expect(calls).toHaveLength(3);
+  });
+});
+
+// ── P6 B047: the counts before the detail caps ──────────────────────────────
+
+describe("useDomainDetail: urlTotal / promptTotal when the route sends them (B047)", () => {
+  const url = domainDetailUrl("surface=website", "a.example");
+  const list = { urls: [{ url: "https://a.example/1", title: "", count: 1, aiProvider: "", promptText: "", country: null }], promptList: [] };
+
+  it("kept on the ready state when the caps cut the lists; absent otherwise (the legacy keys only)", async () => {
+    const h = rt.mount((p: { url: string; open: boolean }) => useDomainDetail(p.url, p.open), { url, open: true });
+    calls[0].reply(200, { ...list, urlTotal: 37, promptTotal: 250 });
+    await flush();
+    expect(h.result.current).toMatchObject({ status: "ready", urlTotal: 37, promptTotal: 250 });
+    const other = domainDetailUrl("surface=website&engine=gemini", "a.example");
+    h.rerender({ url: other, open: true });
+    await flush();
+    calls[1].reply(200, list);
+    await flush();
+    expect(Object.keys(h.result.current ?? {}).sort()).toEqual(["promptList", "status", "url", "urls"]);
+  });
+});
+
+// ── P6 B048 / B049: one export at a time, failure -> the existing toast ──────
+
+describe("export buttons: one export at a time, failures reach the existing toast (B048 / B049)", () => {
+  beforeEach(() => toastError.mockReset());
+
+  it("runExportTask: a second click while one runs is ignored; busy true while it runs; a failure goes to onError", async () => {
+    const guard = { current: false };
+    const busy: boolean[] = [];
+    const onError = vi.fn();
+    let finish!: () => void;
+    const task = vi.fn(() => new Promise<void>((r) => (finish = r)));
+    const first = runExportTask(guard, (b) => busy.push(b), task, onError);
+    await runExportTask(guard, (b) => busy.push(b), task, onError); // double click
+    expect([task.mock.calls.length, busy]).toEqual([1, [true]]);
+    finish();
+    await first;
+    expect([busy, onError.mock.calls.length, guard.current]).toEqual([[true, false], 0, false]);
+    const boom = new Error("exceljs chunk failed");
+    await runExportTask(guard, (b) => busy.push(b), () => Promise.reject(boom), onError);
+    expect([onError.mock.calls, busy.slice(2), guard.current]).toEqual([[[boom]], [true, false], false]);
+  });
+
+  it("useExportTask: busy re-renders the button state; the failure notice is the existing message key", async () => {
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    let finish!: (fail: boolean) => void;
+    const h = rt.mount(() => useExportTask(useExportFailedNotice()), undefined);
+    expect(h.result.current.busy).toBe(false);
+    const run = h.result.current.run(() => new Promise<void>((ok, no) => (finish = (fail) => (fail ? no(new Error("x")) : ok()))));
+    await flush();
+    expect(h.result.current.busy).toBe(true);
+    void h.result.current.run(() => Promise.resolve()); // ignored while busy
+    finish(true);
+    await run;
+    await flush();
+    expect(h.result.current.busy).toBe(false);
+    expect(toastError.mock.calls).toEqual([["standardPromptsView.exportFailed"]]);
+    expect(err).toHaveBeenCalledTimes(1);
+    err.mockRestore();
+  });
+
+  it("downloadDomainExport: 2xx -> the bytes saved under the Content-Disposition name; non-2xx -> thrown, nothing saved", async () => {
+    const saved: [string, string][] = [];
+    const save = async (blob: Blob, name: string) => void saved.push([await blob.text(), name]);
+    const fetchOk = (cd: string | null) => async () =>
+      new Response("xlsx-bytes", { status: 200, headers: cd ? { "content-disposition": cd } : {} });
+    await downloadDomainExport("/api/citations/domains/export?surface=website", {
+      fetchImpl: fetchOk(`attachment; filename="citation-domains.xlsx"; filename*=UTF-8''%EC%9D%B8%EC%9A%A9.xlsx`) as typeof fetch,
+      save: (b, n) => void save(b, n),
+    });
+    await downloadDomainExport("/x", { fetchImpl: fetchOk('attachment; filename="d.xlsx"') as typeof fetch, save: (b, n) => void save(b, n) });
+    await flush();
+    expect(saved).toEqual([
+      ["xlsx-bytes", "인용.xlsx"],
+      ["xlsx-bytes", "d.xlsx"],
+    ]);
+    // a JSON error (401 / 403 / 422 / 5xx / timeout) no longer navigates to the raw body: it throws for the toast
+    const fail = async () => new Response(JSON.stringify({ error: { code: "upstream" } }), { status: 503 });
+    await expect(downloadDomainExport("/x", { fetchImpl: fail as typeof fetch, save: (b, n) => void save(b, n) })).rejects.toMatchObject({ status: 503 });
+    expect(saved).toHaveLength(2);
   });
 });

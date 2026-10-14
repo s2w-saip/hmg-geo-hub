@@ -13,6 +13,7 @@ import { CitationsStandardView } from "./citations-standard-view";
 import { CitationPromptsPage, cursorPagingStep } from "./citation-prompts-page";
 import {
   citationDrilldownEmptyKey,
+  contentDispositionFilename,
   domainDetailUrl,
   domainExportUrl,
   domainListUrl,
@@ -111,6 +112,51 @@ describe("CitationsView (website / project) with an API table source", () => {
   });
 });
 
+describe("CitationsView (website / project): a backend outage shows the existing 'delayed' notice (P6 B042)", () => {
+  const DEGRADED = ko.answerAnalysis.mentions.kpi.degraded;
+  const EMPTY = ko.answerAnalysis.empty;
+  const PENDING = ko.answerAnalysis.pending;
+  const c = ko.answerAnalysis.citations;
+  const view = (props: Partial<React.ComponentProps<typeof CitationsView>>) =>
+    render(<CitationsView data={LIVE} hideFilterPanel tableSource={{ query: "surface=website", nextCursor: null, total: 2 }} {...props} />);
+
+  it("domains / sources failed (live null + dataDegraded): the delayed card, not 'no data'", () => {
+    const html = view({ data: null, dataDegraded: true });
+    expect(html).toContain(DEGRADED);
+    expect(html).toContain(ko.answerAnalysis.tabs.citations);
+    expect(html).not.toContain(EMPTY);
+    // no flag (legacy, or a real empty window): 'no data' as before
+    const empty = view({ data: null });
+    expect(empty).toContain(EMPTY);
+    expect(empty).not.toContain(DEGRADED);
+    expect(view({ data: null, dataDegraded: false })).toBe(empty);
+  });
+
+  it("trend / category trend / prompt split failed: the delayed notice where 'coming soon' or a hidden block was", () => {
+    const count = (html: string, s: string) => html.split(s).length - 1;
+    const html = view({ degradedSections: { trend: true, categoryTrend: true, split: true } });
+    // trend card: delayed instead of 'coming soon' (the engine card of this LIVE, no engine data, stays 'coming soon')
+    expect([count(view({}), PENDING), count(html, PENDING)]).toEqual([2, 1]);
+    expect(count(html, DEGRADED)).toBe(3);
+    expect(html).toContain(c.trend.title);
+    expect(html).toContain(c.categoryTrend.title);
+    expect(html).toContain(c.baseSplit.title);
+  });
+
+  it("no flags (normal path, legacy): the markup is unchanged ('coming soon' trend, hidden category trend and split)", () => {
+    const html = view({});
+    expect(view({ degradedSections: null, dataDegraded: false })).toBe(html);
+    expect(view({ degradedSections: { trend: false, categoryTrend: false, split: false } })).toBe(html);
+    expect(html).toContain(PENDING);
+    expect(html).not.toContain(DEGRADED);
+    expect(html).not.toContain(c.categoryTrend.title);
+    expect(html).not.toContain(c.baseSplit.title);
+    // a flag never hides real data: a present split and trend render as before
+    const withSplit = { ...LIVE, promptSplit: { owned: [], uncited: [], ownedCount: 3, uncitedCount: 4 } };
+    expect(view({ data: withSplit, degradedSections: { split: true } })).toBe(view({ data: withSplit }));
+  });
+});
+
 describe("LoadMoreRow (D3: one request at a time)", () => {
   const table = { active: true, rows: [], total: 9, nextCursor: "n1", status: "ready" as const, loadingMore: false, loadMore: () => {} };
   const button = (html: string) => html.match(/<button[^>]*>/)?.[0] ?? "";
@@ -201,6 +247,17 @@ describe("table and drilldown URLs (client side of /api/citations/domains*)", ()
       "/api/citations/domains/export?surface=website&geography=US&sort=prompts&dir=desc&locale=en",
     );
     expect([isDefaultDomainQuery({ q: " ", sortKey: "citations", asc: false }), isDefaultDomainQuery({ q: "", sortKey: "citations", asc: true })]).toEqual([true, false]);
+  });
+
+  it("export file name (B049): the Content-Disposition name the link download used (filename* first, then filename)", () => {
+    expect(contentDispositionFilename(`attachment; filename="citation-domains.xlsx"; filename*=UTF-8''%EC%9D%B8%EC%9A%A9%20%EB%8F%84%EB%A9%94%EC%9D%B8.xlsx`)).toBe(
+      "인용 도메인.xlsx",
+    );
+    expect(contentDispositionFilename('attachment; filename="d.csv"')).toBe("d.csv");
+    expect(contentDispositionFilename("attachment; filename=plain.xlsx")).toBe("plain.xlsx");
+    // a broken percent escape: the ASCII name (the browser drops filename* too)
+    expect(contentDispositionFilename(`attachment; filename="a.xlsx"; filename*=UTF-8''%E0%A4%A`)).toBe("a.xlsx");
+    expect([contentDispositionFilename("attachment"), contentDispositionFilename(null)]).toEqual([null, null]);
   });
 
   it("empty drilldown text: an API row (skey) is complete when loaded ('no URLs', never 'top domains only')", () => {

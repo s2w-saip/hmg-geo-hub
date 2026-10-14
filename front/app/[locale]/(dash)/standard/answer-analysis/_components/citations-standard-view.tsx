@@ -41,6 +41,7 @@ import {
   categoryShare,
   OFFICIAL_COMPETITOR_CATEGORY,
   typeCategoryBars,
+  type CitationSectionDegraded,
   type CitationTableSource,
 } from "../_data/citation-view";
 import { deltaPp } from "../_data/kpi-view";
@@ -57,6 +58,8 @@ import {
   TableStatus,
   Th,
   categoryColor,
+  useExportFailedNotice,
+  useExportTask,
   useServerDomainTable,
   type RankedDomainRow,
 } from "./citations-view";
@@ -97,6 +100,13 @@ type Props = {
    * `null` = "데이터 없음".
    */
   dataDegraded?: Awaitable<boolean>;
+  /**
+   * API 원천(P6 B041): 보조 블록(주별 도메인 추이·카테고리 구성 추이·인용/미인용 프롬프트 분할)이
+   * 일시 실패(5xx·시간 초과)로 비었는가 — `dataDegraded` 와 같은 요청 스코프 표식(`citationsDegraded`)을
+   * 페이지가 같은 집계 뒤에 이어 붙여 넘긴다. 켜진 블록은 '준비 중'·숨김·빈 타일 대신 기존 지연
+   * 안내(answerAnalysis.mentions.kpi.degraded)를 낸다. 없으면 종전 그대로.
+   */
+  sectionDegraded?: Awaitable<CitationSectionDegraded | null>;
   /** 렌더 테스트 seam. */
   initialCompetitors?: string[];
   /**
@@ -125,10 +135,16 @@ export function CitationsStandardView(props: Props) {
         {/* QA 2차 #2(2026-09-10) — 출처 카테고리·경쟁사는 칩이 아니라 **필터 패널 축**이다
             (DimensionFilterPanel 의 `답변 필터` 행). 이 본문은 URL 축을 읽기만 한다. */}
         <Suspense fallback={<KpiHeroSkeleton />}>
-          <StatusBlock data={props.data} officialDelta={props.officialDelta ?? null} prevCategories={props.prevCategories ?? null} dataDegraded={props.dataDegraded ?? false} />
+          <StatusBlock
+            data={props.data}
+            officialDelta={props.officialDelta ?? null}
+            prevCategories={props.prevCategories ?? null}
+            dataDegraded={props.dataDegraded ?? false}
+            sectionDegraded={props.sectionDegraded ?? null}
+          />
         </Suspense>
         <Suspense fallback={<KpiSectionSkeleton />}>
-          <CategoryBlock data={props.data} prevCategories={props.prevCategories ?? null} picked={picked} />
+          <CategoryBlock data={props.data} prevCategories={props.prevCategories ?? null} picked={picked} sectionDegraded={props.sectionDegraded ?? null} />
         </Suspense>
         <div className="grid gap-6 lg:grid-cols-2">
           <Suspense fallback={<KpiSectionSkeleton />}>
@@ -142,7 +158,7 @@ export function CitationsStandardView(props: Props) {
           <ToneBlock toneSummary={props.toneSummary} />
         </Suspense>
         <Suspense fallback={<KpiSectionSkeleton />}>
-          <DomainsBlock data={props.data} picked={picked} tableSource={props.tableSource ?? null} />
+          <DomainsBlock data={props.data} picked={picked} tableSource={props.tableSource ?? null} sectionDegraded={props.sectionDegraded ?? null} />
         </Suspense>
       </div>
     </TooltipProvider>
@@ -176,12 +192,19 @@ function prevCategoryShare(prev: { totals: CitationCategoryTotals } | null | und
   return Math.round((1000 * (prev.totals.byCategory[name] ?? 0)) / prev.totals.total) / 10;
 }
 
-function StatusBlock({ data, officialDelta, prevCategories, dataDegraded }: Pick<Props, "data" | "officialDelta" | "prevCategories" | "dataDegraded">) {
+function StatusBlock({
+  data,
+  officialDelta,
+  prevCategories,
+  dataDegraded,
+  sectionDegraded,
+}: Pick<Props, "data" | "officialDelta" | "prevCategories" | "dataDegraded" | "sectionDegraded">) {
   const t = useTranslations("answerAnalysis.citations.v2.status");
   const tRoot = useTranslations("answerAnalysis");
   const tKpi = useTranslations("answerAnalysis.mentions.kpi");
   const live = useAwaited(data);
   const degraded = useAwaited(dataDegraded ?? false);
+  const sections = useAwaited(sectionDegraded ?? null);
   const active = useActiveCitationCategories();
   const href = useSubpageHref();
   // `live == null` 은 두 뜻이다 — ① 이 필터에 데이터가 없다 ② 집계가 예산에 걸렸다.
@@ -206,6 +229,9 @@ function StatusBlock({ data, officialDelta, prevCategories, dataDegraded }: Pick
   const dealer = categoryShare(live.categories, DEALER_CATEGORY);
   const ownIncluded = categoryIncluded(active, OFFICIAL_HMG_CATEGORY);
   const split = live.promptSplit ?? null;
+  // 분할 조회가 일시 실패(P6 B041)면 빈('—') 비활성 타일 대신 기존 지연 안내 — 아래 우호도 블록이
+  // 요약 실패 때 타일 자리에 내는 것과 같은 문단이다. 공식(HMG) 미포함이면 종전대로 비활성 타일.
+  const splitDegraded = ownIncluded && !split && Boolean(sections?.split);
   return (
     <>
       <section className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
@@ -234,22 +260,28 @@ function StatusBlock({ data, officialDelta, prevCategories, dataDegraded }: Pick
             </div>
           </div>
           <div className="flex flex-col gap-2">
-            <LinkTile
-              label={t("ownedPrompts")}
-              count={split?.ownedCount ?? null}
-              href={href("prompts", { tab: "owned" })}
-              disabled={!ownIncluded || !split}
-              disabledHint={t("requiresOwn")}
-              tone="brand"
-            />
-            <LinkTile
-              label={t("uncitedPrompts")}
-              count={split?.uncitedCount ?? null}
-              href={href("prompts", { tab: "uncited" })}
-              disabled={!ownIncluded || !split}
-              disabledHint={t("requiresOwn")}
-              tone="warn"
-            />
+            {splitDegraded ? (
+              <p className="py-4 text-center text-xs text-muted-foreground">{tKpi("degraded")}</p>
+            ) : (
+              <>
+                <LinkTile
+                  label={t("ownedPrompts")}
+                  count={split?.ownedCount ?? null}
+                  href={href("prompts", { tab: "owned" })}
+                  disabled={!ownIncluded || !split}
+                  disabledHint={t("requiresOwn")}
+                  tone="brand"
+                />
+                <LinkTile
+                  label={t("uncitedPrompts")}
+                  count={split?.uncitedCount ?? null}
+                  href={href("prompts", { tab: "uncited" })}
+                  disabled={!ownIncluded || !split}
+                  disabledHint={t("requiresOwn")}
+                  tone="warn"
+                />
+              </>
+            )}
           </div>
         </div>
       </section>
@@ -372,11 +404,14 @@ function CategoryBlock({
   data,
   prevCategories,
   picked,
-}: Pick<Props, "data" | "prevCategories"> & { picked: ReadonlySet<string> }) {
+  sectionDegraded,
+}: Pick<Props, "data" | "prevCategories" | "sectionDegraded"> & { picked: ReadonlySet<string> }) {
   const t = useTranslations("answerAnalysis.citations.v2.categoryStatus");
   const tCit = useTranslations("answerAnalysis.citations");
   const tComp = useTranslations("answerAnalysis.citations.v2.competitor");
+  const tKpi = useTranslations("answerAnalysis.mentions.kpi");
   const live = useAwaited(data);
+  const sections = useAwaited(sectionDegraded ?? null);
   const label = useCatLabel();
   const active = useActiveCitationCategories();
   const toggleSource = useSourceToggle();
@@ -475,6 +510,9 @@ function CategoryBlock({
             ))}
           </ul>
         </>
+      ) : sections?.categoryTrend ? (
+        // 구성 추이 조회가 일시 실패(P6 B041) — 숨기지 않고 기존 지연 안내.
+        <PendingCard title={tCit("categoryTrend.title")} label={tKpi("degraded")} />
       ) : null}
       <SectionDoneMarker id="standard-citation:category" />
     </section>
@@ -559,13 +597,27 @@ function ToneBlock({ toneSummary }: Pick<Props, "toneSummary">) {
 // ─── 인용 도메인: 주별 Top10 + 순위 표 ───────────────────────────────────────
 type SortKey = "domain" | "citations" | "share" | "coverageRate";
 
-function DomainsBlock({ data, picked, tableSource }: { data: Props["data"]; picked: Set<string>; tableSource: Awaitable<CitationTableSource | null> }) {
+function DomainsBlock({
+  data,
+  picked,
+  tableSource,
+  sectionDegraded,
+}: {
+  data: Props["data"];
+  picked: Set<string>;
+  tableSource: Awaitable<CitationTableSource | null>;
+  sectionDegraded: Awaitable<CitationSectionDegraded | null>;
+}) {
   const t = useTranslations("answerAnalysis.citations");
   const tV2 = useTranslations("answerAnalysis.citations.v2");
   const tRoot = useTranslations("answerAnalysis");
+  const tKpi = useTranslations("answerAnalysis.mentions.kpi");
   const tFilter = useTranslations("answerAnalysis.filters");
   const live = useAwaited(data);
   const source = useAwaited(tableSource);
+  const sections = useAwaited(sectionDegraded);
+  // 엑셀 생성은 한 번에 하나(버튼 비활성), 실패는 기존 문구 토스트(P6 B048).
+  const exportTask = useExportTask(useExportFailedNotice());
   const label = useCatLabel();
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search);
@@ -604,17 +656,25 @@ function DomainsBlock({ data, picked, tableSource }: { data: Props["data"]; pick
     else { setSortKey(k); setAsc(k === "domain"); }
   }
   function onExport() {
-    void downloadXlsx(
-      `citation-sources-${dateStamp()}`,
-      [t("table.col.rank"), t("table.col.domain"), t("table.col.category"), t("table.col.citations"), t("table.col.share"), t("table.col.prompts"), t("table.col.coverage")],
-      sorted.map((r) => [r.rank, r.domain, r.category ? label(r.category) : "", r.citations, r.share.toFixed(1), r.prompts, r.coverageRate.toFixed(1)]),
+    const rows = sorted.map((r) => [r.rank, r.domain, r.category ? label(r.category) : "", r.citations, r.share.toFixed(1), r.prompts, r.coverageRate.toFixed(1)]);
+    void exportTask.run(() =>
+      downloadXlsx(
+        `citation-sources-${dateStamp()}`,
+        [t("table.col.rank"), t("table.col.domain"), t("table.col.category"), t("table.col.citations"), t("table.col.share"), t("table.col.prompts"), t("table.col.coverage")],
+        rows,
+      ),
     );
   }
 
   return (
     <section className="flex flex-col gap-4" aria-labelledby="citation-domains-heading">
       <h2 id="citation-domains-heading" className="text-lg font-medium tracking-tight text-foreground">{tV2("domainsHeading")}</h2>
-      {live.trend ? <CitationTrendChart title={t("trend.title")} trend={live.trend} /> : <PendingCard title={t("trend.title")} label={tRoot("pending")} />}
+      {/* 추이 조회가 일시 실패(P6 B041)면 '준비 중'이 아니라 기존 지연 안내. */}
+      {live.trend ? (
+        <CitationTrendChart title={t("trend.title")} trend={live.trend} />
+      ) : (
+        <PendingCard title={t("trend.title")} label={sections?.trend ? tKpi("degraded") : tRoot("pending")} />
+      )}
       <div className="overflow-hidden rounded-lg border border-border bg-card">
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3">
           <div className="flex flex-col gap-1">
@@ -626,7 +686,15 @@ function DomainsBlock({ data, picked, tableSource }: { data: Props["data"]; pick
               <Search className="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden />
               <Input id="c-search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={tFilter("domainSearchPlaceholder")} aria-label={tFilter("domainSearch")} className="h-8 pl-8 text-xs" />
             </div>
-            <Button type="button" variant="outline" size="sm" onClick={onExport} disabled={sorted.length === 0} className="shrink-0">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onExport}
+              disabled={sorted.length === 0 || exportTask.busy}
+              aria-busy={exportTask.busy || undefined}
+              className="shrink-0"
+            >
               <Download className="h-3.5 w-3.5" aria-hidden />
               {tRoot("exportExcel")}
             </Button>

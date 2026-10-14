@@ -51,6 +51,7 @@ import { loadFilterDates, loadPanelOptions } from "@/lib/hgh/adapters/filters";
 import {
   afterCitationEssentials,
   citationRouteQuery,
+  citationsDegraded,
   isCitationsApi,
   loadCitationDeltas,
   loadCitationPeriodCompare,
@@ -381,6 +382,9 @@ async function CitationsBodyApi({
       <CitationsStandardView
         data={view.then((v) => v.live)}
         dataDegraded={view.then(() => wasDegradedInRequest("standardCitations"))}
+        // P6 B041: 보조 블록(추이·구성 추이·프롬프트 분할)의 일시 실패도 같은 표식으로 — 같은
+        // 집계 뒤에 이어 붙여 읽는다(추가 조회 0). '준비 중'·숨김 대신 기존 지연 안내가 뜬다.
+        sectionDegraded={view.then(() => citationsDegraded("global"))}
         officialDelta={deltas.then((d) => d.officialDelta)}
         typeCategories={parts.then((p) => p.typeCategories)}
         toneSummary={parts.then((p) => p.toneSummary)}

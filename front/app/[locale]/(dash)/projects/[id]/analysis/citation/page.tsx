@@ -13,7 +13,13 @@ import { CitationsView } from "../../../../standard/answer-analysis/_components/
 import { loadProjectAnalysisContext } from "../_lib/auth-and-locks";
 import { throwForPage } from "@/lib/hgh/errors";
 import { loadFilterDates, loadPanelOptions } from "@/lib/hgh/adapters/filters";
-import { citationRouteQuery, isCitationsApi, loadCitationsView, type CitationsContext } from "@/lib/hgh/adapters/citations";
+import {
+  citationRouteQuery,
+  citationsDegraded,
+  isCitationsApi,
+  loadCitationsView,
+  type CitationsContext,
+} from "@/lib/hgh/adapters/citations";
 
 // Per-project 인용 분석. Data through the enforced per-project scope seam
 // (fetchProjectCitations) — synthetic in mock, the project's real run in live —
@@ -146,6 +152,8 @@ async function ProjectCitationApi({
       projectId: id,
       customFieldIds: activeCustomFields.map((f) => f.id),
     });
+    // P6 B042: 이 요청의 degrade 표식(5xx·시간 초과) — 그 블록은 기존 지연 안내를 낸다.
+    const degraded = citationsDegraded("project");
     return (
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-1.5">
@@ -160,6 +168,8 @@ async function ProjectCitationApi({
           engineOptions={options.engineOptions}
           selectableDates={dates.selectableDates}
           tableSource={view.table ? { query: tableQuery, ...view.table } : null}
+          dataDegraded={degraded.data}
+          degradedSections={degraded}
         />
       </div>
     );

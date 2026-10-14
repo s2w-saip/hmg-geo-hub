@@ -493,6 +493,10 @@ function defaultHandler(url: URL): Response {
       return ok({ items: [], counts: { positive: 4, negative: 1 } }, { ...META, page: { limit: 50, next_cursor: null, total: 0 } });
     case "/v1/trend": {
       const dim = url.searchParams.get("dimension");
+      // P12 B101 dims: the category block of a source call (shared buckets, the block's series and meta)
+      if (dim === "source" && url.searchParams.getAll("dims").includes("category@13")) {
+        return ok({ ...TREND_SOURCE, dims: [{ dimension: "category", series: TREND_CATEGORY.series, meta: META }] });
+      }
       return ok(dim === "source" ? TREND_SOURCE : dim === "category" ? TREND_CATEGORY : TREND_SHARE);
     }
     case "/v1/filters/dates":
@@ -530,23 +534,32 @@ const paths = () => log.map((x) => x.url.pathname);
 const calls = (path: string) => log.filter((x) => x.url.pathname === path).map((x) => x.url.searchParams);
 
 describe("loadCitationsView: calls, D6 order, degrade", () => {
-  it("global: domains (limit 200, competitor sources, picks), sources, two trends, split counts (limit 1), then essentials", async () => {
+  it("global: domains (limit 100 = the table, competitor sources, picks), sources, one trend call, split counts (limit 1), then essentials", async () => {
     const v = await C.loadCitationsView({ cumulative: true, engine: ["chatgpt"] }, G, ["toyota.com"]);
     const d = calls("/v1/citations/domains");
-    // main call (+ the picks outside the first page: skey[] with the same competitor pick)
+    // main call (+ the picks outside the first page: skey[] with the same competitor pick). B046: the
+    // standard table shows 100 rows and has no "more" row, so its first page is 100 rows
     expect(d.map((q) => [q.get("limit"), q.getAll("competitor"), q.get("competitor_sources"), q.getAll("skey")])).toContainEqual([
-      "200",
+      "100",
       ["toyota.com"],
       "true",
       [],
     ]);
-    expect(d.map((q) => q.getAll("skey"))).toContainEqual(["toyota.com"]);
-    expect(calls("/v1/trend").map((q) => [q.get("dimension"), q.get("top"), q.get("bucket")])).toEqual(
-      expect.arrayContaining([["source", "15", "cycle"], ["category", "13", "cycle"]]),
-    );
-    // performance A1: no citation trend reader uses buckets[].measured_days
-    expect(calls("/v1/trend").map((q) => q.getAll("measured_days"))).toEqual(calls("/v1/trend").map(() => ["false"]));
-    expect(calls("/v1/citations/prompts").map((q) => [q.get("owned"), q.get("limit")])).toEqual([["true", "1"]]);
+    expect(d.map((q) => [q.get("limit"), q.getAll("skey")])).toContainEqual(["200", ["toyota.com"]]);
+    // B043: no citation screen reads the competitor brand totals; the coverage denominator stays (include_den not sent)
+    expect(d.map((q) => [q.get("include_competitor_totals"), q.get("include_den")])).toEqual(d.map(() => ["false", null]));
+    // B043: the standard sources call keeps tone and types (the tiles and the type chart read the same answer)
+    const src = calls("/v1/citations/sources");
+    expect(src.length).toBeGreaterThan(0);
+    expect(src.map((q) => [q.get("include_tone"), q.get("include_types")])).toEqual(src.map(() => [null, null]));
+    // B044: the source and category trends are one call (dims), measured_days off (performance A1)
+    expect(calls("/v1/trend").map((q) => [q.get("dimension"), q.get("top"), q.get("bucket"), q.getAll("dims"), q.getAll("measured_days")])).toEqual([
+      ["source", "15", "cycle", ["category@13"], ["false"]],
+    ]);
+    // B043: the split card reads the two counts only
+    expect(
+      calls("/v1/citations/prompts").map((q) => [q.get("owned"), q.get("limit"), q.get("include_refs"), q.get("fields"), q.get("both_buckets")]),
+    ).toEqual([["true", "1", "false", "text", null]]);
     expect(paths()).toEqual(expect.arrayContaining(["/v1/citations/sources", "/v1/filters/dates"]));
     // FA-3: the K-1 summary fed only the measurement overview card, gone upstream (hmg-geo #305)
     expect(paths()).not.toContain("/v1/kpi/summary");
@@ -574,7 +587,7 @@ describe("loadCitationsView: calls, D6 order, degrade", () => {
     expect(startedWith).toEqual({ "/v1/trend": 3, "/v1/citations/prompts": 3 });
   });
 
-  it("FA-3: the global page loaders read seven distinct calls, no K-1 summary", async () => {
+  it("FA-3 / B044: the global page loaders read six distinct calls, no K-1 summary", async () => {
     await Promise.all([
       C.loadCitationsView({ cumulative: true }, G),
       C.loadCitationsAsOf({ cumulative: true }, G),
@@ -582,27 +595,60 @@ describe("loadCitationsView: calls, D6 order, degrade", () => {
       C.loadCitationSourceParts({ cumulative: true }, G),
     ]);
     // Distinct calls (outside a request scope nothing is deduped, so the set is compared):
-    // domains, sources, calendar (essentials); source and category trends, the prompt split,
-    // the share trend (card Δ). The page adds auth/me, F-1 options and, for a calendar month,
-    // K-2 compare. Before FA-3 the K-1 summary was one more essential (8 -> 7 here).
-    const keys = new Set(log.map((x) => `${x.url.pathname}:${x.url.searchParams.get("dimension") ?? ""}`));
-    expect([...keys].sort()).toEqual([
+    // domains, sources, calendar (essentials); the source trend with the category block (dims,
+    // also the category Δ base), the prompt split, the share trend (card Δ). The page adds
+    // auth/me, F-1 options and, for a calendar month, K-2 compare. Before FA-3 the K-1 summary was
+    // one more essential (8 -> 7); B044 folded the category trend into the source call (7 -> 6).
+    const key = (x: (typeof log)[number]) =>
+      `${x.url.pathname}:${x.url.searchParams.get("dimension") ?? ""}${x.url.searchParams.getAll("dims").map((d) => `+${d}`).join("")}`;
+    expect([...new Set(log.map(key))].sort()).toEqual([
       "/v1/citations/domains:",
       "/v1/citations/prompts:",
       "/v1/citations/sources:",
       "/v1/filters/dates:",
-      "/v1/trend:category",
       "/v1/trend:none",
-      "/v1/trend:source",
+      "/v1/trend:source+category@13",
     ]);
+    // the view's trend call and the Δ loader's category base are the same query (one HTTP call in a request)
+    const trendQueries = new Set(calls("/v1/trend").filter((q) => q.get("dimension") === "source").map((q) => q.toString()));
+    expect(trendQueries.size).toBe(1);
   });
 
-  it("website: split cards (owned and uncited, five rows), the K-1 summary among the essentials, no C-4 targets", async () => {
-    await C.loadCitationsView({ cumulative: true, websiteCountry: ["HYUNDAI-N"] }, { surface: "website", scope: null });
-    expect(calls("/v1/citations/prompts").map((q) => [q.get("owned"), q.get("limit")]).sort()).toEqual([
-      ["false", "5"],
-      ["true", "5"],
-    ]);
+  it("B044: the one dims call gives the same trends and category Δ base as the two separate calls", async () => {
+    const v = await C.loadCitationsView({ cumulative: true }, G);
+    const d = await C.loadCitationDeltas({ cumulative: true }, G);
+    // the separate dimension=category call of the same window has the same buckets (the window's)
+    const category = { ...TREND_CATEGORY, buckets: TREND_SOURCE.buckets };
+    const separate = C.toCitationsLive({ domains: env(DOMAINS), sources: env(SOURCES), sourceTrend: env(TREND_SOURCE), categoryTrend: env(category), owned: env(PROMPTS) })!;
+    expect([v.live?.trend, v.live?.categoryTrend]).toEqual([separate.trend, separate.categoryTrend]);
+    expect(v.live?.trend).not.toBeNull();
+    expect(v.live?.categoryTrend?.series).toEqual(["Official (HMG)", "Automotive Media"]);
+    expect(d.prevCategories).toEqual(C.prevCategoriesOf(env(category)));
+    // an answer without the category block (older backend): no category trend, the source trend stays
+    handler = (url) => (url.pathname === "/v1/trend" && url.searchParams.get("dimension") === "source" ? ok(TREND_SOURCE) : defaultHandler(url));
+    const old = await C.loadCitationsView({ cumulative: true, engine: ["x"] }, G);
+    expect([old.live?.trend, old.live?.categoryTrend]).toEqual([separate.trend, null]);
+  });
+
+  it("website: split cards (owned and uncited, five rows) from one both_buckets call, the K-1 summary among the essentials, no C-4 targets", async () => {
+    const UNCITED_ROW = { ...PROMPT_ROW, prompt_id: "00000000-0000-4000-8000-000000000031", text: "best SUV", citations: 4 };
+    handler = (url) =>
+      url.pathname === "/v1/citations/prompts" && url.searchParams.get("both_buckets") === "true"
+        ? ok({ ...PROMPTS, other_bucket: [UNCITED_ROW] })
+        : defaultHandler(url);
+    const v = await C.loadCitationsView({ cumulative: true, websiteCountry: ["HYUNDAI-N"] }, { surface: "website", scope: null });
+    // B043: one call instead of owned=true + owned=false (uncited = data.other_bucket, same limit and order)
+    expect(
+      calls("/v1/citations/prompts").map((q) => [q.get("owned"), q.get("limit"), q.get("both_buckets"), q.get("include_refs"), q.get("fields")]),
+    ).toEqual([["true", "5", "true", null, null]]);
+    expect(v.live?.promptSplit).toEqual(C.toPromptSplit(PROMPTS, { counts: PROMPTS.counts, items: [UNCITED_ROW] }));
+    expect(v.live?.promptSplit?.uncited.map((p) => p.promptText)).toEqual(["best SUV"]);
+    // B043: the website screen draws neither tone tiles nor types
+    const src = calls("/v1/citations/sources");
+    expect(src.length).toBeGreaterThan(0);
+    expect(src.map((q) => [q.get("include_tone"), q.get("include_types")])).toEqual(src.map(() => ["false", "false"]));
+    const dom = calls("/v1/citations/domains");
+    expect(dom.map((q) => q.get("include_competitor_totals"))).toEqual(dom.map(() => "false"));
     // DC-02 decision 6: the website cards read K-1 url_prompts (C-4 keeps the measurement unit, unread)
     expect(paths()).toContain("/v1/kpi/summary");
     expect(paths()).not.toContain("/v1/citations/targets");
@@ -627,9 +673,8 @@ describe("loadCitationsView: calls, D6 order, degrade", () => {
 
   it("U7-N13: website split cards under a source category filter are the API split with source[] (not the legacy top-80 promptList buckets)", async () => {
     const v = await C.loadCitationsView({ cumulative: true, sourceCategory: ["Official (HMG)"] }, { surface: "website", scope: null });
-    expect(calls("/v1/citations/prompts").map((q) => [q.get("owned"), q.getAll("source")]).sort()).toEqual([
-      ["false", ["officialHmg"]],
-      ["true", ["officialHmg"]],
+    expect(calls("/v1/citations/prompts").map((q) => [q.get("owned"), q.get("both_buckets"), q.getAll("source")])).toEqual([
+      ["true", "true", ["officialHmg"]],
     ]);
     // the split is set (the view does not fall back to its promptList buckets)
     expect(v.live?.promptSplit).not.toBeUndefined();
@@ -673,10 +718,21 @@ describe("loadCitationsView: calls, D6 order, degrade", () => {
     // the legacy label (read by the page through wasDegraded inside the request scope)
     expect(warn.mock.calls.map((c) => String(c[0])).some((m) => m.includes("degraded=standardCitations"))).toBe(true);
     expect(wasDegraded("standardCitations")).toBe(false); // outside a request: no store (degrade-registry header)
-    warn.mockRestore();
+    // citationsDegraded reads the same labels back (all false outside a request scope)
+    expect(C.citationsDegraded("global")).toEqual({ data: false, trend: false, categoryTrend: false, split: false });
+    warn.mockClear();
     handler = (url) => (url.pathname === "/v1/trend" ? fail(504, "timeout") : defaultHandler(url));
     const w = await C.loadCitationsView({ cumulative: true, dateFrom: "2026-09-01", dateTo: "2026-09-21" }, G);
     expect([w.live?.trend, w.live?.categoryTrend, w.live?.summary.total]).toEqual([null, null, 16]);
+    // B044: the one trend call failed -> both chart labels are recorded, as the two calls did (the screens read them, B041/B042)
+    const labels = () => warn.mock.calls.map((c) => String(c[0]).replace(/^.*degraded=/, ""));
+    expect(labels().sort()).toEqual(["standardCitations.categoryTrend", "standardCitations.trend"]);
+    // B042: a failed website split records websiteCitations.split (one call now, both cards)
+    warn.mockClear();
+    handler = (url) => (url.pathname === "/v1/citations/prompts" ? fail(503, "upstream") : defaultHandler(url));
+    const s = await C.loadCitationsView({ cumulative: true, engine: ["gemini"] }, { surface: "website", scope: null });
+    expect([s.live?.promptSplit, labels()]).toEqual([null, ["websiteCitations.split"]]);
+    warn.mockRestore();
   });
 
   it("errors that are not a backend outage reach the page (401, 403, 422)", async () => {
@@ -693,9 +749,31 @@ describe("standard secondary loaders", () => {
     expect(Object.keys(d).sort()).toEqual(["officialDelta", "prevCategories"]);
     expect(d.officialDelta).toEqual({ delta: 6.3, basisDate: "2026-09-14" });
     expect(d.prevCategories?.asOf).toBe("2026-09-14");
-    expect(calls("/v1/trend").map((q) => [q.get("dimension"), q.getAll("metrics").sort()])).toEqual(
-      expect.arrayContaining([["none", ["citation_share", "visibility"]], ["category", []]]),
+    // the category Δ base is the category block of the view's trend call (B044, same query)
+    expect(calls("/v1/trend").map((q) => [q.get("dimension"), q.getAll("metrics").sort(), q.getAll("dims")])).toEqual(
+      expect.arrayContaining([["none", ["citation_share", "visibility"], []], ["source", [], ["category@13"]]]),
     );
+    expect(calls("/v1/trend").map((q) => q.get("dimension")).sort()).toEqual(["none", "source"]);
+  });
+
+  it("B050 (kept): the share Δ needs visibility - a round without answers or with a mention gap is not a Δ basis", async () => {
+    const shareOnly = { ...TREND_SHARE, series: [TREND_SHARE.series[1]] };
+    const noAnswers = {
+      ...TREND_SHARE,
+      series: [series({ metric: "visibility", key: null, points: [pt("2026-09-07", 4, 8), pt("2026-09-14", 0, 0), pt("2026-09-21", 6, 8)] }), TREND_SHARE.series[1]],
+    };
+    const mentionGap = {
+      ...TREND_SHARE,
+      series: [series({ metric: "visibility", key: null, points: [pt("2026-09-07", 4, 8), pt("2026-09-14", null, 0, "hidden"), pt("2026-09-21", 6, 8)] }), TREND_SHARE.series[1]],
+    };
+    expect(C.shareDeltas(env(noAnswers)).officialDelta?.basisDate).toBe("2026-09-07");
+    expect(C.shareDeltas(env(mentionGap)).officialDelta?.basisDate).toBe("2026-09-07");
+    // without the visibility series every bucket has answers 0 (the card rule skips it) and the Δ is gone:
+    // visibility is read by the valid-round rule, so the request keeps it (B050 "쓰이면 유지")
+    expect(C.shareDeltas(env(TREND_SHARE)).officialDelta).toEqual({ delta: 6.3, basisDate: "2026-09-14" });
+    expect(C.shareDeltas(env(shareOnly)).officialDelta).toBeNull();
+    await C.loadCitationDeltas({ engine: ["x"] }, G);
+    expect(calls("/v1/trend").find((q) => q.get("dimension") === "none")?.getAll("metrics").sort()).toEqual(["citation_share", "visibility"]);
   });
 
   it("types and tone from the same C-2 call; a 503 -> both null (PendingCard)", async () => {
@@ -718,8 +796,23 @@ describe("standard secondary loaders", () => {
 describe("sub pages (cursor, D5)", () => {
   it("prompts: q / limit 50 / cursor forwarded, rows + both tab counts from one answer, total = meta.page.total", async () => {
     const r = await C.loadOwnedPromptPage({}, G, { owned: false, q: " ev ", page: 3, cursor: "abc" });
-    expect(calls("/v1/citations/prompts").map((q) => [q.get("owned"), q.get("limit"), q.get("q"), q.get("cursor")])).toEqual([["false", "50", "ev", "abc"]]);
+    // B043: fields=text (the page draws no funnel / engines); answers kept for the modal; no both_buckets with a cursor
+    expect(
+      calls("/v1/citations/prompts").map((q) => [q.get("owned"), q.get("limit"), q.get("q"), q.get("cursor"), q.get("fields"), q.get("include_refs"), q.get("both_buckets")]),
+    ).toEqual([["false", "50", "ev", "abc", "text", null, null]]);
     expect([r.page?.total, r.page?.page, r.page?.pageSize, r.page?.nextCursor, r.ownedCount, r.uncitedCount]).toEqual([2, 3, 50, null, 2, 5]);
+  });
+
+  it("fetchCitationPrompts: the P12 options are sent only when set; both_buckets never with a cursor", async () => {
+    await C.fetchCitationPrompts({}, G, { owned: true, limit: 5 });
+    await C.fetchCitationPrompts({}, G, { owned: true, limit: 5, bothBuckets: true, cursor: "c1" });
+    await C.fetchCitationPrompts({}, G, { owned: true, limit: 1, includeRefs: false, fields: "text", bothBuckets: true });
+    const opts = (q: URLSearchParams) => [q.get("include_refs"), q.get("fields"), q.get("both_buckets"), q.get("cursor")];
+    expect(calls("/v1/citations/prompts").map(opts)).toEqual([
+      [null, null, null, null],
+      [null, null, null, "c1"],
+      ["false", "text", "true", null],
+    ]);
   });
 
   it("prompts: counts null when no prompt has an own citation (legacy promptSplit null)", async () => {
@@ -810,12 +903,47 @@ describe("drilldown, table pages and the export relay", () => {
     expect(log[0].url.searchParams.getAll("engine")).toEqual(["gemini"]);
   });
 
-  it("list page for the client table: rows + cursor + total", async () => {
+  it("B047: url_total / prompt_total are passed on only when the detail caps cut the lists", () => {
+    const url = (i: number) => ({ url: `https://a.example/${i}`, title: "T", citations: 1, engines: ["gemini"], prompt_text: null, country: null });
+    const prompt = (i: number) => ({
+      prompt_id: `00000000-0000-4000-8000-0000000001${String(i).padStart(2, "0")}`,
+      text: `p${i}`,
+      funnel: null,
+      citations: 1,
+      own_citations: 0,
+      engines: ["gemini"],
+      answers: [],
+    });
+    const detail = (o: Partial<S["DomainDetailData"]>): S["DomainDetailData"] => ({
+      source: { skey: "a.example", domain: "a.example", is_social: false, category: MEDIA },
+      citations: 40,
+      own_citations: 0,
+      urls: Array.from({ length: 10 }, (_, i) => url(i)),
+      prompts: Array.from({ length: 12 }, (_, i) => prompt(i)),
+      ...o,
+    });
+    // cut: 37 URLs (10 shown), 250 prompts (12 shown)
+    const cut = C.toDomainDrilldown(detail({ url_total: 37, prompt_total: 250 }));
+    expect([cut.urls.length, cut.promptList.length, cut.urlTotal, cut.promptTotal]).toEqual([10, 12, 37, 250]);
+    // not cut (total = shown), or an older backend without totals: the legacy keys only (same object as before)
+    expect(Object.keys(C.toDomainDrilldown(detail({ url_total: 10, prompt_total: 12 })))).toEqual(["urls", "promptList"]);
+    expect(Object.keys(C.toDomainDrilldown(detail({})))).toEqual(["urls", "promptList"]);
+    expect(Object.keys(C.toDomainDrilldown(detail({ url_total: 37, prompt_total: 12 })))).toEqual(["urls", "promptList", "urlTotal"]);
+  });
+
+  it("list page for the client table: rows + cursor + total; the competitor brand totals are not computed", async () => {
     const p = await C.listCitationDomains({}, G, { limit: 200, q: "kia", sort: "skey", dir: "asc", cursor: "c1", competitor: ["toyota.com"] });
-    expect(calls("/v1/citations/domains").map((q) => [q.get("q"), q.get("sort"), q.get("dir"), q.get("cursor"), q.getAll("competitor")])).toEqual([
-      ["kia", "skey", "asc", "c1", ["toyota.com"]],
-    ]);
+    expect(
+      calls("/v1/citations/domains").map((q) => [q.get("q"), q.get("sort"), q.get("dir"), q.get("cursor"), q.getAll("competitor"), q.get("include_competitor_totals")]),
+    ).toEqual([["kia", "skey", "asc", "c1", ["toyota.com"], "false"]]);
     expect([p.rows.length, p.nextCursor, p.total]).toEqual([3, "c2", 480]);
+  });
+
+  it("B046: the standard first page is the table's 100 rows; website/project keep 200 with the cursor", () => {
+    expect(C.mainDomainsRequest(G, ["b", "a"])).toEqual({ limit: 100, competitor: ["b", "a"], competitorSources: true, competitorTotals: false });
+    expect(C.mainDomainsRequest({ surface: "website", scope: null })).toEqual({ limit: 200, competitorTotals: false });
+    expect(C.STANDARD_TABLE_ROWS).toBe(100);
+    expect(C.domainsParams(C.mainDomainsRequest(G))).toEqual({ limit: 100, competitor_sources: true, include_competitor_totals: false });
   });
 
   it("export (BG-22): streamed with the same search / sort and the locale", async () => {
@@ -838,5 +966,7 @@ describe("drilldown, table pages and the export relay", () => {
       null,
       "website",
     ]);
+    // the export query has no include_competitor_totals (the back export already skips them, P2 B011)
+    expect(q.has("include_competitor_totals")).toBe(false);
   });
 });

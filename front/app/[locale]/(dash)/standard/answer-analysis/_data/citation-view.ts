@@ -285,3 +285,39 @@ export function domainExportUrl(source: Pick<CitationTableSource, "query">, t: D
 export function isDefaultDomainQuery(t: DomainTableQuery): boolean {
   return !t.q.trim() && t.sortKey === "citations" && !t.asc;
 }
+
+/**
+ * 내려받은 파일의 이름 — 브라우저가 링크 이동 다운로드에서 쓰던 규칙 그대로(P6 B049):
+ * `filename*=UTF-8''…`(RFC 5987, 한글 이름)이 있으면 그것, 없으면 `filename="…"`. 둘 다 없으면 null.
+ * 백엔드(core/export.py export_headers)는 늘 ASCII `filename` 을 싣고, 비 ASCII 이름이면 `filename*` 를 더한다.
+ */
+export function contentDispositionFilename(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const star = /filename\*\s*=\s*([^']*)'[^']*'([^;]+)/i.exec(value);
+  if (star && (!star[1] || star[1].trim().toLowerCase() === "utf-8")) {
+    try {
+      const name = decodeURIComponent(star[2].trim().replace(/^"|"$/g, ""));
+      if (name) return name;
+    } catch {
+      // 깨진 퍼센트 인코딩 — 아래 ASCII 이름으로 넘어간다(브라우저도 filename* 을 버린다).
+    }
+  }
+  const plain = /filename\s*=\s*(?:"([^"]*)"|([^;]*))/i.exec(value);
+  const name = (plain?.[1] ?? plain?.[2] ?? "").trim();
+  return name || null;
+}
+
+/**
+ * API 원천 인용 화면의 보조 블록이 일시 실패(5xx·시간 초과·중단)로 비었는가(P6 B041·B042).
+ * 서버가 요청 스코프의 degrade 표식(`lib/hgh/adapters/citations.ts::citationsDegraded`)을 읽어
+ * 넘긴다. 켜진 블록은 '준비 중'·숨김 대신 기존 지연 안내(answerAnalysis.mentions.kpi.degraded)를 낸다.
+ * 없으면(legacy·정상) 종전 그대로다.
+ */
+export interface CitationSectionDegraded {
+  /** 주별 상위 도메인 추이 */
+  trend?: boolean;
+  /** 출처 카테고리 구성 추이 */
+  categoryTrend?: boolean;
+  /** 자사 인용/미인용 프롬프트 분할 */
+  split?: boolean;
+}

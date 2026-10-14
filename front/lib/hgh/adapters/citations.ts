@@ -22,12 +22,19 @@ import "server-only";
 //   (client search / sort / export of every row)           listCitationDomains (BG-21), export (BG-22)
 //
 // Calls. One CitationsLive = C-1 domains (summary, table, competitor sources) + C-2 sources
-// (categories, engines, types, tone) + T-1 source trend (top 15) + T-1 category trend (top 13)
-// + C-3 prompts (split counts; website/project also the top 5 of each side). Identical queries
-// share one request through the client dedupe, so the header pill, the overview card, the filter
-// bar and the body read one domains call.
+// (categories, engines, types, tone) + T-1 source trend (top 15) with the category trend (top 13)
+// as a dims block of the same call (P12 B101, P6 B044) + C-3 prompts (split counts; website/project
+// also the top 5 of each side, both from one both_buckets call). Identical queries share one
+// request through the client dedupe, so the header pill, the overview card, the filter bar and the
+// body read one domains call.
 // D6: the essentials (domains, sources and the calendar; plus the K-1 summary on website, the
 // URL-rate cards) fire first; every other call waits in afterCitationEssentials until they settled.
+// Unread work is switched off with the additive params (P2 B011, P12 B098/B099; P6 B043): the
+// domains calls skip the competitor brand totals (no screen reads them), website/project sources
+// skip tone and types (their screen draws neither), the standard split card reads counts only
+// (include_refs=false, fields=text) and the prompts sub page skips funnel and engines (fields=text:
+// the page shows the prompt text and the answer modal only). The coverage denominator is kept
+// (include_den default): every table shows the coverage column.
 //
 // Field rules (hand-checked in citations.test.ts):
 //   domain row  domain <- skey (the group key the legacy table showed, social accounts host+path),
@@ -61,7 +68,10 @@ import "server-only";
 // no citation in the window -> the legacy empty shape (EMPTY_CITATIONS). A backend 5xx, timeout
 // or abort of the domains or sources call -> null plus the legacy degrade label (the standard
 // screen then shows its "delayed" card); a failed trend -> that trend null; a failed prompt
-// split -> null. 401/403/404/422 are thrown for the page (throwForPage) or the route.
+// split -> null. Each of these records its label (CITATIONS_DEGRADE_LABEL + .trend /
+// .categoryTrend / .split); citationsDegraded reads them back so every citation screen shows the
+// existing "delayed" notice there instead of "no data", "coming soon" or a hidden block (P6
+// B041/B042). 401/403/404/422 are thrown for the page (throwForPage) or the route.
 //
 // Known differences. Design DC list (front-adapter-plan 3.6 (나)): DC-01 (engine[] empty = the
 // default engine), DC-05 (Δ per round), DC-08 (trend
@@ -141,7 +151,7 @@ import { readStandardFilters } from "@/components/dash/standard-filters";
 import { readProjectCustomFieldFiltersRaw } from "@/components/dash/project-custom-field-filters";
 import { splitFilterValues } from "@/components/dash/filter-encoding";
 import type { TrendGapRow, TrendGap } from "@/lib/viz/trend-gap";
-import { degradeOnApiFailure } from "@/lib/scope/degrade-registry";
+import { degradeOnApiFailure, wasDegraded } from "@/lib/scope/degrade-registry";
 import { dedupeInRequest, stableKey } from "@/lib/request-dedupe";
 import type { components } from "../api-types";
 import { hghGet, hghSource } from "../client";
@@ -152,7 +162,7 @@ import { relayDownload } from "../relay";
 import { withParams, type Surface } from "../query";
 import { analysisQuery, canReadAnalysis, fetchFilterDates, isAnalysisApi, type AnalysisQueryContext } from "./filters";
 import { fetchKpiSummary, provenanceOf, urlPromptRates, type SummaryResponse } from "./summary";
-import { fetchTrend, toStandardTrendBuckets, type TrendResponse } from "./trend";
+import { fetchTrend, fetchTrendDims, toStandardTrendBuckets, type TrendResponse } from "./trend";
 import { fetchPeriodCompareApi } from "./compare";
 import { fetchProjectGate, isProjectId } from "./project-gate";
 
@@ -182,7 +192,7 @@ export type CitationsContext = AnalysisQueryContext;
 
 /** Rows of the first domains page (design 3.3: limit=200, the backend maximum). */
 export const DOMAIN_PAGE = 200;
-/** Rows the standard table shows (DOMAIN_RANK_LIMIT, citations-standard-view.tsx). */
+/** Rows the standard table shows (DOMAIN_RANK_LIMIT, citations-standard-view.tsx) = its first page (B046). */
 export const STANDARD_TABLE_ROWS = 100;
 /** Series of the weekly top domains chart (legacy union cap 15) and the category chart (13). */
 export const SOURCE_TREND_TOP = 15;
@@ -375,20 +385,43 @@ export function toCitationPrompt(r: ApiPromptRow): CitationPromptLive {
   };
 }
 
-/** C-3 answers (owned=true, optional owned=false) -> CitationsPromptSplit; owned 0 -> null. */
+/**
+ * C-3 answers (owned=true, optional owned=false) -> CitationsPromptSplit; owned 0 -> null. Without
+ * an owned=false answer the uncited rows are the owned answer's other_bucket (both_buckets=true:
+ * the first page of the uncited bucket, same limit and order as a separate owned=false call).
+ */
 export function toPromptSplit(owned: ApiPromptsData, uncited?: ApiPromptsData | null): CitationsPromptSplit | null {
   if (owned.counts.owned === 0) return null;
   return {
     owned: owned.items.map(toCitationPrompt),
-    uncited: (uncited?.items ?? []).map(toCitationPrompt),
+    uncited: (uncited?.items ?? owned.other_bucket ?? []).map(toCitationPrompt),
     ownedCount: owned.counts.owned,
     uncitedCount: owned.counts.uncited,
   };
 }
 
-/** C-1 detail -> the row's URL list and prompt list (legacy foldCitationsLive shapes). */
-export function toDomainDrilldown(d: ApiDomainDetail): { urls: CitationUrlLive[]; promptList: CitationPromptLive[] } {
-  return {
+/** The row drilldown: lists plus the counts before the detail caps, only when a cap cut a list. */
+export interface CitationDomainDrilldown {
+  urls: CitationUrlLive[];
+  promptList: CitationPromptLive[];
+  /** URLs before the cap (url_total), only when the cap (10) cut the list (P6 B047). */
+  urlTotal?: number;
+  /** Prompts before the cap (prompt_total), only when the cap (12) cut the list (P6 B047). */
+  promptTotal?: number;
+}
+
+/** A total worth reporting: the count before the cap, only when it is larger than what was read. */
+function cutTotal(total: number | null | undefined, shown: number): number | undefined {
+  return typeof total === "number" && total > shown ? total : undefined;
+}
+
+/**
+ * C-1 detail -> the row's URL list and prompt list (legacy foldCitationsLive shapes), plus
+ * urlTotal / promptTotal when the detail caps cut them (the screen adds the existing
+ * "{total}개 중 {shown}개 표시" line; a list that fits has no extra key, P6 B047).
+ */
+export function toDomainDrilldown(d: ApiDomainDetail): CitationDomainDrilldown {
+  const out: CitationDomainDrilldown = {
     urls: d.urls
       .map((u) => ({
         url: u.url,
@@ -412,6 +445,11 @@ export function toDomainDrilldown(d: ApiDomainDetail): { urls: CitationUrlLive[]
       }))
       .sort((a, b) => b.citations - a.citations),
   };
+  const urlTotal = cutTotal(d.url_total, d.urls.length);
+  const promptTotal = cutTotal(d.prompt_total, d.prompts.length);
+  if (urlTotal !== undefined) out.urlTotal = urlTotal;
+  if (promptTotal !== undefined) out.promptTotal = promptTotal;
+  return out;
 }
 
 function toDetailAnswer(a: ApiDetailAnswer): MentionAnswerLive {
@@ -446,9 +484,9 @@ export interface CitationsParts {
   sources: Enveloped<ApiSourcesData>;
   sourceTrend: TrendResponse | null;
   categoryTrend: TrendResponse | null;
-  /** owned=true answer (counts, top owned rows); null = failed (split null). */
+  /** owned=true answer (counts, top owned rows; website/project also other_bucket); null = failed (split null). */
   owned: Enveloped<ApiPromptsData> | null;
-  /** owned=false answer (website/project cards); undefined = not requested. */
+  /** A separate owned=false answer; undefined = the uncited rows are owned.other_bucket (or none). */
   uncited?: Enveloped<ApiPromptsData> | null;
 }
 
@@ -506,6 +544,12 @@ export interface DomainsRequest {
   /** BG-20 skey[]: these rows only. */
   skey?: readonly string[];
   competitorSources?: boolean;
+  /**
+   * P2 B011: false sends include_competitor_totals=false (data.competitor_totals = [], the
+   * competitor brand sums are not computed). No citation screen reads them. Outside the cursor
+   * hash, so a page read with it continues a cursor read without it. Default: not sent.
+   */
+  competitorTotals?: boolean;
 }
 
 /** Backend cap of competitor[] and skey[] (DomainsQuery SKEY_MAX_ITEMS) and of one skey's length. */
@@ -533,6 +577,7 @@ export type DomainsParams = {
   competitor?: string[];
   skey?: string[];
   competitor_sources?: boolean;
+  include_competitor_totals?: boolean;
 };
 
 export function domainsParams(req: Partial<DomainsRequest>): DomainsParams {
@@ -548,6 +593,7 @@ export function domainsParams(req: Partial<DomainsRequest>): DomainsParams {
   const skey = pickList(req.skey);
   if (skey.length) out.skey = skey;
   if (req.competitorSources) out.competitor_sources = true;
+  if (req.competitorTotals === false) out.include_competitor_totals = false;
   return out;
 }
 
@@ -561,22 +607,64 @@ export async function fetchCitationDomains(
   return { data: res.data, meta: res.meta };
 }
 
-export async function fetchCitationSources(filters: StandardFilters, ctx: CitationsContext): Promise<Enveloped<ApiSourcesData>> {
+/**
+ * C-2 parts to compute (P12 B098). false sends include_tone=false (data.tone = zero tiles) or
+ * include_types=false (data.types = []); categories, by_engine and total_citations are the same.
+ * Default: both computed, nothing sent (the query and its dedupe key stay as before).
+ */
+export interface SourcesRequest {
+  tone?: boolean;
+  types?: boolean;
+}
+
+export async function fetchCitationSources(
+  filters: StandardFilters,
+  ctx: CitationsContext,
+  req: SourcesRequest = {},
+): Promise<Enveloped<ApiSourcesData>> {
   const { query, cf } = analysisQuery(filters, ctx);
-  const res = await hghGet("/v1/citations/sources", { query, cf });
+  const extra: { include_tone?: boolean; include_types?: boolean } = {};
+  if (req.tone === false) extra.include_tone = false;
+  if (req.types === false) extra.include_types = false;
+  const res = await hghGet("/v1/citations/sources", { query: withParams(query, extra), cf });
   return { data: res.data, meta: res.meta };
+}
+
+/** C-3 request (P12 B099 options default to the previous answer: nothing sent). */
+export interface PromptsRequest {
+  owned: boolean;
+  limit: number;
+  q?: string;
+  cursor?: string | null;
+  /** false: no answer sample per row (items[].answers = []). */
+  includeRefs?: boolean;
+  /** text: no funnel and engines (items[].funnel = null, providers = []); citations and counts are the same. */
+  fields?: "all" | "text";
+  /** true: the opposite bucket's first page in data.other_bucket (same q / limit / order). Not with a cursor. */
+  bothBuckets?: boolean;
 }
 
 export async function fetchCitationPrompts(
   filters: StandardFilters,
   ctx: CitationsContext,
-  req: { owned: boolean; limit: number; q?: string; cursor?: string | null },
+  req: PromptsRequest,
 ): Promise<Enveloped<ApiPromptsData>> {
   const { query, cf } = analysisQuery(filters, ctx);
-  const extra: { owned: boolean; limit: number; q?: string; cursor?: string } = { owned: req.owned, limit: req.limit };
+  const extra: {
+    owned: boolean;
+    limit: number;
+    q?: string;
+    cursor?: string;
+    include_refs?: boolean;
+    fields?: "text";
+    both_buckets?: boolean;
+  } = { owned: req.owned, limit: req.limit };
   const q = req.q?.trim();
   if (q) extra.q = q;
   if (req.cursor) extra.cursor = req.cursor;
+  if (req.includeRefs === false) extra.include_refs = false;
+  if (req.fields === "text") extra.fields = "text";
+  if (req.bothBuckets && !req.cursor) extra.both_buckets = true;
   const res = await hghGet("/v1/citations/prompts", { query: withParams(query, extra), cf });
   return { data: res.data, meta: res.meta };
 }
@@ -618,15 +706,39 @@ export async function fetchDomainDetail(
 
 // The citation trends send measured_days=false (performance A1): toCitationTrend, prevCategoriesOf
 // and shareDeltas read no measuredDays.
-export function fetchSourceTrend(filters: StandardFilters, ctx: CitationsContext): Promise<TrendResponse> {
-  return fetchTrend(filters, { ...ctx, bucket: "cycle", dimension: "source", top: SOURCE_TREND_TOP, measuredDays: false });
+
+/** The two citation trends of a screen: weekly top domains (source) and category composition. */
+export interface CitationTrends {
+  source: TrendResponse;
+  /** null when the answer carries no category block (an older backend: treated as no trend). */
+  category: TrendResponse | null;
 }
-export function fetchCategoryTrend(filters: StandardFilters, ctx: CitationsContext): Promise<TrendResponse> {
-  return fetchTrend(filters, { ...ctx, bucket: "cycle", dimension: "category", top: CATEGORY_TREND_TOP, measuredDays: false });
+
+/**
+ * Source trend (top 15) and category trend (top 13) in ONE T-1 call (P12 B101 dims, P6 B044): the
+ * window, citation presence and the rd.citation scan are computed once. Each block equals the
+ * separate dimension=source / dimension=category call with the same filters, bucket and
+ * measured_days (splitTrendDims), so toCitationTrend and prevCategoriesOf read the same data.
+ * The view and the Δ loader send the same query: inside a request it is one HTTP call.
+ */
+export async function fetchCitationTrends(filters: StandardFilters, ctx: CitationsContext): Promise<CitationTrends> {
+  const parts = await fetchTrendDims(filters, {
+    ...ctx,
+    bucket: "cycle",
+    dimension: "source",
+    top: SOURCE_TREND_TOP,
+    measuredDays: false,
+    dims: [{ dimension: "category", top: CATEGORY_TREND_TOP }],
+  });
+  return { source: parts.get("source")!, category: parts.get("category") ?? null };
 }
 /**
  * The Overview card Δ input: citation_share plus visibility (its den = the bucket's answers; the
  * card rule skips a bucket without answers or with a mention-family gap, overviewTrendValues).
+ * P6 B050 (checked, kept): visibility is not an unread series. toStandardTrendBuckets takes the
+ * bucket's answers from its den and bucketGap reads its mention-family gap; overviewCardDelta
+ * skips those buckets when it picks the last two valued rounds. With citation_share alone every
+ * bucket would have 0 answers and the Δ would disappear (citations.test.ts 'B050').
  */
 export function fetchShareTrend(filters: StandardFilters, ctx: CitationsContext): Promise<TrendResponse> {
   return fetchTrend(filters, {
@@ -638,11 +750,33 @@ export function fetchShareTrend(filters: StandardFilters, ctx: CitationsContext)
   });
 }
 
-/** The main domains call of a screen (standard: competitor picks and the competitor sources). */
+/**
+ * The main domains call of a screen (standard: competitor picks and the competitor sources). The
+ * standard table shows the top STANDARD_TABLE_ROWS and has no "more" row (its search and sort read
+ * the route with that page size), so its first page is that many rows (P6 B046; competitor picks
+ * outside it are read with skey[], as before for picks outside 200). Website/project page through
+ * the first DOMAIN_PAGE rows with the cursor. No screen reads the competitor brand totals (B043).
+ */
 export function mainDomainsRequest(ctx: CitationsContext, competitor?: readonly string[]): DomainsRequest {
   return ctx.surface === "global"
-    ? { limit: DOMAIN_PAGE, competitor: competitor ?? [], competitorSources: true }
-    : { limit: DOMAIN_PAGE };
+    ? { limit: STANDARD_TABLE_ROWS, competitor: competitor ?? [], competitorSources: true, competitorTotals: false }
+    : { limit: DOMAIN_PAGE, competitorTotals: false };
+}
+
+/** The main sources call of a screen: website/project draw neither tone tiles nor types (B043). */
+export function mainSourcesRequest(ctx: CitationsContext): SourcesRequest {
+  return ctx.surface === "global" ? {} : { tone: false, types: false };
+}
+
+/**
+ * The prompt split call (B043). Standard: the status tiles read the two counts only (one row, no
+ * answer sample, no funnel / engines). Website/project: the owned and uncited cards (five rows
+ * each) from one call (both_buckets: uncited = data.other_bucket).
+ */
+export function splitPromptsRequest(ctx: CitationsContext): PromptsRequest {
+  return ctx.surface === "global"
+    ? { owned: true, limit: 1, includeRefs: false, fields: "text" }
+    : { owned: true, limit: SPLIT_CARD_ROWS, bothBuckets: true };
 }
 
 // ── D6: first render budget ─────────────────────────────────────────────────
@@ -660,7 +794,7 @@ export function citationsEssentials(filters: StandardFilters, ctx: CitationsCont
   return dedupeInRequest(key, async () => {
     const calls: Promise<unknown>[] = [
       fetchCitationDomains(filters, ctx, mainDomainsRequest(ctx, competitor)),
-      fetchCitationSources(filters, ctx),
+      fetchCitationSources(filters, ctx, mainSourcesRequest(ctx)),
       fetchFilterDates({ surface: ctx.surface, projectId: ctx.projectId, family: "citations" }),
     ];
     if (ctx.surface === "website" && targetsApplicable(filters)) calls.push(fetchKpiSummary(filters, ctx));
@@ -688,6 +822,33 @@ export const CITATIONS_DEGRADE_LABEL: Readonly<Record<Surface, string>> = {
   project: "projectCitations",
 };
 
+/** Which parts of loadCitationsView ended in a backend outage (5xx, timeout, abort) in this request. */
+export interface CitationsDegraded {
+  /** domains or sources: live is null. */
+  data: boolean;
+  /** source trend: live.trend is null. */
+  trend: boolean;
+  /** category trend: live.categoryTrend is null. */
+  categoryTrend: boolean;
+  /** prompt split: live.promptSplit is null. */
+  split: boolean;
+}
+
+/**
+ * The degrade labels loadCitationsView recorded (P6 B041/B042), read back in the same request.
+ * Call it after the view settled (the labels are written when its calls fail). Outside a request
+ * scope every flag is false (degrade-registry).
+ */
+export function citationsDegraded(surface: Surface): CitationsDegraded {
+  const label = CITATIONS_DEGRADE_LABEL[surface];
+  return {
+    data: wasDegraded(label),
+    trend: wasDegraded(`${label}.trend`),
+    categoryTrend: wasDegraded(`${label}.categoryTrend`),
+    split: wasDegraded(`${label}.split`),
+  };
+}
+
 export interface CitationsView {
   live: CitationsLive | null;
   /** null when live is null (nothing to page). */
@@ -712,32 +873,31 @@ export function loadCitationsView(
     void citationsEssentials(filters, ctx, picks);
     const label = CITATIONS_DEGRADE_LABEL[ctx.surface];
     const later = <T>(run: () => Promise<T>) => afterCitationEssentials(filters, ctx, run, picks);
-    const [core, sourceTrend, categoryTrend, owned, uncited, pickedRows] = await Promise.all([
+    // One trend call for both charts (B044). Each chart keeps its own degrade label: a failed call
+    // records both, as the two separate calls did when the backend was down.
+    const trends = later(() => fetchCitationTrends(filters, ctx));
+    const [core, sourceTrend, categoryTrend, owned, pickedRows] = await Promise.all([
       degradeOnApiFailure(label, () =>
         Promise.all([
           fetchCitationDomains(filters, ctx, mainDomainsRequest(ctx, picks)),
-          fetchCitationSources(filters, ctx),
+          fetchCitationSources(filters, ctx, mainSourcesRequest(ctx)),
         ]),
       ),
-      degradeOnApiFailure(`${label}.trend`, () => later(() => fetchSourceTrend(filters, ctx))),
-      degradeOnApiFailure(`${label}.categoryTrend`, () => later(() => fetchCategoryTrend(filters, ctx))),
-      degradeOnApiFailure(`${label}.split`, () =>
-        later(() => fetchCitationPrompts(filters, ctx, { owned: true, limit: ctx.surface === "global" ? 1 : SPLIT_CARD_ROWS })),
-      ),
-      ctx.surface === "global"
-        ? Promise.resolve(undefined)
-        : degradeOnApiFailure(`${label}.split`, () =>
-            later(() => fetchCitationPrompts(filters, ctx, { owned: false, limit: SPLIT_CARD_ROWS })),
-          ),
+      degradeOnApiFailure(`${label}.trend`, () => trends.then((t) => t.source)),
+      degradeOnApiFailure(`${label}.categoryTrend`, () => trends.then((t) => t.category)),
+      // Website/project: the uncited card rows come in the same answer (other_bucket, B043).
+      degradeOnApiFailure(`${label}.split`, () => later(() => fetchCitationPrompts(filters, ctx, splitPromptsRequest(ctx)))),
       picks.length
         ? degradeOnApiFailure(`${label}.competitor`, () =>
-            later(() => fetchCitationDomains(filters, ctx, { limit: DOMAIN_PAGE, skey: picks, competitor: picks })),
+            later(() =>
+              fetchCitationDomains(filters, ctx, { limit: DOMAIN_PAGE, skey: picks, competitor: picks, competitorTotals: false }),
+            ),
           )
         : Promise.resolve(null),
     ]);
     if (!core) return { live: null, table: null, competitorOptions: [] };
     const [domains, sources] = core;
-    const live = toCitationsLive({ domains, sources, sourceTrend, categoryTrend, owned, uncited });
+    const live = toCitationsLive({ domains, sources, sourceTrend, categoryTrend, owned });
     if (live && pickedRows) {
       const have = new Set(live.domains.map((r) => r.domain));
       for (const r of pickedRows.data.items) if (!have.has(r.skey)) live.domains.push(toCitationDomain(r));
@@ -795,7 +955,10 @@ export function prevCategoriesOf(trend: TrendResponse | null): CitationDeltas["p
   return { totals: { total: prev.total, byCategory: prev.byCategory }, asOf: prev.key };
 }
 
-/** Standard status Δ sources: the share trend and the category trend (second stage). */
+/**
+ * Standard status Δ sources: the share trend and the category trend (second stage). The category
+ * trend is the category block of the view's trend call (same query: one HTTP call per request).
+ */
 export async function loadCitationDeltas(
   filters: StandardFilters,
   ctx: CitationsContext,
@@ -806,13 +969,16 @@ export async function loadCitationDeltas(
       afterCitationEssentials(filters, ctx, () => fetchShareTrend(filters, ctx), competitor),
     ),
     degradeOnApiFailure("citationCategoriesPrev", () =>
-      afterCitationEssentials(filters, ctx, () => fetchCategoryTrend(filters, ctx), competitor),
+      afterCitationEssentials(filters, ctx, () => fetchCitationTrends(filters, ctx), competitor).then((t) => t.category),
     ),
   ]);
   return { ...shareDeltas(share), prevCategories: prevCategoriesOf(category) };
 }
 
-/** Type composition and tone tiles from the same C-2 answer (null = degrade, legacy kpiDegrade). */
+/**
+ * Type composition and tone tiles from the same C-2 answer (null = degrade, legacy kpiDegrade).
+ * The standard screen's main sources call computes both (mainSourcesRequest global): one call.
+ */
 export async function loadCitationSourceParts(
   filters: StandardFilters,
   ctx: CitationsContext,
@@ -870,6 +1036,9 @@ export interface SubpageRequest {
 /**
  * Prompts sub page (owned / uncited). Tab counts come from the same answer (counts). null =
  * degrade (legacy kpiDegrade). total = meta.page.total (q applied) or the tab count without q.
+ * fields=text (B043): the page draws the prompt text and the answer modal (answers kept), never
+ * the funnel or the engines, so rows carry funnelStage null and providers [] (order, citations
+ * and counts are the same; citations.parity.test.ts 'prompts sub page').
  */
 export async function loadOwnedPromptPage(
   filters: StandardFilters,
@@ -878,7 +1047,7 @@ export async function loadOwnedPromptPage(
 ): Promise<{ page: CursorPageOf<CitationOwnedPromptPage> | null; ownedCount: number | null; uncitedCount: number | null }> {
   const got = await degradeOnApiFailure("citationOwnedPrompts", () =>
     pageOrFirst(req.cursor, (cursor) =>
-      fetchCitationPrompts(filters, ctx, { owned: req.owned, limit: SUBPAGE_SIZE, q: req.q, cursor }),
+      fetchCitationPrompts(filters, ctx, { owned: req.owned, limit: SUBPAGE_SIZE, q: req.q, cursor, fields: "text" }),
     ),
   );
   if (!got) return { page: null, ownedCount: null, uncitedCount: null };
@@ -1190,7 +1359,7 @@ export async function loadDomainDrilldown(
   filters: StandardFilters,
   ctx: CitationsContext,
   skey: string,
-): Promise<{ urls: CitationUrlLive[]; promptList: CitationPromptLive[] }> {
+): Promise<CitationDomainDrilldown> {
   return toDomainDrilldown((await fetchDomainDetail(filters, ctx, skey)).data);
 }
 
@@ -1200,13 +1369,16 @@ export interface DomainListPage {
   total: number | null;
 }
 
-/** C-1 list page for the client table (route /api/citations/domains). */
+/**
+ * C-1 list page for the client table (route /api/citations/domains). The route answers rows,
+ * cursor and total only: the competitor brand totals are not computed (B043).
+ */
 export async function listCitationDomains(
   filters: StandardFilters,
   ctx: CitationsContext,
   req: DomainsRequest,
 ): Promise<DomainListPage> {
-  const res = await fetchCitationDomains(filters, ctx, req);
+  const res = await fetchCitationDomains(filters, ctx, { ...req, competitorTotals: false });
   const info = pageInfo(res.meta);
   return { rows: res.data.items.map(toCitationDomain), nextCursor: info.nextCursor, total: info.total };
 }
@@ -1215,7 +1387,7 @@ export async function listCitationDomains(
 export function relayDomainsExport(
   filters: StandardFilters,
   ctx: CitationsContext,
-  req: Omit<DomainsRequest, "limit" | "cursor" | "competitorSources"> & {
+  req: Omit<DomainsRequest, "limit" | "cursor" | "competitorSources" | "competitorTotals"> & {
     locale: "ko" | "en";
     format?: "xlsx" | "csv";
     maxRows?: number;
@@ -1223,7 +1395,7 @@ export function relayDomainsExport(
 ): Promise<Response> {
   const { query, cf } = analysisQuery(filters, ctx);
   const { limit: _limit, ...list } = domainsParams(req);
-  const extra: Omit<DomainsParams, "limit" | "cursor" | "competitor_sources"> & {
+  const extra: Omit<DomainsParams, "limit" | "cursor" | "competitor_sources" | "include_competitor_totals"> & {
     locale: "ko" | "en";
     format: "xlsx" | "csv";
     max_rows?: number;

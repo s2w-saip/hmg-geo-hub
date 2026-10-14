@@ -273,7 +273,9 @@ function sourcesData(): S["SourcesData"] {
     types: [],
   };
 }
-function promptsData(owned: boolean, limit: number): S["CitationPromptsData"] {
+/** P12 B099 options of C-3: refs = the answer sample (include_refs), text = no funnel / engines (fields=text). */
+type PromptOpts = { refs: boolean; text: boolean };
+function promptsData(owned: boolean, limit: number, opts: PromptOpts = { refs: true, text: false }): S["CitationPromptsData"] {
   const byPrompt = new Map<string, Cit[]>();
   for (const x of CITS) {
     const p = ANSWER.get(x.job)!.prompt;
@@ -286,14 +288,16 @@ function promptsData(owned: boolean, limit: number): S["CitationPromptsData"] {
     items: pick.slice(0, limit).map((r) => ({
       prompt_id: r.pid,
       text: PROMPT.get(r.pid)!.text,
-      funnel: PROMPT.get(r.pid)!.funnel,
+      funnel: opts.text ? null : PROMPT.get(r.pid)!.funnel,
       citations: r.list.length,
-      providers: [...new Set(r.list.map((x) => ANSWER.get(x.job)!.engine))].sort(),
-      answers: [...new Set(r.list.map((x) => x.job))]
-        .map((job) => ({ job, n: r.list.filter((x) => x.job === job).length }))
-        .sort((a, b) => b.n - a.n || (a.job < b.job ? -1 : 1))
-        .slice(0, 8)
-        .map(({ job, n }) => ({ job_id: job, provider: ANSWER.get(job)!.engine, region: ANSWER.get(job)!.region, citations_in_answer: n })),
+      providers: opts.text ? [] : [...new Set(r.list.map((x) => ANSWER.get(x.job)!.engine))].sort(),
+      answers: !opts.refs
+        ? []
+        : [...new Set(r.list.map((x) => x.job))]
+            .map((job) => ({ job, n: r.list.filter((x) => x.job === job).length }))
+            .sort((a, b) => b.n - a.n || (a.job < b.job ? -1 : 1))
+            .slice(0, 8)
+            .map(({ job, n }) => ({ job_id: job, provider: ANSWER.get(job)!.engine, region: ANSWER.get(job)!.region, citations_in_answer: n })),
     })),
   };
 }
@@ -350,15 +354,28 @@ const json = (data: unknown, meta: S["Meta"] = META) =>
 function serve(url: string): Response {
   const x = new URL(url);
   const q = x.searchParams;
-  if (x.pathname === "/v1/citations/domains") return json(domainsData(), { ...META, page: { limit: Number(q.get("limit")), next_cursor: null, total: domainRows().length } });
+  if (x.pathname === "/v1/citations/domains") {
+    // P2 B011: include_competitor_totals=false -> competitor_totals [] (rows, summary and order unchanged)
+    const d = domainsData();
+    const data = q.get("include_competitor_totals") === "false" ? { ...d, competitor_totals: [] } : d;
+    return json(data, { ...META, page: { limit: Number(q.get("limit")), next_cursor: null, total: domainRows().length } });
+  }
   if (x.pathname.startsWith("/v1/citations/domains/")) return json(detailData(decodeURIComponent(x.pathname.slice("/v1/citations/domains/".length))));
   if (x.pathname === "/v1/citations/sources") return json(sourcesData());
   if (x.pathname === "/v1/citations/prompts") {
-    const d = promptsData(q.get("owned") === "true", Number(q.get("limit")));
-    const all = promptsData(q.get("owned") === "true", 1000).items.length;
-    return json(d, { ...META, page: { limit: Number(q.get("limit")), next_cursor: null, total: all } });
+    // P12 B099: include_refs / fields / both_buckets (other_bucket = the opposite bucket's first page, same limit and options)
+    const owned = q.get("owned") === "true";
+    const opts: PromptOpts = { refs: q.get("include_refs") !== "false", text: q.get("fields") === "text" };
+    const d = promptsData(owned, Number(q.get("limit")), opts);
+    const data = q.get("both_buckets") === "true" ? { ...d, other_bucket: promptsData(!owned, Number(q.get("limit")), opts).items } : d;
+    const all = promptsData(owned, 1000).items.length;
+    return json(data, { ...META, page: { limit: Number(q.get("limit")), next_cursor: null, total: all } });
   }
-  if (x.pathname === "/v1/trend") return json({ bucket: "cycle", dimension: q.get("dimension") ?? "none", own_label: "HMG", buckets: [], series: [] });
+  if (x.pathname === "/v1/trend") {
+    // P12 B101: one block per dims item (no buckets in this model: the trends are unit-tested, see KNOWN_DIFF)
+    const dims = q.getAll("dims").map((item) => ({ dimension: item.split(/[:@]/)[0], series: [], meta: META }));
+    return json({ bucket: "cycle", dimension: q.get("dimension") ?? "none", own_label: "HMG", buckets: [], series: [], ...(dims.length ? { dims } : {}) });
+  }
   if (x.pathname === "/v1/filters/dates") return json({ dates: ["2026-09-21"], first_measured_date: "2026-09-01", latest_round_date: "2026-09-21", presets: [], dates_truncated: false });
   if (x.pathname === "/v1/kpi/summary") return json({});
   return new Response(JSON.stringify({ error: { code: "not_found" } }), { status: 404, headers: { "content-type": "application/json" } });
@@ -398,7 +415,7 @@ const KNOWN_DIFF: Record<string, string> = {
   "domains[].skey": "api rows keep the source key for the drilldown route (legacy rows have none)",
   "domains[].rank": "BG-21: api rows carry the backend rank ('#'); the legacy table numbers rows on the client",
   "domains[].matchRank": "BG-21: same as rank (search rank)",
-  "promptSplit.owned": "the standard screen reads only the split counts (limit 1); the list rows are the website/project cards",
+  "promptSplit.owned": "the standard screen reads only the split counts (limit 1, no answer sample, no funnel / engines: B043); the list rows are the website/project cards",
   "promptSplit.uncited": "same as promptSplit.owned",
   trend: "not modeled here (DC-08 series rule; toCitationTrend is unit-tested)",
   categoryTrend: "not modeled here (DC-08; unit-tested)",
@@ -469,6 +486,27 @@ describe("standard citations: legacy aggregateCitationsFromMirror (PGlite) vs lo
     ]);
   });
 
+  it("B043: the website/project view reads both cards from one both_buckets call - the same split as the two calls and the legacy lists", async () => {
+    const calls: URL[] = [];
+    const view = await withBackend(async () => {
+      const inner = globalThis.fetch;
+      vi.stubGlobal("fetch", vi.fn(async (input: string | URL) => (calls.push(new URL(String(input))), inner(input))));
+      return C.loadCitationsView({ cumulative: true }, { surface: "website", scope: null });
+    });
+    const prompts = calls.filter((u) => u.pathname === "/v1/citations/prompts");
+    expect(prompts.map((u) => [u.searchParams.get("owned"), u.searchParams.get("limit"), u.searchParams.get("both_buckets")])).toEqual([["true", "5", "true"]]);
+    const l = legacy!.promptSplit!;
+    expect(view.live!.promptSplit).toEqual({
+      owned: l.owned.slice(0, C.SPLIT_CARD_ROWS),
+      uncited: l.uncited.slice(0, C.SPLIT_CARD_ROWS),
+      ownedCount: l.ownedCount,
+      uncitedCount: l.uncitedCount,
+    });
+    // the other website/project values do not depend on the skipped tone / types / competitor totals
+    const std = await withBackend(() => C.loadCitationsView({ cumulative: true }, { surface: "global", scope: null }));
+    expect({ ...view.live!, promptSplit: null }).toEqual({ ...std.live!, promptSplit: null });
+  });
+
   it("prompts sub page: loadOwnedPromptPage vs aggregateCitationOwnedPromptsFromMirror, DC-10 the only difference", async () => {
     const f = { cumulative: true };
     const ctx = { surface: "global" as const, scope: null };
@@ -486,9 +524,19 @@ describe("standard citations: legacy aggregateCitationsFromMirror (PGlite) vs lo
     expect(ids(au.page!.rows)).toEqual([u(0x31), u(0x33)]);
     const byId = (rows: { id: string }[]) => new Map(rows.map((r) => [r.id, r]));
     const lAll = byId([...lo.rows, ...lu.rows]);
+    // B043 fields=text: the page draws the prompt text (and the answer modal), never the funnel or the
+    // engines, so the loader no longer asks for them (funnelStage null, providers []). Every field the
+    // page shows (text, the modal's answers) and the rest of the row (id, citations) stay equal.
     for (const r of [...ao.page!.rows, ...au.page!.rows]) {
       const l = lAll.get(r.id)!;
-      expect({ ...r, answers: r.answers.map((a) => a.jobId).sort() }).toEqual({ ...l, answers: l.answers.map((a) => a.jobId).sort() });
+      expect([r.funnelStage, r.providers]).toEqual([null, []]);
+      expect({ ...r, funnelStage: l.funnelStage, providers: l.providers, answers: r.answers.map((a) => a.jobId).sort() }).toEqual({
+        ...l,
+        answers: l.answers.map((a) => a.jobId).sort(),
+      });
+      // the modal reads each answer's provider / region / count: equal per answer
+      const ans = (x: typeof r) => [...x.answers].sort((a, b) => (a.jobId < b.jobId ? -1 : 1)).map((a) => [a.jobId, a.provider, a.region, a.mentionCount]);
+      expect(ans(r)).toEqual(ans(l));
     }
     // tab counts come with the rows (legacy: the promptSplit of the main aggregate, row grain)
     expect([ao.ownedCount, ao.uncitedCount]).toEqual([legacy!.promptSplit!.ownedCount, legacy!.promptSplit!.uncitedCount]);

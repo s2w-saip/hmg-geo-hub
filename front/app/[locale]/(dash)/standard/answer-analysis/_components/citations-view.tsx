@@ -62,14 +62,17 @@ import {
 } from "@/lib/citation-categorizer/taxonomy";
 import {
   citationDrilldownEmptyKey,
+  contentDispositionFilename,
   domainDetailUrl,
   domainExportUrl,
   domainListUrl,
   isDefaultDomainQuery,
   type CitationDrilldownEmptyKey,
+  type CitationSectionDegraded,
   type CitationTableSource,
   type DomainTableSortKey,
 } from "../_data/citation-view";
+import { toast } from "sonner";
 import { dateStamp } from "@/lib/export/csv";
 import { downloadXlsx } from "@/lib/export/xlsx";
 import { cn } from "@/lib/utils";
@@ -95,6 +98,7 @@ import type {
 } from "@/lib/scope/result-adapter";
 import { PendingCard, EmptyState, weekStartMD } from "./mentions-view";
 import { AnswerModal } from "./answer-modal";
+import { TRUNCATED_ROW_CLASS, TruncatedNote } from "./citation-domain-table";
 
 const PIE_COLORS = [
   "#002c5f", "#e63312", "#00aad2", "#a36b4f", "#6b89b3",
@@ -293,7 +297,15 @@ export function useServerDomainTable(opts: {
 
 type DetailState = { url: string } & (
   | { status: "loading" }
-  | { status: "ready"; urls: CitationUrlLive[]; promptList: CitationPromptLive[] }
+  | {
+      status: "ready";
+      urls: CitationUrlLive[];
+      promptList: CitationPromptLive[];
+      /** 상세 상한(URL 10) 전 URL 수 — 상한이 목록을 잘랐을 때만(P6 B047). */
+      urlTotal?: number;
+      /** 상세 상한(프롬프트 12) 전 프롬프트 수 — 상한이 목록을 잘랐을 때만(P6 B047). */
+      promptTotal?: number;
+    }
   | { status: "error" }
 );
 
@@ -313,8 +325,16 @@ export function useDomainDetail(url: string | null, open: boolean): DetailState 
     setState({ url, status: "loading" });
     fetch(url, { signal: ctrl.signal })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error("detail failed"))))
-      .then((d: { urls?: CitationUrlLive[]; promptList?: CitationPromptLive[] }) => {
-        if (!ctrl.signal.aborted) setState({ url, status: "ready", urls: d.urls ?? [], promptList: d.promptList ?? [] });
+      .then((d: { urls?: CitationUrlLive[]; promptList?: CitationPromptLive[]; urlTotal?: number; promptTotal?: number }) => {
+        if (ctrl.signal.aborted) return;
+        setState({
+          url,
+          status: "ready",
+          urls: d.urls ?? [],
+          promptList: d.promptList ?? [],
+          ...(typeof d.urlTotal === "number" ? { urlTotal: d.urlTotal } : {}),
+          ...(typeof d.promptTotal === "number" ? { promptTotal: d.promptTotal } : {}),
+        });
       })
       .catch(() => {
         if (!ctrl.signal.aborted) setState({ url, status: "error" });
@@ -379,6 +399,85 @@ export function LoadMoreRow({ table, colSpan }: { table: ReturnType<typeof useSe
   );
 }
 
+// ── 내보내기(P6 B048·B049): 실패 고지·진행 중 비활성 ───────────────────────────
+//
+// 종전에는 `void downloadXlsx(...)`(표준·legacy) 와 `window.location.assign(내보내기 URL)`(API 원천
+// website/project)이라 실패가 삼켜지거나 브라우저가 원시 JSON 오류 화면으로 이동했고, 연타마다
+// 파일 생성(API 원천은 전량 재집계)이 다시 돌았다. 이제 한 번에 하나만 돌리고(버튼 비활성),
+// 실패는 기존 문구(standardPromptsView.exportFailed) 토스트로 알린다. 파일 바이트·이름은 같다.
+
+/**
+ * 내보내기 한 번. 나가 있는 동안의 호출은 무시하고(guard), 실패는 onError 로 넘긴다. busy 는
+ * 시작에 true, 끝(성공·실패)에 false.
+ */
+export async function runExportTask(
+  guard: { current: boolean },
+  setBusy: (busy: boolean) => void,
+  task: () => Promise<void>,
+  onError: (e: unknown) => void,
+): Promise<void> {
+  if (guard.current) return;
+  guard.current = true;
+  setBusy(true);
+  try {
+    await task();
+  } catch (e) {
+    onError(e);
+  } finally {
+    guard.current = false;
+    setBusy(false);
+  }
+}
+
+/** 버튼 하나의 내보내기 상태: busy(비활성 표시)와 run(한 번에 하나). */
+export function useExportTask(onError: (e: unknown) => void): { busy: boolean; run: (task: () => Promise<void>) => Promise<void> } {
+  const guard = useRef(false);
+  const [busy, setBusy] = useState(false);
+  const run = useCallback((task: () => Promise<void>) => runExportTask(guard, setBusy, task, onError), [onError]);
+  return { busy, run };
+}
+
+/** 내보내기 실패 고지 — 기존 문구(표준 프롬프트 화면의 엑셀 실패 토스트와 같은 키). */
+export function useExportFailedNotice(): (e: unknown) => void {
+  const t = useTranslations("standardPromptsView");
+  return useCallback(
+    (e: unknown) => {
+      // 조용히 실패하면 "버튼이 안 먹는다"로만 보인다 — 로그에 남기고 사용자에게 알린다.
+      console.error("[citations] export failed:", e);
+      toast.error(t("exportFailed"));
+    },
+    [t],
+  );
+}
+
+/** 받은 파일을 a[download] 로 저장한다(브라우저 전용, lib/export/xlsx.ts 와 같은 방식). */
+function saveBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * API 원천 도메인 전체 파일(BG-22, /api/citations/domains/export)을 fetch 로 받아 저장한다. 2xx 가
+ * 아니면(401·403·422·5xx·시간 초과의 JSON 오류) 던진다 — 화면을 떠나지 않고 호출부가 알린다.
+ * 파일 이름은 응답 Content-Disposition(링크 이동 다운로드가 쓰던 것) 그대로다.
+ */
+export async function downloadDomainExport(
+  url: string,
+  deps: { fetchImpl?: typeof fetch; save?: (blob: Blob, filename: string) => void } = {},
+): Promise<void> {
+  const r = await (deps.fetchImpl ?? fetch)(url);
+  if (!r.ok) throw Object.assign(new Error("export failed"), { status: r.status });
+  const blob = await r.blob();
+  const name = contentDispositionFilename(r.headers.get("content-disposition")) ?? `citation-sources-${dateStamp()}.xlsx`;
+  (deps.save ?? saveBlob)(blob, name);
+}
+
 // 표준 > 답변 분석 > 인용 분석 (Citation Sources) — LIVE only.
 //
 // Fed by the root scope project (fetchStandardCitations → aggregateCitations:
@@ -407,6 +506,8 @@ export function CitationsView({
   selectableDates,
   hideFilterPanel = false,
   tableSource,
+  dataDegraded = false,
+  degradedSections,
 }: {
   data: CitationsLive | null;
   lockedGroups?: DimensionGroup[];
@@ -468,9 +569,18 @@ export function CitationsView({
    * 없으면 종전(legacy) 그대로 받은 전 행을 클라이언트에서 검색·정렬한다.
    */
   tableSource?: CitationTableSource | null;
+  /**
+   * API 원천(P6 B042): `data` 의 `null` 이 데이터 없음이 아니라 일시 실패(5xx·시간 초과)인가.
+   * 판정은 서버 요청 스코프의 degrade 표식(`citationsDegraded`)이라 페이지가 읽어 넘긴다. 켜지면
+   * '데이터 없음' 대신 기존 지연 안내(answerAnalysis.mentions.kpi.degraded)를 낸다. 없으면 종전 그대로.
+   */
+  dataDegraded?: boolean;
+  /** API 원천(P6 B042): 일시 실패로 빈 보조 블록 — '준비 중'·숨김 대신 같은 지연 안내. */
+  degradedSections?: CitationSectionDegraded | null;
 }) {
   const t = useTranslations("answerAnalysis.citations");
   const tRoot = useTranslations("answerAnalysis");
+  const tKpi = useTranslations("answerAnalysis.mentions.kpi");
   const tFilter = useTranslations("answerAnalysis.filters");
   const tCat = useTranslations("citationCategories");
   const locale = useLocale();
@@ -654,33 +764,41 @@ export function CitationsView({
     }
   }
 
+  // 내보내기는 한 번에 하나(버튼 비활성), 실패는 기존 문구 토스트(P6 B049).
+  const exportTask = useExportTask(useExportFailedNotice());
+
   // Export the real (server-filtered, sorted) domain rows.
   function onExport() {
     if (tableSource) {
-      // API 원천: 받은 페이지가 아니라 전 행이 대상이다(현행 파일과 같은 7열, BG-22).
-      window.location.assign(domainExportUrl(tableSource, { q: deferredSearch, sortKey, asc }, locale));
+      // API 원천: 받은 페이지가 아니라 전 행이 대상이다(현행 파일과 같은 7열, BG-22). 링크 이동 대신
+      // fetch 로 받아 저장한다 — 실패가 원시 JSON 화면 이동이 아니라 화면 안의 토스트가 된다.
+      const url = domainExportUrl(tableSource, { q: deferredSearch, sortKey, asc }, locale);
+      void exportTask.run(() => downloadDomainExport(url));
       return;
     }
-    void downloadXlsx(
-      `citation-sources-${dateStamp()}`,
-      [
-        t("table.col.rank"),
-        t("table.col.domain"),
-        t("table.col.category"),
-        t("table.col.citations"),
-        t("table.col.share"),
-        t("table.col.prompts"),
-        t("table.col.coverage"),
-      ],
-      sorted.map((r) => [
-        r.rank,
-        r.domain,
-        r.category ? catLabel(r.category) : "",
-        r.citations,
-        r.share.toFixed(1),
-        r.prompts,
-        r.coverageRate.toFixed(1),
-      ]),
+    const rows = sorted.map((r) => [
+      r.rank,
+      r.domain,
+      r.category ? catLabel(r.category) : "",
+      r.citations,
+      r.share.toFixed(1),
+      r.prompts,
+      r.coverageRate.toFixed(1),
+    ]);
+    void exportTask.run(() =>
+      downloadXlsx(
+        `citation-sources-${dateStamp()}`,
+        [
+          t("table.col.rank"),
+          t("table.col.domain"),
+          t("table.col.category"),
+          t("table.col.citations"),
+          t("table.col.share"),
+          t("table.col.prompts"),
+          t("table.col.coverage"),
+        ],
+        rows,
+      ),
     );
   }
 
@@ -688,7 +806,12 @@ export function CitationsView({
     return (
       <div className="flex flex-col gap-6">
         <p className="text-sm text-muted-foreground">{t("description")}</p>
-        <EmptyState label={tRoot("empty")} />
+        {/* 일시 실패면 '데이터 없음'이 아니라 기존 지연 안내(P6 B042, 표준 화면 StatusBlock 과 같은 카드). */}
+        {dataDegraded ? (
+          <PendingCard title={tRoot("tabs.citations")} label={tKpi("degraded")} />
+        ) : (
+          <EmptyState label={tRoot("empty")} />
+        )}
       </div>
     );
   }
@@ -817,19 +940,23 @@ export function CitationsView({
           ownedCount={promptBuckets.ownedCount}
           uncitedCount={promptBuckets.uncitedCount}
         />
+      ) : degradedSections?.split ? (
+        // 일시 실패(P6 B042) — '자사 인용 없음'(섹션 숨김)과 구분해 기존 지연 안내.
+        <PendingCard title={t("baseSplit.title")} label={tKpi("degraded")} />
       ) : null}
 
       {/* (c) Trend chart — weekly Top-10 domain citation lines. Needs ≥2 dated
-          weeks (data.trend is null otherwise → 준비 중 placeholder). */}
+          weeks (data.trend is null otherwise → 준비 중 placeholder; 일시 실패면 지연 안내). */}
       {data.trend ? (
         <CitationTrendChart title={t("trend.title")} trend={data.trend} />
       ) : (
-        <PendingCard title={t("trend.title")} label={tRoot("pending")} />
+        <PendingCard title={t("trend.title")} label={degradedSections?.trend ? tKpi("degraded") : tRoot("pending")} />
       )}
 
       {/* (c′) Category composition trend — weekly 100% stacked area over the
           citation-source categories (같은 ≥2주 규칙, null이면 숨김: 도메인 추이
-          카드가 이미 '준비 중'을 말해주므로 중복 placeholder는 두지 않는다). */}
+          카드가 이미 '준비 중'을 말해주므로 중복 placeholder는 두지 않는다).
+          일시 실패면 숨기지 않고 지연 안내(P6 B042). */}
       {data.categoryTrend ? (
         <CategoryCompositionTrend
           title={t("categoryTrend.title")}
@@ -837,6 +964,8 @@ export function CitationsView({
           trend={data.categoryTrend}
           label={catLabel}
         />
+      ) : degradedSections?.categoryTrend ? (
+        <PendingCard title={t("categoryTrend.title")} label={tKpi("degraded")} />
       ) : null}
 
       {/* (d) Category donut (클릭 = ?source= 필터 토글) + 엔진별 카테고리 구성.
@@ -903,7 +1032,8 @@ export function CitationsView({
               variant="outline"
               size="sm"
               onClick={onExport}
-              disabled={sorted.length === 0}
+              disabled={sorted.length === 0 || exportTask.busy}
+              aria-busy={exportTask.busy || undefined}
               className="shrink-0"
             >
               <Download className="h-3.5 w-3.5" aria-hidden />
@@ -1433,12 +1563,21 @@ export function DomainRow({
                 ) : urls.length === 0 ? (
                   <p className="text-xs text-muted-foreground">{t(noUrlsKey)}</p>
                 ) : (
-                  <UrlList urls={urls} />
+                  <>
+                    <UrlList urls={urls} />
+                    <TruncatedNote shown={urls.length} total={loaded?.urlTotal} className={DRILLDOWN_TRUNCATED_CLASS} />
+                  </>
                 )}
               </TabsContent>
               <TabsContent value="prompts">
                 {pending ?? (
-                  <CitationPromptsDrilldown prompts={promptList} domain={row.domain} totalCitations={row.citations} emptyKey={noPromptsKey} />
+                  <CitationPromptsDrilldown
+                    prompts={promptList}
+                    domain={row.domain}
+                    totalCitations={row.citations}
+                    emptyKey={noPromptsKey}
+                    total={loaded?.promptTotal}
+                  />
                 )}
               </TabsContent>
             </Tabs>
@@ -1498,6 +1637,9 @@ export function DomainRow({
                 ))}
               </ul>
             )}
+            {!pending && urls.length > 0 ? (
+              <TruncatedNote shown={urls.length} total={loaded?.urlTotal} className={DRILLDOWN_TRUNCATED_CLASS} />
+            ) : null}
           </td>
         </tr>
       ) : null}
@@ -1505,13 +1647,18 @@ export function DomainRow({
       {openMode === "prompts" ? (
         <tr className="border-t border-border bg-muted/20">
           <td colSpan={7} className="px-4 py-4">
-            {pending ?? <CitationPromptsDrilldown prompts={promptList} domain={row.domain} emptyKey={noPromptsKey} />}
+            {pending ?? (
+              <CitationPromptsDrilldown prompts={promptList} domain={row.domain} emptyKey={noPromptsKey} total={loaded?.promptTotal} />
+            )}
           </td>
         </tr>
       ) : null}
     </>
   );
 }
+
+/** URL 목록 아래 절단 고지 한 줄(P6 B047, 언급 드릴다운 citation-domain-table 과 같은 모양). */
+const DRILLDOWN_TRUNCATED_CLASS = "mt-2 text-[11px] text-muted-foreground";
 
 /** 도메인 드릴다운의 URL 목록 — 두 드릴다운 형태(종전 인라인 / 탭)가 같은 마크업을 쓴다. */
 function UrlList({ urls }: { urls: CitationDomainLive["urls"] }) {
@@ -1572,6 +1719,7 @@ function CitationPromptsDrilldown({
   domain,
   totalCitations,
   emptyKey = "drilldown.noPrompts",
+  total,
 }: {
   prompts: CitationPromptLive[];
   domain: string;
@@ -1579,6 +1727,8 @@ function CitationPromptsDrilldown({
   totalCitations?: number;
   /** 빈 목록 문구 키 — 호출부가 행 상태로 결정한다(citationDrilldownEmptyKey). */
   emptyKey?: CitationDrilldownEmptyKey;
+  /** 상세 상한(12) 전 프롬프트 수 — 상한이 목록을 잘랐을 때만(P6 B047). */
+  total?: number;
 }) {
   const t = useTranslations("answerAnalysis.citations");
   const tMd = useTranslations("answerAnalysis.mentions.drilldown");
@@ -1669,6 +1819,7 @@ function CitationPromptsDrilldown({
             })}
           </tbody>
         </table>
+        <TruncatedNote shown={prompts.length} total={total} className={TRUNCATED_ROW_CLASS} />
       </div>
 
       <AnswerModal

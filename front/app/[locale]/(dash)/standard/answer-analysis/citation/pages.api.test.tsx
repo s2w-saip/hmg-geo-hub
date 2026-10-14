@@ -217,6 +217,8 @@ describe("standard citation page, api source (G2)", () => {
     expect(live.domains[0].skey).toBe("hyundai.com");
     expect(await view.tableSource).toEqual({ query: "competitor=toyota.com&geography=US&time=2026-08-01..2026-08-31", nextCursor: "n1", total: 300 });
     expect(await view.dataDegraded).toBe(false);
+    // P6 B041: the section flags come from the same request-scope labels (none here: every call answered)
+    expect(await view.sectionDegraded).toEqual({ data: false, trend: false, categoryTrend: false, split: false });
     expect(await view.officialDelta).toBeNull(); // no trend buckets in this stub
     expect((await view.typeCategories) as unknown[]).toHaveLength(5);
     expect(await view.toneSummary).toEqual({ positive: { urls: 3, citations: 4, answers: 2 }, negative: { urls: 1, citations: 1, answers: 1 } });
@@ -229,6 +231,11 @@ describe("standard citation page, api source (G2)", () => {
     // the competitor pick reaches the backend with the page filters
     const main = log.find((u) => u.pathname === "/v1/citations/domains" && u.searchParams.get("competitor_sources"))!.searchParams;
     expect([main.getAll("competitor"), main.getAll("country"), main.get("from"), main.get("to")]).toEqual([["toyota.com"], ["US"], "2026-08-01", "2026-08-31"]);
+    // P6 B043 / B044 / B046: the table's 100 rows, no competitor brand totals; one trend call for both charts
+    expect([main.get("limit"), main.get("include_competitor_totals")]).toEqual(["100", "false"]);
+    const trends = log.filter((u) => u.pathname === "/v1/trend").map((u) => [u.searchParams.get("dimension"), u.searchParams.getAll("dims")]);
+    expect(trends).toEqual(expect.arrayContaining([["source", ["category@13"]], ["none", []]]));
+    expect(trends.some(([d]) => d === "category")).toBe(false);
   });
 
   it("legacy source (default): the legacy readers run, no backend call", async () => {
@@ -255,6 +262,8 @@ describe("standard sub pages, api source (G2)", () => {
     expect(view.page).toMatchObject({ page: 2, pageSize: 50, total: 7, nextCursor: "p2" });
     const q = log[0].searchParams;
     expect([log.length, q.get("owned"), q.get("q"), q.get("cursor"), q.get("limit")]).toEqual([1, "false", "ev", "p1", "50"]);
+    // P6 B043: the page draws no funnel / engines (fields=text); the modal's answers stay (include_refs not sent)
+    expect([q.get("fields"), q.get("include_refs")]).toEqual(["text", null]);
     expect(st.legacy).toEqual([]);
   });
 
@@ -285,6 +294,13 @@ describe("website citation page, api source (G3)", () => {
     const d = log.find((u) => u.pathname === "/v1/citations/domains")!.searchParams;
     expect([d.get("surface"), d.getAll("country"), d.get("competitor_sources")]).toEqual(["website", ["US"], null]);
     expect(st.legacy).toEqual([]);
+    // P6 B042: the degrade flags reach the view (none here); B043: lighter calls with the same screen values
+    expect([view.dataDegraded, view.degradedSections]).toEqual([false, { data: false, trend: false, categoryTrend: false, split: false }]);
+    const src = log.find((u) => u.pathname === "/v1/citations/sources")!.searchParams;
+    expect([src.get("include_tone"), src.get("include_types"), d.get("limit"), d.get("include_competitor_totals")]).toEqual(["false", "false", "200", "false"]);
+    const prompts = log.filter((u) => u.pathname === "/v1/citations/prompts").map((u) => [u.searchParams.get("owned"), u.searchParams.get("limit"), u.searchParams.get("both_buckets")]);
+    // one query shape (the same call repeats only because nothing is deduped outside the react-server build)
+    expect([...new Set(prompts.map((x) => JSON.stringify(x)))]).toEqual([JSON.stringify(["true", "5", "true"])]);
   });
 
   it("source category filter: empty cards (prompt unit like the filled card, U7 verification D6), no summary or targets call (legacy page rule)", async () => {
@@ -307,6 +323,8 @@ describe("project citation page, api source (G6)", () => {
     const d = log.find((u) => u.pathname === "/v1/citations/domains")!.searchParams;
     expect([d.get("surface"), d.get("project_id"), d.getAll(`cf.${FIELD}`)]).toEqual(["project", PROJECT, ["a"]]);
     expect(st.legacy).toEqual([]);
+    // P6 B042: the degrade flags reach the view (none here)
+    expect([view.dataDegraded, view.degradedSections]).toEqual([false, { data: false, trend: false, categoryTrend: false, split: false }]);
   });
 
   it("a 404 from the backend (not a member) -> notFound()", async () => {
