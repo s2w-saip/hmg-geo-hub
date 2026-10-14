@@ -54,8 +54,14 @@ export function TypeKpiSection({
   onPickCompetitor,
   total = null,
   initialCounts = false,
+  degraded = false,
 }: {
   metric: KpiMetric;
+  /**
+   * 유형 집계가 일시 실패했는가(B034). 막대가 없을 때 "유형별 측정 데이터가 없습니다" 대신
+   * 기존 degraded 문구를 같은 자리에 낸다 — 우측 콤보의 `trendUnavailable` 과 같은 짝이다.
+   */
+  degraded?: boolean;
   /**
    * 첫 행 "전체" — 히어로와 같은 값(노출률 = 전체 노출률, 점유율 = 당사 총 점유율).
    * 피그마 327:369 의 굵은 첫 행. null 이면 행을 그리지 않는다.
@@ -151,7 +157,9 @@ export function TypeKpiSection({
       </header>
 
       {bars.length === 0 ? (
-        <p className="px-2 py-8 text-center text-xs text-muted-foreground">{t("type.empty")}</p>
+        <p className="px-2 py-8 text-center text-xs text-muted-foreground">
+          {degraded ? t("degraded") : t("type.empty")}
+        </p>
       ) : (
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
           <div className="flex min-w-0 flex-1 flex-col gap-2">

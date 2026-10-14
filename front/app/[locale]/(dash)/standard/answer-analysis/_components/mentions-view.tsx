@@ -75,6 +75,32 @@ import { SignalPromptsDialog } from "./signal-prompts-dialog";
 // (brandPresence/listType/depth). 웹사이트 뷰는 onlyGroups/primaryGroups 를
 // override 해 language 를 넣고 카탈로그 축(태깅 없어 무의미)을 숨긴다.
 
+/**
+ * 본문 집계 — `MentionsLive` 그대로이되 API 원천(lib/hgh/adapters/mentions.ts)의 두 가지를
+ * 받는다(legacy 값은 그대로 들어맞는다):
+ *   · `summary.totalPrompts` null — 요약 조회가 일시 실패했다. 0 을 지어내지 않고 "—"(B035).
+ *   · `brandsTotal` — 전량 목록이 서버 상한(10,000)에서 잘렸을 때만, 잘리기 전 브랜드 수(B039).
+ */
+export type MentionsViewData = Omit<MentionsLive, "summary"> & {
+  summary: Omit<MentionsLive["summary"], "totalPrompts"> & { totalPrompts: number | null };
+  brandsTotal?: number;
+};
+
+/**
+ * 어느 읽기가 **일시 실패**했는가(B035). 판정은 서버의 요청 스코프 표식
+ * (`lib/scope/degrade-registry`)이라 이 클라이언트 뷰가 직접 못 읽고, 페이지가 집계가 끝난
+ * 뒤에 읽어 넘긴다. 참인 자리는 "데이터 없음"·"준비 중" 대신 기존 `kpi.degraded` 문구를
+ * 낸다. 미전달이면 종전 그대로다.
+ */
+export interface MentionsDegradedView {
+  /** 본문(브랜드 행) — `data` 의 null 이 "데이터 없음"이 아니라 지연. */
+  data?: boolean;
+  /** 유형 집계 — 유형 카드의 '준비 중' 자리. */
+  types?: boolean;
+  /** Sub KPI·직전 Sub KPI(Δ)·측정 프롬프트 수 — 카드 그리드 아래 캡션 자리. */
+  subKpis?: boolean;
+}
+
 export function MentionsView({
   data,
   lockedGroups = [],
@@ -95,8 +121,9 @@ export function MentionsView({
   subKpis = null,
   prevSubKpis = null,
   prevBasisDate = null,
+  degraded,
 }: {
-  data: MentionsLive | null;
+  data: MentionsViewData | null;
   lockedGroups?: DimensionGroup[];
   // Appended to onlyGroups/primaryGroups — 웹사이트 뷰가 admin 에게 brand(브랜드
   // 통합) 축을 추가 노출하기 위해 사용. 비어 있으면 표준 필터 구성 그대로.
@@ -142,6 +169,8 @@ export function MentionsView({
   prevSubKpis?: MentionSubKpis | null;
   // 비교 기준 측정일(YYYY-MM-DD) — 카드 그리드 하단에 명시.
   prevBasisDate?: string | null;
+  // 일시 실패 표식(B035) — 페이지가 집계 뒤에 읽어 넘긴다. 미전달이면 종전 그대로.
+  degraded?: MentionsDegradedView;
 }) {
   const t = useTranslations("answerAnalysis.mentions");
   const tRoot = useTranslations("answerAnalysis");
@@ -150,7 +179,7 @@ export function MentionsView({
     return (
       <div className="flex flex-col gap-6">
         <p className="text-sm text-muted-foreground">{t("description")}</p>
-        <EmptyState label={tRoot("empty")} />
+        <EmptyState label={degraded?.data ? t("kpi.degraded") : tRoot("empty")} />
       </div>
     );
   }
@@ -192,6 +221,7 @@ export function MentionsView({
         prevSubKpis={prevSubKpis}
         prevBasisDate={prevBasisDate}
         designatedTargetBrand={designatedTargetBrand}
+        degraded={degraded}
       />
       <MentionsTrendSection data={data} />
       <MentionsRankSection data={data} isWebsite={isWebsite} lazyPrompts={lazyPrompts} />
@@ -224,12 +254,14 @@ export function MentionsSummarySection({
   prevSubKpis = null,
   prevBasisDate = null,
   designatedTargetBrand,
+  degraded,
 }: {
-  data: MentionsLive | null;
+  data: MentionsViewData | null;
   subKpis?: MentionSubKpis | null;
   prevSubKpis?: MentionSubKpis | null;
   prevBasisDate?: string | null;
   designatedTargetBrand?: string | null;
+  degraded?: MentionsDegradedView;
 }) {
   const t = useTranslations("answerAnalysis.mentions");
   const tRoot = useTranslations("answerAnalysis");
@@ -309,7 +341,7 @@ export function MentionsSummarySection({
     return (
       <div className="flex flex-col gap-6">
         <p className="text-sm text-muted-foreground">{t("description")}</p>
-        <EmptyState label={tRoot("empty")} />
+        <EmptyState label={degraded?.data ? t("kpi.degraded") : tRoot("empty")} />
       </div>
     );
   }
@@ -347,7 +379,8 @@ export function MentionsSummarySection({
         <SummaryCard
           icon={BarChart3}
           label={t("summary.totalPrompts")}
-          value={data.summary.totalPrompts.toLocaleString()}
+          // null = 요약 조회 일시 실패(B035) — 0 을 지어내지 않는다(미언급 프롬프트 카드와 같은 "—").
+          value={data.summary.totalPrompts != null ? data.summary.totalPrompts.toLocaleString() : "—"}
           delta={summaryDelta(subKpis?.measuredPrompts, prevSubKpis?.measuredPrompts, "count", null)}
           info={{
             title: t("summary.totalPrompts"),
@@ -410,6 +443,11 @@ export function MentionsSummarySection({
           {t("summary.deltaBasis", { date: prevBasisDate })}
         </p>
       ) : null}
+      {/* Sub KPI·직전 Sub KPI(Δ)·측정 프롬프트 수 조회가 일시 실패했으면(B035) 빠진 카드·배지·"—" 가
+          "측정 없음"으로 읽히지 않게 같은 캡션 자리에 기존 degraded 문구를 둔다. */}
+      {degraded?.subKpis ? (
+        <p className="-mt-3 text-[11px] text-muted-foreground">{t("kpi.degraded")}</p>
+      ) : null}
 
       {/* (b-1) 당사 vs 경쟁사 헤드투헤드 — comparison is null when there's no
           own or no external brand in the current filtered slice. */}
@@ -445,7 +483,8 @@ export function MentionsSummarySection({
             onSignalClick={(signal, label) => setSignal({ signal, label })}
           />
         ) : (
-          <PendingCard title={t("breakdown.typesTitle")} label={tRoot("pending")} />
+          // 유형 조회가 일시 실패했으면(B035) '준비 중' 대신 기존 degraded 문구.
+          <PendingCard title={t("breakdown.typesTitle")} label={degraded?.types ? t("kpi.degraded") : tRoot("pending")} />
         )}
       </div>
       <SignalPromptsDialog
@@ -461,7 +500,7 @@ export function MentionsSummarySection({
 }
 
 // ② 추이 — 언급 집계만 읽는다. 데이터가 없으면 스스로 사라진다(빈 상태는 ①).
-export function MentionsTrendSection({ data }: { data: MentionsLive | null }) {
+export function MentionsTrendSection({ data }: { data: MentionsViewData | null }) {
   const t = useTranslations("answerAnalysis.mentions");
   const tRoot = useTranslations("answerAnalysis");
   if (!data) return null;
@@ -477,7 +516,12 @@ export function MentionsTrendSection({ data }: { data: MentionsLive | null }) {
           trackedBrands={new Set(data.brands.filter((b) => b.isTracked).map((b) => b.brand))}
         />
       ) : (
-        <PendingCard title={t("trend.title")} label={tRoot("pending")} />
+        // null 의 두 사유를 구분한다 — 시간 초과·일시 실패(degrade)와 "2주 미만"(측정 대기).
+        // 표준 공통 하단(mentions-prompts-section.tsx)과 같은 판정·같은 문구다(B035).
+        <PendingCard
+          title={t("trend.title")}
+          label={data.trendDegraded ? t("kpi.degradedTrend") : tRoot("pending")}
+        />
       )}
     </>
   );
@@ -490,7 +534,7 @@ export function MentionsRankSection({
   isWebsite = false,
   lazyPrompts = false,
 }: {
-  data: MentionsLive | null;
+  data: MentionsViewData | null;
   isWebsite?: boolean;
   lazyPrompts?: boolean;
 }) {
@@ -507,6 +551,7 @@ export function MentionsRankSection({
         perBrandPrompts={data.perBrandPrompts}
         isWebsite={isWebsite}
         lazyPrompts={lazyPrompts}
+        total={data.brandsTotal}
       />
     </div>
     </TooltipProvider>

@@ -16,13 +16,19 @@ import "server-only";
 //
 // Calls (one set per screen; identical queries are shared in the request by the client dedupe):
 //   B1 GET /v1/mentions/brands  full=true, sort=mentions, split_own=true (D13),
-//                               include=multi,prompts,types (BG-12, BG-13, BG-14)
-//   B2 GET /v1/mentions/types   (typeTotals; merged perspective = legacy tracked rollup)
+//                               include=multi,prompts,types (BG-12, BG-13, BG-14); the website
+//                               screen sends include=prompts,types (its table has no multi toggle, B036)
+//   B2 GET /v1/mentions/types   (typeTotals; merged perspective = legacy tracked rollup),
+//                               include_stance=false unless the stance card reads it (B036)
 //   B3 GET /v1/trend            bucket=cycle, dimension=brand, metrics=visibility,share_of_voice,
 //                               position, top=10, split_own=true (the KPI tab and the bottom chart
-//                               share it: 정합 3)
-//   B4 GET /v1/kpi/summary      (U4 fetchKpiSummary: measured/applied prompts, BG-06 prompts_without_brand)
-//   B5 GET /v1/kpi/engines      part=all (Sub KPI rows; the KPI tab reuses the same answer)
+//                               share it: 정합 3). Website/project (bottom chart only, B037):
+//                               metrics=share_of_voice, measured_days=false
+//   B4 GET /v1/kpi/summary      (U4 fetchKpiSummary: measured prompts, BG-06 prompts_without_brand),
+//                               parts=measured on every mention call (MENTION_SUMMARY_PARTS: ①~⑤ come
+//                               always; the KPI tab sends the same parts so the calls fold)
+//   B5 GET /v1/kpi/engines      part=exposure (Sub KPI rows: mention columns + multi/top3, no citation
+//                               columns, B036; the KPI tab reads part=sov)
 // D6 (first render budget): the first loader of a screen fires the four essentials at once
 // (global: B1, B4, the calendar, the overview trend; website/project: B1, B4, the calendar, B5);
 // afterEssentials() holds every other call until those four settled.
@@ -36,7 +42,10 @@ import "server-only";
 //   isTracked ← is_own ; sentiment ← sentiment ; brandKey ← brand_key
 //   ownBrandCode ← own_brand_code (extra field: the drilldown's own target, BG-17)
 //   summary.total ← totals.mentions_total ; uniqueBrands ← totals.brand_count
-//   summary.totalPrompts ← B4 params.measured_prompts ; totalAnswers ← totals.answers
+//   summary.totalPrompts ← B4 params.measured_prompts, a failed B4 -> null ("—", not a made-up 0, B035)
+//   totalAnswers ← totals.answers
+//   brandsTotal ← totals.brand_count, only when the full list was cut (data.truncated or
+//           meta.truncated.brands, B039): the table adds the "{total}개 중 {shown}개" line
 //   sentimentTotals ← sum of the own rows' sentiment, all four 0 -> null
 //   typeTotals ← B2 by_type[].own_mentions when the own rows have mentions, else null
 //   typesByBrand ← types_total + brands[].types (BG-14), types_total sum 0 -> null
@@ -55,8 +64,9 @@ import "server-only";
 //          default window 12 rounds (legacy 120 days)
 //   DC-12  handled by D13 (split_own): one own row and one own line per perspective brand
 // Outside the DC list (U6 numbering, for the A4 notice; asserted in mentions.test.ts):
-//   U6-N1  the full brand list is capped at 2000 competitor rows (legacy: every brand). Above
-//          it data.truncated is set and the table shows the first 2000 (BG-19 full)
+//   U6-N1  the full brand list is capped at 10,000 competitor rows (FULL_CAP, legacy: every
+//          brand). Above it data.truncated is set, the table shows the first 10,000 and says so
+//          with the existing "{total}개 중 {shown}개 표시" line (BG-19 full, B039)
 //   U6-N2  project custom-field values of deleted prompts are no longer offered (options API)
 //   U6-N3  mentions of a brand the parser could not resolve (brand_key 0) are not a table row
 //          (backend rule F03); legacy kept an unnamed row when it had a display name
@@ -72,14 +82,14 @@ import type {
 import { buildMentionTrend } from "@/lib/scope/result-adapter";
 import type { MentionSentimentBreakdown, MentionTypeBreakdown } from "@/lib/scope/types";
 import { dedupeInRequest, stableKey } from "@/lib/request-dedupe";
-import { degradeOnApiFailure } from "@/lib/scope/degrade-registry";
+import { degradeOnApiFailure, wasDegraded } from "@/lib/scope/degrade-registry";
 import type { components } from "../api-types";
 import { hghGet } from "../client";
 import { asOfDate, pct1OrZero, rankAvg, wholeSuppression, type ApiMeta } from "../convert";
 import { isHghApiError } from "../errors";
 import { withParams } from "../query";
 import { analysisQuery, fetchFilterDates, type AnalysisQueryContext } from "./filters";
-import { fetchKpiSummary, type SummaryResponse } from "./summary";
+import { fetchKpiSummary, type SummaryPart, type SummaryResponse } from "./summary";
 import { bucketRoundDate, fetchTrend, mondayOf, pointGap, seriesLabel, type TrendResponse } from "./trend";
 
 type S = components["schemas"];
@@ -94,6 +104,16 @@ export type MentionsContext = AnalysisQueryContext;
 
 /** A brand row with the own-row key of a split perspective (D13): the drilldown's own target. */
 export type ApiMentionsBrandLive = MentionsBrandLive & { ownBrandCode?: string };
+
+/**
+ * MentionsLive of the API source: totalPrompts is null when the summary read failed (B035, the
+ * card shows "—" instead of a made-up 0) and brandsTotal carries the count before the 10,000 cap
+ * when the full list was cut (B039). Otherwise the legacy shape as is.
+ */
+export type ApiMentionsLive = Omit<MentionsLive, "summary"> & {
+  summary: Omit<MentionsLive["summary"], "totalPrompts"> & { totalPrompts: number | null };
+  brandsTotal?: number;
+};
 
 export const MENTION_TYPES = ["mention", "recommendation", "comparison", "definition", "final_choice"] as const;
 
@@ -113,6 +133,18 @@ export const BRANDS_TABLE = {
   include: ["multi", "prompts", "types"],
 } as const;
 
+/**
+ * B1 of the website screen (B036): its brand table has no multi-mention toggle (BrandRankTable
+ * multiToggle off, the multi values are never shown), so the multi extras are not requested.
+ * Every other option and so every shown value is the same as BRANDS_TABLE.
+ */
+export const WEBSITE_BRANDS_TABLE = { ...BRANDS_TABLE, include: ["prompts", "types"] } as const;
+
+/** The B1 options of a screen (every B1 call of one screen must use the same set). */
+export function brandsTableOf(ctx: Pick<MentionsContext, "surface">): BrandsRequest {
+  return ctx.surface === "website" ? WEBSITE_BRANDS_TABLE : BRANDS_TABLE;
+}
+
 export interface BrandsRequest {
   top_n?: number;
   sort?: "mentions" | "share" | "avg_rank";
@@ -120,13 +152,15 @@ export interface BrandsRequest {
   full?: boolean;
   include?: readonly ("prompts" | "multi" | "types" | "hmg")[];
   group_by?: "engine";
+  /** With group_by=engine only (B092/B038): by_engine alone, the window-wide rows are skipped. */
+  engine_only?: boolean;
 }
 
-/** GET /v1/mentions/brands for the screen filters (default: the table call B1). */
+/** GET /v1/mentions/brands for the screen filters (default: the table call B1 of the screen). */
 export async function fetchMentionBrands(
   filters: StandardFilters,
   ctx: MentionsContext,
-  req: BrandsRequest = BRANDS_TABLE,
+  req: BrandsRequest = brandsTableOf(ctx),
 ): Promise<Enveloped<ApiBrandsData>> {
   const { query, cf } = analysisQuery(filters, ctx);
   const extra: {
@@ -136,6 +170,7 @@ export async function fetchMentionBrands(
     full?: boolean;
     include?: ("prompts" | "multi" | "types" | "hmg")[];
     group_by?: "engine";
+    engine_only?: boolean;
   } = {};
   if (req.top_n !== undefined) extra.top_n = req.top_n;
   if (req.sort) extra.sort = req.sort;
@@ -143,43 +178,88 @@ export async function fetchMentionBrands(
   if (req.full) extra.full = true;
   if (req.include?.length) extra.include = [...req.include];
   if (req.group_by) extra.group_by = req.group_by;
+  if (req.group_by && req.engine_only) extra.engine_only = true;
   const res = await hghGet("/v1/mentions/brands", { query: withParams(query, extra), cf });
   return { data: res.data, meta: res.meta };
 }
 
-/** GET /v1/mentions/types (merged perspective, as the legacy tracked rollup). */
-export async function fetchMentionTypes(filters: StandardFilters, ctx: MentionsContext): Promise<Enveloped<ApiTypesData>> {
+/**
+ * GET /v1/mentions/types (merged perspective, as the legacy tracked rollup). include_stance=false
+ * unless opts.stance (B036): only the stance card reads data.stance and it is off today
+ * (STANCE_CARD_ENABLED), so the stance statement is skipped; by_type, answers_total and the
+ * sentiment matrix are the same.
+ */
+export async function fetchMentionTypes(
+  filters: StandardFilters,
+  ctx: MentionsContext,
+  opts: { stance?: boolean } = {},
+): Promise<Enveloped<ApiTypesData>> {
   const { query, cf } = analysisQuery(filters, ctx);
-  const res = await hghGet("/v1/mentions/types", { query, cf });
+  const res = await hghGet("/v1/mentions/types", {
+    query: opts.stance ? query : withParams(query, { include_stance: false }),
+    cf,
+  });
   return { data: res.data, meta: res.meta };
 }
 
 export type EnginesPart = "all" | "exposure" | "sov" | "favorability" | "position" | "citation";
 
-/** GET /v1/kpi/engines part=all (the Sub KPI rows and the KPI tab engine scalars share it). */
+/**
+ * B036: the engine-row columns the Sub KPI reads (backend part: columns it does not compute come
+ * back null). buildMentionSubKpis reads the mention columns and the rank detail (multi, top3), never
+ * cit_total / cit_owned, so part=exposure (mentions + rank detail) instead of all.
+ */
+export const SUB_KPI_ENGINE_PART: EnginesPart = "exposure";
+
+/** GET /v1/kpi/engines (default part: the Sub KPI rows; the KPI tab passes its own part). */
 export async function fetchEngineRows(
   filters: StandardFilters,
   ctx: MentionsContext,
   opts: { cycleOffset?: 0 | 1; part?: EnginesPart } = {},
 ): Promise<Enveloped<ApiEnginesData>> {
   const { query, cf } = analysisQuery(filters, ctx);
-  const extra: { part: EnginesPart; cycle_offset?: number } = { part: opts.part ?? "all" };
+  const extra: { part: EnginesPart; cycle_offset?: number } = { part: opts.part ?? SUB_KPI_ENGINE_PART };
   if (opts.cycleOffset) extra.cycle_offset = opts.cycleOffset;
   const res = await hghGet("/v1/kpi/engines", { query: withParams(query, extra), cf });
   return { data: res.data, meta: res.meta };
 }
 
+/**
+ * B4 parts of every mention-screen summary call (mentions and kpi-tab alike, so the in-request
+ * dedupe folds them): the screens read params.measured_prompts / prompts_without_brand and the
+ * ①~⑤ pairs (always computed), never applied_prompts, analysis_gap or the URL cards.
+ */
+export const MENTION_SUMMARY_PARTS: readonly SummaryPart[] = ["measured"];
+
+/** GET /v1/kpi/summary of a mention screen (B4, MENTION_SUMMARY_PARTS). */
+export function fetchMentionSummary(
+  filters: StandardFilters,
+  ctx: MentionsContext,
+  opts: { cycleOffset?: 0 | 1 } = {},
+): Promise<SummaryResponse> {
+  return fetchKpiSummary(filters, { ...ctx, ...opts, parts: MENTION_SUMMARY_PARTS });
+}
+
 /** B3: the brand trend shared by the KPI tab (brand, first rank) and the bottom weekly chart. */
 export const BRAND_TREND_METRICS = ["visibility", "share_of_voice", "position"] as const;
 
+/**
+ * B3 of the website/project screens (B037): only the bottom weekly chart reads it, and
+ * toMentionTrend takes the share_of_voice numerators and the round dates, never measured days.
+ * The series (own + top 10 by mentions) do not depend on the requested metrics.
+ */
+export const CHART_BRAND_TREND_METRICS = ["share_of_voice"] as const;
+
 export function fetchBrandTrend(filters: StandardFilters, ctx: MentionsContext): Promise<TrendResponse> {
+  const chartOnly = ctx.surface !== "global";
   return fetchTrend(filters, {
     ...ctx,
     bucket: "cycle",
     dimension: "brand",
-    metrics: BRAND_TREND_METRICS,
+    metrics: chartOnly ? CHART_BRAND_TREND_METRICS : BRAND_TREND_METRICS,
     top: 10,
     splitOwn: true,
+    ...(chartOnly ? { measuredDays: false } : {}),
   });
 }
 
@@ -203,7 +283,7 @@ export function mentionsEssentials(filters: StandardFilters, ctx: MentionsContex
   return dedupeInRequest(key, async () => {
     await Promise.allSettled([
       fetchMentionBrands(filters, ctx),
-      fetchKpiSummary(filters, ctx),
+      fetchMentionSummary(filters, ctx),
       fetchFilterDates({ surface: ctx.surface, projectId: ctx.projectId, family: "mentions" }),
       ctx.surface === "global" ? fetchOverviewTrend(filters, ctx) : fetchEngineRows(filters, ctx),
     ]);
@@ -337,8 +417,13 @@ export interface MentionsParts {
   trendFailed?: boolean;
 }
 
+/** The full brand list (B1) was cut at the backend cap (data.truncated or meta.truncated.brands). */
+export function brandsTruncated(res: Enveloped<ApiBrandsData>): boolean {
+  return res.data.truncated === true || res.meta.truncated?.brands === true;
+}
+
 /** B1..B4 -> MentionsLive (field rules in the header). */
-export function toMentionsLive(p: MentionsParts): MentionsLive | null {
+export function toMentionsLive(p: MentionsParts): ApiMentionsLive | null {
   if (wholeSuppression(p.brands.meta)) return null;
   const d = p.brands.data;
   if (d.totals.answers === 0) return emptyMentionsLive();
@@ -347,9 +432,10 @@ export function toMentionsLive(p: MentionsParts): MentionsLive | null {
     summary: {
       total: d.totals.mentions_total,
       uniqueBrands: d.totals.brand_count,
-      totalPrompts: p.summary?.data.params.measured_prompts ?? 0,
+      totalPrompts: p.summary?.data.params.measured_prompts ?? null,
       totalAnswers: d.totals.answers,
     },
+    ...(brandsTruncated(p.brands) ? { brandsTotal: d.totals.brand_count } : {}),
     asOf: asOfDate(p.brands.meta),
     brands,
     perBrandPrompts: {},
@@ -415,18 +501,42 @@ export async function degrade<T, F>(label: string, run: () => Promise<T>, fallba
   return v === null ? fallback : v;
 }
 
-/** Drop-in for fetchStandard/Website/ProjectMentions: MentionsLive | null. */
-export async function loadMentionsLive(filters: StandardFilters, ctx: MentionsContext): Promise<MentionsLive | null> {
+/** Drop-in for fetchStandard/Website/ProjectMentions: MentionsLive | null (ApiMentionsLive, see there). */
+export async function loadMentionsLive(filters: StandardFilters, ctx: MentionsContext): Promise<ApiMentionsLive | null> {
   startEssentials(filters, ctx);
   const label = `${ctx.surface}Mentions`;
   const brands = await degradeOnApiFailure(label, () => fetchMentionBrands(filters, ctx));
   if (!brands) return null;
   const [types, summary, trend] = await Promise.all([
     degradeOnApiFailure(`${label}.types`, () => afterEssentials(filters, ctx, () => fetchMentionTypes(filters, ctx))),
-    degradeOnApiFailure(`${label}.summary`, () => fetchKpiSummary(filters, ctx)),
+    degradeOnApiFailure(`${label}.summary`, () => fetchMentionSummary(filters, ctx)),
     degradeOnApiFailure(`${label}.trend`, () => afterEssentials(filters, ctx, () => fetchBrandTrend(filters, ctx))),
   ]);
   return toMentionsLive({ brands, types, summary, trend, trendFailed: trend === null });
+}
+
+/** Which mention reads of this request were transient failures (degrade marks, B034/B035). */
+export interface MentionsDegraded {
+  /** B1: the body is null because the read failed, not because there is no data. */
+  data: boolean;
+  /** B2: the type card has no value because the read failed. */
+  types: boolean;
+  /** B4/B5 and the previous window: Sub KPI cards, the prompt total or the Δ badges are missing. */
+  subKpis: boolean;
+}
+
+/**
+ * The degrade marks of the mention screen loaders (loadMentionsLive, loadSubKpis,
+ * loadSubKpisPrev) in this request, for the screen's existing degraded notice. Read it after
+ * those loaders settled: the marks are written when a read fails (lib/scope/degrade-registry).
+ */
+export function mentionsDegraded(ctx: Pick<MentionsContext, "surface">): MentionsDegraded {
+  const s = ctx.surface;
+  return {
+    data: wasDegraded(`${s}Mentions`),
+    types: wasDegraded(`${s}Mentions.types`),
+    subKpis: [`${s}SubKpis`, `${s}SubKpis.summary`, `${s}SubKpisPrev`, `${s}Mentions.summary`].some((l) => wasDegraded(l)),
+  };
 }
 
 /** The header "측정 기준일" pill (legacy MentionsLive.asOf): meta.as_of of the B1 call. */
@@ -469,7 +579,7 @@ export async function loadSubKpis(filters: StandardFilters, ctx: MentionsContext
     degradeOnApiFailure(`${ctx.surface}SubKpis`, () =>
       ctx.surface === "global" ? afterEssentials(filters, ctx, engineRead) : engineRead(),
     ),
-    degradeOnApiFailure(`${ctx.surface}SubKpis.summary`, () => fetchKpiSummary(filters, ctx)),
+    degradeOnApiFailure(`${ctx.surface}SubKpis.summary`, () => fetchMentionSummary(filters, ctx)),
   ]);
   if (!engines) {
     return { rows: [], promptsWithoutBrand: null, measuredPrompts: summary ? summary.data.params.measured_prompts : null };
@@ -494,7 +604,7 @@ export async function loadSubKpisPrev(filters: StandardFilters, ctx: MentionsCon
     () =>
       afterEssentials(filters, ctx, async () => {
         if (filters.dateFrom || filters.dateTo) {
-          const cur = await fetchKpiSummary(filters, ctx);
+          const cur = await fetchMentionSummary(filters, ctx);
           const cycles = [...new Set(cur.meta.cycles ?? [])].sort();
           if (cycles.length < 2) return null;
           const first = cycles[0];
@@ -502,13 +612,13 @@ export async function loadSubKpisPrev(filters: StandardFilters, ctx: MentionsCon
           const prevFilters: StandardFilters = { ...filters, dateFrom: from, dateTo: first };
           const [engines, summary] = await Promise.all([
             fetchEngineRows(prevFilters, ctx),
-            fetchKpiSummary(prevFilters, ctx),
+            fetchMentionSummary(prevFilters, ctx),
           ]);
           return { sub: toStandardSubKpis(engines, summary), asOf: first };
         }
         const [engines, summary] = await Promise.all([
           fetchEngineRows(filters, ctx, { cycleOffset: 1 }),
-          fetchKpiSummary(filters, { ...ctx, cycleOffset: 1 }),
+          fetchMentionSummary(filters, ctx, { cycleOffset: 1 }),
         ]);
         if (wholeSuppression(engines.meta) || !engines.meta.as_of) return null;
         return { sub: toStandardSubKpis(engines, summary), asOf: engines.meta.as_of };

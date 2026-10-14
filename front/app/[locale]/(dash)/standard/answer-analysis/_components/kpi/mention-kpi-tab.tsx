@@ -128,6 +128,14 @@ type TabProps = {
   periodCompare?: readonly CompareResult[] | null;
   /** 선택된 구간의 길이(일) — 억제 캡션 입력. */
   periodDays?: number;
+  /**
+   * `subKpis` 의 빈 값이 **일시 실패**인가(= 측정 없음이 아니라 지연, B034). 판정은 서버의
+   * 요청 스코프 표식이라 페이지가 같은 집계 뒤에 이어 붙여 넘긴다. 참이면 히어로 아래에 기존
+   * degraded 문구 한 줄. 미전달이면 종전 그대로다.
+   */
+  heroDegraded?: Awaitable<boolean>;
+  /** `typeKpi` 의 null 이 일시 실패인가(B034) — 유형 막대 자리의 "데이터 없음" 대신 기존 degraded 문구. */
+  typeKpiDegraded?: Awaitable<boolean>;
 };
 
 export function MentionKpiTab({
@@ -146,6 +154,8 @@ export function MentionKpiTab({
   initialTypeCompetitor,
   periodCompare,
   periodDays,
+  heroDegraded,
+  typeKpiDegraded,
 }: TabProps) {
   // 2026-09-10 QA 2차 #6(고객 기대값): "경쟁사 분석(노출률), 멘션 유형별 노출은
   // 각각 경쟁사 선택을 할 수 있는 구조로 따로 작동해야함(연계성 없음)."
@@ -179,6 +189,7 @@ export function MentionKpiTab({
           engineTrend={engineTrend}
           periodCompare={periodCompare}
           periodDays={periodDays}
+          heroDegraded={heroDegraded}
         />
       </Suspense>
 
@@ -212,6 +223,7 @@ export function MentionKpiTab({
           competitor={typeCompetitor}
           onPickCompetitor={setTypeCompetitor}
           initialScope={initialTypeScope}
+          typeKpiDegraded={typeKpiDegraded}
         />
       </Suspense>
     </div>
@@ -233,6 +245,7 @@ function HeroBlock({
   engineTrend,
   periodCompare,
   periodDays,
+  heroDegraded,
 }: Pick<
   TabProps,
   | "metric"
@@ -245,8 +258,12 @@ function HeroBlock({
   | "engineTrend"
   | "periodCompare"
   | "periodDays"
+  | "heroDegraded"
 >) {
+  const t = useTranslations("answerAnalysis.mentions.kpi");
   const sub = useAwaited(subKpis);
+  // `undefined` 면 `use()` 를 부르지 않는다(useRows 의 competitorValues 와 같은 이유).
+  const degraded = useAwaited(heroDegraded ?? false);
   const hero = useMemo(() => kpiHero(sub, metric), [sub, metric]);
 
   return (
@@ -292,6 +309,9 @@ function HeroBlock({
           </Suspense>
         }
       />
+      {/* 스칼라 집계가 일시 실패했으면(B034) "—" 가 "측정 없음"으로 읽히지 않게 기존 degraded
+          문구를 히어로 아래 캡션 자리에 한 줄 둔다. 정상 경로에서는 아무것도 그리지 않는다. */}
+      {degraded ? <p className="-mt-4 text-[11px] text-muted-foreground">{t("degraded")}</p> : null}
       <Suspense fallback={null}>
         <HeroDeltaBasis
           metric={metric}
@@ -584,7 +604,8 @@ function TypeBlock({
   competitor,
   onPickCompetitor,
   initialScope,
-}: Pick<TabProps, "metric" | "subKpis" | "typeKpi" | "typesByBrand" | "engineTrend"> & {
+  typeKpiDegraded,
+}: Pick<TabProps, "metric" | "subKpis" | "typeKpi" | "typesByBrand" | "engineTrend" | "typeKpiDegraded"> & {
   competitor: string | null;
   /** 헤더 경쟁사 드롭다운(QA #1) — 이 섹션 **전용** 선택이다(QA 2차 #6). */
   onPickCompetitor?: (brand: string | null) => void;
@@ -593,6 +614,7 @@ function TypeBlock({
   const kpi = useAwaited(typeKpi);
   const byBrand = useAwaited(typesByBrand);
   const sub = useAwaited(subKpis);
+  const degraded = useAwaited(typeKpiDegraded ?? false);
   const barsFor = useMemo(
     () => (scope: TypeScope) =>
       typeKpiBars({ kpi, typesByBrand: byBrand, metric, scope, competitor }),
@@ -619,6 +641,7 @@ function TypeBlock({
         competitors={competitors}
         onPickCompetitor={onPickCompetitor}
         total={total}
+        degraded={degraded}
         trendSlot={
           <Suspense fallback={<KpiChartSlotSkeleton />}>
             <TypeCombo metric={metric} engineTrend={engineTrend} />

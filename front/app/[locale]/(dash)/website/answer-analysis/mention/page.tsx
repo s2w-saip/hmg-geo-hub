@@ -22,7 +22,11 @@ import type { AllowedScope } from "@/lib/auth/types";
 import type { StandardFilters } from "@/lib/scope/result-adapter";
 import type { DimensionGroup } from "@/components/dash/dimension-filter-panel";
 import { readStandardFilters } from "@/components/dash/standard-filters";
-import { MentionsView } from "../../../standard/answer-analysis/_components/mentions-view";
+import {
+  MentionsView,
+  type MentionsDegradedView,
+  type MentionsViewData,
+} from "../../../standard/answer-analysis/_components/mentions-view";
 import { AnalysisFilterBar } from "../../../standard/answer-analysis/_components/analysis-filter-bar";
 import { buildMentionSubKpis } from "../../../standard/answer-analysis/_data/sub-kpis";
 import {
@@ -40,6 +44,7 @@ import {
   loadMentionsLive,
   loadSubKpis,
   loadSubKpisPrev,
+  mentionsDegraded,
   type MentionsContext,
 } from "@/lib/hgh/adapters/mentions";
 import { isAnalysisApi, loadFilterDates, loadPanelOptions } from "@/lib/hgh/adapters/filters";
@@ -213,16 +218,19 @@ async function MentionsData({
 }) {
   const session = await getSession();
   let loaded: [
-    Awaited<ReturnType<typeof fetchWebsiteMentions>>,
+    MentionsViewData | null,
     Awaited<ReturnType<typeof fetchWebsiteSubKpis>>,
     Awaited<ReturnType<typeof fetchWebsiteSubKpisPrev>>,
   ];
+  // B035: api 원천의 일시 실패 표식 — 집계가 끝난 뒤에 읽는다(legacy 는 종전 그대로 미전달).
+  let degraded: MentionsDegradedView | undefined;
   if (api) {
     try {
       loaded = await Promise.all([loadMentionsLive(filters, api), loadSubKpis(filters, api), loadSubKpisPrev(filters, api)]);
     } catch (e) {
       throwForPage(e, locale);
     }
+    degraded = mentionsDegraded(api);
   } else {
     loaded = await Promise.all([
       fetchWebsiteMentions(filters),
@@ -239,6 +247,7 @@ async function MentionsData({
         subKpis={buildMentionSubKpis(subKpis)}
         prevSubKpis={prevSubKpis ? buildMentionSubKpis(prevSubKpis.sub) : null}
         prevBasisDate={prevSubKpis?.asOf ?? null}
+        degraded={degraded}
         scope={session?.user.scope}
         extraGroups={extraGroups}
         onlyGroups={WEBSITE_ONLY_GROUPS}

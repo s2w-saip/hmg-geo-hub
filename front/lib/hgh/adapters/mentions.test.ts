@@ -24,6 +24,7 @@ const { withRequestScope } = await import("@/test/request-scope");
 const { bindHghAuth } = await import("../auth");
 const M = await import("./mentions");
 const { buildMentionSubKpis } = await import("@/app/[locale]/(dash)/standard/answer-analysis/_data/sub-kpis");
+const { brandRowValues } = await import("@/app/[locale]/(dash)/standard/answer-analysis/_data/prompt-rank");
 const { buildMentionTrend } = await import("@/lib/scope/result-adapter");
 const { wasDegraded } = await import("@/lib/scope/degrade-registry");
 
@@ -204,6 +205,25 @@ describe("toMentionsLive: B-2 assembly", () => {
     const live = M.toMentionsLive(parts({ trend: null, trendFailed: true }))!;
     expect([live.trend, live.trendDegraded, live.summary.total]).toEqual([null, true, 900]);
   });
+  it("B035: failed summary call -> totalPrompts null ('—'), never a made-up 0; the rest is unchanged", () => {
+    const failed = M.toMentionsLive(parts({ summary: null }))!;
+    const ok = M.toMentionsLive(parts())!;
+    expect(failed.summary).toEqual({ total: 900, uniqueBrands: 17, totalPrompts: null, totalAnswers: 400 });
+    expect({ ...failed, summary: null }).toEqual({ ...ok, summary: null });
+    // the legacy empty shape (no answers) keeps its 0
+    const none = { ...BRANDS, totals: { answers: 0, brand_count: 0, mentions_total: 0 } };
+    expect(M.toMentionsLive(parts({ brands: { data: none, meta: meta() }, summary: null }))?.summary.totalPrompts).toBe(0);
+  });
+  it("B039: a cut full list carries the count before the cap (data.truncated or meta.truncated.brands); else no key", () => {
+    expect("brandsTotal" in M.toMentionsLive(parts())!).toBe(false);
+    expect("brandsTotal" in M.toMentionsLive(parts({ brands: { data: { ...BRANDS, truncated: false }, meta: meta({ truncated: { brands: false } }) } }))!).toBe(false);
+    const cut = M.toMentionsLive(parts({ brands: { data: { ...BRANDS, truncated: true }, meta: meta({ truncated: { brands: true } }) } }))!;
+    expect([cut.brandsTotal, cut.brands.length]).toEqual([17, 3]);
+    const metaOnly = M.toMentionsLive(parts({ brands: { data: BRANDS, meta: meta({ truncated: { brands: true } }) } }))!;
+    expect(metaOnly.brandsTotal).toBe(17);
+    // the rows and every other field are the same as the uncut answer
+    expect({ ...cut, brandsTotal: undefined }).toEqual({ ...M.toMentionsLive(parts())!, brandsTotal: undefined });
+  });
 });
 
 describe("toMentionTrend: weekly chart through the unchanged legacy builder", () => {
@@ -239,6 +259,18 @@ describe("toMentionTrend: weekly chart through the unchanged legacy builder", ()
     d.buckets = d.buckets.slice(0, 3);
     d.series = d.series.map((s) => ({ ...s, points: s.points.slice(0, 3) }));
     expect(M.toMentionTrend(d)).toBeNull();
+  });
+  it("B037: the website/project answer (share_of_voice only, measured_days=false) gives the same chart", () => {
+    // the full B3 answer: visibility and position series too, measured days per bucket
+    const full = trendData();
+    const extra = full.series.flatMap((s) => [
+      { ...s, metric: "visibility", code: "M01", points: s.points.map((p) => ({ ...p, ratio: p.ratio ? ratio(p.ratio.num + 1, 400) : p.ratio })) },
+      { ...s, metric: "position", code: "M04", kind: "rank" as const, points: s.points.map((p) => ({ bucket: p.bucket, gap: p.gap, gap_reason: p.gap_reason, rank: { sum: 3, count: 2 } })) },
+    ]);
+    const fullAnswer = { ...full, series: [...extra, ...full.series] } as unknown as S["TrendData"];
+    const chartOnly = { ...trendData(), buckets: trendData().buckets.map((b) => ({ ...b, measured_days: null })) } as unknown as S["TrendData"];
+    expect(M.toMentionTrend(chartOnly)).toEqual(M.toMentionTrend(fullAnswer));
+    expect(M.toMentionTrend(chartOnly)).not.toBeNull();
   });
 });
 
@@ -282,6 +314,30 @@ describe("Sub KPI (B-3)", () => {
   it("prompts_without_brand absent -> null (BG-06 gives it on every surface; a hidden summary gives nulls)", () => {
     const hidden = M.toStandardSubKpis({ data: ENGINES, meta: meta() }, { data: summaryData(), meta: meta({ suppressed: { "*": "hidden" } }) });
     expect([hidden.promptsWithoutBrand, hidden.measuredPrompts]).toEqual([null, null]);
+  });
+  it("B036 parity: the part=exposure rows (citation columns null) and the parts=measured summary give the same cards", () => {
+    // backend part=exposure = core mentions + rank_detail: cit_total / cit_owned come back null
+    const exposureOnly: S["EnginesData"] = {
+      ...ENGINES,
+      rows: ENGINES.rows.map((r) => ({ ...r, cit_total: null, cit_owned: null })),
+      total: { ...ENGINES.total, cit_total: null, cit_owned: null },
+    };
+    // parts=measured: applied_prompts, analysis_gap and the URL cards come back null
+    const measuredOnly = summaryData({ analysis_gap: null, params: { ...summaryData().params, applied_prompts: null } });
+    const api = buildMentionSubKpis(M.toStandardSubKpis({ data: exposureOnly, meta: meta() }, { data: measuredOnly, meta: meta() }));
+    expect(api).toEqual(buildMentionSubKpis(LEGACY_SUB));
+  });
+});
+
+describe("B036 website brand rows without the multi extras", () => {
+  it("the website table values (multi toggle off) are the same without include=multi", () => {
+    for (const row of BRANDS.brands) {
+      const withMulti = M.toMentionsBrandLive(row);
+      const without = M.toMentionsBrandLive({ ...row, multi: undefined });
+      const opts = { multi: false, multiTotalMentions: 0, totalAnswers: null };
+      expect(brandRowValues(without, opts)).toEqual(brandRowValues(withMulti, opts));
+      expect({ ...without, multi: undefined }).toEqual({ ...withMulti, multi: undefined });
+    }
   });
 });
 
@@ -357,6 +413,55 @@ describe("loaders: queries, filter consistency, D6 order", () => {
       "100",
       ["multi", "prompts", "types"],
     ]);
+  });
+
+  it("B036: the website B1 drops include=multi (no multi toggle there); global and project keep it", async () => {
+    await M.fetchMentionBrands({}, { surface: "website", scope: null });
+    await M.fetchMentionBrands({}, { surface: "project", projectId: PROJECT, scope: null });
+    const [web, proj] = log.map((u) => u.searchParams);
+    expect([web.get("full"), web.get("split_own"), web.get("sort"), web.get("top_n"), web.getAll("include")]).toEqual([
+      "true",
+      "true",
+      "mentions",
+      "100",
+      ["prompts", "types"],
+    ]);
+    expect(proj.getAll("include")).toEqual(["multi", "prompts", "types"]);
+    // engine_only is sent with group_by only
+    log.length = 0;
+    await M.fetchMentionBrands({}, { surface: "global", scope: null }, { ...M.BRANDS_TABLE, engine_only: true });
+    expect(log[0].searchParams.has("engine_only")).toBe(false);
+  });
+
+  it("B036/B037/B4: website screen calls — engines part=exposure, types without stance, summary parts=measured, chart-only brand trend", async () => {
+    const ctx = { surface: "website" as const, scope: null };
+    await withRequestScope(() => Promise.all([M.loadMentionsLive({}, ctx), M.loadSubKpis({}, ctx), M.loadSubKpisPrev({}, ctx)]));
+    const by = (p: string) => log.filter((u) => u.pathname === p).map((u) => u.searchParams);
+    const offset = (q: URLSearchParams) => q.get("cycle_offset") ?? "0";
+    expect(by("/v1/kpi/engines").map((q) => [q.get("part"), q.getAll("parts"), offset(q)]).sort()).toEqual([
+      ["exposure", [], "0"],
+      ["exposure", [], "1"],
+    ]);
+    expect(by("/v1/kpi/summary").map((q) => [q.getAll("parts"), offset(q)]).sort()).toEqual([
+      [["measured"], "0"],
+      [["measured"], "1"],
+    ]);
+    expect(by("/v1/mentions/types").map((q) => q.get("include_stance"))).toEqual(["false"]);
+    const tb = by("/v1/trend");
+    expect(tb.map((q) => [q.get("dimension"), q.getAll("metrics"), q.get("measured_days"), q.get("top"), q.get("split_own")])).toEqual([
+      ["brand", ["share_of_voice"], "false", "10", "true"],
+    ]);
+    // each distinct call once (the essentials, the body and the Sub KPI share their reads)
+    const keys = log.map((u) => `${u.pathname}?${u.search}`);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it("B037/B4: the global body keeps the shared B3 (three metrics, measured days) and sends parts=measured", async () => {
+    await withRequestScope(() => M.loadMentionsLive({}, { surface: "global", scope: null }));
+    const tb = log.find((u) => u.pathname === "/v1/trend" && u.searchParams.get("dimension") === "brand")!.searchParams;
+    expect([tb.getAll("metrics"), tb.get("measured_days")]).toEqual([["visibility", "share_of_voice", "position"], null]);
+    expect(log.filter((u) => u.pathname === "/v1/kpi/summary").map((u) => u.searchParams.getAll("parts"))).toEqual([["measured"]]);
+    expect(log.find((u) => u.pathname === "/v1/mentions/types")!.searchParams.get("include_stance")).toBe("false");
   });
 
   it("every call of one screen carries the same CommonFilters (scope injection stripped, cf on project)", async () => {
@@ -460,6 +565,44 @@ describe("loaders: queries, filter consistency, D6 order", () => {
     stubFetch((u) => (u.pathname === "/v1/mentions/brands" ? { status: 403, body: { error: { code: "role_forbidden", message: "x" } } } : defaultHandler(u)), log);
     await withRequestScope(() => expect(M.loadMentionsLive({}, { surface: "global", scope: null })).rejects.toMatchObject({ status: 403 }));
   });
+
+  it("B035: mentionsDegraded reads the marks of the failed reads only (after the loaders settled)", async () => {
+    const ctx = { surface: "project" as const, projectId: PROJECT, scope: null };
+    const run = () => Promise.all([M.loadMentionsLive({}, ctx), M.loadSubKpis({}, ctx), M.loadSubKpisPrev({}, ctx)]);
+    // all reads fine -> no mark
+    await withRequestScope(async () => {
+      await run();
+      expect(M.mentionsDegraded(ctx)).toEqual({ data: false, types: false, subKpis: false });
+    });
+    const fail503 = (path: string) =>
+      stubFetch((u) => (u.pathname === path ? { status: 503, body: { error: { code: "upstream", message: "x" } } } : defaultHandler(u)), log);
+    fail503("/v1/mentions/types");
+    await withRequestScope(async () => {
+      const [live] = await run();
+      expect(live?.typeTotals).toBeNull();
+      expect(M.mentionsDegraded(ctx)).toEqual({ data: false, types: true, subKpis: false });
+    });
+    fail503("/v1/kpi/engines");
+    await withRequestScope(async () => {
+      const [, sub] = await run();
+      expect(sub.rows).toEqual([]);
+      expect(M.mentionsDegraded(ctx)).toEqual({ data: false, types: false, subKpis: true });
+    });
+    fail503("/v1/kpi/summary");
+    await withRequestScope(async () => {
+      const [live] = await run();
+      expect(live?.summary.totalPrompts).toBeNull();
+      expect(M.mentionsDegraded(ctx).subKpis).toBe(true);
+    });
+    fail503("/v1/mentions/brands");
+    await withRequestScope(async () => {
+      const [live] = await run();
+      expect(live).toBeNull();
+      expect(M.mentionsDegraded(ctx).data).toBe(true);
+      // another surface's marks are not read
+      expect(M.mentionsDegraded({ surface: "website" })).toEqual({ data: false, types: false, subKpis: false });
+    });
+  });
 });
 
 // ── known differences ───────────────────────────────────────────────────────
@@ -470,7 +613,7 @@ export const KNOWN_DIFF = [
   { id: "DC-05", reason: "prev Sub KPI = previous round (legacy: previous measure day)" },
   { id: "DC-08", reason: "trend series top 10 over the window; 12 rounds by default" },
   { id: "DC-12", reason: "handled by split_own (D13): own rows per perspective brand" },
-  { id: "U6-N1", reason: "full brand list capped at 2000 competitor rows" },
+  { id: "U6-N1", reason: "full brand list capped at 10,000 competitor rows (the cut is shown, B039)" },
   { id: "U6-N2", reason: "custom-field values of deleted prompts no longer offered" },
   { id: "U6-N3", reason: "unresolved brand (brand_key 0) is not a table row" },
 ];
@@ -480,8 +623,13 @@ describe("known differences are documented in the adapter header", () => {
   it.each(KNOWN_DIFF.map((k) => [k.id, k.reason] as const))("%s", (id) => {
     expect(src).toContain(id);
   });
-  it("U6-N1: truncated list keeps the first 2000 (the flag is passed through the call)", () => {
+  it("U6-N1: truncated list keeps the rows the backend sent and passes the count before the cap (B039)", () => {
     const big = { ...BRANDS, truncated: true };
-    expect(M.toMentionsLive({ brands: { data: big, meta: meta() }, types: null, summary: null, trend: null })?.brands).toHaveLength(3);
+    const live = M.toMentionsLive({ brands: { data: big, meta: meta() }, types: null, summary: null, trend: null });
+    expect([live?.brands.length, live?.brandsTotal]).toEqual([3, 17]);
+  });
+  it("U6-N1: the header states the real cap (10,000, back FULL_CAP), not 2000", () => {
+    expect(src).toMatch(/capped at 10,000 competitor rows/);
+    expect(src).not.toMatch(/capped at 2000/);
   });
 });

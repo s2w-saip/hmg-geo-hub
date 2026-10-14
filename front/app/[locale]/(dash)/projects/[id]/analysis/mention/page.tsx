@@ -23,6 +23,7 @@ import {
   loadMentionsLive,
   loadSubKpis,
   loadSubKpisPrev,
+  mentionsDegraded,
   type MentionsContext,
 } from "@/lib/hgh/adapters/mentions";
 
@@ -173,6 +174,8 @@ async function ProjectMentionApi({
       loadDesignatedTargetBrand(id),
       loadFilterDates({ surface: "project", projectId: id, family: "mentions" }),
     ]);
+    // B035: 일시 실패 표식 — 위 집계가 끝난 뒤에 읽는다(빈 자리에 "데이터 없음" 대신 기존 degraded 문구).
+    const degraded = mentionsDegraded(ctx);
     return (
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-1.5">
@@ -184,6 +187,7 @@ async function ProjectMentionApi({
           subKpis={buildMentionSubKpis(subKpis)}
           prevSubKpis={prevSubKpis ? buildMentionSubKpis(prevSubKpis.sub) : null}
           prevBasisDate={prevSubKpis?.asOf ?? null}
+          degraded={degraded}
           lockedGroups={lockedGroups}
           dynamicAxes={activeCustomFields}
           catalogRows={options.catalogRows}

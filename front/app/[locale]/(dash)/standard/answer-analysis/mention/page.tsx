@@ -26,7 +26,7 @@ import { narrowScopeBrands } from "@/lib/scope/hmg-brands";
 import type { AllowedScope } from "@/lib/auth/types";
 import type { StandardFilters } from "@/lib/scope/result-adapter";
 import { readStandardFilters } from "@/components/dash/standard-filters";
-import { PendingCard } from "../_components/mentions-view";
+import { PendingCard, type MentionsViewData } from "../_components/mentions-view";
 import { MentionsPromptsSection } from "../_components/mentions-prompts-section";
 import { AnalysisFilterBar } from "../_components/analysis-filter-bar";
 import { KpiTabs } from "../_components/kpi-tabs";
@@ -70,6 +70,7 @@ import {
   loadMentionsLive,
   loadSentimentTotals,
   loadTypesByBrand,
+  mentionsDegraded,
   type MentionsContext,
 } from "@/lib/hgh/adapters/mentions";
 import {
@@ -80,6 +81,7 @@ import {
   loadKpiHeroSubKpisPrev,
   loadStanceDist,
   loadTypeKpi,
+  wasKpiTabDegraded,
 } from "@/lib/hgh/adapters/kpi-tab";
 import { isAnalysisApi, loadFilterDates, loadPanelOptions } from "@/lib/hgh/adapters/filters";
 import { fetchPeriodCompareApi } from "@/lib/hgh/adapters/compare";
@@ -432,21 +434,28 @@ async function MentionsKpiBody({
     // Same props from the backend adapters. competitorValues null: the competitor rows and their
     // values come from the same /v1/mentions/brands call (U6-N6).
     const prevApi = loadKpiHeroSubKpisPrev(filters, api, metric);
+    const subKpisApi = loadKpiHeroSubKpis(filters, api, metric);
+    const typeKpiApi = loadTypeKpi(filters, api);
     return (
       <>
         <MentionKpiTab
           metric={metric}
-          subKpis={loadKpiHeroSubKpis(filters, api, metric)}
+          subKpis={subKpisApi}
           prevSubKpis={prevApi.then((p) => p?.sub ?? null)}
           brands={loadMentionBrandRows(filters, api)}
           competitorValues={null}
           engineTrend={loadEngineKpiTrend(filters, api)}
           brandTrend={loadBrandTrend(filters, api)}
-          typeKpi={loadTypeKpi(filters, api)}
+          typeKpi={typeKpiApi}
           typesByBrand={loadTypesByBrand(filters, api)}
           prevBasisDate={prevApi.then((p) => p?.asOf ?? null)}
           periodCompare={periodCompare}
           periodDays={periodDays}
+          // B034: 빈 히어로·유형 막대가 "측정 없음"이 아니라 일시 실패인지(요청 스코프 표식).
+          // 표식은 그 집계가 끝난 **뒤에만** 유효하므로 같은 프로미스에 이어 붙인다(추가 조회 0,
+          // citation/page.tsx 의 dataDegraded 와 같은 짝).
+          heroDegraded={subKpisApi.then(() => wasKpiTabDegraded("hero"))}
+          typeKpiDegraded={typeKpiApi.then(() => wasKpiTabDegraded("types"))}
         />
         {monthLine}
       </>
@@ -529,7 +538,7 @@ async function MentionsData({
   api: MentionsContext | null;
   locale: string;
 }) {
-  let data: Awaited<ReturnType<typeof fetchStandardMentions>>;
+  let data: MentionsViewData | null;
   if (api) {
     try {
       data = await loadMentionsLive(filters, api);
@@ -541,7 +550,8 @@ async function MentionsData({
   }
   return (
     <>
-      <MentionsPromptsSection data={data} />
+      {/* B034: api 원천에서 null 이 일시 실패(globalMentions 표식)면 "데이터 없음" 대신 기존 degraded 문구. */}
+      <MentionsPromptsSection data={data} degraded={api ? mentionsDegraded(api).data : false} />
       <SectionDoneMarker id="standard-mention:data" />
     </>
   );

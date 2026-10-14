@@ -28,6 +28,7 @@ vi.mock("@/lib/scope/server", () => ({}));
 const { withRequestScope } = await import("@/test/request-scope");
 const { bindHghAuth } = await import("../auth");
 const K = await import("./kpi-tab");
+const M = await import("./mentions");
 const { rankFirstPositionRows } = await import("@/lib/kpi/first-position-rank");
 const V = await import("@/app/[locale]/(dash)/standard/answer-analysis/_data/kpi-view");
 
@@ -340,6 +341,26 @@ describe("hero sub KPI", () => {
     const legacy: StandardSubKpis = { ...sub, overviewCards: K.toOverviewCards(summaryData()) };
     expectParity(V.favorabilityHero(legacy), V.favorabilityHero(sub));
   });
+  it("B036 parity: part=sov rows (rank detail and citation columns null) give the same hero and engine scalars", () => {
+    // backend part=sov = core mentions only: multi / top1 / top3 / cit_total / cit_owned come back null
+    const sovOnly: S["EnginesData"] = {
+      ...ENGINES,
+      rows: ENGINES.rows.map((r) => ({ ...r, multi: null, top1: null, top3: null, cit_total: null, cit_owned: null })),
+    };
+    expect(V.favorabilityHero(K.toFavorabilitySubKpis({ data: sovOnly, meta: meta() }))).toEqual(
+      V.favorabilityHero(K.toFavorabilitySubKpis({ data: ENGINES, meta: meta() })),
+    );
+    expect(sovOnly.rows.map(K.toEnginePoint)).toEqual(ENGINES.rows.map(K.toEnginePoint));
+    const t = (e: S["EnginesData"]) =>
+      K.toEngineKpiTrend({ engines: { data: e, meta: meta() }, latestBrands: { data: BY_ENGINE, meta: meta() }, engineTrend: { data: ENGINE, meta: meta() }, typeTrend: { data: TYPE, meta: meta() }, overview: { data: NONE, meta: meta() } });
+    for (const m of ["exposure", "sov"] as const) expectParity(V.engineKpiBars(t(ENGINES), m), V.engineKpiBars(t(sovOnly), m));
+  });
+  it("B4 parity: a parts=measured summary (applied, gap and URL fields null) gives the same hero cards", () => {
+    const measuredOnly = summaryData({ analysis_gap: null, params: { ...summaryData().params, applied_prompts: null } });
+    for (const metric of ["exposure", "sov"] as const) {
+      expect(K.toHeroSubKpis({ data: measuredOnly, meta: meta() }, metric)).toEqual(K.toHeroSubKpis({ data: summaryData(), meta: meta() }, metric));
+    }
+  });
 });
 
 describe("engine trend", () => {
@@ -368,6 +389,26 @@ describe("engine trend", () => {
   it("a failed trend read keeps the scalars and marks trendDegraded (legacy C2)", () => {
     const t = K.toEngineKpiTrend({ engines: { data: ENGINES, meta: meta() }, latestBrands: null, engineTrend: null, typeTrend: null, overview: null });
     expect([t.trendDegraded, t.buckets, t.latest.length, t.overviewSlots]).toEqual([true, [], 2, undefined]);
+  });
+  it("B034: a failed engine × brand or type trend read marks trendDegraded too; the other values stay", () => {
+    const ok = apiEngineTrend();
+    const parts = { engines: { data: ENGINES, meta: meta() }, latestBrands: { data: BY_ENGINE, meta: meta() }, engineTrend: { data: ENGINE, meta: meta() }, typeTrend: { data: TYPE, meta: meta() }, overview: { data: NONE, meta: meta() } };
+    const noType = K.toEngineKpiTrend({ ...parts, typeTrend: null });
+    expect([noType.trendDegraded, noType.typeTrend]).toEqual([true, []]);
+    expect({ ...noType, trendDegraded: false, typeTrend: ok.typeTrend }).toEqual(ok);
+    const noBrands = K.toEngineKpiTrend({ ...parts, latestBrands: null });
+    expect([noBrands.trendDegraded, noBrands.latestBrands]).toEqual([true, []]);
+    expect({ ...noBrands, trendDegraded: false, latestBrands: ok.latestBrands }).toEqual(ok);
+    // the type combo then says degradedTrend (legacy trend phase failure) instead of an empty chart
+    expect(ok.trendDegraded).toBe(false);
+  });
+  it("B038: the type block of the dims call carries measured days, which toTypeTrend never reads", () => {
+    const noDays = { ...TYPE, buckets: TYPE.buckets.map((b) => ({ ...b, measured_days: null })) } as S["TrendData"];
+    expect(K.toTypeTrend(TYPE)).toEqual(K.toTypeTrend(noDays));
+  });
+  it("B038: engine_only by_engine answer (window-wide rows empty) gives the same engine × brand points", () => {
+    const engineOnly: S["BrandsData"] = { ...BY_ENGINE, brands: [], totals: { answers: 0, brand_count: 0, mentions_total: 0 } };
+    expect(K.toLatestBrands(engineOnly)).toEqual(K.toLatestBrands(BY_ENGINE));
   });
 
   const t = () => ({ legacy: legacyEngineTrend(), api: apiEngineTrend() });
@@ -595,7 +636,13 @@ describe("loaders: queries and period rules", () => {
               return { data: { dates: [], dates_truncated: false, first_measured_date: null, latest_round_date: null, presets: [] }, meta: meta() };
             case "/v1/trend": {
               const d = url.searchParams.get("dimension");
-              return { data: d === "engine" ? ENGINE : d === "type" ? TYPE : NONE, meta: meta() };
+              const base = d === "engine" ? ENGINE : d === "type" ? TYPE : NONE;
+              // B101 dims: each extra dimension as a block (series + meta), buckets shared
+              const dims = url.searchParams.getAll("dims").map((item) => {
+                const dim = item.split(/[:@]/)[0];
+                return { dimension: dim, series: (dim === "type" ? TYPE : dim === "engine" ? ENGINE : NONE).series, meta: meta() };
+              });
+              return { data: dims.length ? { ...base, dims } : base, meta: meta() };
             }
             default:
               return { data: null, meta: meta() };
@@ -613,24 +660,100 @@ describe("loaders: queries and period rules", () => {
   const ROWS_FOR_LOADER: S["BrandsData"] = { ...BY_ENGINE, by_engine: null, brands: [brandItem("Hyundai", true, [100, 200], 150, [25, 10])] };
   const ctx = { surface: "global" as const, scope: null };
 
-  it("engine trend: engines part=all, brands group_by=engine top 30 split own, trend engine/type/none on cycles", async () => {
+  it("engine trend: engines part=sov, brands group_by=engine top 30 split own engine_only, trend engine+type (dims) and none on cycles", async () => {
     const t = await withRequestScope(() => K.loadEngineKpiTrend({}, ctx));
     expect(t?.trendDegraded).toBe(false);
     const by = (path: string, dim?: string) => log.filter((u) => u.pathname === path && (!dim || u.searchParams.get("dimension") === dim));
-    expect(by("/v1/kpi/engines")[0].searchParams.get("part")).toBe("all");
+    // B036: the mention columns only (no rank detail, no citation columns)
+    expect(by("/v1/kpi/engines").map((u) => [u.searchParams.get("part"), u.searchParams.getAll("parts")])).toEqual([["sov", []]]);
     const eb = by("/v1/mentions/brands").find((u) => u.searchParams.get("group_by"))!.searchParams;
-    expect([eb.get("group_by"), eb.get("top_n"), eb.get("split_own"), eb.get("sort")]).toEqual(["engine", "30", "true", "mentions"]);
+    expect([eb.get("group_by"), eb.get("top_n"), eb.get("split_own"), eb.get("sort"), eb.get("engine_only")]).toEqual(["engine", "30", "true", "mentions", "true"]);
     expect(by("/v1/trend", "engine")[0].searchParams.getAll("metrics")).toEqual(["visibility", "share_of_voice", "sentiment"]);
-    expect(by("/v1/trend", "type")[0].searchParams.getAll("metrics")).toEqual(["type_exposure"]);
+    // B038: the type trend rides on the engine call (one window, base scan and measured days)
+    expect(by("/v1/trend", "engine")[0].searchParams.getAll("dims")).toEqual(["type:type_exposure"]);
+    expect(by("/v1/trend", "type")).toHaveLength(0);
     for (const u of by("/v1/trend")) expect(u.searchParams.get("bucket")).toBe("cycle");
-    // performance A1: only the type trend opts out; engine and overview feed the coverage labels
+    // engine and overview feed the coverage labels (measured days kept); none stays the D6 essential
     expect(by("/v1/trend").map((u) => [u.searchParams.get("dimension"), u.searchParams.get("measured_days")]).sort()).toEqual([
       ["engine", null],
       ["none", null],
-      ["type", "false"],
     ]);
     const keys = log.map((u) => `${u.pathname}?${u.search}`);
     expect(new Set(keys).size).toBe(keys.length); // each distinct call once (request dedupe)
+    // same EngineKpiTrend as the separate engine / type calls of the same WORLD
+    expect(t).toEqual(apiEngineTrend());
+  });
+
+  it("B036: the hero, its previous round and the engine trend share one engines part (one call per offset)", async () => {
+    await withRequestScope(() =>
+      Promise.all([
+        K.loadKpiHeroSubKpis({}, ctx, "favorability"),
+        K.loadKpiHeroSubKpisPrev({}, ctx, "favorability"),
+        K.loadEngineKpiTrend({}, ctx),
+      ]),
+    );
+    const eng = log.filter((u) => u.pathname === "/v1/kpi/engines").map((u) => [u.searchParams.get("part"), u.searchParams.get("cycle_offset") ?? "0"]);
+    expect(eng.sort()).toEqual([
+      ["sov", "0"],
+      ["sov", "1"],
+    ]);
+  });
+
+  it("B4: the KPI tab and the mention body send the same summary parts, so one summary call serves them all", async () => {
+    await withRequestScope(() =>
+      Promise.all([
+        K.loadKpiHeroSubKpis({}, ctx, "exposure"),
+        K.loadKpiHeroSubKpis({}, ctx, "sov"),
+        K.loadFirstPosition({}, ctx),
+        M.loadMentionsLive({}, ctx),
+      ]),
+    );
+    const summary = log.filter((u) => u.pathname === "/v1/kpi/summary");
+    expect(summary.map((u) => u.searchParams.getAll("parts"))).toEqual([["measured"]]);
+    log.length = 0;
+    // the previous round: the D6 essential (offset 0) and the offset 1 read, both parts=measured
+    await withRequestScope(() => K.loadKpiHeroSubKpisPrev({}, ctx, "sov"));
+    const prev = log.filter((u) => u.pathname === "/v1/kpi/summary").map((u) => [u.searchParams.getAll("parts"), u.searchParams.get("cycle_offset") ?? "0"]);
+    expect(prev.sort()).toEqual([
+      [["measured"], "0"],
+      [["measured"], "1"],
+    ]);
+  });
+
+  it("B036: the type KPI skips the stance (include_stance=false); the stance card keeps it", async () => {
+    await withRequestScope(() => K.loadTypeKpi({}, ctx));
+    expect(log.filter((u) => u.pathname === "/v1/mentions/types").map((u) => u.searchParams.get("include_stance"))).toEqual(["false"]);
+    log.length = 0;
+    expect(await withRequestScope(() => K.loadStanceDist({}, ctx))).toEqual({ positive: 5, neutral: 3, mixed: 1, negative: 1, pairs: 10 });
+    expect(log.filter((u) => u.pathname === "/v1/mentions/types").map((u) => u.searchParams.has("include_stance"))).toEqual([false]);
+  });
+
+  it("B034: wasKpiTabDegraded reads the hero / type marks of this request (5xx only)", async () => {
+    const fail = (path: string) => {
+      const ok = vi.mocked(fetch).getMockImplementation()!;
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (u: string, init?: RequestInit) =>
+          new URL(String(u)).pathname === path
+            ? new Response(JSON.stringify({ error: { code: "upstream", message: "x" } }), { status: 503, headers: { "content-type": "application/json" } })
+            : ok(u, init),
+        ),
+      );
+    };
+    await withRequestScope(async () => {
+      await Promise.all([K.loadKpiHeroSubKpis({}, ctx, "exposure"), K.loadTypeKpi({}, ctx)]);
+      expect([K.wasKpiTabDegraded("hero"), K.wasKpiTabDegraded("types")]).toEqual([false, false]);
+    });
+    fail("/v1/kpi/summary");
+    await withRequestScope(async () => {
+      expect(await K.loadKpiHeroSubKpis({}, ctx, "exposure")).toEqual({ rows: [], promptsWithoutBrand: null, measuredPrompts: null });
+      expect([K.wasKpiTabDegraded("hero"), K.wasKpiTabDegraded("types")]).toEqual([true, false]);
+    });
+    fail("/v1/mentions/types");
+    await withRequestScope(async () => {
+      expect(await K.loadTypeKpi({}, ctx)).toBeNull();
+      expect(K.wasKpiTabDegraded("types")).toBe(true);
+    });
   });
 
   it("hero prev: period -> null without a call; snapshot -> cycle_offset=1, asOf = meta.as_of", async () => {

@@ -112,6 +112,81 @@ describe("언급 본문 구획 — 단독 렌더", () => {
   });
 });
 
+// ── B035 — API 원천의 일시 실패 고지 (website/project) ────────────────────────
+//
+// 페이지가 요청 스코프 표식(mentionsDegraded)을 읽어 `degraded` 로 넘긴다. 참인 자리만 기존
+// `kpi.degraded`(추이는 `kpi.degradedTrend`) 문구로 바뀌고, 정상 경로 마크업은 그대로다.
+describe("B035 일시 실패 고지", () => {
+  const kpi = ko.answerAnalysis.mentions.kpi;
+  const ALL_FALSE = { data: false, types: false, subKpis: false };
+
+  it("정상 경로(표식 전부 false)는 표식 미전달과 바이트 단위로 같다", () => {
+    const props = { data: DATA, subKpis: SUB, prevSubKpis: PREV, prevBasisDate: "2026-08-25", hideFilterPanel: true };
+    expect(render(<MentionsView {...props} degraded={ALL_FALSE} />)).toBe(render(<MentionsView {...props} />));
+    expect(render(<MentionsView {...props} />)).not.toContain(kpi.degraded);
+  });
+
+  it("본문 실패(data null)는 '데이터 없음' 대신 기존 degraded 문구", () => {
+    for (const html of [
+      render(<MentionsView data={null} degraded={{ data: true }} />),
+      render(<MentionsSummarySection data={null} degraded={{ data: true }} />),
+    ]) {
+      expect(html).toContain(kpi.degraded);
+      expect(html).not.toContain(ko.answerAnalysis.empty);
+    }
+    // 표식이 없으면 종전 빈 상태
+    expect(render(<MentionsView data={null} />)).toContain(ko.answerAnalysis.empty);
+  });
+
+  it("유형 조회 실패는 유형 카드의 '준비 중' 대신 degraded 문구", () => {
+    const noTypes = { ...DATA, typeTotals: null };
+    const failed = render(<MentionsSummarySection data={noTypes} degraded={{ types: true }} />);
+    expect(failed).toContain(kpi.degraded);
+    expect(failed).not.toContain(ko.answerAnalysis.pending);
+    expect(render(<MentionsSummarySection data={noTypes} />)).toContain(ko.answerAnalysis.pending);
+  });
+
+  it("Sub KPI·Δ 실패는 카드 그리드 아래 캡션 자리에 degraded 문구 한 줄", () => {
+    const failed = render(<MentionsSummarySection data={DATA} subKpis={null} degraded={{ subKpis: true }} />);
+    expect(failed).toContain(`<p class="-mt-3 text-[11px] text-muted-foreground">${kpi.degraded}</p>`);
+    expect(render(<MentionsSummarySection data={DATA} subKpis={null} />)).not.toContain(kpi.degraded);
+  });
+
+  it("측정 프롬프트 수 null(요약 실패)은 0 이 아니라 '—'", () => {
+    // 카드 라벨 뒤 첫 값 칸(SummaryCard 의 큰 숫자)
+    const valueOf = (html: string) => {
+      const card = html.slice(html.indexOf(ko.answerAnalysis.mentions.summary.totalPrompts));
+      return card.match(/font-head text-xl font-semibold tracking-tight tabular-nums text-foreground">([^<]*)</)?.[1];
+    };
+    expect(valueOf(render(<MentionsSummarySection data={{ ...DATA, summary: { ...DATA.summary, totalPrompts: null } }} />))).toBe("—");
+    // 정상 값은 종전 그대로(20)
+    expect(valueOf(render(<MentionsSummarySection data={DATA} />))).toBe("20");
+  });
+
+  it("추이 실패(trendDegraded)는 '준비 중' 대신 degradedTrend — 표준 공통 하단과 같은 판정", () => {
+    const failed = render(<MentionsTrendSection data={{ ...DATA, trend: null, trendDegraded: true }} />);
+    expect(failed).toContain(kpi.degradedTrend);
+    expect(failed).not.toContain(ko.answerAnalysis.pending);
+    // 2주 미만(실패 아님)은 종전 '준비 중'
+    expect(render(<MentionsTrendSection data={{ ...DATA, trend: null }} />)).toContain(ko.answerAnalysis.pending);
+  });
+});
+
+// ── B039 — 전량 목록 절단 표식(순위표 구획) ─────────────────────────────────────
+describe("B039 순위표 절단 한 줄", () => {
+  const cut = (shown: number, total: number) =>
+    ko.answerAnalysis.mentions.kpi.overview.unmeasuredDialog.truncated
+      .replace("{total}", String(total))
+      .replace("{shown}", String(shown));
+
+  it("잘린 목록이면 '{total}개 중 {shown}개 표시', 안 잘렸으면 마크업 그대로", () => {
+    const html = render(<MentionsRankSection data={{ ...DATA, brandsTotal: 12000 }} />);
+    expect(html).toContain(cut(3, 12000));
+    expect(render(<MentionsRankSection data={DATA} />)).not.toContain(cut(3, 12000));
+    expect(render(<MentionsRankSection data={DATA} />)).toBe(render(<MentionsRankSection data={{ ...DATA, brandsTotal: undefined }} />));
+  });
+});
+
 describe("통짜 MentionsView — 분할 전과 같은 지면", () => {
   it("website/project 표면은 세 구획을 이어 붙여 전과 같은 화면을 낸다", () => {
     const html = render(

@@ -209,6 +209,42 @@ describe("MentionKpiTab", () => {
     expect(html).toContain("60.0%");
   });
 
+  // B034 — 히어로·유형 집계의 **일시 실패**는 "측정 없음"과 구분한다(요청 스코프 표식을 페이지가
+  // 넘긴다). 정상 경로(표식 false·미전달)의 마크업은 종전과 바이트 단위로 같아야 한다.
+  describe("B034 degraded notices (hero, type bars)", () => {
+    const degraded = ko.answerAnalysis.mentions.kpi.degraded;
+    const heroCaption = `<p class="-mt-4 text-[11px] text-muted-foreground">${degraded}</p>`;
+
+    it.each(["exposure", "sov"] as const)("keeps the normal markup identical when nothing failed (%s)", (metric) => {
+      expect(render(metric, { heroDegraded: false, typeKpiDegraded: false })).toBe(render(metric));
+      expect(render(metric)).not.toContain(heroCaption);
+    });
+
+    it("says the hero scalar failed (not 'no measurement') with the existing degraded line", () => {
+      const empty = { rows: [], promptsWithoutBrand: null, measuredPrompts: null };
+      const html = render("exposure", { subKpis: empty, heroDegraded: true });
+      expect(html).toContain(heroCaption);
+      // the rest of the tab is still drawn
+      expect(html).toContain(ko.answerAnalysis.mentions.kpi.type.title.exposure);
+      // without the mark the same empty sub stays the legacy "—" hero without the line
+      expect(render("exposure", { subKpis: empty })).not.toContain(heroCaption);
+    });
+
+    it("says the type bars failed instead of 'no data' when the type read was a transient failure", () => {
+      const failed = render("sov", { typeKpi: null, typeKpiDegraded: true });
+      const section = failed.slice(failed.indexOf(ko.answerAnalysis.mentions.kpi.type.title.sov));
+      expect(section).toContain(degraded);
+      expect(section).not.toContain(ko.answerAnalysis.mentions.kpi.type.empty);
+      // no mark -> the legacy empty message
+      expect(render("sov", { typeKpi: null })).toContain(ko.answerAnalysis.mentions.kpi.type.empty);
+    });
+
+    it("shows degradedTrend on the type combo when the engine payload is marked trendDegraded (B034 brands·type)", () => {
+      const html = render("exposure", { engineTrend: { ...ENGINE_TREND, trendDegraded: true } });
+      expect(html).toContain(ko.answerAnalysis.mentions.kpi.degradedTrend);
+    });
+  });
+
   it("renders with no data at all", () => {
     const html = render("sov", {
       subKpis: null, prevSubKpis: null, brands: [],

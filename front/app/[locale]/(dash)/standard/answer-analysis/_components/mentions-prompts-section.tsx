@@ -8,8 +8,7 @@
 
 import { useTranslations } from "next-intl";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import type { MentionsLive } from "@/lib/scope/result-adapter";
-import { EmptyState, MentionTrendChart, PendingCard } from "./mentions-view";
+import { EmptyState, MentionTrendChart, PendingCard, type MentionsViewData } from "./mentions-view";
 import { BrandRankTable } from "./brand-rank-table";
 
 export const BRAND_RANK_LIMIT = 100;
@@ -17,14 +16,26 @@ export const BRAND_RANK_LIMIT = 100;
 export function MentionsPromptsSection({
   data,
   initialMulti,
+  degraded = false,
 }: {
-  data: MentionsLive | null;
+  data: MentionsViewData | null;
   /** 렌더 테스트 seam. */
   initialMulti?: boolean;
+  /**
+   * `data` 의 null 이 **일시 실패**인가(B034, 요청 스코프 표식 `globalMentions` — 페이지가
+   * 집계 뒤에 읽어 넘긴다). 참이면 "데이터 없음" 대신 기존 degraded 문구. 기본은 종전 그대로.
+   */
+  degraded?: boolean;
 }) {
   const t = useTranslations("answerAnalysis.mentions");
   const tRoot = useTranslations("answerAnalysis");
-  if (!data) return <EmptyState label={tRoot("empty")} />;
+  if (!data) {
+    return degraded ? (
+      <PendingCard title={t("prompts.title")} label={t("kpi.degraded")} />
+    ) : (
+      <EmptyState label={tRoot("empty")} />
+    );
+  }
   const tracked = new Set(data.brands.filter((b) => b.isTracked).map((b) => b.brand));
   return (
     <TooltipProvider delayDuration={200}>
@@ -50,6 +61,7 @@ export function MentionsPromptsSection({
           limit={BRAND_RANK_LIMIT}
           totalAnswers={data.summary.totalAnswers ?? null}
           initialMulti={initialMulti}
+          total={data.brandsTotal}
         />
       </section>
     </TooltipProvider>

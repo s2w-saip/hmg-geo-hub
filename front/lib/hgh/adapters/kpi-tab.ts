@@ -10,10 +10,11 @@ import "server-only";
 //   fetchStandardKpiHeroSubKpisPrev                 loadKpiHeroSubKpisPrev: cycle_offset=1 (snapshot),
 //                                                   null in period mode (the round Δ takes over)
 //   fetchStandardKpiEngineTrend                     loadEngineKpiTrend: K-3 (latest), M-1 group_by=
-//                                                   engine (latestBrands, BG-16), T-1 dimension=engine
-//                                                   (buckets, BG-09 negative, BG-10 measured days),
-//                                                   T-1 dimension=type (typeTrend, BG-07), T-1
-//                                                   dimension=none (overviewSlots = Δ slots, grid)
+//                                                   engine engine_only (latestBrands, BG-16), T-1
+//                                                   dimension=engine (buckets, BG-09 negative, BG-10
+//                                                   measured days) with dims=type (typeTrend, BG-07)
+//                                                   in the same call (B038), T-1 dimension=none
+//                                                   (overviewSlots = Δ slots, grid; the D6 essential)
 //   fetchStandardKpiBrandTrend                      loadBrandTrend: T-1 dimension=brand (U4 toBrandTrendResult)
 //   fetchStandardKpiFirstPosition                   loadFirstPosition: same T-1 brand answer (position) +
 //                                                   M-1 rows (latest, re-ranked by average position)
@@ -40,6 +41,12 @@ import "server-only";
 //                  by a code unit name compare (locale independent; sync S1 FA-2)
 //   TypeKpi        rows by_type in the legacy order; percents by the mirror rule; ownMentions and
 //                  totalMentions = row sums; sentimentMatrix split by scope own/all
+//   requests       K-1 parts=measured (mentions.ts MENTION_SUMMARY_PARTS, shared with the body);
+//                  K-3 part=sov (KPI_TAB_ENGINE_PART: the mention columns, no rank detail or
+//                  citation columns, B036); M-2 include_stance=false except the stance card
+//   degraded       trendDegraded also when the engine × brand or the type trend read failed (the
+//                  legacy trend phase held both, B034); the hero and type-bar failures are read by
+//                  the page (KPI_TAB_DEGRADE_LABELS) and shown with the existing degraded notice
 //
 // Known differences. Design DC list (front-adapter-plan 3.6 (나)):
 //   DC-01  engine[] empty = the default engine only (legacy: every engine)
@@ -79,7 +86,7 @@ import type {
 } from "@/lib/db/repositories/scope-aggregates";
 import type { StandardFilters } from "@/lib/scope/result-adapter";
 import { rankFirstPositionRows } from "@/lib/kpi/first-position-rank";
-import { degradeOnApiFailure } from "@/lib/scope/degrade-registry";
+import { degradeOnApiFailure, wasDegraded } from "@/lib/scope/degrade-registry";
 import { rankAvg, suppressionOf, wholeSuppression, type Ratio } from "../convert";
 import {
   afterEssentials,
@@ -87,6 +94,7 @@ import {
   fetchBrandTrend,
   fetchEngineRows,
   fetchMentionBrands,
+  fetchMentionSummary,
   fetchMentionTypes,
   fetchOverviewTrend,
   MENTION_TYPES,
@@ -94,13 +102,15 @@ import {
   type ApiBrandsData,
   type ApiEnginesData,
   type ApiTypesData,
+  type BrandsRequest,
+  type EnginesPart,
   type Enveloped,
   type MentionsContext,
 } from "./mentions";
-import { fetchKpiSummary, type ApiSummaryData, type SummaryResponse } from "./summary";
+import type { ApiSummaryData, SummaryResponse } from "./summary";
 import {
   bucketRoundDate,
-  fetchTrend,
+  fetchTrendDims,
   mirrorPct,
   pointGap,
   toBrandTrendResult,
@@ -114,6 +124,24 @@ import {
 } from "./trend";
 
 export type HeroMetric = "exposure" | "sov" | "favorability";
+
+/**
+ * B036: the engine-row columns the KPI tab reads (favorability hero rows: sentiment counts; engine
+ * scalars: answers, tracked, mentions, sentiment). part=sov = the mention columns only; the hero,
+ * its previous round and the engine trend all send it, so they share one call.
+ */
+export const KPI_TAB_ENGINE_PART: EnginesPart = "sov";
+
+/**
+ * B034: degrade labels of the KPI tab reads the page shows with the existing degraded notice
+ * (read with wasKpiTabDegraded after that read settled).
+ */
+export const KPI_TAB_DEGRADE_LABELS = { hero: "standardKpiHero", types: "standardKpiTypes" } as const;
+
+/** Was that KPI tab read a transient failure in this request (degrade mark)? */
+export function wasKpiTabDegraded(which: keyof typeof KPI_TAB_DEGRADE_LABELS): boolean {
+  return wasDegraded(KPI_TAB_DEGRADE_LABELS[which]);
+}
 
 /** Legacy mirror percent: Math.round(n/d*1000)/10, d 0 -> null (scope-aggregates pctOrNull). */
 export const pctOrNull = (n: number, d: number): number | null => mirrorPct({ num: n, den: d });
@@ -160,12 +188,12 @@ export async function loadKpiHeroSubKpis(filters: StandardFilters, ctx: Mentions
   startEssentials(filters, ctx);
   const empty: StandardSubKpis = { rows: [], promptsWithoutBrand: null, measuredPrompts: null };
   if (metric === "favorability") {
-    const engines = await degradeOnApiFailure("standardKpiHero", () =>
-      afterEssentials(filters, ctx, () => fetchEngineRows(filters, ctx)),
+    const engines = await degradeOnApiFailure(KPI_TAB_DEGRADE_LABELS.hero, () =>
+      afterEssentials(filters, ctx, () => fetchEngineRows(filters, ctx, { part: KPI_TAB_ENGINE_PART })),
     );
     return engines ? toFavorabilitySubKpis(engines) : empty;
   }
-  const res = await degradeOnApiFailure("standardKpiHero", () => fetchKpiSummary(filters, ctx));
+  const res = await degradeOnApiFailure(KPI_TAB_DEGRADE_LABELS.hero, () => fetchMentionSummary(filters, ctx));
   return res ? toHeroSubKpis(res, metric) : empty;
 }
 
@@ -183,11 +211,11 @@ export async function loadKpiHeroSubKpisPrev(
   return degradeOnApiFailure("standardKpiHeroPrev", () =>
     afterEssentials(filters, ctx, async () => {
       if (metric === "favorability") {
-        const engines = await fetchEngineRows(filters, ctx, { cycleOffset: 1 });
+        const engines = await fetchEngineRows(filters, ctx, { cycleOffset: 1, part: KPI_TAB_ENGINE_PART });
         if (wholeSuppression(engines.meta) || !engines.meta.as_of) return null;
         return { sub: toFavorabilitySubKpis(engines), asOf: engines.meta.as_of };
       }
-      const res = await fetchKpiSummary(filters, { ...ctx, cycleOffset: 1 });
+      const res = await fetchMentionSummary(filters, ctx, { cycleOffset: 1 });
       if (wholeSuppression(res.meta) || !res.meta.as_of) return null;
       return { sub: toHeroSubKpis(res, metric), asOf: res.meta.as_of };
     }),
@@ -300,10 +328,12 @@ export interface EngineTrendParts {
 
 /**
  * K-3 + M-1(engine) + T-1(engine, type, none) -> EngineKpiTrend. A failed trend read is
- * trendDegraded with the snapshot scalars kept (legacy C2 contract).
+ * trendDegraded with the snapshot scalars kept (legacy C2 contract). The engine × brand and the
+ * type trend reads count too (B034): the legacy trend phase computed them, and its failure was
+ * this same mark (the type combo then says degradedTrend instead of an empty chart).
  */
 export function toEngineKpiTrend(p: EngineTrendParts): EngineKpiTrend {
-  const degraded = !p.engineTrend || !p.overview;
+  const degraded = !p.engineTrend || !p.overview || !p.typeTrend || !p.latestBrands;
   const eng = p.engineTrend ? toEngineBuckets(p.engineTrend.data) : { engines: [], buckets: [] };
   const latest = wholeSuppression(p.engines.meta) ? [] : p.engines.data.rows.map(toEnginePoint);
   const out: EngineKpiTrend = {
@@ -332,25 +362,47 @@ export function toEngineKpiTrend(p: EngineTrendParts): EngineKpiTrend {
 /** Engine × brand snapshot (BG-16): each engine's own rows + top 30 competitors. */
 export const ENGINE_BRAND_TOP_N = 30;
 
+/**
+ * M-1 group_by=engine of the engine section (B038): toLatestBrands reads by_engine only, so
+ * engine_only=true skips the window-wide own totals, competitor rows and sentiment (by_engine and
+ * meta are the same).
+ */
+export const ENGINE_BRANDS: BrandsRequest = {
+  top_n: ENGINE_BRAND_TOP_N,
+  sort: "mentions",
+  split_own: true,
+  group_by: "engine",
+  engine_only: true,
+};
+
+/** T-1 engine metrics of the engine section (buckets, BG-09 negative, BG-10 measured days). */
+export const ENGINE_TREND_METRICS = ["visibility", "share_of_voice", "sentiment"] as const;
+
 /** Drop-in for fetchStandardKpiEngineTrend. null when the engine scalars themselves failed. */
 export async function loadEngineKpiTrend(filters: StandardFilters, ctx: MentionsContext): Promise<EngineKpiTrend | null> {
   const engines = await degradeOnApiFailure("standardKpiEngineTrend", () =>
-    afterEssentials(filters, ctx, () => fetchEngineRows(filters, ctx)),
+    afterEssentials(filters, ctx, () => fetchEngineRows(filters, ctx, { part: KPI_TAB_ENGINE_PART })),
   );
   if (!engines) return null;
-  const [latestBrands, engineTrend, typeTrend, overview] = await Promise.all([
-    degradeOnApiFailure("standardKpiEngineTrend.brands", () =>
-      fetchMentionBrands(filters, ctx, { top_n: ENGINE_BRAND_TOP_N, sort: "mentions", split_own: true, group_by: "engine" }),
-    ),
+  const [latestBrands, trends, overview] = await Promise.all([
+    degradeOnApiFailure("standardKpiEngineTrend.brands", () => fetchMentionBrands(filters, ctx, ENGINE_BRANDS)),
+    // B038: the engine and type trends in one call (backend dims: one window, base scan and
+    // measured days). Each block equals its former separate call; the type block now carries
+    // measured days too, which toTypeTrend does not read. The overview (none) stays its own call:
+    // it is the D6 essential the hero, card Δ and first rank share.
     degradeOnApiFailure("standardKpiEngineTrend.trend", () =>
-      fetchTrend(filters, { ...ctx, bucket: "cycle", dimension: "engine", metrics: ["visibility", "share_of_voice", "sentiment"] }),
-    ),
-    degradeOnApiFailure("standardKpiEngineTrend.types", () =>
-      // toTypeTrend reads no measuredDays (type combo coverage comes from the overview slots).
-      fetchTrend(filters, { ...ctx, bucket: "cycle", dimension: "type", metrics: ["type_exposure"], measuredDays: false }),
+      fetchTrendDims(filters, {
+        ...ctx,
+        bucket: "cycle",
+        dimension: "engine",
+        metrics: ENGINE_TREND_METRICS,
+        dims: [{ dimension: "type", metrics: ["type_exposure"] }],
+      }),
     ),
     degradeOnApiFailure("standardKpiEngineTrend.overview", () => fetchOverviewTrend(filters, ctx)),
   ]);
+  const engineTrend = trends?.get("engine") ?? null;
+  const typeTrend = trends?.get("type") ?? null;
   return toEngineKpiTrend({ engines, latestBrands, engineTrend, typeTrend, overview });
 }
 
@@ -417,7 +469,7 @@ export async function loadFirstPosition(filters: StandardFilters, ctx: MentionsC
   if (!brands) return null;
   const [trend, summary, overview] = await Promise.all([
     degradeOnApiFailure("standardKpiFirstPosition.trend", () => afterEssentials(filters, ctx, () => fetchBrandTrend(filters, ctx))),
-    degradeOnApiFailure("standardKpiFirstPosition.summary", () => fetchKpiSummary(filters, ctx)),
+    degradeOnApiFailure("standardKpiFirstPosition.summary", () => fetchMentionSummary(filters, ctx)),
     degradeOnApiFailure("standardKpiFirstPosition.overview", () => fetchOverviewTrend(filters, ctx)),
   ]);
   return toFirstPositionResultApi({ trend, brands, summary, overview });
@@ -468,7 +520,9 @@ export function toTypeKpi(data: ApiTypesData): TypeKpi {
 
 /** Drop-in for fetchStandardKpiTypes. Failure or whole suppression -> null (legacy kpiDegrade). */
 export async function loadTypeKpi(filters: StandardFilters, ctx: MentionsContext): Promise<TypeKpi | null> {
-  const res = await degradeOnApiFailure("standardKpiTypes", () => afterEssentials(filters, ctx, () => fetchMentionTypes(filters, ctx)));
+  const res = await degradeOnApiFailure(KPI_TAB_DEGRADE_LABELS.types, () =>
+    afterEssentials(filters, ctx, () => fetchMentionTypes(filters, ctx)),
+  );
   if (!res || wholeSuppression(res.meta)) return null;
   return toTypeKpi(res.data);
 }
@@ -479,9 +533,14 @@ export function toStanceDist(data: ApiTypesData): AnswerStanceDistribution | nul
   return s ? { positive: s.positive, neutral: s.neutral, mixed: s.mixed, negative: s.negative, pairs: s.pairs } : null;
 }
 
-/** Drop-in for fetchStandardKpiStanceDist (the card is off today: STANCE_CARD_ENABLED). */
+/**
+ * Drop-in for fetchStandardKpiStanceDist (the card is off today: STANCE_CARD_ENABLED). The only
+ * reader of data.stance, so the only M-2 call that keeps include_stance (B036).
+ */
 export async function loadStanceDist(filters: StandardFilters, ctx: MentionsContext): Promise<AnswerStanceDistribution | null> {
-  const res = await degradeOnApiFailure("standardKpiStance", () => afterEssentials(filters, ctx, () => fetchMentionTypes(filters, ctx)));
+  const res = await degradeOnApiFailure("standardKpiStance", () =>
+    afterEssentials(filters, ctx, () => fetchMentionTypes(filters, ctx, { stance: true })),
+  );
   if (!res || wholeSuppression(res.meta)) return null;
   return toStanceDist(res.data);
 }
