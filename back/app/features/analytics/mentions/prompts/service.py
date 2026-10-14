@@ -35,6 +35,7 @@ from app.features.analytics.mentions.prompts.queries import (
     page_sql,
     terms_sql,
 )
+from app.features.analytics.mentions.prompts import schemas as prompt_schemas
 from app.features.analytics.mentions.prompts.schemas import AnswerRef, PromptItem, PromptsData, PromptsQuery, Target, Terms
 
 TERMS_BRAND_CAP = 8      # 답변 참조당 브랜드 표기 상한(현행 슬림 수준 0: hlBrand 8)
@@ -166,9 +167,14 @@ async def mention_prompts(conn: Any, ctx: ReadContext, win: Window, q: PromptsQu
         if q.terms and arows:
             tt = _terms_target(ctx, spec, target)
             by_answer: dict[int, list[dict[str, Any]]] = {}
-            h = terms_sql(sorted({int(r["answer_key"]) for r in arows}), ctx.sf, ctx.project_keys)
-            for r in await fetch_all(conn, h.text, h.params):
-                by_answer.setdefault(int(r["answer_key"]), []).append(r)
+            # 언급 원본 뷰는 answer_key 배치 상한(TERMS_MAX_REFS)씩 나눠 읽는다. 한 페이지는 limit 200 × answers_limit 50
+            # = 최대 10,000 참조라, 상한을 요청 422 로 걸면 어댑터의 브랜드 드릴다운(200 × 50)이 항상 거부된다(2026-10-14).
+            akeys = sorted({int(r["answer_key"]) for r in arows})
+            step = prompt_schemas.TERMS_MAX_REFS
+            for i in range(0, len(akeys), step):
+                h = terms_sql(akeys[i:i + step], ctx.sf, ctx.project_keys)
+                for r in await fetch_all(conn, h.text, h.params):
+                    by_answer.setdefault(int(r["answer_key"]), []).append(r)
             terms = {k: build_terms(by_answer.get(k, []), **tt) for k in {int(r["answer_key"]) for r in arows}}
         for r in arows:
             refs.setdefault(int(r["prompt_key"]), []).append(AnswerRef(

@@ -168,7 +168,8 @@ async def test_own_mode_excludes_non_competitive_rows(client_as):
     {"mode": "brand", "mention_brand": ""}, {"mode": "brand", "mention_brand": "a\x01"}, {"mode": "brand", "mention_brand": "x" * 101},
     {"mode": "brand", "own": "true", "own_brand_code": "Nope"},            # 모르는 브랜드 코드
     {"mode": "brand", "own": "maybe"}, {"mode": "brand", "brand_key": 1, "terms": "nope"},
-    {"mode": "brand", "brand_key": 1, "terms": "true", "limit": 200, "answers_limit": 6}])     # terms 배치 상한(TERMS_MAX_REFS)
+    {"mode": "brand", "brand_key": 1, "terms": "true", "limit": 201},  # 필드 상한(limit ≤ 200, answers_limit ≤ 50)
+    {"mode": "brand", "brand_key": 1, "terms": "true", "answers_limit": 51}])
 async def test_bad_params_422(client_as, params):
     r = await _get(client_as, HQ_HYUNDAI, surface="global", **params)
     assert r.status_code == 422 and r.json()["error"]["code"] == "unprocessable", (params, r.text)
@@ -187,6 +188,19 @@ async def test_terms_brand_targets(client_as):
     d = (await _get(client_as, HQ_HYUNDAI, surface="global", mode="brand", mention_brand="Hyundai", terms="true")).json()["data"]
     # Hyundai Creta(정본 Hyundai, 롤업 = Tata)는 롤업이 Hyundai 가 아니라 모델 표기가 아니다(현행 highlightTermsForBrand 와 같다, 검증 D3)
     assert _terms(d) == {J1: {"brand": ["Hyundai"], "model": []}, J12: {"brand": ["Hyundai"], "model": []}}
+
+
+async def test_terms_with_adapter_page_size(client_as, monkeypatch):
+    """어댑터 브랜드 드릴다운 요청(limit 200 × answers_limit 50, terms=true)은 받는다 — 언급 원본 뷰는 TERMS_MAX_REFS 씩
+    나눠 읽고, 배치 크기와 무관하게 같은 표기가 나온다(종전 422 회귀, 2026-10-14)."""
+    from app.features.analytics.mentions.prompts import schemas as prompt_schemas
+    q = dict(surface="global", mode="brand", mention_brand="Hyundai", terms="true", limit=200, answers_limit=50)
+    r = await _get(client_as, HQ_HYUNDAI, **q)
+    assert r.status_code == 200, r.text
+    whole = _terms(r.json()["data"])
+    assert whole == {J1: {"brand": ["Hyundai"], "model": []}, J12: {"brand": ["Hyundai"], "model": []}}
+    monkeypatch.setattr(prompt_schemas, "TERMS_MAX_REFS", 1)            # 답변 하나씩 나눠 읽어도 같다
+    assert _terms((await _get(client_as, HQ_HYUNDAI, **q)).json()["data"]) == whole
 
 
 async def test_terms_own_and_signal_targets(client_as):

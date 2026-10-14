@@ -37,4 +37,5 @@
   모델 표기는 현행과 같이 롤업으로만 잇는다(롤업 id 가 타깃 Brand 행이거나 롤업 엔티티 정본 브랜드가 타깃. 엔티티 자기 정본 브랜드로는 잇지 않는다:
   Hyundai 타깃의 `Hyundai Creta`(롤업 = Tata)는 칠하지 않는다, 검증 D3). mode=signal 의 terms 는 현행 신호 드릴다운(하이라이트 없음)에 없는
   확장이라 화면을 그대로 두는 어댑터는 signal 에 terms 를 요청하지 않는다.
-  상한: 표기 brand 8·model 24, 요청 limit × answers_limit ≤ 1000(TERMS_MAX_REFS, 넘으면 422).
+  상한: 표기 brand 8·model 24. 언급 원본 뷰는 answer_key 1000개(TERMS_MAX_REFS)씩 나눠 읽는다 — 요청 크기는 limit ≤ 200 ×
+  answers_limit ≤ 50 필드 상한으로만 묶는다(종전 limit × answers_limit ≤ 1000 의 422 는 어댑터 브랜드 드릴다운 200 × 50 을 항상 거부해 뺐다).

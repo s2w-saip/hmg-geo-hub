@@ -15,7 +15,7 @@ Mode = Literal["brand", "signal"]
 SignalKey = Literal["positive", "neutral", "negative", "mixed", "mention", "recommendation", "comparison", "definition", "final_choice"]
 
 
-TERMS_MAX_REFS = 1000    # terms=true 일 때 limit × answers_limit 상한(언급 원본 뷰를 answer_key 배치로 읽는 양의 상한)
+TERMS_MAX_REFS = 1000    # terms=true 일 때 언급 원본 뷰를 한 문장에 읽는 answer_key 수 상한(넘으면 배치로 나눠 읽는다, service.list_prompts)
 
 
 def _none(v: object) -> bool:
@@ -49,8 +49,6 @@ class PromptsQuery(CommonFilters):
             raise ValueError("own_brand_code 는 mode=brand·own=true 와 함께만")
         if self.mode == "signal" and (self.own or self.mention_brand is not None or self.brand_key is not None):
             raise ValueError("brand_key·own·mention_brand 는 mode=brand 타깃이다(mode=signal 과 함께 줄 수 없다)")
-        if self.terms and self.limit * self.answers_limit > TERMS_MAX_REFS:
-            raise ValueError(f"terms=true 는 limit × answers_limit ≤ {TERMS_MAX_REFS}")
         if self.mode == "signal" and self.signal is None:
             raise ValueError("mode=signal 은 signal 필수")
         return self
