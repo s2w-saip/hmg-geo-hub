@@ -8,10 +8,16 @@
   → snap/frz_ops_*/NNNNN.csv.gz(mig_src_frz.sql 표와 같은 열 순서). 운영 summary 활성 세대만, 질의마다 새 읽기 전용 트랜잭션.
   시작 마커(회차별 활성 세대)를 맨 먼저, 끝 마커를 맨 나중에 뽑고 두 값이 다른 회차(추출 중 재생성)를 _frz_manifest.json 에 적는다
   (이관기는 마커가 다른 회차를 건너뛴다). 세부층 전체가 아니라 셀 집합·프롬프트 축·판정 입력 + 바뀐 답변 세부층 + 집계층 회차 합만.
+QA 검수 기록 이관 입력(2026-10-14): python3 export.py --qa > export-qa.log 2>&1
+  → snap/qa/<표>/00000.csv.gz(질의 정본 export-qa.sql, 열 순서 = mig_src_qa.sql) + snap/qa/_qa_manifest.json(표별 행 수·최대 시각·sha256).
+  리뷰·노트와 인용·멘션·ACR 참조가 같은 시점이어야 하므로 한 커넥션·한 트랜잭션(REPEATABLE READ READ ONLY)에서 전부 뽑는다(재개 없음).
+  snap/qa 는 s9-load 의 snap/*/*.csv.gz 글롭 밖(qa-load.tpl.sh 가 따로 적재). 레거시 콘솔 차단(RAW_DATA_QA_ENABLED≠1) + 락 TTL 180초 뒤 실행한다.
 """
 import gzip
+import hashlib
 import json
 import os
+import re
 import sys
 import time
 
@@ -134,6 +140,11 @@ FRZ = [
     ("frz_ops_marker", "00001", _MARKER.format(phase="end")),
 ]
 
+# ── QA 검수 기록 이관 입력(--qa). 질의 정본 = migration/export-qa.sql("-- name:" 블록), 열 순서 = migration/mig_src_qa.sql ──
+QA_SQL = os.path.join(os.path.dirname(os.path.abspath(__file__)), "export-qa.sql")
+QA_OUT = os.path.join(OUT, "qa")
+QA_TABLES = ("qa_answer_reviews", "qa_review_notes", "qa_ref_job", "qa_ref_citation", "qa_ref_mention", "qa_ref_acr")
+
 
 def ro_conn():
     c = psycopg2.connect(URL, connect_timeout=20)
@@ -244,8 +255,78 @@ def main_frz():
     print("FRZ_EXPORT_COMPLETE cycles", len(start), "regenerated", len(regen), flush=True)
 
 
+def named_sql(path):
+    """'-- name: x' 로 나뉜 SQL 파일 → {이름: 문장}("--" 로 시작하는 줄은 버림). back/tests/support.load_named_sql 과 같은 규칙."""
+    out, cur = {}, None
+    with open(path, encoding="utf-8") as f:
+        for line in f.read().splitlines():
+            m = re.match(r"^--\s*name:\s*(\S+)", line)
+            if m:
+                cur = out.setdefault(m.group(1), [])
+            elif cur is not None and not line.lstrip().startswith("--"):
+                cur.append(line)
+    return {k: "\n".join(v).strip() for k, v in out.items()}
+
+
+def _sha256(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for b in iter(lambda: f.read(1 << 20), b""):
+            h.update(b)
+    return h.hexdigest()
+
+
+def main_qa():
+    """QA 검수 기록 이관 입력만(--qa). 조각마다 새 커넥션을 여는 ro_conn 은 쓰지 않는다: 노트와 인용 참조가 같은 스냅샷이어야 한다.
+    파일은 .part 로 쓰고 COMMIT 뒤에 한꺼번에 이름을 바꾼다(중간 실패면 이전 산출을 그대로 두고 처음부터 다시)."""
+    q = named_sql(QA_SQL)
+    missing = [t for t in QA_TABLES if t not in q]
+    assert not missing, f"export-qa.sql 에 블록 없음: {missing}"
+    rows, parts = {}, []
+    c = psycopg2.connect(URL, connect_timeout=20)
+    c.autocommit = True
+    try:
+        cur = c.cursor()
+        cur.execute("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY")
+        cur.execute("SHOW transaction_read_only")
+        assert cur.fetchone()[0] == "on", "read-only 아님"
+        cur.execute("SHOW transaction_isolation")
+        assert cur.fetchone()[0] == "repeatable read", "repeatable read 아님"
+        cur.execute("SET LOCAL statement_timeout = '20min'")
+        cur.execute("SELECT now(), (SELECT max(updated_at) FROM public.qa_answer_reviews), (SELECT max(created_at) FROM public.qa_review_notes), "
+                    "(SELECT max(resolved_at) FROM public.qa_review_notes), "
+                    "(SELECT count(*) FROM public.qa_answer_locks WHERE heartbeat_at > now() - interval '180 seconds')")   # 살아 있는 락(TTL 180초)
+        snap_at, max_upd, max_cre, max_res, locks = cur.fetchone()
+        for t in QA_TABLES:
+            path = os.path.join(QA_OUT, t, "00000.csv.gz")
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            t0 = time.time()
+            with gzip.open(path + ".part", "wb", compresslevel=5) as f:
+                cur.copy_expert(f"COPY ({q[t]}) TO STDOUT WITH (FORMAT csv, HEADER false)", f)
+            parts.append((path + ".part", path))
+            cur.execute(f"SELECT count(*) FROM ({q[t]}) x")        # 본문에 줄바꿈이 있을 수 있어 CSV 줄 수가 아니라 같은 스냅샷에서 센다
+            rows[t] = cur.fetchone()[0]
+            print(f"{t} rows={rows[t]} {time.time() - t0:.1f}s", flush=True)
+        cur.execute("COMMIT")
+    finally:
+        c.close()
+    for tmp, path in parts:
+        os.replace(tmp, path)
+    ts = lambda v: None if v is None else str(v)  # noqa: E731
+    manifest = {"snapshot_at": ts(snap_at), "finished": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "rows": rows,
+                "max_review_updated_at": ts(max_upd), "max_note_created_at": ts(max_cre), "max_note_resolved_at": ts(max_res),
+                "legacy_live_locks_at_snapshot": locks,
+                "sha256": {t: _sha256(os.path.join(QA_OUT, t, "00000.csv.gz")) for t in QA_TABLES}}
+    with open(os.path.join(QA_OUT, "_qa_manifest.json"), "w") as f:
+        json.dump(manifest, f, indent=1)
+    # 살아 있는 레거시 락이 있으면 콘솔 차단 전 추출(진행 중 판정이 빠질 수 있다): 산출은 남기되 크게 알린다
+    print("QA_EXPORT_COMPLETE", json.dumps(rows), "locks", locks, "(WARN: 레거시 콘솔이 아직 열려 있다)" if locks else "", flush=True)
+
+
 if __name__ == "__main__":
     if "--frz" in sys.argv[1:]:
         main_frz()
+    elif "--qa" in sys.argv[1:]:
+        main_qa()
     else:
         main()
