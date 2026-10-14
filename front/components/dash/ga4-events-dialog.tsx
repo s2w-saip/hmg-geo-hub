@@ -17,8 +17,17 @@ import {
 import {
   loadConversionEvents,
   saveConversionEvents,
+  type SaveConversionOutcome,
 } from "@/lib/ga4/tracked-events-actions";
 import type { Ga4EventRow } from "@/lib/ga4/tracked-events-service";
+
+/**
+ * 저장 성공 토스트 문구. 액션이 반영 대기(api 원천, propagation pending) 문구를 notice 로 주면 그것을,
+ * 아니면(현행 원천은 즉시 반영이라 notice = null) 종전 '저장됨' 문구를 쓴다(U8-N8).
+ */
+export function savedToastText(outcome: SaveConversionOutcome, saved: string): string {
+  return outcome.notice ?? saved;
+}
 
 // property별 GA4 이벤트 목록을 불러와 "전환으로 셀 이벤트"를 체크로 고르는 다이얼로그.
 // 세 화면(admin 레지스트리 / project 전환 / website 전환)이 공유한다. 대상은 항상
@@ -77,7 +86,7 @@ export function Ga4EventsDialog({
     startSaving(async () => {
       const r = await saveConversionEvents(propertyId, [...selected], projectId);
       if (r.ok) {
-        toast.success(t("saved"));
+        toast.success(savedToastText(r.value, t("saved")));
         setOpen(false);
       } else {
         toast.error(r.error);

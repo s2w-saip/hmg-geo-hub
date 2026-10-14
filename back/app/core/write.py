@@ -209,16 +209,19 @@ class AuditEvent:
 
 class AccessAuditWriter:
     """프로세스 내 버퍼 + 백그라운드 태스크. ≤ flush_s 초 또는 batch 건 중 먼저 도달 시 한 트랜잭션 벌크 INSERT.
-    실패한 배치는 로그만 남기고 버린다(요청 경로를 막지 않는다, Q4 유실 허용)."""
+    쓰기에 실패한 배치는 버퍼 앞에 되돌려 백오프(flush_s × 2^연속 실패, retry_max_s 상한) 뒤 다시 쓴다(일시 DB 오류에 유실 없음).
+    버리는 것은 둘뿐이다: 되돌린 뒤 max_buffer(2만 건)를 넘는 최신분, 다시 써도 같은 오류가 날 데이터·제약 오류(SQLSTATE 22·23) 배치.
+    둘 다 dropped 로 세고 로그를 남긴다(요청 경로를 막지 않는다, Q4: 프로세스 크래시·정지 시 버퍼분 유실 허용)."""
 
-    def __init__(self, *, flush_s: float = 2.0, batch: int = 500, max_buffer: int = 20_000):
-        self.flush_s, self.batch, self.max_buffer = flush_s, batch, max_buffer
+    def __init__(self, *, flush_s: float = 2.0, batch: int = 500, max_buffer: int = 20_000, retry_max_s: float = 60.0):
+        self.flush_s, self.batch, self.max_buffer, self.retry_max_s = flush_s, batch, max_buffer, retry_max_s
         self._buf: list[AuditEvent] = []
         self._task: asyncio.Task[None] | None = None
         self._wake = asyncio.Event()
         self._stopping = False
         self.dropped = 0
         self.written = 0
+        self.failures = 0                                 # 연속 쓰기 실패 횟수(한 배치라도 쓰면 0)
 
     def record(self, p: Principal, kind: AuditKind, action: str, *, target: str | None = None,
                detail: dict[str, Any] | None = None, request_id: uuid.UUID | None = None) -> None:
@@ -255,29 +258,62 @@ class AccessAuditWriter:
             await self._task
             self._task = None
 
+    def retry_delay(self) -> float:
+        """다음 flush 까지 기다릴 초: 정상이면 flush_s, 연속 실패 n 회면 flush_s × 2^n(retry_max_s 상한)."""
+        if not self.failures:
+            return self.flush_s
+        return min(self.flush_s * 2 ** min(self.failures, 16), self.retry_max_s)
+
     async def _run(self) -> None:
+        loop = asyncio.get_running_loop()
         while True:
-            with contextlib.suppress(TimeoutError):
-                await asyncio.wait_for(self._wake.wait(), timeout=self.flush_s)
-            self._wake.clear()
+            deadline = loop.time() + self.retry_delay()
+            while True:
+                with contextlib.suppress(TimeoutError):
+                    await asyncio.wait_for(self._wake.wait(), timeout=max(deadline - loop.time(), 0.0))
+                self._wake.clear()
+                # 실패 뒤 백오프 중에는 batch 도달 신호로 깨지 않는다(DB 장애 중 재시도 폭주 방지). 정지 신호는 바로 깬다.
+                if not self.failures or self._stopping or loop.time() >= deadline:
+                    break
             await self.flush()
             if self._stopping:
                 await self.flush()
+                if self._buf:
+                    log.warning("접근 감사 정지: %d건 미기록(쓰기 실패, Q4 유실 허용)", len(self._buf))
                 return
 
     async def flush(self) -> int:
+        """버퍼를 batch 건씩 쓴다. 일시 오류면 그 배치를 버퍼 앞에 되돌리고 이번 flush 를 멈춘다(다음 시도는 _run 의 백오프 뒤)."""
         n_total = 0
         while self._buf:
             chunk, self._buf = self._buf[: self.batch], self._buf[self.batch:]
             try:
                 async with get_db().transaction("api_rw") as conn:
                     await conn.execute(_audit_insert(), _audit_params(chunk))
-                self.written += len(chunk)
-                n_total += len(chunk)
             except Exception as e:  # noqa: BLE001
-                self.dropped += len(chunk)
-                log.warning("접근 감사 배치 %d건 유실: %s", len(chunk), type(e).__name__)
+                state = errors.db_error_info(e)[0]
+                if state is not None and state[:2] in ("22", "23"):    # 데이터·제약 오류: 다시 써도 같다(뒤 배치를 막지 않게 버린다)
+                    self.dropped += len(chunk)
+                    log.warning("접근 감사 배치 %d건 유실(sqlstate %s): %s", len(chunk), state, type(e).__name__)
+                    continue
+                self.failures += 1
+                self._requeue(chunk)
+                log.warning("접근 감사 배치 %d건 쓰기 실패(연속 %d회): 버퍼에 되돌려 %.1f초 뒤 재시도: %s",
+                            len(chunk), self.failures, self.retry_delay(), type(e).__name__)
+                return n_total
+            self.failures = 0
+            self.written += len(chunk)
+            n_total += len(chunk)
         return n_total
+
+    def _requeue(self, chunk: list[AuditEvent]) -> None:
+        """실패한 배치를 버퍼 앞에 되돌린다(기록 순서 유지). 합쳐서 max_buffer 를 넘으면 record_actor 처럼 최신분을 버린다."""
+        self._buf[:0] = chunk
+        over = len(self._buf) - self.max_buffer
+        if over > 0:
+            del self._buf[-over:]
+            self.dropped += over
+            log.warning("접근 감사 버퍼 상한 %d건 초과: %d건 유실", self.max_buffer, over)
 
 
 def _audit_insert() -> Any:
