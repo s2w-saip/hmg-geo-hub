@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HMG GEO 현황 분석</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  /* 2쪽 요약문. 치수는 rem 기준이라 화면 폭(1280→3840px)에 따라 비율대로 커진다. 보고서 ①과 같은 체계. */
+  :root {
+    --bg: #eef0f3; --sheet: #ffffff;
+    --ink: #1a1d23; --ink-2: #454b57; --ink-3: #6f7685;
+    --line: #d9dde4; --soft: #f3f5f8;
+    --accent: #1f4e8c; --accent-soft: #e8eff9;
+    --warn: #8a5a00; --warn-soft: #fcf4e3;
+    --risk: #b42318; --risk-soft: #fcebe9;
+    --ok: #1b6b3a; --ok-soft: #e4f3e9;
+    --font: "Pretendard", "Pretendard Variable", "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+    --mono: ui-monospace, "Cascadia Code", "D2Coding", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1216; --sheet: #161a20; --ink: #e6e9ef; --ink-2: #b8bec9; --ink-3: #8a91a0;
+      --line: #2c323c; --soft: #1d222a; --accent: #8db5f2; --accent-soft: #1a2638;
+      --warn: #e4b55a; --warn-soft: #2e2611; --risk: #f29286; --risk-soft: #3a1f1d; --ok: #6fcf97; --ok-soft: #15301d; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1216; --sheet: #161a20; --ink: #e6e9ef; --ink-2: #b8bec9; --ink-3: #8a91a0;
+    --line: #2c323c; --soft: #1d222a; --accent: #8db5f2; --accent-soft: #1a2638;
+    --warn: #e4b55a; --warn-soft: #2e2611; --risk: #f29286; --risk-soft: #3a1f1d; --ok: #6fcf97; --ok-soft: #15301d; color-scheme: dark;
+  }
+  html { font-size: clamp(15px, 0.4vw + 10.5px, 27px); }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 1rem; line-height: 1.7; word-break: keep-all; overflow-wrap: break-word; padding-inline: max(16px, 2.5vw); padding-block: 2.5rem 5rem; }
+  .sheet { max-width: 60rem; margin: 0 auto; background: var(--sheet); border: 1px solid var(--line); border-radius: 10px; padding: 2.6rem 3rem 2.4rem; }
+  @media (max-width: 700px) { .sheet { padding: 1.4rem 1.1rem; } }
+
+  .eyebrow { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; color: var(--accent); margin: 0 0 0.6rem; }
+  h1 { font-size: 1.9rem; font-weight: 800; line-height: 1.25; letter-spacing: -0.02em; margin: 0; text-wrap: balance; }
+  .meta { display: flex; flex-wrap: wrap; gap: 0.3em 1.8em; margin: 1rem 0 0; padding-top: 0.8rem; border-top: 2px solid var(--ink); font-size: 0.82rem; color: var(--ink-2); }
+  .meta b { color: var(--ink-3); font-weight: 600; margin-right: 0.5em; }
+
+  .summary { margin: 1.6rem 0 0; padding: 1.1rem 1.4rem 1rem; background: var(--accent-soft); border-radius: 8px; }
+  .summary .label { font-size: 0.74rem; font-weight: 700; letter-spacing: 0.08em; color: var(--accent); margin: 0 0 0.6rem; }
+  .summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 0.5em; }
+  .summary li::marker { color: var(--accent); font-weight: 700; }
+  .summary b { color: var(--accent); }
+
+  .ask { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin: 1rem 0 0; }
+  .ask > div { border: 1px solid var(--accent); border-radius: 8px; padding: 0.7rem 0.95rem; font-size: 0.92rem; }
+  .ask h4 { margin: 0 0 0.35em; font-size: 0.8rem; letter-spacing: 0.06em; color: var(--accent); font-weight: 700; }
+  .ask ol { margin: 0; padding-left: 1.2em; display: grid; gap: 0.25em; }
+  @media (max-width: 700px) { .ask { grid-template-columns: 1fr; } }
+
+  section { margin-top: 2.2rem; }
+  h2 { font-size: 1.25rem; font-weight: 750; line-height: 1.35; letter-spacing: -0.01em; margin: 0 0 0.6rem; display: flex; gap: 0.6em; align-items: baseline; }
+  h2 .no { font-family: var(--mono); font-size: 0.72em; color: var(--accent); font-weight: 600; }
+  .key { margin: 0 0 1rem; padding: 0.55rem 0.9rem; border-left: 3px solid var(--accent); background: var(--soft); font-weight: 600; border-radius: 0 6px 6px 0; }
+  h3 { font-size: 0.98rem; font-weight: 700; margin: 1.1rem 0 0.3rem; }
+  p { margin: 0 0 0.7em; }
+  ul { margin: 0 0 0.8em; padding-left: 1.3em; }
+  li { margin: 0.3em 0; }
+  strong { font-weight: 700; }
+  .small { font-size: 0.86rem; color: var(--ink-2); }
+  .note { font-size: 0.86rem; color: var(--ink-3); }
+  .ref { font-size: 0.72em; color: var(--ink-3); vertical-align: super; line-height: 0; text-decoration: none; margin-left: 0.1em; }
+  .ref:hover { color: var(--accent); }
+  code { font-family: var(--mono); font-size: 0.86em; background: var(--soft); border-radius: 4px; padding: 0.05em 0.35em; }
+  .tag { display: inline-block; font-size: 0.72em; font-weight: 600; line-height: 1.5; padding: 0 0.45em; margin-inline: 0.15em; border: 1px solid var(--line); border-radius: 4px; color: var(--ink-3); vertical-align: 0.1em; }
+  .tag.a { color: var(--warn); border-color: var(--warn); }
+  .tag.h { color: var(--risk); border-color: var(--risk); }
+  .tag.s { color: var(--ok); border-color: var(--ok); }
+
+  /* 데이터 경로 그림 */
+  .flow { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0.6rem; align-items: stretch; margin: 0.6rem 0 1rem; font-size: 0.9rem; }
+  .flow .box { border: 1px solid var(--line); border-radius: 8px; padding: 0.6rem 0.85rem; }
+  .flow .box h4 { margin: 0 0 0.3em; font-size: 0.8rem; letter-spacing: 0.04em; color: var(--ink-3); font-weight: 700; }
+  .flow .box.src { background: var(--warn-soft); border-color: var(--warn); }
+  .flow .arrow { display: grid; place-items: center; color: var(--ink-3); font-size: 1.4rem; }
+  .flow .paths { display: grid; gap: 0.6rem; }
+  .flow .path { border: 1px solid var(--line); border-radius: 8px; padding: 0.55rem 0.85rem; }
+  .flow .path.now { border-color: var(--accent); background: var(--accent-soft); }
+  .flow .path b { display: block; font-size: 0.84rem; margin-bottom: 0.15em; }
+  @media (max-width: 700px) { .flow { grid-template-columns: 1fr; } .flow .arrow { display: none; } }
+
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(12em, 1fr)); gap: 0.7rem; margin: 0.4rem 0 1rem; }
+  .fact { border: 1px solid var(--line); border-radius: 8px; padding: 0.6rem 0.9rem; }
+  .fact .v { font-size: 1.3rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.2; font-variant-numeric: tabular-nums; }
+  .fact .l { font-size: 0.84rem; color: var(--ink-2); margin-top: 0.15em; }
+
+  .table-wrap { overflow-x: auto; margin: 0.6rem 0 0.9rem; border: 1px solid var(--line); border-radius: 8px; }
+  table { width: 100%; min-width: 40em; border-collapse: collapse; font-size: 0.86rem; line-height: 1.5; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; vertical-align: top; padding: 0.5em 0.8em; border-bottom: 1px solid var(--line); }
+  th { background: var(--soft); color: var(--ink-2); font-size: 0.9em; white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.n { text-align: right; white-space: nowrap; }
+  td.c { color: var(--ink-3); }
+  tr.grp td { background: var(--soft); font-weight: 700; color: var(--ink-2); font-size: 0.84rem; }
+
+  .callout { border-left: 3px solid var(--warn); background: var(--warn-soft); padding: 0.6rem 0.9rem; border-radius: 0 6px 6px 0; margin: 0.8rem 0; font-size: 0.92rem; }
+  .callout.risk { border-color: var(--risk); background: var(--risk-soft); }
+  .callout b.t { display: block; margin-bottom: 0.2em; color: var(--warn); }
+  .callout.risk b.t { color: var(--risk); }
+  .callout ul { margin: 0; padding-left: 1.2em; }
+
+  .gaps { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; margin: 0.4rem 0 0.8rem; }
+  .gap { border: 1px solid var(--line); border-radius: 8px; padding: 0.6rem 0.9rem; font-size: 0.9rem; }
+  .gap b { display: block; margin-bottom: 0.2em; }
+  .gap .who { font-size: 0.8rem; color: var(--ink-3); }
+  @media (max-width: 700px) { .gaps { grid-template-columns: 1fr; } }
+
+  .sec4 { display: grid; gap: 0.5rem; margin: 0.4rem 0 0.8rem; }
+  .sec4 > div { display: grid; grid-template-columns: 2.2em 1fr; gap: 0.6em; align-items: baseline; font-size: 0.93rem; }
+  .sec4 .n { font-family: var(--mono); font-weight: 700; color: var(--risk); }
+  .sec4 .d { color: var(--ink-2); display: block; font-size: 0.88rem; }
+
+  .gloss { margin-top: 1.6rem; padding: 0.7rem 0.9rem; background: var(--soft); border-radius: 8px; font-size: 0.86rem; color: var(--ink-2); line-height: 1.8; }
+  .gloss b { color: var(--ink); }
+  .sources { margin-top: 1.6rem; padding-top: 0.8rem; border-top: 1px solid var(--line); font-size: 0.78rem; color: var(--ink-3); }
+  .sources ol { margin: 0.3rem 0 0; padding-left: 1.6em; columns: 2; column-gap: 2em; }
+  .sources li { break-inside: avoid; margin: 0.15em 0; }
+  .sources a { color: var(--ink-2); text-decoration: none; }
+  .sources a:hover { color: var(--accent); text-decoration: underline; }
+  @media (max-width: 700px) { .sources ol { columns: 1; } }
+  @media print { html { font-size: 10pt; } body { background: #fff; padding: 0; } .sheet { border: 0; padding: 0; max-width: none; } h2 { break-after: avoid; } .table-wrap { overflow: visible; } }
+</style>
+</head>
+<body>
+<article class="sheet">
+  <header>
+    <p class="eyebrow">HMG GEO 인수 · 보고서 ② / ③ · 내부 검토용</p>
+    <h1>현황 분석 — 무엇을 인수하고, 무엇이 없고, 누구에게 막혀 있나</h1>
+    <div class="meta">
+      <span><b>작성</b>2026-10-06 · 초안 v0.1</span>
+      <span><b>독자</b>S2W 내부 팀·경영진 (보고서 ①을 읽은 기준)</span>
+      <span><b>코드 기준</b>hub-share 스냅샷 2026-10-02 (개발 저장소 리비전 72c260a3) · 유일한 인수물(협의 완료) · 9/22 인계 zip은 참고본(<code>_archive/</code>)</span>
+      <span><b>앞·뒤</b>① GEO 개념 요약 · ③ 수행 계획</span>
+    </div>
+  </header>
+
+  <div class="summary">
+    <p class="label">한눈에 보기</p>
+    <ol>
+      <li><b>인수물은 hub-share 하나다.</b> 10월 2일 스냅샷(72c260a3)으로 협의가 끝났고, 9월 22일 인계 zip은 참고본으로 보관한다(<code>_archive/</code>). 그래도 그대로 운영 배포는 못 한다. 지금 고객 화면은 옛 경로(DB 직접 조회)로 돌고, 새 백엔드(기능 72개)는 운영 전이다.</li>
+      <li><b>기능은 62개 항목 중 있음 34·상당 4·일부 7·없음 17.</b> 핵심 지표, 출처 분석, 질문 관리, 검수 콘솔은 갖춰져 있다. 없는 것은 측정 범위(앤서 소관), 통계적 신뢰, 외부 데이터 연동, 행동 제안이다.</li>
+      <li><b>가장 큰 공백은 S2W가 운영할 분석 엔진이다.</b> 지금 화면의 분석값은 앤서 Scope가 계산해 넘겨준다. 앤서가 원문만 주는 방식으로 바꾸는 날(C5, 날짜 미정)부터 새 엔진이 없으면 분석값 갱신이 멈춘다.</li>
+      <li><b>배포 전에 막을 것:</b> hub-share front에 없는 보안 수정 4건(9/22 참고본에는 있음), 운영 배포 워크플로 부재, 테스트 실행 기록 0건.</li>
+      <li><b>남의 손에 있는 것:</b> 측정·엔진 추가·수동 측정 한도(앤서), H-Cloud 런타임·SSO·외부 통신 허용(HMG·이노션), AWS·Supabase·Vercel 계정 소유(확인 필요). 아래 결정 2개·요청 4개, 할 일 15개는 ③에서 크기를 잰다.</li>
+    </ol>
+    <div class="ask">
+      <div>
+        <h4>결정이 필요한 것 (S2W 내부·고객)</h4>
+        <ol>
+          <li><strong>H-Cloud 백엔드 런타임.</strong> FastAPI 예외 협의를 시작할지, Node.js 백엔드로 갈지. 결정 전에는 새 백엔드 추가 투입을 보류한다.</li>
+          <li><strong>C1·C5.</strong> 과거 분석값을 다시 계산할지, 전환일을 언제로 할지. 앤서 쪽 입장은 이미 문서에 있다(D절).</li>
+        </ol>
+      </div>
+      <div>
+        <h4>앤서에게 요청할 것</h4>
+        <ol>
+          <li>원본 개발 저장소 읽기 권한과 스냅샷에서 뺀 자료(배포 워크플로, 비용 산정, 내부 메모).</li>
+          <li>AWS 'scope' 계정·Supabase·Vercel·도메인·GA4 OAuth 주체의 소유 확인과 이관 방식.</li>
+          <li>최신 scope-analysis(10dd345, 코어 ec6bccb1)와 Scope 카탈로그 내보내기(S-A2) 일정.</li>
+          <li>원문 API 개시일과 현 연동 종료일(C5), 수동 측정 하루 한도(C2).</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <section>
+    <h2><span class="no">A</span>지금 무엇이 어디에 있나</h2>
+    <p class="key">측정은 앤서, 화면은 두 경로(옛 경로 가동 중·새 경로 운영 전), 분석은 아직 앤서 계산값이다.</p>
+    <div class="flow">
+      <div class="box src">
+        <h4>앤서 Scope — 측정</h4>
+        AI 서비스 3종(ChatGPT·Gemini·DeepSeek)에 질문을 보내 답을 모은다. 소스는 전달되지 않았다. 지금은 분석값(언급·감성·인용 분류)까지 함께 넘겨준다(v0).
+      </div>
+      <div class="arrow">→</div>
+      <div class="paths">
+        <div class="path now"><b>옛 경로 (현재 고객 화면)</b>front의 크론이 20분마다 Scope 결과를 Supabase 미러 테이블에 복사하고, 화면이 DB를 직접 읽어 집계한다<a class="ref" href="#s1">1</a>.</div>
+        <div class="path"><b>새 경로 (운영 전)</b>back/ingest가 20분마다 원문을 받아 PostgreSQL 17에 적재하면서 판정하고, FastAPI가 화면에 데이터를 준다. front는 설정(<code>HGH_SOURCE_*</code>)으로 경로를 바꾼다<a class="ref" href="#s2">2</a>.</div>
+      </div>
+    </div>
+    <ul>
+      <li><strong>인수물은 하나, 참고본은 따로.</strong> hub-share(10/2)가 유일한 인수물이고, 9/22 인계 zip은 같은 뿌리의 옛 갈래라 참고본으로 보관한다(<code>_archive/</code>). 보안 수정 4건은 참고본에만 있어 hub-share front에 직접 반영해야 한다(C절). 앤서 원본 저장소는 접근 권한이 없다.</li>
+      <li><strong>환경.</strong> 스테이징은 9월 28~30일 실측 기록이 있고 현재 기동 여부는 확인이 필요하다. 운영 환경은 개설 후 정지 상태다. 정지한 RDS는 7일 뒤 자동으로 다시 켜지고, 유휴 비용이 환경당 월 약 60달러다<a class="ref" href="#s3">3</a>. 인프라는 AWS 'scope' 계정에 있다(앤서 소유로 추정).</li>
+      <li><strong>S2W가 새 저장소·새 배포 환경을 만드는 전제다.</strong> 9/22 참고본의 인수 안내서가 그렇게 쓰여 있고, hub-share도 배포 워크플로가 빠져 있다. 운영 키 값은 문서에 없고 별도 전달 대상이다<a class="ref" href="#s4">4</a>.</li>
+    </ul>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>접근·소유 항목</th><th>필요한 것</th><th>현재</th></tr></thead>
+        <tbody>
+          <tr><td>소스</td><td>원본 개발 저장소(be/int4), 배포 워크플로</td><td class="c">hub-share 스냅샷만. 저장소 권한 없음</td></tr>
+          <tr><td>HMG DB·로그인</td><td>Supabase 프로젝트, DB URL, Auth 키, 기존 관리자 계정</td><td class="c">값 미전달</td></tr>
+          <tr><td>배포·배치</td><td>Vercel·도메인/DNS, cron, 미러·요약 배치 서버, 알림 저장소</td><td class="c">값 미전달. front 배포 워크플로는 스냅샷에서 제외(9/22 참고본에 있음)</td></tr>
+          <tr><td>Scope 연동</td><td>API 주소·키, root/project 매핑, 계약 변경 담당자</td><td class="c">S2W 전용 키 발급 예정(협의안)</td></tr>
+          <tr><td>분석·새 백엔드 인프라</td><td>AWS 'scope' 계정의 RDS·EC2·ALB·CloudFront, Secrets Manager</td><td class="c">소유·이관 방식 확인 필요</td></tr>
+          <tr><td>외부 서비스</td><td>GA4 OAuth 주체·property, DataForSEO, OpenRouter(LLM) 키</td><td class="c">값 미전달. GA4는 Kia 이탈리아 1개 property만 연결</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="facts">
+      <div class="fact"><div class="v">69.9만 답변</div><div class="l">언급 550만 · 인용 450만. 미러 약 10GB, DB 전체 21GB, 웹 크롤 6GB(S3 보관)<a class="ref" href="#s5">5</a>.</div></div>
+      <div class="fact"><div class="v">28~38초 → 1초</div><div class="l">현재 콜드 로딩 시간과 재설계 목표. 새 백엔드를 만든 이유다<a class="ref" href="#s5">5</a>.</div></div>
+      <div class="fact"><div class="v">72 / 187</div><div class="l">새 백엔드의 기능 수 / 엔드포인트 수. 전부 운영 전이라 "남은 일의 크기"이기도 하다<a class="ref" href="#s6">6</a>.</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="no">B</span>기능 보유 현황</h2>
+    <p class="key">재는 기능은 갖춰져 있다. 없는 것은 측정 범위, 통계적 신뢰, 외부 연동, 행동 제안이다.</p>
+    <p class="small">별도 표 「GEO 도구 기능 보유 현황」(62개 항목, 10월 6일 3회 독립 검증판) 기준<a class="ref" href="#s7">7</a>. 있음 = 코드와 화면이 동작, 상당 = 절반 이상 구현, 일부 = 절반 미만, 없음 = 실데이터로 동작하는 구현 없음.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>영역</th><th>있음</th><th>상당</th><th>일부</th><th>없음</th><th>없거나 부족한 것</th></tr></thead>
+        <tbody>
+          <tr><td>측정 범위 (AI 서비스·시장)</td><td class="n">3</td><td class="n">1</td><td class="n">—</td><td class="n">4</td><td class="c">Google AI 답변(AI Overviews·AI Mode), 네이버, Perplexity 등 — 엔진 추가는 앤서 소관</td></tr>
+          <tr><td>핵심 지표 (KPI)</td><td class="n">12</td><td class="n">—</td><td class="n">—</td><td class="n">1</td><td class="c">환각·사실 오류율(브랜드 제공 정답 없음)</td></tr>
+          <tr><td>통계·신뢰성</td><td class="n">2</td><td class="n">—</td><td class="n">2</td><td class="n">4</td><td class="c">오차 범위, 검색 실행 여부, 수집 경로별 분리, 사람 판단 대비 정확도</td></tr>
+          <tr><td>질문·입력</td><td class="n">4</td><td class="n">—</td><td class="n">2</td><td class="n">—</td><td class="c">멀티턴은 ACR만, 질문 대표성 기준 없음</td></tr>
+          <tr><td>분석 (답변 해석)</td><td class="n">4</td><td class="n">1</td><td class="n">—</td><td class="n">—</td><td class="c">"있음"은 앤서 Scope가 실행하는 분석. S2W 엔진은 설계 초안만</td></tr>
+          <tr><td>출처·인용</td><td class="n">3</td><td class="n">—</td><td class="n">—</td><td class="n">1</td><td class="c">인용 페이지의 어느 문장이 쓰였는지 분석 없음</td></tr>
+          <tr><td>유입·전환·웹사이트</td><td class="n">1</td><td class="n">—</td><td class="n">2</td><td class="n">5</td><td class="c">인용↔GA4 연결, Search Console·Bing, AI 봇 접근 로그, llms.txt 점검</td></tr>
+          <tr><td>행동·인사이트</td><td class="n">1</td><td class="n">1</td><td class="n">1</td><td class="n">2</td><td class="c">콘텐츠 개선 제안, 지표 급변 알림</td></tr>
+          <tr><td>운영·플랫폼</td><td class="n">4</td><td class="n">1</td><td class="n">—</td><td class="n">—</td><td class="c">운영 알림은 Slack 웹훅 미배선</td></tr>
+          <tr class="grp"><td>합계 (62)</td><td class="n">34</td><td class="n">4</td><td class="n">7</td><td class="n">17</td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3>'있음' 34개 중 S2W가 쥐고 있는 것은 21개다 <span class="tag">분류(추정)</span></h3>
+    <p>앤서 Scope가 실행하는 것 4개(답변 수집 2, LLM 언급·감성 2), Scope 분석값을 입력으로 받아야 계산되는 지표 9개(노출률·점유율·우호도·우선 노출도·ACR 등), S2W 코드와 외부 SaaS만으로 도는 것 21개. 앤서가 원문만 주는 방식으로 바뀌면 앞의 13개는 S2W 엔진이 있어야 계속 동작한다.</p>
+    <div class="gaps">
+      <div class="gap"><b>측정 범위</b>AI 서비스 3종 밖(Google AI 답변·네이버·Perplexity), 측정 엔진 소유<span class="who">해결 주체: 앤서(엔진 추가는 Scope 변경), 측정 소유는 역할상 S2W 범위 밖</span></div>
+      <div class="gap"><b>통계적 신뢰</b>조합당 답변 1건, 오차 범위 없음, 검색 실행 여부 미기록, 웹 화면·API 수집 결과를 같은 축에 비교<span class="who">해결 주체: S2W(집계·표기) + 앤서(반복 측정·검색 플래그)</span></div>
+      <div class="gap"><b>외부 연동</b>인용↔GA4 유입 연결, Search Console·Bing Webmaster, AI 봇 접근 로그, llms.txt·robots 점검<span class="who">해결 주체: S2W + HMG(사이트 로그·GSC 권한)</span></div>
+      <div class="gap"><b>행동 제안·알림</b>콘텐츠 개선 제안, 지표 급변 감지, 모델 교체·조치 시점 기록<span class="who">해결 주체: S2W</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="no">C</span>품질·보안·운영 준비</h2>
+    <p class="key">코드는 있지만, 안전하게 배포해 돌릴 준비는 되어 있지 않다.</p>
+
+    <h3>보안 수정 4건 — hub-share front에 없다 (9/22 참고본에는 있음, 우리가 직접 반영)</h3>
+    <div class="sec4">
+      <div><span class="n">1</span><span><strong>담당 범위가 없는 일반 계정.</strong> 9/22 참고본은 로그인을 거부하지만 front에는 그 검사가 없다<a class="ref" href="#s8">8</a>. 참고본 인수 문서에 범위 미배정 계정 3개가 실제로 있다고 적혀 있다<a class="ref" href="#s4">4</a>. <span class="d">실제로 무엇이 보이는지는 범위 정책 기본값에 달려 있어 미검증. 심각도 높음(추론).</span></span></div>
+      <div><span class="n">2</span><span><strong>검수 콘솔 비밀번호.</strong> front는 환경변수가 없으면 코드에 적힌 기본값으로 넘어가는 분기가 남아 있다(값은 공유용으로 치환됨). 참고본은 세 가지 설정이 모두 있어야 콘솔을 연다<a class="ref" href="#s9">9</a>. <span class="d">옛 경로에만 해당. 새 백엔드는 기본값 없이 전부 거부한다.</span></span></div>
+      <div><span class="n">3</span><span><strong>프로젝트 목록 API.</strong> front는 로그인한 사용자 모두에게 작업공간 전체 프로젝트 목록을 돌려준다. 참고본은 권한별로 거르고 시험 9건을 둔다<a class="ref" href="#s10">10</a>. <span class="d">노출되는 정보의 범위와 실제 사용 경로는 미확인.</span></span></div>
+      <div><span class="n">4</span><span><strong>로그인 폼 언어값 미검증.</strong> front는 폼의 locale 값을 그대로 이동 주소에 넣어 외부 주소로 보낼 수 있다(열린 리다이렉트). 참고본은 허용 목록으로 거른다<a class="ref" href="#s11">11</a>.</span></div>
+    </div>
+    <p class="note">네 건 모두 코드 차이 자체는 확인된 사실이고, 심각도는 추론이다. 참고본의 수정 코드를 hub-share front에 옮겨 직접 고친다. 앤서 개발 저장소에 이미 반영됐다면 그 커밋을 받는 쪽이 빠르다. 원본 저장소 접근 뒤 확인한다.</p>
+
+    <h3>분석 엔진</h3>
+    <ul>
+      <li><strong>S2W가 운영할 엔진은 미구현이다.</strong> hub-share에는 앤서 분석 과정(15단계)을 Python으로 다시 만드는 설계 초안만 있고(상태 '검토중', 약 44.5인일 추정), 코드는 없다<a class="ref" href="#s12">12</a>.</li>
+      <li><strong>분석 서비스 코드는 인수물에 없다.</strong> 9/22 참고본의 scope-analysis(TypeScript)는 설계가 이식 대상에서 뺐고(동치 검증의 비교 기준으로는 쓸 수 있음), 그 안의 분석 코어도 설계가 참조한 최신판보다 이전 버전이다<a class="ref" href="#s12">12</a>.</li>
+    </ul>
+
+    <h3>테스트·검증</h3>
+    <ul>
+      <li><strong>실행 기록이 없다.</strong> 테스트 파일은 새 백엔드 237개, front 560개가 있지만 hub-share에는 실행 결과가 없고, CI 정의는 참고본이라 돌지 않는다(원본은 사내 전용 러너 전제)<a class="ref" href="#s13">13</a>. 9/22 참고본 문서의 "3,900개 통과"는 옛 갈래 기준이라 hub-share의 근거로 쓰지 않는다<a class="ref" href="#s4">4</a>.</li>
+      <li><strong>분석 품질은 검증된 적이 없다.</strong> 분석 코어의 골든 테스트는 LLM 대신 고정 스텁을 쓴다. 코드가 같은지를 볼 뿐, 분류가 맞는지는 보지 않는다<a class="ref" href="#s12">12</a>.</li>
+    </ul>
+
+    <h3>운영 준비</h3>
+    <ul>
+      <li><strong>배포 경로.</strong> front의 운영 배포 워크플로는 스냅샷에서 제외됐고(9/22 참고본에는 있음), 새 백엔드는 EC2 배포 템플릿만 있다<a class="ref" href="#s14">14</a>.</li>
+      <li><strong>감시.</strong> 상태 확인 주소, ALB 헬스체크, Slack 웹훅(미설정 시 로그만)뿐이다. 경보·지표·로그 보존 설정이 없다<a class="ref" href="#s15">15</a>.</li>
+      <li><strong>설정 목록.</strong> front는 약 60개, 새 백엔드는 약 50개의 환경변수를 읽지만 정리된 목록이 없다. 예시 파일에는 6개만 있다<a class="ref" href="#s16">16</a>.</li>
+      <li><strong>Node 버전.</strong> hub-share CI와 H-Cloud 사양은 22다(9/22 참고본은 24). 22로 간다<a class="ref" href="#s13">13</a>.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2><span class="no">D</span>외부 의존과 제약</h2>
+    <p class="key">측정은 앤서가, 인프라 사양은 HMG가 쥐고 있다. 새 백엔드 설계는 HMG 전용 클라우드를 고려하지 않고 확정됐다.</p>
+    <ul>
+      <li><strong>앤서(Scope).</strong> 측정 실행, AI 서비스 추가, 수동 측정 개방(변경 예정, 하루 한도·비용은 C2 협의)이 앤서 손에 있다. 원문 API는 신설 예정이다<a class="ref" href="#s17">17</a>. 과거 분석값(C1)에 대한 앤서 쪽 입장은 이미 있다. 과거 회차는 다시 계산하고 한 번 고지한다(A4), 리포트로 발행한 값은 유지한다(A5), 전환 이전 이력은 옛 분석값으로 둔다(설계 결정 37)<a class="ref" href="#s18">18</a>. S2W는 이를 받을지 정하면 된다.</li>
+      <li><strong>H-Cloud(HMG 전용 클라우드, 사양 7월 29일 제출·검토중).</strong> 서버는 Node.js 22(표준은 Tomcat이라 이미 예외 1건), DB는 PostgreSQL 17.6 설치형만 허용한다. 새 백엔드(FastAPI)와 관리형 DB(RDS)는 "H-Cloud 미고려"로 확정된 설계라(D2·D3), FastAPI는 두 번째 예외가 된다. 앤서도 이 충돌을 이미 짚고 "예외 협의 착수 또는 TypeScript 백엔드"를 권고했다<a class="ref" href="#s19">19</a>.</li>
+      <li><strong>H-Cloud 보안 요구.</strong> HMG SSO(OIDC) 필수인데 현 설계는 Supabase 로그인 유지(A8)다. 외부 통신 허용 목록은 Scope·DataForSEO·GA4 3건뿐이라, S2W 분석 엔진이 LLM 공급자로 답변 원문을 보내는 경로가 사양에 없다. 관리자 화면은 사내망 한정, 로그 보존 3~5년 요구도 있다<a class="ref" href="#s19">19</a>. <span class="tag">담당: HMG 보안·이노션</span></li>
+      <li><strong>전환 조건.</strong> 고객과 약속한 '데이터 영향 변경 5단계 게이트'가 있다. 새 백엔드로 바꾸는 것 자체가 지표 계산 방식 변경이라, 옛 값과 새 값의 대조가 전환 조건이다. 단계표(S0~S11)는 있으나 날짜와 현재 위치가 없다<a class="ref" href="#s20">20</a>.</li>
+    </ul>
+    <div class="callout">
+      <b class="t">SAIP Factory 검토 결과 (3줄)</b>
+      ① 'Factory'라는 이름은 SAIP 저장소에 없다. 데이터 가공 모듈(Builder의 Pipeline·Datasets, 실행 엔진 Airflow)로 해석해 평가했다(추정, SAIP 팀 확인 필요).
+      ② <strong>핵심 처리에는 맞지 않는다.</strong> 답변 1건씩 LLM 분석을 돌리는 구조가 아니고(노드 실행당 LLM 1회 호출), 모델 버전 고정·JSON 검증·재시도가 없으며, 서버 스택(Python·Airflow·Temporal·Redis·OpenSearch)이 H-Cloud 사양과 어긋난다. 근거는 프론트 저장소와 API 명세 스냅샷(0.9.0, 6월 12일)이라 '명세상 미충족'이다.
+      ③ <strong>후방 탐색 레이어로는 가능하다.</strong> 완성된 KPI 테이블을 읽어 온톨로지·대화형 조회·계보 추적을 얹는 용도. 사람·운영 노하우 재사용은 ③에서 본다. 상세 판정표와 SAIP 팀 질문 8개는 별도 메모<a class="ref" href="#s21">21</a>.
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="no">E</span>해야 할 일 목록</h2>
+    <p class="key">접근부터 확보하고, 안전하게 돌릴 수 있게 만든 뒤, 결정이 풀리는 대로 만든다. 크기와 일정은 ③에서.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>할 일</th><th>담당</th><th>선행 조건</th><th>근거</th></tr></thead>
+        <tbody>
+          <tr class="grp"><td colspan="5">0단계 · 접근 확보 (모든 작업의 선행)</td></tr>
+          <tr><td>1</td><td>원본 개발 저장소 읽기 권한과 스냅샷 제외분(배포 워크플로·비용·메모) 수령</td><td><span class="tag a">앤서</span></td><td>—</td><td class="c">A, C</td></tr>
+          <tr><td>2</td><td>AWS 'scope' 계정·Supabase·Vercel·도메인·GA4 OAuth·외부 키의 소유 확인, 이관 vs 재구축 결정</td><td><span class="tag a">앤서</span> <span class="tag h">HMG</span></td><td>—</td><td class="c">A 접근표</td></tr>
+          <tr><td>3</td><td>최신 scope-analysis(10dd345)와 Scope 카탈로그 내보내기(S-A2) 일정 확보</td><td><span class="tag a">앤서</span></td><td>—</td><td class="c">C 분석 엔진</td></tr>
+          <tr class="grp"><td colspan="5">1단계 · 안전하게 돌리기 (내부, 승인 없이 착수)</td></tr>
+          <tr><td>4</td><td>보안 4건을 hub-share front에 직접 반영(9/22 참고본의 수정 코드·설치 도구·배치 타입 검사 참고), Node 22 고정</td><td><span class="tag s">S2W</span></td><td>1</td><td class="c">C 보안</td></tr>
+          <tr><td>5</td><td>CI를 S2W 러너로 옮겨 테스트 전수 1회 실행·기록</td><td><span class="tag s">S2W</span></td><td>4</td><td class="c">C 테스트</td></tr>
+          <tr><td>6</td><td>운영 배포 경로 복원: front 워크플로, 새 백엔드 배포, 롤백 스위치 운용 문서</td><td><span class="tag s">S2W</span></td><td>1, 2</td><td class="c">C 운영</td></tr>
+          <tr><td>7</td><td>환경변수·시크릿 목록(front 약 60, back 약 50)과 보관 위치 정리</td><td><span class="tag s">S2W</span></td><td>2</td><td class="c">C 운영</td></tr>
+          <tr><td>8</td><td>감시 최소선: 서버·DB·ALB 경보, Slack 웹훅 실배선, 로그 보존</td><td><span class="tag s">S2W</span></td><td>6</td><td class="c">C 운영</td></tr>
+          <tr class="grp"><td colspan="5">2단계 · 결정 대기 (외부 의존, 병행)</td></tr>
+          <tr><td>9</td><td>H-Cloud 백엔드 런타임: FastAPI 예외 협의 착수 vs Node.js 재작성. 결정 전 새 백엔드 추가 투입 보류</td><td><span class="tag h">HMG·이노션</span></td><td>—</td><td class="c">D H-Cloud</td></tr>
+          <tr><td>10</td><td>SSO(OIDC) 연동 가이드 수령, 외부 통신 허용 목록에 LLM 공급자 추가 가능 여부</td><td><span class="tag h">HMG</span></td><td>—</td><td class="c">D 보안 요구</td></tr>
+          <tr><td>11</td><td>C1 과거 분석값 처리·C5 전환일 확정 (C2~C4는 운영 값)</td><td><span class="tag a">앤서</span></td><td>3</td><td class="c">D 앤서</td></tr>
+          <tr class="grp"><td colspan="5">3단계 · ③에서 크기를 잰다</td></tr>
+          <tr><td>12</td><td>분석 엔진 구현과 동치 검증(설계 추정 44.5인일), 옛 분석값과 그림자 실행부터</td><td><span class="tag s">S2W</span></td><td>3, 9, 10</td><td class="c">①-D 1·2·4</td></tr>
+          <tr><td>13</td><td>데이터 이관 런북·리허설, 옛 값과 새 값 대조, 5단계 게이트 통과</td><td><span class="tag s">S2W</span> <span class="tag h">HMG</span></td><td>6, 11</td><td class="c">D 전환 조건</td></tr>
+          <tr><td>14</td><td>측정 범위·반복 횟수·오차 범위 확대 — 앤서 협의 묶음(C2·엔진 추가)</td><td><span class="tag s">S2W</span> <span class="tag a">앤서</span></td><td>11</td><td class="c">B 공백, ①-D 6</td></tr>
+          <tr><td>15</td><td>SAIP 후방 레이어 검토(선택): SAIP 팀 질문 8개 발송 후 재판정</td><td><span class="tag s">S2W</span></td><td>12</td><td class="c">D SAIP</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout risk">
+      <b class="t">리스크</b>
+      <ul>
+        <li><strong>시계.</strong> C5가 정해지는 순간 분석 엔진(12번)의 마감이 생긴다. 날짜가 미정이라 가장 먼저 받아야 할 숫자다.</li>
+        <li><strong>매몰.</strong> H-Cloud 런타임 결정(9번)에 따라 새 백엔드 72개 기능이 상당 부분 재작성될 수 있다.</li>
+        <li><strong>숫자 변동.</strong> 엔진과 경로를 바꾸면 고객이 보는 값이 달라진다. 전환 전후 병행 산출(13번)이 없으면 설명할 수 없다.</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="gloss">
+    <b>용어</b> · <b>미러</b> Scope 결과를 복사해 둔 대시보드 쪽 테이블 · <b>회차</b> 전체 질문을 한 바퀴 측정한 단위 · <b>동치 검증</b> 새 엔진이 옛 엔진과 같은 답을 내는지 대조 · <b>그림자 실행</b> 새 엔진을 화면에 연결하지 않고 옆에서 돌려 비교 · <b>H-Cloud</b> HMG 전용 클라우드 환경 · <b>C1~C5</b> 앤서 협의안의 미결 항목 다섯 가지
+  </div>
+
+  <footer class="sources">
+    <b>출처</b> (2026-10-06 확인, 경로는 hub-share 기준)
+    <ol>
+      <li id="s1"><code>front/vercel.json:10-12</code> (sync-mirror */20) · <code>front/lib/hgh/client.ts:243</code> (설정 없으면 legacy)</li>
+      <li id="s2"><code>back/ingest/worker.py:98</code> · <code>docs/design/DESIGN-CONTRACT.md:6-11</code> (A10 20분 pull, A17 스키마 분리)</li>
+      <li id="s3"><code>README.md:80</code> (prod 개설 후 정지) · <code>infra/env-power.sh:3-4</code> (RDS 7일 자동 기동, 유휴 비용) · <code>docs/test/latency-summary.md</code> (stg 실측 2026-09-28)</li>
+      <li id="s4"><code>_archive/README.md:25-37, 45, 57</code> (9/22 참고본) (접근권한표, 범위 미배정 계정 3개, 테스트 3,900 통과 기록)</li>
+      <li id="s5"><code>docs/research/00-synthesis.md:18, 26-37</code> (답변 699K·언급 5.5M·인용 4.5M, DB 21GB, 크롤 6GB, 콜드 로딩 28~38초)</li>
+      <li id="s6"><code>back/FEATURES.md:3</code> (기능 72개·엔드포인트 187개)</li>
+      <li id="s7"><code>reports/GEO 도구 기능 보유 현황.html</code> (2026-10-06 16:45 판, 62행, 검증 3회 반영)</li>
+      <li id="s8"><code>_archive/hmg-geo/lib/auth/session.ts:44-51</code> (hasAssignedScope) ↔ <code>front/lib/auth/session.ts:47-52</code></li>
+      <li id="s9"><code>front/lib/qa/auth.ts:22, 50-52, 92</code> ↔ <code>_archive/hmg-geo/lib/qa/auth.ts:38-42</code> · <code>back/app/core/config.py:19, 227-228</code></li>
+      <li id="s10"><code>front/lib/scope/server.ts:417-420</code> ↔ <code>_archive/hmg-geo/lib/scope/server.ts:292-317</code>, <code>_archive/hmg-geo/lib/scope/server.project-access.test.ts</code></li>
+      <li id="s11"><code>front/lib/auth/actions.ts:21, 39</code> ↔ <code>_archive/hmg-geo/lib/auth/actions.ts:9-14</code> (formLocale)</li>
+      <li id="s12"><code>ANALYSIS-ENGINE-DESIGN.md:8, 18, 38, 84, 460, 615-617</code> · <code>_archive/scope-analysis/packages/analysis-core/ANALYSIS_CORE_PIN.json:2</code> (64de80d2)</li>
+      <li id="s13"><code>ci/github-workflows/back-ci.yml:6-7</code>, <code>front-ci.yml:6-7, 61</code> · 테스트 파일 수는 2026-10-06 집계(back test_*.py 237, front *.test.ts* 560) · <code>_archive/hmg-geo/.nvmrc</code>, <code>_archive/hmg-geo/package.json</code> engines</li>
+      <li id="s14"><code>README.md:34-35</code> (배포 워크플로 제외) · <code>front/vercel.json</code> (main 자동 배포 끔) · <code>infra/ops/s8-apply.tpl.sh</code> · <code>_archive/hmg-geo/.github/workflows/deploy-production.yml</code></li>
+      <li id="s15"><code>back/app/main.py:85</code> (/healthz) · <code>infra/50-alb.sh:23</code> · <code>back/app/core/config.py:47-48</code> (Slack 웹훅)</li>
+      <li id="s16"><code>front/.env.example</code> · <code>back/app/core/config.py</code> 상단 HGH_* 목록</li>
+      <li id="s17"><code>docs/interfaces/scope-measurement-interface-v0.1.md</code> §1, §2.3, §4, §6, §9</li>
+      <li id="s18"><code>docs/design/DESIGN-CONTRACT.md:9</code> (A4·A5) · <code>ANALYSIS-ENGINE-DESIGN.md:97</code> (결정 37)</li>
+      <li id="s19"><code>docs/research/00-synthesis.md:22, 146-171</code> (H-Cloud 사양, D2 권고, SSO·allowlist) · <code>docs/design/DESIGN-CONTRACT.md:6-7</code> (D2 H-Cloud 미고려, D7)</li>
+      <li id="s20"><code>docs/research/00-synthesis.md:164</code> (5단계 게이트) · <code>docs/design/api/전체-통합.md:148-165</code> (S0~S11)</li>
+      <li id="s21"><a href="부록/SAIP Factory 검토 메모.md">부록/SAIP Factory 검토 메모.md</a> (2026-10-06, <code>dev/SAIP</code> 프론트 저장소·API 명세 0.9.0 기준) · 기능표 검증 노트 3건도 같은 폴더</li>
+    </ol>
+  </footer>
+</article>
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>앤서 미팅 체크리스트</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  /* A4 한 장. 화면에서는 뷰포트에 맞춰 확대(4K 대응), 인쇄는 원본 크기. */
+  :root {
+    --ink: #1a1d23; --ink-2: #454b57; --ink-3: #6f7685; --line: #d9dde4; --soft: #f3f5f8;
+    --accent: #1f4e8c; --accent-soft: #e8eff9; --risk: #b42318; --risk-soft: #fcebe9; --warn: #8a5a00; --warn-soft: #fcf4e3; --ok: #1b6b3a; --ok-soft: #e4f3e9;
+    --font: "Pretendard", "Pretendard Variable", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    --mono: ui-monospace, "Cascadia Code", "D2Coding", Consolas, monospace;
+  }
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; background: #e6e8ec; color: var(--ink); font-family: var(--font); font-size: 8.6pt; line-height: 1.42; word-break: keep-all; }
+  .stage { display: grid; place-items: start center; padding: 24px 16px; }
+  .sheet { width: 210mm; min-height: 297mm; background: #fff; padding: 9mm 10mm 8mm; display: flex; flex-direction: column; gap: 2.6mm; box-shadow: 0 2px 14px rgba(0,0,0,.12); transform-origin: top center; }
+  @media print { body { background: #fff; } .stage { padding: 0; display: block; } .sheet { box-shadow: none; transform: none !important; min-height: 296mm; } }
+
+  h1, h2, h3, p, ul, ol { margin: 0; }
+  .top { display: flex; justify-content: space-between; align-items: flex-end; gap: 6mm; padding-bottom: 2.2mm; border-bottom: 2px solid var(--ink); }
+  .eyebrow { font-size: 7.2pt; font-weight: 700; letter-spacing: .08em; color: var(--accent); margin-bottom: 1mm; }
+  h1 { font-size: 14.5pt; font-weight: 800; letter-spacing: -.02em; line-height: 1.2; }
+  .meta { font-size: 7.2pt; color: var(--ink-3); text-align: right; line-height: 1.5; min-width: 52mm; }
+
+  .fixed { background: var(--ok-soft); border-left: 3px solid var(--ok); border-radius: 0 5px 5px 0; padding: 1.8mm 3.2mm; font-size: 8.4pt; }
+  .fixed b { color: var(--ok); }
+  .fixed code { background: #fff; }
+
+  .must { background: var(--risk-soft); border-left: 3px solid var(--risk); border-radius: 0 5px 5px 0; padding: 2mm 3.2mm; }
+  .must h2 { font-size: 8.8pt; color: var(--risk); margin-bottom: 1mm; }
+  .must ol { padding-left: 4.5mm; display: grid; gap: .6mm; font-size: 8.8pt; }
+  .must b { color: var(--ink); }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2.6mm; }
+  .box { border: 1px solid var(--line); border-radius: 5px; padding: 2mm 2.8mm; }
+  .box h2 { font-size: 8.6pt; font-weight: 700; color: var(--ink); margin-bottom: 1.1mm; display: flex; align-items: center; gap: 1.6mm; }
+  .box h2::before { content: ""; width: 2.5px; height: 8pt; background: var(--accent); border-radius: 2px; }
+  .box ul { padding-left: 3.6mm; display: grid; gap: .55mm; }
+  .box li { padding-left: .3mm; }
+  .box li b { font-weight: 700; }
+  code { font-family: var(--mono); font-size: .92em; background: var(--soft); border-radius: 3px; padding: 0 .35em; }
+  .tag { display: inline-block; font-size: 6.6pt; font-weight: 700; padding: 0 1.3mm; border-radius: 3px; vertical-align: .1em; margin-left: .6mm; }
+  .tag.q { background: var(--accent-soft); color: var(--accent); }
+  .tag.w { background: var(--warn-soft); color: var(--warn); }
+
+  .stance { background: var(--accent-soft); border-radius: 5px; padding: 2mm 3.2mm; }
+  .stance h2 { font-size: 8.6pt; color: var(--accent); margin-bottom: 1mm; }
+  .stance ul { padding-left: 3.6mm; display: grid; grid-template-columns: 1fr 1fr; gap: .4mm 5mm; }
+  .foot { margin-top: auto; padding-top: 1.6mm; border-top: 1px solid var(--line); font-size: 6.8pt; color: var(--ink-3); display: flex; justify-content: space-between; gap: 4mm; }
+</style>
+</head>
+<body>
+<div class="stage">
+<main class="sheet" id="sheet">
+  <header class="top">
+    <div>
+      <p class="eyebrow">HMG GEO 인수 · 앤서 미팅 · 본인 참고용</p>
+      <h1>앤서 미팅 체크리스트 — 미정·확인 항목</h1>
+    </div>
+    <div class="meta">2026-10-07 (v2)<br>근거: 앤서 「AI 답변 데이터와 이관 대상」(10-06) · 협의안 v0.1(10-02) · 테이블 79개 전수 검토(10-07)</div>
+  </header>
+
+  <section class="fixed">
+    <b>확정된 전제:</b> 답변 원문 공급은 <b>앤서 HUB RDS <code>ing</code> 스키마를 S2W가 DB로 직접 읽는 방식, 영구.</b> Scope 원문 API(<code>/raw</code>·<code>/turns</code>)는 공급 경로 아님. Scope API는 측정 등록·수동 측정·스케줄(협의안 §3·§4)에만 사용.
+    구조: Scope 코어 → (앤서 ingest, 20분 pull) → HUB RDS ing → (DB 읽기) → S2W 엔진·시스템(Azure)
+  </section>
+
+  <section class="must">
+    <h2>꼭 받아 올 것 3개</h2>
+    <ol>
+      <li><b>H2 턴 원문 일정</b> — <code>ing.answer</code>에 <code>turn_index</code> 없음, <code>answer_text</code>는 turn-1뿐. 원문 API가 없으니 앤서가 <code>ing.turn</code>(또는 턴 컬럼)을 추가하는 게 유일한 해법. 일정이 안 나오면 우리 엔진을 job 단위로 설계해야 함.</li>
+      <li><b>C5 전환일 + 운영 환경</b> — 현 레거시 연동 종료일, prod RDS 기동 시점(지금 정지 상태), 대상이 stg인지 prod인지(Q6). stg ingest 워커가 실제로 도는지·ing 적재 범위(Q1).</li>
+      <li><b>운영 SLA 초안 합의</b> — 영구 의존이므로 문서로: ingest 가동 보장, 측정 지연·적재 실패 통보, <code>ing</code> DDL 변경(DB-v2.x 패치) 사전 고지, RDS 정지/기동 정책, 복제본·VPN 비용 분담.</li>
+    </ol>
+  </section>
+
+  <div class="grid">
+    <section class="box">
+      <h2>접속 (H1)</h2>
+      <ul>
+        <li><b>영구 운영이면 A안(SSM 포트포워드)은 부적합</b> — 터널 단절·EC2 경유. <b>C 읽기 복제본 + B 사이트 간 VPN</b> 조합을 제안. D(퍼블릭)는 비권고.</li>
+        <li><b>우리가 줄 입력값</b> — Azure 리전·VNet 대역(10.40/16·10.41/16과 겹치면 B 불가)·egress IP·조회 빈도·배치 창. <b>아직 없으면 그 사실 먼저</b>, 확보 일정 제시.</li>
+        <li><code>s2w_ro</code> 롤 — <code>loader_ro</code> 상속안 수용 여부. DEFAULT PRIVILEGES 누락(PDF 2.5)으로 새 ing 테이블 권한이 빠질 수 있음 → 보장 문구 요청.</li>
+        <li>Q3 <code>loader_ro</code> 실제 SELECT 권한 / Q4 라이브 RDS 사양·<code>force_ssl</code>·백업 보존(복제본 생성 전제) <span class="tag q">Q</span></li>
+        <li>Q2 ACR 반복이 <code>ing.answer</code>에 전부 남는지 <span class="tag q">Q</span></li>
+      </ul>
+    </section>
+
+    <section class="box">
+      <h2>마이그레이션</h2>
+      <ul>
+        <li><b>전량 pg_dump 가능 여부</b> — public + auth 스키마, 지금 1회 + 컷오버 직전 1회. 분류는 우리가.</li>
+        <li><b>시드 누락 5건</b> 반영 — <code>profiles</code>, <code>project_members</code>, <code>standard_prompts</code>, QA 3표, <code>scope_context_*</code> 로더. 문서상 이관인데 스크립트엔 없음. <span class="tag w">중요</span></li>
+        <li>회차 원장(<code>summary_cycles</code>·<code>cycle_runs</code>·<code>scope_cycle_rounds</code>) 이관 목록 추가.</li>
+        <li><b>C1 과거 분석값</b> — ing에 과거 회차 v0(<code>ing.mention*</code>·<code>acr_*</code>)가 얼마나 적재돼 있나(Q1). 부족분은 덤프(ing 적재 가능 CSV.gz, 컷오버 직전). 동결층(frz) 범위 명시.</li>
+        <li>보류 7개 회신 일정 / <code>scope_prompts</code> 정본 — 우리 입장: Scope 정본 + 미러 사본.</li>
+      </ul>
+    </section>
+
+    <section class="box">
+      <h2>DB 밖 자산</h2>
+      <ul>
+        <li><code>auth.users</code> export(해시·uuid 유지) + 레포 밖 <code>load-accounts.tpl.sh</code></li>
+        <li>GA4 OAuth 주체 이전 절차(토큰은 env에만)</li>
+        <li>발행 리포트 파일·Confluence 첨부·vol.2 생성기 소스</li>
+        <li>S3 <code>snap/</code> 버킷 접근. crawl/webgeo 실제 건수(문서 0행 vs 9/27 실측 6GB)</li>
+        <li>Scope 측 데이터 export — 프로젝트 설정·프롬프트 메타·스케줄·엔티티 카탈로그(S-A2)</li>
+      </ul>
+    </section>
+
+    <section class="box">
+      <h2>문서 · 자료</h2>
+      <ul>
+        <li>협의자료 v0.12 원문 / 정확한 <code>count(*)</code>(n_live_tup은 9/27 조사와 30~60% 차이)</li>
+        <li>원본 레포 읽기 권한 — stg 브랜치 포함(배포·시크릿 스크립트가 스냅샷에 없음)</li>
+        <li>문서 정정 4건은 구두로만: N2 드롭 답변 물리 삭제됨 · N3 <code>answer_text</code>는 turn-1 · N4 CHECK는 미러 4표만 · N9 <code>deletePromptData</code> 고아 행</li>
+        <li>측정 소요시간 — 문서엔 없음. <code>ing.run</code>의 started/completed_at로 직접 산출 가능한지</li>
+        <li>협의안 C3(호출 한도)은 DB 커넥션 한도·statement_timeout·조회 빈도로 재정의 필요</li>
+      </ul>
+    </section>
+  </div>
+
+  <section class="stance">
+    <h2>우리가 정해서 가는 입장</h2>
+    <ul>
+      <li><b>H1:</b> 읽기 복제본 + VPN. 초기 개발 한정으로만 SSM 허용</li>
+      <li><b>H2:</b> 턴 단위 필수. <code>ing.turn</code> 추가를 앤서 작업으로 요청</li>
+      <li><b>QA 기능 인수:</b> 예 → QA 3표 이관 요청</li>
+      <li><b>감사 로그:</b> 보존 의무 확인 전까지 덤프 보관</li>
+      <li><b><code>scope_prompts</code> 정본:</b> Scope(ing.prompt), HMG 테이블은 둘 다 이관</li>
+      <li><b>분류:</b> 전량 받고 우리가 분류(필수 41·권장 12·선택 6·불요 20)</li>
+      <li><b>회차 원장:</b> 재계산 불가, 이관 필수(운영자 입력값)</li>
+      <li><b>동기화 설계:</b> API 호출이 아니라 RDS 증분 읽기(<code>load_id</code>·<code>first_seen_at</code>·<code>content_hash</code>)</li>
+    </ul>
+  </section>
+
+  <footer class="foot">
+    <span>상세: reports/마이그레이션 테이블 더블체크.html · 부록 A·B·C · 데이터 이관 문서 검토 메모.md</span>
+    <span>단정 금지: 보안 4건은 코드 차이가 사실, 심각도는 추론 · 소요시간은 코드 주석 출처(표본 2회차) · stg 가동 여부 미확인</span>
+  </footer>
+</main>
+</div>
+<script>
+(function () {
+  var sheet = document.getElementById("sheet");
+  function fit() {
+    var w = sheet.offsetWidth || 794;
+    var s = Math.min(2.4, Math.max(1, (window.innerWidth - 48) / w));
+    sheet.style.transform = "scale(" + s + ")";
+    sheet.parentElement.style.height = (sheet.offsetHeight * s + 48) + "px";
+  }
+  fit(); window.addEventListener("resize", fit);
+  window.addEventListener("beforeprint", function () { sheet.style.transform = "none"; sheet.parentElement.style.height = "auto"; });
+  window.addEventListener("afterprint", fit);
+})();
+</script>
+</body>
+</html>

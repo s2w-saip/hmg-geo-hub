@@ -1,0 +1,43 @@
+{
+  "status": "passed",
+  "date": "2026-10-08",
+  "checks": [
+    {
+      "file": "GEO HUB 구성안별 기술 스택 기획.html",
+      "links": 136,
+      "anchors": 71,
+      "findings": 13,
+      "status": "passed"
+    },
+    {
+      "file": "15 구성안별 기술 스택 기획.html",
+      "links": 136,
+      "anchors": 71,
+      "findings": 13,
+      "status": "passed"
+    },
+    {
+      "name": "review chain and final correction",
+      "rounds": 3,
+      "findings": 13,
+      "sourceHashes": 10,
+      "status": "passed"
+    }
+  ],
+  "browser": {
+    "controls": 5,
+    "widths": [
+      {
+        "viewport": 1440,
+        "body": 1425
+      },
+      {
+        "viewport": 390,
+        "body": 390
+      }
+    ],
+    "javascriptErrors": []
+  },
+  "reportSha256": "862627054c855834b567a298f9596d3e35e44e93a2ee69239446a800bd0e302e",
+  "scope": "Document verification only; application security, performance, recovery and cost PoCs not executed."
+}

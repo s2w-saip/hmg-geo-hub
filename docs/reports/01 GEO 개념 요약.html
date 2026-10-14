@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GEO 개념 요약</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  /* 2쪽 요약문. 치수는 모두 rem 기준이라 화면 폭(1280→3840px)에 따라 비율대로 커진다. */
+  :root {
+    --bg: #eef0f3; --sheet: #ffffff;
+    --ink: #1a1d23; --ink-2: #454b57; --ink-3: #6f7685;
+    --line: #d9dde4; --soft: #f3f5f8;
+    --accent: #1f4e8c; --accent-soft: #e8eff9;
+    --warn: #8a5a00; --warn-soft: #fcf4e3;
+    --risk: #b42318; --risk-soft: #fcebe9;
+    --font: "Pretendard", "Pretendard Variable", "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+    --mono: ui-monospace, "Cascadia Code", "D2Coding", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1216; --sheet: #161a20; --ink: #e6e9ef; --ink-2: #b8bec9; --ink-3: #8a91a0;
+      --line: #2c323c; --soft: #1d222a; --accent: #8db5f2; --accent-soft: #1a2638;
+      --warn: #e4b55a; --warn-soft: #2e2611; --risk: #f29286; --risk-soft: #3a1f1d; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1216; --sheet: #161a20; --ink: #e6e9ef; --ink-2: #b8bec9; --ink-3: #8a91a0;
+    --line: #2c323c; --soft: #1d222a; --accent: #8db5f2; --accent-soft: #1a2638;
+    --warn: #e4b55a; --warn-soft: #2e2611; --risk: #f29286; --risk-soft: #3a1f1d; color-scheme: dark;
+  }
+  /* 1280px≈15.5px · 1920px≈18px · 2560px≈20.8px · 3840px≈26px */
+  html { font-size: clamp(15px, 0.4vw + 10.5px, 27px); }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--font); font-size: 1rem; line-height: 1.7;
+    word-break: keep-all; overflow-wrap: break-word;
+    padding-inline: max(16px, 2.5vw); padding-block: 2.5rem 5rem;
+  }
+  .sheet { max-width: 60rem; margin: 0 auto; background: var(--sheet); border: 1px solid var(--line); border-radius: 10px; padding: 2.6rem 3rem 2.4rem; }
+  @media (max-width: 700px) { .sheet { padding: 1.4rem 1.1rem; } }
+
+  .eyebrow { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; color: var(--accent); margin: 0 0 0.6rem; }
+  h1 { font-size: 1.9rem; font-weight: 800; line-height: 1.25; letter-spacing: -0.02em; margin: 0; text-wrap: balance; }
+  .meta { display: flex; flex-wrap: wrap; gap: 0.3em 1.8em; margin: 1rem 0 0; padding-top: 0.8rem; border-top: 2px solid var(--ink); font-size: 0.82rem; color: var(--ink-2); }
+  .meta b { color: var(--ink-3); font-weight: 600; margin-right: 0.5em; }
+
+  /* 한눈에 보기 */
+  .summary { margin: 1.6rem 0 0; padding: 1.1rem 1.4rem 1rem; background: var(--accent-soft); border-radius: 8px; }
+  .summary .label { font-size: 0.74rem; font-weight: 700; letter-spacing: 0.08em; color: var(--accent); margin: 0 0 0.6rem; }
+  .summary ol { margin: 0; padding-left: 1.3em; display: grid; gap: 0.5em; }
+  .summary li::marker { color: var(--accent); font-weight: 700; }
+  .summary b { color: var(--accent); }
+
+  section { margin-top: 2.2rem; }
+  h2 { font-size: 1.25rem; font-weight: 750; line-height: 1.35; letter-spacing: -0.01em; margin: 0 0 0.6rem; display: flex; gap: 0.6em; align-items: baseline; }
+  h2 .no { font-family: var(--mono); font-size: 0.72em; color: var(--accent); font-weight: 600; }
+  /* 절마다 첫 줄에 두는 핵심 문장 */
+  .key { margin: 0 0 1rem; padding: 0.55rem 0.9rem; border-left: 3px solid var(--accent); background: var(--soft); font-weight: 600; border-radius: 0 6px 6px 0; }
+  h3 { font-size: 0.98rem; font-weight: 700; margin: 1.1rem 0 0.3rem; color: var(--ink); }
+  p { margin: 0 0 0.7em; }
+  ul { margin: 0 0 0.8em; padding-left: 1.3em; }
+  li { margin: 0.3em 0; }
+  strong { font-weight: 700; }
+  .small { font-size: 0.86rem; color: var(--ink-2); }
+  .note { font-size: 0.86rem; color: var(--ink-3); }
+  .ref { font-size: 0.72em; color: var(--ink-3); vertical-align: super; line-height: 0; text-decoration: none; margin-left: 0.1em; }
+  .ref:hover { color: var(--accent); }
+  code { font-family: var(--mono); font-size: 0.86em; background: var(--soft); border-radius: 4px; padding: 0.05em 0.35em; }
+
+  /* 근거 두 줄: 큰 숫자 + 설명 */
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(13em, 1fr)); gap: 0.7rem; margin: 0.4rem 0 1rem; }
+  .fact { border: 1px solid var(--line); border-radius: 8px; padding: 0.6rem 0.9rem; }
+  .fact .v { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.2; font-variant-numeric: tabular-nums; }
+  .fact .l { font-size: 0.84rem; color: var(--ink-2); margin-top: 0.15em; }
+
+  /* 역할표 */
+  .roles { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin: 0.6rem 0 0.9rem; }
+  .roles > div { border: 1px solid var(--line); border-radius: 8px; padding: 0.7rem 0.95rem; font-size: 0.92rem; }
+  .roles h4 { margin: 0 0 0.35em; font-size: 0.86rem; letter-spacing: 0.04em; color: var(--ink-3); font-weight: 700; }
+  .roles ul { margin: 0; padding-left: 1.1em; }
+  .roles .s2w { border-color: var(--accent); background: var(--accent-soft); }
+  @media (max-width: 700px) { .roles { grid-template-columns: 1fr; } }
+
+  /* 함정 카드: 제목 → 생기는 일 → 그래서 */
+  .traps { display: grid; gap: 0.7rem; margin: 0.4rem 0 0.9rem; }
+  .trap { border: 1px solid var(--line); border-radius: 8px; padding: 0.7rem 0.95rem; display: grid; grid-template-columns: 5.2em 1fr; gap: 0.25em 0.8em; align-items: baseline; }
+  .trap .h { grid-column: 1 / -1; font-weight: 700; font-size: 1rem; }
+  .trap .h .n { display: inline-grid; place-items: center; width: 1.3em; height: 1.3em; border-radius: 50%; background: var(--accent); color: var(--sheet); font-size: 0.8em; font-weight: 700; margin-right: 0.5em; vertical-align: 0.1em; }
+  .trap .lb { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; color: var(--ink-3); }
+  .trap .tx { font-size: 0.93rem; color: var(--ink-2); }
+  .trap .tx.so { color: var(--ink); font-weight: 600; }
+  @media (max-width: 700px) { .trap { grid-template-columns: 1fr; } }
+
+  .table-wrap { overflow-x: auto; margin: 0.6rem 0 0.9rem; border: 1px solid var(--line); border-radius: 8px; }
+  table { width: 100%; min-width: 44em; border-collapse: collapse; font-size: 0.86rem; line-height: 1.5; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; vertical-align: top; padding: 0.5em 0.8em; border-bottom: 1px solid var(--line); }
+  th { background: var(--soft); color: var(--ink-2); font-size: 0.9em; white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: 0; }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+  td:nth-child(2) { white-space: nowrap; color: var(--ink-2); }
+  td:nth-child(4) { color: var(--ink-3); }
+
+  .callout { border-left: 3px solid var(--warn); background: var(--warn-soft); padding: 0.6rem 0.9rem; border-radius: 0 6px 6px 0; margin: 0.8rem 0; font-size: 0.92rem; }
+  .callout.risk { border-color: var(--risk); background: var(--risk-soft); }
+  .callout b.t { display: block; margin-bottom: 0.2em; color: var(--warn); }
+  .callout.risk b.t { color: var(--risk); }
+  .callout ul { margin: 0; padding-left: 1.2em; }
+
+  /* 우선순위: 제목 / 할 일 / 왜 */
+  ol.prio { margin: 0.4rem 0 0.8rem; padding: 0; list-style: none; counter-reset: p; display: grid; gap: 0.55rem; }
+  ol.prio li { counter-increment: p; display: grid; grid-template-columns: 1.6em 1fr; gap: 0 0.6em; align-items: baseline; }
+  ol.prio li::before { content: counter(p); width: 1.25em; height: 1.25em; border-radius: 50%; background: var(--accent); color: var(--sheet); font-size: 0.8em; font-weight: 700; display: grid; place-items: center; transform: translateY(-0.05em); }
+  ol.prio .t { font-weight: 700; }
+  ol.prio .d { grid-column: 2; font-size: 0.93rem; color: var(--ink-2); }
+  ol.prio .w { grid-column: 2; font-size: 0.84rem; color: var(--ink-3); }
+
+  .decide { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; margin: 0.4rem 0 0.8rem; }
+  .decide > div { border: 1px solid var(--accent); background: var(--accent-soft); border-radius: 8px; padding: 0.6rem 0.9rem; font-size: 0.92rem; }
+  .decide b { color: var(--accent); }
+  @media (max-width: 700px) { .decide { grid-template-columns: 1fr; } }
+
+  .gloss { margin-top: 1.6rem; padding: 0.7rem 0.9rem; background: var(--soft); border-radius: 8px; font-size: 0.86rem; color: var(--ink-2); line-height: 1.8; }
+  .gloss b { color: var(--ink); }
+  .sources { margin-top: 1.6rem; padding-top: 0.8rem; border-top: 1px solid var(--line); font-size: 0.78rem; color: var(--ink-3); }
+  .sources ol { margin: 0.3rem 0 0; padding-left: 1.6em; columns: 2; column-gap: 2em; }
+  .sources li { break-inside: avoid; margin: 0.15em 0; }
+  .sources a { color: var(--ink-2); text-decoration: none; }
+  .sources a:hover { color: var(--accent); text-decoration: underline; }
+  @media (max-width: 700px) { .sources ol { columns: 1; } }
+  @media print {
+    html { font-size: 10pt; } body { background: #fff; padding: 0; }
+    .sheet { border: 0; padding: 0; max-width: none; } h2 { break-after: avoid; } .table-wrap { overflow: visible; } .trap, .fact { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<article class="sheet">
+  <header>
+    <p class="eyebrow">HMG GEO 인수 · 보고서 ① / ③</p>
+    <h1>GEO 개념 요약 — 무엇을 재는 일이고, S2W는 무엇을 맡나</h1>
+    <div class="meta">
+      <span><b>작성</b>2026-10-06 · 초안 v0.2</span>
+      <span><b>독자</b>S2W 내부 팀·경영진 (GEO를 처음 접하는 기준)</span>
+      <span><b>코드 기준</b>hmg-geo-hub-share 스냅샷 (2026-10-02, 앤서 제공)</span>
+      <span><b>다음</b>② 현황 분석 · ③ 수행 계획</span>
+    </div>
+  </header>
+
+  <div class="summary">
+    <p class="label">한눈에 보기</p>
+    <ol>
+      <li><b>GEO</b>는 ChatGPT·Gemini 같은 AI 검색의 답 안에 우리 브랜드와 자사 출처가 나오게 하는 일이다. HMG에게는 "차를 알아보는 질문에 AI가 답할 때 현대·기아·제네시스가 나오는지, 어떻게 평가되는지"를 재는 일이다.</li>
+      <li><b>역할:</b> AI에 질문을 보내 답을 모으는 <b>측정</b>은 앤서(Scope)가 계속 맡는다. 그 답을 읽어 언급·감성·추천을 가려내는 <b>분석</b>과 지표·화면·운영은 S2W가 맡는다. 콘텐츠를 만들거나 SEO를 하는 일은 S2W 몫이 아니다.</li>
+      <li><b>가장 중요한 사실:</b> S2W의 분석 엔진은 아직 없다. 지금 화면의 분석값은 앤서가 계산해 주는 것이고, 앤서는 앞으로 원문만 주겠다고 제안했다. 새로 만들 엔진의 품질이 HMG가 보는 숫자를 그대로 결정한다.</li>
+      <li><b>어려운 점:</b> 같은 질문에도 AI 답은 매번 다르다. 그래서 순위가 아니라 반복해서 잰 비율과 오차 범위로 봐야 하는데, 현 대시보드는 조합마다 답변 1건으로 숫자를 낸다.</li>
+      <li><b>결정이 필요한 것:</b> 과거 분석값을 새 엔진으로 다시 계산할지(C1), 전환 일정을 언제로 할지(C5). 비용·인력·일정은 보고서 ③에서 다룬다.</li>
+    </ol>
+  </div>
+
+  <section>
+    <h2><span class="no">A</span>GEO란 무엇이고, S2W는 어디를 맡나</h2>
+    <p class="key">GEO는 "AI 답에 우리가 나오게 하는 일"이고, S2W는 그중 "얼마나 나오는지 재고 분석하는 일"을 맡는다.</p>
+
+    <h3>어디서 나온 말인가</h3>
+    <p>2023년 11월 프린스턴·IIT 델리 연구진의 논문에서 처음 쓴 말이다<a class="ref" href="#s1">1</a>. AI 검색은 여러 웹 문서를 찾아 요약하고 출처를 붙여 답한다. 그 답 안에 특정 출처가 더 많이 나오게 하는 것을 GEO라고 정의했다.</p>
+    <p>효과가 과장되기 쉬운 분야다. 자주 인용되는 "최대 40% 향상"은 모의 엔진 실험에서 답변 속 단어 수와 위치를 잰 값이다. 2025년 재검증에서는 같은 기법이 54개 조건 중 3개에서만 의미 있는 개선을 냈다<a class="ref" href="#s2">2</a>. Google도 "AI 답변에 나오기 위한 추가 요건이나 특별한 최적화는 없다"고 밝힌다<a class="ref" href="#s3">3</a>.</p>
+
+    <h3>무엇이 새로운가</h3>
+    <p>노출을 높이는 도구는 기존 SEO·PR과 같다. 다만 AI는 자사 사이트보다 리뷰·언론·커뮤니티 같은 외부 매체를 훨씬 많이 인용한다. 그리고 결과는 '몇 위'가 아니라 '몇 %의 답에 나오는가'로 재야 한다. 이 두 가지가 새롭다.</p>
+    <div class="facts">
+      <div class="fact"><div class="v">82%</div><div class="l">미국 자동차 질문에서 AI 검색이 인용한 출처 중 외부 매체 비중. 자사 사이트는 18%였다(Google 검색은 45% 대 40%)<a class="ref" href="#s4">4</a>.</div></div>
+      <div class="fact"><div class="v">15% → 8%</div><div class="l">검색 결과에 AI 요약이 뜨면 일반 링크를 누르는 비율이 이렇게 줄었다(미국, 2025년 3월 자료)<a class="ref" href="#s6">6</a>.</div></div>
+      <div class="fact"><div class="v">25억 명</div><div class="l">Google AI 답변(AI Overviews)의 월 이용자. ChatGPT 주간 이용자는 9억 명 이상(2026년 2월)<a class="ref" href="#s5">5</a>.</div></div>
+    </div>
+    <p>사용자는 사이트에 오기 전에 AI 답에서 브랜드 인상을 굳힌다. HMG가 그 답에 어떻게 나오는지를 재는 이유다.</p>
+
+    <h3>누가 무엇을 맡나</h3>
+    <div class="roles">
+      <div>
+        <h4>앤서 Scope — 측정(수집)</h4>
+        <ul>
+          <li>질문·측정 주기 저장, 정기·수동 측정 실행, 회차 관리</li>
+          <li>측정 원문 제공: 질문, 답변, 인용, 응답 원본</li>
+          <li>API 키 발급·교체, 호출 한도 관리</li>
+        </ul>
+      </div>
+      <div class="s2w">
+        <h4>S2W — 분석·지표·화면·운영</h4>
+        <ul>
+          <li>무엇을 측정할지 정해 등록하고, 필요하면 수동 측정 요청</li>
+          <li><strong>분석:</strong> 브랜드 언급, 감성, 최종 선택(ACR), 인용 출처 분류</li>
+          <li>회차 결과를 화면에 언제 공개할지 결정</li>
+          <li>키 보관, 동기화 배치, 자체 DB·화면 운영</li>
+        </ul>
+      </div>
+    </div>
+    <p class="note">출처: 앤서 협의안 v0.1 §1(2026-10-02)<a class="ref" href="#s7">7</a>.</p>
+    <div class="callout">
+      <b class="t">두 가지 주의</b>
+      <ul>
+        <li><strong>분석 엔진은 설계 초안만 있다.</strong> 앤서의 분석 과정을 새 백엔드에 다시 만드는 설계가 '검토중' 상태이고, 약 44.5인일이 들 것으로 추정돼 있다<a class="ref" href="#s8">8</a>.</li>
+        <li><strong>9월 22일 인계 패키지의 분석 서비스는 쓰지 않는다.</strong> 그 TypeScript 서비스는 설계상 이식 대상이 아니다. 그대로 배포하는 방향은 맞지 않는다.</li>
+        <li><strong>AI를 속이는 조작은 하지 않는다.</strong> 페이지에 숨긴 지시문은 모델마다 결과가 반대로 튀고<a class="ref" href="#s9">9</a>, Bing은 2026년 2월부터 강등·색인 삭제 대상으로 명시했다<a class="ref" href="#s10">10</a>.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="no">B</span>왜 재기 어려운가 — 함정 4가지</h2>
+    <p class="key">AI 답은 같은 질문에도 매번 다르다. 한 번 잰 숫자는 측정이 아니다.</p>
+    <p class="small">AI는 질문을 받으면 검색할지 정하고, 질문을 여러 검색어로 쪼개 자기 검색 데이터베이스에서 문단을 고른 뒤 답을 쓰고 출처를 붙인다. ChatGPT는 Bing 계열, Gemini는 Google 데이터베이스를 써서 같은 질문에도 출처가 다르다. 그 위에 네 가지 함정이 겹친다.</p>
+
+    <div class="traps">
+      <div class="trap">
+        <div class="h"><span class="n">1</span>답이 매번 다르다</div>
+        <span class="lb">생기는 일</span><span class="tx">같은 질문을 2,961번 물었더니 같은 브랜드 목록이 다시 나온 경우는 1% 미만이었다. 다만 자주 나오는 브랜드의 집합은 비교적 유지됐다<a class="ref" href="#s11">11</a>. 하루 7번씩 재도 등장 비율의 오차 범위는 ±16%포인트다<a class="ref" href="#s12">12</a>.</span>
+        <span class="lb">그래서</span><span class="tx so">순위 대신, 반복해서 잰 등장 비율을 오차 범위와 함께 본다.</span>
+      </div>
+      <div class="trap">
+        <div class="h"><span class="n">2</span>어떻게 모으느냐에 따라 답이 다르다</div>
+        <span class="lb">생기는 일</span><span class="tx">같은 AI라도 개발자용 API로 받은 답과 일반 사용자 화면의 답은 언급된 브랜드가 15~24%만 겹쳤다(측정 도구 업체의 자체 조사)<a class="ref" href="#s13">13</a>. 접속 국가, 언어, 로그인 상태도 답을 바꾼다.</span>
+        <span class="lb">그래서</span><span class="tx so">수집 경로가 다른 결과는 같은 차트에 놓지 않고, 수집 조건을 답마다 기록한다.</span>
+      </div>
+      <div class="trap">
+        <div class="h"><span class="n">3</span>지표 이름이 같아도 계산이 다르다</div>
+        <span class="lb">생기는 일</span><span class="tx">'언급 수'를 답변 수로 세는 도구도, 질문 수로 세는 도구도 있다. 업계 단체 IAB가 2026년 8월 낸 측정 가이드라인(공식 표준은 아님)은 지표마다 무엇으로 나눴는지 밝히고, 값은 "약 22%, ±4포인트"처럼 범위로 쓰고, 모델이나 화면이 바뀌면 비교 기준을 새로 잡으라고 한다. "단일 응답 측정은 측정이 아니다"라고 못 박는다<a class="ref" href="#s14">14</a>.</span>
+        <span class="lb">그래서</span><span class="tx so">우리 지표마다 분모(나누는 기준)를 문서에 명시한다.</span>
+      </div>
+      <div class="trap">
+        <div class="h"><span class="n">4</span>AI 채점기도 틀린다</div>
+        <span class="lb">생기는 일</span><span class="tx">답에서 언급·감성을 가려내는 데 쓰는 AI 채점기는 비슷한 과제에서 사람 판단과 절반 남짓만 일치했다(일치도 0.43)<a class="ref" href="#s15">15</a>. 같은 판정을 다시 돌리면 7건 중 1건꼴로 뒤집혔다<a class="ref" href="#s16">16</a>. 브랜드 이름 표기(아이오닉5와 IONIQ 5, 제네시스와 현대)를 통일하는 일도 오차의 첫 원인이다.</span>
+        <span class="lb">그래서</span><span class="tx so">채점 모델 버전을 고정하고, 사람이 만든 정답 세트로 검증하고, 이름 사전을 둔다.</span>
+      </div>
+    </div>
+    <div class="callout">
+      <b class="t">출처는 하루아침에 바뀐다</b>
+      2026년 8월 ChatGPT의 Reddit 인용이 한 주 만에 73% 줄었다(16개 브랜드 추적, 미국)<a class="ref" href="#s17">17</a>. 지표가 움직여도 우리 탓이 아닐 수 있다. 모델·화면·출처 구성이 바뀐 시점을 시계열에 '단절'로 남겨 두어야 설명할 수 있다.
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="no">C</span>우리 대시보드 지표와 현재 한계</h2>
+    <p class="key">지표 정의는 업계 기준과 잘 맞는다. 다만 조합마다 답변 1건으로 계산해 오차 범위가 없다.</p>
+    <p class="small">현 대시보드(hub-share front)의 핵심 지표를 업계 용어와 대응시켰다. 계산은 코드의 산식 기준이다<a class="ref" href="#s18">18</a>.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>대시보드 이름</th><th>업계 이름</th><th>계산</th><th>주의</th></tr></thead>
+        <tbody>
+          <tr><td>① AI 노출률</td><td>Mention Rate</td><td>우리가 1번 이상 나온 답변 수 ÷ 전체 답변 수</td><td>—</td></tr>
+          <tr><td>② AI 점유율</td><td>Share of Voice</td><td>우리 언급 횟수 ÷ 전체 브랜드 언급 횟수</td><td>한 답변에 여러 번 나오면 모두 셈. 애플 등 비경쟁 브랜드 제외</td></tr>
+          <tr><td>③ AI 우호도</td><td>Sentiment</td><td>우리 언급 중 긍정 신호 수 ÷ 전체 신호 수</td><td>중립·혼합도 분모에 포함. 언급 단위</td></tr>
+          <tr><td>④ AI 우선 노출도</td><td>Position</td><td>우리가 나온 답변에서 우리가 몇 번째로 언급됐는지의 평균</td><td>낮을수록 좋음. 우리가 없는 답변은 제외</td></tr>
+          <tr><td>⑤ AI 인용 점유율</td><td>Citation Share</td><td>HMG 공식 사이트·소셜 인용 횟수 ÷ 전체 인용 횟수</td><td>글로벌 화면은 3사 전체 기준, 웹사이트·프로젝트 화면은 등록한 자사 주소 기준</td></tr>
+          <tr><td>⑥ 자사·타겟 URL 인용률</td><td>—</td><td>자사(또는 지정 페이지) 주소가 인용된 질문 수 ÷ 측정한 질문 수</td><td>질문 단위. 웹사이트·프로젝트 전용</td></tr>
+          <tr><td>AI 타겟 출처 인용률</td><td>—</td><td>타겟 도메인이 인용된 답변 수 ÷ 자사 도메인이 인용된 답변 수</td><td>답변 단위라 ⑥과 분모가 다름(보조 지표, 인용 정확도)</td></tr>
+          <tr><td>ACR (Top1 선택률)</td><td>Recommendation</td><td>우리를 최종 1순위로 고른 횟수 ÷ 유효 반복 횟수</td><td>같은 질문을 2턴 대화로 10번 반복</td></tr>
+          <tr><td>⑦ AI 유입 전환율</td><td>Post-citation outcome</td><td>GA4 'AI Assistant' 채널의 주요 이벤트 수 ÷ 그 채널 활성 사용자 수</td><td>최근 28일. 100%를 넘을 수 있음</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>강점</h3>
+    <ul>
+      <li><strong>ACR</strong>은 질문마다 10번 반복해 비율을 내는 유일한 지표다. 함정 1의 반복 측정 요건을 이미 충족한다.</li>
+      <li><strong>인용 출처 분류</strong>는 규칙 기반이라 같은 입력에 늘 같은 결과가 나온다.</li>
+    </ul>
+    <h3>한계 — 업계 가이드라인과 다른 다섯 가지</h3>
+    <ul>
+      <li><strong>답변 1건.</strong> ACR을 뺀 일반 지표는 질문×AI×국가 조합마다 대표 답변 1건으로 계산한다. Scope도 주기마다 조합당 1번만 측정한다.</li>
+      <li><strong>오차 범위 없음.</strong> 모든 값이 숫자 하나로 나온다. 오차 범위를 계산하는 코드가 없다.</li>
+      <li><strong>검색 여부 미기록.</strong> AI가 그 답에서 웹 검색을 했는지 기록하는 항목이 없다. 검색을 건너뛴 답은 인용이 0건이라 인용 지표가 AI의 습관에 따라 출렁인다.</li>
+      <li><strong>모델 버전 미고정.</strong> ChatGPT·Gemini는 사용자 화면에서 모으고, 그 시점에 서비스되는 모델을 그대로 잰다(어떤 모델이었는지는 기록됨). DeepSeek은 API로 모으며 국가 구분 없이 미국으로 기록된다.</li>
+      <li><strong>측정 대상 3종.</strong> ChatGPT·Gemini·DeepSeek만 잰다. Google 검색 안의 AI 답변(AI Overviews·AI Mode)과 네이버 AI 브리핑(인용의 70%가 네이버 안 이용자 글)<a class="ref" href="#s19">19</a>은 밖에 있다. 엔진 추가는 앤서 쪽 변경 사항이다.</li>
+    </ul>
+    <div class="callout">
+      <b class="t">⑦ AI 유입 전환율은 조심해서 읽는다</b>
+      Kia 이탈리아의 주요 이벤트는 87%가 차량 구성기 사용이고 구매는 0%다. '전환'보다 '관여'에 가깝다. AI를 거친 유입은 전체 방문의 1% 남짓이고<a class="ref" href="#s20">20</a>, AI 유입이 더 잘 전환되는지는 조사마다 다르다(소매 +60% 등 벤더 자료<a class="ref" href="#s21">21</a>). HMG 자체 GA4로 확인해야 한다.
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="no">D</span>S2W 우선순위와 결정 요청</h2>
+    <p class="key">첫 일은 분석 엔진을 만드는 것이다. 그다음은 숫자가 바뀌어도 왜 바뀌었는지 설명할 수 있게 만드는 일이다.</p>
+    <p class="small">순서는 위 함정과 협의 사항에서 나온다. 범위·일정·인력은 보고서 ③에서 정한다.</p>
+    <ol class="prio">
+      <li><span class="t">분석 엔진 구현과 동치 검증</span><span class="d">앤서의 15단계 분석을 새 백엔드에 다시 만든다. 같은 답변에서 앤서 결과와 같은 값이 나오는지 확인한다.</span><span class="w">왜: 분석값은 지금 전부 앤서가 계산한 것이다. 설계 초안 기준 약 44.5인일.</span></li>
+      <li><span class="t">분석 결과 버전 관리</span><span class="d">답변마다 어느 엔진 버전으로 분석했는지 저장한다. 발행한 회차는 그 버전으로 고정하고, 버전이 바뀐 시점을 화면에 표시한다.</span><span class="w">왜: 채점기가 바뀌면 모든 지표가 함께 움직인다(함정 4). 협의 C1과 직결.</span></li>
+      <li><span class="t">분모·집계 규칙 문서화와 회귀 테스트</span><span class="d">지표마다 무엇을 세고 무엇으로 나누는지를 버전 있는 문서로 고정한다. 숫자가 바뀌면 테스트가 잡게 한다.</span><span class="w">왜: 함정 3. 같은 이름의 지표도 화면마다 분모가 다르다(⑤·⑥·인용 정확도).</span></li>
+      <li><span class="t">채점기 품질</span><span class="d">채점 모델을 날짜 있는 버전으로 고정한다. 언어·시장별로 사람이 만든 정답 세트로 정확도를 재고, 브랜드 이름 사전을 관리한다.</span><span class="w">왜: 함정 4. 설계 초안은 앤서 결과와 같은지만 보므로, 정답 세트는 새 제안이다.</span></li>
+      <li><span class="t">원문 API로 동기화 전환</span><span class="d">앤서가 새로 여는 원문 API에 맞춰 수집 배치를 다시 쓴다. 전환 일정(C5)과 과거값 처리(C1)를 정한다.</span><span class="w">왜: 협의안 §6·§9.</span></li>
+      <li><span class="t">오차 범위 표기와 반복 측정 확대</span><span class="d">집계 수준에서 오차 범위를 함께 보여 준다. 질문당 반복 횟수를 늘리는 일은 수동 측정 한도·비용(C2)과 함께 협의한다.</span><span class="w">왜: 함정 1. 조합당 1건으로는 오차 범위를 낼 수 없다.</span></li>
+      <li><span class="t">사실 오류율</span><span class="d">사양·가격·안전 등급처럼 틀리면 손해가 큰 항목을 HMG가 준 정답과 대조하는 지표.</span><span class="w">왜: IAB 가이드라인의 Portrayal 축. 코드·협의안에 없는 새 제안이라 HMG·앤서 협의가 필요하다.</span></li>
+    </ol>
+    <div class="callout risk">
+      <b class="t">리스크</b>
+      <ul>
+        <li>엔진을 바꾸면 숫자가 달라진다. HMG는 "왜 바뀌었나"를 묻는다. 전환 전후를 한동안 병행 산출해 차이를 설명할 수 있어야 한다.</li>
+        <li>측정 자체가 앤서 손에 있다. 측정 지연과 엔진 변경을 통보받는 규칙이 필요하다.</li>
+        <li>답변 원문을 LLM 공급자로 보내는 경로는 보안 심사 항목이다.</li>
+      </ul>
+    </div>
+    <h3>결정 요청</h3>
+    <div class="decide">
+      <div><b>C1 · 과거 분석값</b><br>과거 회차의 분석값을 그대로 쓸지, 원문을 받아 새 엔진으로 다시 계산할지. 다시 계산하면 추이가 한 번 끊긴다.</div>
+      <div><b>C5 · 전환 일정</b><br>원문 API 개시일과 현재 연동 종료일. C2(수동 측정 한도·비용)·C3(호출 한도)·C4(키 교체)는 협의 중이며 ③에서 다룬다.</div>
+    </div>
+  </section>
+
+  <div class="gloss">
+    <b>용어</b> · <b>노출률</b> 브랜드가 나온 답변의 비율 · <b>인용</b> AI 답에 출처로 붙은 링크나 매체명 · <b>점유율</b> 전체 브랜드 언급 중 우리 몫 · <b>회차</b> 전체 질문을 한 바퀴 측정한 단위(주 1회) · <b>조합</b> 질문×AI 서비스×국가 하나 · <b>분모</b> 비율을 낼 때 나누는 기준 수 · <b>ACR</b> 대화 끝에 AI가 최종 추천한 브랜드의 비율
+  </div>
+
+  <footer class="sources">
+    <b>출처</b> (2026-10-06 확인)
+    <ol>
+      <li id="s1"><a href="https://arxiv.org/abs/2311.09735">Aggarwal et al., "GEO: Generative Engine Optimization", arXiv 2311.09735 (KDD 2024)</a></li>
+      <li id="s2"><a href="https://arxiv.org/abs/2506.11097">C-SEO Bench, arXiv 2506.11097 (NeurIPS 2025) — 54개 조건 중 3개 유의</a></li>
+      <li id="s3"><a href="https://developers.google.com/search/docs/appearance/ai-features">Google Search Central, AI features and your website</a></li>
+      <li id="s4"><a href="https://arxiv.org/abs/2509.08919">Chen et al., arXiv 2509.08919 — 미국 자동차 질의 출처 구성</a></li>
+      <li id="s5"><a href="https://blog.google/products-and-platforms/products/search/search-io-2026/">Google I/O 2026 — AI Overviews 월 25억, AI Mode 월 10억</a>; OpenAI 2026-02-27 발표(주간 9억)</li>
+      <li id="s6"><a href="https://www.pewresearch.org/short-reads/2025/07/22/google-users-are-less-likely-to-click-on-links-when-an-ai-summary-appears-in-the-results/">Pew Research Center, 2025-07-22</a></li>
+      <li id="s7">앤서, HMG-GEO 측정 연동 인터페이스 v0.1 협의안 — <code>hmg-geo-hub-share/docs/interfaces/scope-measurement-interface-v0.1.md</code></li>
+      <li id="s8">hub-share <code>ANALYSIS-ENGINE-DESIGN.md</code> (2026-10-02, 검토중)</li>
+      <li id="s9"><a href="https://arxiv.org/abs/2606.09204">"The Injection Paradox", arXiv 2606.09204 — Claude에서는 억제, GPT에서는 반대</a></li>
+      <li id="s10"><a href="https://searchengineland.com/prompt-injection-added-to-bing-webmaster-guidelines-443788">Bing Webmaster Guidelines 개정, 2026-02</a></li>
+      <li id="s11"><a href="https://www.searchenginejournal.com/ai-recommendations-change-with-nearly-every-query-sparktoro/566242/">SparkToro·Gumshoe, 2026-01 — 2,961회 실행</a></li>
+      <li id="s12"><a href="https://arxiv.org/abs/2604.07585">Schulte et al., "Don't Measure Once", arXiv 2604.07585 (St. Gallen) — 7회 시 95% 구간 ±0.158</a></li>
+      <li id="s13"><a href="https://surferseo.com/blog/llm-scraped-ai-answers-vs-api-results/">Surfer, 2026-09 — API 대 화면 브랜드 겹침 15.5~23.8% (벤더 조사)</a></li>
+      <li id="s14"><a href="https://www.iab.com/wp-content/uploads/2026/07/IAB_Measuring_Visibility_in_the_AI_Era_August_2026-1.pdf">IAB, "Measuring Visibility in the AI Era", 2026-08-03</a></li>
+      <li id="s15"><a href="https://aclanthology.org/2024.law-1.13/">Rønningstad et al., LAW-XVIII 2024 — 개체 단위 감성, κ=0.425 (노르웨이어)</a></li>
+      <li id="s16"><a href="https://arxiv.org/abs/2606.13685">"The Coin Flip Judge?", arXiv 2606.13685 — 쌍대 판정 13.6% 뒤집힘</a></li>
+      <li id="s17"><a href="https://otterly.ai/blog/chatgpt-reddit-citations/">Otterly.AI, 2026-08 — ChatGPT Reddit 인용 −73.4% (벤더 추적)</a></li>
+      <li id="s18">hub-share <code>front/messages/ko.json</code> 270~302·1040~1049·1294~1305행, <code>back/app/core/measure.py</code> 머리 주석, <code>front/lib/scope/engines.ts</code></li>
+      <li id="s19"><a href="https://news.bizwatch.co.kr/article/mobile/2026/06/01/0021">네이버 AI 브리핑 인용 구성 (비즈워치 2026-06-01)</a></li>
+      <li id="s20"><a href="https://www.conductor.com/academy/aeo-geo-benchmarks-report/">Conductor AEO/GEO Benchmarks — AI 유입 1.08% (벤더)</a></li>
+      <li id="s21"><a href="https://www.digitalcommerce360.com/2026/08/19/adobe-ai-referral-traffic-data-july-2026/">Adobe 2026-07 소매 데이터 (Digital Commerce 360)</a></li>
+    </ol>
+  </footer>
+</article>
+</body>
+</html>

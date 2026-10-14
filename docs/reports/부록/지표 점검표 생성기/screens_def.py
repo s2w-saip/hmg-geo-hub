@@ -1,0 +1,52 @@
+# (loc, area label, note, legacy call, API call, API data keys, legacy function ids, data label)
+SCREENS = [
+    {
+        "name": "대시보드", "menu": "Global › Overview", "title": "AI 답변 성과 요약", "route": "/ko/dashboard", "flag": "HGH_SOURCE_G1", "p": "P1",
+        "f1b": ("n", "3,310 / 7,746"),
+        "areas": [
+            ("헤더 우측 기준일 pill · 상단 필터", "기준일 표시 · 필터 바", "", "fetchStandardAggregates().asOf, listCatalogTaxonomy 외 필터 리더 6개", "/v1/kpi/summary(card) meta, /v1/filters/options, /v1/filters/dates", ["S01", "S17"], ["DAGGa", "DFLT"], "공통 · S17"),
+            ("본문 KPI 카드 그리드", "KPI 카드 5개", "노출률·점유율·우호도·우선 노출도·인용 점유율", "getLiveDashboard → fetchStandardAggregates", "/v1/kpi/summary card=true", ["S01"], ["DAGG"], "S01"),
+            ("각 KPI 카드 안", "카드 증감 · 스파크라인", "", "getLiveTrend → fetchStandardTrend", "/v1/trend bucket=cycle card=true", ["S10"], ["DTRD"], "S10"),
+            ("KPI 카드 ①~④ 안", "카드 기간 비교 칩", "조건부: 기간 지정 + 스위치", "fetchPeriodCompare", "/v1/kpi/compare", ["S10c"], ["DPCM"], "S10"),
+            ("KPI 카드 ①~④ 하단", "경쟁사 미니 행 (카드 ①~④)", "", "fetchStandardCompetitorSources (→ CompetitorBrands · KpiBrandTrend · KpiFirstPosition)", "/v1/mentions/brands top_n=20, /v1/trend dimension=brand", ["S02", "S10"], ["DCSR", "DCBR", "DBTR", "DFPO"], "S02 · S10"),
+            ("KPI 카드 ⑤(AI 인용 점유율) 하단", "카드 ⑤ 경쟁사 행", "공식 경쟁사 도메인 → 브랜드 상위 4", "fetchStandardCitationDomains", "/v1/citations/domains limit=0 competitor_sources=true", ["S03"], ["DCDM"], "S03"),
+            ("카드 그리드 아래 섹션", "국가별 GEO 현황", "조건부: 전체·본사·권역 계정", "getLiveGeo → fetchStandardGeoKpi", "/v1/kpi/summary, /v1/geo card=true", ["S01", "S09"], ["DGEO"], "S09"),
+        ],
+    },
+    {
+        "name": "언급", "menu": "Global › Answer analysis › Mention", "title": "답변 분석 · 언급 분석", "route": "/ko/standard/answer-analysis/mention", "flag": "HGH_SOURCE_G2", "p": "P2",
+        "f1b": ("n", "3,360 / <span class='strong'>38,536</span>"),
+        "areas": [
+            ("헤더 우측 pill · 상단 필터 · 히어로 칩", "기준일 · 필터 바 · 기간 비교", "전월 대비 줄은 월 선택 시", "fetchStandardMentions().asOf, 필터 리더, fetchPeriodCompare", "/v1/mentions/brands meta, /v1/filters/options·dates, /v1/kpi/compare", ["S02", "S17", "S10c"], ["M1a", "DFLT", "DPCM"], "공통 · S17 · S10"),
+            ("KPI 탭: 노출률·점유율", "히어로 · 추이", "", "fetchStandardKpiHeroSubKpis(+Prev), fetchStandardKpiEngineTrend, fetchStandardKpiBrandTrend", "/v1/kpi/summary(+cycle_offset=1), /v1/kpi/engines, /v1/trend", ["S01", "S01e", "S10"], ["M2", "M3", "M4", "DBTR"], "S01 · S10"),
+            ("KPI 탭: 노출률·점유율", "경쟁사 분석 표", "", "brands + fetchStandardKpiBrandTrend", "/v1/mentions/brands, /v1/trend dimension=brand", ["S02", "S10"], ["M1c", "DBTR"], "S02 · S10"),
+            ("KPI 탭: 노출률·점유율", "AI 엔진별", "", "fetchStandardKpiEngineTrend", "/v1/kpi/engines, /v1/trend dimension=engine", ["S01e", "S10"], ["M4"], "S01 · S10"),
+            ("KPI 탭: 노출률·점유율", "멘션 유형별", "", "fetchStandardKpiTypes, typesByBrand", "/v1/mentions/types, /v1/mentions/brands include=types, /v1/trend dimension=type", ["S02t", "S02", "S10"], ["M5", "M1c"], "S02 · S10"),
+            ("KPI 탭: 우호도", "긍정·부정 신호 비율", "", "fetchStandardKpiHeroSubKpis(favorability)", "/v1/kpi/engines", ["S01e"], ["M2"], "S01"),
+            ("KPI 탭: 우호도", "감정 분포 · 신호 프롬프트", "클릭 시 다이얼로그", "sentimentTotals, fetchStandardSignalPrompts", "/v1/mentions/brands, /v1/mentions/prompts mode=signal", ["S02", "S16m"], ["M1d", "M6"], "S02 · S16"),
+            ("KPI 탭: 우호도", "멘션 유형별 감정 분포", "", "fetchStandardKpiTypes", "/v1/mentions/types", ["S02t"], ["M5"], "S02"),
+            ("KPI 탭: 우선 노출도", "히어로 · 순위", "", "fetchStandardKpiFirstPosition, fetchStandardMentionCompetitorBrands", "/v1/mentions/brands, /v1/trend, /v1/kpi/summary", ["S02", "S10", "S01"], ["DFPO", "M7"], "S02 · S10 · S01"),
+            ("하단 '프롬프트 및 답변' (모든 탭 공통)", "주별 브랜드 언급 수", "당사 + 상위 10", "fetchStandardMentions().trend", "/v1/trend dimension=brand top=10", ["S10"], ["M1b"], "S10"),
+            ("하단 '프롬프트 및 답변' (모든 탭 공통)", "브랜드 언급 순위", "상위 100, 엑셀", "fetchStandardMentions().brands", "/v1/mentions/brands top_n=100 (+ /v1/mentions/types, /v1/kpi/summary)", ["S02", "S02t", "S01"], ["M1c"], "S02 · S01"),
+            ("브랜드 언급 순위 행 클릭 → 드릴다운", "행 드릴다운 · 프롬프트", "", "fetchStandardBrandMentionPrompts", "/v1/mentions/prompts mode=brand", ["S16m"], ["M8"], "S16"),
+            ("브랜드 언급 순위 행 클릭 → 드릴다운", "행 드릴다운 · 인용 출처", "", "fetchBrandCitations", "/v1/citations/domains mention_brand=, /v1/citations/domains/{skey}", ["S03", "S16d"], ["M9"], "S03 · S16"),
+            ("드릴다운 프롬프트 클릭 → 모달", "답변 모달", "원문 접근", "fetchStandardAnswerBody", "/v1/answers/{job_id}", ["ANS"], ["M10"], "답변 상세"),
+        ],
+    },
+    {
+        "name": "인용", "menu": "Global › Answer analysis › Citation", "title": "답변 분석 · 인용 분석", "route": "/ko/standard/answer-analysis/citation", "flag": "HGH_SOURCE_G2", "p": "P3",
+        "f1b": ("n", "<span class='strong'>15,538</span> / 17,682"),
+        "areas": [
+            ("헤더 우측 pill · 상단 필터", "기준일 · 필터 바 · 전월 대비", "출처 카테고리·경쟁사 축 포함", "fetchStandardCitations().asOf, competitorDomainOptions, 필터 리더, fetchPeriodCompare", "/v1/citations/domains(competitor_sources), /v1/filters/options·dates, /v1/kpi/compare", ["S03", "S17", "S10c"], ["C1a", "CCO", "DFLT", "DPCM"], "공통 · S17 · S03"),
+            ("'인용 현황' 블록", "인용 현황 · 공식(HMG)/딜러·마켓 인용 비중", "증감 포함", "categories, fetchStandardOverviewCardDelta, fetchStandardCitationCategoriesPrev", "/v1/citations/sources, /v1/trend (none·category)", ["S05", "S10"], ["C1cat", "CDL", "CPV"], "S05 · S10"),
+            ("'인용 현황' 블록", "인용 현황 · 공식 URL 인용/미인용 프롬프트", "건수 타일", "promptSplit", "/v1/citations/prompts owned=true limit=1", ["S06"], ["C1ps"], "S06"),
+            ("'출처 카테고리별 현황' 블록", "출처 카테고리별 현황", "인용 수·비중·구성 추이", "categories, categoryTrend", "/v1/citations/sources, /v1/trend dimension=category", ["S05", "S10"], ["C1cat", "C1ct"], "S05 · S10"),
+            ("'출처 카테고리별 현황' 블록", "엔진별 출처 카테고리 구성", "", "engineCategories", "/v1/citations/sources (by_engine)", ["S05"], ["C1cat"], "S05"),
+            ("'출처 카테고리별 현황' 블록", "멘션 유형별 출처 카테고리 구성", "", "fetchStandardCitationTypeCategories", "/v1/citations/sources", ["S05"], ["CTC"], "S05"),
+            ("'답변 우호도별 인용 도메인' 블록", "답변 우호도별 인용 도메인", "건수 타일", "fetchStandardCitationToneSummary", "/v1/citations/sources (tone)", ["S04"], ["CTN"], "S04"),
+            ("'인용 도메인' 블록", "주별 상위 10개 도메인 인용 수", "", "fetchStandardCitations().trend", "/v1/trend dimension=source top=15", ["S10s"], ["C1tr"], "S10"),
+            ("'인용 도메인' 블록", "도메인 인용 순위", "상위 100, 검색·정렬·엑셀", "fetchStandardCitations().domains (검색·정렬은 브라우저)", "/v1/citations/domains limit=200, /api/citations/domains", ["S03"], ["C1dom"], "S03"),
+            ("도메인 순위 행 클릭 → 드릴다운", "행 드릴다운 · 인용 URL·프롬프트 · 답변 모달", "legacy는 상위 80 도메인 목록을 첫 응답에 포함", "row.urls / promptList, fetchStandardAnswerBody", "/v1/citations/domains/{skey}, /v1/answers/{job_id}", ["S16d", "ANS"], ["C1dom", "M10"], "S16"),
+        ],
+    },
+]
