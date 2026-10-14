@@ -323,3 +323,38 @@ async def test_website_admin_brand_narrows_sites(client_as, legacy):
     assert _all_brands(kia) <= {"Kia"} and {"DE", "FR"} <= set(_codes(kia["data"]["regions"]))
     assert "HYUNDAI-N" not in _all_regions(hy) and "US" in _codes(hy["data"]["regions"]) and _all_brands(hy) <= {"Hyundai"}
     assert wk_asked["data"] == wk["data"] and "brand" in wk_asked["meta"]["ignored_filters"]
+
+
+# ── B095: geo_only(전환 화면 = 국가 옵션만) ─────────────────────────────────────────
+@needs_db
+@pytest.mark.parametrize(("uid", "params", "spec"), [
+    (ADMIN, {"surface": "global"}, None),
+    (HQ_HYUNDAI, {"surface": "global"}, None),
+    (ADMIN, {"surface": "global"}, "filter_options"),
+    (ADMIN, {"surface": "website"}, None),
+    (ADMIN, {"surface": "website"}, "filter_options"),
+    (VENDOR, {"surface": "project", "project_id": str(CUST_PROJECT)}, None),
+])
+async def test_geo_only_skips_catalog_and_custom_fields(client_as, legacy, monkeypatch, uid, params, spec):
+    """geo_only=true: 카탈로그 택소노미(TAXON·CATALOG)·커스텀 필드 문장을 돌리지 않고 catalog·custom_fields = null.
+    geo_matrix·regions·languages·engines·source_categories·meta 는 기본 호출과 같다(현행 프로필 경로 포함)."""
+    from app.features.analytics.filters.options import service as S
+
+    if spec:
+        legacy(spec)
+    seen: list[str] = []
+    real = S.fetch_all
+
+    async def spy(conn, sql, *a, **k):
+        seen.append(str(sql))
+        return await real(conn, sql, *a, **k)
+
+    monkeypatch.setattr(S, "fetch_all", spy)
+    skipped = {S.q.TAXON_SQL, S.q.CATALOG_GLOBAL_SQL, S.q.CATALOG_PROJECT_SQL, S.q.CUSTOM_FIELDS_SQL}
+    full = (await _get(client_as, uid, **params)).json()
+    assert bool(skipped & set(seen)) == (params["surface"] != "website")       # 기본 = 종전(global·project 는 카탈로그 문장)
+    seen.clear()
+    r = await _get(client_as, uid, **params, geo_only="true")
+    assert r.status_code == 200, r.text
+    assert not skipped & set(seen), seen
+    assert r.json()["data"] == {**full["data"], "catalog": None, "custom_fields": None} and r.json()["meta"] == full["meta"]

@@ -23,6 +23,13 @@ class AcrParams(CommonFilters):
     battle_limit: int = Field(200, ge=1, le=500, description="배틀 그리드 프롬프트 상한")
     territory_limit: int = Field(12, ge=1, le=24, description="점유 맵 시트(국가×엔진) 상한")
     model_limit: int = Field(12, ge=1, le=50, description="차종 전환율 표 상한")
+    # ── 계산 생략(B097). 전부 선택: 주지 않으면 응답이 이전과 같다 ──
+    include_option_countries: bool = Field(True, description=(
+        "false = options.countries 를 계산하지 않고 [] 로 둔다(국가 옵션 문장 생략). 화면 국가 목록은 /v1/filters/options 를 쓴다. "
+        "options.langs·다른 필드 값은 같다"))
+    include_catalog_count: bool = Field(True, description=(
+        "false = 카탈로그 ACR 프롬프트 수를 셀이 없는 응답(prompt_runs 0·빈 창·숨김·원천 준비 중)에서만 세고, 셀이 있으면 세지 않고 "
+        "totals.catalog_acr_prompts = null(측정 대기 안내만 이 값을 읽는다). 다른 값은 같다"))
 
 
 class AcrTotals(BaseModel):
@@ -30,7 +37,8 @@ class AcrTotals(BaseModel):
     prompts: int = Field(description="측정된 ACR 프롬프트 수(count DISTINCT)")
     iterations: int = Field(description="유효 ACR 반복 합(Σvalid_acr). choice_share 분모")
     engines: list[str] = Field(description="셀에 나온 엔진 코드")
-    catalog_acr_prompts: int = Field(description="카탈로그의 ACR 프롬프트 수(측정 무관). 0 이면 '카탈로그에 ACR 없음', 양수인데 prompt_runs 0 이면 '측정 대기'")
+    catalog_acr_prompts: int | None = Field(description="카탈로그의 ACR 프롬프트 수(측정 무관). 0 이면 '카탈로그에 ACR 없음', 양수인데 prompt_runs 0 이면 "
+                                                    "'측정 대기'. include_catalog_count=false 이고 셀이 있으면(prompt_runs > 0) null")
 
 
 class AcrBrand(BaseModel):

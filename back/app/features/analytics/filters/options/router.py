@@ -21,4 +21,4 @@ async def get_filters_options_0(request: Request, principal: CurrentUser, conn: 
                                 filters: Annotated[OptionsQuery, Query()]) -> OptionsResponse:
     """analytics.filters.options(F-1). 필터 패널 첫 열림 시 호출(Q7, 첫 렌더 예산 제외). 기간만 받고 값 축은 ignored_filters."""
     return await service.get_options(conn, principal, filters, parse_custom_fields(request.query_params),
-                                     include=frozenset(filters.include))
+                                     include=frozenset(filters.include), geo_only=filters.geo_only)

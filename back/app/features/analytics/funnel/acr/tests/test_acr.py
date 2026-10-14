@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from tests.support import ADMIN, CUST_PROJECT, HQ_HYUNDAI, KIA_EU, KIA_US, SUSPENDED, VENDOR, needs_db
+from tests.support import ADMIN, CUST_PROJECT, HQ_HYUNDAI, KIA_EU, KIA_US, SUSPENDED, VENDOR, Update, needs_db, savepoint, stage
 
 URL = "/v1/funnel/acr"
 P3 = "b0000000-0000-4000-8000-000000000003"
@@ -187,3 +187,85 @@ async def test_website_and_project_source_pending(client_as):
     assert r.status_code == 200, r.text
     assert r.json()["meta"]["suppressed"] == {"*": "source_pending"}
 
+
+
+# ── B097: 계산 생략(include_option_countries·include_catalog_count)·배틀 상한 SQL ─────────────────────
+@pytest.mark.parametrize(("uid", "params"), [
+    (ADMIN, {"surface": "global"}),
+    (KIA_US, {"surface": "global"}),
+    (ADMIN, {"surface": "global", "from": "2026-09-01", "to": "2026-09-30", "lang": "en"}),
+])
+async def test_option_countries_off_skips_statement(client_as, monkeypatch, uid, params):
+    """include_option_countries=false: 국가 옵션 문장 없음, options.countries = [], 나머지 data·meta 는 기본 호출과 같다."""
+    from app.features.analytics.funnel.acr import service as S
+
+    full = (await _get(client_as, uid, **params)).json()
+    assert full["data"]["options"]["countries"]                                  # 기본 = 종전(국가 옵션 계산)
+
+    def boom(*a, **k):
+        raise AssertionError("option_countries_sql must not run when include_option_countries=false")
+
+    monkeypatch.setattr(S.q, "option_countries_sql", boom)
+    r = await _get(client_as, uid, **params, include_option_countries="false")
+    assert r.status_code == 200, r.text
+    d = full["data"]
+    assert r.json()["data"] == {**d, "options": {**d["options"], "countries": []}} and r.json()["meta"] == full["meta"]
+
+
+@pytest.mark.parametrize(("uid", "params", "measured"), [
+    (ADMIN, {"surface": "global"}, True),
+    (HQ_HYUNDAI, {"surface": "global", "list_type": "L1"}, True),
+    (KIA_EU, {"surface": "global"}, False),                                     # 셀 0 = 측정 대기(카탈로그 수 필요)
+    (ADMIN, {"surface": "global", "from": "2026-10-01", "to": "2026-10-31"}, False),
+    (ADMIN, {"surface": "website"}, False),                                     # 원천 준비 중(카탈로그 0 판정)
+    (VENDOR, {"surface": "project", "project_id": str(CUST_PROJECT)}, False),
+])
+async def test_catalog_count_only_when_unmeasured(client_as, monkeypatch, uid, params, measured):
+    """include_catalog_count=false: 셀이 있으면 카탈로그 수 문장 없이 totals.catalog_acr_prompts = null, 셀이 없는 응답은 기본과 같다
+    (측정 대기 안내가 이 값을 읽는다). 나머지 data·meta 는 기본 호출과 같다."""
+    from app.features.analytics.funnel.acr import service as S
+
+    full = (await _get(client_as, uid, **params)).json()
+    calls: list[int] = []
+    real = S.catalog_acr_prompts
+
+    async def spy(*a, **k):
+        calls.append(1)
+        return await real(*a, **k)
+
+    monkeypatch.setattr(S, "catalog_acr_prompts", spy)
+    r = await _get(client_as, uid, **params, include_catalog_count="false")
+    assert r.status_code == 200, r.text
+    assert (full["data"]["totals"]["prompt_runs"] > 0) is measured
+    assert len(calls) == (0 if measured else 1)
+    d = full["data"]
+    want = {**d, "totals": {**d["totals"], "catalog_acr_prompts": None}} if measured else d
+    assert r.json()["data"] == want and r.json()["meta"] == full["meta"]
+
+
+async def _battle(client_as, limit):
+    r = await _get(client_as, ADMIN, surface="global", battle_limit=limit)
+    assert r.status_code == 200, r.text
+    return [(x["prompt_id"], x["cells"]) for x in r.json()["data"]["battle"]]
+
+
+async def _assert_prefixes(client_as):
+    whole = await _battle(client_as, 500)
+    for n in range(1, len(whole) + 1):
+        assert await _battle(client_as, n) == whole[:n], n
+    return [p for p, _ in whole]
+
+
+async def test_battle_sql_limit_same_order_as_app(client_as, acr_seed):
+    """배틀 상한을 SQL 에서 먼저 잘라도(상위 n 프롬프트의 셀만) 결과 = 전체 목록의 앞 n 개(앱 정렬: 선택 합 내림차순 → 문구(NULL = '') → id).
+    동률·대소문자(코드 포인트 순: 'Zeta' < 'alpha')·NULL 문구 경우를 세이브포인트 안에서 만든다."""
+    assert await _assert_prefixes(client_as) == [P9001, P9002, P3]
+    kia_choice = Update("rd.acr_choice", {"acr_cell_key": 9102, "entity_key": 2, "level": 1}, {"choice": 3})
+    async with savepoint(acr_seed):
+        await stage(acr_seed, kia_choice)                                          # P9002 합 3 = P9001 합 3 → 문구 순
+        assert await _assert_prefixes(client_as) == [P9001, P9002, P3]
+        await stage(acr_seed, Update("rd.dim_prompt", {"prompt_key": 9001}, {"text": "alpha"}),
+                    Update("rd.dim_prompt", {"prompt_key": 9002}, {"text": "Zeta"}))
+        assert await _assert_prefixes(client_as) == [P9002, P9001, P3]            # 코드 포인트 순(로캘 순이면 alpha 가 먼저)
+        await stage(acr_seed, Update("rd.dim_prompt", {"prompt_key": 9001}, {"text": None}))
+        assert await _assert_prefixes(client_as) == [P9001, P9002, P3]            # NULL 문구 = '' 가 먼저

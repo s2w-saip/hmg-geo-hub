@@ -1,4 +1,7 @@
-"""기간 비교 순수 로직 골든(현행 front/lib/kpi/period-compare.test.ts·calendar-month-window·period-compare-week 이식)."""
+"""기간 비교 순수 로직 골든(현행 front/lib/kpi/period-compare.test.ts·calendar-month-window·period-compare-week 이식).
+
+끝의 DB 시험(B091): 원장 문장은 요청 지표의 계열만 읽고, 항목·meta.compare 는 전 지표 요청의 같은 항목과 같다.
+"""
 from __future__ import annotations
 
 from datetime import date
@@ -25,6 +28,8 @@ from app.features.analytics.kpi.compare.logic import (
     suppression_of,
     windows_from_range,
 )
+from app.features.analytics.kpi.summary.shared import kpi_today
+from tests.support import HQ_HYUNDAI, TODAY, needs_db
 
 D = date.fromisoformat
 
@@ -170,3 +175,50 @@ def test_delta_pct_unit_bg05():
     assert delta_of("pct", (2, 4), (3, 4)) == 50.0
     assert delta_of("pct", (0, 4), (3, 4)) is None
     assert delta_of("pct", (1, 0), (3, 4)) is None and delta_of("pct", (1, 2), (3, 0)) is None
+
+
+# ── B091: 요청 지표 계열의 원장만(로컬 개발 DB) ───────────────────────────────────
+MENTION_METRICS = ["visibility", "share_of_voice", "sentiment", "position"]
+
+
+@pytest.fixture
+def today_at():
+    from app.main import app
+
+    app.dependency_overrides[kpi_today] = lambda: TODAY
+    yield
+    app.dependency_overrides.pop(kpi_today, None)
+
+
+@needs_db
+@pytest.mark.parametrize("params", [{"kind": "cycle"}, {"days": 7}, {"kind": "calendarMonth"},
+                                    {"from": "2026-09-01", "to": "2026-09-30"}])
+async def test_ledger_rows_only_for_requested_families(client_as, today_at, monkeypatch, params):
+    """웹사이트 OVERVIEW 4지표처럼 언급 계열만 요청하면 인용 계열 원장 문장을 돌리지 않는다(반대도 같다).
+    항목 값·억제·원장 수치와 meta.compare(두 계열 첫 발행 포함)는 전 지표 요청의 같은 항목과 같다."""
+    from app.features.analytics.kpi.compare import service as S
+
+    fams: list[str] = []
+    real = S.ledger_rows
+
+    async def spy(conn, **kw):
+        fams.append(kw["family"])
+        return await real(conn, **kw)
+
+    monkeypatch.setattr(S, "ledger_rows", spy)
+
+    async def get(**extra):
+        async with client_as(HQ_HYUNDAI) as c:
+            r = await c.get("/v1/kpi/compare", params={"surface": "global", **params, **extra})
+        assert r.status_code == 200, r.text
+        return r.json()
+
+    full = await get()
+    assert sorted(fams) == ["citations", "mentions"]                     # 기본(전 지표) = 종전 그대로 두 계열
+    for metrics, fam, family in ((MENTION_METRICS, "mentions", "mention"), (["citation_share"], "citations", "citation")):
+        fams.clear()
+        got = await get(metrics=metrics)
+        assert fams == [fam], (metrics, fams)
+        assert got["data"] == [i for i in full["data"] if i["family"] == family]
+        assert got["meta"]["compare"] == full["meta"]["compare"]
+        assert got["meta"]["suppressed"] == {k: v for k, v in full["meta"]["suppressed"].items() if k in metrics}

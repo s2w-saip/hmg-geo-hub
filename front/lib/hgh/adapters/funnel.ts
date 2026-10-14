@@ -172,7 +172,11 @@ export function toStandardAcr(d: ApiAcrData, meta: Pick<ApiMeta, "suppressed">):
 
 export interface AcrScreen {
   data: StandardAcr;
-  /** Catalog ACR prompts (the waiting-state count, legacy countStandardAcrPrompts). */
+  /**
+   * Catalog ACR prompts (the waiting-state count, legacy countStandardAcrPrompts). Counted only for
+   * an unmeasured answer (include_catalog_count=false, B097): with cells it is 0 here, and the
+   * screen reads it only in the waiting state (data.measured false).
+   */
   acrPromptCount: number;
   /** ACR population languages (BG-33), legacy listMeasuredAcrLanguages. */
   languageOptions: string[];
@@ -182,14 +186,19 @@ export interface AcrScreen {
 /**
  * GET /v1/funnel/acr with the screen's filters (analysisQuery). The extension parameters keep
  * their defaults, which equal the legacy constants (top 12 brands, 5 series, 200 battle rows,
- * 12 sheets, 12 models); trend_cycles keeps the backend default 12 (DC-09).
+ * 12 sheets, 12 models); trend_cycles keeps the backend default 12 (DC-09). B097: the screen
+ * takes its countries from /v1/filters/options and reads the catalog count only while unmeasured,
+ * so include_option_countries=false and include_catalog_count=false skip those statements.
  */
 export async function loadAcrScreen(filters: StandardFilters, ctx: AnalysisQueryContext): Promise<AcrScreen> {
   const { query, cf } = analysisQuery(filters, ctx);
-  const res = await hghGet("/v1/funnel/acr", { query, cf });
+  const res = await hghGet("/v1/funnel/acr", {
+    query: withParams(query, { include_option_countries: false, include_catalog_count: false }),
+    cf,
+  });
   return {
     data: toStandardAcr(res.data, res.meta),
-    acrPromptCount: res.data.totals.catalog_acr_prompts,
+    acrPromptCount: res.data.totals.catalog_acr_prompts ?? 0,
     languageOptions: [...(res.data.options?.langs ?? [])],
     notices: filterNotices(res.meta),
   };
@@ -238,7 +247,12 @@ export interface ConversionRequest {
   days: number;
 }
 
-/** Query for GET /v1/funnel/conversion: CommonFilters via analysisQuery + device, visitor_type, days, page_limit. */
+/**
+ * Query for GET /v1/funnel/conversion: CommonFilters via analysisQuery + device, visitor_type, days, page_limit,
+ * rollup_lite (B096: with two or more markets the screen draws the rollup, which reads summary, by_country
+ * and coverage only, so the backend skips the page and engine-compare statements and sends trend /
+ * by_engine / by_engine_all / pages empty; one market (country leaf) is unaffected).
+ */
 export function conversionQuery(req: ConversionRequest) {
   const ctx: AnalysisQueryContext = { surface: req.surface, projectId: req.projectId, scope: null };
   const common = analysisQuery(
@@ -257,6 +271,7 @@ export function conversionQuery(req: ConversionRequest) {
       ...(visitor.length ? { visitor_type: visitor } : {}),
       days: req.days,
       page_limit: CONVERSION_PAGE_LIMIT,
+      rollup_lite: true,
     }),
     cf: common.cf,
   };

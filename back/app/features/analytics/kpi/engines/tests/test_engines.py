@@ -15,7 +15,8 @@ from datetime import date
 
 import pytest
 
-from app.features.analytics.kpi.engines.service import consistency
+from app.features.analytics.kpi.engines.queries import FIELDS_BY_PART
+from app.features.analytics.kpi.engines.service import ALL_FIELDS, consistency, requested_parts
 from app.features.analytics.kpi.summary.shared import kpi_today
 from tests.support import ADMIN, CUST_PROJECT, HQ_HYUNDAI, KIA_US, TODAY, VENDOR, needs_db
 
@@ -83,6 +84,62 @@ async def test_part_narrows_fields(client_as, today_at):
     assert d["engine_consistency"]["visibility"] is None
     d = (await get(client_as, HQ_HYUNDAI, surface="global", part="sov")).json()["data"]
     assert all(x["multi"] is None and x["cit_total"] is None and x["total_mentions"] is not None for x in d["rows"])
+
+
+def test_requested_parts_rule():
+    """B090: parts 없으면 PART_MAP[part](종전), 있으면 합집합(part 무시)."""
+    assert requested_parts("all") == ("mentions", "rank_detail", "citations")
+    assert requested_parts("sov") == ("mentions",)
+    assert requested_parts("all", ["sov", "citation"]) == ("mentions", "citations")
+    assert requested_parts("citation", ["exposure", "position", "sov"]) == ("mentions", "rank_detail")
+
+
+CONSISTENCY_FAMILY = {"visibility": "mentions", "share_of_voice": "mentions", "sentiment": "mentions", "position": "mentions",
+                      "citation_share": "citations"}
+
+
+@needs_db
+@pytest.mark.parametrize(("parts", "core"), [
+    (["sov", "citation"], {"mentions", "citations"}),            # 엔진 일관성 배지 열(rank_detail 없음)
+    (["favorability", "position"], {"mentions", "rank_detail"}),  # 언급 Sub KPI 열(cit_* 없음)
+    (["sov"], {"mentions"}),
+    (["citation"], {"citations"}),
+])
+async def test_parts_union_skips_columns_values_equal_all(client_as, today_at, monkeypatch, parts, core):
+    """B090: parts 합집합의 core part 만 집계하고(스캔 1회), 계산한 열·일관성은 part=all 의 같은 값, 나머지는 null. part 는 무시."""
+    from app.features.analytics.kpi.engines import service as S
+
+    seen: list[tuple[str, ...]] = []
+    real = S.fetch_counts
+
+    async def spy(conn, ms, win, **kw):
+        seen.append(tuple(kw["parts"]))
+        return await real(conn, ms, win, **kw)
+
+    monkeypatch.setattr(S, "fetch_counts", spy)
+    full = (await get(client_as, HQ_HYUNDAI, surface="global")).json()
+    seen.clear()
+    got = (await get(client_as, HQ_HYUNDAI, surface="global", part="exposure", parts=parts)).json()
+    assert len(seen) == 1 and set(seen[0]) == core
+    filled = {fld for p in core for fld in FIELDS_BY_PART[p]}
+    assert [r["engine"] for r in got["data"]["rows"]] == [r["engine"] for r in full["data"]["rows"]]
+    for g, f in zip([*got["data"]["rows"], got["data"]["total"]], [*full["data"]["rows"], full["data"]["total"]], strict=True):
+        assert {k: g[k] for k in ALL_FIELDS} == {k: (f[k] if k in filled else None) for k in ALL_FIELDS}
+    assert got["data"]["engine_consistency"] == {k: (v if CONSISTENCY_FAMILY[k] in core else None)
+                                                 for k, v in full["data"]["engine_consistency"].items()}
+    assert got["meta"] == full["meta"]
+
+
+@needs_db
+async def test_parts_hidden_family_and_default(client_as, today_at):
+    """B090: 숨김 계열 표식은 요청 계열만(part 와 같은 규칙). parts 를 비우면 part 하나 그대로(종전)."""
+    b = (await get(client_as, ADMIN, surface="website", parts=["sov", "citation"])).json()
+    assert b["meta"]["suppressed"] == {"citation_share": "hidden"} and b["data"]["total"]["cit_total"] is None
+    assert b["data"]["total"]["multi"] is None and b["data"]["total"]["answers"] == 2
+    assert (await get(client_as, ADMIN, surface="website", parts=["sov"])).json()["meta"]["suppressed"] == {}
+    one = (await get(client_as, HQ_HYUNDAI, surface="global", part="sov")).json()
+    assert (await get(client_as, HQ_HYUNDAI, surface="global", part="sov", parts=["sov"])).json() == one
+    assert (await get(client_as, HQ_HYUNDAI, surface="global", parts=["bogus"])).status_code == 422
 
 
 @needs_db

@@ -75,6 +75,7 @@ import {
   API_DATE_MIN,
   isOpenEndedRange,
   toCommonQuery,
+  withParams,
   type CommonFilterParams,
   type CommonQueryContext,
   type Surface,
@@ -193,6 +194,11 @@ export interface OptionsRequest {
   /** The screen's period (options window = data window). One-sided is passed through. */
   dateFrom?: string;
   dateTo?: string;
+  /**
+   * B095: the screen reads the geography options only (the conversion pages): geo_only=true, so
+   * the backend skips the catalog taxonomy and custom fields (data.catalog / custom_fields null).
+   */
+  geoOnly?: boolean;
 }
 
 export interface OptionsResponse {
@@ -204,13 +210,14 @@ export interface OptionsResponse {
  * GET /v1/filters/options. Only surface, project_id and the period are sent: the endpoint
  * supports the period only and must not be narrowed by user selections (the panel narrows
  * the matrix by its draft). In-request dedupe shares one call per (surface, project, period).
+ * geoOnly adds geo_only=true (a separate call: only the conversion pages send it).
  */
 export async function fetchFilterOptions(req: OptionsRequest): Promise<OptionsResponse> {
   const { query } = analysisQuery(
     { dateFrom: req.dateFrom, dateTo: req.dateTo },
     { surface: req.surface, projectId: req.projectId, scope: null },
   );
-  const res = await hghGet("/v1/filters/options", { query });
+  const res = await hghGet("/v1/filters/options", { query: req.geoOnly ? withParams(query, { geo_only: true }) : query });
   return { data: res.data, meta: res.meta };
 }
 

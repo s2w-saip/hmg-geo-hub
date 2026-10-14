@@ -6,6 +6,8 @@
 - split_own(D13): 관점 비트가 둘 이상이면 비트마다 그 비트만 당사로 둔 스코프(core.measure.split_own_scopes, common.own_splits)로
   types_sql·stance_sql 을 한 번씩 더 돌려 by_own_brand 블록을 낸다. 행 키 own_brand_code 는 mentions/brands·trend 와 같은 규칙.
   분모 answers_total 은 합친 관점과 같다(모수·필터 축은 가르지 않는다).
+- include_stance=false(B093): stance_sql 을 돌리지 않고(가른 블록 포함) stance = null. 화면은 스탠스 카드를 그리지 않는다
+  (STANCE_CARD_ENABLED=false). 다른 값은 같다.
 """
 from __future__ import annotations
 
@@ -59,18 +61,20 @@ async def _rows(conn: Any, ms: MeasureScope, win: Window, run: bool) -> list[dic
     return await fetch_all(conn, q.text, q.params)
 
 
-async def mention_types(conn: Any, ctx: ReadContext, win: Window, *, split_own: bool = False) -> tuple[TypesData, dict[str, str]]:
+async def mention_types(conn: Any, ctx: ReadContext, win: Window, *, split_own: bool = False,
+                        include_stance: bool = True) -> tuple[TypesData, dict[str, str]]:
     ms = ctx.measure()
     run = runnable(win)
     suppressed: dict[str, str] = {}
     answers_total = int((await fetch_counts(conn, ms, win, parts=("mentions",)))[0]["answers"]) if run else 0
     by_type, matrix = _assemble(await _rows(conn, ms, win, run), answers_total)
-    stance = await _stance(conn, ms, win, run)
+    stance = await _stance(conn, ms, win, run) if include_stance else None
 
     by_own: list[OwnTypes] | None = None
     if split_own:
         by_own = []
         for sp in own_splits(ctx, ms):
             bt, mx = _assemble(await _rows(conn, sp.ms, win, run), answers_total)
-            by_own.append(OwnTypes(own_brand_code=sp.code, by_type=bt, sentiment_matrix=mx, stance=await _stance(conn, sp.ms, win, run)))
+            by_own.append(OwnTypes(own_brand_code=sp.code, by_type=bt, sentiment_matrix=mx,
+                                   stance=await _stance(conn, sp.ms, win, run) if include_stance else None))
     return TypesData(answers_total=answers_total, by_type=by_type, sentiment_matrix=matrix, stance=stance, by_own_brand=by_own), suppressed

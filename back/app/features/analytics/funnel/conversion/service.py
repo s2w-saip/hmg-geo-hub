@@ -27,6 +27,9 @@
   property_source=market 이면 직접 지정을 건너뛰고 시장 속성만 쓴다(프로젝트 대시보드 ⑦ live.ts:219-231 용, 검증 D3).
 - 상대 창 days(BG-30): 최신 적재일 기준 N일(7·28·90). from/to 와 배타. 둘 다 없으면 90.
 - 엔진 비교 by_engine_all(BG-31): engine[] 을 적용하지 않은 엔진별 분해(기기·방문자 유형·시장·기간은 적용). by_engine 의미는 그대로.
+- 선택 생략(B096): summary_only(요약 카드: summary·coverage·period 만) 또는 rollup_lite ∧ 커버리지 시장 2개 이상(전환 화면 롤업 분기:
+  summary·by_country·coverage 만)이면 페이지 문장·엔진 비교 문장을 건너뛰고 trend·by_engine·by_engine_all·pages = [](summary_only 는
+  by_country = null 도). 남는 값은 같다. 세션·전환 문장(GROUPING SETS)은 요약·국가 행의 원천이라 그대로 돈다.
 - 전환 이벤트 비관리자 경로(BG-29, 현행 lib/ga4/tracked-events-actions.ts:67-93 authorize 이식):
   표면 경로 게이트(require_surface) → 속성 소속 검증. 프로젝트 맥락 = 활성 멤버 ∧ 속성 = 그 프로젝트가 해석하는 속성(IDOR), 쓰기 = 활성 Owner.
   프로젝트가 해석하는 속성은 위 '프로젝트 몫' 규칙을 거친 것이라, 다른 시장 속성을 직접 지정해도 비관리자는 404(검증 D1).
@@ -300,12 +303,14 @@ async def build(conn: Any, ctx: ReadContext, params: ConversionParams) -> Envelo
     ek = ctx.engine_keys
     args = {"engine_keys": ek, "device_keys": dev, "nvr_keys": nvr}
 
+    # B096: 요약 카드(summary_only)·롤업 화면(rollup_lite ∧ 시장 2개 이상)은 추이·엔진·페이지를 그리지 않는다 → 페이지·엔진 비교 문장 생략
+    lite = params.summary_only or (params.rollup_lite and len(markets) >= 2)
     sq = q.sessions_sql(active, lo, hi, **args)
     cq = q.conversions_sql(active, lo, hi, **args)
     srows = await fetch_all(conn, sq.text, sq.params)
     crows = await fetch_all(conn, cq.text, cq.params)
     prows: list[dict[str, Any]] = []
-    if params.include_pages:                                             # 카드 호출(false)은 페이지별 집계 문장을 건너뛴다
+    if params.include_pages and not lite:                                # 카드 호출(false)은 페이지별 집계 문장을 건너뛴다
         pq = q.pages_sql(active, lo, hi, **args, limit=params.page_limit)
         prows = await fetch_all(conn, pq.text, pq.params)
 
@@ -347,13 +352,16 @@ async def build(conn: Any, ctx: ReadContext, params: ConversionParams) -> Envelo
     pages = [PageRow(url=r["url"], ai_sessions=int(r["ai_sessions"]), ai_conversions=int(r["ai_conversions"]),
                      human_sessions=int(r["human_sessions"]), human_conversions=int(r["human_conversions"])) for r in prows]
     by_country = None
-    if len(active) >= 2:
+    if len(active) >= 2 and not params.summary_only:
         by_country = [CountryRow(brand=m["brand"], country=m["country"],
                                  ai=CohortSessions(sessions=s("ai", 5, m["prop_key"]), conversions=cv("ai", 5, m["prop_key"])),
                                  human=CohortSessions(sessions=s("human", 5, m["prop_key"]), conversions=cv("human", 5, m["prop_key"])))
                       for m in markets if m["prop_key"] is not None]
     # BG-31: 엔진 비교(engine[] 무시). 축이 없으면 by_engine 과 같은 값이라 추가 문장 없이 복사한다.
-    if ek is None:
+    by_engine_all: list[EngineRow]
+    if lite:                                                             # B096: 추이·엔진·페이지를 내지 않는다(계약: 빈 배열)
+        trend, by_engine, by_engine_all = [], [], []
+    elif ek is None:
         by_engine_all = [e.model_copy() for e in by_engine]
     else:
         eq = q.engine_sessions_sql(active, lo, hi, device_keys=dev, nvr_keys=nvr)

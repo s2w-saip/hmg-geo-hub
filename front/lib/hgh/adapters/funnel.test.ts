@@ -301,6 +301,21 @@ describe("queries: one serializer (analysisQuery) + feature parameters", () => {
     expect(res.acrPromptCount).toBe(67);
     expect(res.languageOptions).toEqual(["de", "en"]);
     expect(res.data.measured).toBe(true);
+    // B097: the screen takes countries from /v1/filters/options and reads the count only while unmeasured
+    expect([q().get("include_option_countries"), q().get("include_catalog_count")]).toEqual(["false", "false"]);
+  });
+
+  it("ACR B097: catalog count null (cells exist) -> 0 and the same screen; unmeasured keeps the count", async () => {
+    answer.json = { data: acr(), meta: meta() };
+    const full = await F.loadAcrScreen({}, { surface: "global", scope: { all: true } });
+    answer.json = { data: acr({ totals: { ...acr().totals, catalog_acr_prompts: null } }), meta: meta() };
+    const lite = await F.loadAcrScreen({}, { surface: "global", scope: { all: true } });
+    expect(lite.data.measured).toBe(true); // the count is read by the waiting state only
+    expect({ ...lite, acrPromptCount: full.acrPromptCount }).toEqual(full);
+    expect(lite.acrPromptCount).toBe(0);
+    answer.json = { data: acr({ totals: { prompt_runs: 0, prompts: 0, iterations: 0, engines: [], catalog_acr_prompts: 67 } }), meta: meta() };
+    const waiting = await F.loadAcrScreen({}, { surface: "global", scope: { all: true } });
+    expect([waiting.data.measured, waiting.acrPromptCount]).toEqual([false, 67]);
   });
 
   it("ACR: a one-sided period is sent as that end alone (the backend closes it)", async () => {
@@ -324,6 +339,28 @@ describe("queries: one serializer (analysisQuery) + feature parameters", () => {
     expect(q().getAll("visitor_type")).toEqual(["new"]);
     expect([q().get("days"), q().get("page_limit"), q().get("surface")]).toEqual(["28", "15", "global"]);
     expect(q().has("from") || q().has("to")).toBe(false);
+    expect(q().get("rollup_lite")).toBe("true"); // B096: rollup answers skip the parts the rollup does not draw
+  });
+
+  it("conversion B096: a rollup_lite answer (trend / pages / engines empty) draws the same rollup screen", () => {
+    const markets: Conv["coverage"] = {
+      measured_markets: 2,
+      total_markets: 2,
+      markets: [
+        { brand: "Hyundai", country: "US", status: "active", as_of: "2026-09-15", property_id: "1" },
+        { brand: "Kia", country: "IT", status: "active", as_of: "2026-09-15", property_id: "2" },
+      ],
+    };
+    const by_country: Conv["by_country"] = [
+      { brand: "Hyundai", country: "US", ai: { sessions: 120, conversions: 4 }, human: { sessions: 600, conversions: 7 } },
+      { brand: "Kia", country: "IT", ai: { sessions: 80, conversions: 3 }, human: { sessions: 400, conversions: 5 } },
+    ];
+    const full = conv({ coverage: markets, by_country });
+    const lite = conv({ coverage: markets, by_country, trend: [], pages: [], by_engine: [], by_engine_all: [] });
+    expect(full.trend.length + full.pages.length + full.by_engine.length).toBeGreaterThan(0);
+    const a = F.toConversionScreen(full, meta());
+    expect(a.rollupData).not.toBeNull();
+    expect(F.toConversionScreen(lite, meta())).toEqual(a);
   });
 
   it("conversion website keeps virtual site codes; project sends project_id and no country", async () => {

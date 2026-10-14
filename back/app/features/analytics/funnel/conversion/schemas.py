@@ -27,6 +27,13 @@ class ConversionParams(CommonFilters):
     include_pages: bool = Field(True, description=(
         "false = 페이지별 표(data.pages)를 계산하지 않고 빈 배열로 둔다. 요약·커버리지·추이만 쓰는 대시보드 ⑦ 카드용 "
         "(현행 프런트 dashboard.ts toTrafficConversionKpi). 다른 필드 값은 같다"))
+    rollup_lite: bool = Field(False, description=(
+        "B096: true 이고 커버리지 시장이 2개 이상(전환 화면의 권역·본사 롤업 분기)이면 롤업이 그리지 않는 부분을 계산하지 않는다: "
+        "페이지 문장·엔진 비교 문장을 건너뛰고 trend·by_engine·by_engine_all·pages = []. summary·by_country·coverage·period·meta 는 같다. "
+        "시장이 하나 이하(국가 리프)면 효과 없음"))
+    summary_only: bool = Field(False, description=(
+        "B096: true = 요약 카드용(AI 전환율·분자·분모와 커버리지). 페이지 문장·엔진 비교 문장을 건너뛰고 trend·by_engine·by_engine_all·"
+        "pages = [], by_country = null. summary·coverage·period·meta 는 같다"))
     days: int | None = Field(None, description="최신 적재일 기준 상대 창 길이(7·28·90, BG-30). from/to 와 함께 줄 수 없다. 둘 다 없으면 90")
     property_source: Literal["project", "market"] | None = Field(None, description=(
         "project 표면 전용 속성 선택(검증 D3). 생략·project = 프로젝트 직접 지정 우선(전환 화면 page.tsx:52-55), "

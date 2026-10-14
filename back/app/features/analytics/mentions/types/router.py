@@ -22,5 +22,5 @@ async def get_mentions_types_0(request: Request, p: CurrentUser, conn: RoConn,
                                filters: Annotated[TypesQuery, Query()]) -> Envelope[TypesData]:
     """언급 유형 분포(M08)·유형 × 감성 매트릭스·당사 스탠스(A3) (명세: README.md, 모듈-언급 §3.2)."""
     ctx, win = await read_scope(conn, p, filters, request)
-    data, extra = await mention_types(conn, ctx, win, split_own=filters.split_own)
+    data, extra = await mention_types(conn, ctx, win, split_own=filters.split_own, include_stance=filters.include_stance)
     return Envelope[TypesData](data=data, meta=build_meta(mode=win.mode, window=win, ctx=ctx, suppressed={**suppression(win), **extra}))

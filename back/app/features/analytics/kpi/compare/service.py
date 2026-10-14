@@ -1,6 +1,6 @@
 """analytics.kpi.compare 업무 규칙. 공통 술어는 app.core.cycles·app.core.measure 를 쓴다(모듈별 재구현 금지).
 
-흐름(문장 수: 스냅샷 끝점 1~2 + 스캔 창 1 + 계열별 원장·첫 발행 2×2 + 측정 1~2)
+흐름(문장 수: 스냅샷 끝점 1~2 + 스캔 창 1 + 계열별 첫 발행 2 + 요청 지표 계열의 원장 1~2(B091) + 측정 1~2)
   1. 창: kind 별 순수 수식(logic). 끝점 E = to, 없으면 함대 최신 노출 round_date(core.cycles.resolve_window 스냅샷, Q1).
      cycle 은 스냅샷 offset 0·1 두 날.
   2. 스캔 창: core.cycles.resolve_window(기간 [스캔 시작, 스캔 끝]). 전 이력 첫 발행 F 는 core.cycles.first_published(계열 필수)가 낸다
@@ -201,10 +201,14 @@ async def get_compare(conn: Any, ctx: ReadContext, q: CompareQuery, *, today: da
         swin = await resolve_window(conn, surface=ctx.surface, project_keys=ctx.project_keys, date_from=scan.lo, date_to=scan.hi,
                                     today=today, project_ids=ctx.project_ids, **fa)
         # 원장(함대 기준, 필터 무관): 계열별 계획·미발행 단위, 발행 회차(round_date) 수. 전 이력 첫 발행 F(계열별)
+        # B091: 원장은 요청 지표의 계열만 읽는다(다른 계열 원장은 어느 항목에도 쓰이지 않는다). 첫 발행 F 는 meta.compare 에 두 계열 모두 실리므로 그대로
         pub_days: dict[tuple[str, str], set[date]] = {(k, f): set() for k in labels for f in fams}
+        used = {METRIC_FAMILY[m] for m in metrics}
         for f in fams:
             fp = await first_published(conn, surface=ctx.surface, project_keys=ctx.project_keys, family=FAMILY_CORE[f], today=today, **fl)
             first[f] = fp if fp is not None and fp <= scan.hi else None
+            if f not in used:
+                continue
             for r in await ledger_rows(conn, surface=ctx.surface, project_keys=ctx.project_keys, lo=scan.lo, hi=scan.hi,
                                        family=FAMILY_CORE[f], today=today, **fl):
                 lab = w.label_of(r.round_date)

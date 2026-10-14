@@ -23,6 +23,16 @@ import "server-only";
 //   citationAccuracy value round1(100 * num / den) (num = target and own, den = own), no provenance
 // Empty state (R-supp): meta.suppressed['*'] (no_active_snapshot, ...) or params.answers == 0 is
 // the legacy `agg == null || totalAnswers === 0` (whole screen empty).
+// Requested parts (B089, K-1 parts[]): ①~⑤, params.answers and measured_by_funnel are always
+// computed; the optional parts are measured (params.measured_prompts, prompts_without_brand),
+// applied (params.applied_prompts), gap (analysis_gap) and urls (URL-rate cards, url_prompts,
+// meta.source). fetchKpiSummary asks only for what its callers read, without touching them:
+//   analysis tabs (no card)      measured, gap, urls: no screen reads applied_prompts
+//   card (the three dashboards)  every part for now (the query is pinned by dashboard.test.ts); the
+//                                dashboard adapter passes parts: DASHBOARD_SUMMARY_PARTS (urls only:
+//                                the cards read ①~⑤, the URL cards, answers, as_of, measured_by_funnel)
+//   loadKpiSummary               every part (toKpiSummaryView shows them all)
+// A part left out comes back null (no meta.suppressed mark); the values that remain are the same.
 // Competitor SOV (KPI #16, legacy applyCompetitorSov live.ts:356): applyCompetitorSovFromBrands
 // takes GET /v1/mentions/brands items; own mentions = share_of_voice numerator; HMG siblings are
 // excluded by BG-15 is_hmg_own (request include=hmg), never by name.
@@ -65,6 +75,14 @@ type S = components["schemas"];
 export type ApiSummaryData = S["SummaryData"];
 export type ApiBrandItem = S["BrandItem"];
 
+/** Optional K-1 parts (B089). */
+export type SummaryPart = "measured" | "applied" | "gap" | "urls";
+export const ALL_SUMMARY_PARTS: readonly SummaryPart[] = ["applied", "gap", "measured", "urls"];
+/** The dashboards read ①~⑤, the URL cards, params.answers, as_of and measured_by_funnel only (pass as parts). */
+export const DASHBOARD_SUMMARY_PARTS: readonly SummaryPart[] = ["urls"];
+/** The analysis tabs read measured_prompts / prompts_without_brand and the URL cards, never applied_prompts. */
+const ANALYSIS_SUMMARY_PARTS: readonly SummaryPart[] = ["gap", "measured", "urls"];
+
 export interface SummaryRequest extends AnalysisQueryContext {
   /** Snapshot only: 0 latest exposed round (default), 1 the previous one. */
   cycleOffset?: 0 | 1;
@@ -72,6 +90,8 @@ export interface SummaryRequest extends AnalysisQueryContext {
   byFunnel?: boolean;
   /** WU-3 card path (cardParam): the dashboard cards only, never the answer-analysis tabs. */
   card?: boolean;
+  /** B089: parts to compute. Default: card -> every part; otherwise measured, gap, urls (see the header). */
+  parts?: readonly SummaryPart[];
 }
 
 export interface SummaryResponse {
@@ -81,11 +101,14 @@ export interface SummaryResponse {
 
 /** GET /v1/kpi/summary for the screen's filters (one call; header pill and cards share it). */
 export async function fetchKpiSummary(filters: StandardFilters, req: SummaryRequest): Promise<SummaryResponse> {
-  const { cycleOffset, byFunnel, card, ...ctx } = req;
+  const { cycleOffset, byFunnel, card, parts, ...ctx } = req;
   const { query, cf } = analysisQuery(filters, ctx);
-  const extra: { cycle_offset?: number; by_funnel?: boolean; card?: true } = { ...cardParam(ctx.surface, card) };
+  const extra: { cycle_offset?: number; by_funnel?: boolean; card?: true; parts?: SummaryPart[] } = { ...cardParam(ctx.surface, card) };
   if (cycleOffset) extra.cycle_offset = cycleOffset;
   if (byFunnel) extra.by_funnel = true;
+  // every part = the parameter omitted (the backend default); sorted so the in-request dedupe key is stable
+  const want = [...new Set(parts ?? (card ? ALL_SUMMARY_PARTS : ANALYSIS_SUMMARY_PARTS))].sort();
+  if (want.length && want.length < ALL_SUMMARY_PARTS.length) extra.parts = want;
   const res = await hghGet("/v1/kpi/summary", { query: withParams(query, extra), cf });
   return { data: res.data, meta: res.meta };
 }
@@ -263,10 +286,10 @@ export function summaryIsEmpty(data: ApiSummaryData, meta: ApiMeta | null | unde
 export interface SummaryParamsView {
   /** std_in answers (M12 base). */
   answers: number;
-  /** Applied prompts (catalog / registration, measurement-independent). */
-  appliedPrompts: number;
-  /** Measured prompts (legacy measuredPrompts). */
-  measuredPrompts: number;
+  /** Applied prompts (catalog / registration, measurement-independent); null when not requested (parts). */
+  appliedPrompts: number | null;
+  /** Measured prompts (legacy measuredPrompts); null when not requested (parts). */
+  measuredPrompts: number | null;
   /** BG-06: measured prompts without a perspective-brand mention, null when hidden or empty. */
   promptsWithoutBrand: number | null;
   /** BG-08 (by_funnel): measured prompts per funnel stage, null unless requested. */
@@ -288,8 +311,8 @@ export interface KpiSummaryView {
   /** Website/project URL-rate cards; null on global. */
   urlRates: UrlRateKpis | null;
   params: SummaryParamsView;
-  /** A16 analysis gap: gap / base answers, rate as one-decimal percent (null when base 0). */
-  analysisGap: { gapAnswers: number; baseAnswers: number; rate: number | null };
+  /** A16 analysis gap: gap / base answers, rate as one-decimal percent (null when base 0); null when not requested. */
+  analysisGap: { gapAnswers: number; baseAnswers: number; rate: number | null } | null;
   provenance: KpiProvenance | undefined;
   /** meta.suppressed as given (metric key -> reason). */
   suppressed: Record<string, string>;
@@ -299,6 +322,7 @@ export interface KpiSummaryView {
 
 export function toKpiSummaryView(res: SummaryResponse): KpiSummaryView {
   const { data, meta } = res;
+  const gap = data.analysis_gap ?? null;
   const whole = wholeSuppression(meta);
   const empty = summaryIsEmpty(data, meta);
   return {
@@ -311,26 +335,28 @@ export function toKpiSummaryView(res: SummaryResponse): KpiSummaryView {
     urlRates: toUrlRateKpis(data, meta),
     params: {
       answers: data.params.answers,
-      appliedPrompts: data.params.applied_prompts,
-      measuredPrompts: data.params.measured_prompts,
+      appliedPrompts: data.params.applied_prompts ?? null,
+      measuredPrompts: data.params.measured_prompts ?? null,
       promptsWithoutBrand: data.params.prompts_without_brand ?? null,
       measuredByFunnel:
         data.params.measured_by_funnel?.map((f) => ({ funnel: f.funnel ?? null, measuredPrompts: f.measured_prompts })) ?? null,
     },
-    analysisGap: {
-      gapAnswers: data.analysis_gap.gap_answers,
-      baseAnswers: data.analysis_gap.base_answers,
-      rate: pct1OrNull({ num: data.analysis_gap.gap_answers, den: data.analysis_gap.base_answers }),
-    },
+    analysisGap: gap
+      ? {
+          gapAnswers: gap.gap_answers,
+          baseAnswers: gap.base_answers,
+          rate: pct1OrNull({ num: gap.gap_answers, den: gap.base_answers }),
+        }
+      : null,
     provenance: provenanceOf(meta),
     suppressed: { ...(meta.suppressed ?? {}) },
     notices: filterNotices(meta),
   };
 }
 
-/** fetchKpiSummary + toKpiSummaryView. */
+/** fetchKpiSummary + toKpiSummaryView (every part unless req.parts narrows it: the view shows them all). */
 export async function loadKpiSummary(filters: StandardFilters, req: SummaryRequest): Promise<KpiSummaryView> {
-  return toKpiSummaryView(await fetchKpiSummary(filters, req));
+  return toKpiSummaryView(await fetchKpiSummary(filters, { parts: ALL_SUMMARY_PARTS, ...req }));
 }
 
 /**

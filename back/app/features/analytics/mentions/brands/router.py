@@ -23,6 +23,7 @@ async def get_mentions_brands_0(request: Request, p: CurrentUser, conn: RoConn,
     """관점 브랜드 대비 경쟁 브랜드의 노출률·점유율·평균 순위·언급 수·감성(명세: README.md, 모듈-언급 §3.1)."""
     ctx, win = await read_scope(conn, p, q, request)
     data = await mention_brands(conn, ctx, win, top_n=q.top_n, sort=q.sort, brand_keys=q.brand_key or None, split_own=q.split_own,
-                                include=q.include, group_by=q.group_by, q=q.q, full=q.full)
+                                include=q.include, group_by=q.group_by, q=q.q, full=q.full,
+                                include_sentiment=q.include_sentiment, engine_only=q.engine_only)
     return Envelope[BrandsData](data=data, meta=build_meta(mode=win.mode, window=win, ctx=ctx, suppressed=suppression(win),
                                                            truncated=truncation_meta(data, full=q.full)))

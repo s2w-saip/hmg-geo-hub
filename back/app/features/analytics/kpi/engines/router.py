@@ -29,4 +29,4 @@ async def get_kpi_engines_0(
 ) -> Envelope[EnginesData]:
     """analytics.kpi.engines: 엔진별 서브 지표(K-3). 명세: README.md, docs/design/api/모듈-KPI.md §2 K-3."""
     ctx = await kpi_context(conn, p, q, request)
-    return await get_engines(conn, ctx, part=q.part, cycle_offset=q.cycle_offset, today=today)
+    return await get_engines(conn, ctx, part=q.part, cycle_offset=q.cycle_offset, today=today, parts=q.parts)

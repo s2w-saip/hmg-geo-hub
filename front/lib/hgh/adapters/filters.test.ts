@@ -199,6 +199,19 @@ describe("fetchFilterOptions: only surface, project_id and the period are sent",
     await F.fetchFilterOptions({ surface: "global", projectId: PID, dateTo: "2026-06-30" });
     expect(seen[0].query).toEqual({ surface: ["global"], to: ["2026-06-30"] });
   });
+
+  it("B095 geoOnly (conversion pages): geo_only=true; the geography options are the same", async () => {
+    const scope = KIA_ACCOUNT;
+    answer = () => ({ data: optionsData(), meta: meta() });
+    const full = await F.loadPanelOptions({ surface: "global", scope, filters: {} });
+    answer = () => ({ data: optionsData({ catalog: null, custom_fields: null }), meta: meta() });
+    const geo = await F.loadPanelOptions({ surface: "global", scope, filters: {}, geoOnly: true });
+    expect(seen.map((s) => s.query)).toEqual([{ surface: ["global"] }, { geo_only: ["true"], surface: ["global"] }]);
+    expect(geo.geographyOptions).toEqual(full.geographyOptions); // the only prop the conversion pages read
+    expect({ ...geo, catalogRows: full.catalogRows }).toEqual(full);
+    await F.loadPanelOptions({ surface: "website", scope, filters: {}, geoOnly: true });
+    expect(seen[2].query).toEqual({ geo_only: ["true"], surface: ["website"] });
+  });
 });
 
 describe("toCatalogRows: legacy CatalogTaxonomyRow (camel, funnel dropped, deduped, legacy order)", () => {
@@ -433,7 +446,8 @@ describe("filter consistency: every axis reaches every U4 endpoint through one s
   it("GET /v1/kpi/summary carries every axis", async () => {
     await fetchKpiSummary(filters, ctx);
     expect(seen[0].path).toBe("/v1/kpi/summary");
-    expect(seen[0].query).toEqual(expected);
+    // parts: the analysis tabs' K-1 parts (B089, summary.ts), not a filter axis
+    expect(seen[0].query).toEqual({ ...expected, parts: ["gap", "measured", "urls"] });
   });
 
   it("GET /v1/kpi/compare carries every axis + kind + metrics", async () => {
@@ -460,7 +474,7 @@ describe("filter consistency: every axis reaches every U4 endpoint through one s
 
   it("project surface: project_id and cf.<uuid> reach the query", async () => {
     await fetchKpiSummary({ engine: ["chatgpt"] }, { surface: "project", projectId: PID, scope: null, customFields: { [FIELD]: ["b", "a"] } });
-    expect(seen[0].query).toEqual({ [`cf.${FIELD}`]: ["a", "b"], engine: ["chatgpt"], project_id: [PID], surface: ["project"] });
+    expect(seen[0].query).toEqual({ [`cf.${FIELD}`]: ["a", "b"], engine: ["chatgpt"], parts: ["gap", "measured", "urls"], project_id: [PID], surface: ["project"] });
   });
 
   it("scope-injected values are not sent (brand lock, account countries)", async () => {
@@ -468,7 +482,7 @@ describe("filter consistency: every axis reaches every U4 endpoint through one s
     expect(f.brand).toEqual(["Kia", "HMG"]);
     expect(f.region).toEqual(["US", "GB"]);
     await fetchKpiSummary(f, { surface: "global", scope: KIA_ACCOUNT });
-    expect(seen[0].query).toEqual({ surface: ["global"] });
+    expect(seen[0].query).toEqual({ parts: ["gap", "measured", "urls"], surface: ["global"] });
   });
 
   it("ignored_filters / dropped_filters come back as notices", async () => {

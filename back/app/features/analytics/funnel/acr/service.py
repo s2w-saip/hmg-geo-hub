@@ -24,6 +24,9 @@
   거르므로 표가 제외 수만큼 준다). 추이 시리즈(당사 우선 + 상위 trend_series)는 거르기 전 행에서 고른다(현행: 추이는 집계
   안에서 거르기 전 brands 로 고르고 filterAcr 는 brands 만 거른다). 값은 그대로: totals·choice_share·coverage 분모·추이 분모·
   배틀 승자·차종·점유 맵 항목.
+- 계산 생략(B097, 선택 인자: 주지 않으면 응답 그대로): include_option_countries=false = 국가 옵션 문장 생략(options.countries []),
+  include_catalog_count=false = 카탈로그 ACR 수를 셀이 없는 응답에서만 센다(셀이 있으면 null). 배틀 상한은 SQL 에서 먼저 자른다
+  (앱과 같은 순서 키, 결과 같음).
 """
 from __future__ import annotations
 
@@ -146,17 +149,21 @@ def option_scope_countries(ctx: ReadContext, ms: MeasureScope) -> tuple[str, ...
     return tuple(sorted(real | site_cc))
 
 
-async def acr_options(conn: Any, ctx: ReadContext, ms: MeasureScope, win: Window) -> AcrOptions:
+async def acr_options(conn: Any, ctx: ReadContext, ms: MeasureScope, win: Window, *, countries: bool = True) -> AcrOptions:
     """ACR 모집단 언어·국가 옵션(BG-33, 현행 listMeasuredAcrLanguages scope-aggregates.ts:7740 과 같은 모집단 = ACR 셀).
     언어 = langs_scope(스코프 브랜드·국가·기간만, 검증 D5), 국가 = geo 축을 계정 국가 스코프(option_scope_countries)로 바꾼 셀 선택
     (요청 국가로 좁히지 않되 스코프 밖은 없다)에서 숨김 국가를 뺀 것(검증 D2).
-    project 표면은 계정 국가 스코프를 답변 축에 걸지 않으므로(core resolve_read_context) 국가 축 없음."""
+    project 표면은 계정 국가 스코프를 답변 축에 걸지 않으므로(core resolve_read_context) 국가 축 없음.
+    countries=False(include_option_countries=false, B097): 국가 옵션 문장을 돌리지 않고 [](화면 국가 목록은 /v1/filters/options)."""
     lq = q.option_langs_sql(langs_scope(ms, ctx.refs), win)
+    langs = [r["code"] for r in await fetch_all(conn, lq.text, lq.params)]
+    if not countries:
+        return AcrOptions(langs=langs, countries=[])
     scope_c = option_scope_countries(ctx, ms)
     geo = None if scope_c is None else tuple(sorted(k for k in (ctx.refs.geo_key(c) for c in scope_c) if k is not None))
     cq = q.option_countries_sql(dataclasses.replace(ms, geo_keys=geo), win)
     hidden = hidden_countries(ctx)
-    return AcrOptions(langs=[r["code"] for r in await fetch_all(conn, lq.text, lq.params)],
+    return AcrOptions(langs=langs,
                       countries=[r["code"] for r in await fetch_all(conn, cq.text, cq.params) if r["code"].upper() not in hidden])
 
 
@@ -195,22 +202,29 @@ async def build(conn: Any, ctx: ReadContext, params: AcrParams, *, today: date |
     refs = ctx.refs
     ms = ctx.measure()
     win = await ctx.window(conn, today=today)
-    catalog = await catalog_acr_prompts(conn, ctx, ms)
+    # B097: include_catalog_count=false 면 카탈로그 수는 셀이 없는 응답(측정 대기 안내가 읽는 경우)에서만 센다
+    catalog: int | None = await catalog_acr_prompts(conn, ctx, ms) if params.include_catalog_count else None
+
+    async def catalog_count() -> int:
+        nonlocal catalog
+        if catalog is None:
+            catalog = await catalog_acr_prompts(conn, ctx, ms)
+        return catalog
 
     def meta(**suppressed: str) -> Meta:
         return build_meta(mode=win.mode, window=win, ctx=ctx, suppressed=suppressed or None)
 
     if win.empty:
         if win.hidden("mentions"):
-            return Envelope(data=empty_data(catalog), meta=meta(**{"*": SUPPRESS_HIDDEN}))
-        if ctx.surface != "global" and catalog == 0:
-            return Envelope(data=empty_data(catalog), meta=meta(**{"*": SUPPRESS_SOURCE_PENDING}))
-        return Envelope(data=empty_data(catalog), meta=meta(**({"*": SUPPRESS_NO_SNAPSHOT} if win.mode == "snapshot" else {})))
+            return Envelope(data=empty_data(await catalog_count()), meta=meta(**{"*": SUPPRESS_HIDDEN}))
+        if ctx.surface != "global" and await catalog_count() == 0:
+            return Envelope(data=empty_data(await catalog_count()), meta=meta(**{"*": SUPPRESS_SOURCE_PENDING}))
+        return Envelope(data=empty_data(await catalog_count()), meta=meta(**({"*": SUPPRESS_NO_SNAPSHOT} if win.mode == "snapshot" else {})))
     if win.hidden("mentions"):
-        return Envelope(data=empty_data(catalog), meta=meta(**{"*": SUPPRESS_HIDDEN}))
+        return Envelope(data=empty_data(await catalog_count()), meta=meta(**{"*": SUPPRESS_HIDDEN}))
 
     # 0 옵션(BG-33): 데이터와 같은 셀 선택에서 자기 축만 뺀다. 고른 언어에 셀이 없어도 다른 언어 옵션은 남는다.
-    options = await acr_options(conn, ctx, ms, win)
+    options = await acr_options(conn, ctx, ms, win, countries=params.include_option_countries)
 
     # 1 총량
     tq = q.totals_sql(ms, win)
@@ -220,6 +234,7 @@ async def build(conn: Any, ctx: ReadContext, params: AcrParams, *, today: date |
                        engines=sorted(c for c in (_engine_code(refs, int(k)) for k in (t.get("engine_keys") or [])) if c),
                        catalog_acr_prompts=catalog)
     if totals.prompt_runs == 0:
+        catalog = totals.catalog_acr_prompts = await catalog_count()
         pending = ctx.surface != "global" and catalog == 0
         data0 = empty_data(catalog).model_copy(update={"totals": totals, "options": options})
         if not pending:
@@ -240,8 +255,9 @@ async def build(conn: Any, ctx: ReadContext, params: AcrParams, *, today: date |
     # 3 추이: 당사 우선 + 상위(현행 topBrands.slice(0, 5)), 명부 제외를 거르기 전 행에서
     trend = await _trend(conn, ctx, ms, win, params, today=today, brand_rows=brand_rows)
 
-    # 4 배틀: 프롬프트별 셀 묶음, 엔진 코드 순, 프롬프트는 선택 합 내림차순(동률은 문구·id 순) 후 상한
-    gq = q.battle_sql(ms, win)
+    # 4 배틀: 프롬프트별 셀 묶음, 엔진 코드 순, 프롬프트는 선택 합 내림차순(동률은 문구·id 순) 후 상한.
+    #   B097: 상한은 SQL 에서 먼저(같은 순서 키, battle_sql 주석) — 상위 battle_limit 개 프롬프트의 셀만 읽는다. 앱 정렬·절단은 그대로(결과 같음)
+    gq = q.battle_sql(ms, win, limit=params.battle_limit)
     by_prompt: dict[str, AcrBattleRow] = {}
     for r in await fetch_all(conn, gq.text, gq.params):
         row = by_prompt.setdefault(r["prompt_id"], AcrBattleRow(prompt_id=r["prompt_id"], prompt_text=r["prompt_text"], cells=[]))

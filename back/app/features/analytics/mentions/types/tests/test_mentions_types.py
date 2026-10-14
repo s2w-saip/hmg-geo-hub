@@ -199,3 +199,30 @@ async def test_stance_values(client_as):
     assert d["data"]["stance"] == {"positive": 1, "neutral": 0, "mixed": 0, "negative": 0, "pairs": 1}
     d = (await _get(client_as, ADMIN, surface="global")).json()["data"]
     assert d["stance"] == {"positive": 1, "neutral": 0, "mixed": 1, "negative": 0, "pairs": 2}
+
+
+@needs_db
+@pytest.mark.parametrize(("uid", "params"), [
+    (HQ_HYUNDAI, {"surface": "global"}),
+    (ADMIN, {"surface": "global", "split_own": "true"}),
+    (ADMIN, {"surface": "website"}),
+    (VENDOR, {"surface": "project", "project_id": str(CUST_PROJECT)}),
+])
+async def test_include_stance_false_skips_stance_sql(client_as, monkeypatch, uid, params):
+    """B093: include_stance=false = 스탠스 문장(가른 블록 포함) 없음, stance null. 유형·매트릭스·answers_total·meta 는 기본 호출과 같다."""
+    from app.features.analytics.mentions.types import service as S
+
+    full = (await _get(client_as, uid, **params)).json()
+    assert full["data"]["stance"] is not None                                  # 기본 = 종전(스탠스 계산)
+
+    def no_stance(*a, **k):
+        raise AssertionError("stance_sql must not run when include_stance=false")
+
+    monkeypatch.setattr(S, "stance_sql", no_stance)
+    r = await _get(client_as, uid, **params, include_stance="false")
+    assert r.status_code == 200, r.text
+    want = {**full["data"], "stance": None}
+    if "by_own_brand" in full["data"]:
+        want["by_own_brand"] = [{**b, "stance": None} for b in full["data"]["by_own_brand"]]
+        assert want["by_own_brand"]                                               # 가른 블록 경로를 실제로 탔다
+    assert r.json()["data"] == want and r.json()["meta"] == full["meta"]

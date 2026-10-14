@@ -245,12 +245,46 @@ describe("fetchKpiSummary: cycle_offset / by_funnel only when asked", () => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
   });
-  it("default: surface only; previous round and funnel on request", async () => {
+  it("default: surface + the analysis parts; previous round and funnel on request", async () => {
     await Sm.fetchKpiSummary({}, { surface: "global", scope: null });
     await Sm.fetchKpiSummary({}, { surface: "project", projectId: "7c9e6679-7425-40de-944b-e07fc1f90ae7", scope: null, cycleOffset: 1, byFunnel: true });
-    expect(new URL(urls[0]).search).toBe("?surface=global");
+    expect(new URL(urls[0]).search).toBe("?parts=gap&parts=measured&parts=urls&surface=global");
     const q = new URL(urls[1]).searchParams;
     expect([q.get("cycle_offset"), q.get("by_funnel"), q.get("surface")]).toEqual(["1", "true", "project"]);
+    expect(q.getAll("parts")).toEqual(["gap", "measured", "urls"]);
+  });
+
+  it("B089 parts: the analysis tabs drop applied; card calls and loadKpiSummary ask for every part; explicit parts", async () => {
+    await Sm.fetchKpiSummary({}, { surface: "global", scope: null, card: true });
+    await Sm.fetchKpiSummary({}, { surface: "project", projectId: "7c9e6679-7425-40de-944b-e07fc1f90ae7", scope: null, card: true, byFunnel: true });
+    await Sm.fetchKpiSummary({}, { surface: "website", scope: null, parts: ["urls", "measured", "urls"] });
+    await Sm.loadKpiSummary({}, { surface: "global", scope: null });
+    await Sm.fetchKpiSummary({}, { surface: "global", scope: null, parts: Sm.ALL_SUMMARY_PARTS });
+    await Sm.fetchKpiSummary({}, { surface: "global", scope: null, card: true, parts: Sm.DASHBOARD_SUMMARY_PARTS });
+    const q = urls.map((u) => new URL(u).searchParams);
+    expect(new URL(urls[0]).search).toBe("?card=true&surface=global"); // card default = the query as before
+    expect([q[1].has("parts"), q[1].get("card"), q[1].get("by_funnel")]).toEqual([false, null, "true"]); // project: no card param
+    expect(q[2].getAll("parts")).toEqual(["measured", "urls"]); // explicit, deduped and sorted
+    expect(q[3].has("parts")).toBe(false); // every part = the backend default (parameter omitted)
+    expect(q[4].has("parts")).toBe(false);
+    expect([q[5].getAll("parts"), q[5].get("card")]).toEqual([["urls"], "true"]); // what the dashboards read
+  });
+});
+
+describe("toKpiSummaryView: parts left out come back null", () => {
+  it("applied / measured / gap null -> null view fields, the rest unchanged", () => {
+    const full = Sm.toKpiSummaryView({ data: summary(), meta: meta() });
+    const lite = Sm.toKpiSummaryView({
+      data: {
+        ...summary(),
+        params: { ...summary().params, applied_prompts: null, measured_prompts: null, prompts_without_brand: null },
+        analysis_gap: null,
+      },
+      meta: meta(),
+    });
+    expect(lite.params).toEqual({ ...full.params, appliedPrompts: null, measuredPrompts: null, promptsWithoutBrand: null });
+    expect(lite.analysisGap).toBeNull();
+    expect({ ...lite, params: full.params, analysisGap: full.analysisGap }).toEqual(full);
   });
 });
 

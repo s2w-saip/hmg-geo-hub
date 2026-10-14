@@ -29,7 +29,7 @@ async def get_kpi_summary_0(
 ) -> SummaryResponse:
     """analytics.kpi.summary: 요약 카드(K-1). 명세: README.md, docs/design/api/모듈-KPI.md §2 K-1."""
     ctx = await kpi_context(conn, p, q, request)
-    return await get_summary(conn, ctx, cycle_offset=q.cycle_offset, today=today, by_funnel=q.by_funnel)
+    return await get_summary(conn, ctx, cycle_offset=q.cycle_offset, today=today, by_funnel=q.by_funnel, parts=frozenset(q.parts))
 
 
 @router.get("/v1/kpi/unmeasured-prompts", response_model=Envelope[ListData[UnmeasuredPrompt]], responses=ERROR_RESPONSES,

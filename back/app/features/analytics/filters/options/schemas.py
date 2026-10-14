@@ -82,6 +82,9 @@ class OptionsQuery(CommonFilters):
     """F-1 요청: 공통 필터 + include(무거운 선택 필드, WU-12)."""
     include: list[Literal["source_categories"]] = Field(default_factory=list, max_length=1, description=(
         "추가로 계산할 필드. source_categories = 출처 카테고리(창 안 인용 스캔, 옵션 서버 시간의 대부분). 주지 않으면 그 필드는 null"))
+    geo_only: bool = Field(False, description=(
+        "B095: true = 국가 옵션만 쓰는 화면(전환). 카탈로그 택소노미(global = rd.dim_taxon·카탈로그 2문장, project = 프로젝트 프롬프트)와 "
+        "커스텀 필드 문장을 돌리지 않고 catalog·custom_fields 를 null 로 둔다. geo_matrix·regions·languages·engines·meta 는 같다"))
 
 
 class OptionsData(BaseModel):
@@ -89,11 +92,12 @@ class OptionsData(BaseModel):
     regions: list[RegionOption] = Field(description="geo_matrix 의 국가 목록(숨김 국가 제외)")
     languages: list[str] = Field(description="geo_matrix 의 언어 목록(하위호환 단순 목록)")
     engines: list[EngineOption] = Field(description="옵션 창 안에서 실제 측정된 엔진")
-    catalog: CatalogOptions | None = Field(description="카탈로그 택소노미(global = rd.catalog_entry, project = app.prompt). website 는 null(택소노미 축 없음)")
+    catalog: CatalogOptions | None = Field(description="카탈로그 택소노미(global = rd.catalog_entry, project = app.prompt). website 는 null(택소노미 축 없음). "
+                                                       "geo_only=true 면 null")
     source_categories: list[SourceCategoryOption] | None = Field(description=(
         "옵션 창(인용 계열 숨김 적용) 안에 인용 원소가 있는 출처 카테고리. include=source_categories 를 줄 때만 계산하고, 주지 않으면 null"
         "(요청하지 않음. 빈 목록 [] 은 '계산했는데 없음'). 현행 화면의 출처 필터는 정적 카테고리 목록이라 이 값을 쓰지 않는다(WU-12)"))
-    custom_fields: list[CustomFieldOption] | None = Field(description="프로젝트 커스텀 필드(surface=project 만, 그 밖은 null)")
+    custom_fields: list[CustomFieldOption] | None = Field(description="프로젝트 커스텀 필드(surface=project 만, 그 밖은 null). geo_only=true 면 null")
 
 
 OptionsResponse = Envelope[OptionsData]

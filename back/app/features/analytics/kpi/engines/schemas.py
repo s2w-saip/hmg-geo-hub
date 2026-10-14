@@ -14,8 +14,11 @@ Part = Literal["all", "exposure", "sov", "favorability", "position", "citation"]
 
 
 class EnginesQuery(SnapshotQuery):
-    """공통 필터 + cycle_offset + part(히어로 좁힘, 현행 SUB_KPI_PARTS 계승)."""
+    """공통 필터 + cycle_offset + part(히어로 좁힘, 현행 SUB_KPI_PARTS 계승) + parts(여러 part 합집합, B090)."""
     part: Part = Field("all", description="all|exposure|sov|favorability|position|citation. 계산할 열만 좁힌다")
+    parts: list[Part] = Field(default_factory=list, max_length=6, description=(
+        "B090: part 여럿의 합집합으로 열을 좁힌다(예: sov+citation = 엔진 일관성 배지 열, rank_detail 없음). 주면 part 대신 쓰고, "
+        "비우면 [part](종전). 계산하지 않은 필드는 null(part 와 같은 규칙)"))
 
 
 class EngineRow(BaseModel):

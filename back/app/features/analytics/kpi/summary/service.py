@@ -19,6 +19,10 @@ meta.source = 명명 스키마 SummarySource(fe-u4 요청 1: url_rates report|li
 prompts_without_brand(BG-06): 세 표면 모두 measured_prompts − 관점 브랜드 언급 프롬프트 수(숨김 hidden, 빈 창·측정 프롬프트 0 은 null no_data).
 measured_by_funnel(BG-08, by_funnel=true 일 때만): 측정 프롬프트를 퍼널 코드로 나눈 수(합 = measured_prompts).
 미측정 목록(BG-04, GET /v1/kpi/unmeasured-prompts): 카드와 같은 창·필터·술어(적용 집합 − 측정 집합), 상한 200, total = 절단 전 수.
+선택 부분(B089, parts[], 비우면 전부 = 종전): 빠진 부분은 문장·열을 건너뛰고 값 null(억제 표식 없음). measured = core part 'prompts'
+  (측정 프롬프트 count DISTINCT 문장, prompts_without_brand 도 여기서), applied = 적용 프롬프트 문장(prompt_counts), gap = core part 'gap'
+  (메인 스캔의 A16 열), urls = URL 인용률 계열 전부(url_hits_uncovered·urls·url_prompts·url_rates·발행 표식·현행 ⑥). 남는 값은 부분과 무관하게 같다.
+  표면 밖 표식(global·project 의 not_website_surface)은 요청 부분과 무관하게 그대로 적는다.
 """
 from __future__ import annotations
 
@@ -58,6 +62,7 @@ from app.core.measure import (
 
 from .queries import PUBLICATION_LABELS_SQL, SUMMARY_PARTS, CatalogRowGate, funnel_measured_sql, unmeasured_sql
 from .schemas import (
+    SUMMARY_OPTIONAL_PARTS,
     AnalysisGap,
     FunnelPrompts,
     PublicationDetail,
@@ -153,18 +158,23 @@ async def _accuracy_current(conn: Any, ctx: ReadContext, ms: MeasureScope, win: 
 
 
 async def get_summary(conn: Any, ctx: ReadContext, *, cycle_offset: int, today: date | None,
-                      by_funnel: bool = False) -> SummaryResponse:
+                      by_funnel: bool = False, parts: frozenset[str] = frozenset()) -> SummaryResponse:
+    want = set(parts or SUMMARY_OPTIONAL_PARTS)                                      # B089: 비우면 전부(종전)
+    want_measured, want_gap, want_urls = "measured" in want, "gap" in want, "urls" in want
     ctx, win = await ctx.card_window(conn, route="kpi", offset=cycle_offset if ctx.date_from is None else 0, today=today)   # 동결 판정(S4)
     ms = ctx.measure()
     # 현행 자사·타겟 URL 인용률 2종은 고른 회차 세대 중 하나라도 summary_url_hit_generations 에 없으면 그 2장만 미러로 간다
     # (server.ts:5527-5542 url-hits-uncovered, summary-website-aggregates.ts:1273-1297 covered < wanted). 허브 = 그 계열만 비카드(S4b).
     # 그때는 동결 스캔에서 URL 칸을 빼 같은 값을 두 번 세지 않는다
-    url_live = bool(ctx.frz_ok and ctx.surface == "website" and win.mode == "snapshot" and await url_hits_uncovered(conn, win))
-    parts = SUMMARY_PARTS + (("urls",) if ctx.surface in URL_SURFACES and not url_live else ())   # urls 도 같은 스캔에서(core 가 빈 창이면 0 행)
-    if ctx.surface == "website" and not url_live:
-        parts += ("url_prompts",)                                                    # 결정 6: 프롬프트 단위(별도 count DISTINCT 문장)
-    row = (await fetch_counts(conn, ms, win, parts=parts))[0]
-    applied = await prompt_counts(conn, ms)
+    url_live = bool(want_urls and ctx.frz_ok and ctx.surface == "website" and win.mode == "snapshot"
+                    and await url_hits_uncovered(conn, win))
+    skip = ({"prompts"} if not want_measured else set()) | ({"gap"} if not want_gap else set())   # B089: 요청하지 않은 core part
+    core_parts = tuple(p for p in SUMMARY_PARTS if p not in skip)
+    core_parts += (("urls",) if want_urls and ctx.surface in URL_SURFACES and not url_live else ())   # urls 도 같은 스캔에서(core 가 빈 창이면 0 행)
+    if want_urls and ctx.surface == "website" and not url_live:
+        core_parts += ("url_prompts",)                                               # 결정 6: 프롬프트 단위(별도 count DISTINCT 문장)
+    row = (await fetch_counts(conn, ms, win, parts=core_parts))[0]
+    applied = await prompt_counts(conn, ms) if "applied" in want else None
     r = ratios(row)
     sup: dict[str, str] = {}
     m_hidden = win.hidden("mentions")
@@ -185,7 +195,9 @@ async def get_summary(conn: Any, ctx: ReadContext, *, cycle_offset: int, today: 
     if ctx.surface != "website":
         sup["url_prompts"] = "not_website_surface"
     if ctx.surface in URL_SURFACES:
-        if c_hidden:
+        if not want_urls:
+            pass                                                                         # B089: urls 미요청 = 값 null, 표식 없음
+        elif c_hidden:
             for k in URL_METRICS:
                 sup[k] = "hidden"
             if ctx.surface == "website":
@@ -220,8 +232,10 @@ async def get_summary(conn: Any, ctx: ReadContext, *, cycle_offset: int, today: 
     else:
         for k in URL_METRICS:
             sup[k] = "not_website_surface"
-    # BG-06: 세 표면 모두(현행 프로젝트 요약 카드 missingPrompts·표준 미언급 = 측정 − 관점 언급)
-    if m_hidden:
+    # BG-06: 세 표면 모두(현행 프로젝트 요약 카드 missingPrompts·표준 미언급 = 측정 − 관점 언급). measured 미요청이면 값 null, 표식 없음(B089)
+    if not want_measured:
+        pass
+    elif m_hidden:
         sup["prompts_without_brand"] = "hidden"
     elif win.empty or int(row["measured_prompts"]) == 0:
         # M6: 노출 회차 없는 창은 0 이 아니라 null. 창이 있어도 측정 프롬프트 0(필터·스코프로 비었음)이면 null(검증 D3:
@@ -238,11 +252,11 @@ async def get_summary(conn: Any, ctx: ReadContext, *, cycle_offset: int, today: 
     data = SummaryData(
         visibility=vis, share_of_voice=sov, sentiment=sen, position=pos, citation_share=cit,
         target_url_rate=tgt, owned_url_rate=own, citation_accuracy=acc, url_prompts=url_prompts,
-        params=SummaryParams(answers=int(row["answers"]), measured_prompts=int(row["measured_prompts"]), applied_prompts=applied,
-                             prompts_without_brand=without_brand, measured_by_funnel=funnel),
-        analysis_gap=AnalysisGap(gap_answers=int(row["gap_answers"]), base_answers=int(row["gap_base"])),
+        params=SummaryParams(answers=int(row["answers"]), measured_prompts=int(row["measured_prompts"]) if want_measured else None,
+                             applied_prompts=applied, prompts_without_brand=without_brand, measured_by_funnel=funnel),
+        analysis_gap=AnalysisGap(gap_answers=int(row["gap_answers"]), base_answers=int(row["gap_base"])) if want_gap else None,
     )
-    if m_hidden:
+    if m_hidden and want_gap:
         sup["analysis_gap"] = "hidden"                   # M6: 언급 숨김 회차만 있는 창의 {0,0} 은 결손 0 이 아니다
     if win.mode == "snapshot" and win.empty:
         sup["*"] = SUPPRESS_NO_SNAPSHOT

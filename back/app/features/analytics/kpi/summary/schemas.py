@@ -14,6 +14,9 @@ from app.core.envelope import Meta, RankAvg, Ratio, UrlPromptCounts
 from app.core.filters import CommonFilters
 
 UNMEASURED_LIMIT_MAX = 200          # BG-04 미측정 목록 상한(현행 listUnmeasuredPromptsFromCatalog 기본 200)
+# K-1 선택 부분(B089). ①~⑤·params.answers·measured_by_funnel 은 늘 계산한다
+SummaryPart = Literal["measured", "applied", "gap", "urls"]
+SUMMARY_OPTIONAL_PARTS: tuple[str, ...] = ("measured", "applied", "gap", "urls")
 
 
 class SnapshotQuery(CommonFilters):
@@ -22,8 +25,13 @@ class SnapshotQuery(CommonFilters):
 
 
 class SummaryQuery(SnapshotQuery):
-    """K-1 쿼리 = 공통 필터 + cycle_offset + 선택 분해(BG-08)."""
+    """K-1 쿼리 = 공통 필터 + cycle_offset + 선택 분해(BG-08) + 선택 부분(B089)."""
     by_funnel: bool = Field(False, description="true 면 params.measured_by_funnel(퍼널 주제별 측정 프롬프트 수)을 채운다(BG-08)")
+    parts: list[SummaryPart] = Field(default_factory=list, max_length=4, description=(
+        "계산할 선택 부분(B089). 비우면 전부(종전과 같은 응답). measured = params.measured_prompts·prompts_without_brand"
+        "(측정 프롬프트 count DISTINCT 문장), applied = params.applied_prompts(적용 프롬프트 문장), gap = analysis_gap(A16 열), "
+        "urls = target_url_rate·owned_url_rate·citation_accuracy·url_prompts·meta.source(URL 인용률 문장). 빠진 부분은 값 null 이고 "
+        "meta.suppressed 에도 적지 않는다(null 자체가 '요청하지 않음'). ①~⑤·params.answers·measured_by_funnel·나머지 값은 부분과 무관하게 같다"))
 
 
 class UnmeasuredQuery(SnapshotQuery):
@@ -40,8 +48,8 @@ class FunnelPrompts(BaseModel):
 class SummaryParams(BaseModel):
     """M12 모수. prompts_without_brand 는 세 표면 모두(BG-06: 측정 프롬프트 중 관점 브랜드 미언급)."""
     answers: int = Field(description="std_in 답변 수(가산)")
-    measured_prompts: int = Field(description="std_in 답변의 서로 다른 프롬프트 수(비가산)")
-    applied_prompts: int = Field(description="적용 프롬프트 수(카탈로그·웹 등록·프로젝트 프롬프트, 측정 무관)")
+    measured_prompts: int | None = Field(description="std_in 답변의 서로 다른 프롬프트 수(비가산). parts 에 measured 가 없으면 null")
+    applied_prompts: int | None = Field(description="적용 프롬프트 수(카탈로그·웹 등록·프로젝트 프롬프트, 측정 무관). parts 에 applied 가 없으면 null")
     prompts_without_brand: int | None = Field(None, description="measured_prompts − 관점 브랜드 언급 프롬프트 수(세 표면, BG-06). "
                                                                 "숨김·노출 회차 없음이면 null")
     measured_by_funnel: list[FunnelPrompts] | None = Field(None, description="by_funnel=true 일 때만: 퍼널 주제별 측정 프롬프트 수"
@@ -69,7 +77,7 @@ class SummaryData(BaseModel):
         "(meta.source.url_rates report = 발행 프롬프트 합, live = 측정 프롬프트 중 인용 프롬프트). 표면 밖 not_website_surface·숨김 hidden·"
         "측정 프롬프트 0 no_data 면 null(meta.suppressed 'url_prompts')"))
     params: SummaryParams
-    analysis_gap: AnalysisGap
+    analysis_gap: AnalysisGap | None = Field(description="A16 결손 쌍. parts 에 gap 이 없으면 null")
 
 
 class UnmeasuredPrompt(BaseModel):

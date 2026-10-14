@@ -307,3 +307,87 @@ async def test_full_cap_and_meta_truncated_u63(client_as, monkeypatch):
     assert [b["name"] for b in d["brands"]] == ["Hyundai", "Toyota", "Kia"] and d["truncated"] is True
     assert body["meta"]["truncated"] == {"brands": True, "by_engine": any(e["truncated"] for e in d["by_engine"])}
     assert all(len([b for b in e["brands"] if not b["is_own"]]) <= 2 for e in d["by_engine"])
+
+
+# ── B092 계산 생략: include_sentiment·engine_only ──────────────────────────────
+ZERO_SENT = {"positive": 0, "neutral": 0, "mixed": 0, "negative": 0}
+SKIP_CASES = [
+    (HQ_HYUNDAI, {"surface": "global", "group_by": "engine", "include": ["hmg"], "top_n": 30}),
+    (HQ_HYUNDAI, {"surface": "global", "card": "true", "top_n": 20, "include": ["hmg"]}),
+    (ADMIN, {"surface": "global", "group_by": "engine", "split_own": "true", "include": ALL_INC}),
+    (HQ_HYUNDAI, {"surface": "global", "group_by": "engine", "full": "true"}),
+    (KIA_US, {"surface": "global", "group_by": "engine", "split_own": "true", "include": ["hmg"]}),
+    (ADMIN, {"surface": "website", "group_by": "engine"}),
+    (VENDOR, {"surface": "project", "project_id": str(CUST_PROJECT), "group_by": "engine"}),
+]
+
+
+@pytest.fixture
+def stmt_log(monkeypatch):
+    """service 이름공간의 집계 문장(당사 합계·경쟁 행·당사 감성)을 부를 때 group_by·by_engine 을 적는다(값은 원래 함수 그대로)."""
+    from app.features.analytics.mentions.brands import service as S
+
+    log: list[tuple[str, bool]] = []
+    fc, br, os_ = S.fetch_counts, S.brand_rows, S.own_sentiment_sql
+
+    async def fetch_counts_(conn, ms, win, **kw):
+        log.append(("counts", "engine" in kw.get("group_by", ())))
+        return await fc(conn, ms, win, **kw)
+
+    async def brand_rows_(conn, ms, win, **kw):
+        log.append(("brands", "engine" in kw.get("group_by", ())))
+        return await br(conn, ms, win, **kw)
+
+    def own_sentiment_sql_(ms, win, **kw):
+        log.append(("sentiment", bool(kw.get("by_engine"))))
+        return os_(ms, win, **kw)
+
+    monkeypatch.setattr(S, "fetch_counts", fetch_counts_)
+    monkeypatch.setattr(S, "brand_rows", brand_rows_)
+    monkeypatch.setattr(S, "own_sentiment_sql", own_sentiment_sql_)
+    return log
+
+
+def _zero_sentiment(d: dict) -> dict:
+    out = {**d, "brands": [{**b, "sentiment": ZERO_SENT} for b in d["brands"]]}
+    if d.get("by_engine") is not None:
+        out["by_engine"] = [{**e, "brands": [{**b, "sentiment": ZERO_SENT} for b in e["brands"]]} for e in d["by_engine"]]
+    return out
+
+
+@pytest.mark.parametrize(("uid", "params"), SKIP_CASES)
+async def test_include_sentiment_false_skips_own_sentiment(client_as, stmt_log, uid, params):
+    """B092: include_sentiment=false = 당사 감성 문장(전체·엔진별) 없음, 모든 행 sentiment 0, 나머지 data·meta 는 기본 호출과 같다."""
+    full = (await _get(client_as, uid, **params)).json()
+    assert ("sentiment", False) in stmt_log or not full["data"]["brands"] or full["meta"]["suppressed"]   # 기본 = 종전(감성 문장 있음)
+    stmt_log.clear()
+    r = await _get(client_as, uid, **params, include_sentiment="false")
+    assert r.status_code == 200, r.text
+    assert not [s for s in stmt_log if s[0] == "sentiment"], stmt_log
+    assert r.json()["data"] == _zero_sentiment(full["data"]) and r.json()["meta"] == full["meta"]
+
+
+@pytest.mark.parametrize(("uid", "params"), [c for c in SKIP_CASES if c[1].get("group_by") == "engine"])
+async def test_engine_only_skips_whole_window(client_as, stmt_log, uid, params):
+    """B092: engine_only=true(group_by=engine) = 전체 창 당사 합계·경쟁 행·감성 문장 없음. by_engine·meta 는 기본 호출과 같고,
+    최상위 totals·own·brands·types_total 은 빈 창 응답(같은 요청, 측정 없는 기간)의 값과 같다."""
+    full = (await _get(client_as, uid, **params)).json()
+    stmt_log.clear()
+    r = await _get(client_as, uid, **params, engine_only="true")
+    assert r.status_code == 200, r.text
+    assert stmt_log and all(by_engine for _, by_engine in stmt_log), stmt_log      # 엔진별 문장만
+    got = r.json()
+    assert got["data"]["by_engine"] == full["data"]["by_engine"] and got["meta"] == full["meta"]
+    empty = (await _get(client_as, uid, **params, **{"from": "2025-01-01", "to": "2025-01-31"})).json()["data"]
+    top = ("totals", "own", "brands", "types_total", "truncated")
+    assert {k: got["data"].get(k) for k in top} == {k: empty.get(k) for k in top}
+    # 엔진 블록이 없을 때(측정 없는 기간)도 빈 창 응답 그대로
+    none = await _get(client_as, uid, **params, engine_only="true", **{"from": "2025-01-01", "to": "2025-01-31"})
+    assert none.json()["data"] == empty
+
+
+async def test_engine_only_without_group_by_is_default(client_as):
+    """engine_only 는 group_by=engine 일 때만: group_by 가 없으면 응답이 기본과 같다."""
+    base = (await _get(client_as, HQ_HYUNDAI, surface="global", include=["hmg"])).json()
+    assert (await _get(client_as, HQ_HYUNDAI, surface="global", include=["hmg"], engine_only="true")).json() == base
+    assert (await _get(client_as, HQ_HYUNDAI, surface="global", include_sentiment="maybe")).status_code == 422

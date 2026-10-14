@@ -57,12 +57,13 @@ export default async function AiFunnelConversionPage({
 
   // Backend API source (HGH_SOURCE_G4=api, unit U8): GET /v1/funnel/conversion once (markets,
   // live, rollup and visits from one answer, rules C1..C7) + GET /v1/filters/options for the
-  // geography list. catalogRows is not needed: the conversion panel has no catalog axis.
+  // geography list. catalogRows is not needed: the conversion panel has no catalog axis, so the
+  // options call asks for the geography only (geoOnly: the backend skips the catalog statements).
   async function loadApi() {
     try {
       const [screen, options] = await Promise.all([
         loadConversionScreen({ surface: "global", geography: geoFilter, filters, days }),
-        loadPanelOptions({ surface: "global", scope: session?.user.scope ?? null, filters: {} }),
+        loadPanelOptions({ surface: "global", scope: session?.user.scope ?? null, filters: {}, geoOnly: true }),
       ]);
       return { catalogRows: undefined, geographyOptions: options.geographyOptions, ...screen };
     } catch (e) {

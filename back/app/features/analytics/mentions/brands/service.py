@@ -24,6 +24,12 @@
   경쟁 행에 없으므로 빠지지 않는다(현행 isTracked 보호).
 - 값은 그대로: totals.answers·mentions_total(rd.answer 원천), 각 행 값, own 블록 값, types_total(전 경쟁 행 합, 현행 typesByBrand.totals
   "top-N 컷 이전 전 브랜드 합"), totals.brand_count(제외 행 포함 = 현행 summary.uniqueBrands 불변).
+
+계산 생략(B092, 전부 선택 인자: 주지 않으면 결과·문장이 그대로다)
+- include_sentiment=false: 당사 감성 문장(own_sentiment_sql, 전체·엔진별)을 건너뛰고 모든 행 sentiment 를 0 으로 둔다(경쟁 행 감성 열은
+  brand_rows 부산물이지만 같이 0: '계산하지 않음' 한 뜻). 다른 값은 같다.
+- engine_only=true(group_by=engine 일 때만): 최상위를 빈 창처럼(전체 창 당사 합계·경쟁 행·감성 문장 없이) 두고 by_engine 만 센다.
+  명부 제외 키·이름은 엔진 블록이 직접 읽는다(전체 창 경로와 같은 규칙). by_engine 값은 같다.
 """
 from __future__ import annotations
 
@@ -125,11 +131,11 @@ def _own_item(tot: dict[str, Any], sent: dict[str, Any], *, name: str, brand_key
             "rank_sum": int(tot["rank_sum"]), "ranked": int(tot["ranked"]), "sent": sent, "own_brand_code": code, "bits": bits}
 
 
-def _comp_item(r: dict[str, Any], names: dict[int, str]) -> dict[str, Any]:
+def _comp_item(r: dict[str, Any], names: dict[int, str], *, sentiment: bool = True) -> dict[str, Any]:
     k = int(r["brand_key"])
     return {"brand_key": k, "name": r.get("frz_name") or names.get(k, str(k)), "is_own": False, "mentions": int(r["mentions"] or 0),
             "exposed": int(r["exposure_answers"] or 0), "rank_sum": int(r["rank_sum"] or 0), "ranked": int(r["ranked"] or 0),
-            "sent": r, "own_brand_code": None, "bits": ()}
+            "sent": r if sentiment else dict(_ZERO_SENT), "own_brand_code": None, "bits": ()}
 
 
 def _unpack_own_counts(r: dict[str, Any] | None, n: int) -> list[dict[str, int]]:
@@ -218,10 +224,12 @@ async def _names(conn: Any, keys: list[int], lookup: list[str]) -> tuple[dict[in
 
 async def mention_brands(conn: Any, ctx: ReadContext, win: Window, *, top_n: int, sort: SortKey,
                          brand_keys: list[int] | None, split_own: bool = False, include: list[str] | None = None,
-                         group_by: str | None = None, q: str | None = None, full: bool = False) -> BrandsData:
+                         group_by: str | None = None, q: str | None = None, full: bool = False,
+                         include_sentiment: bool = True, engine_only: bool = False) -> BrandsData:
     ms = ctx.measure()
     label = viewpoint_label(ctx)
-    run = runnable(win)
+    eng_only = engine_only and group_by == "engine"                            # B092: 최상위는 빈 창처럼, by_engine 만 센다
+    run = runnable(win) and not eng_only
     splits: list[OwnSplit] = own_splits(ctx, ms) if split_own else []
     split = bool(splits)
     if run:
@@ -230,9 +238,12 @@ async def mention_brands(conn: Any, ctx: ReadContext, win: Window, *, top_n: int
         else:
             tot, split_tot = (await fetch_counts(conn, ms, win, parts=("mentions",)))[0], []
         comp = await brand_rows(conn, ms, win)
-        s = own_sentiment_sql(ms, win, by_bit=split)
-        sent_rows = await fetch_all(conn, s.text, s.params)
-        own_sent = _sum_sent(sent_rows) if split else (sent_rows[0] if sent_rows else dict(_ZERO_SENT))
+        if include_sentiment:
+            s = own_sentiment_sql(ms, win, by_bit=split)
+            sent_rows = await fetch_all(conn, s.text, s.params)
+            own_sent = _sum_sent(sent_rows) if split else (sent_rows[0] if sent_rows else dict(_ZERO_SENT))
+        else:                        # B092: 감성 미요청 = 당사 감성 문장 생략, 모든 행 0
+            sent_rows, own_sent = [], dict(_ZERO_SENT)
     else:
         tot, comp, sent_rows, own_sent = dict(_ZERO_COUNTS), [], [], dict(_ZERO_SENT)
         split_tot = [dict(_ZERO_COUNTS) for _ in splits] if split else []
@@ -246,7 +257,7 @@ async def mention_brands(conn: Any, ctx: ReadContext, win: Window, *, top_n: int
 
     answers, mentions_total = int(tot["answers"]), int(tot["total_mentions"])
     merged_own = _own_item(tot, own_sent, name=label, brand_key=own_key, bits=tuple(sorted(ms.own_bits)))
-    comp_items = [_comp_item(r, names) for r in comp]                          # 전 경쟁 행(types_total·brand_count 원천)
+    comp_items = [_comp_item(r, names, sentiment=include_sentiment) for r in comp]   # 전 경쟁 행(types_total·brand_count 원천)
     n_own = len(splits) if split else len(ms.own_bits)                         # 집계층 브랜드 축의 당사 행 수(관점 브랜드마다 1행)
     shown = _shown(comp_items, excluded, _card_kept(ms, comp_items, n_own))    # 순위·선택 모집단(카드 상한 → 제외 행 뺌)
     merged_ranked = rank_brand_items([dict(merged_own)] + [dict(i) for i in shown])
@@ -288,9 +299,11 @@ async def mention_brands(conn: Any, ctx: ReadContext, win: Window, *, top_n: int
             types_total = TypeCounts(**{t: sum(v.get(t, 0) for v in extras.own_types.values())
                                         + sum(int(r.get(t) or 0) for k, r in extras.comp.items() if k in comp_keys) for t in TYPE_COLS})
 
+    # engine_only: 명부 제외 키는 엔진 블록이 경쟁 행을 보고 직접 읽는다(전체 창 경쟁 행을 읽지 않았으므로)
     by_engine = await _by_engine(conn, ctx, win, ms, splits, label=label, own_key=own_key,
                                  names=names, by_name=by_name, hmg=hmg, include=inc, top_n=top_n, sort=sort,
-                                 brand_keys=brand_keys, q=q, full=full, excluded=excluded) if group_by == "engine" else None
+                                 brand_keys=brand_keys, q=q, full=full, excluded=None if eng_only else excluded,
+                                 sentiment=include_sentiment) if group_by == "engine" else None
 
     out = [_to_item(i, answers, mentions_total, extras) for i in chosen]
     return BrandsData(
@@ -304,11 +317,13 @@ async def mention_brands(conn: Any, ctx: ReadContext, win: Window, *, top_n: int
 async def _by_engine(conn: Any, ctx: ReadContext, win: Window, ms: MeasureScope, splits: list[OwnSplit], *, label: str,
                      own_key: int | None, names: dict[int, str], by_name: dict[str, int], hmg: dict[int, bool], include: set[str],
                      top_n: int, sort: SortKey, brand_keys: list[int] | None, q: str | None, full: bool,
-                     excluded: frozenset[int] = frozenset()) -> list[EngineBrands]:
+                     excluded: frozenset[int] | None = frozenset(), sentiment: bool = True) -> list[EngineBrands]:
     """BG-16 엔진 × 브랜드 스냅샷. 합계·경쟁 행·당사 감성을 engine 으로 묶어 같은 순위·선택 규칙을 엔진마다 적용한다.
     엔진별 행에는 own_brand_code·is_hmg_own(include=hmg)만 싣는다(prompts·multi·types 는 전체 행에만).
     블록 = 창 안 std_in 답변이 있는 엔진만(검증 D4: 창 WHERE 는 cit_in 이라 분석 대기 답변만 있는 엔진이 answers 0 블록으로 나왔다).
-    엔진 블록 answers 합 = 전체 totals.answers. 명부 제외 행은 전체 창과 같은 규칙(순위·선택에서 뺌, brand_count 는 포함)."""
+    엔진 블록 answers 합 = 전체 totals.answers. 명부 제외 행은 전체 창과 같은 규칙(순위·선택에서 뺌, brand_count 는 포함).
+    excluded=None(engine_only, B092): 전체 창 경쟁 행을 읽지 않았으므로 명부 제외 키를 엔진 경쟁 행이 있을 때 여기서 읽는다.
+    sentiment=False(include_sentiment=false, B092): 엔진별 당사 감성 문장을 건너뛰고 행 감성은 0."""
     if not runnable(win):
         return []
     g = ("engine",)
@@ -323,8 +338,12 @@ async def _by_engine(conn: Any, ctx: ReadContext, win: Window, ms: MeasureScope,
     for r in await brand_rows(conn, ms, win, group_by=g):
         if int(r["brand_key"]) != 0:
             comps[int(r["engine_key"])].append(r)
-    s = own_sentiment_sql(ms, win, by_bit=bool(splits), by_engine=True)
-    sent_rows = await fetch_all(conn, s.text, s.params)
+    sent_rows: list[dict[str, Any]] = []
+    if sentiment:
+        s = own_sentiment_sql(ms, win, by_bit=bool(splits), by_engine=True)
+        sent_rows = await fetch_all(conn, s.text, s.params)
+    if excluded is None:             # engine_only: 전체 창 경로의 '경쟁 행이 있으면 읽는다'와 같은 규칙(엔진 행 ⊆ 전체 행)
+        excluded = await excluded_brand_keys(conn) if any(comps.values()) else frozenset()
     missing = sorted({int(r["brand_key"]) for rs in comps.values() for r in rs} - set(names))
     if missing:                      # 전체 창에서 걸러졌던 키는 없다(엔진 행 ⊆ 전체 행). 방어: 이름 없는 키는 조회로 채운다
         more, _, more_hmg = await _names(conn, missing, [])
@@ -339,7 +358,7 @@ async def _by_engine(conn: Any, ctx: ReadContext, win: Window, ms: MeasureScope,
         t = tots[ek]
         answers, mentions_total = int(t["answers"]), int(t["total_mentions"])
         erows = [r for r in sent_rows if int(r["engine_key"]) == ek]
-        comp_items = [_comp_item(r, names) for r in comps.get(ek, [])]
+        comp_items = [_comp_item(r, names, sentiment=sentiment) for r in comps.get(ek, [])]
         # 엔진 축도 같은 상한(현행 keepBrand 가 (engine, brand_name) 축 파티션마다 걸린다, summary-trend-aggregates.ts:1003-1018)
         shown = _shown(comp_items, excluded, _card_kept(ms, comp_items, len(splits) if splits else len(ms.own_bits)))
         if splits:

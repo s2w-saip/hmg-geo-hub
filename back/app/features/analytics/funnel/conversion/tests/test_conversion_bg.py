@@ -286,3 +286,53 @@ async def test_bg29_events_bad_params_422(client_as, params):
 
 async def test_bg29_events_unauthenticated(client_as):
     assert (await _get(client_as, None, EV, property_id="7001")).status_code == 401
+
+
+# ── B096: rollup_lite(전환 화면 롤업 분기)·summary_only(요약 카드) ─────────────────────────────
+def _no_extra_statements(monkeypatch):
+    from app.features.analytics.funnel.conversion import service
+
+    def boom(*a, **k):
+        raise AssertionError("page / engine-compare statements must not run")
+    for name in ("pages_sql", "engine_sessions_sql", "engine_conversions_sql"):
+        monkeypatch.setattr(service.q, name, boom)
+
+
+@pytest.mark.parametrize("params", [{"surface": "global"}, {"surface": "global", "engine": "gemini"},
+                                    {"surface": "global", "device": "mobile", "days": 28}])
+async def test_b096_rollup_lite_skips_unshown_parts(client_as, monkeypatch, params):
+    """관리자 global = 커버리지 시장 4(active 2) → 롤업 분기. rollup_lite 는 페이지·엔진 비교 문장을 돌리지 않고 trend·by_engine·
+    by_engine_all·pages = [], summary·by_country·coverage·period·meta 는 기본 호출과 같다."""
+    full = (await _get(client_as, ADMIN, **params)).json()
+    assert len(full["data"]["coverage"]["markets"]) >= 2 and full["data"]["by_country"]
+    _no_extra_statements(monkeypatch)
+    r = await _get(client_as, ADMIN, **params, rollup_lite="true")
+    assert r.status_code == 200, r.text
+    assert r.json()["data"] == {**full["data"], "trend": [], "by_engine": [], "by_engine_all": [], "pages": []}
+    assert r.json()["meta"] == full["meta"]
+
+
+@pytest.mark.parametrize(("uid", "params"), [(ADMIN, {"surface": "global", "country": "IT"}),
+                                             (VENDOR, {"surface": "project", "project_id": str(CUST_PROJECT)})])
+async def test_b096_rollup_lite_leaf_is_default(client_as, uid, params):
+    """시장이 하나(국가 리프·프로젝트)면 rollup_lite 는 효과가 없다(추이·페이지·엔진을 화면이 그린다)."""
+    full = (await _get(client_as, uid, **params)).json()
+    assert len(full["data"]["coverage"]["markets"]) == 1 and full["data"]["pages"]
+    assert (await _get(client_as, uid, **params, rollup_lite="true")).json() == full
+
+
+@pytest.mark.parametrize(("uid", "params"), [
+    (ADMIN, {"surface": "global"}),
+    (ADMIN, {"surface": "global", "engine": "gemini"}),
+    (ADMIN, {"surface": "global", "country": "IT"}),
+    (VENDOR, {"surface": "project", "project_id": str(CUST_PROJECT), "days": 28, "property_source": "market", "include_pages": "false"}),
+])
+async def test_b096_summary_only_keeps_summary_and_coverage(client_as, monkeypatch, uid, params):
+    """summary_only(대시보드 ⑦ 요약 카드): 페이지·엔진 비교 문장 없음, trend·by_engine·by_engine_all·pages = [], by_country = null.
+    summary·coverage·period·meta 는 기본 호출과 같다."""
+    full = (await _get(client_as, uid, **params)).json()
+    _no_extra_statements(monkeypatch)
+    r = await _get(client_as, uid, **params, summary_only="true")
+    assert r.status_code == 200, r.text
+    assert r.json()["data"] == {**full["data"], "trend": [], "by_engine": [], "by_engine_all": [], "pages": [], "by_country": None}
+    assert r.json()["meta"] == full["meta"]

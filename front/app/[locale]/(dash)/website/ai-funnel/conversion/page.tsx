@@ -54,11 +54,12 @@ export default async function WebsiteAiFunnelConversionPage({
   // once (virtual site codes such as HYUNDAI-N are resolved by the backend) + the website
   // options for geography. The event dialog keeps its property from coverage.markets[]
   // .property_id (BG-29) and its server actions follow the same flag (tracked-events-actions).
+  // The options call asks for the geography only (geoOnly), as on the standard conversion page.
   async function loadApi() {
     try {
       const [screen, options] = await Promise.all([
         loadConversionScreen({ surface: "website", geography: geoFilter, filters, days }),
-        loadPanelOptions({ surface: "website", scope: session?.user.scope ?? null, filters: {} }),
+        loadPanelOptions({ surface: "website", scope: session?.user.scope ?? null, filters: {}, geoOnly: true }),
       ]);
       return { catalogRows: undefined, geographyOptions: options.geographyOptions, ...screen };
     } catch (e) {

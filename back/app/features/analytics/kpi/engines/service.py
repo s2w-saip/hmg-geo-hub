@@ -8,9 +8,12 @@
   제품 책임자 Q1 (a)): 현행 live.ts:880 배지는 base URL 자사(citOwned)라 글로벌 배지 값이 현행과 다르다(DECISIONS-API 동기화 S1 BE-B 고지).
   순위는 평균 순위(rank_sum ÷ ranked)의 min ÷ max. 현행은 소수 1자리로 반올림한 평균을 썼고 여기서는 반올림 전 값을 쓴다.
 - 억제: 숨김 계열(언급 {1,3} · 인용 {1,2})이면 그 계열 필드 null + meta.suppressed[지표] = hidden. 스냅샷 회차 없음 '*'.
+- parts(B090): part 여럿의 합집합으로 core part 를 고른다(예: sov+citation = 일관성 배지 열만, rank_detail 없음). 비우면 [part](종전).
+  스캔은 그대로 rd.answer 한 번이고 열만 준다. 계산한 열의 값은 part=all 의 같은 열과 같다.
 """
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import date
 from typing import Any
 
@@ -51,14 +54,21 @@ def engine_consistency(rows: list[EngineItem]) -> EngineConsistency:
                              citation_share=f("cit_owned", "cit_total"))
 
 
-async def get_engines(conn: Any, ctx: ReadContext, *, part: str, cycle_offset: int, today: date | None) -> Envelope[EnginesData]:
+def requested_parts(part: str, parts: Sequence[str] = ()) -> tuple[str, ...]:
+    """요청 part(들) → core part(순수 함수). parts 를 주면 그 합집합(B090), 비우면 PART_MAP[part](종전)."""
+    return tuple(dict.fromkeys(cp for p in (parts or (part,)) for cp in PART_MAP[p]))
+
+
+async def get_engines(conn: Any, ctx: ReadContext, *, part: str, cycle_offset: int, today: date | None,
+                      parts: Sequence[str] = ()) -> Envelope[EnginesData]:
     ctx, win = await ctx.card_window(conn, route="engines", offset=cycle_offset if ctx.date_from is None else 0, today=today)   # 동결 판정(S4)
     sup: dict[str, str] = {}
     hidden = {"mentions": win.hidden("mentions"), "rank_detail": win.hidden("mentions"), "citations": win.hidden("citations")}
-    parts = tuple(p for p in PART_MAP[part] if not hidden[p])
-    if hidden["mentions"] and any(p in PART_MAP[part] for p in ("mentions", "rank_detail")):
+    want = requested_parts(part, parts)
+    parts = tuple(p for p in want if not hidden[p])
+    if hidden["mentions"] and any(p in want for p in ("mentions", "rank_detail")):
         sup.update(dict.fromkeys(MENTION_METRICS, SUPPRESS_HIDDEN))
-    if hidden["citations"] and "citations" in PART_MAP[part]:
+    if hidden["citations"] and "citations" in want:
         sup["citation_share"] = SUPPRESS_HIDDEN
 
     counts = await fetch_counts(conn, ctx.measure(), win, group_by=("engine",), parts=parts) if parts else []   # 빈 창은 core 가 단락

@@ -39,6 +39,13 @@ class BrandsQuery(CommonFilters):
                           description="BG-19: 경쟁 브랜드 이름 부분 일치(대소문자 무시). 당사 행은 항상 포함, 순위는 전체 기준")
     full: bool = Field(False, description=f"BG-19: 경쟁 행 전량(top_n 무시, 상한 {FULL_CAP}). 상한을 넘으면 data.truncated = true. "
                                           "full=true 응답은 meta.truncated = {brands: bool(, by_engine: bool)} 를 싣는다")
+    # ── 계산 생략(B092). 전부 선택: 주지 않으면 응답이 이전과 같다 ──
+    include_sentiment: bool = Field(True, description=(
+        "false = 감성을 계산하지 않는다: 당사 감성 문장(rd.answer_brand 당사 행 합)을 건너뛰고 모든 행(brands·by_engine[].brands)의 "
+        "sentiment 를 0 4개로 둔다. 다른 필드 값은 같다"))
+    engine_only: bool = Field(False, description=(
+        "group_by=engine 일 때만: true = by_engine 만 계산한다. 전체 창 당사 합계·경쟁 행·당사 감성 문장을 건너뛰고 최상위 "
+        "totals·own·brands·types_total 은 빈 창과 같은 값(0, 당사 행만)으로 둔다. by_engine 값은 같다. group_by 가 없으면 효과 없음"))
 
 
 class Sentiment(BaseModel):

@@ -86,9 +86,12 @@ def trend_sql(ms: MeasureScope, win: Window, *, series_brand_keys: Sequence[int]
     return b.sql(t)
 
 
-def battle_sql(ms: MeasureScope, win: Window) -> Sql:
+def battle_sql(ms: MeasureScope, win: Window, *, limit: int | None = None) -> Sql:
     """배틀 그리드(구 Q4): (프롬프트 × 엔진) 셀 전부 + 승자(선택 수 최다, 동률은 브랜드 이름 순).
-    지역이 여럿이면 같은 (프롬프트, 엔진) 셀을 합산해 판정한다(현행과 같음). 상한은 앱에서(프롬프트 단위 합계 정렬 후)."""
+    지역이 여럿이면 같은 (프롬프트, 엔진) 셀을 합산해 판정한다(현행과 같음).
+    limit(B097): 상위 limit 개 프롬프트의 셀만 낸다. 순서는 앱 정렬과 같다: 프롬프트(prompt_id)별 승자 선택 합 내림차순 → 문구(NULL = '')
+    → prompt_id. 문구·id 비교는 COLLATE "C"(UTF-8 바이트 순 = 파이썬 str 코드 포인트 순). 앱은 같은 키로 다시 정렬해 자른다(결과 같음).
+    None 이면 전부(종전)."""
     b = Binder("g")
     t = (f"WITH {cells_cte(ms, win, b)},\n"
          "agg AS (\n"
@@ -102,11 +105,23 @@ def battle_sql(ms: MeasureScope, win: Window) -> Sql:
          "  SELECT DISTINCT ON (agg.prompt_key, agg.engine_key) agg.prompt_key, agg.engine_key, bn.name AS brand, agg.choice, agg.is_ours\n"
          "    FROM agg JOIN rd.dim_brand_name bn ON bn.brand_key = agg.brand_key\n"
          "   ORDER BY agg.prompt_key, agg.engine_key, agg.choice DESC, bn.name),\n"
-         "pe AS (SELECT DISTINCT cells.prompt_key, cells.engine_key FROM cells)\n"
-         "SELECT dp.prompt_id::text AS prompt_id, dp.text AS prompt_text, pe.engine_key,\n"
-         "       win.brand AS winner_brand, coalesce(win.is_ours, false) AS winner_is_ours, coalesce(win.choice, 0) AS choice\n"
-         f"  FROM pe JOIN {fact_tables(ms).prompt} dp ON dp.prompt_key = pe.prompt_key\n"
-         "  LEFT JOIN win ON win.prompt_key = pe.prompt_key AND win.engine_key = pe.engine_key")
+         "pe AS (SELECT DISTINCT cells.prompt_key, cells.engine_key FROM cells)")
+    top = ""
+    if limit is not None:
+        t += (",\n"
+              "bt AS (\n"
+              "  SELECT dp.prompt_id\n"
+              f"    FROM pe JOIN {fact_tables(ms).prompt} dp ON dp.prompt_key = pe.prompt_key\n"
+              "    LEFT JOIN win ON win.prompt_key = pe.prompt_key AND win.engine_key = pe.engine_key\n"
+              "   GROUP BY dp.prompt_id\n"
+              "   ORDER BY sum(coalesce(win.choice, 0)) DESC, min(coalesce(dp.text, '') COLLATE \"C\"), dp.prompt_id::text COLLATE \"C\"\n"
+              f"   LIMIT {b.v(int(limit), 'int4')})")
+        top = "  JOIN bt ON bt.prompt_id = dp.prompt_id\n"
+    t += ("\nSELECT dp.prompt_id::text AS prompt_id, dp.text AS prompt_text, pe.engine_key,\n"
+          "       win.brand AS winner_brand, coalesce(win.is_ours, false) AS winner_is_ours, coalesce(win.choice, 0) AS choice\n"
+          f"  FROM pe JOIN {fact_tables(ms).prompt} dp ON dp.prompt_key = pe.prompt_key\n"
+          f"{top}"
+          "  LEFT JOIN win ON win.prompt_key = pe.prompt_key AND win.engine_key = pe.engine_key")
     return b.sql(t)
 
 

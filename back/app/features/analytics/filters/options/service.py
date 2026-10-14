@@ -14,6 +14,8 @@
 - 출처 카테고리 = 유효 카테고리(core.measure.CATEGORY_EXPR: 운영자 오버라이드 우선). source[] 데이터 축과 같은 해석이라 옵션 ⊇ 데이터.
 - 현행 프로필 filter_options(F1W4, WU-8): 켜지면 글로벌·웹사이트 국가·매트릭스·언어·엔진을 운영 hmg-geo 2670a16 + read_screens 14키 규칙으로
   낸다(build_legacy_global·build_legacy_website·default_engines). 스코프 교집합(관점 브랜드·스코프 국가·전용 사이트 코드)은 그대로 건다. project 무변경.
+- geo_only(B095, 선택): 국가 옵션만 쓰는 전환 화면용. 카탈로그 택소노미(TAXON·CATALOG 문장)·커스텀 필드 문장을 건너뛰고 그 필드는 null.
+  다른 필드·meta 는 기본 호출과 같다(현행 프로필 경로 포함).
 """
 from __future__ import annotations
 
@@ -314,9 +316,12 @@ def build_legacy_website(ctx: ReadContext, sites: list[dict[str, Any]], langs: l
 
 
 async def get_options(conn: Any, principal: Principal, filters: CommonFilters, custom_fields: dict[str, list[str]],
-                      *, profile: LegacyProfile | None = None, include: frozenset[str] = frozenset()) -> Envelope[OptionsData]:
+                      *, profile: LegacyProfile | None = None, include: frozenset[str] = frozenset(),
+                      geo_only: bool = False) -> Envelope[OptionsData]:
     """include: 'source_categories' 가 있을 때만 출처 카테고리를 계산한다(창 안 인용 스캔, 옵션 서버 시간의 대부분). 없으면 data 값 null,
-    meta.suppressed 에도 적지 않는다(null 자체가 '요청하지 않음'). 그 밖의 필드 값은 include 와 무관하다."""
+    meta.suppressed 에도 적지 않는다(null 자체가 '요청하지 않음'). 그 밖의 필드 값은 include 와 무관하다.
+    geo_only(B095): 국가 옵션만 쓰는 화면(전환)용. 카탈로그 택소노미·커스텀 필드 문장을 건너뛰고 catalog·custom_fields = null(같은 규칙:
+    null = 요청하지 않음, 억제 표식 없음). 매트릭스·국가·언어·엔진은 같은 매트릭스 문장의 결과라 그대로 낸다."""
     ctx = await resolve_read_context(conn, principal, filters, support=OPTIONS_SUPPORT, custom_fields=custom_fields)
     win = await ctx.window(conn)
     refs = ctx.refs
@@ -362,12 +367,14 @@ async def get_options(conn: Any, principal: Principal, filters: CommonFilters, c
         matrix, regions, langs, engines = build_matrix(ctx, rows)
 
     catalog = None
-    if ctx.surface == "global":
+    if geo_only:
+        pass                                        # B095: 국가 옵션만(카탈로그·커스텀 필드 미요청 = null)
+    elif ctx.surface == "global":
         catalog = await _catalog_global(conn, ctx)
     elif ctx.surface == "project":
         catalog = await _catalog_project(conn, ctx)
     cfs = None
-    if ctx.surface == "project" and ctx.project is not None:
+    if ctx.surface == "project" and ctx.project is not None and not geo_only:
         cfs = [CustomFieldOption(field_id=r["field_id"], label=r["label"], values=list(r["vals"] or []))
                for r in await fetch_all(conn, q.CUSTOM_FIELDS_SQL, {"pid": ctx.project.project_id})]
 
