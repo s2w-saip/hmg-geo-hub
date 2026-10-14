@@ -20,18 +20,35 @@ _VALUE_RE = re.compile(r"^[^\x00-\x1f\x7f]{1,100}$")
 
 
 class AnswerDetailQuery(BaseModel):
-    """상세 질의. surface 는 검증용(실제 표면과 다르면 404), brand[] 는 global·website 관점 브랜드(스코프 교집합, 접근 범위 불변)."""
+    """상세 질의. surface 는 검증용(실제 표면과 다르면 404), brand[] 는 global·website 관점 브랜드(스코프 교집합, 접근 범위 불변).
+
+    선택 게이트(project_id·gate_country[]·gate_brand[]): 화면(BFF)이 게이트한 범위로 접근을 더 좁힌다(계정 스코프 ∩, 밖이면 404).
+    없으면 종전 동작(계정 스코프·답변 프로젝트 가시성만). 현행 getMirrorAnswerBody 의 IDOR 게이트(run 소속·region·prompt brand)와 같은 범위.
+    lite: 답변 모달이 쓰지 않는 값을 계산하지 않는다(기본 거짓 = 종전 응답)."""
     model_config = ConfigDict(extra="ignore")
 
     surface: Surface | None = Field(None, description="global|website|project. 주면 실제 표면과 같아야 한다(다르면 404)")
     brand: list[str] = Field(default_factory=list, max_length=20,
                              description="관점 브랜드(global·website, project 는 ignored). 당사 배지·밑줄·스탠스 판정 입력(목록과 같은 규칙)")
+    project_id: uuid.UUID | None = Field(None, description=(
+        "project 표면 선택 게이트: 화면이 게이트한 프로젝트. 답변의 프로젝트와 다르면 404(현행 fetchProjectAnswerBody 의 run 소속 게이트). "
+        "없으면 종전(답변 프로젝트의 가시성만). global·website 는 ignored(meta.ignored_filters)"))
+    gate_country: list[str] = Field(default_factory=list, max_length=300, description=(
+        "global 선택 게이트: 화면 URL 국가(ISO). 답변 국가가 계정 스코프 ∩ 이 목록 밖이면 404(현행 region 게이트, 스코프 밖 값은 버림). "
+        "없으면 종전(계정 스코프 국가). website(사이트 국가 리맵은 게이트에 쓰지 않는다)·project 는 쓰지 않는다"))
+    gate_brand: list[str] = Field(default_factory=list, max_length=20, description=(
+        "global·website 선택 게이트: 화면 URL 브랜드. global = 그 브랜드 카탈로그 행이 있는 프롬프트(현행 prompt brand 게이트), "
+        "website = 그 브랜드 사이트(현행 narrowScopeBrands). 계정 스코프 ∩(스코프 밖 값은 버림), 밖이면 404. 없으면 종전. project 는 쓰지 않는다"))
+    lite: bool = Field(False, description=(
+        "참이면 답변 모달이 쓰지 않는 값을 계산하지 않고 null: header.catalog·cycle_id·anchor_date·model_slug·is_rep·acr_iter_rank, "
+        "citations[].owned·target_hit. 거짓(기본) = 종전 응답"))
 
     @model_validator(mode="after")
     def _check(self) -> AnswerDetailQuery:
-        for v in self.brand:
-            if not _VALUE_RE.match(v):
-                raise ValueError("brand 값 형식 오류")
+        for name in ("brand", "gate_country", "gate_brand"):
+            for v in getattr(self, name):
+                if not _VALUE_RE.match(v):
+                    raise ValueError(f"{name} 값 형식 오류")
         return self
 
 
@@ -53,21 +70,21 @@ class CatalogInfo(BaseModel):
 
 class Header(BaseModel):
     surface: Surface
-    cycle_id: uuid.UUID
+    cycle_id: uuid.UUID | None = Field(description="lite 면 null")
     round_date: date
-    anchor_date: date
+    anchor_date: date | None = Field(description="lite 면 null")
     measured_at: datetime | None = None
     engine: str
     country: str | None = None
     lang: str | None = None
     prompt: PromptInfo
-    catalog: CatalogInfo | None = None
+    catalog: CatalogInfo | None = Field(None, description="global 만. lite 면 null")
     analysis_state: int
     gap: bool
     is_acr: bool
-    is_rep: bool
-    acr_iter_rank: int
-    model_slug: str | None = None
+    is_rep: bool | None = Field(description="lite 면 null")
+    acr_iter_rank: int | None = Field(description="lite 면 null")
+    model_slug: str | None = Field(None, description="lite 면 null")
 
 
 class Body(BaseModel):
@@ -133,8 +150,8 @@ class Citation(BaseModel):
     title: str | None = None
     domain: str | None = None
     category: str | None = Field(None, description="app.citation_category.slug")
-    owned: bool
-    target_hit: bool
+    owned: bool | None = Field(description="lite 면 null")
+    target_hit: bool | None = Field(description="lite 면 null")
 
 
 class AnswerDetail(BaseModel):

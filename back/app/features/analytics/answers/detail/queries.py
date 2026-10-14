@@ -4,6 +4,8 @@
 - 번들 = 한 문장(스칼라 서브쿼리 json_agg). 사실 표는 헤더의 (surface, round_date, cyc_key) 상수 3술어 + answer_key 등치(PK 프리픽스),
   문서형 뷰(rd.v_answer_*)는 answer_key 등치 + 스코프 열(surface·project_key) 재단언. ing 는 뷰로만 닿는다(A17).
 - 숨김 계열(언급·인용)은 그 부분 서브쿼리를 아예 싣지 않는다(NULL): 숨김 데이터를 읽지 않는다.
+- lite(답변 모달): 모달이 쓰지 않는 값(카탈로그 서브쿼리·cycle_id·anchor_date·model_slug·is_rep·acr_iter_rank·인용 owned·target_hit)을
+  계산하지 않고 NULL 로 싣는다. 게이트 술어·나머지 값은 lite 와 무관하게 같다.
 """
 from __future__ import annotations
 
@@ -20,8 +22,10 @@ LOCATE_SQL = """
 SELECT j.surface, d.project_id FROM rd.job j JOIN rd.dim_project d ON d.project_key = j.project_key WHERE j.job_id = :jid"""
 
 
-def header_sql(job_id: str, project_keys: tuple[int, ...], bgrps: tuple[int, ...] | None, geo_keys: tuple[int, ...] | None) -> Sql:
-    """2단계: 노출·숨김·served·스코프 게이트를 건 헤더. 없으면 404(존재·권한·노출 실패를 구분하지 않는다)."""
+def header_sql(job_id: str, project_keys: tuple[int, ...], bgrps: tuple[int, ...] | None, geo_keys: tuple[int, ...] | None,
+               *, lite: bool = False) -> Sql:
+    """2단계: 노출·숨김·served·스코프 게이트를 건 헤더. 없으면 404(존재·권한·노출 실패를 구분하지 않는다).
+    lite = cycle_id·anchor_date 를 싣지 않는다(NULL, 게이트 술어는 같다)."""
     b = Binder()
     w = [f"j.job_id = {b.v(job_id, 'uuid')}", "j.served", "c.servable", "c.view_date IS NOT NULL", "c.view_date <= rd.today_kst()",
          f"NOT (c.hidden_scope = ANY({b.ints(HIDDEN_EXCLUDE['row'])}))",
@@ -30,9 +34,10 @@ def header_sql(job_id: str, project_keys: tuple[int, ...], bgrps: tuple[int, ...
         w.append(f"j.bgrp = ANY({b.ints(bgrps)})")
     if geo_keys is not None:
         w.append(f"j.geo_key = ANY({b.ints(geo_keys)})")
+    meta = "NULL::uuid AS cycle_id, NULL::date AS anchor_date" if lite else "c.cycle_id, c.anchor_date"
     return b.sql(
         "SELECT j.answer_key, j.job_id, j.surface, j.project_key, j.cyc_key, j.round_date, j.measured_at, j.engine_key, j.geo_key,\n"
-        "       j.lang_key, j.prompt_key, c.cycle_id, c.anchor_date, c.hidden_scope,\n"
+        f"       j.lang_key, j.prompt_key, {meta}, c.hidden_scope,\n"
         "       (SELECT g.generation FROM rd.surface_generation g WHERE g.surface = j.surface) AS generation\n"
         "  FROM rd.job j JOIN rd.cycle c ON c.cyc_key = j.cyc_key\n WHERE " + "\n   AND ".join(w))
 
@@ -48,6 +53,7 @@ class BundleInput:
     with_catalog: bool
     with_mentions: bool
     with_citations: bool
+    lite: bool = False          # 모달이 쓰지 않는 값(is_rep·acr_iter_rank·model_slug·인용 owned·target_hit)을 NULL 로. 카탈로그는 with_catalog 로 끈다
 
 
 def _fact(b: Binder, alias: str, x: BundleInput) -> str:
@@ -80,12 +86,13 @@ def bundle_sql(x: BundleInput, ms: MeasureScope) -> Sql:
             f"  WHERE ce.prompt_key = {b.v(x.prompt_key, 'int4')}) AS catalog")
     else:
         parts.append("NULL::json AS catalog")
+    rep = "NULL, 'acr_iter_rank', NULL" if x.lite else "a.is_rep,\n        'acr_iter_rank', a.acr_iter_rank"
     parts.append(
-        "(SELECT json_build_object('analysis_state', a.analysis_state, 'gap', a.gap, 'is_acr', a.is_acr, 'is_rep', a.is_rep,\n"
-        "        'acr_iter_rank', a.acr_iter_rank)\n"
+        f"(SELECT json_build_object('analysis_state', a.analysis_state, 'gap', a.gap, 'is_acr', a.is_acr, 'is_rep', {rep})\n"
         f"   FROM {fact_tables(ms).answer} a WHERE {_fact(b, 'a', x)}) AS answer")
+    slug = "NULL" if x.lite else "v.model_slug"
     parts.append(
-        "(SELECT json_build_object('answer_text', v.answer_text, 'model_slug', v.model_slug)\n"
+        f"(SELECT json_build_object('answer_text', v.answer_text, 'model_slug', {slug})\n"
         f"   FROM rd.v_answer_body v WHERE {_view(b, 'v', x)}) AS body")
     if x.with_mentions:
         parts.append(
@@ -123,9 +130,10 @@ def bundle_sql(x: BundleInput, ms: MeasureScope) -> Sql:
     else:
         parts += ["NULL::json AS brands", "NULL::json AS mention_raw", "NULL::json AS occurrences", "NULL::json AS stances"]
     if x.with_citations:
+        owned = "NULL, 'target_hit', NULL" if x.lite else f"{own_expr(ms, 'c', b)}, 'target_hit', c.tgt_hit"
         parts.append(
             "(SELECT coalesce(json_agg(json_build_object('ord', c.ord, 'url', u.url, 'title', u.title, 'domain', nullif(u.domain, ''),\n"
-            f"        'category', cc.slug, 'owned', {own_expr(ms, 'c', b)}, 'target_hit', c.tgt_hit) ORDER BY c.ord), '[]')\n"
+            f"        'category', cc.slug, 'owned', {owned}) ORDER BY c.ord), '[]')\n"
             f"   FROM {fact_tables(ms).citation} c JOIN rd.dim_url u ON u.url_key = c.url_key\n"
             "   LEFT JOIN rd.dim_source sc ON sc.source_key = c.source_key LEFT JOIN app.citation_category cc ON cc.category_key = sc.category_key\n"
             f"  WHERE {_fact(b, 'c', x)}) AS citations")

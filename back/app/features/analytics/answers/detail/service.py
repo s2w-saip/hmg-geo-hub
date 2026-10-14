@@ -8,12 +8,19 @@
      website project_key = ANY(스코프 사이트)(답변 geo 로 거르지 않는다)
      project resolve_project(멤버 ∨ 스코프 안, 없음·비가시 404)
    brand[](global·website)는 관점(당사 배지·밑줄·스탠스 own) 입력일 뿐 접근 범위를 바꾸지 않는다.
+   선택 게이트(화면 BFF 가 게이트한 범위, 없으면 위 계정 스코프만 = 종전): 현행 getMirrorAnswerBody 의 IDOR 게이트와 같은 범위로 더 좁힌다.
+     project project_id ≠ 답변 프로젝트(LOCATE) → 404(현행 fetchProjectAnswerBody 의 그 프로젝트 run 소속 게이트, 스코프·멤버십 조회 전)
+     global  gate_country[]·gate_brand[] = 같은 resolve_read_context 에 country·brand 로 넣은 교집합(스코프 밖 값은 버림): 답변 geo ∈ 국가,
+             bgrp = 그 브랜드 카탈로그 마스크(엄브렐러 제외, 현행 prompts.brand IN f.brand)
+     website gate_brand[] = 그 브랜드 사이트 project_key(현행 narrowScopeBrands → website project ids). gate_country 는 쓰지 않는다
+             (현행 라우트가 region 을 websiteCountry 로 옮겨 답변 region 게이트가 없다: app/api/scope/answer/route.ts 2026-09-04)
    website 의 당사 비트 = 요청 관점(계정 스코프 ∩ brand[], 없으면 스코프 전체: core ReadContext.own_bits). 목록(analytics.answers.list)과
    같은 규칙이고 현행 front 와 같다(scope-aggregates.ts:7954 trackedEntityIdsFor(contextBrand ?? brand), withWebsite 가 contextBrand =
    스코프 ∩ brand[] 를 넣는다: server.ts:4173-4182). 답변 사이트 브랜드로 고정하던 이전 규칙은 걷었다.
 4. 헤더(노출 R03·숨김 all R04·served·스코프, 실패 404) → 번들 1문장 → 서버 계산(감성 span·스탠스 근거 대조·정렬).
 5. 언급 계열 숨김(hidden_scope 3)이면 언급·감성·스탠스를, 인용 계열 숨김(2)이면 인용을 비우고 meta.suppressed 에 적는다.
    분석 결손(gap)이면 언급 계열이 비고 사유 analysis_gap. 원문이 없으면(body.available=false) 이하 섹션 전부 빈 값(현행 계약).
+   lite 면 모달이 쓰지 않는 값(카탈로그·cycle_id·anchor_date·model_slug·is_rep·acr_iter_rank·인용 owned·target_hit)을 계산하지 않고 null.
 6. 응답 후 접근 감사(Q4: 답변 원문 = data_access, core.write.access_audit 비동기 배치).
 """
 from __future__ import annotations
@@ -54,8 +61,10 @@ from app.features.analytics.answers.detail.schemas import (
 )
 
 # 상세가 받는 공통 축: global·website 의 brand(관점)만. 그 밖의 공통 축(cf.* = custom, project_id 포함)은 meta.ignored_filters
-# (core.filters.ignored_axes, surface 는 이 엔드포인트 자체 파라미터라 축으로 세지 않는다).
+# (core.filters.ignored_axes, surface 는 이 엔드포인트 자체 파라미터라 축으로 세지 않는다. project 표면의 project_id 는 선택 게이트라 쓴다).
 DETAIL_SUPPORT = FilterSupport.of(global_=("brand",), website=("brand",))
+# 선택 게이트(gate_country[]·gate_brand[])를 계정 스코프와 교차할 때의 축: global 은 국가·브랜드, website 는 브랜드(사이트)만.
+GATE_SUPPORT = FilterSupport.of(global_=("brand", "country"), website=("brand",))
 
 
 def pick_catalog(entries: list[dict[str, Any]] | None, ctx: ReadContext) -> CatalogInfo | None:
@@ -140,6 +149,9 @@ async def answer_detail(conn: Any, p: Principal, job_id: uuid.UUID, q: AnswerDet
         raise errors.not_found("답변 없음")
     if surface_denial(p, surface) is not None:   # 표면 없이 부른 답변이 경로 밖 표면이면 404(존재 은폐)
         raise errors.not_found("답변 없음")
+    # 선택 게이트 project_id: 화면이 게이트한 프로젝트 밖 답변은 존재를 드러내지 않는다(현행 run 소속 게이트). 스코프·멤버십 조회 전에 끊는다
+    if surface == "project" and q.project_id is not None and str(loc["project_id"]) != str(q.project_id):
+        raise errors.not_found("답변 없음")
 
     refs = await load_refs(conn)
     base = CommonFilters(surface=surface, project_id=loc["project_id"] if surface == "project" else None)
@@ -147,9 +159,19 @@ async def answer_detail(conn: Any, p: Principal, job_id: uuid.UUID, q: AnswerDet
     view = gate                                  # 관점(own) 문맥: brand[] 는 접근 게이트(gate)를 바꾸지 않는다
     if surface in ("global", "website") and q.brand:
         view = await resolve_read_context(conn, p, base.model_copy(update={"brand": list(q.brand)}), support=DETAIL_SUPPORT, refs=refs)
+    # 선택 게이트 gate_country[](global)·gate_brand[](global·website): 계정 스코프 ∩ 화면 URL 필터(스코프 밖 값은 버림 = 넓어지지 않는다).
+    # 없으면 계정 스코프(gate) 그대로(종전).
+    hdr = gate
+    narrow: dict[str, list[str]] = {}
+    if surface in ("global", "website") and q.gate_brand:
+        narrow["brand"] = list(q.gate_brand)
+    if surface == "global" and q.gate_country:
+        narrow["country"] = list(q.gate_country)
+    if narrow:
+        hdr = await resolve_read_context(conn, p, base.model_copy(update=narrow), support=GATE_SUPPORT, refs=refs)
 
-    hs = Q.header_sql(str(job_id), gate.project_keys, gate.bgrps if surface == "global" else None,
-                      gate.geo_keys if surface == "global" else None)
+    hs = Q.header_sql(str(job_id), hdr.project_keys, hdr.bgrps if surface == "global" else None,
+                      hdr.geo_keys if surface == "global" else None, lite=q.lite)
     h = await fetch_one(conn, hs.text, hs.params)
     if h is None:
         raise errors.not_found("답변 없음")
@@ -158,8 +180,8 @@ async def answer_detail(conn: Any, p: Principal, job_id: uuid.UUID, q: AnswerDet
     ment_hidden = hidden in HIDDEN_EXCLUDE["mentions"]
     cit_hidden = hidden in HIDDEN_EXCLUDE["citations"]
     x = Q.BundleInput(answer_key=int(h["answer_key"]), sf=int(h["surface"]), project_key=int(h["project_key"]), round_date=h["round_date"],
-                      cyc_key=int(h["cyc_key"]), prompt_key=int(h["prompt_key"]), with_catalog=surface == "global",
-                      with_mentions=not ment_hidden, with_citations=not cit_hidden)
+                      cyc_key=int(h["cyc_key"]), prompt_key=int(h["prompt_key"]), with_catalog=surface == "global" and not q.lite,
+                      with_mentions=not ment_hidden, with_citations=not cit_hidden, lite=q.lite)
     bs = Q.bundle_sql(x, view.measure())
     rows = await fetch_all(conn, bs.text, bs.params)
     bd = rows[0]
@@ -179,7 +201,8 @@ async def answer_detail(conn: Any, p: Principal, job_id: uuid.UUID, q: AnswerDet
         prompt=PromptInfo(prompt_id=pr.get("prompt_id"), text=pr.get("text"), funnel=pr.get("funnel"), kind=pr.get("kind") or "single"),
         catalog=pick_catalog(bd["catalog"], view) if surface == "global" else None,
         analysis_state=int(ans.get("analysis_state", 0)), gap=gap, is_acr=bool(ans.get("is_acr", False)),
-        is_rep=bool(ans.get("is_rep", False)), acr_iter_rank=int(ans.get("acr_iter_rank", 1)), model_slug=body_row.get("model_slug"))
+        is_rep=None if q.lite else bool(ans.get("is_rep", False)), acr_iter_rank=None if q.lite else int(ans.get("acr_iter_rank", 1)),
+        model_slug=body_row.get("model_slug"))
 
     suppressed: dict[str, str] = {}
     mentions = Mentions()
@@ -209,7 +232,8 @@ async def answer_detail(conn: Any, p: Principal, job_id: uuid.UUID, q: AnswerDet
     meta = build_meta(mode="snapshot", surface=surface, ctx=view, generation=h["generation"], suppressed=suppressed)
     meta.as_of = h["round_date"]
     meta.cycles = [h["round_date"]]
-    meta.ignored_filters = ignored_axes(query_keys, DETAIL_SUPPORT, surface, consumed=("surface",))
+    meta.ignored_filters = ignored_axes(query_keys, DETAIL_SUPPORT, surface,
+                                        consumed=("surface", "project_id") if surface == "project" else ("surface",))
     if get_settings().access_audit:
         access_audit(p, "data_access", "answers.detail", target=str(h["job_id"]),
                      detail={"surface": surface, "available": available})

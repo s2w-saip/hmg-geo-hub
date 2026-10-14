@@ -4,9 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api-types";
 
 // Answer detail adapter (unit U6, AN-2): hand-checked field map (legacy MirrorAnswerDetail keys and
-// orders, sentiment and stance presence rules), the request (surface, only the admin brand choice),
-// and the error map (404/403/422 -> available:false; 401 and 5xx thrown). Legacy parity on PGlite
-// is in answers.parity.test.ts.
+// orders, sentiment and stance presence rules), the request (surface, only the admin brand choice,
+// the legacy IDOR gate as project_id / gate_country / gate_brand, lite), and the error map
+// (404/403/422 -> available:false; 401 and 5xx thrown). Legacy parity on PGlite is in
+// answers.parity.test.ts.
 
 vi.mock("@/lib/scope/server", () => ({}));
 const { bindHghAuth } = await import("../auth");
@@ -163,18 +164,38 @@ describe("loadAnswerDetail: request and error map", () => {
     vi.unstubAllGlobals();
   });
 
-  it("global admin: surface + the URL brand choice; path is the job id", async () => {
+  it("global admin: surface + the URL brand choice (perspective and gate); path is the job id; lite", async () => {
     await A.loadAnswerDetail({ jobId: JOB, surface: "global", filters: { brand: ["Kia", "Hyundai"] }, scope: { all: true } });
     expect(log[0].pathname).toBe(`/v1/answers/${JOB}`);
     expect([log[0].searchParams.get("surface"), log[0].searchParams.getAll("brand")]).toEqual(["global", ["Hyundai", "Kia"]]);
+    expect([log[0].searchParams.getAll("gate_brand"), log[0].searchParams.get("lite")]).toEqual([["Hyundai", "Kia"], "true"]);
+    expect(log[0].searchParams.has("gate_country") || log[0].searchParams.has("project_id")).toBe(false);
   });
-  it("brand-locked account: the injected lock is not sent (the backend decides the perspective)", async () => {
+  it("brand-locked account: the injected lock is not sent (the backend decides the perspective and applies the scope)", async () => {
     await A.loadAnswerDetail({ jobId: JOB, surface: "website", filters: { brand: ["Kia"] }, scope: { all: false, brands: ["Kia"] } });
-    expect(log[0].search).toBe("?surface=website");
+    expect(log[0].search).toBe("?lite=true&surface=website");
   });
-  it("project: no brand, no project_id (the backend finds the job's project and checks membership)", async () => {
-    await A.loadAnswerDetail({ jobId: JOB, surface: "project", filters: { brand: ["Kia"] }, scope: null });
-    expect(log[0].search).toBe("?surface=project");
+  it("project: project_id = the gated project (legacy run gate), no brand and no URL filter gate", async () => {
+    await A.loadAnswerDetail({
+      jobId: JOB,
+      surface: "project",
+      filters: { brand: ["Kia"], region: ["DE"] },
+      scope: null,
+      projectId: "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+    });
+    expect(log[0].search).toBe("?lite=true&project_id=7c9e6679-7425-40de-944b-e07fc1f90ae7&surface=project");
+  });
+  it("global URL countries gate the answer (legacy region IN f.region); the scope injection is not sent", async () => {
+    await A.loadAnswerDetail({ jobId: JOB, surface: "global", filters: { region: ["US", "DE"] }, scope: { all: true } });
+    // readStandardFilters: a URL country outside the scope falls back to the whole scope -> the injection, not sent
+    const kiaUs = { all: false, brands: ["Kia"], countries: ["US"] };
+    await A.loadAnswerDetail({ jobId: JOB, surface: "global", filters: { brand: ["Kia", "HMG"], region: ["US"] }, scope: kiaUs });
+    expect(log[0].searchParams.getAll("gate_country")).toEqual(["DE", "US"]);
+    expect(log[1].search).toBe("?lite=true&surface=global");
+  });
+  it("website: the URL brand gates (site brand), the URL countries never do (virtual site countries, legacy remap)", async () => {
+    await A.loadAnswerDetail({ jobId: JOB, surface: "website", filters: { brand: ["Kia"], region: ["worldwide"] }, scope: { all: true } });
+    expect(log[0].search).toBe("?brand=Kia&gate_brand=Kia&lite=true&surface=website");
   });
   it.each([404, 403, 422])("%i -> {available: false}", async (status) => {
     reply = { status, body: { error: { code: "x", message: "m" } } };
@@ -188,10 +209,12 @@ describe("loadAnswerDetail: request and error map", () => {
 
 export const KNOWN_DIFF = [
   { id: "U6-N7", reason: "citations[].category is the slug (the modal does not read it)" },
-  { id: "U6-N8", reason: "project answer served on membership of the answer's own project" },
 ];
 
 describe("known differences are documented in the adapter header", () => {
   const src = readFileSync(fileURLToPath(new URL("./answers.ts", import.meta.url)), "utf8");
   it.each(KNOWN_DIFF.map((k) => [k.id] as const))("%s", (id) => expect(src).toContain(id));
+  it("U6-N8 (project answer served for another project's id) is closed: project_id is sent", () => {
+    expect(src).toMatch(/U6-N8[^\n]*closed/);
+  });
 });

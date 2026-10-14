@@ -30,7 +30,9 @@ import { loadAnswerDetail } from "@/lib/hgh/adapters/answers";
 // (dash) place gate of the screen family (403 {available: false}) and, on a project, the project
 // page gate (404 {available: false}): lib/hgh/adapters/drilldown.ts drilldownGate.
 // Source (D8): HGH_SOURCE_<G2|G3|G6> by surface. api -> GET /v1/answers/{job_id}
-// (lib/hgh/adapters/answers.ts: 404/403/422 -> {available: false}, 401 -> 401).
+// (lib/hgh/adapters/answers.ts: 404/403/422 -> {available: false}, 401 -> 401). The api read is
+// gated like the legacy readers: project -> project_id = the gated ?projectId= (only that
+// project's answers), global/website -> the URL filters (lib/hgh/adapters/answers.ts header).
 export const dynamic = "force-dynamic";
 
 const legacyProjectAllowed: LegacyProjectAllowed = async (id, user) => {
@@ -71,6 +73,7 @@ export async function GET(req: NextRequest) {
         surface: target.surface,
         filters: rawFilters,
         scope: scope ?? null,
+        projectId,
       });
       return NextResponse.json(body);
     }

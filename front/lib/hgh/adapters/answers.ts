@@ -9,7 +9,18 @@ import "server-only";
 // Request: surface = the modal's surface (projectId in the path -> project, /website/ -> website,
 // else global). brand = the admin's URL brand choice only (global and website; the backend
 // ignores it on project and decides the perspective from the account or the project brand).
-// No project_id: the backend finds the job's project and checks membership itself.
+// Access gate = the legacy getMirrorAnswerBody IDOR gate (optional backend gates, the account
+// scope is still applied by the backend; a job outside them -> 404 -> {available: false}):
+//   project  project_id = the project the route gated on (legacy fetchProjectAnswerBody: only runs
+//            of that project), so a job of another project is not served
+//   global   gate_country = the URL countries (legacy region IN f.region; urlCountries leaves out
+//            the scope injection, as readStandardFilters falls back to the whole scope) and
+//            gate_brand = the URL brand choice (legacy prompts.brand IN f.brand)
+//   website  gate_brand only (legacy narrowScopeBrands -> website project ids). No country gate:
+//            the legacy route moves region to websiteCountry, so answers are not gated by region
+//            (virtual site countries such as worldwide would block every answer)
+// lite = true: the backend skips the values toMirrorAnswerDetail does not read (catalog, cycle and
+// representative metadata, model slug, citation owned/target_hit).
 //
 // Field map (AnswerDetail -> MirrorAnswerDetail):
 //   available      body.available && answer_text non-empty; otherwise {available: false} only
@@ -30,15 +41,13 @@ import "server-only";
 // Known differences (U6 numbering; asserted in answers.test.ts and answers.parity.test.ts):
 //   U6-N7  citations[].category is the category slug (legacy: the scope classifier label). The
 //          modal does not read it
-//   U6-N8  a project answer requested with another project's id is served when the viewer is a
-//          member of the answer's own project (legacy also required the run to belong to the
-//          requested project). Membership is still checked, so no access widens
+// (U6-N8, a project answer served for another project's id, is closed by project_id above.)
 import type { MirrorAnswerDetail } from "@/lib/db/repositories/scope-aggregates";
 import type { StandardFilters } from "@/lib/scope/result-adapter";
 import type { components } from "../api-types";
 import { hghGet } from "../client";
 import { isHghApiError } from "../errors";
-import { urlBrands, type Surface } from "../query";
+import { urlBrands, urlCountries, type Surface } from "../query";
 import type { AllowedScope } from "@/lib/auth/types";
 
 type S = components["schemas"];
@@ -51,6 +60,8 @@ export interface AnswerRequest {
   filters: StandardFilters;
   /** The scope readStandardFilters used (recognises the injected brand lock). null = none. */
   scope: AllowedScope | null;
+  /** surface=project: the project the route gated on (sent as project_id). */
+  projectId?: string | null;
 }
 
 const UNAVAILABLE: MirrorAnswerDetail = { available: false };
@@ -134,10 +145,26 @@ function isUnavailableError(e: unknown): boolean {
  * thrown (the route answers 401 {error: "unauthorized"} or the error response).
  */
 export async function loadAnswerDetail(req: AnswerRequest): Promise<MirrorAnswerDetail> {
-  const query: { surface: Surface; brand?: string[] } = { surface: req.surface };
-  if (req.surface !== "project") {
+  const query: {
+    surface: Surface;
+    lite: boolean;
+    brand?: string[];
+    project_id?: string;
+    gate_brand?: string[];
+    gate_country?: string[];
+  } = { surface: req.surface, lite: true };
+  if (req.surface === "project") {
+    if (req.projectId) query.project_id = req.projectId;
+  } else {
     const brand = urlBrands(req.filters.brand, req.scope);
-    if (brand.length) query.brand = brand;
+    if (brand.length) {
+      query.brand = brand;
+      query.gate_brand = brand;
+    }
+    if (req.surface === "global") {
+      const countries = urlCountries(req.filters.region, req.scope);
+      if (countries.length) query.gate_country = countries;
+    }
   }
   try {
     const res = await hghGet("/v1/answers/{job_id}", { pathParams: { job_id: req.jobId }, query, retryOn401: true });

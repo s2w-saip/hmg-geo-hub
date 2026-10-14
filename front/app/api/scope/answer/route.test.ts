@@ -137,8 +137,33 @@ describe("api source: AN-2 through the adapter", () => {
     const res = await GET(req(`jobId=${JOB}&surface=website`));
     expect(await res.json()).toMatchObject({ available: true, answerText: "api text" });
     expect(apiLog[0].pathname).toBe(`/v1/answers/${JOB}`);
-    expect(apiLog[0].search).toBe("?surface=website");
+    expect(apiLog[0].search).toBe("?lite=true&surface=website");
     expect(st.calls).toHaveLength(0);
+  });
+  it("project: the gated ?projectId= is sent as project_id; a job of another project (backend 404) -> {available:false}", async () => {
+    const ok = await GET(req(`jobId=${JOB}&projectId=${PROJECT}`));
+    expect(await ok.json()).toMatchObject({ available: true, answerText: "api text" });
+    const answerCalls = () => apiLog.filter((u) => u.pathname.startsWith("/v1/answers"));
+    expect(answerCalls()[0].searchParams.get("project_id")).toBe(PROJECT);
+    expect(answerCalls()[0].searchParams.get("surface")).toBe("project");
+    // the backend refuses a job outside project_id with 404 (existence hidden), like the legacy run gate
+    apiReply = { status: 404, body: { error: { code: "not_found", message: "x" } } };
+    const cross = await GET(req(`jobId=${JOB}&projectId=${PROJECT}`));
+    expect([cross.status, await cross.json()]).toEqual([200, { available: false }]);
+    expect(answerCalls()[1].searchParams.get("project_id")).toBe(PROJECT);
+    expect(st.calls).toHaveLength(0);
+  });
+  it("standard: the URL countries and the admin brand gate the read (legacy IDOR gate); the account scope is not sent", async () => {
+    st.session = hq({ role: "admin", scope: { all: true } });
+    await GET(req(`jobId=${JOB}&geography=US&brand=Kia`));
+    expect(apiLog[0].search).toBe("?brand=Kia&gate_brand=Kia&gate_country=US&lite=true&surface=global");
+    await GET(req(`jobId=${JOB}`));
+    expect(apiLog[1].search).toBe("?lite=true&surface=global");
+  });
+  it("website: the site-country remap is not used as a gate (virtual codes such as worldwide)", async () => {
+    st.session = hq({ role: "admin", scope: { all: true } });
+    await GET(req(`jobId=${JOB}&surface=website&geography=worldwide`));
+    expect(apiLog[0].search).toBe("?lite=true&surface=website");
   });
   it("404 -> {available:false}; 401 -> 401 {error:'unauthorized'}; 503 -> error response", async () => {
     apiReply = { status: 404, body: { error: { code: "not_found", message: "x" } } };

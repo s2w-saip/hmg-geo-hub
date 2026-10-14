@@ -72,6 +72,10 @@ type BodyState =
   | { status: "unavailable" }
   | { status: "error" };
 
+// /api/scope/answer 가 {available:false} 로 답하는 거부 상태(존재 은폐: 게이트·스코프 밖·없음). 그 밖의
+// 비 2xx(401·5xx 등)는 오류 상태다.
+const EXISTENCE_HIDDEN_STATUS: ReadonlySet<number> = new Set([403, 404, 422]);
+
 export function AnswerModal({
   brand,
   promptText,
@@ -148,7 +152,13 @@ export function AnswerModal({
     // 접근을 게이트한다 (route 의 surface=website 분기 — 드릴다운 API 와 동일 규약).
     else if (pathname.includes("/website/")) params.set("surface", "website");
     fetch(`/api/scope/answer?${params.toString()}`, { signal: ctrl.signal })
-      .then((r) => r.json())
+      .then((r) => {
+        // 5xx·401 은 오류 상태(loadError)로 — 라우트의 {error:{code}} 본문을 available 없음('원문 미수집')으로
+        // 읽지 않는다(현행은 라우트 throw → 비 JSON → 같은 오류 상태). 403·404·422 {available:false} 는
+        // 존재 은폐 설계라 그대로 '원문 없음'.
+        if (!r.ok && !EXISTENCE_HIDDEN_STATUS.has(r.status)) throw new Error(`answer ${r.status}`);
+        return r.json();
+      })
       .then((d: AnswerDetailPayload) =>
         setBodies((b) => ({
           ...b,
