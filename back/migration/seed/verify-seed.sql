@@ -60,8 +60,8 @@ WITH t(ord, dst, src, s_n, d_n, reason) AS (VALUES
  (26, 'app.member_audit_log', 'member_audit_logs', (SELECT count(*) FROM mig_src.member_audit_logs), (SELECT count(*) FROM app.member_audit_log), ''),
  (27, 'app.project_member(미이관)', 'project_members', (SELECT count(*) FROM mig_src.project_members), (SELECT count(*) FROM app.project_member),
     'user_id·invited_by 가 app.user_account FK 인데 profiles 미이관(시스템 사용자 1행만)'),
- (28, 'app.qa_answer_review(미이관)', 'qa_answer_reviews', (SELECT count(*) FROM mig_src.qa_answer_reviews), (SELECT count(*) FROM app.qa_answer_review), '이관 범위 밖(지시 목록 외)'),
- (29, 'app.qa_review_note(미이관)', 'qa_review_notes', (SELECT count(*) FROM mig_src.qa_review_notes), (SELECT count(*) FROM app.qa_review_note), '이관 범위 밖(지시 목록 외)')
+ (28, 'app.qa_answer_review(시드 밖)', 'qa_answer_reviews', (SELECT count(*) FROM mig_src.qa_answer_reviews), (SELECT count(*) FROM app.qa_answer_review), '시드 범위 밖 — migrate-qa.sql 로 별도 이관(verify-qa.sql)'),
+ (29, 'app.qa_review_note(시드 밖)', 'qa_review_notes', (SELECT count(*) FROM mig_src.qa_review_notes), (SELECT count(*) FROM app.qa_review_note), '시드 범위 밖 — migrate-qa.sql 로 별도 이관(verify-qa.sql)')
 )
 SELECT dst AS "대상", src AS "원본(mig_src)", s_n AS "원본", d_n AS "이관", s_n - d_n AS "차이", reason AS "차이 사유" FROM t ORDER BY ord;
 

@@ -17,8 +17,9 @@ import { isValidElement, type ReactElement, type ReactNode } from "react";
 // differing paths must equal the declared KNOWN_DIFF of that case, each with its reason: an
 // unexpected difference fails, and so does a declared one that disappears.
 //
-// Not covered here (by design): whether the migrated database holds the same rows (the backend
-// migration does not carry qa_answer_reviews / qa_review_notes at all: see the U12 report).
+// Not covered here (by design): whether the migrated database holds the same rows. The seed
+// migration does not carry qa_answer_reviews / qa_review_notes; they move separately with
+// back/migration/migrate-qa.sql and are checked by verify-qa.sql (tests/core/test_migrate_qa.py).
 
 const st = vi.hoisted(() => ({
   db: null as unknown,
