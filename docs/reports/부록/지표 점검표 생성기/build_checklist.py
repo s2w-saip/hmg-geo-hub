@@ -432,6 +432,32 @@ if os.path.exists(F10_PATH):
             f'<details class="sec"><summary>{esc(th)} <span class="muted small">{len(lst)}건 · 추천 수용 {n_acc} / 맞춤 {len(lst) - n_acc} · 결정 {n_dec}</span></summary>'
             f'<div class="secbody"><div class="scroll"><table class="f10"><thead><tr><th>ID</th><th>차이 (마우스를 올리면 legacy·API 동작)</th><th>영향</th><th>맞추는 노력</th><th></th><th>추천</th><th>결정</th></tr></thead><tbody>'
             + "\n".join(trs) + '</tbody></table></div></div></details>')
+    # undeclared differences (found by the survey, not in any adapter list)
+    UST_PATH = os.path.join(SURVEY_DIR, "f10_undeclared_status.json")
+    ust = json.load(open(UST_PATH, encoding="utf-8")) if os.path.exists(UST_PATH) else {}
+    ST_LAB = {"fixed": ("☑ 해결", "y"), "partial": ("◐ 일부", "u"), "doing": ("◐ 진행 중", "u"), "not_diff": ("— 차이 아님", "x"), "decide": ("⚠ 결정", "n")}
+    utrs = []
+    n_open = 0
+    for idx, u in enumerate(f10.get("undeclared", []), 1):
+        st, note = ust.get(str(idx), ["decide", ""])
+        lab, cls = ST_LAB.get(st, ("⚠ 결정", "n"))
+        uid = f"U{idx:02d}"
+        radios = ""
+        if st in ("decide", "partial"):
+            n_open += 1
+            radios = "".join(
+                f'<label class="rd"><input type="radio" name="f10-{uid}" value="{v}" data-rec="match"> {l}</label>'
+                for v, l in (("accept", "수용"), ("match", "legacy 맞춤")))
+        ev = ", ".join(u["evidence"]) if isinstance(u.get("evidence"), list) else u.get("evidence", "")
+        tip = f"근거: {ev}\n제안: {u.get('suggested_fix', '')}"
+        sev = {"high": "높음", "medium": "중간", "low": "낮음"}.get(u.get("severity", ""), u.get("severity", ""))
+        utrs.append(
+            f'<tr><td class="id">{uid}</td><td title="{esc(tip)}"><strong>{esc(u["title"])}</strong><span class="val">{esc(u.get("effect", ""))}</span></td>'
+            f'<td class="small">{esc(sev)}</td><td class="small"><span class="{cls}">{lab}</span><span class="val">{esc(note)}</span></td><td class="small rdcell">{radios}</td></tr>')
+    blocks.insert(0,
+        f'<details class="sec"><summary>문서에 없는 차이(조사에서 발견) <span class="muted small">{len(utrs)}건 · 해결 {sum(1 for v in ust.values() if v[0] == "fixed")} · 결정 대기 {n_open}</span></summary>'
+        '<div class="secbody"><div class="scroll"><table class="f10"><thead><tr><th>ID</th><th>차이 (마우스를 올리면 근거·제안)</th><th>심각도</th><th>상태</th><th>결정</th></tr></thead><tbody>'
+        + "\n".join(utrs) + '</tbody></table></div></div></details>')
     n_total = len(f10["declared"])
     n_acc_all = sum(1 for i in f10["declared"] if i["recommendation"] == "accept")
     f10_html = (
