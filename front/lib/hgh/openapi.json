@@ -436,9 +436,16 @@
    "AcrTotals": {
     "properties": {
      "catalog_acr_prompts": {
-      "description": "카탈로그의 ACR 프롬프트 수(측정 무관). 0 이면 '카탈로그에 ACR 없음', 양수인데 prompt_runs 0 이면 '측정 대기'",
-      "title": "Catalog Acr Prompts",
-      "type": "integer"
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "카탈로그의 ACR 프롬프트 수(측정 무관). 0 이면 '카탈로그에 ACR 없음', 양수인데 prompt_runs 0 이면 '측정 대기'. include_catalog_count=false 이고 셀이 있으면(prompt_runs > 0) null",
+      "title": "Catalog Acr Prompts"
      },
      "engines": {
       "description": "셀에 나온 엔진 코드",
@@ -3293,7 +3300,8 @@
      },
      "limit": {
       "default": 50,
-      "maximum": 500.0,
+      "description": "기본 50, 최대 500(include_meta=false 면 최대 5,000: 내보내기 묶음)",
+      "maximum": 5000.0,
       "minimum": 1.0,
       "title": "Limit",
       "type": "integer"
@@ -3312,6 +3320,16 @@
       "minimum": 0.0,
       "title": "Offset",
       "type": "integer"
+     },
+     "row_fields": {
+      "default": "full",
+      "description": "list = 목록·내보내기 화면이 쓰는 열만 읽는다(scopeText·promptType·category 는 null, rd.dim_prompt 조인 생략). 행·순서·나머지 값은 full 과 같다. 기본 full = 종전",
+      "enum": [
+       "full",
+       "list"
+      ],
+      "title": "Row Fields",
+      "type": "string"
      },
      "search": {
       "default": "",
@@ -3855,12 +3873,28 @@
       "type": "integer"
      },
      "owned": {
-      "title": "Owned",
-      "type": "boolean"
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "lite 면 null",
+      "title": "Owned"
      },
      "target_hit": {
-      "title": "Target Hit",
-      "type": "boolean"
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "lite 면 null",
+      "title": "Target Hit"
      },
      "title": {
       "anyOf": [
@@ -3904,6 +3938,21 @@
       },
       "title": "Items",
       "type": "array"
+     },
+     "other_bucket": {
+      "anyOf": [
+       {
+        "items": {
+         "$ref": "#/components/schemas/PromptRow"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "both_buckets=true 일 때만 실린다(그 밖 응답에는 키가 없다): 반대 버킷의 첫 페이지(같은 q·limit·정렬). 그 버킷 건수는 counts, 다음 페이지는 그 버킷으로 따로 요청한다",
+      "title": "Other Bucket"
      }
     },
     "required": [
@@ -8796,6 +8845,22 @@
     "title": "Envelope[ListData[CycleItem]]",
     "type": "object"
    },
+   "Envelope_ListData_FetchStatus__": {
+    "properties": {
+     "data": {
+      "$ref": "#/components/schemas/ListData_FetchStatus_"
+     },
+     "meta": {
+      "$ref": "#/components/schemas/Meta"
+     }
+    },
+    "required": [
+     "data",
+     "meta"
+    ],
+    "title": "Envelope[ListData[FetchStatus]]",
+    "type": "object"
+   },
    "Envelope_ListData_Ga4Property__": {
     "properties": {
      "data": {
@@ -8970,6 +9035,22 @@
      "meta"
     ],
     "title": "Envelope[ListData[QaNote]]",
+    "type": "object"
+   },
+   "Envelope_ListData_TrackedAddResult__": {
+    "properties": {
+     "data": {
+      "$ref": "#/components/schemas/ListData_TrackedAddResult_"
+     },
+     "meta": {
+      "$ref": "#/components/schemas/Meta"
+     }
+    },
+    "required": [
+     "data",
+     "meta"
+    ],
+    "title": "Envelope[ListData[TrackedAddResult]]",
     "type": "object"
    },
    "Envelope_ListData_TrackedKeyword__": {
@@ -10957,24 +11038,46 @@
       "title": "Country Code"
      },
      "loaded": {
-      "description": "적재기가 rd.ga4_dim_property 에 투영했는지(GA4 행 적재 대상)",
-      "title": "Loaded",
-      "type": "boolean"
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "적재기가 rd.ga4_dim_property 에 투영했는지(GA4 행 적재 대상, fields=registry 면 null)",
+      "title": "Loaded"
      },
      "pending": {
-      "items": {
-       "$ref": "#/components/schemas/app__features__admin__integrations__ga4__schemas__PendingChange"
-      },
-      "title": "Pending",
-      "type": "array"
+      "anyOf": [
+       {
+        "items": {
+         "$ref": "#/components/schemas/app__features__admin__integrations__ga4__schemas__PendingChange"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "대기·실행 중 요청(fields=registry 면 null)",
+      "title": "Pending"
      },
      "project_overrides": {
-      "description": "이 속성을 직접 지정한 고객 프로젝트(읽기 전용)",
-      "items": {
-       "$ref": "#/components/schemas/ProjectOverride"
-      },
-      "title": "Project Overrides",
-      "type": "array"
+      "anyOf": [
+       {
+        "items": {
+         "$ref": "#/components/schemas/ProjectOverride"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "이 속성을 직접 지정한 고객 프로젝트(읽기 전용, fields=registry 면 null)",
+      "title": "Project Overrides"
      },
      "property_id": {
       "title": "Property Id",
@@ -10990,9 +11093,16 @@
       "type": "string"
      },
      "tracked_events": {
-      "description": "추적(전환) 이벤트 수. 0 이면 key events 폴백",
-      "title": "Tracked Events",
-      "type": "integer"
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "추적(전환) 이벤트 수. 0 이면 key events 폴백(fields=registry 면 null)",
+      "title": "Tracked Events"
      },
      "updated_at": {
       "format": "date-time",
@@ -11767,17 +11877,33 @@
    "Header": {
     "properties": {
      "acr_iter_rank": {
-      "title": "Acr Iter Rank",
-      "type": "integer"
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "lite 면 null",
+      "title": "Acr Iter Rank"
      },
      "analysis_state": {
       "title": "Analysis State",
       "type": "integer"
      },
      "anchor_date": {
-      "format": "date",
-      "title": "Anchor Date",
-      "type": "string"
+      "anyOf": [
+       {
+        "format": "date",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "lite 면 null",
+      "title": "Anchor Date"
      },
      "catalog": {
       "anyOf": [
@@ -11787,7 +11913,8 @@
        {
         "type": "null"
        }
-      ]
+      ],
+      "description": "global 만. lite 면 null"
      },
      "country": {
       "anyOf": [
@@ -11801,9 +11928,17 @@
       "title": "Country"
      },
      "cycle_id": {
-      "format": "uuid",
-      "title": "Cycle Id",
-      "type": "string"
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "lite 면 null",
+      "title": "Cycle Id"
      },
      "engine": {
       "title": "Engine",
@@ -11818,8 +11953,16 @@
       "type": "boolean"
      },
      "is_rep": {
-      "title": "Is Rep",
-      "type": "boolean"
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "lite 면 null",
+      "title": "Is Rep"
      },
      "lang": {
       "anyOf": [
@@ -11853,6 +11996,7 @@
         "type": "null"
        }
       ],
+      "description": "lite 면 null",
       "title": "Model Slug"
      },
      "prompt": {
@@ -13451,6 +13595,22 @@
     "title": "ListData[CycleItem]",
     "type": "object"
    },
+   "ListData_FetchStatus_": {
+    "properties": {
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/FetchStatus"
+      },
+      "title": "Items",
+      "type": "array"
+     }
+    },
+    "required": [
+     "items"
+    ],
+    "title": "ListData[FetchStatus]",
+    "type": "object"
+   },
    "ListData_Ga4Property_": {
     "properties": {
      "items": {
@@ -13625,6 +13785,22 @@
      "items"
     ],
     "title": "ListData[QaNote]",
+    "type": "object"
+   },
+   "ListData_TrackedAddResult_": {
+    "properties": {
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/TrackedAddResult"
+      },
+      "title": "Items",
+      "type": "array"
+     }
+    },
+    "required": [
+     "items"
+    ],
+    "title": "ListData[TrackedAddResult]",
     "type": "object"
    },
    "ListData_TrackedKeyword_": {
@@ -14749,7 +14925,7 @@
         "type": "null"
        }
       ],
-      "description": "카탈로그 택소노미(global = rd.catalog_entry, project = app.prompt). website 는 null(택소노미 축 없음)"
+      "description": "카탈로그 택소노미(global = rd.catalog_entry, project = app.prompt). website 는 null(택소노미 축 없음). geo_only=true 면 null"
      },
      "custom_fields": {
       "anyOf": [
@@ -14763,7 +14939,7 @@
         "type": "null"
        }
       ],
-      "description": "프로젝트 커스텀 필드(surface=project 만, 그 밖은 null)",
+      "description": "프로젝트 커스텀 필드(surface=project 만, 그 밖은 null). geo_only=true 면 null",
       "title": "Custom Fields"
      },
      "engines": {
@@ -15275,7 +15451,15 @@
       "type": "array"
      },
      "stance": {
-      "$ref": "#/components/schemas/StanceCounts"
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/StanceCounts"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "그 관점 브랜드의 스탠스. include_stance=false 면 null"
      }
     },
     "required": [
@@ -16039,11 +16223,19 @@
       "title": "Domain"
      },
      "effective_engines": {
-      "items": {
-       "type": "string"
-      },
-      "title": "Effective Engines",
-      "type": "array"
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "실제 측정 엔진(ai_engines NULL 이면 기본 엔진). GET /v1/projects/{id}?view=gate 는 기본 엔진을 읽지 않아 null",
+      "title": "Effective Engines"
      },
      "ga4_property_id": {
       "anyOf": [
@@ -16714,7 +16906,8 @@
      },
      "limit": {
       "default": 200,
-      "maximum": 500.0,
+      "description": "행 읽기 1~500, ids_only=true(프롬프트)면 1~5000",
+      "maximum": 5000.0,
       "minimum": 1.0,
       "title": "Limit",
       "type": "integer"
@@ -17367,7 +17560,15 @@
       "type": "string"
      },
      "property": {
-      "$ref": "#/components/schemas/Ga4Property"
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/Ga4Property"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "저장 뒤 속성 행(return=minimal 면 null: 응답용 재조회 생략)"
      },
      "verified": {
       "anyOf": [
@@ -21225,10 +21426,18 @@
     "type": "object"
    },
    "SettingsBundle": {
-    "description": "설정 화면 묶음(G-25: 화면 호출 수 억제). 추적 URL 은 건수만(목록은 GET /settings/tracked-urls 키셋).",
+    "description": "설정 화면 묶음(G-25: 화면 호출 수 억제). 추적 URL 은 건수만(목록은 GET /settings/tracked-urls 키셋).\nview=card(홈 KPI 카드)는 카드가 쓰는 값만 채운다: engines·brand_aliases·vehicles 는 null, competitors 는 지정 비교 브랜드 행만.",
     "properties": {
      "brand_aliases": {
-      "$ref": "#/components/schemas/BrandAliases"
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/BrandAliases"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "view=card 면 null"
      },
      "can_edit": {
       "description": "활성 Owner 또는 admin",
@@ -21236,6 +21445,7 @@
       "type": "boolean"
      },
      "competitors": {
+      "description": "추적 경쟁사(brand_name 순). view=card 면 지정 비교 브랜드(is_target) 행만",
       "items": {
        "$ref": "#/components/schemas/Competitor"
       },
@@ -21254,7 +21464,15 @@
       "title": "Domain"
      },
      "engines": {
-      "$ref": "#/components/schemas/EngineSettings"
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/EngineSettings"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "view=card 면 null"
      },
      "my_role": {
       "anyOf": [
@@ -21284,21 +21502,26 @@
       "type": "integer"
      },
      "vehicles": {
-      "items": {
-       "$ref": "#/components/schemas/Vehicle"
-      },
-      "title": "Vehicles",
-      "type": "array"
+      "anyOf": [
+       {
+        "items": {
+         "$ref": "#/components/schemas/Vehicle"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "view=card 면 null",
+      "title": "Vehicles"
      }
     },
     "required": [
      "project_id",
      "can_edit",
-     "engines",
      "owned_bases",
-     "brand_aliases",
      "competitors",
-     "vehicles",
      "tracked_url_count"
     ],
     "title": "SettingsBundle",
@@ -21653,14 +21876,14 @@
      },
      "tone": {
       "$ref": "#/components/schemas/ToneSummary",
-      "description": "답변 톤(관점 브랜드 sent_pos 합 대 sent_neg 합)별 인용 요약 타일"
+      "description": "답변 톤(관점 브랜드 sent_pos 합 대 sent_neg 합)별 인용 요약 타일(include_tone=false 면 0 타일)"
      },
      "total_citations": {
       "title": "Total Citations",
       "type": "integer"
      },
      "types": {
-      "description": "언급 유형 5종 × 카테고리(Q19: /sources/types 를 이 응답에 합침)",
+      "description": "언급 유형 5종 × 카테고리(Q19: /sources/types 를 이 응답에 합침, include_types=false 면 [])",
       "items": {
        "$ref": "#/components/schemas/TypeCategories"
       },
@@ -21946,7 +22169,15 @@
    "SummaryData": {
     "properties": {
      "analysis_gap": {
-      "$ref": "#/components/schemas/AnalysisGap"
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/AnalysisGap"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "A16 결손 쌍. parts 에 gap 이 없으면 null"
      },
      "citation_accuracy": {
       "anyOf": [
@@ -22214,9 +22445,16 @@
       "type": "integer"
      },
      "applied_prompts": {
-      "description": "적용 프롬프트 수(카탈로그·웹 등록·프로젝트 프롬프트, 측정 무관)",
-      "title": "Applied Prompts",
-      "type": "integer"
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "적용 프롬프트 수(카탈로그·웹 등록·프로젝트 프롬프트, 측정 무관). parts 에 applied 가 없으면 null",
+      "title": "Applied Prompts"
      },
      "measured_by_funnel": {
       "anyOf": [
@@ -22234,9 +22472,16 @@
       "title": "Measured By Funnel"
      },
      "measured_prompts": {
-      "description": "std_in 답변의 서로 다른 프롬프트 수(비가산)",
-      "title": "Measured Prompts",
-      "type": "integer"
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "std_in 답변의 서로 다른 프롬프트 수(비가산). parts 에 measured 가 없으면 null",
+      "title": "Measured Prompts"
      },
      "prompts_without_brand": {
       "anyOf": [
@@ -23142,6 +23387,44 @@
     "title": "Totals",
     "type": "object"
    },
+   "TrackedAddResult": {
+    "properties": {
+     "data": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/TrackedKeyword"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "생성된 행(status 201), 아니면 null"
+     },
+     "error": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/ErrorDetail"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "단건 응답의 error 와 같은 code·message·details(status 201 이면 null)"
+     },
+     "status": {
+      "description": "그 행을 단건 본문으로 보냈을 때의 HTTP 상태(201 생성, 409 duplicate_keyword, 422 unknown_country·빈 term 등)",
+      "title": "Status",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "status",
+     "data",
+     "error"
+    ],
+    "title": "TrackedAddResult",
+    "type": "object"
+   },
    "TrackedKeyword": {
     "properties": {
      "country": {
@@ -23245,6 +23528,53 @@
      "term"
     ],
     "title": "TrackedKeywordIn",
+    "type": "object"
+   },
+   "TrackedKeywordItem": {
+    "additionalProperties": false,
+    "description": "다건 추가의 한 행. 길이 규칙은 행마다 단건 본문(TrackedKeywordIn)으로 따로 검사해 그 행 결과(422)로 준다.",
+    "properties": {
+     "country": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Country"
+     },
+     "term": {
+      "title": "Term",
+      "type": "string"
+     }
+    },
+    "required": [
+     "term"
+    ],
+    "title": "TrackedKeywordItem",
+    "type": "object"
+   },
+   "TrackedKeywordsIn": {
+    "additionalProperties": false,
+    "description": "다건 추가 본문(items[]). 단건 본문({term, country})도 같은 경로에서 그대로 받는다.",
+    "properties": {
+     "items": {
+      "description": "1~100행, 결과는 같은 순서",
+      "items": {
+       "$ref": "#/components/schemas/TrackedKeywordItem"
+      },
+      "maxItems": 100,
+      "minItems": 1,
+      "title": "Items",
+      "type": "array"
+     }
+    },
+    "required": [
+     "items"
+    ],
+    "title": "TrackedKeywordsIn",
     "type": "object"
    },
    "TrackedUrl": {
@@ -23569,6 +23899,21 @@
       "title": "Dimension",
       "type": "string"
      },
+     "dims": {
+      "anyOf": [
+       {
+        "items": {
+         "$ref": "#/components/schemas/TrendDimBlock"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "P12 B101: 쿼리 dims 를 줄 때만 실린다(그 밖 응답에는 키가 없다). 항목 순서 = 쿼리 dims 순서",
+      "title": "Dims"
+     },
      "own_label": {
       "description": "당사 라벨(BG-48: GET /v1/mentions/brands own.vp_label 과 같은 규칙): 관점 브랜드가 하나면 그 brand_code, 둘 이상이면 엄브렐러 brand_code(app.brand, 픽스처·운영 'HMG')",
       "title": "Own Label",
@@ -23590,6 +23935,41 @@
      "series"
     ],
     "title": "TrendData",
+    "type": "object"
+   },
+   "TrendDimBlock": {
+    "description": "B101 dims 항목 하나의 결과: 그 차원만 따로 부른 응답의 data.series·meta 와 같다(buckets·own_label 은 TrendData 와 공유).",
+    "properties": {
+     "dimension": {
+      "enum": [
+       "none",
+       "engine",
+       "brand",
+       "source",
+       "category",
+       "type"
+      ],
+      "title": "Dimension",
+      "type": "string"
+     },
+     "meta": {
+      "$ref": "#/components/schemas/Meta",
+      "description": "그 차원 단일 요청의 meta(suppressed·ignored_filters 는 그 차원 지표로 판정)"
+     },
+     "series": {
+      "items": {
+       "$ref": "#/components/schemas/TrendSeries"
+      },
+      "title": "Series",
+      "type": "array"
+     }
+    },
+    "required": [
+     "dimension",
+     "series",
+     "meta"
+    ],
+    "title": "TrendDimBlock",
     "type": "object"
    },
    "TrendSeries": {
@@ -26081,6 +26461,7 @@
         "type": "null"
        }
       ],
+      "description": "대표 답변 측정 시각. lite 면 null",
       "title": "Measured At"
      },
      "position": {
@@ -26092,7 +26473,7 @@
         "type": "null"
        }
       ],
-      "description": "답변 내 브랜드 등장 순위(rk, 0 은 null)",
+      "description": "답변 내 브랜드 등장 순위(rk, 0 은 null). lite 면 null",
       "title": "Position"
      },
      "region": {
@@ -26107,9 +26488,16 @@
       "title": "Region"
      },
      "runs": {
-      "description": "같은 (프롬프트, 엔진, 국가) 셀의 타깃 답변 수(대표 1건으로 접힘)",
-      "title": "Runs",
-      "type": "integer"
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "같은 (프롬프트, 엔진, 국가) 셀의 타깃 답변 수(대표 1건으로 접힘). lite 면 null",
+      "title": "Runs"
      },
      "terms": {
       "anyOf": [
@@ -26253,7 +26641,7 @@
         "type": "null"
        }
       ],
-      "description": "A3 당사 스탠스(대표 턴, rd.answer_stance). 창이 비면 0 쌍"
+      "description": "A3 당사 스탠스(대표 턴, rd.answer_stance). 창이 비면 0 쌍. include_stance=false 면 null"
      }
     },
     "required": [
@@ -27480,6 +27868,22 @@
        "title": "Prompt Id",
        "type": "string"
       }
+     },
+     {
+      "description": "minimal = 응답용 재조회 생략: prompt·change_id 는 null, change_ids 는 [], propagation 은 이번 쓰기의 outbox 행만 본다(재판정 요청은 GET 상세 pending_changes). 기본 full = 종전",
+      "in": "query",
+      "name": "return",
+      "required": false,
+      "schema": {
+       "default": "full",
+       "description": "minimal = 응답용 재조회 생략: prompt·change_id 는 null, change_ids 는 [], propagation 은 이번 쓰기의 outbox 행만 본다(재판정 요청은 GET 상세 pending_changes). 기본 full = 종전",
+       "enum": [
+        "full",
+        "minimal"
+       ],
+       "title": "Return",
+       "type": "string"
+      }
      }
     ],
     "responses": {
@@ -27763,6 +28167,22 @@
        "title": "Prompt Id",
        "type": "string"
       }
+     },
+     {
+      "description": "minimal = 응답용 재조회 생략: prompt·change_id 는 null, change_ids 는 [], propagation 은 이번 쓰기의 outbox 행만 본다(재판정 요청은 GET 상세 pending_changes). 기본 full = 종전",
+      "in": "query",
+      "name": "return",
+      "required": false,
+      "schema": {
+       "default": "full",
+       "description": "minimal = 응답용 재조회 생략: prompt·change_id 는 null, change_ids 는 [], propagation 은 이번 쓰기의 outbox 행만 본다(재판정 요청은 GET 상세 pending_changes). 기본 full = 종전",
+       "enum": [
+        "full",
+        "minimal"
+       ],
+       "title": "Return",
+       "type": "string"
+      }
      }
     ],
     "requestBody": {
@@ -27854,6 +28274,22 @@
       "schema": {
        "format": "uuid",
        "title": "Prompt Id",
+       "type": "string"
+      }
+     },
+     {
+      "description": "minimal = 응답용 재조회 생략: prompt·change_id 는 null, change_ids 는 [], propagation 은 이번 쓰기의 outbox 행만 본다(재판정 요청은 GET 상세 pending_changes). 기본 full = 종전",
+      "in": "query",
+      "name": "return",
+      "required": false,
+      "schema": {
+       "default": "full",
+       "description": "minimal = 응답용 재조회 생략: prompt·change_id 는 null, change_ids 는 [], propagation 은 이번 쓰기의 outbox 행만 본다(재판정 요청은 GET 상세 pending_changes). 기본 full = 종전",
+       "enum": [
+        "full",
+        "minimal"
+       ],
+       "title": "Return",
        "type": "string"
       }
      }
@@ -27949,6 +28385,22 @@
        "title": "Prompt Id",
        "type": "string"
       }
+     },
+     {
+      "description": "minimal = 응답용 재조회 생략: prompt·change_id 는 null, change_ids 는 [], propagation 은 이번 쓰기의 outbox 행만 본다(재판정 요청은 GET 상세 pending_changes). 기본 full = 종전",
+      "in": "query",
+      "name": "return",
+      "required": false,
+      "schema": {
+       "default": "full",
+       "description": "minimal = 응답용 재조회 생략: prompt·change_id 는 null, change_ids 는 [], propagation 은 이번 쓰기의 outbox 행만 본다(재판정 요청은 GET 상세 pending_changes). 기본 full = 종전",
+       "enum": [
+        "full",
+        "minimal"
+       ],
+       "title": "Return",
+       "type": "string"
+      }
      }
     ],
     "requestBody": {
@@ -28042,6 +28494,22 @@
        "title": "Prompt Id",
        "type": "string"
       }
+     },
+     {
+      "description": "minimal = 응답용 재조회 생략: prompt·change_id 는 null, change_ids 는 [], propagation 은 이번 쓰기의 outbox 행만 본다(재판정 요청은 GET 상세 pending_changes). 기본 full = 종전",
+      "in": "query",
+      "name": "return",
+      "required": false,
+      "schema": {
+       "default": "full",
+       "description": "minimal = 응답용 재조회 생략: prompt·change_id 는 null, change_ids 는 [], propagation 은 이번 쓰기의 outbox 행만 본다(재판정 요청은 GET 상세 pending_changes). 기본 full = 종전",
+       "enum": [
+        "full",
+        "minimal"
+       ],
+       "title": "Return",
+       "type": "string"
+      }
      }
     ],
     "responses": {
@@ -28123,6 +28591,22 @@
       "schema": {
        "format": "uuid",
        "title": "Prompt Id",
+       "type": "string"
+      }
+     },
+     {
+      "description": "minimal = 응답용 재조회 생략: prompt·change_id 는 null, change_ids 는 [], propagation 은 이번 쓰기의 outbox 행만 본다(재판정 요청은 GET 상세 pending_changes). 기본 full = 종전",
+      "in": "query",
+      "name": "return",
+      "required": false,
+      "schema": {
+       "default": "full",
+       "description": "minimal = 응답용 재조회 생략: prompt·change_id 는 null, change_ids 는 [], propagation 은 이번 쓰기의 outbox 행만 본다(재판정 요청은 GET 상세 pending_changes). 기본 full = 종전",
+       "enum": [
+        "full",
+        "minimal"
+       ],
+       "title": "Return",
        "type": "string"
       }
      }
@@ -30232,6 +30716,22 @@
        "description": "기본 100, 최대 500",
        "title": "Limit"
       }
+     },
+     {
+      "description": "full(기본) = 종전 그대로. names = 이름·유형만 쓰는 호출(검토함 병합 후보)용: 유효 귀속 판정(own_brand)을 하지 않는다(null). 행·순서·이름·유형·역할·수치·커서는 full 과 같다",
+      "in": "query",
+      "name": "fields",
+      "required": false,
+      "schema": {
+       "default": "full",
+       "description": "full(기본) = 종전 그대로. names = 이름·유형만 쓰는 호출(검토함 병합 후보)용: 유효 귀속 판정(own_brand)을 하지 않는다(null). 행·순서·이름·유형·역할·수치·커서는 full 과 같다",
+       "enum": [
+        "full",
+        "names"
+       ],
+       "title": "Fields",
+       "type": "string"
+      }
      }
     ],
     "responses": {
@@ -31719,6 +32219,22 @@
        "title": "Limit",
        "type": "integer"
       }
+     },
+     {
+      "description": "full(기본) = 종전 목록. gate = 활성·초안 번호만(items = [], status·limit 무시): 하위 화면 게이트 용도",
+      "in": "query",
+      "name": "view",
+      "required": false,
+      "schema": {
+       "default": "full",
+       "description": "full(기본) = 종전 목록. gate = 활성·초안 번호만(items = [], status·limit 무시): 하위 화면 게이트 용도",
+       "enum": [
+        "full",
+        "gate"
+       ],
+       "title": "View",
+       "type": "string"
+      }
      }
     ],
     "responses": {
@@ -31800,6 +32316,24 @@
    },
    "post": {
     "operationId": "post_v1_admin_entities_versions",
+    "parameters": [
+     {
+      "description": "full(기본) = 종전 버전 상세 전체. minimal = 버전 요약(version)만: content_md5·lint = null, entities·surfaces = [](화면이 번호만 쓰고 다시 읽을 때)",
+      "in": "query",
+      "name": "return",
+      "required": false,
+      "schema": {
+       "default": "full",
+       "description": "full(기본) = 종전 버전 상세 전체. minimal = 버전 요약(version)만: content_md5·lint = null, entities·surfaces = [](화면이 번호만 쓰고 다시 읽을 때)",
+       "enum": [
+        "full",
+        "minimal"
+       ],
+       "title": "Return",
+       "type": "string"
+      }
+     }
+    ],
     "requestBody": {
      "content": {
       "application/json": {
@@ -31902,6 +32436,22 @@
        "title": "Ver",
        "type": "integer"
       }
+     },
+     {
+      "description": "full(기본) = 종전 상세. lint = 버전 요약·content_md5·lint 만(값은 full 과 같다), entities·surfaces = [](반영 상세 화면 보조)",
+      "in": "query",
+      "name": "view",
+      "required": false,
+      "schema": {
+       "default": "full",
+       "description": "full(기본) = 종전 상세. lint = 버전 요약·content_md5·lint 만(값은 full 과 같다), entities·surfaces = [](반영 상세 화면 보조)",
+       "enum": [
+        "full",
+        "lint"
+       ],
+       "title": "View",
+       "type": "string"
+      }
      }
     ],
     "responses": {
@@ -31993,6 +32543,22 @@
        "minimum": 1,
        "title": "Ver",
        "type": "integer"
+      }
+     },
+     {
+      "description": "full(기본) = 종전 버전 상세 전체. minimal = 버전 요약(version)만: content_md5·lint = null, entities·surfaces = [](화면이 번호만 쓰고 다시 읽을 때)",
+      "in": "query",
+      "name": "return",
+      "required": false,
+      "schema": {
+       "default": "full",
+       "description": "full(기본) = 종전 버전 상세 전체. minimal = 버전 요약(version)만: content_md5·lint = null, entities·surfaces = [](화면이 번호만 쓰고 다시 읽을 때)",
+       "enum": [
+        "full",
+        "minimal"
+       ],
+       "title": "Return",
+       "type": "string"
       }
      }
     ],
@@ -33845,7 +34411,7 @@
   },
   "/v1/admin/ga4/properties": {
    "get": {
-    "description": "브랜드·국가 순. 추적 이벤트 수·적재 투영 여부·프로젝트 직접 지정·대기 요청을 함께 낸다.",
+    "description": "브랜드·국가 순. 추적 이벤트 수·적재 투영 여부·프로젝트 직접 지정·대기 요청을 함께 낸다(fields=registry 면 생략).",
     "operationId": "get_v1_admin_ga4_properties",
     "parameters": [
      {
@@ -33902,6 +34468,22 @@
         }
        ],
        "title": "Status"
+      }
+     },
+     {
+      "description": "registry = 화면 표 열만(tracked_events·loaded·conv_basis·project_overrides·pending 은 계산하지 않고 null). 기본 full = 종전",
+      "in": "query",
+      "name": "fields",
+      "required": false,
+      "schema": {
+       "default": "full",
+       "description": "registry = 화면 표 열만(tracked_events·loaded·conv_basis·project_overrides·pending 은 계산하지 않고 null). 기본 full = 종전",
+       "enum": [
+        "full",
+        "registry"
+       ],
+       "title": "Fields",
+       "type": "string"
       }
      }
     ],
@@ -34071,6 +34653,22 @@
        "description": "GA4 속성 id(숫자)",
        "pattern": "^\\d{1,20}$",
        "title": "Property Id",
+       "type": "string"
+      }
+     },
+     {
+      "description": "minimal = 응답 property 재조회 생략(null). 기본 full = 종전",
+      "in": "query",
+      "name": "return",
+      "required": false,
+      "schema": {
+       "default": "full",
+       "description": "minimal = 응답 property 재조회 생략(null). 기본 full = 종전",
+       "enum": [
+        "full",
+        "minimal"
+       ],
+       "title": "Return",
        "type": "string"
       }
      }
@@ -37310,6 +37908,67 @@
        "title": "Brand",
        "type": "array"
       }
+     },
+     {
+      "description": "project 표면 선택 게이트: 화면이 게이트한 프로젝트. 답변의 프로젝트와 다르면 404(현행 fetchProjectAnswerBody 의 run 소속 게이트). 없으면 종전(답변 프로젝트의 가시성만). global·website 는 ignored(meta.ignored_filters)",
+      "in": "query",
+      "name": "project_id",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "uuid",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "project 표면 선택 게이트: 화면이 게이트한 프로젝트. 답변의 프로젝트와 다르면 404(현행 fetchProjectAnswerBody 의 run 소속 게이트). 없으면 종전(답변 프로젝트의 가시성만). global·website 는 ignored(meta.ignored_filters)",
+       "title": "Project Id"
+      }
+     },
+     {
+      "description": "global 선택 게이트: 화면 URL 국가(ISO). 답변 국가가 계정 스코프 ∩ 이 목록 밖이면 404(현행 region 게이트, 스코프 밖 값은 버림). 없으면 종전(계정 스코프 국가). website(사이트 국가 리맵은 게이트에 쓰지 않는다)·project 는 쓰지 않는다",
+      "in": "query",
+      "name": "gate_country",
+      "required": false,
+      "schema": {
+       "description": "global 선택 게이트: 화면 URL 국가(ISO). 답변 국가가 계정 스코프 ∩ 이 목록 밖이면 404(현행 region 게이트, 스코프 밖 값은 버림). 없으면 종전(계정 스코프 국가). website(사이트 국가 리맵은 게이트에 쓰지 않는다)·project 는 쓰지 않는다",
+       "items": {
+        "type": "string"
+       },
+       "maxItems": 300,
+       "title": "Gate Country",
+       "type": "array"
+      }
+     },
+     {
+      "description": "global·website 선택 게이트: 화면 URL 브랜드. global = 그 브랜드 카탈로그 행이 있는 프롬프트(현행 prompt brand 게이트), website = 그 브랜드 사이트(현행 narrowScopeBrands). 계정 스코프 ∩(스코프 밖 값은 버림), 밖이면 404. 없으면 종전. project 는 쓰지 않는다",
+      "in": "query",
+      "name": "gate_brand",
+      "required": false,
+      "schema": {
+       "description": "global·website 선택 게이트: 화면 URL 브랜드. global = 그 브랜드 카탈로그 행이 있는 프롬프트(현행 prompt brand 게이트), website = 그 브랜드 사이트(현행 narrowScopeBrands). 계정 스코프 ∩(스코프 밖 값은 버림), 밖이면 404. 없으면 종전. project 는 쓰지 않는다",
+       "items": {
+        "type": "string"
+       },
+       "maxItems": 20,
+       "title": "Gate Brand",
+       "type": "array"
+      }
+     },
+     {
+      "description": "참이면 답변 모달이 쓰지 않는 값을 계산하지 않고 null: header.catalog·cycle_id·anchor_date·model_slug·is_rep·acr_iter_rank, citations[].owned·target_hit. 거짓(기본) = 종전 응답",
+      "in": "query",
+      "name": "lite",
+      "required": false,
+      "schema": {
+       "default": false,
+       "description": "참이면 답변 모달이 쓰지 않는 값을 계산하지 않고 null: header.catalog·cycle_id·anchor_date·model_slug·is_rep·acr_iter_rank, citations[].owned·target_hit. 거짓(기본) = 종전 응답",
+       "title": "Lite",
+       "type": "boolean"
+      }
      }
     ],
     "responses": {
@@ -37809,14 +38468,14 @@
       }
      },
      {
-      "description": "순위 행 수(0 = 요약·경쟁사 합만, meta.page.total 은 그대로 좁힌 행 수)",
+      "description": "순위 행 수(0~200, 0 = 요약·경쟁사 합만, meta.page.total 은 그대로 좁힌 행 수). mention_brand 가 있으면 2000 까지(언급 드릴다운 한 번 조회), 없이 넘으면 422",
       "in": "query",
       "name": "limit",
       "required": false,
       "schema": {
        "default": 50,
-       "description": "순위 행 수(0 = 요약·경쟁사 합만, meta.page.total 은 그대로 좁힌 행 수)",
-       "maximum": 200,
+       "description": "순위 행 수(0~200, 0 = 요약·경쟁사 합만, meta.page.total 은 그대로 좁힌 행 수). mention_brand 가 있으면 2000 까지(언급 드릴다운 한 번 조회), 없이 넘으면 422",
+       "maximum": 2000,
        "minimum": 0,
        "title": "Limit",
        "type": "integer"
@@ -37842,14 +38501,38 @@
       }
      },
      {
-      "description": "BG-20: 공식(경쟁사) 카테고리 출처 전부(인용 수 내림차순, 상한 5000)를 data.competitor_sources 로 함께 낸다(경쟁사 선택 옵션). q·skey 와 무관. true 면 meta.truncated.competitor_sources = 상한에서 잘렸는가",
+      "description": "BG-20: 공식(경쟁사) 카테고리 출처 전부(인용 수 내림차순, 상한 5000)를 data.competitor_sources 로 함께 낸다(경쟁사 선택 옵션). q·skey 와 무관. true 면 meta.truncated.competitor_sources = 상한에서 잘렸는가. card=true·limit=0(대시보드 카드: 출처를 브랜드로 접어 값을 낸다)은 상한 없이 전부(현행과 같은 값, 잘림 false)",
       "in": "query",
       "name": "competitor_sources",
       "required": false,
       "schema": {
        "default": false,
-       "description": "BG-20: 공식(경쟁사) 카테고리 출처 전부(인용 수 내림차순, 상한 5000)를 data.competitor_sources 로 함께 낸다(경쟁사 선택 옵션). q·skey 와 무관. true 면 meta.truncated.competitor_sources = 상한에서 잘렸는가",
+       "description": "BG-20: 공식(경쟁사) 카테고리 출처 전부(인용 수 내림차순, 상한 5000)를 data.competitor_sources 로 함께 낸다(경쟁사 선택 옵션). q·skey 와 무관. true 면 meta.truncated.competitor_sources = 상한에서 잘렸는가. card=true·limit=0(대시보드 카드: 출처를 브랜드로 접어 값을 낸다)은 상한 없이 전부(현행과 같은 값, 잘림 false)",
        "title": "Competitor Sources",
+       "type": "boolean"
+      }
+     },
+     {
+      "description": "false 면 커버리지 분모 문장을 생략한다: summary.answers_den = 0, 행 coverage.den = 0(coverage·분모를 읽지 않는 호출용). sort=coverage 는 정렬 키가 분모를 써서 그대로 센다",
+      "in": "query",
+      "name": "include_den",
+      "required": false,
+      "schema": {
+       "default": true,
+       "description": "false 면 커버리지 분모 문장을 생략한다: summary.answers_den = 0, 행 coverage.den = 0(coverage·분모를 읽지 않는 호출용). sort=coverage 는 정렬 키가 분모를 써서 그대로 센다",
+       "title": "Include Den",
+       "type": "boolean"
+      }
+     },
+     {
+      "description": "false 면 경쟁사 브랜드별 합을 계산하지 않는다(competitor_totals = 빈 목록, 읽지 않는 호출용)",
+      "in": "query",
+      "name": "include_competitor_totals",
+      "required": false,
+      "schema": {
+       "default": true,
+       "description": "false 면 경쟁사 브랜드별 합을 계산하지 않는다(competitor_totals = 빈 목록, 읽지 않는 호출용)",
+       "title": "Include Competitor Totals",
        "type": "boolean"
       }
      }
@@ -37938,7 +38621,7 @@
       "description": "unavailable(auth_unavailable: JWKS 장애 포함)"
      }
     },
-    "summary": "출처(source_key: 도메인·공식 소셜 계정) 인용 순위 + 요약(M05, 고유 출처 수) + 경쟁사 브랜드별 인용 합. limit=0 이면 요약·경쟁사 합만(대시보드 경쟁사 행). mention_brand 로 언급 드릴다운 인용 탭 대체. q·sort·dir·skey[](BG-20·21), competitor_sources(BG-20)",
+    "summary": "출처(source_key: 도메인·공식 소셜 계정) 인용 순위 + 요약(M05, 고유 출처 수) + 경쟁사 브랜드별 인용 합. limit=0 이면 요약·경쟁사 합만(대시보드 경쟁사 행). mention_brand 로 언급 드릴다운 인용 탭 대체(limit 2,000 까지 한 번 조회). q·sort·dir·skey[](BG-20·21), competitor_sources(BG-20), include_den·include_competitor_totals(읽지 않는 계산 끄기)",
     "tags": [
      "analytics.citations"
     ]
@@ -39196,6 +39879,46 @@
        "description": "이전 응답 meta.page.next_cursor",
        "title": "Cursor"
       }
+     },
+     {
+      "description": "P12 B099: false = 행당 답변 표본 문장을 돌리지 않고 items[].answers 를 빈 배열로 둔다(건수만 읽는 분할 카드용). 다른 값은 같다",
+      "in": "query",
+      "name": "include_refs",
+      "required": false,
+      "schema": {
+       "default": true,
+       "description": "P12 B099: false = 행당 답변 표본 문장을 돌리지 않고 items[].answers 를 빈 배열로 둔다(건수만 읽는 분할 카드용). 다른 값은 같다",
+       "title": "Include Refs",
+       "type": "boolean"
+      }
+     },
+     {
+      "description": "P12 B099: text = 퍼널·AI 엔진을 계산하지 않는다(items[].funnel = null, providers = []). 정렬·citations·버킷·카운트는 같다",
+      "in": "query",
+      "name": "fields",
+      "required": false,
+      "schema": {
+       "default": "all",
+       "description": "P12 B099: text = 퍼널·AI 엔진을 계산하지 않는다(items[].funnel = null, providers = []). 정렬·citations·버킷·카운트는 같다",
+       "enum": [
+        "all",
+        "text"
+       ],
+       "title": "Fields",
+       "type": "string"
+      }
+     },
+     {
+      "description": "P12 B099: true = 같은 집계 한 번으로 반대 버킷(owned 의 반대)의 첫 페이지(같은 q·limit·정렬·include_refs·fields)를 data.other_bucket 에 함께 싣는다. items·counts·meta.page 는 요청 버킷 그대로. cursor 와 함께 줄 수 없다",
+      "in": "query",
+      "name": "both_buckets",
+      "required": false,
+      "schema": {
+       "default": false,
+       "description": "P12 B099: true = 같은 집계 한 번으로 반대 버킷(owned 의 반대)의 첫 페이지(같은 q·limit·정렬·include_refs·fields)를 data.other_bucket 에 함께 싣는다. items·counts·meta.page 는 요청 버킷 그대로. cursor 와 함께 줄 수 없다",
+       "title": "Both Buckets",
+       "type": "boolean"
+      }
      }
     ],
     "responses": {
@@ -39541,6 +40264,30 @@
        "default": false,
        "description": "대시보드 카드 경로 요청(global·website). 현행 프로필(운영 hmg-geo 재현 스위치)의 카드 정의를 쓴다: card_slot_rep(기간 창 = 자리마다 대표 회차 하나)·summary_all_engines(엔진 필터 없음 = 전 엔진)·web_registered_only(website 모수 = 보고서 유닛 소속). 스위치가 꺼져 있거나 project 표면이면 효과 없음",
        "title": "Card",
+       "type": "boolean"
+      }
+     },
+     {
+      "description": "false = 톤 타일 문장을 돌리지 않고 tone 을 0 타일로 둔다(톤을 그리지 않는 웹사이트·프로젝트 인용 화면용). 다른 필드 값은 같다",
+      "in": "query",
+      "name": "include_tone",
+      "required": false,
+      "schema": {
+       "default": true,
+       "description": "false = 톤 타일 문장을 돌리지 않고 tone 을 0 타일로 둔다(톤을 그리지 않는 웹사이트·프로젝트 인용 화면용). 다른 필드 값은 같다",
+       "title": "Include Tone",
+       "type": "boolean"
+      }
+     },
+     {
+      "description": "false = 유형 × 카테고리(답변 열 65열·유형 플래그)를 계산하지 않고 types 를 빈 배열로 둔다. 다른 필드 값은 같다",
+      "in": "query",
+      "name": "include_types",
+      "required": false,
+      "schema": {
+       "default": true,
+       "description": "false = 유형 × 카테고리(답변 열 65열·유형 플래그)를 계산하지 않고 types 를 빈 배열로 둔다. 다른 필드 값은 같다",
+       "title": "Include Types",
        "type": "boolean"
       }
      }
@@ -41355,6 +42102,18 @@
        "title": "Include",
        "type": "array"
       }
+     },
+     {
+      "description": "B095: true = 국가 옵션만 쓰는 화면(전환). 카탈로그 택소노미(global = rd.dim_taxon·카탈로그 2문장, project = 프로젝트 프롬프트)와 커스텀 필드 문장을 돌리지 않고 catalog·custom_fields 를 null 로 둔다. geo_matrix·regions·languages·engines·meta 는 같다",
+      "in": "query",
+      "name": "geo_only",
+      "required": false,
+      "schema": {
+       "default": false,
+       "description": "B095: true = 국가 옵션만 쓰는 화면(전환). 카탈로그 택소노미(global = rd.dim_taxon·카탈로그 2문장, project = 프로젝트 프롬프트)와 커스텀 필드 문장을 돌리지 않고 catalog·custom_fields 를 null 로 둔다. geo_matrix·regions·languages·engines·meta 는 같다",
+       "title": "Geo Only",
+       "type": "boolean"
+      }
      }
     ],
     "responses": {
@@ -41776,6 +42535,30 @@
        "title": "Model Limit",
        "type": "integer"
       }
+     },
+     {
+      "description": "false = options.countries 를 계산하지 않고 [] 로 둔다(국가 옵션 문장 생략). 화면 국가 목록은 /v1/filters/options 를 쓴다. options.langs·다른 필드 값은 같다",
+      "in": "query",
+      "name": "include_option_countries",
+      "required": false,
+      "schema": {
+       "default": true,
+       "description": "false = options.countries 를 계산하지 않고 [] 로 둔다(국가 옵션 문장 생략). 화면 국가 목록은 /v1/filters/options 를 쓴다. options.langs·다른 필드 값은 같다",
+       "title": "Include Option Countries",
+       "type": "boolean"
+      }
+     },
+     {
+      "description": "false = 카탈로그 ACR 프롬프트 수를 셀이 없는 응답(prompt_runs 0·빈 창·숨김·원천 준비 중)에서만 세고, 셀이 있으면 세지 않고 totals.catalog_acr_prompts = null(측정 대기 안내만 이 값을 읽는다). 다른 값은 같다",
+      "in": "query",
+      "name": "include_catalog_count",
+      "required": false,
+      "schema": {
+       "default": true,
+       "description": "false = 카탈로그 ACR 프롬프트 수를 셀이 없는 응답(prompt_runs 0·빈 창·숨김·원천 준비 중)에서만 세고, 셀이 있으면 세지 않고 totals.catalog_acr_prompts = null(측정 대기 안내만 이 값을 읽는다). 다른 값은 같다",
+       "title": "Include Catalog Count",
+       "type": "boolean"
+      }
      }
     ],
     "responses": {
@@ -42176,6 +42959,30 @@
        "default": true,
        "description": "false = 페이지별 표(data.pages)를 계산하지 않고 빈 배열로 둔다. 요약·커버리지·추이만 쓰는 대시보드 ⑦ 카드용 (현행 프런트 dashboard.ts toTrafficConversionKpi). 다른 필드 값은 같다",
        "title": "Include Pages",
+       "type": "boolean"
+      }
+     },
+     {
+      "description": "B096: true 이고 커버리지 시장이 2개 이상(전환 화면의 권역·본사 롤업 분기)이면 롤업이 그리지 않는 부분을 계산하지 않는다: 페이지 문장·엔진 비교 문장을 건너뛰고 trend·by_engine·by_engine_all·pages = []. summary·by_country·coverage·period·meta 는 같다. 시장이 하나 이하(국가 리프)면 효과 없음",
+      "in": "query",
+      "name": "rollup_lite",
+      "required": false,
+      "schema": {
+       "default": false,
+       "description": "B096: true 이고 커버리지 시장이 2개 이상(전환 화면의 권역·본사 롤업 분기)이면 롤업이 그리지 않는 부분을 계산하지 않는다: 페이지 문장·엔진 비교 문장을 건너뛰고 trend·by_engine·by_engine_all·pages = []. summary·by_country·coverage·period·meta 는 같다. 시장이 하나 이하(국가 리프)면 효과 없음",
+       "title": "Rollup Lite",
+       "type": "boolean"
+      }
+     },
+     {
+      "description": "B096: true = 요약 카드용(AI 전환율·분자·분모와 커버리지). 페이지 문장·엔진 비교 문장을 건너뛰고 trend·by_engine·by_engine_all·pages = [], by_country = null. summary·coverage·period·meta 는 같다",
+      "in": "query",
+      "name": "summary_only",
+      "required": false,
+      "schema": {
+       "default": false,
+       "description": "B096: true = 요약 카드용(AI 전환율·분자·분모와 커버리지). 페이지 문장·엔진 비교 문장을 건너뛰고 trend·by_engine·by_engine_all·pages = [], by_country = null. summary·coverage·period·meta 는 같다",
+       "title": "Summary Only",
        "type": "boolean"
       }
      },
@@ -42983,6 +43790,95 @@
    }
   },
   "/v1/intent/fetches": {
+   "get": {
+    "operationId": "get_v1_intent_fetches",
+    "parameters": [
+     {
+      "description": "change id 1~20건",
+      "in": "query",
+      "name": "ids",
+      "required": true,
+      "schema": {
+       "description": "change id 1~20건",
+       "items": {
+        "maximum": 9223372036854775807,
+        "minimum": 1,
+        "type": "integer"
+       },
+       "maxItems": 20,
+       "minItems": 1,
+       "title": "Ids",
+       "type": "array"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Envelope_ListData_FetchStatus__"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "401": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorBody"
+        }
+       }
+      },
+      "description": "unauthenticated"
+     },
+     "403": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorBody"
+        }
+       }
+      },
+      "description": "forbidden"
+     },
+     "404": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorBody"
+        }
+       }
+      },
+      "description": "not_found"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorBody"
+        }
+       }
+      },
+      "description": "unprocessable"
+     },
+     "503": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorBody"
+        }
+       }
+      },
+      "description": "unavailable(auth_unavailable: JWKS 장애 포함)"
+     }
+    },
+    "summary": "수집 요청 상태 일괄(폴링용, 요청 순서). 단건과 같은 가시성: 하나라도 없거나 볼 수 없으면 404",
+    "tags": [
+     "intent.keywords"
+    ]
+   },
    "post": {
     "operationId": "post_v1_intent_fetches",
     "requestBody": {
@@ -43408,6 +44304,18 @@
        "title": "Project Id",
        "type": "string"
       }
+     },
+     {
+      "description": "최신 월 검색량(latest_month·latest_volume) 포함. false 면 읽지 않고 null(키워드 탭은 id·term 만 쓴다)",
+      "in": "query",
+      "name": "include_volume",
+      "required": false,
+      "schema": {
+       "default": true,
+       "description": "최신 월 검색량(latest_month·latest_volume) 포함. false 면 읽지 않고 null(키워드 탭은 id·term 만 쓴다)",
+       "title": "Include Volume",
+       "type": "boolean"
+      }
      }
     ],
     "responses": {
@@ -43497,13 +44405,31 @@
      "content": {
       "application/json": {
        "schema": {
-        "$ref": "#/components/schemas/TrackedKeywordIn"
+        "anyOf": [
+         {
+          "$ref": "#/components/schemas/TrackedKeywordIn"
+         },
+         {
+          "$ref": "#/components/schemas/TrackedKeywordsIn"
+         }
+        ],
+        "title": "Body"
        }
       }
      },
      "required": true
     },
     "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Envelope_ListData_TrackedAddResult__"
+        }
+       }
+      },
+      "description": "items[] 본문: 행별 결과(요청 순서, 행마다 단건과 같은 상태·오류)"
+     },
      "201": {
       "content": {
        "application/json": {
@@ -43565,7 +44491,7 @@
       "description": "unavailable(auth_unavailable: JWKS 장애 포함)"
      }
     },
-    "summary": "추적 키워드 추가(중복 409)",
+    "summary": "추적 키워드 추가(중복 409). items[] 본문이면 행별 결과 200",
     "tags": [
      "intent.keywords"
     ]
@@ -45785,6 +46711,29 @@
        "title": "Part",
        "type": "string"
       }
+     },
+     {
+      "description": "B090: part 여럿의 합집합으로 열을 좁힌다(예: sov+citation = 엔진 일관성 배지 열, rank_detail 없음). 주면 part 대신 쓰고, 비우면 [part](종전). 계산하지 않은 필드는 null(part 와 같은 규칙)",
+      "in": "query",
+      "name": "parts",
+      "required": false,
+      "schema": {
+       "description": "B090: part 여럿의 합집합으로 열을 좁힌다(예: sov+citation = 엔진 일관성 배지 열, rank_detail 없음). 주면 part 대신 쓰고, 비우면 [part](종전). 계산하지 않은 필드는 null(part 와 같은 규칙)",
+       "items": {
+        "enum": [
+         "all",
+         "exposure",
+         "sov",
+         "favorability",
+         "position",
+         "citation"
+        ],
+        "type": "string"
+       },
+       "maxItems": 6,
+       "title": "Parts",
+       "type": "array"
+      }
      }
     ],
     "responses": {
@@ -46147,6 +47096,27 @@
        "description": "true 면 params.measured_by_funnel(퍼널 주제별 측정 프롬프트 수)을 채운다(BG-08)",
        "title": "By Funnel",
        "type": "boolean"
+      }
+     },
+     {
+      "description": "계산할 선택 부분(B089). 비우면 전부(종전과 같은 응답). measured = params.measured_prompts·prompts_without_brand(측정 프롬프트 count DISTINCT 문장), applied = params.applied_prompts(적용 프롬프트 문장), gap = analysis_gap(A16 열), urls = target_url_rate·owned_url_rate·citation_accuracy·url_prompts·meta.source(URL 인용률 문장). 빠진 부분은 값 null 이고 meta.suppressed 에도 적지 않는다(null 자체가 '요청하지 않음'). ①~⑤·params.answers·measured_by_funnel·나머지 값은 부분과 무관하게 같다",
+      "in": "query",
+      "name": "parts",
+      "required": false,
+      "schema": {
+       "description": "계산할 선택 부분(B089). 비우면 전부(종전과 같은 응답). measured = params.measured_prompts·prompts_without_brand(측정 프롬프트 count DISTINCT 문장), applied = params.applied_prompts(적용 프롬프트 문장), gap = analysis_gap(A16 열), urls = target_url_rate·owned_url_rate·citation_accuracy·url_prompts·meta.source(URL 인용률 문장). 빠진 부분은 값 null 이고 meta.suppressed 에도 적지 않는다(null 자체가 '요청하지 않음'). ①~⑤·params.answers·measured_by_funnel·나머지 값은 부분과 무관하게 같다",
+       "items": {
+        "enum": [
+         "measured",
+         "applied",
+         "gap",
+         "urls"
+        ],
+        "type": "string"
+       },
+       "maxItems": 4,
+       "title": "Parts",
+       "type": "array"
       }
      }
     ],
@@ -47054,6 +48024,30 @@
        "title": "Full",
        "type": "boolean"
       }
+     },
+     {
+      "description": "false = 감성을 계산하지 않는다: 당사 감성 문장(rd.answer_brand 당사 행 합)을 건너뛰고 모든 행(brands·by_engine[].brands)의 sentiment 를 0 4개로 둔다. 다른 필드 값은 같다",
+      "in": "query",
+      "name": "include_sentiment",
+      "required": false,
+      "schema": {
+       "default": true,
+       "description": "false = 감성을 계산하지 않는다: 당사 감성 문장(rd.answer_brand 당사 행 합)을 건너뛰고 모든 행(brands·by_engine[].brands)의 sentiment 를 0 4개로 둔다. 다른 필드 값은 같다",
+       "title": "Include Sentiment",
+       "type": "boolean"
+      }
+     },
+     {
+      "description": "group_by=engine 일 때만: true = by_engine 만 계산한다. 전체 창 당사 합계·경쟁 행·당사 감성 문장을 건너뛰고 최상위 totals·own·brands·types_total 은 빈 창과 같은 값(0, 당사 행만)으로 둔다. by_engine 값은 같다. group_by 가 없으면 효과 없음",
+      "in": "query",
+      "name": "engine_only",
+      "required": false,
+      "schema": {
+       "default": false,
+       "description": "group_by=engine 일 때만: true = by_engine 만 계산한다. 전체 창 당사 합계·경쟁 행·당사 감성 문장을 건너뛰고 최상위 totals·own·brands·types_total 은 빈 창과 같은 값(0, 당사 행만)으로 둔다. by_engine 값은 같다. group_by 가 없으면 효과 없음",
+       "title": "Engine Only",
+       "type": "boolean"
+      }
      }
     ],
     "responses": {
@@ -47523,14 +48517,14 @@
       }
      },
      {
-      "description": "프롬프트 페이지 크기",
+      "description": "프롬프트 페이지 크기(1~200). mode=brand 의 드릴다운 타깃(mention_brand·own)은 2000 까지(언급 드릴다운이 한 요청으로 끝까지 읽는다), 그 밖 타깃이 넘으면 422",
       "in": "query",
       "name": "limit",
       "required": false,
       "schema": {
        "default": 50,
-       "description": "프롬프트 페이지 크기",
-       "maximum": 200,
+       "description": "프롬프트 페이지 크기(1~200). mode=brand 의 드릴다운 타깃(mention_brand·own)은 2000 까지(언급 드릴다운이 한 요청으로 끝까지 읽는다), 그 밖 타깃이 넘으면 422",
+       "maximum": 2000,
        "minimum": 1,
        "title": "Limit",
        "type": "integer"
@@ -47567,6 +48561,18 @@
        "minimum": 1,
        "title": "Answers Limit",
        "type": "integer"
+      }
+     },
+     {
+      "description": "mode=signal 전용(그 밖 mode 와 함께면 422): 답변 참조의 runs·position·measured_at 을 내지 않는다(null). 신호 다이얼로그가 쓰지 않는 열이다. 프롬프트·값·share·대표 답변 선택(job_id)은 같다",
+      "in": "query",
+      "name": "lite",
+      "required": false,
+      "schema": {
+       "default": false,
+       "description": "mode=signal 전용(그 밖 mode 와 함께면 422): 답변 참조의 runs·position·measured_at 을 내지 않는다(null). 신호 다이얼로그가 쓰지 않는 열이다. 프롬프트·값·share·대표 답변 선택(job_id)은 같다",
+       "title": "Lite",
+       "type": "boolean"
       }
      }
     ],
@@ -47903,6 +48909,18 @@
        "default": false,
        "description": "D13: 다중 관점이면 당사 쪽을 관점 브랜드별로 가른 블록(by_own_brand, 행 키 own_brand_code)을 더한다. mentions/brands·trend 의 split_own 과 같은 공용 판정(core.measure.split_own_scopes)",
        "title": "Split Own",
+       "type": "boolean"
+      }
+     },
+     {
+      "description": "B093: false = 당사 스탠스(A3) 문장을 돌리지 않고 stance(by_own_brand[].stance 포함)를 null 로 둔다. 다른 필드 값은 같다",
+      "in": "query",
+      "name": "include_stance",
+      "required": false,
+      "schema": {
+       "default": true,
+       "description": "B093: false = 당사 스탠스(A3) 문장을 돌리지 않고 stance(by_own_brand[].stance 포함)를 null 로 둔다. 다른 필드 값은 같다",
+       "title": "Include Stance",
        "type": "boolean"
       }
      }
@@ -48444,6 +49462,22 @@
       "schema": {
        "format": "uuid",
        "title": "Project Id",
+       "type": "string"
+      }
+     },
+     {
+      "description": "full(기본) = 상세 + 요약(BG-38). gate = 프로젝트 게이트용 경량 조회: 같은 접근 판정·같은 404, effective_engines·요약 필드(target_brand 제외)는 읽지 않고 null",
+      "in": "query",
+      "name": "view",
+      "required": false,
+      "schema": {
+       "default": "full",
+       "description": "full(기본) = 상세 + 요약(BG-38). gate = 프로젝트 게이트용 경량 조회: 같은 접근 판정·같은 404, effective_engines·요약 필드(target_brand 제외)는 읽지 않고 null",
+       "enum": [
+        "full",
+        "gate"
+       ],
+       "title": "View",
        "type": "string"
       }
      }
@@ -49329,6 +50363,18 @@
         }
        ],
        "title": "Limit"
+      }
+     },
+     {
+      "description": "false = 전체 건수(COUNT) 를 세지 않고 meta.page.total = null(행·커서는 같다). 건수를 따로 아는 화면(홈 타일은 상세 candidate_count)용",
+      "in": "query",
+      "name": "include_total",
+      "required": false,
+      "schema": {
+       "default": true,
+       "description": "false = 전체 건수(COUNT) 를 세지 않고 meta.page.total = null(행·커서는 같다). 건수를 따로 아는 화면(홈 타일은 상세 candidate_count)용",
+       "title": "Include Total",
+       "type": "boolean"
       }
      }
     ],
@@ -51764,6 +52810,22 @@
        "title": "Project Id",
        "type": "string"
       }
+     },
+     {
+      "description": "full(기본) = 설정 화면 묶음 전체. card = 홈 KPI 카드용(domain·owned_bases·tracked_url_count·지정 비교 브랜드 행만, engines·brand_aliases·vehicles 는 null)",
+      "in": "query",
+      "name": "view",
+      "required": false,
+      "schema": {
+       "default": "full",
+       "description": "full(기본) = 설정 화면 묶음 전체. card = 홈 KPI 카드용(domain·owned_bases·tracked_url_count·지정 비교 브랜드 행만, engines·brand_aliases·vehicles 는 null)",
+       "enum": [
+        "full",
+        "card"
+       ],
+       "title": "View",
+       "type": "string"
+      }
      }
     ],
     "responses": {
@@ -52613,6 +53675,18 @@
        "format": "uuid",
        "title": "Project Id",
        "type": "string"
+      }
+     },
+     {
+      "description": "false = 최근 아웃박스 10행을 읽지 않는다(outbox.recent = 빈 목록, 건수·상태는 같다). 건수·상태만 쓰는 화면용",
+      "in": "query",
+      "name": "include_recent",
+      "required": false,
+      "schema": {
+       "default": true,
+       "description": "false = 최근 아웃박스 10행을 읽지 않는다(outbox.recent = 빈 목록, 건수·상태는 같다). 건수·상태만 쓰는 화면용",
+       "title": "Include Recent",
+       "type": "boolean"
       }
      }
     ],
@@ -58534,6 +59608,21 @@
        "description": "성능 A1(추가형): buckets[].measured_days 계산 여부. 기본 true = 계산(종전과 같다). false 면 계산하지 않고 모든 버킷의 measured_days 를 null 로 낸다(rd.job 조인 문장 생략). 결과 캐시 키에는 원문 쿼리로 들어간다(선언 파라미터)",
        "title": "Measured Days",
        "type": "boolean"
+      }
+     },
+     {
+      "description": "P12 B101(추가형): 같은 요청에서 함께 낼 차원(반복). 항목 = 'dimension[:metric,…][@top]'(dimension = none|engine|type|source|category, metric 은 metrics 와 같은 이름·코드, 생략 = 그 차원 기본 세트, top 생략 = 요청 top). data.dims[] 에 항목 순서로 {dimension, series, meta}: 그 차원만 따로 부른 응답(같은 필터·bucket·card·measured_days)의 series·meta 와 같다. brand 는 dimension 으로만, 차원 중복·형식 오류 422. 생략 = 종전(data.dims 키 없음)",
+      "in": "query",
+      "name": "dims",
+      "required": false,
+      "schema": {
+       "description": "P12 B101(추가형): 같은 요청에서 함께 낼 차원(반복). 항목 = 'dimension[:metric,…][@top]'(dimension = none|engine|type|source|category, metric 은 metrics 와 같은 이름·코드, 생략 = 그 차원 기본 세트, top 생략 = 요청 top). data.dims[] 에 항목 순서로 {dimension, series, meta}: 그 차원만 따로 부른 응답(같은 필터·bucket·card·measured_days)의 series·meta 와 같다. brand 는 dimension 으로만, 차원 중복·형식 오류 422. 생략 = 종전(data.dims 키 없음)",
+       "items": {
+        "type": "string"
+       },
+       "maxItems": 5,
+       "title": "Dims",
+       "type": "array"
       }
      }
     ],

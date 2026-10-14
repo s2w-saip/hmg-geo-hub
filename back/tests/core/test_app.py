@@ -13,7 +13,7 @@ OPS = ("get", "post", "put", "patch", "delete")
 def test_openapi_keeps_feature_stubs():
     spec = app.openapi()
     n = sum(len([m for m in v if m in OPS]) for v in spec["paths"].values())
-    assert n == 218 and len(spec["paths"]) == 176   # 기능 172 + 적재 운영 조회 GET 3(ingest.pull.ops) + 값 갭 보강(BG) 신규 8 + GA4 대기 시장 4(경로 2, DB-v2.9 P61)
+    assert n == 219 and len(spec["paths"]) == 176   # 기능 172 + 적재 운영 조회 GET 3(ingest.pull.ops) + 값 갭 보강(BG) 신규 8 + GA4 대기 시장 4(경로 2, DB-v2.9 P61) + 수집 일괄 상태 GET 1(intent.fetches?ids, 기존 경로)
     #                                                 + 관리 카탈로그 프롬프트 타임라인 1(U8-7, catalog.prompts.history)
     #                                                 + 엔티티 버전 관리 26(경로 22, E6 admin.entities.versions, 포기 abandon 포함)
     #                                                 + 화면 목록 조회 POST …/screen 4(경로 4, 표준·관리자·프로젝트 프롬프트·후보, 내부 리팩토링 2026-10-09)

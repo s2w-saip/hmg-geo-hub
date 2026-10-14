@@ -977,7 +977,7 @@ export interface paths {
         };
         /**
          * (단위 설계 필요) GA4 속성 목록
-         * @description 브랜드·국가 순. 추적 이벤트 수·적재 투영 여부·프로젝트 직접 지정·대기 요청을 함께 낸다.
+         * @description 브랜드·국가 순. 추적 이벤트 수·적재 투영 여부·프로젝트 직접 지정·대기 요청을 함께 낸다(fields=registry 면 생략).
          */
         get: operations["get_v1_admin_ga4_properties"];
         put?: never;
@@ -1419,7 +1419,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * 출처(source_key: 도메인·공식 소셜 계정) 인용 순위 + 요약(M05, 고유 출처 수) + 경쟁사 브랜드별 인용 합. limit=0 이면 요약·경쟁사 합만(대시보드 경쟁사 행). mention_brand 로 언급 드릴다운 인용 탭 대체. q·sort·dir·skey[](BG-20·21), competitor_sources(BG-20)
+         * 출처(source_key: 도메인·공식 소셜 계정) 인용 순위 + 요약(M05, 고유 출처 수) + 경쟁사 브랜드별 인용 합. limit=0 이면 요약·경쟁사 합만(대시보드 경쟁사 행). mention_brand 로 언급 드릴다운 인용 탭 대체(limit 2,000 까지 한 번 조회). q·sort·dir·skey[](BG-20·21), competitor_sources(BG-20), include_den·include_competitor_totals(읽지 않는 계산 끄기)
          * @description analytics.citations.domains: C-1 도메인 순위(모듈-인용 §2).
          */
         get: operations["get_v1_citations_domains"];
@@ -1720,7 +1720,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** 수집 요청 상태 일괄(폴링용, 요청 순서). 단건과 같은 가시성: 하나라도 없거나 볼 수 없으면 404 */
+        get: operations["get_v1_intent_fetches"];
         put?: never;
         /** DataForSEO 수집 요청: 신선하면 200 skip, 아니면 judgment_change(dfs_fetch, 제안 kind) 202 {change_id} */
         post: operations["post_v1_intent_fetches"];
@@ -1774,7 +1775,7 @@ export interface paths {
         /** 추적 키워드 + 최신 월 검색량 */
         get: operations["get_v1_intent_keywords"];
         put?: never;
-        /** 추적 키워드 추가(중복 409) */
+        /** 추적 키워드 추가(중복 409). items[] 본문이면 행별 결과 200 */
         post: operations["post_v1_intent_keywords"];
         /** 추적 키워드 1~100건 삭제 */
         delete: operations["delete_v1_intent_keywords"];
@@ -3413,9 +3414,9 @@ export interface components {
         AcrTotals: {
             /**
              * Catalog Acr Prompts
-             * @description 카탈로그의 ACR 프롬프트 수(측정 무관). 0 이면 '카탈로그에 ACR 없음', 양수인데 prompt_runs 0 이면 '측정 대기'
+             * @description 카탈로그의 ACR 프롬프트 수(측정 무관). 0 이면 '카탈로그에 ACR 없음', 양수인데 prompt_runs 0 이면 '측정 대기'. include_catalog_count=false 이고 셀이 있으면(prompt_runs > 0) null
              */
-            catalog_acr_prompts: number;
+            catalog_acr_prompts: number | null;
             /**
              * Engines
              * @description 셀에 나온 엔진 코드
@@ -4453,6 +4454,7 @@ export interface components {
             include_meta: boolean;
             /**
              * Limit
+             * @description 기본 50, 최대 500(include_meta=false 면 최대 5,000: 내보내기 묶음)
              * @default 50
              */
             limit: number;
@@ -4465,6 +4467,13 @@ export interface components {
              * @default 0
              */
             offset: number;
+            /**
+             * Row Fields
+             * @description list = 목록·내보내기 화면이 쓰는 열만 읽는다(scopeText·promptType·category 는 null, rd.dim_prompt 조인 생략). 행·순서·나머지 값은 full 과 같다. 기본 full = 종전
+             * @default full
+             * @enum {string}
+             */
+            row_fields: "full" | "list";
             /**
              * Search
              * @default
@@ -4640,10 +4649,16 @@ export interface components {
             domain?: string | null;
             /** Ord */
             ord: number;
-            /** Owned */
-            owned: boolean;
-            /** Target Hit */
-            target_hit: boolean;
+            /**
+             * Owned
+             * @description lite 면 null
+             */
+            owned: boolean | null;
+            /**
+             * Target Hit
+             * @description lite 면 null
+             */
+            target_hit: boolean | null;
             /** Title */
             title?: string | null;
             /** Url */
@@ -4654,6 +4669,11 @@ export interface components {
             counts: components["schemas"]["PromptCounts"];
             /** Items */
             items: components["schemas"]["PromptRow"][];
+            /**
+             * Other Bucket
+             * @description both_buckets=true 일 때만 실린다(그 밖 응답에는 키가 없다): 반대 버킷의 첫 페이지(같은 q·limit·정렬). 그 버킷 건수는 counts, 다음 페이지는 그 버킷으로 따로 요청한다
+             */
+            other_bucket?: components["schemas"]["PromptRow"][] | null;
         };
         /** CloseBody */
         CloseBody: {
@@ -6472,6 +6492,11 @@ export interface components {
             data: components["schemas"]["ListData_CycleItem_"];
             meta: components["schemas"]["Meta"];
         };
+        /** Envelope[ListData[FetchStatus]] */
+        Envelope_ListData_FetchStatus__: {
+            data: components["schemas"]["ListData_FetchStatus_"];
+            meta: components["schemas"]["Meta"];
+        };
         /** Envelope[ListData[Ga4Property]] */
         Envelope_ListData_Ga4Property__: {
             data: components["schemas"]["ListData_Ga4Property_"];
@@ -6525,6 +6550,11 @@ export interface components {
         /** Envelope[ListData[QaNote]] */
         Envelope_ListData_QaNote__: {
             data: components["schemas"]["ListData_QaNote_"];
+            meta: components["schemas"]["Meta"];
+        };
+        /** Envelope[ListData[TrackedAddResult]] */
+        Envelope_ListData_TrackedAddResult__: {
+            data: components["schemas"]["ListData_TrackedAddResult_"];
             meta: components["schemas"]["Meta"];
         };
         /** Envelope[ListData[TrackedKeyword]] */
@@ -7197,16 +7227,19 @@ export interface components {
             country_code?: string | null;
             /**
              * Loaded
-             * @description 적재기가 rd.ga4_dim_property 에 투영했는지(GA4 행 적재 대상)
+             * @description 적재기가 rd.ga4_dim_property 에 투영했는지(GA4 행 적재 대상, fields=registry 면 null)
              */
-            loaded: boolean;
-            /** Pending */
-            pending?: components["schemas"]["app__features__admin__integrations__ga4__schemas__PendingChange"][];
+            loaded: boolean | null;
+            /**
+             * Pending
+             * @description 대기·실행 중 요청(fields=registry 면 null)
+             */
+            pending?: components["schemas"]["app__features__admin__integrations__ga4__schemas__PendingChange"][] | null;
             /**
              * Project Overrides
-             * @description 이 속성을 직접 지정한 고객 프로젝트(읽기 전용)
+             * @description 이 속성을 직접 지정한 고객 프로젝트(읽기 전용, fields=registry 면 null)
              */
-            project_overrides?: components["schemas"]["ProjectOverride"][];
+            project_overrides?: components["schemas"]["ProjectOverride"][] | null;
             /** Property Id */
             property_id: string;
             /**
@@ -7216,9 +7249,9 @@ export interface components {
             status: "active" | "pending_grant" | "unmapped";
             /**
              * Tracked Events
-             * @description 추적(전환) 이벤트 수. 0 이면 key events 폴백
+             * @description 추적(전환) 이벤트 수. 0 이면 key events 폴백(fields=registry 면 null)
              */
-            tracked_events: number;
+            tracked_events: number | null;
             /**
              * Updated At
              * Format: date-time
@@ -7473,36 +7506,46 @@ export interface components {
         };
         /** Header */
         Header: {
-            /** Acr Iter Rank */
-            acr_iter_rank: number;
+            /**
+             * Acr Iter Rank
+             * @description lite 면 null
+             */
+            acr_iter_rank: number | null;
             /** Analysis State */
             analysis_state: number;
             /**
              * Anchor Date
-             * Format: date
+             * @description lite 면 null
              */
-            anchor_date: string;
+            anchor_date: string | null;
+            /** @description global 만. lite 면 null */
             catalog?: components["schemas"]["CatalogInfo"] | null;
             /** Country */
             country?: string | null;
             /**
              * Cycle Id
-             * Format: uuid
+             * @description lite 면 null
              */
-            cycle_id: string;
+            cycle_id: string | null;
             /** Engine */
             engine: string;
             /** Gap */
             gap: boolean;
             /** Is Acr */
             is_acr: boolean;
-            /** Is Rep */
-            is_rep: boolean;
+            /**
+             * Is Rep
+             * @description lite 면 null
+             */
+            is_rep: boolean | null;
             /** Lang */
             lang?: string | null;
             /** Measured At */
             measured_at?: string | null;
-            /** Model Slug */
+            /**
+             * Model Slug
+             * @description lite 면 null
+             */
             model_slug?: string | null;
             prompt: components["schemas"]["PromptInfo"];
             /**
@@ -8137,6 +8180,11 @@ export interface components {
             /** Items */
             items: components["schemas"]["CycleItem"][];
         };
+        /** ListData[FetchStatus] */
+        ListData_FetchStatus_: {
+            /** Items */
+            items: components["schemas"]["FetchStatus"][];
+        };
         /** ListData[Ga4Property] */
         ListData_Ga4Property_: {
             /** Items */
@@ -8191,6 +8239,11 @@ export interface components {
         ListData_QaNote_: {
             /** Items */
             items: components["schemas"]["QaNote"][];
+        };
+        /** ListData[TrackedAddResult] */
+        ListData_TrackedAddResult_: {
+            /** Items */
+            items: components["schemas"]["TrackedAddResult"][];
         };
         /** ListData[TrackedKeyword] */
         ListData_TrackedKeyword_: {
@@ -8568,11 +8621,11 @@ export interface components {
         };
         /** OptionsData */
         OptionsData: {
-            /** @description 카탈로그 택소노미(global = rd.catalog_entry, project = app.prompt). website 는 null(택소노미 축 없음) */
+            /** @description 카탈로그 택소노미(global = rd.catalog_entry, project = app.prompt). website 는 null(택소노미 축 없음). geo_only=true 면 null */
             catalog: components["schemas"]["CatalogOptions"] | null;
             /**
              * Custom Fields
-             * @description 프로젝트 커스텀 필드(surface=project 만, 그 밖은 null)
+             * @description 프로젝트 커스텀 필드(surface=project 만, 그 밖은 null). geo_only=true 면 null
              */
             custom_fields: components["schemas"]["CustomFieldOption"][] | null;
             /**
@@ -8795,7 +8848,8 @@ export interface components {
             own_brand_code: string;
             /** Sentiment Matrix */
             sentiment_matrix: components["schemas"]["SentimentCell"][];
-            stance: components["schemas"]["StanceCounts"];
+            /** @description 그 관점 브랜드의 스탠스. include_stance=false 면 null */
+            stance: components["schemas"]["StanceCounts"] | null;
         };
         /** OwnedBase */
         OwnedBase: {
@@ -9082,8 +9136,11 @@ export interface components {
              * @description 대표 도메인(가장 먼저 등록된 owned base 의 정규화 값, 읽기 전용)
              */
             domain?: string | null;
-            /** Effective Engines */
-            effective_engines: string[];
+            /**
+             * Effective Engines
+             * @description 실제 측정 엔진(ai_engines NULL 이면 기본 엔진). GET /v1/projects/{id}?view=gate 는 기본 엔진을 읽지 않아 null
+             */
+            effective_engines: string[] | null;
             /** Ga4 Property Id */
             ga4_property_id?: string | null;
             /**
@@ -9373,6 +9430,7 @@ export interface components {
             include_values: boolean;
             /**
              * Limit
+             * @description 행 읽기 1~500, ids_only=true(프롬프트)면 1~5000
              * @default 200
              */
             limit: number;
@@ -9659,7 +9717,8 @@ export interface components {
              * @enum {string}
              */
             propagation: "pending" | "none";
-            property: components["schemas"]["Ga4Property"];
+            /** @description 저장 뒤 속성 행(return=minimal 면 null: 응답용 재조회 생략) */
+            property: components["schemas"]["Ga4Property"] | null;
             /**
              * Verified
              * @description verify 요청 결과(요청 안 했으면 null)
@@ -10999,19 +11058,25 @@ export interface components {
         /**
          * SettingsBundle
          * @description 설정 화면 묶음(G-25: 화면 호출 수 억제). 추적 URL 은 건수만(목록은 GET /settings/tracked-urls 키셋).
+         *     view=card(홈 KPI 카드)는 카드가 쓰는 값만 채운다: engines·brand_aliases·vehicles 는 null, competitors 는 지정 비교 브랜드 행만.
          */
         SettingsBundle: {
-            brand_aliases: components["schemas"]["BrandAliases"];
+            /** @description view=card 면 null */
+            brand_aliases?: components["schemas"]["BrandAliases"] | null;
             /**
              * Can Edit
              * @description 활성 Owner 또는 admin
              */
             can_edit: boolean;
-            /** Competitors */
+            /**
+             * Competitors
+             * @description 추적 경쟁사(brand_name 순). view=card 면 지정 비교 브랜드(is_target) 행만
+             */
             competitors: components["schemas"]["Competitor"][];
             /** Domain */
             domain?: string | null;
-            engines: components["schemas"]["EngineSettings"];
+            /** @description view=card 면 null */
+            engines?: components["schemas"]["EngineSettings"] | null;
             /** My Role */
             my_role?: string | null;
             /** Owned Bases */
@@ -11023,8 +11088,11 @@ export interface components {
             project_id: string;
             /** Tracked Url Count */
             tracked_url_count: number;
-            /** Vehicles */
-            vehicles: components["schemas"]["Vehicle"][];
+            /**
+             * Vehicles
+             * @description view=card 면 null
+             */
+            vehicles?: components["schemas"]["Vehicle"][] | null;
         };
         /** SimilarTo */
         SimilarTo: {
@@ -11160,13 +11228,13 @@ export interface components {
              * @description 카테고리 분포(인용 수 내림차순, 0 인 카테고리 제외)
              */
             categories: components["schemas"]["CategoryCount"][];
-            /** @description 답변 톤(관점 브랜드 sent_pos 합 대 sent_neg 합)별 인용 요약 타일 */
+            /** @description 답변 톤(관점 브랜드 sent_pos 합 대 sent_neg 합)별 인용 요약 타일(include_tone=false 면 0 타일) */
             tone: components["schemas"]["ToneSummary"];
             /** Total Citations */
             total_citations: number;
             /**
              * Types
-             * @description 언급 유형 5종 × 카테고리(Q19: /sources/types 를 이 응답에 합침)
+             * @description 언급 유형 5종 × 카테고리(Q19: /sources/types 를 이 응답에 합침, include_types=false 면 [])
              */
             types: components["schemas"]["TypeCategories"][];
         };
@@ -11303,7 +11371,8 @@ export interface components {
         };
         /** SummaryData */
         SummaryData: {
-            analysis_gap: components["schemas"]["AnalysisGap"];
+            /** @description A16 결손 쌍. parts 에 gap 이 없으면 null */
+            analysis_gap: components["schemas"]["AnalysisGap"] | null;
             /** @description 인용 정확도 = M06 분자 / M07 분자(website·project) */
             citation_accuracy: components["schemas"]["Ratio"] | null;
             /** @description M05 인용 점유율 = 분자 / 전체 인용(cit_in, 호스트 있는 인용). 분자: global = 출처 카테고리 Official (HMG) 인용 수(hmg-geo #320), website·project = 표면 자사 인용 수 */
@@ -11373,9 +11442,9 @@ export interface components {
             answers: number;
             /**
              * Applied Prompts
-             * @description 적용 프롬프트 수(카탈로그·웹 등록·프로젝트 프롬프트, 측정 무관)
+             * @description 적용 프롬프트 수(카탈로그·웹 등록·프로젝트 프롬프트, 측정 무관). parts 에 applied 가 없으면 null
              */
-            applied_prompts: number;
+            applied_prompts: number | null;
             /**
              * Measured By Funnel
              * @description by_funnel=true 일 때만: 퍼널 주제별 측정 프롬프트 수(측정 수 내림차순, 같으면 코드순, 미분류 끝). 그 밖은 null(BG-08)
@@ -11383,9 +11452,9 @@ export interface components {
             measured_by_funnel?: components["schemas"]["FunnelPrompts"][] | null;
             /**
              * Measured Prompts
-             * @description std_in 답변의 서로 다른 프롬프트 수(비가산)
+             * @description std_in 답변의 서로 다른 프롬프트 수(비가산). parts 에 measured 가 없으면 null
              */
-            measured_prompts: number;
+            measured_prompts: number | null;
             /**
              * Prompts Without Brand
              * @description measured_prompts − 관점 브랜드 언급 프롬프트 수(세 표면, BG-06). 숨김·노출 회차 없음이면 null
@@ -11740,6 +11809,18 @@ export interface components {
              */
             mentions_total: number;
         };
+        /** TrackedAddResult */
+        TrackedAddResult: {
+            /** @description 생성된 행(status 201), 아니면 null */
+            data: components["schemas"]["TrackedKeyword"] | null;
+            /** @description 단건 응답의 error 와 같은 code·message·details(status 201 이면 null) */
+            error: components["schemas"]["ErrorDetail"] | null;
+            /**
+             * Status
+             * @description 그 행을 단건 본문으로 보냈을 때의 HTTP 상태(201 생성, 409 duplicate_keyword, 422 unknown_country·빈 term 등)
+             */
+            status: number;
+        };
         /** TrackedKeyword */
         TrackedKeyword: {
             /**
@@ -11778,6 +11859,27 @@ export interface components {
             country?: string | null;
             /** Term */
             term: string;
+        };
+        /**
+         * TrackedKeywordItem
+         * @description 다건 추가의 한 행. 길이 규칙은 행마다 단건 본문(TrackedKeywordIn)으로 따로 검사해 그 행 결과(422)로 준다.
+         */
+        TrackedKeywordItem: {
+            /** Country */
+            country?: string | null;
+            /** Term */
+            term: string;
+        };
+        /**
+         * TrackedKeywordsIn
+         * @description 다건 추가 본문(items[]). 단건 본문({term, country})도 같은 경로에서 그대로 받는다.
+         */
+        TrackedKeywordsIn: {
+            /**
+             * Items
+             * @description 1~100행, 결과는 같은 순서
+             */
+            items: components["schemas"]["TrackedKeywordItem"][];
         };
         /** TrackedUrl */
         TrackedUrl: {
@@ -11908,10 +12010,30 @@ export interface components {
              */
             dimension: "none" | "engine" | "brand" | "source" | "category" | "type";
             /**
+             * Dims
+             * @description P12 B101: 쿼리 dims 를 줄 때만 실린다(그 밖 응답에는 키가 없다). 항목 순서 = 쿼리 dims 순서
+             */
+            dims?: components["schemas"]["TrendDimBlock"][] | null;
+            /**
              * Own Label
              * @description 당사 라벨(BG-48: GET /v1/mentions/brands own.vp_label 과 같은 규칙): 관점 브랜드가 하나면 그 brand_code, 둘 이상이면 엄브렐러 brand_code(app.brand, 픽스처·운영 'HMG')
              */
             own_label: string;
+            /** Series */
+            series: components["schemas"]["TrendSeries"][];
+        };
+        /**
+         * TrendDimBlock
+         * @description B101 dims 항목 하나의 결과: 그 차원만 따로 부른 응답의 data.series·meta 와 같다(buckets·own_label 은 TrendData 와 공유).
+         */
+        TrendDimBlock: {
+            /**
+             * Dimension
+             * @enum {string}
+             */
+            dimension: "none" | "engine" | "brand" | "source" | "category" | "type";
+            /** @description 그 차원 단일 요청의 meta(suppressed·ignored_filters 는 그 차원 지표로 판정) */
+            meta: components["schemas"]["Meta"];
             /** Series */
             series: components["schemas"]["TrendSeries"][];
         };
@@ -12901,20 +13023,23 @@ export interface components {
              * Format: uuid
              */
             job_id: string;
-            /** Measured At */
+            /**
+             * Measured At
+             * @description 대표 답변 측정 시각. lite 면 null
+             */
             measured_at: string | null;
             /**
              * Position
-             * @description 답변 내 브랜드 등장 순위(rk, 0 은 null)
+             * @description 답변 내 브랜드 등장 순위(rk, 0 은 null). lite 면 null
              */
             position: number | null;
             /** Region */
             region: string | null;
             /**
              * Runs
-             * @description 같은 (프롬프트, 엔진, 국가) 셀의 타깃 답변 수(대표 1건으로 접힘)
+             * @description 같은 (프롬프트, 엔진, 국가) 셀의 타깃 답변 수(대표 1건으로 접힘). lite 면 null
              */
-            runs: number;
+            runs: number | null;
             /** @description terms=true 일 때 이 답변의 하이라이트 표기(BG-18) */
             terms?: components["schemas"]["Terms"] | null;
             /**
@@ -12971,7 +13096,7 @@ export interface components {
              * @description 유형 5종 × 스코프(own·all) 10행. 근사: 한 행에 유형이 둘 이상이면 두 유형에 모두 계상되므로 유형 간 합산 금지, 유형 안 구성비로만 읽는다
              */
             sentiment_matrix: components["schemas"]["SentimentCell"][];
-            /** @description A3 당사 스탠스(대표 턴, rd.answer_stance). 창이 비면 0 쌍 */
+            /** @description A3 당사 스탠스(대표 턴, rd.answer_stance). 창이 비면 0 쌍. include_stance=false 면 null */
             stance: components["schemas"]["StanceCounts"] | null;
         };
         /** TrendPoint */
@@ -13763,7 +13888,10 @@ export interface operations {
     };
     delete_v1_admin_catalog_prompts_by_prompt_id: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description minimal = 응답용 재조회 생략: prompt·change_id 는 null, change_ids 는 [], propagation 은 이번 쓰기의 outbox 행만 본다(재판정 요청은 GET 상세 pending_changes). 기본 full = 종전 */
+                return?: "full" | "minimal";
+            };
             header?: never;
             path: {
                 prompt_id: string;
@@ -13901,7 +14029,10 @@ export interface operations {
     };
     patch_v1_admin_catalog_prompts_by_prompt_id_kind: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description minimal = 응답용 재조회 생략: prompt·change_id 는 null, change_ids 는 [], propagation 은 이번 쓰기의 outbox 행만 본다(재판정 요청은 GET 상세 pending_changes). 기본 full = 종전 */
+                return?: "full" | "minimal";
+            };
             header?: never;
             path: {
                 prompt_id: string;
@@ -13972,7 +14103,10 @@ export interface operations {
     };
     patch_v1_admin_catalog_prompts_by_prompt_id_labels: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description minimal = 응답용 재조회 생략: prompt·change_id 는 null, change_ids 는 [], propagation 은 이번 쓰기의 outbox 행만 본다(재판정 요청은 GET 상세 pending_changes). 기본 full = 종전 */
+                return?: "full" | "minimal";
+            };
             header?: never;
             path: {
                 prompt_id: string;
@@ -14043,7 +14177,10 @@ export interface operations {
     };
     patch_v1_admin_catalog_prompts_by_prompt_id_regions: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description minimal = 응답용 재조회 생략: prompt·change_id 는 null, change_ids 는 [], propagation 은 이번 쓰기의 outbox 행만 본다(재판정 요청은 GET 상세 pending_changes). 기본 full = 종전 */
+                return?: "full" | "minimal";
+            };
             header?: never;
             path: {
                 prompt_id: string;
@@ -14114,7 +14251,10 @@ export interface operations {
     };
     post_v1_admin_catalog_prompts_by_prompt_id_restore: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description minimal = 응답용 재조회 생략: prompt·change_id 는 null, change_ids 는 [], propagation 은 이번 쓰기의 outbox 행만 본다(재판정 요청은 GET 상세 pending_changes). 기본 full = 종전 */
+                return?: "full" | "minimal";
+            };
             header?: never;
             path: {
                 prompt_id: string;
@@ -14181,7 +14321,10 @@ export interface operations {
     };
     patch_v1_admin_catalog_prompts_by_prompt_id_text: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description minimal = 응답용 재조회 생략: prompt·change_id 는 null, change_ids 는 [], propagation 은 이번 쓰기의 outbox 행만 본다(재판정 요청은 GET 상세 pending_changes). 기본 full = 종전 */
+                return?: "full" | "minimal";
+            };
             header?: never;
             path: {
                 prompt_id: string;
@@ -15293,6 +15436,8 @@ export interface operations {
                 cursor?: string | null;
                 /** @description 기본 100, 최대 500 */
                 limit?: number | null;
+                /** @description full(기본) = 종전 그대로. names = 이름·유형만 쓰는 호출(검토함 병합 후보)용: 유효 귀속 판정(own_brand)을 하지 않는다(null). 행·순서·이름·유형·역할·수치·커서는 full 과 같다 */
+                fields?: "full" | "names";
             };
             header?: never;
             path?: never;
@@ -16312,6 +16457,8 @@ export interface operations {
                 status?: ("draft" | "active" | "retired" | "discarded") | null;
                 /** @description 기본 100, 최대 500 */
                 limit?: number;
+                /** @description full(기본) = 종전 목록. gate = 활성·초안 번호만(items = [], status·limit 무시): 하위 화면 게이트 용도 */
+                view?: "full" | "gate";
             };
             header?: never;
             path?: never;
@@ -16386,7 +16533,10 @@ export interface operations {
     };
     post_v1_admin_entities_versions: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description full(기본) = 종전 버전 상세 전체. minimal = 버전 요약(version)만: content_md5·lint = null, entities·surfaces = [](화면이 번호만 쓰고 다시 읽을 때) */
+                return?: "full" | "minimal";
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -16464,7 +16614,10 @@ export interface operations {
     };
     get_v1_admin_entities_versions_by_ver: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description full(기본) = 종전 상세. lint = 버전 요약·content_md5·lint 만(값은 full 과 같다), entities·surfaces = [](반영 상세 화면 보조) */
+                view?: "full" | "lint";
+            };
             header?: never;
             path: {
                 ver: number;
@@ -16540,7 +16693,10 @@ export interface operations {
     };
     patch_v1_admin_entities_versions_by_ver: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description full(기본) = 종전 버전 상세 전체. minimal = 버전 요약(version)만: content_md5·lint = null, entities·surfaces = [](화면이 번호만 쓰고 다시 읽을 때) */
+                return?: "full" | "minimal";
+            };
             header?: never;
             path: {
                 ver: number;
@@ -17842,6 +17998,8 @@ export interface operations {
                 brand_code?: string | null;
                 country_code?: string | null;
                 status?: ("active" | "pending_grant" | "unmapped") | null;
+                /** @description registry = 화면 표 열만(tracked_events·loaded·conv_basis·project_overrides·pending 은 계산하지 않고 null). 기본 full = 종전 */
+                fields?: "full" | "registry";
             };
             header?: never;
             path?: never;
@@ -17907,7 +18065,10 @@ export interface operations {
     };
     put_v1_admin_ga4_properties_by_property_id: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description minimal = 응답 property 재조회 생략(null). 기본 full = 종전 */
+                return?: "full" | "minimal";
+            };
             header?: never;
             path: {
                 /** @description GA4 속성 id(숫자) */
@@ -19909,6 +20070,14 @@ export interface operations {
                 surface?: ("global" | "website" | "project") | null;
                 /** @description 관점 브랜드(global·website, project 는 ignored). 당사 배지·밑줄·스탠스 판정 입력(목록과 같은 규칙) */
                 brand?: string[];
+                /** @description project 표면 선택 게이트: 화면이 게이트한 프로젝트. 답변의 프로젝트와 다르면 404(현행 fetchProjectAnswerBody 의 run 소속 게이트). 없으면 종전(답변 프로젝트의 가시성만). global·website 는 ignored(meta.ignored_filters) */
+                project_id?: string | null;
+                /** @description global 선택 게이트: 화면 URL 국가(ISO). 답변 국가가 계정 스코프 ∩ 이 목록 밖이면 404(현행 region 게이트, 스코프 밖 값은 버림). 없으면 종전(계정 스코프 국가). website(사이트 국가 리맵은 게이트에 쓰지 않는다)·project 는 쓰지 않는다 */
+                gate_country?: string[];
+                /** @description global·website 선택 게이트: 화면 URL 브랜드. global = 그 브랜드 카탈로그 행이 있는 프롬프트(현행 prompt brand 게이트), website = 그 브랜드 사이트(현행 narrowScopeBrands). 계정 스코프 ∩(스코프 밖 값은 버림), 밖이면 404. 없으면 종전. project 는 쓰지 않는다 */
+                gate_brand?: string[];
+                /** @description 참이면 답변 모달이 쓰지 않는 값을 계산하지 않고 null: header.catalog·cycle_id·anchor_date·model_slug·is_rep·acr_iter_rank, citations[].owned·target_hit. 거짓(기본) = 종전 응답 */
+                lite?: boolean;
             };
             header?: never;
             path: {
@@ -20056,12 +20225,16 @@ export interface operations {
                 competitor?: string[];
                 /** @description 대시보드 도메인 목록(현행 프로필 domains_card_by_host 가 켜졌을 때만 효과): 공식 소셜 계정 그룹 키를 그 도메인 행에 합친 도메인(호스트) 단위. card=true 이면 이 값과 무관하게 접는다(현행 대시보드 카드 = 도메인 축). 기간이 걸려 card 를 보내지 않는 대시보드 호출이 쓴다. 인용 화면 도메인 표는 보내지 않는다(그룹 키 단위) */
                 host_fold?: boolean;
-                /** @description 순위 행 수(0 = 요약·경쟁사 합만, meta.page.total 은 그대로 좁힌 행 수) */
+                /** @description 순위 행 수(0~200, 0 = 요약·경쟁사 합만, meta.page.total 은 그대로 좁힌 행 수). mention_brand 가 있으면 2000 까지(언급 드릴다운 한 번 조회), 없이 넘으면 422 */
                 limit?: number;
                 /** @description 키셋 다음 페이지 커서(meta.page.next_cursor) */
                 cursor?: string | null;
-                /** @description BG-20: 공식(경쟁사) 카테고리 출처 전부(인용 수 내림차순, 상한 5000)를 data.competitor_sources 로 함께 낸다(경쟁사 선택 옵션). q·skey 와 무관. true 면 meta.truncated.competitor_sources = 상한에서 잘렸는가 */
+                /** @description BG-20: 공식(경쟁사) 카테고리 출처 전부(인용 수 내림차순, 상한 5000)를 data.competitor_sources 로 함께 낸다(경쟁사 선택 옵션). q·skey 와 무관. true 면 meta.truncated.competitor_sources = 상한에서 잘렸는가. card=true·limit=0(대시보드 카드: 출처를 브랜드로 접어 값을 낸다)은 상한 없이 전부(현행과 같은 값, 잘림 false) */
                 competitor_sources?: boolean;
+                /** @description false 면 커버리지 분모 문장을 생략한다: summary.answers_den = 0, 행 coverage.den = 0(coverage·분모를 읽지 않는 호출용). sort=coverage 는 정렬 키가 분모를 써서 그대로 센다 */
+                include_den?: boolean;
+                /** @description false 면 경쟁사 브랜드별 합을 계산하지 않는다(competitor_totals = 빈 목록, 읽지 않는 호출용) */
+                include_competitor_totals?: boolean;
             };
             header?: never;
             path?: never;
@@ -20392,6 +20565,12 @@ export interface operations {
                 limit?: number;
                 /** @description 이전 응답 meta.page.next_cursor */
                 cursor?: string | null;
+                /** @description P12 B099: false = 행당 답변 표본 문장을 돌리지 않고 items[].answers 를 빈 배열로 둔다(건수만 읽는 분할 카드용). 다른 값은 같다 */
+                include_refs?: boolean;
+                /** @description P12 B099: text = 퍼널·AI 엔진을 계산하지 않는다(items[].funnel = null, providers = []). 정렬·citations·버킷·카운트는 같다 */
+                fields?: "all" | "text";
+                /** @description P12 B099: true = 같은 집계 한 번으로 반대 버킷(owned 의 반대)의 첫 페이지(같은 q·limit·정렬·include_refs·fields)를 data.other_bucket 에 함께 싣는다. items·counts·meta.page 는 요청 버킷 그대로. cursor 와 함께 줄 수 없다 */
+                both_buckets?: boolean;
             };
             header?: never;
             path?: never;
@@ -20496,6 +20675,10 @@ export interface operations {
                 source?: string[];
                 /** @description 대시보드 카드 경로 요청(global·website). 현행 프로필(운영 hmg-geo 재현 스위치)의 카드 정의를 쓴다: card_slot_rep(기간 창 = 자리마다 대표 회차 하나)·summary_all_engines(엔진 필터 없음 = 전 엔진)·web_registered_only(website 모수 = 보고서 유닛 소속). 스위치가 꺼져 있거나 project 표면이면 효과 없음 */
                 card?: boolean;
+                /** @description false = 톤 타일 문장을 돌리지 않고 tone 을 0 타일로 둔다(톤을 그리지 않는 웹사이트·프로젝트 인용 화면용). 다른 필드 값은 같다 */
+                include_tone?: boolean;
+                /** @description false = 유형 × 카테고리(답변 열 65열·유형 플래그)를 계산하지 않고 types 를 빈 배열로 둔다. 다른 필드 값은 같다 */
+                include_types?: boolean;
             };
             header?: never;
             path?: never;
@@ -20986,6 +21169,8 @@ export interface operations {
                 card?: boolean;
                 /** @description 추가로 계산할 필드. source_categories = 출처 카테고리(창 안 인용 스캔, 옵션 서버 시간의 대부분). 주지 않으면 그 필드는 null */
                 include?: "source_categories"[];
+                /** @description B095: true = 국가 옵션만 쓰는 화면(전환). 카탈로그 택소노미(global = rd.dim_taxon·카탈로그 2문장, project = 프로젝트 프롬프트)와 커스텀 필드 문장을 돌리지 않고 catalog·custom_fields 를 null 로 둔다. geo_matrix·regions·languages·engines·meta 는 같다 */
+                geo_only?: boolean;
             };
             header?: never;
             path?: never;
@@ -21093,6 +21278,10 @@ export interface operations {
                 territory_limit?: number;
                 /** @description 차종 전환율 표 상한 */
                 model_limit?: number;
+                /** @description false = options.countries 를 계산하지 않고 [] 로 둔다(국가 옵션 문장 생략). 화면 국가 목록은 /v1/filters/options 를 쓴다. options.langs·다른 필드 값은 같다 */
+                include_option_countries?: boolean;
+                /** @description false = 카탈로그 ACR 프롬프트 수를 셀이 없는 응답(prompt_runs 0·빈 창·숨김·원천 준비 중)에서만 세고, 셀이 있으면 세지 않고 totals.catalog_acr_prompts = null(측정 대기 안내만 이 값을 읽는다). 다른 값은 같다 */
+                include_catalog_count?: boolean;
             };
             header?: never;
             path?: never;
@@ -21196,6 +21385,10 @@ export interface operations {
                 page_limit?: number;
                 /** @description false = 페이지별 표(data.pages)를 계산하지 않고 빈 배열로 둔다. 요약·커버리지·추이만 쓰는 대시보드 ⑦ 카드용 (현행 프런트 dashboard.ts toTrafficConversionKpi). 다른 필드 값은 같다 */
                 include_pages?: boolean;
+                /** @description B096: true 이고 커버리지 시장이 2개 이상(전환 화면의 권역·본사 롤업 분기)이면 롤업이 그리지 않는 부분을 계산하지 않는다: 페이지 문장·엔진 비교 문장을 건너뛰고 trend·by_engine·by_engine_all·pages = []. summary·by_country·coverage·period·meta 는 같다. 시장이 하나 이하(국가 리프)면 효과 없음 */
+                rollup_lite?: boolean;
+                /** @description B096: true = 요약 카드용(AI 전환율·분자·분모와 커버리지). 페이지 문장·엔진 비교 문장을 건너뛰고 trend·by_engine·by_engine_all·pages = [], by_country = null. summary·coverage·period·meta 는 같다 */
+                summary_only?: boolean;
                 /** @description 최신 적재일 기준 상대 창 길이(7·28·90, BG-30). from/to 와 함께 줄 수 없다. 둘 다 없으면 90 */
                 days?: number | null;
                 /** @description project 표면 전용 속성 선택(검증 D3). 생략·project = 프로젝트 직접 지정 우선(전환 화면 page.tsx:52-55), market = 직접 지정을 건너뛰고 프로젝트 (브랜드, 국가) 시장 속성만(프로젝트 대시보드 ⑦ live.ts:219-231). 다른 표면에서 주면 422 */
@@ -21577,6 +21770,74 @@ export interface operations {
             };
         };
     };
+    get_v1_intent_fetches: {
+        parameters: {
+            query: {
+                /** @description change id 1~20건 */
+                ids: number[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ListData_FetchStatus__"];
+                };
+            };
+            /** @description unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description not_found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description unprocessable */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description unavailable(auth_unavailable: JWKS 장애 포함) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     post_v1_intent_fetches: {
         parameters: {
             query?: never;
@@ -21801,6 +22062,8 @@ export interface operations {
             query: {
                 /** @description 프로젝트 */
                 project_id: string;
+                /** @description 최신 월 검색량(latest_month·latest_volume) 포함. false 면 읽지 않고 null(키워드 탭은 id·term 만 쓴다) */
+                include_volume?: boolean;
             };
             header?: never;
             path?: never;
@@ -21876,10 +22139,19 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["TrackedKeywordIn"];
+                "application/json": components["schemas"]["TrackedKeywordIn"] | components["schemas"]["TrackedKeywordsIn"];
             };
         };
         responses: {
+            /** @description items[] 본문: 행별 결과(요청 순서, 행마다 단건과 같은 상태·오류) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ListData_TrackedAddResult__"];
+                };
+            };
             /** @description Successful Response */
             201: {
                 headers: {
@@ -23104,6 +23376,8 @@ export interface operations {
                 cycle_offset?: number;
                 /** @description all|exposure|sov|favorability|position|citation. 계산할 열만 좁힌다 */
                 part?: "all" | "exposure" | "sov" | "favorability" | "position" | "citation";
+                /** @description B090: part 여럿의 합집합으로 열을 좁힌다(예: sov+citation = 엔진 일관성 배지 열, rank_detail 없음). 주면 part 대신 쓰고, 비우면 [part](종전). 계산하지 않은 필드는 null(part 와 같은 규칙) */
+                parts?: ("all" | "exposure" | "sov" | "favorability" | "position" | "citation")[];
             };
             header?: never;
             path?: never;
@@ -23203,6 +23477,8 @@ export interface operations {
                 cycle_offset?: number;
                 /** @description true 면 params.measured_by_funnel(퍼널 주제별 측정 프롬프트 수)을 채운다(BG-08) */
                 by_funnel?: boolean;
+                /** @description 계산할 선택 부분(B089). 비우면 전부(종전과 같은 응답). measured = params.measured_prompts·prompts_without_brand(측정 프롬프트 count DISTINCT 문장), applied = params.applied_prompts(적용 프롬프트 문장), gap = analysis_gap(A16 열), urls = target_url_rate·owned_url_rate·citation_accuracy·url_prompts·meta.source(URL 인용률 문장). 빠진 부분은 값 null 이고 meta.suppressed 에도 적지 않는다(null 자체가 '요청하지 않음'). ①~⑤·params.answers·measured_by_funnel·나머지 값은 부분과 무관하게 같다 */
+                parts?: ("measured" | "applied" | "gap" | "urls")[];
             };
             header?: never;
             path?: never;
@@ -23478,6 +23754,10 @@ export interface operations {
                 q?: string | null;
                 /** @description BG-19: 경쟁 행 전량(top_n 무시, 상한 10000). 상한을 넘으면 data.truncated = true. full=true 응답은 meta.truncated = {brands: bool(, by_engine: bool)} 를 싣는다 */
                 full?: boolean;
+                /** @description false = 감성을 계산하지 않는다: 당사 감성 문장(rd.answer_brand 당사 행 합)을 건너뛰고 모든 행(brands·by_engine[].brands)의 sentiment 를 0 4개로 둔다. 다른 필드 값은 같다 */
+                include_sentiment?: boolean;
+                /** @description group_by=engine 일 때만: true = by_engine 만 계산한다. 전체 창 당사 합계·경쟁 행·당사 감성 문장을 건너뛰고 최상위 totals·own·brands·types_total 은 빈 창과 같은 값(0, 당사 행만)으로 둔다. by_engine 값은 같다. group_by 가 없으면 효과 없음 */
+                engine_only?: boolean;
             };
             header?: never;
             path?: never;
@@ -23587,12 +23867,14 @@ export interface operations {
                 terms?: boolean;
                 /** @description mode=signal 필수: 감성 4종·유형 5종 */
                 signal?: ("positive" | "neutral" | "negative" | "mixed" | "mention" | "recommendation" | "comparison" | "definition" | "final_choice") | null;
-                /** @description 프롬프트 페이지 크기 */
+                /** @description 프롬프트 페이지 크기(1~200). mode=brand 의 드릴다운 타깃(mention_brand·own)은 2000 까지(언급 드릴다운이 한 요청으로 끝까지 읽는다), 그 밖 타깃이 넘으면 422 */
                 limit?: number;
                 /** @description 이전 응답 meta.page.next_cursor 그대로 */
                 cursor?: string | null;
                 /** @description 프롬프트당 답변(job) 참조 상한(셀 대표 기준) */
                 answers_limit?: number;
+                /** @description mode=signal 전용(그 밖 mode 와 함께면 422): 답변 참조의 runs·position·measured_at 을 내지 않는다(null). 신호 다이얼로그가 쓰지 않는 열이다. 프롬프트·값·share·대표 답변 선택(job_id)은 같다 */
+                lite?: boolean;
             };
             header?: never;
             path?: never;
@@ -23688,6 +23970,8 @@ export interface operations {
                 card?: boolean;
                 /** @description D13: 다중 관점이면 당사 쪽을 관점 브랜드별로 가른 블록(by_own_brand, 행 키 own_brand_code)을 더한다. mentions/brands·trend 의 split_own 과 같은 공용 판정(core.measure.split_own_scopes) */
                 split_own?: boolean;
+                /** @description B093: false = 당사 스탠스(A3) 문장을 돌리지 않고 stance(by_own_brand[].stance 포함)를 null 로 둔다. 다른 필드 값은 같다 */
+                include_stance?: boolean;
             };
             header?: never;
             path?: never;
@@ -24027,7 +24311,10 @@ export interface operations {
     };
     get_v1_projects_by_project_id: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description full(기본) = 상세 + 요약(BG-38). gate = 프로젝트 게이트용 경량 조회: 같은 접근 판정·같은 404, effective_engines·요약 필드(target_brand 제외)는 읽지 않고 null */
+                view?: "full" | "gate";
+            };
             header?: never;
             path: {
                 project_id: string;
@@ -24735,6 +25022,8 @@ export interface operations {
             query?: {
                 cursor?: string | null;
                 limit?: number | null;
+                /** @description false = 전체 건수(COUNT) 를 세지 않고 meta.page.total = null(행·커서는 같다). 건수를 따로 아는 화면(홈 타일은 상세 candidate_count)용 */
+                include_total?: boolean;
             };
             header?: never;
             path: {
@@ -26497,7 +26786,10 @@ export interface operations {
     };
     get_v1_projects_by_project_id_settings: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description full(기본) = 설정 화면 묶음 전체. card = 홈 KPI 카드용(domain·owned_bases·tracked_url_count·지정 비교 브랜드 행만, engines·brand_aliases·vehicles 는 null) */
+                view?: "full" | "card";
+            };
             header?: never;
             path: {
                 project_id: string;
@@ -27127,7 +27419,10 @@ export interface operations {
     };
     get_v1_projects_by_project_id_settings_scope_link: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description false = 최근 아웃박스 10행을 읽지 않는다(outbox.recent = 빈 목록, 건수·상태는 같다). 건수·상태만 쓰는 화면용 */
+                include_recent?: boolean;
+            };
             header?: never;
             path: {
                 project_id: string;
@@ -29690,6 +29985,8 @@ export interface operations {
                 split_own?: boolean;
                 /** @description 성능 A1(추가형): buckets[].measured_days 계산 여부. 기본 true = 계산(종전과 같다). false 면 계산하지 않고 모든 버킷의 measured_days 를 null 로 낸다(rd.job 조인 문장 생략). 결과 캐시 키에는 원문 쿼리로 들어간다(선언 파라미터) */
                 measured_days?: boolean;
+                /** @description P12 B101(추가형): 같은 요청에서 함께 낼 차원(반복). 항목 = 'dimension[:metric,…][@top]'(dimension = none|engine|type|source|category, metric 은 metrics 와 같은 이름·코드, 생략 = 그 차원 기본 세트, top 생략 = 요청 top). data.dims[] 에 항목 순서로 {dimension, series, meta}: 그 차원만 따로 부른 응답(같은 필터·bucket·card·measured_days)의 series·meta 와 같다. brand 는 dimension 으로만, 차원 중복·형식 오류 422. 생략 = 종전(data.dims 키 없음) */
+                dims?: string[];
             };
             header?: never;
             path?: never;
