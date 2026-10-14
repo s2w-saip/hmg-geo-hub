@@ -8,22 +8,33 @@ import "server-only";
 //
 // Calls (one function per endpoint shape; D6 essentials reuse them, so the in-request GET
 // dedupe of lib/hgh/client folds a repeated call into one request):
-//   summary     GET /v1/kpi/summary            (project: by_funnel=true, BG-08 topics)
+//   summary     GET /v1/kpi/summary            (project: by_funnel=true, BG-08 topics); parts=urls
+//                                              (DASHBOARD_SUMMARY_PARTS, B089): the cards never read
+//                                              measured/applied prompts or the analysis gap
 //   brands      GET /v1/mentions/brands        top_n=20 sort=mentions include=hmg (BG-15);
-//                                              project with a designated target: full=true (BG-19)
+//                                              project with a designated target: full=true + q=<target>
+//                                              (BG-19, the target row only). Website and project:
+//                                              include_sentiment=false (KPI #16 reads mentions only);
+//                                              global keeps the sentiment (③ competitor minis read it)
 //   conversion  GET /v1/funnel/conversion      ⑦ GA4 directly (design 4.2): project home only
-//                                              (property_source=market). The global dashboard no
-//                                              longer calls it (2026-10-14): Overview renders the five
-//                                              OVERVIEW_KPI_KEYS only, so ⑦ was fetched but never shown
+//                                              (property_source=market, summary_only=true B096). The
+//                                              global dashboard no longer calls it (2026-10-14): Overview
+//                                              renders the five OVERVIEW_KPI_KEYS only, so ⑦ was fetched
+//                                              but never shown
 //   trend       GET /v1/trend                  U4 fetchTrend (cycle for Δ, week for charts)
-//   brandTrend  GET /v1/trend dimension=brand  visibility, share_of_voice, position; top=20 plus
-//                                              the candidate brand keys (BG-11), split_own (D13)
+//   brandTrend  GET /v1/trend dimension=brand  visibility, share_of_voice, position; the candidate
+//                                              brand keys (BG-11) with the minimum top (the card reads
+//                                              the candidates' Δ only), split_own (D13)
 //   domains     GET /v1/citations/domains      limit=0 + competitor_sources (BG-20, competitor
-//                                              row) or limit=7 (composition)
-//   engines     GET /v1/kpi/engines part=all   engine consistency badge rows
-//   geo         GET /v1/geo                    GEO section
+//                                              row) or limit=7 (composition); include_den=false and
+//                                              include_competitor_totals=false (B011: neither reads
+//                                              the coverage denominator or the competitor sums)
+//   engines     GET /v1/kpi/engines            parts=sov+citation (B090): the badge columns only
+//   geo         GET /v1/geo                    GEO section (website: not called when the perspective
+//                                              has no single active brand, see website/_data/live.ts)
 //   dates       GET /v1/filters/dates family=all, options GET /v1/filters/options (U4)
-//   project     GET /v1/projects/{id} (the U2 gate call, shared), .../settings, .../prompt-candidates?limit=5
+//   project     GET /v1/projects/{id} (the U2 gate call, shared), .../settings?view=card,
+//               .../prompt-candidates?limit=5&include_total=false
 //
 // D6 (first render = 3-4 calls). essentialsGate() starts (or joins) the surface's essential
 // calls and waits for all of them to settle; every other section loader waits on it before
@@ -105,7 +116,12 @@ import "server-only";
 //         cards; the legacy readers failed the whole section (or, for GA4, also returned null).
 //         Website: the engine badge, composition and GEO reads degrade exactly as the legacy
 //         degradeAware readers did (same labels websiteSubKpis / websiteSourceComposition /
-//         websiteGeoCompetition, same empty shapes); 4xx is raised on every surface
+//         websiteGeoCompetition, same empty shapes); 4xx is raised on every surface.
+//         B027: a section that would vanish (global and website GEO, website composition, project
+//         composition and ⑦) records a degrade label (global GEO the legacy standardGeoCompetition,
+//         project projectComposition / projectTrafficConversion) and the page draws the existing
+//         DegradeNotice (kpi.degraded) in its place on the api source; inline parts (badge, Δ,
+//         KPI #16, as-of chip) stay silent (no existing notice pattern, UC-16)
 //   U5-N7 website composition topics = [] (the website panel never draws topics, showTopics=false;
 //         the legacy reader computed and discarded them); project topics come from BG-08
 import { cache } from "react";
@@ -143,8 +159,25 @@ import {
   type AnalysisQueryContext,
   type FilterDatesView,
 } from "./filters";
-import { applyCompetitorSovFromBrands, fetchKpiSummary, summaryIsEmpty, toMirrorKpis, toUrlRateKpis, type SummaryResponse } from "./summary";
-import { fetchTrend, toBrandTrendResult, toFirstPositionResult, toLiveTrend, type ApiLiveTrend, type TrendBucketName, type TrendMetric } from "./trend";
+import {
+  DASHBOARD_SUMMARY_PARTS,
+  applyCompetitorSovFromBrands,
+  fetchKpiSummary,
+  summaryIsEmpty,
+  toMirrorKpis,
+  toUrlRateKpis,
+  type SummaryResponse,
+} from "./summary";
+import {
+  OVERVIEW_TREND_METRICS,
+  fetchTrend,
+  toBrandTrendResult,
+  toFirstPositionResult,
+  toLiveTrend,
+  type ApiLiveTrend,
+  type TrendBucketName,
+  type TrendMetric,
+} from "./trend";
 
 type S = components["schemas"];
 export type ApiBrandsData = S["BrandsData"];
@@ -175,24 +208,55 @@ export const CARD_BRANDS_TOP_N = 20;
 export const SOURCE_TOP_N = 7;
 /** Legacy GA4 KPI window (lib/ga4/conversion.ts: 28daysAgo..today). */
 export const CONVERSION_DAYS = 28;
-/** Competitor trend pool (appendix A: top=20). */
-export const BRAND_TREND_TOP = 20;
+/**
+ * Competitor Δ trend top (B031). The card reads the Δ of the candidate brands only
+ * (competitorDeltaBrands: the three Δ cards' top 4), and those are requested by brand_key
+ * (BG-11: added beyond top), so top is the backend minimum (was 20, appendix A). The candidates'
+ * series and their last two values are the same either way (lastTwoDelta skips the null slots).
+ */
+export const BRAND_TREND_TOP = 1;
+/**
+ * Website overview trend metrics (B032): ①~⑤ and the live ⑥ citation_accuracy series (WU-9).
+ * M06/M07 (target / owned URL rate) are left out: no website reader draws them (the chart series,
+ * the card Δ and ⑥ read M01..M05 and ACC; urlRateOrigin has no consumer), and with ACC present ⑥
+ * never reads their numerators (toLiveTrend). The backend then skips url_rates and the report
+ * statement. The project trend keeps M06/M07 (URL_TREND_METRICS: its ⑥ comes from them).
+ */
+export const WEBSITE_OVERVIEW_TREND_METRICS: readonly TrendMetric[] = [...OVERVIEW_TREND_METRICS, "citation_accuracy"];
 
 /** Summary of a dashboard (project: with the funnel topic counts, one call for pill and cards). */
 export function fetchDashboardSummary(filters: StandardFilters, ctx: DashboardCtx): Promise<SummaryResponse> {
-  return fetchKpiSummary(filters, { ...ctx, card: true, ...(ctx.surface === "project" ? { byFunnel: true } : {}) });
+  return fetchKpiSummary(filters, {
+    ...ctx,
+    card: true,
+    parts: DASHBOARD_SUMMARY_PARTS,
+    ...(ctx.surface === "project" ? { byFunnel: true } : {}),
+  });
 }
 
-/** Brand rows for KPI #16 and the competitor minis. `designatedTarget` (project) reads every row. */
+/** BG-19 q (brands schemas: 1..100 characters, no control characters); out of bounds = not sent. */
+function targetNameQuery(name: string): { q?: string } {
+  return name.length >= 1 && name.length <= 100 && !/[\x00-\x1f\x7f]/.test(name) ? { q: name } : {};
+}
+
+/**
+ * Brand rows for KPI #16 and the competitor minis. `designatedTarget` (project) reads the
+ * competitor rows whose name contains it (full=true + q, BG-19: case-insensitive part match, own
+ * rows always kept): applyCompetitorSovFromBrands picks the exact name among them, as it did among
+ * every row. include_sentiment=false on website and project: they read the mentions of the
+ * competitor rows only (KPI #16). The global rows also feed the ③ competitor minis
+ * (competitorValueOf "sentiment"), so the global call keeps the default.
+ */
 export async function fetchCardBrands(
   filters: StandardFilters,
   ctx: DashboardCtx,
   designatedTarget?: string | null,
 ): Promise<Envelope<ApiBrandsData>> {
   const { query, cf } = analysisQuery(filters, ctx);
+  const sentiment = ctx.surface === "global" ? {} : { include_sentiment: false };
   const extra = designatedTarget
-    ? { full: true, sort: "mentions" as const, include: ["hmg" as const] }
-    : { top_n: CARD_BRANDS_TOP_N, sort: "mentions" as const, include: ["hmg" as const], ...cardParam(ctx.surface, true) };
+    ? { full: true, sort: "mentions" as const, include: ["hmg" as const], ...targetNameQuery(designatedTarget), ...sentiment }
+    : { top_n: CARD_BRANDS_TOP_N, sort: "mentions" as const, include: ["hmg" as const], ...cardParam(ctx.surface, true), ...sentiment };
   const res = await hghGet("/v1/mentions/brands", { query: withParams(query, extra), cf });
   return { data: res.data, meta: res.meta };
 }
@@ -203,6 +267,9 @@ export async function fetchCardBrands(
  * no period (the tile had its own window) and no engine (the legacy tile ignored it).
  * include_pages=false: the tile reads summary, coverage and trend only (toTrafficConversionKpi),
  * so the backend skips the per-page aggregation (a backend without the flag ignores it).
+ * Project: summary_only=true (B096) as well: the home tile reads the AI conversion rate and its
+ * numerator / denominator only (no sparkline, getProjectDashboardApi), so the backend also skips
+ * the trend and engine comparison statements (trend / by_engine [] and by_country null).
  */
 export async function fetchTrafficConversion(
   filters: StandardFilters,
@@ -212,7 +279,7 @@ export async function fetchTrafficConversion(
   const { query } = analysisQuery(marketOnly, { surface: ctx.surface, projectId: ctx.projectId, scope: ctx.scope });
   const extra =
     ctx.surface === "project"
-      ? { days: CONVERSION_DAYS, property_source: "market" as const, include_pages: false }
+      ? { days: CONVERSION_DAYS, property_source: "market" as const, include_pages: false, summary_only: true }
       : { days: CONVERSION_DAYS, include_pages: false };
   const res = await hghGet("/v1/funnel/conversion", { query: withParams(query, extra) });
   return { data: res.data, meta: res.meta };
@@ -239,20 +306,39 @@ export async function fetchDashboardDomains(
   // host_fold: the legacy dashboard domain list is per host (summary trend `axis = 'domain'` and the mirror `GROUP BY c2.domain`),
   // with or without a period; the citations screen table is per group key. card covers the no-period call, host_fold the period one
   // (WU-12, back profile switch domains_card_by_host). Global and website only, like card (project is not verified).
-  const extra: { limit: number; competitor_sources?: boolean; card?: true; host_fold?: true } = {
+  // B011 (B029): the competitor row reads own_share.den and competitor_sources, the composition the
+  // top rows and own_share.den. Neither reads the coverage denominator (summary.answers_den, row
+  // coverage.den) or competitor_totals, so the backend skips both (own_share is not affected).
+  const extra: {
+    limit: number;
+    competitor_sources?: boolean;
+    card?: true;
+    host_fold?: true;
+    include_den: false;
+    include_competitor_totals: false;
+  } = {
     limit: call.limit,
     ...cardParam(ctx.surface, domainsCard(query)),
     ...(ctx.surface === "global" || ctx.surface === "website" ? { host_fold: true as const } : {}),
+    include_den: false,
+    include_competitor_totals: false,
   };
   if (call.competitorSources) extra.competitor_sources = true;
   const res = await hghGet("/v1/citations/domains", { query: withParams(query, extra), cf });
   return { data: res.data, meta: res.meta };
 }
 
+/**
+ * The engine badge columns (B090 parts=sov+citation): answers, tracked, mentions, sentiment, rank
+ * sum / ranked and the citation pair, i.e. every input of applyEngineConsistency. rank_detail
+ * (multi, top1, top3) is not computed: the dashboards never read it (null -> 0 in toEngineRow).
+ */
+export const BADGE_ENGINE_PARTS = ["citation", "sov"] as const;
+
 export async function fetchEngineRows(filters: StandardFilters, ctx: DashboardCtx): Promise<Envelope<ApiEnginesData>> {
   const { query, cf } = analysisQuery(filters, ctx);
   // card: the website badge only (legacy S4.subkpi, summary). The global badge was S2.mention (mirror).
-  const extra = { part: "all" as const, ...cardParam(ctx.surface, ctx.surface === "website") };
+  const extra = { parts: [...BADGE_ENGINE_PARTS], ...cardParam(ctx.surface, ctx.surface === "website") };
   const res = await hghGet("/v1/kpi/engines", { query: withParams(query, extra), cf });
   return { data: res.data, meta: res.meta };
 }
@@ -269,17 +355,29 @@ export async function fetchProjectDetail(projectId: string): Promise<ApiProjectD
   return res.data;
 }
 
+/**
+ * view=card (P3): the KPI section reads the owned base count, tracked_url_count, the domain and the
+ * designated comparison brand only (toProjectCardSettings); engines, aliases and vehicles are not
+ * read (null) and competitors is the designated row alone.
+ */
 export async function fetchProjectSettings(projectId: string): Promise<ApiSettingsBundle> {
-  const res = await hghGet("/v1/projects/{project_id}/settings", { pathParams: { project_id: projectId } });
+  const res = await hghGet("/v1/projects/{project_id}/settings", {
+    pathParams: { project_id: projectId },
+    query: { view: "card" },
+  });
   return res.data;
 }
 
-/** Recent candidates for the dashboard panel: the backend lists created_at desc, so one small page. */
+/**
+ * Recent candidates for the dashboard panel: the backend lists created_at desc, so one small page.
+ * include_total=false (P3): the candidates tile reads ProjectDetail.candidate_count (BG-38), never
+ * meta.page.total, so the backend skips the COUNT.
+ */
 export const RECENT_LIMIT = 5;
 export async function fetchRecentCandidates(projectId: string): Promise<ApiCandidateItem[]> {
   const res = await hghGet("/v1/projects/{project_id}/prompt-candidates", {
     pathParams: { project_id: projectId },
-    query: { limit: RECENT_LIMIT },
+    query: { limit: RECENT_LIMIT, include_total: false },
   });
   return res.data.items;
 }
@@ -630,6 +728,15 @@ export function toDashboardKpis(
   return applyCompetitorSovFromBrands(cards, summary.data.share_of_voice?.num ?? 0, brands.brands, opts.designatedTarget);
 }
 
+/**
+ * B027 degrade labels of the project home sections that would otherwise vanish on a transient
+ * failure: the composition panel (topics + sources) and the ⑦ tile ("답변의 전환"). The api source
+ * records them (projects/[id]/_data/live.ts degradeOnApiFailure) and project-dashboard.tsx draws
+ * the existing DegradeNotice in their place. The legacy readers had no label for these reads.
+ */
+export const PROJECT_COMPOSITION_LABEL = "projectComposition";
+export const PROJECT_CONVERSION_LABEL = "projectTrafficConversion";
+
 /** A transient backend failure (5xx, timeout, network, abort): the part degrades, 4xx is raised. */
 export function isTransientApiFailure(e: unknown): boolean {
   const name = (e as { name?: unknown } | null)?.name;
@@ -723,7 +830,9 @@ export async function loadCompetitorSources(
         ...ctx,
         bucket: "cycle",
         dimension: "brand",
+        // the three Δ cards (COMPETITOR_DELTA_KEYS: visibility, shareOfVoice, position)
         metrics: ["visibility", "share_of_voice", "position"],
+        // B031: the candidates come by brand_key; top is the minimum (BRAND_TREND_TOP)
         top: BRAND_TREND_TOP,
         brandKeys: keys,
         // Competitor Δ reads the last two values only (competitor-values.ts), never measuredDays.

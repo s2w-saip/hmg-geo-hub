@@ -467,8 +467,10 @@ async function getLiveGeoImpl(filters?: StandardFilters): Promise<LiveGeo | null
     return afterFirstRender(f, ctx, async () => {
       const summary = await orNullOnTransient(fetchDashboardSummary(f, ctx));
       if (!summary || summaryIsEmpty(summary.data, summary.meta)) return null;
-      // GEO 일시 실패는 섹션 생략(카드는 그대로), 권한·필터 오류는 던진다.
-      return orNullOnTransient(loadLiveGeo(f, ctx));
+      // GEO 일시 실패(5xx·시간 초과)는 종전 리더(fetchStandardGeoKpi)와 같은 라벨 standardGeoCompetition 을 남기고
+      // null — 카드는 그대로, 페이지(GeoSection)가 그 자리에 기존 지연 고지(DegradeNotice)를 낸다(B027).
+      // 권한·필터 오류(4xx)는 던진다.
+      return degradeOnApiFailure("standardGeoCompetition", () => loadLiveGeo(f, ctx));
     });
   }
   const session = await getSession();
@@ -733,6 +735,19 @@ export { DELTA_TREND_BUCKET, deltaTrendFilters };
 // 창(일) 정본은 `lib/scope/kpi-tab-budget.ts` — 집계층 추이 경로도 같은 값을 봐야 해서
 // 중립 모듈로 올렸다(PR③ GG-4). 여기서는 재수출만 한다(기존 import 경로 유지).
 export { DELTA_TREND_WINDOW_DAYS };
+
+// ── 카드 스파크라인에 넘기는 추이 (B031) ──────────────────────────────────────
+// Overview 카드('use client')는 추이에서 **마지막 SPARK_POINTS(5)개 점**만 그린다
+// (`overview-kpi-cards.tsx::sparkPoints` 가 `points.slice(-SPARK_POINTS)` 로 자르고, WoW 도 그 안에서
+// 센다). 페이지는 그 프로미스를 클라이언트로 직렬화하므로 12버킷 × 5계열을 통째로 넘기던 것을
+// 같은 마지막 점들만 넘긴다 — 그려지는 값·라벨·갭은 같다(Δ 는 서버에서 전체 추이로 이미 계산한다).
+// 상수가 카드와 갈리면 `dashboard.parity.test.ts` 의 스파크라인 동등 단언이 깨진다.
+export const SPARKLINE_POINTS = 5;
+
+export function sparklineTrend(trend: LiveTrend | null): LiveTrend | null {
+  if (!trend || trend.points.length <= SPARKLINE_POINTS) return trend;
+  return { ...trend, points: trend.points.slice(-SPARKLINE_POINTS) };
+}
 
 // KPI 카드 변화량 — 정규화된 시계열의 "마지막 측정 버킷 vs 직전 측정 버킷" 차이.
 // 이제 시계열(getLiveTrend)이 있으므로 단일 스냅샷이라 null 이던 delta 를 채운다.

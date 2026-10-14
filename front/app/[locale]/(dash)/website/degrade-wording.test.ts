@@ -100,3 +100,44 @@ describe("웹사이트 오버뷰 빈 지면: 예산 초과와 데이터 없음�
     expect(typeof dig(en, "dashboard.empty")).toBe("string");
   });
 });
+
+// ── 섹션 지연 고지(B027) ─────────────────────────────────────────────────────────
+// 구성 도넛·GEO 는 일시 실패면 종전과 같은 빈 모양 + 라벨로 닫힌다(_data/live.ts degradeOnApiFailure, legacy 는
+// server.ts degradeAware). 그대로 그리면 섹션이 조용히 사라지거나(구성) 빈 지도가 "측정 결과"처럼 보인다(GEO).
+// api 경로에서는 그 자리에 기존 `DegradeNotice`(kpi.degraded)를 낸다 — 라벨 문자열이 어긋나면 고지가 영원히
+// 안 뜨므로 두 원천과 대조한다.
+describe("웹사이트 오버뷰: 섹션 지연 고지와 엔진 배지 4xx (B027)", () => {
+  const page = websitePage.replace(/\r\n/g, "\n");
+  const live = here("./_data/live.ts");
+  const declared = new Set(
+    [...server.matchAll(/degradeAware\(\s*[`"]([^`"]+)[`"]/g)].map((m) => m[1]),
+  );
+  const labelsOf = (name: string): string[] => {
+    const m = page.match(new RegExp(`const ${name} = \\[([^\\]]*)\\] as const;`));
+    expect(m, name).not.toBeNull();
+    return [...m![1].matchAll(/"([^"]+)"/g)].map((x) => x[1]);
+  };
+  const body = (fn: string): string => {
+    const s = page.slice(page.indexOf(`async function ${fn}(`));
+    return s.slice(0, s.indexOf("\n}\n"));
+  };
+
+  it.each([
+    ["COMPOSITION_LABELS", "websiteSourceComposition", "WebsiteCompositionSection"],
+    ["GEO_LABELS", "websiteGeoCompetition", "WebsiteGeoSection"],
+  ])("%s: 종전 리더 라벨 = api 가 남기는 라벨, 그 섹션이 api 에서 고지를 그린다", (name, label, section) => {
+    expect(labelsOf(name)).toEqual([label]);
+    expect(declared).toContain(label);
+    expect(live).toContain(`degradeOnApiFailure("${label}"`);
+    expect(body(section)).toContain(`<DegradeNotice labels={${name}}`);
+    // legacy 경로는 종전 그대로(고지는 api 에서만)
+    expect(body(section)).toMatch(/\bapi\b/);
+  });
+
+  it("엔진 배지 조회의 거부는 api 에서 페이지 오류 경로로 오른다(배지 병합의 `.catch(() => items)` 는 그대로)", () => {
+    const summary = body("WebsiteSummarySection");
+    expect(summary).toContain(".catch(() => items)");
+    expect(summary).toMatch(/apiCtx \? \(\s*<Suspense fallback=\{null\}>\s*<RaiseOnRejection read=\{subKpis\} locale=\{locale\} \/>/);
+    expect(body("RaiseOnRejection")).toContain("throwForPage(e, locale)");
+  });
+});

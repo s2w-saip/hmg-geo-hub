@@ -42,8 +42,8 @@ import { trendGapApplies } from "@/lib/viz/trend-gap";
 import type { KpiSummary } from "../../dashboard/_data/sample";
 import { isAnalysisApi } from "@/lib/hgh/adapters/filters";
 import { degradeOnApiFailure } from "@/lib/scope/degrade-registry";
-import { WEBSITE_TREND_METRICS } from "@/lib/hgh/adapters/trend";
 import {
+  WEBSITE_OVERVIEW_TREND_METRICS,
   afterFirstRender,
   loadComposition,
   loadLiveGeo,
@@ -199,17 +199,21 @@ async function getLiveWebsiteGeoImpl(filters?: StandardFilters): Promise<LiveGeo
   const ctx = await websiteApiCtx();
   if (ctx) {
     const f = filters ?? {};
+    const scope = ctx.scope ?? undefined;
+    const active = activeBrandFor(scope, f);
+    // B033: 권역 트리는 활성 브랜드가 하나일 때만 그린다(종전 buildGeo 의 activeBrand, 백엔드 Q8 도 관점
+    // 브랜드가 여럿이면 markets=[]). 활성 브랜드가 없으면(관점 브랜드 여럿: admin 무필터·다중 브랜드 스코프·URL
+    // 다중 선택) 종전 결과는 데이터와 무관하게 빈 트리 + 종전 라벨이므로 /v1/geo 를 부르지 않고 그 모양을 낸다.
+    if (!active) return buildGeo({ brands: [], codes: [] }, ourBrandsOf(scope), null);
     // 종전 fetchWebsiteGeoCompetition 의 degradeAware("websiteGeoCompetition") 와 같은 자리:
     // 일시 실패(5xx·시간 초과)는 라벨을 남기고 종전 빈 모양(buildGeo 에 빈 행)을 돌려준다.
     // 4xx 는 그대로 던진다(degradeOnApiFailure 규칙). 활성 브랜드도 종전과 같게 넘긴다. 단일
     // 브랜드 스코프(Kia)면 종전은 그 브랜드의 권역을 "측정 예정"으로 냈다(U5 N1).
+    // 페이지(WebsiteGeoSection)는 이 라벨을 읽어 빈 지도 대신 기존 지연 고지를 낸다(B027).
     const geo = await degradeOnApiFailure("websiteGeoCompetition", () =>
       afterFirstRender(f, ctx, () => loadLiveGeo(f, ctx)),
     );
-    return (
-      geo ??
-      buildGeo({ brands: [], codes: [] }, ourBrandsOf(ctx.scope ?? undefined), activeBrandFor(ctx.scope ?? undefined, f))
-    );
+    return geo ?? buildGeo({ brands: [], codes: [] }, ourBrandsOf(scope), active);
   }
   const [mentions, session] = await Promise.all([
     fetchWebsiteGeoCompetition(filters),
@@ -244,7 +248,8 @@ export async function getLiveWebsiteTrend(
     // 축 = 회차 자리(bucket=cycle): 현행 주 추이는 X.trendGrid 원장 금요일 자리이고(fetchWebsiteTrend → trendSlotsFor),
     // API 의 그 격자는 bucket=cycle 이다(백엔드 프로필 trend_grid, WU-6). 월요일 키 주 버킷은 현행에 없는 축.
     // LiveTrend.unit 은 종전 호출 단위 그대로(라벨은 앵커 축이라 round_date).
-    return afterFirstRender(f, ctx, () => loadLiveTrend(f, ctx, "cycle", WEBSITE_TREND_METRICS, unit));
+    // 지표 = ①~⑤ + 라이브 ⑥(ACC). 화면이 안 그리는 M06·M07 은 요청하지 않는다(B032, 상수 머리 주석).
+    return afterFirstRender(f, ctx, () => loadLiveTrend(f, ctx, "cycle", WEBSITE_OVERVIEW_TREND_METRICS, unit));
   }
   const [buckets, accuracy] = await Promise.all([
     fetchWebsiteTrend(filters, unit),

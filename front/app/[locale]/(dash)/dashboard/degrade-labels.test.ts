@@ -17,6 +17,9 @@ const declared = new Set(
   [...server.matchAll(/degradeAware\(\s*[`"]([^`"]+)[`"]/g)].map((m) => m[1]),
 );
 
+/** 이 폴더 기준 상대 경로의 소스(줄바꿈은 LF 로 맞춘다 — 체크아웃 설정에 따라 CRLF 일 수 있다). */
+const src = (rel: string) => readFileSync(fileURLToPath(new URL(rel, import.meta.url)), "utf8").replace(/\r\n/g, "\n");
+
 describe("degrade 라벨 정합 — 고지 목록 ↔ server.ts", () => {
   it("server.ts 가 심는 라벨을 뽑아낸다(추출기 자체가 죽지 않았는지)", () => {
     expect(declared.size).toBeGreaterThanOrEqual(5);
@@ -116,5 +119,41 @@ describe("예산 프로파일 기본값 — 화면 쪽이 종전(또는 더 넉�
     expect(body).toContain("return null;");
     // 삼키되 조용하지 않다.
     expect(body).toContain("console.error(");
+  });
+});
+
+// ── 섹션 지연 고지(B027) — 화면이 읽는 라벨 = 원천이 심는 라벨 ─────────────────────
+// 섹션째 사라지던 일시 실패(글로벌 GEO, 프로젝트 홈 구성·⑦)는 api 원천이 라벨을 남기고 화면이 기존
+// `DegradeNotice`(kpi.degraded)로 그 자리에 고지한다. 고지는 라벨 문자열 매칭뿐이라 위와 같이 소스로 대조한다.
+describe("섹션 지연 고지(B027) — 대시보드·프로젝트 홈", () => {
+  const page = src("./page.tsx");
+  const live = src("./_data/live.ts");
+  const adapter = src("../../../../lib/hgh/adapters/dashboard.ts");
+  const projectView = src("../projects/[id]/_components/project-dashboard.tsx");
+  const projectLive = src("../projects/[id]/_data/live.ts");
+
+  it("글로벌 GEO: 페이지 라벨 = 종전 리더 라벨(server.ts) = api 가 남기는 라벨(_data/live.ts)", () => {
+    const m = page.match(/const GEO_LABELS = \[([^\]]*)\] as const;/);
+    expect(m, "GEO_LABELS").not.toBeNull();
+    const labels = [...m![1].matchAll(/"([^"]+)"/g)].map((x) => x[1]);
+    expect(labels).toEqual(["standardGeoCompetition"]);
+    for (const l of labels) {
+      expect(declared, l).toContain(l);
+      expect(live).toContain(`degradeOnApiFailure("${l}"`);
+    }
+    // GeoSection 이 그 목록으로 고지를 그린다(api 경로에서만 — legacy 는 종전 그대로).
+    const geo = page.slice(page.indexOf("async function GeoSection("));
+    expect(geo.slice(0, geo.indexOf("\n}\n"))).toContain("<DegradeNotice labels={GEO_LABELS}");
+  });
+
+  it("프로젝트 홈: 구성·⑦ 라벨은 한 상수를 원천(_data/live.ts)과 화면(project-dashboard.tsx)이 함께 쓴다", () => {
+    for (const name of ["PROJECT_COMPOSITION_LABEL", "PROJECT_CONVERSION_LABEL"]) {
+      const m = adapter.match(new RegExp(`export const ${name} = "([^"]+)";`));
+      expect(m, name).not.toBeNull();
+      // 종전 리더에는 이 read 의 라벨이 없었다 — 기존 라벨과 겹치면 다른 read 의 지연이 여기 고지로 샌다.
+      expect(declared).not.toContain(m![1]);
+      expect(projectLive).toContain(`degradeOnApiFailure(${name},`);
+      expect(projectView).toContain(`DegradeNotice({ labels: [${name}]`);
+    }
   });
 });

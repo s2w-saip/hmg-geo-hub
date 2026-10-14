@@ -47,6 +47,7 @@ import {
   getLiveTrend,
   applyTrendDeltas,
   deltaTrendFilters,
+  sparklineTrend,
   DELTA_TREND_BUCKET,
 } from "./_data/live";
 import {
@@ -97,6 +98,9 @@ export const maxDuration = 120;
 // 오류: 5xx·시간 초과는 종전 degrade 표식으로, 401·403·404 는 throwForPage(로그인·no-access·404).
 const G1 = { surface: "global" as const };
 const g1Api = () => isAnalysisApi("dashboard", "global");
+// ④ GEO 섹션 고지(B027)가 읽는 라벨 — 종전 리더 fetchStandardGeoKpi 의 degradeAware 라벨과 같은 문자열이고,
+// api 는 _data/live.ts 가 같은 이름으로 남긴다(`degrade-labels.test.ts` 가 두 소스와 대조한다).
+const GEO_LABELS = ["standardGeoCompetition"] as const;
 
 export default async function DashboardPage({
   params,
@@ -437,7 +441,9 @@ async function KpiCardsSection({
   const deferred = live
     ? {
         deltas: deltaTrend.then((d) => applyTrendDeltas(live.kpis, d)),
-        trend: weeklyTrend,
+        // 'use client' 카드로 직렬화되는 것은 스파크라인이 그리는 마지막 점들뿐이다(B031, `sparklineTrend`
+        // 머리 주석). Δ 는 위에서 전체 추이로 계산하므로 값은 같다.
+        trend: handled(weeklyTrend.then(sparklineTrend)),
         competitors,
       }
     : null;
@@ -531,11 +537,24 @@ async function DeferredArrival({
 // 집계를 기다리지 않고, showsGeoMap=false 인 역할에서는 아예 돌지 않는다.
 // 빈 상태 판정에 쓰는 getLiveDashboard 는 ① 과 dedup 되어 DB 추가 호출 0.
 async function GeoSection({ filters, locale }: { filters: StandardFilters; locale: string }) {
-  const geo = g1Api()
+  const api = g1Api();
+  const geo = api
     ? await getLiveGeo(filters).catch((e: unknown) => throwForPage(e, locale))
     : await getLiveGeo(filters);
   // 마커는 빈 상태에서도 낸다 — "이 섹션의 read 가 끝났다"가 이 표식의 뜻이다.
-  if (!geo) return <SectionDoneMarker id="dashboard:geo" />;
+  // api(G1): GEO 일시 실패면 live.ts 가 null + 라벨(standardGeoCompetition)을 남긴다 — 섹션이 조용히
+  // 사라지지 않게 그 자리에 기존 지연 고지를 낸다(B027). 데이터 없음(라벨 없음)이면 DegradeNotice 가
+  // 아무것도 그리지 않아 종전 마크업 그대로다. legacy 경로는 종전 그대로(고지 없음).
+  if (!geo) {
+    if (!api) return <SectionDoneMarker id="dashboard:geo" />;
+    const tOverview = await getTranslations("dashboard.overview");
+    return (
+      <>
+        <DegradeNotice labels={GEO_LABELS} title={tOverview("geo.title")} />
+        <SectionDoneMarker id="dashboard:geo" />
+      </>
+    );
+  }
   return (
     <>
       <GeoOverview geo={geo} />

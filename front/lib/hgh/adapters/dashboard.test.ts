@@ -459,9 +459,40 @@ describe("queries: one filter serializer, feature params apart, scope values nev
       expect(got.country, u.pathname).toBeUndefined();
       expect(got.brand, u.pathname).toBeUndefined();
     }
+    expect(q(calls[0])).toMatchObject({ parts: ["urls"] });
     expect(q(calls[1])).toMatchObject({ top_n: ["20"], sort: ["mentions"], include: ["hmg"] });
-    expect(q(calls[2])).toMatchObject({ limit: ["0"], competitor_sources: ["true"] });
-    expect(q(calls[3])).toMatchObject({ part: ["all"] });
+    // global: the ③ competitor minis read the sentiment of these rows, so it is not switched off
+    expect(q(calls[1]).include_sentiment).toBeUndefined();
+    expect(q(calls[2])).toMatchObject({ limit: ["0"], competitor_sources: ["true"], include_den: ["false"], include_competitor_totals: ["false"] });
+    // B090: the badge columns only (sov + citation, no rank_detail); part is not sent (parts wins)
+    expect(q(calls[3])).toMatchObject({ parts: ["citation", "sov"] });
+    expect(q(calls[3]).part).toBeUndefined();
+  });
+
+  it("B011 / B092 / P3: what each card read leaves out (the values it reads are not affected)", async () => {
+    routes["/v1/mentions/brands"] = () => json({ data: brands([]), meta: meta() });
+    routes["/v1/citations/domains"] = () => json({ data: domains(), meta: meta() });
+    routes["/v1/kpi/summary"] = () => json({ data: summary(), meta: meta() });
+    routes[`/v1/projects/${PID}/settings`] = () =>
+      json({ data: { project_id: PID, can_edit: false, domain: null, owned_bases: [], tracked_url_count: 0, competitors: [] }, meta: meta({ mode: "crud" }) });
+    const website = { surface: "website" as const, scope: null };
+    const project = { surface: "project" as const, projectId: PID, scope: null };
+    // KPI #16 on website / project reads the competitor mentions only -> no sentiment statement
+    await D.fetchCardBrands({}, website);
+    await D.fetchCardBrands({}, project);
+    expect(q(calls[0])).toMatchObject({ top_n: ["20"], card: ["true"], include_sentiment: ["false"] });
+    expect(q(calls[1])).toMatchObject({ top_n: ["20"], include_sentiment: ["false"] });
+    // the composition (top 7, website and project) reads neither the coverage denominator nor the competitor sums
+    calls.length = 0;
+    await D.loadComposition({}, website);
+    await D.loadComposition({}, project);
+    for (const u of calls.filter((x) => x.pathname === "/v1/citations/domains")) {
+      expect(q(u)).toMatchObject({ limit: ["7"], include_den: ["false"], include_competitor_totals: ["false"] });
+    }
+    // the project KPI section reads the card view of the settings bundle
+    calls.length = 0;
+    await D.fetchProjectSettings(PID);
+    expect(q(calls[0])).toEqual({ view: ["card"] });
   });
 
   it("a URL country subset IS sent; deny markers (ZZ) are never sent as values", async () => {
@@ -480,18 +511,24 @@ describe("queries: one filter serializer, feature params apart, scope values nev
     const g = q(calls[0]);
     expect(g).toEqual({ surface: ["global"], brand: ["HMG", "Kia"], country: ["DE", "FR"], days: ["28"], include_pages: ["false"] });
     const p = q(calls[1]);
+    // B096 summary_only: the home tile reads the rate and its numerator / denominator only (no sparkline)
     expect(p).toEqual({
-      surface: ["project"], project_id: [PID], country: ["DE"], days: ["28"], property_source: ["market"], include_pages: ["false"],
+      surface: ["project"], project_id: [PID], country: ["DE"], days: ["28"], property_source: ["market"], include_pages: ["false"], summary_only: ["true"],
     });
   });
 
-  it("project: custom fields travel as cf.<uuid>; a designated target reads every brand row (full)", async () => {
+  it("project: custom fields travel as cf.<uuid>; a designated target reads the rows matching its name (full + q, BG-19)", async () => {
     routes["/v1/mentions/brands"] = () => json({ data: brands([]), meta: meta() });
     await D.fetchCardBrands({}, { surface: "project", projectId: PID, scope: null, customFields: { [CF]: ["b", "a"] } }, "Toyota");
     const got = q(calls[0]);
     expect(got[`cf.${CF}`]).toEqual(["a", "b"]);
-    expect(got).toMatchObject({ full: ["true"], include: ["hmg"], project_id: [PID] });
+    expect(got).toMatchObject({ full: ["true"], q: ["Toyota"], include: ["hmg"], include_sentiment: ["false"], project_id: [PID] });
     expect(got.top_n).toBeUndefined();
+    // a name the q bounds refuse (over 100 characters) falls back to every row (the old read), never a 422
+    calls.length = 0;
+    await D.fetchCardBrands({}, { surface: "project", projectId: PID, scope: null }, "x".repeat(101));
+    expect(q(calls[0]).q).toBeUndefined();
+    expect(q(calls[0]).full).toEqual(["true"]);
   });
 
   it("composition: website asks the domains only (topics [] U5-N7), project adds the by_funnel summary", async () => {
@@ -507,10 +544,28 @@ describe("queries: one filter serializer, feature params apart, scope values nev
     expect(q(calls.find((u) => u.pathname === "/v1/kpi/summary")!).by_funnel).toEqual(["true"]);
   });
 
-  it("recent candidates: one page of 5 from the created_at desc list", async () => {
+  it("recent candidates: one page of 5 from the created_at desc list, no total (the tile reads candidate_count)", async () => {
     routes[`/v1/projects/${PID}/prompt-candidates`] = () => json({ data: { items: [] }, meta: meta({ mode: "crud" }) });
     await D.fetchRecentCandidates(PID);
-    expect(q(calls[0])).toEqual({ limit: ["5"] });
+    expect(q(calls[0])).toEqual({ limit: ["5"], include_total: ["false"] });
+  });
+
+  it("competitor Δ trend: the candidate brand keys with the minimum top (B031), the three Δ metrics", async () => {
+    routes["/v1/mentions/brands"] = () =>
+      json({
+        data: brands([
+          brandItem({ name: "Kia", is_own: true, mentions: 90, brand_key: 1 }),
+          brandItem({ name: "Toyota", mentions: 50, brand_key: 3, avg_rank: { sum: 3, count: 1 } }),
+          brandItem({ name: "Ford", mentions: 40, brand_key: 4 }),
+        ]),
+        meta: meta(),
+      });
+    routes["/v1/trend"] = () => json({ data: { bucket: "cycle", dimension: "brand", own_label: "Kia", buckets: [], series: [] }, meta: meta() });
+    routes["/v1/citations/domains"] = () => json({ data: domains({ competitor_sources: [] }), meta: meta() });
+    await D.loadCompetitorSources({}, { surface: "global", scope: null });
+    const t = q(calls.find((u) => u.pathname === "/v1/trend")!);
+    expect(t).toMatchObject({ dimension: ["brand"], bucket: ["cycle"], top: ["1"], brand_key: ["3", "4"], card: ["true"], measured_days: ["false"] });
+    expect(t.metrics?.sort()).toEqual(["position", "share_of_voice", "visibility"]);
   });
 });
 
@@ -700,8 +755,9 @@ describe("D8 facades: api source never touches the legacy readers; legacy is the
     const live = await withRequestScope(() => getLiveDashboard({}));
     // KPI #16: own mentions 90 (share_of_voice numerator) / Toyota 45 x 100 = 200
     expect(live?.kpis.find((k) => k.key === "shareOfVoice")?.competitorSov).toEqual({ brand: "Toyota", value: 200 });
-    // brand-scoped session: the injected brand lock and countries are not sent (card: WU-3 card path)
-    expect(q(calls.find((u) => u.pathname === "/v1/kpi/summary")!)).toEqual({ surface: ["global"], card: ["true"] });
+    // brand-scoped session: the injected brand lock and countries are not sent (card: WU-3 card path;
+    // parts: DASHBOARD_SUMMARY_PARTS, the cards read neither the measured / applied prompts nor the gap)
+    expect(q(calls.find((u) => u.pathname === "/v1/kpi/summary")!)).toEqual({ surface: ["global"], card: ["true"], parts: ["urls"] });
     routes["/v1/kpi/summary"] = () => errorBody(503, "upstream");
     const [empty, degraded] = await withRequestScope(async () => [await getLiveDashboard({}), wasDegraded("standardAggregates")] as const);
     expect(empty).toBeNull();
@@ -715,7 +771,7 @@ describe("D8 facades: api source never touches the legacy readers; legacy is the
     expect(calls).toHaveLength(0);
   });
 
-  it("G3=api: website trend is the cycle-slot trend of M01..M07 + the live ⑥ accuracy series (WU-9); week and day -> cycle (WU-6)", async () => {
+  it("G3=api: website trend is the cycle-slot trend of M01..M05 + the live ⑥ accuracy series (WU-9, no M06/M07: B032); week and day -> cycle (WU-6)", async () => {
     vi.stubEnv("HGH_SOURCE_G3", "api");
     routes["/v1/kpi/summary"] = () => json({ data: summary(), meta: meta() });
     routes["/v1/mentions/brands"] = () => json({ data: brands([]), meta: meta() });
@@ -726,7 +782,7 @@ describe("D8 facades: api source never touches the legacy readers; legacy is the
     expect(await withRequestScope(() => getLiveWebsiteTrend({}, "week"))).toBeNull();
     const t = q(calls.find((u) => u.pathname === "/v1/trend")!);
     expect(t.bucket).toEqual(["cycle"]);
-    expect(t.metrics?.sort()).toEqual(["citation_accuracy", "citation_share", "owned_url_rate", "position", "sentiment", "share_of_voice", "target_url_rate", "visibility"]);
+    expect(t.metrics?.sort()).toEqual(["citation_accuracy", "citation_share", "position", "sentiment", "share_of_voice", "visibility"]);
     expect(t.surface).toEqual(["website"]);
     // performance A1: LiveTrend readers never use measuredDays
     expect(t.measured_days).toEqual(["false"]);

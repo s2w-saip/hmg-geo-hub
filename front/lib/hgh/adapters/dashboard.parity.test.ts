@@ -81,8 +81,10 @@ const tracked = await import("@/lib/db/repositories/tracked-entities");
 const dashLive = await import("@/app/[locale]/(dash)/dashboard/_data/live");
 const webLive = await import("@/app/[locale]/(dash)/website/_data/live");
 const projLive = await import("@/app/[locale]/(dash)/projects/[id]/_data/live");
-const { competitorCitationShares } = await import("@/app/[locale]/(dash)/dashboard/_components/overview-kpi-cards");
+const { competitorCitationShares, sparkPoints } = await import("@/app/[locale]/(dash)/dashboard/_components/overview-kpi-cards");
 const { rhqForCountry, rhqRegionIdsForBrand } = await import("@/lib/rhq");
+const T = await import("./trend");
+const { competitorPositionDeltas, competitorTrendDeltas } = await import("@/lib/kpi/competitor-values");
 
 type S = components["schemas"];
 const TOKEN = "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJ1In0.c2ln"; // {"alg":"ES256"}.{"sub":"u"}.sig
@@ -115,6 +117,55 @@ afterEach(() => {
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
 });
+
+// ── backend answers that honour the opt-in params the dashboards send (P2 / P3 / P11) ──────────
+// The routes below apply the documented effect of each "skip unused work" parameter to a full
+// answer, so the parity cases run the lighter requests and still have to equal the legacy values.
+
+const ZERO_SENTIMENT = { positive: 0, neutral: 0, negative: 0, mixed: 0 };
+
+/** GET /v1/mentions/brands: include_sentiment=false zeroes every row's sentiment; q keeps the own rows
+ *  and the competitor rows whose name contains q (case-insensitive, BG-19). */
+function honourBrands(data: S["BrandsData"], u: URL): S["BrandsData"] {
+  const noSentiment = u.searchParams.get("include_sentiment") === "false";
+  const needle = u.searchParams.get("q")?.toLowerCase() ?? null;
+  return {
+    ...data,
+    brands: data.brands
+      .filter((b) => b.is_own || needle === null || b.name.toLowerCase().includes(needle))
+      .map((b) => (noSentiment ? { ...b, sentiment: ZERO_SENTIMENT } : b)),
+  };
+}
+
+/** GET /v1/citations/domains: include_den=false -> answers_den 0 and row coverage.den 0;
+ *  include_competitor_totals=false -> competitor_totals []. own_share is not affected (B011). */
+function honourDomains(data: S["DomainsData"], u: URL): S["DomainsData"] {
+  const noDen = u.searchParams.get("include_den") === "false";
+  const noTotals = u.searchParams.get("include_competitor_totals") === "false";
+  return {
+    ...data,
+    ...(noDen
+      ? { summary: { ...data.summary, answers_den: 0 }, items: data.items.map((r) => ({ ...r, coverage: { num: r.coverage.num, den: 0 } })) }
+      : {}),
+    ...(noTotals ? { competitor_totals: [] } : {}),
+  };
+}
+
+/** GET /v1/kpi/engines: parts without a rank_detail part (exposure / position / all) -> multi, top1, top3 null. */
+function honourEngines(data: S["EnginesData"], u: URL): S["EnginesData"] {
+  const parts = u.searchParams.getAll("parts");
+  const rankDetail = parts.length === 0 || parts.some((p) => p === "all" || p === "exposure" || p === "position");
+  return rankDetail ? data : { ...data, rows: data.rows.map((r) => ({ ...r, multi: null, top1: null, top3: null })) };
+}
+
+/** GET /v1/funnel/conversion: summary_only=true -> trend / by_engine / pages [] and by_country null. */
+function honourConversion(data: S["ConversionData"], u: URL): S["ConversionData"] {
+  if (u.searchParams.get("summary_only") !== "true") return data;
+  return { ...data, trend: [], by_engine: [], pages: [], by_country: null };
+}
+
+/** The B011 flags every dashboard domains call sends (fetchDashboardDomains). */
+const LIGHT_DOMAINS = new URL("https://api.hgh.test/v1/citations/domains?include_den=false&include_competitor_totals=false");
 
 /** Paths where a and b differ (undefined on both sides is equal). */
 function diff(a: unknown, b: unknown, path = ""): string[] {
@@ -278,14 +329,20 @@ describe("competitor rows: brand values and the citation minis", () => {
       { domain: "honda.com", citations: 4, category: "Official (Competitor)" },
       { domain: "cars.com", citations: 30, category: "Media" },
     ].map((d) => ({ ...d, share: pct(d.citations, total), prompts: 0, coverageRate: 0, urls: [], promptList: [], isOurs: false, subcategory: null }));
-    const api = D.toCompetitorCitationDomains({
-      items: [],
-      competitor_totals: [],
-      summary: { answers_den: 100, own_share: { num: 45, den: total }, unique_sources: 4 },
-      competitor_sources: legacyDomains
-        .filter((d) => d.category === "Official (Competitor)")
-        .map((d) => ({ domain: d.domain, skey: d.domain, citations: d.citations, brand: null })),
-    });
+    // the card request sends include_den=false and include_competitor_totals=false (B011): own_share stays
+    const api = D.toCompetitorCitationDomains(
+      honourDomains(
+        {
+          items: [],
+          competitor_totals: [{ brand: "Toyota", citations: 10, sources: 2 }],
+          summary: { answers_den: 100, own_share: { num: 45, den: total }, unique_sources: 4 },
+          competitor_sources: legacyDomains
+            .filter((d) => d.category === "Official (Competitor)")
+            .map((d) => ({ domain: d.domain, skey: d.domain, citations: d.citations, brand: null })),
+        },
+        LIGHT_DOMAINS,
+      ),
+    );
     // toyota 3.0 + 0.3 = 3.3, honda 1.3
     expect(competitorCitationShares(api)).toEqual(competitorCitationShares(legacyDomains));
     expect(competitorCitationShares(api).map((m) => [m.brand, m.value])).toEqual([
@@ -379,6 +436,23 @@ describe("engine consistency badge: legacy rows vs converted API rows", () => {
     const cards = dashLive.buildMirrorKpis(legacyAgg());
     expect(dashLive.applyEngineConsistency(cards, api.rows)).toEqual(dashLive.applyEngineConsistency(cards, legacyRows));
   });
+
+  it("B090 parts=sov+citation (no rank_detail): multi / top1 / top3 come back null, the badges are the same", () => {
+    const row = (engine: string, answers: number, tracked: number, rankSum: number, total: number, own: number, sent: number, pos: number, cit: number, citOwn: number): S["EngineItem"] => ({
+      engine, answers, tracked, multi: 3, top1: 9, top3: 12, rank_sum: rankSum, ranked: tracked,
+      total_mentions: total, tracked_mentions: own, sent_mentions: sent, positive_mentions: pos, negative_mentions: 1, cit_total: cit, cit_owned: citOwn,
+    });
+    const full: S["EnginesData"] = {
+      rows: [row("chatgpt", 100, 60, 90, 200, 50, 40, 30, 50, 10), row("gemini", 80, 40, 120, 100, 50, 20, 10, 40, 4)],
+      engine_consistency: { visibility: null, share_of_voice: null, sentiment: null, position: null, citation_share: null },
+    };
+    const lighter = honourEngines(full, new URL("https://x/v1/kpi/engines?parts=citation&parts=sov"));
+    expect(lighter.rows.every((r) => r.multi === null && r.top1 === null && r.top3 === null)).toBe(true);
+    const cards = dashLive.buildMirrorKpis(legacyAgg());
+    const badges = (d: S["EnginesData"]) => dashLive.applyEngineConsistency(cards, D.toSubKpis(d).rows).map((k) => k.engineConsistency);
+    expect(badges(lighter)).toEqual(badges(full));
+    expect(badges(full).filter((b) => b !== undefined)).toHaveLength(5);
+  });
 });
 
 // ── website cards ─────────────────────────────────────────────────────────────
@@ -403,11 +477,15 @@ describe("website cards: getLiveWebsiteDashboard legacy vs HGH_SOURCE_G3=api", (
         }),
         meta: meta({ surface: "website", source: { url_rates: "live" } }),
       });
-    routes["/v1/mentions/brands"] = () => json({ data: apiBrands(), meta: meta() });
+    routes["/v1/mentions/brands"] = (u) => json({ data: honourBrands(apiBrands(), u), meta: meta() });
     const api = await withRequestScope(() => webLive.getLiveWebsiteDashboard({}));
 
     expectOnlyKnown(legacy, api, []);
     expect(api?.kpis.map((k) => k.key)).toEqual(["visibility", "shareOfVoice", "sentiment", "position", "citationShare", "ownedUrlRate", "targetUrlRate", "citationAccuracy"]);
+    // B028: KPI #16 reads the competitor mentions only, so the sentiment-free rows give the same card
+    const calls = vi.mocked(fetch).mock.calls.map(([i]) => new URL(String(i)));
+    expect(calls.find((u) => u.pathname === "/v1/mentions/brands")?.searchParams.get("include_sentiment")).toBe("false");
+    expect(calls.find((u) => u.pathname === "/v1/kpi/summary")?.searchParams.getAll("parts")).toEqual(["urls"]);
   });
 });
 
@@ -463,7 +541,8 @@ describe("composition: getLiveComposition (project) legacy vs toSourceSlices / t
         }),
         meta: meta(),
       }),
-      sources: D.toSourceSlices(apiDomains),
+      // the composition request sends include_den=false and include_competitor_totals=false (B011)
+      sources: D.toSourceSlices(honourDomains(apiDomains, LIGHT_DOMAINS)),
     };
     // rest = 1+1+1 (sorted after 82,60,50,40,30,20,10: the last 7 are 82..10; rest 5,1,1,1)
     expectOnlyKnown(legacy, api, [
@@ -582,55 +661,60 @@ describe("project dashboard: getProjectDashboard legacy vs HGH_SOURCE_G6=api", (
         meta: meta({ surface: "project" }),
       });
     routes["/v1/trend"] = (u) => json({ data: apiTrend(u.searchParams.get("bucket") as "cycle" | "week"), meta: meta() });
-    routes["/v1/kpi/engines"] = () =>
+    routes["/v1/kpi/engines"] = (u) =>
       json({
-        data: {
+        data: honourEngines({
           rows: engineRows.map((r) => ({ engine: r.engine, answers: r.answers, tracked: r.tracked, multi: 0, top1: 0, top3: 0, rank_sum: Math.round((r.avgPosition ?? 0) * r.tracked), ranked: r.tracked, total_mentions: r.totalMentions, tracked_mentions: r.trackedMentions, sent_mentions: r.sentMentions, positive_mentions: r.positiveMentions, negative_mentions: 0, cit_total: r.citTotal, cit_owned: r.citOwned })),
           engine_consistency: { visibility: null, share_of_voice: null, sentiment: null, position: null, citation_share: null },
-        },
+        }, u),
         meta: meta(),
       });
-    routes["/v1/citations/domains"] = () =>
+    routes["/v1/citations/domains"] = (u) =>
       json({
-        data: {
+        data: honourDomains({
           items: [
             { domain: "x.com", skey: "x.com", citations: 36, citing_answers: 1, coverage: { num: 1, den: 1 }, share: { num: 36, den: 48 }, is_own: false, is_social: false, is_target: false, own_citations: 0, category: null },
             { domain: "kia.com", skey: "kia.com", citations: 12, citing_answers: 1, coverage: { num: 1, den: 1 }, share: { num: 12, den: 48 }, is_own: true, is_social: false, is_target: false, own_citations: 12, category: null },
           ],
-          competitor_totals: [],
+          competitor_totals: [{ brand: "Toyota", citations: 36, sources: 1 }],
           summary: { answers_den: 60, own_share: { num: 12, den: 48 }, unique_sources: 2 },
-        },
+        }, u),
         meta: meta(),
       });
-    routes["/v1/mentions/brands"] = () =>
+    routes["/v1/mentions/brands"] = (u) =>
       json({
-        data: {
+        data: honourBrands({
           brands: [
-            { name: "Kia", rank: 1, mentions: last.own, exposure: { num: 30, den: 60 }, share: { num: last.own, den: last.total }, avg_rank: null, is_own: true, is_hmg_own: true, brand_key: 1, sentiment: { positive: 0, neutral: 0, negative: 0, mixed: 0 } },
-            { name: "Toyota", rank: 2, mentions: 36, exposure: { num: 20, den: 60 }, share: { num: 36, den: last.total }, avg_rank: null, is_own: false, is_hmg_own: false, brand_key: 2, sentiment: { positive: 0, neutral: 0, negative: 0, mixed: 0 } },
+            { name: "Kia", rank: 1, mentions: last.own, exposure: { num: 30, den: 60 }, share: { num: last.own, den: last.total }, avg_rank: null, is_own: true, is_hmg_own: true, brand_key: 1, sentiment: { positive: 5, neutral: 1, negative: 0, mixed: 0 } },
+            { name: "Toyota", rank: 2, mentions: 36, exposure: { num: 20, den: 60 }, share: { num: 36, den: last.total }, avg_rank: null, is_own: false, is_hmg_own: false, brand_key: 2, sentiment: { positive: 3, neutral: 0, negative: 1, mixed: 0 } },
+            { name: "Honda", rank: 3, mentions: 36, exposure: { num: 18, den: 60 }, share: { num: 36, den: last.total }, avg_rank: null, is_own: false, is_hmg_own: false, brand_key: 3, sentiment: { positive: 1, neutral: 0, negative: 0, mixed: 0 } },
           ],
           own: { brands: ["Kia"], vp_label: "Kia", mentions: last.own, rank: 1, exposure: { num: 30, den: 60 }, share: { num: last.own, den: last.total }, avg_rank: null },
-          totals: { answers: 60, brand_count: 2, mentions_total: last.total },
-        },
+          totals: { answers: 60, brand_count: 3, mentions_total: last.total },
+        }, u),
         meta: meta(),
       });
-    routes[`/v1/projects/${PID}/settings`] = () =>
-      json({
-        data: {
-          project_id: PID,
-          can_edit: false,
-          domain: "kia.com/de",
-          owned_bases: [{ base_url: "kia.com/de", base_norm: "kia.com/de", created_at: "2026-09-01T00:00:00Z", created_by: PID }],
-          tracked_url_count: 1,
-          competitors: [{ brand_name: "Toyota", is_target: true, created_at: "2026-09-01T00:00:00Z" }],
-          brand_aliases: {},
-          engines: { allowed: [], effective: [] },
-          vehicles: [],
-        },
-        meta: meta({ mode: "crud" }),
-      });
+    routes[`/v1/projects/${PID}/settings`] = (u) => {
+      const full = {
+        project_id: PID,
+        can_edit: false,
+        domain: "kia.com/de",
+        owned_bases: [{ base_url: "kia.com/de", base_norm: "kia.com/de", created_at: "2026-09-01T00:00:00Z", created_by: PID }],
+        tracked_url_count: 1,
+        competitors: [
+          { brand_name: "Honda", is_target: false, created_at: "2026-09-01T00:00:00Z" },
+          { brand_name: "Toyota", is_target: true, created_at: "2026-09-01T00:00:00Z" },
+        ],
+        brand_aliases: {},
+        engines: { allowed: [], effective: [] },
+        vehicles: [],
+      };
+      // view=card (P3): engines / aliases / vehicles null, competitors = the designated row only
+      const card = { ...full, competitors: full.competitors.filter((c) => c.is_target), brand_aliases: null, engines: null, vehicles: null };
+      return json({ data: u.searchParams.get("view") === "card" ? card : full, meta: meta({ mode: "crud" }) });
+    };
     // the project's GA4 market has no property (legacy resolveProperty null): unmapped
-    routes["/v1/funnel/conversion"] = () => json({ data: conversion(1, 0, 0, 0, []), meta: meta() });
+    routes["/v1/funnel/conversion"] = (u) => json({ data: honourConversion(conversion(1, 0, 0, 0, []), u), meta: meta() });
     const legacyReads = vi.mocked(server.fetchProjectStandardAggregates).mock.calls.length;
     const api = await withRequestScope(() => projLive.getProjectDashboard(PID, {}));
 
@@ -642,9 +726,17 @@ describe("project dashboard: getProjectDashboard legacy vs HGH_SOURCE_G6=api", (
     for (const p of ["/v1/kpi/summary", "/v1/trend", "/v1/kpi/engines", "/v1/citations/domains", "/v1/mentions/brands", `/v1/projects/${PID}/settings`, "/v1/funnel/conversion"]) {
       expect(hit, p).toContain(p);
     }
-    // #16 read every brand row because a target is designated (BG-19 full)
-    const brandsCall = vi.mocked(fetch).mock.calls.map((c) => new URL(String(c[0]))).find((u) => u.pathname === "/v1/mentions/brands")!;
-    expect(brandsCall.searchParams.get("full")).toBe("true");
+    // #16 reads the rows matching the designated target (BG-19 full + q, B028) without the sentiment
+    const hitUrls = vi.mocked(fetch).mock.calls.map((c) => new URL(String(c[0])));
+    const brandsCall = hitUrls.find((u) => u.pathname === "/v1/mentions/brands")!;
+    expect([brandsCall.searchParams.get("full"), brandsCall.searchParams.get("q"), brandsCall.searchParams.get("include_sentiment")]).toEqual(["true", "Toyota", "false"]);
+    // the lighter reads of the other calls (B029, B030, B033): the routes above apply their effect
+    expect(hitUrls.find((u) => u.pathname === `/v1/projects/${PID}/settings`)?.searchParams.get("view")).toBe("card");
+    expect(hitUrls.find((u) => u.pathname === "/v1/funnel/conversion")?.searchParams.get("summary_only")).toBe("true");
+    expect(hitUrls.find((u) => u.pathname === "/v1/kpi/engines")?.searchParams.getAll("parts")).toEqual(["citation", "sov"]);
+    expect(hitUrls.filter((u) => u.pathname === "/v1/citations/domains").every((u) => u.searchParams.get("include_den") === "false")).toBe(true);
+    expect(hitUrls.find((u) => u.pathname === `/v1/projects/${PID}/prompt-candidates`)?.searchParams.get("include_total")).toBe("false");
+    expect(hitUrls.find((u) => u.pathname === "/v1/kpi/summary")?.searchParams.getAll("parts")).toEqual(["urls"]);
     expectOnlyKnown(legacy!.kpis, api!.kpis, []);
     expect(api!.kpis.map((k) => k.key)).toEqual(["visibility", "shareOfVoice", "sentiment", "position", "citationShare", "citationAccuracy"]);
     expectOnlyKnown(
@@ -704,11 +796,46 @@ describe("failure paths on the api sources", () => {
     routes["/v1/kpi/engines"] = fail(502, "upstream");
     routes["/v1/citations/domains"] = fail(503, "upstream");
     routes["/v1/mentions/brands"] = fail(504, "timeout");
-    const d = await withRequestScope(() => projLive.getProjectDashboard(PID, {}));
+    const [d, labels] = await withRequestScope(async () => [await projLive.getProjectDashboard(PID, {}), degradedLabels()] as const);
     expect(d?.composition).toEqual({ topics: [], sources: [] });
     expect(d?.kpis.some((k) => k.engineConsistency !== undefined || k.competitorSov !== undefined)).toBe(false);
+    // B027: the composition panel would vanish -> its label is recorded for the in-place notice;
+    // the inline parts (badge, KPI #16) stay silent (UC-16)
+    expect(labels).toEqual([D.PROJECT_COMPOSITION_LABEL]);
     routes["/v1/kpi/engines"] = fail(403, "menu_forbidden");
     await expect(withRequestScope(() => projLive.getProjectDashboard(PID, {}))).rejects.toMatchObject({ status: 403 });
+  });
+
+  it("project: a transient ⑦ GA4 failure drops the tile and records projectTrafficConversion (B027); a 4xx still fails", async () => {
+    vi.stubEnv("HGH_SOURCE_G6", "api");
+    projectRoutes();
+    // a reachable GA4 market with sessions: the tile is drawn on the ok path
+    routes["/v1/funnel/conversion"] = ok(conversion(1, 1, 7, 160, []));
+    const okRun = await withRequestScope(async () => [await projLive.getProjectDashboard(PID, {}), degradedLabels()] as const);
+    expect(okRun[0]?.kpis.find((k) => k.key === "trafficConversion")).toMatchObject({ value: 4.4, ratio: { numerator: 7, denominator: 160 } });
+    expect(okRun[1]).toEqual([]);
+    routes["/v1/funnel/conversion"] = fail(503, "upstream");
+    const [d, labels] = await withRequestScope(async () => [await projLive.getProjectDashboard(PID, {}), degradedLabels()] as const);
+    expect(d?.kpis.map((k) => k.key)).toEqual(["visibility", "shareOfVoice", "sentiment", "position", "citationShare"]);
+    expect(labels).toEqual([D.PROJECT_CONVERSION_LABEL]);
+    routes["/v1/funnel/conversion"] = fail(403, "menu_forbidden");
+    await expect(withRequestScope(() => projLive.getProjectDashboard(PID, {}))).rejects.toMatchObject({ status: 403 });
+  });
+
+  it("project: ⑦ summary_only (B096) gives the same tile as the full answer (the tile has no sparkline)", async () => {
+    vi.stubEnv("HGH_SOURCE_G6", "api");
+    projectRoutes();
+    const run = async (honour: boolean) => {
+      routes["/v1/funnel/conversion"] = (u) => {
+        const full = conversion(1, 1, 7, 160, [3, 5, 8]);
+        return json({ data: honour ? honourConversion(full, u) : full, meta: meta() });
+      };
+      return withRequestScope(() => projLive.getProjectDashboard(PID, {}));
+    };
+    const lighter = await run(true);
+    const full = await run(false);
+    expect(lighter?.kpis).toEqual(full?.kpis);
+    expect(lighter?.kpis.some((k) => k.key === "trafficConversion")).toBe(true);
   });
 
   it("project: a failed essential dates call is sent once per request, not again by later sections or the shell (D3)", async () => {
@@ -814,15 +941,17 @@ describe("failure paths on the api sources", () => {
   });
 
   it("website: engine badge, composition and GEO 5xx degrade to the legacy empty shapes with the legacy labels (D1)", async () => {
+    // admin with one brand chosen (Kia): the GEO tree has an active brand, so /v1/geo is requested
+    const f = { brand: ["Kia"] };
     // legacy: the three readers degraded (degradeAware returns their empty value and records the label)
     vi.mocked(server.fetchWebsiteSubKpis).mockResolvedValue({ rows: [], promptsWithoutBrand: null, measuredPrompts: null });
     vi.mocked(server.fetchWebsitePromptTopics).mockResolvedValue([]);
     vi.mocked(server.fetchWebsiteSourceComposition).mockResolvedValue([]);
     vi.mocked(server.fetchWebsiteGeoCompetition).mockResolvedValue([]);
     const legacy = await withRequestScope(async () => [
-      await webLive.getLiveWebsiteSubKpis({}),
-      await webLive.getLiveWebsiteComposition({}),
-      await webLive.getLiveWebsiteGeo({}),
+      await webLive.getLiveWebsiteSubKpis(f),
+      await webLive.getLiveWebsiteComposition(f),
+      await webLive.getLiveWebsiteGeo(f),
     ]);
 
     vi.stubEnv("HGH_SOURCE_G3", "api");
@@ -832,18 +961,62 @@ describe("failure paths on the api sources", () => {
     routes["/v1/geo"] = fail(504, "timeout");
     const [api, labels] = await withRequestScope(async () => {
       const out = [
-        await webLive.getLiveWebsiteSubKpis({}),
-        await webLive.getLiveWebsiteComposition({}),
-        await webLive.getLiveWebsiteGeo({}),
+        await webLive.getLiveWebsiteSubKpis(f),
+        await webLive.getLiveWebsiteComposition(f),
+        await webLive.getLiveWebsiteGeo(f),
       ];
       return [out, degradedLabels()] as const;
     });
     expectOnlyKnown(legacy, api, []);
     expect([...labels].sort()).toEqual(["websiteGeoCompetition", "websiteSourceComposition", "websiteSubKpis"]);
 
+    expect((api[2] as { pending: string[] }).pending).toEqual(rhqRegionIdsForBrand("Kia"));
+
     // a 4xx is not a delay: it is raised (permission or filter bug)
     routes["/v1/kpi/engines"] = fail(403, "menu_forbidden");
     await expect(withRequestScope(() => webLive.getLiveWebsiteSubKpis({}))).rejects.toMatchObject({ status: 403 });
+  });
+
+  it("website: no single active brand -> /v1/geo is not requested and the legacy empty tree comes back (B033)", async () => {
+    const geoCalls = () => vi.mocked(fetch).mock.calls.filter(([i]) => new URL(String(i)).pathname === "/v1/geo").length;
+    const cases: { scope: Record<string, unknown>; role: string; filters: Record<string, unknown> }[] = [
+      { scope: { all: true }, role: "admin", filters: {} }, // admin without a brand: every HMG brand is the perspective
+      { scope: { all: true }, role: "admin", filters: { brand: ["Hyundai", "Kia"] } }, // two brands chosen in the URL
+      { scope: { all: false, brands: ["Hyundai", "Kia"] }, role: "hq", filters: { brand: ["Hyundai", "Kia", "HMG"] } }, // two-brand lock
+    ];
+    for (const c of cases) {
+      session.current = { user: { ...ADMIN.user, role: c.role, scope: c.scope } };
+      vi.unstubAllEnvs();
+      vi.stubEnv("HGH_API_BASE_URL", "https://api.hgh.test");
+      vi.mocked(server.fetchWebsiteGeoCompetition).mockResolvedValue([
+        { code: "DE", brand: "Kia", mentions: 20, isTracked: true },
+        { code: "DE", brand: "Toyota", mentions: 25, isTracked: false },
+      ] as never);
+      const legacy = await withRequestScope(() => webLive.getLiveWebsiteGeo(c.filters));
+
+      vi.stubEnv("HGH_SOURCE_G3", "api");
+      websiteEssentials();
+      routes["/v1/geo"] = fail(500, "should_not_be_called");
+      const before = geoCalls();
+      const [api, labels] = await withRequestScope(async () => [await webLive.getLiveWebsiteGeo(c.filters), degradedLabels()] as const);
+      expect(geoCalls(), JSON.stringify(c)).toBe(before);
+      expect(api.markets).toEqual([]);
+      expect(labels).toEqual([]);
+      expectOnlyKnown(legacy, api, []);
+    }
+  });
+
+  it("global: GEO 5xx -> the section is empty with the legacy label standardGeoCompetition (B027), a 4xx is raised", async () => {
+    vi.stubEnv("HGH_SOURCE_G1", "api");
+    routes["/v1/kpi/summary"] = ok(apiSummary());
+    routes["/v1/mentions/brands"] = ok(apiBrands());
+    routes["/v1/filters/dates"] = ok({ dates: [], dates_truncated: false, first_measured_date: null, latest_round_date: null, presets: [] });
+    routes["/v1/geo"] = fail(503, "upstream");
+    const [geo, labels] = await withRequestScope(async () => [await dashLive.getLiveGeo({}), degradedLabels()] as const);
+    expect(geo).toBeNull();
+    expect(labels).toEqual(["standardGeoCompetition"]);
+    routes["/v1/geo"] = fail(403, "role_forbidden");
+    await expect(withRequestScope(() => dashLive.getLiveGeo({}))).rejects.toMatchObject({ status: 403 });
   });
 
   it("website: GEO 5xx on a single-brand account (Kia) keeps the legacy pending regions (D1, U5 N1)", async () => {
@@ -916,5 +1089,123 @@ describe("project tiles: buildProjectOverview (legacy rows) vs toProjectOverview
         .map((c) => ({ candidate_id: c.id, text: c.text, source: c.source, source_keyword: c.sourceKeyword, created_at: c.createdAt.toISOString() })),
     );
     expectOnlyKnown(legacy, api, []);
+  });
+});
+
+// ── lighter card reads: the values the screens draw do not move (B031, B032) ─────────────────
+
+describe("lighter card reads give the same drawn values", () => {
+  const B = ["2026-08-17", "2026-08-24", "2026-08-31", "2026-09-07"];
+  type Pt = S["app__features__analytics__trend__series__schemas__TrendPoint"];
+  const ratio = (num: number, den: number): S["Ratio"] => ({ num, den });
+
+  it("B031 competitor Δ: top=1 + the candidate keys gives the candidates the same Δ as top=20", () => {
+    // own + five competitors over four rounds. A..E by mentions; the candidates are B and D (brand_key).
+    // C alone has a rank on round 3 (the other rows are null there), round 4 is a collection-error gap.
+    const gap = (bucket: string): Pt => ({ bucket, gap: true, gap_reason: "collection_error", ratio: null, rank: null });
+    const series = (key: string, own: boolean, bk: number | null, vis: (number | null)[], sov: (number | null)[], pos: ([number, number] | null)[]): S["TrendSeries"][] => {
+      const base = { key, is_own: own, ...(own ? { own_brand_code: key } : { label: key }), brand_key: bk };
+      const pts = (vals: (number | null)[], den: number): Pt[] =>
+        vals.map((v, i) => (i === 3 ? gap(B[i]) : { bucket: B[i], ratio: v === null ? null : ratio(v, den) }));
+      return [
+        { metric: "visibility", kind: "ratio", ...base, points: pts(vis, 100) },
+        { metric: "share_of_voice", kind: "ratio", ...base, points: pts(sov, 300) },
+        { metric: "position", kind: "rank", ...base, points: pos.map((r, i): Pt => (i === 3 ? gap(B[i]) : { bucket: B[i], rank: r ? { sum: r[0], count: r[1] } : null })) },
+      ] as S["TrendSeries"][];
+    };
+    const own = series("Kia", true, 1, [60, 62, 64, null], [90, 95, 99, null], [[150, 60], [140, 62], null, null]);
+    const comp = {
+      A: series("A", false, 10, [50, 49, 51, null], [80, 78, 82, null], [[100, 50], [98, 49], null, null]),
+      B: series("B", false, 11, [40, 44, 39, null], [70, 72, 69, null], [[90, 40], null, null, null]),
+      C: series("C", false, 12, [30, 31, 35, null], [60, 61, 66, null], [[70, 30], [64, 31], [60, 35], null]),
+      D: series("D", false, 13, [20, null, 26, null], [50, 52, 58, null], [[44, 20], [40, 21], null, null]),
+      E: series("E", false, 14, [10, 12, 9, null], [30, 33, 29, null], [null, null, null, null]),
+    };
+    const answer = (picked: (keyof typeof comp)[]): S["TrendData"] => ({
+      bucket: "cycle",
+      dimension: "brand",
+      own_label: "Kia",
+      buckets: B.map((k) => ({ key: k, round_dates: [k], measured_days: null })),
+      series: [...own, ...picked.flatMap((k) => comp[k])],
+    });
+    const top20 = answer(["A", "B", "C", "D", "E"]);
+    const lighter = answer(["A", "B", "D"]); // top=1 (A) + brand_key B, D
+    const candidates = ["B", "D"];
+    for (const key of ["visibility", "shareOfVoice"] as const) {
+      const full = competitorTrendDeltas(T.toBrandTrendResult(top20), key);
+      const light = competitorTrendDeltas(T.toBrandTrendResult(lighter), key);
+      for (const c of candidates) expect(light.get(c), `${key} ${c}`).toBe(full.get(c));
+    }
+    const fullPos = competitorPositionDeltas(T.toFirstPositionResult(top20));
+    const lightPos = competitorPositionDeltas(T.toFirstPositionResult(lighter));
+    for (const c of candidates) expect(lightPos.get(c), `position ${c}`).toBe(fullPos.get(c));
+    // the case is not vacuous: B and D have Δ values, and C's round-3 rank drops a bucket from the lighter answer
+    expect([...candidates].map((c) => competitorTrendDeltas(T.toBrandTrendResult(top20), "shareOfVoice").get(c))).toEqual([-1, 2]);
+    expect(T.toFirstPositionResult(top20).buckets.length).toBe(T.toFirstPositionResult(lighter).buckets.length + 1);
+  });
+
+  it("B032 website trend: without M06/M07 the LiveTrend values, gaps and ⑥ are the same (only urlRateOrigin goes)", () => {
+    const hidden = (bucket: string): Pt => ({ bucket, gap: true, gap_reason: "hidden", ratio: null, rank: null });
+    const r = (metric: string, vals: ([number, number] | "hidden")[], origin?: ("report" | "live")[]): S["TrendSeries"] => ({
+      metric,
+      kind: "ratio",
+      key: null,
+      points: vals.map((v, i): Pt => (v === "hidden" ? hidden(B[i]) : { bucket: B[i], ratio: ratio(v[0], v[1]), ...(origin ? { origin: origin[i] } : {}) })),
+    });
+    // round 3 hides the citation family (M05, M06, M07 and ACC alike: one family gap per slot)
+    const mention = (metric: string, vals: [number, number][]) => r(metric, vals);
+    const base: S["TrendSeries"][] = [
+      mention("visibility", [[40, 80], [45, 90], [44, 88], [50, 100]]),
+      mention("share_of_voice", [[50, 200], [60, 240], [58, 230], [70, 260]]),
+      mention("sentiment", [[20, 30], [21, 30], [22, 33], [25, 35]]),
+      { metric: "position", kind: "rank", key: null, points: B.map((b, i): Pt => ({ bucket: b, rank: { sum: 60 + i, count: 40 } })) },
+      r("citation_share", [[9, 60], [8, 64], "hidden", [10, 70]]),
+      r("citation_accuracy", [[6, 12], [7, 13], "hidden", [5, 10]]),
+    ];
+    const url: S["TrendSeries"][] = [
+      // published round 0 carries report prompt counts (their numerators would give another ⑥)
+      r("target_url_rate", [[10, 15], [7, 90], "hidden", [6, 100]], ["report", "live", "live", "live"]),
+      r("owned_url_rate", [[12, 15], [13, 90], "hidden", [11, 100]], ["report", "live", "live", "live"]),
+    ];
+    const data = (series: S["TrendSeries"][]): S["TrendData"] => ({
+      bucket: "cycle",
+      dimension: "none",
+      own_label: "HMG",
+      buckets: B.map((k) => ({ key: k, round_dates: [k], measured_days: null })),
+      series,
+    });
+    const withUrl = T.toLiveTrend(data([...base.slice(0, 5), ...url, base[5]]), { unit: "week" });
+    const without = T.toLiveTrend(data(base), { unit: "week" });
+    expectOnlyKnown(withUrl, without, [
+      { path: /^points\.\d+\.urlRateOrigin$/, reason: "M06/M07 value source flag: not requested any more, no reader (B032)" },
+    ]);
+    expect(without.points.map((p) => p.values.citationAccuracy)).toEqual([50, 53.8, undefined, 50]);
+    expect(without.points[2].gap).toEqual({ reason: "not_published", scope: "citations" });
+    // and the card Δ read from it (applyTrendDeltas) is the same
+    const cards = dashLive.buildMirrorKpis(legacyAgg());
+    expect(dashLive.applyTrendDeltas(cards, without)).toEqual(dashLive.applyTrendDeltas(cards, withUrl));
+  });
+
+  it("B031 sparkline: the card draws the same points from the trimmed trend (SPARKLINE_POINTS = the card's SPARK_POINTS)", () => {
+    const points = Array.from({ length: 12 }, (_, i) => ({
+      bucketStart: `2026-07-${String(i + 1).padStart(2, "0")}`,
+      cycleAnchorAt: `2026-07-${String(i + 1).padStart(2, "0")}T03:00:00.000Z`,
+      firstAt: null,
+      values: i === 9 ? {} : { visibility: 40 + i, shareOfVoice: 30 + i / 2, sentiment: 60 - i, position: 2 + i / 10, citationShare: 10 + i },
+      measuredDays: 1,
+      answers: i === 9 ? 0 : 100,
+      lastAt: null,
+      ...(i === 9 ? { gap: { reason: "collection_error" as const } } : {}),
+      ...(i === 10 ? { gap: { reason: "not_published" as const, scope: "citations" as const } } : {}),
+    }));
+    const trend = { unit: "day" as const, axis: "anchor" as const, points, lastMeasuredAt: null, totalAnswers: 1100 };
+    const trimmed = dashLive.sparklineTrend(trend)!;
+    expect(trimmed.points).toHaveLength(dashLive.SPARKLINE_POINTS);
+    for (const key of ["visibility", "shareOfVoice", "sentiment", "position", "citationShare"] as const) {
+      expect(sparkPoints(trimmed, key), key).toEqual(sparkPoints(trend, key));
+    }
+    expect(dashLive.sparklineTrend(null)).toBeNull();
+    const short = { ...trend, points: points.slice(0, 3) };
+    expect(dashLive.sparklineTrend(short)).toBe(short);
   });
 });

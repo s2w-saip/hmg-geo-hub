@@ -22,6 +22,7 @@ import {
 } from "../dashboard/_components/summary-tiles-deferred-deltas";
 import { GeoSnapshot } from "../dashboard/_components/geo-snapshot";
 import { GeoMapLazy } from "../dashboard/_components/geo-map-lazy";
+import { DegradeNotice } from "../dashboard/_components/degrade-notice";
 import { PageHeader } from "@/components/page-header";
 import {
   DashboardCompositionSkeleton,
@@ -75,6 +76,10 @@ import {
 // 같은 함수들이 원천을 고른다. legacy(기본)는 종전 경로 그대로다. D6: 첫 렌더는 요약·브랜드·달력·옵션
 // 4호출이 먼저 나가고, 추이·배지·구성·GEO·기간 비교는 그 뒤에 발행된다.
 const websiteApi = () => isAnalysisApi("dashboard", "website");
+// 섹션 지연 고지(B027)가 읽는 라벨 — 종전 리더(server.ts degradeAware)와 api(_data/live.ts degradeOnApiFailure)가
+// 같은 이름으로 남긴다(`degrade-wording.test.ts` 가 두 소스와 대조한다).
+const COMPOSITION_LABELS = ["websiteSourceComposition"] as const;
+const GEO_LABELS = ["websiteGeoCompetition"] as const;
 
 // 웹사이트 Overview — 표준 통합 대시보드와 동일한 라이브 집계를 재사용하되, 권역별
 // 공식 사이트 성격에 맞춘 WebsiteFilters(geography 1차 축 + admin 전용 brand 통합
@@ -366,11 +371,11 @@ function WebsiteDashboardSections({
         <WebsiteTrendSection trend={trend} />
       </Suspense>
       <Suspense key={`composition:${key}`} fallback={<DashboardCompositionSkeleton />}>
-        <WebsiteCompositionSection composition={composition} />
+        <WebsiteCompositionSection composition={composition} api={apiCtx !== null} />
       </Suspense>
       {geo ? (
         <Suspense key={`geo:${key}`} fallback={<DashboardGeoSkeleton />}>
-          <WebsiteGeoSection live={live} geo={geo} />
+          <WebsiteGeoSection live={live} geo={geo} api={apiCtx !== null} />
         </Suspense>
       ) : null}
     </div>
@@ -495,8 +500,23 @@ async function WebsiteSummarySection({
           <SectionDoneMarker id="website:summary-deltas" />
         </DeferredArrival>
       </Suspense>
+      {/* api(G3): 위 배지 병합의 `.catch(() => items)` 는 실패를 "배지 없음"으로 삼킨다. 5xx·시간 초과는
+          live.ts 가 이미 degrade(websiteSubKpis, 빈 행)로 닫아 거부로 오지 않으므로, 여기 오는 거부는
+          4xx(권한·필터)뿐이다 — 지연이 아니라 오류라 기존 페이지 오류 경로(throwForPage)로 올린다(B027).
+          그리는 것은 없다(정상 경로 마크업 불변). legacy 는 종전 그대로. */}
+      {apiCtx ? (
+        <Suspense fallback={null}>
+          <RaiseOnRejection read={subKpis} locale={locale} />
+        </Suspense>
+      ) : null}
     </section>
   );
+}
+
+/** `read` 가 거부되면 페이지 오류 경로(throwForPage: 로그인·no-access·404·오류 경계)로 올린다. 아무것도 그리지 않는다. */
+async function RaiseOnRejection({ read, locale }: { read: Promise<unknown>; locale: string }) {
+  await read.catch((e: unknown) => throwForPage(e, locale));
+  return null;
 }
 
 /** 아직 아무도 await 하지 않는 프로미스에 거부 핸들러를 미리 붙인다. */
@@ -536,13 +556,26 @@ async function WebsiteTrendSection({ trend }: { trend: ReturnType<typeof getLive
 
 async function WebsiteCompositionSection({
   composition,
+  api,
 }: {
   composition: ReturnType<typeof getLiveWebsiteComposition>;
+  /** api 원천(G3)인가 — 지연 고지는 api 경로에서만 낸다(legacy 는 종전 그대로). */
+  api: boolean;
 }) {
   const t = await getTranslations("dashboard");
   const tw = await getTranslations("website.dashboard");
   const c = await composition;
-  if (c.sources.length === 0) return <SectionDoneMarker id="website:composition" />;
+  if (c.sources.length === 0) {
+    // api: 출처 조회 일시 실패면 live.ts 가 종전 라벨(websiteSourceComposition)과 빈 모양을 낸다 — 섹션이
+    // 조용히 사라지지 않게 그 자리에 기존 지연 고지를 낸다(B027). 데이터 없음이면 고지는 아무것도
+    // 그리지 않아 종전과 같다(마커만).
+    return (
+      <>
+        {api ? <DegradeNotice labels={COMPOSITION_LABELS} title={t("composition.title")} /> : null}
+        <SectionDoneMarker id="website:composition" />
+      </>
+    );
+  }
   return (
     <SectionCard title={t("composition.title")} description={tw("compositionDescription")}>
       <CompositionPanel topics={c.topics} sources={c.sources} showTopics={false} />
@@ -556,12 +589,26 @@ async function WebsiteCompositionSection({
 async function WebsiteGeoSection({
   live,
   geo,
+  api,
 }: {
   live: ReturnType<typeof getLiveWebsiteDashboard>;
   geo: ReturnType<typeof getLiveWebsiteGeo>;
+  /** api 원천(G3)인가 — 지연 고지는 api 경로에서만 낸다(legacy 는 종전 그대로). */
+  api: boolean;
 }) {
   const [dash, g] = await Promise.all([live, geo]);
   if (!dash) return <SectionDoneMarker id="website:geo" />;
+  // api: GEO 일시 실패면 live.ts 가 종전 빈 모양 + 라벨(websiteGeoCompetition)을 낸다 — 빈 지도·표를 "측정 결과"로
+  // 그리지 않고 그 자리에 기존 지연 고지를 낸다(B027). 라벨이 없으면 종전 그대로 지도·표를 그린다.
+  if (api && GEO_LABELS.some((l) => wasDegraded(l))) {
+    const tGeo = await getTranslations("dashboard.geo");
+    return (
+      <>
+        <DegradeNotice labels={GEO_LABELS} title={tGeo("title")} />
+        <SectionDoneMarker id="website:geo" />
+      </>
+    );
+  }
   return (
     <div className="flex flex-col gap-4">
       <GeoMapLazy geo={g} />

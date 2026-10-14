@@ -39,6 +39,8 @@ import { degradeOnApiFailure, wasDegraded as wasApiDegraded } from "@/lib/scope/
 import { URL_TREND_METRICS } from "@/lib/hgh/adapters/trend";
 import { applyCompetitorSovFromBrands, summaryIsEmpty, toMirrorKpis, toUrlRateKpis } from "@/lib/hgh/adapters/summary";
 import {
+  PROJECT_COMPOSITION_LABEL,
+  PROJECT_CONVERSION_LABEL,
   PROMPT_STATUS_ORDER,
   RECENT_LIMIT,
   afterFirstRender,
@@ -349,7 +351,9 @@ export async function getProjectDashboard(
 //   ⑦ 타일: 값이 있을 때만(속성 없음·AI 세션 0 이면 항목 생략), 스파크라인 없음(종전 프로젝트 타일).
 //   #16: 지정 비교 브랜드(ProjectDetail.target_brand) 우선, 없으면 자동.
 // 실패: 요약 실패는 종전처럼 섹션 오류, 추이(주)는 종전 라벨 projectTrend:week 로 degrade, 나머지 보조 조회
-// (엔진 배지·구성·#16 브랜드·GA4)의 일시 실패는 그 부분만 비운다(U5-N6).
+// (엔진 배지·구성·#16 브랜드·GA4)의 일시 실패는 그 부분만 비운다(U5-N6). 그중 섹션째 사라지는 둘(구성 패널·
+// ⑦ '답변의 전환')은 라벨(PROJECT_COMPOSITION_LABEL·PROJECT_CONVERSION_LABEL)을 남겨 화면이 그 자리에 기존
+// 지연 고지를 낸다(B027, project-dashboard.tsx). 배지·#16·Δ 는 인라인 요소라 종전처럼 조용히 빠진다(UC-16).
 // known_diff: DC-01·DC-05·DC-23(⑥ 자사 판정을 백엔드가 owned base 전체로), U5-N4(다른 국가 선택 시 ⑦), U5-N6.
 // DC-21(평균 순위 정의)은 해소: 현행 ④ 는 답변 안 경쟁 순위였고 우선 노출도 탭도 hmg-geo 6bc5c54 로 같은 정의가 됐다(동기화 S1 FA-4).
 async function getProjectDashboardApi(
@@ -377,10 +381,12 @@ async function getProjectDashboardApi(
         loadLiveTrend(filters, ctx, bucket === "day" ? "cycle" : "week", URL_TREND_METRICS),
       ),
       orNullOnTransient(loadLiveTrend(filters, ctx, "cycle", URL_TREND_METRICS)),
-      orNullOnTransient(loadComposition(filters, ctx)),
+      degradeOnApiFailure(PROJECT_COMPOSITION_LABEL, () => loadComposition(filters, ctx)),
       orNullOnTransient(fetchCardBrands(filters, ctx, targetBrand)),
       fetchProjectSettings(projectId),
-      isCaptureDemoProject(projectId) ? Promise.resolve(null) : orNullOnTransient(fetchTrafficConversion(filters, ctx)),
+      isCaptureDemoProject(projectId)
+        ? Promise.resolve(null)
+        : degradeOnApiFailure(PROJECT_CONVERSION_LABEL, () => fetchTrafficConversion(filters, ctx)),
     ]);
 
     const s = toProjectCardSettings(settings);

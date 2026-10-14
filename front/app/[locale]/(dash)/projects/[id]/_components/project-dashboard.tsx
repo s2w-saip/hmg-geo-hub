@@ -28,11 +28,14 @@ import type { StandardFilters } from "@/lib/scope/result-adapter";
 import type { PromptRow, PromptCandidateRow } from "@/lib/db/schema";
 import { isAnalysisApi } from "@/lib/hgh/adapters/filters";
 import {
+  PROJECT_COMPOSITION_LABEL,
+  PROJECT_CONVERSION_LABEL,
   loadDashboardAsOf,
   loadEssentialFilterDates,
   orNullOnTransient,
   type ProjectOverview,
 } from "@/lib/hgh/adapters/dashboard";
+import { DegradeNotice } from "../../../dashboard/_components/degrade-notice";
 import { SummaryTiles } from "../../../dashboard/_components/summary-tiles";
 import { LiveTrendChart } from "../../../dashboard/_components/live-trend-chart";
 import { CompositionPanel } from "../../../dashboard/_components/composition-panel";
@@ -367,6 +370,13 @@ export async function ProjectMeasurementSections({
     composition,
     citationAccuracyNotice,
   } = data;
+  // 섹션째 사라지는 두 조각(⑦ '답변의 전환'·구성 패널)의 일시 실패 고지(B027). api 원천이 라벨을 남기고
+  // (`_data/live.ts` degradeOnApiFailure) 여기서 기존 지연 고지(DegradeNotice, kpi.degraded)를 그 자리에 낸다.
+  // 라벨이 없으면(정상·데이터 없음·legacy) null 이라 종전 마크업 그대로다. 함수로 바로 부르는 이유: 이 컴포넌트의
+  // 반환 트리가 동기 렌더(render 테스트 seam)에서도 그려져야 해서 async 자식을 두지 않는다.
+  const tCat = await getTranslations("dashboard.kpi.category");
+  const conversionNotice = await DegradeNotice({ labels: [PROJECT_CONVERSION_LABEL], title: tCat("conversion") });
+  const compositionNotice = await DegradeNotice({ labels: [PROJECT_COMPOSITION_LABEL], title: tDash("composition.title") });
   return (
     <div className="flex flex-col gap-6">
       <SectionCard title={t("kpi.title")} description={t("kpi.description")}>
@@ -377,6 +387,7 @@ export async function ProjectMeasurementSections({
         ) : null}
         <SummaryTiles items={kpis} perturb={false} />
       </SectionCard>
+      {conversionNotice}
 
       {/* 추이 — 측정 버킷(주) KPI 시계열. 버킷 1개뿐이면 차트 대신 안내.
           ⚠️ `trend === null` 의 **두 뜻**을 가른다(`mentions-prompts-section.tsx` 와 같은 자세):
@@ -408,7 +419,9 @@ export async function ProjectMeasurementSections({
         >
           <CompositionPanel topics={composition.topics} sources={composition.sources} />
         </SectionCard>
-      ) : null}
+      ) : (
+        compositionNotice
+      )}
 
     </div>
   );
