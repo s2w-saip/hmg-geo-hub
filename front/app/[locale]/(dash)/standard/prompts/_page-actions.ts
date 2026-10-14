@@ -19,7 +19,7 @@ async function catalogRead(admin: boolean, input: CatalogPageQuery, maxLimit?: n
   return { scope: session.user.scope, query, api: admin ? isAdminApi() : isAnalysisApi("prompts", "global") };
 }
 
-/** The standard list's server render reads in the browser's order (Accept-Language), so hydration need not read it again. */
+/** Both lists' server render reads in the browser's order (Accept-Language), so hydration need not read it again. */
 async function requestCollation(): Promise<"ko" | "en"> {
   try {
     return collationOf((await headers()).get("accept-language"));
@@ -43,7 +43,7 @@ async function postScreen(admin: boolean, query: Required<CatalogPageQuery>, inc
 }
 
 export async function loadCatalogPage(admin: boolean, input: CatalogPageQuery): Promise<CatalogPage> {
-  const first = !admin && input.collation === undefined ? { ...input, collation: await requestCollation() } : input;
+  const first = input.collation === undefined ? { ...input, collation: await requestCollation() } : input;
   const { scope, query, api } = await catalogRead(admin, first, CATALOG_PAGE_LIMIT_MAX);
   if (!api) return { ...(await readCatalogPage(scope, query, admin)), collation: query.collation };
   const page = await postScreen(admin, query, true);
