@@ -1,0 +1,1624 @@
+{
+ "surface": "검수 콘솔(QA) + 화면 밖 경로(크론·인증·미들웨어·API 라우트)",
+ "prefix": "AQ",
+ "common": "AQCOMMON",
+ "endpoints": {
+  "GET /v1/qa/sessions/current": {
+   "label": "getCurrentReviewer → qa.review.sessions.current(assert_qa_session)",
+   "where": "back/app/features/qa/review/sessions/router.py:35-39 · sessions/service.py:127-130 · back/app/core/auth.py:929-943 · front/lib/hgh/adapters/qa.ts:432-442 · front/app/[locale]/raw-data-qa/layout.tsx:95-98 · raw-data-qa/page.tsx:24-30",
+   "stmts": "QaConn(set_config 1) + 세션 행 확인 1(PK, FOR KEY SHARE) = 1(+set_config 1). 레이아웃이 QA 하위 화면 매 렌더마다 1콜, 게이트 페이지 1콜. no-store·캐시 허용 목록 밖",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "_QA_SESSION_SQL back/app/core/auth.py:929"
+   ],
+   "f3": [
+    "y",
+    "세션 PK 점 조회"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "레이아웃은 401 만 게이트로 보내고 그 밖 오류는 던져 에러 경계(qa.ts:439-440; layout.tsx:95-98). 게이트 페이지만 확인 실패를 warn 후 폼 표시(page.tsx:24-30) — 입장 시도가 자기 오류를 냄(Before 와 같은 판정)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "1"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "legacy 는 쿠키 HMAC·12h 만 로컬 검증(front/lib/qa/auth.ts:150-157), api 는 + 세션 행 존재 확인(로그아웃·운영 폐기 쿠키 즉시 401, core/auth.py:933-943) — 더 엄격"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/qa.parity.test.ts › layout: reviewer name from the cookie session; an unknown cookie goes to the gate",
+    "front/lib/hgh/adapters/qa.parity.test.ts › gate: a valid session skips the form; no session shows it",
+    "back/app/features/qa/review/sessions/tests/test_bg_qa_platform.py::test_bg45_current_rejects_missing_revoked_expired"
+   ]
+  },
+  "POST /v1/qa/sessions": {
+   "label": "qaApiRoutes.sessionPost → qa.review.sessions.login",
+   "where": "back/app/features/qa/review/sessions/router.py:26-32 · sessions/service.py:104-124 · sessions/queries.py:2-4 · front/lib/hgh/adapters/qa.ts:588-635 · front/app/api/qa/session/route.ts:27 · raw-data-qa/_components/gate-form.tsx:26-48",
+   "stmts": "시도 상한(프로세스 메모리: IP 당 10/분 + 전역 60/분, sessions/service.py:48-49,112) → 이름 → 비밀번호 → qa_gate tx(set_config 1 + INSERT qa_review_session 1) → 서명 쿠키 → 프론트 relaySetCookies 가 raw_data_qa 만 중계 = 1(+set_config 1)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "INSERT_SESSION_SQL back/app/features/qa/review/sessions/queries.py:2"
+   ],
+   "f3": [
+    "skip",
+    "쓰기 경로"
+   ],
+   "f4": [],
+   "f6": [
+    "skip",
+    "쓰기 경로 — f7 참조"
+   ],
+   "f7": [
+    "y",
+    "오류 코드별 문구 유지(401 bad-credentials·400 bad-name·429 rate-limited: qa.ts:605-618; gate-form.tsx:36-47). 쿠키 중계 실패·비JSON 은 502 로 막아 게이트 루프 방지(qa.ts:620-633) → errorUnknown 표시. 제출 버튼 busy 가드(gate-form.tsx:82)"
+   ],
+   "f8": [
+    "y",
+    "",
+    "1"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "DC-17: 기본 비밀번호 없음(core/auth.py:818-823; legacy 는 미설정 시 코드 기본값 front/lib/qa/auth.ts:92), 전역 60회/분 상한 추가(sessions/service.py:49) — 더 엄격. 본문·쿠키 모양은 동일(parity)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/qa.parity.test.ts › session: login success (cookie shape), bad name, bad credentials; logout clears the cookie",
+    "front/lib/hgh/adapters/qa.parity.test.ts › no default password: legacy accepts qa-default-redacted when unset, the backend refuses everything",
+    "back/app/features/qa/review/sessions/tests/test_sessions.py::test_login_rate_limited"
+   ]
+  },
+  "PATCH /v1/qa/sessions/{session_id}": {
+   "label": "qaApiRoutes.sessionDelete → qa.review.sessions.logout",
+   "where": "back/app/features/qa/review/sessions/router.py:42-52 · sessions/service.py:148-162 · sessions/queries.py:19-29 · front/lib/hgh/adapters/qa.ts:638-662 · raw-data-qa/_components/qa-header.tsx:22-26",
+   "stmts": "QaConn(set_config 1, 세션 행 확인 없음) + 세션 행 FOR UPDATE 1 + 락 해제 DELETE 1 + (행 있으면) 판정·노트 session_id 끊기 UPDATE 2 + 세션 DELETE 1 = 5(행 없으면 2)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "DELETE_SESSION_SQL back/app/features/qa/review/sessions/queries.py:25"
+   ],
+   "f3": [
+    "skip",
+    "쓰기 경로"
+   ],
+   "f4": [],
+   "f6": [
+    "skip",
+    "쓰기 경로 — f7 참조"
+   ],
+   "f7": [
+    "n",
+    "클라이언트는 DELETE 실패를 삼키고 게이트로 이동(qa-header.tsx:23) — 네트워크 실패면 쿠키가 남아 게이트가 다시 목록으로 보냄(raw-data-qa/page.tsx:30). 어댑터는 백엔드 폐기 실패(5xx·타임아웃)를 warn 만 하고 항상 {ok:true}+쿠키 삭제(qa.ts:640-661) → 서버 세션 미폐기·락 미해제를 고지 없이 성공 처리"
+   ],
+   "f8": [
+    "y",
+    "",
+    "5"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "DC-17: 로그아웃이 세션 락 해제 + 세션 행 폐기(sessions/service.py:148-162) — legacy 는 쿠키만 삭제(front/app/api/qa/session/route.ts:64-69). 더 엄격(복사 쿠키 즉시 401)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/qa.parity.test.ts › session: login success (cookie shape), bad name, bad credentials; logout clears the cookie",
+    "front/lib/hgh/adapters/qa.parity.test.ts › logout releases the session's locks: another reviewer can take the answer at once",
+    "back/app/features/qa/review/sessions/tests/test_sessions.py::test_d2_logout_revokes_session_and_clears_cookie"
+   ]
+  },
+  "GET /v1/qa/answers/progress": {
+   "label": "qaApi.getProgress → qa.answers.list.progress(progress_sql)",
+   "where": "back/app/features/qa/answers/list/router.py:28-32 · list/service.py:165-186 · list/queries.py:277-285 · front/lib/hgh/adapters/qa.ts:457-467 · raw-data-qa/answers/page.tsx:60-75",
+   "stmts": "캐시 없음(D8: legacy unstable_cache 30s 제거)·허용 목록 밖. refs 1 + scoped count 1 (+total count 1: 필터가 범위를 좁힐 때만, 같은 SQL 이면 재사용 list/service.py:173-185) = 2(+1)",
+   "f2": [
+    1,
+    0,
+    0,
+    0,
+    "progress_sql back/app/features/qa/answers/list/queries.py:277"
+   ],
+   "f3": [
+    "n",
+    "rd.job 서버 범위 전체를 요청 시 count·FILTER·EXISTS(qa_review_note)로 집계, no_mentions 필터면 rd.v_answer_mention_raw 원소 행 NOT EXISTS(scope.py:361-362)"
+   ],
+   "f4": [
+    "AQK2"
+   ],
+   "f6": [
+    "y",
+    "Promise.all 실패 → throwForPage(answers/page.tsx:68-74) → 401 게이트·그 밖 에러 경계"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "Before 의 '필터 없음이면 같은 쿼리 2회'·30s 무태그 캐시 지연 해소(list/service.py:173-185)",
+    "2(+1)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "from/to 가 KST 날짜(scope.py:45,264-266; legacy UTC 날짜, qa.ts:55-56), 모집단 = 서버 고정 범위의 rd.job 전체(비완료·드롭 포함, scope.py:10). parity 머리말상 legacy 판정·노트 미이관(qa.parity.test.ts:19-20) → 진행률 0 에서 재시작"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/qa.parity.test.ts › answers page: %s",
+    "front/lib/hgh/adapters/qa.parity.test.ts › date filter boundary: the backend counts the KST date of the measurement, legacy the UTC date",
+    "back/app/features/qa/answers/list/tests/test_list.py::test_progress_counts_once_when_filter_does_not_narrow"
+   ]
+  },
+  "GET /v1/qa/filters": {
+   "label": "qaApi.getFilterOptions → qa.answers.list.filter_options",
+   "where": "back/app/features/qa/answers/list/router.py:42-45 · list/service.py:211-222 · list/scope.py:179-231 · list/queries.py:303-306 · front/lib/hgh/adapters/qa.ts:469-479",
+   "stmts": "캐시 없음(legacy 300s 캐시 제거). refs 1(차원 4종 json_agg) + 검수자 DISTINCT 1 = 2",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "REVIEWERS_SQL back/app/features/qa/answers/list/queries.py:303"
+   ],
+   "f3": [
+    "y",
+    "차원표 직접 + 판정 DISTINCT(집계 재계산 없음)"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "throwForPage(answers/page.tsx:73)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "2"
+   ],
+   "f9": [
+    "y",
+    "차원 목록 전량 = 축별 고유값(화면 표시 단위). legacy 의 4축 조합 DISTINCT 후 JS 접기 해소"
+   ],
+   "f10": [
+    "n",
+    "옵션이 차원표에서 와 답변 0건 값도 섞임(qa.ts:53-54; parity OPTIONS_DIFF options.country), 검수자 옵션은 서버 범위 안 판정자만(D7, list/queries.py:301-306)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/qa.parity.test.ts › answers page: %s",
+    "back/app/features/qa/answers/list/tests/test_list.py::test_filter_options"
+   ]
+  },
+  "GET /v1/qa/answers": {
+   "label": "qaApi.listAnswers → qa.answers.list.list_answers(segment_sql + enrich)",
+   "where": "back/app/features/qa/answers/list/router.py:21-25 · list/service.py:97-162 · list/queries.py:250-298 · front/lib/hgh/adapters/qa.ts:444-455 · raw-data-qa/answers/page.tsx:60-75",
+   "stmts": "캐시 없음. refs 1 + 비NULL 구간 1(표면별 UNION ALL, LIMIT 51) (+NULL 구간 1: 페이지 미충족 시) + enrich 5(프롬프트 텍스트·노트 수·멘션 수·인용 수·유효 락, 모두 = ANY(페이지)) = 7(+1). 행별 상관 서브쿼리 없음",
+   "f2": [
+    3,
+    0,
+    0,
+    0,
+    "segment_sql back/app/features/qa/answers/list/queries.py:250 (기본 3표면 분기 × LEFT JOIN app.qa_answer_review)"
+   ],
+   "f3": [
+    "n",
+    "페이지 행의 멘션·인용 수를 rd.v_answer_mention_raw·rd.v_answer_citation_raw 원소 행 count GROUP BY 로 요청 시 계산(list/queries.py:291-294), q·no_mentions 필터는 원행 EXISTS"
+   ],
+   "f4": [
+    "AQK2"
+   ],
+   "f6": [
+    "y",
+    "throwForPage(answers/page.tsx:73). 낡은 커서 409·타 원천 커서 422 는 첫 페이지 재오픈(page.tsx:69-72)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "7(+1)"
+   ],
+   "f9": [
+    "y",
+    "키셋 50행 + 더 보기(limit ≤200, scope.py:146)"
+   ],
+   "f10": [
+    "n",
+    "from/to KST 경계(qa.ts:55-56), 동률 정렬 = answer_key(qa.ts:54), 서버 고정 범위·모집단 rd.job(비완료·드롭 포함), 표면 값은 ingest 의 rd.job.surface(legacy QAK1 판정 아님). 행 모양은 동일(parity)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/qa.parity.test.ts › answers page: %s",
+    "front/lib/hgh/adapters/qa.parity.test.ts › answers page 2 through each source's own cursor: same rows",
+    "front/lib/hgh/adapters/qa.parity.test.ts › answers page: a stale api cursor and a legacy cursor both reopen the first page (api only)",
+    "front/lib/hgh/adapters/qa.parity.test.ts › review range fixed by the server (HGH_QA_SURFACES): answers outside it are not listed, even when filtered for",
+    "back/app/features/qa/answers/list/tests/test_list.py::test_pagination_two_segment_keyset"
+   ]
+  },
+  "GET /v1/qa/deltas": {
+   "label": "qaApiRoutes.answersDeltas → qa.review.deltas.deltas",
+   "where": "back/app/features/qa/review/deltas/router.py:15-18 · deltas/service.py:33-44 · deltas/queries.py:6-18 · front/lib/hgh/adapters/qa.ts:826-844 · front/app/api/qa/answers/route.ts:15 · raw-data-qa/answers/_components/answer-list.tsx:59-91",
+   "stmts": "10초 폴링(탭 숨김이면 건너뜀). 유효 락 1(qa_answer_lock⋈rd.job) + 판정 1(qa_answer_review⋈rd.job) = 2, ids ≤200(초과분 meta.dropped_filters)",
+   "f2": [
+    1,
+    0,
+    0,
+    0,
+    "locks_sql back/app/features/qa/review/deltas/queries.py:6"
+   ],
+   "f3": [
+    "y",
+    "job_id = ANY 점 조회, 집계 없음"
+   ],
+   "f4": [],
+   "f6": [
+    "n",
+    "폴링 실패(!res.ok·네트워크·세션 폐기 401)를 조용히 무시(answer-list.tsx:65,83-85) → 락·검수 상태 배지가 고지 없이 낡음(클라이언트 Before 와 동일, 67aabc2 범위 밖)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "2"
+   ],
+   "f9": [
+    "y",
+    "현재 페이지 행 id 만(≤200, qa.ts:829-833; deltas/service.py:30)"
+   ],
+   "f10": [
+    "y",
+    "{locks, reviews} 본문·상태 동일(parity). 범위는 서버 고정 scope_predicates(deltas/queries.py:9,16)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/qa.parity.test.ts › poll GET /api/qa/answers: live locks and review states",
+    "back/app/features/qa/review/deltas/tests/test_deltas.py::test_deltas_cap_and_validation"
+   ]
+  },
+  "GET /v1/qa/answers/{job_id}": {
+   "label": "qaApi.getAnswerDetail → qa.answers.detail.get_detail",
+   "where": "back/app/features/qa/answers/detail/router.py:17-22 · detail/service.py:80-204 · detail/queries.py:211-290 · front/lib/hgh/adapters/qa.ts:273-341,482-490 · raw-data-qa/answers/[jobId]/page.tsx:93-106",
+   "stmts": "캐시 없음. 범위 확인 1 + refs 1 + 원문 1 + 프롬프트 1 + 카탈로그 1(프롬프트 있을 때) + 레지스트리 1 + 멘션 1 + 인용 1 + ACR 셀 1 = 9 (+롤업 이름 1·도메인 오버라이드 1·서빙 job 인용 URL 2·ACR 선택 1 = 최대 +5). 전부 순차 await. 원문 열람 감사는 배치 라이터(요청당 SQL 0, detail/router.py:21)",
+   "f2": [
+    3,
+    0,
+    0,
+    0,
+    "ACR_CHOICES_SQL back/app/features/qa/answers/detail/queries.py:278"
+   ],
+   "f3": [
+    "y",
+    "답변 1건의 낱알 행 조회·LEFT JOIN 해소뿐, 집계 없음(ACR 비율은 저장 정수 쌍 Ratio, detail/service.py:157-167)"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "404·422 → null → notFound(qa.ts:486-488; [jobId]/page.tsx:122), 그 밖 throwForPage(page.tsx:103-105)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "9(+5)"
+   ],
+   "f9": [
+    "y",
+    "답변 1건 낱알 전량(화면 절단 없음)"
+   ],
+   "f10": [
+    "n",
+    "BG-46: answer.runId·region 은 R1 전까지 null, ACR 행 키 'acr_cell:<key>'(R2 전), 인용 id = ord·targetKey 'job_id:ord'(legacy scope_citations.id), ACR 은 rd.acr_cell_job 정확 연결(legacy 4축 근사, detail/queries.py:268) → 값이 다를 수 있음(qa.ts:48-54)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/qa.parity.test.ts › detail page: %s",
+    "front/lib/hgh/adapters/qa.parity.test.ts › detail page: unknown answer -> notFound on both",
+    "back/app/features/qa/answers/detail/tests/test_detail.py::test_acr_exact_link",
+    "back/app/features/qa/answers/detail/tests/test_bg46.py::test_nonserved_job_citations_url_norm_from_raw_url"
+   ]
+  },
+  "GET /v1/qa/answers/{job_id}/notes": {
+   "label": "qaApi.listNotesForJob → qa.notes.notes.job_notes",
+   "where": "back/app/features/qa/notes/notes/router.py:25-27 · notes/service.py:130-132 · notes/queries.py:231 · front/lib/hgh/adapters/qa.ts:497-503",
+   "stmts": "범위 확인 1 + job 노트 1 = 2",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "JOB_NOTES_SQL back/app/features/qa/notes/notes/queries.py:231"
+   ],
+   "f3": [
+    "y",
+    "job 단위 행 조회"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "throwForPage([jobId]/page.tsx:103-105)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "2"
+   ],
+   "f9": [
+    "y",
+    "답변 1건 노트 전부(블록별 미해결 수 계산용)"
+   ],
+   "f10": [
+    "n",
+    "인용 노트 키 'job_id:ord'·ACR 키 'acr_cell:<key>' 로 바뀌어 legacy 키로 쓴 노트는 새 낱알에 안 붙음(qa.ts:48-53) — noteCountFor 결과 달라짐"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/qa.parity.test.ts › detail page: %s"
+   ]
+  },
+  "GET /v1/qa/answers/{job_id}/review": {
+   "label": "qaApi.getReview → qa.review.verdict.get_review",
+   "where": "back/app/features/qa/review/verdict/router.py:16-18 · verdict/service.py:28-31 · verdict/queries.py:9 · front/lib/hgh/adapters/qa.ts:343-355,492-495",
+   "stmts": "범위 확인 1 + 판정 점 조회 1 = 2",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "GET_REVIEW_SQL back/app/features/qa/review/verdict/queries.py:9"
+   ],
+   "f3": [
+    "y",
+    "점 조회"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "throwForPage([jobId]/page.tsx:103-105)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "2"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "y",
+    "status·sectionFlags·reviewerName·reviewedAt(updated_at) 동일(parity)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/qa.parity.test.ts › detail page: %s",
+    "front/lib/hgh/adapters/qa.parity.test.ts › review saved on one source is read back the same by the detail page"
+   ]
+  },
+  "GET /v1/qa/answers/{job_id}/neighbors": {
+   "label": "qaApi.getNeighbors → qa.answers.list.neighbors",
+   "where": "back/app/features/qa/answers/list/router.py:35-39 · list/service.py:189-208 · list/queries.py:250 · front/lib/hgh/adapters/qa.ts:505-513",
+   "stmts": "범위 확인 1 + refs 1 + 다음 1(+NULL 구간 1) + 이전 1 = 4(+1). 각 구간이 목록 필터 전부를 다시 평가",
+   "f2": [
+    3,
+    0,
+    0,
+    0,
+    "segment_sql back/app/features/qa/answers/list/queries.py:250"
+   ],
+   "f3": [
+    "n",
+    "목록과 같은 필터·정렬을 rd.job 에 요청 시 재적용, q·no_mentions 면 원행 EXISTS(scope.py:347-362)"
+   ],
+   "f4": [
+    "AQK2"
+   ],
+   "f6": [
+    "y",
+    "throwForPage([jobId]/page.tsx:103-105)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "4(+1)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "KST 날짜 경계·answer_key 동률 정렬로 legacy 와 이웃이 달라질 수 있음(qa.ts:54-56)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/qa.parity.test.ts › detail page: %s",
+    "back/app/features/qa/answers/list/tests/test_list.py::test_neighbors_follow_list_order"
+   ]
+  },
+  "POST /v1/qa/answers/{job_id}/lock": {
+   "label": "qaApiRoutes.lockPost → qa.review.lock.acquire (+ review-session.start)",
+   "where": "back/app/features/qa/review/lock/router.py:17-19 · lock/service.py:23-48 · lock/queries.py:6-14 · front/lib/hgh/adapters/qa.ts:665-698 · front/lib/qa/review-session.ts:102-122 · raw-data-qa/answers/[jobId]/_components/detail-shell.tsx:52-83",
+   "stmts": "범위 확인 1 + 세션 확인 1(QaLiveConn 과 중복) + 락 upsert 1(+보유자 SELECT 1, 행 소멸 시 재시도 2) + last_seen UPDATE 1 = 4(+1~3)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "LOCK_UPSERT_SQL back/app/features/qa/review/lock/queries.py:6"
+   ],
+   "f3": [
+    "skip",
+    "쓰기 경로"
+   ],
+   "f4": [],
+   "f6": [
+    "skip",
+    "쓰기 경로 — f7 참조"
+   ],
+   "f7": [
+    "y",
+    "67aabc2 수정이 After 경로에 적용: 클라이언트가 같은 /api/qa/lock 을 부르고 G7=api 면 lockPost 로 중계(front/app/api/qa/lock/route.ts:22). 409 lock_held → {ok:false, heldBy} → 읽기 전용 배너(review-session.ts:111-117), 그 밖 실패·네트워크·15초 타임아웃 → 'lock.unavailable' 오류 배너(review-session.ts:58-61,118-120; detail-shell.tsx:144-151), 이탈 후 늦은 응답 무시(active 가드 :103,107,112). 원자적 upsert(lock/queries.py:6-12)"
+   ],
+   "f8": [
+    "n",
+    "assert_qa_session 이 QaLiveConn(core/auth.py:946-949)과 acquire(lock/service.py:43)에서 같은 트랜잭션에 두 번 실행 — 동일 문장 반복(경미)",
+    "4(+1~3)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "y",
+    "본문·409 모양 동일(parity). heldBy.acquiredAt 누락 시 현재 시각으로 채움(qa.ts:690)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/qa.parity.test.ts › lock: acquire a free answer, heartbeat, release (fetch and sendBeacon forms)",
+    "front/lib/hgh/adapters/qa.parity.test.ts › lock: an answer held by another reviewer -> 409 {ok:false, heldBy}",
+    "back/app/features/qa/review/lock/tests/test_lock.py::test_concurrent_acquire_exactly_one_wins"
+   ]
+  },
+  "PATCH /v1/qa/answers/{job_id}/lock": {
+   "label": "qaApiRoutes.lockPatch → qa.review.lock.heartbeat (+ review-session.renewLock)",
+   "where": "back/app/features/qa/review/lock/router.py:22-24 · lock/service.py:51-54 · lock/queries.py:16-18 · front/lib/hgh/adapters/qa.ts:701-715 · front/lib/qa/review-session.ts:84-97,110",
+   "stmts": "30초마다(락 보유 중일 때만). 범위 확인 1 + heartbeat UPDATE 1 = 2",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "HEARTBEAT_SQL back/app/features/qa/review/lock/queries.py:16"
+   ],
+   "f3": [
+    "skip",
+    "쓰기 경로"
+   ],
+   "f4": [],
+   "f6": [
+    "skip",
+    "쓰기 경로 — f7 참조"
+   ],
+   "f7": [
+    "y",
+    "67aabc2: held:false → 'lock.lost' 배너·편집 차단, 오류·401·타임아웃 → lock 오류 배너(review-session.ts:88-94), heartbeatBusy 로 겹침 방지, 저장 중 늦게 온 정상 heartbeat 가 잃은 락을 되살리지 않음(:89). Before 의 '오류 삼킴·만료 무고지' 해소"
+   ],
+   "f8": [
+    "y",
+    "읽기 전용 뷰어는 heartbeat 를 보내지 않음(renewLock 가드 review-session.ts:85) — Before f8 결함 해소",
+    "2"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "y",
+    "{held} 동일(parity)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/qa.parity.test.ts › lock: acquire a free answer, heartbeat, release (fetch and sendBeacon forms)",
+    "back/app/features/qa/review/lock/tests/test_lock.py::test_heartbeat_and_release_owner_only"
+   ]
+  },
+  "DELETE /v1/qa/answers/{job_id}/lock": {
+   "label": "qaApiRoutes.lockDelete / lockPost?release=1 → qa.review.lock.release",
+   "where": "back/app/features/qa/review/lock/router.py:27-29 · lock/service.py:57-60 · lock/queries.py:20 · front/lib/hgh/adapters/qa.ts:671-678,718-729 · detail-shell.tsx:57-82",
+   "stmts": "범위 확인 1 + DELETE 1 = 2. 이탈(pagehide·언마운트) 시 sendBeacon POST ?release=1(→ DELETE 중계) 또는 fetch keepalive DELETE",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "RELEASE_SQL back/app/features/qa/review/lock/queries.py:20"
+   ],
+   "f3": [
+    "skip",
+    "쓰기 경로"
+   ],
+   "f4": [],
+   "f6": [
+    "skip",
+    "쓰기 경로 — f7 참조"
+   ],
+   "f7": [
+    "n",
+    "해제는 fire-and-forget(sendBeacon 결과 미확인, fetch .catch(()=>{}) detail-shell.tsx:62-73) — 실패 시 TTL 180초 동안 다른 검수자가 읽기 전용(언로드 특성상 고지 불가, TTL 이 백스톱). 67aabc2 범위 밖"
+   ],
+   "f8": [
+    "y",
+    "",
+    "2"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "y",
+    "{ok:true} 동일, sendBeacon 형식도 계속 받음(parity)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/qa.parity.test.ts › lock: acquire a free answer, heartbeat, release (fetch and sendBeacon forms)"
+   ]
+  },
+  "PUT /v1/qa/answers/{job_id}/review": {
+   "label": "qaApiRoutes.reviewPut → qa.review.verdict.save_review (+ review-session.save)",
+   "where": "back/app/features/qa/review/verdict/router.py:21-24 · verdict/service.py:34-43 · verdict/queries.py:11-19 · front/lib/hgh/adapters/qa.ts:732-752 · front/lib/qa/review-session.ts:133-163 · detail-shell.tsx:86,144-151 · verdict-bar.tsx:44-74",
+   "stmts": "한 트랜잭션: 범위 확인 1 + 세션 확인 1(중복) + 락 재획득 upsert 1(+보유자·재시도 1~3) + 판정 upsert 1 = 4(+1~3). 성공 시 router.refresh() → 상세 재렌더 = 백엔드 5콜(current·detail·review·notes·neighbors, 각 공통 2문장) ≈ 27~32문장",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "UPSERT_REVIEW_SQL back/app/features/qa/review/verdict/queries.py:11"
+   ],
+   "f3": [
+    "skip",
+    "쓰기 경로"
+   ],
+   "f4": [],
+   "f6": [
+    "skip",
+    "쓰기 경로 — f7 참조"
+   ],
+   "f7": [
+    "y",
+    "67aabc2 수정 5종이 After 경로에 그대로 적용(같은 /api/qa/review → G7=api 면 reviewPut 중계 front/app/api/qa/review/route.ts:13; 어댑터가 lock_lost→409 {error:'lock-lost'}·401→401·422→400·그 밖 상태 유지 qa.ts:745-751): ①저장 실패 배너 'detail.saveFailed'(review-session.ts:157-158; detail-shell.tsx:144-151) ②409→lock lost·401/403→lock 오류(:153-156) ③동기 saving 가드로 중복 저장 차단(:135) ④revision 비교로 늦은 응답이 새 편집을 '저장됨'으로 덮지 않음·편집 시 savedAt 초기화(:126-130,146-148)·이탈 후 응답 무시(:141,152) ⑤15초 AbortController(:4,66). 서버는 같은 tx 에서 락 재확인 후 저장(verdict/service.py:34-43). 잔여: 브라우저 15초 = BFF write 타임아웃 15초(front/lib/hgh/client.ts:66)라 느린 백엔드가 늦게 커밋하면 '저장 실패'로 보이나 실제 저장(PUT 멱등, 재시도 안전)"
+   ],
+   "f8": [
+    "n",
+    "세션 확인 중복 실행(verdict/service.py:36 + core/auth.py:948) + 저장마다 router.refresh 로 상세 5콜 전체 재조회(review-session.ts:150; detail-shell.tsx:53) — 바뀌는 건 reviewedBy·savedAt 뿐",
+    "4(+1~3) + 재조회 ≈27~32"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "y",
+    "본문·409 lock-lost 모양 동일, status 는 DB GENERATED 같은 규칙(verdict/queries.py:3)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/qa.parity.test.ts › review: save (status derived) and lock lost (another reviewer holds the answer)",
+    "back/app/features/qa/review/verdict/tests/test_verdict.py::test_lock_lost_rolls_back"
+   ]
+  },
+  "POST /v1/qa/answers/{job_id}/notes": {
+   "label": "qaApiRoutes.notePost → qa.notes.notes.create",
+   "where": "back/app/features/qa/notes/notes/router.py:30-32 · notes/service.py:135-141 · notes/queries.py:233-236 · front/lib/hgh/adapters/qa.ts:755-783 · raw-data-qa/answers/[jobId]/_components/note-dialog.tsx:52-76",
+   "stmts": "범위 확인 1 + 세션 확인 1(중복) + INSERT … RETURNING 1 = 3",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "INSERT_NOTE_SQL back/app/features/qa/notes/notes/queries.py:233"
+   ],
+   "f3": [
+    "skip",
+    "쓰기 경로"
+   ],
+   "f4": [],
+   "f6": [
+    "skip",
+    "쓰기 경로 — f7 참조"
+   ],
+   "f7": [
+    "n",
+    "note-dialog 는 67aabc2 미적용: 실패 응답이면 고지 없이 다이얼로그 유지, 네트워크 오류는 catch 없는 try/finally 라 미처리 거부(note-dialog.tsx:54-75), 요청 타임아웃 없음. POST 에 멱등 키 없음 → 재시도 시 노트 중복. 연타는 busy 로 막음(:130)"
+   ],
+   "f8": [
+    "n",
+    "세션 확인 중복(notes/service.py:137 + core/auth.py:948, 경미)",
+    "3"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "y",
+    "note JSON 동일(sessionId 만 미노출·화면 미사용, parity), 422→400·없는 job 404(qa.ts:779-780)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/qa.parity.test.ts › note: create (validation, trim), resolve toggle by another reviewer, not-found, id required",
+    "back/app/features/qa/notes/notes/tests/test_notes.py::test_create_unknown_job_revoked_session_no_cookie"
+   ]
+  },
+  "GET /v1/qa/notes/counts": {
+   "label": "qaApi.countNotesByKind → qa.notes.notes.counts",
+   "where": "back/app/features/qa/notes/notes/router.py:41-44 · notes/service.py:161-167 · notes/queries.py:247-267 · front/lib/hgh/adapters/qa.ts:528-535",
+   "stmts": "refs 1 + GROUP BY target_kind 1 = 2. 캐시 없음",
+   "f2": [
+    2,
+    0,
+    1,
+    0,
+    "counts_sql back/app/features/qa/notes/notes/queries.py:264"
+   ],
+   "f3": [
+    "n",
+    "노트⋈rd.job 후 GROUP BY 를 요청 시 계산, no_mentions 필터면 멘션 원행 NOT EXISTS"
+   ],
+   "f4": [
+    "AQK2"
+   ],
+   "f6": [
+    "y",
+    "throwForPage(notes/page.tsx:53-58)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "2"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "답변 필터 from/to KST 경계(qa.ts:55-56). 0건 종류 제외는 어댑터가 legacy 에 맞춤(qa.ts:531-533)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/qa.parity.test.ts › notes page: %s",
+    "back/app/features/qa/notes/notes/tests/test_notes.py::test_counts"
+   ]
+  },
+  "GET /v1/qa/notes": {
+   "label": "qaApi.listNotes → qa.notes.notes.list_notes",
+   "where": "back/app/features/qa/notes/notes/router.py:35-38 · notes/service.py:148-158 · notes/queries.py:247-261 · front/lib/hgh/adapters/qa.ts:515-526",
+   "stmts": "refs 1 + 키셋 목록 1(LIMIT 51) + 프롬프트 텍스트 1 = 3",
+   "f2": [
+    2,
+    0,
+    0,
+    0,
+    "list_sql back/app/features/qa/notes/notes/queries.py:254"
+   ],
+   "f3": [
+    "n",
+    "노트⋈rd.job⟕qa_answer_review 필터를 요청 시 평가, q·no_mentions 는 원행 EXISTS"
+   ],
+   "f4": [
+    "AQK2"
+   ],
+   "f6": [
+    "y",
+    "throwForPage(notes/page.tsx:58), 낡은 커서는 첫 페이지 재오픈(:54-57)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "3"
+   ],
+   "f9": [
+    "y",
+    "50행 키셋 + 더 보기"
+   ],
+   "f10": [
+    "n",
+    "답변 필터 KST 경계(qa.ts:55-56)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/qa.parity.test.ts › notes page: %s",
+    "back/app/features/qa/notes/notes/tests/test_notes.py::test_list_filters_and_keyset"
+   ]
+  },
+  "PATCH /v1/qa/notes/{note_id}": {
+   "label": "qaApiRoutes.notePatch → qa.notes.notes.patch",
+   "where": "back/app/features/qa/notes/notes/router.py:65-67 · notes/service.py:187-206 · notes/queries.py:277-285 · front/lib/hgh/adapters/qa.ts:786-809 · raw-data-qa/notes/_components/note-list.tsx:77-90",
+   "stmts": "세션 확인 1(중복) + 노트 조회 1 + 범위 확인 1 + UPDATE … RETURNING 1 = 4",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "update_sql back/app/features/qa/notes/notes/queries.py:277"
+   ],
+   "f3": [
+    "skip",
+    "쓰기 경로"
+   ],
+   "f4": [],
+   "f6": [
+    "skip",
+    "쓰기 경로 — f7 참조"
+   ],
+   "f7": [
+    "n",
+    "note-list 는 67aabc2 미적용: 실패 응답이면 return 만(note-list.tsx:84), 네트워크 오류 미처리 거부, busy 가드 없음, 성공 시 resolvedAt 을 서버값 대신 클라이언트 시각으로 덮고 resolvedBy 미갱신(:85-89) — 서버는 resolved_by 를 돌려줌(notes/queries.py:282)"
+   ],
+   "f8": [
+    "n",
+    "세션 확인 중복(notes/service.py:200 + core/auth.py:948, 경미)",
+    "4"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "DC-17: 본문·severity 수정은 작성자만(403 not_author → {error:'forbidden'}, notes/service.py:203-204; qa.ts:869-872), 해결 토글은 누구나(동일)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/qa.parity.test.ts › note: create (validation, trim), resolve toggle by another reviewer, not-found, id required",
+    "front/lib/hgh/adapters/qa.parity.test.ts › note body/severity edit and delete: author only on the API (resolve toggle stays open)",
+    "back/app/features/qa/notes/notes/tests/test_notes.py::test_patch_author_rules"
+   ]
+  },
+  "GET /v1/qa/notes/export": {
+   "label": "qaApiRoutes.notesExport(relayDownload) → qa.notes.notes.export_rows → core.export csv",
+   "where": "back/app/features/qa/notes/notes/router.py:47-62 · notes/service.py:170-184 · notes/queries.py:229,270-274 · back/app/core/export.py:85-91 · front/lib/hgh/adapters/qa.ts:847-866 · front/lib/hgh/relay.ts:23,77-83 · raw-data-qa/notes/_components/note-list.tsx:92-131",
+   "stmts": "refs 1 + 내보내기 1(LIMIT 10,001: 넘침 판정) + 프롬프트 텍스트 1 = 3. 행은 fetch_all 로 전량 적재 후 CSV 청크 스트림(export.py:88-90), 프론트는 무버퍼 중계. 다운로드 감사는 배치 라이터",
+   "f2": [
+    2,
+    0,
+    0,
+    0,
+    "export_sql back/app/features/qa/notes/notes/queries.py:270"
+   ],
+   "f3": [
+    "n",
+    "노트⋈rd.job 필터를 요청 시 평가"
+   ],
+   "f4": [
+    "AQK2"
+   ],
+   "f6": [
+    "n",
+    "<a href download> 라 401·5xx 면 화면 고지 없이 오류 본문(JSON)이 파일로 받아짐(note-list.tsx:126-131; qa.ts:863-865)"
+   ],
+   "f7": [
+    "n",
+    "10,000행 상한 절단을 X-Export-Truncated 헤더로만 알림(notes/router.py:52; relay.ts:23) — 화면은 링크라 헤더를 못 봄 → 잘린 CSV 를 전체처럼 받음. X-Row-Count·X-Dropped-Filters 는 relay 허용 목록 밖이라 탈락"
+   ],
+   "f8": [
+    "y",
+    "",
+    "3"
+   ],
+   "f9": [
+    "n",
+    "LIMIT 10,000 절단이 화면에 무고지(notes/queries.py:229; note-list.tsx:126-131)"
+   ],
+   "f10": [
+    "n",
+    "DC-17: = + - @ 시작 셀 ' 접두, surface 열 'global', 시각 ISO 오프셋, 끝 CRLF(qa.ts:46-47; front/app/api/qa/notes/export/route.ts:11-13), 답변 필터 KST 경계"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/qa.parity.test.ts › export: same header row and rows; value format follows the backend (known differences listed)",
+    "back/app/features/qa/notes/notes/tests/test_notes.py::test_export_truncated_header"
+   ]
+  },
+  "GET /v1/auth/me": {
+   "label": "getSessionFromApi → platform.auth.session.get_auth_me_0",
+   "where": "back/app/features/platform/auth/session/router.py:19-30 · session/service.py:56-67 · back/app/core/auth.py:177-205,221-251,483-504 · back/app/core/codes.py:200,264-279 · front/lib/hgh/adapters/session.ts:101-160 · front/lib/auth/session.ts:26-28 · front/app/[locale]/(dash)/layout.tsx:129-150",
+   "stmts": "React cache 로 요청당 1콜. JWT JWKS 검증(SQL 0, 키 캐시 600s·조회 타임아웃 5s core/auth.py:89) → api_ro set_config 1 + 계정 1 + refs 1(+cat_diff 1: 프로필 설정 시) = 1(+공통 2). 캐시 허용 목록 밖(private, no-store)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "_REFS_SQL back/app/core/codes.py:200"
+   ],
+   "f3": [
+    "y",
+    "계정 PK 단건 + 참조 차원 1문장"
+   ],
+   "f4": [
+    "B10",
+    "AQK1",
+    "WSK2",
+    "GLK1"
+   ],
+   "f6": [
+    "y",
+    "401(토큰·no_account) 만 null → /login, 그 밖(5xx·JWKS 503·타임아웃)은 던져 에러 경계(session.ts:146-154; core/auth.py:119-120) — legacy profiles catch-all 축소 select 폴백(menuGroups=null 로 좁히기 해제) 제거. 남는 무고지: 계정 없음 → /login(no-access 아님, layout.tsx:134-136)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "1(+공통 2)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "좁히기 방향 차이 명시(session.ts:69-75): 비어 있지 않은 브랜드 목록에서 엄브렐러 제외, 미해석 권역 계정 거부(ZZ)·그때 operator→none(F1), 빈 배열 거부 표기 변환(HMG·ZZ, session.ts:28-40,86-89). 오류 계약도 다름(legacy 폴백 → api 던짐). 메뉴·착지·라우트 접근은 동일(BE-7)"
+   ],
+   "parity": [
+    "front/lib/auth/session.test.ts › api only ever narrows: projects, rows, countries, creation choices, operator rights (every fixture)",
+    "front/lib/auth/session.test.ts › backend failure is thrown to the error boundary, not turned into 'logged out'",
+    "front/lib/auth/session.test.ts › F1 repro: an unresolvable-region account with operator global cannot create a ZZ project on either source",
+    "back/app/features/platform/auth/session/tests/test_session.py::test_unresolvable_region_is_denied_not_unrestricted"
+   ]
+  },
+  "GET /v1/projects/{id}": {
+   "label": "projectMetaForSnb → fetchProjectGate → projects.project.core.get_project",
+   "where": "back/app/features/projects/project/core/router.py:65-69 · core/service.py:110-135 · core/queries.py:35-67 · core/shared.py:49-58,82-86 · back/app/core/auth.py:706-741 · front/lib/hgh/adapters/project-gate.ts:89-98,124-139 · front/app/[locale]/(dash)/layout.tsx:182-186",
+   "stmts": "프로젝트 경로(uuid)일 때만. 요청 내 dedupe 로 프로젝트 레이아웃·리프 게이트와 1콜 공유(project-gate.ts:84-88). refs 1 + resolve_project 1 + DETAIL 1(LEFT JOIN 1) + default_engines 1 + DETAIL_SUMMARY 1 + 최근 프롬프트 5건 1 = 6(+공통 2)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "DETAIL_SUMMARY back/app/features/projects/project/core/queries.py:44 (상관 서브쿼리 count 3 + 상태별 FILTER, GROUP BY 없음)"
+   ],
+   "f3": [
+    "y",
+    "프로젝트 PK 조회 + 프로젝트 단위 app 표 소량 count(판정 재계산·원소 행 없음)"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "5xx·타임아웃은 SNB 헤더만 비우고 warn(project-gate.ts:136-137)하나 같은 dedupe 콜을 프로젝트 레이아웃 requireProjectPage 가 던져 에러 경계(project-gate.ts:101-110), 401→/login·403→notFound·no-access"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "SNB 는 id·name·description·createdAt 4필드만 쓰는데 detail_summary(상태별 프롬프트 수·후보·활성 멤버·최근 실행·지정 브랜드·최근 5건)와 default_engines 까지 계산(core/service.py:110-135) — 프로젝트 대시보드 외 하위 화면에선 미사용",
+    "6"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "y",
+    "admin ∨ 활성 멤버만 통과, 그 밖 404(resolve_project active_member, project-gate.ts:8-17) = legacy legacyProjectMeta(layout.tsx:102-117). SNB 4필드 동일(toSnbMeta, createdAt ISO 재직렬화)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/project-gate.test.ts › every field, created_at re-serialized like Date#toISOString (the legacy string)",
+    "front/lib/hgh/adapters/project-gate.test.ts › layout + project layout + leaf gate in one request share one backend call",
+    "front/lib/hgh/adapters/project-gate.test.ts › 404 (missing, out of scope, non-member, pending) -> null"
+   ]
+  },
+  "ACTION login → GET /v1/auth/me": {
+   "label": "login 서버 액션 → apiLanding → fetchSessionData({bearer})",
+   "where": "front/lib/auth/actions.ts:15-57 · front/lib/hgh/adapters/session.ts:146-154 · front/app/[locale]/login/login-form.tsx:18,82 · back/app/features/platform/auth/session/router.py:19-30",
+   "stmts": "Supabase signInWithPassword 1(외부) + GET /v1/auth/me 1콜(백엔드 set_config 1 + 계정 1 + refs 1) → defaultLandingFor(role, menu_groups) redirect",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "_REFS_SQL back/app/core/codes.py:200"
+   ],
+   "f3": [
+    "skip",
+    "인증 쓰기 경로"
+   ],
+   "f4": [
+    "WSK2",
+    "GLK1"
+   ],
+   "f6": [
+    "skip",
+    "읽기 폴백은 GET /v1/auth/me"
+   ],
+   "f7": [
+    "n",
+    "Supabase 오류는 사유 구분 없이 한 문구(actions.ts:28-30) — Auth 장애도 자격 오류로 보임. 계정 없음(401 no_account)은 /dashboard → 레이아웃 세션 null → /login 으로 문구 없이 반복(actions.ts:53-55; layout.tsx:134-136). /v1/auth/me 5xx·JWKS 503 은 액션이 던져 에러 화면이나 Supabase 세션 쿠키는 이미 발급된 상태. 연타는 pending 으로 막음(login-form.tsx:82)"
+   ],
+   "f8": [
+    "y",
+    "",
+    "1 API(+Supabase 1)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "y",
+    "착지 = defaultLandingFor(role, menu_groups) — 백엔드 menu_groups 가 legacy effectiveMenuGroups 와 같은 규칙(BE-7, actions.ts:42-50; session.ts:73-75)"
+   ],
+   "parity": [
+    "front/lib/auth/actions.test.ts › menu groups count on both sources (same rule as the locale root page)",
+    "front/lib/auth/actions.test.ts › signed in but no account: legacy no profile == api 401 no_account -> /dashboard (the (dash) layout then finds no session)",
+    "front/lib/auth/actions.test.ts › api: backend failure is thrown (legacy: a failed profiles read was thrown too)"
+   ]
+  },
+  "GET /v1/kpi/unmeasured-prompts": {
+   "label": "loadUnmeasuredPrompts → analytics.kpi.summary.get_unmeasured(unmeasured_sql)",
+   "where": "back/app/features/analytics/kpi/summary/router.py:35-47 · summary/service.py:267-290 · summary/queries.py:55-62,99-125 · back/app/core/measure.py:1599-1602 · front/lib/hgh/adapters/drilldown.ts:467-479 · front/app/api/scope/unmeasured-prompts/route.ts:30-39",
+   "stmts": "캐시 허용 목록 등재(result_cache.py:90)이나 HGH_RESULT_CACHE 기본 끔 → 무캐시. 표면 게이트·스코프(refs 1) + 창(스냅샷 1) + 본문 1(WITH ap·me·u, LIMIT 200 + count OVER) = 3(+공통 2, +동결·cat_diff 조건부)",
+   "f2": [
+    3,
+    3,
+    0,
+    1,
+    "unmeasured_sql back/app/features/analytics/kpi/summary/queries.py:99 (u⋈dim_prompt + LEFT JOIN LATERAL(catalog_entry⋈app.prompt); applied·measured 술어는 core.measure 공용 조각 제외)"
+   ],
+   "f3": [
+    "y",
+    "적용 키(rd.catalog_entry) − 측정 키(rd.answer DISTINCT prompt_key, 답변 그레인) 차집합 — 원소 행 조인 없음"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "오류는 hghErrorResponse 로 상태 유지 → 다이얼로그 오류 상태(route.ts:46-51), 422→400. 억제(meta.suppressed '*'·items)는 빈 목록 + total 0 으로 오고 어댑터가 meta.suppressed 를 버림(drilldown.ts:478) — 억제 표시는 카드 쪽"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "UnmeasuredPromptsButton 을 import 하는 화면이 없어 도달 불가(unmeasured-prompts-dialog.tsx:21 외 참조 0건, Before 와 동일)",
+    "3(+공통 2)"
+   ],
+   "f9": [
+    "y",
+    "LIMIT 200 + meta.page.total(절단 전) 전달(drilldown.ts:478; U6-N13)"
+   ],
+   "f10": null,
+   "parity": [
+    "front/app/api/scope/unmeasured-prompts/route.test.ts › api: BG-04 with the same filters, total before the cap; 422 -> 400 {result:null}",
+    "front/lib/hgh/adapters/drilldown.test.ts › unmeasured (BG-04): total = meta.page.total (before the 200 cap)"
+   ]
+  },
+  "POST /v1/admin/keyword-tools/prompt-to-volume": {
+   "label": "api.promptToVolume → admin.integrations.keyword_tools.prompt_to_volume",
+   "where": "back/app/features/admin/integrations/keyword_tools/router.py:48-55 · keyword_tools/service.py:73-92,124-158,291-306 · keyword_tools/queries.py:7-16 · back/app/core/kw.py:51-52 · back/app/core/config.py:99,207 · front/lib/hgh/adapters/admin.ts:1395-1423,1502-1544 · front/app/api/keyword/prompt-to-volume/route.ts:23-49",
+   "stmts": "AdminDetached(짧은 api_ro: set_config 1 + 계정 1) → LLM(OpenRouter) 1회(175s 기한) → 짧은 api_ro(set_config 1 + term_norm 1 + 검색량 1 + now 1) (+부족분 수집 요청 rw tx: 겹침 조회 1 + enqueue N, UNKNOWN) → 수집 대기 시 프론트가 GET /v1/admin/changes/{id} 1.5초 간격 최대 20초 폴링 + POST …/volume 재조회 1",
+   "f2": [
+    1,
+    0,
+    0,
+    0,
+    "VOLUMES_SQL back/app/features/admin/integrations/keyword_tools/queries.py:7"
+   ],
+   "f3": [
+    "n",
+    "요청마다 LLM 외부 호출(keyword_tools/service.py:294-295)로 키워드 추출, 검색량은 적재값(rd.kw_volume_monthly) 읽기 + 부족분 DataForSEO 수집 큐 적재"
+   ],
+   "f4": [
+    "ADK3",
+    "ADK4"
+   ],
+   "f6": [
+    "n",
+    "LLM 키워드 0개면 volume:null·keywords:[] 정상 200(keyword_tools/service.py:300-301; admin.ts:1515), 검색량 0 도 null(admin.ts:1532-1533) — '데이터 없음'과 실패 성격 구분 없음(Before 와 같은 판정). LLM 오류·형식 오류는 502/504 → 500{details:code}(admin.ts:1551), 수집 대기는 pending 으로 드러남"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "관리자 키워드 도구 화면은 volume·to-prompt 만 호출 — 이 라우트는 호출부 없음(Before 와 동일). 호출 시 대기 폴링 최대 ~14콜",
+    "LLM 1 + 6문장(+폴링)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "y",
+    "admin + 메뉴 게이트 동일(route.ts:23-24 + 백엔드 AdminDetached = check_admin·menu admin, core/auth.py:359-366), 응답 {volume, keywords, debug} 유지 + pending 추가형(admin.ts:1534-1543)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/admin.test.ts › queued prompt-to-volume: one LLM POST, then the SAME keywords re-read with POST .../volume (M2)"
+   ]
+  },
+  "MW middleware(front 유지)": {
+   "label": "middleware(크롤러 410·next-intl·Supabase getClaims·로그인 게이트·x-pathname)",
+   "where": "front/middleware.ts:16-85 (Before 와 파일 동일)",
+   "stmts": "SQL 0. 매 내비게이션 getClaims 1(비대칭 키면 로컬 검증). After 에서도 그대로 — 백엔드 Bearer 토큰 갱신을 이 단계가 담당(front/lib/hgh/auth.ts:9-25)",
+   "f2": [
+    "skip",
+    "SQL 없음"
+   ],
+   "f3": [
+    "skip",
+    ""
+   ],
+   "f4": [],
+   "f6": [
+    "n",
+    "getClaims error 를 버리고 data 만 봄(middleware.ts:54-55) → Auth 장애도 비로그인으로 /login(Before 와 동일)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "0 SQL"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "y",
+    "파일 동일 — 같은 게이트"
+   ],
+   "parity": []
+  },
+  "ACTION logout(Supabase signOut, front 유지)": {
+   "label": "logout 서버 액션(no-access·GNB 레일)",
+   "where": "front/lib/auth/actions.ts:81-86 (Before 와 동일, 백엔드 호출 없음)",
+   "stmts": "SQL 0. supabase.auth.signOut() → redirect(/login)",
+   "f2": [
+    "skip",
+    "SQL 없음"
+   ],
+   "f3": [
+    "skip",
+    ""
+   ],
+   "f4": [],
+   "f6": [
+    "skip",
+    ""
+   ],
+   "f7": [
+    "n",
+    "signOut error 미확인 후 /login(actions.ts:83-85) — 서버 로그아웃 실패도 성공처럼 보임(Before 와 동일)"
+   ],
+   "f8": [
+    "y",
+    "",
+    "0"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "y",
+    "동일(백엔드 무상태)"
+   ],
+   "parity": [
+    "front/lib/auth/actions.test.ts › signs out and goes to /login"
+   ]
+  },
+  "ROUTE GET /api/scope/projects(front 유지)": {
+   "label": "GET /api/scope/projects BFF(호출부 없음)",
+   "where": "front/app/api/scope/projects/route.ts:11-24 · front/lib/scope/server.ts:359,417 (Before 와 파일 동일, scope 게이트웨이 직결)",
+   "stmts": "getSession(SESSION=api 면 /v1/auth/me 1콜) + scope API listProjects 1회(limit·cursor 전달). 캐시 없음",
+   "f2": [
+    "skip",
+    "외부 scope API"
+   ],
+   "f3": [
+    "n",
+    "요청마다 scope 게이트웨이 listProjects 외부 호출(server.ts:417-420)"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "401, 그 밖 던짐(route.ts:18-23)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "프론트·백엔드 호출부 0건(Before 와 동일)",
+    "1 API(+세션 1콜)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "y",
+    "파일 동일 — 같은 계약(권한 범위 미적용 결함도 그대로, server.ts:359-365,417-420)"
+   ],
+   "parity": []
+  },
+  "INGEST back/ingest(범위 밖)": {
+   "label": "back/ingest 적재·회차 관제·동결·감시(After 원천 생산자)",
+   "where": "back/ingest/ (cycles·pull·frz·project·worker 디렉터리 존재만 확인, 미열람)",
+   "stmts": "UNKNOWN: 범위 밖(블랙박스, 동료가 신규 레포로 재구축). 인터페이스 = rd.* + app.judgment_change",
+   "f2": [
+    "skip",
+    "back/ingest 범위 밖"
+   ],
+   "f3": [
+    "skip",
+    "범위 밖"
+   ],
+   "f4": [],
+   "f6": [
+    "skip",
+    "범위 밖"
+   ],
+   "f7": [
+    "skip",
+    "범위 밖"
+   ],
+   "f8": [
+    "skip",
+    "범위 밖"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "skip",
+    "범위 밖"
+   ],
+   "parity": []
+  },
+  "CRON /api/cron/sync-mirror(front 유지)": {
+   "label": "GET /api/cron/sync-mirror — legacy 미러 동기화(front 파일 동일, After 배포에도 vercel.json 스케줄)",
+   "where": "front/vercel.json:10 · front/app/api/cron/sync-mirror/route.ts:366 · front/lib/scope/mirror/sync.ts:2333",
+   "stmts": "Before NS1 과 동일(호출당 문장 수 run·프로젝트 수 의존, UNKNOWN). After 화면 원천(RDS rd.*·app.*)에는 쓰지 않음 — 대응 적재는 back/ingest(범위 밖)",
+   "f2": [
+    "skip",
+    "legacy 쓰기 파이프라인 — After 화면 집계 아님"
+   ],
+   "f3": [
+    "skip",
+    "배치"
+   ],
+   "f4": [],
+   "f6": [
+    "skip",
+    "After 화면은 scope_* 미러·mirrorCache 를 읽지 않음(legacy 롤백 경로 전용)"
+   ],
+   "f7": [
+    "skip",
+    "After 원천 쓰기 아님"
+   ],
+   "f8": [
+    "n",
+    "전 플래그 api 에서도 20분마다 scope API 읽기·run 단위 삭제·재삽입·mirrorCache 전체 무효화를 계속 실행(vercel.json:10; route.ts:517-518) — After 화면이 소비하지 않는 작업",
+    "UNKNOWN(run 수 의존)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "skip",
+    "화면 계약 없음"
+   ],
+   "parity": []
+  },
+  "CRON /api/cron/ga4-prebuild(front 유지)": {
+   "label": "GET /api/cron/ga4-prebuild — 프론트 lib/ga4 캐시 워밍 + 회차 사슬 교차 확인(front 파일 동일)",
+   "where": "front/vercel.json:11 · front/app/api/cron/ga4-prebuild/route.ts:41 · back/app/features/analytics/funnel/conversion/service.py:4",
+   "stmts": "Before NS2 와 동일(GA4 호출 = 마켓 수×2, UNKNOWN). After 전환 화면은 back /v1/funnel/conversion 이 rd.ga4_row 적재값만 읽어 실시간 GA4 호출 없음 → 워밍 대상 아님. GA4 보고서 적재는 back/ingest(범위 밖)",
+   "f2": [
+    "skip",
+    "외부 GA4 API — After 화면 경로 아님"
+   ],
+   "f3": [
+    "skip",
+    "캐시 워밍 배치"
+   ],
+   "f4": [],
+   "f6": [
+    "skip",
+    "After 화면은 프론트 GA4 캐시를 읽지 않음"
+   ],
+   "f7": [
+    "skip",
+    "DB 쓰기 없음"
+   ],
+   "f8": [
+    "n",
+    "전 플래그 api 에서 소비처 없는 GA4 Data API 호출을 매일 마켓 수×2 회 계속(vercel.json:11), 교차 확인도 legacy 회차 표 감시",
+    "마켓 수×2 GA4 + 감시 SQL"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "skip",
+    "화면 계약 없음"
+   ],
+   "parity": []
+  },
+  "CRON /api/cron/cycle-chain-watch(front 유지)": {
+   "label": "GET /api/cron/cycle-chain-watch — legacy 회차 사슬 감시(front 파일 동일)",
+   "where": "front/vercel.json:12 · front/app/api/cron/cycle-chain-watch/route.ts:135 · front/lib/summary/health/cycle-chain.ts:346,427,602,710",
+   "stmts": "Before NS3 과 동일(4 스캔, 문장 수 UNKNOWN). 감시 대상 = legacy 표(summary_cycles·URL 사실표·앵커). After 원천(rd.* 적재·회차) 감시는 back/ingest 소관(범위 밖)",
+   "f2": [
+    "skip",
+    "감시 SQL — After 화면 집계 아님"
+   ],
+   "f3": [
+    "skip",
+    "감시 배치"
+   ],
+   "f4": [],
+   "f6": [
+    "skip",
+    "After 데이터 상태를 보지 않음"
+   ],
+   "f7": [
+    "skip",
+    "화면 쓰기 아님"
+   ],
+   "f8": [
+    "n",
+    "After 원천이 아닌 legacy 파이프라인을 6시간마다 감시 — PASS 가 After 화면 데이터 신선도를 보증하지 않음",
+    "4 스캔"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "skip",
+    "화면 계약 없음"
+   ],
+   "parity": []
+  },
+  "CRON /api/cron/mirror-status(front 유지)": {
+   "label": "GET /api/cron/mirror-status — legacy 미러 진단(수동, front 파일 동일)",
+   "where": "front/app/api/cron/mirror-status/route.ts:13 · front/lib/db/repositories/scope-aggregates.ts:8303",
+   "stmts": "Before NS4 와 동일(프로브 + 3문장). After 원천 진단 수단 아님(After 운영 가시성은 어드민 회차·작업 화면 /v1/admin/cycles·jobs, 다른 표면)",
+   "f2": [
+    "skip",
+    "legacy 미러 진단 — After 원천 아님"
+   ],
+   "f3": [
+    "skip",
+    "진단"
+   ],
+   "f4": [],
+   "f6": [
+    "skip",
+    "After 화면 무관"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "수동 진단 전용(크론 미등록·호출부 없음)",
+    "3"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "skip",
+    "화면 계약 없음"
+   ],
+   "parity": []
+  },
+  "ROUTE POST /api/internal/summary/published(front 유지)": {
+   "label": "POST /api/internal/summary/published — 프론트 캐시 태그 무효화(front 파일 동일)",
+   "where": "front/app/api/internal/summary/published/route.ts:19-27 · back/app/core/result_cache.py:1-10,78 · back/app/core/config.py:86",
+   "stmts": "SQL 0, revalidateTag 2(legacy mirrorCache·SUMMARY). After 화면 캐시는 back core.result_cache(데이터 버전 키라 명시 무효화 불필요, HGH_RESULT_CACHE 기본 끔) — 이 라우트와 무관. 사실표 generation 스왑은 back/ingest(범위 밖)",
+   "f2": [
+    "skip",
+    "SQL 없음"
+   ],
+   "f3": [
+    "skip",
+    ""
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "가드 fail-closed(front/lib/cron-auth.ts:8-16)"
+   ],
+   "f7": [
+    "y",
+    "무효화 동기 호출, 실패 경로 없음"
+   ],
+   "f8": [
+    "y",
+    "After 화면은 mirrorCache 를 안 써 Before 의 '전 미러 캐시 콜드' 비용이 After 화면에는 없음",
+    "0 SQL·태그 2"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "skip",
+    "화면 계약 없음"
+   ],
+   "parity": []
+  },
+  "JOB back/app access-audit-writer": {
+   "label": "AccessAuditWriter(접근 감사 배치, back/app 프로세스 내 백그라운드 태스크) — 대응 영역 없음(미부착)",
+   "where": "back/app/core/write.py:210-281,318-326 · back/app/main.py:61 · 호출: back/app/features/qa/answers/detail/router.py:21, back/app/features/qa/notes/notes/router.py:61",
+   "stmts": "요청 경로 SQL 0(메모리 버퍼). ≤2초 또는 500건마다 api_rw tx 벌크 INSERT 1(app.access_audit_log)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "_audit_insert back/app/core/write.py:283"
+   ],
+   "f3": [
+    "skip",
+    "감사 쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "skip",
+    "읽기 아님"
+   ],
+   "f7": [
+    "n",
+    "배치 INSERT 실패는 로그만 남기고 유실, 버퍼 2만 건 초과분 드롭(write.py:228-230,270-279) — Q4 유실 허용 설계, 화면 고지 대상 아님"
+   ],
+   "f8": [
+    "y",
+    "",
+    "1/배치"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "skip",
+    "화면 계약 없음"
+   ],
+   "parity": []
+  },
+  "TOOL back/app warm_cache": {
+   "label": "app.tools.warm_cache(결과 캐시 데우기, 수동 CLI) — 대응 영역 없음(미부착)",
+   "where": "back/app/tools/warm_cache.py:1-14 · back/app/tools/warm_calls.json · back/app/core/result_cache.py:78-96",
+   "stmts": "HGH_RESULT_CACHE=1 일 때만(아니면 종료 코드 2). 스케줄러 없음(infra·ci 에 등록 없음) — 수동 실행. 대표 계정 서명별 34콜(11경로)을 앱 ASGI 로 실행(동시 2). QA·세션·unmeasured 는 대상 아님",
+   "f2": [
+    "skip",
+    "앱 경로 호출 래퍼"
+   ],
+   "f3": [
+    "skip",
+    ""
+   ],
+   "f4": [],
+   "f6": [
+    "skip",
+    "도구 출력(종료 코드 1 = 실패 호출, 표식 미기록)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "데이터 버전 표식이 같으면 건너뜀",
+    "34콜/실행"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "skip",
+    "화면 계약 없음"
+   ],
+   "parity": []
+  },
+  "AQCOMMON": {
+   "label": "QA 게이트 공통(킬 스위치 + HMAC 쿠키 require_qa_reviewer → qa_gate 풀 set_config → QaLiveConn 세션 행 FOR KEY SHARE) + 서버 고정 검수 범위(get_qa_scope·scope_predicates·job_predicates) + 어댑터 오류 매핑 / 화면 밖 JWT 갈래(verified_subject JWKS → get_principal)",
+   "where": "back/app/core/auth.py:906-952 · back/app/core/auth.py:221-251 · back/app/core/db.py:130-145 · back/app/features/qa/answers/list/scope.py:83-86,330-383 · front/lib/qa/route-helpers.ts:42-49 · front/lib/hgh/adapters/qa.ts:424-442,551-558 · front/lib/hgh/errors.ts:226-238 · front/app/[locale]/raw-data-qa/layout.tsx:85-106",
+   "stmts": "QA 요청마다 2문장: set_config(role·statement_timeout) 1 + 세션 행 확인 1(QaLiveConn; 로그아웃·current 는 QaConn = set_config 만). 쿠키 서명·12h 만료·킬 스위치 HGH_QA_ENABLED 는 SQL 0. 프론트는 쿠키 존재만 확인(apiGuard)하고 raw_data_qa 만 중계. JWT 갈래: JWKS 검증 SQL 0(키 캐시 600s) + api_ro set_config 1 + 계정 1. 캐시 없음",
+   "f2": [
+    "skip",
+    ""
+   ],
+   "f3": [
+    "skip",
+    ""
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "QA: 401 qa_unauthorized → 게이트 리다이렉트(throwForPage errors.ts:230; layout.tsx:96-97), 그 밖 오류는 던져 에러 경계. 라우트는 401 → {error:'unauthorized'}, 5xx 는 warn 후 상태 유지(qa.ts:552-558). 게이트 페이지만 세션 확인 실패를 warn 후 폼 표시(raw-data-qa/page.tsx:24-30, 입장 시도가 자기 오류를 냄). JWT: JWKS 장애 503 auth_unavailable → GET 1회 재시도 후 던짐(core/auth.py:119-120; front/lib/hgh/client.ts:788)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "skip",
+    ""
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "QA: 세션 행 확인으로 로그아웃·운영 폐기 쿠키 즉시 401(legacy 는 HMAC·12h 만, front/lib/qa/auth.ts:150-157), 범위 = 서버 고정 HGH_QA_SURFACES·SINCE(scope.py:83-86), 모집단 rd.job 전체(비완료·드롭 포함), 기본 비밀번호 없음 — 더 엄격. role 스코프 미적용은 legacy 와 같은 설계 예외(scope.py:7-9). JWT: 백엔드 DataScope 가 좁히기 방향으로 다름(front/lib/hgh/adapters/session.ts:69-75)"
+   ],
+   "parity": []
+  }
+ },
+ "area_keys": [
+  {
+   "route": "—",
+   "label": "/api/cron/sync-mirror — 회차 관제 → 미러 동기화 → 전 캐시 무효화 → 감시 2종·앵커 따라잡기",
+   "api_keys": [
+    "CRON /api/cron/sync-mirror(front 유지)",
+    "INGEST back/ingest(범위 밖)"
+   ]
+  },
+  {
+   "route": "—",
+   "label": "/api/cron/ga4-prebuild — GA4 KPI 28d·Live 90d 캐시 워밍 + 회차 사슬 교차 확인",
+   "api_keys": [
+    "CRON /api/cron/ga4-prebuild(front 유지)",
+    "INGEST back/ingest(범위 밖)"
+   ]
+  },
+  {
+   "route": "—",
+   "label": "/api/cron/cycle-chain-watch — 노출 지체·생성 적체·URL 인용률 사실표 누락·앵커 공백 감시 → Slack/Issue",
+   "api_keys": [
+    "CRON /api/cron/cycle-chain-watch(front 유지)",
+    "INGEST back/ingest(범위 밖)"
+   ]
+  },
+  {
+   "route": "—",
+   "label": "/api/cron/mirror-status — 미러 누적·cadence 진단",
+   "api_keys": [
+    "CRON /api/cron/mirror-status(front 유지)"
+   ]
+  },
+  {
+   "route": "—",
+   "label": "/api/internal/summary/published — 사실표 generation 스왑 후 캐시 무효화",
+   "api_keys": [
+    "ROUTE POST /api/internal/summary/published(front 유지)",
+    "INGEST back/ingest(범위 밖)"
+   ]
+  },
+  {
+   "route": "—",
+   "label": "미들웨어 — 크롤러 410·next-intl 로케일·Supabase 세션 갱신·로그인 게이트·x-pathname",
+   "api_keys": [
+    "MW middleware(front 유지)"
+   ]
+  },
+  {
+   "route": "—",
+   "label": "로그인 화면(HMG GEO 모니터링 로그인) + 쓰기: 로그인",
+   "api_keys": [
+    "ACTION login → GET /v1/auth/me"
+   ]
+  },
+  {
+   "route": "—",
+   "label": "접근 불가 화면(접근 가능한 메뉴가 없습니다) + 쓰기: 로그아웃",
+   "api_keys": [
+    "ACTION logout(Supabase signOut, front 유지)"
+   ]
+  },
+  {
+   "route": "—",
+   "label": "/api/scope/projects — scope 워크스페이스 프로젝트 목록 BFF",
+   "api_keys": [
+    "ROUTE GET /api/scope/projects(front 유지)"
+   ]
+  }
+ ],
+ "new_constants": {
+  "AQK1": [
+   "세션 거부 표기 국가 SCOPE_DENY_COUNTRY 'ZZ'",
+   "front/lib/hgh/adapters/session.ts:87",
+   1,
+   "백엔드 scope.countries [](전부 거부) → 프론트 ['ZZ'](어떤 행과도 안 맞음). 거부 브랜드 표기는 UMBRELLA_BRAND 'HMG'(B10) 재사용(session.ts:89)"
+  ],
+  "AQK2": [
+   "QA 날짜 필터 KST 경계",
+   "back/app/features/qa/answers/list/scope.py:45",
+   1,
+   "timezone(+9h): from/to 를 KST 자정으로 해석(scope.py:264-266,313-316) — legacy 는 UTC 날짜(qa.ts:55-56), 00~09시 KST 측정분이 다른 날로 감"
+  ]
+ },
+ "notes": [
+  "플래그 가정(After): HGH_SOURCE_G7=api(QA·관리자 키워드), HGH_SOURCE_SESSION=api(세션·SNB 게이트·로그인 착지), HGH_SOURCE_G2=api(unmeasured). HGH_RESULT_CACHE 기본 끔 → 전부 무캐시 계수(허용 목록 등재는 /v1/kpi/unmeasured-prompts 뿐, QA·세션·프로젝트 상세는 목록 밖). QA 는 HGH_QA_ENABLED=1(백엔드)·RAW_DATA_QA_ENABLED=1(프론트) 둘 다 켜져야 동작(하나라도 꺼지면 401/404), HGH_QA_SURFACES 기본 3표면·HGH_QA_SINCE 없음(back/app/core/config.py:89-90).",
+  "문장 수 규약: stmts·f8 count 는 기능 문장만 셈. 요청마다 붙는 공통 2문장(QA: set_config + 세션 행 확인 / JWT: set_config + 계정 조회)은 AQCOMMON 으로 분리. QA 화면 1회 렌더 = 레이아웃 current 1콜 + 화면 콜(목록 3·상세 4·노트 2), 콜마다 공통 2문장 → 예: 검수 목록 4콜 ≈ 공통 8 + 기능 11(+1)문장(legacy 2+2+2, 30s·300s 캐시). refs(_REFS_SQL)를 QA 콜마다 다시 읽고 상세 화면 4콜이 각각 rd.job 범위 확인을 반복.",
+  "JOIN 계수에서 뺀 공용 조각: QA job_predicates·note_predicates·scope_predicates(back/app/features/qa/answers/list/scope.py:330-383, EXISTS 서브쿼리 포함), resolve_project(back/app/core/auth.py:706), core.measure applied_prompt_keys_sql·measured_prompt_where·CatalogRowGate.pred.",
+  "67aabc2 확인 방법: 규칙상 git 미실행. 현 HEAD 의 front/lib/qa/review-session.ts(+review-session.test.ts 11건)와 detail-shell.tsx 가 그 수정(저장 오류 배너·락 처리·중복 저장 차단·늦은 응답 무시·15초 타임아웃)을 담고 있음을 코드로 확인. 클라이언트는 원천과 무관하게 같은 /api/qa/lock·/api/qa/review 를 부르고 각 route.ts 첫 줄이 G7=api 면 qaApiRoutes 로 중계, 어댑터가 409 lock_held/lock_lost·401·422 를 legacy 본문으로 맞춰(parity) 수정 분기가 After 에서도 그대로 동작 → 판정 저장·락 획득·heartbeat f7 y. 미적용: note-dialog(POST 노트)·note-list(해결 토글)·qa-header(검수 종료)·answer-list(폴링)·export 링크 — f7/f6 결함 잔존.",
+  "잔여 위험: 브라우저 15초(front/lib/qa/review-session.ts:4) = BFF write 타임아웃 15초(front/lib/hgh/client.ts:66). 느린 백엔드면 '저장 실패' 표시 후 실제 커밋 가능(PUT 멱등이라 재시도 안전). 노트 POST 는 타임아웃·멱등 키 둘 다 없음.",
+  "데이터 이관(UNKNOWN): qa.parity.test.ts:19-20 머리말이 '백엔드 마이그레이션은 qa_answer_reviews·qa_review_notes 를 옮기지 않는다'고 명시. back/migration/export.py:37 은 원본을 mig_src 로 내보내기만 하고 app.qa_* 적재 코드는 back/app·back/migration 에서 찾지 못함(back/ingest 미열람) → 전환 시 기존 판정·노트·진행률이 0 에서 시작할 가능성.",
+  "세션 이중 확인: QaLiveConn(back/app/core/auth.py:946-949) 뒤 쓰기 서비스(lock.acquire·verdict.save_review·notes.create/patch/delete)가 assert_qa_session 을 같은 tx 에서 다시 호출 — 쓰기마다 PK 조회 1 중복(f8 n 근거, 경미).",
+  "공유 끝점: GET /v1/auth/me(모든 대시 화면 레이아웃·로그인 착지), GET /v1/projects/{id}(프로젝트 레이아웃·리프 게이트와 요청 내 dedupe 공유), GET /v1/kpi/unmeasured-prompts(global KPI 모듈 analytics.kpi.summary), POST …/prompt-to-volume(어드민 키워드 도구 모듈). unmeasured 의 공통 분석 경로 상수(core.measure·cycles 모수·창)는 global 표면 After COMMON 소관이라 여기 f4 에서 제외.",
+  "f4 재사용 근거: WSK2·GLK1 = back/app/core/auth.py:433,439(WEBSITE_DEDICATED_SITE_CODES WORLDWIDE·CPO + SITE_GLOBAL_MARKETS HYUNDAI-N→US·KR; 브랜드 가상 코드는 rd.dim_country 행) — effective_menu_groups 가 매 JWT 요청 계정 행에서 메뉴를 파생. ADK3 = back/app/core/kw.py:51-52(PRESETS·DEFAULT_PRESET_ID 'kr'), ADK4 = back/app/core/config.py:99,207 기본 모델 'google/gemini-2.5-flash'(HGH_OPENROUTER_MODEL 미설정 시) + temperature 0.3(keyword_tools/service.py:294). FRESH_DAYS 7 은 캐시 신선도(TTL)라 제외. 주의: Before NS7·NS8·NS12 는 같은 legacy 정의(menu-groups.ts·defaultModel·location-presets)를 f4 [] 로 두었음 — 비교 시 After 증가로 오독 금지.",
+  "QAK1(검수 콘솔 표면 판정 순서)은 After 경로에 없음 — 표면은 ingest 가 만든 rd.job.surface. 글로벌 루트 'project' 오분류 해소 여부는 ingest 소관(UNKNOWN).",
+  "AQCOMMON 은 QA 게이트(쿠키) + JWT(get_principal) 두 갈래를 함께 서술. 크론·미들웨어처럼 백엔드를 안 거치는 행에는 실질 적용 없음(자동 부착 산물).",
+  "크론 After 대응: back/app 에는 스케줄러가 없음(main.py lifespan = 풀 초기화·JWKS 선로드·감사 배치 라이터뿐, infra·ci 에 크론 정의 없음). 미러 동기화·GA4 보고서 적재·회차 관제·사실표 generation 스왑·사슬 감시는 back/ingest(cycles·pull·frz·worker) 소관 → 'INGEST back/ingest(범위 밖)' 로 표기. 프론트 vercel.json 크론 3개는 파일 동일로 After 배포에도 스케줄됨(전환 완료 후 정리 대상, f8 n). back/app 상주 작업 2종(감사 배치 라이터·warm_cache 수동 도구)은 endpoints 에 측정했으나 대응 영역이 없어 area_keys 에 붙이지 않음.",
+  "UNKNOWN: GET /v1/kpi/unmeasured-prompts f10 = null — legacy 분기는 cumulative:true 강제(front/app/api/scope/unmeasured-prompts/route.ts:43), api 분기는 cumulative 를 넘기지 않고(route.ts:31-33, 어댑터에 cumulative 처리 없음) 백엔드 기본 창(from/to 없으면 스냅샷)으로 계산 → 화면 URL 이 from/to 를 싣는지 코드만으로 확정 불가(다이얼로그 자체는 도달 불가). 그 밖 UNKNOWN: prompt-to-volume 수집 요청 enqueue 문장 수, 프론트 크론 호출당 문장·GA4 호출 수, back/ingest 전부.",
+  "x-pathname 의존(Before 노트)은 After 도 동일 — QA 레이아웃 게이트 판정(raw-data-qa/layout.tsx:91-92)과 (dash) 가드가 미들웨어 응답 헤더 전달을 전제.",
+  "성능 메모: QA 상세 get_detail 은 9~14문장을 전부 순차 await(back/app/features/qa/answers/detail/service.py:171-204). 검수 목록은 legacy 2문장 → After 7(+1)문장이나 행별 상관 서브쿼리 3개가 페이지 배치 조회 5개로 바뀜. progress·filters 는 캐시 제거로 매 요청 계산."
+ ]
+}

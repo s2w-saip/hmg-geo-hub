@@ -1,0 +1,689 @@
+{
+  "surface": "existing3 (대시보드 · 언급 · 인용)",
+  "prefix": "AX",
+  "common": "AXCOMMON",
+  "endpoints": {
+    "AXCOMMON": {
+      "label": "공통: JWT·계정(CurrentUser) → resolve_read_context(require_surface + DataScope) → 창 해석 + 어댑터 오류 매핑",
+      "where": "back core/auth.py:221-249(verified_subject·get_principal)·:300-326(SURFACE_ROLES·surface_denial·require_surface)·:569-646(DataScope.of·for_surface), core/filters.py:619-853(resolve_read_context), core/cycles.py:299-385(resolve_window), core/db.py:167-179(set_local); front lib/hgh/client.ts:62-68(HGH_TIMEOUTS read 10s)·:144(요청당 동시 4), lib/hgh/query.ts:302-321(스코프 주입값 제거), lib/hgh/errors.ts:226-238(throwForPage), lib/scope/degrade-registry.ts:116-130(degradeOnApiFailure), lib/hgh/adapters/dashboard.ts:641-655(orNullOnTransient, HEAD)",
+      "stmts": "요청당 공통 3문장: set_config 1 · app.user_account 계정 1 · load_refs 참조 1(프로필 catalog_incl_deleted 면 +1). 끝점마다 창 해석(resolve_window 등) 1문장은 각 끝점 stmts 에 포함. 결과 캐시(HGH_RESULT_CACHE) 기본 꺼짐 = 캐시 문장 0",
+      "f2": ["skip", "공통 조각 — scope_where·mention/citation_population·Window.where 는 각 끝점 f2 계수에서 제외"],
+      "f3": ["skip", ""],
+      "f4": ["AXK1", "AXK4", "GLK1", "WSK2"],
+      "f6": ["n", "프론트 degradeOnApiFailure·orNullOnTransient 가 5xx·시간 초과(읽기 10s)를 null·빈 값으로 바꾸고 고지는 화면마다 갈린다(언급 화면은 degrade 표식을 읽지 않음). 백엔드 resolve_read_context 는 스코프 밖·모르는 필터 값을 버려 빈 집합(결과 0)으로 만들고 meta.dropped_filters 에만 적는데(core/filters.py:6-8·652-667), 세 화면 어디도 filterNotices(lib/hgh/convert.ts:98)를 그리지 않는다"],
+      "f7": ["skip", ""],
+      "f8": ["skip", ""],
+      "f9": ["skip", ""],
+      "f10": ["y", "표면 게이트 = route-policy 역할 천장·menu_groups 이식(core/auth.py:300-326), 데이터 스코프 = DataScope(브랜드·국가·전용 사이트 계정 글로벌 시장, :569-646)를 resolve_read_context 첫 줄에서 건다(core/filters.py:630-638). 프론트는 스코프 주입값을 빼고 보내 백엔드 스코프가 유일한 경계(lib/hgh/query.ts:302-321). 끝점별 차이(답변 모달 필터 게이트 등)는 각 키에서 판정"],
+      "parity": []
+    },
+    "GET /v1/kpi/summary card=true": {
+      "label": "get_kpi_summary_0 → get_summary(card=true) / dashboard.ts fetchDashboardSummary (카드·헤더 pill·GEO 빈 상태 판정, 요청 dedupe 1회)",
+      "where": "back features/analytics/kpi/summary/router.py:18-31 → service.py:155-252, SQL core/measure.py:567-705(plan_counts)·:1522-1557(applied_prompts_sql); front lib/hgh/adapters/dashboard.ts:179-181 → summary.ts:83-91, dashboard.ts:662-674·:687-689, live.ts:513-524 (dashboard.ts·live.ts 줄 = HEAD 56ad6f9)",
+      "stmts": "창 1 + rd.answer 메인 1 + M12 측정·언급 프롬프트 count(DISTINCT) 1 + 적용 프롬프트 1 = 4 (+공통 3). 조건부: 다국가 자사 허용 배열(countryN, 다국가 스코프 계정은 필터 없이도) cross +1(rd.answer⋈rd.citation), lang·source 축 원소 스캔 +1, 프로필 current 면 동결 판정·frozen_route_reason·frozen_drops +1~3. 결과 캐시 허용 목록(기본 꺼짐)",
+      "f2": [0, 0, 0, 0, "plan_counts main core/measure.py:676-680 (FROM rd.answer 단일 스캔, FILTER 집계, GROUP BY 없음)"],
+      "f3": ["n", "기본은 rd.answer 저장 열 합이지만 countryN 이면 cross 문장이 rd.citation 원소를 JOIN 해 자사 인용을 요청 때 센다(core/measure.py:684-697), lang·source 축이면 rd.citation 원소 스캔(:717-747)"],
+      "f4": ["AXK2"],
+      "f6": ["y", "5xx·시간 초과 → degradeOnApiFailure('standardAggregates')(live.ts:436) → 카드 자리 '시간 안에 끝나지 않아…' 문구(dashboard/page.tsx:470). 헤더 pill 은 '—'(page.tsx:159)·GEO 는 생략되지만 같은 화면에 고지가 있다. 4xx 는 throwForPage"],
+      "f7": ["skip", ""],
+      "f8": ["n", "대시보드는 ①~⑤ 값·as_of·params.answers(빈 상태)만 쓰는데(summary.ts:259-261) M12 측정·언급 프롬프트 count(DISTINCT) 문장과 적용 프롬프트 문장·결손 쌍까지 계산(service.py:163-167, SUMMARY_PARTS queries.py:36) — 4문장 중 2문장 결과 미사용", "4 (+조건부 1~2)"],
+      "f9": ["skip", "고정 카드 5개"],
+      "f10": ["n", "현행 프로필 기본 off(core/profile.py:265)라 card=true 여도 summary_all_engines 꺼짐 → 엔진 미선택 = 기본 엔진만(core/measure.py:192-194) vs legacy 집계층 전 엔진(DC-01, dashboard.pglite.parity.test.ts:357); card_slot_rep·동결 층도 꺼짐. 권한 범위는 동일"],
+      "parity": [
+        "front/lib/hgh/adapters/dashboard.parity.test.ts › global cards: getLiveDashboard legacy vs HGH_SOURCE_G1=api › ①~⑤, KPI #16 equal",
+        "front/lib/hgh/adapters/dashboard.pglite.parity.test.ts › global cards on the real legacy SQL reader (PGlite) vs HGH_SOURCE_G1=api › default engines only: ①~⑤ values, ratios and KPI #16 are equal",
+        "front/lib/hgh/adapters/dashboard.pglite.parity.test.ts › … › a non-default engine answer: the differences are exactly DC-01",
+        "back/tests/core/test_card_path.py › test_summary_all_engines_equals_dflt_oracle",
+        "back/app/features/analytics/kpi/summary/tests/test_core_parity.py › test_applied_and_measured_sets_match_counts"
+      ]
+    },
+    "GET /v1/kpi/summary (분석, +cycle_offset=1)": {
+      "label": "get_kpi_summary_0 → get_summary / summary.ts fetchKpiSummary (언급 히어로·직전 회차·본문 totalPrompts·우선 노출 카드값·D6 필수)",
+      "where": "back features/analytics/kpi/summary/router.py:18-31 → service.py:155-252, SQL core/measure.py:567-705·:1522-1557; front lib/hgh/adapters/summary.ts:83-91 ← kpi-tab.ts:159-170·177-195·414-424, mentions.ts:201-211·426",
+      "stmts": "창 1 + 메인 1 + 측정 프롬프트 1 + 적용 프롬프트 1 = 4 (+공통 3). cycle_offset=1(직전 회차, 기간 미지정일 때만)은 같은 4문장 별도 요청. 조건부 countryN cross +1, lang 원소 스캔 +1",
+      "f2": [0, 0, 0, 0, "plan_counts main core/measure.py:676-680"],
+      "f3": ["n", "countryN cross(rd.citation JOIN, core/measure.py:684-697)·lang 원소 스캔(:717-747) 조건부 경로"],
+      "f4": ["AXK2"],
+      "f6": ["n", "히어로 실패 → degradeOnApiFailure('standardKpiHero') → 빈 Sub KPI(kpi-tab.ts:168-169) → '측정 없음'과 구분 안 됨, 본문 totalPrompts 0(mentions.ts:426·350), 직전 회차 null → Δ 사라짐. 언급 화면은 wasDegraded 를 읽지 않아 고지 없음"],
+      "f7": ["skip", ""],
+      "f8": ["n", "적용 프롬프트 문장(prompt_counts, service.py:167)·결손 쌍은 언급 화면 미사용(측정 개요 카드 제거, mentions.ts:14-15). 히어로·본문·우선 노출 3곳은 요청 dedupe 로 1회 공유", "4"],
+      "f9": ["skip", "스칼라 카드"],
+      "f10": ["n", "DC-01(엔진 미선택 = 기본 엔진), DC-05(직전 = 직전 회차, 기간 모드는 prev 없음 kpi-tab.ts:182) — 어댑터 머리 주석의 알려진 차이"],
+      "parity": [
+        "front/lib/hgh/adapters/kpi-tab.test.ts › hero sub KPI",
+        "front/lib/hgh/adapters/mentions.test.ts › Sub KPI (B-3) › parity: buildMentionSubKpis gives the same cards on the adapter output and the legacy sub",
+        "back/app/features/analytics/kpi/summary/tests/test_core_parity.py › test_applied_and_measured_sets_match_counts"
+      ]
+    },
+    "GET /v1/mentions/brands card=true top_n=20 include=hmg": {
+      "label": "get_mentions_brands_0 → mention_brands(top_n=20, sort=mentions, include=hmg) / dashboard.ts fetchCardBrands·keptCardBrands (KPI #16·경쟁사 미니 행, D6 필수)",
+      "where": "back features/analytics/mentions/brands/router.py:18-28 → service.py:219-301, SQL core/measure.py:1409-1433(competitor_rows_sql)·brands/queries.py:100-111(own_sentiment_sql)·:178-182(brand_names_sql)·core/entities.py:39-50(excluded_brand_keys); front lib/hgh/adapters/dashboard.ts:184-195·:339-342·:665·:724 (HEAD)",
+      "stmts": "창 1 + 당사 합계(fetch_counts mentions) 1 + 경쟁 행(rd.answer_brand GROUP BY) 1 + 당사 감성 1 + 명부 제외 키 1 + 표시명 1 = 6 (+공통 3). 조건부: 프로필 current 동결 읽기면 개명 키(RENAMED_SQL) +1·회차 재집계 +1·frz 표시명 +1. 결과 캐시 허용 목록",
+      "f2": [0, 0, 1, 0, "competitor_rows_sql core/measure.py:1409-1433 (rd.answer_brand GROUP BY brand_key, LIMIT 없음)"],
+      "f3": ["y", "rd.answer 당사 열·rd.answer_brand 저장 열(rk·s_*·mention_count) 합만(service.py:228-235), 순위는 앱(rank_brand_items)"],
+      "f4": [],
+      "f6": ["y", "일시 실패 → orNullOnTransient 로 KPI #16 만 조용히 빠지지만(dashboard.ts:665·670) 경쟁사 행이 같은 보관 프로미스를 다시 읽어 markDegraded('standardMentions') → COMPETITOR_LABELS 고지(page.tsx:487-492)"],
+      "f7": ["skip", ""],
+      "f8": ["n", "당사 감성 문장(own_sentiment_sql, service.py:233-235)·당사 행 값은 대시보드 미사용; 경쟁 행 SQL 은 전 경쟁 브랜드를 집계(LIMIT 금지 설계)한 뒤 앱에서 20행 선택", "6"],
+      "f9": ["y", "top_n=20 후보 풀(카드 4개 × 4, HMG 형제 제외 여유) + 당사 1행 — 표시 최대 16행과 비슷"],
+      "f10": ["n", "DC-01(프로필 off: 기본 엔진만, legacy S1 집계층 전 엔진); KPI #16 HMG 형제 판정은 is_hmg_own(이름 아님). 권한 동일"],
+      "parity": [
+        "front/lib/hgh/adapters/dashboard.parity.test.ts › competitor rows: brand values and the citation minis › brand values feed the same card candidates; citation minis equal on the same domain world",
+        "front/lib/hgh/adapters/dashboard.parity.test.ts › failure paths on the api sources › global: a failed essential brands call is not sent again by the competitor rows (U5 N2)",
+        "back/app/features/analytics/mentions/brands/tests/test_perf_equiv.py › test_mentions_brands_response_equiv",
+        "back/app/features/analytics/mentions/brands/tests/test_mentions_brands_card_cap.py"
+      ]
+    },
+    "GET /v1/mentions/brands full=true split_own include=multi,prompts,types": {
+      "label": "get_mentions_brands_0 → mention_brands(full, split_own, include) / mentions.ts fetchMentionBrands B1 (헤더 pill·순위 표·KPI 경쟁사 표·감성·유형·우선 노출 공유)",
+      "where": "back features/analytics/mentions/brands/service.py:219-301, SQL brands/queries.py:114-133(brand_extras_sql)·:136-149(own_extras_sql)·:155-175(own_counts_sql)·core/measure.py:1409-1433; front lib/hgh/adapters/mentions.ts:108-114·126-148 ← :419-461, kpi-tab.ts:416",
+      "stmts": "창 1 + 당사 합계(split_own 이면 own_counts_sql 1회 스캔) 1 + 경쟁 행 1 + 당사 감성(비트별) 1 + 명부 제외 1 + 표시명 1 + own_extras(count DISTINCT) 1 + brand_extras(2단 GROUP BY) 1 = 8 (+공통 3). 결과 캐시 허용 목록",
+      "f2": [0, 0, 2, 0, "brand_extras_sql features/analytics/mentions/brands/queries.py:114-133 (파생 테이블 (brand,own_bit,prompt) GROUP BY → 바깥 GROUP BY)"],
+      "f3": ["y", "rd.answer 당사 열·rd.answer_brand 저장 열(rk·s_*·t_*·mention_count) 합, 순위는 앱(service.py:252-261)"],
+      "f4": ["T1"],
+      "f6": ["n", "loadMentionsLive 가 degradeOnApiFailure('globalMentions') → null → '데이터 없음' EmptyState(mentions-prompts-section.tsx:27), KPI 경쟁사 행 [](mentions.ts:442-444), 감성·유형 null — 언급 화면은 degrade 표식을 읽지 않음"],
+      "f7": ["skip", ""],
+      "f8": ["y", "한 호출을 헤더·순위 표·KPI 경쟁사 표·감성·유형·우선 노출이 요청 dedupe 로 공유(mentions.ts:107-114), include 부분 전부 사용", "8"],
+      "f9": ["n", "full=true 로 경쟁 행 전량(상한 FULL_CAP 10,000 brands/schemas.py:17)을 'use client' 섹션에 직렬화, 순위 표는 100행(BRAND_RANK_LIMIT mentions-prompts-section.tsx:15) — 나머지는 클라이언트 검색용(제목 '상위 100' 표기), 상한 초과는 meta.truncated(router.py:27-28)"],
+      "f10": ["n", "DC-01, U6-N1(전량 상한), U6-N3(brand_key 0 무명 행 제외 service.py:240), DC-12 는 D13 split_own 로 처리 — 어댑터 머리 주석"],
+      "parity": [
+        "front/lib/hgh/adapters/mentions.test.ts › toMentionsLive: B-2 assembly › summary, sentiment of the own rows, type totals, types by brand, position flag",
+        "front/lib/hgh/adapters/mentions.test.ts › loaders: queries, filter consistency, D6 order › brands call B1: full list, split own, include multi/prompts/types, sort by mentions",
+        "back/app/features/analytics/mentions/brands/tests/test_perf_equiv.py › test_brand_extras_statement_equiv",
+        "back/app/features/analytics/mentions/brands/tests/test_mentions_brands_bg.py › test_include_values_hyundai"
+      ]
+    },
+    "GET /v1/mentions/brands group_by=engine top_n=30": {
+      "label": "get_mentions_brands_0 → mention_brands(group_by=engine) → _by_engine / kpi-tab.ts loadEngineKpiTrend (엔진 × 브랜드 latestBrands)",
+      "where": "back features/analytics/mentions/brands/service.py:219-301·:304-359, SQL core/measure.py:1409-1433(group_by engine)·brands/queries.py:100-111·155-175; front lib/hgh/adapters/kpi-tab.ts:333·342-344, toLatestBrands :219-227",
+      "stmts": "전체 창 경로 6(창·당사 합계·경쟁 행·감성·명부 제외·표시명) + 엔진별 당사 합계 1 + 엔진별 경쟁 행 1 + 엔진별 감성 1 (+누락 표시명 0~1) = 9 (+공통 3)",
+      "f2": [0, 0, 1, 0, "competitor_rows_sql(group_by engine) core/measure.py:1409-1433 (GROUP BY engine_key, brand_key)"],
+      "f3": ["y", "rd.answer·rd.answer_brand 저장 열 합(service.py:316-327)"],
+      "f4": ["T5"],
+      "f6": ["n", "degradeOnApiFailure('standardKpiEngineTrend.brands') → latestBrands [](kpi-tab.ts:342-344·313) — trendDegraded 판정(:306)에 들어가지 않아 엔진×브랜드 막대가 고지 없이 빔"],
+      "f7": ["skip", ""],
+      "f8": ["n", "어댑터는 by_engine 만 읽는데(toLatestBrands kpi-tab.ts:219-227) 서비스가 전체 창 당사 합계·경쟁 행·감성·상위 30 brands 를 먼저 다 계산(service.py:227-301) — 9문장 중 6문장 결과 폐기", "9"],
+      "f9": ["y", "by_engine(엔진별 당사 + 경쟁 30) 전부 사용, 같은 응답의 전체 창 brands 31행은 미사용(경미)"],
+      "f10": ["n", "DC-01(기본 엔진만) — kpi-tab.ts 머리 주석 BG-16"],
+      "parity": [
+        "front/lib/hgh/adapters/kpi-tab.test.ts › engine trend",
+        "back/app/features/analytics/mentions/brands/tests/test_mentions_brands_bg.py › test_split_own_admin_rows"
+      ]
+    },
+    "GET /v1/funnel/conversion days=28 include_pages=false": {
+      "label": "get_funnel_conversion_0 → service.build / dashboard.ts fetchTrafficConversion (global D6 필수 호출, loadLiveDashboard ⑦) — HEAD 56ad6f9",
+      "where": "back features/analytics/funnel/conversion/router.py:25-33 → service.py:255-370, SQL conversion/queries.py:28-43(markets_sql·props_sql)·:52-59(as_of_sql)·:71-101(sessions_sql·conversions_sql); front lib/hgh/adapters/dashboard.ts:174·204-216·:366-372·:662-674, live.ts:431-437 (HEAD)",
+      "stmts": "레지스트리 시장 1 + 적재 속성 1 + 속성별 최신 적재일 1 + 세션(GROUPING SETS) 1 + 전환(GROUPING SETS, ⋈ 속성) 1 = 5 (+공통 3). 실시간 GA4 호출 없음(적재 rd.ga4_row). include_pages=false 라 페이지 문장 생략. active 시장이 없으면 3문장. 결과 캐시 허용 목록 밖",
+      "f2": [1, 0, 1, 0, "conversions_sql features/analytics/funnel/conversion/queries.py:88-101 (rd.ga4_row JOIN rd.ga4_dim_property, GROUPING SETS 1절)"],
+      "f3": ["n", "적재된 GA4 원본 그레인 행(rd.ga4_row: 날짜×속성×엔진×기기·방문자·이벤트)을 요청마다 GROUPING SETS 로 재집계(queries.py:71-101) — legacy 의 per-request GA4 Data API 호출은 없어짐(service.py:4)"],
+      "f4": ["GA2", "GA3"],
+      "f6": ["n", "orNullOnTransient → null → ⑦ '측정 대기' 값(dashboard.ts:666·457-459)이지만 카드가 그려지지 않아 실패가 어디에도 드러나지 않음"],
+      "f7": ["skip", ""],
+      "f8": ["n", "Overview 카드는 OVERVIEW_KPI_KEYS 5종만 그림(overview-kpi-cards.tsx:272, overview-metrics.ts:12-14) — ⑦ 은 계산 후 버려짐. 게다가 global D6 필수 4호출 중 하나(dashboard.ts:366-372)라 카드 본체가 같은 Promise.all 로 기다리고(:663-667), 옵션·추이·경쟁사·기간 비교·GEO 발행이 이 호출 정착까지 대기(afterFirstRender :409-412, 요청당 동시 4 슬롯 client.ts:144)", "5"],
+      "f9": ["n", "trafficConversion KpiSummary(값·ratio·sparkline 28점·coverage)가 kpis 로 'use client' 카드에 직렬화되나 표시 0(dashboard/page.tsx:448-449)"],
+      "f10": ["n", "분모 = 세션(DC-03) vs legacy 활성사용자, 창 = 최신 적재일 기준 28일(legacy 28daysAgo..today) — 미표시라 화면 영향은 없음"],
+      "parity": [
+        "front/lib/hgh/adapters/funnel.parity.test.ts › country leaf: live conversion and visits (legacy GA4 functions vs adapter)",
+        "front/lib/hgh/adapters/funnel.parity.test.ts › region rollup (legacy getAiTrafficConversionRollup vs adapter)",
+        "back/app/features/analytics/funnel/conversion/tests/test_conversion_bg.py › test_bg30_relative_days"
+      ]
+    },
+    "GET /v1/filters/dates family=all": {
+      "label": "get_filters_dates_0 → get_dates / filters.ts fetchFilterDates ← dashboard.ts keptDates·loadEssentialFilterDates (D6 필수, 달력)",
+      "where": "back features/analytics/filters/dates/router.py:17-23 → service.py:71-78, SQL core/cycles.py:815-820(_DATES_SQL)·:824-837; front lib/hgh/adapters/filters.ts:405-413, dashboard.ts:328-332·:419-422 (HEAD), dashboard/page.tsx:302",
+      "stmts": "선택 가능 날짜 1 (+공통 3). 결과 캐시 허용 목록",
+      "f2": [0, 1, 0, 0, "_DATES_SQL core/cycles.py:815-820 (CTE d DISTINCT round_date, 유일 문장)"],
+      "f3": ["y", "rd.cycle 원장 행만"],
+      "f4": ["AXK3"],
+      "f6": ["n", "orNullOnTransient → null(dashboard.ts:419-422) → 달력 최솟값·선택 가능 날짜·프리셋 끝점이 고지 없이 빠짐(legacy .catch(null) 과 같음)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "1문장, 보관 프로미스로 요청당 1회(실패도 재발행 안 함, dashboard.ts:310-332)", "1"],
+      "f9": ["y", "날짜 ≤400(MAX_DATES), 절단은 dates_truncated 로 표면화(service.py:67-68)"],
+      "f10": ["n", "DC-07(첫 측정일 = 함대 값, legacy 스코프 좁힘)·DC-16(latest_round_date 항상)·U4-N12(filters.ts:41-60)"],
+      "parity": [
+        "back/app/features/analytics/filters/dates/tests/test_dates.py › test_latest_matches_options_snapshot",
+        "back/app/features/analytics/filters/dates/tests/test_dates.py › test_preset_range_matches_ts_port"
+      ]
+    },
+    "GET /v1/filters/dates family=mentions|citations": {
+      "label": "get_filters_dates_0 → get_dates / filters.ts loadFilterDates (언급 family=mentions · 인용 family=citations 필터 바, D6 필수)",
+      "where": "back features/analytics/filters/dates/service.py:71-78, SQL core/cycles.py:815-820; front lib/hgh/adapters/filters.ts:405-413·463-465, mention/page.tsx:219-222, citation/page.tsx:192-195, mentions.ts:207, citations.ts:664",
+      "stmts": "선택 가능 날짜 1 (+공통 3). 결과 캐시 허용 목록",
+      "f2": [0, 1, 0, 0, "_DATES_SQL core/cycles.py:815-820"],
+      "f3": ["y", "rd.cycle 원장 행만"],
+      "f4": ["AXK3"],
+      "f6": ["y", "옵션과 Promise.all → throwForPage → 5xx 는 (dash) 오류 경계(mention/page.tsx:208-222, citation/page.tsx:168-195) — legacy(.catch(null))보다 엄격"],
+      "f7": ["skip", ""],
+      "f8": ["y", "1문장, 필수 호출과 필터 바가 요청 dedupe 로 1회", "1"],
+      "f9": ["y", "날짜 ≤400, dates_truncated 표면화"],
+      "f10": ["n", "DC-07·DC-16·U4-N12 (filters.ts:41-60)"],
+      "parity": [
+        "back/app/features/analytics/filters/dates/tests/test_dates.py › test_latest_vs_options_as_of_by_hidden_scope"
+      ]
+    },
+    "GET /v1/filters/options": {
+      "label": "get_filters_options → get_options / filters.ts fetchFilterOptions·loadPanelOptions (세 화면 필터 패널, D6 뒤 발행)",
+      "where": "back features/analytics/filters/options/service.py:316-384, SQL options/queries.py:14-20(matrix_sql)·:77-85(CATALOG_GLOBAL_SQL·TAXON_SQL); front lib/hgh/adapters/filters.ts:208-215·358-385, dashboard/page.tsx:296-306, mention/page.tsx:208-222, citation/page.tsx:168-195",
+      "stmts": "창 1 + 측정 조합(rd.answer GROUP BY 5열) 1 + 택소노미 사전 1 + 카탈로그 1 = 4 (+공통 3). 조건부 include=source_categories(미요청) +1, 프로필 filter_options 면 legacy_global_sql(rd.job) 로 대체. 결과 캐시 허용 목록",
+      "f2": [1, 0, 1, 0, "CATALOG_GLOBAL_SQL features/analytics/filters/options/queries.py:77-83 (rd.catalog_entry LEFT JOIN app.prompt GROUP BY 8열)"],
+      "f3": ["y", "rd.answer 저장 조합 열 GROUP BY·카탈로그 차원만"],
+      "f4": [],
+      "f6": ["y", "세 화면 모두 try/catch → throwForPage, 5xx 는 오류 경계(dashboard/page.tsx:304-306, mention :220-222, citation :193-195)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "legacy 의 지역·언어·매트릭스 3중 스캔을 조합 1스캔으로 대체, 화면당 요청 dedupe 1회. engines·regions 필드는 같은 행 파생(글로벌 패널 미사용, 경미)", "4"],
+      "f9": ["y", "매트릭스·카탈로그 행은 패널이 draft 로 좁혀 전부 사용"],
+      "f10": ["n", "DC-06/07/22·U4-N8~N12·S1-N1(ID 숨김) 알려진 차이(filters.ts:47-64)"],
+      "parity": [
+        "front/lib/hgh/adapters/filters.parity.test.ts › legacy/api parity: filter options (dashboard composition) › catalog rows keep the legacy ORDER BY list_type, depth1, depth2, depth3",
+        "back/app/features/analytics/filters/options/tests/test_legacy_switch.py › test_global_admin_snapshot"
+      ]
+    },
+    "GET /v1/trend card=true bucket=cycle dimension=none": {
+      "label": "get_trend_0 → get_trend → _series_plain (M01~M05, measured_days=false) / dashboard.ts loadLiveTrend (카드 Δ·스파크라인 한 호출)",
+      "where": "back features/analytics/trend/series/router.py:19-28 → service.py:578-636·294-367, SQL core/measure.py:646-650(plan_counts main GROUP BY round_date)·core/cycles.py:409-448(resolve_recent_window); front lib/hgh/adapters/dashboard.ts:692-706 → trend.ts:177-199, live.ts:666-676, dashboard/page.tsx:389-390 (HEAD)",
+      "stmts": "창(최근 12 회차) 1 + rd.answer 메인(GROUP BY round_date) 1 = 2 (+공통 3). 조건부: 인용 숨김 회차로 계열 키가 갈리면 citation_presence +1, countryN cross +1, lang·source 원소 스캔 +1, 프로필 current 면 격자(_GRID_SQL)·동결 판정 +1~4. 결과 캐시 허용 목록",
+      "f2": [0, 0, 1, 0, "plan_counts main core/measure.py:646-650 (GROUP BY round_date)"],
+      "f3": ["n", "기본은 rd.answer 저장 열(cit_off·cit_n·당사 열)이지만 countryN cross 가 rd.citation 원소 JOIN(core/measure.py:695-697), scan 은 rd.citation 스캔(:744)"],
+      "f4": ["AXK5", "AXK2", "AXK9"],
+      "f6": ["y", "degradeOnApiFailure('standardTrend:day') → EXTRAS_LABELS 고지(live.ts:670-675, degrade-notice.tsx:43, page.tsx:481-486)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "Δ·스파크라인이 같은 cycle 호출 1회 공유(page.tsx:389-390, legacy 는 2회), measured_days=false 로 rd.job 조인 생략. cit_owned·gap 열은 같은 스캔에서 미사용(경미)", "2"],
+      "f9": ["n", "5계열 × 12버킷을 'use client' 카드로 직렬화, 스파크라인은 마지막 몇 점만 표시(overview-kpi-cards.tsx) — 경미(수 KB)"],
+      "f10": ["n", "DC-05(Δ = 직전 회차)·U5-N3(스파크라인 = 회차 버킷)·DC-01(프로필 off 기본 엔진) — dashboard.ts 머리 주석"],
+      "parity": [
+        "front/lib/hgh/adapters/trend.test.ts › legacy/api parity: dashboard trend (getLiveTrend + applyTrendDeltas + overviewCardDelta) › card Δ (applyTrendDeltas) identical",
+        "front/lib/hgh/adapters/trend.test.ts › legacy/api parity: dashboard trend … › LiveTrend",
+        "back/app/features/analytics/trend/series/tests/test_trend.py › test_default_window_shape_and_values"
+      ]
+    },
+    "GET /v1/trend card=true dimension=brand top=20 brand_key": {
+      "label": "get_trend_0 → _series_brand (visibility·share_of_voice·position, split_own, measured_days=false) / dashboard.ts loadCompetitorSources (경쟁사 Δ)",
+      "where": "back features/analytics/trend/series/service.py:408-490, SQL core/measure.py:1409-1433(competitor_rows_sql)·trend/series/queries.py:89-108(own_split_counts_sql)·:113-126; front lib/hgh/adapters/dashboard.ts:727-741 → trend.ts:177-199 (HEAD)",
+      "stmts": "다관점 계정 7 / 단일 관점 5 (+공통 3): 창 1 + base counts(mentions,gap) 1 + 당사 브랜드 키 1 + 비트별 당사 합계 1 + 경쟁 행(answer_brand GROUP BY) 1 + 명부 제외 1 + 표시명 1. 조건부 프로필 current 동결이면 개명 키·재집계·frz 표시명 +1~3. 결과 캐시 허용 목록",
+      "f2": [0, 0, 1, 0, "competitor_rows_sql core/measure.py:1431-1433 (GROUP BY round_date, brand_key)"],
+      "f3": ["y", "rd.answer·rd.answer_brand 저장 열 합 + 차원 점 조회"],
+      "f4": ["AXK5", "AXK9"],
+      "f6": ["y", "guard onFailure → markDegraded('brandTrend','firstPosition') → COMPETITOR_LABELS 고지(dashboard.ts:714-722·729, page.tsx:487-492)"],
+      "f7": ["skip", ""],
+      "f8": ["n", "base 와 비트별 당사 합계가 같은 WHERE 로 rd.answer 를 두 번 스캔, 경쟁 행은 창 전체 경쟁 브랜드 × 버킷 전량을 앱으로 가져와 top20 + 후보만 사용, 미요청 M03 열까지 집계(서브에이전트 측정: service.py:415·437-451, queries.py:94-97)", "7"],
+      "f9": ["n", "관점 3 + top20 + 후보 계열 × 3지표 × 12버킷을 경쟁사 묶음으로 직렬화, 카드는 경쟁사 4개의 마지막 두 점 Δ 만 사용(competitor-values.ts:177-205); top 절단은 meta 표식 없음(service.py:437)"],
+      "f10": ["n", "DC-01·DC-08(창 전체 상위 N)·회차 축(legacy S1.competitors off = 미러 주 축)"],
+      "parity": [
+        "front/lib/hgh/adapters/trend.test.ts › brand dimension (toBrandTrendResult / toFirstPositionResult)",
+        "front/lib/hgh/adapters/dashboard.test.ts › competitor rows › candidate brand keys = the three Δ cards' top 4",
+        "back/app/features/analytics/trend/series/tests/test_trend_bg.py › test_bg11_brand_keys_beyond_top",
+        "back/app/features/analytics/trend/series/tests/test_trend_excluded.py › test_top_refills_after_excluded"
+      ]
+    },
+    "GET /v1/trend dimension=brand top=10 split_own": {
+      "label": "get_trend_0 → _series_brand (+measured_days) / mentions.ts fetchBrandTrend B3 (KPI 브랜드 추이·우선 노출 추이·하단 주별 브랜드 언급 수 공유)",
+      "where": "back features/analytics/trend/series/service.py:408-490·515-522, SQL trend/series/queries.py:60-79(measured_days_sql)·core/measure.py:1409-1433; front lib/hgh/adapters/mentions.ts:175-184 ← kpi-tab.ts:360-365·419, mentions.ts:427·293-315",
+      "stmts": "다관점 8 / 단일 6 (+공통 3): V2 의 문장 + measured_days(rd.answer ⋈ rd.job) 1. 결과 캐시 허용 목록",
+      "f2": [1, 0, 2, 0, "measured_days_sql features/analytics/trend/series/queries.py:72-78 (rd.answer JOIN rd.job, 2단 GROUP BY)"],
+      "f3": ["y", "rd.answer·rd.answer_brand 저장 열, rd.job 은 answer_key PK 답변 그레인"],
+      "f4": ["AXK5", "AXK6", "AXK9"],
+      "f6": ["y", "loadMentionsLive.trend 실패 → trendDegraded → 하단 차트 'kpi.degradedTrend' 고지(mentions-prompts-section.tsx:35-42); KPI 탭 브랜드 추이는 null"],
+      "f7": ["skip", ""],
+      "f8": ["n", "base·비트별 당사 합계 rd.answer 이중 스캔, 경쟁 행 전량을 앱으로 가져와 top10 사용(V2 와 같은 구조)", "8"],
+      "f9": ["y", "당사 + 상위 10 계열 × 12회차 전부 KPI 탭·하단 차트에 표시"],
+      "f10": ["n", "DC-08(창 전체 상위 10, 기본 12회차 vs legacy 주별 상위 10 합집합 ≤15·120일)"],
+      "parity": [
+        "front/lib/hgh/adapters/mentions.test.ts › toMentionTrend: weekly chart through the unchanged legacy builder › parity: equals buildMentionTrend on the legacy weekly entries of the same WORLD",
+        "front/lib/hgh/adapters/kpi-tab.test.ts › first rank",
+        "back/app/features/analytics/trend/series/tests/test_trend.py › test_dimension_brand_own_and_competitors"
+      ]
+    },
+    "GET /v1/trend dimension=none (언급 개요)": {
+      "label": "get_trend_0 → _series_plain (visibility·share_of_voice·sentiment·position) / mentions.ts fetchOverviewTrend (D6 필수, 히어로 Δ 슬롯·우선 노출 슬롯)",
+      "where": "back features/analytics/trend/series/service.py:294-367, SQL trend/series/queries.py:60-79·core/measure.py:646-650; front lib/hgh/adapters/mentions.ts:187-191 ← :208, kpi-tab.ts:352·421",
+      "stmts": "창 1 + measured_days 1 + 메인(mentions,gap) 1 = 3 (+공통 3). 인용 계열 없음 → presence·cross·scan 없음. 결과 캐시 허용 목록",
+      "f2": [1, 0, 2, 0, "measured_days_sql features/analytics/trend/series/queries.py:72-78"],
+      "f3": ["y", "rd.answer 저장 열 + rd.job 답변 그레인"],
+      "f4": ["AXK5", "AXK6", "AXK9"],
+      "f6": ["y", "실패 → toEngineKpiTrend trendDegraded(kpi-tab.ts:306) → 'degraded' 문구(mention-kpi-tab.tsx:478-484)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "필수 호출·엔진 추이·우선 노출이 요청 dedupe 로 1회 공유, gap 열만 미사용(경미)", "3"],
+      "f9": ["y", "4계열 × 12회차, 전부 슬롯·Δ 에 사용"],
+      "f10": ["n", "DC-08·U6-N5(firstAt/lastAt null)·DC-05"],
+      "parity": [
+        "front/lib/hgh/adapters/trend.test.ts › legacy/api parity: dashboard trend … › mention-screen Δ (overviewCardDelta) and slot values identical on the bucket arrays",
+        "back/app/features/analytics/trend/series/tests/test_trend_bg.py › test_bg10_measured_days_kst"
+      ]
+    },
+    "GET /v1/trend dimension=engine": {
+      "label": "get_trend_0 → _series_plain(engine) / kpi-tab.ts loadEngineKpiTrend (엔진별 추이 버킷)",
+      "where": "back features/analytics/trend/series/service.py:294-367(engine :309·327-331), SQL queries.py:60-79·core/measure.py:646-650; front lib/hgh/adapters/kpi-tab.ts:345-347, toEngineBuckets :232-270",
+      "stmts": "창 1 + measured_days 1 + 메인(GROUP BY round_date, engine_key) 1 = 3 (+공통 3). 엔진 미선택이면 기본 엔진만(a.dflt)",
+      "f2": [1, 0, 2, 0, "measured_days_sql features/analytics/trend/series/queries.py:72-78 (메인은 [0,0,1,0])"],
+      "f3": ["y", "rd.answer 저장 열 + rd.job 답변 그레인"],
+      "f4": ["AXK5", "AXK6", "AXK9"],
+      "f6": ["y", "실패 → trendDegraded → 엔진 섹션·히어로 추이 'degraded'/'degradedTrend' 문구(kpi-tab.ts:306, engine-kpi-section.tsx:150)"],
+      "f7": ["skip", ""],
+      "f8": ["n", "엔진 추이 로더가 none·engine·type 추이를 동시에 보내 창 문장 ×3·base 스캔 ×2·measured_days ×2 를 별도 요청마다 반복(kpi-tab.ts:341-353), 미요청 rank 열 집계", "3"],
+      "f9": ["y", "3지표 × 기본 엔진 수 × 12회차, 전부 사용"],
+      "f10": ["n", "DC-01·DC-08·U6-N5"],
+      "parity": [
+        "front/lib/hgh/adapters/kpi-tab.test.ts › engine trend",
+        "front/lib/hgh/adapters/trend.test.ts › toStandardTrendBuckets / toLiveTrend: hand-computed values › engine breakdown attaches per-engine counts",
+        "back/app/features/analytics/trend/series/tests/test_trend.py › test_dimension_engine_series_keyed_by_engine_code"
+      ]
+    },
+    "GET /v1/trend dimension=type": {
+      "label": "get_trend_0 → _series_type (type_exposure, measured_days=false) / kpi-tab.ts loadEngineKpiTrend typeTrend (유형 콤보)",
+      "where": "back features/analytics/trend/series/service.py:493-512, SQL trend/series/queries.py:46-57(type_counts_sql); front lib/hgh/adapters/kpi-tab.ts:348-351, toTypeTrend :273-291",
+      "stmts": "창 1 + base counts(mentions,gap) 1 + type_counts(rd.answer_brand) 1 = 3 (+공통 3)",
+      "f2": [0, 1, 2, 0, "type_counts_sql features/analytics/trend/series/queries.py:54-56"],
+      "f3": ["y", "rd.answer_brand 저장 유형 열(t_*)을 답변 단위로 접음"],
+      "f4": ["AXK5", "AXK9"],
+      "f6": ["n", "실패 → typeTrend [](kpi-tab.ts:348-351·314) — trendDegraded 는 engine·overview 만 봄(:306) → 유형 콤보가 고지 없이 빔"],
+      "f7": ["skip", ""],
+      "f8": ["n", "base counts 가 V4·V2 와 같은 rd.answer 스캔을 별도 요청으로 반복하고 answers·gap_base 만 사용", "3"],
+      "f9": ["y", "5계열 고정"],
+      "f10": ["n", "DC-08·DC-01"],
+      "parity": [
+        "front/lib/hgh/adapters/kpi-tab.test.ts › loaders: queries and period rules",
+        "back/app/features/analytics/trend/series/tests/test_trend_bg.py › test_bg07_dimension_type_values_and_card_parity"
+      ]
+    },
+    "GET /v1/trend dimension=source top=15": {
+      "label": "get_trend_0 → _series_mix(source) / citations.ts fetchSourceTrend (주별 상위 도메인 차트)",
+      "where": "back features/analytics/trend/series/service.py:525-560, SQL trend/series/queries.py:138-160(mix_counts_sql); front lib/hgh/adapters/citations.ts:621-623 ← :722, toCitationTrend :313-350",
+      "stmts": "창 1 + citation_presence(rd.answer, 항상) 1 + mix_counts(rd.citation) 1 = 3 (+공통 3). 결과 캐시 허용 목록",
+      "f2": [3, 3, 3, 0, "mix_counts_sql features/analytics/trend/series/queries.py:143-159 (CTE per·tot·cut, JOIN tot·dim_source)"],
+      "f3": ["n", "요청마다 rd.citation 원소를 (버킷, 출처)로 집계하고 순위를 매김(queries.py:143-159, service.py:550)"],
+      "f4": ["AXK5", "AXK9"],
+      "f6": ["n", "degradeOnApiFailure('standardCitations.trend') → null → '대기' PendingCard(citations-standard-view.tsx:617) — 데이터 없음과 구분 안 됨"],
+      "f7": ["skip", ""],
+      "f8": ["n", "citation_presence 가 행 존재만 보려고 rd.answer 를 따로 스캔(url 4열 미사용, service.py:266) — 3문장 중 1문장", "3"],
+      "f9": ["y", "상위 15 계열 전부 차트(요청한 상한, legacy 합집합 상한 15)"],
+      "f10": ["n", "DC-08(창 전체 상위 N, 12버킷 기본)"],
+      "parity": [
+        "front/lib/hgh/adapters/citations.test.ts › conversions (hand-computed) › source trend: rows in bucket order",
+        "back/app/features/analytics/trend/series/tests/test_trend.py › test_dimension_source_and_category_mix"
+      ]
+    },
+    "GET /v1/trend dimension=category top=13": {
+      "label": "get_trend_0 → _series_mix(category) / citations.ts fetchCategoryTrend (카테고리 추이 + 직전 회차 카테고리 Δ 기준, 요청 dedupe 1회)",
+      "where": "back features/analytics/trend/series/service.py:525-560, SQL trend/series/queries.py:143-151; front lib/hgh/adapters/citations.ts:624-626 ← :723·:808-810, prevCategoriesOf :775-796",
+      "stmts": "창 1 + citation_presence 1 + mix_counts(category) 1 = 3 (+공통 3)",
+      "f2": [2, 1, 3, 0, "mix_counts_sql(category) features/analytics/trend/series/queries.py:147-150 (JOIN dim_source + LEFT JOIN override)"],
+      "f3": ["n", "rd.citation 스캔 + 유효 카테고리를 조회 시점 오버라이드로 재판정(coalesce(o.category_key, ds.category_key), queries.py:148-149)"],
+      "f4": ["AXK5", "AXK9"],
+      "f6": ["n", "실패 → categoryTrend null(차트 생략, citations-standard-view.tsx:458)·prevCategories null(Δ 사라짐) — 고지 없음"],
+      "f7": ["skip", ""],
+      "f8": ["n", "citation_presence 별도 rd.answer 스캔(V7 과 같은 문제)", "3"],
+      "f9": ["y", "13계열 = 카테고리 코드표 전부, 표시"],
+      "f10": ["n", "DC-08; DC-11 은 상류 해소(citations.ts:71-75)"],
+      "parity": [
+        "front/lib/hgh/adapters/citations.test.ts › conversions (hand-computed) › category trend: series = the snapshot categories",
+        "back/app/features/analytics/kpi/summary/tests/test_sync_s1_m05.py › test_category_delta_basis_is_previous_round_slot"
+      ]
+    },
+    "GET /v1/trend dimension=none metrics=visibility,citation_share": {
+      "label": "get_trend_0 → _series_plain (M01·M05, measured_days=false) / citations.ts fetchShareTrend (공식(HMG) 인용 비중 Δ)",
+      "where": "back features/analytics/trend/series/service.py:294-367, SQL core/measure.py:646-650; front lib/hgh/adapters/citations.ts:631-639 ← :805-807, shareDeltas :769-772",
+      "stmts": "창 1 + 메인 1 = 2 (+공통 3). 조건부 presence·countryN cross·lang/source scan +1 (V1 과 같음)",
+      "f2": [0, 0, 1, 0, "plan_counts main core/measure.py:646-650"],
+      "f3": ["n", "조건부 cross·scan 이 rd.citation 원소 사용(core/measure.py:695-697·744)"],
+      "f4": ["AXK5", "AXK2", "AXK9"],
+      "f6": ["n", "degradeOnApiFailure('citationShareDelta') → officialDelta null → Δ 가 고지 없이 사라짐(citations.ts:805-807)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "parts 를 계열 단위로 골라 M02~M04 열까지 같은 문장에서 집계(경미)", "2"],
+      "f9": ["n", "12버킷 × 2계열을 받아 마지막 두 유효 회차만 Δ 에 사용(경미)"],
+      "f10": ["n", "DC-05(Δ = 직전 회차)"],
+      "parity": [
+        "front/lib/hgh/adapters/citations.test.ts › standard secondary loaders › deltas from the share and category trends",
+        "back/app/features/analytics/kpi/summary/tests/test_sync_s1_m05.py › test_geo_trend_compare_engines_follow_card"
+      ]
+    },
+    "GET /v1/citations/domains card=true limit=0 competitor_sources": {
+      "label": "get_citations_domains_0 → get_domains(limit=0 단축) / dashboard.ts fetchDashboardDomains (카드 ⑤ 경쟁사 행)",
+      "where": "back features/analytics/citations/domains/router.py:18-25 → service.py:124-158(_scan :111-121), SQL domains/queries.py:268-301(_totals_sql)·:304-311(answers_den_sql)·:247-265; front lib/hgh/adapters/dashboard.ts:230-247·:742, toCompetitorCitationDomains :502-519 (HEAD)",
+      "stmts": "창 1 + 커버리지 분모(answers_den_sql) 1 + 합계·경쟁사 출처(_totals_sql) 1 = 3 (+공통 3). host_fold 는 프로필 off 에서 무효, domains_card_by_host 켜면 fold CTE 만 추가. 결과 캐시 허용 목록",
+      "f2": [4, 2, 2, 0, "_totals_sql features/analytics/citations/domains/queries.py:268-301 (CTE g·s, JOIN dim_source·override·dim_brand_name×2)"],
+      "f3": ["n", "rd.citation 원소를 source_key 로 요청 때 GROUP BY, 카테고리를 조회 시점 오버라이드로 재판정(queries.py:278-287)"],
+      "f4": ["AXK7"],
+      "f6": ["y", "guard onFailure('standardCitationDomains') → COMPETITOR_LABELS 고지(dashboard.ts:742, page.tsx:487-492). 단 백엔드는 경쟁사 slug 없으면 competitor_sources [] 를 표식 없이 냄(queries.py:260)"],
+      "f7": ["skip", ""],
+      "f8": ["n", "카드는 own_share.den·competitor_sources 만 읽는데 answers_den_sql 1문장 통째 미사용, competitor_totals·summary.own·matched 도 미사용, 같은 문장 안 count(*) FROM s 2회(queries.py:247·276)", "3"],
+      "f9": ["n", "competitor_sources 최대 5,000행(COMPETITOR_SOURCES_MAX domains/schemas.py:17)을 받아 카드가 브랜드 상위 4개로 접음; meta.truncated 를 어댑터가 보지 않아 상한 밖 공식 도메인이 값에서 무음 누락(dashboard.ts:502-519)"],
+      "f10": ["n", "DC-01(프로필 off 기본 엔진)·카드 경로 동결 층 꺼짐; 공식 경쟁사 도메인 → 브랜드 접기 규칙은 legacy 그대로(BG-20)"],
+      "parity": [
+        "front/lib/hgh/adapters/dashboard.parity.test.ts › competitor rows: brand values and the citation minis › brand values feed the same card candidates; citation minis equal on the same domain world",
+        "back/app/features/analytics/citations/domains/tests/test_perf_equiv.py › test_domains_limit0_equiv_global",
+        "back/app/features/analytics/citations/domains/tests/test_domains_bg.py › test_competitor_sources_cap_and_meta_truncated_u72"
+      ]
+    },
+    "GET /v1/citations/domains limit=200 competitor_sources": {
+      "label": "get_citations_domains_0 → get_domains / citations.ts fetchCitationDomains(mainDomainsRequest) (헤더 pill·도메인 표 첫 페이지·경쟁사 옵션·D6 필수)",
+      "where": "back features/analytics/citations/domains/service.py:124-158, SQL domains/queries.py:144-235(domains_sql, 본문 :195-228)·:304-311; front lib/hgh/adapters/citations.ts:554-562·642-646 ← loadCitationsView :704-752, competitorOptionsOf :481-486",
+      "stmts": "창 1 + 분모 1 + domains_sql(요약·경쟁사 합·목록 201행·matched·경쟁사 출처) 1 = 3 (+공통 3). 조건부: ?competitor= 선택이 있으면 skey 선택 호출이 별도 +3(citations.ts:732-735), source[] 는 세미조인만. 결과 캐시 허용 목록",
+      "f2": [6, 6, 3, 2, "domains_sql features/analytics/citations/domains/queries.py:195-228 (CTE g0·g·s·t·r·m, rank·match_rank 창 함수)"],
+      "f3": ["n", "rd.citation 원소를 (출처, 프롬프트)로 요청 때 GROUP BY, 조회 시점 오버라이드(queries.py:196-213)"],
+      "f4": ["AXK7"],
+      "f6": ["y", "domains·sources core 실패 → degradeOnApiFailure('standardCitations') → 'degraded' 카드(citation/page.tsx:383, citations-standard-view.tsx:190-195); 경쟁사 옵션 .catch(() => [])(page.tsx:202-204)는 무음이지만 같은 실패가 고지됨"],
+      "f7": ["skip", ""],
+      "f8": ["n", "competitor_totals·summary.own_share 는 글로벌 화면 미사용, t.total 과 요약 citations 가 같은 합을 2회 계산, 200행을 위해 전 출처에 row_number 2회", "3 (+선택 시 3)"],
+      "f9": ["n", "201행 조회·200행 반환, 표는 상위 100행(DOMAIN_RANK_LIMIT citations-standard-view.tsx:109·598); competitor_sources ≤5,000 의 meta.truncated 를 competitorOptionsOf 가 보지 않음. cursor·total 은 제공"],
+      "f10": ["n", "U7-N1(asOf = 회차일)·U7-N2(전 행 드릴다운)·U7-N3(경쟁사 옵션 상한)·U7-N5·N6(서버 검색·정렬)·U7-N14 — citations.ts 머리 주석"],
+      "parity": [
+        "front/lib/hgh/adapters/citations.parity.test.ts › every value is equal except the declared differences, and every declared difference occurs",
+        "front/lib/hgh/adapters/citations.parity.test.ts › hand check of the compared values (not just equal: the expected numbers)",
+        "back/app/features/analytics/citations/domains/tests/test_domains.py › test_global_shape_and_values_admin",
+        "back/app/features/analytics/citations/domains/tests/test_domains_bg.py › test_bg20_competitor_sources_and_skey_selection"
+      ]
+    },
+    "ROUTE /api/citations/domains → GET /v1/citations/domains (q·sort·cursor)": {
+      "label": "Next 라우트 GET /api/citations/domains → listCitationDomains → GET /v1/citations/domains (도메인 표 검색·정렬·더 보기)",
+      "where": "front app/api/citations/domains/route.ts:20-45 · app/api/citations/_lib/route.ts(openCitationRoute 게이트) → lib/hgh/adapters/citations.ts:1204-1212; 클라 citations-view.tsx useServerDomainTable(readTablePage); back domains/service.py:124-158, queries.py:195-228",
+      "stmts": "요청(페이지)당 창 1 + 분모 1 + 목록 1 = 3 (+공통 3). 검색어·정렬·더 보기마다 새 요청. 커서 세대가 바뀌면 409",
+      "f2": [5, 6, 3, 2, "domains_sql features/analytics/citations/domains/queries.py:195-228 (competitor_sources 없음, q 는 m 단계 ILIKE)"],
+      "f3": ["n", "rd.citation 원소 GROUP BY + 조회 시점 오버라이드"],
+      "f4": ["AXK7"],
+      "f6": ["y", "readTablePage 가 r.ok 확인 → status error → '불러오지 못했습니다' 표 상태(citations-view.tsx TableStatus)"],
+      "f7": ["skip", ""],
+      "f8": ["n", "검색어·정렬·페이지가 바뀔 때마다 전 출처를 처음부터 재집계하고 창·분모 문장도 반복, 라우트는 rows·nextCursor·total 만 사용(요약·competitor_totals 폐기)", "3/요청"],
+      "f9": ["y", "pageSize 100(표 상한과 같음)·next_cursor·total 제공"],
+      "f10": ["n", "U7-N5(검색·정렬이 전 출처 대상, legacy 는 슬리밍된 1,500~2,000행)·U7-N6(이름 정렬 = skey 순); 게이트는 두 원천 모두 place gate(_lib/route.ts)"],
+      "parity": [
+        "front/lib/hgh/adapters/citations.test.ts › list page for the client table",
+        "back/app/features/analytics/citations/domains/tests/test_domains_bg.py › test_bg21_search_narrows_rows_only"
+      ]
+    },
+    "GET /v1/citations/domains mention_brand (드릴다운 목록)": {
+      "label": "Next /api/scope/brand-citations → drilldown.ts loadBrandCitationDomains → GET /v1/citations/domains?mention_brand (최대 10페이지 순차)",
+      "where": "front app/api/scope/brand-citations/route.ts:83-99 → lib/hgh/adapters/drilldown.ts:420-443(fetchAllPages MAX_PAGES 10 :109); 클라 mentions-drilldown.tsx:342-346; back domains/service.py:77-82·124-158, queries.py:46-47·93-98·195-228",
+      "stmts": "페이지당 창 1 + 브랜드 키 1 + 분모(EXISTS answer_brand) 1 + 목록(EXISTS) 1 = 4 (+공통 3), 최대 10페이지 = 40문장(+공통 30). 모르는 브랜드는 2문장 뒤 빈 결과 + dropped_filters",
+      "f2": [5, 6, 3, 2, "domains_sql features/analytics/citations/domains/queries.py:195-228 (+ 인용 행마다 상관 EXISTS rd.answer_brand :96-98)"],
+      "f3": ["n", "rd.citation 원소 GROUP BY + 조회 시점 오버라이드"],
+      "f4": ["AXK7"],
+      "f6": ["n", "mentions-drilldown.tsx:342-346 이 r.ok 를 보지 않아 5xx {error} 응답이 domains 없음 → 빈 목록; 404·403 도 [](drilldown.ts:439-441), 모르는 브랜드는 200 + meta 만"],
+      "f7": ["skip", ""],
+      "f8": ["n", "페이지마다 창·브랜드 키·분모 문장과 전 출처 집계를 반복(10페이지면 10회, HTTP 순차), 같은 EXISTS 가 분모·목록에 중복, 요약·competitor_totals 미사용", "4×페이지"],
+      "f9": ["n", "fetchAllPages truncate 모드로 2,000행에서 멈추고 truncated·total 을 버림(drilldown.ts:427-438) — 무음 절단"],
+      "f10": ["n", "U6-N10·U6-N11(프로젝트는 프로젝트 원천); 모르는 브랜드 = 200 + dropped(legacy 와 응답 모양 다름)"],
+      "parity": [
+        "front/lib/hgh/adapters/drilldown.test.ts › loaders",
+        "back/app/features/analytics/citations/domains/tests/test_domains.py › test_mention_brand"
+      ]
+    },
+    "GET /v1/citations/domains/{skey} mention_brand (드릴다운 상세)": {
+      "label": "Next /api/scope/brand-citations?skey → drilldown.ts loadBrandCitationDetail → GET /v1/citations/domains/{skey}?mention_brand (행 펼칠 때)",
+      "where": "front app/api/scope/brand-citations/route.ts(skey 분기) → lib/hgh/adapters/drilldown.ts:446-465(DETAIL_LIMITS 10/100/20 :115); 클라 citation-domain-table.tsx:61-104(startDomainDetailLoad); back features/analytics/citations/domain_detail/router.py:19-26 → service.py:34-53, queries.py:24-29·32-86",
+      "stmts": "창 1 + 출처 점 조회 1 + 브랜드 키 1 + detail_sql 1 = 4 (+공통 3). 모르는 skey 는 404, 모르는 브랜드·source 밖이면 detail 생략",
+      "f2": [7, 9, 3, 1, "detail_sql features/analytics/citations/domain_detail/queries.py:39-85 (+ 상관 EXISTS rd.answer_brand)"],
+      "f3": ["n", "rd.citation 원소 범위 스캔·URL 단위(rd.dim_url) 집계, 출처 점 조회는 조회 시점 오버라이드(queries.py:24-52)"],
+      "f4": [],
+      "f6": ["y", "startDomainDetailLoad 가 r.ok 확인 → 'error' 상태 문구(citation-domain-table.tsx:89-99); 백엔드 out_of_category·모르는 브랜드는 0건 무표식"],
+      "f7": ["skip", ""],
+      "f8": ["n", "url_total·prompt_total·최상위 citations·출처 정보를 프론트가 읽지 않음, base count 2회(queries.py:78-81)", "4"],
+      "f9": ["n", "URL 10·프롬프트 100·프롬프트당 답변 20 상한 — 답변 참조 절단은 total·meta 없음(U6-N10), url/prompt_total 은 어댑터가 버림"],
+      "f10": ["n", "U6-N10(상세 상한)·U6-N11"],
+      "parity": [
+        "front/lib/hgh/adapters/drilldown.test.ts › citation rows",
+        "back/app/features/analytics/citations/domain_detail/tests/test_domain_detail_bg.py › test_bg25_limits_cut_and_tail"
+      ]
+    },
+    "ROUTE /api/citations/domains/{skey} → GET /v1/citations/domains/{skey}": {
+      "label": "Next 라우트 GET /api/citations/domains/<base64url skey> → loadDomainDrilldown → GET /v1/citations/domains/{skey} (인용 화면 행 드릴다운)",
+      "where": "front app/api/citations/domains/[skey]/route.ts:20-31 → lib/hgh/adapters/citations.ts:1194-1200·390-415; 클라 _data/citation-view.ts:269-270(domainDetailUrl)·citations-view.tsx DomainRow useDomainDetail; back domain_detail/service.py:34-53, queries.py:24-86",
+      "stmts": "창 1 + 출처 점 조회 1 + detail_sql 1 = 3 (+공통 3). 행 펼칠 때 1회",
+      "f2": [7, 9, 3, 1, "detail_sql features/analytics/citations/domain_detail/queries.py:39-85 (CTE 9, JOIN dim_url·owned_base·dim_prompt×2·dim_taxon·pk·job, rk 창 함수)"],
+      "f3": ["n", "rd.citation 원소·URL 단위 집계 + 조회 시점 오버라이드"],
+      "f4": [],
+      "f6": ["y", "r.ok 확인 → 'drilldown.loadFailed' 문구(citations-view.tsx DomainRow pending 분기)"],
+      "f7": ["skip", ""],
+      "f8": ["n", "url_total·prompt_total·출처 정보 미사용, base count 2회", "3"],
+      "f9": ["n", "URL 10·프롬프트 12·참조 8 상한, url/prompt_total 을 어댑터가 버려 절단 고지 없음"],
+      "f10": ["n", "U7-N2(전 행 드릴다운, legacy 상위 80 도메인만)·U7-N9·U7-N10"],
+      "parity": [
+        "front/lib/hgh/adapters/citations.parity.test.ts › drilldown: loadDomainDrilldown equals the legacy inline urls / promptList of the same row",
+        "back/app/features/analytics/citations/domain_detail/tests/test_domain_detail.py › test_global_reddit_shape"
+      ]
+    },
+    "GET /v1/citations/sources": {
+      "label": "get_citations_sources_0 → get_sources / citations.ts fetchCitationSources (카테고리·엔진·유형·톤, core + loadCitationSourceParts 요청 dedupe 1회, D6 필수)",
+      "where": "back features/analytics/citations/sources/router.py:18-24 → service.py:80-112, SQL sources/queries.py:125-164(sources_ans_sql)·:204-258(tone_sql)·:58-83(폴백); front lib/hgh/adapters/citations.ts:564-568 ← :716-720·:816-823",
+      "stmts": "창 1 + sources_ans(rd.answer cit_c·t_own 합) 1 + tone 1 = 데이터 3 + planner_hint 래퍼 3(SAVEPOINT·set_config·ROLLBACK, core/db.py:190-202) = 6 (+공통 3). 조건부: t_own NULL 답변이면 jt 재실행 +1, cit_c 미채움·오버라이드 반영 대기면 원소 경로 sources_sql +1. 결과 캐시 허용 목록",
+      "f2": [2, 4, 1, 0, "tone_sql features/analytics/citations/sources/queries.py:214-241 (rd.citation ⋈ 톤 답변 → URL 단위 집계)"],
+      "f3": ["n", "톤이 rd.citation 원소를 url_key 로 요청 때 집계(queries.py:225-229), 폴백은 원소 스캔 + 조회 시점 오버라이드(:68-77)"],
+      "f4": ["AXK8"],
+      "f6": ["y", "core 실패 → 'degraded' 카드, parts 실패 → 유형·톤 블록 'degraded' 문구(citations-standard-view.tsx:517-522·547-548)"],
+      "f7": ["skip", ""],
+      "f8": ["n", "rd.answer 를 같은 술어로 3회 스캔(sources_ans aw, tone ta, tone n), 폴백 시 거의 같은 문장 최대 +2", "6"],
+      "f9": ["y", "카테고리·엔진·유형·톤 전부 표시, 잘림 없음"],
+      "f10": ["n", "DC-10(톤 타일이 source[] 적용) — citations.ts 머리 주석"],
+      "parity": [
+        "front/lib/hgh/adapters/citations.parity.test.ts › every value is equal except the declared differences, and every declared difference occurs",
+        "back/app/features/analytics/citations/sources/tests/test_sources.py › test_override_applied_at_read_time",
+        "back/app/features/analytics/citations/sources/tests/test_sources_equiv.py › test_ans_path_falls_back"
+      ]
+    },
+    "GET /v1/citations/prompts owned=true limit=1": {
+      "label": "get_citations_prompts_0 → list_prompts / citations.ts fetchCitationPrompts(owned=true, limit=1) (공식 URL 인용/미인용 프롬프트 건수)",
+      "where": "back features/analytics/citations/prompts/router.py:19-36 → service.py:78-110, SQL prompts/queries.py:37-83(bucket_page_sql)·:86-108(answer_refs_sql)·core/measure.py:567-705; front lib/hgh/adapters/citations.ts:570-582 ← :724-726, toPromptSplit :379-387",
+      "stmts": "창 1 + bucket_page(건수·total·1행) 1 + answer_refs 1 = 3 (+공통 3). 조건부 countryN 이면 cross CTE(rd.answer⋈rd.citation) 가 문장 안에 붙음, lang·source 면 원소 스캔·상관 count",
+      "f2": [3, 6, 2, 0, "bucket_page_sql features/analytics/citations/prompts/queries.py:56-82 + core/measure.py:646-650"],
+      "f3": ["n", "countryN·scan·source 경로가 rd.citation 원소를 조인(core/measure.py:688-704), source_where 는 조회 시점 오버라이드"],
+      "f4": ["AXK2"],
+      "f6": ["n", "degradeOnApiFailure('standardCitations.split') → promptSplit null → 블록이 고지 없이 숨음(citations.ts:724-726, citations-standard-view.tsx:208)"],
+      "f7": ["skip", ""],
+      "f8": ["n", "글로벌 화면은 counts 두 값만 읽는데 answer_refs 1문장 통째 미사용, bucket_page 안 rows·engine array_agg·dim_prompt/taxon 조인도 미사용", "3"],
+      "f9": ["n", "1행 + 답변 참조 ≤8 을 받지만 표시 0(경미)"],
+      "f10": ["n", "DC-10(프롬프트 분할 = 인용 행 단위 자사)"],
+      "parity": [
+        "front/lib/hgh/adapters/citations.parity.test.ts › every value is equal except the declared differences, and every declared difference occurs",
+        "back/app/features/analytics/citations/prompts/tests/test_citations_prompts.py › test_global_matches_independent_citation_scan"
+      ]
+    },
+    "GET /v1/kpi/compare": {
+      "label": "get_kpi_compare → get_compare / compare.ts fetchPeriodCompareView·fetchPeriodCompareApi (대시보드 칩·언급 히어로 칩·인용 전월 대비 줄)",
+      "where": "back features/analytics/kpi/compare/service.py:172-282·logic.py:36-54, SQL core/cycles.py:299-385·761-821(ledger_rows·first_published)·core/measure.py:567-705; front lib/hgh/adapters/compare.ts:161-190, dashboard/page.tsx:420-426, mention/page.tsx:322-330, citations.ts:829-843",
+      "stmts": "URL 기간 양끝이 없으면 호출 0(compare.ts:165) — 기본 화면은 0. 있으면 스캔 창 1 + 계열 2 × (첫 발행 1 + 원장 1) + rd.answer 메인(GROUP BY cyc_key) 1 = 6 (+공통 3). 조건부 citations_per_answer 의 언급 숨김 회차 보조 +1, countryN cross·lang scan +1. card=true 전 화면",
+      "f2": [0, 0, 1, 0, "plan_counts group_by cycle core/measure.py:676-682 (원장·첫 발행은 core.cycles 공유 문장)"],
+      "f3": ["n", "조건부 cross(rd.citation JOIN)·lang 원소 스캔"],
+      "f4": ["P1", "P2", "P3", "P4", "AXK2"],
+      "f6": ["n", "대시보드 orNullOnTransient → null = 종전 Δ(page.tsx:423-425), 언급 degrade('standardPeriodCompare') null, 인용 degrade('citationPeriodCompare') null(citations.ts:835) — 셋 다 고지 없이 칩·줄이 사라짐"],
+      "f7": ["skip", ""],
+      "f8": ["y", "기간 지정 시에만 발행, 요청 지표만", "6"],
+      "f9": ["skip", ""],
+      "f10": ["n", "프로필 off 면 compare_epoch_gate·compare_suppress 꺼짐 → 적용일(2026-09-08) 이전 창도 비교(legacy null = 종전 Δ, DC-16)·미지원 조합(depth2·3·부분 자사)도 값을 냄(compare.ts:23-35), DC-01"],
+      "parity": [
+        "front/lib/hgh/adapters/compare.test.ts › legacy/api parity: computeCompare vs adapter(backend model)",
+        "back/app/features/analytics/kpi/compare/tests/test_legacy_switches.py › test_epoch_gate_before_epoch_returns_gated_without_reads"
+      ]
+    },
+    "GET /v1/geo card=true": {
+      "label": "get_geo_0 → get_geo / dashboard.ts fetchGeo → loadLiveGeo (live.ts getLiveGeoImpl, 요약으로 빈 상태 판정 후)",
+      "where": "back features/analytics/geo/markets/router.py:19-25 → service.py:119-210, SQL core/measure.py:567-705(fetch_counts group_by geo)·:1409-1433(brand_rows geo)·geo/markets/queries.py:7-20; front lib/hgh/adapters/dashboard.ts:257-261·753-755, live.ts:513-524 (HEAD)",
+      "stmts": "창 1; 관점 브랜드가 둘 이상(admin 기본·HMG 계정)이면 그 뒤 문장 없이 markets=[](service.py:138-140). 단일 브랜드: + 국가별 당사 합계 1 + 국가×경쟁 행 1 + 명부 제외 1 + 표시명 1 + 권역 라벨 1 = 6 (+공통 3). 조건부 countryN cross·lang scan +1. 결과 캐시 허용 목록(geo_gate 키)",
+      "f2": [0, 0, 1, 0, "competitor_rows_sql(group_by geo, hmg_siblings=False) core/measure.py:1409-1433"],
+      "f3": ["n", "조건부 countryN cross·lang 원소 스캔(core/measure.py:684-704)"],
+      "f4": [],
+      "f6": ["n", "orNullOnTransient(loadLiveGeo) → 섹션 생략(live.ts:522), 고지 없음"],
+      "f7": ["skip", ""],
+      "f8": ["y", "다중 브랜드 관점이면 창 1문장 뒤 즉시 반환 — legacy 처럼 숨겨질 집계를 돌리지 않음; 단일 브랜드는 전부 사용", "1 / 6"],
+      "f9": ["y", "권역 ≤18·국가 행 전부 지도·표"],
+      "f10": ["n", "U5-N1(own_label: 다중 브랜드 계정 'HMG' vs legacy 'Hyundai, Kia')·DC-01; 화면 게이트 shows_geo_map(core/auth.py:341-343) = legacy showsGeoMap"],
+      "parity": [
+        "front/lib/hgh/adapters/dashboard.parity.test.ts › GEO: buildGeo legacy vs toLiveGeo › single-brand account (Kia): identical tree, values and label",
+        "front/lib/hgh/adapters/dashboard.parity.test.ts › GEO: buildGeo legacy vs toLiveGeo › account scoped to two brands: no region tree either way; the label is own_label (U5-N1)",
+        "back/app/features/analytics/geo/markets/tests/test_geo.py › test_region_scope_no_leak"
+      ]
+    },
+    "GET /v1/kpi/engines part=all (+cycle_offset=1)": {
+      "label": "get_kpi_engines_0 → get_engines(part=all) / mentions.ts fetchEngineRows (엔진 추이 스칼라·우호도 히어로·직전 회차)",
+      "where": "back features/analytics/kpi/engines/router.py → service.py:54-78, SQL core/measure.py:567-705(plan_counts group_by engine); front lib/hgh/adapters/mentions.ts:160-170 ← kpi-tab.ts:159-170·177-195·336-340",
+      "stmts": "창 1 + rd.answer 메인(GROUP BY engine) 1 = 2 (+공통 3). 조건부 countryN cross +1, lang·source 원소 스캔 +1. cycle_offset=1 은 같은 2문장 별도 요청. 결과 캐시 허용 목록",
+      "f2": [0, 0, 1, 0, "plan_counts main group_by engine core/measure.py:676-682"],
+      "f3": ["n", "조건부 cross(rd.citation JOIN)·원소 스캔(core/measure.py:684-704)"],
+      "f4": ["T2", "T3", "T4", "AXK2"],
+      "f6": ["y", "loadEngineKpiTrend 실패 → null → 엔진·추이 자리 'degraded' 문구(mention-kpi-tab.tsx:478-484, favorability-kpi-tab.tsx:334-337); 우호도 히어로는 빈 Sub KPI"],
+      "f7": ["skip", ""],
+      "f8": ["n", "part=all 이라 인용 열(cit_*)·rank_detail(multi·top1·top3)까지 계산하지만 표준 언급 화면은 엔진 점(toEnginePoint kpi-tab.ts:200-216)·감성 행만 사용; countryN·lang 이면 인용 보조 문장까지 낭비", "2 (+조건부 1)"],
+      "f9": ["y", "엔진 수만큼 소량, 전부 사용"],
+      "f10": ["n", "DC-01·DC-05(직전 = 회차, 기간 모드 prev 없음)"],
+      "parity": [
+        "front/lib/hgh/adapters/kpi-tab.test.ts › engine trend",
+        "front/lib/hgh/adapters/mentions.test.ts › Sub KPI (B-3) › parity: buildMentionSubKpis gives the same cards on the adapter output and the legacy sub",
+        "back/app/features/analytics/kpi/engines/tests/test_engines.py › test_total_equals_summary_card"
+      ]
+    },
+    "GET /v1/mentions/types": {
+      "label": "get_mentions_types_0 → mention_types / mentions.ts fetchMentionTypes (KPI 유형 막대·유형별 감성·본문 typeTotals, 요청 dedupe 1회)",
+      "where": "back features/analytics/mentions/types/router.py:18-26 → service.py:62-76, SQL types/queries.py:22-37(types_sql)·:40-49(stance_sql); front lib/hgh/adapters/mentions.ts:151-155 ← kpi-tab.ts:470-474·484, mentions.ts:425",
+      "stmts": "창 1 + 답변 수(fetch_counts) 1 + types_sql 1 + stance_sql 1 = 4 (+공통 3). 결과 캐시 허용 목록",
+      "f2": [0, 1, 2, 0, "types_sql features/analytics/mentions/types/queries.py:22-37 (CTE pa (round_date,answer_key,own) GROUP BY → GROUP BY own)"],
+      "f3": ["y", "rd.answer_brand t_*·s_* 저장 열, rd.answer_stance ⋈ rd.answer(답변 그레인)"],
+      "f4": [],
+      "f6": ["n", "loadTypeKpi 실패 → null(kpi-tab.ts:471-473) → 유형 막대 빈 값('—'), 본문 typeTotals null — 고지 없음"],
+      "f7": ["skip", ""],
+      "f8": ["n", "스탠스 문장(stance_sql, service.py:68)은 STANCE_CARD_ENABLED=false(_data/kpi-view.ts:1401)라 화면 미사용 — 4문장 중 1문장 폐기", "4"],
+      "f9": ["y", "유형 5행 + 매트릭스 10행 전부 표시"],
+      "f10": ["n", "DC-01(기본 엔진)"],
+      "parity": [
+        "front/lib/hgh/adapters/kpi-tab.test.ts › type KPI and stance",
+        "back/app/features/analytics/mentions/types/tests/test_mentions_types.py › test_global_hyundai_values"
+      ]
+    },
+    "GET /v1/mentions/prompts mode=signal": {
+      "label": "get_mentions_prompts_0 → mention_prompts(signal) / drilldown.ts loadSignalPrompts ← /api/scope/signal-prompts (신호 프롬프트 다이얼로그, 클릭 시)",
+      "where": "back features/analytics/mentions/prompts/router.py:17-24 → service.py:140-184, SQL prompts/queries.py:47-61(page_sql)·:64-89(answers_sql); front lib/hgh/adapters/drilldown.ts:395-417, app/api/scope/signal-prompts/route.ts:80-97, signal-prompts-dialog.tsx:59-66",
+      "stmts": "창 1 + 페이지(answer_brand GROUP BY prompt + 창 함수) 1 + 답변 참조 1 = 3 (+공통 3). 결과 캐시 밖",
+      "f2": [4, 3, 1, 3, "answers_sql features/analytics/mentions/prompts/queries.py:64-89 (CTE t·c·d, JOIN rd.answer·rd.job + LEFT JOIN dim_engine·dim_country, row_number×2·count OVER)"],
+      "f3": ["y", "신호 열(s_*·t_*) 저장 값 합, 셀 대표 답변은 표시용 선택"],
+      "f4": [],
+      "f6": ["y", "다이얼로그가 r.ok 확인 → 오류 상태(signal-prompts-dialog.tsx:60-66); 백엔드 404·403 은 빈 목록(drilldown.ts:413-415, 존재 은폐)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "1페이지 50건·답변 6건만", "3"],
+      "f9": ["y", "상위 50(SIGNAL_PROMPTS_LIMIT drilldown.ts:112), 다이얼로그 안내에 상한 표기"],
+      "f10": ["n", "U6-N9(상위 50·답변 6, share 는 전체 기준)·U6-N16(퍼널 = 카탈로그 퍼널)"],
+      "parity": [
+        "front/lib/hgh/adapters/drilldown.parity.test.ts › signal list: legacy aggregateSignalPromptsFromMirror vs M-3 mode=signal through the adapter › positive: same prompts, signal counts (own rows, products folded), shares, references",
+        "back/app/features/analytics/mentions/prompts/tests/test_mentions_prompts_bg.py › test_signal_mode_rejects_brand_targets"
+      ]
+    },
+    "GET /v1/mentions/prompts mode=brand": {
+      "label": "get_mentions_prompts_0 → mention_prompts(brand, terms) / drilldown.ts loadBrandMentionPrompts ← /api/scope/brand-mention-prompts (행 드릴다운, 최대 10페이지)",
+      "where": "back features/analytics/mentions/prompts/service.py:44-63·140-184, SQL prompts/queries.py:47-61·64-89·92-103(terms_sql)·108-111(RESOLVE_BRAND_SQL); front lib/hgh/adapters/drilldown.ts:358-392(fetchAllPages MAX_PAGES 10), app/api/scope/brand-mention-prompts/route.ts:82-100, mentions-drilldown.tsx:143-147",
+      "stmts": "페이지당 창 1 + 브랜드 이름 해석 1(당사 행 0) + 페이지 1 + 답변 참조 1 + terms 원본 언급 1 = 5 (+공통 3). 200건 넘으면 커서로 최대 10페이지 순차(HTTP 10왕복). 결과 캐시 밖",
+      "f2": [4, 3, 1, 3, "answers_sql features/analytics/mentions/prompts/queries.py:64-89"],
+      "f3": ["n", "terms=true 가 rd.v_answer_mention_raw(언급 원본 행)를 읽어 하이라이트 대상 브랜드·모델을 앱에서 재판정(queries.py:92-103, service.py:66-112)"],
+      "f4": [],
+      "f6": ["n", "mentions-drilldown.tsx:143-147 이 r.ok 를 보지 않아 5xx {error} 응답이 prompts 없음 → '프롬프트 없음' 빈 상태; 404 brand_not_found·403 도 [](drilldown.ts:388-390)"],
+      "f7": ["skip", ""],
+      "f8": ["n", "페이지마다 같은 page_sql 전체 집계(sum OVER·count OVER)·창·이름 해석을 반복(최대 10회 순차)", "5×페이지"],
+      "f9": ["n", "최대 10×200=2,000 프롬프트까지 읽고 넘으면 안내 없이 절단(onLimit 'truncate', drilldown.ts:385)"],
+      "f10": ["n", "U6-N12·N14·N15(답변 참조 값·순위 = rd.answer_brand 규칙)·U6-N16"],
+      "parity": [
+        "front/lib/hgh/adapters/drilldown.parity.test.ts › brand drilldown: legacy aggregateMentionsFromMirror({onlyBrand}) vs M-3 mode=brand through the adapter › Toyota: same prompts, counts (products folded into the brand), shares, providers, references",
+        "back/app/features/analytics/mentions/prompts/tests/test_mentions_prompts_bg.py › test_mention_brand_equals_brand_key"
+      ]
+    },
+    "GET /v1/answers/{job_id}": {
+      "label": "get_answers_by_id_0 → answer_detail / answers.ts loadAnswerDetail ← /api/scope/answer (답변 모달, 언급·인용 공통)",
+      "where": "back features/analytics/answers/detail/router.py:17-22 → service.py:130-216, SQL detail/queries.py:19-37(LOCATE·header_sql)·:65-134(bundle_sql); front lib/hgh/adapters/answers.ts:136-149, app/api/scope/answer/route.ts:68-75, answer-modal.tsx:150-165",
+      "stmts": "위치(LOCATE) 1 + 헤더 1 + 번들(json_agg 스칼라 서브쿼리 묶음) 1 = 3 (+공통 3: 핸들러가 load_refs 를 직접 부르고 resolve_read_context 에 넘김). 설정 access_audit 이면 응답 뒤 비동기 감사 INSERT 1. 결과 캐시 밖",
+      "f2": [17, 0, 0, 0, "bundle_sql features/analytics/answers/detail/queries.py:65-134 (카탈로그 LEFT JOIN 5·브랜드 1·언급 원본 4·발생 2·스탠스 2·인용 3)"],
+      "f3": ["y", "답변 1건 점 조회(answer_key 등치), 감성 스팬·스탠스 근거 대조는 표시용 렌더(service.py:99-127)"],
+      "f4": [],
+      "f6": ["n", "answer-modal.tsx:150-158 이 r.ok 를 보지 않아 5xx {error:{code}} 가 available 없음 → '원문 미수집' 안내로 위장(legacy 는 재throw → 오류 상태, Before M10 y). 404·403·422 → available:false(answers.ts:128-130)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "클릭 시 1건", "3"],
+      "f9": ["skip", ""],
+      "f10": ["n", "접근 게이트 = 계정 스코프(루트·bgrp·스코프 국가, queries.py:23-37)만 — legacy getMirrorAnswerBody 는 화면 URL 필터(region 등)까지 IDOR 게이트에 걸었음(app/api/scope/answer/route.ts:77-93 주석) → 필터 밖이지만 스코프 안 답변이 보임(느슨); 원문 접근 감사 신설"],
+      "parity": [
+        "front/lib/hgh/adapters/answers.parity.test.ts › answer modal body: legacy getMirrorAnswerBody vs AN-2 through the adapter › same body, mentions (alias folded, own flag), models under their brand, citations by ref order",
+        "back/app/features/analytics/answers/detail/tests/test_an_answers_detail.py › test_detail_shape_global"
+      ]
+    },
+    "CLIENT xlsx export (브랜드 언급 순위)": {
+      "label": "BrandRankTable.onExport → downloadXlsx (B1 브랜드 행 재사용, 서버 호출 없음)",
+      "where": "front app/[locale]/(dash)/standard/answer-analysis/_components/brand-rank-table.tsx:147-171·221-231 · lib/export/xlsx.ts:16-52",
+      "stmts": "SQL 0 — 받은 브랜드 행을 브라우저에서 ExcelJS 동적 import 후 xlsx 생성",
+      "f2": ["skip", "SQL 없음 — 브라우저 내보내기"],
+      "f3": ["skip", "GET /v1/mentions/brands(B1) 결과 재사용"],
+      "f4": [],
+      "f6": ["skip", "읽기 없음 — 화면 행 재사용"],
+      "f7": ["n", "`void downloadXlsx(...)` — exceljs 청크 import·writeBuffer 실패가 삼켜져 오류 안내 없음(brand-rank-table.tsx:149, xlsx.ts:22·43), 생성 중 버튼 비활성·진행 표시 없음(:225-226) → 연타 시 중복 다운로드 (legacy 와 같은 컴포넌트)"],
+      "f8": ["y", "추가 조회 없음", "0"],
+      "f9": ["y", "정렬·검색 결과 상위 100 — 제목에 '상위 100' 표기"],
+      "f10": ["y", "같은 컴포넌트·열 — 원천 차이는 GET /v1/mentions/brands 키에서 판정"],
+      "parity": []
+    },
+    "CLIENT xlsx export (도메인 인용 순위)": {
+      "label": "DomainsBlock.onExport → downloadXlsx (도메인 표 행 재사용, 서버 호출 없음)",
+      "where": "front app/[locale]/(dash)/standard/answer-analysis/_components/citations-standard-view.tsx:606-610·629-632 · lib/export/xlsx.ts:16-52",
+      "stmts": "SQL 0 — 표시 중인 행(첫 페이지 또는 /api/citations/domains 검색·정렬 결과)을 브라우저에서 xlsx 생성",
+      "f2": ["skip", "SQL 없음 — 브라우저 내보내기"],
+      "f3": ["skip", "도메인 목록 결과 재사용"],
+      "f4": [],
+      "f6": ["skip", "읽기 없음 — 화면 행 재사용"],
+      "f7": ["n", "`void downloadXlsx(...)` — 실패가 삼켜져 오류 안내 없음(citations-standard-view.tsx:607), 생성 중 버튼 비활성·진행 표시 없음(:629) → 연타 시 중복 다운로드"],
+      "f8": ["y", "추가 조회 없음", "0"],
+      "f9": ["n", "표시분 최대 100행(DOMAIN_RANK_LIMIT :109·598)만 내보내고 제목('도메인 인용 순위')에 상한 표기 없음(백엔드 export 경로 BG-22 는 표준 화면 미사용)"],
+      "f10": ["y", "같은 컴포넌트·열 — 원천 차이는 도메인 목록 키에서 판정"],
+      "parity": []
+    }
+  },
+  "area_keys": [
+    {"route": "/ko/dashboard", "label": "기준일 표시 · 필터 바", "api_keys": ["GET /v1/kpi/summary card=true", "GET /v1/filters/options", "GET /v1/filters/dates family=all"]},
+    {"route": "/ko/dashboard", "label": "KPI 카드 5개", "api_keys": ["GET /v1/kpi/summary card=true", "GET /v1/mentions/brands card=true top_n=20 include=hmg", "GET /v1/funnel/conversion days=28 include_pages=false"]},
+    {"route": "/ko/dashboard", "label": "카드 증감 · 스파크라인", "api_keys": ["GET /v1/trend card=true bucket=cycle dimension=none"]},
+    {"route": "/ko/dashboard", "label": "카드 기간 비교 칩", "api_keys": ["GET /v1/kpi/compare"]},
+    {"route": "/ko/dashboard", "label": "경쟁사 미니 행 (카드 ①~④)", "api_keys": ["GET /v1/mentions/brands card=true top_n=20 include=hmg", "GET /v1/trend card=true dimension=brand top=20 brand_key"]},
+    {"route": "/ko/dashboard", "label": "카드 ⑤ 경쟁사 행", "api_keys": ["GET /v1/citations/domains card=true limit=0 competitor_sources"]},
+    {"route": "/ko/dashboard", "label": "숨은 계산: AI 유입 전환(GA4)", "api_keys": ["GET /v1/funnel/conversion days=28 include_pages=false"]},
+    {"route": "/ko/dashboard", "label": "국가별 GEO 현황", "api_keys": ["GET /v1/kpi/summary card=true", "GET /v1/geo card=true"]},
+    {"route": "/ko/standard/answer-analysis/mention", "label": "기준일 · 필터 바 · 기간 비교", "api_keys": ["GET /v1/mentions/brands full=true split_own include=multi,prompts,types", "GET /v1/filters/options", "GET /v1/filters/dates family=mentions|citations", "GET /v1/kpi/compare"]},
+    {"route": "/ko/standard/answer-analysis/mention", "label": "히어로 · 추이", "api_keys": ["GET /v1/kpi/summary (분석, +cycle_offset=1)", "GET /v1/kpi/engines part=all (+cycle_offset=1)", "GET /v1/mentions/brands group_by=engine top_n=30", "GET /v1/trend dimension=none (언급 개요)", "GET /v1/trend dimension=engine", "GET /v1/trend dimension=type", "GET /v1/trend dimension=brand top=10 split_own"]},
+    {"route": "/ko/standard/answer-analysis/mention", "label": "경쟁사 분석 표", "api_keys": ["GET /v1/mentions/brands full=true split_own include=multi,prompts,types", "GET /v1/trend dimension=brand top=10 split_own"]},
+    {"route": "/ko/standard/answer-analysis/mention", "label": "AI 엔진별", "api_keys": ["GET /v1/kpi/engines part=all (+cycle_offset=1)", "GET /v1/trend dimension=engine", "GET /v1/mentions/brands group_by=engine top_n=30", "GET /v1/trend dimension=none (언급 개요)"]},
+    {"route": "/ko/standard/answer-analysis/mention", "label": "멘션 유형별", "api_keys": ["GET /v1/mentions/types", "GET /v1/mentions/brands full=true split_own include=multi,prompts,types", "GET /v1/trend dimension=type"]},
+    {"route": "/ko/standard/answer-analysis/mention", "label": "긍정·부정 신호 비율", "api_keys": ["GET /v1/kpi/engines part=all (+cycle_offset=1)", "GET /v1/trend dimension=engine", "GET /v1/trend dimension=none (언급 개요)"]},
+    {"route": "/ko/standard/answer-analysis/mention", "label": "감정 분포 · 신호 프롬프트", "api_keys": ["GET /v1/mentions/brands full=true split_own include=multi,prompts,types", "GET /v1/mentions/prompts mode=signal"]},
+    {"route": "/ko/standard/answer-analysis/mention", "label": "멘션 유형별 감정 분포", "api_keys": ["GET /v1/mentions/types"]},
+    {"route": "/ko/standard/answer-analysis/mention", "label": "히어로 · 순위", "api_keys": ["GET /v1/mentions/brands full=true split_own include=multi,prompts,types", "GET /v1/trend dimension=brand top=10 split_own", "GET /v1/kpi/summary (분석, +cycle_offset=1)", "GET /v1/trend dimension=none (언급 개요)"]},
+    {"route": "/ko/standard/answer-analysis/mention", "label": "주별 브랜드 언급 수", "api_keys": ["GET /v1/trend dimension=brand top=10 split_own", "GET /v1/mentions/brands full=true split_own include=multi,prompts,types"]},
+    {"route": "/ko/standard/answer-analysis/mention", "label": "브랜드 언급 순위", "api_keys": ["GET /v1/mentions/brands full=true split_own include=multi,prompts,types", "GET /v1/mentions/types", "GET /v1/kpi/summary (분석, +cycle_offset=1)"]},
+    {"route": "/ko/standard/answer-analysis/mention", "label": "행 드릴다운 · 프롬프트", "api_keys": ["GET /v1/mentions/prompts mode=brand"]},
+    {"route": "/ko/standard/answer-analysis/mention", "label": "행 드릴다운 · 인용 출처", "api_keys": ["GET /v1/citations/domains mention_brand (드릴다운 목록)", "GET /v1/citations/domains/{skey} mention_brand (드릴다운 상세)"]},
+    {"route": "/ko/standard/answer-analysis/mention", "label": "답변 모달", "api_keys": ["GET /v1/answers/{job_id}"]},
+    {"route": "/ko/standard/answer-analysis/mention", "label": "쓰기: 브랜드 언급 순위 Excel 내보내기", "api_keys": ["CLIENT xlsx export (브랜드 언급 순위)", "GET /v1/mentions/brands full=true split_own include=multi,prompts,types"]},
+    {"route": "/ko/standard/answer-analysis/citation", "label": "기준일 · 필터 바 · 전월 대비", "api_keys": ["GET /v1/citations/domains limit=200 competitor_sources", "GET /v1/citations/sources", "GET /v1/filters/options", "GET /v1/filters/dates family=mentions|citations", "GET /v1/kpi/compare"]},
+    {"route": "/ko/standard/answer-analysis/citation", "label": "인용 현황 · 공식(HMG)/딜러·마켓 인용 비중", "api_keys": ["GET /v1/citations/sources", "GET /v1/citations/domains limit=200 competitor_sources", "GET /v1/trend dimension=none metrics=visibility,citation_share", "GET /v1/trend dimension=category top=13"]},
+    {"route": "/ko/standard/answer-analysis/citation", "label": "인용 현황 · 공식 URL 인용/미인용 프롬프트", "api_keys": ["GET /v1/citations/prompts owned=true limit=1", "GET /v1/citations/domains limit=200 competitor_sources", "GET /v1/citations/sources"]},
+    {"route": "/ko/standard/answer-analysis/citation", "label": "출처 카테고리별 현황", "api_keys": ["GET /v1/citations/sources", "GET /v1/trend dimension=category top=13", "GET /v1/citations/domains limit=200 competitor_sources"]},
+    {"route": "/ko/standard/answer-analysis/citation", "label": "엔진별 출처 카테고리 구성", "api_keys": ["GET /v1/citations/sources", "GET /v1/citations/domains limit=200 competitor_sources"]},
+    {"route": "/ko/standard/answer-analysis/citation", "label": "멘션 유형별 출처 카테고리 구성", "api_keys": ["GET /v1/citations/sources"]},
+    {"route": "/ko/standard/answer-analysis/citation", "label": "답변 우호도별 인용 도메인", "api_keys": ["GET /v1/citations/sources"]},
+    {"route": "/ko/standard/answer-analysis/citation", "label": "주별 상위 10개 도메인 인용 수", "api_keys": ["GET /v1/trend dimension=source top=15", "GET /v1/citations/domains limit=200 competitor_sources", "GET /v1/citations/sources"]},
+    {"route": "/ko/standard/answer-analysis/citation", "label": "도메인 인용 순위", "api_keys": ["GET /v1/citations/domains limit=200 competitor_sources", "ROUTE /api/citations/domains → GET /v1/citations/domains (q·sort·cursor)", "GET /v1/citations/sources"]},
+    {"route": "/ko/standard/answer-analysis/citation", "label": "행 드릴다운 · 인용 URL·프롬프트 · 답변 모달", "api_keys": ["ROUTE /api/citations/domains/{skey} → GET /v1/citations/domains/{skey}", "GET /v1/answers/{job_id}"]},
+    {"route": "/ko/standard/answer-analysis/citation", "label": "쓰기: 도메인 인용 순위 Excel 내보내기", "api_keys": ["CLIENT xlsx export (도메인 인용 순위)", "GET /v1/citations/domains limit=200 competitor_sources", "ROUTE /api/citations/domains → GET /v1/citations/domains (q·sort·cursor)"]}
+  ],
+  "new_constants": {
+    "AXK1": ["rd.answer 당사 열 3사 고정 BRAND_OWN_COLS (+ 출처 유형 비트 이동 T_OWN_SHIFT)", "back/app/core/codes.py:22 · features/analytics/citations/sources/queries.py:109", 1, "{1:h, 2:k, 4:g} — 당사 = 현대·기아·제네시스 3열 고정(own_cols·cit_own_*), T_OWN_SHIFT {1:0, 2:5, 4:10}"],
+    "AXK2": ["M05 공식 카테고리 매칭 문자열 OFFICIAL_CATEGORY_NAME", "back/app/core/measure.py:506-509", 1, "'Official (HMG)' — lang·source 축 원소 스캔 경로의 M05 분자(OFFICIAL_SOURCES, citation_counts_sql :733)"],
+    "AXK3": ["기간 프리셋 창 preset_range", "back/app/features/analytics/filters/dates/service.py:41-55", 1, "주 -6일 · 격주 -13일 · 월 -29일 · 년 -1년(첫 측정일 클램프)"],
+    "AXK4": ["숨김 계열 배제 규칙 HIDDEN_EXCLUDE", "back/app/core/codes.py:27-32", 1, "mentions {1,3} · citations {1,2} · any {1,2,3} · row {1} — 모든 창 해석·발행·숨김 억제 판정"],
+    "AXK5": ["추이 기본 창 DEFAULT_WINDOW", "back/app/features/analytics/trend/series/service.py:87", 1, "12(회차 12자리·주 12·월 12) — 기간 미지정 추이"],
+    "AXK6": ["측정일 계산 시간대 MEASURED_TZ", "back/app/features/analytics/trend/series/queries.py:35", 1, "'Asia/Seoul' — 버킷 measured_days 의 KST 일 경계"],
+    "AXK7": ["경쟁사 카테고리 slug 매칭 COMPETITOR_SLUG", "back/app/features/analytics/citations/domains/service.py:51", 1, "'officialCompetitor' — competitor_sources·경쟁사 선택의 카테고리 키 판정"],
+    "AXK8": ["출처 카테고리 13종 고정 답변 열 CAT_KEYS", "back/app/features/analytics/citations/sources/queries.py:97", 1, "range(1,14) = rd.answer cit_c1..13 — 카테고리가 늘면 답변 경로 집계에서 빠짐"],
+    "AXK9": ["추이 격자·결손 상수(프로필 current 경로)", "back/app/core/cycles.py:238·475-477", 1, "TREND_GRID_SLOTS 13 · TREND_GRID_MAX_DAYS 180 · TREND_COMPLETION_MIN 0.9 · ANALYSIS_GAP_MAX 0.05"]
+  },
+  "notes": [
+    "설정 가정: HGH_SOURCE_G1·G2=api, HGH_RESULT_CACHE 꺼짐(전부 미캐시로 계수, 허용 목록 여부는 stmts 에 기재), HGH_LEGACY_PROFILE 미설정 = off(core/profile.py:265 DEFAULT_SPEC, docs/reports/부록/화면 지표 JOIN 분석.json 로컬 관측도 unset). 그래서 card=true 여도 summary_all_engines·card_slot_rep·freeze_at_publish(frz 동결 뷰)·trend_grid·compare_epoch_gate·compare_suppress·filter_options 가 꺼진 경로를 기본으로 쟀고, current 경로는 stmts 의 조건부로만 적었다. 운영 프로필·캐시 실제 값은 UNKNOWN.",
+    "작업 트리 변경 주의: front/lib/hgh/adapters/dashboard.ts·dashboard/_data/live.ts·dashboard*.test.ts 가 2026-10-14 16:04~16:10 에 미커밋 수정되는 중이다(측정 도중 관찰). 수정본은 글로벌 대시보드 ⑦(GA4) 호출을 legacy·api 양쪽에서 제거한다(essentialCalls global = 3호출, loadLiveDashboard 에서 fetchTrafficConversion 제거, dashboard.parity.test.ts:229-253 이 /v1/funnel/conversion 미호출 단언). 규칙대로 HEAD 56ad6f9(세션 초기에 읽은 본문)를 기준으로 측정했고 dashboard.ts·live.ts 줄 번호는 HEAD 기준이다. 수정본 기준이면 '숨은 계산' 영역은 0호출, 'KPI 카드 5개' 영역에서 conversion 키가 빠지고 D6 필수가 3호출로 준다.",
+    "숨은 계산 확인(HEAD): /v1/funnel/conversion 은 global D6 필수 4호출(dashboard.ts:366-372)이고 loadLiveDashboard 가 카드 본체와 같은 Promise.all 로 기다려(:663-667) ⑦ KpiSummary 를 만든다(:669). OverviewKpiCards 는 OVERVIEW_KPI_KEYS 5종만 그린다(overview-kpi-cards.tsx:272, overview-metrics.ts:12-14) → 렌더되지 않음. 카드 본체가 이 호출을 기다리므로 'KPI 카드 5개' 영역에도 같은 키를 붙였다(Before notes 권고와 같은 이유).",
+    "f2 계수 규칙: 공유 술어 빌더(core.measure scope_where·mention_population·citation_population·unit_gate_of·frozen_gate·rep_term·catalog_all_pred·source_where·citation_where·frozen_taxon_pred·web_unit_pred, core.cycles Window.where) 안의 조인·서브쿼리는 제외했다. core.cycles 창·격자·원장 문장(resolve_window·resolve_recent_window·ledger_rows·first_published)은 stmts 에는 세되 heaviest 후보에서 뺐다(filters/dates 는 그 문장이 유일해 그대로 썼다). 점수(JOIN+CTE+AGG+WIN) 동률이면 큰 사실 표를 읽는 쪽을 골랐다. 공통 3문장(set_config·app.user_account·load_refs)은 AXCOMMON 에만 있다.",
+    "f3 판정: summary·engines·geo·compare·trend(none) 은 기본 경로가 rd.answer 저장 열 합(y 성격)이지만, 다국가 스코프 계정(countryN)은 필터 없이도 cross 문장이 rd.citation 원소를 JOIN 하고(core/measure.py:684-700, core/filters.py:804-811) lang·source 축은 원소 스캔을 한다. 규칙(any path)에 따라 n 으로 적었다. 인용 C-1 목록·상세·톤·카테고리 추이는 조회 시점 오버라이드 재판정까지 있다.",
+    "끝점 공유: 대시보드 summary·brands·trend·geo·domains·compare·options·dates 핸들러는 website(G3)·project(G6) 대시보드도 쓴다(파라미터만 다름). 분석 키(mentions·citations·trend·answers·drilldown)는 website·project 언급·인용 화면과 공유한다. 언급 KPI 탭 loadEngineKpiTrend 는 trend none·engine·type 을 동시에 보내 창 문장 ×3·base 스캔 ×2·measured_days ×2 가 별도 요청에서 반복된다. 요청당 동시 호출 상한은 4(client.ts:144)다.",
+    "주석과 코드 불일치: mentions.ts 머리 U6-N1 은 full 상한 2000 이라 적지만 백엔드 FULL_CAP=10000(mentions/brands/schemas.py:17). citations.ts U7-N3 은 경쟁사 옵션 500 이지만 백엔드 COMPETITOR_SOURCES_MAX=5000(citations/domains/schemas.py:17, core 9 U7-2). COMPETITOR_SOURCES_MAX 는 표시 상한으로 보고 f4 에서 뺐다. 다만 대시보드 카드 ⑤ 는 competitor_sources 를 브랜드로 접어 값을 내므로 계산 경로의 무음 상한이 된다(어댑터가 meta.truncated 를 보지 않음).",
+    "f6 악화 지점: 드릴다운 fetch 의 r.ok 미확인(Before notes 의 재검토 후보)이 After 에도 그대로다(mentions-drilldown.tsx:143-147·342-346, answer-modal.tsx:150-158). After 라우트는 5xx 를 JSON {error:{code}}(hghErrorResponse)로 돌려주므로, legacy(비 JSON 500 → catch → 오류 상태)와 달리 '없음'·'원문 미수집'으로 보인다. 그래서 답변 모달 f6 이 Before y → After n 으로 바뀌었다. 인용 화면 행 드릴다운·신호 다이얼로그·도메인 표는 r.ok 를 확인한다(y).",
+    "mention_brand 를 모를 때: 인용 C-1 목록·상세는 200 + meta.dropped_filters(브랜드 404 없음)이고, 언급 M-3 만 404 brand_not_found 를 낸다. 그래서 drilldown.ts 의 404→빈 목록 분기 일부는 인용 경로에서 쓰이지 않는다. 스코프 밖 skey 상세는 200 + 0건이다(test_domain_detail.py › test_scope_no_leak 가 고정).",
+    "쓰기 영역 2개는 클라이언트 전용(서버 호출 없음)이라 CLIENT 키에 f7 을 쟀고, 데이터 원천 키도 함께 붙였다. 대시보드에는 쓰기 영역이 없다(Before notes 와 같음). 백엔드 /v1/citations/domains/export(BG-22)는 표준 인용 화면이 쓰지 않는다.",
+    "UNKNOWN: 운영 HGH_LEGACY_PROFILE·HGH_RESULT_CACHE 값, 문장별 실측 비용(EXPLAIN 미실행), trend brand(top=20)에서 후보 키 밖 계열이 카드에 표시되는지, project 표면 resolve_project 문장 수(이번 범위 밖)."
+  ]
+}

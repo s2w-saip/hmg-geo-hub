@@ -1,0 +1,11 @@
+{
+  "notes": [
+    "에이전트 측정 이후 main 작업 트리에 들어간 수정을 반영하는 보정. 에이전트 원본(after/*.json)은 그대로 두고 이 파일이 마지막에 덮어쓴다.",
+    "2026-10-14 대시보드 숨은 GA4 조회 제거: 글로벌 대시보드 api 경로가 GET /v1/funnel/conversion 을 더 부르지 않는다(lib/hgh/adapters/dashboard.ts essentialCalls·loadLiveDashboard). KPI 카드 영역에서 키를 빼고, 숨은 계산 영역은 호출 없음.",
+    "2026-10-14 브랜드 드릴다운 terms 422: back mentions/prompts 가 terms 를 answer_key 1000개씩 나눠 읽고 요청 단계 곱 상한 422 를 뺐다. 기존 판정(f6 r.ok 미확인·f9 2,000행 절단·f10 선언 차이)은 그대로라 칸 변화는 없다."
+  ],
+  "area_keys": [
+    {"route": "/ko/dashboard", "label": "KPI 카드 5개", "api_keys": ["GET /v1/kpi/summary card=true", "GET /v1/mentions/brands card=true top_n=20 include=hmg"]},
+    {"route": "/ko/dashboard", "label": "숨은 계산: AI 유입 전환(GA4)", "api_keys": []}
+  ]
+}

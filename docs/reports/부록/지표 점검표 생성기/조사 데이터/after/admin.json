@@ -1,0 +1,1356 @@
+{
+  "surface": "admin",
+  "prefix": "AA",
+  "common": "AACOMMON",
+  "endpoints": {
+    "AACOMMON": {
+      "label": "공통: JWT(JWKS) 검증 verified_subject → get_principal(app.user_account status=active) → require_admin·require_menu_group('admin')/AdminDetached + 어댑터 오류 매핑(writeFailure·degradeRead·ecatErrorKey·throwForPage)",
+      "where": "back/app/core/auth.py:221-263(verified_subject·get_principal·get_principal_detached)·177-205(_PRINCIPAL_SQL·load_principal)·269-294(check_role·check_menu_group·require_menu_group)·346-366(check_admin·require_admin·AdminDetached)·598-601(DataScope admin=전체); front/lib/hgh/client.ts:620-808(dedupe·execute·retryOn401), front/lib/hgh/adapters/admin.ts:171-198(writeFailure·degradeRead), front/lib/hgh/adapters/admin-entities.ts:92-115(ecatErrorKey), front/lib/hgh/errors.ts:226(throwForPage), front/lib/auth/session.ts:26-27(SESSION 원천 분기)",
+      "stmts": "백엔드 요청마다 JWT 검증(JWKS 캐시 600s, 커넥션 전) + principal SELECT app.user_account 1(요청 RoConn 또는 Detached 짧은 api_ro). 쓰기는 RwConn(api_rw·행위자 GUC) 별도 트랜잭션이라 principal(api_ro)+쓰기 tx 2커넥션. 프런트: 페이지·서버 액션 요청마다 getSession(SESSION=api 면 GET /v1/auth/me 1회, React cache) → canAccessAdmin(role admin) 게이트 → 백엔드 호출. admin 의 DataScope 는 전체(Q16)라 스코프 술어 없음. 결과 캐시(HGH_RESULT_CACHE) 기본 off, 관리 엔드포인트는 ALLOWLIST 밖(back/app/core/result_cache.py:73-92).",
+      "f2": ["skip", ""],
+      "f3": ["skip", ""],
+      "f4": [],
+      "f6": ["y", "SESSION=api 기준 401→null(로그인), 그 밖 오류 throw; 페이지는 throwForPage(401 login·403 no-access·5xx 오류 경계), 쓰기 401/403 은 UnauthorizedError. 단 HGH_SOURCE_SESSION=legacy 로 두면 profiles 축소 SELECT 폴백(menuGroups=null) 무표시가 프런트 게이트에 남음 front/lib/db/repositories/profiles.ts:59-87"],
+      "f7": ["skip", ""],
+      "f8": ["skip", ""],
+      "f9": ["skip", ""],
+      "f10": ["n", "역할은 전 /v1/admin 엔드포인트가 role=admin 강제(레거시 canAccessAdmin 과 동일). 메뉴그룹 admin 은 대부분 백엔드가 추가 검사(레거시 서버 액션은 role 만 → 액션 기준 엄격화, 페이지 게이트 role∧menu 와는 동일)이나 admin.interest.*·admin.entities.registry(GET/PUT /v1/admin/entities)는 require_admin 만이라 읽기가 레거시 페이지 게이트보다 느슨 back/app/features/admin/interest/keywords/router.py:22, interest/sources/router.py:22, entities/registry/router.py:26. 정지 계정은 백엔드 401 no_account(레거시 정지 개념 없음) auth.py:177-205"],
+      "parity": []
+    },
+    "GET /v1/admin/users": {
+      "label": "get_admin_users_0 → service.list_users(+Supabase last_sign_in) / listAdminUsers",
+      "where": "back/app/features/admin/accounts/users/router.py:34 · service.py:107 · queries.py:15(LIST_SQL) · adapters.py:99-125(last_sign_in 목록 스캔); front/lib/hgh/adapters/admin.ts:263; page front/app/[locale]/(dash)/admin/page.tsx:34-35, admin/_components/user-list.tsx:19-28",
+      "stmts": "백엔드 페이지(limit 200)당 LIST_SQL 1(키셋) + Supabase Admin 조회(1명=단건 GET, 여러 명=/auth/v1/admin/users per_page 1000 을 전원 찾을 때까지 최대 50페이지) → 커서 끝까지 반복(maxPages 25). 헤더 사용자 수·목록은 요청 내 GET dedupe 로 공유. +공통. 캐시 허용목록 밖.",
+      "f2": [0, 0, 0, 0, "LIST_SQL back/app/features/admin/accounts/users/queries.py:15"],
+      "f3": ["y", "계정 행 조회 + Supabase 최근 로그인 병합(집계 없음)"],
+      "f4": [],
+      "f6": ["n", "Supabase 조회 실패는 meta.suppressed 로만 알리고 어댑터가 lastSignInAt 전부 null → '로그인 기록 없음'으로 무표시 back/app/features/admin/accounts/users/service.py:91-99, front/lib/hgh/adapters/admin.ts:256,269"],
+      "f7": ["skip", ""],
+      "f8": ["n", "계정 200명 초과면 백엔드 페이지마다 Supabase 전체 사용자 목록(1000×최대 50페이지)을 다시 스캔 users/adapters.py:112-125, admin.ts:263-274", "페이지당 1 SQL + Supabase 1~k"],
+      "f9": ["y", "키셋 200/페이지를 끝까지 읽어 전량 표시, maxPages 초과는 page_limit_exceeded 오류(무표시 절단 없음, 레거시 per_page=200 고정 절단 해소) admin.ts:242-243"],
+      "f10": ["y", "UserRow 모양 동일(+rowVersion·status 가산, U11-N6 정지 배지), 최근 로그인은 백엔드 조인; 권한 AdminDetached(role admin∧menu admin) = 레거시 페이지 게이트(layout canAccessRoute + canAccessAdmin) auth.py:359-366"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › accounts (/admin) › list, count and self id match; api rows carry rowVersion + status; the form asks role and scope only on api (D10)",
+        "front/lib/hgh/adapters/admin.parity.test.ts › first render call budget (D6) and in-request dedupe › each page issues only its own GETs, never the same request twice; the users header and list share pages",
+        "back/app/features/admin/accounts/users/tests/test_ad_ops_users.py"
+      ]
+    },
+    "PATCH /v1/admin/users/{user_id}": {
+      "label": "patch_admin_users_by_id_3 → service.patch_user / patchAccount(If-Match)",
+      "where": "back/app/features/admin/accounts/users/router.py:65 · service.py:257 · queries.py:28(LOCK)·36(OTHER_ADMINS)·55(UPDATE); front/lib/hgh/adapters/admin.ts:368; action front/app/[locale]/(dash)/admin/_actions.ts:188-206; UI admin/_components/edit-user-dialog.tsx:233-284",
+      "stmts": "LOCK_SQL(FOR UPDATE) 1 + (실효 admin 강등 시 OTHER_ADMINS FOR UPDATE 1) + UPDATE(row_version 조건) 1 + ONE 재조회 1 = 3~4 (+DB 트리거 permission_audit_log). +공통. 하류 캐시 없음, 프런트 revalidatePath(admin 페이지)만.",
+      "f2": [0, 0, 0, 0, "UPDATE_SQL back/app/features/admin/accounts/users/queries.py:55"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음(잠금 조회 실패는 오류 응답)"],
+      "f7": ["y", "If-Match row_version 낙관적 잠금(불일치 409 → rowVersionConflict 표시), 자기 강등·마지막 실효 admin 은 FOR UPDATE 잠금 + DB 트리거 ua_last_admin 이중 방어, 저장·정지 버튼 pending 중 비활성 service.py:257-291, edit-user-dialog.tsx:233-284"],
+      "f8": ["y", "", "3~4"],
+      "f9": ["skip", ""],
+      "f10": ["n", "DC-19: If-Match 필수(없으면 428, 어댑터는 rowVersion 없으면 rowVersionConflict), 실효 admin 정의에 admin 메뉴 포함(메뉴 제거=강등 409), status(정지) 신설; 권한 role∧menu admin 으로 레거시 액션(assertAdmin role 만 admin/_actions.ts:28-34)보다 엄격 admin.ts:368-394, users/router.py:28"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › accounts (/admin) › writes: same results and resulting list; declared: DC-19 referenced delete, U11-N1 create scope",
+        "front/lib/hgh/adapters/admin.parity.test.ts › accounts (/admin) › stale dialog: api answers rowVersionConflict and changes nothing",
+        "back/app/features/admin/accounts/users/tests/test_ad_ops_users.py"
+      ]
+    },
+    "DELETE /v1/admin/users/{user_id}": {
+      "label": "delete_admin_users_by_id_4 → service.delete_user / deleteAccount",
+      "where": "back/app/features/admin/accounts/users/router.py:72 · service.py:295 · queries.py:66(REFS)·78(DELETE)·79(ORPHANS)·83(SUCCEED)·88(MEMBER_AUDIT); front/lib/hgh/adapters/admin.ts:403; action front/app/[locale]/(dash)/admin/_actions.ts:276-282; UI edit-user-dialog.tsx:286-298",
+      "stmts": "api_ro: ONE 1 + REFS(스칼라 서브쿼리 5) 1 + (대상 admin 이면 OTHER_ADMINS_RO 1) → Supabase DELETE 1(커넥션 밖) → 쓰기 tx: OWNED 1 + DELETE 1 + (소유 프로젝트 있으면 ORPHANS 1) + 승계 프로젝트마다 SUCCEED 1 + MEMBER_AUDIT 1 (+감사 트리거). +공통",
+      "f2": [0, 0, 0, 0, "REFS_SQL back/app/features/admin/accounts/users/queries.py:66"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "사전 조회 실패는 오류 응답"],
+      "f7": ["n", "인증 선삭제 뒤 앱 삭제 실패는 409 delete_incomplete(부분 성공)인데 어댑터 코드표에 없어 일반 deleteFailed 로 표시 — 부분 성공 구분 없음(재시도 시 auth not_found 를 지나 완결은 가능) users/service.py:318-332, admin.ts:396-414"],
+      "f8": ["n", "Owner 승계 루프가 프로젝트마다 SUCCEED·MEMBER_AUDIT INSERT 2문장(per-row) users/service.py:324-328", "5~6 + 승계 프로젝트당 2"],
+      "f9": ["skip", ""],
+      "f10": ["n", "DC-19: 참조 기록(프로젝트 생성·초대·QA 검수)이 있으면 409 user_referenced 로 삭제 거부(정지 안내) — 레거시는 삭제 진행; 부분 실패 계약 변경; 권한 role∧menu admin(레거시 액션 role 만) users/service.py:302-305"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › accounts (/admin) › writes: same results and resulting list; declared: DC-19 referenced delete, U11-N1 create scope",
+        "front/lib/hgh/adapters/admin.test.ts › accounts › delete: guard codes map to keys; 401 / 403 throw UnauthorizedError; local faults rethrow",
+        "back/app/features/admin/accounts/users/tests/test_ad_ops_users.py"
+      ]
+    },
+    "POST /v1/admin/users": {
+      "label": "post_admin_users_1 → service.create_user / createAccount",
+      "where": "back/app/features/admin/accounts/users/router.py:52 · service.py:200 · queries.py:29(EMAIL_TAKEN)·47(INSERT); front/lib/hgh/adapters/admin.ts:314; action front/app/[locale]/(dash)/admin/_actions.ts:78-99; UI admin/_components/create-user-form.tsx:36-177",
+      "stmts": "사전검증 tx(EMAIL_TAKEN 1 + INSERT 1 → 롤백) → Supabase POST 1(커넥션 밖) → 쓰기 tx(INSERT 1 + ONE 1, 감사 트리거) → 실패 시 Supabase DELETE 보상 1. +공통",
+      "f2": [0, 0, 0, 0, "INSERT_SQL back/app/features/admin/accounts/users/queries.py:47"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "오류는 errorKey 인라인, 보상 삭제 실패는 compensation_failed→rollbackFailed 로 구분, 이메일 중복 409 email_taken, pending 중 제출 비활성(create-user-form.tsx:169) users/service.py:206-239, admin.ts:291-342"],
+      "f8": ["y", "", "SQL 4(사전검증 롤백 2 포함) + Supabase 1~2"],
+      "f9": ["skip", ""],
+      "f10": ["n", "U11-N1(D10): 역할·운영권한·범위를 입력받아 검증(scopeRequired 등) — 레거시는 이메일만 받아 role=country·범위 없음으로 생성; 권한 AdminDetached role∧menu(레거시 액션 role 만)"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › accounts (/admin) › writes: same results and resulting list; declared: DC-19 referenced delete, U11-N1 create scope",
+        "front/lib/hgh/adapters/admin.test.ts › accounts › create: admin forces scope_all and empty axes, vendor forces operator none; errors map to form keys",
+        "back/app/features/admin/accounts/users/tests/test_ad_ops_users.py"
+      ]
+    },
+    "GET /v1/admin/ga4/properties": {
+      "label": "get_admin_ga4_properties_0 → service.list_properties / listGa4Registry",
+      "where": "back/app/features/admin/integrations/ga4/router.py:47 · service.py:94 · queries.py:10(LIST)·49(DIMS)·41(PENDING); front/lib/hgh/adapters/admin.ts:1201·1161; page front/app/[locale]/(dash)/admin/ga4/page.tsx:42-43",
+      "stmts": "LIST_SQL 1(행마다 추적 이벤트 count·project_overrides json_agg 상관 서브쿼리) + DIMS(rd.ga4_dim_property) 1 + PENDING(judgment_change) 1 = 3. markets·project-overrides 와 allSettled 병렬. +공통",
+      "f2": [1, 0, 0, 0, "LIST_SQL back/app/features/admin/integrations/ga4/queries.py:10"],
+      "f3": ["y", "설정 표 행 조회(행별 소형 상관 서브쿼리, 사실 표 집계 없음)"],
+      "f4": [],
+      "f6": ["n", "5xx 는 degradeRead 로 빈 목록 → 매핑 표가 '등록된 매핑 없음'처럼 보이고 env 등록 대기 섹션만 숨김(오류 안내 없음) admin.ts:193-198,1213-1222"],
+      "f7": ["skip", ""],
+      "f8": ["n", "tracked_events·project_overrides(json)·loaded·conv_basis·pending 을 계산하나 화면은 property_id·brand·country·status·verified_at 만 사용(toGa4PropertyRow admin.ts:1161-1170), 프로젝트 지정 정보는 별도 project-overrides 호출과 중복", "3"],
+      "f9": ["y", "레지스트리 전량(소규모 표)"],
+      "f10": ["n", "DC-20: 속성 행 status 'unmapped' 의미 변경(브랜드×국가 매핑 없음), 행 id 체계 p:<property_id>/m:<brand>:<country>(레거시 uuid), U11-N7 실패 시 env 섹션 숨김; 권한 role∧menu admin = 레거시 페이지 게이트"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › GA4 registry (/admin/ga4) › rows (properties + property-less markets), env markets and project overrides match; api ids name the row kind",
+        "front/lib/hgh/adapters/admin.parity.test.ts › partial backend failures degrade per part, as legacy (M1, M5) › GA4: failed overrides alone keep the registry and the import list; a failed registry part hides the import list (U11-N7)",
+        "back/app/features/admin/integrations/ga4/tests/test_d2_verified_and_markets.py"
+      ]
+    },
+    "GET /v1/admin/ga4/markets": {
+      "label": "get_admin_ga4_markets → service.list_markets / listGa4Registry(toGa4MarketRow)",
+      "where": "back/app/features/admin/integrations/ga4/router.py:102 · service.py:235 · queries.py:89(MARKETS); front/lib/hgh/adapters/admin.ts:1201·1172",
+      "stmts": "MARKETS_SQL 1. +공통",
+      "f2": [1, 0, 0, 0, "MARKETS_SQL back/app/features/admin/integrations/ga4/queries.py:89"],
+      "f3": ["y", "설정 표 조회"],
+      "f4": [],
+      "f6": ["n", "5xx 는 degradeRead 로 [] — 속성 없는 시장 행이 안내 없이 사라지고 env 섹션도 숨김 admin.ts:1213-1222"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1"],
+      "f9": ["y", "대기 시장 전량(소규모)"],
+      "f10": ["n", "속성 없는 시장(app.ga4_market_pending)을 status 'unmapped' 행으로 합성해 레거시 의미는 유지하나, U11-N7: 읽기 실패 시 env 등록 대기 섹션 숨김(레거시는 실패도 []로 전 env 시장 노출) admin.ts:1172-1181,1222"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › GA4 registry (/admin/ga4) › rows (properties + property-less markets), env markets and project overrides match; api ids name the row kind",
+        "front/lib/hgh/adapters/admin.parity.test.ts › partial backend failures degrade per part, as legacy (M1, M5) › GA4: failed overrides alone keep the registry and the import list; a failed registry part hides the import list (U11-N7)",
+        "back/app/features/admin/integrations/ga4/tests/test_d2_verified_and_markets.py"
+      ]
+    },
+    "GET /v1/admin/ga4/project-overrides": {
+      "label": "get_admin_ga4_project_overrides_5 → service.list_project_overrides / listGa4Registry(allPages)",
+      "where": "back/app/features/admin/integrations/ga4/router.py:59 · service.py:128 · queries.py:28(PROJECT_OVERRIDES); front/lib/hgh/adapters/admin.ts:1205-1210·1183",
+      "stmts": "페이지(limit 500)당 PROJECT_OVERRIDES_SQL 1(키셋) → 커서 끝까지(maxPages 10). +공통",
+      "f2": [1, 0, 0, 0, "PROJECT_OVERRIDES_SQL back/app/features/admin/integrations/ga4/queries.py:28"],
+      "f3": ["y", "ga4_property_id 있는 프로젝트 행 조회"],
+      "f4": [],
+      "f6": ["n", "5xx 는 degradeRead 로 [] → 프로젝트 오버라이드 섹션이 안내 없이 사라짐(레거시 .catch(()=>[])와 같은 무표시) admin.ts:1213,1221"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "페이지당 1"],
+      "f9": ["y", "ga4_property_id 있는 프로젝트만 키셋 조회(레거시 projects 전 행·전 컬럼 → JS 필터 개선), maxPages 초과는 오류"],
+      "f10": ["y", "행 모양(id·name·brand·country·propertyId)·정렬(createdAt DESC) 동일, 실패 시 빈 섹션도 레거시와 동일; 권한 페이지 게이트와 동일"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › GA4 registry (/admin/ga4) › rows (properties + property-less markets), env markets and project overrides match; api ids name the row kind",
+        "front/lib/hgh/adapters/admin.parity.test.ts › partial backend failures degrade per part, as legacy (M1, M5) › GA4: failed overrides alone keep the registry and the import list; a failed registry part hides the import list (U11-N7)",
+        "back/app/features/admin/integrations/ga4/tests/test_bg43_project_overrides.py"
+      ]
+    },
+    "PAGE GA4 env 매핑 − 레지스트리(legacyEnvMarkets)": {
+      "label": "AdminGa4Page legacyEnvMarkets() − dbKeys(registryComplete 조건)",
+      "where": "front/app/[locale]/(dash)/admin/ga4/page.tsx:71-74; front/lib/ga4/property-map.ts(legacyEnvMarkets); registryComplete front/lib/hgh/adapters/admin.ts:1222",
+      "stmts": "SQL·API 0 — front env MAP 읽기 후 GET properties·markets 결과 키와 차집합.",
+      "f2": ["skip", "SQL 없음 — front env MAP 읽기"],
+      "f3": ["y", "env 상수 읽기(집계 없음)"],
+      "f4": ["GA2"],
+      "f6": ["n", "properties·markets 읽기 실패 시 registryComplete=false 로 섹션 자체를 안내 없이 숨김(표는 빈 목록) page.tsx:72, admin.ts:1213-1222"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "0"],
+      "f9": ["skip", ""],
+      "f10": ["n", "U11-N7: 레지스트리 읽기 실패 시 env 등록 대기 섹션 숨김(레거시는 항상 표시, 실패 시 전 env 시장을 미등록으로 노출)"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › GA4 registry (/admin/ga4) › rows (properties + property-less markets), env markets and project overrides match; api ids name the row kind",
+        "front/lib/hgh/adapters/admin.parity.test.ts › partial backend failures degrade per part, as legacy (M1, M5) › GA4: failed overrides alone keep the registry and the import list; a failed registry part hides the import list (U11-N7)"
+      ]
+    },
+    "PUT /v1/admin/ga4/properties/{property_id}": {
+      "label": "put_admin_ga4_properties_by_id_1 → service.put_property / putGa4Mapping(추가·가져오기)·verifyGa4Property(검증)",
+      "where": "back/app/features/admin/integrations/ga4/router.py:74 · service.py:144 · queries.py:62(PROP_LOCK)·64(MARKET_TAKEN)·70(UPSERT)·104(MARKET_DELETE); front/lib/hgh/adapters/admin.ts:1235·1260; action front/app/[locale]/(dash)/admin/ga4/_actions.ts:51-56·79-84·119-123; UI ga4/_components/ga4-registry-client.tsx:59-101",
+      "stmts": "api_ro PENDING 1 → (verify=true 면 GA4 Data API runReport 1, 커넥션 밖) → 쓰기 tx: PROP_LOCK 1 + MARKET_LOCK 1 + MARKET_TAKEN 1 + UPSERT 1 + MARKET_DELETE 1 + (변경 시 enqueue_change ga4_property: advisory·dedupe·INSERT 3) + 응답 재조회 LIST_SQL 1 + PENDING 1 → api_ro DIMS 1 ≈ 8~12. 검증에서 market 미전달 시 어댑터가 GET properties 1 추가. 분석 반영 = judgment_change → 적재기 rd.ga4_row 재투영(비동기), 프런트 revalidatePath 만. +공통",
+      "f2": [1, 0, 0, 0, "LIST_SQL(응답 재조회) back/app/features/admin/integrations/ga4/queries.py:10"],
+      "f3": ["skip", "쓰기 경로(검증은 GA4 외부 호출 1)"],
+      "f4": ["GA2"],
+      "f6": ["y", "GA4 검증 실패는 422 ga4_verify_failed → '검증 실패' 토스트"],
+      "f7": ["n", "①추가 폼에 다른 시장에 매핑된 속성ID를 넣으면 ON CONFLICT(property_id) 로 그 속성의 브랜드·국가를 무경고 이동 ga4/queries.py:70-76, ga4/service.py:171-181 ②검증은 행의 브랜드·국가를 다시 실어 매핑을 덮어써(버전 검사 없음) 동시 변경을 조용히 되돌릴 수 있음 admin.ts:1256-1277 ③매핑 변경의 전환 화면 반영은 적재 뒤인데 propagation 을 버리고 '추가/검증 완료'만 표시 admin.ts:1250,1279"],
+      "f8": ["n", "응답용 목록 SQL 재조회·대기·투영(3문장, 별도 api_ro 1회)을 계산하나 어댑터는 verified 만 사용 ga4/service.py:190-198, admin.ts:1278", "8~12"],
+      "f9": ["skip", ""],
+      "f10": ["n", "U11-N3: 같은 시장이 다른 속성에 매핑돼 있으면 409 market_taken(레거시는 brand×country upsert 로 속성 교체), 대기 요청 중이면 409 duplicate_pending(추가 직후 검증 거부), 검증 성공만 verified_at 갱신; 권한 AdminDetached role∧menu(레거시 액션 role 만 ga4/_actions.ts:28-34) ga4/service.py:147-149,166-170"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › GA4 registry (/admin/ga4) › writes: same results and registry; declared U11-N3: a market mapped to another property is refused",
+        "front/lib/hgh/adapters/admin.test.ts › interest, entities, citation overrides, GA4 › GA4: no property id -> pending market PUT; verify re-sends the market or looks it up; remove by row kind",
+        "back/app/features/admin/integrations/ga4/tests/test_ad_ops_ga4.py"
+      ]
+    },
+    "PUT /v1/admin/ga4/markets/{brand_code}/{country_code}": {
+      "label": "put_admin_ga4_market → service.put_market / putGa4Mapping(속성ID 없음)",
+      "where": "back/app/features/admin/integrations/ga4/router.py:118 · service.py:246 · queries.py:88(MARKET_LOCK)·97(MARKET_MAPPED)·98(MARKET_UPSERT); front/lib/hgh/adapters/admin.ts:1244-1248",
+      "stmts": "MARKET_LOCK 1 + MARKET_MAPPED 1 + MARKET_UPSERT 1 + get_market MARKETS 1 = 4. judgment_change 없음. +공통",
+      "f2": [1, 0, 0, 0, "MARKETS_SQL(get_market) back/app/features/admin/integrations/ga4/queries.py:89"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "멱등 upsert, 같은 시장에 속성 매핑 있으면 409 market_taken 표시, 시장 단위 advisory 잠금, pending 중 버튼 비활성 ga4-registry-client.tsx:132"],
+      "f8": ["y", "", "4"],
+      "f9": ["skip", ""],
+      "f10": ["n", "레거시는 속성ID 없는 추가도 brand×country upsert(기존 매핑 속성ID 를 null 로 덮음) — api 는 market_taken 거부(U11-N3)·브랜드 FK 검증 unknown_brand; 권한 role∧menu(레거시 액션 role 만)"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › GA4 registry (/admin/ga4) › writes: same results and registry; declared U11-N3: a market mapped to another property is refused",
+        "back/app/features/admin/integrations/ga4/tests/test_d2_verified_and_markets.py"
+      ]
+    },
+    "DELETE /v1/admin/ga4/properties/{property_id}": {
+      "label": "delete_admin_ga4_properties_by_id_2 → service.delete_property / removeGa4Row",
+      "where": "back/app/features/admin/integrations/ga4/router.py:81 · service.py:202 · queries.py:78(DELETE_EVENTS)·79(DELETE_PROP)·77(OVERRIDE_COUNT); front/lib/hgh/adapters/admin.ts:1289; action admin/ga4/_actions.ts:136-140",
+      "stmts": "DELETE_EVENTS 1 + DELETE_PROP 1 + OVERRIDE_COUNT 1 + enqueue_change 3 = 6. +공통",
+      "f2": [0, 0, 0, 0, "DELETE_PROP_SQL back/app/features/admin/integrations/ga4/queries.py:79"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "404 는 ok(레거시 무동작과 동일), 오류 토스트, pending 중 비활성(1클릭 무확인은 기준 밖)"],
+      "f8": ["y", "", "6"],
+      "f9": ["skip", ""],
+      "f10": ["n", "추적 전환 이벤트(app.ga4_tracked_event)를 함께 삭제(응답 removed_tracked_events 를 어댑터가 버려 안내 없음)하고 judgment_change 로 재투영 — 레거시는 레지스트리 행만 삭제; 권한 role∧menu(레거시 액션 role 만) ga4/service.py:203-211"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › GA4 registry (/admin/ga4) › writes: same results and registry; declared U11-N3: a market mapped to another property is refused",
+        "front/lib/hgh/adapters/admin.test.ts › interest, entities, citation overrides, GA4 › GA4: no property id -> pending market PUT; verify re-sends the market or looks it up; remove by row kind",
+        "back/app/features/admin/integrations/ga4/tests/test_ad_ops_ga4.py"
+      ]
+    },
+    "DELETE /v1/admin/ga4/markets/{brand_code}/{country_code}": {
+      "label": "delete_admin_ga4_market → service.delete_market / removeGa4Row",
+      "where": "back/app/features/admin/integrations/ga4/router.py:126 · service.py:261 · queries.py:104(MARKET_DELETE); front/lib/hgh/adapters/admin.ts:1296-1299",
+      "stmts": "MARKET_LOCK 1 + MARKET_DELETE 1 = 2. +공통",
+      "f2": [0, 0, 0, 0, "MARKET_DELETE_SQL back/app/features/admin/integrations/ga4/queries.py:104"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "404 는 ok, 오류 토스트, pending 중 비활성"],
+      "f8": ["y", "", "2"],
+      "f9": ["skip", ""],
+      "f10": ["n", "결과·의미는 레거시 행 삭제와 같으나 권한 role∧menu admin — 레거시 액션(requireAdmin role 만 ga4/_actions.ts:28-34) 기준 엄격화"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › GA4 registry (/admin/ga4) › writes: same results and registry; declared U11-N3: a market mapped to another property is refused",
+        "back/app/features/admin/integrations/ga4/tests/test_d2_verified_and_markets.py"
+      ]
+    },
+    "GET /v1/admin/ga4/properties/{property_id}/events": {
+      "label": "get_admin_ga4_properties_by_id_events_3 → service.list_events/load_events / fetchAdminConversionEvents",
+      "where": "back/app/features/admin/integrations/ga4/router.py:87 · service.py:101-122 · queries.py:52(EVENT_COUNTS)·80(TRACKED); front/lib/hgh/adapters/funnel.ts:447; action front/lib/ga4/tracked-events-actions.ts:178-193",
+      "stmts": "PROP_SQL 1 + TODAY 1 + DIMS 1 + (적재된 속성이면 EVENT_COUNTS: rd.ga4_row 90일 합 1) + TRACKED 1 = 4~5. 요청 시 GA4 API 호출 없음. +공통",
+      "f2": [1, 0, 1, 0, "EVENT_COUNTS_SQL back/app/features/admin/integrations/ga4/queries.py:52"],
+      "f3": ["y", "적재된 GA4 일별 이벤트 행(rd.ga4_row) 90일 합 + 설정 조회 — 요청 시 GA4 원천 API 호출 없음(레거시 n 개선)"],
+      "f4": ["ADK1"],
+      "f6": ["y", "실패는 apiEventsFailure → 다이얼로그 오류 문구(404=미등록) tracked-events-actions.ts:164-176"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "4~5"],
+      "f9": ["y", "90일 이벤트 전량 + 추적 이벤트(레거시 runReport limit 250 무표시 절단 해소)"],
+      "f10": ["n", "수치 원천이 실시간 GA4 Data API → 적재된 rd.ga4_row(적재 지연), 미적재 속성은 추적 이벤트만(이벤트 0) ga4/service.py:113-122; 권한 eventsPlace(admin∧menu) = 백엔드 role∧menu 동일 tracked-events-actions.ts:142-148"],
+      "parity": ["back/app/features/admin/integrations/ga4/tests/test_ad_ops_ga4.py"]
+    },
+    "PUT /v1/admin/ga4/properties/{property_id}/events": {
+      "label": "put_admin_ga4_properties_by_id_events_4 → service.put_events / putAdminConversionEvents",
+      "where": "back/app/features/admin/integrations/ga4/router.py:94 · service.py:214 · queries.py:62·80·78·81(INSERT_EVENTS); front/lib/hgh/adapters/funnel.ts:456; action front/lib/ga4/tracked-events-actions.ts:212-231",
+      "stmts": "PROP_LOCK 1 + TRACKED 1 + (집합 변경 시 DELETE_EVENTS 1 + INSERT 1 + enqueue_change ga4_tracked_event 3) = 2 또는 7. 반영 = 적재기 is_conv·conv_basis 재투영(비동기) + 'savedPending' 토스트, 레거시 revalidateTag('ga4') 없음. +공통",
+      "f2": [0, 0, 0, 0, "INSERT_EVENTS_SQL back/app/features/admin/integrations/ga4/queries.py:81"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["n", "선택 집합 통째 교체(버전·ETag 없음) — 같은 app.ga4_tracked_event 를 project·website 전환 화면(/v1/funnel/conversion/events)과 공유해 동시 편집 시 나중 저장이 무경고 덮어씀(대기 반영은 토스트로 표시) ga4/service.py:214-226"],
+      "f8": ["y", "", "2~7"],
+      "f9": ["skip", ""],
+      "f10": ["n", "저장 즉시 반영(레거시) → 적재 뒤 반영(propagation pending, savedPending 안내) tracked-events-actions.ts:222-231; 권한 동일(admin∧menu)"],
+      "parity": ["back/app/features/admin/integrations/ga4/tests/test_ad_ops_ga4.py"]
+    },
+    "POST /v1/admin/keyword-tools/volume": {
+      "label": "post_admin_keyword_tools_volume_0 → service.volume/lookup_volumes(+_enqueue_fetch) / lookupKeywordVolumes(+waitForChanges)",
+      "where": "back/app/features/admin/integrations/keyword_tools/router.py:33 · service.py:165·124(lookup_volumes)·96(_enqueue_fetch) · queries.py:7(VOLUMES)·21(PENDING_OVERLAP); front/lib/hgh/adapters/admin.ts:1437; route front/app/api/keyword/volume/route.ts:34-51; UI front/components/keyword/keyword-tools.tsx:159-192",
+      "stmts": "db_term_norms 1 + VOLUMES_SQL 1 + NOW 1 + (미수집·7일 경과분 있으면 쓰기 tx: PENDING_OVERLAP 1 + enqueue_change dfs_fetch 3) → 202 면 BFF 가 change 폴링(1.5s, 최대 20s) 후 같은 POST 1회 재호출. DataForSEO 호출은 적재기. +공통",
+      "f2": [1, 0, 0, 0, "VOLUMES_SQL back/app/features/admin/integrations/keyword_tools/queries.py:7"],
+      "f3": ["n", "수집된 rd.kw_volume_monthly 읽기는 저장값이나, 미수집·7일 경과 키워드는 요청마다 dfs_fetch 수집 요청 → 적재기 DataForSEO 호출을 요청 경로에서 최대 20s 대기(간접 외부 호출) keyword_tools/service.py:139-155, admin.ts:1444-1449"],
+      "f4": ["ADK2", "ADK3"],
+      "f6": ["y", "오류는 errorGeneric, 대기 중 잔여분은 pendingCollection 안내(pending terms) keyword-tools.tsx:187-190,260-262"],
+      "f7": ["skip", "조회 엔드포인트(수집 요청 부수효과는 term 단위 dedupe·coalesce)"],
+      "f8": ["y", "", "3~7 (+폴링·재호출 1)"],
+      "f9": ["y", "요청 키워드 전량 반환(1000개 상한 초과는 400), 대기분은 pending 으로 노출"],
+      "f10": ["n", "U11-N4: 미수집분은 제한 시간 대기 후 pending 목록으로 분리(레거시는 DataForSEO 즉시 호출), competition 없으면 null(레거시 캐시 'LOW'), 1000개 상한 422→400; 권한 canUseKeywordTools(role∧menu) = 백엔드 GATE 동일"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.test.ts › /api/keyword/{volume,to-prompt,prompt-to-volume} routes › api volume: legacy body shape plus pending terms; empty keywords 400 without a call",
+        "front/lib/hgh/adapters/admin.test.ts › conversions (hand-computed) › keyword volume rows and the legacy summary formula (checked against the legacy function too)",
+        "back/app/features/admin/integrations/keyword_tools/tests/test_ad_ops_keyword_tools.py"
+      ]
+    },
+    "GET /v1/admin/changes/{change_id}": {
+      "label": "get_admin_changes_by_id_1 → service.get_change / waitForChanges(폴링)",
+      "where": "back/app/features/admin/changes/queue/router.py:43 · service.py:49 · queries.py:25(ONE_SQL); front/lib/hgh/adapters/admin.ts:1405-1423",
+      "stmts": "폴링 1회당 ONE_SQL 1(LEFT JOIN user_account). change id 별로 1.5s 간격, 최대 20s(id당 ~14회). +공통(폴링마다 principal 1)",
+      "f2": [1, 0, 0, 0, "ONE_SQL back/app/features/admin/changes/queue/queries.py:25"],
+      "f3": ["y", "요청 큐 단건 조회"],
+      "f4": [],
+      "f6": ["y", "404 는 완료로 간주, 그 밖 오류는 throw → route 500 → errorGeneric"],
+      "f7": ["skip", ""],
+      "f8": ["n", "대기 change id 마다 개별 GET 순차 폴링(GET /v1/admin/changes 목록 1회로 대체 가능) admin.ts:1409-1417", "id당 최대 ~14"],
+      "f9": ["skip", ""],
+      "f10": ["skip", "api 전용 내부 폴링(레거시 대응 없음); 권한 role∧menu admin"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.test.ts › keyword tools › queued volume: polls the change until applied, then asks once more",
+        "front/lib/hgh/adapters/admin.test.ts › keyword tools › waitForChanges: gives up at the budget (false), 404 counts as done, other errors propagate",
+        "back/app/features/admin/changes/queue/tests/test_ad_ops_changes_queue.py"
+      ]
+    },
+    "POST /v1/admin/keyword-tools/to-prompt": {
+      "label": "post_admin_keyword_tools_to_prompt_1 → service.to_prompt / keywordsToPrompts",
+      "where": "back/app/features/admin/integrations/keyword_tools/router.py:41 · service.py:264(to_prompt)·242(_questions); front/lib/hgh/adapters/admin.ts:1465; route front/app/api/keyword/to-prompt/route.ts:40-53; UI front/components/keyword/keyword-tools.tsx:334-381",
+      "stmts": "SQL 0. AdminDetached(principal 짧은 api_ro) → LLM 1회(≤25) 또는 10개 배치 병렬(>25), 호출당 180s·요청 기한 175s(X-HGH-Timeout-Ms 185s). +공통",
+      "f2": ["skip", "SQL 없음(LLM 호출 core.llm)"],
+      "f3": ["n", "요청마다 LLM 으로 질문 생성"],
+      "f4": ["ADK4"],
+      "f6": ["n", "일부 배치 실패는 failed_batches 로만 돌려주고 어댑터·라우트가 버려 누락 질문이 안내 없이 빠짐 keyword_tools/service.py:270-279, admin.ts:1480-1486"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "0 SQL + LLM 1~⌈N/10⌉"],
+      "f9": ["n", "화면이 maxQuestions 200 고정 → 입력 키워드를 안내 없이 절단(keywords[:max_questions]) keyword-tools.tsx:369, keyword_tools/service.py:265"],
+      "f10": ["n", "U11-N8: 500 응답 details 가 오류 코드(레거시 err.message), 입력 상한 500개 초과 422→400(레거시 상한 없음); 권한 동일(role∧menu)"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.test.ts › /api/keyword/{volume,to-prompt,prompt-to-volume} routes › api to-prompt and prompt-to-volume: legacy body shapes; backend failure -> 500 with the code, no message leak",
+        "back/app/features/admin/integrations/keyword_tools/tests/test_ad_ops_keyword_tools.py"
+      ]
+    },
+    "POST /v1/admin/keyword-tools/volume (프롬프트 탭 선조회)": {
+      "label": "ToPromptTab '검색량 포함' 선조회 → /api/keyword/volume → lookupKeywordVolumes",
+      "where": "front/components/keyword/keyword-tools.tsx:347-363; route front/app/api/keyword/volume/route.ts:34-51; back/app/features/admin/integrations/keyword_tools/router.py:33",
+      "stmts": "POST /v1/admin/keyword-tools/volume 와 동일(폴링·재호출 포함).",
+      "f2": [1, 0, 0, 0, "VOLUMES_SQL back/app/features/admin/integrations/keyword_tools/queries.py:7"],
+      "f3": ["n", "검색량 탭과 동일(미수집분 수집 요청·대기)"],
+      "f4": ["ADK3"],
+      "f6": ["n", "선조회 실패·pending 을 무시하고 볼륨 없이 진행(안내 없음) keyword-tools.tsx:356-362"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "3~7"],
+      "f9": ["y", "요청 키워드 전량"],
+      "f10": ["n", "검색량 탭과 동일(U11-N4)"],
+      "parity": ["front/lib/hgh/adapters/admin.test.ts › /api/keyword/{volume,to-prompt,prompt-to-volume} routes › api volume: legacy body shape plus pending terms; empty keywords 400 without a call"]
+    },
+    "CLIENT 검색량 CSV(downloadCsv)": {
+      "label": "VolumeTab exportCsv → downloadCsv(브라우저 Blob)",
+      "where": "front/components/keyword/keyword-tools.tsx:195-208, 86(downloadCsv)",
+      "stmts": "API·SQL 0 — 화면 행 그대로 CSV.",
+      "f2": ["skip", "API·SQL 없음(브라우저 생성)"],
+      "f3": ["y", "화면 데이터 직렬화"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["skip", "서버 쓰기 없음(브라우저 다운로드)"],
+      "f8": ["y", "", "0"],
+      "f9": ["y", "화면 행 전량(대기 term 은 별도 안내)"],
+      "f10": ["y", "레거시와 같은 클라이언트 경로(변경 없음)"],
+      "parity": []
+    },
+    "CLIENT 프롬프트 CSV(downloadCsv)": {
+      "label": "ToPromptTab exportCsv → downloadCsv(브라우저 Blob)",
+      "where": "front/components/keyword/keyword-tools.tsx:385-398, 86(downloadCsv)",
+      "stmts": "API·SQL 0 — 화면 행 그대로 CSV.",
+      "f2": ["skip", "API·SQL 없음(브라우저 생성)"],
+      "f3": ["y", "화면 데이터 직렬화"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["skip", "서버 쓰기 없음(브라우저 다운로드)"],
+      "f8": ["y", "", "0"],
+      "f9": ["y", "화면 행 전량"],
+      "f10": ["y", "레거시와 같은 클라이언트 경로(변경 없음)"],
+      "parity": []
+    },
+    "POST /v1/admin/catalog/prompts/screen": {
+      "label": "read_admin_screen → catalog_screen(admin=True) / loadCatalogPage·loadCatalogRows·exportCatalogPages",
+      "where": "back/app/features/admin/catalog/prompts/router.py:46 · back/app/features/catalog/prompts/catalog/screen.py:97(catalog_screen)·139(count)·156(메타)·157(시장)·178(행)·182(stats=list_catalog) · back/app/features/admin/catalog/prompts/service.py:199(list_catalog); front/app/[locale]/(dash)/standard/prompts/_page-actions.ts:13-48(직접 hghPost); page admin/standards/prompts/page.tsx:40-43; export front/lib/standards/catalog-page.ts:76",
+      "stmts": "include_meta=true(첫 렌더·draft 변경): ROOT 1 + load_refs 1 + 필터 count 1 + 메타(count·facets array_agg·bool_or) 1 + 시장 DISTINCT(LATERAL unnest) 1 + 행(LIMIT/OFFSET, LEFT JOIN rd.dim_prompt) 1 + stats 용 list_catalog(limit 1: ROOT·ROOT_DIM·LIST_SELECT(outbox 상관 서브쿼리)·STATS·SCOPE_ORPHANS 5) = 11. include_meta=false(페이지·정렬·검색, CSV 내보내기 500행 반복): ROOT·refs·count·행 4. +공통",
+      "f2": [1, 0, 0, 0, "catalog_screen 행 SQL back/app/features/catalog/prompts/catalog/screen.py:178"],
+      "f3": ["n", "include_meta 경로 stats 가 scope 고아 수를 rd.dim_prompt × app.prompt NOT EXISTS 로 요청마다 계산 admin/catalog/prompts/service.py:226-228, admin/catalog/prompts/queries.py:50-54"],
+      "f4": [],
+      "f6": ["y", "첫 렌더는 throwForPage, 이후 페이지 실패는 usePagedQuery error → 오류 경계 throw(prompt-list.tsx:268), 내보내기 중 변경은 예외로 중단 catalog-page.ts:76-92"],
+      "f7": ["skip", ""],
+      "f8": ["n", "stats 를 위해 list_catalog(limit=1)을 재사용 — 표시 안 하는 목록 행(outbox EXISTS·last_error 상관 서브쿼리)·루트 재조회까지 실행 screen.py:181-183", "11 (메타 없음 4)"],
+      "f9": ["y", "오프셋 윈도우(limit≤500)·total 노출, 내보내기는 500행 페이지 반복으로 전량+정합 검사"],
+      "f10": ["y", "행·stats·facets 모양 동일(파리티), 권한 catalogRead canAccessRoute(role∧menu) = 백엔드 require_admin∧menu admin _page-actions.ts:16, admin/catalog/prompts/router.py:38"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › standard catalog (/admin/standards/prompts) › initial active rows, whole-catalog stats and markets match",
+        "front/lib/hgh/adapters/admin.parity.test.ts › first render call budget (D6) and in-request dedupe › each page issues only its own GETs, never the same request twice; the users header and list share pages",
+        "back/app/features/catalog/prompts/catalog/tests/test_screen.py"
+      ]
+    },
+    "GET /v1/admin/catalog/prompts/{prompt_id}/history": {
+      "label": "get_admin_catalog_prompt_history → list_prompt_timeline_admin/_list_history / fetchAdminPromptTimelineApi",
+      "where": "back/app/features/catalog/prompts/history/router.py:35 · service.py:87·99 · queries.py:17(history_select); front/lib/hgh/adapters/catalog.ts:193; action front/app/[locale]/(dash)/standard/prompts/_actions.ts:41-104(timelinePlace·timelineFromApi)",
+      "stmts": "load_refs 1 + ROOT 1 + 이력 SELECT(키셋 LIMIT 101) 1 = 3. +공통",
+      "f2": [2, 0, 0, 0, "history_select back/app/features/catalog/prompts/history/queries.py:17 (스코프 조각 _scope_preds 제외)"],
+      "f3": ["y", "감사 원장 행 조회(집계 없음)"],
+      "f4": [],
+      "f6": ["y", "실패는 {ok:false, error: kind} → 타임라인 '불러오지 못함' 표시"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "3"],
+      "f9": ["n", "첫 100행만 읽고 next_cursor 를 버림 — 100건 초과 이력은 안내 없이 절단(레거시와 동일) catalog.ts:193-200"],
+      "f10": ["y", "PromptAuditLogView 동일(삭제 프롬프트 포함·기간 없음, 레거시 listForPrompt 100), 권한 timelinePlace(admin∧admin 카탈로그 경로 메뉴) = 백엔드 require_admin∧menu admin"],
+      "parity": ["back/app/features/catalog/prompts/history/tests/test_admin_timeline.py"]
+    },
+    "PATCH /v1/admin/catalog/prompts/{prompt_id}/kind": {
+      "label": "patch_admin_catalog_prompts_by_id_kind_6 → service.apply_patch / setCatalogKind",
+      "where": "back/app/features/admin/catalog/prompts/router.py:154 · service.py:317(apply_patch)·253(update_row)·286(enqueue_prompt_outbox) · queries.py:75(LOCK)·94(TX_CHANGES)·34(OUTBOX_FLAGS); front/lib/hgh/adapters/admin.ts:511; action admin/standards/_actions.ts:155-158; UI admin/standards/prompts/_components/prompt-list.tsx:133-145",
+      "stmts": "ROOT 1 + LOCK_ROW(FOR UPDATE) 1 + UPDATE 1(트리거가 prompt_audit_log·judgment_change prompt_kind) + outbox(연결 행 enqueue 1~2, 미연결은 PENDING_CREATE 1) + TX_CHANGES 1 + OUTBOX_FLAGS 1 ≈ 6~7. Scope 반영은 app.scope_outbox 워커(비동기), 재측정은 적재기. 프런트 revalidatePath 만. +공통",
+      "f2": [0, 0, 0, 0, "apply_patch/update_row back/app/features/admin/catalog/prompts/service.py:317·253"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "행 잠금 조회 실패는 오류 응답"],
+      "f7": ["n", "DC-18: Scope 반영이 outbox 비동기라 실패해도 로컬 성공으로 표시되고, 관리 화면(screen 응답)에 outbox_pending·outbox_error 가 없어 Scope 실패가 어디에도 안 보임 catalog/screen.py:55-73, admin.ts:511-518; prompt_kind 재측정도 적재 뒤 반영인데 안내 없음(confirm·인라인 오류·pendingId 단일 상태는 레거시 동일 prompt-list.tsx:129-145)"],
+      "f8": ["n", "응답용 outbox_flags·tx_change_ids 2문장을 계산하나 어댑터는 ok 만 반환 admin/catalog/prompts/router.py:51-59, admin.ts:513-514", "6~7"],
+      "f9": ["skip", ""],
+      "f10": ["n", "DC-18: Scope 실패가 로컬 롤백을 일으키지 않음(레거시는 tx 안 Scope PATCH 실패 시 전체 롤백), 삭제된 행 편집은 409 state_mismatch→'삭제된 행은 편집할 수 없습니다'; 권한 role∧menu admin(레거시 requireCatalogEditor role 만 admin/standards/_actions.ts:51-62)"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › standard catalog (/admin/standards/prompts) › writes: same results and resulting catalog; declared: DC-18 messages for a deleted row",
+        "back/app/features/admin/catalog/prompts/tests/test_ad_catalog_prompts.py",
+        "back/app/features/admin/catalog/prompts/tests/test_bg44_outbox_flags.py"
+      ]
+    },
+    "DELETE /v1/admin/catalog/prompts/{prompt_id}": {
+      "label": "delete_admin_catalog_prompts_by_id_7 → service.apply_patch(deleted_at=delete) / softDeleteCatalogPrompt",
+      "where": "back/app/features/admin/catalog/prompts/router.py:174 · service.py:317·253·286 · queries.py:75·94·34; front/lib/hgh/adapters/admin.ts:653; action admin/standards/_actions.ts:461-464; UI prompt-list.tsx:147-155",
+      "stmts": "ROOT 1 + LOCK_ROW 1 + UPDATE(deleted_at) 1 + outbox(enabled=false) 1~2 + TX_CHANGES 1 + OUTBOX_FLAGS 1 ≈ 6~7. +공통",
+      "f2": [0, 0, 0, 0, "apply_patch/update_row back/app/features/admin/catalog/prompts/service.py:317·253"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "행 잠금 조회 실패는 오류 응답"],
+      "f7": ["n", "409 state_mismatch(이미 삭제)는 ok 로 흡수(레거시 멱등)하나, Scope enabled=false 반영 실패는 outbox 에만 남고 화면 미노출(DC-18) admin.ts:653-661, catalog/screen.py:55-73"],
+      "f8": ["n", "응답용 outbox_flags·tx_change_ids 결과를 어댑터가 버림", "6~7"],
+      "f9": ["skip", ""],
+      "f10": ["n", "DC-18(Scope 실패 비롤백); 권한 role∧menu admin(레거시 액션 role 만)"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › standard catalog (/admin/standards/prompts) › writes: same results and resulting catalog; declared: DC-18 messages for a deleted row",
+        "front/lib/hgh/adapters/admin.test.ts › catalog › delete / restore absorb state_mismatch; other codes give the legacy messages",
+        "back/app/features/admin/catalog/prompts/tests/test_ad_catalog_prompts.py"
+      ]
+    },
+    "POST /v1/admin/catalog/prompts/{prompt_id}/restore": {
+      "label": "post_admin_catalog_prompts_by_id_restore_8 → service.apply_patch(deleted_at=restore) / restoreCatalogPrompt",
+      "where": "back/app/features/admin/catalog/prompts/router.py:182 · service.py:317·253·286 · queries.py:75·94·34; front/lib/hgh/adapters/admin.ts:663; action admin/standards/_actions.ts:492-495; UI prompt-list.tsx:157-165",
+      "stmts": "ROOT 1 + LOCK_ROW 1 + UPDATE(deleted_at NULL) 1 + outbox(enabled=true) 1~2 + TX_CHANGES 1 + OUTBOX_FLAGS 1 ≈ 6~7. +공통",
+      "f2": [0, 0, 0, 0, "apply_patch/update_row back/app/features/admin/catalog/prompts/service.py:317·253"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "행 잠금 조회 실패는 오류 응답"],
+      "f7": ["n", "409 state_mismatch(이미 활성)는 ok 로 흡수하나 Scope enabled=true 반영 실패는 화면 미노출(DC-18) admin.ts:663-671"],
+      "f8": ["n", "응답용 outbox_flags·tx_change_ids 결과를 어댑터가 버림", "6~7"],
+      "f9": ["skip", ""],
+      "f10": ["n", "DC-18(Scope 실패 비롤백); 권한 role∧menu admin(레거시 액션 role 만)"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › standard catalog (/admin/standards/prompts) › writes: same results and resulting catalog; declared: DC-18 messages for a deleted row",
+        "front/lib/hgh/adapters/admin.test.ts › catalog › delete / restore absorb state_mismatch; other codes give the legacy messages",
+        "back/app/features/admin/catalog/prompts/tests/test_ad_catalog_prompts.py"
+      ]
+    },
+    "PATCH /v1/admin/catalog/prompts/{prompt_id}/text": {
+      "label": "patch_admin_catalog_prompts_by_id_text_3 → service.apply_patch / updateCatalogText",
+      "where": "back/app/features/admin/catalog/prompts/router.py:111 · service.py:317·253·286 · queries.py:75·94·34; front/lib/hgh/adapters/admin.ts:520; action admin/standards/_actions.ts:229-232; UI admin/standards/prompts/_components/prompt-edit-dialog.tsx:97-134",
+      "stmts": "ROOT 1 + LOCK_ROW 1 + (변경 시 UPDATE 1 + outbox 1~2 + TX_CHANGES 1) + OUTBOX_FLAGS 1 = 3~7. +공통",
+      "f2": [0, 0, 0, 0, "apply_patch/update_row back/app/features/admin/catalog/prompts/service.py:317·253"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "행 잠금 조회 실패는 오류 응답"],
+      "f7": ["n", "편집 다이얼로그가 text→labels→regions 순차 3액션 — 앞 단계 저장 후 뒤 단계 실패 시 오류만 표시(부분 저장 구분 없음) prompt-edit-dialog.tsx:107-134; 버전·ETag 없이 덮어씀(FOR UPDATE 직렬화만, 동시 편집 무경고) admin/catalog/prompts/service.py:317-343; Scope 반영 실패 화면 미노출(DC-18)"],
+      "f8": ["n", "응답용 outbox_flags·tx_change_ids 결과를 어댑터가 버림", "3~7"],
+      "f9": ["skip", ""],
+      "f10": ["n", "DC-18(Scope 실패 비롤백·삭제 행 편집 409); 권한 role∧menu admin(레거시 액션 role 만)"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › standard catalog (/admin/standards/prompts) › writes: same results and resulting catalog; declared: DC-18 messages for a deleted row",
+        "back/app/features/admin/catalog/prompts/tests/test_ad_catalog_prompts.py"
+      ]
+    },
+    "PATCH /v1/admin/catalog/prompts/{prompt_id}/labels": {
+      "label": "patch_admin_catalog_prompts_by_id_labels_4 → service.apply_patch / updateCatalogLabels",
+      "where": "back/app/features/admin/catalog/prompts/router.py:120 · service.py:317·145(label_errors)·346(known_brands) · queries.py:75·94·34; front/lib/hgh/adapters/admin.ts:560; action admin/standards/_actions.ts:264-267; UI prompt-edit-dialog.tsx:115-120",
+      "stmts": "brand_codes(api_ro) 1 + ROOT 1 + LOCK_ROW 1 + (변경 시 UPDATE 1(트리거 judgment_change catalog) + Scope 가시 필드면 outbox 1~2 + TX_CHANGES 1) + OUTBOX_FLAGS 1 = 4~8. 카탈로그 축 변경의 분석 반영은 적재기(비동기). +공통",
+      "f2": [0, 0, 0, 0, "apply_patch/update_row back/app/features/admin/catalog/prompts/service.py:317·253"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "행 잠금 조회 실패는 오류 응답"],
+      "f7": ["n", "3액션 부분 저장 구분 없음(prompt-edit-dialog.tsx:115-120), 버전 검사 없음; 카탈로그 축(brand·depth·funnel) 변경의 분석 반영이 judgment_change catalog → 적재기 비동기인데 propagation 을 버려 안내 없음(레거시 미러 캐시 구값 문제의 After 판) admin.ts:560-569"],
+      "f8": ["n", "응답용 outbox_flags·tx_change_ids 결과를 어댑터가 버림", "4~8"],
+      "f9": ["skip", ""],
+      "f10": ["n", "DC-18; 라벨 값 사전 검증 코드(unknown_brand 등 → '라벨 값이 올바르지 않습니다'); 권한 role∧menu admin(레거시 액션 role 만)"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › standard catalog (/admin/standards/prompts) › writes: same results and resulting catalog; declared: DC-18 messages for a deleted row",
+        "front/lib/hgh/adapters/admin.test.ts › conversions (hand-computed) › labels: camel -> snake, only given keys; bulk item from a legacy-shaped item or the preview item",
+        "back/app/features/admin/catalog/prompts/tests/test_ad_catalog_prompts.py"
+      ]
+    },
+    "PATCH /v1/admin/catalog/prompts/{prompt_id}/regions": {
+      "label": "patch_admin_catalog_prompts_by_id_regions_5 → service.apply_patch(+regions_or_422) / updateCatalogRegions",
+      "where": "back/app/features/admin/catalog/prompts/router.py:135 · service.py:317·120(regions_or_422)·60(root_dim) · queries.py:16·75·94·34; front/lib/hgh/adapters/admin.ts:581; action admin/standards/_actions.ts:354-357; UI prompt-edit-dialog.tsx:121-133",
+      "stmts": "(regions 있으면 ROOT_DIM api_ro 1) + ROOT 1 + LOCK_ROW 1 + (변경 시 UPDATE 1 + regions 변경이면 outbox 1~2 + TX_CHANGES 1) + OUTBOX_FLAGS 1 = 3~8. 422 region_out_of_vocabulary 면 어댑터가 GET /v1/admin/catalog/markets 1 추가. +공통",
+      "f2": [0, 0, 0, 0, "apply_patch/update_row back/app/features/admin/catalog/prompts/service.py:317·253"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "어휘 부재(rd.dim_project 루트 미적재)는 형식만 검사 — 조회 실패가 아니라 부재(레거시 동일 규칙), 어휘 조회 DB 오류는 500"],
+      "f7": ["n", "3액션 부분 저장 구분 없음(prompt-edit-dialog.tsx:121-133), 버전 검사 없음, 측정 시장 변경의 Scope·재측정 반영 대기·실패 미노출(DC-18) admin.ts:581-606"],
+      "f8": ["n", "응답용 outbox_flags·tx_change_ids 결과를 어댑터가 버림", "3~8"],
+      "f9": ["skip", ""],
+      "f10": ["n", "DC-18; 어휘 원천이 Scope getProject → rd.dim_project.regions 투영; 권한 role∧menu admin(레거시 액션 role 만)"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › standard catalog (/admin/standards/prompts) › writes: same results and resulting catalog; declared: DC-18 messages for a deleted row",
+        "front/lib/hgh/adapters/admin.test.ts › catalog › regions: format checked locally (nothing sent), vocabulary refusal names the values",
+        "back/app/features/admin/catalog/prompts/tests/test_ad_catalog_prompts.py"
+      ]
+    },
+    "GET /v1/admin/catalog/markets": {
+      "label": "get_admin_catalog_markets_1 → reference.markets(root_dim) / catalogMarketVocabularyForScreen",
+      "where": "back/app/features/admin/catalog/reference/router.py:24 · service.py:45 · back/app/features/admin/catalog/prompts/queries.py:16(ROOT_DIM); front/lib/hgh/adapters/admin.ts:473-485; page admin/standards/prompts/page.tsx:42",
+      "stmts": "ROOT_DIM_SQL 1. +공통",
+      "f2": [0, 0, 0, 0, "ROOT_DIM_SQL back/app/features/admin/catalog/prompts/queries.py:16"],
+      "f3": ["y", "표준 루트 차원 단건(rd.dim_project.regions, Scope 직접 호출 없음)"],
+      "f4": [],
+      "f6": ["n", "5xx 는 degradeRead 로 [] → 시장 멀티셀렉트가 안내 없이 빔(레거시 rootMarketVocabulary 와 같은 무표시 폴백) admin.ts:483-485"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1"],
+      "f9": ["y", "시장 어휘 전량(소규모)"],
+      "f10": ["y", "bounded=false → [] 로 레거시 null→[] 과 동일, 원천은 Scope 시장 설정의 1:1 투영; 권한 페이지 게이트와 동일(role∧menu)"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › standard catalog (/admin/standards/prompts) › initial active rows, whole-catalog stats and markets match",
+        "front/lib/hgh/adapters/admin.parity.test.ts › partial backend failures degrade per part, as legacy (M1, M5) › catalog: a failed market vocabulary reads as [] alone; the list still renders (legacy rootMarketVocabulary)",
+        "back/app/features/admin/catalog/reference/tests/test_ad_catalog_reference.py"
+      ]
+    },
+    "GET /v1/admin/catalog/prompts/export": {
+      "label": "get_admin_catalog_prompts_export_3 → bulk.export_sheet / exportCatalogXlsx",
+      "where": "back/app/features/admin/catalog/bulk/router.py:60 · service.py:165 · queries.py:5(LIVE_ROWS); front/lib/hgh/adapters/admin.ts:726; action admin/standards/_actions.ts:584; UI admin/standards/prompts/_components/catalog-io.tsx:45-63",
+      "stmts": "ROOT 1 + LIVE_ROWS 1 = 2 + 접근 감사(download, 비동기 배치). xlsx 스트리밍 → BFF 가 base64 변환. +공통",
+      "f2": [0, 0, 0, 0, "LIVE_ROWS_SQL back/app/features/admin/catalog/bulk/queries.py:5"],
+      "f3": ["y", "카탈로그 원본 행 읽기(레거시의 scope 고아 anti-join COUNT 제거)"],
+      "f4": [],
+      "f6": ["y", "실패는 {ok:false} → CatalogIo 인라인 오류 catalog-io.tsx:46-50"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "2"],
+      "f9": ["y", "활성 행 전량 내보내기(의도)"],
+      "f10": ["n", "열 계약(id·text·brand…·kind)은 레거시 excel.ts 와 같으나 생성이 백엔드로 이동(파일명 Content-Disposition); 권한 role∧menu admin(레거시 액션 requireCatalogEditor role 만 → 액션 기준 엄격화)"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.test.ts › catalog › export: bytes to base64, file name from the header or the legacy fallback",
+        "back/app/features/admin/catalog/bulk/tests/test_ad_catalog_bulk.py"
+      ]
+    },
+    "POST /v1/admin/catalog/prompts/import/preview": {
+      "label": "post_admin_catalog_prompts_import_preview_1 → bulk.preview(parse_workbook) / previewCatalogImport(relayUpload)",
+      "where": "back/app/features/admin/catalog/bulk/router.py:43 · service.py:258(preview)·184(parse_workbook) · queries.py:5; front/lib/hgh/adapters/admin.ts:781; front/lib/hgh/relay.ts(relayUpload); action admin/standards/_actions.ts:600-603",
+      "stmts": "xlsx 파싱(작업 스레드) + ROOT 1 + LIVE_ROWS 1 + ROOT_DIM 1 + brand_codes 1 = 4. 업로드 5MB 상한(BFF 가 먼저 413). +공통",
+      "f2": [0, 0, 0, 0, "LIVE_ROWS_SQL back/app/features/admin/catalog/bulk/queries.py:5"],
+      "f3": ["y", "원본 행 대조(레거시의 scope 고아 COUNT 제거)"],
+      "f4": [],
+      "f6": ["y", "어휘 부재 시 형식만 검사(부재, 실패 아님), 읽을 수 없는 파일은 200+경고, 그 밖 오류는 인라인 표시"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "4"],
+      "f9": ["y", "변경 항목 전량(미매칭 id 목록·불변 수, 경고는 상한 요약)"],
+      "f10": ["n", "변경 키는 레거시 감사 키로 변환해 같은 프리뷰 모양이나 항목에 백엔드 BulkItem 이 실려 적용 계약이 바뀜; 권한 role∧menu(레거시 액션 role 만)"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.test.ts › conversions (hand-computed) › preview: backend keys -> legacy audit keys, the backend item kept opaque",
+        "front/lib/hgh/adapters/admin.test.ts › catalog › preview: multipart relay; 413 before sending when over the limit",
+        "back/app/features/admin/catalog/bulk/tests/test_ad_catalog_bulk.py"
+      ]
+    },
+    "POST /v1/admin/catalog/prompts/bulk/apply": {
+      "label": "post_admin_catalog_prompts_bulk_apply_2 → bulk.apply_items(행별 apply_patch) / applyCatalogChunk",
+      "where": "back/app/features/admin/catalog/bulk/router.py:50 · service.py:123(apply_items) · back/app/features/admin/catalog/prompts/service.py:317; front/lib/hgh/adapters/admin.ts:822; action admin/standards/_actions.ts:685-688; UI admin/standards/prompts/_components/catalog-io.tsx:84-119",
+      "stmts": "청크(25)당 ROOT_DIM 1 + brand_codes 1 + ROOT 1 + 항목마다 SAVEPOINT·LOCK·UPDATE·outbox 0~2·RELEASE + 변경 시 TX_CHANGES 1 → 청크당 ≈3 + 25×(4~6). +공통",
+      "f2": [0, 0, 0, 0, "apply_patch(행별) back/app/features/admin/catalog/prompts/service.py:317"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "행 조회 실패는 항목 실패로 집계"],
+      "f7": ["n", "①서버 액션이 throw(UnauthorizedError·전송 실패)하면 void applyItems 가 잡지 않아 '적용 중'에 멈추고 닫기 불가 catalog-io.tsx:84-105,114-119 ②프리뷰 뒤 다른 관리자 변경을 버전 검사 없이 파일 값으로 덮어씀 bulk/service.py:129-143 ③Scope·재측정 반영(outbox·judgment_change) 대기·실패 미노출(DC-18)"],
+      "f8": ["n", "항목마다 잠금·UPDATE·outbox·TX_CHANGES 를 순차 실행(per-row) bulk/service.py:129-150", "청크당 ≈3+25×(4~6)"],
+      "f9": ["skip", ""],
+      "f10": ["n", "DC-18(Scope 실패 비롤백), 행 단위 SAVEPOINT 부분 성공(applied=applied+unchanged 로 레거시 의미 유지); 권한 role∧menu(레거시 액션 role 만)"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.test.ts › catalog › bulk apply: applied counts unchanged rows, failures keep the row id; bulk regions likewise",
+        "back/app/features/admin/catalog/bulk/tests/test_ad_catalog_bulk.py"
+      ]
+    },
+    "CLIENT 소셜 리서치 샘플 픽스처(getSampleMatrix)": {
+      "label": "SocialScrapingFlow(mode=admin) getSampleMatrix 픽스처 + 메모리 페이징",
+      "where": "front/components/social-scraping/social-scraping-flow.tsx:127,162-163; front/components/social-scraping/sample-data.ts:976; page admin/standards/customer-interest/page.tsx:50",
+      "stmts": "서버 읽기 0 — 픽스처 메모리 페이징(양 원천 동일).",
+      "f2": ["skip", "DB·API 읽기 없음 — 샘플 픽스처"],
+      "f3": ["y", "고정 픽스처(서버 계산 없음)"],
+      "f4": ["ADK5"],
+      "f6": ["n", "실데이터 없이 샘플 픽스처를 리서치 결과처럼 상시 표시(샘플 표기 없음) — After 에서도 그대로 social-scraping-flow.tsx:127-163"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "0"],
+      "f9": ["skip", ""],
+      "f10": ["y", "레거시와 같은 클라이언트 경로(변경 없음)"],
+      "parity": []
+    },
+    "CLIENT 데모 전송 토스트(CatalogTable.onSend)": {
+      "label": "CatalogTable.onSend(projectId 없음) 데모 토스트",
+      "where": "front/components/social-scraping/context-map-view.tsx:1213-1221",
+      "stmts": "서버 호출 0 — toast.success(catalogSendSuccess '…(데모)').",
+      "f2": ["skip", "쓰기 없음 — 데모 토스트"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["n", "실제 저장 없이 '전송했습니다' 성공 토스트(문구 끝 '(데모)')만 — After 동일 context-map-view.tsx:1213-1221"],
+      "f8": ["y", "", "0"],
+      "f9": ["skip", ""],
+      "f10": ["y", "레거시와 같은 클라이언트 경로(변경 없음)"],
+      "parity": []
+    },
+    "CLIENT 샘플 맥락지도 xlsx(buildContextMapWorkbook)": {
+      "label": "onExport → buildContextMapWorkbook(샘플 매트릭스, 브라우저 생성)",
+      "where": "front/components/social-scraping/context-map-view.tsx:302-325",
+      "stmts": "서버 호출 0 — exceljs 브라우저 빌드.",
+      "f2": ["skip", "API·SQL 없음(브라우저 생성)"],
+      "f3": ["y", "고정 픽스처 직렬화"],
+      "f4": ["ADK5"],
+      "f6": ["n", "샘플 픽스처를 실데이터처럼 내보냄(샘플 표기 없음)"],
+      "f7": ["skip", "서버 쓰기 없음(브라우저 다운로드)"],
+      "f8": ["y", "", "0"],
+      "f9": ["y", "샘플 페이지 전량"],
+      "f10": ["y", "레거시와 같은 클라이언트 경로(변경 없음)"],
+      "parity": []
+    },
+    "GET /v1/admin/interest/keywords": {
+      "label": "get_admin_interest_keywords_0 → svc.list_keywords / listInterest",
+      "where": "back/app/features/admin/interest/keywords/router.py:25 · service.py:21 · queries.py:6(LIST_SELECT); front/lib/hgh/adapters/admin.ts:892-897; page admin/standards/customer-interest/page.tsx:39-41",
+      "stmts": "LIST_SELECT 1(정렬 source_type, created_at DESC). sources 와 Promise.all 병렬. +공통",
+      "f2": [0, 0, 0, 0, "LIST_SELECT back/app/features/admin/interest/keywords/queries.py:6"],
+      "f3": ["y", "원천 표 행 조회"],
+      "f4": [],
+      "f6": ["y", "catch → throwForPage(오류 경계)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1"],
+      "f9": ["y", "전량 표시(소규모, 레거시 동일)"],
+      "f10": ["n", "행 모양·순서(어댑터가 enum 선언 순서로 재정렬) 동일하나 라우터가 require_admin 만 걸어 메뉴그룹 admin 미검사 — 레거시 페이지 게이트(role∧menu)보다 느슨 back/app/features/admin/interest/keywords/router.py:22"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › customer-interest sources (/admin/standards/customer-interest) › keyword and source rows match (kind, then newest first)",
+        "back/app/features/admin/interest/keywords/tests/test_ad_interest_keywords.py"
+      ]
+    },
+    "POST /v1/admin/interest/keywords": {
+      "label": "post_admin_interest_keywords_1 → svc.create / createInterestKeyword",
+      "where": "back/app/features/admin/interest/keywords/router.py:39 · service.py:42 · queries.py:9(INSERT); front/lib/hgh/adapters/admin.ts:904; action admin/standards/_actions.ts:770-778; UI admin/standards/customer-interest/_components/keyword-list.tsx:68-83",
+      "stmts": "(brand 있으면 brand_codes api_ro 1) + INSERT 1 = 1~2. 하류 캐시·판정 없음. +공통",
+      "f2": [0, 0, 0, 0, "INSERT_SQL back/app/features/admin/interest/keywords/queries.py:9"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "422·unknown_brand 는 토스트, 그 밖 실패는 '저장에 실패했습니다' 토스트, pending 중 비활성 keyword-list.tsx:68-83,154"],
+      "f8": ["y", "", "1~2"],
+      "f9": ["skip", ""],
+      "f10": ["n", "브랜드를 app.brand FK 로 사전 검증해 미등록 브랜드 422 unknown_brand(레거시 brand 자유 텍스트 저장), DB 실패도 오류 경계 대신 토스트; 권한 require_admin = 레거시 액션 role 만(동일)"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › customer-interest sources (/admin/standards/customer-interest) › writes: same results and resulting lists (new ids aside)",
+        "front/lib/hgh/adapters/admin.test.ts › interest, entities, citation overrides, GA4 › interest deletes absorb 404; unknown brand is named",
+        "back/app/features/admin/interest/keywords/tests/test_ad_interest_keywords.py"
+      ]
+    },
+    "PATCH /v1/admin/interest/keywords/{keyword_id}": {
+      "label": "patch_admin_interest_keywords_by_id_2 → svc.update / setInterestKeywordEnabled",
+      "where": "back/app/features/admin/interest/keywords/router.py:44 · service.py:52-74; front/lib/hgh/adapters/admin.ts:924; action admin/standards/_actions.ts:797-801; UI keyword-list.tsx:86-91",
+      "stmts": "UPDATE(enabled) 1. +공통",
+      "f2": [0, 0, 0, 0, "동적 UPDATE back/app/features/admin/interest/keywords/service.py:70"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "명시값(!enabled) 저장, 404·실패 토스트, pending 중 비활성"],
+      "f8": ["y", "", "1"],
+      "f9": ["skip", ""],
+      "f10": ["y", "결과·의미 동일, 권한 require_admin = 레거시 액션 role 만"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › customer-interest sources (/admin/standards/customer-interest) › writes: same results and resulting lists (new ids aside)",
+        "back/app/features/admin/interest/keywords/tests/test_ad_interest_keywords.py"
+      ]
+    },
+    "DELETE /v1/admin/interest/keywords/{keyword_id}": {
+      "label": "delete_admin_interest_keywords_by_id_3 → svc.delete / deleteInterestKeyword",
+      "where": "back/app/features/admin/interest/keywords/router.py:49 · service.py:77 · queries.py:16; front/lib/hgh/adapters/admin.ts:933; action admin/standards/_actions.ts:809-812; UI keyword-list.tsx:94-99",
+      "stmts": "DELETE 1. +공통",
+      "f2": [0, 0, 0, 0, "DELETE_SQL back/app/features/admin/interest/keywords/queries.py:16"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "404 는 ok(레거시 무동작), 실패 토스트, pending 중 비활성(무확인 1클릭은 기준 밖)"],
+      "f8": ["y", "", "1"],
+      "f9": ["skip", ""],
+      "f10": ["y", "결과·의미 동일, 권한 require_admin = 레거시 액션 role 만"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › customer-interest sources (/admin/standards/customer-interest) › writes: same results and resulting lists (new ids aside)",
+        "front/lib/hgh/adapters/admin.test.ts › interest, entities, citation overrides, GA4 › interest deletes absorb 404; unknown brand is named",
+        "back/app/features/admin/interest/keywords/tests/test_ad_interest_keywords.py"
+      ]
+    },
+    "GET /v1/admin/interest/sources": {
+      "label": "get_admin_interest_sources_0 → svc.list_sources / listInterest",
+      "where": "back/app/features/admin/interest/sources/router.py:25 · service.py:21 · queries.py:6(LIST_SELECT); front/lib/hgh/adapters/admin.ts:892-897; page admin/standards/customer-interest/page.tsx:39-41",
+      "stmts": "LIST_SELECT 1(정렬 channel, created_at DESC). keywords 와 병렬. +공통",
+      "f2": [0, 0, 0, 0, "LIST_SELECT back/app/features/admin/interest/sources/queries.py:6"],
+      "f3": ["y", "원천 표 행 조회"],
+      "f4": [],
+      "f6": ["y", "catch → throwForPage(오류 경계)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1"],
+      "f9": ["y", "전량 표시(소규모, 레거시 동일)"],
+      "f10": ["n", "행 모양·순서 동일하나 require_admin 만(메뉴그룹 admin 미검사) — 레거시 페이지 게이트보다 느슨 back/app/features/admin/interest/sources/router.py:22"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › customer-interest sources (/admin/standards/customer-interest) › keyword and source rows match (kind, then newest first)",
+        "back/app/features/admin/interest/sources/tests/test_ad_interest_sources.py"
+      ]
+    },
+    "POST /v1/admin/interest/sources": {
+      "label": "post_admin_interest_sources_1 → svc.create / createInterestSource",
+      "where": "back/app/features/admin/interest/sources/router.py:39 · service.py:42 · queries.py:9(INSERT); front/lib/hgh/adapters/admin.ts:943; action admin/standards/_actions.ts:840-848; UI admin/standards/customer-interest/_components/source-list.tsx:68-83",
+      "stmts": "(brand 있으면 brand_codes 1) + INSERT 1 = 1~2. +공통",
+      "f2": [0, 0, 0, 0, "INSERT_SQL back/app/features/admin/interest/sources/queries.py:9"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "422·unknown_brand·실패 토스트, pending 중 비활성 source-list.tsx:68-83"],
+      "f8": ["y", "", "1~2"],
+      "f9": ["skip", ""],
+      "f10": ["n", "브랜드 FK 사전 검증(unknown_brand, 레거시 자유 텍스트), 실패 표시 방식 변경; 권한 require_admin = 레거시 액션 role 만"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › customer-interest sources (/admin/standards/customer-interest) › writes: same results and resulting lists (new ids aside)",
+        "back/app/features/admin/interest/sources/tests/test_ad_interest_sources.py"
+      ]
+    },
+    "PATCH /v1/admin/interest/sources/{source_id}": {
+      "label": "patch_admin_interest_sources_by_id_2 → svc.update / setInterestSourceEnabled",
+      "where": "back/app/features/admin/interest/sources/router.py:44 · service.py:52-74; front/lib/hgh/adapters/admin.ts:963; action admin/standards/_actions.ts:867-871; UI source-list.tsx:86-91",
+      "stmts": "UPDATE(enabled) 1. +공통",
+      "f2": [0, 0, 0, 0, "동적 UPDATE back/app/features/admin/interest/sources/service.py:70"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "명시값 저장, 404·실패 토스트, pending 중 비활성"],
+      "f8": ["y", "", "1"],
+      "f9": ["skip", ""],
+      "f10": ["y", "결과·의미 동일, 권한 require_admin = 레거시 액션 role 만"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › customer-interest sources (/admin/standards/customer-interest) › writes: same results and resulting lists (new ids aside)",
+        "back/app/features/admin/interest/sources/tests/test_ad_interest_sources.py"
+      ]
+    },
+    "DELETE /v1/admin/interest/sources/{source_id}": {
+      "label": "delete_admin_interest_sources_by_id_3 → svc.delete / deleteInterestSource",
+      "where": "back/app/features/admin/interest/sources/router.py:49 · service.py:77 · queries.py:16; front/lib/hgh/adapters/admin.ts:972; action admin/standards/_actions.ts:879-882",
+      "stmts": "DELETE 1. +공통",
+      "f2": [0, 0, 0, 0, "DELETE_SQL back/app/features/admin/interest/sources/queries.py:16"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "404 는 ok, 실패 토스트, pending 중 비활성"],
+      "f8": ["y", "", "1"],
+      "f9": ["skip", ""],
+      "f10": ["y", "결과·의미 동일, 권한 require_admin = 레거시 액션 role 만"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › customer-interest sources (/admin/standards/customer-interest) › writes: same results and resulting lists (new ids aside)",
+        "back/app/features/admin/interest/sources/tests/test_ad_interest_sources.py"
+      ]
+    },
+    "GET /v1/admin/citation-overrides/candidates": {
+      "label": "get_admin_citation_overrides_candidates_1 → service.list_candidates / listCitationCuration",
+      "where": "back/app/features/admin/citation_sources/overrides/router.py:39 · service.py:111 · queries.py:53(CANDIDATES)·21(WEIGHTED_CTE); front/lib/hgh/adapters/admin.ts:1079·1065; page admin/standards/citation-sources/page.tsx:37-42",
+      "stmts": "load_refs 1 + 창 해석(resolve_window, 최신 노출 회차) 1 + CANDIDATES 1(창이 여러 날이면 admin_long 커넥션) = 3. 인용 계열 숨김 회차면 사실 표 미조회(오버라이드만). +공통",
+      "f2": [5, 4, 2, 1, "CANDIDATES_SQL+WEIGHTED_CTE back/app/features/admin/citation_sources/overrides/queries.py:53·21 (Window.where 창 술어 core.cycles 제외)"],
+      "f3": ["n", "rd.citation 원소 행을 요청마다 source_key GROUP BY → 도메인 재집계 overrides/queries.py:21-31"],
+      "f4": [],
+      "f6": ["y", "catch → throwForPage(레거시 .catch(()=>[]) 제거, After 개선) citation-sources/page.tsx:39-41"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "3"],
+      "f9": ["y", "상위 500 + 교정 도메인 전부, 상한을 힌트로 노출(domain-list.tsx hintApi)"],
+      "f10": ["n", "DC-14: 인용 수 = global 최신 노출 회차(레거시 전 기간 미러), '현재 분류'는 적재 반영된 rd.dim_source 분류라 저장 직후엔 교정 전 값·출처 배지(교정 미반영이면 원복 버튼 없음), 'social' 분류 계층 추가; 응답 override.propagated·meta.suppressed 를 어댑터가 버림 overrides/service.py:90-100, admin.ts:1065-1087; 권한 동일(role∧menu, 표면 게이트 면제)"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › citation sources (/admin/standards/citation-sources) › same domains, weights, categories and override info; declared: the backend 'social' layer",
+        "front/lib/hgh/adapters/admin.parity.test.ts › permissions (both sources) › api: entity and citation 5xx propagate instead of becoming empty success",
+        "back/app/features/admin/citation_sources/overrides/tests/test_ad_ops_citation_overrides.py",
+        "back/app/features/admin/citation_sources/overrides/tests/test_bg42_shadows_owned.py"
+      ]
+    },
+    "PUT /v1/admin/citation-overrides/{domain}": {
+      "label": "put_admin_citation_overrides_by_id_3 → service.put_override / putCitationOverride",
+      "where": "back/app/features/admin/citation_sources/overrides/router.py:55 · service.py:146 · queries.py:85(CATEGORY_BY_LABEL)·88(OLD)·89(UPSERT); front/lib/hgh/adapters/admin.ts:1095; action admin/standards/citation-sources/_actions.ts:62-66; UI citation-sources/_components/domain-list.tsx:117-124",
+      "stmts": "카테고리 조회 1 + OLD(FOR UPDATE) 1 + UPSERT 1 + (분류 변경 시 enqueue_change citation_override: advisory·dedupe·INSERT 3) = 3~6. 프런트 revalidatePath 만(레거시 revalidateTag citation-overrides·mirror-aggregates 없음) — 인용 화면 반영은 적재기 재분류 뒤. +공통",
+      "f2": [0, 0, 0, 0, "UPSERT_SQL back/app/features/admin/citation_sources/overrides/queries.py:89"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "'savedPending' 토스트로 비동기 반영 안내, 같은 도메인 대기 요청은 409 duplicate_pending 표시(반영 전 재편집 차단), pending 중 Select 비활성 domain-list.tsx:117-124, overrides/service.py:223-227"],
+      "f8": ["y", "", "3~6"],
+      "f9": ["skip", ""],
+      "f10": ["n", "즉시 재분류(레거시: read-time 파생 + 두 캐시 태그 무효화) → 적재기 비동기 반영(DC-14)·대기 중 재편집 409; 권한 role∧menu(레거시 액션 role 만 citation-sources/_actions.ts:36-42)"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › citation sources (/admin/standards/citation-sources) › set / clear: same results and resulting rows (updatedAt aside)",
+        "front/lib/hgh/adapters/admin.test.ts › interest, entities, citation overrides, GA4 › citation override: note trimmed to null, delete absorbs 404, pending duplicate named",
+        "back/app/features/admin/citation_sources/overrides/tests/test_ad_ops_citation_overrides.py"
+      ]
+    },
+    "DELETE /v1/admin/citation-overrides/{domain}": {
+      "label": "delete_admin_citation_overrides_by_id_4 → service.delete_override / deleteCitationOverride",
+      "where": "back/app/features/admin/citation_sources/overrides/router.py:62 · service.py:168 · queries.py:96(DELETE); front/lib/hgh/adapters/admin.ts:1108; action admin/standards/citation-sources/_actions.ts:89-93; UI domain-list.tsx:126-132",
+      "stmts": "DELETE 1 + enqueue_change citation_override 3 = 4. +공통",
+      "f2": [0, 0, 0, 0, "DELETE_SQL back/app/features/admin/citation_sources/overrides/queries.py:96"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "404 는 ok(레거시 remove→false 와 동일), 'revertedPending' 토스트, 대기 중 409 표시, pending 중 비활성"],
+      "f8": ["y", "", "4"],
+      "f9": ["skip", ""],
+      "f10": ["n", "원복도 적재기 비동기 반영(DC-14)·대기 중 409; 권한 role∧menu(레거시 액션 role 만)"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › citation sources (/admin/standards/citation-sources) › set / clear: same results and resulting rows (updatedAt aside)",
+        "back/app/features/admin/citation_sources/overrides/tests/test_ad_ops_citation_overrides.py"
+      ]
+    },
+    "GET /v1/admin/entities": {
+      "label": "get_admin_entities_0 → registry.list_entities/_list_on(+versions.active_own_brands) / listEntityRows·listAdminEntities",
+      "where": "back/app/features/admin/entities/registry/router.py:29 · service.py:78·93 · queries.py:16(LIST_TEMPLATE)·10; back/app/features/admin/entities/versions/service.py:283(active_own_brands); front/lib/hgh/adapters/admin-entities.ts:1163, front/lib/hgh/adapters/admin.ts:1006; page admin/standards/entities/page.tsx:38-43·87",
+      "stmts": "페이지(limit 500)당 PROJECT_KEYS 1 + resolve_window 1 + LIST_TEMPLATE 1(전 Brand 엔티티 ∪ 명부 CTE → 정렬·키셋) + active_own_brands(ACTIVE 1 + 활성 버전 ENTITIES_OF·SURFACES_OF 2 + OWN_BRANDS 1 + OWN_SCOPE_ATTRIBUTION 1 + 제거 엔티티 있으면 ROLLUP_SETS_FOR_IDS(rd.v_entity_mention_surface 전 기간) 1 + LINT_CONFIG 1) ≈ 9~10 → 커서 끝까지(maxPages 10). +공통",
+      "f2": [4, 2, 0, 0, "LIST_TEMPLATE back/app/features/admin/entities/registry/queries.py:16"],
+      "f3": ["n", "수치는 rd.entity_mention_total 저장 합계이나, 유효 귀속 자사 브랜드를 요청마다 RollupRule 로 재판정하고 제거 엔티티가 있으면 언급 표면 뷰 전 기간을 조회 versions/service.py:283-299, versions/queries.py:146-152"],
+      "f4": [],
+      "f6": ["y", "메인 화면은 catch → throwForPage(레거시 .catch(()=>[]) 제거) entities/page.tsx:40-42"],
+      "f7": ["skip", ""],
+      "f8": ["n", "페이지마다 활성 버전 스냅샷(ENTITIES_OF·SURFACES_OF)·OWN_BRANDS·LINT_CONFIG 를 동일하게 재조회하고 전 엔티티 CTE 정렬을 반복; precutover 화면은 own_brand 를 쓰지 않음 registry/service.py:150-163", "페이지당 ≈9~10"],
+      "f9": ["y", "500행 키셋 끝까지 전량 표시(maxPages 초과 오류)"],
+      "f10": ["n", "수치 정의는 엔티티별 전 기간(레거시 listDiscoveredBrands)으로 맞췄으나 라우터가 require_admin 만 — 메뉴그룹 admin 미검사로 레거시 페이지 게이트(role∧menu)보다 느슨 registry/router.py:26; 행에 brandCode·brandName 가산(U11-N2)"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › entity registry (/admin/standards/entities) › same entities, names, roles and numbers (per entity, all time = legacy listDiscoveredBrands; DC-13 retired, 5차 항목 1)",
+        "front/lib/hgh/adapters/admin.parity.test.ts › permissions (both sources) › api: entity and citation 5xx propagate instead of becoming empty success",
+        "back/app/features/admin/entities/registry/tests/test_ad_entities_registry.py"
+      ]
+    },
+    "GET /v1/admin/entities/versions": {
+      "label": "get_versions → svc.list_versions / listVersions(ecatGate)",
+      "where": "back/app/features/admin/entities/versions/router.py:65 · service.py:197 · queries.py:13(VERSIONS)·21(LAST_APPLY_OF)·6·7; front/lib/hgh/adapters/admin-entities.ts:180; gate admin/standards/entities/_ecat-data.ts:30-43",
+      "stmts": "VERSIONS(LIMIT 100, 버전별 entity·surface count 상관 서브쿼리) 1 + LAST_APPLY_OF 1 + ACTIVE 1 + DRAFT 1 = 4. 모든 엔티티 화면 진입마다 게이트로 호출. +공통",
+      "f2": [0, 0, 0, 0, "VERSIONS back/app/features/admin/entities/versions/queries.py:13"],
+      "f3": ["y", "버전 설정 표 조회"],
+      "f4": [],
+      "f6": ["y", "5xx 는 'unavailable' 위험 Notice, 404 는 precutover(구 화면), 그 밖 throwForPage _ecat-data.ts:35-42, entities/page.tsx:44-56"],
+      "f7": ["skip", ""],
+      "f8": ["n", "게이트 용도(활성·초안 번호)로 호출되는 초안·검토·감사·반영 화면에서도 버전 100행·행별 count·최근 반영을 계산", "4"],
+      "f9": ["n", "limit 100 고정 — 버전 화면에서 100개 초과 버전은 안내 없이 절단 admin-entities.ts:180-181"],
+      "f10": ["skip", "api 전용(레거시는 게이트 안내문만); 권한 role∧menu admin = _ecat-actions 게이트"],
+      "parity": [
+        "front/lib/hgh/adapters/admin-entities.test.ts › request shapes › lint, acks, diff, apply flow and review / audit queries",
+        "back/app/features/admin/entities/versions/tests/test_ad_entities_versions.py"
+      ]
+    },
+    "PUT /v1/admin/entities/{entity_id}": {
+      "label": "put_admin_entities_by_id_1 → registry.set_role / setAdminEntityRole",
+      "where": "back/app/features/admin/entities/registry/router.py:52 · service.py:116 · queries.py:56(ACTIVE_ECAT)·45·47·49(UPSERT)·58; front/lib/hgh/adapters/admin.ts:1025; action admin/standards/entities/_actions.ts:47-56; UI admin/standards/entities/_components/entity-catalog.tsx:72-90",
+      "stmts": "ACTIVE_ECAT 1 + DIM_ENTITY(api_ro) 1 + LOCK_REGISTRY 1 + (브랜드 지정 시 brand_codes 1) + UPSERT 또는 DELETE 1 + enqueue_change(entity) 3 = 7~8. 반영 = 적재기 own_bit·leaf 재구축(전 기간, 비동기), 레거시 revalidateTag(mirror-aggregates) 전면 콜드화 없음. +공통",
+      "f2": [0, 0, 0, 0, "UPSERT_SQL back/app/features/admin/entities/registry/queries.py:49"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "'roleUpdatedPending' 토스트로 비동기 반영 안내, 같은 엔티티 대기 요청 409 duplicate_pending 표시, 컷오버 뒤 409 ECAT_LEGACY_WRITE(화면은 precutover 에서만 노출), pending 중 Select 비활성 entity-catalog.tsx:72-80"],
+      "f8": ["y", "", "7~8"],
+      "f9": ["skip", ""],
+      "f10": ["n", "U11-N2: 자사 지정에 brand_code 필수(brand_required), 컷오버 뒤 쓰기 거부, KPI 반영은 적재기 재구축 뒤(레거시 즉시 + 캐시 무효화); 권한 require_admin = 레거시 액션 role 만(동일)"],
+      "parity": [
+        "front/lib/hgh/adapters/admin.parity.test.ts › entity registry (/admin/standards/entities) › role writes: same results and roles; own needs a brand code on api (U11-N2)",
+        "front/lib/hgh/adapters/admin.test.ts › interest, entities, citation overrides, GA4 › entity role: brand code only for own; codes map to messages",
+        "back/app/features/admin/entities/registry/tests/test_ad_entities_registry.py"
+      ]
+    },
+    "POST /v1/admin/entities/versions": {
+      "label": "post_versions → svc.create_draft(+version_detail) / createDraft",
+      "where": "back/app/features/admin/entities/versions/router.py:71 · service.py:388·378(_new_draft)·302(version_detail) · queries.py:27·31·35; front/lib/hgh/adapters/admin-entities.ts:360; action admin/standards/entities/_ecat-actions.ts:46-50; UI _components/draft-bar.tsx:47-58",
+      "stmts": "ACTIVE 1 + DRAFT 1 + INSERT_DRAFT 1 + COPY_ENTITIES 1 + COPY_SURFACES 1 + AUDIT 1 + 응답 version_detail ≈12(VERSION·ENTITIES_OF·SURFACES_OF·CONTENT_MD5·DIM_ENTITIES·LAST_APPLY_OF·스냅샷 재조회 2·OWN_BRANDS·OWN_SCOPE_ATTRIBUTION·ROLLUP_SETS·LINT_CONFIG) ≈ 18. +공통",
+      "f2": [2, 0, 0, 0, "OWN_SCOPE_ATTRIBUTION(응답 version_detail) back/app/features/admin/entities/versions/queries.py:102"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "초안 1개 규칙 409 ECAT_DRAFT_EXISTS 표시, pending 중 비활성, 감사 같은 tx draft-bar.tsx:47-58"],
+      "f8": ["n", "응답 version_detail(엔티티 전량·귀속 판정·롤업 조회)을 계산하나 화면은 ver 만 쓰고 router.refresh 로 다시 읽음 draft-bar.tsx:54-55", "≈18"],
+      "f9": ["skip", ""],
+      "f10": ["skip", "api 전용(레거시 미제공); 권한 role∧menu admin = 액션 게이트(_ecat-actions.ts:25-30)"],
+      "parity": [
+        "front/lib/hgh/adapters/admin-entities.test.ts › request shapes › draft edits: bodies, trimming, own-only brand code",
+        "front/app/[locale]/(dash)/admin/standards/entities/_ecat-actions.test.ts › entity version flow (edit -> lint -> preview -> apply -> rollback) › runs end to end with the unexposed range and self approval",
+        "back/app/features/admin/entities/versions/tests/test_ad_entities_versions.py"
+      ]
+    },
+    "GET /v1/admin/entities/versions/{ver}": {
+      "label": "get_version → svc.version_detail / getVersion",
+      "where": "back/app/features/admin/entities/versions/router.py:77 · service.py:302 · queries.py:8·42·65·25·162·102·108·146-152·99; front/lib/hgh/adapters/admin-entities.ts:314; page admin/standards/entities/page.tsx:59-62, entities/draft/page.tsx:28-34",
+      "stmts": "VERSION 1 + ENTITIES_OF 1 + SURFACES_OF 1 + CONTENT_MD5 1 + DIM_ENTITIES 1 + LAST_APPLY_OF 1 + _snapshot(ENTITIES_OF·SURFACES_OF 재실행 2) + OWN_BRANDS 1 + OWN_SCOPE_ATTRIBUTION 1 + (제거 엔티티 있으면 ROLLUP_SETS_FOR_IDS: rd.v_entity_mention_surface 전 기간, LIMIT 5000) + LINT_CONFIG 1 ≈ 11~12. 메인 화면은 활성·초안 2회 병렬. +공통",
+      "f2": [2, 0, 0, 0, "OWN_SCOPE_ATTRIBUTION back/app/features/admin/entities/versions/queries.py:102"],
+      "f3": ["n", "엔티티 행마다 유효 귀속(effective_own_brand)을 RollupRule 로 요청 시 재판정, 제거 엔티티 롤업은 언급 표면 뷰 전 기간 조회 versions/service.py:312-321"],
+      "f4": [],
+      "f6": ["y", "메인·초안 화면 throwForPage"],
+      "f7": ["skip", ""],
+      "f8": ["n", "ENTITIES_OF·SURFACES_OF 를 본문용(_entities·_surfaces)과 _snapshot 에서 두 번씩 실행 versions/service.py:307-312", "≈11~12"],
+      "f9": ["y", "버전의 덮어쓰기 행·표면 전량(버전 크기 한정)"],
+      "f10": ["skip", "api 전용; 권한 role∧menu admin"],
+      "parity": [
+        "front/lib/hgh/adapters/admin-entities.test.ts › entity list merge › role from the active version, draft role and change flag, hub rows appended",
+        "front/lib/hgh/adapters/admin-entities.test.ts › entity list merge › own attribution: list own_brand for the active, the draft row's effective_own_brand for the draft (else as active)",
+        "back/app/features/admin/entities/versions/tests/test_ad_entities_versions.py"
+      ]
+    },
+    "GET /v1/admin/entities/{entity_id}/mentions": {
+      "label": "get_entity_mentions → svc.mention_samples/_samples_on / getEntityMentions(entityMentionsAction)",
+      "where": "back/app/features/admin/entities/versions/router.py:225 · service.py:1214·1153 · queries.py:243·248·254·259·262; front/lib/hgh/adapters/admin-entities.ts:1300; action admin/standards/entities/_ecat-actions.ts:150-154; UI _components/entity-drawer.tsx:140-148",
+      "stmts": "DIM_ENTITY 1 + window_for(PROJECT_KEYS·resolve_window 2) + SAMPLE_KEYS(rd.answer_brand, 최대 80) 1 + SAMPLE_OCC(rd.v_answer_occurrence) 1 + SAMPLE_MENTIONS 1 + (발생 행 없는 답변 있으면 SAMPLE_BODIES 1 → 본문 표면 스캔) = 6~7 + 접근 감사(data_access, 비동기). +공통",
+      "f2": [1, 0, 0, 0, "DIM_ENTITY back/app/features/admin/entities/versions/queries.py:243 (나머지는 문서형 뷰 단일 relation)"],
+      "f3": ["n", "언급 발생 원소 행·저장 본문을 요청 시 읽어 표면 빈도(most_common 30) 집계·본문 표면 재매칭 versions/service.py:1173-1208"],
+      "f4": [],
+      "f6": ["y", "실패는 errorKey → 드로어 표본 오류 표시 entity-drawer.tsx:147"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "6~7"],
+      "f9": ["y", "표본 20건(최대 50) — 표본 성격"],
+      "f10": ["skip", "api 전용; 권한 role∧menu admin"],
+      "parity": ["back/app/features/admin/entities/versions/tests/test_ad_entities_versions.py"]
+    },
+    "PUT /v1/admin/entities/versions/{ver}/entities/{entity_id}": {
+      "label": "put_version_entity → svc.put_entity/_write_entity / putDraftEntity",
+      "where": "back/app/features/admin/entities/versions/router.py:102 · service.py:501·456 · queries.py:48·52·59·45·162·198(STALE_OPEN)·230(AUDIT); front/lib/hgh/adapters/admin-entities.ts:419·407; action _ecat-actions.ts:64-71; UI _components/entity-drawer.tsx:160-200",
+      "stmts": "VERSION_FOR_UPDATE 1 + ENTITY_ROW_FOR_UPDATE 1 + DIM_ENTITIES 1 + (brand 시 brand_codes 1) + (merge·parent 참조마다 DIM_ENTITIES·ENTITY_IN_VER 2) + UPSERT/DELETE 1 + STALE_OPEN 1 + AUDIT 1 + ENTITY_ONE 1 = 7~12. 편집 → 열린 반영 요청 낡음 표시. +공통",
+      "f2": [1, 0, 0, 0, "DIM_ENTITIES back/app/features/admin/entities/versions/queries.py:162"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["n", "공유 초안의 엔티티 행을 버전·ETag 없이 전 필드 덮어씀(FOR UPDATE 직렬화만) — 두 관리자가 같은 엔티티의 다른 필드를 고치면 나중 저장이 앞 변경을 무경고 삭제 versions/service.py:456-498, admin-entities.ts:407-430 (열린 반영 낡음은 staleApplies 토스트로 표시)"],
+      "f8": ["y", "", "7~12"],
+      "f9": ["skip", ""],
+      "f10": ["skip", "api 전용; 권한 role∧menu admin"],
+      "parity": [
+        "front/lib/hgh/adapters/admin-entities.test.ts › request shapes › draft edits: bodies, trimming, own-only brand code",
+        "front/app/[locale]/(dash)/admin/standards/entities/_ecat-actions.test.ts › entity version flow (edit -> lint -> preview -> apply -> rollback) › runs end to end with the unexposed range and self approval",
+        "back/app/features/admin/entities/versions/tests/test_ad_entities_versions.py"
+      ]
+    },
+    "DELETE /v1/admin/entities/versions/{ver}/entities/{entity_id}": {
+      "label": "delete_version_entity → svc.delete_entity / deleteDraftEntity",
+      "where": "back/app/features/admin/entities/versions/router.py:115 · service.py:514 · queries.py:48·60(ENTITY_REFS)·59; front/lib/hgh/adapters/admin-entities.ts:457; action _ecat-actions.ts:80-84",
+      "stmts": "VERSION_FOR_UPDATE 1 + ENTITY_ROW_FOR_UPDATE 1 + (허브면 ENTITY_REFS 1) + DELETE 1 + STALE_OPEN 1 + AUDIT 1 = 5~6. +공통",
+      "f2": [1, 0, 0, 0, "ENTITY_REFS back/app/features/admin/entities/versions/queries.py:60"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "없는 행 404 ECAT_ENTITY_NOT_IN_DRAFT·참조 중 409 ECAT_ENTITY_IN_USE 를 오류 키로 표시, pending 중 비활성"],
+      "f8": ["y", "", "5~6"],
+      "f9": ["skip", ""],
+      "f10": ["skip", "api 전용; 권한 role∧menu admin"],
+      "parity": [
+        "front/lib/hgh/adapters/admin-entities.test.ts › request shapes › draft edits: bodies, trimming, own-only brand code",
+        "back/app/features/admin/entities/versions/tests/test_ad_entities_versions.py"
+      ]
+    },
+    "POST /v1/admin/entities/versions/{ver}/surfaces": {
+      "label": "post_version_surface → svc.add_surface/_put_surface / addDraftSurface",
+      "where": "back/app/features/admin/entities/versions/router.py:121 · service.py:574·535 · queries.py:73·76·81·82·69; front/lib/hgh/adapters/admin-entities.ts:480; action _ecat-actions.ts:86-92; UI _components/entity-drawer.tsx, _components/draft-panel.tsx:121-131",
+      "stmts": "VERSION_FOR_UPDATE 1 + (엔티티 지정 시 DIM_ENTITIES·ENTITY_IN_VER 2) + FIND_SURFACE_DEF 1 + (없으면 INSERT_SURFACE_DEF 1 [+경합 재조회 1]) + SURFACE_IN_VER 1 + UPSERT_SURFACE 1 + STALE_OPEN 1 + AUDIT 1 + SURFACE_ONE 1 = 7~11. +공통",
+      "f2": [1, 0, 0, 0, "SURFACE_ONE back/app/features/admin/entities/versions/queries.py:69"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "표면 정의 재사용·동시 생성 경합(DO NOTHING→재조회) 처리, 같은 동작이면 no-op, 오류 토스트·pending 비활성, 낡은 반영 수 안내"],
+      "f8": ["y", "", "7~11"],
+      "f9": ["skip", ""],
+      "f10": ["skip", "api 전용; 권한 role∧menu admin"],
+      "parity": [
+        "front/lib/hgh/adapters/admin-entities.test.ts › request shapes › draft edits: bodies, trimming, own-only brand code",
+        "back/app/features/admin/entities/versions/tests/test_ad_entities_versions.py"
+      ]
+    },
+    "DELETE /v1/admin/entities/versions/{ver}/surfaces/{surface_id}": {
+      "label": "delete_version_surface → svc.remove_surface / deleteDraftSurface",
+      "where": "back/app/features/admin/entities/versions/router.py:127 · service.py:579 · queries.py:69·85; front/lib/hgh/adapters/admin-entities.ts:492; action _ecat-actions.ts:94-98",
+      "stmts": "VERSION_FOR_UPDATE 1 + SURFACE_ONE 1 + DELETE_SURFACE 1 + STALE_OPEN 1 + AUDIT 1 = 5. +공통",
+      "f2": [1, 0, 0, 0, "SURFACE_ONE back/app/features/admin/entities/versions/queries.py:69"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "초안에 없으면 404 ECAT_SURFACE_NOT_IN_DRAFT 표시, pending 중 비활성"],
+      "f8": ["y", "", "5"],
+      "f9": ["skip", ""],
+      "f10": ["skip", "api 전용; 권한 role∧menu admin"],
+      "parity": ["back/app/features/admin/entities/versions/tests/test_ad_entities_versions.py"]
+    },
+    "GET /v1/admin/entities/versions/{ver}/diff": {
+      "label": "get_version_diff → svc.version_diff / getVersionDiff·versionDiffResult",
+      "where": "back/app/features/admin/entities/versions/router.py:95 · service.py:330 · queries.py:8·42·65; front/lib/hgh/adapters/admin-entities.ts:350·1330; page entities/draft/page.tsx:30-33; action _ecat-actions.ts:112-116(versionDiffAction); UI _components/version-list.tsx",
+      "stmts": "VERSION 1 + 기준 VERSION 1 + ENTITIES_OF 2 + SURFACES_OF 2 = 6. +공통",
+      "f2": [1, 0, 0, 0, "SURFACES_OF back/app/features/admin/entities/versions/queries.py:65"],
+      "f3": ["y", "두 버전 설정 행 비교(파이썬)"],
+      "f4": [],
+      "f6": ["y", "초안 화면은 실패 시 위험 Notice(draft-panel.tsx:157), 버전 비교는 오류 토스트"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "6"],
+      "f9": ["y", "차이 행 전량"],
+      "f10": ["skip", "api 전용; 권한 role∧menu admin"],
+      "parity": [
+        "front/lib/hgh/adapters/admin-entities.test.ts › request shapes › lint, acks, diff, apply flow and review / audit queries",
+        "back/app/features/admin/entities/versions/tests/test_ad_entities_versions.py"
+      ]
+    },
+    "PATCH /v1/admin/entities/versions/{ver}": {
+      "label": "patch_version → svc.patch_draft(+version_detail) / patchDraft",
+      "where": "back/app/features/admin/entities/versions/router.py:83 · service.py:399 · queries.py:12·36; front/lib/hgh/adapters/admin-entities.ts:367; action _ecat-actions.ts:52-56; UI _components/draft-panel.tsx:82-90",
+      "stmts": "VERSION_FOR_UPDATE 1 + (변경 시 UPDATE_DRAFT_META 1 + AUDIT 1) + 응답 version_detail ≈12 → ≈13~15. +공통",
+      "f2": [2, 0, 0, 0, "OWN_SCOPE_ATTRIBUTION(응답 version_detail) back/app/features/admin/entities/versions/queries.py:102"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["n", "공유 초안의 제목·사유를 버전 검사 없이 덮어씀(마지막 저장 우선, 영향은 메타 한정) versions/service.py:399-409"],
+      "f8": ["n", "응답 version_detail 전체를 계산하나 화면은 토스트 후 router.refresh 로 재조회 draft-panel.tsx:82-90", "≈13~15"],
+      "f9": ["skip", ""],
+      "f10": ["skip", "api 전용; 권한 role∧menu admin"],
+      "parity": [
+        "front/lib/hgh/adapters/admin-entities.test.ts › request shapes › draft edits: bodies, trimming, own-only brand code",
+        "back/app/features/admin/entities/versions/tests/test_ad_entities_versions.py"
+      ]
+    },
+    "POST /v1/admin/entities/versions/{ver}/discard": {
+      "label": "post_version_discard → svc.discard_draft / discardDraft",
+      "where": "back/app/features/admin/entities/versions/router.py:89 · service.py:412 · queries.py:12·201(REJECT_OPEN)·37(DISCARD); front/lib/hgh/adapters/admin-entities.ts:374; action _ecat-actions.ts:58-62; UI _components/draft-panel.tsx:92-101",
+      "stmts": "VERSION_FOR_UPDATE 1 + REJECT_OPEN 1 + DISCARD 1 + AUDIT 1 = 4. +공통",
+      "f2": [0, 0, 0, 0, "REJECT_OPEN back/app/features/admin/entities/versions/queries.py:201"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "초안 잠금·상태 가드(409 ECAT_VERSION_STATE), 거절된 열린 요청 수를 토스트로 표시, pending 중 비활성"],
+      "f8": ["y", "", "4"],
+      "f9": ["skip", ""],
+      "f10": ["skip", "api 전용; 권한 role∧menu admin"],
+      "parity": ["back/app/features/admin/entities/versions/tests/test_ad_entities_versions.py"]
+    },
+    "POST /v1/admin/entities/versions/{ver}/entities": {
+      "label": "post_version_entity → svc.create_hub_entity/_write_entity / addHubEntity",
+      "where": "back/app/features/admin/entities/versions/router.py:109 · service.py:506·456 · queries.py:52·162; front/lib/hgh/adapters/admin-entities.ts:439; action _ecat-actions.ts:73-78; UI _components/draft-panel.tsx:103-119",
+      "stmts": "PUT 초안 엔티티와 같은 흐름(새 uuid 발급) 7~12. +공통",
+      "f2": [1, 0, 0, 0, "DIM_ENTITIES back/app/features/admin/entities/versions/queries.py:162"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "요청마다 새 uuid 라 중복 제출 시 허브 엔티티 중복 가능하나 pending 중 버튼 비활성으로 방지, 오류 키 토스트"],
+      "f8": ["y", "", "7~12"],
+      "f9": ["skip", ""],
+      "f10": ["skip", "api 전용; 권한 role∧menu admin"],
+      "parity": [
+        "front/lib/hgh/adapters/admin-entities.test.ts › request shapes › draft edits: bodies, trimming, own-only brand code",
+        "back/app/features/admin/entities/versions/tests/test_ad_entities_versions.py"
+      ]
+    },
+    "POST /v1/admin/entities/versions/{ver}/lint": {
+      "label": "post_version_lint → svc.lint/run_lint(core.ecat.lint) / runLint",
+      "where": "back/app/features/admin/entities/versions/router.py:132 · service.py:729·689(run_lint)·632(_rollup_observed)·260(_rollup_dependents) · queries.py:89·94·98·99·102·123·128·137·146-153·38; back/app/core/ecat/lint.py; front/lib/hgh/adapters/admin-entities.ts:503; action _ecat-actions.ts:100-104; UI _components/lint-panel.tsx:44-62",
+      "stmts": "VERSION_FOR_UPDATE 1 + 초안·기준 스냅샷 4 + 관측(OBSERVED_DEFS·OBSERVED_REVIEW·OBSERVED_NAMES 3) + LINT_CONFIG 1 + ROLLUP_SETS_FOR_IDS 0~1 + admin_long ROLLUP_DEPENDENTS 0~1(최근 N개월) + OWN_BRANDS·OWN_SCOPE_ATTRIBUTION 2 + (새 전역 차단 있으면 admin_long OWN_CANDIDATE·ROLLUP_OBSERVED_SURFACES·ENTITY_SCOPE_ROLLUPS 2~3) + CONTENT_MD5 1 + SET_LINT 1 + AUDIT 1 ≈ 14~20. +공통",
+      "f2": [2, 0, 0, 0, "OWN_SCOPE_ATTRIBUTION back/app/features/admin/entities/versions/queries.py:102 (언급 표면 뷰 ROLLUP_OBSERVED_SURFACES :128 은 CTE 1)"],
+      "f3": ["n", "린트가 언급 표면 뷰(rd.v_entity_mention_surface) 최근 N개월 원문을 읽어 정규화·자사 귀속을 요청 시 재판정 versions/service.py:632-672,689-726"],
+      "f4": ["AAK2", "AAK3"],
+      "f6": ["y", "롤업 역조회·전역 차단 대조 실패(시간 초과)는 린트를 계속하되 observed_source 에 '조회 실패'를 남기고 패널에 표시 versions/service.py:266-270,653-654, lint-panel.tsx:112"],
+      "f7": ["y", "결과 저장·감사 같은 tx, 내용 지문(content_md5)으로 낡음 판정, 오류 토스트·pending 중 비활성"],
+      "f8": ["y", "", "≈14~20"],
+      "f9": ["skip", ""],
+      "f10": ["skip", "api 전용; 권한 role∧menu admin"],
+      "parity": [
+        "front/app/[locale]/(dash)/admin/standards/entities/_ecat-actions.test.ts › entity version flow (edit -> lint -> preview -> apply -> rollback) › runs end to end with the unexposed range and self approval",
+        "front/lib/hgh/adapters/admin-entities.test.ts › request shapes › lint, acks, diff, apply flow and review / audit queries",
+        "back/app/features/admin/entities/versions/tests/test_ad_entities_versions_lint_gate.py"
+      ]
+    },
+    "PUT /v1/admin/entities/versions/{ver}/lint/acks": {
+      "label": "put_version_lint_acks → svc.ack_lint / saveLintAcks",
+      "where": "back/app/features/admin/entities/versions/router.py:137 · service.py:737 · queries.py:12·25·38; front/lib/hgh/adapters/admin-entities.ts:510; action _ecat-actions.ts:106-110; UI _components/lint-panel.tsx:56-62,98-110",
+      "stmts": "VERSION_FOR_UPDATE 1 + CONTENT_MD5 1 + (변경 시 SET_LINT 1 + AUDIT 1) = 2~4. +공통",
+      "f2": [0, 0, 0, 0, "SET_LINT back/app/features/admin/entities/versions/queries.py:38"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "린트 뒤 내용 변경은 409 ECAT_LINT_STALE 로 거부·패널 경고, 낡은 린트면 저장 버튼 비활성; 키 전체 교체라 동시 확인은 마지막 저장 우선이나 미확인이 남으면 반영 요청이 ECAT_LINT_UNACKED 로 막혀 표시됨 lint-panel.tsx:98-110"],
+      "f8": ["y", "", "2~4"],
+      "f9": ["skip", ""],
+      "f10": ["skip", "api 전용; 권한 role∧menu admin"],
+      "parity": [
+        "front/lib/hgh/adapters/admin-entities.test.ts › request shapes › lint, acks, diff, apply flow and review / audit queries",
+        "back/app/features/admin/entities/versions/tests/test_ad_entities_versions_lint_gate.py"
+      ]
+    },
+    "POST /v1/admin/entities/applies": {
+      "label": "post_applies → svc.request_apply(+_lint_gate·apply_detail) / requestApply",
+      "where": "back/app/features/admin/entities/versions/router.py:152 · service.py:915·772(_lint_gate)·905(_insert_apply) · queries.py:186·180·183·187·39; front/lib/hgh/adapters/admin-entities.ts:984; action _ecat-actions.ts:118-126; UI _components/apply-request-form.tsx:30-41, _components/version-list.tsx(범위 넓혀 반영)",
+      "stmts": "APPLY_LOCK 1 + ACTIVE 1 + (DRAFT 1) + VERSION_FOR_UPDATE 1 + BUSY 1 + (초안이면 run_lint 게이트 ≈14~20) + OPEN_FOR_VER 1 + INSERT_APPLY 1 + MARK_SUBMITTED 1 + enqueue_change(entity_version preview) 3 + AUDIT 1 + apply_detail 4 ≈ 28~35. 미리보기·반영 계산은 적재기. +공통",
+      "f2": [2, 0, 0, 0, "OWN_SCOPE_ATTRIBUTION(린트 게이트) back/app/features/admin/entities/versions/queries.py:102"],
+      "f3": ["skip", "쓰기 경로(린트 게이트 재계산 포함)"],
+      "f4": ["AAK2", "AAK3"],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "전역 advisory 잠금·진행 중 반영 409 ECAT_APPLY_RUNNING·열린 요청 409 ECAT_APPLY_OPEN·린트 422 차단을 오류 키로 표시, pending 중 비활성"],
+      "f8": ["y", "", "≈28~35"],
+      "f9": ["skip", ""],
+      "f10": ["skip", "api 전용; 권한 role∧menu admin"],
+      "parity": [
+        "front/app/[locale]/(dash)/admin/standards/entities/_ecat-actions.test.ts › entity version flow (edit -> lint -> preview -> apply -> rollback) › runs end to end with the unexposed range and self approval",
+        "back/app/features/admin/entities/versions/tests/test_ad_entities_versions.py"
+      ]
+    },
+    "GET /v1/admin/entities/review": {
+      "label": "get_review → svc.list_reviews / listReview",
+      "where": "back/app/features/admin/entities/versions/router.py:201 · service.py:1091 · queries.py:217(REVIEWS); front/lib/hgh/adapters/admin-entities.ts:1073; page admin/standards/entities/review/page.tsx:37",
+      "stmts": "REVIEWS 1(LIMIT 200). +공통",
+      "f2": [0, 0, 0, 0, "REVIEWS back/app/features/admin/entities/versions/queries.py:217"],
+      "f3": ["y", "적재기가 쌓은 검토 행 조회"],
+      "f4": [],
+      "f6": ["y", "throwForPage"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1"],
+      "f9": ["n", "limit 200 고정·before_id 다음 페이지 미사용 — 200건 초과 대기 항목은 안내 없이 절단 admin-entities.ts:1073-1077, review/page.tsx:37"],
+      "f10": ["skip", "api 전용; 권한 role∧menu admin"],
+      "parity": [
+        "front/lib/hgh/adapters/admin-entities.test.ts › request shapes › lint, acks, diff, apply flow and review / audit queries",
+        "back/app/features/admin/entities/versions/tests/test_ad_entities_versions.py"
+      ]
+    },
+    "GET /v1/admin/entities (병합 후보)": {
+      "label": "EntityReviewPage 병합 후보 listEntityRows(degradeRead)",
+      "where": "front/app/[locale]/(dash)/admin/standards/entities/review/page.tsx:38-40; front/lib/hgh/adapters/admin-entities.ts:1163; back/app/features/admin/entities/registry/router.py:29",
+      "stmts": "GET /v1/admin/entities 와 동일(전 페이지·귀속 판정 포함).",
+      "f2": [4, 2, 0, 0, "LIST_TEMPLATE back/app/features/admin/entities/registry/queries.py:16"],
+      "f3": ["n", "GET /v1/admin/entities 와 동일(귀속 재판정)"],
+      "f4": [],
+      "f6": ["n", "실패를 degradeRead 로 [] — 병합 대상 선택지가 대기함 자체 엔티티로만 줄어드는데 안내 없음 review/page.tsx:38"],
+      "f7": ["skip", ""],
+      "f8": ["n", "병합 대상 이름·유형 표시용으로 목록 전량(최대 5000)과 페이지별 귀속 판정까지 계산 review/page.tsx:38-40", "페이지당 ≈9~10"],
+      "f9": ["y", "전량(maxPages 초과 오류)"],
+      "f10": ["skip", "api 전용 화면 용도; 권한 require_admin 만(메뉴 미검사, GET /v1/admin/entities 참고)"],
+      "parity": []
+    },
+    "POST /v1/admin/entities/review/{review_id}/decision": {
+      "label": "post_review_decision → svc.decide_review / decideReview",
+      "where": "back/app/features/admin/entities/versions/router.py:210 · service.py:1099 · queries.py:224·225·7; front/lib/hgh/adapters/admin-entities.ts:1094; action _ecat-actions.ts:156-164; UI _components/review-inbox.tsx:85-96",
+      "stmts": "REVIEW_FOR_UPDATE 1 + (등록: DRAFT 1 + VERSION_FOR_UPDATE 1 + _write_entity 7~12 또는 _put_surface 7~11) + DECIDE_REVIEW 1 + AUDIT 1 + REVIEW_FOR_UPDATE 재조회 1 = 4~17. +공통",
+      "f2": [1, 0, 0, 0, "DIM_ENTITIES/SURFACE_ONE back/app/features/admin/entities/versions/queries.py:162·69"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "FOR UPDATE + status='pending' 조건 갱신으로 이중 처리 409 ECAT_REVIEW_DECIDED 표시, 초안 없으면 409 ECAT_NO_DRAFT, pending 중 비활성"],
+      "f8": ["y", "", "4~17"],
+      "f9": ["skip", ""],
+      "f10": ["skip", "api 전용; 권한 role∧menu admin"],
+      "parity": [
+        "front/lib/hgh/adapters/admin-entities.test.ts › request shapes › lint, acks, diff, apply flow and review / audit queries",
+        "back/app/features/admin/entities/versions/tests/test_ad_entities_versions.py"
+      ]
+    },
+    "GET /v1/admin/entities/applies": {
+      "label": "get_applies → svc.list_applies / listApplies",
+      "where": "back/app/features/admin/entities/versions/router.py:143 · service.py:805 · queries.py:173(APPLIES); front/lib/hgh/adapters/admin-entities.ts:561; page admin/standards/entities/versions/page.tsx:19",
+      "stmts": "APPLIES 1(LIMIT 50). +공통",
+      "f2": [0, 0, 0, 0, "APPLIES back/app/features/admin/entities/versions/queries.py:173"],
+      "f3": ["y", "반영 요청 행 조회"],
+      "f4": [],
+      "f6": ["y", "throwForPage"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1"],
+      "f9": ["n", "최근 50건 고정·before_id 페이지 미사용 — 초과 반영 요청은 안내 없이 절단(화면 문구에 상한 표기 없음) admin-entities.ts:561-564, versions/page.tsx:19"],
+      "f10": ["skip", "api 전용; 권한 role∧menu admin"],
+      "parity": [
+        "front/lib/hgh/adapters/admin-entities.test.ts › request shapes › lint, acks, diff, apply flow and review / audit queries",
+        "back/app/features/admin/entities/versions/tests/test_ad_entities_versions.py"
+      ]
+    },
+    "POST /v1/admin/entities/applies/{apply_id}/rollback": {
+      "label": "post_apply_rollback → svc.rollback(+run_lint·apply_detail) / applyAction('rollback')",
+      "where": "back/app/features/admin/entities/versions/router.py:193 · service.py:1052 · queries.py:186·172·27·31·35·187; front/lib/hgh/adapters/admin-entities.ts:999-1024; action _ecat-actions.ts:133-142; UI _components/apply-detail.tsx:96-115, _components/version-list.tsx",
+      "stmts": "APPLY_LOCK 1 + APPLY_FOR_UPDATE 1 + ACTIVE 1 + BUSY 1 + DRAFT 1 + INSERT_DRAFT 1 + COPY 2 + VERSION 1 + run_lint(기록) ≈14~20 + OPEN_FOR_VER 1 + INSERT_APPLY 1 + MARK_SUBMITTED 1 + enqueue 3 + AUDIT 2 + apply_detail 4 ≈ 35~40. +공통",
+      "f2": [2, 0, 0, 0, "OWN_SCOPE_ATTRIBUTION(run_lint) back/app/features/admin/entities/versions/queries.py:102"],
+      "f3": ["skip", "쓰기 경로(린트 기록 재계산 포함)"],
+      "f4": ["AAK1", "AAK2", "AAK3"],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "applied·활성 버전 일치·초안 없음(409 ECAT_DRAFT_EXISTS)·진행 중 반영 가드를 오류 키로 표시, 사유 필수, 성공 시 새 반영 화면으로 이동"],
+      "f8": ["y", "", "≈35~40"],
+      "f9": ["skip", ""],
+      "f10": ["skip", "api 전용; 권한 role∧menu admin"],
+      "parity": [
+        "front/app/[locale]/(dash)/admin/standards/entities/_ecat-actions.test.ts › entity version flow (edit -> lint -> preview -> apply -> rollback) › runs end to end with the unexposed range and self approval",
+        "back/app/features/admin/entities/versions/tests/test_ad_entities_versions.py"
+      ]
+    },
+    "GET /v1/admin/entities/audit": {
+      "label": "get_entities_audit → svc.list_audit / listAudit",
+      "where": "back/app/features/admin/entities/versions/router.py:217 · service.py:1136 · queries.py:234(AUDITS); front/lib/hgh/adapters/admin-entities.ts:1146; page admin/standards/entities/audit/page.tsx:30",
+      "stmts": "AUDITS 1(LIMIT 100, before_id 커서). +공통",
+      "f2": [0, 0, 0, 0, "AUDITS back/app/features/admin/entities/versions/queries.py:234"],
+      "f3": ["y", "감사 원장 행 조회"],
+      "f4": [],
+      "f6": ["y", "throwForPage"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1"],
+      "f9": ["y", "100건 + before_id '더 보기'(상한 도달 시 노출) audit-log.tsx:61"],
+      "f10": ["skip", "api 전용; 권한 role∧menu admin"],
+      "parity": [
+        "front/lib/hgh/adapters/admin-entities.test.ts › request shapes › lint, acks, diff, apply flow and review / audit queries",
+        "back/app/features/admin/entities/versions/tests/test_ad_entities_versions.py"
+      ]
+    },
+    "GET /v1/admin/entities/applies/{apply_id}": {
+      "label": "get_apply → svc.apply_detail(+_abandon_pins) / getApply(toApplyDetail·toPreview)",
+      "where": "back/app/features/admin/entities/versions/router.py:158 · service.py:859·824 · queries.py:171·204·159·6·155; front/lib/hgh/adapters/admin-entities.ts:972·950·803; page admin/standards/entities/applies/[applyId]/page.tsx:21",
+      "stmts": "APPLY 1(preview JSON 포함) + QUEUE_OF 1 + APPROVERS 1 + ACTIVE 1 + (failed·포기 시 ABANDON_CYCLES 1) = 4~5. 미리보기 KPI(가시성·SOV·순위 전후)는 어댑터가 저장 카운트로 계산. +공통",
+      "f2": [0, 0, 0, 0, "APPLY back/app/features/admin/entities/versions/queries.py:171"],
+      "f3": ["y", "적재기가 저장한 미리보기 JSON·큐 조회(어댑터는 저장 카운트로 비율만 계산)"],
+      "f4": ["AAK1"],
+      "f6": ["y", "첫 읽기 throwForPage"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "4~5"],
+      "f9": ["y", "KPI 상위 200 그룹만 표시하되 shown/total 노출 preview-view.tsx:227"],
+      "f10": ["skip", "api 전용; 권한 role∧menu admin"],
+      "parity": [
+        "front/lib/hgh/adapters/admin-entities.test.ts › preview conversion › ratios per brand, rounds summed, groups ordered by the largest change",
+        "back/app/features/admin/entities/versions/tests/test_ad_entities_versions.py"
+      ]
+    },
+    "GET /v1/admin/entities/applies/{apply_id} (폴링)": {
+      "label": "ApplyDetail 폴링 getApplyAction → applyDetailResult/getApply",
+      "where": "front/app/[locale]/(dash)/admin/standards/entities/_components/apply-detail.tsx:80-93; action _ecat-actions.ts:128-131; front/lib/hgh/adapters/admin-entities.ts:1334; back/app/features/admin/entities/versions/router.py:158",
+      "stmts": "단건 상세와 동일 4~5 × 3s 간격(isApplyBusy 동안, 최대 200회=10분). 폴링마다 서버 액션 세션 조회 + principal. +공통",
+      "f2": [0, 0, 0, 0, "APPLY back/app/features/admin/entities/versions/queries.py:171"],
+      "f3": ["y", "저장된 상세 조회"],
+      "f4": ["AAK1"],
+      "f6": ["n", "폴링 실패(r.ok=false)를 무시하고 횟수만 늘려 화면 상태가 안내 없이 멈춤(200회 뒤에만 pollStopped 안내); 401/403 액션 throw 는 setTimeout 안에서 처리되지 않음 apply-detail.tsx:82-90"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "4~5 × 폴링"],
+      "f9": ["skip", ""],
+      "f10": ["skip", "api 전용; 권한 role∧menu admin"],
+      "parity": ["front/lib/hgh/adapters/admin-entities.test.ts › preview conversion › apply busy states (the page polls on these)"]
+    },
+    "GET /v1/admin/entities/versions/{ver} (반영 상세 보조)": {
+      "label": "EntityApplyPage getVersion(detail.ver).catch(()=>null) — 린트 표시용",
+      "where": "front/app/[locale]/(dash)/admin/standards/entities/applies/[applyId]/page.tsx:26-29; front/lib/hgh/adapters/admin-entities.ts:314; back/app/features/admin/entities/versions/router.py:77",
+      "stmts": "GET /v1/admin/entities/versions/{ver} 와 동일 ≈11~12.",
+      "f2": [2, 0, 0, 0, "OWN_SCOPE_ATTRIBUTION back/app/features/admin/entities/versions/queries.py:102"],
+      "f3": ["n", "버전 상세와 동일(귀속 재판정)"],
+      "f4": [],
+      "f6": ["n", "실패를 null 로 삼켜 lint=null → '다시 미리보기' 린트 차단 판단 없이 버튼 활성(백엔드가 재검사해 422) — 안내 없음 page.tsx:26-29"],
+      "f7": ["skip", ""],
+      "f8": ["n", "린트 상태만 쓰는데 버전 상세 전체(엔티티·귀속 판정·롤업 조회)를 계산 page.tsx:26-29", "≈11~12"],
+      "f9": ["y", "버전 크기 한정"],
+      "f10": ["skip", "api 전용; 권한 role∧menu admin"],
+      "parity": []
+    },
+    "GET /v1/admin/entities/versions/{ver}/diff (반영 상세 보조)": {
+      "label": "EntityApplyPage getVersionDiff(ver, fromVer).catch(()=>null) — 숨김 변경 수",
+      "where": "front/app/[locale]/(dash)/admin/standards/entities/applies/[applyId]/page.tsx:27; front/lib/hgh/adapters/admin-entities.ts:350·674; back/app/features/admin/entities/versions/router.py:95",
+      "stmts": "버전 diff 와 동일 6.",
+      "f2": [1, 0, 0, 0, "SURFACES_OF back/app/features/admin/entities/versions/queries.py:65"],
+      "f3": ["y", "설정 행 비교"],
+      "f4": [],
+      "f6": ["n", "실패를 null 로 삼켜 미리보기에 hiddenChanges 가 없으면 숨김 역할 변경 수를 0 으로 표시(안내 없음) page.tsx:27, apply-detail.tsx:119"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "6"],
+      "f9": ["y", "차이 행 전량"],
+      "f10": ["skip", "api 전용; 권한 role∧menu admin"],
+      "parity": ["front/lib/hgh/adapters/admin-entities.test.ts › preview conversion › hidden role changes: the preview list when present, else counted from the version diff"]
+    },
+    "POST /v1/admin/entities/applies/{apply_id}/preview": {
+      "label": "post_apply_preview → svc.re_preview(+_lint_gate) / applyAction('preview')",
+      "where": "back/app/features/admin/entities/versions/router.py:164 · service.py:945 · queries.py:186·172·195; front/lib/hgh/adapters/admin-entities.ts:999-1009; action _ecat-actions.ts:133-142; UI _components/apply-detail.tsx:96-115",
+      "stmts": "APPLY_LOCK 1 + APPLY_FOR_UPDATE 1 + ACTIVE 1 + VERSION_FOR_UPDATE 1 + BUSY 1 + (초안이면 run_lint 게이트 ≈14~20) + (approved 면 BACK_TO_PREVIEWED 1) + enqueue 3 + AUDIT 1 + apply_detail 4 ≈ 27~34. +공통",
+      "f2": [2, 0, 0, 0, "OWN_SCOPE_ATTRIBUTION(린트 게이트) back/app/features/admin/entities/versions/queries.py:102"],
+      "f3": ["skip", "쓰기 경로(린트 게이트 재계산 포함)"],
+      "f4": ["AAK1", "AAK2", "AAK3"],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "상태 머신 가드(ECAT_APPLY_STATE·ECAT_BASE_CHANGED·ECAT_APPLY_RUNNING)·전역 advisory 잠금, 오류 토스트·pending 비활성, 결과 상세로 갱신 후 폴링 재개"],
+      "f8": ["y", "", "≈27~34"],
+      "f9": ["skip", ""],
+      "f10": ["skip", "api 전용; 권한 role∧menu admin"],
+      "parity": [
+        "front/app/[locale]/(dash)/admin/standards/entities/_ecat-actions.test.ts › entity version flow (edit -> lint -> preview -> apply -> rollback) › runs end to end with the unexposed range and self approval",
+        "back/app/features/admin/entities/versions/tests/test_ad_entities_versions_lint_gate.py"
+      ]
+    },
+    "POST /v1/admin/entities/applies/{apply_id}/approve": {
+      "label": "post_apply_approve → svc.approve / applyAction('approve')",
+      "where": "back/app/features/admin/entities/versions/router.py:169 · service.py:967 · queries.py:186·172·209·25·159·180·191; front/lib/hgh/adapters/admin-entities.ts:1012; action _ecat-actions.ts:133-142; UI _components/apply-detail.tsx:195",
+      "stmts": "APPLY_LOCK 1 + APPLY_FOR_UPDATE 1 + QUEUE_OPEN 1 + ACTIVE 1 + VERSION_FOR_UPDATE 1 + (_lint_fresh CONTENT_MD5 1) + (승인자 필요 시 APPROVERS 1) + BUSY 1 + SET_APPROVED 1 + enqueue 3 + AUDIT 1 + apply_detail 4 ≈ 16~17. +공통",
+      "f2": [0, 0, 0, 0, "APPLY_FOR_UPDATE back/app/features/admin/entities/versions/queries.py:172"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": ["AAK1"],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "낡은 미리보기 409 ECAT_PREVIEW_STALE·대기 큐 409 ECAT_PREVIEW_PENDING·린트 지문 불일치 409·노출 회차 비승인자 403 을 오류 키로 표시, status 조건 UPDATE 로 이중 승인 방지, pending 비활성"],
+      "f8": ["y", "", "≈16~17"],
+      "f9": ["skip", ""],
+      "f10": ["skip", "api 전용; 권한 role∧menu admin(노출 회차는 app.rule_param ecat_approvers 추가 판정)"],
+      "parity": [
+        "front/app/[locale]/(dash)/admin/standards/entities/_ecat-actions.test.ts › entity version flow (edit -> lint -> preview -> apply -> rollback) › an exposed range is refused for a non-approver and approved by one",
+        "back/app/features/admin/entities/versions/tests/test_ad_entities_versions.py"
+      ]
+    },
+    "POST /v1/admin/entities/applies/{apply_id}/reject": {
+      "label": "post_apply_reject → svc.reject / applyAction('reject')",
+      "where": "back/app/features/admin/entities/versions/router.py:176 · service.py:1004 · queries.py:172·194; front/lib/hgh/adapters/admin-entities.ts:1015; action _ecat-actions.ts:133-142",
+      "stmts": "APPLY_FOR_UPDATE 1 + SET_REJECTED 1 + AUDIT 1 + apply_detail 4 = 7. +공통",
+      "f2": [0, 0, 0, 0, "SET_REJECTED back/app/features/admin/entities/versions/queries.py:194"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": ["AAK1"],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "행 잠금 후 상태 가드(draft·previewed·approved 만), 사유 필수(액션·백엔드), 오류 토스트·pending 비활성"],
+      "f8": ["y", "", "7"],
+      "f9": ["skip", ""],
+      "f10": ["skip", "api 전용; 권한 role∧menu admin"],
+      "parity": ["back/app/features/admin/entities/versions/tests/test_ad_entities_versions.py"]
+    },
+    "POST /v1/admin/entities/applies/{apply_id}/resume": {
+      "label": "post_apply_resume → svc.resume / applyAction('resume')",
+      "where": "back/app/features/admin/entities/versions/router.py:181 · service.py:1016 · queries.py:186·172·209·180; front/lib/hgh/adapters/admin-entities.ts:1018; action _ecat-actions.ts:133-142",
+      "stmts": "APPLY_LOCK 1 + APPLY_FOR_UPDATE 1 + QUEUE_OPEN 1 + BUSY 1 + enqueue 3 + AUDIT 1 + apply_detail 4 = 12. +공통",
+      "f2": [0, 0, 0, 0, "QUEUE_OPEN back/app/features/admin/entities/versions/queries.py:209"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": ["AAK1"],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "포기 시작·대기 큐 중복 409 duplicate_pending·상태 가드를 오류 키로 표시, pending 비활성"],
+      "f8": ["y", "", "12"],
+      "f9": ["skip", ""],
+      "f10": ["skip", "api 전용; 권한 role∧menu admin"],
+      "parity": ["back/app/features/admin/entities/versions/tests/test_ad_entities_versions.py"]
+    },
+    "POST /v1/admin/entities/applies/{apply_id}/abandon": {
+      "label": "post_apply_abandon → svc.abandon / applyAction('abandon')",
+      "where": "back/app/features/admin/entities/versions/router.py:186 · service.py:1036 · queries.py:186·172·209·155; front/lib/hgh/adapters/admin-entities.ts:1021; action _ecat-actions.ts:133-142",
+      "stmts": "APPLY_LOCK 1 + APPLY_FOR_UPDATE 1 + QUEUE_OPEN 1 + enqueue 3 + AUDIT 1 + apply_detail 4 + ABANDON_CYCLES(api_ro) 1 = 12. +공통",
+      "f2": [0, 0, 0, 0, "QUEUE_OPEN back/app/features/admin/entities/versions/queries.py:209"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": ["AAK1"],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "failed 만·대기 큐 중복 409·사유 필수, 회차 고정 예정(abandon_pins) 표시, pending 비활성"],
+      "f8": ["y", "", "12"],
+      "f9": ["skip", ""],
+      "f10": ["skip", "api 전용; 권한 role∧menu admin"],
+      "parity": [
+        "front/app/[locale]/(dash)/admin/standards/entities/_ecat-actions.test.ts › gate and argument checks › abandon needs a reason and posts it to the abandon endpoint",
+        "back/app/features/admin/entities/versions/tests/test_ad_entities_abandon.py"
+      ]
+    }
+  },
+  "area_keys": [
+    {"route": "/ko/admin/ga4", "label": "env 매핑 중 DB 미등록 시장 목록", "api_keys": ["GET /v1/admin/ga4/properties", "GET /v1/admin/ga4/markets", "PAGE GA4 env 매핑 − 레지스트리(legacyEnvMarkets)"]},
+    {"route": "/ko/admin/keyword-tools", "label": "쓰기: 검색량 CSV 내보내기", "api_keys": ["CLIENT 검색량 CSV(downloadCsv)"]},
+    {"route": "/ko/admin/keyword-tools", "label": "생성 프롬프트 표(원 입력·질문·검색 의도·검색량)", "api_keys": ["POST /v1/admin/keyword-tools/to-prompt", "POST /v1/admin/keyword-tools/volume (프롬프트 탭 선조회)", "GET /v1/admin/changes/{change_id}"]},
+    {"route": "/ko/admin/keyword-tools", "label": "쓰기: 프롬프트 CSV 내보내기", "api_keys": ["CLIENT 프롬프트 CSV(downloadCsv)"]},
+    {"route": "/ko/admin/standards/customer-interest", "label": "입력→탐색→맥락 지도(통계·탭 표·노드맵)", "api_keys": ["CLIENT 소셜 리서치 샘플 픽스처(getSampleMatrix)"]},
+    {"route": "/ko/admin/standards/customer-interest", "label": "쓰기: 후보 '전송'", "api_keys": ["CLIENT 데모 전송 토스트(CatalogTable.onSend)"]},
+    {"route": "/ko/admin/standards/customer-interest", "label": "쓰기: 맥락 지도 xlsx 내보내기(샘플, 브라우저 생성)", "api_keys": ["CLIENT 샘플 맥락지도 xlsx(buildContextMapWorkbook)"]},
+    {"route": "/ko/admin/standards/entities/review", "label": "검토 항목 목록(상태·종류·검색 URL 필터, 200건)", "api_keys": ["GET /v1/admin/entities/review", "GET /v1/admin/entities (병합 후보)"]},
+    {"route": "/ko/admin/standards/entities/applies/[applyId]", "label": "상태·미리보기(PreviewPanel)·진행률·숨김 변경 수 (적재 중 폴링)", "api_keys": ["GET /v1/admin/entities/applies/{apply_id}", "GET /v1/admin/entities/applies/{apply_id} (폴링)", "GET /v1/admin/entities/versions/{ver} (반영 상세 보조)", "GET /v1/admin/entities/versions/{ver}/diff (반영 상세 보조)"]}
+  ],
+  "new_constants": {
+    "AAK1": ["엔티티 반영 미리보기 자사 브랜드 목록 OWN_BRANDS", "front/lib/hgh/ecat-model.ts:8", 1, "['Hyundai','Kia','Genesis'] — 미리보기 KPI(가시성·SOV·순위 전후) 브랜드별 집계·표시 키(front/lib/hgh/adapters/admin-entities.ts:728-787, preview-view.tsx:200). B1(HMG_BRANDS)과 같은 값의 별도 하드코딩"],
+    "AAK2": ["엔티티 린트 자사 관측 표면 조회 기본 개월", "back/app/features/admin/entities/versions/service.py:104", 1, "OWN_SURFACE_MONTHS=3 — app.rule_param ecat_lint.own_surface_lookback_months 미설정·오류 시 기본값(service.py:613-625)"],
+    "AAK3": ["엔티티 린트 짧은 표면 판정 임계", "back/app/core/ecat/lint.py:469-476", 1, "1자 L1, 라틴 ≤3자 L1(short_ascii_allowlist 예외), 라틴 4~5자 L2, 비라틴 2자 L2 — 반영 요청·다시 미리보기 린트 게이트에 쓰임"]
+  },
+  "notes": [
+    "측정 전제: HGH_SOURCE_G7=api(관리 전체), HGH_SOURCE_SESSION=api, HGH_RESULT_CACHE=0(기본). 관리 엔드포인트는 결과 캐시 ALLOWLIST(back/app/core/result_cache.py:73-92) 밖. stmts 는 백엔드 SQL 기준이며 요청마다 붙는 principal 1문장·세션 조회는 AACOMMON 으로 분리(+공통 표기).",
+    "백엔드 admin 권한 강제 요약: 모든 /v1/admin/* 가 role=admin 강제(require_admin·AdminDetached·check_admin). 메뉴그룹 admin 은 accounts·catalog(prompts·reference·bulk·history)·changes·citation_sources·entities.versions(+mentions)·integrations(ga4·keyword_tools)에서 검사하나, admin.interest.keywords·sources 와 admin.entities.registry(GET/PUT /v1/admin/entities)는 require_admin 만(메뉴 미검사) — 라우터 간 불일치(interest/keywords/router.py:22, interest/sources/router.py:22, entities/registry/router.py:26).",
+    "f10 권한 비교 기준: 읽기 = 레거시 페이지 게이트(layout canAccessRoute role∧menu + 페이지 canAccessAdmin), 쓰기 = 레거시 서버 액션 게이트(canAccessAdmin role 만; _ecat-actions·키워드 라우트 canUseKeywordTools·GA4 이벤트 eventsPlace·타임라인 timelinePlace 는 role∧menu). 백엔드가 role∧menu 인 쓰기는 '액션 기준 엄격화'로 n(화면 경유 결과는 동일), require_admin 만인 읽기는 '느슨'으로 n. 엔티티 버전 하위 기능(api 전용)은 레거시 계약이 없어 skip.",
+    "After 캐시 무효화: api 경로 서버 액션은 revalidatePath(해당 관리 화면)만 하고 레거시의 revalidateTag(mirror-aggregates·citation-overrides·ga4) 전면 무효화가 없음(프런트 결과 캐시 없음 D8, 모든 fetch no-store). 분석 화면 반영은 app.judgment_change(citation_override·entity·ga4_property·ga4_tracked_event·dfs_fetch, app.prompt 트리거 catalog/prompt_kind)와 app.scope_outbox(Scope)를 적재기·워커가 처리한 뒤(비동기). 백엔드 결과 캐시는 켜도 데이터 버전 키(rcache.tg_bump·max(judgment_change))라 쓰기 시 자동 무효. 대기 안내: 인용 교정·엔티티 역할(precutover)·GA4 전환 이벤트는 토스트로 표시, 카탈로그 편집·GA4 매핑 변경은 안내 없음.",
+    "레거시의 '저장 1건마다 전 미러 집계 콜드화(prod ~38s)' 부작용(인용 교정·엔티티 역할)은 After 경로에서 사라짐. 대신 반영 지연이 적재 주기에 묶임 — UNKNOWN: 적재기 주기·처리 시간(back/ingest 블랙박스).",
+    "혼합 플래그 주의: G7=api 인데 분석 그룹(G1~G6)을 legacy 로 두면 관리 쓰기(app.* 표)가 레거시 화면(front DB 표)에 반영되지 않음.",
+    "카탈로그 Scope 동기화: outbox 워커 실패는 app.scope_outbox.last_error 에만 남고 renewal 관리 화면이 쓰는 POST .../screen 응답에는 outbox 필드가 없어 어디에도 표시되지 않음(GET /v1/admin/catalog/prompts 목록·상세에는 outbox_pending·outbox_error 가 있으나 화면 미사용). 카탈로그 쓰기 Scope keywords 인코딩 접두(hmg:type:·hmg:category:·hmg:brand:, admin/catalog/prompts/service.py:47)는 쓰기 계약이라 f4 미포함(참고).",
+    "공유 엔드포인트: POST /v1/admin/catalog/prompts/screen 은 /v1/prompts/screen 과 catalog_screen 구현 공유(표준 화면 조사와 겹침); 관리 타임라인은 /v1/prompts/history 의 _list_history 공유; app.ga4_tracked_event 는 project·website 전환 화면(/v1/funnel/conversion/events)과 공유; active_own_brands·RollupRule 귀속 판정은 GET /v1/admin/entities·versions/{ver}·lint 가 공유.",
+    "조사표 보정: 프롬프트 카탈로그 목록은 renewal 에서 GET /v1/admin/catalog/prompts(listAdminCatalog) 대신 standard/prompts/_page-actions.ts 직접 hghPost(POST .../screen) — listAdminCatalog 는 파리티 테스트 외 미사용. 키워드 '→ 프롬프트' 탭의 볼륨 선조회는 실패 무시 경로라 별도 키, 클라이언트 전용 영역(CSV·샘플 픽스처·데모 전송·샘플 xlsx)은 CLIENT 키, 엔티티 검토함 병합 후보·반영 상세의 보조 읽기·폴링은 오류 처리가 달라 별도 키로 측정(area_keys).",
+    "f4 변화: 레거시 하드코딩 G1(루트 UUID)·인용 분류 R/C1~C5 는 백엔드에서 DB(app.project kind·app.owned_base·rd.dim_source·app.citation_category)·적재기로 이동해 관리 엔드포인트 계산 경로에서 빠짐. 남은 것: ADK1(EVENT_WINDOW_DAYS 백엔드 이식 ga4/service.py:56), ADK2(어댑터 summarizeVolumes admin.ts:1370-1372), ADK3(back/app/core/kw.py:35-52 프리셋 + 화면 프리셋), ADK4(back/app/core/config.py:99 기본 모델·keyword_tools/service.py:244 temperature·:51-52 배치), ADK5(샘플 픽스처), GA2(front env MAP), 신규 AAK1~AAK3. FRESH_DAYS=7(keyword_tools/service.py:49)은 레거시 캐시 TTL 대응이라 제외.",
+    "쓰기 공통 위험(참고, 판정 미반영): BFF 타임아웃(write 15s·external 70s) 뒤 백엔드가 커밋했어도 화면은 실패로 표시 — 계정 생성은 임시 비밀번호가 응답 1회라 유실되고 재시도는 email_taken.",
+    "엔티티 반영 상세 폴링: in-flight 폴링을 취소하지 않아 단계 액션 직후 늦은 폴링 응답이 상태를 덮을 수 있음(status 가 바뀌는 단계는 key 리마운트로 복구, 그 밖은 다음 동작이 백엔드 가드 오류로 표시) apply-detail.tsx:80-115 — 데이터 오염 없음이라 단계 POST f7 은 y 유지.",
+    "엔티티 귀속 판정 상한: ROLLUP_SETS_FOR_IDS·ROLLUP_DEPENDENTS·ROLLUP_OBSERVED_SURFACES 는 LIMIT 5000(OWN_SURFACE_LIMIT), 후보 20000 — 초과 시 귀속 배지·드로어·린트가 조용히 근사(린트만 observed_source 에 '상한 도달' 표기).",
+    "키워드 도구 페이지 게이트는 여전히 canAccessRoute 2인자(메뉴 미반영, admin/keyword-tools/page.tsx:24) — 레이아웃·라우트·백엔드가 메뉴를 보므로 실효 영향 없음.",
+    "UNKNOWN: 데이터 규모(계정 수 — 200명 초과 시 Supabase 재스캔, 엔티티·버전·검토 항목·반영 요청 수), Supabase Admin 목록 응답 시간, outbox 워커·적재기 처리 지연. f9 의 100·200·50 상한 영향은 규모 미측정이라 코드 구조로만 판정."
+  ]
+}

@@ -1,0 +1,3116 @@
+{
+ "surface": "프로젝트 운영 + 고객 관심 (Project Prompt·Member·Setting·Intent, Global Customer interest)",
+ "prefix": "AI",
+ "common": "AICOMMON",
+ "endpoints": {
+  "AICOMMON": {
+   "label": "공통(After): Bearer JWT(verified_subject) → get_principal → load_refs → core.auth.resolve_project(project_access·project_gate·operate_gate) + 프론트 requireProjectPage·writeFailure·actionFailure",
+   "where": "back core/auth.py:221-251(verified_subject·get_principal) · :394-417(require_operator) · :706-741(resolve_project: 404 은폐·owner_only 403) · core/codes.py:200-279(load_refs) · core/write.py:68-74(RwConn 요청 1트랜잭션, 정상 반환 시 COMMIT) · features/projects/project/core/shared.py:49-58(project_access members_only) · features/projects/prompts/crud/common.py:28-44(ROUTER_DEPS 역할 천장+메뉴 project, project_gate, operate_gate) · core/result_cache.py:78-96(ALLOWLIST — 이 표면 엔드포인트 없음) / front lib/hgh/adapters/project-gate.ts:89-110(fetchProjectGate·requireProjectPage) · app/[locale]/(dash)/projects/[id]/layout.tsx:39-51(게이트+데모 notFound) · lib/hgh/adapters/projects.ts:740-761(writeFailure·run) · lib/hgh/adapters/intent.ts:166-176(projectRouteGate)·883-903(actionFailure) · lib/hgh/client.ts:47-50(요청 내 GET dedupe·동시 4개)",
+   "stmts": "공통 3 = set_config 1(롤·timeout) + app.user_account 1 + load_refs 1(참조 차원 전체 json_build_object 한 문장). 프로젝트 게이트 resolve_project 1문(project LEFT JOIN project_member + rd.dim_project 상관 서브쿼리)은 각 엔드포인트에 '게이트 1'로 셈. 쓰기는 api_rw set_config 1 추가(RwConn), LLM·외부 대기 핸들러(Detached)는 principal 을 별도 짧은 트랜잭션에서 읽음. context-map 5종은 load_refs 없음(공통 2). HGH_RESULT_CACHE 기본 끔 + ALLOWLIST 밖이라 캐시 문장 0. 프론트: 한 서버 요청 안 같은 GET 은 1회(dedupe) — 단 서버 액션(페이징·쓰기)은 요청마다 새로 게이트 GET",
+   "f2": [
+    "skip",
+    "조각 — resolve_project·load_refs 는 각 엔드포인트 앞단 인가(집계 없음)"
+   ],
+   "f3": [
+    "skip",
+    ""
+   ],
+   "f4": [
+    "PJK12"
+   ],
+   "f6": [
+    "y",
+    "공통 경로 무음 폴백 없음: 게이트 404→notFound, 401→/login, 403 role/menu→/no-access, 5xx·timeout→에러 바운더리(project-gate.ts:31-36,101-110); 쓰기 401/403/미매핑 404→UnauthorizedError throw, 그 외 ok:false 문구(projects.ts:740-752, intent.ts:883-903). SNB 헤더만 5xx 시 null 강등하나 같은 GET 을 레이아웃·리프 게이트가 다시 올려 바운더리 표시(project-gate.ts:124-139)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "skip",
+    ""
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "y",
+    "resolve_project(active_member/owner, members_only)가 레거시 페이지 게이트·requireOwner·requireMember 와 같은 판정(admin 우회, 비활성·비멤버 404, viewer 쓰기 403 owner_only). 차이는 UI 미도달 경로뿐: 프롬프트 라우터에 역할 천장(hq·region·country·admin·vendor)+메뉴 project 추가(crud/common.py:28 — 레거시 서버 액션은 세션+멤버십만), 운영 게이트가 global 운영자에게도 가시성(스코프 안∨활성 멤버) 요구(auth.py:394-417 vs 레거시 operator-policy.ts:36 global=무조건) — 화면은 활성 멤버만 들어오므로 결과 동일. member 수준 읽기·context-map 인증만 게이트는 해당 엔드포인트 f10 에 기록"
+   ],
+   "parity": []
+  },
+  "GET /v1/projects/{project_id}": {
+   "label": "get_project (게이트 GET: requireProjectPage·requireProjectAccess·projectDetail·authorizeReprocess·keywordRouteGate 공용)",
+   "where": "back/app/features/projects/project/core/router.py:65-69 → service.py:110-135(get_project·detail_summary), SQL queries.py:35(DETAIL)·44(DETAIL_SUMMARY)·61(RECENT_PROMPTS) / front lib/hgh/adapters/project-gate.ts:89-110, projects.ts:411-424, intent.ts:166-176",
+   "stmts": "게이트 1 + DETAIL 1 + default_engines(app.rule_param) 1 + DETAIL_SUMMARY 1 + RECENT_PROMPTS 1 = 5 (+공통 3). 한 페이지 렌더 안에서는 (dash)·[id] 레이아웃·리프 게이트가 dedupe 로 1회, 프롬프트 페이징·전체 선택 서버 액션과 키워드 /api 라우트는 호출마다 1회 추가",
+   "f2": [
+    1,
+    0,
+    0,
+    0,
+    "back/app/features/projects/project/core/queries.py:35 DETAIL (LEFT JOIN project_member; DETAIL_SUMMARY :44 는 FILTER 집계·GROUP BY 없음 [0,0,0,0])"
+   ],
+   "f3": [
+    "y",
+    "프로젝트 행 점 조회 + 프롬프트 상태별 count(app 행, 판정 재계산 없음)"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "requireProjectPage → throwForPage(404 notFound·401 login·403 no-access·5xx 바운더리, project-gate.ts:101-110)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "게이트 용도인데 매 호출 상세 요약(상태별 프롬프트 수·후보 수·활성 멤버 수·최근 실행·지정 비교 브랜드·최근 프롬프트 5건, service.py:117·125-135)과 effective_engines 를 계산 — 프롬프트·멤버·설정·의도 화면은 name·my_role·country 등만 사용(project-gate.ts:71-82). 프롬프트 페이징 서버 액션마다 requireRead 가 이 GET 을 다시 부름(_page-actions.ts:18-28,30-31)",
+    "5 (+공통 3)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "y",
+    "ProjectDetail→GateProject 필드 맵이 레거시 게이트와 같음(project-gate.ts:19-29), level=active_member = 레거시 페이지 게이트(admin 우회·비멤버 404). 상세 요약 필드는 추가분(화면 미사용)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/projects.parity.test.ts › /projects/[id]/member › pending invitee, outsider, unknown project: notFound on both",
+    "front/lib/hgh/adapters/projects.parity.test.ts › /projects/[id]/prompt › pending invitee: notFound on both (PJ-3 active members only)",
+    "front/lib/hgh/adapters/projects.parity.test.ts › /projects/[id]/setting › outsider: notFound on both",
+    "front/lib/hgh/adapters/project-gate.test.ts",
+    "back/app/features/projects/project/core/tests/test_project_core.py › test_detail_visibility"
+   ]
+  },
+  "POST /v1/projects/{project_id}/prompt-candidates/screen": {
+   "label": "candidate_screen (loadProjectCandidateRows)",
+   "where": "back/app/features/projects/prompts/candidates/router.py:26-29 → prompts/screen.py:83-98 / front app/[locale]/(dash)/projects/[id]/prompt/_page-actions.ts:38-44, _components/candidate-list.tsx:56-61",
+   "stmts": "게이트 1 + count 1 + 페이지 행 1 = 3 (+공통 3). 첫 렌더 limit 200, 이후 윈도잉 페이지(usePagedQuery 80ms 디바운스)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/prompts/screen.py:96 (prompt_candidate 단일 표 ORDER BY+LIMIT/OFFSET, ICU collation)"
+   ],
+   "f3": [
+    "y",
+    "후보 행 조회만(집계는 count 1)"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "SSR 실패는 throw→바운더리, 클라 페이지 실패는 page.error throw(use-paged-query.ts:18-20, candidate-list.tsx:134)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "페이지·정렬·스크롤 서버 액션마다 requireRead 가 GET /v1/projects/{id}(상세 요약 5문)를 추가 호출(_page-actions.ts:18-28,30-31,38-39) — 백엔드 screen 이 이미 active_member 게이트를 건다(router)",
+    "3 (+공통 3) + 게이트 GET 1회/서버 액션"
+   ],
+   "f9": [
+    "y",
+    "offset/limit 페이지(≤500)+total 로 윈도잉 렌더, 늦은 응답 폐기(use-paged-query.ts:5-23)"
+   ],
+   "f10": [
+    "y",
+    "CandidateRow 필드 동일(toCandidateRow projects.ts:639-647), 최신순 기본·정렬 4종 동일(서버 ICU 정렬로 이동), active_member = 레거시 페이지 게이트"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/projects.parity.test.ts › /projects/[id]/prompt › owner and viewer: same candidates, prompts (oldest first, tags), fields, edit flags",
+    "back/app/features/projects/prompts/crud/tests/test_screen.py › test_screen_reads_require_active_membership"
+   ]
+  },
+  "POST /v1/projects/{project_id}/prompts/screen": {
+   "label": "prompt_screen (loadProjectPromptRows · loadAllProjectPromptIds ids_only)",
+   "where": "back/app/features/projects/prompts/crud/router.py:27-30 → prompts/screen.py:40-80, crud/common.py:86-93(tags_for) / front app/[locale]/(dash)/projects/[id]/prompt/_page-actions.ts:30-36·57-68, app/[locale]/(dash)/projects/[id]/prompt/_components/prompt-list.tsx:125-131",
+   "stmts": "게이트 1 + meta(count·bool_or·draft_count) 1 + 페이지 행 1 + 태그 값 제안 1(include_values=true, 첫 렌더만) + 페이지 태그 1 = 5 (+공통 3). 커스텀 태그 정렬이면 +1(필드 존재 확인)·ORDER BY 상관 서브쿼리. ids_only(전체 선택) = 3/500건 페이지",
+   "f2": [
+    1,
+    0,
+    1,
+    0,
+    "back/app/features/projects/prompts/screen.py:73 (태그 값 제안: prompt_custom_field_value JOIN prompt, GROUP BY field_id)"
+   ],
+   "f3": [
+    "y",
+    "프롬프트·태그 값 행 조회, 집계는 프로젝트 count/bool_or/값 목록(판정 재계산 없음)"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "SSR 실패 throw→바운더리, 클라 페이지 실패 page.error throw(prompt-list.tsx:400), 전체 선택 실패는 bulk.selectFailed 토스트(prompt-list.tsx:289-291)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "페이지·정렬·스크롤 서버 액션마다 requireRead 가 GET /v1/projects/{id}(상세 요약 5문)를 추가 호출(_page-actions.ts:18-28,30-31,38-39) — 백엔드 screen 이 이미 active_member 게이트를 건다(router); 전체 선택은 500건마다 POST 1회 순차(_page-actions.ts:57-68)",
+    "5 (+공통 3) + 게이트 GET 1회/서버 액션"
+   ],
+   "f9": [
+    "y",
+    "offset/limit(≤500) 윈도잉 + total 표시(list.description count), 전체 선택은 total·offset 변동 시 오류로 중단(_page-actions.ts:63)"
+   ],
+   "f10": [
+    "y",
+    "PromptRow 필드 동일(toPromptRows reverse=false, 서버 created_at ASC 기본), show_brand·show_category·draft_count 가 레거시 클라 계산과 같은 규칙(screen.py:44-46 vs prompt-list.tsx:259-261), active_member 게이트 동일"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/projects.parity.test.ts › /projects/[id]/prompt › owner and viewer: same candidates, prompts (oldest first, tags), fields, edit flags",
+    "back/app/features/projects/prompts/crud/tests/test_screen.py › test_project_pages_over_twenty_thousand_rows",
+    "front/lib/projects/prompt-page.test.ts › reuseProjectValues: tag value suggestions are project-wide"
+   ]
+  },
+  "GET /v1/projects/{project_id}/prompt-fields": {
+   "label": "list_fields (loadProjectPromptScreen 태그 열)",
+   "where": "back/app/features/projects/prompts/fields/router.py:24-27 → service.py:29-30, SQL queries.py:8(LIST_SQL) / front _page-actions.ts:50-52, lib/hgh/adapters/projects.ts:663-665",
+   "stmts": "게이트 1 + LIST_SQL 1(필드별 value_count 상관 서브쿼리) = 2 (+공통 3)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/prompts/fields/queries.py:8 (project_custom_field + 상관 count 서브쿼리, JOIN 없음)"
+   ],
+   "f3": [
+    "y",
+    "태그 정의 행 + 값 개수 count(app 행)"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "Promise.all 안 throw → 바운더리(_page-actions.ts:47-52)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "필드별 value_count 를 계산하지만 어댑터가 버림(toCustomFieldRow projects.ts:663-665) — 정작 열 삭제 확인 판정은 창에 로드된 행만으로 함(prompt-list.tsx:379-384)",
+    "2 (+공통 3)"
+   ],
+   "f9": [
+    "y",
+    "프로젝트 태그 전량(소량)"
+   ],
+   "f10": [
+    "y",
+    "CustomFieldRow(id·label·archived) 동일, 보관 열 숨김 동일"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/projects.parity.test.ts › /projects/[id]/prompt › owner and viewer: same candidates, prompts (oldest first, tags), fields, edit flags",
+    "back/app/features/projects/prompts/fields/tests/test_fields.py › test_list_and_create"
+   ]
+  },
+  "GET /v1/projects/{project_id}/prompts/{prompt_id}/lifecycle-impact": {
+   "label": "impact (getPromptLifecycleImpact)",
+   "where": "back/app/features/projects/prompts/lifecycle/router.py:28-34 → service.py:36-57, SQL queries.py:17·21·26-37(impact_sql) / front lib/hgh/adapters/projects.ts:1417-1430, app/[locale]/(dash)/projects/[id]/prompt/_components/prompt-list.tsx:799-809",
+   "stmts": "게이트 1(owner) + get_prompt 1 + count_shared 1 + PROMPT_KEY 1 + CYCLES 1 + impact 1 = 6 (+공통 3). scope_prompt_id NULL·프로젝트 키 없음이면 3에서 종료",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/prompts/lifecycle/queries.py:26-37 impact_sql (rd.answer·rd.answer_brand·rd.citation 스칼라 count 서브쿼리 3개; core.cycles Window.where 공유 술어 제외)"
+   ],
+   "f3": [
+    "n",
+    "rd.citation(인용 원소 행)·rd.answer_brand 를 요청 시 count(queries.py:34-36)"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "5xx·timeout 은 ok:false RETRY_LATER → 팝업 loadError 표시(projects.ts:1418-1427). 단 401·403·미매핑 404 는 throw 인데 useEffect 가 .then 만 있어(prompt-list.tsx:801-805) 팝업이 '불러오는 중'에 멈춤(세션 만료·권한 변경 시 잔존)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "6 (+공통 3)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "U9-N9: 영향 수 단위가 백엔드 기준(answers=served 답변, mentions=브랜드 언급 행 rd.answer_brand)으로 바뀜 — 레거시 scope_answers/mentions/citations 원시 행 count 와 값 의미 다름(projects.ts:101-103)"
+   ],
+   "parity": [
+    "front/app/[locale]/(dash)/projects/[id]/prompt/_actions.api.test.ts › lifecycle: impact read, pause, resume, hard delete, draft delete",
+    "back/app/features/projects/prompts/lifecycle/tests/test_lifecycle.py › test_impact_counts_match_fact_tables",
+    "back/app/features/projects/prompts/lifecycle/tests/test_lifecycle.py › test_impact_shared_rows_unpublished_and_permissions"
+   ]
+  },
+  "POST /v1/projects/{project_id}/prompt-candidates/select": {
+   "label": "select_candidates (selectFromCandidates, 500건 청크)",
+   "where": "back/app/features/projects/prompts/candidates/router.py:45-50 → service.py:33-39, SQL queries.py:31(INSERT…SELECT) / front lib/hgh/adapters/projects.ts:1323-1349, prompt/_components/candidate-list.tsx:90-101",
+   "stmts": "게이트 1(owner) + INSERT…SELECT…RETURNING 1 = 2 (+공통 3, rw set_config +1) / 500건 청크",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/prompts/candidates/queries.py:31 (prompt_candidate → app.prompt INSERT SELECT, JOIN 없음)"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "ok:false 토스트, 401/403/404 throw → 트랜지션 → 바운더리"
+   ],
+   "f7": [
+    "n",
+    "청크(500)마다 한 트랜잭션이라 원자적이지만 ① 후보가 풀에 남고 '승격됨' 표식·중복 검사가 없어 같은 후보 재선정 시 프롬프트 사본이 또 생김(queries.py:31-37) ② 500건 초과 선택에서 뒤 청크 실패 시 앞 청크 생성분(created)을 버리고 오류만 반환(projects.ts:1328-1333) — 부분 성공 미구분. 버튼은 pending 중 비활성(candidate-list.tsx:179)"
+   ],
+   "f8": [
+    "y",
+    "",
+    "2 (+공통 3)/청크"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "y",
+    "레거시와 같은 결과·문구(선택 0·전부 없음 → '선택한 후보를 찾을 수 없습니다'), 타 프로젝트 id 는 매칭 안 됨(IDOR 은폐)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/projects.test.ts › candidates: chunks of 500, a chunk without rows of this project counts 0, all gone -> legacy message",
+    "back/app/features/projects/prompts/candidates/tests/test_candidates.py › test_select_promotes_and_keeps_pool"
+   ]
+  },
+  "DELETE /v1/projects/{project_id}/prompt-candidates/{candidate_id}": {
+   "label": "delete_one (deleteCandidate)",
+   "where": "back/app/features/projects/prompts/candidates/router.py:53-58 → service.py:42-45, SQL queries.py:39 / front lib/hgh/adapters/projects.ts:1366-1376",
+   "stmts": "게이트 1(owner) + DELETE…RETURNING 1 = 2 (+공통 3)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/prompts/candidates/queries.py:39"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "candidate_not_found → '삭제할 후보를 찾을 수 없습니다' 토스트, 그 외 throw→바운더리"
+   ],
+   "f7": [
+    "y",
+    "project_id+candidate_id 범위 삭제(타 프로젝트 id 404), 0건이면 문구, pending 중 버튼 비활성(candidate-list.tsx:215)"
+   ],
+   "f8": [
+    "y",
+    "",
+    "2 (+공통 3)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "y",
+    "레거시 deleteForProject 와 같은 범위·문구"
+   ],
+   "parity": [
+    "back/app/features/projects/prompts/candidates/tests/test_candidates.py › test_delete_one_and_bulk"
+   ]
+  },
+  "POST /v1/projects/{project_id}/prompt-candidates/bulk-delete": {
+   "label": "delete_many (deleteCandidates, 500건 청크)",
+   "where": "back/app/features/projects/prompts/candidates/router.py:61-65 → service.py:48-53, SQL queries.py:41 / front lib/hgh/adapters/projects.ts:1351-1364",
+   "stmts": "게이트 1(owner) + DELETE…ANY…RETURNING 1 = 2 (+공통 3)/청크",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/prompts/candidates/queries.py:41"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "ok:false 토스트, throw → 바운더리"
+   ],
+   "f7": [
+    "y",
+    "청크 단위 단일 DELETE(원자), 삭제 건수 표시, pending 비활성(candidate-list.tsx:170). (희소: 500건 초과 선택에서 뒤 청크 실패 시 앞 청크 삭제 수 미표시 — projects.ts:1328-1333)"
+   ],
+   "f8": [
+    "y",
+    "",
+    "2 (+공통 3)/청크"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "y",
+    "레거시 deleteManyForProject 와 같은 범위·문구"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/projects.test.ts › candidates: chunks of 500, a chunk without rows of this project counts 0, all gone -> legacy message",
+    "back/app/features/projects/prompts/candidates/tests/test_candidates.py › test_delete_one_and_bulk"
+   ]
+  },
+  "POST /v1/projects/{project_id}/prompts": {
+   "label": "add_manual (addManualPrompt)",
+   "where": "back/app/features/projects/prompts/crud/router.py:56-61 → service.py:48-72(split_lines·insert_texts), SQL queries.py:59 / front lib/hgh/adapters/projects.ts:1378-1393",
+   "stmts": "게이트 1(owner) + INSERT…unnest…RETURNING 1 = 2 (+공통 3)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/prompts/crud/queries.py:59 (unnest WITH ORDINALITY 다건 INSERT)"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "검증 코드별 문구 토스트(MANUAL_ERRORS), throw → 바운더리"
+   ],
+   "f7": [
+    "y",
+    "줄 전체를 한 문장 INSERT(원자) — 레거시 줄별 루프 부분 커밋 해소, pending 중 버튼 비활성(manual-input.tsx). (메모: 기존·같은 본문 중복 검사는 여전히 없음 — 가져오기만 중복 방지)"
+   ],
+   "f8": [
+    "y",
+    "",
+    "2 (+공통 3)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "새 오류 계약: 1,000줄·줄당 4,000자·제어 문자 422(too_many_lines·text_too_long·invalid_text, projects.ts:1378-1384) — 레거시는 상한 없음"
+   ],
+   "parity": [
+    "front/app/[locale]/(dash)/projects/[id]/prompt/_actions.api.test.ts › candidates and manual add: backend paths and bodies; prompt tab revalidated per success",
+    "back/app/features/projects/prompts/crud/tests/test_crud.py › test_manual_add_splits_lines_and_audits"
+   ]
+  },
+  "DELETE /v1/projects/{project_id}/prompts/{prompt_id}": {
+   "label": "delete_prompt (deletePrompt, draft 만)",
+   "where": "back/app/features/projects/prompts/crud/router.py:72-78 → service.py:101-106, crud/common.py:50-54·71-76(_LOCK_SQL·lock_prompt), SQL queries.py:66 / front lib/hgh/adapters/projects.ts:1395-1408, app/[locale]/(dash)/projects/[id]/prompt/_components/prompt-list.tsx:721-728",
+   "stmts": "게이트 1(owner) + lock_prompt(FOR UPDATE) 1 + DELETE 1 = 3 (+공통 3)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/prompts/crud/common.py:50 _LOCK_SQL (project_id AND prompt_id FOR UPDATE)"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "prompt_not_deletable 문구 토스트, prompt_not_found → ok(멱등), 그 외 throw → 바운더리"
+   ],
+   "f7": [
+    "y",
+    "IDOR 해소: lock_prompt·DELETE 모두 project_id 조건(crud/common.py:53, queries.py:66) — 타 프로젝트 prompt_id 는 404→멱등 ok 로 무변경, 비draft·발행 행은 409. 한 트랜잭션·행 잠금, pending 비활성(prompt-list.tsx:720). (메모: 교차 프로젝트 id 회귀 테스트 없음 — test_delete_draft_only 는 비멤버 403 만)"
+   ],
+   "f8": [
+    "y",
+    "",
+    "3 (+공통 3)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "U9-N9: draft 라도 발행(scope_prompt_id)·비draft 면 409 prompt_not_deletable 새 문구(레거시는 상태·프로젝트 무검증 삭제), 없는 id 는 ok(projects.ts:101-103,1397-1407)"
+   ],
+   "parity": [
+    "front/app/[locale]/(dash)/projects/[id]/prompt/_actions.api.test.ts › lifecycle: impact read, pause, resume, hard delete, draft delete",
+    "back/app/features/projects/prompts/crud/tests/test_crud.py › test_delete_draft_only"
+   ]
+  },
+  "POST /v1/projects/{project_id}/prompts/{prompt_id}/pause": {
+   "label": "pause (promptLifecycle pause)",
+   "where": "back/app/features/projects/prompts/lifecycle/router.py:37-44 → service.py:60-70, execute/publisher.py:32-35, core/write.py:147-172(enqueue_scope supersede), SQL lifecycle/queries.py:40 / front lib/hgh/adapters/projects.ts:1448-1460, app/[locale]/(dash)/projects/[id]/prompt/_components/prompt-list.tsx:814-825",
+   "stmts": "게이트 1(owner) + lock_prompt 1 + count_shared 1 + outbox supersede UPDATE 1 + INSERT 1 + PAUSE UPDATE 1 = 6 (+공통 3)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/prompts/crud/common.py:66 _SHARED_SQL / lifecycle/queries.py:40 PAUSE_SQL"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "invalid_status·shared_prompt 문구 토스트, throw → 바운더리"
+   ],
+   "f7": [
+    "y",
+    "행 FOR UPDATE + 공유 행 가드 + 같은 트랜잭션 outbox(prompt:disable, 미완료 토글 supersede로 순서 보장, publisher.py:7-11) — 실패 시 전체 롤백, 다이얼로그 pending 비활성(prompt-list.tsx:899). (메모: Scope 반영은 워커 비동기 — 실패는 admin scope-link 진단에서만 보임)"
+   ],
+   "f8": [
+    "y",
+    "",
+    "6 (+공통 3)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "U9-N10: 동기 Scope PATCH → outbox(propagation pending), 'scope 반영 실패' 문구 분기 소멸(projects.ts:104-105)"
+   ],
+   "parity": [
+    "back/app/features/projects/prompts/lifecycle/tests/test_lifecycle.py › test_pause_resume_flow",
+    "back/app/features/projects/prompts/lifecycle/tests/test_lifecycle.py › test_toggle_pause_resume_pause_keeps_latest_order"
+   ]
+  },
+  "POST /v1/projects/{project_id}/prompts/{prompt_id}/resume": {
+   "label": "resume (promptLifecycle resume, 운영자 게이트)",
+   "where": "back/app/features/projects/prompts/lifecycle/router.py:47-54 → crud/common.py:40-44(operate_gate) → service.py:73-81, SQL lifecycle/queries.py:44 / front lib/hgh/adapters/projects.ts:1448-1460, app/[locale]/(dash)/projects/[id]/prompt/_components/prompt-list.tsx:814-825",
+   "stmts": "게이트 1(member) + require_operator 0~2(assigned/global 멤버 확인·스코프 확인) + lock_prompt 1 + outbox supersede 2 + RESUME UPDATE 1 = 5~7 (+공통 3)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/prompts/lifecycle/queries.py:44 RESUME_SQL"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "invalid_status 문구 토스트, throw → 바운더리"
+   ],
+   "f7": [
+    "y",
+    "행 잠금 + outbox(prompt:enable) supersede 한 트랜잭션, 다이얼로그 pending 비활성. (메모: 워커 반영 실패는 admin 진단에서만)"
+   ],
+   "f8": [
+    "y",
+    "",
+    "5~7 (+공통 3)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "U9-N10: 미발행 행은 서버가 'queued' 로 되돌리는데(service.py:79) 화면 낙관 오버레이는 무조건 'done'(prompt-list.tsx:820) — statusOverlay 가 revalidate 뒤에도 남아 상태 표시 불일치; 동기 Scope 실패 분기 소멸"
+   ],
+   "parity": [
+    "back/app/features/projects/prompts/lifecycle/tests/test_lifecycle.py › test_pause_shared_guard_and_unpublished_resume",
+    "back/app/features/projects/prompts/lifecycle/tests/test_lifecycle.py › test_toggle_resume_pause_resume_after_processed_disable"
+   ]
+  },
+  "POST /v1/projects/{project_id}/prompts/{prompt_id}/hard-delete": {
+   "label": "hard_delete (promptLifecycle hard-delete)",
+   "where": "back/app/features/projects/prompts/lifecycle/router.py:57-65 → service.py:84-94, SQL lifecycle/queries.py:48(SOFT_DELETE) / front lib/hgh/adapters/projects.ts:1448-1460, app/[locale]/(dash)/projects/[id]/prompt/_components/prompt-list.tsx:827-836",
+   "stmts": "게이트 1(owner) + lock_prompt 1 + count_shared 1 + (공유 0·발행 이력) outbox UPDATE 1(+INSERT 1) + soft delete UPDATE 1 = 4~6 (+공통 3)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/prompts/lifecycle/queries.py:48 SOFT_DELETE_SQL"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "prompt_not_found 문구, throw → 바운더리"
+   ],
+   "f7": [
+    "y",
+    "공유 가드 + outbox(prompt:delete) + soft delete 한 트랜잭션(트리거가 judgment_change·감사), 2단계 확인·pending 비활성(prompt-list.tsx:892-926)"
+   ],
+   "f8": [
+    "y",
+    "",
+    "4~6 (+공통 3)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "U9-N10: scope 중단→미러 삭제→로컬 삭제 동기 순서가 outbox 비동기로 바뀌고 로컬은 soft delete(deleted_at), 'scope 반영 실패' 분기 소멸"
+   ],
+   "parity": [
+    "back/app/features/projects/prompts/lifecycle/tests/test_lifecycle.py › test_hard_delete_variants",
+    "back/app/features/projects/prompts/lifecycle/tests/test_lifecycle.py › test_publisher_failure_rolls_back"
+   ]
+  },
+  "POST /v1/projects/{project_id}/prompts/execute": {
+   "label": "execute (executePrompts, 운영자 게이트, 202)",
+   "where": "back/app/features/projects/prompts/execute/router.py:27-34 → service.py:21-37, publisher.py:32-35, SQL execute/queries.py:11·13·23 / front lib/hgh/adapters/projects.ts:1462-1473, prompt/_actions.ts:444-449, app/[locale]/(dash)/projects/[id]/prompt/_components/prompt-list.tsx:370-376",
+   "stmts": "게이트 1(member) + require_operator 0~2 + advisory 잠금 1 + 대상 FOR UPDATE 1 + 행마다 outbox(UPDATE 1 + 없으면 INSERT 1) + draft→queued UPDATE 1 = 4+N~2N (+공통 3)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/prompts/execute/queries.py:13 TARGETS_SQL (EXISTS scope_outbox 상관 서브쿼리, FOR UPDATE OF p)"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "nothing_to_execute 문구 토스트, 성공 시 분석 탭 redirect, throw → 바운더리"
+   ],
+   "f7": [
+    "y",
+    "프로젝트 advisory 잠금으로 동시 실행 직렬화 + 한 트랜잭션(발행 실패 시 전체 롤백, 부분 발행 없음, service.py:1-6 머리말) + 미완료 create 있는 복구 대상 건너뜀, 확인 다이얼로그·pending 비활성(prompt-list.tsx:411-432). (메모: Scope 푸시 실패는 워커 이후라 사용자에게 즉시 안 보임 — admin scope-link outbox erroring 만)"
+   ],
+   "f8": [
+    "n",
+    "대상 프롬프트마다 enqueue_scope 개별 문장(UPDATE…RETURNING 후 INSERT) 순차 — unnest 한 문장으로 가능(service.py:30-33)",
+    "4+N~2N (+공통 3)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "U9-N10: 동기 Scope 푸시·부분 실패 문구 → outbox 비동기(propagation pending), recovered·skipped_pending 의미 추가"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/projects.parity.test.ts › actions: legacy (real repositories on PGlite) vs api (backend answer for the same state) › executePrompts: nothing to run answers the same message; a run redirects to the analysis tab on both",
+    "back/app/features/projects/prompts/execute/tests/test_execute.py › test_concurrent_execute_is_serialized",
+    "back/app/features/projects/prompts/execute/tests/test_execute.py › test_execute_rolls_back_on_publisher_failure_and_audits"
+   ]
+  },
+  "GET /v1/projects/{project_id}/prompts/export": {
+   "label": "export_xlsx (exportPromptsXlsx, xlsx 바이너리 → base64)",
+   "where": "back/app/features/projects/prompts/io/router.py:44-54 → service.py:49-60, SQL io/queries.py:4·9·12 / front lib/hgh/adapters/projects.ts:1232-1253",
+   "stmts": "게이트 1(active_member) + 프롬프트 1 + 필드 1 + 값 1 = 4 (+공통 3)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/prompts/io/queries.py:4 EXPORT_PROMPTS_SQL"
+   ],
+   "f3": [
+    "y",
+    "행 조회만"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "ok:false 토스트 / throw → 바운더리(prompt-io.tsx)"
+   ],
+   "f7": [
+    "skip",
+    "읽기(다운로드)"
+   ],
+   "f8": [
+    "y",
+    "보관 태그 값도 읽은 뒤 버림(경미, service.py:51-52)",
+    "4 (+공통 3)"
+   ],
+   "f9": [
+    "y",
+    "내보내기는 정의상 전량"
+   ],
+   "f10": [
+    "y",
+    "열(id·text·비보관 태그)·파일명 규칙이 레거시와 같음(service.py:55-60)"
+   ],
+   "parity": [
+    "front/app/[locale]/(dash)/projects/[id]/prompt/_actions.api.test.ts › xlsx: export relays the file, import relays the upload and maps the summary",
+    "back/app/features/projects/prompts/io/tests/test_prompts_io.py › test_export_contents_permissions_and_audit"
+   ]
+  },
+  "POST /v1/projects/{project_id}/prompts/import": {
+   "label": "import_rows (importPromptsXlsx, relayUpload multipart)",
+   "where": "back/app/features/projects/prompts/io/router.py:57-66 → service.py:69-110(parse_rows, 스레드풀)·112-230(import_rows), SQL io/queries.py:15-49 / front lib/hgh/adapters/projects.ts:1275-1315",
+   "stmts": "게이트 1(owner) + 기존 FOR UPDATE 1 + 필드 1 + 값 1 + 새 태그 헤더마다 INSERT 1(충돌 시 재조회 +1) + 본문 UPDATE 1 + 신규 INSERT 1 + 값 DELETE 1 + 값 UPSERT 1 = 8+T (+공통 3)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/prompts/io/queries.py:36 UPDATE_TEXTS_SQL (unnest FROM, JOIN 없음)"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "파일 오류는 코드별 문구(IMPORT_ERRORS), 행 문제는 경고 목록, throw → 바운더리"
+   ],
+   "f7": [
+    "y",
+    "한 트랜잭션 배치 문장(레거시 행 루프 부분 커밋 해소), 기존 행 FOR UPDATE, created/updated/skipped/경고 요약 반환, importing 중 비활성(prompt-io.tsx)"
+   ],
+   "f8": [
+    "y",
+    "배치 문장(행 수 무관), 새 태그 헤더만 개별 INSERT",
+    "8+T (+공통 3)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "U9-N14: 규칙을 서버로 이동, 5MB·5,000행·셀 상한 새 문구(projects.ts:114-116,1258-1273)"
+   ],
+   "parity": [
+    "front/app/[locale]/(dash)/projects/[id]/prompt/_actions.api.test.ts › xlsx: export relays the file, import relays the upload and maps the summary",
+    "back/app/features/projects/prompts/io/tests/test_prompts_io.py › test_import_rules",
+    "back/app/features/projects/prompts/io/tests/test_prompts_io.py › test_import_errors_permissions_and_limits"
+   ]
+  },
+  "POST /v1/projects/{project_id}/prompt-fields": {
+   "label": "create_field (addCustomField)",
+   "where": "back/app/features/projects/prompts/fields/router.py:30-34 → service.py:40-48, SQL fields/queries.py:23·25·15 / front lib/hgh/adapters/projects.ts:1475-1489, app/[locale]/(dash)/projects/[id]/prompt/_components/prompt-list.tsx:334-348",
+   "stmts": "게이트 1(owner) + 같은 이름 확인 1 + INSERT ON CONFLICT 1 + 재조회 1 = 4 (+공통 3)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/prompts/fields/queries.py:15 GET_SQL (상관 count 서브쿼리)"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "reserved_label·duplicate 문구 토스트"
+   ],
+   "f7": [
+    "y",
+    "대소문자 무시 중복 확인 + UNIQUE ON CONFLICT(동시 생성 409), 성공 후에만 열 오버레이 추가, pending 비활성"
+   ],
+   "f8": [
+    "y",
+    "",
+    "4 (+공통 3)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "U9-N16: 중복 라벨이 '이미 있는 태그입니다' 문구로 답함 — 레거시는 DrizzleQueryError 로 throw(projects.ts:119-122)"
+   ],
+   "parity": [
+    "front/app/[locale]/(dash)/projects/[id]/prompt/_actions.api.test.ts › custom fields and values",
+    "back/app/features/projects/prompts/fields/tests/test_fields.py › test_list_and_create"
+   ]
+  },
+  "DELETE /v1/projects/{project_id}/prompt-fields/{field_id}": {
+   "label": "delete_field (customFieldOp delete = deleteCustomFieldHard, 값 CASCADE)",
+   "where": "back/app/features/projects/prompts/fields/router.py:51-56 → service.py:57-59, SQL fields/queries.py:33 / front lib/hgh/adapters/projects.ts:1492-1504, app/[locale]/(dash)/projects/[id]/prompt/_components/prompt-list.tsx:350-368·379-384",
+   "stmts": "게이트 1(owner) + DELETE…RETURNING 1 = 2 (+공통 3)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/prompts/fields/queries.py:33"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "field_not_found 등 throw → 바운더리, ok:false 토스트"
+   ],
+   "f7": [
+    "n",
+    "렌뉴얼 회귀: 값 있는 열의 강제 삭제 확인 다이얼로그 판정(usedFieldIds)이 현재 창에 로드된 행(첫 200행+윈도잉)만 봄(prompt-list.tsx:379-384) — 서버 value_count 는 어댑터가 버림(projects.ts:663-665). 창 밖에만 값이 있는 열은 확인 없이 즉시 삭제되고 값이 FK CASCADE 로 함께 지워짐(fields/service.py:57-59)"
+   ],
+   "f8": [
+    "y",
+    "",
+    "2 (+공통 3)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "y",
+    "레거시 deleteCustomFieldHard 와 같은 연산(값 포함 삭제)·throw 계약"
+   ],
+   "parity": [
+    "front/app/[locale]/(dash)/projects/[id]/prompt/_actions.api.test.ts › custom fields and values",
+    "back/app/features/projects/prompts/fields/tests/test_fields.py › test_archive_restore_delete_cascade"
+   ]
+  },
+  "PUT /v1/projects/{project_id}/prompts/{prompt_id}/fields/{field_id}": {
+   "label": "set_value (setPromptCustomFieldValue, blur 저장)",
+   "where": "back/app/features/projects/prompts/fields/router.py:59-64 → service.py:73-83, SQL fields/queries.py:21·35·40 / front lib/hgh/adapters/projects.ts:1506-1519, app/[locale]/(dash)/projects/[id]/prompt/_components/prompt-list.tsx:992-1006",
+   "stmts": "게이트 1(owner) + 필드 FOR UPDATE 1 + 프롬프트 FOR SHARE 1 + UPSERT 1 = 4 (+공통 3)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/prompts/fields/queries.py:40 UPSERT_SQL"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "ok:false 토스트(prompt-list.tsx:999-1001), throw → 바운더리"
+   ],
+   "f7": [
+    "y",
+    "필드·프롬프트 소속 재검증(IDOR 404) + UPSERT 한 트랜잭션, 셀별 독립, 입력 pending 비활성·실패 시 초안 유지(prompt-list.tsx:1003,1015)"
+   ],
+   "f8": [
+    "y",
+    "",
+    "4 (+공통 3)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "y",
+    "같은 의미(trim 저장·보관 태그도 허용). U9-N12 빈 값 검사 선행은 UI 미도달"
+   ],
+   "parity": [
+    "front/app/[locale]/(dash)/projects/[id]/prompt/_actions.api.test.ts › custom fields and values",
+    "back/app/features/projects/prompts/fields/tests/test_fields.py › test_values_put_bulk_clear"
+   ]
+  },
+  "DELETE /v1/projects/{project_id}/prompts/{prompt_id}/fields/{field_id}": {
+   "label": "clear_value (clearPromptCustomFieldValue)",
+   "where": "back/app/features/projects/prompts/fields/router.py:75-80 → service.py:90-93, SQL fields/queries.py:45 / front lib/hgh/adapters/projects.ts:1564-1574",
+   "stmts": "게이트 1(owner) + 필드 FOR UPDATE 1 + 프롬프트 FOR SHARE 1 + DELETE 1 = 4 (+공통 3)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/prompts/fields/queries.py:45 CLEAR_SQL"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "ok:false 토스트, throw → 바운더리"
+   ],
+   "f7": [
+    "y",
+    "소속 재검증 + 한 트랜잭션, pending 비활성"
+   ],
+   "f8": [
+    "y",
+    "",
+    "4 (+공통 3)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "y",
+    "레거시 clearPromptCustomFieldValue 와 같은 의미"
+   ],
+   "parity": [
+    "front/app/[locale]/(dash)/projects/[id]/prompt/_actions.api.test.ts › custom fields and values",
+    "back/app/features/projects/prompts/fields/tests/test_fields.py › test_values_put_bulk_clear"
+   ]
+  },
+  "POST /v1/projects/{project_id}/prompt-fields/{field_id}/bulk-set": {
+   "label": "bulk_set (setPromptCustomFieldValueBulk, 1,000건 청크 + progress)",
+   "where": "back/app/features/projects/prompts/fields/router.py:67-72 → service.py:73-88, SQL fields/queries.py:35·40 / front lib/hgh/adapters/projects.ts:1521-1562, app/[locale]/(dash)/projects/[id]/prompt/_components/prompt-list.tsx:304-332",
+   "stmts": "게이트 1(owner) + 필드 FOR UPDATE 1 + 프롬프트 FOR SHARE(ANY) 1 + UPSERT(unnest) 1 = 4 (+공통 3)/1,000건 청크",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/prompts/fields/queries.py:40 UPSERT_SQL (unnest)"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "ok:false 토스트, 첫 청크 throw 는 바운더리"
+   ],
+   "f7": [
+    "y",
+    "청크별 원자 UPSERT + 청크 실패 시 appliedIds/remainingIds progress 로 부분 성공 구분·남은 선택만 유지(projects.ts:1543-1559, prompt-list.tsx:311-319), 응답 count≠요청 수면 오류, pending 비활성"
+   ],
+   "f8": [
+    "y",
+    "레거시 id별 소속 SELECT(N+1) → ANY 1문",
+    "4 (+공통 3)/청크"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "y",
+    "같은 결과(값 일괄 부여), IDOR 불일치는 404→throw(레거시 throw 와 같음). progress 는 양쪽 소스 공용 결과형"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/projects.test.ts › bulk tag values: input checks, chunks of 1000 ids, counts summed",
+    "front/lib/hgh/adapters/projects.test.ts › bulk tag failure reports confirmed chunks and leaves only the remainder for retry",
+    "back/app/features/projects/prompts/fields/tests/test_fields.py › test_values_put_bulk_clear"
+   ]
+  },
+  "GET /v1/projects/{project_id}/members": {
+   "label": "list_members (loadMemberPage · cancelInvite 사전 확인)",
+   "where": "back/app/features/projects/members/roster/router.py:19-22 → service.py:36-38, SQL roster/queries.py:9(LIST) / front lib/hgh/adapters/projects.ts:449-464·860-870",
+   "stmts": "게이트 1(active_member) + LIST 1 = 2 (+공통 3)",
+   "f2": [
+    2,
+    0,
+    0,
+    0,
+    "back/app/features/projects/members/roster/queries.py:9 LIST (JOIN user_account + LEFT JOIN user_account invited_by)"
+   ],
+   "f3": [
+    "y",
+    "멤버 행 조회만"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "loadMemberPage → throwForPage(projects.ts:461-463)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "cancelInvite 가 대상 1명의 상태 확인을 위해 명부 전량을 dedupe 없이 다시 GET(projects.ts:861-870) — 백엔드가 DELETE ?expect=pending 조건을 이미 제공(roster/router.py:47-52)",
+    "2 (+공통 3)"
+   ],
+   "f9": [
+    "y",
+    "프로젝트 멤버 전량(소량) 표시"
+   ],
+   "f10": [
+    "y",
+    "MemberRow(id=user_id·email·role·status·invitedAt) 동일, active_member 게이트 동일"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/projects.parity.test.ts › /projects/[id]/member › owner (edit), viewer (read only), admin without membership (edit): same rows, order, flags",
+    "back/app/features/projects/members/roster/tests/test_roster.py › test_list_shape_order_and_visibility"
+   ]
+  },
+  "GET /v1/projects/{project_id}/member-audit": {
+   "label": "list_audit (loadMemberPage, limit 20)",
+   "where": "back/app/features/projects/members/audit/router.py:17-26 → service.py:19-29, SQL audit/queries.py:7-12 / front lib/hgh/adapters/projects.ts:454",
+   "stmts": "게이트 1(active_member) + 키셋 1 = 2 (+공통 3)",
+   "f2": [
+    2,
+    0,
+    0,
+    0,
+    "back/app/features/projects/members/audit/queries.py:7 (LEFT JOIN user_account ×2)"
+   ],
+   "f3": [
+    "y",
+    "감사 로그 행 조회만"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "throwForPage(projects.ts:461-463)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "2 (+공통 3)"
+   ],
+   "f9": [
+    "y",
+    "limit 20 + '(최근 20건)' 고지 유지(레거시와 같음), next_cursor 미사용"
+   ],
+   "f10": [
+    "y",
+    "AuditLogEntry 필드·최신순 동일"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/projects.parity.test.ts › /projects/[id]/member › owner (edit), viewer (read only), admin without membership (edit): same rows, order, flags"
+   ]
+  },
+  "POST /v1/projects/{project_id}/members": {
+   "label": "invite (inviteMember)",
+   "where": "back/app/features/projects/members/roster/router.py:25-32 → service.py:41-61, SQL roster/queries.py:17-26·42·15 / front lib/hgh/adapters/projects.ts:830-845",
+   "stmts": "게이트 1(owner) + INVITEE 1 + EXISTING 1 + INSERT ON CONFLICT 1(경합 시 재조회 +1) + AUDIT 1 + ONE 1 = 6~7 (+공통 3)",
+   "f2": [
+    2,
+    0,
+    0,
+    0,
+    "back/app/features/projects/members/roster/queries.py:15 ONE (JOIN + LEFT JOIN user_account)"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "코드별 레거시 문구(INVITE_ERRORS), throw → 바운더리"
+   ],
+   "f7": [
+    "y",
+    "멤버 INSERT + 감사 로그를 한 트랜잭션(레거시 비트랜잭션 쌍 해소), ON CONFLICT 경합 시 승자 상태 재조회로 already_member/already_invited, 버튼·입력 pending 비활성(invite-form.tsx)"
+   ],
+   "f8": [
+    "y",
+    "",
+    "6~7 (+공통 3)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "y",
+    "같은 규칙·문구(가입자만·Viewer pending·본인 금지·중복 구분)"
+   ],
+   "parity": [
+    "back/app/features/projects/members/roster/tests/test_roster.py › test_invite_rules_and_audit",
+    "back/app/features/projects/members/roster/tests/test_roster.py › test_invite_duplicate_codes_split_active_pending"
+   ]
+  },
+  "DELETE /v1/projects/{project_id}/members/{user_id}": {
+   "label": "remove (cancelInvite · removeMember)",
+   "where": "back/app/features/projects/members/roster/router.py:43-53 → service.py:87-110, SQL roster/queries.py:28·40·42 / front lib/hgh/adapters/projects.ts:847-884",
+   "stmts": "게이트 1(owner) + LOCK_TARGET FOR UPDATE 1 + DELETE 1 + AUDIT 1 = 4 (+공통 3); cancelInvite 는 앞서 GET members 1요청(2 +공통 3) 추가",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/members/roster/queries.py:28 LOCK_TARGET"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "코드별 문구(REMOVE_ERRORS), member_not_found 등, throw → 바운더리"
+   ],
+   "f7": [
+    "n",
+    "cancelInvite 가 명부를 읽어 pending 확인 후 expect 없이 DELETE(projects.ts:860-876) — 그 사이 초대가 수락되면 활성 멤버가 제거되고 감사 'remove' 로 남는데 화면은 '초대 취소' 성공. 백엔드 ?expect=pending(잠금 안 상태 조건, service.py:96-99)을 쓰지 않음. 나머지는 잠금+감사 한 트랜잭션, pending 비활성(member-list.tsx:178)"
+   ],
+   "f8": [
+    "n",
+    "cancelInvite 는 대상 1명 확인에 명부 전량 GET 추가(projects.ts:861-866)",
+    "4 (+공통 3) [+취소 시 2 (+공통 3)]"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "U9-N11: removeMember 로 pending 행을 지우면 초대 취소로 처리·감사 cancel_invite(레거시 remove)(projects.ts:106-108)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/projects.test.ts › cancelInvite reads the roster first: pending -> DELETE; active -> legacy message, no DELETE; missing -> not found",
+    "back/app/features/projects/members/roster/tests/test_roster.py › test_remove_cancel_and_guards",
+    "back/app/features/projects/members/roster/tests/test_roster.py › test_remove_expect_pending_and_active"
+   ]
+  },
+  "PATCH /v1/projects/{project_id}/members/{user_id}": {
+   "label": "change_role (changeMemberRole: promote/demote)",
+   "where": "back/app/features/projects/members/roster/router.py:35-40 → service.py:64-84, SQL roster/queries.py:28·33·38·42·15 / front lib/hgh/adapters/projects.ts:904-929, setting/_actions.ts:362-363·395-396",
+   "stmts": "게이트 1(owner) + (강등) 활성 Owner 전체 FOR UPDATE 1 + LOCK_TARGET 1 + SET_ROLE 1 + AUDIT 1 + ONE 1 = 5~6 (+공통 3)",
+   "f2": [
+    2,
+    0,
+    0,
+    0,
+    "back/app/features/projects/members/roster/queries.py:15 ONE"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "코드별 문구(PROMOTE/DEMOTE_ERRORS), throw → 바운더리"
+   ],
+   "f7": [
+    "y",
+    "강등 시 활성 Owner 행 전부를 먼저 잠가 동시 상호 강등에서도 마지막 Owner 보호(service.py:68-70) — 레거시 스냅샷 카운트 경합 해소, 감사 한 트랜잭션, 다이얼로그 pending 중 닫힘 방지"
+   ],
+   "f8": [
+    "y",
+    "",
+    "5~6 (+공통 3)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "U9-N11: pending 멤버 강등은 '활성 상태의 멤버만 위임 가능합니다'(레거시 'Viewer는 이미 Viewer입니다')(projects.ts:106-108)"
+   ],
+   "parity": [
+    "back/app/features/projects/members/roster/tests/test_roster.py › test_role_change_last_owner_guard"
+   ]
+  },
+  "GET /v1/projects/{project_id}/settings": {
+   "label": "bundle (loadSettingsPage 설정 묶음)",
+   "where": "back/app/features/projects/settings/overview/router.py:17-20 → service.py:17-38, SQL overview/queries.py:8 + owned_bases/queries.py:6 + tracked_targets/queries.py:7-9 + tracked_urls/queries.py:13 / front lib/hgh/adapters/projects.ts:526-567·618-635",
+   "stmts": "게이트 1(active_member) + PROJECT 1 + BRAND_ROW 1 + (ai_engines NULL) default_engines 1 + owned bases 1 + 경쟁사 1 + 차종 1 + 추적 URL count 1 = 7~8 (+공통 3)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/settings/overview/queries.py:8 (단일 표 점 조회들, JOIN 없음)"
+   ],
+   "f3": [
+    "y",
+    "설정 행 조회만"
+   ],
+   "f4": [
+    "PJK6"
+   ],
+   "f6": [
+    "y",
+    "loadSettingsPage → throwForPage(projects.ts:630-632)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "tracked_url_count 를 계산하지만 어댑터는 버리고 목록을 따로 전량 페이징(projects.ts:526-567,626); 게이트가 이미 읽은 프로젝트 행을 PROJECT 로 재조회(service.py:19)",
+    "7~8 (+공통 3)"
+   ],
+   "f9": [
+    "y",
+    "프로젝트당 소량 목록 전량 표시"
+   ],
+   "f10": [
+    "n",
+    "U9-N8: 경쟁사 별칭을 project_tracked_competitor 에서만 읽음(레거시는 병합 tracked_brands 우선), owned base id=base_norm·차종 id=브랜드\\u0000모델 합성 키, engines.can_edit 신설(projects.ts:43-48,99-100). 엔진 표시는 front normalizeAiEngines(AI_ENGINE_IDS)로 걸러 백엔드 어휘 밖 엔진은 조용히 빠짐(projects.ts:543)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/projects.parity.test.ts › /projects/[id]/setting › owner: same forms, rows (order), aliases, engine state, flags, scope status",
+    "front/lib/hgh/adapters/projects.parity.test.ts › /projects/[id]/setting › viewer: everything disabled, no danger zone, on both",
+    "back/app/features/projects/settings/overview/tests/test_overview.py › test_bundle_values_and_permissions"
+   ]
+  },
+  "GET /v1/projects/{project_id}/settings/engines/history": {
+   "label": "history (allEngineHistory 커서 전량, limit 200·maxPages 10)",
+   "where": "back/app/features/projects/settings/engines/router.py:26-33 → service.py:46-56, SQL engines/queries.py:12-16 / front lib/hgh/adapters/projects.ts:583-595",
+   "stmts": "게이트 1(active_member) + 키셋 1 = 2 (+공통 3)/페이지",
+   "f2": [
+    1,
+    0,
+    0,
+    0,
+    "back/app/features/projects/settings/engines/queries.py:12 (LEFT JOIN user_account)"
+   ],
+   "f3": [
+    "y",
+    "이력 행 조회만"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "fetchAllPages 실패 → throwForPage(projects.ts:630-632)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "2 (+공통 3)/페이지"
+   ],
+   "f9": [
+    "y",
+    "커서 전량, maxPages 초과는 조용한 절단 대신 오류(paginate.ts:96-98)"
+   ],
+   "f10": [
+    "y",
+    "EngineHistoryEntry(id·engines·changedAt) 최신순 동일"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/projects.parity.test.ts › /projects/[id]/setting › owner: same forms, rows (order), aliases, engine state, flags, scope status",
+    "back/app/features/projects/settings/engines/tests/test_engines.py › test_history_keyset_and_visibility"
+   ]
+  },
+  "GET /v1/projects/{project_id}/settings/tracked-urls": {
+   "label": "list_urls (allTrackedUrls 커서 전량, limit 500·maxPages 20)",
+   "where": "back/app/features/projects/settings/tracked_urls/router.py:35-41 → service.py:114-125, SQL tracked_urls/queries.py:8·13 / front lib/hgh/adapters/projects.ts:569-581",
+   "stmts": "게이트 1(active_member) + 키셋 1 + count 1 = 3 (+공통 3)/페이지",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/settings/tracked_urls/queries.py:8"
+   ],
+   "f3": [
+    "y",
+    "URL 행 조회만"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "throwForPage(projects.ts:630-632)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "페이지마다 count 재계산(경미)",
+    "3 (+공통 3)/페이지"
+   ],
+   "f9": [
+    "y",
+    "커서 전량, 초과 시 오류(paginate.ts:96-98)"
+   ],
+   "f10": [
+    "n",
+    "행 id 가 url_norm(레거시 uuid id) — 삭제·가져오기 키 의미 변경(projects.ts:49, U9-N14)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/projects.parity.test.ts › /projects/[id]/setting › owner: same forms, rows (order), aliases, engine state, flags, scope status",
+    "back/app/features/projects/settings/tracked_urls/tests/test_tracked_urls.py › test_add_list_delete_and_queue"
+   ]
+  },
+  "GET /v1/projects/{project_id}/settings/scope-link": {
+   "label": "diagnose (loadScopeLink, admin 전용)",
+   "where": "back/app/features/projects/settings/scope_link/router.py:25-40 → service.py:36-59, SQL scope_link/queries.py:9-46 / front lib/hgh/adapters/projects.ts:485-503·601-610·633",
+   "stmts": "Detached principal 1(별도 트랜잭션) + RoSession: refs 1 + 게이트 1 + PROJECT 1 + LATEST_ROUND 1 + JOBS 1 + OUTBOX_COUNTS 1 + PROMPT_OUTBOX_PENDING 1 + OUTBOX_RECENT 1 = 8 (+set_config·principal). 라이브 probe 기본 꺼짐(adapter.py DisabledProbe)",
+   "f2": [
+    1,
+    0,
+    0,
+    0,
+    "back/app/features/projects/settings/scope_link/queries.py:34 PROMPT_OUTBOX_PENDING (prompt JOIN scope_outbox)"
+   ],
+   "f3": [
+    "y",
+    "job·outbox 상태 count(진단), 원소 행 집계 아님"
+   ],
+   "f4": [],
+   "f6": [
+    "n",
+    "실패 시 config 외 모든 HghApiError 를 console.warn 후 null → 진단 블록이 조용히 사라짐(projects.ts:601-610, setting/page.tsx:217) — 레거시는 오류 상태를 블록 안에 표시"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "OUTBOX_RECENT 10행을 계산하지만 toScopeLinkView 가 recent 를 매핑하지 않음(projects.ts:485-503)",
+    "8 (+공통 2)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "C2: 라이브 언급·인용 probe 대신 DB 연결 상태(state·회차·job·outbox) — 표시 의미 변경(setting/page.tsx:40-42), admin 전용은 동일"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/projects.parity.test.ts › /projects/[id]/setting › admin: the Scope diagnostic block is the API state model (C2)",
+    "front/lib/hgh/adapters/projects.test.ts › setting page, admin: scope-link after the first four; a transient failure degrades to no diagnostic",
+    "back/app/features/projects/settings/scope_link/tests/test_scope_link.py › test_linked_project_diagnosis"
+   ]
+  },
+  "PATCH /v1/projects/{project_id}": {
+   "label": "patch_project (updateProject 일반 정보)",
+   "where": "back/app/features/projects/project/core/router.py:72-77 → service.py:274-325, shared.py:126-167(rebuild_tracked_brand), SQL queries.py:92·99 / front lib/hgh/adapters/projects.ts:953-1015, setting/_components/general-form.tsx:53-72",
+   "stmts": "게이트 1(owner) + LOCK FOR UPDATE 1 + UPDATE…RETURNING 1 + default_engines 1 = 4 (+공통 3); 이름·설명·브랜드 변경 시 outbox +1~2; 브랜드 변경 시 DELETE_TRACKED_BRAND 1 + 재구성 5+N",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/project/core/queries.py:99 update_sql"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "코드별 문구(PATCH_ERRORS), throw → 바운더리"
+   ],
+   "f7": [
+    "y",
+    "한 트랜잭션(FOR UPDATE·tracked_brand 재구성·outbox project:update, judgment_change 는 트리거) — 레거시 scope PATCH 삼킴·다단계 비트랜잭션 해소, 저장 버튼 pending. (메모: 버전·ETag 없음 — Owner 동시 편집은 마지막 쓰기 우선)"
+   ],
+   "f8": [
+    "n",
+    "브랜드 변경 시 rebuild_tracked_brand 정본별 UPSERT 루프(shared.py:160-164) N+1",
+    "4 (+공통 3) [+브랜드 변경 6+N]"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "U9-N5: reprocessable 항상 0(재처리 다이얼로그 미개방), domain 은 읽기 전용(전송 안 함), brand_forbidden·unknown_brand 코드(projects.ts:87-90,977-1015)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/projects.test.ts › updateProject: PATCH general fields (domain never sent), PUT aliases (deduped, trimmed); reprocessable 0",
+    "back/app/features/projects/project/core/tests/test_project_core.py › test_patch_brand_rebuilds_tracked_and_enqueues",
+    "back/app/features/projects/project/core/tests/test_project_core.py › test_patch_permission_validation_and_rollback"
+   ]
+  },
+  "PUT /v1/projects/{project_id}/settings/brand-aliases": {
+   "label": "put_brand_aliases (updateProject brandAliases, 낙관 반영)",
+   "where": "back/app/features/projects/settings/tracked_targets/router.py:29-33 → service.py:52-68, SQL tracked_targets/queries.py:10-16 / front lib/hgh/adapters/projects.ts:1000-1013, setting/_components/tracked-entities.tsx:256-272",
+   "stmts": "게이트 1(owner) + LOCK 1 + UPSERT|DELETE 1 + 재구성 5+N + judgment_change 1 + BRAND_ROW 1 = 10+N (+공통 3)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/settings/tracked_targets/queries.py:12 UPSERT_BRAND"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "ok:false → 칩 롤백 + 토스트(tracked-entities.tsx:264-267)"
+   ],
+   "f7": [
+    "y",
+    "화면이 본 브랜드와 현재 브랜드 대조(409 brand_mismatch), 한 트랜잭션, ok:false 시 낙관 칩 롤백"
+   ],
+   "f8": [
+    "n",
+    "rebuild_tracked_brand 정본별 UPSERT 루프(shared.py:160-164) N+1",
+    "10+N (+공통 3)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "U9-N6: 낡은 브랜드 기준 저장은 '프로젝트 브랜드가 바뀌었습니다…' 409(레거시는 별칭을 조용히 삭제)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/projects.test.ts › updateProject: PATCH general fields (domain never sent), PUT aliases (deduped, trimmed); reprocessable 0",
+    "back/app/features/projects/settings/tracked_targets/tests/test_tracked_targets.py › test_aliases_competitors_target_vehicles"
+   ]
+  },
+  "PUT /v1/projects/{project_id}/settings/engines": {
+   "label": "put_engines (updateProjectEngines, owner_and_operate)",
+   "where": "back/app/features/projects/settings/engines/router.py:18-23 → service.py:28-43, SQL engines/queries.py:4-8 / front lib/hgh/adapters/projects.ts:1017-1039, setting/_components/ai-engines-panel.tsx:55-80",
+   "stmts": "게이트 1(owner_and_operate) + LOCK 1 + (변경 시) SET 1 + HISTORY 1 + outbox 1~2 = 3~6 (+공통 3)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/settings/engines/queries.py:5 SET_ENGINES"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [
+    "PJK6"
+   ],
+   "f6": [
+    "y",
+    "operator_forbidden·unknown_engine 문구, throw → 바운더리"
+   ],
+   "f7": [
+    "y",
+    "ai_engines·이력·outbox(schedule:set_targets) 한 트랜잭션, 같은 값이면 no-op, '저장됨(측정 반영 대기)' 토스트, 0개는 수집 중단 경고, 저장 버튼 pending. (메모: 워커 반영 실패는 admin 진단만)"
+   ],
+   "f8": [
+    "y",
+    "",
+    "3~6 (+공통 3)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "U9-N7: pushed=true·queued=true 고정(스케줄은 outbox) — savedQueued 토스트로 바뀜; 요청 전 front normalizeAiEngines(AI_ENGINE_IDS)가 카탈로그 밖 엔진을 조용히 제거(projects.ts:1031)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/projects.test.ts › updateProjectEngines: engines normalized like legacy; result engines normalized; pushed + queued",
+    "back/app/features/projects/settings/engines/tests/test_engines.py › test_put_engines_changes_noop_and_reenable"
+   ]
+  },
+  "POST /v1/projects/{project_id}/settings/owned-bases": {
+   "label": "add (addOwnedBase)",
+   "where": "back/app/features/projects/settings/owned_bases/router.py:19-24 → service.py:28-54, shared.py:101-122, SQL owned_bases/queries.py:8·17 / front lib/hgh/adapters/projects.ts:1148-1168",
+   "stmts": "게이트 1(owner) + DOMAIN FOR UPDATE 1 + INSERT|DELETE 1 + 대표 도메인 UPDATE 1 + judgment_change 1 (+도메인 바뀌면 프로젝트 재조회 1 + outbox 1~2) = 5~8 (+공통 3)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/project/core/shared.py:113 resync UPDATE (owned_base 서브쿼리)"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "duplicate_owned_base·invalid_url 문구 토스트"
+   ],
+   "f7": [
+    "y",
+    "INSERT·대표 도메인 재동기화·judgment_change·outbox(project:update)를 한 트랜잭션 — 레거시 scope 미러 PATCH 실패 삼킴 해소, 제출 pending 비활성"
+   ],
+   "f8": [
+    "y",
+    "",
+    "5~8 (+공통 3)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "U9-N4: http(s) 없거나 잘못된 URL 은 '올바른 URL 형식이 아닙니다' 한 문구(레거시 'http(s):// URL만…' 구분), 레거시 도메인 이전 안내 소멸; U9-N16 중복 문구"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/projects.test.ts › owned bases and tracked URLs: empty input keeps the legacy message and is not sent; ids = normalized keys",
+    "back/app/features/projects/settings/owned_bases/tests/test_owned_bases.py › test_add_remove_resync_and_queues"
+   ]
+  },
+  "DELETE /v1/projects/{project_id}/settings/owned-bases": {
+   "label": "remove (removeOwnedBase ?base_norm=)",
+   "where": "back/app/features/projects/settings/owned_bases/router.py:27-33 → service.py:57-66, SQL owned_bases/queries.py:15 / front lib/hgh/adapters/projects.ts:1170-1177",
+   "stmts": "게이트 1(owner) + DOMAIN FOR UPDATE 1 + INSERT|DELETE 1 + 대표 도메인 UPDATE 1 + judgment_change 1 (+도메인 바뀌면 프로젝트 재조회 1 + outbox 1~2) = 5~8 (+공통 3)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/settings/owned_bases/queries.py:15"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "throw → 바운더리, owned_base_not_found 는 ok(멱등)"
+   ],
+   "f7": [
+    "y",
+    "범위 삭제(project_id+base_norm)+재동기화+outbox 한 트랜잭션, 멱등"
+   ],
+   "f8": [
+    "y",
+    "",
+    "5~8 (+공통 3)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "id 가 base_norm 자연키(레거시 uuid), U9-N4"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/projects.test.ts › owned bases and tracked URLs: empty input keeps the legacy message and is not sent; ids = normalized keys",
+    "back/app/features/projects/settings/owned_bases/tests/test_owned_bases.py › test_add_remove_resync_and_queues"
+   ]
+  },
+  "POST /v1/projects/{project_id}/settings/tracked-urls": {
+   "label": "add (addTrackedUrl)",
+   "where": "back/app/features/projects/settings/tracked_urls/router.py:44-49 → service.py:128-137, SQL tracked_urls/queries.py:17 / front lib/hgh/adapters/projects.ts:1179-1197",
+   "stmts": "게이트 1(owner) + INSERT ON CONFLICT 1 + judgment_change 1 = 3 (+공통 3)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/settings/tracked_urls/queries.py:17"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "duplicate_tracked_url·invalid_url 문구"
+   ],
+   "f7": [
+    "y",
+    "UNIQUE ON CONFLICT 중복 문구, 한 트랜잭션, pending 비활성(tracked-urls.tsx)"
+   ],
+   "f8": [
+    "y",
+    "",
+    "3 (+공통 3)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "U9-N4 URL 문구 통합, U9-N16 중복 문구(레거시 throw), id=url_norm"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/projects.test.ts › owned bases and tracked URLs: empty input keeps the legacy message and is not sent; ids = normalized keys",
+    "back/app/features/projects/settings/tracked_urls/tests/test_tracked_urls.py › test_add_list_delete_and_queue"
+   ]
+  },
+  "DELETE /v1/projects/{project_id}/settings/tracked-urls": {
+   "label": "remove (removeTrackedUrl ?url_norm=)",
+   "where": "back/app/features/projects/settings/tracked_urls/router.py:52-58 → service.py:140-145, SQL tracked_urls/queries.py:24 / front lib/hgh/adapters/projects.ts:1199-1206",
+   "stmts": "게이트 1(owner) + DELETE…RETURNING 1 + judgment_change 1 = 3 (+공통 3)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/settings/tracked_urls/queries.py:24"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "throw → 바운더리, tracked_url_not_found 는 ok(멱등)"
+   ],
+   "f7": [
+    "y",
+    "범위 삭제, 멱등, 한 트랜잭션"
+   ],
+   "f8": [
+    "y",
+    "",
+    "3 (+공통 3)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "삭제 키가 url_norm(레거시 uuid id)"
+   ],
+   "parity": [
+    "back/app/features/projects/settings/tracked_urls/tests/test_tracked_urls.py › test_add_list_delete_and_queue"
+   ]
+  },
+  "GET /v1/projects/{project_id}/settings/tracked-urls/export": {
+   "label": "export_rows (exportTrackedUrlsXlsx)",
+   "where": "back/app/features/projects/settings/tracked_urls/router.py:61-67 → service.py:148-150·63-65, SQL tracked_urls/queries.py:14 / front lib/hgh/adapters/projects.ts:1232-1256",
+   "stmts": "게이트 1(active_member) + ALL 1 = 2 (+공통 3)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/settings/tracked_urls/queries.py:14"
+   ],
+   "f3": [
+    "y",
+    "행 조회만"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "ok:false 토스트/throw — 레거시 42P01 [] 폴백(빈 파일 정상 다운로드) 없음"
+   ],
+   "f7": [
+    "skip",
+    "읽기(다운로드)"
+   ],
+   "f8": [
+    "y",
+    "",
+    "2 (+공통 3)"
+   ],
+   "f9": [
+    "y",
+    "내보내기는 정의상 전량"
+   ],
+   "f10": [
+    "n",
+    "열 구성 url_norm·url·label(레거시 id·url·label, lib/tracked-urls/excel.ts:16) — 레거시 파일과 가져오기 키 호환 깨짐(U9-N14 CK-14)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/projects.test.ts › xlsx export: bytes -> base64, filename from Content-Disposition, legacy name when absent",
+    "back/app/features/projects/settings/tracked_urls/tests/test_tracked_urls.py › test_export_and_import"
+   ]
+  },
+  "POST /v1/projects/{project_id}/settings/tracked-urls/import": {
+   "label": "import_xlsx (importTrackedUrlsXlsx)",
+   "where": "back/app/features/projects/settings/tracked_urls/router.py:70-81 → service.py:153-201, SQL tracked_urls/queries.py:15·17·26·28 / front lib/hgh/adapters/projects.ts:1275-1302",
+   "stmts": "라우터 project_access 2(refs·게이트) + 서비스 project_access 재호출 2 + LOCK 1 + 행마다 EXISTS 1 + UPDATE 1 | INSERT 1 + judgment_change 1 = 6+~2N (+공통 3)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/settings/tracked_urls/queries.py:28 UPDATE (NOT EXISTS 상관 서브쿼리)"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "파일 오류 코드별 문구, 행 문제는 경고"
+   ],
+   "f7": [
+    "y",
+    "한 트랜잭션(프로젝트 FOR UPDATE)·UPDATE 결과 확인(충돌 시 건너뜀+경고)·created/updated/skipped 요약 — 레거시 부분 커밋·updated 과다 집계 해소"
+   ],
+   "f8": [
+    "n",
+    "권한 판정 project_access 를 라우터(router.py:78)와 서비스(service.py:154)가 두 번(+2문), 행별 개별 문장 N+1(service.py:162-198)",
+    "6+~2N (+공통 3)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "U9-N14: 행 키가 uuid id → url_norm(레거시 id 열 파일은 URL 로 매칭), 5MB·5,000행 상한"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/projects.test.ts › xlsx import: no file / over 5MB answered locally (not sent); multipart field 'file'; summary mapped",
+    "back/app/features/projects/settings/tracked_urls/tests/test_tracked_urls.py › test_export_and_import"
+   ]
+  },
+  "POST /v1/projects/{project_id}/settings/competitors": {
+   "label": "add_competitor (addTrackedCompetitor)",
+   "where": "back/app/features/projects/settings/tracked_targets/router.py:36-41 → service.py:71-81, SQL tracked_targets/queries.py:18 / front lib/hgh/adapters/projects.ts:1055-1077",
+   "stmts": "게이트 1(owner) + LOCK 1 + INSERT ON CONFLICT 1 + 재구성 5+N + judgment_change 1 = 9+N (+공통 3)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/settings/tracked_targets/queries.py:18"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "duplicate_competitor·required 문구"
+   ],
+   "f7": [
+    "y",
+    "프로젝트 행 FOR UPDATE 로 직렬화한 한 트랜잭션(쓰기·tracked_brand 재구성·judgment_change), 모든 삭제가 project_id 조건(레거시 projectId 무검증 IDOR 해소), 없는 행은 멱등 ok, pending 비활성"
+   ],
+   "f8": [
+    "n",
+    "rebuild_tracked_brand 정본별 UPSERT 루프(shared.py:160-164) N+1",
+    "9+N (+공통 3)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "U9-N16 중복 문구(레거시 throw), U9-N5 reprocessable 0, U9-N8 별칭 원천"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/projects.test.ts › tracked entities: ids are the natural keys; vehicle delete splits the composite id",
+    "back/app/features/projects/settings/tracked_targets/tests/test_tracked_targets.py › test_aliases_competitors_target_vehicles"
+   ]
+  },
+  "DELETE /v1/projects/{project_id}/settings/competitors": {
+   "label": "remove_competitor (removeTrackedCompetitor ?brand_name=)",
+   "where": "back/app/features/projects/settings/tracked_targets/router.py:43-47 → service.py:84-90, SQL tracked_targets/queries.py:24 / front lib/hgh/adapters/projects.ts:1079-1086",
+   "stmts": "게이트 1(owner) + LOCK 1 + DELETE 1 + 재구성 5+N + judgment_change 1 = 9+N (+공통 3)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/settings/tracked_targets/queries.py:24"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "throw → 바운더리, competitor_not_found 는 ok"
+   ],
+   "f7": [
+    "y",
+    "프로젝트 행 FOR UPDATE 로 직렬화한 한 트랜잭션(쓰기·tracked_brand 재구성·judgment_change), 모든 삭제가 project_id 조건(레거시 projectId 무검증 IDOR 해소), 없는 행은 멱등 ok, pending 비활성"
+   ],
+   "f8": [
+    "n",
+    "rebuild_tracked_brand 정본별 UPSERT 루프(shared.py:160-164) N+1",
+    "9+N (+공통 3)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "U9-N5 reprocessable 0, 삭제 키가 brand_name 자연키(레거시 uuid)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/projects.test.ts › tracked entities: ids are the natural keys; vehicle delete splits the composite id",
+    "back/app/features/projects/settings/tracked_targets/tests/test_tracked_targets.py › test_aliases_competitors_target_vehicles"
+   ]
+  },
+  "POST /v1/projects/{project_id}/settings/vehicles": {
+   "label": "add_vehicle (addTrackedVehicle, 차종 브랜드 경쟁사 자동 등록)",
+   "where": "back/app/features/projects/settings/tracked_targets/router.py:57-62 → service.py:104-116, SQL tracked_targets/queries.py:28·34 / front lib/hgh/adapters/projects.ts:1105-1129",
+   "stmts": "게이트 1(owner) + LOCK 1 + INSERT 1 + (타 브랜드) AUTO_COMPETITOR 1 + 재구성 5+N + judgment_change 1 = 9~10+N (+공통 3)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/settings/tracked_targets/queries.py:28"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "duplicate_vehicle 문구"
+   ],
+   "f7": [
+    "y",
+    "프로젝트 행 FOR UPDATE 로 직렬화한 한 트랜잭션(쓰기·tracked_brand 재구성·judgment_change), 모든 삭제가 project_id 조건(레거시 projectId 무검증 IDOR 해소), 없는 행은 멱등 ok, pending 비활성"
+   ],
+   "f8": [
+    "n",
+    "rebuild_tracked_brand 정본별 UPSERT 루프(shared.py:160-164) N+1",
+    "9~10+N (+공통 3)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "U9-N16 중복 문구, U9-N5 reprocessable 0, id=브랜드\\u0000모델 합성 키"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/projects.test.ts › tracked entities: ids are the natural keys; vehicle delete splits the composite id",
+    "back/app/features/projects/settings/tracked_targets/tests/test_tracked_targets.py › test_aliases_competitors_target_vehicles"
+   ]
+  },
+  "DELETE /v1/projects/{project_id}/settings/vehicles": {
+   "label": "remove_vehicle (removeTrackedVehicle ?brand=&model=)",
+   "where": "back/app/features/projects/settings/tracked_targets/router.py:64-69 → service.py:119-125, SQL tracked_targets/queries.py:38 / front lib/hgh/adapters/projects.ts:1131-1146",
+   "stmts": "게이트 1(owner) + LOCK 1 + DELETE 1 + 재구성 5+N + judgment_change 1 = 9+N (+공통 3)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/settings/tracked_targets/queries.py:38"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "throw → 바운더리, vehicle_not_found·잘못된 합성 id 는 ok"
+   ],
+   "f7": [
+    "y",
+    "프로젝트 행 FOR UPDATE 로 직렬화한 한 트랜잭션(쓰기·tracked_brand 재구성·judgment_change), 모든 삭제가 project_id 조건(레거시 projectId 무검증 IDOR 해소), 없는 행은 멱등 ok, pending 비활성"
+   ],
+   "f8": [
+    "n",
+    "rebuild_tracked_brand 정본별 UPSERT 루프(shared.py:160-164) N+1",
+    "9+N (+공통 3)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "U9-N5 reprocessable 0, 키 = brand+model"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/projects.test.ts › tracked entities: ids are the natural keys; vehicle delete splits the composite id",
+    "back/app/features/projects/settings/tracked_targets/tests/test_tracked_targets.py › test_aliases_competitors_target_vehicles"
+   ]
+  },
+  "PUT /v1/projects/{project_id}/settings/competitors/target": {
+   "label": "set_target (setTargetCompetitor, KPI#16 비교 기준)",
+   "where": "back/app/features/projects/settings/tracked_targets/router.py:50-55 → service.py:93-101, SQL tracked_targets/queries.py:25-26 / front lib/hgh/adapters/projects.ts:1088-1103, setting/_components/tracked-entities.tsx:108-117",
+   "stmts": "게이트 1(owner) + LOCK 1 + CLEAR 1 + SET…RETURNING 1 = 4 (+공통 3)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/settings/tracked_targets/queries.py:26 SET_TARGET"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "competitor_not_found 문구 토스트"
+   ],
+   "f7": [
+    "y",
+    "SET 매칭 0건이면 404 로 트랜잭션 롤백 → 이전 지정 유지 + 문구(service.py:99-100) — 레거시 '조용히 해제 후 성공' 해소"
+   ],
+   "f8": [
+    "y",
+    "",
+    "4 (+공통 3)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "U9-N13: 없는 브랜드면 이전 지정 유지 + '해당 브랜드를 찾을 수 없습니다'(레거시는 지정 해제)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/projects.test.ts › tracked entities: ids are the natural keys; vehicle delete splits the composite id",
+    "back/app/features/projects/settings/tracked_targets/tests/test_tracked_targets.py › test_aliases_competitors_target_vehicles"
+   ]
+  },
+  "GET /v1/auth/me": {
+   "label": "get_auth_me (authorizeReprocess 비Owner 분기)",
+   "where": "back/app/features/platform/auth/session/router.py:19-30 → service.py:56-67 / front lib/hgh/adapters/projects.ts:938-951",
+   "stmts": "기능 0문(공통 3 = set_config + user_account + load_refs)",
+   "f2": [
+    "skip",
+    "기능 SQL 없음(공통 load_refs 조각만, core/codes.py:200)"
+   ],
+   "f3": [
+    "y",
+    "계정·참조 조회만"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "run() → 5xx RETRY_LATER 문구, 401/403 throw"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "0 (+공통 3)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "y",
+    "role 판정 동일(admin 이면 통과)"
+   ],
+   "parity": [
+    "back/app/features/platform/auth/session/tests/test_session.py"
+   ]
+  },
+  "ACTION triggerReprocess → authorizeReprocess": {
+   "label": "triggerReprocess API 분기 = authorizeReprocess (읽기 2회, 재처리 없음)",
+   "where": "front lib/hgh/adapters/projects.ts:933-951, setting/_actions.ts:821, setting/_components/general-form.tsx:74-84, tracked-entities.tsx:83-90",
+   "stmts": "GET /v1/projects/{id} 1요청(5 +공통 3) + (비Owner) GET /v1/auth/me 1요청(0 +공통 3). 쓰기 없음",
+   "f2": [
+    "skip",
+    "쓰기 SQL 없음(권한 확인 GET 2개)"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "run() 오류 문구, 권한 없으면 throw"
+   ],
+   "f7": [
+    "y",
+    "API 원천은 reprocessable 이 항상 0이라 재처리 다이얼로그가 열리지 않음(재판정은 judgment_change 로 자동) — 레거시 '소비 워커 없는 스텁인데 N건 등록' 성공 토스트 해소. 호출돼도 flagged 0 만 답함"
+   ],
+   "f8": [
+    "n",
+    "아무것도 하지 않는 동작에 게이트 GET(상세 요약 5문) + auth/me 를 소비(권한 확인 목적)",
+    "5~5 (+공통 3×1~2)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "U9-N5: flagged 0 고정, 다이얼로그 미개방(projects.ts:87-90)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/projects.test.ts › authorizeReprocess: owner / admin -> flagged 0 (reads only); viewer, hidden, no session, bad id -> throw"
+   ]
+  },
+  "DELETE /v1/projects/{project_id}": {
+   "label": "delete_project (deleteProject, body confirm_name)",
+   "where": "back/app/features/projects/project/core/router.py:80-84 → service.py:329-340, SQL queries.py:92·96 / front lib/hgh/adapters/projects.ts:1041-1053, setting/_actions.ts:329-334, setting/_components/danger-zone.tsx",
+   "stmts": "게이트 1(owner) + LOCK FOR UPDATE 1 + DELETE(FK CASCADE) 1 + outbox(project:delete) 1~2 = 4~5 (+공통 3) + 접근 감사(비동기 배치)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/projects/project/core/queries.py:96 DELETE_PROJECT"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "name_mismatch 문구, throw → 바운더리"
+   ],
+   "f7": [
+    "y",
+    "FOR UPDATE 후 이름 대조 → DELETE(자식 FK CASCADE) → outbox 를 한 트랜잭션 — 레거시 11문 비트랜잭션 부분 삭제·scope 삭제 실패 삼킴 해소, 이름 재입력·pending 비활성. (메모: Scope 측 삭제는 워커 비동기 — 프로젝트가 사라져 화면 고지 경로 없음)"
+   ],
+   "f8": [
+    "y",
+    "",
+    "4~5 (+공통 3)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "y",
+    "같은 확인 규칙·문구·redirect(/projects). 삭제 범위는 CASCADE 로 넓어짐(레거시 고아 행 해소)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/projects.test.ts › delete project: empty confirmation is the mismatch message (not sent); body confirm_name",
+    "back/app/features/projects/project/core/tests/test_project_core.py › test_delete_confirm_cascade_and_outbox"
+   ]
+  },
+  "GET /v1/intent/keywords": {
+   "label": "list_keywords (listTrackedKeywordTabs)",
+   "where": "back/app/features/intent/keywords/tracked/router.py:34-38 → service.py:27-44, SQL tracked/queries.py:8(LIST)·13(LATEST_VOLUME) / front lib/hgh/adapters/intent.ts:585-588, projects/[id]/intent/google-keyword/page.tsx:38-70",
+   "stmts": "게이트 1(member) + LIST 1 + LATEST_VOLUME 1 = 3 (+공통 3). 페이지는 별도로 requireProjectPage(GET /v1/projects/{id})",
+   "f2": [
+    2,
+    0,
+    0,
+    0,
+    "back/app/features/intent/keywords/tracked/queries.py:13 LATEST_VOLUME (unnest JOIN rd.dim_keyword + JOIN LATERAL kw_volume_monthly)"
+   ],
+   "f3": [
+    "y",
+    "추적 키워드 행 + 키워드별 최신 월 1행 점 조회"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "throwForPage(google-keyword/page.tsx:62-66)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "키워드별 최신 월 검색량(latest_month·latest_volume)을 LATERAL 로 계산하지만 탭은 id·term 만 사용(intent.ts:585-588)",
+    "3 (+공통 3)"
+   ],
+   "f9": [
+    "y",
+    "추적 키워드 전량을 탭으로 표시(소량)"
+   ],
+   "f10": [
+    "n",
+    "백엔드 게이트가 member 수준(router.py:36) — 화면 게이트(활성 멤버)와 달리 스코프 안 비멤버도 직접 API 로 프로젝트 추적 키워드를 읽음; 탭 형태(id·label·생성순)는 동일"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/intent.parity.test.ts › pages › google-keyword: tracked keyword tabs, canEdit, project country",
+    "back/app/features/intent/keywords/tracked/tests/test_tracked.py › test_add_list_delete_flow"
+   ]
+  },
+  "GET /v1/intent/insight": {
+   "label": "insight (loadKeywordInsight: 읽기 → 미신선 시 수집·폴링 → 재조회 → SERP 초안)",
+   "where": "back/app/features/intent/keywords/research/router.py:27-39 → service.py:68-84(resolve_access)·94-118(insight), SQL research/queries.py:9·14·23 / front lib/hgh/adapters/intent.ts:447-498, app/api/keyword/insight/route.ts:35-51",
+   "stmts": "프로젝트: 게이트 1(member) + PROJECT_TRACKED 1 + db_term_norms 1 + KW_KEYS 1 + TREND 1 + SERP_LATEST 1 = 6 (+공통 3); 표준 화면: 4 (+공통 3). 미신선이면 같은 GET 재호출 1회",
+   "f2": [
+    2,
+    1,
+    0,
+    0,
+    "back/app/features/intent/keywords/research/queries.py:23 SERP_LATEST (latest CTE JOIN rd.kw_serp + LEFT JOIN LATERAL app.kw_prompt_draft)"
+   ],
+   "f3": [
+    "y",
+    "적재된 rd.kw_volume_monthly·rd.kw_serp 점 조회(외부 호출 없음) — 수집은 POST fetches 키 참조"
+   ],
+   "f4": [
+    "PIK1",
+    "PIK2",
+    "PIK3"
+   ],
+   "f6": [
+    "n",
+    "비운영자·미수집이면 빈 추이·SERP 를 고지 없이 표시(meta.suppressed source_pending 을 어댑터가 버림, intent.ts:457-463); 수집 실패·시간 초과 시 옛 사본을 고지 없이 표시(U10-N1); SERP 초안 실패(403·404·409·5xx·timeout)는 키워드 원문을 제안 프롬프트로 조용히 대체(intent.ts:489-494); 미등록 국가는 KR 프리셋으로 대체(intent.ts:405-407). 요청 자체 오류는 화면 오류+재시도"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "프로젝트 화면 요청마다 keywordRouteGate→projectRouteGate 가 GET /v1/projects/{id}(상세 요약 5문)를 추가 호출(intent.ts:166-176,212-231) — 백엔드 insight 도 resolve_project 를 다시 수행; 신선하지 않으면 POST fetches + 1.5초 폴링(최대 40초) + 재조회(intent.ts:454-464)",
+    "6 (+공통 3) ×1~2 + 게이트 GET 1"
+   ],
+   "f9": [
+    "n",
+    "SERP 를 상위 8행으로 고정 절단(query limit 8 intent.ts:453, service MAX_SERP_ROWS) — 고지 없음"
+   ],
+   "f10": [
+    "n",
+    "DC-15: 레거시는 누구나 실시간 DataForSEO+LLM, After 는 저장 데이터·수집은 admin/운영자만(비운영자는 빈 결과·옛 사본); 프로젝트 경로는 member 가시성+국가 묶임 규칙(service.py:68-84)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/intent.parity.test.ts › /api/keyword/* › insight: stored after an operator's collection equals the live legacy answer (drafts included)",
+    "front/lib/hgh/adapters/intent.parity.test.ts › /api/keyword/* › insight on the standard screen (no projectId) for admin; unknown country falls back to kr",
+    "front/lib/hgh/adapters/intent.parity.test.ts › /api/keyword/* › insight for a viewer who may not collect: stored data only (DC-15)",
+    "back/app/features/intent/keywords/research/tests/test_research.py › test_insight_shape_and_values"
+   ]
+  },
+  "POST /v1/intent/fetches": {
+   "label": "accept (requestCollect: dfs_fetch 큐 적재)",
+   "where": "back/app/features/intent/keywords/fetches/router.py:19-24 → service.py:38-52(_access)·85-108(accept), core/write.py:96-133(enqueue_change_result coalesce_active), SQL research/queries.py:51(LATEST_OBSERVED) / front lib/hgh/adapters/intent.ts:330-350·379-392",
+   "stmts": "refs 1 + 게이트 1(operate) + PROJECT_TRACKED 1 + db_term_norms 1 + LATEST_OBSERVED 1 + advisory 잠금 1 + 대기 행 조회 1 + (재사용 후보 가시성 확인 0~2) + INSERT 1 = 7~10 (+set_config·principal, rw set_config +1). 신선하면 큐 없이 200",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/intent/keywords/research/queries.py:51 LATEST_OBSERVED (상관 서브쿼리 4개, JOIN 없음)"
+   ],
+   "f3": [
+    "n",
+    "화면 조회(신선도 24h/7d 경과)가 유료 DataForSEO 수집을 유발 — 적재기 경유 비동기지만 요청이 결과를 최대 40초 기다림(intent.ts:304-306)"
+   ],
+   "f4": [
+    "PIK3"
+   ],
+   "f6": [
+    "n",
+    "403(운영자 아님)을 'forbidden' 으로 바꿔 저장분만 보여주고 고지 없음(intent.ts:343-345)"
+   ],
+   "f7": [
+    "y",
+    "coalesce_active + advisory 잠금으로 같은 요청 중복 수집 방지(동시 요청 1행), 재사용은 요청자가 볼 수 있는 행만(service.py:102-107), 실패는 폴링 결과로 502(저장분 없을 때)"
+   ],
+   "f8": [
+    "y",
+    "",
+    "7~10 (+공통 2)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "skip",
+    "레거시 대응 없음(동기 외부 호출을 큐로 대체한 신규 엔드포인트)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/intent.parity.test.ts › /api/keyword/* › insight: stored after an operator's collection equals the live legacy answer (drafts included)",
+    "back/app/features/intent/keywords/fetches/tests/test_fetches.py › test_concurrent_same_request_single_row_d1",
+    "back/app/features/intent/keywords/fetches/tests/test_fetches.py › test_permissions_and_status"
+   ]
+  },
+  "GET /v1/intent/fetches/{change_id}": {
+   "label": "status (pollCollects 1.5초 폴링)",
+   "where": "back/app/features/intent/keywords/fetches/router.py:27-31 → service.py:55-67(_visible)·111-121(status), SQL fetches/queries.py:5 / front lib/hgh/adapters/intent.ts:356-373",
+   "stmts": "CHANGE 1 + (요청자 아니면) refs 1 + 게이트 1 = 1~3 (+set_config·principal)/폴링. 수집 1건당 최대 약 27회(40초/1.5초)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/intent/keywords/fetches/queries.py:5 CHANGE (judgment_change PK 점 조회)"
+   ],
+   "f3": [
+    "y",
+    "큐 행 점 조회"
+   ],
+   "f4": [],
+   "f6": [
+    "n",
+    "failed·escalated_rebuild·timeout 이면 저장 사본이 있을 때 고지 없이 옛 데이터 표시(intent.ts:457-463, U10-N1)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "결과를 1.5초 간격 폴링(수집당 최대 ~27요청, 요청마다 principal 조회)",
+    "1~3 (+공통 2)/폴링"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "skip",
+    "레거시 대응 없음(신규 비동기 수집 상태)"
+   ],
+   "parity": [
+    "back/app/features/intent/keywords/fetches/tests/test_fetches.py › test_permissions_and_status"
+   ]
+  },
+  "POST /v1/intent/serp-drafts": {
+   "label": "run/plan/generate/save (SERP 행 LLM 초안)",
+   "where": "back/app/features/intent/keywords/serp_drafts/router.py:22-27 → service.py:64-90(plan)·93-108(generate)·111-117(save)·120-128, SQL serp_drafts/queries.py:6·15 / front lib/hgh/adapters/intent.ts:466-497",
+   "stmts": "Detached principal 1 + RoSession: refs 1 + 게이트 1(operate) + SERP_ROWS 1 + PROJECT_TRACKED 1 = 4 → LLM 1회(외부) → rw: set_config 1 + INSERT 1 = 6+LLM",
+   "f2": [
+    1,
+    0,
+    0,
+    0,
+    "back/app/features/intent/keywords/serp_drafts/queries.py:6 SERP_ROWS (rd.kw_serp JOIN rd.dim_keyword + max(gen) 상관 서브쿼리)"
+   ],
+   "f3": [
+    "n",
+    "요청 시 OpenRouter LLM 호출로 초안 생성(모델 기본값 별칭 google/gemini-2.5-flash, core/config.py:99)"
+   ],
+   "f4": [],
+   "f6": [
+    "n",
+    "403·404·409·5xx·timeout 을 삼키고 키워드 원문을 제안 프롬프트로 표시(intent.ts:489-494) — LLM 실패가 정상 초안처럼 보임, skipped_count 무시"
+   ],
+   "f7": [
+    "n",
+    "초안 저장 실패·LLM 실패가 화면에서 성공처럼 보임(키워드 원문 폴백, 고지 없음); 동시 생성은 PK 충돌 ON CONFLICT DO NOTHING 으로 건너뜀(serp_drafts/queries.py:15). 읽기 전용 표준 화면의 '재생성'도 admin·전역 운영자면 유료 재호출(gen+1)"
+   ],
+   "f8": [
+    "y",
+    "",
+    "6+LLM1"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "U10-N2: 레거시는 LLM 실패 시 키워드를 초안으로 저장, After 는 저장 안 함·운영자만 생성(비운영자는 항상 키워드 원문)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/intent.parity.test.ts › /api/keyword/* › insight: stored after an operator's collection equals the live legacy answer (drafts included)",
+    "back/app/features/intent/keywords/serp_drafts/tests/test_serp_drafts.py › test_generate_missing_then_regenerate",
+    "back/app/features/intent/keywords/serp_drafts/tests/test_serp_drafts.py › test_llm_failure_writes_nothing"
+   ]
+  },
+  "GET /v1/intent/related": {
+   "label": "related (loadRelatedKeywords)",
+   "where": "back/app/features/intent/keywords/research/router.py:42-51 → service.py:134-143, SQL research/queries.py:9·37(SUGGEST_LATEST) / front lib/hgh/adapters/intent.ts:500-515·278-289",
+   "stmts": "프로젝트: 게이트 1 + PROJECT_TRACKED 1 + db_term_norms 1 + KW_KEYS 1 + SUGGEST_LATEST 1 = 5 (+공통 3); 표준: 3 (+공통 3). 미신선이면 수집·폴링 후 재조회",
+   "f2": [
+    2,
+    1,
+    0,
+    0,
+    "back/app/features/intent/keywords/research/queries.py:37 SUGGEST_LATEST (latest CTE JOIN rd.kw_suggestion + JOIN rd.dim_keyword)"
+   ],
+   "f3": [
+    "y",
+    "적재된 최신 연관어 호출 행 조회(외부 호출 없음)"
+   ],
+   "f4": [
+    "PIK1",
+    "PIK2",
+    "PIK3"
+   ],
+   "f6": [
+    "n",
+    "비운영자·미수집 → '0개 발견' 빈 표를 고지 없이; 수집 실패 시 옛 사본 무고지(U10-N1); 미등록 국가 KR 대체(intent.ts:405-407). 요청 오류는 패널 오류+재시도"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "프로젝트 화면 요청마다 keywordRouteGate→projectRouteGate 가 GET /v1/projects/{id}(상세 요약 5문)를 추가 호출(intent.ts:166-176,212-231) — 백엔드 related 도 resolve_project 를 다시 수행; 신선하지 않으면 POST fetches + 1.5초 폴링(최대 40초) + 재조회(intent.ts:454-464)",
+    "5 (+공통 3) ×1~2 + 게이트 GET 1"
+   ],
+   "f9": [
+    "n",
+    "연관어를 30개로 절단(MAX_RELATED service.py:140)하면서 헤더는 'N개 발견'(total_count) — 30개만 표시 고지 없음(intent.ts:286-289)"
+   ],
+   "f10": [
+    "n",
+    "DC-15 저장 데이터·운영자 수집, U10-N3 foundCount=DataForSEO total_count"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/intent.parity.test.ts › /api/keyword/* › related: foundCount = DataForSEO total_count (BG-39), legacy volume order",
+    "back/app/features/intent/keywords/research/tests/test_research.py › test_related_excludes_seed"
+   ]
+  },
+  "GET /v1/intent/lookup": {
+   "label": "lookup (loadKeywordSearchGroups, 20어 청크·최대 40어)",
+   "where": "back/app/features/intent/keywords/research/router.py:54-66 → service.py:146-169, SQL research/queries.py:37 / front lib/hgh/adapters/intent.ts:523-575",
+   "stmts": "청크당: (프로젝트) 게이트 1 + PROJECT_TRACKED 1 + db_term_norms 1 + KW_KEYS 1 + 검색어마다 SUGGEST_LATEST 1 = 4+T (+공통 3); 표준 2+T. 미신선이면 청크별 수집 요청 + 공동 폴링 후 재조회",
+   "f2": [
+    2,
+    1,
+    0,
+    0,
+    "back/app/features/intent/keywords/research/queries.py:37 SUGGEST_LATEST"
+   ],
+   "f3": [
+    "y",
+    "적재된 연관어 호출 행 조회(외부 호출 없음)"
+   ],
+   "f4": [
+    "PIK1",
+    "PIK2",
+    "PIK3"
+   ],
+   "f6": [
+    "n",
+    "비운영자·미수집 term 은 검색량 0·관련어 없음으로 고지 없이 표시(intent.ts:573-574); 미등록 국가 KR 대체"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "검색어마다 SUGGEST_LATEST 개별 문장(service.py:154-157) N+1 + 게이트 GET·폴링",
+    "4+T (+공통 3)/청크"
+   ],
+   "f9": [
+    "n",
+    "검색어별 관련어 30개 절단(service.py:166) 고지 없음"
+   ],
+   "f10": [
+    "n",
+    "DC-15, U10-N14 검색어 40개 상한(400)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/intent.parity.test.ts › /api/keyword/* › search: several terms, duplicates and a term with no data",
+    "back/app/features/intent/keywords/research/tests/test_research.py › test_lookup_found_and_missing"
+   ]
+  },
+  "POST /v1/intent/keywords": {
+   "label": "add_keyword (apiAddTrackedKeyword)",
+   "where": "back/app/features/intent/keywords/tracked/router.py:41-46 → service.py:47-61, SQL tracked/queries.py:24 / front lib/hgh/adapters/intent.ts:1051-1068, app/[locale]/(dash)/projects/[id]/intent/_components/google-keyword-view.tsx:332-351·422-438",
+   "stmts": "refs 1 + 게이트 1(operate) + INSERT ON CONFLICT 1 = 3 (+set_config·principal, rw set_config +1)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/intent/keywords/tracked/queries.py:24 INSERT (ON CONFLICT DO NOTHING)"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [
+    "PIK3"
+   ],
+   "f6": [
+    "y",
+    "ok:false 토스트(duplicateKeyword·unknownCountry·emptyKeyword)"
+   ],
+   "f7": [
+    "n",
+    "클라 호출이 트랜지션·try 밖(google-keyword-view.tsx:339-341,425-432, keyword-search-start.tsx:86-99) — 추가 버튼은 Owner 기준 canEdit 로 노출되는데 백엔드는 운영 게이트(operate)라 운영자 아닌 Owner 는 403 → actionFailure 가 UnauthorizedError throw(intent.ts:890-892) → savingKeyword 가 true 로 고정돼 버튼 영구 비활성·문구 없음; 표준 화면(canEdit=false)에서도 관련어 '키워드로 추가'가 노출돼(google-keyword-view.tsx:743-756) project_id '' 로 호출 → 메뉴 project 없으면 403 throw 정지, 있으면 422 를 '키워드를 입력해주세요'로 오표시. 중복은 DB 유니크 409 문구"
+   ],
+   "f8": [
+    "n",
+    "관련어·검색 결과 다중 추가가 키워드마다 서버 액션(매번 게이트 2문)을 순차 호출(google-keyword-view.tsx:427-431, keyword-search-start.tsx:91-95)",
+    "3N (+공통 2)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "U10-N4: 국가는 30개 프리셋만(422 unknown_country), U10-N13: 정규화 term·유효 국가 중복 409 문구(레거시 throw)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/intent.parity.test.ts › intent actions › tracked keywords: add, duplicate, empty, remove unknown, remove many (same answers and resulting tabs)",
+    "front/lib/hgh/adapters/intent.parity.test.ts › intent actions › no operator authority: every write throws UnauthorizedError on both sources",
+    "back/app/features/intent/keywords/tracked/tests/test_tracked.py › test_duplicate_by_norm_and_effective_country_d6"
+   ]
+  },
+  "DELETE /v1/intent/keywords": {
+   "label": "remove_keywords (apiRemoveTrackedKeyword(s), 100건 청크)",
+   "where": "back/app/features/intent/keywords/tracked/router.py:49-54 → service.py:64-69, SQL tracked/queries.py:30 / front lib/hgh/adapters/intent.ts:1070-1109, app/[locale]/(dash)/projects/[id]/intent/_components/google-keyword-view.tsx:353-367·390-413",
+   "stmts": "refs 1 + 게이트 1(operate) + DELETE…RETURNING 1 = 3 (+set_config·principal)/100건",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/intent/keywords/tracked/queries.py:30 DELETE (project_id 범위)"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "ok:false 토스트(keywordNotFound 등)"
+   ],
+   "f7": [
+    "n",
+    "단건 삭제는 낙관 제거 후 ok:false 만 롤백 — 운영자 아닌 Owner 의 403 은 throw(트랜지션 밖)라 탭이 사라진 채 서버는 그대로·고지 없음(google-keyword-view.tsx:353-365); 선택 삭제도 throw 시 deletingKeywords 고정(:398-400). 범위 삭제·removed_count 0 문구는 정상"
+   ],
+   "f8": [
+    "y",
+    "",
+    "3 (+공통 2)/청크"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "y",
+    "project_id 범위 삭제·없으면 '삭제할 키워드를 찾을 수 없습니다' 동일"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/intent.parity.test.ts › intent actions › tracked keywords: add, duplicate, empty, remove unknown, remove many (same answers and resulting tabs)",
+    "back/app/features/intent/keywords/tracked/tests/test_tracked.py › test_delete_other_project_rows_is_noop"
+   ]
+  },
+  "POST /v1/intent/candidates": {
+   "label": "submit (apiAddCandidate 단건 · apiAddCandidates 200건 청크)",
+   "where": "back/app/features/intent/candidates/submit/router.py:24-30 → service.py:20-40, SQL submit/queries.py:7·9·11 / front lib/hgh/adapters/intent.ts:910-958, app/[locale]/(dash)/projects/[id]/intent/_components/google-keyword-view.tsx:458-492, components/social-scraping/context-map-view.tsx:1213-1249",
+   "stmts": "refs 1 + 게이트 1(operate) + 프로젝트 FOR NO KEY UPDATE 1 + 기존 텍스트 1 + INSERT 1 = 5 (+set_config·principal, rw +1)/호출",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/intent/candidates/submit/queries.py:11 INSERT (unnest WITH ORDINALITY)"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "ok:false 토스트, throw(트랜지션 안) → 바운더리"
+   ],
+   "f7": [
+    "y",
+    "프로젝트 행 잠금으로 동시 제출 직렬화 + 텍스트 dedupe(단건 포함, 레거시 단건 중복 해소), 소셜 전송은 skipped 고지·pending 비활성, SERP 선택 추가는 행별 실패 토스트로 부분 성공 구분. (메모: 단건이 중복으로 건너뛰어도 ok·id '' → '추가됨' 표시; 200건 초과 소셜 전송에서 뒤 청크 실패 시 앞 청크 추가 수 미표시 intent.ts:944-955)"
+   ],
+   "f8": [
+    "n",
+    "SERP 선택 추가가 행마다 서버 액션(게이트 2문 반복)을 순차 호출(google-keyword-view.tsx:478-482) — 한 요청 items 배열로 가능",
+    "5N (+공통 2)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "U10-N5: 단건 추가도 프로젝트 풀 동일 텍스트 dedupe, 건너뛴 단건은 ok + id ''"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/intent.parity.test.ts › intent actions › candidates: single add, empty, bulk with a duplicate and a blank",
+    "front/lib/hgh/adapters/intent.parity.test.ts › intent actions › no operator authority: every write throws UnauthorizedError on both sources",
+    "back/app/features/intent/candidates/submit/tests/test_candidates.py › test_submit_dedup"
+   ]
+  },
+  "GET /v1/intent/standard-keywords": {
+   "label": "standard_keywords (listStandardKeywordTabs 커서 전량, 500·maxPages 100)",
+   "where": "back/app/features/intent/keywords/research/router.py:70-87 → service.py:180-221, SQL research/queries.py:83(STANDARD_KEYWORDS) / front lib/hgh/adapters/intent.ts:590-613, customer-interest/google-keywords/page.tsx:32-44",
+   "stmts": "refs 1 + STANDARD_KEYWORDS 1 = 2 (+set_config·principal)/페이지",
+   "f2": [
+    1,
+    2,
+    1,
+    0,
+    "back/app/features/intent/keywords/research/queries.py:83 STANDARD_KEYWORDS (CTE base·grp, GROUP BY term_norm, LEFT JOIN LATERAL)"
+   ],
+   "f3": [
+    "y",
+    "관리 표준 키워드 카탈로그 행(term_norm 묶음은 카탈로그 정리, 판정 아님)"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "throwForPage(customer-interest/google-keywords/page.tsx:34-38)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "2 (+공통 2)/페이지"
+   ],
+   "f9": [
+    "y",
+    "커서 전량, maxPages 초과는 조용한 절단 대신 실패(intent.ts:590-595)"
+   ],
+   "f10": [
+    "n",
+    "U10-N10: 탭이 고정 샘플 5종(PIK4) → 관리 표준 키워드 목록(브랜드 스코프, 최신순)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/intent.parity.test.ts › pages › customer-interest google keywords: managed standard keywords replace the sample (U10-N10)",
+    "back/app/features/intent/keywords/research/tests/test_standard_keywords.py › test_values_shape_and_scope_by_account"
+   ]
+  },
+  "GET /v1/intent/social/context-map/stats": {
+   "label": "stats (fetchContextMapStats, 헤더 요약)",
+   "where": "back/app/features/intent/social/context_map/router.py:50-54 → service.py:109-117·127-131, SQL context_map/queries.py:9-25 / front lib/hgh/adapters/intent.ts:677-687·761-764·831-846",
+   "stmts": "활성 스냅샷 1 + STATS 1 = 2 (+공통 2, load_refs 없음)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/intent/social/context_map/queries.py:19 STATS (스칼라 count 서브쿼리 5개, count(DISTINCT host))"
+   ],
+   "f3": [
+    "n",
+    "ext.ctx_entity·ctx_drive·ctx_combination·ctx_domain 행을 요청 시 count/count(DISTINCT host)"
+   ],
+   "f4": [],
+   "f6": [
+    "n",
+    "활성 스냅샷 없음(meta.suppressed no_active_snapshot)을 어댑터가 버리고 0 으로 표시(toStats intent.ts:677-687) — '준비 중' 고지 없음; 그 외 오류는 throwForPage"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "2 (+공통 2)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "백엔드 게이트가 인증만(context_map/router.py 머리말·test_auth_required) — 역할 천장·메뉴·프로젝트 게이트 없음: 화면 게이트(활성 멤버)·BFF ROUTES 규칙(contextMapRouteDenied)보다 느슨(직접 API 로 website·vendor 계정도 열람); U10-N8 스냅샷 없음 → 0"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/intent.parity.test.ts › pages › social-scraping: stats, first pages, generated prompts and their 이미 추가됨 marks (D6)",
+    "back/app/features/intent/social/context_map/tests/test_context_map.py › test_stats"
+   ]
+  },
+  "GET /v1/intent/social/context-map/contexts": {
+   "label": "list_entities ConsumerContext (fetchContextMapPage contexts)",
+   "where": "back/app/features/intent/social/context_map/router.py:66-72 → service.py:134-168, 목록 SQL service.py:149-152 / front lib/hgh/adapters/intent.ts:716-759, app/api/context-map/route.ts:53-70",
+   "stmts": "활성 스냅샷 1 + 페이지 행 1(행마다 linked_count 상관 count) + total count 1 = 3 (+공통 2)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/intent/social/context_map/service.py:149 (ctx_entity + ctx_drive 상관 count 서브쿼리, JOIN 없음)"
+   ],
+   "f3": [
+    "n",
+    "linked_count 를 ctx_drive 관계 행에서 요청 시 상관 count(service.py:151)"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "SSR 첫 페이지 throwForPage, 이후 /api/context-map 오류는 표 loadError·늦은 응답 폐기(use-paged-tab). 스냅샷 없음은 빈 표(stats 항목 참조)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "3 (+공통 2)"
+   ],
+   "f9": [
+    "y",
+    "키셋 페이지(기본 50·최대 200) + total·페이저, 커서 세대 = snapshot_id(바뀌면 cursor_stale → 첫 페이지)"
+   ],
+   "f10": [
+    "n",
+    "백엔드 게이트가 인증만(context_map/router.py 머리말·test_auth_required) — 역할 천장·메뉴·프로젝트 게이트 없음: 화면 게이트(활성 멤버)·BFF ROUTES 규칙(contextMapRouteDenied)보다 느슨(직접 API 로 website·vendor 계정도 열람); U10-N7 오프셋→키셋 커서·동률 id 정렬·검색 100자 절단"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/intent.parity.test.ts › /api/context-map › contexts page 0 and page 1 (offset vs cursor), conditions by name, combinations search, details",
+    "back/app/features/intent/social/context_map/tests/test_context_map.py › test_contexts_keyset_pages"
+   ]
+  },
+  "GET /v1/intent/social/context-map/conditions": {
+   "label": "list_entities ConsumerRequirement (fetchContextMapPage conditions)",
+   "where": "back/app/features/intent/social/context_map/router.py:75-80 → service.py:134-168·67-71(categorize) / front lib/hgh/adapters/intent.ts:716-759",
+   "stmts": "활성 스냅샷 1 + 페이지 행 1 + total count 1 = 3 (+공통 2)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/intent/social/context_map/service.py:149"
+   ],
+   "f3": [
+    "n",
+    "구매 조건 카테고리를 정규식으로 조회 시 재판정(categorize service.py:67-71) + linked_count 상관 count"
+   ],
+   "f4": [
+    "PIK7"
+   ],
+   "f6": [
+    "y",
+    "loadError 표시(use-paged-tab), SSR throwForPage"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "3 (+공통 2)"
+   ],
+   "f9": [
+    "y",
+    "키셋 페이지(기본 50·최대 200) + total·페이저, 커서 세대 = snapshot_id(바뀌면 cursor_stale → 첫 페이지)"
+   ],
+   "f10": [
+    "n",
+    "백엔드 게이트가 인증만(context_map/router.py 머리말·test_auth_required) — 역할 천장·메뉴·프로젝트 게이트 없음: 화면 게이트(활성 멤버)·BFF ROUTES 규칙(contextMapRouteDenied)보다 느슨(직접 API 로 website·vendor 계정도 열람); U10-N7"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/intent.parity.test.ts › /api/context-map › contexts page 0 and page 1 (offset vs cursor), conditions by name, combinations search, details",
+    "back/app/features/intent/social/context_map/tests/test_context_map.py › test_conditions_search_escape"
+   ]
+  },
+  "GET /v1/intent/social/context-map/combinations": {
+   "label": "list_combinations (fetchContextMapPage combinations)",
+   "where": "back/app/features/intent/social/context_map/router.py:83-93 → service.py:171-201, SQL service.py:186-191·queries.py:27(MAX_CO) / front lib/hgh/adapters/intent.ts:716-759",
+   "stmts": "활성 스냅샷 1 + 페이지 행 1 + total count 1 + MAX_CO 1 = 4 (+공통 2)",
+   "f2": [
+    2,
+    0,
+    0,
+    0,
+    "back/app/features/intent/social/context_map/service.py:186 (ctx_combination JOIN ctx_entity ×2; count 문장도 같은 JOIN)"
+   ],
+   "f3": [
+    "n",
+    "빈도 등급을 스냅샷 max(co_count) 대비로 조회 시 재산정(bucket_strength service.py:78-82)"
+   ],
+   "f4": [
+    "PIK8"
+   ],
+   "f6": [
+    "y",
+    "loadError 표시, SSR throwForPage"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "total count 가 페이지 문장과 같은 2중 JOIN 을 매 페이지 재실행, MAX_CO 도 매 페이지 재계산(service.py:191-192)",
+    "4 (+공통 2)"
+   ],
+   "f9": [
+    "y",
+    "키셋 페이지(기본 50·최대 200) + total·페이저, 커서 세대 = snapshot_id(바뀌면 cursor_stale → 첫 페이지)"
+   ],
+   "f10": [
+    "n",
+    "백엔드 게이트가 인증만(context_map/router.py 머리말·test_auth_required) — 역할 천장·메뉴·프로젝트 게이트 없음: 화면 게이트(활성 멤버)·BFF ROUTES 규칙(contextMapRouteDenied)보다 느슨(직접 API 로 website·vendor 계정도 열람); U10-N7"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/intent.parity.test.ts › /api/context-map › contexts page 0 and page 1 (offset vs cursor), conditions by name, combinations search, details",
+    "back/app/features/intent/social/context_map/tests/test_context_map.py › test_combinations"
+   ]
+  },
+  "GET /v1/intent/social/context-map/entities/{entity_id}": {
+   "label": "entity_detail (fetchContextEntityDetail)",
+   "where": "back/app/features/intent/social/context_map/router.py:96-104 → service.py:204-218, SQL context_map/queries.py:29-58 / front lib/hgh/adapters/intent.ts:767-776",
+   "stmts": "활성 스냅샷 1 + ENTITY 1 + EVIDENCE 1 + DOMAINS 1 + LINKED 1 = 5 (+공통 2)",
+   "f2": [
+    1,
+    0,
+    0,
+    0,
+    "back/app/features/intent/social/context_map/queries.py:45 LINKED_FROM_CONTEXT (ctx_drive JOIN ctx_entity)"
+   ],
+   "f3": [
+    "n",
+    "연결 강도 등급을 엔티티 연결 max 대비로 조회 시 재산정(service.py:212-218)"
+   ],
+   "f4": [
+    "PIK8"
+   ],
+   "f6": [
+    "y",
+    "404 → null → '—', 그 외 오류는 다이얼로그 loadError"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "5 (+공통 2)"
+   ],
+   "f9": [
+    "n",
+    "근거 인용을 8건으로 고정 절단(EVIDENCE_PER_ENTITY service.py:49) — 고지 없음"
+   ],
+   "f10": [
+    "n",
+    "백엔드 게이트가 인증만(context_map/router.py 머리말·test_auth_required) — 역할 천장·메뉴·프로젝트 게이트 없음: 화면 게이트(활성 멤버)·BFF ROUTES 규칙(contextMapRouteDenied)보다 느슨(직접 API 로 website·vendor 계정도 열람); 스냅샷 없음 → 404(no_active_snapshot)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/intent.parity.test.ts › /api/context-map › contexts page 0 and page 1 (offset vs cursor), conditions by name, combinations search, details",
+    "back/app/features/intent/social/context_map/tests/test_context_map.py › test_entity_detail"
+   ]
+  },
+  "GET /v1/intent/social/context-map/export": {
+   "label": "export_sheets (relayContextMapExport 스트림 릴레이)",
+   "where": "back/app/features/intent/social/context_map/router.py:107-120 → service.py:248-262, SQL context_map/queries.py:60-81 / front lib/hgh/adapters/intent.ts:786-791, app/api/context-map/export/route.ts:63-90",
+   "stmts": "활성 스냅샷 1 + EXPORT_CONTEXTS 1 + EXPORT_CONDITIONS 1 + EXPORT_COMBINATIONS 1 = 4 (+공통 2) + 접근 감사(비동기)",
+   "f2": [
+    2,
+    0,
+    0,
+    0,
+    "back/app/features/intent/social/context_map/queries.py:74 EXPORT_COMBINATIONS (JOIN ctx_entity ×2)"
+   ],
+   "f3": [
+    "n",
+    "linked_count 상관 count·카테고리 정규식·빈도 등급을 내보내기 시 계산"
+   ],
+   "f4": [
+    "PIK7",
+    "PIK8"
+   ],
+   "f6": [
+    "y",
+    "실패 시 exportError 토스트(context-map-view.tsx:346-349), 스냅샷 없음 409 전달"
+   ],
+   "f7": [
+    "skip",
+    "읽기(다운로드)"
+   ],
+   "f8": [
+    "y",
+    "",
+    "4 (+공통 2)"
+   ],
+   "f9": [
+    "y",
+    "내보내기는 정의상 전량"
+   ],
+   "f10": [
+    "n",
+    "백엔드 게이트가 인증만(context_map/router.py 머리말·test_auth_required) — 역할 천장·메뉴·프로젝트 게이트 없음: 화면 게이트(활성 멤버)·BFF ROUTES 규칙(contextMapRouteDenied)보다 느슨(직접 API 로 website·vendor 계정도 열람); U10-N9 시트명·헤더를 백엔드 EXPORT_LABELS·body lang 으로"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/intent.parity.test.ts › /api/context-map › export: api streams the backend file (lang from body), drops upstream cookies; no session 401 on both",
+    "back/app/features/intent/social/context_map/tests/test_context_map.py › test_export_xlsx"
+   ]
+  },
+  "GET /v1/intent/social/prompts": {
+   "label": "list_prompts (loadSocialScrapingPage 카탈로그, 유사도·이미 추가됨 서버 계산)",
+   "where": "back/app/features/intent/social/prompts/router.py:35-40 → service.py:36-57, seeds.py:175-206(most_similar), SQL social/prompts/queries.py:5·13 / front lib/hgh/adapters/intent.ts:798-846",
+   "stmts": "refs 1 + 게이트 1(member) + LIST 1 + EXISTING_TEXTS 1 = 4 (+set_config·principal) + 파이썬 bigram 코사인 P×E",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/intent/social/prompts/queries.py:13 EXISTING_TEXTS (UNION ALL, JOIN 없음)"
+   ],
+   "f3": [
+    "n",
+    "유사 문구 판정을 조회마다 생성 프롬프트×기존 프롬프트·후보 전 텍스트 bigram 코사인으로 재계산(service.py:44-49, seeds.py:197-206)"
+   ],
+   "f4": [
+    "PIK9"
+   ],
+   "f6": [
+    "y",
+    "throwForPage(social-scraping/page.tsx:76-80) — 레거시 .catch(()=>null) 무음 폴백 없음. 빈 목록이면 탭 진입 시 자동 생성(의도된 동작)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "4 (+공통 2)"
+   ],
+   "f9": [
+    "y",
+    "프로젝트 생성분 전량(소량) 반환·표시"
+   ],
+   "f10": [
+    "n",
+    "U10-N6: id=백엔드 prompt_id(레거시 seed id), 정렬 batch·priority desc, null 기본값 치환; 백엔드 게이트 member 수준(router.py:38) — 스코프 안 비멤버도 직접 API 열람"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/intent.parity.test.ts › pages › social-scraping: stats, first pages, generated prompts and their 이미 추가됨 marks (D6)"
+   ]
+  },
+  "POST /v1/intent/social/prompts": {
+   "label": "generate (apiGenerateMore/SelectedSocialPrompts, LLM)",
+   "where": "back/app/features/intent/social/prompts/router.py:43-50 → service.py:59-73(_seed_pool)·75-97·100-113(plan)·116-138(generate), seeds.py:57-124, SQL context_map/queries.py:84-110·prompts/queries.py:11·19-33 / front lib/hgh/adapters/intent.ts:960-1026, components/social-scraping/context-map-view.tsx:602-635·1268-1307",
+   "stmts": "Detached principal 1 + RoSession: refs 1 + 게이트 1(operate) + 스냅샷 1 + SEED_KEYS 1 + 시드(more: 엔티티 2 + 조합 1 + 구동 1 | selected: ENTITY_SEEDS 1) + 경쟁사 1 + 차종 1 = 8~10 → LLM 1회 → rw: set_config 1 + INSERT ON CONFLICT 1 + EXISTING_TEXTS 1 = 11~13+LLM",
+   "f2": [
+    2,
+    0,
+    0,
+    0,
+    "back/app/features/intent/social/context_map/queries.py:90 POOL_COMBINATIONS (JOIN ctx_entity ×2)"
+   ],
+   "f3": [
+    "n",
+    "시드 Top-N·관계 강도를 스냅샷 행에서 요청 시 산출 + LLM 생성"
+   ],
+   "f4": [
+    "PIK5",
+    "PIK6",
+    "PIK8",
+    "PIK9"
+   ],
+   "f6": [
+    "y",
+    "LLM 실패·스냅샷 없음은 generateFailed·contextMapNotReady 문구(intent.ts:979-981)"
+   ],
+   "f7": [
+    "n",
+    "구성(selected) 선택을 백엔드가 맥락 10·조건 10·조합 10(교차 12)로 조용히 절단(seeds.py:20,87,113) — 어댑터는 종류별 50까지 허용해(intent.ts:908,996-1002) 초과분은 고지 없이 버려짐. 동시 생성 중복은 seed_key UNIQUE ON CONFLICT 로 해소(레거시 캐시 쓰기 삼킴 해소), skipped_existing 고지"
+   ],
+   "f8": [
+    "y",
+    "",
+    "11~13+LLM1"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "U10-N6: 종류별 50 상한·낙관 락 '다른 작업과 겹쳤습니다' 응답 소멸, id·정렬 의미 변경"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/intent.parity.test.ts › api error mapping › actions: 5xx -> tryAgain text, generation failure -> generateFailed text (ko = legacy wording)",
+    "back/app/features/intent/social/prompts/tests/test_social_prompts.py › test_more_batches_until_exhausted",
+    "back/app/features/intent/social/prompts/tests/test_social_prompts.py › test_selected_normalizes_and_skips"
+   ]
+  },
+  "DELETE /v1/intent/social/prompts": {
+   "label": "remove (apiRemoveSocialPrompts, 100건 청크, soft delete)",
+   "where": "back/app/features/intent/social/prompts/router.py:53-59 → service.py:141-145, SQL social/prompts/queries.py:35 / front lib/hgh/adapters/intent.ts:1028-1049, components/social-scraping/context-map-view.tsx:1250-1267",
+   "stmts": "refs 1 + 게이트 1(operate) + UPDATE removed_at…RETURNING 1 = 3 (+set_config·principal, rw +1)/100건",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "back/app/features/intent/social/prompts/queries.py:35 REMOVE"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "ok:false 토스트, throw(트랜지션 안) → 바운더리"
+   ],
+   "f7": [
+    "y",
+    "project_id 범위 soft delete(seed_key 는 제외 집합에 남아 재생성 안 됨), removed_count 0 이면 문구, pending 비활성"
+   ],
+   "f8": [
+    "y",
+    "",
+    "3 (+공통 2)/청크"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "y",
+    "같은 결과(removed 마킹·재등장 방지)·문구. 낙관 락 충돌 응답만 사라짐(U10-N6)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/intent.parity.test.ts › intent actions › remove generated prompts: count, then not found; no ids"
+   ]
+  },
+  "CLIENT 픽스처 getSampleMatrix·MOCK_MATRIX": {
+   "label": "SocialScrapingTabs (렌뉴얼도 어댑터 미연결, 정적 픽스처)",
+   "where": "front app/[locale]/(dash)/customer-interest/social-scraping/page.tsx, components/social-scraping/sample-data.ts:976, node-map/sample-matrix.ts:16-18",
+   "stmts": "서버 호출 0",
+   "f2": [
+    "skip",
+    "정적 픽스처"
+   ],
+   "f3": [
+    "skip",
+    "정적 픽스처"
+   ],
+   "f4": [
+    "PIK12"
+   ],
+   "f6": [
+    "y",
+    "읽기 없음(픽스처)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "0"
+   ],
+   "f9": [
+    "y",
+    "픽스처 메모리 페이징(50)"
+   ],
+   "f10": [
+    "y",
+    "레거시와 같은 픽스처 경로(After 대응 없음) — 목업 고지 없음도 동일"
+   ],
+   "parity": []
+  },
+  "CLIENT 픽스처 xlsx 내보내기": {
+   "label": "ContextMapView.handleExport SAMPLE 분기(브라우저 워크북)",
+   "where": "front components/social-scraping/context-map-view.tsx:267-349",
+   "stmts": "서버 호출 0",
+   "f2": [
+    "skip",
+    "정적 픽스처"
+   ],
+   "f3": [
+    "skip",
+    "정적 픽스처"
+   ],
+   "f4": [
+    "PIK12"
+   ],
+   "f6": [
+    "y",
+    "실패 시 exportError 토스트"
+   ],
+   "f7": [
+    "skip",
+    "읽기(다운로드)"
+   ],
+   "f8": [
+    "y",
+    "",
+    "0"
+   ],
+   "f9": [
+    "y",
+    "내보내기는 정의상 전량"
+   ],
+   "f10": [
+    "y",
+    "레거시와 같은 픽스처 내보내기"
+   ],
+   "parity": []
+  }
+ },
+ "area_keys": [
+  {
+   "route": "/ko/projects/[id]/intent/google-keyword",
+   "label": "추적 키워드 탭 목록",
+   "api_keys": [
+    "GET /v1/projects/{project_id}",
+    "GET /v1/intent/keywords"
+   ]
+  },
+  {
+   "route": "/ko/projects/[id]/intent/google-keyword",
+   "label": "관심도 추이 라인 차트(월별 검색량 기간 최대=100) + 평균 관심도",
+   "api_keys": [
+    "GET /v1/projects/{project_id}",
+    "GET /v1/intent/insight",
+    "POST /v1/intent/fetches",
+    "GET /v1/intent/fetches/{change_id}"
+   ]
+  },
+  {
+   "route": "/ko/projects/[id]/intent/google-keyword",
+   "label": "SERP 표(순위·제목/URL·스니펫·제안 프롬프트, 정렬) + 재생성",
+   "api_keys": [
+    "GET /v1/projects/{project_id}",
+    "GET /v1/intent/insight",
+    "POST /v1/intent/serp-drafts",
+    "POST /v1/intent/fetches",
+    "GET /v1/intent/fetches/{change_id}"
+   ]
+  },
+  {
+   "route": "/ko/projects/[id]/intent/google-keyword",
+   "label": "관련 검색어 표(검색량·의도, 'N개 발견')",
+   "api_keys": [
+    "GET /v1/projects/{project_id}",
+    "GET /v1/intent/related",
+    "POST /v1/intent/fetches",
+    "GET /v1/intent/fetches/{change_id}"
+   ]
+  },
+  {
+   "route": "/ko/projects/[id]/intent/google-keyword",
+   "label": "키워드 검색 시작(콤마 다건 검색 → 검색량·의도·관련어)",
+   "api_keys": [
+    "GET /v1/projects/{project_id}",
+    "GET /v1/intent/lookup",
+    "POST /v1/intent/fetches",
+    "GET /v1/intent/fetches/{change_id}"
+   ]
+  },
+  {
+   "route": "/ko/projects/[id]/intent/social-scraping",
+   "label": "구매 맥락·구매 조건·관계·출처 도메인 수",
+   "api_keys": [
+    "GET /v1/projects/{project_id}",
+    "GET /v1/intent/social/context-map/stats"
+   ]
+  },
+  {
+   "route": "/ko/customer-interest/google-keywords",
+   "label": "관심도 추이 + 평균 관심도",
+   "api_keys": [
+    "GET /v1/intent/insight",
+    "POST /v1/intent/fetches",
+    "GET /v1/intent/fetches/{change_id}"
+   ]
+  },
+  {
+   "route": "/ko/customer-interest/google-keywords",
+   "label": "SERP 표 + 제안 프롬프트(후보 추가 버튼 비활성) + 재생성",
+   "api_keys": [
+    "GET /v1/intent/insight",
+    "POST /v1/intent/serp-drafts",
+    "POST /v1/intent/fetches",
+    "GET /v1/intent/fetches/{change_id}"
+   ]
+  },
+  {
+   "route": "/ko/customer-interest/google-keywords",
+   "label": "관련 검색어 표",
+   "api_keys": [
+    "GET /v1/intent/related",
+    "POST /v1/intent/fetches",
+    "GET /v1/intent/fetches/{change_id}"
+   ]
+  },
+  {
+   "route": "/ko/projects/[id]/setting",
+   "label": "쓰기: 지금 재처리",
+   "api_keys": [
+    "ACTION triggerReprocess → authorizeReprocess",
+    "GET /v1/projects/{project_id}",
+    "GET /v1/auth/me"
+   ]
+  },
+  {
+   "route": "/ko/customer-interest/social-scraping",
+   "label": "구매 맥락 지도(요약 라인·구매 맥락/조건/조합 표, 메모리 페이징)",
+   "api_keys": [
+    "CLIENT 픽스처 getSampleMatrix·MOCK_MATRIX"
+   ]
+  },
+  {
+   "route": "/ko/customer-interest/social-scraping",
+   "label": "상세(근거 인용·도메인, 목업)",
+   "api_keys": [
+    "CLIENT 픽스처 getSampleMatrix·MOCK_MATRIX"
+   ]
+  },
+  {
+   "route": "/ko/customer-interest/social-scraping",
+   "label": "노드 그래프(관점 필터·물리 설정, 목업 '패밀리 SUV')",
+   "api_keys": [
+    "CLIENT 픽스처 getSampleMatrix·MOCK_MATRIX"
+   ]
+  },
+  {
+   "route": "/ko/customer-interest/social-scraping",
+   "label": "쓰기: Excel 내보내기(픽스처를 브라우저에서 워크북 생성)",
+   "api_keys": [
+    "CLIENT 픽스처 xlsx 내보내기"
+   ]
+  }
+ ],
+ "new_constants": {},
+ "notes": [
+  "플래그 가정: HGH_SOURCE_G6=api(프로젝트·의도 데이터·서버 액션), HGH_SOURCE_SESSION=api(게이트 = GET /v1/projects/{id}), HGH_RESULT_CACHE 끔 — 이 표면 엔드포인트는 결과 캐시 ALLOWLIST 밖(back/app/core/result_cache.py:78-96)이라 켜도 무관.",
+  "stmts 표기: 'N (+공통 3)' — 공통 3 = set_config + app.user_account + load_refs(AICOMMON). 프로젝트 게이트 resolve_project 1문은 각 엔드포인트 N 에 '게이트 1'로 포함. 직접 load_refs 를 부르는 의도(intent) 라우터는 refs 를 N 에 넣고 '(+공통 2)'. f8 count 도 같은 표기.",
+  "f2 제외한 공유 조각: core.auth.resolve_project 의 LEFT JOIN project_member·rd.dim_project 상관 서브쿼리(auth.py:719-726), core.codes._REFS_SQL json 서브쿼리(codes.py:200-227), core.cycles Window.where(lifecycle-impact).",
+  "IDOR(요청 강조점): After DELETE /v1/projects/{project_id}/prompts/{prompt_id} 는 project_gate(owner) 후 lock_prompt 가 'project_id = :pid AND prompt_id = :id … FOR UPDATE'(crud/common.py:50-54)로 소속을 확인하고 DELETE 도 project_id 조건(crud/queries.py:66) → 타 프로젝트 prompt_id 는 404(어댑터는 prompt_not_found 를 멱등 ok 로 처리, 무변경). 레거시 deletePrompt IDOR(_actions.ts:247-248) 해소. 단 교차 프로젝트 id 회귀 테스트는 없음(test_delete_draft_only 는 비멤버 403·자기 프로젝트 404 만). 추적 경쟁사·차종 삭제, 태그 값(_assert_field·_assert_prompts), 후보, 키워드, 소셜 프롬프트도 모두 project_id 조건.",
+  "트랜잭션: 쓰기는 RwConn 요청당 1 트랜잭션(정상 반환 시 COMMIT, 예외 시 롤백, core/write.py:68-74) → 레거시 루프형 부분 커밋(선정·수동 추가·가져오기·삭제 캐스케이드·초대+감사)이 원자화됨. Scope 반영은 같은 트랜잭션의 outbox(app.scope_outbox)로 적재되고 실제 호출은 back/ingest 워커(범위 밖) — 워커 실패의 화면 고지는 admin 전용 scope-link 진단(outbox erroring)뿐이라 확인 불가 항목(UNKNOWN: 워커 재시도·실패 처리)으로 둠.",
+  "권한 판정은 api_ro 커넥션(RoConn), 쓰기는 api_rw(RwConn) 별도 커넥션 — 판정~쓰기 사이 멤버십 회수 창이 있음(희소, f7 미반영).",
+  "렌뉴얼 신규 결함(After 전용): ① 태그 열 강제 삭제 확인이 창(첫 200행+윈도잉)에 로드된 행만 보고 판정 — value_count 를 어댑터가 버림(prompt-list.tsx:379-384, projects.ts:663-665) ② scope-link 진단 실패가 조용히 숨겨짐(projects.ts:601-610) ③ cancelInvite 가 백엔드 expect=pending 을 쓰지 않아 수락 경합 시 활성 멤버 제거 ④ 운영자 아닌 Owner 에게 키워드 추가·삭제 버튼이 노출되고 403 이 트랜지션 밖 throw 로 무고지 정지 ⑤ 재개 후 미발행 행 상태 'done' 오표시 ⑥ 프롬프트 페이징 서버 액션마다 게이트 GET 재호출.",
+  "f4 매핑: PIK3(30개국 프리셋)은 back/app/core/kw.py:35-51 PRESETS 와 front location-presets 양쪽, PIK1(KR 폴백)은 front intent.ts:405-407 keywordPreset(백엔드는 미등록 국가 422), PIK2 는 google-keyword-view.tsx:126·customer-interest/google-keywords/page.tsx:52, PIK5 는 core/config.py:102·210 기본값 '자동차'(env HGH_CONTEXT_MAP_KEYWORD 로 대체 가능), PIK6 는 social/prompts/service.py:32, PIK7 은 context_map/service.py:53-60, PIK8 은 context_map/service.py:78-82·social/prompts/seeds.py:45-50, PIK9 는 seeds.py:22, PJK6(AI_ENGINE_IDS)는 front normalizeAiEngines 필터(projects.ts:543·1031), PJK12(데모 프로젝트 UUID)는 projects/[id]/layout.tsx:48·intent.ts:173.",
+  "After 경로에서 사라진 상수: PIK4(표준 키워드 고정 샘플 — 관리 목록으로 대체, 레거시 분기에만), PIK10·PIK11(DEFAULT_AI_ENGINES·스케줄 주기 — app.rule_param default_engines(DB)·outbox 워커로 이동). 새 상수 없음(new_constants 비움). 제외: FRESHNESS_TTL 24h/7d·COLLECT_BUDGET 40s·폴링 1.5s(TTL·타임아웃), SERP 8·연관어 30·근거 8(표시 top-N, f9 에 반영), SERP_DEPTH 10(수집 깊이), MAX_SEL 10/10/10/12(배치 예산, f7 에 반영), RESERVED_FIELD_LABELS(쓰기 검증 어휘), RECENT_PROMPTS_N 5.",
+  "LLM 모델 기본값이 별칭 'google/gemini-2.5-flash'(back/app/core/config.py:99·207, env HGH_OPENROUTER_MODEL) — 버전 고정 아님(전역 규칙 위반 소지, f4 는 Before 와 같은 기준으로 미포함).",
+  "공유 엔드포인트: GET /v1/projects/{project_id} 는 모든 프로젝트 화면 게이트(타 표면 PJ 와 공유). insight·related·serp-drafts·fetches 는 프로젝트 화면과 고객 관심 표준 화면이 공유(표준은 project_id 없음 → 표준 열람 역할+국가 스코프, 수집은 admin·전역 운영자만). POST /v1/intent/candidates 는 구글 키워드 SERP 와 커뮤니티 카탈로그 전송이 공유.",
+  "area_keys 보정: 구글 키워드 화면 영역에 게이트 GET(requireProjectPage·keywordRouteGate)과 수집 폴링 GET /v1/intent/fetches/{change_id} 추가, SERP 영역에 수집 키 추가, 고객 관심 커뮤니티 수집 4영역(어댑터 미연결)에 CLIENT 픽스처 키, '지금 재처리'에 ACTION 키 추가.",
+  "f6 판단(lifecycle-impact): 5xx·timeout 은 RETRY_LATER loadError 로 보이게 바뀌어 y. 401(재시도 후)·403·미매핑 404 는 throw 인데 useEffect 가 .then 만 있어 팝업이 멈추는 경로가 남음(prompt-list.tsx:799-809).",
+  "f10 판단 원칙: 화면에서 도달 가능한 흐름의 필드 의미·문구·권한이 같으면 y. 백엔드 직접 호출로만 드러나는 '더 느슨한' 게이트(member 수준 읽기, context-map 인증만)는 n, '더 엄격한' 게이트(역할 천장·운영 게이트 가시성)는 UI 미도달이라 AICOMMON 메모로만 기록.",
+  "parity 표기: projects.parity.test.ts·intent.parity.test.ts 는 레거시(PGlite) 대비 어댑터 출력 비교, projects.test.ts·_actions.api.test.ts·back tests/*.py 는 계약 테스트. 프롬프트 화면 parity 테스트는 screen 엔드포인트를 모의 응답으로 렌더해 비교(projects.parity.test.ts:464-470)."
+ ]
+}

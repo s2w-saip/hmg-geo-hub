@@ -1,0 +1,1340 @@
+{
+ "surface": "website",
+ "prefix": "AW",
+ "common": "AWCOMMON",
+ "endpoints": {
+  "AWCOMMON": {
+   "label": "공통(After): Bearer JWT(verified_subject) · get_principal · load_refs · resolve_read_context(require_surface website + DataScope.for_surface('website') + 사이트 선택) · 프론트 hghGet/toCommonQuery/throwForPage/degradeOnApiFailure",
+   "where": "back core/auth.py:221-251(verified_subject·get_principal) · :300-326(SURFACE_ROLES·require_surface) · :428-439·540-646(website 국가·브랜드 스코프) · core/db.py:130-179(set_local) · core/codes.py:200-279(load_refs) · core/filters.py:619-848(resolve_read_context, 사이트 선택 :715-745, 403 no_country_scope :637-638) · core/result_cache.py:78-97(ALLOWLIST, 끔) / front lib/hgh/client.ts:243-300(HGH_SOURCE_G3)·hghGet · lib/hgh/query.ts:302-347(toCommonQuery·urlCountries) · lib/hgh/errors.ts:226-244(throwForPage) · lib/scope/degrade-registry.ts:116-130 · lib/hgh/adapters/dashboard.ts:646-653(orNullOnTransient)",
+   "stmts": "모든 웹사이트 API 호출마다 3문장: set_config 1(롤·statement_timeout) + app.user_account 1 + 참조 차원 load_refs 1(json_build_object 한 문장, catalog_incl_deleted 켜짐이면 +1). JWT 검증은 DB 없음(JWKS). 웹사이트 사이트 선택·스코프 교집합은 refs 메모리 계산(추가 문장 0). 조건부: 기간 한쪽만 → close_period selectable_round_dates +1(회차 없으면 rd.today_kst +1). HGH_RESULT_CACHE=0 → 캐시 문장 0(켜면 lookup 1 + put 1, 허용 18개 라우트). 프론트: 요청 안 GET 중복 제거·동시 4개 상한, 실패 GET 은 연결 오류·503 auth_unavailable 만 1회 재시도",
+   "f2": [
+    "skip",
+    "조각 — 각 엔드포인트 SQL 에 포함(scope_where·mention_population·citation_population 등 공유 술어)"
+   ],
+   "f3": [
+    "skip",
+    ""
+   ],
+   "f4": [
+    "WSK2",
+    "WSK4",
+    "GLK1",
+    "RHQ",
+    "AWK51"
+   ],
+   "f6": [
+    "n",
+    "degradeOnApiFailure(5xx·시간 초과·중단 → markDegraded(label) + null)가 웹사이트 화면 전반의 실패 흡수 장치인데, 웹사이트 화면이 읽는 라벨은 개요 'websiteAggregates' 하나뿐(website/page.tsx:435) — websiteSubKpis·websiteSourceComposition·websiteGeoCompetition·websiteMentions*·websiteSubKpisPrev·websiteCitations* 는 어디서도 wasDegraded 로 읽지 않아 빈 값으로 조용히 바뀜(degrade-registry.ts:116-130). orNullOnTransient 는 라벨조차 없음(dashboard.ts:646-653). 4xx·그 밖 5xx 는 throwForPage → (dash) 오류 경계(errors.ts:226-244)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "skip",
+    "",
+    ""
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "역할·메뉴 천장은 route-policy WEBSITE_VIEWERS 와 같음(core/auth.py:300-316 ↔ route-policy.ts:26-35)이고 국가 스코프는 effectiveCountries 이식(core/auth.py:540-565)이지만, 웹사이트 국가 교집합이 비거나 권역이 국가로 안 풀리면 legacy 는 빈 화면(withWebsite empty, server.ts:4503)인데 After 는 403 no_country_scope(core/filters.py:637-638, core/auth.py:549 주석) → 프론트 throwForPage 가 /no-access 로 보냄. 브랜드 스코프가 비면 403 no_brand_scope(core/filters.py:449·748). legacy enforce 는 데이터 읽기마다 역할 검사 없음 ↔ After 는 API 마다 require_surface(더 엄격, 페이지 게이트와 같은 판정) 모든 측정 엔드포인트 공통 의미 차이 2가지: ① DC-01 엔진 미지정 = 기본 엔진만(scope_where a.dflt, core/measure.py:195-197 — legacy 웹사이트 미러·집계층은 전 엔진, summary.ts:31) ② 창 = 함대 스냅샷(최신 노출 round_date 하루의 회차, core/cycles.py:169-181) — legacy 미러는 프로젝트별 최신 답변 + 7일 floor(WSK6)라 그날 회차가 없는 사이트는 After 값에서 빠짐(로그만, cycles.py:382-383)."
+   ],
+   "parity": []
+  },
+  "GET /v1/kpi/summary": {
+   "label": "get_summary (analytics.kpi.summary) ← fetchKpiSummary / fetchDashboardSummary(card=true)",
+   "where": "back features/analytics/kpi/summary/router.py:20-32 → service.py:155-252(get_summary) · core/filters.py:407-422(card_window) · core/cycles.py:169-181·299-384(resolve_window 스냅샷 SQL) · core/measure.py:567-705(plan_counts main·prompts·url_prompts) · :1522-1557(applied_prompts_sql) · :1166-1197(url_rates) · :863-892(report_values_sql) / front lib/hgh/adapters/summary.ts:75-83(fetchKpiSummary) · dashboard.ts:182-184·674-686(개요 카드·기준일 칩) · mentions.ts:201-210·420-431·466-516(언급 화면 요약·Sub KPI·직전) · citations.ts:657-669·1037-1040(인용 화면 URL 인용률)",
+   "stmts": "호출당(프로필 off·캐시 off): 스냅샷 = 창 1(rd.cycle CTE 3) + 집계 main 1(rd.answer FILTER 열) + 측정 프롬프트 count DISTINCT 1 + url_prompts count DISTINCT 1 + 적용 프롬프트 1 + 발행값 report_values_sql 1(엔진 필터 없고 스냅샷·from=to 일 때) = 6, 발행값 채택(origin report)이면 _publication_marks +2(report_values 재실행 + 발행 라벨) → 8. 기간(from≠to) = 5(발행값 문장 생략). + 공통 3. card=true 는 프로필 off 에서 효과 없음(같은 문장). 조건부(프로필): freeze_at_publish → frz 창(SNAPSHOT_SQL_FRZ)·frozen_keys 1·pick_holes 1·frozen_route_reason 빈 집계 탐침 1·url_hits_uncovered 1, web_url_rate → published_sites_sql 1 + runtime_sites_sql 1, web_accuracy_flat → accuracy_counts_sql 1(+비카드 창 재해석 1). 화면별 HTTP: 개요 1회(카드·기준일 칩·필수 호출이 keptCall/중복 제거로 공유), 언급 2회(본문·Sub KPI 공유 1 + 직전 Δ cycle_offset=1 또는 직전 창 1), 인용 1회(출처 카테고리 필터 시 0). 결과 캐시 허용 목록에 있음(기본 끔)",
+   "f2": [
+    2,
+    2,
+    2,
+    0,
+    "report_values_sql core/measure.py:863-892 (sel·pool CTE 2, JOIN app.report_publication + JOIN pool, GROUP BY 2) — 스냅샷 기본 경로. 창 스냅샷 SQL cycles.py:169-181 = 1/3/0/0"
+   ],
+   "f3": [
+    "n",
+    "기본 경로는 rd.answer 답변 단위 판정 열 합(FILTER)·rd.dim_prompt 카운트·발행값 표라 y 이지만, 조건부 web_accuracy_flat(⑥ 현행 정의, screen 모드)이 rd.citation 원소를 rd.web_target_url 과 요청 때 대조해 답변을 판정함(core/measure.py:1316-1333, service.py:211-214)"
+   ],
+   "f4": [
+    "WSK5",
+    "AWK50"
+   ],
+   "f6": [
+    "n",
+    "개요 카드는 degradeOnApiFailure('websiteAggregates') → '지연' 문구(website/_data/live.ts:94, website/page.tsx:435)로 보이지만, 언급 화면은 요약 실패를 websiteMentions.summary·websiteSubKpis.summary·websiteSubKpisPrev 라벨로 null 처리하고 화면이 그 라벨을 읽지 않아 측정 프롬프트 수는 틀린 0(mentions.ts:350 measured_prompts ?? 0), 미언급 수·Δ 는 안내 없이 빈 값(mentions.ts:426·472·492-516) — legacy fetchWebsiteSubKpisPrev 는 오류 경계(WSSUBP y). 개요 기준일 칩은 orNullOnTransient 로 조용히 숨김(website/page.tsx:277). 인용 화면 URL 인용률은 throwForPage → 오류 경계(citation/page.tsx:230-235)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "개요는 ①~⑤·URL 카드만 쓰는데 측정 프롬프트 count DISTINCT·적용 프롬프트 문장·gap 열을 함께 계산(service.py:163-167, 소비 dashboard.ts:618-636). 언급 화면은 measured_prompts·prompts_without_brand 만 쓰는데 같은 요약 전체(urls·url_prompts·report_values 포함)를 계산하고 직전 Δ 용으로 한 번 더 호출(mentions.ts:466-516). 인용 화면은 url_prompts 만 쓰는데 ①~⑤ 집계까지 계산(citations.ts:1037-1040)",
+    "6(+2)/호출"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "어댑터 알려진 차이: DC-01 엔진 미지정 = 기본 엔진만(legacy 웹사이트 카드 S4.dashboard 집계층 = 전 엔진, summary_all_engines 켜야 같음 — summary.ts:31, dashboard.ts:81-82), U4-N7 숨김 회차 = null 카드(측정 대기, summary.ts:42-43), U4-N6 ④ 비율 분자 = 실제 순위 합(summary.ts:39). URL 카드 2종은 결정 6 으로 url_prompts(프롬프트 단위)라 legacy 와 같음. 공통 스코프 차이는 AWCOMMON"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/dashboard.parity.test.ts › website cards: getLiveWebsiteDashboard legacy vs HGH_SOURCE_G3=api › ①~⑤, accuracy, #16 and the URL-rate cards equal (DC-02 decision 6: url_prompts, legacy prompt unit and wording)",
+    "front/lib/hgh/adapters/mentions.test.ts › Sub KPI (B-3) › parity: buildMentionSubKpis gives the same cards on the adapter output and the legacy sub",
+    "back/app/features/analytics/kpi/summary/tests/test_url_prompts.py › test_url_prompts_live_is_prompt_unit_report_is_publication",
+    "back/tests/core/test_web_accuracy.py › test_web_accuracy_current_paths"
+   ]
+  },
+  "GET /v1/filters/options": {
+   "label": "get_filters_options_0 → service.get_options(website = build_matrix) · 어댑터 loadPanelOptions / loadWebsitePromptOptions → fetchFilterOptions",
+   "where": "back/app/features/analytics/filters/options/router.py:17-24 · service.py:316-384(get_options)·128-191(build_matrix) · queries.py:38-44(matrix_sql) · core/cycles.py:299(resolve_window) · front/lib/hgh/adapters/filters.ts:208-215·358-385, catalog.ts:320-327 · 호출 website/page.tsx:256, mention/page.tsx:142, citation/page.tsx:155, prompts/page.tsx:89, conversion/page.tsx:61, acr/page.tsx:28, D6 필수 dashboard.ts:362-366",
+   "stmts": "기본(프로필 off): 창 해석 1(resolve_window — 기간 없음 = 스냅샷 SQL cycles.py:169, 기간 있음 = 범위 SQL :184) + matrix_sql 1(rd.answer GROUP BY project·geo·lang·cat_mask·engine) = 2 +공통 3. 빈 창이면 matrix 생략(1). 화면별: 개요·언급·인용 = 화면 기간으로 1회(개요는 D6 필수 options 와 같은 질의라 요청 내 dedupe 1회), 프롬프트·전환·ACR = 기간 없이 1회(스냅샷). 조건부: include=source_categories +1(인용 원소 DISTINCT, 웹사이트 미전송), 현행 프로필 filter_options 켬 = matrix 대신 LEGACY_WEBSITE_SITES_SQL 1(app.website_site⋈app.brand) + LEGACY_WEBSITE_LANGS_SQL 1(queries.py:67-76) + 라우터 key_deps 지문 LEGACY_WEBSITE_VERSION_SQL 1(router.py:19 → service.py:197-202, FastAPI 의존성이라 결과 캐시 꺼짐이어도 실행). 결과 캐시 허용 목록 포함(result_cache.py:93, 기본 꺼짐)",
+   "f2": [
+    1,
+    3,
+    0,
+    0,
+    "core/cycles.py:169 _snapshot_sql(창: cand JOIN pick, CTE cand·d·pick) — 창 문장 제외 시 filters/options/queries.py:38 matrix_sql [0,0,1,0]"
+   ],
+   "f3": [
+    "y",
+    "기본 경로는 rd.answer 답변 행을 GROUP BY 로 접어 측정 조합만 냄(답변 grain, queries.py:38-44), 현행 프로필 경로는 app.website_site·website_prompt 카탈로그. 인용 원소 스캔(source_categories_sql :87-97)은 include=source_categories 때만인데 웹사이트 화면은 보내지 않음(filters.ts:208-215)"
+   ],
+   "f4": [
+    "WSK2",
+    "B10"
+   ],
+   "f6": [
+    "y",
+    "백엔드 try/except 없음. 웹사이트 호출부 6곳 모두 오류를 throwForPage 로 넘김(website/page.tsx:254-262 · mention/page.tsx:139-155 · citation/page.tsx:152-166 · prompts/page.tsx:87-93 · conversion/page.tsx:57-67 · acr/page.tsx:27-30) → 401 로그인·403 no-access·그 밖 (dash) 오류 경계. D6 게이트(allSettled)는 실패를 삼키지만 화면 호출이 같은 오류를 받음"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "화면당 1회(개요는 D6 필수 options 와 같은 질의 → 요청 내 dedupe). website 는 catalog 를 계산하지 않음(종전 미사용 listCatalogTaxonomy 문장 제거). engines·regions.area 는 웹사이트 패널이 안 쓰지만 같은 matrix 문장의 부산물(추가 문장 없음). 조건부(filter_options 켬)에서는 결과 캐시 꺼짐이어도 지문 문장 1개를 실행하고 버림",
+    "2"
+   ],
+   "f9": [
+    "y",
+    "페이징 없지만 측정 조합 전량(수백 행)이 곧 패널 옵션·매트릭스. 전환·ACR 은 국가 목록만 쓰고 매트릭스·언어는 버림(소량)"
+   ],
+   "f10": [
+    "n",
+    "옵션 의미가 다름: 기본(filter_options off)은 옵션 창(최신 회차 스냅샷 또는 화면 기간) 안 측정 답변의 사이트 국가·언어(DC-06, filters.ts:47-49, service.py:128-191) — 종전은 등록 사이트·프롬프트 카탈로그(website_sites·website_prompts, 측정 무관)라 미측정·창 밖 사이트 국가·언어가 이제 빠짐. 프롬프트 화면 브랜드 옵션도 측정 매트릭스에서 파생(catalog.ts:320-327, 종전 listWebsiteBrands). 전환·ACR 국가는 종전 표준 측정 지역 → 웹사이트 사이트 국가(U8-N15), app.hidden_market(website) 시장 제외(더 좁음). 현행 정의는 프로필 filter_options 켬일 때만(service.py:324). 스코프는 bgrps·DataScope.site_allowed 로 종전 판정과 같음, 공통 차이는 AWCOMMON"
+   ],
+   "parity": [
+    "back/app/features/analytics/filters/options/tests/test_legacy_switch.py › test_website_registered_sites",
+    "back/app/features/analytics/filters/options/tests/test_legacy_switch.py › test_website_virtual_code_hidden_market_and_scope",
+    "back/app/features/analytics/filters/options/tests/test_legacy_switch.py › test_website_admin_brand_narrows_sites"
+   ]
+  },
+  "GET /v1/filters/dates": {
+   "label": "get_filters_dates_0 → service.get_dates → core.cycles.selectable_round_dates · 어댑터 loadEssentialFilterDates(keptDates) / loadFilterDates / loadWebsitePromptDates → fetchFilterDates",
+   "where": "back/app/features/analytics/filters/dates/router.py:17-23 · service.py:99-106 · core/cycles.py:816-836(_DATES_SQL·selectable_round_dates) · front/lib/hgh/adapters/filters.ts:405-413·450-465, dashboard.ts:331-335·417-420, catalog.ts:329-331, mentions.ts:207(D6 필수) · 호출 website/page.tsx:258, mention/page.tsx:150, citation/page.tsx:163, prompts/page.tsx:89",
+   "stmts": "1문장(_DATES_SQL: rd.cycle DISTINCT round_date CTE + 배열·count·min 스칼라) +공통 3. 화면당 1회: 개요 family=all(D6 필수 keptDates, 셸 달력이 같은 보관 프로미스), 언급 family=mentions(D6 필수와 dedupe), 인용 family=citations, 프롬프트 family=all. 값 축·기간은 받지 않음(DATES_SUPPORT 빈 집합). 결과 캐시 허용 목록 포함(result_cache.py:94)",
+   "f2": [
+    0,
+    1,
+    0,
+    0,
+    "core/cycles.py:816 _DATES_SQL"
+   ],
+   "f3": [
+    "y",
+    "rd.cycle 회차 행만 읽음(선택 가능 날짜·최신·최초 회차), 사실 표·원소 없음"
+   ],
+   "f4": [],
+   "f6": [
+    "n",
+    "개요: loadEssentialFilterDates 가 5xx·시간 초과를 null 로 바꿈(dashboard.ts:417-420 → orNullOnTransient :641) → 달력 활성일 제한·프리셋 끝점(latestAnchorDay)이 안내 없이 풀린 채 렌더(website/page.tsx:272-273). 언급·인용·프롬프트는 throwForPage(mention/page.tsx:153, citation/page.tsx:166, prompts/page.tsx:92)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "화면당 1회(개요 keptDates 보관 프로미스로 D6·셸 공유, 언급은 D6 필수와 dedupe). presets·first_measured_date 는 웹사이트 화면이 안 쓰지만 같은 행의 파이썬 계산(추가 문장 없음)",
+    "1"
+   ],
+   "f9": [
+    "n",
+    "백엔드가 400개로 자르고 dates_truncated 를 내지만(dates/service.py:53·95-96) 웹사이트 필터바는 selectableDates·latestAnchorDay 만 받아(website/page.tsx:272-273, mention/page.tsx:168) 절단 표식이 화면에 없음 — 오래된 회차가 조용히 선택 불가(filters.ts:445-457 truncated 미전달)"
+   ],
+   "f10": [
+    "n",
+    "운영 기준 종전은 앵커 축·기간 비교 스위치 off 라 달력 제한 없음(selectableDates undefined)·프리셋 끝점 null(website.json WSFLT). After 는 늘 회차 날짜로 달력을 제한하고 latest_round_date 로 프리셋 끝점을 둠(DC-16), 달력이 브랜드·국가로 좁혀지지 않음(DC-22, filters.ts:36-49). 공통 차이는 AWCOMMON"
+   ],
+   "parity": [
+    "back/app/features/analytics/filters/dates/tests/test_dates.py › test_preset_range_matches_ts_port"
+   ]
+  },
+  "GET /v1/kpi/compare": {
+   "label": "get_kpi_compare_0 → service.get_compare(logic 창·억제) · 어댑터 fetchPeriodCompareApi → fetchPeriodCompareView",
+   "where": "back/app/features/analytics/kpi/compare/router.py:19-31 · service.py:172-282 · logic.py:139-246 · core/cycles.py:184(범위 창)·728(_LEDGER_SQL)·780(_FIRST_SQL) · core/measure.py:567(plan_counts) · front/lib/hgh/adapters/compare.ts:161-190 · 호출 website/page.tsx:464-471(afterFirstRender + orNullOnTransient)",
+   "stmts": "조건부 호출(기간 양 끝 지정 시만, compare.ts:165 hasClosedPeriod — 기본 화면 = 호출 없음 0문장): 스캔 창 범위 SQL 1 + 계열 2개(mention·citation) × (first_published 1 + ledger_rows 1) = 4 + fetch_counts main 1(rd.answer group_by cycle, parts mentions — OVERVIEW 4지표) = 6 +공통 3. kind = resolveRequestComparePeriodShape(달력 월 → 주 → 창, lib/period/compare-shape.ts:62). 조건부: compare_epoch_gate 켬 ∧ cur.hi < 2026-09-08 이면 원장·측정 생략(0), compare_suppress 켬 ∧ 관점 다중 일부면 전 지표 unsupported·문장 생략(service.py:152-169), freeze_at_publish ∧ card 면 원장·첫 발행 술어에 frz.generation EXISTS(술어 조각), citations_per_answer 요청 시 cit_answers_sql +0~1(웹사이트 미요청). 결과 캐시 허용 목록 포함(result_cache.py:91)",
+   "f2": [
+    0,
+    0,
+    1,
+    0,
+    "core/measure.py:567 plan_counts main(rd.answer group_by cycle)"
+   ],
+   "f3": [
+    "y",
+    "rd.cycle 원장·회차 + rd.answer 당사 열 FILTER 합(회차 GROUP BY). 웹사이트는 KPI_SUPPORT 에 source 축이 없고 자사 모드 local 이라 원소 스캔·cross 경로 없음(core/filters.py:183-187, measure.py:152-157)"
+   ],
+   "f4": [
+    "P1",
+    "P2",
+    "P3",
+    "P4",
+    "AWK51"
+   ],
+   "f6": [
+    "n",
+    "5xx·시간 초과 → orNullOnTransient null(dashboard.ts:641) → periodCompare null = 종전 Δ 를 그대로 그려 비교 실패 안내 없음(website/page.tsx:464-471). 4xx 는 throwForPage. 백엔드 catch 없음"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "OVERVIEW_COMPARE_METRICS 4개(①~④)는 전부 언급 계열인데 인용 계열 first_published·ledger_rows 2문장을 늘 실행하고 버림(service.py:205-217 계열 루프 고정). 백엔드 delta 도 어댑터가 legacyCompareDelta 로 다시 계산(compare.ts:116)",
+    "6"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "종전 웹사이트 경로는 운영 S1.periodCompare off 라 null·0문장(종전 Δ 유지, website.json DPCM). After 는 프로필 off 기본에서 적용일 게이트가 없어 기간 양 끝이면 늘 비교 칩을 냄(DC-16, compare.ts:23-31, logic.py:9-17), 엔진 미선택 = 기본 엔진만(DC-01, compare.ts:37-44). 공통 차이는 AWCOMMON"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/compare.test.ts › legacy/api parity: computeCompare vs adapter(backend model)",
+    "front/lib/hgh/adapters/compare.test.ts › legacy/api parity: computeCompare vs adapter(backend model) › WU-9: exact .x5 boundary keeps the legacy chip (250/400 -> 263/400 = 3.2, backend round1 would be 3.3)",
+    "back/app/features/analytics/kpi/compare/tests/test_logic.py › test_delta_golden_g1_and_rank"
+   ]
+  },
+  "GET /v1/kpi/engines": {
+   "label": "get_kpi_engines_0 → service.get_engines → core.measure.fetch_counts(group_by engine) · 어댑터 개요 dashboard.loadSubKpis → fetchEngineRows(part=all card=true) / 언급 mentions.loadSubKpis·loadSubKpisPrev → fetchEngineRows(part=all[, cycle_offset=1])",
+   "where": "back/app/features/analytics/kpi/engines/router.py:20-32 · service.py:111-135 · queries.py:40-57 · core/measure.py:567-706(plan_counts main)·833(fetch_counts) · core/filters.py:407-422(card_window) · front/lib/hgh/adapters/dashboard.ts:252-258·750-752, website/_data/live.ts:322-337, website/page.tsx:445 · mentions.ts:160-170·201-211·464-478·491-518, mention/page.tsx:222",
+   "stmts": "호출당 창 1(card_window → resolve_window 스냅샷 SQL, cycle_offset=1 이면 :n=2 / 기간이면 범위 SQL) + fetch_counts main 1(rd.answer group_by engine, parts mentions·rank_detail·citations 한 스캔) = 2 +공통 3. 빈 창·전 계열 숨김이면 main 생략(1). 웹사이트 호출: 개요 배지 1회(part=all·card=true, D6 뒤) = 2; 언급 2회(현재 part=all — D6 필수 mentions.ts:208 과 loadSubKpis :467 가 dedupe / 직전: 기간 없음 cycle_offset=1(:510), 기간 있음 from~창 첫 회차(:504), 창 회차 2개 미만이면 없음) = 4. 조건부: freeze_at_publish 켬 ∧ card(개요) = 동결 판정 frozen_keys +1(기간이면 pick_holes +1)·frozen_route_reason 빈 집계 탐침 +0~1·폴백 시 창 재해석 +1, 읽기 표 frz.card_answer_w; web_registered_only ∧ card = 모수 술어에 rd.web_report_prompt 세미조인(술어 조각). 결과 캐시 허용 목록 포함(result_cache.py:92)",
+   "f2": [
+    1,
+    3,
+    0,
+    0,
+    "core/cycles.py:169 _snapshot_sql(창) — 창 문장 제외 시 core/measure.py:567 plan_counts main [0,0,1,0]"
+   ],
+   "f3": [
+    "y",
+    "rd.answer 당사 열(own_mask·ment_*·sent_*·own_rk_*·cit_n·cit_loc_tgt) FILTER 합을 엔진별 GROUP BY(답변 grain). 웹사이트는 자사 모드 local·source 축 없음이라 rd.citation 원소 경로(cross·scan) 없음(measure.py:152-157, core/filters.py:183-187). 동결 경로는 frz.card_answer_w 저장 행"
+   ],
+   "f4": [
+    "AWK51",
+    "T2",
+    "T3",
+    "T4"
+   ],
+   "f6": [
+    "n",
+    "개요: degradeOnApiFailure('websiteSubKpis')(website/_data/live.ts:328) → 빈 rows → 배지 생략, 화면은 wasDegraded 를 읽지 않음 + page.tsx:445 .catch(() => items) 가 4xx 까지 삼킴. 언급: 5xx → rows [](mentions.ts:469-476) → buildMentionSubKpis null → Sub KPI 3장·감정 키워드·당사 언급률이 안내 없이 빠짐, 직전은 degrade('websiteSubKpisPrev') → null 로 Δ·비교 기준일이 사라짐(mentions.ts:491-518). 4xx 만 throwForPage(mention/page.tsx:224)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "part=all 고정이라 화면이 안 쓰는 계열까지 집계: 개요 배지(applyEngineConsistency, dashboard/_data/live.ts:875-907)는 multi·top1·top3·negative 미사용, 언급 Sub KPI(buildMentionSubKpis, standard/answer-analysis/_data/sub-kpis.ts:44-64)는 cit_total·cit_owned·rank_sum 미사용. 백엔드 engine_consistency·total 은 프론트가 버리고 다시 계산. 언급 직전 호출은 Δ 5종만 쓰는데 전량 재집계",
+    "개요 2 · 언급 4"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "개요 배지: 종전 S4.subkpi off = 미러 스냅샷(프로젝트별 최신 답변 + 7일 floor)·전 엔진 → After rd.answer 함대 스냅샷·엔진 미선택 = 기본 엔진만(DC-01, dashboard.ts:81-82). 언급: 직전 = 직전 회차(DC-05, 종전 직전 측정일·누적이면 첫 측정일까지, mentions.ts:48-53), 엔진 DC-01(mentions.ts:52). 숨긴 언급 계열이면 rows [](카드 사라짐, mentions.ts:389-394). 공통 차이는 AWCOMMON"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/dashboard.parity.test.ts › engine consistency badge: legacy rows vs converted API rows › same badges on the cards",
+    "front/lib/hgh/adapters/dashboard.parity.test.ts › failure paths on the api sources › website: engine badge, composition and GEO 5xx degrade to the legacy empty shapes with the legacy labels (D1)",
+    "front/lib/hgh/adapters/mentions.test.ts › Sub KPI (B-3) › parity: buildMentionSubKpis gives the same cards on the adapter output and the legacy sub"
+   ]
+  },
+  "GET /v1/geo": {
+   "label": "get_geo_0 → service.get_geo(geo_gate · fetch_counts group_by geo · brand_rows) · 어댑터 loadLiveGeo → fetchGeo(card=true) → toLiveGeo",
+   "where": "back/app/features/analytics/geo/markets/router.py:19-25 · service.py:164-255 · queries.py:33-45 · core/measure.py:567(plan_counts)·1409-1433(competitor_rows_sql)·1453(brand_rows) · core/entities.py:39-50 · front/lib/hgh/adapters/dashboard.ts:260-264·543-554·745-748, website/_data/live.ts:198-218, website/page.tsx:345",
+   "stmts": "단일 관점 브랜드: 창 1 + fetch_counts main 1(rd.answer group_by geo, parts mentions) + competitor_rows_sql 1(rd.answer_brand group_by geo·brand) + EXCLUDED_BRAND_KEYS_SQL 1(경쟁 행 있을 때) + BRAND_NAMES_SQL 1(키 있을 때) + REGION_LABELS_SQL 1 = 6 +공통 3. 관점 브랜드 여럿(admin 무필터·전사 HQ) 또는 빈 창 = 창 1문장 뒤 markets [](service.py:180-185). 화면: showsGeoMap 계정만, D6 뒤 1회(page.tsx:345, website/_data/live.ts:206-208). 조건부: freeze_at_publish ∧ card = 동결 판정 +1~3, frozen_brand_names +1, renamed_brand_keys +1(창 회차 2개 이상) 및 개명 키 있으면 competitor_rows_sql(group_by geo·cycle) +1. 결과 캐시 허용 목록 포함(result_cache.py:95, geo_gate)",
+   "f2": [
+    1,
+    3,
+    0,
+    0,
+    "core/cycles.py:169 _snapshot_sql(창) — 창 문장 제외 시 core/entities.py:39 EXCLUDED_BRAND_KEYS_SQL [1,0,0,0] · measure.py:1409 competitor_rows_sql [0,0,1,0] (모두 1점)"
+   ],
+   "f3": [
+    "y",
+    "rd.answer 당사 열 합(국가 GROUP BY)·rd.answer_brand 브랜드 행 합(답변×브랜드 grain)·차원(dim_brand_name·dim_entity·app.rhq_region) 조회. 웹사이트는 parts mentions 만이라 인용 원소 경로 없음, 동결 경로는 frz 저장 행"
+   ],
+   "f4": [
+    "AWK51",
+    "RHQ"
+   ],
+   "f6": [
+    "n",
+    "5xx·시간 초과 → degradeOnApiFailure('websiteGeoCompetition') null → buildGeo 빈 행(website/_data/live.ts:206-213) → 빈 지도·스냅샷, 화면이 wasDegraded 를 읽지 않아 안내 없음. 4xx 는 WebsiteGeoSection Promise.all 이 오류 경계로 올림"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "웹사이트는 SOV 만 표시하는데(service.py:122-123·133-134, suppressed website_mentions_only) counts·competitor_rows 가 노출·순위·감성 합까지 집계. 관점 브랜드가 여럿이면(admin 무필터) 결과가 markets [] 인데도 프론트가 호출(page.tsx:345) — 창 1 + 공통 3 낭비",
+    "6"
+   ],
+   "f9": [
+    "y",
+    "관점 브랜드 RHQ 권역·소속 ISO 국가 트리 전량 = 지도·스냅샷 표시 범위, 가상·유사 코드는 백엔드가 뺌(service.py:229-233)"
+   ],
+   "f10": [
+    "n",
+    "엔진 미선택 = 기본 엔진만(DC-01, 종전 집계층 trend_brands 는 전 엔진, dashboard.ts:81-82), 다중 브랜드 스코프 계정 라벨 = 백엔드 own_label 'HMG'(종전은 브랜드명 결합, U5-N1 dashboard.ts:92-95), 권역 트리 원천 = app.rhq_region(DB, 종전 rhq-map.json). 권한: 백엔드 geo_gate(shows_geo_map, service.py:105-108, core/auth.py:341-343) = 종전 showsGeoMap 과 같은 역할(admin·scope_all·hq·region), 프론트도 showGeo 일 때만 호출. 공통 차이는 AWCOMMON"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/dashboard.parity.test.ts › GEO: buildGeo legacy vs toLiveGeo › single-brand account (Kia): identical tree, values and label",
+    "front/lib/hgh/adapters/dashboard.parity.test.ts › GEO: buildGeo legacy vs toLiveGeo › account scoped to two brands: no region tree either way; the label is own_label (U5-N1)",
+    "front/lib/hgh/adapters/dashboard.parity.test.ts › failure paths on the api sources › website: GEO 5xx on a single-brand account (Kia) keeps the legacy pending regions (D1, U5 N1)"
+   ]
+  },
+  "GET /v1/mentions/brands": {
+   "label": "get_mentions_brands_0 → mention_brands (어댑터: 언급 화면 fetchMentionBrands B1[top_n=100·sort=mentions·split_own·full·include=multi,prompts,types] → loadMentionsLive·loadMentionsAsOf / 개요 fetchCardBrands[top_n=20·sort=mentions·include=hmg·card=true] → loadWebsiteDashboard KPI #16)",
+   "where": "back mentions/brands/router.py:18-29 get_mentions_brands_0 → brands/service.py:219-301 mention_brands → core/measure.py:1409-1433 competitor_rows_sql·:1453-1484 brand_rows, brands/queries.py:27-38 own_sentiment_sql·:41-60 brand_extras_sql·:63-76 own_extras_sql·:82-102 own_counts_sql·:105-109 brand_names_sql, core/entities.py:39-50 명부 제외, 창 brands/common.py:30-34 → core/filters.py:407-422 card_window → core/cycles.py:299-385; front lib/hgh/adapters/mentions.ts:126-148 fetchMentionBrands·:419-430 loadMentionsLive·:433-437 loadMentionsAsOf·:341-363 toMentionsLive, dashboard.ts:187-198 fetchCardBrands·:669-676 loadWebsiteDashboard·summary.ts:343-363 applyCompetitorSovFromBrands",
+   "stmts": "언급 화면 B1(스냅샷·프로필 off): 창 1(core/cycles.py:169-181 _snapshot_sql) + 당사 합계 1(core/measure.py:567-646 fetch_counts main; 관점 비트 ≥2(admin 무필터)면 split_own own_counts_sql brands/queries.py:82-102 한 스캔) + 경쟁 행 1(competitor_rows_sql) + 당사 감성 1(own_sentiment_sql) + 명부 제외 1(EXCLUDED_BRAND_KEYS_SQL, 경쟁 행 있을 때) + 표시명 1(brand_names_sql) + include prompts·multi own_extras_sql 1 + brand_extras_sql 1 = 8 (+공통 3). 필터바 기준일 칩(loadMentionsAsOf)·D6 essentials 는 같은 쿼리라 요청 내 GET dedupe 로 1회. 개요 카드(KPI #16): 창 1 + fetch_counts 1 + competitor_rows 1 + own_sentiment 1 + 명부 제외 1 + 표시명 1 = 6 (+공통 3), essentials(keptCardBrands)·loadWebsiteDashboard 도 dedupe 1회. 조건부(card=true ∧ freeze_at_publish 켜짐): frozen_keys 1(+기간이면 pick_holes 1·frozen_empty_sql 1) + renamed_brand_keys 1(창 회차 ≥2; 개명 키 있으면 회차별 competitor_rows +1) + frozen_brand_names 1, 동결 판정 실패면 비카드 창 재해석 +1, 사실 표는 frz.card_*_w. card_slot_rep(기간)은 _CARD_RANGE_SQL 로 대체(수 동일), card_brand_cap 은 앱 절단(SQL 0), web_registered_only 는 모수 술어 세미조인만. 결과 캐시 ALLOWLIST 등재(core/result_cache.py:80) — HGH_RESULT_CACHE=0 기본이라 미캐시로 셈",
+   "f2": [
+    1,
+    3,
+    0,
+    0,
+    "core/cycles.py:169-181 _snapshot_sql(창 해석: cand JOIN pick, CTE cand·d·pick) — 다른 묶음과 같이 창 문장을 엔드포인트 문장으로 셈. 창 제외 시 언급 화면 brand_extras_sql mentions/brands/queries.py:41-60 [0,0,2,0], 개요 카드 competitor_rows_sql core/measure.py:1409-1433 [0,0,1,0]"
+   ],
+   "f3": [
+    "y",
+    "모든 웹사이트 변형(언급 화면 include=types·multi·prompts, 개요 카드 card=true, 조건부 동결 뷰 frz.card_*_w)이 rd.answer 당사 열·rd.answer_brand(답변×브랜드) 저장 열(mention_count·rk·s_*·t_*)을 합산하고 차원 점 조회(rd.dim_brand_name·rd.dim_entity·frz.card_brand_name)만 함. 원소(rd.citation·언급 원본) 조인·판정 재계산 없음, 순위(rank_brand_items core/measure.py:1445-1450)는 표시 정렬. 보정 기준(S02 = y)과 같고 include=types·card 변형도 다르지 않음"
+   ],
+   "f4": [
+    "T1",
+    "AWK10",
+    "AWK50"
+   ],
+   "f6": [
+    "n",
+    "개요: fetchCardBrands 를 orNullOnTransient 로 감싸 5xx·시간 초과면 null → KPI #16 경쟁사 SOV 비만 조용히 빠지고 안내 없음(dashboard.ts:641-648·669-676; 바깥 degradeOnApiFailure('websiteAggregates') 까지 안 감). 언급 화면: degradeOnApiFailure('websiteMentions') → null → MentionsView '데이터 없음' EmptyState(mentions.ts:422-423, mentions-view.tsx:149-155), 기준일 칩도 빈 값(mentions.ts:433-437) — wasDegraded('websiteMentions') 를 읽는 곳이 없어 Before 와 같이 지연 안내 없는 빈 상태. 4xx 만 throwForPage(page.tsx:220-225)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "개요 카드 변형: own_sentiment_sql 1문장과 행별 감성·노출·평균 순위를 계산하지만 KPI #16 은 경쟁사 mentions 만 씀(summary.ts:343-363). 언급 화면 변형: include=multi(own_extras_sql count(DISTINCT) FILTER mp, brand_extras_sql ma·mm·multi_prompts)를 계산하나 웹사이트 순위표는 multiToggle 꺼짐이라 복수 언급 열이 안 보임(brand-rank-table.tsx:81·291, mentions-view.tsx:505-510) — 표준 화면과 같은 BRANDS_TABLE 을 공유(mentions.ts:108-114)",
+    "8 (언급 화면) / 6 (개요 카드)"
+   ],
+   "f9": [
+    "n",
+    "언급 화면 full=true: 경쟁 행 상한 FULL_CAP 10000(brands/schemas.py:17) 초과 시 data.truncated·meta.truncated 를 내지만 toMentionsLive 가 버리고 화면 안내 없음(mentions.ts:341-363; 어댑터 머리 U6-N1 은 아직 2000 으로 적힘 :58-60). stg 답변 등장 경쟁 브랜드 1,933(schemas.py:18 주석)이라 현재는 잠재 절단. 개요 카드는 top_n=20 후보 풀(경계 있음)"
+   ],
+   "f10": [
+    "n",
+    "DC-01: 엔진 미선택 = 기본 엔진만(core/measure.py:195-197 scope_where a.dflt; 카드 경로도 summary_all_engines off 라 같음), 현행 웹사이트 미러·S4 카드 읽기는 전 엔진(mentions.ts:52, dashboard.ts:81-82) — 전 분석 엔드포인트 공통 원인. 엔드포인트 고유: U6-N3 brand_key 0(파서 미해석) 행 제외(service.py:240), 전량 상한·truncated 미전달(f9), 개요 #16 은 일시 실패 시 #16 만 빠짐(U5-N6, 현행은 섹션 전체 실패). 접근 범위는 resolve_read_context 공통(공통 차이는 AWCOMMON), 엔드포인트 고유 권한 차이 없음"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/dashboard.parity.test.ts › website cards: getLiveWebsiteDashboard legacy vs HGH_SOURCE_G3=api › ①~⑤, accuracy, #16 and the URL-rate cards equal (DC-02 decision 6: url_prompts, legacy prompt unit and wording)",
+    "front/lib/hgh/adapters/mentions.test.ts › toMentionsLive: B-2 assembly › summary, sentiment of the own rows, type totals, types by brand, position flag",
+    "back/app/features/analytics/mentions/brands/tests/test_mentions_brands.py › test_website_and_project"
+   ]
+  },
+  "GET /v1/mentions/types": {
+   "label": "get_mentions_types_0 → mention_types (어댑터 fetchMentionTypes → toTypeTotals; loadMentionsLive 2단계 afterEssentials)",
+   "where": "back mentions/types/router.py:18-26 → types/service.py:62-76 mention_types → types/queries.py:22-37 types_sql·:40-49 stance_sql, core/measure.py:833-845 fetch_counts; front lib/hgh/adapters/mentions.ts:151-155 fetchMentionTypes·:425 loadMentionsLive·:268-274 toTypeTotals",
+   "stmts": "창 1(_snapshot_sql) + answers_total 1(fetch_counts parts=mentions main) + types_sql 1 + stance_sql 1 = 4 (+공통 3). split_own 미전송이라 비트별 반복 없음(보내면 관점 비트당 +2). card 미전송 → 동결 경로 없음. 빈 창·언급 숨김이면 창 1만. 결과 캐시 ALLOWLIST 등재(core/result_cache.py:81) — 미캐시로 셈",
+   "f2": [
+    1,
+    3,
+    0,
+    0,
+    "core/cycles.py:169-181 _snapshot_sql(창) — 창 제외 시 types_sql mentions/types/queries.py:22-37 [0,1,2,0], stance_sql :40-49 [1,0,1,0]"
+   ],
+   "f3": [
+    "y",
+    "rd.answer_brand 저장 유형·감성 열(t_*·s_*) 합산과 rd.answer_stance(first_turn, 답변×브랜드 판정 코드) ⋈ rd.answer 등치만 — 원소 행 조인·판정 재계산 없음"
+   ],
+   "f4": [],
+   "f6": [
+    "n",
+    "degradeOnApiFailure('websiteMentions.types') → null → typeTotals null → '측정 대기' PendingCard(mentions.ts:425·357, mentions-view.tsx:439-448). 5xx·시간 초과가 '측정 대기'로 보이고 지연 안내 없음(wasDegraded 미사용)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "화면은 by_type[].own_mentions 만 씀(mentions.ts:268-274)인데 answers_total(fetch_counts 1문장)·other_*·노출률·유형×감성 매트릭스 20칸·스탠스(stance_sql 1문장)까지 계산",
+    "4"
+   ],
+   "f9": [
+    "skip",
+    "유형 5행 고정"
+   ],
+   "f10": [
+    "n",
+    "DC-01(엔진 미선택 = 기본 엔진만, 현행 미러는 전 엔진 — 공통 원인). 값 정의는 합친 관점 own_mentions = 현행 tracked 롤업(sig)이고 당사 언급 0 이면 null(현행 typesSeen)로 같음(mentions.ts:20·40·268-274). 권한은 AWCOMMON, 고유 차이 없음"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/mentions.test.ts › toMentionsLive: B-2 assembly › summary, sentiment of the own rows, type totals, types by brand, position flag",
+    "back/app/features/analytics/mentions/types/tests/test_mentions_types.py › test_website_and_project_values"
+   ]
+  },
+  "GET /v1/mentions/prompts": {
+   "label": "get_mentions_prompts_0 → mention_prompts (어댑터 loadSignalPrompts mode=signal·limit 50·answers_limit 6 / loadBrandMentionPrompts mode=brand·terms=true·limit 200·answers_limit 50·최대 10페이지)",
+   "where": "back mentions/prompts/router.py:18-25 → prompts/service.py:140-184 mention_prompts → prompts/queries.py:47-61 page_sql·:64-89 answers_sql·:92-103 terms_sql·:108-111 RESOLVE_BRAND_SQL, 요청 검증 prompts/schemas.py:18·38-40·52-53; front app/api/scope/signal-prompts/route.ts:80-97 → lib/hgh/adapters/drilldown.ts:395-417 loadSignalPrompts, app/api/scope/brand-mention-prompts/route.ts:82-106 → drilldown.ts:358-392 loadBrandMentionPrompts",
+   "stmts": "mode=signal(감정·유형 세그먼트 클릭 1회): 창 1 + page_sql 1 + answers_sql 1(페이지 비면 생략) = 3 (+공통 3). mode=brand(순위 행 펼침, 설계 경로): 페이지마다 창 1 + RESOLVE_BRAND_SQL 1(mention_brand; own=1 이면 0) + page_sql 1 + answers_sql 1 + terms_sql 1 = 5 (+공통 3), fetchAllPages 최대 10페이지(drilldown.ts:109·385). 실제 현재 경로: terms=true·limit 200 × answers_limit 50 = 10,000 > TERMS_MAX_REFS 1,000 이라 요청 검증 422(핸들러 미실행, 데이터 문장 0). 결과 캐시 ALLOWLIST 밖",
+   "f2": [
+    4,
+    3,
+    1,
+    3,
+    "answers_sql mentions/prompts/queries.py:64-89 (CTE t·c·d; JOIN rd.answer·rd.job + LEFT dim_engine·dim_country; GROUP BY 1; row_number 2·count(*) OVER 1) — signal·brand 공통. page_sql :47-61 = [2,0,1,2], terms_sql :92-103 = [4,0,0,0]"
+   ],
+   "f3": [
+    "n",
+    "mode=brand(terms=true): 페이지 답변마다 rd.v_answer_mention_raw 언급 원본 행(요소 단위)을 읽어 build_terms 로 브랜드·모델 하이라이트 귀속(롤업 id·정본 브랜드·own_bit)을 요청 때 재구성(service.py:166-172·66-112, queries.py:92-103). mode=signal 만이면 y(rd.answer_brand 합산 + rd.answer·rd.job 점 조회; answers_sql 의 셀 대표 재선정은 표시용 선택)"
+   ],
+   "f4": [],
+   "f6": [
+    "n",
+    "브랜드 드릴다운: 5xx 는 hghErrorResponse JSON(route.ts:105), 422 는 400 {prompts:[]}(route.ts:104)인데 클라이언트가 r.ok 를 안 보고 r.json() 의 prompts ?? [] 로 빈 목록을 그림(mentions-drilldown.tsx:143-147) — 오류가 '데이터 없음'으로 보임(현행은 라우트 throw → JSON 파싱 실패 → 오류 상태). 신호 다이얼로그는 r.ok 확인 후 오류 문구(signal-prompts-dialog.tsx:59-66) = y. 403·404 → 빈 목록은 설계(drilldown.ts:203-206)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "signal: page_sql 의 total·share(창 함수)와 answers_sql 의 runs·pos·measured_at 을 계산하지만 어댑터가 signal 모드에서 버림(drilldown.ts:229-241, U6-N9 'the dialog does not show it'). brand: 키셋 페이지마다 page_sql 이 대상 전체를 GROUP BY·창 집계한 뒤 바깥에서 키셋을 걸어(queries.py:52-60) 페이지 N 이면 같은 집계를 N 회",
+    "3 (signal) / 5×페이지 (brand, 최대 10)"
+   ],
+   "f9": [
+    "n",
+    "signal: 상위 50 프롬프트·답변 참조 6건 1페이지만, next_cursor 무시·잘림 안내 없음(drilldown.ts:112-113·402-412). brand: MAX_PAGES 10 × 200 에서 onLimit 'truncate' 로 조용히 자르고 답변 참조 50건 상한(drilldown.ts:109-111·385)"
+   ],
+   "f10": [
+    "n",
+    "계약 불일치: 프런트 mode=brand 요청(terms=true·limit 200·answers_limit 50: drilldown.ts:371-379, drilldown.test.ts:310-323 이 이 값을 단언)이 백엔드 검증 terms ⇒ limit×answers_limit ≤ 1000(prompts/schemas.py:18·52-53; test_mentions_prompts_bg.py:171 은 200×6 도 422 로 단언)에 걸려 항상 422 → 라우트 400 빈 목록 → 웹사이트(및 표준·프로젝트) 브랜드 드릴다운 '프롬프트' 탭이 API 경로에서 늘 비어 보임. 오류 계약: 5xx 가 빈 목록으로 보임(f6). 값 의미 차이(어댑터 머리 명시, drilldown.ts:40-62): U6-N9 signal share 분모 = 전 프롬프트, U6-N14 답변 참조 값 = 그 답변의 브랜드 합계, U6-N15 위치 = 경쟁 브랜드 rk 순위, U6-N16 퍼널 = 카탈로그 퍼널. DC-01 공통. 권한: 라우트 drilldownGate(canReadAnalysis) + back require_surface·스코프(AWCOMMON), 고유 차이 없음"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/drilldown.parity.test.ts › brand drilldown: legacy aggregateMentionsFromMirror({onlyBrand}) vs M-3 mode=brand through the adapter › Toyota: same prompts, counts (products folded into the brand), shares, providers, references",
+    "front/lib/hgh/adapters/drilldown.parity.test.ts › signal list: legacy aggregateSignalPromptsFromMirror vs M-3 mode=signal through the adapter › positive: same prompts, signal counts (own rows, products folded), shares, references",
+    "back/app/features/analytics/mentions/prompts/tests/test_mentions_prompts.py › test_website_and_project_values",
+    "back/app/features/analytics/mentions/prompts/tests/test_mentions_prompts_fix2.py › test_terms_model_rollup_only_matches_front"
+   ]
+  },
+  "GET /v1/answers/{job_id}": {
+   "label": "get_answers_by_id_0 → answer_detail (어댑터 loadAnswerDetail → toMirrorAnswerDetail, 라우트 /api/scope/answer?surface=website)",
+   "where": "back answers/detail/router.py:17-22 → detail/service.py:130-216 answer_detail → detail/queries.py:19-20 LOCATE_SQL·:23-37 header_sql·:65-134 bundle_sql, detail/render.py:84-133; front app/api/scope/answer/route.ts:68-76 → lib/hgh/adapters/answers.ts:136-148 loadAnswerDetail·:66-125 toMirrorAnswerDetail",
+   "stmts": "클릭 1회: LOCATE 1 + 헤더 1(노출·숨김·served·website 스코프 사이트 게이트) + 번들 1(스칼라 서브쿼리 json_agg: 프롬프트·답변·원문·브랜드·언급 원본·발생·스탠스·인용) = 3 (+공통 3: load_refs 는 service.py:144 가 직접 호출해 resolve_read_context 에 넘김, brand[] 관점 재해석은 SQL 없음). 응답 뒤 접근 감사 비동기 배치 쓰기(core.write.access_audit, HGH_ACCESS_AUDIT 기본 켜짐 core/config.py:81). 숨김 계열이면 그 서브쿼리 생략. 결과 캐시 ALLOWLIST 밖",
+   "f2": [
+    12,
+    0,
+    0,
+    0,
+    "bundle_sql answers/detail/queries.py:65-134 (website·숨김 없음: 브랜드 JOIN 1 + 언급 원본 LEFT 4 + 발생 LEFT 2 + 스탠스 LEFT 2 + 인용 JOIN 1·LEFT 2, 전부 answer_key 등치 점 조회, GROUP BY 없음)"
+   ],
+   "f3": [
+    "y",
+    "답변 1건 점 조회(job_id → answer_key 등치; 사실 표 3술어 + 문서형 뷰 스코프 재단언). 서버 계산(build_sentiment_spans 문장 경계·verify_stance_evidence 원문 대조·fold_brands 표시명 합)은 저장 판정을 표시용으로 접는 것(현행 spans.ts·stance-evidence.ts 포팅), 판정 재계산 아님"
+   ],
+   "f4": [
+    "WSK5"
+   ],
+   "f6": [
+    "n",
+    "5xx·시간 초과는 라우트가 hghErrorResponse JSON 으로 내는데(route.ts:108-113) 모달이 r.ok 를 안 보고 r.json() 의 available 거짓으로 '원문 없음(unavailable)'을 그림(answer-modal.tsx:150-158) — 오류 상태(:285)로 가지 않음. 현행은 라우트 throw → 비 JSON 500 → 오류 표시(Before WSANS y). 404·403·422 → {available:false} 는 설계(answers.ts:127-130)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "필요한 섹션을 번들 1문장으로. 헤더 prompt 블록·인용 owned/target_hit 는 어댑터가 버리지만(answers.ts:66-81) 같은 점 조회 문장 안이라 경미",
+    "3"
+   ],
+   "f9": [
+    "skip",
+    "답변 1건"
+   ],
+   "f10": [
+    "n",
+    "오류 계약: 5xx 가 '원문 없음'으로 보임(f6). 필드: U6-N7 citations.category = 분류 slug(모달 미사용, answers.ts:31-32). 접근: back website 게이트 = 계정 스코프 사이트 project_key, 답변 geo·URL brand/country 로 좁히지 않음(service.py:8-13·151-152) vs 현행 = narrowScopeBrands(scope, brand) 의 website project ids(server.ts:4435-4444·4480-4499) — URL 필터보다 넓지만 계정 스코프보다 넓어지진 않음. 공통 차이는 AWCOMMON"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/answers.parity.test.ts › answer modal body: legacy getMirrorAnswerBody vs AN-2 through the adapter › same body, mentions (alias folded, own flag), models under their brand, citations by ref order",
+    "back/app/features/analytics/answers/detail/tests/test_an_answers_detail.py › test_detail_website_own_is_request_viewpoint",
+    "back/app/features/analytics/answers/detail/tests/test_an_answers_detail.py › test_detail_website_hidden_citations"
+   ]
+  },
+  "CLIENT xlsx export (브랜드 순위)": {
+   "label": "BrandRankTable onExport → downloadXlsx (클라이언트 직렬화, API 무호출)",
+   "where": "front app/[locale]/(dash)/standard/answer-analysis/_components/brand-rank-table.tsx:147-170 onExport → lib/export/xlsx.ts:16-53 (행 원천 = GET /v1/mentions/brands 어댑터 행, mentions-view.tsx:505-510)",
+   "stmts": "DB 0 — 화면이 가진 검색·정렬된 브랜드 행을 브라우저에서 exceljs 로 직렬화. G3(API) 경로도 Before 와 같은 컴포넌트·같은 6열, API 호출 없음",
+   "f2": [
+    "skip",
+    "SQL 없음 — 클라이언트 직렬화"
+   ],
+   "f3": [
+    "skip",
+    ""
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "읽기 없음(이미 받은 행 사용)"
+   ],
+   "f7": [
+    "n",
+    "void downloadXlsx(...) — exceljs 동적 import·writeBuffer·다운로드 실패를 잡지 않아 무시되고 사용자 안내 없음(brand-rank-table.tsx:149, xlsx.ts:16-53 try/catch 없음). Before 와 동일"
+   ],
+   "f8": [
+    "y",
+    "",
+    "0"
+   ],
+   "f9": [
+    "y",
+    "화면의 검색·정렬 결과 전량(sorted)을 내보냄. 원천 목록의 FULL_CAP 절단은 GET /v1/mentions/brands f9 소관"
+   ],
+   "f10": [
+    "skip",
+    "API 무호출 — 행 값 계약은 GET /v1/mentions/brands 에 귀속(브랜드·언급 수·점유율·평균 순위·프롬프트·언급률 6열 동일)"
+   ],
+   "parity": []
+  },
+  "GET /v1/citations/domains": {
+   "label": "get_citations_domains_0 → service.get_domains ← 어댑터 fetchDashboardDomains·loadComposition(개요 도넛) / loadBrandCitationDomains(언급 드릴다운 '인용 출처' 탭) / fetchCitationDomains·loadCitationsView·loadCitationsAsOf·listCitationDomains(인용 화면 기준일 pill·요약 타일·도메인 순위 표)",
+   "where": "back/app/features/analytics/citations/domains/router.py:18-25 → service.py:159-193 (_scan :146-156, resolve_mention_brand :112-117) → queries.py:144-235 domains_sql(본문 :195-228, _SUMMARY_COLS :247-253) · :304-311 answers_den_sql · :46-47 BRAND_KEY_SQL; shared.py:89-100 open_read → core/filters.py:407-422 card_window → core/cycles.py:299-345 resolve_window / front/lib/hgh/adapters/dashboard.ts:233-250(fetchDashboardDomains)·754-760(loadComposition)·586-597(toSourceSlices) ← app/[locale]/(dash)/website/_data/live.ts:279-291; front/lib/hgh/adapters/drilldown.ts:420-444(loadBrandCitationDomains) ← app/api/scope/brand-citations/route.ts:88-108; front/lib/hgh/adapters/citations.ts:554-562(fetchCitationDomains)·642-646·658-669(D6 필수)·704-752(loadCitationsView)·755-761·1204-1212(listCitationDomains) ← app/api/citations/domains/route.ts:65-90",
+   "stmts": "자체 3 = 창 1(open_read → card_window → resolve_window 스냅샷/기간 문장) + 커버리지 분모 answers_den_sql 1 + 목록 domains_sql 1 (+공통 3). 변형별: ① 개요 도넛 limit=7·card=true(기간 없을 때)·host_fold=true — 프로필 off 라 card·host_fold 무효(card_host_fold queries.py:101-105) → 같은 3, afterFirstRender 로 필수 호출 뒤; ② 언급 드릴다운 mention_brand=<브랜드>·limit=200 을 커서 끝까지(MAX_PAGES 10) — 페이지마다 BRAND_KEY_SQL +1 → 4(+공통 3), 최대 10페이지 = 40(+공통 30); ③ 인용 화면 limit=200 1회(D6 필수 호출·본문·기준일 pill 이 요청 안 중복 제거로 공유) + 더 보기·검색·정렬마다 /api/citations/domains 경유 3(+공통 3). 창에 회차가 없으면(rd.empty) 창 1만. 조건부(프로필): domains_card_by_host on → 개요 문장에 fm·fk·gp·gf CTE 와 rd.citation 출처 색인 재읽기(gp) 추가(queries.py:113-141·229-234); freeze_at_publish on(card) → frozen_keys·pick_holes·frozen_route_reason 탐침 +1~3, 동결 뷰 읽기. 결과 캐시 ALLOWLIST 포함(core/result_cache.py:82), HGH_RESULT_CACHE=0 이라 미적용",
+   "f2": [
+    5,
+    6,
+    3,
+    2,
+    "domains_sql back/app/features/analytics/citations/domains/queries.py:195-228 (CTE g0·g·s·t·r·m 6, JOIN dim_source·LEFT override·CROSS t·LEFT dim_brand_name(rows)·dim_brand_name(competitors) 5, GROUP BY g0·g·competitors 3, row_number rank·match_rank 2) — 세 변형 공통 목록 문장, 언급 변형은 WHERE 에 EXISTS rd.answer_brand 상관 서브쿼리(mention_brand_exists :93-98)만 추가. answers_den_sql :304-311 = 0/0/0/0"
+   ],
+   "f3": [
+    "n",
+    "rd.citation 원소를 (출처, 프롬프트)→출처로 두 번 접어 인용 수·자사·타겟·인용 답변·인용 프롬프트·순위·점유율 천분율을 요청 때 계산(queries.py:196-222). 보정 S03 = n"
+   ],
+   "f4": [
+    "WSK5"
+   ],
+   "f6": [
+    "n",
+    "① 개요: degradeOnApiFailure('websiteSourceComposition') → {sources:[]} → 섹션 통째 생략(website/_data/live.ts:287-291, website/page.tsx:545), 이 라벨을 읽는 화면 없음(page.tsx:435 는 websiteAggregates 만); ② 언급 드릴다운: 백엔드 403·404 → [](drilldown.ts:439-440), 5xx 는 route 가 JSON 오류로 답하지만 BrandCitationsTab 이 r.ok 를 안 보고 d.domains ?? [] → '인용 없음' 빈 상태(mentions-drilldown.tsx:342-346·370-372); ③ 인용 화면: domains·sources 중 하나라도 5xx/시간 초과 → live null → '데이터 없음' EmptyState, 지연 안내 없음(citations.ts:716-721·738, citations-view.tsx:687-693), 기준일 pill 도 빈 값. 더 보기·검색 실패만 'loadFailed' 표시(citations-view.tsx:350·361)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "① 개요 도넛은 상위 7 행·총 인용만 읽는데(toSourceSlices dashboard.ts:587-597) 커버리지 분모 문장 answers_den_sql 1개, citing_prompts 용 (출처×프롬프트) 2단 접기, rank/match_rank 창 함수, 경쟁사 합 JSON 을 매번 계산(service.py:149-150, queries.py:196-222·247-253); ② 언급 드릴다운은 200행 페이지마다 전 출처 집계·분모·브랜드 키 조회를 처음부터 다시 돌려 최대 10회 반복(drilldown.ts:427-437); ③ 인용 화면도 competitor_totals 를 계산하고 안 씀(toCitationsLive citations.ts:456-478)",
+    "3"
+   ],
+   "f9": [
+    "n",
+    "언급 드릴다운: 200행×최대 10페이지(2,000 출처)에서 onLimit 'truncate' 로 끊고 truncated 를 버려 안내 없이 절단(drilldown.ts:109·114·436-438, brand-citations/route.ts:101). 개요 limit=7, 인용 화면 limit=200 + 커서 더 보기 + 검색 건수(matched/total) 표시(citations-view.tsx:893-898)는 유계"
+   ],
+   "f10": [
+    "n",
+    "① 언급 드릴다운 행 domain ← r.domain(표시 호스트, drilldown.ts:278-281) — 종전은 그룹 키(공식 소셜 host+path, lib/scope/result-adapter.ts:2418·2457) → 공식 소셜 계정 행이 같은 호스트 일반 행과 같은 이름으로 나오고 행 key·펼침 상태가 겹침(citation-domain-table.tsx:185-195; 소셜 그룹 키 + 같은 호스트 대표 행 공존 stg 9건, domains/queries.py:108-110). 인용 화면 어댑터는 skey 를 씀(citations.ts:232-245); ② 개요 도넛: 프로필 off(기본)면 host_fold 무효라 출처 그룹 키 단위 상위 7인데 라벨은 d.domain(dashboard.ts:587-593) — 종전 집계층 호스트 축(WU-12, tests/test_wu12_host_fold.py 머리)과 다름(같은 호스트 조각 중복·분할); ③ DC-01 엔진 미지정 = 기본 엔진만(scope_where core/measure.py:195-197 a.dflt, summary.ts:31 'legacy: all engines', citations.ts:66-67); ④ 인용 화면 첫 200행 + 더 보기(U7-N4)·asOf = 회차일(U7-N1) 선언 차이. 권한: mention_brand 는 권한 축 아님, 표면 게이트·스코프는 공통(AWCOMMON)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/citations.parity.test.ts › standard citations: legacy aggregateCitationsFromMirror (PGlite) vs loadCitationsView (backend model) › every value is equal except the declared differences, and every declared difference occurs",
+    "front/lib/hgh/adapters/citations.parity.test.ts › standard citations: legacy aggregateCitationsFromMirror (PGlite) vs loadCitationsView (backend model) › hand check of the compared values (not just equal: the expected numbers)",
+    "front/lib/hgh/adapters/dashboard.parity.test.ts › composition: getLiveComposition (project) legacy vs toSourceSlices / toTopicSlices › top 7 and topics equal; 기타 share differs by rounding only (U5-N2)",
+    "front/lib/hgh/adapters/dashboard.parity.test.ts › failure paths on the api sources › website: engine badge, composition and GEO 5xx degrade to the legacy empty shapes with the legacy labels (D1)",
+    "back/app/features/analytics/citations/domains/tests/test_domains.py › test_website_sql_without_hidden",
+    "back/app/features/analytics/citations/domains/tests/test_domains.py › test_mention_brand",
+    "back/app/features/analytics/citations/domains/tests/test_domains_bg.py › test_bg24_citing_prompts_and_rank"
+   ]
+  },
+  "GET /v1/citations/domains/{skey}": {
+   "label": "get_citations_domains_by_id_0 → domain_detail.service.get_detail ← 어댑터 fetchDomainDetail·loadDomainDrilldown(인용 화면 행 펼침) / loadBrandCitationDetail(언급 드릴다운 인용 출처 행 펼침)",
+   "where": "back/app/features/analytics/citations/domain_detail/router.py:19-26 → service.py:60-79 (_assemble :82-93) → queries.py:117-122 SOURCE_SQL · :125-179 detail_sql; resolve_mention_brand domains/service.py:112-117 / front/lib/hgh/adapters/citations.ts:609-617·1189-1195·390-415(toDomainDrilldown) ← app/api/citations/domains/[skey]/route.ts:110-121 ← front/app/[locale]/(dash)/standard/answer-analysis/_components/citations-view.tsx:308-330(useDomainDetail)·1318-1335; front/lib/hgh/adapters/drilldown.ts:446-465(loadBrandCitationDetail, DETAIL_LIMITS :115)·300-330 ← app/api/scope/brand-citations/route.ts:100 ← citation-domain-table.tsx:61-65·79-96",
+   "stmts": "자체 3 = 창 1 + 출처 조회 SOURCE_SQL 1 + 드릴다운 detail_sql 1 (+공통 3). 언급 드릴다운(mention_brand)은 BRAND_KEY_SQL +1 = 4. 모르는 skey 는 SOURCE_SQL 뒤 404, 창이 비었거나 source[] 밖 카테고리면 detail 생략(2). 행을 펼칠 때 1호출: 인용 화면은 기본 상한 urls 10·prompts 12·answers 8, 언급 드릴다운은 urls 10·prompts 100·answers 20. ALLOWLIST 포함(result_cache.py:83), 캐시 off",
+   "f2": [
+    7,
+    9,
+    3,
+    1,
+    "detail_sql back/app/features/analytics/citations/domain_detail/queries.py:132-178 (CTE base·u·ut·utp·pl·pk·rf·rk·rs 9, JOIN dim_url·LEFT owned_base·LEFT dim_prompt·dim_prompt·LEFT dim_taxon·pk·rd.job 7, GROUP BY u·pl·rf 3, row_number 1). SOURCE_SQL :117-122 = 2/0/0/0"
+   ],
+   "f3": [
+    "n",
+    "출처 하나로 좁힌 rd.citation 원소를 URL·프롬프트·답변 단위로 요청 때 집계·순위(queries.py:133-169)"
+   ],
+   "f4": [
+    "C2"
+   ],
+   "f6": [
+    "n",
+    "언급 드릴다운: 백엔드 403·404 → {urls:[], promptList:[]} 로 조용히 빈 목록(drilldown.ts:461-462, 권한 실패도 '없음'). 5xx 는 두 화면 모두 r.ok 검사로 'drilldown.loadFailed' 표시(citations-view.tsx:1331-1332, citation-domain-table.tsx:90)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "행 1개 펼침 = 1호출. url_total·prompt_total 은 같은 문장 안 CTE 행 수라 부담 미미(어댑터는 버림)",
+    "3"
+   ],
+   "f9": [
+    "n",
+    "URL 10·프롬프트 12(언급 100)·답변 참조 8(언급 20) 상한에서 자르고, 백엔드가 주는 url_total·prompt_total 을 두 어댑터가 버려(citations.ts:390-415, drilldown.ts:300-330) 화면에 잘림 표시 없음"
+   ],
+   "f10": [
+    "n",
+    "언급 드릴다운: 프롬프트 100·답변 참조 20 상한(U6-N10, drilldown.ts:115) — 종전은 전 프롬프트·전 답변(result-adapter.ts:2464-2466); URL country = app.owned_base.geo_code(drilldown.ts:310) vs 종전 지오 카탈로그(result-adapter.ts:2463, 이 표는 국가 미표시). 인용 화면: 국가 규칙 유지(U7-N9, citations.ts:399), 10-URL 상한 동률 처리 차이(U7-N10), 전 행 드릴다운(U7-N2). DC-01 엔진 미지정 = 기본 엔진만(core/measure.py:195-197). 권한 공통(AWCOMMON)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/citations.parity.test.ts › standard citations: legacy aggregateCitationsFromMirror (PGlite) vs loadCitationsView (backend model) › drilldown: loadDomainDrilldown equals the legacy inline urls / promptList of the same row",
+    "back/app/features/analytics/citations/domain_detail/tests/test_domain_detail.py › test_website_sql_without_hidden",
+    "back/app/features/analytics/citations/domain_detail/tests/test_domain_detail_bg.py › test_bg23_url_prompt_text_and_bg25_totals"
+   ]
+  },
+  "GET /v1/citations/sources": {
+   "label": "get_citations_sources_0 → sources.service.get_sources ← 어댑터 fetchCitationSources·loadCitationsView(toCategorySlices·toEngineCategories: 요약 타일 분류 수·딜러/마켓 비중, 분류 도넛, 엔진×카테고리)",
+   "where": "back/app/features/analytics/citations/sources/router.py:18-24 → service.py:113-145 (_category_rows :90-104) → queries.py:125-164 sources_ans_sql · :204-258 tone_sql · (폴백) :58-83 sources_sql; core/db.py:190-202 planner_hint / front/lib/hgh/adapters/citations.ts:564-568·658-669·704-752·251-275·456-478",
+   "stmts": "자체 3 = 창 1 + 답변 열 sources_ans_sql(types='col', rd.answer cit_c1..13·t_own 합) 1 + 톤 tone_sql 1 (+공통 3). 두 문장은 planner_hint 블록 안이라 SAVEPOINT·set_config·ROLLBACK TO SAVEPOINT 제어 3 추가(db.py:190-202). 조건부(데이터 상태): t_own 미채움 답변 → jt 경로 재집계 +1; cit_c 미채움 또는 재판정 전 오버라이드(ovr_pending) → 원소 경로 sources_sql +1. 창 비면 창 1만. D6 필수 호출(citationsEssentials)과 본문(loadCitationsView)이 같은 쿼리라 요청 안 중복 제거로 1회. ALLOWLIST 포함(result_cache.py:84), 캐시 off",
+   "f2": [
+    2,
+    4,
+    1,
+    0,
+    "tone_sql back/app/features/analytics/citations/sources/queries.py:224-241 (CTE ta·u·t·n 4, JOIN ta·CROSS n 2, GROUP BY u 1) — 기본 경로 최중. sources_ans_sql :148-154 = 1/0/1/0(ovr_pending 서브쿼리 JOIN 1). 조건부 폴백 sources_sql :66-82 = 3/3/3/0, jt 경로 :156-163 = 2/1/2/0"
+   ],
+   "f3": [
+    "n",
+    "톤 문장이 rd.citation 원소 ⋈ 톤 답변을 url_key 로 요청 때 접어 URL 수·인용 수를 셈(queries.py:225-229). 조건부 폴백 sources_sql 은 rd.citation 전량 스캔 + rd.answer_brand 답변별 접기(jt)(queries.py:45-83). 기본 카테고리 집계는 rd.answer 답변 열 합"
+   ],
+   "f4": [],
+   "f6": [
+    "n",
+    "loadCitationsView 가 domains 와 묶어 degradeOnApiFailure('websiteCitations') — 5xx/시간 초과면 화면 전체가 '데이터 없음'(citations.ts:716-721·738, citations-view.tsx:687-693), 지연 안내 없음"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "웹사이트 인용 화면은 categories·by_engine 만 읽는데(toCitationsLive citations.ts:456-478, CitationsLive 에 톤·유형 없음) 톤 타일 문장 tone_sql(기본 경로 최중)과 유형 65열(t_*_k FILTER, queries.py:136-139)을 계산해 버림",
+    "3"
+   ],
+   "f9": [
+    "y",
+    "카테고리 13 × 엔진 수로 유계, 전부 표시(톤·유형 여분은 f8)"
+   ],
+   "f10": [
+    "n",
+    "toCategorySlices·toEngineCategories 가 종전 categories·engineCategories 모양 그대로(엔진 라벨 병합 포함)지만 DC-01 엔진 미지정 = 기본 엔진만(core/measure.py:195-197, citations.ts:66-67 — 종전 전 엔진). 분류 원천이 요청 때 JS 분류 → 적재 판정 rd.dim_source + 운영자 오버라이드(CATEGORY_EXPR core/measure.py:514-515)로 바뀜(parity 는 백엔드 모델 기준). 권한 공통(AWCOMMON)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/citations.parity.test.ts › standard citations: legacy aggregateCitationsFromMirror (PGlite) vs loadCitationsView (backend model) › every value is equal except the declared differences, and every declared difference occurs",
+    "back/app/features/analytics/citations/sources/tests/test_sources.py › test_website_sql_without_hidden",
+    "back/app/features/analytics/citations/sources/tests/test_sources.py › test_override_applied_at_read_time",
+    "back/app/features/analytics/citations/sources/tests/test_sources_equiv.py › test_equiv_staged_rich"
+   ]
+  },
+  "GET /v1/citations/prompts": {
+   "label": "get_citations_prompts_0 → prompts.service.list_prompts ← 어댑터 fetchCitationPrompts(owned=true·false, limit=5) → toPromptSplit (Owned base URL 기준 프롬프트 분리 카드)",
+   "where": "back/app/features/analytics/citations/prompts/router.py:19-36 → service.py:114-146 → queries.py:183-229 bucket_page_sql(m = core/measure.py:567-650 plan_counts main) · :232-255 answer_refs_sql / front/lib/hgh/adapters/citations.ts:570-582·724-731·379-387 → front/app/[locale]/(dash)/standard/answer-analysis/_components/citations-view.tsx:646-647·813-820",
+   "stmts": "호출당 자체 3 = 창 1(ctx.window) + 버킷·페이지 bucket_page_sql 1 + 답변 표본 answer_refs_sql 1(페이지 행 있을 때) (+공통 3). 화면은 owned=true·owned=false 2호출(D6 2단계, citations.ts:724-731) → 렌더당 자체 6(+공통 6). 조건부: ?source= 이면 plan_counts 가 원소 스캔 문장(citation_counts_sql)을 m 으로 쓰고 answer_refs 가 답변마다 rd.citation 상관 count; 창 비었거나 인용 숨김이면 창 1만. ALLOWLIST 포함(result_cache.py:87), 캐시 off",
+   "f2": [
+    3,
+    6,
+    2,
+    0,
+    "bucket_page_sql back/app/features/analytics/citations/prompts/queries.py:202-228 (CTE m·x·pe·pr·c·b 6, JOIN LEFT x·dim_prompt·LEFT dim_taxon 3, GROUP BY m(plan main measure.py:647-649)·pr 2). answer_refs_sql :244-254 = 1/0/0/1"
+   ],
+   "f3": [
+    "n",
+    "기본은 rd.answer 답변 열(cit_n·cit_loc_tgt) 합이지만 조건부 ?source= 경로가 rd.citation 원소를 프롬프트×엔진으로 요청 때 집계(core/measure.py:703-704·717-747)하고 답변 표본도 rd.citation 상관 count(queries.py:241-243)"
+   ],
+   "f4": [
+    "WSK5"
+   ],
+   "f6": [
+    "n",
+    "degradeOnApiFailure('websiteCitations.split') — owned 호출 실패 → promptSplit null → 섹션 통째 숨김('자사 인용 없음'과 구분 안 됨, citations.ts:724-726·476, citations-view.tsx:813-820); uncited 호출만 실패 → uncited [] 인데 uncitedCount 는 owned 응답 값이라 건수만 있고 목록 빈 카드(citations.ts:379-387·729-731)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "owned=true·false 두 호출이 같은 프롬프트 집계(m·pe·pr·c CTE)와 두 버킷 카운트를 각자 다시 계산 — 다른 것은 버킷 술어·페이지뿐(queries.py:202-228), uncited 호출의 counts 는 버림(toPromptSplit citations.ts:379-387)",
+    "6"
+   ],
+   "f9": [
+    "y",
+    "limit=5 = 카드 표시 5행, 버킷 건수(counts) 함께 표시"
+   ],
+   "f10": [
+    "n",
+    "toPromptSplit 모양(owned·uncited 상위 5·건수)·자사 판정(인용 행 단위, 웹사이트 loc_owned∨tgt_hit)·uncited = '인용 있으나 자사 0' 은 종전과 같지만 DC-01 엔진 미지정 = 기본 엔진만(core/measure.py:195-197) 이 다르고, ?source= 시 값 차이(U7-N13: 종전은 상위 80 도메인 promptList 근사) 선언. 권한 공통(AWCOMMON)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/citations.parity.test.ts › standard citations: legacy aggregateCitationsFromMirror (PGlite) vs loadCitationsView (backend model) › prompt split rows (website/project cards): toPromptSplit of C-3 owned / uncited equals the legacy split lists",
+    "back/app/features/analytics/citations/prompts/tests/test_citations_prompts.py › test_website_values_and_keyset_pagination",
+    "back/app/features/analytics/citations/prompts/tests/test_citations_prompts.py › test_global_matches_independent_citation_scan"
+   ]
+  },
+  "GET /v1/citations/domains/export": {
+   "label": "get_citations_domains_export_1 → service.export_domains ← relayDomainsExport ← /api/citations/domains/export ← CitationsView onExport(domainExportUrl, window.location.assign)",
+   "where": "back/app/features/analytics/citations/domains/router.py:30-35 → service.py:239-257 (_scan :146-156, export_rows :227-236, rank_basis :222-224) → queries.py:195-228 domains_sql(limit=5000) · :304-311; core/export.py:66-95 / front/app/[locale]/(dash)/standard/answer-analysis/_components/citations-view.tsx:658-662·903-907 → standard/answer-analysis/_data/citation-view.ts:274-283 → app/api/citations/domains/export/route.ts:19-45 → front/lib/hgh/adapters/citations.ts:1215-1233 → front/lib/hgh/relay.ts:62-83",
+   "stmts": "클릭당 자체 3 = 창 1 + 커버리지 분모 1 + 목록 domains_sql 1(limit = min(max_rows, 5000), 5,001행까지) (+공통 3). 다운로드 감사 access_audit 는 배치 기록(요청 문장 아님, core/write.py:309-312). 목록과 같은 q·sort·dir 로 전 출처를 다시 집계. 결과 캐시 ALLOWLIST 밖",
+   "f2": [
+    5,
+    6,
+    3,
+    2,
+    "domains_sql back/app/features/analytics/citations/domains/queries.py:195-228 (목록과 같은 문장, limit 5000)"
+   ],
+   "f3": [
+    "n",
+    "목록과 같은 rd.citation 원소 2단 접기(queries.py:196-222)"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "읽기 실패가 빈 파일로 둔갑하지 않음 — route 가 상태 유지 JSON 오류로 답함(export/route.ts:42-44). 표시 방식 문제는 f7"
+   ],
+   "f7": [
+    "n",
+    "① 5,000행 상한 잘림은 X-Export-Truncated 헤더로만 알림(service.py:250·256, core/export.py:73-74, relay.ts:24) — window.location.assign 다운로드라 화면이 헤더를 못 읽어 사용자에게 안 보임(citations-view.tsx:659-662); ② 401·403·422·5xx·시간 초과는 JSON {error:{code}}(app/api/citations/_lib/route.ts:155-157, export/route.ts:42-44)로 와서 브라우저가 대시보드를 떠나 원시 JSON 화면으로 이동 — 앱 오류 표시·재시도 없음; ③ 중복 클릭 방지 없음(버튼 disabled 는 sorted.length===0 만, citations-view.tsx:906) → 연타마다 전량 집계 재실행"
+   ],
+   "f8": [
+    "n",
+    "파일 7열에 안 쓰는 경쟁사 합 JSON(_SUMMARY_COLS queries.py:249-253)·자사/타겟 인용 FILTER 를 같은 문장에서 계산",
+    "3"
+   ],
+   "f9": [
+    "n",
+    "상한 5,000행 초과분을 화면 안내 없이 절단(헤더만, f7 ①)"
+   ],
+   "f10": [
+    "n",
+    "종전은 받은 행(슬림 절단 목록)을 브라우저에서 직렬화(WSXLC) — After 는 서버 전량(≤5,000)·'#' = match_rank(rank_basis service.py:222-224)라 행 집합이 다름(U7-N4 선언); 점유율·커버리지가 숫자 셀(pct1 float, core/xlsx.py:694-697)로 종전 문자열 셀(toFixed(1))과 형이 다름; 카테고리 라벨은 back 하드코딩 사본 CATEGORY_LABELS(service.py:99-109)라 front messages 와 어긋날 수 있음; 오류 계약이 '실패 무시'(void downloadXlsx) → 'JSON 화면 이동'; DC-01 기본 엔진만. 권한: route 장소 게이트(_lib/route.ts:178-197) + back require_surface + 다운로드 감사 — 종전엔 서버 확인 없음(이미 받은 행). 공통 차이는 AWCOMMON"
+   ],
+   "parity": [
+    "back/app/features/analytics/citations/domains/tests/test_domains_bg.py › test_bg22_export_csv_matches_list",
+    "back/app/features/analytics/citations/domains/tests/test_domains_bg.py › test_bg22_export_xlsx_route_and_truncation",
+    "back/app/features/analytics/citations/domains/tests/test_domains_bg.py › test_d1_export_rank_basis",
+    "front/app/api/citations/domains/route.test.ts › api answers › export: streamed with the relay header whitelist (no set-cookie), same search and sort"
+   ]
+  },
+  "GET /v1/trend": {
+   "label": "get_trend → _series_plain (dimension=none, metrics=WEBSITE_TREND_METRICS 8종 M01~M07+ACC, bucket=cycle, card=true, measured_days=false) / 어댑터 loadLiveTrend → toLiveTrend (카드 Δ·KPI 추이 차트 공유 1호출)",
+   "where": "back features/analytics/trend/series/router.py:19-28 → service.py:578-636 get_trend · :294-367 _series_plain → core/measure.py:567-705 plan_counts(main) · :1166-1197 url_rates → :863-892 report_values_sql · core/cycles.py:409-448 resolve_recent_window(_RECENT_SQL :285-296); front website/_data/live.ts:236-248 getLiveWebsiteTrend → lib/hgh/adapters/dashboard.ts:684-703 loadLiveTrend → trend.ts:177-199 fetchTrend · :369-428 toLiveTrend; 소비 website/page.tsx:334-339(1회 생성) · :444-458(Δ, applyTrendDeltas dashboard/_data/live.ts:742-761) · :520-533(차트)",
+   "stmts": "기본 4 (+공통 3): ① 창 1(resolve_recent_window _RECENT_SQL, 기간 지정 시 resolve_window 기간 문장 1) ② fetch_counts main 1(rd.answer 1회 스캔, parts mentions·gap·citations·urls, GROUP BY round_date) ③ url_rates 라이브 fetch_counts 1(parts urls — live 를 안 넘겨 ②의 urls 열을 같은 창으로 재집계, service.py:323) ④ report_values_sql 1(R09 발행값 rd.report_unit_value ⋈ app.report_publication). 조건부: 언급·인용 계열 숨김 회차 키가 다르면 citation_presence +1(service.py:263-266); 엔진 필터 선택 시 ③④ 생략(use_r09 거짓, service.py:301); profile trend_grid → 창이 _GRID_SQL 1로 대체(cycles.py:666-693); freeze_at_publish(card=true) → frozen_keys 1 + pick_holes 1, 구멍이면 비카드 강등 후 창 재해석 +1(service.py:598-603); web_accuracy_flat → accuracy_counts +1(service.py:318-320, 비카드면 screen 모드 CTE 2). measured_days=false 라 rd.job 문장 없음. 결과 캐시 ALLOWLIST 대상(result_cache.py:79), 기본 off 라 미적용",
+   "f2": [
+    2,
+    2,
+    2,
+    0,
+    "report_values_sql core/measure.py:863-892 (sel·pool CTE 2, JOIN app.report_publication·JOIN pool 2, GROUP BY pool·본문 2) — main plan_counts measure.py:646-650 은 0/0/1/0"
+   ],
+   "f3": [
+    "n",
+    "기본 경로는 rd.answer 답변 열 합(plan_counts) + rd.report_unit_value 발행값이라 y 수준. 그러나 조건부 web_accuracy_flat(⑥)이 비카드(동결 구멍 강등)일 때 screen 모드로 rd.citation 원소를 url_key ∈ rd.web_target_url 로 요청 때 스캔(core/measure.py:1316-1333, service.py:318-320)"
+   ],
+   "f4": [
+    "AWK30",
+    "AWK31",
+    "AWK50",
+    "WSK5",
+    "T7"
+   ],
+   "f6": [
+    "n",
+    "카드 Δ 경로가 trend.catch(() => null) 로 실패를 Δ 없음으로 흡수 — 안내 없음(website/page.tsx:444-458). 차트 섹션은 await 로 (dash) 오류 경계(website/page.tsx:520-523), 웹사이트 추이에는 degrade 라벨 없음(website/_data/live.ts:244)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "M06·M07(target_url_rate·owned_url_rate)을 요청해 url_rates 재집계 1 + report_values_sql 1 = 2문장을 더 돌리지만 차트(TREND_SERIES live-trend-chart.tsx:44-51)·카드 Δ 어디도 안 씀(urlRateOrigin 소비처 없음, trend.ts:378-379). 게다가 url_rates 에 live 를 안 넘겨(service.py:323) main 문장에 이미 있는 urls 열을 같은 창으로 다시 셈",
+    "4"
+   ],
+   "f9": [
+    "y",
+    "기본 창 최근 12 회차 자리 = 차트 축. 계열 8개 중 6개를 그림(M06·M07 2계열 여분은 f8)"
+   ],
+   "f10": [
+    "n",
+    "기본 프로필(HGH_LEGACY_PROFILE off → trend_grid off)이라 현행 운영 X.trendGrid(원장 13자리·(사이트, 자리) 대표 회차·미발행 자리 갭) 대신 최근 12 회차 자리·같은 round_date 회차 전부 합산(service.py:87·598, cycles.py:409; test_trend_grid 의 off 값 = on 의 2배 사례) → 점 값·축 의미가 다름(trend.ts:56-60 DC-08). ⑥ 선이 같은 호출에 묶여 ⑥ 실패 = 추이 전체 실패(현행은 ⑥ 선만 조용히 빠짐). 스코프 차이는 공통(AWCOMMON) 외 없음"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/trend.test.ts › legacy/api parity: website trend (getLiveWebsiteTrend) › LiveTrend incl. citationAccuracy; urlRateOrigin is the published-value flag",
+    "front/lib/hgh/adapters/trend.test.ts › legacy/api parity: website trend (getLiveWebsiteTrend) › WU-9: the citation_accuracy series (live answers) wins over M06/M07 numerators on a published round",
+    "front/lib/hgh/adapters/dashboard.parity.test.ts › website: trend 5xx is raised as before (no degrade label on the website trend)",
+    "back/app/features/analytics/trend/series/tests/test_trend_accuracy.py › test_website_accuracy_is_live_pair_on_published_round",
+    "back/app/features/analytics/trend/series/tests/test_trend_grid.py › test_website_grid_per_site_representative_no_completion"
+   ]
+  },
+  "GET /v1/trend (dimension=brand)": {
+   "label": "get_trend → _series_brand (bucket=cycle, metrics visibility·share_of_voice·position, top=10, split_own=true, measured_days 기본 true, card 미전송) / 어댑터 fetchBrandTrend → toMentionTrend",
+   "where": "back service.py:408-490 _series_brand · :381-405 _own_parts·split_counts · :515-522 measured_days → queries.py:60-79 measured_days_sql · :89-108 own_split_counts_sql · :113-126 BRAND_NAMES_SQL·OWN_BRAND_KEYS_SQL · core/measure.py:1409-1433 competitor_rows_sql(:1453 brand_rows) · core/entities.py:39-50 EXCLUDED_BRAND_KEYS_SQL; front lib/hgh/adapters/mentions.ts:175-184 fetchBrandTrend · :419-430 loadMentionsLive · :293-315 toMentionTrend; 소비 website/answer-analysis/mention/page.tsx:222 → standard/answer-analysis/_components/mentions-view.tsx:464-482",
+   "stmts": "기본 6 (+공통 3): 창 1 + measured_days_sql 1(rd.answer ⋈ rd.job — fetchBrandTrend 가 measured_days=false 를 안 보냄) + fetch_counts main 1(rd.answer mentions·gap) + competitor_rows_sql 1(rd.answer_brand) + EXCLUDED_BRAND_KEYS_SQL 1 + BRAND_NAMES_SQL 1. 조건부: 관점 비트 ≥2(HQ HMG·admin 무브랜드 등, split_own) → OWN_BRAND_KEYS_SQL 1 + own_split_counts_sql 1 (= 8); profile trend_grid → 창 _GRID_SQL 대체; 동결 읽기 문장(renamed_brand_keys·frozen_brand_names)은 card 미전송이라 해당 없음. 결과 캐시 ALLOWLIST 대상, 기본 off",
+   "f2": [
+    1,
+    0,
+    2,
+    0,
+    "measured_days_sql queries.py:60-79 (JOIN rd.job 1, 안쪽·바깥 GROUP BY 2) — competitor_rows_sql measure.py:1431-1433 은 0/0/1/0, EXCLUDED_BRAND_KEYS_SQL 은 1/0/0/0"
+   ],
+   "f3": [
+    "y",
+    "rd.answer 당사 열 합·rd.answer_brand 경쟁 행 합·rd.job(답변 색인) 측정일·차원 점 조회뿐. 원소(rd.citation·언급 발생) 조인·판정 재계산 없음"
+   ],
+   "f4": [
+    "AWK30",
+    "AWK31",
+    "AWK33"
+   ],
+   "f6": [
+    "n",
+    "5xx·시간 초과 → degradeOnApiFailure('websiteMentions.trend') null + trendDegraded 표식(mentions.ts:427-429)이지만 웹사이트 MentionsView 추이 섹션은 trendDegraded 를 안 읽고 '준비 중' PendingCard(mentions-view.tsx:472-480) — '2주 미만'과 구분 안 됨"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "measured_days 문장(rd.job 조인)을 돌리지만 toMentionTrend·buildMentionTrend 는 measuredDays 를 안 읽음(mentions.ts:293-315, result-adapter.ts:1303-1316). visibility·position 계열도 계산·전송되나 웹사이트 차트는 share_of_voice 만 사용(KPI 탭 공유용 BRAND_TREND_METRICS, mentions.ts:173)",
+    "6 (+관점 다중 2)"
+   ],
+   "f9": [
+    "n",
+    "응답 = 3지표 × (당사 1~3 + 경쟁 10) 계열 × 12 버킷인데 차트는 share_of_voice 계열만 그림 → 응답의 약 2/3 미사용. 상한·절단은 없음"
+   ],
+   "f10": [
+    "n",
+    "현행 = 전 이력 일별 언급 수(weekSource=measured)의 주별 top-10 합집합(상한 15) → API = 최근 12 회차 창·창 합계 top 10 + 관점 브랜드별 당사 분리(trend.ts:56-60 DC-08, service.py:87·435-437). 창 길이·시리즈 선정 규칙이 달라 다른 주·브랜드가 그려질 수 있음. 스코프 차이는 공통(AWCOMMON) 외 없음"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/mentions.test.ts › toMentionTrend: weekly chart through the unchanged legacy builder › parity: equals buildMentionTrend on the legacy weekly entries of the same WORLD",
+    "back/app/features/analytics/trend/series/tests/test_trend_excluded.py › test_top_refills_after_excluded"
+   ]
+  },
+  "GET /v1/trend (dimension=source|category)": {
+   "label": "get_trend → _series_mix (bucket=cycle, source top=15 · category top=13, measured_days=false, card 미전송) / 어댑터 fetchSourceTrend·fetchCategoryTrend → toCitationTrend",
+   "where": "back service.py:525-560 _series_mix · :257-266 citation_presence → queries.py:138-160 mix_counts_sql(술어 core/measure.py:526-529 citation_where) · core/measure.py:567 plan_counts(urls); front lib/hgh/adapters/citations.ts:621-626 fetchSourceTrend·fetchCategoryTrend · :704-752 loadCitationsView(:722-723) · :313-350 toCitationTrend · :456-478 toCitationsLive; 소비 website/answer-analysis/citation/page.tsx:229-235 → standard/answer-analysis/_components/citations-view.tsx:821-840",
+   "stmts": "호출당 3 (+공통 3): 창 1 + citation_presence fetch_counts 1(rd.answer urls part — idx=None 이라 항상 실행, service.py:531) + mix_counts_sql 1(rd.citation 스캔 → (버킷, 출처) 접기). 화면은 source·category 2호출이라 렌더당 6(창·presence·per 스캔이 두 호출에서 반복). 조건부: profile trend_grid → 창 _GRID_SQL 대체; source[] 필터 시 citation_where 에 출처 세미조인(공유 술어). 결과 캐시 ALLOWLIST 대상, 기본 off",
+   "f2": [
+    3,
+    3,
+    3,
+    0,
+    "mix_counts_sql source 분기 queries.py:152-159 (per·tot·cut CTE 3, JOIN dim_source·tot·dim_source 3, GROUP BY per·tot·head 3); category 분기 :146-151 은 2/1/3/0 (JOIN rd.dim_source + LEFT JOIN app.citation_domain_override)"
+   ],
+   "f3": [
+    "n",
+    "mix_counts_sql 이 rd.citation 원소를 요청 때 (버킷, source_key) 로 집계(queries.py:143-144) — 원소 단위 집계"
+   ],
+   "f4": [
+    "AWK30",
+    "AWK31"
+   ],
+   "f6": [
+    "n",
+    "5xx·시간 초과 → degradeOnApiFailure('websiteCitations.trend'·'.categoryTrend') null(citations.ts:722-723). 도메인 추이는 '준비 중' PendingCard(citations-view.tsx:824-827), 카테고리 추이는 블록 생략(:833-840) — 웹사이트 인용 페이지는 wasDegraded 를 읽지 않아 지연 안내 없음"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "source·category 두 호출이 같은 창·같은 citation_presence·같은 per(rd.citation 스캔)를 각각 다시 실행 — 공유 가능한 결과를 2번 계산(현행은 trendRows 1문장 공유)",
+    "3/호출 (렌더당 6)"
+   ],
+   "f9": [
+    "y",
+    "source top 15·category top 13 계열 × 12 버킷, 차트가 받은 계열을 그림(도메인 15선 = 현행 합집합 상한 15, 카테고리는 스냅샷 분류 순서 seriesOrder 로만)"
+   ],
+   "f10": [
+    "n",
+    "현행 = 주별 도메인 top-10 합집합(상한 15)·요청 때 분류 규칙으로 카테고리 판정 → API = 최근 12 회차 창 전체 합계 top 15, 저장 category_key(오버라이드 coalesce) (trend.ts:56-60 DC-08). 창·시리즈 선정 규칙이 달라 다른 도메인이 그려질 수 있음. 스코프 차이는 공통 외 없음"
+   ],
+   "parity": []
+  },
+  "GET /v1/prompts": {
+   "label": "list_catalog → _website (surface=website, 기본 정렬 last_measured desc = 모양 B, limit 50) / 어댑터 listWebsitePromptsApi",
+   "where": "back features/catalog/prompts/catalog/router.py:32-44 → service.py:102-120 list_catalog · :273-333 _website · :212-230 _scoped_sites · :237-243 _lens_window → queries.py:102-106 WEBSITE_SITES_SQL · :109-117 website_rows_cte · :125-139 lens_cte · :142-149 website_joined · :157-158 website_count; front website/prompts/page.tsx:226-255 PromptDataApi → lib/hgh/adapters/catalog.ts:284-305 listWebsitePromptsApi · :231-251 websitePromptQuery · lib/website/prompt-query.ts:72-108",
+   "stmts": "기본(모양 B) 4 (+공통 3): WEBSITE_SITES_SQL 1 + website_count 1 + 렌즈 창 resolve_window(all_visible·ungated) 1 + 키셋 본문 1(s·r·m·q CTE, m = rd.answer 전 측정 이력 prompt_key 집계). 모양 A(정렬 prompt·brand·country·lang·target_url): 사이트 1 + count 1 + 행 페이지 1 + 렌즈 창 1 + PAGE_PROMPT_KEYS_SQL 1 + website_page_meta 1 = 6. 커서 409 cursor_stale·422 cursor_invalid → 어댑터가 첫 페이지로 1회 재조회(요청 1회분 전체 +4·공통 3). 현행의 '?page 범위 초과 → 마지막 페이지 재조회'(2문장 재실행)는 After 에 없음(?page 는 라벨, 커서 없으면 1쪽). 결과 캐시 비대상(ALLOWLIST 밖)",
+   "f2": [
+    3,
+    4,
+    1,
+    0,
+    "website_joined queries.py:142-149 + website_rows_cte :109-117 + lens_cte :125-139 (CTE s·r·m·q 4, JOIN s·LEFT rd.dim_prompt·LEFT m 3, GROUP BY m 1)"
+   ],
+   "f3": [
+    "y",
+    "rd.answer 답변 행을 prompt_key 별 count·max(round_date)·엔진 array_agg 로 셈(답변 grain) + 카탈로그·차원 점 조회. 원소 조인·판정 재계산 없음"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "catch → throwForPage(website/prompts/page.tsx:252-254) → 로그인·no-access·404·오류 경계. 단 커서 409/422 는 안내 없이 1쪽 재조회(catalog.ts:298-304, 1쪽 라벨)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "기본 정렬 last_measured(모양 B)는 페이지마다 스코프 사이트 전 프롬프트의 answers·last_rd·engines(array_agg DISTINCT)를 전 측정 이력으로 집계한 뒤 50행만 씀 — 페이지 밖 행의 answers·engines 는 버려지고 결과 캐시 밖이라 페이지 이동마다 재집계(README 위험 high)",
+    "4"
+   ],
+   "f9": [
+    "y",
+    "키셋 50행(상한 200)·meta.page.total 로 총계 표시. 절단 없음"
+   ],
+   "f10": [
+    "n",
+    "U8-N13: 페이지 번호 점프 없음·범위 밖/낡은 커서는 1쪽 재시작(현행은 ?page 범위 초과 시 마지막 페이지 재조회, page.tsx:196-208 legacy); U8-N19: 최근 측정 = 렌즈 최신 round_date(YYYY-MM-DD) vs 현행 타임스탬프(catalog.ts:42-54). 라우트 게이트 = hq·region·country·admin·website ∧ 메뉴 website(service.py:52-53·72-79) = 현행 route-policy + DashLayout 3인자와 같음, 사이트 스코프는 bgrps·DataScope.site_allowed(공통)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/catalog.parity.test.ts › /website/prompts: listWebsitePromptsScoped vs GET /v1/prompts?surface=website › A admin, every engine, last measured desc (B~E 케이스 포함)",
+    "front/lib/hgh/adapters/catalog.parity.test.ts › /website/prompts: listWebsitePromptsScoped vs GET /v1/prompts?surface=website › U8-N19: the legacy value is a timestamp; the API value is its KST day (W5 crosses midnight)",
+    "back/app/features/catalog/prompts/catalog/tests/test_catalog.py › test_website_lens_ungated_parity"
+   ]
+  },
+  "GET /v1/prompts (format=xlsx)": {
+   "label": "list_catalog → _website 내보내기 분기(format=xlsx, columns=screen, locale) → screen_export.screen_response / 라우트 GET /api/website/prompts/export → relayWebsitePromptsExport → relayDownload(스트림 중계)",
+   "where": "back service.py:286-299 → queries.py:142-149 website_joined(LIMIT 50,001, service.py:292) · screen_export.py:155-169 screen_response · core/export.py:66-82 export_headers·xlsx_response · core/xlsx.py:794 iter_workbook; front app/api/website/prompts/export/route.ts:48-87 → lib/hgh/adapters/catalog.ts:342-349 → lib/hgh/relay.ts:62-83; 버튼 website/prompts/_components/export-button.tsx:17-53(<a href>)",
+   "stmts": "클릭당 3 (+공통 3): WEBSITE_SITES_SQL 1 + 렌즈 창 1 + 내보내기 본문 1(목록 모양 B 와 같은 s·r·m·q, ORDER BY 동점 website_prompt_id ASC, LIMIT 50,001). count 문장 없음. 이후 백엔드가 행 전부(≤5만)를 메모리에서 8열 셀로 만들고 xlsx 스트리밍, 프론트는 버퍼 없이 중계(파일명만 덮어씀). 다운로드 감사는 배치 기록(core/write.py:309-312)",
+   "f2": [
+    3,
+    4,
+    1,
+    0,
+    "website_joined queries.py:142-149 (목록과 같은 빌더) + service.py:291-292 정렬·LIMIT 래퍼"
+   ],
+   "f3": [
+    "y",
+    "목록과 같은 rd.answer 답변 grain 집계"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "백엔드 오류 → hghErrorResponse(상태 그대로, Content-Disposition 없음, route.ts:84-86·errors.ts:246-255) → <a href>(download 속성 없음)라 브라우저가 오류 본문을 표시(export-button.tsx:41-47)"
+   ],
+   "f7": [
+    "n",
+    "상한 50,000 도달 시 X-Export-Truncated 헤더만(service.py:294·298, core/export.py:73-74, relay.ts:24 통과) — <a href> 경로라 사용자는 못 보고 파일은 성공처럼 저장. 200·attachment 헤더를 보낸 뒤 스트림이 끊기면 부분 파일과 성공 구분이 약함(route maxDuration 60s < relay file 타임아웃 120s, route.ts:46·relay.ts:75). 중복 클릭은 막지 않으나 읽기 전용이라 영향 작음"
+   ],
+   "f8": [
+    "y",
+    "행 전부가 파일에 실림(렌즈는 스코프 사이트 프로젝트로 한정, service.py:287)",
+    "3"
+   ],
+   "f9": [
+    "n",
+    "5만 행 상한 조용한 절단(헤더만, 사용자 비가시) — queries.py:19 EXPORT_MAX_ROWS, service.py:292-295"
+   ],
+   "f10": [
+    "n",
+    "오류 계약: 현행 라우트는 실패 시 항상 500 {error:'export failed'}(route.ts:141-144 legacy 분기), After 는 백엔드 상태(401·403·404·422·5xx)와 {error:{code,requestId}}를 그대로 전달. 국가·언어 표시명은 Intl 대신 names_data 고정 표(변이·확장 하위 태그는 코드 그대로, back README 다른 점 6). 행 집합·정렬·8열·파일명은 현행과 같음. 게이트 = route.ts:60 canReadAnalysis 3인자 + 백엔드 check_route(같은 역할·메뉴)"
+   ],
+   "parity": [
+    "back/app/features/catalog/prompts/catalog/tests/test_catalog_bg.py › test_screen_xlsx_ko_matches_current_file_shape",
+    "back/app/features/catalog/prompts/catalog/tests/test_catalog_bg.py › test_export_tie_order_matches_current_file",
+    "back/app/features/catalog/prompts/catalog/tests/test_catalog_bg.py › test_screen_pseudo_country_label",
+    "back/app/features/catalog/prompts/catalog/tests/test_catalog_bg.py › test_names_match_intl_sample"
+   ]
+  },
+  "GET /v1/funnel/conversion": {
+   "label": "get_funnel_conversion_0 → service.build (GA4 AI 유입·전환: 요약·일별 추이·엔진별·페이지별·국가별·coverage) / 어댑터 loadConversionScreen → toConversionScreen",
+   "where": "back features/analytics/funnel/conversion/router.py:25-33 → service.py:255-368 build (_registry_and_props :371-373, resolve_markets :138-150, _markets :93-118) → queries.py:28-123 (최중 pages_sql :104-123); front lib/hgh/adapters/funnel.ts:411-415 loadConversionScreen (conversionQuery :242-263, toConversionScreen :394-408, toConversionLive :286-323, toConversionRollup :337-362, toVisits :365-384) ← app/[locale]/(dash)/website/ai-funnel/conversion/page.tsx:57-67",
+   "stmts": "SQL 자체 6 (+공통 3) + GA4 0. markets_sql(app.ga4_property 전 행) 1 + props_sql(rd.ga4_dim_property 레지스트리·env 출처) 1 + as_of_sql(속성별 최신 적재일, report 1) 1 + sessions_sql(report 1·2, GROUPING SETS 4개) 1 + conversions_sql(report 3 is_conv) 1 + pages_sql(report 4 landing, include_pages 기본 true·page_limit 15) 1. GA4 Data API 호출 없음 — 적재기가 채운 rd.ga4_row 만 읽음(service.py:4, router.py:29). 조건부: device·visitor_type 필터 +1(dim_values_sql), engine 필터 +2(engine_sessions_sql·engine_conversions_sql → by_engine_all), active 시장 0개면 2문장에서 종료(source_pending). 시장별 N+1 없음(prop_key = ANY 한 문장). 결과 캐시 ALLOWLIST 밖(result_cache.py:78-97) → 항상 미캐시, 백엔드에 GA4 결과 캐시 표·TTL 없음(현행 unstable_cache 24h 는 사라짐 — 신선도 = 적재 주기)",
+   "f2": [
+    2,
+    1,
+    1,
+    0,
+    "back/app/features/analytics/funnel/conversion/queries.py:104-123 pages_sql (CTE pg 안 rd.ga4_row JOIN rd.ga4_dim_property + pg LEFT JOIN rd.ga4_dim_value, GROUP BY page_key). 참고: conversions_sql [1,0,1,0] :88-101, sessions_sql [0,0,1,0](GROUPING SETS 4개를 GROUP BY 1로 셈) :71-85"
+   ],
+   "f3": [
+    "n",
+    "GA4 실시간 호출은 사라짐(적재 rd.ga4_row) — 그러나 요청마다 GA4 원본 그레인(일×속성×엔진×기기×방문자) 90일치를 SUM/GROUPING SETS 로 집계하고, pages_sql 은 URL(page_key) 단위 landing 행을 차원 조인해 페이지 표를 만듦(queries.py:104-123) → URL 단위 행 요청 시 집계. is_conv·is_ai·engine_key 는 적재 판정 열이라 재계산은 없음(conv_basis 는 열 선택 CASE, queries.py:20)"
+   ],
+   "f4": [
+    "GA2",
+    "WSK9",
+    "WSK8",
+    "AWK40"
+   ],
+   "f6": [
+    "n",
+    "① 스코프 안 GA4 시장 0개(레지스트리 밖 스코프, 국가 필터가 시장을 다 거름)면 백엔드는 빈 결과 + meta.suppressed source_pending(service.py:290-295)인데 어댑터는 '시장 없음 → 아무것도 안 줌'(funnel.ts:392·404) → ConversionView 가 SAMPLE_CONVERSION_* 고정값을 필터 해시로 흔들어 실측처럼 그림(conversion-view.tsx:89·126-188). 웹사이트 경로엔 표본 안내 layout 없음(표준 conversion/layout.tsx:15 에만) — Before WSGPM 과 같음. ② 어댑터가 만든 notices(filterNotices: dropped·ignored·suppressed)를 페이지가 안 읽음(page.tsx:47). 개선점: API 오류(5xx·504)는 throwForPage → 오류 경계(page.tsx:64-66)라 '측정 대기'와 섞이지 않고, 시장별 부분 실패 경로 자체가 없음. 남는 데이터 상태: 적재가 늦은 시장도 창 끝 = 전 시장 최신 적재일 max(service.py:280-286)에 맞춰져 안내 없음(coverage.markets[].as_of 미표시), 0 세션 시장은 국가별 표에서 빠지고 measured 수만 줄어듦(funnel.ts:347-354)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "롤업(N국) 변형: 화면은 페이지·추이·엔진을 안 그리는데(conversion-view.tsx:210-264) 어댑터가 include_pages 를 안 보내(funnel.ts:255-260, 기본 true schemas.py:27) 최중 문장 pages_sql 과 날짜·엔진 GROUPING SET 을 계산해 버림. leaf 는 1시장인데도 속성 GROUPING SET 계산(사소). N+1·숨은 추가 호출 없음(화면당 1회)",
+    "6 (+공통 3)"
+   ],
+   "f9": [
+    "y",
+    "페이지 page_limit=15 (전환 표 12·방문 표 15 = 표시 범위, funnel.ts:203-204·315·376), 추이 = 창 일수, 국가별 = active 시장 전량, 엔진 표 = 패널 2개(chatgpt·gemini) 고정 — 다른 엔진은 응답엔 있으나 표에서 빠짐(현행과 같음, funnel.ts:201·275-283)"
+   ],
+   "f10": [
+    "n",
+    "값 의미 차이: 분모 = 세션(DC-03)인데 라벨·필드는 '활성 사용자'(aiUsersTotal 등, U8-N3 — 전환 시 재라벨 필요), 7/28일 창 끝 = 최신 적재일(U8-N5), 엔진 필터 시 비교 코호트 = 비AI 만(U8-N16), pending_grant 시장 = '측정 대기'(현행은 GA4 호출 실패, U8-N7), 방문 고유 방문자·빈도 카드 숨김(U8-N4), 페이지 표 = AI 세션순 15행 중 12(U8-N6), 레지스트리 unmapped 시장 property_id 미전송(D4/DC-4). 오류 계약: 현행 GA4 실패 → '측정 대기', API → 오류 경계. 접근: GA4 시장 = 계정 원값 스코프(DataScope.of) ∩ 요청 국가 ∩ 관점 브랜드 — 현행 resolveProperties(session.scope) 와 같은 규칙(service.py:121-150), website 가상 지역 코드는 사이트 브랜드 비트로 좁힘(service.py:147, 검증 D1). 공통 차이(no_country_scope 403 등)는 AWCOMMON (funnel.ts:21-64 known_diff)"
+   ],
+   "parity": [
+    "front/lib/hgh/adapters/funnel.parity.test.ts › country leaf: live conversion and visits (legacy GA4 functions vs adapter)",
+    "front/lib/hgh/adapters/funnel.parity.test.ts › region rollup (legacy getAiTrafficConversionRollup vs adapter)",
+    "front/lib/hgh/adapters/funnel.test.ts › toConversionScreen: the legacy page branches",
+    "back/app/features/analytics/funnel/conversion/tests/test_conversion.py › test_admin_default_window_shape_and_values",
+    "back/app/features/analytics/funnel/conversion/tests/test_conversion.py › test_website_surface_same_source",
+    "back/app/features/analytics/funnel/conversion/tests/test_conversion.py › test_scope_isolation",
+    "back/app/features/analytics/funnel/conversion/tests/test_conversion_bg.py › test_bg29_coverage_property_id",
+    "back/app/features/analytics/funnel/conversion/tests/test_conversion_bg.py › test_bg30_relative_days",
+    "back/app/features/analytics/funnel/conversion/tests/test_conversion_regress.py › test_d1_website_virtual_code_narrows_markets"
+   ]
+  },
+  "GET /v1/funnel/conversion/events": {
+   "label": "get_funnel_conversion_events_1 → service.list_events (authorize_events → ga4 service.load_events) / 어댑터 fetchConversionEvents ← 서버 액션 loadConversionEvents",
+   "where": "back features/analytics/funnel/conversion/router.py:36-44 → service.py:379-412 (authorize_events :379-404, list_events :407-412) → features/admin/integrations/ga4/service.py:107-125 load_events → ga4/queries.py:7·49·52-59·80; front lib/hgh/adapters/funnel.ts:425-431 fetchConversionEvents ← lib/ga4/tracked-events-actions.ts:178-203 ← components/dash/ga4-events-dialog.tsx:51-64",
+   "stmts": "SQL 자체 7 (+공통 3) + GA4 0. authorize_events: resolve_read_context(website, 추가 SQL 없음) → markets_sql 1 + props_sql 1 + registry_by_id_sql 1 (+admin 이고 스코프 소속 밖이면 props_by_id_sql +1) → load_events: TODAY_SQL(rd.today_kst) 1 + DIMS_SQL 1 + EVENT_COUNTS_SQL 1(적재 투영 있을 때만) + TRACKED_SQL(app.ga4_tracked_event) 1. 이벤트 수 = 적재 events 보고서(현행은 열 때마다 GA4 runReport). 캐시 없음(ALLOWLIST 밖)",
+   "f2": [
+    1,
+    0,
+    1,
+    0,
+    "back/app/features/admin/integrations/ga4/queries.py:52-59 EVENT_COUNTS_SQL (rd.ga4_row JOIN rd.ga4_dim_value, GROUP BY v.value)"
+   ],
+   "f3": [
+    "y",
+    "적재된 events 일별 보고서 행(rd.ga4_row report 3)을 이벤트 이름별 SUM + 설정 행 점조회 — 외부 GA4 호출·판정 재계산 없음(현행은 열 때마다 GA4 Data API 90일 원격 집계). 경계 판정은 notes 참조"
+   ],
+   "f4": [
+    "GA2",
+    "ADK1"
+   ],
+   "f6": [
+    "y",
+    "5xx·시간 초과 → {ok:false, loadFailed} → 다이얼로그 오류 문구(tracked-events-actions.ts:172-175, ga4-events-dialog.tsx:56-60·111-114). 단서: 403·404 는 UnauthorizedError 를 던져 클라이언트 load() 가 setLoading(false) 전에 끊겨 스피너가 남음(ga4-events-dialog.tsx:51-55, tracked-events-actions.ts:167-168 — 현행 authorize 실패와 같음); 적재 전 속성(loaded=false)은 수가 전부 0 인데 안내 없음(data.loaded 미사용, funnel.ts:420-422)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "속성 하나의 소속 판정에 레지스트리·적재 투영 전 행을 읽지만 표가 작음. N+1·숨은 호출 없음(다이얼로그 열 때 1회)",
+    "7 (+공통 3)"
+   ],
+   "f9": [
+    "y",
+    "상한 없음 — 속성의 90일 이벤트 이름 ∪ 추적 이벤트 전량 = 다이얼로그 스크롤 목록 전량. 현행 GA4 eventName 250 상한(잘림 안내 없음)은 사라짐"
+   ],
+   "f10": [
+    "n",
+    "이벤트 수 원천이 실시간 GA4 → 적재 events 보고서(오늘 KST 기준 90일, 적재 지연만큼 최근 일 누락, U8-N8)이고 250 상한 제거. 소속: 레지스트리 unmapped 시장 속성은 소속에서 빠짐(D4, service.py:30-35), admin 은 알려진 속성(레지스트리 ∨ 적재 투영)만 — 모르는 속성 404(service.py:398-401, 현행 admin 무조건 허용). 편집 가능 역할·스코프 소속 규칙은 현행 authorize 와 같음(service.py:396-397 ↔ tracked-events-actions.ts:120-128). 응답 can_edit·registered 는 다이얼로그가 안 씀(U8-N8). admin(관리 메뉴 보유)은 이 키가 아니라 G7 /v1/admin/ga4/properties/{id}/events 로 감(tracked-events-actions.ts:145·150-153, U8-N9). 공통 차이는 AWCOMMON"
+   ],
+   "parity": [
+    "back/app/features/analytics/funnel/conversion/tests/test_conversion_bg.py › test_bg29_events_read_scope",
+    "front/lib/ga4/tracked-events-actions.api.test.ts › error map (api) › read: 404 (outside the account, IDOR hiding) and 403 -> UnauthorizedError, as legacy authorize failure",
+    "front/lib/ga4/tracked-events-actions.api.test.ts › error map (api) › 5xx / unavailable -> load or save failed, not thrown"
+   ]
+  },
+  "PUT /v1/funnel/conversion/events": {
+   "label": "put_funnel_conversion_events_2 → service.put_events (authorize_events → api_rw 트랜잭션 ga4 service.put_events + enqueue_change('ga4_tracked_event')) / 어댑터 putConversionEvents ← 서버 액션 saveConversionEvents",
+   "where": "back features/analytics/funnel/conversion/router.py:47-54 → service.py:415-426 put_events → features/admin/integrations/ga4/service.py:214-227 → ga4/queries.py:62·78·80-84 + core/write.py:96-133 enqueue_change_result; front lib/hgh/adapters/funnel.ts:434-441 putConversionEvents ← lib/ga4/tracked-events-actions.ts:212-236 ← components/dash/ga4-events-dialog.tsx:76-86·164-174",
+   "stmts": "SQL 자체 11 (+공통 3), 커넥션 2개(api_ro 읽기 + api_rw 쓰기) + GA4 0. 읽기: authorize_events markets_sql 1 + props_sql 1 + registry_by_id_sql 1(+admin 스코프 밖 +1). 쓰기 트랜잭션(get_db().write): set_local(행위자 GUC) 1 + PROP_LOCK_SQL(FOR UPDATE) 1 + TRACKED_SQL 1 + DELETE 1 + INSERT 1(빈 집합이면 생략) + enqueue_change: advisory xact lock 1 + 대기·실행 중 judgment_change 조회 1 + INSERT judgment_change 1. 같은 집합이면 쓰기 쪽 3문장에서 끝(propagation none) → 자체 6. 반영은 적재기 재투영(비동기)",
+   "f2": [
+    "skip",
+    "쓰기 — 집계 SQL 없음(인가 조회는 단순 SELECT, JOIN 0)"
+   ],
+   "f3": [
+    "skip",
+    ""
+   ],
+   "f4": [
+    "GA2"
+   ],
+   "f6": [
+    "y",
+    "쓰기 경로(읽기 없음)"
+   ],
+   "f7": [
+    "n",
+    "① 저장이 재판정 큐(judgment_change, propagation pending)에 들어가 다음 적재 뒤 반영되는데 다이얼로그는 value.notice 를 무시하고 평범한 '저장됨' 토스트(ga4-events-dialog.tsx:79-81, funnel.ts:42-50 U8-N8) → 비동기 반영을 완료처럼 표시. ② 동시 편집: 버전·If-Match·ETag 없음 — 행 잠금(PROP_LOCK FOR UPDATE, ga4/queries.py:62)은 직렬화만 함. 앞선 변경이 대기·실행 중이면 enqueue dedupe='raise' 가 409 duplicate_pending 으로 거절(core/write.py:112-123, 트랜잭션 롤백)하지만 프런트는 409 를 conflict → '저장 실패' 일반 문구로만 보여 줌(tracked-events-actions.ts:169-172, errors.ts:167-168); 앞 변경이 처리된 뒤엔 낡은 스냅샷으로 저장해도 앞 사람 선택을 조용히 덮음(last write wins, 현행 WSEVW 와 같음). ③ 쓰기 시간 초과 15s → 504 '저장 실패'인데 커밋됐을 수 있음(client.ts:66·751). 실패 표시(toast.error)·중복 제출 방지(saving 으로 버튼 비활성, ga4-events-dialog.tsx:159·168)는 됨"
+   ],
+   "f8": [
+    "y",
+    "",
+    "11 (+공통 3)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "n",
+    "저장 의미 변경: 현행 즉시 반영(replaceForProperty + revalidateTag('ga4')) → 큐 적재 후 반영(U8-N8). 레지스트리 밖 속성(env·프로젝트 직접 지정) 저장 404 → notRegistered 문구(G13, ga4 service.py:215-216). 새 오류 409 duplicate_pending(대기 중 재저장 거절, 현행 없음). admin 은 알려진 속성만(모르는 속성 404). 편집 역할 country·region·hq·admin 은 프런트 canEdit(page.tsx:103-104)·서버 액션 WRITE_ROLES(tracked-events-actions.ts:68)·백 WRITE_ROLES+is_admin(service.py:80·397, 403 role_forbidden)이 같음. 레지스트리 unmapped 시장 속성은 소속에서 빠짐(D4). admin(관리 메뉴 보유)은 G7 /v1/admin/ga4/properties/{id}/events 로 감(U8-N9). 공통 차이는 AWCOMMON"
+   ],
+   "parity": [
+    "back/app/features/analytics/funnel/conversion/tests/test_conversion_events_write.py › test_put_scope_role_and_change_queue",
+    "back/app/features/analytics/funnel/conversion/tests/test_conversion_events_write.py › test_put_unregistered_and_bad_body",
+    "front/lib/ga4/tracked-events-actions.api.test.ts › source switch › U8-N8 (verify D4): a queued api save returns the pending notice; an unchanged set (propagation none) the plain one",
+    "front/lib/ga4/tracked-events-actions.api.test.ts › error map (api) › write 404 = property outside the registry -> error text (G13); 422 -> invalid"
+   ]
+  },
+  "STATIC 웹사이트 ACR 표본(호출 없음)": {
+   "label": "AcrView 가 SAMPLE_ACR_* 를 렌더(데이터 호출 없음) — 정적 표본 상수 보고용 의사 키",
+   "where": "front app/[locale]/(dash)/website/ai-funnel/acr/page.tsx:27-43 (G3=api 여도 loadPanelOptions 만) → standard/ai-funnel/_components/acr-view.tsx:25-33·55-120 → standard/ai-funnel/_data/sample.ts:44·60·78·105·222",
+   "stmts": "SQL 0 · API 0 (GET /v1/funnel/acr 미호출. 필터 바만 GET /v1/filters/options — 다른 에이전트 측정)",
+   "f2": [
+    "skip",
+    "정적 표본 — 조회 없음"
+   ],
+   "f3": [
+    "skip",
+    "데이터 조회 없음"
+   ],
+   "f4": [
+    "PJK9",
+    "GLK3"
+   ],
+   "f6": [
+    "n",
+    "읽기는 없지만 표본 고정값이 표본 안내 없이 실측처럼 표시(제목 '(beta)' 뿐), 필터를 바꾸면 useFilterSignal 해시로 값이 흔들림(acr-view.tsx:55-90, use-filter-signal.ts:42-52). 메뉴 숨김·직접 URL 만(route-policy)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "0"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ],
+   "f10": [
+    "y",
+    "legacy 와 같은 컴포넌트·같은 표본. G3 분기는 필터 옵션만 website 표면 값으로 바뀜(U8-N15, 필터 키 소관)"
+   ],
+   "parity": []
+  }
+ },
+ "area_keys": [
+  {
+   "route": "/ko/website/answer-analysis/mention",
+   "label": "전체 언급 수 · 언급 브랜드 수 · 측정 프롬프트 수",
+   "api_keys": [
+    "GET /v1/mentions/brands",
+    "GET /v1/kpi/summary",
+    "GET /v1/kpi/engines"
+   ]
+  },
+  {
+   "route": "/ko/website/answer-analysis/mention",
+   "label": "쓰기: 브랜드 순위 엑셀 다운로드",
+   "api_keys": [
+    "CLIENT xlsx export (브랜드 순위)"
+   ]
+  },
+  {
+   "route": "/ko/website/answer-analysis/mention",
+   "label": "주별 브랜드 언급 수(당사 + 상위 10)",
+   "api_keys": [
+    "GET /v1/trend (dimension=brand)"
+   ]
+  },
+  {
+   "route": "/ko/website/answer-analysis/citation",
+   "label": "주별 상위 10개 도메인 인용 수",
+   "api_keys": [
+    "GET /v1/trend (dimension=source|category)"
+   ]
+  },
+  {
+   "route": "/ko/website/answer-analysis/citation",
+   "label": "출처 카테고리 구성 추이(100% 누적 면적)",
+   "api_keys": [
+    "GET /v1/trend (dimension=source|category)"
+   ]
+  },
+  {
+   "route": "/ko/website/ai-funnel/acr",
+   "label": "ACR 본문(브랜드 ACR · 추이 · 배틀 · 차종 전환) — 정적 표본",
+   "api_keys": [
+    "STATIC 웹사이트 ACR 표본(호출 없음)"
+   ]
+  }
+ ],
+ "new_constants": {
+  "AWK50": [
+   "ANALYSIS_GAP_MAX = '0.05' (생성 대기 구멍 판정 갭 상한, 조건부 freeze_at_publish)",
+   "back/app/core/cycles.py:238 (pick_holes :245-264)",
+   1,
+   "분석 결손 비율 ≤ 5% 인 닫힌 회차를 구멍으로 보고 카드 요청을 비카드로 내림"
+  ],
+  "AWK51": [
+   "BRAND_OWN_COLS · OWN_BITS (당사 열 비트 {1:h, 2:k, 4:g})",
+   "back/app/core/codes.py:22-23 (own_cols core/measure.py:452-483, own_bit_of codes.py:146-155, project 폴백 filters.py:699)",
+   1,
+   "Hyundai·Kia·Genesis 3 비트를 당사 열 접미사로 고정(브랜드 정본은 app.brand 지만 당사 판정 집합은 코드 고정)"
+  ],
+  "AWK10": [
+   "CARD_BRAND_CAP = 200 (카드 경로 경쟁 행 상한, 현행 프로필 card_brand_cap 조건부)",
+   "back/app/features/analytics/mentions/brands/service.py:97 (적용 :100-109·251)",
+   1,
+   "card=true ∧ card_brand_cap 켜짐이면 경쟁 행을 언급 순 상위 200 − 당사 행 수로 자른 뒤 순위·KPI #16 SOV 1위 경쟁사를 고름(현행 summary-trend-aggregates.ts:353 DEFAULT_LIMITS.brand)"
+  ],
+  "AWK30": [
+   "DEFAULT_WINDOW = 12 (추이 기본 창: 최근 12 버킷)",
+   "back/app/features/analytics/trend/series/service.py:87",
+   1,
+   "from/to 없으면 회차·주·월 12 버킷(Q9, core.cycles.resolve_recent_window). 현행 웹사이트 추이 13자리·전 이력과 다름"
+  ],
+  "AWK31": [
+   "TREND_GRID_SLOTS = 13 · TREND_GRID_MAX_DAYS = 180 (현행 추이 격자, profile trend_grid 조건부)",
+   "back/app/core/cycles.py:475-476",
+   2,
+   "원장 자리 최신 13개 · 오늘−180일 이후(bucket=cycle ∧ website, 웹사이트는 완결성 0.9 미적용 GRID_RULES)"
+  ],
+  "AWK33": [
+   "MEASURED_TZ = 'Asia/Seoul' (측정 일수 날짜 경계)",
+   "back/app/features/analytics/trend/series/queries.py:35",
+   1,
+   "buckets[].measured_days = rd.job.measured_at KST 고유 일수(measured_days=true 호출만: 웹사이트 브랜드 추이)"
+  ],
+  "AWK40": [
+   "LOOKBACK_DAYS = 400 (GA4 최신 적재일 탐색 창)",
+   "back/app/features/analytics/funnel/conversion/queries.py:21 (as_of_sql :52-59)",
+   1,
+   "오늘(KST) − 400일 ~ +1일 안의 report 1 최신 날짜를 속성 as_of 로 씀 → 기본 90일 창의 끝. 400일 넘게 적재가 끊긴 속성은 as_of 없음(창 없음 → 빈 결과)"
+  ]
+ },
+ "notes": [
+  "설정 가정: HGH_SOURCE_G3=api, HGH_RESULT_CACHE=0(core/config.py:86, 미캐시로 셈), HGH_LEGACY_PROFILE=off(코드 기본값 core/config.py:88·profile.py:265 — infra/ci 에 설정 없음). 프로필 스위치 분기(freeze_at_publish·web_registered_only·web_url_rate·web_accuracy_flat·filter_options·card_brand_cap·domains_card_by_host·trend_grid·compare_*)는 조건부 경로로만 f3·f4·stmts 에 반영",
+  "공통 문장 3(set_config·user_account·load_refs)은 AWCOMMON 에만 셈 — 엔드포인트 stmts 는 자체 문장 + '공통 3' 표기",
+  "공유 술어 빌더(JOIN·CTE 계수 제외): core/measure.py scope_where(:181)·catalog_all_pred(:253)·frozen_taxon_pred(:219)·web_unit_pred/unit_gate_of(:290-321)·mention_population(:324)·frozen_gate(:364)·citation_population(:382)·rep_term(:411)·source_where(:518)·citation_where(:526), core/cycles.py Window.where(:122), core/filters.py catalog_brand_scope·catalog_market_scope·catalog_market_filter(:878-903)",
+  "표면 공유: /v1/kpi/summary·/v1/mentions/*·/v1/citations/*·/v1/trend·/v1/kpi/engines·/v1/kpi/compare·/v1/geo·/v1/filters/*·/v1/answers/{job_id}·/v1/funnel/conversion* 은 global·project 표면과 같은 핸들러를 surface=website 로 부름(표면 분기는 resolve_read_context 의 사이트 선택·website 전용 열 web_reg·cit_loc_tgt·발행값 report_values_sql 등). card=true(개요 카드 경로)는 프로필 off 에서 문장이 같음",
+  "[lead] /v1/funnel/conversion f4 는 규칙(백+어댑터)대로 뷰 단계 상수 GLK4(SAMPLE_CONVERSION_* 시장 0개 표본)·GLK3(useFilterSignal)·PJK5(LOW_SAMPLE_USERS=50)를 뺐음 — Before WSGPM/WSGCL 과 같은 잣대. 표본 폴백 자체는 f6 n 근거로 남김. ACR 의사 키 'STATIC 웹사이트 ACR 표본(호출 없음)'은 화면 본문 원천이 표본 상수뿐이라 PJK9·GLK3 를 그대로 둠",
+  "[lead] 상수 병합: 같은 정의 중복 id 를 하나로 — AWK1(A)·AWK11(B) → AWK51(BRAND_OWN_COLS, AWCOMMON), AWK12(B)·AWK32(D) → AWK50(ANALYSIS_GAP_MAX). /v1/prompts (format=xlsx) 의 WSK4 는 내보내기 표시명 표(screen_export.py:56-61 PSEUDO_COUNTRY_LABELS) = 표시 어휘라 규칙상 제외 — 웹사이트 스코프의 도시 의사 코드(WSK4)는 AWCOMMON(core/auth.py:428 WEBSITE_SCOPE_PARENT)에 있음",
+  "[lead] f2 기준 통일: 각 엔드포인트가 스스로 내는 창 해석 문장(core/cycles.py resolve_window 스냅샷 SQL :169-181 = [1,3,0,0], 기간 SQL = 0, 최근 N _RECENT_SQL = [0,2,0,0])은 공유 술어 조각이 아니라 완결 문장이라 엔드포인트 문장으로 셈(A·C·D·리드와 같게 B 의 /v1/mentions/brands·/types f2 를 [1,3,0,0] 으로 바꿈). 창을 공통으로 빼면 options·engines·geo·brands·types 의 f2 가 괄호 안 값으로 내려감",
+  "[lead] 검증한 중대 결함: 언급 브랜드 드릴다운 '프롬프트' 탭 — 어댑터가 terms=true·limit=200(PROMPT_PAGE drilldown.ts:110)·answers_limit=50(:111)을 보내는데 백엔드는 terms 일 때 limit×answers_limit ≤ 1000(TERMS_MAX_REFS mentions/prompts/schemas.py:18·52-53)이라 항상 422 → 라우트 400 빈 목록 → 화면은 '프롬프트 없음'(GET /v1/mentions/prompts f10 n). 표준·프로젝트 드릴다운도 같은 어댑터",
+  "[lead] 웹사이트 화면이 읽는 degrade 라벨은 개요 'websiteAggregates' 하나(website/page.tsx:435) — 나머지 웹사이트 5xx·시간 초과 흡수(degradeOnApiFailure·orNullOnTransient)는 전부 안내 없는 빈 값이라 다수 엔드포인트 f6 = n 의 공통 원인(AWCOMMON f6)",
+  "[A_filters_kpi] 설정 가정: HGH_SOURCE_G3=api, HGH_LEGACY_PROFILE 기본 off(core/config.py:88), HGH_RESULT_CACHE 꺼짐 → 무캐시로 셈. 다섯 끝점 모두 result_cache.py ALLOWLIST(:91-95)에 있음(켜면 적중 시 끝점 문장 0).",
+  "[A_filters_kpi] f2 판정 선택: 끝점 서비스가 부르는 창 해석 문장(core/cycles.py:299 resolve_window — 스냅샷 SQL :169 = JOIN 1·CTE 3, 범위 SQL :184 = 0)은 AWCOMMON 목록(set_local·principal·refs·close_period)에 없어 끝점 문장으로 셈. 그래서 기간 없는 기본 화면의 options·engines·geo f2 = [1,3,0,0](창 문장). 창 문장을 공통으로 옮기면 options [0,0,1,0] matrix_sql(filters/options/queries.py:38), engines [0,0,1,0] plan_counts main(measure.py:567), geo [1,0,0,0] EXCLUDED_BRAND_KEYS_SQL(entities.py:39)·[0,0,1,0] competitor_rows_sql. dates(_DATES_SQL 단독)·compare(범위 창 = 0)는 영향 없음.",
+  "[A_filters_kpi] 언급 화면 GET /v1/kpi/summary 호출(리드 계수용, 이 묶음에서는 계수 안 함): ① mentions.ts:206 mentionsEssentials → fetchKpiSummary(filters, ctx) = GET /v1/kpi/summary?surface=website + country·lang·engine·brand(admin)·from/to(card·cycle_offset 없음, summary.ts:83-90); ② mentions.ts:426 loadMentionsLive(B4) 같은 질의 → 요청 내 dedupe; ③ mentions.ts:472 loadSubKpis 같은 질의 → dedupe; ④ 직전: 기간 없음 → mentions.ts:511 fetchKpiSummary(filters, {cycleOffset:1}) = 같은 질의 + cycle_offset=1(별도 HTTP), 기간 있음 → mentions.ts:497 현재 질의(dedupe) 뒤 mentions.ts:505 fetchKpiSummary(prevFilters) from=min(dateFrom, 창 첫 회차)·to=창 첫 회차(별도 HTTP, 창 회차 2개 미만이면 :499 에서 호출 없음). ⇒ 렌더당 서로 다른 kpi/summary HTTP 2회(현재 1 + 직전 1). 쓰는 필드: params.measured_prompts(요약 카드 측정 프롬프트 수·Sub KPI measuredPrompts Δ)·params.prompts_without_brand(미언급 프롬프트 카드). 같은 화면의 kpi/engines 행 합이 summary 언급 카운트와 같은 빌더(D6)라 summary main 문장은 언급 화면에서 값이 겹침.",
+  "[A_filters_kpi] 언급 화면 GET /v1/kpi/engines: 렌더당 HTTP 2회(현재 part=all — D6 필수와 loadSubKpis 가 dedupe 로 1회, 직전 cycle_offset=1 또는 기간 직전 창 1회). 개요는 배지용 1회(part=all·card=true). dedupe 는 진행 중·성공 항목만 공유하고 실패 항목은 지움(dashboard.ts:288-295 주석)이라 실패 시 뒤 호출이 재전송할 수 있음.",
+  "[A_filters_kpi] 공유 술어 조각(scope_where·mention_population·citation_population·rep_term·web_unit_pred·catalog_all_pred·Window.where)의 서브쿼리는 JOIN/CTE 계수에서 뺌.",
+  "[A_filters_kpi] AWK1 은 B1(HMG 자사 3사 명부)과 같은 업무 정의를 백엔드 비트·열 형태로 고정한 것 — 리드가 B1 로 합쳐도 됨. core/codes.py load_refs(:151)에서도 쓰므로 AWCOMMON f4 와 겹칠 수 있음.",
+  "[A_filters_kpi] WSK2 재사용: core/auth.py:433 WEBSITE_DEDICATED_SITE_CODES {WORLDWIDE, CPO} + :439 SITE_GLOBAL_MARKETS 키(HYUNDAI-N) — filters/options build_matrix 가 dedicated_site_codes 로 직접 씀(service.py:178, :299). 가상 브랜드 코드·모 브랜드·숨김 시장·권역은 DB 참조(refs: rd.dim_country·app.brand·app.hidden_market·app.rhq_region)라 하드코딩 상수 아님(WSK1·WSK3·WSK4 대응 없음). B10 = 프론트 SCOPE_DENY_BRAND = UMBRELLA_BRAND 'HMG'(front/lib/hgh/adapters/session.ts:89 → lib/scope/brand-presence.ts:17), optionBrandsFor(filters.ts:269)가 씀.",
+  "[A_filters_kpi] 계수 제외 상수: HIDDEN_EXCLUDE(core/codes.py:27 계열별 숨김 코드 집합 — 코드표), MAX_DATES 400(목록 상한), 날짜 프리셋 6·13·29일·1년(dates/service.py:69-83, 현행 UI 이식·웹사이트 미사용), compare DEFAULT_DAYS 30·ALLOWED_DAYS(웹사이트는 늘 from/to 를 보내 도달 안 함), grace_days ceil(N/4)(compare/logic.py:188-191, Before DPCM 도 미계수), rd.today_kst()(DB 함수). P1 은 compare_epoch_gate 켬일 때만, AWK1 의 N_OWN_BRANDS 는 compare_suppress 켬일 때만 쓰이지만(조건부) own_cols 는 기본 경로.",
+  "[A_filters_kpi] filters/options f3 = y 근거: include=source_categories(rd.citation 원소 DISTINCT 스캔, queries.py:87-97)는 요청 인자 경로이고 웹사이트 화면은 보내지 않아 제외. 리드가 '끝점의 모든 경로'로 보면 n 으로 바꿀 것.",
+  "[A_filters_kpi] kpi/compare: 기본 화면(기간 없음)은 0문장 = Before DPCM 운영값(0)과 같음. 기간 양 끝을 고르면 After 만 6문장 +공통 3을 실행하고 칩을 그림(Before 는 스위치 off 로 null).",
+  "[A_filters_kpi] GEO: admin 무필터·전사 HQ 처럼 관점 브랜드가 여럿이면 백엔드가 meta.suppressed.markets='brand_required' 와 markets [] 를 주고 어댑터는 meta 를 읽지 않아 빈 지도(종전도 빈 결과라 표시는 같음). 5xx 폴백 buildGeo 는 프론트 lib/rhq(rhq-map.json)로 대기 권역을 만들어 RHQ 를 f4 에 넣음(실패 경로 한정).",
+  "[A_filters_kpi] 실패 경로 세부: 개요 options 화면 호출은 D6 필수 options 와 요청 내 dedupe 로 보통 1회지만 dedupe 가 실패 항목을 지우므로 D6 쪽이 먼저 실패해 끝나면 화면 호출이 1회 더 보냄. dates 는 keptCall 보관 프로미스라 재전송 없음(dashboard.ts:331-335).",
+  "[A_filters_kpi] 창 해석은 함대 스냅샷(최신 round_date 하루의 회차만, cycles.py:169-181)이라 그 날 회차가 없는 웹사이트 사이트는 결손 프로젝트로 값에서 빠짐(로그만, cycles.py:382-383) — 웹사이트 분석 끝점 공통 의미라 AWCOMMON 쪽 판단 대상.",
+  "[A_filters_kpi] 언급·인용 화면 options 는 afterEssentials 로 D6 4호출(브랜드·summary·달력·engines/인용 필수) 뒤에 나감(mention/page.tsx:142, citation/page.tsx:155). 프롬프트·전환·ACR 은 D6 게이트 없음.",
+  "[B_mentions] 설정 가정: HGH_SOURCE_G3=api, HGH_RESULT_CACHE=0(미캐시로 셈; /v1/mentions/brands·/v1/mentions/types 는 core/result_cache.py:80-81 ALLOWLIST 등재, /v1/mentions/prompts·/v1/answers/{job_id} 는 밖), HGH_LEGACY_PROFILE off(프로필 스위치 경로는 stmts 조건부로만 적음). 언급 화면 기본 = 기간 미지정 스냅샷(cumulative 플래그는 API 로 안 감, from·to 있을 때만 누적 창).",
+  "[B_mentions] f2 기준: 창 해석 문장(core/cycles.py:169-181 _snapshot_sql, [JOIN 1·CTE 3·AGG 0·WIN 0], 기간이면 _range_sql [0,0,0,0])은 모든 분석 엔드포인트가 read_scope→card_window 로 1회씩 내는 공통 문장이라 f2 에서 뺐고 stmts 에는 '창 1'로 셈. 포함하면 brands(2)·types(3) 의 최대 문장이 창 문장(4)으로 바뀜 — 리드가 다른 묶음과 맞춰 조정 바람.",
+  "[B_mentions] 중대 결함(계약): 브랜드 드릴다운 '프롬프트' 탭 — front loadBrandMentionPrompts 가 terms=true·limit=200·answers_limit=50 을 보내는데(drilldown.ts:371-379) back PromptsQuery 검증이 terms 일 때 limit×answers_limit ≤ 1000(TERMS_MAX_REFS, prompts/schemas.py:18·52-53)이라 항상 422 → 라우트 400 {prompts:[]}(brand-mention-prompts/route.ts:104) → 클라이언트가 r.ok 를 안 봐서 '프롬프트 없음' 빈 표(mentions-drilldown.tsx:143-147). 웹사이트뿐 아니라 표준·프로젝트 드릴다운도 같은 어댑터. 프런트 drilldown.test.ts:310-323 은 이 값을 단언하고 drilldown.parity.test.ts 는 백엔드 모델(실제 검증 없음)을 써서 못 잡음. 의도 경로(5문장/페이지)로 측정하고 f10 n.",
+  "[B_mentions] 언급 화면 오류 처리(API 경로): 필터바 = afterEssentials(loadPanelOptions)·loadFilterDates 를 try → throwForPage(page.tsx:139-154), 기준일 칩 = loadMentionsAsOf → degradeOnApiFailure('websiteMentions')(5xx → null 빈 칩). 본문 = Promise.all([loadMentionsLive, loadSubKpis, loadSubKpisPrev]) try → throwForPage(page.tsx:220-225). 그 안에서 brands 는 degradeOnApiFailure('websiteMentions') → null → '데이터 없음' EmptyState, types·summary·trend 는 degradeOnApiFailure('websiteMentions.types|.summary|.trend') → 측정 대기 카드·측정 프롬프트 수 0·추이 준비 중(trendDegraded 는 세우지만 MentionsTrendSection 이 안 읽음 mentions-view.tsx:464-480), Sub KPI 는 degradeOnApiFailure('websiteSubKpis'·'.summary') → 카드 3장 조용히 빠짐, Prev 는 degrade → Δ 숨김. 이 화면에 wasDegraded 를 읽는 곳이 없어 5xx·시간 초과(10s → 504)는 전부 안내 없는 빈 상태/0 — Before(시간 초과 → '데이터 없음', 안내 없음)와 같음. orNullOnTransient 는 이 화면이 아니라 개요 KPI #16 brands 에서만 씀. 4xx → throwForPage(401 로그인, 403 no-access, 404 notFound, 422 등 → (dash) 오류 경계).",
+  "[B_mentions] summary(B4, /v1/kpi/summary 묶음 소관) 일시 실패 시 언급 화면 '측정 프롬프트 수'가 0 으로 표시됨(mentions.ts:350 measured_prompts ?? 0) — 빈 값이 아니라 틀린 0.",
+  "[B_mentions] 라우트 오류 응답 회귀: hghErrorResponse 가 JSON {error:{code}} 를 내므로 r.ok 를 안 보는 클라이언트(브랜드 드릴다운 mentions-drilldown.tsx:143-147, 답변 모달 answer-modal.tsx:150-158)는 5xx 를 빈 목록·'원문 없음'으로 오독. 현행은 라우트 throw → 비 JSON 500 → r.json() 실패 → 오류 상태. 신호 다이얼로그만 r.ok 확인(signal-prompts-dialog.tsx:60).",
+  "[B_mentions] DC-01(엔진 미선택 = 기본 엔진만, core/measure.py:195-197)은 scope_where 공통 술어라 모든 분석 엔드포인트 f10 에 걸림 — AWCOMMON 으로 옮길 후보. 이 묶음 f10 은 그것과 엔드포인트 고유 차이를 함께 적음.",
+  "[B_mentions] 상수: T1(복수 언급 임계 ≥ 2)은 brands/queries.py:49·71 에서 같은 정의라 재사용. WSK5(웹사이트 자사 = 자사 URL ∨ 타겟 URL)는 back core/measure.py:498-499 own_expr 가 같은 정의라 답변 상세에 재사용(모달은 owned 를 안 읽음). ANALYSIS_GAP_MAX 는 리드 Z_lead 의 AWK50 을 재사용(개요 KPI #16 카드 brands 호출의 동결 창 판정, 조건부). BRAND_OWN_COLS(core/codes.py:22-23, own_cols 경유로 brands·types 의 fetch_counts·own_counts_sql·own_extras_sql 에 걸림)는 리드가 AWCOMMON f4 의 AWK51 로 넣었으므로 엔드포인트 f4 에서 뺌. 표시용 상한(BRANDS_TABLE top_n 100·CARD_BRANDS_TOP_N 20·SIGNAL 50/6·MAX_PAGES 10·FULL_CAP·TERMS caps 8/24·하이라이트 2자 규칙)은 제외.",
+  "[B_mentions] area_keys: 기존 api_keys 는 맞음(언급 화면 brands·types·prompts·answers, 개요 KPI 카드 kpi/summary + mentions/brands). '쓰기: 브랜드 순위 엑셀 다운로드'만 클라이언트 키를 추가. /v1/mentions/prompts 는 mode=signal·mode=brand 가 같은 핸들러·같은 빌더(page_sql·answers_sql)라 키를 나누지 않고 한 키로 재고, 변형별 차이(signal f3 y·f6 y vs brand f3 n·f6 n·422)를 본문에 적음.",
+  "[B_mentions] parity 주의: drilldown.parity·answers.parity 는 현행 리더(PGlite) 대 '백엔드 모델'(문서화된 의미론으로 만든 모의 응답)을 어댑터로 비교 — 실제 back SQL·요청 검증은 안 거침. back 테스트는 합성 픽스처 손 계산값(website 케이스만 인용).",
+  "[C_citations] 설정 가정: HGH_SOURCE_G3=api, HGH_RESULT_CACHE=0(미캐시로 셈 — /v1/citations/domains·/domains/{skey}·/sources·/prompts 는 ALLOWLIST core/result_cache.py:82-84·87 에 있음, /domains/export 는 없음), HGH_LEGACY_PROFILE=off(card·host_fold·freeze_at_publish·web_registered_only 분기는 조건부로만 기재).",
+  "[C_citations] 엔드포인트 stmts 의 '창 1'(open_read → ReadContext.card_window/window → core/cycles.py:299-345 resolve_window 스냅샷·기간 문장)은 엔드포인트 자체 문장으로 셈. 공통 3(set_config·user_account·load_refs)은 AWCOMMON.",
+  "[C_citations] JOIN 계수: OVERRIDE_JOIN(app.citation_domain_override)·rd.dim_source·rd.dim_brand_name·rd.dim_url·app.owned_base·rd.dim_taxon·rd.job 조인은 엔드포인트 빌더 문장 안이라 셈. citation_where(scope_where·citation_population·source_where)·Window.where·mention_population(mention_brand_exists EXISTS 안)은 공유 술어라 제외. 창 숨김 계열 상수 HIDDEN_EXCLUDE['citations']={1,2}(core/codes.py:27-32)도 공통 창 술어라 f4 에 넣지 않음.",
+  "[C_citations] 상수 재사용: WSK5(타겟 URL = 자사 판정 OR) = After 웹사이트 자사 식 (loc_owned OR tgt_hit) core/measure.py:498-499(own_expr), 답변 열 cit_loc_tgt core/measure.py:557-559(_owned_sum) — 도메인 is_own·own_share(공식(당사) 인용 비중), 프롬프트 분리 owned 버킷에 영향. C2(자사 사이트 카탈로그 web-geo-final.json) = 인용 화면 드릴다운 URL 국가 geoEntryForUrl(citations.ts:399 → lib/geo-catalog/index.ts:6·184-192). 새 상수 없음. 분류(rd.dim_source.category_key)·loc_owned·tgt_hit 는 적재(back/ingest) 판정, 오버라이드는 DB 표라 하드코딩 아님.",
+  "[C_citations] 인용 화면(citation/page.tsx)의 GET /v1/kpi/summary 호출(리드 측정용): loadTargetHitRate(citations.ts:1037-1040) → fetchKpiSummary(summary.ts:83-91) = surface=website + 공통 필터(country = websiteCountry, lang·engine·from/to·admin 은 brand), card·cycle_offset·by_funnel 없음. D6 필수 호출(citationsEssentials citations.ts:666)과 본문 호출이 같은 쿼리라 요청 안 중복 제거로 1 HTTP. 출처 카테고리 필터(?source=)가 있으면 targetsApplicable 거짓 → 호출 0, emptyTargetHitRate 로 두 카드 '—'(citations.ts:964-966·1038, page.tsx:232). 실패는 degrade 없이 throwForPage → 오류 경계(page.tsx:231-235).",
+  "[C_citations] 인용 화면 추이 호출(다른 에이전트 /v1/trend 측정용): fetchSourceTrend(citations.ts:621-623) = GET /v1/trend surface=website + 공통 필터(source 포함) + bucket=cycle·dimension=source·top=15·measured_days=false(card 없음, trend.ts:177-199); fetchCategoryTrend(citations.ts:624-626) = 같은 필터 + dimension=category·top=13·measured_days=false. 둘 다 필수 호출 뒤 2단계(afterCitationEssentials, citations.ts:722-723), 5xx → degrade 라벨 websiteCitations.trend·.categoryTrend → null → '준비 중' PendingCard/블록 생략(citations-view.tsx:827·833), 안내 없음. 카테고리 추이는 categories 가 null(인용 0)이면 화면이 버리는데도 호출됨(citations.ts:471-474).",
+  "[C_citations] 같은 엔드포인트를 두 어댑터가 다르게 변환: 인용 화면 citations.ts(domain ← skey, URL 국가 = 지오 카탈로그, 동률 url 순) vs 언급 드릴다운 drilldown.ts(domain ← r.domain 호스트, URL 국가 = owned_base.geo_code, 상한 10·100·20). 언급 드릴다운 route 는 website 에서 websiteCountry 이식·cumulative 를 안 하지만 query.ts:339 가 websiteCountry ?? region 이라 국가 축은 같음.",
+  "[C_citations] 인용 화면 1회 렌더의 이 클러스터 문장: domains 3 + sources 3(+힌트 제어 3) + prompts 6 = 자체 12 (+공통 3×4 HTTP = 12). 행 펼침·더 보기·검색·정렬·내보내기는 클릭마다 별도. 개요 도넛 3(+공통 3). 언급 드릴다운 인용 출처 탭 열기 4~40(+공통 3~30), 행 펼침 4(+공통 3).",
+  "[C_citations] Before 대비: WSSRC(집계층 1문장)·WSC1a/dom/cat/ps(미러 9문장, JS 접기)·WSBCT(6읽기+JS) → After 는 rd.citation 원소 집계를 SQL 한 문장씩으로 옮겼으나 f3 은 여전히 n(원소 집계). 슬림 2MB 절단(WSC1dom·WSBCT f9)은 사라졌고 대신 언급 드릴다운 2,000 출처 절단·내보내기 5,000행 절단이 새 상한(둘 다 화면 안내 없음).",
+  "[C_citations] 엔드포인트는 global·project 표면(표준·프로젝트 인용 화면, 대시보드 도넛)과 같은 핸들러를 공유 — 여기 값은 surface=website 경로 기준.",
+  "[D_trend_prompts] 분할 결정: /v1/trend 의 웹사이트 4용도는 서비스 분기가 다르다(_series_plain service.py:294 / _series_brand :408 / _series_mix :525). 그래서 'GET /v1/trend'(개요, dimension=none) · 'GET /v1/trend (dimension=brand)'(언급) · 'GET /v1/trend (dimension=source|category)'(인용 2영역, 같은 mix_counts_sql 의 두 분기)로 나눠 측정. 개요 두 영역('카드 증감 Δ · 엔진 일관성 배지'·'KPI 추이 차트')의 기존 api_keys(GET /v1/trend [+ GET /v1/kpi/engines])는 그대로라 area_keys 에 다시 쓰지 않았다.",
+  "[D_trend_prompts] 설정 가정: HGH_SOURCE_G3=api, HGH_RESULT_CACHE=0(/v1/trend 는 ALLOWLIST 대상 result_cache.py:79, /v1/prompts 는 비대상), HGH_LEGACY_PROFILE 기본 off → trend_grid·freeze_at_publish·web_accuracy_flat·web_url_rate·web_registered_only 경로는 조건부로만 stmts·f3·f4 에 반영.",
+  "[D_trend_prompts] JOIN/CTE 집계에서 제외한 공유 술어: Window.where(cycles.py:122), scope_where(measure.py:181), mention_population(:324), citation_population(:382), citation_where/source_where(:518-529). OVERRIDE_JOIN(measure.py:515)은 mix_counts_sql category 분기 본문에 직접 끼워 쓰므로 JOIN 으로 셌다. _RECENT_SQL 의 'FROM rd.cycle c, lo'(쉼표 조인)는 명시 JOIN 이 아니라 세지 않았다(최대 문장 판정에 영향 없음).",
+  "[D_trend_prompts] 개요 추이 card=true 는 기본 프로필에서 SQL 을 바꾸지 않는다(scope_where 의 summary_all_engines·web_units 모두 off). 언급·인용 추이 호출은 card 를 보내지 않는다(cardParam 미지정, query.ts:212-214).",
+  "[D_trend_prompts] 공통(AWCOMMON) 쪽 상수 후보(이 엔드포인트 f4 에는 넣지 않음): core/codes.py:22 BRAND_OWN_COLS {1:h,2:k,4:g}(자사 3브랜드 고정 열), core/auth.py:433 WEBSITE_DEDICATED_SITE_CODES {WORLDWIDE, CPO}·:439 SITE_GLOBAL_MARKETS {HYUNDAI-N: US·KR} — 웹사이트 프롬프트 목록의 사이트 스코프(DataScope.site_allowed)도 이 공통 규칙을 탄다.",
+  "[D_trend_prompts] WSK4 재사용: 내보내기 표시명 분기의 의사 국가 코드 4개(screen_export.py:56-61 PSEUDO_COUNTRY_LABELS = SA-Dammam·SA-Jeddah·SA-Riyadh·CN-BJ)가 현행 PSEUDO_COUNTRIES 와 같은 목록. WSK5 재사용: 웹사이트 자사 = loc_owned ∨ tgt_hit(cit_loc_tgt, measure.py:499·559). T7 재사용: 카드 Δ 방향 임계 ±0.05 가 After 경로에서도 그대로(dashboard/_data/live.ts:754).",
+  "[D_trend_prompts] AWK32(ANALYSIS_GAP_MAX)는 card=true 창 해석 공통 코드(cycles.py)라 다른 카드 경로 엔드포인트 조사와 겹칠 수 있다 — 리드 병합 시 한 id 로 합칠 것.",
+  "[E_funnel] 지시 전제 정정: After 의 GET /v1/funnel/conversion·GET/PUT …/events 는 GA4 Data API 를 부르지 않음 — 적재기(back/ingest, 블랙박스)가 채운 rd.ga4_row·rd.ga4_dim_property·rd.ga4_dim_value 와 app.ga4_property·app.ga4_tracked_event 만 읽음(service.py:4 '실시간 GA4 호출 없음', router.py:29, ga4 service.py:11-12). 그래서 세 키 모두 'SQL n + GA4 0'. GA4 결과 캐시 표·TTL 없음(필요 없음: DB 적재분), 결과 캐시 ALLOWLIST 에도 없음(/v1/funnel/acr 만 있음, result_cache.py:96). 시장별 N+1 GA4 호출·시장별 부분 실패 경로 없음(한 문장 prop_key = ANY). 신선도 = 적재 주기(as_of).",
+  "[E_funnel] 설정 가정: HGH_SOURCE_G3=api, HGH_RESULT_CACHE=0, HGH_LEGACY_PROFILE off — 이 기능·ga4 서비스엔 프로필 스위치 분기 없음(grep 0). 페이지는 days 를 늘 보냄(기본 90, parseConversionPeriod), from/to 미전송이라 공통 경로 추가 SQL 없음. include_pages 는 안 보내 기본 true.",
+  "[E_funnel] f3 경계: rd.ga4_row 는 GA4 가 일 단위로 묶은 보고서 행(적재 '원본 그레인'). 전환 키는 pages_sql 이 URL(page_key) 단위 landing 행을 요청마다 90일 집계·차원 조인해 n 으로 판정, 이벤트 목록은 이벤트 이름 단위 일별 행 SUM 이라 y. rd.ga4_row 를 요약표급으로 본다면 전환 키도 y 로 바뀜(판정 근거는 pages_sql 하나).",
+  "[E_funnel] f4 범위: 백+어댑터만 보면 전환 키 = GA2(MARKET_CATALOG (('Kia','IT'),) service.py:82 — 현행 property-map MAP 의 시장, property id·env 폴백은 코드에서 빠지고 적재 투영 source='env' 로 감) · WSK9(DEFAULT_DAYS=90 service.py:83 + RELATIVE_DAYS (7,28,90) schemas.py:19 + 프런트 conversion-window.ts:6-7) · WSK8(ENGINE_SOURCE conversion.ts:131 — API 경로에서도 parseConversionFilters 가 엔진 필터 허용 목록으로 씀 conversion.ts:202, 호스트 매칭 자체는 적재기 몫) · AWK40. GLK4(SAMPLE_CONVERSION_* 시장 0개 분기)·GLK3(useFilterSignal)·PJK5(LOW_SAMPLE_USERS=50 conversion-view.tsx:59)는 지시대로 넣은 뷰 단계 상수 — 현행 경로에도 똑같이 있었으나 Before website(WSGPM/WSGCL)는 넣지 않았음. 같은 잣대로 비교하려면 빼거나 Before 에도 더할 것.",
+  "[E_funnel] f4 제외: GA1(AI_CHANNEL_GROUP)·WSK8 의 호스트 매칭·is_ai/is_conv 판정은 적재기로 옮겨가 After 요청 경로에 없음. CONVERSION_PANEL_ENGINES ['chatgpt','gemini'](funnel.ts:201)는 현행 PANEL_ENGINES(conversion.ts:142)와 같은 정의인데 Before 가 표시 목록으로 보고 넣지 않아 같이 제외. CONVERSION_PAGE_LIMIT 15·TABLE_ROWS 12 = 표시 top-N. MARKET_SOURCES ('env','registry')(queries.py:25)는 출처 코드 어휘라 제외. 이벤트 창·LOOKBACK 의 '오늘' = rd.today_kst()(db/DB-v2.1.sql:377 'Asia/Seoul', DB 함수라 비하드코딩으로 봄 — GA4 날짜는 속성 시간대).",
+  "[E_funnel] ADK1 재사용: EVENT_WINDOW_DAYS=90 위치가 back/app/features/admin/integrations/ga4/service.py:56 으로 바뀜(lo = 오늘 KST − 90 ~ 오늘, BETWEEN 포함).",
+  "[E_funnel] U8-N9: admin 이 관리 메뉴(/admin/ga4)를 가지면 website 전환 화면의 이벤트 다이얼로그도 G7 원천(GET/PUT /v1/admin/ga4/properties/{id}/events)으로 감 — 이 두 키는 이 측정 범위 밖. G7 이 legacy 면 admin 은 G3=api 여도 현행 저장소 + 실시간 GA4 경로를 탐(tracked-events-actions.ts:145·150-153).",
+  "[E_funnel] 프런트 판정 분기(API): 시장 1개 active → leaf(live+visits, 0 세션이면 '측정 대기'), 1개 pending_grant → '측정 대기' + 다이얼로그, 1개 unmapped → 미연동 안내, 2개 이상 → 롤업(active 0 이면 0% KPI + 커버리지 0/N), 0개 → 표본(안내 없음). API 오류는 오류 경계(현행은 GA4 실패를 '측정 대기'로 숨김 — 개선).",
+  "[E_funnel] ACR(/website/ai-funnel/acr): G3=api 에서도 GET /v1/funnel/acr 를 부르지 않고 정적 표본 유지(acr/page.tsx:13-16·27-43). 표본 상수 = PJK9(SAMPLE_ACR_* sample.ts:44·60·78·105·222) + GLK3. area_keys 의 'STATIC …' 은 상수 보고용 의사 키라 필요 없으면 빼도 됨. GLK2(가시성 표본)는 웹사이트 경로에 없음.",
+  "[E_funnel] parity 메모: funnel.parity.test.ts 는 legacy GA4 함수 vs '백엔드 모델(JS)' + 어댑터 비교(실제 백엔드 아님, DC-03 을 상쇄하려 활성 사용자 = 세션으로 둔 WORLD). 백 테스트는 손계산 기대값 비교. 동시 저장(409 duplicate_pending)을 이 경로에서 검증하는 테스트는 없음(admin 경로 test_ad_ops_ga4.py 에만).",
+  "[A_filters_kpi] UNKNOWN: GEO 명부 제외(BE-5, entities.py) 규칙이 Before 기준 코드(392ca45)의 웹사이트 GEO 에도 있었는지 미확인 — f10 은 DC-01·U5-N1 만으로 n.",
+  "[A_filters_kpi] UNKNOWN: 웹사이트 사이트들이 같은 정규 round_date 를 공유하는지(함대 스냅샷 결손 규모)는 데이터 상태라 코드로 판정 불가.",
+  "[B_mentions] UNKNOWN: 운영 경쟁 브랜드 수 대비 FULL_CAP 10000 여유(stg 주석 1,933 기준) — 절단 발현 여부는 데이터 의존.",
+  "[B_mentions] UNKNOWN: 422 요청에서 FastAPI 가 CurrentUser·RoConn 의존성(공통 문장)을 검증 실패 전에 실행하는지 — 데이터 문장은 0 이 확실하나 공통 문장 수는 미검증(빌드·실행 금지).",
+  "[B_mentions] UNKNOWN: 언급 화면 B1 응답 크기(전 브랜드 × types·multi·sentiment) 실측 없음.",
+  "[C_citations] UNKNOWN: 언급 순위의 당사 행(isTracked)에서 인용 출처 탭을 열면 mentionBrand = 관점 라벨(viewpoint_label: 관점 브랜드 둘 이상이면 엄브렐러 코드, mentions/brands/common.py:51-55)이 그대로 mention_brand 로 감. 그 이름이 rd.dim_brand_name 에 없으면 BRAND_KEY_SQL(queries.py:46-47) 미해석 → dropped_filters + 빈 결과 → '인용 없음'. 있으면 그 엔티티 언급 답변만이라 3사 합산과 다를 수 있음 — 실데이터 미확인",
+  "[C_citations] UNKNOWN: /v1/citations/sources 기본 경로(답변 열 sources_ans_sql)는 cit_c1..13·t_own 채움과 미반영 오버라이드 0 을 전제 — 운영 데이터 상태에 따라 원소 경로 sources_sql(3/3/3/0)로 갈 수 있음(미확인)",
+  "[C_citations] UNKNOWN: 분류 동치: 종전 요청 때 JS 분류(R·C5·C1 규칙)와 적재 판정 rd.dim_source.category_key 의 실데이터 일치 여부는 back/ingest(블랙박스) 영역이라 미확인 — parity 는 백엔드 JS 모델 기준",
+  "[D_trend_prompts] UNKNOWN: catalog.ts:29-30 DC-01('엔진 미선택 = 기본 엔진만')과 실제 백엔드 lens_cte(queries.py:125-139)가 어긋나 보임: ctx.engine_keys 가 None(filters.py:765)이면 엔진 술어가 없어 전 엔진(현행과 같음)을 센다. catalog.parity.test.ts 의 DC-01 케이스는 백엔드 '모델'이 기본 엔진을 가정 — 실제 값 확인 필요(f10 판정은 U8-N13·U8-N19 로 이미 n).",
+  "[D_trend_prompts] UNKNOWN: 웹사이트 계정 중 관점 비트 ≥2(split_own 분리 +2문장) 비중은 운영 데이터를 봐야 함(코드상 HQ HMG·admin 무브랜드는 해당).",
+  "[D_trend_prompts] UNKNOWN: 내보내기 스트림 중단 시 브라우저 표시(실패 표시 vs 부분 파일 저장)는 플랫폼·브라우저 동작이라 코드만으로 확정 불가(route maxDuration 60s vs relay 120s).",
+  "[E_funnel] UNKNOWN: rd.ga4_row 실데이터 규모(속성당 landing·events 행 수) 미상 → pages_sql·EVENT_COUNTS_SQL 실제 비용 UNKNOWN(README 는 로컬 EXPLAIN 만: 리프 PK 인덱스 스캔).",
+  "[E_funnel] UNKNOWN: judgment_change('ga4_tracked_event')가 pending·running 으로 남는 시간 = 적재기 처리 주기(블랙박스) → 재저장이 409 로 막히는 창 길이 UNKNOWN."
+ ]
+}

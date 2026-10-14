@@ -18,6 +18,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from before_data import FN, K  # noqa: E402
 from work_items import WORK  # noqa: E402
+from progress import PROGRESS  # noqa: E402
 
 REPO = os.path.normpath(os.path.join(HERE, "..", "..", "..", ".."))
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(REPO), "★ 리뉴얼·최적화 지표 점검표.html")
@@ -59,12 +60,40 @@ for key in SURVEY_ORDER:
                        a["legacy_fns"], "쓰기" if a["label"].startswith("쓰기") else "") for a in sc["areas"]],
         })
 
-# After (API) verdicts per (data key, factor). Absent = unknown (☐).
-DATA = {
-    ("S01", "F2"): "y", ("S01", "F3"): "n",
-    ("S02", "F2"): "y", ("S02", "F3"): "y",
-    ("S03", "F2"): "n", ("S03", "F3"): "n",
-}
+# ── merge After survey (API path, measured per endpoint key) ──
+AFN = {}  # endpoint key -> {f2..f10, parity} (first surface that measured it)
+AFN_NS = {}  # survey key -> {endpoint key -> measurement} (surface-specific)
+AFTER_DIR = os.path.join(SURVEY_DIR, "after")
+AFTER_COMMON = {"existing3": "AXCOMMON", "global": "AGCOMMON", "website": "AWCOMMON", "project": "APCOMMON",
+                "project_ops_interest": "AICOMMON", "admin": "AACOMMON", "qa_nonscreen": "AQCOMMON"}
+AFTER_KEY_OVERRIDE = {}  # (route, label) -> [endpoint keys]
+after_conflicts = []
+for key in SURVEY_ORDER:
+    pth = os.path.join(AFTER_DIR, key + ".json")
+    if not os.path.exists(pth):
+        AFTER_COMMON.pop(key, None)
+        continue
+    d = json.load(open(pth, encoding="utf-8"))
+    for cid, v in d.get("new_constants", {}).items():
+        if cid in K and tuple(K[cid]) != tuple(v):
+            after_conflicts.append(f"constant {cid} ({key})")
+            continue
+        K[cid] = tuple(v)
+    AFN_NS[key] = d.get("endpoints", {})
+    for ek, v in AFN_NS[key].items():
+        AFN.setdefault(ek, v)
+    for ak in d.get("area_keys", []):
+        AFTER_KEY_OVERRIDE[(ak["route"], ak["label"])] = ak["api_keys"]
+    if AFTER_COMMON.get(key) not in AFN:
+        AFTER_COMMON.pop(key, None)
+_fx = os.path.join(AFTER_DIR, "_fixes.json")  # corrections for fixes made after the agents measured
+if os.path.exists(_fx):
+    for ak in json.load(open(_fx, encoding="utf-8")).get("area_keys", []):
+        AFTER_KEY_OVERRIDE[(ak["route"], ak["label"])] = ak["api_keys"]
+for s_ in SCREENS:  # noqa: F821
+    s_["acommon"] = AFTER_COMMON.get(s_.get("survey", "existing3"))
+    s_["ans"] = s_.get("survey", "existing3")
+    s_["areas"] = [a[:5] + (AFTER_KEY_OVERRIDE.get((s_["route"], a[1]), a[5]),) + a[6:] for a in s_["areas"]]
 FACTORS = ["F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "DONE"]
 AFTER_ONLY = {"F5", "F10", "DONE"}
 
@@ -83,12 +112,15 @@ def area_fns(fns, common, write=False):
 def before_cell(fns, factor, common, write=False):
     if factor in AFTER_ONLY:
         return "x", ""
-    fns = area_fns(fns, common, write)
-    missing = [f for f in fns if f not in FN]
+    return judge(FN, area_fns(fns, common, write), factor)
+
+
+def judge(table, fns, factor):
+    missing = [f for f in fns if f not in table]
     if missing:
         return "u", "정의 없음"
     key = factor.lower()
-    vals = {f: FN[f].get(key) for f in fns}
+    vals = {f: table[f].get(key) for f in fns}
     if factor == "F2":
         if any(v is None for v in vals.values()):
             return "u", "미측정 포함"
@@ -127,13 +159,31 @@ def before_cell(fns, factor, common, write=False):
     return ("n" if bad else "y"), ""
 
 
-def after_cell(keys, factor):
-    vals = [DATA.get((d, factor)) for d in keys]
-    if "n" in vals:
-        return "n"
-    if vals and all(v == "y" for v in vals):
-        return "y"
-    return "u"
+def after_cell(keys, factor, acommon, write=False, ns=None):
+    """After (API path) verdict for one area from endpoint measurements.
+    The screen's own surface measurement wins; another surface's is borrowed only when missing."""
+    if factor == "DONE":
+        return "n", "legacy 잔존"
+    own = [k for k in keys if not str(k).endswith("COMMON")]
+    if not own:
+        return "x", "API 없음"
+    table = dict(AFN)
+    table.update(AFN_NS.get(ns, {}))
+    if any(k not in table for k in own):
+        return "u", "미측정"
+    ks = own + ([acommon] if acommon and acommon in table and not write else [])
+    if factor == "F5":
+        no_test = [k for k in own if not table[k].get("parity")]
+        return ("n", f"시험 없음 {len(no_test)}") if no_test else ("u", "시험 있음·미실행")
+    if factor == "F10":
+        vals = [table[k].get("f10") for k in ks]
+        if any(v is None for v in vals):
+            return "u", ""
+        app = [v for v in vals if v[0] != "skip"]
+        if not app:
+            return "x", ""
+        return ("n" if any(v[0] == "n" for v in app) else "y"), ""
+    return judge(table, ks, factor)
 
 
 esc = html.escape
@@ -144,6 +194,7 @@ for w in WORK:
         work_by_route.setdefault(t, []).append(w[0])
 
 rows = []
+screen_blocks = []
 counts = {"y": 0, "n": 0, "u": 0}
 side_counts = {"B": {"y": 0, "n": 0, "u": 0}, "A": {"y": 0, "n": 0, "u": 0}}
 used_fns, commons = [], []
@@ -157,6 +208,36 @@ def tally(side, v):
         side_counts[side][v] += 1
 
 
+SYMTXT = {"y": "☑", "n": "☒", "u": "☐", "x": "—"}
+AFTER_ONLY_F = {"F5", "F10", "DONE"}
+
+
+def pair_cell(vb, tb, va, ta, f):
+    """One factor cell: Before → After (After-only factors show the After symbol only); tint = After."""
+    tip = (f"After: {SYMTXT[va]} {ta}".strip() if f in AFTER_ONLY_F
+           else f"Before: {SYMTXT[vb]} {tb}".strip() + "  →  " + f"After: {SYMTXT[va]} {ta}".strip())
+    inner = SYM[va] if f in AFTER_ONLY_F else f'{SYM[vb]}<span class="arr">→</span>{SYM[va]}'
+    return f'<td class="pc t{va}" title="{esc(tip)}">{inner}</td>'
+
+
+def count_cell(cb, ca, f):
+    """Screen row: number of ☒ areas, Before → After."""
+    def part(c):
+        judged = c["y"] + c["n"]
+        if c["n"]:
+            return f'<span class="n">{c["n"]}</span>', judged
+        if judged:
+            return '<span class="y">☑</span>', judged
+        return ('<span class="u">☐</span>' if c["u"] else '<span class="x">—</span>'), judged
+    pb, jb = part(cb)
+    pa, ja = part(ca)
+    tint = "n" if ca["n"] else ("y" if ja else ("u" if ca["u"] else "x"))
+    tip = (f"After ☒ {ca['n']} / 판정 {ja}" if f in AFTER_ONLY_F
+           else f"Before ☒ {cb['n']} / 판정 {jb}  →  After ☒ {ca['n']} / 판정 {ja}")
+    inner = pa if f in AFTER_ONLY_F else f'{pb}<span class="arr">→</span>{pa}'
+    return f'<td class="pc cnt t{tint}" title="{esc(tip)}">{inner}</td>'
+
+
 for s in SCREENS:  # noqa: F821
     nonscreen = s["route"] in ("—", "", None)
     if not nonscreen:
@@ -168,18 +249,12 @@ for s in SCREENS:  # noqa: F821
     if s.get("common") and s["common"] not in commons:
         commons.append(s["common"])
     wrefs = work_by_route.get(s["route"], [])
-    wtxt = f'<span class="val">관련 작업: {", ".join(wrefs)}</span>' if wrefs else ""
-    route_html = f'<code>{esc(s["route"])}</code>' if not nonscreen else "—"
     flag = str(s["flag"])
     m = re.match(r"^(?:HGH_SOURCE_)?(G[0-9]+|SESSION)(.*)$", flag)
-    flag_html = f'<code>HGH_SOURCE_{m.group(1)}</code>{esc(m.group(2))}' if m else esc(flag)
-    rows.append(
-        f'<tr class="screen"><td>{esc(s["name"])}<span class="val">화면 제목: {esc(s["title"])}</span>{wtxt}</td>'
-        f'<td class="route">메뉴: <strong>{esc(s["menu"])}</strong></td>'
-        f'<td class="route" colspan="2">{route_html}<span class="val">플래그 {flag_html} · 근거 {s["p"]}</span></td>'
-        f'<td class="small route">영역 {len(s["areas"])}개</td>'
-        f'<td class="ck b">{SYM[b]}<span class="val">{bval}</span></td><td class="ck a">{SYM[a1]}</td>'
-        f'<td colspan="{2 * len(FACTORS)}"></td></tr>')
+    flag_txt = f"HGH_SOURCE_{m.group(1)}{m.group(2)}" if m else flag
+    sidx = len(screen_blocks)
+    area_rows = []
+    agg = {f: {"B": {"y": 0, "n": 0, "u": 0, "x": 0}, "A": {"y": 0, "n": 0, "u": 0, "x": 0}} for f in FACTORS}
     for loc, label, note, legacy, api, a_keys, b_fns, dlabel in s["areas"]:
         n_areas += 1
         for f in b_fns:
@@ -191,16 +266,29 @@ for s in SCREENS:  # noqa: F821
         cells = []
         for f in FACTORS:
             vb, tb = before_cell(b_fns, f, s.get("common"), dlabel == "쓰기")
-            va = after_cell(a_keys, f)
+            va, ta = after_cell(a_keys, f, s.get("acommon"), dlabel == "쓰기", s.get("ans"))
             tally("B", vb)
             tally("A", va)
-            tb_html = f'<span class="val">{tb}</span>' if tb else ""
-            cells.append(f'<td class="ck b">{SYM[vb]}{tb_html}</td><td class="ck a">{SYM[va]}</td>')
-        note_html = f'<span class="val">{esc(note)}</span>' if note else ""
+            agg[f]["B"][vb] += 1
+            agg[f]["A"][va] += 1
+            cells.append(pair_cell(vb, tb, va, ta, f))
         api_txt = api if isinstance(api, str) else ", ".join(api)
-        rows.append(
-            f'<tr class="block"><td class="indent">{esc(label)}{note_html}</td><td class="small loc">{esc(loc)}</td><td class="small call">{esc(legacy)}</td><td class="small call">{esc(api_txt)}</td><td class="small">{esc(dlabel or "—")}</td>'
-            f'<td colspan="2" class="ck"><span class="x">—</span></td>{"".join(cells)}</tr>')
+        sub = " · ".join(x for x in (loc, note) if x)
+        tip = f"legacy: {legacy}\nAPI: {api_txt}"
+        area_rows.append(
+            f'<tr class="block"><td class="indent" title="{esc(tip)}">{esc(label)}<span class="val">{esc(sub)}</span></td>'
+            f'<td class="pc tx"><span class="x">—</span></td>{"".join(cells)}</tr>')
+
+    cnt_cells = "".join(count_cell(agg[f]["B"], agg[f]["A"], f) for f in FACTORS)
+    f1_tip = f"Before: {SYMTXT[b]} {re.sub('<[^>]+>', '', str(bval))}  →  After: {SYMTXT[a1]} {'배포 전 미측정' if a1 == 'u' else ''}"
+    f1_cell = f'<td class="pc t{a1}" title="{esc(f1_tip)}">{SYM[b]}<span class="arr">→</span>{SYM[a1]}</td>'
+    route_txt = f'<code>{esc(s["route"])}</code>' if not nonscreen else ""
+    scr_tip = f"화면 제목: {s['title']}\n플래그: {flag_txt}\n영역 {len(s['areas'])}개" + (f"\n관련 작업: {', '.join(wrefs)}" if wrefs else "")
+    screen_row = (
+        f'<tr class="screen" onclick="toggleScreen({sidx})"><td title="{esc(scr_tip)}">{esc(s["name"])} <span class="muted small">({len(s["areas"])})</span>'
+        f'<span class="val">{esc(s["menu"])} {route_txt}</span></td>'
+        f'{f1_cell}{cnt_cells}</tr>')
+    screen_blocks.append(f'<tbody class="scr" id="scr-{sidx}">\n' + screen_row + "\n" + "\n".join(area_rows) + "\n</tbody>")
 
 
 def fmt_flag(v, ok_sym=None):
@@ -271,18 +359,30 @@ for wid, title, docs, targets, status, factors in WORK:
     in_table = any(t in route_name for t in targets) and not outside
     if outside:
         w_out += 1
-        judge = '<span class="tag del">점검표 밖</span>'
+        wjudge = '<span class="tag del">점검표 밖</span>'
     else:
         w_in += 1
-        judge = '<span class="tag ok">판정</span>' if in_table else '<span class="tag fix">층 단위</span>'
+        wjudge = '<span class="tag ok">판정</span>' if in_table else '<span class="tag fix">층 단위</span>'
     ftxt = " · ".join(esc(f.replace("DONE", "완료")) for f in factors)
-    wrows.append(f'<tr><td class="id">{wid}</td><td class="small">{esc(title)}</td><td class="small">{esc(docs)}</td><td class="small">{"<br>".join(tnames)}</td><td class="small">{esc(status)}</td><td class="small">{ftxt}</td><td>{judge}</td></tr>')
+    wrows.append(f'<tr><td class="id">{wid}</td><td class="small">{esc(title)}</td><td class="small">{esc(docs)}</td><td class="small">{"<br>".join(tnames)}</td><td class="small">{esc(status)}</td><td class="small">{ftxt}</td><td>{wjudge}</td></tr>')
+
+ST = {"done": ("☑ 완료", "done"), "next": ("☐ 다음", "next"), "decide": ("⚠ 결정 필요", "decide")}
+prow = []
+for st, title, target, note in PROGRESS:
+    lab, cls = ST[st]
+    prow.append(f'<tr class="{cls}"><td class="st">{lab}</td><td><strong>{esc(title)}</strong></td><td class="small">{esc(target)}</td><td class="small muted">{esc(note)}</td></tr>')
+n_done = sum(1 for x in PROGRESS if x[0] == "done")
+n_next = sum(1 for x in PROGRESS if x[0] == "next")
+n_dec = sum(1 for x in PROGRESS if x[0] == "decide")
+progress_html = (f'<section>\n<h2>진행 현황 <span class="muted small">완료 {n_done} · 다음 {n_next} · 결정 필요 {n_dec}</span></h2>\n'
+                 '<div class="scroll"><table class="progress"><thead><tr><th>상태</th><th>항목</th><th>대상 · 판정 요소</th><th>비고</th></tr></thead><tbody>\n'
+                 + "\n".join(prow) + '\n</tbody></table></div>\n</section>')
 
 total = sum(counts.values())
 TEMPLATE = open(TEMPLATE_PATH, encoding="utf-8").read()
 out = TEMPLATE
 for k, v in {
-    "{{ROWS}}": "\n".join(rows), "{{BEFORE_ROWS}}": "\n".join(brows), "{{K_ROWS}}": "\n".join(krows),
+    "{{ROWS}}": "\n".join(screen_blocks), "{{PROGRESS}}": progress_html, "{{BEFORE_ROWS}}": "\n".join(brows), "{{K_ROWS}}": "\n".join(krows),
     "{{WORK_ROWS}}": "\n".join(wrows), "{{N_WORK}}": str(len(WORK)), "{{N_WORK_IN}}": str(w_in), "{{N_WORK_OUT}}": str(w_out),
     "{{N_FNS}}": str(len(used_fns)), "{{N_AREAS}}": str(n_areas), "{{N_SCREENS}}": str(n_screens),
     "{{Y}}": str(counts["y"]), "{{N}}": str(counts["n"]), "{{U}}": str(counts["u"]), "{{TOTAL}}": str(total),
@@ -294,6 +394,9 @@ assert "{{" not in out, out[out.index("{{"):out.index("{{") + 40]
 open(OUT, "w", encoding="utf-8", newline="\n").write(out)
 print("screens", n_screens, "areas", n_areas, "fns", len(used_fns), "commons", commons, "counts", counts, "total", total, "by side", side_counts)
 print("work items: in", w_in, "outside", w_out)
+print("after: endpoints", len(AFN), "by surface", {k: len(v) for k, v in AFN_NS.items()}, "commons", sorted(set(AFTER_COMMON.values())), "conflicts", after_conflicts[:10])
+unmeasured_after = sorted({k for s in SCREENS for a in s["areas"] for k in a[5] if k not in AFN and not str(k).endswith("COMMON")})  # noqa: F821
+print("after keys without measurement:", len(unmeasured_after), unmeasured_after[:15])
 missing = sorted({f for s in SCREENS for a in s["areas"] for f in a[6] if f not in FN})  # noqa: F821
 print("undefined fns:", missing)
 unmeasured = [f for f in used_fns if f in FN and any(FN[f].get(k) is None for k in ("f2", "f4", "f6", "f7", "f8", "f9"))]

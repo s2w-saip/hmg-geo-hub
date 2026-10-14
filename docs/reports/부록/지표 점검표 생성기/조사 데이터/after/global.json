@@ -1,0 +1,735 @@
+{
+  "surface": "global (standard) — AI Agent Funnel · 인용 하위 페이지 · 글로벌 프롬프트 (After: HGH_SOURCE_G2·G4·G5=api)",
+  "prefix": "AG",
+  "common": "AGCOMMON",
+  "endpoints": {
+    "AGCOMMON": {
+      "label": "공통(After): Bearer JWT(verified_subject) · get_principal(app.user_account) · load_refs · resolve_read_context(require_surface global + DataScope.for_surface('global') + 관점 브랜드·국가·택소노미 해석) · 프론트 hghGet/analysisQuery·toCommonQuery/throwForPage/degradeOnApiFailure",
+      "where": "back core/auth.py:221-251(verified_subject·get_principal) · :300-326(SURFACE_ROLES·require_surface) · :433·439(WEBSITE_DEDICATED_SITE_CODES·SITE_GLOBAL_MARKETS) · :470-480(global_scope_countries) · :596-633(DataScope.of·for_surface) · core/db.py:130-179(transaction·set_local) · core/codes.py:146-155(own_bit_of)·200-279(load_refs) · core/filters.py:619-848(resolve_read_context: 403 no_country_scope :637-638, no_brand_scope :449·748, 택소노미 :790-801, 한쪽 기간 close_period :813-825) · core/result_cache.py:78-97(ALLOWLIST, 기본 끔) / front lib/hgh/client.ts:243-290(HGH_SOURCE_*)·620-809(hghGet: dedupe·동시 4·재시도) · lib/hgh/adapters/filters.ts:174-180(analysisQuery) · lib/hgh/query.ts:302-314(urlCountries·urlBrands) · components/dash/standard-filters(readStandardFilters 브랜드 락) · lib/hgh/errors.ts:226-238(throwForPage) · lib/scope/degrade-registry.ts:116-130",
+      "stmts": "모든 글로벌 API 호출마다 3문장: set_config 1(롤·statement_timeout 5s·jit·plan_cache_mode) + app.user_account 1 + 참조 차원 _REFS_SQL 1(catalog_incl_deleted 프로필이면 cat_diff +1). JWT 검증은 DB 없음(JWKS 캐시). 조건부: 택소노미 축 → rd.dim_taxon 1 + 축당 rd.catalog_entry DISTINCT 1 + 최종 prompt_key 1(depth4 +1), 기간 한쪽만 → close_period selectable_round_dates 1(+rd.today_kst 1). HGH_RESULT_CACHE=0 → 캐시 문장 0. 프론트: 요청 안 GET 중복 제거·동시 4개 상한, GET 연결 오류·503 auth_unavailable 만 1회 재시도",
+      "f2": [
+        "skip",
+        ""
+      ],
+      "f3": [
+        "skip",
+        ""
+      ],
+      "f4": [
+        "GLK1",
+        "RHQ",
+        "B10",
+        "AWK51"
+      ],
+      "f6": [
+        "y",
+        "백엔드 무음 폴백 없음(스코프 미해석 = 403 fail-closed). 프론트는 모든 non-2xx 를 HghApiError 로 → 페이지 throwForPage(401 로그인·403 no-access·404 notFound·그 외 (dash) 오류 경계, errors.ts:226-238), 인용 하위 페이지는 5xx·시간초과만 degradeOnApiFailure → '시간 안에 끝나지 않았습니다' 안내(degrade-registry.ts:116-130). 단 meta.dropped_filters(스코프 밖·모르는 필터 값 → 그 축 결과 0)는 화면에 안내되지 않고 개발 모드 console.warn 뿐(client.ts:604-612)"
+      ],
+      "f7": [
+        "skip",
+        ""
+      ],
+      "f8": [
+        "skip",
+        "",
+        ""
+      ],
+      "f9": [
+        "skip",
+        ""
+      ],
+      "f10": [
+        "n",
+        "역할·메뉴 천장은 route-policy STANDARD_VIEWERS + menu standard 와 같음(core/auth.py:300-316). 국가 스코프는 effectiveScopeCountries(전용 사이트 GLK1 포함) 이식. 그러나 계정 권역이 국가로 안 풀리면 legacy 는 국가 조건 없이 전체를 보던 것을 After 는 403 no_country_scope(core/filters.py:637-638), 브랜드 스코프가 엄브렐러뿐이면 legacy 는 공통 행만 보던 것을 403 no_brand_scope(core/filters.py:449·748) → 프론트가 /no-access 로 보냄(더 엄격, stg 해당 계정 0). legacy 데이터 리더는 역할 재검사 없음 ↔ After 는 API 마다 require_surface"
+      ],
+      "parity": []
+    },
+    "GET /v1/filters/options": {
+      "label": "get_filters_options_0 → service.get_options (F-1) / 어댑터 fetchFilterOptions·toPanelOptions(loadPanelOptions)",
+      "where": "back features/analytics/filters/options/router.py:17-24 → service.py:340-408(get_options, 카탈로그 :388-392) · queries.py:14-20(matrix_sql)·77-83(CATALOG_GLOBAL_SQL)·85(TAXON_SQL) [filter_options 프로필: queries.py:23-36 legacy_global_sql] / front lib/hgh/adapters/filters.ts:208-215(fetchFilterOptions)·266-270(optionBrandsFor)·358-385(toPanelOptions·loadPanelOptions); 호출 visibility/page.tsx:24-27 · acr/page.tsx:163 · conversion/page.tsx:65",
+      "stmts": "기능 4문장(+공통 3): 창 resolve_window 1(_SNAPSHOT_SQL) · 매트릭스 1(rd.answer GROUP BY 5열) · rd.dim_taxon 1 · 루트 카탈로그 1. 이 화면들은 기간을 보내지 않음(스냅샷). filter_options 프로필이면 매트릭스 대신 rd.job 소집합 1. include=source_categories(이 화면들은 안 보냄)면 rd.citation DISTINCT source_key +1. 결과 캐시 허용 목록(기본 끔)",
+      "f2": [
+        1,
+        0,
+        1,
+        0,
+        "CATALOG_GLOBAL_SQL features/analytics/filters/options/queries.py:77-83 (LEFT JOIN app.prompt + GROUP BY 8열; matrix_sql :14-20 은 [0,0,1,0])"
+      ],
+      "f3": [
+        "y",
+        "rd.answer 답변 행(옵션 창 회차)을 project·geo·lang·cat_mask·engine 로 GROUP BY 한 소집합 + rd.catalog_entry·rd.dim_taxon 조회 — 원소 행 없음. (include=source_categories 경로는 rd.citation 원소 스캔이지만 이 화면 어댑터는 보내지 않음)"
+      ],
+      "f4": [
+        "B10"
+      ],
+      "f6": [
+        "y",
+        "백엔드 catch 없음, 어댑터 catch 없음 → 페이지 .catch(throwForPage)/try-catch(throwForPage) → 오류 경계 (visibility/page.tsx:24-27, acr/page.tsx:160-179, conversion/page.tsx:61-71). 창이 비면 meta.suppressed 로 빈 옵션(안내 없이 패널 비어 보임)"
+      ],
+      "f7": [
+        "skip",
+        ""
+      ],
+      "f8": [
+        "n",
+        "전환 화면은 geographyOptions 만 쓰는데(conversion/page.tsx:65-67 catalogRows undefined) 매 호출 카탈로그 택소노미 2문장(TAXON·CATALOG_GLOBAL)과 매트릭스·언어·엔진 전량을 계산·전송(options/service.py:384-392)",
+        "4 (+공통 3)"
+      ],
+      "f9": [
+        "y",
+        "옵션 목록 — 패널이 사용. 전환 화면의 미사용 카탈로그 행은 BFF 에서 버리고 브라우저로 보내지 않음(현행은 catalogRows props 로 전송)"
+      ],
+      "f10": [
+        "n",
+        "U4-N8 실패 답변만 있는 국가 제외(F-1 = completed 만, filter_options 프로필이면 되돌림)·U4-N9 브랜드 NULL 루트 프롬프트는 공통 행으로 브랜드 선택 시에도 유지·S1-N1 ID 숨김(BE-2 전)·DC-07 (filters.ts:50-64). 현행 narrowScopeBrands 좁힘은 어댑터가 geo_matrix 로 재현(filters.ts:266-292)"
+      ],
+      "parity": [
+        "front/lib/hgh/adapters/filters.parity.test.ts › legacy/api parity: filter options (dashboard composition)",
+        "front/lib/hgh/adapters/filters.parity.test.ts › catalog rows keep the legacy ORDER BY list_type, depth1, depth2, depth3",
+        "back/app/features/analytics/filters/options/tests/test_legacy_switch.py › test_global_admin_snapshot"
+      ]
+    },
+    "GET /v1/filters/dates": {
+      "label": "get_filters_dates_0 → service.get_dates → core.cycles.selectable_round_dates (F-2) / 어댑터 loadFilterDates·standardCollectionPeriodApi",
+      "where": "back features/analytics/filters/dates/router.py:17-23 → service.py:94-101(get_dates)·81-91(build_dates) → core/cycles.py:816-821(_DATES_SQL)·824-837 / front lib/hgh/adapters/filters.ts:405-465(fetchFilterDates·toFilterDatesView·loadFilterDates) · lib/hgh/adapters/catalog.ts:135-138(standardCollectionPeriodApi); 호출 acr/page.tsx:164(family=all) · prompts/page.tsx:55(family=mentions)",
+      "stmts": "기능 1문장(+공통 3): _DATES_SQL(DISTINCT round_date ∧ 계열 숨김 배제, 내림차순 400·전체 개수·최초일·generation 한 문장). 결과 캐시 허용 목록(기본 끔)",
+      "f2": [
+        0,
+        1,
+        0,
+        0,
+        "_DATES_SQL back/app/core/cycles.py:816-821 (CTE d, JOIN 없음)"
+      ],
+      "f3": [
+        "y",
+        "rd.cycle 회차 원장 DISTINCT·min·count — 측정 원천(답변·원소) 재집계 없음"
+      ],
+      "f4": [],
+      "f6": [
+        "y",
+        "catch 없음 → 페이지 Promise.all 의 try-catch(throwForPage) → 오류 경계 (acr/page.tsx:160-179, prompts/page.tsx:51-62). 현행 ACR 달력의 실패 → [] 무음 폴백은 없어짐. 값 없음(회차 0)은 헤더 줄 숨김(prompts/page.tsx:86-94)"
+      ],
+      "f7": [
+        "skip",
+        ""
+      ],
+      "f8": [
+        "y",
+        "단일 문장 — 프롬프트 헤더는 first_measured_date·latest_round_date 만 쓰고 날짜 배열·프리셋은 버리지만 같은 문장 산출물",
+        "1 (+공통 3)"
+      ],
+      "f9": [
+        "n",
+        "선택 가능 날짜 400개 상한(dates/service.py:48·90-91) 절단 시 dates_truncated 를 내지만 어댑터·ACR 화면은 selectableDates 만 쓰고 절단 표시 없음(filters.ts:450-459, acr/page.tsx:174) — 현행 MAX_DATES 와 같은 상한, 현 데이터 미도달(잠재)"
+      ],
+      "f10": [
+        "n",
+        "수집 기간 = 게이트 회차 first_measured_date..latest_round_date(U8-N10, 현행 = 계정 스코프 completed 답변 measured_at min/max 의 UTC 일)·함대 값(DC-07, 현행 계정 스코프)·latest 항상 설정(DC-16)·ACR 달력은 앵커 축 설정과 무관하게 항상 게이트 회차 격자(현행 축 off = 자유 달력) (filters.ts:36-47, catalog.ts:33-37)"
+      ],
+      "parity": [
+        "front/lib/hgh/adapters/catalog.test.ts › standardCollectionPeriodApi",
+        "back/app/features/analytics/filters/dates/tests/test_dates.py › test_preset_range_matches_ts_port",
+        "back/app/features/analytics/filters/dates/tests/test_dates.py › test_latest_matches_options_snapshot"
+      ]
+    },
+    "GET /v1/funnel/acr": {
+      "label": "get_funnel_acr_0 → service.build (ACR 6구획 한 응답) / 어댑터 loadAcrScreen·toStandardAcr",
+      "where": "back features/analytics/funnel/acr/router.py:18-25 → service.py:219-298(build)·174-185(acr_options)·188-216(_trend) → queries.py:23-28(cells_cte)·31-153(옵션·총량·브랜드·추이·배틀·차종·점유 맵) / front lib/hgh/adapters/funnel.ts:187-196(loadAcrScreen)·109-171(toStandardAcr); 호출 acr/page.tsx:157-180(AcrDataApi)",
+      "stmts": "기능 12문장(+공통 3, 기본 스냅샷·측정 있음): 창 1 · 카탈로그 ACR 프롬프트 수 1 · 옵션 언어 1·국가 1 · 총량 1 · 브랜드 1 · 명부 제외 키 1 · 추이 후보 창(rd.cycle 전 이력) 1 · 추이 1 · 배틀 1 · 차종 1 · 점유 맵 1. 창이 비면 2문장, 총량 0 이면 창·카운트·옵션 2·총량 + 추이 3. 택소노미 축 +2~, 한쪽 기간 +1. 결과 캐시 허용 목록(기본 끔)",
+      "f2": [
+        4,
+        4,
+        1,
+        0,
+        "battle_sql back/app/features/analytics/funnel/acr/queries.py:89-110 (CTE cells·agg·win·pe, ⋈ acr_choice·dim_brand_name·dim_prompt·LEFT win; territory_sql :133-153 = [3,2,2,0])"
+      ],
+      "f3": [
+        "y",
+        "적재 시 셀 단위로 접힌 rd.acr_cell(셀)·rd.acr_choice(셀×브랜드/차종, 저장 choice·keep) 열을 합산·정렬 — 반복 접기·비경쟁 판정은 적재(ingest) 몫(service.py:34). 원소·원문 재판정 없음"
+      ],
+      "f4": [
+        "AGK1"
+      ],
+      "f6": [
+        "y",
+        "자체 catch 없음 → AcrDataApi try-catch(throwForPage) → 오류 경계(acr/page.tsx:160-179). 단 숨김 회차('hidden')·스냅샷 없음 억제도 measured=false → '측정 대기' 안내로 같은 문구(funnel.ts:111, service.py:228-235) — 실패가 아니라 억제 사유 미표시"
+      ],
+      "f7": [
+        "skip",
+        ""
+      ],
+      "f8": [
+        "n",
+        "같은 셀 선택 머리(cells AS MATERIALIZED: rd.acr_cell 창·스코프·acr_in)를 8문장(옵션 2·총량·브랜드·추이·배틀·차종·점유 맵)이 각각 다시 스캔(queries.py:23-28). options.countries 는 계산·전송하지만 화면은 /v1/filters/options 국가를 씀(acr/page.tsx:171·173). 카탈로그 ACR 수는 측정된 상태에서도 매번 조회(대기 문구 전용)",
+        "12 (+공통 3)"
+      ],
+      "f9": [
+        "n",
+        "브랜드 LIMIT 12 안내 없음(당사 13위 이하면 KPI 카드 '—'), 배틀은 SQL LIMIT 없이 전 (프롬프트×엔진) 셀을 읽고 앱에서 200개로 자름(service.py:269-278) — 화면은 30개 + 더 보기, 점유 맵 시트 12·차종 12 절단 안내 없음(queries.py:70·129·140)"
+      ],
+      "f10": [
+        "n",
+        "DC-01 엔진 미선택 = 기본 엔진만(현행 전 엔진)·DC-09 추이 = 게이트 회차 최근 12개(현행 측정일 버킷 전 이력)·U8-N1 갭 회차 제외·U8-N2 acrPromptCount = 계정 스코프 카탈로그 수(현행 루트 전체)·U8-N22 시리즈 브랜드 0%(현행 점 생략)·U8-N20 추이 힌트 문구 '일별' 그대로 (funnel.ts:21-29·66-71)"
+      ],
+      "parity": [
+        "front/lib/hgh/adapters/funnel.acr.parity.test.ts › totals, brands, battle and modelConversion are equal",
+        "front/lib/hgh/adapters/funnel.acr.parity.test.ts › territory: the same sheets, rows and entries per ACR cell; only the order of tied sheets may differ",
+        "front/lib/hgh/adapters/funnel.acr.parity.test.ts › trend DC-09: legacy = measured days (the 09-10 round drains into 09-11), api = rounds; U8-N1 gap round dropped; U8-N22",
+        "back/app/features/analytics/funnel/acr/tests/test_acr.py › test_admin_snapshot_shape_and_values"
+      ]
+    },
+    "GET /v1/funnel/conversion": {
+      "label": "get_funnel_conversion_0 → service.build (적재 GA4 rd.ga4_row) / 어댑터 conversionQuery·loadConversionScreen·toConversionScreen",
+      "where": "back features/analytics/funnel/conversion/router.py:25-33 → service.py:309-422(build)·192-204(resolve_markets)·425-427 → queries.py:28-123(markets·props·as_of·sessions·conversions·pages) / front lib/hgh/adapters/funnel.ts:242-263(conversionQuery)·394-415(toConversionScreen·loadConversionScreen)·286-384(live·rollup·visits 변환); 호출 conversion/page.tsx:61-71",
+      "stmts": "기능 6문장(+공통 3, 국가 단일·active·필터 없음): 레지스트리 app.ga4_property 1 · 적재 속성 rd.ga4_dim_property 1 · as_of 1 · 세션 GROUPING SETS 1 · 전환 GROUPING SETS 1 · 페이지 1. engine[] 이면 +엔진 비교 2, device·visitor_type 이면 +1, active 시장 없으면 2문장. GA4 Data API 실시간 호출 0(적재분만). 결과 캐시 허용 목록 밖",
+      "f2": [
+        2,
+        1,
+        1,
+        0,
+        "pages_sql back/app/features/analytics/funnel/conversion/queries.py:104-123 (CTE pg, ⋈ ga4_dim_property, LEFT ⋈ ga4_dim_value)"
+      ],
+      "f3": [
+        "n",
+        "실시간 GA4 호출은 없어졌지만 rd.ga4_row 원본 그레인(일×속성×엔진×기기×방문자×페이지×이벤트)을 요청 때 GROUPING SETS·페이지(URL) 단위로 합산(queries.py:71-123)"
+      ],
+      "f4": [
+        "GA2",
+        "GLK6",
+        "AGK2"
+      ],
+      "f6": [
+        "y",
+        "백엔드·어댑터 catch 없음 → loadApi try-catch(throwForPage) → 오류 경계(conversion/page.tsx:61-71). 시장 상태는 레지스트리·적재 status(pending_grant → '측정 대기', unmapped → 미연동) — 현행의 GA4 호출 실패 → '측정 대기' 위장은 없어짐(적재 실패는 ingest 몫). 시장 0개 분기의 가상 표본은 별도 키(CLIENT 전환 가상 표본)"
+      ],
+      "f7": [
+        "skip",
+        ""
+      ],
+      "f8": [
+        "n",
+        "권역·본사(active 시장 2개 이상) 응답에도 일별 추이·페이지 15행·엔진 분해 문장을 돌리지만 롤업 화면은 KPI·커버리지·국가 표만 표시(service.py:357-364·394-402, conversion-view.tsx:205-260 '추이 숨김'); 프론트는 include_pages=false 를 보내지 않음",
+        "6 (+공통 3)"
+      ],
+      "f9": [
+        "n",
+        "페이지 15행을 받아 전환 표는 12행으로 자르고 안내 없음(U8-N6, funnel.ts:313-316); 엔진 카드는 by_engine_all 중 ChatGPT·Gemini 2개만 — 나머지 AI 엔진 유입은 합계에만(funnel.ts:201·275-283)"
+      ],
+      "f10": [
+        "n",
+        "DC-03 분모 = 세션(현행 활성 사용자)인데 라벨은 '활성 사용자' 그대로(U8-N3)·U8-N4 방문자 수 카드 숨김·U8-N5 7/28일 창 끝 = 최신 적재일·U8-N6·U8-N7 시장 상태 = coverage status·U8-N16 엔진 필터 시 비교 코호트 = 비AI 만 (funnel.ts:21-24·32-43·61-63). 시장 스코프는 계정 원값(DataScope.of, service.py:175-179) = 현행 resolveProperties"
+      ],
+      "parity": [
+        "front/lib/hgh/adapters/funnel.parity.test.ts › country leaf: live conversion and visits (legacy GA4 functions vs adapter)",
+        "front/lib/hgh/adapters/funnel.parity.test.ts › region rollup (legacy getAiTrafficConversionRollup vs adapter)",
+        "back/app/features/analytics/funnel/conversion/tests/test_conversion.py › test_admin_default_window_shape_and_values"
+      ]
+    },
+    "CLIENT 전환 가상 표본 (시장 없음 분기)": {
+      "label": "ConversionView SAMPLE_* × useFilterSignal — API 응답 시장 0개(live·rollup null)일 때",
+      "where": "front app/[locale]/(dash)/standard/ai-funnel/_components/conversion-view.tsx:126-188 → _data/sample.ts:240-285 · components/dash/use-filter-signal.ts:42-51; 분기 조건 lib/hgh/adapters/funnel.ts:394-407(시장 없음 → liveData·rollupData null), 진입 팝업 conversion/layout.tsx:150-160 → conversion-sample-notice-dialog.tsx",
+      "stmts": "SQL 0 — 정적 표본을 필터 신호로 결정론적 변형(클라이언트). 백엔드 MARKET_CATALOG ∪ 레지스트리에서 계정 스코프 시장이 0개인 계정(Kia/IT 외 대부분)에서 KPI·추이·엔진·페이지 표를 채움",
+      "f2": [
+        "skip",
+        "SQL 없음 — 정적 표본"
+      ],
+      "f3": [
+        "y",
+        "원천 집계 없음(값이 가상 표본)"
+      ],
+      "f4": [
+        "GLK4",
+        "GLK3"
+      ],
+      "f6": [
+        "n",
+        "시장 미매핑 계정에 가상 수치를 실값처럼 표시, 필터를 바꾸면 가짜 값이 결정론적으로 변함 — 진입 팝업은 'Kia Italy 데이터 샘플'이라 실제 표시(가상 표본)와 다름 (conversion-view.tsx:126-188, conversion-sample-notice-dialog.tsx:9-33)"
+      ],
+      "f7": [
+        "skip",
+        ""
+      ],
+      "f8": [
+        "y",
+        "",
+        "0"
+      ],
+      "f9": [
+        "skip",
+        ""
+      ],
+      "f10": [
+        "y",
+        "현행 GLGAS 와 같은 분기·같은 표본 — 시장 판정만 백엔드(MARKET_CATALOG ∪ app.ga4_property, 계정 원값 스코프)로 이동"
+      ],
+      "parity": []
+    },
+    "GET /v1/citations/prompts": {
+      "label": "get_citations_prompts_0 → service.list_prompts (C-3 owned/uncited 버킷 + 카운트) / 어댑터 fetchCitationPrompts·loadOwnedPromptPage",
+      "where": "back features/analytics/citations/prompts/router.py:19-36 → service.py:114-146 → queries.py:183-229(bucket_page_sql)·232-255(answer_refs_sql) + core/measure.py:567-705(plan_counts main·cross·scan) / front lib/hgh/adapters/citations.ts:570-582(fetchCitationPrompts)·874-903(loadOwnedPromptPage)·853-861(pageOrFirst); 호출 citation/prompts/page.tsx:40-56",
+      "stmts": "기능 3문장(+공통 3): 창 1 · 버킷 카운트+total+키셋 페이지 1(plan_counts main 을 CTE m 으로) · 답변 참조 1(행 있을 때, 행당 8). 국가 2개+ 계정(countryN)은 같은 문장에 rd.answer⋈rd.citation 교차 CTE, lang·source 축이면 m 이 rd.citation 원소 스캔(citation_counts_sql). 결과 캐시 허용 목록(기본 끔)",
+      "f2": [
+        3,
+        6,
+        2,
+        0,
+        "bucket_page_sql back/app/features/analytics/citations/prompts/queries.py:183-229 (CTE m·x·pe·pr·c·b, m LEFT⋈x · ⋈dim_prompt · LEFT⋈dim_taxon, GROUP BY main + pr); countryN 이면 x 에 ⋈rd.citation +1 JOIN +1 AGG"
+      ],
+      "f3": [
+        "n",
+        "기본(브랜드 모드)은 rd.answer 답변 열 cit_* 합이지만, 국가 2개+ 계정은 rd.citation 원소를 교차 국가 자사로 요청 때 조인·집계(measure.py:687-700), lang·source 축이면 rd.citation 원소 스캔(measure.py:702-704), source 축 답변 참조는 답변별 rd.citation 상관 count(queries.py:239-243)"
+      ],
+      "f4": [
+        "AWK51"
+      ],
+      "f6": [
+        "y",
+        "5xx·시간초과 → degradeOnApiFailure → page null → '시간 안에 끝나지 않았습니다' 안내 + 탭 숫자 '—'(citations.ts:879-884, citation-prompts-page.tsx:80-81·93-94); 4xx → throwForPage; 낡은 커서 → 1쪽 재조회. 단 인용 숨김·스냅샷 없음 억제는 빈 목록·탭 '—' 로만 보임"
+      ],
+      "f7": [
+        "skip",
+        ""
+      ],
+      "f8": [
+        "n",
+        "화면은 프롬프트 문구 1열만 그리는데(citation-prompts-page.tsx:101-123) 퍼널·AI 엔진(array_agg)·인용 수와 main 의 cit_target·cit_m05 를 계산·전송(queries.py:205-224, measure.py:635-643)",
+        "3 (+공통 3)"
+      ],
+      "f9": [
+        "n",
+        "목록은 50행 키셋 + total 표시로 정상이나 행별 답변 참조를 상위 8개(ANSWER_SAMPLE_MAX, prompts/schemas.py:17)로 잘라 모달에 안내 없음"
+      ],
+      "f10": [
+        "n",
+        "DC-10 자사 판정 = 인용 행 단위(현행 도메인 단위로 접어 판정)·U7-N7 커서 페이지(이전·다음만, 쪽 점프 없음)·U7-N12 맞지 않는 커서 → 1쪽 (citations.ts:66-70·88-89·99-100). owned 0 → 탭 '—' 는 현행과 같음"
+      ],
+      "parity": [
+        "front/lib/hgh/adapters/citations.parity.test.ts › prompts sub page: loadOwnedPromptPage vs aggregateCitationOwnedPromptsFromMirror, DC-10 the only difference",
+        "front/app/[locale]/(dash)/standard/answer-analysis/citation/pages.api.test.tsx › prompts: URL cursor and q forwarded, rows + both tab counts from one call, nextCursor for the pager",
+        "back/app/features/analytics/citations/prompts/tests/test_citations_prompts.py › test_global_matches_independent_citation_scan"
+      ]
+    },
+    "GET /v1/answers/{job_id}": {
+      "label": "get_answers_by_id_0 → service.answer_detail (AN-2) / BFF /api/scope/answer → 어댑터 loadAnswerDetail·toMirrorAnswerDetail",
+      "where": "back features/analytics/answers/detail/router.py:17-22 → service.py:152-238 → queries.py:257-258(LOCATE_SQL)·261-275(header_sql)·303-372(bundle_sql) / front app/api/scope/answer/route.ts:42-115 → lib/hgh/adapters/answers.ts:136-149·66-125; 모달 standard/answer-analysis/_components/answer-modal.tsx:137-163",
+      "stmts": "답변 클릭마다 기능 3문장(+공통 3; refs 는 service 가 직접 1회): LOCATE 1 · 헤더 1(rd.job⋈rd.cycle 노출·숨김·served·스코프) · 번들 1(스칼라 서브쿼리 json_agg 8개). 접근 감사는 비동기 배치 쓰기. 결과 캐시 밖",
+      "f2": [
+        17,
+        0,
+        0,
+        0,
+        "bundle_sql back/app/features/analytics/answers/detail/queries.py:303-372 (카탈로그 LEFT⋈5·브랜드 ⋈1·mention_raw LEFT⋈4·occurrence LEFT⋈2·stance LEFT⋈2·인용 ⋈1 LEFT⋈2, 전부 answer_key 점 조회)"
+      ],
+      "f3": [
+        "y",
+        "답변 1건 점 조회(answer_key 등치) — 언급·감성·스탠스·인용은 저장 판정을 읽고 화면용 스팬 병합·근거 대조만 계산(service.py:121-149)"
+      ],
+      "f4": [],
+      "f6": [
+        "n",
+        "백엔드 5xx·시간초과가 오면 라우트가 hghErrorResponse 로 {error:{code}} JSON 을 내고(route.ts:112) 모달은 r.ok 를 보지 않고 r.json() 의 available 만 봐서 '원문 없음'(unavailable)으로 표시 — 오류 상태(error)는 네트워크·JSON 파싱 실패 때만(answer-modal.tsx:150-160). 403·404·422 → {available:false} 는 의도(존재 은폐, answers.ts:127-130)"
+      ],
+      "f7": [
+        "skip",
+        ""
+      ],
+      "f8": [
+        "n",
+        "글로벌이면 카탈로그 행(LEFT⋈5)·헤더 메타(cycle_id·anchor_date·model_slug·is_rep·acr_iter_rank·catalog)·인용 owned/target_hit 를 계산하지만 어댑터(answers.ts:66-125)가 쓰지 않음",
+        "3 (+공통 3)"
+      ],
+      "f9": [
+        "y",
+        "답변 1건 — 인용 전량을 모달이 표시"
+      ],
+      "f10": [
+        "n",
+        "오류 계약 변경: 5xx 가 '원문 없음'으로 보임(현행: 라우트 throw → 모달 오류 상태) (route.ts:112, answer-modal.tsx:150-160); 접근 게이트 = 계정 스코프(루트 ∧ bgrp ∧ 허용 국가, queries.py:261-275)로 화면 URL 필터(region 등)를 IDOR 게이트에 쓰던 현행보다 넓지만 계정 스코프 밖은 아님; U6-N7 인용 category = slug(모달 미사용)"
+      ],
+      "parity": [
+        "front/lib/hgh/adapters/answers.parity.test.ts › same body, mentions (alias folded, own flag), models under their brand, citations by ref order",
+        "front/lib/hgh/adapters/answers.parity.test.ts › a job the reader does not have: both sides {available: false}"
+      ]
+    },
+    "GET /v1/citations/sources/tone": {
+      "label": "get_citations_sources_tone_0 → service.get_tone_rows (C-2 톤 드릴다운 + with_counts) / 어댑터 fetchCitationTone·loadToneUrlPage",
+      "where": "back features/analytics/citations/tone/router.py:17-23 → service.py:49-81 → queries.py:104-142(tone_rows_sql)·145-158(tone_counts_sql) + citations/domains/shared.py:89-100(open_read) / front lib/hgh/adapters/citations.ts:584-601(fetchCitationTone)·919-943(loadToneUrlPage); 호출 citation/tone-urls/page.tsx:115-131",
+      "stmts": "기능 3문장(+공통 3): 창 1 · 톤 목록(키셋 + 전체 행 수) 1 · 두 톤 탭 카운트 1(with_counts). 커서가 마지막 뒤면 total 재조회 +1. 결과 캐시 허용 목록(기본 끔)",
+      "f2": [
+        5,
+        2,
+        1,
+        0,
+        "tone_rows_sql back/app/features/analytics/citations/tone/queries.py:104-142 (CTE t·j, rd.citation⋈rd.answer · ⋈dim_url · ⋈dim_source · LEFT⋈override · LEFT⋈dim_prompt, GROUP BY gk)"
+      ],
+      "f3": [
+        "n",
+        "rd.citation 원소를 rd.answer 와 조인해 URL·출처별로 요청 때 집계, 톤(관점 sent_pos 합 vs sent_neg 합)을 읽기 시점에 판정(core/measure.py:486-489)"
+      ],
+      "f4": [
+        "AWK51"
+      ],
+      "f6": [
+        "y",
+        "5xx·시간초과 → degradeOnApiFailure → page null → 저하 안내 + 탭 숫자 '—'(citations.ts:925-930, citation-tone-urls-page.tsx:76-77); 4xx → throwForPage. 현행의 오버라이드 조회 실패 → 빈 맵 무음 분류는 없음(카테고리 = 조회 시 CATEGORY_EXPR)"
+      ],
+      "f7": [
+        "skip",
+        ""
+      ],
+      "f8": [
+        "n",
+        "탭 카운트 문장이 목록 문장과 같은 rd.citation⋈rd.answer 창 조인을 한 번 더 스캔하고(queries.py:145-158), q·페이지와 무관한 값인데 페이지 이동·검색마다 다시 계산",
+        "3 (+공통 3)"
+      ],
+      "f9": [
+        "y",
+        "LIMIT 50 키셋 + 전체 행 수, 'from–to / 총 N개' 표시"
+      ],
+      "f10": [
+        "n",
+        "DC-10 출처 카테고리 필터를 톤 목록·카운트에 적용(현행 미적용)·U7-N7 커서 페이지(이전·다음만)·U7-N12 (citations.ts:66-70·88-89, tone-urls/page.tsx:90-93)"
+      ],
+      "parity": [
+        "front/app/[locale]/(dash)/standard/answer-analysis/citation/pages.api.test.tsx › tone: with_counts, domain switch -> group_by source, one call",
+        "back/app/features/analytics/citations/tone/tests/test_tone_bg.py › test_bg27_counts_match_tiles_and_ignore_q"
+      ]
+    },
+    "POST /v1/prompts/screen": {
+      "label": "read_standard_screen → screen.catalog_screen (루트 카탈로그 경계 페이지·facet) / 서버 액션 loadCatalogPage(include_meta=true)·loadCatalogRows(false)",
+      "where": "back features/catalog/prompts/catalog/router.py:22-24 → screen.py:141-229(catalog_screen) + service.py:72-79(check_route)·144-171(_global_where) / front app/[locale]/(dash)/standard/prompts/_page-actions.ts:136-171 · prompts/page.tsx:54 · _components/prompt-list-readonly.tsx:470-487(원격 읽기·hydration 재조회) · lib/standards/catalog-page.ts:46-60(reuseCatalogMeta)",
+      "stmts": "include_meta=true(첫 렌더·draft 변경) 기능 5문장(+공통 3): 루트 프로젝트 1 · count(*) 1 · 메타(count + facet array_agg FILTER + has_*) 1 · 시장 DISTINCT unnest 1 · 행(OFFSET/LIMIT) 1. include_meta=false(페이지·필터·검색·정렬) 기능 3문장. 결과 캐시 밖",
+      "f2": [
+        1,
+        0,
+        0,
+        0,
+        "행 문장 back/app/features/catalog/prompts/catalog/screen.py:222-223 (app.prompt LEFT⋈rd.dim_prompt; 시장 문장 :201 CROSS JOIN LATERAL unnest 도 1)"
+      ],
+      "f3": [
+        "y",
+        "카탈로그 행 조회·COUNT·facet DISTINCT — 측정 원천 재집계 없음"
+      ],
+      "f4": [],
+      "f6": [
+        "y",
+        "첫 렌더 실패 → loadApi try-catch(throwForPage)(prompts/page.tsx:51-62), 메타 누락 → Error throw(_page-actions.ts:160), 클라이언트 원격 읽기 실패 → setReadError → 렌더 중 throw → 오류 경계(prompt-list-readonly.tsx:481-484·597). 늦은 응답은 active 플래그로 버림"
+      ],
+      "f7": [
+        "skip",
+        ""
+      ],
+      "f8": [
+        "n",
+        "한국어 로케일 브라우저는 SSR 첫 읽기(collation en) 뒤 hydration 에서 같은 페이지를 collation ko 로 한 번 더 읽음(prompt-list-readonly.tsx:479-480) — 매 진입 숨은 호출 1회; 행 문장이 화면 미사용 scope_text(LEFT⋈rd.dim_prompt)·prompt_type·category 를 읽음(screen.py:222)",
+        "5 / 3 (+공통 3)"
+      ],
+      "f9": [
+        "y",
+        "OFFSET/LIMIT 25·50·100(상한 500) + total·count 표시 — 현행의 스코프 카탈로그 전량 전송은 없어짐"
+      ],
+      "f10": null,
+      "parity": [
+        "back/app/features/catalog/prompts/catalog/tests/test_screen.py › test_screen_scope_matches_existing_catalog_and_pages_without_duplicates"
+      ]
+    },
+    "CLIENT xlsx 내보내기 → POST /v1/prompts/screen 500행 반복": {
+      "label": "handleExport → exportCatalogPages(loadCatalogRows) → buildStandardPromptSheet → downloadXlsx",
+      "where": "front app/[locale]/(dash)/standard/prompts/_components/prompt-list-readonly.tsx:492-536(handleExport, 버튼 :937-938) → lib/standards/catalog-page.ts:76-92(exportCatalogPages) → prompts/_page-actions.ts:166-171(loadCatalogRows) → back features/catalog/prompts/catalog/screen.py:141-229",
+      "stmts": "필터 결과 N행에 대해 POST /v1/prompts/screen(include_meta=false, limit 500)을 ⌈N/500⌉회 순차 호출 — 호출마다 6문장(공통 3 + 루트·count(*)·행) → ⌈N/500⌉×6문장. 현행은 서버 호출 0(메모리 배열 직렬화)",
+      "f2": [
+        1,
+        0,
+        0,
+        0,
+        "호출마다 행 문장 back/app/features/catalog/prompts/catalog/screen.py:222-223"
+      ],
+      "f3": [
+        "y",
+        "카탈로그 행 조회 — 집계 없음"
+      ],
+      "f4": [],
+      "f6": [
+        "y",
+        "페이지 실패·도중 변경(offset·total 불일치·중복 id) → throw → toast.error('exportFailed')(prompt-list-readonly.tsx:526-532, catalog-page.ts:83-90)"
+      ],
+      "f7": [
+        "y",
+        "exporting 플래그 + 버튼 disabled 로 중복 방지, 일부 페이지만 받은 채 파일을 만들지 않음(전부 아니면 실패), 실패는 toast 안내 (prompt-list-readonly.tsx:492-536, catalog-page.ts:76-92)"
+      ],
+      "f8": [
+        "n",
+        "500행 페이지마다 principal·refs·루트·count(*) 를 다시 돌리는 반복 호출(호출당 6문장) — 전량 내보내기 전용 경로가 없음",
+        "⌈N/500⌉×6"
+      ],
+      "f9": [
+        "y",
+        "필터·검색·정렬 전량(페이지 무관)을 내보냄 — 의도된 설계, 총계 불일치면 실패"
+      ],
+      "f10": null,
+      "parity": [
+        "front/app/[locale]/(dash)/standard/prompts/_components/prompt-export.render.test.tsx › exports more than the visible 50 rows in their server order",
+        "front/lib/standards/catalog-page.test.ts › rejects a failed page without retrying"
+      ]
+    },
+    "GET /v1/prompts/history": {
+      "label": "get_prompts_history → service.list_history (90일, 첫 페이지 500) / 어댑터 listGlobalAuditApi",
+      "where": "back features/catalog/prompts/history/router.py:21-32 → service.py:125-199(_list_history) → queries.py:222-230(history_select) + core/filters.py:878-903(catalog_* 스코프 술어) / front lib/hgh/adapters/catalog.ts:172-175; 호출 prompts/page.tsx:56",
+      "stmts": "기능 2문장(+공통 3): 루트 프로젝트 1 · 이력 1(LEFT⋈app.prompt·app.user_account, LIMIT 501). 카탈로그 탭이 기본이어도 매 렌더 조회. 결과 캐시 밖",
+      "f2": [
+        2,
+        0,
+        0,
+        0,
+        "history_select back/app/features/catalog/prompts/history/queries.py:222-230"
+      ],
+      "f3": [
+        "y",
+        "감사 원장 행 단순 조회 — 집계 없음"
+      ],
+      "f4": [],
+      "f6": [
+        "y",
+        "catch 없음 → loadApi try-catch(throwForPage) → 오류 경계(prompts/page.tsx:51-62)"
+      ],
+      "f7": [
+        "skip",
+        ""
+      ],
+      "f8": [
+        "y",
+        "",
+        "2 (+공통 3)"
+      ],
+      "f9": [
+        "n",
+        "limit 500 첫 페이지만 읽고 meta.page.next_cursor 를 버림(catalog.ts:172-175) — 화면엔 '최근 90일'·'표시 N건'만, 상한 안내 없음(현행 LIMIT 500 과 같은 상한)"
+      ],
+      "f10": [
+        "n",
+        "U8-N11 창 = KST 달력 90일(현행 now − 90×24h)·U8-N18 행 id = String(audit_id) (catalog.ts:38·48); 스코프 술어(브랜드 ∪ 엄브렐러·NULL, 대상 시장 B1)는 현행과 같은 한 벌"
+      ],
+      "parity": [
+        "front/lib/hgh/adapters/catalog.parity.test.ts › /standard/prompts history: listGlobalScoped(90 days) vs GET /v1/prompts/history"
+      ]
+    },
+    "ACTION fetchPromptAuditTimeline → GET /v1/prompts/history?prompt_id": {
+      "label": "서버 액션 fetchPromptAuditTimeline(표준 자리, G5) → fetchPromptTimelineApi → list_history(prompt_id, 2000-01-01~오늘 KST, limit 100)",
+      "where": "front app/[locale]/(dash)/standard/prompts/_actions.ts:224-261 → lib/hgh/adapters/catalog.ts:181-187 → back features/catalog/prompts/history/service.py:147-199(소속 확인 :162-173, PROMPT_VISIBLE queries.py:219) ; 컴포넌트 components/standards/prompt-audit-timeline.tsx:40-55",
+      "stmts": "클릭마다 기능 3문장(+공통 3): 루트 1 · 소속 확인(app.prompt 점 조회 + 스코프 술어) 1 · 이력 1(LIMIT 101). scope.all(admin) 이면 2문장. 결과 캐시 밖",
+      "f2": [
+        2,
+        0,
+        0,
+        0,
+        "history_select back/app/features/catalog/prompts/history/queries.py:222-230"
+      ],
+      "f3": [
+        "y",
+        "원장 행 조회 + 프롬프트 점 조회 — 집계 없음"
+      ],
+      "f4": [],
+      "f6": [
+        "y",
+        "실패 → {ok:false} 또는 throw → '이력을 불러오지 못했습니다' 표시(_actions.ts:249-260, prompt-audit-timeline.tsx:44-51·72-73). 스코프 밖 프롬프트는 빈 목록(dropped_filters.prompt_id 미표시, 현행도 빈 목록 U8-N12)"
+      ],
+      "f7": [
+        "skip",
+        ""
+      ],
+      "f8": [
+        "y",
+        "현행의 클릭마다 스코프 카탈로그 전량 재조회가 점 조회 1문장으로 바뀜",
+        "3 (+공통 3)"
+      ],
+      "f9": [
+        "n",
+        "limit 100 첫 페이지만, next_cursor 를 버리고 안내 없음(catalog.ts:181-187)"
+      ],
+      "f10": [
+        "n",
+        "U8-N14 메뉴 그룹 standard 요구(check_route, catalog/service.py:72-79·history/service.py:126) — 원본 액션은 역할만 확인; 창 = 2000-01-01~오늘 KST(현행 창 없음, catalog.ts:177-187)"
+      ],
+      "parity": [
+        "front/app/[locale]/(dash)/standard/prompts/_actions.api.test.ts › reads the whole timeline of the prompt (from 2000-01-01 to today KST, latest 100) and maps the rows",
+        "back/app/features/catalog/prompts/history/tests/test_history.py › test_prompt_timeline_and_scope"
+      ]
+    },
+    "GET /v1/admin/catalog/prompts/{prompt_id}/history": {
+      "label": "get_admin_catalog_prompt_history → service.list_prompt_timeline_admin (관리 카탈로그 자리 G7) / 어댑터 fetchAdminPromptTimelineApi",
+      "where": "back features/catalog/prompts/history/router.py:35-48(require_admin·require_menu_group('admin')) → service.py:135-144 → _list_history :147-199 → queries.py:222-230 / front lib/hgh/adapters/catalog.ts:193-200; 자리 판정 standard/prompts/_actions.ts:212-222",
+      "stmts": "클릭마다 기능 2문장(+공통 3): 루트 1 · 이력 1(기간 DATE_MIN~DATE_MAX, LIMIT 101). admin = 전체 스코프라 소속 확인 없음. 결과 캐시 밖",
+      "f2": [
+        2,
+        0,
+        0,
+        0,
+        "history_select back/app/features/catalog/prompts/history/queries.py:222-230"
+      ],
+      "f3": [
+        "y",
+        "원장 행 조회 — 집계 없음"
+      ],
+      "f4": [],
+      "f6": [
+        "y",
+        "403·401 → UnauthorizedError, 그 밖 → {ok:false} → '이력을 불러오지 못했습니다'(_actions.ts:249-260, prompt-audit-timeline.tsx:44-51)"
+      ],
+      "f7": [
+        "skip",
+        ""
+      ],
+      "f8": [
+        "y",
+        "",
+        "2 (+공통 3)"
+      ],
+      "f9": [
+        "n",
+        "limit 100 첫 페이지만, next_cursor 를 버리고 안내 없음(catalog.ts:193-200)"
+      ],
+      "f10": [
+        "n",
+        "admin ∧ 메뉴 admin 요구(router.py:39) — 원본 액션은 역할만 확인(메뉴 그룹 제한 admin 이 두 자리 다 못 닿으면 거부, U8-N14)·표준 메뉴 없는 admin 도 열람(U8-N21) (catalog.ts:45-60)"
+      ],
+      "parity": [
+        "back/app/features/catalog/prompts/history/tests/test_admin_timeline.py › test_same_rows_as_standard_route_for_full_admin",
+        "front/app/[locale]/(dash)/standard/prompts/_actions.api.test.ts › G7=api: the admin reads the admin timeline route (G5 still legacy, U8-7)"
+      ]
+    },
+    "CLIENT 변경 이력 CSV (GET /v1/prompts/history 결과 재사용)": {
+      "label": "onExport → downloadCsv (변경 이력 CSV, 클라이언트 필터 결과)",
+      "where": "front app/[locale]/(dash)/standard/prompts/_components/audit-history-view.tsx:76-90 → lib/export/csv.ts:24-40",
+      "stmts": "서버 호출 0 — 클라이언트 필터 결과(GET /v1/prompts/history 첫 페이지 최대 500행)를 CSV 로 직렬화",
+      "f2": [
+        "skip",
+        "서버 읽기 없음 — 메모리 배열 직렬화"
+      ],
+      "f3": [
+        "skip",
+        ""
+      ],
+      "f4": [],
+      "f6": [
+        "y",
+        "서버 읽기 없음(이력 탭 목록 재사용)"
+      ],
+      "f7": [
+        "y",
+        "동기 메모리 직렬화 — 서버 쓰기·HTTP 없음, 중복 클릭은 같은 파일 재다운로드(무해). 예외 처리 없음 (audit-history-view.tsx:76-90)"
+      ],
+      "f8": [
+        "y",
+        "",
+        "0"
+      ],
+      "f9": [
+        "n",
+        "첫 페이지 500행 상한(catalog.ts:172-175)으로 잘린 목록을 그대로 내보내며 상한 안내 없음"
+      ],
+      "f10": [
+        "y",
+        "현행 GLPCSV 와 같은 직렬화·같은 500행 상한"
+      ],
+      "parity": []
+    }
+  },
+  "area_keys": [
+    {
+      "route": "/ko/standard/ai-funnel/visibility",
+      "label": "4분면 카드 (우수·AI 노출 보강·검색 보강·우선순위 낮음)",
+      "api_keys": []
+    },
+    {
+      "route": "/ko/standard/ai-funnel/visibility",
+      "label": "4분면 산점도 (분위수 기반)",
+      "api_keys": []
+    },
+    {
+      "route": "/ko/standard/ai-funnel/visibility",
+      "label": "페이지 진단 표",
+      "api_keys": []
+    },
+    {
+      "route": "/ko/standard/ai-funnel/conversion",
+      "label": "AI 전환율 · 일반 전환율 · 전환 격차",
+      "api_keys": [
+        "GET /v1/funnel/conversion",
+        "CLIENT 전환 가상 표본 (시장 없음 분기)"
+      ]
+    },
+    {
+      "route": "/ko/standard/ai-funnel/conversion",
+      "label": "전환율 · 방문 수 추이",
+      "api_keys": [
+        "GET /v1/funnel/conversion",
+        "CLIENT 전환 가상 표본 (시장 없음 분기)"
+      ]
+    },
+    {
+      "route": "/ko/standard/ai-funnel/conversion",
+      "label": "AI 모델(엔진)별 전환",
+      "api_keys": [
+        "GET /v1/funnel/conversion",
+        "CLIENT 전환 가상 표본 (시장 없음 분기)"
+      ]
+    },
+    {
+      "route": "/ko/standard/ai-funnel/conversion",
+      "label": "페이지별 전환 표",
+      "api_keys": [
+        "GET /v1/funnel/conversion",
+        "CLIENT 전환 가상 표본 (시장 없음 분기)"
+      ]
+    },
+    {
+      "route": "/ko/standard/prompts",
+      "label": "프롬프트 변경 이력 타임라인",
+      "api_keys": [
+        "ACTION fetchPromptAuditTimeline → GET /v1/prompts/history?prompt_id",
+        "GET /v1/admin/catalog/prompts/{prompt_id}/history"
+      ]
+    },
+    {
+      "route": "/ko/standard/prompts",
+      "label": "쓰기: 엑셀 다운로드 (필터 전량)",
+      "api_keys": [
+        "CLIENT xlsx 내보내기 → POST /v1/prompts/screen 500행 반복"
+      ]
+    },
+    {
+      "route": "/ko/standard/prompts",
+      "label": "쓰기: CSV 내보내기",
+      "api_keys": [
+        "CLIENT 변경 이력 CSV (GET /v1/prompts/history 결과 재사용)"
+      ]
+    }
+  ],
+  "new_constants": {
+    "AGK1": [
+      "TREND_CYCLES_DEFAULT = 12 (ACR 추이 창 = 게이트 통과 최근 12회차, 제품 결정 Q12)",
+      "back/app/features/analytics/funnel/acr/schemas.py:15 (AcrParams.trend_cycles :23, 적용 service.py:95-105)",
+      1,
+      "12회차 — 현행 ACR 추이는 전 이력 측정일 버킷(DC-09)"
+    ],
+    "AGK2": [
+      "LOOKBACK_DAYS = 400 (GA4 최신 적재일 탐색 창)",
+      "back/app/features/analytics/funnel/conversion/queries.py:21 (as_of_sql :52-59)",
+      1,
+      "오늘 KST − 400일 안 report 1 최신일만 as_of — 밖이면 시장 기간 없음(빈 응답)"
+    ]
+  },
+  "notes": [
+    "전제: HGH_SOURCE_G2·G4·G5=api(인용 하위 페이지·AI 퍼널·글로벌 프롬프트), 타임라인 admin 자리는 G7=api. HGH_RESULT_CACHE=0(캐시 문장 0) — 허용 목록에 든 키: /v1/filters/options·/v1/filters/dates·/v1/funnel/acr·/v1/citations/prompts·/v1/citations/sources/tone. 밖: /v1/funnel/conversion·/v1/answers/{job_id}·POST /v1/prompts/screen·/v1/prompts/history·admin history.",
+    "HGH_LEGACY_PROFILE = 코드 기본 'off'(core/profile.py:265, config.py:88) 기준으로 계수. stg 는 부분 프로필(compare_*·trend_grid·cell_rep·rep_pick_latest_first·acr_iter_unfolded·gap_in_population·catalog_incl_deleted·display_name_latin·brand_exposure_per_alias·filter_options, test_sources_equiv.py:283-284)로 돈다 → 공통 refs +1(cat_diff), 글로벌 bgrp 술어 → 삭제 포함 카탈로그 세미조인, 옵션 매트릭스 → rd.job 소집합(legacy_global_sql). 운영(prod) 값은 UNKNOWN.",
+    "JOIN 계수에서 뺀 공유 술어 조각: core.measure.scope_where·catalog_all_pred·frozen_taxon_pred, core.cycles.Window.where, core.measure.mention_population·citation_population·citation_where·source_where, core.filters.catalog_brand_scope·catalog_market_scope·catalog_market_filter. CTE 에 대한 조인은 셈.",
+    "공통 문장(set_config·app.user_account·_REFS_SQL = 3)은 AGCOMMON 에 두고 각 엔드포인트 stmts/f8 수는 기능 문장만(+공통 3 표기).",
+    "AI 가시성 화면 본문 3영역은 After 에서도 정적 표본(결정 D9 a) — API 없음(api_keys []). 필터 바만 GET /v1/filters/options. AI 유입 전환은 응답 시장이 0개면 여전히 가상 표본 → KPI·추이·엔진·페이지 표 영역에 'CLIENT 전환 가상 표본' 키를 더함(GLK4·GLK3, 진입 팝업 문구 불일치 그대로).",
+    "글로벌 프롬프트: 타임라인 영역은 호출 모양(prompt_id·limit 100)이 이력 탭(limit 500)과 달라 'ACTION fetchPromptAuditTimeline → GET /v1/prompts/history?prompt_id' 로 분리. 엑셀은 현행(서버 0)과 달리 POST /v1/prompts/screen 을 500행씩 ⌈N/500⌉회 부르므로 CLIENT 키로 분리. CSV 는 클라이언트 키(이력 탭 결과 재사용).",
+    "다른 표면과 공유하는 키: /v1/filters/options·/v1/filters/dates(대시보드·인용·웹사이트·프로젝트), /v1/answers/{job_id}(언급·인용 모달 전부), /v1/citations/prompts(부모 인용 화면 분할 카드·웹사이트·프로젝트 상위 5), /v1/citations/sources/tone, /v1/prompts/history·admin history(관리 카탈로그). 옵션 f3 'y' 는 이 화면들이 include=source_categories 를 보내지 않는 호출 모양 기준 — 그 파라미터를 보내는 화면(인용)에서는 rd.citation 원소 스캔이 붙어 'n'.",
+    "f4 에서 뺀 것(Before 와 같은 기준): HIDDEN_EXCLUDE·HIDDEN_REASON·CYCLE_STATUS(DB 코드 매핑), MARKET_SOURCES('env','registry' 출처 어휘), SURFACE_ROLES·STANDARD_ROLES·WRITE_ROLES(권한), GEO_PSEUDO_MARKETS x:WW·x:EU·x:ME(카탈로그 시장 필터 어휘, Before 도 미계수), OFFICIAL_CATEGORY_NAME 'Official (HMG)'(measure.py:506 — 프롬프트 목록 scan 경로의 미사용 cit_m05 에만 등장), history DEFAULT_DAYS=90·KST 달력일(화면에 '최근 90일' 명시), MAX_DATES 400·ANSWER_SAMPLE_MAX 8·ACR top 12/시리즈 5/배틀 200/시트 12/차종 12·전환 page_limit 15/표 12·CONVERSION_PANEL_ENGINES(표시 집합, f9 반영)·페이지 크기, 날짜 프리셋 -6/-13/-29일/1년(표시), _EPOCH 2000-01-01·TIMELINE_FROM(기술 하한). 루트 프로젝트(G1)·권역 매핑·엄브렐러·숨김 국가·자사 베이스·출처 카테고리·GA4 AI 채널 판정(GA1·GLK5)은 After 에서 DB 표(app.project kind·app.rhq_region·app.brand·rd.dim_country.hidden_standard·app.owned_base·rd.dim_source)나 적재(ingest, 범위 밖)로 옮겨 하드코딩 아님.",
+    "AWK51(BRAND_OWN_COLS·OWN_BITS {1:h,2:k,4:g}, back/app/core/codes.py:22-23)은 after/website.json 이 정의한 같은 상수를 재사용 — 글로벌에서는 own_bit_of(codes.py:146-155, 모든 요청의 관점 비트)·plan_counts _owned_sum·tone_expr 가 씀. 공통 f4 의 RHQ·GLK1·B10 은 프론트 readStandardFilters 의 스코프 주입(브랜드 락 HMG·effectiveScopeCountries)과 analysisQuery 의 주입값 제거(urlCountries·urlBrands, query.ts:302-314)·옵션 어댑터 SCOPE_DENY_BRAND(=UMBRELLA_BRAND, session.ts:89) 경로, GLK1 은 백엔드 SITE_GLOBAL_MARKETS(auth.py:439)도.",
+    "UNKNOWN: POST /v1/prompts/screen 과 엑셀 내보내기의 f10(정렬·검색·facet 의 현행 동등성 시험 없음 → null). 톤 URL 목록 자체의 legacy 대비 parity 시험은 없음(탭 카운트 = /sources 타일 일치 시험만).",
+    "back/ingest/ 는 읽지 않음. 전환의 GA4 원천(rd.ga4_row·is_ai·is_conv·engine_key)과 ACR 셀 접기(rd.acr_cell·acr_choice keep)는 적재 산물로 보고 판정 상수(GA1·GLK5·B7·B8 등)는 After 계산 경로 밖으로 처리."
+  ]
+}
