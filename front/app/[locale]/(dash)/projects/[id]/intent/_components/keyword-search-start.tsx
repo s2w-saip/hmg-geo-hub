@@ -28,6 +28,20 @@ type SearchGroup = {
 };
 type Status = "idle" | "loading" | "ready" | "error";
 
+/**
+ * Runs a keyword write with its busy flag and clears the flag even when the server action throws
+ * (401 / 403 / 404 -> UnauthorizedError): without it the button stayed disabled for good. The
+ * error still propagates as before (no new message here).
+ */
+export async function withBusy<T>(setBusy: (busy: boolean) => void, write: () => Promise<T>): Promise<T> {
+  setBusy(true);
+  try {
+    return await write();
+  } finally {
+    setBusy(false);
+  }
+}
+
 // Empty-state Google Keyword search — shown instead of the full trend/SERP
 // dashboard when the project has no tracked keywords yet (a fresh project has
 // no keyword to build tabs/charts around). Comma-separated input searches
@@ -86,14 +100,15 @@ export function KeywordSearchStart({
   async function onSaveSelected() {
     const terms = [...checked];
     if (terms.length === 0) return;
-    setSaving(true);
-    const created: { id: string; label: string }[] = [];
-    for (const term of terms) {
-      const res = await addTrackedKeyword(projectId, { term, country });
-      if (res.ok) created.push({ id: res.value.id, label: term });
-      else toast.error(res.error);
-    }
-    setSaving(false);
+    const created = await withBusy(setSaving, async () => {
+      const out: { id: string; label: string }[] = [];
+      for (const term of terms) {
+        const res = await addTrackedKeyword(projectId, { term, country });
+        if (res.ok) out.push({ id: res.value.id, label: term });
+        else toast.error(res.error);
+      }
+      return out;
+    });
     if (created.length > 0) {
       toast.success(t("keywordAdded"));
       onSaved(created);

@@ -9,7 +9,7 @@ import "server-only";
 // intent/_actions.ts ActionResult).
 //
 //   screen / route / action                    backend
-//   google-keyword page: tracked tabs          GET    /v1/intent/keywords?project_id
+//   google-keyword page: tracked tabs          GET    /v1/intent/keywords?project_id&include_volume=false
 //   customer-interest/google-keywords: tabs    GET    /v1/intent/standard-keywords (BG-41, cursor)
 //   POST /api/keyword/insight                  GET    /v1/intent/insight (+ collect, serp-drafts)
 //   POST /api/keyword/related                  GET    /v1/intent/related (+ collect)
@@ -21,14 +21,16 @@ import "server-only";
 //                                                     (cursor, D5), context-map/entities/{id}
 //   POST /api/context-map/export               GET    context-map/export?lang (stream relay)
 //   addTrackedKeyword / remove(s)              POST / DELETE /v1/intent/keywords
+//   (several keywords at once)                 POST   /v1/intent/keywords {items}, 100 per call
 //   addCandidate / addCandidates               POST   /v1/intent/candidates
 //   generateMore / generateSelected            POST   /v1/intent/social/prompts {mode}
 //   removeSocialPrompts                        DELETE /v1/intent/social/prompts
 //
 // Collection (D12, Q13): the backend GETs never call DataForSEO. When a read is not fresh the
 // route asks for a collection (POST /v1/intent/fetches, operators only), polls the change until
-// applied or failed (bounded), reads again, then drafts missing SERP prompts (POST
-// /v1/intent/serp-drafts, operators only). A viewer who may not collect gets what is stored.
+// applied or failed (bounded; every waiting change in one GET /v1/intent/fetches?ids per poll),
+// reads again, then drafts missing SERP prompts (POST /v1/intent/serp-drafts, operators only). A
+// viewer who may not collect gets what is stored.
 //
 // Known differences from the legacy source (asserted in intent.test.ts and intent.parity.test.ts):
 //   DC-15    keyword data: legacy = anyone, live DataForSEO + LLM inside the request. api = stored
@@ -351,7 +353,10 @@ async function requestCollect(
 
 /**
  * Poll every requested change together until each is applied / failed or the ONE shared
- * `deadline` passes (verification D2: the chunks of one search never wait a budget each).
+ * `deadline` passes (verification D2: the chunks of one search never wait a budget each). Each
+ * poll reads every change still waiting in ONE GET /v1/intent/fetches?ids (same rows and
+ * visibility as GET /v1/intent/fetches/{id}: a hidden id is a 404 as before). The ids are at
+ * most the search chunks (MAX_SEARCH_TERMS / MAX_TERMS_PER_CALL = 2), inside the backend's 20.
  */
 async function pollCollects(requested: readonly Requested[], deadline: number, opts: CollectOptions): Promise<CollectOutcome[]> {
   const sleep = opts.sleep ?? defaultSleep;
@@ -360,12 +365,15 @@ async function pollCollects(requested: readonly Requested[], deadline: number, o
   const out: (CollectOutcome | null)[] = requested.map((r) => (typeof r === "string" ? r : null));
   while (out.some((o) => o === null)) {
     await sleep(pollMs);
+    const waiting = [...new Set(requested.flatMap((r, i) => (out[i] === null && typeof r !== "string" ? [r.changeId] : [])))];
+    const st = await hghGet("/v1/intent/fetches", { query: { ids: waiting }, dedupe: false });
+    const status = new Map(st.data.items.map((c) => [c.change_id, c.status]));
     for (let i = 0; i < requested.length; i += 1) {
       const r = requested[i];
       if (out[i] !== null || typeof r === "string") continue;
-      const st = await hghGet("/v1/intent/fetches/{change_id}", { pathParams: { change_id: r.changeId }, dedupe: false });
-      if (st.data.status === "applied") out[i] = "applied";
-      else if (st.data.status === "failed" || st.data.status === "escalated_rebuild") out[i] = "failed";
+      const s = status.get(r.changeId);
+      if (s === "applied") out[i] = "applied";
+      else if (s === "failed" || s === "escalated_rebuild") out[i] = "failed";
     }
     if (now() >= deadline) return out.map((o) => o ?? "timeout");
   }
@@ -581,9 +589,12 @@ export interface KeywordTab {
   label: string;
 }
 
-/** Project tracked keywords -> GoogleKeywordView initialKeywords (created order, as legacy). */
+/**
+ * Project tracked keywords -> GoogleKeywordView initialKeywords (created order, as legacy). The
+ * tabs use id and term only, so the latest monthly volume is not read (include_volume=false).
+ */
 export async function listTrackedKeywordTabs(projectId: string): Promise<KeywordTab[]> {
-  const res = await hghGet("/v1/intent/keywords", { query: { project_id: projectId } });
+  const res = await hghGet("/v1/intent/keywords", { query: { project_id: projectId, include_volume: false } });
   return res.data.items.map((k) => ({ id: k.keyword_id, label: k.term }));
 }
 
@@ -1048,6 +1059,12 @@ export async function apiRemoveSocialPrompts(
   return { ok: true, value: { count } };
 }
 
+const TRACKED_KEYWORD_ERRORS: Partial<Record<number | string, IntentActionErrorKey>> = {
+  duplicate_keyword: "duplicateKeyword",
+  unknown_country: "unknownCountry",
+  422: "emptyKeyword",
+};
+
 export async function apiAddTrackedKeyword(
   projectId: string,
   input: { term: string; country?: string | null },
@@ -1061,10 +1078,56 @@ export async function apiAddTrackedKeyword(
       body: { term, country: input.country?.trim() || null },
       retryOn401: true,
     });
-    return { ok: true, value: { id: res.data.keyword_id } };
+    // A single body is answered 201 with the keyword (the 200 row list answers an items[] body).
+    const d = res.data;
+    return { ok: true, value: { id: "keyword_id" in d ? d.keyword_id : "" } };
   } catch (e) {
-    return actionFailure(e, msg, { duplicate_keyword: "duplicateKeyword", unknown_country: "unknownCountry", 422: "emptyKeyword" });
+    return actionFailure(e, msg, TRACKED_KEYWORD_ERRORS);
   }
+}
+
+/** Rows per POST /v1/intent/keywords items[] call (backend MAX_ADD). */
+export const MAX_KEYWORDS_PER_ADD = 100;
+
+/**
+ * Several tracked keywords in one request per MAX_KEYWORDS_PER_ADD (items[] body) instead of one
+ * call per keyword. The answer per input, in input order, is what apiAddTrackedKeyword answers
+ * for it alone: blank -> emptyKeyword (not sent), a row's 409 / 422 -> the same texts, the backend
+ * checks each row after the rows before it (a repeated term is the duplicate). A failed request
+ * answers each of its rows like a failed single add (401 / 403 / 404 throw UnauthorizedError).
+ */
+export async function apiAddTrackedKeywords(
+  projectId: string,
+  inputs: ReadonlyArray<{ term: string; country?: string | null }>,
+  msg: IntentMessages,
+): Promise<IntentActionResult<{ id: string }>[]> {
+  const out: IntentActionResult<{ id: string }>[] = inputs.map(() => ({ ok: false, error: msg("emptyKeyword") }));
+  const send = inputs
+    .map((it, i) => ({ i, term: it.term.trim(), country: it.country?.trim() || null }))
+    .filter((x) => x.term.length > 0);
+  for (const part of chunk(send, MAX_KEYWORDS_PER_ADD)) {
+    let rows: S["TrackedAddResult"][];
+    try {
+      const res = await hghPost("/v1/intent/keywords", {
+        query: { project_id: projectId },
+        body: { items: part.map(({ term, country }) => ({ term, country })) },
+        retryOn401: true,
+      });
+      const d = res.data;
+      rows = "items" in d ? d.items : [];
+    } catch (e) {
+      const failed = actionFailure(e, msg, TRACKED_KEYWORD_ERRORS);
+      for (const x of part) out[x.i] = failed;
+      continue;
+    }
+    part.forEach((x, k) => {
+      const r = rows[k];
+      out[x.i] = r?.data
+        ? { ok: true, value: { id: r.data.keyword_id } }
+        : actionFailure(new HghApiError(r?.status ?? 502, r?.error?.code ?? "upstream", r?.error?.message ?? ""), msg, TRACKED_KEYWORD_ERRORS);
+    });
+  }
+  return out;
 }
 
 async function deleteKeywords(projectId: string, ids: string[]): Promise<number> {

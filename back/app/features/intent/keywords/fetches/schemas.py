@@ -7,10 +7,11 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.core.envelope import Envelope
+from app.core.envelope import Envelope, ListData
 
 FetchKind = Literal["insight", "related", "search"]
 MAX_TERMS = 20          # 한 요청 terms 상한(모듈-고객-관심 열린 질문 9: 현행 상한 미확인 → 화면 다건 검색 규모로 20)
+MAX_STATUS_IDS = 20     # 일괄 상태 조회 한 요청 change id 상한(화면 폴링은 많아야 검색 청크 수 = 2건)
 
 
 class FetchIn(BaseModel):
@@ -44,3 +45,4 @@ class FetchStatus(BaseModel):
 
 FetchAcceptedEnvelope = Envelope[FetchAccepted]
 FetchStatusEnvelope = Envelope[FetchStatus]
+FetchStatusListEnvelope = Envelope[ListData[FetchStatus]]

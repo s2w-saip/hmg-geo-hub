@@ -11,6 +11,7 @@
      (dedupe="coalesce_active" + dedupe_key: 국가·종류가 다른 대기 행에 묻히지 않는다, 검증 D1). 동시 요청은 core 가 advisory 잠금으로
      직렬화한다. 재사용 후보는 요청자가 상태 조회로 볼 수 있는 행만(reusable = _visible, 검증 D4). 재사용이면 202 pending + 기존 change_id.
 적재기(ingest dfs_fetch 빠른 경로)가 claim → ext.dfs_call·rd.kw_* 적재 → status 전이. API 는 외부 서비스를 부르지 않는다.
+상태 조회: 단건(GET …/{change_id})과 일괄(GET …?ids=, 화면 폴링이 대기 id 를 한 요청으로)은 같은 가시성 규칙(_visible)·같은 응답 행이다.
 """
 from __future__ import annotations
 
@@ -119,3 +120,9 @@ async def status(conn: AsyncConnection, p: Principal, change_id: int) -> FetchSt
                        terms=list(pl.get("terms") or r["subject_texts"] or []), project_id=uuid.UUID(pid) if pid else None,
                        requested_at=r["requested_at"], claimed_at=r["claimed_at"], applied_at=r["applied_at"],
                        error=(r["error"] or None) and str(r["error"])[:500])
+
+
+async def statuses(conn: AsyncConnection, p: Principal, change_ids: list[int]) -> list[FetchStatus]:
+    """일괄 상태 조회: id 마다 status 와 같은 판정(요청 순서, 중복 id 는 한 번). 하나라도 없거나 볼 수 없으면 404(단건 조회와 같은
+    응답이라 어느 id 인지 드러내지 않는다, IDOR 은폐)."""
+    return [await status(conn, p, cid) for cid in dict.fromkeys(change_ids)]

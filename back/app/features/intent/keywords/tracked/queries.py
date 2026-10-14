@@ -27,6 +27,14 @@ ON CONFLICT DO NOTHING
 RETURNING keyword_id, term, country_code, created_at
 """
 
+# 다건 추가(items[])의 행: 같은 규칙에 created_at 만 clock_timestamp(). 한 트랜잭션 안의 now() 는 모든 행이 같은 값이라 목록 순서
+# (created_at, keyword_id)가 무작위 id 순이 되므로, 행마다 실행 시각으로 요청 순서를 지킨다(단건을 차례로 보낸 것과 같은 순서).
+INSERT_IN_BATCH = """
+INSERT INTO app.project_tracked_keyword (project_id, term, country_code, created_at) VALUES (:pid, :term, :country, clock_timestamp())
+ON CONFLICT DO NOTHING
+RETURNING keyword_id, term, country_code, created_at
+"""
+
 DELETE = """
 DELETE FROM app.project_tracked_keyword WHERE project_id = :pid AND keyword_id = ANY(CAST(:ids AS uuid[]))
 RETURNING keyword_id

@@ -107,6 +107,21 @@ const insight = (serp: S["SerpRow"][], callId: number | null = 11, trend = true)
       ]
     : [],
 });
+// GET /v1/intent/fetches?ids answer: every asked change in the asked order (one poll = one request).
+const change = (id: number, status: S["FetchStatus"]["status"], over: Partial<S["FetchStatus"]> = {}): S["FetchStatus"] => ({
+  change_id: id,
+  status,
+  kind: "insight",
+  country: "kr",
+  terms: ["suv"],
+  project_id: null,
+  requested_at: "2026-09-29T00:00:00Z",
+  claimed_at: null,
+  applied_at: null,
+  error: null,
+  ...over,
+});
+const statuses = (...rows: S["FetchStatus"][]) => env({ items: rows });
 const fresh = { source: { freshness: "fresh" } };
 const missing = { source: { freshness: "missing" }, suppressed: { "*": "source_pending" } };
 const stale = { source: { freshness: "stale" } };
@@ -300,9 +315,9 @@ describe("loadKeywordInsight", () => {
     install({
       "GET /v1/intent/insight": [() => env(insight([], null, false), missing), () => env(insight([serpRow(1, null), serpRow(2, "kept")]), fresh)],
       "POST /v1/intent/fetches": () => json(202, { data: { status: "queued", change_id: 7, terms: ["suv"], fresh_terms: [] }, meta: { mode: "crud" } }),
-      "GET /v1/intent/fetches/7": [
-        () => env({ change_id: 7, status: "pending", kind: "insight", country: "kr", terms: ["suv"], project_id: PID, requested_at: "2026-09-29T00:00:00Z", claimed_at: null, applied_at: null, error: null }),
-        () => env({ change_id: 7, status: "applied", kind: "insight", country: "kr", terms: ["suv"], project_id: PID, requested_at: "2026-09-29T00:00:00Z", claimed_at: null, applied_at: null, error: null }),
+      "GET /v1/intent/fetches": [
+        () => statuses(change(7, "pending", { project_id: PID })),
+        () => statuses(change(7, "applied", { project_id: PID })),
       ],
       "POST /v1/intent/serp-drafts": () =>
         env({ serp_call_id: 11, skipped_count: 0, drafts: [{ rank: 1, prompt: "drafted", gen: 1, model: "m", generated_at: "2026-09-29T00:00:01Z" }] }),
@@ -311,12 +326,13 @@ describe("loadKeywordInsight", () => {
     expect(seq()).toEqual([
       "GET /v1/intent/insight",
       "POST /v1/intent/fetches",
-      "GET /v1/intent/fetches/7",
-      "GET /v1/intent/fetches/7",
+      "GET /v1/intent/fetches",
+      "GET /v1/intent/fetches",
       "GET /v1/intent/insight",
       "POST /v1/intent/serp-drafts",
     ]);
     expect(calls[1].body).toEqual({ kind: "insight", terms: ["suv"], country: "kr", project_id: PID, force: false });
+    expect([calls[2].query, calls[3].query]).toEqual([{ ids: ["7"] }, { ids: ["7"] }]);
     expect(calls[5].body).toEqual({ project_id: PID, serp_call_id: 11, ranks: null });
     expect(out.serp.map((r) => r.suggestedPrompt)).toEqual(["drafted", "kept"]);
   });
@@ -337,23 +353,21 @@ describe("loadKeywordInsight", () => {
     install({
       "GET /v1/intent/insight": () => env(insight([serpRow(1, "old")]), stale),
       "POST /v1/intent/fetches": () => json(202, { data: { status: "pending", change_id: 8, terms: ["suv"], fresh_terms: [] }, meta: { mode: "crud" } }),
-      "GET /v1/intent/fetches/8": () =>
-        env({ change_id: 8, status: "running", kind: "insight", country: "kr", terms: ["suv"], project_id: null, requested_at: "2026-09-29T00:00:00Z", claimed_at: null, applied_at: null, error: null }),
+      "GET /v1/intent/fetches": () => statuses(change(8, "running")),
     });
     const out = await I.loadKeywordInsight(
       { term: "suv", country: KR },
       { sleep: async () => {}, pollMs: 1, budgetMs: 3, now: () => (t += 1) },
     );
     expect(out.serp[0].suggestedPrompt).toBe("old");
-    expect(seq().filter((s) => s === "GET /v1/intent/fetches/8").length).toBeGreaterThanOrEqual(2);
+    expect(seq().filter((s) => s === "GET /v1/intent/fetches").length).toBeGreaterThanOrEqual(2);
   });
 
   it("missing + collection failed: 502 upstream (component error state, gap G9)", async () => {
     install({
       "GET /v1/intent/insight": () => env(insight([], null, false), missing),
       "POST /v1/intent/fetches": () => json(202, { data: { status: "queued", change_id: 9, terms: ["suv"], fresh_terms: [] }, meta: { mode: "crud" } }),
-      "GET /v1/intent/fetches/9": () =>
-        env({ change_id: 9, status: "failed", kind: "insight", country: "kr", terms: ["suv"], project_id: null, requested_at: "2026-09-29T00:00:00Z", claimed_at: null, applied_at: null, error: "x" }),
+      "GET /v1/intent/fetches": () => statuses(change(9, "failed", { error: "x" })),
     });
     await expect(I.loadKeywordInsight({ term: "suv", country: KR }, noSleep)).rejects.toMatchObject({ status: 502, code: "upstream" });
   });
@@ -415,8 +429,7 @@ describe("loadKeywordInsight", () => {
     install({
       "GET /v1/intent/insight": [() => env(insight([], null, false), missing), () => env(insight([serpRow(1, null)]), fresh)],
       "POST /v1/intent/fetches": () => json(202, { data: { status: "queued", change_id: 7, terms: ["suv"], fresh_terms: [] }, meta: { mode: "crud" } }),
-      "GET /v1/intent/fetches/7": () =>
-        env({ change_id: 7, status: "applied", kind: "insight", country: "kr", terms: ["suv"], project_id: null, requested_at: "2026-09-29T00:00:00Z", claimed_at: null, applied_at: null, error: null }),
+      "GET /v1/intent/fetches": () => statuses(change(7, "applied")),
       "POST /v1/intent/serp-drafts": () => {
         throw new Error("the drafts call must not be sent without budget");
       },
@@ -426,7 +439,7 @@ describe("loadKeywordInsight", () => {
       { term: "suv", country: KR },
       { sleep: async () => {}, pollMs: 1, budgetMs: 200_000, now: () => (t += 40_000) },
     );
-    expect(seq()).toEqual(["GET /v1/intent/insight", "POST /v1/intent/fetches", "GET /v1/intent/fetches/7", "GET /v1/intent/insight"]);
+    expect(seq()).toEqual(["GET /v1/intent/insight", "POST /v1/intent/fetches", "GET /v1/intent/fetches", "GET /v1/intent/insight"]);
     expect(late.serp.map((r) => r.suggestedPrompt)).toEqual(["suv"]);
   });
 
@@ -466,16 +479,17 @@ describe("loadRelatedKeywords / loadKeywordSearchGroups", () => {
         return env({ country: "kr", items: ts.map((t) => row(t, round > 1 || t !== "t21")) }, fresh);
       },
       "POST /v1/intent/fetches": () => json(202, { data: { status: "queued", change_id: 5, terms: [], fresh_terms: [] }, meta: { mode: "crud" } }),
-      "GET /v1/intent/fetches/5": () =>
-        env({ change_id: 5, status: "applied", kind: "search", country: "kr", terms: [], project_id: null, requested_at: "2026-09-29T00:00:00Z", claimed_at: null, applied_at: null, error: null }),
+      "GET /v1/intent/fetches": () => statuses(change(5, "applied", { kind: "search", terms: [] })),
     });
     const groups = await I.loadKeywordSearchGroups([...terms, " t0 ", ""], { country: KR }, noSleep);
     expect(groups).toHaveLength(25);
     expect(groups[21]).toEqual({ term: "t21", volume: 5, intent: "informational", foundCount: 9, related: [] });
     const lookups = calls.filter((c) => c.path === "/v1/intent/lookup").map((c) => c.query.terms.length);
     expect(lookups).toEqual([20, 5, 20, 5]);
-    const fetches = calls.filter((c) => c.path === "/v1/intent/fetches").map((c) => (c.body as { terms: string[] }).terms.length);
+    const fetches = calls.filter((c) => c.method === "POST" && c.path === "/v1/intent/fetches").map((c) => (c.body as { terms: string[] }).terms.length);
     expect(fetches).toEqual([20, 5]);
+    // the two chunks were coalesced into the same change: one id per status request
+    expect(calls.filter((c) => c.method === "GET" && c.path === "/v1/intent/fetches").map((c) => c.query.ids)).toEqual([["5"]]);
   });
 
   // Verification D2: every chunk shares ONE collection deadline, and every chunk's collection is
@@ -484,17 +498,17 @@ describe("loadRelatedKeywords / loadKeywordSearchGroups", () => {
     found
       ? { term: t, status: "found", search_volume: 5, intent: null, related: [], total_count: 9 }
       : { term: t, status: "missing", search_volume: null, intent: null, related: [], total_count: null };
-  const pendingChange = (id: number) =>
-    env({ change_id: id, status: "pending", kind: "search", country: "kr", terms: [], project_id: null, requested_at: "2026-09-29T00:00:00Z", claimed_at: null, applied_at: null, error: null });
+  const pendingChange = (id: number) => change(id, "pending", { kind: "search", terms: [] });
+  const queued = (id: number) => json(202, { data: { status: "queued", change_id: id, terms: [], fresh_terms: [] }, meta: { mode: "crud" } });
   function pendingForever(storedTerm: string | null) {
     let nextChange = 30;
     install({
       "GET /v1/intent/lookup": (c) => env({ country: "kr", items: c.query.terms.map((t) => lookupRow(t, t === storedTerm)) }, missing),
-      "POST /v1/intent/fetches": () => json(202, { data: { status: "queued", change_id: (nextChange += 1), terms: [], fresh_terms: [] }, meta: { mode: "crud" } }),
-      "GET /v1/intent/fetches/31": () => pendingChange(31),
-      "GET /v1/intent/fetches/32": () => pendingChange(32),
+      "POST /v1/intent/fetches": () => queued((nextChange += 1)),
+      "GET /v1/intent/fetches": (c) => statuses(...c.query.ids.map((id) => pendingChange(Number(id)))),
     });
   }
+  const statusPolls = () => calls.filter((c) => c.method === "GET" && c.path === "/v1/intent/fetches").map((c) => c.query.ids);
   const clock = () => {
     const c = { t: 0 };
     return { c, opts: { sleep: async (ms: number) => void (c.t += ms), now: () => c.t, pollMs: I.COLLECT_POLL_MS, budgetMs: I.COLLECT_BUDGET_MS } };
@@ -510,8 +524,27 @@ describe("loadRelatedKeywords / loadKeywordSearchGroups", () => {
     expect(c.t).toBeLessThanOrEqual(I.COLLECT_BUDGET_MS + I.COLLECT_POLL_MS);
     const s = seq();
     expect(s.filter((x) => x === "POST /v1/intent/fetches")).toHaveLength(2);
-    expect(s.lastIndexOf("POST /v1/intent/fetches")).toBeLessThan(s.indexOf("GET /v1/intent/fetches/31"));
-    expect(s.filter((x) => x === "GET /v1/intent/fetches/32").length).toBe(s.filter((x) => x === "GET /v1/intent/fetches/31").length);
+    expect(s.lastIndexOf("POST /v1/intent/fetches")).toBeLessThan(s.indexOf("GET /v1/intent/fetches"));
+    // every poll asks both waiting changes in one request (was one GET per change)
+    expect(statusPolls().length).toBeGreaterThan(1);
+    expect(new Set(statusPolls().map((ids) => ids.join(",")))).toEqual(new Set(["31,32"]));
+  });
+
+  it("search polling: one status request per poll for the waiting changes; a finished change leaves the next poll", async () => {
+    let polls = 0;
+    install({
+      "GET /v1/intent/lookup": (c) => env({ country: "kr", items: c.query.terms.map((t) => lookupRow(t, polls >= 2)) }, polls >= 2 ? fresh : missing),
+      "POST /v1/intent/fetches": [() => queued(41), () => queued(42)],
+      "GET /v1/intent/fetches": (c) => {
+        polls += 1;
+        return statuses(...c.query.ids.map((id) => change(Number(id), id === "41" || polls >= 2 ? "applied" : "running", { kind: "search" })));
+      },
+    });
+    const groups = await I.loadKeywordSearchGroups(forty, { country: KR }, noSleep);
+    expect(groups).toHaveLength(40);
+    expect(groups.every((g) => g.volume === 5)).toBe(true);
+    expect(statusPolls()).toEqual([["41", "42"], ["42"]]);
+    expect(seq().filter((x) => x === "GET /v1/intent/lookup")).toHaveLength(4);
   });
 
   it("search: every term missing and never collected -> both chunks requested, then 502 within one budget (D2)", async () => {
@@ -583,6 +616,26 @@ describe("fetchContextMapPage", () => {
   });
 });
 
+describe("listTrackedKeywordTabs", () => {
+  it("tabs = id + term in the backend order; the latest monthly volume is not asked for (include_volume=false)", async () => {
+    const kw = (id: string, term: string): S["TrackedKeyword"] => ({
+      keyword_id: id,
+      term,
+      country_code: null,
+      country: "kr",
+      created_at: "2026-09-01T00:00:00Z",
+      latest_month: null,
+      latest_volume: null,
+    });
+    install({ "GET /v1/intent/keywords": () => env({ items: [kw("k1", "suv"), kw("k2", "ev3")] }, { mode: "crud" }) });
+    expect(await I.listTrackedKeywordTabs(PID)).toEqual([
+      { id: "k1", label: "suv" },
+      { id: "k2", label: "ev3" },
+    ]);
+    expect(calls[0].query).toEqual({ project_id: [PID], include_volume: ["false"] });
+  });
+});
+
 describe("listStandardKeywordTabs", () => {
   const kw = (n: number) => ({
     keyword_id: `k${n}`, keyword_ids: [`k${n}`], term: `t${n}`, source_type: "google_keyword", brand_codes: [null], created_at: "x", updated_at: "x",
@@ -640,6 +693,72 @@ describe("action bodies (error mapping)", () => {
     expect(await I.apiAddTrackedKeyword(PID, { term: "suv" }, msg)).toEqual({ ok: false, error: "m:tryAgain" });
     expect(await I.apiAddTrackedKeyword(PID, { term: "  " }, msg)).toEqual({ ok: false, error: "m:emptyKeyword" });
     expect(calls).toHaveLength(7);
+  });
+
+  it("addTrackedKeywords: one items[] request per 100; each row answers what the single add answers for it", async () => {
+    // A backend with the documented row rule: 409 for the same term (case) and country, 422 unknown_country,
+    // a row checked after the rows before it. A single body answers 201 / an error, an items[] body 200 rows.
+    const backend = () => {
+      const seen = new Set<string>();
+      let n = 0;
+      const one = (term: string, country: string | null | undefined): S["TrackedAddResult"] => {
+        const e = (status: number, code: string) => ({ status, data: null, error: { code, message: code, details: null } });
+        if (country === "ZZ") return e(422, "unknown_country");
+        const key = `${term.toLowerCase()}|${country ?? ""}`;
+        if (seen.has(key)) return e(409, "duplicate_keyword");
+        seen.add(key);
+        n += 1;
+        const data = { keyword_id: `k${n}`, term, country_code: country ?? null, country: "kr", created_at: "x", latest_month: null, latest_volume: null };
+        return { status: 201, data, error: null };
+      };
+      return (c: Call) => {
+        const b = c.body as { term?: string; country?: string | null; items?: { term: string; country?: string | null }[] };
+        if (b.items) return env({ items: b.items.map((it) => one(it.term, it.country)) }, { mode: "crud" });
+        const r = one(b.term!, b.country);
+        return r.data ? json(201, { data: r.data, meta: { mode: "crud" } }) : json(r.status, { error: r.error });
+      };
+    };
+    const inputs = [{ term: " suv " }, { term: "SUV" }, { term: "  " }, { term: "ev3", country: "ZZ" }, { term: "ev3", country: " KR " }, { term: "ev3", country: "KR" }];
+    install({ "POST /v1/intent/keywords": backend() });
+    const singles = [];
+    for (const x of inputs) singles.push(await I.apiAddTrackedKeyword(PID, x, msg));
+    expect(calls).toHaveLength(5);
+    calls.length = 0;
+    install({ "POST /v1/intent/keywords": backend() });
+    const batch = await I.apiAddTrackedKeywords(PID, inputs, msg);
+    expect(batch).toEqual(singles);
+    expect(batch.map((r) => (r.ok ? r.value.id : r.error))).toEqual(["k1", "m:duplicateKeyword", "m:emptyKeyword", "m:unknownCountry", "k2", "m:duplicateKeyword"]);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].query).toEqual({ project_id: [PID] });
+    expect(calls[0].body).toEqual({
+      items: [
+        { term: "suv", country: null },
+        { term: "SUV", country: null },
+        { term: "ev3", country: "ZZ" },
+        { term: "ev3", country: "KR" },
+        { term: "ev3", country: "KR" },
+      ],
+    });
+
+    // 250 rows -> 100 + 100 + 50; blank only -> no call
+    calls.length = 0;
+    install({ "POST /v1/intent/keywords": backend() });
+    const many = await I.apiAddTrackedKeywords(PID, Array.from({ length: 250 }, (_, i) => ({ term: `t${i}` })), msg);
+    expect(many.every((r) => r.ok)).toBe(true);
+    expect(calls.map((c) => (c.body as { items: unknown[] }).items.length)).toEqual([100, 100, 50]);
+    calls.length = 0;
+    expect(await I.apiAddTrackedKeywords(PID, [{ term: " " }], msg)).toEqual([{ ok: false, error: "m:emptyKeyword" }]);
+    expect(calls).toHaveLength(0);
+
+    // a failed request: 403 / 404 throw like the single add, a transient failure answers each sent row
+    install({ "POST /v1/intent/keywords": () => err(403, "operator_forbidden") });
+    await expect(I.apiAddTrackedKeywords(PID, [{ term: "x" }], msg)).rejects.toBeInstanceOf(UnauthorizedError);
+    install({ "POST /v1/intent/keywords": () => err(503, "unavailable") });
+    expect(await I.apiAddTrackedKeywords(PID, [{ term: "x" }, { term: " " }, { term: "y" }], msg)).toEqual([
+      { ok: false, error: "m:tryAgain" },
+      { ok: false, error: "m:emptyKeyword" },
+      { ok: false, error: "m:tryAgain" },
+    ]);
   });
 
   it("removeTrackedKeywords: dedup, 100 per call, count summed; 0 -> not found; empty -> no call", async () => {

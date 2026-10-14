@@ -45,6 +45,19 @@ SELECT g.call_id, g.pos, g.is_seed, g.search_volume, g.intent, g.observed_at, g.
  ORDER BY g.pos
 """
 
+# lookup 용 다건: seed kw_key 마다 최신 연관어 호출 1건의 행(SUGGEST_LATEST 와 같은 행)을 한 문장으로. seed_kw 로 앱에서 가른다.
+# 최신 호출 찾기는 seed 마다 LATERAL 1건(kw_suggestion_latest 인덱스, SUGGEST_LATEST 의 latest CTE 와 같은 조건·정렬).
+SUGGEST_LATEST_MANY = """
+SELECT x.kw AS seed_kw, g.call_id, g.pos, g.is_seed, g.search_volume, g.intent, g.observed_at, g.total_count, k.term
+  FROM unnest(CAST(:kws AS int4[])) AS x(kw)
+  JOIN LATERAL (SELECT l.call_id FROM rd.kw_suggestion l
+                 WHERE l.seed_kw_key = x.kw AND l.location_code = :loc AND l.language_code = :lang
+                 ORDER BY l.call_id DESC LIMIT 1) latest ON true
+  JOIN rd.kw_suggestion g ON g.call_id = latest.call_id
+  JOIN rd.dim_keyword k ON k.kw_key = g.kw_key
+ ORDER BY x.kw, g.pos
+"""
+
 # 신선도 판정용: term 별 최신 관측 시각. fetches 가 "신선하면 skip" 에 쓴다.
 # volume_at·serp_at = insight(검색량·SERP), related_at = 최신 연관어 호출, search_at = seed 행을 포함한 최신 연관어 호출(search 는
 # include_seed 라 seed 없는 related 호출로는 채워지지 않는다). 연관어 두 값은 kw_suggestion_latest 인덱스 순서로 1행씩.

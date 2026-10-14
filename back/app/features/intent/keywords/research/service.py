@@ -148,13 +148,17 @@ async def lookup(conn: AsyncConnection, terms: list[str], preset: Preset) -> tup
     nm = await db_term_norms(conn, terms)                  # 정규화 정본 = DB app.term_norm(검증 m-5)
     norms = [nm[t] for t in terms]
     keys = await kw_keys(conn, sorted(set(norms)))
+    found = sorted({keys[n] for n in norms if n in keys})
+    by_kw: dict[int, list[dict[str, Any]]] = {}
+    if found:                                              # 찾은 키워드 전부를 한 문장으로(term 마다 SUGGEST_LATEST 와 같은 행)
+        for r in await fetch_all(conn, q.SUGGEST_LATEST_MANY, {"kws": found, "loc": preset.location_code, "lang": preset.language_code}):
+            by_kw.setdefault(int(r["seed_kw"]), []).append(r)
     out: list[LookupRow] = []
     seen: list[Freshness] = []
     latest: datetime | None = None
     for t, n in zip(terms, norms, strict=True):
         kw = keys.get(n)
-        rows = [] if kw is None else await fetch_all(conn, q.SUGGEST_LATEST,
-                                                       {"kw": kw, "loc": preset.location_code, "lang": preset.language_code})
+        rows = [] if kw is None else by_kw.get(kw, [])
         if not rows:
             out.append(LookupRow(term=t, status="missing", search_volume=None, intent=None, related=[]))
             continue

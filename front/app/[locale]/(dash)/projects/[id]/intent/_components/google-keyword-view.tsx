@@ -45,11 +45,12 @@ import { ColInfo } from "@/components/dash/col-info";
 import { type SearchIntent } from "../_data/sample";
 import {
   addCandidate,
+  addCandidates,
   addTrackedKeyword,
   removeTrackedKeyword,
   removeTrackedKeywords,
 } from "../_actions";
-import { KeywordSearchStart } from "./keyword-search-start";
+import { KeywordSearchStart, withBusy } from "./keyword-search-start";
 import { nextActiveAfterRemoval, restoreHidden } from "./keyword-selection";
 
 // Google Keyword 분기 — wired to live data (2026-06):
@@ -96,6 +97,32 @@ type RelatedItem = { id: string; term: string; volume: number; intent: SearchInt
 type RelatedBundle = { foundCount: number; items: RelatedItem[] };
 type Tab = { id: string; label: string };
 type Async<T> = { status: "loading" | "ready" | "error"; data?: T };
+
+/**
+ * Runs an optimistic write and undoes the optimistic state with `rollback` when the server action
+ * throws (401 / 403 / 404 -> UnauthorizedError), then rethrows: the tab no longer stays gone while
+ * the server still has it. An ok:false answer is rolled back by the caller as before.
+ */
+export async function rollbackOnThrow<T>(write: () => Promise<T>, rollback: () => void): Promise<T> {
+  try {
+    return await write();
+  } catch (e) {
+    rollback();
+    throw e;
+  }
+}
+
+/**
+ * The checked SERP rows go to the candidate pool in ONE bulk action (addCandidates, the pool's
+ * 200-row chunks) instead of one addCandidate per row.
+ */
+export function addSerpRowsAsCandidates(projectId: string, keyword: string, rows: readonly SerpRow[]) {
+  return addCandidates(
+    projectId,
+    "google_keyword",
+    rows.map((row) => ({ text: row.suggestedPrompt, sourceKeyword: keyword })),
+  );
+}
 
 export function GoogleKeywordView({
   projectId,
@@ -336,9 +363,7 @@ export function GoogleKeywordView({
       toast.error(t("keywordExists"));
       return false;
     }
-    setSavingKeyword(true);
-    const res = await addTrackedKeyword(projectId, { term: value, country });
-    setSavingKeyword(false);
+    const res = await withBusy(setSavingKeyword, () => addTrackedKeyword(projectId, { term: value, country }));
     if (!res.ok) {
       toast.error(res.error);
       return false;
@@ -356,9 +381,9 @@ export function GoogleKeywordView({
     setTabs(next);
     if (active === id) setActive(next[Math.max(0, idx - 1)]?.id ?? "");
     if (relatedFor === id) setRelatedFor(null);
-    const res = await removeTrackedKeyword(projectId, id);
+    // restore on failure so the UI doesn't silently lose the tab (an ok:false answer or a throw)
+    const res = await rollbackOnThrow(() => removeTrackedKeyword(projectId, id), () => setTabs(tabs));
     if (!res.ok) {
-      // restore on failure so the UI doesn't silently lose the tab
       setTabs(tabs);
       toast.error(res.error);
       return;
@@ -395,9 +420,7 @@ export function GoogleKeywordView({
     // The single-tab delete is optimistic-with-rollback, but rolling back N tabs
     // (and the active/related selections that moved with them) is far more state
     // to unwind than a brief spinner is worth.
-    setDeletingKeywords(true);
-    const res = await removeTrackedKeywords(projectId, ids);
-    setDeletingKeywords(false);
+    const res = await withBusy(setDeletingKeywords, () => removeTrackedKeywords(projectId, ids));
     if (!res.ok) {
       toast.error(res.error);
       return;
@@ -422,14 +445,15 @@ export function GoogleKeywordView({
   async function addSelectedRelated() {
     const terms = [...checkedRelated].filter((term) => !existingLabels.has(term));
     if (terms.length === 0) return;
-    setSavingKeyword(true);
-    const created: Tab[] = [];
-    for (const term of terms) {
-      const res = await addTrackedKeyword(projectId, { term, country });
-      if (res.ok) created.push({ id: res.value.id, label: term });
-      else toast.error(res.error);
-    }
-    setSavingKeyword(false);
+    const created = await withBusy(setSavingKeyword, async () => {
+      const out: Tab[] = [];
+      for (const term of terms) {
+        const res = await addTrackedKeyword(projectId, { term, country });
+        if (res.ok) out.push({ id: res.value.id, label: term });
+        else toast.error(res.error);
+      }
+      return out;
+    });
     if (created.length === 0) return;
     setTabs((prev) => [...prev, ...created]);
     setActive(created[created.length - 1].id);
@@ -470,24 +494,23 @@ export function GoogleKeywordView({
 
   // Bulk-add every "적용" (applied) checked row that hasn't been sent yet —
   // previously the checkbox only fed the count badge, with no batch action.
+  // One bulk action for all of them (a duplicate text counts as sent, as the
+  // single add answered it).
   function onAddSelectedSerpCandidates() {
     if (!canEdit || !activeTab || pendingApplied.length === 0) return;
     const targets = pendingApplied;
     startTransition(async () => {
-      const addedKeys: string[] = [];
-      for (const row of targets) {
-        const r = await addCandidate(projectId, "google_keyword", row.suggestedPrompt, activeTab.label);
-        if (r.ok) addedKeys.push(rowKey(row.id));
-        else toast.error(r.error);
+      const r = await addSerpRowsAsCandidates(projectId, activeTab.label, targets);
+      if (!r.ok) {
+        toast.error(r.error);
+        return;
       }
-      if (addedKeys.length > 0) {
-        setAddedSerpIds((prev) => {
-          const next = new Set(prev);
-          addedKeys.forEach((k) => next.add(k));
-          return next;
-        });
-        toast.success(t("addToPromptSuccess"));
-      }
+      setAddedSerpIds((prev) => {
+        const next = new Set(prev);
+        targets.forEach((row) => next.add(rowKey(row.id)));
+        return next;
+      });
+      toast.success(t("addToPromptSuccess"));
     });
   }
 

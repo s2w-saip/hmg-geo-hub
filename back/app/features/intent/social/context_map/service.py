@@ -6,6 +6,8 @@
   (A12 '준비 중').
 - 목록: 키셋 페이지네이션(core.pagination, 정렬키 + id 튜플). 커서 세대 = snapshot_id(스냅샷이 바뀌면 409 cursor_stale).
   현행 page/size 오프셋을 키셋으로 바꿨다(CM-1). total 은 같은 조건 count(*) 로 매 요청 계산(D8: 저장 안 함).
+  조합 목록만 total·max(co_count)를 첫 페이지(커서 없음)에서 세어 다음 커서 키 뒤에 싣고, 다음 페이지는 그 값을 쓴다
+  (커서 세대 = 스냅샷·필터 해시가 같으면 두 값이 바뀌지 않는다. 2중 JOIN count·MAX_CO 를 페이지마다 다시 돌리지 않는다).
 - 표시 매핑(theme_name·category)은 현행 DIMENSION_THEME·CATEGORY_RULES(scope-context-map.ts:57-83) 그대로(서버 고정 한국어).
 - 빈도 버킷은 스냅샷 전체 max 대비(페이지 max 아님), 연결 강도는 그 엔티티 연결 중 max 대비(현행 bucketStrength).
 """
@@ -23,7 +25,16 @@ from app.core import errors
 from app.core.config import get_settings
 from app.core.db import fetch_all, fetch_one, fetch_val
 from app.core.envelope import Page, ratio
-from app.core.pagination import clamp_limit, decode_cursor, fetch_keyset, filter_hash, keyset_page, keyset_predicate
+from app.core.pagination import (
+    Cursor,
+    KeyType,
+    clamp_limit,
+    decode_cursor,
+    fetch_keyset,
+    filter_hash,
+    keyset_page,
+    keyset_predicate,
+)
 from app.core.sqlb import Binder
 from app.core.xlsx import SheetSpec, auto_widths
 from app.features.intent.social.context_map import queries as q
@@ -168,11 +179,32 @@ async def list_entities(conn: AsyncConnection, snap_id: int, etype: EntityType, 
     return items, Page(next_cursor=nxt, limit=limit, total=int(total or 0))
 
 
+# 조합 커서 키 = 정렬 키(co_count, cond_a, cond_b) + 첫 페이지에서 센 (total, max_co). 정렬 키 3개뿐인 커서(이전 형식)도 받는다
+_COMBO_SORT_KEY: tuple[KeyType, ...] = ("int4", "uuid", "uuid")
+_COMBO_CARRY: tuple[KeyType, ...] = ("int8", "int4")
+
+
+def _combo_cursor(cursor: str | None, *, dir: Dir, fh: str, snap_id: int) -> tuple[Cursor | None, tuple[int, int] | None]:
+    """(정렬 키 커서, 실어 온 (total, max_co) | None). 이전 형식 커서면 두 값은 None(다시 센다)."""
+    try:
+        cur = decode_cursor(cursor, sort="cooccurrence", dir=dir, fh=fh, types=_COMBO_SORT_KEY + _COMBO_CARRY, generation=snap_id)
+    except errors.ApiError as e:
+        if e.code != "cursor_invalid":
+            raise
+        return decode_cursor(cursor, sort="cooccurrence", dir=dir, fh=fh, types=_COMBO_SORT_KEY, generation=snap_id), None
+    if cur is None:
+        return None, None
+    total, mx = cur.key[3], cur.key[4]
+    if total < 0 or mx < 0:
+        raise errors.unprocessable("커서 형식 오류", code="cursor_invalid")
+    return Cursor(sort=cur.sort, dir=cur.dir, key=cur.key[:3], fh=cur.fh, g=cur.g), (total, mx)
+
+
 async def list_combinations(conn: AsyncConnection, snap_id: int, *, search: str | None, dir: Dir, cursor: str | None,
                             limit: int) -> tuple[list[CombinationRow], int, Page]:
     limit = clamp_limit(limit, DEFAULT_PAGE)
     fh = filter_hash({"t": "combination", "q": search})
-    cur = decode_cursor(cursor, sort="cooccurrence", dir=dir, fh=fh, types=("int4", "uuid", "uuid"), generation=snap_id)
+    cur, carried = _combo_cursor(cursor, dir=dir, fh=fh, snap_id=snap_id)
     b = Binder()
     where = [f"c.snapshot_id = {b.v(snap_id)}"]
     if search:
@@ -188,12 +220,15 @@ async def list_combinations(conn: AsyncConnection, snap_id: int, *, search: str 
     sql = (f"SELECT c.cond_a, c.cond_b, c.co_count, a.canonical_name AS a_name, b.canonical_name AS b_name {joins} "
            f"WHERE {' AND '.join(where)} ORDER BY c.co_count {d}, c.cond_a {d}, c.cond_b {d} LIMIT {b.v(limit + 1)}")
     rows = await fetch_keyset(conn, sql, b.params)
-    total = await fetch_val(conn, f"SELECT count(*) {joins} WHERE {' AND '.join(count_where)}", b.params)
-    mx = int(await fetch_val(conn, q.MAX_CO, {"s": snap_id}) or 0)
-    page, nxt = keyset_page(rows, limit, lambda r: (r["co_count"], r["cond_a"], r["cond_b"]), sort="cooccurrence", dir=dir, fh=fh,
-                            generation=snap_id)
+    if carried is None:
+        total = int(await fetch_val(conn, f"SELECT count(*) {joins} WHERE {' AND '.join(count_where)}", b.params) or 0)
+        mx = int(await fetch_val(conn, q.MAX_CO, {"s": snap_id}) or 0)
+    else:
+        total, mx = carried
+    page, nxt = keyset_page(rows, limit, lambda r: (r["co_count"], r["cond_a"], r["cond_b"], total, mx), sort="cooccurrence", dir=dir,
+                            fh=fh, generation=snap_id)
     items = [combo_row(r, mx) for r in page]
-    return items, mx, Page(next_cursor=nxt, limit=limit, total=int(total or 0))
+    return items, mx, Page(next_cursor=nxt, limit=limit, total=total)
 
 
 def combo_row(r: dict[str, Any], mx: int) -> CombinationRow:

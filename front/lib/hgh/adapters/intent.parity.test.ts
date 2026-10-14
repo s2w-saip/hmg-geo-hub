@@ -98,7 +98,7 @@ const contextMapRoute = await import("@/app/api/context-map/route");
 const exportRoute = await import("@/app/api/context-map/export/route");
 const { scopeContextMapRepository } = await import("@/lib/db/repositories/scope-context-map");
 const { DEMO_PROJECT_ID } = await import("@/lib/demo");
-const { MAX_SEARCH_TERMS } = await import("./intent");
+const { MAX_SEARCH_TERMS, apiAddTrackedKeywords, intentActionMessages } = await import("./intent");
 const actions = await import("@/app/[locale]/(dash)/projects/[id]/intent/_actions");
 const GoogleKeywordPage = (await import("@/app/[locale]/(dash)/projects/[id]/intent/google-keyword/page")).default;
 const SocialPage = (await import("@/app/[locale]/(dash)/projects/[id]/intent/social-scraping/page")).default;
@@ -479,12 +479,20 @@ class BackendModel {
     if (method === "POST" && path === "/v1/intent/keywords") {
       const denied = operate();
       if (denied) return denied;
-      const term = String(body!.term).trim();
-      if (!term) return fail(422, "unprocessable");
-      if (this.tracked.some((k) => k.term.toLowerCase() === term.toLowerCase())) return fail(409, "duplicate_keyword");
-      const id = u((this.nextId += 1));
-      this.tracked.push({ id, term, country: null, createdAt: "2026-09-29T00:00:00.000Z" });
-      return ok({ keyword_id: id, term, country_code: null, country: "kr", created_at: "2026-09-29T00:00:00Z", latest_month: null, latest_volume: null }, {}, 201);
+      // One row rule for the single body and each row of an items[] body (checked after the rows before it).
+      const addOne = (raw: unknown) => {
+        const term = String(raw).trim();
+        const e = (status: number, code: string) => ({ status, data: null, error: { code, message: code, details: null } });
+        if (!term) return e(422, "unprocessable");
+        if (this.tracked.some((k) => k.term.toLowerCase() === term.toLowerCase())) return e(409, "duplicate_keyword");
+        const id = u((this.nextId += 1));
+        this.tracked.push({ id, term, country: null, createdAt: "2026-09-29T00:00:00.000Z" });
+        const data = { keyword_id: id, term, country_code: null, country: "kr", created_at: "2026-09-29T00:00:00Z", latest_month: null, latest_volume: null };
+        return { status: 201, data, error: null };
+      };
+      if (Array.isArray(body!.items)) return ok({ items: (body!.items as { term: string }[]).map((it) => addOne(it.term)) });
+      const r = addOne(body!.term);
+      return r.data ? ok(r.data, {}, 201) : fail(r.status, r.error!.code);
     }
     if (method === "DELETE" && path === "/v1/intent/keywords") {
       const denied = operate();
@@ -633,6 +641,18 @@ class BackendModel {
       const id = (this.nextChange += 1);
       this.changes.set(id, { terms, polled: 0 });
       return ok({ status: "queued", change_id: id, terms, fresh_terms: [] }, {}, 202);
+    }
+    if (method === "GET" && path === "/v1/intent/fetches") {
+      const ids = [...new Set(q.getAll("ids").map(Number))];
+      if (ids.some((id) => !this.changes.has(id))) return fail(404, "not_found");
+      const items = ids.map((id) => {
+        const ch = this.changes.get(id)!;
+        ch.polled += 1;
+        const status = ch.polled >= 2 ? "applied" : "running";
+        if (status === "applied") for (const t of ch.terms) this.collected.add(t);
+        return { change_id: id, status, kind: null, country: "kr", terms: ch.terms, project_id: null, requested_at: "2026-09-29T00:00:00Z", claimed_at: null, applied_at: null, error: null };
+      });
+      return ok({ items });
     }
     const change = /^\/v1\/intent\/fetches\/(\d+)$/.exec(path);
     if (method === "GET" && change) {
@@ -962,8 +982,8 @@ describe("/api/keyword/*", () => {
     expect(model.calls).toEqual([
       "GET /v1/intent/insight",
       "POST /v1/intent/fetches",
-      "GET /v1/intent/fetches/101",
-      "GET /v1/intent/fetches/101",
+      "GET /v1/intent/fetches",
+      "GET /v1/intent/fetches",
       "GET /v1/intent/insight",
       "POST /v1/intent/serp-drafts",
     ]);
@@ -1206,6 +1226,21 @@ describe("intent actions", () => {
     );
     expect(legacy.dup).toEqual({ threw: "wrapped driver error" });
     expect(api.dup).toEqual({ ok: false, error: "이미 추가된 키워드입니다" });
+  });
+
+  it("tracked keywords, several at once: one api request answers what the legacy single adds answered (same resulting tabs)", async () => {
+    const inputs = [{ term: "  아이오닉 5 " }, { term: "   " }, { term: "EV9", country: "KR" }, { term: "캐스퍼" }];
+    await parity(async (s) => {
+      asSource(s, "owner");
+      const results = [];
+      if (s === "legacy") {
+        for (const x of inputs) results.push(await actions.addTrackedKeyword(PID, x));
+      } else {
+        results.push(...(await apiAddTrackedKeywords(PID, inputs, await intentActionMessages())));
+      }
+      return { results: results.map((r) => (r.ok ? "ok" : r.error)), tabs: await tabsNow() };
+    });
+    expect(model.calls.filter((c) => c === "POST /v1/intent/keywords")).toHaveLength(1);
   });
 
   it("candidates: single add, empty, bulk with a duplicate and a blank", async () => {

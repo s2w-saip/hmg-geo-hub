@@ -11,9 +11,11 @@ from xml.sax.saxutils import unescape
 import pytest_asyncio
 
 from app.core.config import get_settings, set_settings
+from app.core.pagination import Cursor, encode_cursor, filter_hash
 from app.core.xlsx import XlsxReader
 from app.features.intent.keywords.research.tests import intent_fixtures as fx
 from app.features.intent.social.context_map.service import categorize, like_pattern
+from tests.core.rcache_calls import Stmts
 from tests.support import HQ_HYUNDAI, KIA_US, SUSPENDED, VENDOR, needs_db
 
 pytestmark = needs_db
@@ -149,6 +151,44 @@ async def test_combinations(client_as, ctx):
     assert [x["co_count"] for x in asc.json()["data"]["items"]] == [5, 9, 12]
     assert [x["co_count"] for x in asc2.json()["data"]["items"]] == [30]
     assert s.json()["meta"]["page"]["total"] == 3
+
+
+async def test_combinations_pages_reuse_first_page_total_and_max(client_as, ctx):
+    """total·max_co_count 는 첫 페이지에서만 센다: 다음 페이지는 커서에 실린 값(같은 스냅샷·필터라 값 불변)이라 행·등급·total 이 한 번에 받은
+    목록과 같고, 2중 JOIN count·MAX_CO 문장을 다시 돌리지 않는다. 정렬 키만 든 이전 형식 커서도 받는다(두 값은 다시 센다)."""
+    a, _ = ctx
+    fh_all = filter_hash({"t": "combination", "q": None})
+    async with client_as(HQ_HYUNDAI) as c:
+        full = (await c.get(f"{BASE}/combinations")).json()
+        searched = (await c.get(f"{BASE}/combinations", params={"search": "트렁크"})).json()
+        pages, counts, cur = [], [], None
+        for _ in range(5):
+            with Stmts() as st:
+                pg = (await c.get(f"{BASE}/combinations", params={"limit": 1, **({"cursor": cur} if cur else {})})).json()
+            pages.append(pg)
+            counts.append(len([s for s in st.seen if "count(*)" in s or "max(c.co_count)" in s]))
+            cur = pg["meta"]["page"]["next_cursor"]
+            if not cur:
+                break
+        s1 = (await c.get(f"{BASE}/combinations", params={"search": "트렁크", "limit": 2})).json()
+        s1_cur = s1["meta"]["page"]["next_cursor"]
+        s2 = (await c.get(f"{BASE}/combinations", params={"search": "트렁크", "limit": 2, "cursor": s1_cur})).json()
+        other_search = await c.get(f"{BASE}/combinations", params={"limit": 2, "cursor": s1_cur})
+        first = full["data"]["items"]
+        key0 = (first[0]["co_count"], uuid.UUID(first[0]["cond_a_id"]), uuid.UUID(first[0]["cond_b_id"]))
+        legacy = encode_cursor(Cursor(sort="cooccurrence", dir="desc", key=key0, fh=fh_all, g=SNAP_A))
+        old = (await c.get(f"{BASE}/combinations", params={"limit": 1, "cursor": legacy})).json()
+        forged = encode_cursor(Cursor(sort="cooccurrence", dir="desc", key=(*key0, -1, 30), fh=fh_all, g=SNAP_A))
+        bad = await c.get(f"{BASE}/combinations", params={"limit": 1, "cursor": forged})
+    assert len(pages) == 4 and pages[-1]["meta"]["page"]["next_cursor"] is None
+    assert [p["data"]["items"][0] for p in pages] == first                      # 페이지별 행·등급 = 한 번에 받은 목록
+    assert {(p["meta"]["page"]["total"], p["data"]["max_co_count"]) for p in pages} == {(4, 30)}
+    assert counts[0] == 2 and counts[1:] == [0, 0, 0]                            # 첫 페이지만 count·MAX_CO
+    assert [x["id"] for x in s1["data"]["items"] + s2["data"]["items"]] == [x["id"] for x in searched["data"]["items"]]
+    assert s2["meta"]["page"]["total"] == 3 and s2["data"]["max_co_count"] == 30
+    assert other_search.status_code == 422 and other_search.json()["error"]["code"] == "cursor_invalid"
+    assert old["data"]["items"] == first[1:2] and old["meta"]["page"]["total"] == 4 and old["data"]["max_co_count"] == 30
+    assert bad.status_code == 422 and bad.json()["error"]["code"] == "cursor_invalid"
 
 
 async def test_entity_detail(client_as, ctx):

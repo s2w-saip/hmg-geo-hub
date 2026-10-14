@@ -1,4 +1,4 @@
-"""intent.keywords.fetches 테스트: 신선 skip(200)·큐 기록(202, judgment_change 행 대조)·중복 대기·권한·상태 조회·롤백."""
+"""intent.keywords.fetches 테스트: 신선 skip(200)·큐 기록(202, judgment_change 행 대조)·중복 대기·권한·상태 조회(단건·일괄)·롤백."""
 from __future__ import annotations
 
 import uuid
@@ -228,3 +228,38 @@ async def test_concurrent_same_request_single_row_d1(client_as, world):
     CREATED.extend(ids)
     assert all(r.status_code == 202 for r in rs) and len(ids) == 1
     assert sorted(r.json()["data"]["status"] for r in rs) == ["pending"] * 4 + ["queued"]
+
+
+# ── 일괄 상태 조회(폴링): 단건 조회와 같은 행·같은 가시성(하나라도 못 보면 404), 요청 순서, 중복 id 는 한 번 ──
+async def test_batch_status_equals_single(client_as, world):
+    _, pr = world
+    async with client_as(HQ_HYUNDAI) as c:
+        a = await c.post(URL, json={"kind": "search", "terms": [fx.uniq("batch a")], "project_id": str(pr.own)})
+        b = await c.post(URL, json={"kind": "related", "terms": [fx.uniq("batch b")], "project_id": str(pr.own)})
+    ids = [a.json()["data"]["change_id"], b.json()["data"]["change_id"]]
+    CREATED.extend(ids)
+    async with client_as(ADMIN) as c:              # 프로젝트 없는 요청: 배정 운영자(HQ_HYUNDAI)는 볼 수 없다
+        other = await c.post(URL, json={"kind": "search", "terms": [fx.uniq("batch other")], "country": "us"})
+    oid = other.json()["data"]["change_id"]
+    CREATED.append(oid)
+    async with client_as(HQ_HYUNDAI) as c:
+        singles = [(await c.get(f"{URL}/{i}")).json()["data"] for i in ids]
+        batch = await c.get(URL, params={"ids": [ids[1], ids[0], ids[1]]})
+        hidden_single = await c.get(f"{URL}/{oid}")
+        hidden = await c.get(URL, params={"ids": [ids[0], oid]})
+        missing = await c.get(URL, params={"ids": [ids[0], 999999999999]})
+        no_ids = await c.get(URL)
+        zero = await c.get(URL, params={"ids": [ids[0], 0]})
+        too_many = await c.get(URL, params={"ids": list(range(1, 22))})
+    assert batch.status_code == 200, batch.text
+    assert batch.json()["data"]["items"] == [singles[1], singles[0]]
+    assert batch.json()["meta"]["mode"] == "crud"
+    assert hidden_single.status_code == 404 and hidden.status_code == 404
+    assert hidden.json()["error"] == hidden_single.json()["error"] and missing.status_code == 404
+    assert (no_ids.status_code, zero.status_code, too_many.status_code) == (422, 422, 422)
+    async with client_as(VENDOR) as c:             # 요청자 아님·운영자 아님 → 단건과 같은 404
+        assert (await c.get(URL, params={"ids": ids})).status_code == 404
+    async with client_as(ADMIN) as c:
+        assert (await c.get(URL, params={"ids": [*ids, oid]})).status_code == 200
+    async with client_as(None) as c:
+        assert (await c.get(URL, params={"ids": ids})).status_code == 401

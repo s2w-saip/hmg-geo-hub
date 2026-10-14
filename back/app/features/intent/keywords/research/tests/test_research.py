@@ -9,6 +9,7 @@ import pytest_asyncio
 
 from app.features.intent.keywords.research.intent_common import freshness
 from app.features.intent.keywords.research.tests import intent_fixtures as fx
+from tests.core.rcache_calls import Stmts
 from tests.support import ADMIN, CUST_PROJECT, HQ_HYUNDAI, KIA_EU, KIA_US, SUSPENDED, VENDOR, needs_db
 
 pytestmark = needs_db
@@ -173,6 +174,26 @@ async def test_lookup_found_and_missing(client_as, world):
     assert [i["search_volume"] for i in mixed.json()["data"]["items"]] == [900, 70]
     assert (mixed.json()["meta"]["source"]["freshness"], mixed.json()["meta"]["source"]["stale_terms"]) == ("stale", 1)
     assert none.json()["meta"]["source"]["freshness"] == "missing" and none.json()["meta"]["suppressed"] == {"*": "source_pending"}
+
+
+async def test_lookup_reads_latest_suggestions_in_one_statement(client_as, world):
+    """검색어마다 SUGGEST_LATEST 를 따로 돌리지 않는다: 찾은 키워드 전부의 최신 연관어 호출을 한 문장으로 읽는다(값·순서·누락은
+    test_lookup_found_and_missing 그대로, 같은 키워드의 related 응답과도 같다)."""
+    w, _ = world
+    async with client_as(ADMIN) as c:
+        with Stmts() as st:
+            r = await c.get("/v1/intent/lookup", params={"terms": [w.fresh, w.stale, w.missing, w.half], "country": "us"})
+        rel = {t: (await c.get("/v1/intent/related", params={"term": t, "country": "us"})).json()["data"] for t in (w.fresh, w.stale, w.half)}
+    assert r.status_code == 200, r.text
+    assert len([s for s in st.seen if "rd.kw_suggestion" in s]) == 1
+    items = r.json()["data"]["items"]
+    assert [(i["term"], i["status"], i["search_volume"], i["intent"]) for i in items] == [
+        (w.fresh, "found", 900, "commercial"), (w.stale, "found", 70, "commercial"), (w.missing, "missing", None, None),
+        (w.half, "found", None, None)]
+    for i in items:
+        if i["status"] == "found":
+            assert (i["related"], i["total_count"]) == (rel[i["term"]]["items"], rel[i["term"]]["total_count"])
+    assert r.json()["meta"]["source"]["stale_terms"] == 1 and r.json()["meta"]["source"]["missing_terms"] == 1
 
 
 async def test_common_filters_are_reported_not_silently_ignored(client_as, world):

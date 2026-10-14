@@ -1,4 +1,4 @@
-"""intent.keywords.tracked 테스트: 목록(최신 월 검색량 손계산)·추가(409·422)·삭제(IDOR 0건)·권한·롤백."""
+"""intent.keywords.tracked 테스트: 목록(최신 월 검색량 손계산)·추가(409·422)·삭제(IDOR 0건)·권한·롤백·탭 목록(검색량 생략)·다건 추가."""
 from __future__ import annotations
 
 import uuid
@@ -6,6 +6,7 @@ import uuid
 import pytest_asyncio
 
 from app.features.intent.keywords.research.tests import intent_fixtures as fx
+from tests.core.rcache_calls import Stmts
 from tests.support import ADMIN, CUST_PROJECT, HQ_HYUNDAI, KIA_US, VENDOR, WEBSITE_KIA, Update, needs_db, staged
 
 pytestmark = needs_db
@@ -154,3 +155,77 @@ async def test_website_role_blocked_on_project_paths_m7(client_as, world):
     async with client_as(KIA_US) as c:                          # 대조: country 역할은 표면 통과(프로젝트 스코프 판정으로 넘어간다)
         r = await c.get(URL, params={"project_id": str(pr.other)})
     assert r.json()["error"]["code"] != "role_forbidden"
+
+
+# ── 탭 목록: include_volume=false 면 최신 월 검색량(LATERAL)을 읽지 않고 두 값만 null, 기본값은 종전 그대로 ──
+async def test_list_without_volume_skips_latest_volume(client_as, world):
+    w, _ = world
+    own = await fx.create_project("Hyundai", "US", member=(HQ_HYUNDAI, "owner"))
+    try:
+        await fx.add_tracked(own, w.fresh, None)
+        await fx.add_tracked(own, w.fresh, "kr")
+        await fx.add_tracked(own, w.missing, None)
+        async with client_as(HQ_HYUNDAI) as c:
+            with Stmts() as full_st:
+                full = await c.get(URL, params={"project_id": str(own)})
+            with Stmts() as tabs_st:
+                tabs = await c.get(URL, params={"project_id": str(own), "include_volume": "false"})
+        assert full.status_code == 200 and tabs.status_code == 200, (full.text, tabs.text)
+        f, t = full.json()["data"]["items"], tabs.json()["data"]["items"]
+        assert [(i["term"], i["country"], i["latest_volume"]) for i in f] == [(w.fresh, "us", 113), (w.fresh, "kr", w.kr_volume),
+                                                                              (w.missing, "us", None)]
+        assert t == [{**i, "latest_month": None, "latest_volume": None} for i in f]     # id·term·국가·순서 동일, 검색량 두 값만 null
+        assert [s for s in full_st.seen if "kw_volume_monthly" in s]
+        assert not [s for s in tabs_st.seen if "kw_volume_monthly" in s]
+    finally:
+        await fx.drop_project_ids([own])
+
+
+# ── 다건 추가: items[] 본문 = 행마다 단건 POST 를 차례로 보낸 결과(상태·오류·저장 행) ──
+def _strip(kw: dict) -> dict:
+    return {k: v for k, v in kw.items() if k not in ("keyword_id", "created_at")}
+
+
+async def test_batch_add_equals_single_adds(client_as, world):
+    a = await fx.create_project("Hyundai", "US", member=(HQ_HYUNDAI, "owner"))
+    b = await fx.create_project("Hyundai", "US", member=(HQ_HYUNDAI, "owner"))
+    t1, t2 = fx.uniq("batch one"), fx.uniq("batch two")
+    rows = [{"term": f"  {t1} "}, {"term": t1.upper()}, {"term": t2, "country": "kr"}, {"term": t2, "country": "zz"}, {"term": "   "},
+            {"term": ""}, {"term": "x" * 201}, {"term": t2, "country": "KR"}, {"term": t2, "country": "us"}, {"term": t2}]
+    try:
+        async with client_as(HQ_HYUNDAI) as c:
+            singles = [await c.post(URL, params={"project_id": str(a)}, json=r) for r in rows]
+            batch = await c.post(URL, params={"project_id": str(b)}, json={"items": rows})
+        assert batch.status_code == 200, batch.text
+        got = batch.json()["data"]["items"]
+        assert [g["status"] for g in got] == [s.status_code for s in singles] == [201, 409, 201, 422, 422, 422, 422, 409, 201, 409]
+        for g, s in zip(got, singles, strict=True):
+            if s.status_code == 201:
+                assert g["error"] is None and _strip(g["data"]) == _strip(s.json()["data"])
+            elif s.json()["error"]["code"] == "unprocessable" and isinstance(s.json()["error"]["details"], list):
+                # 본문 형식 422(빈 term·길이 초과): 같은 code·message, details 는 행 기준 위치(단건 본문이 받던 위치 그대로)
+                assert g["data"] is None and (g["error"]["code"], g["error"]["message"]) == ("unprocessable", s.json()["error"]["message"])
+                assert [d["loc"] for d in g["error"]["details"]] == [["body", "term"]]
+            else:
+                assert g["data"] is None and g["error"] == s.json()["error"]
+        assert await _rows(b) == await _rows(a)
+        assert batch.json()["meta"]["mode"] == "crud"
+    finally:
+        await fx.drop_project_ids([a, b])
+
+
+async def test_batch_add_gate_and_limits(client_as, world):
+    _, pr = world
+    before = await _rows(CUST_PROJECT)
+    async with client_as(VENDOR) as c:                            # 운영 권한 없음 → 요청 전체 403(단건과 같은 게이트), 쓰기 없음
+        r = await c.post(URL, params={"project_id": str(CUST_PROJECT)}, json={"items": [{"term": fx.uniq("gate")}]})
+    assert r.status_code == 403 and r.json()["error"]["code"] == "operator_forbidden"
+    assert await _rows(CUST_PROJECT) == before
+    async with client_as(KIA_US) as c:
+        assert (await c.post(URL, params={"project_id": str(pr.own)}, json={"items": [{"term": "x"}]})).status_code == 404
+    async with client_as(HQ_HYUNDAI) as c:
+        empty = await c.post(URL, params={"project_id": str(pr.own)}, json={"items": []})
+        many = await c.post(URL, params={"project_id": str(pr.own)}, json={"items": [{"term": f"t{i}"} for i in range(101)]})
+        mixed = await c.post(URL, params={"project_id": str(pr.own)}, json={"items": [{"term": "x"}], "term": "x"})
+        extra = await c.post(URL, params={"project_id": str(pr.own)}, json={"items": [{"term": "x", "surprise": 1}]})
+    assert (empty.status_code, many.status_code, mixed.status_code, extra.status_code) == (422, 422, 422, 422)
