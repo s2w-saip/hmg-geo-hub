@@ -33,6 +33,9 @@ import {
 // Unit U6: gate on both sources first (session 401, place gate 403, project page gate 404:
 // drilldownGate). Source (D8) HGH_SOURCE_<G2|G3|G6> by surface. api -> GET /v1/mentions/prompts
 // mode=signal (top 50 prompts, 6 answer references, the legacy reference shape).
+// Body: {prompts} on both sources; the api source adds `total` (prompts before the cap) only when the
+// cap cut the list (B008), and the dialog then shows its existing "{total}개 중 {shown}개 표시" line.
+// The legacy readers answer the capped rows alone, so their body stays {prompts} (no line, as before).
 export const dynamic = "force-dynamic";
 
 const legacyProjectAllowed: LegacyProjectAllowed = async (id, user) => {
@@ -80,7 +83,8 @@ export async function GET(req: NextRequest) {
     if (isAnalysisApi("analysis", target.surface)) {
       const filters = projectId ? { ...rawFilters, customFieldFilters: readProjectCustomFieldFiltersRaw(sp) } : rawFilters;
       try {
-        const prompts = await loadSignalPrompts(
+        // {prompts} or {prompts, total}: total only when the 50-row cap cut the list (B008).
+        const list = await loadSignalPrompts(
           filters,
           {
             surface: target.surface,
@@ -90,7 +94,7 @@ export async function GET(req: NextRequest) {
           },
           signal,
         );
-        return NextResponse.json({ prompts });
+        return NextResponse.json(list);
       } catch (err) {
         if (isBadFilterError(err)) return NextResponse.json({ prompts: [] }, { status: 400 });
         throw err;

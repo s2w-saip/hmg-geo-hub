@@ -267,12 +267,16 @@ export async function updateProject(
 //   - scope schedule targets 로 전파(best-effort). 0개 선택 = 수집 중단
 //     (enabled=false). 전파 실패는 에러가 아니라 pushed=false 로 알린다 —
 //     로컬 값이 정본이고 다음 저장 때 재전파.
+//   - kept = 화면 어휘(AI_ENGINES) 밖 저장 엔진(#16). 패널은 컨트롤 없이 들고 있다가
+//     그대로 돌려보내고, 저장은 체크박스 선택 뒤에 그대로 붙인다(전엔 저장 때 사라졌다).
+//     비어 있으면(어휘 안 엔진만 저장된 프로젝트) 저장·전파·결과가 전과 같다.
 export async function updateProjectEngines(
   projectId: string,
   engines: string[],
-): Promise<ActionResult<{ engines: string[]; changed: boolean; pushed: boolean; queued?: boolean }>> {
+  kept: string[] = [],
+): Promise<ActionResult<{ engines: string[]; changed: boolean; pushed: boolean; queued?: boolean; kept?: string[] }>> {
   if (api.isProjectsApi()) {
-    const r = await api.updateProjectEngines(projectId, engines);
+    const r = await api.updateProjectEngines(projectId, engines, kept);
     if (r.ok) revalidatePath(`/projects/${projectId}/setting`);
     return r;
   }
@@ -290,13 +294,17 @@ export async function updateProjectEngines(
   if (!before) return { ok: false, error: "프로젝트를 찾을 수 없습니다" };
 
   const next = normalizeAiEngines(engines);
+  // 보존만 한다: 브라우저가 돌려보낸 kept 중 이미 저장돼 있던 어휘 밖 코드만(저장 순서). 새 코드는
+  // 이 경로로 들어오지 않는다(api 경로는 백엔드 어휘 검증).
+  const sent = new Set(kept);
+  const keep = api.keptAiEngines(before.aiEngines).filter((e) => sent.has(e));
   // 레거시(NULL)는 "기본 2종 측정 중"이지만 명시 저장이 아니므로, 같은 값이라도
   // 첫 저장은 이력에 남긴다(그 시점부터 명시값). 명시값이 있고 같으면 no-op.
   const changed = before.aiEngines == null || !sameAiEngines(before.aiEngines, next);
 
   let scopeProjectId = before.scopeProjectId;
   if (changed) {
-    await projectRepository.setAiEngines(projectId, next, userId);
+    await projectRepository.setAiEngines(projectId, keep.length > 0 ? [...next, ...keep] : next, userId);
   }
   // 미러가 없으면 (브랜드 없는 프로젝트 등) 만들어 본다 — 스케줄은 미러가 있어야
   // 걸린다. 미러 생성 조건은 pushScopeUpdate 규약 그대로(best-effort). 스케줄은
@@ -309,16 +317,19 @@ export async function updateProjectEngines(
       scopeProjectId = newScopeProjectId;
     }
   }
-  // 직전 저장이 명시 [](우리가 enabled=false 로 내린 것)였고 지금 ≥1 이면 되켠다.
+  // 직전 저장이 명시 [](우리가 enabled=false 로 내린 것)였고 지금 ≥1 이면 되켠다. 어휘 밖 kept 만
+  // 남은 저장도 [] 와 같다(Scope 에는 어휘 안 엔진만 밀므로 그때도 enabled=false 였다, #16).
   const reenable =
-    before.aiEngines != null && before.aiEngines.length === 0 && next.length > 0;
+    before.aiEngines != null && normalizeAiEngines(before.aiEngines).length === 0 && next.length > 0;
   const { pushed } = await syncScopeSchedule(
     { id: projectId, scopeProjectId, aiEngines: next },
     { reenable },
   );
 
   revalidatePath(`/projects/${projectId}/setting`);
-  return { ok: true, value: { engines: next, changed, pushed } };
+  // 저장된 어휘 밖 엔진: 바꿨으면 보낸 값, no-op 이면 원래 저장값의 것.
+  const stillKept = changed ? keep : api.keptAiEngines(before.aiEngines);
+  return { ok: true, value: { engines: next, changed, pushed, ...(stillKept.length > 0 ? { kept: stillKept } : {}) } };
 }
 
 export async function deleteProject(

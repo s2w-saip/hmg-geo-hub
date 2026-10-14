@@ -78,12 +78,21 @@ describe("drilldownGate: both sources, before any read", () => {
     expect(legacyNo).toHaveBeenCalledWith(PROJECT, hq);
     expect(log).toHaveLength(0);
   });
-  it("project, HGH_SOURCE_SESSION=api: GET /v1/projects/{id} decides (404 hides)", async () => {
+  it("project, HGH_SOURCE_SESSION=api: GET /v1/projects/{id}?view=gate decides (404 hides)", async () => {
     vi.stubEnv("HGH_SOURCE_SESSION", "api");
     const hq = { id: "u", role: "hq" as const, menuGroups: null };
     expect(await D.drilldownGate(hq, { surface: "project", projectId: PROJECT }, legacyNo)).toEqual({ ok: true });
     expect(await D.drilldownGate(hq, { surface: "project", projectId: "11111111-1111-4111-8111-111111111111" }, legacyYes)).toEqual({ ok: false, status: 404 });
     expect(legacyYes).not.toHaveBeenCalled();
+    // The light gate read (project-gate fetchProjectGate): the same decision and 404 without the detail summary.
+    expect(log.map((u) => `${u.pathname}${u.search}`)).toEqual([
+      `/v1/projects/${PROJECT}?view=gate`,
+      "/v1/projects/11111111-1111-4111-8111-111111111111?view=gate",
+    ]);
+    // A malformed id is never sent (404), as before.
+    log.length = 0;
+    expect(await D.drilldownGate(hq, { surface: "project", projectId: "not-a-uuid" }, legacyYes)).toEqual({ ok: false, status: 404 });
+    expect(log).toHaveLength(0);
   });
   it("demo project: admin only (before any membership lookup)", async () => {
     const { DEMO_PROJECT_ID } = await import("@/lib/demo");
@@ -96,10 +105,12 @@ describe("drilldownGate: both sources, before any read", () => {
 
 describe("U6 verification D3: api project gate answers (HGH_SOURCE_SESSION=api)", () => {
   const replies: { status: number; code?: string }[] = [];
+  const urls: string[] = [];
   let calls = 0;
   let refreshed = 0;
   beforeEach(() => {
     replies.length = 0;
+    urls.length = 0;
     calls = 0;
     refreshed = 0;
     vi.stubEnv("HGH_API_BASE_URL", "https://api.hgh.test");
@@ -107,8 +118,10 @@ describe("U6 verification D3: api project gate answers (HGH_SOURCE_SESSION=api)"
     bindHghAuth({ getAccessToken: async () => TOKEN, refreshAccessToken: async () => (refreshed++, TOKEN) });
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => {
+      vi.fn(async (u: string) => {
         calls++;
+        const url = new URL(String(u));
+        urls.push(`${url.pathname}${url.search}`);
         const r = replies.shift() ?? { status: 200 };
         const body = r.status === 200
           ? { data: { project_id: PROJECT, name: "p", created_at: "2026-01-01T00:00:00Z", country_code: "US" }, meta: { mode: "crud" } }
@@ -138,6 +151,17 @@ describe("U6 verification D3: api project gate answers (HGH_SOURCE_SESSION=api)"
     replies.push({ status: 401, code: "token_expired" });
     expect(await D.drilldownGate(hq, t, legacy)).toEqual({ ok: true });
     expect([calls, refreshed]).toEqual([2, 1]);
+    // Both attempts are the light gate read.
+    expect(urls).toEqual([`/v1/projects/${PROJECT}?view=gate`, `/v1/projects/${PROJECT}?view=gate`]);
+  });
+  it("404 -> 404; a 401 that survives the refresh is thrown (the routes answer 401)", async () => {
+    replies.push({ status: 404, code: "not_found" });
+    expect(await D.drilldownGate(hq, t, legacy)).toEqual({ ok: false, status: 404 });
+    replies.push({ status: 401, code: "token_expired" }, { status: 401, code: "token_expired" });
+    const e = await D.drilldownGate(hq, t, legacy).catch((x: unknown) => x);
+    expect((e as { status?: number }).status).toBe(401);
+    expect([calls, refreshed]).toEqual([3, 1]);
+    expect(legacy).not.toHaveBeenCalled();
   });
   it("5xx is thrown as HghApiError; gateErrorResponse maps it (and 401) without the backend message", async () => {
     replies.push({ status: 500, code: "internal" });
@@ -362,7 +386,7 @@ describe("loaders", () => {
     handler = () => ({ status: 404, body: { error: { code: "brand_not_found", message: "x" } } });
     expect(await D.loadBrandMentionPrompts({}, ctx, { mentionBrand: "Nope" })).toEqual({ prompts: [] });
     handler = () => ({ status: 403, body: { error: { code: "role_forbidden", message: "x" } } });
-    expect(await D.loadSignalPrompts({}, ctx, "positive")).toEqual([]);
+    expect(await D.loadSignalPrompts({}, ctx, "positive")).toEqual({ prompts: [] });
     const forbidden = await D.loadBrandMentionPrompts({}, ctx, { mentionBrand: "Toyota" }).catch((e) => e);
     expect([D.isForbiddenError(forbidden), D.isNoDataError(forbidden), D.isBadFilterError(forbidden)]).toEqual([true, false, false]);
     handler = () => ({ status: 422, body: { error: { code: "invalid_value", message: "x" } } });
@@ -385,6 +409,23 @@ describe("loaders", () => {
     ]);
     // B014: lite=true - the backend skips runs / position / measured_at, which the signal reference drops
     expect(q.get("lite")).toBe("true");
+  });
+  it("B008 signal: { prompts } when the 50 rows hold every prompt; total = meta.page.total only when the cap cut the list", async () => {
+    handler = () => page([item(), item({ prompt_id: "p2" })], null);
+    const plain = await D.loadSignalPrompts({}, ctx, "positive");
+    expect(plain).toEqual({ prompts: [expect.objectContaining({ id: "p1" }), expect.objectContaining({ id: "p2" })] });
+    expect(Object.keys(plain)).toEqual(["prompts"]);
+    // total equal to the rows read (or absent, as in page() above): not a cut, no total.
+    handler = () => ({ body: { data: { items: [item()], mode: "signal", target: {}, total: 4 }, meta: { mode: "cumulative", page: { limit: 50, next_cursor: null, total: 1 } } } });
+    expect(Object.keys(await D.loadSignalPrompts({}, ctx, "positive"))).toEqual(["prompts"]);
+    // More prompts than the cap: the 50 rows read (one request, next_cursor never followed) plus total.
+    handler = () => ({ body: { data: { items: [item()], mode: "signal", target: {}, total: 900 }, meta: { mode: "cumulative", page: { limit: 50, next_cursor: "Y3Vy", total: 137 } } } });
+    log.length = 0;
+    const cut = await D.loadSignalPrompts({}, ctx, "positive");
+    expect([cut.prompts.length, cut.total, log.length]).toEqual([1, 137, 1]);
+    // 404 hides the list like 403.
+    handler = () => ({ status: 404, body: { error: { code: "not_found", message: "x" } } });
+    expect(await D.loadSignalPrompts({}, ctx, "positive")).toEqual({ prompts: [] });
   });
   it("B014: a lite reply (runs / position / measured_at null) converts to the same signal rows as a full one", async () => {
     const full = item({ answers: [ref({ terms: null })] });

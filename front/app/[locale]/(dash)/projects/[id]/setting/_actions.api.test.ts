@@ -99,6 +99,20 @@ describe("setting actions on the api source", () => {
     expect(h.revalidate).toEqual([SETTING]);
   });
 
+  it("#16 updateProjectEngines: the panel's kept engines go back unchanged; none kept -> the body of before", async () => {
+    answer = () => data({ engines: ["chatgpt"], changed: true, propagation: "pending" });
+    await A.updateProjectEngines(PID, ["chatgpt"]);
+    await A.updateProjectEngines(PID, ["chatgpt"], []);
+    expect(calls.map((c) => c.body)).toEqual([{ engines: ["chatgpt"] }, { engines: ["chatgpt"] }]);
+    calls.length = 0;
+    answer = () => data({ engines: ["gemini", "claude-web"], changed: true, propagation: "pending" });
+    await expect(A.updateProjectEngines(PID, ["gemini"], ["claude-web"])).resolves.toEqual({
+      ok: true,
+      value: { engines: ["gemini"], changed: true, pushed: true, queued: true, kept: ["claude-web"] },
+    });
+    expect(calls).toEqual([{ method: "PUT", url: P("/settings/engines"), body: { engines: ["gemini", "claude-web"] } }]);
+  });
+
   it("deleteProject: DELETE {confirm_name}, then list revalidated and redirect; mismatch stays", async () => {
     await expect(A.deleteProject(PID, "Kia US", "en")).rejects.toThrow("REDIRECT:/en/projects");
     expect(calls).toEqual([{ method: "DELETE", url: P(), body: { confirm_name: "Kia US" } }]);
@@ -170,11 +184,12 @@ describe("setting actions on the api source", () => {
     const gate = (my_role: string | null) => data({ project_id: PID, my_role });
     answer = () => gate("owner");
     await expect(A.triggerReprocess(PID)).resolves.toEqual({ ok: true, value: { flagged: 0 } });
-    expect(calls.map(key)).toEqual([`GET ${P()}`]);
+    // The light gate read (view=gate): the same access decision and my_role.
+    expect(calls.map(key)).toEqual([`GET ${P()}?view=gate`]);
     calls.length = 0;
     answer = (_m, path) => (path === "/v1/auth/me" ? data({ role: "hq" }) : gate("viewer"));
     await expect(A.triggerReprocess(PID)).rejects.toThrow("setting action requires active Owner");
-    expect(calls.map(key)).toEqual([`GET ${P()}`, "GET /v1/auth/me"]);
+    expect(calls.map(key)).toEqual([`GET ${P()}?view=gate`, "GET /v1/auth/me"]);
     answer = (_m, path) => (path === "/v1/auth/me" ? data({ role: "admin" }) : gate(null));
     await expect(A.triggerReprocess(PID)).resolves.toEqual({ ok: true, value: { flagged: 0 } });
     answer = () => json(404, { error: { code: "project_not_found", message: "m" } });

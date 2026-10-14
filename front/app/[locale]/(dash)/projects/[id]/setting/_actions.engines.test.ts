@@ -166,6 +166,56 @@ describe("updateProjectEngines", () => {
     expect(setAiEnginesMock).toHaveBeenCalledTimes(1);
   });
 
+  // #16: engines outside the front vocabulary had no checkbox and were dropped by the next save.
+  it("#16 keeps the panel's kept engines after the checkboxes; the Scope push and the result engines are unchanged", async () => {
+    getProjectMock.mockResolvedValue(fakeProject({ aiEngines: ["chatgpt", "perplexity"] }));
+    const r = await updateProjectEngines(PROJECT_ID, ["gemini", "chatgpt"], ["perplexity", "gemini", "perplexity"]);
+    expect(r).toEqual({ ok: true, value: { engines: ["chatgpt", "gemini"], changed: true, pushed: true, kept: ["perplexity"] } });
+    expect(setAiEnginesMock).toHaveBeenCalledWith(PROJECT_ID, ["chatgpt", "gemini", "perplexity"], OWNER_ID);
+    // Scope schedule targets: the front vocabulary only, as before (effectiveAiEngines would drop the rest anyway).
+    expect(syncScheduleMock).toHaveBeenCalledWith(
+      { id: PROJECT_ID, scopeProjectId: "scope-1", aiEngines: ["chatgpt", "gemini"] },
+      { reenable: false },
+    );
+  });
+
+  it("#16 no-op save (same checkboxes): nothing written, the stored kept engines are reported back", async () => {
+    getProjectMock.mockResolvedValue(fakeProject({ aiEngines: ["chatgpt", "perplexity"] }));
+    const r = await updateProjectEngines(PROJECT_ID, ["chatgpt"], ["perplexity"]);
+    expect(r).toEqual({ ok: true, value: { engines: ["chatgpt"], changed: false, pushed: true, kept: ["perplexity"] } });
+    expect(setAiEnginesMock).not.toHaveBeenCalled();
+  });
+
+  it("#16 a save that left only kept engines (Scope disabled) re-enables on the next checkbox, like []", async () => {
+    getProjectMock.mockResolvedValue(fakeProject({ aiEngines: ["perplexity"] }));
+    const r = await updateProjectEngines(PROJECT_ID, ["chatgpt"], ["perplexity"]);
+    expect(r.ok && r.value.kept).toEqual(["perplexity"]);
+    expect(setAiEnginesMock).toHaveBeenCalledWith(PROJECT_ID, ["chatgpt", "perplexity"], OWNER_ID);
+    expect(syncScheduleMock).toHaveBeenCalledWith(
+      { id: PROJECT_ID, scopeProjectId: "scope-1", aiEngines: ["chatgpt"] },
+      { reenable: true },
+    );
+  });
+
+  it("#16 kept only preserves: codes the project did not already store are ignored (no new codes via this path)", async () => {
+    getProjectMock.mockResolvedValue(fakeProject({ aiEngines: ["chatgpt", "perplexity"] }));
+    const r = await updateProjectEngines(PROJECT_ID, ["gemini"], ["made-up", "perplexity", "x' OR 1=1"]);
+    expect(r).toEqual({ ok: true, value: { engines: ["gemini"], changed: true, pushed: true, kept: ["perplexity"] } });
+    expect(setAiEnginesMock).toHaveBeenCalledWith(PROJECT_ID, ["gemini", "perplexity"], OWNER_ID);
+    getProjectMock.mockResolvedValue(fakeProject({ aiEngines: ["chatgpt"] }));
+    setAiEnginesMock.mockClear();
+    const r2 = await updateProjectEngines(PROJECT_ID, ["gemini"], ["made-up"]);
+    expect(r2).toEqual({ ok: true, value: { engines: ["gemini"], changed: true, pushed: true } });
+    expect(setAiEnginesMock).toHaveBeenCalledWith(PROJECT_ID, ["gemini"], OWNER_ID);
+  });
+
+  it("#16 no kept engines (a project in the front vocabulary): the same write and result as before", async () => {
+    getProjectMock.mockResolvedValue(fakeProject({ aiEngines: ["chatgpt"] }));
+    const r = await updateProjectEngines(PROJECT_ID, ["gemini", "chatgpt"], []);
+    expect(r).toEqual({ ok: true, value: { engines: ["chatgpt", "gemini"], changed: true, pushed: true } });
+    expect(setAiEnginesMock).toHaveBeenCalledWith(PROJECT_ID, ["chatgpt", "gemini"], OWNER_ID);
+  });
+
   it("rejects an Owner without operator authority (operator=none) — cost lever", async () => {
     sessionMock.mockResolvedValue(session(OWNER_ID, "none"));
     const r = await updateProjectEngines(PROJECT_ID, ["chatgpt"]);

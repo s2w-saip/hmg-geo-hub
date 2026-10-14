@@ -108,9 +108,10 @@ describe("prompt actions on the api source", () => {
           ? new Response(null, { status: 204 })
           : data({ prompt_id: Q, status: "paused", propagation: "pending" });
     await expect(A.getPromptLifecycleImpact(PID, Q)).resolves.toEqual({ ok: true, value: { answers: 1, mentions: 2, citations: 3, sharedRows: 0 } });
-    await A.pausePrompt(PID, Q);
+    await expect(A.pausePrompt(PID, Q)).resolves.toEqual({ ok: true, value: { status: "paused" } });
     await A.resumePrompt(PID, Q);
-    await A.deletePromptCascade(PID, Q);
+    // hard delete keeps its no-value answer.
+    await expect(A.deletePromptCascade(PID, Q)).resolves.toEqual({ ok: true, value: undefined });
     await A.deletePrompt(PID, Q);
     expect(calls.map(key)).toEqual([
       `GET ${P(`/prompts/${Q}/lifecycle-impact`)}`,
@@ -123,13 +124,21 @@ describe("prompt actions on the api source", () => {
   });
 
   // B019: an unpublished row resumes to 'queued' on the backend (lifecycle/service.py resume). The action
-  // revalidates the tab on success, so the re-rendered list carries the server status; the list's
-  // 'done' overlay applies only while the row still shows 'paused' (prompt-list applyStatusOverlay).
-  it("resume of an unpublished prompt: backend answers queued; ok + the prompt tab revalidated (the list then shows the server status)", async () => {
+  // answers that status, so the list overlay shows 'queued' at once (prompt-list statusAfterLifecycle)
+  // instead of 'done' until the revalidated rows arrive; the tab is revalidated as before.
+  it("resume of an unpublished prompt: backend answers queued; ok with { status: queued } + the prompt tab revalidated", async () => {
     answer = () => data({ prompt_id: Q, status: "queued", propagation: "pending", outbox_id: 9 });
-    await expect(A.resumePrompt(PID, Q)).resolves.toEqual({ ok: true, value: undefined });
+    await expect(A.resumePrompt(PID, Q)).resolves.toEqual({ ok: true, value: { status: "queued" } });
     expect(calls.map(key)).toEqual([`POST ${P(`/prompts/${Q}/resume`)}`]);
     expect(h.revalidate).toEqual([TAB]);
+  });
+
+  it("resume / pause: a status the list cannot show (or no body) answers no value; the list keeps its old overlay", async () => {
+    answer = () => data({ prompt_id: Q, status: "archived", propagation: "pending" });
+    await expect(A.resumePrompt(PID, Q)).resolves.toEqual({ ok: true, value: undefined });
+    answer = () => new Response(null, { status: 204 });
+    await expect(A.pausePrompt(PID, Q)).resolves.toEqual({ ok: true, value: undefined });
+    expect(h.revalidate).toEqual([TAB, TAB]);
   });
 
   it("executePrompts: 202 -> revalidate + redirect to the analysis tab; 409 -> legacy message, no redirect", async () => {

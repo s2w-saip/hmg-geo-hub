@@ -311,7 +311,7 @@ async function apiList(target: { brand: string } | { signal: "positive" }): Prom
     const rows =
       "brand" in target
         ? (await D.loadBrandMentionPrompts({ cumulative: true }, ctx, { mentionBrand: target.brand })).prompts
-        : await D.loadSignalPrompts({ cumulative: true }, ctx, target.signal);
+        : (await D.loadSignalPrompts({ cumulative: true }, ctx, target.signal)).prompts;
     const q = log[0].searchParams;
     expect([q.get("mode"), q.get("mention_brand"), q.get("signal")]).toEqual(
       "brand" in target ? ["brand", target.brand, null] : ["signal", null, target.signal],

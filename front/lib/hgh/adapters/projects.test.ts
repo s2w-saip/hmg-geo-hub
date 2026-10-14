@@ -259,8 +259,9 @@ describe("mappers (hand-computed)", () => {
       project: { name: "Kia US", description: null, brand: "Kia", country: "US", ga4PropertyId: null, domain: "kia.com/us" },
       canEdit: true,
       canEditEngines: false,
-      // "claude" is outside the front vocabulary and dropped; catalog order chatgpt, gemini.
-      engines: { initial: ["chatgpt", "gemini"], explicit: true },
+      // "claude" is outside the front vocabulary (no checkbox); catalog order chatgpt, gemini. It is not kept
+      // either: this backend's allowed list lacks it (a save sending it would be refused 422).
+      engines: { initial: ["chatgpt", "gemini"], explicit: true, kept: [] },
       engineHistory: [{ id: "42", engines: ["chatgpt"], changedAt: "2026-06-05T01:02:03.456Z" }],
       ownedBases: [{ id: "kia.com/us", baseUrl: "https://www.kia.com/us/", label: "US" }],
       trackedUrls: [{ id: "kia.com/us/ev9", url: "https://www.kia.com/us/ev9", label: null }],
@@ -278,10 +279,33 @@ describe("mappers (hand-computed)", () => {
       [],
       [],
     );
-    expect(d.engines).toEqual({ initial: ["chatgpt", "gemini"], explicit: false });
+    expect(d.engines).toEqual({ initial: ["chatgpt", "gemini"], explicit: false, kept: [] });
     expect(d.canEditEngines).toBe(true);
     expect(d.scopeLink).toEqual({ status: "missing", scopeProjectId: null });
     expect(d.ownBrandAliases).toEqual([]);
+  });
+
+  it("#16 settings: stored engines outside the front vocabulary that the backend allows are kept (no control), in their order", () => {
+    const engines = (stored: string[] | null, effective: string[], allowed: string[]) =>
+      P.toSettingsPageData(detail(), bundle({ engines: { stored, effective, allowed, can_edit: true } }), [], []).engines;
+    const allowed = ["chatgpt", "gemini", "claude-web", "deepseek", "perplexity"];
+    // The checkboxes get the front vocabulary only (unchanged); the rest rides along as kept.
+    expect(engines(["chatgpt", "claude-web", "perplexity"], ["chatgpt", "claude-web", "perplexity"], allowed)).toEqual({
+      initial: ["chatgpt"],
+      explicit: true,
+      kept: ["claude-web", "perplexity"],
+    });
+    // A project stored in the front vocabulary: nothing kept (the page data is the one before #16 plus kept: []).
+    expect(engines(["gemini", "chatgpt"], ["gemini", "chatgpt"], allowed)).toEqual({ initial: ["chatgpt", "gemini"], explicit: true, kept: [] });
+    // A code the backend no longer allows is not carried (sending it would fail the save: 422 unknown_engine).
+    expect(engines(["chatgpt", "bing"], ["chatgpt", "bing"], allowed).kept).toEqual([]);
+  });
+
+  it("#16 keptAiEngines: codes outside AI_ENGINE_IDS, deduped, first-seen order; empty strings and known codes out", () => {
+    expect(P.keptAiEngines(["perplexity", "chatgpt", "", "claude-web", "perplexity", "deepseek"])).toEqual(["perplexity", "claude-web"]);
+    expect(P.keptAiEngines(null)).toEqual([]);
+    expect(P.keptAiEngines(["chatgpt", "gemini", "deepseek"])).toEqual([]);
+    expect(P.keptAiEngines(["perplexity", "bing"], ["perplexity"])).toEqual(["perplexity"]);
   });
 
   it("scope link view: served_ratio 3/4 -> 75%, 0/0 -> null (block shows 'no jobs')", () => {
@@ -701,14 +725,15 @@ describe("write requests (method, path, body) and success values", () => {
   });
 
   // Verification D2: triggerReprocess on the api source keeps the legacy owner-or-admin outcome.
+  // The gate read is the light view (view=gate): the same decision, 404s and my_role (B020 follow-up).
   it("authorizeReprocess: owner / admin -> flagged 0 (reads only); viewer, hidden, no session, bad id -> throw", async () => {
     serve(() => ok(detail({ my_role: "owner" })));
     await expect(P.authorizeReprocess(PID)).resolves.toEqual({ ok: true, value: { flagged: 0 } });
-    expect(callKeys()).toEqual([`GET /v1/projects/${PID}`]);
+    expect(callKeys()).toEqual([`GET /v1/projects/${PID}?view=gate`]);
     calls.length = 0;
     serve((r) => (r.path === "/v1/auth/me" ? ok({ role: "admin" }) : ok(detail({ my_role: null }))));
     await expect(P.authorizeReprocess(PID)).resolves.toEqual({ ok: true, value: { flagged: 0 } });
-    expect(callKeys()).toEqual([`GET /v1/projects/${PID}`, "GET /v1/auth/me"]);
+    expect(callKeys()).toEqual([`GET /v1/projects/${PID}?view=gate`, "GET /v1/auth/me"]);
     serve((r) => (r.path === "/v1/auth/me" ? ok({ role: "hq" }) : ok(detail({ my_role: "viewer" }))));
     await expect(P.authorizeReprocess(PID)).rejects.toBeInstanceOf(UnauthorizedError);
     serve(() => err(404, "project_not_found"));
@@ -753,6 +778,28 @@ describe("write requests (method, path, body) and success values", () => {
     const r = await P.updateProjectEngines(PID, ["gemini", "foo", "chatgpt", "gemini"]);
     expect(calls[0].body).toEqual({ engines: ["chatgpt", "gemini"] });
     expect(r).toEqual({ ok: true, value: { engines: ["chatgpt", "gemini"], changed: true, pushed: true, queued: true } });
+    // The panel always passes its kept list; empty (a project in the front vocabulary) -> the same body and result.
+    calls.length = 0;
+    await expect(P.updateProjectEngines(PID, ["gemini", "foo", "chatgpt", "gemini"], [])).resolves.toEqual(r);
+    expect(calls[0].body).toEqual({ engines: ["chatgpt", "gemini"] });
+  });
+
+  it("#16 updateProjectEngines: kept engines go back unchanged after the checkboxes; the result splits them out again", async () => {
+    // The backend stores its catalog order (normalize_engines); "claude-web" sorts before "deepseek" there.
+    serve(() => ok({ engines: ["chatgpt", "claude-web", "deepseek", "perplexity"], changed: true, propagation: "pending", reenable: false, outbox_id: 6 }));
+    const r = await P.updateProjectEngines(PID, ["deepseek", "chatgpt"], ["perplexity", "claude-web", "chatgpt", "perplexity"]);
+    // Known codes in catalog order first, then the kept ones in their order (deduped; a known code is never "kept").
+    expect(calls[0].body).toEqual({ engines: ["chatgpt", "deepseek", "perplexity", "claude-web"] });
+    expect(r).toEqual({
+      ok: true,
+      value: { engines: ["chatgpt", "deepseek"], changed: true, pushed: true, queued: true, kept: ["claude-web", "perplexity"] },
+    });
+    // A save that changes nothing (same set) answers changed=false with the same split.
+    serve(() => ok({ engines: ["chatgpt", "perplexity"], changed: false, propagation: "none" }));
+    await expect(P.updateProjectEngines(PID, ["chatgpt"], ["perplexity"])).resolves.toEqual({
+      ok: true,
+      value: { engines: ["chatgpt"], changed: false, pushed: true, queued: true, kept: ["perplexity"] },
+    });
   });
 
   it("tracked entities: ids are the natural keys; vehicle delete splits the composite id", async () => {
@@ -825,6 +872,33 @@ describe("write requests (method, path, body) and success values", () => {
     await expect(P.setPromptCustomFieldValueBulk(PID, [...ids, ids[0]], PID2, " v ")).resolves.toEqual({ ok: true, value: { count: 2500 } });
     expect(calls.map((c) => (c.body as { prompt_ids: string[]; value: string }).prompt_ids.length)).toEqual([1000, 1000, 500]);
     expect((calls[0].body as { value: string }).value).toBe("v");
+  });
+
+  it("B019 lifecycle: pause / resume answer the server status (queued for an unpublished row); hard-delete, no body or an unknown status -> no value", async () => {
+    let status: unknown = "paused";
+    serve(() => ok({ prompt_id: PID2, status, propagation: "pending", outbox_id: 1 }));
+    await expect(P.promptLifecycle(PID, PID2, "pause")).resolves.toEqual({ ok: true, value: { status: "paused" } });
+    status = "queued";
+    await expect(P.promptLifecycle(PID, PID2, "resume")).resolves.toEqual({ ok: true, value: { status: "queued" } });
+    status = "done";
+    await expect(P.promptLifecycle(PID, PID2, "resume")).resolves.toEqual({ ok: true, value: { status: "done" } });
+    // hard-delete keeps its no-value answer; a status the list cannot draw answers no value (the list keeps its old overlay).
+    await expect(P.promptLifecycle(PID, PID2, "hard-delete")).resolves.toEqual({ ok: true, value: undefined });
+    status = "archived";
+    await expect(P.promptLifecycle(PID, PID2, "resume")).resolves.toEqual({ ok: true, value: undefined });
+    status = 3;
+    await expect(P.promptLifecycle(PID, PID2, "pause")).resolves.toEqual({ ok: true, value: undefined });
+    serve(() => noContent());
+    await expect(P.promptLifecycle(PID, PID2, "pause")).resolves.toEqual({ ok: true, value: undefined });
+    expect(calls.map((c) => `${c.method} ${c.path}`)).toEqual([
+      `POST /v1/projects/${PID}/prompts/${PID2}/pause`,
+      `POST /v1/projects/${PID}/prompts/${PID2}/resume`,
+      `POST /v1/projects/${PID}/prompts/${PID2}/resume`,
+      `POST /v1/projects/${PID}/prompts/${PID2}/hard-delete`,
+      `POST /v1/projects/${PID}/prompts/${PID2}/resume`,
+      `POST /v1/projects/${PID}/prompts/${PID2}/pause`,
+      `POST /v1/projects/${PID}/prompts/${PID2}/pause`,
+    ]);
   });
 
   it("lifecycle impact: shared_rows -> sharedRows; manual add returns the created count", async () => {

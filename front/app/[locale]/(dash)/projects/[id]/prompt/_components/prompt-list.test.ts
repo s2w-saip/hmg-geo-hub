@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 // and values outside that window. The server actions are not called here.
 vi.mock("../_actions", () => ({}));
 
-const { applyStatusOverlay, usedTagFieldIds } = await import("./prompt-list");
+const { applyStatusOverlay, statusAfterLifecycle, usedTagFieldIds } = await import("./prompt-list");
 type Row = Parameters<typeof applyStatusOverlay>[0][number];
 
 const row = (i: number, d: Partial<Row> = {}): Row => ({
@@ -67,5 +67,22 @@ describe("applyStatusOverlay: pause / resume shows the action at once, then the 
     const rows = [row(1, { status: "done" }), row(2, { status: "running" })];
     expect(applyStatusOverlay(rows, overlay).map((r) => r.status)).toEqual(["paused", "running"]);
     expect(applyStatusOverlay([row(1, { status: "paused" })], overlay)[0].status).toBe("paused");
+  });
+});
+
+describe("statusAfterLifecycle: the overlay status right after pause / resume (B019)", () => {
+  it("the server status when the action answers one (api source): resume of an unpublished row shows 'queued' at once", () => {
+    expect(statusAfterLifecycle(true, { status: "queued" })).toBe("queued");
+    expect(statusAfterLifecycle(true, { status: "done" })).toBe("done");
+    expect(statusAfterLifecycle(false, { status: "paused" })).toBe("paused");
+    // The overlay then matches the revalidated row: nothing flips from 'done' to 'queued' later.
+    const overlay = { p1: { status: statusAfterLifecycle(true, { status: "queued" }), from: "paused" as const } };
+    expect(applyStatusOverlay([row(1, { status: "paused" })], overlay)[0].status).toBe("queued");
+    expect(applyStatusOverlay([row(1, { status: "queued" })], overlay)[0].status).toBe("queued");
+  });
+
+  it("no value (legacy source, or a status the list cannot show): the old overlay, resume 'done', pause 'paused'", () => {
+    expect(statusAfterLifecycle(true, undefined)).toBe("done");
+    expect(statusAfterLifecycle(false, undefined)).toBe("paused");
   });
 });

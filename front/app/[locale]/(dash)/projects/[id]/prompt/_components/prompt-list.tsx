@@ -109,6 +109,12 @@ export function applyStatusOverlay(rows: PromptRow[], overlay: StatusOverlay): P
   });
 }
 
+// 중지·재개 성공 직후 오버레이에 올릴 상태(B019) — 서버가 알려 준 상태(재개한 미발행 행은 queued)를
+// 바로 쓰고, 없으면(레거시) 종전 값(재개 done, 중지 paused).
+export function statusAfterLifecycle(paused: boolean, value: { status: PromptStatus } | undefined): PromptStatus {
+  return value?.status ?? (paused ? "done" : "paused");
+}
+
 // 완전삭제 확인 대상 태그 열 = 서버 valueCount > 0(창 밖 행 포함) ∪ 로드된 행의 값 ∪ 낙관 편집 값.
 // valueCount 가 없는 원천(legacy)은 종전처럼 로드된 행만 본다.
 export function usedTagFieldIds(
@@ -839,7 +845,7 @@ function PromptLifecycleDialog({
         ? await resumePrompt(projectId, prompt.id)
         : await pausePrompt(projectId, prompt.id);
       if (r.ok) {
-        onStatusChange(prompt.id, paused ? "done" : "paused");
+        onStatusChange(prompt.id, statusAfterLifecycle(paused, r.value));
         toast.success(t(paused ? "resumedToast" : "pausedToast"));
         onClose();
       } else toast.error(r.error);

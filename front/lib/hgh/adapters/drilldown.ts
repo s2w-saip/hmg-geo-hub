@@ -50,7 +50,9 @@ import "server-only";
 //
 // Known differences (U6 numbering; asserted in drilldown.test.ts):
 //   U6-N9  signal list = the top 50 prompts by signal count with 6 answer references each (the
-//          legacy limits); share is over every prompt, not the top 50 (the dialog does not show it)
+//          legacy limits); share is over every prompt, not the top 50 (the dialog does not show it).
+//          A cut list carries `total` (meta.page.total, B008) and the dialog shows the existing
+//          "{total}개 중 {shown}개 표시" line; legacy answered the 50 rows alone (no total, no line)
 //   U6-N10 domain detail is capped: 10 URLs (as legacy), 100 prompts and 20 answer references per
 //          prompt (legacy: every prompt and every answer); the prompts column keeps the full count
 //   U6-N11 the project drilldown's citation tab reads the project (legacy read the standard root:
@@ -89,7 +91,7 @@ import { pct1OrZero } from "../convert";
 import { errorKindOf, hghErrorResponse, isHghApiError } from "../errors";
 import { withParams, type Surface } from "../query";
 import { analysisQuery, canReadAnalysis, type AnalysisQueryContext } from "./filters";
-import { isProjectId } from "./project-gate";
+import { fetchProjectGate } from "./project-gate";
 
 type S = components["schemas"];
 export type ApiPromptItem = S["app__features__analytics__mentions__prompts__schemas__PromptItem"];
@@ -155,7 +157,7 @@ export type GateResult = { ok: true } | { ok: false; status: 403 | 404 };
  *   1. the (dash) place gate of the screen family: canReadAnalysis(role, menuGroups, analysis,
  *      surface) -> 403
  *   2. project surface: the project page gate (demo project admin only; HGH_SOURCE_SESSION=api ->
- *      GET /v1/projects/{id}, legacy -> the injected repository check) -> 404
+ *      GET /v1/projects/{id}?view=gate (fetchProjectGate), legacy -> the injected repository check) -> 404
  *
  * Backend answers of the api project gate (U6 verification D3), the project page contract of
  * project-gate.ts mapped to route statuses: 404 -> 404; 403 role_forbidden / menu_forbidden -> 403;
@@ -181,12 +183,11 @@ export async function drilldownGate(
 }
 
 async function apiProjectGate(id: string): Promise<GateResult> {
-  if (!isProjectId(id)) return { ok: false, status: 404 };
   try {
-    await hghGet("/v1/projects/{project_id}", { pathParams: { project_id: id }, retryOn401: true });
-    return { ok: true };
+    // project-gate fetchProjectGate: the light read (view=gate, the same decision and 404s without the
+    // detail summary statements); null = 404 or a non-uuid id (never sent).
+    return (await fetchProjectGate(id, { retryOn401: true })) ? { ok: true } : { ok: false, status: 404 };
   } catch (e) {
-    if (isHghApiError(e) && e.status === 404) return { ok: false, status: 404 };
     if (isHghApiError(e) && e.status === 403) {
       return { ok: false, status: errorKindOf(e.status, e.code) === "forbidden" ? 403 : 404 };
     }
@@ -426,14 +427,21 @@ export async function loadBrandMentionPrompts(
 }
 
 /**
+ * The signal dialog list (route JSON {prompts}); total = prompts before the 50-row cap (meta.page.total),
+ * only when the cap cut the list (B008: the dialog then shows the existing "{total}개 중 {shown}개 표시" line).
+ */
+export type SignalPromptsList = BrandPromptsList;
+
+/**
  * M-3 mode=signal: the top 50 prompts with 6 answer references (legacy limits), one page. lite=true:
  * the backend skips runs / position / measured_at, which the signal reference drops anyway.
+ * 404 / 403 -> { prompts: [] } (existence hidden, 공통 규칙 4).
  */
 export async function loadSignalPrompts(
   filters: StandardFilters,
   ctx: DrilldownContext,
   signal: SignalKey,
-): Promise<MentionsPromptLive[]> {
+): Promise<SignalPromptsList> {
   const { query, cf } = analysisQuery(filters, ctx);
   try {
     const res = await hghGet("/v1/mentions/prompts", {
@@ -447,9 +455,11 @@ export async function loadSignalPrompts(
       cf,
       retryOn401: true,
     });
-    return res.data.items.map((i) => toMentionsPrompt(i, "signal"));
+    const prompts = res.data.items.map((i) => toMentionsPrompt(i, "signal"));
+    const total = cutTotal(res.meta.page?.total, prompts.length);
+    return total !== undefined ? { prompts, total } : { prompts };
   } catch (e) {
-    if (isEmptyListError(e)) return [];
+    if (isEmptyListError(e)) return { prompts: [] };
     throw e;
   }
 }

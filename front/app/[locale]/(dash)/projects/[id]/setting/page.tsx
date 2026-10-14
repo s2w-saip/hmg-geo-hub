@@ -15,6 +15,7 @@ import { listProjectTrackedUrls } from "@/lib/db/repositories/project-tracked-ur
 import { listProjectOwnedBases } from "@/lib/db/repositories/project-owned-bases";
 import {
   isProjectsApi,
+  keptAiEngines,
   loadSettingsPage,
   SCOPE_LINK_ERROR,
   type ScopeLinkDiagnostic,
@@ -115,6 +116,10 @@ export default async function ProjectSettingPage({
           projectId={id}
           initial={data.engines.initial}
           explicit={data.engines.explicit}
+          kept={data.engines.kept}
+          // api: the backend schedule (outbox set_targets) measures the kept engines too; legacy pushes
+          // only the front vocabulary to Scope, so no checkbox = collection stops (#16).
+          keptCollects={isProjectsApi()}
           history={data.engineHistory}
           disabled={!canEditEngines}
         />
@@ -361,7 +366,8 @@ async function legacySettingsPage(
     },
     canEdit,
     canEditEngines,
-    engines: { initial: effectiveAiEngines(project.aiEngines), explicit: project.aiEngines != null },
+    // kept: 화면 어휘 밖 저장 엔진(#16) — 컨트롤 없이 패널이 들고 있다가 저장 때 돌려보낸다.
+    engines: { initial: effectiveAiEngines(project.aiEngines), explicit: project.aiEngines != null, kept: keptAiEngines(project.aiEngines) },
     engineHistory: engineHistoryRaw.map((h) => ({
       id: h.id,
       engines: h.engines,

@@ -292,13 +292,17 @@ export async function getPromptLifecycleImpact(
   return { ok: true, value: { ...impact, sharedRows } };
 }
 
+// 중지·재개 결과의 서버 상태(B019) — API 원천만 싣는다(재개한 미발행 행은 queued).
+// 값이 없으면(레거시, 목록이 못 그리는 상태) 목록은 종전 오버레이(재개 done, 중지 paused)를 쓴다.
+export type PromptLifecycleStatus = api.PromptLifecycleStatus;
+
 // 측정 중지 — scope active=false + 로컬 status='paused'. 이력·지표는 보존되고
 // 언제든 재개 가능. scope 반영이 실패하면 로컬도 바꾸지 않는다(화면은 중지인데
 // 측정·비용은 계속되는 불일치 방지).
 export async function pausePrompt(
   projectId: string,
   promptId: string,
-): Promise<ActionResult> {
+): Promise<ActionResult<PromptLifecycleStatus | undefined>> {
   if (api.isProjectsApi()) {
     const r = await api.promptLifecycle(projectId, promptId, "pause");
     if (r.ok) revalidatePath(`/projects/${projectId}/prompt`);
@@ -347,7 +351,7 @@ export async function pausePrompt(
 export async function resumePrompt(
   projectId: string,
   promptId: string,
-): Promise<ActionResult> {
+): Promise<ActionResult<PromptLifecycleStatus | undefined>> {
   if (api.isProjectsApi()) {
     const r = await api.promptLifecycle(projectId, promptId, "resume");
     if (r.ok) revalidatePath(`/projects/${projectId}/prompt`);
@@ -392,8 +396,9 @@ export async function deletePromptCascade(
 ): Promise<ActionResult> {
   if (api.isProjectsApi()) {
     const r = await api.promptLifecycle(projectId, promptId, "hard-delete");
-    if (r.ok) revalidatePath(`/projects/${projectId}/prompt`);
-    return r;
+    if (!r.ok) return r;
+    revalidatePath(`/projects/${projectId}/prompt`);
+    return { ok: true, value: undefined };
   }
   const { userId, role } = await requireOwner(projectId);
   const row = await promptRepository.getById(promptId);

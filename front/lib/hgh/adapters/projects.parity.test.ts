@@ -435,7 +435,8 @@ function backend(method: string, path: string, query: URLSearchParams): Response
       engines: {
         stored: p.engines,
         effective: p.engines ?? ["chatgpt", "gemini"],
-        allowed: ["chatgpt", "gemini", "deepseek"],
+        // rd.dim_engine: every measured target code, not only the front vocabulary (#16 uses perplexity).
+        allowed: ["chatgpt", "gemini", "deepseek", "perplexity"],
         can_edit: canEdit && (me.role === "admin" || me.operator === "global" || (me.operator === "assigned" && role !== null)),
       },
       owned_bases: OWNED.filter((o) => o.projectId === p.id).map((o) => ({ base_norm: o.norm, base_url: o.baseUrl, label: o.label, created_at: apiTs(o.createdAt), created_by: OWNER.id })),
@@ -778,6 +779,8 @@ describe("/projects/[id]/setting", () => {
   };
   const ids = {
     "^\\.engines\\.history\\[\\d\\]\\.id$": "history id: uuid -> history_id",
+    "^\\.engines\\.keptCollects$":
+      "#16: api's backend schedule (outbox set_targets) measures the kept engines, legacy pushes only the front vocabulary to Scope (no checkbox = collection stops there)",
     "^\\.owned\\.rows\\[\\d\\]\\.id$": "owned base id: uuid -> base_norm",
     "^\\.urls\\.rows\\[\\d\\]\\.id$": "tracked URL id: uuid -> url_norm",
     "^\\.tracked\\.brands\\[\\d\\]\\.id$": "competitor id: uuid -> brand_name",
@@ -791,6 +794,31 @@ describe("/projects/[id]/setting", () => {
     expect(legacy.engines).toMatchObject({ initial: ["chatgpt", "gemini"], explicit: true, disabled: false });
     expect(legacy.scopeKeys).toContain("scopeLink.statusValue.linked");
     expectDiff(legacy, await view("api", OWNER), ids);
+  });
+  it("#16 a stored engine outside the front vocabulary: no checkbox, carried as kept on both sources", async () => {
+    const pa = PROJECTS.find((p) => p.id === PA)!;
+    const stored = pa.engines;
+    pa.engines = ["chatgpt", "gemini", "perplexity"];
+    try {
+      await pg.query("UPDATE projects SET ai_engines = $1 WHERE id = $2", [pa.engines, PA]);
+      const legacy = (await view("legacy", OWNER)) as Record<string, Record<string, unknown>>;
+      expect(legacy.engines).toMatchObject({ initial: ["chatgpt", "gemini"], explicit: true, kept: ["perplexity"], disabled: false });
+      expectDiff(legacy, await view("api", OWNER), ids);
+    } finally {
+      pa.engines = stored;
+    }
+  });
+  it("#16 legacy save (real repository): the kept engine survives a checkbox change and comes back as kept", async () => {
+    await pg.query("UPDATE projects SET ai_engines = $1 WHERE id = $2", [["chatgpt", "gemini", "perplexity"], PA]);
+    as("legacy", OWNER);
+    await expect(settingActions.updateProjectEngines(PA, ["chatgpt"], ["perplexity"])).resolves.toEqual({
+      ok: true,
+      value: { engines: ["chatgpt"], changed: true, pushed: true, kept: ["perplexity"] },
+    });
+    const row = await pg.query("SELECT ai_engines FROM projects WHERE id = $1", [PA]);
+    expect((row.rows[0] as { ai_engines: string[] }).ai_engines).toEqual(["chatgpt", "perplexity"]);
+    const legacy = (await view("legacy", OWNER)) as Record<string, Record<string, unknown>>;
+    expect(legacy.engines).toMatchObject({ initial: ["chatgpt"], explicit: true, kept: ["perplexity"] });
   });
   it("viewer: everything disabled, no danger zone, on both", async () => {
     const api = (await view("api", VIEWER)) as { general: { disabled: boolean }; danger: unknown };

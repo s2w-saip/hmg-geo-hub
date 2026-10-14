@@ -45,7 +45,9 @@ import "server-only";
 //   MemberAuditEntry -> AuditLogEntry  id = audit_id, actorEmail = actor_email, targetEmail = target_email
 //   SettingsBundle                  canEdit = can_edit, canEditEngines = engines.can_edit,
 //                                   engines initial = normalizeAiEngines(effective) (legacy
-//                                   effectiveAiEngines), explicit = stored !== null,
+//                                   effectiveAiEngines), explicit = stored !== null, kept = the
+//                                   effective codes outside the front vocabulary that the backend
+//                                   allows (keptAiEngines, #16: no control, sent back on save),
 //                                   ownBrandAliases = brand_aliases.aliases (canonical removed by the
 //                                   server), competitors id = brand_name, vehicles id =
 //                                   brand + "\u0000" + model, owned base id = base_norm
@@ -93,8 +95,9 @@ import "server-only";
 //          domain is derived from the owned bases (read only), so no domain exists without a base.
 //   U9-N5  tracked-entity writes always report reprocessable 0 (re-judgment is automatic through
 //          judgment_change); the "N건 재분석" dialog no longer opens; triggerReprocess flags nothing
-//          and answers flagged 0 (it still requires an active Owner or admin: two reads, the
-//          project gate then /v1/auth/me for non-owners; unauthorized callers throw as in legacy).
+//          and answers flagged 0 (it still requires an active Owner or admin: two reads, the light
+//          project gate (view=gate) then /v1/auth/me for non-owners; unauthorized callers throw as
+//          in legacy).
 //   U9-N6  brand aliases saved against a stale project brand answer "프로젝트 브랜드가 바뀌었습니다.
 //          새로고침 후 다시 저장해주세요" (409 brand_mismatch); legacy silently deleted the aliases.
 //   U9-N7  engine save reports pushed=true with queued=true (the Scope schedule is an outbox job):
@@ -110,6 +113,9 @@ import "server-only";
 //          (measured) answers 409 prompt_not_deletable with a new message (legacy deleted any status).
 //   U9-N10 pause / resume / hard delete / execute: no synchronous Scope call, so the "scope 반영 실패"
 //          and "측정 엔진(scope) 연결에 실패" branches are gone; resume leaves unpublished rows queued.
+//          pause / resume answer the server status (B019): the list overlay shows it at once
+//          (queued for an unpublished row); a status the list cannot show answers no value, and the
+//          list keeps its legacy overlay (resume done, pause paused).
 //   U9-N11 cancelInvite / removeMember on a pending row both remove the invitation; removeMember of a
 //          pending row is audited as cancel_invite (legacy: remove). demote of a pending member
 //          answers "활성 상태의 멤버만 위임 가능합니다" (legacy: "Viewer는 이미 Viewer입니다").
@@ -132,7 +138,7 @@ import type { ProjectRow } from "@/lib/db/schema";
 import type { User } from "@/lib/auth/types";
 import { UnauthorizedError } from "@/lib/auth/errors";
 import { projectCreationOptions } from "@/lib/auth/scope-policy";
-import { normalizeAiEngines, type AiEngineId } from "@/lib/scope/engines";
+import { isAiEngineId, normalizeAiEngines, type AiEngineId } from "@/lib/scope/engines";
 import type { PendingRow } from "@/app/[locale]/(dash)/projects/_components/pending-invites";
 import type { ProjectCardData } from "@/app/[locale]/(dash)/projects/_components/project-list";
 import type { MemberRow } from "@/app/[locale]/(dash)/projects/[id]/member/_components/member-list";
@@ -157,7 +163,7 @@ import { pct1OrNull } from "../convert";
 import { describeHghError, isHghApiError, LOCAL_CODES, throwForPage, type HghApiError } from "../errors";
 import { fetchAllPages, pageInfo, type CursorPage } from "../paginate";
 import { relayUpload, uploadLimitBytes } from "../relay";
-import { isProjectId, requireProjectPage, type GateProject, type GateReadOptions } from "./project-gate";
+import { GATE_QUERY, isProjectId, requireProjectPage, type GateProject, type GateReadOptions } from "./project-gate";
 
 type S = components["schemas"];
 export type ApiProjectListItem = S["ProjectListItem"];
@@ -525,7 +531,8 @@ export interface SettingsPageData {
   };
   canEdit: boolean;
   canEditEngines: boolean;
-  engines: { initial: AiEngineId[]; explicit: boolean };
+  /** kept: stored codes outside the front vocabulary (no control; sent back unchanged on save, #16). */
+  engines: { initial: AiEngineId[]; explicit: boolean; kept: string[] };
   engineHistory: EngineHistoryEntry[];
   ownedBases: { id: string; baseUrl: string; label: string | null }[];
   trackedUrls: { id: string; url: string; label: string | null }[];
@@ -533,6 +540,18 @@ export interface SettingsPageData {
   designatedBrands: { id: string; brandName: string; aliases: string[]; notes: string | null; isTarget: boolean }[];
   vehicles: { id: string; brand: string; model: string; segment: string | null; aliases: string[] }[];
   scopeLink: { status: "missing" | "root" | "linked"; scopeProjectId: string | null };
+}
+
+/**
+ * Engine codes outside the front vocabulary (AI_ENGINE_IDS), deduped, in their given order (#16). The
+ * settings panel draws no control for them; it carries them and sends them back on save, so a save no
+ * longer drops them. `allowed` (the backend vocabulary, SettingsBundle engines.allowed) keeps only the
+ * codes the backend accepts on that save: a code it would refuse (422 unknown_engine) is left out as
+ * before, so the save does not start failing. Empty for a project stored in the front vocabulary.
+ */
+export function keptAiEngines(values: readonly string[] | null | undefined, allowed?: readonly string[]): string[] {
+  const ok = allowed ? new Set(allowed) : null;
+  return [...new Set((values ?? []).filter((v) => v !== "" && !isAiEngineId(v) && (!ok || ok.has(v))))];
 }
 
 export function toSettingsPageData(
@@ -552,7 +571,11 @@ export function toSettingsPageData(
     },
     canEdit: bundle.can_edit,
     canEditEngines: bundle.engines?.can_edit ?? false,
-    engines: { initial: normalizeAiEngines(bundle.engines?.effective ?? []), explicit: bundle.engines?.stored != null },
+    engines: {
+      initial: normalizeAiEngines(bundle.engines?.effective ?? []),
+      explicit: bundle.engines?.stored != null,
+      kept: keptAiEngines(bundle.engines?.effective, bundle.engines?.allowed ?? []),
+    },
     // The settings page reads the full bundle (no ?view): engines, brand_aliases and vehicles are present
     // (they are null only on the home card view).
     engineHistory: history.map((h) => ({ id: h.history_id, engines: [...h.engines], changedAt: isoLegacy(h.changed_at) })),
@@ -955,12 +978,13 @@ export async function changeMemberRole(projectId: string, userId: string, role: 
 /**
  * triggerReprocess on the api source: nothing to trigger (U9-N5), but the caller still has to be
  * what legacy requireOwner accepted (verification D2): active Owner of the project, or admin.
- * Anyone else (no session, viewer, pending, hidden project) gets the legacy throw. Reads only.
+ * Anyone else (no session, viewer, pending, hidden project) gets the legacy throw. Reads only. The gate
+ * read is the light view (view=gate): the same access decision, 404s and my_role, no summary statements.
  */
 export async function authorizeReprocess(projectId: string): Promise<ActionResult<{ flagged: number }>> {
   if (!isProjectId(projectId)) throw new UnauthorizedError("project not found");
   const gate = await run(
-    () => hghGet("/v1/projects/{project_id}", { ...W, pathParams: pid(projectId) }),
+    () => hghGet("/v1/projects/{project_id}", { ...W, pathParams: pid(projectId), query: GATE_QUERY }),
     {},
   );
   if (!gate.ok) return gate;
@@ -1041,23 +1065,40 @@ export const ENGINES_ERRORS: ErrorTable = {
   unknown_engine: "알 수 없는 엔진입니다",
 };
 
+/**
+ * PUT …/settings/engines. `engines` = the panel's checkboxes (normalized as before); `kept` = the stored
+ * codes the panel has no control for (keptAiEngines, #16), appended unchanged so the save keeps them.
+ * kept empty (every project stored in the front vocabulary) -> the same body as before. The result
+ * splits the stored set the same way; `kept` is present only when non-empty.
+ */
 export async function updateProjectEngines(
   projectId: string,
   engines: string[],
-): Promise<ActionResult<{ engines: string[]; changed: boolean; pushed: boolean; queued: boolean }>> {
+  kept: readonly string[] = [],
+): Promise<ActionResult<{ engines: string[]; changed: boolean; pushed: boolean; queued: boolean; kept?: string[] }>> {
   const r = await run(
     () =>
       hghPut("/v1/projects/{project_id}/settings/engines", {
         ...W,
         pathParams: pid(projectId),
-        body: { engines: normalizeAiEngines(engines) },
+        body: { engines: [...normalizeAiEngines(engines), ...keptAiEngines(kept)] },
       }),
     ENGINES_ERRORS,
   );
   if (!r.ok) return r;
   const d = r.value!.data;
+  const stillKept = keptAiEngines(d.engines);
   // pushed: the Scope schedule is an outbox job now (G6); queued tells the panel to say so (U9-N7).
-  return { ok: true, value: { engines: normalizeAiEngines(d.engines), changed: d.changed, pushed: true, queued: true } };
+  return {
+    ok: true,
+    value: {
+      engines: normalizeAiEngines(d.engines),
+      changed: d.changed,
+      pushed: true,
+      queued: true,
+      ...(stillKept.length > 0 ? { kept: stillKept } : {}),
+    },
+  };
 }
 
 export const DELETE_PROJECT_ERRORS: ErrorTable = {
@@ -1467,7 +1508,27 @@ export const HARD_DELETE_ERRORS: ErrorTable = {
   unprocessable: PROMPT_GONE,
 };
 
-export async function promptLifecycle(projectId: string, promptId: string, op: "pause" | "resume" | "hard-delete"): Promise<ActionResult> {
+/** The statuses the prompt list can draw (StatusBadge, applyStatusOverlay). */
+const PROMPT_STATUSES: Record<PromptStatus, true> = { draft: true, queued: true, running: true, done: true, failed: true, paused: true };
+
+function toPromptStatus(value: unknown): PromptStatus | undefined {
+  return typeof value === "string" && Object.hasOwn(PROMPT_STATUSES, value) ? (value as PromptStatus) : undefined;
+}
+
+/** pause / resume answer: the status the backend stored (resume of an unpublished row: queued, B019). */
+export type PromptLifecycleStatus = { status: PromptStatus };
+
+/**
+ * pause / resume / hard-delete. pause and resume answer { status } from the backend (paused; done, or
+ * queued for an unpublished row) so the list overlay shows the server state at once (B019); a status the
+ * list cannot show (or no body) answers no value, and the list keeps its legacy overlay. hard-delete
+ * answers no value, as before.
+ */
+export async function promptLifecycle(
+  projectId: string,
+  promptId: string,
+  op: "pause" | "resume" | "hard-delete",
+): Promise<ActionResult<PromptLifecycleStatus | undefined>> {
   const pathParams = { project_id: projectId, prompt_id: promptId };
   const r = await run(
     () =>
@@ -1478,7 +1539,9 @@ export async function promptLifecycle(projectId: string, promptId: string, op: "
           : hghPost("/v1/projects/{project_id}/prompts/{prompt_id}/hard-delete", { ...W, pathParams }),
     op === "pause" ? PAUSE_ERRORS : op === "resume" ? RESUME_ERRORS : HARD_DELETE_ERRORS,
   );
-  return r.ok ? { ok: true, value: undefined } : r;
+  if (!r.ok) return r;
+  const status = op === "hard-delete" ? undefined : toPromptStatus(r.value?.data?.status);
+  return { ok: true, value: status ? { status } : undefined };
 }
 
 export const EXECUTE_ERRORS: ErrorTable = {
