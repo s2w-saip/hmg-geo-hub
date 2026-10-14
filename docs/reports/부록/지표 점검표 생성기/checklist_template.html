@@ -56,18 +56,18 @@ tr.group td{background:#f6fafb;font-weight:700}
 <body><main>
 
 <header>
-<div class="meta">GEO HUB · 프로젝트 상시 문서 · 최종 갱신 2026-10-14 · 초안(양식 확인용: 화면 3개) · <strong>Before 측정 완료</strong>(원본 <code>392ca45</code> 정적 계수 + 운영 실측) · After 측정 대기</div>
+<div class="meta">GEO HUB · 프로젝트 상시 문서 · 최종 갱신 2026-10-14 · <strong>전 화면 조사판</strong>(데이터 화면 {{N_SCREENS}}개 + 화면 밖 경로) · Before: 원본 <code>392ca45</code> 정적 계수(F1은 화면 3개만 운영 실측) · After 측정 대기</div>
 <h1>★ 리뉴얼·최적화 지표 점검표</h1>
 <p><strong>화면마다</strong>, 그리고 화면 안의 <strong>데이터 영역마다</strong> 리뉴얼 전(Before)과 후(After)를 같은 판정 요소·같은 성공 조건으로 체크해서, 리뉴얼 성공을 KPI로 보여 주는 표입니다. 프로젝트가 끝날 때까지 이 문서 하나를 계속 갱신합니다.</p>
 <ul class="rules">
-<li><strong>화면 행</strong>에는 메뉴 위치(좌측 내비게이션 그대로)·화면 제목·URL과 <strong>F1 속도</strong>(화면 단위)를, 그 아래 <strong>영역 행</strong>에는 화면 안 위치·실제 호출(legacy 함수 / API 엔드포인트)과 F2~F6을 적습니다.</li>
+<li><strong>화면 행</strong>에는 메뉴 위치(좌측 내비게이션 그대로)·화면 제목·URL·관련 작업 ID와 <strong>F1 속도</strong>(화면 단위)를, 그 아래 <strong>영역 행</strong>에는 화면 안 위치·실제 호출(legacy 함수 / API 엔드포인트)과 F2~F10·완료를 적습니다. 쓰기 기능은 "쓰기: …" 영역으로 따로 둡니다.</li>
 <li><strong>영역 체크 규칙</strong>: 영역이 쓰는 데이터가 모두 충족해야 <b class="y">☑</b>, 하나라도 미충족이면 <b class="n">☒</b>, 나머지는 <b class="u">☐</b>. 체크는 아래 데이터 근거의 검증 결과에서만 나옵니다.</li>
 <li><strong>Before</strong> = 리뉴얼 착수 전 운영 경로(legacy, 원본 <code>392ca45</code>). <strong>After</strong> = 리뉴얼 경로(API). <span class="x">—</span> = 해당 없음. 확인되지 않은 칸은 추정으로 채우지 않습니다.</li>
 <li><strong>Before 칸의 작은 글씨 = 측정값</strong>: F2 최대 구조 점수 · F4 하드코딩 상수 종수 · F6 실패 위치(자체 경로 / 공통 경로만). 근거는 아래 <strong>Before 측정 근거</strong> 표.</li>
 </ul>
 <div class="summary">
-<div class="card"><b>3</b><span>화면</span></div>
-<div class="card"><b>{{N_AREAS}}</b><span>데이터 영역 (코드 검증)</span></div>
+<div class="card"><b>{{N_SCREENS}}</b><span>데이터 화면 (+ 화면 밖 경로)</span></div>
+<div class="card"><b>{{N_AREAS}}</b><span>영역 (읽기 + 쓰기)</span></div>
 <div class="card"><b>{{Y}}</b><span><b class="y">☑</b> 충족</span></div>
 <div class="card"><b>{{N}}</b><span><b class="n">☒</b> 미충족 (Before {{NB}} · After {{NA}})</span></div>
 <div class="card"><b>{{U}}</b><span><b class="u">☐</b> 미확인 (Before {{UB}} · After {{UA}}) / 체크 칸 {{TOTAL}}</span></div>
@@ -79,30 +79,47 @@ tr.group td{background:#f6fafb;font-weight:700}
 <div class="scroll"><table>
 <thead><tr><th>요소</th><th>단위</th><th>무엇을 보나</th><th>성공 조건 (☑ 조건)</th><th>확인 방법</th></tr></thead>
 <tbody>
-<tr><td class="id">F1 속도</td><td>화면</td><td>화면 데이터가 다 채워지기까지의 시간</td><td>재방문 ≤ <strong>2,500 ms</strong> <strong>그리고</strong> 첫 방문 ≤ <strong>5,000 ms</strong></td><td>같은 환경·같은 데이터에서 n회 측정 중앙값(<code>responseEnd</code>)</td></tr>
-<tr><td class="id">F2 구조 복잡도</td><td>영역</td><td>영역 데이터를 계산하는 대표 SQL의 구조</td><td>구조 점수(JOIN + CTE + 집계 단계 + 윈도우 함수) ≤ <strong>5</strong>. 영역 값 = 영역이 쓰는 함수 중 최대</td><td>코드 정적 계수(22번 문서 기준). 집계 단계 = 문장 안 GROUP BY 수(22번 S02 = 5로 보정). 운영 설정 경로 기준(격자 off · <code>S2.mentionTrend</code> on · 나머지 옵트인 off)</td></tr>
+<tr><td class="id">F1 속도</td><td>화면</td><td>화면 데이터가 다 채워지기까지의 시간</td><td>재방문 ≤ <strong>2,500 ms</strong> <strong>그리고</strong> 첫 방문 ≤ <strong>5,000 ms</strong> <span class="tag fix">임시</span><span class="val">확정 필요. 문서 19는 목표 지연 미정, 문서 14는 읽기 API cold p95 ≤ 1초를 기준선으로 제시</span></td><td>같은 환경·같은 데이터에서 n회 측정 중앙값(<code>responseEnd</code>)</td></tr>
+<tr><td class="id">F2 구조 복잡도</td><td>영역</td><td>영역 데이터를 계산하는 대표 SQL의 구조</td><td>구조 점수(JOIN + CTE + 집계 단계 + 윈도우 함수) ≤ <strong>5</strong> <span class="tag fix">임시</span>. 영역 값 = 영역이 쓰는 함수 중 최대</td><td>코드 정적 계수(22번 문서 기준). 집계 단계 = 문장 안 GROUP BY 수(22번 S02 = 5로 보정). 운영 설정 경로 기준(격자 off · <code>S2.mentionTrend</code> on · 나머지 옵트인 off)</td></tr>
 <tr><td class="id">F3 조회 시 재계산</td><td>영역</td><td>화면을 열 때 원천 행을 다시 계산하는지</td><td>원천 행(언급·인용·GA4 행 등)을 조회 때 다시 결합·집계하지 <strong>않음</strong>. 조건부 분기 포함, 하나라도 재계산하면 ☒</td><td>코드 경로 확인(20·22번 문서)</td></tr>
 <tr><td class="id">F4 하드코딩</td><td>영역</td><td>업무 값을 코드에 직접 썼는지</td><td>계산 경로(폴백 포함)에서 브랜드·국가·ID·매칭 문구·임계값을 코드 상수로 쓴 곳 <strong>0종</strong></td><td>계산 경로가 읽는 상수 정의 계수(영역 = 합집합). 제외: 타임아웃·캐시 TTL·표시 개수·추이 창·표시용 어휘</td></tr>
 <tr><td class="id">F5 결과 정합성</td><td>영역</td><td>리뉴얼 후에도 숫자가 같은지</td><td>Before와 같은 값(동등성 시험 통과). After에만 적용</td><td><code>*.parity.test.ts</code>, 운영 규모 데이터 대조</td></tr>
-<tr><td class="id">F6 오류 처리</td><td>영역</td><td>실패를 감추는지</td><td>조회 실패를 빈 값·0·기본값·성공으로 바꾸지 <strong>않고</strong> 기존 오류 표시로 전달. 공통 경로의 폴백 포함</td><td>코드 경로 확인, 실패 주입 시험</td></tr>
+<tr><td class="id">F6 조회 오류</td><td>영역</td><td>실패를 감추는지</td><td>조회 실패를 빈 값·0·기본값·성공으로 바꾸지 <strong>않고</strong> 기존 오류 표시로 전달. 공통 경로의 폴백 포함</td><td>코드 경로 확인, 실패 주입 시험</td></tr>
+<tr><td class="id">F7 쓰기 경로</td><td>영역</td><td>저장·수정·삭제·일괄 작업·내보내기가 실패를 드러내는지</td><td>쓰기 실패·부분 성공·잠금 상실을 화면에 드러내고, 중복 제출과 늦은 응답의 덮어쓰기를 막음. 읽기 전용 영역은 <span class="x">—</span></td><td>코드 경로 확인, 실패 주입·동시성 시험</td></tr>
+<tr><td class="id">F8 중복·미사용 계산</td><td>영역</td><td>한 요청 안에서 쓸데없는 계산을 하는지</td><td>화면에 안 쓰는 계산 · 같은 요청 안 중복 계산 · 문장마다 반복되는 같은 하위 조회 · N+1 조회 <strong>0건</strong>. 값 = 해당 함수 수, 근거표에 문장 수</td><td>코드 경로 확인, 요청당 SQL 로그</td></tr>
+<tr><td class="id">F9 페이로드·목록</td><td>영역</td><td>보이는 것보다 많이 보내거나 조용히 자르는지</td><td>표시 범위(페이지)보다 과도하게 전송하지 않고, 목록 상한으로 <strong>조용히</strong> 자르지 않음</td><td>응답 크기·전송 행 측정, 상한 경로 확인</td></tr>
+<tr><td class="id">F10 계약·권한 불변</td><td>영역</td><td>리뉴얼 후 화면이 받는 계약과 권한이 같은지</td><td>화면이 받는 필드·의미·오류 계약과 권한 범위가 Before와 같음(추가 필드는 화면 미사용일 때만). After에만 적용</td><td>OpenAPI 비교, 계약 시험, 역할별 권한 행렬 시험</td></tr>
+<tr><td class="id">완료</td><td>영역</td><td>리뉴얼이 끝났는지</td><td>legacy 경로 제거 + <code>HGH_SOURCE_*</code> API 고정 + F5·F10 통과. After에만 적용</td><td>코드에서 legacy 호출 제거 확인, 배포 플래그</td></tr>
 </tbody>
 </table></div>
 <p class="note">F1은 Before·After를 <strong>같은 환경</strong>(운영 규모 데이터, 같은 리전)에서 재야 비교가 성립합니다. 리뉴얼 front의 경로 플래그(<code>HGH_SOURCE_*</code>, 화면 행에 표시)로 legacy·API를 같은 배포에서 바꿔 재는 방식이 기본입니다. 지금의 F1 Before는 운영 실측(참고값)입니다.</p>
 </section>
 
 <section>
+<h2>조사 중 발견한 즉시 보고 사항</h2>
+<div class="warn"><strong>가짜 데이터를 실데이터처럼 보여 주는 화면</strong> (F6 ☒, 리팩토링 이전에 제품 판단 필요)<br>
+① <strong>Global › AI Agent Funnel › AI Visibility</strong>와 프로젝트·웹사이트의 숨은 Visibility·ACR 화면: DB를 읽지 않고 고정 샘플(<code>SAMPLE_VISIBILITY_*</code> 등)을 필터 조합 해시로 흔들어 표시합니다. 샘플 안내가 없습니다(<code>components/dash/use-filter-signal.ts:7-13</code> "Demo wiring").<br>
+② <strong>Global › Customer interest › Social Scraping</strong>: <code>&lt;SocialScrapingTabs /&gt;</code>를 props 없이 렌더해 샘플 픽스처 모드로 동작합니다(<code>social-scraping-flow.tsx:49</code>).<br>
+③ <strong>AI Conversion</strong>(글로벌·웹사이트): GA4 시장이 매핑되지 않은 계정은 샘플 숫자를 봅니다. 글로벌 화면만 진입 팝업이 있고, 웹사이트는 안내가 없습니다.</div>
+<div class="warn"><strong>보안 (D 보안 보강은 보류 중이지만 기록)</strong><br>
+① <code>deletePrompt</code>: 넘겨받은 projectId의 소유자인지만 확인하고 프롬프트 id 하나로 삭제합니다. 다른 프로젝트의 프롬프트도 지울 수 있습니다(IDOR, <code>projects/[id]/prompt/_actions.ts:247-248</code>, <code>lib/db/repositories/prompts.ts:343-345</code>). 추적 경쟁사·차량 삭제도 같은 형태라는 조사 보고가 있습니다.<br>
+② 원본 데이터 검수 콘솔: <code>RAW_DATA_QA_PASSWORD</code>가 없으면 코드에 박힌 기본 비밀번호로 열립니다(<code>lib/qa/auth.ts:22·92</code>).<br>
+③ <code>/api/scope/projects</code>: 결과를 거르지 않고 워크스페이스 전체 프로젝트 목록을 돌려줍니다. 화면 호출부는 없지만 라우트는 열려 있습니다(<code>app/api/scope/projects/route.ts</code>, <code>lib/scope/server.ts:417-419</code>).</div>
+</section>
+
+<section>
 <h2>화면별 체크 매트릭스</h2>
 <div class="scroll"><table>
 <thead>
-<tr class="band"><th colspan="5">화면 / 데이터 영역</th><th colspan="2">F1 속도</th><th colspan="2">F2 구조</th><th colspan="2">F3 재계산</th><th colspan="2">F4 하드코딩</th><th colspan="2">F5 정합성</th><th colspan="2">F6 오류 처리</th></tr>
+<tr class="band"><th colspan="5">화면 / 데이터 영역</th><th colspan="2">F1 속도</th><th colspan="2">F2 구조</th><th colspan="2">F3 재계산</th><th colspan="2">F4 하드코딩</th><th colspan="2">F5 정합성</th><th colspan="2">F6 조회 오류</th><th colspan="2">F7 쓰기</th><th colspan="2">F8 중복 계산</th><th colspan="2">F9 페이로드</th><th colspan="2">F10 계약·권한</th><th colspan="2">완료</th></tr>
 <tr><th>화면 · 영역</th><th>위치 (메뉴 · 화면 안)</th><th>legacy 호출</th><th>API 호출</th><th>데이터</th>
-<th class="b">B</th><th class="a">A</th><th class="b">B</th><th class="a">A</th><th class="b">B</th><th class="a">A</th><th class="b">B</th><th class="a">A</th><th class="b">B</th><th class="a">A</th><th class="b">B</th><th class="a">A</th></tr>
+<th class="b">B</th><th class="a">A</th><th class="b">B</th><th class="a">A</th><th class="b">B</th><th class="a">A</th><th class="b">B</th><th class="a">A</th><th class="b">B</th><th class="a">A</th><th class="b">B</th><th class="a">A</th><th class="b">B</th><th class="a">A</th><th class="b">B</th><th class="a">A</th><th class="b">B</th><th class="a">A</th><th class="b">B</th><th class="a">A</th><th class="b">B</th><th class="a">A</th></tr>
 </thead>
 <tbody>
 {{ROWS}}
 </tbody>
 </table></div>
-<div class="legend"><span><b class="y">☑</b> 충족</span><span><b class="n">☒</b> 미충족</span><span><b class="u">☐</b> 미확인</span><span><span class="x">—</span> 해당 없음</span><span class="muted">B = Before(legacy) · A = After(API) · F1 값 = 재방문 / 첫 방문(ms) · 데이터 = 22번 문서 S번호</span></div>
+<div class="legend"><span><b class="y">☑</b> 충족</span><span><b class="n">☒</b> 미충족</span><span><b class="u">☐</b> 미확인</span><span><span class="x">—</span> 해당 없음</span><span class="muted">B = Before(legacy) · A = After(API) · F1 값 = 재방문 / 첫 방문(ms) · 데이터 = 22번 문서 S번호(처음 3화면) · 작은 글씨 = 측정값</span></div>
 <div class="warn"><strong>화면에 안 보이는데 계산하는 데이터 (대시보드)</strong><br>
 ① <strong>AI 유입 전환(GA4) 카드</strong>: legacy는 <code>getAiTrafficConversionKpi</code>·<code>…Rollup</code>·<code>getAiVisitsKpi</code>(<code>lib/ga4/conversion.ts</code>, <code>_data/live.ts:445-462</code>), API는 첫 렌더에서 <code>GET /v1/funnel/conversion</code>(<code>dashboard.ts:204,370,666</code>)을 부르지만, 카드 목록 <code>OVERVIEW_KPI_KEYS</code>(<code>overview-metrics.ts:11-14</code>)에 없어 그리지 않습니다.<br>
 ② <strong>KPI #16 경쟁사 점유율(<code>competitorSov</code>)</strong>: 계산하지만 이 화면이 쓰지 않는 <code>summary-tiles.tsx</code>에서만 그립니다.<br>
@@ -111,7 +128,7 @@ tr.group td{background:#f6fafb;font-weight:700}
 </section>
 
 <section>
-<h2>화면 구성 검증 결과 (2026-10-14, 리뉴얼 코드 기준)</h2>
+<h2>화면 구성 검증 결과 — 처음 3화면 (2026-10-14, 리뉴얼 코드 기준)</h2>
 <p>직전 초안의 화면별 영역 목록을 페이지 코드(하위 컴포넌트·<code>_data</code> 로더·서버 함수)와 대조했습니다.</p>
 <div class="scroll"><table>
 <thead><tr><th>화면</th><th>직전 초안 항목</th><th>판정</th><th>근거·바뀐 내용</th></tr></thead>
@@ -148,22 +165,33 @@ tr.group td{background:#f6fafb;font-weight:700}
 
 <section>
 <h2>Before 측정 근거 (legacy 함수별, 원본 <code>392ca45</code>)</h2>
-<p>영역 행의 Before 칸은 아래 함수 {{N_FNS}}개와 <strong>공통 경로</strong>를 합쳐 판정합니다(영역 체크 규칙과 같음). 모든 표준 화면 조회는 공통 경로(<code>withStandardRoot</code> · 스냅샷 술어)를 거치므로 공통 행의 F4·F6가 모든 영역에 들어갑니다.</p>
+<p>영역 행의 Before 칸은 아래 함수 {{N_FNS}}개와 그 화면 표면의 <strong>공통 경로</strong>(표준 <code>COMMON</code>, 웹사이트·프로젝트·관리 등은 각 <code>…COMMON</code>)를 합쳐 판정합니다. 공통 행의 F4·F6는 그 표면의 모든 영역에 들어갑니다.</p>
 <div class="scroll"><table>
-<thead><tr><th>legacy 함수 · 위치</th><th>실행 문장(캐시 미스)</th><th class="b">F2 구조 점수</th><th class="b">B</th><th class="b">F3 근거</th><th class="b">B</th><th class="b">F4 상수</th><th class="b">B</th><th class="b">F6 근거</th><th class="b">B</th></tr></thead>
+<thead><tr><th>legacy 함수 · 위치</th><th>실행 문장(캐시 미스)</th><th class="b">F2 구조 점수</th><th class="b">B</th><th class="b">F3 근거</th><th class="b">B</th><th class="b">F4 상수</th><th class="b">B</th><th class="b">F6 근거</th><th class="b">B</th><th class="b">F7 쓰기</th><th class="b">B</th><th class="b">F8 중복 계산</th><th class="b">B</th><th class="b">F9 페이로드</th><th class="b">B</th></tr></thead>
 <tbody>
 {{BEFORE_ROWS}}
 </tbody>
 </table></div>
 <p class="note"><strong>판정에 영향을 준 공통 사실</strong><br>
 ① <strong>F6 공통 폴백</strong>: 명부 조회가 실패하면 시드 명부로, 인용 오버라이드 조회가 실패하면 빈 맵으로 <strong>조용히</strong> 계산을 이어 갑니다. 화면은 정상처럼 보이므로 F6 기준(실패를 기본값으로 바꾸지 않음)에 걸립니다. 영역 칸의 "공통만"은 자체 경로는 오류를 드러내지만 공통 폴백 때문에 ☒라는 뜻입니다.<br>
-② <strong>설정 의존 분기</strong>: <code>X.trendGrid</code>·<code>S1.competitors</code>·<code>S2.mentionTrend</code>는 옵트인 DB 설정입니다. 운영 상태는 코드 주석 기준(격자 off: <code>server.ts:3348</code>, <code>S2.mentionTrend</code> on: <code>server.ts:3289</code>)이며, 운영 DB 설정값은 직접 확인하지 않았습니다. 격자 off에서 0문장인 함수는 F2를 <span class="x">—</span>로 두고, 격자 on 분기는 F3·F4·F6에만 반영했습니다.<br>
+② <strong>설정 의존 분기</strong>: <code>X.trendGrid</code>·<code>S1.competitors</code>·<code>S2.mentionTrend</code> 등은 옵트인 DB 설정입니다. 운영 상태는 코드 주석 기준(격자 off: <code>server.ts:3348</code>, <code>S2.mentionTrend</code> on: <code>server.ts:3289</code>, 웹사이트 <code>S4.dashboard</code>·<code>S6.citation</code> on: <code>website/page.tsx:388-389</code>)이며, 운영 DB 설정값은 직접 확인하지 않았습니다. 0문장인 경로는 F2를 <span class="x">—</span>로 두고, 조건부 분기는 F3·F4·F6에 반영했습니다. 프로젝트 화면은 집계층(summary_*)을 전혀 읽지 않아 설정과 무관하게 미러 경로입니다.<br>
 ③ <strong>F4 세부 분해</strong>: 한 호출이 여러 파트를 함께 계산하는 경우(<code>fetchStandardMentions</code>·<code>fetchStandardCitations</code>), 파트별 상수 분해가 안 된 곳은 호출 단위 상수로 셌습니다(과대 계수 가능).</p>
 <h3 style="font-size:16px;margin:18px 0 8px">F4 상수 목록 (ID → 정의)</h3>
 <div class="scroll"><table>
 <thead><tr><th>ID</th><th>상수</th><th>위치(원본)</th><th>종수</th><th>값</th></tr></thead>
 <tbody>
 {{K_ROWS}}
+</tbody>
+</table></div>
+</section>
+
+<section>
+<h2>작업 항목 연결 (문서 01·03·13·14·16–24, {{N_WORK}}건)</h2>
+<p>문서에 적힌 리팩토링 작업과 미해결 문제를 점검표의 화면·판정 요소에 연결했습니다. <span class="tag ok">판정</span> = 점검표의 화면 행에서 판정됨, <span class="tag fix">층 단위</span> = 화면이 아닌 층(API·캐시·배포 등)이라 판정 요소로만 연결, <span class="tag del">점검표 밖</span> = F1~F10으로 판정할 수 없어 여기서만 관리. 판정·층 단위 {{N_WORK_IN}}건, 점검표 밖 {{N_WORK_OUT}}건.</p>
+<div class="scroll"><table>
+<thead><tr><th>ID</th><th>작업</th><th>문서</th><th>대상</th><th>상태(문서 기준)</th><th>판정 요소</th><th>점검표</th></tr></thead>
+<tbody>
+{{WORK_ROWS}}
 </tbody>
 </table></div>
 </section>
@@ -193,6 +221,7 @@ tr.group td{background:#f6fafb;font-weight:700}
 <div class="scroll"><table>
 <thead><tr><th>날짜</th><th>대상</th><th>방법</th><th>조건</th><th>갱신한 칸</th></tr></thead>
 <tbody>
+<tr><td class="id">2026-10-14</td><td>원본 코드 <code>392ca45</code> 전 화면</td><td>정적 계수(Claude 에이전트 7개: 글로벌 나머지 / 웹사이트 / 프로젝트 분석 / 프로젝트 운영·고객 관심 / 관리 / 검수·화면 밖 / 기존 3화면 F7~F9) + Claude 교차 확인(가짜 데이터 화면, 보안 3건, GA4 ⑦ 카드 위치)</td><td>같은 규칙(<code>docs/reports/부록/지표 점검표 생성기</code>)으로 페이지별 영역·쓰기 기능·legacy 함수를 추적. 데이터 화면 수는 페이지 59개 − 리다이렉트 11개 − 로그인·권한 없음 2개 = 46개와 일치. F1은 미측정</td><td>화면 43개·화면 밖 경로 추가, 전 영역 F2·F3·F4·F6·F7·F8·F9 Before, 기존 3화면 F7~F9</td></tr>
 <tr><td class="id">2026-10-14</td><td>원본 코드 <code>392ca45</code> (<code>hmg-geo-hub-share</code>)</td><td>정적 계수(Claude 탐색 에이전트 3개: 대시보드·공통 / 언급 / 인용) + Claude 교차 확인</td><td>legacy 함수 37개의 실행 문장·대표 SQL·상수·오류 경로 추적. 집계 단계 = GROUP BY 수(22번 S02 = 5로 보정). 운영 설정은 코드 주석 기준(격자 off · <code>S2.mentionTrend</code>·<code>S1.dashboard</code>·<code>S3.citation</code> on), 운영 DB 설정값 미확인. 공통 폴백 2개·스코프 상수·옵트인 기본값·주 경계·갭 원장은 원본에서 직접 확인</td><td>31개 영역 F2·F3·F4·F6 Before 전부, S01·S03 Before</td></tr>
 <tr><td class="id">2026-10-14</td><td>리뉴얼 코드 <code>f4f2871</code></td><td>화면 구성 코드 대조(Claude 탐색 에이전트)</td><td>3개 페이지의 하위 컴포넌트·로더·서버 함수 추적, legacy·API 호출 식별</td><td>영역 목록·호출 열 전부</td></tr>
 <tr><td class="id">2026-10-14</td><td>리뉴얼 코드 <code>204e5e7</code></td><td>코드 확인(Claude)</td><td>22번에 숫자가 없던 칸을 SQL 빌더에서 직접 계수. 해당 함수는 원본 <code>392ca454</code>와 같음</td><td>S01 F2·F3 After, S02 F2 After</td></tr>
@@ -205,9 +234,10 @@ tr.group td{background:#f6fafb;font-weight:700}
 <section>
 <h2>전체 조사 때 채울 범위</h2>
 <ul>
-<li><strong>화면 전부</strong>: 표준(대시보드·답변 분석·AI 퍼널·프롬프트), 웹사이트, 프로젝트, 고객 관심, 관리, 검수 화면과 영역별 호출.</li>
+<li><strong>화면 전부</strong>: 조사 완료(데이터 화면 {{N_SCREENS}}개 + 화면 밖 경로). 리다이렉트 페이지는 제외.</li>
 <li><strong>운영 화면 대조</strong>: 영역 목록이 운영 화면과 같은지 브라우저로 확인.</li>
-<li><strong>F1</strong>: 같은 환경 비교용 운영 규모 데이터셋, 경로 플래그로 legacy·API 측정(n회 중앙값).</li>
+<li><strong>F1</strong>: 처음 3화면 외에는 Before 미측정. 운영 브라우저 실측(화면별 n회) 또는 같은 환경 데이터셋에서 경로 플래그로 legacy·API 측정.</li>
+<li><strong>임계값 확정</strong>: F1(2.5초·5초)·F2(≤5)는 임시값. 문서 14의 API cold p95 ≤ 1초 채택 여부 결정 필요.</li>
 <li><strong>F2·F3</strong>: 화면 3개의 Before는 완료. 나머지 화면의 legacy 함수와 모든 화면의 API SQL 계수.</li>
 <li><strong>F4~F6</strong>: 상수 모듈·동등성 시험·실패 주입 시험 대응.</li>
 </ul>

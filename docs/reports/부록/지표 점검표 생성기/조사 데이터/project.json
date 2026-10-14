@@ -1,0 +1,3389 @@
+{
+ "surface": "PROJECT (list, home, analysis, funnel)",
+ "prefix": "PJ",
+ "redirects": [
+  "/ko/projects/[id]/ai-funnel -> /ko/projects/[id]/ai-funnel/conversion (가시성·ACR 은 SNB 숨김이라 첫 노출 단계로)",
+  "/ko/projects/[id]/analysis -> /ko/projects/[id]/analysis/mention",
+  "/ko/projects/by-scope/[scopeId] -> /ko/projects/[id] (로컬 프로젝트 scope_project_id 일치) | /ko/website?geography=&brand= (website_sites 연결) | 404 — 자체 권한 검사 없음, 대상 페이지가 집행"
+ ],
+ "screens": [
+  {
+   "name": "프로젝트 목록",
+   "menu": "Project › Project list",
+   "title": "프로젝트 현황",
+   "route": "/ko/projects",
+   "flag": "G6",
+   "page_file": "front/app/[locale]/(dash)/projects/page.tsx",
+   "areas": [
+    {
+     "loc": "헤더 우측",
+     "label": "프로젝트 수 · '프로젝트 만들기' 버튼",
+     "note": "버튼은 canCreateProject(admin 또는 operator=global)만 노출. 라우트 접근 = hq·region·country·admin·vendor (website 제외)",
+     "legacy_call": "legacyProjectsList → listForUser(비 admin) | listAll(admin) … cards.length, canCreateProject",
+     "api_call": "loadProjectsList → GET /v1/projects (cursor 끝까지) + GET /v1/me/project-invites",
+     "legacy_fns": [
+      "PJLCOMMON",
+      "PJL1"
+     ],
+     "api_keys": [
+      "GET /v1/projects"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "헤더 아래 (대기 초대가 있을 때만)",
+     "label": "초대 대기 패널",
+     "note": "본인 pending 멤버십만",
+     "legacy_call": "pendingForUser + getNamesByIds",
+     "api_call": "fetchPendingInvites → GET /v1/me/project-invites",
+     "legacy_fns": [
+      "PJLCOMMON",
+      "PJL2"
+     ],
+     "api_keys": [
+      "GET /v1/me/project-invites"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "초대 대기 패널 행 버튼",
+     "label": "쓰기: 초대 수락 · 거절",
+     "note": "초대받은 본인만(서버가 pending 목록으로 재확인)",
+     "legacy_call": "acceptInvite / rejectInvite (서버 액션)",
+     "api_call": "respondToInvite → POST /v1/projects/{project_id}/members/me/accept | /reject",
+     "legacy_fns": [
+      "PJW1"
+     ],
+     "api_keys": [
+      "POST /v1/projects/{project_id}/members/me/accept",
+      "POST /v1/projects/{project_id}/members/me/reject"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "개요 타일 줄",
+     "label": "타일 4개 (총 프로젝트 · 활성 멤버 · 최근 7일 신규 · 실행 대기/중 프롬프트)",
+     "note": "활성 멤버 = 프로젝트별 활성 멤버 수 합(사용자 중복 계상)",
+     "legacy_call": "legacyProjectsList → countActiveMembersByProject·countByProject 합 + ProjectsOverview JS 접기",
+     "api_call": "loadProjectsList → GET /v1/projects (active_member_count·prompt_in_flight_count 합)",
+     "legacy_fns": [
+      "PJLCOMMON",
+      "PJL1"
+     ],
+     "api_keys": [
+      "GET /v1/projects"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "개요 타일 아래",
+     "label": "브랜드별 · 국가별 분포 (상위 6)",
+     "note": "내가 볼 수 있는 프로젝트 기준",
+     "legacy_call": "legacyProjectsList → ProjectsOverview countBy",
+     "api_call": "loadProjectsList → GET /v1/projects",
+     "legacy_fns": [
+      "PJLCOMMON",
+      "PJL1"
+     ],
+     "api_keys": [
+      "GET /v1/projects"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "본문 카드 그리드",
+     "label": "프로젝트 카드 목록 (검색 · 역할 필터 · 정렬)",
+     "note": "검색·필터·정렬은 브라우저. 역할 배지 owner/viewer (멤버십 행 없으면 viewer). admin 은 전 프로젝트, 그 외는 활성 멤버십 프로젝트만",
+     "legacy_call": "legacyProjectsList → cards (getRolesForProjects·countActiveMembersByProject·countByProject)",
+     "api_call": "loadProjectsList → GET /v1/projects",
+     "legacy_fns": [
+      "PJLCOMMON",
+      "PJL1"
+     ],
+     "api_keys": [
+      "GET /v1/projects"
+     ],
+     "work_refs": []
+    }
+   ]
+  },
+  {
+   "name": "프로젝트 만들기",
+   "menu": "Project › Project list › 프로젝트 만들기 (SNB 숨김 — 목록 CTA)",
+   "title": "프로젝트 만들기",
+   "route": "/ko/projects/new",
+   "flag": "G6",
+   "page_file": "front/app/[locale]/(dash)/projects/new/page.tsx",
+   "areas": [
+    {
+     "loc": "'프로젝트 정보' 카드 폼",
+     "label": "생성 폼 옵션 (브랜드 · 권역 · 국가 · AI 엔진, 브랜드 잠금)",
+     "note": "canCreateProject 아니면 /projects 로 redirect, 라우트 PROJECT_CREATORS(vendor 제외). 권역→국가는 브라우저에서 rhq-map 캐스케이드",
+     "legacy_call": "projectCreationOptions(session.user) + canCreateProject",
+     "api_call": "loadCreationOptions → GET /v1/projects/creation-options",
+     "legacy_fns": [
+      "PJLCOMMON",
+      "PJN1"
+     ],
+     "api_keys": [
+      "GET /v1/projects/creation-options"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "폼 하단 '프로젝트 생성' 버튼",
+     "label": "쓰기: 프로젝트 생성",
+     "note": "운영자(global)·admin 만 — 액션이 재검사. 성공 시 /projects/{id}/intent 로 이동",
+     "legacy_call": "createProject (서버 액션: INSERT projects·owner 멤버·엔진 이력·owned base → scope 미러·스케줄)",
+     "api_call": "createProject → POST /v1/projects",
+     "legacy_fns": [
+      "PJW2"
+     ],
+     "api_keys": [
+      "POST /v1/projects"
+     ],
+     "work_refs": []
+    }
+   ]
+  },
+  {
+   "name": "프로젝트 대시보드",
+   "menu": "Project › (프로젝트) › Dashboard",
+   "title": "Dashboard (본문 h1 없음 — 상단 바 제목, SNB 에 프로젝트 이름)",
+   "route": "/ko/projects/[id]",
+   "flag": "G6",
+   "page_file": "front/app/[locale]/(dash)/projects/[id]/page.tsx",
+   "areas": [
+    {
+     "loc": "본문 최상단 sticky 필터바 (DimensionFilterPanel)",
+     "label": "필터 바 · 측정 기준일 칩 · 달력",
+     "note": "축 = 기간·국가·엔진·프롬프트 맥락 + 프로젝트 커스텀 태그(동적 축). 국가 옵션은 프로젝트와 무관하게 계정 스코프 기준 미러 전체에서 뽑음. 달력은 앵커 축 off(운영)라 종전 네이티브 달력. 기준일 칩은 KPI 섹션과 같은 조회(requestDeduped)",
+     "legacy_call": "fetchProjectStandardAggregates(projectId, filters).asOf, fetchProjectSelectableAnchorDates(projectId, filters, 'all'), listMeasuredRegions(session.user.scope), projectCustomFieldRepository.listForProject + listValuesForProject",
+     "api_call": "loadDashboardAsOf → GET /v1/kpi/summary (card=true, by_funnel=true; meta.as_of), loadEssentialFilterDates → GET /v1/filters/dates (surface=project, project_id, family=all), loadPanelOptions → GET /v1/filters/options (surface=project, project_id)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJH7",
+      "PJM7",
+      "PJH4",
+      "PJM8"
+     ],
+     "api_keys": [
+      "GET /v1/kpi/summary",
+      "GET /v1/filters/dates",
+      "GET /v1/filters/options"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "필터바 아래 타일 4칸",
+     "label": "요약 타일 (프롬프트 · 후보 풀 · 활성 멤버 · 마지막 AI 호출)",
+     "note": "필터 무관. 프롬프트·후보·멤버 타일은 각 탭 링크. legacy 는 행 3종 전량을 받아 JS로 셈",
+     "legacy_call": "promptRepository.listForProject, promptCandidateRepository.listForProject, projectMemberRepository.listForProject → buildProjectOverview",
+     "api_call": "loadProjectOverview → GET /v1/projects/{project_id} (prompt_counts·candidate_count·active_member_count·last_run_at) (+ GET /v1/projects/{project_id}/prompt-candidates 동시 호출)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJH1",
+      "PJH2",
+      "PJH3"
+     ],
+     "api_keys": [
+      "GET /v1/projects/{project_id}",
+      "GET /v1/projects/{project_id}/prompt-candidates"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "'측정 KPI' 섹션 카드 그리드 (SummaryTiles)",
+     "label": "KPI 카드 ①~⑤ (노출률·점유율·우호도·우선 노출도·인용 점유율)",
+     "note": "집계 0건·미연결이면 섹션 전체가 '측정 대기/집계 반영 대기'. DEMO_PROJECT_IDS env 에 든 프로젝트는 샘플 KPI 7종으로 전량 대체(표시 없음). ⑤ 분자 = 프로젝트 owned base 인용",
+     "legacy_call": "getProjectDashboard → (isDemoProject) → fetchProjectStandardAggregates → buildMirrorKpis",
+     "api_call": "fetchDashboardSummary → GET /v1/kpi/summary (card=true, by_funnel=true) → toMirrorKpis (summaryIsEmpty 면 측정 대기)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJH19",
+      "PJH8"
+     ],
+     "api_keys": [
+      "GET /v1/kpi/summary"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "KPI 카드 ①~⑥ 안 증감 칩",
+     "label": "카드 Δ (직전 측정 대비)",
+     "note": "legacy: 일 버킷 '값 있는 마지막 두 날' 차이(±0.05 flat) — 차트(주 버킷)와 다른 버킷. ⑥ Δ 는 ⑥ 일 추이에서",
+     "legacy_call": "getLiveTrend(filters, 'day', projectId) → fetchProjectTrend(day) + fetchProjectCitationAccuracyTrend(day) → mergeProjectTrendAccuracy → applyTrendDeltas",
+     "api_call": "loadLiveTrend → GET /v1/trend (bucket=cycle, metrics=URL_TREND_METRICS, card=true, measured_days=false) → applyTrendDeltas",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJH11",
+      "PJH17"
+     ],
+     "api_keys": [
+      "GET /v1/trend"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "KPI 카드 ①~⑤ 안 배지",
+     "label": "엔진 간 일관성 배지",
+     "note": "엔진(target)별 Core 값 min÷max. 유효 엔진 2개 미만·카드 값 없음이면 생략",
+     "legacy_call": "getLiveSubKpis(filters, projectId) → fetchProjectSubKpis → applyEngineConsistency",
+     "api_call": "loadSubKpis → fetchEngineRows → GET /v1/kpi/engines (part=all)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJH9"
+     ],
+     "api_keys": [
+      "GET /v1/kpi/engines"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "② AI 점유율 카드 하단 행",
+     "label": "#16 경쟁사 SOV 비교",
+     "note": "지정 비교 브랜드(is_target) 우선, 없으면 외부 브랜드 SOV 1위 자동. 지정 브랜드 언급 0이면 '측정 대기' + 분모 브랜드명",
+     "legacy_call": "trackedCompetitorRepository.getTargetBrand + fetchProjectStandardAggregates().brands → applyCompetitorSov",
+     "api_call": "fetchProjectDetail → GET /v1/projects/{project_id} (target_brand), fetchCardBrands → GET /v1/mentions/brands (full=true, sort=mentions, include=hmg), fetchDashboardSummary → GET /v1/kpi/summary (share_of_voice.num) → applyCompetitorSovFromBrands",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJH15",
+      "PJH8"
+     ],
+     "api_keys": [
+      "GET /v1/projects/{project_id}",
+      "GET /v1/mentions/brands",
+      "GET /v1/kpi/summary"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "'답변의 인용' 카테고리 ⑥ 카드",
+     "label": "⑥ AI 타겟 URL 인용률",
+     "note": "owned base ≤1 ∧ 추적 URL ≥1 일 때만 카드 노출, 값은 유효 owned base 정확히 1개일 때만(아니면 null). ⑥ 리더는 withProject 미경유",
+     "legacy_call": "listProjectTrackedUrls · projectRepository.getById · listProjectOwnedBases → fetchProjectCitationAccuracy(projectId, filters, urls, effectiveOwnedBases[0])",
+     "api_call": "fetchProjectSettings → GET /v1/projects/{project_id}/settings (owned_bases·tracked_url_count·domain) + fetchDashboardSummary → GET /v1/kpi/summary → toUrlRateKpis(citation_accuracy)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJH14",
+      "PJH16"
+     ],
+     "api_keys": [
+      "GET /v1/projects/{project_id}/settings",
+      "GET /v1/kpi/summary"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "'측정 KPI' 섹션 상단 노란 배너",
+     "label": "안내 배너 (citationAccuracyNotice)",
+     "note": "hiddenMultipleOwnedBases(설정 owned base ≥2) / legacyDomainFallback(⑥ 카드 표시 ∧ 설정 owned base 0 ∧ project.domain 있음)",
+     "legacy_call": "listProjectOwnedBases · projectRepository.getById · listProjectTrackedUrls → live.ts:239-244 판정",
+     "api_call": "fetchProjectSettings → GET /v1/projects/{project_id}/settings → toProjectCardSettings",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJH14"
+     ],
+     "api_keys": [
+      "GET /v1/projects/{project_id}/settings"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "'답변의 전환' 카테고리 ⑦ 카드",
+     "label": "⑦ AI 유입 전환율",
+     "note": "프로젝트 (brand,country) → GA4 속성 1개. 속성 없음·GA4 실패·AI 사용자 0 이면 항목·섹션째 생략(안내 없음). 국가 필터 1개 선택 시 그 국가 속성으로 바뀜. 데모 캡처 프로젝트는 가짜 값",
+     "legacy_call": "resolveProperty(projScope, filters) → getAiTrafficConversionKpi(propertyId) (isCaptureDemoProject → demoConversionKpi)",
+     "api_call": "fetchTrafficConversion → GET /v1/funnel/conversion (days=28, property_source=market, include_pages=false, region 만) → toTrafficConversionKpi",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJH18"
+     ],
+     "api_keys": [
+      "GET /v1/funnel/conversion"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "'추이' 섹션 (LiveTrendChart)",
+     "label": "KPI 추이 차트 (주 버킷)",
+     "note": "120일 창 주 버킷. 버킷 2개 미만이면 '집계 중', 예산 초과(57014)면 '지연' 안내. ⑥ 선은 유효 owned base 1개 ∧ 추적 URL ≥1 일 때만",
+     "legacy_call": "getLiveTrend(filters, 'week', projectId) → fetchProjectTrend(week) + fetchProjectCitationAccuracyTrend(week) → mergeProjectTrendAccuracy, wasDegraded('projectTrend:week')",
+     "api_call": "loadLiveTrend → GET /v1/trend (bucket=week, metrics=URL_TREND_METRICS, card=true, measured_days=false) (degradeOnApiFailure projectTrend:week), ⑥ 선 판정 fetchProjectSettings → GET /v1/projects/{project_id}/settings (withAccuracy)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJH10",
+      "PJH17",
+      "PJH14"
+     ],
+     "api_keys": [
+      "GET /v1/trend",
+      "GET /v1/projects/{project_id}/settings"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "'구성' 섹션 (CompositionPanel 도넛 2개)",
+     "label": "구성 (#21 주제별 프롬프트 · #22 출처 도메인)",
+     "note": "출처는 상위 7 + 기타. 주제·출처 둘 다 비면 섹션 생략",
+     "legacy_call": "getLiveComposition(filters, projectId) → getLiveTopicComposition → fetchProjectPromptTopics + fetchProjectSourceComposition",
+     "api_call": "loadComposition → GET /v1/citations/domains (limit=7) + GET /v1/kpi/summary (by_funnel=true) → toTopicSlices·toSourceSlices",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJH12",
+      "PJH13"
+     ],
+     "api_keys": [
+      "GET /v1/citations/domains",
+      "GET /v1/kpi/summary"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "'프롬프트 상태' 섹션 막대 + 범례",
+     "label": "프롬프트 상태 분포 (draft·queued·running·done·failed·paused)",
+     "note": "필터 무관",
+     "legacy_call": "promptRepository.listForProject → buildProjectOverview.statusCounts",
+     "api_call": "loadProjectOverview → GET /v1/projects/{project_id} (prompt_counts) → toProjectOverview",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJH1"
+     ],
+     "api_keys": [
+      "GET /v1/projects/{project_id}"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "하단 좌측 '최근 후보' 카드",
+     "label": "최근 프롬프트 후보",
+     "note": "createdAt 최신 5건, 출처 배지(구글 키워드·커뮤니티 수집·수동)",
+     "legacy_call": "promptCandidateRepository.listForProject → createdAt desc slice(0,5)",
+     "api_call": "loadProjectOverview → GET /v1/projects/{project_id}/prompt-candidates (limit=5)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJH2"
+     ],
+     "api_keys": [
+      "GET /v1/projects/{project_id}/prompt-candidates"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "하단 우측 '최근 프롬프트' 카드",
+     "label": "최근 적용 프롬프트",
+     "note": "updatedAt 최신 5건 + 상태 배지",
+     "legacy_call": "promptRepository.listForProject → updatedAt desc slice(0,5)",
+     "api_call": "loadProjectOverview → GET /v1/projects/{project_id} (recent_prompts ≤5)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJH1"
+     ],
+     "api_keys": [
+      "GET /v1/projects/{project_id}"
+     ],
+     "work_refs": []
+    }
+   ]
+  },
+  {
+   "name": "프로젝트 언급 분석",
+   "menu": "Project › (프로젝트) › Analysis › Mention",
+   "title": "언급 분석",
+   "route": "/ko/projects/[id]/analysis/mention",
+   "flag": "G6",
+   "page_file": "front/app/[locale]/(dash)/projects/[id]/analysis/mention/page.tsx",
+   "areas": [
+    {
+     "loc": "페이지 상단 헤더",
+     "label": "제목 · 국가 잠금 칩",
+     "note": "페이지 게이트(관리자 또는 활성 멤버, 아니면 404). 잠금 칩 = project.country → geography 축 잠금",
+     "legacy_call": "loadProjectAnalysisContext (projectRepository.getById + projectMemberRepository.findMembership → locks)",
+     "api_call": "requireProjectPage → GET /v1/projects/{project_id}",
+     "legacy_fns": [
+      "PJCOMMON"
+     ],
+     "api_keys": [
+      "GET /v1/projects/{project_id}"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "본문 상단 필터 바(sticky)",
+     "label": "필터 바 · 기준일 pill · 달력 · 축 옵션",
+     "note": "카탈로그 축(brandPresence/listType/depth)·엔진 옵션·커스텀 필드(태그) 동적 축. 앵커 축 off(운영)면 달력은 전 날짜 개방. 커스텀 필드 2문장이 본 병렬 묶음보다 먼저 직렬 대기, 달력은 묶음 뒤 직렬",
+     "legacy_call": "fetchProjectMentions().asOf, listCatalogTaxonomy(id), fetchProjectMeasuredEngines(id, filters), projectCustomFieldRepository.listForProject + listValuesForProject, fetchProjectSelectableAnchorDates(id, filters, 'mentions')",
+     "api_call": "loadMentionsLive → GET /v1/mentions/brands (meta.as_of); loadPanelOptions → GET /v1/filters/options (catalog·engines·custom fields); loadFilterDates → GET /v1/filters/dates family=mentions",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJM1a",
+      "PJM5",
+      "PJM6",
+      "PJM8",
+      "PJM7"
+     ],
+     "api_keys": [
+      "GET /v1/mentions/brands",
+      "GET /v1/filters/options",
+      "GET /v1/filters/dates"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "본문 상단 요약 카드 그리드",
+     "label": "요약 카드 6개 · 직전 대비 Δ",
+     "note": "총 언급·고유 브랜드·측정 프롬프트(언급 집계) + 미언급 프롬프트·복수언급·Top3(Sub KPI, 없으면 3장 숨김). Δ는 현재·직전 Sub KPI 로 계산, 하단에 비교 기준일 캡션",
+     "legacy_call": "fetchProjectMentions().summary, fetchProjectSubKpis(id, filters), fetchProjectSubKpisPrev(id, filters) → buildMentionSubKpis",
+     "api_call": "loadMentionsLive → GET /v1/mentions/brands (totals) · GET /v1/kpi/summary (measured_prompts); loadSubKpis → GET /v1/kpi/engines part=all · GET /v1/kpi/summary; loadSubKpisPrev → GET /v1/kpi/engines cycle_offset=1 · GET /v1/kpi/summary cycle_offset=1 (기간 지정 시 to=첫 회차)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJM1c",
+      "PJM2",
+      "PJM3"
+     ],
+     "api_keys": [
+      "GET /v1/mentions/brands",
+      "GET /v1/kpi/summary",
+      "GET /v1/kpi/engines"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "요약 카드 아래",
+     "label": "당사 vs 경쟁사 헤드투헤드",
+     "note": "비교 대상 = 수동 선택 > 프로젝트 지정 브랜드(is_target) > 자동 SOV 1위. 당사 언급률은 Sub KPI ownMentionRate. 수동 전환은 클라이언트 리렌더",
+     "legacy_call": "fetchProjectMentions().brands + fetchProjectSubKpis().ownMentionRate + trackedCompetitorRepository.getTargetBrand(id)",
+     "api_call": "loadMentionsLive → GET /v1/mentions/brands; loadSubKpis → GET /v1/kpi/engines part=all; loadDesignatedTargetBrand → GET /v1/projects/{project_id} (target_brand)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJM1c",
+      "PJM2",
+      "PJM4"
+     ],
+     "api_keys": [
+      "GET /v1/mentions/brands",
+      "GET /v1/kpi/engines",
+      "GET /v1/projects/{project_id}"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "헤드투헤드 아래 2열",
+     "label": "감정 분포 · 멘션 유형 분포",
+     "note": "감정 = 당사 언급 신호 합(+Sub KPI 긍·부정 신호 수 행), 유형 = 유형×브랜드 100% 스택(당사·비교·상위 기타·잔여) + 당사 절대 건수. 세그먼트 클릭 시 신호 다이얼로그",
+     "legacy_call": "fetchProjectMentions().sentimentTotals · typeTotals · typesByBrand, fetchProjectSubKpis() (positive/negativeMentions)",
+     "api_call": "loadMentionsLive → GET /v1/mentions/brands include=types (당사 행 sentiment·types_total) · GET /v1/mentions/types; loadSubKpis → GET /v1/kpi/engines part=all",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJM1d",
+      "PJM1c",
+      "PJM2"
+     ],
+     "api_keys": [
+      "GET /v1/mentions/brands",
+      "GET /v1/mentions/types",
+      "GET /v1/kpi/engines"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "감정·유형 세그먼트 클릭 → 다이얼로그",
+     "label": "신호 프롬프트 다이얼로그",
+     "note": "클릭 시 /api/scope/signal-prompts?projectId= (상위 50, 안내문에 명시). 행 클릭 → 답변 모달",
+     "legacy_call": "signal-prompts route: drilldownGate(legacy 프로젝트 게이트) → fetchProjectSignalPrompts → aggregateSignalPromptsFromMirror(signal, filters, scopeProjectId)",
+     "api_call": "app/api/scope/signal-prompts → loadSignalPrompts → GET /v1/mentions/prompts mode=signal limit=50",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJM9"
+     ],
+     "api_keys": [
+      "GET /v1/mentions/prompts"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "본문 중단 차트",
+     "label": "주별 브랜드 언급 추이",
+     "note": "스냅샷 상위 10 브랜드 시리즈, 당사 굵은 실선. 2주 미만이면 '준비 중' 카드. 숨김 회차는 갭 음영",
+     "legacy_call": "fetchProjectMentions().trend (readMentionBrandDayCounts → buildMentionTrend, withWeeklyTrendGrid 갭 슬롯)",
+     "api_call": "loadMentionsLive → GET /v1/trend bucket=cycle dimension=brand top=10 split_own=true",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJM1b"
+     ],
+     "api_keys": [
+      "GET /v1/trend"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "본문 하단 표",
+     "label": "브랜드 언급 순위표",
+     "note": "전 브랜드(상한 없음), 검색·정렬은 브라우저, 고정 순번. 행 클릭 시 드릴다운",
+     "legacy_call": "fetchProjectMentions().brands → BrandRankTable",
+     "api_call": "loadMentionsLive → GET /v1/mentions/brands full=true sort=mentions split_own=true include=multi,prompts,types",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJM1c"
+     ],
+     "api_keys": [
+      "GET /v1/mentions/brands"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "브랜드 언급 순위표 우상단 버튼",
+     "label": "쓰기: 엑셀 내보내기",
+     "note": "브라우저에서 현재 표 행(검색·정렬 반영)으로 xlsx 생성, 서버 호출 없음",
+     "legacy_call": "BrandRankTable.onExport → downloadXlsx (exceljs 동적 import, 클라이언트)",
+     "api_call": "동일 — 클라이언트 downloadXlsx (API 호출 없음)",
+     "legacy_fns": [
+      "PJM12"
+     ],
+     "api_keys": [],
+     "work_refs": []
+    },
+    {
+     "loc": "순위표 행 클릭 → 인라인 드릴다운",
+     "label": "행 드릴다운 · 프롬프트 탭",
+     "note": "legacy 는 lazyPrompts=false — 첫 응답의 perBrandPrompts 를 그대로 사용(추가 호출 없음). 프롬프트 행 클릭 → 답변 모달",
+     "legacy_call": "fetchProjectMentions().perBrandPrompts[brand] (eager)",
+     "api_call": "app/api/scope/brand-mention-prompts → loadBrandMentionPrompts → GET /v1/mentions/prompts mode=brand (행 열 때 lazy)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJM1e"
+     ],
+     "api_keys": [
+      "GET /v1/mentions/prompts"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "순위표 행 클릭 → 인라인 드릴다운",
+     "label": "행 드릴다운 · 인용 출처 탭",
+     "note": "탭 열 때 /api/scope/brand-citations?projectId=. legacy 분기는 projectId 여도 표준 루트를 읽음(U6-N11) + 글로벌 장소 권한 없으면 403 {domains:[]} → 빈 목록 문구",
+     "legacy_call": "brand-citations route: drilldownGate + canReadAnalysis(global) → fetchBrandCitations(brand, {계정 스코프 필터, cumulative}) (표준 루트)",
+     "api_call": "app/api/scope/brand-citations → loadBrandCitationDomains → GET /v1/citations/domains mention_brand= (surface=project); 행 열면 loadBrandCitationDetail → GET /v1/citations/domains/{skey}",
+     "legacy_fns": [
+      "PJM11",
+      "COMMON",
+      "M9"
+     ],
+     "api_keys": [
+      "GET /v1/citations/domains",
+      "GET /v1/citations/domains/{skey}"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "드릴다운 프롬프트·신호 프롬프트 클릭 → 모달",
+     "label": "답변 모달",
+     "note": "job 단위 원문·인용·브랜드 배지, 클릭 시 lazy (projectId 전달)",
+     "legacy_call": "answer route: drilldownGate → fetchProjectAnswerBody → getMirrorAnswerBody(jobId, f, {runProjectIds})",
+     "api_call": "app/api/scope/answer → loadAnswerDetail → GET /v1/answers/{job_id}",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJM10"
+     ],
+     "api_keys": [
+      "GET /v1/answers/{job_id}"
+     ],
+     "work_refs": []
+    }
+   ]
+  },
+  {
+   "name": "프로젝트 인용 분석",
+   "menu": "Project › (프로젝트) › Analysis › Citation",
+   "title": "인용 분석",
+   "route": "/ko/projects/[id]/analysis/citation",
+   "flag": "G6",
+   "page_file": "front/app/[locale]/(dash)/projects/[id]/analysis/citation/page.tsx",
+   "areas": [
+    {
+     "loc": "탭 제목 아래 상단 필터 바(sticky) · 기준일 표시",
+     "label": "기준일 · 필터 바",
+     "note": "엔진 옵션=기간 내 실제 수집 엔진, 카탈로그 축=이 프로젝트 프롬프트 값, 태그(커스텀 필드) 동적 축, 출처 카테고리 축. 달력 선택일은 앵커 축 on에서만(운영 off → 전 날짜 활성)",
+     "legacy_call": "fetchProjectCitations().asOf, listCatalogTaxonomy(id), fetchProjectMeasuredEngines(id, filters), projectCustomFieldRepository.listForProject · listValuesForProject, fetchProjectSelectableAnchorDates(id, filters, 'citations')",
+     "api_call": "loadPanelOptions → GET /v1/filters/options (surface=project, project_id, 기간); loadFilterDates → GET /v1/filters/dates (family=citations); loadCitationsView → GET /v1/citations/domains (meta 기준일)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJC1a",
+      "PJM5",
+      "PJM6",
+      "PJM8",
+      "PJM7"
+     ],
+     "api_keys": [
+      "GET /v1/filters/options",
+      "GET /v1/filters/dates",
+      "GET /v1/citations/domains"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "설명 문구 아래 요약 카드 행",
+     "label": "요약 카드 5종 (총 인용 · 고유 도메인 · 카테고리 수 · 공식(당사) 인용 비중 · 딜러/마켓 비중)",
+     "note": "공식(당사) 비중 = 프로젝트 owned base 사슬의 행 단위 판정, 딜러/마켓 = 카테고리 슬라이스 비중(브라우저 계산). 자사·타겟 URL 인용률 카드는 웹사이트 전용(프로젝트 미노출)",
+     "legacy_call": "fetchProjectCitations().summary(total · uniqueDomains · officialOwnShare) · categories",
+     "api_call": "loadCitationsView → GET /v1/citations/domains (summary total_citations · unique_sources · own_share) + GET /v1/citations/sources (categories)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJC1",
+      "PJC1sum",
+      "PJC1cat"
+     ],
+     "api_keys": [
+      "GET /v1/citations/domains",
+      "GET /v1/citations/sources"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "요약 카드 아래 'Owned base URL 기준 프롬프트 분리' 블록",
+     "label": "Owned base 인용 / 미인용 프롬프트 카드",
+     "note": "카드별 상위 5 + '외 N개'(전체 수는 정확). 자사 인용 0이면 섹션 숨김. 출처 카테고리 필터 시 SQL 분할 생략 → 브라우저가 domains[].promptList(캡)로 재계산",
+     "legacy_call": "fetchProjectCitations().promptSplit (source 필터 시 domains[].promptList 스캔 폴백)",
+     "api_call": "loadCitationsView → GET /v1/citations/prompts (owned=true, limit=5) · GET /v1/citations/prompts (owned=false, limit=5)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJC1",
+      "PJC1ps",
+      "PJC1dom"
+     ],
+     "api_keys": [
+      "GET /v1/citations/prompts"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "'주별 상위 도메인 인용 수' 라인 차트",
+     "label": "주별 상위 도메인 인용 추이",
+     "note": "주마다 상위 10 합집합(최대 15 시리즈). 2주 미만이면 '준비 중' 카드. 숨긴 회차 갭 음영",
+     "legacy_call": "fetchProjectCitations().trend (readCitationDomainDayCounts + weeklyGapWeeks)",
+     "api_call": "loadCitationsView → fetchSourceTrend → GET /v1/trend (bucket=cycle, dimension=source, top=15)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJC1tr"
+     ],
+     "api_keys": [
+      "GET /v1/trend"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "도메인 추이 아래 100% 누적 영역 차트",
+     "label": "출처 카테고리 구성 추이",
+     "note": "null이면 안내 없이 숨김",
+     "legacy_call": "fetchProjectCitations().categoryTrend",
+     "api_call": "loadCitationsView → fetchCategoryTrend → GET /v1/trend (bucket=cycle, dimension=category, top=13)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJC1ct"
+     ],
+     "api_keys": [
+      "GET /v1/trend"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "2열 그리드 좌측 도넛",
+     "label": "출처 카테고리 도넛",
+     "note": "슬라이스·범례 클릭 = ?source 필터 토글(서버 재집계). 중앙 Official (HMG) 비중은 전사 카탈로그 분류 — 공식(당사) 타일과 정의가 다름",
+     "legacy_call": "fetchProjectCitations().categories",
+     "api_call": "loadCitationsView → GET /v1/citations/sources (categories)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJC1cat"
+     ],
+     "api_keys": [
+      "GET /v1/citations/sources"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "2열 그리드 우측 가로 100% 막대",
+     "label": "엔진별 출처 카테고리 구성",
+     "note": "",
+     "legacy_call": "fetchProjectCitations().engineCategories",
+     "api_call": "loadCitationsView → GET /v1/citations/sources (엔진×카테고리)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJC1cat"
+     ],
+     "api_keys": [
+      "GET /v1/citations/sources"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "'도메인 인용 순위' 표",
+     "label": "도메인 인용 순위 표",
+     "note": "레거시: 전 도메인 행을 첫 응답에 싣고 검색·정렬은 브라우저(캐시 1.5MB 초과 시 2000→1500→1000→600→400행으로 조용히 절단). HMG 배지 = 프로젝트 owned base 판정",
+     "legacy_call": "fetchProjectCitations().domains (검색·정렬 브라우저)",
+     "api_call": "loadCitationsView → GET /v1/citations/domains (limit=200 첫 페이지); 더 보기·검색·정렬: /api/citations/domains?projectId= → listCitationDomains → GET /v1/citations/domains (cursor · q · sort · dir)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJC1",
+      "PJC1dom"
+     ],
+     "api_keys": [
+      "GET /v1/citations/domains"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "표 행 클릭(URL 목록) · 프롬프트 수 클릭(프롬프트 목록)",
+     "label": "행 드릴다운 · 인용 URL / 프롬프트",
+     "note": "레거시: 상위 80 도메인(+상위 밖 공식(HMG) 최대 250개는 URL 5개만)의 urls(≤10) · promptList(≤12, 답변 ref ≤8)를 첫 응답에 포함, 그 밖 행은 '인용 상위 도메인에만 표시' 문구",
+     "legacy_call": "row.urls / row.promptList (인라인)",
+     "api_call": "/api/citations/domains/[skey]?projectId= → loadDomainDrilldown → GET /v1/citations/domains/{skey}",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJC1dom"
+     ],
+     "api_keys": [
+      "GET /v1/citations/domains/{skey}"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "프롬프트 분리 카드 · 드릴다운 프롬프트 클릭 → 모달",
+     "label": "답변 모달",
+     "note": "원문 접근. 프로젝트 화면은 ?projectId= 를 붙여 그 프로젝트 run 소속 답변만 게이트",
+     "legacy_call": "AnswerModal → GET /api/scope/answer?projectId=&jobId= → fetchProjectAnswerBody",
+     "api_call": "/api/scope/answer → loadAnswerDetail → GET /v1/answers/{job_id} (선행 게이트 drilldownGate: HGH_SOURCE_SESSION=api 면 GET /v1/projects/{project_id})",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJM10"
+     ],
+     "api_keys": [
+      "GET /v1/answers/{job_id}"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "도메인 표 헤더 우측 '엑셀 내보내기' 버튼",
+     "label": "쓰기: 엑셀 내보내기",
+     "note": "레거시: 서버 호출 없이 브라우저가 받은 행(검색·정렬 반영)을 7열 xlsx로 생성",
+     "legacy_call": "onExport → downloadXlsx(sorted)",
+     "api_call": "domainExportUrl → /api/citations/domains/export?projectId= → relayDomainsExport → GET /v1/citations/domains/export (format=xlsx, 전 행)",
+     "legacy_fns": [
+      "PJC6"
+     ],
+     "api_keys": [
+      "GET /v1/citations/domains/export"
+     ],
+     "work_refs": []
+    }
+   ]
+  },
+  {
+   "name": "AI 가시성",
+   "menu": "Project › (프로젝트) › AI Agent Funnel › AI Visibility (SNB 숨김 — URL 직접 접근만)",
+   "title": "AI 가시성",
+   "route": "/ko/projects/[id]/ai-funnel/visibility",
+   "flag": "G6 (데이터 호출 없음 — 게이트만 HGH_SOURCE_SESSION)",
+   "page_file": "front/app/[locale]/(dash)/projects/[id]/ai-funnel/visibility/page.tsx",
+   "areas": [
+    {
+     "loc": "화면 상단",
+     "label": "제목 · 국가 잠금 칩",
+     "note": "프로젝트 게이트(admin 또는 활성 멤버, 아니면 404)",
+     "legacy_call": "loadProjectFunnelContext (getById + findMembership)",
+     "api_call": "requireProjectPage → GET /v1/projects/{project_id} (HGH_SOURCE_SESSION=api 일 때만, 아니면 legacy 게이트)",
+     "legacy_fns": [
+      "PJCOMMON"
+     ],
+     "api_keys": [
+      "GET /v1/projects/{project_id}"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "제목 아래",
+     "label": "필터바 (정적 옵션)",
+     "note": "옵션 정적. 선택하면 샘플 숫자가 해시로 변조될 뿐 실제 범위 축소 아님",
+     "legacy_call": "DimensionFilterPanel (정적 폴백 옵션) + useFilterSignal",
+     "api_call": "없음 (After 도 같은 샘플 픽스처, API 호출 없음)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJV1"
+     ],
+     "api_keys": [],
+     "work_refs": []
+    },
+    {
+     "loc": "본문 상단 카드 줄",
+     "label": "사분면 카드 4개 (우수 페이지 · AI 노출 보강 · 검색 보강 · 우선순위 낮음)",
+     "note": "샘플 픽스처 — 실측 아님, 샘플 표시 없음",
+     "legacy_call": "SAMPLE_* 픽스처 × useFilterSignal",
+     "api_call": "없음 (After 도 같은 샘플 픽스처, API 호출 없음)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJV1"
+     ],
+     "api_keys": [],
+     "work_refs": []
+    },
+    {
+     "loc": "본문 중단",
+     "label": "4분면 산점도 (분위수 기반)",
+     "note": "샘플 픽스처 — 실측 아님, 샘플 표시 없음",
+     "legacy_call": "SAMPLE_* 픽스처 × useFilterSignal",
+     "api_call": "없음 (After 도 같은 샘플 픽스처, API 호출 없음)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJV1"
+     ],
+     "api_keys": [],
+     "work_refs": []
+    },
+    {
+     "loc": "본문 하단",
+     "label": "페이지 진단 표 (정렬)",
+     "note": "샘플 픽스처 — 실측 아님, 샘플 표시 없음",
+     "legacy_call": "SAMPLE_* 픽스처 × useFilterSignal",
+     "api_call": "없음 (After 도 같은 샘플 픽스처, API 호출 없음)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJV1"
+     ],
+     "api_keys": [],
+     "work_refs": []
+    }
+   ]
+  },
+  {
+   "name": "ACR",
+   "menu": "Project › (프로젝트) › AI Agent Funnel › ACR (SNB 숨김 — URL 직접 접근만)",
+   "title": "ACR · AI Choice Rate (beta)",
+   "route": "/ko/projects/[id]/ai-funnel/acr",
+   "flag": "G6 (데이터 호출 없음 — 게이트만 HGH_SOURCE_SESSION)",
+   "page_file": "front/app/[locale]/(dash)/projects/[id]/ai-funnel/acr/page.tsx",
+   "areas": [
+    {
+     "loc": "화면 상단",
+     "label": "제목 · 국가 잠금 칩",
+     "note": "프로젝트 게이트(admin 또는 활성 멤버, 아니면 404)",
+     "legacy_call": "loadProjectFunnelContext (getById + findMembership)",
+     "api_call": "requireProjectPage → GET /v1/projects/{project_id} (HGH_SOURCE_SESSION=api 일 때만, 아니면 legacy 게이트)",
+     "legacy_fns": [
+      "PJCOMMON"
+     ],
+     "api_keys": [
+      "GET /v1/projects/{project_id}"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "제목 아래",
+     "label": "필터바 (정적 옵션)",
+     "note": "옵션 정적. 선택하면 샘플 숫자가 해시로 변조될 뿐 실제 범위 축소 아님",
+     "legacy_call": "DimensionFilterPanel (정적 폴백 옵션) + useFilterSignal",
+     "api_call": "없음 (After 도 같은 샘플 픽스처, API 호출 없음)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJA1"
+     ],
+     "api_keys": [],
+     "work_refs": []
+    },
+    {
+     "loc": "본문 상단 카드 줄",
+     "label": "KPI 카드 4개 (Top1 ACR · Top5 ACR · 답변 수 · 1순위 횟수)",
+     "note": "샘플 픽스처 — 실측 아님, 샘플 표시 없음",
+     "legacy_call": "SAMPLE_* 픽스처 × useFilterSignal",
+     "api_call": "없음 (After 도 같은 샘플 픽스처, API 호출 없음)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJA1"
+     ],
+     "api_keys": [],
+     "work_refs": []
+    },
+    {
+     "loc": "본문",
+     "label": "선택률 추이 — 우리 브랜드 vs 주요 경쟁사",
+     "note": "샘플 픽스처 — 실측 아님, 샘플 표시 없음",
+     "legacy_call": "SAMPLE_* 픽스처 × useFilterSignal",
+     "api_call": "없음 (After 도 같은 샘플 픽스처, API 호출 없음)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJA1"
+     ],
+     "api_keys": [],
+     "work_refs": []
+    },
+    {
+     "loc": "본문",
+     "label": "모델별 선택 구도 (시트 탭)",
+     "note": "샘플 픽스처 — 실측 아님, 샘플 표시 없음",
+     "legacy_call": "SAMPLE_* 픽스처 × useFilterSignal",
+     "api_call": "없음 (After 도 같은 샘플 픽스처, API 호출 없음)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJA1"
+     ],
+     "api_keys": [],
+     "work_refs": []
+    },
+    {
+     "loc": "본문",
+     "label": "차종별 선택 전환율 표",
+     "note": "샘플 픽스처 — 실측 아님, 샘플 표시 없음",
+     "legacy_call": "SAMPLE_* 픽스처 × useFilterSignal",
+     "api_call": "없음 (After 도 같은 샘플 픽스처, API 호출 없음)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJA1"
+     ],
+     "api_keys": [],
+     "work_refs": []
+    },
+    {
+     "loc": "본문 하단",
+     "label": "모델별 점유 맵",
+     "note": "샘플 픽스처 — 실측 아님, 샘플 표시 없음",
+     "legacy_call": "SAMPLE_* 픽스처 × useFilterSignal",
+     "api_call": "없음 (After 도 같은 샘플 픽스처, API 호출 없음)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJA1"
+     ],
+     "api_keys": [],
+     "work_refs": []
+    }
+   ]
+  },
+  {
+   "name": "AI 유입 전환",
+   "menu": "Project › (프로젝트) › AI Agent Funnel › AI Conversion",
+   "title": "AI 유입 전환 (beta)",
+   "route": "/ko/projects/[id]/ai-funnel/conversion",
+   "flag": "G6",
+   "page_file": "front/app/[locale]/(dash)/projects/[id]/ai-funnel/conversion/page.tsx",
+   "areas": [
+    {
+     "loc": "화면 상단",
+     "label": "제목 · 국가 잠금 칩 · GA4 속성 해석 (미연동 분기)",
+     "note": "프로젝트 게이트(admin 또는 활성 멤버). 속성 = 프로젝트 바인딩 우선, 없으면 (brand,country) 레지스트리. brand 없음(우산)이면 미연동. 데모 프로젝트는 합성 데이터",
+     "legacy_call": "loadProjectFunnelContext → project.ga4PropertyId ?? resolveProperty(brand, country)",
+     "api_call": "requireProjectPage → GET /v1/projects/{project_id} (HGH_SOURCE_SESSION=api 일 때만, 아니면 legacy 게이트) + loadConversionScreen → GET /v1/funnel/conversion (surface=project, project_id, days, 필터) (coverage.markets[0].property_id)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJF1"
+     ],
+     "api_keys": [
+      "GET /v1/projects/{project_id}",
+      "GET /v1/funnel/conversion"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "제목 우측 'GA4 이벤트' 버튼 → 다이얼로그",
+     "label": "전환 이벤트 목록 (최근 90일 볼륨 · 추적 여부)",
+     "note": "속성이 있을 때만, 데모 제외. Viewer 는 조회 전용",
+     "legacy_call": "loadConversionEvents → authorize + loadEventsForProperty",
+     "api_call": "fetchConversionEvents → GET /v1/funnel/conversion/events (property_id, project_id)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJF4"
+     ],
+     "api_keys": [
+      "GET /v1/funnel/conversion/events"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "GA4 이벤트 다이얼로그 '저장'",
+     "label": "쓰기: 전환 이벤트 선택 저장",
+     "note": "admin 또는 활성 Owner 만 (canEditConversion, 서버 authorize 재검사). 선택은 GA4 속성 단위 공유",
+     "legacy_call": "saveConversionEvents → saveEventsForProperty (트랜잭션 교체 + revalidateTag('ga4'))",
+     "api_call": "putConversionEvents → PUT /v1/funnel/conversion/events",
+     "legacy_fns": [
+      "PJW3"
+     ],
+     "api_keys": [
+      "PUT /v1/funnel/conversion/events"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "본문 상단",
+     "label": "필터바 (엔진 · 기기 · 방문자 유형) · 기간 선택 7/28/90",
+     "note": "옵션 정적, 선택값이 GA4 질의 조건(엔진→sessionSource 매핑). 기본 90일",
+     "legacy_call": "parseConversionFilters · parseConversionPeriod → getAiConversionLive / getAiVisitsLive 인자",
+     "api_call": "loadConversionScreen → GET /v1/funnel/conversion (surface=project, project_id, days, 필터)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJF2",
+      "PJF3"
+     ],
+     "api_keys": [
+      "GET /v1/funnel/conversion"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "필터바 아래 카드 줄",
+     "label": "KPI 3장 (AI 유입 전환율 · 일반 유입 전환율 · 전환 격차)",
+     "note": "liveData null 이면 '측정 데이터 누적 중' 안내로 대체",
+     "legacy_call": "getAiConversionLive().summary",
+     "api_call": "loadConversionScreen → GET /v1/funnel/conversion (surface=project, project_id, days, 필터)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJF2"
+     ],
+     "api_keys": [
+      "GET /v1/funnel/conversion"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "본문",
+     "label": "전환율 · 방문 수 추이",
+     "note": "전환율 선(AI·일반) + 방문 수 선(visits trend)",
+     "legacy_call": "getAiConversionLive().trend + getAiVisitsLive().trend",
+     "api_call": "loadConversionScreen → GET /v1/funnel/conversion (surface=project, project_id, days, 필터)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJF2",
+      "PJF3"
+     ],
+     "api_keys": [
+      "GET /v1/funnel/conversion"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "본문",
+     "label": "AI 모델(엔진)별 전환 (표본 부족 배지)",
+     "note": "chatgpt·gemini 고정 비교, 활성사용자 < 50 이면 표본 부족 배지",
+     "legacy_call": "getAiConversionLive().byEngine",
+     "api_call": "loadConversionScreen → GET /v1/funnel/conversion (surface=project, project_id, days, 필터)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJF2"
+     ],
+     "api_keys": [
+      "GET /v1/funnel/conversion"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "본문",
+     "label": "페이지별 전환 표 (상위 12, 정렬)",
+     "note": "정렬은 브라우저",
+     "legacy_call": "getAiConversionLive().pages",
+     "api_call": "loadConversionScreen → GET /v1/funnel/conversion (surface=project, project_id, days, 필터)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJF2"
+     ],
+     "api_keys": [
+      "GET /v1/funnel/conversion"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "본문 하단",
+     "label": "AI 유입 사이트 방문 수 (방문 수 · 순 방문자 · 방문 빈도 + 입구 페이지별 방문 상위 15)",
+     "note": "visitsData null 이면 섹션째 숨김",
+     "legacy_call": "getAiVisitsLive",
+     "api_call": "loadConversionScreen → GET /v1/funnel/conversion (surface=project, project_id, days, 필터)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJF3"
+     ],
+     "api_keys": [
+      "GET /v1/funnel/conversion"
+     ],
+     "work_refs": []
+    },
+    {
+     "loc": "본문 (분기)",
+     "label": "미연동 안내 · 측정 대기 안내",
+     "note": "속성 없음 → 'GA4 연동 전'(설정 링크), 속성은 있는데 데이터 없음 → '측정 데이터 누적 중'",
+     "legacy_call": "propertyId null → ConversionUnmappedNotice / liveData null → ConversionPendingNotice",
+     "api_call": "loadConversionScreen → GET /v1/funnel/conversion (surface=project, project_id, days, 필터) (markets[0].status: unmapped·pending_grant)",
+     "legacy_fns": [
+      "PJCOMMON",
+      "PJF1",
+      "PJF2"
+     ],
+     "api_keys": [
+      "GET /v1/funnel/conversion"
+     ],
+     "work_refs": []
+    }
+   ]
+  }
+ ],
+ "functions": {
+  "PJCOMMON": {
+   "label": "공통: 프로젝트 페이지 게이트 + withProject (인가 · scope 프로젝트 해석 · 당사 컨텍스트) + 프로젝트 스냅샷 술어",
+   "where": "app/[locale]/(dash)/projects/[id]/layout.tsx:62-71, app/[locale]/(dash)/projects/[id]/page.tsx:153-162, app/[locale]/(dash)/projects/[id]/analysis/_lib/auth-and-locks.ts:18-48, app/[locale]/(dash)/projects/[id]/ai-funnel/_lib/auth-and-locks.ts:20-76, app/[locale]/(dash)/layout.tsx:102-116, lib/scope/server.ts:359-365·390-412·593-600·1230-1239·1294-1313, lib/auth/scope-policy.ts:90-123, lib/db/repositories/scope-aggregates.ts:808-834·1797-1799 (perProjectLatestAnswerIds → latestAnswerIds)",
+   "stmts": "페이지 렌더당: (dash) 레이아웃 cachedProjectById+cachedMembership(요청 memo) + [id] 레이아웃 projectRepository.getById(비캐시) + 리프 게이트(분석·퍼널 getById+findMembership 비캐시, 홈은 memo). withProject 호출마다: findMembership 1(비캐시) + bff_audit_logs INSERT 1(after) + 명부 listRoster 1(mirrorCache 미스 시) + 프로젝트 행(요청 memo). 게이트 실패 = notFound/UnauthorizedError. 프로젝트 스냅샷 술어(perProjectLatestAnswerIds: 셀(프롬프트×엔진×지역)별 최신 완료 답변 + 프로젝트 최신 측정 − 7일 stale 바닥)는 각 함수 SQL 안 조각 — withSnapshotAnswerSetScope 로 요청당 1회 확정하는 경로와 detailAnswerWhere 처럼 인라인 재계산하는 경로가 섞임",
+   "f2": [
+    "skip",
+    "조각 — 각 함수 SQL 앞단 인가·해석(집계 없음)"
+   ],
+   "f3": [
+    "skip",
+    ""
+   ],
+   "f4": [
+    "RHQ",
+    "B1",
+    "B2",
+    "B3",
+    "WSK6"
+   ],
+   "f6": [
+    "n",
+    "명부 조회 실패 → hmg-brands 시드로 조용히 전환 (server.ts:1236-1238); scope 미연결 프로젝트(resolveScopeProjectId null) → empty(null/[]) 반환 (server.ts:599·1303-1304) → 화면은 '측정 대기'/빈 상태로 미연결 사실 표시 없음; project_members 스키마 부재 → findMembership null 로 조용히 (project-members.ts:143-147)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "같은 요청에서 프로젝트·멤버십 중복 조회: [id] 레이아웃 getById 가 (dash) 레이아웃 memo 를 안 탐 (layout.tsx:63), 분석·퍼널 리프 게이트 getById+findMembership 비캐시 (analysis/_lib/auth-and-locks.ts:32-38, ai-funnel/_lib/auth-and-locks.ts:52-58), assertProjectInScope 의 findMembership 이 withProject 호출마다 재조회 (server.ts:401 — 분석 화면 4~5회)",
+    "호출당 1~3 (멤버십 1 + 감사 INSERT 1 + 명부 캐시 미스 1)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ]
+  },
+  "PJLCOMMON": {
+   "label": "공통(목록·생성 화면): 세션 + 라우트 역할 게이트 (프로젝트 게이트 없음)",
+   "where": "app/[locale]/(dash)/projects/page.tsx:32-33, app/[locale]/(dash)/projects/new/page.tsx:31-33, lib/auth/route-policy.ts:34·43-48·215-231, app/[locale]/(dash)/layout.tsx",
+   "stmts": "세션 조회(React cache) + 라우트 정책(역할·메뉴 그룹) — 화면 데이터 SQL 없음. 목록·생성 화면이 프로젝트 게이트(PJCOMMON)를 자동으로 물려받지 않게 하는 표식",
+   "f2": [
+    "skip",
+    "조각 — 인가만"
+   ],
+   "f3": [
+    "skip",
+    ""
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "세션 없음 → /login redirect, 역할 밖 → 라우트 정책 차단 (명시적)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "skip",
+    ""
+   ],
+   "f9": [
+    "skip",
+    ""
+   ]
+  },
+  "PJL1": {
+   "label": "legacyProjectsList (listForUser|listAll + getRolesForProjects + countActiveMembersByProject + countByProject) → ProjectsOverview · ProjectList",
+   "where": "app/[locale]/(dash)/projects/page.tsx:95-157 → lib/db/repositories/projects.ts:190-221, project-members.ts:152-205, prompts.ts:238-256; app/[locale]/(dash)/projects/_components/projects-overview.tsx:35-50",
+   "stmts": "매 렌더(캐시 없음) 2 wave: ① listForUser(비 admin, project_members INNER JOIN) 또는 listAll(admin) ② getRolesForProjects + countActiveMembersByProject(GROUP BY) + countByProject(GROUP BY·FILTER) 병렬 = 4 (+ PJL2 2문장 병렬). 타일·분포는 JS 접기",
+   "f2": [
+    1,
+    0,
+    0,
+    0,
+    "listForUser projects.ts:190-217 (count 쿼리 GROUP BY 1 — project-members.ts:176-191·prompts.ts:238-248 동점)"
+   ],
+   "f3": [
+    "n",
+    "프롬프트 수·대기/실행 수·활성 멤버 수를 prompts·project_members 원행에서 요청 때 count GROUP BY (요약 없음)"
+   ],
+   "f4": [
+    "PJK1"
+   ],
+   "f6": [
+    "n",
+    "project_members 스키마 부재 → 역할·멤버 수 [] → 'viewer' 배지·0 으로 조용히 표시 (project-members.ts:167-171·198-202, page.tsx:144-146)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "4개 IN/GROUP BY 일괄 (종전 N+1 해소, page.tsx:104-118)",
+    "4"
+   ],
+   "f9": [
+    "y",
+    "보이는 프로젝트 전부를 카드로 표시(검색·정렬은 브라우저) — 전송 행 = 표시 행, 상한 없음"
+   ]
+  },
+  "PJL2": {
+   "label": "pendingForUser + getNamesByIds (초대 대기 패널)",
+   "where": "app/[locale]/(dash)/projects/page.tsx:99-128 → lib/db/repositories/project-members.ts:207-226, projects.ts:180-188",
+   "stmts": "매 렌더: pendingForUser 1 (+ 대기 프로젝트 이름 IN 1, PJL1 2차 wave 와 병렬)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "pendingForUser project-members.ts:207-218"
+   ],
+   "f3": [
+    "y",
+    "본인 대기 멤버십 행·프로젝트 이름 점 조회 (집계 없음)"
+   ],
+   "f4": [],
+   "f6": [
+    "n",
+    "스키마 부재 → [] 로 패널이 조용히 사라짐 (project-members.ts:220-223); 이름 못 찾으면 '(unknown project)' (page.tsx:126)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "2"
+   ],
+   "f9": [
+    "y",
+    "대기 초대 전부 표시"
+   ]
+  },
+  "PJW1": {
+   "label": "acceptInvite / rejectInvite (서버 액션)",
+   "where": "app/[locale]/(dash)/projects/[id]/member/_actions.ts:206-267 (호출 app/[locale]/(dash)/projects/_components/pending-invites.tsx:34-47)",
+   "stmts": "pendingForUser 1 → UPDATE project_members(수락) 또는 DELETE(거절) 1 → INSERT member_audit_logs 1 → revalidatePath('/projects')",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "pendingForUser project-members.ts:207 (쓰기는 단건 UPDATE/DELETE/INSERT)"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "조회 오류는 예외 전파, 대기 초대 아님은 오류 토스트 (_actions.ts:220-223)"
+   ],
+   "f7": [
+    "n",
+    "수락 UPDATE 와 감사 INSERT 가 트랜잭션 밖 — 감사 INSERT 실패 시 수락은 반영됐는데 예외로 실패처럼 보임 (_actions.ts:224-232); accept 는 id 로만 UPDATE (status='pending' 조건 없음, project-members.ts:246-254) — 확인과 갱신 사이 경합 미검출. (양호: 처리 중 버튼 비활성 pending-invites.tsx:72·82)"
+   ],
+   "f8": [
+    "y",
+    "",
+    "3"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ]
+  },
+  "PJN1": {
+   "label": "projectCreationOptions(session.user) + canCreateProject (생성 폼 옵션 · 브랜드 잠금)",
+   "where": "app/[locale]/(dash)/projects/new/page.tsx:31-50 → lib/auth/scope-policy.ts:286-320, lib/auth/operator-policy.ts:21-24; 권역→국가 캐스케이드 app/[locale]/(dash)/projects/new/_form.tsx:59-99",
+   "stmts": "SQL 0 — 세션 scope × 정적 카탈로그(GEO_BRANDS ← web-geo-final.json, rhq-map) JS 계산",
+   "f2": [
+    "skip",
+    "SQL 없음 — 세션 scope·정적 카탈로그 JS 계산"
+   ],
+   "f3": [
+    "y",
+    "정적 카탈로그 교집합 (원행 집계 없음)"
+   ],
+   "f4": [
+    "C2",
+    "RHQ",
+    "PJK6"
+   ],
+   "f6": [
+    "y",
+    "읽기 IO 없음"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "0"
+   ],
+   "f9": [
+    "y",
+    "드롭다운 = 권한 내 카탈로그 전부"
+   ]
+  },
+  "PJW2": {
+   "label": "createProject (서버 액션: projects INSERT + Owner 멤버 + 엔진 이력 + owned base + scope 미러·스케줄)",
+   "where": "app/[locale]/(dash)/projects/new/_actions.ts:32-146 → lib/db/repositories/projects.ts:223-266·285-290, project-owned-bases.ts:39-53, lib/scope/project-sync.ts:95-113·162-214",
+   "stmts": "INSERT projects 1 + INSERT project_members 1(ON CONFLICT DO NOTHING) + INSERT project_engine_history 1 + (도메인 있으면) INSERT project_owned_bases 1 → 외부 scope POST /projects 1 → UPDATE projects.scope_project_id 1 + 외부 scope GET/PUT schedule 2",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "INSERT projects projects.ts:223-238 (단건 쓰기)"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [
+    "C2",
+    "RHQ",
+    "PJK6",
+    "PJK7"
+   ],
+   "f6": [
+    "y",
+    "읽기 없음 — 검증은 세션 scope 계산, 오류는 예외 전파"
+   ],
+   "f7": [
+    "n",
+    "로컬 INSERT 3~4건이 트랜잭션 없이 순차 (projects.ts:240-266, _actions.ts:96-117) — 중간 실패 시 Owner·owned base 없는 고아 프로젝트가 남고 예외로 실패처럼 보여 재제출 → 중복 생성; scope 스케줄 동기화 실패는 console.error 후 삼킴 → 성공 리다이렉트 (project-sync.ts:191-197, 부분 성공을 전체 성공으로 표시); setScopeProjectId 실패는 저장 뒤 예외 (project-sync.ts:210). (양호: scope 생성 실패는 명시 반환 _actions.ts:129-140, 제출 중 버튼 비활성 _form.tsx:242-243)"
+   ],
+   "f8": [
+    "y",
+    "",
+    "4~8 (외부 호출 3 포함)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ]
+  },
+  "PJV1": {
+   "label": "VisibilityView 샘플 픽스처 + useFilterSignal 변조",
+   "where": "app/[locale]/(dash)/standard/ai-funnel/_components/visibility-view.tsx:55-70 ← app/[locale]/(dash)/standard/ai-funnel/_data/sample.ts:14·26, components/dash/use-filter-signal.ts",
+   "stmts": "SQL·외부 호출 0 — 정적 샘플을 필터 조합 해시로 0.5~1.0배 변조해 표시",
+   "f2": [
+    "skip",
+    "SQL 없음 — 정적 픽스처"
+   ],
+   "f3": [
+    "y",
+    "고정 샘플 값 (실측·집계 없음)"
+   ],
+   "f4": [
+    "GLK2",
+    "GLK3"
+   ],
+   "f6": [
+    "y",
+    "읽기 없음 (단, 샘플임을 알리는 표시도 없음)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "0"
+   ],
+   "f9": [
+    "y",
+    "샘플 행 전부 표시"
+   ]
+  },
+  "PJA1": {
+   "label": "AcrView 샘플 픽스처 + useFilterSignal 변조",
+   "where": "app/[locale]/(dash)/standard/ai-funnel/_components/acr-view.tsx:55-120 ← app/[locale]/(dash)/standard/ai-funnel/_data/sample.ts:44·60·78·105·222, components/dash/use-filter-signal.ts",
+   "stmts": "SQL·외부 호출 0 — 정적 샘플을 필터 조합 해시로 변조해 표시",
+   "f2": [
+    "skip",
+    "SQL 없음 — 정적 픽스처"
+   ],
+   "f3": [
+    "y",
+    "고정 샘플 값 (실측·집계 없음)"
+   ],
+   "f4": [
+    "PJK9",
+    "GLK3"
+   ],
+   "f6": [
+    "y",
+    "읽기 없음 (단, 샘플임을 알리는 표시도 없음)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "0"
+   ],
+   "f9": [
+    "y",
+    "샘플 행 전부 표시"
+   ]
+  },
+  "PJF1": {
+   "label": "GA4 속성 해석: project.ga4PropertyId ?? resolveProperty(undefined, {brand, region})",
+   "where": "app/[locale]/(dash)/projects/[id]/ai-funnel/conversion/page.tsx:132-135 → lib/ga4/property-map.ts:82-97",
+   "stmts": "프로젝트 바인딩 있으면 0, 없으면 ga4_properties 점 조회 1 (캐시 없음) + env MAP 폴백. brand null(우산)이면 조회 없이 null",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "getByBrandCountry lib/db/repositories/ga4-properties.ts:30-42"
+   ],
+   "f3": [
+    "y",
+    "레지스트리 점 조회"
+   ],
+   "f4": [
+    "GA2",
+    "PJK12",
+    "PJK13"
+   ],
+   "f6": [
+    "y",
+    "DB 오류는 예외 → 오류 경계; 미매핑은 '연동 전' 안내로 명시 (page.tsx:186-191)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "0~1"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ]
+  },
+  "PJF2": {
+   "label": "getAiConversionLive(propertyId, days, filters)",
+   "where": "app/[locale]/(dash)/projects/[id]/ai-funnel/conversion/page.tsx:136-141 → lib/ga4/conversion.ts:469-525 (fetchCohorts :332 · fetchTrend :347 · fetchPageSplit :378 · fetchEngineBreakdown :433)",
+   "stmts": "unstable_cache 24h (키 property·days·필터). 미스 시 ga4_tracked_events SELECT 1 + GA4 runReport 7회 (코호트 2 · 일별 2 · 페이지 2 순차 · 엔진 1), 전환 이벤트 지정 시 eventCount 보고서 +7 = 14회",
+   "f2": [
+    "skip",
+    "SQL 집계 없음 — GA4 Data API 원격 집계"
+   ],
+   "f3": [
+    "n",
+    "캐시 미스마다 원천 GA4 Data API 호출"
+   ],
+   "f4": [
+    "GA1",
+    "GLK5",
+    "GLK6",
+    "PJK5",
+    "PJK12",
+    "PJK13"
+   ],
+   "f6": [
+    "n",
+    "GA4 실패 → null (conversion.ts:518-524) → 화면은 '측정 데이터 누적 중' 안내라 데이터 없음과 구분 안 됨 (page.tsx:176-182); 전환 이벤트 조회 실패 → key events 분자로 조용히 전환 (conversion.ts:258-265)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "GA4 7~14 + SQL 1"
+   ],
+   "f9": [
+    "y",
+    "페이지 상위 12 (표시 top-N, GA4 24행 조회 후 서버에서 자름), 일별 limit 500 > 최대 90일"
+   ]
+  },
+  "PJF3": {
+   "label": "getAiVisitsLive(propertyId, days, filters)",
+   "where": "app/[locale]/(dash)/projects/[id]/ai-funnel/conversion/page.tsx:136-141 → lib/ga4/conversion.ts:721-813",
+   "stmts": "unstable_cache 24h. 미스 시 GA4 runReport 3회 (합계 · 입구 페이지 · 일별)",
+   "f2": [
+    "skip",
+    "SQL 집계 없음 — GA4 Data API 원격 집계"
+   ],
+   "f3": [
+    "n",
+    "캐시 미스마다 원천 GA4 Data API 호출"
+   ],
+   "f4": [
+    "GA1",
+    "GLK5",
+    "GLK6",
+    "PJK12",
+    "PJK13"
+   ],
+   "f6": [
+    "n",
+    "GA4 실패 → null (conversion.ts:806-812) → 방문 섹션이 안내 없이 사라지고 추이의 방문 선도 빠짐 (page.tsx:174·184)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "GA4 3"
+   ],
+   "f9": [
+    "y",
+    "입구 페이지 상위 15 (GA4 45행 조회 후 서버에서 자름), 일별 limit 500"
+   ]
+  },
+  "PJF4": {
+   "label": "loadConversionEvents → authorize + loadEventsForProperty (GA4 이벤트 다이얼로그 조회)",
+   "where": "components/dash/ga4-events-dialog.tsx:51-64 → lib/ga4/tracked-events-actions.ts:178-203·77-129 → lib/ga4/tracked-events-service.ts:22-48",
+   "stmts": "다이얼로그 열 때마다(캐시 없음): authorize (admin 아니면 projects getById 1 + ga4_properties 1 + findMembership 1) + ga4_tracked_events SELECT 1 + GA4 runReport 1 (eventName × eventCount 90일, limit 250)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "listForProperty lib/db/repositories/ga4-tracked-events.ts:15-21"
+   ],
+   "f3": [
+    "n",
+    "열 때마다 원천 GA4 Data API 호출 (캐시 없음)"
+   ],
+   "f4": [
+    "GA2"
+   ],
+   "f6": [
+    "y",
+    "조회 실패는 다이얼로그 오류 문구로 표시 (tracked-events-actions.ts:197-202, ga4-events-dialog.tsx:55-59)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "SQL 1~4 + GA4 1"
+   ],
+   "f9": [
+    "n",
+    "GA4 이벤트 목록 limit 250 고정 — 초과분은 안내 없이 잘림 (tracked-events-service.ts:26-31)"
+   ]
+  },
+  "PJW3": {
+   "label": "saveConversionEvents → saveEventsForProperty (전환 이벤트 선택 교체)",
+   "where": "components/dash/ga4-events-dialog.tsx:76-86 → lib/ga4/tracked-events-actions.ts:212-236 → lib/ga4/tracked-events-service.ts:51-59 → lib/db/repositories/ga4-tracked-events.ts:47-63",
+   "stmts": "authorize (Owner·admin, 최대 3) + 트랜잭션 DELETE 1 + INSERT 1 + revalidateTag('ga4')",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "replaceForProperty ga4-tracked-events.ts:47-63"
+   ],
+   "f3": [
+    "skip",
+    "쓰기"
+   ],
+   "f4": [
+    "GA2"
+   ],
+   "f6": [
+    "y",
+    "권한 실패는 예외, 형식 오류는 토스트"
+   ],
+   "f7": [
+    "n",
+    "선택 집합을 통째 교체(버전 검사 없음) — 동시 편집 시 나중 저장이 앞 저장을 조용히 덮음 (ga4-tracked-events.ts:47-63); 선택이 GA4 속성 단위라 같은 속성을 쓰는 다른 프로젝트·웹사이트·admin 화면의 전환 분자도 바뀌는데 안내 없음; 저장 뒤 화면 숫자 재조회 없음 (다이얼로그만 닫힘, ga4-events-dialog.tsx:79-81). (양호: 트랜잭션, 저장 중 버튼 비활성 :168)"
+   ],
+   "f8": [
+    "y",
+    "",
+    "5"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ]
+  },
+  "PJH1": {
+   "label": "promptRepository.listForProject (→ buildProjectOverview)",
+   "where": "projects/[id]/page.tsx:105 → lib/db/repositories/prompts.ts:230 · projects/[id]/_data/live.ts:155-180",
+   "stmts": "1문장 매 렌더(캐시 없음): SELECT * FROM prompts WHERE project_id ORDER BY created_at — 프로젝트 전 프롬프트·전 컬럼. JS로 총수·상태 6종 분포·lastAi(running/done 최신 updatedAt)·hasMeasuredPrompts·최근 5건 계산",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "promptRepository.listForProject prompts.ts:231"
+   ],
+   "f3": [
+    "n",
+    "전 행을 매 요청 읽어 JS로 개수·상태 분포·lastAi 집계 (live.ts:160-178) — 사전 계산 카운트 없음"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "catch 없음 → 페이지 Promise.all 거부 → (dash)/error.tsx"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "1"
+   ],
+   "f9": [
+    "n",
+    "전 프롬프트 행(전 컬럼) 전송, 화면은 개수·상태 분포·최근 5건만 (page.tsx:105, live.ts:164-178)"
+   ]
+  },
+  "PJH2": {
+   "label": "promptCandidateRepository.listForProject",
+   "where": "projects/[id]/page.tsx:106 → lib/db/repositories/prompts.ts:58 · projects/[id]/_data/live.ts:169·173-175",
+   "stmts": "1문장 매 렌더(캐시 없음): SELECT * FROM prompt_candidates WHERE project_id ORDER BY created_at DESC — 후보 풀 전량. JS로 개수 + 최근 5건",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "promptCandidateRepository.listForProject prompts.ts:59"
+   ],
+   "f3": [
+    "n",
+    "후보 전 행을 매 요청 읽어 JS로 개수 집계"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "catch 없음 → 오류 경계"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "1"
+   ],
+   "f9": [
+    "n",
+    "후보 풀 전량(전 컬럼) 전송, 화면은 개수 1개 + 최근 5건 (live.ts:169·173-175)"
+   ]
+  },
+  "PJH3": {
+   "label": "projectMemberRepository.listForProject",
+   "where": "projects/[id]/page.tsx:107 → lib/db/repositories/project-members.ts:96 · projects/[id]/_data/live.ts:170",
+   "stmts": "1문장 매 렌더(캐시 없음): project_members LEFT JOIN profiles(이메일·시스템 역할) 전 멤버. JS로 status=active 수만",
+   "f2": [
+    1,
+    0,
+    0,
+    0,
+    "listForProject project-members.ts:98-116"
+   ],
+   "f3": [
+    "n",
+    "전 멤버 행을 읽어 JS로 활성 수 집계"
+   ],
+   "f4": [],
+   "f6": [
+    "n",
+    "멤버 테이블·컬럼 부재(42P01/42703) → [] 로 '활성 멤버 0' 표시, 안내 없음 (project-members.ts:121-126)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "1"
+   ],
+   "f9": [
+    "n",
+    "전 멤버 행 + 프로필 이메일 전송, 화면은 활성 수 1개 (live.ts:170)"
+   ]
+  },
+  "PJH4": {
+   "label": "listMeasuredRegions(session.user.scope)",
+   "where": "projects/[id]/page.tsx:108 → lib/db/repositories/scope-aggregates.ts:7698",
+   "stmts": "1문장 매 렌더(캐시 없음): SELECT DISTINCT region FROM scope_answers WHERE region 유효 [+ 계정 허용 국가 IN (effectiveScopeCountries)] [+ 브랜드 계정이면 prompts 카탈로그 brand∈(계정 브랜드 + HMG) semi-join]. projectIds·rootScoped·dateRange 미전달 → 프로젝트 스코프·측정 창 없이 미러 전 프로젝트·전 이력 스캔 (:7721-7775). DFLT 구성원과 같은 함수지만 인자(의미)가 달라 별도 계측",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "listMeasuredRegions scope-aggregates.ts:7771"
+   ],
+   "f3": [
+    "n",
+    "scope_answers 전 이력 DISTINCT 를 매 요청 계산"
+   ],
+   "f4": [
+    "RHQ",
+    "B10",
+    "GLK1",
+    "WSK2"
+   ],
+   "f6": [
+    "y",
+    "catch 없음 → 오류 경계"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "이 프로젝트와 무관한 전 프로젝트·전 이력 측정 국가를 계산 — 프로젝트 데이터(perProjectLatestAnswerIds)에 없는 국가가 옵션에 떠 고르면 빈 화면",
+    "1"
+   ],
+   "f9": [
+    "y",
+    "국가 수십 개, 전량 표시"
+   ]
+  },
+  "PJH7": {
+   "label": "fetchProjectStandardAggregates().asOf",
+   "where": "projects/[id]/_components/project-dashboard.tsx:147 → lib/scope/server.ts:3931 → scope-aggregates.ts:2895-2949",
+   "stmts": "추가 문장 없음 — KPI 섹션(PJH8)과 같은 인자라 requestDeduped 로 요청당 1회 (server.ts:3929-3931). 값 = ansRows 의 max(COALESCE(r.cycle_anchor_at, a.measured_at))",
+   "f2": [
+    "skip",
+    "KPI 조회(PJH8) 결과 재사용"
+   ],
+   "f3": [
+    "n",
+    "미러 _answer_set ⋈ scope_runs 를 요청 때 GROUP BY region 으로 max 계산 (scope-aggregates.ts:2895-2915)"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "오류는 필터바 Suspense 안에서 throw → (dash)/error.tsx. null(미연결·0건)은 칩 생략 = 데이터 없음 (project-dashboard.tsx:515-518)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "0"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ]
+  },
+  "PJH8": {
+   "label": "fetchProjectStandardAggregates (+ buildMirrorKpis)",
+   "where": "projects/[id]/_data/live.ts:205·218·292 → lib/scope/server.ts:3931 → scope-aggregates.ts:2840 · dashboard/_data/live.ts:307",
+   "stmts": "매 렌더(캐시 무관): listProjectOwnedBases 1문장(ownedBasePrefixesForProject server.ts:961-983, 캐시 키 계산용) + 제외 명부(mirrorCache). 캐시 미스(mirrorCache 'project-aggregates' TTL 7,200s, 예산 없음): 공유 스냅샷 job_id 1문장(sharedSnapshotAnswerIds :2806, 요청 내 PJH9·12·13 과 공유) + 트랜잭션 SET 1·CREATE TEMP 1·ANALYZE 1 + ansRows·brandRows·sentRows·posRows·citAgg·domRows 6 = 10문장. 집계층(summary_*) 경로 없음 — 프로젝트 표면은 S1 게이트를 안 타고 항상 미러 (server.ts:3925-3927). ⑤ 분자 = 프로젝트 owned base prefix 인용",
+   "f2": [
+    4,
+    9,
+    2,
+    1,
+    "posRows scope-aggregates.ts:3019 + ownBrandRankPerJobSql :495"
+   ],
+   "f3": [
+    "n",
+    "집계층 없이 scope_answers·scope_mentions·scope_citations 를 캐시 미스마다 재집계"
+   ],
+   "f4": [
+    "B1",
+    "B2",
+    "B3",
+    "B4",
+    "B5",
+    "B6",
+    "B7",
+    "B8",
+    "B9",
+    "C2",
+    "C3",
+    "C4",
+    "C6",
+    "PJK15"
+   ],
+   "f6": [
+    "n",
+    "제외 엔티티 명부 조회 실패 → 빈 집합으로 조용히 진행 → #16 자동 경쟁사에 제외 브랜드가 섞일 수 있음 (server.ts:1246-1251); owned base 테이블 부재(42P01) → [] 로 project.domain·카탈로그 판정으로 조용히 전환 (project-owned-bases.ts:29-33). 집계 오류 자체는 오류 경계"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "domRows(도메인별 인용 GROUP BY)·regions·brands 전량을 계산하지만 화면은 카드 ①~⑤ 와 #16 브랜드 1개만 사용(domains 미사용); 매 렌더 owned bases 재조회(요청 memo 없음, server.ts:3938 → :976)",
+    "11"
+   ],
+   "f9": [
+    "n",
+    "brands 전 브랜드·domains 전 도메인을 결과에 실어 캐시 셀·서버로 운반, 화면은 카드 5개 + #16 1행"
+   ]
+  },
+  "PJH9": {
+   "label": "getLiveSubKpis → fetchProjectSubKpis (+ applyEngineConsistency)",
+   "where": "projects/[id]/_data/live.ts:207·324 → dashboard/_data/live.ts:819·926 → lib/scope/server.ts:3953 → scope-aggregates.ts:3270",
+   "stmts": "매 렌더: listProjectOwnedBases 1. 캐시 미스(mirrorCache 'project-subkpis', 예산·parts 미지정 = 5파트 전량): 공유 스냅샷(PJH8 과 공유) + SET·CREATE TEMP·ANALYZE + Q1 답변·Q2 언급·Q3 감정·Q4 인용·Q5 프롬프트 = 8문장. JS: 엔진별 min÷max 일관성",
+   "f2": [
+    4,
+    9,
+    3,
+    1,
+    "Q1 scope-aggregates.ts:3299 + ownBrandRankPerJobSql :495"
+   ],
+   "f3": [
+    "n",
+    "엔진별 scope_mentions·scope_citations ⋈ _answer_set 를 요청 때 집계"
+   ],
+   "f4": [
+    "B1",
+    "B2",
+    "B3",
+    "B4",
+    "B5",
+    "B6",
+    "B7",
+    "B8",
+    "B9",
+    "C2",
+    "C3",
+    "C4",
+    "C6",
+    "PJK15",
+    "T2",
+    "T3",
+    "T4"
+   ],
+   "f6": [
+    "n",
+    "owned base 42P01 → [] 로 ⑤ 엔진값 판정 기준이 조용히 바뀜 (project-owned-bases.ts:29-33). 그 밖 오류는 오류 경계, rows 0 이면 배지 생략"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "Q5(미언급·측정 프롬프트 수)와 multi·top1·top3 를 계산하지만 화면은 엔진 일관성 배지만 사용 — parts 미지정이라 전량 (server.ts:3963, scope-aggregates.ts:3289-3290); 매 렌더 owned bases 재조회",
+    "9"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ]
+  },
+  "PJH10": {
+   "label": "getLiveTrend(filters, 'week', projectId) → fetchProjectTrend(week)",
+   "where": "projects/[id]/_data/live.ts:208·273·335 → dashboard/_data/live.ts:661 → lib/scope/server.ts:3991 → scope-aggregates.ts:4291",
+   "stmts": "degradeAware('projectTrend:week'). 매 렌더: listProjectOwnedBases 1 + trendSlotsFor(격자 off → null, 0문장). 캐시 미스(mirrorCache 'project-trend', 예산 없음): SET·CREATE TEMP(120일 창 + DISTINCT ON 주×셀 + excludeHiddenCycleRuns('mention'))·ANALYZE + ①ans ②mention ③sent ④pos ⑤cit = 8문장. 후처리: withTrendGapBuckets 갭 원장 1문장(cachedGapKeys) · applyTrendGridToBuckets(격자 off 무동작) · fillTrendGaps(JS)",
+   "f2": [
+    4,
+    9,
+    3,
+    1,
+    "posRows scope-aggregates.ts:4503 + ownBrandRankPerJobSql :495"
+   ],
+   "f3": [
+    "n",
+    "120일 원문 답변·언급·인용을 주 버킷으로 캐시 미스마다 재집계"
+   ],
+   "f4": [
+    "B1",
+    "B2",
+    "B3",
+    "B4",
+    "B5",
+    "B6",
+    "B7",
+    "B8",
+    "B9",
+    "C2",
+    "C3",
+    "C4",
+    "C6",
+    "PJK15",
+    "H1",
+    "H2"
+   ],
+   "f6": [
+    "n",
+    "숨김 회차(갭) 원장 조회 실패 → [] 로 갭 표시 없이 진행 (summary-cycles.ts:762-763); owned base 42P01 → [] (project-owned-bases.ts:29-33). 예산 초과 자체는 '지연' 안내 (project-dashboard.tsx:390-393)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "매 렌더 owned bases 재조회(server.ts:4002 → :976, 요청 memo 없음)",
+    "10"
+   ],
+   "f9": [
+    "y",
+    "120일 창 주 버킷 ≤18개 전량 표시"
+   ]
+  },
+  "PJH11": {
+   "label": "getLiveTrend(filters, 'day', projectId) → fetchProjectTrend(day) + applyTrendDeltas",
+   "where": "projects/[id]/_data/live.ts:209·274·324 → dashboard/_data/live.ts:661·793 → lib/scope/server.ts:3991 → scope-aggregates.ts:4291",
+   "stmts": "degradeAware('projectTrend:day'). 매 렌더 owned bases 1. 캐시 미스: PJH10 과 같은 8문장을 bucket=day(date_trunc('day', measured_at))로 — 120일 창, 글로벌의 30일 Δ 바운드(deltaTrendFilters) 미적용. 갭 삽입 없음(day). JS: mergeProjectTrendAccuracy(⑥ day 합류) → applyTrendDeltas(값 있는 마지막 두 버킷 차, ±0.05 flat)",
+   "f2": [
+    4,
+    9,
+    3,
+    1,
+    "posRows scope-aggregates.ts:4503 + ownBrandRankPerJobSql :495"
+   ],
+   "f3": [
+    "n",
+    "120일 원문을 일 버킷으로 캐시 미스마다 재집계"
+   ],
+   "f4": [
+    "B1",
+    "B2",
+    "B3",
+    "B4",
+    "B5",
+    "B6",
+    "B7",
+    "B8",
+    "B9",
+    "C2",
+    "C3",
+    "C4",
+    "C6",
+    "PJK15",
+    "H1",
+    "H2",
+    "T7"
+   ],
+   "f6": [
+    "n",
+    "예산 초과 표식 projectTrend:day 는 화면이 안 읽음(live.ts:335 는 차트 버킷 라벨만) → null 추이로 Δ 칩이 안내 없이 사라짐 (dashboard/_data/live.ts:797); owned base 42P01 → [] (project-owned-bases.ts:29-33)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "Δ 는 값 있는 마지막 두 일 버킷만 쓰는데(dashboard/_data/live.ts:799-803) 120일치 일 버킷 전량을 5문장으로 계산하고, 차트용 주 추이(PJH10)와 같은 120일 답변셋을 별도 TEMP 로 한 번 더 집계; 매 렌더 owned bases 재조회",
+    "9"
+   ],
+   "f9": [
+    "n",
+    "일 버킷 최대 120행 생성, 화면 사용 2개"
+   ]
+  },
+  "PJH12": {
+   "label": "getLiveComposition → getLiveTopicComposition → fetchProjectPromptTopics",
+   "where": "projects/[id]/_data/live.ts:210 → dashboard/_data/live.ts:856·871 → lib/scope/server.ts:4035 → scope-aggregates.ts:3588",
+   "stmts": "캐시 미스(mirrorCache 'project-prompt-topics'): 공유 스냅샷(PJH8 과 공유) + 1문장(pa: 프롬프트별 GROUP BY + 상관 스칼라 서브쿼리 funnel_stage LIMIT 1 → topic GROUP BY). JS: share% 계산",
+   "f2": [
+    0,
+    1,
+    2,
+    0,
+    "aggregatePromptTopicFromMirror scope-aggregates.ts:3611"
+   ],
+   "f3": [
+    "n",
+    "스냅샷 답변을 프롬프트로 접어 주제별 개수를 요청 때 집계"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "catch 없음 → 오류 경계; 주제·출처 둘 다 비면 섹션 생략 = 데이터 없음 (project-dashboard.tsx:404)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "프롬프트 그룹당 상관 서브쿼리(인덱스 의존, scope-aggregates.ts:3605-3616)는 SQL 내부 평가라 N+1 로 보지 않음",
+    "1"
+   ],
+   "f9": [
+    "y",
+    "주제 3종 + 미분류 전량 표시"
+   ]
+  },
+  "PJH13": {
+   "label": "fetchProjectSourceComposition (+ 상위 7·기타 접기)",
+   "where": "dashboard/_data/live.ts:884-911 → lib/scope/server.ts:4046 → scope-aggregates.ts:7288",
+   "stmts": "매 렌더 owned bases 1. 캐시 미스(mirrorCache 'project-source-composition'): 공유 스냅샷(PJH8 과 공유) + 1문장(scope_citations GROUP BY domain 전 도메인, isOurs = bool_or(domain ~* 프로젝트 owned 도메인 패턴)). JS: 인용 수 정렬 → 상위 7 + 나머지 '기타' 합산(SOURCE_TOP_N=7)",
+   "f2": [
+    0,
+    0,
+    1,
+    0,
+    "aggregateSourceCompositionFromMirror scope-aggregates.ts:7341"
+   ],
+   "f3": [
+    "n",
+    "scope_citations ⋈ 스냅샷 답변을 도메인별로 요청 때 집계"
+   ],
+   "f4": [
+    "C2",
+    "C3",
+    "C4",
+    "PJK15"
+   ],
+   "f6": [
+    "n",
+    "owned base 42P01 → [] 로 isOurs 배지 기준이 조용히 바뀜 (project-owned-bases.ts:29-33); 그 밖 오류는 오류 경계"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "전 도메인 행에 share 까지 계산한 뒤 상위 7개만 표시, 나머지는 합계로만 사용 — SQL 에서 접을 수 있음 (dashboard/_data/live.ts:891-911); 매 렌더 owned bases 재조회",
+    "2"
+   ],
+   "f9": [
+    "n",
+    "도메인 전량(수백~수천 행) 반환, 화면은 상위 7 + 기타 1"
+   ]
+  },
+  "PJH14": {
+   "label": "listProjectTrackedUrls · projectRepository.getById · listProjectOwnedBases (⑥ 노출·배너 판정)",
+   "where": "projects/[id]/_data/live.ts:211-213·225-244 → lib/db/repositories/project-tracked-urls.ts:20 · projects.ts:136 · project-owned-bases.ts:16",
+   "stmts": "3문장 매 렌더(캐시 없음): project_tracked_urls 전 행, projects 1행(요청 memo cachedProjectById 미사용), project_owned_bases 전 행. JS: effectiveOwnedBases(설정 → project.domain), showCitationAccuracy(owned ≤1 ∧ URL ≥1), 배너 판정",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "listProjectTrackedUrls project-tracked-urls.ts:25"
+   ],
+   "f3": [
+    "y",
+    "단순 행 조회 + JS 길이 판정"
+   ],
+   "f4": [],
+   "f6": [
+    "n",
+    "tracked_urls·owned_bases 테이블 부재(42P01) → [] 로 ⑥ 카드·배너가 안내 없이 사라지거나 바뀜 (project-tracked-urls.ts:37-42, project-owned-bases.ts:29-33)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "projectRepository.getById 가 레이아웃이 데운 요청 memo(cachedProjectById)를 두고 재조회; listProjectOwnedBases 는 같은 요청에서 ownedBasePrefixesForProject 로 5회 더 반복(server.ts:976 — PJH8·9·10·11·13)",
+    "3"
+   ],
+   "f9": [
+    "y",
+    "추적 URL 전량은 ⑥ 분자 매칭에 실제로 필요"
+   ]
+  },
+  "PJH15": {
+   "label": "trackedCompetitorRepository.getTargetBrand (+ applyCompetitorSov)",
+   "where": "projects/[id]/_data/live.ts:216·323-327 → lib/db/repositories/tracked-entities.ts:101 · dashboard/_data/live.ts:387",
+   "stmts": "1문장 매 렌더(캐시 없음): tracked_competitors is_target 1행. JS: PJH8 brands 에서 지정 브랜드(소문자 일치) 또는 외부 브랜드 SOV 1위 → 당사 언급 ÷ 기준 언급 ×100",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "getTargetBrand tracked-entities.ts:102"
+   ],
+   "f3": [
+    "n",
+    "자체는 점 조회지만 값은 PJH8 미러 재집계 brands 를 상속해 JS로 접음"
+   ],
+   "f4": [
+    "B1",
+    "B2",
+    "B3",
+    "B4",
+    "B5",
+    "B6",
+    "B7",
+    "B8",
+    "B9"
+   ],
+   "f6": [
+    "y",
+    "오류는 오류 경계; 지정 브랜드 언급 0 → null '측정 대기' + 분모 브랜드명 (dashboard/_data/live.ts:405-411); 외부 브랜드 0 이면 행 생략 = 데이터 없음"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "1"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ]
+  },
+  "PJH16": {
+   "label": "fetchProjectCitationAccuracy",
+   "where": "projects/[id]/_data/live.ts:245-253·293-304 → lib/scope/server.ts:3837 → scope-aggregates.ts:8392",
+   "stmts": "유효 owned base 정확히 1개일 때만 호출(아니면 0문장, rate null), 추적 URL 0개면 0문장. enforce·resolveScopeProjectId(memo) 만 — withProject 미경유(assertProjectInScope·contextBrand·공유 답변셋 없음). 캐시 미스(mirrorCache 'citation-accuracy'): 1문장(WITH ans: 스냅샷 답변마다 EXISTS 자사 prefix 인용·EXISTS 타겟 URL 인용, tracked 정규화). answerWhere 를 직접 박아 요청 공유 답변셋 미사용",
+   "f2": [
+    0,
+    1,
+    0,
+    0,
+    "aggregateCitationAccuracy scope-aggregates.ts:8434"
+   ],
+   "f3": [
+    "n",
+    "scope_answers × scope_citations EXISTS 를 캐시 미스마다 계산"
+   ],
+   "f4": [
+    "WSK6",
+    "PJK11",
+    "C2",
+    "C3"
+   ],
+   "f6": [
+    "y",
+    "catch 없음 → 오류 경계. 카드 숨김·배너는 설정 규칙(owned ≥2 는 배너로 고지)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "PJH8 과 같은 스냅샷 술어(perProjectLatestAnswerIds)를 공유 답변셋 대신 다시 계산 (scope-aggregates.ts:8405 — snapshotAnswerWhere 미사용)",
+    "1"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ]
+  },
+  "PJH17": {
+   "label": "fetchProjectCitationAccuracyTrend ×2 (+ mergeProjectTrendAccuracy)",
+   "where": "projects/[id]/_data/live.ts:254-274·111-150 → lib/scope/server.ts:3887 → scope-aggregates.ts:8459",
+   "stmts": "유효 owned base 1개 ∧ 추적 URL ≥1 일 때 2회(bucket=week 차트 ⑥ 선, day ⑥ 카드 Δ). 각: trendSlotsFor(격자 off·day → null, 0문장) + 캐시 미스(mirrorCache 'citation-accuracy-trend') 1문장(WITH ans: DISTINCT ON 버킷×셀 + EXISTS 2 → GROUP BY bucket, 120일 창, excludeHiddenCycleRuns('citation')). JS: 주·일 추이에 ⑥ 값 합류(없는 버킷은 점 새로 생성)",
+   "f2": [
+    0,
+    1,
+    1,
+    0,
+    "aggregateCitationAccuracyTrend scope-aggregates.ts:8510"
+   ],
+   "f3": [
+    "n",
+    "120일 답변 × 인용 EXISTS 를 버킷별로 캐시 미스마다 재집계"
+   ],
+   "f4": [
+    "PJK11",
+    "C2",
+    "C3",
+    "H1",
+    "H2",
+    "T7"
+   ],
+   "f6": [
+    "y",
+    "catch·degrade 없음 → 오류 경계"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "day 호출은 ⑥ Δ 용으로 마지막 두 일 버킷만 쓰는데 120일치 일 버킷 전량 계산; 주 호출과 같은 답변 집합을 버킷만 바꿔 재집계",
+    "2"
+   ],
+   "f9": [
+    "n",
+    "일 버킷 최대 120행 생성, 화면 사용 2개"
+   ]
+  },
+  "PJH18": {
+   "label": "resolveProperty + getAiTrafficConversionKpi (⑦)",
+   "where": "projects/[id]/_data/live.ts:277-289·310-318 → lib/ga4/property-map.ts:82 → lib/ga4/conversion.ts:675",
+   "stmts": "매 렌더(캐시 없음): ga4_properties (brand,country) 점 조회 1문장 (property-map.ts:92). 속성 있으면 unstable_cache('ga4-kpi', 24h) 미스 시 ga4_tracked_events 1문장 + GA4 runReport 2회(전체·AI 코호트, 이벤트 스펙 있으면 4회). 데모 캡처 프로젝트는 demoConversionKpi() 가짜 값. 국가 필터 1개 선택 시 그 국가 속성으로 바뀜 (property-map.ts:88-89). DGA4 번들과 같은 리더지만 이 화면은 null 이면 ⑦ 타일 자체를 생략",
+   "f2": [
+    "skip",
+    "SQL 집계 없음 — 점 조회 + GA4 Data API 원격 집계"
+   ],
+   "f3": [
+    "n",
+    "캐시 미스마다 GA4 Data API 원천 호출"
+   ],
+   "f4": [
+    "GA1",
+    "GA2",
+    "GA3",
+    "PJK12",
+    "PJK13"
+   ],
+   "f6": [
+    "n",
+    "GA4 실패·속성 없음·AI 사용자 0 이 모두 null → ⑦ 타일(과 '답변의 전환' 섹션)이 안내 없이 사라짐 (conversion.ts:662·685-691, live.ts:285-289·310-318); 전환 이벤트 스펙 조회 실패 → keyEvents 로 조용히 폴백 (conversion.ts:262-264)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "전체 코호트 runReport(사람 전환율·lift 계산)를 부르지만 프로젝트 타일은 AI 전환율·AI 분자/분모만 표시 (conversion.ts:338-342·663-672)",
+    "SQL 2 + GA4 runReport 2~4"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ]
+  },
+  "PJH19": {
+   "label": "isDemoProject (DEMO_PROJECT_IDS env → SAMPLE_KPI_SUMMARY)",
+   "where": "projects/[id]/_data/live.ts:92-101·191-200",
+   "stmts": "0문장 — env 목록에 projectId 가 있으면 가짜 KPI 7종(SAMPLE_KPI_SUMMARY)·추이 null·구성 빈 값을 반환하고 이하 집계 전부 생략. 화면에 샘플 고지 없음. 운영 env 값 UNKNOWN",
+   "f2": [
+    "skip",
+    "0문장 — env 판정 후 상수 반환"
+   ],
+   "f3": [
+    "skip",
+    ""
+   ],
+   "f4": [
+    "PJK14"
+   ],
+   "f6": [
+    "y",
+    "읽기 없음"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "0"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ]
+  },
+  "PJM1a": {
+   "label": "fetchProjectMentions().asOf",
+   "where": "server.ts:788 → scope-aggregates.ts:6077 (JS 경로 all) · result-adapter.ts:1438-1444",
+   "stmts": "JS 경로 5문장 묶음 중 readMirrorAnswerMeta(스냅샷 답변 메타) → JS max(measured_at). mirrorCache('project-mentions'), 예산 mentionsJs(문장 상한 없음·75s 마감), degradeAware·withExcludedBrands 는 캐시 밖",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "readMirrorAnswerMeta scope-aggregates.ts:4963 (스냅샷 술어 조각 제외)"
+   ],
+   "f3": [
+    "n",
+    "scope_answers 에서 셀당 최신 스냅샷(DISTINCT ON + floor GROUP BY)을 요청 때 재구성, 기준일은 JS max(measured_at) (result-adapter.ts:1442-1443)"
+   ],
+   "f4": [],
+   "f6": [
+    "n",
+    "예산 75s·문장 타임아웃 → degradeAware null → 화면 전체가 '측정 데이터가 아직 없습니다'(필터바까지 사라짐), 지연 안내 없음 — wasDegraded 미사용 (server.ts:803, mentions-view.tsx:149-155)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "같은 스냅샷 서브쿼리를 answer meta·mentions 두 문장에 각자 인라인 — withProject 가 연 요청 공유 답변셋(sharedSnapshotAnswerIds) 미사용 (scope-aggregates.ts:5163-5167·4841-4845)",
+    "5"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ]
+  },
+  "PJM1b": {
+   "label": "fetchProjectMentions().trend",
+   "where": "scope-aggregates.ts:5292·5374 → :6160 · server.ts:3230 (withWeeklyTrendGrid)",
+   "stmts": "readMentionBrandDayCounts 1문장(주×브랜드 롤업, seriesKeys 없음) + 갭 원장 1(자체 캐시). 격자 off 라 자리 목록 0문장. JS 접기가 만든 추이는 이 SQL 추이로 교체",
+   "f2": [
+    2,
+    2,
+    1,
+    0,
+    "mentionBrandDayCountsQuery scope-aggregates.ts:5374 (프로젝트=measured 주 격자라 주 조인 없음)"
+   ],
+   "f3": [
+    "n",
+    "scope_mentions ⋈ 답변셋(전 run·120일 창)을 주×브랜드로 요청 때 GROUP BY"
+   ],
+   "f4": [
+    "B1",
+    "B2",
+    "B3",
+    "B4",
+    "B5",
+    "B6",
+    "B7",
+    "B8",
+    "B9",
+    "H1",
+    "H2"
+   ],
+   "f6": [
+    "n",
+    "숨김 회차(갭) 원장 조회 실패 → [] 로 갭 표시 없이 진행 (summary-cycles.ts:762-763); 추이 문장 실패는 묶음 전체 실패라 타임아웃이면 화면 전체 '측정 데이터가 아직 없습니다' (server.ts:803)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "JS 접기가 만든 추이(trendEntries·buildMentionTrend)를 계산 후 버리고 SQL 추이로 교체 (result-adapter.ts:1450-1456·1653 → scope-aggregates.ts:6160)",
+    "5"
+   ],
+   "f9": [
+    "n",
+    "seriesKeys 미전달로 전 브랜드×주 행을 DB→서버 전송, 화면은 상위 10 시리즈만 (scope-aggregates.ts:6125-6126·5297-5299)"
+   ]
+  },
+  "PJM1c": {
+   "label": "fetchProjectMentions().brands · summary · typesByBrand",
+   "where": "scope-aggregates.ts:6114-6165 → result-adapter.ts:1342 · server.ts:803 (withExcludedBrands/filterMentionsLive)",
+   "stmts": "5문장: readMirrorAnswerMeta · readMirrorMentionsByJob(SELECT *) · readMirrorPromptMap(전 카탈로그, WHERE 없음) · readMentionBrandDayCounts · readBrandNameMap(ROLLUP_NAMES 전역) + 조건부 readCustomFieldPromptIds(태그 필터)·mirrorHasAnswers(빈 결과). 이후 JS 접기 → slimMentionsLiveForCache(1.5MB) → 게이트웨이 제외 필터(명부 셀)",
+   "f2": [
+    1,
+    0,
+    0,
+    0,
+    "readMirrorPromptMap scope-aggregates.ts:4633 (무게는 JS 접기 result-adapter.ts:1342)"
+   ],
+   "f3": [
+    "n",
+    "스냅샷 전 언급 행을 Node 로 가져와 브랜드 해석·순위·언급률·유형×브랜드를 JS 로 접음 (result-adapter.ts:1429-1585)"
+   ],
+   "f4": [
+    "B1",
+    "B2",
+    "B3",
+    "B4",
+    "B5",
+    "B6",
+    "B7",
+    "B8",
+    "B9",
+    "B10"
+   ],
+   "f6": [
+    "n",
+    "타임아웃 → 화면 전체 '측정 데이터가 아직 없습니다' (server.ts:803, mentions-view.tsx:149-155); 명부 제외 목록 조회 실패 → 빈 집합으로 제외 브랜드가 순위표·헤드투헤드에 조용히 재노출 (server.ts:1246-1251)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "scope_prompts⋈prompts 전 카탈로그(전 프로젝트분)를 캐시 미스마다 읽음 (scope-aggregates.ts:4633-4650); 스냅샷 서브쿼리 2회 인라인 (:5163-5167); 제외 브랜드도 전부 집계 후 표시 단계에서 버림 (excluded-brands.ts:121-152)",
+    "5"
+   ],
+   "f9": [
+    "n",
+    "스냅샷 전 언급 행 SELECT * 를 DB→Node 전송하는 전송 지배 경로 (server.ts:775-778 주석 '왕복 47 s'), 프롬프트 카탈로그도 전 프로젝트분 전송"
+   ]
+  },
+  "PJM1d": {
+   "label": "fetchProjectMentions().sentimentTotals · typeTotals",
+   "where": "result-adapter.ts:1478-1493·1563-1568",
+   "stmts": "PJM1c 와 같은 5문장 묶음 — 당사 언급 행의 감정·유형 신호를 JS 로 합산(추가 문장 없음)",
+   "f2": [
+    1,
+    0,
+    0,
+    0,
+    "PJM1c 와 같은 묶음 — readMirrorPromptMap scope-aggregates.ts:4633 (무게는 JS 접기)"
+   ],
+   "f3": [
+    "n",
+    "언급 원문 행의 감정·유형 신호를 요청 때 JS 합산"
+   ],
+   "f4": [
+    "B1",
+    "B2",
+    "B3",
+    "B4",
+    "B5",
+    "B6",
+    "B7",
+    "B8",
+    "B9",
+    "B10"
+   ],
+   "f6": [
+    "n",
+    "타임아웃 → 화면 전체 '측정 데이터가 아직 없습니다' (server.ts:803, mentions-view.tsx:149-155)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "PJM1c 묶음 상속(전 카탈로그 읽기·스냅샷 서브쿼리 2회 인라인)",
+    "5"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ]
+  },
+  "PJM1e": {
+   "label": "fetchProjectMentions().perBrandPrompts (드릴다운 프롬프트 탭, eager)",
+   "where": "result-adapter.ts:1499-1609 · scope-aggregates.ts:5563 · mentions-view.tsx:505-510",
+   "stmts": "PJM1c 묶음의 JS 산출물 — 전 브랜드 × 프롬프트 × 답변 ref 를 첫 응답에 실음(lazyPrompts=false), 1.5MB 예산 초과 시 단계 슬림. 클릭 시 추가 호출 없음",
+   "f2": [
+    1,
+    0,
+    0,
+    0,
+    "readMirrorPromptMap scope-aggregates.ts:4633 (promptText·funnel 원천, 무게는 JS 접기)"
+   ],
+   "f3": [
+    "n",
+    "전 브랜드×프롬프트×답변 ref 를 원문 행에서 JS 로 접음 (result-adapter.ts:1499-1609)"
+   ],
+   "f4": [
+    "B1",
+    "B2",
+    "B3",
+    "B4",
+    "B5",
+    "B6",
+    "B7",
+    "B8",
+    "B9",
+    "B10"
+   ],
+   "f6": [
+    "n",
+    "타임아웃 → 화면 전체 '측정 데이터가 아직 없습니다' (server.ts:803)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "제외 브랜드의 드릴다운까지 계산 후 버림 (excluded-brands.ts:138-142); PJM1c 묶음 상속",
+    "5"
+   ],
+   "f9": [
+    "n",
+    "전 브랜드 드릴다운을 첫 RSC 페이로드에 실음(화면은 클릭한 1행만) (mentions-view.tsx:505-510); 1.5MB 초과 시 브랜드당 프롬프트 25→5·답변 ref 8→2→0·전체 {} 로 무고지 절단, 드릴다운은 '해당 브랜드의 프롬프트 샘플이 없습니다'로 보임 (scope-aggregates.ts:5521-5579, mentions-drilldown.tsx:100-101)"
+   ]
+  },
+  "PJM2": {
+   "label": "fetchProjectSubKpis",
+   "where": "server.ts:3953 → scope-aggregates.ts:3270 (aggregateSubKpisFromMirror)",
+   "stmts": "캐시 미스(mirrorCache 'project-subkpis'): 공유 답변셋 SELECT 1 + SET LOCAL 1 + CREATE TEMP·ANALYZE 2 + Q1~Q5 5 = 9. 캐시와 무관하게 매 렌더 ownedBasePrefixesForProject → listProjectOwnedBases 1 (withProject·enforce 전)",
+   "f2": [
+    4,
+    9,
+    3,
+    1,
+    "Q1 scope-aggregates.ts:3299 + ownBrandRankPerJobSql :495"
+   ],
+   "f3": [
+    "n",
+    "scope_mentions ⋈ _answer_set 을 요청 때 엔진별 집계 (Q1~Q5)"
+   ],
+   "f4": [
+    "B1",
+    "B2",
+    "B3",
+    "B4",
+    "B5",
+    "B6",
+    "B7",
+    "B8",
+    "B9",
+    "T2",
+    "T3",
+    "T4"
+   ],
+   "f6": [
+    "y",
+    "catch·degrade 없음 → Promise.all 거부 → 페이지 오류 경계 (page.tsx:91-103). 단 Sub KPI 하나의 타임아웃이 페이지 전체를 떨어뜨림"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "Q4 인용·top1·avg_position 은 이 화면 미사용(sub-kpis.ts:44-65)인데 표준 KPI 탭처럼 parts 로 좁히지 않고 전량 (server.ts:1437-1441 대비); totalMentions·measuredPrompts 를 언급 JS 접기와 별도로 재계산 (sub-kpis.ts:35-39); Q4 전용 listProjectOwnedBases 를 캐시 밖에서 SubKpis·Prev 가 각자 조회 (server.ts:3958·3977·976)",
+    "9+1"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ]
+  },
+  "PJM3": {
+   "label": "fetchProjectSubKpisPrev",
+   "where": "server.ts:3972 → :1451 (subKpisPrevImpl) → scope-aggregates.ts:3551·3270",
+   "stmts": "filters.cumulative=true 라 기간 유무와 무관하게 누적 분기: measureDayBoundsInRange 1(프로젝트 전 이력 측정일) + 같은 Sub KPI 9 (dateTo=첫 측정일). 매 렌더 listProjectOwnedBases 1",
+   "f2": [
+    4,
+    9,
+    3,
+    1,
+    "Q1 scope-aggregates.ts:3299 + ownBrandRankPerJobSql :495"
+   ],
+   "f3": [
+    "n",
+    "직전 시점을 같은 집계로 재계산 + 측정일 GROUP BY (scope-aggregates.ts:3565-3573)"
+   ],
+   "f4": [
+    "B1",
+    "B2",
+    "B3",
+    "B4",
+    "B5",
+    "B6",
+    "B7",
+    "B8",
+    "B9",
+    "T2",
+    "T3",
+    "T4"
+   ],
+   "f6": [
+    "y",
+    "catch 없음 → 오류 경계 (server.ts:3972-3985, page.tsx:91-103). 측정일 1개뿐이면 null → 배지·캡션 숨김(정상)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "PJM2 와 같은 미사용 Q4 전량; 기간 미선택에도 cumulativeMode 가 아닌 filters.cumulative 원값을 봐 프로젝트 전 이력 측정일을 스캔 (server.ts:1469-1471, scope-aggregates.ts:3563)",
+    "10+1"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ]
+  },
+  "PJM4": {
+   "label": "trackedCompetitorRepository.getTargetBrand",
+   "where": "lib/db/repositories/tracked-entities.ts:101",
+   "stmts": "점 조회 1 (캐시 없음, 매 렌더, 페이지 게이트 뒤 직접 호출)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "tracked-entities.ts:102-111"
+   ],
+   "f3": [
+    "y",
+    "is_target 행 점 조회"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "catch 없음 → 오류 경계 (page.tsx:91-103)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "1"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ]
+  },
+  "PJM5": {
+   "label": "listCatalogTaxonomy(projectId)",
+   "where": "lib/db/repositories/standards.ts:394-411 (언급 page.tsx:99 · 인용 page.tsx:81)",
+   "stmts": "SELECT DISTINCT 1 (프로젝트 카탈로그 prompts, 캐시 없음, 매 렌더). 프로젝트 id 를 넘겨 G1 기본값 미사용. 인용 화면도 같은 함수·같은 인자로 호출",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "listCatalogTaxonomy standards.ts:398-410 (SELECT DISTINCT, GROUP BY 없음)"
+   ],
+   "f3": [
+    "y",
+    "카탈로그 설정 행 DISTINCT — 측정 원문 집계 아님"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "catch 없음 → 오류 경계 (page.tsx:91-103)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "1"
+   ],
+   "f9": [
+    "y",
+    "프로젝트 카탈로그 조합 행 전량 — 패널 연쇄 축 옵션 계산용"
+   ]
+  },
+  "PJM6": {
+   "label": "fetchProjectMeasuredEngines → listMeasuredEngines",
+   "where": "server.ts:825-836 → scope-aggregates.ts:7999-8015 (언급 page.tsx:102 · 인용 page.tsx:83)",
+   "stmts": "SELECT DISTINCT target 1 (스냅샷 서브쿼리 포함), 캐시 없음 — 매 렌더. 인용 화면도 같은 함수·같은 인자로 호출",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "listMeasuredEngines scope-aggregates.ts:8007 (스냅샷 술어 조각 제외)"
+   ],
+   "f3": [
+    "n",
+    "scope_answers 스냅샷(셀당 최신·floor GROUP BY)을 매 렌더 재구성해 DISTINCT target"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "catch 없음 → 오류 경계 (미연결 프로젝트 [] 는 정상)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "캐시 없이 매 렌더, 같은 스냅샷 서브쿼리를 요청 공유 답변셋 없이 또 평가 (scope-aggregates.ts:8011, server.ts:829-835)",
+    "1"
+   ],
+   "f9": [
+    "y",
+    "엔진 몇 개 전량 표시"
+   ]
+  },
+  "PJM7": {
+   "label": "fetchProjectSelectableAnchorDates(projectId, filters, family 'all'·'mentions'·'citations')",
+   "where": "server.ts:5836-5850 → lib/calendar/selectable-anchor-dates.ts:99-134 → lib/db/repositories/scope-answer-anchors.ts:470-516 (홈 project-dashboard.tsx:157 · 언급 page.tsx:124 · 인용 page.tsx:101)",
+   "stmts": "운영(앵커 축 off): ensureAnchorAxis false → undefined, 0문장 — 종전 달력(전 날짜). 조건부(축 on): withProject + unstable_cache(900s) 앵커 날짜 DISTINCT 1문장(최신 400개). 세 화면 공용(계열만 다름), 페이지는 JSX 안에서 직렬 await",
+   "f2": [
+    "skip",
+    "운영(앵커 축 off) 0문장 — undefined 반환 (server.ts:5842)"
+   ],
+   "f3": [
+    "n",
+    "조건부(축 on): 답변 단위 앵커 행에서 날짜 DISTINCT (scope-answer-anchors.ts:387-432)"
+   ],
+   "f4": [],
+   "f6": [
+    "n",
+    "조건부(축 on): 리더 실패 → [] 로 접혀 달력이 종전 입력으로 조용히 복귀 (selectable-anchor-dates.ts:120-132, scope-answer-anchors.ts:503-514)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "0"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ]
+  },
+  "PJM8": {
+   "label": "projectCustomFieldRepository.listForProject + listValuesForProject",
+   "where": "lib/db/repositories/project-custom-fields.ts:19-25·77-87 (홈 page.tsx:109-129 · 언급 page.tsx:64-84 · 인용 page.tsx:51-71)",
+   "stmts": "2문장 병렬, 캐시 없음, 매 렌더(세 화면 공용). 인가 래퍼 없이 페이지 직접 호출(페이지 게이트 뒤), 이후 JS로 보관 필드 제외·필드별 값 DISTINCT → 필터 동적 축",
+   "f2": [
+    1,
+    0,
+    0,
+    0,
+    "listValuesForProject project-custom-fields.ts:78-86"
+   ],
+   "f3": [
+    "y",
+    "설정·태그 행 조회, DISTINCT 는 JS"
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "catch 없음 → 오류 경계 (page.tsx:64-67)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "2"
+   ],
+   "f9": [
+    "n",
+    "프로젝트 전 프롬프트×필드 값 행을 받아 JS 로 DISTINCT (page.tsx:70-84) — 보관 필드·삭제 프롬프트(deleted_at 미필터) 값까지 전송·노출"
+   ]
+  },
+  "PJM9": {
+   "label": "fetchProjectSignalPrompts",
+   "where": "server.ts:4280 → scope-aggregates.ts:7476 (app/api/scope/signal-prompts/route.ts:109-110)",
+   "stmts": "1문장 (클릭 시, mirrorCache 'project-signal-prompts') + 라우트 게이트(cachedProjectById·cachedMembership)",
+   "f2": [
+    3,
+    2,
+    2,
+    1,
+    "scope-aggregates.ts:7490 (sig·pr CTE, row_number)"
+   ],
+   "f3": [
+    "n",
+    "scope_mentions ⋈ scope_answers 를 요청 때 신호별 집계"
+   ],
+   "f4": [
+    "B1",
+    "B2",
+    "B3",
+    "B4",
+    "B5"
+   ],
+   "f6": [
+    "y",
+    "라우트 재throw·게이트 403/404 → 클라이언트 r.ok 검사로 오류 문구 (signal-prompts-dialog.tsx:59-67)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "1"
+   ],
+   "f9": [
+    "n",
+    "상위 50 은 안내문에 명시되나 프롬프트당 답변 ref 6건 상한은 무고지 (scope-aggregates.ts:7474·7532) — SQL 은 상위 50 프롬프트의 전 job 행을 Node 로 보낸 뒤 6건만 사용"
+   ]
+  },
+  "PJM10": {
+   "label": "fetchProjectAnswerBody (GET /api/scope/answer?projectId=)",
+   "where": "app/api/scope/answer/route.ts:42-115 → server.ts:4421-4433 → scope-aggregates.ts:8077-8281 (언급·인용 화면 답변 모달 공용)",
+   "stmts": "클릭 시(캐시 없음): 라우트 게이트(세션 · drilldownGate → cachedProjectById · cachedMembership) + withProject + 점 조회 3 (답변 본문 LIMIT 1 · 인용 · 언급) + 조건부 2 (발생 감성 · 스탠스 테이블 있을 때); run 소속 게이트. 언급·인용 두 화면 공용",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "점 조회 scope-aggregates.ts:8126-8149 (+run 소속 게이트 :8111-8115)"
+   ],
+   "f3": [
+    "n",
+    "답변 1건의 언급 수·당사 여부·감성 스팬을 JS 로 재계산 (scope-aggregates.ts:8163-8224)"
+   ],
+   "f4": [
+    "B1",
+    "B2",
+    "B3",
+    "B4",
+    "B5",
+    "B6"
+   ],
+   "f6": [
+    "y",
+    "DB 오류 재throw → 모달 오류 (answer-modal.tsx:161-165). 단 r.ok 미검사라 게이트 403/404·미연결 {available:false} 는 '원문 미수집' 문구로 표시 (route.ts:53·106, answer-modal.tsx:150-158)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "3(+2)"
+   ],
+   "f9": [
+    "y",
+    "답변 1건 상세 전량 표시"
+   ]
+  },
+  "PJM11": {
+   "label": "brand-citations 라우트 GET — projectId 레거시 분기",
+   "where": "app/api/scope/brand-citations/route.ts:57-145 (110-137)",
+   "stmts": "게이트(drilldownGate: cachedProjectById·cachedMembership) + 글로벌 장소 게이트 → fetchBrandCitations(표준 루트, M9). 프로젝트 데이터·커스텀 필드 필터 미적용",
+   "f2": [
+    "skip",
+    "래퍼 — SQL 은 M9(fetchBrandCitations, 표준 루트)"
+   ],
+   "f3": [
+    "skip",
+    ""
+   ],
+   "f4": [],
+   "f6": [
+    "n",
+    "프로젝트 전용 계정(글로벌 장소 권한 없음)은 403 {domains:[]} 를 받는데 클라이언트가 r.ok 를 안 봐 '해당 브랜드 답변이 인용한 도메인 샘플이 없습니다'로 표시 (route.ts:114-116, mentions-drilldown.tsx:342-345·370-372)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "0(+M9)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ]
+  },
+  "PJM12": {
+   "label": "BrandRankTable.onExport → downloadXlsx",
+   "where": "brand-rank-table.tsx:147-171 · lib/export/xlsx.ts:16-53",
+   "stmts": "SQL 0 — 브라우저에서 현재 표 행(검색·정렬 반영)으로 xlsx 생성",
+   "f2": [
+    "skip",
+    "SQL 없음 — 클라이언트 생성"
+   ],
+   "f3": [
+    "skip",
+    ""
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "읽기 없음 — 화면 행 재사용"
+   ],
+   "f7": [
+    "n",
+    "void downloadXlsx(...) — exceljs 동적 import·생성 실패가 삼켜지고 안내 없음, 진행 표시·중복 클릭 방지 없음 (brand-rank-table.tsx:149·221-231, lib/export/xlsx.ts:22)"
+   ],
+   "f8": [
+    "y",
+    "",
+    "0"
+   ],
+   "f9": [
+    "y",
+    "표에 보이는 행(검색·정렬 반영) 그대로"
+   ]
+  },
+  "PJC1": {
+   "label": "fetchProjectCitations 래퍼 (degradeAware · ownedBasePrefixesForProject · withWeeklyTrendGrid · mirrorCache 'project-citations')",
+   "where": "lib/scope/server.ts:838-865 (+ :961-983 ownedBasePrefixesForProject, :783-786 cachedProjectCitations, :3230-3283 withWeeklyTrendGrid)",
+   "stmts": "매 렌더(캐시 밖): listProjectOwnedBases 1 (캐시 없음, project-owned-bases.ts:21) + 숨긴 회차 원장 hiddenCycleSlots 1 (React cache, 추이가 있을 때, summary-cycles.ts:725) + 격자 판정(X.trendGrid off → 0문장). 캐시 미스(mirrorCache, 키=scopeProjectId·정규화 필터·ownedBasePrefixes, TTL 7200s, 미러 싱크 태그 무효화) 시 aggregateCitationsFromMirror 7문장 + SET LOCAL 6 + 오버라이드 1 (PJC1a~tr에서 계수, 인용 0건이면 +mirrorHasCitations 1). 예산 citationsWide(문장 20s · 벽시계 45s), degradeAware는 캐시 밖. S3.citation 무관(프로젝트는 항상 미러)",
+   "f2": [
+    0,
+    0,
+    0,
+    0,
+    "자체 문장 listProjectOwnedBases project-owned-bases.ts:21 · hiddenCycleSlots summary-cycles.ts:725 (집계는 PJC1a~tr)"
+   ],
+   "f3": [
+    "y",
+    "자체 문장은 설정(project_owned_bases)·원장(summary_cycles) 행 단순 조회 — 미러 재집계는 하위 PJC1a~tr에서 계수"
+   ],
+   "f4": [
+    "C2",
+    "C3",
+    "C4"
+   ],
+   "f6": [
+    "n",
+    "집계 시간 초과(57014·마감) → degradeAware가 null로 접고(server.ts:842, degrade-registry.ts:55-73) 페이지는 wasDegraded를 읽지 않아 '측정 데이터가 아직 없습니다' 빈 상태로 표시(citations-view.tsx:687-693); project_owned_bases 테이블 없음(42P01) → [] 로 project.domain 사슬에 조용히 전환(project-owned-bases.ts:29-34); 숨김 회차(갭) 원장 조회 실패 → [] 로 갭 표시 없이 진행(summary-cycles.ts:762-763)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "owned base 목록은 캐시 키·판정 입력, 갭 원장은 추이 음영에 실제 사용",
+    "2 (매 렌더, 캐시 밖)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ]
+  },
+  "PJC1a": {
+   "label": "fetchProjectCitations().asOf",
+   "where": "server.ts:838 → scope-aggregates.ts:7047-7056 (aggregateCitationsFromMirror ansRows)",
+   "stmts": "ansRows (미스 시 7문장 + SET 6 + 오버라이드 1 묶음의 일부, 축 off → cycleAsOfSql)",
+   "f2": [
+    1,
+    0,
+    0,
+    0,
+    "ansRows scope-aggregates.ts:7047"
+   ],
+   "f3": [
+    "n",
+    "scope_answers 스냅샷 답변셋을 요청 때 count·max 집계"
+   ],
+   "f4": [],
+   "f6": [
+    "n",
+    "저하 시 화면 전체가 '측정 데이터가 아직 없습니다'로 바뀌어 기준일도 안내 없이 사라짐(server.ts:842, citations-view.tsx:687-693)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "1"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ]
+  },
+  "PJC1dom": {
+   "label": "fetchProjectCitations().domains (+row.urls · promptList)",
+   "where": "scope-aggregates.ts:7058 · 7073 · 7166-7218 (+ foldCitationsLive :6784, slimCitationsLiveForCache :5680)",
+   "stmts": "groupRows + statRows + drill(cbase 1벌 json_agg). 드릴다운 대상 = 상위 80 ∪ 상위 밖 공식(HMG) ≤250(URL 5개만, :5465-5492 · 7129-7153), 반환 직전 1.5MB 예산 슬리밍",
+   "f2": [
+    4,
+    9,
+    3,
+    3,
+    "drill scope-aggregates.ts:7166-7218"
+   ],
+   "f3": [
+    "n",
+    "scope_citations ⋈ scope_answers 를 도메인×URL×프롬프트로 접고 row_number 순위 — 요청 때 재집계"
+   ],
+   "f4": [
+    "R",
+    "C5",
+    "C1",
+    "C2",
+    "C3",
+    "C4",
+    "C6"
+   ],
+   "f6": [
+    "n",
+    "오버라이드 조회 실패 → 빈 맵으로 조용히 분류 (overrides-loader.ts:63-69); 저하 → 화면 전체 빈 상태(server.ts:842); 드릴다운 상한 밖 행은 urls·promptList [] → '인용 수가 적어 … 상위 도메인에만 표시' 문구(scope-aggregates.ts:5613-5619, citation-view.ts:191-208)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "n",
+    "프로젝트 스냅샷 답변셋 서브쿼리(perProjectLatestAnswerIds: DISTINCT ON + 프로젝트별 max GROUP BY)를 6문장(ansRows·groupRows·statRows·splitRows·drill·splitRefs)이 각자 인라인 재계산 — withProject가 연 공유 답변셋 스코프(server.ts:1309)를 detailAnswerWhere가 쓰지 않음(scope-aggregates.ts:6481). groupRows·statRows도 같은 citations⋈answers 베이스를 따로 스캔(:7058 · 7073)",
+    "3 (groupRows · statRows · drill / 묶음 7 + SET 6 + 오버라이드 1)"
+   ],
+   "f9": [
+    "n",
+    "레거시는 전 도메인 행 + 상위 80(+공식 꼬리 ≤250) 도메인의 urls(≤10)·promptList(≤12, 답변 ref ≤8)를 첫 응답에 실음 — 화면은 펼친 1행만 봄. 1.5MB 초과 시 도메인 행을 2000/1500/1000/600/400으로 조용히 절단(scope-aggregates.ts:5593-5598 · 5684-5693), 검색 건수 분모도 절단 수(citations-view.tsx:897). 프롬프트 12·URL 10·ref 8 상한은 안내 없음(상위 80 밖 URL 미제공만 문구로 안내)"
+   ]
+  },
+  "PJC1sum": {
+   "label": "fetchProjectCitations().summary (total · uniqueDomains · officialOwnShare)",
+   "where": "scope-aggregates.ts:7058-7072 (groupRows owned_citations) → foldCitationsLive :6818-6829 · 6935-6944",
+   "stmts": "groupRows 공유(추가 문장 없음) — 공식(당사) 비중 = 행 단위 owned 매칭 합 ÷ 전체 인용",
+   "f2": [
+    1,
+    1,
+    1,
+    0,
+    "groupRows scope-aggregates.ts:7058 (PJC1cat와 같은 문장)"
+   ],
+   "f3": [
+    "n",
+    "행 단위 owned 판정 카운트·도메인 수를 요청 때 집계"
+   ],
+   "f4": [
+    "R",
+    "C5",
+    "C1",
+    "C2",
+    "C3",
+    "C4",
+    "C6"
+   ],
+   "f6": [
+    "n",
+    "저하 → 화면 전체 빈 상태(server.ts:842, citations-view.tsx:687-693); 오버라이드 조회 실패 → 빈 맵으로 조용히 분류 (overrides-loader.ts:63-69 — source 필터 시 분모·분자 모집단이 조용히 바뀜)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "0 (groupRows 공유)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ]
+  },
+  "PJC1cat": {
+   "label": "fetchProjectCitations().categories · engineCategories",
+   "where": "scope-aggregates.ts:7058-7072 (groupRows) → foldCitationsLive :6819-6829 · 6946-6950",
+   "stmts": "groupRows (도메인×카테고리×엔진 롤업, 분류는 JS)",
+   "f2": [
+    1,
+    1,
+    1,
+    0,
+    "groupRows scope-aggregates.ts:7058"
+   ],
+   "f3": [
+    "n",
+    "인용 원소를 요청 때 분류·집계"
+   ],
+   "f4": [
+    "R",
+    "C5",
+    "C1",
+    "C2",
+    "C3"
+   ],
+   "f6": [
+    "n",
+    "오버라이드 조회 실패 → 빈 맵으로 조용히 분류 (overrides-loader.ts:63-69); 저하 → 화면 전체 빈 상태(server.ts:842); 엔진 구성 빈 배열은 '측정 연동 준비 중' 카드로 표시(citations-view.tsx:859-868)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "1 (PJC1dom groupRows 공유)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ]
+  },
+  "PJC1ct": {
+   "label": "fetchProjectCitations().categoryTrend",
+   "where": "scope-aggregates.ts:5241-5290 (readCitationDomainDayCounts) → :7262-7271",
+   "stmts": "trendRows (예산 없는 getDb, 120일 창, 주·셀당 최신 1건) — trend와 같은 문장 공유",
+   "f2": [
+    1,
+    1,
+    1,
+    0,
+    "readCitationDomainDayCounts scope-aggregates.ts:5273 (프로젝트 주 키 = measured, _wk 조인 없음 :3683-3708)"
+   ],
+   "f3": [
+    "n",
+    "일별 도메인 인용을 요청 때 분류·주별 집계"
+   ],
+   "f4": [
+    "R",
+    "C5",
+    "C1",
+    "C2",
+    "C3",
+    "H1",
+    "H2"
+   ],
+   "f6": [
+    "n",
+    "null 추이는 안내 없이 섹션 생략(citations-view.tsx:833-840); 숨김 회차(갭) 원장 조회 실패 → [] 로 갭 표시 없이 진행 (summary-cycles.ts:762-763); 오버라이드 조회 실패 → 빈 맵으로 조용히 분류 (overrides-loader.ts:63-69)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "PJC1tr와 trendRows 1문장 공유",
+    "1 (공유)"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ]
+  },
+  "PJC1ps": {
+   "label": "fetchProjectCitations().promptSplit",
+   "where": "scope-aggregates.ts:7082-7106 (splitRows) · 7224-7233 (splitRefs) → :6904-6933",
+   "stmts": "splitRows + splitRefs (source 카테고리 필터 시 둘 다 생략 → 뷰가 domains[].promptList 스캔 폴백, citations-view.tsx:562-647)",
+   "f2": [
+    2,
+    2,
+    1,
+    2,
+    "splitRows scope-aggregates.ts:7082"
+   ],
+   "f3": [
+    "n",
+    "자사 URL 인용 프롬프트를 요청 때 판정·순위"
+   ],
+   "f4": [
+    "C1",
+    "C2",
+    "C3",
+    "C4",
+    "C6",
+    "R",
+    "C5"
+   ],
+   "f6": [
+    "n",
+    "저하 → 화면 전체 빈 상태(server.ts:842, citations-view.tsx:687-693)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "2"
+   ],
+   "f9": [
+    "n",
+    "버킷 리스트 SQL 상한 20 중 카드는 5개 + '외 N개'(정확) 표시. source 필터 시 SQL 분할 생략 → 브라우저가 상위 80 도메인×프롬프트 12로 캡된 promptList로 재계산해 개수가 과소·안내 없음(scope-aggregates.ts:7032, citations-view.tsx:643-647)"
+   ]
+  },
+  "PJC1tr": {
+   "label": "fetchProjectCitations().trend",
+   "where": "scope-aggregates.ts:5273 → :7270 (+ server.ts:3266 weeklyGapWeeks)",
+   "stmts": "trendRows (categoryTrend와 공유) + 갭 원장(PJC1 래퍼)",
+   "f2": [
+    1,
+    1,
+    1,
+    0,
+    "readCitationDomainDayCounts scope-aggregates.ts:5273"
+   ],
+   "f3": [
+    "n",
+    "주별 도메인 인용 재집계"
+   ],
+   "f4": [
+    "C1",
+    "R",
+    "C5",
+    "C2",
+    "C3",
+    "H1",
+    "H2"
+   ],
+   "f6": [
+    "n",
+    "숨김 회차(갭) 원장 조회 실패 → [] 로 갭 표시 없이 진행 (summary-cycles.ts:762-763). null 추이(2주 미만)는 '측정 연동 준비 중' 카드(citations-view.tsx:824-828)"
+   ],
+   "f7": [
+    "skip",
+    ""
+   ],
+   "f8": [
+    "y",
+    "",
+    "1"
+   ],
+   "f9": [
+    "skip",
+    ""
+   ]
+  },
+  "PJC6": {
+   "label": "쓰기: onExport → downloadXlsx (레거시 브라우저 생성)",
+   "where": "app/[locale]/(dash)/standard/answer-analysis/_components/citations-view.tsx:657-685 → lib/export/xlsx.ts:16-53",
+   "stmts": "서버 호출 0 — 브라우저가 받은 행(sorted)으로 7열 xlsx 생성, exceljs 동적 import",
+   "f2": [
+    "skip",
+    "SQL 없음 — 이미 받은 행(PJC1dom)을 브라우저에서 파일화"
+   ],
+   "f3": [
+    "skip",
+    ""
+   ],
+   "f4": [],
+   "f6": [
+    "y",
+    "별도 읽기 없음 — 화면 데이터 재사용"
+   ],
+   "f7": [
+    "n",
+    "void downloadXlsx(...) 로 프로미스를 버려 exceljs 청크 로드·생성 실패가 안내 없이 묻힘(citations-view.tsx:664); 대상이 브라우저가 받은 행뿐이라 캐시 예산 슬리밍으로 잘린 경우(2000~400행) 일부만 담긴 파일을 전체처럼 내려줌(citations-view.tsx:675, scope-aggregates.ts:5680-5693); 생성 중 버튼 비활성 없음 → 중복 파일(citations-view.tsx:901-911)"
+   ],
+   "f8": [
+    "y",
+    "",
+    "0"
+   ],
+   "f9": [
+    "n",
+    "파일이 클라이언트에 있는(절단됐을 수 있는) 행만 담고 절단 여부 안내 없음"
+   ]
+  }
+ },
+ "new_constants": {
+  "PJK1": [
+   "RECENT_WINDOW_DAYS = 7 (최근 신규 타일 창)",
+   "app/[locale]/(dash)/projects/_components/projects-overview.tsx:33",
+   1,
+   "최근 7일 생성 프로젝트 수 (라벨에 일수 노출)"
+  ],
+  "PJK5": [
+   "LOW_SAMPLE_USERS = 50 (엔진별 표본 부족 배지 임계)",
+   "app/[locale]/(dash)/standard/ai-funnel/_components/conversion-view.tsx:59",
+   1,
+   "활성사용자 < 50 이면 '표본 부족'"
+  ],
+  "PJK6": [
+   "AI 엔진 어휘 AI_ENGINE_IDS · DEFAULT_AI_ENGINES",
+   "lib/scope/engines.ts:16·37",
+   1,
+   "chatgpt·gemini·deepseek, 기본 chatgpt·gemini"
+  ],
+  "PJK7": [
+   "NEW_SCHEDULE_INTERVAL_DAYS = 7 (새 scope 스케줄 주기)",
+   "lib/scope/project-sync.ts:63",
+   1,
+   "생성 직후 측정 주기 7일"
+  ],
+  "PJK9": [
+   "ACR 샘플 픽스처 SAMPLE_ACR_*",
+   "app/[locale]/(dash)/standard/ai-funnel/_data/sample.ts:44·60·78·105·222",
+   1,
+   "브랜드·추이·배틀·차종 전환·시트 샘플 (필터 해시 변조는 GLK3)"
+  ],
+  "PJK11": [
+   "추적 파라미터 제거 목록 TRACKING_PARAM",
+   "lib/scope/url-match.ts:19-20 · scope-aggregates.ts:598-599 (SQL 쌍둥이)",
+   1,
+   "utm*·msockid·fbclid·gclid 등 13 패턴 — ⑥ 타겟 URL 매칭 정규화"
+  ],
+  "PJK12": [
+   "데모 캡처 프로젝트 UUID DEMO_PROJECT_ID·DEMO_SCOPE_PROJECT_ID",
+   "lib/demo.ts:14·19",
+   1,
+   "UUID 2개 — ⑦ 가짜 값 분기"
+  ],
+  "PJK13": [
+   "데모 GA4 합성 값 (⑦ 타일 · 전환 · 방문)",
+   "lib/ga4/demo-conversion.ts:19-27·65-114",
+   1,
+   "속성 ID 'demo-ga4-property', AI 전환율 8.5% · 일반 4.2% · AI 사용자 1,240 · 키 이벤트 105 등 + demoConversionLive·demoVisits 합성 추이 (데모 캡처 프로젝트 전용)"
+  ],
+  "PJK14": [
+   "SAMPLE_KPI_SUMMARY 가짜 KPI 7종 (DEMO_PROJECT_IDS env 매칭 시)",
+   "app/[locale]/(dash)/dashboard/_data/sample.ts:204-213 · projects/[id]/_data/live.ts:92-101",
+   1,
+   "노출률 62.1 · 점유율 28.4 · 우호도 41.7 · 순위 3.4 · 인용 11.5 · ⑥ 84.2 · ⑦ 2.7 (+Δ·분자/분모)"
+  ],
+  "PJK15": [
+   "GEO_COUNTRY_ISO 국가명→ISO 매핑",
+   "lib/geo-catalog/country-codes.ts:11",
+   1,
+   "132개(grep 기준) — 프로젝트 brand×country 카탈로그 owned base 선택 (server.ts:970-975)"
+  ]
+ },
+ "notes": [
+  "원천 스위치: 프로젝트 표면 데이터는 전부 HGH_SOURCE_G6 (projects·dashboard/analysis/funnel surface=project), 페이지 게이트·SNB 메타는 HGH_SOURCE_SESSION. Before 측정은 두 스위치 모두 legacy 기준.",
+  "권한 집행 이원화: legacy 리프 게이트(layout·loadProjectAnalysisContext·loadProjectFunnelContext·projectPageBrand)는 'admin 또는 활성 멤버'만 통과시키고, 그 뒤 withProject→assertProjectInScope 는 hq/region/country 에 brand×country scope 기반 접근도 허용한다. 페이지 게이트가 더 좁아 scope 기반 허용 분기는 페이지에서 사실상 도달 불가. 목록(listForUser)도 활성 멤버십만 보여 scope 안 프로젝트가 목록에 안 보인다.",
+  "역할 게이트: /projects = hq·region·country·admin·vendor (website 제외, route-policy.ts:34·215-221). 생성 = 라우트 PROJECT_CREATORS(vendor 제외) + canCreateProject(admin 또는 operator=global) — CTA 숨김 + 페이지 redirect + 액션 재검사. 전환 이벤트 저장 = admin 또는 활성 Owner (canEditConversion + 서버 authorize). 데모 프로젝트는 admin 외 404 (layout.tsx:48-51).",
+  "AI 가시성·ACR 은 SNB 에서 숨겼지만 URL 로 열리며, 실측 없이 정적 샘플을 필터 해시로 변조해 보여 준다(샘플 표시 없음). After 도 같은 픽스처라 API 호출 없음.",
+  "by-scope 리다이렉트는 자체 권한 검사 없이 scope id → 로컬 프로젝트(또는 website 사이트) 로 넘기고 권한은 대상 페이지가 집행한다. legacy 2문장(getByScopeProjectId, getSiteByScopeProjectId).",
+  "전환 이벤트 선택은 GA4 속성 단위로 저장되어(ga4_tracked_events.property_id) 같은 속성을 공유하는 다른 프로젝트·웹사이트·admin 레지스트리 화면의 전환 분자를 함께 바꾼다.",
+  "프로젝트 목록 '활성 멤버' 타일은 프로젝트별 활성 멤버 수의 합이라 여러 프로젝트에 속한 사용자를 중복 계상한다 (page.tsx:154).",
+  "[홈] 경로 약어: projects/[id]/... = front/app/[locale]/(dash)/projects/[id]/..., dashboard/_data/live.ts = front/app/[locale]/(dash)/dashboard/_data/live.ts, 그 밖 lib/... 와 scope-aggregates.ts(= lib/db/repositories/scope-aggregates.ts), server.ts(= lib/scope/server.ts) 는 front/ 기준.",
+  "[홈] 프로젝트 표면은 집계층(summary_*) 경로를 한 번도 타지 않는다 — KPI·Sub KPI·추이·구성·⑥ 모두 mirrorCache 미러 직행(server.ts:3925-4056). S1.dashboard/S2.mentionTrend/S3.citation 스위치 무관. summary_* 테이블은 excludeHiddenCycleRuns 술어와 갭 원장(withTrendGapBuckets)에서만 읽힌다. 앵커 축 off 라 달력(PJH6)은 0문장.",
+  "[홈] 콜드(전 셀 미스) 1회 렌더 SQL 약 39문장(PJH8 10 + PJH9 8 + PJH10 8 + PJH11 8 + PJH12 1 + PJH13 1 + PJH16 1 + PJH17 2, + 갭 원장 1) — 캐시 적중과 무관하게 매 렌더 16문장(페이지 리더 6 + owned bases 5 + 설정·#16 4 + ga4_properties 1) + GA4 runReport 2~4(24h 캐시 미스 시). PJCOMMON 의 assertProjectInScope→findMembership 도 withProject 6회마다 반복(요청 memo 없음, 참고만).",
+  "[홈] listProjectOwnedBases 가 한 요청에서 6회(live.ts:213 + ownedBasePrefixesForProject×5: aggregates·subKPI·trend week·trend day·출처 구성) — 캐시 키 계산이 캐시 바깥이라 적중 시에도 매번 실행.",
+  "[홈] 카드 Δ = 일 버킷(직전 측정일 대비), 차트 = 주 버킷 → 같은 화면에서 Δ 와 차트가 다른 버킷. 글로벌은 Δ 를 30일로 바운드(deltaTrendFilters)하지만 프로젝트는 미적용 → 120일 일 버킷 전량. ⑥ 카드도 applyTrendDeltas 키에 citationAccuracy 가 있어 ⑥ 일 추이로 Δ 가 채워짐(코드 주석의 '⑥⑦ Δ null' 과 다름).",
+  "[홈] 국가 옵션(PJH4 listMeasuredRegions)이 프로젝트 무관 전 미러·전 이력 기준이라 죽은 옵션이 생김. AFTER 는 프로젝트 측정국(U4-N10).",
+  "[홈] ⑥ 리더(PJH16·17)는 withProject 를 안 거침 — enforce + resolveScopeProjectId 만(assertProjectInScope·contextBrand·ownEntities·공유 답변셋 스코프 없음). (⑥·배너·⑦ 영역에도 PJCOMMON 은 페이지 게이트 몫으로 기재 — 아래 공통 규칙 참조.) 페이지 게이트가 먼저 막아 화면 경로의 권한 누수는 없음. scopeProjectId 없으면 미러 전체로 폴백하는 분기(server.ts:3848-3852)는 agg null 선반환(live.ts:218)으로 이 화면에선 도달 안 함.",
+  "[홈] '다음 작업' 섹션은 링크 3개뿐(데이터·쓰기 없음) → 영역 제외. 이 화면에 쓰기 기능 없음.",
+  "[홈] f6 의 42P01 폴백(owned bases·tracked urls·members)은 테이블 부재 한정 — 운영에선 사실상 미발화지만 규칙(조용한 빈 값 전환)상 n 으로 표기.",
+  "[홈] PJH9 f4 의 T2~T4 는 Sub KPI SQL 에 있으나 이 화면 배지는 그 컬럼을 안 씀(값 영향 없음) — 포함 여부는 병합 시 판단. PJH15 f4 는 PJH8 brands 상속(CCO 관례).",
+  "[홈] DEMO_PROJECT_IDS 운영 env 값 UNKNOWN — 비어 있으면 PJH19 무동작. isDemoProject 판정은 isAnalysisApi 분기보다 앞이라 AFTER 에도 남음.",
+  "[홈] SummaryTiles 계약: ⑦ 항목이 없으면 타일과 '답변의 전환' 섹션째 숨김 → GA4 실패가 '미연동'과 구분 안 됨.",
+  "[홈] f2 계산: JOIN 은 answerWhere·perProjectLatestAnswerIds·snapshotAnswerIds·excludeHiddenCycleRuns·ROLLUP_NAMES 내부 제외, ROLLUP names CTE 는 1. posRows(3019) = 16 은 DAGG 미러 폴백 보정값과, Q1(3299)·posRows(4503) = 17 은 M2·DTRD 보정값과 일치.",
+  "[언급] 운영 가정 확인: 앵커 축 off·격자 off → withWeeklyTrendGrid 자리 목록 0문장(lib/period/trend-grid.ts:290), selectable dates = undefined. 기간 미선택 기본 화면은 cumulative:true 여도 누적 아님(period-mode.ts:73 cumulative && hasPeriod) → answerWhere·detailAnswerWhere·snapshotRunFilter 모두 perProjectLatestAnswerIds 스냅샷(scope-aggregates.ts:2214·6481·4845). S2.mentionTrend 은 프로젝트 언급에 영향 없음(weekSource 기본 measured, mirrorWeekGridFor(project)=measured, :3683).",
+  "[언급] 예외(검증 결과): subKpisPrevImpl 은 cumulativeMode 가 아니라 filters.cumulative 원값을 본다(server.ts:1469). 분석 페이지는 항상 cumulative:true 라 기본 화면에서도 누적 분기 → Δ = 현재 스냅샷(셀당 최신·7일 floor) − 프로젝트 전 이력 '첫 측정일까지 누적'. 캡션도 '증감은 기간 내 누적 기준… 기간 첫 측정일({date})' 로 표기(mentions-view.tsx:408-412, ko.json summary.deltaBasis) — 현재 값은 누적이 아님. 점수 항목 밖의 정합 이슈로 보고.",
+  "[언급] brand-citations 레거시 분기는 projectId 여도 표준 루트 fetchBrandCitations(=M9, withStandardRoot=COMMON)를 계정 스코프 필터·cumulative 로 읽는다(route.ts:43-45·111-113·123-137). 프로젝트 화면 드릴다운 인용 탭이 프로젝트가 아닌 전사 루트 데이터이고 커스텀 필드(태그) 필터도 미적용. M9 를 그대로 참조하고, 라우트 게이트·무고지 403 은 래퍼 PJM11 로 따로 기록.",
+  "[언급] f2 관례: 프로젝트 언급은 JS 경로라 하위 항목을 데이터 계보로 나눴다 — asOf=readMirrorAnswerMeta(0), trend=mentionBrandDayCountsQuery(2,2,1,0)=5, 나머지(brands·감정·드릴다운)=readMirrorPromptMap(1,0,0,0)·'무게는 JS 접기'(M9 관례). 호출 전체 최중량은 mentionBrandDayCountsQuery 5 — M8 관례(호출 안 최중량)를 따르면 PJM1c·1d·1e 도 (2,2,1,0). 같은 문장을 표준 루트(anchorKst 주 조인 +1)에서 센 M8 은 (3,2,1,0).",
+  "[언급] PJM2·PJM3 f2 (4,9,3,1)은 M2 와 같은 Q1 문장(프로젝트 인자만 다름)을 직접 재계수해 일치 확인: 바깥 ans CTE 1 + LEFT JOIN 1 + GROUP BY 1, ownBrandRankPerJobSql 안 CTE 8(names 포함)·JOIN 3·GROUP BY 2·rank() 1. PJM9 (3,2,2,1)도 M6 과 같은 문장 재계수.",
+  "[언급] PJM2·PJM3 계산 경로의 Q4(인용 owned) 판정 상수 — GEO_OWNED_BASES 카탈로그 필터·GEO_OWNED_BASE_PREFIXES 폴백(server.ts:964·972, C2 계열)과 ownedBasePrefixClause — 는 이 화면 표시값에 영향이 없어(sub-kpis.ts 미사용) f4 미계상. 대신 f8 에 미사용 계산으로 반영.",
+  "[언급] 엔진 옵션(PJM6)은 스냅샷(최신−7일 floor) 기준이라 기간(누적) 선택 시 기간 초반에만 수집된 엔진이 옵션에서 빠질 수 있다 — 주석 '기간 안에 실제로 수집한 엔진'(server.ts:822-824)과 불일치.",
+  "[언급] 커스텀 필드 옵션(PJM8)은 삭제 프롬프트 값까지 포함(project-custom-fields.ts:77-86 deleted_at 미필터, listCatalogTaxonomy 는 isNull(deletedAt) 적용) — renewal U6-N2 가 고친 차이.",
+  "[언급] 페이지 대기 순서: 커스텀 필드 2문장 → 6개 병렬(page.tsx:91-103) → 달력 직렬 await(page.tsx:124). getTargetBrand·listCatalogTaxonomy·listMeasuredEngines·listProjectOwnedBases(×2)는 캐시 없이 매 렌더 DB. Sub KPI 타임아웃·오류는 degrade 없이 페이지 전체 오류 경계로 간다(f6 은 y 로 판정, 복원력 이슈).",
+  "[언급] fetchProjectSubKpis/Prev 는 withProject(enforce·assertProjectInScope) 전에 cachedProjectById·listProjectOwnedBases 를 실행(server.ts:3957-3958·3976-3977) — 페이지 게이트 뒤라 노출은 없음.",
+  "[언급] 제외 브랜드(명부 excluded)가 추이 상위 10 시리즈에 있으면 재선정 없이 9개로 줄어든다(excluded-brands.ts:133-137, 시리즈 = base.brands.slice(0,10) scope-aggregates.ts:6160-6163). '고유 브랜드' 카드·총 언급은 설계상 제외 브랜드 포함이라 순위표 행 수와 다를 수 있음.",
+  "[언급] 드릴다운 프롬프트 탭: legacy 는 첫 응답에 전 브랜드분을 실어 추가 호출 0(eager), After 는 행 열 때 lazy 1회. 인용 출처 탭은 legacy·After 모두 탭 열 때 호출.",
+  "[인용] PJC1(래퍼)은 owned base 값에 의존하는 영역(요약 카드·프롬프트 분리·도메인 표)에만 붙였다. 저하=빈 화면 f6은 각 하위 항목 f6에도 적었고, 갭 원장 실패(GAP)는 PJC1tr·PJC1ct f6에 있다.",
+  "[인용] S3.citation은 프로젝트 경로에 영향 없음: fetchProjectCitations는 집계층 게이트 없이 항상 미러(server.ts:783-786 · 838-865), S3.citation은 글로벌 리더만 사용(server.ts:4302 · 4339). 운영 가정(X.trendGrid off, 앵커 축 off)에서 격자·축 분기는 0문장.",
+  "[인용] cumulative:true지만 기간 미지정 기본 화면은 cumulativeMode=false → 스냅샷(perProjectLatestAnswerIds) 술어(scope-aggregates.ts:6469-6481). 기간을 걸면 detailAllRunsWindowPreds(누적)로 바뀌나 문장 빌더·f2 계수는 동일.",
+  "[인용] 프로젝트 추이(PJC1tr·PJC1ct)는 G5 미사용: mirrorWeekGridFor(프로젝트)='measured' → date_trunc 세션 TZ, _wk 조인 없음(scope-aggregates.ts:3683-3708) → f2 (1,1,1,0)로 표준 C1ct·C1tr (2,1,1,0)보다 JOIN 1 적음. 그 외 f2 계수(ansRows 1·0·0·0, groupRows 1·1·1·0, splitRows 2·2·1·2, drill 4·9·3·3)는 표준과 같은 빌더라 동일.",
+  "[인용] owned 판정: 프로젝트는 owned base 사슬(project_owned_bases → 설정 없을 때만 project.domain ∪ brand×country 카탈로그 GEO_OWNED_BASES, server.ts:961-983)이라 표준 C1dom OWN의 B1·B2·B3·B5(축E 명부)는 이 경로에서 안 읽어 제외(B*는 PJCOMMON 명부 시드 폴백 쪽). 대신 ownedBasePrefixClause가 형제 모집단으로 전사 GEO_OWNED_BASE_PREFIXES(C2·C3·C4)와 SHARED_GLOBAL_HOSTS(C6)를 읽어 C6 포함(scope-aggregates.ts:750-768) — 표준 C1dom·C1cat 보정은 같은 절을 타는데 C6이 빠져 있음(불일치 참고).",
+  "[인용] 같은 화면에 '공식' 정의가 두 벌: 카테고리 도넛·배지의 Official (HMG)는 전사 카탈로그 분류(categorizeDomain → ownedBrandOf, citation-categorizer/index.ts:138), 공식(당사) 타일·HMG 배지·promptSplit은 프로젝트 owned base 사슬. 예: Hyundai 프로젝트에서 kia.com은 도넛상 Official (HMG)지만 당사 타일 분자에는 없음(툴팁만 설명, citations-view.tsx:737-755).",
+  "[인용] targetHitRate(자사·타겟 URL 인용률) 카드는 웹사이트 전용 — 프로젝트 페이지는 prop을 안 넘겨 미노출(page.tsx:94-102, citations-view.tsx:777).",
+  "[인용] 레거시 캡 정리: 드릴다운 도메인 상위 80 + 상위 밖 공식(HMG) 최대 250(URL 5개만), URL/도메인 10, 프롬프트/도메인 12, ref/프롬프트 8, promptSplit 버킷 20, 캐시 1.5MB 초과 시 도메인 행 2000→400 단계 절단(scope-aggregates.ts:5459-5492 · 5593-5598 · 5680-5695). 화면 안내는 '상위 도메인에만 URL 표시' 문구와 promptSplit '외 N개'뿐, 도메인 행 절단·프롬프트 12 상한은 무표시. 렌더 페이로드 = 슬림 후 CitationsLive 전체(최대 약 1.5MB, 답변 ref 포함).",
+  "[인용] 묶음 공통 낭비(공유 답변셋 미사용으로 스냅샷 서브쿼리 6회 재계산, groupRows·statRows 중복 스캔)는 PJC1dom f8에만 기재 — PJC1a·sum·cat·ps·tr는 'y'로 둠.",
+  "[인용] ownedBasePrefixesForProject(listProjectOwnedBases)는 withProject의 enforce·assertProjectInScope보다 먼저, 캐시 밖에서 매 렌더 실행(server.ts:846-849) — 페이지 게이트는 이미 통과한 뒤라 노출 위험은 낮음.",
+  "[인용] 페이지 워터폴(점수 항목 아님): 커스텀 필드 2문장 → (인용 집계·카탈로그·엔진 병렬) → JSX 안에서 await 하는 달력(page.tsx:51-101) 순차.",
+  "[인용] 참고 실측(코드 주석): 프로젝트 인용 미러 8문장 exec 합 20.3s · 최장 6.88s · wall 36.9s (kpi-tab-budget.ts:416-422).",
+  "[인용] owned 판정의 홈 문서명 규칙(owned.ts:163 'main|index|home')은 수치를 바꾸는 매칭 규칙이나 표준 보정이 세지 않아 미계상.",
+  "[인용] AFTER: 프로젝트 = HGH_SOURCE_G6. 페이지는 loadPanelOptions(GET /v1/filters/options, 태그 축 포함) 먼저, 이어 loadCitationsView(domains+sources 필수 → trend·categoryTrend·prompts owned/uncited 후행) + loadFilterDates. 표·드릴다운·내보내기 BFF 라우트와 답변 라우트는 api 원천에서만 동작하고 SESSION=api면 citationRouteGate·drilldownGate가 GET /v1/projects/{project_id}로 프로젝트 게이트(api_keys에는 데이터 엔드포인트만 기재).",
+  "[인용] 답변 모달은 fetch 응답의 r.ok를 보지 않아 401/403/404 JSON이 '원문 미수집'으로 보임(answer-modal.tsx:150-159) — PJM10 f6은 표준 M10 보정과 같게 'y'로 두고 단서만 적음.",
+  "공통 경로 기재 규칙: PJCOMMON(프로젝트 페이지 게이트 + withProject + 프로젝트 스냅샷 술어 perProjectLatestAnswerIds·SNAPSHOT_CELL_STALE_DAYS=WSK6)은 /projects/[id]/* 화면의 모든 읽기 영역 legacy_fns 첫 칸에 명시했다(build_checklist explicit 모드 — 쓰기 영역 제외). 페이지 게이트는 모든 영역에 해당하지만 withProject·스냅샷 술어는 영역마다 다르다: 홈의 요약 타일·상태 분포·최근 후보/프롬프트(PJH1~3)와 ⑥·배너·⑦(PJH14·16·17·18), 커스텀 필드(PJM8)·카탈로그(PJM5)·지정 브랜드(PJM4)는 withProject 를 안 탄다. 목록·생성 화면은 프로젝트 게이트가 없어 PJLCOMMON(세션·라우트 역할 게이트, 측정값 영향 없음)으로 표시해 PJCOMMON 자동 부착을 막았다.",
+  "언급 화면 '행 드릴다운 · 인용 출처 탭'은 legacy 에서 프로젝트가 아니라 표준 루트(withStandardRoot = COMMON, fetchBrandCitations = M9)를 읽으므로 PJCOMMON 대신 기존 COMMON·M9 를 참조했다.",
+  "중복 정의 병합: 같은 함수를 여러 화면이 같은 의미로 부르는 경우 한 ID 로 합쳤다 — listCatalogTaxonomy(projectId)=PJM5, fetchProjectMeasuredEngines=PJM6, fetchProjectSelectableAnchorDates(계열 all·mentions·citations)=PJM7, 커스텀 필드 2문장=PJM8, fetchProjectAnswerBody=PJM10. 상수 SNAPSHOT_CELL_STALE_DAYS 는 PJCOMMON 에 귀속(⑥ PJH16 은 withProject 를 안 타고 같은 술어를 직접 박아 함수 f4 에도 유지).",
+  "PJM8 f3 은 'y'(설정·태그 행 조회 + JS DISTINCT, 측정 원천 아님)로 통일했다 — 홈 조사는 'n'(배정 행 전량 JS distinct)으로 봤음. 판단이 갈리는 항목.",
+  "PJH19(DEMO_PROJECT_IDS env → SAMPLE_KPI_SUMMARY)의 운영 env 값은 UNKNOWN — 비어 있으면 무동작.",
+  "형제 조사와 같은 상수는 새 ID 를 만들지 않고 그쪽 ID 를 썼다: ENGINE_SOURCE=GLK5, 전환 측정 창 CONVERSION_PERIODS·DEFAULT_CONVERSION_DAYS=GLK6, 가시성 샘플=GLK2, useFilterSignal 변조=GLK3, 전용 사이트 계정 코드·글로벌 시장=GLK1·WSK2 (global.json), SNAPSHOT_CELL_STALE_DAYS=WSK6 (website.json). 그쪽 ID 가 바뀌면 project.json 의 f4 도 같이 바꿔야 한다."
+ ]
+}

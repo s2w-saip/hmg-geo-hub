@@ -1,0 +1,1041 @@
+{
+  "surface": "website",
+  "prefix": "WS",
+  "redirects": [
+    "/ko/website/ai-funnel -> /ko/website/ai-funnel/conversion (website/ai-funnel/page.tsx:12)",
+    "/ko/website/answer-analysis -> /ko/website/answer-analysis/mention (website/answer-analysis/page.tsx:11)"
+  ],
+  "screens": [
+    {
+      "name": "웹사이트 개요",
+      "menu": "Website › Overview",
+      "title": "오피셜 사이트 인용 현황",
+      "route": "/ko/website",
+      "flag": "HGH_SOURCE_G3",
+      "page_file": "front/app/[locale]/(dash)/website/page.tsx",
+      "areas": [
+        {
+          "loc": "상단 필터 바(국가·언어·엔진·기간, admin 은 브랜드 추가)",
+          "label": "필터 바 · 달력",
+          "note": "옵션은 website_sites·website_prompts 카탈로그. 프리셋 끝점·달력 활성일은 운영 스위치 off(S1.periodCompare·X.answerAnchor)라 미사용",
+          "legacy_call": "listCatalogTaxonomy · listWebsiteCountries · listMeasuredLanguages · listWebsiteScopeMatrix · fetchLatestAnchorDay('website') · fetchSelectableAnchorDates('website','all')",
+          "api_call": "loadPanelOptions → GET /v1/filters/options?surface=website · loadEssentialFilterDates → GET /v1/filters/dates?surface=website",
+          "legacy_fns": ["WSFLT"],
+          "api_keys": ["GET /v1/filters/options", "GET /v1/filters/dates"],
+          "work_refs": []
+        },
+        {
+          "loc": "필터 바 우측 슬롯",
+          "label": "측정 기준일 칩",
+          "note": "본문 카드와 같은 read(requestDeduped)",
+          "legacy_call": "fetchWebsiteAggregates(filters).asOf",
+          "api_call": "loadDashboardAsOf → GET /v1/kpi/summary?surface=website&card=true (meta.as_of)",
+          "legacy_fns": ["WSAGGa"],
+          "api_keys": ["GET /v1/kpi/summary"],
+          "work_refs": []
+        },
+        {
+          "loc": "본문 KPI 카드 그리드",
+          "label": "KPI 카드 ①~⑤ (노출률·점유율·우호도·우선 노출도·인용 점유율) + 경쟁사 SOV 비(#16)",
+          "note": "기간 미지정 = 최신 회차 스냅샷, 기간 지정 = cumulative(게이트가 미러로 보냄)",
+          "legacy_call": "getLiveWebsiteDashboard → fetchWebsiteAggregates → buildMirrorKpis · applyCompetitorSov",
+          "api_call": "loadWebsiteDashboard → GET /v1/kpi/summary card=true + GET /v1/mentions/brands top_n=20 include=hmg card=true",
+          "legacy_fns": ["WSAGG"],
+          "api_keys": ["GET /v1/kpi/summary", "GET /v1/mentions/brands"],
+          "work_refs": []
+        },
+        {
+          "loc": "본문 KPI 카드 그리드",
+          "label": "자사 URL 인용률 · 타겟 URL 인용률 카드",
+          "note": "프롬프트 기준 비율, 분모 0 이면 측정 대기. X.reportTruth off(운영)라 출처 표식 없음, X.websiteOwnedUnit off 라 미러",
+          "legacy_call": "getLiveWebsiteDashboard → fetchWebsiteTargetHitRate → websiteTargetHitRateLive → aggregateWebsiteTargetHitRate",
+          "api_call": "loadWebsiteDashboard → GET /v1/kpi/summary card=true (url_prompts)",
+          "legacy_fns": ["WSHIT"],
+          "api_keys": ["GET /v1/kpi/summary"],
+          "work_refs": []
+        },
+        {
+          "loc": "본문 KPI 카드 그리드",
+          "label": "⑥ AI 타겟 출처 인용률 카드",
+          "note": "자사 인용 답변 중 타겟 URL 인용 답변 비율",
+          "legacy_call": "getLiveWebsiteDashboard → fetchWebsiteCitationAccuracy",
+          "api_call": "loadWebsiteDashboard → GET /v1/kpi/summary card=true",
+          "legacy_fns": ["WSACC"],
+          "api_keys": ["GET /v1/kpi/summary"],
+          "work_refs": []
+        },
+        {
+          "loc": "각 KPI 카드 안(지연 경계)",
+          "label": "카드 증감 Δ · 엔진 일관성 배지",
+          "note": "Δ = 추이 마지막 두 점, 배지 = Sub-KPI(S4.subkpi, 운영 off → 미러). 실패 시 배지·Δ 없이 카드만",
+          "legacy_call": "getLiveWebsiteTrend → fetchWebsiteTrend (+fetchWebsiteCitationAccuracyTrend) → applyTrendDeltas; getLiveWebsiteSubKpis → fetchWebsiteSubKpis(screen 'S4.subkpi') → applyEngineConsistency",
+          "api_call": "loadLiveTrend → GET /v1/trend bucket=cycle metrics=WEBSITE_TREND_METRICS card=true; loadSubKpis → GET /v1/kpi/engines part=all card=true",
+          "legacy_fns": ["WSTRD", "WSACT", "WSSUB4"],
+          "api_keys": ["GET /v1/trend", "GET /v1/kpi/engines"],
+          "work_refs": []
+        },
+        {
+          "loc": "KPI 카드 ①~④ 안",
+          "label": "카드 기간 비교 칩",
+          "note": "조건부: 기간(양 끝) 지정 + 스위치 S1.periodCompare(운영 off → null, 0문장)",
+          "legacy_call": "fetchPeriodCompare(filters, {surface:'website', family:'mention', kind, metrics: OVERVIEW_COMPARE_METRICS})",
+          "api_call": "fetchPeriodCompareApi → GET /v1/kpi/compare card=true",
+          "legacy_fns": ["DPCM"],
+          "api_keys": ["GET /v1/kpi/compare"],
+          "work_refs": []
+        },
+        {
+          "loc": "카드 아래 'KPI 추이' 섹션",
+          "label": "KPI 추이 차트(①~⑤ + ⑥ 선)",
+          "note": "점 2개 미만이면 '축적 중'. ⑥ 선은 실패해도 조용히 빠짐",
+          "legacy_call": "getLiveWebsiteTrend → fetchWebsiteTrend + fetchWebsiteCitationAccuracyTrend → buildTrendFromBuckets",
+          "api_call": "loadLiveTrend → GET /v1/trend bucket=cycle card=true measured_days=false",
+          "legacy_fns": ["WSTRD", "WSACT"],
+          "api_keys": ["GET /v1/trend"],
+          "work_refs": []
+        },
+        {
+          "loc": "'구성 분석' 섹션",
+          "label": "인용 출처 구성 도넛(상위 7 + 기타)",
+          "note": "주제 도넛은 숨김(showTopics=false)인데 주제 집계도 함께 발행. 출처 0건이면 섹션 자체 생략",
+          "legacy_call": "getLiveWebsiteComposition → fetchWebsitePromptTopics + fetchWebsiteSourceComposition",
+          "api_call": "loadComposition → GET /v1/citations/domains limit=7 card=true host_fold=true",
+          "legacy_fns": ["WSSRC", "WSTOP"],
+          "api_keys": ["GET /v1/citations/domains"],
+          "work_refs": []
+        },
+        {
+          "loc": "하단 GEO 섹션(지도 + 시장 스냅샷)",
+          "label": "시장별 경쟁 위치(GEO)",
+          "note": "조건부: showsGeoMap(admin·hq·region). 단일 브랜드 없으면(admin 무필터) 빈 결과. 언급 외 지표는 0 채움 → 측정 대기",
+          "legacy_call": "getLiveWebsiteGeo → fetchWebsiteGeoCompetition → buildGeo",
+          "api_call": "loadLiveGeo → GET /v1/geo card=true",
+          "legacy_fns": ["WSGEO"],
+          "api_keys": ["GET /v1/geo"],
+          "work_refs": []
+        }
+      ]
+    },
+    {
+      "name": "웹사이트 프롬프트",
+      "menu": "Website › Prompts",
+      "title": "웹사이트 프롬프트",
+      "route": "/ko/website/prompts",
+      "flag": "HGH_SOURCE_G3",
+      "page_file": "front/app/[locale]/(dash)/website/prompts/page.tsx",
+      "areas": [
+        {
+          "loc": "상단 필터(국가·언어·엔진·기간, admin 은 브랜드)",
+          "label": "필터 바 · 달력",
+          "note": "지역 옵션에서 HYUNDAI-N 가상 코드는 제외(브랜드 축으로 선택). 엔진·기간은 측정 렌즈(행을 거르지 않음)",
+          "legacy_call": "listWebsiteCountries · listMeasuredLanguages · listWebsiteBrands · fetchSelectableAnchorDates('website', {}, 'all')",
+          "api_call": "loadWebsitePromptOptions → GET /v1/filters/options?surface=website · loadWebsitePromptDates → GET /v1/filters/dates?surface=website&family=all",
+          "legacy_fns": ["WSPFLT"],
+          "api_keys": ["GET /v1/filters/options", "GET /v1/filters/dates"],
+          "work_refs": []
+        },
+        {
+          "loc": "본문 '웹사이트 프롬프트' 카드",
+          "label": "프롬프트 표(서버 페이징 50 · 정렬 · 검색 · 측정 횟수·최근 측정·엔진)",
+          "note": "?page 가 범위를 넘으면 마지막 페이지로 재조회",
+          "legacy_call": "listWebsitePromptsScoped(scope, filters, {sort, dir, page, pageSize:50})",
+          "api_call": "listWebsitePromptsApi → GET /v1/prompts?surface=website (키셋 cursor, limit=WEBSITE_PROMPTS_API_PAGE_SIZE)",
+          "legacy_fns": ["WSPL"],
+          "api_keys": ["GET /v1/prompts"],
+          "work_refs": []
+        },
+        {
+          "loc": "표 헤더 우측 버튼",
+          "label": "쓰기: 엑셀 다운로드",
+          "note": "평범한 <a href> 링크(GET), 같은 필터 파생 함수(readWebsitePromptQuery). total=0 이면 비활성",
+          "legacy_call": "GET /api/website/prompts/export → listWebsitePromptsForExport → buildWebsitePromptSheet → buildXlsxBuffer",
+          "api_call": "relayWebsitePromptsExport → GET /v1/prompts?surface=website&format=xlsx&columns=screen&locale (중계)",
+          "legacy_fns": ["WSPX"],
+          "api_keys": ["GET /v1/prompts (format=xlsx)"],
+          "work_refs": []
+        }
+      ]
+    },
+    {
+      "name": "웹사이트 언급",
+      "menu": "Website › Answer analysis › Mention",
+      "title": "답변 분석 · 언급 분석",
+      "route": "/ko/website/answer-analysis/mention",
+      "flag": "HGH_SOURCE_G3",
+      "page_file": "front/app/[locale]/(dash)/website/answer-analysis/mention/page.tsx",
+      "areas": [
+        {
+          "loc": "상단 필터 바(국가·언어·엔진·기간, admin 은 브랜드) · 측정 기준일 pill",
+          "label": "필터 바 · 기준일",
+          "note": "cumulative:true 화면(기간 지정 시 누적)",
+          "legacy_call": "listCatalogTaxonomy · listWebsiteCountries · listMeasuredLanguages · listWebsiteScopeMatrix · fetchSelectableAnchorDates('website', filters, 'mentions') · fetchWebsiteMentions().asOf",
+          "api_call": "loadPanelOptions → GET /v1/filters/options?surface=website · loadFilterDates → GET /v1/filters/dates?family=mentions · loadMentionsAsOf → GET /v1/mentions/brands (meta.as_of)",
+          "legacy_fns": ["WSFLT", "WSM1a"],
+          "api_keys": ["GET /v1/filters/options", "GET /v1/filters/dates", "GET /v1/mentions/brands"],
+          "work_refs": []
+        },
+        {
+          "loc": "본문 상단 요약 카드 3장",
+          "label": "전체 언급 수 · 언급 브랜드 수 · 측정 프롬프트 수",
+          "note": "Δ 는 Sub-KPI 현재/직전 총계에서 계산",
+          "legacy_call": "fetchWebsiteMentions().summary (ansAgg · brandRows)",
+          "api_call": "loadMentionsLive → GET /v1/mentions/brands + GET /v1/kpi/summary",
+          "legacy_fns": ["WSM1a", "WSM1c"],
+          "api_keys": ["GET /v1/mentions/brands", "GET /v1/kpi/summary"],
+          "work_refs": []
+        },
+        {
+          "loc": "요약 카드 뒤 3장 + 하단 캡션",
+          "label": "Sub KPI 카드(미언급 프롬프트 · 복수 언급 답변 · Top 3 노출 비율) + 증감 Δ · 비교 기준일",
+          "note": "subKpis 없으면 카드 3장이 조용히 빠짐. 직전 = 기간 첫 측정일까지의 누적",
+          "legacy_call": "fetchWebsiteSubKpis(filters) → buildMentionSubKpis; fetchWebsiteSubKpisPrev(filters)",
+          "api_call": "loadSubKpis → GET /v1/kpi/engines part=all + GET /v1/kpi/summary; loadSubKpisPrev → GET /v1/kpi/summary + GET /v1/kpi/engines (cycle_offset=1 또는 직전 창)",
+          "legacy_fns": ["WSSUB5", "WSSUBP"],
+          "api_keys": ["GET /v1/kpi/engines", "GET /v1/kpi/summary"],
+          "work_refs": []
+        },
+        {
+          "loc": "'당사 vs 경쟁사' 블록",
+          "label": "헤드투헤드 비교(당사 합산 vs 자동 SOV 1위·수동 선택)",
+          "note": "당사 언급률은 Sub-KPI ownMentionRate",
+          "legacy_call": "fetchWebsiteMentions().brands + fetchWebsiteSubKpis().ownMentionRate",
+          "api_call": "loadMentionsLive → GET /v1/mentions/brands; loadSubKpis → GET /v1/kpi/engines",
+          "legacy_fns": ["WSM1c", "WSSUB5"],
+          "api_keys": ["GET /v1/mentions/brands", "GET /v1/kpi/engines"],
+          "work_refs": []
+        },
+        {
+          "loc": "감정·유형 2열 블록(왼쪽)",
+          "label": "감정 분포 + 긍정·부정 키워드 언급 수",
+          "note": "신호 0이면 측정 대기 카드",
+          "legacy_call": "fetchWebsiteMentions().sentimentTotals + fetchWebsiteSubKpis()",
+          "api_call": "loadMentionsLive → GET /v1/mentions/brands; loadSubKpis → GET /v1/kpi/engines",
+          "legacy_fns": ["WSM1d", "WSSUB5"],
+          "api_keys": ["GET /v1/mentions/brands", "GET /v1/kpi/engines"],
+          "work_refs": []
+        },
+        {
+          "loc": "감정·유형 2열 블록(오른쪽)",
+          "label": "멘션 유형(유형 합계 · 유형×브랜드 점유)",
+          "note": "",
+          "legacy_call": "fetchWebsiteMentions().typeTotals (sig) · typesByBrand (brandRows)",
+          "api_call": "loadMentionsLive → GET /v1/mentions/types + GET /v1/mentions/brands include=types",
+          "legacy_fns": ["WSM1d", "WSM1c"],
+          "api_keys": ["GET /v1/mentions/types", "GET /v1/mentions/brands"],
+          "work_refs": []
+        },
+        {
+          "loc": "감정·유형 세그먼트 클릭 → 다이얼로그",
+          "label": "신호 발생 프롬프트 목록(→ 답변 모달)",
+          "note": "클릭 시 lazy fetch, /api/scope/signal-prompts?surface=website",
+          "legacy_call": "fetchWebsiteSignalPrompts(signal, filters)",
+          "api_call": "loadSignalPrompts → GET /v1/mentions/prompts mode=signal",
+          "legacy_fns": ["WSSIG"],
+          "api_keys": ["GET /v1/mentions/prompts"],
+          "work_refs": []
+        },
+        {
+          "loc": "하단 추이 블록",
+          "label": "주별 브랜드 언급 수(당사 + 상위 10)",
+          "note": "주 2개 미만이면 준비 중 카드",
+          "legacy_call": "fetchWebsiteMentions().trend (readMentionBrandDayCounts, weekSource=measured)",
+          "api_call": "fetchBrandTrend → GET /v1/trend bucket=cycle dimension=brand top=10 split_own",
+          "legacy_fns": ["WSM1b"],
+          "api_keys": ["GET /v1/trend"],
+          "work_refs": []
+        },
+        {
+          "loc": "하단 순위표",
+          "label": "브랜드 언급 순위(검색·정렬, 전 브랜드)",
+          "note": "",
+          "legacy_call": "fetchWebsiteMentions().brands",
+          "api_call": "loadMentionsLive → GET /v1/mentions/brands",
+          "legacy_fns": ["WSM1c"],
+          "api_keys": ["GET /v1/mentions/brands"],
+          "work_refs": []
+        },
+        {
+          "loc": "순위표 헤더 버튼",
+          "label": "쓰기: 브랜드 순위 엑셀 다운로드",
+          "note": "브라우저에서 화면 행을 직렬화",
+          "legacy_call": "BrandRankTable onExport → downloadXlsx (클라이언트)",
+          "api_call": "없음 — 클라이언트 직렬화(downloadXlsx, API 호출 없음)",
+          "legacy_fns": ["WSXLM"],
+          "api_keys": [],
+          "work_refs": []
+        },
+        {
+          "loc": "순위 행 펼침 → 드릴다운 '프롬프트' 탭",
+          "label": "브랜드별 언급 프롬프트·답변 참조",
+          "note": "lazy: /api/scope/brand-mention-prompts?surface=website",
+          "legacy_call": "fetchWebsiteBrandMentionPrompts(brand, filters)",
+          "api_call": "loadBrandMentionPrompts → GET /v1/mentions/prompts mode=brand (mention_brand | own=1)",
+          "legacy_fns": ["WSBMP"],
+          "api_keys": ["GET /v1/mentions/prompts"],
+          "work_refs": []
+        },
+        {
+          "loc": "순위 행 펼침 → 드릴다운 '인용 출처' 탭",
+          "label": "브랜드 언급 답변의 인용 도메인",
+          "note": "lazy: /api/scope/brand-citations?surface=website",
+          "legacy_call": "fetchWebsiteBrandCitations(brand, filters)",
+          "api_call": "loadBrandCitationDomains → GET /v1/citations/domains mention_brand=…; 행 펼침 loadBrandCitationDetail → GET /v1/citations/domains/{skey}",
+          "legacy_fns": ["WSBCT"],
+          "api_keys": ["GET /v1/citations/domains", "GET /v1/citations/domains/{skey}"],
+          "work_refs": []
+        },
+        {
+          "loc": "드릴다운·신호 다이얼로그 행 클릭 → 모달",
+          "label": "답변 모달(원문·인용·언급 배지)",
+          "note": "/api/scope/answer?surface=website — website project run 소속만",
+          "legacy_call": "fetchWebsiteAnswerBody(jobId, filters) → getMirrorAnswerBody(runProjectIds)",
+          "api_call": "loadAnswerDetail → GET /v1/answers/{job_id}",
+          "legacy_fns": ["WSANS"],
+          "api_keys": ["GET /v1/answers/{job_id}"],
+          "work_refs": []
+        }
+      ]
+    },
+    {
+      "name": "웹사이트 인용",
+      "menu": "Website › Answer analysis › Citation",
+      "title": "답변 분석 · 인용 분석",
+      "route": "/ko/website/answer-analysis/citation",
+      "flag": "HGH_SOURCE_G3",
+      "page_file": "front/app/[locale]/(dash)/website/answer-analysis/citation/page.tsx",
+      "areas": [
+        {
+          "loc": "상단 필터 바(국가·언어·엔진·기간·출처 카테고리, admin 은 브랜드) · 측정 기준일 pill",
+          "label": "필터 바 · 기준일",
+          "note": "cumulative:true 화면",
+          "legacy_call": "listCatalogTaxonomy · listWebsiteCountries · listMeasuredLanguages · listWebsiteScopeMatrix · fetchSelectableAnchorDates('website', filters, 'citations') · fetchWebsiteCitations().asOf",
+          "api_call": "loadPanelOptions → GET /v1/filters/options?surface=website · loadFilterDates → GET /v1/filters/dates?family=citations · loadCitationsAsOf → GET /v1/citations/domains (meta)",
+          "legacy_fns": ["WSFLT", "WSC1a"],
+          "api_keys": ["GET /v1/filters/options", "GET /v1/filters/dates", "GET /v1/citations/domains"],
+          "work_refs": []
+        },
+        {
+          "loc": "요약 타일 행(앞 5장)",
+          "label": "전체 인용 수 · 고유 도메인 · 분류 수 · 공식(당사) 인용 비중 · 딜러/마켓 비중",
+          "note": "공식(당사) 비중 = 선언 base·타겟 URL 자사 판정",
+          "legacy_call": "fetchWebsiteCitations().summary · categories (groupRows)",
+          "api_call": "loadCitationsView → GET /v1/citations/domains limit=200 + GET /v1/citations/sources",
+          "legacy_fns": ["WSC1cat"],
+          "api_keys": ["GET /v1/citations/domains", "GET /v1/citations/sources"],
+          "work_refs": []
+        },
+        {
+          "loc": "요약 타일 행(뒤 2장)",
+          "label": "자사 URL 인용률 · 타겟 URL 인용률",
+          "note": "출처 카테고리 필터가 켜지면 계산하지 않고 '—'(EMPTY_WEBSITE_PROMPT_HIT_RATES)",
+          "legacy_call": "fetchWebsiteTargetHitRate(filters)",
+          "api_call": "loadTargetHitRate → GET /v1/kpi/summary (url_prompts)",
+          "legacy_fns": ["WSHIT"],
+          "api_keys": ["GET /v1/kpi/summary"],
+          "work_refs": []
+        },
+        {
+          "loc": "'Owned base URL 기준 프롬프트 분리' 블록",
+          "label": "자사 base 인용 / 미인용 프롬프트 카드(건수 + 상위 5)",
+          "note": "출처 카테고리 필터 시 promptSplit 미계산 → 도메인 promptList 스캔 폴백",
+          "legacy_call": "fetchWebsiteCitations().promptSplit",
+          "api_call": "fetchCitationPrompts owned=true/false limit=5 → GET /v1/citations/prompts",
+          "legacy_fns": ["WSC1ps"],
+          "api_keys": ["GET /v1/citations/prompts"],
+          "work_refs": []
+        },
+        {
+          "loc": "추이 블록",
+          "label": "주별 상위 10개 도메인 인용 수",
+          "note": "주 2개 미만이면 준비 중",
+          "legacy_call": "fetchWebsiteCitations().trend",
+          "api_call": "fetchSourceTrend → GET /v1/trend bucket=cycle dimension=source top=15",
+          "legacy_fns": ["WSC1tr"],
+          "api_keys": ["GET /v1/trend"],
+          "work_refs": []
+        },
+        {
+          "loc": "추이 블록 아래",
+          "label": "출처 카테고리 구성 추이(100% 누적 면적)",
+          "note": "null 이면 블록 생략",
+          "legacy_call": "fetchWebsiteCitations().categoryTrend",
+          "api_call": "fetchCategoryTrend → GET /v1/trend bucket=cycle dimension=category top=13",
+          "legacy_fns": ["WSC1ct"],
+          "api_keys": ["GET /v1/trend"],
+          "work_refs": []
+        },
+        {
+          "loc": "분류 2열 블록(왼쪽)",
+          "label": "분류별 인용 도넛(슬라이스 클릭 = 출처 필터 토글)",
+          "note": "",
+          "legacy_call": "fetchWebsiteCitations().categories",
+          "api_call": "loadCitationsView → GET /v1/citations/sources",
+          "legacy_fns": ["WSC1cat"],
+          "api_keys": ["GET /v1/citations/sources"],
+          "work_refs": []
+        },
+        {
+          "loc": "분류 2열 블록(오른쪽)",
+          "label": "엔진별 출처 카테고리 구성",
+          "note": "",
+          "legacy_call": "fetchWebsiteCitations().engineCategories",
+          "api_call": "loadCitationsView → GET /v1/citations/sources (by_engine)",
+          "legacy_fns": ["WSC1cat"],
+          "api_keys": ["GET /v1/citations/sources"],
+          "work_refs": []
+        },
+        {
+          "loc": "'도메인 인용 순위' 표",
+          "label": "도메인 인용 순위(검색·정렬은 브라우저, 전 행 렌더)",
+          "note": "legacy 는 전 도메인 행을 첫 응답에 실음",
+          "legacy_call": "fetchWebsiteCitations().domains",
+          "api_call": "loadCitationsView → GET /v1/citations/domains limit=200 (+ 더 보기·검색·정렬 /api/citations/domains → GET /v1/citations/domains cursor)",
+          "legacy_fns": ["WSC1dom"],
+          "api_keys": ["GET /v1/citations/domains"],
+          "work_refs": []
+        },
+        {
+          "loc": "도메인 행 펼침 → 드릴다운 → 모달",
+          "label": "인용 URL · 인용 프롬프트 · 답변 모달",
+          "note": "legacy 는 상위 80 도메인 + 공식 꼬리의 드릴다운 행을 첫 응답에 포함",
+          "legacy_call": "row.urls / promptList (fetchWebsiteCitations drill) · fetchWebsiteAnswerBody",
+          "api_call": "loadDomainDrilldown → GET /v1/citations/domains/{skey} · loadAnswerDetail → GET /v1/answers/{job_id}",
+          "legacy_fns": ["WSC1dom", "WSANS"],
+          "api_keys": ["GET /v1/citations/domains/{skey}", "GET /v1/answers/{job_id}"],
+          "work_refs": []
+        },
+        {
+          "loc": "도메인 표 헤더 버튼",
+          "label": "쓰기: 도메인 순위 엑셀 다운로드",
+          "note": "legacy 는 브라우저에서 받은 행을 직렬화",
+          "legacy_call": "CitationsView onExport → downloadXlsx (클라이언트)",
+          "api_call": "domainExportUrl → /api/citations/domains/export → relayDomainsExport → GET /v1/citations/domains/export format=xlsx",
+          "legacy_fns": ["WSXLC"],
+          "api_keys": ["GET /v1/citations/domains/export"],
+          "work_refs": []
+        }
+      ]
+    },
+    {
+      "name": "웹사이트 AI 전환",
+      "menu": "Website › AI Agent Funnel › AI Conversion",
+      "title": "AI 유입 전환 (beta)",
+      "route": "/ko/website/ai-funnel/conversion",
+      "flag": "HGH_SOURCE_G3",
+      "page_file": "front/app/[locale]/(dash)/website/ai-funnel/conversion/page.tsx",
+      "areas": [
+        {
+          "loc": "상단 필터(엔진·디바이스·방문자·국가) · 기간 선택(7/28/90일)",
+          "label": "필터 바 · 측정 기간",
+          "note": "국가 옵션은 표준 측정 지역(scope_answers 전체) — 웹사이트 사이트 국가 아님",
+          "legacy_call": "listCatalogTaxonomy · listMeasuredRegions(session.scope)",
+          "api_call": "loadPanelOptions → GET /v1/filters/options?surface=website",
+          "legacy_fns": ["WSFUNF"],
+          "api_keys": ["GET /v1/filters/options"],
+          "work_refs": []
+        },
+        {
+          "loc": "본문 분기(미매핑 안내 · 측정 대기 · 샘플)",
+          "label": "시장·GA4 속성 해석",
+          "note": "1개 시장 = leaf(국가 화면), N개 = 롤업. 시장 0개면 샘플 고정값이 안내 없이 그려짐",
+          "legacy_call": "resolveProperties(scope, geography) · resolveProperty(scope, geography)",
+          "api_call": "loadConversionScreen → GET /v1/funnel/conversion?surface=website (coverage.markets)",
+          "legacy_fns": ["WSGPM"],
+          "api_keys": ["GET /v1/funnel/conversion"],
+          "work_refs": []
+        },
+        {
+          "loc": "국가 1곳(leaf) 본문",
+          "label": "전환 KPI 3종 · 전환율 추이 · 엔진별 · 입구 페이지별 표",
+          "note": "조건부: leaf + 속성 매핑. 실패·빈 값은 '측정 대기' 안내",
+          "legacy_call": "getAiConversionLive(propertyId, days, filters)",
+          "api_call": "loadConversionScreen → GET /v1/funnel/conversion?surface=website&days=",
+          "legacy_fns": ["WSGCL"],
+          "api_keys": ["GET /v1/funnel/conversion"],
+          "work_refs": []
+        },
+        {
+          "loc": "권역·HQ(N국) 본문",
+          "label": "가중 전환 KPI · 측정 커버리지 · 국가별 표",
+          "note": "조건부: 비-leaf + 시장 1개 이상",
+          "legacy_call": "getAiTrafficConversionRollup(markets, days, filters)",
+          "api_call": "loadConversionScreen → GET /v1/funnel/conversion?surface=website",
+          "legacy_fns": ["WSGRL"],
+          "api_keys": ["GET /v1/funnel/conversion"],
+          "work_refs": []
+        },
+        {
+          "loc": "본문 하단 VisitsView + 추이 오버레이",
+          "label": "AI 유입 방문 수 · 입구 페이지 · 일별 방문",
+          "note": "조건부: leaf + 속성 매핑",
+          "legacy_call": "getAiVisitsLive(propertyId, days, filters)",
+          "api_call": "loadConversionScreen → GET /v1/funnel/conversion?surface=website",
+          "legacy_fns": ["WSGVL"],
+          "api_keys": ["GET /v1/funnel/conversion"],
+          "work_refs": []
+        },
+        {
+          "loc": "헤더 우측 'GA4 이벤트' 버튼 → 다이얼로그",
+          "label": "GA4 이벤트 목록(최근 90일 볼륨 + 추적 여부) 조회",
+          "note": "조건부: leaf + 속성 매핑. 서버 액션",
+          "legacy_call": "loadConversionEvents(propertyId) → loadEventsForProperty",
+          "api_call": "fetchConversionEvents → GET /v1/funnel/conversion/events?property_id=",
+          "legacy_fns": ["WSEVR"],
+          "api_keys": ["GET /v1/funnel/conversion/events"],
+          "work_refs": []
+        },
+        {
+          "loc": "GA4 이벤트 다이얼로그 저장 버튼",
+          "label": "쓰기: 전환으로 셀 이벤트 선택 저장",
+          "note": "역할 country·region·hq·admin 만(canEdit), 서버 액션",
+          "legacy_call": "saveConversionEvents(propertyId, names) → saveEventsForProperty → replaceForProperty + revalidateTag('ga4')",
+          "api_call": "putConversionEvents → PUT /v1/funnel/conversion/events?property_id=",
+          "legacy_fns": ["WSEVW"],
+          "api_keys": ["PUT /v1/funnel/conversion/events"],
+          "work_refs": []
+        }
+      ]
+    },
+    {
+      "name": "웹사이트 ACR",
+      "menu": "Website › AI Agent Funnel › ACR (메뉴 숨김 · 직접 URL)",
+      "title": "ACR · AI Choice Rate (beta)",
+      "route": "/ko/website/ai-funnel/acr",
+      "flag": "HGH_SOURCE_G3",
+      "page_file": "front/app/[locale]/(dash)/website/ai-funnel/acr/page.tsx",
+      "areas": [
+        {
+          "loc": "상단 필터",
+          "label": "필터 바(카탈로그·국가 옵션)",
+          "note": "legacy 는 표준 루트 카탈로그 축이 웹사이트에 노출(API 는 catalogRows [] 로 숨김, known_diff U8-N15)",
+          "legacy_call": "listCatalogTaxonomy · listMeasuredRegions(session.scope)",
+          "api_call": "loadPanelOptions → GET /v1/filters/options?surface=website",
+          "legacy_fns": ["WSFUNF"],
+          "api_keys": ["GET /v1/filters/options"],
+          "work_refs": []
+        },
+        {
+          "loc": "본문",
+          "label": "ACR 본문(브랜드 ACR · 추이 · 배틀 · 차종 전환) — 정적 표본",
+          "note": "SAMPLE_ACR_* 고정값(결정 D9 a), 데이터 조회 없음",
+          "legacy_call": "없음 — AcrView 가 SAMPLE_ACR_* 를 렌더(standard/ai-funnel/_components/acr-view.tsx:26-33)",
+          "api_call": "없음 — 정적 표본",
+          "legacy_fns": [],
+          "api_keys": [],
+          "work_refs": []
+        }
+      ]
+    }
+  ],
+  "functions": {
+    "WSCOMMON": {
+      "label": "공통: withWebsite · websiteOwnedPrefixes · 사실표 게이트(viaTrend/viaSummary)",
+      "where": "server.ts:4459-4529 (cachedProjectIdsForScope·withWebsite), server.ts:4553-4579 (websiteOwnedPrefixes), server.ts:4709-4735·5050-5163 (게이트), gate.ts:306-381, website-sites.ts:60-170 (effectiveCountries·getProjectIdsForScope), scope-aggregates.ts:808-834·1797 (스냅샷 셀 선택)",
+      "stmts": "웹사이트 모든 조회가 거침: enforce(세션 + 감사 로그 비동기 기록, withWebsite 호출마다) → getProjectIdsForScope 1문장(React cache, 요청·스코프당 1회) + 자사 명부(unstable_cache 셀). 미러 셀 안: websiteDeclaredOwnedBases 1~2문장(선언 base·형제 모집단) + X.websiteOwnedUnit 메모 읽기. 사실표 경로: 게이트 판정 read_enabled·ledger 메모 + pickWebsiteCycles 1 + hasOpenCycle 1 + 접힘 프로브 1(필터별 React cache) + website_excluded_fs·unit_owned 컬럼 프로브(30초 메모). 미러 스냅샷 술어 = 프로젝트별 (prompt, engine, region) 최신 1건 + 7일 stale floor(perProjectLatestAnswerIds)",
+      "f2": ["skip", "조각 — 각 함수 SQL에 포함"],
+      "f3": ["skip", ""],
+      "f4": ["WSK1", "WSK2", "WSK3", "WSK4", "RHQ", "B1", "B2", "B3", "WSK6"],
+      "f6": ["n", "명부 조회 실패 → 시드 명부로 조용히 전환(server.ts:1230-1241), 제외 목록 실패 → 빈 집합(server.ts:1246-1253), website_excluded_fs 조회 실패 → [] 로 보고서 제외 유닛이 사실표 모수에 재합류(summary-settings.ts:129-145), open 회차 관측 실패 → false(summary-cycles.ts:811-825). degradeAware 는 시간 초과만 null 로 삼킴(degrade-registry.ts:55-74)"],
+      "f7": ["skip", ""],
+      "f8": ["skip", "", ""],
+      "f9": ["skip", ""]
+    },
+    "WSFLT": {
+      "label": "웹사이트 필터 리더 6개 (개요·언급·인용 공통)",
+      "where": "listCatalogTaxonomy standards.ts:394 · listWebsiteCountries website-sites.ts:258 · listMeasuredLanguages website-sites.ts:176 · listWebsiteScopeMatrix website-sites.ts:215 · fetchLatestAnchorDay server.ts:5862 · fetchSelectableAnchorDates server.ts:5804",
+      "stmts": "매 렌더 4문장(캐시 없음, Promise.all): 표준 카탈로그 DISTINCT 1 + website_sites DISTINCT 1 + website_prompts⋈website_sites DISTINCT 2. 앵커 리더 2개는 운영(S1.periodCompare·X.answerAnchor off)에서 0문장(null/undefined). 언급·인용 화면은 fetchLatestAnchorDay 없이 5개. listCatalogTaxonomy·앵커 리더는 DFLT 구성 함수와 같은 함수",
+      "f2": [1, 0, 0, 0, "listWebsiteScopeMatrix website-sites.ts:215"],
+      "f3": ["n", "조건부(X.answerAnchor on): 달력 활성일을 답변 앵커 행 DISTINCT 로 계산(lib/calendar/selectable-anchor-dates.ts:99, 셀 캐시). 기본 경로 옵션은 카탈로그 표 DISTINCT"],
+      "f4": ["G1", "WSK1", "WSK2", "WSK3", "WSK4", "RHQ"],
+      "f6": ["n", "옵션 리더는 catch 없음(오류 경계)이나 앵커 리더 조건부 경로 오류 → [] · null 로 달력 제한이 조용히 풀림 (selectable-anchor-dates.ts:117-127, summary-period-compare.ts:345)"],
+      "f7": ["skip", ""],
+      "f8": ["n", "listCatalogTaxonomy(표준 루트 카탈로그 DISTINCT)를 매 렌더 읽지만 웹사이트 필터는 카탈로그 축을 숨김 — admin 브랜드 draft 정리에만 쓰임 (website/page.tsx:200, website-filters.tsx:61, dimension-filter-panel.tsx:1601)", "4"],
+      "f9": ["y", "옵션 목록(실측 매트릭스 139행) 전량이 곧 화면 옵션"]
+    },
+    "WSAGGa": {
+      "label": "fetchWebsiteAggregates().asOf (기준일 칩)",
+      "where": "website/page.tsx:229 → server.ts:5165",
+      "stmts": "추가 문장 없음 — 본문 카드 read 와 requestDeduped 공유. 사실표 경로는 회차 집합 max(anchor)(cycleSetAsOf) 를 JS 로 계산",
+      "f2": ["skip", "카드 조회 결과 재사용 (requestDeduped)"],
+      "f3": ["n", "조건부: 미러 폴백이면 max(cycle_anchor_at, measured_at) 를 원문 답변에서 계산"],
+      "f4": [],
+      "f6": ["n", "degrade(null)·데이터 없음이면 칩을 안내 없이 숨김 (website/page.tsx:288-296)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "0"],
+      "f9": ["skip", ""]
+    },
+    "WSAGG": {
+      "label": "fetchWebsiteAggregates (+ getLiveWebsiteDashboard · buildMirrorKpis · applyCompetitorSov)",
+      "where": "website/_data/live.ts:90-162 · server.ts:5165-5174 · summary-website-aggregates.ts:484-490",
+      "stmts": "운영(S4.dashboard on, 기간 미지정): 집계층 3문장(summary_trend_own·brands·domains, only 지정) + 게이트(회차 픽·open 관측·접힘 프로브) + 명부·제외 셀. 집계층 거부(planTrendRead·접힘 미실행·empty) → 세부층 summaryWebsiteAggregatesDetail(예산 detail), 게이트 거부(스위치 off·회차 없음·cumulative·region 축) → 미러 aggregateStandardFromMirror(주석 실측 10문장·9.7s). mirrorCache(unstable_cache) 셀",
+      "f2": [0, 0, 1, 0, "trendBrandsSql summary-trend-aggregates.ts:966 (웹사이트 절단 null → 창·CTE 없음; 미러 폴백은 aggregateStandardFromMirror posRows scope-aggregates.ts:3019 + 타겟=자사 서브쿼리)"],
+      "f3": ["n", "조건부: 게이트 거부 시 미러 scope_answers·scope_mentions·scope_citations 재집계 (server.ts:4582-4587)"],
+      "f4": ["B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9", "C2", "C3", "C4", "C6", "WSK5"],
+      "f6": ["y", "degradeAware('websiteAggregates') + wasDegraded 로 '지연' 문구 표시 (website/page.tsx:426-440), 그 밖 오류는 오류 경계"],
+      "f7": ["skip", ""],
+      "f8": ["n", "카드 셀이 도메인 축 전 행(GROUPING SETS (domain))·국가 롤업까지 계산·적재하지만 화면은 카드 총계만 사용 (summary-website-aggregates.ts:448-482, server.ts:4964-4969: 카드 셀 664KB)", "3"],
+      "f9": ["n", "카드 5장을 위해 도메인·국가 행 전량을 읽어 옴(카드+GEO 셀 952KB, summary-website-aggregates.ts:473-477)"]
+    },
+    "WSHIT": {
+      "label": "fetchWebsiteTargetHitRate (자사·타겟 URL 인용률)",
+      "where": "server.ts:5544 → :5527 websiteTargetHitRateLive → scope-aggregates.ts:9055",
+      "stmts": "운영(X.reportTruth·X.websiteOwnedUnit off): 미러 1문장(aggregateWebsiteTargetHitRate, CTE 7개) + websiteDeclaredOwnedBases 1~2. mirrorCache 셀(키에 필터). 주석 실측 함대 무필터 11s · Kia×MX 87s(server.ts:5516). 조건부: 유닛 키 on + S4.dashboard 사실표 → summary_url_hits 1문장, reportTruth on → 발행 report_site_facts + 최신 회차·런타임 분류 조회",
+      "f2": [5, 7, 2, 0, "aggregateWebsiteTargetHitRate scope-aggregates.ts:9083"],
+      "f3": ["n", "스냅샷 job ⋈ scope_citations 를 URL 정규화 후 프롬프트 단위로 요청 때 판정"],
+      "f4": ["C2", "C3", "C4", "C6"],
+      "f6": ["y", "catch 없음 — 개요는 카드 섹션 오류 경계, 인용 화면은 페이지 오류 경계 (website/_data/live.ts:95-99, citation/page.tsx:257-262)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1~3"],
+      "f9": ["skip", ""]
+    },
+    "WSACC": {
+      "label": "fetchWebsiteCitationAccuracy (⑥ AI 타겟 출처 인용률)",
+      "where": "server.ts:5296 → summary-website-aggregates.ts:1164",
+      "stmts": "운영(S6.citation on): 세부층 1문장(summary_answers 굳힌 unit_owned·unit_target 합 — 0060 컬럼 존재 가정). unitFlags 없으면 websiteTargetKeys 1 + summary_target_hits 1. 게이트 거부 → 미러 aggregateWebsiteCitationAccuracy 1문장(CTE 6)",
+      "f2": [0, 0, 0, 0, "summary-website-aggregates.ts:1173 (미러 폴백 scope-aggregates.ts:8992 = 4+6+2)"],
+      "f3": ["n", "조건부: 게이트 거부 시 미러가 스냅샷 job ⋈ scope_citations 를 정규화·판정"],
+      "f4": ["C2", "C3", "C4", "C6", "WSK5"],
+      "f6": ["y", "catch 없음 → 카드 섹션 오류 경계, 분모 0 은 '측정 대기'(rate null)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1"],
+      "f9": ["skip", ""]
+    },
+    "WSSUB4": {
+      "label": "fetchWebsiteSubKpis(screen 'S4.subkpi') — 엔진 일관성 배지",
+      "where": "website/_data/live.ts:321-336 → server.ts:5228 → scope-aggregates.ts:3270",
+      "stmts": "운영(S4.subkpi opt-in off → screen-not-allowed): 미러 한 트랜잭션 — SET LOCAL 2 · CREATE TEMP _answer_set · ANALYZE · Q1~Q4(파트 축소, Q5 생략) = 8문장. 예산 문장 15s·마감 30s. 실측 6.8~7.0s(server.ts:4597)",
+      "f2": [4, 9, 3, 1, "Q1 scope-aggregates.ts:3299 + ownBrandRankPerJobSql :495"],
+      "f3": ["n", "scope_mentions·scope_citations ⋈ _answer_set 요청 때 집계"],
+      "f4": ["B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9", "T2", "T3", "T4", "C2", "C3", "C4", "C6", "WSK5"],
+      "f6": ["n", "degradeAware('websiteSubKpis') 시간 초과 → 빈 rows → 배지 조용히 생략, 그 밖 실패도 .catch(() => items) 로 배지 없이 표시 (website/page.tsx:445, server.ts:5242-5248)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "Q5 는 이미 생략(S4_BADGE_SUB_KPI_PARTS)", "8"],
+      "f9": ["skip", ""]
+    },
+    "WSTRD": {
+      "label": "fetchWebsiteTrend (+ getLiveWebsiteTrend · buildTrendFromBuckets · applyTrendDeltas)",
+      "where": "website/_data/live.ts:236-277·396-439 → server.ts:5186-5214 → summary-website-aggregates.ts:1376",
+      "stmts": "렌더당 1회(Δ·차트 공유). 운영(S4.dashboard on, 13주 창 기간 판정 통과·회차 주≥2·접힘 있음): 집계층 own 1문장(회차 축 GROUPING SETS) + 기간 게이트(회차 픽·open·접힘 프로브) + 갭 원장 1. 판정 실패(unpublished-cycle-in-range 등) → 미러 aggregateStandardTrendFromMirror(120일 원문 재집계). X.trendGrid off → 자리 목록 0문장",
+      "f2": [0, 0, 1, 0, "trendOwnSql summary-trend-aggregates.ts:768 (미러 폴백 aggregateStandardTrendFromMirror posRows scope-aggregates.ts:4503)"],
+      "f3": ["n", "조건부: 판정 실패 시 미러가 120일 원문 답변·언급·인용을 주별 재집계 (server.ts:4589-4594)"],
+      "f4": ["B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9", "C2", "C3", "C4", "C6", "WSK5", "G5", "H1", "H2", "T7", "WSK7"],
+      "f6": ["n", "Δ 경로는 trend.catch(() => null) 로 실패를 Δ 없음으로 흡수(website/page.tsx:446); 숨김 회차(갭) 원장 조회 실패 → [] 로 갭 표시 없이 진행 (summary-cycles.ts:762-763). 차트 섹션 자체는 await 로 오류 경계"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1+게이트 3"],
+      "f9": ["y", "회차 13주·미러 120일 창 = 표시 창"]
+    },
+    "WSACT": {
+      "label": "fetchWebsiteCitationAccuracyTrend (⑥ 추이 선)",
+      "where": "website/_data/live.ts:255 → server.ts:5305-5329 → summary-website-aggregates.ts:1570",
+      "stmts": "운영: 세부층 1문장(summary_answers GROUP BY cycle_id, ① 추이와 같은 회차 판정 셀 공유). 판정 실패 → 미러 aggregateWebsiteCitationAccuracyTrend 1문장(CTE 6)",
+      "f2": [0, 0, 1, 0, "summaryWebsiteCitationAccuracyTrend summary-website-aggregates.ts:1576 (미러 폴백 scope-aggregates.ts:9298 = 4+6+3)"],
+      "f3": ["n", "조건부: 미러 폴백이 스냅샷 job ⋈ scope_citations 를 버킷별 재판정"],
+      "f4": ["C2", "C3", "C4", "C6", "WSK5", "H1", "H2", "WSK7"],
+      "f6": ["n", "실패 → .catch(() => []) 로 ⑥ 선만 안내 없이 사라짐 (website/_data/live.ts:255)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1"],
+      "f9": ["y", "추이 창 = 표시 창"]
+    },
+    "WSTOP": {
+      "label": "fetchWebsitePromptTopics (주제 도넛 — 화면 미표시)",
+      "where": "website/_data/live.ts:292-302 → server.ts:5266-5272 → summary-website-aggregates.ts:694",
+      "stmts": "운영(S4.dashboard): 세부층 1문장(summary_answers funnel_catalog GROUP BY). 게이트 거부 → 미러 aggregatePromptTopicFromMirror",
+      "f2": [0, 0, 1, 0, "summaryWebsitePromptTopics summary-website-aggregates.ts:698"],
+      "f3": ["n", "조건부: 미러 폴백이 scope_answers 를 prompt 단위로 접음"],
+      "f4": [],
+      "f6": ["y", "catch 없음 → 구성 섹션 오류 경계"],
+      "f7": ["skip", ""],
+      "f8": ["n", "CompositionPanel showTopics={false} — 주제 집계를 계산하고 버림 (website/page.tsx:548, website/_data/live.ts:297-302)", "1"],
+      "f9": ["skip", ""]
+    },
+    "WSSRC": {
+      "label": "fetchWebsiteSourceComposition (인용 출처 구성 도넛)",
+      "where": "website/_data/live.ts:279-319 → server.ts:5274-5282 → summary-website-aggregates.ts:717",
+      "stmts": "운영(S6.citation): 집계층 domains 1문장(접힘 프로브 공유). 집계층 거부 → 세부층 summaryWebsiteSourceCompositionDetail, 게이트 거부 → 미러 aggregateSourceCompositionFromMirror",
+      "f2": [0, 0, 1, 0, "trendDomainsSql summary-trend-aggregates.ts:1078"],
+      "f3": ["n", "조건부: 미러 폴백이 scope_citations ⋈ 답변셋 GROUP BY"],
+      "f4": ["C2", "C3", "C4", "C6"],
+      "f6": ["n", "degradeAware('websiteSourceComposition') 시간 초과 → [] → 섹션이 안내 없이 사라짐 (server.ts:5277-5281, website/page.tsx:545)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1"],
+      "f9": ["n", "도넛은 상위 7 + 기타인데 도메인 축 전 행(실측 출처 셀 405KB)을 읽어 JS 로 접음 (summary-website-aggregates.ts:473-477, website/_data/live.ts:304-316)"]
+    },
+    "WSGEO": {
+      "label": "fetchWebsiteGeoCompetition (+ getLiveWebsiteGeo · buildGeo)",
+      "where": "website/_data/live.ts:198-234 → server.ts:5284-5294 → dashboard/_data/live.ts:218",
+      "stmts": "운영: 카드와 같은 셀(cachedSummaryWebsiteDashboard)을 같은 키로 재사용 — 추가 문장 0(동시 미스면 같은 3문장이 한 번 더 나갈 수 있음). 집계층 거부 → 세부층 summaryWebsiteGeoCompetitionDetail, 게이트 거부 → 미러 aggregateGeoCompetitionFromMirror. showsGeoMap 계정만 발행",
+      "f2": ["skip", "카드 셀(trend_brands country 축) 재사용 — 추가 문장 0"],
+      "f3": ["n", "조건부: 미러 폴백이 국가×브랜드 언급을 원문에서 집계"],
+      "f4": ["B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9", "RHQ"],
+      "f6": ["n", "degradeAware('websiteGeoCompetition') → [] → 빈 지도·스냅샷, 안내 없음 (server.ts:5288-5292); 언급 외 지표는 0 채움 → '측정 대기' (website/_data/live.ts:218-225)"],
+      "f7": ["skip", ""],
+      "f8": ["n", "단일 브랜드가 없으면(admin 무필터 기본 화면) buildGeo 가 빈 결과 — 국가×브랜드 행을 읽고 버림 (website/_data/live.ts:189-196·226-230, dashboard/_data/live.ts:224)", "0"],
+      "f9": ["skip", ""]
+    },
+    "WSM1a": {
+      "label": "fetchWebsiteMentions().asOf · summary",
+      "where": "mention/page.tsx:194·228 → server.ts:5332-5349 → scope-aggregates.ts:5782",
+      "stmts": "ansAgg (헤드라인 트랜잭션 묶음: SET LOCAL·CREATE TEMP·ANALYZE + ansAgg·brandRows·sig + 추이 1 + 갭 원장 1). 운영: 미러(fetchWebsiteMentions 는 사실표 경로 없음) — mirrorCache 셀, 예산 mentions 프로파일",
+      "f2": [1, 0, 0, 0, "ansAgg scope-aggregates.ts:5782"],
+      "f3": ["n", "scope_answers 답변셋을 요청 때 집계"],
+      "f4": [],
+      "f6": ["n", "degradeAware('websiteMentions') 시간 초과 → null → 화면은 '데이터 없음' 빈 상태(지연 안내 없음, mentions-view.tsx:148-155), 기준일 pill 도 빈 값"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "8"],
+      "f9": ["skip", ""]
+    },
+    "WSM1b": {
+      "label": "fetchWebsiteMentions().trend (주별 브랜드 언급 수)",
+      "where": "scope-aggregates.ts:6009-6015 → :5292 · :5374",
+      "stmts": "mentionBrandDayCountsQuery 1문장(전 이력 일별, 20s 상한) + 갭 원장(weeklyGapWeeks) 1. 웹사이트는 weekSource='measured'(S2.mentionTrend 미적용 → _cw 조인 없음)",
+      "f2": [3, 2, 1, 0, "mentionBrandDayCountsQuery scope-aggregates.ts:5374"],
+      "f3": ["n", "scope_mentions ⋈ 답변셋 전 이력 일별 재집계"],
+      "f4": ["B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9", "H1", "H2", "G5"],
+      "f6": ["n", "숨김 회차(갭) 원장 조회 실패 → [] 로 갭 표시 없이 진행 (summary-cycles.ts:762-763). 추이 실패는 trend=null → '준비 중' PendingCard 로 표시돼 지연과 구분 안 됨 (scope-aggregates.ts:6017-6024, mentions-view.tsx:480)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "2"],
+      "f9": ["y", "주별 top-10 합집합(상한 15) = 표시 시리즈"]
+    },
+    "WSM1c": {
+      "label": "fetchWebsiteMentions().brands · typesByBrand (순위표·헤드투헤드·유형)",
+      "where": "scope-aggregates.ts:5818",
+      "stmts": "brandRows (헤드라인 SQL, WSM1a 묶음)",
+      "f2": [4, 6, 5, 1, "aggregateMentionsHeadlineSql brandRows scope-aggregates.ts:5818"],
+      "f3": ["n", "답변별 순위(RANK)·복수 언급을 원문 언급에서 재구성"],
+      "f4": ["B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9", "T1"],
+      "f6": ["n", "시간 초과 시 전체 null → '데이터 없음' 빈 상태(mentions-view.tsx:148-155); 제외 목록 실패는 빈 집합(WSCOMMON)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1"],
+      "f9": ["y", "전 브랜드 행 = 표 전량(검색·정렬)"]
+    },
+    "WSM1d": {
+      "label": "fetchWebsiteMentions().sentimentTotals · typeTotals",
+      "where": "scope-aggregates.ts:5916",
+      "stmts": "sig (WSM1a 묶음)",
+      "f2": [1, 0, 0, 0, "sig scope-aggregates.ts:5916"],
+      "f3": ["n", "감정·유형 신호를 원문 언급에서 집계"],
+      "f4": ["B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9"],
+      "f6": ["n", "시간 초과 시 전체 null → 빈 상태, 신호 0 이면 '측정 대기' PendingCard (mentions-view.tsx:437·448)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1"],
+      "f9": ["skip", ""]
+    },
+    "WSSUB5": {
+      "label": "fetchWebsiteSubKpis(기본 'S5.mention') — Sub KPI 카드·감정 키워드·당사 언급률",
+      "where": "mention/page.tsx:230 → server.ts:5228-5250 → scope-aggregates.ts:3270",
+      "stmts": "운영(S5.mention opt-in off, cumulative): 미러 한 트랜잭션 — SET LOCAL 2 · CREATE TEMP · ANALYZE · Q1~Q5 = 9문장(예산 문장 15s·마감 30s)",
+      "f2": [4, 9, 3, 1, "Q1 scope-aggregates.ts:3299 + ownBrandRankPerJobSql :495"],
+      "f3": ["n", "scope_mentions·scope_citations ⋈ _answer_set 요청 때 집계"],
+      "f4": ["B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9", "T2", "T3", "T4", "C2", "C3", "C4", "C6", "WSK5"],
+      "f6": ["n", "degradeAware('websiteSubKpis') 시간 초과 → 빈 rows → buildMentionSubKpis null → Sub KPI 타일·감정 키워드가 안내 없이 빠짐 (server.ts:5242-5248, sub-kpis.ts:45, mentions-view.tsx:358)"],
+      "f7": ["skip", ""],
+      "f8": ["n", "Q4(인용 자사 판정, URL 정규화) 결과 citTotal·citOwned 와 avgPosition·top1·trackedMentions 를 언급 화면이 읽지 않음 (sub-kpis.ts:44-64)", "9"],
+      "f9": ["skip", ""]
+    },
+    "WSSUBP": {
+      "label": "fetchWebsiteSubKpisPrev — Sub KPI 증감 기준(직전)",
+      "where": "mention/page.tsx:231 → server.ts:5259-5264 → server.ts:1451 subKpisPrevImpl",
+      "stmts": "누적(cumulative) 분기: measureDayBoundsInRange 1문장(웹사이트 전 이력 측정일 GROUP BY) + aggregateSubKpisFromMirror 전량 9문장(dateTo = 첫 측정일). 측정일 2개 미만이면 1문장 후 null. mirrorCache 셀",
+      "f2": [4, 9, 3, 1, "Q1 scope-aggregates.ts:3299 + ownBrandRankPerJobSql :495"],
+      "f3": ["n", "직전 창을 같은 방식으로 원문 재집계"],
+      "f4": ["B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9", "T2", "T3", "T4", "C2", "C3", "C4", "C6", "WSK5"],
+      "f6": ["y", "catch 없음 → 오류 경계 (mention/page.tsx:227-232)"],
+      "f7": ["skip", ""],
+      "f8": ["n", "직전 스냅샷은 Δ 5종(총언급·측정 프롬프트·미언급·복수언급·Top3)만 쓰는데 Q3 감정·Q4 인용까지 전량 재집계 (mentions-view.tsx:324-411, server.ts:1469-1480)", "10"],
+      "f9": ["skip", ""]
+    },
+    "WSSIG": {
+      "label": "fetchWebsiteSignalPrompts (감정·유형 신호 프롬프트)",
+      "where": "app/api/scope/signal-prompts/route.ts:112 → server.ts:4272 → scope-aggregates.ts:7476",
+      "stmts": "클릭 시 1문장(/api/scope/signal-prompts?surface=website), mirrorCache 셀",
+      "f2": [3, 2, 2, 1, "aggregateSignalPromptsFromMirror scope-aggregates.ts:7490"],
+      "f3": ["n", "scope_mentions ⋈ scope_answers 요청 때 집계"],
+      "f4": ["B1", "B2", "B3", "B4", "B5"],
+      "f6": ["y", "라우트 재throw, 클라이언트 오류 표시 (signal-prompts-dialog.tsx:60-66)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1"],
+      "f9": ["n", "상위 50 프롬프트·답변 참조 6건 고정 상한, 잘림 안내 없음 (scope-aggregates.ts:7473-7474·7532)"]
+    },
+    "WSBMP": {
+      "label": "fetchWebsiteBrandMentionPrompts (드릴다운 프롬프트 탭)",
+      "where": "app/api/scope/brand-mention-prompts/route.ts:128-130 → server.ts:5352 → scope-aggregates.ts:6077 (JS 경로)",
+      "stmts": "클릭 시: readMirrorJobs·readMirrorPromptMap·readMentionBrandDayCounts·readBrandNameMap 4 + websiteCountry 필터 시 readWebsiteCountryPromptIds 1 + 빈 결과면 mirrorHasAnswers 1 → JS 접기. 추이는 계산 후 버림",
+      "f2": [3, 2, 1, 0, "mentionBrandDayCountsQuery scope-aggregates.ts:5374"],
+      "f3": ["n", "원문 답변·언급 행을 JS로 접음"],
+      "f4": ["B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9", "H1", "H2", "G5"],
+      "f6": ["y", "라우트 재throw → 드릴다운 오류 상태"],
+      "f7": ["skip", ""],
+      "f8": ["n", "브랜드 하나의 프롬프트만 쓰는데 전 이력 브랜드 일별 추이(readMentionBrandDayCounts)를 계산 후 버림 (scope-aggregates.ts:6125-6126·6160-6163, server.ts:4649-4653)", "4~6"],
+      "f9": ["n", "slimMentionsLiveForCache 가 2MB 초과 시 드릴다운 프롬프트를 top-N 으로 안내 없이 절단 (scope-aggregates.ts:6165)"]
+    },
+    "WSBCT": {
+      "label": "fetchWebsiteBrandCitations (드릴다운 인용 출처 탭)",
+      "where": "app/api/scope/brand-citations/route.ts:135-137 → server.ts:5570 → scope-aggregates.ts:7645",
+      "stmts": "클릭 시 6읽기 병렬(answer meta·mentions·citations·prompt map·overrides·brand names) + JS 접기",
+      "f2": [1, 0, 0, 0, "readMirrorPromptMap scope-aggregates.ts:4633 (무게는 JS 접기에 있음)"],
+      "f3": ["n", "원문 언급·인용 행을 JS로 접음"],
+      "f4": ["B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9", "R", "C5", "C1", "C2", "C3"],
+      "f6": ["n", "오버라이드 조회 실패 → 빈 맵으로 조용히 분류 (overrides-loader.ts:63-69)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "6"],
+      "f9": ["n", "slimBrandCitationDomainsForCache 가 2MB 초과 시 도메인 500→300→150→100 행으로 안내 없이 절단 (scope-aggregates.ts:5705-5715)"]
+    },
+    "WSANS": {
+      "label": "fetchWebsiteAnswerBody (답변 모달)",
+      "where": "app/api/scope/answer/route.ts:100-104 → server.ts:4435 → scope-aggregates.ts:8077",
+      "stmts": "클릭 시 점 조회 3 (+조건부 2: occurrences·stances), website project run 소속 게이트",
+      "f2": [0, 0, 0, 0, "점 조회 scope-aggregates.ts:8126-8149"],
+      "f3": ["n", "답변 1건의 언급 수·추적 여부를 JS로 재계산"],
+      "f4": ["B1", "B2", "B3", "B4", "B5", "B6"],
+      "f6": ["y", "DB 오류 재throw → 모달 오류 표시 (answer-modal.tsx:161-165)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "3~5"],
+      "f9": ["skip", ""]
+    },
+    "WSC1a": {
+      "label": "fetchWebsiteCitations().asOf",
+      "where": "citation/page.tsx:207·258 → server.ts:5361-5374 → scope-aggregates.ts:7037",
+      "stmts": "ansRows (미스 시 병렬 5문장 + 드릴 2문장 + 오버라이드 1 + 갭 원장 1; 문장마다 SET LOCAL 트랜잭션, 예산 citationsWide). 운영: 미러(fetchWebsiteCitations 는 사실표 경로 없음)",
+      "f2": [1, 0, 0, 0, "ansRows scope-aggregates.ts:7037"],
+      "f3": ["n", "scope_answers 요청 때 집계"],
+      "f4": [],
+      "f6": ["n", "degradeAware('websiteCitations') 시간 초과 → null → '데이터 없음' 빈 상태(지연 안내 없음, server.ts:5365-5372, citations-view.tsx:686-693), 기준일 pill 도 빈 값"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "9"],
+      "f9": ["skip", ""]
+    },
+    "WSC1dom": {
+      "label": "fetchWebsiteCitations().domains (+row.urls · promptList 드릴다운)",
+      "where": "scope-aggregates.ts:7058 · 7073 · 7166",
+      "stmts": "groupRows + statRows + drill(상위 80 도메인 + 공식 꼬리)",
+      "f2": [5, 9, 3, 3, "drill scope-aggregates.ts:7166-7220 (웹사이트 타겟=자사 서브쿼리 website_prompts⋈website_sites +1 JOIN)"],
+      "f3": ["n", "scope_citations ⋈ scope_answers 를 출처×프롬프트로 접고 순위"],
+      "f4": ["R", "C5", "C1", "C2", "C3", "C4", "C6", "WSK5", "B1", "B2", "B3", "B5"],
+      "f6": ["n", "드릴다운 상한 밖 행은 urls·promptList [] → '프롬프트가 없습니다'로 표시 (scope-aggregates.ts:5613-5619); 오버라이드 조회 실패 → 빈 맵으로 조용히 분류 (overrides-loader.ts:63-69)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "3"],
+      "f9": ["n", "전 도메인 행·드릴다운을 첫 응답에 실어 보내고(표는 전 행 렌더), 2MB 초과 시 slimCitationsLiveForCache 가 도메인·드릴다운을 안내 없이 절단 (scope-aggregates.ts:5680-5694)"]
+    },
+    "WSC1cat": {
+      "label": "fetchWebsiteCitations().categories · engineCategories · summary(officialOwnShare)",
+      "where": "scope-aggregates.ts:7058",
+      "stmts": "groupRows",
+      "f2": [3, 1, 1, 0, "groupRows scope-aggregates.ts:7058 (타겟=자사 서브쿼리 2회 포함)"],
+      "f3": ["n", "인용 원소를 요청 때 분류·집계"],
+      "f4": ["R", "C5", "C1", "C2", "C3", "C4", "C6", "WSK5"],
+      "f6": ["n", "오버라이드 조회 실패 → 빈 맵으로 조용히 분류 (overrides-loader.ts:63-69); null 이면 PendingCard 로 대체돼 지연과 구분 안 됨 (citations-view.tsx:857·867)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1"],
+      "f9": ["skip", ""]
+    },
+    "WSC1ct": {
+      "label": "fetchWebsiteCitations().categoryTrend",
+      "where": "scope-aggregates.ts:5273 → :7270",
+      "stmts": "trendRows (WSC1tr 와 같은 문장 공유)",
+      "f2": [2, 1, 1, 0, "readCitationDomainDayCounts scope-aggregates.ts:5273"],
+      "f3": ["n", "일별 도메인 인용을 요청 때 분류·집계"],
+      "f4": ["R", "C5", "C1", "C2", "C3", "H1", "H2", "G5"],
+      "f6": ["n", "null 추이는 안내 없이 블록 생략 (citations-view.tsx:833); 오버라이드 조회 실패 → 빈 맵으로 조용히 분류 (overrides-loader.ts:63-69); 숨김 회차(갭) 원장 조회 실패 → [] (summary-cycles.ts:762-763)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1"],
+      "f9": ["skip", ""]
+    },
+    "WSC1ps": {
+      "label": "fetchWebsiteCitations().promptSplit (Owned base 인용/미인용 프롬프트)",
+      "where": "scope-aggregates.ts:7082 · 7224",
+      "stmts": "splitRows + splitRefs (출처 카테고리 필터 시 생략 → 클라이언트가 도메인 promptList 스캔으로 근사)",
+      "f2": [3, 2, 1, 2, "splitRows scope-aggregates.ts:7082 (+타겟=자사 서브쿼리)"],
+      "f3": ["n", "자사 URL 인용 프롬프트를 요청 때 판정"],
+      "f4": ["C2", "C3", "C4", "C6", "WSK5", "B1", "B2", "B3", "B5", "C1"],
+      "f6": ["n", "문장 실패·시간 초과 시 집계 전체 null → '데이터 없음'(WSC1a 와 같은 경로), 안내 없음"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "2"],
+      "f9": ["n", "버킷당 20 프롬프트(+참조)를 싣고 카드는 5행만 표시 (scope-aggregates.ts:5491, citations-view.tsx:1075)"]
+    },
+    "WSC1tr": {
+      "label": "fetchWebsiteCitations().trend (주별 상위 10개 도메인)",
+      "where": "scope-aggregates.ts:5273 → :7266",
+      "stmts": "trendRows (WSC1ct 와 공유)",
+      "f2": [2, 1, 1, 0, "readCitationDomainDayCounts scope-aggregates.ts:5273"],
+      "f3": ["n", "주별 도메인 인용 재집계"],
+      "f4": ["C1", "H1", "H2", "R", "C5", "C2", "C3", "G5"],
+      "f6": ["n", "숨김 회차(갭) 원장 조회 실패 → [] 로 갭 표시 없이 진행 (summary-cycles.ts:762-763). null 추이는 '준비 중' 카드 (citations-view.tsx:827)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1"],
+      "f9": ["y", "주별 top-10 합집합(상한 15) = 표시 시리즈"]
+    },
+    "WSXLM": {
+      "label": "BrandRankTable onExport (브랜드 순위 엑셀)",
+      "where": "standard/answer-analysis/_components/brand-rank-table.tsx:147-170 → lib/export/xlsx.ts:16",
+      "stmts": "DB 0 — 화면이 가진 정렬·검색된 브랜드 행을 브라우저에서 exceljs 로 직렬화",
+      "f2": ["skip", "SQL 없음 — 클라이언트 직렬화"],
+      "f3": ["skip", ""],
+      "f4": [],
+      "f6": ["y", "읽기 없음(이미 받은 행 사용)"],
+      "f7": ["n", "void downloadXlsx(...) — exceljs 동적 import·직렬화 실패를 무시, 사용자 안내 없음 (brand-rank-table.tsx:149)"],
+      "f8": ["y", "", "0"],
+      "f9": ["y", "화면의 정렬·검색 결과 전량을 내보냄"]
+    },
+    "WSXLC": {
+      "label": "CitationsView onExport (도메인 순위 엑셀)",
+      "where": "standard/answer-analysis/_components/citations-view.tsx:658-680 → lib/export/xlsx.ts:16",
+      "stmts": "DB 0 — 받은 도메인 행을 브라우저에서 직렬화(legacy)",
+      "f2": ["skip", "SQL 없음 — 클라이언트 직렬화"],
+      "f3": ["skip", ""],
+      "f4": [],
+      "f6": ["y", "읽기 없음(이미 받은 행 사용)"],
+      "f7": ["n", "void downloadXlsx(...) 실패 무시 (citations-view.tsx:664); 슬림 절단된 도메인 목록을 전량인 것처럼 내보냄"],
+      "f8": ["y", "", "0"],
+      "f9": ["n", "슬림 상한(2MB 초과 시 400행 등)으로 잘린 도메인 목록을 안내 없이 내보냄 (scope-aggregates.ts:5680-5694)"]
+    },
+    "WSPFLT": {
+      "label": "웹사이트 프롬프트 필터 리더 4개",
+      "where": "website/prompts/page.tsx:96-111·134 → listWebsiteCountries website-sites.ts:258 · listMeasuredLanguages :176 · listWebsiteBrands :692 · fetchSelectableAnchorDates server.ts:5804",
+      "stmts": "매 렌더 3문장(캐시 없음) + 앵커 달력 0문장(운영 X.answerAnchor off)",
+      "f2": [1, 0, 0, 0, "listMeasuredLanguages website-sites.ts:176"],
+      "f3": ["n", "조건부(X.answerAnchor on): 달력 활성일을 답변 앵커 행 DISTINCT 로 계산(selectable-anchor-dates.ts:99). 기본 경로는 카탈로그 표 DISTINCT"],
+      "f4": ["WSK1", "WSK2", "WSK3", "WSK4", "RHQ"],
+      "f6": ["n", "옵션 리더는 오류 경계로 가나 앵커 달력 조건부 경로 오류 → [] 로 달력 제한이 조용히 풀림 (selectable-anchor-dates.ts:117-127)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "3"],
+      "f9": ["y", "옵션 목록 전량 = 화면 옵션"]
+    },
+    "WSPL": {
+      "label": "listWebsitePromptsScoped (서버 페이징 목록)",
+      "where": "website/prompts/page.tsx:189-208 → website-sites.ts:594",
+      "stmts": "매 렌더 2문장(총계 count + 페이지 SELECT LIMIT 50) — 캐시 없음. ?page 가 범위를 넘으면 2문장 재실행",
+      "f2": [3, 1, 1, 0, "websitePromptSelect website-sites.ts:511 (lens CTE + 조인 3)"],
+      "f3": ["n", "lens CTE 가 scope_answers 원문을 prompt_id 별로 매 요청 집계 (website-sites.ts:528-541)"],
+      "f4": ["WSK1", "WSK2", "WSK3", "WSK4", "RHQ"],
+      "f6": ["y", "catch 없음 → 오류 경계"],
+      "f7": ["skip", ""],
+      "f8": ["n", "lens CTE 가 프로젝트·사이트 제한 없이 전 scope_answers(표준 루트·프로젝트 포함)를 prompt_id 별로 집계한 뒤 웹사이트 50행에만 조인 (website-sites.ts:528-555); page 초과 시 같은 2문장 재실행", "2~4"],
+      "f9": ["y", "서버 페이징 50행 · 총계 · 페이지 표시"]
+    },
+    "WSPX": {
+      "label": "GET /api/website/prompts/export → listWebsitePromptsForExport (엑셀 다운로드)",
+      "where": "app/api/website/prompts/export/route.ts:48-145 → website-sites.ts:661",
+      "stmts": "클릭 시 1문장(목록과 같은 SELECT, LIMIT 50,000) + 서버 xlsx 직렬화",
+      "f2": [3, 1, 1, 0, "websitePromptSelect website-sites.ts:511"],
+      "f3": ["n", "lens CTE 원문 집계(목록과 동일)"],
+      "f4": ["WSK1", "WSK2", "WSK3", "WSK4", "RHQ"],
+      "f6": ["y", "실패 → 500 JSON(Content-Disposition 없음) → 브라우저가 오류 본문 표시 (route.ts:141-144, export-button.tsx:41-47)"],
+      "f7": ["n", "50,000행 상한 도달 시 X-Export-Truncated 헤더만 붙이고 파일은 성공처럼 저장 — <a href> 경로라 사용자 비가시 (route.ts:130-138)"],
+      "f8": ["n", "lens CTE 가 전 scope_answers 를 집계(목록과 같은 낭비)", "1"],
+      "f9": ["n", "상한 50,000행 조용한 절단(헤더만, 사용자 비가시) (website-sites.ts:651·676-684, route.ts:130-138)"]
+    },
+    "WSFUNF": {
+      "label": "퍼널 필터 리더 2개 (listCatalogTaxonomy · listMeasuredRegions — DFLT 구성 함수 부분집합)",
+      "where": "website/ai-funnel/acr/page.tsx:31-34 · conversion/page.tsx:70-73 → standards.ts:394 · scope-aggregates.ts:7698",
+      "stmts": "매 렌더 2문장(캐시 없음): 표준 루트 카탈로그 DISTINCT + scope_answers DISTINCT region(projectIds·rootScoped 미전달 → 프로젝트·창 제한 없이 전 답변)",
+      "f2": [0, 0, 0, 0, "listMeasuredRegions scope-aggregates.ts:7774 (DISTINCT, 조인 없음)"],
+      "f3": ["n", "지역 옵션을 scope_answers 원문 DISTINCT 로 매 요청 계산"],
+      "f4": ["G1", "B10"],
+      "f6": ["y", "catch 없음 → 오류 경계"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "2"],
+      "f9": ["y", "옵션 목록 전량"]
+    },
+    "WSGPM": {
+      "label": "resolveProperties · resolveProperty (GA4 시장·속성 해석)",
+      "where": "conversion/page.tsx:74-81 → lib/ga4/property-map.ts:82 · 107",
+      "stmts": "매 렌더 ga4_properties 전체 SELECT 1(캐시 없음) + 비-leaf 이고 단일 브랜드·국가일 때 getByBrandCountry 1",
+      "f2": [0, 0, 0, 0, "ga4PropertyRepository.list (property-map.ts:70)"],
+      "f3": ["y", "레지스트리 행 조회 + JS 필터"],
+      "f4": ["GA2"],
+      "f6": ["n", "시장 0개(레지스트리 밖 스코프)면 GA4 호출 없이 ConversionView 가 샘플 고정값(SAMPLE_CONVERSION_*)을 그리는데 웹사이트 경로엔 샘플 안내 layout 이 없음 (conversion-view.tsx:127-188; 안내 다이얼로그는 standard/ai-funnel/conversion/layout.tsx:15 에만)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1~2"],
+      "f9": ["skip", ""]
+    },
+    "WSGCL": {
+      "label": "getAiConversionLive (국가 1곳 전환: KPI·추이·페이지·엔진)",
+      "where": "conversion/page.tsx:83-85 → lib/ga4/conversion.ts:507",
+      "stmts": "SQL: 전환 이벤트 선택 ga4_tracked_events 1 + 캐시 미스 시 GA4 runReport(코호트·추이·페이지 2단·엔진, 이벤트 선택 시 보고서마다 1회 더) 4~10회. unstable_cache 24h",
+      "f2": ["skip", "SQL 집계 없음 — GA4 Data API 원격 집계"],
+      "f3": ["n", "캐시 미스마다 원천 GA4 Data API 호출"],
+      "f4": ["GA1", "WSK8", "WSK9"],
+      "f6": ["n", "GA4 실패 → catch → null → '측정 대기' 안내(ConversionPendingNotice)로 표시돼 오류와 구분 안 됨 (conversion.ts:518-524, conversion/page.tsx:101); 이벤트 선택 조회 실패 → key events 로 조용히 대체 (conversion.ts:258-265)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1+GA4 4~10"],
+      "f9": ["y", "페이지 상위 12 · 엔진 2 = 표시 범위"]
+    },
+    "WSGRL": {
+      "label": "getAiTrafficConversionRollup (권역·HQ N국 전환 롤업)",
+      "where": "conversion/page.tsx:86-88 → lib/ga4/conversion.ts:628",
+      "stmts": "SQL: listForProperties 1 + 캐시 미스 시 매핑 시장마다 GA4 코호트 보고서 2~4회(시장 N개 반복). unstable_cache 24h",
+      "f2": ["skip", "SQL 집계 없음 — GA4 Data API 원격 집계"],
+      "f3": ["n", "캐시 미스마다 시장별 GA4 Data API 호출"],
+      "f4": ["GA1", "WSK8", "WSK9"],
+      "f6": ["n", "시장별 실패를 빼고 부분 결과를 24시간 캐시 — 커버리지 수치만 줄어 안내 없음 (conversion.ts:575-581·640-644); 이벤트 선택 조회 실패 → 빈 맵(key events) (conversion.ts:565-567)"],
+      "f7": ["skip", ""],
+      "f8": ["n", "시장마다 GA4 runReport 를 개별 발행(N+1형, conversion.ts:568-583)", "1+GA4 2N~4N"],
+      "f9": ["y", "국가별 표 = 측정 시장 전량"]
+    },
+    "WSGVL": {
+      "label": "getAiVisitsLive (AI 유입 방문 수·추이)",
+      "where": "conversion/page.tsx:89-91 → lib/ga4/conversion.ts:795",
+      "stmts": "SQL 0 + 캐시 미스 시 GA4 runReport 3회(총계·입구 페이지·일별). unstable_cache 24h",
+      "f2": ["skip", "SQL 집계 없음 — GA4 Data API 원격 집계"],
+      "f3": ["n", "캐시 미스마다 원천 GA4 Data API 호출"],
+      "f4": ["GA1", "WSK8", "WSK9"],
+      "f6": ["n", "실패 → null → VisitsView 를 안내 없이 숨김, 추이 방문 수 오버레이도 빠짐 (conversion.ts:806-812, conversion/page.tsx:143)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "GA4 3"],
+      "f9": ["y", "입구 페이지 상위 15 = 표시 범위"]
+    },
+    "WSEVR": {
+      "label": "loadConversionEvents (GA4 이벤트 다이얼로그 조회)",
+      "where": "components/dash/ga4-events-dialog.tsx:52-64 → lib/ga4/tracked-events-actions.ts:178 → tracked-events-service.ts:22",
+      "stmts": "다이얼로그 열 때: 권한 확인 resolveProperties(ga4_properties 1) + ga4_tracked_events 1 + GA4 runReport 1(캐시 없음)",
+      "f2": ["skip", "GA4 Data API + 단순 조회"],
+      "f3": ["n", "열 때마다 GA4 Data API 로 90일 eventName×eventCount 원격 집계(캐시 없음)"],
+      "f4": ["GA2"],
+      "f6": ["y", "실패 → {ok:false, error} → 다이얼로그 오류 문구 (ga4-events-dialog.tsx:55-60, tracked-events-actions.ts:196-201)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "2+GA4 1"],
+      "f9": ["n", "GA4 eventName 상위 250 고정 상한, 잘림 안내 없음 (tracked-events-service.ts:26-31)"]
+    },
+    "WSEVW": {
+      "label": "saveConversionEvents (전환 이벤트 선택 저장)",
+      "where": "ga4-events-dialog.tsx:76-86 → tracked-events-actions.ts:212 → tracked-events-service.ts:51 → ga4-tracked-events.ts:47",
+      "stmts": "저장 시: 권한 확인(ga4_properties 1) + 트랜잭션 DELETE 1 · INSERT 1 + revalidateTag('ga4')(GA4 캐시 전체 무효화)",
+      "f2": ["skip", "쓰기 — 집계 SQL 없음"],
+      "f3": ["skip", ""],
+      "f4": ["GA2"],
+      "f6": ["y", "쓰기 경로(읽기 없음)"],
+      "f7": ["n", "선택 집합 통째 교체(DELETE+INSERT)에 버전·잠금 검사 없음 — 동시 편집 시 마지막 저장이 앞선 저장을 조용히 덮음 (ga4-tracked-events.ts:47-63, ga4-events-dialog.tsx:76-86). 중복 제출은 saving 으로 막음(ga4-events-dialog.tsx:159·168)"],
+      "f8": ["y", "", "3"],
+      "f9": ["skip", ""]
+    }
+  },
+  "new_constants": {
+    "WSK1": ["WEBSITE_BRAND_GEO_CODES (브랜드 가상 지역 코드)", "lib/scope/website-virtual-geo.ts:23", 1, "HYUNDAI-N → 'Hyundai N' 1개"],
+    "WSK2": ["WEBSITE_DEDICATED_SITE_CODES (전용 사이트 계정 코드)", "lib/scope/website-virtual-geo.ts:102", 1, "worldwide · CPO · HYUNDAI-N"],
+    "WSK3": ["WEBSITE_SITE_BRAND_PARENT (사이트 브랜드 → 모 브랜드)", "lib/scope/website-virtual-geo.ts:174", 1, "Hyundai N → Hyundai"],
+    "WSK4": ["PSEUDO_COUNTRIES (도시 의사 국가 코드)", "lib/geo-catalog/pseudo-country.ts:31", 1, "SA-Dammam · SA-Jeddah · SA-Riyadh · CN-BJ 4개"],
+    "WSK5": ["WEBSITE_TARGETS_OWNED = true (타겟 URL = 자사 판정)", "lib/scope/server.ts:4551", 1, "웹사이트 자사 판정에 타겟 URL 집합 OR"],
+    "WSK6": ["SNAPSHOT_CELL_STALE_DAYS = 7 (프로젝트·웹사이트 스냅샷 셀 stale floor)", "lib/db/repositories/scope-aggregates.ts:808", 1, "프로젝트 최신 측정 − 7일 이전 셀 제외"],
+    "WSK7": ["TREND_MIN_CYCLES = 2 (웹사이트 회차 추이 전환 하한)", "lib/scope/server.ts:4767", 1, "회차 주 2개 미만이면 미러 유지"],
+    "WSK8": ["ENGINE_SOURCE (엔진 → GA4 sessionSource 매칭)", "lib/ga4/conversion.ts:131", 1, "chatgpt.com · gemini.google.com · copilot.com · perplexity.ai · claude.ai 5개"],
+    "WSK9": ["DEFAULT_CONVERSION_DAYS = 90 · CONVERSION_PERIODS [7,28,90]", "lib/ga4/conversion-window.ts:6-7", 1, "웹사이트 전환 화면 기본 90일 창"]
+  },
+  "notes": [
+    "운영 설정 가정: 규칙대로 X.trendGrid off · S2.mentionTrend/S1.dashboard/S3.citation on. 웹사이트 화면 키 S4.dashboard·S6.citation 은 옵트인 집합(SUMMARY_SCREEN_OPT_IN, screens.ts:252-430) 밖이고 라이브 read_screens 에 포함된다는 코드 주석(website/page.tsx:388-389, screens.ts:65·429)에 따라 on 으로 봄. 옵트인 키 S4.subkpi·S5.mention·S4.periodRoute·S1.periodCompare·X.answerAnchor·X.websiteOwnedUnit·X.reportTruth 는 off.",
+    "S4.dashboard·S6.citation 을 off 로 보면 개요의 카드·추이·출처·주제·⑥ 이 전부 미러(aggregateStandardFromMirror 등)로 바뀜 — WSAGG/WSTRD/WSACT/WSSRC/WSTOP/WSACC 의 f2 괄호 안 미러 폴백 문장이 그 경우의 대표 문장.",
+    "X.websiteOwnedUnit off(운영) → WSHIT 는 미러 aggregateWebsiteTargetHitRate(주석 실측 11~87s). on 이면 S4.dashboard 사실표(summary_url_hits)로 감. X.reportTruth off → 발행값 경로·출처 표식 없음.",
+    "S4.subkpi off → 개요 배지(WSSUB4)는 미러 8문장. on 이면 배지 숫자가 바뀜(screens.ts:31-49).",
+    "capability 가정(설정 아님): summary_answers.unit_owned(0060) 존재 → WSACC/WSACT 세부층 1문장(없으면 summary_target_hits 경로 +1문장, CTE 1·GROUP BY 1). citationNormColumnsAvailable true → un CTE 가 GROUP BY 형태(없으면 DISTINCT).",
+    "WSTRD/WSACT 의 운영 경로는 데이터 상태에 달림: 13주 창에 미생성(closed) 회차가 있으면 기간 게이트가 unpublished-cycle-in-range 로 미러 폴백(server.ts:4752-4766 주석, 2026-09-11 기준). f2 는 사실표 경로로 기록.",
+    "언급·인용 화면은 cumulative:true 라 사실표 게이트 대상이 아니고 fetchWebsiteMentions·fetchWebsiteCitations 는 애초에 미러 직행(server.ts:4645·4657). 웹사이트 언급 추이는 weekSource='measured' 라 M1b 의 S2.mentionTrend _cw 조인이 없음(3,2,1,0).",
+    "JOIN 계수: 웹사이트 자사 판정의 '타겟=자사' 서브쿼리(websiteTargetSetSelect: website_prompts⋈website_sites, scope-aggregates.ts:8831-8850)는 범위·권한 필터가 아니라 판정 조각이라 등장마다 +1 JOIN 으로 셈 — WSC1dom(+1)·WSC1cat(+2)·WSC1ps(+1). 빼면 4/1/2 로 표준 C1dom·C1cat·C1ps 와 같음.",
+    "WSFLT·WSPFLT·WSFUNF 는 DFLT 를 참조하지 않고 따로 정의: DFLT 7개 중 일부(listCatalogTaxonomy·listMeasuredRegions·fetchLatestAnchorDay·fetchSelectableAnchorDates)만 같은 함수로 호출되고 나머지 옵션은 website_sites/website_prompts 리더라서. 앵커 리더 조건부 상수(H*/P6)는 DFLT 쪽 측정을 따름(여기서는 미포함).",
+    "DPCM 은 같은 함수(fetchPeriodCompare)의 surface='website' 분기 — 스위치가 enforce 앞이라 운영 off 에서 0문장(server.ts:5921-5939). 켜지면 withWebsite + websiteOwnedPrefixes + 집계층 비교 문장.",
+    "WSCOMMON: withWebsite 호출마다 enforce 가 감사 로그를 비동기 기록(lib/audit.ts:23) — 개요 1회 렌더에 withWebsite 10회 이상. 웹사이트 자사 base 는 website_prompts.owned_base_url 선언(데이터)이 우선이고 선언이 없을 때만 카탈로그(C2·C3·C4) 폴백 → C2·C3·C4·C6·WSK5 는 자사 판정 함수마다 f4 에 넣음.",
+    "웹사이트 전환 화면(WSGPM f6): 시장 0개 스코프에서 샘플 고정값이 안내 없이 표시됨 — standard 전환 화면에는 conversion/layout.tsx 의 샘플 안내 다이얼로그가 있으나 website 경로에는 layout.tsx 가 없음.",
+    "WSFUNF: 웹사이트 ACR·전환의 국가 옵션은 listMeasuredRegions(scope) 를 projectIds·rootScoped 없이 불러 표준·프로젝트·웹사이트 전 답변의 region 을 나열(창도 없음). API 쪽은 surface=website 옵션으로 교정(known_diff U8-N15).",
+    "ACR(/website/ai-funnel/acr)은 메뉴 숨김(route-policy.ts:198-206)이고 본문은 정적 표본 — 데이터 영역은 필터뿐.",
+    "GEO(WSGEO): showsGeoMap 은 admin(scope.all) 에 true 인데 activeBrandFor 가 단일 브랜드를 못 찾으면 buildGeo 가 빈 결과라 admin 무필터 기본 화면에서는 GEO 가 비어 보임.",
+    "back/ingest 의존 없음(미러 scope_*·summary_* 표와 GA4 외부 API 만 읽음). UNKNOWN 없음."
+  ]
+}

@@ -1,0 +1,251 @@
+{
+  "functions_patch": {
+    "COMMON": {
+      "f7": ["skip", ""],
+      "f8": ["y", "공통 술어 조각 — 자체 집계 없음 (fetcher 호출마다 감사 INSERT 1건은 설계상 기록이라 미계상, notes 참조)", "0"],
+      "f9": ["skip", ""]
+    },
+    "DAGGa": {
+      "f7": ["skip", ""],
+      "f8": ["y", "카드 조회의 asOf 재사용 — 헤더 pill 과 카드가 같은 키로 요청 dedup (dashboard/page.tsx:162 ↔ live.ts:451, server.ts:2101)", "0"],
+      "f9": ["skip", ""]
+    },
+    "DAGG": {
+      "f7": ["skip", ""],
+      "f8": ["y", "S1 3문장을 GEO 와 공유(summary-global-aggregates.ts:1021-1036). 경미: KPI #16 competitorSov 를 JS 로 계산해 kpis 에 싣지만 Overview 카드는 그리지 않음(live.ts:387-415·498) — SQL 추가 없음", "3 (+오버라이드·공식 키)"],
+      "f9": ["skip", "고정 카드 5개"]
+    },
+    "DFLT": {
+      "f7": ["skip", ""],
+      "f8": ["n", "필터 리더가 캐시 없이 매 렌더 원문 스캔: listMeasuredRegions(scope-aggregates.ts:7771-7775)·listMeasuredStandardLanguages(:7924-7934)·listMeasuredScopeMatrix(:7874-7885)가 같은 측정 창의 scope_answers 를 각각 훑음 — 지역·언어 목록은 매트릭스(브랜드×국가×언어, 같은 루트 게이트·숨김 지역·스코프 술어)에서 파생 가능한 중복 스캔. listCatalogTaxonomy(standards.ts:394)·standardCollectionDates(scope-aggregates.ts:9811)도 unstable_cache 없음. 세 화면 page.tsx(dashboard :231-253, mention :246-268, citation :223-245)가 매 요청 같은 5개를 발행", "5 (+조건부 2)"],
+      "f9": ["y", "옵션·의존 매트릭스(실측 138행)는 패널이 draft 로 좁혀 전부 사용"]
+    },
+    "DTRD": {
+      "f7": ["skip", ""],
+      "f8": ["n", "렌더당 2회 호출(dashboard/page.tsx:389-390: day·30일 Δ / week 스파크) — 인자가 달라 requestDeduped 키가 갈림(server.ts:2133). 운영 집계층(S1.dashboard) 경로는 globalSeriesFilters 가 Δ 30일 바닥을 지워 같은 f 로 만들므로(server.ts:2699-2702) requestGlobalCore·cachedGlobalPeriodBase·cachedGapKeys 요청 캐시로 DB 문장은 1벌(server.ts:2713-2716·2789-2792, trend-gaps.ts:145) — 래퍼·JS 만 2회. 미러 폴백이면 cachedStandardTrend(f, unit) 키가 달라 미러 추이를 2벌 계산(server.ts:1418-1424 '두 번 부른다', live.ts:766-768 감사 로그 1.98배)", "집계층 2(+키) ×1 / 미러 폴백 약 9 ×2"],
+      "f9": ["n", "주 버킷 LiveTrend 전체(집계층 13점·미러 최대 ~17점 × KPI 5)를 'use client' 카드로 직렬화(dashboard/page.tsx:440 → overview-kpi-cards.tsx:593), 스파크라인은 마지막 5점만 표시(overview-kpi-cards.tsx:74·461) — 2배 초과(수 KB, 경미)"]
+    },
+    "DPCM": {
+      "f7": ["skip", ""],
+      "f8": ["y", "운영 경로(스위치 off·기간 미지정) 0문장 → null", "0"],
+      "f9": ["skip", ""]
+    },
+    "DCSR": {
+      "f7": ["skip", ""],
+      "f8": ["y", "래퍼 — 자체 문장 0, 구성 함수(DCBR·DBTR·DFPO·DCDM)에서 판정", "0"],
+      "f9": ["skip", "래퍼 — 구성 함수에서 판정 (묶음 전체가 'use client' 카드로 직렬화: dashboard/page.tsx:401-408·441 → overview-kpi-cards.tsx:624)"]
+    },
+    "DCBR": {
+      "f7": ["skip", ""],
+      "f8": ["n", "대시보드 경쟁사 행은 brands 의 6값만 쓰는데(overview-kpi-cards.tsx:198-200·630) S1.competitors off 라 fetchStandardMentions 전체를 계산(server.ts:4136-4138): 당사 감정·유형 합계 sig 문장(scope-aggregates.ts:5916-5930)과 120일 브랜드 주별 추이 롤업(readMentionBrandDayCounts 호출 :6009-6017, TREND_WINDOW_DAYS=120 :3737)이 대시보드에서 버려짐", "7 (+게이트 1 · 추이 1)"],
+      "f9": ["n", "MentionsLive.brands 전량(LIMIT 없음 — scope-aggregates.ts:5889-5891)을 competitors 묶음으로 클라이언트 직렬화, 카드당 경쟁사 4행만 표시(overview-kpi-cards.tsx:198-200·624-630)"]
+    },
+    "DBTR": {
+      "f7": ["skip", ""],
+      "f8": ["y", "SQL 은 전 브랜드를 버킷별로 집계(점유율 분모용)하고 상위 10 은 JS 캡 — 대시보드는 그중 경쟁사 4개 Δ 만 쓰지만 추가 문장 없음. 창 28일(kpi-tab-budget.ts:601)", "7 (SET 2·CREATE·ANALYZE·경계·ansRows·brandRows)"],
+      "f9": ["n", "BrandTrendResult(브랜드 10 × 4~5주)를 competitors 묶음으로 클라이언트 직렬화, 카드 ①② 는 경쟁사 4개 Δ 만 표시(overview-kpi-cards.tsx:160-166, competitor-values.ts:177-191) — 2배 초과(수 KB, 경미). 언급 화면에서는 전 시리즈 표시"]
+    },
+    "DFPO": {
+      "f7": ["skip", ""],
+      "f8": ["n", "대시보드 경쟁사 행은 순위 시계열의 마지막 두 점 Δ 만 쓰는데(competitor-values.ts:194-205) trendDays 미지정이라 84일 12주 시계열 전체(KPI_TAB_HERO_TREND_DAYS kpi-tab-budget.ts:594, server.ts:3466-3468·3687)와 별도 _answer_set 트랜잭션의 스냅샷 순위표 snapRows(scope-aggregates.ts:11278-11322 — latest 는 대시보드 미사용)를 계산", "트랜잭션 2개 (snapRows · ansRows · posRows)"],
+      "f9": ["n", "FirstPositionResult 전체(브랜드 10+ × 12주 버킷 + latest 순위표)를 competitors 묶음으로 클라이언트 직렬화, 카드 ④ 는 경쟁사 4개 Δ 만 표시(overview-kpi-cards.tsx:165·624-630)"]
+    },
+    "DCDM": {
+      "f7": ["skip", ""],
+      "f8": ["n", "카드 ⑤ 경쟁사 행은 domains 의 category·share 만 씀(overview-kpi-cards.tsx:170-187). 집계층(S3.citation) 경로가 summaryCitationsFromTrend 4문장을 다 실행하고 .domains 만 취함(server.ts:4340-4343) — 엔진×카테고리 문장·답변 수(커버리지 분모)·top-80 2단 조회(prompts·coverage)는 버려짐(summary-citation-read.ts:210-218·246·266-275). 미러 폴백은 CitationsLive 전체(드릴다운·promptSplit·추이 포함)를 계산해 domains 만 사용(server.ts:4345-4346)", "4 + 오버라이드 (미러 폴백 7~8)"],
+      "f9": ["n", "domains(집계층 top-80 / 미러 폴백 최대 2,000행 + 드릴다운)를 competitors 묶음으로 클라이언트 직렬화, 카드는 경쟁사 브랜드 4개만 표시. 또 집계층 경로는 그룹 키 상위 80개(CITATION_TOP_DOMAINS summary-citation-read.ts:82·245-249)에서만 브랜드 점유율을 합산 — 80위 밖 공식(경쟁사) 도메인은 안내 없이 빠짐"]
+    },
+    "DGEO": {
+      "f7": ["skip", ""],
+      "f8": ["n", "브랜드 미선택(admin 기본 화면 등 activeBrand=null)이면 buildGeo 가 빈 markets 를 돌려 '브랜드 선택' 안내만 표시(live.ts:224, geo-overview.tsx:144-149)하는데 fetchStandardGeoKpi 는 항상 병렬 발행(live.ts:526-529) — 집계층 경로는 S1 문장의 지역 GROUPING SETS 축(추가 문장 0, summary-global-aggregates.ts:1005-1036), 미러 폴백은 6문장 + 공식 키를 계산 후 폐기(server.ts:1409-1416·4368)", "0 (집계층 공유) / 미러 6"],
+      "f9": ["y", "LiveGeo(권역 ≤18 · 국가 행)는 지도·표에 전부 표시"]
+    },
+    "DGA4": {
+      "f7": ["skip", ""],
+      "f8": ["n", "getLiveDashboardImpl 이 GA4 3종을 카드 집계와 같은 Promise.all 로 매 렌더 대기(live.ts:445-462) → trafficConversion KPI(+28일 방문 sparkline)로 kpis 에 싣지만(live.ts:473-494) Overview 카드는 OVERVIEW_KPI_KEYS 5종만 그림(overview-metrics.ts:11-14, overview-kpi-cards.tsx:272) — 화면 미표시. 롤업은 시장마다 GA4 runReport 를 따로 호출(conversion.ts:568-583)", "SQL 1~2(ga4_properties) + 미스 시 runReport 2~4×시장"],
+      "f9": ["n", "trafficConversion 항목(값·비율·커버리지·28일 sparkline 배열)이 kpis 로 클라이언트 직렬화되지만 표시 0 (경미)"]
+    },
+    "M1a": {
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1 (ansAgg, 헤드라인 묶음 일부)"],
+      "f9": ["skip", ""]
+    },
+    "M1b": {
+      "f7": ["skip", ""],
+      "f8": ["y", "주별 상위 10 합집합 산출에 전 브랜드 일별 행이 필요(scope-aggregates.ts:5992-5997)", "1"],
+      "f9": ["y", "합집합 ≤15 시리즈 전부 차트에 표시(mentions-view.tsx:638-641)"]
+    },
+    "M1c": {
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1 (헤드라인 brandRows)"],
+      "f9": ["n", "MentionsLive 전체(브랜드 행 전량 — LIMIT 없음 scope-aggregates.ts:5889-5891)를 'use client' 섹션으로 직렬화(mention/page.tsx:540-544 → mentions-prompts-section.tsx:1·44-53), 순위 표는 상위 100행(BRAND_RANK_LIMIT mentions-prompts-section.tsx:15, brand-rank-table.tsx:135) — 나머지는 클라이언트 검색용으로만 실림 (상한 100 은 제목에 표기)"]
+    },
+    "M1d": {
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1 (sig)"],
+      "f9": ["skip", ""]
+    },
+    "M2": {
+      "f7": ["skip", ""],
+      "f8": ["y", "탭별 필요 파트만 계산(server.ts:2221-2246), 요청 공유 답변셋 사용(scope-aggregates.ts:3294)", "4~5 (+SET 2)"],
+      "f9": ["y", "히어로 스칼라 + 엔진 행 소량, 전부 표시"]
+    },
+    "M3": {
+      "f7": ["skip", ""],
+      "f8": ["y", "", "5~6"],
+      "f9": ["skip", ""]
+    },
+    "M4": {
+      "f7": ["skip", ""],
+      "f8": ["y", "운영(격자 off) withOverviewSlots 는 즉시 반환(server.ts:3443)", "9 (+SET 4)"],
+      "f9": ["y", "엔진 추이·엔진×브랜드(상위 30) 전부 사용"]
+    },
+    "M5": {
+      "f7": ["skip", ""],
+      "f8": ["y", "", "4 (+SET 2)"],
+      "f9": ["y", "유형 5종 전부 표시"]
+    },
+    "M6": {
+      "f7": ["skip", ""],
+      "f8": ["y", "클릭 시 1문장", "1"],
+      "f9": ["y", "상위 50 상한(SIGNAL_PROMPTS_LIMIT scope-aggregates.ts:7473)을 다이얼로그 안내 문구에 표기(ko.json answerAnalysis.mentions.signalDrilldown.hint)"]
+    },
+    "M7": {
+      "f7": ["skip", ""],
+      "f8": ["y", "운영(격자 off) 즉시 null(server.ts:4203)", "0"],
+      "f9": ["skip", ""]
+    },
+    "M8": {
+      "f7": ["skip", ""],
+      "f8": ["n", "드릴다운은 perBrandPrompts[brand] 만 반환(server.ts:1375-1379)하는데 JS 경로가 120일 브랜드 주별 추이(readMentionBrandDayCounts scope-aggregates.ts:6125-6126)를 읽고 buildMentionTrend(:6160-6163)까지 만든 뒤 버림. 브랜드 랭킹·감정·유형 접기(:6154)도 폐기, readMirrorPromptMap 은 scope_prompts 전량 로드(:4629-4650·6121)", "5 + JS 접기"],
+      "f9": ["n", "브랜드 프롬프트 전량을 페이지 없이 반환해 표에 다 그리지만, 1.5MB 예산 초과 시 브랜드당 프롬프트 25→15→10→5개, 최후엔 빈 목록으로 안내 없이 캡(MENTION_SLIM_LEVELS scope-aggregates.ts:5521-5526, slimMentionsLiveForCache :5563-5579, 호출 :6165)"]
+    },
+    "M9": {
+      "f7": ["skip", ""],
+      "f8": ["n", "클릭마다 readMirrorPromptMap 이 scope_prompts 전량(카탈로그 조인)을 읽어 그 브랜드 답변의 프롬프트만 사용(scope-aggregates.ts:4629-4650·7664)", "5 + JS 접기"],
+      "f9": ["n", "도메인 전량을 표에 그리지만 1.5MB 초과 시 500→300→150→100 도메인으로 안내 없이 캡(BRAND_CITATION_SLIM_LEVELS scope-aggregates.ts:5698-5715)"]
+    },
+    "M10": {
+      "f7": ["skip", ""],
+      "f8": ["y", "", "3 (+조건부 2)"],
+      "f9": ["skip", ""]
+    },
+    "C1a": {
+      "f7": ["skip", ""],
+      "f8": ["n", "ansRows 문장에 detailAnswerWhere 스냅샷 게이트(rootFullCycleAnswerIds scope-aggregates.ts:1660-1719, 실측 643 ms)가 인라인으로 들어감 — 같은 W 가 C1 7문장 중 6문장에 반복(:6988·7056·7063·7078·7087·7173·7229, 경로 :6481 → :4782). withAnswerSet(_answer_set 1회 materialize, :2724)이나 요청 공유 답변셋을 쓰지 않음", "1 (게이트 인라인)"],
+      "f9": ["skip", ""]
+    },
+    "C1dom": {
+      "f7": ["skip", ""],
+      "f8": ["n", "groupRows·statRows·drill 세 문장 모두 같은 스냅샷 게이트를 인라인 재평가(scope-aggregates.ts:7063·7078·7173) — C1a 와 같은 근거", "3 (각 문장 게이트 인라인)"],
+      "f9": ["n", "CitationsLive 전체(캐시 예산 1.5MB scope-aggregates.ts:5459 — 도메인 최대 2,000행 + 상위 80 드릴다운(URL 10·프롬프트 12×ref 8) + 공식 꼬리 ≤250, :5465-5487·5593-5598)를 'use client' 뷰로 직렬화(citation/page.tsx:306·323-325, citations-standard-view.tsx:1·66-67)하는데 표는 100행(DOMAIN_RANK_LIMIT :109·585). 제목('도메인 인용 순위')에 상한 표기 없고, 검색 대상도 슬리밍된 목록이라 안내 없이 축소(citation/page.tsx:260-265 실측: 전체 스코프 상위 1,500 도메인만)"]
+    },
+    "C1cat": {
+      "f7": ["skip", ""],
+      "f8": ["n", "groupRows 에 스냅샷 게이트 인라인(scope-aggregates.ts:7063) — C1a 와 같은 근거", "1 (groupRows)"],
+      "f9": ["y", "카테고리·엔진별 구성 전부 표시"]
+    },
+    "C1ct": {
+      "f7": ["skip", ""],
+      "f8": ["y", "trendRows 1문장을 C1tr 와 공유(scope-aggregates.ts:7262-7271), 게이트 없음(allRuns 창)", "1 (C1tr 와 공유)"],
+      "f9": ["y", "카테고리 시리즈 전부 표시"]
+    },
+    "C1ps": {
+      "f7": ["skip", ""],
+      "f8": ["n", "표준 화면은 ownedCount·uncitedCount 두 건수만 쓰는데(citations-standard-view.tsx:208·236-251) 프롬프트 목록(row_number ≤20, scope-aggregates.ts:7082-7107)과 그 답변 ref 문장 splitRefs(:7224-7233)까지 계산 — 하위 페이지도 목록은 별도 페이저(fetchStandardCitationOwnedPrompts)로 다시 읽음(citation/prompts/page.tsx:59-71). 두 문장 모두 스냅샷 게이트 인라인", "2 (splitRows · splitRefs)"],
+      "f9": ["n", "owned·uncited 목록(각 ≤20 프롬프트 + ref ≤8)이 클라이언트로 실리지만 이 화면 표시 0"]
+    },
+    "C1tr": {
+      "f7": ["skip", ""],
+      "f8": ["y", "trendRows 공유", "1 (C1ct 와 공유)"],
+      "f9": ["y", "주별 상위 10 합집합(≤15 시리즈) 전부 표시"]
+    },
+    "CCO": {
+      "f7": ["skip", ""],
+      "f8": ["y", "domains 결과 재사용(_data/citation-view.ts:101)", "0"],
+      "f9": ["n", "경쟁사 옵션을 슬리밍된 live.domains(최대 2,000→1,500→…→400행)에서 뽑아 상한 밖 공식(경쟁사) 도메인이 옵션에서 안내 없이 빠짐(citation/page.tsx:260-268 주석: 실측 상위 1,500 도메인만 남음)"]
+    },
+    "CDL": {
+      "f7": ["skip", ""],
+      "f8": ["y", "운영(격자 off) ensureTrendGrid false 로 즉시 null(server.ts:2350)", "0"],
+      "f9": ["skip", ""]
+    },
+    "CPV": {
+      "f7": ["skip", ""],
+      "f8": ["n", "직전 회차 기준점 하나를 고르려고 카드 5지표 추이 전체(fetchStandardTrend day, server.ts:2567)를 계산; 미러 폴백이면 120일 미러 추이를 다 계산한 뒤 cycleAnchorAt 이 없어 null 로 버림(server.ts:2571)", "집계층 2(+키) + 직전 회차 도메인 1 / 미러 폴백 약 9 후 폐기"],
+      "f9": ["skip", ""]
+    },
+    "CTC": {
+      "f7": ["skip", ""],
+      "f8": ["n", "같은 detailAnswerWhere(citations) 스냅샷 게이트를 자기 _answer_set 으로 다시 평가(scope-aggregates.ts:11571-11573) — C1 6문장 + CTC + CTN 으로 콜드 인용 화면 1회에 게이트 8회. 요청 공유 답변셋(withStandardRoot → withSnapshotAnswerSetScope, server.ts:1283) 미사용", "5 (+오버라이드 1)"],
+      "f9": ["y", "유형 5행 전부 표시"]
+    },
+    "CTN": {
+      "f7": ["skip", ""],
+      "f8": ["n", "CTC 와 같은 게이트를 자기 _answer_set 으로 재평가(scope-aggregates.ts:11646-11648)", "5"],
+      "f9": ["skip", ""]
+    }
+  },
+  "write_areas": [
+    {
+      "screen": "언급",
+      "loc": "하단 '프롬프트 및 답변' › 브랜드 언급 순위 표 우상단 버튼",
+      "label": "쓰기: 브랜드 언급 순위 Excel 내보내기",
+      "note": "브라우저 생성(ExcelJS 동적 import) · 현재 정렬·검색 결과의 상위 100행 · 6열(복수 언급 열 제외)",
+      "legacy_call": "BrandRankTable.onExport → downloadXlsx (M1c 결과 재사용, 서버 호출 없음)",
+      "api_call": "loadMentionsLive → GET /v1/mentions/brands top_n=100 결과 재사용 → downloadXlsx (추가 호출 없음)",
+      "legacy_fns": ["EXM1"],
+      "api_keys": ["GET /v1/mentions/brands"],
+      "work_refs": []
+    },
+    {
+      "screen": "인용",
+      "loc": "'인용 도메인' 블록 › 도메인 인용 순위 표 우상단 버튼",
+      "label": "쓰기: 도메인 인용 순위 Excel 내보내기",
+      "note": "브라우저 생성(ExcelJS 동적 import) · 현재 정렬·검색·경쟁사 선택 결과의 상위 100행 · 7열",
+      "legacy_call": "DomainsBlock.onExport → downloadXlsx (C1dom 결과 재사용, 서버 호출 없음)",
+      "api_call": "loadCitationsView → GET /v1/citations/domains (표 검색·정렬은 /api/citations/domains → GET /v1/citations/domains) 결과 재사용 → downloadXlsx (추가 호출 없음)",
+      "legacy_fns": ["EXC1"],
+      "api_keys": ["GET /v1/citations/domains"],
+      "work_refs": []
+    }
+  ],
+  "functions": {
+    "EXM1": {
+      "label": "BrandRankTable.onExport → downloadXlsx",
+      "where": "standard/answer-analysis/_components/brand-rank-table.tsx:147-171·221-231 · lib/export/xlsx.ts:16-52",
+      "stmts": "SQL 0 — 받은 브랜드 행(M1c)을 브라우저에서 ExcelJS 동적 import 후 xlsx 생성·a[download] 클릭",
+      "f2": ["skip", "SQL 없음 — 브라우저 내보내기"],
+      "f3": ["skip", "M1c 결과 재사용"],
+      "f4": [],
+      "f6": ["skip", "읽기 없음 — 화면 행 재사용"],
+      "f7": ["n", "`void downloadXlsx(...)` — exceljs 청크 동적 import·writeBuffer 실패가 삼켜져 오류 안내 없음(brand-rank-table.tsx:149, xlsx.ts:22·43); 생성 중 버튼 비활성·진행 표시 없음(brand-rank-table.tsx:221-231) → 연타 시 중복 다운로드"],
+      "f8": ["y", "추가 조회 없음 — 화면 행 재사용", "0"],
+      "f9": ["y", "표시 중인 정렬·검색 결과(상위 100) 그대로 — 제목에 '상위 100' 표기"]
+    },
+    "EXC1": {
+      "label": "DomainsBlock.onExport → downloadXlsx",
+      "where": "standard/answer-analysis/_components/citations-standard-view.tsx:606-610·629-632 · lib/export/xlsx.ts:16-52",
+      "stmts": "SQL 0 — 받은 도메인 행(C1dom, api 원천은 /api/citations/domains 페이지)을 브라우저에서 xlsx 생성·다운로드",
+      "f2": ["skip", "SQL 없음 — 브라우저 내보내기"],
+      "f3": ["skip", "C1dom 결과 재사용"],
+      "f4": [],
+      "f6": ["skip", "읽기 없음 — 화면 행 재사용"],
+      "f7": ["n", "`void downloadXlsx(...)` — 실패가 삼켜져 오류 안내 없음(citations-standard-view.tsx:607); 생성 중 버튼 비활성·진행 표시 없음(:629) → 연타 시 중복 다운로드"],
+      "f8": ["y", "추가 조회 없음 — 화면 행 재사용", "0"],
+      "f9": ["n", "내보내기는 표시분 최대 100행(DOMAIN_RANK_LIMIT citations-standard-view.tsx:109·585·598)만 — 제목('도메인 인용 순위')에 상한 표기 없음. legacy 원천도 캐시 슬리밍으로 최대 2,000→…→400행에서 잘린 live.domains 라 검색·내보내기 대상이 안내 없이 축소(scope-aggregates.ts:5593-5598·5680-5694)"]
+    }
+  },
+  "notes": [
+    "DTRD 중복 확인 결과: 운영 집계층(S1.dashboard) 경로에서 두 호출(day·30일 / week)은 requestDeduped 키는 다르지만 내부 requestGlobalCore·cachedGlobalPeriodBase·cachedGapKeys(React cache, 문자열 키)가 접혀 DB 문장은 1벌이다(server.ts:2699-2702·2713-2716·2789-2792). 중복 실행은 래퍼·JS 와 미러 폴백(cachedStandardTrend 셀 2개)에서만 일어난다. f8=n 은 미러 폴백 2벌 계산 근거이고, 운영 경로 비용은 작다. 인용 화면에서는 CPV 가 세 번째 호출자다.",
+    "COMMON: withStandardRoot → enforce → auditScopeCall 이 fetcher 호출마다 bff_audit_logs INSERT 1건을 after() 로 발행한다(lib/audit.ts:23-36·71-82, server.ts:359-364). 대시보드 1렌더 기준 약 8건(aggregates 1·trend 2·mentions 1·citationDomains 1·brandTrend 1·firstPosition 1·geo 1, 정적 추정). 설계상 감사 기록이라 f8=y 로 두었다. INSERT 실패는 console.error 만 남지만 사용자 쓰기가 아니라 f7 은 skip.",
+    "DGA4 는 생성기 EXTRA_FNS 라 어느 영역에도 안 붙어 f8=n·f9=n 이 영역 판정에 안 잡힌다. getLiveDashboardImpl 이 카드 집계와 같은 Promise.all 로 GA4 를 기다리므로(live.ts:449-463, 캐시 미스면 카드 본체가 미표시 GA4 호출을 기다림) '본문 KPI 카드 그리드' 영역 legacy_fns 에 DGA4 를 붙이는 것을 권장한다. screens_def.py 를 고쳐야 하고 이 파일로는 붙일 수 없다.",
+    "쓰기 영역 2개(언급·인용 Excel)는 withStandardRoot 를 안 거치지만 생성기가 첫 3화면 영역에 COMMON 을 자동으로 붙인다(build_checklist.py s.setdefault('common','COMMON')). 그래서 내보내기 영역의 F4·F6 이 COMMON 값(G1~G4·B1~B3, 명부 폴백)으로 ☒ 표시된다. 맞추려면 쓰기 영역은 common 을 빼야 한다.",
+    "대시보드에는 쓰기 기능이 없다: dashboard/_components·components/dash 에 downloadXlsx·POST fetch·server action 이 없다. 필터 적용은 URL 변경이고, 베타 공지 '오늘 하루 보지 않기'는 레이아웃 공통 localStorage(components/dash/notice-dialog.tsx:77-118)라 화면 쓰기 영역에서 뺐다. 언급 KPI 탭 경쟁사 선택 드롭다운(competitor-kpi-table.tsx, write-path 테스트가 있음)은 저장되지 않는 클라이언트 상태라 뺐다. 답변 모달에도 복사·저장 동작이 없다.",
+    "f9 경미 판정: DTRD·DBTR·DGA4 는 기계적 '2배 초과' 규칙으로 n 이지만 바이트는 수 KB 다. 무거운 쪽은 C1dom(최대 ~1.5MB)·DCDM 미러 폴백(최대 2,000행 + 드릴다운)·DCBR·M1c(브랜드 전량)다.",
+    "M4·M5·M6·DFPO(스냅샷 단계)도 detailAnswerWhere 게이트를 각자 _answer_set 으로 평가한다. 그러나 M1·M2 가 쓰는 요청 공유 답변셋(snapshotAnswerWhere = answerWhere 의미)과 술어가 달라 같은 부분식이라 단정할 수 없어 f8 에 넣지 않았다. 인용 C1·CTC·CTN 은 같은 detailAnswerWhere(…, {hiddenFamily:'citations'}) 라 넣었다. 기본 경로(기간 미지정)에서만 해당되고, 기간을 걸면 누적 창 술어(detailAllRunsWindowPreds)로 바뀐다.",
+    "설정 가정: S1.competitors off(경쟁사 행 off 분기, server.ts:3671-3692). 켜지면 DCBR 는 viaGlobalS1 공유로 추가 문장이 0 이 되어 120일 추이 폐기가 사라지고, DBTR·DFPO 대신 회차 축 2단(competitorSeries)을 탄다. X.trendGrid off 라 CDL·M7·withOverviewSlots·withOverviewCards 는 0문장이다.",
+    "DGEO f8=n 은 조건부(브랜드 미선택 계정)다. 운영 집계층에서는 S1 문장의 지역 GROUPING SETS 축만 낭비라 비용이 작다. 미러 폴백일 때만 6문장이 버려진다.",
+    "참고(f6 재검토 후보, 이번 범위 밖): 언급 드릴다운 fetch 두 곳이 r.ok 를 확인하지 않는다(mentions-drilldown.tsx:143-147·342-346). 401 JSON 이나 게이트 403/404 {prompts:[]} 가 오류가 아니라 '없음' 빈 상태로 보인다. 현재 값은 M8 f6=y, M9 f6=n 이다."
+  ]
+}

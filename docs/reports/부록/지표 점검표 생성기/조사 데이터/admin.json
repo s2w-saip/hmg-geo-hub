@@ -1,0 +1,1361 @@
+{
+  "surface": "admin",
+  "prefix": "AD",
+  "redirects": [
+    "/ko/admin/standards -> /ko/admin/standards/prompts (front/app/[locale]/(dash)/admin/standards/page.tsx:11)"
+  ],
+  "screens": [
+    {
+      "name": "사용자 관리",
+      "menu": "Admin › User management",
+      "title": "사용자 권한 관리",
+      "route": "/ko/admin",
+      "flag": "G7",
+      "page_file": "front/app/[locale]/(dash)/admin/page.tsx",
+      "areas": [
+        {
+          "loc": "페이지 헤더 우측 메타",
+          "label": "사용자 수",
+          "note": "admin 전용(페이지 재검사 page.tsx:27-30)",
+          "legacy_call": "AdminPage → profileRepository.list().length",
+          "api_call": "listAdminUsers() → GET /v1/admin/users?limit=200 (커서 끝까지, 목록과 요청 내 dedupe)",
+          "legacy_fns": ["ADCOMMON", "ADU1"],
+          "api_keys": ["GET /v1/admin/users"],
+          "work_refs": []
+        },
+        {
+          "loc": "'사용자 목록' 카드",
+          "label": "사용자 표(이메일·역할·범위·운영권한·생성일·최근 로그인) + 검색·정렬",
+          "note": "검색·정렬은 클라이언트(user-list-client.tsx:141-175), 페이지네이션 없음",
+          "legacy_call": "UserList → Promise.all[profileRepository.list(), adminListUsers()(Supabase Admin GET /auth/v1/admin/users?per_page=200).catch(()=>[]), getSession()] → 행 병합",
+          "api_call": "listAdminUsers() → GET /v1/admin/users (last_sign_in_at 백엔드 조인, rowVersion·status 포함)",
+          "legacy_fns": ["ADU2"],
+          "api_keys": ["GET /v1/admin/users"],
+          "work_refs": []
+        },
+        {
+          "loc": "사용자 행 클릭 → '사용자 편집' 다이얼로그",
+          "label": "쓰기: 역할·운영권한·범위(브랜드>권역>국가) 저장",
+          "note": "본인 admin 강등 옵션 비활성, 변경 없으면 저장 버튼 비활성",
+          "legacy_call": "EditUserDialog.handleSave → updateUserProfile(userId, patch) → [getByUserId·countAdminsExcept] → profileRepository.update → auditDataAccess → revalidatePath(admin page)",
+          "api_call": "patchAccount() → PATCH /v1/admin/users/{user_id} (If-Match rowVersion)",
+          "legacy_fns": ["ADU4"],
+          "api_keys": ["PATCH /v1/admin/users/{user_id}"],
+          "work_refs": []
+        },
+        {
+          "loc": "편집 다이얼로그 하단 위험 영역",
+          "label": "쓰기: 사용자 삭제(2단계 확인)",
+          "note": "본인 행은 삭제 차단",
+          "legacy_call": "handleDelete → deleteUser(userId) → [getByUserId·countAdminsExcept] → adminDeleteUser(Supabase DELETE) → profileRepository.delete → projectMemberRepository.removeUserAndSucceedOrphans → memberAuditLogRepository.insert×N → auditDataAccess",
+          "api_call": "deleteAccount() → DELETE /v1/admin/users/{user_id}",
+          "legacy_fns": ["ADU5"],
+          "api_keys": ["DELETE /v1/admin/users/{user_id}"],
+          "work_refs": []
+        },
+        {
+          "loc": "편집 다이얼로그 위험 영역",
+          "label": "쓰기: 계정 정지/재개",
+          "note": "api 원천 전용(rowVersion 있을 때만 노출 edit-user-dialog.tsx:256) — 레거시 미노출",
+          "legacy_call": "없음(레거시 미노출)",
+          "api_call": "patchAccount(status) → PATCH /v1/admin/users/{user_id}",
+          "legacy_fns": [],
+          "api_keys": ["PATCH /v1/admin/users/{user_id}"],
+          "work_refs": []
+        },
+        {
+          "loc": "'사용자 추가' 카드",
+          "label": "쓰기: 이메일로 계정 생성 + 임시 비밀번호 토스트",
+          "note": "레거시 폼은 이메일만(역할 country·범위 없음 고정), api 폼은 역할·운영권한·범위 포함(D10)",
+          "legacy_call": "CreateUserForm → createUser(formData) → generateTempPassword → adminCreateUser(Supabase POST) → profileRepository.insert(role=country) (실패 시 adminDeleteUser 롤백) → auditDataAccess",
+          "api_call": "createAccount() → POST /v1/admin/users",
+          "legacy_fns": ["ADU3"],
+          "api_keys": ["POST /v1/admin/users"],
+          "work_refs": []
+        }
+      ]
+    },
+    {
+      "name": "GA4 연동",
+      "menu": "Admin › GA4 연동",
+      "title": "GA4 연동",
+      "route": "/ko/admin/ga4",
+      "flag": "G7",
+      "page_file": "front/app/[locale]/(dash)/admin/ga4/page.tsx",
+      "areas": [
+        {
+          "loc": "'연동 레지스트리' 카드 — 매핑 표",
+          "label": "브랜드×국가 → 속성ID·상태·검증일 표",
+          "note": "비admin은 /dashboard로 redirect(page.tsx:36)",
+          "legacy_call": "AdminGa4Page → ga4PropertyRepository.list().catch(()=>[])",
+          "api_call": "listGa4Registry() → GET /v1/admin/ga4/properties + GET /v1/admin/ga4/markets (allSettled, 5xx 부분은 빈 목록)",
+          "legacy_fns": ["ADCOMMON", "ADG1"],
+          "api_keys": ["GET /v1/admin/ga4/properties", "GET /v1/admin/ga4/markets"],
+          "work_refs": []
+        },
+        {
+          "loc": "레지스트리 카드 하단 — '레거시(env) 매핑 — 등록 대기' 표",
+          "label": "env 매핑 중 DB 미등록 시장 목록",
+          "note": "registryComplete=false(api 읽기 실패)면 숨김, 레거시는 항상 true",
+          "legacy_call": "legacyEnvMarkets()(env MAP) − dbKeys(ga4PropertyRepository.list 결과)",
+          "api_call": "front env 읽기 동일 + dbKeys는 GET /v1/admin/ga4/properties·/markets 결과",
+          "legacy_fns": ["ADG3", "ADG1"],
+          "api_keys": ["GET /v1/admin/ga4/properties", "GET /v1/admin/ga4/markets"],
+          "work_refs": []
+        },
+        {
+          "loc": "레지스트리 카드 하단 — '프로젝트 오버라이드' 표",
+          "label": "projects.ga4PropertyId로 표준 매핑을 우회하는 프로젝트(읽기 전용)",
+          "note": "",
+          "legacy_call": "projectRepository.listAll().catch(()=>[]) → JS filter(ga4PropertyId)",
+          "api_call": "listGa4Registry() → GET /v1/admin/ga4/project-overrides (커서)",
+          "legacy_fns": ["ADG2"],
+          "api_keys": ["GET /v1/admin/ga4/project-overrides"],
+          "work_refs": []
+        },
+        {
+          "loc": "레지스트리 카드 상단 추가 폼",
+          "label": "쓰기: 매핑 추가(브랜드·국가·속성ID)",
+          "note": "브랜드·국가 자유 텍스트",
+          "legacy_call": "onAdd → upsertGa4Mapping → ga4PropertyRepository.upsert(brand×country ON CONFLICT) → revalidatePath('/admin/ga4')",
+          "api_call": "putGa4Mapping() → PUT /v1/admin/ga4/properties/{property_id} (속성ID 있음) | PUT /v1/admin/ga4/markets/{brand_code}/{country_code} (없음)",
+          "legacy_fns": ["ADG4"],
+          "api_keys": ["PUT /v1/admin/ga4/properties/{property_id}", "PUT /v1/admin/ga4/markets/{brand_code}/{country_code}"],
+          "work_refs": []
+        },
+        {
+          "loc": "매핑 표 행 액션",
+          "label": "쓰기: 검증(GA4 Data API 최소 read → active 승격)",
+          "note": "속성ID 없는 행은 비활성",
+          "legacy_call": "onVerify → verifyGa4Mapping(id, propertyId) → runReport(activeUsers, 1일) → ga4PropertyRepository.setStatus(id, active)",
+          "api_call": "verifyGa4Property() → PUT /v1/admin/ga4/properties/{property_id} (verify=true)",
+          "legacy_fns": ["ADG5"],
+          "api_keys": ["PUT /v1/admin/ga4/properties/{property_id}"],
+          "work_refs": []
+        },
+        {
+          "loc": "매핑 표 행 액션(휴지통)",
+          "label": "쓰기: 매핑 삭제",
+          "note": "확인 절차 없음(1클릭)",
+          "legacy_call": "onRemove → removeGa4Mapping(id) → ga4PropertyRepository.remove",
+          "api_call": "removeGa4Row() → DELETE /v1/admin/ga4/properties/{property_id} | DELETE /v1/admin/ga4/markets/{brand_code}/{country_code}",
+          "legacy_fns": ["ADG7"],
+          "api_keys": ["DELETE /v1/admin/ga4/properties/{property_id}", "DELETE /v1/admin/ga4/markets/{brand_code}/{country_code}"],
+          "work_refs": []
+        },
+        {
+          "loc": "레거시(env) 표 행 액션",
+          "label": "쓰기: env 매핑 가져오기(등록)",
+          "note": "속성ID는 서버가 env로 재확인",
+          "legacy_call": "onImport → importLegacyMapping(brand, country) → envPropertyFor → ga4PropertyRepository.upsert",
+          "api_call": "putGa4Mapping() → PUT /v1/admin/ga4/properties/{property_id}",
+          "legacy_fns": ["ADG6"],
+          "api_keys": ["PUT /v1/admin/ga4/properties/{property_id}"],
+          "work_refs": []
+        },
+        {
+          "loc": "매핑 표 행 → '전환 이벤트 선택' 다이얼로그",
+          "label": "GA4 이벤트 목록(최근 90일 볼륨) + 현재 추적 선택",
+          "note": "속성ID 있는 행만, 열 때마다 조회",
+          "legacy_call": "Ga4EventsDialog.load → loadConversionEvents(pid) → requirePlace(admin) → authorize(admin=true) → loadEventsForProperty → ga4TrackedEventRepository.listForProperty + runReport(eventName×eventCount, 90일, limit 250)",
+          "api_call": "fetchAdminConversionEvents() → GET /v1/admin/ga4/properties/{property_id}/events",
+          "legacy_fns": ["ADG8"],
+          "api_keys": ["GET /v1/admin/ga4/properties/{property_id}/events"],
+          "work_refs": []
+        },
+        {
+          "loc": "전환 이벤트 다이얼로그 하단",
+          "label": "쓰기: 전환 이벤트 선택 저장(빈 선택=key events 폴백)",
+          "note": "project·website 전환 화면과 같은 액션·같은 속성 집합 공유",
+          "legacy_call": "onSave → saveConversionEvents(pid, names) → authorize → saveEventsForProperty → ga4TrackedEventRepository.replaceForProperty(tx DELETE+INSERT) → revalidateTag('ga4')",
+          "api_call": "putAdminConversionEvents() → PUT /v1/admin/ga4/properties/{property_id}/events",
+          "legacy_fns": ["ADG9"],
+          "api_keys": ["PUT /v1/admin/ga4/properties/{property_id}/events"],
+          "work_refs": []
+        }
+      ]
+    },
+    {
+      "name": "키워드 도구",
+      "menu": "Admin › Keyword tools",
+      "title": "키워드 도구",
+      "route": "/ko/admin/keyword-tools",
+      "flag": "G7",
+      "page_file": "front/app/[locale]/(dash)/admin/keyword-tools/page.tsx",
+      "areas": [
+        {
+          "loc": "'검색량 조회' 탭",
+          "label": "요약 카드 6개(총·평균·총검색량·고/중/저) + 결과 표(검색량·경쟁도·CPC·최근 6개월 막대)",
+          "note": "리다이렉트 아님(조건부 redirect는 권한 실패 시만). 첫 렌더 읽기 없음 — 실행 버튼 클릭 시에만 유료 API",
+          "legacy_call": "VolumeTab.run → POST /api/keyword/volume → requireAdminUser·canUseKeywordTools → getKeywordVolumes(cache getValid → DataForSEO 미스분 → upsertMany) → summarizeKeywordSearchVolume",
+          "api_call": "route → lookupKeywordVolumes() → POST /v1/admin/keyword-tools/volume (+ GET /v1/admin/changes/{change_id} 폴링, 미수집분 pending)",
+          "legacy_fns": ["ADCOMMON", "ADKW1"],
+          "api_keys": ["POST /v1/admin/keyword-tools/volume", "GET /v1/admin/changes/{change_id}"],
+          "work_refs": []
+        },
+        {
+          "loc": "'검색량 조회' 탭 결과 상단",
+          "label": "쓰기: 검색량 CSV 내보내기",
+          "note": "클라이언트 전용(화면 행 그대로)",
+          "legacy_call": "exportCsv() → downloadCsv(브라우저 Blob)",
+          "api_call": "동일(클라이언트, API 호출 없음)",
+          "legacy_fns": ["ADKW1"],
+          "api_keys": [],
+          "work_refs": []
+        },
+        {
+          "loc": "'키워드 → 프롬프트' 탭",
+          "label": "생성 프롬프트 표(원 입력·질문·검색 의도·검색량)",
+          "note": "'검색량 포함' 체크 시 볼륨 선조회. 실행 시에만 호출",
+          "legacy_call": "ToPromptTab.run → [includeVolume: POST /api/keyword/volume] → POST /api/keyword/to-prompt(maxQuestions 200) → generateNaturalQuestions(Batch) (OpenRouter) → attachVolumes",
+          "api_call": "route → keywordsToPrompts() → POST /v1/admin/keyword-tools/to-prompt (+ 볼륨 선조회 POST /v1/admin/keyword-tools/volume)",
+          "legacy_fns": ["ADKW2", "ADKW1"],
+          "api_keys": ["POST /v1/admin/keyword-tools/to-prompt", "POST /v1/admin/keyword-tools/volume"],
+          "work_refs": []
+        },
+        {
+          "loc": "'키워드 → 프롬프트' 탭 결과 상단",
+          "label": "쓰기: 프롬프트 CSV 내보내기",
+          "note": "클라이언트 전용",
+          "legacy_call": "exportCsv() → downloadCsv(브라우저 Blob)",
+          "api_call": "동일(클라이언트, API 호출 없음)",
+          "legacy_fns": ["ADKW2"],
+          "api_keys": [],
+          "work_refs": []
+        }
+      ]
+    },
+    {
+      "name": "글로벌 프롬프트 관리",
+      "menu": "Admin › Global config › Global prompts",
+      "title": "글로벌 프롬프트 관리",
+      "route": "/ko/admin/standards/prompts",
+      "flag": "G7",
+      "page_file": "front/app/[locale]/(dash)/admin/standards/prompts/page.tsx",
+      "areas": [
+        {
+          "loc": "카드 상단 통계 스트립",
+          "label": "총·사용중·미추적·scope 고아·ACR 배지 + 활성/삭제됨 뷰 토글",
+          "note": "stats는 활성 행 기준, 삭제됨 개수는 includeDeleted 조회",
+          "legacy_call": "AdminStandardPromptsPage → listStandardCatalog({includeDeleted:true}) (목록 + orphan COUNT)",
+          "api_call": "loadCatalogPage(true,{limit:200}) → POST /v1/admin/catalog/prompts/screen (include_meta=true, stats·facets) — renewal _page-actions.ts 직접 hghPost",
+          "legacy_fns": ["ADCOMMON", "ADP1"],
+          "api_keys": ["POST /v1/admin/catalog/prompts/screen"],
+          "work_refs": []
+        },
+        {
+          "loc": "통계 스트립 아래 필터 바",
+          "label": "필터(depth1·퍼널·추적상태·측정종류) + 초기화 + 표시건수",
+          "note": "레거시는 전량 받은 행을 클라이언트 필터(prompt-list.tsx:161-183)",
+          "legacy_call": "ADP1 결과 → useMemo 필터·정렬",
+          "api_call": "POST /v1/admin/catalog/prompts/screen (filters·facets 서버 처리)",
+          "legacy_fns": ["ADP1"],
+          "api_keys": ["POST /v1/admin/catalog/prompts/screen"],
+          "work_refs": []
+        },
+        {
+          "loc": "카탈로그 표",
+          "label": "본문·브랜드·프레임워크(listType/depth1-4)·퍼널·브랜드 유무·측정종류·추적·작업 열",
+          "note": "레거시 전량 렌더(페이지네이션 없음), renewal은 윈도우 페이징",
+          "legacy_call": "ADP1 rows → StandardPromptList",
+          "api_call": "loadCatalogRows → POST /v1/admin/catalog/prompts/screen (include_meta=false, offset·limit 윈도우)",
+          "legacy_fns": ["ADP1"],
+          "api_keys": ["POST /v1/admin/catalog/prompts/screen"],
+          "work_refs": []
+        },
+        {
+          "loc": "행 작업 '변경 이력' 아이콘 → 타임라인 다이얼로그",
+          "label": "프롬프트 감사 이력 타임라인",
+          "note": "admin은 scope.all이라 스코프 확인 생략",
+          "legacy_call": "PromptAuditTimeline → fetchPromptAuditTimeline(promptId) → promptAuditLogRepository.listForPrompt(limit 100)",
+          "api_call": "fetchAdminPromptTimelineApi() → GET /v1/admin/catalog/prompts/{prompt_id}/history",
+          "legacy_fns": ["ADP3"],
+          "api_keys": ["GET /v1/admin/catalog/prompts/{prompt_id}/history"],
+          "work_refs": []
+        },
+        {
+          "loc": "표 '측정 종류' 열 토글 버튼",
+          "label": "쓰기: 측정 종류 전환 single↔acr(confirm)",
+          "note": "acr 전환 시 측정량 ~20배 안내",
+          "legacy_call": "onToggleKind → setStandardPromptKind → promptRepository.getById → applyAuditedCatalogChange(tx UPDATE+감사 INSERT+updateRootPrompt scope PATCH)",
+          "api_call": "setCatalogKind() → PATCH /v1/admin/catalog/prompts/{prompt_id}/kind",
+          "legacy_fns": ["ADP4"],
+          "api_keys": ["PATCH /v1/admin/catalog/prompts/{prompt_id}/kind"],
+          "work_refs": []
+        },
+        {
+          "loc": "행 작업 휴지통(활성 뷰)",
+          "label": "쓰기: 삭제(soft-delete, confirm)",
+          "note": "",
+          "legacy_call": "onDelete → softDeleteStandardPrompt → getCatalogRowOr → applyAuditedCatalogChange(deletedAt, scope enabled=false)",
+          "api_call": "softDeleteCatalogPrompt() → DELETE /v1/admin/catalog/prompts/{prompt_id}",
+          "legacy_fns": ["ADP5"],
+          "api_keys": ["DELETE /v1/admin/catalog/prompts/{prompt_id}"],
+          "work_refs": []
+        },
+        {
+          "loc": "행 작업 '복원'(삭제됨 뷰)",
+          "label": "쓰기: 복원(confirm)",
+          "note": "",
+          "legacy_call": "onRestore → restoreStandardPrompt → getCatalogRowOr → applyAuditedCatalogChange(deletedAt=null, scope enabled=true)",
+          "api_call": "restoreCatalogPrompt() → POST /v1/admin/catalog/prompts/{prompt_id}/restore",
+          "legacy_fns": ["ADP6"],
+          "api_keys": ["POST /v1/admin/catalog/prompts/{prompt_id}/restore"],
+          "work_refs": []
+        },
+        {
+          "loc": "행 작업 연필 → '편집' 다이얼로그",
+          "label": "쓰기: 본문·라벨(브랜드·유무·listType·depth1-4·퍼널)·시장·언어 저장",
+          "note": "변경 부분만 text→labels→regions 순차 3액션. 시장 멀티셀렉트 어휘는 페이지 로드 시 ADP2",
+          "legacy_call": "PromptEditDialog.onSave → updateStandardPromptText → updateStandardPromptLabels → updateStandardPromptRegions(rootMarketVocabulary 재조회) — 각자 getCatalogRowOr + applyAuditedCatalogChange(scope PATCH)",
+          "api_call": "updateCatalogText/Labels/Regions() → PATCH /v1/admin/catalog/prompts/{prompt_id}/text · /labels · /regions; 어휘 catalogMarketVocabularyForScreen() → GET /v1/admin/catalog/markets",
+          "legacy_fns": ["ADP7", "ADP8", "ADP9", "ADP2"],
+          "api_keys": ["PATCH /v1/admin/catalog/prompts/{prompt_id}/text", "PATCH /v1/admin/catalog/prompts/{prompt_id}/labels", "PATCH /v1/admin/catalog/prompts/{prompt_id}/regions", "GET /v1/admin/catalog/markets"],
+          "work_refs": []
+        },
+        {
+          "loc": "필터 바 우측 'CSV 내보내기'",
+          "label": "쓰기: 필터 결과 CSV 내보내기",
+          "note": "레거시는 클라이언트 행 그대로",
+          "legacy_call": "onExport → downloadCsv(sorted 행)",
+          "api_call": "exportCatalogPages() → POST /v1/admin/catalog/prompts/screen (페이지 반복)",
+          "legacy_fns": ["ADP1"],
+          "api_keys": ["POST /v1/admin/catalog/prompts/screen"],
+          "work_refs": []
+        },
+        {
+          "loc": "헤더 우측 CatalogIo '내보내기'",
+          "label": "쓰기: 편집 템플릿 xlsx 내보내기",
+          "note": "삭제 행 제외",
+          "legacy_call": "onExport → exportStandardCatalogXlsx → listStandardCatalog() → buildCatalogWorkbook → base64",
+          "api_call": "exportCatalogXlsx() → GET /v1/admin/catalog/prompts/export",
+          "legacy_fns": ["ADP10"],
+          "api_keys": ["GET /v1/admin/catalog/prompts/export"],
+          "work_refs": []
+        },
+        {
+          "loc": "헤더 우측 CatalogIo '가져오기' → 프리뷰 다이얼로그",
+          "label": "쓰기: xlsx 업로드 → 변경 대조 프리뷰(변경·불변·미매칭·경고)",
+          "note": "",
+          "legacy_call": "onFile → previewStandardCatalogImport(formData) → parseCatalogWorkbook → listStandardCatalog() → rootMarketVocabulary → diffAgainstRow",
+          "api_call": "previewCatalogImport() → POST /v1/admin/catalog/prompts/import/preview (업로드 relay)",
+          "legacy_fns": ["ADP11"],
+          "api_keys": ["POST /v1/admin/catalog/prompts/import/preview"],
+          "work_refs": []
+        },
+        {
+          "loc": "프리뷰 다이얼로그 하단 '적용'·'실패 재시도'",
+          "label": "쓰기: 청크(25) 순차 적용 + 진행률·실패 목록",
+          "note": "부분 성공 허용(적용·실패 건수 표시)",
+          "legacy_call": "applyItems → applyStandardCatalogChunk(chunk, batchId) ×⌈N/25⌉ → 항목별 getCatalogRowOr → applyAuditedCatalogChange(scope PATCH)",
+          "api_call": "applyCatalogChunk() → POST /v1/admin/catalog/prompts/bulk/apply",
+          "legacy_fns": ["ADP12"],
+          "api_keys": ["POST /v1/admin/catalog/prompts/bulk/apply"],
+          "work_refs": []
+        }
+      ]
+    },
+    {
+      "name": "고객 관심 설정",
+      "menu": "Admin › Global config › Customer interest config",
+      "title": "고객 관심 데이터 관리",
+      "route": "/ko/admin/standards/customer-interest",
+      "flag": "G7",
+      "page_file": "front/app/[locale]/(dash)/admin/standards/customer-interest/page.tsx",
+      "areas": [
+        {
+          "loc": "'소셜 리서치 (Social Research)' 카드",
+          "label": "입력→탐색→맥락 지도(통계·탭 표·노드맵)",
+          "note": "양 원천 모두 샘플 픽스처(mode=admin, stats·initialPages 미전달). 샘플 표기 없음",
+          "legacy_call": "SocialScrapingFlow(mode=admin) → getSampleMatrix(locale) → sampleStats/sampleInitialPages(메모리 페이징)",
+          "api_call": "동일(픽스처, API 호출 없음)",
+          "legacy_fns": ["ADCI3"],
+          "api_keys": [],
+          "work_refs": []
+        },
+        {
+          "loc": "소셜 리서치 카드 — 프롬프트 카탈로그 추가 표",
+          "label": "쓰기: 후보 '전송'",
+          "note": "projectId 없음 → 데모 토스트('(데모)')만, 실제 저장 없음",
+          "legacy_call": "CatalogTable.onSend → toast.success(catalogSendSuccess) (context-map-view.tsx:1212-1220)",
+          "api_call": "동일(쓰기 없음)",
+          "legacy_fns": ["ADCI10"],
+          "api_keys": [],
+          "work_refs": []
+        },
+        {
+          "loc": "소셜 리서치 카드 — Excel 내보내기",
+          "label": "쓰기: 맥락 지도 xlsx 내보내기(샘플, 브라우저 생성)",
+          "note": "SAMPLE 모드는 exceljs 브라우저 빌드",
+          "legacy_call": "onExport → buildContextMapWorkbook(sampleMatrix 페이지 전량) → Blob",
+          "api_call": "동일(픽스처, API 호출 없음)",
+          "legacy_fns": ["ADCI3"],
+          "api_keys": [],
+          "work_refs": []
+        },
+        {
+          "loc": "'글로벌 키워드 카탈로그' 카드",
+          "label": "키워드 표(키워드·소스유형·브랜드·메모·활성) + 정렬",
+          "note": "",
+          "legacy_call": "legacyInterest → standardKeywordRepository.list()",
+          "api_call": "listInterest() → GET /v1/admin/interest/keywords",
+          "legacy_fns": ["ADCOMMON", "ADCI1"],
+          "api_keys": ["GET /v1/admin/interest/keywords"],
+          "work_refs": []
+        },
+        {
+          "loc": "키워드 카드 상단 추가 폼",
+          "label": "쓰기: 키워드 추가",
+          "note": "",
+          "legacy_call": "createStandardKeyword → standardKeywordRepository.insert",
+          "api_call": "createInterestKeyword() → POST /v1/admin/interest/keywords",
+          "legacy_fns": ["ADCI4"],
+          "api_keys": ["POST /v1/admin/interest/keywords"],
+          "work_refs": []
+        },
+        {
+          "loc": "키워드 표 행 액션(전원)",
+          "label": "쓰기: 키워드 활성/비활성",
+          "note": "",
+          "legacy_call": "toggleStandardKeywordEnabled → standardKeywordRepository.update",
+          "api_call": "setInterestKeywordEnabled() → PATCH /v1/admin/interest/keywords/{keyword_id}",
+          "legacy_fns": ["ADCI5"],
+          "api_keys": ["PATCH /v1/admin/interest/keywords/{keyword_id}"],
+          "work_refs": []
+        },
+        {
+          "loc": "키워드 표 행 액션(휴지통)",
+          "label": "쓰기: 키워드 삭제",
+          "note": "확인 절차 없음",
+          "legacy_call": "deleteStandardKeyword → standardKeywordRepository.delete",
+          "api_call": "deleteInterestKeyword() → DELETE /v1/admin/interest/keywords/{keyword_id}",
+          "legacy_fns": ["ADCI6"],
+          "api_keys": ["DELETE /v1/admin/interest/keywords/{keyword_id}"],
+          "work_refs": []
+        },
+        {
+          "loc": "'글로벌 소스 URL' 카드",
+          "label": "소스 표(URL·채널·브랜드·메모·활성) + 정렬",
+          "note": "",
+          "legacy_call": "legacyInterest → standardSourceRepository.list()",
+          "api_call": "listInterest() → GET /v1/admin/interest/sources",
+          "legacy_fns": ["ADCI2"],
+          "api_keys": ["GET /v1/admin/interest/sources"],
+          "work_refs": []
+        },
+        {
+          "loc": "소스 카드 상단 추가 폼",
+          "label": "쓰기: 소스 URL 추가",
+          "note": "",
+          "legacy_call": "createStandardSource → standardSourceRepository.insert",
+          "api_call": "createInterestSource() → POST /v1/admin/interest/sources",
+          "legacy_fns": ["ADCI7"],
+          "api_keys": ["POST /v1/admin/interest/sources"],
+          "work_refs": []
+        },
+        {
+          "loc": "소스 표 행 액션(전원)",
+          "label": "쓰기: 소스 활성/비활성",
+          "note": "",
+          "legacy_call": "toggleStandardSourceEnabled → standardSourceRepository.update",
+          "api_call": "setInterestSourceEnabled() → PATCH /v1/admin/interest/sources/{source_id}",
+          "legacy_fns": ["ADCI8"],
+          "api_keys": ["PATCH /v1/admin/interest/sources/{source_id}"],
+          "work_refs": []
+        },
+        {
+          "loc": "소스 표 행 액션(휴지통)",
+          "label": "쓰기: 소스 삭제",
+          "note": "확인 절차 없음",
+          "legacy_call": "deleteStandardSource → standardSourceRepository.delete",
+          "api_call": "deleteInterestSource() → DELETE /v1/admin/interest/sources/{source_id}",
+          "legacy_fns": ["ADCI9"],
+          "api_keys": ["DELETE /v1/admin/interest/sources/{source_id}"],
+          "work_refs": []
+        }
+      ]
+    },
+    {
+      "name": "인용 출처 분류",
+      "menu": "Admin › Global config › 인용 출처 분류",
+      "title": "인용 출처 분류",
+      "route": "/ko/admin/standards/citation-sources",
+      "flag": "G7",
+      "page_file": "front/app/[locale]/(dash)/admin/standards/citation-sources/page.tsx",
+      "areas": [
+        {
+          "loc": "'도메인 큐레이션' 카드",
+          "label": "도메인 표(도메인·인용수·현재 분류·출처 배지·소유 도메인 섀도 경고) + 검색·카테고리·Other만 필터 + 건수/교정 수",
+          "note": "상위 500 + 교정 도메인 전체(힌트로 상한 노출). force-dynamic, 캐시 없음",
+          "legacy_call": "AdminCitationSourcesPage → citationOverrideRepository.listDomainCuration(500).catch(()=>[]) → CITATION_DOMAIN_WEIGHT_SQL + list() + (조건부) 누락 도메인 재집계 → buildCurationRows(categorizeDomain)",
+          "api_call": "listCitationCuration(500) → GET /v1/admin/citation-overrides/candidates?surface=global&limit=500",
+          "legacy_fns": ["ADCOMMON", "ADC1"],
+          "api_keys": ["GET /v1/admin/citation-overrides/candidates"],
+          "work_refs": []
+        },
+        {
+          "loc": "도메인 표 '분류' 열 Select",
+          "label": "쓰기: 카테고리 교정(선택 즉시 저장)",
+          "note": "저장 시 오버라이드 캐시 + 전 미러 집계 캐시 무효화",
+          "legacy_call": "onCategoryChange → setCitationDomainCategory → citationOverrideRepository.upsert → auditDataAccess → revalidateTag(citation-overrides)+revalidateTag(mirror-aggregates)+revalidatePath",
+          "api_call": "putCitationOverride() → PUT /v1/admin/citation-overrides/{domain}",
+          "legacy_fns": ["ADC2"],
+          "api_keys": ["PUT /v1/admin/citation-overrides/{domain}"],
+          "work_refs": []
+        },
+        {
+          "loc": "도메인 표 행 '원복' 버튼(교정 행)",
+          "label": "쓰기: 교정 원복(기본 분류로)",
+          "note": "",
+          "legacy_call": "onRevert → clearCitationDomainOverride → citationOverrideRepository.remove → auditDataAccess → invalidate()",
+          "api_call": "deleteCitationOverride() → DELETE /v1/admin/citation-overrides/{domain}",
+          "legacy_fns": ["ADC3"],
+          "api_keys": ["DELETE /v1/admin/citation-overrides/{domain}"],
+          "work_refs": []
+        }
+      ]
+    },
+    {
+      "name": "엔티티 카탈로그",
+      "menu": "Admin › Global config › Entity catalog",
+      "title": "엔티티 카탈로그",
+      "route": "/ko/admin/standards/entities",
+      "flag": "G7",
+      "page_file": "front/app/[locale]/(dash)/admin/standards/entities/page.tsx",
+      "areas": [
+        {
+          "loc": "'브랜드 엔티티' 카드(레거시·precutover)",
+          "label": "브랜드 엔티티 표(브랜드·언급 수·등장 답변 수·역할) + 검색 + 총/자사 수",
+          "note": "레거시 기본 경로. api는 활성 버전 없을 때(precutover)만 이 화면",
+          "legacy_call": "AdminStandardEntitiesPage → listDiscoveredBrands().catch(()=>[]) → scope_mentions GROUP BY entity_id(.catch→[]) + entityRegistryRepository.listAll(.catch→[])",
+          "api_call": "listEntityRows() → GET /v1/admin/entities?surface=global&sort=answers_desc&limit=500 (커서) + ecatGate listVersions() → GET /v1/admin/entities/versions",
+          "legacy_fns": ["ADCOMMON", "ADE1"],
+          "api_keys": ["GET /v1/admin/entities", "GET /v1/admin/entities/versions"],
+          "work_refs": []
+        },
+        {
+          "loc": "엔티티 표 '역할' 열 Select",
+          "label": "쓰기: 역할 변경(자사/경쟁사/제외)",
+          "note": "경쟁사=명부 행 삭제(파생 기본값). api는 자사 지정에 브랜드 코드 필요. ready 이후엔 초안 편집으로 대체",
+          "legacy_call": "save → setEntityRole → entityRegistryRepository.upsert|remove → auditDataAccess → revalidateTag(mirror-aggregates) + revalidatePath",
+          "api_call": "setAdminEntityRole() → PUT /v1/admin/entities/{entity_id}",
+          "legacy_fns": ["ADE2"],
+          "api_keys": ["PUT /v1/admin/entities/{entity_id}"],
+          "work_refs": []
+        },
+        {
+          "loc": "EcatNav 아래 초안 바(api·ready 전용)",
+          "label": "활성 버전·초안 상태 + 쓰기: 초안 만들기",
+          "note": "레거시 미노출(ecatGate=legacy)",
+          "legacy_call": "없음(레거시 미제공)",
+          "api_call": "listVersions() → GET /v1/admin/entities/versions; createDraft() → POST /v1/admin/entities/versions",
+          "legacy_fns": [],
+          "api_keys": ["GET /v1/admin/entities/versions", "POST /v1/admin/entities/versions"],
+          "work_refs": []
+        },
+        {
+          "loc": "'엔티티 목록' 카드 EntityManager(api·ready 전용)",
+          "label": "엔티티 관리 표(실역할·숨김·초안 변경 표시)",
+          "note": "목록 + 활성·초안 버전 상세 병합(mergeEntityRows)",
+          "legacy_call": "없음(레거시 미제공)",
+          "api_call": "listEntityRows() → GET /v1/admin/entities + getVersion(active·draft) → GET /v1/admin/entities/versions/{ver} ×2",
+          "legacy_fns": [],
+          "api_keys": ["GET /v1/admin/entities", "GET /v1/admin/entities/versions/{ver}"],
+          "work_refs": []
+        },
+        {
+          "loc": "엔티티 행 → 엔티티 드로어(api·ready 전용)",
+          "label": "언급 샘플 + 쓰기: 초안 엔티티 편집·삭제, 표면 추가·삭제",
+          "note": "",
+          "legacy_call": "없음(레거시 미제공)",
+          "api_call": "entityMentionsAction → GET /v1/admin/entities/{entity_id}/mentions; putDraftEntity → PUT /v1/admin/entities/versions/{ver}/entities/{entity_id}; deleteDraftEntity → DELETE 같은 경로; addDraftSurface → POST /v1/admin/entities/versions/{ver}/surfaces; deleteDraftSurface → DELETE /v1/admin/entities/versions/{ver}/surfaces/{surface_id}",
+          "legacy_fns": [],
+          "api_keys": ["GET /v1/admin/entities/{entity_id}/mentions", "PUT /v1/admin/entities/versions/{ver}/entities/{entity_id}", "DELETE /v1/admin/entities/versions/{ver}/entities/{entity_id}", "POST /v1/admin/entities/versions/{ver}/surfaces", "DELETE /v1/admin/entities/versions/{ver}/surfaces/{surface_id}"],
+          "work_refs": []
+        }
+      ]
+    },
+    {
+      "name": "엔티티 초안",
+      "menu": "Admin › Global config › Entity catalog › 초안(EcatNav, api 전용)",
+      "title": "엔티티 초안",
+      "route": "/ko/admin/standards/entities/draft",
+      "flag": "G7",
+      "page_file": "front/app/[locale]/(dash)/admin/standards/entities/draft/page.tsx",
+      "areas": [
+        {
+          "loc": "페이지 본문(게이트)",
+          "label": "게이트 안내문(legacy: '새 백엔드 연결에서만 사용')",
+          "note": "레거시 기본 경로는 이 안내문만 렌더(데이터 읽기 0)",
+          "legacy_call": "requireAdminPage → ecatGate()=legacy → EcatShell 안내문",
+          "api_call": "ecatGate → listVersions() → GET /v1/admin/entities/versions",
+          "legacy_fns": ["ADCOMMON"],
+          "api_keys": ["GET /v1/admin/entities/versions"],
+          "work_refs": []
+        },
+        {
+          "loc": "초안 패널 — 변경 목록(DiffTable)",
+          "label": "초안 대 기준 버전 변경 목록 + 전역 차단 표면",
+          "note": "api·ready 전용, diff 실패 시 null(안내)",
+          "legacy_call": "없음(레거시 미제공)",
+          "api_call": "getVersion(draftVer) → GET /v1/admin/entities/versions/{ver} + getVersionDiff → GET /v1/admin/entities/versions/{ver}/diff",
+          "legacy_fns": [],
+          "api_keys": ["GET /v1/admin/entities/versions/{ver}", "GET /v1/admin/entities/versions/{ver}/diff"],
+          "work_refs": []
+        },
+        {
+          "loc": "초안 패널 상단",
+          "label": "쓰기: 초안 제목·사유 수정 / 초안 폐기",
+          "note": "api·ready 전용",
+          "legacy_call": "없음(레거시 미제공)",
+          "api_call": "patchDraft → PATCH /v1/admin/entities/versions/{ver}; discardDraft → POST /v1/admin/entities/versions/{ver}/discard",
+          "legacy_fns": [],
+          "api_keys": ["PATCH /v1/admin/entities/versions/{ver}", "POST /v1/admin/entities/versions/{ver}/discard"],
+          "work_refs": []
+        },
+        {
+          "loc": "초안 패널 — 허브 엔티티·전역 차단 폼",
+          "label": "쓰기: 허브 엔티티 추가 / 전역 차단 표면 추가",
+          "note": "api·ready 전용",
+          "legacy_call": "없음(레거시 미제공)",
+          "api_call": "addHubEntity → POST /v1/admin/entities/versions/{ver}/entities; addDraftSurface → POST /v1/admin/entities/versions/{ver}/surfaces",
+          "legacy_fns": [],
+          "api_keys": ["POST /v1/admin/entities/versions/{ver}/entities", "POST /v1/admin/entities/versions/{ver}/surfaces"],
+          "work_refs": []
+        },
+        {
+          "loc": "초안 패널 — 린트 패널",
+          "label": "린트 결과 + 쓰기: 린트 실행·확인(ack) 저장",
+          "note": "api·ready 전용",
+          "legacy_call": "없음(레거시 미제공)",
+          "api_call": "runLint → POST /v1/admin/entities/versions/{ver}/lint; saveLintAcks → PUT /v1/admin/entities/versions/{ver}/lint/acks",
+          "legacy_fns": [],
+          "api_keys": ["POST /v1/admin/entities/versions/{ver}/lint", "PUT /v1/admin/entities/versions/{ver}/lint/acks"],
+          "work_refs": []
+        },
+        {
+          "loc": "초안 패널 하단 반영 요청 폼",
+          "label": "쓰기: 반영 요청(범위 unexposed/from_round/all + 사유)",
+          "note": "린트 차단 시 비활성",
+          "legacy_call": "없음(레거시 미제공)",
+          "api_call": "requestApply → POST /v1/admin/entities/applies",
+          "legacy_fns": [],
+          "api_keys": ["POST /v1/admin/entities/applies"],
+          "work_refs": []
+        }
+      ]
+    },
+    {
+      "name": "엔티티 검토함",
+      "menu": "Admin › Global config › Entity catalog › 검토 대기함(EcatNav, api 전용)",
+      "title": "엔티티 검토 대기함",
+      "route": "/ko/admin/standards/entities/review",
+      "flag": "G7",
+      "page_file": "front/app/[locale]/(dash)/admin/standards/entities/review/page.tsx",
+      "areas": [
+        {
+          "loc": "페이지 본문(게이트)",
+          "label": "게이트 안내문(legacy)",
+          "note": "레거시 기본 경로는 안내문만",
+          "legacy_call": "requireAdminPage → ecatGate()=legacy → EcatShell 안내문",
+          "api_call": "ecatGate → GET /v1/admin/entities/versions",
+          "legacy_fns": ["ADCOMMON"],
+          "api_keys": ["GET /v1/admin/entities/versions"],
+          "work_refs": []
+        },
+        {
+          "loc": "'검토 대기함' 카드",
+          "label": "검토 항목 목록(상태·종류·검색 URL 필터, 200건)",
+          "note": "api·ready 전용, 병합 후보 목록은 실패 시 빈 목록",
+          "legacy_call": "없음(레거시 미제공)",
+          "api_call": "listReview({status,kind,q,limit:200}) → GET /v1/admin/entities/review + listEntityRows() → GET /v1/admin/entities",
+          "legacy_fns": [],
+          "api_keys": ["GET /v1/admin/entities/review", "GET /v1/admin/entities"],
+          "work_refs": []
+        },
+        {
+          "loc": "검토 항목 펼침 폼",
+          "label": "쓰기: 등록/기각 결정(역할·병합·표면)",
+          "note": "api·ready 전용",
+          "legacy_call": "없음(레거시 미제공)",
+          "api_call": "decideReview → POST /v1/admin/entities/review/{review_id}/decision",
+          "legacy_fns": [],
+          "api_keys": ["POST /v1/admin/entities/review/{review_id}/decision"],
+          "work_refs": []
+        }
+      ]
+    },
+    {
+      "name": "엔티티 버전",
+      "menu": "Admin › Global config › Entity catalog › 버전·반영(EcatNav, api 전용)",
+      "title": "엔티티 버전·반영",
+      "route": "/ko/admin/standards/entities/versions",
+      "flag": "G7",
+      "page_file": "front/app/[locale]/(dash)/admin/standards/entities/versions/page.tsx",
+      "areas": [
+        {
+          "loc": "페이지 본문(게이트)",
+          "label": "게이트 안내문(legacy)",
+          "note": "레거시 기본 경로는 안내문만",
+          "legacy_call": "requireAdminPage → ecatGate()=legacy → EcatShell 안내문",
+          "api_call": "ecatGate → GET /v1/admin/entities/versions",
+          "legacy_fns": ["ADCOMMON"],
+          "api_keys": ["GET /v1/admin/entities/versions"],
+          "work_refs": []
+        },
+        {
+          "loc": "'버전' 카드",
+          "label": "버전 목록 + 반영 요청 목록(최근 50)",
+          "note": "api·ready 전용",
+          "legacy_call": "없음(레거시 미제공)",
+          "api_call": "listVersions() → GET /v1/admin/entities/versions + listApplies({limit:50}) → GET /v1/admin/entities/applies",
+          "legacy_fns": [],
+          "api_keys": ["GET /v1/admin/entities/versions", "GET /v1/admin/entities/applies"],
+          "work_refs": []
+        },
+        {
+          "loc": "버전 행 '비교' 펼침",
+          "label": "버전 간 diff 표",
+          "note": "api·ready 전용, 클릭 시 조회",
+          "legacy_call": "없음(레거시 미제공)",
+          "api_call": "versionDiffAction → GET /v1/admin/entities/versions/{ver}/diff?against",
+          "legacy_fns": [],
+          "api_keys": ["GET /v1/admin/entities/versions/{ver}/diff"],
+          "work_refs": []
+        },
+        {
+          "loc": "버전 카드 하단·행 액션",
+          "label": "쓰기: 활성 버전 반영 요청 / 단계 액션(되돌리기 등)",
+          "note": "api·ready 전용",
+          "legacy_call": "없음(레거시 미제공)",
+          "api_call": "requestApply → POST /v1/admin/entities/applies; applyStepAction → POST /v1/admin/entities/applies/{apply_id}/rollback 등",
+          "legacy_fns": [],
+          "api_keys": ["POST /v1/admin/entities/applies", "POST /v1/admin/entities/applies/{apply_id}/rollback"],
+          "work_refs": []
+        }
+      ]
+    },
+    {
+      "name": "엔티티 감사",
+      "menu": "Admin › Global config › Entity catalog › 감사 이력(EcatNav, api 전용)",
+      "title": "엔티티 감사 이력",
+      "route": "/ko/admin/standards/entities/audit",
+      "flag": "G7",
+      "page_file": "front/app/[locale]/(dash)/admin/standards/entities/audit/page.tsx",
+      "areas": [
+        {
+          "loc": "페이지 본문(게이트)",
+          "label": "게이트 안내문(legacy)",
+          "note": "레거시 기본 경로는 안내문만",
+          "legacy_call": "requireAdminPage → ecatGate()=legacy → EcatShell 안내문",
+          "api_call": "ecatGate → GET /v1/admin/entities/versions",
+          "legacy_fns": ["ADCOMMON"],
+          "api_keys": ["GET /v1/admin/entities/versions"],
+          "work_refs": []
+        },
+        {
+          "loc": "'감사 이력' 카드",
+          "label": "감사 이력 표(100건, before_id 커서 '더 보기')",
+          "note": "api·ready 전용",
+          "legacy_call": "없음(레거시 미제공)",
+          "api_call": "listAudit({beforeId,limit:100}) → GET /v1/admin/entities/audit",
+          "legacy_fns": [],
+          "api_keys": ["GET /v1/admin/entities/audit"],
+          "work_refs": []
+        }
+      ]
+    },
+    {
+      "name": "엔티티 반영 상세",
+      "menu": "Admin › Global config › Entity catalog › 버전·반영 › 반영 요청(api 전용)",
+      "title": "엔티티 반영",
+      "route": "/ko/admin/standards/entities/applies/[applyId]",
+      "flag": "G7",
+      "page_file": "front/app/[locale]/(dash)/admin/standards/entities/applies/[applyId]/page.tsx",
+      "areas": [
+        {
+          "loc": "페이지 본문(게이트)",
+          "label": "게이트 안내문(legacy)",
+          "note": "레거시 기본 경로는 안내문만(id 형식 오류는 notFound)",
+          "legacy_call": "requireAdminPage → ecatGate()=legacy → EcatShell 안내문",
+          "api_call": "ecatGate → GET /v1/admin/entities/versions",
+          "legacy_fns": ["ADCOMMON"],
+          "api_keys": ["GET /v1/admin/entities/versions"],
+          "work_refs": []
+        },
+        {
+          "loc": "반영 요청 상세 카드",
+          "label": "상태·미리보기(PreviewPanel)·진행률·숨김 변경 수 (적재 중 폴링)",
+          "note": "api·ready 전용, APPLY_POLL_MAX 도달 시 폴링 중단 안내",
+          "legacy_call": "없음(레거시 미제공)",
+          "api_call": "getApply → GET /v1/admin/entities/applies/{apply_id} (+getApplyAction 폴링) + getVersion → GET /v1/admin/entities/versions/{ver} + getVersionDiff → GET /v1/admin/entities/versions/{ver}/diff?against=fromVer",
+          "legacy_fns": [],
+          "api_keys": ["GET /v1/admin/entities/applies/{apply_id}", "GET /v1/admin/entities/versions/{ver}", "GET /v1/admin/entities/versions/{ver}/diff"],
+          "work_refs": []
+        },
+        {
+          "loc": "반영 요청 상세 액션 버튼",
+          "label": "쓰기: 미리보기·승인·거절·재개·포기·되돌리기",
+          "note": "거절·포기·되돌리기는 사유 필수, 허용 액션은 백엔드 actions[]",
+          "legacy_call": "없음(레거시 미제공)",
+          "api_call": "applyStepAction → POST /v1/admin/entities/applies/{apply_id}/preview|approve|reject|resume|abandon|rollback",
+          "legacy_fns": [],
+          "api_keys": ["POST /v1/admin/entities/applies/{apply_id}/preview", "POST /v1/admin/entities/applies/{apply_id}/approve", "POST /v1/admin/entities/applies/{apply_id}/reject", "POST /v1/admin/entities/applies/{apply_id}/resume", "POST /v1/admin/entities/applies/{apply_id}/abandon", "POST /v1/admin/entities/applies/{apply_id}/rollback"],
+          "work_refs": []
+        }
+      ]
+    }
+  ],
+  "functions": {
+    "ADCOMMON": {
+      "label": "getSession + canAccessAdmin(assertAdmin·requireAdmin·requireCatalogEditor·requireAdminPage) + auditDataAccess",
+      "where": "front/lib/auth/session.ts:26",
+      "stmts": "요청당 getSession(React cache) 1회: 레거시 Supabase getClaims(로컬 JWT 검증) + profiles SELECT 1(실패 시 축소 SELECT 재시도 profiles.ts:59-87). canAccessAdmin=role==='admin'(scope-policy.ts:48-50). 페이지는 redirect, 액션은 UnauthorizedError(admin/_actions.ts:28-34, ga4/_actions.ts:28-34, standards/_actions.ts:51-62, citation-sources/_actions.ts:36-42, entities/_actions.ts:25-31, _ecat-actions.ts:25-30 메뉴그룹 포함, _ecat-data.ts:24-28). 서버 액션 호출마다 별도 요청이라 세션·profile 재조회. 감사: auditDataAccess → bff_audit_logs INSERT를 after()로 비동기(lib/audit.ts:40-102; 사용자·인용 오버라이드·엔티티 역할 쓰기). 카탈로그 쓰기는 prompt_audit_logs를 트랜잭션 내 INSERT, scope 게이트웨이 호출은 enforce()→auditScopeCall(bff_audit_logs) 추가(scope/server.ts:359-365).",
+      "f2": ["skip", ""],
+      "f3": ["skip", ""],
+      "f4": [],
+      "f6": ["n", "profiles 전체 SELECT 실패 시 축소 SELECT로 operator='none'·menuGroups=null(메뉴 제한 없음) 기본값을 무표시로 채움 front/lib/db/repositories/profiles.ts:59-87"],
+      "f7": ["n", "감사 sink(bff_audit_logs) 쓰기 실패는 console.error만 — 원 액션은 성공 표시 front/lib/audit.ts:74-102"],
+      "f8": ["y", "", "1"],
+      "f9": ["skip", ""]
+    },
+    "ADU1": {
+      "label": "AdminPage userCount (profileRepository.list().length)",
+      "where": "front/app/[locale]/(dash)/admin/page.tsx:34",
+      "stmts": "SELECT * FROM profiles ORDER BY created_at DESC 1회(캐시 없음) → length만 사용.",
+      "f2": [0, 0, 0, 0, "profileRepository.list front/lib/db/repositories/profiles.ts:103-108"],
+      "f3": ["y", "단순 행 조회(집계 없음)"],
+      "f4": [],
+      "f6": ["y", "catch 없음 — 실패 시 (dash)/error.tsx 경계 admin/page.tsx:36"],
+      "f7": ["skip", ""],
+      "f8": ["n", "헤더 개수용으로 UserList와 같은 SELECT * FROM profiles를 한 요청에서 중복 실행(React cache 없음) admin/page.tsx:36, admin/_components/user-list.tsx:31", "1"],
+      "f9": ["n", "전체 profiles 행·전 컬럼을 읽어 개수 하나만 표시 admin/page.tsx:34-36"]
+    },
+    "ADU2": {
+      "label": "UserList (profileRepository.list + adminListUsers)",
+      "where": "front/app/[locale]/(dash)/admin/_components/user-list.tsx:16",
+      "stmts": "Promise.all: profiles SELECT * 1 + Supabase Auth Admin GET /auth/v1/admin/users?per_page=200 1(HTTP, catch→[]) + getSession(cached) → JS 병합(email·lastSignInAt).",
+      "f2": [0, 0, 0, 0, "profileRepository.list front/lib/db/repositories/profiles.ts:103-108"],
+      "f3": ["y", "단순 행 조회 + 외부 목록 1페이지 병합(집계 없음)"],
+      "f4": [],
+      "f6": ["n", "Supabase Admin 목록 실패를 []로 삼켜 최근 로그인이 전부 '로그인 기록 없음'·이메일 대체값 공란으로 무표시 표시 admin/_components/user-list.tsx:32"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1 SQL + Supabase HTTP 1"],
+      "f9": ["n", "Supabase Admin 목록 per_page=200 고정 1페이지 — 200명 초과분 최근 로그인은 안내 없이 '로그인 기록 없음' front/lib/supabase/admin.ts:89, user-list.tsx:35-57"]
+    },
+    "ADU3": {
+      "label": "createUser",
+      "where": "front/app/[locale]/(dash)/admin/_actions.ts:69",
+      "stmts": "레거시: Supabase Admin POST /auth/v1/admin/users(HTTP) → INSERT profiles(role='country', scope 없음) 1 → 실패 시 Supabase DELETE 롤백 → auditDataAccess(after INSERT) → revalidatePath(admin page).",
+      "f2": [0, 0, 0, 0, "profileRepository.insert front/lib/db/repositories/profiles.ts:110-129"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "실패는 errorKey 인라인(create-user-form.tsx:172-177), 롤백 실패는 rollbackFailed로 구분, pending 중 제출 비활성"],
+      "f8": ["y", "", "1 SQL(+감사 1) + Supabase HTTP 1~2"],
+      "f9": ["skip", ""]
+    },
+    "ADU4": {
+      "label": "updateUserProfile",
+      "where": "front/app/[locale]/(dash)/admin/_actions.ts:170",
+      "stmts": "레거시: role≠admin이면 SELECT profile 1(+기존 admin이면 COUNT admins 1) → UPDATE profiles 1 → auditDataAccess(after) → revalidatePath.",
+      "f2": [0, 0, 0, 0, "profileRepository.update front/lib/db/repositories/profiles.ts:131-154"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "현재 행 조회 실패는 throw → 오류 경계"],
+      "f7": ["n", "레거시는 버전 검사 없음(rowVersion은 api 전용) — 동시 편집 시 나중 저장이 무경고 덮어씀; 마지막 admin 확인(COUNT)→UPDATE가 비원자적이라 동시 강등 시 보호 우회 가능 admin/_actions.ts:213-253"],
+      "f8": ["y", "", "1~3 SQL(+감사 1)"],
+      "f9": ["skip", ""]
+    },
+    "ADU5": {
+      "label": "deleteUser",
+      "where": "front/app/[locale]/(dash)/admin/_actions.ts:269",
+      "stmts": "레거시: SELECT target(+admin이면 COUNT) → Supabase DELETE(HTTP) → DELETE profiles → tx removeUserAndSucceedOrphans(DELETE members RETURNING + 프로젝트마다 owner SELECT·기존 멤버 SELECT·UPDATE/INSERT) → 승계 프로젝트마다 member_audit_logs INSERT → auditDataAccess.",
+      "f2": [0, 0, 0, 0, "projectMemberRepository.removeUserAndSucceedOrphans front/lib/db/repositories/project-members.ts:286"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "대상 조회 실패는 throw → 오류 경계"],
+      "f7": ["n", "auth 삭제 후 profile 정리·Owner 승계·감사 INSERT 실패를 console.warn만 남기고 ok 반환 — 부분 성공을 성공 토스트로 표시 admin/_actions.ts:301-333"],
+      "f8": ["n", "Owner 승계 루프가 프로젝트마다 SELECT 1~2 + UPDATE/INSERT 1, 승계마다 감사 INSERT 1(per-row) project-members.ts:299-340, admin/_actions.ts:319-327", "3 + 프로젝트당 2~3 + 승계당 1"],
+      "f9": ["skip", ""]
+    },
+    "ADG1": {
+      "label": "ga4PropertyRepository.list (AdminGa4Page)",
+      "where": "front/app/[locale]/(dash)/admin/ga4/page.tsx:45",
+      "stmts": "SELECT * FROM ga4_properties ORDER BY brand, country_code 1회(캐시 없음).",
+      "f2": [0, 0, 0, 0, "ga4PropertyRepository.list front/lib/db/repositories/ga4-properties.ts:23-28"],
+      "f3": ["y", "단순 행 조회"],
+      "f4": [],
+      "f6": ["n", ".catch(()=>[])로 실패를 '등록된 GA4 매핑이 없습니다' 빈 표로 무표시 처리 admin/ga4/page.tsx:45"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1"],
+      "f9": ["y", "레지스트리 전량 표시(소규모 표)"]
+    },
+    "ADG2": {
+      "label": "projectRepository.listAll → ga4PropertyId 필터 (오버라이드)",
+      "where": "front/app/[locale]/(dash)/admin/ga4/page.tsx:58",
+      "stmts": "SELECT * FROM projects ORDER BY created_at DESC 1회 → JS filter(ga4PropertyId).",
+      "f2": [0, 0, 0, 0, "projectRepository.listAll front/lib/db/repositories/projects.ts:219-221"],
+      "f3": ["y", "단순 행 조회 + JS 필터"],
+      "f4": [],
+      "f6": ["n", ".catch(()=>[])로 실패 시 오버라이드 섹션이 안내 없이 사라짐 admin/ga4/page.tsx:58"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1"],
+      "f9": ["n", "projects 전 행·전 컬럼을 읽고 ga4PropertyId 있는 행만 표시 admin/ga4/page.tsx:58-66"]
+    },
+    "ADG3": {
+      "label": "legacyEnvMarkets − dbKeys (env 매핑 등록 대기)",
+      "where": "front/app/[locale]/(dash)/admin/ga4/page.tsx:71",
+      "stmts": "SQL 0 — env MAP(property-map.ts:37-39) 읽기 후 ADG1 결과 키와 차집합.",
+      "f2": ["skip", "SQL 없음 — env MAP 읽기 front/lib/ga4/property-map.ts:136-142"],
+      "f3": ["y", "env 상수 읽기(집계 없음)"],
+      "f4": ["GA2"],
+      "f6": ["n", "ADG1 읽기 실패(→[]) 시 dbKeys가 비어 이미 등록된 env 시장까지 '등록 대기'로 무표시 표시(레거시 registryComplete 항상 true) admin/ga4/page.tsx:41,45,71-74"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "0"],
+      "f9": ["skip", ""]
+    },
+    "ADG4": {
+      "label": "upsertGa4Mapping",
+      "where": "front/app/[locale]/(dash)/admin/ga4/_actions.ts:36",
+      "stmts": "INSERT ga4_properties ON CONFLICT(brand,country_code) DO UPDATE 1 → revalidatePath('/admin/ga4'). GA4 집계 캐시는 키에 propertyId 포함이라 무효화 불필요.",
+      "f2": [0, 0, 0, 0, "ga4PropertyRepository.upsert front/lib/db/repositories/ga4-properties.ts:49-71"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["n", "같은 브랜드×국가가 있으면 기존 속성ID를 무경고 교체하고 상태를 pending_grant로 리셋한 뒤 '추가' 성공 토스트 ga4-properties.ts:60-67, ga4/_actions.ts:57-64"],
+      "f8": ["y", "", "1"],
+      "f9": ["skip", ""]
+    },
+    "ADG5": {
+      "label": "verifyGa4Mapping",
+      "where": "front/app/[locale]/(dash)/admin/ga4/_actions.ts:71",
+      "stmts": "GA4 Data API runReport(activeUsers, 1일, limit 1) 1 → UPDATE ga4_properties SET status='active', verified_at WHERE id 1.",
+      "f2": [0, 0, 0, 0, "ga4PropertyRepository.setStatus front/lib/db/repositories/ga4-properties.ts:73-85"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "runReport 실패는 '검증 실패' 토스트"],
+      "f7": ["n", "검증은 클라이언트가 보낸 propertyId로 하고 승격은 id 행에 무조건 적용 — 행의 현재 propertyId와 대조 없음, 행이 지워졌어도 0행 UPDATE를 성공 처리 ga4/_actions.ts:85-103, ga4-properties.ts:73-85"],
+      "f8": ["y", "", "1 SQL + GA4 API 1"],
+      "f9": ["skip", ""]
+    },
+    "ADG6": {
+      "label": "importLegacyMapping",
+      "where": "front/app/[locale]/(dash)/admin/ga4/_actions.ts:108",
+      "stmts": "envPropertyFor(env) → INSERT ga4_properties ON CONFLICT DO UPDATE 1 → revalidatePath.",
+      "f2": [0, 0, 0, 0, "ga4PropertyRepository.upsert front/lib/db/repositories/ga4-properties.ts:49-71"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": ["GA2"],
+      "f6": ["y", "읽기 없음(env)"],
+      "f7": ["n", "가져오기도 brand×country upsert라 화면 로드 뒤 등록된 행을 무경고 덮어씀 ga4/_actions.ts:124-131"],
+      "f8": ["y", "", "1"],
+      "f9": ["skip", ""]
+    },
+    "ADG7": {
+      "label": "removeGa4Mapping",
+      "where": "front/app/[locale]/(dash)/admin/ga4/_actions.ts:134",
+      "stmts": "DELETE ga4_properties WHERE id 1 → revalidatePath.",
+      "f2": [0, 0, 0, 0, "ga4PropertyRepository.remove front/lib/db/repositories/ga4-properties.ts:87-89"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "실패 시 throw → 오류 경계, pending 중 버튼 비활성(확인 절차 없는 1클릭 삭제는 기준 밖) ga4-registry-client.tsx:89-95"],
+      "f8": ["y", "", "1"],
+      "f9": ["skip", ""]
+    },
+    "ADG8": {
+      "label": "loadConversionEvents → loadEventsForProperty",
+      "where": "front/lib/ga4/tracked-events-actions.ts:178",
+      "stmts": "getSession(cached) → requirePlace(admin) → authorize(admin=true, SQL 0) → SELECT ga4_tracked_events WHERE property_id 1 + GA4 Data API runReport(eventName×eventCount, 90일, limit 250) 1 → JS 합집합·정렬. 캐시 없음.",
+      "f2": [0, 0, 0, 0, "ga4TrackedEventRepository.listForProperty front/lib/db/repositories/ga4-tracked-events.ts:15-21"],
+      "f3": ["n", "열 때마다 GA4 원 API로 90일 이벤트 볼륨을 요청 시 집계 tracked-events-service.ts:22-31"],
+      "f4": ["ADK1"],
+      "f6": ["y", "조회 실패는 다이얼로그 오류 문구 tracked-events-actions.ts:195-202, ga4-events-dialog.tsx:56-60"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1 SQL + GA4 API 1"],
+      "f9": ["n", "runReport limit 250 고정 — 250종 초과 이벤트는 안내 없이 절단 tracked-events-service.ts:26-31"]
+    },
+    "ADG9": {
+      "label": "saveConversionEvents → saveEventsForProperty",
+      "where": "front/lib/ga4/tracked-events-actions.ts:212",
+      "stmts": "authorize → tx(DELETE ga4_tracked_events WHERE property_id + INSERT 선택분) → revalidateTag('ga4')(전 속성 GA4 캐시 무효화).",
+      "f2": [0, 0, 0, 0, "ga4TrackedEventRepository.replaceForProperty front/lib/db/repositories/ga4-tracked-events.ts:47-63"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["n", "선택 집합 통째 교체(버전 검사 없음) — 같은 속성을 project·website 전환 화면과 공유해 동시 편집 시 나중 저장이 무경고 덮어씀 ga4-tracked-events.ts:47-63, tracked-events-service.ts:51-59"],
+      "f8": ["y", "", "2(tx)"],
+      "f9": ["skip", ""]
+    },
+    "ADKW1": {
+      "label": "POST /api/keyword/volume → getKeywordVolumes + summarizeKeywordSearchVolume",
+      "where": "front/app/api/keyword/volume/route.ts:19",
+      "stmts": "requireAdminUser(getSession) → SELECT keyword_volume_cache(IN, 미만료) 1 → 미스분 DataForSEO HTTP ⌈N/250⌉ → 캐시 write-back(DELETE+INSERT) → JS 정렬·요약. 캐시 오류 시 이후 캐시 비활성(비용만 영향).",
+      "f2": [0, 0, 0, 0, "keywordVolumeCacheRepository.getValid front/lib/db/repositories/keyword-volume-cache.ts:58-76"],
+      "f3": ["n", "캐시 미스 시 DataForSEO 실시간 호출 + JS 요약을 요청 시 계산 lib/keyword/service.ts:74-118"],
+      "f4": ["ADK2", "ADK3"],
+      "f6": ["y", "API 오류는 errorGeneric 표시 components/keyword/keyword-tools.tsx:182-189"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1~3 SQL + DataForSEO ⌈N/250⌉"],
+      "f9": ["y", "요청 키워드 전량 반환(250개 배치 분할)"]
+    },
+    "ADKW2": {
+      "label": "POST /api/keyword/to-prompt → generateNaturalQuestions(Batch) + attachVolumes",
+      "where": "front/app/api/keyword/to-prompt/route.ts:23",
+      "stmts": "SQL 0. (includeVolume 시 ADKW1 선호출) → OpenRouter LLM 1회(≤25) 또는 10개 배치 병렬(>25) → attachVolumes.",
+      "f2": ["skip", "SQL 없음(LLM 호출)"],
+      "f3": ["n", "includeVolume 시 DataForSEO 실시간 볼륨 + LLM 생성을 요청 시 수행"],
+      "f4": ["ADK3", "ADK4"],
+      "f6": ["n", "검색량 선조회 실패를 무시하고 볼륨 없이 진행(안내 없음) components/keyword/keyword-tools.tsx:347-363"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "0 SQL + LLM 1~⌈N/10⌉ (+ADKW1)"],
+      "f9": ["n", "maxQuestions 200으로 입력 키워드를 안내 없이 절단 keyword-tools.tsx:369, lib/keyword/keyword-to-prompt.ts:64,125"]
+    },
+    "ADP1": {
+      "label": "listStandardCatalog({includeDeleted:true})",
+      "where": "front/lib/db/repositories/standards.ts:160",
+      "stmts": "SQL 2(캐시 없음): ①prompts LEFT JOIN scope_prompts WHERE project_id=ROOT ORDER BY depth1..text ②scope_prompts LEFT JOIN prompts WHERE prompts.id IS NULL COUNT(*)(scope 고아). stats는 JS 집계.",
+      "f2": [1, 0, 0, 0, "listStandardCatalog front/lib/db/repositories/standards.ts:164-202"],
+      "f3": ["n", "scope_prompts 미러 원행 anti-join COUNT를 요청마다 계산 standards.ts:197-202"],
+      "f4": ["G1"],
+      "f6": ["y", "catch 없음 — 오류 경계 prompts/page.tsx:54"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "2"],
+      "f9": ["y", "카탈로그 전량 표시(삭제 행은 같은 화면 '삭제됨' 뷰), 페이지네이션 없음"]
+    },
+    "ADP2": {
+      "label": "getStandardMarketVocabulary → rootMarketVocabulary",
+      "where": "front/app/[locale]/(dash)/admin/standards/_actions.ts:337",
+      "stmts": "SQL 0. getRootConfig → scope API getProject(root)(외부 HTTP, enforce→auditScopeCall) → project.regions.",
+      "f2": ["skip", "SQL 없음 — scope API getProject(외부 HTTP)"],
+      "f3": ["y", "단건 조회"],
+      "f4": [],
+      "f6": ["n", "scope 조회 실패를 null→[]로 삼켜 시장 멀티셀렉트가 안내 없이 비고 서버 어휘 검증도 꺼짐 standards/_actions.ts:328-333,340"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "0 SQL + scope HTTP 1"],
+      "f9": ["skip", ""]
+    },
+    "ADP3": {
+      "label": "fetchPromptAuditTimeline → promptAuditLogRepository.listForPrompt",
+      "where": "front/app/[locale]/(dash)/standard/prompts/_actions.ts:53",
+      "stmts": "getSession(cached) → admin(scope.all)이라 스코프 확인 생략 → prompt_audit_logs LEFT JOIN profiles LEFT JOIN prompts WHERE prompt_id ORDER BY created_at DESC LIMIT 100 1.",
+      "f2": [2, 0, 0, 0, "promptAuditLogRepository.listForPrompt front/lib/db/repositories/prompt-audit-logs.ts:60-88"],
+      "f3": ["y", "행 조회(집계 없음)"],
+      "f4": [],
+      "f6": ["y", "실패 시 '불러오지 못함' 표시 components/standards/prompt-audit-timeline.tsx:44-50"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1"],
+      "f9": ["n", "limit 100 고정 — 초과 이력은 안내 없이 절단 prompt-audit-logs.ts:82-87"]
+    },
+    "ADP4": {
+      "label": "setStandardPromptKind",
+      "where": "front/app/[locale]/(dash)/admin/standards/_actions.ts:147",
+      "stmts": "SELECT prompts by id 1 → tx(UPDATE prompts guard deleted_at + INSERT prompt_audit_logs + updateRootPrompt scope PATCH HTTP) → revalidatePath(prompts).",
+      "f2": [0, 0, 0, 0, "applyAuditedCatalogChange front/lib/db/repositories/prompt-audit-logs.ts:198-235"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": ["G1"],
+      "f6": ["y", "행 조회 실패는 throw"],
+      "f7": ["y", "confirm·인라인 오류, scope 실패 시 전체 롤백, 같은 종류면 멱등 ok(단 pendingId 단일 상태라 다른 행 클릭 시 버튼 재활성 prompt-list.tsx:122-138)"],
+      "f8": ["y", "", "1 SELECT + tx 2 + scope HTTP 1"],
+      "f9": ["skip", ""]
+    },
+    "ADP5": {
+      "label": "softDeleteStandardPrompt",
+      "where": "front/app/[locale]/(dash)/admin/standards/_actions.ts:459",
+      "stmts": "SELECT 1 → tx(UPDATE deleted_at + INSERT 감사 + scope PATCH enabled=false) → revalidatePath.",
+      "f2": [0, 0, 0, 0, "applyAuditedCatalogChange front/lib/db/repositories/prompt-audit-logs.ts:198-235"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": ["G1"],
+      "f6": ["y", "행 조회 실패는 throw"],
+      "f7": ["y", "confirm·인라인 오류, 이미 삭제면 멱등 ok, scope 실패 시 롤백(집계는 deleted_at 미사용이라 캐시 영향 없음)"],
+      "f8": ["y", "", "1 SELECT + tx 2 + scope HTTP 1"],
+      "f9": ["skip", ""]
+    },
+    "ADP6": {
+      "label": "restoreStandardPrompt",
+      "where": "front/app/[locale]/(dash)/admin/standards/_actions.ts:490",
+      "stmts": "SELECT 1 → tx(UPDATE deleted_at=null + INSERT 감사 + scope PATCH enabled=true) → revalidatePath.",
+      "f2": [0, 0, 0, 0, "applyAuditedCatalogChange front/lib/db/repositories/prompt-audit-logs.ts:198-235"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": ["G1"],
+      "f6": ["y", "행 조회 실패는 throw"],
+      "f7": ["y", "confirm·인라인 오류, 이미 활성이면 멱등 ok, scope 실패 시 롤백"],
+      "f8": ["y", "", "1 SELECT + tx 2 + scope HTTP 1"],
+      "f9": ["skip", ""]
+    },
+    "ADP7": {
+      "label": "updateStandardPromptText",
+      "where": "front/app/[locale]/(dash)/admin/standards/_actions.ts:222",
+      "stmts": "SELECT 1 → (변경 없으면 0) tx(UPDATE text + INSERT 감사 + scope PATCH text) → revalidatePath.",
+      "f2": [0, 0, 0, 0, "applyAuditedCatalogChange front/lib/db/repositories/prompt-audit-logs.ts:198-235"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": ["G1"],
+      "f6": ["y", "행 조회 실패는 throw"],
+      "f7": ["n", "편집 다이얼로그가 text→labels→regions 순차 3액션 — 앞 단계 저장 후 뒤 단계 실패 시 '저장 실패'만 표시(부분 저장 구분 없음) prompt-edit-dialog.tsx:107-135; 버전 검사 없이 본문 통째 덮어씀(동시 편집 무경고) standards/_actions.ts:234-251"],
+      "f8": ["y", "", "1 SELECT + tx 2 + scope HTTP 1"],
+      "f9": ["skip", ""]
+    },
+    "ADP8": {
+      "label": "updateStandardPromptLabels",
+      "where": "front/app/[locale]/(dash)/admin/standards/_actions.ts:259",
+      "stmts": "SELECT 1 → tx(UPDATE 라벨 + INSERT 감사 + (promptType/category/brand 변경 시) scope PATCH keywords) → revalidatePath(prompts)만.",
+      "f2": [0, 0, 0, 0, "applyAuditedCatalogChange front/lib/db/repositories/prompt-audit-logs.ts:198-235"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": ["G1"],
+      "f6": ["y", "행 조회 실패는 throw"],
+      "f7": ["n", "다이얼로그 3액션 부분 저장 구분 없음(prompt-edit-dialog.tsx:114-120), 버전 검사 없음; 카탈로그 축(brand·depth·funnel) 변경인데 미러 집계 캐시(mirror-aggregates, TTL 7200s) 무효화 없이 성공 — 표준 화면 축 필터 결과가 TTL/다음 싱크까지 구값 standards/_actions.ts:309, scope/server.ts:876-887"],
+      "f8": ["y", "", "1 SELECT + tx 2 + scope HTTP 0~1"],
+      "f9": ["skip", ""]
+    },
+    "ADP9": {
+      "label": "updateStandardPromptRegions",
+      "where": "front/app/[locale]/(dash)/admin/standards/_actions.ts:349",
+      "stmts": "SELECT 1 + rootMarketVocabulary(scope getProject HTTP) → 정규화·검증 → tx(UPDATE regions/lang + INSERT 감사 + (regions 변경 시) scope PATCH regions) → revalidatePath.",
+      "f2": [0, 0, 0, 0, "applyAuditedCatalogChange front/lib/db/repositories/prompt-audit-logs.ts:198-235"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": ["G1"],
+      "f6": ["n", "어휘 조회 실패 시 상한 없이 형식 검사만 적용(무표시) standards/_actions.ts:328-333,363-365"],
+      "f7": ["n", "다이얼로그 3액션 부분 저장 구분 없음(prompt-edit-dialog.tsx:121-133), 버전 검사 없음, regions(측정 시장) 변경 후 미러 집계 캐시 무효화 없음 standards/_actions.ts:427"],
+      "f8": ["y", "", "1 SELECT + tx 2 + scope HTTP 1~2"],
+      "f9": ["skip", ""]
+    },
+    "ADP10": {
+      "label": "exportStandardCatalogXlsx",
+      "where": "front/app/[locale]/(dash)/admin/standards/_actions.ts:580",
+      "stmts": "listStandardCatalog()(SQL 2: 목록 + orphan COUNT) → buildCatalogWorkbook → base64 반환.",
+      "f2": [1, 0, 0, 0, "listStandardCatalog front/lib/db/repositories/standards.ts:164-202"],
+      "f3": ["n", "listStandardCatalog의 scope_prompts anti-join COUNT를 요청 시 계산"],
+      "f4": ["G1"],
+      "f6": ["y", "실패 시 throw → 오류 경계 / {ok:false}는 인라인 catalog-io.tsx:47-51"],
+      "f7": ["skip", ""],
+      "f8": ["n", "내보내기에 쓰지 않는 scope 고아 COUNT(anti-join)를 함께 계산 standards.ts:197-202, standards/_actions.ts:585", "2"],
+      "f9": ["y", "활성 행 전량 내보내기(의도)"]
+    },
+    "ADP11": {
+      "label": "previewStandardCatalogImport",
+      "where": "front/app/[locale]/(dash)/admin/standards/_actions.ts:594",
+      "stmts": "parseCatalogWorkbook(업로드 xlsx) → listStandardCatalog()(SQL 2) → rootMarketVocabulary(scope HTTP 1) → 행별 JS diff.",
+      "f2": [1, 0, 0, 0, "listStandardCatalog front/lib/db/repositories/standards.ts:164-202"],
+      "f3": ["n", "listStandardCatalog의 scope_prompts anti-join COUNT를 요청 시 계산"],
+      "f4": ["G1"],
+      "f6": ["n", "어휘 조회 실패 시 시장 어휘 검증을 조용히 생략 — 프리뷰는 통과, 적용 단계 scope 400으로 이월 standards/_actions.ts:612,625-645"],
+      "f7": ["skip", ""],
+      "f8": ["n", "프리뷰에 쓰지 않는 scope 고아 COUNT를 함께 계산 standards/_actions.ts:607", "2 + scope HTTP 1"],
+      "f9": ["y", "변경 항목 전량 프리뷰(미매칭은 개수 배지)"]
+    },
+    "ADP12": {
+      "label": "applyStandardCatalogChunk",
+      "where": "front/app/[locale]/(dash)/admin/standards/_actions.ts:673",
+      "stmts": "청크(≤25) 항목마다 SELECT 1 → 재대조 → tx(UPDATE + INSERT 감사 + scope PATCH) → 끝에 revalidatePath(prompts)만.",
+      "f2": [0, 0, 0, 0, "applyAuditedCatalogChange front/lib/db/repositories/prompt-audit-logs.ts:198-235"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": ["G1"],
+      "f6": ["y", "행 조회 실패는 항목 실패로 집계"],
+      "f7": ["n", "청크 액션이 throw(타임아웃·네트워크)하면 void applyItems가 잡지 않아 '적용 중'에 멈추고 닫기 불가 catalog-io.tsx:84-106; 프리뷰 뒤 다른 관리자 변경을 적용 시 재대조로 무경고 덮어씀 standards/_actions.ts:700-709; 라벨·시장 변경 후 미러 집계 캐시 무효화 없음 :750"],
+      "f8": ["n", "항목마다 SELECT 1 + tx(UPDATE·INSERT) + scope PATCH 1(per-row) standards/_actions.ts:693-749", "청크당 최대 25×3 SQL + 25 HTTP"],
+      "f9": ["skip", ""]
+    },
+    "ADCI1": {
+      "label": "standardKeywordRepository.list",
+      "where": "front/lib/db/repositories/standards.ts:440",
+      "stmts": "SELECT * FROM standard_keywords ORDER BY source_type, created_at DESC 1(Promise.all로 ADCI2와 병렬).",
+      "f2": [0, 0, 0, 0, "standardKeywordRepository.list front/lib/db/repositories/standards.ts:440-445"],
+      "f3": ["y", "단순 행 조회"],
+      "f4": [],
+      "f6": ["y", "catch 없음 — 오류 경계 customer-interest/page.tsx:68-72"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1"],
+      "f9": ["y", "전량 표시"]
+    },
+    "ADCI2": {
+      "label": "standardSourceRepository.list",
+      "where": "front/lib/db/repositories/standards.ts:515",
+      "stmts": "SELECT * FROM standard_sources ORDER BY channel, created_at DESC 1.",
+      "f2": [0, 0, 0, 0, "standardSourceRepository.list front/lib/db/repositories/standards.ts:515-520"],
+      "f3": ["y", "단순 행 조회"],
+      "f4": [],
+      "f6": ["y", "catch 없음 — 오류 경계 customer-interest/page.tsx:68-72"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1"],
+      "f9": ["y", "전량 표시"]
+    },
+    "ADCI3": {
+      "label": "SocialScrapingFlow(mode=admin) 샘플 픽스처",
+      "where": "front/components/social-scraping/social-scraping-flow.tsx:127",
+      "stmts": "서버 읽기 0 — getSampleMatrix(locale) 픽스처 + sampleStats/sampleInitialPages 메모리 페이징(클라이언트).",
+      "f2": ["skip", "DB·API 읽기 없음 — 샘플 픽스처(sample-data.ts:976)"],
+      "f3": ["y", "고정 픽스처(서버 계산 없음)"],
+      "f4": ["ADK5"],
+      "f6": ["n", "실데이터 없이 샘플 픽스처를 리서치 결과처럼 상시 표시(샘플 표기 없음) social-scraping-flow.tsx:127-163, customer-interest/page.tsx:50"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "0"],
+      "f9": ["skip", ""]
+    },
+    "ADCI4": {
+      "label": "createStandardKeyword",
+      "where": "front/app/[locale]/(dash)/admin/standards/_actions.ts:756",
+      "stmts": "INSERT standard_keywords 1 → revalidatePath(customer-interest).",
+      "f2": [0, 0, 0, 0, "standardKeywordRepository.insert front/lib/db/repositories/standards.ts:447-462"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "검증 오류는 토스트, DB 실패는 throw → 오류 경계, pending 중 비활성, 하류 캐시 없음"],
+      "f8": ["y", "", "1"],
+      "f9": ["skip", ""]
+    },
+    "ADCI5": {
+      "label": "toggleStandardKeywordEnabled",
+      "where": "front/app/[locale]/(dash)/admin/standards/_actions.ts:792",
+      "stmts": "UPDATE standard_keywords SET enabled 1 → revalidatePath.",
+      "f2": [0, 0, 0, 0, "standardKeywordRepository.update front/lib/db/repositories/standards.ts:464-479"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "명시값(!enabled) 저장, 실패 throw → 오류 경계, pending 중 비활성"],
+      "f8": ["y", "", "1"],
+      "f9": ["skip", ""]
+    },
+    "ADCI6": {
+      "label": "deleteStandardKeyword",
+      "where": "front/app/[locale]/(dash)/admin/standards/_actions.ts:807",
+      "stmts": "DELETE standard_keywords WHERE id 1 → revalidatePath.",
+      "f2": [0, 0, 0, 0, "standardKeywordRepository.delete front/lib/db/repositories/standards.ts:481-483"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "실패 throw → 오류 경계, pending 중 비활성(확인 절차 없음은 기준 밖)"],
+      "f8": ["y", "", "1"],
+      "f9": ["skip", ""]
+    },
+    "ADCI7": {
+      "label": "createStandardSource",
+      "where": "front/app/[locale]/(dash)/admin/standards/_actions.ts:828",
+      "stmts": "INSERT standard_sources 1 → revalidatePath.",
+      "f2": [0, 0, 0, 0, "standardSourceRepository.insert front/lib/db/repositories/standards.ts:522-537"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "검증 오류 토스트, DB 실패 throw → 오류 경계, pending 중 비활성"],
+      "f8": ["y", "", "1"],
+      "f9": ["skip", ""]
+    },
+    "ADCI8": {
+      "label": "toggleStandardSourceEnabled",
+      "where": "front/app/[locale]/(dash)/admin/standards/_actions.ts:862",
+      "stmts": "UPDATE standard_sources SET enabled 1 → revalidatePath.",
+      "f2": [0, 0, 0, 0, "standardSourceRepository.update front/lib/db/repositories/standards.ts:539-554"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "명시값 저장, 실패 throw → 오류 경계"],
+      "f8": ["y", "", "1"],
+      "f9": ["skip", ""]
+    },
+    "ADCI9": {
+      "label": "deleteStandardSource",
+      "where": "front/app/[locale]/(dash)/admin/standards/_actions.ts:877",
+      "stmts": "DELETE standard_sources WHERE id 1 → revalidatePath.",
+      "f2": [0, 0, 0, 0, "standardSourceRepository.delete front/lib/db/repositories/standards.ts:556-558"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "실패 throw → 오류 경계, pending 중 비활성"],
+      "f8": ["y", "", "1"],
+      "f9": ["skip", ""]
+    },
+    "ADCI10": {
+      "label": "CatalogTable.onSend (projectId 없음 → 데모 토스트)",
+      "where": "front/components/social-scraping/context-map-view.tsx:1212",
+      "stmts": "서버 호출 0 — toast.success(catalogSendSuccess '…전송했습니다 (데모)').",
+      "f2": ["skip", "쓰기 없음 — 데모 토스트"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["n", "실제 저장 없이 '전송했습니다' 성공 토스트(문구 끝 '(데모)' 표기뿐), 카드 설명은 '글로벌 프롬프트 후보로 전송' context-map-view.tsx:1217-1220"],
+      "f8": ["y", "", "0"],
+      "f9": ["skip", ""]
+    },
+    "ADC1": {
+      "label": "citationOverrideRepository.listDomainCuration(500)",
+      "where": "front/lib/db/repositories/citation-overrides.ts:137",
+      "stmts": "캐시 없음(force-dynamic). ①scope_citations 전수 GROUP BY regexp 정규화 도메인 ORDER BY citations LIMIT 500 ②SELECT citation_domain_overrides ③(상위 500 밖 오버라이드 있으면) scope_citations 전수 GROUP BY 재집계(IN 목록) → buildCurationRows(categorizeDomain·classificationSource JS).",
+      "f2": [0, 0, 1, 0, "CITATION_DOMAIN_WEIGHT_SQL front/lib/citation-categorizer/curation.ts:19-25"],
+      "f3": ["n", "scope_citations 미러 원행을 요청마다 GROUP BY 집계 citation-overrides.ts:140-142"],
+      "f4": ["C1", "C2", "C3", "C5", "R"],
+      "f6": ["n", ".catch(()=>[])로 실패를 '표시할 도메인이 없습니다'로 무표시 처리 citation-sources/page.tsx:48"],
+      "f7": ["skip", ""],
+      "f8": ["n", "상위 500 밖 교정 도메인 인용수를 위해 scope_citations 전수 GROUP BY를 한 번 더 스캔 citation-overrides.ts:159-171", "2~3"],
+      "f9": ["y", "상위 500 상한을 힌트로 노출 citation-sources/page.tsx:24, domain-list.tsx:274"]
+    },
+    "ADC2": {
+      "label": "setCitationDomainCategory",
+      "where": "front/app/[locale]/(dash)/admin/standards/citation-sources/_actions.ts:51",
+      "stmts": "INSERT citation_domain_overrides ON CONFLICT(domain) DO UPDATE 1 → auditDataAccess → revalidateTag(citation-overrides) + revalidateTag(mirror-aggregates) + revalidatePath.",
+      "f2": [0, 0, 0, 0, "citationOverrideRepository.upsert front/lib/db/repositories/citation-overrides.ts:85-119"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "실패는 오류 토스트, 두 캐시 태그 무효화로 즉시 반영, pending 중 Select 비활성 citation-sources/_actions.ts:67-79"],
+      "f8": ["y", "", "1(+감사 1)"],
+      "f9": ["skip", ""]
+    },
+    "ADC3": {
+      "label": "clearCitationDomainOverride",
+      "where": "front/app/[locale]/(dash)/admin/standards/citation-sources/_actions.ts:83",
+      "stmts": "DELETE citation_domain_overrides WHERE domain 1 → auditDataAccess → invalidate()(두 태그 + 경로).",
+      "f2": [0, 0, 0, 0, "citationOverrideRepository.remove front/lib/db/repositories/citation-overrides.ts:122-130"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "실패는 오류 토스트, 캐시 무효화 동일, 없는 행 삭제는 멱등"],
+      "f8": ["y", "", "1(+감사 1)"],
+      "f9": ["skip", ""]
+    },
+    "ADE1": {
+      "label": "listDiscoveredBrands",
+      "where": "front/lib/db/repositories/entity-registry.ts:118",
+      "stmts": "캐시 없음. ①scope_mentions WHERE entity_type='Brand' GROUP BY entity_id (array_agg ORDER BY mention_count, sum, count(DISTINCT job_id)) 전수 ②SELECT entity_registry → JS 병합(미등재=competitor).",
+      "f2": [0, 0, 1, 0, "listDiscoveredBrands front/lib/db/repositories/entity-registry.ts:126-135"],
+      "f3": ["n", "scope_mentions 미러 원행을 요청마다 엔티티별 집계 entity-registry.ts:126-135"],
+      "f4": [],
+      "f6": ["n", "미러 집계 실패·명부 실패를 각각 []로 삼킴 — 명부 실패 시 전 엔티티가 '경쟁사'로 무표시 표시 entity-registry.ts:135,138, entities/page.tsx:102"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "2"],
+      "f9": ["y", "발견 브랜드 전량 전송·표시(상한·페이지 없음, 행수 미측정)"]
+    },
+    "ADE2": {
+      "label": "setEntityRole",
+      "where": "front/app/[locale]/(dash)/admin/standards/entities/_actions.ts:35",
+      "stmts": "competitor면 DELETE entity_registry, 아니면 INSERT ON CONFLICT DO UPDATE 1 → auditDataAccess → revalidateTag(mirror-aggregates)(명부 캐시 entity-roster-v2 포함 전 미러 셀) + revalidatePath.",
+      "f2": [0, 0, 0, 0, "entityRegistryRepository.upsert/remove front/lib/db/repositories/entity-registry.ts:80-102"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["y", "읽기 없음"],
+      "f7": ["y", "실패 throw → 오류 경계, 명부 캐시(mirrorCache)까지 태그 무효화로 즉시 반영, pending 중 Select 비활성 entities/_actions.ts:58-73"],
+      "f8": ["y", "", "1(+감사 1)"],
+      "f9": ["skip", ""]
+    }
+  },
+  "new_constants": {
+    "ADK1": ["GA4 전환 이벤트 조회 창 90일", "front/lib/ga4/tracked-events-service.ts:17", 1, "EVENT_WINDOW_DAYS=90 — 이벤트 선택 다이얼로그의 eventCount 집계 창"],
+    "ADK2": ["키워드 검색량 구간 임계(고·중·저)", "front/lib/keyword/dataforseo.ts:184-192", 1, "high ≥100000, medium 10000~99999, low <10000 — 요약 카드 개수"],
+    "ADK3": ["키워드 도구 위치·언어 프리셋·기본 프리셋", "front/lib/keyword/location-presets.ts:20-83", 1, "29개 시장 location_code·language_code 표, DEFAULT_PRESET_ID='kr'"],
+    "ADK4": ["키워드→프롬프트 LLM 기본 모델·샘플링", "front/lib/openrouter/client.ts:32", 1, "DEFAULT_OPENROUTER_MODEL='google/gemini-2.5-flash'(OPENROUTER_MODEL 미설정 시), temperature 0.5 keyword-to-prompt.ts:104, 배치 기준 25·배치 10 to-prompt/route.ts:58"],
+    "ADK5": ["소셜 리서치 샘플 매트릭스(픽스처)", "front/components/social-scraping/sample-data.ts:976", 1, "getSampleMatrix 고정 가짜 데이터 — admin 고객 관심 화면 리서치 카드 상시 표시"]
+  },
+  "notes": [
+    "기본 경로 = HGH_SOURCE_G7 미설정 → legacy(lib/hgh/client.ts:242-248). Before 측정은 전부 레거시 경로. renewal admin.ts·admin-entities.ts·funnel.ts 어댑터는 share와 바이트 동일(diff 무차이) — api_call은 그 어댑터 기준, 단 renewal 프롬프트 목록은 _page-actions.ts의 직접 hghPost(POST /v1/admin/catalog/prompts/screen, 윈도우 페이징)로 바뀜(adapters/* 밖).",
+    "엔티티 버전 하위 5화면(draft·review·versions·audit·applies/[applyId])은 레거시에서 ecatGate()=legacy → EcatShell 안내문('새 백엔드 연결에서만')만 렌더(Before 데이터 읽기 0). 레거시 메인 엔티티 화면엔 EcatNav가 없어 직접 URL로만 도달. 해당 영역의 legacy_fns는 비워 두고 api_call은 api·ready 게이트 기준. _ecat-actions.ts 쓰기 전부 api 전용(레거시 분기 없음).",
+    "캐시 무효화 부수효과: ①인용 교정 set/clear → revalidateTag(citation-overrides)+revalidateTag(mirror-aggregates) — 도메인 1건 저장마다 표준·웹사이트·프로젝트 전 미러 집계 셀 콜드화(prod 콜드 ~38s 메모 참고) ②setEntityRole → revalidateTag(mirror-aggregates) 동일 전면 콜드 ③saveConversionEvents → revalidateTag('ga4') 전 속성 GA4 캐시 무효화 ④카탈로그 편집(라벨·시장·벌크)은 revalidatePath만 — 표준 집계 mirrorCache(카탈로그 축 술어 포함, TTL 7200s)는 TTL/다음 싱크까지 구값(ADP8·ADP9·ADP12 f7 근거) ⑤GA4 매핑 변경은 revalidatePath만이나 GA4 캐시 키에 propertyId 포함이라 실질 영향 없음 ⑥사용자·키워드/소스 쓰기는 하류 캐시 없음.",
+    "레거시 쓰기 중 try/catch 없는 것(GA4 upsert/setStatus/import/remove, 키워드·소스 CRUD, setEntityRole, saveConversionEvents)은 서버 액션 throw → React 19 transition 오류가 (dash)/error.tsx 경계로 전파(화면 전체 교체) — 무표시가 아니므로 이것만으로는 f7 n 처리하지 않음.",
+    "revalidatePath 인자에 locale 세그먼트 없음('/admin/ga4', '/admin/standards/prompts' 등) — 서버 액션 응답이 현재 라우트를 재렌더하고 페이지가 동적이라 화면 갱신엔 영향 없음(감점 안 함).",
+    "키워드 도구: 조건부 redirect는 세션 없음/권한 실패 때만, 정상 시 렌더. 첫 렌더 읽기 없음 — 실행 시에만 유료 API(DataForSEO/OpenRouter). /api/keyword/prompt-to-volume은 화면 미배선. 페이지 게이트는 canAccessRoute 2인자(menuGroups 미반영) vs 라우트 게이트 canUseKeywordTools는 반영 — 불일치(page.tsx:24).",
+    "카탈로그 액션 createStandardPrompt·bulkSetStandardPromptRegions·toggleStandardPromptEnabled·deleteStandardPrompt는 UI 미배선 — 함수 감사 제외.",
+    "레거시 카탈로그 쓰기는 Scope API PATCH를 DB 트랜잭션 안에서 호출(HTTP 동안 커넥션 점유), scope 성공 후 COMMIT 실패 시 드리프트 창 잔존(prompt-audit-logs.ts 주석). getRootConfig 미설정(SCOPE_ROOT_PROJECT_ID 없음·mock) 시 updateRootPrompt가 null 반환 → scope 반영 없이 로컬만 바뀌어도 성공.",
+    "고객 관심: standard_keywords/standard_sources는 레거시 front에서 이 관리 화면 외 소비처 없음(백엔드 intent 라우터는 api 경로). 소셜 리서치 카드는 양 원천 모두 샘플 픽스처, '전송'은 데모 토스트.",
+    "사용자 목록 주석('orphan profile is hidden by the join')과 달리 목록은 profiles 기준이라 auth 삭제 후 남은 profile도 표시됨(user-list.tsx:41). 레거시 createUser는 이메일만 받아 role=country·범위 없음으로 생성(admin/_actions.ts:118-126) — 편집 다이얼로그 추가 설정 필요.",
+    "GA4 추가 폼의 브랜드는 자유 텍스트(카탈로그 대조 없음) — 'kia' 등 대소문자 불일치 시 resolveProperty 정확 일치 실패로 조용히 미매핑(property-map.ts:92). GA4 삭제·키워드/소스 삭제는 확인 절차 없음(f7 기준 밖, 참고).",
+    "renewal에서는 citation-sources·entities 레거시 읽기의 .catch(()=>[])가 제거되어 오류 경계로 전달(After 개선, 참고).",
+    "UNKNOWN: 데이터 규모(사용자 수·발견 브랜드 수·scope_citations/scope_mentions 행수) 미측정 — f9·성능 판단은 코드 구조 기준."
+  ]
+}

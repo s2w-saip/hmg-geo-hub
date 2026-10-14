@@ -10,6 +10,7 @@ SCREENS = [
             ("KPI 카드 ①~④ 안", "카드 기간 비교 칩", "조건부: 기간 지정 + 스위치", "fetchPeriodCompare", "/v1/kpi/compare", ["S10c"], ["DPCM"], "S10"),
             ("KPI 카드 ①~④ 하단", "경쟁사 미니 행 (카드 ①~④)", "", "fetchStandardCompetitorSources (→ CompetitorBrands · KpiBrandTrend · KpiFirstPosition)", "/v1/mentions/brands top_n=20, /v1/trend dimension=brand", ["S02", "S10"], ["DCSR", "DCBR", "DBTR", "DFPO"], "S02 · S10"),
             ("KPI 카드 ⑤(AI 인용 점유율) 하단", "카드 ⑤ 경쟁사 행", "공식 경쟁사 도메인 → 브랜드 상위 4", "fetchStandardCitationDomains", "/v1/citations/domains limit=0 competitor_sources=true", ["S03"], ["DCDM"], "S03"),
+            ("화면 밖 (KPI 카드 조회와 같은 Promise.all)", "숨은 계산: AI 유입 전환(GA4)", "조회하지만 그리지 않음 — 제거 대상", "getLiveDashboard → getAiTrafficConversionKpi · …Rollup · getAiVisitsKpi", "GET /v1/funnel/conversion (include_pages=false)", [], ["DGA4"], "—"),
             ("카드 그리드 아래 섹션", "국가별 GEO 현황", "조건부: 전체·본사·권역 계정", "getLiveGeo → fetchStandardGeoKpi", "/v1/kpi/summary, /v1/geo card=true", ["S01", "S09"], ["DGEO"], "S09"),
         ],
     },

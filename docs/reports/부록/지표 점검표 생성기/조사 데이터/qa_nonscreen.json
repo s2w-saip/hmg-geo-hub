@@ -1,0 +1,781 @@
+{
+  "surface": "검수 콘솔(QA) + 화면 밖 경로(크론·인증·미들웨어·API 라우트)",
+  "prefix": "QA/NS",
+  "redirects": [
+    "/ko/raw-data-qa (유효 검수 세션, 조건부) -> /ko/raw-data-qa/answers",
+    "/ko/raw-data-qa/* (검수 세션 없음·만료·12h 초과) -> /ko/raw-data-qa",
+    "/ko/raw-data-qa/** (RAW_DATA_QA_ENABLED≠1) -> 404",
+    "(dash)/* (Supabase 비로그인, 미들웨어) -> /ko/login",
+    "(dash)/* (세션 null: 프로필 없음 포함) -> /ko/login",
+    "(dash)/* (route-policy 불허) -> /ko/no-access"
+  ],
+  "screens": [
+    {
+      "name": "검수 게이트",
+      "menu": "원본 데이터 검수(GNB 밖) › 게이트",
+      "title": "원본 데이터 검수",
+      "route": "/ko/raw-data-qa",
+      "flag": "G7",
+      "page_file": "front/app/[locale]/raw-data-qa/page.tsx",
+      "areas": [
+        {
+          "loc": "중앙 카드",
+          "label": "게이트 진입 판정(유효 세션이면 목록으로)",
+          "note": "킬 스위치 RAW_DATA_QA_ENABLED≠1 이면 404(layout.tsx:31). (dash) 밖이라 GNB·route-policy 없음, 미들웨어 PUBLIC_PATHS 로 Supabase 게이트 면제(middleware.ts:14). role 스코프 없음(설계 예외)",
+          "legacy_call": "RawDataQaGatePage → cookies().get('raw_data_qa') → verifyReviewerCookie(HMAC·12h 하드 만료) → 유효하면 redirect(/answers)",
+          "api_call": "getCurrentReviewer → GET /v1/qa/sessions/current",
+          "legacy_fns": ["QACOMMON"],
+          "api_keys": ["GET /v1/qa/sessions/current"],
+          "work_refs": []
+        },
+        {
+          "loc": "중앙 카드 폼",
+          "label": "쓰기: 입장(검수자 이름 + 공유 비밀번호)",
+          "note": "오류 코드→문구(bad-credentials·bad-name·rate-limited·unknown) 표시. 분당 10회 시도 제한은 인스턴스 메모리 best-effort(rate-limit.ts:1-8). RAW_DATA_QA_PASSWORD 미설정 시 코드 내 기본 비밀번호(auth.ts:22,92)",
+          "legacy_call": "GateForm.onSubmit → POST /api/qa/session → hit(qa-pw:ipHash,10/60s) → normalizeReviewerName → checkPassword → createReviewSession(INSERT qa_review_sessions) → signReviewerCookie(세션 쿠키) → router.replace(/answers)",
+          "api_call": "qaApiRoutes.sessionPost → POST /v1/qa/sessions",
+          "legacy_fns": ["QA16"],
+          "api_keys": ["POST /v1/qa/sessions"],
+          "work_refs": []
+        }
+      ]
+    },
+    {
+      "name": "검수 목록",
+      "menu": "원본 데이터 검수(GNB 밖) › 검수 목록",
+      "title": "검수 목록(탭) — 페이지 h1 없음, 진행률 헤더가 첫 줄",
+      "route": "/ko/raw-data-qa/answers",
+      "flag": "G7",
+      "page_file": "front/app/[locale]/raw-data-qa/answers/page.tsx",
+      "areas": [
+        {
+          "loc": "상단 바",
+          "label": "검수자 표시·탭(검수 목록/노트 모아보기)",
+          "note": "레이아웃이 매 요청 requireReviewer(쿠키 HMAC) — 무효면 게이트로(raw-data-qa/layout.tsx:41-52). 상세·노트 화면도 같은 바",
+          "legacy_call": "RawDataQaLayout → requireReviewer → verifyReviewerCookie",
+          "api_call": "getCurrentReviewer → GET /v1/qa/sessions/current",
+          "legacy_fns": ["QACOMMON"],
+          "api_keys": ["GET /v1/qa/sessions/current"],
+          "work_refs": []
+        },
+        {
+          "loc": "상단 바 우측",
+          "label": "쓰기: 검수 종료(세션 쿠키 삭제)",
+          "note": "교대 근무용 명시 종료. legacy 는 쿠키만 지움(서버 세션 행 미폐기)",
+          "legacy_call": "QaHeader.signOut → DELETE /api/qa/session(.catch 무시) → 쿠키 maxAge 0 → router.replace(게이트) → router.refresh()",
+          "api_call": "qaApiRoutes.sessionDelete → PATCH /v1/qa/sessions/{session_id}",
+          "legacy_fns": ["QA16"],
+          "api_keys": ["PATCH /v1/qa/sessions/{session_id}"],
+          "work_refs": []
+        },
+        {
+          "loc": "본문 상단",
+          "label": "진행률 헤더(필터 기준 N건 중 M건 완료 %·이상·노트 / 전체 완료)",
+          "note": "unstable_cache 30s(태그 없음) — 저장 직후 최대 30초 늦게 반영",
+          "legacy_call": "AnswersPage → loadLegacy → getProgress(filter) → countProgress(filter) + countProgress({})",
+          "api_call": "qaApi.getProgress → GET /v1/qa/answers/progress",
+          "legacy_fns": ["QACOMMON", "QA2"],
+          "api_keys": ["GET /v1/qa/answers/progress"],
+          "work_refs": []
+        },
+        {
+          "loc": "필터 바",
+          "label": "필터(표면·검수 상태 칩, 브랜드·국가·엔진·언어·검수자 다중선택, 프롬프트 검색·기간·노트 있음/멘션 0 토글, 필터 링크 복사·초기화)",
+          "note": "전 축 URL 쿼리. 검색 300ms 디바운스. 옵션 5분 캐시. 표면 '글로벌' 필터는 알려진 오분류로 글로벌 루트 답변이 'project' 로 라벨돼 안 나옴(qa-review.ts:187-191)",
+          "legacy_call": "loadLegacy → listFilterOptions(unstable_cache 300s) → readFilterOptions(DISTINCT 조합 + 검수자 DISTINCT)",
+          "api_call": "qaApi.getFilterOptions → GET /v1/qa/filters",
+          "legacy_fns": ["QACOMMON", "QA3"],
+          "api_keys": ["GET /v1/qa/filters"],
+          "work_refs": []
+        },
+        {
+          "loc": "본문 테이블",
+          "label": "답변 목록(프롬프트·표면·브랜드·국가·엔진·언어·측정일·멘션·인용·검수 상태·검수자/락 배지, 50행 + 더 보기)",
+          "note": "API 원천에서 낡은 커서(409)·타 원천 커서(422)는 첫 페이지로 재오픈(page.tsx:69-72). '더 보기'는 다음 50행으로 교체(누적 아님)",
+          "legacy_call": "loadLegacy → listReviewAnswers(filter, cursor, 50) → listLocks(jobIds)",
+          "api_call": "qaApi.listAnswers → GET /v1/qa/answers",
+          "legacy_fns": ["QACOMMON", "QA1"],
+          "api_keys": ["GET /v1/qa/answers"],
+          "work_refs": []
+        },
+        {
+          "loc": "본문 테이블(백그라운드)",
+          "label": "락·검수 상태 10초 폴링",
+          "note": "탭 숨김이면 건너뜀. 실패는 무음",
+          "legacy_call": "AnswerList.poll → GET /api/qa/answers?jobIds= → guard → getListDeltas(listLocks + qa_answer_reviews IN)",
+          "api_call": "qaApiRoutes.answersDeltas → GET /v1/qa/deltas",
+          "legacy_fns": ["QA4"],
+          "api_keys": ["GET /v1/qa/deltas"],
+          "work_refs": []
+        }
+      ]
+    },
+    {
+      "name": "검수 상세",
+      "menu": "원본 데이터 검수(GNB 밖) › 검수 목록 › 상세",
+      "title": "— (페이지 제목 없음: '목록으로' 링크 + 좌 '답변' / 우 낱알 블록)",
+      "route": "/ko/raw-data-qa/answers/[jobId]",
+      "flag": "G7",
+      "page_file": "front/app/[locale]/raw-data-qa/answers/[jobId]/page.tsx",
+      "areas": [
+        {
+          "loc": "좌측",
+          "label": "답변 원문(프롬프트 user turn·AI 답변 하이라이트) + 앵커 접힘/미러 제외 고지",
+          "note": "자사/경쟁 하이라이트는 entity_registry role=own 기준, 답변분석과 같은 MarkdownAnswer. 미러 가시성 밖·없는 답변은 404",
+          "legacy_call": "AnswerDetailPage → loadLegacy → getReviewAnswerDetail(jobId)(head + 멘션·인용·ACR·앵커·드롭 병렬)",
+          "api_call": "qaApi.getAnswerDetail → GET /v1/qa/answers/{job_id}",
+          "legacy_fns": ["QACOMMON", "QA5"],
+          "api_keys": ["GET /v1/qa/answers/{job_id}"],
+          "work_refs": []
+        },
+        {
+          "loc": "우측",
+          "label": "낱알 패널(프롬프트·멘션·인용·ACR·메타 블록, 블록별 판정 토글·미해결 노트 수)",
+          "note": "ACR 은 (run,prompt,engine,region) 4축 근사 연결 — 답변 단위 아님. ACR 0행이면 블록 숨김. 판정 토글은 로컬 상태(저장은 판정 바)",
+          "legacy_call": "getReviewAnswerDetail 결과 + listNotesForJob(jobId) → noteCountFor(미해결)",
+          "api_call": "qaApi.getAnswerDetail + qaApi.listNotesForJob → GET /v1/qa/answers/{job_id}, GET /v1/qa/answers/{job_id}/notes",
+          "legacy_fns": ["QACOMMON", "QA5", "QA7"],
+          "api_keys": ["GET /v1/qa/answers/{job_id}", "GET /v1/qa/answers/{job_id}/notes"],
+          "work_refs": []
+        },
+        {
+          "loc": "하단 고정 바",
+          "label": "기존 검수 기록(검수자·시각) 표시",
+          "note": "",
+          "legacy_call": "loadLegacy → getReview(jobId)",
+          "api_call": "qaApi.getReview → GET /v1/qa/answers/{job_id}/review",
+          "legacy_fns": ["QA6"],
+          "api_keys": ["GET /v1/qa/answers/{job_id}/review"],
+          "work_refs": []
+        },
+        {
+          "loc": "하단 고정 바 우측",
+          "label": "이전/다음(J/K) — 목록과 같은 필터·정렬",
+          "note": "",
+          "legacy_call": "loadLegacy → getNeighbors(filter, jobId)(앵커 1 + 다음/이전 pick 2)",
+          "api_call": "qaApi.getNeighbors → GET /v1/qa/answers/{job_id}/neighbors",
+          "legacy_fns": ["QACOMMON", "QA8"],
+          "api_keys": ["GET /v1/qa/answers/{job_id}/neighbors"],
+          "work_refs": []
+        },
+        {
+          "loc": "상단 배너 + 판정 바",
+          "label": "쓰기: 검수 락(진입 획득·30초 heartbeat·이탈 해제/sendBeacon)",
+          "note": "락 TTL 180s(heartbeat 6배). 남이 보유하면 읽기 전용 + '다른 검수자가 보고 있어 읽기 전용입니다' 배너, 상실은 '락이 만료되어…' 배너",
+          "legacy_call": "DetailShell useEffect → POST /api/qa/lock(acquireLock + touchReviewSession) → setInterval PATCH /api/qa/lock(heartbeatLock) → pagehide/unmount sendBeacon POST ?release=1 또는 DELETE(releaseLock)",
+          "api_call": "qaApiRoutes.lockPost / lockPatch / lockDelete → POST·PATCH·DELETE /v1/qa/answers/{job_id}/lock",
+          "legacy_fns": ["QA9"],
+          "api_keys": ["POST /v1/qa/answers/{job_id}/lock", "PATCH /v1/qa/answers/{job_id}/lock", "DELETE /v1/qa/answers/{job_id}/lock"],
+          "work_refs": []
+        },
+        {
+          "loc": "하단 고정 바",
+          "label": "쓰기: 판정 저장(검수 완료/이상 있음, O 단축키)",
+          "note": "status 는 서버 파생(하나라도 issue 면 issue, 빈 판정도 ok). 저장 직전 락 재확인 409 → 읽기 전용 전환",
+          "legacy_call": "DetailShell.save → PUT /api/qa/review → guard → acquireLock(재확인) → upsertReview → router.refresh()",
+          "api_call": "qaApiRoutes.reviewPut → PUT /v1/qa/answers/{job_id}/review",
+          "legacy_fns": ["QA10"],
+          "api_keys": ["PUT /v1/qa/answers/{job_id}/review"],
+          "work_refs": []
+        },
+        {
+          "loc": "노트 다이얼로그",
+          "label": "쓰기: 노트 추가(대상·심각도·본문 4,000자, N 단축키)",
+          "note": "targetLabel 은 클라이언트 스냅샷. 노트 삭제(DELETE /api/qa/note)는 UI 호출부 없음",
+          "legacy_call": "NoteDialog.submit → POST /api/qa/note → guard → createNote(INSERT … RETURNING) → onCreated",
+          "api_call": "qaApiRoutes.notePost → POST /v1/qa/answers/{job_id}/notes",
+          "legacy_fns": ["QA11"],
+          "api_keys": ["POST /v1/qa/answers/{job_id}/notes"],
+          "work_refs": []
+        }
+      ]
+    },
+    {
+      "name": "노트 모아보기",
+      "menu": "원본 데이터 검수(GNB 밖) › 노트 모아보기",
+      "title": "노트 모아보기(sr-only h1) / 화면 첫 줄 '대상별 노트 수'",
+      "route": "/ko/raw-data-qa/notes",
+      "flag": "G7",
+      "page_file": "front/app/[locale]/raw-data-qa/notes/page.tsx",
+      "areas": [
+        {
+          "loc": "상단",
+          "label": "대상별 노트 수(답변·프롬프트·멘션·인용·ACR·메타) + 전체 건수",
+          "note": "기본 미해결만 집계(필터와 동일)",
+          "legacy_call": "NotesPage → loadLegacy → countNotesByKind(filter)",
+          "api_call": "qaApi.countNotesByKind → GET /v1/qa/notes/counts",
+          "legacy_fns": ["QACOMMON", "QA13"],
+          "api_keys": ["GET /v1/qa/notes/counts"],
+          "work_refs": []
+        },
+        {
+          "loc": "본문",
+          "label": "노트 목록 + 필터(대상 종류·심각도·해결된 것도 보기) + 더 보기",
+          "note": "기본 미해결만, 50행 커서",
+          "legacy_call": "loadLegacy → listNotes(filter, cursor, 50)",
+          "api_call": "qaApi.listNotes → GET /v1/qa/notes",
+          "legacy_fns": ["QACOMMON", "QA12"],
+          "api_keys": ["GET /v1/qa/notes"],
+          "work_refs": []
+        },
+        {
+          "loc": "노트 행 우측",
+          "label": "쓰기: 해결 표시/해결 취소",
+          "note": "",
+          "legacy_call": "NoteList.toggleResolved → PATCH /api/qa/note → guard → updateNote",
+          "api_call": "qaApiRoutes.notePatch → PATCH /v1/qa/notes/{note_id}",
+          "legacy_fns": ["QA14"],
+          "api_keys": ["PATCH /v1/qa/notes/{note_id}"],
+          "work_refs": []
+        },
+        {
+          "loc": "필터 바 우측",
+          "label": "쓰기: CSV 내보내기(현재 필터와 같은 집합)",
+          "note": "BOM UTF-8, 상한 10,000행, <a href download> 링크",
+          "legacy_call": "<a href=/api/qa/notes/export?…> → guard → listAllNotes(filter) → CSV 문자열 조립",
+          "api_call": "qaApiRoutes.notesExport → GET /v1/qa/notes/export(relayDownload)",
+          "legacy_fns": ["QACOMMON", "QA15"],
+          "api_keys": ["GET /v1/qa/notes/export"],
+          "work_refs": []
+        }
+      ]
+    },
+    {
+      "name": "화면 밖 경로",
+      "menu": "—",
+      "title": "크론·인증·미들웨어·API 라우트",
+      "route": "—",
+      "flag": "—",
+      "page_file": "front/vercel.json · front/middleware.ts · front/lib/auth/* · front/app/api/**",
+      "areas": [
+        {
+          "loc": "Vercel 크론 */20",
+          "label": "/api/cron/sync-mirror — 회차 관제 → 미러 동기화 → 전 캐시 무효화 → 감시 2종·앵커 따라잡기",
+          "note": "쓰기 대상: scope_* 미러(run 단위 replace), prompts.status, 동기화 커서, summary_cycles·summary_cycle_runs(관제), scope_answer_anchors(따라잡기), GitHub Issue(미배선). runs>0 또는 관제 attributed>0 이면 revalidateTag(MIRROR_AGGREGATE_TAG) = mirrorCache 79셀 전부 콜드. back/ingest 와 별개(프론트 lib/scope/mirror)",
+          "legacy_call": "GET /api/cron/sync-mirror → requireCronSecret → controlCyclesWithDeadline(runCycleControl) → syncStandardMirror(프로젝트 루프 → syncOneProject → replaceRun) → revalidateTag(MIRROR_AGGREGATE_TAG) → Promise.all[watchOrphans, watchTruncation, anchorCatchupWithDeadline] → (rowsFilled>0 && !busted) revalidateTag",
+          "api_call": "After 동일(프론트 크론 라우트 유지, 파일 동일 — 백엔드 대응 없음)",
+          "legacy_fns": ["NSCOMMON", "NS1"],
+          "api_keys": [],
+          "work_refs": []
+        },
+        {
+          "loc": "Vercel 크론 매일 18:00Z",
+          "label": "/api/cron/ga4-prebuild — GA4 KPI 28d·Live 90d 캐시 워밍 + 회차 사슬 교차 확인",
+          "note": "마켓 루프 순차. 교차 확인은 cycle-chain-watch 가 죽었을 때를 잡는 독립 관측(GitHub Issue 하나)",
+          "legacy_call": "GET /api/cron/ga4-prebuild → requireCronSecret → crossCheckCycleChain(scanViewLag+scanGenerationBacklog) → getAllMappedMarkets → for 마켓: [getAiTrafficConversionKpi(pid,28), getAiConversionLive(pid,90)]",
+          "api_call": "After 동일(프론트 lib/ga4 직접 호출, 백엔드 대응 없음)",
+          "legacy_fns": ["NSCOMMON", "NS2"],
+          "api_keys": [],
+          "work_refs": []
+        },
+        {
+          "loc": "Vercel 크론 6시간",
+          "label": "/api/cron/cycle-chain-watch — 노출 지체·생성 적체·URL 인용률 사실표 누락·앵커 공백 감시 → Slack/Issue",
+          "note": "스케줄 자체가 Slack 스로틀(하루 4회). ?dry=1 은 판정만",
+          "legacy_call": "GET /api/cron/cycle-chain-watch → requireCronSecret → Promise.all[scanViewLag, scanGenerationBacklog, scanUrlHitsCoverage, scanAnchorGap] → emitViewLag/emitBacklog/emitUrlHits/emitAnchorGap",
+          "api_call": "After 동일(프론트 크론 라우트 유지)",
+          "legacy_fns": ["NSCOMMON", "NS3"],
+          "api_keys": [],
+          "work_refs": []
+        },
+        {
+          "loc": "수동 호출(크론 미등록)",
+          "label": "/api/cron/mirror-status — 미러 누적·cadence 진단",
+          "note": "vercel.json 에 없음, 프론트 호출부 없음 — 운영자 수동 진단 전용",
+          "legacy_call": "GET /api/cron/mirror-status → requireCronSecret → getMirrorStatus(3문장)",
+          "api_call": "After 동일",
+          "legacy_fns": ["NSCOMMON", "NS4"],
+          "api_keys": [],
+          "work_refs": []
+        },
+        {
+          "loc": "외부 생성 러너(EC2) → 내부 라우트",
+          "label": "/api/internal/summary/published — 사실표 generation 스왑 후 캐시 무효화",
+          "note": "POST 전용(GET 405). 미러 태그까지 무효화해 전 미러 캐시 콜드",
+          "legacy_call": "POST /api/internal/summary/published → requireCronSecret → revalidateTag(MIRROR_AGGREGATE_TAG) + revalidateTag(SUMMARY_TAG)",
+          "api_call": "After 동일",
+          "legacy_fns": ["NSCOMMON", "NS5"],
+          "api_keys": [],
+          "work_refs": []
+        },
+        {
+          "loc": "모든 페이지 내비게이션",
+          "label": "미들웨어 — 크롤러 410·next-intl 로케일·Supabase 세션 갱신·로그인 게이트·x-pathname",
+          "note": "matcher 가 /api·_next·_vercel·정적 파일 제외(middleware.ts:84) → API 라우트는 각자 가드. PUBLIC_PATHS = /login, /raw-data-qa",
+          "legacy_call": "middleware → isBlockedCrawler → intlMiddleware → createServerClient.auth.getClaims() → 비로그인·비공개 경로면 redirect(/login) → res.headers x-pathname",
+          "api_call": "After 동일(middleware.ts 파일 동일)",
+          "legacy_fns": ["NS6"],
+          "api_keys": [],
+          "work_refs": []
+        },
+        {
+          "loc": "(dash) 레이아웃(모든 대시 화면 공통)",
+          "label": "세션·역할 해석(getSession) + 라우트 가드(canAccessRoute → /no-access) + 프로젝트 SNB 메타",
+          "note": "HGH_SOURCE_SESSION: legacy = Supabase claims + profiles(role·scope·operator·menu_groups) / api = GET /v1/auth/me. React cache 로 요청당 1회. 프로필 없음은 /login 으로(/no-access 아님)",
+          "legacy_call": "DashLayout → getSession(cache) → getSessionLegacy → getClaims → profileRepository.getByUserId → effectiveMenuGroups → canAccessRoute(role, x-pathname, menuGroups) → (프로젝트 경로) cachedMembership + cachedProjectById",
+          "api_call": "getSessionFromApi → GET /v1/auth/me · projectMetaForSnb → GET /v1/projects/{id}",
+          "legacy_fns": ["NS7"],
+          "api_keys": ["GET /v1/auth/me", "GET /v1/projects/{id}"],
+          "work_refs": []
+        },
+        {
+          "loc": "/ko/login",
+          "label": "로그인 화면(HMG GEO 모니터링 로그인) + 쓰기: 로그인",
+          "note": "오류 문구 1종('이메일 또는 비밀번호가 올바르지 않습니다'). 착지 = defaultLandingFor(role, menuGroups)",
+          "legacy_call": "LoginForm(useActionState) → login 서버 액션 → supabase.auth.signInWithPassword → legacyLanding(profileRepository.getByUserId → effectiveMenuGroups) → redirect",
+          "api_call": "apiLanding → fetchSessionData({bearer}) → GET /v1/auth/me",
+          "legacy_fns": ["NS8"],
+          "api_keys": ["GET /v1/auth/me"],
+          "work_refs": []
+        },
+        {
+          "loc": "/ko/no-access (+ GNB 레일 사용자 메뉴)",
+          "label": "접근 불가 화면(접근 가능한 메뉴가 없습니다) + 쓰기: 로그아웃",
+          "note": "정적 빈 상태(데이터 읽기 없음). route-policy GUARD_BYPASS 경로. 로그아웃은 gnb-rail.tsx 에서도 같은 액션",
+          "legacy_call": "NoAccessPage(정적) · <form action={logout}> → supabase.auth.signOut() → redirect(/login)",
+          "api_call": "After 동일(Supabase signOut, 백엔드 호출 없음)",
+          "legacy_fns": ["NS9"],
+          "api_keys": [],
+          "work_refs": []
+        },
+        {
+          "loc": "API 라우트(호출부 없음)",
+          "label": "/api/scope/projects — scope 워크스페이스 프로젝트 목록 BFF",
+          "note": "프론트·백엔드 호출부 0건. enforce() 는 세션만 확인하고 파생 scope 필터를 listProjects 에 적용하지 않음 — 로그인한 모든 role 에 전체 목록(권한 범위 미적용)",
+          "legacy_call": "GET /api/scope/projects → listProjects → enforce(getSession·auditScopeCall) → getScopeClient().listProjects(limit,cursor)",
+          "api_call": "After 동일(파일 동일, scope 게이트웨이 직결)",
+          "legacy_fns": ["NS10"],
+          "api_keys": [],
+          "work_refs": []
+        },
+        {
+          "loc": "API 라우트(UI 미연결)",
+          "label": "/api/scope/unmeasured-prompts — 측정 개요 '미측정 프롬프트' 모달 목록",
+          "note": "UnmeasuredPromptsButton 을 import 하는 화면이 없어 도달 불가. 글로벌 전용, cumulative:true 강제",
+          "legacy_call": "GET /api/scope/unmeasured-prompts → getSession → canReadAnalysis → fetchStandardUnmeasuredPrompts → kpiDegrade(withStandardRoot(mirrorCache(listUnmeasuredPromptsFromCatalog)))",
+          "api_call": "loadUnmeasuredPrompts → GET /v1/kpi/unmeasured-prompts",
+          "legacy_fns": ["COMMON", "NS11"],
+          "api_keys": ["GET /v1/kpi/unmeasured-prompts"],
+          "work_refs": []
+        },
+        {
+          "loc": "API 라우트(호출부 없음)",
+          "label": "/api/keyword/prompt-to-volume — 프롬프트→키워드(LLM)→검색량",
+          "note": "관리자 키워드 도구 화면은 volume·to-prompt 만 호출. admin + 메뉴 그룹 게이트",
+          "legacy_call": "POST /api/keyword/prompt-to-volume → requireAdminUser → canUseKeywordTools → callOpenRouter(defaultModel, 키워드 1~2) → getKeywordVolumes(DB 캐시 우선·DataForSEO) → max",
+          "api_call": "api.promptToVolume → POST /v1/admin/keyword-tools/prompt-to-volume",
+          "legacy_fns": ["NS12"],
+          "api_keys": ["POST /v1/admin/keyword-tools/prompt-to-volume"],
+          "work_refs": []
+        },
+        {
+          "loc": "API 폴더",
+          "label": "app/api/citations/_lib/route.ts — 라우트 아님(_ 접두 비공개 폴더)",
+          "note": "citations 라우트 3개(domains·[skey]·export) 공용 게이트 모듈. 31개 route.ts 중 실제 엔드포인트는 30개",
+          "legacy_call": "—",
+          "api_call": "—",
+          "legacy_fns": [],
+          "api_keys": [],
+          "work_refs": []
+        },
+        {
+          "loc": "API 라우트 전체",
+          "label": "route.ts 31개 소유 맵(호출 화면)",
+          "note": "notes 의 'ROUTE MAP' 항목 참조. 데이터 화면 소유: citations/domains·[skey]·export(답변분석 인용, api 원천 전용·legacy 404), context-map·export(소셜 스크래핑 3화면), filters/options(공용 필터 패널), keyword/insight·related·search(구글 키워드 2화면), keyword/volume·to-prompt(어드민 키워드 도구), qa/*(검수 콘솔), scope/answer·brand-citations·brand-mention-prompts·signal-prompts(답변분석), website/prompts/export(웹사이트 프롬프트). 미소유: cron 4, internal 1, scope/projects, scope/unmeasured-prompts, keyword/prompt-to-volume",
+          "legacy_call": "—",
+          "api_call": "—",
+          "legacy_fns": [],
+          "api_keys": [],
+          "work_refs": []
+        }
+      ]
+    }
+  ],
+  "functions": {
+    "QACOMMON": {
+      "label": "검수 콘솔 공통(쿠키 게이트·킬 스위치·미러 가시성 술어·run 표면 판정 FROM)",
+      "where": "front/lib/qa/auth.ts:150 · front/lib/qa/route-helpers.ts:15 · front/app/[locale]/raw-data-qa/layout.tsx:23 · front/lib/db/repositories/qa-review.ts:197-224 · front/lib/db/repositories/scope-mirror-progress-read.ts:60",
+      "stmts": "레이아웃 매 요청: 쿠키 HMAC 검증(SQL 0, legacy) / api 원천 GET /v1/qa/sessions/current. 모든 미러 읽기가 bulkMirrorRunVisibleSql(to_regclass 프로브 1문장, 프로세스당 1회 캐시 후 NOT EXISTS scope_mirror_progress 술어) + RUN_SURFACE_CTE(scope_runs⟕website_sites⟕projects) + ANSWER_FROM(run_surface·scope_prompts·prompts(STANDARD_ROOT)·qa_answer_reviews LEFT JOIN) 를 공유. role 스코프(scopeWhere) 미적용 — 설계상 예외(qa-review.ts:26-31)",
+      "f2": ["skip", ""],
+      "f3": ["skip", ""],
+      "f4": ["G1", "QAK1"],
+      "f6": ["y", "프로브 실패는 삼키지 않고 던짐(scope-mirror-progress-read.ts:37-40) → 에러 경계. 쿠키 무효는 게이트로 리다이렉트(raw-data-qa/layout.tsx:45-51), API 원천 401 외 오류는 던짐(adapters/qa.ts:432-441). 게이트 페이지의 세션 확인 실패만 경고 후 폼 표시(raw-data-qa/page.tsx:25-29) — 입장 시도가 자기 오류를 냄"],
+      "f7": ["skip", ""],
+      "f8": ["skip", ""],
+      "f9": ["skip", ""]
+    },
+    "QA1": {
+      "label": "listReviewAnswers (+listLocks)",
+      "where": "front/lib/db/repositories/qa-review.ts:328",
+      "stmts": "캐시 없음. 본문 1(WITH run_surface … 행마다 scope_mentions·scope_citations·qa_review_notes 상관 count 서브쿼리 3개, LIMIT 51) + listLocks 1(행 있을 때) = 2 (+프로브 프로세스당 첫 1회)",
+      "f2": [6, 1, 0, 0, "listReviewAnswers qa-review.ts:340"],
+      "f3": ["n", "요청 시 scope_answers 원행에 필터 술어(ILIKE·EXISTS 포함)·정렬을 걸고 행별 멘션/인용/노트 수를 미러 원행에서 셈(qa-review.ts:341-355)"],
+      "f4": [],
+      "f6": ["y", "legacy loadLegacy 는 try 없이 던짐 → 에러 경계(answers/page.tsx:33-38), api 는 throwForPage(answers/page.tsx:73)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "2"],
+      "f9": ["y", "50행 커서 페이지 + '더 보기'(qa-review.ts:326,354; answer-list.tsx:184-190)"]
+    },
+    "QA2": {
+      "label": "getProgress (countProgress ×2)",
+      "where": "front/lib/db/repositories/qa-review.ts:472",
+      "stmts": "unstable_cache 30s(키=필터 JSON, 태그 없음). 미스 시 countProgress 2문장(필터 기준 + 전체 {}) — 각 문장이 미러 전수 count·FILTER + 행별 EXISTS(qa_review_notes)",
+      "f2": [6, 1, 0, 0, "countProgress qa-review.ts:449"],
+      "f3": ["n", "미러 전체(주석상 십수만 행)를 요청 시 count·FILTER·EXISTS 로 집계(qa-review.ts:449-459)"],
+      "f4": [],
+      "f6": ["y", "실패 시 던짐(Promise.all, answers/page.tsx:34-38) → 에러 경계"],
+      "f7": ["skip", ""],
+      "f8": ["n", "필터와 무관한 '전체' 진행률을 캐시 키(필터 JSON)마다 다시 셈 — 검색어 디바운스(qa-filter-bar.tsx:57-63)마다 새 키라 전수 count 반복, 필터 없음이면 scoped·total 이 같은 쿼리 2회(qa-review.ts:475-482). 저장 후에도 태그 무효화 없음", "2"],
+      "f9": ["skip", ""]
+    },
+    "QA3": {
+      "label": "listFilterOptions (readFilterOptions)",
+      "where": "front/lib/db/repositories/qa-review.ts:527",
+      "stmts": "unstable_cache 300s. 미스 시 2문장(미러 전수 SELECT DISTINCT brand×country×engine×lang 조합 + qa_answer_reviews DISTINCT reviewer_name)",
+      "f2": [6, 1, 0, 0, "readFilterOptions qa-review.ts:495"],
+      "f3": ["n", "미러 전수 DISTINCT 스캔(qa-review.ts:495-501)"],
+      "f4": [],
+      "f6": ["y", "던짐 → 에러 경계"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "2"],
+      "f9": ["n", "4축 조합 DISTINCT 행 전체를 받아 JS 에서 축별 Set 으로 접음(qa-review.ts:497-514) — 화면은 축별 고유값만 씀. 검수자 목록은 5분 캐시라 신규 검수자 늦게 보임"]
+    },
+    "QA4": {
+      "label": "getListDeltas (GET /api/qa/answers 10초 폴링)",
+      "where": "front/lib/db/repositories/qa-review.ts:1110 · front/app/api/qa/answers/route.ts:14 · front/app/[locale]/raw-data-qa/answers/_components/answer-list.tsx:59",
+      "stmts": "10초 폴링(탭 숨김이면 건너뜀). 2문장(qa_answer_locks TTL 내 IN + qa_answer_reviews IN), ids ≤200",
+      "f2": [0, 0, 0, 0, "listLocks qa-review.ts:139"],
+      "f3": ["y", "job_id IN 점 조회, 집계 없음"],
+      "f4": [],
+      "f6": ["n", "폴링 실패(!res.ok·네트워크·세션 만료 401)를 조용히 무시(answer-list.tsx:65,83-85) → 락·검수 상태 배지가 고지 없이 낡음"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "2"],
+      "f9": ["y", "현재 페이지 행 id 만(≤200, qa/answers/route.ts:12,24)"]
+    },
+    "QA5": {
+      "label": "getReviewAnswerDetail",
+      "where": "front/lib/db/repositories/qa-review.ts:652",
+      "stmts": "캐시 없음. head 1(WITH run_surface … job 1건) + 병렬 5(멘션⟕entity_registry×2⟕scope_mentions, 인용⟕citation_domain_overrides, ACR(promptId 있을 때), anchors, drops) = 6(promptId 없으면 5)",
+      "f2": [6, 1, 0, 0, "getReviewAnswerDetail head qa-review.ts:657"],
+      "f3": ["y", "job 1건의 낱알 행 조회·LEFT JOIN 해소뿐, 집계 없음(qa-review.ts:656-722)"],
+      "f4": [],
+      "f6": ["y", "없거나 미러 가시성 밖이면 notFound(404)([jobId]/page.tsx:122), 오류는 던짐"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "6"],
+      "f9": ["y", "답변 1건 낱알 전부를 그대로 표시(granule-tables.tsx 절단 없음)"]
+    },
+    "QA6": {
+      "label": "getReview",
+      "where": "front/lib/db/repositories/qa-review.ts:862",
+      "stmts": "1문장(qa_answer_reviews 점 조회)",
+      "f2": [0, 0, 0, 0, "getReview qa-review.ts:863"],
+      "f3": ["y", "점 조회"],
+      "f4": [],
+      "f6": ["y", "던짐 → 에러 경계"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1"],
+      "f9": ["skip", ""]
+    },
+    "QA7": {
+      "label": "listNotesForJob",
+      "where": "front/lib/db/repositories/qa-review.ts:1041",
+      "stmts": "1문장(qa_review_notes job 조회 + EXISTS 미러 가시성)",
+      "f2": [0, 0, 0, 0, "listNotesForJob qa-review.ts:1043"],
+      "f3": ["y", "job 단위 행 조회"],
+      "f4": [],
+      "f6": ["y", "던짐 → 에러 경계"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1"],
+      "f9": ["y", "답변 1건 노트 전부(블록별 미해결 수 계산에 사용)"]
+    },
+    "QA8": {
+      "label": "getNeighbors",
+      "where": "front/lib/db/repositories/qa-review.ts:390",
+      "stmts": "3문장(앵커 1 + 다음/이전 pick 2 병렬 — 각 pick 이 목록 필터 전부를 다시 평가). 앵커 없으면 1",
+      "f2": [6, 1, 0, 0, "getNeighbors.pick qa-review.ts:421"],
+      "f3": ["n", "목록과 같은 필터·정렬을 미러 원행에 요청 시 다시 적용(qa-review.ts:404-434)"],
+      "f4": [],
+      "f6": ["y", "던짐 → 에러 경계"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "3"],
+      "f9": ["skip", ""]
+    },
+    "QA9": {
+      "label": "검수 락 획득·heartbeat·해제 (POST/PATCH/DELETE /api/qa/lock → acquireLock·heartbeatLock·releaseLock)",
+      "where": "front/app/api/qa/lock/route.ts:21 · front/lib/db/repositories/qa-review.ts:76,121,131 · front/app/[locale]/raw-data-qa/answers/[jobId]/_components/detail-shell.tsx:55-112",
+      "stmts": "획득 POST: INSERT … ON CONFLICT … WHERE(본인 세션 또는 TTL 만료) 1 (+실패 시 SELECT 1, 행 소멸 시 재시도 1회) + touchReviewSession 1(fire-and-forget) = 2. heartbeat PATCH 1(30초마다). 해제 DELETE/sendBeacon 1",
+      "f2": [0, 0, 0, 0, "acquireLock qa-review.ts:84"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["skip", "쓰기 경로 — f7 참조"],
+      "f7": ["n", "획득 응답이 409 외(401 세션 만료·500·네트워크)면 무시(detail-shell.tsx:63-74) → 락 없이 편집 가능한 화면. heartbeat 오류·401 은 삼킴(:82-86) → TTL 180s 만료로 남이 가져가도 저장(409) 때까지 고지 없음. 반대로 읽기 전용 뷰어도 heartbeat 를 돌려 held:false 를 받으면 '락이 만료되어 다른 검수자가 가져갔습니다' 배너로 바뀜(:76-87,195-203). 해제 실패도 무음(:96-102)"],
+      "f8": ["n", "남이 락을 쥔 읽기 전용 상태에서도 30초 heartbeat PATCH 를 계속 보냄(detail-shell.tsx:76-87) — 결과는 항상 held:false", "1~2"],
+      "f9": ["skip", ""]
+    },
+    "QA10": {
+      "label": "판정 저장 (PUT /api/qa/review → acquireLock 재확인 + upsertReview)",
+      "where": "front/app/api/qa/review/route.ts:12 · front/lib/db/repositories/qa-review.ts:870 · front/app/[locale]/raw-data-qa/answers/[jobId]/_components/detail-shell.tsx:115-137",
+      "stmts": "acquireLock 1(+충돌 시 SELECT 1) + upsert 1 = 2. 성공 시 router.refresh() 로 상세 페이지 서버 데이터 재조회(상세 6 + 판정 1 + 노트 1 + 이웃 3 = 11)",
+      "f2": [0, 0, 0, 0, "upsertReview qa-review.ts:881"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["skip", "쓰기 경로 — f7 참조"],
+      "f7": ["n", "409 외 실패(401: 12시간 하드 만료·400·500)는 표시 없이 버튼만 복귀, 네트워크 오류는 catch 없는 try/finally 라 미처리 거부(detail-shell.tsx:115-137). '저장되었습니다'(savedAt)는 이후 판정을 바꿔도 안 지워져 미저장 변경을 저장된 것처럼 보이고(verdict-bar.tsx:68-69), 저장 중 바꾼 판정도 같은 표시. 중복 제출은 saving 가드로 막음"],
+      "f8": ["n", "저장마다 router.refresh() 로 상세 전체(11문장) 재조회 — 바뀌는 건 savedAt 뿐이고 목록 진행률(getProgress)은 30s unstable_cache 라 이 새로고침으로 갱신되지도 않음(detail-shell.tsx:129-133; qa-review.ts:476-483)", "2(+11)"],
+      "f9": ["skip", ""]
+    },
+    "QA11": {
+      "label": "노트 추가 (POST /api/qa/note → createNote)",
+      "where": "front/app/api/qa/note/route.ts:24 · front/lib/db/repositories/qa-review.ts:1057 · front/app/[locale]/raw-data-qa/answers/[jobId]/_components/note-dialog.tsx:50-73",
+      "stmts": "1문장(INSERT … RETURNING)",
+      "f2": [0, 0, 0, 0, "createNote qa-review.ts:1067"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["skip", "쓰기 경로 — f7 참조"],
+      "f7": ["n", "실패 응답이면 표시 없이 다이얼로그 유지, 네트워크 오류는 미처리 거부(note-dialog.tsx:50-73). POST 에 멱등 키 없음 → 타임아웃 후 재시도 시 노트 중복 가능. 연타는 busy 로 막음"],
+      "f8": ["y", "", "1"],
+      "f9": ["skip", ""]
+    },
+    "QA12": {
+      "label": "listNotes",
+      "where": "front/lib/db/repositories/qa-review.ts:966",
+      "stmts": "1문장(NOTE_SELECT: qa_review_notes⋈scope_answers + run_surface·scope_prompts·prompts·qa_answer_reviews LEFT JOIN, LIMIT 51). 캐시 없음",
+      "f2": [7, 1, 0, 0, "listNotes qa-review.ts:981"],
+      "f3": ["n", "노트마다 미러 원행 조인·필터를 요청 시 평가"],
+      "f4": [],
+      "f6": ["y", "던짐 → 에러 경계(notes/page.tsx:23-27)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1"],
+      "f9": ["y", "50행 커서 + 더 보기(note-list.tsx:201-215)"]
+    },
+    "QA13": {
+      "label": "countNotesByKind",
+      "where": "front/lib/db/repositories/qa-review.ts:1019",
+      "stmts": "1문장(GROUP BY target_kind). 캐시 없음",
+      "f2": [7, 1, 1, 0, "countNotesByKind qa-review.ts:1022"],
+      "f3": ["n", "미러 원행 조인 후 GROUP BY 를 요청 시 계산"],
+      "f4": [],
+      "f6": ["y", "던짐 → 에러 경계"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1"],
+      "f9": ["skip", ""]
+    },
+    "QA14": {
+      "label": "노트 해결 토글 (PATCH /api/qa/note → updateNote)",
+      "where": "front/app/api/qa/note/route.ts:50 · front/lib/db/repositories/qa-review.ts:1083 · front/app/[locale]/raw-data-qa/notes/_components/note-list.tsx:77-90",
+      "stmts": "1문장(UPDATE … RETURNING)",
+      "f2": [0, 0, 0, 0, "updateNote qa-review.ts:1095"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["skip", "쓰기 경로 — f7 참조"],
+      "f7": ["n", "실패 응답이면 return 만(note-list.tsx:84) — 고지 없음, 네트워크 오류는 미처리 거부. 버튼 busy 가드 없음. 성공 시 resolvedAt 을 서버값 대신 클라이언트 시각으로 덮고 resolvedBy 는 갱신 안 함(:85-89)"],
+      "f8": ["y", "", "1"],
+      "f9": ["skip", ""]
+    },
+    "QA15": {
+      "label": "노트 CSV 내보내기 (GET /api/qa/notes/export → listAllNotes)",
+      "where": "front/app/api/qa/notes/export/route.ts:58 · front/lib/db/repositories/qa-review.ts:1004 · front/app/[locale]/raw-data-qa/notes/_components/note-list.tsx:93,126-131",
+      "stmts": "1문장(NOTE_SELECT 전량, LIMIT 10,000) → 서버에서 CSV 문자열 조립(스트림 아님)",
+      "f2": [7, 1, 0, 0, "listAllNotes qa-review.ts:1007"],
+      "f3": ["n", "미러 원행 조인을 요청 시 평가"],
+      "f4": [],
+      "f6": ["n", "다운로드가 <a href download> 라 401/404/500 이면 화면 고지 없이 오류 본문(JSON)·빈 응답이 파일로 받아짐(note-list.tsx:126-131; notes/export/route.ts:59-61)"],
+      "f7": ["n", "10,000행 상한에서 조용히 잘린 CSV 를 전체처럼 냄 — 부분 성공을 성공으로 표시(qa-review.ts:1002,1012). 성공/실패를 화면이 모름"],
+      "f8": ["y", "", "1"],
+      "f9": ["n", "LIMIT 10,000 무고지 절단(qa-review.ts:1002,1012). 주석은 '서버가 스트림으로 준다'(note-list.tsx:124-125)지만 실제는 전량 문자열 조립(notes/export/route.ts:70-71)"]
+    },
+    "QA16": {
+      "label": "검수 입장·종료 (POST/DELETE /api/qa/session → createReviewSession)",
+      "where": "front/app/api/qa/session/route.ts:26,64 · front/lib/db/repositories/qa-review.ts:153 · front/app/[locale]/raw-data-qa/_components/gate-form.tsx:26-48 · front/app/[locale]/raw-data-qa/_components/qa-header.tsx:22-26",
+      "stmts": "입장: 레이트리밋(인스턴스 메모리) → 이름·비밀번호 검사 → INSERT qa_review_sessions 1 → HMAC 세션 쿠키. 종료: 쿠키 삭제만(SQL 0, 서버 세션 행 폐기 없음)",
+      "f2": [0, 0, 0, 0, "createReviewSession qa-review.ts:158"],
+      "f3": ["skip", "쓰기 경로"],
+      "f4": [],
+      "f6": ["skip", "쓰기 경로 — f7 참조"],
+      "f7": ["n", "입장은 오류 코드별 문구로 처리(gate-form.tsx:36-47)하나, 검수 종료는 DELETE 실패를 삼키고(qa-header.tsx:23) 게이트로 이동 → 쿠키가 살아 있으면 게이트가 다시 목록으로 보내(raw-data-qa/page.tsx:32-35) 종료 실패가 고지 없이 되돌려짐"],
+      "f8": ["y", "", "1"],
+      "f9": ["skip", ""]
+    },
+    "NSCOMMON": {
+      "label": "크론·내부 라우트 공통 가드 requireCronSecret",
+      "where": "front/lib/cron-auth.ts:8",
+      "stmts": "SQL 0. CRON_SECRET 미설정 503, Bearer 불일치 401(fail-closed). /api 는 미들웨어 matcher 밖이라 이 헤더 검사가 유일한 문턱",
+      "f2": ["skip", ""],
+      "f3": ["skip", ""],
+      "f4": [],
+      "f6": ["y", "fail-closed 503/401 이 크론 로그에 상태 코드로 남음(cron-auth.ts:10-15)"],
+      "f7": ["skip", ""],
+      "f8": ["skip", ""],
+      "f9": ["skip", ""]
+    },
+    "NS1": {
+      "label": "미러 동기화 크론 GET /api/cron/sync-mirror (*/20)",
+      "where": "front/app/api/cron/sync-mirror/route.ts:366 · front/lib/scope/mirror/sync.ts:2333",
+      "stmts": "① 회차 관제 runCycleControl(DB tx, 주석상 5문장, 하드 월클럭 ≤45s) → ② syncStandardMirror: 대상 = 루트 + 링크 프로젝트 + 웹사이트 scope id(+env), 프로젝트별 scope API 페이지 읽기 → run 단위 replaceRun tx(pg_advisory_xact_lock, scope_answers·mentions·citations·acr_rollups·occurrences·stances 삭제·재삽입) + prompts.status + 커서 기록 → runs>0 또는 attributed>0 이면 revalidateTag(MIRROR_AGGREGATE_TAG) → ③ 병렬: 고아·절단 감시(GitHub Issue, 의도적 미배선) + 앵커 따라잡기(scope_answer_anchors, ≤15s) → rowsFilled>0 이고 미무효화면 다시 revalidateTag. 문장 수는 run·프로젝트 수 의존(UNKNOWN)",
+      "f2": ["skip", "쓰기 파이프라인(외부 scope API → run 단위 replace) — 화면 집계 SELECT 아님"],
+      "f3": ["skip", "배치 쓰기 경로"],
+      "f4": ["NSK1", "NSK2"],
+      "f6": ["n", "프로젝트별 실패를 console.warn·perProject.error·커서 last_error 로만 남기고 계속(sync.ts:2515-2526), 루트 설정 없으면 0건 결과를 조용히 반환(sync.ts:2340-2359), 응답은 항상 ok:true·200(route.ts:546-547) → 크론은 성공으로 기록. 고아·절단 감시는 GITHUB_ALERT_* 의도적 미배선이라 console.error 뿐(route.ts:11-23,193-198,226-232) → 화면은 낡은 데이터를 고지 없이 계속 냄"],
+      "f7": ["n", "부분 성공(일부 프로젝트 실패·pageCapHits·oversizedRuns·recheckDeferredHeavy)을 ok:true 로 냄(route.ts:546-560). 관제가 lead-timeout 으로 끊기면 attributed:0 으로 보고되지만 tx 는 뒤늦게 커밋될 수 있고 그 귀속은 이번 틱에 캐시 무효화 안 됨(route.ts:515-516)"],
+      "f8": ["n", "runs>0 이면 전 캐시 무효화(route.ts:517-518) — runs 는 3일 재확인 창 안에서 미완 답변이 남은 run 을 내용 변화와 무관하게 다시 당겨 replaceRun 한 수까지 셈(sync.ts:359-366,2187) → 측정 진행 중에는 20분마다 mirrorCache 79셀(server.ts:1034-1057, 사실표 셀 포함 server.ts:877-881)이 콜드, 변경 없는 run 도 삭제·재삽입", "UNKNOWN(run 수 의존)"],
+      "f9": ["n", "run·job 페이지 상한(MIRROR_RUN_MAX_PAGES·MIRROR_JOB_MAX_PAGES 기본 50, sync.ts:117,128)·재확인 상한(RECHECK_MAX_RUNS_PER_PASS 25, sync.ts:878) 절단은 크론 JSON·커서에만 남고 알림 미배선 → 화면 사용자에겐 무고지"]
+    },
+    "NS2": {
+      "label": "GA4 캐시 워머 크론 GET /api/cron/ga4-prebuild (매일 18:00Z) + 회차 사슬 교차 확인",
+      "where": "front/app/api/cron/ga4-prebuild/route.ts:41",
+      "stmts": "교차 확인 crossCheckCycleChain(scanViewLag 표면 global·website 각 원장+서빙 회차 읽기 + scanGenerationBacklog SQL, 이상 시 GitHub Issue) → getAllMappedMarkets(DB 레지스트리+env MAP) → 마켓마다 순차로 getAiTrafficConversionKpi(pid,28)·getAiConversionLive(pid,90) 병렬(GA4 Data API runReport, 셀별 unstable_cache 24h·태그 ga4). GA4 호출 수는 마켓 수 의존(UNKNOWN)",
+      "f2": ["skip", "외부 GA4 API(집계 SQL 아님), 교차 확인 SQL 은 감시용"],
+      "f3": ["skip", "캐시 워밍 배치"],
+      "f4": ["GA1", "GA2", "GA3"],
+      "f6": ["n", "GA4 실패는 내부에서 null 로 삼켜(conversion.ts:518-523,685-690) kpiOk/liveOk:false 로만 응답에 싣고 ok:true·200(route.ts:66-77,88-95). 교차 확인 예외도 alert:'error' 로 응답에만(route.ts:48-58)"],
+      "f7": ["skip", "DB 쓰기 없음(캐시 셀만)"],
+      "f8": ["n", "Live 셀을 filters 없이(키 '_') 데우는데(route.ts:69; conversion.ts:222-223) 전환 화면은 항상 parseConversionFilters 객체(키 'e:;d:;v:')로 읽음(conversion.ts:196-207; standard/ai-funnel/conversion/page.tsx:48,88; website·projects 전환 페이지 동일) → 데운 Live 셀을 화면이 못 씀(GA4 호출 낭비). KPI 28d 셀만 대시보드 키와 일치(dashboard/_data/live.ts:453)", "마켓 수×2 GA4 호출 + 감시 SQL"],
+      "f9": ["skip", ""]
+    },
+    "NS3": {
+      "label": "회차 사슬 감시 크론 GET /api/cron/cycle-chain-watch (6시간)",
+      "where": "front/app/api/cron/cycle-chain-watch/route.ts:135 · front/lib/summary/health/cycle-chain.ts:346,427,602,710",
+      "stmts": "병렬 4 스캔: scanViewLag(표면 global·website 각 readCycleLedger+servedCycle), scanGenerationBacklog, scanUrlHitsCoverage(readUrlHitsGaps+websiteOwnedUnitEnabled), scanAnchorGap(readAnchorGapGroups) → Slack(①③④)·GitHub Issue(②). ?dry=1 이면 발송 없음. 정확 문장 수 UNKNOWN",
+      "f2": ["skip", "감시 판정 SQL — 화면 집계 아님"],
+      "f3": ["skip", "감시 배치"],
+      "f4": [],
+      "f6": ["n", "스캔 예외를 checked:false·severity 0 으로 바꾸고(cycle-chain.ts:363-368,499-505,608-612,717-721) 발송 함수가 alert:'none' 으로 처리(route.ts:61-62,88,101,114) → DB 장애가 PASS 와 같은 무알림, 응답은 ok:true·200"],
+      "f7": ["n", "Slack·Issue 발송 실패는 console.error + 응답 alert:'failed' 인데 ok:true·200(route.ts:80-83,129-131,164-166) → 크론 성공으로 기록. Slack 미배선이면 'unconfigured' 로그뿐"],
+      "f8": ["y", "ga4-prebuild 교차 확인이 같은 스캔 2종을 하루 1회 반복하나 의도된 독립 관측(cross-check.ts:13-28)", "4 스캔"],
+      "f9": ["skip", "URL 누락 목록(최대 500행)은 응답에 개수만(route.ts:171-176)"]
+    },
+    "NS4": {
+      "label": "미러 상태 진단 GET /api/cron/mirror-status (스케줄 없음·수동)",
+      "where": "front/app/api/cron/mirror-status/route.ts:13 · front/lib/db/repositories/scope-aggregates.ts:8303",
+      "stmts": "프로브(ensureColumnAvailability·ensureAnchorAxis) + 3문장: scope_answers 전수 count·count DISTINCT 주/일 버킷·min/max, scope_mentions·scope_citations 전수 count 서브쿼리 3(TRACKED 브랜드 포함), scope_mentions brand GROUP BY top10. 캐시 없음",
+      "f2": [0, 0, 1, 0, "getMirrorStatus brandSample scope-aggregates.ts:8349"],
+      "f3": ["n", "미러 원테이블 전수 count·DISTINCT 를 요청 시 계산(scope-aggregates.ts:8307-8356)"],
+      "f4": ["NSK3"],
+      "f6": ["y", "오류는 던져 500(mirror-status/route.ts:16)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "수동 진단 전용(vercel.json 크론 미등록, 호출부 없음)", "3"],
+      "f9": ["skip", ""]
+    },
+    "NS5": {
+      "label": "사실표 발행 무효화 POST /api/internal/summary/published (외부 생성 러너)",
+      "where": "front/app/api/internal/summary/published/route.ts:19",
+      "stmts": "SQL 0. revalidateTag(MIRROR_AGGREGATE_TAG) + revalidateTag(SUMMARY_TAG). GET 은 405(route.ts:27)",
+      "f2": ["skip", "SQL 없음"],
+      "f3": ["skip", ""],
+      "f4": [],
+      "f6": ["y", "가드 fail-closed(cron-auth.ts:8-16)"],
+      "f7": ["y", "무효화는 동기 호출, 실패 경로 없음"],
+      "f8": ["n", "사실표 generation 스왑인데 미러 태그까지 무효화해 mirrorCache 79셀 전체 콜드(route.ts:22; server.ts:5027-5030 주석이 '프로덕션 미러 캐시 전체가 콜드'라고 명시) — 사실표 셀만이면 SUMMARY_TAG 로 충분", "0 SQL·태그 2"],
+      "f9": ["skip", ""]
+    },
+    "NS6": {
+      "label": "middleware (크롤러 410·next-intl·Supabase getClaims·로그인 게이트·x-pathname)",
+      "where": "front/middleware.ts:16",
+      "stmts": "SQL 0. 매 내비게이션(matcher: api·_next·_vercel·정적 제외)마다 supabase.auth.getClaims()(비대칭 키면 로컬 JWT 검증, 대칭 키면 Auth 서버 왕복) → 비로그인은 /login 리다이렉트(PUBLIC_PATHS /login·/raw-data-qa 제외) → 응답 헤더 x-pathname",
+      "f2": ["skip", "SQL 없음"],
+      "f3": ["skip", ""],
+      "f4": [],
+      "f6": ["n", "getClaims 의 error 를 버리고 data 만 봄(middleware.ts:54-55) → Auth 장애도 '비로그인'으로 처리돼 고지 없이 /login 으로 보냄(보안상 fail-closed 이나 사용자에겐 세션 만료처럼 보임)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "/raw-data-qa·/login 에서도 Supabase getClaims 수행(검수 콘솔은 자체 쿠키라 불필요하나 비용 작음). 레이아웃에서 getClaims 한 번 더는 표준 패턴", "0 SQL"],
+      "f9": ["skip", ""]
+    },
+    "NS7": {
+      "label": "getSession (legacy: getClaims + profiles / api: GET /v1/auth/me) + (dash) 라우트 가드",
+      "where": "front/lib/auth/session.ts:26 · front/app/[locale]/(dash)/layout.tsx:119 · front/lib/db/repositories/profiles.ts:53",
+      "stmts": "요청당 React cache 1회: legacy = getClaims + profiles 1문장(전체 select 실패 시 축소 select 1 추가) / api = GET /v1/auth/me. 레이아웃: canAccessRoute(role, x-pathname, menuGroups) → /no-access. 프로젝트 경로면 membership·project 조회(request-cache)",
+      "f2": [0, 0, 0, 0, "profileRepository.getByUserId profiles.ts:60"],
+      "f3": ["y", "점 조회"],
+      "f4": [],
+      "f6": ["n", "getByUserId 가 모든 예외를 잡아 menu_groups·operator 를 뺀 축소 select 로 폴백(profiles.ts:59-87) → 일시 DB 오류에도 menuGroups=null(제한 없음)·operator='none' 으로 조용히 바뀌어 계정별 메뉴 좁히기가 풀림. getClaims error 무시(session.ts:39-41). 프로필 없음은 null → /no-access 가 아니라 /login 으로 무고지 리다이렉트(session.ts:44-45; layout.tsx:134-136)"],
+      "f7": ["skip", ""],
+      "f8": ["y", "", "1"],
+      "f9": ["skip", ""]
+    },
+    "NS8": {
+      "label": "login 서버 액션 (signInWithPassword → 착지 경로)",
+      "where": "front/lib/auth/actions.ts:15 · front/app/[locale]/login/login-form.tsx:15",
+      "stmts": "Supabase signInWithPassword 1 + legacy profiles 1문장(api: GET /v1/auth/me) → defaultLandingFor 로 redirect",
+      "f2": [0, 0, 0, 0, "profileRepository.getByUserId profiles.ts:60"],
+      "f3": ["skip", "인증 쓰기 경로"],
+      "f4": [],
+      "f6": ["skip", "읽기 폴백은 NS7"],
+      "f7": ["n", "인증 실패 사유를 구분 없이 '이메일 또는 비밀번호가 올바르지 않습니다'로 표시(actions.ts:28-30; login-form.tsx:76-78) — Auth 장애도 자격 오류처럼 보임. Supabase 로그인은 성공했으나 profiles 행이 없으면 '/dashboard' 로 보낸 뒤(actions.ts:68-79) 레이아웃이 /login 으로 되돌려(layout.tsx:134-136) 오류 문구 없이 로그인 화면 반복. 연타는 pending 으로 막음(login-form.tsx:82)"],
+      "f8": ["y", "", "1"],
+      "f9": ["skip", ""]
+    },
+    "NS9": {
+      "label": "logout 서버 액션 (no-access·GNB 레일)",
+      "where": "front/lib/auth/actions.ts:81",
+      "stmts": "SQL 0. supabase.auth.signOut() → redirect(/login)",
+      "f2": ["skip", "SQL 없음"],
+      "f3": ["skip", ""],
+      "f4": [],
+      "f6": ["skip", ""],
+      "f7": ["n", "signOut 이 돌려준 error 를 확인하지 않고 바로 /login 으로 보냄(actions.ts:83-85) — 서버 로그아웃이 실패해도 로그아웃된 것처럼 보임(공용 PC 위험)"],
+      "f8": ["y", "", "0"],
+      "f9": ["skip", ""]
+    },
+    "NS10": {
+      "label": "scope 프로젝트 목록 BFF GET /api/scope/projects (호출부 없음)",
+      "where": "front/app/api/scope/projects/route.ts:11 · front/lib/scope/server.ts:359,417",
+      "stmts": "getSession(profiles 1) + auditScopeCall + scope API listProjects 1회(limit·cursor 그대로 전달). 캐시 없음",
+      "f2": ["skip", "외부 scope API"],
+      "f3": ["skip", "외부 패스스루"],
+      "f4": [],
+      "f6": ["y", "Unauthorized 401, 그 외 던짐(scope/projects/route.ts:18-23)"],
+      "f7": ["skip", ""],
+      "f8": ["n", "프론트·백엔드 어디에도 호출부 없는 라우트(grep 0건)", "1 API"],
+      "f9": ["skip", ""]
+    },
+    "NS11": {
+      "label": "미측정 프롬프트 BFF GET /api/scope/unmeasured-prompts (UI 미연결) → fetchStandardUnmeasuredPrompts",
+      "where": "front/app/api/scope/unmeasured-prompts/route.ts:19 · front/lib/scope/server.ts:2628 · front/lib/db/repositories/scope-aggregates.ts:6382",
+      "stmts": "getSession + canReadAnalysis → kpiDegrade(withStandardRoot(mirrorCache 'kpi-unmeasured-prompts')) — 미스 시 withAnswerSet tx: SET LOCAL 2 + CREATE TEMP _answer_set + ANALYZE + 본문 1 = 5 (+프로브)",
+      "f2": [0, 1, 0, 1, "listUnmeasuredPromptsFromCatalog scope-aggregates.ts:6396"],
+      "f3": ["n", "요청 시 스냅샷 답변셋 임시표를 미러 원행에서 만들고 카탈로그와 차집합"],
+      "f4": [],
+      "f6": ["n", "statement timeout 이면 kpiDegrade 가 null 로 삼켜 {result:null} 200(kpi-tab-budget.ts:741-755; unmeasured-prompts/route.ts:44-45)"],
+      "f7": ["skip", ""],
+      "f8": ["n", "UnmeasuredPromptsButton 을 import 하는 화면이 없어 라우트가 도달 불가(unmeasured-prompts-dialog.tsx:21 외 참조 0건)", "5"],
+      "f9": ["y", "LIMIT 200 + total(count OVER) 동봉"]
+    },
+    "NS12": {
+      "label": "프롬프트→검색량 BFF POST /api/keyword/prompt-to-volume (호출부 없음)",
+      "where": "front/app/api/keyword/prompt-to-volume/route.ts:21",
+      "stmts": "requireAdminUser(세션+profiles) → (G7=api 면 백엔드 중계) legacy: OpenRouter LLM 1회(키워드 1~2개) → getKeywordVolumes(DB 캐시 우선, 미스 시 DataForSEO) → 최대 검색량",
+      "f2": ["skip", "외부 LLM·DataForSEO"],
+      "f3": ["skip", "외부 호출"],
+      "f4": [],
+      "f6": ["n", "LLM 이 키워드를 못 내거나 검색량이 없으면 volume:null 로 정상 응답(prompt-to-volume/route.ts:84-98) — 실패와 '데이터 없음'을 구분 안 함"],
+      "f7": ["skip", ""],
+      "f8": ["n", "관리자 키워드 도구 화면은 volume·to-prompt 만 호출(keyword-tools.tsx:172,348,366) — 이 라우트는 호출부 없음", "LLM 1 + 검색량 조회"],
+      "f9": ["skip", ""]
+    }
+  },
+  "new_constants": {
+    "QAK1": ["검수 콘솔 run 표면 판정 순서(website_sites → projects → standard, 루트 판정 없음)", "front/lib/db/repositories/qa-review.ts:197", 1, "website_sites.scope_project_id 있으면 website, projects 에 있으면 project, 그 외·project_id NULL 은 standard. 글로벌 루트도 projects 행이 있어 'project' 로 오분류(주석 187-191). 같은 순서가 lib/surface/run-surface.ts:60 QA_CONSOLE_SURFACE_ORDER 에 테스트용 값으로 복제"],
+    "NSK1": ["대소문자 구분 브랜드 재계수 CASE_SENSITIVE_BRANDS", "front/lib/scope/mirror/case-sensitive-brands.ts:17", 1, "{seat: 'SEAT'} — 미러 동기화 시 SEAT 멘션을 답변 원문의 대문자 'SEAT' 정확 일치로 다시 세고 0건이면 행 삭제(전 화면 멘션 수에 반영)"],
+    "NSK2": ["미러 재확인 창 RUN_RECHECK_WINDOW_DAYS", "front/lib/scope/mirror/recheck-window.ts:10", 1, "3일 — 지나면 미완 답변 run 의 failed→completed 회수를 정규 크론이 더 안 당김(값 고정), 창 안에서는 매 틱 재수집"],
+    "NSK3": ["추적 브랜드 TRACKED(진단 전용 별도 리터럴)", "front/lib/db/repositories/scope-aggregates.ts:187", 1, "('Hyundai','Kia','Genesis') — B1(HMG_BRANDS)와 같은 값의 별도 정의, 사용처는 getMirrorStatus(scope-aggregates.ts:8336) 하나"]
+  },
+  "notes": [
+    "원천 가정: HGH_SOURCE_G7(qa)·HGH_SOURCE_SESSION 미설정 = legacy 로 보고 Before 를 legacy 경로로 측정. f7 클라이언트 결함(detail-shell·note-dialog·note-list·qa-header·answer-list)은 원천과 무관하게 동일(클라이언트 코드 공통)",
+    "검수 콘솔 읽기는 withStandardRoot 를 타지 않음 — QACOMMON(쿠키 게이트 + bulkMirrorRunVisibleSql + RUN_SURFACE_CTE/ANSWER_FROM)으로 별도 정의. role 스코프 미적용은 설계 문서상 수용된 리스크(qa-review.ts:26-31)",
+    "알려진 오분류(QAK1): 글로벌 루트 run 이 'project', project_id NULL 레거시 run 이 'standard' 로 라벨 → 표면 필터·진행률·목록 결과가 틀림. 원본은 값이 바뀌는 수정이라 보류(qa-review.ts:187-196, run-surface.ts:20-25)",
+    "빈 판정({})으로 저장해도 status 'ok'(완료)로 진행률에 잡힘(qa-review.ts:878-880, 버튼 라벨 '검수 완료' verdict-bar.tsx:39-53)",
+    "DELETE /api/qa/note 는 UI 호출부 없음(adapters/qa.ts noteDelete 주석 'no caller in the UI today')",
+    "보안: RAW_DATA_QA_PASSWORD 미설정 시 코드 기본 비밀번호(auth.ts:22,92, 공유본은 redacted 값). 시도 제한은 인스턴스 메모리 best-effort(rate-limit.ts:1-8). legacy 검수 종료는 쿠키만 지워 서버 세션 미폐기 — 쿠키 사본은 12h 유효(auth.ts:20,87)",
+    "보안: /api 는 미들웨어 matcher 밖(middleware.ts:84) — 각 라우트가 자체 가드. /api/scope/projects 는 enforce() 가 파생한 scope 필터를 listProjects 에 적용하지 않아(server.ts:359-365,417-420) 로그인한 모든 role(vendor·country 포함)에 워크스페이스 전체 scope 프로젝트 목록 반환 — 호출부도 없음",
+    "권한 폴백: profiles.getByUserId 의 catch-all 폴백(profiles.ts:59-87)은 스키마 불일치뿐 아니라 일시 DB 오류에도 menuGroups=null 로 메뉴 좁히기를 풀 수 있음(effectiveMenuGroups 는 WW·CPO 의 standard 제거만 재적용, menu-groups.ts:17-30)",
+    "UNKNOWN: x-pathname 은 미들웨어가 응답 헤더로만 심음(middleware.ts:78). (dash) 가드(layout.tsx:142-149 — 비면 가드를 건너뜀, fail-open)와 QA 게이트 판정(raw-data-qa/layout.tsx:37-38)이 RSC headers() 전달을 전제. 테스트는 headers 목(layout.test.ts:21) — 운영 전달 여부는 코드만으로 확정 불가",
+    "캐시 무효화 범위: MIRROR_AGGREGATE_TAG 셀 = mirrorCache 79개(server.ts:1034 정의, '= mirrorCache(' 79건; 사실표 셀도 mirrorCache 로 감싸 함께 무효화 server.ts:877-881). 무효화 주체 = sync-mirror(route.ts:518,545), internal/summary/published(route.ts:22), 어드민 citation-sources·entities 저장 액션(_actions.ts:46, :71). 프로덕션 콜드 비용(별도 실측 메모 10-13: 콜드 38s)은 이 코드 근거 밖",
+    "크론 알림 채널: GITHUB_ALERT_TOKEN/REPO 의도적 보류(sync-mirror/route.ts:11-23) — 'unconfigured' 는 설계상 상태지만 f6 관점에선 무고지. SLACK_ALERT_WEBHOOK 미배선 시 cycle-chain-watch 도 로그뿐",
+    "vercel.json: regions icn1, crons 3개(sync-mirror */20, ga4-prebuild 0 18 * * *, cycle-chain-watch 0 */6 * * *). mirror-status 는 크론 미등록 수동 진단. After(renewal) vercel.json·크론 라우트 파일 동일",
+    "알림 임계(VIEW_LAG_GRACE_HOURS, GENERATION_BACKLOG_HOURS 6, GENERATION_BACKLOG_URGENT_HOURS 24, ANCHOR_GAP_* — cycle-chain.ts:86-108,644-661)와 락 TTL 180s·QA 세션 12h·페이지 상한류는 화면 수치를 바꾸지 않거나 타임아웃/예산이라 f4 제외",
+    "back/ingest 는 범위 밖 — 이 표면의 미러 동기화는 프론트 lib/scope/mirror/sync.ts 경로이며 back/ingest 와 별개",
+    "api_call(After): QA 는 renewal front/lib/hgh/adapters/qa.ts(qaApi.* 읽기, qaApiRoutes.* 중계). 크론·internal·middleware·lib/auth/actions.ts·lib/auth/session.ts·scope/projects·unmeasured-prompts·prompt-to-volume·qa-review.ts 는 Before/After 파일 동일 확인(detail-shell.tsx 만 After 에서 변경됨)",
+    "UNKNOWN: sync-mirror·ga4-prebuild·cycle-chain-watch 의 호출당 SQL/외부 호출 수(run·프로젝트·마켓 수 의존)",
+    "ROUTE MAP(31): 1 citations/_lib/route.ts — 라우트 아님(_ 비공개 폴더) | 2 citations/domains — 답변분석 인용 도메인 표(citation-view.ts:259), api 원천 전용·legacy 404 | 3 citations/domains/[skey] — 같은 표 드릴다운(citation-view.ts:270) | 4 citations/domains/export — 같은 표 파일(citation-view.ts:275) | 5 context-map — 소셜 스크래핑(context-map-view.tsx:1662, use-paged-tab.ts:199): customer-interest/social-scraping·projects/[id]/intent/social-scraping·admin/standards/customer-interest | 6 context-map/export — 같은 화면(context-map-view.tsx:327) | 7 cron/cycle-chain-watch — Vercel 크론(NS3) | 8 cron/ga4-prebuild — Vercel 크론(NS2) | 9 cron/mirror-status — 수동(NS4) | 10 cron/sync-mirror — Vercel 크론(NS1) | 11 filters/options — 공용 필터 패널 지연 옵션(dimension-filter-panel.tsx:650,685) | 12 internal/summary/published — 외부 러너(NS5) | 13 keyword/insight — 구글 키워드(google-keyword-view.tsx:212): customer-interest/google-keywords·projects/[id]/intent/google-keyword | 14 keyword/prompt-to-volume — 호출부 없음(NS12) | 15 keyword/related — 구글 키워드(google-keyword-view.tsx:243) | 16 keyword/search — 구글 키워드 시작(keyword-search-start.tsx:61) | 17 keyword/to-prompt — 어드민 키워드 도구(keyword-tools.tsx:366) | 18 keyword/volume — 어드민 키워드 도구(keyword-tools.tsx:172,348) | 19 qa/answers — 검수 목록 폴링(QA4) | 20 qa/lock — 검수 상세(QA9) | 21 qa/note — 상세 노트 추가(QA11)·노트 해결(QA14), DELETE 는 호출부 없음 | 22 qa/notes/export — 노트 CSV(QA15) | 23 qa/review — 판정 저장(QA10) | 24 qa/session — 게이트·검수 종료(QA16) | 25 scope/answer — 답변분석 답변 모달(answer-modal.tsx:150) | 26 scope/brand-citations — 인용 도메인 표·언급 드릴다운(citation-domain-table.tsx:64, mentions-drilldown.tsx:342) | 27 scope/brand-mention-prompts — 언급 드릴다운(mentions-drilldown.tsx:143) | 28 scope/projects — 호출부 없음(NS10) | 29 scope/signal-prompts — 언급 탭·호감도 KPI 탭 신호 프롬프트 다이얼로그(signal-prompts-dialog.tsx:59) | 30 scope/unmeasured-prompts — 다이얼로그 미연결(NS11) | 31 website/prompts/export — 웹사이트 프롬프트 내보내기(export-button.tsx:28)"
+  ]
+}
