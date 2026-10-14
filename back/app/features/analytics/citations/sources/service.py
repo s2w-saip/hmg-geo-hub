@@ -5,6 +5,8 @@
 - source[]: 분포·엔진×카테고리·톤 타일·유형 전부에 같은 모집단으로 적용한다(모듈-인용 §8 열린 질문 1 권장안: 톤 타일 미적용은
   현행이 JS 분류라 생긴 제약이었고 이유가 사라졌다. A4 고지 대상).
 - /sources/types 는 Q19 에 따라 /sources 응답(types)에 합쳤다. 경로는 taxonomy 정본이라 남기고 같은 계산의 types 부분만 낸다.
+- 선택 파라미터(P12 B098, 기본 = 종전): include_tone=false 면 톤 문장을 돌리지 않고 tone 은 0 타일, include_types=false 면 유형 열(65열)을
+  만들지 않고 types = []. 카테고리·엔진×카테고리·total_citations 는 어느 쪽이든 같은 값이다.
 """
 from __future__ import annotations
 
@@ -59,16 +61,25 @@ async def _category_rows(conn: Any, rd: CitationRead) -> list[dict[str, Any]]:
     재판정 전 오버라이드가 있으면 원소 경로(sources_sql)로 되돌린다(두 경로 결과 동치: tests/test_sources_equiv.py).
     유형 플래그는 답변 열 t_own(DB-v2.18 P105)으로 세고, 모수에 t_own 미채움 답변이 있으면 종전 jt(answer_brand 답변별 접기)로 다시 센다
     (두 방식 결과 동치: tests/test_t_own_path.py)."""
-    types = "col" if q.t_own_usable(rd.ctx) else "jt"
+    rows, _ = await _category_and_answers(conn, rd)
+    return rows
+
+
+async def _category_and_answers(conn: Any, rd: CitationRead, *,
+                                with_types: bool = True) -> tuple[list[dict[str, Any]], dict[str, int]]:
+    """_category_rows + 같은 답변 열 문장이 센 톤 타일 답변 수(B098: 출처 축이 없으면 tone_sql 의 답변 CTE 대신 쓴다).
+    with_types=False(include_types=false)면 유형 열을 만들지 않는다(행의 t_* 는 0, 호출자가 쓰지 않는다)."""
+    types = ("col" if q.t_own_usable(rd.ctx) else "jt") if with_types else "none"
     s = q.sources_ans_sql(rd.ctx, rd.win, types=types)
     rows = await fetch_all(conn, s.text, s.params)
     if types == "col" and q.t_own_unfilled(rows):
         s = q.sources_ans_sql(rd.ctx, rd.win, types="jt")
         rows = await fetch_all(conn, s.text, s.params)
+    answers = q.tone_answers_of(rows)
     if q.ans_path_usable(rows):
-        return q.fold_ans_rows(rows, rd.ctx.source_category_keys)
-    s = q.sources_sql(rd.ctx, rd.win)
-    return await fetch_all(conn, s.text, s.params)
+        return q.fold_ans_rows(rows, rd.ctx.source_category_keys), answers
+    s = q.sources_sql(rd.ctx, rd.win, with_types=with_types)
+    return await fetch_all(conn, s.text, s.params), answers
 
 
 async def _types(conn: Any, rd: CitationRead) -> list[TypeCategories]:
@@ -77,15 +88,19 @@ async def _types(conn: Any, rd: CitationRead) -> list[TypeCategories]:
     return _fold_types(rd, [r for r in rows if int(r["grp"]) == 2])
 
 
-async def get_sources(conn: Any, principal: Principal, filters: CommonFilters, request: Request) -> Envelope[SourcesData]:
+async def get_sources(conn: Any, principal: Principal, filters: CommonFilters, request: Request, *,
+                      include_tone: bool = True, include_types: bool = True) -> Envelope[SourcesData]:
     rd = await open_read(conn, principal, filters, request)
-    data = SourcesData(total_citations=0, categories=[], by_engine=[], tone=_zero_tone(), types=_empty_types())
+    data = SourcesData(total_citations=0, categories=[], by_engine=[], tone=_zero_tone(), types=_empty_types() if include_types else [])
     if not rd.empty:
+        # 톤 답변 수(B098): 출처 축이 없으면 답변 열 문장이 같은 스캔에서 센다(톤 문장의 rd.answer 답변 CTE 생략). 출처 축이면 톤 문장 안에서
+        tone_ans = include_tone and rd.ctx.source_category_keys is None
+        t = q.tone_sql(rd.ctx, rd.win, answers=not tone_ans) if include_tone else None
         # 두 무거운 문장(답변 열·톤)은 Gather 비용 힌트 안에서(core.db.PARALLEL_GATHER_HINT: 계획만 바뀌고 값은 같다, be/web-card-perf)
-        t = q.tone_sql(rd.ctx, rd.win)
         async with planner_hint(conn, PARALLEL_GATHER_HINT):
-            rows = await _category_rows(conn, rd)                 # 카테고리·엔진×카테고리·유형(답변 열 합, 폴백 = 인용 1회 스캔)
-            tr = await fetch_one(conn, t.text, t.params) or {}
+            # 카테고리·엔진×카테고리·유형(답변 열 합, 폴백 = 인용 1회 스캔)
+            rows, ans = await _category_and_answers(conn, rd, with_types=include_types)
+            tr = {**(await fetch_one(conn, t.text, t.params) or {}), **(ans if tone_ans else {})} if t is not None else {}
         total = next((int(r["citations"]) for r in rows if int(r["grp"]) == 3), 0)
         cats = [r for r in rows if int(r["grp"]) == 2]            # GROUPING: 엔진 제외(카테고리 단독) = 0b10
         cats.sort(key=lambda r: (-int(r["citations"]), _cat_sort(rd, int(r["category_key"]))))
@@ -107,7 +122,8 @@ async def get_sources(conn: Any, principal: Principal, filters: CommonFilters, r
         tone = ToneSummary(
             positive=ToneTile(urls=int(tr.get("pos_urls") or 0), citations=int(tr.get("pos_citations") or 0), answers=int(tr.get("pos_answers") or 0)),
             negative=ToneTile(urls=int(tr.get("neg_urls") or 0), citations=int(tr.get("neg_citations") or 0), answers=int(tr.get("neg_answers") or 0)))
-        data = SourcesData(total_citations=total, categories=categories, by_engine=engines, tone=tone, types=_fold_types(rd, cats))
+        data = SourcesData(total_citations=total, categories=categories, by_engine=engines, tone=tone,
+                           types=_fold_types(rd, cats) if include_types else [])
     meta = build_meta(mode=rd.win.mode, ctx=rd.ctx, window=rd.win, suppressed=rd.suppressed)
     return Envelope[SourcesData](data=data, meta=meta)
 

@@ -12,6 +12,13 @@
    rd.answer 만 센다. source[] 가 있으면 cit_n 이 출처 무관 합이라 같은 조인을 GROUPING SETS ((톤, url), (톤, 답변)) 로 한 번에 접는다
    (선택 출처 인용만 남아 작고, 인용을 두 번 읽지 않는다).
 /sources/types(types_sql)는 유형만 필요해 jt 내부 조인 한 문장을 유지한다(jt 식은 _type_flags 공용).
+
+선택 파라미터(P12 B098, 기본 = 종전 값):
+- include_types=false: 답변 열 문장(sources_ans_sql types='none')·원소 폴백(sources_sql with_types=False)이 유형 열(65열·jt)을 만들지 않는다.
+- include_tone=false: tone_sql 을 돌리지 않는다.
+- 톤 답변 수(출처 축 없음): tone_sql 의 답변 CTE(n)가 답변 열 문장과 같은 술어(창 + 필터 축 + cit_in ∧ cit_n > 0)로 rd.answer 를 한 번 더
+  읽던 것을 답변 열 문장의 FILTER 두 열(sources_ans_sql pos_answers·neg_answers)로 옮긴다(tone_sql answers=False). 값은 같다
+  (tests/test_sources_equiv.py::test_tone_answers_from_sources_ans_equal_tone_sql). rd.answer 스캔 3 → 2.
 """
 from __future__ import annotations
 
@@ -55,11 +62,29 @@ def _type_flags(ctx: ReadContext, ms: MeasureScope, win: Window, b: Binder) -> s
    GROUP BY ab.answer_key)"""
 
 
-def sources_sql(ctx: ReadContext, win: Window) -> Sql:
+def sources_sql(ctx: ReadContext, win: Window, *, with_types: bool = True) -> Sql:
     """카테고리 분포·엔진×카테고리·유형×카테고리를 인용 1회 스캔으로. 행 = GROUPING(engine_key, category_key) grp 3(전체)·2(카테고리)·
-    0(엔진×카테고리). citations = 인용 수, t_* = 그 유형 신호가 있는 당사 언급 답변의 인용 수(유형 간 중복 계상)."""
+    0(엔진×카테고리). citations = 인용 수, t_* = 그 유형 신호가 있는 당사 언급 답변의 인용 수(유형 간 중복 계상).
+    with_types=False(include_types=false): 유형 플래그(jt)·t_* 열 없이 카테고리·엔진×카테고리만(행·citations 는 같다)."""
     ms = ctx.measure()
     b = Binder("k")
+    if not with_types:
+        txt = f"""
+WITH g AS (
+  SELECT c.engine_key, c.source_key, count(*) AS n
+    FROM {fact_tables(ms).citation} c
+   WHERE {' AND '.join(citation_where(ms, win, "c", b))}
+   GROUP BY c.engine_key, c.source_key),
+e AS (
+  SELECT g.engine_key, {CATEGORY_EXPR} AS category_key, g.n
+    FROM g JOIN rd.dim_source ds ON ds.source_key = g.source_key
+    {OVERRIDE_JOIN}{_cat_filter(ctx, b)})
+SELECT e.engine_key, e.category_key, coalesce(sum(e.n), 0) AS citations,
+       GROUPING(e.engine_key, e.category_key) AS grp
+  FROM e
+ GROUP BY GROUPING SETS ((e.category_key), (e.engine_key, e.category_key), ())
+"""
+        return b.sql(txt)
     counts = ",\n         ".join(f"count(*) FILTER (WHERE jt.{col}) AS {col}" for col in TYPE_COLS.values())
     cols = ", ".join(f"g.{col}" for col in TYPE_COLS.values())
     sums = ", ".join(f"coalesce(sum(e.{col}), 0) AS {col}" for col in TYPE_COLS.values())
@@ -123,12 +148,14 @@ def t_own_usable(ctx: ReadContext) -> bool:
 
 
 def sources_ans_sql(ctx: ReadContext, win: Window, *, types: str = "col") -> Sql:
-    """엔진별 한 행: n<k>(카테고리 k 인용 수)·<유형>_<k>(그 유형 신호 답변의 카테고리 k 인용 수)·unfilled·ovr_pending·t_unfilled.
-    fold_ans_rows 가 sources_sql 과 같은 모양의 행(engine_key, category_key, citations, t_*, grp)으로 접는다.
-    types = 'col'(유형 플래그 = 답변 열 t_own, DB-v2.18) | 'jt'(종전: rd.answer_brand 를 답변별로 접은 jt). 두 경로 결과 동치
-    (tests/test_t_own_path.py). 'jt' 의 t_unfilled 는 항상 0."""
-    if types not in ("col", "jt"):
-        raise ValueError(f"types 는 col|jt: {types}")
+    """엔진별 한 행: n<k>(카테고리 k 인용 수)·<유형>_<k>(그 유형 신호 답변의 카테고리 k 인용 수)·unfilled·ovr_pending·t_unfilled·
+    pos_answers·neg_answers. fold_ans_rows 가 sources_sql 과 같은 모양의 행(engine_key, category_key, citations, t_*, grp)으로 접는다.
+    types = 'col'(유형 플래그 = 답변 열 t_own, DB-v2.18) | 'jt'(종전: rd.answer_brand 를 답변별로 접은 jt) | 'none'(include_types=false:
+    유형 열 없음). 두 경로 결과 동치(tests/test_t_own_path.py). 'jt'·'none' 의 t_unfilled 는 항상 0.
+    pos_answers·neg_answers(B098): 같은 스캔에서 센 관점 톤 답변 수(core.measure.tone_expr ∧ cit_n > 0). tone_sql 의 답변 CTE(n)와 같은
+    술어·같은 값이라 출처 축이 없으면 tone_sql(answers=False)과 짝으로 쓴다(tone_answers_of). 관점 비트가 없으면 0(톤 판정 불가)."""
+    if types not in ("col", "jt", "none"):
+        raise ValueError(f"types 는 col|jt|none: {types}")
     ms = ctx.measure()
     b = Binder("s")
     aw = win.where("a", FAMILY, b) + scope_where(ms, "a", b) + [citation_population(ms, "a")]
@@ -137,14 +164,19 @@ def sources_ans_sql(ctx: ReadContext, win: Window, *, types: str = "col") -> Sql
         mp = mention_population(ms, "a", "brand")
         cols += [f"coalesce(sum(a.cit_c{k}) FILTER (WHERE {mp} AND (a.t_own & {t_own_mask(ctx.own_bits, i)}) <> 0), 0) AS {tc}_{k}"
                  for i, tc in enumerate(TYPE_COLS.values()) for k in CAT_KEYS]
-    else:
+    elif types == "jt":
         cols += [f"coalesce(sum(a.cit_c{k}) FILTER (WHERE jt.{tc}), 0) AS {tc}_{k}" for tc in TYPE_COLS.values() for k in CAT_KEYS]
     cols += ["count(*) FILTER (WHERE a.cit_n > 0 AND a.cit_c1 IS NULL) AS unfilled",
              "(SELECT count(*) FROM app.citation_domain_override o JOIN rd.dim_source ds ON ds.skey = o.domain"
              " WHERE o.category_key IS NOT NULL AND o.category_key <> ds.category_key) AS ovr_pending",
              "count(*) FILTER (WHERE a.t_own IS NULL) AS t_unfilled" if types == "col" else "0 AS t_unfilled"]
+    if ctx.own_bits:
+        pos, neg = tone_expr(ctx.own_bits, "a")
+        cols += [f"count(*) FILTER (WHERE {pos}) AS pos_answers", f"count(*) FILTER (WHERE {neg}) AS neg_answers"]
+    else:
+        cols += ["0 AS pos_answers", "0 AS neg_answers"]
     sel = ",\n       ".join(cols)
-    if types == "col":
+    if types != "jt":
         txt = f"""
 SELECT a.engine_key,
        {sel}
@@ -174,9 +206,16 @@ def ans_path_usable(rows: list[dict]) -> bool:
     return all(int(r["unfilled"] or 0) == 0 and int(r["ovr_pending"] or 0) == 0 for r in rows)
 
 
+def tone_answers_of(rows: list[dict]) -> dict[str, int]:
+    """sources_ans_sql 엔진별 행 → 톤 타일 답변 수(엔진 합). 답변은 엔진 하나에만 속해 엔진 합 = 전체 답변 수다.
+    답변 열 경로를 못 써 원소 경로로 되돌려도(ans_path_usable 거짓) 이 값은 쓴다: 답변 단위 술어(cit_n > 0)라 cit_c 채움·오버라이드와 무관하다."""
+    return {"pos_answers": sum(int(r["pos_answers"] or 0) for r in rows),
+            "neg_answers": sum(int(r["neg_answers"] or 0) for r in rows)}
+
+
 def fold_ans_rows(rows: list[dict], cat_keys: tuple[int, ...] | None) -> list[dict]:
     """sources_ans_sql 행 → sources_sql 과 같은 행(GROUPING grp 0 = 엔진×카테고리, 2 = 카테고리, 3 = 전체). 0 인 조합은 원소 경로처럼 행이 없다.
-    cat_keys = source[] 로 고른 카테고리(None = 전부)."""
+    cat_keys = source[] 로 고른 카테고리(None = 전부). 유형 열이 없는 결과(types='none')는 t_* 가 0 이다(호출자가 쓰지 않는다)."""
     keys = CAT_KEYS if cat_keys is None else tuple(k for k in CAT_KEYS if k in set(cat_keys))
     tcols = tuple(TYPE_COLS.values())
     out: list[dict] = []
@@ -188,7 +227,7 @@ def fold_ans_rows(rows: list[dict], cat_keys: tuple[int, ...] | None) -> list[di
                 continue
             e = {"engine_key": r["engine_key"], "category_key": k, "citations": n, "grp": 0}
             for tc in tcols:
-                e[tc] = int(r[f"{tc}_{k}"] or 0)
+                e[tc] = int(r.get(f"{tc}_{k}") or 0)
             out.append(e)
             c = cat.setdefault(k, {"engine_key": None, "category_key": k, "citations": 0, "grp": 2, **{tc: 0 for tc in tcols}})
             c["citations"] += n
@@ -201,9 +240,11 @@ def fold_ans_rows(rows: list[dict], cat_keys: tuple[int, ...] | None) -> list[di
     return out
 
 
-def tone_sql(ctx: ReadContext, win: Window) -> Sql:
+def tone_sql(ctx: ReadContext, win: Window, *, answers: bool = True) -> Sql:
     """톤 타일 한 행(pos_urls·pos_citations·pos_answers·neg_*). 모집단 = 종전 rd.citation ⋈ rd.answer(citation_where + 같은 창) 과 같다:
-    답변 쪽 술어(창 + 필터 축 + cit_in)는 rd.citation 게이트·축 열이 답변 사본(전파 함수 대상)이라 인용 쪽과 같은 답변을 고른다."""
+    답변 쪽 술어(창 + 필터 축 + cit_in)는 rd.citation 게이트·축 열이 답변 사본(전파 함수 대상)이라 인용 쪽과 같은 답변을 고른다.
+    answers=False(B098, 출처 축 없을 때): 답변 CTE(n)를 빼고 url·인용 4열만 낸다. 답변 수는 sources_ans_sql 이 같은 술어로 센다
+    (pos_answers·neg_answers). 출처 축이 있으면 답변 수가 같은 인용 조인 안에서 접히므로 answers 와 무관하게 6열이다."""
     ms = ctx.measure()
     b = Binder("t")
     pos, neg = tone_expr(ctx.own_bits, "a")
@@ -220,7 +261,18 @@ WITH ta AS (
     # 사본이라 ta(같은 술어로 고른 답변)와의 조인이 이미 건다. 종전처럼 인용 쪽에도 되풀이하면 현행 프로필 catalog_incl_deleted 의
     # dim_prompt 세미조인이 인용 행마다 붙는다(stg 9/28 브랜드 현대 26.7만 번 dim_prompt 조회, 톤 문장 194 → 317ms, WU-5).
     cw = " AND ".join(win.where("c", FAMILY, b) + ["c.source_key <> 0"] + source_where(ms, "c", b))
-    if ms.source_category_keys is None:
+    if ms.source_category_keys is None and not answers:
+        txt = f"""{head}
+u AS (
+  SELECT ta.pos, c.url_key, count(*) AS n
+    FROM {fact_tables(ms).citation} c JOIN ta ON ta.answer_key = c.answer_key
+   WHERE {cw}
+   GROUP BY ta.pos, c.url_key)
+SELECT count(*) FILTER (WHERE u.pos) AS pos_urls, coalesce(sum(u.n) FILTER (WHERE u.pos), 0) AS pos_citations,
+       count(*) FILTER (WHERE NOT u.pos) AS neg_urls, coalesce(sum(u.n) FILTER (WHERE NOT u.pos), 0) AS neg_citations
+  FROM u
+"""
+    elif ms.source_category_keys is None:
         txt = f"""{head}
 u AS (
   SELECT ta.pos, c.url_key, count(*) AS n

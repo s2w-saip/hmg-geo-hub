@@ -10,9 +10,14 @@
 """
 from __future__ import annotations
 
+import contextlib
 import pathlib
+from collections.abc import Iterator
 from datetime import date
 from typing import Any
+
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
 
 from app.core.auth import load_principal
 from app.core.cycles import Window
@@ -300,3 +305,134 @@ async def test_equiv_under_stg_profile(settings, client_as):
             assert {k: v["total"] for k, v in old.items()} == got and got["admin"] > 0
     finally:
         set_settings(settings)
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# P12 B098: 톤 답변 수를 답변 열 문장에서(rd.answer 스캔 3 → 2) · include_tone·include_types 선택 파라미터(기본 = 종전)
+# ════════════════════════════════════════════════════════════════════════════
+@contextlib.contextmanager
+def _recorded() -> Iterator[list[str]]:
+    """이 블록에서 실행된 SQL 문장(모든 엔진)."""
+    seen: list[str] = []
+
+    def before(conn, cursor, statement, parameters, context, executemany):  # noqa: ANN001
+        seen.append(statement)
+    event.listen(Engine, "before_cursor_execute", before)
+    try:
+        yield seen
+    finally:
+        event.remove(Engine, "before_cursor_execute", before)
+
+
+async def _tone_merged(conn: Any, ctx: ReadContext, win: Window, label: str) -> tuple[int, ...]:
+    """출처 축 없는 문맥: tone_sql(answers=False) url·인용 4값 + 답변 열 문장(types col·jt·none 모두)의 톤 답변 수 = 종전 톤 6값."""
+    old = await _run(conn, legacy_tone_sql(ctx, win), one=True)
+    four = await _run(conn, q.tone_sql(ctx, win, answers=False), one=True)
+    assert "pos_answers" not in four and "neg_answers" not in four, label
+    want = tuple(int(old.get(k) or 0) for k in TONE_KEYS)
+    for types in ("col", "jt", "none"):
+        ans = q.tone_answers_of(await _run(conn, q.sources_ans_sql(ctx, win, types=types)))
+        got = tuple(int({**four, **ans}.get(k) or 0) for k in TONE_KEYS)
+        assert got == want, (label, types, want, got)
+    return want
+
+
+async def _tone_merged_all(conn: Any) -> dict[str, tuple[int, ...]]:
+    out = {}
+    for label, uid, f in CASES:
+        ctx, win = await _ctx(conn, uid, **f)
+        if ctx.source_category_keys is None:          # 출처 축이면 톤 문장이 답변 수를 인용 조인 안에서 센다(answers 와 무관)
+            out[label] = await _tone_merged(conn, ctx, win, label)
+    p = await load_principal(conn, KIA_EU)
+    wctx = await resolve_read_context(conn, p, CommonFilters(surface="website"), support=CITATION_SUPPORT)
+    out["website"] = await _tone_merged(conn, wctx, website_window(wctx.project_keys), "website")
+    return out
+
+
+async def test_tone_answers_from_sources_ans_equal_tone_sql(client_as):
+    """B098: 톤 답변 수 = 답변 열 문장의 FILTER 두 열(같은 술어). 기본 픽스처·rich 준비(부정 톤·다회차·언어·톤 중복)·원소 경로 폴백 준비 모두."""
+    async with staged() as conn:
+        base = await _tone_merged_all(conn)
+    assert base["admin"] == (9, 9, 1, 0, 0, 0)
+    async with staged(StageSql(PROMPT_SQL["global"]), StageSql(BG["src_first"]), StageSql(BG["tone_negative"]), StageSql(BG["lang_ko"]),
+                      StageSql(BG["share_tie"]), StageSql(EQ["tone_dup"])) as conn:
+        rich = await _tone_merged_all(conn)
+    pu, pc, pa, nu, nc, na = rich["hq_hyundai"]
+    assert na == 3 and pa == 4 and nc > 1000 + nu                                        # 빈 값끼리의 일치가 아니다
+    async with staged(StageSql(PROMPT_SQL["global"]), StageSql(EQ["null_cit_ext"])) as conn:     # 답변 열 경로 못 씀(원소 경로 폴백)
+        ctx, win = await _ctx(conn, ADMIN, **G)
+        assert not q.ans_path_usable(await _run(conn, q.sources_ans_sql(ctx, win)))
+        await _tone_merged(conn, ctx, win, "fallback")
+
+
+SOURCES_URL = "/v1/citations/sources"
+INCLUDE_CASES: list[tuple[Any, dict[str, Any]]] = [
+    (ADMIN, G), (HQ_HYUNDAI, G), (HQ_HYUNDAI, {**G, "source": ["officialHmg", "other"], "country": ["US"]}),
+    (ADMIN, {**G, "from": "2026-09-01", "to": "2026-09-30"}), (ADMIN, {**G, "engine": ["gemini"]}),
+    (KIA_EU, {"surface": "website"}), (VENDOR, {"surface": "project", "project_id": str(CUST_PROJECT)}),
+]
+ZERO_TONE = {"positive": {"urls": 0, "citations": 0, "answers": 0}, "negative": {"urls": 0, "citations": 0, "answers": 0}}
+
+
+async def _sources(client_as, uid: Any, params: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+    async with client_as(uid) as c:
+        with _recorded() as seen:
+            r = await c.get(SOURCES_URL, params=params)
+    assert r.status_code == 200, r.text
+    return r.json(), list(seen)
+
+
+def _data_stmts(seen: list[str]) -> dict[str, int]:
+    """/sources 데이터 문장 종류별 수: ans = 답변 열 문장, tone = 톤 문장, el = 원소 폴백, types = 유형 열·jt 를 만드는 문장,
+    n_cte = 톤 문장 안 rd.answer 답변 CTE(B098 이전 기본 경로)."""
+    return {"ans": sum("AS n1" in s and "unfilled" in s for s in seen), "tone": sum("WITH ta AS" in s for s in seen),
+            "el": sum("GROUPING SETS ((e.category_key)" in s for s in seen),
+            "types": sum("t_mention" in s for s in seen), "n_cte": sum("\nn AS (" in s for s in seen)}
+
+
+async def test_include_params_default_unchanged_and_skip_statements(client_as):
+    """include_tone·include_types(기본 true = 종전 값): false 면 그 문장·열을 만들지 않고 tone = 0 타일·types = [] 외 data·meta 는 같다.
+    기본 경로 톤 문장에는 rd.answer 답변 CTE 가 없다(B098, 출처 축이 없으면 답변 수는 답변 열 문장에서)."""
+    async with staged(StageSql(PROMPT_SQL["global"]), StageSql(BG["src_first"]), StageSql(BG["tone_negative"]), StageSql(BG["lang_ko"]),
+                      StageSql(BG["share_tie"]), StageSql(EQ["tone_dup"])):
+        valued = 0
+        for uid, f in INCLUDE_CASES:
+            full, s_full = await _sources(client_as, uid, f)
+            explicit, _ = await _sources(client_as, uid, {**f, "include_tone": "true", "include_types": "true"})
+            assert explicit == full, f
+            no_tone, s_nt = await _sources(client_as, uid, {**f, "include_tone": "false"})
+            no_types, s_ny = await _sources(client_as, uid, {**f, "include_types": "false"})
+            core, s_core = await _sources(client_as, uid, {**f, "include_tone": "false", "include_types": "false"})
+            assert no_tone["data"] == {**full["data"], "tone": ZERO_TONE} and no_tone["meta"] == full["meta"], f
+            assert no_types["data"] == {**full["data"], "types": []} and no_types["meta"] == full["meta"], f
+            assert core["data"] == {**full["data"], "tone": ZERO_TONE, "types": []} and core["meta"] == full["meta"], f
+            d = {k: _data_stmts(v) for k, v in (("full", s_full), ("nt", s_nt), ("ny", s_ny), ("core", s_core))}
+            assert d["full"]["n_cte"] == 0, (f, d)                                         # 톤 답변 CTE 없음(rd.answer 스캔 2)
+            if d["full"]["ans"]:                                                          # 창이 비지 않은 경우(데이터 문장이 돈다)
+                valued += full["data"]["total_citations"] > 0
+                assert d["full"]["tone"] == 1 and d["nt"]["tone"] == 0 and d["core"]["tone"] == 0, (f, d)
+                assert d["full"]["types"] >= 1 and d["ny"]["types"] == 0 and d["core"]["types"] == 0, (f, d)
+                # 톤 문장 1개 생략. 유형은 열·CTE 생략 + t_own 미채움 재집계(jt) 문장도 없다(준비 행은 t_own 이 비어 기본 경로가 두 번 센다)
+                rerun = d["full"]["ans"] - 1
+                assert d["ny"]["ans"] == d["core"]["ans"] == 1 and d["nt"]["ans"] == d["full"]["ans"], (f, d)
+                assert len(s_nt) == len(s_full) - 1 and len(s_ny) == len(s_full) - rerun and len(s_core) == len(s_full) - 1 - rerun, f
+        assert valued >= 4
+        full, _ = await _sources(client_as, HQ_HYUNDAI, G)                               # 값이 있는 표본(빈 값끼리의 일치 아님)
+        assert full["data"]["tone"]["negative"]["answers"] == 3
+    # 기본 픽스처(유형 값 있음: k1 당사 t_mention): 유형만 빠지고 나머지는 같다
+    full, _ = await _sources(client_as, ADMIN, G)
+    no_types, _ = await _sources(client_as, ADMIN, {**G, "include_types": "false"})
+    assert {t["type"]: t["total"] for t in full["data"]["types"]}["mention"] == 9
+    assert no_types["data"] == {**full["data"], "types": []} and no_types["meta"] == full["meta"]
+    # 원소 경로 폴백(재판정 전 오버라이드)에서도 같은 규칙
+    async with staged(StageSql(PROMPT_SQL["global"]), StageSql(BG["competitor"]), StageSql(EQ["refresh_cit_ext"])):
+        full, s_full = await _sources(client_as, ADMIN, G)
+        core, s_core = await _sources(client_as, ADMIN, {**G, "include_tone": "false", "include_types": "false"})
+        assert _data_stmts(s_full)["el"] == 1 and _data_stmts(s_core)["el"] == 1 and _data_stmts(s_core)["types"] == 0
+        assert core["data"] == {**full["data"], "tone": ZERO_TONE, "types": []} and full["data"]["total_citations"] > 0
+
+
+async def test_include_params_invalid_422(client_as):
+    async with client_as(ADMIN) as c:
+        r = await c.get(SOURCES_URL, params={**G, "include_tone": "maybe"})
+    assert r.status_code == 422 and r.json()["error"]["code"] == "unprocessable"

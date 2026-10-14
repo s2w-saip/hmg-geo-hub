@@ -48,9 +48,17 @@
 - 명부 제외(동기화 S1 BE-5, 현행 hmg-geo 2670a16 excluded-brands.ts filterBrandTrend·filterFirstPosition, 키 = core.entities): dimension=brand
   경쟁 계열 선정에서 제외 키 행을 top 앞에서 뺀다(다음 순위가 채운다 = 현행 server.ts:3364·:3484 캡 + 제외 수 → recapBrands). 요청
   brand_key[] 의 제외 키는 dropped_filters.brand_key. 분모·당사 계열·남은 경쟁 계열 값은 그대로(KPI 값 불변).
+
+성능 P12(기본 응답 불변, 값 동치는 tests/test_trend_bg.py p12 시험)
+- B100 dimension=brand: split_own 이면 base(mentions·gap)와 비트별 당사 합계를 rd.answer 한 문장으로(brand_split_counts, 요청 지표 열만),
+  경쟁 행은 순위 후보(top) ∪ 요청 brand_key[] 브랜드만 앱으로 받는다(competitor_rows, 동결 개명 창은 core brand_rows 그대로).
+- B102 웹사이트 M06·M07(R09, bucket=cycle): url_rates 에 main 문장 결과(live, urls part)를 넘겨 같은 창 재집계 문장을 없앤다.
+- B101 dims(선택): 'dimension[:metric,…][@top]' 항목마다 그 차원 단일 요청과 같은 계열·meta 를 data.dims[] 에 함께 낸다. 창·measured_days 는
+  요청 하나에서 한 번, (버킷) base 행·인용 계열 자리 유무·source·category 구성비 문장(per)은 차원 사이에 나눠 쓴다(_Shared). 생략 = 종전.
 """
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
@@ -75,6 +83,7 @@ from app.core.measure import (
     legacy_accuracy,
     rank_brand_items,
     ratios,
+    renamed_brand_keys,
     split_own_label,
     split_own_scopes,
     url_rates,
@@ -82,7 +91,7 @@ from app.core.measure import (
 from app.core.profile import LegacyProfile, active_profile
 
 from . import queries as q
-from .schemas import TrendBucket, TrendData, TrendPoint, TrendSeries
+from .schemas import TrendBucket, TrendData, TrendDimBlock, TrendPoint, TrendSeries
 
 DEFAULT_WINDOW = 12                       # Q9: 회차 12자리·주 12·월 12
 DEFAULT_TOP = 10
@@ -126,6 +135,9 @@ MIX_DEF = {"source": MetricDef("M09", "source_share", "citations", "ratio"),
            "category": MetricDef("M10", "category_share", "citations", "ratio")}
 TYPE_DEF = MetricDef("M08", "type_exposure", "mentions", "ratio")      # BG-07 dimension=type
 BRAND_ONLY = "dimension=brand 전용"
+# B101 dims 항목 'dimension[:metric,…][@top]'. brand 는 기본 dimension 으로만(brand_key·split_own·dropped_filters 가 기본 차원 전용)
+DIMS_ITEM = re.compile(r"^(none|engine|type|source|category)(?::([A-Za-z0-9_,]+))?(?:@([0-9]{1,2}))?$")
+DIM_ORDER = ("none", "engine", "brand", "type", "source", "category")    # 계산 순서: (버킷) base 를 만드는 차원 먼저, 구성비는 끝(공유)
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -167,6 +179,35 @@ def parse_metrics(raw: Sequence[str], surface: str, dimension: str) -> tuple[Met
         raise errors.unprocessable("이 표면·차원이 지원하지 않는 지표", code="metric_not_supported",
                                    details={"metrics": unsupported, "allowed": list(allowed)})
     return tuple(out)
+
+
+@dataclass(frozen=True)
+class DimSpec:
+    """B101 dims 항목 하나: 그 차원 단일 요청(dimension·metrics·top)과 같은 계열을 낸다."""
+    dimension: str
+    mdefs: tuple[MetricDef, ...]
+    top: int
+
+
+def parse_dims(raw: Sequence[str], surface: str, primary: str, top: int) -> list[DimSpec]:
+    """?dims=engine:visibility,share_of_voice&dims=type&dims=category@13(반복). 항목 = 'dimension[:metric,…][@top]': metrics 생략 = 그 차원
+    기본 세트(parse_metrics 규칙 그대로), top 생략 = 요청 top. 형식 오류·brand·기본 dimension 또는 항목끼리 중복·top 범위(1~50) 밖 = 422."""
+    out: list[DimSpec] = []
+    seen = {primary}
+    for item in raw:
+        m = DIMS_ITEM.match(item.strip())
+        if m is None:
+            raise errors.unprocessable("dims 항목 형식: dimension[:metric,…][@top] (dimension = none|engine|type|source|category)",
+                                       details={"field": "dims", "value": item})
+        dim, mets, t = m.group(1), m.group(2), m.group(3)
+        if dim in seen:
+            raise errors.unprocessable("dims 차원 중복(기본 dimension 포함)", details={"field": "dims", "value": item})
+        seen.add(dim)
+        n = int(t) if t is not None else top
+        if not 1 <= n <= 50:
+            raise errors.unprocessable("dims top 범위: 1~50", details={"field": "dims", "value": item})
+        out.append(DimSpec(dim, parse_metrics([mets] if mets else [], surface, dim), n))
+    return out
 
 
 def bucket_key(d: date, bucket: str) -> date:
@@ -288,11 +329,34 @@ def _rows_by(rows: Sequence[dict[str, Any]], *cols: str) -> dict[tuple[Any, ...]
     return {tuple(r.get(c) for c in cols): r for r in rows}
 
 
+@dataclass
+class _Shared:
+    """B101 dims 요청 한 번 안에서 차원 사이에 나눠 쓰는 결과(같은 ctx·창·버킷). 단일 차원 요청은 만들지 않는다(종전 경로 그대로).
+    base: (버킷) group_by fetch_counts 결과(parts ⊇ mentions·gap, dimension none·brand·type 이 만든다). type 의 base 와 구성비의 인용 계열
+          자리 유무(두 계열 회차 키가 같을 때 gap_base, citation_presence 규칙)로 다시 쓴다. 언급·gap 열은 parts 가 더 많아도(인용 계열은
+          FILTER 로 분리) 같은 값이고, 인용 계열 회차에만 있는 버킷 행(answers·gap_base 0)은 행이 없을 때와 같은 지점을 만든다.
+          brand split_own 경로의 행은 answers·total_mentions·gap_base·gap_answers 만 있다(쓰는 쪽도 그 열만 읽는다).
+    presence: (버킷) 인용 계열 자리 유무(citation_presence 결과). mix: source·category 를 함께 요청했을 때 queries.mix_pair_sql 결과."""
+    base: list[dict[str, Any]] | None = None
+    presence: set[tuple[Any, ...]] | None = None
+    mix: list[dict[str, Any]] | None = None
+
+
+async def _bucket_presence(conn: Any, ctx: ReadContext, win: Window, g: str, shared: _Shared | None) -> set[tuple[Any, ...]]:
+    """(버킷) 인용 계열 자리 유무. dims 요청이면 한 번 세어 나눠 쓰고, 같은 요청의 (버킷) base 가 있으면 citation_presence 가 그 gap_base 로
+    문장 없이 낸다(두 계열 회차 키가 같을 때)."""
+    if shared is None:
+        return await citation_presence(conn, ctx, win, (g,), None)
+    if shared.presence is None:
+        shared.presence = await citation_presence(conn, ctx, win, (g,), _rows_by(shared.base, g) if shared.base is not None else None)
+    return shared.presence
+
+
 # ════════════════════════════════════════════════════════════════════════════
 # 차원별 시리즈
 # ════════════════════════════════════════════════════════════════════════════
 async def _series_plain(conn: Any, ctx: ReadContext, win: Window, slots: list[Slot], bucket: str,
-                        mdefs: tuple[MetricDef, ...], dimension: str) -> list[TrendSeries]:
+                        mdefs: tuple[MetricDef, ...], dimension: str, *, shared: _Shared | None = None) -> list[TrendSeries]:
     """dimension none·engine: 지표 × (엔진)."""
     ms = ctx.measure()
     g = BUCKET_GROUP[bucket]
@@ -304,14 +368,20 @@ async def _series_plain(conn: Any, ctx: ReadContext, win: Window, slots: list[Sl
     parts = ["mentions", "gap"]
     if m05:
         parts.append("citations")          # source[] 가 있으면 core 가 원소 스캔(선택 카테고리 출처 인용만, 분자·분모 모두)
-    if (url_metrics and (not use_r09 or fold_r09)) or acc:
+    # urls part: 버킷 라이브 M06·M07(R09 를 안 쓰거나 주·월 접기)·인용 정확도, 그리고 B102: R09 회차 버킷(bucket=cycle)도 같은 main 문장에서
+    # 세어 url_rates 에 live 로 넘긴다(url_rates 가 같은 창 urls 를 다시 세던 문장 생략, 값은 같은 술어·같은 FILTER)
+    if url_metrics or acc:
         parts.append("urls")
     group_by: tuple[str, ...] = (g, "engine") if dimension == "engine" else (g,)
     rows = await fetch_counts(conn, ms, win, group_by=group_by, parts=parts)
     idx = _rows_by(rows, BUCKET_GROUP[bucket], *(("engine_key",) if dimension == "engine" else ()))
+    if shared is not None and dimension == "none":
+        shared.base = rows
     cit_seen: set[tuple[Any, ...]] = set()
     if any(m.family == "citations" for m in mdefs):
         cit_seen = await citation_presence(conn, ctx, win, group_by, idx)
+        if shared is not None and dimension == "none":
+            shared.presence = cit_seen
     # 현행 ⑥(web_accuracy_flat, WU-12): 카드 추이 = 집계층 유닛 flat 타겟(summaryWebsiteCitationAccuracyTrend), 비카드 = 미러 정의.
     # 같은 창·같은 버킷 키로 따로 세어 ACC 점만 바꾼다(M07 등 urls part 의 다른 값은 그대로)
     acc_idx: dict[tuple[Any, ...], dict[str, Any]] | None = None
@@ -320,8 +390,9 @@ async def _series_plain(conn: Any, ctx: ReadContext, win: Window, slots: list[Sl
         acc_idx = _rows_by(acc_rows, BUCKET_GROUP[bucket], *(("engine_key",) if dimension == "engine" else ()))
     rates: dict[Any, dict[str, Any]] = {}
     if use_r09:
+        # bucket=cycle 이면 main 결과가 곧 회차(round_date)별 라이브 urls 다(B102). 주·월은 버킷 키가 회차가 아니라 url_rates 가 회차별로 센다
         rates = await url_rates(conn, ms, win, brands=ctx.own_brands, countries=ctx.countries, langs=ctx.langs, by_round=True,
-                                req=ctx.r09)
+                                live=None if fold_r09 else rows, req=ctx.r09)
     url_origin = "live" if ctx.surface == "website" else None
 
     if dimension == "engine":
@@ -382,7 +453,9 @@ async def _own_parts(conn: Any, ctx: ReadContext, win: Window, g: str, label: st
                      split_own: bool) -> list[OwnPart]:
     """D13: split_own 이고 관점 비트가 둘 이상이면 core.measure.split_own_scopes(비트 오름차순)로 비트별 당사 값, 아니면 합친 1행.
     분리 행에는 brand_key 를 싣는다(검증 V1): GET /v1/mentions/brands 당사 행과 같은 규칙(이름 = 관점 brand_code)이라 두 그룹의
-    관점 브랜드 행을 brand_key 로 잇는다. 이름이 차원에 없으면 null(행 키는 own_brand_code 로 유일하다)."""
+    관점 브랜드 행을 brand_key 로 잇는다. 이름이 차원에 없으면 null(행 키는 own_brand_code 로 유일하다).
+    P12 B100: _series_brand 의 분리 경로는 base 와 비트별 합계를 한 문장(brand_split_counts)으로 세어 같은 규칙으로 계열을 만들고, 이 함수는
+    분리 없는 경우(합친 1행)에 쓴다. 분리 분기는 같은 값의 단독 경로(A3 split_counts)로 남긴다(동치 시험의 바꿔 끼우기 자리)."""
     ms = ctx.measure()
     splits = split_own_scopes(ms) if split_own else ()
     if not splits:
@@ -405,18 +478,68 @@ async def split_counts(conn: Any, ms: Any, win: Window, g: str, bits: Sequence[i
             for i in range(len(bits))]
 
 
+async def brand_split_counts(conn: Any, ms: Any, win: Window, g: str, bits: Sequence[int],
+                             mdefs: Sequence[MetricDef]) -> tuple[list[dict[str, Any]], list[list[dict[str, Any]]]]:
+    """B100: dimension=brand split_own 의 (base, 비트별 당사 합계)를 rd.answer 한 문장(queries.own_split_counts_sql base=True)으로.
+    base 행 = fetch_counts(group_by=(g,), parts=('mentions','gap')) 중 _series_brand 가 읽는 answers·total_mentions·gap_base·gap_answers
+    (같은 WHERE·같은 식), 비트별 행 = split_counts 와 같은 모양. 비트 열은 요청 지표(mdefs)가 읽는 것만 세고 나머지는 0(그 지표 지점을
+    만들지 않는다). 빈 창이면 문장 없이 빈 목록."""
+    if win.empty:
+        return [], [[] for _ in bits]
+    keys = {k for m in mdefs for k in q.SPLIT_KEYS_BY_METRIC.get(m.code, ())}
+    sq = q.own_split_counts_sql(ms, win, g, bits, base=True, keys=keys)
+    rows = sorted(await fetch_all(conn, sq.text, sq.params), key=lambda r: (r[g] is None, r[g]))
+    base = [{g: r[g], **{k: int(r[k] or 0) for k in ("answers", "total_mentions", "gap_base", "gap_answers")}} for r in rows]
+    shared = ("answers", "total_mentions")
+    per_bit = [[{g: r[g], **{k: int(r[k] or 0) for k in shared},
+                 **{k: int(r[f"{k}{i}"] or 0) if k in keys else 0 for k in q.SPLIT_KEYS}} for r in rows]
+               for i in range(len(bits))]
+    return base, per_bit
+
+
+async def competitor_rows(conn: Any, ms: Any, win: Window, g: str, *, top: int, want: Sequence[int]) -> list[dict[str, Any]]:
+    """B100: dimension=brand 경쟁 행 중 순위 후보(top) ∪ 요청 brand_key[] 브랜드의 행만(queries.competitor_candidates_sql). core brand_rows 와
+    선정·값이 같다(후보 밖 브랜드는 top 안에 들 수 없다, 쿼리 머리 주석). 창에 동결 개명 키가 있으면(core renamed_brand_keys: 동결 읽기 ∧ 회차 2개
+    이상일 때만 문장) 계열 = (키, 세대 이름)이라 core brand_rows 를 그대로 쓴다(그 경우 개명 조회 문장 1 이 더 돈다). G20 노출 단위 미채움
+    행이 있으면 core brand_rows 로 다시 읽어 같은 예외를 낸다(오류 경로). 빈 창이면 문장 없이 []."""
+    if win.empty:
+        return []
+    if await renamed_brand_keys(conn, ms, win):
+        return await brand_rows(conn, ms, win, group_by=(g,))
+    sq = q.competitor_candidates_sql(ms, win, g, top, want)
+    rows = await fetch_all(conn, sq.text, sq.params)
+    if ms.profile.brand_exposure_per_alias:
+        if any(int(r.get("rid_n_missing") or 0) for r in rows):
+            return await brand_rows(conn, ms, win, group_by=(g,))
+        for r in rows:
+            r.pop("rid_n_missing", None)
+    return rows
+
+
 async def _series_brand(conn: Any, ctx: ReadContext, win: Window, slots: list[Slot], bucket: str,
                         mdefs: tuple[MetricDef, ...], top: int, label: str, *, brand_keys: Sequence[int] = (),
-                        split_own: bool = False, dropped: dict[str, list[str]] | None = None) -> list[TrendSeries]:
+                        split_own: bool = False, dropped: dict[str, list[str]] | None = None,
+                        shared: _Shared | None = None) -> list[TrendSeries]:
     """dimension brand(M11): 당사 계열(rd.answer 당사 열) + 경쟁 상위 top(core brand_rows: 형제 HMG 브랜드는 경쟁 행에 남는다)
     + BG-11 요청 brand_key[](top 밖 경쟁 브랜드). D13 split_own 이면 당사를 관점 브랜드별 계열로 나눈다(분모·갭은 관점 전체)."""
     ms = ctx.measure()
     g = BUCKET_GROUP[bucket]
-    rows = await fetch_counts(conn, ms, win, group_by=(g,), parts=("mentions", "gap"))
-    idx = _rows_by(rows, g)
-    owns = await _own_parts(conn, ctx, win, g, label, idx, split_own)
-    comp = [r for r in await brand_rows(conn, ms, win, group_by=(g,)) if int(r["brand_key"]) != 0]
+    splits = split_own_scopes(ms) if split_own else ()
+    if splits:
+        # B100: base(mentions·gap)와 비트별 당사 합계를 rd.answer 한 문장으로(같은 WHERE 이중 스캔 제거, 요청 지표 열만)
+        rows, per_bit = await brand_split_counts(conn, ms, win, g, [bit for bit, _ in splits], mdefs)
+        idx = _rows_by(rows, g)
+        codes = [split_own_label(ctx.refs, bit) for bit, _ in splits]
+        okeys = {str(r["name"]): int(r["brand_key"]) for r in await fetch_all(conn, q.OWN_BRAND_KEYS_SQL, {"names": codes})}
+        owns = [OwnPart(code, code, code, _rows_by(prow, g), okeys.get(code)) for code, prow in zip(codes, per_bit, strict=True)]
+    else:
+        rows = await fetch_counts(conn, ms, win, group_by=(g,), parts=("mentions", "gap"))
+        idx = _rows_by(rows, g)
+        owns = await _own_parts(conn, ctx, win, g, label, idx, split_own)
+    if shared is not None:
+        shared.base = rows
     want = list(dict.fromkeys(int(k) for k in brand_keys))
+    comp = [r for r in await competitor_rows(conn, ms, win, g, top=top, want=want) if int(r["brand_key"]) != 0]
     # 명부 제외(BE-5): 제외 키 경쟁 행은 순위·top 선정 전에 뺀다(다음 순위가 채운다, 현행 filterBrandTrend·filterFirstPosition +
     # server.ts:3364·:3484 캡 여유). 분모(base = fetch_counts)와 남은 계열 값은 그대로. 경쟁 행은 관점 비트 밖이라 자사 계열은 무관.
     excluded = await excluded_brand_keys(conn) if comp or want else frozenset()
@@ -490,12 +613,20 @@ async def _series_brand(conn: Any, ctx: ReadContext, win: Window, slots: list[Sl
     return out
 
 
-async def _series_type(conn: Any, ctx: ReadContext, win: Window, slots: list[Slot], bucket: str) -> list[TrendSeries]:
-    """BG-07 dimension=type(M08): 버킷 × 유형 5종. 분자 = 그 유형 신호가 있는 당사 답변(queries.type_counts_sql), 분모 = 버킷 답변(std_in)."""
+async def _series_type(conn: Any, ctx: ReadContext, win: Window, slots: list[Slot], bucket: str, *,
+                       shared: _Shared | None = None) -> list[TrendSeries]:
+    """BG-07 dimension=type(M08): 버킷 × 유형 5종. 분자 = 그 유형 신호가 있는 당사 답변(queries.type_counts_sql), 분모 = 버킷 답변(std_in).
+    dims 요청이면 같은 요청의 (버킷) base(none·brand 차원)를 그대로 쓴다(answers·gap_base 만 읽는다, _Shared)."""
     md = TYPE_DEF
     ms = ctx.measure()
     g = BUCKET_GROUP[bucket]
-    idx = _rows_by(await fetch_counts(conn, ms, win, group_by=(g,), parts=("mentions", "gap")), g)
+    if shared is not None and shared.base is not None:
+        base_rows = shared.base
+    else:
+        base_rows = await fetch_counts(conn, ms, win, group_by=(g,), parts=("mentions", "gap"))
+        if shared is not None:
+            shared.base = base_rows
+    idx = _rows_by(base_rows, g)
     trows: dict[Any, dict[str, Any]] = {}
     if win.cyc_keys("mentions"):
         tq = q.type_counts_sql(ms, win, g)
@@ -523,16 +654,21 @@ async def measured_days(conn: Any, ctx: ReadContext, win: Window, bucket: str) -
 
 
 async def _series_mix(conn: Any, ctx: ReadContext, win: Window, slots: list[Slot], bucket: str,
-                      dimension: str, top: int) -> list[TrendSeries]:
-    """dimension source·category(M09·M10): 버킷별 출처(카테고리) 인용 수 / 버킷 전체 인용 수(호스트 있는 인용, cit_in)."""
+                      dimension: str, top: int, *, shared: _Shared | None = None) -> list[TrendSeries]:
+    """dimension source·category(M09·M10): 버킷별 출처(카테고리) 인용 수 / 버킷 전체 인용 수(호스트 있는 인용, cit_in).
+    dims 요청이면 인용 계열 자리 유무를 차원 사이에 나눠 쓰고(_bucket_presence), source·category 를 함께 요청했으면 queries.mix_pair_sql
+    결과(per 1회, 호출자가 _Shared.mix 에 둔다)에서 이 차원의 부분(source = part 1, category = part 2)을 읽는다."""
     md = MIX_DEF[dimension]
     ms = ctx.measure()
     g = BUCKET_GROUP[bucket]
-    seen = await citation_presence(conn, ctx, win, (g,), None)          # 인용 계열 모수로 자리 유무(검증 D1)
+    seen = await _bucket_presence(conn, ctx, win, g, shared)            # 인용 계열 모수로 자리 유무(검증 D1)
     # A2: (버킷, 출처) 합산·출처 차원 조인·순위 후보 좁히기는 SQL(queries.mix_counts_sql), 순위 정본(rank_brand_items: 합계 내림차순 →
     # lc_key)은 여기서 후보에만 건다. source[] 는 core citation_where 가 건다(분자·분모 모두 선택 카테고리 출처).
     rows: list[dict[str, Any]] = []
-    if not win.empty:
+    if not win.empty and shared is not None and shared.mix is not None:
+        own_part = 1 if dimension == "source" else 2
+        rows = [r for r in shared.mix if r["part"] == 0] + [{**r, "part": 1} for r in shared.mix if r["part"] == own_part]
+    elif not win.empty:
         mq = q.mix_counts_sql(ms, win, g, dimension, top)
         rows = await fetch_all(conn, mq.text, mq.params)
     bucket_total: dict[Any, int] = {r["bk"]: int(r["n"] or 0) for r in rows if r["part"] == 0}
@@ -575,12 +711,66 @@ async def _bind_trend(conn: Any, ctx: ReadContext, win: Window, *, grid: bool) -
     return ctx.bind_frozen(False)
 
 
+async def _series_of(conn: Any, ctx: ReadContext, win: Window, slots: list[Slot], bucket: str, dimension: str,
+                     mdefs: tuple[MetricDef, ...], top: int, label: str, *, brand_keys: Sequence[int] = (), split_own: bool = False,
+                     dropped: dict[str, list[str]] | None = None, shared: _Shared | None = None) -> list[TrendSeries]:
+    """차원 하나의 계열. shared 는 dims 요청에서만 넘긴다(단일 차원 요청은 종전 호출 그대로: 기존 동치 시험이 이 이름들을 바꿔 끼운다)."""
+    kw: dict[str, Any] = {"shared": shared} if shared is not None else {}
+    if dimension in ("none", "engine"):
+        return await _series_plain(conn, ctx, win, slots, bucket, mdefs, dimension, **kw)
+    if dimension == "brand":
+        return await _series_brand(conn, ctx, win, slots, bucket, mdefs, top, label, brand_keys=brand_keys,
+                                   split_own=split_own, dropped=dropped, **kw)
+    if dimension == "type":
+        return await _series_type(conn, ctx, win, slots, bucket, **kw)
+    return await _series_mix(conn, ctx, win, slots, bucket, dimension, top, **kw)
+
+
+async def _multi_series(conn: Any, ctx: ReadContext, win: Window, slots: list[Slot], bucket: str, specs: Sequence[DimSpec],
+                        label: str, *, brand_keys: Sequence[int], split_own: bool,
+                        dropped: dict[str, list[str]]) -> list[list[TrendSeries]]:
+    """B101 dims: 차원마다 단일 요청과 같은 계열(specs 순서로 돌려준다). 계산은 DIM_ORDER 순서((버킷) base 를 만드는 차원 먼저)로 하며
+    _Shared 로 base·인용 계열 자리 유무를 나눠 쓰고, source·category 가 함께 있으면 구성비 문장을 하나(queries.mix_pair_sql)로 돌린다."""
+    shared = _Shared()
+    by_dim = {s.dimension: s for s in specs}
+    if "source" in by_dim and "category" in by_dim and not win.empty:
+        mq = q.mix_pair_sql(ctx.measure(), win, BUCKET_GROUP[bucket], by_dim["source"].top)
+        shared.mix = await fetch_all(conn, mq.text, mq.params)
+    out: dict[str, list[TrendSeries]] = {}
+    for d in sorted(by_dim, key=DIM_ORDER.index):
+        s = by_dim[d]
+        out[d] = await _series_of(conn, ctx, win, slots, bucket, d, s.mdefs, s.top, label, brand_keys=brand_keys,
+                                  split_own=split_own, dropped=dropped, shared=shared)
+    return [out[s.dimension] for s in specs]
+
+
+def _hidden_suppressed(win: Window, mdefs: Sequence[MetricDef]) -> dict[str, str]:
+    """창이 계열에서 전부 숨김이면 그 계열 지표 이름 → hidden(meta.suppressed)."""
+    out: dict[str, str] = {}
+    for fam in ("mentions", "citations"):
+        if win.hidden(fam):
+            for m in mdefs:
+                if m.family == fam:
+                    out[m.name] = SUPPRESS_HIDDEN
+    return out
+
+
+def _trend_meta(win: Window, ctx: ReadContext, suppressed: dict[str, str], dropped: dict[str, list[str]], dimension: str,
+                mdefs: Sequence[MetricDef]) -> Meta:
+    meta = build_meta(mode="cumulative", window=win, ctx=ctx, suppressed=suppressed)
+    meta.dropped_filters.update(dropped)             # BG-11: 모르는·관점 브랜드 brand_key
+    if ctx.source_category_keys is not None and not (dimension in MIX_DEF or any(m.code in SOURCE_METRICS for m in mdefs)):
+        mark_ignored(meta, "source")                  # 적용 대상 계열(M05·M09·M10)이 없는 요청: 조용히 무시하지 않는다
+    return meta
+
+
 async def get_trend(conn: Any, principal: Principal, filters: CommonFilters, *, bucket: str, dimension: str, metrics: Sequence[str],
                     top: int, custom_fields: dict[str, list[str]] | None = None, today: date | None = None,
                     brand_keys: Sequence[int] = (), split_own: bool = False, with_measured_days: bool = True,
-                    profile: LegacyProfile | None = None) -> Envelope[TrendData]:
+                    profile: LegacyProfile | None = None, dims: Sequence[str] = ()) -> Envelope[TrendData]:
     prof = profile if profile is not None else active_profile()
     mdefs = parse_metrics(metrics, filters.surface, dimension)
+    extras = parse_dims(dims, filters.surface, dimension, top)        # B101(선택): 없으면 종전 단일 차원
     if dimension != "brand" and (brand_keys or split_own):   # 다른 차원에서 조용히 무시하지 않는다
         field_ = "brand_key" if brand_keys else "split_own"
         raise errors.unprocessable(f"{field_} 는 {BRAND_ONLY}", details={"field": field_, "dimension": dimension})
@@ -605,34 +795,30 @@ async def get_trend(conn: Any, principal: Principal, filters: CommonFilters, *, 
     suppressed: dict[str, str] = {}
     dropped: dict[str, list[str]] = {}
     days: dict[Any, int] = {}
+    extra_series: list[list[TrendSeries]] = [[] for _ in extras]
     if not slots:
         suppressed["*"] = SUPPRESS_NO_SNAPSHOT
         series: list[TrendSeries] = []
     else:
         if with_measured_days:
             days = await measured_days(conn, ctx, win, bucket)
-        for fam in ("mentions", "citations"):
-            if win.hidden(fam):
-                for m in mdefs:
-                    if m.family == fam:
-                        suppressed[m.name] = SUPPRESS_HIDDEN
-        if dimension in ("none", "engine"):
-            series = await _series_plain(conn, ctx, win, slots, bucket, mdefs, dimension)
-        elif dimension == "brand":
-            series = await _series_brand(conn, ctx, win, slots, bucket, mdefs, top, label, brand_keys=brand_keys,
-                                         split_own=split_own, dropped=dropped)
-        elif dimension == "type":
-            series = await _series_type(conn, ctx, win, slots, bucket)
+        suppressed.update(_hidden_suppressed(win, mdefs))
+        if not extras:
+            series = await _series_of(conn, ctx, win, slots, bucket, dimension, mdefs, top, label, brand_keys=brand_keys,
+                                      split_own=split_own, dropped=dropped)
         else:
-            series = await _series_mix(conn, ctx, win, slots, bucket, dimension, top)
+            series, *extra_series = await _multi_series(conn, ctx, win, slots, bucket, [DimSpec(dimension, mdefs, top), *extras], label,
+                                                        brand_keys=brand_keys, split_own=split_own, dropped=dropped)
     data = TrendData(bucket=bucket, dimension=dimension, own_label=label,  # type: ignore[arg-type]
                      buckets=[TrendBucket(key=s.key, round_dates=s.round_dates,
                                           measured_days=days.get(s.key, 0) if with_measured_days else None) for s in slots],
                      series=series)
-    meta = build_meta(mode="cumulative", window=win, ctx=ctx, suppressed=suppressed)
-    meta.dropped_filters.update(dropped)             # BG-11: 모르는·관점 브랜드 brand_key
-    if ctx.source_category_keys is not None and not (dimension in MIX_DEF or any(m.code in SOURCE_METRICS for m in mdefs)):
-        mark_ignored(meta, "source")                  # 적용 대상 계열(M05·M09·M10)이 없는 요청: 조용히 무시하지 않는다
+    if extras:     # B101: 차원마다 그 차원 단일 요청과 같은 meta(억제·무시 축은 그 차원 지표로 판정)
+        data.dims = [TrendDimBlock(dimension=s.dimension, series=ss,  # type: ignore[arg-type]
+                                   meta=_trend_meta(win, ctx, _hidden_suppressed(win, s.mdefs) if slots else {"*": SUPPRESS_NO_SNAPSHOT},
+                                                    {}, s.dimension, s.mdefs))
+                     for s, ss in zip(extras, extra_series, strict=True)]
+    meta = _trend_meta(win, ctx, suppressed, dropped, dimension, mdefs)
     return Envelope[TrendData](data=data, meta=meta)
 
 

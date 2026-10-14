@@ -550,3 +550,109 @@ def test_split_own_scopes_pure():
 def test_parse_metrics_type_dimension():
     assert [m.code for m in service.parse_metrics([], "global", "type")] == ["M08"]
     assert [m.code for m in service.parse_metrics(["m08", "type_exposure"], "project", "type")] == ["M08"]
+
+
+# ── P12 B101 dims: 차원마다 그 차원 단일 요청과 같은 series·meta(창·measured_days·base·자리 유무·구성비 문장 공유) ─────────────
+def _dim_single(params: dict, item: str) -> dict:
+    """dims 항목 'dimension[:metrics][@top]' → 같은 필터·bucket·card·measured_days 의 단일 요청 파라미터."""
+    spec, _, top = item.partition("@")
+    dim, _, mets = spec.partition(":")
+    base = {k: v for k, v in params.items() if k not in ("dimension", "metrics", "top", "split_own", "brand_key", "dims")}
+    return {**base, "dimension": dim, **({"metrics": mets.split(",")} if mets else {}),
+            **({"top": int(top)} if top else ({"top": params["top"]} if "top" in params else {}))}
+
+
+async def _recorded_get(client_as, uid, params) -> tuple[dict, list[str]]:
+    from app.features.analytics.trend.series.tests.test_trend_bg import recorded
+    async with client_as(uid) as c:
+        with recorded() as seen:
+            r = await c.get("/v1/trend", params=params)
+    assert r.status_code == 200, (params, r.text)
+    return r.json(), list(seen)
+
+
+def _facts(seen: list[str]) -> int:
+    """사실 표(rd.answer·answer_brand·citation)를 읽는 문장 수."""
+    return sum("rd.answer" in s or "rd.citation" in s for s in seen)
+
+
+async def _dims_check(client_as, uid, params: dict, dims: list[str]) -> tuple[int, int]:
+    """dims 요청 = 기본 차원 단일 요청 + 항목별 단일 요청(data·meta 동치). 반환 = (dims 요청 사실 문장 수, 단일 요청 합)."""
+    comb, s_comb = await _recorded_get(client_as, uid, {**params, "dims": dims})
+    prim, s_prim = await _recorded_get(client_as, uid, params)
+    blocks = comb["data"].pop("dims")
+    assert "dims" not in prim["data"]
+    assert comb == prim, (params, dims)                                             # 기본 차원: data·meta 그대로
+    assert [b["dimension"] for b in blocks] == [i.split(":")[0].split("@")[0] for i in dims]
+    total = _facts(s_prim)
+    for item, blk in zip(dims, blocks, strict=True):
+        one, s_one = await _recorded_get(client_as, uid, _dim_single(params, item))
+        assert {**comb["data"], "dimension": blk["dimension"], "series": blk["series"]} == one["data"], (params, item)
+        assert blk["meta"] == one["meta"], (params, item)
+        total += _facts(s_one)
+    return _facts(s_comb), total
+
+
+G_ = {"surface": "global"}
+DIMS_CASES: list[tuple[object, dict, list[str]]] = [
+    (HQ_HYUNDAI, {**G_, "dimension": "engine", "metrics": ["visibility", "share_of_voice", "sentiment"]},
+     ["none:visibility,share_of_voice,sentiment,position,citation_share", "type"]),
+    (HQ_HYUNDAI, {**G_, "dimension": "source", "top": 15, "measured_days": "false"}, ["category@13"]),
+    (ADMIN, {**G_}, ["engine", "type", "source@3", "category"]),
+    (ADMIN, {**G_, "dimension": "brand", "split_own": "true", "top": 2}, ["type", "none:M01", "category"]),
+    (ADMIN, {**G_, "metrics": ["M01"], "source": ["officialHmg", "other"]}, ["category", "engine:M05"]),      # 출처 축 무시 판정은 차원마다
+    (HQ_HYUNDAI, {**G_, "dimension": "type", "bucket": "week"}, ["none", "engine:M01", "source"]),
+    (HQ_HYUNDAI, {**G_, "dimension": "category", "bucket": "month", "card": "true"}, ["source@2", "none:M05"]),
+    (KIA_EU, {"surface": "website", "dimension": "source", "top": 15}, ["category@13", "none"]),
+    (VENDOR, {"surface": "project", "project_id": str(CUST_PROJECT), "dimension": "category", "top": 13}, ["source@15", "type"]),
+    (HQ_HYUNDAI, {**G_, "from": "2020-01-01", "to": "2020-01-31"}, ["type", "source"]),                      # 자리 없는 창
+]
+
+
+@needs_db
+async def test_p12_dims_each_dimension_equals_single_request(client_as):
+    """B101: dims 항목마다 {dimension, series, meta} = 그 차원 단일 요청의 data.series·meta, 기본 차원·buckets·own_label 은 그대로.
+    기본 픽스처 + 성능 준비(인용 숨김 회차 → 두 계열 회차 키가 달라 자리 유무 문장 경로, 출처 순위 경계 동률·차원 밖 출처·오버라이드)."""
+    from app.features.analytics.trend.series.tests.test_perf_equiv import AUG_LEAF, SEED, _copy
+    from tests.support import SqlFile
+    from tests.support import staged as core_staged
+
+    for uid, params, dims in DIMS_CASES:
+        await _dims_check(client_as, uid, params, dims)
+    async with core_staged(AUG_LEAF, _copy, SqlFile(SEED)):
+        for uid, params, dims in DIMS_CASES:
+            await _dims_check(client_as, uid, params, dims)
+        # 문장 공유: 출처·카테고리 = 출처 단일 요청과 같은 사실 문장 수(자리 유무 1 + 구성비 1), 3 차원 묶음 < 단일 요청 합
+        sc, total = await _dims_check(client_as, HQ_HYUNDAI, {**G_, "dimension": "source", "top": 15, "measured_days": "false"}, ["category@13"])
+        assert sc == 2 and total == 4, (sc, total)
+        sc, total = await _dims_check(client_as, HQ_HYUNDAI, {**G_, "dimension": "engine", "metrics": ["visibility", "share_of_voice", "sentiment"]},
+                                      ["none:visibility,share_of_voice,sentiment,position,citation_share", "type"])
+        assert sc < total - 2, (sc, total)                                           # 측정 일수 1·base 1 이상 덜 돈다
+        b = (await _recorded_get(client_as, ADMIN, {**G_, "dimension": "source", "top": 4, "dims": ["category"]}))[0]
+        assert [s["key"] for s in b["data"]["series"]] == ["reddit.com", "reddit-alt.test", "reddit-acc.test", "under.test"]   # 경계 동률
+
+
+@needs_db
+@pytest.mark.parametrize("params", [
+    {"surface": "global", "dims": "brand"},                          # brand 는 기본 dimension 으로만
+    {"surface": "global", "dims": "none"},                           # 기본 dimension 과 중복
+    {"surface": "global", "dimension": "source", "dims": ["category", "category@5"]},
+    {"surface": "global", "dims": "prompt"},
+    {"surface": "global", "dims": "category@0"},
+    {"surface": "global", "dims": "category@51"},
+    {"surface": "global", "dims": "type:M01"},
+    {"surface": "global", "dims": "source:M09"},
+    {"surface": "global", "dims": "engine:M99"},
+    {"surface": "global", "dims": ["type", "engine", "source", "category", "brand", "none"]},     # 상한 5
+])
+async def test_p12_dims_invalid_422(client_as, params):
+    async with client_as(HQ_HYUNDAI) as c:
+        r = await c.get("/v1/trend", params=params)
+    assert r.status_code == 422, (params, r.text)
+    assert r.json()["error"]["code"] in ("unprocessable", "unknown_metric", "metric_not_supported")
+
+
+@needs_db
+async def test_p12_dims_absent_keeps_response_shape(client_as):
+    b = await _get(client_as, HQ_HYUNDAI, {"surface": "global", "dimension": "source"})
+    assert "dims" not in b["data"]

@@ -10,7 +10,7 @@ from app.core.errors import ERROR_RESPONSES
 from app.core.filters import CommonFilters
 from app.core.result_cache import CachedRoute, result_cache
 from app.features.analytics.citations.sources import service
-from app.features.analytics.citations.sources.schemas import SourcesData, TypesData
+from app.features.analytics.citations.sources.schemas import SourcesData, SourcesQuery, TypesData
 
 router = APIRouter(tags=["analytics.citations"], route_class=CachedRoute)
 
@@ -19,9 +19,9 @@ router = APIRouter(tags=["analytics.citations"], route_class=CachedRoute)
             summary="출처 카테고리 분포(M09) + 엔진×카테고리 + 답변 톤별 인용 요약 타일(한 요청)")
 @result_cache()
 async def get_citations_sources_0(request: Request, conn: RoConn, user: CurrentUser,
-                                  filters: Annotated[CommonFilters, Query()]) -> Envelope[SourcesData]:
+                                  params: Annotated[SourcesQuery, Query()]) -> Envelope[SourcesData]:
     """analytics.citations.sources: C-2 카테고리·엔진·톤·유형(Q19 로 유형 포함)."""
-    return await service.get_sources(conn, user, filters, request)
+    return await service.get_sources(conn, user, params, request, include_tone=params.include_tone, include_types=params.include_types)
 
 
 @router.get("/v1/citations/sources/types", response_model=Envelope[TypesData], responses=ERROR_RESPONSES,

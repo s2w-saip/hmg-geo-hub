@@ -14,6 +14,8 @@ import "server-only";
 //   toBrandTrendResult      -> BrandTrendResult (dimension=brand: competitor sparklines, KPI tab)
 //   toFirstPositionResult   -> FirstPositionResult buckets (dimension=brand, position)
 //   toSeriesViews           -> generic series (key, label, colour, points) for any dimension
+//   splitTrendDims          -> one TrendResponse per dimension of a dims call (P12 B101: several
+//                              dimensions in one request; each equals its separate call)
 //
 // Point rules (R-trend):
 //   bucket key -> bucketStart; roundDate = last round_dates entry (the round the slot belongs
@@ -166,6 +168,24 @@ export interface TrendRequest extends AnalysisQueryContext {
   measuredDays?: boolean;
   /** WU-3 card path (cardParam): the dashboard trend and competitor Δ reads, not the analysis tabs. */
   card?: boolean;
+  /**
+   * P12 B101: more dimensions in the same call (backend dims). Each one answers like a separate
+   * fetchTrend of that dimension with the same filters, bucket, measuredDays and card (the window,
+   * measured days, base scan, citation presence and the source/category scan are computed once).
+   * Read the answer with splitTrendDims. Default: not sent, so the query stays as before.
+   */
+  dims?: readonly TrendDimSpec[];
+}
+
+/**
+ * One extra dimension of a dims call: metrics/top as in TrendRequest (omitted = the backend
+ * default of that dimension / the request top). brand is only the primary dimension (brand_key
+ * and split_own belong to it).
+ */
+export interface TrendDimSpec {
+  dimension: Exclude<TrendDimension, "brand">;
+  metrics?: readonly TrendMetric[];
+  top?: number;
 }
 
 export interface TrendResponse {
@@ -173,9 +193,15 @@ export interface TrendResponse {
   meta: ApiMeta;
 }
 
+/** The backend dims item of a spec: `dimension[:metric,…][@top]`. */
+export function dimsParam(spec: TrendDimSpec): string {
+  const metrics = spec.metrics?.length ? `:${[...new Set(spec.metrics)].join(",")}` : "";
+  return `${spec.dimension}${metrics}${spec.top !== undefined ? `@${spec.top}` : ""}`;
+}
+
 /** GET /v1/trend for the screen's filters (one call, deduped in the request). */
 export async function fetchTrend(filters: StandardFilters, req: TrendRequest): Promise<TrendResponse> {
-  const { bucket, dimension = "none", metrics, top, brandKeys, splitOwn, measuredDays, card, ...ctx } = req;
+  const { bucket, dimension = "none", metrics, top, brandKeys, splitOwn, measuredDays, card, dims, ...ctx } = req;
   const { query, cf } = analysisQuery(filters, ctx);
   const extra: {
     bucket: TrendBucketName;
@@ -186,6 +212,7 @@ export async function fetchTrend(filters: StandardFilters, req: TrendRequest): P
     split_own?: boolean;
     measured_days?: boolean;
     card?: true;
+    dims?: string[];
   } = { bucket, dimension, ...cardParam(ctx.surface, card) };
   if (metrics?.length) extra.metrics = [...new Set(metrics)];
   if (top !== undefined) extra.top = top;
@@ -194,8 +221,30 @@ export async function fetchTrend(filters: StandardFilters, req: TrendRequest): P
     extra.split_own = splitOwn ?? true;
   }
   if (measuredDays === false) extra.measured_days = false;
+  if (dims?.length) extra.dims = dims.map(dimsParam);
   const res = await hghGet("/v1/trend", { query: withParams(query, extra), cf });
   return { data: res.data, meta: res.meta };
+}
+
+/**
+ * A dims answer -> one TrendResponse per dimension (the primary first), each shaped like the
+ * answer of a separate fetchTrend of that dimension: bucket, buckets and own_label shared,
+ * dimension and series from the block, meta = the block meta (the primary keeps the top-level
+ * meta). The primary data carries no dims. An answer without dims gives the primary only.
+ */
+export function splitTrendDims(res: TrendResponse): Map<TrendDimension, TrendResponse> {
+  const { dims, ...data } = res.data;
+  const out = new Map<TrendDimension, TrendResponse>([[data.dimension, { data, meta: res.meta }]]);
+  for (const b of dims ?? []) out.set(b.dimension, { data: { ...data, dimension: b.dimension, series: b.series }, meta: b.meta });
+  return out;
+}
+
+/** fetchTrend with dims, split per dimension (splitTrendDims). One call. */
+export async function fetchTrendDims(
+  filters: StandardFilters,
+  req: TrendRequest & { dims: readonly TrendDimSpec[] },
+): Promise<Map<TrendDimension, TrendResponse>> {
+  return splitTrendDims(await fetchTrend(filters, req));
 }
 
 // ── point helpers ────────────────────────────────────────────────────────────

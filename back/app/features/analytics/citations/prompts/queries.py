@@ -13,6 +13,9 @@
 - 문장 2(answer_refs_sql): 페이지에 실린 프롬프트의 답변 표본(행당 상위 8). rd.answer ⋈ rd.job(PK) 만. 출처 축이 있으면 그 출처 인용이
   있는 답변만, 인용 수도 그 출처 인용만(rd.citation 상관 집계, core citation_where 3술어).
 정렬은 현행과 같다: 인용 수 내림차순, prompt_id 오름차순(키셋은 (-cites, prompt_id) 오름차순 행 비교).
+선택 파라미터(P12 B099, 기본 = 종전 문장 그대로): fields=text 면 pr 의 엔진 array_agg 와 퍼널(rd.dim_taxon) 조인을 빼고(NULL 열),
+both=True 면 같은 c(물리화)에서 반대 버킷의 첫 페이지(rows_other)를 한 열 더 낸다(m·pe·pr·c 계산 1회). include_refs=false 는 서비스가
+문장 2 를 건너뛴다.
 """
 from __future__ import annotations
 
@@ -35,10 +38,15 @@ def like_pattern(q: str) -> str:
 
 
 def bucket_page_sql(plan: CountsPlan, *, owned: bool, q: str | None, cursor: Cursor | None, limit: int,
-                    ms: MeasureScope | None = None) -> Sql:
+                    ms: MeasureScope | None = None, fields: str = "all", both: bool = False) -> Sql:
     """문장 1. plan 은 plan_counts(ms, win, group_by=("prompt", "engine"), parts=("citations",)) 결과(역할 main + 선택 cross, 또는
     출처 축이면 main(건수만) + scan). 반환 열: n_owned, n_uncited, total, rows(json 배열: prompt_key·prompt_id·text·funnel·cites·engine_keys,
-    최대 limit+1)."""
+    최대 limit+1). fields='text' 면 rows 의 funnel·engine_keys 가 null(계산 안 함). both=True 면 rows_other(반대 버킷 첫 페이지, 같은 q,
+    최대 limit+1, 키셋 없음: cursor 는 None 이어야 한다)를 더 낸다."""
+    if fields not in ("all", "text"):
+        raise ValueError(f"fields 는 all|text: {fields}")
+    if both and cursor is not None:
+        raise ValueError("both 는 커서 없는 첫 페이지만")
     roles = dict(plan.statements)
     if set(roles) - {"main", "cross", "scan"} or "main" not in roles:
         raise ValueError(f"프롬프트별 인용 계획은 main(+cross|scan) 문장만 지원: {sorted(roles)}")
@@ -49,10 +57,30 @@ def bucket_page_sql(plan: CountsPlan, *, owned: bool, q: str | None, cursor: Cur
     params = {**main.params, **(cross.params if cross else {})}
     b = Binder("k")
     bucket_where = [f"c.owned = {b.v(owned, 'bool')}"]
+    q_where: list[str] = []
     if q:
-        bucket_where.append(f"c.text ILIKE {b.v(like_pattern(q), 'text')} ESCAPE '\\'")
+        q_where = [f"c.text ILIKE {b.v(like_pattern(q), 'text')} ESCAPE '\\'"]
+        bucket_where += q_where
     ks = keyset_predicate(KEYSET_COLS, "asc", cursor, b)
     page_where = f"\n    WHERE {ks}" if ks else ""
+    if fields == "text":     # 퍼널·엔진 목록을 만들지 않는다(행 JSON 모양은 같고 두 값이 null)
+        pr_engines = ""
+        c_cols = "pr.prompt_key, pr.cites, pr.owned, NULL::int2[] AS engine_keys, dp.prompt_id, dp.text, NULL::text AS funnel"
+        taxon = ""
+    else:
+        pr_engines = ",\n         array_agg(pe.engine_key ORDER BY pe.engine_key) AS engine_keys"
+        c_cols = "pr.prompt_key, pr.cites, pr.owned, pr.engine_keys, dp.prompt_id, dp.text, t.code AS funnel"
+        taxon = "\n    LEFT JOIN rd.dim_taxon t ON t.taxon_key = dp.funnel_key AND t.axis = 'funnel'"
+    lim = b.v(limit + 1, "int4")
+    rows_json = ("coalesce(json_agg(json_build_object('prompt_key', p.prompt_key, 'prompt_id', p.prompt_id, 'text', p.text,\n"
+                 "                                                  'funnel', p.funnel, 'cites', p.cites, 'engine_keys', p.engine_keys)\n"
+                 "                                ORDER BY p.cites DESC, p.prompt_id), '[]'::json)")
+    other_cte = other_col = ""
+    if both:                 # 반대 버킷 첫 페이지: 같은 c(물리화)·같은 q·같은 정렬(키셋 없음)
+        other_where = [f"c.owned = {b.v(not owned, 'bool')}", *q_where]
+        other_cte = f",\nbo AS (SELECT c.* FROM c WHERE {' AND '.join(other_where)})"
+        other_col = (f",\n       (SELECT {rows_json}\n"
+                     f"          FROM (SELECT bo.* FROM bo ORDER BY bo.cites DESC, bo.prompt_id LIMIT {lim}) p) AS rows_other")
     txt = (
         f"WITH m AS (\n{main.text}\n),\n"
         f"x AS (\n{cross.text if cross else _EMPTY_CROSS}\n),\n"
@@ -62,23 +90,19 @@ def bucket_page_sql(plan: CountsPlan, *, owned: bool, q: str | None, cursor: Cur
         "    FROM m LEFT JOIN x ON x.prompt_key = m.prompt_key AND x.engine_key = m.engine_key\n"
         "   WHERE m.cit_total > 0),\n"
         "pr AS (\n"
-        "  SELECT pe.prompt_key, sum(pe.cites)::int8 AS cites, sum(pe.owned_cites) > 0 AS owned,\n"
-        "         array_agg(pe.engine_key ORDER BY pe.engine_key) AS engine_keys\n"
+        f"  SELECT pe.prompt_key, sum(pe.cites)::int8 AS cites, sum(pe.owned_cites) > 0 AS owned{pr_engines}\n"
         "    FROM pe GROUP BY pe.prompt_key),\n"
         "c AS MATERIALIZED (\n"
-        "  SELECT pr.prompt_key, pr.cites, pr.owned, pr.engine_keys, dp.prompt_id, dp.text, t.code AS funnel\n"
-        f"    FROM pr JOIN {fact_tables(ms).prompt} dp ON dp.prompt_key = pr.prompt_key\n"
-        "    LEFT JOIN rd.dim_taxon t ON t.taxon_key = dp.funnel_key AND t.axis = 'funnel'),\n"
-        f"b AS (SELECT c.* FROM c WHERE {' AND '.join(bucket_where)})\n"
+        f"  SELECT {c_cols}\n"
+        f"    FROM pr JOIN {fact_tables(ms).prompt} dp ON dp.prompt_key = pr.prompt_key{taxon}),\n"
+        f"b AS (SELECT c.* FROM c WHERE {' AND '.join(bucket_where)}){other_cte}\n"
         "SELECT (SELECT count(*) FILTER (WHERE c.owned) FROM c) AS n_owned,\n"
         "       (SELECT count(*) FILTER (WHERE NOT c.owned) FROM c) AS n_uncited,\n"
         "       (SELECT count(*) FROM b) AS total,\n"
-        "       (SELECT coalesce(json_agg(json_build_object('prompt_key', p.prompt_key, 'prompt_id', p.prompt_id, 'text', p.text,\n"
-        "                                                  'funnel', p.funnel, 'cites', p.cites, 'engine_keys', p.engine_keys)\n"
-        "                                ORDER BY p.cites DESC, p.prompt_id), '[]'::json)\n"
+        f"       (SELECT {rows_json}\n"
         "          FROM (SELECT b.* FROM b"
         f"{page_where}\n"
-        f"                 ORDER BY b.cites DESC, b.prompt_id LIMIT {b.v(limit + 1, 'int4')}) p) AS rows"
+        f"                 ORDER BY b.cites DESC, b.prompt_id LIMIT {lim}) p) AS rows{other_col}"
     )
     return Sql(txt, {**params, **b.params})
 

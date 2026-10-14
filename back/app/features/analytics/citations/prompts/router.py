@@ -31,6 +31,7 @@ async def get_citations_prompts_0(
     filters = params.common()
     ctx = await resolve_read_context(conn, p, filters, support=service.SUPPORT, custom_fields=custom)
     req = service.PageRequest(owned=params.owned, q=qq, limit=params.limit, cursor=params.cursor,
-                              fh=service.request_hash(filters, params.owned, qq, custom))
+                              fh=service.request_hash(filters, params.owned, qq, custom),
+                              include_refs=params.include_refs, fields=params.fields, both=params.both_buckets)
     win = await service.window_for(ctx, conn)
     return await service.list_prompts(conn, ctx, win, req)

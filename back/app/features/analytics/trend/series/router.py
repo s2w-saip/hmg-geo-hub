@@ -25,4 +25,5 @@ async def get_trend_0(request: Request, p: CurrentUser, conn: RoConn, query: Ann
     """analytics.trend.series: 지표 추이(T-1). from/to 가 없으면 최근 12 버킷(Q9)."""
     return await service.get_trend(conn, p, query, bucket=query.bucket, dimension=query.dimension, metrics=query.metrics,
                                    top=query.top, custom_fields=parse_custom_fields(request.query_params),
-                                   brand_keys=query.brand_key, split_own=query.split_own, with_measured_days=query.measured_days)
+                                   brand_keys=query.brand_key, split_own=query.split_own, with_measured_days=query.measured_days,
+                                   dims=query.dims)

@@ -9,11 +9,17 @@
 """
 from __future__ import annotations
 
+import contextlib
+import uuid
+from collections.abc import Iterator
 from datetime import UTC, date, datetime
+from typing import Any
 
 import pytest
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
 
-from tests.support import ADMIN, CUST_PROJECT, HQ_HYUNDAI, KIA_EU, KIA_US, VENDOR, Sql, Update, needs_db, raw_fetch, staged
+from tests.support import ADMIN, CUST_PROJECT, HQ_HYUNDAI, KIA_EU, KIA_US, VENDOR, Sql, SqlFile, Update, needs_db, raw_fetch, staged
 
 pytestmark = needs_db
 D07, D14 = date(2026, 9, 7), date(2026, 9, 14)
@@ -416,3 +422,153 @@ async def test_a1_measured_days_opt_out(client_as, monkeypatch):
     assert off["data"]["series"] == base["data"]["series"] and off["meta"] == base["meta"]
     br = await get(client_as, HQ_HYUNDAI, {"surface": "global", "dimension": "brand", "measured_days": "false"})
     assert all(x["measured_days"] is None for x in br["data"]["buckets"])
+
+
+# ── P12 성능(기본 응답 불변): 새 경로 응답 = 종전 조합 응답(바이트), 문장 수 감소 ─────────────────────────
+@contextlib.contextmanager
+def recorded() -> Iterator[list[str]]:
+    """이 블록에서 실행된 SQL 문장(모든 엔진)."""
+    seen: list[str] = []
+
+    def before(conn, cursor, statement, parameters, context, executemany):  # noqa: ANN001
+        seen.append(statement)
+    event.listen(Engine, "before_cursor_execute", before)
+    try:
+        yield seen
+    finally:
+        event.remove(Engine, "before_cursor_execute", before)
+
+
+async def p12_pair(client_as, monkeypatch, uid, params: dict[str, Any], patches) -> tuple[dict, int, int]:
+    """(새 응답 JSON, 새 문장 수, 종전 문장 수). 종전 = patches(모듈, 이름, 종전 함수)를 끼운 같은 요청. 응답 바이트가 같아야 한다."""
+    async with client_as(uid) as c:
+        with recorded() as s_new:
+            new = await c.get("/v1/trend", params=params)
+        with monkeypatch.context() as m:
+            for mod, name, fn in patches:
+                m.setattr(mod, name, fn)
+            with recorded() as s_old:
+                old = await c.get("/v1/trend", params=params)
+    assert new.status_code == 200, (params, new.text)
+    assert old.status_code == 200, (params, old.text)
+    assert new.content == old.content, params
+    return new.json(), len(s_new), len(s_old)
+
+
+def b100_patches():
+    """B100 이전: base = core fetch_counts(mentions·gap) 문장 + 비트별 합계 = split_counts(A3) 문장, 경쟁 행 = core brand_rows 전부."""
+    from app.core.measure import brand_rows, fetch_counts
+    from app.features.analytics.trend.series import service as svc
+
+    async def old_split(conn, ms, win, g, bits, mdefs):
+        return await fetch_counts(conn, ms, win, group_by=(g,), parts=("mentions", "gap")), await svc.split_counts(conn, ms, win, g, bits)
+
+    async def old_comp(conn, ms, win, g, *, top, want):
+        return await brand_rows(conn, ms, win, group_by=(g,))
+    return [(svc, "brand_split_counts", old_split), (svc, "competitor_rows", old_comp)]
+
+
+B = {"surface": "global", "dimension": "brand"}
+B100_CASES: list[dict[str, Any]] = [
+    {**B, "split_own": "true", "metrics": ["M01", "M02", "M03", "M04"]},
+    {**B, "split_own": "true", "metrics": ["M02"]},
+    {**B, "split_own": "true", "metrics": ["M01", "M02", "M04"], "top": 1, "card": "true", "measured_days": "false"},
+    {**B, "split_own": "true", "bucket": "week", "metrics": ["M03"]},
+    {**B, "split_own": "true", "bucket": "month", "brand": ["Hyundai", "Kia"]},
+    {**B, "split_own": "true", "engine": "chatgpt", "country": "US"},
+    {**B}, {**B, "top": 1}, {**B, "top": 2, "metrics": ["M04"]}, {**B, "top": 3, "metrics": ["M01", "M03"]},
+    {**B, "from": "2025-01-01", "to": "2025-01-31"},
+]
+
+
+async def _b100_run(client_as, monkeypatch, extra_keys: list[int]) -> list[tuple[str, dict, int, int]]:
+    out = []
+    for uid in (ADMIN, HQ_HYUNDAI, KIA_US):
+        for params in [*B100_CASES, {**B, "top": 1, "brand_key": [str(k) for k in extra_keys]},
+                       {**B, "split_own": "true", "top": 2, "brand_key": [str(k) for k in extra_keys]}]:
+            body, n_new, n_old = await p12_pair(client_as, monkeypatch, uid, params, b100_patches())
+            out.append((str(uid), params, n_new, n_old))
+            split = uid == ADMIN and params.get("split_own") == "true" and body["data"]["buckets"]
+            # split: base·비트 합계 한 문장(-1). 후보에 제외 키가 이미 빠져 경쟁 행·요청 키가 없으면 명부 제외 조회도 돌지 않는다(-1 더)
+            assert n_new <= n_old - (1 if split else 0), (uid, params, n_new, n_old)
+    return out
+
+
+async def test_p12_b100_brand_equals_old_composition(client_as, monkeypatch, settings):
+    """B100: split_own base·비트별 합계 한 문장(요청 지표 열만) + 경쟁 후보 행만 = 종전 조합(두 문장 + 경쟁 행 전부) 응답 바이트.
+    기본 픽스처 · 성능 준비(다회차·인용 숨김·수집 오류 갭) · 명부 제외(Toyota → 다음 순위가 채움) · G20 프로필(노출 단위 열 경로)."""
+    from app.core.config import set_settings
+    from app.core.measure import brand_rows
+    from app.features.analytics.trend.series import service as svc
+    from app.features.analytics.trend.series.tests.test_perf_equiv import AUG_LEAF, SEED, _copy
+
+    async with staged() as conn:
+        smart = await key_of(conn, "SELECT brand_key AS k FROM rd.dim_brand_name WHERE name = 'smart'")
+        tesla = await key_of(conn, "SELECT brand_key AS k FROM rd.dim_brand_name WHERE name = 'Tesla'")
+        await _b100_run(client_as, monkeypatch, [smart, tesla])
+    async with staged(AUG_LEAF, _copy, SqlFile(SEED)):
+        await _b100_run(client_as, monkeypatch, [smart, tesla])
+    toyota_excluded = Update("rd.dim_entity", {"entity_id": uuid.UUID("71000000-0000-4000-8000-000000000001")}, {"registry_role": "excluded"})
+    async with staged(toyota_excluded):
+        await _b100_run(client_as, monkeypatch, [smart])
+        b = await get(client_as, HQ_HYUNDAI, {**B, "top": 1})
+        assert [s["key"] for s in b["data"]["series"] if s["metric"] == "share_of_voice"] == ["own", "Kia"]   # 제외 뒤 다음 순위
+    try:
+        set_settings(settings.model_copy(update={"legacy_profile": "brand_exposure_per_alias"}))
+        async with staged():
+            await _b100_run(client_as, monkeypatch, [smart])
+    finally:
+        set_settings(settings)
+    # 경쟁 행이 실제로 줄어든다(top 1 = 후보 1 브랜드 행만, 종전 = 창의 경쟁 브랜드 행 전부)
+    sizes: list[tuple[int, int]] = []
+    real = svc.competitor_rows
+
+    async def spy(conn, ms, win, g, *, top, want):
+        rows = await real(conn, ms, win, g, top=top, want=want)
+        sizes.append((len(rows), len(await brand_rows(conn, ms, win, group_by=(g,)))))
+        return rows
+    monkeypatch.setattr(svc, "competitor_rows", spy)
+    async with staged():
+        await get(client_as, HQ_HYUNDAI, {**B, "top": 1})
+    assert sizes and all(n < full for n, full in sizes), sizes
+
+
+def b102_patches():
+    """B102 이전: url_rates 가 main 결과를 받지 않고 같은 창 urls 를 다시 센다(live=None)."""
+    from app.features.analytics.trend.series import service as svc
+    real = svc.url_rates
+
+    async def recount(conn, ms, win, **kw):
+        return await real(conn, ms, win, **{**kw, "live": None})
+    return [(svc, "url_rates", recount)]
+
+
+async def test_p12_b102_website_url_rates_reuse_main_counts(client_as, monkeypatch):
+    """B102: 웹사이트 M06·M07(R09) bucket=cycle 은 url_rates 가 main 문장 결과(live)를 받아 urls 재집계 문장 1 을 생략. 응답 바이트 = 종전.
+    주·월 버킷(접기)·엔진 필터(R09 아님)는 종전 경로 그대로(문장 수 같음)."""
+    from app.features.analytics.trend.series import service as svc
+    from app.features.analytics.trend.series.tests.staged import Stage
+    from app.features.analytics.trend.series.tests.staged import staged as trend_staged
+
+    lives: list[bool] = []
+    real = svc.url_rates
+
+    async def spy(conn, ms, win, **kw):
+        lives.append(kw.get("live") is not None)
+        return await real(conn, ms, win, **kw)
+    W = {"surface": "website"}
+    cases = [(W, True), ({**W, "metrics": ["M06", "M07", "citation_accuracy"]}, True), ({**W, "metrics": ["M01", "M06"]}, True),
+             ({**W, "card": "true", "measured_days": "false", "metrics": ["M01", "M02", "M03", "M04", "M05", "M06", "M07", "ACC"]}, True),
+             ({**W, "bucket": "week"}, False), ({**W, "bucket": "month", "metrics": ["M07"]}, False), ({**W, "engine": "gemini"}, False)]
+    for unhide in ([21], []):                                   # 21 = 발행(R09 report) 회차, 숨김 그대로면 인용 계열 갭
+        async with trend_staged(Stage(unhide=unhide)):
+            for params, reuse in cases:
+                _, n_new, n_old = await p12_pair(client_as, monkeypatch, KIA_EU, params, b102_patches())
+                assert n_new == n_old - (1 if reuse else 0), (unhide, params, n_new, n_old)
+                lives.clear()
+                with monkeypatch.context() as m:
+                    m.setattr(svc, "url_rates", spy)
+                    await get(client_as, KIA_EU, params)
+                assert lives == ([True] if reuse else ([False] if params.get("bucket") else [])), (params, lives)
+        body = await get(client_as, KIA_EU, W)
+    assert body["data"]["series"]

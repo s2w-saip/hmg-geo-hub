@@ -1,6 +1,7 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api-types";
 import type { BrandTrendResult, StandardTrendBucket } from "@/lib/db/repositories/scope-aggregates";
+import type { TrendRequest, TrendResponse } from "./trend";
 
 // Trend adapter (T-1): conversions checked against hand-computed values, then legacy/api
 // parity by running the UNCHANGED legacy view builders on the same WORLD:
@@ -543,5 +544,99 @@ describe("week grid: anchor week = API week key, slot label = round date", () =>
       { roundDate: WR[0], anchorWeek: W[0], gapReason: null },
       { roundDate: WR[1], anchorWeek: W[1], gapReason: null },
     ]);
+  });
+});
+
+// ── P12 B101: dims (several dimensions in one call) ─────────────────────────
+describe("dims: one call, one TrendResponse per dimension", () => {
+  type Meta = S["Meta"];
+  const meta = (m: Partial<Meta> = {}): Meta => ({ mode: "cumulative", as_of: R[3], cycles: [...R], ...m });
+  const mix = (metric: string, code: string, key: string, num: number): S["TrendSeries"] => ({
+    metric,
+    code,
+    kind: "ratio",
+    key,
+    label: key,
+    points: R.map((bucket) => ({ bucket, ratio: { num, den: 10 } })),
+  });
+  const shared = { bucket: "cycle" as const, own_label: "HMG", buckets: apiOverview().buckets };
+  const source: S["TrendData"] = { ...shared, dimension: "source", series: [mix("source_share", "M09", "reddit.com", 3)] };
+  const category: S["TrendData"] = { ...shared, dimension: "category", series: [mix("category_share", "M10", "newsMedia", 4)] };
+  const overview = apiOverview();
+
+  it("dimsParam builds the backend item dimension[:metric,…][@top]", () => {
+    expect(T.dimsParam({ dimension: "category", top: 13 })).toBe("category@13");
+    expect(T.dimsParam({ dimension: "none", metrics: ["visibility", "share_of_voice", "visibility"] })).toBe("none:visibility,share_of_voice");
+    expect(T.dimsParam({ dimension: "engine", metrics: ["sentiment"], top: 5 })).toBe("engine:sentiment@5");
+    expect(T.dimsParam({ dimension: "type" })).toBe("type");
+  });
+
+  it("splitTrendDims: each dimension has the shape (and values) of its separate answer", () => {
+    const sourceMeta = meta({ ignored_filters: [] });
+    const categoryMeta = meta({ suppressed: { category_share: "hidden" } });
+    const overviewMeta = meta({ ignored_filters: ["source"] });
+    const combined: TrendResponse = {
+      data: {
+        ...source,
+        dims: [
+          { dimension: "category", series: category.series, meta: categoryMeta },
+          { dimension: "none", series: overview.series, meta: overviewMeta },
+        ],
+      },
+      meta: sourceMeta,
+    };
+    const m = T.splitTrendDims(combined);
+    expect([...m.keys()]).toEqual(["source", "category", "none"]);
+    expect(m.get("source")).toEqual({ data: source, meta: sourceMeta });
+    expect("dims" in m.get("source")!.data).toBe(false);
+    expect(m.get("category")).toEqual({ data: category, meta: categoryMeta });
+    expect(m.get("none")).toEqual({ data: overview, meta: overviewMeta });
+    // the adapters give the same output on a split answer as on the separate answer
+    expect(T.toLiveTrend(m.get("none")!.data)).toEqual(T.toLiveTrend(overview));
+    expect(T.toSeriesViews(m.get("category")!.data)).toEqual(T.toSeriesViews(category));
+    // an answer without dims gives the primary only
+    expect([...T.splitTrendDims({ data: source, meta: sourceMeta }).entries()]).toEqual([["source", { data: source, meta: sourceMeta }]]);
+  });
+
+  describe("fetchTrend query", () => {
+    const log: URL[] = [];
+    beforeEach(async () => {
+      log.length = 0;
+      vi.stubEnv("HGH_API_BASE_URL", "https://api.hgh.test");
+      const { bindHghAuth } = await import("../auth");
+      bindHghAuth({ getAccessToken: async () => "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJ1In0.c2ln" });
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (u: string) => {
+          const url = new URL(String(u));
+          log.push(url);
+          const dims = url.searchParams.getAll("dims");
+          const data = dims.length ? { ...source, dims: [{ dimension: "category", series: category.series, meta: meta() }] } : source;
+          return new Response(JSON.stringify({ data, meta: meta() }), { status: 200, headers: { "content-type": "application/json" } });
+        }),
+      );
+    });
+    afterEach(async () => {
+      const { bindHghAuth } = await import("../auth");
+      bindHghAuth(null);
+      vi.unstubAllEnvs();
+      vi.unstubAllGlobals();
+    });
+
+    it("sends dims only when given; fetchTrendDims splits the one answer", async () => {
+      const req: TrendRequest = { surface: "global", scope: null, bucket: "cycle", dimension: "source", top: 15, measuredDays: false };
+      await T.fetchTrend({}, req);
+      expect(log).toHaveLength(1);
+      expect(log[0].searchParams.has("dims")).toBe(false); // default query unchanged (cache keys as before)
+      const byDim = await T.fetchTrendDims({}, { ...req, dims: [{ dimension: "category", top: 13 }] });
+      expect(log).toHaveLength(2);
+      expect(log[1].searchParams.getAll("dims")).toEqual(["category@13"]);
+      expect(log[1].searchParams.get("dimension")).toBe("source");
+      expect(log[1].searchParams.get("top")).toBe("15");
+      expect(log[1].searchParams.get("measured_days")).toBe("false");
+      expect([...byDim.keys()]).toEqual(["source", "category"]);
+      expect(byDim.get("category")!.data).toEqual(category);
+      expect(byDim.get("source")!.data).toEqual(source);
+    });
   });
 });

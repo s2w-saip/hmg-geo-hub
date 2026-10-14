@@ -9,12 +9,16 @@ Window.where 3술어와 함께 만든다. 이 파일에는 차원·원장 속성
   "그 유형 신호가 있는 당사 답변 수". 술어는 GET /v1/mentions/types(M-2 types_sql)의 당사 행과 같다.
 - measured_days_sql(BG-10): 버킷 답변(cit_in, 계열 합집합 회차)의 rd.job.measured_at KST 고유 일수. rd.job 은 사실 표가 아닌 job 색인
   (answer_key PK)이라 같은 좌표(surface·round_date·cyc_key)로 범위를 좁혀 job_round_idx 를 쓰게 한다.
+- P12(성능, 기본 응답 불변): own_split_counts_sql(base=True)가 dimension=brand base(fetch_counts mentions·gap 의 gap_base)를 같은 스캔에서
+  내고(B100: rd.answer 이중 스캔 제거, 요청 지표가 쓰는 비트 열만), competitor_candidates_sql 이 core 경쟁 행 문장을 감싸 순위 후보 브랜드
+  행만 앱으로 보낸다(B100), mix_pair_sql 이 dims 의 source·category 를 per 한 번으로 낸다(B101).
 """
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 
 from app.core.cycles import Window
+from app.core.entities import EXCLUDED_BRAND_KEYS_SQL
 from app.core.facts import fact_tables
 from app.core.measure import (
     CATEGORY_EXPR,
@@ -23,6 +27,7 @@ from app.core.measure import (
     MeasureScope,
     citation_population,
     citation_where,
+    competitor_rows_sql,
     mention_population,
     own_cols,
     scope_where,
@@ -84,10 +89,17 @@ def measured_days_sql(ms: MeasureScope, win: Window, group: str, families: Seque
 # 당사 열 = core.measure.own_cols) 와 같고 비트 i 의 열에 접미 i 를 붙인다. 필터 축(scope_where)은 own_bits·owner 를 쓰지 않으므로
 # split_own_scopes 의 비트별 스코프와 WHERE 가 같다. 비트 식은 FILTER 안에서만.
 SPLIT_KEYS = ("tracked", "own_mentions", "sent_pos", "sent_neg", "sent_all", "rank_sum", "ranked")
+# B100: 지표(dimension=brand M01~M04)가 읽는 비트별 열. 요청하지 않은 지표의 열은 문장에서 빼고 호출자가 0 으로 채운다(그 지표 지점을 만들지 않는다)
+SPLIT_KEYS_BY_METRIC = {"M01": ("tracked",), "M02": ("own_mentions",), "M03": ("sent_pos", "sent_neg", "sent_all"),
+                        "M04": ("rank_sum", "ranked")}
 
 
-def own_split_counts_sql(ms: MeasureScope, win: Window, group: str, bits: Sequence[int]) -> Sql:
-    """버킷별 answers·total_mentions(공유) + 비트 i 마다 SPLIT_KEYS{i}. 결과를 비트별 fetch_counts 행으로 푸는 것은 호출자."""
+def own_split_counts_sql(ms: MeasureScope, win: Window, group: str, bits: Sequence[int], *, base: bool = False,
+                         keys: Collection[str] | None = None) -> Sql:
+    """버킷별 answers·total_mentions(공유) + 비트 i 마다 SPLIT_KEYS{i}. 결과를 비트별 fetch_counts 행으로 푸는 것은 호출자.
+    base=True(B100): dimension=brand base(core fetch_counts(group_by=(버킷,), parts=('mentions','gap')))의 gap_base·gap_answers 도 같은 스캔에서
+    낸다: WHERE 가 같고(언급 계열만 요청 = 분리 없음) gap 열은 FILTER 없는 count(*)·gap 이라 base 문장 값과 같다. answers·total_mentions 는 공유 열.
+    keys: 비트별로 낼 SPLIT_KEYS 부분집합(None = 전부). 열 순서는 SPLIT_KEYS 순서 그대로."""
     b = Binder("s")
     a = "a"
     name, expr = _bucket(group, a)
@@ -95,15 +107,19 @@ def own_split_counts_sql(ms: MeasureScope, win: Window, group: str, bits: Sequen
     mg = mention_population(ms, a)
     cols = [f"{expr} AS {name}", f"count(*) FILTER (WHERE {mg}) AS answers",
             f"coalesce(sum({a}.ment_total) FILTER (WHERE {mg}), 0) AS total_mentions"]
+    if base:
+        cols += ["count(*) AS gap_base", f"count(*) FILTER (WHERE {a}.gap) AS gap_answers"]
+    want = set(SPLIT_KEYS if keys is None else keys)
     for i, bit in enumerate(bits):
         oc = own_cols((bit,), a)
-        cols += [f"count(*) FILTER (WHERE {mg} AND ({a}.own_mask & {oc.mask}) <> 0) AS tracked{i}",
-                 f"coalesce(sum({oc.ment}) FILTER (WHERE {mg}), 0) AS own_mentions{i}",
-                 f"coalesce(sum({oc.sent_pos}) FILTER (WHERE {mg}), 0) AS sent_pos{i}",
-                 f"coalesce(sum({oc.sent_neg}) FILTER (WHERE {mg}), 0) AS sent_neg{i}",
-                 f"coalesce(sum({oc.sent_all}) FILTER (WHERE {mg}), 0) AS sent_all{i}",
-                 f"coalesce(sum({oc.rank}) FILTER (WHERE {mg} AND {oc.ranked}), 0) AS rank_sum{i}",
-                 f"count(*) FILTER (WHERE {mg} AND {oc.ranked}) AS ranked{i}"]
+        per = {"tracked": f"count(*) FILTER (WHERE {mg} AND ({a}.own_mask & {oc.mask}) <> 0) AS tracked{i}",
+               "own_mentions": f"coalesce(sum({oc.ment}) FILTER (WHERE {mg}), 0) AS own_mentions{i}",
+               "sent_pos": f"coalesce(sum({oc.sent_pos}) FILTER (WHERE {mg}), 0) AS sent_pos{i}",
+               "sent_neg": f"coalesce(sum({oc.sent_neg}) FILTER (WHERE {mg}), 0) AS sent_neg{i}",
+               "sent_all": f"coalesce(sum({oc.sent_all}) FILTER (WHERE {mg}), 0) AS sent_all{i}",
+               "rank_sum": f"coalesce(sum({oc.rank}) FILTER (WHERE {mg} AND {oc.ranked}), 0) AS rank_sum{i}",
+               "ranked": f"count(*) FILTER (WHERE {mg} AND {oc.ranked}) AS ranked{i}"}
+        cols += [per[k] for k in SPLIT_KEYS if k in want]
     t = f"SELECT {', '.join(cols)}\n  FROM {fact_tables(ms).answer} {a}\n WHERE {' AND '.join(w)}\n GROUP BY 1"
     return b.sql(t)
 
@@ -124,6 +140,27 @@ SELECT b.brand_key, b.name
   FROM rd.dim_brand_name b
  WHERE b.name = ANY(CAST(:names AS text[]))
 """
+
+
+# B100 경쟁 계열 후보(dimension=brand). 예전에는 core.measure.brand_rows(창의 경쟁 브랜드 × 버킷 전부)를 앱으로 받아 top + 요청 키만 썼다.
+# core.measure.competitor_rows_sql 문장(술어·열 그대로)을 r 로 감싸 순위 후보 브랜드의 행만 낸다. 후보 = 창 합계(mentions)가 top 번째로 큰
+# 합계(중복 포함) 이상인 브랜드(키 0·명부 제외 키(core.entities 와 같은 문장)는 순위 전에 빠지므로 합계 계산에서도 뺀다) ∪ 요청 brand_key[].
+# 합계가 그보다 작은 브랜드는 (합계 내림차순, lc_key) 순위에서 top 안에 들 수 없으므로 선정·값이 같고, 경계 동률은 후보에 전부 남아
+# 파이썬 rank_brand_items(lc_key, 정본)가 가른다(mix_counts_sql 출처 후보와 같은 규칙). 브랜드 키 하나 = 계열 하나일 때만 성립하므로
+# 동결 개명(계열 = (키, 세대 이름), core brand_rows 의 renamed 경로)이 가능한 창은 호출자가 core brand_rows 를 그대로 쓴다.
+# G20(brand_exposure_per_alias): 노출 단위 열 미채움 행이 하나라도 있으면 전 행을 내 core 와 같은 예외(행 수 포함)가 나게 한다.
+def competitor_candidates_sql(ms: MeasureScope, win: Window, group: str, top: int, want: Sequence[int]) -> Sql:
+    inner = competitor_rows_sql(ms, win, group_by=(group,))
+    b = Binder("n")
+    missing = "\n    OR EXISTS (SELECT 1 FROM r m WHERE m.rid_n_missing > 0)" if ms.profile.brand_exposure_per_alias else ""
+    t = (f"WITH r AS (\n{inner.text}\n),\n"
+         "t AS (\n  SELECT r.brand_key, coalesce(sum(r.mentions), 0) AS t\n    FROM r\n"
+         f"   WHERE r.brand_key <> 0 AND r.brand_key NOT IN ({EXCLUDED_BRAND_KEYS_SQL})\n   GROUP BY r.brand_key),\n"
+         f"cut AS (\n  SELECT t.t FROM t ORDER BY t.t DESC LIMIT 1 OFFSET {b.v(max(int(top), 1) - 1, 'int8')})\n"
+         "SELECT r.*\n  FROM r\n"
+         " WHERE r.brand_key IN (SELECT t.brand_key FROM t WHERE t.t >= coalesce((SELECT cut.t FROM cut), 0))\n"
+         f"    OR r.brand_key = ANY({b.ints(want, 'int4')}){missing}")
+    return Sql(t, {**inner.params, **b.params})
 
 # dimension source·category(M09·M10) 구성비 집계(A2). 예전에는 core.measure.citation_counts(group_by=(버킷, source)) 결과(창의
 # (버킷, 출처) 전부, stg 7.4만 행)를 앱으로 받아 출처 라벨·카테고리를 붙이고 파이썬에서 합산·전체 출처 순위(lc_key 2.4만 번)를 냈다.
@@ -157,5 +194,28 @@ def mix_counts_sql(ms: MeasureScope, win: Window, group: str, dimension: str, to
          "SELECT 1, p.bk, p.source_key, p.n, ds.skey, ds.domain\n"
          "  FROM per p JOIN tot ON tot.source_key = p.source_key JOIN rd.dim_source ds ON ds.source_key = p.source_key\n"
          " WHERE tot.t >= coalesce((SELECT cut.t FROM cut), 0)")
+    return b.sql(t)
+
+
+def mix_pair_sql(ms: MeasureScope, win: Window, group: str, source_top: int) -> Sql:
+    """B101 dims 에 source·category 가 함께 있을 때: mix_counts_sql 두 문장(per 를 각각 계산)을 per 한 번으로. part 0 = 버킷 전체 인용 수,
+    part 1 = source 후보 행(mix_counts_sql(dimension='source', top=source_top) 의 part 1 과 같은 식), part 2 = (버킷, 유효 카테고리) 합
+    (mix_counts_sql(dimension='category') 의 part 1 과 같은 식). 카테고리 쪽 top 은 파이썬이 자른다(category 문장도 top 을 SQL 에 쓰지 않는다)."""
+    b = Binder("x")
+    _, expr = _bucket(group, "c")
+    per = (f"per AS (\n  SELECT {expr} AS bk, c.source_key, count(*) AS n\n    FROM {fact_tables(ms).citation} c\n"
+           f"   WHERE {' AND '.join(citation_where(ms, win, 'c', b))}\n   GROUP BY 1, 2)")
+    head = "SELECT 0 AS part, p.bk, NULL::int4 AS dkey, sum(p.n)::int8 AS n, NULL::text AS skey, NULL::text AS domain\n  FROM per p GROUP BY p.bk"
+    t = (f"WITH {per},\n"
+         "tot AS (\n  SELECT p.source_key, sum(p.n) AS t\n    FROM per p JOIN rd.dim_source ds ON ds.source_key = p.source_key\n"
+         "   GROUP BY p.source_key),\n"
+         f"cut AS (\n  SELECT tot.t FROM tot ORDER BY tot.t DESC LIMIT 1 OFFSET {b.v(max(int(source_top), 1) - 1, 'int8')})\n"
+         f"{head}\nUNION ALL\n"
+         "SELECT 1, p.bk, p.source_key, p.n, ds.skey, ds.domain\n"
+         "  FROM per p JOIN tot ON tot.source_key = p.source_key JOIN rd.dim_source ds ON ds.source_key = p.source_key\n"
+         " WHERE tot.t >= coalesce((SELECT cut.t FROM cut), 0)\nUNION ALL\n"
+         f"SELECT 2, p.bk, ({CATEGORY_EXPR})::int4, sum(p.n)::int8, NULL::text, NULL::text\n"
+         f"  FROM per p JOIN rd.dim_source ds ON ds.source_key = p.source_key {OVERRIDE_JOIN}\n"
+         " GROUP BY p.bk, 3")
     return b.sql(t)
 

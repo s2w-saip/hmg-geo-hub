@@ -9,6 +9,9 @@ C-3 프롬프트별 인용(자사 owned / 자사 미인용 uncited 버킷)
 - 억제(meta.suppressed): 스냅샷 회차 없음 '*': no_active_snapshot, 창의 회차가 전부 인용 숨김 'citations': hidden.
 - BG-01: global 도 lang[] 을 받는다(같은 화면의 /domains·/sources 와 같은 모집단). 답변 언어 축이라 rd.answer·rd.citation 의 lang_key 로
   좁히고, 글로벌 자사 판정은 core OwnerScope 가 언어로 허용 배열을 좁혀 원소 스캔(scan 모드)으로 센다(core plan_counts 가 고른다).
+- 선택 파라미터(P12 B099, 기본 = 종전): include_refs=false 면 답변 표본 문장 생략(answers = []), fields=text 면 퍼널·엔진 생략
+  (funnel = null, providers = []), both_buckets=true 면 같은 문장 1 이 반대 버킷 첫 페이지를 함께 내고(other_bucket) 답변 표본은 두 페이지
+  프롬프트를 한 문장으로 센다(행당 표본은 프롬프트별 창 함수라 다른 프롬프트와 섞여도 같다).
 """
 from __future__ import annotations
 
@@ -46,6 +49,9 @@ class PageRequest:
     limit: int
     cursor: str | None
     fh: str
+    include_refs: bool = True        # P12 B099 선택 파라미터(기본 = 종전)
+    fields: str = "all"
+    both: bool = False
 
 
 def request_hash(filters: CommonFilters, owned: bool, q: str | None, custom: dict[str, list[str]]) -> str:
@@ -71,7 +77,7 @@ async def window_for(ctx: ReadContext, conn: Any) -> Window:
 
 def _empty(ctx: ReadContext, win: Window, req: PageRequest, suppressed: dict[str, str]) -> Envelope[CitationPromptsData]:
     return Envelope[CitationPromptsData](
-        data=CitationPromptsData(items=[], counts=PromptCounts(owned=0, uncited=0)),
+        data=CitationPromptsData(items=[], counts=PromptCounts(owned=0, uncited=0), other_bucket=[] if req.both else None),
         meta=build_meta(mode=win.mode, window=win, ctx=ctx, suppressed=suppressed, page=Page(next_cursor=None, limit=req.limit, total=0)))
 
 
@@ -84,27 +90,31 @@ async def list_prompts(conn: Any, ctx: ReadContext, win: Window, req: PageReques
     ms = ctx.measure()
     # 인용 수 = 호스트 있는 인용(현행 인용 화면 프롬프트 목록도 도메인 NULL 인용을 뺀다): ⑤ 분모가 아니므로 m05_den=False(G21A, WU-5)
     plan = plan_counts(ms, win, group_by=("prompt", "engine"), parts=("citations",), m05_den=False)
-    q1 = bucket_page_sql(plan, owned=req.owned, q=req.q, cursor=cur, limit=req.limit, ms=ms)
+    q1 = bucket_page_sql(plan, owned=req.owned, q=req.q, cursor=cur, limit=req.limit, ms=ms, fields=req.fields, both=req.both)
     res = await fetch_keyset(conn, q1.text, q1.params, cursor=cur)   # 커서 값이 DB 입력 오류를 내면 422 cursor_invalid(최후 방어)
-    head = res[0] if res else {"n_owned": 0, "n_uncited": 0, "total": 0, "rows": []}
+    head = res[0] if res else {"n_owned": 0, "n_uncited": 0, "total": 0, "rows": [], "rows_other": []}
     rows: list[dict[str, Any]] = list(head["rows"] or [])
     page, nxt = keyset_page(rows, req.limit, lambda r: (-int(r["cites"]), uuid.UUID(str(r["prompt_id"]))),
                             sort=SORT, dir="asc", fh=req.fh, generation=win.generation)
+    other = list(head.get("rows_other") or [])[:req.limit] if req.both else []     # 반대 버킷 첫 페이지(다음 커서 없음)
 
     engine_code = {k: code for code, (k, _) in ctx.refs.engines.items()}
     geo_code = {c.geo_key: c.code for c in ctx.refs.countries.values()}
     refs_by: dict[int, list[AnswerRef]] = defaultdict(list)
-    if page:
-        q2 = answer_refs_sql(ms, win, [int(r["prompt_key"]) for r in page], ANSWER_SAMPLE_MAX)
+    if (page or other) and req.include_refs:
+        q2 = answer_refs_sql(ms, win, [int(r["prompt_key"]) for r in [*page, *other]], ANSWER_SAMPLE_MAX)
         for r in await fetch_all(conn, q2.text, q2.params):
             refs_by[int(r["prompt_key"])].append(AnswerRef(job_id=r["job_id"], provider=engine_code.get(int(r["engine_key"]), ""),
                                                            region=geo_code.get(int(r["geo_key"])) or None, citations_in_answer=int(r["cites"])))
 
-    items = [PromptRow(prompt_id=r["prompt_id"], text=r["text"] or "", funnel=r["funnel"], citations=int(r["cites"]),
-                       providers=sorted({engine_code.get(int(k), "") for k in (r["engine_keys"] or [])} - {""}),
-                       answers=refs_by.get(int(r["prompt_key"]), []))
-             for r in page]
-    data = CitationPromptsData(items=items, counts=PromptCounts(owned=int(head["n_owned"] or 0), uncited=int(head["n_uncited"] or 0)))
+    def row_of(r: dict[str, Any]) -> PromptRow:
+        return PromptRow(prompt_id=r["prompt_id"], text=r["text"] or "", funnel=r["funnel"], citations=int(r["cites"]),
+                         providers=sorted({engine_code.get(int(k), "") for k in (r["engine_keys"] or [])} - {""}),
+                         answers=refs_by.get(int(r["prompt_key"]), []))
+
+    items = [row_of(r) for r in page]
+    data = CitationPromptsData(items=items, counts=PromptCounts(owned=int(head["n_owned"] or 0), uncited=int(head["n_uncited"] or 0)),
+                               other_bucket=[row_of(r) for r in other] if req.both else None)
     meta = build_meta(mode=win.mode, window=win, ctx=ctx,
                       page=Page(next_cursor=nxt, limit=req.limit, total=int(head["total"] or 0)))
     return Envelope[CitationPromptsData](data=data, meta=meta)

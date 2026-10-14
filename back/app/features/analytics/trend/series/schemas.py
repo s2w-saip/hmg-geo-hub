@@ -21,6 +21,9 @@
 - D13 split_own=true(dimension=brand 전용): 관점 브랜드가 여럿(관점 비트 둘 이상)이면 합친 'own' 계열 대신 관점 브랜드별 당사 계열
   (key = own_brand_code = 그 브랜드 brand_code, is_own=true, brand_key = 같은 이름의 rd.dim_brand_name 키). 관점이 하나면 기존과 같다(합친 1행).
   행 키 계약: 분리 행의 정본 키는 own_brand_code, mentions 그룹과 잇는 키는 brand_key(둘 다 이름 = brand_code 규칙, 검증 V1).
+- P12 B101 dims(선택, 반복): 'dimension[:metric,…][@top]' 항목마다 그 차원을 같은 요청에서 함께 낸다(data.dims[]). 항목 하나의
+  {dimension, series, meta} = 같은 필터·bucket·card·measured_days 로 그 차원만 따로 부른 응답의 data.series·meta 와 같다(buckets·own_label 은
+  공유). 창·측정 일수는 한 번, (버킷) base 행·인용 계열 자리 유무·출처/카테고리 구성비 문장은 차원 사이에 나눠 쓴다. 생략하면 data.dims 키가 없다.
 """
 from __future__ import annotations
 
@@ -29,7 +32,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.core.envelope import RankAvg, Ratio
+from app.core.envelope import Meta, RankAvg, Ratio
 from app.core.filters import CommonFilters
 
 INT4_MAX = 2**31 - 1              # rd.dim_brand_name.brand_key int4: 넘는 값은 바인드 전에 422
@@ -54,6 +57,11 @@ class TrendQuery(CommonFilters):
     measured_days: bool = Field(True, description=(
         "성능 A1(추가형): buckets[].measured_days 계산 여부. 기본 true = 계산(종전과 같다). false 면 계산하지 않고 모든 버킷의 "
         "measured_days 를 null 로 낸다(rd.job 조인 문장 생략). 결과 캐시 키에는 원문 쿼리로 들어간다(선언 파라미터)"))
+    dims: list[str] = Field(default_factory=list, max_length=5, description=(
+        "P12 B101(추가형): 같은 요청에서 함께 낼 차원(반복). 항목 = 'dimension[:metric,…][@top]'(dimension = none|engine|type|source|category, "
+        "metric 은 metrics 와 같은 이름·코드, 생략 = 그 차원 기본 세트, top 생략 = 요청 top). data.dims[] 에 항목 순서로 {dimension, series, meta}: "
+        "그 차원만 따로 부른 응답(같은 필터·bucket·card·measured_days)의 series·meta 와 같다. brand 는 dimension 으로만, 차원 중복·형식 오류 422. "
+        "생략 = 종전(data.dims 키 없음)"))
 
     @field_validator("brand_key")
     @classmethod
@@ -96,6 +104,13 @@ class TrendSeries(BaseModel):
     points: list[TrendPoint]
 
 
+class TrendDimBlock(BaseModel):
+    """B101 dims 항목 하나의 결과: 그 차원만 따로 부른 응답의 data.series·meta 와 같다(buckets·own_label 은 TrendData 와 공유)."""
+    dimension: Dimension
+    series: list[TrendSeries]
+    meta: Meta = Field(description="그 차원 단일 요청의 meta(suppressed·ignored_filters 는 그 차원 지표로 판정)")
+
+
 class TrendData(BaseModel):
     bucket: Bucket
     dimension: Dimension
@@ -103,3 +118,5 @@ class TrendData(BaseModel):
                                        "둘 이상이면 엄브렐러 brand_code(app.brand, 픽스처·운영 'HMG')")
     buckets: list[TrendBucket]
     series: list[TrendSeries]
+    dims: list[TrendDimBlock] | None = Field(None, exclude_if=lambda v: v is None, description=(
+        "P12 B101: 쿼리 dims 를 줄 때만 실린다(그 밖 응답에는 키가 없다). 항목 순서 = 쿼리 dims 순서"))

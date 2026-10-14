@@ -4,12 +4,20 @@
 - data.items[]  : 프롬프트 행(버킷 하나의 키셋 페이지). 내부 정수 키(prompt_key·answer_key·engine_key·geo_key)는 싣지 않는다.
 - data.counts   : 현재 필터 창의 두 버킷 프롬프트 수(owned = 자사 인용 있음, uncited = 인용은 있으나 자사 0). q 와 무관한 탭 카운트.
 - meta.page     : next_cursor·limit·total(total = 요청 버킷에서 q 를 적용한 행 수).
+
+선택 파라미터(P12 B099, 추가형: 기본값 = 종전 응답 바이트 그대로)
+- include_refs=false : 행당 답변 표본(answers) 문장을 돌리지 않는다(items[].answers = []).
+- fields=text        : 퍼널(rd.dim_taxon 조인)·AI 엔진(array_agg)을 계산하지 않는다(items[].funnel = null, providers = []). 정렬·인용 수·
+                       버킷 판정·카운트는 같다.
+- both_buckets=true  : 같은 집계 한 번으로 반대 버킷(owned 의 반대)의 첫 페이지(같은 q·limit·정렬)를 data.other_bucket 에 함께 싣는다.
+                       items·counts·meta.page 는 요청 버킷 그대로. cursor 와 함께 줄 수 없다(422). 생략·false 면 other_bucket 키가 없다.
 """
 from __future__ import annotations
 
 import uuid
+from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.core.envelope import ListData
 from app.core.filters import CommonFilters
@@ -26,10 +34,24 @@ class PromptsQuery(CommonFilters):
     q: str | None = Field(None, max_length=Q_MAX, description="프롬프트 텍스트 부분 일치(대소문자 무시, 와일드카드는 글자 그대로)")
     limit: int = Field(DEFAULT_LIMIT, ge=1, le=MAX_LIMIT)
     cursor: str | None = Field(None, max_length=4096, description="이전 응답 meta.page.next_cursor")
+    include_refs: bool = Field(True, description=(
+        "P12 B099: false = 행당 답변 표본 문장을 돌리지 않고 items[].answers 를 빈 배열로 둔다(건수만 읽는 분할 카드용). 다른 값은 같다"))
+    fields: Literal["all", "text"] = Field("all", description=(
+        "P12 B099: text = 퍼널·AI 엔진을 계산하지 않는다(items[].funnel = null, providers = []). 정렬·citations·버킷·카운트는 같다"))
+    both_buckets: bool = Field(False, description=(
+        "P12 B099: true = 같은 집계 한 번으로 반대 버킷(owned 의 반대)의 첫 페이지(같은 q·limit·정렬·include_refs·fields)를 "
+        "data.other_bucket 에 함께 싣는다. items·counts·meta.page 는 요청 버킷 그대로. cursor 와 함께 줄 수 없다"))
+
+    @model_validator(mode="after")
+    def _both_without_cursor(self) -> PromptsQuery:
+        if self.both_buckets and self.cursor:
+            raise ValueError("both_buckets 는 cursor 와 함께 줄 수 없다(커서는 한 버킷의 페이지)")
+        return self
 
     def common(self) -> CommonFilters:
         """추가 파라미터를 뺀 공통 필터(커서 필터 해시 입력)."""
-        return CommonFilters.model_validate(self.model_dump(by_alias=True, exclude={"owned", "q", "limit", "cursor"}))
+        return CommonFilters.model_validate(self.model_dump(
+            by_alias=True, exclude={"owned", "q", "limit", "cursor", "include_refs", "fields", "both_buckets"}))
 
 
 class AnswerRef(BaseModel):
@@ -56,3 +78,6 @@ class PromptCounts(BaseModel):
 
 class CitationPromptsData(ListData[PromptRow]):
     counts: PromptCounts
+    other_bucket: list[PromptRow] | None = Field(None, exclude_if=lambda v: v is None, description=(
+        "both_buckets=true 일 때만 실린다(그 밖 응답에는 키가 없다): 반대 버킷의 첫 페이지(같은 q·limit·정렬). "
+        "그 버킷 건수는 counts, 다음 페이지는 그 버킷으로 따로 요청한다"))
