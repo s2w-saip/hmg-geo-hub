@@ -479,3 +479,52 @@ async def test_competitor_sources_cap_and_meta_truncated_u72(client_as, monkeypa
         monkeypatch.setattr(domains_service, "COMPETITOR_SOURCES_MAX", 3)                  # 정확히 상한 = 잘림 아님
         body = (await get(client_as, HQ_HYUNDAI, **G, competitor_sources="true")).json()
         assert len(body["data"]["competitor_sources"]) == 3 and body["meta"]["truncated"] == {"competitor_sources": False}
+
+
+async def test_b012_card_competitor_sources_uncapped(client_as, monkeypatch):
+    """B012: 대시보드 카드(card=true·limit=0)는 competitor_sources 를 브랜드로 접어 값을 내므로 상한이 값의 무음 절단이 된다. 카드 경로는 상한 없이
+    전부(현행 = 상한 없음)라 상한보다 출처가 많아도 카드 값(브랜드 접기) = 상한 없는 목록의 접기 값이고 잘림 표식은 false 다.
+    비카드 요청(limit=0·목록, 카드 목록 limit>0)은 상한·meta.truncated 그대로. 상한을 2 로 줄여 출처 3개 픽스처로 '상한 초과'를 만든다."""
+    def fold(sources: list[dict[str, Any]]) -> dict[str, int]:
+        out: dict[str, int] = {}
+        for x in sources:
+            out[x["brand"] or x["skey"]] = out.get(x["brand"] or x["skey"], 0) + x["citations"]
+        return out
+
+    async with staged(*steps("competitor")):
+        full = (await get(client_as, HQ_HYUNDAI, **G, limit=0, competitor_sources="true")).json()["data"]["competitor_sources"]
+        assert len(full) == 3
+        monkeypatch.setattr(domains_service, "COMPETITOR_SOURCES_MAX", 2)
+        card = (await get(client_as, HQ_HYUNDAI, **G, card="true", limit=0, competitor_sources="true")).json()
+        assert card["data"]["competitor_sources"] == full and card["meta"]["truncated"] == {"competitor_sources": False}
+        assert fold(card["data"]["competitor_sources"]) == fold(full)
+        capped = (await get(client_as, HQ_HYUNDAI, **G, limit=0, competitor_sources="true")).json()
+        assert len(capped["data"]["competitor_sources"]) == 2 and capped["meta"]["truncated"] == {"competitor_sources": True}
+        assert fold(capped["data"]["competitor_sources"]) != fold(full)                       # 상한이 걸리면 접기 값이 달라진다(고친 결함)
+        listed = (await get(client_as, HQ_HYUNDAI, **G, card="true", limit=5, competitor_sources="true")).json()
+        assert len(listed["data"]["competitor_sources"]) == 2 and listed["meta"]["truncated"] == {"competitor_sources": True}
+
+
+# ── B011 내보내기: 파일 7열이 쓰지 않는 계산 생략 ───────────────────────────────────────
+async def test_b011_export_skips_unused_columns_same_file(client_as, monkeypatch):
+    """내보내기 문장은 경쟁사 합·자사/타겟 인용 FILTER 를 세지 않는다(B011). 파일 = 그 계산을 켠 종전 문장의 파일(바이트 동일)."""
+    orig = domains_queries.domains_sql
+    seen: list[dict[str, Any]] = []
+
+    def spy(*a: Any, **k: Any) -> Any:
+        seen.append(k)
+        return orig(*a, **k)
+
+    async with staged(*steps("competitor")):
+        for params in ({"format": "csv"}, {"format": "csv", "sort": "prompts", "q": "o"},
+                       {"format": "csv", "competitor": ["caranddriver.com"], "locale": "en", "rank_basis": "match"},
+                       {"format": "csv", "sort": "coverage", "dir": "asc", "max_rows": 3}):
+            with monkeypatch.context() as m:
+                m.setattr(domains_queries, "domains_sql", spy)
+                new = await get(client_as, HQ_HYUNDAI, EXPORT, **G, **params)
+            with monkeypatch.context() as m:
+                m.setattr(domains_queries, "domains_sql", lambda *a, competitor_totals=True, own_target=True, **k: orig(*a, **k))
+                old = await get(client_as, HQ_HYUNDAI, EXPORT, **G, **params)
+            assert new.status_code == old.status_code == 200, (params, new.text)
+            assert new.content == old.content and len(_csv(new.content)) > 1, params
+    assert seen and all(k.get("competitor_totals") is False and k.get("own_target") is False for k in seen)

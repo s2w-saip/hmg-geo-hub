@@ -143,18 +143,21 @@ gf AS (
 
 def domains_sql(ctx: ReadContext, win: Window, *, limit: int, cursor: Cursor | None, mention_brand_key: int | None,
                 spec: SortSpec | None = None, q: str | None = None, skeys: tuple[str, ...] = (),
-                competitor_category_key: int | None = None, competitor_limit: int = 0, competitor_pick: tuple[str, ...] = (),
-                answers_den: int = 0, host_fold: bool = False) -> Sql:
+                competitor_category_key: int | None = None, competitor_limit: int | None = 0, competitor_pick: tuple[str, ...] = (),
+                answers_den: int = 0, host_fold: bool = False, competitor_totals: bool = True, own_target: bool = True) -> Sql:
     """반환 열: summary(json) · competitors(json) · rows(json, 최대 limit+1) · matched(경쟁사 선택·q·skey 적용 행 수, limit=0 이어도 계산)
     · competitor_sources(json|null). answers_den = 커버리지 분모(answers_den_sql 결과): coverage 정렬 키(반올림 천분율)에만 쓴다.
     competitor_limit > 0 이면 유효 카테고리 = competitor_category_key 인 출처를 인용 수 내림차순으로 싣는다(없는 카테고리면 빈 배열).
-    잘림 판정용으로 competitor_limit + 1 행까지 싣는다(호출자가 상한으로 자르고 넘친 행이 있으면 잘림 표식).
+    잘림 판정용으로 competitor_limit + 1 행까지 싣는다(호출자가 상한으로 자르고 넘친 행이 있으면 잘림 표식). None 이면 상한 없이 전부
+    (대시보드 카드 경로, B012), 0 이면 싣지 않는다(NULL).
     competitor_pick 이 있으면 유효 카테고리 = competitor_category_key 인 행 중 고른 skey 만 남기고 다른 카테고리 행은 그대로 둔다
-    (현행 applyCompetitorPick). rank 는 이 선택 뒤 번호다(요약·경쟁사 합·옵션은 선택과 무관)."""
+    (현행 applyCompetitorPick). rank 는 이 선택 뒤 번호다(요약·경쟁사 합·옵션은 선택과 무관).
+    읽지 않는 계산 끄기(B011, 기본은 전부 계산): competitor_totals=False 면 competitors = '[]'(경쟁사 합 집계 생략), own_target=False 면
+    목록 문장이 자사·타겟 인용 FILTER 를 세지 않는다(own_citations·target_citations·요약 own = 0: 내보내기 7열이 쓰지 않는 열)."""
     ms = ctx.measure()
     b = Binder("d")
     spec = spec or sort_spec("citations", None)
-    own = own_expr(ms, "c", b)
+    own = own_expr(ms, "c", b) if own_target or limit == 0 else None
     where = citation_where(ms, win, "c", b)
     if mention_brand_key is not None:
         where.append(mention_brand_exists(win, "c", mention_brand_key, b, ms))
@@ -173,9 +176,9 @@ def domains_sql(ctx: ReadContext, win: Window, *, limit: int, cursor: Cursor | N
                 f" OR s.skey = ANY({b.v(sorted(set(competitor_pick)), 'text[]')})")
     pick_where = f" WHERE {pick}" if pick else ""
     if limit == 0:                                     # A6: 목록 없이 요약·경쟁사 합·경쟁사 출처·matched 만
-        return _totals_sql(b, own, where, cat_filter, pick, row_where,
+        return _totals_sql(b, own or "", where, cat_filter, pick, row_where,
                            _competitor_sources_sql(b, competitor_category_key, competitor_limit), fold=card_host_fold(ctx, host_fold),
-                           ms=ms)
+                           ms=ms, competitor_totals=competitor_totals)
     den = f"{b.v(max(int(answers_den), 0), 'int8')}::numeric"
     rows_sql = "'[]'::json"
     matched_sql = "(SELECT count(*) FROM m)"          # 검증 D4: limit=0 이어도 q·skey[]·competitor[] 로 좁힌 행 수
@@ -190,13 +193,20 @@ def domains_sql(ctx: ReadContext, win: Window, *, limit: int, cursor: Cursor | N
             f"      ORDER BY {spec.order_by('r')} LIMIT {b.v(limit + 1, 'int4')}) p)")
     comp_sql = _competitor_sources_sql(b, competitor_category_key, competitor_limit)
     # t(합계 1행)는 MATERIALIZED: 인라인이면 계획기가 s 를 1행으로 잘못 추정할 때 합계 집계를 s 행마다 다시 돈다(O(n²), stg 9/25 웹 카드
-    # 5,424 출처 × 5,424 = 4.2s, be/web-card-perf). 한 번 계산하는 형은 추정과 무관하게 같은 값이다
+    # 5,424 출처 × 5,424 = 4.2s, be/web-card-perf). 한 번 계산하는 형은 추정과 무관하게 같은 값이다.
+    # B011: 검색·skey[] 선택이 없으면 match_rank = rank(같은 행·같은 정렬의 row_number)라 두 번째 창 함수를 돌리지 않는다.
+    # 값은 같다(test_perf_equiv 목록 동치)
     fold = card_host_fold(ctx, host_fold)
+    own_col = f"count(*) FILTER (WHERE {own})" if own is not None else "0::int8"
+    tgt_col = "count(*) FILTER (WHERE c.tgt_hit)" if own_target else "0::int8"
+    m_sql = ("SELECT r.*, row_number() OVER (ORDER BY r.citations DESC, r.skey) AS match_rank FROM r WHERE " + " AND ".join(row_where)
+             if row_where else "SELECT r.*, r.rank AS match_rank FROM r")
+    competitors_sql = _COMPETITORS_COL if competitor_totals else _NO_COMPETITORS
     txt = f"""
 WITH g0 AS (
   SELECT c.source_key, c.prompt_key, count(*) AS citations,
-         count(*) FILTER (WHERE {own}) AS own_citations,
-         count(*) FILTER (WHERE c.tgt_hit) AS target_citations,
+         {own_col} AS own_citations,
+         {tgt_col} AS target_citations,
          count(*) FILTER (WHERE c.src_first) AS citing_answers
     FROM {fact_tables(ms).citation} c
    WHERE {' AND '.join(where)}
@@ -219,9 +229,10 @@ r AS (
          CASE WHEN {den} > 0 THEN floor(s.citing_answers * 1000 / {den} + 0.5)::int8 ELSE 0::int8 END AS coverage_pm
     FROM s CROSS JOIN t{pick_where}),
 m AS (
-  SELECT r.*, row_number() OVER (ORDER BY r.citations DESC, r.skey) AS match_rank FROM r{' WHERE ' + ' AND '.join(row_where) if row_where else ''})
+  {m_sql})
 SELECT
-{_SUMMARY_COLS}
+{_SUMMARY_COL}
+  {competitors_sql} AS competitors,
   {rows_sql} AS rows,
   {matched_sql} AS matched,
   {comp_sql} AS competitor_sources
@@ -244,29 +255,32 @@ def _replace_once(txt: str, anchor: str, new: str) -> str:
 
 
 # 요약·경쟁사 합(출처 CTE s 위, 목록·검색·선택과 무관한 전체 모집단). 목록 문장과 limit=0 문장이 같은 조각을 쓴다.
-_SUMMARY_COLS = """  (SELECT json_build_object('citations', coalesce(sum(s.citations), 0), 'own', coalesce(sum(s.own_citations), 0), 'sources', count(*))
-     FROM s) AS summary,
-  (SELECT coalesce(json_agg(json_build_object('brand', bn.name, 'citations', x.citations, 'sources', x.sources)
+_SUMMARY_COL = """  (SELECT json_build_object('citations', coalesce(sum(s.citations), 0), 'own', coalesce(sum(s.own_citations), 0), 'sources', count(*))
+     FROM s) AS summary,"""
+_COMPETITORS_COL = """(SELECT coalesce(json_agg(json_build_object('brand', bn.name, 'citations', x.citations, 'sources', x.sources)
                             ORDER BY x.citations DESC, bn.name), '[]'::json)
      FROM (SELECT s.competitor_brand_key, sum(s.citations) AS citations, count(*) AS sources
              FROM s WHERE s.competitor_brand_key IS NOT NULL GROUP BY s.competitor_brand_key) x
-     JOIN rd.dim_brand_name bn ON bn.brand_key = x.competitor_brand_key) AS competitors,"""
+     JOIN rd.dim_brand_name bn ON bn.brand_key = x.competitor_brand_key)"""
+_NO_COMPETITORS = "'[]'::json"            # include_competitor_totals=false(B011): 경쟁사 합 집계 생략
 
 
-def _competitor_sources_sql(b: Binder, competitor_category_key: int | None, competitor_limit: int) -> str:
-    """BG-20 경쟁사 출처(유효 카테고리 = 공식(경쟁사)) 인용 수 내림차순, 상한 + 1 행(잘림 판정). competitor_limit 0 이면 NULL."""
-    if competitor_limit <= 0:
+def _competitor_sources_sql(b: Binder, competitor_category_key: int | None, competitor_limit: int | None) -> str:
+    """BG-20 경쟁사 출처(유효 카테고리 = 공식(경쟁사)) 인용 수 내림차순, 상한 + 1 행(잘림 판정). competitor_limit 0 이면 NULL,
+    None 이면 상한 없이 전부(대시보드 카드 경로: 출처를 브랜드로 접어 값을 내므로 상한이 값의 무음 절단이 된다, B012)."""
+    if competitor_limit is not None and competitor_limit <= 0:
         return "NULL::json"
     ck = b.v(competitor_category_key if competitor_category_key is not None else -1, "int4")
+    cap = f" LIMIT {b.v(competitor_limit + 1, 'int4')}" if competitor_limit is not None else ""
     return ("(SELECT coalesce(json_agg(x ORDER BY x.citations DESC, x.skey), '[]'::json) FROM (\n"
             "     SELECT s.skey, s.domain, s.citations, bn.name AS brand\n"
             "       FROM s LEFT JOIN rd.dim_brand_name bn ON bn.brand_key = s.competitor_brand_key\n"
             f"      WHERE s.category_key = {ck}\n"
-            f"      ORDER BY s.citations DESC, s.skey LIMIT {b.v(competitor_limit + 1, 'int4')}) x)")
+            f"      ORDER BY s.citations DESC, s.skey{cap}) x)")
 
 
 def _totals_sql(b: Binder, own: str, where: list[str], cat_filter: str, pick: str, row_where: list[str], comp_sql: str, *,
-                fold: bool = False, ms: MeasureScope | None = None) -> Sql:
+                fold: bool = False, ms: MeasureScope | None = None, competitor_totals: bool = True) -> Sql:
     """A6 limit=0(대시보드 경쟁사 행·D8): 목록 문장과 같은 반환 열(summary·competitors·rows='[]'·matched·competitor_sources).
     목록이 없으면 (출처, 프롬프트) 접기(citing_prompts 전용)·순위 창 함수·점유율/커버리지 정렬 키가 필요 없어 rd.citation 을 출처 키로
     한 번에 접는다. 요약·경쟁사 합·경쟁사 출처가 읽는 열(citations·own_citations = 가산)은 두 단계 합과 같다.
@@ -286,7 +300,8 @@ s AS MATERIALIZED (
     FROM g JOIN rd.dim_source ds ON ds.source_key = g.source_key
     {OVERRIDE_JOIN}{cat_filter})
 SELECT
-{_SUMMARY_COLS}
+{_SUMMARY_COL}
+  {_COMPETITORS_COL if competitor_totals else _NO_COMPETITORS} AS competitors,
   '[]'::json AS rows,
   {matched} AS matched,
   {comp_sql} AS competitor_sources

@@ -1,10 +1,10 @@
 import "server-only";
 
 // Drilldown adapter (unit U6): the mention drilldown BFF routes (/api/scope/brand-mention-prompts,
-// /signal-prompts, /brand-citations, /unmeasured-prompts) and their shared route gate. The
-// routes keep their paths and JSON shapes ({prompts}, {domains}, {result}); only the inside
-// switches to the backend. Design 3.3 "공용 드릴다운" row, appendix B 공통 규칙 3·4 and the
-// "공용: 답변 드릴다운·모달" table, 3.5 #4·#5, BG-04, BG-17, BG-18, BG-23..25.
+// /signal-prompts, /brand-citations) and their shared route gate. The routes keep their paths and
+// JSON shapes ({prompts}, {domains}); only the inside switches to the backend. Design 3.3 "공용
+// 드릴다운" row, appendix B 공통 규칙 3·4 and the "공용: 답변 드릴다운·모달" table, 3.5 #4·#5,
+// BG-17, BG-18, BG-23..25.
 //
 //   legacy (lib/scope/server.ts)                           api (this module)
 //   fetchStandard/WebsiteBrandMentionPrompts SRV:3876/5002  loadBrandMentionPrompts  M-3 mode=brand
@@ -12,12 +12,16 @@ import "server-only";
 //   fetchStandard/Website/ProjectSignalPrompts SRV:3923..  loadSignalPrompts        M-3 mode=signal
 //   fetchBrandCitations / fetchWebsiteBrandCitations       loadBrandCitationDomains C-1 mention_brand
 //     (urls, promptList inside each row)                   loadBrandCitationDetail  C-1 /domains/{skey}
-//   fetchStandardUnmeasuredPrompts SRV:2365                loadUnmeasuredPrompts    BG-04
+// (The unmeasured prompts route /api/scope/unmeasured-prompts and its loader were removed: no screen
+// imported its dialog, before or after the switch. GET /v1/kpi/unmeasured-prompts stays in the back.)
 //
 // Targets of mode=brand (BG-17): a competitor row -> mention_brand=<name>; the own row ->
 // own=true, plus own_brand_code=<code> when the row is one brand of a split perspective (D13).
-// Lists are cursor pages (D5) read to the end in the route with an explicit cap (MAX_PAGES):
-// the drilldown table sorts the whole list on the client, as the legacy full answer did.
+// The brand lists are read in ONE request of DRILLDOWN_LIST_LIMIT rows (the former cap of 10 cursor
+// pages x 200; the backend takes limit <= 2000 for these targets): the drilldown table sorts the
+// whole list on the client, as the legacy full answer did. When the backend has more rows than
+// the cap (meta.page.total), the result carries `total` and the table shows the existing
+// "{total}개 중 {shown}개 표시" line; a list that fits carries no `total` (JSON as before).
 //
 // Row rules (hand-checked in drilldown.test.ts):
 //   prompt  id ← prompt_id, promptText ← prompt_text ?? "", mentions ← count, share ← Ratio % (one
@@ -25,17 +29,24 @@ import "server-only";
 //           providerLabel: claude-web and claude-sonnet are both "Claude")
 //   answer  jobId, provider ← label, region, mentionCount ← value, position, measuredAt, runs,
 //           highlights ← terms (BG-18); signal mode keeps the legacy reference: position null,
-//           runs 1, measuredAt null, no highlights (terms are not requested)
-//   domain  domain, citations, share, prompts ← citing_prompts (BG-24), coverageRate ← coverage %,
-//           isOurs ← is_own, category ← the legacy label of the category slug, skey; urls and
-//           promptList are empty until the row opens (citation-domain-table loads the detail)
+//           runs 1, measuredAt null, no highlights (terms are not requested, and lite=true asks the
+//           backend not to compute runs / position / measured_at at all)
+//   domain  domain ← skey (the legacy group key: registrable domain, an official social account
+//           host+path, as citations.ts; the display host would give an account row the same name
+//           and React key as the plain row of its host), citations, share, prompts ←
+//           citing_prompts (BG-24), coverageRate ← coverage %, isOurs ← is_own, category ← the
+//           legacy label of the category slug, skey; urls and promptList are empty until the row
+//           opens (citation-domain-table loads the detail)
 //   detail  urls ← {url, title ?? display url, count ← citations, aiProvider ← labels joined,
 //           promptText ← prompt_text (BG-23), country}; promptList ← prompts with answer refs
-//           (position null, runs 1, no highlights, as the legacy citation references)
+//           (position null, runs 1, no highlights, as the legacy citation references);
+//           urlTotal / promptTotal ← url_total / prompt_total only when the caps cut the lists
 //
 // Route errors (공통 규칙 4): 401 -> 401 {error: "unauthorized"} (legacy); 403 place gate -> 403
-// with the empty shape; project gate -> 404 with the empty shape; backend 404 brand_not_found
-// or 403 -> the empty list; 422 -> 400 with the empty shape; 5xx -> the error response.
+// with the empty shape; project gate -> 404 with the empty shape; backend 404 brand_not_found /
+// unknown skey -> the empty list ("no data"); backend 403 on a brand list or detail -> 403 with
+// the empty shape (thrown, not an empty list: the component shows its existing error state);
+// 422 -> 400 with the empty shape; 5xx -> the error response. The signal list keeps 404/403 -> [].
 //
 // Known differences (U6 numbering; asserted in drilldown.test.ts):
 //   U6-N9  signal list = the top 50 prompts by signal count with 6 answer references each (the
@@ -49,9 +60,6 @@ import "server-only";
 //          (isNonCompetitorMention), the backend keeps rd.answer_brand.competitive rows (the same
 //          rule, ported). The prompt count sums every such row, products rolled up included, on
 //          both sides (PGlite parity: drilldown.parity.test.ts, Toyota and the bare-only "Golf")
-//   U6-N13 unmeasured prompts: total = meta.page.total (before the 200 cap) as legacy; rows carry
-//          the catalog row id (global), the project prompt id (project) or the Scope prompt id
-//          (website)
 //   U6-N14 brand drilldown answer reference value: the brand's total in that answer (brand row plus
 //          its rolled-up products, rd.answer_brand.mention_count); legacy took the first mention row
 //          of the brand in the answer (the prompt count is the same on both sides, U6-N12)
@@ -63,7 +71,6 @@ import "server-only";
 // U6-N12, N14, N15 and N16 are asserted against the unchanged legacy readers on PGlite in
 // drilldown.parity.test.ts.
 import type { MenuGroup, Role } from "@/lib/auth/types";
-import type { UnmeasuredPrompt } from "@/lib/db/repositories/scope-aggregates";
 import type {
   CitationDomainLive,
   CitationPromptLive,
@@ -80,7 +87,6 @@ import type { components } from "../api-types";
 import { hghGet, hghSource } from "../client";
 import { pct1OrZero } from "../convert";
 import { errorKindOf, hghErrorResponse, isHghApiError } from "../errors";
-import { fetchAllPages } from "../paginate";
 import { withParams, type Surface } from "../query";
 import { analysisQuery, canReadAnalysis, type AnalysisQueryContext } from "./filters";
 import { isProjectId } from "./project-gate";
@@ -90,7 +96,6 @@ export type ApiPromptItem = S["app__features__analytics__mentions__prompts__sche
 export type ApiAnswerRef = S["app__features__analytics__mentions__prompts__schemas__AnswerRef"];
 export type ApiDomainRow = S["DomainRow"];
 export type ApiDomainDetail = S["DomainDetailData"];
-export type ApiUnmeasuredPrompt = S["UnmeasuredPrompt"];
 export type SignalKey = NonNullable<S["Target"]["signal"]>;
 
 export const SIGNAL_KEYS: readonly SignalKey[] = [
@@ -105,15 +110,15 @@ export const SIGNAL_KEYS: readonly SignalKey[] = [
   "final_choice",
 ];
 
-/** Page caps for the "read to the end" lists (no unbounded loop, design 2.6). */
-export const MAX_PAGES = 10;
-export const PROMPT_PAGE = 200;
+/**
+ * Cap of the brand lists, read in one request (the former "read to the end" cap: 10 cursor pages x
+ * 200, design 2.6; the backend takes limit <= 2000 for mention_brand / own targets only).
+ */
+export const DRILLDOWN_LIST_LIMIT = 2000;
 export const BRAND_ANSWERS_LIMIT = 50;
 export const SIGNAL_PROMPTS_LIMIT = 50;
 export const SIGNAL_ANSWERS_LIMIT = 6;
-export const DOMAIN_PAGE = 200;
 export const DETAIL_LIMITS = { urls_limit: 10, prompts_limit: 100, answers_limit: 20 } as const;
-export const UNMEASURED_LIMIT = 200;
 
 // ── route target and gate ───────────────────────────────────────────────────
 
@@ -200,9 +205,24 @@ export function gateErrorResponse(e: unknown): Response {
   throw e;
 }
 
-/** Backend answers the routes turn into an empty list (existence hidden, 공통 규칙 4). */
+/** Backend answers the signal list turns into an empty list (existence hidden, 공통 규칙 4). */
 export function isEmptyListError(e: unknown): boolean {
   return isHghApiError(e) && (e.status === 404 || e.status === 403);
+}
+
+/**
+ * Backend answers the brand lists and the source detail turn into an empty list: 404 only
+ * (brand_not_found, an unknown skey = "no data"). A 403 is a refusal, not "no data": it is thrown
+ * and the routes answer 403 with the empty shape (isForbiddenError), so the component shows its
+ * existing error state instead of "no prompts / no sources".
+ */
+export function isNoDataError(e: unknown): boolean {
+  return isHghApiError(e) && e.status === 404;
+}
+
+/** A backend refusal (403) of a brand list or detail read: the routes answer 403 with the empty shape. */
+export function isForbiddenError(e: unknown): boolean {
+  return isHghApiError(e) && e.status === 403;
 }
 
 /** A filter the backend refused (422): the routes answer 400 with the empty shape. */
@@ -247,7 +267,8 @@ export function toMentionAnswer(a: ApiAnswerRef, mode: PromptMode): MentionAnswe
     position: a.position ?? null,
     highlights: { brand: [...(a.terms?.brand ?? [])], model: [...(a.terms?.model ?? [])] },
     measuredAt: a.measured_at ?? null,
-    runs: a.runs,
+    // runs is null only in a lite reply, which the backend gives to mode=signal only (422 otherwise)
+    runs: a.runs ?? 1,
   };
 }
 
@@ -274,10 +295,14 @@ export function categoryLabel(c: ApiDomainRow["category"]): string | null {
   return CATEGORY_LABEL_BY_SLUG.get(c.slug) ?? c.name;
 }
 
-/** C-1 DomainRow -> CitationDomainLive (drilldown loaded when the row opens). */
+/**
+ * C-1 DomainRow -> CitationDomainLive (drilldown loaded when the row opens). The row name is the
+ * legacy group key (skey: an official social account is host+path), as citations.ts: the display
+ * host (domain) is shared by an account row and the plain row of its host.
+ */
 export function toCitationDomain(r: ApiDomainRow): CitationDomainLive {
   return {
-    domain: r.domain,
+    domain: r.skey,
     citations: r.citations,
     share: pct1OrZero(r.share),
     prompts: r.citing_prompts ?? 0,
@@ -294,11 +319,20 @@ export function toCitationDomain(r: ApiDomainRow): CitationDomainLive {
 export interface DomainDrilldown {
   urls: CitationUrlLive[];
   promptList: CitationPromptLive[];
+  /** URLs before the cap (url_total), only when the cap cut the list. */
+  urlTotal?: number;
+  /** Prompts before the cap (prompt_total), only when the cap cut the list. */
+  promptTotal?: number;
+}
+
+/** A total worth reporting: the count before the cap, only when it is larger than what was read. */
+function cutTotal(total: number | null | undefined, shown: number): number | undefined {
+  return typeof total === "number" && total > shown ? total : undefined;
 }
 
 /** C-1 detail -> the row's URL list and prompt list (legacy buildCitationDomains shapes). */
 export function toDomainDrilldown(d: ApiDomainDetail): DomainDrilldown {
-  return {
+  const out: DomainDrilldown = {
     urls: [...d.urls]
       .sort((a, b) => b.citations - a.citations)
       .map((u) => ({
@@ -330,18 +364,11 @@ export function toDomainDrilldown(d: ApiDomainDetail): DomainDrilldown {
         })),
       })),
   };
-}
-
-/** BG-04 row -> the legacy UnmeasuredPrompt. */
-export function toUnmeasuredPrompt(r: ApiUnmeasuredPrompt): UnmeasuredPrompt {
-  return {
-    id: r.prompt_id,
-    text: r.text ?? "",
-    listType: r.list_type ?? null,
-    depth1: r.depth1 ?? null,
-    depth2: r.depth2 ?? null,
-    funnelStage: r.funnel_stage ?? null,
-  };
+  const urlTotal = cutTotal(d.url_total, d.urls.length);
+  const promptTotal = cutTotal(d.prompt_total, d.prompts.length);
+  if (urlTotal !== undefined) out.urlTotal = urlTotal;
+  if (promptTotal !== undefined) out.promptTotal = promptTotal;
+  return out;
 }
 
 // ── loaders ─────────────────────────────────────────────────────────────────
@@ -351,47 +378,57 @@ export type DrilldownContext = AnalysisQueryContext;
 /** mode=brand target (BG-17). */
 export type BrandTarget = { mentionBrand: string } | { own: true; ownBrandCode?: string };
 
+/** The prompts tab list (route JSON {prompts}); total = prompts before the cap, only when it cut the list. */
+export interface BrandPromptsList {
+  prompts: MentionsPromptLive[];
+  total?: number;
+}
+
+/** The citation sources tab list (route JSON {domains}); total = sources before the cap, only when it cut the list. */
+export interface BrandDomainsList {
+  domains: CitationDomainLive[];
+  total?: number;
+}
+
 /**
- * M-3 mode=brand read to the end (MAX_PAGES x PROMPT_PAGE prompts, 50 answer references each,
- * terms=true). brand_not_found (404) or a hidden target (403) -> [].
+ * M-3 mode=brand in one request (DRILLDOWN_LIST_LIMIT prompts, 50 answer references each,
+ * terms=true). brand_not_found (404) -> []; a refusal (403) or a refused filter (422) is thrown.
  */
 export async function loadBrandMentionPrompts(
   filters: StandardFilters,
   ctx: DrilldownContext,
   target: BrandTarget,
-): Promise<MentionsPromptLive[]> {
+): Promise<BrandPromptsList> {
   const { query, cf } = analysisQuery(filters, ctx);
   const targetParams: { mention_brand?: string; own?: boolean; own_brand_code?: string } =
     "own" in target
       ? { own: true, ...(target.ownBrandCode ? { own_brand_code: target.ownBrandCode } : {}) }
       : { mention_brand: target.mentionBrand };
   try {
-    const all = await fetchAllPages<ApiPromptItem>(
-      async (cursor) => {
-        const res = await hghGet("/v1/mentions/prompts", {
-          query: withParams(query, {
-            mode: "brand" as const,
-            ...targetParams,
-            terms: true,
-            limit: PROMPT_PAGE,
-            answers_limit: BRAND_ANSWERS_LIMIT,
-            ...(cursor ? { cursor } : {}),
-          }),
-          cf,
-          retryOn401: true,
-        });
-        return { items: res.data.items, nextCursor: res.meta.page?.next_cursor ?? null };
-      },
-      { maxPages: MAX_PAGES, onLimit: "truncate" },
-    );
-    return all.items.map((i) => toMentionsPrompt(i, "brand"));
+    const res = await hghGet("/v1/mentions/prompts", {
+      query: withParams(query, {
+        mode: "brand" as const,
+        ...targetParams,
+        terms: true,
+        limit: DRILLDOWN_LIST_LIMIT,
+        answers_limit: BRAND_ANSWERS_LIMIT,
+      }),
+      cf,
+      retryOn401: true,
+    });
+    const prompts = res.data.items.map((i) => toMentionsPrompt(i, "brand"));
+    const total = cutTotal(res.meta.page?.total, prompts.length);
+    return total !== undefined ? { prompts, total } : { prompts };
   } catch (e) {
-    if (isEmptyListError(e)) return [];
+    if (isNoDataError(e)) return { prompts: [] };
     throw e;
   }
 }
 
-/** M-3 mode=signal: the top 50 prompts with 6 answer references (legacy limits), one page. */
+/**
+ * M-3 mode=signal: the top 50 prompts with 6 answer references (legacy limits), one page. lite=true:
+ * the backend skips runs / position / measured_at, which the signal reference drops anyway.
+ */
 export async function loadSignalPrompts(
   filters: StandardFilters,
   ctx: DrilldownContext,
@@ -405,6 +442,7 @@ export async function loadSignalPrompts(
         signal,
         limit: SIGNAL_PROMPTS_LIMIT,
         answers_limit: SIGNAL_ANSWERS_LIMIT,
+        lite: true,
       }),
       cf,
       retryOn401: true,
@@ -416,33 +454,37 @@ export async function loadSignalPrompts(
   }
 }
 
-/** C-1 with mention_brand read to the end (MAX_PAGES x 200 sources). */
+/**
+ * C-1 with mention_brand in one request (DRILLDOWN_LIST_LIMIT sources). The table reads rows only
+ * (coverage needs the denominator), so the competitor totals are not computed
+ * (include_competitor_totals=false). 404 -> []; 403 / 422 are thrown (an unknown brand name is not
+ * a 404 here: the backend answers an empty list).
+ */
 export async function loadBrandCitationDomains(
   filters: StandardFilters,
   ctx: DrilldownContext,
   mentionBrand: string,
-): Promise<CitationDomainLive[]> {
+): Promise<BrandDomainsList> {
   const { query, cf } = analysisQuery(filters, ctx);
   try {
-    const all = await fetchAllPages<ApiDomainRow>(
-      async (cursor) => {
-        const res = await hghGet("/v1/citations/domains", {
-          query: withParams(query, { mention_brand: mentionBrand, limit: DOMAIN_PAGE, ...(cursor ? { cursor } : {}) }),
-          cf,
-          retryOn401: true,
-        });
-        return { items: res.data.items, nextCursor: res.meta.page?.next_cursor ?? null };
-      },
-      { maxPages: MAX_PAGES, onLimit: "truncate" },
-    );
-    return all.items.map(toCitationDomain);
+    const res = await hghGet("/v1/citations/domains", {
+      query: withParams(query, { mention_brand: mentionBrand, limit: DRILLDOWN_LIST_LIMIT, include_competitor_totals: false }),
+      cf,
+      retryOn401: true,
+    });
+    const domains = res.data.items.map(toCitationDomain);
+    const total = cutTotal(res.meta.page?.total, domains.length);
+    return total !== undefined ? { domains, total } : { domains };
   } catch (e) {
-    if (isEmptyListError(e)) return [];
+    if (isNoDataError(e)) return { domains: [] };
     throw e;
   }
 }
 
-/** C-1 detail of one source for the brand (loaded when a row opens). 404 -> empty lists. */
+/**
+ * C-1 detail of one source for the brand (loaded when a row opens). 404 (unknown skey) -> empty
+ * lists; 403 / 422 are thrown.
+ */
 export async function loadBrandCitationDetail(
   filters: StandardFilters,
   ctx: DrilldownContext,
@@ -459,24 +501,9 @@ export async function loadBrandCitationDetail(
     });
     return toDomainDrilldown(res.data);
   } catch (e) {
-    if (isEmptyListError(e)) return { urls: [], promptList: [] };
+    if (isNoDataError(e)) return { urls: [], promptList: [] };
     throw e;
   }
-}
-
-/** BG-04 GET /v1/kpi/unmeasured-prompts -> the dialog's {total, rows}. */
-export async function loadUnmeasuredPrompts(
-  filters: StandardFilters,
-  ctx: DrilldownContext,
-): Promise<{ total: number; rows: UnmeasuredPrompt[] }> {
-  const { query, cf } = analysisQuery(filters, ctx);
-  const res = await hghGet("/v1/kpi/unmeasured-prompts", {
-    query: withParams(query, { limit: UNMEASURED_LIMIT }),
-    cf,
-    retryOn401: true,
-  });
-  const rows = res.data.items.map(toUnmeasuredPrompt);
-  return { total: res.meta.page?.total ?? rows.length, rows };
 }
 
 /** Parse a signal key (the dialog's ?signal=). */

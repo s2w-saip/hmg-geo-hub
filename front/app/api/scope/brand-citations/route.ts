@@ -11,6 +11,7 @@ import {
   drilldownTarget,
   gateErrorResponse,
   isBadFilterError,
+  isForbiddenError,
   loadBrandCitationDetail,
   loadBrandCitationDomains,
   type GateResult,
@@ -36,10 +37,14 @@ import {
 //
 // Unit U6: gate on both sources first (session 401, place gate 403, project page gate 404:
 // drilldownGate). Source (D8) HGH_SOURCE_<G2|G3|G6> by surface.
-//   api, list:   GET /v1/citations/domains?mention_brand=<name> read to the end -> {domains}
-//                (rows carry skey; urls/promptList empty until a row opens)
-//   api, &skey=: GET /v1/citations/domains/{skey}?mention_brand=<name> -> {urls, promptList}
-//                (citation-domain-table.tsx loads it when a row opens, 3.5 #5)
+//   api, list:   GET /v1/citations/domains?mention_brand=<name> in one request (up to 2,000) ->
+//                {domains} (rows carry skey; urls/promptList empty until a row opens), plus `total`
+//                only when the cap cut the list
+//   api, &skey=: GET /v1/citations/domains/{skey}?mention_brand=<name> -> {urls, promptList}, plus
+//                urlTotal / promptTotal only when the caps cut them (citation-domain-table.tsx
+//                loads it when a row opens, 3.5 #5)
+//   api errors:  backend 403 -> 403 with the empty shape (an error for the tab or the row, not
+//                "no sources"); 404 (unknown skey) -> 200 with the empty shape
 //   legacy:      the unchanged readers (rows carry urls/promptList; no detail call, skey -> 400).
 //                projectId reads the standard root there, as before (the project surface is api
 //                only: U6-N11), so it also needs the standard place gate (403 {domains:[]})
@@ -98,9 +103,12 @@ export async function GET(req: NextRequest) {
     };
     try {
       if (skey !== null) return NextResponse.json(await loadBrandCitationDetail(filters, ctx, brand, skey));
-      return NextResponse.json({ domains: await loadBrandCitationDomains(filters, ctx, brand) });
+      return NextResponse.json(await loadBrandCitationDomains(filters, ctx, brand));
     } catch (err) {
       if (isHghApiError(err) && err.status === 401) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+      if (isForbiddenError(err)) {
+        return NextResponse.json(skey !== null ? { urls: [], promptList: [] } : { domains: [] }, { status: 403 });
+      }
       if (isBadFilterError(err)) {
         return NextResponse.json(skey !== null ? { urls: [], promptList: [] } : { domains: [] }, { status: 400 });
       }

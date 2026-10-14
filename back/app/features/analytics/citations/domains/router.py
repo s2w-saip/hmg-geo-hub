@@ -17,7 +17,7 @@ router = APIRouter(tags=["analytics.citations"], route_class=CachedRoute)
 
 @router.get("/v1/citations/domains", response_model=Envelope[DomainsData],
             responses={**ERROR_RESPONSES, 409: {"model": ErrorBody, "description": "conflict(cursor_stale)"}},
-            summary="출처(source_key: 도메인·공식 소셜 계정) 인용 순위 + 요약(M05, 고유 출처 수) + 경쟁사 브랜드별 인용 합. limit=0 이면 요약·경쟁사 합만(대시보드 경쟁사 행). mention_brand 로 언급 드릴다운 인용 탭 대체. q·sort·dir·skey[](BG-20·21), competitor_sources(BG-20)")
+            summary="출처(source_key: 도메인·공식 소셜 계정) 인용 순위 + 요약(M05, 고유 출처 수) + 경쟁사 브랜드별 인용 합. limit=0 이면 요약·경쟁사 합만(대시보드 경쟁사 행). mention_brand 로 언급 드릴다운 인용 탭 대체(limit 2,000 까지 한 번 조회). q·sort·dir·skey[](BG-20·21), competitor_sources(BG-20), include_den·include_competitor_totals(읽지 않는 계산 끄기)")
 @result_cache()
 async def get_citations_domains_0(request: Request, conn: RoConn, user: CurrentUser,
                                   params: Annotated[DomainsQuery, Query()]) -> Envelope[DomainsData]:

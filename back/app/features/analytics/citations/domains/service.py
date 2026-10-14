@@ -14,6 +14,14 @@
 - BG-22 내보내기: 목록과 같은 모집단·검색·정렬·선택을 전량(상한 EXPORT_MAX_ROWS) 파일로. 열 = 현행 xlsx 7열(순위·도메인·카테고리·
   인용 수·점유율·프롬프트·커버리지), 점유율·커버리지는 퍼센트 소수 1자리(현행 toFixed(1) 과 같은 반올림: 0.5 올림).
   '#' 열 = rank_basis(기본: global 표면 = rank, website·project = match_rank). max_rows = 정렬 뒤 상위 N(현행 표준 표 = 100).
+  파일 7열이 쓰지 않는 경쟁사 합·자사/타겟 인용 FILTER 는 세지 않는다(B011, 행·값은 같다).
+- 읽지 않는 계산 끄기(B011, 기본 = 전부 계산): include_den=false 면 커버리지 분모 문장을 생략(summary.answers_den·행 coverage.den = 0,
+  sort=coverage 는 정렬 키라 그대로 센다), include_competitor_totals=false 면 경쟁사 합 집계 생략(빈 목록). 두 값은 행·순서와 무관해 커서
+  필터 해시에서 뺀다.
+- 한 번 조회(B009): mention_brand 가 있으면 limit 을 2,000(MENTION_BRAND_MAX_LIMIT)까지 받는다(언급 드릴다운 인용 탭이 커서 10페이지를
+  순차로 읽던 것을 한 요청으로).
+- 대시보드 카드(card=true·limit=0)의 competitor_sources 는 상한 없이 전부 싣는다(B012): 카드는 출처를 브랜드로 접어 값을 내므로 상한이
+  값의 무음 절단이 된다(현행 = 상한 없음). 잘림 표식은 false. 비카드 요청의 상한·meta.truncated 는 그대로.
 """
 from __future__ import annotations
 
@@ -53,6 +61,7 @@ COMPETITOR_SLUG = "officialCompetitor"
 _NEW_PARAMS: dict[str, Any] = {"q": None, "sort": "citations", "dir": None, "skey": [], "competitor": [], "competitor_sources": False,
                                 "host_fold": False}
 _SET_PARAMS = ("skey", "competitor")     # 목록 파라미터 중 집합 의미(커서 해시 정규화 대상, 검증 D5)
+_SHAPE_PARAMS = {"include_den", "include_competitor_totals"}   # 응답에서 계산을 끄기만 하는 파라미터(B011): 행·순서와 무관해 해시에서 뺀다
 
 # BG-22 내보내기 열(현행 citations-view.tsx·citations-standard-view.tsx onExport 7열, 열 이름 = front messages answerAnalysis.citations.table.col)
 EXPORT_COLUMNS = ("rank", "domain", "category", "citations", "share", "prompts", "coverage")
@@ -93,7 +102,7 @@ def _search(params: DomainsListParams) -> str | None:
 
 def _request_hash(params: DomainsQuery, request: Request) -> str:
     """커서 필터 해시: 공통 필터 + 기능 파라미터(cursor·limit 제외, 새 파라미터는 기본값이면 제외) + 커스텀 필드(cf.*)."""
-    drop = {"cursor", "limit"} | {k for k, v in _NEW_PARAMS.items() if getattr(params, k) == v}
+    drop = {"cursor", "limit"} | _SHAPE_PARAMS | {k for k, v in _NEW_PARAMS.items() if getattr(params, k) == v}
     if params.dir == ("asc" if params.sort == "skey" else "desc"):      # 기본 방향을 명시한 요청 = 생략한 요청(같은 커서)
         drop.add("dir")
     custom = {k: sorted(request.query_params.getlist(k)) for k in sorted(request.query_params) if k.startswith("cf.")}
@@ -109,14 +118,23 @@ def _competitor_key(rd: CitationRead) -> int | None:
 
 
 async def _scan(conn: Any, rd: CitationRead, params: DomainsListParams, *, limit: int, cursor: Any, spec: q.SortSpec, brand_key: int | None,
-                competitors: bool) -> tuple[dict[str, Any], int]:
-    # 분모를 먼저 센다: coverage 정렬 키(반올림 천분율, 검증 D3)가 분모를 쓴다
-    den_q = q.answers_den_sql(rd.ctx, rd.win, mention_brand_key=brand_key)
-    den = int((await fetch_one(conn, den_q.text, den_q.params) or {}).get("answers") or 0)
+                competitors: bool, competitor_cap: int | None = None, with_den: bool = True, competitor_totals: bool = True,
+                own_target: bool = True) -> tuple[dict[str, Any], int]:
+    """competitor_cap: 경쟁사 출처 상한(None = 상한 없음, 대시보드 카드 B012). with_den·competitor_totals·own_target = 읽지 않는 계산 끄기(B011).
+    기본값이 아닌 것만 domains_sql 에 넘긴다(기본 요청의 호출 모양 = 종전)."""
+    den = 0
+    if with_den:      # 분모를 먼저 센다: coverage 정렬 키(반올림 천분율, 검증 D3)가 분모를 쓴다
+        den_q = q.answers_den_sql(rd.ctx, rd.win, mention_brand_key=brand_key)
+        den = int((await fetch_one(conn, den_q.text, den_q.params) or {}).get("answers") or 0)
+    extra: dict[str, Any] = {}
+    if not competitor_totals:
+        extra["competitor_totals"] = False
+    if not own_target:
+        extra["own_target"] = False
     s = q.domains_sql(rd.ctx, rd.win, limit=limit, cursor=cursor, mention_brand_key=brand_key, spec=spec, q=_search(params),
                       skeys=tuple(params.skey), competitor_category_key=_competitor_key(rd),
-                      competitor_limit=COMPETITOR_SOURCES_MAX if competitors else 0, competitor_pick=tuple(params.competitor),
-                      answers_den=den, host_fold=params.host_fold)
+                      competitor_limit=competitor_cap if competitors else 0, competitor_pick=tuple(params.competitor),
+                      answers_den=den, host_fold=params.host_fold, **extra)
     rows = await fetch_all(conn, s.text, s.params)
     return rows[0], den
 
@@ -134,7 +152,11 @@ async def get_domains(conn: Any, principal: Principal, params: DomainsQuery, req
         return _envelope(rd, _empty(with_competitors=params.competitor_sources), page, meta_extra,
                          {"competitor_sources": False} if params.competitor_sources else None)
 
-    r0, den = await _scan(conn, rd, params, limit=limit, cursor=cur, spec=spec, brand_key=brand_key, competitors=params.competitor_sources)
+    # 대시보드 카드(card=true·limit=0)는 경쟁사 출처를 브랜드로 접어 값을 낸다: 상한 없이 전부(B012). 그 밖은 상한 + 잘림 표식
+    cap = None if (params.card and limit == 0) else COMPETITOR_SOURCES_MAX
+    r0, den = await _scan(conn, rd, params, limit=limit, cursor=cur, spec=spec, brand_key=brand_key, competitors=params.competitor_sources,
+                          competitor_cap=cap, with_den=params.include_den or params.sort == "coverage",
+                          competitor_totals=params.include_competitor_totals)
     summ = r0["summary"] or {}
     total, own, n_sources = int(summ.get("citations") or 0), int(summ.get("own") or 0), int(summ.get("sources") or 0)
     items_raw: list[dict[str, Any]] = list(r0["rows"] or [])
@@ -145,9 +167,9 @@ async def get_domains(conn: Any, principal: Principal, params: DomainsQuery, req
     truncated: dict[str, bool] | None = None
     if params.competitor_sources:              # 쿼리는 상한 + 1 행까지 싣는다(넘친 1행 = 잘림, core 9 U7-2)
         raw_comp = list(r0["competitor_sources"] or [])
-        truncated = {"competitor_sources": len(raw_comp) > COMPETITOR_SOURCES_MAX}
+        truncated = {"competitor_sources": cap is not None and len(raw_comp) > cap}
         comp = [CompetitorSource(skey=x["skey"], domain=x["domain"], brand=x.get("brand"), citations=int(x["citations"]))
-                for x in raw_comp[:COMPETITOR_SOURCES_MAX]]
+                for x in (raw_comp if cap is None else raw_comp[:cap])]
     data = DomainsData(
         summary=DomainsSummary(total_citations=total, unique_sources=n_sources, own_share=ratio(own, total), answers_den=den),
         items=items,
@@ -209,7 +231,9 @@ async def export_domains(conn: Any, principal: Principal, params: DomainsExportQ
     truncated = False
     if not (rd.empty or unknown):
         cap = min(params.max_rows or EXPORT_MAX_ROWS, EXPORT_MAX_ROWS)
-        r0, den = await _scan(conn, rd, params, limit=cap, cursor=None, spec=spec, brand_key=brand_key, competitors=False)
+        # 파일 7열(순위·도메인·카테고리·인용 수·점유율·프롬프트·커버리지)이 쓰지 않는 경쟁사 합·자사/타겟 FILTER 는 세지 않는다(B011)
+        r0, den = await _scan(conn, rd, params, limit=cap, cursor=None, spec=spec, brand_key=brand_key, competitors=False,
+                              competitor_totals=False, own_target=False)
         raw = list(r0["rows"] or [])
         # X-Export-Truncated 는 서버 상한으로 잘렸을 때만(요청한 max_rows 로 자른 것은 요청대로다)
         truncated = len(raw) > cap and (params.max_rows is None or params.max_rows >= EXPORT_MAX_ROWS)

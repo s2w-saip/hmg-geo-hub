@@ -12,7 +12,7 @@ import { ColInfo } from "@/components/dash/col-info";
 import { cn } from "@/lib/utils";
 import type { MentionsPromptLive, CitationDomainLive } from "@/lib/scope/result-adapter";
 import { AnswerModal } from "./answer-modal";
-import { CitationDomainTable } from "./citation-domain-table";
+import { CitationDomainTable, TRUNCATED_ROW_CLASS, TruncatedNote } from "./citation-domain-table";
 import { isTopRank, promptBestRank } from "../_data/prompt-rank";
 
 // Per-brand drilldown rendered inline when a Brand row is clicked — LIVE only.
@@ -27,6 +27,11 @@ import { isTopRank, promptBestRank } from "../_data/prompt-rank";
 // the answer modal and the signal dialog do), so the project surface reads the project (the
 // legacy citation tab read the standard root). An own row asks by "own" (+ its brand code on a
 // split perspective, D13) instead of by name (BG-17). The legacy routes ignore both.
+//
+// B005: a route reply that is not 2xx (5xx, 403, 400) is the tab's existing error state, not "no
+// prompts / no sources" (the signal dialog and the row detail already did this). B008: when the
+// route cut a list it sends `total` (before the cap) and the table adds the existing
+// "{total}개 중 {shown}개 표시" line; a list that fits renders exactly as before.
 
 /** Project id of a /projects/<id>/... page, else null (same rule as answer-modal.tsx). */
 export function projectIdFromPath(pathname: string | null | undefined): string | null {
@@ -93,15 +98,7 @@ export function MentionsDrilldown({
         </TabsList>
 
         <TabsContent value="prompts">
-          {prompts.status === "loading" ? (
-            <LoadingBox label={t("promptsLoading")} />
-          ) : prompts.status === "error" ? (
-            <ErrorBox label={t("promptsError")} />
-          ) : prompts.list.length === 0 ? (
-            <Empty label={t("noPrompts")} />
-          ) : (
-            <PromptsTable rows={prompts.list} brand={brand} showRank={showRank} />
-          )}
+          <BrandPromptsPanel state={prompts} brand={brand} showRank={showRank} />
         </TabsContent>
 
         <TabsContent value="citations">
@@ -112,10 +109,39 @@ export function MentionsDrilldown({
   );
 }
 
-type PromptsState =
+/** A lazily loaded drilldown list; total = rows before the route's cap, only when it cut the list (B008). */
+export type ListState<T> =
   | { status: "loading" }
-  | { status: "ready"; list: MentionsPromptLive[] }
+  | { status: "ready"; list: T[]; total?: number }
   | { status: "error" };
+
+type PromptsState = ListState<MentionsPromptLive>;
+
+/**
+ * One lazy drilldown list load (the effect body of useBrandPrompts and BrandCitationsTab): `key` is
+ * the route's list field (prompts / domains). A reply that is not 2xx is the error state, never an
+ * empty list (B005: the routes answer a backend failure with its status). Returns the cleanup (abort).
+ */
+export function startListLoad<T>(
+  url: string,
+  key: "prompts" | "domains",
+  setState: (s: ListState<T>) => void,
+  fetchImpl: typeof fetch = fetch,
+): () => void {
+  const ctrl = new AbortController();
+  setState({ status: "loading" });
+  fetchImpl(url, { signal: ctrl.signal })
+    .then((r) => (r.ok ? r.json() : Promise.reject(new Error("failed"))))
+    .then((d: { prompts?: T[]; domains?: T[]; total?: number }) => {
+      const list = d[key] ?? [];
+      setState(typeof d.total === "number" ? { status: "ready", list, total: d.total } : { status: "ready", list });
+    })
+    .catch((e: unknown) => {
+      if (e instanceof DOMException && e.name === "AbortError") return;
+      setState({ status: "error" });
+    });
+  return () => ctrl.abort();
+}
 
 // 프롬프트 목록 소스 — lazy면 /api/scope/brand-mention-prompts로 그 브랜드만 가져오고
 // (BrandCitationsTab와 동일 lazy 패턴), 아니면 eager prop을 그대로 쓴다.
@@ -138,21 +164,32 @@ function useBrandPrompts(
       return;
     }
     const params = drilldownParams(spStr, { brand, own, isWebsite, projectId });
-    const ctrl = new AbortController();
-    setState({ status: "loading" });
-    fetch(`/api/scope/brand-mention-prompts?${params.toString()}`, { signal: ctrl.signal })
-      .then((r) => r.json())
-      .then((d: { prompts?: MentionsPromptLive[] }) =>
-        setState({ status: "ready", list: d.prompts ?? [] }),
-      )
-      .catch((e: unknown) => {
-        if (e instanceof DOMException && e.name === "AbortError") return;
-        setState({ status: "error" });
-      });
-    return () => ctrl.abort();
+    return startListLoad<MentionsPromptLive>(`/api/scope/brand-mention-prompts?${params.toString()}`, "prompts", setState);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- eager only read on !lazy
   }, [brand, own?.code, own === null, spStr, isWebsite, projectId, lazy]);
   return state;
+}
+
+/** The prompts tab body for a list state: loading / error / no prompts / the table. */
+export function BrandPromptsPanel({
+  state,
+  brand,
+  showRank = false,
+}: {
+  state: PromptsState;
+  brand: string;
+  showRank?: boolean;
+}) {
+  const t = useTranslations("answerAnalysis.mentions.drilldown");
+  return state.status === "loading" ? (
+    <LoadingBox label={t("promptsLoading")} />
+  ) : state.status === "error" ? (
+    <ErrorBox label={t("promptsError")} />
+  ) : state.list.length === 0 ? (
+    <Empty label={t("noPrompts")} />
+  ) : (
+    <PromptsTable rows={state.list} total={state.total} brand={brand} showRank={showRank} />
+  );
 }
 
 function LoadingBox({ label }: { label: string }) {
@@ -177,10 +214,13 @@ type PromptsSortKey = "prompt" | "rank" | "mentions" | "share" | "funnel" | "pro
 
 function PromptsTable({
   rows,
+  total,
   brand,
   showRank = false,
 }: {
   rows: MentionsPromptLive[];
+  /** Prompts before the route's cap, only when it cut the list (B008). */
+  total?: number;
   brand: string;
   showRank?: boolean;
 }) {
@@ -298,6 +338,7 @@ function PromptsTable({
             })}
           </tbody>
         </table>
+        <TruncatedNote shown={rows.length} total={total} className={TRUNCATED_ROW_CLASS} />
       </div>
 
       <AnswerModal
@@ -326,31 +367,23 @@ function BrandCitationsTab({
   isWebsite: boolean;
   projectId: string | null;
 }) {
-  const t = useTranslations("answerAnalysis.mentions.drilldown");
   const sp = useSearchParams();
   const spStr = sp.toString();
-  const [state, setState] = useState<
-    | { status: "loading" }
-    | { status: "ready"; domains: CitationDomainLive[] }
-    | { status: "error" }
-  >({ status: "loading" });
+  const [state, setState] = useState<ListState<CitationDomainLive>>({ status: "loading" });
 
   useEffect(() => {
     const params = drilldownParams(spStr, { brand, isWebsite, projectId });
-    const ctrl = new AbortController();
-    setState({ status: "loading" });
-    fetch(`/api/scope/brand-citations?${params.toString()}`, { signal: ctrl.signal })
-      .then((r) => r.json())
-      .then((d: { domains?: CitationDomainLive[] }) =>
-        setState({ status: "ready", domains: d.domains ?? [] }),
-      )
-      .catch((e: unknown) => {
-        if (e instanceof DOMException && e.name === "AbortError") return;
-        setState({ status: "error" });
-      });
-    return () => ctrl.abort();
+    return startListLoad<CitationDomainLive>(`/api/scope/brand-citations?${params.toString()}`, "domains", setState);
   }, [brand, spStr, isWebsite, projectId]);
 
+  return (
+    <BrandCitationsPanel state={state} detailQuery={drilldownParams(spStr, { brand, isWebsite, projectId }).toString()} />
+  );
+}
+
+/** The citation sources tab body for a list state: loading / error / no sources / the domain table. */
+export function BrandCitationsPanel({ state, detailQuery }: { state: ListState<CitationDomainLive>; detailQuery: string }) {
+  const t = useTranslations("answerAnalysis.mentions.drilldown");
   if (state.status === "loading") {
     return (
       <div className="flex items-center justify-center gap-2 rounded-md border border-dashed border-border bg-muted/20 px-4 py-8 text-xs text-muted-foreground">
@@ -367,16 +400,11 @@ function BrandCitationsTab({
       </div>
     );
   }
-  if (state.domains.length === 0) {
+  if (state.list.length === 0) {
     return <Empty label={t("noCitations")} />;
   }
   // API rows carry skey and no urls/promptList: the table loads a row's detail when it opens.
-  return (
-    <CitationDomainTable
-      domains={state.domains}
-      detailQuery={drilldownParams(spStr, { brand, isWebsite, projectId }).toString()}
-    />
-  );
+  return <CitationDomainTable domains={state.list} detailQuery={detailQuery} total={state.total} />;
 }
 
 function Empty({ label }: { label: string }) {

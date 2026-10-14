@@ -61,29 +61,33 @@ def page_sql(ms: MeasureScope, win: Window, t: TargetSpec, *, cursor: Cursor | N
     return b.sql(txt)
 
 
-def answers_sql(ms: MeasureScope, win: Window, t: TargetSpec, *, prompt_keys: Sequence[int], answers_limit: int) -> Sql:
+def answers_sql(ms: MeasureScope, win: Window, t: TargetSpec, *, prompt_keys: Sequence[int], answers_limit: int, lite: bool = False) -> Sql:
     """페이지 프롬프트의 답변 참조(1회). 답변 단위로 타깃 값을 접고 → (프롬프트, 엔진, 국가) 셀 대표 1건(R05: is_rep 우선, 최신 측정)과
-    셀 답변 수(runs) → 프롬프트 안에서 값 내림차순 answers_limit 건. job_id·measured_at 은 rd.job(answer_key PK) 에서 읽는다."""
+    셀 답변 수(runs) → 프롬프트 안에서 값 내림차순 answers_limit 건. job_id·measured_at 은 rd.job(answer_key PK) 에서 읽는다.
+    lite(mode=signal 전용): 순위(pos)·셀 답변 수(runs) 집계를 하지 않고 pos·measured_at·runs 를 NULL 로 낸다. measured_at 은 대표 선택
+    정렬에 그대로 쓰므로 고르는 답변(job_id)·순서는 lite 가 아닐 때와 같다."""
     b = Binder("a")
     tw, val = _target(t, ms, b)
     w = (win.where("b", "mentions", b) + scope_where(ms, "b", b) + [mention_population(ms, "b", "brand")] + tw
          + [f"b.prompt_key = ANY({b.ints(prompt_keys, 'int4')})"])
     wa = win.where("a", "mentions", b)
+    pos = "" if lite else ", min(NULLIF(b.rk, 0)) AS pos"
+    runs = "" if lite else ",\n         count(*) OVER (PARTITION BY t.prompt_key, t.engine_key, t.geo_key) AS runs"
+    out = "NULL::int4 AS pos, NULL::timestamptz AS measured_at, NULL::int8 AS runs" if lite else "d.pos, d.measured_at, d.runs"
     txt = ("WITH t AS (\n"
-           f"  SELECT b.round_date, b.answer_key, b.prompt_key, b.engine_key, b.geo_key, sum({val})::int8 AS val, min(NULLIF(b.rk, 0)) AS pos\n"
+           f"  SELECT b.round_date, b.answer_key, b.prompt_key, b.engine_key, b.geo_key, sum({val})::int8 AS val{pos}\n"
            f"    FROM {fact_tables(ms).answer_brand} b\n   WHERE {' AND '.join(w)}\n   GROUP BY 1, 2, 3, 4, 5),\n"
            "c AS (\n"
            "  SELECT t.*, j.job_id, j.measured_at,\n"
            "         row_number() OVER (PARTITION BY t.prompt_key, t.engine_key, t.geo_key\n"
-           "                            ORDER BY a.is_rep DESC, j.measured_at DESC NULLS LAST, t.answer_key DESC) AS rn,\n"
-           "         count(*) OVER (PARTITION BY t.prompt_key, t.engine_key, t.geo_key) AS runs\n"
+           f"                            ORDER BY a.is_rep DESC, j.measured_at DESC NULLS LAST, t.answer_key DESC) AS rn{runs}\n"
            f"    FROM t JOIN {fact_tables(ms).answer} a ON a.round_date = t.round_date AND a.answer_key = t.answer_key\n"
            "           JOIN rd.job j ON j.answer_key = t.answer_key\n"
            f"   WHERE {' AND '.join(wa)}),\n"
            "d AS (\n"
            "  SELECT c.*, row_number() OVER (PARTITION BY c.prompt_key ORDER BY c.val DESC, c.measured_at DESC NULLS LAST, c.answer_key DESC) AS pr\n"
            "    FROM c WHERE c.rn = 1)\n"
-           "SELECT d.prompt_key, d.answer_key, d.job_id, e.code AS engine, g.code AS region, d.val, d.pos, d.measured_at, d.runs\n"
+           f"SELECT d.prompt_key, d.answer_key, d.job_id, e.code AS engine, g.code AS region, d.val, {out}\n"
            "  FROM d LEFT JOIN rd.dim_engine e ON e.engine_key = d.engine_key LEFT JOIN rd.dim_country g ON g.geo_key = d.geo_key\n"
            f" WHERE d.pr <= {b.v(answers_limit, 'int4')}\n ORDER BY d.prompt_key, d.pr")
     return b.sql(txt)

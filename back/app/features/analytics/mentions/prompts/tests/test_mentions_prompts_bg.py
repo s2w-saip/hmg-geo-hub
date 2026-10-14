@@ -168,8 +168,13 @@ async def test_own_mode_excludes_non_competitive_rows(client_as):
     {"mode": "brand", "mention_brand": ""}, {"mode": "brand", "mention_brand": "a\x01"}, {"mode": "brand", "mention_brand": "x" * 101},
     {"mode": "brand", "own": "true", "own_brand_code": "Nope"},            # 모르는 브랜드 코드
     {"mode": "brand", "own": "maybe"}, {"mode": "brand", "brand_key": 1, "terms": "nope"},
-    {"mode": "brand", "brand_key": 1, "terms": "true", "limit": 201},  # 필드 상한(limit ≤ 200, answers_limit ≤ 50)
-    {"mode": "brand", "brand_key": 1, "terms": "true", "answers_limit": 51}])
+    {"mode": "brand", "brand_key": 1, "terms": "true", "limit": 201},  # 필드 상한(brand_key 타깃 limit ≤ 200, answers_limit ≤ 50)
+    {"mode": "brand", "brand_key": 1, "terms": "true", "answers_limit": 51},
+    {"mode": "brand", "mention_brand": "Kia", "limit": 2001},             # B009: 드릴다운 타깃도 2,000 까지
+    {"mode": "brand", "own": "true", "limit": 2001},
+    {"mode": "signal", "signal": "positive", "limit": 201},               # signal 은 종전 상한 200
+    {"mode": "brand", "mention_brand": "Kia", "lite": "true"},            # B014: lite 는 mode=signal 전용
+    {"mode": "signal", "signal": "positive", "lite": "maybe"}])
 async def test_bad_params_422(client_as, params):
     r = await _get(client_as, HQ_HYUNDAI, surface="global", **params)
     assert r.status_code == 422 and r.json()["error"]["code"] == "unprocessable", (params, r.text)
@@ -235,6 +240,47 @@ async def test_terms_surfaces_from_mention_raw(client_as):
         assert _terms(d) == {J1: {"brand": ["Toyota", "toyota", "TOYOTA"], "model": []}}
         d = (await _get(client_as, HQ_HYUNDAI, surface="global", mode="brand", mention_brand="Hyundai", terms="true")).json()["data"]
         assert _terms(d)[J1] == {"brand": ["Hyundai"], "model": []}
+
+
+# ── B009 드릴다운 한 번 조회 · B014 신호 lite ─────────────────────────────────────
+async def test_b009_drilldown_one_request_equals_cursor_pages(client_as):
+    """어댑터 드릴다운 타깃(mention_brand·own)의 limit 2,000 한 번 조회 = limit 1 커서 페이지를 끝까지 이어 붙인 결과
+    (행·순서·count·share·답변 참조·terms 동일, meta.page.total = 행 수). 종전 어댑터는 200 씩 최대 10페이지를 순차로 읽었다."""
+    for uid, target in ((ADMIN, {"own": "true"}), (HQ_HYUNDAI, {"mention_brand": "Hyundai"}), (HQ_HYUNDAI, {"mention_brand": "Toyota"}),
+                        (ADMIN, {"own": "true", "own_brand_code": "Kia"})):
+        base = dict(surface="global", mode="brand", terms="true", answers_limit=50, **target)
+        r = await _get(client_as, uid, **base, limit=2000)
+        assert r.status_code == 200, r.text
+        one = r.json()
+        assert one["meta"]["page"]["next_cursor"] is None and one["meta"]["page"]["limit"] == 2000
+        items: list = []
+        cursor = None
+        for _ in range(10):
+            b = (await _get(client_as, uid, **base, limit=1, **({"cursor": cursor} if cursor else {}))).json()
+            items += b["data"]["items"]
+            assert b["data"]["total"] == one["data"]["total"]
+            cursor = b["meta"]["page"]["next_cursor"]
+            if not cursor:
+                break
+        assert items and one["data"]["items"] == items and one["meta"]["page"]["total"] == len(items), target
+    sig = await _get(client_as, ADMIN, surface="global", mode="signal", signal="positive", limit=200)      # signal 상한 200 그대로
+    assert sig.status_code == 200
+
+
+async def test_b014_signal_lite_drops_only_unused_columns(client_as):
+    """lite=true(mode=signal) 응답 = lite 아닌 응답에서 답변 참조 runs·position·measured_at 만 null(프롬프트·count·share·job_id·엔진·국가·
+    값·순서·meta 동일). 대표 답변 선택 정렬은 measured_at 을 그대로 쓰므로 고르는 답변이 같다."""
+    seen = 0
+    for uid, signal in ((ADMIN, "positive"), (HQ_HYUNDAI, "positive"), (ADMIN, "mention")):
+        q = dict(surface="global", mode="signal", signal=signal, limit=50, answers_limit=6)
+        full = (await _get(client_as, uid, **q)).json()
+        lite = (await _get(client_as, uid, **q, lite="true")).json()
+        want = {**full["data"], "items": [{**i, "answers": [{**a, "runs": None, "position": None, "measured_at": None} for a in i["answers"]]}
+                                          for i in full["data"]["items"]]}
+        assert lite["data"] == want, (uid, signal)
+        assert lite["meta"]["page"] == full["meta"]["page"]
+        seen += sum(1 for i in full["data"]["items"] for a in i["answers"] if a["runs"] and a["measured_at"])
+    assert seen > 0                                                          # 지운 열에 실제 값이 있었다(빈 목록끼리의 동치가 아니다)
 
 
 def test_build_terms_rules():

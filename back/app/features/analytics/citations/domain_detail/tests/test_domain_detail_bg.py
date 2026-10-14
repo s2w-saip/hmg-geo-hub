@@ -7,7 +7,9 @@ reddit.com 은 회차 14 에서 프롬프트 4개(PA·PB·PC·PD)·인용 9건, 
 """
 from __future__ import annotations
 
+import json
 import pathlib
+from typing import Any
 
 import pytest
 
@@ -94,6 +96,52 @@ async def test_bg25_fixture_defaults_unchanged(client_as):
 async def test_bg25_invalid_limits_422(client_as, bad):
     r = await get(client_as, ADMIN, "reddit.com", **G, **bad)
     assert r.status_code == 422 and r.json()["error"]["code"] == "unprocessable", (bad, r.text)
+
+
+def _cte_scans(node: Any, name: str) -> int:
+    """EXPLAIN (FORMAT JSON) 계획 트리에서 이름이 name 인 CTE 의 스캔 노드 수."""
+    if isinstance(node, list):
+        return sum(_cte_scans(x, name) for x in node)
+    if not isinstance(node, dict):
+        return 0
+    own = 1 if node.get("Node Type") == "CTE Scan" and node.get("CTE Name") == name else 0
+    return own + sum(_cte_scans(v, name) for k, v in node.items() if k in ("Plan", "Plans"))
+
+
+async def test_b013_summary_counts_read_base_once(ro):
+    """B013: 요약 수 중 base 를 다시 읽던 자사 인용 수(own_citations)는 프롬프트별로 이미 센 pl 의 합으로 낸다. 계획의 base 스캔 =
+    u·pl·rf·인용 수 4회(종전 5회: 요약 스칼라 부분질의 둘이 base 를 따로 읽었다). 값은 위 BG-23·25 시험(독립 SQL 대조)과 픽스처 손 계산이
+    같고, 자사 인용이 있는 출처(hyundai.com)에서 pl 합 = base 직접 FILTER 수다."""
+    from app.core.auth import load_principal
+    from app.core.db import fetch_all, fetch_one
+    from app.core.filters import CommonFilters, resolve_read_context
+    from app.features.analytics.citations.domain_detail.queries import detail_sql
+    from app.features.analytics.citations.domains.shared import CITATION_SUPPORT
+
+    p = await load_principal(ro, ADMIN)
+    ctx = await resolve_read_context(ro, p, CommonFilters(surface="global"), support=CITATION_SUPPORT)
+    win = await ctx.window(ro)
+    src = await fetch_one(ro, "SELECT source_key FROM rd.dim_source WHERE skey = :k", {"k": "reddit.com"})
+    assert src is not None
+    s = detail_sql(ctx, win, source_key=int(src["source_key"]), mention_brand_key=None)
+    plan = (await fetch_all(ro, "EXPLAIN (FORMAT JSON) " + s.text, s.params))[0]
+    doc = next(iter(plan.values()))
+    doc = json.loads(doc) if isinstance(doc, str) else doc
+    assert _cte_scans(doc, "base") == 4, doc
+    assert s.text.count("FROM base") == 4 and "FILTER (WHERE base.own) FROM base)" not in s.text
+    r = await fetch_one(ro, s.text, s.params)
+    assert r is not None and (int(r["citations"]), int(r["own_citations"]), int(r["prompt_total"])) == (2, 0, 1)   # 픽스처 k1 ord2·ord4
+    # 자사 인용이 있는 출처: pl 합 = base 를 직접 센 FILTER 수(종전 문장의 값)
+    hk = await fetch_one(ro, "SELECT source_key FROM rd.dim_source WHERE skey = :k", {"k": "hyundai.com"})
+    assert hk is not None
+    h = detail_sql(ctx, win, source_key=int(hk["source_key"]), mention_brand_key=None)
+    old = h.text.replace("(SELECT coalesce(sum(pl.own_citations), 0) FROM pl) AS own_citations",
+                         "(SELECT count(*) FILTER (WHERE base.own) FROM base) AS own_citations", 1)
+    assert old != h.text
+    new_r, old_r = await fetch_one(ro, h.text, h.params), await fetch_one(ro, old, h.params)
+    assert new_r is not None and old_r is not None and int(new_r["own_citations"]) == int(old_r["own_citations"]) == 1
+    assert {k: new_r[k] for k in ("citations", "url_total", "prompt_total", "urls", "prompts", "refs")} == \
+        {k: old_r[k] for k in ("citations", "url_total", "prompt_total", "urls", "prompts", "refs")}
 
 
 def test_d3_embed_rationale_cites_component_fix_6():

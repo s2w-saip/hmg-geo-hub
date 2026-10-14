@@ -163,6 +163,23 @@ describe("api source", () => {
     apiReply = { status: 401, body: { error: { code: "no_account", message: "x" } } };
     expect((await GET(req("mentionBrand=Kia"))).status).toBe(401);
   });
+  it("B006: a backend 403 -> 403 {prompts:[]} (the tab's error state, not 'no prompts'); 5xx -> the error response", async () => {
+    apiReply = { status: 403, body: { error: { code: "role_forbidden", message: "internal detail" } } };
+    const r403 = await GET(req("mentionBrand=Kia"));
+    expect([r403.status, await r403.json()]).toEqual([403, { prompts: [] }]);
+    apiReply = { status: 503, body: { error: { code: "unavailable", message: "internal detail" } } };
+    const r503 = await GET(req("mentionBrand=Kia"));
+    expect([r503.status, ((await r503.json()) as { error: { code: string } }).error.code]).toEqual([503, "unavailable"]);
+  });
+  it("B010: one request of 2,000 (no cursor loop); B008: total only when the backend has more prompts than the cap", async () => {
+    const fit = await GET(req("mentionBrand=Toyota"));
+    expect(await fit.json()).toEqual({ prompts: [expect.objectContaining({ id: "p1" })] });
+    expect(apiLog.map((u) => [u.searchParams.get("limit"), u.searchParams.get("cursor")])).toEqual([["2000", null]]);
+    apiReply = { status: 200, body: { ...PAGE, meta: { mode: "cumulative", page: { limit: 2000, next_cursor: "Y3Vy", total: 2400 } } } };
+    const cut = (await (await GET(req("mentionBrand=Toyota"))).json()) as { prompts: unknown[]; total?: number };
+    expect([cut.prompts.length, cut.total]).toEqual([1, 2400]);
+    expect(apiLog).toHaveLength(2);
+  });
 });
 
 // ── independent verification (fail) regressions ───────────────────────────

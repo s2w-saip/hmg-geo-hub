@@ -6,8 +6,9 @@ import type { MentionsPromptLive } from "@/lib/scope/result-adapter";
 
 // Drilldown adapter (unit U6): the route gate (place gate on role and menu groups, the project page
 // gate on both session sources), hand-checked row conversions (M-3 brand and signal, C-1 list and
-// detail, BG-04), the loaders' queries, cursor reads to the end (cap, cursor_stale restart), and
-// the error map (404/403 -> empty list, 422 kept for the route's 400).
+// detail), the loaders' queries, the brand lists in one request of 2,000 with the cut total (B010,
+// B008), and the error map (brand lists: 404 -> empty, 403 and 422 thrown for the route's 403 / 400
+// (B006); signal list: 404/403 -> empty).
 
 vi.mock("@/lib/scope/server", () => ({}));
 const { bindHghAuth } = await import("../auth");
@@ -218,6 +219,16 @@ describe("citation rows", () => {
     share: { num: 30, den: 120 },
     skey: "hyundai.com",
   };
+  it("B007: an official social account row is named by its group key (skey, host+path), not by the host it shares", () => {
+    const social = { ...row, skey: "linkedin.com/hyundai-motor-group", domain: "linkedin.com", is_social: true };
+    const plain = { ...row, skey: "linkedin.com", domain: "linkedin.com", is_social: false, is_own: false, category: null };
+    const rows = [social, plain].map(D.toCitationDomain);
+    expect(rows.map((r) => [r.domain, r.skey])).toEqual([
+      ["linkedin.com/hyundai-motor-group", "linkedin.com/hyundai-motor-group"],
+      ["linkedin.com", "linkedin.com"],
+    ]);
+    expect(new Set(rows.map((r) => r.domain)).size).toBe(2); // React key / expanded state of the table = domain
+  });
   it("list row: legacy category label from the slug, prompts = citing_prompts (BG-24), drilldown empty until opened", () => {
     expect(D.toCitationDomain(row)).toEqual({
       domain: "hyundai.com",
@@ -266,15 +277,19 @@ describe("citation rows", () => {
       },
     ]);
   });
-  it("unmeasured row -> legacy UnmeasuredPrompt", () => {
-    expect(D.toUnmeasuredPrompt({ prompt_id: "c1", scope_prompt_id: "s1", text: null, list_type: "L", depth1: "d1", depth2: null, funnel_stage: "f" })).toEqual({
-      id: "c1",
-      text: "",
-      listType: "L",
-      depth1: "d1",
-      depth2: null,
-      funnelStage: "f",
+  it("B008: url_total / prompt_total are kept only when the caps cut the lists (a list that fits: shape as before)", () => {
+    const detail = (o: Partial<D.ApiDomainDetail>): D.ApiDomainDetail => ({
+      citations: 3,
+      own_citations: 0,
+      source: { category: null, competitor_brand: null, domain: "a.example", is_social: false, skey: "a.example" },
+      urls: [{ url: "https://a.example/x", title: "X", citations: 3, engines: ["gemini"], prompt_text: null, country: null }],
+      prompts: [{ prompt_id: "p1", text: "t", funnel: null, citations: 3, own_citations: 0, engines: ["gemini"], answers: [] }],
+      ...o,
     });
+    expect(Object.keys(D.toDomainDrilldown(detail({ url_total: 1, prompt_total: 1 })))).toEqual(["urls", "promptList"]);
+    expect(Object.keys(D.toDomainDrilldown(detail({})))).toEqual(["urls", "promptList"]);
+    const cut = D.toDomainDrilldown(detail({ url_total: 37, prompt_total: 250 }));
+    expect([cut.urlTotal, cut.promptTotal, cut.urls.length, cut.promptList.length]).toEqual([37, 250, 1, 1]);
   });
 });
 
@@ -307,20 +322,32 @@ describe("loaders", () => {
   });
   const ctx = { surface: "global" as const, scope: null };
 
-  it("brand prompts: mention_brand, terms, 200 per page, 50 references, read to the end by cursor", async () => {
-    handler = (u) => (u.searchParams.get("cursor") ? page([item({ prompt_id: "p2" })], null) : page([item()], "Y3Vyc29yMQ"));
-    const rows = await D.loadBrandMentionPrompts({ region: ["US"] }, ctx, { mentionBrand: "Toyota" });
-    expect(rows.map((r) => r.id)).toEqual(["p1", "p2"]);
+  it("brand prompts (B010): mention_brand, terms, ONE request of 2,000 with 50 references (no cursor loop)", async () => {
+    handler = () => page([item(), item({ prompt_id: "p2" })], null);
+    const res = await D.loadBrandMentionPrompts({ region: ["US"] }, ctx, { mentionBrand: "Toyota" });
+    expect(res).toEqual({ prompts: [expect.objectContaining({ id: "p1" }), expect.objectContaining({ id: "p2" })] });
     const q = log[0].searchParams;
-    expect([q.get("mode"), q.get("mention_brand"), q.get("terms"), q.get("limit"), q.get("answers_limit"), q.getAll("country")]).toEqual([
+    expect([q.get("mode"), q.get("mention_brand"), q.get("terms"), q.get("limit"), q.get("answers_limit"), q.getAll("country"), q.get("cursor")]).toEqual([
       "brand",
       "Toyota",
       "true",
-      "200",
+      String(D.DRILLDOWN_LIST_LIMIT),
       "50",
       ["US"],
+      null,
     ]);
-    expect(log[1].searchParams.get("cursor")).toBe("Y3Vyc29yMQ");
+    expect([log.length, D.DRILLDOWN_LIST_LIMIT]).toEqual([1, 2000]);
+  });
+  it("B008: more prompts than the cap -> the rows read plus total = meta.page.total; a next_cursor is never followed", async () => {
+    handler = () => ({
+      body: { data: { items: [item()], mode: "brand", target: {}, total: 40 }, meta: { mode: "cumulative", page: { limit: 2000, next_cursor: "Y3Vy", total: 2345 } } },
+    });
+    const res = await D.loadBrandMentionPrompts({}, ctx, { mentionBrand: "Toyota" });
+    expect([res.prompts.length, res.total, log.length]).toEqual([1, 2345, 1]);
+    handler = () => ({
+      body: { data: { items: [item()], mode: "brand", target: {}, total: 40 }, meta: { mode: "cumulative", page: { limit: 2000, next_cursor: null, total: 1 } } },
+    });
+    expect(Object.keys(await D.loadBrandMentionPrompts({}, ctx, { mentionBrand: "Toyota" }))).toEqual(["prompts"]);
   });
   it("own targets (BG-17): own=true, plus own_brand_code for a split row; never mention_brand", async () => {
     handler = () => page([], null);
@@ -331,30 +358,16 @@ describe("loaders", () => {
       ["true", "Kia", null],
     ]);
   });
-  it("brand_not_found (404) or hidden (403) -> []; 422 is thrown (route answers 400)", async () => {
+  it("B006: brand_not_found (404) -> []; a refusal (403) and 422 are thrown (routes answer 403 / 400); the signal list keeps 403 -> []", async () => {
     handler = () => ({ status: 404, body: { error: { code: "brand_not_found", message: "x" } } });
-    expect(await D.loadBrandMentionPrompts({}, ctx, { mentionBrand: "Nope" })).toEqual([]);
+    expect(await D.loadBrandMentionPrompts({}, ctx, { mentionBrand: "Nope" })).toEqual({ prompts: [] });
     handler = () => ({ status: 403, body: { error: { code: "role_forbidden", message: "x" } } });
     expect(await D.loadSignalPrompts({}, ctx, "positive")).toEqual([]);
+    const forbidden = await D.loadBrandMentionPrompts({}, ctx, { mentionBrand: "Toyota" }).catch((e) => e);
+    expect([D.isForbiddenError(forbidden), D.isNoDataError(forbidden), D.isBadFilterError(forbidden)]).toEqual([true, false, false]);
     handler = () => ({ status: 422, body: { error: { code: "invalid_value", message: "x" } } });
     const err = await D.loadBrandMentionPrompts({}, ctx, { mentionBrand: "X" }).catch((e) => e);
     expect(D.isBadFilterError(err)).toBe(true);
-  });
-  it("cursor_stale (409) restarts from the first page once", async () => {
-    let calls = 0;
-    handler = (u) => {
-      calls += 1;
-      if (u.searchParams.get("cursor") && calls === 2) return { status: 409, body: { error: { code: "cursor_stale", message: "x" } } };
-      return u.searchParams.get("cursor") ? page([item({ prompt_id: "p2" })], null) : page([item()], "Y3Vyc29yMQ");
-    };
-    expect((await D.loadBrandMentionPrompts({}, ctx, { mentionBrand: "Toyota" })).map((r) => r.id)).toEqual(["p1", "p2"]);
-    expect(log.map((u) => u.searchParams.get("cursor"))).toEqual([null, "Y3Vyc29yMQ", null, "Y3Vyc29yMQ"]);
-  });
-  it("the cap: at most MAX_PAGES requests, then the list read so far", async () => {
-    let n = 0;
-    handler = () => page([item({ prompt_id: `p${++n}` })], `Y3Vy${n}`);
-    const rows = await D.loadBrandMentionPrompts({}, ctx, { mentionBrand: "Toyota" });
-    expect([rows.length, log.length]).toEqual([D.MAX_PAGES, D.MAX_PAGES]);
   });
   it("signal: one page of 50 with 6 references, no terms; project surface carries project_id and cf", async () => {
     handler = () => page([item()], null);
@@ -370,27 +383,50 @@ describe("loaders", () => {
       PROJECT,
       ["x"],
     ]);
+    // B014: lite=true - the backend skips runs / position / measured_at, which the signal reference drops
+    expect(q.get("lite")).toBe("true");
   });
-  it("citation list (mention_brand, 200 per page) and detail (urls 10, prompts 100, answers 20)", async () => {
+  it("B014: a lite reply (runs / position / measured_at null) converts to the same signal rows as a full one", async () => {
+    const full = item({ answers: [ref({ terms: null })] });
+    const lite = item({ answers: [ref({ terms: null, runs: null, position: null, measured_at: null })] });
+    handler = () => page([full], null);
+    const a = await D.loadSignalPrompts({}, ctx, "positive");
+    handler = () => page([lite], null);
+    const b = await D.loadSignalPrompts({}, ctx, "positive");
+    expect(b).toEqual(a);
+  });
+  it("citation list (mention_brand, one request of 2,000) and detail (urls 10, prompts 100, answers 20)", async () => {
     handler = (u) =>
       u.pathname === "/v1/citations/domains"
         ? { body: { data: { items: [], competitor_totals: [], summary: { answers_den: 0, own_share: { num: 0, den: 0 }, total_citations: 0, unique_sources: 0 } }, meta: { mode: "cumulative", page: { limit: 200, next_cursor: null } } } }
         : { body: { data: { citations: 0, own_citations: 0, prompts: [], urls: [], source: { category: null, domain: "a", is_social: false, skey: "a/b" } }, meta: { mode: "cumulative" } } };
     await D.loadBrandCitationDomains({}, { surface: "website", scope: null }, "Kia");
     await D.loadBrandCitationDetail({}, { surface: "website", scope: null }, "Kia", "linkedin.com/hyundai-motor-group");
-    expect([log[0].searchParams.get("mention_brand"), log[0].searchParams.get("limit"), log[0].searchParams.get("surface")]).toEqual(["Kia", "200", "website"]);
+    expect([log[0].searchParams.get("mention_brand"), log[0].searchParams.get("limit"), log[0].searchParams.get("surface"), log[0].searchParams.get("cursor")]).toEqual(["Kia", "2000", "website", null]);
+    // B011: the table reads rows only - competitor totals off, the coverage denominator kept (include_den not sent)
+    expect([log[0].searchParams.get("include_competitor_totals"), log[0].searchParams.get("include_den")]).toEqual(["false", null]);
     expect(log[1].pathname).toBe("/v1/citations/domains/linkedin.com%2Fhyundai-motor-group");
     expect([log[1].searchParams.get("urls_limit"), log[1].searchParams.get("prompts_limit"), log[1].searchParams.get("answers_limit")]).toEqual(["10", "100", "20"]);
+    expect(log).toHaveLength(2);
   });
-  it("unmeasured (BG-04): total = meta.page.total (before the 200 cap)", async () => {
-    handler = () => ({
+  it("B006: citation list / detail - 404 -> empty, 403 thrown (route answers 403); B008: list total only when cut", async () => {
+    const w = { surface: "website" as const, scope: null };
+    handler = () => ({ status: 404, body: { error: { code: "not_found", message: "x" } } });
+    expect(await D.loadBrandCitationDomains({}, w, "Kia")).toEqual({ domains: [] });
+    expect(await D.loadBrandCitationDetail({}, w, "Kia", "gone.example")).toEqual({ urls: [], promptList: [] });
+    handler = () => ({ status: 403, body: { error: { code: "role_forbidden", message: "x" } } });
+    expect(D.isForbiddenError(await D.loadBrandCitationDomains({}, w, "Kia").catch((e) => e))).toBe(true);
+    expect(D.isForbiddenError(await D.loadBrandCitationDetail({}, w, "Kia", "a.example").catch((e) => e))).toBe(true);
+    const listBody = (total: number) => ({
       body: {
-        data: { items: [{ prompt_id: "c1", scope_prompt_id: "s1", text: "t", list_type: null, depth1: null, depth2: null, funnel_stage: null }] },
-        meta: { mode: "snapshot", page: { limit: 200, next_cursor: null, total: 350 } },
+        data: { items: [], competitor_totals: [], summary: { answers_den: 0, own_share: { num: 0, den: 0 }, total_citations: 0, unique_sources: 0 } },
+        meta: { mode: "cumulative", page: { limit: 2000, next_cursor: null, total } },
       },
     });
-    const r = await D.loadUnmeasuredPrompts({ region: ["US"] }, { surface: "global", scope: null });
-    expect([r.total, r.rows.length, log[0].searchParams.get("limit"), log[0].searchParams.getAll("country")]).toEqual([350, 1, "200", ["US"]]);
+    handler = () => listBody(2001);
+    expect(await D.loadBrandCitationDomains({}, w, "Kia")).toEqual({ domains: [], total: 2001 });
+    handler = () => listBody(0);
+    expect(await D.loadBrandCitationDomains({}, w, "Kia")).toEqual({ domains: [] });
   });
 });
 
@@ -399,7 +435,6 @@ export const KNOWN_DIFF = [
   { id: "U6-N10", reason: "domain detail capped at 10 URLs, 100 prompts, 20 references" },
   { id: "U6-N11", reason: "project citation tab reads the project (legacy: standard root)" },
   { id: "U6-N12", reason: "competitive rows only on both sides (C-G11 confirmed by drilldown.parity.test.ts)" },
-  { id: "U6-N13", reason: "unmeasured rows carry the surface's prompt id" },
   { id: "U6-N14", reason: "brand reference value = the brand's answer total (legacy: first row)" },
   { id: "U6-N15", reason: "brand reference position = rank among competitive brands (legacy: avg_position)" },
   { id: "U6-N16", reason: "signal list funnel = catalog funnel (legacy: scope_prompts.funnel_stage)" },

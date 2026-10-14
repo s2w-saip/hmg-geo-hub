@@ -15,6 +15,7 @@ import {
   drilldownTarget,
   gateErrorResponse,
   isBadFilterError,
+  isForbiddenError,
   loadBrandMentionPrompts,
   type BrandTarget,
   type GateResult,
@@ -39,11 +40,14 @@ import {
 //
 // Unit U6: gate on both sources first (session 401, place gate 403, project page gate 404:
 // lib/hgh/adapters/drilldown.ts drilldownGate). Source (D8) HGH_SOURCE_<G2|G3|G6> by surface.
-// api -> GET /v1/mentions/prompts mode=brand read to the end: a competitor row by name
-// (mention_brand, BG-17), the own row by own=1 (+ ownCode=<brand code> for one brand of a split
-// perspective, D13). projectId selects the project surface (the project page drilldown is lazy
-// on the api source). legacy -> the unchanged readers; a projectId there answers 404 {prompts:[]}
-// (no project reader: the project page stays eager, and the readers would read the standard root).
+// api -> GET /v1/mentions/prompts mode=brand in one request (up to 2,000 prompts): a competitor row
+// by name (mention_brand, BG-17), the own row by own=1 (+ ownCode=<brand code> for one brand of a
+// split perspective, D13). projectId selects the project surface (the project page drilldown is
+// lazy on the api source). {prompts} as before, plus `total` only when the cap cut the list. A
+// backend 403 answers 403 {prompts:[]} (an error for the tab, not "no prompts"); 404
+// brand_not_found stays 200 {prompts:[]}. legacy -> the unchanged readers; a projectId there
+// answers 404 {prompts:[]} (no project reader: the project page stays eager, and the readers would
+// read the standard root).
 export const dynamic = "force-dynamic";
 
 const legacyProjectAllowed: LegacyProjectAllowed = async (id, user) => {
@@ -88,7 +92,7 @@ export async function GET(req: NextRequest) {
     const ownCode = q.get("ownCode");
     const brandTarget: BrandTarget = own ? { own: true, ...(ownCode ? { ownBrandCode: ownCode } : {}) } : { mentionBrand: brand };
     try {
-      const prompts = await loadBrandMentionPrompts(
+      const list = await loadBrandMentionPrompts(
         filters,
         {
           surface: target.surface,
@@ -98,9 +102,10 @@ export async function GET(req: NextRequest) {
         },
         brandTarget,
       );
-      return NextResponse.json({ prompts });
+      return NextResponse.json(list);
     } catch (err) {
       if (isHghApiError(err) && err.status === 401) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+      if (isForbiddenError(err)) return NextResponse.json({ prompts: [] }, { status: 403 });
       if (isBadFilterError(err)) return NextResponse.json({ prompts: [] }, { status: 400 });
       return hghErrorResponse(err);
     }

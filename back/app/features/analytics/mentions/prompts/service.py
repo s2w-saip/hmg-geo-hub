@@ -12,6 +12,9 @@
 - 커서 = (count, prompt_key) + 필터 해시(공통 필터·커스텀 필드·타깃) + 데이터 세대. 세대가 바뀌면 409 cursor_stale.
   새 타깃 인자는 기본값이면 해시에서 빠진다(배포 전 커서 호환, 검증 D5).
 - 빈 창·언급 숨김이면 질의 없이 빈 목록.
+- 한 번 조회(B009): mode=brand 의 드릴다운 타깃(mention_brand·own)은 limit 을 DRILLDOWN_MAX_LIMIT(2,000)까지 받는다. 어댑터가 커서 10페이지를
+  순차로 읽던 것(페이지마다 page_sql 이 대상 전체를 다시 접는다)을 한 요청으로 바꾼다. brand_key·signal 은 종전 상한 200.
+- lite(mode=signal 전용): 답변 참조 runs·position·measured_at 을 계산하지 않는다(null). 신호 다이얼로그 어댑터가 버리는 열이다. 커서 해시 제외.
 """
 from __future__ import annotations
 
@@ -131,9 +134,9 @@ _ADDED_TARGET_DEFAULTS: dict[str, object] = {"mention_brand": None, "own": False
 
 
 def cursor_hash(q: PromptsQuery, custom: dict[str, list[str]]) -> str:
-    """커서가 다른 필터·타깃으로 재사용되지 않게: 공통 필터 전 축 + 커스텀 필드 + mode·타깃(limit·answers_limit·cursor·terms 제외).
+    """커서가 다른 필터·타깃으로 재사용되지 않게: 공통 필터 전 축 + 커스텀 필드 + mode·타깃(limit·answers_limit·cursor·terms·lite 제외).
     새 타깃 인자(mention_brand·own·own_brand_code)는 값이 있을 때만 넣는다: 기본값 요청의 해시 = BG 라운드 전 해시."""
-    skip = {"limit", "cursor", "answers_limit", "terms"} | {k for k, v in _ADDED_TARGET_DEFAULTS.items() if getattr(q, k) == v}
+    skip = {"limit", "cursor", "answers_limit", "terms", "lite"} | {k for k, v in _ADDED_TARGET_DEFAULTS.items() if getattr(q, k) == v}
     f = q.model_dump(mode="json", by_alias=True, exclude=skip)
     return filter_hash({"f": f, "cf": {k: sorted(v) for k, v in sorted(custom.items())}})
 
@@ -161,7 +164,7 @@ async def mention_prompts(conn: Any, ctx: ReadContext, win: Window, q: PromptsQu
 
     refs: dict[int, list[AnswerRef]] = {}
     if page:
-        a = answers_sql(ms, win, spec, prompt_keys=[int(r["prompt_key"]) for r in page], answers_limit=q.answers_limit)
+        a = answers_sql(ms, win, spec, prompt_keys=[int(r["prompt_key"]) for r in page], answers_limit=q.answers_limit, lite=q.lite)
         arows = await fetch_all(conn, a.text, a.params)
         terms: dict[int, Terms] = {}
         if q.terms and arows:
@@ -179,7 +182,8 @@ async def mention_prompts(conn: Any, ctx: ReadContext, win: Window, q: PromptsQu
         for r in arows:
             refs.setdefault(int(r["prompt_key"]), []).append(AnswerRef(
                 job_id=r["job_id"], engine=r["engine"], region=r["region"], value=int(r["val"] or 0),
-                position=int(r["pos"]) if r["pos"] else None, measured_at=r["measured_at"], runs=int(r["runs"]),
+                position=int(r["pos"]) if r["pos"] else None, measured_at=r["measured_at"],
+                runs=int(r["runs"]) if r["runs"] is not None else None,
                 terms=terms.get(int(r["answer_key"])) if q.terms else None))
 
     eng = {k: code for code, (k, _) in ctx.refs.engines.items()}

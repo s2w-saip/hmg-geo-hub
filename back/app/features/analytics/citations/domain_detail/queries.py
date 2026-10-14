@@ -6,6 +6,8 @@ urls_limit·prompts_limit·answers_limit 를 넓힐 수 있다(상한은 schemas
 BG-23 URL 행 prompt_text = 그 URL 의 가장 이른 인용(round_date·answer_key·ord 순)의 프롬프트(톤 드릴다운 ToneRow 와 같은 규칙).
 답변 참조는 (인용 수 내림차순, answer_key) 로 순위를 매겨 8건을 자른 뒤에만 rd.job PK 로 job_id 를 붙인다(최대 12 × 8 = 96행,
 모듈-인용 C-3 과 같은 규약: 표본 전 rd.job 조인 없음).
+요약 자사 인용 수(own_citations)는 프롬프트별로 이미 센 pl 의 합이다(B013: 종전 스칼라 부분질의가 base 를 한 번 더 읽었다. 프롬프트 키로 나눈
+FILTER 수의 합 = 전체 FILTER 수). base 스캔 = u·pl·rf·인용 수 4회.
 """
 from __future__ import annotations
 
@@ -76,7 +78,7 @@ rs AS (
    WHERE rk.rn <= {b.v(answers_limit, 'int4')})
 SELECT
   (SELECT count(*) FROM base) AS citations,
-  (SELECT count(*) FILTER (WHERE base.own) FROM base) AS own_citations,
+  (SELECT coalesce(sum(pl.own_citations), 0) FROM pl) AS own_citations,
   (SELECT count(*) FROM u) AS url_total,
   (SELECT count(*) FROM pl) AS prompt_total,
   (SELECT coalesce(json_agg(utp ORDER BY utp.citations DESC, utp.h), '[]'::json) FROM utp) AS urls,

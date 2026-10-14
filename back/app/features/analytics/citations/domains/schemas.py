@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, StringConstraints
+from pydantic import BaseModel, Field, StringConstraints, ValidationInfo, field_validator
 
 from app.core.envelope import Ratio
 from app.core.filters import SAFE_TEXT, CommonFilters
@@ -11,6 +11,8 @@ from app.features.analytics.citations.domains.shared import CategoryRef
 
 # 모듈-인용 §2 PageIn: limit 1~200(0 은 요약 전용). core.pagination.MAX_LIMIT(500) 보다 좁다(톤 드릴다운과 같은 상한).
 MAX_DOMAINS_LIMIT = 200
+MENTION_BRAND_MAX_LIMIT = 2000  # mention_brand(언급 드릴다운 인용 탭) 한 번 조회 상한 = 어댑터 종전 커서 상한(10페이지 × 200). 페이지마다 문장이
+                                # 대상 전체를 다시 접던 순차 10회를 한 요청으로(B009)
 Q_MAX = 200                 # 검색어 길이 상한(프롬프트·톤 검색과 같다)
 SKEY_MAX_ITEMS = 100        # skey[] 선택 상한(BG-20 경쟁사 도메인 선택: 현행 옵션 수보다 넉넉하게)
 SKEY_MAX_LEN = 512          # 도메인 드릴다운 경로 skey 와 같은 길이 상한
@@ -44,11 +46,25 @@ class DomainsListParams(CommonFilters):
 
 class DomainsQuery(DomainsListParams):
     """C-1 목록 파라미터. FastAPI 쿼리 모델은 다른 쿼리 인자와 섞을 수 없어 상속으로 합친다."""
-    limit: int = Field(50, ge=0, le=MAX_DOMAINS_LIMIT, description="순위 행 수(0 = 요약·경쟁사 합만, meta.page.total 은 그대로 좁힌 행 수)")
+    limit: int = Field(50, ge=0, le=MENTION_BRAND_MAX_LIMIT,
+                       description=f"순위 행 수(0~{MAX_DOMAINS_LIMIT}, 0 = 요약·경쟁사 합만, meta.page.total 은 그대로 좁힌 행 수). "
+                                   f"mention_brand 가 있으면 {MENTION_BRAND_MAX_LIMIT} 까지(언급 드릴다운 한 번 조회), 없이 넘으면 422")
     cursor: str | None = Field(None, max_length=4096, description="키셋 다음 페이지 커서(meta.page.next_cursor)")
     competitor_sources: bool = Field(False, description=f"BG-20: 공식(경쟁사) 카테고리 출처 전부(인용 수 내림차순, 상한 {COMPETITOR_SOURCES_MAX})를 "
                                                         "data.competitor_sources 로 함께 낸다(경쟁사 선택 옵션). q·skey 와 무관. "
-                                                        "true 면 meta.truncated.competitor_sources = 상한에서 잘렸는가")
+                                                        "true 면 meta.truncated.competitor_sources = 상한에서 잘렸는가. card=true·limit=0(대시보드 카드: "
+                                                        "출처를 브랜드로 접어 값을 낸다)은 상한 없이 전부(현행과 같은 값, 잘림 false)")
+    include_den: bool = Field(True, description="false 면 커버리지 분모 문장을 생략한다: summary.answers_den = 0, 행 coverage.den = 0(coverage·분모를 "
+                                                "읽지 않는 호출용). sort=coverage 는 정렬 키가 분모를 써서 그대로 센다")
+    include_competitor_totals: bool = Field(True, description="false 면 경쟁사 브랜드별 합을 계산하지 않는다(competitor_totals = 빈 목록, 읽지 않는 호출용)")
+
+    @field_validator("limit")
+    @classmethod
+    def _limit(cls, v: int, info: ValidationInfo) -> int:
+        # mention_brand(DomainsListParams)는 limit 보다 먼저 검증된다: 오류 위치는 limit 그대로(D4 회귀와 같은 loc)
+        if v > MAX_DOMAINS_LIMIT and info.data.get("mention_brand") is None:
+            raise ValueError(f"limit > {MAX_DOMAINS_LIMIT} 는 mention_brand 와 함께만(최대 {MENTION_BRAND_MAX_LIMIT})")
+        return v
 
 
 class DomainsExportQuery(DomainsListParams):

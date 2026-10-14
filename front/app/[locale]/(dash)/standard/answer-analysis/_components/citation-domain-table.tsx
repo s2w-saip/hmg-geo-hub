@@ -46,11 +46,28 @@ type SortKey = "domain" | "citations" | "share" | "prompts" | "coverageRate";
 // `detailQuery` (the drilldown's route parameters) an opened row loads its detail from
 // /api/scope/brand-citations?<detailQuery>&skey=<skey> once, then renders exactly as before.
 // Legacy rows (no skey) keep the inline urls / promptList.
+//
+// B008: when the route cut a list (the list itself, a row's URLs or its prompts), it sends the count
+// before the cap (total / urlTotal / promptTotal) and the table adds one line with the existing
+// "{total}개 중 {shown}개 표시" copy (TruncatedNote). A list that fits renders exactly as before.
 
 type DetailState =
   | { status: "loading" }
-  | { status: "ready"; urls: CitationUrlLive[]; promptList: CitationPromptLive[] }
+  | { status: "ready"; urls: CitationUrlLive[]; promptList: CitationPromptLive[]; urlTotal?: number; promptTotal?: number }
   | { status: "error" };
+
+/**
+ * The one-line notice under a list the route cut (B008): the existing unmeasured-dialog copy
+ * "{total}개 중 {shown}개 표시". Nothing when the list was not cut (total absent or not larger).
+ */
+export function TruncatedNote({ shown, total, className }: { shown: number; total?: number; className: string }) {
+  const t = useTranslations("answerAnalysis.mentions.kpi.overview.unmeasuredDialog");
+  if (total === undefined || total <= shown) return null;
+  return <p className={className}>{t("truncated", { shown, total })}</p>;
+}
+
+/** Class of the notice inside a bordered table box (the unmeasured dialog's line). */
+export const TRUNCATED_ROW_CLASS = "border-t border-border px-3 py-2 text-[11px] text-muted-foreground";
 
 /** Whether a row's drilldown comes from the detail call (API rows) rather than inline data. */
 export function rowLoadsDetail(row: Pick<CitationDomainLive, "skey">, detailQuery: string | undefined): boolean {
@@ -88,9 +105,15 @@ export function startDomainDetailLoad(
   setState({ status: "loading" });
   fetchImpl(url, { signal: ctrl.signal })
     .then((r) => (r.ok ? r.json() : Promise.reject(new Error("failed"))))
-    .then((d: { urls?: CitationUrlLive[]; promptList?: CitationPromptLive[] }) => {
+    .then((d: { urls?: CitationUrlLive[]; promptList?: CitationPromptLive[]; urlTotal?: number; promptTotal?: number }) => {
       if (ctrl.signal.aborted) return;
-      setState({ status: "ready", urls: d.urls ?? [], promptList: d.promptList ?? [] });
+      setState({
+        status: "ready",
+        urls: d.urls ?? [],
+        promptList: d.promptList ?? [],
+        ...(typeof d.urlTotal === "number" ? { urlTotal: d.urlTotal } : {}),
+        ...(typeof d.promptTotal === "number" ? { promptTotal: d.promptTotal } : {}),
+      });
     })
     .catch((e: unknown) => {
       if (ctrl.signal.aborted || (e instanceof DOMException && e.name === "AbortError")) return;
@@ -115,10 +138,13 @@ function useDomainDetail(url: string | null, active: boolean): DetailState | nul
 export function CitationDomainTable({
   domains,
   detailQuery,
+  total,
 }: {
   domains: CitationDomainLive[];
   /** API rows (skey): the drilldown route parameters used to load a row's detail when it opens. */
   detailQuery?: string;
+  /** Sources before the route's cap, only when it cut the list (B008). */
+  total?: number;
 }) {
   const t = useTranslations("answerAnalysis.citations");
   const [sortKey, setSortKey] = useState<SortKey>("citations");
@@ -199,6 +225,7 @@ export function CitationDomainTable({
           )}
         </tbody>
       </table>
+      <TruncatedNote shown={domains.length} total={total} className={TRUNCATED_ROW_CLASS} />
     </div>
   );
 }
@@ -352,6 +379,9 @@ function DomainRow({
                 ))}
               </ul>
             )}
+            {!pending && urls.length > 0 ? (
+              <TruncatedNote shown={urls.length} total={loaded?.urlTotal} className="mt-2 text-[11px] text-muted-foreground" />
+            ) : null}
           </td>
         </tr>
       ) : null}
@@ -360,7 +390,12 @@ function DomainRow({
         <tr className="border-t border-border bg-muted/20">
           <td colSpan={7} className="px-4 py-4">
             {pending ?? (
-              <CitationPromptsDrilldown prompts={promptList} domain={row.domain} emptyKey={noPromptsKey} />
+              <CitationPromptsDrilldown
+                prompts={promptList}
+                domain={row.domain}
+                emptyKey={noPromptsKey}
+                total={loaded?.promptTotal}
+              />
             )}
           </td>
         </tr>
@@ -369,15 +404,18 @@ function DomainRow({
   );
 }
 
-function CitationPromptsDrilldown({
+export function CitationPromptsDrilldown({
   prompts,
   domain,
   emptyKey = "drilldown.noPrompts",
+  total,
 }: {
   prompts: CitationPromptLive[];
   domain: string;
   /** 빈 목록 문구 키 — 호출부가 행 상태로 결정한다(citationDrilldownEmptyKey). */
   emptyKey?: CitationDrilldownEmptyKey;
+  /** 상세 상한 전 프롬프트 수 — 상한이 목록을 잘랐을 때만(B008). */
+  total?: number;
 }) {
   const t = useTranslations("answerAnalysis.citations");
   const tMd = useTranslations("answerAnalysis.mentions.drilldown");
@@ -438,6 +476,7 @@ function CitationPromptsDrilldown({
             })}
           </tbody>
         </table>
+        <TruncatedNote shown={prompts.length} total={total} className={TRUNCATED_ROW_CLASS} />
       </div>
 
       <AnswerModal

@@ -155,6 +155,7 @@ async def test_limit_zero_summary_only(client_as):
 
 
 @pytest.mark.parametrize("params", [{"surface": "nope"}, {"surface": "global", "limit": -1}, {"surface": "global", "limit": 201},
+                                    {"surface": "global", "mention_brand": "Hyundai", "limit": 2001},
                                     {"surface": "global", "from": "2026-09-02", "to": "2026-09-01"}, {"surface": "global", "from": "2026-09-30", "to": "2026-09-01"},
                                     {"surface": "global", "cf.bad": "x"}])
 @needs_db
@@ -200,12 +201,36 @@ async def test_empty_period(client_as):
 
 @needs_db
 async def test_limit_cap_200(client_as):
-    """D4 회귀: 모듈-인용 §2 PageIn limit 상한 200(0 은 요약 전용). 010dc5d 는 core MAX_LIMIT 500 을 써서 limit=500 이 200 이었다."""
+    """D4 회귀: 모듈-인용 §2 PageIn limit 상한 200(0 은 요약 전용). 010dc5d 는 core MAX_LIMIT 500 을 써서 limit=500 이 200 이었다.
+    B009: mention_brand(언급 드릴다운 인용 탭) 요청만 2,000 까지(한 번 조회). 오류 위치는 어느 쪽이든 limit."""
     assert (await _get(client_as, ADMIN, {**G, "limit": 200})).status_code == 200
     for bad in (201, 500):
         r = await _get(client_as, ADMIN, {**G, "limit": bad})
         assert r.status_code == 422 and r.json()["error"]["code"] == "unprocessable", (bad, r.text)
         assert any(d["loc"][-1] == "limit" for d in r.json()["error"]["details"])
+    assert (await _get(client_as, ADMIN, {**G, "mention_brand": "Hyundai", "limit": 2000})).status_code == 200
+    r = await _get(client_as, ADMIN, {**G, "mention_brand": "Hyundai", "limit": 2001})
+    assert r.status_code == 422 and any(d["loc"][-1] == "limit" for d in r.json()["error"]["details"]), r.text
+
+
+@needs_db
+async def test_b009_mention_brand_one_request_equals_cursor_pages(client_as):
+    """B009: 언급 드릴다운 인용 탭(mention_brand)의 limit 2,000 한 번 조회 = limit 1 커서 페이지를 끝까지 이어 붙인 결과(행·순서·share·
+    coverage·rank 동일, meta.page.total = 행 수). 종전 어댑터는 200 씩 최대 10페이지를 순차로 읽었다(페이지마다 문장이 대상 전체를 다시 접는다)."""
+    for uid, brand in ((ADMIN, "Hyundai"), (ADMIN, "Toyota"), (HQ_HYUNDAI, "Hyundai")):
+        base = {**G, "mention_brand": brand}
+        one = (await _get(client_as, uid, {**base, "limit": 2000})).json()
+        assert one["meta"]["page"]["next_cursor"] is None and one["meta"]["page"]["limit"] == 2000
+        items: list = []
+        cursor = None
+        for _ in range(30):
+            b = (await _get(client_as, uid, {**base, "limit": 1, **({"cursor": cursor} if cursor else {})})).json()
+            items += b["data"]["items"]
+            assert b["data"]["summary"] == one["data"]["summary"]
+            cursor = b["meta"]["page"]["next_cursor"]
+            if not cursor:
+                break
+        assert items and one["data"]["items"] == items and one["meta"]["page"]["total"] == len(items), (uid, brand)
 
 
 @pytest.mark.parametrize("value", ["a\x00b", "a\x1fb", "\x7f"])

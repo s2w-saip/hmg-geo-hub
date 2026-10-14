@@ -138,6 +138,45 @@ describe("api source", () => {
   it("skey validation: empty -> 400", async () => {
     expect((await GET(req("mentionBrand=Kia&skey="))).status).toBe(400);
   });
+  it("B006: a backend 403 -> 403 with the empty shape (list and detail); 404 unknown skey -> 200 empty detail", async () => {
+    const reply = (status: number, code: string) =>
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (u: string) => {
+          apiLog.push(new URL(String(u)));
+          return new Response(JSON.stringify({ error: { code, message: "internal detail" } }), { status, headers: { "content-type": "application/json" } });
+        }),
+      );
+    reply(403, "role_forbidden");
+    const list = await GET(req("mentionBrand=Kia"));
+    expect([list.status, await list.json()]).toEqual([403, { domains: [] }]);
+    const det = await GET(req("mentionBrand=Kia&skey=a.example"));
+    expect([det.status, await det.json()]).toEqual([403, { urls: [], promptList: [] }]);
+    reply(404, "not_found");
+    const gone = await GET(req("mentionBrand=Kia&skey=gone.example"));
+    expect([gone.status, await gone.json()]).toEqual([200, { urls: [], promptList: [] }]);
+  });
+  it("B010: one request of 2,000; B008: total / urlTotal / promptTotal only when a cap cut the list", async () => {
+    const fit = await (await GET(req("mentionBrand=Kia"))).json();
+    expect(Object.keys(fit)).toEqual(["domains"]);
+    expect(apiLog.map((u) => [u.searchParams.get("limit"), u.searchParams.get("cursor")])).toEqual([["2000", null]]);
+    const det = await (await GET(req("mentionBrand=Kia&skey=a.example"))).json();
+    expect(Object.keys(det)).toEqual(["urls", "promptList"]);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (u: string) => {
+        const url = new URL(String(u));
+        const body =
+          url.pathname === "/v1/citations/domains"
+            ? { ...LIST, meta: { mode: "cumulative", page: { limit: 2000, next_cursor: "Y3Vy", total: 2100 } } }
+            : { ...DETAIL, data: { ...DETAIL.data, url_total: 14, prompt_total: 0 } };
+        return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
+      }),
+    );
+    expect(((await (await GET(req("mentionBrand=Kia"))).json()) as { total?: number }).total).toBe(2100);
+    const cut = (await (await GET(req("mentionBrand=Kia&skey=a.example"))).json()) as { urlTotal?: number; promptTotal?: number };
+    expect([cut.urlTotal, cut.promptTotal]).toEqual([14, undefined]);
+  });
 });
 
 // ── independent verification (fail) regressions ───────────────────────────

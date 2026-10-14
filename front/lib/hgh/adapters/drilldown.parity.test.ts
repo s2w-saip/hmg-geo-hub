@@ -21,6 +21,14 @@ import { isNonCompetitorMention } from "@/lib/scope/non-competitor-brands";
 //           loaders (loadBrandMentionPrompts, loadSignalPrompts).
 // Rows are compared per prompt id (the drilldown table sorts on the client); every differing path
 // must be declared in KNOWN_DIFF with its reason, and every declared difference must still occur.
+// The brand lists are read in one request of 2,000 (B010) and the signal list with lite=true (B014):
+// the model serves exactly what the backend sends for those requests, so the parity covers them.
+//
+// Citation sources tab (B007): legacy aggregateBrandCitationsFrom (the pure rollup behind
+// fetchBrandCitations / aggregateBrandCitationsFromMirror) vs a model of C-1 ?mention_brand= whose
+// rows carry skey = the group key (the backend dim_source ports the same OFFICIAL_SOCIAL_ACCOUNTS
+// rule: an official social account is host+path) and domain = the display host. An official account
+// row and the plain row of the same host must keep the legacy names and count.
 
 const st = vi.hoisted(() => ({ db: null as unknown }));
 vi.mock("@/lib/db", () => ({ getDb: () => st.db }));
@@ -36,6 +44,8 @@ const { SYNC_PROBED_COLUMNS, setColumnAvailabilityForTests, resetColumnAvailabil
   "@/lib/db/column-availability"
 );
 const { aggregateMentionsFromMirror, aggregateSignalPromptsFromMirror } = await import("@/lib/db/repositories/scope-aggregates");
+const { aggregateBrandCitationsFrom } = await import("@/lib/scope/result-adapter");
+const { citationGroupKey } = await import("@/lib/citation-categorizer/official-social");
 const { STANDARD_ROOT_PROJECT_ID } = await import("@/lib/db/repositories/standards");
 const { HMG_BRAND_ENTITY_IDS } = await import("@/lib/scope/hmg-brands");
 const { bindHghAuth } = await import("../auth");
@@ -235,7 +245,7 @@ function answerBrandRows(): AnswerBrandRow[] {
 }
 
 type PromptItem = D.ApiPromptItem;
-function backendPrompts(target: { brand: string } | { signal: "positive" }): S["PromptsData"] {
+function backendPrompts(target: { brand: string } | { signal: "positive" }, lite = false): S["PromptsData"] {
   const own = [...OWN].map((id) => BRAND_NAME.get(id)!);
   const rows = answerBrandRows()
     .filter((r) => ("brand" in target ? r.brand === target.brand : own.includes(r.brand) && r.positive > 0))
@@ -264,9 +274,10 @@ function backendPrompts(target: { brand: string } | { signal: "positive" }): S["
             engine: a.engine,
             region: a.region,
             value: r.value,
-            position: r.rk,
-            measured_at: at(a.hoursAgo),
-            runs: 1,
+            // lite (mode=signal only, B014): the backend does not compute these three
+            position: lite ? null : r.rk,
+            measured_at: lite ? null : at(a.hoursAgo),
+            runs: lite ? null : 1,
             ...("brand" in target ? { terms: { brand: [target.brand], model: r.models } } : {}),
           };
         }),
@@ -291,7 +302,7 @@ async function apiList(target: { brand: string } | { signal: "positive" }): Prom
     vi.fn(async (u: string) => {
       const url = new URL(String(u));
       log.push(url);
-      const body = { data: backendPrompts(target), meta: { mode: "cumulative", page: { limit: 200, next_cursor: null } } };
+      const body = { data: backendPrompts(target, url.searchParams.get("lite") === "true"), meta: { mode: "cumulative", page: { limit: 200, next_cursor: null } } };
       return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
     }),
   );
@@ -299,12 +310,14 @@ async function apiList(target: { brand: string } | { signal: "positive" }): Prom
     const ctx = { surface: "global" as const, scope: null };
     const rows =
       "brand" in target
-        ? await D.loadBrandMentionPrompts({ cumulative: true }, ctx, { mentionBrand: target.brand })
+        ? (await D.loadBrandMentionPrompts({ cumulative: true }, ctx, { mentionBrand: target.brand })).prompts
         : await D.loadSignalPrompts({ cumulative: true }, ctx, target.signal);
     const q = log[0].searchParams;
     expect([q.get("mode"), q.get("mention_brand"), q.get("signal")]).toEqual(
       "brand" in target ? ["brand", target.brand, null] : ["signal", null, target.signal],
     );
+    // B010: one request of 2,000 for the brand list; B014: lite for the signal list
+    expect([log.length, q.get("limit"), q.get("lite")]).toEqual("brand" in target ? [1, "2000", null] : [1, "50", "true"]);
     return rows;
   } finally {
     bindHghAuth(null);
@@ -390,5 +403,150 @@ describe("signal list: legacy aggregateSignalPromptsFromMirror vs M-3 mode=signa
     expectOnlyKnown(legacy, api, [
       { path: /^\d\.funnelStage$/, reason: "U6-N16 signal list funnel: API = the catalog funnel (as the brand list), legacy = scope_prompts.funnel_stage (legacy vocabulary, null here)" },
     ]);
+  });
+});
+
+// ── citation sources tab (B007): legacy group keys vs C-1 ?mention_brand= through the adapter ──
+
+const CJ = (n: number) => `c0000000-0000-4000-8000-${n.toString(16).padStart(12, "0")}`;
+const brandMention = (entity: string, name: string) => ({
+  entity_id: entity,
+  entity_type: "Brand",
+  display_name: name,
+  rollups: { product_entity_id: null, brand_entity_id: entity, company_entity_id: null },
+  surfaces: [],
+  mention_count: 1,
+});
+/** Answers: two mention Toyota (cited sources below), one only BMW (its sources are outside the drilldown). */
+const CIT_JOBS = [
+  { job: CJ(1), prompt: u(0x30), engine: "chatgpt", brands: [[TOYOTA, "Toyota"]] },
+  { job: CJ(2), prompt: u(0x31), engine: "gemini", brands: [[TOYOTA, "Toyota"], [BMW, "BMW"]] },
+  { job: CJ(3), prompt: u(0x32), engine: "chatgpt", brands: [[BMW, "BMW"]] },
+] as const;
+/** Citations per answer: an official HMG social account (host+path key) next to plain rows of the same host. */
+const CIT_URLS: Record<string, { url: string; host: string }[]> = {
+  [CJ(1)]: [
+    { url: "https://www.linkedin.com/company/hyundai-motor-group/posts/1", host: "linkedin.com" },
+    { url: "https://www.linkedin.com/in/someone", host: "linkedin.com" },
+    { url: "https://www.reddit.com/r/cars/1", host: "reddit.com" },
+  ],
+  [CJ(2)]: [
+    { url: "https://www.linkedin.com/posts/hyundai-motor-group_ioniq-123", host: "linkedin.com" },
+    { url: "https://www.linkedin.com/pulse/ev-2026", host: "linkedin.com" },
+    { url: "https://www.linkedin.com/company/hyundai-motor-group/about", host: "linkedin.com" },
+  ],
+  [CJ(3)]: [{ url: "https://www.linkedin.com/in/other", host: "linkedin.com" }],
+};
+
+function legacyBrandSources(brand: string) {
+  const jobs = CIT_JOBS.map((j) => ({
+    job_id: j.job,
+    prompt_id: j.prompt,
+    target: j.engine,
+    region: "US",
+    status: "completed",
+    measured_at: at(10),
+    analysis: { status: "completed", resolved_mentions: j.brands.map(([id, name]) => brandMention(id, name)) },
+  }));
+  const results = CIT_JOBS.map((j) => ({
+    job_id: j.job,
+    target: j.engine,
+    status: "completed",
+    result: { answer_text: "", measured_at: at(10), citations: CIT_URLS[j.job] },
+  }));
+  const promptMap = new Map(PROMPTS.map((p) => [p.id, { text: p.text, funnel: p.funnel }]));
+  return aggregateBrandCitationsFrom(jobs as never, promptMap as never, results as never, brand, {}, { anchorAxis: false });
+}
+
+/** C-1 ?mention_brand= model: rows per source group key (skey) with the display host (domain), citations desc. */
+function backendSources(brand: string): S["DomainsData"] {
+  const jobs = new Set(CIT_JOBS.filter((j) => j.brands.some(([, name]) => name === brand)).map((j) => j.job));
+  const by = new Map<string, { domain: string; citations: number; answers: Set<string>; prompts: Set<string> }>();
+  for (const j of CIT_JOBS.filter((x) => jobs.has(x.job))) {
+    for (const c of CIT_URLS[j.job]) {
+      const skey = citationGroupKey(c.host, c.url);
+      const r = by.get(skey) ?? { domain: c.host, citations: 0, answers: new Set<string>(), prompts: new Set<string>() };
+      r.citations += 1;
+      r.answers.add(j.job);
+      r.prompts.add(j.prompt);
+      by.set(skey, r);
+    }
+  }
+  const total = [...by.values()].reduce((n, r) => n + r.citations, 0);
+  const items = [...by]
+    .sort(([ka, a], [kb, b]) => b.citations - a.citations || ka.localeCompare(kb))
+    .map(([skey, r], i) => ({
+      skey,
+      domain: r.domain,
+      is_social: skey !== r.domain,
+      category: null,
+      citations: r.citations,
+      share: { num: r.citations, den: total },
+      citing_answers: r.answers.size,
+      coverage: { num: r.answers.size, den: jobs.size },
+      own_citations: 0,
+      is_own: false,
+      is_target: false,
+      competitor_brand: null,
+      citing_prompts: r.prompts.size,
+      rank: i + 1,
+      match_rank: i + 1,
+    }));
+  return {
+    summary: { total_citations: total, unique_sources: items.length, own_share: { num: 0, den: total }, answers_den: jobs.size },
+    items,
+    competitor_totals: [],
+  } as S["DomainsData"];
+}
+
+async function apiSources(brand: string) {
+  const log: URL[] = [];
+  vi.stubEnv("HGH_API_BASE_URL", "https://api.hgh.test");
+  bindHghAuth({ getAccessToken: async () => TOKEN });
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url0: string) => {
+      const url = new URL(String(url0));
+      log.push(url);
+      const data = backendSources(url.searchParams.get("mention_brand") ?? "");
+      const body = { data, meta: { mode: "cumulative", page: { limit: 2000, next_cursor: null, total: data.items.length } } };
+      return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
+    }),
+  );
+  try {
+    const res = await D.loadBrandCitationDomains({ cumulative: true }, { surface: "global", scope: null }, brand);
+    expect(log.map((x) => [x.pathname, x.searchParams.get("mention_brand"), x.searchParams.get("limit")])).toEqual([
+      ["/v1/citations/domains", brand, "2000"],
+    ]);
+    return res;
+  } finally {
+    bindHghAuth(null);
+    vi.unstubAllGlobals();
+    vi.stubEnv("HGH_API_BASE_URL", "");
+  }
+}
+
+describe("citation sources tab (B007): legacy aggregateBrandCitationsFrom vs C-1 mention_brand through the adapter", () => {
+  it("an official social account row and the plain row of its host keep the legacy names and count", async () => {
+    const legacy = legacyBrandSources("Toyota");
+    const api = await apiSources("Toyota");
+    const rows = (list: { domain: string; citations: number; prompts: number }[]) =>
+      list.map((r) => [r.domain, r.citations, r.prompts] as const).sort((a, b) => a[0].localeCompare(b[0]));
+    // sanity: the legacy rollup really split the host (official account key next to the plain host)
+    expect(rows(legacy)).toEqual([
+      ["linkedin.com", 2, 2],
+      ["linkedin.com/hyundai-motor-group", 3, 2],
+      ["reddit.com", 1, 1],
+    ]);
+    expect(rows(api.domains)).toEqual(rows(legacy));
+    expect(api.total).toBeUndefined();
+    expect(new Set(api.domains.map((r) => r.domain)).size).toBe(api.domains.length); // table React key / expanded row
+    // the display host alone would have collided (the pre-B007 row name)
+    const hosts = backendSources("Toyota").items.map((r) => r.domain);
+    expect(new Set(hosts).size).toBeLessThan(hosts.length);
+  });
+  it("a brand cited nowhere: both empty", async () => {
+    expect(legacyBrandSources("Nope")).toEqual([]);
+    expect((await apiSources("Nope")).domains).toEqual([]);
   });
 });
