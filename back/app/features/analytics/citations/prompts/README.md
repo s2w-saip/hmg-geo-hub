@@ -36,3 +36,12 @@
   OwnerScope 가 요청 언어로 허용 배열을 좁혀(비면 안 좁힘) core plan_counts 가 원소 스캔(scan 모드)으로 센다. 이전 테스트의
   "global lang = ignored_filters" 단언은 새 동작으로 바꿨다.
 - 테스트: `tests/test_citations_prompts_bg.py`(준비 = staged.pgsql @global + domains/tests/bg.pgsql @lang_ko).
+
+## 선택 파라미터(백로그 P1~P12, 2026-10-14). 전부 선택 인자: 주지 않으면 응답 모양·값·문장이 종전과 같다
+- `include_refs`(B099): false = 행당 답변 표본 문장을 돌리지 않고 `items[].answers` = [].
+- `fields`(B099, all|text): text = 퍼널·AI 엔진을 계산하지 않는다(`items[].funnel` = null, `providers` = []). 정렬·citations·버킷·카운트는 같다.
+- `both_buckets`(B099): true = 같은 집계 한 번으로 반대 버킷(owned 의 반대)의 첫 페이지(같은 q·limit·정렬·include_refs·fields)를
+  `data.other_bucket` 에 싣는다. items·counts·meta.page 는 요청 버킷 그대로. cursor 와 함께면 422. 키는 both_buckets=true 일 때만 있고,
+  빈·숨김 창이면 [].
+- 보내는 화면: 표준 분할 카드 = `owned=true&limit=1&include_refs=false&fields=text`, 웹사이트·프로젝트 분할 = `owned=true&limit=5&both_buckets=true`
+  (owned = items, 미인용 = other_bucket), 하위 프롬프트 페이지 = `fields=text`.

@@ -59,3 +59,9 @@
 
 ## 파일
 - `router.py` · `schemas.py` · `service.py` · `queries.py` · `dberr.py`(DB 트리거·색인 오류 → 코드) · `tests/`(ecat6.pgsql = 준비·정리 문장)
+
+## 선택 파라미터(백로그 P1~P12, 2026-10-14). 전부 선택 인자: 주지 않으면 응답 모양·값·문장이 종전과 같다
+- `GET /v1/admin/entities/versions?view=gate`(B084): 활성·초안 번호만(items = [], status·limit 무시). 하위 화면 게이트용. 기본 full = 종전.
+- `GET /v1/admin/entities/versions/{ver}?view=lint`(B087): 버전 요약·content_md5·lint 만(값은 full 과 같다), entities·surfaces = [](반영 상세 화면 보조).
+- `POST /v1/admin/entities/versions`(초안 생성)·`PATCH /v1/admin/entities/versions/{ver}`(초안 수정)의 `?return=minimal`(B085): 버전 요약(version)만,
+  content_md5·lint = null, entities·surfaces = [](화면이 번호만 쓰고 다시 읽을 때). 기본 full = 종전.

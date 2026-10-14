@@ -45,3 +45,9 @@
   `own_brand_code`·`is_hmg_own` 만 싣는다. 엔진별 값 = `engine=<e>` 필터로 부른 값. 블록 = 창 안 std_in 답변이 있는 엔진만(answers 0 블록 없음,
   검증 D4: 창 WHERE 가 cit_in 이라 분석 대기 답변만 있는 엔진이 빈 블록으로 나왔다). 블록 answers 합 = `totals.answers`.
 - `q`(BG-19): 경쟁 브랜드 이름 부분 일치(대소문자 무시, 1~100자). `full`(BG-19): 경쟁 행 전량(top_n 무시, 상한 `FULL_CAP` 2000) + `data.truncated`.
+
+## 선택 파라미터(백로그 P1~P12, 2026-10-14). 전부 선택 인자: 주지 않으면 응답 모양·값·문장이 종전과 같다
+- `include_sentiment`(B092): false = 당사 감성 문장(rd.answer_brand 당사 행 합)을 건너뛰고 모든 행(brands·by_engine[].brands)의 sentiment = 0 4개.
+- `engine_only`(B092, `group_by=engine` 일 때만): true = by_engine 만 계산. 창 전체 당사 합계·경쟁 행·당사 감성 문장을 건너뛰고 최상위
+  totals·own·brands·types_total·truncated 는 빈 창 응답과 같은 값(0, 당사 행만). by_engine·meta 는 같다. group_by 가 없으면 효과 없음.
+- 브랜드 하나만 필요하면 기존 `brand_key[]`·`q`(예: `full=true&q=<이름>`)로 응답만 좁힌다(새 파라미터 없음).

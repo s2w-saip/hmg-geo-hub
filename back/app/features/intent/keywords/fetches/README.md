@@ -25,3 +25,7 @@
 - payload = core.contracts DfsFetch 계약(fetch·terms·location_code·language_code·country·depth·project_id·force), subject_texts = 정렬된 term_norm.
 - 권한: project_id 없음 = 메뉴 standard + admin·전역 운영자 + 국가 스코프. 있음 = 메뉴 project + resolve_project(operate), 국가가 프로젝트 국가·추적
   키워드 국가 밖이면 project_id 없는 규칙.
+
+## 선택 파라미터(백로그 P1~P12, 2026-10-14). 전부 선택 인자: 주지 않으면 응답 모양·값·문장이 종전과 같다
+- `GET /v1/intent/fetches?ids=…`(B063·B073, 1~20건, 반복): 수집 요청 상태 일괄(폴링용, 응답 items = 요청 순서). 단건
+  `GET /v1/intent/fetches/{change_id}` 와 같은 가시성: 하나라도 없거나 볼 수 없으면 404. 구글 키워드·키워드 도구 폴링이 change id 별 GET 대신 쓴다.

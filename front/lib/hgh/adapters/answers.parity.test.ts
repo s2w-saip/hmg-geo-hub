@@ -245,6 +245,16 @@ const HYUNDAI_US: Scope = { all: false, brands: ["Hyundai"], countries: ["US"] }
 async function legacyGlobal(sp: Sp, scope: Scope) {
   return getMirrorAnswerBody(JOB, readStandardFilters(sp, scope, undefined, "standard"));
 }
+// Project: the route reads the project URL without the profile scope and fetchProjectAnswerBody gates on the project's runs
+// (getMirrorAnswerBody runProjectIds, which replaces the brand gate) and region IN f.region. The answer's run belongs to RUN_PROJECT
+// (the project's Scope id); the API side is called with the hub project id the route gated on (PROJECT_ID = the answer's project).
+const RUN_PROJECT = SITES.find((s) => s.brand === SITE_BRAND)!.id;
+const PROJECT_ID = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
+/** Legacy project: fetchProjectAnswerBody -> withProject (contextBrand = the project brand) -> getMirrorAnswerBody run gate. */
+async function legacyProject(sp: Sp) {
+  const f = readStandardFilters(sp, undefined, undefined, "standard");
+  return getMirrorAnswerBody(JOB, { ...f, contextBrand: PERSPECTIVE }, { runProjectIds: RUN_PROJECT });
+}
 /** Legacy website: the route's region -> websiteCountry remap, then withWebsite (narrowScopeBrands -> site ids -> run gate). */
 async function legacyWebsite(sp: Sp, scope: Scope) {
   const raw = readStandardFilters(sp, scope, undefined, "website");
@@ -258,10 +268,16 @@ async function legacyWebsite(sp: Sp, scope: Scope) {
 /**
  * Backend model of GET /v1/answers/{job_id} access (back answers/detail service.py): the account scope, then the optional gates
  * intersected with it (resolve_read_context: values outside the scope dropped; brand: all dropped -> the scope; country: all
- * dropped -> nothing). global: answer geo and prompt catalog brand; website: the site brand only (gate_country unused).
+ * dropped -> nothing). global: answer geo and prompt catalog brand; website: the site brand only (gate_country unused); project: the
+ * answer's project (project_id) and the answer geo (gate_country as sent: the project surface does not apply the account country scope).
  */
 function backendStatus(q: URLSearchParams, scope: Scope): 200 | 404 {
   const surface = q.get("surface");
+  if (surface === "project") {
+    if (q.get("project_id") !== PROJECT_ID) return 404;
+    if (q.has("gate_country") && !q.getAll("gate_country").includes(ANSWER_COUNTRY)) return 404;
+    return 200;
+  }
   const scopeBrands = scope.all || !scope.brands?.length ? null : scope.brands;
   const scopeCountries = scope.all || !scope.countries?.length ? null : scope.countries;
   const brand = surface === "website" ? SITE_BRAND : PROMPT_BRAND;
@@ -300,8 +316,13 @@ describe("answer modal access: the URL filters gate both sides alike (B003)", ()
     vi.unstubAllGlobals();
   });
 
-  async function api(sp: Sp, s: Scope, surface: "global" | "website") {
+  async function api(sp: Sp, s: Scope, surface: "global" | "website" | "project") {
     scope = s;
+    if (surface === "project") {
+      // the route: no profile scope on a project (readStandardFilters without it, scope null), projectId = the gated project
+      const filters = readStandardFilters(sp, undefined, undefined, "standard");
+      return A.loadAnswerDetail({ jobId: JOB, surface, filters, scope: null, projectId: PROJECT_ID });
+    }
     const filters = readStandardFilters(sp, s, undefined, surface === "website" ? "website" : "standard");
     return A.loadAnswerDetail({ jobId: JOB, surface, filters, scope: s });
   }
@@ -336,5 +357,20 @@ describe("answer modal access: the URL filters gate both sides alike (B003)", ()
   ] as const)("website: %s", async (_name, sp, available) => {
     same(await legacyWebsite(sp as Sp, ADMIN), await api(sp as Sp, ADMIN, "website"), available);
     expect(requests.at(-1)!.searchParams.has("gate_country")).toBe(false);
+  });
+
+  it.each([
+    ["no URL filter", {}, true],
+    ["URL country = the answer's", { geography: "US" }, true],
+    ["URL countries incl. the answer's", { geography: ["DE", "US"] }, true],
+    // legacy region IN f.region also gates a project answer (P13d: the API read now sends gate_country on a project)
+    ["URL country outside the answer", { geography: "DE" }, false],
+    // the run gate replaces the prompt brand gate on a project: a URL brand never gates
+    ["URL brand outside the prompt", { brand: "Kia" }, true],
+    ["URL brand + country outside the answer", { brand: "Kia", geography: "DE" }, false],
+  ] as const)("project: %s", async (_name, sp, available) => {
+    same(await legacyProject(sp as Sp), await api(sp as Sp, HYUNDAI_US, "project"), available);
+    expect(requests.at(-1)!.searchParams.get("project_id")).toBe(PROJECT_ID);
+    expect(requests.at(-1)!.searchParams.has("gate_brand")).toBe(false);
   });
 });

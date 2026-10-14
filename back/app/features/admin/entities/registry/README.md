@@ -28,3 +28,7 @@
 - PUT: own(brand_code 필수, 엄브렐러 불가)·excluded = upsert, competitor = 삭제. 같은 트랜잭션에서 `enqueue_change('entity', payload{op, entity_id, old, new})`.
   같은 엔티티 대기 요청이 있으면 409 `duplicate_pending`(쓰기 롤백). 변경 없음 = applied false·요청 없음. 응답 warnings `full_rebuild`.
 - EXPLAIN(로컬 합성 DB): 기본 창·1개월 창 모두 answer_brand 리프 1개(`answer_brand_g_202609`)만 스캔(파티션 가지치기 확인).
+
+## 선택 파라미터(백로그 P1~P12, 2026-10-14). 전부 선택 인자: 주지 않으면 응답 모양·값·문장이 종전과 같다
+- `GET /v1/admin/entities?fields=names`(B088): 이름·유형만 쓰는 호출(검토함 병합 후보)용. 유효 귀속 판정(own_brand)을 하지 않고 null.
+  행·순서·이름·유형·역할·수치·커서는 full(기본, 종전)과 같다.

@@ -59,3 +59,9 @@
   출처 3만·프롬프트 2천) 로컬 비교: 이전 문장(출처 인덱스 순 GroupAggregate) 중앙값 7.8s, 새 문장 4.7s, count(DISTINCT) 대안 6.6s,
   기존 열 값 동일. 파티션은 회차 월 리프 하나만 읽는다.
 - 테스트: `tests/test_domains_bg.py`(준비 = prompts/tests/staged.pgsql @global + `tests/bg.pgsql`).
+
+## 선택 파라미터(백로그 P1~P12, 2026-10-14). 전부 선택 인자: 주지 않으면 응답 모양·값·문장이 종전과 같다
+- `limit`(B009): 종전 0~200. `mention_brand` 가 있으면 2,000 까지(언급 드릴다운 인용 출처 탭 한 번 조회), 없이 200 을 넘으면 422.
+- `include_den`(B011): false = 커버리지 분모 문장 생략. `summary.answers_den` = 0, 행 `coverage.den` = 0(coverage·분모를 읽지 않는 호출용).
+  `sort=coverage` 는 정렬 키가 분모를 쓰므로 그대로 센다.
+- `include_competitor_totals`(B011): false = 경쟁사 브랜드별 합을 계산하지 않고 `competitor_totals` = [](읽지 않는 호출용).

@@ -42,3 +42,8 @@
   채운다(쓰기 트랜잭션 안에서 읽어 이번 쓰기의 outbox 행 포함, 변경 없는 요청은 기존 대기 그대로. 검증 D4: 전에는 null 이라 null 을 false 로 읽는 어댑터가
   '대기 없음' 으로 보였다).
   scope_outbox_aggregate_idx 접두 조회 행당 2회(페이지 상한 500).
+
+## 선택 파라미터(백로그 P1~P12, 2026-10-14). 전부 선택 인자: 주지 않으면 응답 모양·값·문장이 종전과 같다
+- 쓰기 6종(`PATCH …/{prompt_id}/text`·`/labels`·`/regions`·`/kind`, `DELETE …/{prompt_id}`, `POST …/{prompt_id}/restore`)의 `?return=minimal`(B075):
+  응답용 재조회 2문장(prompt 의 outbox 표시·이번 쓰기 change_ids)을 생략한다. prompt·change_id = null, change_ids = [], propagation 은 이번 쓰기의
+  outbox 행만 본다(재판정 요청은 GET 상세 pending_changes). 쓰기·트리거·outbox 는 같다. 기본 full = 종전.

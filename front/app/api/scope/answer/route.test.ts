@@ -153,6 +153,15 @@ describe("api source: AN-2 through the adapter", () => {
     expect(answerCalls()[1].searchParams.get("project_id")).toBe(PROJECT);
     expect(st.calls).toHaveLength(0);
   });
+  it("project: the URL countries gate the read as sent (legacy region IN f.region, no profile scope on a project); no brand gate", async () => {
+    // hq scope countries = US: a project URL is read without the profile scope, so DE is sent as it is (legacy readStandardFilters(sp, undefined))
+    await GET(req(`jobId=${JOB}&projectId=${PROJECT}&geography=DE&brand=Kia`));
+    await GET(req(`jobId=${JOB}&projectId=${PROJECT}`));
+    const answerCalls = apiLog.filter((u) => u.pathname.startsWith("/v1/answers"));
+    expect(answerCalls[0].search).toBe(`?gate_country=DE&lite=true&project_id=${PROJECT}&surface=project`);
+    expect(answerCalls[1].search).toBe(`?lite=true&project_id=${PROJECT}&surface=project`);
+    expect(st.calls).toHaveLength(0);
+  });
   it("standard: the URL countries and the admin brand gate the read (legacy IDOR gate); the account scope is not sent", async () => {
     st.session = hq({ role: "admin", scope: { all: true } });
     await GET(req(`jobId=${JOB}&geography=US&brand=Kia`));

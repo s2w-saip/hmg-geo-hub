@@ -1,10 +1,8 @@
-"""projects.settings.overview SQL(app 만). 프로젝트당 소량 표 5개를 PK·project_id 접두로 읽는다."""
+"""projects.settings.overview SQL(app 만). 목록 표(owned base·경쟁사·차종)를 project_id 접두로 읽는다.
+프로젝트 행·추적 URL 건수·자사 브랜드 별칭 행·기본 엔진은 service.PROJECT_BUNDLE 한 문장(P3 B022)이라 여기 두지 않는다."""
 from __future__ import annotations
 
 from app.features.projects.settings.owned_bases.queries import LIST as OWNED_BASES
-from app.features.projects.settings.tracked_targets.queries import BRAND_ROW, LIST_COMPETITORS, LIST_VEHICLES
-from app.features.projects.settings.tracked_urls.queries import COUNT as TRACKED_URL_COUNT
+from app.features.projects.settings.tracked_targets.queries import LIST_COMPETITORS, LIST_VEHICLES
 
-PROJECT = "SELECT domain, brand_code, ai_engines FROM app.project WHERE project_id = :pid"
-
-__all__ = ["BRAND_ROW", "LIST_COMPETITORS", "LIST_VEHICLES", "OWNED_BASES", "PROJECT", "TRACKED_URL_COUNT"]
+__all__ = ["LIST_COMPETITORS", "LIST_VEHICLES", "OWNED_BASES"]

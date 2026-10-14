@@ -28,3 +28,7 @@
   분모 `answers_total` 은 합친 관점과 같다. 당사 언급·당사 매트릭스·스탠스는 블록 합 = 합친 값(행 가산), own_answers 는 가산 아님.
   관점 비트가 하나면 `by_own_brand = []`(가르지 않음). 합친 필드는 split_own 과 무관하게 같다. 쿼리 = 비트 수(≤ 3) × 2 문장 추가.
   손 계산(admin, 스냅샷 11): Hyundai 당사 5·답변 2·비교 6, Kia 2·1·9, Genesis 0·0·11, 스탠스 Hyundai {positive 1}, Kia {mixed 1}.
+
+## 선택 파라미터(백로그 P1~P12, 2026-10-14). 전부 선택 인자: 주지 않으면 응답 모양·값·문장이 종전과 같다
+- `include_stance`(B093): false = 당사 스탠스(A3) 문장을 돌리지 않고 `stance`·`by_own_brand[].stance` = null(OwnTypes.stance nullable).
+  유형·매트릭스·answers_total·meta 는 같다.

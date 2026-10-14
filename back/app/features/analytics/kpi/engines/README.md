@@ -24,3 +24,8 @@
 
 ## 값 갭 보강(2026-09-28, bg-kpi-filters)
 - BG-01·BG-03: core KPI_SUPPORT 로 글로벌 `lang[]`, 글로벌·프로젝트 `depth4[]` 를 적용한다(행 합 = K-1 카드 불변).
+
+## 선택 파라미터(백로그 P1~P12, 2026-10-14). 전부 선택 인자: 주지 않으면 응답 모양·값·문장이 종전과 같다
+- `parts[]`(B090, all|exposure|sov|favorability|position|citation): core part 들의 합집합으로 열을 좁힌다. 주면 `part` 대신 쓰고, 비우면 `[part]`(종전).
+  계산하지 않은 필드는 null(`part` 와 같은 규칙).
+- 보내는 화면: 엔진 일관성 배지 = `parts=sov&parts=citation`(rank_detail 없음), 언급 서브 KPI = `parts=sov`.

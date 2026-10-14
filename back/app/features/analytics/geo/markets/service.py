@@ -10,6 +10,9 @@
 - 당사 값(M01~M05)은 core.measure.fetch_counts(group_by=geo): rd.answer 당사 열(G-03), M05 는 답변 인용 수 열(G-25). M05 분자 =
   출처 카테고리 Official (HMG) 인용 수(cit_m05 = Σ cit_off, 동기화 S1 BE-4 = hmg-geo #321 feddea7: Overview GEO 국가별 ⑤ 도 카드와 같은 분자).
   카드와 같은 빌더라 국가 합 = 카드(D6).
+- 웹사이트(언급 수 지표만, B094): 사실 집계를 점유율이 쓰는 열로 좁힌다. fetch_counts part 'sov'(답변 수·당사 언급·전체 언급)와
+  brand_rows(mentions_only=True)(경쟁 행 언급 수)만 읽고 노출·감성·순위 열은 계산하지 않는다(meta.suppressed website_mentions_only 와 같은
+  범위). 남는 열은 'mentions'·기본 경쟁 행과 같은 식이라 응답이 같다.
 - 경쟁사는 core.measure.brand_rows(group_by=geo, hmg_siblings=False)(competitive ∧ std_in ∧ own_bit = 0): 권한 밖 형제 HMG 브랜드는
   경쟁사 목록·순위에 없고 분모(시장 전체 언급 ment_total)에는 남는다(브랜드 격리, 현행 marketStats 계승).
 - 국가 표시명(명세 GeoCountryRow.country_name)은 싣지 않는다(DECISIONS-API GEO-1): rd.dim_country 에 표시명 열이 없고, 현행도 표시명을
@@ -146,8 +149,10 @@ async def get_geo(conn: Any, principal: Principal, filters: CommonFilters, *, to
 
     # ── 사실 집계(core 빌더) ──
     ms = ctx.measure()
-    counts = await fetch_counts(conn, ms, win, group_by=("geo",), parts=("mentions",) if website else ("mentions", "citations"))
-    comp = await brand_rows(conn, ms, win, group_by=("geo",), hmg_siblings=False)     # HMG 브랜드(형제 포함)는 경쟁사가 아니다
+    # B094: 웹사이트는 점유율·순위·최대 경쟁사 점유율만 그린다 → 당사 'sov' 3열·경쟁 행 언급 수만(없는 열은 0 으로 읽고 쓰지 않는다)
+    counts = await fetch_counts(conn, ms, win, group_by=("geo",), parts=("sov",) if website else ("mentions", "citations"))
+    comp = await brand_rows(conn, ms, win, group_by=("geo",), hmg_siblings=False,    # HMG 브랜드(형제 포함)는 경쟁사가 아니다
+                            mentions_only=website)
     excluded = await excluded_brand_keys(conn) if comp else frozenset()
     comp = [r for r in comp if int(r["brand_key"]) not in excluded]                # 명부 제외: 순위·모수·최대 경쟁사에서만 빠진다
     keys = sorted({int(r["brand_key"]) for r in comp if int(r["brand_key"]) != 0})
@@ -172,7 +177,7 @@ async def get_geo(conn: Any, principal: Principal, filters: CommonFilters, *, to
         # 개명 브랜드(동결 읽기, 회차마다 세대 이름이 다른 키)는 core.measure.brand_rows 가 세대 이름별 행으로 나눠 준다(frz_name, S4b)
         cur = rivals_by_geo[int(r["geo_key"])].setdefault(r.get("frz_name") or n["name"], dict.fromkeys(BRAND_COLS, 0))
         for k in BRAND_COLS:
-            cur[k] += int(r[k] or 0)
+            cur[k] += int(r.get(k) or 0)
 
     region_counts: dict[str, dict[str, int]] = {}
     region_rivals: dict[str, dict[str, dict[str, int]]] = defaultdict(dict)

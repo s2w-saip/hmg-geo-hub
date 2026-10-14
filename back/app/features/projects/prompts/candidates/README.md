@@ -22,3 +22,8 @@
 - 권한: 목록 = 활성 멤버 또는 admin(core.auth.resolve_project active_member, 비멤버 404: 현행 prompt/page.tsx:43, 메인 정정 2026-09-28), 승격·삭제 = 활성 Owner 또는 admin. 라우터 공통 = 역할(hq·region·country·admin·vendor) + 메뉴 project.
 - 목록 키셋(created_at DESC, candidate_id DESC, 기본 200). 공통 필터 축은 지원하지 않고 meta.ignored_filters 로 표기.
 - 다른 프로젝트 후보 id 는 not_found 로 돌려주고, 한 건도 없으면 404 candidate_not_found. 승격 원본은 풀에 남는다.
+
+## 선택 파라미터(백로그 P1~P12, 2026-10-14). 전부 선택 인자: 주지 않으면 응답 모양·값·문장이 종전과 같다
+- `GET /v1/projects/{project_id}/prompt-candidates?include_total=false`(B023): 전체 건수 COUNT 를 세지 않고 `meta.page.total` = null(행·커서는 같다).
+  건수를 따로 아는 화면(홈 타일은 상세 candidate_count)용. front `fetchRecentCandidates(..., {include_total: false})`.
+- `POST …/prompt-candidates/screen` 은 ids_only 묶음이 없다(행 읽기 상한 1~500 그대로).

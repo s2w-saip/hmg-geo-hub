@@ -68,36 +68,48 @@ def _dims(b: Binder, device_keys: Sequence[int] | None, nvr_keys: Sequence[int] 
     return w
 
 
+def _sets(cohort: str, detail: bool) -> tuple[str, str]:
+    """(g·묶음 열 SELECT 조각, GROUPING SETS). detail=False(B096: 추이·엔진 행을 쓰지 않는 요약·롤업 호출)면 (날짜)·(엔진) 묶음을 빼고
+    (속성)·(전체)만 센다. g 값(5 속성, 7 전체)과 date·engine_key 열(NULL)은 detail=True 의 같은 행과 같다."""
+    if detail:
+        return (f"GROUPING(r.date, r.prop_key, r.engine_key)::int AS g, {cohort}, r.date, r.prop_key, r.engine_key",
+                f"({cohort}, r.date), ({cohort}, r.prop_key), ({cohort}, r.engine_key), ({cohort})")
+    return (f"CASE WHEN GROUPING(r.prop_key) = 0 THEN 5 ELSE 7 END AS g, {cohort}, NULL::date AS date, r.prop_key, "
+            "NULL::int2 AS engine_key", f"({cohort}, r.prop_key), ({cohort})")
+
+
 def sessions_sql(props: Sequence[int], lo: date, hi: date, *, engine_keys: Sequence[int] | None,
-                 device_keys: Sequence[int] | None, nvr_keys: Sequence[int] | None) -> Sql:
+                 device_keys: Sequence[int] | None, nvr_keys: Sequence[int] | None, detail: bool = True) -> Sql:
     """세션: report 2(AI, engine 필터) + report 1 비AI 행. GROUPING SETS (날짜)·(속성)·(엔진)·(전체) × report.
-    g = GROUPING(date, prop_key, engine_key): 3 날짜, 5 속성, 6 엔진, 7 전체."""
+    g = GROUPING(date, prop_key, engine_key): 3 날짜, 5 속성, 6 엔진, 7 전체. detail=False 면 (속성)·(전체)만(_sets)."""
     b = Binder("s")
     w = [f"r.prop_key = ANY({b.ints(props)})", f"r.report = ANY({b.ints((1, 2))})",
          f"r.date BETWEEN {b.date(lo)} AND {b.date(hi)}", "r.event_key = 0", "(r.report = 2 OR NOT r.is_ai)"]
     if engine_keys is not None:
         w.append(f"(r.report = 1 OR r.engine_key = ANY({b.ints(engine_keys)}))")
     w += _dims(b, device_keys, nvr_keys)
-    t = ("SELECT GROUPING(r.date, r.prop_key, r.engine_key)::int AS g, r.report, r.date, r.prop_key, r.engine_key,\n"
+    sel, sets = _sets("r.report", detail)
+    t = (f"SELECT {sel},\n"
          "       coalesce(sum(r.sessions), 0)::int8 AS sessions, coalesce(sum(r.page_views), 0)::int8 AS page_views\n"
          f"  FROM rd.ga4_row r\n WHERE {' AND '.join(w)}\n"
-         " GROUP BY GROUPING SETS ((r.report, r.date), (r.report, r.prop_key), (r.report, r.engine_key), (r.report))")
+         f" GROUP BY GROUPING SETS ({sets})")
     return b.sql(t)
 
 
 def conversions_sql(props: Sequence[int], lo: date, hi: date, *, engine_keys: Sequence[int] | None,
-                    device_keys: Sequence[int] | None, nvr_keys: Sequence[int] | None) -> Sql:
-    """전환: report 3 is_conv 행, 분자 열은 속성 conv_basis. engine 필터는 AI 행에만. g 는 sessions_sql 과 같다."""
+                    device_keys: Sequence[int] | None, nvr_keys: Sequence[int] | None, detail: bool = True) -> Sql:
+    """전환: report 3 is_conv 행, 분자 열은 속성 conv_basis. engine 필터는 AI 행에만. g·detail 은 sessions_sql 과 같다."""
     b = Binder("c")
     w = [f"r.prop_key = ANY({b.ints(props)})", "r.report = 3", f"r.date BETWEEN {b.date(lo)} AND {b.date(hi)}", "r.is_conv"]
     if engine_keys is not None:
         w.append(f"(NOT r.is_ai OR r.engine_key = ANY({b.ints(engine_keys)}))")
     w += _dims(b, device_keys, nvr_keys)
-    t = ("SELECT GROUPING(r.date, r.prop_key, r.engine_key)::int AS g, r.is_ai, r.date, r.prop_key, r.engine_key,\n"
+    sel, sets = _sets("r.is_ai", detail)
+    t = (f"SELECT {sel},\n"
          f"       coalesce(sum({_CONV}), 0)::int8 AS conv\n"
          "  FROM rd.ga4_row r JOIN rd.ga4_dim_property p ON p.prop_key = r.prop_key\n"
          f" WHERE {' AND '.join(w)}\n"
-         " GROUP BY GROUPING SETS ((r.is_ai, r.date), (r.is_ai, r.prop_key), (r.is_ai, r.engine_key), (r.is_ai))")
+         f" GROUP BY GROUPING SETS ({sets})")
     return b.sql(t)
 
 

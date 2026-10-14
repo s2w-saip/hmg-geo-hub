@@ -69,3 +69,12 @@
 
 ## 파일
 - `router.py` 엔드포인트(APIRouter) · `schemas.py` 요청·응답(Pydantic) · `service.py` 업무 규칙 · `queries.py` 읽기 스키마 SQL(rd·app·ext) · `tests/`
+
+## 선택 파라미터(백로그 P1~P12, 2026-10-14). 전부 선택 인자: 주지 않으면 응답 모양·값·문장이 종전과 같다
+- `dims[]`(B101, 최대 5, 반복): 같은 요청에서 함께 낼 차원. 항목 = `dimension[:metric,…][@top]`(dimension = none|engine|type|source|category,
+  brand 는 기본 `dimension` 으로만). metric 생략 = 그 차원 기본 세트, top 생략 = 요청 top. 형식 오류·중복(기본 dimension 포함)·top 1~50 밖은 422,
+  지표 오류는 기존 `unknown_metric`·`metric_not_supported` 422.
+- 응답 `data.dims[]` = 항목 순서의 `{dimension, series, meta}`. 그 차원만 따로 부른 응답(같은 필터·bucket·card·measured_days)의 series·meta 와 같다.
+  buckets·own_label 은 공유, 최상위 data·meta = 기본 dimension. dims 를 주지 않으면 키가 없다.
+- 보내는 곳: front `trend.ts` `fetchTrendDims`(언급 = engine + none·type, 인용 = source + category).
+- 내부 생략(파라미터 없음, 값 같음): brand 계열 base·비트별 당사 합계 한 문장·요청 지표 열만(B100), url_rates 가 main 문장 urls 열 재사용(B102).

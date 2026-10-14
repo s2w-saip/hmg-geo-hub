@@ -400,9 +400,46 @@ async def test_detail_project_id_gate(client_as):
     async with client_as(VENDOR) as c:                     # 거부는 표면 게이트 다음: 경로 밖 표면은 종전대로 403/404
         r = await c.get(url(1), params={"surface": "global", "project_id": str(CUST_PROJECT)})
     assert r.status_code == 403
-    async with client_as(HQ_HYUNDAI) as c:                 # project 는 gate_country·gate_brand 를 쓰지 않는다(종전)
-        r = await c.get(url(31), params={"project_id": str(CUST_PROJECT), "gate_country": ["DE"], "gate_brand": ["Kia"]})
+    async with client_as(HQ_HYUNDAI) as c:                 # project 는 gate_brand 를 쓰지 않는다(현행 run 소속 게이트가 brand 게이트를 대신한다)
+        r = await c.get(url(31), params={"project_id": str(CUST_PROJECT), "gate_country": ["US"], "gate_brand": ["Kia"]})
     assert r.status_code == 200
+
+
+@needs_db
+async def test_detail_gate_country_project(client_as):
+    """P1 잔여(P13d): project 도 화면 URL 국가로 게이트한다. 현행 fetchProjectAnswerBody → getMirrorAnswerBody 는 region IN f.region 을 건다
+    (라우트가 프로젝트 URL 을 프로필 스코프 없이 readStandardFilters 로 읽어 f.region = URL ?geography= 그대로). k31 = CUST_PROJECT US 답변.
+    계정 국가 스코프와 교차하지 않는다: KIA_US(스코프 US)·VENDOR 도 같은 결과, 스코프 밖 국가(DE)만 주면 404(현행 IN 이 맞는 행 없음)."""
+    pid = str(CUST_PROJECT)
+    for uid in (HQ_HYUNDAI, VENDOR, ADMIN):
+        async with client_as(uid) as c:
+            base = await c.get(url(31), params={"surface": "project", "project_id": pid})
+            ok = [await c.get(url(31), params={"surface": "project", "project_id": pid, "gate_country": g})
+                  for g in (["US"], ["DE", "US"], ["us"], ["US", "ZZ"], ["US", "HYUNDAI-N"])]
+            out = [await c.get(url(31), params={"surface": "project", "project_id": pid, "gate_country": g})
+                   for g in (["DE"], ["ZZ"], ["HYUNDAI-N"], ["KR", "DE"])]
+        assert base.status_code == 200, (uid, base.text)
+        for r in ok:
+            assert r.status_code == 200 and r.json() == base.json(), (uid, r.text)              # 게이트 안 = 본문·meta 같다
+        for r in out:
+            assert r.status_code == 404 and r.json()["error"]["code"] == "not_found", (uid, r.text)
+    c = await asyncpg.connect(DB_URL)
+    try:                                                                                         # 손계산 전제(답변 국가 = US)
+        assert await c.fetchval("SELECT g.code FROM rd.job j JOIN rd.dim_country g ON g.geo_key = j.geo_key "
+                                "WHERE j.job_id = $1::uuid", jid(31)) == "US"
+    finally:
+        await c.close()
+
+
+def test_project_gate_geo_keys():
+    """project gate_country → geo 키: 대소문자 무시, 모르는 코드·가상 브랜드 코드는 버림, 전부 버려지면 빈 튜플(fail-closed)."""
+    from types import SimpleNamespace
+
+    def ref(k: int, kind: str) -> SimpleNamespace:
+        return SimpleNamespace(geo_key=k, kind=kind)
+    refs = SimpleNamespace(countries={"US": ref(7, "iso"), "DE": ref(3, "iso"), "HYUNDAI-N": ref(9, "virtual_brand")})
+    assert S.project_gate_geo_keys(refs, ["us", "DE", "ZZ", "HYUNDAI-N", "US"]) == (3, 7)   # type: ignore[arg-type]
+    assert S.project_gate_geo_keys(refs, ["ZZ", "hyundai-n"]) == ()                         # type: ignore[arg-type]
 
 
 @needs_db

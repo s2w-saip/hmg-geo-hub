@@ -39,3 +39,9 @@
   확장이라 화면을 그대로 두는 어댑터는 signal 에 terms 를 요청하지 않는다.
   상한: 표기 brand 8·model 24. 언급 원본 뷰는 answer_key 1000개(TERMS_MAX_REFS)씩 나눠 읽는다 — 요청 크기는 limit ≤ 200 ×
   answers_limit ≤ 50 필드 상한으로만 묶는다(종전 limit × answers_limit ≤ 1000 의 422 는 어댑터 브랜드 드릴다운 200 × 50 을 항상 거부해 뺐다).
+
+## 선택 파라미터(백로그 P1~P12, 2026-10-14). 전부 선택 인자: 주지 않으면 응답 모양·값·문장이 종전과 같다
+- `limit`(B009): 종전 1~200. `mode=brand` 의 드릴다운 타깃(`mention_brand`·`own`)만 2,000 까지(언급 드릴다운이 커서 10페이지 대신 한 요청으로
+  끝까지 읽는다). 그 밖 타깃이 200 을 넘으면 422.
+- `lite`(B014, `mode=signal` 전용, 다른 mode 와 함께면 422): `answers[].runs`·`position`·`measured_at` = null. 프롬프트·값·share·대표 답변(job_id)은
+  같다. 신호 프롬프트 다이얼로그용.

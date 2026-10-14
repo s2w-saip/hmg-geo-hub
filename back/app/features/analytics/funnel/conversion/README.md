@@ -41,3 +41,11 @@
   직접 지정 t-ga4-kia-it) 회귀를 더했다(원천 차단 방향은 메인 결정: CORE-REQUESTS/bg-funnel.md 3절). D3 은 property_source=market 으로 해소.
   D4 days 창 길이는 known_diff DC-5(끝점 = 최신 적재일, 길이 N, 현행은 N+1 달력일·오늘 포함)로 고정 테스트.
 - EXPLAIN(로컬): 엔진 비교 두 문장은 prop_key·report 등치 + date 범위로 창 밖 월 리프 제외, 리프 PK 인덱스 스캔.
+
+## 선택 파라미터(백로그 P1~P12, 2026-10-14). 전부 선택 인자: 주지 않으면 응답 모양·값·문장이 종전과 같다
+- `rollup_lite`(B096): true 이고 커버리지 시장이 2개 이상(전환 화면의 권역·본사 롤업 분기)이면 페이지 문장·엔진 비교 문장을 건너뛰고
+  trend·by_engine·by_engine_all·pages = []. summary·by_country·coverage·period·meta 는 같다. 시장이 하나 이하(국가 리프)면 효과 없음.
+  전환 화면(front `funnel.ts` loadConversionScreen)이 보낸다.
+- `summary_only`(B096): 같은 생략 + `by_country` = null. 요약 카드(프로젝트 홈 ⑦)용.
+- 두 파라미터가 생략을 켜면 세션·전환 문장도 GROUPING SETS 의 (날짜)·(엔진) 묶음을 빼고 (속성)·(전체)만 센다(P13d, `queries` `detail=False`:
+  그 행 = 전 묶음 문장의 같은 행, `test_b096_summary_sets_equal_full_rows`·`test_b096_lite_calls_skip_date_and_engine_sets`).

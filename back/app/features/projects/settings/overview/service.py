@@ -21,7 +21,7 @@ from app.features.projects.settings.tracked_targets.service import aliases_witho
 
 BundleView = Literal["full", "card"]
 
-# 프로젝트 행 + 추적 URL 건수(Q.TRACKED_URL_COUNT) + 자사 브랜드 별칭 행(Q.BRAND_ROW) + 기본 엔진(shared.default_engines)을 한 문장으로.
+# 프로젝트 행 + 추적 URL 건수(tracked_urls COUNT) + 자사 브랜드 별칭 행(tracked_targets BRAND_ROW) + 기본 엔진(shared.default_engines)을 한 문장으로.
 # 각 스칼라 하위 질의는 PK 1행 조회(project_tracked_url 은 PK 접두 범위 count).
 PROJECT_BUNDLE = """
 SELECT p.domain, p.brand_code, p.ai_engines,

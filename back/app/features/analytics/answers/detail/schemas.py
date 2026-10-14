@@ -34,8 +34,9 @@ class AnswerDetailQuery(BaseModel):
         "project 표면 선택 게이트: 화면이 게이트한 프로젝트. 답변의 프로젝트와 다르면 404(현행 fetchProjectAnswerBody 의 run 소속 게이트). "
         "없으면 종전(답변 프로젝트의 가시성만). global·website 는 ignored(meta.ignored_filters)"))
     gate_country: list[str] = Field(default_factory=list, max_length=300, description=(
-        "global 선택 게이트: 화면 URL 국가(ISO). 답변 국가가 계정 스코프 ∩ 이 목록 밖이면 404(현행 region 게이트, 스코프 밖 값은 버림). "
-        "없으면 종전(계정 스코프 국가). website(사이트 국가 리맵은 게이트에 쓰지 않는다)·project 는 쓰지 않는다"))
+        "global·project 선택 게이트: 화면 URL 국가(ISO). global = 답변 국가가 계정 스코프 ∩ 이 목록 밖이면 404(현행 region 게이트, 스코프 밖 "
+        "값은 버림). project = 답변 국가가 이 목록 밖이면 404(현행 region IN f.region, 프로젝트 URL 은 프로필 스코프 없이 읽으므로 계정 스코프와 "
+        "교차하지 않는다. 모르는·가상 브랜드 코드는 버림). 없으면 종전. website 는 쓰지 않는다(사이트 국가 리맵은 게이트에 쓰지 않는다)"))
     gate_brand: list[str] = Field(default_factory=list, max_length=20, description=(
         "global·website 선택 게이트: 화면 URL 브랜드. global = 그 브랜드 카탈로그 행이 있는 프롬프트(현행 prompt brand 게이트), "
         "website = 그 브랜드 사이트(현행 narrowScopeBrands). 계정 스코프 ∩(스코프 밖 값은 버림), 밖이면 404. 없으면 종전. project 는 쓰지 않는다"))

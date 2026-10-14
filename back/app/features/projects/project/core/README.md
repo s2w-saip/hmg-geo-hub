@@ -59,3 +59,8 @@
 
 ## 파일
 - `router.py` 엔드포인트(APIRouter) · `schemas.py` 요청·응답(Pydantic) · `service.py` 업무 규칙 · `queries.py` 읽기 스키마 SQL(rd·app·ext) · `tests/`
+
+## 선택 파라미터(백로그 P1~P12, 2026-10-14). 전부 선택 인자: 주지 않으면 응답 모양·값·문장이 종전과 같다
+- `GET /v1/projects/{project_id}?view=gate`(B020): 프로젝트 게이트용 경량 조회. 같은 접근 판정·같은 404, 게이트 행(GATE_DETAIL)만 읽고
+  effective_engines·요약 필드는 null(target_brand 는 같은 문장에서 채운다). 기본 full = 종전(상세 + 요약 BG-38).
+  front `fetchProjectGate(id, {light: true})`·`requireProjectPage` 가 고른다.

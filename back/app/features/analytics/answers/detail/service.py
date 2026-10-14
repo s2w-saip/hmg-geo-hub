@@ -10,6 +10,9 @@
    brand[](global·website)는 관점(당사 배지·밑줄·스탠스 own) 입력일 뿐 접근 범위를 바꾸지 않는다.
    선택 게이트(화면 BFF 가 게이트한 범위, 없으면 위 계정 스코프만 = 종전): 현행 getMirrorAnswerBody 의 IDOR 게이트와 같은 범위로 더 좁힌다.
      project project_id ≠ 답변 프로젝트(LOCATE) → 404(현행 fetchProjectAnswerBody 의 그 프로젝트 run 소속 게이트, 스코프·멤버십 조회 전)
+             gate_country[] = 화면 URL 국가 그대로(현행 region IN f.region: 라우트가 프로젝트 URL 을 프로필 스코프 없이 읽는다). 계정 국가
+             스코프와 교차하지 않는다(core resolve_read_context 프로젝트 국가 축과 같은 해석: 모르는·가상 브랜드 코드는 버림, 다 버려지면 404).
+             gate_brand 는 쓰지 않는다(현행 run 소속 게이트가 prompt brand 게이트를 대신한다)
      global  gate_country[]·gate_brand[] = 같은 resolve_read_context 에 country·brand 로 넣은 교집합(스코프 밖 값은 버림): 답변 geo ∈ 국가,
              bgrp = 그 브랜드 카탈로그 마스크(엄브렐러 제외, 현행 prompts.brand IN f.brand)
      website gate_brand[] = 그 브랜드 사이트 project_key(현행 narrowScopeBrands → website project ids). gate_country 는 쓰지 않는다
@@ -30,7 +33,7 @@ from typing import Any
 
 from app.core import errors
 from app.core.auth import Principal, surface_denial
-from app.core.codes import HIDDEN_EXCLUDE, STANCE_CODE, SURFACE_NAME, load_refs
+from app.core.codes import HIDDEN_EXCLUDE, STANCE_CODE, SURFACE_NAME, Refs, load_refs
 from app.core.config import get_settings
 from app.core.db import fetch_all, fetch_one
 from app.core.envelope import Envelope, build_meta
@@ -65,6 +68,17 @@ from app.features.analytics.answers.detail.schemas import (
 DETAIL_SUPPORT = FilterSupport.of(global_=("brand",), website=("brand",))
 # 선택 게이트(gate_country[]·gate_brand[])를 계정 스코프와 교차할 때의 축: global 은 국가·브랜드, website 는 브랜드(사이트)만.
 GATE_SUPPORT = FilterSupport.of(global_=("brand", "country"), website=("brand",))
+
+
+def project_gate_geo_keys(refs: Refs, codes: list[str]) -> tuple[int, ...]:
+    """project gate_country[] → 답변 geo 키. 프로젝트 표면은 계정 국가 스코프를 답변 축에 걸지 않으므로(core resolve_read_context 프로젝트
+    분기) 요청 코드를 그대로 푼다: 모르는 코드·가상 브랜드 코드는 버린다(같은 해석). 빈 튜플 = 전부 거부(현행 region IN 이 맞는 행 없음)."""
+    keys = set()
+    for c in codes:
+        ref = refs.countries.get(c.upper())
+        if ref is not None and ref.kind != "virtual_brand":
+            keys.add(ref.geo_key)
+    return tuple(sorted(keys))
 
 
 def pick_catalog(entries: list[dict[str, Any]] | None, ctx: ReadContext) -> CatalogInfo | None:
@@ -160,7 +174,7 @@ async def answer_detail(conn: Any, p: Principal, job_id: uuid.UUID, q: AnswerDet
     if surface in ("global", "website") and q.brand:
         view = await resolve_read_context(conn, p, base.model_copy(update={"brand": list(q.brand)}), support=DETAIL_SUPPORT, refs=refs)
     # 선택 게이트 gate_country[](global)·gate_brand[](global·website): 계정 스코프 ∩ 화면 URL 필터(스코프 밖 값은 버림 = 넓어지지 않는다).
-    # 없으면 계정 스코프(gate) 그대로(종전).
+    # project 의 gate_country[] 는 계정 스코프와 교차하지 않고 그대로 건다(아래 geo_gate). 없으면 계정 스코프(gate) 그대로(종전).
     hdr = gate
     narrow: dict[str, list[str]] = {}
     if surface in ("global", "website") and q.gate_brand:
@@ -169,9 +183,11 @@ async def answer_detail(conn: Any, p: Principal, job_id: uuid.UUID, q: AnswerDet
         narrow["country"] = list(q.gate_country)
     if narrow:
         hdr = await resolve_read_context(conn, p, base.model_copy(update=narrow), support=GATE_SUPPORT, refs=refs)
+    geo_gate: tuple[int, ...] | None = hdr.geo_keys if surface == "global" else None
+    if surface == "project" and q.gate_country:     # 현행 region IN f.region(프로필 스코프 없는 URL 국가). 프로젝트 재조회 없이 refs 로 푼다
+        geo_gate = project_gate_geo_keys(refs, list(q.gate_country))
 
-    hs = Q.header_sql(str(job_id), hdr.project_keys, hdr.bgrps if surface == "global" else None,
-                      hdr.geo_keys if surface == "global" else None, lite=q.lite)
+    hs = Q.header_sql(str(job_id), hdr.project_keys, hdr.bgrps if surface == "global" else None, geo_gate, lite=q.lite)
     h = await fetch_one(conn, hs.text, hs.params)
     if h is None:
         raise errors.not_found("답변 없음")

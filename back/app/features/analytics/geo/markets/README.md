@@ -14,6 +14,8 @@
 - 기간 미지정 = 함대 스냅샷(Q1), 기간 지정 = D1 누적. 권역 트리는 관점 브랜드가 하나일 때만(아니면 `markets=[]`, `meta.suppressed.markets=brand_required`).
 - 국가·권역 행: 당사 M01~M05(`ratio`·`rank`), 순위(our·field_size), 선두 자사 브랜드, 최대 경쟁사(형제 HMG 브랜드 제외: 브랜드 격리). 권역 = 국가 원시값 합.
 - 웹사이트는 언급 수 지표만(Q8): 점유율·순위·경쟁사만 채우고 나머지는 null + `meta.suppressed` 사유 `website_mentions_only`.
+  사실 집계도 그 범위만 센다(B094, 파라미터 없음): core `fetch_counts` part `sov`(답변 수·당사 언급·전체 언급)와 `brand_rows(mentions_only=True)`
+  (경쟁 행 언급 수). 노출·감성·순위 열은 계산하지 않고, 응답은 전 열로 센 종전 응답과 바이트가 같다(`test_geo.py` B094 시험).
 - `surface=global` 에 `project_id` 를 주면 값은 그대로이고 `meta.ignored_filters` 에 `project_id`(검증 D4 방어).
 - 게이트: 인증 + 현행 showsGeoMap(scope_all 또는 admin·hq·region) + 표면별 메뉴 그룹(global = standard, website = website).
 

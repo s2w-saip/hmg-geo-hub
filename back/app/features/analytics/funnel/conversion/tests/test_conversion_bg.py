@@ -336,3 +336,59 @@ async def test_b096_summary_only_keeps_summary_and_coverage(client_as, monkeypat
     assert r.status_code == 200, r.text
     assert r.json()["data"] == {**full["data"], "trend": [], "by_engine": [], "by_engine_all": [], "pages": [], "by_country": None}
     assert r.json()["meta"] == full["meta"]
+
+
+# ── B096 문장: detail=False(요약·롤업 호출)는 GROUPING SETS 의 (날짜)·(엔진) 묶음을 빼고 (속성)·(전체)만 센다 ─────────────────────
+@pytest.mark.parametrize("axes", [{}, {"engine": "chatgpt"}, {"device_keys": (9001,), "nvr_keys": (9001,)}, {"engine": "gemini", "device_keys": (9002,)}])
+async def test_b096_summary_sets_equal_full_rows(ga4_seed, axes):
+    """queries.sessions_sql·conversions_sql(detail=False): (속성)·(전체) 행(g 5·7)만, 그 행은 기본 문장(4 묶음)의 g 5·7 행과 같다
+    (요약·국가 행의 원천: 서비스는 같은 키로 읽는다). 기본(detail 생략)은 종전 문장 그대로다."""
+    from datetime import date
+
+    from app.core.db import fetch_all
+    from app.features.analytics.funnel.conversion import queries as q
+
+    conn = ga4_seed
+    eng = None
+    if "engine" in axes:
+        eng = tuple(int(r["engine_key"]) for r in await raw_fetch(conn, "SELECT engine_key FROM rd.dim_engine WHERE code = $1", axes["engine"]))
+    args = {"engine_keys": eng, "device_keys": axes.get("device_keys"), "nvr_keys": axes.get("nvr_keys")}
+    lo, hi = date(2026, 9, 1), date(2026, 9, 30)
+
+    def key(r: dict) -> tuple:
+        return int(r["g"]), str(r.get("report", r.get("is_ai"))), r["prop_key"] or 0
+    for fn in (q.sessions_sql, q.conversions_sql):
+        full_q, lite_q = fn([901, 902], lo, hi, **args), fn([901, 902], lo, hi, **args, detail=False)
+        assert fn([901, 902], lo, hi, **args, detail=True).text == full_q.text
+        sets = lite_q.text.split("GROUPING SETS")[1]
+        assert "r.date)" not in sets and "r.engine_key)" not in sets and "r.prop_key)" in sets
+        full = [dict(r) for r in await fetch_all(conn, full_q.text, full_q.params)]
+        lite = [dict(r) for r in await fetch_all(conn, lite_q.text, lite_q.params)]
+        assert {int(r["g"]) for r in full} >= {3, 5, 7}                      # 시드에 날짜·속성 행이 있다(비교가 비지 않는다)
+        assert {int(r["g"]) for r in lite} == {5, 7}
+        assert sorted(lite, key=key) == sorted((r for r in full if int(r["g"]) in (5, 7)), key=key), (fn.__name__, axes)
+
+
+@pytest.mark.parametrize(("uid", "params", "lite"), [
+    (ADMIN, {"surface": "global", "rollup_lite": "true"}, True),
+    (ADMIN, {"surface": "global", "summary_only": "true", "engine": "gemini"}, True),
+    (VENDOR, {"surface": "project", "project_id": str(CUST_PROJECT), "summary_only": "true"}, True),
+    (ADMIN, {"surface": "global"}, False),
+    (ADMIN, {"surface": "global", "country": "IT", "rollup_lite": "true"}, False),      # 국가 리프 = 롤업 아님(추이·엔진을 그린다)
+])
+async def test_b096_lite_calls_skip_date_and_engine_sets(client_as, monkeypatch, uid, params, lite):
+    """summary_only·rollup_lite(시장 2개 이상)는 세션·전환 문장의 (날짜)·(엔진) 묶음을 세지 않는다(값은 위 B096 시험이 기본 호출과 비교)."""
+    from app.features.analytics.funnel.conversion import service as S
+
+    seen: list[str] = []
+    real = S.fetch_all
+
+    async def spy(conn, sql, *a, **k):
+        seen.append(str(sql))
+        return await real(conn, sql, *a, **k)
+    monkeypatch.setattr(S, "fetch_all", spy)
+    assert (await _get(client_as, uid, **params)).status_code == 200
+    sets = [x.split("GROUPING SETS")[1] for x in seen if "GROUPING SETS" in x]
+    assert len(sets) == 2
+    for s in sets:
+        assert ("r.date)" in s and "r.engine_key)" in s) is not lite and "r.prop_key)" in s, (params, s)

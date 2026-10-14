@@ -32,7 +32,8 @@ import { loadAnswerDetail } from "@/lib/hgh/adapters/answers";
 // Source (D8): HGH_SOURCE_<G2|G3|G6> by surface. api -> GET /v1/answers/{job_id}
 // (lib/hgh/adapters/answers.ts: 404/403/422 -> {available: false}, 401 -> 401). The api read is
 // gated like the legacy readers: project -> project_id = the gated ?projectId= (only that
-// project's answers), global/website -> the URL filters (lib/hgh/adapters/answers.ts header).
+// project's answers) and the URL countries read without the profile scope (legacy region IN
+// f.region), global/website -> the URL filters (lib/hgh/adapters/answers.ts header).
 export const dynamic = "force-dynamic";
 
 const legacyProjectAllowed: LegacyProjectAllowed = async (id, user) => {

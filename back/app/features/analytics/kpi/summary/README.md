@@ -67,3 +67,13 @@
 - fe-u4 요청 1·2(core 9라운드): `meta.source` 는 OpenAPI 명명 스키마 `SummarySource`(응답 `SummaryResponse`·`SummaryMeta`). 발행물이 여럿이면
   `publication_details`·`publications` 순서 = round_date 내림차순 → slug 오름차순, 헤드라인 라벨 한 쌍 `cycle_label`·`cycle_label_en` = 첫 원소.
   현행 front 는 정해진 순서가 없다(report-publications.ts:210-217 ORDER BY 없는 LIMIT 1, 활성 유일 색인이 brand_scope 를 포함해 한 회차에 둘 이상 가능).
+
+## 선택 파라미터(백로그 P1~P12, 2026-10-14). 전부 선택 인자: 주지 않으면 응답 모양·값·문장이 종전과 같다
+- `parts[]`(B089, measured|applied|gap|urls, 비우면 전부 = 종전): 빠진 부분은 null 이고 `meta.suppressed` 에 적지 않는다(null = 요청하지 않음).
+  - measured → `params.measured_prompts`·`prompts_without_brand`(측정 프롬프트 count DISTINCT 문장)
+  - applied → `params.applied_prompts`(적용 프롬프트 문장)
+  - gap → `analysis_gap`
+  - urls → `target_url_rate`·`owned_url_rate`·`citation_accuracy`·`url_prompts`·`meta.source`(URL 인용률 문장)
+- ①~⑤·`params.answers`·`measured_by_funnel` 은 늘 계산하고, global·project 의 not_website_surface 표식도 그대로다.
+- 보내는 화면: 분석 탭(비카드) = `parts=gap,measured,urls`(적용 프롬프트 문장 생략), 대시보드 카드 = `parts=urls`(front DASHBOARD_SUMMARY_PARTS).
+  같은 요청 안 중복 제거(D6)를 위해 KPI 탭과 언급 화면은 같은 parts 를 보낸다.

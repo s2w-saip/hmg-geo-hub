@@ -24,3 +24,8 @@
 - `/sources/types` 경로는 taxonomy 정본이라 유지하고 같은 계산의 types 부분만 낸다.
 - source[] 는 분포·톤 타일·유형 모두에 적용(모듈-인용 §8 열린 질문 1 권장안, A4 고지 대상).
 - 표면 게이트는 core `require_surface`(core `resolve_read_context` 첫 줄, 403 role_forbidden·menu_forbidden).
+
+## 선택 파라미터(백로그 P1~P12, 2026-10-14). 전부 선택 인자: 주지 않으면 응답 모양·값·문장이 종전과 같다
+- `include_tone`(B098): false = 톤 타일 문장을 돌리지 않고 `data.tone` = 0 타일.
+- `include_types`(B098): false = 유형 × 카테고리(답변 열 65열·유형 플래그·당사 유형 재집계)를 계산하지 않고 `data.types` = [](빈 배열).
+- categories·by_engine·total_citations 는 같다. 웹사이트·프로젝트 인용 화면은 둘 다 false 로 보낸다(톤·유형을 그리지 않는다).

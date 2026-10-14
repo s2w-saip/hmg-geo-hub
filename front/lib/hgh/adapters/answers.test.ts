@@ -175,15 +175,12 @@ describe("loadAnswerDetail: request and error map", () => {
     await A.loadAnswerDetail({ jobId: JOB, surface: "website", filters: { brand: ["Kia"] }, scope: { all: false, brands: ["Kia"] } });
     expect(log[0].search).toBe("?lite=true&surface=website");
   });
-  it("project: project_id = the gated project (legacy run gate), no brand and no URL filter gate", async () => {
-    await A.loadAnswerDetail({
-      jobId: JOB,
-      surface: "project",
-      filters: { brand: ["Kia"], region: ["DE"] },
-      scope: null,
-      projectId: "7c9e6679-7425-40de-944b-e07fc1f90ae7",
-    });
-    expect(log[0].search).toBe("?lite=true&project_id=7c9e6679-7425-40de-944b-e07fc1f90ae7&surface=project");
+  it("project: project_id = the gated project (legacy run gate) and the URL countries (legacy region IN f.region), no brand", async () => {
+    const projectId = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
+    await A.loadAnswerDetail({ jobId: JOB, surface: "project", filters: { brand: ["Kia"], region: ["US", "DE"] }, scope: null, projectId });
+    await A.loadAnswerDetail({ jobId: JOB, surface: "project", filters: { brand: ["Kia"] }, scope: null, projectId });
+    expect(log[0].search).toBe(`?gate_country=DE&gate_country=US&lite=true&project_id=${projectId}&surface=project`);
+    expect(log[1].search).toBe(`?lite=true&project_id=${projectId}&surface=project`);
   });
   it("global URL countries gate the answer (legacy region IN f.region); the scope injection is not sent", async () => {
     await A.loadAnswerDetail({ jobId: JOB, surface: "global", filters: { region: ["US", "DE"] }, scope: { all: true } });

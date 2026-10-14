@@ -25,3 +25,7 @@
 - 제어 문자: 본문(POST·PATCH text)은 탭·줄바꿈만 허용, 분류 메타·q 는 C0·DEL 전부 금지 → 422 unprocessable(NUL 이 DB 까지 가 500 이던 결함, 검증 D2·D5).
   짝 없는 서로게이트(JSON `"\ud800"`)도 본문·분류 메타·regions 항목에서 같은 방어선(본문 check_body, 한 줄 값 core.filters.PgLine·single_line)으로 422(asyncpg 인코딩 오류 500 이던 결함, 검증 D2-R). 본문 규칙은 core PgText 보다 좁아(탭·줄바꿈 밖 C0·DEL 도 거부) 기능에 둔다(요청 §8 처분).
 - DELETE: draft ∧ scope_prompt_id NULL 만(그 외 409 prompt_not_deletable). 감사·judgment_change 는 app.prompt 트리거(Q3).
+
+## 선택 파라미터(백로그 P1~P12, 2026-10-14). 전부 선택 인자: 주지 않으면 응답 모양·값·문장이 종전과 같다
+- `POST /v1/projects/{project_id}/prompts/screen` 의 `ids_only=true`(B021): limit 상한 5,000(행 읽기는 종전 1~500). 전체 선택이 id 만 5,000 씩
+  읽는다(500 씩 순차 호출 대신 1~수 회). ids_only 가 아닌데 500 을 넘으면 422.

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import pathlib
 import uuid
+from dataclasses import replace
 
 import pytest
 
@@ -358,3 +359,44 @@ async def test_geo_only_skips_catalog_and_custom_fields(client_as, legacy, monke
     assert r.status_code == 200, r.text
     assert not skipped & set(seen), seen
     assert r.json()["data"] == {**full["data"], "catalog": None, "custom_fields": None} and r.json()["meta"] == full["meta"]
+
+
+@needs_db
+@pytest.mark.parametrize(("uid", "params", "legacy_sql"), [
+    (ADMIN, {"surface": "global"}, False),
+    (HQ_HYUNDAI, {"surface": "global", "from": "2026-09-01", "to": "2026-09-30"}, False),
+    (ADMIN, {"surface": "website"}, False),
+    (VENDOR, {"surface": "project", "project_id": str(CUST_PROJECT)}, False),
+    (ADMIN, {"surface": "global"}, True),
+    (KIA_US, {"surface": "global"}, True),
+])
+async def test_geo_only_matrix_columns_are_the_projection(uid, params, legacy_sql):
+    """B095 문장: matrix_sql·legacy_global_sql(geo_only=True) = 국가 열 조합(project_key·geo_key·cat_mask)만 묶은 행. 그 행 집합은 전 열 문장
+    (lang_key·engine_key 포함)의 투영과 같고(현행 문장의 served 는 조합 안 bool_or), 기본(geo_only 생략) 문장은 종전 그대로다.
+    국가·브랜드 좁힘(build_matrix: 웹사이트 사이트 = project_key, 그 밖 = geo_key·cat_mask 전개)은 이 세 열만 읽는다."""
+    from app.core.db import fetch_all
+    from app.core.filters import CommonFilters, resolve_read_context
+    from app.features.analytics.filters.options import queries as q
+    from app.features.analytics.filters.options.service import OPTIONS_SUPPORT
+    from tests.support import principal
+
+    async with staged() as conn:
+        p = await principal(conn, uid)
+        ctx = await resolve_read_context(conn, p, CommonFilters(**params), support=OPTIONS_SUPPORT)
+        win = await ctx.window(conn)
+        keys = ctx.refs.default_engine_keys if legacy_sql else tuple(sorted(k for k, _ in ctx.refs.engines.values()))
+        ms = replace(ctx.measure(), engine_keys=keys)
+        fn = q.legacy_global_sql if legacy_sql else q.matrix_sql
+        assert fn(ms, win, geo_only=False).text == fn(ms, win).text
+        full_q, geo_q = fn(ms, win), fn(ms, win, geo_only=True)
+        full = await fetch_all(conn, full_q.text, full_q.params)
+        geo = await fetch_all(conn, geo_q.text, geo_q.params)
+    head = geo_q.text.split(" FROM ")[0]
+    assert "lang_key" not in head and "engine_key" not in head and geo_q.text.endswith("GROUP BY 1, 2, 3")
+    assert full, params                                                          # 비교가 비지 않는다
+    proj: dict[tuple, bool] = {}
+    for r in full:
+        k = (r["project_key"], r["geo_key"], r["cat_mask"])
+        proj[k] = proj.get(k, False) or bool(r.get("served", True))
+    got = {(r["project_key"], r["geo_key"], r["cat_mask"]): bool(r.get("served", True)) for r in geo}
+    assert len(got) == len(geo) and got == proj, params

@@ -67,3 +67,9 @@
 | 4 | 요청 country[] 의 의사 시장 코드 | 지리 의사 시장 코드 x:WW·x:EU·x:ME 는 시장 필터 값(스코프 검사 없음, regions 정확 포함·정규화), 허용목록 밖 x:* 는 dropped | 메인 결정 catalog #7 = front 현행(prompt-markets.ts:25 GEO_PSEUDO·:54-57 isGeoFilterable·:110-118 matchesMarket) | 반영: `core.filters.split_geo_pseudo`·`GEO_PSEUDO_MARKETS`(P-1·P-2 공통), 회귀 test_global_geo_pseudo_market_filter |
 | 5 | global 은 전량(cursor·limit 무시) | 기본은 키셋 500 유지, 전량은 `all=true`(상한 25,000, 넘으면 next_cursor) | 기존 응답 의미 보호(기본 limit 500·상한 501 은 422 유지) + 무상한 금지 | BG-34 반영(추가형) |
 | 6 | 국가·언어 표시명은 front Intl.DisplayNames | 같은 Intl 결과를 표 + 조립 규칙(names_data.py, 생성기 names_gen.mjs)으로. 규칙 = 언어 이름 + (문자, 지역), ko '언어(한정어)'·en '언어 (한정어)', 한정어 안 괄호는 대괄호, 별칭 정규화 후 방언 이름(ko de-CH '고지 독일어(스위스)'·nl-BE '플라망어'·fa-AF '다리어'·ro-MD '몰도바어', en de-AT 'Austrian German' 등)은 표. 3글자 언어·문자 체계·숫자 지역(M.49)·폐지 지역(SU 등)도 Intl 과 같다 | 백엔드에 ICU 없음(pip 금지). 남은 차이: 변이·확장 하위 태그(en-US-POSIX 등, Intl '영어(미국, Computer)')는 코드 그대로(현행 데이터 모양 밖: 사이트 언어 태그는 언어[-지역]) | BG-35 반영(검증 m-2 로 범위 확대). ICU 버전이 바뀌면 `cd back/app/features/catalog/prompts/catalog && node names_gen.mjs` 로 재생성(입력 파일 없음: 코드 공간 전수, 약 40초, 산출 names_data.py·tests/names_intl_sample.json, 표본은 시드 고정이라 재실행 결과가 같다) |
+
+## 선택 파라미터(백로그 P1~P12, 2026-10-14). 전부 선택 인자: 주지 않으면 응답 모양·값·문장이 종전과 같다
+- `row_fields`(B077, full|list): `POST /v1/prompts/screen`·`POST /v1/admin/catalog/prompts/screen` 본문. list = 목록·내보내기 화면이 쓰는 열만
+  읽는다(rd.dim_prompt 조인 생략, scopeText·promptType·category = null). 행·순서·나머지 값은 full(기본, 종전)과 같다.
+- `limit`(B078): 종전 최대 500. `include_meta=false`(행·total 만)면 5,000 까지(엑셀 내보내기 큰 묶음). include_meta=true 로 500 을 넘으면 422.
+- 관리 화면(admin=True) stats(B076, 파라미터 없음, 값 같음): `list_catalog(limit=1)` 재사용 대신 루트 전체 통계만(STATS·SCOPE_ORPHANS) 센다.

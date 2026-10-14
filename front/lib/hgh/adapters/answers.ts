@@ -12,7 +12,10 @@ import "server-only";
 // Access gate = the legacy getMirrorAnswerBody IDOR gate (optional backend gates, the account
 // scope is still applied by the backend; a job outside them -> 404 -> {available: false}):
 //   project  project_id = the project the route gated on (legacy fetchProjectAnswerBody: only runs
-//            of that project), so a job of another project is not served
+//            of that project), so a job of another project is not served, and gate_country = the
+//            URL countries (legacy region IN f.region: the route reads the project URL without the
+//            profile scope, so they are sent as they are). No brand gate (legacy: the run gate
+//            replaces prompts.brand on a project)
 //   global   gate_country = the URL countries (legacy region IN f.region; urlCountries leaves out
 //            the scope injection, as readStandardFilters falls back to the whole scope) and
 //            gate_brand = the URL brand choice (legacy prompts.brand IN f.brand)
@@ -155,6 +158,8 @@ export async function loadAnswerDetail(req: AnswerRequest): Promise<MirrorAnswer
   } = { surface: req.surface, lite: true };
   if (req.surface === "project") {
     if (req.projectId) query.project_id = req.projectId;
+    const countries = urlCountries(req.filters.region, req.scope);
+    if (countries.length) query.gate_country = countries;
   } else {
     const brand = urlBrands(req.filters.brand, req.scope);
     if (brand.length) {

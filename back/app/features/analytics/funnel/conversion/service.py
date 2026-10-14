@@ -29,7 +29,8 @@
 - 엔진 비교 by_engine_all(BG-31): engine[] 을 적용하지 않은 엔진별 분해(기기·방문자 유형·시장·기간은 적용). by_engine 의미는 그대로.
 - 선택 생략(B096): summary_only(요약 카드: summary·coverage·period 만) 또는 rollup_lite ∧ 커버리지 시장 2개 이상(전환 화면 롤업 분기:
   summary·by_country·coverage 만)이면 페이지 문장·엔진 비교 문장을 건너뛰고 trend·by_engine·by_engine_all·pages = [](summary_only 는
-  by_country = null 도). 남는 값은 같다. 세션·전환 문장(GROUPING SETS)은 요약·국가 행의 원천이라 그대로 돈다.
+  by_country = null 도). 남는 값은 같다. 세션·전환 문장(GROUPING SETS)은 요약·국가 행의 원천이라 돌되 (날짜)·(엔진) 묶음은 빼고
+  (속성)·(전체)만 센다(queries detail=False: 그 행은 전 묶음 문장의 같은 행과 같다).
 - 전환 이벤트 비관리자 경로(BG-29, 현행 lib/ga4/tracked-events-actions.ts:67-93 authorize 이식):
   표면 경로 게이트(require_surface) → 속성 소속 검증. 프로젝트 맥락 = 활성 멤버 ∧ 속성 = 그 프로젝트가 해석하는 속성(IDOR), 쓰기 = 활성 Owner.
   프로젝트가 해석하는 속성은 위 '프로젝트 몫' 규칙을 거친 것이라, 다른 시장 속성을 직접 지정해도 비관리자는 404(검증 D1).
@@ -305,8 +306,8 @@ async def build(conn: Any, ctx: ReadContext, params: ConversionParams) -> Envelo
 
     # B096: 요약 카드(summary_only)·롤업 화면(rollup_lite ∧ 시장 2개 이상)은 추이·엔진·페이지를 그리지 않는다 → 페이지·엔진 비교 문장 생략
     lite = params.summary_only or (params.rollup_lite and len(markets) >= 2)
-    sq = q.sessions_sql(active, lo, hi, **args)
-    cq = q.conversions_sql(active, lo, hi, **args)
+    sq = q.sessions_sql(active, lo, hi, **args, detail=not lite)
+    cq = q.conversions_sql(active, lo, hi, **args, detail=not lite)
     srows = await fetch_all(conn, sq.text, sq.params)
     crows = await fetch_all(conn, cq.text, cq.params)
     prows: list[dict[str, Any]] = []

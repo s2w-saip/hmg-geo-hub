@@ -47,3 +47,8 @@
       속성 매핑(PUT properties)은 같은 트랜잭션에서 그 시장의 대기 행을 지우고 `pending_market_cleared` 로 알린다. 두 쓰기는 시장 단위 advisory 잠금을 먼저 잡는다.
       속성 목록과 합쳐 보이는 것은 프론트 어댑터 몫(설계 부록 F 임시 규칙은 이제 필요 없다).
     - 회귀 `tests/test_d2_verified_and_markets.py`(예전 test_d2_blocked_fields 를 실제 기대로 전환).
+
+## 선택 파라미터(백로그 P1~P12, 2026-10-14). 전부 선택 인자: 주지 않으면 응답 모양·값·문장이 종전과 같다
+- `GET /v1/admin/ga4/properties?fields=registry`(B072): 화면 표 열만. tracked_events·loaded·conv_basis·project_overrides·pending 은 계산하지 않고 null.
+  기본 full = 종전.
+- `PUT /v1/admin/ga4/properties/{property_id}?return=minimal`(B072): 저장 뒤 응답 property 재조회 생략(null). 기본 full = 종전.

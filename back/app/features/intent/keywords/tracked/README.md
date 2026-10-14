@@ -22,3 +22,8 @@
 - term_norm 정본 = DB `app.term_norm`(DB-v2.7 P55, 생성 열도 이 함수). 목록의 최신 검색량 조인도 생성 열 값을 쓴다(파이썬 정규화 안 씀, 검증 m-5).
 - 저장 국가 = `app.project.country_code` 와 같은 ISO 대문자(DB-v2.7 P54 CHECK `ptk_country_upper`, 검증 m-4). 응답 `country_code` = 저장값(대문자),
   `country` = 프리셋 id(소문자).
+
+## 선택 파라미터(백로그 P1~P12, 2026-10-14). 전부 선택 인자: 주지 않으면 응답 모양·값·문장이 종전과 같다
+- `GET /v1/intent/keywords?include_volume=false`(B062): 최신 월 검색량(latest_month·latest_volume)을 읽지 않고 null(키워드 탭은 id·term 만 쓴다).
+- `POST /v1/intent/keywords` 본문 `{items: [{term, country?}, …]}`(B065, 1~100행): 다건 추가. 200 + 행별 결과 `{status, data, error}`(요청 순서,
+  행마다 단건 본문으로 보냈을 때의 상태 201·409 duplicate_keyword·422 와 같은 값). 단건 본문 `{term, country}` 는 종전 그대로 201.

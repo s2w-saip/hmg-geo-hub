@@ -11,29 +11,40 @@ from app.core.measure import CATEGORY_EXPR, OVERRIDE_JOIN, MeasureScope, citatio
 from app.core.sqlb import Binder, Sql
 
 
-def matrix_sql(ms: MeasureScope, win: Window) -> Sql:
+def _group_by(n: int) -> str:
+    return ", ".join(str(i + 1) for i in range(n))
+
+
+def matrix_sql(ms: MeasureScope, win: Window, *, geo_only: bool = False) -> Sql:
     """옵션 창(row 계열: 전체 숨김 {1}만 배제) 안 측정 조합. 1단계 GROUP BY 로 수백 행 소집합을 만든다.
-    모수 = cit_in(언급 모수 std_in ⊇ 가 아니라 그 상위 집합: 옵션 ⊇ 데이터, 모듈-필터 §2.2)."""
+    모수 = cit_in(언급 모수 std_in ⊇ 가 아니라 그 상위 집합: 옵션 ⊇ 데이터, 모듈-필터 §2.2).
+    geo_only(B095, 국가 옵션만 쓰는 전환 화면): 국가 열을 만드는 열만 묶는다 = project_key(웹사이트 사이트 국가·브랜드)·geo_key·
+    cat_mask(브랜드 전개·좁힘). lang_key·engine_key 가 없을 뿐 세 열 조합은 전 열 묶음의 투영과 같다."""
     b = Binder()
     where = win.where("a", "row", b) + scope_where(ms, "a", b) + ["a.cit_in"]
-    return b.sql(f"SELECT a.project_key, a.geo_key, a.lang_key, a.cat_mask, a.engine_key FROM {fact_tables(ms).answer} a "
-                 f"WHERE {' AND '.join(where)} GROUP BY 1, 2, 3, 4, 5")
+    cols = ["a.project_key", "a.geo_key", "a.cat_mask"] if geo_only else \
+        ["a.project_key", "a.geo_key", "a.lang_key", "a.cat_mask", "a.engine_key"]
+    return b.sql(f"SELECT {', '.join(cols)} FROM {fact_tables(ms).answer} a "
+                 f"WHERE {' AND '.join(where)} GROUP BY {_group_by(len(cols))}")
 
 
-def legacy_global_sql(ms: MeasureScope, win: Window) -> Sql:
+def legacy_global_sql(ms: MeasureScope, win: Window, *, geo_only: bool = False) -> Sql:
     """현행 프로필 filter_options(F1W4, WU-8) 글로벌 옵션 소집합. 현행 hmg-geo 2670a16 + read_screens 14키(축 on) 규칙:
     - 국가 목록 listMeasuredRegions(scope-aggregates.ts:7698, rootScoped·dateRange): 루트 카탈로그 게이트(:7746) ∧ 옵션 창
       optionAnchorJobClause(:2073-2088 = 회차 창 + 기본 엔진 anchorDefaultEngineScope :1943·:2033) ∧ 숨김 지역 ∧ 스코프. **답변 상태 술어가
       없고**(실패·진행 중 답변만 있는 국가도 나온다) 지역 스코핑(rootRegionScopingPreds: 한국어 비-KR·시장 태그, run 상태)도 없다.
     - 매트릭스 listMeasuredScopeMatrix(:7846): 같은 창·게이트 + a.status = 'completed'(:7856).
     그래서 원천은 rd.answer(elig = 지역 스코핑·run 상태 포함)가 아니라 rd.job(모든 status)이다. served(= completed ∧ 운영자 드롭 아님)로
-    매트릭스 행을 가른다. 운영자 드롭(ing.answer_drop)은 현행 앵커 표에서도 빠지므로 둘 다 뺀다. 엔진은 호출자가 기본 엔진 키로 넘긴다."""
+    매트릭스 행을 가른다. 운영자 드롭(ing.answer_drop)은 현행 앵커 표에서도 빠지므로 둘 다 뺀다. 엔진은 호출자가 기본 엔진 키로 넘긴다.
+    geo_only = matrix_sql 과 같이 국가 열 조합(project_key·geo_key·cat_mask)만 묶는다(served = 그 조합 안 bool_or)."""
     b = Binder()
     where = win.where("j", "row", b) + scope_where(ms, "j", b, dflt_column=False) + [
         "NOT j.dropped",
         f"EXISTS (SELECT 1 FROM {fact_tables(ms).prompt} p WHERE p.prompt_key = j.prompt_key AND p.in_root_catalog)"]
-    return b.sql("SELECT j.project_key, j.geo_key, j.lang_key, j.bgrp AS cat_mask, j.engine_key, bool_or(j.status_code = 0) AS served "
-                 f"FROM rd.job j WHERE {' AND '.join(where)} GROUP BY 1, 2, 3, 4, 5")
+    cols = ["j.project_key", "j.geo_key", "j.bgrp AS cat_mask"] if geo_only else \
+        ["j.project_key", "j.geo_key", "j.lang_key", "j.bgrp AS cat_mask", "j.engine_key"]
+    return b.sql(f"SELECT {', '.join(cols)}, bool_or(j.status_code = 0) AS served "
+                 f"FROM rd.job j WHERE {' AND '.join(where)} GROUP BY {_group_by(len(cols))}")
 
 
 # 현행 프로필 filter_options(F1W4, WU-8) 웹사이트: 등록 사이트(app.website_site)와 그 프롬프트 언어(app.website_prompt). 측정 창 무관.

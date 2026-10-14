@@ -31,6 +31,8 @@
 
 D6 보장: 카드(group_by 없음)·추이(round_date·week·month)·엔진(engine)·국가(geo) 가 같은 빌더라 카드 = 버킷 합이다.
 성능: count(DISTINCT) 는 병렬 집계를 막으므로 M12 측정 프롬프트 수(part 'prompts')는 별도 문장으로 분리한다.
+점유율만 쓰는 소비자(B094 웹사이트 GEO, Q8 언급 수 지표만)는 part 'sov'(답변 수·당사 언급·전체 언급 3열 = 'mentions' 의 같은 식)와
+brand_rows(mentions_only=True)(경쟁 행 언급 수만)로 노출·감성·순위 열을 계산하지 않는다. 남는 열의 값은 'mentions'·기본 경쟁 행과 같다.
 
 현행 프로필(core.profile, 제품 결정 19·23~25, WU-1 골격): MeasureScope.profile 의 스위치가 모수 술어 자리(mention_population·
 citation_population·scope_where(카드 경로 엔진)·m05_den_col)를 바꾼다. 전부 꺼짐(OFF)이면 이 자리들이 도입 전과 같은 문자열을 내어 문장·응답이 바이트 같다.
@@ -54,9 +56,10 @@ from app.core.profile import OFF, LegacyProfile, require_slot
 from app.core.sqlb import Binder, Sql
 
 OwnerMode = Literal["brand", "country1", "countryN", "scan", "local"]
-Part = Literal["mentions", "rank_detail", "prompts", "gap", "urls", "url_prompts", "citations"]
+Part = Literal["mentions", "sov", "rank_detail", "prompts", "gap", "urls", "url_prompts", "citations"]
 DEFAULT_PARTS: tuple[str, ...] = ("mentions", "gap", "urls", "citations")
-ALL_PARTS: tuple[str, ...] = ("mentions", "rank_detail", "prompts", "gap", "urls", "url_prompts", "citations")
+# 'sov' = 'mentions' 의 부분집합(answers·own_mentions·total_mentions, B094). 둘 다 주면 'mentions' 가 이긴다.
+ALL_PARTS: tuple[str, ...] = ("mentions", "sov", "rank_detail", "prompts", "gap", "urls", "url_prompts", "citations")
 
 # group_by 화이트리스트: 이름 → (결과 열 이름, 식 템플릿). {a} 는 별칭.
 GROUPS: dict[str, tuple[str, str]] = {
@@ -574,7 +577,7 @@ def plan_counts(ms: MeasureScope, win: Window, *, group_by: Sequence[str] = (), 
         raise ValueError(f"알 수 없는 part: {unknown}")
     parts = tuple(p for p in ALL_PARTS if p in parts)
     a = "a"
-    need_m = any(p in parts for p in ("mentions", "rank_detail", "prompts", "gap"))
+    need_m = any(p in parts for p in ("mentions", "sov", "rank_detail", "prompts", "gap"))
     need_c = any(p in parts for p in ("urls", "citations"))
     mode: OwnerMode | None = ms.owner_mode() if "citations" in parts else None
     # 출처 축이 있으면 답변 열(출처 무관 합)로 M05 를 낼 수 없다 → 원소 스캔(scan 문장, citation_where 가 출처 술어를 건다)
@@ -601,7 +604,7 @@ def plan_counts(ms: MeasureScope, win: Window, *, group_by: Sequence[str] = (), 
 
     mg = mention_population(ms, a)
     cols: list[str] = []
-    if "mentions" in parts or "rank_detail" in parts:
+    if "mentions" in parts or "sov" in parts or "rank_detail" in parts:
         oc = own_cols(ms.own_bits, a)
     if "mentions" in parts:
         cols += [
@@ -614,6 +617,12 @@ def plan_counts(ms: MeasureScope, win: Window, *, group_by: Sequence[str] = (), 
             f"coalesce(sum({oc.sent_all}){flt(mg, mf)}, 0) AS sent_all",
             f"coalesce(sum({oc.rank}){flt(mg, mf, oc.ranked)}, 0) AS rank_sum",
             f"count(*){flt(mg, mf, oc.ranked)} AS ranked",
+        ]
+    elif "sov" in parts:    # B094 점유율(M02)만: 'mentions' 와 같은 식의 답변 수·당사 언급·전체 언급(노출·감성·순위 열 없음)
+        cols += [
+            f"count(*){flt(mg, mf)} AS answers",
+            f"coalesce(sum({oc.ment}){flt(mg, mf)}, 0) AS own_mentions",
+            f"coalesce(sum({a}.ment_total){flt(mg, mf)}, 0) AS total_mentions",
         ]
     if "rank_detail" in parts:
         cols += [
@@ -794,6 +803,8 @@ def _part_metrics(parts: Sequence[str]) -> list[str]:
     m: list[str] = []
     if "mentions" in parts:
         m += ["answers", "tracked", "own_mentions", "total_mentions", "sent_pos", "sent_neg", "sent_all", "rank_sum", "ranked"]
+    elif "sov" in parts:
+        m += ["answers", "own_mentions", "total_mentions"]
     if "rank_detail" in parts:
         m += ["multi", "top1", "top3"]
     if "prompts" in parts:
@@ -812,9 +823,12 @@ def _part_metrics(parts: Sequence[str]) -> list[str]:
 def ratios(row: dict[str, Any]) -> dict[str, tuple[int, int]]:
     """카운트 행 → 지표 정수 쌍(num, den). position 은 (순위 합, 순위 있는 답변 수). 없는 부분은 빠진다.
     citation_share 분자 = cit_m05(표면별 M05 분자: global 공식(HMG) 카테고리, website·project 자사). cit_owned 로 대신하지 않는다
-    (행을 손으로 합치는 소비자도 cit_m05 를 함께 더해야 한다: 없으면 KeyError 로 드러난다)."""
+    (행을 손으로 합치는 소비자도 cit_m05 를 함께 더해야 한다: 없으면 KeyError 로 드러난다).
+    part 'sov' 행(B094: answers·own_mentions·total_mentions 만, tracked 없음)은 share_of_voice 만 낸다."""
     out: dict[str, tuple[int, int]] = {}
-    if "answers" in row:
+    if "answers" in row and "tracked" not in row:
+        out["share_of_voice"] = (row["own_mentions"], row["total_mentions"])
+    elif "answers" in row:
         out["visibility"] = (row["tracked"], row["answers"])
         out["share_of_voice"] = (row["own_mentions"], row["total_mentions"])
         out["sentiment"] = (row["sent_pos"], row["sent_all"])
@@ -1406,12 +1420,14 @@ async def report_publications(conn: Any, ms: MeasureScope, win: Window, *, brand
 # ════════════════════════════════════════════════════════════════════════════
 # 브랜드 행(M-1, QUERY-FIXES M-1)
 # ════════════════════════════════════════════════════════════════════════════
-def competitor_rows_sql(ms: MeasureScope, win: Window, *, group_by: Sequence[str] = (), hmg_siblings: bool = True) -> Sql:
+def competitor_rows_sql(ms: MeasureScope, win: Window, *, group_by: Sequence[str] = (), hmg_siblings: bool = True,
+                        mentions_only: bool = False) -> Sql:
     """경쟁 행: competitive ∧ std_in ∧ NOT (own_bit = ANY(관점 비트)). 형제 HMG 브랜드는 남는다(M-1·T-1). LIMIT 없음(순위는 앱).
     hmg_siblings=False 면 관점 밖 HMG 브랜드(own_bit ≠ 0)도 뺀다(GEO-1 브랜드 격리, 현행 marketStats: 권한 밖 형제 브랜드는 목록·순위에
     없고 분모(답변 ment_total)에만 남는다).
+    mentions_only=True(B094: 언급 수만 쓰는 소비자, 웹사이트 GEO)면 brand_key·mentions 만 싣는다(노출·순위·톤 합 없음, 술어·묶음은 같다).
     현행 프로필 자리: brand_exposure_per_alias(G20, WU-4 구현: 노출 답변 수 = sum(rid_n) = (답변, 롤업 id) 단위, 현행 fold.ts:468,486).
-    켜지면 rid_n_missing(채우기 전 행 수) 열이 붙고 brand_rows 가 0 이 아니면 예외를 낸다(결과 행에서는 뺀다)."""
+    켜지면 rid_n_missing(채우기 전 행 수) 열이 붙고 brand_rows 가 0 이 아니면 예외를 낸다(결과 행에서는 뺀다). mentions_only 여도 이 검사는 같다."""
     require_slot(ms.profile, "brand_exposure_per_alias")
     t_ = "b"
     b = Binder("b")
@@ -1423,11 +1439,14 @@ def competitor_rows_sql(ms: MeasureScope, win: Window, *, group_by: Sequence[str
     # G20(brand_exposure_per_alias, WU-4): 노출 답변 수 = (답변, 롤업 id) 수 = sum(rid_n)(DB-v2.15 P89). 채우기 전 행(NULL)은 조용히 빠지지 않게
     #   rid_n_missing 으로 세어 brand_rows 가 예외를 낸다. 언급 수·순위·톤 합은 롤업 id 로 나뉘지 않아(언급 행 1개 = rid 1개) 그대로다.
     g20 = ms.profile.brand_exposure_per_alias
-    expo = [f"coalesce(sum({t_}.rid_n), 0) AS exposure_answers", f"count(*) FILTER (WHERE {t_}.rid_n IS NULL) AS rid_n_missing"] \
-        if g20 else ["count(*) AS exposure_answers"]
-    cols = [f"{t_}.brand_key", f"sum({t_}.mention_count) AS mentions", *expo,
-            f"coalesce(sum({t_}.rk) FILTER (WHERE {t_}.rk > 0), 0) AS rank_sum", f"count(*) FILTER (WHERE {t_}.rk > 0) AS ranked",
-            f"sum({t_}.s_pos) AS s_pos", f"sum({t_}.s_neu) AS s_neu", f"sum({t_}.s_neg) AS s_neg", f"sum({t_}.s_mix) AS s_mix"]
+    missing = [f"count(*) FILTER (WHERE {t_}.rid_n IS NULL) AS rid_n_missing"] if g20 else []
+    if mentions_only:
+        cols = [f"{t_}.brand_key", f"sum({t_}.mention_count) AS mentions", *missing]
+    else:
+        expo = [f"coalesce(sum({t_}.rid_n), 0) AS exposure_answers", *missing] if g20 else ["count(*) AS exposure_answers"]
+        cols = [f"{t_}.brand_key", f"sum({t_}.mention_count) AS mentions", *expo,
+                f"coalesce(sum({t_}.rk) FILTER (WHERE {t_}.rk > 0), 0) AS rank_sum", f"count(*) FILTER (WHERE {t_}.rk > 0) AS ranked",
+                f"sum({t_}.s_pos) AS s_pos", f"sum({t_}.s_neu) AS s_neu", f"sum({t_}.s_neg) AS s_neg", f"sum({t_}.s_mix) AS s_mix"]
     t = f"SELECT {', '.join(gsel + cols)}\n  FROM {fact_tables(ms).answer_brand} {t_}\n WHERE {' AND '.join(w)}\n GROUP BY " + \
         ", ".join([str(i + 1) for i in range(len(gsel))] + [f"{t_}.brand_key"])
     return b.sql(t)
@@ -1451,20 +1470,20 @@ def rank_brand_items(items: list[dict[str, Any]], *, key: str = "mentions", name
 
 
 async def brand_rows(conn: Any, ms: MeasureScope, win: Window, *, group_by: Sequence[str] = (),
-                     hmg_siblings: bool = True) -> list[dict[str, Any]]:
-    """경쟁 브랜드 행(competitor_rows_sql). 빈 창이면 DB 문장 없이 []."""
+                     hmg_siblings: bool = True, mentions_only: bool = False) -> list[dict[str, Any]]:
+    """경쟁 브랜드 행(competitor_rows_sql). 빈 창이면 DB 문장 없이 []. mentions_only = 언급 수 열만(B094, competitor_rows_sql)."""
     from app.core.db import fetch_all
 
     if win.empty:
         return []
-    q = competitor_rows_sql(ms, win, group_by=group_by, hmg_siblings=hmg_siblings)
+    q = competitor_rows_sql(ms, win, group_by=group_by, hmg_siblings=hmg_siblings, mentions_only=mentions_only)
     rows = _g20_check(ms, await fetch_all(conn, q.text, q.params))
     renamed = await renamed_brand_keys(conn, ms, win)
     if not renamed:
         return rows
     # 동결 읽기에서 창 회차들의 동결 세대 이름이 다른 키(개명): 현행 집계층은 세대별 brand_name 으로 묶어 두 행이 된다(summary_trend_brands 키 =
     # brand_name, fold.ts:468-486). 그 키만 회차로 나눠 읽고 (그룹, 키, 그 회차 세대 이름)으로 다시 더한다(열이 전부 가산이라 값이 같다)
-    q2 = competitor_rows_sql(ms, win, group_by=(*group_by, "cycle"), hmg_siblings=hmg_siblings)
+    q2 = competitor_rows_sql(ms, win, group_by=(*group_by, "cycle"), hmg_siblings=hmg_siblings, mentions_only=mentions_only)
     rows2 = _g20_check(ms, await fetch_all(conn, q2.text, q2.params))
     gnames = [GROUPS[g][0] for g in group_by]
     merged: dict[tuple[Any, ...], dict[str, Any]] = {}

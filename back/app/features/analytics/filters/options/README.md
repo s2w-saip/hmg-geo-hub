@@ -82,3 +82,10 @@
   현행 화면의 출처 필터는 정적 목록(dimension-filter-panel.tsx DIMENSIONS.source = CITATION_CATEGORIES)이고 허브 프론트도 이 필드를
   읽지 않는다(lib/hgh/adapters/filters.ts toPanelOptions). 계산할 때의 문장은 DISTINCT source_key 를 먼저 접는 형태(queries.py 주석, 결과 동일).
   stg hmg_r2 서버 시간(ASGI 직접, cache-miss, 3회): 글로벌 무필터 815 → 143ms, 웹 1년 1,185 → 39~86ms, include 지정 시 글로벌 356ms·웹 1년 336ms.
+
+## 선택 파라미터(백로그 P1~P12, 2026-10-14). 전부 선택 인자: 주지 않으면 응답 모양·값·문장이 종전과 같다
+- `geo_only`(B095): true = 국가 옵션만 쓰는 화면(표준·웹사이트 전환 화면, front `loadPanelOptions({geoOnly: true})`). 카탈로그 택소노미
+  (global = TAXON·CATALOG 2문장, project = 프로젝트 프롬프트)와 커스텀 필드 문장을 돌리지 않고 `catalog`·`custom_fields` = null.
+  geo_matrix·regions·languages·engines·meta 는 기본 호출과 같다(현행 프로필 경로 포함).
+- 매트릭스 문장 빌더 `queries.matrix_sql`·`legacy_global_sql` 은 `geo_only=True` 로 국가 열 조합(project_key·geo_key·cat_mask)만 묶을 수 있다
+  (P13d, 세 열 조합 = 전 열 문장의 투영: `test_geo_only_matrix_columns_are_the_projection`). 서비스는 아직 기본 문장을 쓴다.
