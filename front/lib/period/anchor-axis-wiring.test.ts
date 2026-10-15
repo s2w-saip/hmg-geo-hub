@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { execSync } from "node:child_process";
+import { readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { readSourceText } from "@/test/source-text";
 
@@ -166,14 +166,26 @@ describe("플래그 → 달력 (스펙 §5.1)", () => {
   //    그래서 판정은 **"기간 축이 없다고 증명된 경우만 제외"** 로 뒤집는다.
   it("필터 패널을 그리는 파일은 전부 selectableDates 를 넘기거나 면제 목록에 있다", () => {
     const exempt = new Set(CALENDAR_EXEMPT.map(([, f]) => f));
-    const renderers = execSync(
-      `grep -rlE '<(DimensionFilterPanel|AnalysisFilterBar)' "${REPO_ROOT}app" "${REPO_ROOT}components" --include=*.tsx | grep -v '\\.test\\.' || true`,
-      { encoding: "utf8" },
-    )
-      .split("\n")
-      .filter(Boolean)
-      .map((f) => f.slice(REPO_ROOT.length))
-      .filter((f) => !f.endsWith("components/dash/dimension-filter-panel.tsx"));
+    // `grep -rlE '<(DimensionFilterPanel|AnalysisFilterBar)' app components --include=*.tsx
+    //  | grep -v '\.test\.'` 를 셸 없이 한다(Windows 셸에는 grep 이 없다). grep -r 처럼
+    // 하위 심볼릭 링크는 따라가지 않고, `.test.` 은 리포 기준 경로에서만 거른다.
+    const found: string[] = [];
+    const walk = (rel: string) => {
+      for (const e of readdirSync(`${REPO_ROOT}/${rel}`, { withFileTypes: true })) {
+        const child = `${rel}/${e.name}`;
+        if (e.isDirectory()) walk(child);
+        else if (
+          e.isFile() &&
+          e.name.endsWith(".tsx") &&
+          !child.includes(".test.") &&
+          /<(DimensionFilterPanel|AnalysisFilterBar)/.test(read(child))
+        )
+          found.push(child);
+      }
+    };
+    walk("app");
+    walk("components");
+    const renderers = found.filter((f) => !f.endsWith("components/dash/dimension-filter-panel.tsx"));
 
     /**
      * 그 파일이 **기간 축이 없다고 증명하는가**. 증명 방법은 하나뿐이다:

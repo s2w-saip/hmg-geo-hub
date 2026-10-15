@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 
 /**
@@ -17,7 +18,10 @@ import path from "node:path";
  * `scope_answer_stances` 만 `1_TABLE_MISSING`(0072 미적용 — 정상).
  */
 const REPO = path.resolve(__dirname, "../..");
-const out = execFileSync("npx", ["tsx", "scripts/db/drift-sql.ts"], {
+// `npx tsx` 와 같은 CLI(로컬 tsx 의 bin)를 지금 node 로 직접 돈다. Windows 에서 npx 는 npx.cmd 라
+// 셸 없이 execFile 하면 ENOENT 다.
+const TSX_CLI = createRequire(import.meta.url).resolve("tsx/cli");
+const out = execFileSync(process.execPath, [TSX_CLI, "scripts/db/drift-sql.ts"], {
   cwd: REPO,
   encoding: "utf8",
   maxBuffer: 8 * 1024 * 1024,
