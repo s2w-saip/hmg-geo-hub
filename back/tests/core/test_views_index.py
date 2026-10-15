@@ -40,11 +40,17 @@ def regen(tmp_path_factory) -> pathlib.Path:
     return root
 
 
+def _committed(p: pathlib.Path) -> bytes:
+    """레포 파일을 git 이 저장한 바이트로 읽는다. Windows 체크아웃(core.autocrlf=true)은 작업본이 CRLF 라 \\r\\n 만 \\n 으로
+    되돌린다(LF 체크아웃에서는 그대로). 생성기 출력 쪽은 손대지 않는다: 바이트 단위 재현 판정은 그대로다."""
+    return p.read_bytes().replace(b"\r\n", b"\n")
+
+
 def test_d02_repo_generator_reproduces_committed_outputs(regen):
-    assert (regen / "taxonomy" / "taxonomy.json").read_bytes() == (TAX / "taxonomy.json").read_bytes() == (BACK / "taxonomy.json").read_bytes()
+    assert (regen / "taxonomy" / "taxonomy.json").read_bytes() == _committed(TAX / "taxonomy.json") == _committed(BACK / "taxonomy.json")
     views = regen / "repo" / "back" / "app" / "views"
-    assert (views / "views.json").read_bytes() == (BACK / "app" / "views" / "views.json").read_bytes()
-    assert (views / "VIEWS.md").read_bytes() == (BACK / "app" / "views" / "VIEWS.md").read_bytes()
+    assert (views / "views.json").read_bytes() == _committed(BACK / "app" / "views" / "views.json")
+    assert (views / "VIEWS.md").read_bytes() == _committed(BACK / "app" / "views" / "VIEWS.md")
     assert TX["views"] == VIEWS and len(VIEWS) == 42
 
 
