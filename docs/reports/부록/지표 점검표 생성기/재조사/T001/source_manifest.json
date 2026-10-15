@@ -1,0 +1,30 @@
+{
+  "before_commit": "392ca454a098365d772556cd980db3c870cf5592",
+  "after_commit_at_start": "32b442af0d4a10271b4276dbc603217b88ef99f7",
+  "sha256": {
+    "before:front/lib/scope/server.ts": "e11e8676964a5961bef3a9845ea0f1e55823b834cbd6d316923e54e5c51ef846",
+    "before:front/lib/db/repositories/scope-aggregates.ts": "abd3077888a5e4ff74806907b629387c0f024f11542ea2573c0cc5e4cf4cb91e",
+    "after:back/app/features/analytics/geo/markets/service.py": "b2060568c934b4f93f1c6a359fd664f631e051dd915a5bd8b475cfc0e279bbd1",
+    "after:back/app/core/measure.py": "c0a03c303b36953e0d95d7ebcf3fc68b39ab7234f7a492843a4f896727bfe9a8",
+    "after:back/app/core/result_cache.py": "1772de32b59db82b6c2cc9dad946e393d462c530167ea38865a5dd6f70d0cb30",
+    "before:front/app/[locale]/(dash)/dashboard/_data/live.ts": "b376d737bf513724dbce1e49901a8455d8a6d1f415505ca6587b87ba79c500df",
+    "before:front/lib/rhq/index.ts": "497c955d05eea2cbe80a0fab607d904b3a1e834e339fa67c1d84683a6135c2a1",
+    "after:back/app/core/codes.py": "4b1cac2083da8b1239ed846380b2dc40384dba3623172cf86b28ed223c39dd97",
+    "after:front/app/[locale]/(dash)/dashboard/_components/geo-map.tsx": "43d1d9ff9e3dd4cd4f84035f3ebff82f216898dba964b057dea9e450d7f56ee9",
+    "before:front/lib/db/repositories/summary-global-aggregates.ts": "972d7ba27ae9b8a84b59dc170a3d253f69044be4383b6ceb79dbad65bf8f940e",
+    "before:front/app/[locale]/(dash)/dashboard/_data/overview-metrics.ts": "e830920fc9755eaad27017aad12a8593b6472bd6742d282ea2249a2d25ff0965",
+    "after:back/ingest/project/apply/queries.py": "e1d762b51e938a2e226f3f5ba0b342347cf5c5467cfb09972a1959d711824c05",
+    "after:front/lib/hgh/adapters/dashboard.parity.test.ts": "896dd44b3f2a5f81946ffa9630d13b6830fc2c0e2b93705f079b6aec8115833e",
+    "before:front/app/[locale]/(dash)/dashboard/page.tsx": "8c6dc35c1c5d9c4dfa32d9000b138be450c19909891a0a8e7b63d441a372057e",
+    "after:front/app/[locale]/(dash)/dashboard/_data/live.ts": "bbdfc7564dd031d359e67d847600bb275025fdcfffef6bba6adcdb44f3c38de8",
+    "after:front/app/[locale]/(dash)/dashboard/page.tsx": "35828f93737b2436ff3151dd740b0aed6d7711acfc4c3b3a04244fbc6007c5dc",
+    "after:front/app/[locale]/(dash)/dashboard/degrade-labels.test.ts": "85af74140de239e712fa747a8d2c2cea5318baaa2728bd590b78c69fedbd2e51",
+    "after:docs/reports/부록/지표 점검표 생성기/조사 데이터/after/_fixes.json": "88d42d82a729bf7ad89f75dd8a2de3de3bc463b7514ce033d18cc9f809fd1bf1",
+    "after:front/app/[locale]/(dash)/dashboard/_components/geo-overview.tsx": "ab066ac9733aa67ff16afabd6b57d9d1cded323d0513af5729e80f0ef2a11f64",
+    "after:back/app/features/analytics/geo/markets/router.py": "340440e4bba03365fdee052929f99d8176ea17838923c6b62b5ce7c906f169ce",
+    "after:back/app/core/auth.py": "4569de5a1b7add2408a69de9febd055cf2fa6abef3d671a469d1fb6c5351f939",
+    "before:front/lib/auth/scope-policy.ts": "2d2fb31d157209a7dd784991946e11cece32a26152ec25b153122ed7aec97b62",
+    "after:back/app/features/analytics/geo/markets/tests/test_geo.py": "85e3baf06135c217ea7365cf7a22c1faa86613d642cf2e45bf6ac33cb318c3af",
+    "after:back/app/core/profile.py": "836d1cee5d23fee4c259d0c252ef1e6343636b7efbf3f957d0bb7a0a120af27c"
+  }
+}

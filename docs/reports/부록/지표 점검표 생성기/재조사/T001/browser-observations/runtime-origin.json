@@ -1,0 +1,46 @@
+{
+  "recorded_at": "2026-10-15T05:03:25.211241+00:00",
+  "local_preview_root": "C:\\Users\\tae_h\\OneDrive\\바탕 화면\\GEO-HUB-renewal-temp-20261008\\.local\\perf-preview\\front",
+  "saved_preview_pid": "50764",
+  "observed_asset_path": "/_next/static/chunks/app/%5Blocale%5D/login/page-8cf566f4fc4cccb2.js",
+  "served_asset_sha256": "2edcf54ec579968a43d1de3d6a5401138177be3fd97fcb35d403804c84665675",
+  "local_asset_path": "C:\\Users\\tae_h\\OneDrive\\바탕 화면\\GEO-HUB-renewal-temp-20261008\\.local\\perf-preview\\front\\.next\\static\\chunks\\app\\[locale]\\login\\page-8cf566f4fc4cccb2.js",
+  "local_asset_sha256": "2edcf54ec579968a43d1de3d6a5401138177be3fd97fcb35d403804c84665675",
+  "asset_matches": true,
+  "source_comparison": [
+    {
+      "file": "app/[locale]/(dash)/dashboard/_data/live.ts",
+      "preview_source_exists": true,
+      "renewal_exists": true,
+      "same_text": false
+    },
+    {
+      "file": "app/[locale]/(dash)/dashboard/page.tsx",
+      "preview_source_exists": true,
+      "renewal_exists": true,
+      "same_text": false
+    },
+    {
+      "file": "lib/hgh/adapters/dashboard.ts",
+      "preview_source_exists": true,
+      "renewal_exists": true,
+      "same_text": false
+    },
+    {
+      "file": "app/[locale]/(dash)/dashboard/_components/geo-overview.tsx",
+      "preview_source_exists": true,
+      "renewal_exists": true,
+      "same_text": true
+    }
+  ],
+  "settings": {
+    "auth_url": "http://127.0.0.1:54399",
+    "api_url": "http://127.0.0.1:18080",
+    "source": "existing preview.mjs launcher, not introspection of process environment"
+  },
+  "process": {
+    "pid": 50764,
+    "start_time_utc": "2026-10-08T16:34:03.4555146Z",
+    "pid_file_written_utc": "2026-10-08T16:34:03.4864927Z"
+  }
+}

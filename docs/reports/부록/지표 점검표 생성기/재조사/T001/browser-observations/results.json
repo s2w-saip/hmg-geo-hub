@@ -1,0 +1,96 @@
+{
+  "observed_at": "2026-10-15T05:03:53.254Z",
+  "viewport": {
+    "width": 1920,
+    "height": 1080
+  },
+  "parity_verified": false,
+  "environments": {
+    "before": {
+      "requested_url": "https://hmg-geo.vercel.app/",
+      "requests": [
+        {
+          "origin": "https://hmg-geo.vercel.app",
+          "path": "/",
+          "status": 307,
+          "type": "document"
+        },
+        {
+          "origin": "https://hmg-geo.vercel.app",
+          "path": "/ko/login",
+          "status": 200,
+          "type": "document"
+        }
+      ],
+      "entry_status": 200,
+      "entry_url": "https://hmg-geo.vercel.app/ko/login",
+      "entry_snapshot": "- main:\n  - img \"Hyundai Motor Group\"\n  - heading \"HMG GEO 모니터링 로그인\" [level=1]\n  - textbox \"이메일\"\n  - textbox \"비밀번호\"\n  - button \"비밀번호 표시\"\n  - button \"로그인\"\n- alert"
+    },
+    "after": {
+      "requested_url": "http://127.0.0.1:3130/",
+      "requests": [
+        {
+          "origin": "http://127.0.0.1:3130",
+          "path": "/",
+          "status": 307,
+          "type": "document"
+        },
+        {
+          "origin": "http://localhost:3130",
+          "path": "/ko/login",
+          "status": 200,
+          "type": "document"
+        },
+        {
+          "origin": "http://localhost:3130",
+          "path": "/ko",
+          "status": 200,
+          "type": "fetch"
+        },
+        {
+          "origin": "http://localhost:3130",
+          "path": "/ko/standard/answer-analysis/mention",
+          "status": 200,
+          "type": "fetch"
+        },
+        {
+          "origin": "http://localhost:3130",
+          "path": "/ko/standard/answer-analysis/citation",
+          "status": 200,
+          "type": "fetch"
+        },
+        {
+          "origin": "http://localhost:3130",
+          "path": "/ko/dashboard",
+          "status": 200,
+          "type": "fetch"
+        }
+      ],
+      "entry_status": 200,
+      "entry_url": "http://localhost:3130/ko/login",
+      "entry_snapshot": "- main:\n  - img \"Hyundai Motor Group\"\n  - heading \"HMG GEO 모니터링 로그인\" [level=1]\n  - textbox \"이메일\"\n  - textbox \"비밀번호\"\n  - button \"비밀번호 표시\"\n  - button \"로그인\"\n- alert",
+      "dialog_closed": true,
+      "account_basis": "Existing local mock ADMIN account; not matched to a Vercel account.",
+      "dashboard_url": "http://localhost:3130/ko/dashboard",
+      "dashboard_snapshot": "- alert: Overview · HMG GEO 모니터링\n- banner:\n  - link \"HMG GEO 모니터링\":\n    - /url: /ko\n    - img \"Hyundai Motor Group\"\n    - text: HMG GEO 모니터링\n  - button \"언어\": 한국어\n- paragraph: 사용 중 불편한 점이나 추가로 필요한 기능이 있다면 두 개의 주소를 모두 포함하여 메일로 언제든지 의견 보내주세요. 보내주신 의견은 검토하여 다음 업데이트에 반영하겠습니다.\n- button \"의견 메일 주소 두 개 복사\": feedback-hmg@example.com feedback-partner@example.com\n- complementary \"Primary\":\n  - navigation:\n    - link \"Global\":\n      - /url: /ko/dashboard\n    - link \"Website\":\n      - /url: /ko/website\n    - link \"Project\":\n      - /url: /ko/projects\n    - link \"Admin\":\n      - /url: /ko/admin\n  - text: T t-admin 시스템 관리자\n  - button \"Log out\"\n- complementary \"Secondary navigation\":\n  - navigation:\n    - link \"Overview\":\n      - /url: /ko/dashboard\n    - link \"Global prompts\":\n      - /url: /ko/standard/prompts\n    - link \"Answer analysis\":\n      - /url: /ko/standard/answer-analysis\n    - link \"Mention\":\n      - /url: /ko/standard/answer-analysis/mention\n    - link \"Citation\":\n      - /url: /ko/standard/answer-analysis/citation\n    - link \"AI Agent Funnel\":\n      - /url: /ko/standard/ai-funnel\n    - link \"ACR (beta)\":\n      - /url: /ko/standard/ai-funnel/acr\n    - link \"AI Conversion (beta)\":\n      - /url: /ko/standard/ai-funnel/conversion\n- main:\n  - heading \"AI 답변 성과 요약\" [level=1]\n  - paragraph: HMG 브랜드가 AI 답변에서 얼마나 보이고, 어떤 출처로 신뢰를 얻고, 실제 방문으로 이어지는지 한 화면에서 봅니다.\n  - text: 주 1회 측정 측정 회차 2026-09-14 기준 디멘션\n  - button \"브랜드\"\n  - button \"국가\"\n  - button \"언어\"\n  - button \"AI 엔진\"\n  - button \"기간\"\n  - text: 프롬프트 필터\n  - button \"프롬프트 퍼널\"\n  - button \"브랜드 포함 여부\"\n  - button \"리스트 타입\"\n  - button \"Depth 1\"\n  - button \"Depth 2\"\n  - button \"적용\" [disabled]\n  - paragraph: 필터를 선택하지 않으면 계정 권한 범위의 전체 데이터가 조회됩니다 (기간 미선택 시 최근 7일 기준).\n  - region \"핵심 지표 요약\":\n    - heading \"AI 노출률 지표 정의 보기\" [level=3]:\n      - text: AI 노출률\n      - button \"지표 정의 보기\"\n    - link \"상세 보기\":\n      - /url: /ko/standard/answer-analysis/mention?kpi=exposure\n    - text: 100.0% 직전 회차 대비 −\n    - application: 9. 7. 9. 14.\n    - list:\n      - listitem: smart 33.3% −\n      - listitem: Toyota 33.3% −\n    - paragraph: 경쟁사 증감은 값이 있는 마지막 두 측정 지점의 차입니다. 비교할 지점이 2개 미만이면 −로 표시합니다.\n    - heading \"AI 점유율 지표 정의 보기\" [level=3]:\n      - text: AI 점유율\n      - button \"지표 정의 보기\"\n    - link \"상세 보기\":\n      - /url: /ko/standard/answer-analysis/mention?kpi=sov\n    - text: 63.6% 직전 회차 대비 −\n    - application: 9. 7. 9. 14.\n    - list:\n      - listitem: Toyota 27.3% −\n      - listitem: smart 9.1% −\n    - paragraph: 경쟁사 증감은 값이 있는 마지막 두 측정 지점의 차입니다. 비교할 지점이 2개 미만이면 −로 표시합니다.\n    - heading \"AI 우호도 지표 정의 보기\" [level=3]:\n      - text: AI 우호도\n      - button \"지표 정의 보기\"\n    - link \"상세 보기\":\n      - /url: /ko/standard/answer-analysis/mention?kpi=favorability\n    - text: 71.4% 직전 회차 대비 −\n    - application: 9. 7. 9. 14.\n    - list:\n      - listitem: Toyota 0.0% −\n    - paragraph: 경쟁사 증감은 값이 있는 마지막 두 측정 지점의 차입니다. 비교할 지점이 2개 미만이면 −로 표시합니다.\n    - heading \"AI 우선 노출도 지표 정의 보기\" [level=3]:\n      - text: AI 우선 노출도\n      - button \"지표 정의 보기\"\n    - link \"상세 보기\":\n      - /url: /ko/standard/answer-analysis/mention?kpi=first-rank\n    - text: 1.3번째 직전 회차 대비 −\n    - application: 9. 7. 9. 14.\n    - list:\n      - listitem: Toyota 1.0번째 −\n      - listitem: smart 2.0번째 −\n    - paragraph: 경쟁사 증감은 값이 있는 마지막 두 측정 지점의 차입니다. 비교할 지점이 2개 미만이면 −로 표시합니다.\n    - heading \"AI 인용 점유율 지표 정의 보기\" [level=3]:\n      - text: AI 인용 점유율\n      - button \"지표 정의 보기\"\n    - link \"상세 보기\":\n      - /url: /ko/standard/answer-analysis/citation\n    - text: 44.4% 직전 회차 대비 −\n    - application: 9. 7. 9. 14.\n    - paragraph: 경쟁사 값을 제공하지 않는 지표입니다\n  - heading \"국가별 GEO 현황\" [level=3]\n  - paragraph: 권역별 현황은 브랜드를 하나 선택하면 표시됩니다.\n- region \"Notifications alt+T\"",
+      "geo_heading_visible": true,
+      "script_paths": [
+        "/_next/static/chunks/5937e399-8e6ab637b42d079b.js",
+        "/_next/static/chunks/3856-5caadb8cf223f45b.js",
+        "/_next/static/chunks/main-app-ac5b8b0d7caf88db.js",
+        "/_next/static/chunks/5466-5d4244d2c0d5e6a3.js",
+        "/_next/static/chunks/1841-1e96c43fd49e31b6.js",
+        "/_next/static/chunks/6189-85f5382ef2b36b15.js",
+        "/_next/static/chunks/app/%5Blocale%5D/login/page-8cf566f4fc4cccb2.js",
+        "/_next/static/chunks/polyfills-42372ed130431b0a.js",
+        "/_next/static/chunks/webpack-f036d432f58b7ffa.js"
+      ],
+      "brand_menu_snapshot": "- button \"의견 메일 주소 두 개 복사\"\n- region \"Notifications alt+T\"\n- menu \"브랜드\":\n  - menuitemcheckbox \"Genesis\"\n  - menuitemcheckbox \"Hyundai\"\n  - menuitemcheckbox \"Kia\"",
+      "brand_chosen_snapshot": "- button \"의견 메일 주소 두 개 복사\"\n- region \"Notifications alt+T\"\n- menu \"브랜드 1\":\n  - menuitemcheckbox \"Genesis\"\n  - menuitemcheckbox \"Hyundai\"\n  - menuitemcheckbox \"Kia\" [checked]:\n    - img\n    - text: Kia\n  - separator\n  - menuitem \"선택 해제\"",
+      "filter_draft_snapshot": "",
+      "filtered_url": "http://localhost:3130/ko/dashboard?brand=Kia",
+      "filtered_snapshot": "- main:\n  - heading \"AI 답변 성과 요약\" [level=1]\n  - paragraph: HMG 브랜드가 AI 답변에서 얼마나 보이고, 어떤 출처로 신뢰를 얻고, 실제 방문으로 이어지는지 한 화면에서 봅니다.\n  - text: 주 1회 측정 측정 회차 2026-09-14 기준 디멘션\n  - button \"브랜드 1\"\n  - button \"국가\"\n  - button \"언어\"\n  - button \"AI 엔진\"\n  - button \"기간\"\n  - text: 프롬프트 필터\n  - button \"프롬프트 퍼널\"\n  - button \"브랜드 포함 여부\"\n  - button \"리스트 타입\"\n  - button \"Depth 1\"\n  - button \"Depth 2\"\n  - button \"적용\" [disabled]\n  - button \"초기화\"\n  - text: 측정 데이터가 아직 없습니다",
+      "geo_snapshot": null
+    }
+  }
+}

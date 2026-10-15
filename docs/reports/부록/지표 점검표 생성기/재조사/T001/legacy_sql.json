@@ -1,0 +1,134 @@
+{
+  "assumptions": "S1 summary path; synthetic snapshot; no user filters; NOT a deployed-path observation",
+  "statements": [
+    {
+      "key": "own",
+      "table": "summary_trend_own",
+      "sql": "\n    SELECT CASE\n             WHEN GROUPING(engine) = 0  THEN 'engine'\n             WHEN GROUPING(country) = 0 THEN 'country'\n             ELSE 'total'\n           END AS axis,\n           COALESCE(\n             CASE WHEN GROUPING(engine) = 0 THEN engine END,\n             CASE WHEN GROUPING(country) = 0 THEN country END\n           ) AS bucket,\n           NULL::timestamptz AS cycle_anchor_at,\n           count(*)::bigint                               AS key_rows,\n           COALESCE(sum(monitored), 0)::bigint            AS monitored,\n           COALESCE(sum(tracked_answers), 0)::bigint      AS tracked_answers,\n           COALESCE(sum(multi_answers), 0)::bigint        AS multi_answers,\n           COALESCE(sum(top1_answers), 0)::bigint         AS top1_answers,\n           COALESCE(sum(top3_answers), 0)::bigint         AS top3_answers,\n           COALESCE(sum(rank_sum), 0)::double precision   AS rank_sum,\n           COALESCE(sum(ranked_answers), 0)::bigint       AS ranked_answers,\n           COALESCE(sum(own_mentions), 0)::bigint         AS own_mentions,\n           COALESCE(sum(own_positive), 0)::bigint         AS own_positive,\n           COALESCE(sum(own_signals), 0)::bigint          AS own_signals,\n           COALESCE(sum(comp_mentions), 0)::bigint        AS comp_mentions,\n           COALESCE(sum(all_citations), 0)::bigint        AS all_citations,\n           COALESCE(sum(own_citations), 0)::bigint        AS own_citations,\n           COALESCE(sum(own_fallback_citations), 0)::bigint AS own_fallback_citations,\n           COALESCE(sum(tile_own_mentions), 0)::bigint    AS tile_own_mentions,\n           COALESCE(sum(citing_answers), 0)::bigint       AS citing_answers\n    FROM summary_trend_own\n    WHERE surface = $1\n    AND cycle_anchor_at BETWEEN $2::timestamptz AND $3::timestamptz\n    AND project_id = ANY($4::uuid[])\n    AND cycle_id = $5::uuid AND generation_id = $6::uuid AND run_status IN ('completed', 'partial_failed') AND in_root_catalog = 1 AND in_tagged_region = 1 AND in_full_cycle = 1 AND own_variant = $7\n    GROUP BY GROUPING SETS ((), (engine), (country))\n  ",
+      "params": [
+        "global",
+        "2026-08-31T00:00:00.000Z",
+        "2026-08-31T00:00:00.000Z",
+        [
+          "00000003-0000-0000-0000-000000000000"
+        ],
+        "00000001-0000-0000-0000-000000000000",
+        "00000002-0000-0000-0000-000000000000",
+        "ALL"
+      ],
+      "typings": [
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none"
+      ],
+      "score": {
+        "join": 0,
+        "cte": 0,
+        "group_by": 1,
+        "window": 0,
+        "total": 1
+      }
+    },
+    {
+      "key": "brands",
+      "table": "summary_trend_brands",
+      "sql": "\n    WITH g AS (\n      SELECT GROUPING(country)::int AS by_country,\n             1::int AS by_engine,\n             1::int AS by_cycle,\n             CASE WHEN GROUPING(country) = 1 THEN NULL ELSE country END AS country,\n             NULL::text AS engine,\n             NULL::timestamptz AS cycle_anchor_at,\n             brand_name,\n             bool_or(brand_id = ANY($1::uuid[]))               AS is_tracked,\n             count(*)::bigint                                 AS key_rows,\n             \n           COALESCE(sum(mentions), 0)::bigint               AS mentions,\n           COALESCE(sum(answers), 0)::bigint                AS answers,\n           COALESCE(sum(rank_sum), 0)::double precision     AS rank_sum,\n           COALESCE(sum(ranked_answers), 0)::bigint         AS ranked_answers,\n           \n           0::double precision                              AS comp_rank_sum,\n           0::bigint                                        AS comp_ranked_answers,\n           COALESCE(sum(top3_answers), 0)::bigint           AS top3_answers,\n           COALESCE(sum(positive), 0)::bigint               AS positive,\n           COALESCE(sum(neutral), 0)::bigint                AS neutral,\n           COALESCE(sum(negative), 0)::bigint               AS negative,\n           COALESCE(sum(mixed), 0)::bigint                  AS mixed,\n           COALESCE(sum(type_mention), 0)::bigint           AS type_mention,\n           COALESCE(sum(type_recommendation), 0)::bigint    AS type_recommendation,\n           COALESCE(sum(type_comparison), 0)::bigint        AS type_comparison,\n           COALESCE(sum(type_definition), 0)::bigint        AS type_definition,\n           COALESCE(sum(type_final_choice), 0)::bigint      AS type_final_choice\n      FROM summary_trend_brands\n      WHERE surface = $2\n    AND cycle_anchor_at BETWEEN $3::timestamptz AND $4::timestamptz\n    AND project_id = ANY($5::uuid[])\n    AND cycle_id = $6::uuid AND generation_id = $7::uuid AND run_status IN ('completed', 'partial_failed') AND in_root_catalog = 1 AND in_tagged_region = 1 AND in_full_cycle = 1 AND is_competitor = 1\n      GROUP BY GROUPING SETS ((brand_name), (country, brand_name))),\n    r AS (\n      SELECT g.*, row_number() OVER (\n               PARTITION BY by_country, country, by_engine, engine, by_cycle, cycle_anchor_at\n               ORDER BY mentions DESC, brand_name\n             ) AS rn\n      FROM g\n    )\n    SELECT by_country, by_engine, by_cycle, country, engine, cycle_anchor_at,\n           brand_name, is_tracked, key_rows,\n           mentions, answers, rank_sum, ranked_answers, comp_rank_sum, comp_ranked_answers, top3_answers, positive, neutral, negative, mixed, type_mention, type_recommendation, type_comparison, type_definition, type_final_choice,\n           0::int AS is_rest, 0::bigint AS rest_count\n    FROM r\n    WHERE CASE WHEN by_country = 0 THEN true ELSE rn <= $8 END\n    UNION ALL\n    SELECT by_country, by_engine, by_cycle, country, engine, cycle_anchor_at,\n           NULL::text, bool_or(is_tracked),\n           sum(key_rows)::bigint, \n           sum(mentions)::bigint, sum(answers)::bigint, sum(rank_sum)::double precision,\n           sum(ranked_answers)::bigint,\n           sum(comp_rank_sum)::double precision, sum(comp_ranked_answers)::bigint,\n           sum(top3_answers)::bigint,\n           sum(positive)::bigint, sum(neutral)::bigint, sum(negative)::bigint, sum(mixed)::bigint,\n           sum(type_mention)::bigint, sum(type_recommendation)::bigint, sum(type_comparison)::bigint,\n           sum(type_definition)::bigint, sum(type_final_choice)::bigint,\n           1::int, count(*)::bigint\n    FROM r\n    WHERE NOT (CASE WHEN by_country = 0 THEN true ELSE rn <= $9 END)\n    GROUP BY by_country, by_engine, by_cycle, country, engine, cycle_anchor_at\n  ",
+      "params": [
+        [
+          "00000000-0000-0000-0000-000000000301",
+          "e0348d5f-afe4-48e6-aa99-1dee566f2822",
+          "c6dc2ca3-0fc9-42bc-b255-6fbfdb394e45",
+          "65eabd79-6138-4851-8b58-8a9b0261b517",
+          "00000000-0000-0000-0000-000000000302",
+          "ed4b8012-4a73-4174-9b43-4cb696934b25",
+          "53a1ac82-6346-477d-9fb7-31d78b9248fa",
+          "e21f66ad-9a28-46ab-8436-78ead06bd8f9",
+          "00000000-0000-0000-0000-000000000304",
+          "fd2f4a33-8f9b-4a46-bfd0-62133d162d28"
+        ],
+        "global",
+        "2026-08-31T00:00:00.000Z",
+        "2026-08-31T00:00:00.000Z",
+        [
+          "00000003-0000-0000-0000-000000000000"
+        ],
+        "00000001-0000-0000-0000-000000000000",
+        "00000002-0000-0000-0000-000000000000",
+        200,
+        200
+      ],
+      "typings": [
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none"
+      ],
+      "score": {
+        "join": 0,
+        "cte": 2,
+        "group_by": 2,
+        "window": 1,
+        "total": 5
+      }
+    },
+    {
+      "key": "domains",
+      "table": "summary_trend_domains",
+      "sql": "\n    WITH g AS MATERIALIZED (\n      SELECT CASE\n               \n               WHEN GROUPING(country) = 0 AND GROUPING(group_key) = 0 THEN 'country-group'\n               WHEN GROUPING(country) = 0 THEN 'country'\n               WHEN GROUPING(group_key) = 0 THEN 'group'\n               WHEN GROUPING(domain) = 0    THEN 'domain'\n               ELSE 'total'\n             END AS axis,\n             CASE WHEN GROUPING(group_key) = 0 THEN group_key END AS group_key,\n             CASE WHEN GROUPING(domain) = 0 THEN domain END       AS domain,\n             CASE WHEN GROUPING(country) = 0 THEN country END AS country,\n             NULL::timestamptz AS cycle_anchor_at,\n             count(*)::bigint                         AS key_rows,\n             COALESCE(sum(citations), 0)::bigint      AS citations,\n             COALESCE(sum(citing_answers), 0)::bigint AS citing_answers,\n             COALESCE(sum(citations) FILTER (WHERE ((matched_base <> '' AND matched_base = ANY($1::text[])) OR (base_norm_null = 1 AND domain ~* $2))), 0)::bigint AS owned_citations,\n             bool_or(((matched_base <> '' AND matched_base = ANY($3::text[])) OR (base_norm_null = 1 AND domain ~* $4)))     AS is_ours\n      FROM summary_trend_domains\n      WHERE surface = $5\n    AND cycle_anchor_at BETWEEN $6::timestamptz AND $7::timestamptz\n    AND project_id = ANY($8::uuid[])\n    AND cycle_id = $9::uuid AND generation_id = $10::uuid AND run_status IN ('completed', 'partial_failed') AND in_root_catalog = 1 AND in_tagged_region = 1 AND in_full_cycle = 1\n      GROUP BY GROUPING SETS ((group_key), (domain), (country), ()))\n    SELECT axis, group_key, domain, country, cycle_anchor_at, key_rows,\n           citations, citing_answers, owned_citations, is_ours,\n           0::int AS is_rest, 0::bigint AS rest_count\n    FROM g WHERE CASE axis WHEN 'domain' THEN (domain IS NULL OR domain IN (\n            (SELECT domain FROM g WHERE axis = 'domain' AND domain IS NOT NULL\n              ORDER BY citations DESC, domain LIMIT $11)\n            UNION\n            (SELECT domain FROM g WHERE axis = 'domain' AND domain IS NOT NULL\n              ORDER BY citing_answers DESC, domain LIMIT $12)\n          )) WHEN 'group' THEN true ELSE true END\n    UNION ALL\n    SELECT axis, NULL::text, NULL::text, country, cycle_anchor_at, sum(key_rows)::bigint,\n           sum(citations)::bigint, sum(citing_answers)::bigint, sum(owned_citations)::bigint,\n           bool_or(is_ours), 1::int, count(*)::bigint\n    FROM g WHERE NOT (CASE axis WHEN 'domain' THEN (domain IS NULL OR domain IN (\n            (SELECT domain FROM g WHERE axis = 'domain' AND domain IS NOT NULL\n              ORDER BY citations DESC, domain LIMIT $13)\n            UNION\n            (SELECT domain FROM g WHERE axis = 'domain' AND domain IS NOT NULL\n              ORDER BY citing_answers DESC, domain LIMIT $14)\n          )) WHEN 'group' THEN true ELSE true END)\n    GROUP BY axis, country, cycle_anchor_at\n  ",
+      "params": [
+        [
+          "kia.com"
+        ],
+        "(^|\\.)(kia\\.com)$",
+        [
+          "kia.com"
+        ],
+        "(^|\\.)(kia\\.com)$",
+        "global",
+        "2026-08-31T00:00:00.000Z",
+        "2026-08-31T00:00:00.000Z",
+        [
+          "00000003-0000-0000-0000-000000000000"
+        ],
+        "00000001-0000-0000-0000-000000000000",
+        "00000002-0000-0000-0000-000000000000",
+        80,
+        80,
+        80,
+        80
+      ],
+      "typings": [
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none",
+        "none"
+      ],
+      "score": {
+        "join": 0,
+        "cte": 1,
+        "group_by": 2,
+        "window": 0,
+        "total": 3
+      }
+    }
+  ]
+}

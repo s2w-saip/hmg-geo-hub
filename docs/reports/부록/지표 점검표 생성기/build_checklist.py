@@ -1,11 +1,14 @@
-"""Build ★ 리뉴얼·최적화 지표 점검표.html (v3: all screens, F1–F10 + 완료, work items).
+"""Build ★ 리뉴얼·최적화 지표 점검표.html (visible UI items; old F5 is a mandatory gate).
 
 Area check rule: ☑ only when every input passes; ☒ when any input fails; otherwise ☐.
 Before inputs = the legacy functions the area calls + its surface common path. After inputs = API data keys (DATA).
 Data: before_data.py (first 3 screens, legacy measurements, constants K), screens_def.py (first 3 screens),
-      조사 데이터/*.json (survey of the other screens + F7–F9 patch), work_items.py (documented work items).
+      조사 데이터/*.json (survey of the other screens + F7–F9 patch), work_items.py (documented work items),
+      visible_items.py (explicit UI splits, source provenance, and technical-only exclusions),
+      item_applicability.py + visible_applicability.json (reviewed applicable factors per item).
 usage: python -I build_checklist.py [out.html] [template.html]
   default out = workspace root "★ 리뉴얼·최적화 지표 점검표.html" (repo/../), default template = sibling file.
+  Topic report HTML files are expected beside the output checklist.
 """
 import glob
 import html
@@ -19,6 +22,8 @@ sys.path.insert(0, HERE)
 from before_data import FN, K  # noqa: E402
 from work_items import WORK  # noqa: E402
 from progress import PROGRESS  # noqa: E402
+from visible_items import visible_inventory  # noqa: E402
+from item_applicability import applicability, validate_inventory, has_explicit_hardcoding_target  # noqa: E402
 
 REPO = os.path.normpath(os.path.join(HERE, "..", "..", "..", ".."))
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(REPO), "★ 리뉴얼·최적화 지표 점검표.html")
@@ -86,8 +91,6 @@ for key in SURVEY_ORDER:
         AFTER_KEY_OVERRIDE[(ak["route"], ak["label"])] = ak["api_keys"]
     if AFTER_COMMON.get(key) not in AFN:
         AFTER_COMMON.pop(key, None)
-_pr = os.path.join(AFTER_DIR, "_parity_results.json")  # ref -> pass | fail | missing | skipped (test runs)
-PARITY = json.load(open(_pr, encoding="utf-8")) if os.path.exists(_pr) else {}
 _fx = os.path.join(AFTER_DIR, "_fixes.json")  # corrections for fixes made after the agents measured
 if os.path.exists(_fx):
     _fxd = json.load(open(_fx, encoding="utf-8"))
@@ -106,8 +109,28 @@ for s_ in SCREENS:  # noqa: F821
     s_["acommon"] = AFTER_COMMON.get(s_.get("survey", "existing3"))
     s_["ans"] = s_.get("survey", "existing3")
     s_["areas"] = [a[:5] + (AFTER_KEY_OVERRIDE.get((s_["route"], a[1]), a[5]),) + a[6:] for a in s_["areas"]]
-FACTORS = ["F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "DONE"]
-AFTER_ONLY = {"F5", "F10", "DONE"}
+SOURCE_SCREENS = SCREENS
+SCREENS, TECHNICAL_AREAS, ITEM_SOURCES = visible_inventory(SOURCE_SCREENS)
+validate_inventory(ITEM_SOURCES)
+SOURCE_USAGE = {}
+for (route, label), source in ITEM_SOURCES.items():
+    key = (route, source[1])
+    SOURCE_USAGE[key] = SOURCE_USAGE.get(key, 0) + 1
+TOPIC_AUDITS = {}
+for audit_path in sorted(glob.glob(os.path.join(HERE, '재조사', '*', 'audit.json'))):
+    audit = json.load(open(audit_path, encoding='utf-8'))
+    audit_key = (audit['route'], audit['label'])
+    assert audit_key in ITEM_SOURCES, f'unknown audited item: {audit_key}'
+    assert audit_key not in TOPIC_AUDITS, f'duplicate audit: {audit_key}'
+    assert set(audit['factors']) == {f'F{i}' for i in range(1, 11)}, audit_path
+    for factor in audit['factors'].values():
+        for side in ('before', 'after'):
+            assert factor[side]['status'] in ('x', 'u', 'n', 'y'), audit_path
+    TOPIC_AUDITS[audit_key] = audit
+# F5 is an unconditional compatibility requirement, not an improvement score.
+# Keep its original ID in topic evidence; do not inherit grouped parity results.
+FACTORS = ["F2", "F3", "F4", "F6", "F7", "F8", "F9", "F10", "DONE"]
+AFTER_ONLY = {"F10", "DONE"}
 
 
 def score(f2):
@@ -124,7 +147,24 @@ def area_fns(fns, common, write=False):
 def before_cell(fns, factor, common, write=False):
     if factor in AFTER_ONLY:
         return "x", ""
+    if own_factor_applicability(FN, fns, factor) is False:
+        return "x", "해당 표시 항목의 직접 경로에는 점검 대상 없음"
     return judge(FN, area_fns(fns, common, write), factor)
+
+
+def own_factor_applicability(table, keys, factor):
+    """Honor explicit skip evidence before adding shared path verdicts.
+
+    Missing measurements are unknown, never evidence of absence. Numeric zero
+    (e.g. SQL complexity 0) and a passing check still mean the target exists.
+    """
+    own = [key for key in keys if not str(key).endswith('COMMON')]
+    if not own or factor in {'F4', 'F5', 'DONE'}:
+        return None
+    values = [table.get(key, {}).get(factor.lower()) for key in own]
+    if any(value is None for value in values):
+        return None
+    return any(value[0] != 'skip' for value in values)
 
 
 def judge(table, fns, factor):
@@ -174,27 +214,18 @@ def judge(table, fns, factor):
 def after_cell(keys, factor, acommon, write=False, ns=None):
     """After (API path) verdict for one area from endpoint measurements.
     The screen's own surface measurement wins; another surface's is borrowed only when missing."""
-    if factor == "DONE":
-        return "n", "legacy 잔존"
     own = [k for k in keys if not str(k).endswith("COMMON")]
     if not own:
         return "x", "API 없음"
+    if factor == "DONE":
+        return "n", "legacy 잔존"
     table = dict(AFN)
     table.update(AFN_NS.get(ns, {}))
     if any(k not in table for k in own):
         return "u", "미측정"
+    if own_factor_applicability(table, own, factor) is False:
+        return "x", "해당 표시 항목의 직접 경로에는 점검 대상 없음"
     ks = own + ([acommon] if acommon and acommon in table and not write else [])
-    if factor == "F5":
-        no_test = [k for k in own if not table[k].get("parity")]
-        if no_test:
-            return "n", f"시험 없음 {len(no_test)}"
-        refs = [r for k in own for r in table[k].get("parity")]
-        res = [PARITY.get(r) for r in refs]
-        if "fail" in res:
-            return "n", f"시험 실패 {res.count('fail')}"
-        if not PARITY or any(x in (None, "missing", "skipped") for x in res):
-            return "u", "시험 있음·미실행" if not PARITY else "일부 시험 미확인"
-        return "y", f"시험 통과 {len(res)}"
     if factor == "F10":
         vals = [table[k].get("f10") for k in ks]
         if any(v is None for v in vals):
@@ -206,6 +237,61 @@ def after_cell(keys, factor, acommon, write=False, ns=None):
     return judge(table, ks, factor)
 
 
+def hardcoding_evidence(table, keys):
+    """Return explicit own-path evidence, never the surface's COMMON evidence.
+
+    None means unknown; an empty set is a measured absence. Keep them distinct.
+    """
+    own = [key for key in keys if not str(key).endswith('COMMON')]
+    if not own:
+        return None, '조사된 직접 호출 경로 없음'
+    if any(key not in table or table[key].get('f4') is None for key in own):
+        return None, '하드코딩 조사 근거 미확인'
+    ids = {cid for key in own for cid in table[key]['f4']}
+    if any(cid not in K for cid in ids):
+        return None, '하드코딩 상수 정의 미확인'
+    if not ids:
+        return set(), '직접 호출 경로에 조사된 하드코딩 없음'
+    evidence = '; '.join(f'{cid}: {K[cid][0]}' for cid in sorted(ids))
+    return ids, f'직접 호출 경로 근거: {evidence}'
+
+
+def hardcoding_cells(b_fns, a_keys, ns, shared, explicit_target=False):
+    """F4 tracks a removal target, so absence is blank, not a passing check.
+
+    Confirmed absence in Before makes both cells inapplicable.
+    A positive grouped finding cannot establish which split child is affected.
+    Unassigned grouped evidence stays in the pending register, not in check cells.
+    This does not declare the code free of hardcoding.
+    A pass is meaningful only when a confirmed Before target has been removed.
+    """
+    before, tb = hardcoding_evidence(FN, b_fns)
+    if before == set():
+        return 'x', '', 'x', ''
+    if shared and not explicit_target:
+        return 'x', '', 'x', ''
+    table = dict(AFN)
+    table.update(AFN_NS.get(ns, {}))
+    after, ta = hardcoding_evidence(table, a_keys)
+
+    def verdict(ids, tip, keys):
+        if not any(not str(key).endswith('COMMON') for key in keys):
+            return 'x', tip
+        if ids is None:
+            return 'u', tip
+        if not ids:
+            return 'x', tip
+        if shared:
+            return 'u', '기존 묶음에는 하드코딩이 있으나 이 표시 항목에 미치는 영향은 개별 미확인 · ' + tip
+        return 'n', tip
+
+    vb, tb = verdict(before, tb, b_fns)
+    va, ta = verdict(after, ta, a_keys)
+    if vb == 'n' and after == set():
+        va, ta = 'y', 'Before에서 확인한 하드코딩 제거됨 · ' + ta
+    return vb, tb, va, ta
+
+
 esc = html.escape
 SYM = {"y": '<span class="y">☑</span>', "n": '<span class="n">☒</span>', "u": '<span class="u">☐</span>', "x": '<span class="x">—</span>'}
 work_by_route = {}
@@ -215,11 +301,11 @@ for w in WORK:
 
 rows = []
 screen_blocks = []
+f4_pending = {}
 counts = {"y": 0, "n": 0, "u": 0}
 side_counts = {"B": {"y": 0, "n": 0, "u": 0}, "A": {"y": 0, "n": 0, "u": 0}}
 used_fns, commons = [], []
 n_areas = n_screens = 0
-NCOL = 5 + 2 + 2 * len(FACTORS)
 
 
 def tally(side, v):
@@ -229,32 +315,48 @@ def tally(side, v):
 
 
 SYMTXT = {"y": "☑", "n": "☒", "u": "☐", "x": "—"}
-AFTER_ONLY_F = {"F5", "F10", "DONE"}
+AFTER_ONLY_F = AFTER_ONLY
 
 
 def pair_cell(vb, tb, va, ta, f):
     """One factor cell: Before → After (After-only factors show the After symbol only); tint = After."""
-    tip = (f"After: {SYMTXT[va]} {ta}".strip() if f in AFTER_ONLY_F
-           else f"Before: {SYMTXT[vb]} {tb}".strip() + "  →  " + f"After: {SYMTXT[va]} {ta}".strip())
-    inner = SYM[va] if f in AFTER_ONLY_F else f'{SYM[vb]}<span class="arr">→</span>{SYM[va]}'
+    sides = [] if f in AFTER_ONLY_F or vb == 'x' else [('Before', vb, tb)]
+    if va != 'x':
+        sides.append(('After', va, ta))
+    if not sides:
+        return '<td class="pc tx"></td>'
+    tip = '  →  '.join(f'{side}: {SYMTXT[value]} {note}'.strip() for side, value, note in sides)
+    inner = '<span class="arr">→</span>'.join(SYM[value] for _, value, _ in sides)
     return f'<td class="pc t{va}" title="{esc(tip)}">{inner}</td>'
 
 
 def count_cell(cb, ca, f):
-    """Screen row: number of ☒ areas, Before → After."""
+    """Screen row: completed/eligible for DONE; otherwise number of ☒ areas."""
+    if f == 'DONE':
+        total = ca['y'] + ca['n'] + ca['u']
+        if not total:
+            return '<td class="pc cnt tx"></td>'
+        completed = ca['y']
+        tint = 'y' if completed == total else ('n' if ca['n'] else 'u')
+        tip = (f"After 전환 완료 {completed} / 전체 전환 대상 {total}"
+               f" · 미완료 {ca['n']} · 미확인 {ca['u']} · 해당 없음은 전체에서 제외")
+        return (f'<td class="pc cnt t{tint}" title="{esc(tip)}">'
+                f'<span class="{tint}">{completed} / {total}</span></td>')
     def part(c):
         judged = c["y"] + c["n"]
         if c["n"]:
             return f'<span class="n">{c["n"]}</span>', judged
         if judged:
             return '<span class="y">☑</span>', judged
-        return ('<span class="u">☐</span>' if c["u"] else '<span class="x">—</span>'), judged
+        return ('<span class="u">☐</span>' if c["u"] else ''), judged
     pb, jb = part(cb)
     pa, ja = part(ca)
     tint = "n" if ca["n"] else ("y" if ja else ("u" if ca["u"] else "x"))
     tip = (f"After ☒ {ca['n']} / 판정 {ja}" if f in AFTER_ONLY_F
            else f"Before ☒ {cb['n']} / 판정 {jb}  →  After ☒ {ca['n']} / 판정 {ja}")
-    inner = pa if f in AFTER_ONLY_F else f'{pb}<span class="arr">→</span>{pa}'
+    inner = pa if f in AFTER_ONLY_F else '<span class="arr">→</span>'.join(p for p in (pb, pa) if p)
+    if not inner:
+        return '<td class="pc cnt tx"></td>'
     return f'<td class="pc cnt t{tint}" title="{esc(tip)}">{inner}</td>'
 
 
@@ -277,6 +379,18 @@ for s in SCREENS:  # noqa: F821
     agg = {f: {"B": {"y": 0, "n": 0, "u": 0, "x": 0}, "A": {"y": 0, "n": 0, "u": 0, "x": 0}} for f in FACTORS}
     for loc, label, note, legacy, api, a_keys, b_fns, dlabel in s["areas"]:
         n_areas += 1
+        source_area = ITEM_SOURCES[(s["route"], label)]
+        topic_audit = TOPIC_AUDITS.get((s['route'], label))
+        applicable, item_kind = applicability(s['route'], label, source_area[1])
+        shared = SOURCE_USAGE[(s["route"], source_area[1])] > 1
+        explicit_f4_target = has_explicit_hardcoding_target(s['route'], label)
+        f4_scope_pending = (
+            'F4' in applicable and shared and not explicit_f4_target
+            and not (topic_audit and 'F4' in topic_audit['factors'])
+            and hardcoding_evidence(FN, b_fns)[0] != set()
+        )
+        if f4_scope_pending:
+            f4_pending.setdefault((s['menu'], s['route'], source_area[1]), []).append(label)
         for f in b_fns:
             if f.endswith("COMMON"):
                 if f not in commons:
@@ -284,31 +398,112 @@ for s in SCREENS:  # noqa: F821
             elif f not in used_fns:
                 used_fns.append(f)
         cells = []
+        shown_factors = []
         for f in FACTORS:
-            vb, tb = before_cell(b_fns, f, s.get("common"), dlabel == "쓰기")
-            va, ta = after_cell(a_keys, f, s.get("acommon"), dlabel == "쓰기", s.get("ans"))
+            # Applicability is a gate for every row, including topic overrides.
+            if f not in applicable:
+                vb, tb, va, ta = 'x', '', 'x', ''
+            elif topic_audit and f in topic_audit['factors']:
+                reviewed = topic_audit['factors'][f]
+                vb, tb = reviewed['before']['status'], reviewed['before']['note']
+                va, ta = reviewed['after']['status'], reviewed['after']['note']
+                tb, ta = f"{topic_audit['id']} · {tb}", f"{topic_audit['id']} · {ta}"
+            elif f == 'F4' and f in applicable:
+                vb, tb, va, ta = hardcoding_cells(b_fns, a_keys, s.get('ans'), shared, explicit_f4_target)
+            elif f in applicable:
+                vb, tb = before_cell(b_fns, f, s.get("common"), dlabel == "쓰기")
+                va, ta = after_cell(a_keys, f, s.get("acommon"), dlabel == "쓰기", s.get("ans"))
+            else:
+                vb, tb, va, ta = 'x', '', 'x', ''
+            if f == 'DONE' and va != 'x':
+                parity = topic_audit['factors']['F5'] if topic_audit else None
+                if parity and parity['after']['status'] == 'n':
+                    va = 'n'
+                    ta += ' · 계산·표시 규칙 불일치 결함: 수정 및 동일성 재검증 전 전환 불가'
+                elif va == 'y' and not (parity and parity['after']['status'] == 'y'
+                                       and parity.get('verification_complete') is True):
+                    va, ta = 'u', '필수 계산·표시 규칙 동일성 검증 미완료: 전환 완료 처리 불가'
+            if shared and not (topic_audit and f in topic_audit['factors']):
+                tb += " · 기존 묶음의 공통 근거"
+                ta += " · 기존 묶음의 공통 근거"
             tally("B", vb)
             tally("A", va)
             agg[f]["B"][vb] += 1
             agg[f]["A"][va] += 1
+            if vb != 'x' or va != 'x':
+                shown_factors.append(f)
             cells.append(pair_cell(vb, tb, va, ta, f))
         api_txt = api if isinstance(api, str) else ", ".join(api)
         sub = " · ".join(x for x in (loc, note) if x)
-        tip = f"legacy: {legacy}\nAPI: {api_txt}"
+        tip = f"기존 조사 단위: {source_area[1]}\n조건·근거: {source_area[2]}\nlegacy: {legacy}\nAPI: {api_txt}"
+        tip += f"\n항목 성격: {item_kind}\n적용 기준: " + (', '.join(f.replace('DONE', '완료') for f in shown_factors) or '해당 없음')
+        if f4_scope_pending:
+            tip += '\nF4: 항목별 제거 대상 연결 대기. 묶음 상수 기록만 있어 체크하지 않으며, 하드코딩 없음이 검증된 것은 아닙니다.'
+        if shared and shown_factors:
+            tip += "\n이 항목에 적용되는 기준만 기존 묶음의 판정을 참조합니다. 개별 UI 검증은 별도로 필요합니다."
+        badge = '<span class="shared">공통 근거</span>' if shared and shown_factors else ''
+        if topic_audit:
+            report_path = os.path.join(os.path.dirname(os.path.abspath(OUT)), topic_audit['report_file'])
+            report_link = os.path.relpath(report_path, os.path.dirname(os.path.abspath(OUT))).replace(os.sep, '/')
+            audit_label = f'재조사 {topic_audit["id"]}'
+            if topic_audit.get('verification_policy', {}).get('datasets_may_differ'):
+                audit_label += ' · 로직 기준 조사'
+            elif topic_audit.get('paired_live'):
+                audit_label += ' · 표시값 대조 · 동일 데이터 미검증'
+            elif topic_audit.get('verification_status', '').startswith('incomplete'):
+                audit_label += ' · 실검증 미완료'
+            badge += f'<a class="shared" href="{esc(report_link)}">{esc(audit_label)}</a>'
+        tip = '\n'.join(line.rstrip() for line in tip.split('\n'))
         area_rows.append(
-            f'<tr class="block"><td class="indent" title="{esc(tip)}">{esc(label)}<span class="val">{esc(sub)}</span></td>'
-            f'<td class="pc tx"><span class="x">—</span></td>{"".join(cells)}</tr>')
+            f'<tr class="block" data-source="{esc(source_area[1])}"><td class="indent" title="{esc(tip)}">{esc(label)}{badge}<span class="val">{esc(sub)}</span></td>'
+            f'<td class="pc tx"></td>{"".join(cells)}</tr>')
 
     cnt_cells = "".join(count_cell(agg[f]["B"], agg[f]["A"], f) for f in FACTORS)
-    f1_tip = f"Before: {SYMTXT[b]} {re.sub('<[^>]+>', '', str(bval))}  →  After: {SYMTXT[a1]} {'배포 전 미측정' if a1 == 'u' else ''}"
-    f1_cell = f'<td class="pc t{a1}" title="{esc(f1_tip)}">{SYM[b]}<span class="arr">→</span>{SYM[a1]}</td>'
+    f1_before = re.sub('<[^>]+>', '', str(bval)) + ' ms' if b in ('y', 'n') else '미측정'
+    f1_tip = f"화면 전체의 데이터 로딩 시간 · 재방문 / 첫 방문\nBefore: {f1_before}\nAfter: 미측정\n개별 표시 항목의 F1은 해당 없음"
+    f1_cell = (
+        f'<td class="pc f1 t{a1}" title="{esc(f1_tip)}">'
+        f'<span class="f1-reading"><span class="f1-side">B</span>{SYM[b]}<span>{esc(f1_before)}</span></span>'
+        f'<span class="f1-reading"><span class="f1-side">A</span>{SYM[a1]}<span>미측정</span></span></td>'
+    ) if not nonscreen else '<td class="pc tx"></td>'
     route_txt = f'<code>{esc(s["route"])}</code>' if not nonscreen else ""
-    scr_tip = f"화면 제목: {s['title']}\n플래그: {flag_txt}\n영역 {len(s['areas'])}개" + (f"\n관련 작업: {', '.join(wrefs)}" if wrefs else "")
+    scr_tip = f"화면 제목: {s['title']}\n플래그: {flag_txt}\n표시 항목 {len(s['areas'])}개" + (f"\n관련 작업: {', '.join(wrefs)}" if wrefs else "")
+    menu_path = s["menu"].replace(" › ", " > ")
+    # Visibility/access annotations belong to the tooltip, not the menu path.
+    menu_path = re.sub(r"\s*\((?:메뉴 숨김[^)]*|beta|하위 페이지|SNB 숨김[^)]*|EcatNav[^)]*|api 전용|GNB 밖)\)", "", menu_path)
+    scr_tip += f"\n메뉴 경로·조건: {s['menu']}"
     screen_row = (
-        f'<tr class="screen" onclick="toggleScreen({sidx})"><td title="{esc(scr_tip)}">{esc(s["name"])} <span class="muted small">({len(s["areas"])})</span>'
-        f'<span class="val">{esc(s["menu"])} {route_txt}</span></td>'
+        f'<tr class="screen" onclick="toggleScreen({sidx})"><td title="{esc(scr_tip)}">{esc(menu_path)}'
+        f'<span class="val route">{route_txt}</span></td>'
         f'{f1_cell}{cnt_cells}</tr>')
     screen_blocks.append(f'<tbody class="scr" id="scr-{sidx}">\n' + screen_row + "\n" + "\n".join(area_rows) + "\n</tbody>")
+
+
+f4_pending_rows = []
+for (menu, route, source_label), labels in f4_pending.items():
+    f4_pending_rows.append(
+        f'<tr><td>{esc(menu.replace(" › ", " > "))}<br><code>{esc(route)}</code></td>'
+        f'<td>{esc(source_label)}</td><td>{esc(" · ".join(labels))}</td></tr>'
+    )
+
+
+# Keep all original function evidence, including technical-only paths, in the
+# appendix. These rows do not contribute to visible-item counts or verdicts.
+for s in SOURCE_SCREENS:
+    for area in s['areas']:
+        for f in area[6]:
+            target = commons if f.endswith('COMMON') else used_fns
+            if f not in target:
+                target.append(f)
+    if s.get('common') and s['common'] not in commons:
+        commons.append(s['common'])
+technical_rows = []
+for screen_name, area in TECHNICAL_AREAS:
+    loc, label, note, legacy, api, *_ = area
+    api_txt = api if isinstance(api, str) else ', '.join(api)
+    technical_rows.append(
+        f'<tr><td>{esc(screen_name)}</td><td>{esc(label)}<span class="val">{esc(loc)}</span></td>'
+        f'<td>{esc(note)}</td><td>{esc(legacy)}</td><td>{esc(api_txt)}</td></tr>')
 
 
 def fmt_flag(v, ok_sym=None):
@@ -399,81 +594,88 @@ progress_html = (f'<section>\n<h2>진행 현황 <span class="muted small">완료
                  '<div class="scroll"><table class="progress"><thead><tr><th>상태</th><th>항목</th><th>대상 · 판정 요소</th><th>비고</th></tr></thead><tbody>\n'
                  + "\n".join(prow) + '\n</tbody></table></div>\n</section>')
 
-# ── F10 decision section ──
+# ── Mandatory compatibility evidence (old F5, outside optimization totals) ──
+mandatory_rows = []
+for audit in TOPIC_AUDITS.values():
+    parity = audit['factors']['F5']
+    status = parity['after']['status']
+    if status == 'n':
+        outcome = '전환 차단 · 수정 필수'
+    elif status == 'y' and parity.get('verification_complete') is True:
+        outcome = '명시한 전체 범위의 동일성 검증 완료'
+    else:
+        outcome = '동일성 검증 미완료 · 전환 완료 처리 불가'
+    report_path = os.path.join(os.path.dirname(os.path.abspath(OUT)), audit['report_file'])
+    report_link = os.path.relpath(report_path, os.path.dirname(os.path.abspath(OUT))).replace(os.sep, '/') + '#F5'
+    mandatory_rows.append(
+        f'<tr><th>{esc(audit["menu"])}<br><code>{esc(audit["route"])}</code><br>{esc(audit["label"])}</th>'
+        f'<td><strong>{esc(outcome)}</strong></td><td>{esc(parity["finding"])} '
+        f'<a href="{esc(report_link)}">{esc(audit["id"])} 근거·검증 범위</a></td></tr>')
+
+# ── Historical F10 differences: evidence only, no blanket acceptance control ──
 F10_PATH = os.path.join(SURVEY_DIR, "f10_differences.json")
-F10_DEC_PATH = os.path.join(SURVEY_DIR, "f10_decisions.json")  # {"<id>": "accept" | "match"} once the user decides
 f10_html = ""
 if os.path.exists(F10_PATH):
     f10 = json.load(open(F10_PATH, encoding="utf-8"))
-    f10dec = json.load(open(F10_DEC_PATH, encoding="utf-8")) if os.path.exists(F10_DEC_PATH) else {}
     themes = {}
     for it in f10["declared"]:
         themes.setdefault(it["theme"], []).append(it)
     blocks = []
     for th, lst in sorted(themes.items(), key=lambda kv: -len(kv[1])):
-        n_acc = sum(1 for i in lst if i["recommendation"] == "accept")
-        n_dec = sum(1 for i in lst if i["id"] in f10dec)
         trs = []
         for i in lst:
-            rec = "match" if i["recommendation"].startswith("match") else "accept"
-            rec_lab = "legacy 맞춤" if rec == "match" else "수용"
-            cur = f10dec.get(i["id"], "")
             tip = f"legacy: {i['legacy']}\nAPI: {i['api']}\n근거: {', '.join(i['evidence']) if isinstance(i['evidence'], list) else i['evidence']}"
-            pd = "제품 결정" if i.get("product_decision") else ""
             imp = {"high": "높음", "medium": "중간", "low": "낮음"}.get(i.get("impact", ""), i.get("impact", ""))
-            radios = "".join(
-                f'<label class="rd"><input type="radio" name="f10-{esc(i["id"])}" value="{v}" data-rec="{rec}"{" checked" if cur == v else ""}> {lab}</label>'
-                for v, lab in (("accept", "수용"), ("match", "legacy 맞춤")))
             trs.append(
                 f'<tr><td class="id">{esc(i["id"])}</td><td title="{esc(tip)}"><strong>{esc(i["title"])}</strong><span class="val">{esc(i["effect"])}</span></td>'
-                f'<td class="small">{esc(imp)}</td><td class="small">{esc(str(i.get("effort", ""))[:40])}</td><td class="small">{pd}</td>'
-                f'<td class="small"><strong>{rec_lab}</strong><span class="val">{esc(i.get("reason", ""))}</span></td><td class="small rdcell">{radios}</td></tr>')
+                f'<td class="small">{esc(imp)}</td><td class="small">{esc(str(i.get("effort", ""))[:40])}</td></tr>')
         blocks.append(
-            f'<details class="sec"><summary>{esc(th)} <span class="muted small">{len(lst)}건 · 추천 수용 {n_acc} / 맞춤 {len(lst) - n_acc} · 결정 {n_dec}</span></summary>'
-            f'<div class="secbody"><div class="scroll"><table class="f10"><thead><tr><th>ID</th><th>차이 (마우스를 올리면 legacy·API 동작)</th><th>영향</th><th>맞추는 노력</th><th></th><th>추천</th><th>결정</th></tr></thead><tbody>'
+            f'<details class="sec"><summary>{esc(th)} <span class="muted small">기존 기록 {len(lst)}건</span></summary>'
+            f'<div class="secbody"><div class="scroll"><table class="f10"><thead><tr><th>ID</th><th>차이 (마우스를 올리면 legacy·API 동작)</th><th>기존 영향 평가</th><th>기존 수정 노력 추정</th></tr></thead><tbody>'
             + "\n".join(trs) + '</tbody></table></div></div></details>')
     # undeclared differences (found by the survey, not in any adapter list)
     UST_PATH = os.path.join(SURVEY_DIR, "f10_undeclared_status.json")
     ust = json.load(open(UST_PATH, encoding="utf-8")) if os.path.exists(UST_PATH) else {}
-    ST_LAB = {"fixed": ("☑ 해결", "y"), "partial": ("◐ 일부", "u"), "doing": ("◐ 진행 중", "u"), "not_diff": ("— 차이 아님", "x"), "decide": ("⚠ 결정", "n")}
+    ST_LAB = {"fixed": ("해결 기록", "y"), "partial": ("일부 수정 기록", "u"), "doing": ("진행 중 기록", "u"), "not_diff": ("차이 아님 기록", "x"), "decide": ("미해결 기록", "n")}
     utrs = []
     n_open = 0
     for idx, u in enumerate(f10.get("undeclared", []), 1):
         st, note = ust.get(str(idx), ["decide", ""])
-        lab, cls = ST_LAB.get(st, ("⚠ 결정", "n"))
+        lab, cls = ST_LAB.get(st, ("미해결 기록", "n"))
         uid = f"U{idx:02d}"
-        radios = ""
         if st in ("decide", "partial"):
             n_open += 1
-            radios = "".join(
-                f'<label class="rd"><input type="radio" name="f10-{uid}" value="{v}" data-rec="match"> {l}</label>'
-                for v, l in (("accept", "수용"), ("match", "legacy 맞춤")))
         ev = ", ".join(u["evidence"]) if isinstance(u.get("evidence"), list) else u.get("evidence", "")
         tip = f"근거: {ev}\n제안: {u.get('suggested_fix', '')}"
         sev = {"high": "높음", "medium": "중간", "low": "낮음"}.get(u.get("severity", ""), u.get("severity", ""))
         utrs.append(
             f'<tr><td class="id">{uid}</td><td title="{esc(tip)}"><strong>{esc(u["title"])}</strong><span class="val">{esc(u.get("effect", ""))}</span></td>'
-            f'<td class="small">{esc(sev)}</td><td class="small"><span class="{cls}">{lab}</span><span class="val">{esc(note)}</span></td><td class="small rdcell">{radios}</td></tr>')
+            f'<td class="small">{esc(sev)}</td><td class="small"><span class="{cls}">{lab}</span><span class="val">{esc(note)}</span></td></tr>')
     blocks.insert(0,
-        f'<details class="sec"><summary>문서에 없는 차이(조사에서 발견) <span class="muted small">{len(utrs)}건 · 해결 {sum(1 for v in ust.values() if v[0] == "fixed")} · 결정 대기 {n_open}</span></summary>'
-        '<div class="secbody"><div class="scroll"><table class="f10"><thead><tr><th>ID</th><th>차이 (마우스를 올리면 근거·제안)</th><th>심각도</th><th>상태</th><th>결정</th></tr></thead><tbody>'
+        f'<details class="sec"><summary>문서에 없는 차이(기존 조사에서 발견) <span class="muted small">{len(utrs)}건 · 해결 기록 {sum(1 for v in ust.values() if v[0] == "fixed")} · 미해결 기록 {n_open}</span></summary>'
+        '<div class="secbody"><div class="scroll"><table class="f10"><thead><tr><th>ID</th><th>차이 (마우스를 올리면 근거·제안)</th><th>기존 심각도 평가</th><th>기존 상태 기록</th></tr></thead><tbody>'
         + "\n".join(utrs) + '</tbody></table></div></div></details>')
     n_total = len(f10["declared"])
-    n_acc_all = sum(1 for i in f10["declared"] if i["recommendation"] == "accept")
     f10_html = (
-        f'<section id="f10">\n<h2>F10 결정 — 선언된 계약 차이 {n_total}건 <span class="muted small">추천 수용 {n_acc_all} · legacy 맞춤 {n_total - n_acc_all} · 결정 {len(f10dec)}</span></h2>\n'
-        '<p class="small">항목마다 <b>수용</b>(API 동작 유지) 또는 <b>legacy 맞춤</b>을 고르면 이 브라우저에 저장됩니다. 다 고르면 <b>결정 복사</b>를 눌러 채팅에 붙여 주세요. '
-        '<b>현행 재현 스위치</b> 22건은 배포 env <code>HGH_LEGACY_PROFILE=current</code> 하나로 함께 맞출 수 있습니다(일부는 동결 층 적재·재투영 선행).</p>'
-        '<div class="toolbar"><button type="button" onclick="f10Fill()">추천대로 채우기</button><button type="button" onclick="f10Copy()">결정 복사</button>'
-        '<span id="f10-count" class="muted small"></span></div>\n' + "\n".join(blocks) + "\n</section>")
+        f'<section id="f10">\n<h2>F10 차이 기록 — 선언된 차이 {n_total}건</h2>\n'
+        '<p class="small"><strong>지표 계산 방식·표시 규칙의 변경은 수용 대상이 아닙니다. 최적화 과정에서 발생한 차이는 수정해야 하며 동일성 검증 전에는 전환할 수 없습니다.</strong> '
+        '기존 조사 기록은 근거 추적용으로 남깁니다. 기존 추천과 일괄 수용 조작은 제거했으며, 저장된 원본 기록은 변경하지 않았습니다. '
+        '각 차이의 실제 상태는 해당 토픽 차례에 재검증합니다. 이 목록의 기존 상태만으로 완료를 판정하지 않습니다.</p>\n'
+        + "\n".join(blocks) + "\n</section>")
 
 total = sum(counts.values())
 TEMPLATE = open(TEMPLATE_PATH, encoding="utf-8").read()
 out = TEMPLATE
 for k, v in {
     "{{ROWS}}": "\n".join(screen_blocks), "{{PROGRESS}}": progress_html, "{{F10}}": f10_html, "{{BEFORE_ROWS}}": "\n".join(brows), "{{K_ROWS}}": "\n".join(krows),
+    "{{TECHNICAL_ROWS}}": "\n".join(technical_rows), "{{N_TECHNICAL}}": str(len(technical_rows)),
     "{{WORK_ROWS}}": "\n".join(wrows), "{{N_WORK}}": str(len(WORK)), "{{N_WORK_IN}}": str(w_in), "{{N_WORK_OUT}}": str(w_out),
     "{{N_FNS}}": str(len(used_fns)), "{{N_AREAS}}": str(n_areas), "{{N_SCREENS}}": str(n_screens),
+    "{{N_F1_BEFORE}}": str(sum(s['f1b'][0] in ('y', 'n') for s in SCREENS)),
+    "{{N_TOPIC_AUDITS}}": str(len(TOPIC_AUDITS)),
+    "{{MANDATORY_ROWS}}": "\n".join(mandatory_rows),
+    "{{N_F4_PENDING}}": str(sum(len(labels) for labels in f4_pending.values())),
+    "{{F4_PENDING_ROWS}}": "\n".join(f4_pending_rows),
     "{{Y}}": str(counts["y"]), "{{N}}": str(counts["n"]), "{{U}}": str(counts["u"]), "{{TOTAL}}": str(total),
     "{{NB}}": str(side_counts["B"]["n"]), "{{NA}}": str(side_counts["A"]["n"]),
     "{{UB}}": str(side_counts["B"]["u"]), "{{UA}}": str(side_counts["A"]["u"]), "{{YB}}": str(side_counts["B"]["y"]),

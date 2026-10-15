@@ -8,7 +8,8 @@
 :root{--ink:#19333d;--muted:#556c76;--line:#d5e0e5;--bg:#f0f5f7;--good:#1f7a4d;--bad:#b3261e;--none:#7b8a90;--before:#f7f3ea;--after:#eaf5f2;--screen:#173d46}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.7 "Malgun Gothic",system-ui,sans-serif;word-break:keep-all}
-main{max-width:1600px;margin:auto;padding:32px 24px 60px}
+/* PC document: keep the desktop layout; narrower windows scroll the table. */
+main{min-width:1280px;max-width:1920px;margin:auto;padding:32px 24px 60px}
 header{background:var(--screen);color:#fff;padding:28px;border-radius:12px}
 header .meta{font-size:12px;color:#c8e0e4}
 h1{font-size:29px;margin:6px 0 10px}
@@ -40,6 +41,7 @@ tr.screen td.b{background:#efe6d3} tr.screen td.a{background:#d6ece6}
 tr.screen .route{font-weight:400}
 tr.block td.indent{padding-left:26px;min-width:230px}
 tr.block td.indent::before{content:"└ ";color:#9fb3ba}
+.shared{display:inline-block;margin-left:8px;padding:0 5px;border:1px solid #d5e0e5;border-radius:4px;color:var(--muted);font-size:10px;white-space:nowrap}
 .val{display:block;font-size:11px;font-weight:400;color:var(--muted);margin-top:3px}
 code{font-size:12px;background:#edf2f5;padding:2px 4px;overflow-wrap:anywhere}
 .muted{color:var(--muted)} .small{font-size:12px} .strong{font-weight:700;color:var(--bad)}
@@ -50,8 +52,7 @@ code{font-size:12px;background:#edf2f5;padding:2px 4px;overflow-wrap:anywhere}
 tr.group td{background:#f6fafb;font-weight:700}
 .tag{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:700}
 .tag.ok{color:#1f7a4d;background:#e3f4ea} .tag.fix{color:#8a5a00;background:#fdf0d5} .tag.add{color:#0b5a8a;background:#e2f0fb} .tag.del{color:#b3261e;background:#fbe7e5}
-@media (max-width:760px){main{padding:16px}.summary{grid-template-columns:repeat(2,1fr)}}
-@media print{body{background:#fff;font-size:9.5px}main{max-width:none;padding:0}header{background:#fff;color:var(--ink);border:1px solid var(--line)}header .meta,.rules,.card span{color:var(--muted)}.card{border-color:var(--line)}section{padding:12px}@page{size:A3 landscape;margin:8mm}}
+@media print{body{background:#fff;font-size:9.5px}main{min-width:0;max-width:none;padding:0}header{background:#fff;color:var(--ink);border:1px solid var(--line)}header .meta,.rules,.card span{color:var(--muted)}.card{border-color:var(--line)}section{padding:12px}@page{size:A3 landscape;margin:8mm}}
 
 .progress td.st{white-space:nowrap;font-weight:700}
 .progress tr.done td{color:#33515b} .progress tr.done td.st{color:var(--good)}
@@ -69,65 +70,115 @@ details.sec .secbody{padding:0 14px 14px}
 
 table.matrix{width:auto;min-width:100%}
 table.matrix th{text-align:center;font-size:12px;line-height:1.3}
-table.matrix th.namecol{text-align:left;min-width:320px}
+table.matrix th.namecol{text-align:left;min-width:360px}
 td.pc{text-align:center;white-space:nowrap;font-size:15px;min-width:64px;padding:6px 6px}
 td.pc .arr{color:#9fb3ba;font-size:11px;margin:0 3px}
 td.pc.ty{background:#eef8f1} td.pc.tn{background:#fdf0ee} td.pc.tu{background:#f6f7f8} td.pc.tx{background:#fff}
 td.pc.cnt{font-size:13px;font-weight:700}
 tr.screen td.pc.ty{background:#dff1e6} tr.screen td.pc.tn{background:#f8dfdb}
+.metric-help{display:block;width:100%;min-width:98px;padding:3px 1px;border:0;background:transparent;color:inherit;font:inherit;font-weight:700;line-height:1.45;cursor:help;white-space:nowrap}
+.metric-help:hover,.metric-help[aria-expanded="true"]{color:#0b5a8a}
+.metric-help:focus-visible{outline:2px solid #0b5a8a;outline-offset:3px;border-radius:3px}
+.metric-code{display:block;color:var(--muted);font-size:11px;margin-bottom:4px}
+.metric-code::after{content:" ⓘ";font-weight:400}
+.metric-popup{position:fixed;z-index:10000;width:440px;max-width:calc(100vw - 24px);max-height:calc(100vh - 24px);overflow:auto;padding:17px 19px;background:#fff;color:var(--ink);border:1px solid #9fc0c8;border-radius:10px;box-shadow:0 8px 28px #173d4630;font-size:13px;line-height:1.65}
+.metric-popup[hidden]{display:none}
+.metric-popup strong.metric-title{display:block;font-size:15px;line-height:1.5}
+.metric-popup .metric-scope{color:var(--muted);font-size:12px;margin-top:3px}
+.metric-popup dl{margin:12px 0 0}
+.metric-popup dt{font-weight:700;color:#0b5a8a;margin-top:10px}
+.metric-popup dd{margin:3px 0 0}
+.metric-popup .popup-hint{border-top:1px solid var(--line);padding-top:9px;margin-top:12px;font-size:11px;color:var(--muted)}
+td.pc.f1{min-width:168px;font-size:11px;font-weight:400;text-align:left}
+.f1-reading{display:flex;align-items:center;gap:5px;line-height:1.6}
+.f1-side{width:12px;color:var(--muted);font-weight:700}
+.f1-reading>.y,.f1-reading>.n,.f1-reading>.u{font-size:14px}
+@media print{.metric-popup{display:none!important}.metric-code::after{content:""}.metric-help{cursor:default}}
 
-table.f10 td.rdcell{white-space:nowrap} label.rd{margin-right:8px;cursor:pointer}
 table.f10 td:nth-child(2){min-width:360px}
 </style>
 </head>
 <body><main>
 
 <header>
-<div class="meta">GEO HUB · 프로젝트 상시 문서 · 최종 갱신 2026-10-14 · <strong>전 화면 조사판</strong>(데이터 화면 {{N_SCREENS}}개 + 화면 밖 경로) · Before: 원본 <code>392ca45</code> 정적 계수(F1은 화면 3개만 운영 실측) · After: 리뉴얼 API 경로 정적 계수(엔드포인트 261개, F1 제외) + 수정 2건 반영</div>
+<div class="meta">GEO HUB · 프로젝트 상시 문서 · 최종 갱신 2026-10-15 · <strong>사용자에게 보이는 항목 기준</strong>(화면 {{N_SCREENS}}개) · Before: 원본 <code>392ca45</code> 정적 계수(F1은 화면 3개만 운영 실측) · After: 리뉴얼 API 경로 정적 계수(엔드포인트 261개, F1 제외) + 수정 2건 반영 · 판정 근거는 기존 조사 기준</div>
 <h1>★ 리뉴얼·최적화 지표 점검표</h1>
-<p>화면·영역마다 리뉴얼 전(Before, legacy)과 후(After, API)를 같은 기준으로 체크합니다. 맨 위 진행 현황 → 화면별 점검표 순서로 보면 됩니다.</p>
+<p>사용자가 보는 지표·카드·차트·표·안내문·버튼을 한 항목씩 나눠 리뉴얼 전(Before, legacy)과 후(After, API)를 점검합니다.</p>
 <div class="summary">
-<div class="card"><b>{{N_SCREENS}}</b><span>데이터 화면 (+ 화면 밖 경로)</span></div>
-<div class="card"><b>{{N_AREAS}}</b><span>영역 (읽기 + 쓰기)</span></div>
+<div class="card"><b>{{N_SCREENS}}</b><span>사용자 화면 (로그인·접근 불가 포함)</span></div>
+<div class="card"><b>{{N_AREAS}}</b><span>화면에 보이는 점검 항목</span></div>
 <div class="card"><b>{{Y}}</b><span><b class="y">☑</b> 충족</span></div>
 <div class="card"><b>{{N}}</b><span><b class="n">☒</b> 미충족 (Before {{NB}} · After {{NA}})</span></div>
 <div class="card"><b>{{U}}</b><span><b class="u">☐</b> 미확인 (Before {{UB}} · After {{UA}}) / 체크 칸 {{TOTAL}}</span></div>
 </div>
 </header>
 
+<section id="mandatory-compatibility">
+<h2>필수 전제 · 지표 계산 방식과 표시 규칙은 반드시 동일</h2>
+<p><strong>소스코드를 최적화하더라도 지표의 계산식·분모·필터 적용·집계 기준과 단위·반올림·순위·증감·표시 형식은 Before와 같아야 합니다.</strong> 같은 입력과 조건에서는 같은 결과가 나와야 합니다. 운영 데이터가 서로 다른 것은 허용하지만 계산 방식이나 표시 규칙의 변경은 허용하지 않습니다.</p>
+<p>기존 F5는 개선 항목이 아니므로 아래 점검표의 열과 충족·미충족·미확인 집계에서 제외했습니다. 근거 문서 연결을 위해 ‘구 F5’ 식별자만 유지합니다. <strong>규칙 차이는 수정 필수 결함이며, 수정 후 동일성 검증을 마치기 전에는 전환 완료로 처리할 수 없습니다.</strong> 미검증이나 일부 시험 통과도 전체 동일성 통과로 취급하지 않습니다.</p>
+<div class="scroll"><table><colgroup><col style="width:18%"><col style="width:16%"><col style="width:66%"></colgroup><thead><tr><th>화면 경로 · 표시 항목</th><th>필수 검증 상태</th><th>현재 토픽에서 확인한 근거</th></tr></thead><tbody>{{MANDATORY_ROWS}}</tbody></table></div>
+<p class="small muted">현재 토픽의 기존 근거만 반영했습니다. 다른 토픽은 ‘다음’ 지시 후 순서대로 조사하며, 이 문서 변경으로 동일성이 검증됐다고 판정하지 않습니다.</p>
+</section>
+
 {{PROGRESS}}
 
 {{F10}}
 
-<section>
+<section id="screen-checklist">
 <h2>화면별 점검표</h2>
-<div class="toolbar"><button type="button" onclick="toggleAll(true)">모두 펼치기</button><button type="button" onclick="toggleAll(false)">모두 접기</button><span class="muted small">칸 = <b>Before → After</b>, 칸 색 = After 결과. 화면 행의 숫자 = 그 화면에서 ☒인 영역 수. 행을 누르면 영역이 펼쳐지고, 마우스를 올리면 호출·측정값이 보입니다. F5·F10·완료는 After만.</span></div>
+<p class="small">한 행은 화면에서 구분되는 하나의 표시 항목입니다. KPI 카드는 지표별로, 증감·배지·비교 값과 별도 버튼은 각각 나눴습니다. 하나의 표·차트에 속한 데이터 행·열·범례는 해당 표·차트의 점검 범위입니다. 권한·필터·데이터 상태에 따라 나타나는 항목도 포함합니다.</p>
+<p class="small muted"><strong>모든 행·모든 열에 동일한 적용 기준을 사용합니다.</strong> Before·After 모두 점검 대상이 없으면 체크박스·화살표·툴팁 없이 완전히 비우고 집계에서 제외합니다. 직접 경로에 해당 없음으로 기록된 칸을 공통 경로의 판정으로 채우지 않습니다. 대상이 있지만 아직 확인하지 못한 칸은 ☐로 남기며, 통과한 항목을 빈칸으로 바꾸지 않습니다. 기준일·상태 표시에는 계산·API 응답·접근 권한·전환 완료 판정을 붙이지 않습니다. <b>공통 근거</b>는 해당 항목에 적용되는 기준만 기존 묶음의 조사 결과를 참조한다는 뜻입니다. 개별 UI 검증을 새로 완료했다는 뜻은 아닙니다. 항목에 마우스를 올리면 실제 표시된 점검 기준과 원래 조사 근거를 볼 수 있습니다.</p>
+<p class="small muted"><strong>F4 업무 기준값의 하드코딩 제거:</strong> Before에 해당 하드코딩이 없었던 항목은 Before·After 모두 빈칸으로 두고 집계에서 제외합니다. Before에서 확인된 하드코딩이 남아 있으면 ☒, 제거됐으면 ☑입니다. 제거 대상이 해당 항목에 연결돼 있지만 상태 검증이 남았을 때만 ☐를 표시합니다. 묶음에만 상수 기록이 있고 개별 항목과 연결되지 않았으면 체크를 만들지 않고 빈칸으로 둡니다. 이 경우의 불확실성은 아래 ‘F4 항목별 근거 연결 대기’에 별도로 보존하며, 하드코딩 없음으로 판정한 것은 아닙니다.</p>
+<p class="small muted">조회한 옵션을 선택하는 필터·달력은 그 조작 자체에 F4 제거 대상이 없어 빈칸입니다. 함께 조회한 KPI의 계산 상수나 공통 기간 설정을 필터의 하드코딩으로 붙이지 않습니다. 정적 업무 목록을 직접 사용하는 선택 항목(예: 프로젝트 생성의 정적 카탈로그, 고정 키워드 탭)은 F4 대상에 남깁니다. 이 적용 기준 정리는 기존 조사 기록을 사용하며, 다른 토픽의 F1~F10 재조사를 완료했다는 뜻은 아닙니다.</p>
+<p class="small"><strong>토픽별 재조사 기록 {{N_TOPIC_AUDITS}}건:</strong> 재조사 기록 수는 실제 사이트 검증 완료 수가 아닙니다. 해당 행의 ‘재조사’ 링크에서 지정 사이트·소스의 일치 여부, 코드 근거·실행한 시험·미검증 범위를 확인할 수 있습니다. 나머지 행은 아직 이 방식으로 재검증하지 않았습니다.</p>
+<p class="small"><strong>재조사 기준:</strong> Before·After의 운영 데이터 차이는 허용합니다. 계산·필터·표시 규칙과 조회·계산의 개선은 소스 및 동일한 작은 입력의 시험으로 확인합니다. 사이트의 숫자·행 수·총 전송량 차이만으로 실패나 개선을 판정하지 않으며, 통제되지 않은 환경의 응답 시간은 참고값으로 기록합니다. 이 기준으로 다른 토픽의 판정을 일괄 변경하지 않습니다.</p>
+<p class="small"><strong>F1은 화면 경로 행에서만 점검합니다.</strong> 개별 카드·버튼 행은 빈칸입니다. Before는 {{N_F1_BEFORE}}개 화면만 실측했고, After는 모두 미측정입니다. <strong>열 제목에 커서를 올리거나 누르면</strong> 점검 대상·충족 기준·확인 방법이 표시됩니다.</p>
+<div class="toolbar"><button type="button" onclick="toggleAll(true)">모두 펼치기</button><button type="button" onclick="toggleAll(false)">모두 접기</button><span class="muted small">칸 = <b>Before → After</b>, 칸 색 = After 결과. 화면 행의 숫자 = 그 화면에서 ☒인 항목 수. <b>리뉴얼 전환 완료는 완료된 항목 수 / 전체 전환 대상 항목 수</b>이며, 미확인은 전체에 포함하고 해당 없음은 제외합니다. 화면 행을 누르면 표시 항목이 펼쳐집니다. F10·완료는 After만. 구 F5는 위 필수 동일성 검증에서 별도 관리합니다.</span></div>
 <div class="scroll"><table class="matrix">
 <thead>
-<tr><th class="namecol">화면 · 영역</th><th>F1<br>속도</th><th>F2<br>구조</th><th>F3<br>재계산</th><th>F4<br>하드코딩</th><th>F5<br>정합성</th><th>F6<br>조회 오류</th><th>F7<br>쓰기</th><th>F8<br>중복 계산</th><th>F9<br>페이로드</th><th>F10<br>계약·권한</th><th>완료</th></tr>
+<tr><th class="namecol" scope="col">화면 경로 · 사용자에게 보이는 항목</th>
+<th scope="col"><button type="button" class="metric-help" data-factor="F1"><span class="metric-code">F1</span>화면 데이터<br>로딩 시간</button></th>
+<th scope="col"><button type="button" class="metric-help" data-factor="F2"><span class="metric-code">F2</span>데이터 조회<br>SQL 복잡도</button></th>
+<th scope="col"><button type="button" class="metric-help" data-factor="F3"><span class="metric-code">F3</span>원천 데이터<br>재집계 방지</button></th>
+<th scope="col"><button type="button" class="metric-help" data-factor="F4"><span class="metric-code">F4</span>업무 기준값<br>하드코딩 제거</button></th>
+<th scope="col"><button type="button" class="metric-help" data-factor="F6"><span class="metric-code">F6</span>데이터 조회<br>실패 표시</button></th>
+<th scope="col"><button type="button" class="metric-help" data-factor="F7"><span class="metric-code">F7</span>저장·내보내기<br>처리 안정성</button></th>
+<th scope="col"><button type="button" class="metric-help" data-factor="F8"><span class="metric-code">F8</span>불필요한<br>계산·조회 제거</button></th>
+<th scope="col"><button type="button" class="metric-help" data-factor="F9"><span class="metric-code">F9</span>응답 데이터<br>전송량·목록 잘림</button></th>
+<th scope="col"><button type="button" class="metric-help" data-factor="F10"><span class="metric-code">F10</span>API 응답 규칙·<br>접근 권한 유지</button></th>
+<th scope="col"><button type="button" class="metric-help" data-factor="DONE"><span class="metric-code">완료</span>리뉴얼<br>전환 완료</button></th></tr>
 </thead>
 {{ROWS}}
 </table></div>
-<div class="legend"><span><b class="y">☑</b> 충족</span><span><b class="n">☒</b> 미충족</span><span><b class="u">☐</b> 미확인</span><span><span class="x">—</span> 해당 없음</span><span class="muted">B = Before(legacy) · A = After(API) · F1 값 = 재방문 / 첫 방문(ms) · 데이터 = 22번 문서 S번호(처음 3화면) · 작은 글씨 = 측정값</span></div>
-<div class="warn"><strong>화면에 안 보이는데 계산하는 데이터 (대시보드)</strong><br>
-① <strong>AI 유입 전환(GA4) 카드</strong>: legacy는 <code>getAiTrafficConversionKpi</code>·<code>…Rollup</code>·<code>getAiVisitsKpi</code>(<code>lib/ga4/conversion.ts</code>, <code>_data/live.ts:445-462</code>), API는 첫 렌더에서 <code>GET /v1/funnel/conversion</code>(<code>dashboard.ts:204,370,666</code>)을 부르지만, 카드 목록 <code>OVERVIEW_KPI_KEYS</code>(<code>overview-metrics.ts:11-14</code>)에 없어 그리지 않습니다.<br>
-② <strong>KPI #16 경쟁사 점유율(<code>competitorSov</code>)</strong>: 계산하지만 이 화면이 쓰지 않는 <code>summary-tiles.tsx</code>에서만 그립니다.<br>
-→ 기능·디자인 변경 없이 조회를 걷어낼 수 있는 성능 후보입니다(대시보드 F1에 직접 영향).<br>
-<strong>Before 측정에서 함께 확인한 것</strong>: GA4 조회는 F3 <span class="n">☒</span>(캐시 미스마다 GA4 Data API 호출) · F6 <span class="n">☒</span>(실패 시장을 뺀 부분 결과를 24시간 캐시)이고, 매 렌더 캐시 없는 <code>ga4_properties</code> SELECT가 KPI 카드·국가별 GEO 앞에 섭니다(<code>live.ts:445</code>). 경쟁사 행용 <code>fetchStandardCompetitorBrands</code>는 쓰지 않는 120일 언급 추이까지 계산하고, 필터 리더 5개는 캐시 없이 매 렌더 원문을 훑습니다(세 화면 공통).</div>
+<div class="legend"><span><b class="y">☑</b> 충족</span><span><b class="n">☒</b> 미충족</span><span><b class="u">☐</b> 미확인</span><span>빈칸 = 체크 대상 없음 · F4 근거 연결 대기는 아래 기록 참조</span><span class="muted">B = Before(legacy) · A = After(API) · F1 값 = 재방문 / 첫 방문(ms) · 작은 글씨 = 화면 내 위치 · 측정값과 표시 조건 = 마우스를 올려 확인</span></div>
+<details class="sec" id="f4-pending"><summary>F4 항목별 근거 연결 대기 · {{N_F4_PENDING}}개 항목</summary>
+<div class="secbody"><p class="small">아래 항목은 기존 묶음의 상수 목록만 있고 개별 표시 항목에 적용되는 제거 대상이 아직 연결되지 않았습니다. 화면별 점검표에는 체크박스·화살표를 표시하지 않으며 집계에서도 제외합니다. 하드코딩 없음이나 제거 완료를 확인한 것이 아닙니다. 원본 함수별 상수 근거는 아래 Before 측정 근거에 보존하고, 토픽별 재조사에서 직접 대상이 확인되면 해당 행에만 반영합니다.</p>
+<div class="scroll"><table><thead><tr><th>화면 경로 · URL</th><th>기존 조사 묶음</th><th>항목별 근거 연결 대기</th></tr></thead><tbody>{{F4_PENDING_ROWS}}</tbody></table></div></div></details>
 </section>
 
 <section class="more">
 <h2>자세히 보기</h2>
 <p class="muted small">판정 근거·측정 기록·발견 사항은 아래에 접어 두었습니다.</p>
+<details class="sec" id="technical-evidence"><summary>화면에 직접 표시되지 않는 처리 · {{N_TECHNICAL}}개</summary><div class="secbody">
+<p class="small muted">숨은 계산, 백그라운드 갱신, API·크론 경로입니다. 화면별 점검표와 상단 항목 수·판정 집계에서는 제외하며 기술 근거로 보존합니다.</p>
+<div class="scroll"><table><thead><tr><th>관련 화면</th><th>내부 처리</th><th>조사 메모</th><th>Before 근거</th><th>After 근거</th></tr></thead><tbody>{{TECHNICAL_ROWS}}</tbody></table></div>
+<div class="warn"><strong>화면에 안 보이는데 계산하는 데이터 (대시보드)</strong><br>
+① <strong>AI 유입 전환(GA4) 카드</strong>: legacy는 <code>getAiTrafficConversionKpi</code>·<code>…Rollup</code>·<code>getAiVisitsKpi</code>(<code>lib/ga4/conversion.ts</code>, <code>_data/live.ts:445-462</code>), API는 첫 렌더에서 <code>GET /v1/funnel/conversion</code>(<code>dashboard.ts:204,370,666</code>)을 부르지만, 카드 목록 <code>OVERVIEW_KPI_KEYS</code>(<code>overview-metrics.ts:11-14</code>)에 없어 그리지 않습니다.<br>
+② <strong>KPI #16 경쟁사 점유율(<code>competitorSov</code>)</strong>: 계산하지만 이 화면이 쓰지 않는 <code>summary-tiles.tsx</code>에서만 그립니다.<br>
+→ 기능·디자인 변경 없이 조회를 걷어낼 수 있는 성능 후보입니다(대시보드 F1에 직접 영향).<br>
+<strong>Before 측정에서 함께 확인한 것</strong>: GA4 조회는 F3 <span class="n">☒</span>(캐시 미스마다 GA4 Data API 호출) · F6 <span class="n">☒</span>(실패 시장을 뺀 부분 결과를 24시간 캐시)이고, 매 렌더 캐시 없는 <code>ga4_properties</code> SELECT가 KPI 카드·국가별 GEO 앞에 섭니다(<code>live.ts:445</code>). 경쟁사 행용 <code>fetchStandardCompetitorBrands</code>는 쓰지 않는 120일 언급 추이까지 계산하고, 필터 리더 5개는 캐시 없이 매 렌더 원문을 훑습니다(세 화면 공통).</div>
+</div></details>
 <details class="sec"><summary>After 측정에서 확인한 것 (2026-10-14)</summary>
 <div class="secbody">
+<p class="small muted">아래는 분리 전 344개 조사 영역 기준의 기록입니다. 현재 화면 표시 항목의 수·판정 집계와는 단위가 다릅니다.</p>
 <div class="note"><strong>After가 Before보다 고르게 좋은 것은 아닙니다.</strong> 판정 요소별 ☒→☑(개선) / ☑→☒(후퇴) 영역 수:
 F2 32/46 · F3 64/2 · F4 52/14 · F6 95/1 · F7 21/5 · F8 38/78 · F9 22/24.<br>
 ① <strong>F6·F3·F4·F7은 확실히 좋아졌습니다.</strong> 공통 폴백 제거, 적재 판정 열 합산, 쓰기 한 요청 = 한 트랜잭션(IDOR 해소 포함) 덕분입니다.<br>
 ② <strong>F8(중복·미사용 계산)은 After가 더 나쁩니다.</strong> 엔드포인트가 응답 전체를 계산하고 화면은 일부만 씁니다(톤·유형 열, 분모 문장, 쓰지 않는 추이 계열 등). 결과값을 바꾸지 않는 빠른 수정의 주 대상입니다.<br>
 ③ <strong>F2 후퇴는 일부 계수 관례 차이입니다.</strong> After 측정은 창(window) 문장과 원소 집계를 한 SQL로 센 곳이 있고, Before 대시보드는 집계층 경로(3~5점)였습니다.<br>
-④ <strong>F10(계약·권한)은 After 276영역 ☒.</strong> 대부분 어댑터 머리 주석에 선언된 의도적 차이(DC-01 "엔진 미지정 = 기본 엔진만", 추이 창 규칙 DC-08, 국가 범위가 비면 403 등)입니다. "지표·권한·계약 불변" 규칙과 충돌하므로, 선언된 차이를 제품 결정으로 수용할지 legacy에 맞출지 결정이 필요합니다.<br>
-⑤ <strong>F5</strong>: 동등성 시험이 있는 영역 291개는 미실행(☐), 시험이 없는 영역 37개는 ☒.</div>
+④ <strong>F10(계약·권한)은 After 276영역 ☒.</strong> 대부분 어댑터 머리 주석에 선언된 의도적 차이(DC-01 "엔진 미지정 = 기본 엔진만", 추이 창 규칙 DC-08, 국가 범위가 비면 403 등)입니다. 기존 조사 기록이며 아직 토픽별로 재검증하지 않았습니다. 지표 계산·표시 규칙의 차이는 의도적으로 선언했더라도 허용할 수 없고 수정해야 합니다.<br>
+⑤ <strong>구 F5 기록</strong>: 당시 시험 보유 291개·시험 없음 37개로 분류한 기록입니다. 시험 유무와 묶음 시험 통과는 항목별 계산·표시 규칙 동일성의 증명이 아닙니다. 현재 개선 집계에서 제외하고 필수 검증으로 관리합니다.</div>
 <div class="warn"><strong>After 경로의 기능·데이터 위험</strong><br>
 ① <strong>브랜드 드릴다운 프롬프트 탭이 API 경로에서 항상 비어 있었음</strong> — 어댑터 200×50 요청을 백엔드가 곱 ≤ 1000 검증으로 422 거부. <span class="tag ok">수정함</span>(back 이 1000개씩 나눠 읽음, 미커밋).<br>
 ② <strong>답변 모달·드릴다운이 5xx를 "원문 없음"·"없음"으로 표시</strong> — <code>r.ok</code> 미확인(<code>answer-modal.tsx:150-160</code>, <code>mentions-drilldown.tsx:143-147·342-346</code>). legacy보다 나빠진 F6.<br>
@@ -152,29 +203,28 @@ F2 32/46 · F3 64/2 · F4 52/14 · F6 95/1 · F7 21/5 · F8 38/78 · F9 22/24.<b
 <details class="sec"><summary>판정 요소와 성공 조건</summary>
 <div class="secbody">
 <ul>
-<li><strong>화면 행</strong>에는 메뉴 위치(좌측 내비게이션 그대로)·화면 제목·URL·관련 작업 ID와 <strong>F1 속도</strong>(화면 단위)를, 그 아래 <strong>영역 행</strong>에는 화면 안 위치·실제 호출(legacy 함수 / API 엔드포인트)과 F2~F10·완료를 적습니다. 쓰기 기능은 "쓰기: …" 영역으로 따로 둡니다.</li>
+<li><strong>화면 행</strong>에는 메뉴 경로·URL과 <strong>F1 화면 데이터 로딩 시간</strong>을 표시합니다. 그 아래 <strong>표시 항목 행</strong>에는 각 항목에 적용되는 F2~F10·완료만 표시하며, 호출·조건·관련 작업은 마우스를 올려 확인합니다.</li>
 <li><strong>영역 체크 규칙</strong>: 영역이 쓰는 데이터가 모두 충족해야 <b class="y">☑</b>, 하나라도 미충족이면 <b class="n">☒</b>, 나머지는 <b class="u">☐</b>. 체크는 아래 데이터 근거의 검증 결과에서만 나옵니다.</li>
-<li><strong>Before</strong> = 리뉴얼 착수 전 운영 경로(legacy, 원본 <code>392ca45</code>). <strong>After</strong> = 리뉴얼 경로(API). <span class="x">—</span> = 해당 없음. 확인되지 않은 칸은 추정으로 채우지 않습니다.</li>
+<li><strong>Before</strong> = 리뉴얼 착수 전 운영 경로(legacy, 원본 <code>392ca45</code>). <strong>After</strong> = 리뉴얼 경로(API). 화면별 점검표의 빈칸 = 해당 없음(아래 원본 조사 표에서는 <span class="x">—</span>로 표기). 적용되는 기준 중 확인되지 않은 칸은 ☐로 남깁니다.</li>
 <li><strong>Before 칸의 작은 글씨 = 측정값</strong>: F2 최대 구조 점수 · F4 하드코딩 상수 종수 · F6 실패 위치(자체 경로 / 공통 경로만). 근거는 아래 <strong>Before 측정 근거</strong> 표.</li>
 </ul>
 
 <div class="scroll"><table>
 <thead><tr><th>요소</th><th>단위</th><th>무엇을 보나</th><th>성공 조건 (☑ 조건)</th><th>확인 방법</th></tr></thead>
 <tbody>
-<tr><td class="id">F1 속도</td><td>화면</td><td>화면 데이터가 다 채워지기까지의 시간</td><td>재방문 ≤ <strong>2,500 ms</strong> <strong>그리고</strong> 첫 방문 ≤ <strong>5,000 ms</strong> <span class="tag fix">임시</span><span class="val">확정 필요. 문서 19는 목표 지연 미정, 문서 14는 읽기 API cold p95 ≤ 1초를 기준선으로 제시</span></td><td>같은 환경·같은 데이터에서 n회 측정 중앙값(<code>responseEnd</code>)</td></tr>
-<tr><td class="id">F2 구조 복잡도</td><td>영역</td><td>영역 데이터를 계산하는 대표 SQL의 구조</td><td>구조 점수(JOIN + CTE + 집계 단계 + 윈도우 함수) ≤ <strong>5</strong> <span class="tag fix">임시</span>. 영역 값 = 영역이 쓰는 함수 중 최대</td><td>코드 정적 계수(22번 문서 기준). 집계 단계 = 문장 안 GROUP BY 수(22번 S02 = 5로 보정). 운영 설정 경로 기준(격자 off · <code>S2.mentionTrend</code> on · 나머지 옵트인 off)</td></tr>
-<tr><td class="id">F3 조회 시 재계산</td><td>영역</td><td>화면을 열 때 원천 행을 다시 계산하는지</td><td>원천 행(언급·인용·GA4 행 등)을 조회 때 다시 결합·집계하지 <strong>않음</strong>. 조건부 분기 포함, 하나라도 재계산하면 ☒</td><td>코드 경로 확인(20·22번 문서)</td></tr>
-<tr><td class="id">F4 하드코딩</td><td>영역</td><td>업무 값을 코드에 직접 썼는지</td><td>계산 경로(폴백 포함)에서 브랜드·국가·ID·매칭 문구·임계값을 코드 상수로 쓴 곳 <strong>0종</strong></td><td>계산 경로가 읽는 상수 정의 계수(영역 = 합집합). 제외: 타임아웃·캐시 TTL·표시 개수·추이 창·표시용 어휘</td></tr>
-<tr><td class="id">F5 결과 정합성</td><td>영역</td><td>리뉴얼 후에도 숫자가 같은지</td><td>Before와 같은 값(동등성 시험 통과). After에만 적용</td><td><code>*.parity.test.ts</code>, 운영 규모 데이터 대조</td></tr>
-<tr><td class="id">F6 조회 오류</td><td>영역</td><td>실패를 감추는지</td><td>조회 실패를 빈 값·0·기본값·성공으로 바꾸지 <strong>않고</strong> 기존 오류 표시로 전달. 공통 경로의 폴백 포함</td><td>코드 경로 확인, 실패 주입 시험</td></tr>
-<tr><td class="id">F7 쓰기 경로</td><td>영역</td><td>저장·수정·삭제·일괄 작업·내보내기가 실패를 드러내는지</td><td>쓰기 실패·부분 성공·잠금 상실을 화면에 드러내고, 중복 제출과 늦은 응답의 덮어쓰기를 막음. 읽기 전용 영역은 <span class="x">—</span></td><td>코드 경로 확인, 실패 주입·동시성 시험</td></tr>
-<tr><td class="id">F8 중복·미사용 계산</td><td>영역</td><td>한 요청 안에서 쓸데없는 계산을 하는지</td><td>화면에 안 쓰는 계산 · 같은 요청 안 중복 계산 · 문장마다 반복되는 같은 하위 조회 · N+1 조회 <strong>0건</strong>. 값 = 해당 함수 수, 근거표에 문장 수</td><td>코드 경로 확인, 요청당 SQL 로그</td></tr>
-<tr><td class="id">F9 페이로드·목록</td><td>영역</td><td>보이는 것보다 많이 보내거나 조용히 자르는지</td><td>표시 범위(페이지)보다 과도하게 전송하지 않고, 목록 상한으로 <strong>조용히</strong> 자르지 않음</td><td>응답 크기·전송 행 측정, 상한 경로 확인</td></tr>
-<tr><td class="id">F10 계약·권한 불변</td><td>영역</td><td>리뉴얼 후 화면이 받는 계약과 권한이 같은지</td><td>화면이 받는 필드·의미·오류 계약과 권한 범위가 Before와 같음(추가 필드는 화면 미사용일 때만). After에만 적용</td><td>OpenAPI 비교, 계약 시험, 역할별 권한 행렬 시험</td></tr>
-<tr><td class="id">완료</td><td>영역</td><td>리뉴얼이 끝났는지</td><td>legacy 경로 제거 + <code>HGH_SOURCE_*</code> API 고정 + F5·F10 통과. After에만 적용</td><td>코드에서 legacy 호출 제거 확인, 배포 플래그</td></tr>
+<tr data-factor-definition="F1"><td class="id">F1 화면 데이터 로딩 시간</td><td>화면 전체 · 화면 경로 행에만 표시</td><td>화면 데이터를 받을 때까지 걸리는 시간입니다. 개별 카드·버튼의 처리 시간이 아니므로 하위 항목의 F1은 빈칸입니다.</td><td>재방문 ≤ <strong>2,500 ms</strong> <strong>그리고</strong> 첫 방문 ≤ <strong>5,000 ms</strong> <span class="tag fix">임시</span>. 셀의 시간 순서는 재방문 / 첫 방문입니다. 아직 측정하지 않은 화면은 ☐ 미측정으로 표시합니다.</td><td>각 환경에서 반복 측정한 중앙값(<code>responseEnd</code>, 응답 수신 완료 시점)과 데이터 규모·캐시 조건을 함께 기록합니다. 서로 다른 환경의 시간으로 전후 개선율을 계산하지 않습니다. 현재 Before {{N_F1_BEFORE}}개 화면은 운영 참고값이며 After는 전부 미측정입니다. 실제 렌더링 완료 시점과 구분합니다.</td></tr>
+<tr data-factor-definition="F2"><td class="id">F2 데이터 조회 SQL 복잡도</td><td>해당 표시 항목의 데이터 조회 경로</td><td>이 항목의 데이터를 만드는 SQL(DB 조회문)이 얼마나 복잡한지 봅니다. 화면 레이아웃이나 컴포넌트 구조를 뜻하지 않습니다.</td><td>JOIN(테이블 결합) + CTE(임시 결과 정의) + GROUP BY(집계 단계) + 윈도우 함수의 개수 합이 <strong>5 이하</strong> <span class="tag fix">임시</span>. 여러 함수가 쓰이면 가장 높은 점수를 적용합니다.</td><td>운영 설정에서 실행되는 대표 SQL을 코드로 확인하고 구조를 셉니다(22번 문서 기준). 실행 시간은 F1에서 별도로 봅니다.</td></tr>
+<tr data-factor-definition="F3"><td class="id">F3 원천 데이터 재집계 방지</td><td>집계 지표·표·차트의 계산 경로</td><td>화면을 열 때 언급·인용·GA4 등의 원천 행을 다시 결합하고 합산하는지 봅니다.</td><td>이미 집계된 결과를 사용하고, 조회 시 원천 행을 다시 결합·집계하지 않습니다. 조건부 경로를 포함해 재집계하는 경로가 하나라도 있으면 ☒입니다.</td><td>데이터 조회와 집계 코드 경로를 확인합니다(20·22번 문서). 단순 날짜 표시나 입력·이동 버튼에는 적용하지 않습니다.</td></tr>
+<tr data-factor-definition="F4"><td class="id">F4 업무 기준값 하드코딩 제거</td><td>Before에서 해당 표시 항목에 확인된 하드코딩 제거 대상</td><td>표시값 자체가 고정 숫자인지를 뜻하지 않습니다. 해당 항목의 계산·판정에 쓰는 브랜드·국가·ID·매칭 문구·판정 임계값이 코드에 고정돼 있는지 봅니다.</td><td><strong>Before에 해당 하드코딩이 없었던 항목은 Before·After 모두 빈칸</strong>으로 두고 집계에서 제외합니다. Before에서 확인된 하드코딩이 남아 있으면 ☒, After에서 제거됐으면 ☑입니다. 해당 항목의 제거 대상이 특정돼 있고 상태 검증만 남았다면 ☐입니다. 묶음 상수만 있고 개별 항목에 연결된 대상이 없으면 빈칸으로 두고 근거 연결 대기에 기록합니다.</td><td>먼저 Before 항목의 직접 호출 경로에서 제거 대상을 확인합니다. 없음이 확인되면 양쪽 칸을 비우며, 조사하지 않은 상태를 없음으로 취급하지 않습니다. 조회한 옵션을 선택하는 필터·달력에는 묶음의 계산 상수를 붙이지 않습니다. 정적 업무 목록을 직접 쓰는 선택 항목은 별도로 적용합니다. 공통 코드의 상수를 모든 항목에 자동 합산하지 않습니다. 묶음 단위 근거만 있는 경우 개별 항목에 체크를 복사하지 않고 별도 대기 기록에 남깁니다. 타임아웃·캐시 유지 시간·표시 개수·추이 창·표시용 문구는 제외합니다.</td></tr>
+<tr data-factor-definition="F6"><td class="id">F6 데이터 조회 실패 표시</td><td>해당 표시 항목의 조회 실패 처리</td><td>데이터를 읽지 못했는데 화면이 정상적인 0건·빈 목록·기본값처럼 보여 주는지 봅니다.</td><td>조회 실패를 빈 값·0·기본값·성공으로 바꾸지 않고 오류 표시로 전달해야 합니다. 여러 항목이 함께 쓰는 공통 조회의 실패 처리도 포함합니다.</td><td>조회 코드와 오류 전달 경로를 확인하고, 실패를 의도적으로 발생시켜 화면 표시를 확인합니다.</td></tr>
+<tr data-factor-definition="F7"><td class="id">F7 저장·내보내기 처리 안정성</td><td>저장·수정·삭제·일괄 작업·내보내기 동작과 결과 표시</td><td>사용자가 실행한 작업의 실패·부분 성공을 정확히 알 수 있고, 중복 실행이나 뒤늦은 응답이 결과를 망가뜨리지 않는지 봅니다.</td><td>실패·부분 성공·작업 잠금 상실을 화면에 드러내고, 중복 제출과 늦은 응답의 덮어쓰기를 막아야 합니다. 조회만 하는 항목은 빈칸입니다.</td><td>작업 코드, 실패 상황, 중복 클릭, 여러 사용자의 동시 작업을 확인합니다.</td></tr>
+<tr data-factor-definition="F8"><td class="id">F8 불필요한 계산·조회 제거</td><td>한 요청 안에서 실행되는 계산·DB 조회</td><td>화면에서 쓰지 않는 값을 계산하거나 같은 조회를 반복하는지 봅니다.</td><td>미사용 계산·중복 계산·동일한 하위 조회의 반복·목록 한 행마다 추가 조회하는 N+1 패턴이 <strong>0건</strong>이어야 합니다.</td><td>호출 코드와 요청당 SQL 로그를 확인합니다. 근거표의 값은 문제가 있는 함수 수이며, 실행 문장 수도 함께 확인합니다.</td></tr>
+<tr data-factor-definition="F9"><td class="id">F9 응답 데이터 전송량·목록 잘림</td><td>서버에서 화면으로 보내는 응답 본문과 목록</td><td>응답 데이터(페이로드)는 서버가 보내는 실제 필드·행·내용입니다. 화면에 필요한 양보다 많이 보내거나 목록 일부가 안내 없이 빠지는지 봅니다.</td><td>표시 범위·페이지에 비해 과도한 데이터를 전송하지 않고, 최대 행 수 제한으로 목록을 자를 때 이를 숨기지 않아야 합니다.</td><td>응답 크기, 전송 행 수, 페이지 처리, 목록 상한과 잘림 안내를 확인합니다. 예: 50행을 보여 주려고 전체 목록을 받는지, 상한 초과 행이 설명 없이 사라지는지 확인합니다.</td></tr>
+<tr data-factor-definition="F10"><td class="id">F10 API 응답 규칙·접근 권한 유지</td><td>리뉴얼 API의 응답과 사용자별 데이터 접근 범위 · After만 판정</td><td>API 응답 규칙은 화면에 전달하는 필드 이름·형식·의미와 오류 응답 방식입니다. 접근 권한은 사용자 역할·브랜드·국가·프로젝트에 따라 볼 수 있는 데이터 범위입니다.</td><td>응답 규칙과 접근 범위가 Before와 같아야 합니다. 화면이 사용하지 않는 필드 추가만 허용합니다. 의도적인 차이도 기존 기준과 다르면 차이로 기록합니다.</td><td>API 명세(OpenAPI), 응답 비교 시험, 역할별 권한 시험을 확인합니다. 지표 계산·표시 규칙의 동일성은 문서 상단의 필수 검증 조건(구 F5)으로 별도 관리합니다. 규칙 변경은 수용할 수 없습니다.</td></tr>
+<tr data-factor-definition="DONE"><td class="id">리뉴얼 전환 완료</td><td>해당 항목의 리뉴얼 전환 상태 · After만 판정</td><td>기존 처리 경로를 걷어내고 리뉴얼 API 경로로 전환을 끝냈는지 봅니다. 화면 경로 행은 <strong>완료된 항목 수 / 전체 전환 대상 항목 수</strong>로 표시합니다. 전체는 완료·미완료·미확인의 합이며 해당 없음은 제외합니다. 전환 대상이 없으면 빈칸입니다.</td><td>기존 legacy 경로 제거 + <code>HGH_SOURCE_*</code> 설정의 API 고정 + 필수 계산·표시 규칙 동일성 검증 완료 + F10 통과가 모두 필요합니다. 규칙 차이가 있거나 동일성 검증이 끝나지 않았으면 완료로 처리할 수 없습니다. 조회·저장 경로 전환과 무관한 단순 표시·조작 항목은 빈칸입니다.</td><td>기존 호출 제거 여부, 배포 설정, 필수 동일성 검증과 F10의 검증 결과를 확인합니다. 화면에 항목이 보인다는 사실만으로 완료 처리하지 않습니다.</td></tr>
 </tbody>
 </table></div>
-<p class="note">F1은 Before·After를 <strong>같은 환경</strong>(운영 규모 데이터, 같은 리전)에서 재야 비교가 성립합니다. 리뉴얼 front의 경로 플래그(<code>HGH_SOURCE_*</code>, 화면 행에 표시)로 legacy·API를 같은 배포에서 바꿔 재는 방식이 기본입니다. 지금의 F1 Before는 운영 실측(참고값)입니다.</p>
+<p class="note">F1의 전후 시간 개선율에는 데이터·서버·네트워크·캐시 등 통제된 조건이 필요합니다. 현재는 각 환경의 시간을 참고값으로 구분하며, 같은 환경을 마련하는 것을 로직 조사 조건으로 요구하지 않습니다. 조회·계산 구조의 개선은 F2·F3·F8 등에서 확인하고 실측 시간 개선과 구분합니다.</p>
 </div>
 </details>
 <details class="sec"><summary>작업 항목 연결 (문서 01·03·13·14·16–24, {{N_WORK}}건)</summary>
@@ -190,7 +240,7 @@ F2 32/46 · F3 64/2 · F4 52/14 · F6 95/1 · F7 21/5 · F8 38/78 · F9 22/24.<b
 </details>
 <details class="sec"><summary>Before 측정 근거 (legacy 함수별, 원본 <code>392ca45</code>)</summary>
 <div class="secbody">
-<p>영역 행의 Before 칸은 아래 함수 {{N_FNS}}개와 그 화면 표면의 <strong>공통 경로</strong>(표준 <code>COMMON</code>, 웹사이트·프로젝트·관리 등은 각 <code>…COMMON</code>)를 합쳐 판정합니다. 공통 행의 F4·F6는 그 표면의 모든 영역에 들어갑니다.</p>
+<p>아래는 함수 {{N_FNS}}개와 화면 표면의 <strong>공통 경로</strong>(표준 <code>COMMON</code>, 웹사이트·프로젝트·관리 등은 각 <code>…COMMON</code>)에 대한 원본 조사 기록입니다. 화면별 점검표의 F4는 직접 호출 경로의 근거만 사용하며, 하드코딩 없음은 빈칸, 분리된 항목의 영향이 불명확한 묶음 근거는 체크에서 제외하고 별도 대기 기록에 보존합니다. 원본 함수 조사 표의 ☑는 상수 0종을 뜻하므로 화면별 F4의 제거 완료 표시와 구분합니다.</p>
 <div class="scroll"><table>
 <thead><tr><th>legacy 함수 · 위치</th><th>실행 문장(캐시 미스)</th><th class="b">F2 구조 점수</th><th class="b">B</th><th class="b">F3 근거</th><th class="b">B</th><th class="b">F4 상수</th><th class="b">B</th><th class="b">F6 근거</th><th class="b">B</th><th class="b">F7 쓰기</th><th class="b">B</th><th class="b">F8 중복 계산</th><th class="b">B</th><th class="b">F9 페이로드</th><th class="b">B</th></tr></thead>
 <tbody>
@@ -289,51 +339,121 @@ F2 32/46 · F3 64/2 · F4 52/14 · F6 95/1 · F7 21/5 · F8 38/78 · F9 22/24.<b
 <li><strong>화면 전부</strong>: 조사 완료(데이터 화면 {{N_SCREENS}}개 + 화면 밖 경로). 리다이렉트 페이지는 제외.</li>
 <li><strong>운영 화면 대조</strong>: 영역 목록이 운영 화면과 같은지 브라우저로 확인.</li>
 <li><strong>F1</strong>: 처음 3화면 외에는 Before 미측정, After는 전부 미측정. 운영 브라우저 실측(화면별 n회) 또는 같은 환경 데이터셋에서 경로 플래그로 legacy·API 측정.</li>
-<li><strong>F5</strong>: 동등성 시험 실행(프런트 parity·PGlite, 백엔드 동치 시험)으로 291개 영역 ☐ 해소.</li>
-<li><strong>F10</strong>: 선언된 계약 차이(DC·U 목록)를 제품 결정으로 수용할지 결정.</li>
+<li><strong>필수 동일성 검증(구 F5)</strong>: 토픽별 실제 계산·필터·표시 경로와 동일 입력 시험으로 규칙 유지를 확인합니다. 확인된 차이는 수정 후 재검증하며, 미검증 상태로 전환 완료 처리하지 않습니다.</li>
+<li><strong>F10</strong>: 선언된 차이(DC·U 목록)는 해당 토픽 차례에 확인합니다. 지표 계산·표시 규칙을 바꾸는 차이는 수정 대상이며 수용하지 않습니다.</li>
 <li><strong>임계값 확정</strong>: F1(2.5초·5초)·F2(≤5)는 임시값. 문서 14의 API cold p95 ≤ 1초 채택 여부 결정 필요.</li>
 <li><strong>F2·F3</strong>: 화면 3개의 Before는 완료. 나머지 화면의 legacy 함수와 모든 화면의 API SQL 계수.</li>
-<li><strong>F4~F6</strong>: 상수 모듈·동등성 시험·실패 주입 시험 대응.</li>
+<li><strong>F4·F6</strong>: 상수 모듈·실패 주입 시험 대응. 동등성은 별도 필수 검증으로 확인.</li>
 </ul>
 </div>
 </details>
 </section>
 
 <script>
-function toggleScreen(i) { var t = document.getElementById('scr-' + i); if (t) t.classList.toggle('open'); }
+// The definition table is the single source for each header's explanation.
+// Attach the popup to body so sticky headers and scrolling tables cannot clip it.
+(function initMetricHelp() {
+  var popup = document.createElement('div');
+  popup.id = 'metric-popup';
+  popup.className = 'metric-popup';
+  popup.setAttribute('role', 'tooltip');
+  popup.hidden = true;
+  document.body.appendChild(popup);
+  var active = null, pinned = false, closeTimer = null;
 
-var F10_KEY = 'hgh-f10-decisions-v1';
-function f10Load() { try { return JSON.parse(localStorage.getItem(F10_KEY) || '{}'); } catch (e) { return {}; } }
-function f10Save(d) { try { localStorage.setItem(F10_KEY, JSON.stringify(d)); } catch (e) {} f10Count(); }
-function f10Count() {
-  var all = document.querySelectorAll('#f10 input[type=radio][value=accept]').length;
-  var done = document.querySelectorAll('#f10 input[type=radio]:checked').length;
-  var el = document.getElementById('f10-count'); if (el) el.textContent = '결정 ' + done + ' / ' + all;
-}
-function f10Fill() {
-  var d = f10Load();
-  document.querySelectorAll('#f10 input[type=radio]').forEach(function (r) {
-    var id = r.name.slice(4);
-    if (!d[id] && r.value === r.dataset.rec) { r.checked = true; d[id] = r.value; }
+  function cancelClose() { clearTimeout(closeTimer); }
+  function hide() {
+    cancelClose();
+    if (active) {
+      active.setAttribute('aria-expanded', 'false');
+      active.removeAttribute('aria-describedby');
+    }
+    popup.hidden = true;
+    active = null;
+    pinned = false;
+  }
+  function position() {
+    if (!active || popup.hidden) return;
+    var rect = active.getBoundingClientRect();
+    var gap = 10, margin = 12;
+    var width = popup.offsetWidth, height = popup.offsetHeight;
+    var left = Math.max(margin, Math.min(rect.left + (rect.width - width) / 2, window.innerWidth - width - margin));
+    var top = rect.bottom + gap;
+    if (top + height > window.innerHeight - margin) top = rect.top - height - gap;
+    top = Math.max(margin, Math.min(top, window.innerHeight - height - margin));
+    popup.style.left = left + 'px';
+    popup.style.top = top + 'px';
+  }
+  function show(button) {
+    cancelClose();
+    if (active === button && !popup.hidden) { position(); return; }
+    hide();
+    active = button;
+    var row = document.querySelector('[data-factor-definition="' + button.dataset.factor + '"]');
+    var cells = row.cells;
+    popup.replaceChildren();
+    var title = document.createElement('strong');
+    title.className = 'metric-title';
+    title.textContent = cells[0].textContent;
+    popup.appendChild(title);
+    var scope = document.createElement('div');
+    scope.className = 'metric-scope';
+    scope.textContent = '적용 단위: ' + cells[1].textContent;
+    popup.appendChild(scope);
+    var list = document.createElement('dl');
+    ['점검 대상', '충족 기준 (☑)', '확인 방법'].forEach(function (label, index) {
+      var term = document.createElement('dt');
+      term.textContent = label;
+      var detail = document.createElement('dd');
+      Array.from(cells[index + 2].childNodes).forEach(function (node) { detail.appendChild(node.cloneNode(true)); });
+      list.append(term, detail);
+    });
+    popup.appendChild(list);
+    var hint = document.createElement('p');
+    hint.className = 'popup-hint';
+    hint.textContent = '제목을 누르면 설명 유지 · 다시 누르거나 바깥 클릭 / Esc로 닫기';
+    popup.appendChild(hint);
+    popup.scrollTop = 0;
+    popup.hidden = false;
+    button.setAttribute('aria-describedby', popup.id);
+    button.setAttribute('aria-expanded', 'true');
+    position();
+  }
+  function scheduleClose() {
+    cancelClose();
+    if (pinned) return;
+    closeTimer = setTimeout(function () {
+      if (!active || popup.matches(':hover') || active.matches(':hover') || document.activeElement === active) return;
+      hide();
+    }, 160);
+  }
+  document.querySelectorAll('.metric-help').forEach(function (button) {
+    var row = document.querySelector('[data-factor-definition="' + button.dataset.factor + '"]');
+    button.setAttribute('aria-label', row.cells[0].textContent + ' 설명 보기');
+    button.setAttribute('aria-controls', popup.id);
+    button.setAttribute('aria-expanded', 'false');
+    button.addEventListener('mouseenter', function () { show(button); });
+    button.addEventListener('mouseleave', scheduleClose);
+    button.addEventListener('focus', function () { show(button); });
+    button.addEventListener('blur', scheduleClose);
+    button.addEventListener('click', function () {
+      if (active === button && pinned) hide();
+      else { show(button); pinned = true; }
+    });
   });
-  f10Save(d);
-}
-function f10Copy() {
-  var d = {};
-  document.querySelectorAll('#f10 input[type=radio]:checked').forEach(function (r) { d[r.name.slice(4)] = r.value; });
-  var txt = JSON.stringify(d);
-  if (navigator.clipboard) { navigator.clipboard.writeText(txt).then(function () { alert('결정 ' + Object.keys(d).length + '건을 복사했습니다. 채팅에 붙여 주세요.'); }); }
-  else { prompt('복사해서 채팅에 붙여 주세요', txt); }
-}
-document.addEventListener('DOMContentLoaded', function () {
-  var d = f10Load();
-  document.querySelectorAll('#f10 input[type=radio]').forEach(function (r) {
-    var id = r.name.slice(4);
-    if (d[id] && r.value === d[id]) r.checked = true;
-    r.addEventListener('change', function () { var x = f10Load(); x[id] = r.value; f10Save(x); });
+  popup.addEventListener('mouseenter', cancelClose);
+  popup.addEventListener('mouseleave', scheduleClose);
+  document.addEventListener('pointerdown', function (event) {
+    if (active && !active.contains(event.target) && !popup.contains(event.target)) hide();
   });
-  f10Count();
-});
+  document.addEventListener('keydown', function (event) { if (event.key === 'Escape') hide(); });
+  document.addEventListener('scroll', function (event) {
+    if (!popup.contains(event.target)) hide();
+  }, true);
+  window.addEventListener('resize', position);
+})();
+
+function toggleScreen(i) { var t = document.getElementById('scr-' + i); if (t) t.classList.toggle('open'); }
 
 function toggleAll(open) { document.querySelectorAll('tbody.scr').forEach(function (t) { t.classList.toggle('open', open); }); }
 </script>

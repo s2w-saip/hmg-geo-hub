@@ -1,0 +1,238 @@
+{
+  "observed_at": "2026-10-15T05:48:29.398Z",
+  "scope": "Global > Overview /ko/dashboard > 국가별 GEO 현황",
+  "filters": {
+    "brand": "Hyundai",
+    "country": "미국 (US)",
+    "time": "2026-09-14..2026-09-14",
+    "language": "전체",
+    "engine": "전체"
+  },
+  "before": {
+    "url": "https://hmg-geo.vercel.app/ko/dashboard?geography=US&time=2026-09-14..2026-09-14&brand=Hyundai",
+    "account": "사용자 제공 시스템 관리자",
+    "metrics": {
+      "AI 노출률": {
+        "snapshot": "- region \"국가별 GEO 현황\":\n  - heading \"국가별 GEO 현황\" [level=3]\n  - tablist \"지표 선택\":\n    - tab \"AI 노출률\" [selected]\n    - tab \"AI 점유율\"\n    - tab \"AI 우호도\"\n    - tab \"AI 우선 노출도\"\n    - tab \"AI 인용 점유율\"\n  - button \"전체 국가\"\n  - img \"GEO MAP\"\n  - text: 낮음 높음 · AI 노출률\n  - table:\n    - rowgroup:\n      - row \"권역/국가 AI 노출률 최대 경쟁사\":\n        - columnheader \"권역/국가\"\n        - columnheader \"AI 노출률\"\n        - columnheader \"최대 경쟁사\"\n    - rowgroup:\n      - row \"북아메리카 75.3% Toyota 34.1%\":\n        - rowheader \"북아메리카\":\n          - button \"북아메리카\" [expanded]\n        - cell \"75.3%\"\n        - cell \"Toyota 34.1%\"\n      - row \"미국 75.3% Toyota 34.1%\":\n        - rowheader \"미국\"\n        - cell \"75.3%\"\n        - cell \"Toyota 34.1%\"",
+        "rows": [
+          {
+            "kind": "region",
+            "cells": [
+              "북아메리카",
+              "75.3%",
+              "Toyota\n34.1%"
+            ]
+          },
+          {
+            "kind": "country",
+            "cells": [
+              "미국",
+              "75.3%",
+              "Toyota\n34.1%"
+            ]
+          }
+        ]
+      },
+      "AI 점유율": {
+        "snapshot": "- region \"국가별 GEO 현황\":\n  - heading \"국가별 GEO 현황\" [level=3]\n  - tablist \"지표 선택\":\n    - tab \"AI 노출률\"\n    - tab \"AI 점유율\" [selected]\n    - tab \"AI 우호도\"\n    - tab \"AI 우선 노출도\"\n    - tab \"AI 인용 점유율\"\n  - button \"전체 국가\"\n  - img \"GEO MAP\"\n  - text: 낮음 높음 · AI 점유율\n  - table:\n    - rowgroup:\n      - row \"권역/국가 AI 점유율 최대 경쟁사\":\n        - columnheader \"권역/국가\"\n        - columnheader \"AI 점유율\"\n        - columnheader \"최대 경쟁사\"\n    - rowgroup:\n      - row \"북아메리카 29.1% Toyota 10.3%\":\n        - rowheader \"북아메리카\":\n          - button \"북아메리카\" [expanded]\n        - cell \"29.1%\"\n        - cell \"Toyota 10.3%\"\n      - row \"미국 29.1% Toyota 10.3%\":\n        - rowheader \"미국\"\n        - cell \"29.1%\"\n        - cell \"Toyota 10.3%\"",
+        "rows": [
+          {
+            "kind": "region",
+            "cells": [
+              "북아메리카",
+              "29.1%",
+              "Toyota\n10.3%"
+            ]
+          },
+          {
+            "kind": "country",
+            "cells": [
+              "미국",
+              "29.1%",
+              "Toyota\n10.3%"
+            ]
+          }
+        ]
+      },
+      "AI 우호도": {
+        "snapshot": "- region \"국가별 GEO 현황\":\n  - heading \"국가별 GEO 현황\" [level=3]\n  - tablist \"지표 선택\":\n    - tab \"AI 노출률\"\n    - tab \"AI 점유율\"\n    - tab \"AI 우호도\" [selected]\n    - tab \"AI 우선 노출도\"\n    - tab \"AI 인용 점유율\"\n  - button \"전체 국가\"\n  - img \"GEO MAP\"\n  - text: 낮음 높음 · AI 우호도\n  - table:\n    - rowgroup:\n      - row \"권역/국가 AI 우호도 최대 경쟁사\":\n        - columnheader \"권역/국가\"\n        - columnheader \"AI 우호도\"\n        - columnheader \"최대 경쟁사\"\n    - rowgroup:\n      - row \"북아메리카 56.3% Toyota 73.0%\":\n        - rowheader \"북아메리카\":\n          - button \"북아메리카\" [expanded]\n        - cell \"56.3%\"\n        - cell \"Toyota 73.0%\"\n      - row \"미국 56.3% Toyota 73.0%\":\n        - rowheader \"미국\"\n        - cell \"56.3%\"\n        - cell \"Toyota 73.0%\"",
+        "rows": [
+          {
+            "kind": "region",
+            "cells": [
+              "북아메리카",
+              "56.3%",
+              "Toyota\n73.0%"
+            ]
+          },
+          {
+            "kind": "country",
+            "cells": [
+              "미국",
+              "56.3%",
+              "Toyota\n73.0%"
+            ]
+          }
+        ]
+      },
+      "AI 우선 노출도": {
+        "snapshot": "- region \"국가별 GEO 현황\":\n  - heading \"국가별 GEO 현황\" [level=3]\n  - tablist \"지표 선택\":\n    - tab \"AI 노출률\"\n    - tab \"AI 점유율\"\n    - tab \"AI 우호도\"\n    - tab \"AI 우선 노출도\" [selected]\n    - tab \"AI 인용 점유율\"\n  - button \"전체 국가\"\n  - img \"GEO MAP\"\n  - text: 낮음 높음 · AI 우선 노출도\n  - table:\n    - rowgroup:\n      - row \"권역/국가 AI 우선 노출도 최대 경쟁사\":\n        - columnheader \"권역/국가\"\n        - columnheader \"AI 우선 노출도\"\n        - columnheader \"최대 경쟁사\"\n    - rowgroup:\n      - row \"북아메리카 24.4번째 Toyota 30.1번째\":\n        - rowheader \"북아메리카\":\n          - button \"북아메리카\" [expanded]\n        - cell \"24.4번째\"\n        - cell \"Toyota 30.1번째\"\n      - row \"미국 24.4번째 Toyota 30.1번째\":\n        - rowheader \"미국\"\n        - cell \"24.4번째\"\n        - cell \"Toyota 30.1번째\"",
+        "rows": [
+          {
+            "kind": "region",
+            "cells": [
+              "북아메리카",
+              "24.4번째",
+              "Toyota\n30.1번째"
+            ]
+          },
+          {
+            "kind": "country",
+            "cells": [
+              "미국",
+              "24.4번째",
+              "Toyota\n30.1번째"
+            ]
+          }
+        ]
+      },
+      "AI 인용 점유율": {
+        "snapshot": "- region \"국가별 GEO 현황\":\n  - heading \"국가별 GEO 현황\" [level=3]\n  - tablist \"지표 선택\":\n    - tab \"AI 노출률\"\n    - tab \"AI 점유율\"\n    - tab \"AI 우호도\"\n    - tab \"AI 우선 노출도\"\n    - tab \"AI 인용 점유율\" [selected]\n  - button \"전체 국가\"\n  - img \"GEO MAP\"\n  - text: 낮음 높음 · AI 인용 점유율\n  - table:\n    - rowgroup:\n      - row \"권역/국가 AI 인용 점유율 최대 경쟁사\":\n        - columnheader \"권역/국가\"\n        - columnheader \"AI 인용 점유율\"\n        - columnheader \"최대 경쟁사\"\n    - rowgroup:\n      - row \"북아메리카 18.6% —\":\n        - rowheader \"북아메리카\":\n          - button \"북아메리카\" [expanded]\n        - cell \"18.6%\"\n        - cell \"—\"\n      - row \"미국 18.6% —\":\n        - rowheader \"미국\"\n        - cell \"18.6%\"\n        - cell \"—\"",
+        "rows": [
+          {
+            "kind": "region",
+            "cells": [
+              "북아메리카",
+              "18.6%",
+              "—"
+            ]
+          },
+          {
+            "kind": "country",
+            "cells": [
+              "미국",
+              "18.6%",
+              "—"
+            ]
+          }
+        ]
+      }
+    },
+    "filters_snapshot": "- main:\n  - heading \"AI 답변 성과 요약\" [level=1]\n  - paragraph: HMG 브랜드가 AI 답변에서 얼마나 보이고, 어떤 출처로 신뢰를 얻고, 실제 방문으로 이어지는지 한 화면에서 봅니다.\n  - text: 주 1회 측정 측정 회차 2026-09-14 기준 디멘션\n  - button \"브랜드 1\"\n  - button \"권역 1\"\n  - button \"국가 1\"\n  - button \"언어\"\n  - button \"AI 엔진\"\n  - button \"기간 2026-09-14 ~ 2026-09-14\"\n  - text: 프롬프트 필터\n  - button \"프롬프트 퍼널\"\n  - button \"브랜드 포함 여부\"\n  - button \"리스트 타입\"\n  - button \"Depth 1\"\n  - button \"Depth 2\"\n  - button \"Depth 3\"\n  - button \"적용\" [disabled]\n  - button \"초기화\"\n  "
+  },
+  "after": {
+    "url": "http://localhost:3130/ko/dashboard?brand=Hyundai&geography=US&time=2026-09-14..2026-09-14",
+    "account": "프로젝트 front/e2e/accounts.json의 ADMIN",
+    "metrics": {
+      "AI 노출률": {
+        "snapshot": "- region \"국가별 GEO 현황\":\n  - heading \"국가별 GEO 현황\" [level=3]\n  - tablist \"지표 선택\":\n    - tab \"AI 노출률\" [selected]\n    - tab \"AI 점유율\"\n    - tab \"AI 우호도\"\n    - tab \"AI 우선 노출도\"\n    - tab \"AI 인용 점유율\"\n  - button \"전체 국가\"\n  - img \"GEO MAP\"\n  - text: 낮음 높음 · AI 노출률\n  - table:\n    - rowgroup:\n      - row \"권역/국가 AI 노출률 최대 경쟁사\":\n        - columnheader \"권역/국가\"\n        - columnheader \"AI 노출률\"\n        - columnheader \"최대 경쟁사\"\n    - rowgroup:\n      - row \"북아메리카 50.0% Toyota 50.0%\":\n        - rowheader \"북아메리카\":\n          - button \"북아메리카\" [expanded]\n        - cell \"50.0%\"\n        - cell \"Toyota 50.0%\"\n      - row \"미국 50.0% Toyota 50.0%\":\n        - rowheader \"미국\"\n        - cell \"50.0%\"\n        - cell \"Toyota 50.0%\"",
+        "rows": [
+          {
+            "kind": "region",
+            "cells": [
+              "북아메리카",
+              "50.0%",
+              "Toyota\n50.0%"
+            ]
+          },
+          {
+            "kind": "country",
+            "cells": [
+              "미국",
+              "50.0%",
+              "Toyota\n50.0%"
+            ]
+          }
+        ]
+      },
+      "AI 점유율": {
+        "snapshot": "- region \"국가별 GEO 현황\":\n  - heading \"국가별 GEO 현황\" [level=3]\n  - tablist \"지표 선택\":\n    - tab \"AI 노출률\"\n    - tab \"AI 점유율\" [selected]\n    - tab \"AI 우호도\"\n    - tab \"AI 우선 노출도\"\n    - tab \"AI 인용 점유율\"\n  - button \"전체 국가\"\n  - img \"GEO MAP\"\n  - text: 낮음 높음 · AI 점유율\n  - table:\n    - rowgroup:\n      - row \"권역/국가 AI 점유율 최대 경쟁사\":\n        - columnheader \"권역/국가\"\n        - columnheader \"AI 점유율\"\n        - columnheader \"최대 경쟁사\"\n    - rowgroup:\n      - row \"북아메리카 40.0% Toyota 30.0%\":\n        - rowheader \"북아메리카\":\n          - button \"북아메리카\" [expanded]\n        - cell \"40.0%\"\n        - cell \"Toyota 30.0%\"\n      - row \"미국 40.0% Toyota 30.0%\":\n        - rowheader \"미국\"\n        - cell \"40.0%\"\n        - cell \"Toyota 30.0%\"",
+        "rows": [
+          {
+            "kind": "region",
+            "cells": [
+              "북아메리카",
+              "40.0%",
+              "Toyota\n30.0%"
+            ]
+          },
+          {
+            "kind": "country",
+            "cells": [
+              "미국",
+              "40.0%",
+              "Toyota\n30.0%"
+            ]
+          }
+        ]
+      },
+      "AI 우호도": {
+        "snapshot": "- region \"국가별 GEO 현황\":\n  - heading \"국가별 GEO 현황\" [level=3]\n  - tablist \"지표 선택\":\n    - tab \"AI 노출률\"\n    - tab \"AI 점유율\"\n    - tab \"AI 우호도\" [selected]\n    - tab \"AI 우선 노출도\"\n    - tab \"AI 인용 점유율\"\n  - button \"전체 국가\"\n  - img \"GEO MAP\"\n  - text: 낮음 높음 · AI 우호도\n  - table:\n    - rowgroup:\n      - row \"권역/국가 AI 우호도 최대 경쟁사\":\n        - columnheader \"권역/국가\"\n        - columnheader \"AI 우호도\"\n        - columnheader \"최대 경쟁사\"\n    - rowgroup:\n      - row \"북아메리카 75.0% Toyota 0.0%\":\n        - rowheader \"북아메리카\":\n          - button \"북아메리카\" [expanded]\n        - cell \"75.0%\"\n        - cell \"Toyota 0.0%\"\n      - row \"미국 75.0% Toyota 0.0%\":\n        - rowheader \"미국\"\n        - cell \"75.0%\"\n        - cell \"Toyota 0.0%\"",
+        "rows": [
+          {
+            "kind": "region",
+            "cells": [
+              "북아메리카",
+              "75.0%",
+              "Toyota\n0.0%"
+            ]
+          },
+          {
+            "kind": "country",
+            "cells": [
+              "미국",
+              "75.0%",
+              "Toyota\n0.0%"
+            ]
+          }
+        ]
+      },
+      "AI 우선 노출도": {
+        "snapshot": "- region \"국가별 GEO 현황\":\n  - heading \"국가별 GEO 현황\" [level=3]\n  - tablist \"지표 선택\":\n    - tab \"AI 노출률\"\n    - tab \"AI 점유율\"\n    - tab \"AI 우호도\"\n    - tab \"AI 우선 노출도\" [selected]\n    - tab \"AI 인용 점유율\"\n  - button \"전체 국가\"\n  - img \"GEO MAP\"\n  - text: 낮음 높음 · AI 우선 노출도\n  - table:\n    - rowgroup:\n      - row \"권역/국가 AI 우선 노출도 최대 경쟁사\":\n        - columnheader \"권역/국가\"\n        - columnheader \"AI 우선 노출도\"\n        - columnheader \"최대 경쟁사\"\n    - rowgroup:\n      - row \"북아메리카 2.0번째 Toyota 1.0번째\":\n        - rowheader \"북아메리카\":\n          - button \"북아메리카\" [expanded]\n        - cell \"2.0번째\"\n        - cell \"Toyota 1.0번째\"\n      - row \"미국 2.0번째 Toyota 1.0번째\":\n        - rowheader \"미국\"\n        - cell \"2.0번째\"\n        - cell \"Toyota 1.0번째\"",
+        "rows": [
+          {
+            "kind": "region",
+            "cells": [
+              "북아메리카",
+              "2.0번째",
+              "Toyota\n1.0번째"
+            ]
+          },
+          {
+            "kind": "country",
+            "cells": [
+              "미국",
+              "2.0번째",
+              "Toyota\n1.0번째"
+            ]
+          }
+        ]
+      },
+      "AI 인용 점유율": {
+        "snapshot": "- region \"국가별 GEO 현황\":\n  - heading \"국가별 GEO 현황\" [level=3]\n  - tablist \"지표 선택\":\n    - tab \"AI 노출률\"\n    - tab \"AI 점유율\"\n    - tab \"AI 우호도\"\n    - tab \"AI 우선 노출도\"\n    - tab \"AI 인용 점유율\" [selected]\n  - button \"전체 국가\"\n  - img \"GEO MAP\"\n  - text: 낮음 높음 · AI 인용 점유율\n  - table:\n    - rowgroup:\n      - row \"권역/국가 AI 인용 점유율 최대 경쟁사\":\n        - columnheader \"권역/국가\"\n        - columnheader \"AI 인용 점유율\"\n        - columnheader \"최대 경쟁사\"\n    - rowgroup:\n      - row \"북아메리카 44.4% —\":\n        - rowheader \"북아메리카\":\n          - button \"북아메리카\" [expanded]\n        - cell \"44.4%\"\n        - cell \"—\"\n      - row \"미국 44.4% —\":\n        - rowheader \"미국\"\n        - cell \"44.4%\"\n        - cell \"—\"",
+        "rows": [
+          {
+            "kind": "region",
+            "cells": [
+              "북아메리카",
+              "44.4%",
+              "—"
+            ]
+          },
+          {
+            "kind": "country",
+            "cells": [
+              "미국",
+              "44.4%",
+              "—"
+            ]
+          }
+        ]
+      }
+    },
+    "filters_snapshot": "- main:\n  - heading \"AI 답변 성과 요약\" [level=1]\n  - paragraph: HMG 브랜드가 AI 답변에서 얼마나 보이고, 어떤 출처로 신뢰를 얻고, 실제 방문으로 이어지는지 한 화면에서 봅니다.\n  - text: 주 1회 측정 측정 회차 2026-09-14 기준 디멘션\n  - button \"브랜드 1\"\n  - button \"권역 1\"\n  - button \"국가 1\"\n  - button \"언어\"\n  - button \"AI 엔진\"\n  - button \"기간 2026-09-14 ~ 2026-09-14\"\n  - text: 프롬프트 필터\n  - button \"프롬프트 퍼널\"\n  - button \"브랜드 포함 여부\"\n  - button \"리스트 타입\"\n  - button \"Depth 1\"\n  - button \"Depth 2\"\n  - button \"적용\" [disabled]\n  - button \"초기화\"\n  "
+  },
+  "same_dataset_verified": false,
+  "same_running_source_verified": false,
+  "completed_at": "2026-10-15T05:48:30.430Z"
+}
