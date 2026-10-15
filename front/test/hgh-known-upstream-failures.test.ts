@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { fullName, KNOWN_UPSTREAM_FAILURES, knownFailurePattern } from "./hgh-known-upstream-failures";
@@ -21,7 +21,8 @@ function testFiles(dir: string, out: string[] = []): string[] {
 
 describe("hub known upstream failures", () => {
   const pattern = knownFailurePattern()!;
-  const sources = testFiles(ROOT).map((p) => ({ rel: p.slice(ROOT.length), text: readFileSync(p, "utf8") }));
+  // rel uses "/" like the list's `file` (on Windows, join gives "\")
+  const sources = testFiles(ROOT).map((p) => ({ rel: relative(ROOT, p).split(sep).join("/"), text: readFileSync(p, "utf8") }));
 
   it.each(KNOWN_UPSTREAM_FAILURES.map((f) => [f.file, f] as const))("%s: names one test, in its file only", (_file, f) => {
     expect(existsSync(join(ROOT, f.file)), f.file).toBe(true);

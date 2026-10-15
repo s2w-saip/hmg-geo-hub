@@ -134,8 +134,10 @@ describe("result-adapter — 사본 pageAll 제거 후 공용 헬퍼를 지난�
 //  lib/scope/mirror-cache-generation.test.ts 가 server.ts 의 import 클로저를 읽는다.)
 import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const REPO_ROOT = new URL("../../", import.meta.url).pathname;
+// URL.pathname 은 퍼센트 인코딩이 남고(공백·한글 경로) Windows 에서는 `/C:/…` 라 경로가 아니다.
+const REPO_ROOT = fileURLToPath(new URL("../../", import.meta.url));
 
 function sourceFiles(): string[] {
   const out: string[] = [];
