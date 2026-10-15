@@ -12,6 +12,7 @@
 //      전 화면이 미러 폴백으로 떨어진다(숨김이 아니라 장애다).
 import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
 import { PgDialect } from "drizzle-orm/pg-core";
+import { readSourceText } from "@/test/source-text";
 
 const ledgerAvailable = vi.fn<[], Promise<boolean>>();
 vi.mock("@/lib/db/repositories/summary-settings", () => ({
@@ -275,8 +276,6 @@ describe("리더 → 계열 매핑 (§4-1)", () => {
 
 function fsSrc(): string {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const fs = require("node:fs") as typeof import("node:fs");
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const path = require("node:path") as typeof import("node:path");
-  return fs.readFileSync(path.join(process.cwd(), "lib/db/repositories/scope-aggregates.ts"), "utf8");
+  return readSourceText(path.join(process.cwd(), "lib/db/repositories/scope-aggregates.ts"));
 }

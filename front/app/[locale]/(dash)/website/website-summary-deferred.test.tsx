@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { readSourceText } from "@/test/source-text";
 
 // next/navigation 훅은 라우터 없는 정적 렌더에서 null 을 준다 — 최소 mock
 // (citations-standard-view.render.test.tsx 와 같은 형태).
@@ -141,9 +141,8 @@ describe("/website 요약 타일 — 값은 Sub-KPI·추이를 기다리지 않�
 // `page.tsx` 에 있다. `Promise.all([live, subKpis])` 로 되돌리면 타일이 다시 미러
 // Sub-KPI 에 묶이는데 위 테스트는 그대로 초록이다 — 그래서 소스 형태로 고정한다.
 describe("WebsiteSummarySection — 타일이 기다리는 read (PR③-a)", () => {
-  const src = readFileSync(
+  const src = readSourceText(
     fileURLToPath(new URL("./page.tsx", import.meta.url)),
-    "utf8",
   );
   const body = src.slice(src.indexOf("async function WebsiteSummarySection"));
   const section = body.slice(0, body.indexOf("\n}\n"));

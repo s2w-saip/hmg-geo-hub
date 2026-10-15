@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { PgDialect } from "drizzle-orm/pg-core";
 import type { SQL } from "drizzle-orm";
+import { readSourceText } from "@/test/source-text";
 
 /**
  * 콜드 프로세스(= Vercel 콜드 람다)의 첫 호출이 **다른 술어**를 만들던 결함을 닫는다.
@@ -155,9 +155,8 @@ describe("ensureColumnAvailability — 실패해도 던지지 않고, 폴백이 
 });
 
 describe("진입점 계약 — export 된 async 함수는 전부 ensure 를 먼저 await 한다", () => {
-  const src = readFileSync(
+  const src = readSourceText(
     fileURLToPath(new URL("./scope-aggregates.ts", import.meta.url)),
-    "utf8",
   );
 
   /**
@@ -233,9 +232,8 @@ describe("진입점 계약 — export 된 async 함수는 전부 ensure 를 먼�
 // **이미 ensure 를 부르고 있는가**의 역방향이 아니라, 아래처럼 소스에서 축 관련
 // 심볼을 쓰는 진입점을 모아 본다.
 describe("앵커 축 계약 — 축을 쓰는 진입점은 ensureAnchorAxis 를 먼저 await 한다", () => {
-  const src = readFileSync(
+  const src = readSourceText(
     fileURLToPath(new URL("./scope-aggregates.ts", import.meta.url)),
-    "utf8",
   );
 
   /** `ensureColumnAvailability` 계약과 같은 본문 추출(위 describe 의 로직 재사용). */
@@ -305,9 +303,8 @@ describe("앵커 축 계약 — 축을 쓰는 진입점은 ensureAnchorAxis 를 
 // **소스**에 둔다: 인용 계열 리더는 술어 빌더에 `"citations"` 를, 언급+인용을 함께
 // 내는 롤업은 `"all"` 을 넘겨야 한다. 새 인용 리더가 계열 없이 추가되면 여기서 깨진다.
 describe("숨김 게이트 계열 — 인용 리더는 citations, 혼합 롤업은 all", () => {
-  const src = readFileSync(
+  const src = readSourceText(
     fileURLToPath(new URL("./scope-aggregates.ts", import.meta.url)),
-    "utf8",
   );
 
   /** 리더 하나의 본문(다음 export 직전까지). */

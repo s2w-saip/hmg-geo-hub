@@ -12,6 +12,7 @@ import {
   anchorRootProjectIdOrThrow,
   resolveAnchorRootProjectId,
 } from "./anchor-root";
+import { readSourceText } from "@/test/source-text";
 
 const ROOT = "be28fe15-c743-4a88-abb8-182b25602812";
 const prev = process.env[ANCHOR_ROOT_ENV];
@@ -92,9 +93,8 @@ describe("경로별 처리 (N-14)", () => {
 
 describe("경로 배선 — 어느 판을 쓰는지", () => {
   const read = async (rel: string) => {
-    const fs = await import("node:fs");
     const path = await import("node:path");
-    return fs.readFileSync(path.resolve(__dirname, "..", "..", rel), "utf8");
+    return readSourceText(path.resolve(__dirname, "..", "..", rel));
   };
 
   it("원장을 쓰는 경로는 던지는 판을 쓴다", async () => {

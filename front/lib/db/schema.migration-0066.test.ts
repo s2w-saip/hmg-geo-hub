@@ -10,12 +10,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { readSourceText } from "@/test/source-text";
 
 const REPO = path.resolve(__dirname, "../..");
 const MIG_DIR = path.join(REPO, "lib/db/migrations");
 const FILE = path.join(MIG_DIR, "0066_summary_aggregate_keys.sql");
 
-const raw = fs.readFileSync(FILE, "utf8");
+const raw = readSourceText(FILE);
 /** `--` 줄 주석 제거 — 롤백 안내문의 DROP/TRUNCATE 가 규율 검사에 걸리지 않게. */
 const sql = raw
   .split("\n")
@@ -209,7 +210,7 @@ describe("0066 — 집계층 키 확장", () => {
 
 describe("0066 — out-of-band 규약", () => {
   it("schema.ts·기준선 스냅샷·저널 어디에도 들어가지 않는다", () => {
-    const schema = fs.readFileSync(path.join(REPO, "lib/db/schema.ts"), "utf8");
+    const schema = readSourceText(path.join(REPO, "lib/db/schema.ts"));
     expect(schema).not.toMatch(/pgTable\(\s*["']summary_/);
 
     const metaDir = path.join(MIG_DIR, "meta");

@@ -21,10 +21,11 @@
 import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
+import { readSourceText } from "@/test/source-text";
 
 const DIR = path.resolve(__dirname);
 const FILE = path.join(DIR, "0077_scope_answer_cycle_anchors.sql");
-const sql = fs.readFileSync(FILE, "utf8");
+const sql = readSourceText(FILE);
 /** 주석을 뺀 실행 본문 — 계약은 "실행되는 것"에만 건다. */
 const body = sql
   .split("\n")
@@ -175,21 +176,18 @@ describe("① 앵커 결정: **회차 단위**로 정하고 답변이 상속한�
   });
 
   it("결정 ⑩ 이 dry-run·백필·감사에서도 같은 술어다", () => {
-    const dry = fs.readFileSync(
+    const dry = readSourceText(
       path.resolve(DIR, "../../../scripts/db/answer-cycle-anchors-dryrun.sql"),
-      "utf8",
     );
     // dry-run 은 제외분을 **세기** 위해 LEFT JOIN 뒤 FILTER 로 가른다.
     expect(dry).toContain("count(*) FILTER (WHERE has_run AND project_id IS NULL)");
-    const backfill = fs.readFileSync(
+    const backfill = readSourceText(
       path.resolve(DIR, "../../../scripts/db/backfill-answer-cycle-anchors.ts"),
-      "utf8",
     );
     expect(backfill).toContain("AND r.project_id IS NOT NULL");
     expect(backfill).toContain("r_run IS NOT NULL AND project_id IS NULL");
-    const audit = fs.readFileSync(
+    const audit = readSourceText(
       path.resolve(DIR, "../../../scripts/db/answer-cycle-anchors-audit.sql"),
-      "utf8",
     );
     expect(audit).toContain("AND r.project_id IS NOT NULL");
   });
@@ -304,7 +302,7 @@ describe("①'' 신설 컬럼 — 대표 답변 정렬 키 · 기본 엔진 (인
   });
 
   it("schema.ts 가 두 컬럼과 인덱스를 안다 (db:drift 기준선)", () => {
-    const schema = fs.readFileSync(path.resolve(DIR, "../schema.ts"), "utf8");
+    const schema = readSourceText(path.resolve(DIR, "../schema.ts"));
     expect(schema).toContain('measuredAtOrig: timestamp("measured_at_orig"');
     expect(schema).toContain('isDefaultEngine: boolean("is_default_engine").notNull()');
     expect(schema).toContain("scope_answer_cycle_anchors_rep_idx");
@@ -481,8 +479,7 @@ describe("④ R1 확정 = KST — 타임존 상수는 한 곳", () => {
   });
 
   it("dry-run SQL 의 zone 상수가 마이그레이션과 같은 값이고 **딱 한 벌**이다", () => {
-    const dry = fs
-      .readFileSync(path.resolve(DIR, "../../../scripts/db/answer-cycle-anchors-dryrun.sql"), "utf8")
+    const dry = readSourceText(path.resolve(DIR, "../../../scripts/db/answer-cycle-anchors-dryrun.sql"))
       .split("\n")
       .filter((l) => !/^\s*--/.test(l))
       .join("\n");
@@ -647,16 +644,15 @@ describe("표면 판정 — website → standard(원장 global) → project", ()
   it("호출부 둘이 루트 id 를 넘긴다 — 미러 싱크와 백필", () => {
     // N-4: 해소는 `lib/scope/anchor-root.ts` 한 곳이다 — env 를 직접 읽는 사본이 없다.
     // N-14: 경로마다 다르게 쓴다 — 미러 싱크는 죽이지 않고 재계산만 건너뛴다.
-    const mirror = fs.readFileSync(path.resolve(DIR, "../repositories/scope-mirror.ts"), "utf8");
+    const mirror = readSourceText(path.resolve(DIR, "../repositories/scope-mirror.ts"));
     expect(mirror).toContain('import { resolveAnchorRootProjectId } from "@/lib/scope/anchor-root";');
     expect(mirror).toContain("function anchorRootForMirror()");
     expect(mirror).toContain("rootProjectId: anchorRootForMirror().projectId,");
     expect(mirror).toContain(
       "refresh_answer_cycle_anchors(array[${runId}::uuid], ${rootProjectId}::uuid)",
     );
-    const backfill = fs.readFileSync(
+    const backfill = readSourceText(
       path.resolve(DIR, "../../../scripts/db/backfill-answer-cycle-anchors.ts"),
-      "utf8",
     );
     // 백필은 원장을 쓰는 경로라 형식 오류를 던진다(N-14).
     expect(backfill).toContain("const ROOT_PROJECT_ID = anchorRootProjectIdOrThrow();");
@@ -669,7 +665,7 @@ describe("표면 판정 — website → standard(원장 global) → project", ()
       "../../../lib/summary/cycle-control.ts",
       "../../../lib/summary/generate/swap.ts",
     ]) {
-      const f = fs.readFileSync(path.resolve(DIR, rel), "utf8");
+      const f = readSourceText(path.resolve(DIR, rel));
       expect(f, rel).toContain("anchor-root");
       expect(f, rel).not.toContain("process.env.SCOPE_ROOT_PROJECT_ID ?? null");
     }
@@ -749,7 +745,7 @@ describe("⑤⑥⑦ 규율", () => {
     expect(flat).toContain(
       "('scope_answer_cycle_anchors_cycle_idx', '(cycle_id) WHERE cycle_id IS NOT NULL')",
     );
-    const schema = fs.readFileSync(path.resolve(DIR, "../schema.ts"), "utf8");
+    const schema = readSourceText(path.resolve(DIR, "../schema.ts"));
     expect(schema).toContain("scope_answer_cycle_anchors_cycle_idx");
     expect(schema).toContain("`${t.cycleId} IS NOT NULL`");
     // 기간 술어의 주 경로는 **귀속 날짜**다.
@@ -944,8 +940,7 @@ describe("정규 요일 귀속 — 회차를 표면의 정규 요일 자리에 �
   // 여기서 보는 것은 **텍스트 계약**뿐이다: 리더가 기간 키로 `anchor_date` 를 쓰지
   // 않고, 컬럼 리터럴을 자기 파일에 또 적지 않고 정본 헬퍼에 위임하는가.
   it("리더는 round_date 를 본다 (달력 축 = 기간 술어 축)", () => {
-    const code = fs
-      .readFileSync(path.resolve(DIR, "../repositories/scope-answer-anchors.ts"), "utf8")
+    const code = readSourceText(path.resolve(DIR, "../repositories/scope-answer-anchors.ts"))
       .split("\n")
       .filter((l) => !/^\s*(\*|\/\*|\/\/)/.test(l))
       .join("\n");
@@ -954,9 +949,8 @@ describe("정규 요일 귀속 — 회차를 표면의 정규 요일 자리에 �
     expect(code).not.toContain("fleet_round_date");
     expect(code).not.toContain(".anchor_date");
 
-    const canonical = fs.readFileSync(
+    const canonical = readSourceText(
       path.resolve(DIR, "../../period/anchor-axis.ts"),
-      "utf8",
     );
     expect(canonical).toContain('col(alias, "round_date")');
     expect(canonical).not.toContain('col(alias, "anchor_date")');
@@ -972,16 +966,15 @@ describe("정규 요일 귀속 — 회차를 표면의 정규 요일 자리에 �
   });
 
   it("schema.ts 가 매핑 표와 round_date 를 안다 (db:drift 기준선)", () => {
-    const schema = fs.readFileSync(path.resolve(DIR, "../schema.ts"), "utf8");
+    const schema = readSourceText(path.resolve(DIR, "../schema.ts"));
     expect(schema).toContain('pgTable(\n  "scope_cycle_rounds"');
     expect(schema).toContain('roundDate: date("round_date", { mode: "string" }).notNull()');
     expect(schema).not.toContain("fleet_round_date");
   });
 
   it("감사 SQL 이 귀속 불변식 넷을 본다", () => {
-    const audit = fs.readFileSync(
+    const audit = readSourceText(
       path.resolve(DIR, "../../../scripts/db/answer-cycle-anchors-audit.sql"),
-      "utf8",
     );
     for (const k of [
       "off_canonical_round_date",

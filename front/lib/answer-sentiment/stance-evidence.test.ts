@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
 import path from "node:path";
 import { verifyStanceEvidence } from "./stance-evidence";
+import { readSourceText } from "@/test/source-text";
 
 // 근거 인용 대조(검증자 F5). 고정하는 명제 하나:
 // **"원문에서 확인됨"은 미러 원문과 대조한 결과여야 하고, 코어가 오프셋을 줬다는
@@ -104,9 +104,8 @@ describe("verifyStanceEvidence", () => {
 // ── 읽기 경로 배선 ──────────────────────────────────────────────────────────
 // 순수 함수가 맞아도 읽기 경로가 그것을 안 부르면 아무 소용이 없다.
 describe("getMirrorAnswerBody — 대조 배선", () => {
-  const SRC = readFileSync(
+  const SRC = readSourceText(
     path.join(process.cwd(), "lib/db/repositories/scope-aggregates.ts"),
-    "utf8",
   );
   const fn = SRC.slice(SRC.indexOf("export async function getMirrorAnswerBody("));
   const body = fn.slice(0, fn.indexOf("\n}\n") + 3);

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { SUMMARY_SCREEN_OPT_IN } from "@/lib/summary/read/screens";
+import { readSourceText } from "@/test/source-text";
 
 // 대시보드 **경쟁사 행**의 배선을 고정한다 — PR④ B1 수용 기준 ①·③·⑤.
 //
@@ -18,13 +18,11 @@ import { SUMMARY_SCREEN_OPT_IN } from "@/lib/summary/read/screens";
 // 이 셋 중 하나라도 깨지면 "성능은 좋아졌는데 문장이 늘었다"거나 "스위치를 껐는데
 // 값이 안 돌아온다"가 된다. 둘 다 화면으로는 안 보인다.
 
-const src = readFileSync(
+const src = readSourceText(
   fileURLToPath(new URL("./server.ts", import.meta.url)),
-  "utf8",
 );
-const dashboard = readFileSync(
+const dashboard = readSourceText(
   fileURLToPath(new URL("../../app/[locale]/(dash)/dashboard/page.tsx", import.meta.url)),
-  "utf8",
 );
 
 /** `fetchStandardCompetitorBrands` 의 본문(다음 최상위 선언 전까지). */

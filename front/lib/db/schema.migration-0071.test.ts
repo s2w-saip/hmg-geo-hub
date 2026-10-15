@@ -15,12 +15,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { readSourceText } from "@/test/source-text";
 
 const REPO = path.resolve(__dirname, "../..");
 const MIG_DIR = path.join(REPO, "lib/db/migrations");
 const FILE = path.join(MIG_DIR, "0071_summary_cycle_hidden_scope.sql");
 
-const raw = fs.readFileSync(FILE, "utf8");
+const raw = readSourceText(FILE);
 /** `--` 줄 주석 제거 — 롤백 안내문이 규율 검사에 걸리지 않게. */
 const sql = raw
   .split("\n")
@@ -118,14 +119,14 @@ describe("0071 — 회차 숨김 범위", () => {
   });
 
   it("0070 파일을 고치지 않았다 — 적용된 마이그레이션은 불변이다", () => {
-    const old = fs.readFileSync(path.join(MIG_DIR, "0070_summary_cycle_hidden.sql"), "utf8");
+    const old = readSourceText(path.join(MIG_DIR, "0070_summary_cycle_hidden.sql"));
     expect(old).not.toMatch(/hidden_scope/);
   });
 });
 
 describe("0071 — out-of-band 규약", () => {
   it("schema.ts·기준선 스냅샷·저널 어디에도 들어가지 않는다", () => {
-    const schema = fs.readFileSync(path.join(REPO, "lib/db/schema.ts"), "utf8");
+    const schema = readSourceText(path.join(REPO, "lib/db/schema.ts"));
     expect(schema).not.toMatch(/pgTable\(\s*["']summary_/);
 
     const metaDir = path.join(MIG_DIR, "meta");
@@ -153,7 +154,7 @@ describe("0071 — out-of-band 규약", () => {
 
 // ── 프로브는 **따로**다 (교차 배포 4상태) ────────────────────────────────────
 describe("0071 — 컬럼 프로브를 0070 과 합치지 않는다", () => {
-  const src = fs.readFileSync(path.join(REPO, "lib/db/column-availability.ts"), "utf8");
+  const src = readSourceText(path.join(REPO, "lib/db/column-availability.ts"));
 
   it("hiddenCycleColumnsAvailable 은 여전히 hidden_reason 하나만 본다", () => {
     const fn =
@@ -191,7 +192,7 @@ describe("0071/D2 — 범위를 보는 판정은 period 하나뿐이다", () => 
   ];
 
   it("cycle-set.ts 의 범위 판정은 judgeCycleRange 안에만 있다 — 스냅샷 분기는 모른다", () => {
-    const src = fs.readFileSync(path.join(REPO, files[0]), "utf8");
+    const src = readSourceText(path.join(REPO, files[0]));
     // `isGeneratorSkipped` 선언 뒤가 스냅샷 경로(`resolveCycleSet`)다.
     const at = src.indexOf("export function isGeneratorSkipped");
     expect(at).toBeGreaterThan(0);
@@ -204,7 +205,7 @@ describe("0071/D2 — 범위를 보는 판정은 period 하나뿐이다", () => 
   });
 
   it("cycleNotHiddenSql 은 사유만 본다 (pickGlobalCycle·pickWebsiteCycles 공통)", () => {
-    const src = fs.readFileSync(path.join(REPO, files[1]), "utf8");
+    const src = readSourceText(path.join(REPO, files[1]));
     const fn = /export function cycleNotHiddenSql\([\s\S]*?\n}/.exec(src)?.[0] ?? "";
     expect(fn.length).toBeGreaterThan(50);
     expect(fn).toMatch(/hidden_reason IS NULL/);
@@ -212,7 +213,7 @@ describe("0071/D2 — 범위를 보는 판정은 period 하나뿐이다", () => 
   });
 
   it("summary-cycles.ts 가 hidden_scope 를 읽는 곳은 갭 슬롯 + 범위 조회 **둘**뿐이다", () => {
-    const src = fs.readFileSync(path.join(REPO, files[1]), "utf8");
+    const src = readSourceText(path.join(REPO, files[1]));
     // 문자열 `hidden_scope` 가 나오는 SQL 은 `hiddenCycleSlots` 와 `pickCyclesInRange`
     // 두 줄뿐이다(주석·타입 주석은 백틱 SQL 밖이라 아래 정규식이 안 잡는다).
     const inSql = src.match(/COALESCE\(c\.hidden_scope, 'all'\)/g) ?? [];
@@ -231,7 +232,7 @@ describe("0071 — 관제·생성기·스왑은 hidden_scope 를 안 쓴다", ()
   ];
 
   it.each(sources)("%s 의 summary_cycles 쓰기 문장에 hidden_scope 가 없다", (rel) => {
-    const src = fs.readFileSync(path.join(REPO, rel), "utf8");
+    const src = readSourceText(path.join(REPO, rel));
     const writes =
       src.match(/(INSERT INTO summary_cycles[\s\S]{0,900}?`|UPDATE summary_cycles[\s\S]{0,900}?`)/g) ??
       [];
@@ -242,7 +243,7 @@ describe("0071 — 관제·생성기·스왑은 hidden_scope 를 안 쓴다", ()
   });
 
   it("범위를 쓰는 곳은 운영자 스크립트 **한 곳**뿐이다", () => {
-    const script = fs.readFileSync(path.join(REPO, "scripts/summary/hide-cycle.ts"), "utf8");
+    const script = readSourceText(path.join(REPO, "scripts/summary/hide-cycle.ts"));
     expect(script).toMatch(/hidden_scope = \$\{scope\}/);
     // 0071 미적용 DB 에서 citations 를 조용히 all 로 떨어뜨리지 않는다.
     expect(script).toMatch(/0071 을 먼저 적용할 것/);

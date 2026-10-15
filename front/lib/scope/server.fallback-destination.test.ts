@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { planTrendRead } from "@/lib/db/repositories/summary-trend-aggregates";
+import { readSourceText } from "@/test/source-text";
 
 // ── 폴백 목적지 회귀 가드 (T11 기준 6) ──────────────────────────────────────
 //
@@ -31,9 +31,8 @@ import { planTrendRead } from "@/lib/db/repositories/summary-trend-aggregates";
 const PERIOD_DEF = 'const period = route.mode === "period";';
 const AGG_FALLBACK_DEF = "const aggFallback = period ? onMirror : detail;";
 
-const src = readFileSync(
+const src = readSourceText(
   fileURLToPath(new URL("./server.ts", import.meta.url)),
-  "utf8",
 );
 
 /** `viaX` 함수 본문만 잘라낸다(다음 최상위 선언 전까지). */

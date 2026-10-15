@@ -14,11 +14,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { readSourceText } from "@/test/source-text";
 
 const REPO = path.resolve(__dirname, "../..");
 const FILE = path.join(REPO, "lib/db/migrations/0080_report_publications.sql");
 
-const raw = fs.readFileSync(FILE, "utf8");
+const raw = readSourceText(FILE);
 /** `--` 줄 주석 제거 — 설명문이 규율 검사에 걸리지 않게. */
 const sql = raw
   .split("\n")
@@ -86,7 +87,7 @@ describe("0080 — 발행 리포트 사실표", () => {
   });
 
   it("schema.ts 의 정의와 컬럼 집합이 일치한다 (앱이 drizzle 로 읽는 표다)", () => {
-    const schema = fs.readFileSync(path.join(REPO, "lib/db/schema.ts"), "utf8");
+    const schema = readSourceText(path.join(REPO, "lib/db/schema.ts"));
     const block = (from: string, to: string) => {
       const i = schema.indexOf(from);
       expect(i, from).toBeGreaterThan(-1);

@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { SUMMARY_SCREEN_KEYS, SUMMARY_SCREEN_OPT_IN } from "@/lib/summary/read/screens";
 import { periodRouteScreenKeyFor } from "@/lib/summary/read/period-route-flag";
+import { readSourceText } from "@/test/source-text";
 
 // ── 기간 누적의 집계층 서빙: **배선 가드** (2026-09-18) ────────────────────
 //
@@ -13,9 +13,8 @@ import { periodRouteScreenKeyFor } from "@/lib/summary/read/period-route-flag";
 // 하나라도 빠지면 **종전 스냅샷 판정 그대로**여야 한다. 그 회귀 0 이 이 change 의
 // 전제이므로, 배선이 그 모양인지를 소스에서 고정한다(라이브 판정은 검증자가 본다).
 
-const src = readFileSync(
+const src = readSourceText(
   fileURLToPath(new URL("./server.ts", import.meta.url)),
-  "utf8",
 );
 
 function bodyOf(name: string): string {
@@ -91,9 +90,8 @@ describe("기간 경로 스위치 배선", () => {
 });
 
 describe("env 강제 경로의 금기", () => {
-  const flag = readFileSync(
+  const flag = readSourceText(
     fileURLToPath(new URL("../summary/read/period-route-flag.ts", import.meta.url)),
-    "utf8",
   );
 
   it("`NEXT_PUBLIC_` 접두사를 쓰지 않는다: 서버 전용 값이다", () => {

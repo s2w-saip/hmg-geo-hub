@@ -12,14 +12,14 @@
  *   · **REVOKE 를 빼면** 신규 테이블이 anon 에 열린 채로 남는다(RLS 없는 리포의
  *     보상통제는 lockdown 뿐이고, 신규 테이블은 그 파일 재실행 전까지 무방비다).
  */
-import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { readSourceText } from "@/test/source-text";
 
 const REPO = path.resolve(__dirname, "../..");
 const FILE = path.join(REPO, "lib/db/migrations/0072_scope_answer_stances.sql");
 
-const raw = fs.readFileSync(FILE, "utf8");
+const raw = readSourceText(FILE);
 /** `--` 줄 주석 제거 — 검증·롤백 안내문이 규율 검사에 걸리지 않게. */
 const sql = raw
   .split("\n")
@@ -87,7 +87,7 @@ describe("0072 — 답변 단위 브랜드 스탠스 미러", () => {
   });
 
   it("schema.ts 의 테이블 정의와 컬럼 집합이 일치한다", () => {
-    const schema = fs.readFileSync(path.join(REPO, "lib/db/schema.ts"), "utf8");
+    const schema = readSourceText(path.join(REPO, "lib/db/schema.ts"));
     const block = schema.slice(
       schema.indexOf('export const scopeAnswerStances = pgTable('),
       schema.indexOf("export type ScopeAnswerStanceRow"),

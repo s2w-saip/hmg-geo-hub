@@ -1,5 +1,4 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import fs from "node:fs";
 import path from "node:path";
 import { splitDryRunStatements } from "./answer-cycle-anchors-dryrun-split";
 import {
@@ -16,6 +15,7 @@ import {
   migrationStatements,
   newDb,
 } from "./answer-cycle-anchors-pglite-fixture";
+import { readSourceText } from "@/test/source-text";
 
 /**
  * 0077 계열 SQL 을 **진짜 Postgres(pglite = wasm 빌드)에서 실행**한다.
@@ -62,8 +62,7 @@ const BIND: Record<string, string> = {
 };
 
 function scriptStatements(file: string): string[] {
-  const code = fs
-    .readFileSync(file, "utf8")
+  const code = readSourceText(file)
     .split("\n")
     .filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l))
     .join("\n");
@@ -164,11 +163,11 @@ describe("0077 계열 SQL 실행 검증 (pglite)", () => {
 
   beforeAll(async () => {
     db = await freshDb();
-    dryrun = splitDryRunStatements(fs.readFileSync(DRYRUN_SQL, "utf8"));
+    dryrun = splitDryRunStatements(readSourceText(DRYRUN_SQL));
   }, 120_000);
 
   it("0077 의 모든 문장이 실제로 적용된다 (적용 시점 스모크 포함)", async () => {
-    const statements = migrationStatements(fs.readFileSync(MIGRATION_0077, "utf8"));
+    const statements = migrationStatements(readSourceText(MIGRATION_0077));
     // 테이블 2 + 인덱스 2 + 함수 17 + 자가검증 1 + 스모크 1 + DDL 가드 1 = 24 문장
     expect(statements.length).toBe(24);
     const fns = (await db.query(
@@ -178,7 +177,7 @@ describe("0077 계열 SQL 실행 검증 (pglite)", () => {
     // 0077 의 16 + 0078 의 4(cycle_key·refresh/prune_cycle_registry_runs·sync_cycle_anchor_state).
     // `refresh_answer_cycle_anchors` 는 접두사가 달라 여기 안 잡힌다.
     expect(n(fns.rows[0], "n")).toBe(20);
-    expect(migrationStatements(fs.readFileSync(MIGRATION_0078, "utf8")).length).toBe(13);
+    expect(migrationStatements(readSourceText(MIGRATION_0078)).length).toBe(13);
     // 인덱스도 실제로 만들어졌는가 — 특히 부분 인덱스는 문법 오류가 여기서만 드러난다.
     const idx = (await db.query(
       `SELECT indexname::text AS name, indexdef::text AS def FROM pg_indexes
@@ -372,7 +371,7 @@ describe("0077 계열 SQL 실행 검증 (pglite)", () => {
 
   it("감사 SQL 이 실행되고 경고·긴급 항목이 하나도 없다", async () => {
     const rows = (
-      (await db.query(fs.readFileSync(AUDIT_SQL, "utf8"))) as {
+      (await db.query(readSourceText(AUDIT_SQL))) as {
         rows: Array<Record<string, unknown>>;
       }
     ).rows;
@@ -552,7 +551,7 @@ describe("dry-run 의 prev/next 자리 산술이 0077 함수와 같다 (사본 �
 
   it("2,555 조합 전부에서 같다", async () => {
     const db = await freshDb();
-    const e = seatExprs(fs.readFileSync(DRYRUN_SQL, "utf8"));
+    const e = seatExprs(readSourceText(DRYRUN_SQL));
     expect(e.prev).toContain("anchor_date -");
     expect(e.next).toContain("anchor_date +");
     const r = (await db.query(compareSql(e))) as { rows: Array<Record<string, unknown>> };
@@ -562,7 +561,7 @@ describe("dry-run 의 prev/next 자리 산술이 0077 함수와 같다 (사본 �
 
   it("**변이**: 사본의 부호를 뒤집으면 대조가 깨진다", async () => {
     const db = await freshDb();
-    const e = seatExprs(fs.readFileSync(DRYRUN_SQL, "utf8"));
+    const e = seatExprs(readSourceText(DRYRUN_SQL));
     const r = (await db.query(
       compareSql({ prev: e.prev.replace("anchor_date -", "anchor_date +"), next: e.next }),
     )) as { rows: Array<Record<string, unknown>> };
@@ -574,8 +573,7 @@ describe("dry-run 의 prev/next 자리 산술이 0077 함수와 같다 (사본 �
 describe("변이 검증 — 이 테스트가 실제로 그 두 결함을 잡는가", () => {
   it("`ANY((SELECT engines FROM de))` 로 되돌리면 S4·S5 가 실패한다", async () => {
     const db = await freshDb();
-    const broken = fs
-      .readFileSync(DRYRUN_SQL, "utf8")
+    const broken = readSourceText(DRYRUN_SQL)
       .replace(/\n\s*CROSS JOIN de\n/g, "\n")
       .replace(/\(a\.target = ANY\(de\.engines\)\)/g, "(a.target = ANY((SELECT engines FROM de)))");
     const sts = splitDryRunStatements(broken);
@@ -594,8 +592,7 @@ describe("변이 검증 — 이 테스트가 실제로 그 두 결함을 잡는�
   it("`min(uuid)` 로 되돌리면 dry-run 과 refresh 가 둘 다 실패한다", async () => {
     const db = await freshDb();
     // ① dry-run: cyc_base 의 GROUP BY 키를 집계로 바꾼다
-    const broken = fs
-      .readFileSync(DRYRUN_SQL, "utf8")
+    const broken = readSourceText(DRYRUN_SQL)
       .replace(
         /SELECT cycle_key, project_id,\n(\s*)min\(run_anchor_at\)/,
         "SELECT cycle_key, min(project_id) AS project_id,\n$1min(run_anchor_at)",
@@ -604,7 +601,7 @@ describe("변이 검증 — 이 테스트가 실제로 그 두 결함을 잡는�
     await expect(db.query(s1.sql)).rejects.toThrow(/min\(uuid\)/);
 
     // ② 마이그레이션 함수: 같은 자리를 집계로 바꾼 사본을 올리고 호출한다.
-    const mig = fs.readFileSync(MIGRATION_0077, "utf8");
+    const mig = readSourceText(MIGRATION_0077);
     const fn = migrationStatements(mig).find((s) =>
       s.startsWith("CREATE OR REPLACE FUNCTION refresh_answer_cycle_anchors"),
     )!;

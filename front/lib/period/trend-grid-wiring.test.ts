@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { readSourceText } from "@/test/source-text";
 
 // ════════════════════════════════════════════════════════════════════════════
 // 추이 격자 배선 가드 — **끄면 바이트 동일**을 소스로 고정한다 (W1)
@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 //    캐시). 이 리포의 다른 배선 가드와 같이 **소스 분석**으로 본다.
 
 const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
-const read = (rel: string) => readFileSync(`${REPO_ROOT}/${rel}`, "utf8");
+const read = (rel: string) => readSourceText(`${REPO_ROOT}/${rel}`);
 
 const SERVER = read("lib/scope/server.ts");
 const GATE = read("lib/summary/read/gate.ts");

@@ -12,13 +12,13 @@
  * 새는 경로는 아래 §소스 대조가 막는다 — sticky-layer.test.ts·trend-gap-wiring.test.ts 와
  * 같은 관례(렌더러가 못 보는 계약은 소스로 고정).
  */
-import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import {
   createFilterDraftActions,
   type FilterDraft,
   type FilterDynDraft,
 } from "./filter-draft-actions";
+import { readSourceText } from "@/test/source-text";
 
 /** 팩토리를 렌더러 없이 구동하는 최소 스토어 — setState 업데이터 계약만 흉내낸다. */
 function harness(init: FilterDraft = {}, initDyn: FilterDynDraft = {}) {
@@ -115,7 +115,7 @@ describe("드래프트 토글은 URL 을 건드리지 않는다 (검증 B3)", ()
 // 위 계약은 팩토리 안에서만 유효하다. 패널이 `onToggle` 배선에서 직접 commit 하면
 // 같은 회귀가 되살아나므로, 패널 소스에서 commit 호출 지점을 못 박는다.
 
-const PANEL = readFileSync("components/dash/dimension-filter-panel.tsx", "utf-8");
+const PANEL = readSourceText("components/dash/dimension-filter-panel.tsx");
 
 describe("패널 배선 — commit 지점은 `적용` 하나뿐", () => {
   it("핸들러 본문은 패널이 아니라 팩토리가 갖는다", () => {

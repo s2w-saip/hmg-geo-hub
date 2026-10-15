@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { selectableAnchorDatesCacheKey } from "@/lib/calendar/selectable-anchor-dates";
+import { readSourceText } from "@/test/source-text";
 
 // ════════════════════════════════════════════════════════════════════════════
 // 캐시 키 — **축 off 의 키는 문자 하나도 바뀌면 안 된다** (계약 §4)
@@ -18,7 +18,7 @@ import { selectableAnchorDatesCacheKey } from "@/lib/calendar/selectable-anchor-
 //   ③ 키 문자열 — 10개짜리 직렬화를 **리터럴로** 박아 둔다
 
 const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
-const SERVER_SRC = readFileSync(`${REPO_ROOT}/lib/scope/server.ts`, "utf8");
+const SERVER_SRC = readSourceText(`${REPO_ROOT}/lib/scope/server.ts`);
 
 /** `unstable_cache` 가 인자에서 키를 만드는 규칙. Next 구현과 같은 식이다. */
 const invocationKey = (args: readonly unknown[]): string => JSON.stringify(args);
@@ -127,7 +127,7 @@ describe("달력 로더 셀 — 키는 순서가 고정된 문자열 하나", ()
 // 키에는 축이 없었다. `MIRROR_CACHE_GENERATION` 은 소스 해시라 화면 키 토글로는 안
 // 바뀌므로, 켠 직후 최대 TTL(7,200초) 동안 카드는 옛 축·달력은 새 축일 수 있었다.
 describe("미러 집계 셀 — 축 on 에서만 셀이 갈린다", () => {
-  const SRC = readFileSync(`${REPO_ROOT}/lib/scope/server.ts`, "utf8");
+  const SRC = readSourceText(`${REPO_ROOT}/lib/scope/server.ts`);
   const at = SRC.indexOf("function mirrorCache<A extends unknown[], R>(");
   const body = SRC.slice(at, SRC.indexOf("\n}\n", at));
 
@@ -211,7 +211,7 @@ describe("미러 집계 셀 — 축 on 에서만 셀이 갈린다", () => {
 // 유닛, 옆 타일은 flat** 이다 — 이 트랙이 애초에 막으려던 "한 화면에 두 정의" 가
 // 캐시 층에서 그대로 재현된다.
 describe("미러 집계 셀 — 유닛 판정은 옵트인 셀에만, 켜졌을 때만 붙는다", () => {
-  const SRC = readFileSync(`${REPO_ROOT}/lib/scope/server.ts`, "utf8");
+  const SRC = readSourceText(`${REPO_ROOT}/lib/scope/server.ts`);
   const at = SRC.indexOf("function mirrorCache<A extends unknown[], R>(");
   const body = SRC.slice(at, SRC.indexOf("\n}\n", at));
 

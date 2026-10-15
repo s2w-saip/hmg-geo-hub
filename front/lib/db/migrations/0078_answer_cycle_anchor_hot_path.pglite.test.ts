@@ -8,6 +8,7 @@ import {
   newDb,
   statementsOf,
 } from "../../../scripts/db/answer-cycle-anchors-pglite-fixture";
+import { readSourceText } from "@/test/source-text";
 
 const SCRIPTS_DB = path.resolve(__dirname, "..", "..", "..", "scripts", "db");
 const AUDIT_SQL = path.join(SCRIPTS_DB, "answer-cycle-anchors-audit.sql");
@@ -201,7 +202,7 @@ describe("0078 적용 자체", () => {
   }, 120_000);
 
   it("REVOKE 가 신규 객체 전부를 덮는다 (lockdown 공백 방지)", () => {
-    const raw = fs.readFileSync(MIGRATION_0078, "utf8");
+    const raw = readSourceText(MIGRATION_0078);
     for (const target of [
       'ON "scope_cycle_anchor_state"',
       'ON "scope_cycle_registry_runs"',
@@ -413,9 +414,8 @@ INSERT INTO scope_answers (job_id, run_id, target, region, status, measured_at) 
       expect(await refresh(db, [R(101)])).toBe(BIG_RUNS * 2);
       // 두 번째 호출은 값이 안 바뀌어 rowcount 는 0 이지만, 0077 은 확장 자체를
       // 건너뛸 수단이 없다 — 그 사실을 NOTICE 문구로 고정한다.
-      const raw = fs.readFileSync(
+      const raw = readSourceText(
         require.resolve("./0077_scope_answer_cycle_anchors.sql"),
-        "utf8",
       );
       expect(raw).toContain("회차 상속으로 run %개 → %개로 넓혔다");
     } finally {
@@ -555,7 +555,7 @@ INSERT INTO summary_cycle_runs (cycle_id, run_id, attributed_by) VALUES ${attrib
         await refresh(db, ids.rows.map((r) => r.id));
         if (!withV78) for (const s of statementsOf(MIGRATION_0078)) await db.exec(s);
         const rows = (
-          (await db.query(fs.readFileSync(AUDIT_SQL, "utf8"))) as {
+          (await db.query(readSourceText(AUDIT_SQL))) as {
             rows: Array<Record<string, unknown>>;
           }
         ).rows;
@@ -585,10 +585,10 @@ INSERT INTO summary_cycle_runs (cycle_id, run_id, attributed_by) VALUES ${attrib
 
   it("원장 앵커 선택 규칙의 **사본**이 세 곳에서 같다 (드리프트 가드)", () => {
     const ORDER = "ORDER BY cycle_key, matches_run DESC, runs DESC, ledger_anchor_at ASC";
-    expect(fs.readFileSync(MIGRATION_0078, "utf8")).toContain(ORDER);
+    expect(readSourceText(MIGRATION_0078)).toContain(ORDER);
     // dry-run 은 S1·S4·S5 세 문장이 각각 자기 사본을 갖는다.
-    expect(fs.readFileSync(DRYRUN_SQL, "utf8").split(ORDER).length - 1).toBe(3);
-    expect(fs.readFileSync(AUDIT_SQL, "utf8")).toContain(ORDER);
+    expect(readSourceText(DRYRUN_SQL).split(ORDER).length - 1).toBe(3);
+    expect(readSourceText(AUDIT_SQL)).toContain(ORDER);
   });
 });
 
@@ -617,7 +617,7 @@ INSERT INTO scope_answers (job_id, run_id, target, region, status, measured_at) 
 
   const auditMap = async (db: PgliteDb) => {
     const rows = (
-      (await db.query(fs.readFileSync(AUDIT_SQL, "utf8"))) as {
+      (await db.query(readSourceText(AUDIT_SQL))) as {
         rows: Array<Record<string, unknown>>;
       }
     ).rows;
@@ -715,7 +715,7 @@ INSERT INTO scope_answers (job_id, run_id, target, region, status, measured_at) 
 describe("0053 의 앵커 **값만** 정정된 경우", () => {
   const auditRow = async (db: PgliteDb, name: string) => {
     const rows = (
-      (await db.query(fs.readFileSync(AUDIT_SQL, "utf8"))) as {
+      (await db.query(readSourceText(AUDIT_SQL))) as {
         rows: Array<Record<string, unknown>>;
       }
     ).rows;
@@ -769,9 +769,8 @@ describe("롤백 SQL", () => {
   }
 
   it("붙여넣은 0077 함수 본문이 0077 파일과 **문자 단위로** 같다", () => {
-    const rb = fs.readFileSync(ROLLBACK, "utf8");
-    const mig = fs
-      .readFileSync(path.join(__dirname, "0077_scope_answer_cycle_anchors.sql"), "utf8")
+    const rb = readSourceText(ROLLBACK);
+    const mig = readSourceText(path.join(__dirname, "0077_scope_answer_cycle_anchors.sql"))
       .split("--> statement-breakpoint")
       .map((s) => s.trim());
     for (const [marker, needle] of [
@@ -785,7 +784,7 @@ describe("롤백 SQL", () => {
   });
 
   it("0078 이 만든 객체를 빠짐없이 지우고, 감사 되돌림을 머리말에 적는다", () => {
-    const rb = fs.readFileSync(ROLLBACK, "utf8");
+    const rb = readSourceText(ROLLBACK);
     for (const drop of [
       "DROP FUNCTION IF EXISTS hmg_sync_cycle_anchor_state(uuid[], uuid);",
       "DROP FUNCTION IF EXISTS hmg_prune_cycle_registry_runs(text[]);",
@@ -842,7 +841,7 @@ describe("롤백 SQL 실행 (0077 → 0078 → 롤백 → 0077 스모크)", () =
       // ⚠️ 텍스트 대조가 아니라 **파일 전체를 그대로 실행**한다. BEGIN/COMMIT·DROP
       //    순서·검증 DO 블록이 여기서 처음으로 돈다(재검증 N1).
       //    검증 DO 블록이 실패하면 이 exec 가 throw 하고 트랜잭션이 통째로 롤백된다.
-      await db.exec(fs.readFileSync(ROLLBACK, "utf8"));
+      await db.exec(readSourceText(ROLLBACK));
 
       expect(await objects(db), "0078 객체가 남았다").toEqual([]);
       // 0077 판 함수는 남아 있고, 그 스모크(없는 run → 0행)는 롤백 SQL 안에서 이미 돌았다.
@@ -865,7 +864,7 @@ describe("롤백 SQL 실행 (0077 → 0078 → 롤백 → 0077 스모크)", () =
     try {
       await refresh(db, [R(1), R(2), R(3)]);
       const before = await snapshot(db);
-      await db.exec(fs.readFileSync(ROLLBACK, "utf8"));
+      await db.exec(readSourceText(ROLLBACK));
       const tables = (await db.query(
         `SELECT tablename::text AS n FROM pg_tables
           WHERE tablename IN ('scope_answer_cycle_anchors','scope_cycle_rounds') ORDER BY 1`,
@@ -955,7 +954,7 @@ describe("INVALID 인덱스 점검 (0079 DO 블록이 못 막는 자리)", () =>
 
   const auditRow = async (db: PgliteDb, name: string) => {
     const rows = (
-      (await db.query(fs.readFileSync(AUDIT_SQL, "utf8"))) as {
+      (await db.query(readSourceText(AUDIT_SQL))) as {
         rows: Array<Record<string, unknown>>;
       }
     ).rows;
@@ -967,7 +966,7 @@ describe("INVALID 인덱스 점검 (0079 DO 블록이 못 막는 자리)", () =>
     const db = await newDb({ withV78: true, fixtures: BASE });
     try {
       const rows = (
-        (await db.query(fs.readFileSync(CHECK_SQL, "utf8"))) as {
+        (await db.query(readSourceText(CHECK_SQL))) as {
           rows: Array<Record<string, unknown>>;
         }
       ).rows;
@@ -992,7 +991,7 @@ describe("INVALID 인덱스 점검 (0079 DO 블록이 못 막는 자리)", () =>
           WHERE indexrelid = 'public.scope_runs_project_cycle_idx'::regclass;`,
       );
       const rows = (
-        (await db.query(fs.readFileSync(CHECK_SQL, "utf8"))) as {
+        (await db.query(readSourceText(CHECK_SQL))) as {
           rows: Array<Record<string, unknown>>;
         }
       ).rows;
@@ -1038,7 +1037,7 @@ INSERT INTO summary_cycle_runs (cycle_id, run_id, attributed_by) VALUES
       for (const s of statementsOf(MIGRATION_0078)) await db.exec(s);
 
       const rows = (
-        (await db.query(fs.readFileSync(LIST_SQL, "utf8"))) as {
+        (await db.query(readSourceText(LIST_SQL))) as {
           rows: Array<Record<string, unknown>>;
         }
       ).rows;
@@ -1063,7 +1062,7 @@ INSERT INTO summary_cycle_runs (cycle_id, run_id, attributed_by) VALUES
       expect(after.rows).toEqual([{ d: "2026-09-18" }]);
       // 회수 뒤에는 목록이 "회수 필요 없음"으로 바뀐다.
       const rows2 = (
-        (await db.query(fs.readFileSync(LIST_SQL, "utf8"))) as {
+        (await db.query(readSourceText(LIST_SQL))) as {
           rows: Array<Record<string, unknown>>;
         }
       ).rows;

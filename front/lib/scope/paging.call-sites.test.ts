@@ -12,6 +12,7 @@ import { PROMPT_MAX_PAGES } from "./paging";
 import { aggregateMentions } from "./result-adapter";
 import type { ScopeClient } from "./client";
 import type { Paginated } from "./types";
+import { readSourceText } from "@/test/source-text";
 
 /** 끝나지 않는 커서 소스 — 매 페이지 1건 + 항상 next_cursor. 상한을 반드시 친다. */
 function endless<T>(make: (i: number) => T) {
@@ -131,7 +132,7 @@ describe("result-adapter — 사본 pageAll 제거 후 공용 헬퍼를 지난�
 // 없으므로, **"결함의 모양이 어디에도 남아 있지 않다"** 를 실행되는 단언으로 만든다.
 // (이 리포에는 소스를 읽어 판정하는 테스트의 선례가 있다 —
 //  lib/scope/mirror-cache-generation.test.ts 가 server.ts 의 import 클로저를 읽는다.)
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 const REPO_ROOT = new URL("../../", import.meta.url).pathname;
@@ -149,7 +150,7 @@ function sourceFiles(): string[] {
   return out;
 }
 
-const read = (rel: string) => readFileSync(join(REPO_ROOT, rel), "utf8");
+const read = (rel: string) => readSourceText(join(REPO_ROOT, rel));
 
 describe("회귀 그물 — 커서 페이징은 공용 헬퍼 밖에 존재하지 않는다", () => {
   /**

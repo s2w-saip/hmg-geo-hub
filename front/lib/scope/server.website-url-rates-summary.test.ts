@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { readSourceText } from "@/test/source-text";
 
 // ── 자사·타겟 URL 인용률(GGMD-61) 서머리 편입: **배선 가드** (2026-09-27) ────────
 //
@@ -8,10 +8,9 @@ import { fileURLToPath } from "node:url";
 // 하네스가 본다. 여기서는 "언제 사실표로 가고, 언제 종전 미러로 남는가" 를 소스에서 고정한다
 // (server.report-truth.test.ts 와 같은 자세: 게이트웨이는 세션·DB 없이 못 부른다).
 
-const src = readFileSync(fileURLToPath(new URL("./server.ts", import.meta.url)), "utf8");
-const aggSrc = readFileSync(
+const src = readSourceText(fileURLToPath(new URL("./server.ts", import.meta.url)));
+const aggSrc = readSourceText(
   fileURLToPath(new URL("../db/repositories/scope-aggregates.ts", import.meta.url)),
-  "utf8",
 );
 
 function bodyOf(text: string, signature: string): string {

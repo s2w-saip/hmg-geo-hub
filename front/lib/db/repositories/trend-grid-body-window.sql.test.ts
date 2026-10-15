@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { readFileSync } from "node:fs";
 import { PgDialect } from "drizzle-orm/pg-core";
 import type { SQL } from "drizzle-orm";
 import { answerWhere, detailAnswerWhere, __testables as agg } from "./scope-aggregates";
@@ -22,6 +21,7 @@ import {
   setColumnAvailabilityForTests,
   resetColumnAvailabilityForTests,
 } from "@/lib/db/column-availability";
+import { readSourceText } from "@/test/source-text";
 
 // ════════════════════════════════════════════════════════════════════════════
 // 회귀: 자리 창(S0)이 **본문 집계로 샜다** (2026-09-20 고객 보고)
@@ -43,7 +43,7 @@ import {
 const dialect = new PgDialect();
 const compile = (q: SQL): string => dialect.sqlToQuery(q).sql;
 const params = (q: SQL): unknown[] => dialect.sqlToQuery(q).params;
-const SRC = readFileSync(`${process.cwd()}/lib/scope/server.ts`, "utf8");
+const SRC = readSourceText(`${process.cwd()}/lib/scope/server.ts`);
 
 /** 기간 미선택 = 기본 화면. 이 상태에서 본문이 누적 창으로 떨어지면 안 된다. */
 const NO_PERIOD: StandardFilters = {};

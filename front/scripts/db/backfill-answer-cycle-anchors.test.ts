@@ -11,20 +11,19 @@
  * **소스 텍스트로 계약을 고정한다**(실행하지 않는다).
  */
 import { describe, expect, it } from "vitest";
-import fs from "node:fs";
 import path from "node:path";
+import { readSourceText } from "@/test/source-text";
 
 const FILE = path.resolve(__dirname, "backfill-answer-cycle-anchors.ts");
-const src = fs.readFileSync(FILE, "utf8");
+const src = readSourceText(FILE);
 /** 주석을 뺀 실행 본문 — 계약은 "실행되는 것"에만 건다. */
 const code = src
   .split("\n")
   .filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l))
   .join("\n");
 
-const DRYRUN = fs.readFileSync(
+const DRYRUN = readSourceText(
   path.resolve(__dirname, "answer-cycle-anchors-dryrun.sql"),
-  "utf8",
 );
 
 describe("BLOCK-1 — 하한 단언은 rowcount 가 아니라 배치 후 상태다", () => {
@@ -241,11 +240,9 @@ describe("변하지 않아야 하는 안전수칙", () => {
   });
 
   it("N-15 — 앱 프로브도 신판 컬럼을 본다", async () => {
-    const fs2 = await import("node:fs");
     const path2 = await import("node:path");
-    const ca = fs2.readFileSync(
+    const ca = readSourceText(
       path2.resolve(__dirname, "../../lib/db/column-availability.ts"),
-      "utf8",
     );
     expect(ca).toContain('columnAvailable("scope_answer_cycle_anchors", "round_date")');
     expect(ca).not.toContain('columnAvailable("scope_answer_cycle_anchors", "anchor_date")');

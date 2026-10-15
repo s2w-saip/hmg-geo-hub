@@ -10,12 +10,12 @@
  * 나머지(i18n·zeroFill·누적 계산·styleOf)는 전부 실제 구현이 돈다.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import fs from "node:fs";
 import path from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import { NextIntlClientProvider } from "next-intl";
 import ko from "@/messages/ko.json";
 import type { RechartsStubState } from "@/test/recharts-stub";
+import { readSourceText } from "@/test/source-text";
 
 /**
  * 스텁이 읽는 가변 상태 — 형제 가드(`trend-gap-bridge.render.test.tsx`)와 **같은 공용
@@ -333,12 +333,11 @@ describe("CategoryCompositionTrend — 갭 창을 누적 밴드로 잇는다", (
 // ── 툴팁 배선 (소스 대조 — 스텁 툴팁은 content 를 렌더하지 않는다) ────────────
 
 describe("CategoryCompositionTrend — 갭 툴팁 배선", () => {
-  const src = fs.readFileSync(
+  const src = readSourceText(
     path.join(
       path.resolve(__dirname, "..", ".."),
       "app/[locale]/(dash)/standard/answer-analysis/_components/citations-view.tsx",
     ),
-    "utf8",
   );
   const block =
     /export function CategoryCompositionTrend[\s\S]*?\n}\n/.exec(src)?.[0] ?? "";
@@ -377,7 +376,7 @@ describe("밴드 z-order — 갭 음영 위, 본 영역과 같은 층", () => {
     path.resolve(__dirname, "..", ".."),
     "node_modules/recharts/es6/cartesian",
   );
-  const readSrc = (f: string) => fs.readFileSync(path.join(rechartsDir, f), "utf8");
+  const readSrc = (f: string) => readSourceText(path.join(rechartsDir, f));
 
   it("recharts 전제: Area 도 ReferenceArea 도 기본 층이 DefaultZIndexes.area 다", () => {
     // 두 컴포넌트의 zIndex 기본값은 export 되지 않는다(내부 defaultProps 객체) —

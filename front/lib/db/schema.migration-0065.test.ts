@@ -16,12 +16,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { readSourceText } from "@/test/source-text";
 
 const REPO = path.resolve(__dirname, "../..");
 const MIG_DIR = path.join(REPO, "lib/db/migrations");
 const FILE = path.join(MIG_DIR, "0065_summary_aggregate_layer.sql");
 
-const raw = fs.readFileSync(FILE, "utf8");
+const raw = readSourceText(FILE);
 /** `--` 줄 주석 제거 — 롤백 안내문의 DROP 이 규율 검사에 걸리지 않게. */
 const sql = raw
   .split("\n")
@@ -218,7 +219,7 @@ describe("0065 — 집계층 스키마 개정", () => {
 
 describe("0065 — out-of-band 규약 (schema.ts·저널)", () => {
   it("schema.ts 는 summary_* 표를 정의하지 않는다", () => {
-    const schema = fs.readFileSync(path.join(REPO, "lib/db/schema.ts"), "utf8");
+    const schema = readSourceText(path.join(REPO, "lib/db/schema.ts"));
     expect(schema).not.toMatch(/pgTable\(\s*"summary_/);
     expect(schema).not.toMatch(/pgTable\(\s*'summary_/);
   });

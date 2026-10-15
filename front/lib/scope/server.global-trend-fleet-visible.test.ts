@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { readSourceText } from "@/test/source-text";
 
 // ── 글로벌 **추이**만 같은 주 대표 회차를 쓴다 — 배선 가드 (2026-09-18) ──────
 //
@@ -17,9 +17,8 @@ import { fileURLToPath } from "node:url";
 // ③이 이 파일의 존재 이유다 — 필터를 `pickCyclesInRange` 술어나 `judgeCycleRange` 로
 // 올리면 이 세 가드가 전부 조용히 통과하면서 누적 값이 바뀐다.
 
-const src = readFileSync(
+const src = readSourceText(
   fileURLToPath(new URL("./server.ts", import.meta.url)),
-  "utf8",
 );
 
 /** `viaX` 함수 본문만 잘라낸다(다음 최상위 선언 전까지) — fallback-destination 과 같은 자세. */
@@ -64,9 +63,8 @@ describe("viaGlobalSeries — 추이 회차 집합은 대표만", () => {
   });
 
   it("③ 함대 대표 거르기의 **호출은 한 곳**이다", () => {
-    const CYCLE_SET = readFileSync(
+    const CYCLE_SET = readSourceText(
       fileURLToPath(new URL("../summary/read/cycle-set.ts", import.meta.url)),
-      "utf8",
     );
     // 선언 1 + `restrictToTrendSlotSet` 안의 호출 1. 늘었다면 누적·스냅샷 경로로 샜는지 볼 것.
     expect(CYCLE_SET.match(/restrictToFleetVisible\(/g) ?? []).toHaveLength(2);
@@ -120,7 +118,7 @@ describe("viaGlobalSeries — 추이 회차 집합은 대표만", () => {
 // 갈려 상시 오탐이 된다(2026-09-13 사건의 교훈). 소비자가 전부 같은 모듈을 쓰는지 본다.
 describe("dropFleetLosers — 소비자 배선", () => {
   const read = (rel: string): string =>
-    readFileSync(fileURLToPath(new URL(rel, import.meta.url)), "utf8");
+    readSourceText(fileURLToPath(new URL(rel, import.meta.url)));
 
   it("세 소비자(추이 집합·스냅샷 픽·회차 감시)가 같은 모듈을 쓴다", () => {
     for (const rel of [

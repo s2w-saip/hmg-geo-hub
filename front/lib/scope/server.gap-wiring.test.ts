@@ -21,15 +21,15 @@
  * 소스 대조가 필요한 이유: 중첩 순서는 **정상 경로에서 값이 같다**. 실패를 주입해야만
  * 갈리므로, 배선 자체를 텍스트로 못 박지 않으면 다음 리팩터가 조용히 되돌린다.
  */
-import fs from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { readSourceText } from "@/test/source-text";
 
 // ════════════════════════════════════════════════════════════════════════════
 // ① 소스 대조 — 배선 형태
 // ════════════════════════════════════════════════════════════════════════════
 
-const SRC = fs.readFileSync(path.join(__dirname, "server.ts"), "utf8");
+const SRC = readSourceText(path.join(__dirname, "server.ts"));
 
 /** 줄 주석 제거 — 주석에 적힌 함수 이름이 중첩 순서 판정에 섞이지 않게. */
 function stripLineComments(s: string): string {

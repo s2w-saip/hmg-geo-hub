@@ -12,12 +12,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { readSourceText } from "@/test/source-text";
 
 const REPO = path.resolve(__dirname, "../..");
 const MIG_DIR = path.join(REPO, "lib/db/migrations");
 const FILE = path.join(MIG_DIR, "0070_summary_cycle_hidden.sql");
 
-const raw = fs.readFileSync(FILE, "utf8");
+const raw = readSourceText(FILE);
 /** `--` 줄 주석 제거 — 롤백 안내문이 규율 검사에 걸리지 않게. */
 const sql = raw
   .split("\n")
@@ -123,7 +124,7 @@ describe("0070 — 회차 원장 숨김", () => {
 
 describe("0070 — out-of-band 규약", () => {
   it("schema.ts·기준선 스냅샷·저널 어디에도 들어가지 않는다", () => {
-    const schema = fs.readFileSync(path.join(REPO, "lib/db/schema.ts"), "utf8");
+    const schema = readSourceText(path.join(REPO, "lib/db/schema.ts"));
     expect(schema).not.toMatch(/pgTable\(\s*["']summary_/);
 
     const metaDir = path.join(MIG_DIR, "meta");
@@ -162,7 +163,7 @@ describe("0070 — 새 컬럼은 어떤 자동 경로에서도 안 써진다", (
   ];
 
   it.each(sources)("%s 는 summary_cycles 에 hidden_* 를 쓰지 않는다", (rel) => {
-    const src = fs.readFileSync(path.join(REPO, rel), "utf8");
+    const src = readSourceText(path.join(REPO, rel));
     // 쓰기 문장(INSERT/UPDATE) 안에 컬럼 이름이 등장하면 안 된다.
     const writes = src.match(/(INSERT INTO summary_cycles[\s\S]{0,900}?`|UPDATE summary_cycles[\s\S]{0,900}?`)/g) ?? [];
     // 비공허성 — 문장 형태가 바뀌어 0개가 잡히면 이 테스트는 조용히 아무것도 안 보게 된다.
@@ -174,13 +175,13 @@ describe("0070 — 새 컬럼은 어떤 자동 경로에서도 안 써진다", (
 
   it("`SELECT *` 로 summary_cycles 를 읽는 곳이 없다 — 새 컬럼이 조용히 실려 나가지 않게", () => {
     for (const rel of sources) {
-      const src = fs.readFileSync(path.join(REPO, rel), "utf8");
+      const src = readSourceText(path.join(REPO, rel));
       expect(src, rel).not.toMatch(/SELECT\s+\*\s+FROM\s+summary_cycles/i);
     }
   });
 
   it("숨김을 쓰는 곳은 운영자 스크립트 **한 곳**뿐이다", () => {
-    const script = fs.readFileSync(path.join(REPO, "scripts/summary/hide-cycle.ts"), "utf8");
+    const script = readSourceText(path.join(REPO, "scripts/summary/hide-cycle.ts"));
     expect(script).toMatch(/UPDATE summary_cycles SET hidden_reason = /);
     // rowcount 단언 — 0행을 성공으로 세면 "숨겼다" 는 보고가 거짓이 된다.
     expect(script).toMatch(/expected 1 row updated/);

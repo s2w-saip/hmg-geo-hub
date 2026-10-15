@@ -16,7 +16,6 @@
 // PRIVATE section therefore fails loudly instead of drifting silently.
 
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 
 import {
@@ -32,6 +31,7 @@ import {
   PUBLIC_SUFFIX_RULE_COUNT,
   PUBLIC_SUFFIX_RULES_SHA256,
 } from "./data";
+import { readSourceText } from "@/test/source-text";
 
 const splitRules = (txt: string): string[] =>
   txt
@@ -92,7 +92,7 @@ const PRIVATE_SECTION_DIVERGENCE: Record<
 describe("upstream PSL test vectors", () => {
   it("registrableDomain matches every vector except the enumerated PRIVATE-section ones", () => {
     const file = new URL("./__fixtures__/psl-test-vectors.tsv", import.meta.url);
-    const lines = readFileSync(file, "utf8").trim().split("\n");
+    const lines = readSourceText(file).trim().split("\n");
     expect(lines.length).toBeGreaterThanOrEqual(70);
     let checked = 0;
     const diverged: string[] = [];

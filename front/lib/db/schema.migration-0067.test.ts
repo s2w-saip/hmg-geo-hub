@@ -10,12 +10,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { readSourceText } from "@/test/source-text";
 
 const REPO = path.resolve(__dirname, "../..");
 const MIG_DIR = path.join(REPO, "lib/db/migrations");
 const FILE = path.join(MIG_DIR, "0067_summary_detail_report_fs.sql");
 
-const raw = fs.readFileSync(FILE, "utf8");
+const raw = readSourceText(FILE);
 /** `--` 줄 주석 제거 — 백필·롤백 안내문이 규율 검사에 걸리지 않게. */
 const sql = raw
   .split("\n")
@@ -167,7 +168,7 @@ describe("0067 — PR③ 위생", () => {
 
 describe("0067 — out-of-band 규약", () => {
   it("schema.ts·기준선 스냅샷·저널 어디에도 들어가지 않는다", () => {
-    const schema = fs.readFileSync(path.join(REPO, "lib/db/schema.ts"), "utf8");
+    const schema = readSourceText(path.join(REPO, "lib/db/schema.ts"));
     expect(schema).not.toMatch(/pgTable\(\s*["']summary_/);
 
     const metaDir = path.join(MIG_DIR, "meta");

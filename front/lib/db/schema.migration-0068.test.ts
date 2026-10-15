@@ -20,12 +20,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { readSourceText } from "@/test/source-text";
 
 const REPO = path.resolve(__dirname, "../..");
 const MIG_DIR = path.join(REPO, "lib/db/migrations");
 const FILE = path.join(MIG_DIR, "0068_summary_trend_s1_cover_idx.sql");
 
-const raw = fs.readFileSync(FILE, "utf8");
+const raw = readSourceText(FILE);
 /** `--` 줄 주석 제거 — out-of-band 안내문·롤백 절이 규율 검사에 걸리지 않게. */
 const sql = raw
   .split("\n")
@@ -169,7 +170,7 @@ describe("0068 — PR④ A2 커버링 인덱스", () => {
       fs.readFileSync(path.join(MIG_DIR, "meta/_journal.json"), "utf8"),
     ) as { entries: Array<{ tag: string }> };
     expect(journal.entries.some((e) => e.tag.startsWith("0068"))).toBe(false);
-    const schema = fs.readFileSync(path.join(REPO, "lib/db/schema.ts"), "utf8");
+    const schema = readSourceText(path.join(REPO, "lib/db/schema.ts"));
     expect(schema).not.toMatch(/summary_trend_brands_s1_cover/);
   });
 });

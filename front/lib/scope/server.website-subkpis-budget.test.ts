@@ -14,9 +14,9 @@
  * 생기거나 이월분이 늘면 깨진다.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { S4_BADGE_SUB_KPI_PARTS } from "./kpi-tab-budget";
+import { readSourceText } from "@/test/source-text";
 
 vi.mock("react", async () => {
   const { createRequire } = await import("node:module");
@@ -145,9 +145,8 @@ describe("A4 — 파트 축소는 S4 배지에서만", () => {
 
 // ── 회귀 가드 — 예산 없는 Sub-KPI 미러 호출부의 집합을 고정한다 ─────────────
 describe("A4 — 무예산 Sub-KPI 미러 호출부는 명시 이월분뿐이다", () => {
-  const server = readFileSync(
+  const server = readSourceText(
     fileURLToPath(new URL("./server.ts", import.meta.url)),
-    "utf8",
   );
 
   /**

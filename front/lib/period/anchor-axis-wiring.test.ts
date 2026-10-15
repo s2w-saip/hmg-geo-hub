@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { readSourceText } from "@/test/source-text";
 
 // ════════════════════════════════════════════════════════════════════════════
 // 통합 배선 가드 — 플래그 → 달력 / 플래그 → 비교 (앵커 축 전환, 2026-09-20)
@@ -20,7 +20,7 @@ import { fileURLToPath } from "node:url";
 //    런타임으로 import 하지 않는다 — 전부 소스 분석이다).
 
 const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
-const read = (rel: string) => readFileSync(`${REPO_ROOT}/${rel}`, "utf8");
+const read = (rel: string) => readSourceText(`${REPO_ROOT}/${rel}`);
 
 const SERVER_TS = "lib/scope/server.ts";
 const SERVER_SRC = read(SERVER_TS);
