@@ -11,7 +11,7 @@ import os
 import re
 import sys
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
 HERE = Path(__file__).resolve().parent
 REPO = next(p for p in HERE.parents if (p / 'back/app/core/measure.py').exists())
@@ -125,7 +125,7 @@ if d.get('paired_live'):
         '<p>Before는 사용자 제공 시스템 관리자, After는 프로젝트에 저장된 ADMIN으로 로그인했습니다. '
         '운영 데이터 차이는 허용된 비교 조건입니다. 아래 숫자와 행 수는 화면 동작의 참고 기록이며 그 차이로 합격 여부를 판정하지 않습니다. '
         '계산·필터·표시 규칙은 지정 폴더의 코드와 같은 작은 입력의 실행 결과로 검증합니다.</p>'
-        '<table><thead><tr><th>지표 · 미국</th><th>Before · hmg-geo.vercel.app</th><th>After · 127.0.0.1:3130</th></tr></thead>'
+        f'<table><thead><tr><th>지표 · 미국</th><th>Before · hmg-geo.vercel.app</th><th>After · {esc(urlsplit(pair["after"]["url"]).netloc)}</th></tr></thead>'
         f'<tbody>{"".join(pair_rows)}</tbody></table>'
         '<p>양쪽 모두 북아메리카 권역 행은 미국 행과 같은 값을 표시했습니다. '
         'AI 인용 점유율의 최대 경쟁사 표시는 양쪽 모두 “—”입니다.</p>'

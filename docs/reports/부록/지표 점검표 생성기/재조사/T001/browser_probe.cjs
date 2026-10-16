@@ -1,13 +1,14 @@
 // PC-only environment observation. This is not a Before/After parity test.
-// Uses only the existing local mock account for localhost; never submits it to Vercel.
+// After = synthetic demo stack on 127.0.0.1:3200 (current repo code, back/db/synth/synth-db.sh demo).
+// Uses only that stack's local mock account; never submits it to Vercel (Before opens the entry page only).
 const fs = require('node:fs');
 const path = require('node:path');
 const { createRequire } = require('node:module');
 const repo = path.resolve(__dirname, '../../../../../..');
 const requireFront = createRequire(path.join(repo, 'front/package.json'));
 const { chromium } = requireFront('playwright');
-const runtimeRoot = process.argv[2];
-if (!runtimeRoot) throw new Error('Supply the existing local preview root.');
+const demoAccounts = path.join(repo, 'back/db/synth/out/run/demo-accounts.json');
+if (!fs.existsSync(demoAccounts)) throw new Error('Start the synthetic demo first: bash back/db/synth/synth-db.sh demo');
 const out = path.join(__dirname, 'browser-observations');
 fs.mkdirSync(out, { recursive: true });
 
@@ -15,7 +16,7 @@ fs.mkdirSync(out, { recursive: true });
   const result = { observed_at: new Date().toISOString(), viewport: { width: 1920, height: 1080 }, parity_verified: false, environments: {} };
   const browser = await chromium.launch({ channel: 'msedge', headless: true });
   try {
-    for (const [side, url] of [['before', 'https://hmg-geo.vercel.app/'], ['after', 'http://127.0.0.1:3130/']]) {
+    for (const [side, url] of [['before', 'https://hmg-geo.vercel.app/'], ['after', 'http://127.0.0.1:3200/']]) {
       const context = await browser.newContext({ viewport: result.viewport, locale: 'ko-KR', timezoneId: 'Asia/Seoul' });
       const page = await context.newPage();
       const record = { requested_url: url, requests: [] };
@@ -33,9 +34,9 @@ fs.mkdirSync(out, { recursive: true });
       record.entry_snapshot = await page.locator('body').ariaSnapshot();
       await page.screenshot({ path: path.join(out, `${side}-entry.png`) });
       if (side === 'after') {
-        const credentials = JSON.parse(fs.readFileSync(path.join(runtimeRoot, '.local/perf-preview/front/e2e/accounts.json'), 'utf8'));
+        const credentials = JSON.parse(fs.readFileSync(demoAccounts, 'utf8'));
         const account = credentials.accounts.find(item => item.key === 'ADMIN');
-        if (new URL(page.url()).origin !== 'http://localhost:3130') throw new Error('Unexpected local login destination.');
+        if (!['http://127.0.0.1:3200', 'http://localhost:3200'].includes(new URL(page.url()).origin)) throw new Error('Unexpected local login destination.');
         await page.getByRole('textbox', { name: '이메일', exact: true }).fill(account.email);
         await page.getByRole('textbox', { name: '비밀번호', exact: true }).fill(credentials.password);
         await page.getByRole('button', { name: '로그인', exact: true }).click();
@@ -46,7 +47,7 @@ fs.mkdirSync(out, { recursive: true });
           await dialog.getByRole('button', { name: '닫기', exact: true }).click();
           record.dialog_closed = await dialog.waitFor({ state: 'hidden', timeout: 5000 }).then(() => true).catch(() => false);
         }
-        record.account_basis = 'Existing local mock ADMIN account; not matched to a Vercel account.';
+        record.account_basis = 'Synthetic demo mock ADMIN account (3200); not matched to a Vercel account.';
         record.dashboard_url = page.url();
         record.dashboard_snapshot = (await page.locator('body').ariaSnapshot()).replaceAll(account.email, '[local mock ADMIN]');
         record.geo_heading_visible = await page.getByText('국가별 GEO 현황', { exact: true }).isVisible();
