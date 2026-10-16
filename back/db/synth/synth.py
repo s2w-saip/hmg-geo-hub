@@ -34,6 +34,9 @@ KST = timezone(timedelta(hours=9))
 NS = uuid.UUID("5e7a0000-0000-4000-8000-00000000c0de")
 SYS_USER = "5eed0000-0000-4000-8000-000000000001"   # fixture-00 시스템 사용자(귀속 전용)
 ADMIN_USER = "11111111-0000-4000-8000-000000000001"  # 데모 admin(ACCOUNTS_SQL)
+# 데모 화면용 짧은 관리자 계정(합성 스택 전용). 로그인 입력칸이 type=email 이라 '@' 가 있어야 한다. 비밀번호는 synth-db.sh demo 의
+# mock auth 계정 파일(SYNTH_DEMO_PASSWORD, 기본 admin)이 정한다(DB 에는 비밀번호가 없다).
+DEMO_ADMIN = ("5e7a0000-0000-4000-8000-00000000ad01", "admin@admin")
 
 
 def uid(*parts) -> str:
@@ -864,6 +867,8 @@ class Gen:
         first = uid("project", "cust", 0)
         return ["-- 데모 계정(E2E 와 같은 합성 계정, 비밀번호는 mock auth 전용 상수). vendor·HQ 는 첫 합성 고객 프로젝트 멤버",
                 m.group(0),
+                "INSERT INTO app.user_account (user_id, email, display_name, role, operator, scope_all, status) VALUES "
+                f"('{DEMO_ADMIN[0]}', '{DEMO_ADMIN[1]}', 'admin', 'admin', 'global', true, 'active') ON CONFLICT (user_id) DO NOTHING;",
                 "INSERT INTO app.project_member (project_id, user_id, role, status, invited_by, accepted_at) VALUES "
                 f"('{first}', '11111111-0000-4000-8000-000000000004', 'viewer', 'active', '{ADMIN_USER}', now()), "
                 f"('{first}', '11111111-0000-4000-8000-000000000002', 'viewer', 'active', '{ADMIN_USER}', now());"]

@@ -12,7 +12,9 @@
 #   api-down             백엔드 정지
 #   demo                 호스트에 mock auth(front/e2e/mock-auth, 127.0.0.1:SYNTH_AUTH_PORT 기본 54599: Windows 예약 대역 54467-54566 밖)와
 #                        화면 next dev(127.0.0.1:SYNTH_FRONT_PORT 기본 3200, 외부 통신 차단 훅, 모든 화면 그룹 = 백엔드 경로)를 띄운다.
-#                        로그 = back/db/synth/out/run/. 로그인 t-admin@example.test / e2e-pass(mock auth 전용 상수)
+#                        로그 = back/db/synth/out/run/. 로그인 admin@admin / admin(SYNTH_DEMO_PASSWORD, 로컬 mock auth 전용).
+#                        mock auth 계정 파일은 out/run/demo-accounts.json 으로 새로 만든다(E2E 계정 + 데모 관리자, 비밀번호 공통).
+#                        mock auth 를 새로 띄우면 서명 키가 바뀌므로 백엔드 컨테이너를 재시작해 JWKS 캐시를 비운다
 #   demo-down            demo 가 띄운 두 프로세스(트리)만 정지(포트로 찾고 명령줄이 mock-auth·next dev -p 포트 일 때만)
 #   down                 DB 정지(볼륨 유지)
 #   purge                DB 정지 + 볼륨 삭제
@@ -113,9 +115,25 @@ case "${1:-}" in
     mkdir -p "$RUN"
     [ "$(http_code "http://127.0.0.1:${API_PORT}/healthz")" = 200 ] || { echo "백엔드 없음: 먼저 api"; exit 1; }
     if [ "$(http_code "http://127.0.0.1:${AUTH_PORT}/__e2e/health")" != 200 ]; then
+      # 데모 계정 파일 = E2E 계정 + 데모 관리자(synth.py DEMO_ADMIN). E2E 파일(front/e2e/accounts.json)은 고치지 않는다
+      python - "$(hostpath "$FRONT/e2e/accounts.json")" "$(hostpath "$RUN/demo-accounts.json")" "${SYNTH_DEMO_PASSWORD:-admin}" <<'PY'
+import json, sys
+src, out, password = sys.argv[1:4]
+with open(src, encoding="utf-8") as f:
+    doc = json.load(f)
+doc["$comment"] = "합성 데모 전용(back/db/synth/synth-db.sh demo 가 생성). E2E 계정 + 데모 관리자. 비밀번호는 로컬 mock auth 전용"
+doc["password"] = password
+doc["accounts"].append({"key": "DEMO_ADMIN", "id": "5e7a0000-0000-4000-8000-00000000ad01", "email": "admin@admin",
+                        "role": "admin", "menuGroups": None, "status": "active"})
+with open(out, "w", encoding="utf-8") as f:
+    json.dump(doc, f, ensure_ascii=False, indent=1)
+PY
       (cd "$FRONT" && E2E_ALLOW_MOCK_AUTH=1 E2E_AUTH_HOST=127.0.0.1 E2E_AUTH_PORT="$AUTH_PORT" \
+         E2E_ACCOUNTS="$(hostpath "$RUN/demo-accounts.json")" \
          nohup node e2e/mock-auth/server.mjs >"$RUN/auth.log" 2>&1 </dev/null &)
       wait_http auth "http://127.0.0.1:${AUTH_PORT}/__e2e/health" 20
+      # mock auth 는 띄울 때마다 서명 키를 새로 만든다 → 백엔드를 재시작해 미리 받아 둔 JWKS 를 비운다
+      docker restart "$API" >/dev/null && wait_http api "http://127.0.0.1:${API_PORT}/healthz" 90
     fi
     if [ "$(http_code "http://127.0.0.1:${FRONT_PORT}/ko/login")" != 200 ]; then
       (cd "$FRONT" && env -u DATABASE_URL -u SCOPE_API_BASE -u SCOPE_API_KEY -u SCOPE_MODE \
@@ -127,7 +145,7 @@ case "${1:-}" in
       wait_http front "http://127.0.0.1:${FRONT_PORT}/ko/login" 300
     fi
     api_db="$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$API" 2>/dev/null | sed -n 's#^HGH_DB_URL=.*/##p')"
-    echo "DEMO http://127.0.0.1:${FRONT_PORT}/ko/login  (t-admin@example.test / e2e-pass, 백엔드 DB = ${api_db:-?})" ;;
+    echo "DEMO http://127.0.0.1:${FRONT_PORT}/ko/login  (admin@admin / ${SYNTH_DEMO_PASSWORD:-admin}, 백엔드 DB = ${api_db:-?})" ;;
   demo-down)
     stop_port "$FRONT_PORT" "next dev -p $FRONT_PORT"; stop_port "$AUTH_PORT" "mock-auth/server.mjs" ;;
   down)

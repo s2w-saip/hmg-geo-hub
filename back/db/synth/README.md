@@ -69,7 +69,9 @@ bash $B/synth-db.sh demo                       # mock 인증 127.0.0.1:54599 + �
 bash $B/synth-db.sh demo-down; bash $B/synth-db.sh api-down; bash $B/synth-db.sh down
 ```
 
-- 로그인: `http://127.0.0.1:3200/ko/login`, `t-admin@example.test` / `e2e-pass`(mock 인증 전용 상수). 다른 역할은 `front/e2e/accounts.json`.
+- 로그인: `http://127.0.0.1:3200/ko/login`, `admin@admin` / `admin`(관리자). 로그인 입력칸이 이메일 형식이라 ID 에 `@` 가 들어간다.
+  비밀번호는 로컬 mock 인증 전용이며 `SYNTH_DEMO_PASSWORD` 로 바꾼다. 다른 역할은 `front/e2e/accounts.json` 의 계정을 같은 비밀번호로 쓴다
+  (`demo` 가 E2E 계정 + 데모 관리자로 `out/run/demo-accounts.json` 을 만든다. E2E 계정 파일은 그대로).
 - 화면은 모든 화면 그룹을 백엔드 경로로 띄운다(`HGH_SOURCE_SESSION`·`G1`~`G7`=api). 옛 경로 변수(`DATABASE_URL`·`SCOPE_*`)는 비운다.
 - 포트: Windows Hyper-V 예약 대역(`netsh interface ipv4 show excludedportrange protocol=tcp`)을 피한다. 54467–54566 이 예약이라 mock 인증은 54599.
 - 같은 `--scale`·`--seed`·`--asof`(기본 2026-10-14T12:00Z)면 같은 데이터. `--asof` 뒤 측정은 진행 중으로 남는다.
