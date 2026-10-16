@@ -963,6 +963,54 @@ def test_switch_web_accuracy_flat():
         M.accuracy_counts_sql(frz, WEB, mode="x")  # type: ignore[arg-type]
 
 
+# ── 리팩터 #13(DC-23): 프로젝트 ⑥ 현행 미러 정의. DB 대조는 tests/core/test_project_accuracy.py ──
+def test_switch_project_accuracy_single_base(settings):
+    """현행 프로젝트 ⑥(scope-aggregates.ts:8392-8559, projects/[id]/_data/live.ts:225-268): 유효 owned base 하나의 normalizeUrlForMatch 접두 P 로
+    자사(정규형 = P ∨ LIKE P || '/%'), 분모 = 자사 답변, 분자 = 자사 ∧ 추적 URL 답변. 판정 입력이 없으면 값 없음. 모수는 허브 ⑥ 과 같다."""
+    on = P.LegacyProfile(project_accuracy_single_base=True)
+    sp = P.SWITCHES["project_accuracy_single_base"]
+    assert sp.kind == "read" and "project_accuracy_single_base" in P.IMPLEMENTED and "project_accuracy_single_base" not in P.REQUIRES
+    assert M.project_accuracy(_ms(3, on)) and not M.project_accuracy(_ms(2, on)) and not M.project_accuracy(_ms(1, on))
+    assert not M.project_accuracy(_ms(3))
+    base, B = M.project_accuracy_base, M.ProjectAccuracyBase
+    # 유효 base: 설정 1개 = 그것(domain 무시), 설정 0개 = domain, 설정 2개 이상·둘 다 없음 = 값 없음. 추적 URL 0개 = 값 없음
+    assert base("kia.com/it", ["https://www.Kia.com/de/"], ["https://kia.com/de/ev9?utm_source=x#top"]) == B("kia.com/de", ("kia.com/de/ev9",))
+    assert base("https://www.kia.com/it/", [], ["https://kia.com/it/a"]) == B("kia.com/it", ("kia.com/it/a",))
+    assert base("a.com", ["https://a.com/", "https://b.com/"], ["https://a.com/x"]) is None
+    assert base(None, [], ["https://a.com/x"]) is None and base("a.com", [], []) is None
+    # 추적 URL: 원문을 정규화(중복 제거·정렬·빈 값 제외). 정규화 뒤 모두 비어도 값은 있다(분자 0 = 현행 targetClause false)
+    assert base("a.com", [], ["https://www.a.com/x/", "http://a.com/x", "https://a.com/b?v=1&utm_medium=y"]).targets == ("a.com/b?v=1", "a.com/x")
+    assert base("a.com", [], ["   "]) == B("a.com", ())
+    assert base("https://", [], ["https://a.com/x"]) is None                       # 빈 접두(허브 쓰기 불변식상 없음) = 값 없음
+    prj = build_window(surface="project", mode="snapshot", rows=ROWS[:1], lo=date(2026, 9, 28), hi=date(2026, 9, 28), generation=1,
+                       project_keys=(1,))
+    ms = dataclasses.replace(_ms(3, on), bgrps=None)
+    q = M.project_accuracy_counts_sql(ms, prj, B("kia.com/de", ("kia.com/de/ev9",)))
+    t = q.text
+    assert "FROM rd.citation c JOIN rd.dim_url u ON u.url_key = c.url_key" in t and "GROUP BY c.answer_key" in t
+    assert "bool_or(u.url_norm = CAST(:y0 AS text) OR u.url_norm LIKE CAST(:y0 AS text) || '/%') AS owned" in t   # 현행 LIKE 그대로
+    assert "bool_or(u.url_norm = ANY(CAST(:y1 AS text[]))) AS target" in t and q.params["y0"] == "kia.com/de" and q.params["y1"] == ["kia.com/de/ev9"]
+    assert "count(*) FILTER (WHERE h.owned) AS own_url_hits" in t and "count(*) FILTER (WHERE h.owned AND h.target) AS tgt_own_hits" in t
+    assert "FROM rd.answer a JOIN hit h ON h.answer_key = a.answer_key" in t and "a.cit_in" in t and "a.dflt" in t   # 모수 = 허브 ⑥ 과 같은 술어
+    assert not any(x in t for x in ("own_url_cited", "tgt_cited", "loc_owned", "tgt_hit", "source_key"))         # 적재 판정·호스트 게이트 없음
+    assert "GROUP BY" not in t.split("\nSELECT ")[-1]
+    g = M.project_accuracy_counts_sql(ms, prj, B("kia.com/de", ()), group_by=("round_date", "engine")).text
+    assert "GROUP BY 1, 2" in g
+    from app.core.sqlguard import fact_guard
+    assert fact_guard(t) == [] and fact_guard(g) == []
+    # 결과 캐시 끝점 추가 키: 꺼짐·다른 표면·uuid 아닌 project_id 는 문장 없이 None
+    from starlette.datastructures import QueryParams
+    try:
+        set_settings(settings.model_copy(update={"legacy_profile": "off"}))
+        pid = "c0000000-0000-4000-8000-000000000003"
+        assert asyncio.run(M.project_accuracy_cache_key(None, QueryParams({"surface": "project", "project_id": pid}))) is None
+        set_settings(settings.model_copy(update={"legacy_profile": "project_accuracy_single_base"}))
+        assert asyncio.run(M.project_accuracy_cache_key(None, QueryParams({"surface": "website", "project_id": "x"}))) is None
+        assert asyncio.run(M.project_accuracy_cache_key(None, QueryParams({"surface": "project", "project_id": "x"}))) is None
+    finally:
+        set_settings(settings)
+
+
 # ════════════════════════════════════════════════════════════════════════════
 # 동결 층 S3(freeze_at_publish): 카드 요청 ∧ global·website 만 카드 뷰, 글로벌 격자 = 격자 뷰, 카탈로그 = 동결 비트(사실 행 bgrp). DB 값 시험은
 # tests/core/test_frz_read.py

@@ -594,9 +594,10 @@ describe("project dashboard: getProjectDashboard legacy vs HGH_SOURCE_G6=api", (
         ratio("sentiment", (r) => ({ num: r.sentP, den: r.sentT })),
         { metric: "position", kind: "rank", points: pts((r) => ({ rank: { sum: r.rank[0], count: r.rank[1] } })) },
         ratio("citation_share", (r) => ({ num: r.cit[0], den: r.cit[1] })),
-        // M07 numerator = answers citing an owned URL, M06 numerator = of those citing a target URL
         ratio("owned_url_rate", (r) => ({ num: r.acc[1], den: r.answers })),
         ratio("target_url_rate", (r) => ({ num: r.acc[0], den: r.answers })),
+        // ⑥ = target ∧ owned / owned answers (legacy aggregateCitationAccuracyTrend), the requested series (#13)
+        ratio("citation_accuracy", (r) => ({ num: r.acc[0], den: r.acc[1] })),
       ],
     };
   };
@@ -737,6 +738,10 @@ describe("project dashboard: getProjectDashboard legacy vs HGH_SOURCE_G6=api", (
     expect(hitUrls.filter((u) => u.pathname === "/v1/citations/domains").every((u) => u.searchParams.get("include_den") === "false")).toBe(true);
     expect(hitUrls.find((u) => u.pathname === `/v1/projects/${PID}/prompt-candidates`)?.searchParams.get("include_total")).toBe("false");
     expect(hitUrls.find((u) => u.pathname === "/v1/kpi/summary")?.searchParams.getAll("parts")).toEqual(["urls"]);
+    // #13: both trend calls (chart and Δ) request the ⑥ series; ⑥ is never derived from the M06/M07 numerators
+    const trendCalls = hitUrls.filter((u) => u.pathname === "/v1/trend");
+    expect(trendCalls.length).toBe(2);
+    expect(trendCalls.every((u) => u.searchParams.getAll("metrics").includes("citation_accuracy"))).toBe(true);
     expectOnlyKnown(legacy!.kpis, api!.kpis, []);
     expect(api!.kpis.map((k) => k.key)).toEqual(["visibility", "shareOfVoice", "sentiment", "position", "citationShare", "citationAccuracy"]);
     expectOnlyKnown(

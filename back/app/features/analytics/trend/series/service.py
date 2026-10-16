@@ -28,6 +28,7 @@
   fetchWebsiteCitationAccuracyTrend, 세부층 summary-website-aggregates.ts:1570-1650 = 회차별 타겟∧자사 답변 ÷ 자사 URL 인용 답변, 항상 라이브)을
   같은 빌더의 버킷 값으로 낸다: (tgt_own_hits, own_url_hits)(core.measure.ratios, K-1 카드 citation_accuracy 와 같은 쌍). R09 발행값·origin 을
   쓰지 않는다(현행 ⑥ 은 발행물을 읽지 않는다). 기본 지표 목록에는 넣지 않는다(기존 요청의 응답 불변).
+  현행 프로필 project_accuracy_single_base(DC-23)면 project ⑥ 점만 현행 미러 정의(core.measure.project_accuracy_counts, 같은 창·버킷 키)로 바꾼다.
 - 차원: engine = 지표 × 엔진(시리즈 키 = 엔진 코드, Q9), brand = 당사 + 경쟁 상위 top(core.measure.brand_rows, M-1 경쟁 규칙),
   source·category = 인용 출처·카테고리 구성비(queries.mix_counts_sql: core.measure.citation_where 술어의 rd.citation 스캔, 1년 조합 고위험).
 
@@ -81,6 +82,8 @@ from app.core.measure import (
     frozen_brand_names,
     lc_key,
     legacy_accuracy,
+    project_accuracy,
+    project_accuracy_counts,
     rank_brand_items,
     ratios,
     renamed_brand_keys,
@@ -387,6 +390,10 @@ async def _series_plain(conn: Any, ctx: ReadContext, win: Window, slots: list[Sl
     acc_idx: dict[tuple[Any, ...], dict[str, Any]] | None = None
     if acc and legacy_accuracy(ms):
         acc_rows = await accuracy_counts(conn, ms, win, mode=accuracy_mode(ctx.card, False), group_by=group_by)
+        acc_idx = _rows_by(acc_rows, BUCKET_GROUP[bucket], *(("engine_key",) if dimension == "engine" else ()))
+    elif acc and project_accuracy(ms):
+        # 현행 프로젝트 ⑥(project_accuracy_single_base, DC-23): 같은 창·버킷 키, 판정만 유효 owned base 하나의 접두(미러 aggregateCitationAccuracyTrend)
+        acc_rows = await project_accuracy_counts(conn, ms, win, group_by=group_by)
         acc_idx = _rows_by(acc_rows, BUCKET_GROUP[bucket], *(("engine_key",) if dimension == "engine" else ()))
     rates: dict[Any, dict[str, Any]] = {}
     if use_r09:

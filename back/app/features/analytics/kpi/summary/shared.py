@@ -12,12 +12,20 @@ from typing import Any
 from fastapi import Request
 
 from app.core.auth import Principal
+from app.core.db import RoConn
 from app.core.filters import KPI_SUPPORT, CommonFilters, ReadContext, parse_custom_fields, resolve_read_context
+from app.core.measure import project_accuracy_cache_key
 
 
 def kpi_today() -> date | None:
     """회차 노출 기준일 의존성(None = DB rd.today_kst()). 테스트 전용 교체 지점."""
     return None
+
+
+async def project_accuracy_key(request: Request, conn: RoConn) -> str | None:
+    """결과 캐시 끝점 추가 키(K-1 router key_deps): 현행 프로필 project_accuracy_single_base ∧ project 표면이면 프로젝트 ⑥ 판정 입력 지문
+    (core.measure.project_accuracy_cache_key: owned base·domain·추적 URL 은 추적 표가 아니다). 그 밖 None(문장 없음)."""
+    return await project_accuracy_cache_key(conn, request.query_params)
 
 
 async def kpi_context(conn: Any, p: Principal, filters: CommonFilters, request: Request) -> ReadContext:

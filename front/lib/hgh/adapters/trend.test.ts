@@ -306,6 +306,7 @@ function apiWebsite(): S["TrendData"] {
       s("citation_share", [r(9, 60), r(8, 64)]),
       s("target_url_rate", [r(6, 80), r(7, 90)], ["report", "live"]),
       s("owned_url_rate", [r(12, 80), r(13, 90)], ["report", "live"]),
+      s("citation_accuracy", [r(6, 12), r(7, 13)]),
     ],
   };
 }
@@ -351,7 +352,7 @@ describe("legacy/api parity: website trend (getLiveWebsiteTrend)", () => {
     ]);
   });
 
-  it("WU-9: the citation_accuracy series (live answers) wins over M06/M07 numerators on a published round", async () => {
+  it("WU-9·#13: ⑥ comes only from the citation_accuracy series (live answers), never from the M06/M07 numerators", async () => {
     // Round 0 is published: M06/M07 carry report prompt counts (10/15, 12/15), whose numerators
     // would give 10/12 = 83.3. The legacy ⑥ line never reads the report: live 6/12 = 50.
     const data = apiWebsite();
@@ -361,15 +362,6 @@ describe("legacy/api parity: website trend (getLiveWebsiteTrend)", () => {
         : x.metric === "owned_url_rate" ? { ...x, points: [{ ...x.points[0], ratio: r(12, 15) }, x.points[1]] }
           : x,
     );
-    const without = T.toLiveTrend(data, { unit: "week" });
-    expect(without.points[0].values.citationAccuracy).toBe(83.3); // the numerator rule mixes units here
-    data.series.push({
-      metric: "citation_accuracy",
-      code: "ACC",
-      kind: "ratio",
-      key: null,
-      points: [{ bucket: W[0], ratio: r(6, 12) }, { bucket: W[1], ratio: r(7, 13) }],
-    });
     const l = legacyWebsite();
     reader.website = l.buckets;
     reader.accuracy = l.accuracy;
@@ -377,13 +369,17 @@ describe("legacy/api parity: website trend (getLiveWebsiteTrend)", () => {
     const api = T.toLiveTrend(data, { unit: "week" });
     expect(api.points.map((p) => p.values.citationAccuracy)).toEqual([50, 53.8]);
     expect(legacy?.points.map((p) => p.values.citationAccuracy)).toEqual([50, 53.8]);
+    // without the series there is no ⑥ value: the former project rule (M06.num / M07.num) is gone (#13)
+    const without = T.toLiveTrend({ ...data, series: data.series.filter((x) => x.metric !== "citation_accuracy") }, { unit: "week" });
+    expect(without.points.map((p) => p.values.citationAccuracy)).toEqual([undefined, undefined]);
     // a slot without an accuracy point (den 0 = no owned-URL answer) draws no ⑥ value, the legacy null rate
-    data.series[data.series.length - 1].points[1] = { bucket: W[1], ratio: null };
+    data.series = data.series.map((x) => (x.metric === "citation_accuracy" ? { ...x, points: [x.points[0], { bucket: W[1], ratio: null }] } : x));
     expect(T.toLiveTrend(data, { unit: "week" }).points[1].values.citationAccuracy).toBeUndefined();
   });
 
-  it("WU-9: the website trend requests the accuracy series, the project keeps M01..M07", () => {
+  it("WU-9·#13: the website and project trends request the accuracy series", () => {
     expect(T.WEBSITE_TREND_METRICS).toEqual([...T.URL_TREND_METRICS, "citation_accuracy"]);
+    expect(T.PROJECT_TREND_METRICS).toEqual([...T.URL_TREND_METRICS, "citation_accuracy"]);
     expect(T.URL_TREND_METRICS).not.toContain("citation_accuracy");
   });
 });

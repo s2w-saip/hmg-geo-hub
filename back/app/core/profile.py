@@ -223,6 +223,13 @@ SWITCHES: dict[str, SwitchSpec] = {
         " 2026-10-02 stg frz 이관 드라이런 924 회차 중 글로벌 3 회차 실패(Smart: bare-only 비경쟁 Brand + 경쟁 Product Smart Fortwo)",
         slot="ingest.frz.fold(공존 답변 접기, 적재기 stage 재사용) ← ingest.frz.freeze(S2 발행·재생성)·ingest.frz.ops_import(S1 이관, 단언 all_mentions 보정·comp_mentions)",
         db="frz.kept src 'fold'·frz.keep_fold(int4, jsonb)(DB-v2.27 P141~P143), 선택 입력 mig_src.frz_ops_sum_comp(운영 comp_mentions)"),
+    "project_accuracy_single_base": SwitchSpec(
+        "DC-23", "리팩터 #13", "read",
+        "프로젝트 ⑥ 인용 정확도(카드·추이) = 현행 미러 정의(scope-aggregates.ts:8392-8559, projects/[id]/_data/live.ts:225-268): 유효 owned base"
+        " 하나(설정 base 1개면 그것, 0개면 project.domain, 2개 이상이면 값 없음)의 normalizeUrlForMatch 접두 P 로 분모 = 인용 정규형이 P 이거나"
+        " LIKE P || '/%' 인 답변, 분자 = 그중 인용 정규형이 추적 URL 정규형에 든 답변(추적 URL 0개면 값 없음). 판정 입력은 조회 시점 app 표."
+        " 허브 기본(웹사이트 규칙: 분모 = 적재 loc_owned ∨ tgt_hit, 분자 = tgt_cited)과 자사 범위·분모의 타겟 항이 다르다",
+        slot="analytics/kpi/summary·trend/series(project ⑥ 문장 project_accuracy_counts_sql, 캐시 끝점 추가 키 project_accuracy_cache_key)"),
 }
 
 # 구현이 끝난 스위치(WU 가 채운 뒤 여기에 넣는다). 여기 없는 스위치를 켜면 설정 적재가 실패한다.
@@ -243,6 +250,7 @@ IMPLEMENTED: frozenset[str] = frozenset({
     "web_accuracy_flat",                            # WU-12(CACC6: 웹 ⑥ 인용 정확도 분자·기간 카드 모수, 2026-10-01)
     "freeze_at_publish",                            # S3(동결 층 카드 읽기 치환, DB-v2.21~v2.23, 2026-10-01)
     "brand_card_fold",                              # be/int3-smartfold(동결 층 answer_brand = 운영 summary 접기, DB-v2.27, 2026-10-02)
+    "project_accuracy_single_base",                 # 리팩터 #13(DC-23: 프로젝트 ⑥ 현행 미러 정의, 2026-10-16)
 })
 
 # 함께 켜야 하는 스위치(키가 켜지면 값의 스위치도 켜져 있어야 한다). 해석 규칙(parse_profile)과 LegacyProfile 생성 둘 다 검사한다.
@@ -295,6 +303,7 @@ class LegacyProfile:
     resub_phantom_exclude: bool = False
     domains_card_by_host: bool = False
     brand_card_fold: bool = False
+    project_accuracy_single_base: bool = False
 
     def __post_init__(self) -> None:
         for name, needs in REQUIRES.items():

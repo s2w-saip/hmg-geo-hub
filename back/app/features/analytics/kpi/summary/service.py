@@ -16,6 +16,8 @@ meta.source = 명명 스키마 SummarySource(fe-u4 요청 1: url_rates report|li
   발행값이면 round_date·site_count·publication_details·헤드라인 라벨 cycle_label·cycle_label_en, 아니면 null. 순서 = order_publications). 인용 정확도 = 타겟 ∧ 자사 / 자사(라이브).
   발행값(report)이면 BG-26 표식을 더한다(추가형): round_date(발행 회차), site_count(합산에 실제로 들어간 발행 유닛 수 = 헤드라인 풀
   규칙 뒤, 현행 publishedSubtotal.siteCount), publication_details[{slug, cycle_label, cycle_label_en, round_date}].
+  현행 프로필 project_accuracy_single_base(DC-23)면 project ⑥ 만 현행 미러 정의(core.measure.project_accuracy_counts: 유효 owned base 하나의
+  접두로 자사 판정, 분모 = 자사, 분자 = 자사 ∧ 추적 URL)로 바꾼다. 모수·M06·M07 은 그대로.
 prompts_without_brand(BG-06): 세 표면 모두 measured_prompts − 관점 브랜드 언급 프롬프트 수(숨김 hidden, 빈 창·측정 프롬프트 0 은 null no_data).
 measured_by_funnel(BG-08, by_funnel=true 일 때만): 측정 프롬프트를 퍼널 코드로 나눈 수(합 = measured_prompts).
 미측정 목록(BG-04, GET /v1/kpi/unmeasured-prompts): 카드와 같은 창·필터·술어(적용 집합 − 측정 집합), 상한 200, total = 절단 전 수.
@@ -53,6 +55,8 @@ from app.core.measure import (
     accuracy_mode,
     fetch_counts,
     legacy_accuracy,
+    project_accuracy,
+    project_accuracy_counts,
     prompt_counts,
     ratios,
     report_values_sql,
@@ -224,6 +228,10 @@ async def get_summary(conn: Any, ctx: ReadContext, *, cycle_offset: int, today: 
                 acc_pair = await _accuracy_current(conn, ctx, ms, win, offset=cycle_offset if ctx.date_from is None else 0, today=today)
                 sup.pop("citation_accuracy", None)
                 acc = _gate(sup, "citation_accuracy", ratio_or_none(*acc_pair), hidden=False)
+            elif project_accuracy(ms):      # 현행 프로젝트 ⑥(project_accuracy_single_base, DC-23): 같은 모수, 유효 owned base 하나의 접두 판정
+                r6 = (await project_accuracy_counts(conn, ms, win))[0]
+                sup.pop("citation_accuracy", None)
+                acc = _gate(sup, "citation_accuracy", ratio_or_none(int(r6["tgt_own_hits"] or 0), int(r6["own_url_hits"] or 0)), hidden=False)
             if ctx.surface == "website":
                 mp, tp, op = u["prompts"]
                 url_prompts = UrlPromptCounts(measured_prompts=mp, target_prompts=tp, owned_prompts=op) if mp > 0 else None

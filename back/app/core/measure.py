@@ -1358,6 +1358,127 @@ async def accuracy_counts(conn: Any, ms: MeasureScope, win: Window, *, mode: Acc
     return await fetch_all(conn, q.text, q.params)
 
 
+# ── 프로젝트 ⑥ 인용 정확도 현행 정의(project_accuracy_single_base, DC-23·차이 #13) ─────────────────────────────────────
+# 현행(hmg-geo 2670a16) 프로젝트 ⑥ 카드·추이 = 미러 aggregateCitationAccuracy·aggregateCitationAccuracyTrend(scope-aggregates.ts:8392-8559):
+#   분모 = 인용 중 하나라도 정규형(cnorm = 추적 정규화)이 자사 접두 P 와 같거나 P || '/%' 에 LIKE 인 답변, 분자 = 그중 인용 중 하나라도 정규형이
+#   추적 URL 정규형 집합에 든 답변, rate = round1(100 × 분자 ÷ 분모)(분모 0 = 값 없음). P = normalizeUrlForMatch(유효 owned base 하나)
+#   (projects/[id]/_data/live.ts:225-268: 설정 base 가 있으면 그것들, 없으면 project.domain. 정확히 하나일 때만 조회).
+# 허브 기본(urls part)은 웹사이트 규칙이다: 분모 = own_url_cited(적재 loc_owned ∨ tgt_hit, loc_owned = 설정 base ∪ 브랜드·국가 owned base·형제 제외·
+#   홈 호스트), 분자 = tgt_cited. 자사 판정 범위와 분모의 타겟 항이 현행과 다르다. 판정 입력(base·domain·추적 URL)은 조회 시점에 app 표에서 읽는다
+#   (현행도 조회 시점 판정: 편집 직후 다음 호출에 반영). 결과 캐시는 끝점 추가 키(project_accuracy_cache_key)로 그 표 지문을 싣는다.
+@dataclass(frozen=True)
+class ProjectAccuracyBase:
+    """현행 프로젝트 ⑥ 판정 입력(project_accuracy_base 결과): prefix = 자사 접두, targets = 추적 URL 정규형(빈 값 제외·중복 제거·정렬)."""
+    prefix: str
+    targets: tuple[str, ...]
+
+
+def project_accuracy(ms: MeasureScope) -> bool:
+    """project_accuracy_single_base(DC-23·#13)가 이 스코프에 걸리나: project 표면만."""
+    return ms.profile.project_accuracy_single_base and ms.sf == 3
+
+
+def project_accuracy_base(domain: str | None, bases: Sequence[str], urls: Sequence[str]) -> ProjectAccuracyBase | None:
+    """현행 프로젝트 ⑥ 입력 판정(순수 함수). None = 값 없음(현행은 ⑥ 을 조회하지 않는다):
+    - 추적 URL 0개(scope-aggregates.ts:8400·8471, 정규화 전 행 수로 판정)
+    - 유효 owned base 가 하나가 아님(설정 base 2개 이상, 또는 설정 0개 ∧ domain 없음: live.ts:225-231·244-268)
+    자사 접두 = 유효 base 하나(설정 base_url 또는 project.domain)의 normalizeUrlForMatch. 추적 URL 정규형은 원문 url 을 그 자리에서 정규화한다
+    (현행 :8424-8426: 저장된 url_norm 이 아니라 url 을 매번 정규화, 빈 값 제외). 빈 접두(현행은 글로벌 OWNED 호스트 패턴으로 대체)는 허브 쓰기
+    불변식상 생기지 않는다(base_url = canonical_http_url, domain = 비지 않은 base_norm 또는 NULL: projects.project.core seed_domain·
+    resync_project_domain): 값 없음으로 닫는다."""
+    from app.core.urls import normalize_url_for_match
+
+    if not urls:
+        return None
+    eff = list(bases) if bases else ([domain] if domain else [])
+    if len(eff) != 1:
+        return None
+    prefix = normalize_url_for_match(eff[0])
+    if not prefix:
+        return None
+    return ProjectAccuracyBase(prefix, tuple(sorted({n for n in (normalize_url_for_match(u) for u in urls) if n})))
+
+
+# 프로젝트 ⑥ 판정 입력(rd.dim_project → app.project 1행). 순서는 판정에 영향이 없다(정렬은 재현성 표시)
+PROJECT_ACCURACY_INPUTS_SQL = """
+SELECT p.domain,
+       ARRAY(SELECT b.base_url FROM app.project_owned_base b WHERE b.project_id = p.project_id ORDER BY b.base_url) AS bases,
+       ARRAY(SELECT t.url FROM app.project_tracked_url t WHERE t.project_id = p.project_id ORDER BY t.url) AS urls
+  FROM rd.dim_project dp JOIN app.project p ON p.project_id = dp.project_id
+ WHERE dp.surface = 3 AND dp.project_key = ANY(CAST(:pk AS int2[]))
+"""
+
+# 결과 캐시 끝점 추가 키(project_accuracy_cache_key): 두 app 표(owned base·추적 URL)는 추적 표(DB-v2.11 P67)가 아니다. 쓰기는 같은 트랜잭션에서
+# judgment_change 를 남겨 데이터 버전이 바뀌지만, 판정 입력을 읽는 이 경로는 그 규약에 기대지 않고 요청마다 같은 스냅샷에서 지문을 다시 읽는다
+PROJECT_ACCURACY_VERSION_SQL = """
+SELECT md5(coalesce(string_agg(x, '|' ORDER BY x), '')) AS v
+  FROM (SELECT concat_ws(',', 'd', p.domain) FROM app.project p WHERE p.project_id = CAST(:pid AS uuid)
+        UNION ALL
+        SELECT concat_ws(',', 'b', b.base_url) FROM app.project_owned_base b WHERE b.project_id = CAST(:pid AS uuid)
+        UNION ALL
+        SELECT concat_ws(',', 't', t.url) FROM app.project_tracked_url t WHERE t.project_id = CAST(:pid AS uuid)) t(x)
+"""
+
+
+def project_accuracy_counts_sql(ms: MeasureScope, win: Window, base: ProjectAccuracyBase, *, group_by: Sequence[str] = ()) -> Sql:
+    """현행 프로젝트 ⑥ 의 (own_url_hits, tgt_own_hits) = (분모, 분자). 열 이름은 urls part 와 같아 호출자가 같은 자리에 끼운다.
+    모수 = 허브 ⑥(urls part)과 같은 답변(창 인용 계열 ∧ 스코프 ∧ citation_population): 바뀌는 것은 판정뿐이다(scope-aggregates.ts:8434-8450·
+    8510-8536). 자사 = 그 답변 인용 중 하나라도 정규형(rd.dim_url.url_norm = 미러 cnorm, 같은 정규화 citation_url_norm)이 P 이거나
+    LIKE P || '/%'(현행 LIKE 그대로: 접두의 % _ 도 패턴이다), 타겟 = 인용 중 하나라도 정규형 ∈ 추적 URL 정규형(비면 거짓).
+    인용은 호스트 유무·인용 행 게이트와 무관하게 그 답변의 전부를 본다(현행 EXISTS … WHERE c.job_id = a.job_id)."""
+    a, c = "a", "c"
+    b = Binder("y")
+    gsel, _ = _group_select(group_by, None, a, b)
+    ft = fact_tables(ms)
+    p = b.v(base.prefix, "text")
+    tg = b.v(list(base.targets), "text[]")
+    cw = win.where(c, "citations", b) + [f"{c}.project_key = ANY({b.ints(ms.project_keys)})"]
+    hit = (f"SELECT {c}.answer_key, bool_or(u.url_norm = {p} OR u.url_norm LIKE {p} || '/%') AS owned,"
+           f" bool_or(u.url_norm = ANY({tg})) AS target\n"
+           f"  FROM {ft.citation} {c} JOIN rd.dim_url u ON u.url_key = {c}.url_key\n WHERE {' AND '.join(cw)}\n GROUP BY {c}.answer_key")
+    pop = win.where(a, "citations", b) + scope_where(ms, a, b) + [citation_population(ms, a)]
+    cols = ["count(*) FILTER (WHERE h.owned) AS own_url_hits", "count(*) FILTER (WHERE h.owned AND h.target) AS tgt_own_hits"]
+    t = (f"WITH hit AS MATERIALIZED ({hit})\n"
+         f"SELECT {', '.join(gsel + cols)}\n  FROM {ft.answer} {a} JOIN hit h ON h.answer_key = {a}.answer_key\n WHERE {' AND '.join(pop)}")
+    if gsel:
+        t += "\n GROUP BY " + ", ".join(str(i + 1) for i in range(len(gsel)))
+    return b.sql(t)
+
+
+async def project_accuracy_counts(conn: Any, ms: MeasureScope, win: Window, *, group_by: Sequence[str] = ()) -> list[dict[str, Any]]:
+    """현행 프로젝트 ⑥ 쌍. 판정 입력이 없으면(project_accuracy_base None) 또는 빈 창이면 사실 표 문장 없이 [](그룹 없음이면 0 행 1개) = 값 없음."""
+    from app.core.db import fetch_all
+
+    zero: list[dict[str, Any]] = [] if group_by else [{"own_url_hits": 0, "tgt_own_hits": 0}]
+    if win.empty:
+        return zero
+    rows = await fetch_all(conn, PROJECT_ACCURACY_INPUTS_SQL, {"pk": sorted({int(k) for k in ms.project_keys})})
+    if len(rows) > 1:
+        raise ValueError("프로젝트 ⑥ 현행 정의는 프로젝트 하나의 스코프에서만: project 표면 스코프가 아니다")
+    base = project_accuracy_base(rows[0]["domain"], list(rows[0]["bases"]), list(rows[0]["urls"])) if rows else None
+    if base is None:
+        return zero
+    q = project_accuracy_counts_sql(ms, win, base, group_by=group_by)
+    return await fetch_all(conn, q.text, q.params)
+
+
+async def project_accuracy_cache_key(conn: Any, query: Any) -> str | None:
+    """결과 캐시 끝점 추가 키 본체(K-1 요약·T-1 추이 라우터의 key_deps 가 부른다). 켜짐(project_accuracy_single_base) ∧ surface=project ∧
+    project_id 가 uuid 일 때만 판정 입력 지문(PROJECT_ACCURACY_VERSION_SQL). 그 밖 = None(문장 없음). query = 요청 query_params."""
+    import uuid
+
+    from app.core.db import fetch_val
+    from app.core.profile import active_profile
+
+    if not active_profile().project_accuracy_single_base or query.getlist("surface") != ["project"]:
+        return None
+    try:
+        pid = uuid.UUID(str(query.get("project_id")))
+    except ValueError:
+        return None
+    return await fetch_val(conn, PROJECT_ACCURACY_VERSION_SQL, {"pid": str(pid)})
+
+
 def report_publications_sql(round_dates: Sequence[date], brands: Sequence[str], countries: Sequence[str] | None,
                             langs: Sequence[str] | None, *, project_keys: Sequence[int], geo_keys: Sequence[int] | None) -> Sql:
     """BG-26(추가형): report_values_sql 과 **같은 선택**(활성 웹사이트 발행 · 스코프 · 요청 축 · 헤드라인 풀)에서 합산에 들어간

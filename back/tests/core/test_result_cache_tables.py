@@ -39,6 +39,10 @@ SIGNATURE: dict[str, str] = {
     # 두 표 지문(md5)을 다시 읽어 키에 싣는다(options/queries.py LEGACY_WEBSITE_VERSION_SQL)
     "app.website_site": "options website(현행 프로필): 끝점 추가 키 legacy_web = 등록 사이트·프롬프트 언어 지문(요청마다 다시 읽음)",
     "app.website_prompt": "options website(현행 프로필): 끝점 추가 키 legacy_web = 등록 사이트·프롬프트 언어 지문(요청마다 다시 읽음)",
+    # 리팩터 #13 현행 프로필 project_accuracy_single_base: K-1 요약·T-1 추이 project 요청만 읽는다. 끝점 추가 키(key_deps project_accuracy)가
+    # 요청마다 같은 스냅샷에서 domain·owned base·추적 URL 지문(md5)을 다시 읽어 키에 싣는다(core.measure PROJECT_ACCURACY_VERSION_SQL)
+    "app.project_owned_base": "project ⑥(현행 프로필): 끝점 추가 키 project_accuracy = domain·owned base·추적 URL 지문(요청마다 다시 읽음)",
+    "app.project_tracked_url": "project ⑥(현행 프로필): 끝점 추가 키 project_accuracy = domain·owned base·추적 URL 지문(요청마다 다시 읽음)",
 }
 DATE_FUNCS = {"rd.today_kst": "d = to_char(rd.today_kst(), 'YYYY-MM-DD')"}
 # 호출마다·시각마다 값이 달라지는 함수(스키마 없음·pg_catalog). now() 는 STABLE 이라 휘발성으로는 못 거른다

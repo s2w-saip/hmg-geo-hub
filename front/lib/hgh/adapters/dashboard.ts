@@ -98,7 +98,8 @@ import "server-only";
 //   legacy keys (messages are global, so no key is overwritten);
 //   DC-04 admin brand[] changes "own"; DC-05 card Δ = previous round (bucket=cycle); DC-06/07/22
 //   options and calendar (U4); DC-08 trend series; DC-16 period compare (DC-21 position resolved upstream, 6bc5c54);
-//   DC-23 project ⑥ owned-base judgement by the backend.
+//   DC-23 project ⑥ owned-base judgement: the legacy rule (one effective owned base) is the backend
+//   profile project_accuracy_single_base; the project ⑥ card and trend line read that value (#13).
 // Outside the DC list (U5 numbering, asserted in dashboard.parity.test.ts KNOWN_DIFF):
 //   U5-N1 GEO "our" label = backend own_label: an account scoped to several brands reads "HMG"
 //         (legacy joined the brand names, "Hyundai, Kia"); admin with one brand chosen reads that
@@ -220,7 +221,7 @@ export const BRAND_TREND_TOP = 1;
  * M06/M07 (target / owned URL rate) are left out: no website reader draws them (the chart series,
  * the card Δ and ⑥ read M01..M05 and ACC; urlRateOrigin has no consumer), and with ACC present ⑥
  * never reads their numerators (toLiveTrend). The backend then skips url_rates and the report
- * statement. The project trend keeps M06/M07 (URL_TREND_METRICS: its ⑥ comes from them).
+ * statement. The project trend (PROJECT_TREND_METRICS) still requests M06/M07 next to ACC (#13).
  */
 export const WEBSITE_OVERVIEW_TREND_METRICS: readonly TrendMetric[] = [...OVERVIEW_TREND_METRICS, "citation_accuracy"];
 

@@ -36,13 +36,15 @@ import "server-only";
 //   mention values but no citation answer carries no marker (legacy: the bucket exists).
 //   Citation-only no_answer stays unmarked.
 //   Website/project M06/M07: point origin report|live (published value vs live) is kept per
-//   point as urlRateOrigin. citationAccuracy (⑥ line and the card Δ via applyTrendDeltas):
-//   when the answer carries the citation_accuracy series (requested by WEBSITE_TREND_METRICS,
-//   WU-9) it is round1(100 * target∧owned / owned answers), always live: the legacy website ⑥
-//   (website/_data/live.ts:246-272, summary-website-aggregates.ts:1570-1650) never reads the
-//   published report. Without that series (project) the older rule stays: round1(100 * M06.num /
-//   M07.num), none when the M07 numerator is 0. On a published website round M06/M07 are report
-//   prompt counts, so that older rule would mix units there.
+//   point as urlRateOrigin. citationAccuracy (⑥ line and the card Δ via applyTrendDeltas) comes
+//   only from the citation_accuracy series (requested by WEBSITE_TREND_METRICS, WU-9, and
+//   PROJECT_TREND_METRICS, #13): round1(100 * target∧owned / owned answers), always live. The legacy
+//   ⑥ readers never read the published report (website/_data/live.ts:246-272,
+//   summary-website-aggregates.ts:1570-1650; project aggregateCitationAccuracyTrend,
+//   scope-aggregates.ts:8459-8559). The project's legacy owned rule (one effective owned base) is
+//   the backend's job (profile project_accuracy_single_base, DC-23). A slot without a series point
+//   (den 0) draws no ⑥ value. The former project rule round1(100 * M06.num / M07.num) is gone: it
+//   is not the legacy definition and mixes units on a published website round.
 //
 // Brand dimension (D13): split_own=true is sent by default so a multi-perspective account
 // (HMG three brands, admin without a brand) keeps one own line per brand (Hyundai, Kia,
@@ -134,6 +136,8 @@ export const OVERVIEW_TREND_METRICS: readonly TrendMetric[] = [
 export const URL_TREND_METRICS: readonly TrendMetric[] = [...OVERVIEW_TREND_METRICS, "target_url_rate", "owned_url_rate"];
 /** Website trend: M01..M07 + the live citation accuracy series (legacy ⑥ line, WU-9). */
 export const WEBSITE_TREND_METRICS: readonly TrendMetric[] = [...URL_TREND_METRICS, "citation_accuracy"];
+/** Project trend: M01..M07 + the citation accuracy series (legacy project ⑥ line, #13). */
+export const PROJECT_TREND_METRICS: readonly TrendMetric[] = [...URL_TREND_METRICS, "citation_accuracy"];
 
 /** API metric -> LiveTrend value key (TrendKpiKey). */
 export const TREND_METRIC_KPI_KEY = {
@@ -441,19 +445,9 @@ export function toLiveTrend(data: ApiTrendData, opts: LiveTrendOptions = {}): Ap
       };
     }
     const values: LiveTrendPoint["values"] = { ...overviewTrendValues(b) };
-    // ⑥ citation accuracy = target ∧ own / own answers. The live series when requested (legacy
-    // website ⑥), otherwise the numerators of M06 / M07 (project).
-    if (accSeries) {
-      const acc = pct1OrNull(ratioOf(accSeries, k));
-      if (acc !== null) values.citationAccuracy = acc;
-    } else {
-      const t = ratioOf(tgt, k);
-      const o = ratioOf(own, k);
-      if (t && o) {
-        const acc = pct1OrNull({ num: t.num, den: o.num });
-        if (acc !== null) values.citationAccuracy = acc;
-      }
-    }
+    // ⑥ citation accuracy = target ∧ own / own answers, only from the requested live series.
+    const acc = accSeries ? pct1OrNull(ratioOf(accSeries, k)) : null;
+    if (acc !== null) values.citationAccuracy = acc;
     return {
       bucketStart: k,
       ...(b.roundDate ? { roundDate: b.roundDate } : {}),

@@ -36,7 +36,7 @@ import type { MemberWithProfile } from "@/lib/db/repositories/project-members";
 import { isAnalysisApi } from "@/lib/hgh/adapters/filters";
 // api 경로는 표식을 쓰는 모듈(degrade-registry)에서 바로 읽는다(lib/scope/server 의 재수출과 같은 저장소).
 import { degradeOnApiFailure, wasDegraded as wasApiDegraded } from "@/lib/scope/degrade-registry";
-import { URL_TREND_METRICS } from "@/lib/hgh/adapters/trend";
+import { PROJECT_TREND_METRICS } from "@/lib/hgh/adapters/trend";
 import { applyCompetitorSovFromBrands, summaryIsEmpty, toMirrorKpis, toUrlRateKpis } from "@/lib/hgh/adapters/summary";
 import {
   PROJECT_COMPOSITION_LABEL,
@@ -354,7 +354,9 @@ export async function getProjectDashboard(
 // (엔진 배지·구성·#16 브랜드·GA4)의 일시 실패는 그 부분만 비운다(U5-N6). 그중 섹션째 사라지는 둘(구성 패널·
 // ⑦ '답변의 전환')은 라벨(PROJECT_COMPOSITION_LABEL·PROJECT_CONVERSION_LABEL)을 남겨 화면이 그 자리에 기존
 // 지연 고지를 낸다(B027, project-dashboard.tsx). 배지·#16·Δ 는 인라인 요소라 종전처럼 조용히 빠진다(UC-16).
-// known_diff: DC-01·DC-05·DC-23(⑥ 자사 판정을 백엔드가 owned base 전체로), U5-N4(다른 국가 선택 시 ⑦), U5-N6.
+// known_diff: DC-01·DC-05, U5-N4(다른 국가 선택 시 ⑦), U5-N6.
+// ⑥ 카드·추이 선·Δ 는 요약 citation_accuracy 와 추이 citation_accuracy 계열(PROJECT_TREND_METRICS)을 읽는다(#13). 현행 산식(유효 owned base
+// 하나의 접두 판정, DC-23)은 백엔드 현행 프로필 project_accuracy_single_base 가 낸다.
 // DC-21(평균 순위 정의)은 해소: 현행 ④ 는 답변 안 경쟁 순위였고 우선 노출도 탭도 hmg-geo 6bc5c54 로 같은 정의가 됐다(동기화 S1 FA-4).
 async function getProjectDashboardApi(
   projectId: string,
@@ -378,9 +380,9 @@ async function getProjectDashboardApi(
     const [subKpis, trend, deltaTrend, composition, brands, settings, conversion] = await Promise.all([
       orNullOnTransient(loadSubKpis(filters, ctx)),
       degradeOnApiFailure(trendLabel, () =>
-        loadLiveTrend(filters, ctx, bucket === "day" ? "cycle" : "week", URL_TREND_METRICS),
+        loadLiveTrend(filters, ctx, bucket === "day" ? "cycle" : "week", PROJECT_TREND_METRICS),
       ),
-      orNullOnTransient(loadLiveTrend(filters, ctx, "cycle", URL_TREND_METRICS)),
+      orNullOnTransient(loadLiveTrend(filters, ctx, "cycle", PROJECT_TREND_METRICS)),
       degradeOnApiFailure(PROJECT_COMPOSITION_LABEL, () => loadComposition(filters, ctx)),
       orNullOnTransient(fetchCardBrands(filters, ctx, targetBrand)),
       fetchProjectSettings(projectId),

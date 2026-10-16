@@ -12,14 +12,14 @@ from app.core.result_cache import CachedRoute, result_cache
 
 from .schemas import SummaryQuery, SummaryResponse, UnmeasuredPrompt, UnmeasuredQuery
 from .service import get_summary, get_unmeasured
-from .shared import kpi_context, kpi_today
+from .shared import kpi_context, kpi_today, project_accuracy_key
 
 router = APIRouter(tags=["analytics.kpi"], route_class=CachedRoute)
 
 
 @router.get("/v1/kpi/summary", response_model=SummaryResponse, responses=ERROR_RESPONSES,
             summary="M01~M05 카드 + 웹사이트 M06·M07·인용 정확도 + M12 모수 + A16 결손. 스냅샷(cycle_offset 0|1) 또는 기간 누적(round_date). 분자·분모 정수 쌍(P3), 웹사이트 발행 ")
-@result_cache(key_deps={"today": kpi_today})
+@result_cache(key_deps={"today": kpi_today, "project_accuracy": project_accuracy_key})
 async def get_kpi_summary_0(
     request: Request,
     p: CurrentUser,
