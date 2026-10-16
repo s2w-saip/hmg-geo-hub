@@ -48,8 +48,8 @@
   ""
  ],
  "13": [
-  "decide",
-  ""
+  "fixed",
+  "db44e4b 백엔드 현행 프로필 project_accuracy_single_base(레거시 ⑥ 산식) + 프런트 ⑥ 계열 요청, 근사식 제거"
  ],
  "14": [
   "fixed",
