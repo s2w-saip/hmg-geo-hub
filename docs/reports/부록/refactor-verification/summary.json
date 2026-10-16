@@ -476,7 +476,7 @@
     "jwks_reads": 24,
     "production_auth_requests": 0,
     "stopped_at_initial_verification": true,
-    "current_mode": "Running again at user request; next start at 3130. See performance.json."
+    "current_mode": "Running again at user request; next start at 3130. See performance.json. (This preview and its workspace were discarded on 2026-10-16; demo and verification now run at 127.0.0.1:3200.)"
   },
   "not_executed": [
     "Production DB / deployment",
