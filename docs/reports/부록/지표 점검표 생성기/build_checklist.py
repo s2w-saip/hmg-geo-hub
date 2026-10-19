@@ -116,19 +116,7 @@ SOURCE_USAGE = {}
 for (route, label), source in ITEM_SOURCES.items():
     key = (route, source[1])
     SOURCE_USAGE[key] = SOURCE_USAGE.get(key, 0) + 1
-TOPIC_AUDITS = {}
-for audit_path in sorted(glob.glob(os.path.join(HERE, '재조사', '*', 'audit.json'))):
-    audit = json.load(open(audit_path, encoding='utf-8'))
-    audit_key = (audit['route'], audit['label'])
-    assert audit_key in ITEM_SOURCES, f'unknown audited item: {audit_key}'
-    assert audit_key not in TOPIC_AUDITS, f'duplicate audit: {audit_key}'
-    assert set(audit['factors']) == {f'F{i}' for i in range(1, 11)}, audit_path
-    for factor in audit['factors'].values():
-        for side in ('before', 'after'):
-            assert factor[side]['status'] in ('x', 'u', 'n', 'y'), audit_path
-    TOPIC_AUDITS[audit_key] = audit
 # F5 is an unconditional compatibility requirement, not an improvement score.
-# Keep its original ID in topic evidence; do not inherit grouped parity results.
 FACTORS = ["F2", "F3", "F4", "F6", "F7", "F8", "F9", "F10", "DONE"]
 AFTER_ONLY = {"F10", "DONE"}
 
@@ -380,13 +368,11 @@ for s in SCREENS:  # noqa: F821
     for loc, label, note, legacy, api, a_keys, b_fns, dlabel in s["areas"]:
         n_areas += 1
         source_area = ITEM_SOURCES[(s["route"], label)]
-        topic_audit = TOPIC_AUDITS.get((s['route'], label))
         applicable, item_kind = applicability(s['route'], label, source_area[1])
         shared = SOURCE_USAGE[(s["route"], source_area[1])] > 1
         explicit_f4_target = has_explicit_hardcoding_target(s['route'], label)
         f4_scope_pending = (
             'F4' in applicable and shared and not explicit_f4_target
-            and not (topic_audit and 'F4' in topic_audit['factors'])
             and hardcoding_evidence(FN, b_fns)[0] != set()
         )
         if f4_scope_pending:
@@ -400,14 +386,9 @@ for s in SCREENS:  # noqa: F821
         cells = []
         shown_factors = []
         for f in FACTORS:
-            # Applicability is a gate for every row, including topic overrides.
+            # Applicability is a gate for every row.
             if f not in applicable:
                 vb, tb, va, ta = 'x', '', 'x', ''
-            elif topic_audit and f in topic_audit['factors']:
-                reviewed = topic_audit['factors'][f]
-                vb, tb = reviewed['before']['status'], reviewed['before']['note']
-                va, ta = reviewed['after']['status'], reviewed['after']['note']
-                tb, ta = f"{topic_audit['id']} · {tb}", f"{topic_audit['id']} · {ta}"
             elif f == 'F4' and f in applicable:
                 vb, tb, va, ta = hardcoding_cells(b_fns, a_keys, s.get('ans'), shared, explicit_f4_target)
             elif f in applicable:
@@ -415,15 +396,10 @@ for s in SCREENS:  # noqa: F821
                 va, ta = after_cell(a_keys, f, s.get("acommon"), dlabel == "쓰기", s.get("ans"))
             else:
                 vb, tb, va, ta = 'x', '', 'x', ''
-            if f == 'DONE' and va != 'x':
-                parity = topic_audit['factors']['F5'] if topic_audit else None
-                if parity and parity['after']['status'] == 'n':
-                    va = 'n'
-                    ta += ' · 계산·표시 규칙 불일치 결함: 수정 및 동일성 재검증 전 전환 불가'
-                elif va == 'y' and not (parity and parity['after']['status'] == 'y'
-                                       and parity.get('verification_complete') is True):
-                    va, ta = 'u', '필수 계산·표시 규칙 동일성 검증 미완료: 전환 완료 처리 불가'
-            if shared and not (topic_audit and f in topic_audit['factors']):
+            if f == 'DONE' and va == 'y':
+                # No item has a completed mandatory parity check, so nothing is marked converted.
+                va, ta = 'u', '필수 계산·표시 규칙 동일성 검증 미완료: 전환 완료 처리 불가'
+            if shared:
                 tb += " · 기존 묶음의 공통 근거"
                 ta += " · 기존 묶음의 공통 근거"
             tally("B", vb)
@@ -442,17 +418,6 @@ for s in SCREENS:  # noqa: F821
         if shared and shown_factors:
             tip += "\n이 항목에 적용되는 기준만 기존 묶음의 판정을 참조합니다. 개별 UI 검증은 별도로 필요합니다."
         badge = '<span class="shared">공통 근거</span>' if shared and shown_factors else ''
-        if topic_audit:
-            report_path = os.path.join(os.path.dirname(os.path.abspath(OUT)), topic_audit['report_file'])
-            report_link = os.path.relpath(report_path, os.path.dirname(os.path.abspath(OUT))).replace(os.sep, '/')
-            audit_label = f'재조사 {topic_audit["id"]}'
-            if topic_audit.get('verification_policy', {}).get('datasets_may_differ'):
-                audit_label += ' · 로직 기준 조사'
-            elif topic_audit.get('paired_live'):
-                audit_label += ' · 표시값 대조 · 동일 데이터 미검증'
-            elif topic_audit.get('verification_status', '').startswith('incomplete'):
-                audit_label += ' · 실검증 미완료'
-            badge += f'<a class="shared" href="{esc(report_link)}">{esc(audit_label)}</a>'
         tip = '\n'.join(line.rstrip() for line in tip.split('\n'))
         area_rows.append(
             f'<tr class="block" data-source="{esc(source_area[1])}"><td class="indent" title="{esc(tip)}">{esc(label)}{badge}<span class="val">{esc(sub)}</span></td>'
@@ -594,24 +559,6 @@ progress_html = (f'<section>\n<h2>진행 현황 <span class="muted small">완료
                  '<div class="scroll"><table class="progress"><thead><tr><th>상태</th><th>항목</th><th>대상 · 판정 요소</th><th>비고</th></tr></thead><tbody>\n'
                  + "\n".join(prow) + '\n</tbody></table></div>\n</section>')
 
-# ── Mandatory compatibility evidence (old F5, outside optimization totals) ──
-mandatory_rows = []
-for audit in TOPIC_AUDITS.values():
-    parity = audit['factors']['F5']
-    status = parity['after']['status']
-    if status == 'n':
-        outcome = '전환 차단 · 수정 필수'
-    elif status == 'y' and parity.get('verification_complete') is True:
-        outcome = '명시한 전체 범위의 동일성 검증 완료'
-    else:
-        outcome = '동일성 검증 미완료 · 전환 완료 처리 불가'
-    report_path = os.path.join(os.path.dirname(os.path.abspath(OUT)), audit['report_file'])
-    report_link = os.path.relpath(report_path, os.path.dirname(os.path.abspath(OUT))).replace(os.sep, '/') + '#F5'
-    mandatory_rows.append(
-        f'<tr><th>{esc(audit["menu"])}<br><code>{esc(audit["route"])}</code><br>{esc(audit["label"])}</th>'
-        f'<td><strong>{esc(outcome)}</strong></td><td>{esc(parity["finding"])} '
-        f'<a href="{esc(report_link)}">{esc(audit["id"])} 근거·검증 범위</a></td></tr>')
-
 # ── Historical F10 differences: evidence only, no blanket acceptance control ──
 F10_PATH = os.path.join(SURVEY_DIR, "f10_differences.json")
 f10_html = ""
@@ -660,7 +607,7 @@ if os.path.exists(F10_PATH):
         f'<section id="f10">\n<h2>F10 차이 기록 — 선언된 차이 {n_total}건</h2>\n'
         '<p class="small"><strong>지표 계산 방식·표시 규칙의 변경은 수용 대상이 아닙니다. 최적화 과정에서 발생한 차이는 수정해야 하며 동일성 검증 전에는 전환할 수 없습니다.</strong> '
         '기존 조사 기록은 근거 추적용으로 남깁니다. 기존 추천과 일괄 수용 조작은 제거했으며, 저장된 원본 기록은 변경하지 않았습니다. '
-        '각 차이의 실제 상태는 해당 토픽 차례에 재검증합니다. 이 목록의 기존 상태만으로 완료를 판정하지 않습니다.</p>\n'
+        '각 차이의 실제 상태는 다시 검증해야 합니다. 이 목록의 기존 상태만으로 완료를 판정하지 않습니다.</p>\n'
         + "\n".join(blocks) + "\n</section>")
 
 total = sum(counts.values())
@@ -672,8 +619,6 @@ for k, v in {
     "{{WORK_ROWS}}": "\n".join(wrows), "{{N_WORK}}": str(len(WORK)), "{{N_WORK_IN}}": str(w_in), "{{N_WORK_OUT}}": str(w_out),
     "{{N_FNS}}": str(len(used_fns)), "{{N_AREAS}}": str(n_areas), "{{N_SCREENS}}": str(n_screens),
     "{{N_F1_BEFORE}}": str(sum(s['f1b'][0] in ('y', 'n') for s in SCREENS)),
-    "{{N_TOPIC_AUDITS}}": str(len(TOPIC_AUDITS)),
-    "{{MANDATORY_ROWS}}": "\n".join(mandatory_rows),
     "{{N_F4_PENDING}}": str(sum(len(labels) for labels in f4_pending.values())),
     "{{F4_PENDING_ROWS}}": "\n".join(f4_pending_rows),
     "{{Y}}": str(counts["y"]), "{{N}}": str(counts["n"]), "{{U}}": str(counts["u"]), "{{TOTAL}}": str(total),
