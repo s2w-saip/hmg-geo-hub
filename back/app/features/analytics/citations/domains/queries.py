@@ -92,9 +92,9 @@ def like_pattern(q: str) -> str:
 
 def mention_brand_exists(win: Window, outer: str, brand_key: int, b: Binder, ms: MeasureScope | None = None) -> str:
     """mention_brand: 그 브랜드가 언급 모수(core.measure.mention_population, ms 없으면 std_in = 옛 호출)로 언급된 답변만(현행 fetchBrandCitations).
-    같은 창 3술어 + 답변 키 등치."""
+    같은 창 3술어 + 답변 키 등치. 셀 대표는 인용 계열 대표(rep='c'): 현행은 인용 계열 답변 집합(snapshotRunFilter …"citations")의 언급으로 판정한다."""
     w = win.where("ab", FAMILY, b) + [f"ab.answer_key = {outer}.answer_key", f"ab.brand_key = {b.v(brand_key, 'int4')}",
-                                 "ab.std_in" if ms is None else mention_population(ms, "ab", "brand")]
+                                 "ab.std_in" if ms is None else mention_population(ms, "ab", "brand", rep="c")]
     return f"EXISTS (SELECT 1 FROM {fact_tables(ms).answer_brand} ab WHERE {' AND '.join(w)})"
 
 

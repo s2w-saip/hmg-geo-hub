@@ -30,6 +30,7 @@ from app.core.measure import (
     competitor_rows_sql,
     mention_population,
     own_cols,
+    scan_population,
     scope_where,
 )
 from app.core.sqlb import Binder, Sql
@@ -103,12 +104,15 @@ def own_split_counts_sql(ms: MeasureScope, win: Window, group: str, bits: Sequen
     b = Binder("s")
     a = "a"
     name, expr = _bucket(group, a)
-    w = win.where(a, "row", b, keys=win.union_keys("mentions")) + scope_where(ms, a, b) + [citation_population(ms, a)]
+    pop, cw = scan_population(ms, a, mentions=True, citations=base)   # gap 열은 인용 모수(plan_counts 'gap' 과 같은 식)
+    w = win.where(a, "row", b, keys=win.union_keys("mentions")) + scope_where(ms, a, b) + [pop]
     mg = mention_population(ms, a)
     cols = [f"{expr} AS {name}", f"count(*) FILTER (WHERE {mg}) AS answers",
             f"coalesce(sum({a}.ment_total) FILTER (WHERE {mg}), 0) AS total_mentions"]
     if base:
-        cols += ["count(*) AS gap_base", f"count(*) FILTER (WHERE {a}.gap) AS gap_answers"]
+        gw = f"{cw} AND " if cw else ""
+        cols += [f"count(*) FILTER (WHERE {cw}) AS gap_base" if cw else "count(*) AS gap_base",
+                 f"count(*) FILTER (WHERE {gw}{a}.gap) AS gap_answers"]
     want = set(SPLIT_KEYS if keys is None else keys)
     for i, bit in enumerate(bits):
         oc = own_cols((bit,), a)

@@ -324,7 +324,7 @@ def unit_gate_of(ms: MeasureScope, a: str, table: PopTable = "answer") -> list[s
     return [f"{a}.unit_in"] if table in ("answer", "brand", "citation") else [web_unit_pred_frozen(a, ms.frz_keys)]
 
 
-def mention_population(ms: MeasureScope, a: str, table: PopTable = "answer") -> str:
+def mention_population(ms: MeasureScope, a: str, table: PopTable = "answer", *, rep: str = "m") -> str:
     """언급 계열 모수(M01~M04·M12·경쟁 행): 기본 = std_in(elig ∧ ACR 첫 반복 ∧ 분석 있음). table = 별칭 a 가 가리키는 사실 표
     (answer = rd.answer, brand = rd.answer_brand, stance = rd.answer_stance). 표마다 가진 게이트 사본 열이 달라 식이 표를 안다.
     현행 프로필 자리: cell_rep(A1, WU-2: 회차 셀 대표만 = is_rep), acr_iter_unfolded(A15, WU-2), gap_in_population(A16, WU-2·WU-10),
@@ -338,16 +338,22 @@ def mention_population(ms: MeasureScope, a: str, table: PopTable = "answer") -> 
       answer_brand·stance  is_rep [∧ std_in(A16 꺼짐)]. std_in 사본의 acr_in 은 is_rep 이 함의한다(셀 최신 = 그 run-셀 최신,
                            rd.assert_rep 이 대표의 acr_in 을 센다: stg 2026-10-01 위반 0). answer_brand 에는 결손 답변 행이 없고(stg 0행)
                            answer_stance 에는 있어(stg 38행, 분석 대기) A16 켜짐이면 std_in 을 빼야 결손 답변 스탠스가 들어온다.
-      전부 켜짐(현행 = CURRENT) = 표와 무관하게 is_rep 하나(불리언 술어, 세미조인 없음. A41 은 scope_where 세미조인만 더한다)."""
+      전부 켜짐(현행 = CURRENT) = 표와 무관하게 is_rep 하나(불리언 술어, 세미조인 없음. A41 은 scope_where 세미조인만 더한다).
+
+    rep: 셀 대표를 어느 계열로 고르나. 'm'(기본) = 언급 계열 대표(is_rep). 'c' = 인용 계열 대표(rep_term 'c'): 인용 행에 그 답변 자신의
+    언급 분석을 붙이는 자리(유형 × 카테고리·브랜드 언급 답변의 인용, 현행 = 인용 계열 답변 집합 위의 scope_mentions)가 쓴다.
+    자리 규칙(rep_round_date_cell)이 아니면 두 대표가 같다(is_rep)."""
     require_slot(ms.profile, "cell_rep", "acr_iter_unfolded", "gap_in_population", "web_registered_only", "freeze_at_publish")
     if table not in _POP_TABLES or table == "citation":
         raise ValueError(f"언급 모수 표가 아니다: {table}")
+    if rep not in ("m", "c"):
+        raise ValueError(f"대표 계열: {rep}")
     p = ms.profile
     std = f"{a}.std_in_nc" if catalog_all(ms) else f"{a}.std_in"   # A41(WU-4): 카탈로그 게이트를 뺀 모수 열(DB-v2.15 P89)
     unit = unit_gate_of(ms, a, table)                             # WEBREG16(WU-7): 웹 집계층 = 보고서 유닛 소속 프롬프트만(동결 읽기 = 생성 시점)
     if not p.cell_rep:          # A15·A16 은 cell_rep 없이 켤 수 없다(core.profile.REQUIRES)
         return _and([std] + unit)
-    t = [f"{a}.is_rep"]
+    t = [f"{a}.is_rep" if rep == "m" else rep_term(ms, a, "c")]
     if table == "answer":
         if not p.acr_iter_unfolded and not p.gap_in_population:
             t.append(std)
@@ -430,6 +436,28 @@ def rep_term(ms: MeasureScope, a: str, family: str, *, analysis_path: bool = Fal
     src = f"rd.rep_cit_delta d WHERE d.surface = {int(ms.sf)}"
     return (f"(CASE WHEN {a}.round_date = ANY((SELECT ARRAY(SELECT DISTINCT d.round_date FROM {src}))::date[]) "
             f"THEN ({a}.is_rep <> ({a}.answer_key IN (SELECT d.answer_key FROM {src}))) ELSE {a}.is_rep END)")
+
+
+def reps_diverge(ms: MeasureScope) -> bool:
+    """셀의 인용 계열 대표가 언급 계열 대표(is_rep)와 다른 답변일 수 있는가(자리 규칙: is_rep XOR rd.rep_cit_delta).
+    거짓이면 언급 모수 ⊆ 인용 모수다(셀 대표 없으면 std_in ⇒ cit_in, 있으면 둘 다 is_rep 이 첫 항)."""
+    return ms.profile.cell_rep and rep_term(ms, "a", "c") != "a.is_rep"
+
+
+def scan_population(ms: MeasureScope, a: str, *, mentions: bool, citations: bool) -> tuple[str, str]:
+    """rd.answer 한 번 스캔의 (WHERE 모수, 인용 쪽 열 FILTER 술어 — 빈 문자열 = 없음). mentions·citations = 그 스캔이 내는 열의 계열.
+    언급 쪽 열은 언급 모수 FILTER 를 직접 걸고, 인용 쪽 열(인용 수·gap·URL)은 WHERE 모수에 기댄다.
+    두 모수가 포함 관계면(reps_diverge 거짓) WHERE = 인용 모수, FILTER 없음(종전 문장 그대로).
+    갈리면 인용 모수만 WHERE 에 걸 때 언급 대표가 스캔에서 빠진다: 같은 자리에 언급만 숨긴 형제 회차가 있으면 언급 대표(보이는 회차)가
+    보정 표에 들어 인용 모수 밖이 되고, 인용 대표(숨긴 회차)는 언급 창 밖이라 그 셀이 언급 지표에서 통째로 사라진다
+    (tests/core/test_rep_seat.py 언급 숨김 형제). 그래서 WHERE = 두 모수 합집합, 인용 쪽 열은 인용 모수 FILTER. 한 계열만 내면 그 계열 모수."""
+    cp = citation_population(ms, a)
+    if not mentions or not reps_diverge(ms):
+        return cp, ""
+    mg = mention_population(ms, a)
+    if not citations:
+        return mg, ""
+    return f"({cp} OR {mg})", cp
 
 
 def mention_family(ms: MeasureScope) -> str:
@@ -603,6 +631,9 @@ def plan_counts(ms: MeasureScope, win: Window, *, group_by: Sequence[str] = (), 
         return f" FILTER (WHERE {' AND '.join(cs)})" if cs else ""
 
     mg = mention_population(ms, a)
+    # 인용 쪽 열(gap·urls·답변 열 인용)은 WHERE 모수에 기댄다. 자리 규칙으로 두 모수가 갈리면 WHERE = 합집합 + 인용 쪽 FILTER cw(scan_population)
+    pop, cw = scan_population(ms, a, mentions=any(p in parts for p in ("mentions", "sov", "rank_detail")),
+                              citations=any(p in parts for p in ("gap", "urls")) or ("citations" in parts and not cit_scan))
     cols: list[str] = []
     if "mentions" in parts or "sov" in parts or "rank_detail" in parts:
         oc = own_cols(ms.own_bits, a)
@@ -631,28 +662,28 @@ def plan_counts(ms: MeasureScope, win: Window, *, group_by: Sequence[str] = (), 
             f"count(*){flt(mg, mf, oc.ranked, f'{oc.rank} <= 3')} AS top3",
         ]
     if "gap" in parts:
-        cols += [f"count(*){flt(mf)} AS gap_base", f"count(*){flt(mf, f'{a}.gap')} AS gap_answers"]
+        cols += [f"count(*){flt(mf, cw)} AS gap_base", f"count(*){flt(mf, cw, f'{a}.gap')} AS gap_answers"]
     if "urls" in parts:
         ug = "" if ms.sf == 3 else f"{a}.web_reg"     # 분모 게이트: website = 등록 프롬프트, project = 없음(Q5), global = 대상 아님(분모 0)
-        cols += [f"count(*){flt(cg, ug)} AS url_den",
-                 f"count(*){flt(cg, ug, f'{a}.tgt_cited')} AS tgt_hits",
-                 f"count(*){flt(cg, ug, f'{a}.own_url_cited')} AS own_url_hits",
-                 f"count(*){flt(cg, ug, f'{a}.tgt_cited', f'{a}.own_url_cited')} AS tgt_own_hits"]
+        cols += [f"count(*){flt(cg, cw, ug)} AS url_den",
+                 f"count(*){flt(cg, cw, ug, f'{a}.tgt_cited')} AS tgt_hits",
+                 f"count(*){flt(cg, cw, ug, f'{a}.own_url_cited')} AS own_url_hits",
+                 f"count(*){flt(cg, cw, ug, f'{a}.tgt_cited', f'{a}.own_url_cited')} AS tgt_own_hits"]
     if "citations" in parts and not cit_scan:
         owned = _owned_sum(ms, a, mode)  # type: ignore[arg-type]
         den = m05_den_col(ms, a) if m05_den else f"{a}.cit_n"
-        cols += [f"coalesce(sum({den}){flt(cg)}, 0) AS cit_total",
-                 f"coalesce(sum({a}.cit_tgt){flt(cg)}, 0) AS cit_target"]
+        cols += [f"coalesce(sum({den}){flt(cg, cw)}, 0) AS cit_total",
+                 f"coalesce(sum({a}.cit_tgt){flt(cg, cw)}, 0) AS cit_target"]
         if mode == "countryN":
-            cols.append(f"coalesce(sum({owned}){flt(cg, f'{a}.cit_own_x = 0')}, 0) AS cit_owned")
+            cols.append(f"coalesce(sum({owned}){flt(cg, cw, f'{a}.cit_own_x = 0')}, 0) AS cit_owned")
         else:
-            cols.append(f"coalesce(sum({owned}){flt(cg)}, 0) AS cit_owned")
+            cols.append(f"coalesce(sum({owned}){flt(cg, cw)}, 0) AS cit_owned")
         # M05 분자: global = 공식(HMG) 카테고리 답변 열, website·project = 표면 자사(local 모드라 cross 보정 없음 = cit_owned 와 같은 식)
         m05 = f"{a}.cit_off" if ms.sf == 1 else owned
-        cols.append(f"coalesce(sum({m05}){flt(cg)}, 0) AS cit_m05")
+        cols.append(f"coalesce(sum({m05}){flt(cg, cw)}, 0) AS cit_m05")
     if not cols:
         cols = ["count(*) AS n"]
-    where = win.where(a, "row", b, keys=union) + scope_where(ms, a, b) + [citation_population(ms, a)]
+    where = win.where(a, "row", b, keys=union) + scope_where(ms, a, b) + [pop]
     txt = f"SELECT {', '.join(gsel + cols)}\n  FROM {fact_tables(ms).answer} {a}\n WHERE {' AND '.join(where)}"
     if gsel:
         txt += "\n GROUP BY " + ", ".join(str(i + 1) for i in range(len(gsel)))

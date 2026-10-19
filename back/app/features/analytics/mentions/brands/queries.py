@@ -16,7 +16,7 @@ from collections.abc import Sequence
 
 from app.core.cycles import Window
 from app.core.facts import fact_tables
-from app.core.measure import MeasureScope, citation_population, mention_population, own_cols, scope_where
+from app.core.measure import MeasureScope, mention_population, own_cols, scan_population, scope_where
 from app.core.sqlb import Binder, Sql
 
 # 유형 5종(응답 순서 고정) → rd.answer_brand 열(analytics.mentions.types 와 같은 화이트리스트)
@@ -86,7 +86,7 @@ def own_counts_sql(ms: MeasureScope, win: Window, groups: Sequence[Sequence[int]
     by_engine = 엔진별(engine_key). fetch_counts 를 비트마다 부르던 N 번 스캔을 한 번으로 줄인다."""
     b = Binder("s")
     a = "a"
-    w = win.where(a, "row", b, keys=win.union_keys("mentions")) + scope_where(ms, a, b) + [citation_population(ms, a)]
+    w = win.where(a, "row", b, keys=win.union_keys("mentions")) + scope_where(ms, a, b) + [scan_population(ms, a, mentions=True, citations=False)[0]]
     mg = mention_population(ms, a)
     cols = [f"count(*) FILTER (WHERE {mg}) AS answers", f"coalesce(sum({a}.ment_total) FILTER (WHERE {mg}), 0) AS total_mentions"]
     for i, bits in enumerate(groups):

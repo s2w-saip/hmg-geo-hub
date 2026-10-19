@@ -51,8 +51,10 @@ def _cat_filter(ctx: ReadContext, b: Binder) -> str:
 
 def _type_flags(ctx: ReadContext, ms: MeasureScope, win: Window, b: Binder) -> str:
     """현행 aggregateCitationTypeCategoriesFromMirror(scope-aggregates.ts:11270) 이관: 당사 언급 답변의 유형 신호(답변 단위 bool_or).
-    당사 = 관점 브랜드 비트(own_bit = ANY, M-1 과 같은 관점 규칙), 언급 모수 = std_in. 반환 = CTE 본문 'jt AS (…)'."""
-    ab_where = win.where("ab", FAMILY, b) + scope_where(ms, "ab", b) + [mention_population(ms, "ab", "brand"), f"ab.own_bit = ANY({b.ints(ctx.own_bits)})"]
+    당사 = 관점 브랜드 비트(own_bit = ANY, M-1 과 같은 관점 규칙), 언급 모수 = std_in(셀 대표는 인용 계열 대표: 현행은 인용 계열 답변 집합의
+    언급을 접는다, mention_population rep='c'). 반환 = CTE 본문 'jt AS (…)'."""
+    ab_where = (win.where("ab", FAMILY, b) + scope_where(ms, "ab", b)
+                + [mention_population(ms, "ab", "brand", rep="c"), f"ab.own_bit = ANY({b.ints(ctx.own_bits)})"])
     flags = ",\n         ".join(f"bool_or(ab.{col} > 0) AS {col}" for col in TYPE_COLS.values())
     return f"""jt AS (
   SELECT ab.answer_key,
@@ -161,7 +163,7 @@ def sources_ans_sql(ctx: ReadContext, win: Window, *, types: str = "col") -> Sql
     aw = win.where("a", FAMILY, b) + scope_where(ms, "a", b) + [citation_population(ms, "a")]
     cols = [f"coalesce(sum(a.cit_c{k}), 0) AS n{k}" for k in CAT_KEYS]
     if types == "col":
-        mp = mention_population(ms, "a", "brand")
+        mp = mention_population(ms, "a", "brand", rep="c")     # 인용 행의 답변 = 인용 계열 대표(그 답변 자신의 유형 신호)
         cols += [f"coalesce(sum(a.cit_c{k}) FILTER (WHERE {mp} AND (a.t_own & {t_own_mask(ctx.own_bits, i)}) <> 0), 0) AS {tc}_{k}"
                  for i, tc in enumerate(TYPE_COLS.values()) for k in CAT_KEYS]
     elif types == "jt":

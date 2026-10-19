@@ -185,17 +185,22 @@ def _impl_spec(with_seat_rule: bool) -> str:
     return ",".join(n for n in P.SWITCHES if n in P.IMPLEMENTED and (with_seat_rule or n != "rep_round_date_cell"))
 
 
-async def _sibling_values(client_as, settings, spec: str) -> dict[tuple[str, bool], Any]:
-    """spec 프로필로 형제 회차 상태를 bulk 재투영(롤백 전용)하고 카드·비카드 응답을 모은다."""
+async def _sibling_values(client_as, settings, spec: str, *, hidden: str = "citations", extra: tuple[str, ...] = (),
+                          calls: tuple[tuple[str, dict[str, Any]], ...] = SIB_CALLS,
+                          cards: tuple[bool, ...] = (False, True)) -> dict[tuple[str, bool], Any]:
+    """spec 프로필로 형제 회차 상태를 bulk 재투영(롤백 전용)하고 카드·비카드 응답을 모은다.
+    hidden = 형제 회차 CY2 의 숨김 계열(ing.cycle.hidden_scope), extra = 재투영 전에 더 돌릴 ing 층 SQL."""
     from app.core.config import set_settings
     from ingest.testkit import bulk_seed_profile
     from tests.support import ADMIN
 
     prof = P.parse_profile(spec)
+    sibling = SIBLING_SQL.replace("'citations', 'operator'", f"'{hidden}', 'operator'")
+    assert sibling != SIBLING_SQL or hidden == "citations"
 
     async def prepare(conn: Any) -> None:
         d = await _raw(conn)
-        for s in [*SEQ_SQL, SIBLING_SQL]:
+        for s in [*SEQ_SQL, sibling, *extra]:
             await d.execute(s)
         await bulk_seed_profile(d, prof)
         # S4: freeze_at_publish 카드 요청은 창 회차가 전부 동결이어야 카드 경로다(구멍이면 비카드 = 현행 미러 폴백). 발행 회차를 S2 생성기로 동결한다
@@ -213,8 +218,8 @@ async def _sibling_values(client_as, settings, spec: str) -> dict[tuple[str, boo
     set_settings(settings.model_copy(update={"legacy_profile": spec}))
     try:
         async with staged(prepare), client_as(ADMIN) as cl:
-            for path, params in SIB_CALLS:
-                for card in (False, True):
+            for path, params in calls:
+                for card in cards:
                     r = await cl.get(path, params={**SIB_Q, **params, **({"card": "true"} if card else {})})
                     assert r.status_code == 200, (path, card, r.text[:300])
                     out[(path, card)] = r.json()["data"]
@@ -242,6 +247,38 @@ async def test_card_citation_den_keeps_cell_with_citation_hidden_sibling(client_
     assert on["frz_host_cits"] == off["frz_host_cits"] == 0
     assert _den(on, True)[0] == _den(on, False)[0] == 4, (_den(on, True), _den(on, False))
     assert _den(on, False) == (4, 4, 4)                                                  # 비카드: 수정 전과 같다(자리 규칙 = JX 대표, 인용 창 = 회차 11 보정)
+
+
+async def test_mention_metrics_keep_seat_rep_with_mention_hidden_sibling(client_as, settings):
+    """형제 회차 CY2 를 언급만 숨기면(hidden 'mentions') 자리 언급 대표 = 회차 11 의 J9, 인용 대표 = CY2 의 JX 이고 보정 표에 J9 가 든다
+    (J9 인용 모수 = is_rep XOR 보정 = 거짓). 어느 계열을 숨겨도 그 셀은 계열마다 대표 1건으로 남으므로 비카드 분모는 인용 숨김 형제와 같은
+    (4, 4, 4) 다. 수정 전: main 스캔 WHERE 가 인용 모수만 걸어 J9 가 빠지고 JX 는 언급 창 밖이라 언급 분모(요약·브랜드 답변)가 3 이었다."""
+    on = await _sibling_values(client_as, settings, _impl_spec(True), hidden="mentions", cards=(False,))
+    assert _den(on, False) == (4, 4, 4), _den(on, False)
+
+
+# k1(회차 11 셀, 인용 9·Hyundai 언급)을 회차 11 셀 최신으로 올린다(J9 05:00 뒤). 인용 숨김 형제 CY2 와 함께면 자리 언급 대표 = JX,
+# 인용 대표 = k1(보정 표). 스위치를 끄면 회차 셀 대표 = k1 이고 인용 창은 회차 11 뿐이라 인용 행·그 답변의 언급 분석이 같아야 한다.
+K1 = "90000000-0000-4000-8000-000000000001"
+K1_LATEST = f"UPDATE ing.answer SET measured_at = '2026-09-14 09:00+00' WHERE job_id = '{K1}'"
+SIB_CIT_CALLS: tuple[tuple[str, dict[str, Any]], ...] = (
+    ("/v1/citations/sources/types", {}),
+    ("/v1/citations/domains", {"mention_brand": "Hyundai", "limit": "50"}),
+)
+
+
+async def test_citation_rows_read_mentions_of_citation_rep(client_as, settings):
+    """인용 행에 붙는 언급 분석(유형 × 카테고리, 브랜드 언급 답변의 인용)은 그 인용 대표 답변 자신의 것이다(현행 = 인용 계열 답변 집합 위의
+    scope_mentions: scope-aggregates.ts OWN_TYPE_FLAGS_PER_JOB · aggregateBrandCitationsFromMirror snapshotRunFilter(…, "citations")).
+    수정 전: 언급 모수(is_rep)가 인용 대표 k1(is_rep 거짓)을 걸러 유형 × 카테고리와 브랜드 언급 인용이 비었다."""
+    on = await _sibling_values(client_as, settings, _impl_spec(True), extra=(K1_LATEST,), calls=SIB_CIT_CALLS, cards=(False,))
+    off = await _sibling_values(client_as, settings, _impl_spec(False), extra=(K1_LATEST,), calls=SIB_CIT_CALLS, cards=(False,))
+    t_on, t_off = on[("/v1/citations/sources/types", False)]["items"], off[("/v1/citations/sources/types", False)]["items"]
+    assert sum(t["total"] for t in t_off) > 0
+    assert t_on == t_off
+    d_on, d_off = on[("/v1/citations/domains", False)], off[("/v1/citations/domains", False)]
+    assert d_off["items"]
+    assert (d_on["summary"], d_on["items"]) == (d_off["summary"], d_off["items"])
 
 
 def test_card_citation_fix_leaves_non_card_sql_unchanged(monkeypatch):
