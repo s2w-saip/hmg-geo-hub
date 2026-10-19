@@ -143,6 +143,17 @@ async def test_source_axis(client_as):
     assert x["data"]["counts"] == {"owned": 0, "uncited": 0} and x["meta"]["dropped_filters"] == {"source": ["news"]}
 
 
+async def test_source_axis_country_n(client_as):
+    """countryN(US·AU) + source[]: 원소 스캔(scan)이 교차 국가 자사(owner_key = ANY)까지 이미 정확히 센다. 출처 술어가 없는
+    cross 를 그 위에 더하면 k1 의 자사 인용(ord1 hyundai.com AU · ord9 hyundaiusa.com US, 둘 다 officialHmg)이 고른 출처 밖에서 들어와
+    'best suv' 가 자사 버킷으로 옮겨 간다. SP1 답변은 전부 US 라 기대값은 국가 축 없는 test_source_axis 와 같다."""
+    u = (await get(client_as, HQ_HYUNDAI, surface="global", owned="false", country=["US", "AU"],
+                   source=["other", "communityForums"])).json()
+    assert u["data"]["counts"] == {"owned": 0, "uncited": 1} and [i["citations"] for i in u["data"]["items"]] == [3]
+    r = (await get(client_as, HQ_HYUNDAI, surface="global", owned="true", country=["US", "AU"], source="officialHmg")).json()
+    assert r["data"]["counts"] == {"owned": 1, "uncited": 0} and [i["citations"] for i in r["data"]["items"]] == [4]
+
+
 async def test_search_q(client_as):
     r = await get(client_as, HQ_HYUNDAI, surface="global", owned="true", q="SUV")
     assert r.json()["meta"]["page"]["total"] == 1 and len(r.json()["data"]["items"]) == 1

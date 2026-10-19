@@ -694,7 +694,9 @@ def plan_counts(ms: MeasureScope, win: Window, *, group_by: Sequence[str] = (), 
         plan.statements.append(("url_prompts", bu.sql(t4)))
 
     # ── cross(국가 2개 이상: 교차 국가 자사 인용이 있는 답변만 원소를 센다) ──
-    if "citations" in parts and mode == "countryN":
+    # 원소 스캔(scan)이면 내지 않는다: scan 의 cit_owned(own_expr = owner_key = ANY)가 교차 국가 자사까지 이미 정확히 세고,
+    # cross 에는 출처 술어가 없어 더하면 고른 출처 밖 자사가 이중으로 들어간다
+    if "citations" in parts and mode == "countryN" and not cit_scan:
         bx = Binder("x")
         gsel3, _ = _group_select(group_by, split_at, a, bx)
         c = "c"

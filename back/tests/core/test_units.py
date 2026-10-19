@@ -1,6 +1,7 @@
 """core 단위 테스트(DB 없음): sqlb·codes·config·errors·envelope·pagination·cycles(build_window)·measure(순수 빌더)."""
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import date
 
 import pytest
@@ -224,6 +225,9 @@ def test_plan_counts_modes():
     assert "c.owner_key = ANY(" in pn.statements[1][1].text and "c.round_date = CAST(" in pn.statements[1][1].text
     ps = plan_counts(_ms(["CA"], ["fr"]), _win())
     assert [r for r, _ in ps.statements] == ["main", "scan"] and "cit_total" not in ps.statements[0][1].text
+    # countryN + 출처 축: scan 이 교차 국가 자사까지 정확히 세므로 cross 를 내지 않는다(같이 내면 출처 밖 자사가 이중으로 더해진다)
+    pns = plan_counts(replace(_ms(["US", "AU"]), source_category_keys=(6,)), _win())
+    assert [r for r, _ in pns.statements] == ["main", "scan"]
     pw = plan_counts(MeasureScope(sf=2, project_keys=(2,), own_bits=(2,), bgrps=(2,)), _win(sf="website"), parts=("citations",))
     assert "a.cit_loc_tgt" in pw.statements[0][1].text
     pp = plan_counts(MeasureScope(sf=3, project_keys=(3,), own_bits=(1,), bgrps=None), _win(sf="project"), parts=("citations",))
