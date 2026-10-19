@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>P4 인계 — ACR 차종 전환율 분모</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1c1f24; --muted: #5b6370; --line: #dde1e6; --card: #f6f7f9;
+    --accent: #2457c5; --warn-bg: #fff5e0; --warn-line: #e3a008; --ok: #1f7a3d; --code-bg: #f1f3f5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15181c; --fg: #e6e8eb; --muted: #9aa3ad; --line: #2c323a; --card: #1c2026;
+      --accent: #7aa2ff; --warn-bg: #2d2412; --warn-line: #b7860b; --ok: #5fc27e; --code-bg: #1f242b;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15181c; --fg: #e6e8eb; --muted: #9aa3ad; --line: #2c323a; --card: #1c2026;
+    --accent: #7aa2ff; --warn-bg: #2d2412; --warn-line: #b7860b; --ok: #5fc27e; --code-bg: #1f242b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+    font: 15px/1.65 "Pretendard", system-ui, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif; }
+  main { max-width: 920px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  h2 { font-size: 19px; margin: 36px 0 10px; padding-top: 12px; border-top: 1px solid var(--line); }
+  h3 { font-size: 16px; margin: 22px 0 6px; }
+  .sub { color: var(--muted); margin: 0 0 18px; }
+  .banner { background: var(--warn-bg); border-left: 4px solid var(--warn-line); padding: 12px 14px; border-radius: 6px; margin: 16px 0; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 10px 0; }
+  code { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 13px; background: var(--code-bg); padding: 1px 4px; border-radius: 4px; }
+  pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px; overflow-x: auto; font-size: 13px; line-height: 1.5; }
+  pre code { background: none; padding: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 14px; }
+  th, td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: var(--card); }
+  .step { counter-increment: step; }
+  .pass { color: var(--ok); font-weight: 600; }
+  .muted { color: var(--muted); }
+  a { color: var(--accent); }
+  .table-wrap { overflow-x: auto; }
+</style>
+</head>
+<body>
+<main>
+<h1>P4 인계 — ACR 차종 전환율 분모 중복 확인</h1>
+<p class="sub">작성 2026-10-19 · 다음 세션 최우선 작업 · stg 데이터에 접근할 수 있는 기기에서 진행</p>
+
+<div class="banner">
+  <strong>상태: 대기.</strong> 코드 분석으로 결함 가능성은 확인했고, 실제 데이터에서 발생하는지는 아직 모릅니다.
+  작성한 기기에는 AWS 자격증명과 <code>infra/state.env</code> 가 없어 stg 를 조회하지 못했습니다.
+  아래 절차를 순서대로 진행하고, 각 단계의 통과 기준을 확인한 뒤 다음 단계로 넘어갑니다.
+  수정은 3단계 결과를 사용자에게 보고하고 승인을 받은 뒤에만 합니다.
+</div>
+
+<div class="card">
+  <strong>선행 작업(완료, main 에 푸시됨)</strong>
+  <div class="table-wrap"><table>
+    <tr><th>Phase</th><th>커밋</th><th>내용</th></tr>
+    <tr><td>P1</td><td><code>24458cb</code></td><td>글로벌 countryN + 출처 필터에서 자사 인용 이중 집계(core <code>plan_counts</code> cross 문장)</td></tr>
+    <tr><td>P2</td><td><code>d3f80d1</code></td><td>자리 규칙(<code>rep_round_date_cell</code>)에서 언급 대표·인용 대표가 갈릴 때 셀 누락(<code>scan_population</code>, <code>mention_population(rep="c")</code>)</td></tr>
+    <tr><td>P3</td><td><code>d8eff02</code></td><td>front 표시 값을 반올림 값이 아닌 원값으로 계산(100% 막대·경쟁사 인용 점유율·권역 전환율·헤드투헤드 당사 행)</td></tr>
+  </table></div>
+</div>
+
+<h2>1. 의심 결함</h2>
+<p>ACR 화면의 차종 전환율(구 Q5)은 차종 표시 이름(<code>rd.dim_entity.rep_name</code>) × 소속 브랜드로 묶어
+<code>sum(choice) ÷ sum(cells.valid_acr)</code> 로 계산합니다. 분모는 조인된 <code>rd.acr_choice</code> 행마다 그 셀의
+<code>valid_acr</code> 를 더합니다.</p>
+<pre><code>-- back/app/features/analytics/funnel/acr/queries.py · models_sql (128행 부근)
+SELECT de.rep_name AS model, pb.name AS brand,
+       sum(ch.choice)::int AS choice, sum(cells.valid_acr)::int AS cell_vacr,
+       count(DISTINCT ch.acr_cell_key)::int AS cells
+  FROM cells JOIN rd.acr_choice ch ON ch.level = 2 AND ch.acr_cell_key = cells.acr_cell_key
+  JOIN rd.dim_entity de ON de.entity_key = ch.entity_key
+  LEFT JOIN rd.dim_brand_name pb ON pb.brand_key = ch.parent_brand_key AND ch.parent_brand_key &lt;&gt; 0
+ WHERE de.rep_name IS NOT NULL
+ GROUP BY de.rep_name, pb.name</code></pre>
+<ul>
+  <li><code>rd.acr_choice</code> 의 기본 키는 <code>(level, acr_cell_key, entity_key)</code> 라서 한 셀 안에서 엔티티마다 한 행입니다.</li>
+  <li>그런데 묶음 키는 엔티티가 아니라 <strong>이름</strong>입니다. <code>rd.dim_entity</code> 는 <code>entity_id</code>(UUID)만 유일하고
+    <code>rep_name</code> 에는 유일 제약이 없습니다(<code>back/db/DB-v2.32.sql</code> 의 <code>CREATE TABLE rd.dim_entity</code>).</li>
+  <li>그래서 같은 이름·같은 소속 브랜드의 엔티티 2개가 한 셀에 함께 있으면 그 셀의 <code>valid_acr</code> 가 두 번 더해집니다.
+    바로 옆 열 <code>cells</code> 는 <code>count(DISTINCT …)</code> 라 중복이 없는데 분모만 중복됩니다.</li>
+  <li>함수 docstring 의 "행이 셀 × 엔티티 유일이라 합이 곧 그 값"은 엔티티 단위에서는 맞지만 이름 단위 묶음에서는 맞지 않습니다.</li>
+</ul>
+<div class="card">
+  <strong>예:</strong> 셀 <code>valid_acr</code> = 10, 엔티티 E1 "Tucson" choice 3, E2 "Tucson" choice 2(같은 소속 브랜드).<br>
+  현재 계산 = 5 ÷ 20 = <strong>25.0%</strong>. 이름 기준 의도 = 5 ÷ 10 = <strong>50.0%</strong>.
+</div>
+<p><strong>legacy 도 같은 결함입니다.</strong> <code>front/lib/db/repositories/scope-aggregates.ts</code> 9715행 부근(Q5)이
+<code>GROUP BY x.brand, COALESCE(x.parent_brand, pn.brand)</code> 로 묶고 <code>sum(x.valid_acr_iterations)</code> 를 분모로 쓰며,
+주석에 같은 가정("행이 (셀×엔티티) 유일이라")이 있습니다. 그래서 고치면 중복이 있는 차종에서는 legacy 와 값이 달라집니다.</p>
+
+<h2>2. 이 기기에서 못 한 이유</h2>
+<ul>
+  <li>AWS CLI 는 있지만 <code>~/.aws</code> 에 자격증명이 없었습니다.</li>
+  <li><code>infra/state.env</code>(EC2 ID 등, 커밋 금지 파일)와 front <code>.env</code>(DB 접속)가 없었습니다.</li>
+  <li>로컬 시험 픽스처는 작고, 합성 DB(<code>back/db/synth</code>)는 이름을 생성해 넣어 운영 분포를 대표하지 않습니다.</li>
+</ul>
+
+<h2>3. 확인 절차</h2>
+<p>모든 쿼리는 <strong>읽기 전용</strong>입니다. 쓰기·DDL 은 하지 않습니다. 결과는 표로 정리해 사용자에게 보고합니다.</p>
+
+<h3>단계 0 — 준비와 접속 확인</h3>
+<ul>
+  <li>필요: stg 계정의 AWS 자격증명, 그 기기의 <code>infra/state.env</code>(<code>infra/lib.sh</code> 가 읽음).</li>
+  <li>접속 방식: <code>ENV=stg bash infra/ssm.sh &lt;스크립트.sh&gt;</code> 가 스크립트를 EC2 에서 실행하고 출력을 돌려줍니다.
+    EC2 의 psql 접속 설정은 <code>infra/ops/s9-load.tpl.sh</code> 머리와 같습니다(Secrets Manager 에서 비밀번호 →
+    <code>PGPASSWORD</code>, <code>PGHOST</code> = RDS 엔드포인트, <code>PGSSLMODE=require</code>). 비밀값은 출력하지 않습니다.</li>
+  <li>스크립트 첫 문장으로 읽기 전용을 겁니다: <code>SET default_transaction_read_only = on;</code></li>
+</ul>
+<pre><code>SET default_transaction_read_only = on;
+SELECT current_database(), now(),
+       (SELECT count(*) FROM rd.acr_cell)   AS acr_cells,
+       (SELECT count(*) FROM rd.acr_choice WHERE level = 2) AS product_choices,
+       (SELECT count(*) FROM rd.dim_entity) AS entities;</code></pre>
+<p><span class="pass">통과 기준</span>: DB 가 stg 이고 세 수가 0 보다 큼.</p>
+
+<h3>단계 1 — 중복이 존재하는가</h3>
+<pre><code>WITH x AS (
+  SELECT ch.acr_cell_key, de.rep_name, ch.parent_brand_key, count(*) AS n_ent
+    FROM rd.acr_choice ch JOIN rd.dim_entity de ON de.entity_key = ch.entity_key
+   WHERE ch.level = 2 AND de.rep_name IS NOT NULL
+   GROUP BY 1, 2, 3 HAVING count(*) &gt; 1)
+SELECT count(*) AS dup_cells,
+       count(DISTINCT (rep_name, parent_brand_key)) AS models,
+       max(n_ent) AS max_dup
+  FROM x;</code></pre>
+<p>같은 쿼리를 최근 90일로 좁혀 한 번 더 돌립니다(<code>JOIN rd.acr_cell c ON c.acr_cell_key = ch.acr_cell_key</code> 후
+<code>c.round_date &gt;= current_date - 90 AND c.acr_in</code>). 화면은 <code>acr_in</code> 셀만 읽습니다.</p>
+<p><span class="pass">판정</span>: <code>dup_cells = 0</code>(전체·최근 모두) → 단계 4 의 "영향 없음" 경로. 0 보다 크면 단계 2·3 진행.</p>
+
+<h3>단계 2 — 어떤 차종이, 왜 겹치는가</h3>
+<pre><code>WITH x AS (
+  SELECT ch.acr_cell_key, de.rep_name, ch.parent_brand_key,
+         count(*) AS n_ent, array_agg(DISTINCT de.entity_id::text) AS entity_ids,
+         array_agg(DISTINCT de.entity_type) AS entity_types
+    FROM rd.acr_choice ch JOIN rd.dim_entity de ON de.entity_key = ch.entity_key
+   WHERE ch.level = 2 AND de.rep_name IS NOT NULL
+   GROUP BY 1, 2, 3 HAVING count(*) &gt; 1)
+SELECT x.rep_name, b.name AS parent_brand, count(*) AS dup_cells, max(x.n_ent) AS max_dup,
+       (array_agg(x.entity_ids))[1] AS sample_entity_ids, (array_agg(x.entity_types))[1] AS entity_types
+  FROM x LEFT JOIN rd.dim_brand_name b ON b.brand_key = x.parent_brand_key
+ GROUP BY 1, 2 ORDER BY dup_cells DESC LIMIT 30;</code></pre>
+<p>원인을 둘로 나눠 기록합니다. (가) 같은 차종이 레지스트리에서 다른 엔티티로 중복된 경우(병합 누락),
+(나) 실제로 다른 엔티티인데 표시 이름이 같은 경우(트림·세대 등). (가)라면 레지스트리 정리도 별도 과제로 보고합니다.</p>
+
+<h3>단계 3 — 화면 값이 얼마나 달라지는가</h3>
+<p>글로벌·최근 90일·<code>acr_in</code> 셀 기준 근사치입니다(화면의 필터 축·창은 <code>cells_cte</code> 가 더 좁힘).
+현재식과 고친식(셀마다 <code>valid_acr</code> 한 번)을 나란히 냅니다.</p>
+<pre><code>WITH cells AS (
+  SELECT c.acr_cell_key, c.valid_acr FROM rd.acr_cell c
+   WHERE c.surface = 1 AND c.acr_in AND c.round_date &gt;= current_date - 90),
+per AS (
+  SELECT ch.acr_cell_key, de.rep_name, ch.parent_brand_key,
+         sum(ch.choice) AS choice, count(*) AS n_ent
+    FROM cells JOIN rd.acr_choice ch ON ch.level = 2 AND ch.acr_cell_key = cells.acr_cell_key
+    JOIN rd.dim_entity de ON de.entity_key = ch.entity_key
+   WHERE de.rep_name IS NOT NULL
+   GROUP BY 1, 2, 3)
+SELECT p.rep_name, b.name AS parent_brand, sum(p.choice) AS choice,
+       sum(c.valid_acr * p.n_ent) AS den_current, sum(c.valid_acr) AS den_fixed,
+       round(100.0 * sum(p.choice) / nullif(sum(c.valid_acr * p.n_ent), 0), 1) AS rate_current,
+       round(100.0 * sum(p.choice) / nullif(sum(c.valid_acr), 0), 1) AS rate_fixed
+  FROM per p JOIN cells c USING (acr_cell_key)
+  LEFT JOIN rd.dim_brand_name b ON b.brand_key = p.parent_brand_key
+ GROUP BY 1, 2
+HAVING sum(p.n_ent) &gt; count(*)
+ ORDER BY rate_fixed - rate_current DESC LIMIT 50;</code></pre>
+<p><span class="pass">보고 형식</span>: 영향 차종 수, 상위 차종별 현재 → 고친 값(%p 차이), 화면 상위 노출 차종(전환율 상위 12) 중 순위가 바뀌는 차종.</p>
+
+<h3>단계 4 — 판정과 사용자 보고</h3>
+<div class="table-wrap"><table>
+  <tr><th>결과</th><th>할 일</th></tr>
+  <tr><td>중복 없음(단계 1 = 0)</td><td>"현재 데이터 영향 없음"으로 보고. 방어적 수정(중복이 없으면 값 불변)을 할지 사용자에게 묻는다.</td></tr>
+  <tr><td>중복 있음</td><td>단계 2·3 표를 보고하고 수정 승인을 받는다. legacy 와 값이 달라진다는 점, legacy(롤백 경로)는 지금까지의 결정대로 고치지 않는다는 점을 함께 확인받는다.</td></tr>
+</table></div>
+
+<h2>4. 수정 계획(승인 후)</h2>
+<ol>
+  <li><strong>재현 시험 먼저.</strong> <code>back/app/features/analytics/funnel/acr/tests/</code> 의 픽스처(<code>seed_acr.pgsql</code>,
+    <code>conftest.py</code> 표 참고)에 같은 <code>rep_name</code>·같은 소속 브랜드의 엔티티 2개를 한 셀에 넣는 케이스를 추가하고,
+    차종 전환율이 50.0%(5/10)여야 한다는 단언을 씁니다. 수정 전 코드에서 25.0% 로 실패하는지 확인합니다.</li>
+  <li><strong>SQL 수정 방향.</strong> 셀 × 차종으로 먼저 접어 choice 를 합치고, 셀의 <code>valid_acr</code> 는 셀당 한 번만 더합니다.
+<pre><code>per AS (SELECT ch.acr_cell_key, de.rep_name, pb.name AS brand,
+               bool_or(ch.own_bit = ANY(:own)) AS is_ours, sum(ch.choice) AS choice
+          FROM cells JOIN rd.acr_choice ch ON … JOIN rd.dim_entity de ON …
+          LEFT JOIN rd.dim_brand_name pb ON …
+         WHERE de.rep_name IS NOT NULL
+         GROUP BY 1, 2, 3)
+SELECT p.rep_name AS model, p.brand, bool_or(p.is_ours) AS is_ours,
+       sum(p.choice)::int AS choice, sum(cells.valid_acr)::int AS cell_vacr, count(*)::int AS cells
+  FROM per p JOIN cells USING (acr_cell_key)
+ GROUP BY 1, 2 HAVING sum(p.choice) &gt; 0 ORDER BY … LIMIT …</code></pre>
+    docstring 의 유일성 가정 문장도 함께 고칩니다.</li>
+  <li><strong>검증.</strong> (가) 새 시험 통과, (나) <code>funnel/acr</code> 기존 시험 전부 통과(중복 없는 픽스처는 값 불변),
+    (다) back 전체 시험을 수정 전·후로 돌려 실패 목록이 같은지(새 시험 제외) 비교, (라) ruff check 통과,
+    (마) front <code>lib/hgh/adapters/funnel.acr.parity.test.ts</code> 등 ACR 어댑터 시험 통과.</li>
+  <li><strong>커밋.</strong> 사용자가 요청할 때만 main 에 직접 커밋·푸시(아래 작업 규칙).</li>
+</ol>
+
+<h2>5. 작업 규칙(이 레포에서 지켜온 것)</h2>
+<ul>
+  <li>브랜치를 만들지 않고 <code>main</code> 에 직접 커밋·푸시합니다. 커밋·푸시는 사용자가 명시적으로 요청할 때만 합니다. 푸시 전 <code>git fetch</code>.</li>
+  <li>커밋 작성자는 환경변수로 지정합니다(git config 변경 금지):
+    <code>GIT_AUTHOR_NAME=taeho-s2w GIT_AUTHOR_EMAIL=taeho_kr@s2w.inc</code>(COMMITTER 도 같게).
+    커밋 메시지는 영어, 끝에 <code>Co-Authored-By</code> 줄.</li>
+  <li>수정은 "재현 시험(수정 전 실패 확인) → 수정 → 전후 시험 비교" 순서입니다.</li>
+  <li>back 시험 환경: Python 3.12 venv(<code>requirements-dev.lock</code>), PostgreSQL 17 dev DB
+    <code>bash back/db/dev-db.sh up</code> → <code>clone &lt;이름&gt;</code>, <code>HGH_TEST_DB_URL</code>, 공식 게이트 <code>bash back/tests/run-areas.sh</code>.
+    Windows(Git Bash)에서는 <code>MSYS2_ARG_CONV_EXCL=/work</code> 를 붙이고, <code>pglast</code>·<code>uvloop</code> 는 Windows 빌드가 없어 빼고
+    <code>tzdata</code> 를 추가합니다. Windows 에서는 환경 탓 실패가 약 112건(대부분 <code>pglast</code> 미설치) 있습니다.</li>
+  <li>stg 와 같은 프로필로 시험하려면 <code>HGH_TEST_LEGACY_PROFILE=implemented</code>(CI 기본은 off).</li>
+  <li>front: <code>npm ci</code> → <code>npm run typecheck</code>, <code>npm run lint</code>, <code>npx vitest run</code>. 전체 vitest 가 스냅샷 파일의 줄바꿈만 바꾸면 되돌립니다.</li>
+</ul>
+
+<h2>6. P4 이후 남은 과제(참고, 우선순위 순)</h2>
+<p class="muted">2026-10-19 로직 점검에서 나왔고 아직 손대지 않은 것들입니다. 착수 전 사용자에게 순서를 확인합니다.</p>
+<div class="table-wrap"><table>
+  <tr><th>#</th><th>영역</th><th>내용</th><th>위치</th></tr>
+  <tr><td>1</td><td>권한</td><td>엄브렐러 브랜드(HMG)만 가진 계정은 <code>brands=()</code> 가 되는데 <code>if self.brands and …</code> 가 검사를 건너뛰어 브랜드 제한이 풀림(docstring 은 "빈 튜플 = 거부", front 는 거부)</td><td><code>back/app/core/auth.py</code> <code>DataScope.project_in_scope</code></td></tr>
+  <tr><td>2</td><td>적재</td><td>모든 트랜잭션 <code>lock_timeout 5s</code> + 블로킹 advisory lock → 평상시 동시 실행에서 큐 항목이 영구 <code>failed</code>(README 는 "대기 유지")</td><td><code>back/ingest/common/db.py</code> <code>tx</code>·<code>lock_dims</code>, <code>back/ingest/cycles/workers/service.py</code> 범용 except</td></tr>
+  <tr><td>3</td><td>적재</td><td>프롬프트 변경 시 커서 커밋(tx1)과 rejudge(tx2) 분리 → tx2 실패 시 재판정 영구 유실</td><td><code>back/ingest/pull/sync/service.py</code> <code>sync_prompts</code></td></tr>
+  <tr><td>4</td><td>P2 잔여</td><td>answers/list 브랜드 필터의 대표 계열, trend <code>measured_days_sql</code> 의 모수, 자리 규칙 프로필의 OR WHERE 성능(stg 규모 측정)</td><td><code>analytics/answers/list/queries.py</code>, <code>analytics/trend/series/queries.py</code></td></tr>
+  <tr><td>5</td><td>legacy 정합(결정 필요)</td><td colspan="2">
+    <ul style="margin:0;padding-left:18px">
+      <li>GEO 평균 순위 척도: back 은 답변 안 경쟁 순위(<code>core/measure.py</code> <code>own_rk_*</code>), legacy GEO 위젯은 본문 서수(<code>front/lib/summary/generate/fold.ts</code> 머리 주석의 <code>rank_sum</code>)</li>
+      <li>HMG 형제 브랜드의 경쟁사 취급: back <code>analytics/geo/markets/service.py</code> <code>brand_rows(hmg_siblings=False)</code>, front <code>lib/hgh/adapters/summary.ts</code> 경쟁사 필터 vs legacy <code>dashboard/_data/live.ts</code> <code>marketStats</code></li>
+      <li>엔진 일관성 배지(순위): back <code>analytics/kpi/engines/service.py</code> 는 반올림 전 평균, legacy <code>summary-global-aggregates.ts</code> 는 <code>round(avg, 1)</code> 뒤 비교</li>
+      <li>K-2 비교의 인용 데이터 회차: <code>analytics/kpi/compare/service.py</code> 가 <code>cit_total &gt; 0</code> 일 때만 셈(legacy 는 답변만 있으면 셈)</li>
+      <li>언급 0건 당사 행이 <code>brand_count</code> 에 들어감: <code>analytics/mentions/brands/service.py</code></li>
+      <li>GEO 권역 합계에 경쟁 언급 없는 국가 포함: <code>analytics/geo/markets/service.py</code> 국가 루프 vs legacy <code>live.ts</code></li>
+      <li>프로젝트 출처 도넛: api 는 그룹 키(<code>lib/hgh/adapters/dashboard.ts</code> <code>host_fold</code> 미전송), legacy 는 host 단위</li>
+      <li>반올림 공식 2종: <code>answer-analysis/_data/kpi-view.ts</code> <code>round1</code> vs <code>overview-card-values.ts</code> <code>pct</code>(x.x5 경계 0.1 차이)</li>
+    </ul></td></tr>
+  <tr><td>6</td><td>중간 신뢰도(미검증)</td><td colspan="2">
+    <ul style="margin:0;padding-left:18px">
+      <li>JWKS <code>kid</code> 캐시 만료 없음·미지 kid 마다 재조회: <code>back/app/core/auth.py</code> <code>PyJWKClient(cache_keys=True)</code></li>
+      <li>프로젝트 owner 권한을 읽기 스냅샷에서만 확인: <code>analytics</code> 밖 <code>features/projects/members/roster/service.py</code></li>
+      <li>staging 재개 시 미해결 job 목록 망각: <code>back/ingest/pull/sync/service.py</code> <code>unresolved</code></li>
+      <li>entity_version prepare 실패가 점유 안 한 큐 행을 failed 로 덮어씀: <code>back/ingest/cycles/workers/service.py</code> <code>PEEK</code>·<code>FAILED</code></li>
+      <li>언급만 숨긴 회차에서 GEO 시장 목록이 빔: <code>analytics/geo/markets/service.py</code></li>
+      <li>한쪽만 준 GA4 기간을 측정 회차 날짜로 닫음: <code>analytics/funnel/conversion/service.py</code></li>
+    </ul></td></tr>
+</table></div>
+</main>
+</body>
+</html>
