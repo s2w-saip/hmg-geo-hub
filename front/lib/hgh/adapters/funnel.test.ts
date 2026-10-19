@@ -224,8 +224,8 @@ describe("toConversionScreen: the legacy page branches", () => {
       totalAiKeyEvents: 7,
       totalHumanKeyEvents: 12,
       byCountry: [
-        { brand: "Kia", country: "IT", aiConvRate: 4, humanConvRate: 1, lift: 3, aiUsers: 150, humanUsers: 800 },
-        { brand: "Kia", country: "DE", aiConvRate: 2, humanConvRate: 2, lift: 0, aiUsers: 50, humanUsers: 200 },
+        { brand: "Kia", country: "IT", aiConvRate: 4, humanConvRate: 1, lift: 3, aiUsers: 150, humanUsers: 800, aiKeyEvents: 6, humanKeyEvents: 8 },
+        { brand: "Kia", country: "DE", aiConvRate: 2, humanConvRate: 2, lift: 0, aiUsers: 50, humanUsers: 200, aiKeyEvents: 1, humanKeyEvents: 4 },
       ],
     });
   });
@@ -233,7 +233,8 @@ describe("toConversionScreen: the legacy page branches", () => {
   it("several markets with one active: its row comes from the summary (by_country is null)", () => {
     const d = conv({ coverage: cov([market("active", "IT"), market("pending_grant", "DE", "Kia", "124")]), by_country: null });
     const r = F.toConversionScreen(d, meta()).rollupData!;
-    expect(r.byCountry).toEqual([{ brand: "Kia", country: "IT", aiConvRate: 3.5, humanConvRate: 1.2, lift: 2.3, aiUsers: 200, humanUsers: 1000 }]);
+    expect(r.byCountry).toEqual([{ brand: "Kia", country: "IT", aiConvRate: 3.5, humanConvRate: 1.2, lift: 2.3, aiUsers: 200, humanUsers: 1000,
+      aiKeyEvents: 7, humanKeyEvents: 12 }]);
     expect([r.measuredMarkets, r.totalMarkets]).toEqual([1, 2]);
   });
 

@@ -64,6 +64,20 @@ describe("typeCategoryBars", () => {
   it("returns empty for null", () => {
     expect(typeCategoryBars(null)).toEqual({ series: [], bars: [] });
   });
+  it("puts the rounding residual on the last segment with citations, never on an empty series", () => {
+    // series = A, B, C, D (D 는 comparison 에만 있다). mention 행의 D 는 0 건이다.
+    const { series, bars } = typeCategoryBars([
+      { type: "mention", total: 3, byCategory: { A: 1, B: 1, C: 1 } },
+      { type: "recommendation", total: 11, byCategory: { A: 5, B: 5, C: 1 } },
+      { type: "comparison", total: 1, byCategory: { D: 1 } },
+    ]);
+    expect(series).toEqual(["A", "B", "C", "D"]);
+    const seg = (type: string) => bars.find((b) => b.type === type)!.segments.map((s) => [s.name, s.value, s.pct]);
+    // 종전: D 가 0 건인데 잔여 0.1% 로 그려졌다(툴팁 "D 0.1% (0)")
+    expect(seg("mention")).toEqual([["A", 1, 33.3], ["B", 1, 33.3], ["C", 1, 33.4]]);
+    // 종전: 45.5 + 45.5 + 9.1 = 100.1(빈 D 가 잔여 −0.1 을 받고 0 으로 잘렸다)
+    expect(seg("recommendation")).toEqual([["A", 5, 45.5], ["B", 5, 45.5], ["C", 1, 9]]);
+  });
 });
 
 describe("competitor pick", () => {

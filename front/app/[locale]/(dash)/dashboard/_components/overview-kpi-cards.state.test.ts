@@ -142,4 +142,14 @@ describe("competitorCitationShares — 브랜드 표기 흔들림 합산", () =>
     const keys = rows.map((r) => r.brand.trim().toLowerCase());
     expect(new Set(keys).size).toBe(keys.length);
   });
+  it("분모(전체 인용 수)가 있으면 반올림된 도메인 점유율이 아니라 인용 수 합으로 낸다", () => {
+    // 전체 10,000 인용: tesla.com 3,040(30.4%) + 국가 도메인 12개 × 4(각 0.04% → 0.0%)
+    const dc = (domain: string, citations: number): CitationDomainLive =>
+      ({ domain, citations, share: Math.round((citations / 10_000) * 1000) / 10, prompts: 1, coverageRate: 0,
+        category: "Official (Competitor)" }) as CitationDomainLive;
+    const doms = [dc("tesla.com", 3040), ...Array.from({ length: 12 }, () => dc("tesla.co.kr", 4))];
+    expect(competitorCitationShares(doms, 4, 10_000).map((r) => r.value)).toEqual([30.9]);
+    // 분모가 없는 경로(legacy)는 종전 그대로 반올림 점유율 합
+    expect(competitorCitationShares(doms).map((r) => r.value)).toEqual([30.4]);
+  });
 });

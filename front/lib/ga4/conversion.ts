@@ -96,6 +96,12 @@ export interface AiTrafficConversionCountry {
   lift: number;
   aiUsers: number;
   humanUsers: number;
+  /**
+   * 전환 수 원값(반올림 전). 권역 가중 전환율을 이 값의 합으로 낸다 — 반올림된 aiConvRate × aiUsers 로
+   * 되살리면 최대 0.1%p 어긋난다. 이 필드 이전의 캐시 행에는 없다(그때는 종전 역산).
+   */
+  aiKeyEvents?: number;
+  humanKeyEvents?: number;
 }
 export interface AiTrafficConversionRollup {
   aiConvRate: number; // 활성사용자 가중 합산
@@ -604,6 +610,8 @@ async function getAiTrafficConversionRollupInner(
       lift: Math.round((aiConvRate - humanConvRate) * 10) / 10,
       aiUsers,
       humanUsers,
+      aiKeyEvents: aiKey,
+      humanKeyEvents: humanKey,
     });
   }
   const aiConvRate = pct(totalAiKey, totalAiUsers);

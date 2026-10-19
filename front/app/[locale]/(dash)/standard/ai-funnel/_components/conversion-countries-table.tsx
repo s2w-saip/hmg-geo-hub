@@ -43,6 +43,46 @@ interface RegionGroup {
   lift: number;
 }
 
+/** 권역(RHQ)별 묶음 + 권역 가중 전환율. 순수 함수(표 컴포넌트·시험이 같이 쓴다). */
+export function groupConversionByRegion(
+  rows: AiTrafficConversionCountry[],
+  activeBrand: string | null,
+): RegionGroup[] {
+  const byRegion = new Map<string, AiTrafficConversionCountry[]>();
+  for (const r of rows) {
+    // r.country = ISO code (scope_answers.region). 활성 브랜드의 RHQ 권역으로.
+    const key = (activeBrand && rhqForCountry(activeBrand, r.country)) ?? "unknown";
+    const list = byRegion.get(key) ?? [];
+    list.push(r);
+    byRegion.set(key, list);
+  }
+  const out: RegionGroup[] = [];
+  for (const [region, rs] of byRegion) {
+    // 권역 전환율 = 국가 전환 수 합 ÷ 국가 사용자 합. 전환 수 원값(aiKeyEvents)이 있으면 그 합이고, 없는 옛 행만
+    // 반올림된 전환율 × 사용자로 되살린다(그 경우 최대 0.1%p 어긋난다).
+    const aiUsersSum = rs.reduce((s, r) => s + r.aiUsers, 0);
+    const humanUsersSum = rs.reduce((s, r) => s + r.humanUsers, 0);
+    const aiKeySum = rs.reduce((s, r) => s + (r.aiKeyEvents ?? (r.aiConvRate / 100) * r.aiUsers), 0);
+    const humanKeySum = rs.reduce(
+      (s, r) => s + (r.humanKeyEvents ?? (r.humanConvRate / 100) * r.humanUsers),
+      0,
+    );
+    const aiConvRate = pct(aiKeySum, aiUsersSum);
+    const humanConvRate = pct(humanKeySum, humanUsersSum);
+    out.push({
+      region,
+      rows: rs,
+      aiUsersSum,
+      humanUsersSum,
+      aiConvRate,
+      humanConvRate,
+      lift: Math.round((aiConvRate - humanConvRate) * 10) / 10,
+    });
+  }
+  // Biggest region (by AI users) first.
+  return out.sort((a, b) => b.aiUsersSum - a.aiUsersSum);
+}
+
 export function CountryConversionTable({
   rows,
   activeBrand,
@@ -54,41 +94,7 @@ export function CountryConversionTable({
   const t = useTranslations("aiFunnelView.conversion");
 
   // Group by 권역 + per-region weighted aggregate.
-  const groups: RegionGroup[] = useMemo(() => {
-    const byRegion = new Map<string, AiTrafficConversionCountry[]>();
-    for (const r of rows) {
-      // r.country = ISO code (scope_answers.region). 활성 브랜드의 RHQ 권역으로.
-      const key = (activeBrand && rhqForCountry(activeBrand, r.country)) ?? "unknown";
-      const list = byRegion.get(key) ?? [];
-      list.push(r);
-      byRegion.set(key, list);
-    }
-    const out: RegionGroup[] = [];
-    for (const [region, rs] of byRegion) {
-      // Derive 권역 weighted KPI from country totals — keyEvents aren't on
-      // AiTrafficConversionCountry, so reconstruct from rate × users.
-      const aiUsersSum = rs.reduce((s, r) => s + r.aiUsers, 0);
-      const humanUsersSum = rs.reduce((s, r) => s + r.humanUsers, 0);
-      const aiKeySum = rs.reduce((s, r) => s + (r.aiConvRate / 100) * r.aiUsers, 0);
-      const humanKeySum = rs.reduce(
-        (s, r) => s + (r.humanConvRate / 100) * r.humanUsers,
-        0,
-      );
-      const aiConvRate = pct(aiKeySum, aiUsersSum);
-      const humanConvRate = pct(humanKeySum, humanUsersSum);
-      out.push({
-        region,
-        rows: rs,
-        aiUsersSum,
-        humanUsersSum,
-        aiConvRate,
-        humanConvRate,
-        lift: Math.round((aiConvRate - humanConvRate) * 10) / 10,
-      });
-    }
-    // Biggest region (by AI users) first.
-    return out.sort((a, b) => b.aiUsersSum - a.aiUsersSum);
-  }, [rows, activeBrand]);
+  const groups: RegionGroup[] = useMemo(() => groupConversionByRegion(rows, activeBrand), [rows, activeBrand]);
 
   if (groups.length === 0) return null;
 

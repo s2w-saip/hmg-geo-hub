@@ -81,13 +81,15 @@ export function typeCategoryBars(rows: CitationTypeCategoryRow[] | null | undefi
   const series = [...totals.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([c]) => c);
   const bars = rows.map((r) => {
     const total = r.total;
+    // 값이 있는 마지막 세그먼트가 잔여를 받는다 — 개별 반올림 합이 100.1 이 되지 않게. 마지막 시리즈가 이 유형에서
+    // 0 건이면 그 빈 시리즈가 잔여(0.1 등)를 받아 0 건 세그먼트가 그려지던 것을 막는다.
+    const last = series.reduce((li, name, i) => ((r.byCategory[name] ?? 0) > 0 ? i : li), -1);
     let acc = 0;
     const segments = series
       .map((name, i) => {
         const value = r.byCategory[name] ?? 0;
-        // 마지막 세그먼트는 잔여로 — 개별 반올림 합이 100.1 이 되지 않게.
-        const pct = total > 0 ? (i === series.length - 1 ? round1(100 - acc) : round1((100 * value) / total)) : 0;
-        acc += i === series.length - 1 ? 0 : pct;
+        const pct = total > 0 ? (i === last ? round1(100 - acc) : round1((100 * value) / total)) : 0;
+        acc += i === last ? 0 : pct;
         return { name, value, pct: Math.max(0, pct) };
       })
       .filter((s) => s.value > 0 || s.pct > 0);

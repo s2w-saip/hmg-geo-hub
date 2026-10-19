@@ -85,6 +85,8 @@ export interface OverviewExtras {
   brandTrend: BrandTrendResult | null;
   firstPosition: FirstPositionResult | null;
   citationDomains: CitationDomainLive[] | null;
+  /** citationDomains 점유율의 분모(전체 인용 수). API 경로만 싣는다 — 없으면 경쟁사 인용 점유율은 도메인 점유율 합. */
+  citationTotal?: number | null;
 }
 
 /**
@@ -166,19 +168,32 @@ export function competitorDeltas(extras: OverviewExtras | null, key: OverviewKpi
   return new Map();
 }
 
-/** 인용 점유율의 경쟁사 값 — 공식(경쟁사) 도메인을 브랜드로 접어 점유율 합. 순수 함수. */
-export function competitorCitationShares(domains: CitationDomainLive[] | null, limit = 4): CompetitorMini[] {
+/**
+ * 인용 점유율의 경쟁사 값 — 공식(경쟁사) 도메인을 브랜드로 접어 점유율 합. 순수 함수.
+ * total(전체 인용 수, 도메인 점유율의 분모)이 있으면 브랜드 인용 수 합 ÷ total 로 낸다: 도메인별로 반올림된 점유율을
+ * 더하면 0.05% 미만 도메인이 0 으로 빠진다. 없으면(legacy 경로) 종전처럼 도메인 점유율 합.
+ */
+export function competitorCitationShares(
+  domains: CitationDomainLive[] | null,
+  limit = 4,
+  total: number | null = null,
+): CompetitorMini[] {
   if (!domains) return [];
   // 표기 흔들림까지 접어 합산한다 — 같은 브랜드가 두 줄로 갈리지 않게(QA #22 부수).
-  const acc = new Map<string, { brand: string; share: number }>();
+  const acc = new Map<string, { brand: string; share: number; citations: number }>();
   for (const d of domains) {
     if (d.category !== OFFICIAL_COMPETITOR_CATEGORY) continue;
     const brand = competitorBrandOfDomain(d.domain);
     if (!brand) continue;
     const key = brandKey(brand);
     const cur = acc.get(key);
-    if (cur) cur.share += d.share;
-    else acc.set(key, { brand, share: d.share });
+    if (cur) {
+      cur.share += d.share;
+      cur.citations += d.citations;
+    } else acc.set(key, { brand, share: d.share, citations: d.citations });
+  }
+  if (total != null && total > 0) {
+    for (const v of acc.values()) v.share = (100 * v.citations) / total;
   }
   return [...acc.values()]
     .sort((a, b) => b.share - a.share || a.brand.localeCompare(b.brand))
@@ -625,7 +640,7 @@ function CompetitorRowLive({
   const deltas = competitorDeltas(src, kpiKey);
   const rows: CompetitorMini[] =
     kpiKey === "citationShare"
-      ? competitorCitationShares(src?.citationDomains ?? null)
+      ? competitorCitationShares(src?.citationDomains ?? null, undefined, src?.citationTotal ?? null)
       : // competitorMinis 가 이미 값 순으로 정렬한다 — Δ 만 얹는다.
         competitorMinis(src?.brands ?? [], kpiKey).map((m) => ({ ...m, delta: deltas.get(m.brand) ?? null }));
   return <CompetitorRow minis={rows} fmt={fmt} isRank={isRank} emptyText={emptyText} />;

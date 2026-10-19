@@ -1157,6 +1157,11 @@ export interface MentionsLive {
   // optional: 구 캐시 엔트리엔 없으므로 부재 시 폴백(캐시 세대 승격 불필요).
   typesByBrand?: MentionTypesByBrand | null;
   hasPosition: boolean;
+  /**
+   * 관점 당사(합친 당사)의 서버 값 — API 원천만 싣는다(/v1/mentions/brands own 블록). share = M02 당사 점유율(%),
+   * avgPosition = M04 우선노출도(답변별 당사 최상위 순위의 평균). 헤드투헤드 '당사' 행이 브랜드 행 합산 대신 쓴다.
+   */
+  own?: { share: number; avgPosition: number | null };
   // Weekly Top-N brand mention trend (null until ≥2 dated weeks exist).
   trend: MentionTrend | null;
   /**

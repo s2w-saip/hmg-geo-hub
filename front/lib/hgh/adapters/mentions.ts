@@ -445,6 +445,7 @@ export function toMentionsLive(p: MentionsParts): ApiMentionsLive | null {
     typeTotals: p.types && !wholeSuppression(p.types.meta) ? toTypeTotals(p.types.data, d.brands) : null,
     typesByBrand: toTypesByBrand(d),
     hasPosition: d.brands.some((b) => (b.avg_rank?.count ?? 0) > 0),
+    own: { share: pct1OrZero(d.own.share), avgPosition: rankAvg(d.own.avg_rank) },
     trend: p.trend ? toMentionTrend(p.trend.data) : null,
     ...(p.trendFailed ? { trendDegraded: true } : {}),
   };

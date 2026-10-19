@@ -10,7 +10,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { ReactNode } from "react";
 import { NextIntlClientProvider } from "next-intl";
 import ko from "@/messages/ko.json";
-import { CountryConversionTable } from "./conversion-countries-table";
+import { CountryConversionTable, groupConversionByRegion } from "./conversion-countries-table";
 import { ConversionPendingNotice } from "./conversion-pending-notice";
 import { ConversionUnmappedNotice } from "./conversion-unmapped-notice";
 
@@ -57,5 +57,25 @@ describe("conversion country labels never throw on non-ISO codes", () => {
     expect(render(<ConversionUnmappedNotice brand="Hyundai" country="CN-BJ" />)).toContain(
       "중국-베이징",
     );
+  });
+});
+
+describe("groupConversionByRegion", () => {
+  // A 1/10(10.0%), B 2/12(16.7%) — 한 권역(activeBrand null = 단일 그룹)
+  const a = { brand: "Hyundai", country: "US", aiConvRate: 10, humanConvRate: 10, lift: 0, aiUsers: 10, humanUsers: 10 };
+  const b = { brand: "Hyundai", country: "CA", aiConvRate: 16.7, humanConvRate: 16.7, lift: 0, aiUsers: 12, humanUsers: 12 };
+
+  it("weights the region rate by raw conversions, not by rounded country rates", () => {
+    const [g] = groupConversionByRegion(
+      [{ ...a, aiKeyEvents: 1, humanKeyEvents: 1 }, { ...b, aiKeyEvents: 2, humanKeyEvents: 2 }],
+      null,
+    );
+    // 3 / 22 = 13.6%. 반올림 전환율로 되살리면 (1 + 2.004) / 22 = 13.7%
+    expect([g.aiConvRate, g.humanConvRate, g.aiUsersSum]).toEqual([13.6, 13.6, 22]);
+  });
+
+  it("falls back to rate × users for rows without raw conversions", () => {
+    const [g] = groupConversionByRegion([a, b], null);
+    expect(g.aiConvRate).toBe(13.7);
   });
 });

@@ -340,7 +340,10 @@ export function toConversionLive(d: ApiConversionData, propertyId: string | null
 function countryRow(brand: string, country: string, ai: { sessions: number; conversions: number }, human: { sessions: number; conversions: number }): AiTrafficConversionCountry {
   const a = pct(ai.conversions, ai.sessions);
   const h = pct(human.conversions, human.sessions);
-  return { brand, country, aiConvRate: a, humanConvRate: h, lift: lift(a, h), aiUsers: ai.sessions, humanUsers: human.sessions };
+  return {
+    brand, country, aiConvRate: a, humanConvRate: h, lift: lift(a, h), aiUsers: ai.sessions, humanUsers: human.sessions,
+    aiKeyEvents: ai.conversions, humanKeyEvents: human.conversions,
+  };
 }
 
 /**

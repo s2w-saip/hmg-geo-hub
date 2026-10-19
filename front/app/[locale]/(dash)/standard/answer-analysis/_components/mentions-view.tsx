@@ -247,6 +247,45 @@ export function MentionsView({
 // 빈 상태의 지면은 ① 이 소유한다 — ②③ 는 데이터가 없으면 스스로 사라진다
 // (dashboard/page.tsx 의 섹션 규약과 동일).
 
+/**
+ * 헤드투헤드 '당사' 행 — 당사가 여럿이면(admin 무필터 등) 하나로 합친다.
+ *
+ * 점유율·평균 순위는 서버가 관점 당사로 낸 값(`own`, API 원천)이 있으면 그 값이다: 브랜드 행을 더하면 점유율은
+ * 반올림된 브랜드 점유율의 합이 되고, 평균 순위는 언급 수로 가중한 브랜드 평균이 되어 답변 단위 ④(답변별 당사
+ * 최상위 순위의 평균)와 다르다. 없으면(legacy 원천) 종전 합산 그대로.
+ *
+ * 언급률은 답변 단위 비율이라 브랜드 간 가산 불가(복수 브랜드 동시 언급이 중복 계상돼 3사 합이 100을 넘으면
+ * 클램프로 100% 고정되던 버그). 서버의 답변 단위 DISTINCT 값(subKpis.ownMentionRate)을 쓰고, 없으면 하한인
+ * 브랜드별 최대값으로 폴백한다.
+ */
+export function ownCompareRow(
+  ownRows: MentionsBrandLive[],
+  own: MentionsLive["own"] | null,
+  ownMentionRate: number | null,
+  label: string,
+): MentionsBrandLive {
+  const posWeighted = ownRows.reduce(
+    (acc, b) =>
+      b.avgPosition != null
+        ? { sum: acc.sum + b.avgPosition * b.mentions, n: acc.n + b.mentions }
+        : acc,
+    { sum: 0, n: 0 },
+  );
+  return {
+    brand: label,
+    mentions: ownRows.reduce((s, b) => s + b.mentions, 0),
+    prompts: ownRows.reduce((s, b) => s + b.prompts, 0),
+    share: own ? own.share : ownRows.reduce((s, b) => s + b.share, 0),
+    mentionRate: ownMentionRate ?? ownRows.reduce((s, b) => Math.max(s, b.mentionRate), 0),
+    avgPosition: own
+      ? own.avgPosition
+      : posWeighted.n > 0
+        ? Math.round((posWeighted.sum / posWeighted.n) * 10) / 10
+        : null,
+    isTracked: true,
+  };
+}
+
 // ① 요약 카드 + 헤드투헤드 + 감정/유형 — Sub KPI 를 읽는 구획.
 export function MentionsSummarySection({
   data,
@@ -283,27 +322,7 @@ export function MentionsSummarySection({
     const external = brands.filter((b) => !b.isTracked);
     if (ownRows.length === 0 || external.length === 0) return null;
 
-    const posWeighted = ownRows.reduce(
-      (acc, b) =>
-        b.avgPosition != null
-          ? { sum: acc.sum + b.avgPosition * b.mentions, n: acc.n + b.mentions }
-          : acc,
-      { sum: 0, n: 0 },
-    );
-    const own: MentionsBrandLive = {
-      brand: t("compare.ours"),
-      mentions: ownRows.reduce((s, b) => s + b.mentions, 0),
-      prompts: ownRows.reduce((s, b) => s + b.prompts, 0),
-      share: ownRows.reduce((s, b) => s + b.share, 0),
-      // 언급률은 답변 단위 비율이라 브랜드 간 가산 불가(복수 브랜드 동시 언급이
-      // 중복 계상돼 3사 합이 100을 넘으면 클램프로 100% 고정되던 버그). 서버의
-      // 답변 단위 DISTINCT 값(subKpis.ownMentionRate)을 쓰고, 없으면 하한인
-      // 브랜드별 최대값으로 폴백한다.
-      mentionRate:
-        subKpis?.ownMentionRate ?? ownRows.reduce((s, b) => Math.max(s, b.mentionRate), 0),
-      avgPosition: posWeighted.n > 0 ? Math.round((posWeighted.sum / posWeighted.n) * 10) / 10 : null,
-      isTracked: true,
-    };
+    const own = ownCompareRow(ownRows, data?.own ?? null, subKpis?.ownMentionRate ?? null, t("compare.ours"));
 
     // 드롭다운·자동 폴백용으로 외부 브랜드를 점유율(SOV) 내림차순 정렬.
     const externalBySov = [...external].sort((a, b) => b.share - a.share);

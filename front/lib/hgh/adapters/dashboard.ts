@@ -848,6 +848,8 @@ export async function loadCompetitorSources(
     brandTrend: trend ? toBrandTrendResult(trend.data) : null,
     firstPosition: trend ? toFirstPositionResult(trend.data) : null,
     citationDomains: domains ? toCompetitorCitationDomains(domains.data) : null,
+    // 도메인 점유율의 분모: 경쟁사 미니값을 반올림 점유율 합이 아니라 인용 수 합 ÷ 분모로 낸다(competitorCitationShares)
+    citationTotal: domains?.data.competitor_sources ? domains.data.summary.own_share.den : null,
   };
 }
 
