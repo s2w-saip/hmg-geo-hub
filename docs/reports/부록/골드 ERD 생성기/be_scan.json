@@ -1,0 +1,2497 @@
+{
+ "routes": [
+  {
+   "method": "GET",
+   "path": "/v1/admin/users",
+   "module": "admin/accounts/users"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/admin/users",
+   "module": "admin/accounts/users"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/admin/users/{user_id}",
+   "module": "admin/accounts/users"
+  },
+  {
+   "method": "PATCH",
+   "path": "/v1/admin/users/{user_id}",
+   "module": "admin/accounts/users"
+  },
+  {
+   "method": "DELETE",
+   "path": "/v1/admin/users/{user_id}",
+   "module": "admin/accounts/users"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/admin/users/{user_id}/audit",
+   "module": "admin/accounts/users"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/admin/catalog/prompts/bulk/regions",
+   "module": "admin/catalog/bulk"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/admin/catalog/prompts/import/preview",
+   "module": "admin/catalog/bulk"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/admin/catalog/prompts/bulk/apply",
+   "module": "admin/catalog/bulk"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/admin/catalog/prompts/export",
+   "module": "admin/catalog/bulk"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/admin/catalog/prompts/screen",
+   "module": "admin/catalog/prompts"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/admin/catalog/prompts",
+   "module": "admin/catalog/prompts"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/admin/catalog/prompts",
+   "module": "admin/catalog/prompts"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/admin/catalog/prompts/{prompt_id:uuid}",
+   "module": "admin/catalog/prompts"
+  },
+  {
+   "method": "PATCH",
+   "path": "/v1/admin/catalog/prompts/{prompt_id:uuid}/text",
+   "module": "admin/catalog/prompts"
+  },
+  {
+   "method": "PATCH",
+   "path": "/v1/admin/catalog/prompts/{prompt_id:uuid}/labels",
+   "module": "admin/catalog/prompts"
+  },
+  {
+   "method": "PATCH",
+   "path": "/v1/admin/catalog/prompts/{prompt_id:uuid}/regions",
+   "module": "admin/catalog/prompts"
+  },
+  {
+   "method": "PATCH",
+   "path": "/v1/admin/catalog/prompts/{prompt_id:uuid}/kind",
+   "module": "admin/catalog/prompts"
+  },
+  {
+   "method": "DELETE",
+   "path": "/v1/admin/catalog/prompts/{prompt_id:uuid}",
+   "module": "admin/catalog/prompts"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/admin/catalog/prompts/{prompt_id:uuid}/restore",
+   "module": "admin/catalog/prompts"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/admin/catalog/taxonomy",
+   "module": "admin/catalog/reference"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/admin/catalog/markets",
+   "module": "admin/catalog/reference"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/admin/changes",
+   "module": "admin/changes/queue"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/admin/changes/{change_id}",
+   "module": "admin/changes/queue"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/admin/citation-overrides",
+   "module": "admin/citation_sources/overrides"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/admin/citation-overrides/candidates",
+   "module": "admin/citation_sources/overrides"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/admin/citation-overrides/categories",
+   "module": "admin/citation_sources/overrides"
+  },
+  {
+   "method": "PUT",
+   "path": "/v1/admin/citation-overrides/{domain}",
+   "module": "admin/citation_sources/overrides"
+  },
+  {
+   "method": "DELETE",
+   "path": "/v1/admin/citation-overrides/{domain}",
+   "module": "admin/citation_sources/overrides"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/admin/cycles",
+   "module": "admin/cycles/cycles"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/admin/cycles/{cyc_key}",
+   "module": "admin/cycles/cycles"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/admin/cycles/{cyc_key}/hide",
+   "module": "admin/cycles/cycles"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/admin/cycles/{cyc_key}/unhide",
+   "module": "admin/cycles/cycles"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/admin/cycles/{cyc_key}/close",
+   "module": "admin/cycles/cycles"
+  },
+  {
+   "method": "PUT",
+   "path": "/v1/admin/cycles/{cyc_key}/view-date",
+   "module": "admin/cycles/cycles"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/admin/jobs/{job_id}/registry",
+   "module": "admin/cycles/jobs"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/admin/jobs/{job_id}/anchor-pin",
+   "module": "admin/cycles/jobs"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/admin/jobs/{job_id}/drop",
+   "module": "admin/cycles/jobs"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/admin/entities",
+   "module": "admin/entities/registry"
+  },
+  {
+   "method": "PUT",
+   "path": "/v1/admin/entities/{entity_id}",
+   "module": "admin/entities/registry"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/admin/entities/audit",
+   "module": "admin/entities/versions"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/admin/entities/{entity_id}/mentions",
+   "module": "admin/entities/versions"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/admin/ga4/properties",
+   "module": "admin/integrations/ga4"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/admin/ga4/project-overrides",
+   "module": "admin/integrations/ga4"
+  },
+  {
+   "method": "PUT",
+   "path": "/v1/admin/ga4/properties/{property_id}",
+   "module": "admin/integrations/ga4"
+  },
+  {
+   "method": "DELETE",
+   "path": "/v1/admin/ga4/properties/{property_id}",
+   "module": "admin/integrations/ga4"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/admin/ga4/properties/{property_id}/events",
+   "module": "admin/integrations/ga4"
+  },
+  {
+   "method": "PUT",
+   "path": "/v1/admin/ga4/properties/{property_id}/events",
+   "module": "admin/integrations/ga4"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/admin/ga4/markets",
+   "module": "admin/integrations/ga4"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/admin/ga4/markets/{brand_code}/{country_code}",
+   "module": "admin/integrations/ga4"
+  },
+  {
+   "method": "PUT",
+   "path": "/v1/admin/ga4/markets/{brand_code}/{country_code}",
+   "module": "admin/integrations/ga4"
+  },
+  {
+   "method": "DELETE",
+   "path": "/v1/admin/ga4/markets/{brand_code}/{country_code}",
+   "module": "admin/integrations/ga4"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/admin/keyword-tools/volume",
+   "module": "admin/integrations/keyword_tools"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/admin/keyword-tools/to-prompt",
+   "module": "admin/integrations/keyword_tools"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/admin/keyword-tools/prompt-to-volume",
+   "module": "admin/integrations/keyword_tools"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/admin/interest/keywords",
+   "module": "admin/interest/keywords"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/admin/interest/keywords",
+   "module": "admin/interest/keywords"
+  },
+  {
+   "method": "PATCH",
+   "path": "/v1/admin/interest/keywords/{keyword_id}",
+   "module": "admin/interest/keywords"
+  },
+  {
+   "method": "DELETE",
+   "path": "/v1/admin/interest/keywords/{keyword_id}",
+   "module": "admin/interest/keywords"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/admin/interest/sources",
+   "module": "admin/interest/sources"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/admin/interest/sources",
+   "module": "admin/interest/sources"
+  },
+  {
+   "method": "PATCH",
+   "path": "/v1/admin/interest/sources/{source_id}",
+   "module": "admin/interest/sources"
+  },
+  {
+   "method": "DELETE",
+   "path": "/v1/admin/interest/sources/{source_id}",
+   "module": "admin/interest/sources"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/answers/{job_id}",
+   "module": "analytics/answers/detail"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/answers",
+   "module": "analytics/answers/list"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/citations/domains",
+   "module": "analytics/citations/domains"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/citations/domains/export",
+   "module": "analytics/citations/domains"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/citations/domains/{skey:path}",
+   "module": "analytics/citations/domain_detail"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/citations/prompts",
+   "module": "analytics/citations/prompts"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/citations/sources",
+   "module": "analytics/citations/sources"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/citations/sources/types",
+   "module": "analytics/citations/sources"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/citations/targets",
+   "module": "analytics/citations/targets"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/citations/sources/tone",
+   "module": "analytics/citations/tone"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/filters/dates",
+   "module": "analytics/filters/dates"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/filters/options",
+   "module": "analytics/filters/options"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/funnel/acr",
+   "module": "analytics/funnel/acr"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/funnel/conversion",
+   "module": "analytics/funnel/conversion"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/funnel/conversion/events",
+   "module": "analytics/funnel/conversion"
+  },
+  {
+   "method": "PUT",
+   "path": "/v1/funnel/conversion/events",
+   "module": "analytics/funnel/conversion"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/geo",
+   "module": "analytics/geo/markets"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/kpi/compare",
+   "module": "analytics/kpi/compare"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/kpi/engines",
+   "module": "analytics/kpi/engines"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/kpi/summary",
+   "module": "analytics/kpi/summary"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/kpi/unmeasured-prompts",
+   "module": "analytics/kpi/summary"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/mentions/brands",
+   "module": "analytics/mentions/brands"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/mentions/prompts",
+   "module": "analytics/mentions/prompts"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/mentions/types",
+   "module": "analytics/mentions/types"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/trend",
+   "module": "analytics/trend/series"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/prompts/screen",
+   "module": "catalog/prompts/catalog"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/prompts",
+   "module": "catalog/prompts/catalog"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/prompts/history",
+   "module": "catalog/prompts/history"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/admin/catalog/prompts/{prompt_id:uuid}/history",
+   "module": "catalog/prompts/history"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/intent/candidates",
+   "module": "intent/candidates/submit"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/intent/fetches",
+   "module": "intent/keywords/fetches"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/intent/fetches/{change_id}",
+   "module": "intent/keywords/fetches"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/intent/fetches",
+   "module": "intent/keywords/fetches"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/intent/insight",
+   "module": "intent/keywords/research"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/intent/related",
+   "module": "intent/keywords/research"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/intent/lookup",
+   "module": "intent/keywords/research"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/intent/standard-keywords",
+   "module": "intent/keywords/research"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/intent/serp-drafts",
+   "module": "intent/keywords/serp_drafts"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/intent/keywords",
+   "module": "intent/keywords/tracked"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/intent/keywords",
+   "module": "intent/keywords/tracked"
+  },
+  {
+   "method": "DELETE",
+   "path": "/v1/intent/keywords",
+   "module": "intent/keywords/tracked"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/intent/social/context-map/stats",
+   "module": "intent/social/context_map"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/intent/social/context-map/contexts",
+   "module": "intent/social/context_map"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/intent/social/context-map/conditions",
+   "module": "intent/social/context_map"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/intent/social/context-map/combinations",
+   "module": "intent/social/context_map"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/intent/social/context-map/entities/{entity_id}",
+   "module": "intent/social/context_map"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/intent/social/context-map/export",
+   "module": "intent/social/context_map"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/intent/social/prompts",
+   "module": "intent/social/prompts"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/intent/social/prompts",
+   "module": "intent/social/prompts"
+  },
+  {
+   "method": "DELETE",
+   "path": "/v1/intent/social/prompts",
+   "module": "intent/social/prompts"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/auth/me",
+   "module": "platform/auth/session"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/projects/{project_id}/member-audit",
+   "module": "projects/members/audit"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/projects/{project_id}/members/me/accept",
+   "module": "projects/members/invites"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/projects/{project_id}/members/me/reject",
+   "module": "projects/members/invites"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/me/project-invites",
+   "module": "projects/members/invites"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/projects/{project_id}/members",
+   "module": "projects/members/roster"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/projects/{project_id}/members",
+   "module": "projects/members/roster"
+  },
+  {
+   "method": "PATCH",
+   "path": "/v1/projects/{project_id}/members/{user_id}",
+   "module": "projects/members/roster"
+  },
+  {
+   "method": "DELETE",
+   "path": "/v1/projects/{project_id}/members/{user_id}",
+   "module": "projects/members/roster"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/projects",
+   "module": "projects/project/core"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/projects",
+   "module": "projects/project/core"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/projects/creation-options",
+   "module": "projects/project/core"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/projects/by-scope/{scope_project_id}",
+   "module": "projects/project/core"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/projects/{project_id}",
+   "module": "projects/project/core"
+  },
+  {
+   "method": "PATCH",
+   "path": "/v1/projects/{project_id}",
+   "module": "projects/project/core"
+  },
+  {
+   "method": "DELETE",
+   "path": "/v1/projects/{project_id}",
+   "module": "projects/project/core"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/projects/{project_id}/prompt-candidates/screen",
+   "module": "projects/prompts/candidates"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/projects/{project_id}/prompt-candidates",
+   "module": "projects/prompts/candidates"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/projects/{project_id}/prompt-candidates/select",
+   "module": "projects/prompts/candidates"
+  },
+  {
+   "method": "DELETE",
+   "path": "/v1/projects/{project_id}/prompt-candidates/{candidate_id}",
+   "module": "projects/prompts/candidates"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/projects/{project_id}/prompt-candidates/bulk-delete",
+   "module": "projects/prompts/candidates"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/projects/{project_id}/prompts/screen",
+   "module": "projects/prompts/crud"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/projects/{project_id}/prompts",
+   "module": "projects/prompts/crud"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/projects/{project_id}/prompts",
+   "module": "projects/prompts/crud"
+  },
+  {
+   "method": "PATCH",
+   "path": "/v1/projects/{project_id}/prompts/{prompt_id}",
+   "module": "projects/prompts/crud"
+  },
+  {
+   "method": "DELETE",
+   "path": "/v1/projects/{project_id}/prompts/{prompt_id}",
+   "module": "projects/prompts/crud"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/projects/{project_id}/prompts/execute",
+   "module": "projects/prompts/execute"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/projects/{project_id}/prompt-fields",
+   "module": "projects/prompts/fields"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/projects/{project_id}/prompt-fields",
+   "module": "projects/prompts/fields"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/projects/{project_id}/prompt-fields/{field_id}/archive",
+   "module": "projects/prompts/fields"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/projects/{project_id}/prompt-fields/{field_id}/restore",
+   "module": "projects/prompts/fields"
+  },
+  {
+   "method": "DELETE",
+   "path": "/v1/projects/{project_id}/prompt-fields/{field_id}",
+   "module": "projects/prompts/fields"
+  },
+  {
+   "method": "PUT",
+   "path": "/v1/projects/{project_id}/prompts/{prompt_id}/fields/{field_id}",
+   "module": "projects/prompts/fields"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/projects/{project_id}/prompt-fields/{field_id}/bulk-set",
+   "module": "projects/prompts/fields"
+  },
+  {
+   "method": "DELETE",
+   "path": "/v1/projects/{project_id}/prompts/{prompt_id}/fields/{field_id}",
+   "module": "projects/prompts/fields"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/projects/{project_id}/prompts/export",
+   "module": "projects/prompts/io"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/projects/{project_id}/prompts/import",
+   "module": "projects/prompts/io"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/projects/{project_id}/prompts/{prompt_id}/lifecycle-impact",
+   "module": "projects/prompts/lifecycle"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/projects/{project_id}/prompts/{prompt_id}/pause",
+   "module": "projects/prompts/lifecycle"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/projects/{project_id}/prompts/{prompt_id}/resume",
+   "module": "projects/prompts/lifecycle"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/projects/{project_id}/prompts/{prompt_id}/hard-delete",
+   "module": "projects/prompts/lifecycle"
+  },
+  {
+   "method": "PUT",
+   "path": "/v1/projects/{project_id}/settings/engines",
+   "module": "projects/settings/engines"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/projects/{project_id}/settings/engines/history",
+   "module": "projects/settings/engines"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/projects/{project_id}/settings",
+   "module": "projects/settings/overview"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/projects/{project_id}/settings/owned-bases",
+   "module": "projects/settings/owned_bases"
+  },
+  {
+   "method": "DELETE",
+   "path": "/v1/projects/{project_id}/settings/owned-bases",
+   "module": "projects/settings/owned_bases"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/projects/{project_id}/settings/scope-link",
+   "module": "projects/settings/scope_link"
+  },
+  {
+   "method": "PUT",
+   "path": "/v1/projects/{project_id}/settings/brand-aliases",
+   "module": "projects/settings/tracked_targets"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/projects/{project_id}/settings/competitors",
+   "module": "projects/settings/tracked_targets"
+  },
+  {
+   "method": "DELETE",
+   "path": "/v1/projects/{project_id}/settings/competitors",
+   "module": "projects/settings/tracked_targets"
+  },
+  {
+   "method": "PUT",
+   "path": "/v1/projects/{project_id}/settings/competitors/target",
+   "module": "projects/settings/tracked_targets"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/projects/{project_id}/settings/vehicles",
+   "module": "projects/settings/tracked_targets"
+  },
+  {
+   "method": "DELETE",
+   "path": "/v1/projects/{project_id}/settings/vehicles",
+   "module": "projects/settings/tracked_targets"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/projects/{project_id}/settings/tracked-urls",
+   "module": "projects/settings/tracked_urls"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/projects/{project_id}/settings/tracked-urls",
+   "module": "projects/settings/tracked_urls"
+  },
+  {
+   "method": "DELETE",
+   "path": "/v1/projects/{project_id}/settings/tracked-urls",
+   "module": "projects/settings/tracked_urls"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/projects/{project_id}/settings/tracked-urls/export",
+   "module": "projects/settings/tracked_urls"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/projects/{project_id}/settings/tracked-urls/import",
+   "module": "projects/settings/tracked_urls"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/qa/answers/{job_id}",
+   "module": "qa/answers/detail"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/qa/answers",
+   "module": "qa/answers/list"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/qa/answers/progress",
+   "module": "qa/answers/list"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/qa/answers/{job_id}/neighbors",
+   "module": "qa/answers/list"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/qa/filters",
+   "module": "qa/answers/list"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/qa/answers/{job_id}/notes",
+   "module": "qa/notes/notes"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/qa/answers/{job_id}/notes",
+   "module": "qa/notes/notes"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/qa/notes",
+   "module": "qa/notes/notes"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/qa/notes/counts",
+   "module": "qa/notes/notes"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/qa/notes/export",
+   "module": "qa/notes/notes"
+  },
+  {
+   "method": "PATCH",
+   "path": "/v1/qa/notes/{note_id}",
+   "module": "qa/notes/notes"
+  },
+  {
+   "method": "DELETE",
+   "path": "/v1/qa/notes/{note_id}",
+   "module": "qa/notes/notes"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/qa/deltas",
+   "module": "qa/review/deltas"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/qa/answers/{job_id}/lock",
+   "module": "qa/review/lock"
+  },
+  {
+   "method": "PATCH",
+   "path": "/v1/qa/answers/{job_id}/lock",
+   "module": "qa/review/lock"
+  },
+  {
+   "method": "DELETE",
+   "path": "/v1/qa/answers/{job_id}/lock",
+   "module": "qa/review/lock"
+  },
+  {
+   "method": "POST",
+   "path": "/v1/qa/sessions",
+   "module": "qa/review/sessions"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/qa/sessions/current",
+   "module": "qa/review/sessions"
+  },
+  {
+   "method": "PATCH",
+   "path": "/v1/qa/sessions/{session_id}",
+   "module": "qa/review/sessions"
+  },
+  {
+   "method": "GET",
+   "path": "/v1/qa/answers/{job_id}/review",
+   "module": "qa/review/verdict"
+  },
+  {
+   "method": "PUT",
+   "path": "/v1/qa/answers/{job_id}/review",
+   "module": "qa/review/verdict"
+  }
+ ],
+ "mods": {
+  "__init__.py": [],
+  "admin/accounts/__init__.py": [],
+  "admin/accounts/users": [
+   "?app.member_role",
+   "?app.member_status",
+   "?app.menu_group",
+   "?app.operator_scope",
+   "?app.user_role",
+   "app.member_audit_log",
+   "app.permission_audit_log",
+   "app.project",
+   "app.project_member",
+   "app.qa_answer_review",
+   "app.qa_review_note",
+   "app.qa_review_session",
+   "app.user_account"
+  ],
+  "admin/catalog/__init__.py": [],
+  "admin/catalog/bulk": [
+   "app.prompt"
+  ],
+  "admin/catalog/prompts": [
+   "?app.batch_id",
+   "app.actor",
+   "app.brand",
+   "app.judgment_change",
+   "app.project",
+   "app.prompt",
+   "app.scope_outbox",
+   "rd.dim_project",
+   "rd.dim_prompt"
+  ],
+  "admin/catalog/reference": [
+   "app.project",
+   "app.prompt"
+  ],
+  "admin/changes/__init__.py": [],
+  "admin/changes/queue": [
+   "app.judgment_change",
+   "app.user_account"
+  ],
+  "admin/citation_sources/__init__.py": [],
+  "admin/citation_sources/overrides": [
+   "app.actor",
+   "app.citation_category",
+   "app.citation_domain_override",
+   "app.owned_base",
+   "app.user_account",
+   "rd.citation",
+   "rd.dim_source"
+  ],
+  "admin/cycles/__init__.py": [],
+  "admin/cycles/cycles": [
+   "app.judgment_change",
+   "rd.answer",
+   "rd.cycle",
+   "rd.dim_project",
+   "rd.job",
+   "rd.today_kst"
+  ],
+  "admin/cycles/jobs": [
+   "app.judgment_change",
+   "rd.cycle",
+   "rd.job",
+   "rd.today_kst",
+   "rd.v_answer_registry"
+  ],
+  "admin/entities/__init__.py": [],
+  "admin/entities/registry": [
+   "app.actor",
+   "app.ecat_version",
+   "app.entity_registry",
+   "rd.dim_brand_name",
+   "rd.dim_entity",
+   "rd.dim_project",
+   "rd.entity_mention_total"
+  ],
+  "admin/entities/versions": [
+   "app.actor",
+   "app.brand",
+   "app.brand_name_prefix",
+   "app.ecat_apply",
+   "app.ecat_audit_log",
+   "app.ecat_content_md5",
+   "app.ecat_entity",
+   "app.ecat_hmg_prefix_id",
+   "app.ecat_review",
+   "app.ecat_rx_escape",
+   "app.ecat_rx_lead_trim",
+   "app.ecat_surface",
+   "app.ecat_surface_def",
+   "app.ecat_version",
+   "app.judgment_change",
+   "app.rule_param",
+   "rd.answer_brand",
+   "rd.cycle",
+   "rd.dim_brand_name",
+   "rd.dim_entity",
+   "rd.today_kst",
+   "rd.v_answer_body",
+   "rd.v_answer_mention_raw",
+   "rd.v_answer_occurrence",
+   "rd.v_entity_mention_surface"
+  ],
+  "admin/integrations/__init__.py": [],
+  "admin/integrations/ga4": [
+   "app.actor",
+   "app.ga4_market_pending",
+   "app.ga4_property",
+   "app.ga4_tracked_event",
+   "app.judgment_change",
+   "app.project",
+   "app.user_account",
+   "rd.ga4_dim_property",
+   "rd.ga4_dim_value",
+   "rd.ga4_row",
+   "rd.today_kst"
+  ],
+  "admin/integrations/keyword_tools": [
+   "app.judgment_change",
+   "rd.dim_keyword",
+   "rd.kw_volume_monthly"
+  ],
+  "admin/interest/__init__.py": [],
+  "admin/interest/keywords": [
+   "app.actor",
+   "app.standard_keyword"
+  ],
+  "admin/interest/sources": [
+   "app.actor",
+   "app.standard_source"
+  ],
+  "analytics/answers/__init__.py": [],
+  "analytics/answers/detail": [
+   "app.citation_category",
+   "rd.catalog_entry",
+   "rd.cycle",
+   "rd.dim_brand_name",
+   "rd.dim_entity",
+   "rd.dim_project",
+   "rd.dim_source",
+   "rd.dim_taxon",
+   "rd.dim_url",
+   "rd.job",
+   "rd.surface_generation",
+   "rd.v_answer_body",
+   "rd.v_answer_mention_raw",
+   "rd.v_answer_occurrence",
+   "rd.v_answer_stance_raw"
+  ],
+  "analytics/answers/list": [
+   "rd.dim_brand_name",
+   "rd.dim_source",
+   "rd.job"
+  ],
+  "analytics/citations/__init__.py": [],
+  "analytics/citations/domain_detail": [
+   "app.owned_base",
+   "rd.dim_brand_name",
+   "rd.dim_source",
+   "rd.dim_taxon",
+   "rd.dim_url",
+   "rd.job"
+  ],
+  "analytics/citations/domains": [
+   "rd.dim_brand_name",
+   "rd.dim_source"
+  ],
+  "analytics/citations/prompts": [
+   "rd.dim_taxon",
+   "rd.job"
+  ],
+  "analytics/citations/sources": [
+   "app.citation_domain_override",
+   "rd.dim_source"
+  ],
+  "analytics/citations/targets": [],
+  "analytics/citations/tone": [
+   "rd.dim_source",
+   "rd.dim_url"
+  ],
+  "analytics/filters/__init__.py": [],
+  "analytics/filters/dates": [],
+  "analytics/filters/options": [
+   "app.brand",
+   "app.citation_category",
+   "app.project_custom_field",
+   "app.prompt",
+   "app.prompt_custom_field_value",
+   "app.website_prompt",
+   "app.website_site",
+   "rd.catalog_entry",
+   "rd.dim_source",
+   "rd.dim_taxon",
+   "rd.job"
+  ],
+  "analytics/funnel/__init__.py": [],
+  "analytics/funnel/acr": [
+   "rd.acr_cell",
+   "rd.acr_choice",
+   "rd.dim_brand_name",
+   "rd.dim_country",
+   "rd.dim_entity",
+   "rd.dim_lang"
+  ],
+  "analytics/funnel/conversion": [
+   "app.ga4_property",
+   "app.project",
+   "rd.ga4_dim_property",
+   "rd.ga4_dim_value",
+   "rd.ga4_row"
+  ],
+  "analytics/geo/__init__.py": [],
+  "analytics/geo/markets": [
+   "app.rhq_region",
+   "rd.dim_brand_name"
+  ],
+  "analytics/kpi/__init__.py": [],
+  "analytics/kpi/compare": [],
+  "analytics/kpi/engines": [],
+  "analytics/kpi/summary": [
+   "app.prompt",
+   "app.report_publication",
+   "rd.catalog_entry",
+   "rd.dim_taxon"
+  ],
+  "analytics/mentions/__init__.py": [],
+  "analytics/mentions/brands": [
+   "rd.dim_brand_name"
+  ],
+  "analytics/mentions/prompts": [
+   "rd.dim_brand_name",
+   "rd.dim_country",
+   "rd.dim_engine",
+   "rd.dim_entity",
+   "rd.dim_taxon",
+   "rd.job",
+   "rd.v_answer_mention_raw"
+  ],
+  "analytics/mentions/types": [],
+  "analytics/trend/__init__.py": [],
+  "analytics/trend/series": [
+   "rd.dim_brand_name",
+   "rd.dim_source",
+   "rd.job"
+  ],
+  "catalog/prompts/__init__.py": [],
+  "catalog/prompts/catalog": [
+   "app.brand",
+   "app.project",
+   "app.prompt",
+   "app.website_prompt",
+   "app.website_site",
+   "rd.answer",
+   "rd.dim_prompt"
+  ],
+  "catalog/prompts/history": [
+   "app.prompt",
+   "app.prompt_audit_log",
+   "app.user_account"
+  ],
+  "core/__init__": [],
+  "core/auth": [
+   "app.project",
+   "app.project_member",
+   "app.qa_review_session",
+   "app.user_account",
+   "rd.dim_project"
+  ],
+  "core/card_routes": [],
+  "core/codes": [
+   "app.brand",
+   "app.citation_category",
+   "app.hidden_market",
+   "app.owned_base",
+   "app.rhq_region",
+   "app.rhq_region_country",
+   "rd.dim_country",
+   "rd.dim_engine",
+   "rd.dim_lang",
+   "rd.dim_project",
+   "rd.dim_region"
+  ],
+  "core/config": [],
+  "core/contracts": [],
+  "core/cycles": [
+   "frz.generation",
+   "rd.cycle",
+   "rd.cycle_pick_basis",
+   "rd.surface_generation",
+   "rd.today_kst"
+  ],
+  "core/db": [
+   "?app.actor_id",
+   "?app.actor_type",
+   "?app.batch_id"
+  ],
+  "core/ecat": [],
+  "core/entities": [
+   "rd.dim_brand_name",
+   "rd.dim_entity"
+  ],
+  "core/envelope": [],
+  "core/errors": [],
+  "core/export": [],
+  "core/facts": [
+   "frz.card_answer",
+   "frz.card_answer_brand",
+   "frz.card_answer_brand_w",
+   "frz.card_answer_w",
+   "frz.card_citation",
+   "frz.card_citation_w",
+   "frz.grid_answer",
+   "frz.grid_answer_brand",
+   "frz.grid_citation",
+   "rd.answer",
+   "rd.answer_brand",
+   "rd.answer_stance",
+   "rd.citation",
+   "rd.dim_prompt"
+  ],
+  "core/filters": [
+   "app.prompt",
+   "app.prompt_custom_field_value",
+   "frz.card_axis",
+   "frz.generation",
+   "frz.prompt",
+   "rd.catalog_entry",
+   "rd.dim_taxon",
+   "rd.today_kst"
+  ],
+  "core/kw": [
+   "app.term_norm"
+  ],
+  "core/llm": [],
+  "core/measure": [
+   "app.citation_category",
+   "app.citation_domain_override",
+   "app.project",
+   "app.project_owned_base",
+   "app.project_tracked_url",
+   "app.prompt",
+   "app.report_publication",
+   "app.website_prompt",
+   "app.website_report_excluded",
+   "app.website_site",
+   "frz.card_axis",
+   "frz.card_brand_name",
+   "frz.card_web",
+   "frz.generation",
+   "rd.catalog_entry",
+   "rd.cycle",
+   "rd.dim_country",
+   "rd.dim_project",
+   "rd.dim_source",
+   "rd.dim_url",
+   "rd.rep_cit_delta",
+   "rd.report_unit_value",
+   "rd.web_report_prompt",
+   "rd.web_target_url",
+   "rd.web_unit"
+  ],
+  "core/pagination": [],
+  "core/profile": [],
+  "core/reqid": [],
+  "core/result_cache": [
+   "app.result_cache_lookup",
+   "app.result_cache_put"
+  ],
+  "core/sqlb": [],
+  "core/sqlguard": [],
+  "core/upload": [],
+  "core/urls": [],
+  "core/write": [
+   "?app.user_role",
+   "app.access_audit_log",
+   "app.actor",
+   "app.judgment_change",
+   "app.scope_outbox"
+  ],
+  "core/xlsx": [],
+  "features/__init__.py": [],
+  "features/admin": [],
+  "features/analytics": [],
+  "features/catalog": [],
+  "features/intent": [],
+  "features/platform": [],
+  "features/projects": [],
+  "features/qa": [],
+  "intent/candidates/__init__.py": [],
+  "intent/candidates/submit": [
+   "app.project",
+   "app.prompt_candidate"
+  ],
+  "intent/keywords/__init__.py": [],
+  "intent/keywords/fetches": [
+   "app.judgment_change"
+  ],
+  "intent/keywords/research": [
+   "app.kw_prompt_draft",
+   "app.project_tracked_keyword",
+   "app.standard_keyword",
+   "app.term_norm",
+   "rd.dim_keyword",
+   "rd.kw_serp",
+   "rd.kw_suggestion",
+   "rd.kw_volume_monthly"
+  ],
+  "intent/keywords/serp_drafts": [
+   "app.kw_prompt_draft",
+   "rd.dim_keyword",
+   "rd.kw_serp"
+  ],
+  "intent/keywords/tracked": [
+   "app.project_tracked_keyword",
+   "rd.dim_keyword",
+   "rd.kw_volume_monthly"
+  ],
+  "intent/social/__init__.py": [],
+  "intent/social/context_map": [
+   "ext.ctx_combination",
+   "ext.ctx_domain",
+   "ext.ctx_drive",
+   "ext.ctx_entity",
+   "ext.ctx_evidence",
+   "ext.ctx_snapshot"
+  ],
+  "intent/social/prompts": [
+   "app.ctx_generated_prompt",
+   "app.project_tracked_competitor",
+   "app.project_tracked_vehicle",
+   "app.prompt",
+   "app.prompt_candidate"
+  ],
+  "main.py": [
+   "app.access_audit_log"
+  ],
+  "platform/auth/__init__.py": [],
+  "platform/auth/session": [],
+  "projects/members/__init__.py": [],
+  "projects/members/audit": [
+   "app.member_audit_log",
+   "app.user_account"
+  ],
+  "projects/members/invites": [
+   "app.project",
+   "app.project_member",
+   "app.user_account"
+  ],
+  "projects/members/roster": [
+   "?app.member_role",
+   "app.member_audit_log",
+   "app.project_member",
+   "app.user_account"
+  ],
+  "projects/project/__init__.py": [],
+  "projects/project/core": [
+   "app.project",
+   "app.project_engine_history",
+   "app.project_member",
+   "app.project_owned_base",
+   "app.project_tracked_brand",
+   "app.project_tracked_competitor",
+   "app.project_tracked_vehicle",
+   "app.prompt",
+   "app.prompt_candidate",
+   "app.rule_param",
+   "app.website_site"
+  ],
+  "projects/prompts/__init__.py": [],
+  "projects/prompts/candidates": [
+   "app.actor",
+   "app.prompt",
+   "app.prompt_candidate"
+  ],
+  "projects/prompts/crud": [
+   "app.actor",
+   "app.project_custom_field",
+   "app.prompt",
+   "app.prompt_custom_field_value"
+  ],
+  "projects/prompts/execute": [
+   "app.actor",
+   "app.prompt",
+   "app.scope_outbox"
+  ],
+  "projects/prompts/fields": [
+   "app.actor",
+   "app.project_custom_field",
+   "app.prompt",
+   "app.prompt_custom_field_value"
+  ],
+  "projects/prompts/io": [
+   "app.actor",
+   "app.project_custom_field",
+   "app.prompt",
+   "app.prompt_custom_field_value"
+  ],
+  "projects/prompts/lifecycle": [
+   "app.actor",
+   "app.prompt",
+   "rd.answer",
+   "rd.answer_brand",
+   "rd.citation",
+   "rd.cycle",
+   "rd.dim_prompt"
+  ],
+  "projects/prompts/screen.py": [
+   "app.project_custom_field",
+   "app.prompt",
+   "app.prompt_candidate",
+   "app.prompt_custom_field_value"
+  ],
+  "projects/settings/__init__.py": [],
+  "projects/settings/engines": [
+   "app.project",
+   "app.project_engine_history",
+   "app.user_account"
+  ],
+  "projects/settings/overview": [
+   "app.project",
+   "app.project_tracked_brand",
+   "app.project_tracked_competitor",
+   "app.project_tracked_url",
+   "app.rule_param"
+  ],
+  "projects/settings/owned_bases": [
+   "app.project",
+   "app.project_owned_base"
+  ],
+  "projects/settings/scope_link": [
+   "app.project",
+   "app.prompt",
+   "app.scope_outbox",
+   "rd.cycle",
+   "rd.job"
+  ],
+  "projects/settings/tracked_targets": [
+   "app.project",
+   "app.project_tracked_brand",
+   "app.project_tracked_competitor",
+   "app.project_tracked_vehicle"
+  ],
+  "projects/settings/tracked_urls": [
+   "app.project",
+   "app.project_tracked_url"
+  ],
+  "qa/answers/__init__.py": [],
+  "qa/answers/detail": [
+   "app.citation_category",
+   "app.citation_domain_override",
+   "app.prompt",
+   "rd.acr_cell",
+   "rd.acr_cell_job",
+   "rd.acr_choice",
+   "rd.citation",
+   "rd.dim_brand_name",
+   "rd.dim_entity",
+   "rd.dim_lang",
+   "rd.dim_project",
+   "rd.dim_prompt",
+   "rd.dim_taxon",
+   "rd.dim_url",
+   "rd.job",
+   "rd.v_acr_cell_run",
+   "rd.v_answer_body",
+   "rd.v_answer_citation_raw",
+   "rd.v_answer_mention_raw",
+   "rd.v_answer_registry"
+  ],
+  "qa/answers/list": [
+   "app.brand",
+   "app.qa_answer_lock",
+   "app.qa_answer_review",
+   "app.qa_review_note",
+   "rd.dim_country",
+   "rd.dim_engine",
+   "rd.dim_lang",
+   "rd.dim_prompt",
+   "rd.job",
+   "rd.v_answer_citation_raw",
+   "rd.v_answer_mention_raw"
+  ],
+  "qa/notes/__init__.py": [],
+  "qa/notes/notes": [
+   "app.qa_answer_review",
+   "app.qa_review_note",
+   "rd.dim_prompt",
+   "rd.job"
+  ],
+  "qa/review/__init__.py": [],
+  "qa/review/deltas": [
+   "app.qa_answer_lock",
+   "app.qa_answer_review",
+   "rd.job"
+  ],
+  "qa/review/lock": [
+   "app.qa_answer_lock"
+  ],
+  "qa/review/sessions": [
+   "app.qa_answer_lock",
+   "app.qa_answer_review",
+   "app.qa_review_note",
+   "app.qa_review_session"
+  ],
+  "qa/review/verdict": [
+   "app.qa_answer_review"
+  ],
+  "tools/__init__.py": [],
+  "tools/warm_cache.py": [
+   "app.user_account"
+  ]
+ },
+ "imports": {
+  "admin/accounts/users": [
+   "core/auth",
+   "core/config",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/filters",
+   "core/pagination",
+   "core/sqlb",
+   "core/write"
+  ],
+  "admin/catalog/bulk": [
+   "core/auth",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/export",
+   "core/filters",
+   "core/upload",
+   "core/write",
+   "core/xlsx"
+  ],
+  "admin/catalog/prompts": [
+   "core/auth",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/filters",
+   "core/pagination",
+   "core/sqlb",
+   "core/write"
+  ],
+  "admin/catalog/reference": [
+   "core/auth",
+   "core/db",
+   "core/envelope",
+   "core/errors"
+  ],
+  "admin/changes/queue": [
+   "core/auth",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/pagination",
+   "core/write"
+  ],
+  "admin/citation_sources/overrides": [
+   "core/auth",
+   "core/cycles",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/filters",
+   "core/pagination",
+   "core/sqlb",
+   "core/write"
+  ],
+  "admin/cycles/cycles": [
+   "core/auth",
+   "core/codes",
+   "core/cycles",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/filters",
+   "core/pagination",
+   "core/sqlb",
+   "core/write"
+  ],
+  "admin/cycles/jobs": [
+   "core/auth",
+   "core/codes",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/write"
+  ],
+  "admin/entities/registry": [
+   "core/auth",
+   "core/codes",
+   "core/cycles",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/filters",
+   "core/pagination",
+   "core/sqlb",
+   "core/write"
+  ],
+  "admin/entities/versions": [
+   "core/auth",
+   "core/codes",
+   "core/cycles",
+   "core/db",
+   "core/ecat",
+   "core/envelope",
+   "core/errors",
+   "core/filters",
+   "core/reqid",
+   "core/sqlb",
+   "core/write"
+  ],
+  "admin/integrations/ga4": [
+   "core/auth",
+   "core/config",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/pagination",
+   "core/sqlb",
+   "core/write"
+  ],
+  "admin/integrations/keyword_tools": [
+   "core/auth",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/kw",
+   "core/llm",
+   "core/write"
+  ],
+  "admin/interest/keywords": [
+   "core/auth",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/filters",
+   "core/sqlb",
+   "core/write"
+  ],
+  "admin/interest/sources": [
+   "core/auth",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/filters",
+   "core/sqlb",
+   "core/write"
+  ],
+  "analytics/answers/detail": [
+   "core/auth",
+   "core/codes",
+   "core/config",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/facts",
+   "core/filters",
+   "core/measure",
+   "core/sqlb",
+   "core/write"
+  ],
+  "analytics/answers/list": [
+   "core/auth",
+   "core/codes",
+   "core/cycles",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/facts",
+   "core/filters",
+   "core/measure",
+   "core/pagination",
+   "core/sqlb"
+  ],
+  "analytics/citations/domain_detail": [
+   "core/auth",
+   "core/cycles",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/facts",
+   "core/filters",
+   "core/measure",
+   "core/result_cache",
+   "core/sqlb"
+  ],
+  "analytics/citations/domains": [
+   "core/auth",
+   "core/cycles",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/export",
+   "core/facts",
+   "core/filters",
+   "core/measure",
+   "core/pagination",
+   "core/result_cache",
+   "core/sqlb",
+   "core/write"
+  ],
+  "analytics/citations/prompts": [
+   "core/auth",
+   "core/cycles",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/facts",
+   "core/filters",
+   "core/measure",
+   "core/pagination",
+   "core/result_cache",
+   "core/sqlb"
+  ],
+  "analytics/citations/sources": [
+   "core/auth",
+   "core/cycles",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/facts",
+   "core/filters",
+   "core/measure",
+   "core/result_cache",
+   "core/sqlb"
+  ],
+  "analytics/citations/targets": [
+   "core/auth",
+   "core/cycles",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/filters",
+   "core/measure",
+   "core/result_cache"
+  ],
+  "analytics/citations/tone": [
+   "core/auth",
+   "core/cycles",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/facts",
+   "core/filters",
+   "core/measure",
+   "core/pagination",
+   "core/result_cache",
+   "core/sqlb"
+  ],
+  "analytics/filters/dates": [
+   "core/auth",
+   "core/cycles",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/filters",
+   "core/result_cache"
+  ],
+  "analytics/filters/options": [
+   "core/auth",
+   "core/codes",
+   "core/cycles",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/facts",
+   "core/filters",
+   "core/measure",
+   "core/profile",
+   "core/result_cache",
+   "core/sqlb"
+  ],
+  "analytics/funnel/acr": [
+   "core/auth",
+   "core/codes",
+   "core/cycles",
+   "core/db",
+   "core/entities",
+   "core/envelope",
+   "core/errors",
+   "core/facts",
+   "core/filters",
+   "core/measure",
+   "core/result_cache",
+   "core/sqlb"
+  ],
+  "analytics/funnel/conversion": [
+   "core/auth",
+   "core/codes",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/filters",
+   "core/sqlb"
+  ],
+  "analytics/geo/markets": [
+   "core/auth",
+   "core/db",
+   "core/entities",
+   "core/envelope",
+   "core/errors",
+   "core/filters",
+   "core/measure",
+   "core/result_cache"
+  ],
+  "analytics/kpi/compare": [
+   "core/auth",
+   "core/codes",
+   "core/cycles",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/facts",
+   "core/filters",
+   "core/measure",
+   "core/profile",
+   "core/result_cache",
+   "core/sqlb"
+  ],
+  "analytics/kpi/engines": [
+   "core/auth",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/filters",
+   "core/measure",
+   "core/result_cache"
+  ],
+  "analytics/kpi/summary": [
+   "core/auth",
+   "core/cycles",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/facts",
+   "core/filters",
+   "core/measure",
+   "core/result_cache",
+   "core/sqlb"
+  ],
+  "analytics/mentions/brands": [
+   "core/auth",
+   "core/cycles",
+   "core/db",
+   "core/entities",
+   "core/envelope",
+   "core/errors",
+   "core/facts",
+   "core/filters",
+   "core/measure",
+   "core/result_cache",
+   "core/sqlb"
+  ],
+  "analytics/mentions/prompts": [
+   "core/auth",
+   "core/cycles",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/facts",
+   "core/filters",
+   "core/measure",
+   "core/pagination",
+   "core/sqlb"
+  ],
+  "analytics/mentions/types": [
+   "core/auth",
+   "core/codes",
+   "core/cycles",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/facts",
+   "core/filters",
+   "core/measure",
+   "core/result_cache",
+   "core/sqlb"
+  ],
+  "analytics/trend/series": [
+   "core/auth",
+   "core/codes",
+   "core/cycles",
+   "core/db",
+   "core/entities",
+   "core/envelope",
+   "core/errors",
+   "core/facts",
+   "core/filters",
+   "core/measure",
+   "core/profile",
+   "core/result_cache",
+   "core/sqlb"
+  ],
+  "catalog/prompts/catalog": [
+   "core/auth",
+   "core/codes",
+   "core/cycles",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/export",
+   "core/filters",
+   "core/pagination",
+   "core/sqlb",
+   "core/write",
+   "core/xlsx"
+  ],
+  "catalog/prompts/history": [
+   "core/auth",
+   "core/codes",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/export",
+   "core/filters",
+   "core/pagination",
+   "core/sqlb",
+   "core/write"
+  ],
+  "core/auth": [
+   "core/codes",
+   "core/config",
+   "core/db",
+   "core/errors"
+  ],
+  "core/codes": [
+   "core/facts",
+   "core/profile"
+  ],
+  "core/config": [
+   "core/profile"
+  ],
+  "core/cycles": [
+   "core/codes",
+   "core/db",
+   "core/profile",
+   "core/sqlb"
+  ],
+  "core/db": [
+   "core/auth",
+   "core/config",
+   "core/sqlguard"
+  ],
+  "core/ecat": [
+   "core/ecat"
+  ],
+  "core/entities": [
+   "core/db"
+  ],
+  "core/envelope": [
+   "core/filters"
+  ],
+  "core/errors": [
+   "core/reqid"
+  ],
+  "core/export": [
+   "core/xlsx"
+  ],
+  "core/filters": [
+   "core/auth",
+   "core/codes",
+   "core/cycles",
+   "core/db",
+   "core/errors",
+   "core/facts",
+   "core/measure",
+   "core/profile",
+   "core/sqlb"
+  ],
+  "core/kw": [
+   "core/db",
+   "core/errors"
+  ],
+  "core/llm": [
+   "core/config",
+   "core/errors"
+  ],
+  "core/measure": [
+   "core/codes",
+   "core/cycles",
+   "core/db",
+   "core/facts",
+   "core/profile",
+   "core/sqlb",
+   "core/urls"
+  ],
+  "core/pagination": [
+   "core/db",
+   "core/errors",
+   "core/sqlb"
+  ],
+  "core/profile": [
+   "core/config"
+  ],
+  "core/result_cache": [
+   "core/auth",
+   "core/codes",
+   "core/config",
+   "core/db",
+   "core/errors",
+   "core/profile"
+  ],
+  "core/upload": [
+   "core/config",
+   "core/errors"
+  ],
+  "core/urls": [
+   "core/errors"
+  ],
+  "core/write": [
+   "core/auth",
+   "core/contracts",
+   "core/db",
+   "core/errors",
+   "core/reqid"
+  ],
+  "intent/candidates/submit": [
+   "core/auth",
+   "core/codes",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/write"
+  ],
+  "intent/keywords/fetches": [
+   "core/auth",
+   "core/codes",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/kw",
+   "core/write"
+  ],
+  "intent/keywords/research": [
+   "core/auth",
+   "core/codes",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/filters",
+   "core/kw",
+   "core/pagination"
+  ],
+  "intent/keywords/serp_drafts": [
+   "core/auth",
+   "core/codes",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/kw",
+   "core/llm"
+  ],
+  "intent/keywords/tracked": [
+   "core/auth",
+   "core/codes",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/kw",
+   "core/write"
+  ],
+  "intent/social/context_map": [
+   "core/auth",
+   "core/config",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/export",
+   "core/pagination",
+   "core/sqlb",
+   "core/write",
+   "core/xlsx"
+  ],
+  "intent/social/prompts": [
+   "core/auth",
+   "core/codes",
+   "core/config",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/llm",
+   "core/write"
+  ],
+  "main.py": [
+   "core/auth",
+   "core/config",
+   "core/db",
+   "core/errors",
+   "core/reqid",
+   "core/upload",
+   "core/write"
+  ],
+  "platform/auth/session": [
+   "core/auth",
+   "core/codes",
+   "core/db",
+   "core/envelope",
+   "core/errors"
+  ],
+  "projects/members/audit": [
+   "core/auth",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/pagination",
+   "core/sqlb"
+  ],
+  "projects/members/invites": [
+   "core/auth",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/write"
+  ],
+  "projects/members/roster": [
+   "core/auth",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/filters",
+   "core/write"
+  ],
+  "projects/project/core": [
+   "core/auth",
+   "core/codes",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/filters",
+   "core/pagination",
+   "core/sqlb",
+   "core/urls",
+   "core/write"
+  ],
+  "projects/prompts/candidates": [
+   "core/auth",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/pagination",
+   "core/sqlb",
+   "core/write"
+  ],
+  "projects/prompts/crud": [
+   "core/auth",
+   "core/codes",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/filters",
+   "core/pagination",
+   "core/sqlb",
+   "core/write"
+  ],
+  "projects/prompts/execute": [
+   "core/auth",
+   "core/contracts",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/write"
+  ],
+  "projects/prompts/fields": [
+   "core/auth",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/write"
+  ],
+  "projects/prompts/io": [
+   "core/auth",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/filters",
+   "core/upload",
+   "core/write",
+   "core/xlsx"
+  ],
+  "projects/prompts/lifecycle": [
+   "core/auth",
+   "core/codes",
+   "core/cycles",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/sqlb",
+   "core/write"
+  ],
+  "projects/prompts/screen.py": [
+   "core/db",
+   "core/errors",
+   "core/sqlb"
+  ],
+  "projects/settings/engines": [
+   "core/auth",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/filters",
+   "core/pagination",
+   "core/sqlb",
+   "core/write"
+  ],
+  "projects/settings/overview": [
+   "core/auth",
+   "core/db",
+   "core/envelope",
+   "core/errors"
+  ],
+  "projects/settings/owned_bases": [
+   "core/auth",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/filters",
+   "core/urls",
+   "core/write"
+  ],
+  "projects/settings/scope_link": [
+   "core/auth",
+   "core/codes",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/write"
+  ],
+  "projects/settings/tracked_targets": [
+   "core/auth",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/filters",
+   "core/write"
+  ],
+  "projects/settings/tracked_urls": [
+   "core/auth",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/export",
+   "core/filters",
+   "core/pagination",
+   "core/sqlb",
+   "core/upload",
+   "core/urls",
+   "core/write",
+   "core/xlsx"
+  ],
+  "qa/answers/detail": [
+   "core/auth",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/urls",
+   "core/write"
+  ],
+  "qa/answers/list": [
+   "core/auth",
+   "core/codes",
+   "core/config",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/filters",
+   "core/pagination",
+   "core/sqlb"
+  ],
+  "qa/notes/notes": [
+   "core/auth",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/export",
+   "core/pagination",
+   "core/sqlb",
+   "core/write"
+  ],
+  "qa/review/deltas": [
+   "core/auth",
+   "core/db",
+   "core/envelope",
+   "core/errors",
+   "core/sqlb"
+  ],
+  "qa/review/lock": [
+   "core/auth",
+   "core/db",
+   "core/envelope",
+   "core/errors"
+  ],
+  "qa/review/sessions": [
+   "core/auth",
+   "core/config",
+   "core/db",
+   "core/envelope",
+   "core/errors"
+  ],
+  "qa/review/verdict": [
+   "core/auth",
+   "core/db",
+   "core/envelope",
+   "core/errors"
+  ],
+  "tools/warm_cache.py": [
+   "core/as",
+   "core/auth",
+   "core/codes",
+   "core/config",
+   "core/db",
+   "core/measure",
+   "core/rc",
+   "core/result_cache"
+  ]
+ },
+ "kinds": {
+  "admin/catalog/bulk": [
+   "catalog"
+  ],
+  "admin/catalog/prompts": [
+   "catalog",
+   "prompt_kind"
+  ],
+  "admin/citation_sources/overrides": [
+   "citation_override"
+  ],
+  "admin/cycles/cycles": [
+   "cycle_admin"
+  ],
+  "admin/cycles/jobs": [
+   "anchor_pin",
+   "answer_drop"
+  ],
+  "admin/entities/registry": [
+   "entity"
+  ],
+  "admin/entities/versions": [
+   "entity_version"
+  ],
+  "admin/integrations/ga4": [
+   "ga4_property",
+   "ga4_tracked_event"
+  ],
+  "admin/integrations/keyword_tools": [
+   "dfs_fetch"
+  ],
+  "analytics/answers/detail": [
+   "catalog"
+  ],
+  "analytics/citations/sources": [
+   "citation_override"
+  ],
+  "analytics/funnel/conversion": [
+   "ga4_tracked_event"
+  ],
+  "catalog/prompts/catalog": [
+   "catalog"
+  ],
+  "core/contracts": [
+   "anchor_pin",
+   "answer_drop",
+   "citation_override",
+   "cycle_admin",
+   "dfs_fetch",
+   "entity",
+   "entity_version",
+   "ga4_property",
+   "ga4_tracked_event",
+   "project_owned_base",
+   "project_setting",
+   "project_target_url",
+   "report_publication"
+  ],
+  "core/entities": [
+   "entity"
+  ],
+  "core/measure": [
+   "citation_override"
+  ],
+  "core/write": [
+   "anchor_pin",
+   "answer_drop",
+   "brand_rule",
+   "catalog",
+   "citation_override",
+   "competitor_token",
+   "cycle_admin",
+   "dfs_fetch",
+   "entity",
+   "entity_version",
+   "ga4_property",
+   "ga4_tracked_event",
+   "hidden_market",
+   "owned_base",
+   "project_owned_base",
+   "project_setting",
+   "project_target_url",
+   "prompt_kind",
+   "report_publication",
+   "rule_param",
+   "scope_prompt",
+   "website_catalog"
+  ],
+  "intent/keywords/fetches": [
+   "dfs_fetch"
+  ],
+  "projects/project/core": [
+   "project_setting"
+  ],
+  "projects/prompts/lifecycle": [
+   "catalog"
+  ],
+  "projects/settings/engines": [
+   "project_setting"
+  ],
+  "projects/settings/owned_bases": [
+   "owned_base",
+   "project_owned_base",
+   "project_setting"
+  ],
+  "projects/settings/tracked_targets": [
+   "project_setting"
+  ],
+  "projects/settings/tracked_urls": [
+   "project_target_url"
+  ]
+ }
+}

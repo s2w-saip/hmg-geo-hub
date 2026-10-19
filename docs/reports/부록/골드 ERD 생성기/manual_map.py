@@ -1,0 +1,2 @@
+MANUAL = {}
+TECH = {}

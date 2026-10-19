@@ -1,0 +1,1298 @@
+[
+ {
+  "method": "GET",
+  "path": "/v1/admin/users",
+  "module": "admin/accounts/users",
+  "fn": "get_admin_users_0"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/admin/users",
+  "module": "admin/accounts/users",
+  "fn": "post_admin_users_1"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/admin/users/{user_id}",
+  "module": "admin/accounts/users",
+  "fn": "get_admin_users_by_id_2"
+ },
+ {
+  "method": "PATCH",
+  "path": "/v1/admin/users/{user_id}",
+  "module": "admin/accounts/users",
+  "fn": "patch_admin_users_by_id_3"
+ },
+ {
+  "method": "DELETE",
+  "path": "/v1/admin/users/{user_id}",
+  "module": "admin/accounts/users",
+  "fn": "delete_admin_users_by_id_4"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/admin/users/{user_id}/audit",
+  "module": "admin/accounts/users",
+  "fn": "get_admin_users_by_id_audit_5"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/admin/catalog/prompts/bulk/regions",
+  "module": "admin/catalog/bulk",
+  "fn": "post_admin_catalog_prompts_bulk_regions_0"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/admin/catalog/prompts/import/preview",
+  "module": "admin/catalog/bulk",
+  "fn": "post_admin_catalog_prompts_import_preview_1"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/admin/catalog/prompts/bulk/apply",
+  "module": "admin/catalog/bulk",
+  "fn": "post_admin_catalog_prompts_bulk_apply_2"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/admin/catalog/prompts/export",
+  "module": "admin/catalog/bulk",
+  "fn": "get_admin_catalog_prompts_export_3"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/admin/catalog/prompts/screen",
+  "module": "admin/catalog/prompts",
+  "fn": "read_admin_screen"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/admin/catalog/prompts",
+  "module": "admin/catalog/prompts",
+  "fn": "get_admin_catalog_prompts_0"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/admin/catalog/prompts",
+  "module": "admin/catalog/prompts",
+  "fn": "post_admin_catalog_prompts_1"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/admin/catalog/prompts/{prompt_id:uuid}",
+  "module": "admin/catalog/prompts",
+  "fn": "get_admin_catalog_prompts_by_id_2"
+ },
+ {
+  "method": "PATCH",
+  "path": "/v1/admin/catalog/prompts/{prompt_id:uuid}/text",
+  "module": "admin/catalog/prompts",
+  "fn": "patch_admin_catalog_prompts_by_id_text_3"
+ },
+ {
+  "method": "PATCH",
+  "path": "/v1/admin/catalog/prompts/{prompt_id:uuid}/labels",
+  "module": "admin/catalog/prompts",
+  "fn": "patch_admin_catalog_prompts_by_id_labels_4"
+ },
+ {
+  "method": "PATCH",
+  "path": "/v1/admin/catalog/prompts/{prompt_id:uuid}/regions",
+  "module": "admin/catalog/prompts",
+  "fn": "patch_admin_catalog_prompts_by_id_regions_5"
+ },
+ {
+  "method": "PATCH",
+  "path": "/v1/admin/catalog/prompts/{prompt_id:uuid}/kind",
+  "module": "admin/catalog/prompts",
+  "fn": "patch_admin_catalog_prompts_by_id_kind_6"
+ },
+ {
+  "method": "DELETE",
+  "path": "/v1/admin/catalog/prompts/{prompt_id:uuid}",
+  "module": "admin/catalog/prompts",
+  "fn": "delete_admin_catalog_prompts_by_id_7"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/admin/catalog/prompts/{prompt_id:uuid}/restore",
+  "module": "admin/catalog/prompts",
+  "fn": "post_admin_catalog_prompts_by_id_restore_8"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/admin/catalog/taxonomy",
+  "module": "admin/catalog/reference",
+  "fn": "get_admin_catalog_taxonomy_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/admin/catalog/markets",
+  "module": "admin/catalog/reference",
+  "fn": "get_admin_catalog_markets_1"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/admin/changes",
+  "module": "admin/changes/queue",
+  "fn": "get_admin_changes_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/admin/changes/{change_id}",
+  "module": "admin/changes/queue",
+  "fn": "get_admin_changes_by_id_1"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/admin/citation-overrides",
+  "module": "admin/citation_sources/overrides",
+  "fn": "get_admin_citation_overrides_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/admin/citation-overrides/candidates",
+  "module": "admin/citation_sources/overrides",
+  "fn": "get_admin_citation_overrides_candidates_1"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/admin/citation-overrides/categories",
+  "module": "admin/citation_sources/overrides",
+  "fn": "get_admin_citation_overrides_categories_2"
+ },
+ {
+  "method": "PUT",
+  "path": "/v1/admin/citation-overrides/{domain}",
+  "module": "admin/citation_sources/overrides",
+  "fn": "put_admin_citation_overrides_by_id_3"
+ },
+ {
+  "method": "DELETE",
+  "path": "/v1/admin/citation-overrides/{domain}",
+  "module": "admin/citation_sources/overrides",
+  "fn": "delete_admin_citation_overrides_by_id_4"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/admin/cycles",
+  "module": "admin/cycles/cycles",
+  "fn": "get_admin_cycles_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/admin/cycles/{cyc_key}",
+  "module": "admin/cycles/cycles",
+  "fn": "get_admin_cycles_by_id_1"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/admin/cycles/{cyc_key}/hide",
+  "module": "admin/cycles/cycles",
+  "fn": "post_admin_cycles_by_id_hide_2"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/admin/cycles/{cyc_key}/unhide",
+  "module": "admin/cycles/cycles",
+  "fn": "post_admin_cycles_by_id_unhide_3"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/admin/cycles/{cyc_key}/close",
+  "module": "admin/cycles/cycles",
+  "fn": "post_admin_cycles_by_id_close_4"
+ },
+ {
+  "method": "PUT",
+  "path": "/v1/admin/cycles/{cyc_key}/view-date",
+  "module": "admin/cycles/cycles",
+  "fn": "put_admin_cycles_by_id_view_date_5"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/admin/jobs/{job_id}/registry",
+  "module": "admin/cycles/jobs",
+  "fn": "get_admin_jobs_by_id_registry_0"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/admin/jobs/{job_id}/anchor-pin",
+  "module": "admin/cycles/jobs",
+  "fn": "post_admin_jobs_by_id_anchor_pin_1"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/admin/jobs/{job_id}/drop",
+  "module": "admin/cycles/jobs",
+  "fn": "post_admin_jobs_by_id_drop_2"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/admin/entities",
+  "module": "admin/entities/registry",
+  "fn": "get_admin_entities_0"
+ },
+ {
+  "method": "PUT",
+  "path": "/v1/admin/entities/{entity_id}",
+  "module": "admin/entities/registry",
+  "fn": "put_admin_entities_by_id_1"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/admin/entities/versions",
+  "module": "admin/entities/versions",
+  "fn": "get_versions"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/admin/entities/versions",
+  "module": "admin/entities/versions",
+  "fn": "post_versions"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/admin/entities/versions/{ver}",
+  "module": "admin/entities/versions",
+  "fn": "get_version"
+ },
+ {
+  "method": "PATCH",
+  "path": "/v1/admin/entities/versions/{ver}",
+  "module": "admin/entities/versions",
+  "fn": "patch_version"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/admin/entities/versions/{ver}/discard",
+  "module": "admin/entities/versions",
+  "fn": "post_version_discard"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/admin/entities/versions/{ver}/diff",
+  "module": "admin/entities/versions",
+  "fn": "get_version_diff"
+ },
+ {
+  "method": "PUT",
+  "path": "/v1/admin/entities/versions/{ver}/entities/{entity_id}",
+  "module": "admin/entities/versions",
+  "fn": "put_version_entity"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/admin/entities/versions/{ver}/entities",
+  "module": "admin/entities/versions",
+  "fn": "post_version_entity"
+ },
+ {
+  "method": "DELETE",
+  "path": "/v1/admin/entities/versions/{ver}/entities/{entity_id}",
+  "module": "admin/entities/versions",
+  "fn": "delete_version_entity"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/admin/entities/versions/{ver}/surfaces",
+  "module": "admin/entities/versions",
+  "fn": "post_version_surface"
+ },
+ {
+  "method": "DELETE",
+  "path": "/v1/admin/entities/versions/{ver}/surfaces/{surface_id}",
+  "module": "admin/entities/versions",
+  "fn": "delete_version_surface"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/admin/entities/versions/{ver}/lint",
+  "module": "admin/entities/versions",
+  "fn": "post_version_lint"
+ },
+ {
+  "method": "PUT",
+  "path": "/v1/admin/entities/versions/{ver}/lint/acks",
+  "module": "admin/entities/versions",
+  "fn": "put_version_lint_acks"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/admin/entities/applies",
+  "module": "admin/entities/versions",
+  "fn": "get_applies"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/admin/entities/applies",
+  "module": "admin/entities/versions",
+  "fn": "post_applies"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/admin/entities/applies/{apply_id}",
+  "module": "admin/entities/versions",
+  "fn": "get_apply"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/admin/entities/applies/{apply_id}/preview",
+  "module": "admin/entities/versions",
+  "fn": "post_apply_preview"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/admin/entities/applies/{apply_id}/approve",
+  "module": "admin/entities/versions",
+  "fn": "post_apply_approve"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/admin/entities/applies/{apply_id}/reject",
+  "module": "admin/entities/versions",
+  "fn": "post_apply_reject"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/admin/entities/applies/{apply_id}/resume",
+  "module": "admin/entities/versions",
+  "fn": "post_apply_resume"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/admin/entities/applies/{apply_id}/abandon",
+  "module": "admin/entities/versions",
+  "fn": "post_apply_abandon"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/admin/entities/applies/{apply_id}/rollback",
+  "module": "admin/entities/versions",
+  "fn": "post_apply_rollback"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/admin/entities/review",
+  "module": "admin/entities/versions",
+  "fn": "get_review"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/admin/entities/review/{review_id}/decision",
+  "module": "admin/entities/versions",
+  "fn": "post_review_decision"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/admin/entities/audit",
+  "module": "admin/entities/versions",
+  "fn": "get_entities_audit"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/admin/entities/{entity_id}/mentions",
+  "module": "admin/entities/versions",
+  "fn": "get_entity_mentions"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/admin/ga4/properties",
+  "module": "admin/integrations/ga4",
+  "fn": "get_admin_ga4_properties_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/admin/ga4/project-overrides",
+  "module": "admin/integrations/ga4",
+  "fn": "get_admin_ga4_project_overrides_5"
+ },
+ {
+  "method": "PUT",
+  "path": "/v1/admin/ga4/properties/{property_id}",
+  "module": "admin/integrations/ga4",
+  "fn": "put_admin_ga4_properties_by_id_1"
+ },
+ {
+  "method": "DELETE",
+  "path": "/v1/admin/ga4/properties/{property_id}",
+  "module": "admin/integrations/ga4",
+  "fn": "delete_admin_ga4_properties_by_id_2"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/admin/ga4/properties/{property_id}/events",
+  "module": "admin/integrations/ga4",
+  "fn": "get_admin_ga4_properties_by_id_events_3"
+ },
+ {
+  "method": "PUT",
+  "path": "/v1/admin/ga4/properties/{property_id}/events",
+  "module": "admin/integrations/ga4",
+  "fn": "put_admin_ga4_properties_by_id_events_4"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/admin/ga4/markets",
+  "module": "admin/integrations/ga4",
+  "fn": "get_admin_ga4_markets"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/admin/ga4/markets/{brand_code}/{country_code}",
+  "module": "admin/integrations/ga4",
+  "fn": "get_admin_ga4_market"
+ },
+ {
+  "method": "PUT",
+  "path": "/v1/admin/ga4/markets/{brand_code}/{country_code}",
+  "module": "admin/integrations/ga4",
+  "fn": "put_admin_ga4_market"
+ },
+ {
+  "method": "DELETE",
+  "path": "/v1/admin/ga4/markets/{brand_code}/{country_code}",
+  "module": "admin/integrations/ga4",
+  "fn": "delete_admin_ga4_market"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/admin/keyword-tools/volume",
+  "module": "admin/integrations/keyword_tools",
+  "fn": "post_admin_keyword_tools_volume_0"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/admin/keyword-tools/to-prompt",
+  "module": "admin/integrations/keyword_tools",
+  "fn": "post_admin_keyword_tools_to_prompt_1"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/admin/keyword-tools/prompt-to-volume",
+  "module": "admin/integrations/keyword_tools",
+  "fn": "post_admin_keyword_tools_prompt_to_volume_2"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/admin/interest/keywords",
+  "module": "admin/interest/keywords",
+  "fn": "get_admin_interest_keywords_0"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/admin/interest/keywords",
+  "module": "admin/interest/keywords",
+  "fn": "post_admin_interest_keywords_1"
+ },
+ {
+  "method": "PATCH",
+  "path": "/v1/admin/interest/keywords/{keyword_id}",
+  "module": "admin/interest/keywords",
+  "fn": "patch_admin_interest_keywords_by_id_2"
+ },
+ {
+  "method": "DELETE",
+  "path": "/v1/admin/interest/keywords/{keyword_id}",
+  "module": "admin/interest/keywords",
+  "fn": "delete_admin_interest_keywords_by_id_3"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/admin/interest/sources",
+  "module": "admin/interest/sources",
+  "fn": "get_admin_interest_sources_0"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/admin/interest/sources",
+  "module": "admin/interest/sources",
+  "fn": "post_admin_interest_sources_1"
+ },
+ {
+  "method": "PATCH",
+  "path": "/v1/admin/interest/sources/{source_id}",
+  "module": "admin/interest/sources",
+  "fn": "patch_admin_interest_sources_by_id_2"
+ },
+ {
+  "method": "DELETE",
+  "path": "/v1/admin/interest/sources/{source_id}",
+  "module": "admin/interest/sources",
+  "fn": "delete_admin_interest_sources_by_id_3"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/answers/{job_id}",
+  "module": "analytics/answers/detail",
+  "fn": "get_answers_by_id_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/answers",
+  "module": "analytics/answers/list",
+  "fn": "get_answers_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/citations/domains",
+  "module": "analytics/citations/domains",
+  "fn": "get_citations_domains_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/citations/domains/export",
+  "module": "analytics/citations/domains",
+  "fn": "get_citations_domains_export_1"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/citations/domains/{skey:path}",
+  "module": "analytics/citations/domain_detail",
+  "fn": "get_citations_domains_by_id_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/citations/prompts",
+  "module": "analytics/citations/prompts",
+  "fn": "get_citations_prompts_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/citations/sources",
+  "module": "analytics/citations/sources",
+  "fn": "get_citations_sources_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/citations/sources/types",
+  "module": "analytics/citations/sources",
+  "fn": "get_citations_sources_types_1"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/citations/targets",
+  "module": "analytics/citations/targets",
+  "fn": "get_citations_targets_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/citations/sources/tone",
+  "module": "analytics/citations/tone",
+  "fn": "get_citations_sources_tone_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/filters/dates",
+  "module": "analytics/filters/dates",
+  "fn": "get_filters_dates_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/filters/options",
+  "module": "analytics/filters/options",
+  "fn": "get_filters_options_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/funnel/acr",
+  "module": "analytics/funnel/acr",
+  "fn": "get_funnel_acr_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/funnel/conversion",
+  "module": "analytics/funnel/conversion",
+  "fn": "get_funnel_conversion_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/funnel/conversion/events",
+  "module": "analytics/funnel/conversion",
+  "fn": "get_funnel_conversion_events_1"
+ },
+ {
+  "method": "PUT",
+  "path": "/v1/funnel/conversion/events",
+  "module": "analytics/funnel/conversion",
+  "fn": "put_funnel_conversion_events_2"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/geo",
+  "module": "analytics/geo/markets",
+  "fn": "get_geo_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/kpi/compare",
+  "module": "analytics/kpi/compare",
+  "fn": "get_kpi_compare_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/kpi/engines",
+  "module": "analytics/kpi/engines",
+  "fn": "get_kpi_engines_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/kpi/summary",
+  "module": "analytics/kpi/summary",
+  "fn": "get_kpi_summary_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/kpi/unmeasured-prompts",
+  "module": "analytics/kpi/summary",
+  "fn": "get_kpi_unmeasured_prompts_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/mentions/brands",
+  "module": "analytics/mentions/brands",
+  "fn": "get_mentions_brands_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/mentions/prompts",
+  "module": "analytics/mentions/prompts",
+  "fn": "get_mentions_prompts_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/mentions/types",
+  "module": "analytics/mentions/types",
+  "fn": "get_mentions_types_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/trend",
+  "module": "analytics/trend/series",
+  "fn": "get_trend_0"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/prompts/screen",
+  "module": "catalog/prompts/catalog",
+  "fn": "read_standard_screen"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/prompts",
+  "module": "catalog/prompts/catalog",
+  "fn": "get_prompts"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/prompts/history",
+  "module": "catalog/prompts/history",
+  "fn": "get_prompts_history"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/admin/catalog/prompts/{prompt_id:uuid}/history",
+  "module": "catalog/prompts/history",
+  "fn": "get_admin_catalog_prompt_history"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/intent/candidates",
+  "module": "intent/candidates/submit",
+  "fn": "post_intent_candidates_0"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/intent/fetches",
+  "module": "intent/keywords/fetches",
+  "fn": "post_intent_fetches_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/intent/fetches/{change_id}",
+  "module": "intent/keywords/fetches",
+  "fn": "get_intent_fetches_by_id_1"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/intent/fetches",
+  "module": "intent/keywords/fetches",
+  "fn": "get_intent_fetches_2"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/intent/insight",
+  "module": "intent/keywords/research",
+  "fn": "get_intent_insight_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/intent/related",
+  "module": "intent/keywords/research",
+  "fn": "get_intent_related_1"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/intent/lookup",
+  "module": "intent/keywords/research",
+  "fn": "get_intent_lookup_2"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/intent/standard-keywords",
+  "module": "intent/keywords/research",
+  "fn": "get_intent_standard_keywords_3"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/intent/serp-drafts",
+  "module": "intent/keywords/serp_drafts",
+  "fn": "post_intent_serp_drafts_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/intent/keywords",
+  "module": "intent/keywords/tracked",
+  "fn": "get_intent_keywords_0"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/intent/keywords",
+  "module": "intent/keywords/tracked",
+  "fn": "post_intent_keywords_1"
+ },
+ {
+  "method": "DELETE",
+  "path": "/v1/intent/keywords",
+  "module": "intent/keywords/tracked",
+  "fn": "delete_intent_keywords_2"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/intent/social/context-map/stats",
+  "module": "intent/social/context_map",
+  "fn": "get_intent_social_context_map_stats_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/intent/social/context-map/contexts",
+  "module": "intent/social/context_map",
+  "fn": "get_intent_social_context_map_contexts_1"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/intent/social/context-map/conditions",
+  "module": "intent/social/context_map",
+  "fn": "get_intent_social_context_map_conditions_2"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/intent/social/context-map/combinations",
+  "module": "intent/social/context_map",
+  "fn": "get_intent_social_context_map_combinations_3"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/intent/social/context-map/entities/{entity_id}",
+  "module": "intent/social/context_map",
+  "fn": "get_intent_social_context_map_entities_by_id_4"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/intent/social/context-map/export",
+  "module": "intent/social/context_map",
+  "fn": "get_intent_social_context_map_export_5"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/intent/social/prompts",
+  "module": "intent/social/prompts",
+  "fn": "get_intent_social_prompts_0"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/intent/social/prompts",
+  "module": "intent/social/prompts",
+  "fn": "post_intent_social_prompts_1"
+ },
+ {
+  "method": "DELETE",
+  "path": "/v1/intent/social/prompts",
+  "module": "intent/social/prompts",
+  "fn": "delete_intent_social_prompts_2"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/auth/me",
+  "module": "platform/auth/session",
+  "fn": "get_auth_me_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/projects/{project_id}/member-audit",
+  "module": "projects/members/audit",
+  "fn": "get_projects_by_id_member_audit_0"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/projects/{project_id}/members/me/accept",
+  "module": "projects/members/invites",
+  "fn": "post_projects_by_id_members_me_accept_0"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/projects/{project_id}/members/me/reject",
+  "module": "projects/members/invites",
+  "fn": "post_projects_by_id_members_me_reject_1"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/me/project-invites",
+  "module": "projects/members/invites",
+  "fn": "get_me_project_invites_2"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/projects/{project_id}/members",
+  "module": "projects/members/roster",
+  "fn": "get_projects_by_id_members_0"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/projects/{project_id}/members",
+  "module": "projects/members/roster",
+  "fn": "post_projects_by_id_members_1"
+ },
+ {
+  "method": "PATCH",
+  "path": "/v1/projects/{project_id}/members/{user_id}",
+  "module": "projects/members/roster",
+  "fn": "patch_projects_by_id_members_by_id_2"
+ },
+ {
+  "method": "DELETE",
+  "path": "/v1/projects/{project_id}/members/{user_id}",
+  "module": "projects/members/roster",
+  "fn": "delete_projects_by_id_members_by_id_3"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/projects",
+  "module": "projects/project/core",
+  "fn": "get_projects_0"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/projects",
+  "module": "projects/project/core",
+  "fn": "post_projects_1"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/projects/creation-options",
+  "module": "projects/project/core",
+  "fn": "get_projects_creation_options"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/projects/by-scope/{scope_project_id}",
+  "module": "projects/project/core",
+  "fn": "get_projects_by_scope"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/projects/{project_id}",
+  "module": "projects/project/core",
+  "fn": "get_projects_by_id_2"
+ },
+ {
+  "method": "PATCH",
+  "path": "/v1/projects/{project_id}",
+  "module": "projects/project/core",
+  "fn": "patch_projects_by_id_3"
+ },
+ {
+  "method": "DELETE",
+  "path": "/v1/projects/{project_id}",
+  "module": "projects/project/core",
+  "fn": "delete_projects_by_id_4"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/projects/{project_id}/prompt-candidates/screen",
+  "module": "projects/prompts/candidates",
+  "fn": "read_candidate_screen"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/projects/{project_id}/prompt-candidates",
+  "module": "projects/prompts/candidates",
+  "fn": "get_projects_by_id_prompt_candidates_0"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/projects/{project_id}/prompt-candidates/select",
+  "module": "projects/prompts/candidates",
+  "fn": "post_projects_by_id_prompt_candidates_select_1"
+ },
+ {
+  "method": "DELETE",
+  "path": "/v1/projects/{project_id}/prompt-candidates/{candidate_id}",
+  "module": "projects/prompts/candidates",
+  "fn": "delete_projects_by_id_prompt_candidates_by_id_2"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/projects/{project_id}/prompt-candidates/bulk-delete",
+  "module": "projects/prompts/candidates",
+  "fn": "post_projects_by_id_prompt_candidates_bulk_delete_3"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/projects/{project_id}/prompts/screen",
+  "module": "projects/prompts/crud",
+  "fn": "read_prompt_screen"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/projects/{project_id}/prompts",
+  "module": "projects/prompts/crud",
+  "fn": "get_projects_by_id_prompts_0"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/projects/{project_id}/prompts",
+  "module": "projects/prompts/crud",
+  "fn": "post_projects_by_id_prompts_1"
+ },
+ {
+  "method": "PATCH",
+  "path": "/v1/projects/{project_id}/prompts/{prompt_id}",
+  "module": "projects/prompts/crud",
+  "fn": "patch_projects_by_id_prompts_by_id_2"
+ },
+ {
+  "method": "DELETE",
+  "path": "/v1/projects/{project_id}/prompts/{prompt_id}",
+  "module": "projects/prompts/crud",
+  "fn": "delete_projects_by_id_prompts_by_id_3"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/projects/{project_id}/prompts/execute",
+  "module": "projects/prompts/execute",
+  "fn": "post_projects_by_id_prompts_execute_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/projects/{project_id}/prompt-fields",
+  "module": "projects/prompts/fields",
+  "fn": "get_projects_by_id_prompt_fields_0"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/projects/{project_id}/prompt-fields",
+  "module": "projects/prompts/fields",
+  "fn": "post_projects_by_id_prompt_fields_1"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/projects/{project_id}/prompt-fields/{field_id}/archive",
+  "module": "projects/prompts/fields",
+  "fn": "post_projects_by_id_prompt_fields_by_id_archive_2"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/projects/{project_id}/prompt-fields/{field_id}/restore",
+  "module": "projects/prompts/fields",
+  "fn": "post_projects_by_id_prompt_fields_by_id_restore_3"
+ },
+ {
+  "method": "DELETE",
+  "path": "/v1/projects/{project_id}/prompt-fields/{field_id}",
+  "module": "projects/prompts/fields",
+  "fn": "delete_projects_by_id_prompt_fields_by_id_4"
+ },
+ {
+  "method": "PUT",
+  "path": "/v1/projects/{project_id}/prompts/{prompt_id}/fields/{field_id}",
+  "module": "projects/prompts/fields",
+  "fn": "put_projects_by_id_prompts_by_id_fields_by_id_5"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/projects/{project_id}/prompt-fields/{field_id}/bulk-set",
+  "module": "projects/prompts/fields",
+  "fn": "post_projects_by_id_prompt_fields_by_id_bulk_set_6"
+ },
+ {
+  "method": "DELETE",
+  "path": "/v1/projects/{project_id}/prompts/{prompt_id}/fields/{field_id}",
+  "module": "projects/prompts/fields",
+  "fn": "delete_projects_by_id_prompts_by_id_fields_by_id_7"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/projects/{project_id}/prompts/export",
+  "module": "projects/prompts/io",
+  "fn": "get_projects_by_id_prompts_export_0"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/projects/{project_id}/prompts/import",
+  "module": "projects/prompts/io",
+  "fn": "post_projects_by_id_prompts_import_1"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/projects/{project_id}/prompts/{prompt_id}/lifecycle-impact",
+  "module": "projects/prompts/lifecycle",
+  "fn": "get_projects_by_id_prompts_by_id_lifecycle_impact_0"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/projects/{project_id}/prompts/{prompt_id}/pause",
+  "module": "projects/prompts/lifecycle",
+  "fn": "post_projects_by_id_prompts_by_id_pause_1"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/projects/{project_id}/prompts/{prompt_id}/resume",
+  "module": "projects/prompts/lifecycle",
+  "fn": "post_projects_by_id_prompts_by_id_resume_2"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/projects/{project_id}/prompts/{prompt_id}/hard-delete",
+  "module": "projects/prompts/lifecycle",
+  "fn": "post_projects_by_id_prompts_by_id_hard_delete_3"
+ },
+ {
+  "method": "PUT",
+  "path": "/v1/projects/{project_id}/settings/engines",
+  "module": "projects/settings/engines",
+  "fn": "put_projects_by_id_settings_engines_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/projects/{project_id}/settings/engines/history",
+  "module": "projects/settings/engines",
+  "fn": "get_projects_by_id_settings_engines_history_1"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/projects/{project_id}/settings",
+  "module": "projects/settings/overview",
+  "fn": "get_projects_by_id_settings_0"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/projects/{project_id}/settings/owned-bases",
+  "module": "projects/settings/owned_bases",
+  "fn": "post_projects_by_id_settings_owned_bases_0"
+ },
+ {
+  "method": "DELETE",
+  "path": "/v1/projects/{project_id}/settings/owned-bases",
+  "module": "projects/settings/owned_bases",
+  "fn": "delete_projects_by_id_settings_owned_bases_1"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/projects/{project_id}/settings/scope-link",
+  "module": "projects/settings/scope_link",
+  "fn": "get_projects_by_id_settings_scope_link_0"
+ },
+ {
+  "method": "PUT",
+  "path": "/v1/projects/{project_id}/settings/brand-aliases",
+  "module": "projects/settings/tracked_targets",
+  "fn": "put_projects_by_id_settings_brand_aliases_0"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/projects/{project_id}/settings/competitors",
+  "module": "projects/settings/tracked_targets",
+  "fn": "post_projects_by_id_settings_competitors_1"
+ },
+ {
+  "method": "DELETE",
+  "path": "/v1/projects/{project_id}/settings/competitors",
+  "module": "projects/settings/tracked_targets",
+  "fn": "delete_projects_by_id_settings_competitors_2"
+ },
+ {
+  "method": "PUT",
+  "path": "/v1/projects/{project_id}/settings/competitors/target",
+  "module": "projects/settings/tracked_targets",
+  "fn": "put_projects_by_id_settings_competitors_target_3"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/projects/{project_id}/settings/vehicles",
+  "module": "projects/settings/tracked_targets",
+  "fn": "post_projects_by_id_settings_vehicles_4"
+ },
+ {
+  "method": "DELETE",
+  "path": "/v1/projects/{project_id}/settings/vehicles",
+  "module": "projects/settings/tracked_targets",
+  "fn": "delete_projects_by_id_settings_vehicles_5"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/projects/{project_id}/settings/tracked-urls",
+  "module": "projects/settings/tracked_urls",
+  "fn": "get_projects_by_id_settings_tracked_urls_0"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/projects/{project_id}/settings/tracked-urls",
+  "module": "projects/settings/tracked_urls",
+  "fn": "post_projects_by_id_settings_tracked_urls_1"
+ },
+ {
+  "method": "DELETE",
+  "path": "/v1/projects/{project_id}/settings/tracked-urls",
+  "module": "projects/settings/tracked_urls",
+  "fn": "delete_projects_by_id_settings_tracked_urls_2"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/projects/{project_id}/settings/tracked-urls/export",
+  "module": "projects/settings/tracked_urls",
+  "fn": "get_projects_by_id_settings_tracked_urls_export_3"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/projects/{project_id}/settings/tracked-urls/import",
+  "module": "projects/settings/tracked_urls",
+  "fn": "post_projects_by_id_settings_tracked_urls_import_4"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/qa/answers/{job_id}",
+  "module": "qa/answers/detail",
+  "fn": "get_qa_answers_by_id_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/qa/answers",
+  "module": "qa/answers/list",
+  "fn": "get_qa_answers_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/qa/answers/progress",
+  "module": "qa/answers/list",
+  "fn": "get_qa_answers_progress_1"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/qa/answers/{job_id}/neighbors",
+  "module": "qa/answers/list",
+  "fn": "get_qa_answers_by_id_neighbors_2"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/qa/filters",
+  "module": "qa/answers/list",
+  "fn": "get_qa_filters_3"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/qa/answers/{job_id}/notes",
+  "module": "qa/notes/notes",
+  "fn": "get_qa_answers_by_id_notes_0"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/qa/answers/{job_id}/notes",
+  "module": "qa/notes/notes",
+  "fn": "post_qa_answers_by_id_notes_1"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/qa/notes",
+  "module": "qa/notes/notes",
+  "fn": "get_qa_notes_2"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/qa/notes/counts",
+  "module": "qa/notes/notes",
+  "fn": "get_qa_notes_counts_3"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/qa/notes/export",
+  "module": "qa/notes/notes",
+  "fn": "get_qa_notes_export_4"
+ },
+ {
+  "method": "PATCH",
+  "path": "/v1/qa/notes/{note_id}",
+  "module": "qa/notes/notes",
+  "fn": "patch_qa_notes_by_id_5"
+ },
+ {
+  "method": "DELETE",
+  "path": "/v1/qa/notes/{note_id}",
+  "module": "qa/notes/notes",
+  "fn": "delete_qa_notes_by_id_6"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/qa/deltas",
+  "module": "qa/review/deltas",
+  "fn": "get_qa_deltas_0"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/qa/answers/{job_id}/lock",
+  "module": "qa/review/lock",
+  "fn": "post_qa_answers_by_id_lock_0"
+ },
+ {
+  "method": "PATCH",
+  "path": "/v1/qa/answers/{job_id}/lock",
+  "module": "qa/review/lock",
+  "fn": "patch_qa_answers_by_id_lock_1"
+ },
+ {
+  "method": "DELETE",
+  "path": "/v1/qa/answers/{job_id}/lock",
+  "module": "qa/review/lock",
+  "fn": "delete_qa_answers_by_id_lock_2"
+ },
+ {
+  "method": "POST",
+  "path": "/v1/qa/sessions",
+  "module": "qa/review/sessions",
+  "fn": "post_qa_sessions_0"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/qa/sessions/current",
+  "module": "qa/review/sessions",
+  "fn": "get_qa_sessions_current_2"
+ },
+ {
+  "method": "PATCH",
+  "path": "/v1/qa/sessions/{session_id}",
+  "module": "qa/review/sessions",
+  "fn": "patch_qa_sessions_by_id_1"
+ },
+ {
+  "method": "GET",
+  "path": "/v1/qa/answers/{job_id}/review",
+  "module": "qa/review/verdict",
+  "fn": "get_qa_answers_by_id_review_0"
+ },
+ {
+  "method": "PUT",
+  "path": "/v1/qa/answers/{job_id}/review",
+  "module": "qa/review/verdict",
+  "fn": "put_qa_answers_by_id_review_1"
+ }
+]
