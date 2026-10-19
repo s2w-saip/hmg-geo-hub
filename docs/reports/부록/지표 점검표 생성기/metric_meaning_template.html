@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>★ 수치 유의미성 점검표</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+/* ── 디자인 토큰 ── 색은 역할로만 쓴다. 인사이트 등급 = 파랑 순서형 램프(검증 PASS) + 인사이트 없음 = 회색 */
+:root{
+  color-scheme:light;
+  --page:#f4f4f1; --surface:#ffffff; --surface-2:#fafaf8; --surface-3:#f2f2ee;
+  --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
+  --line:#e8e7e1; --line-2:#d6d5cd;
+  --accent:#2a78d6; --accent-ink:#184f95; --accent-bg:#ecf3fd;
+  --t-core:#184f95; --t-sub:#3987e5; --t-scale:#86b6ef; --t-none:#c3c2b7;
+  --core-bg:#e9f1fc; --sub-bg:#f3f8fe;
+  --hb:#3b3a37;
+  --radius:12px; --radius-s:8px;
+  --shadow:0 1px 2px rgba(11,11,11,.04),0 1px 1px rgba(11,11,11,.02);
+  --font:"Pretendard Variable",Pretendard,-apple-system,"Segoe UI","Malgun Gothic",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--page);color:var(--ink);font:14px/1.6 var(--font);word-break:keep-all;-webkit-font-smoothing:antialiased;letter-spacing:-.005em}
+a{color:var(--accent-ink);text-decoration:none} a:hover{text-decoration:underline}
+code{font:12px/1.4 ui-monospace,"Cascadia Mono",Consolas,monospace;background:var(--surface-3);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere;color:var(--ink-2)}
+b{font-weight:650}
+.muted{color:var(--muted)}
+.val{display:block;font-size:12px;font-weight:400;color:var(--muted);margin-top:2px;line-height:1.5}
+.num,.num-c{font-variant-numeric:tabular-nums}
+.num-c{text-align:right;white-space:nowrap}
+
+/* ── 상단 내비게이션 ── */
+.topbar{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.92);backdrop-filter:saturate(1.4) blur(8px);border-bottom:1px solid var(--line)}
+.topbar .in{max-width:1680px;margin:auto;padding:0 32px;height:56px;display:flex;align-items:center;gap:28px}
+.brand{font-weight:750;font-size:15px;white-space:nowrap}
+.brand small{font-weight:500;color:var(--muted);margin-left:8px;font-size:12px}
+.nav{display:flex;gap:2px;margin-left:auto}
+.nav a{padding:6px 12px;border-radius:999px;color:var(--ink-2);font-weight:550;font-size:13px}
+.nav a:hover{background:var(--surface-3);text-decoration:none}
+.nav a.on{background:var(--ink);color:#fff}
+
+main{max-width:1680px;min-width:1200px;margin:auto;padding:36px 32px 80px}
+
+/* ── 히어로 ── */
+.hero{margin-bottom:28px}
+.eyebrow{font-size:12px;font-weight:650;color:var(--accent-ink);letter-spacing:.04em}
+h1{font-size:34px;line-height:1.25;margin:6px 0 10px;font-weight:780;letter-spacing:-.02em}
+.lede{font-size:16px;color:var(--ink-2);max-width:980px;margin:0}
+.lede b{color:var(--ink)}
+.meta{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:14px;font-size:12px;color:var(--muted)}
+.meta span::before{content:"";display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--line-2);margin-right:8px;vertical-align:middle}
+
+/* ── 카드·섹션 ── */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+section.card{padding:26px 28px;margin-top:20px}
+.sec-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:16px}
+h2{font-size:20px;line-height:1.3;margin:0;font-weight:750;letter-spacing:-.01em}
+.sec-head p{margin:4px 0 0;color:var(--muted);font-size:13px;max-width:1000px}
+.kicker{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:2px}
+
+/* ── 요약 ── */
+.summary{display:grid;grid-template-columns:2.2fr 1fr 1fr;gap:16px}
+.tile{padding:22px 24px;display:flex;flex-direction:column;gap:10px}
+.tile .label{font-size:13px;font-weight:600;color:var(--ink-2)}
+.tile .big{font-size:44px;line-height:1;font-weight:760;letter-spacing:-.02em}
+.tile .big small{font-size:15px;font-weight:600;color:var(--muted);margin-left:6px;letter-spacing:0}
+.tile .sub{font-size:13px;color:var(--ink-2);display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.tile.core{border-top:3px solid var(--t-core)}
+.tile.cut{border-top:3px solid var(--t-none)}
+.team{display:flex;gap:18px;font-size:13px;color:var(--ink-2)}
+.team b{color:var(--ink);font-size:15px;margin-left:4px}
+.dist{display:flex;gap:2px;height:30px;border-radius:6px;overflow:hidden;margin-top:4px}
+.dist .seg{display:flex;align-items:center;padding-left:10px;min-width:30px;cursor:default}
+.dist .seg em{font-style:normal;font-weight:700;font-size:13px}
+.dist .p-core,.dist .p-sub{color:#fff} .dist .p-scale,.dist .p-none{color:var(--ink)}
+.dist .p-core{background:var(--t-core)} .dist .p-sub{background:var(--t-sub)} .dist .p-scale{background:var(--t-scale)} .dist .p-none{background:var(--t-none)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 22px;list-style:none;margin:4px 0 0;padding:0;font-size:13px;color:var(--ink-2)}
+.legend li{display:flex;align-items:center;gap:7px}
+.legend b{color:var(--ink);font-variant-numeric:tabular-nums}
+.legend .pct{color:var(--muted);font-size:12px}
+.sw{width:10px;height:10px;border-radius:3px;display:inline-block}
+.sw.p-core{background:var(--t-core)} .sw.p-sub{background:var(--t-sub)} .sw.p-scale{background:var(--t-scale)} .sw.p-none{background:var(--t-none)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:16px}
+.stat{padding:16px 20px}
+.stat .v{font-size:24px;font-weight:720;line-height:1.1}
+.stat .v small{font-size:13px;font-weight:600;color:var(--muted);margin-left:4px}
+.stat .k{font-size:12px;color:var(--muted);margin-top:4px}
+
+/* ── 진행 현황 ── */
+.progress{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.pg{display:grid;grid-template-columns:96px 260px 1fr;align-items:center;gap:16px;padding:12px 16px;border:1px solid var(--line);border-radius:var(--radius-s);background:var(--surface-2)}
+.pg-st{font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;text-align:center;justify-self:start}
+.pg-done .pg-st{background:#ebf6eb;color:#0a6b0a} .pg-decide .pg-st{background:#fef5df;color:#8a5a00} .pg-next .pg-st{background:var(--accent-bg);color:var(--accent-ink)}
+.pg-memo{color:var(--ink-2);font-size:13px}
+
+/* ── 배지 ── */
+.pill{display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:650;white-space:nowrap;line-height:1.6;border:1px solid transparent}
+.pill.p-core{background:var(--t-core);color:#fff}
+.pill.p-sub{background:#e3eefc;color:var(--accent-ink);border-color:#cfe0f8}
+.pill.p-scale{background:var(--surface-3);color:var(--ink-2);border-color:var(--line)}
+.pill.p-none{background:var(--surface);color:var(--ink-2);border-color:var(--line-2)}
+.pill.p-none::before{content:"";width:10px;height:1.5px;background:currentColor;display:inline-block}
+.pill.p-na{background:transparent;color:var(--muted);border-color:var(--line)}
+.pill .num,.use-tag .num{font-weight:750;opacity:.9}
+.use-tag{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:650;padding:1px 9px;border-radius:6px;background:var(--surface-3);color:var(--ink);white-space:nowrap;line-height:1.7}
+.flag{display:inline-block;font-size:11.5px;font-weight:650;padding:0 7px;border-radius:4px;background:var(--accent-bg);color:var(--accent-ink)}
+.src{display:inline-block;font-size:11.5px;font-weight:650;padding:0 7px;border-radius:4px;background:var(--accent-bg);color:var(--accent-ink);white-space:nowrap;line-height:1.7;margin:1px 4px 1px 0}
+.src-ops{background:var(--surface-3);color:var(--ink-2)}
+/* 하비볼(●◐○): 판정 근거 — 색 없이 모양으로 읽는다 */
+.hb{width:14px;height:14px;border-radius:50%;display:inline-block;border:1.6px solid var(--hb);vertical-align:middle}
+.hb-full{background:var(--hb)} .hb-half{background:linear-gradient(90deg,var(--hb) 50%,transparent 50%)} .hb-empty{background:transparent}
+.dash{color:var(--line-2)}
+
+/* ── 표 공통 ── */
+.tbl-wrap{border:1px solid var(--line);border-radius:var(--radius-s);overflow:auto;max-height:78vh;background:var(--surface)}
+table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
+th,td{padding:11px 14px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+thead th{position:sticky;top:0;z-index:2;background:var(--surface-2);font-size:12px;font-weight:650;color:var(--ink-2);white-space:nowrap;border-bottom:1px solid var(--line-2)}
+tbody tr:hover td{background:#fbfbf9}
+td.tags{white-space:nowrap} td.tags .pill{margin:0 6px 4px 0}
+
+/* ── 인사이트 맵 ── */
+table.map{table-layout:fixed}
+table.map thead th{white-space:normal;padding:14px 16px;vertical-align:top}
+table.map thead th:first-child{width:250px}
+table.map th.rowh{background:var(--surface-2);padding:16px;white-space:normal;font-weight:400}
+table.map th.rowh .val{margin-top:6px}
+td.mx{padding:14px 16px;border-left:1px solid var(--line)}
+td.mx .mx-n{font-size:26px;font-weight:760;line-height:1;display:block;margin-bottom:10px;font-variant-numeric:tabular-nums}
+td.mx-core{background:var(--core-bg)} td.mx-sub{background:var(--sub-bg)} td.mx-none{background:var(--surface-3)}
+tbody tr:hover td.mx-core{background:var(--core-bg)} tbody tr:hover td.mx-sub{background:var(--sub-bg)} tbody tr:hover td.mx-none{background:var(--surface-3)} tbody tr:hover td.mx-scale{background:var(--surface)}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{display:inline-block;font-size:12px;padding:2px 9px;border-radius:999px;background:var(--surface);border:1px solid var(--line-2);color:var(--ink);line-height:1.6}
+.chip:hover{border-color:var(--accent);color:var(--accent-ink);text-decoration:none}
+td.mx-core .chip{border-color:#bcd3f2;font-weight:600}
+
+/* ── 표현 개편 방안 ── */
+.subh{font-size:15px;font-weight:750;margin:26px 0 12px;display:flex;align-items:baseline;gap:10px}
+.subh small{font-size:12.5px;font-weight:500;color:var(--muted)}
+.subh:first-of-type{margin-top:6px}
+.gapline{font-size:13px;color:var(--ink-2);margin:0 0 4px} .gapline b{color:var(--ink)}
+.elems{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;list-style:none;padding:0;margin:0}
+.elems li{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-s);padding:12px 14px;position:relative}
+.elems li b{display:block;font-size:14px;margin-bottom:2px} .elems li span{font-size:12.5px;color:var(--ink-2);line-height:1.5;display:block}
+.elems li:not(:last-child)::after{content:"→";position:absolute;right:-12px;top:50%;transform:translateY(-50%);color:var(--muted);font-weight:700}
+.principles{list-style:none;display:grid;grid-template-columns:repeat(2,1fr);gap:12px 28px;padding:0;margin:0}
+.principles li{display:flex;gap:12px;align-items:flex-start}
+.pn{width:24px;height:24px;border-radius:50%;background:var(--ink);color:#fff;font-size:12px;font-weight:700;display:grid;place-items:center;flex:none;margin-top:1px}
+.principles p{margin:2px 0 0;color:var(--ink-2);font-size:13px}
+.views{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.view{padding:20px 22px;display:flex;flex-direction:column;gap:12px;scroll-margin-top:80px}
+.view:target{box-shadow:0 0 0 2px var(--accent)}
+.v-top{display:flex;gap:18px;justify-content:space-between;align-items:flex-start}
+.v-top h3{margin:6px 0 4px;font-size:17px;font-weight:750}
+.v-q{margin:0;color:var(--ink-2);font-size:13px}
+.v-team{font-size:11.5px;font-weight:700;color:var(--accent-ink);background:var(--accent-bg);padding:1px 8px;border-radius:999px}
+.v-head{background:var(--core-bg);border-radius:var(--radius-s);padding:10px 14px;font-size:13.5px;font-weight:600;color:var(--accent-ink);line-height:1.55}
+.v-head .note-h{color:var(--accent-ink);opacity:.75;margin-bottom:2px}
+.v-layout{margin:0;padding-left:18px;font-size:13px;color:var(--ink-2);display:grid;gap:5px}
+.v-mets{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:12px}
+.note-h{display:block;font-size:11px;font-weight:700;color:var(--muted)}
+.chip.core{background:var(--t-core);color:#fff;border-color:var(--t-core);font-weight:600}
+.chip.core:hover{color:#fff;opacity:.9}
+.vlink{display:inline-block;margin-top:6px;font-size:11.5px;font-weight:650;color:var(--accent-ink);background:var(--accent-bg);padding:0 8px;border-radius:4px;line-height:1.8}
+.sketch{width:300px;height:140px;flex:none;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-s)}
+.sketch .ax{stroke:var(--line-2);stroke-width:1}
+.sketch .lb{font:9.5px var(--font);fill:var(--muted)} .sketch .lbs{font:700 10px var(--font);fill:var(--ink)}
+.sketch .dot{fill:var(--t-none)} .sketch .us{fill:var(--accent)} .sketch .us-old{fill:none;stroke:var(--accent);stroke-width:1.5;opacity:.45}
+.sketch .mv{stroke:var(--accent);stroke-width:1.5}
+.sketch .q{fill:var(--surface);stroke:var(--line-2)} .sketch .q.hot{fill:var(--core-bg)}
+.sketch .bar{fill:var(--t-scale)} .sketch .bar.hot{fill:var(--t-core)} .sketch .tick{stroke:var(--ink);stroke-width:2}
+.sketch .txt{fill:#e4e3dd} .sketch .prio{fill:var(--t-sub)}
+.sketch .st-miss{fill:var(--ink)} .sketch .st-nocite{fill:none;stroke:var(--ink);stroke-width:2} .sketch .st-nopick{fill:var(--line-2)}
+.sketch .them{fill:#eb6834} .sketch .us-bar{fill:var(--accent)} .sketch .off{fill:none;stroke:var(--line-2);stroke-width:1.5}
+table.diag td.name{min-width:200px;max-width:240px}
+table.diag td.now{min-width:220px;max-width:280px;color:var(--ink-2);font-size:12.5px}
+table.diag td.gap{min-width:220px;max-width:300px;font-size:12.5px;color:var(--ink)}
+table.diag td.insight{min-width:340px}
+table.diag .hl{margin:6px 0 0;color:var(--accent-ink);font-size:12.5px;font-weight:600}
+
+/* ── 바꿀 후보 ── */
+table.cand td:first-child{width:260px}
+td.up-c{color:var(--ink-2)} td.up-c span{color:var(--accent);font-weight:700;margin-right:6px}
+
+/* ── 필터 바 ── */
+.filters{display:flex;flex-direction:column;gap:10px;padding:14px 16px;border:1px solid var(--line);border-radius:var(--radius-s);background:var(--surface-2);margin-bottom:14px}
+.frow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.flbl{width:72px;font-size:12px;font-weight:700;color:var(--ink-2)}
+.segs{display:inline-flex;flex-wrap:wrap;gap:4px}
+.seg-btn{font:inherit;font-size:12.5px;display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);cursor:pointer;color:var(--ink-2);font-weight:600}
+.seg-btn .num{color:var(--muted);font-weight:700}
+.seg-btn:hover{border-color:var(--line-2)}
+.seg-btn.on{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink) inset;color:var(--ink)}
+.seg-btn .pill,.seg-btn .use-tag{pointer-events:none}
+.search{margin-left:auto;display:flex;align-items:center;gap:12px}
+.search input[type=search]{font:inherit;font-size:13px;width:240px;padding:6px 12px;border:1px solid var(--line-2);border-radius:999px;background:var(--surface)}
+.search input[type=search]:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+.toggle{font-size:12.5px;color:var(--ink-2);display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.count{font-size:12.5px;color:var(--muted);white-space:nowrap}
+.count b{color:var(--ink)}
+
+/* ── 지표별 판정 표 ── */
+table.metrics td.name{min-width:240px;max-width:300px}
+table.metrics td.name b{font-size:13.5px}
+table.metrics td.name .src{margin-left:6px}
+th.hbh{text-align:center;width:62px;white-space:normal;line-height:1.3;cursor:help}
+td.hbc{text-align:center;padding-top:14px}
+td.use{white-space:nowrap}
+td.insight{min-width:360px}
+td.insight .ins{margin:0;font-weight:600;color:var(--ink)}
+td.insight .up{margin:6px 0 0;color:var(--ink-2);font-size:12.5px;display:flex;gap:6px}
+td.insight .up span{color:var(--accent);font-weight:700}
+tr.sec-row td{background:var(--surface-2);font-weight:750;font-size:13px;padding:9px 14px;border-bottom:1px solid var(--line-2)}
+tr.sec-row .sec-n{font-weight:600;color:var(--muted);margin-left:10px;font-size:12px}
+tr.sec-row .sec-kind{float:right;font-weight:600;color:var(--muted);font-size:12px}
+tbody tr.sec-row:hover td{background:var(--surface-2)}
+tr.mrow:target td{background:#fff9e6}
+details.scrs{margin-top:6px;font-size:12px}
+details.scrs summary{cursor:pointer;color:var(--accent-ink);font-weight:600;list-style:none;font-size:12px}
+details.scrs summary::-webkit-details-marker{display:none}
+details.scrs summary::before{content:"";display:inline-block;width:0;height:0;border-left:4px solid currentColor;border-top:3.5px solid transparent;border-bottom:3.5px solid transparent;margin-right:6px;vertical-align:1px;transition:transform .15s}
+details[open]>summary::before{transform:rotate(90deg)}
+details.scrs ul{margin:6px 0 0;padding-left:16px;color:var(--ink-2)}
+details.scrs li{margin:2px 0}
+
+/* ── 화면별 수치 목록 ── */
+.tools{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.btn{font:inherit;font-size:12.5px;font-weight:600;padding:5px 12px;border:1px solid var(--line-2);border-radius:var(--radius-s);background:var(--surface);cursor:pointer;color:var(--ink-2)}
+.btn:hover{border-color:var(--ink-2);color:var(--ink)}
+tr.screen td{background:var(--surface-2);cursor:pointer}
+tr.screen:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+tr.screen .sname{font-weight:700}
+.caret{display:inline-block;width:0;height:0;border-left:5px solid var(--muted);border-top:4px solid transparent;border-bottom:4px solid transparent;margin-right:9px;vertical-align:1px;transition:transform .15s}
+tbody.scr.open .caret{transform:rotate(90deg)}
+tbody.scr tr.block{display:none} tbody.scr.open tr.block{display:table-row}
+tr.block td.indent{padding-left:40px;min-width:420px}
+td.srcs{white-space:normal;min-width:120px}
+td.same{white-space:nowrap;font-size:12px}
+table.hide-ops tr[data-group="운영"],table.hide-ops tbody[data-group="운영"]{display:none!important}
+
+/* ── 자세히 보기 ── */
+details.acc{border:1px solid var(--line);border-radius:var(--radius-s);background:var(--surface);margin-top:10px}
+details.acc>summary{cursor:pointer;padding:14px 18px;font-weight:700;font-size:14px;list-style:none;display:flex;align-items:center;gap:10px}
+details.acc>summary::-webkit-details-marker{display:none}
+details.acc>summary::before{content:"";width:0;height:0;border-left:5px solid var(--muted);border-top:4px solid transparent;border-bottom:4px solid transparent;transition:transform .15s}
+details.acc[open]>summary::before{transform:rotate(90deg)}
+details.acc .acc-body{padding:0 18px 18px;display:flex;flex-direction:column;gap:14px}
+details.acc .acc-body p{margin:0;color:var(--ink-2)}
+details.acc .tbl-wrap{max-height:none}
+.badge-cfm{font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;background:#fef5df;color:#8a5a00}
+.rules{font-size:12.5px;color:var(--ink-2)}
+
+/* ── 툴팁 ── */
+#tt{position:fixed;z-index:50;pointer-events:none;max-width:380px;padding:8px 11px;border-radius:7px;background:#1f1f1e;color:#f5f5f3;font-size:12px;line-height:1.55;white-space:pre-line;box-shadow:0 6px 18px rgba(0,0,0,.18);opacity:0;transition:opacity .08s}
+#tt.on{opacity:1}
+[data-tip]{cursor:help}
+a[data-tip]{cursor:pointer}
+
+footer{margin-top:28px;font-size:12px;color:var(--muted);text-align:center}
+
+@media print{
+  body{background:#fff;font-size:10px}.topbar{display:none}main{min-width:0;max-width:none;padding:0}
+  section.card,.card{box-shadow:none;break-inside:avoid-page}.tbl-wrap{max-height:none;overflow:visible}thead th{position:static}
+  tbody.scr tr.block{display:table-row}details{display:block}details>*{display:block}.filters,.tools{display:none}#tt{display:none}
+  @page{size:A3 landscape;margin:10mm}
+}
+@media (forced-colors:active){.pill,.hb,.seg{forced-color-adjust:none}}
+</style>
+</head>
+<body>
+
+<div class="topbar"><div class="in">
+<div class="brand">★ 수치 유의미성 점검표<small>GEO HUB · {{UPDATED}}</small></div>
+<nav class="nav" aria-label="문서 목차">
+<a href="#summary">요약</a><a href="#progress">진행 현황</a><a href="#map">인사이트 맵</a><a href="#redesign">개편 방안</a><a href="#candidates">바꿀 후보</a><a href="#metrics">지표별 판정</a><a href="#screens">화면별 목록</a><a href="#details">판정 기준</a>
+</nav>
+</div></div>
+
+<main>
+
+<div class="hero" id="summary">
+<div class="eyebrow">GEO HUB · 프로젝트 상시 문서</div>
+<h1>이 수치가 전략팀·마케팅 팀에 인사이트를 주는가</h1>
+<p class="lede">화면에 보이는 수치 {{N_NUM}}개를 빠짐없이 나열하고, 지표마다 <b>전략기획실의 전략 판단이나 마케팅의 GEO 최적화(AI 검색에서 우리가 잘 나오게 하기)에 실제 인사이트를 주는지</b> 판정했습니다. 인사이트가 없는 지표에는 유의미하게 바꾸는 안을 달았습니다.</p>
+<div class="meta"><span>최종 갱신 {{UPDATED}}</span><span>판정일 {{INSIGHT_AT}} · 판정 기준은 아직 컨펌 전 제안이다</span><span>항목 출처: <a href="{{CHECKLIST_LINK}}">★ 리뉴얼·최적화 지표 점검표</a>의 화면 표시 항목 (항목 성격 검토일 {{REVIEWED_AT}})</span></div>
+</div>
+
+<div class="summary">
+<div class="card tile">
+<div class="label">성과 지표 {{N_JUDGED}}개를 인사이트 등급별로 나눈 분포</div>
+<div class="dist" role="img" aria-label="인사이트 등급별 지표 수">{{DIST_BAR}}</div>
+<ul class="legend">{{DIST_LEGEND}}</ul>
+</div>
+<div class="card tile core">
+<div class="label">{{T_CORE}}</div>
+<div class="big">{{N_CORE}}<small>개</small></div>
+<div class="team"><span>전략기획실<b>{{N_CORE_STRATEGY}}</b></span><span>마케팅<b>{{N_CORE_MARKETING}}</b></span></div>
+<div class="sub muted">값이 바뀌면 전략·마케팅 의사결정이 직접 바뀌는 지표다. 두 팀이 함께 쓰는 지표는 양쪽 팀 수에 모두 넣었다.</div>
+</div>
+<div class="card tile cut">
+<div class="label">없애거나 합치거나 다시 설계할 후보</div>
+<div class="big">{{N_NONE}}<small>개</small></div>
+<div class="sub">{{TAG_NONE}}</div>
+<div class="sub muted">지표마다 유의미한 지표로 바꾸는 안을 적었다.</div>
+</div>
+</div>
+<div class="stats">
+<div class="card stat"><div class="v">{{N_NUM}}<small>/ {{N_ITEMS_ALL}}</small></div><div class="k">화면 표시 항목 {{N_ITEMS_ALL}}개 가운데 수치를 보여 주는 항목 수</div></div>
+<div class="card stat"><div class="v">{{N_GROUPS}}<small>지표</small></div><div class="k">여러 화면에서 반복 노출되는 지표는 하나로 센다</div></div>
+<div class="card stat"><div class="v">{{N_SCREENS_NUM}}<small>/ {{N_SCREENS}} 화면</small></div><div class="k">전체 {{N_SCREENS}}개 화면 가운데 수치를 보여 주는 화면 수</div></div>
+<div class="card stat"><div class="v">{{N_NA}}<small>지표</small></div><div class="k">프로젝트·프롬프트·검수·관리 화면의 운영 지표는 분석 대상이 아니어서 점검에서 뺐다</div></div>
+</div>
+
+<section class="card" id="progress">
+<div class="sec-head"><div><h2>진행 현황</h2></div></div>
+<ul class="progress">
+{{PROGRESS_ROWS}}
+</ul>
+</section>
+
+<section class="card" id="map">
+<div class="sec-head"><div><div class="kicker">인사이트 등급 × 지표를 쓰는 팀</div><h2>인사이트 맵</h2>
+<p>핵심 지표와 보조 지표는 어느 팀의 어떤 판단에 쓰이는지에 따라 나눴습니다. 지표 이름에 커서를 올리면 그 지표로 얻는 인사이트가 보이고, 규모 정보와 인사이트 없음은 유의미하게 바꾸는 안이 보입니다. 이름을 누르면 지표별 판정으로 이동합니다.</p></div></div>
+<div class="tbl-wrap" style="max-height:none"><table class="map"><thead><tr><th scope="col">인사이트 등급 ＼ 용도</th>{{MAP_HEAD}}</tr></thead><tbody>
+{{MAP_ROWS}}
+</tbody></table></div>
+</section>
+
+<section class="card" id="redesign">
+<div class="sec-head"><div><div class="kicker">{{T_CORE}} {{N_CORE}}개 · 개편 뷰 {{N_VIEWS}}개 · 제안</div><h2>표현 개편 방안</h2>
+<p>핵심 지표도 숫자로 ‘존재만’ 하면 인사이트가 되지 않습니다. 기준점·변화·분해·원인·액션이 같은 화면에 같이 보여야 ‘그래서 무엇을 할지’가 나옵니다. 지금 화면의 핵심 지표 {{N_CORE}}개 중 {{N_ACTION_MISSING}}개는 다음 행동(액션)이 같이 보이지 않습니다.</p></div></div>
+
+<div class="subh">인사이트 전달 5요소<small>지금 화면에서 그 요소가 빠진 핵심 지표 수: {{ELEM_GAPS}}</small></div>
+<ul class="elems">{{ELEM_ROWS}}</ul>
+
+<div class="subh">표현 원칙</div>
+<ul class="principles">{{PRINCIPLE_ROWS}}</ul>
+
+<div class="subh">개편 뷰 {{N_VIEWS}}개<small>핵심 지표를 묶어 질문 하나에 답하는 화면으로 만들고, 보조 지표는 그 화면 안에서 원인을 쪼개 보여 주는 층으로 넣습니다. 스케치는 화면 구성만 그린 도식이며 실제 값은 없습니다.</small></div>
+<div class="views">
+{{VIEW_CARDS}}
+</div>
+
+<div class="subh">핵심 지표별 진단과 개편<small>5요소 칸은 지금 화면에서 그 요소가 지표와 함께 보이는지를 나타냅니다. {{BALL_FULL}} 함께 보임 {{BALL_HALF}} 일부만 보이거나 다른 화면에 있음 {{BALL_EMPTY}} 없음. 헤드라인 예시의 ○○ 자리에는 실제 값이 들어갑니다.</small></div>
+<div class="tbl-wrap"><table class="diag"><thead><tr><th scope="col">핵심 지표 · 개편 뷰</th><th scope="col">지금 보이는 방식</th>{{ELEM_HEADS}}<th scope="col">지금은 인사이트가 안 되는 이유</th><th scope="col">바꿀 표현 · 헤드라인 예시</th></tr></thead><tbody>
+{{DIAG_ROWS}}
+</tbody></table></div>
+</section>
+
+<section class="card" id="candidates">
+<div class="sec-head"><div><div class="kicker">{{T_NONE}} {{N_NONE}}개</div><h2>바꿀 후보</h2>
+<p>전략·마케팅 어디에도 쓰이지 않는 지표입니다. 오른쪽 열의 안대로 바꾸면 인사이트를 주는 지표가 됩니다.</p></div></div>
+<div class="tbl-wrap" style="max-height:none"><table class="cand"><thead><tr><th>지표</th><th>인사이트가 없는 이유</th><th>유의미하게 만들려면</th></tr></thead><tbody>
+{{NONE_ROWS}}
+</tbody></table></div>
+</section>
+
+<section class="card" id="metrics">
+<div class="sec-head"><div><div class="kicker">지표 {{N_GROUPS}}개 · 데이터 소스별 구분</div><h2>지표별 판정</h2>
+<p>여러 화면에 나오는 같은 지표는 한 줄로 합쳤습니다. 판정 근거 4칸은 {{BALL_FULL}} 통과 {{BALL_HALF}} 일부 통과 {{BALL_EMPTY}} 미통과를 뜻합니다. 기호나 배지에 커서를 올리면 근거가 보입니다.</p></div></div>
+<div class="filters">
+<div class="frow"><span class="flbl">인사이트</span><div class="segs">{{TIER_BUTTONS}}</div>
+<div class="search"><input type="search" id="q" placeholder="지표 이름 검색" aria-label="지표 이름 검색" oninput="F.q=this.value.trim().toLowerCase();apply()"><span class="count" id="cnt"></span></div></div>
+<div class="frow"><span class="flbl">용도</span><div class="segs">{{USE_BUTTONS}}</div>
+<label class="toggle" style="margin-left:auto"><input type="checkbox" onchange="F.ops=this.checked;apply()"> 운영 지표 숨기기</label></div>
+</div>
+<div class="tbl-wrap"><table class="metrics" id="metric-table">
+<thead><tr><th scope="col">지표</th><th scope="col">인사이트</th>{{INS_HEADS}}<th scope="col">용도</th><th scope="col">이 지표로 얻는 인사이트 · 유의미하게 만들려면</th></tr></thead>
+<tbody>
+{{GROUP_ROWS}}
+</tbody></table></div>
+</section>
+
+<section class="card" id="screens">
+<div class="sec-head"><div><div class="kicker">화면 {{N_SCREENS_NUM}}개 · 수치 {{N_NUM}}개</div><h2>화면별 수치 목록</h2>
+<p>화면 행을 누르면 그 화면의 수치가 펼쳐집니다. 인사이트는 지표 단위로 판정했으므로, ‘이 지표가 나오는 화면’ 칸을 누르면 지표별 판정으로 이동합니다.</p></div></div>
+<div class="tools"><button type="button" class="btn" onclick="toggleAll(true)">모두 펼치기</button><button type="button" class="btn" onclick="toggleAll(false)">모두 접기</button>
+<label class="toggle"><input type="checkbox" onchange="document.getElementById('screen-table').classList.toggle('hide-ops',this.checked)"> 운영 지표 숨기기</label></div>
+<div class="tbl-wrap"><table id="screen-table">
+<thead><tr><th scope="col">화면 경로 · 화면에 보이는 수치</th><th scope="col">데이터 소스</th><th scope="col">이 지표가 나오는 화면</th><th scope="col">인사이트</th></tr></thead>
+{{SCREEN_ROWS}}
+</table></div>
+</section>
+
+<section class="card" id="details">
+<div class="sec-head"><div><h2>판정 기준 · 자세히 보기</h2></div></div>
+
+<details class="acc" open><summary>인사이트 판정 기준 <span class="badge-cfm">제안 · 컨펌 필요</span></summary><div class="acc-body">
+<p>{{INSIGHT_BASIS}}. 대상은 {{AUDIENCE}}이 보는 성과 지표 {{N_JUDGED}}개이며, 여러 화면에 반복 노출되는 지표는 한 번만 판정했습니다. 키워드·소셜 지표는 성과 측정이 아니라 질문 발굴 도구이므로(04 문서) 용도를 ‘질문 발굴’로 두고, 발굴에 쓸 수 있는지로 봤습니다.</p>
+<div class="tbl-wrap"><table><thead><tr><th>판정 근거</th><th>{{BALL_FULL}} 통과 기준</th><th>{{BALL_EMPTY}} 미통과 기준</th><th class="num-c">통과 지표</th><th class="num-c">일부 통과</th><th class="num-c">미통과 지표</th></tr></thead><tbody>
+{{CRIT_ROWS}}
+</tbody></table></div>
+<div class="tbl-wrap"><table><thead><tr><th>인사이트 등급</th><th>뜻</th><th class="num-c">지표</th></tr></thead><tbody>
+{{TIER_RULE_ROWS}}
+</tbody></table></div>
+<p class="rules">생성기는 등급과 판정 근거가 서로 맞는지 검사합니다. {{T_CORE}}가 되려면 의사결정 연결과 고유 정보를 통과하고, 액션 도출과 비교 기준이 둘 다 미통과여서는 안 됩니다. 이 조건을 만족하는 지표는 반드시 {{T_CORE}}로 둡니다. {{T_SUB}}는 의사결정 연결과 액션 도출이 둘 다 미통과여서는 안 됩니다. {{T_SCALE}}와 {{T_NONE}}은 의사결정 연결과 액션 도출 어느 쪽도 통과하지 않은 지표입니다. {{T_CORE}}와 {{T_SUB}}에는 지표를 쓰는 팀(용도)이 있어야 하고, {{T_SCALE}}와 {{T_NONE}}에는 용도가 없습니다.</p>
+<div class="tbl-wrap"><table><thead><tr><th>용도</th><th>쓰는 팀</th><th>뜻</th><th class="num-c">지표</th></tr></thead><tbody>
+{{USE_ROWS}}
+</tbody></table></div>
+</div></details>
+
+<details class="acc"><summary>목록 기준 · 무엇을 수치로 셌나</summary><div class="acc-body">
+<p>점검표의 화면 표시 항목 {{N_ITEMS_ALL}}개는 항목마다 성격이 정해져 있습니다(<code>조사 데이터/visible_applicability.json</code>). 그중 ‘수치’ 성격 {{N_NUM}}개를 이 문서의 목록으로 삼았습니다. 목록·이력·본문에 들어 있는 행별 값은 그 목록의 일부로 보고 따로 세지 않았습니다.</p>
+<div class="tbl-wrap"><table><thead><tr><th>성격</th><th>설명</th><th class="num-c">항목 수</th><th>이 문서</th></tr></thead><tbody>
+{{PROFILE_ROWS}}
+</tbody></table></div>
+<p class="rules">수치가 없는 화면 {{N_EMPTY}}개: {{EMPTY_SCREENS}}</p>
+</div></details>
+
+<details class="acc"><summary>데이터 소스 분류 · 성과 지표와 운영 지표</summary><div class="acc-body">
+<p><b>성과 지표</b>는 측정 파이프라인(답변 · 언급 · 인용 · ACR · GA4 · 키워드 · 소셜)에서 오는 지표, <b>운영 지표</b>는 앱이 관리하는 프로젝트 · 프롬프트 · 검수 · 관리 화면의 지표입니다. <b>종합</b>은 여러 KPI를 한 번에 보여 주는 차트·지도, <b>측정 규모</b>는 측정 프롬프트 수처럼 샘플 수를 알려 주는 지표입니다. 분류 규칙은 <code>metric_meaning_data.py</code>에 있습니다.</p>
+<div class="tbl-wrap"><table><thead><tr><th>데이터 소스</th><th>구분</th><th class="num-c">지표 수</th><th class="num-c">항목 수</th></tr></thead><tbody>
+{{ORIGIN_ROWS}}
+</tbody></table></div>
+</div></details>
+
+<details class="acc"><summary>수치가 아닌 표시 항목 · {{N_NONNUM}}개</summary><div class="acc-body">
+<p>빠진 수치가 없는지 확인할 수 있도록 나머지 항목도 화면별로 남겼습니다.</p>
+<div class="tbl-wrap"><table><thead><tr><th>화면</th><th class="num-c">항목 수</th><th>항목 (성격별)</th></tr></thead><tbody>
+{{NONNUM_ROWS}}
+</tbody></table></div>
+</div></details>
+
+<details class="acc"><summary>다시 만들기</summary><div class="acc-body">
+<p>이 HTML은 손으로 고치지 않습니다. 레포 <code>docs/reports/부록/지표 점검표 생성기/</code>에서 <code>python -I build_metric_meaning.py</code>를 실행하면 워크스페이스 루트의 이 파일을 다시 씁니다. 지표 묶기·데이터 소스·판정 기준·진행 현황은 <code>metric_meaning_data.py</code>, 지표별 판정은 <code>조사 데이터/insight_judgments.json</code>, 화면 구조·디자인은 <code>metric_meaning_template.html</code>에서 고칩니다. 점검표에 새 항목이 생기거나 이름이 바뀌어 규칙이 맞지 않으면 생성이 실패합니다.</p>
+</div></details>
+</section>
+
+<footer>★ 수치 유의미성 점검표 · GEO HUB · 생성기 <code>build_metric_meaning.py</code> · {{UPDATED}}</footer>
+</main>
+
+<div id="tt" role="tooltip"></div>
+<script>
+function toggleScreen(i) { var t = document.getElementById('scr-' + i); if (t) t.classList.toggle('open'); }
+function toggleAll(open) { document.querySelectorAll('tbody.scr').forEach(function (t) { t.classList.toggle('open', open); }); }
+
+/* 지표별 판정 필터: 인사이트 · 용도 · 검색 · 운영 지표 숨김을 함께 적용하고, 빈 데이터 소스 구획은 숨긴다 */
+var F = { tier: '', use: '', q: '', ops: false };
+function setFilter(kind, v, btn) {
+  F[kind] = v;
+  btn.parentNode.querySelectorAll('.seg-btn').forEach(function (b) { var on = b === btn; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+  apply();
+}
+function apply() {
+  var shown = 0, byOrigin = {};
+  document.querySelectorAll('#metric-table tr.mrow').forEach(function (r) {
+    var ok = (!F.tier || r.dataset.tier === F.tier) && (!F.use || r.dataset.use === F.use)
+      && (!F.q || r.dataset.name.indexOf(F.q) >= 0) && !(F.ops && r.dataset.group === '운영');
+    r.style.display = ok ? '' : 'none';
+    if (ok) { shown++; byOrigin[r.dataset.origin] = (byOrigin[r.dataset.origin] || 0) + 1; }
+  });
+  document.querySelectorAll('#metric-table tr.sec-row').forEach(function (r) { r.style.display = byOrigin[r.dataset.origin] ? '' : 'none'; });
+  document.getElementById('cnt').innerHTML = '<b>' + shown + '</b>개 지표 표시';
+}
+apply();
+
+/* 툴팁: data-tip 하나로 통일 (마우스·키보드 포커스) */
+(function () {
+  var tt = document.getElementById('tt'), cur = null;
+  function show(el, x, y) { tt.textContent = el.getAttribute('data-tip'); tt.classList.add('on'); place(x, y); }
+  function place(x, y) {
+    var w = tt.offsetWidth, h = tt.offsetHeight, px = x + 14, py = y + 16;
+    if (px + w > innerWidth - 8) px = x - w - 14;
+    if (py + h > innerHeight - 8) py = y - h - 12;
+    tt.style.left = Math.max(8, px) + 'px'; tt.style.top = Math.max(8, py) + 'px';
+  }
+  document.addEventListener('mouseover', function (e) { var el = e.target.closest('[data-tip]'); if (el !== cur) { cur = el; if (el) show(el, e.clientX, e.clientY); else tt.classList.remove('on'); } });
+  document.addEventListener('mousemove', function (e) { if (cur) place(e.clientX, e.clientY); });
+  document.addEventListener('focusin', function (e) { var el = e.target.closest('[data-tip]'); if (el) { var r = el.getBoundingClientRect(); cur = el; show(el, r.left, r.bottom); } });
+  document.addEventListener('focusout', function () { cur = null; tt.classList.remove('on'); });
+  addEventListener('scroll', function () { cur = null; tt.classList.remove('on'); }, { passive: true });
+})();
+
+/* 목차: 지금 보고 있는 구획 표시 */
+(function () {
+  var links = {}; document.querySelectorAll('.nav a').forEach(function (a) { links[a.getAttribute('href').slice(1)] = a; });
+  var io = new IntersectionObserver(function (es) {
+    es.forEach(function (e) { if (e.isIntersecting) { Object.values(links).forEach(function (a) { a.classList.remove('on'); }); if (links[e.target.id]) links[e.target.id].classList.add('on'); } });
+  }, { rootMargin: '-40% 0px -55% 0px' });
+  Object.keys(links).forEach(function (id) { var s = document.getElementById(id); if (s) io.observe(s); });
+})();
+</script>
+</body></html>
