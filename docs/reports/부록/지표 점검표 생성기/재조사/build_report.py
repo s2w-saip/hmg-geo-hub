@@ -9,6 +9,7 @@ import html
 import json
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 from urllib.parse import quote, urlsplit
@@ -30,19 +31,25 @@ def link(path, label):
     return f'<a href="{esc(quote(rel, safe="/"))}">{esc(label)}</a>'
 
 
+def before_bytes(file):
+    # The baseline is the upstream commit, read from this repository's objects. Checkout
+    # filters keep the fingerprint equal to a working-tree copy of that commit.
+    return subprocess.run(['git', '-C', str(REPO), 'cat-file', '--filters', f'{d["before_commit"]}:{file}'],
+                          check=True, capture_output=True).stdout
+
+
 def evidence(text):
     m = re.match(r'^(before|after): (.+?):([0-9,]+)$', text)
     if m:
         side, file, lines = m.groups()
-        root = WORKSPACE / 'hmg-geo-hub-share' if side == 'before' else REPO
-        path = root / file
-        assert path.exists(), path
-        hashes[f'{side}:{file}'] = hashlib.sha256(path.read_bytes()).hexdigest()
-        if side == 'before' and target.is_relative_to(REPO):
-            # The baseline lives in the upstream repository, outside this checkout.
+        if side == 'before':
+            hashes[f'{side}:{file}'] = hashlib.sha256(before_bytes(file)).hexdigest()
             url = (f'https://github.com/Kongventures/hmg-geo-hub-share/blob/{d["before_commit"]}/'
                    f'{quote(file, safe="/")}#L{lines.split(",")[0]}')
             return f'<a href="{esc(url)}">{esc(f"{side} · {file}:{lines}")}</a>'
+        path = REPO / file
+        assert path.exists(), path
+        hashes[f'{side}:{file}'] = hashlib.sha256(path.read_bytes()).hexdigest()
         return link(path, f'{side} · {file}:{lines}')
     local = folder / text
     if local.is_file():
