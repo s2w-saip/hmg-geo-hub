@@ -104,6 +104,8 @@ export interface MarketCompetition {
   topRival: BrandStat | null; // strongest external (non-HMG) brand here
   /** KPI 5종(Overview). 구 캐시/테스트 픽스처엔 없을 수 있어 optional. */
   metrics?: GeoMetrics;
+  /** 참 = 답변은 있는데 브랜드 언급이 0(점유율 0/0). hmgSov 0·hmgRank 는 측정값이 아니다 — 스냅샷은 "—". API 원천만 싣는다. */
+  noMentions?: boolean;
 }
 export interface GeoCountryRow extends MarketCompetition {
   code: string; // ISO alpha-2 (scope region)

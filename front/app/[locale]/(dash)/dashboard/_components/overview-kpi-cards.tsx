@@ -57,6 +57,7 @@ import { OFFICIAL_COMPETITOR_CATEGORY } from "@/app/[locale]/(dash)/standard/ans
 import { ColInfo } from "@/components/dash/col-info";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { KpiSummary } from "../_data/sample";
+import { overviewCardState } from "../_data/card-state";
 import type { LiveTrend } from "../_data/live";
 import { OVERVIEW_KPI_KEYS, type OverviewKpiKey } from "../_data/overview-metrics";
 import { PeriodDeltaSlot } from "@/components/dash/period-delta-slot";
@@ -123,32 +124,8 @@ export interface OverviewDeferred {
 /** Δ 가 없을 때 찍는 표기(U+2212 MINUS SIGN) — 빈칸이면 "왜 없는지"가 안 보인다(QA #22). */
 export const NO_DELTA = "−";
 
-/**
- * 카드 하나의 표시 상태 — 값이 "측정 대기"인지, Δ 를 그릴지 (QA #23·#3). 순수 함수.
- *
- * 두 규칙:
- *  1. `value == null` = 측정 대기 → Δ·스파크라인·경쟁사 행을 전부 숨긴다. 종전에는
- *     값만 "측정 대기"인데 그 아래에 `↘44.4pp`·`↘1.0위` 가 함께 찍혔다.
- *  2. 값이 0 이라도 **모수(ratio.denominator)가 0** 이면 측정된 0 이 아니라 분모
- *     부재다 — live.ts 의 `pct(n, 0) = 0` 이 그대로 카드로 샌 것. ratio 자체가 없는
- *     0 도 같은 취급(buildMirrorKpis 는 분모 0 일 때 ratio 를 안 만든다).
- *     QA 이미지의 `0.0% ↘100.0pp` 는 이 규칙이 잡는다(분모 0 → 측정 대기).
- *
- * 모수가 있는 진짜 0 의 Δ 는 **그대로 둔다** — 답변 120건 중 당사 언급 0 이면 -100pp 는
- * 참값이다. (verifier 2026-09-08: "값 0 & Δ<0 → 숨김" 규칙은 실제 하락을 가리는 데다
- * 카드 창과 추이 창이 정합하면 도달 불가한 죽은 코드라 삭제.)
- */
-export function overviewCardState(
-  k?: Pick<KpiSummary, "value" | "delta" | "ratio"> | null,
-): { value: number | null; pending: boolean; delta: number | null } {
-  const value = k?.value ?? null;
-  const rawDelta = k?.delta ?? null;
-  const denom = k?.ratio?.denominator ?? null;
-  if (value == null || (value === 0 && (denom == null || denom === 0))) {
-    return { value: null, pending: true, delta: null };
-  }
-  return { value, pending: false, delta: rawDelta };
-}
+// 카드 표시 상태(측정 대기·Δ) 규칙은 타일과 같이 쓰도록 _data/card-state.ts 로 옮겼다(종전 import 경로 유지).
+export { overviewCardState };
 
 
 /**

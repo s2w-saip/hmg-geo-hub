@@ -312,6 +312,25 @@ describe("GEO toLiveGeo", () => {
       ourLabel: "Kia",
     });
   });
+
+  it("a market with answers but no brand mention is marked noMentions (its SOV 0/0 is not a measured 0)", () => {
+    const zero: S["GeoMetrics"] = {
+      visibility: { num: 0, den: 12 },
+      share_of_voice: { num: 0, den: 0 },
+      sentiment: null,
+      position: null,
+      citation_share: null,
+    };
+    const row = { answers: 12, own: zero, rank: { our: 1, field_size: 1 }, top_own_brand: null, top_rival: null };
+    const g = D.toLiveGeo({
+      active_brand: "Kia",
+      own_label: "Kia",
+      pending: [],
+      markets: [{ ...row, region_id: "kia-europe", region_label: "Europe", country_count: 1, countries: [{ ...row, code: "DE" }] }],
+    });
+    expect(g.markets[0].noMentions).toBe(true);
+    expect(g.markets[0].countries[0].noMentions).toBe(true);
+  });
 });
 
 describe("engines, composition, project overview", () => {

@@ -36,13 +36,13 @@ export function GeoSnapshot({ geo }: { geo: LiveGeo }) {
           <li key={m.region} className="flex flex-col gap-1.5">
             {/* 권역 행 — HMG 순위 · 점유율 · 최대 경쟁사 */}
             <div className="flex items-center gap-3">
-              <RankBadge rank={m.hmgRank} />
+              <RankBadge rank={m.noMentions ? null : m.hmgRank} />
               <span className="w-20 shrink-0 truncate text-xs font-semibold text-foreground">
                 {label(m.region)}
               </span>
-              <Bar value={m.hmgSov} strong />
+              <Bar value={m.noMentions ? 0 : m.hmgSov} strong />
               <span className="w-14 shrink-0 text-right text-xs font-semibold tabular-nums text-foreground">
-                {m.hmgSov.toFixed(1)}%
+                {m.noMentions ? "—" : `${m.hmgSov.toFixed(1)}%`}
               </span>
               <span className="w-44 shrink-0 truncate text-right text-[11px] text-muted-foreground">
                 {m.topRival
@@ -60,9 +60,9 @@ export function GeoSnapshot({ geo }: { geo: LiveGeo }) {
                       {countryName(c.code, locale)}
                     </span>
                   </span>
-                  <Bar value={c.hmgSov} />
+                  <Bar value={c.noMentions ? 0 : c.hmgSov} />
                   <span className="w-14 shrink-0 text-right text-[11px] tabular-nums text-foreground">
-                    {c.hmgSov.toFixed(1)}%
+                    {c.noMentions ? "—" : `${c.hmgSov.toFixed(1)}%`}
                   </span>
                   <span className="w-44 shrink-0 truncate text-right text-[11px] text-muted-foreground">
                     {c.topBrand
@@ -87,8 +87,15 @@ export function GeoSnapshot({ geo }: { geo: LiveGeo }) {
   );
 }
 
-// HMG의 시장 내 순위 배지. 1위 = 브랜드 톤(선두), 그 외 = 골드 톤(도전자).
-function RankBadge({ rank }: { rank: number }) {
+// HMG의 시장 내 순위 배지. 1위 = 브랜드 톤(선두), 그 외 = 골드 톤(도전자). null = 언급 0 이라 순위 없음("—").
+function RankBadge({ rank }: { rank: number | null }) {
+  if (rank == null) {
+    return (
+      <span className="inline-flex h-5 w-8 shrink-0 items-center justify-center rounded bg-muted text-[10px] font-bold text-muted-foreground">
+        —
+      </span>
+    );
+  }
   return (
     <span
       className={cn(

@@ -11,6 +11,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { KPI_DEFINITIONS, type KpiSummary, type KpiCategory, type KpiUnit } from "../_data/sample";
+import { overviewCardState } from "../_data/card-state";
 import { useFilterSignal } from "@/components/dash/use-filter-signal";
 import { PeriodDeltaSlot } from "@/components/dash/period-delta-slot";
 import { PeriodDeltaCaption } from "@/components/dash/delta-chip";
@@ -189,8 +190,14 @@ function Tile({
   // 유일한 로케일 소스는 URL 세그먼트다.
   const locale = useLocale();
 
-  const isPending = summary.value === null;
-  const hasDelta = summary.delta !== null;
+  // 측정 대기·Δ 는 Overview 카드와 같은 규칙(overviewCardState): 값이 없거나 분모 없는 0(0/0)이면 대기이고 Δ 를 그리지 않는다.
+  // Δ 는 추이의 마지막 두 회차에서 오므로(applyTrendDeltas) 카드가 대기여도 값이 있을 수 있다. 건수 카드는 0 이 측정된 값이라 제외.
+  const state =
+    def.unit === "count"
+      ? { value: summary.value, pending: summary.value === null, delta: summary.value === null ? null : summary.delta }
+      : overviewCardState(summary);
+  const isPending = state.pending;
+  const hasDelta = state.delta !== null;
   // 원천별 문구(KpiSummary.copyVariant): api 카드는 정의가 바뀐 지표의 라벨·툴팁을 api.* 에서 고른다.
   const copy = summary.copyVariant === "api" ? "api." : "";
 
@@ -229,7 +236,7 @@ function Tile({
                 )}
               >
                 <DeltaIcon className="h-3 w-3" aria-hidden />
-                {formatDelta(summary.delta as number, def.unit, locale)}
+                {formatDelta(state.delta as number, def.unit, locale)}
               </span>
             ) : null
           }
@@ -286,10 +293,10 @@ function Tile({
           </span>
         ) : (
           <span className="font-head text-2xl font-semibold tracking-tight tabular-nums text-foreground">
-            {formatValue(summary.value as number, def.unit, locale)}
+            {formatValue(state.value as number, def.unit, locale)}
           </span>
         )}
-        {summary.engineConsistency != null ? (
+        {!isPending && summary.engineConsistency != null ? (
           <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10.5px] font-medium text-muted-foreground">
             <GitCompareArrows className="h-3 w-3" aria-hidden />
             <span className="tabular-nums">{summary.engineConsistency.toFixed(1)}%</span>
