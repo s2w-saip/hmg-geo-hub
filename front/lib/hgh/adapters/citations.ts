@@ -317,8 +317,9 @@ export function citationPointGap(p: { gap?: boolean; gap_reason?: string | null 
 }
 
 /**
- * T-1 dimension=source|category -> WeeklyTrend. `seriesOrder` (category chart) keeps the given
- * series in that order and drops the others (legacy buildWeeklyTrend(entries, categories)).
+ * T-1 dimension=source|category -> WeeklyTrend. `seriesOrder` (category chart) puts the given
+ * series first in that order; other series that have a value in some bucket follow (a category
+ * missing from the latest snapshot must not vanish from earlier buckets), all-zero ones are dropped.
  */
 export function toCitationTrend(
   data: TrendResponse["data"],
@@ -329,7 +330,15 @@ export function toCitationTrend(
     const name = data.dimension === "category" ? (s.key ? LABEL_BY_SLUG.get(s.key) : null) ?? s.label ?? s.key : s.key;
     if (name && !byName.has(name)) byName.set(name, s);
   }
-  const names = opts.seriesOrder ? opts.seriesOrder.filter((n) => byName.has(n)) : [...byName.keys()];
+  // seriesOrder(최신 회차 스냅샷 카테고리)는 순서만 정한다: 스냅샷에 없지만 앞 회차에 값이 있는 카테고리를 버리면 그 회차들이
+  // 그 카테고리 없이 100% 로 다시 맞춰진다. 그런 시리즈는 뒤에 붙이고, 모든 회차가 0 인 시리즈만 뺀다.
+  const valuedSeries = (s: TrendResponse["data"]["series"][number]) => s.points.some((p) => !p.gap && (p.ratio?.num ?? 0) > 0);
+  const names = opts.seriesOrder
+    ? [
+        ...opts.seriesOrder.filter((n) => byName.has(n)),
+        ...[...byName.keys()].filter((n) => !opts.seriesOrder!.includes(n) && valuedSeries(byName.get(n)!)),
+      ]
+    : [...byName.keys()];
   if (names.length === 0) return null;
   const idx = names.map((n) => new Map(byName.get(n)!.points.map((p) => [p.bucket, p])));
   let valued = 0;
@@ -922,7 +931,7 @@ export async function loadCitationsAsOf(
 
 export interface CitationDeltas {
   officialDelta: OverviewCardDelta | null;
-  prevCategories: { totals: CitationCategoryTotals; asOf: string } | null;
+  prevCategories: { totals: CitationCategoryTotals; asOf: string; current?: CitationCategoryTotals } | null;
 }
 
 /** Share trend -> the Overview card Δ (the page reads no prev sub KPI since hmg-geo 783478c). */
@@ -952,7 +961,13 @@ export function prevCategoriesOf(trend: TrendResponse | null): CitationDeltas["p
   }
   if (valued.length < 2) return null;
   const prev = valued[valued.length - 2];
-  return { totals: { total: prev.total, byCategory: prev.byCategory }, asOf: prev.key };
+  const last = valued[valued.length - 1];
+  // current = 마지막 값 있는 회차: Δ 의 현재 쪽. 카드 값은 기간이면 누적이라 직전 회차와 단위가 다르다(CategoryDelta)
+  return {
+    totals: { total: prev.total, byCategory: prev.byCategory },
+    asOf: prev.key,
+    current: { total: last.total, byCategory: last.byCategory },
+  };
 }
 
 /**

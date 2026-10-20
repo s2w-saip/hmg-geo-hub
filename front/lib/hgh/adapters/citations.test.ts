@@ -232,6 +232,20 @@ describe("conversions (hand-computed)", () => {
     });
   });
 
+  it("category trend keeps a category that is missing from the latest snapshot but valued earlier (appended after the snapshot order)", () => {
+    // 최신 회차 스냅샷에 없는 카테고리를 버리면 과거 버킷이 그 카테고리 없이 100% 로 다시 맞춰진다(r1 50/30/20 → 62.5/37.5)
+    const lost: S["TrendData"] = {
+      ...TREND_CATEGORY,
+      series: [
+        ...TREND_CATEGORY.series,
+        series({ metric: "category_share", key: "zzLegacyOnly", label: "Forums", points: [pt("2026-09-14", 3, 12), pt("2026-09-21", 0, 16)] }),
+      ],
+    };
+    const t = C.toCitationTrend(lost, { seriesOrder: ["Official (HMG)", "Automotive Media"] });
+    expect(t?.series).toEqual(["Official (HMG)", "Automotive Media", "Forums"]);
+    expect(t?.points[0]).toEqual({ week: "2026-09-14", "Official (HMG)": 5, "Automotive Media": 4, Forums: 3 });
+  });
+
   it("prompt split: rows + counts, owned 0 -> null (legacy section hidden)", () => {
     const s = C.toPromptSplit(PROMPTS, { counts: PROMPTS.counts, items: [] })!;
     expect(s.ownedCount).toBe(2);
@@ -290,9 +304,11 @@ describe("conversions (hand-computed)", () => {
   });
 
   it("category Δ base: the previous valued bucket of the category trend (legacy since d175da4, DC-11 resolved)", () => {
+    // current = 마지막 값 있는 회차(Δ 의 현재 쪽: 기간이면 카드는 누적이라 회차 − 회차로 낸다)
     expect(C.prevCategoriesOf(env(TREND_CATEGORY))).toEqual({
       totals: { total: 9, byCategory: { "Automotive Media": 4, "Official (HMG)": 5, "Wiki & Reference": 0 } },
       asOf: "2026-09-14",
+      current: { total: 16, byCategory: { "Automotive Media": 6, "Official (HMG)": 7, "Wiki & Reference": 0 } },
     });
     expect(C.prevCategoriesOf(env({ ...TREND_CATEGORY, buckets: TREND_CATEGORY.buckets.slice(1) }))).toBeNull();
   });

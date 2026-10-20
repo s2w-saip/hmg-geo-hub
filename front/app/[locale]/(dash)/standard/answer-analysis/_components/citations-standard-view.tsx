@@ -92,7 +92,7 @@ type Props = {
    * **직전 회차 자리**의 카테고리별 인용 수 — 딜러 비중 Δ·카테고리 바 Δ(피그마 D13).
    * 자리는 Overview 카드 Δ 와 같다(`server.ts::citationCategoriesPrevRound`). 없으면 Δ 생략.
    */
-  prevCategories?: Awaitable<{ totals: CitationCategoryTotals; asOf: string } | null>;
+  prevCategories?: Awaitable<{ totals: CitationCategoryTotals; asOf: string; current?: CitationCategoryTotals } | null>;
   /**
    * `data` 의 `null` 이 **예산 초과**인가(= 데이터 없음이 아니라 지연).
    * 판정은 서버의 요청 스코프 표식(`wasDegraded("standardCitations")`)이라 이 클라이언트
@@ -297,7 +297,10 @@ function CategoryDelta({ prevCategories, name, current, size = "md" }: { prevCat
   const prev = useAwaited(prevCategories ?? null);
   const previous = prevCategoryShare(prev, name);
   if (previous == null) return null;
-  return <DeltaBadge value={deltaPp(current, previous)} unit="pp" size={size} />;
+  // 두 값은 같은 단위(회차 하나)여야 한다. API 원천은 직전 회차와 같은 추이의 마지막 회차(`current`)를 싣는다 — 기간이면 카드는
+  // 기간 누적이라 카드 − 직전 회차는 증감이 아니다(공식(HMG) Δ 정본도 추이 마지막 − 직전). 없으면(legacy) 종전대로 카드 값.
+  const base = prev?.current ? prevCategoryShare({ totals: prev.current }, name) : current;
+  return <DeltaBadge value={deltaPp(base, previous)} unit="pp" size={size} />;
 }
 
 /**

@@ -81,22 +81,37 @@ export function typeCategoryBars(rows: CitationTypeCategoryRow[] | null | undefi
   const series = [...totals.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([c]) => c);
   const bars = rows.map((r) => {
     const total = r.total;
-    // 값이 있는 마지막 세그먼트가 잔여를 받는다 — 개별 반올림 합이 100.1 이 되지 않게. 마지막 시리즈가 이 유형에서
-    // 0 건이면 그 빈 시리즈가 잔여(0.1 등)를 받아 0 건 세그먼트가 그려지던 것을 막는다.
-    const last = series.reduce((li, name, i) => ((r.byCategory[name] ?? 0) > 0 ? i : li), -1);
-    let acc = 0;
+    const values = series.map((name) => r.byCategory[name] ?? 0);
+    const tenths = largestRemainderTenths(values);
     const segments = series
-      .map((name, i) => {
-        const value = r.byCategory[name] ?? 0;
-        const pct = total > 0 ? (i === last ? round1(100 - acc) : round1((100 * value) / total)) : 0;
-        acc += i === last ? 0 : pct;
-        return { name, value, pct: Math.max(0, pct) };
-      })
+      .map((name, i) => ({ name, value: values[i], pct: tenths[i] / 10 }))
       .filter((s) => s.value > 0 || s.pct > 0);
     const official = r.byCategory[OFFICIAL_HMG_CATEGORY] ?? 0;
     return { type: r.type, total, segments, officialPct: total > 0 ? round1((100 * official) / total) : null };
   });
   return { series, bars };
+}
+
+/**
+ * 구성비를 0.1%p 단위로 나눠 합이 정확히 100.0(= 1000 칸)이 되게 한다 — 최대잉여(largest remainder) 배분.
+ * 각 값의 정확한 비율을 0.1 단위로 내림하고, 모자란 0.1 들을 내림에서 버려진 나머지가 큰 값부터 하나씩 준다.
+ * 그래서 칸마다 정확한 비율과의 차이가 0.1%p 미만이고, 0 건 칸은 나머지가 0 이라 받지 않는다(빈 시리즈가 그려지지 않는다).
+ * 나머지가 같으면 뒤 칸이 먼저 받는다(종전 '마지막 칸이 잔여를 받는다' 규칙과 같은 쪽).
+ * 분모 = 값의 합. 두 원천 모두 유형 total 이 카테고리 합이라(API back sources/service.py, legacy scope-aggregates.ts) total 과 같다.
+ */
+function largestRemainderTenths(values: number[]): number[] {
+  const den = values.reduce((s, v) => s + v, 0);
+  if (!(den > 0)) return values.map(() => 0);
+  const out = values.map((v) => Math.floor((1000 * v) / den));
+  const rem = values.map((v, i) => 1000 * v - out[i] * den);   // 정수 건수면 정확한 정수 나머지
+  let left = 1000 - out.reduce((s, x) => s + x, 0);
+  const order = values.map((_, i) => i).sort((a, b) => rem[b] - rem[a] || b - a);
+  for (const i of order) {
+    if (left <= 0 || rem[i] <= 0) break;
+    out[i] += 1;
+    left -= 1;
+  }
+  return out;
 }
 
 /** "경쟁사" 드롭다운 옵션 — 공식(경쟁사)로 분류된 도메인(인용 수 내림차순). */

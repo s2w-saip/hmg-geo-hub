@@ -64,7 +64,7 @@ describe("typeCategoryBars", () => {
   it("returns empty for null", () => {
     expect(typeCategoryBars(null)).toEqual({ series: [], bars: [] });
   });
-  it("puts the rounding residual on the last segment with citations, never on an empty series", () => {
+  it("hands the missing 0.1%p to the largest remainders, never to an empty series", () => {
     // series = A, B, C, D (D 는 comparison 에만 있다). mention 행의 D 는 0 건이다.
     const { series, bars } = typeCategoryBars([
       { type: "mention", total: 3, byCategory: { A: 1, B: 1, C: 1 } },
@@ -73,10 +73,33 @@ describe("typeCategoryBars", () => {
     ]);
     expect(series).toEqual(["A", "B", "C", "D"]);
     const seg = (type: string) => bars.find((b) => b.type === type)!.segments.map((s) => [s.name, s.value, s.pct]);
-    // 종전: D 가 0 건인데 잔여 0.1% 로 그려졌다(툴팁 "D 0.1% (0)")
+    // 잔여가 같으면(33.33… 셋) 뒤 칸이 받는다. 빈 D 는 받지 않는다(종전: D 0 건이 0.1% 로 그려졌다)
     expect(seg("mention")).toEqual([["A", 1, 33.3], ["B", 1, 33.3], ["C", 1, 33.4]]);
-    // 종전: 45.5 + 45.5 + 9.1 = 100.1(빈 D 가 잔여 −0.1 을 받고 0 으로 잘렸다)
-    expect(seg("recommendation")).toEqual([["A", 5, 45.5], ["B", 5, 45.5], ["C", 1, 9]]);
+    // 정확한 값 45.45·45.45·9.09: 잔여 큰 C(0.9)와 B(0.5, 뒤 칸)가 0.1 씩 받는다(종전 45.5·45.5·9.1 = 100.1)
+    expect(seg("recommendation")).toEqual([["A", 5, 45.4], ["B", 5, 45.5], ["C", 1, 9.1]]);
+  });
+  it("keeps 100.0 when a tiny last segment cannot absorb a negative residual", () => {
+    // 잔여 방식: 31.1 + 28.6 + 25.3 + 15.1 = 100.1 이라 마지막 칸(3건)이 −0.1 을 받고 0 으로 잘려 합 100.1
+    const [bar] = typeCategoryBars([{ type: "mention", total: 15901, byCategory: { C0: 4544, C1: 3, C3: 4939, C4: 2399, C5: 4016 } }]).bars;
+    expect(bar.segments.map((s) => [s.name, s.pct])).toEqual([["C3", 31.1], ["C0", 28.6], ["C5", 25.2], ["C4", 15.1], ["C1", 0]]);
+  });
+  it("every bar sums to 100.0 with each segment within 0.1%p of its exact share (randomized)", () => {
+    let seed = 7;
+    const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+    for (let t = 0; t < 2000; t++) {
+      const byCategory: Record<string, number> = {};
+      const big = rnd() < 0.5;
+      for (let c = 0; c < 2 + Math.floor(rnd() * 5); c++) if (rnd() > 0.35) byCategory[`C${c}`] = 1 + Math.floor(rnd() * (big ? 5000 : 30));
+      const total = Object.values(byCategory).reduce((a, b) => a + b, 0);
+      if (total === 0) continue;
+      const rows: CitationTypeCategoryRow[] = [{ type: "mention", total, byCategory }, { type: "comparison", total: 1, byCategory: { Z: 1 } }];
+      const segs = typeCategoryBars(rows).bars[0].segments;
+      expect(segs.reduce((s, x) => s + Math.round(x.pct * 10), 0)).toBe(1000);
+      for (const s of segs) {
+        expect(s.value).toBeGreaterThan(0);
+        expect(Math.abs(s.pct - (100 * s.value) / total)).toBeLessThan(0.1);
+      }
+    }
   });
 });
 

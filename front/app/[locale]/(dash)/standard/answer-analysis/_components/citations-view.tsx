@@ -1871,7 +1871,8 @@ export function CategoryDonut({
   const chartData = data.map((d) => ({ ...d, label: label(d.name) }));
   const total = totalOverride ?? data.reduce((s, c) => s + c.value, 0);
   const official = data.find((c) => c.name === OFFICIAL_HMG)?.value ?? 0;
-  const officialPct = total > 0 ? ((100 * official) / total).toFixed(1) : null;
+  // 인용 현황 카드(categoryShare)와 같은 반올림 — toFixed(1) 은 x.x5 경계에서 0.1 갈린다(247/2000: 12.3 대 12.4)
+  const officialPct = total > 0 ? (Math.round(((100 * official) / total) * 10) / 10).toFixed(1) : null;
   const dimmed = (name: string) =>
     activeCategories.length > 0 && !activeCategories.includes(name);
   return (
