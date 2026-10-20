@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Global prompts 리뉴얼 목업</title>
+<style>
+  @font-face {
+    font-family: "Pretendard";
+    src: url("../../../front/public/fonts/PretendardVariable.woff2") format("woff2-variations"),
+         url("../../../front/public/fonts/PretendardVariable.woff2") format("woff2");
+    font-weight: 100 900; font-style: normal; font-display: swap;
+  }
+  /* Mirrors the implemented /renewal/standard/prompts: left filter panel (saved filters + the original page's
+     11 single-choice filters, applied at once) beside the catalog card, with a change-history tab and a per-prompt
+     history drawer. Class names follow the renewal components (components/renewal-ui, rn- tokens in renewal-theme.css). */
+  :root {
+    --navy: #002c5f; --navy-900: #001533; --navy-500: #1a4d8e; --navy-300: #6b89b3; --navy-50: #e6eaf0; --navy-25: #f2f5fd; --navy-tint: rgba(0, 44, 95, .08);
+    --sky: #aacae6; --sand-inset: #eee9e2; --sand-light: #f6f3f2; --white: #ffffff;
+    --ink: #0a0908; --ink-2: #2b2825; --ink-muted: #6b6660; --ink-faint: #939393; --line: #ece8e3; --line-2: #e2ddd6;
+    --down: #e63312; --danger-ink: #b42318;
+    --font: Pretendard, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, "SFMono-Regular", monospace;
+    --shadow-1: 0 1px 2px rgba(10,9,8,.05), 0 1px 3px rgba(10,9,8,.06);
+    --shadow-3: 0 24px 56px -16px rgba(10,9,8,.30), 0 6px 16px rgba(10,9,8,.08);
+    --ease: cubic-bezier(.2,.7,.2,1);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--sand-light); color: var(--ink); font-family: var(--font); font-size: 13px; line-height: 1.5; -webkit-font-smoothing: antialiased; word-break: keep-all; }
+  button, input, select { font-family: inherit; }
+  :focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
+  svg.i { width: 16px; height: 16px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  svg.i.s12 { width: 12px; height: 12px; } svg.i.s14 { width: 14px; height: 14px; } svg.i.s18 { width: 18px; height: 18px; } svg.i.s20 { width: 20px; height: 20px; }
+  .num { font-variant-numeric: tabular-nums; }
+  .muted { color: var(--ink-muted); }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .spin { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+  /* ── Mockup bar ── */
+  .mk { position: sticky; top: 0; z-index: 100; background: #1c1f24; color: #e6e8eb; font-size: 12px; }
+  .mk-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding: 8px 16px; }
+  .mk-tag { background: #f4c542; color: #1c1f24; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
+  .mk-title { font-weight: 600; }
+  .mk-btn { border: 1px solid #3a414b; background: transparent; color: #cfd4da; font-size: 12px; padding: 3px 10px; border-radius: 6px; cursor: pointer; }
+  .mk-btn[aria-pressed="true"] { background: #e6e8eb; color: #1c1f24; border-color: #e6e8eb; font-weight: 600; }
+  .mk-group { display: inline-flex; align-items: center; gap: 4px; }
+  .mk-group > span { color: #9aa3ad; margin-right: 2px; }
+  .mk-cap { border-top: 1px solid #2c323a; padding: 8px 16px; color: #cfd4da; line-height: 1.6; display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; }
+  .mk-cap b { color: #fff; }
+  .mk-cap code { font-family: var(--mono); font-size: 11px; color: #fff; }
+
+  /* ── Shell ── */
+  .hdr { height: 56px; background: var(--white); box-shadow: var(--shadow-1); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; position: relative; z-index: 2; }
+  .wordmark { font-weight: 800; color: var(--navy); font-size: 15px; }
+  .wordmark small { font-weight: 600; color: var(--ink-muted); font-size: 12px; margin-left: 6px; }
+  .shell { display: flex; min-height: calc(100vh - 56px); }
+  .rail { width: 80px; background: var(--navy); flex-shrink: 0; padding: 16px 8px; }
+  .rail a { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 8px; border-radius: 8px; font-size: 11px; font-weight: 500; color: rgba(255,255,255,.85); }
+  .rail a.on { background: rgba(255,255,255,.2); color: #fff; }
+  .snb { width: 240px; background: var(--white); border-right: 1px solid var(--line); padding: 24px 12px; flex-shrink: 0; }
+  .snb a { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px; font-size: 13px; font-weight: 500; color: rgba(10,9,8,.8); }
+  .snb a.on { background: rgba(0,44,95,.1); color: var(--navy); }
+  .snb a[href] { cursor: pointer; }
+  .snb a[href]:not(.on):hover { background: rgba(0,44,95,.06); color: var(--navy); }
+  .snb a[aria-disabled="true"] { color: rgba(10,9,8,.4); cursor: default; }
+  .main { flex: 1; min-width: 0; padding: 32px 40px 72px; }
+  .wrap { max-width: 1152px; margin: 0 auto; }
+
+  /* ── Buttons (RnButton · RnIconButton · RnTextButton) ── */
+  .btn { height: 36px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 12px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid var(--line-2); background: var(--white); color: var(--ink); white-space: nowrap; }
+  .btn:hover { border-color: var(--ink-faint); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn.primary { background: var(--navy); border-color: var(--navy); color: #fff; }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--ink-muted); }
+  .btn.sm { height: 30px; padding: 0 10px; font-size: 12px; }
+  .icon { all: unset; cursor: pointer; position: relative; width: 30px; height: 30px; display: inline-grid; place-items: center; border-radius: 6px; color: var(--ink-muted); flex-shrink: 0; }
+  .icon:hover { background: var(--sand-inset); color: var(--ink); }
+  .icon:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
+  .lnk { all: unset; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--navy); }
+  .lnk:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .lnk[aria-disabled="true"] { color: var(--ink-muted); cursor: default; text-decoration: none; }
+  .lnk:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
+  .badge { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--navy); color: #fff; font-size: 11px; font-weight: 700; display: inline-grid; place-items: center; }
+  .clear { all: unset; cursor: pointer; font-size: 12px; color: var(--ink-muted); text-decoration: underline; text-underline-offset: 3px; }
+  .clear:hover { color: var(--ink); }
+  /* RnSelect: native select */
+  .selw { position: relative; display: inline-flex; align-items: center; }
+  .selw select { height: 30px; cursor: pointer; appearance: none; border-radius: 6px; border: 1px solid var(--line-2); background: var(--white); padding: 0 28px 0 10px; font-size: 12px; font-weight: 600; color: var(--ink); outline: none; }
+  .selw select:focus { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(0,44,95,.12); }
+  .selw .i { position: absolute; right: 8px; pointer-events: none; color: var(--ink-muted); }
+
+  /* ── Layout (RnFilterSplit: panel open from 1360px, [ toggles) ── */
+  .split { display: grid; grid-template-columns: 296px minmax(0, 1fr); gap: 20px; align-items: start; }
+  .split.collapsed { grid-template-columns: 52px minmax(0, 1fr); }
+  .content { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+  /* ── Panel ── */
+  .side { background: var(--white); border-radius: 14px; box-shadow: var(--shadow-1); position: sticky; top: calc(var(--mk-h, 0px) + 16px); max-height: calc(100vh - var(--mk-h, 0px) - 32px); overflow: auto; overscroll-behavior: contain; }
+  .side-top { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 8px; padding: 12px 10px 12px 18px; background: var(--white); border-bottom: 1px solid var(--line); }
+  .side-top b { font-size: 15px; }
+  .side-top .cnt { font-size: 12px; color: var(--ink-muted); }
+  .side-top .icon { margin-left: auto; }
+  .rail2 { background: var(--white); border-radius: 14px; box-shadow: var(--shadow-1); position: sticky; top: calc(var(--mk-h, 0px) + 16px); padding: 8px 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .rail2 .icon { width: 36px; height: 36px; }
+  .rail2 .badge { position: absolute; top: -2px; right: -4px; }
+  .sec { border-bottom: 1px solid var(--line); }
+  .sec-h { all: unset; box-sizing: border-box; cursor: pointer; width: 100%; display: flex; align-items: center; gap: 8px; padding: 12px 14px 8px 18px; font-size: 13px; font-weight: 700; color: var(--ink); }
+  .sec-h:focus-visible { outline: 2px solid var(--navy); outline-offset: -2px; }
+  .sec-h .chev { color: var(--ink-muted); transition: transform .15s var(--ease); }
+  .sec-h[aria-expanded="false"] .chev { transform: rotate(-90deg); }
+  .sec-h .sum { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--navy); max-width: 150px; text-align: right; }
+  .sec-b { padding: 0 8px 12px; }
+  .finwrap { position: relative; display: block; }
+  .finwrap .i { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--ink-muted); pointer-events: none; }
+  .finput { width: 100%; height: 34px; border: 1px solid var(--line-2); border-radius: 8px; padding: 0 10px 0 32px; font-size: 13px; color: var(--ink); background: var(--white); outline: none; }
+  .finput:focus { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(0,44,95,.12); }
+  .finput::placeholder { color: var(--ink-muted); }
+  .sec-b .finwrap { margin: 0 2px 6px; }
+  /* option row = RnCheckRow (radio): [mark 16px] [label] [meta] */
+  .tn { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; align-items: center; gap: 8px; min-height: 32px; padding: 0 8px; border-radius: 6px; font-size: 13px; color: var(--ink-2); cursor: pointer; }
+  .tn:hover { background: var(--sand-light); }
+  .tn:focus-visible { outline: 2px solid var(--navy); outline-offset: 0; }
+  .tn .lab { min-width: 0; overflow-wrap: break-word; padding: 6px 0; line-height: 1.4; }
+  .cb { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--ink-faint); background: var(--white); display: grid; place-items: center; }
+  .cb.on { background: var(--navy); border-color: var(--navy); }
+  .cb.on::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #fff; }
+  .psec { padding-bottom: 10px; border-bottom: 1px solid var(--line); background: linear-gradient(var(--navy-25), var(--white) 70%); }
+  .psec .sec-h { cursor: default; }
+  .psec .sec-h .lnk { margin-left: auto; }
+  .pempty { margin: 0; padding: 0 18px 4px; font-size: 12px; color: var(--ink-muted); }
+  .plist { list-style: none; margin: 0; padding: 0 8px; display: flex; flex-direction: column; gap: 2px; }
+  .pi { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 30px; align-items: center; gap: 4px; border-radius: 8px; }
+  .pi:hover { background: var(--white); box-shadow: inset 0 0 0 1px var(--line-2); }
+  .pi.on { background: var(--white); box-shadow: inset 0 0 0 1.5px var(--navy); }
+  .pa { all: unset; cursor: pointer; display: flex; flex-direction: column; gap: 1px; padding: 8px 4px 8px 10px; min-width: 0; }
+  .pa .pt { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .pa .pt .star { color: var(--navy); font-size: 12px; margin-right: 4px; }
+  .pa .ps { font-size: 12px; color: var(--ink-muted); overflow-wrap: break-word; }
+  .pi .pm { all: unset; cursor: pointer; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 6px; color: var(--ink-muted); }
+  .pi .pm:hover { background: var(--sand-inset); color: var(--ink); }
+  .menu { position: absolute; right: 4px; top: 100%; z-index: 20; min-width: 168px; background: var(--white); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow-3); padding: 6px; display: flex; flex-direction: column; }
+  .menu button { all: unset; cursor: pointer; padding: 8px 10px; border-radius: 6px; font-size: 13px; color: var(--ink-2); }
+  .menu button:hover, .menu button:focus-visible { background: var(--sand-light); }
+  .menu button.danger { color: var(--danger-ink); }
+  .psave { display: flex; gap: 6px; padding: 0 10px 8px; }
+  .psave input { flex: 1; min-width: 0; height: 30px; border: 1px solid var(--navy); border-radius: 6px; padding: 0 8px; font-size: 13px; outline: none; box-shadow: 0 0 0 3px rgba(0,44,95,.12); }
+  .pdirty { margin: 6px 10px 0; padding: 8px 10px; border-radius: 8px; background: var(--white); border: 1px dashed var(--navy-300); font-size: 12px; color: var(--ink-2); display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+  .pdirty .acts { display: flex; gap: 10px; margin-left: auto; }
+
+  /* ── Page header ── */
+  .ph { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 20px; }
+  .ph h1 { margin: 0; font-size: 32px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.2; text-wrap: balance; }
+  .ph .sub { margin-top: 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-muted); }
+  .pill { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 13px; border: 1px solid var(--line-2); background: var(--white); font-size: 12px; color: var(--ink-2); }
+  .applied { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 28px; font-size: 13px; }
+  .tok { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 6px 0 10px; border-radius: 6px; background: var(--navy-tint); color: var(--navy); font-size: 12px; font-weight: 700; }
+  .tok > span { font-weight: 500; }
+  .tok button { all: unset; cursor: pointer; width: 18px; height: 18px; display: grid; place-items: center; border-radius: 4px; }
+  .tok button:hover { background: rgba(0,44,95,.12); }
+  .upd { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--navy); }
+  .note { padding: 10px 14px; border-radius: 10px; background: var(--white); box-shadow: inset 0 0 0 1px var(--line-2); font-size: 12px; color: var(--ink-2); display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; }
+  /* RnTabs */
+  .tabs { display: inline-flex; align-self: flex-start; border-radius: 9px; background: var(--sand-inset); padding: 3px; }
+  .tabs button { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 14px; border-radius: 7px; font-size: 13px; font-weight: 500; color: var(--ink-muted); }
+  .tabs button:hover { color: var(--ink); }
+  .tabs button[aria-selected="true"] { background: var(--white); font-weight: 700; color: var(--ink); box-shadow: var(--shadow-1); }
+  .tabs button:focus-visible { outline: 2px solid var(--navy); outline-offset: 1px; }
+  .tabs .c { font-size: 12px; color: var(--ink-muted); }
+
+  /* ── Card ── */
+  .card { background: var(--white); border-radius: 14px; box-shadow: var(--shadow-1); position: relative; }
+  .card.pad { padding: 20px; }
+  .progress { position: absolute; left: 0; right: 0; top: 0; height: 3px; overflow: hidden; z-index: 3; border-radius: 14px 14px 0 0; background: var(--navy-25); }
+  .progress::after { content: ""; position: absolute; top: 0; bottom: 0; width: 35%; background: var(--navy); animation: slide 1s var(--ease) infinite; }
+  @keyframes slide { from { left: -35%; } to { left: 100%; } }
+  .nodata { margin: 0; padding: 14px; border-radius: 10px; background: var(--sand-light); font-size: 12px; color: var(--ink-muted); }
+
+  /* ── Catalog card ── */
+  .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 20px; border-bottom: 1px solid var(--line); }
+  .toolbar .finwrap { flex: 1; max-width: 280px; min-width: 180px; }
+  .toolbar .shown { margin-left: auto; font-size: 12px; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+  .tblwrap { overflow-x: auto; }
+  table { border-collapse: separate; border-spacing: 0; width: 100%; table-layout: fixed; font-size: 13px; }
+  th { height: 38px; text-align: left; font-size: 12px; font-weight: 600; color: var(--ink-muted); padding: 0 12px; border-bottom: 1px solid var(--line-2); white-space: nowrap; }
+  td { border-bottom: 1px solid var(--line); vertical-align: top; }
+  .pt-tbl th:first-child { padding: 0 12px 0 20px; }
+  .pt-tbl th:last-child { padding: 0 16px 0 8px; text-align: right; }
+  .pt-tbl td { padding: 12px; }
+  .pt-tbl td:first-child { padding-left: 20px; }
+  .pt-tbl td:last-child { padding: 10px 16px 10px 8px; text-align: right; }
+  .pt-tbl tbody tr:hover td { background: rgba(242,245,253,.6); }
+  .ptext { line-height: 1.375; color: var(--ink); }
+  .pmeta { margin-top: 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-muted); }
+  .tag { border-radius: 4px; padding: 0 6px; font-size: 11px; font-weight: 700; color: var(--navy); background: var(--navy-tint); }
+  .tag.common { background: var(--sand-inset); color: var(--ink-2); }
+  .ppath { margin-top: 4px; font-size: 12px; color: var(--ink-muted); }
+  .path { font-size: 12px; line-height: 1.375; color: var(--ink-2); overflow-wrap: break-word; }
+  .fchip { margin-top: 6px; display: inline-block; border-radius: 6px; background: var(--navy-tint); padding: 1px 6px; font-size: 12px; font-weight: 600; color: var(--navy); }
+  .mkts { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+  .mchip { display: inline-flex; align-items: center; gap: 4px; border-radius: 6px; background: var(--sand-inset); padding: 1px 6px; font-size: 12px; color: var(--ink-2); }
+  .mchip.pseudo { background: transparent; border: 1px dashed var(--ink-faint); padding: 0 6px; color: var(--ink-muted); }
+  .mchip.more { background: transparent; color: var(--ink-muted); box-shadow: inset 0 0 0 1px var(--line-2); font-variant-numeric: tabular-nums; }
+  .meas { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+  .acr { display: inline-flex; align-items: center; gap: 4px; border-radius: 6px; padding: 1px 6px; font-size: 12px; font-weight: 700; color: var(--navy); box-shadow: inset 0 0 0 1px var(--navy-300); }
+  .single { font-size: 12px; color: var(--ink-muted); }
+  .st { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--ink-2); }
+  .st.un { color: var(--ink-muted); }
+  .st i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--navy); }
+  .st.un i { background: transparent; border: 1px dashed var(--ink-muted); }
+  .pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 20px; font-size: 12px; color: var(--ink-muted); }
+  .pager > span { display: flex; align-items: center; gap: 8px; }
+
+  /* ── History tab (RnAuditHistory) ── */
+  .hist { display: flex; flex-direction: column; gap: 16px; }
+  .hist h2 { margin: 0; font-size: 15px; font-weight: 700; }
+  .hist .desc { margin: 4px 0 0; font-size: 12px; color: var(--ink-muted); }
+  .hist .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .hist .bar .shown { margin-left: auto; font-size: 12px; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+  .au-tbl th:first-child { padding: 0 12px 0 4px; }
+  .au-tbl td { padding: 10px 12px; font-size: 12px; }
+  .au-tbl td:first-child { padding-left: 4px; white-space: nowrap; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+  .au-tbl tr.grp td { background: var(--sand-light); padding-top: 8px; padding-bottom: 8px; }
+  .au-tbl tr.sub td { background: var(--sand-light); }
+  .clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: var(--ink); }
+  .ev { border-radius: 6px; background: var(--navy-tint); padding: 1px 6px; font-size: 12px; font-weight: 700; color: var(--navy); white-space: nowrap; }
+  .gbtn { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--ink); }
+  .gbtn .chev2 { display: inline-flex; transition: transform .15s; }
+  .gbtn[aria-expanded="true"] .chev2 { transform: rotate(90deg); }
+  .gbtn:focus-visible { outline: 2px solid var(--navy); }
+  .chg { display: flex; flex-direction: column; gap: 6px; }
+  .chg p { margin: 0; font-size: 12px; color: var(--ink-muted); word-break: break-all; }
+  .chg p b { font-weight: 600; color: var(--ink-2); }
+  .chg p s { text-decoration-color: rgba(230,51,18,.4); }
+  .chg p .nv { color: var(--ink); }
+  .chg summary { cursor: pointer; list-style: none; font-size: 12px; font-weight: 600; color: var(--navy); text-decoration: underline dotted; text-underline-offset: 3px; }
+  .chg summary::-webkit-details-marker { display: none; }
+  .diff { margin-top: 6px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; }
+  .diff span { font-size: 11px; font-weight: 600; color: var(--ink-muted); }
+  .diff p { margin: 2px 0 0; border-radius: 6px; background: var(--sand-light); padding: 8px; white-space: pre-wrap; color: var(--ink-muted); }
+  .diff div:last-child p { color: var(--ink); }
+
+  /* ── Drawer (RnDrawer) + timeline ── */
+  .dlg { position: fixed; inset: 0; z-index: 110; }
+  .dlg .bk { position: absolute; inset: 0; background: rgba(10,9,8,.35); }
+  .dlg .sheet { position: absolute; top: 0; bottom: 0; right: 0; width: min(560px, 100vw); display: flex; flex-direction: column; background: var(--white); box-shadow: var(--shadow-3); outline: none; }
+  .dlg .dh { display: flex; align-items: flex-start; gap: 12px; padding: 20px 24px 16px; border-bottom: 1px solid var(--line); }
+  .dlg .dh > div { flex: 1; min-width: 0; }
+  .dlg h2 { margin: 0; font-size: 20px; font-weight: 700; }
+  .dlg .dh p { margin: 4px 0 0; font-size: 13px; color: var(--ink-2); overflow-wrap: break-word; }
+  .dlg .db { flex: 1; min-height: 0; overflow-y: auto; padding: 20px 24px; }
+  .tl { list-style: none; margin: 0; padding: 0; }
+  .tl li { position: relative; display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 12px; padding-bottom: 16px; }
+  .tl .dot { margin-top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--navy-300); }
+  .tl li:first-child .dot { background: var(--navy); }
+  .tl .ln { position: absolute; top: 16px; bottom: 0; left: 4px; width: 1px; background: var(--line-2); }
+  .tl .hd { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; }
+  .tl .hd .muted { font-variant-numeric: tabular-nums; }
+  .bulk { border-radius: 6px; padding: 0 6px; color: var(--ink-muted); box-shadow: inset 0 0 0 1px var(--line-2); }
+  .tl .bd { display: flex; min-width: 0; flex-direction: column; gap: 6px; }
+
+  .toast-wrap { position: fixed; left: 0; right: 0; bottom: 24px; z-index: 120; display: flex; justify-content: center; padding: 0 16px; pointer-events: none; }
+  .toast { pointer-events: auto; background: var(--ink); color: #fff; border-radius: 10px; box-shadow: var(--shadow-3); padding: 10px 10px 10px 16px; display: flex; align-items: center; gap: 14px; font-size: 13px; }
+  .toast button { all: unset; cursor: pointer; font-weight: 700; color: var(--sky); padding: 4px 8px; border-radius: 6px; }
+</style>
+</head>
+<body>
+<div class="mk" id="mk"></div>
+<header class="hdr"><div class="wordmark">HMG GEO <small>모니터링</small></div><span class="muted" id="who" style="font-size:12px">admin</span></header>
+<div class="shell">
+  <nav class="rail"><a class="on"><svg class="i s20"><use href="#i-globe"/></svg>Global</a><a><svg class="i s20"><use href="#i-monitor"/></svg>Website</a></nav>
+  <nav class="snb" aria-label="메뉴"><a href="overview-mockup.html">Overview</a><a class="on" href="global-prompts-filters.html" aria-current="page">Global prompts</a><a aria-disabled="true" title="이 화면은 목업이 없습니다">Answer analysis</a><a aria-disabled="true" title="이 화면은 목업이 없습니다">AI Agent Funnel</a></nav>
+  <main class="main"><div class="wrap" id="page"></div></main>
+</div>
+<div id="dlg"></div><div class="toast-wrap" aria-live="polite" id="toast"></div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-chev-d" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-chev-r" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-chev-l" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></symbol>
+  <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 1 1 0 10h-2"/><line x1="8" x2="16" y1="12" y2="12"/></symbol>
+  <symbol id="i-panel" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></symbol>
+  <symbol id="i-loader" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></symbol>
+  <symbol id="i-monitor" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></symbol>
+  <symbol id="i-swords" viewBox="0 0 24 24"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" x2="19" y1="19" y2="13"/><line x1="16" x2="20" y1="16" y2="20"/><line x1="19" x2="21" y1="21" y2="19"/><polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5"/><line x1="5" x2="9" y1="14" y2="18"/><line x1="7" x2="4" y1="17" y2="20"/><line x1="3" x2="5" y1="19" y2="21"/></symbol>
+  <symbol id="i-tag" viewBox="0 0 24 24"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5"/></symbol>
+  <symbol id="i-sort-asc" viewBox="0 0 24 24"><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/><path d="M11 12h4"/><path d="M11 16h7"/><path d="M11 20h10"/></symbol>
+  <symbol id="i-sort-desc" viewBox="0 0 24 24"><path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="M11 4h10"/><path d="M11 8h7"/><path d="M11 12h4"/></symbol>
+</defs></svg>
+
+<script>
+// ── Data provenance ──
+// The screen mirrors the implemented renewal page /renewal/standard/prompts:
+//   layout, copy and rules → front/app/[locale]/(dash)/renewal/standard/prompts/_components/prompts-view.tsx ·
+//     prompt-filter-model.ts · prompt-history.tsx, renewal/_components/saved-filters.tsx · filter-split.tsx, components/renewal-ui/*
+//   filters = the original /standard/prompts filters (prompt-list-readonly.tsx): 11 single-choice axes, "전체" first,
+//     a parent pick resets its children, options = server facets (lib/db/repositories/catalog-page.ts scopeMeta),
+//     account scope = brand (+ 공통/HMG) and the market scope (catalogMarketScopeCondition)
+//   copy → front/messages/ko.json (standardPromptsView · promptAudit · renewal.*)
+// Production DB only (this PC has no DB access) — same shape as the app, values illustrative:
+//   prompt text / brand / list type / depth / funnel = the v0.4 seed (front/scripts/db/load-standard-prompts-v04.sql, 250 rows);
+//   language, target markets, measure kind, measure status, change history = derived examples (same rule as the scratch harness).
+const SEED = [["who is leading self driving technology?","HMG","Brand Message","Innovation & Technology","Autonomous car",null,"인지/탐색"],["Which of the ev car brands offers a driving experience that does not change after purchase?","HMG","Brand Message","Innovation & Technology","EV,Hybrid Brand Awareness","EV Driving","구매/사후관리"],["Which innovative car brands is consider to buy?","HMG","Brand Message","Innovation & Technology","Innovative Brand Awareness",null,"구매/사후관리"],["Which innovative car brands is consider to buy based on human centered?","HMG","Brand Message","Human & Sustainable Mobility","Human Centered Innovation",null,"구매/사후관리"],["Which electric cars are considered design icons?","HMG","Brand Message","Innovation & Technology","EV,Hybrid Brand Awareness","EV Design","인지/탐색"],["Which car brands have strong AI technology capabilities to buy?","HMG","Brand Message","Innovation & Technology","Relation with AI",null,"구매/사후관리"],["Which car brand's dealership makes you feel an exceptional condition for consumers?","HMG","Brand Message","Brand Image/key value","Value Awareness",null,"구매/사후관리"],["Which car brands can give me the best software connectivity experience?","HMG","Brand Message","Innovation & Technology","Software Technology",null,"인지/탐색"],["Which car brands align with environmentally conscious consumers to buy now?","HMG","Brand Message","Human & Sustainable Mobility","Environmental Friendliness",null,"구매/사후관리"],["Which car brand is the smartest buy in terms of value for money?","HMG","Brand Message","Brand Image/key value","Value Awareness",null,"구매/사후관리"],["Which car brand is the good to buy?","HMG","Brand Message","Brand Image/key value","Brand Awareness",null,"구매/사후관리"],["Which car brand is on the rise these days?","HMG","Brand Message","Brand Image/key value","Brand Awareness",null,"인지/탐색"],["Which car brand is known for safety?","HMG","Brand Message","Brand Image/key value","Value Awareness",null,"인지/탐색"],["Which car brand is considered the most reliable?","HMG","Brand Message","Brand Image/key value","Value Awareness",null,"인지/탐색"],["Which car brand has the strongest luxury image?","HMG","Brand Message","Brand Image/key value","Value Awareness",null,"인지/탐색"],["Which car brand has the best consumer ratings?","HMG","Brand Message","Brand Image/key value","Brand Awareness",null,"비교/검증"],["Which car brand has a warranty system that you can trust, trust, and buy?","HMG","Brand Message","Brand Image/key value","Value Awareness",null,"구매/사후관리"],["Which car brand do you recommend that uses AI-based technology well? Please rank it?","HMG","Brand Message","Innovation & Technology","Relation with AI",null,"비교/검증"],["Which automakers focus on solving real customer problems?","HMG","Brand Message","Human & Sustainable Mobility","Human Centered Innovation",null,"인지/탐색"],["Which automakers are investing in a better future for the next generation?","HMG","Brand Message","Human & Sustainable Mobility","Social Responsibility",null,"인지/탐색"],["Which automaker is building a better future that I can support through my purchase?","HMG","Brand Message","Human & Sustainable Mobility","Social Responsibility",null,"구매/사후관리"],["What's the best car brand these days?","HMG","Brand Message","Brand Image/key value","Brand Awareness",null,"인지/탐색"],["What would be the relative benefits of buying brands that are likely to lead the hydrogen transport market?","HMG","Brand Message","Human & Sustainable Mobility","Environmental Friendliness",null,"구매/사후관리"],["What should I buy that I always fulfill by brand's care?","HMG","Brand Message","Brand Image/key value","Value Awareness",null,"구매/사후관리"],["What should I buy based on self driving technology's safety & reliability?","HMG","Brand Message","Innovation & Technology","Autonomous car",null,"구매/사후관리"],["What is the trustworthy EV carmaker to buy due to good management and after-sales service, etc?","HMG","Brand Message","Innovation & Technology","EV,Hybrid Brand Awareness","EV Value","구매/사후관리"],["What is the ev car brand with good efficiency?","HMG","Brand Message","Innovation & Technology","EV,Hybrid Brand Awareness","EV Efficiency","인지/탐색"],["What is the ev car brand known for reliability?","HMG","Brand Message","Innovation & Technology","EV,Hybrid Brand Awareness","EV Value","인지/탐색"],["What is the car brand that value for money?","HMG","Brand Message","Brand Image/key value","Value Awareness",null,"인지/탐색"],["What is the best ev car brand?","HMG","Brand Message","Innovation & Technology","EV,Hybrid Brand Awareness","EV, Hybrid Awareness","인지/탐색"],["What is people's reputation for the social responsibility of car brands?","HMG","Brand Message","Human & Sustainable Mobility","Social Responsibility",null,"비교/검증"],["What ev car is famous for driving performance?","HMG","Brand Message","Innovation & Technology","EV,Hybrid Brand Awareness","EV Driving","인지/탐색"],["What electric car should I buy overall?","HMG","Brand Message","Innovation & Technology","EV,Hybrid Brand Awareness","EV, Hybrid Awareness","구매/사후관리"],["What electric car should I buy based on efficiency such as long distance?","HMG","Brand Message","Innovation & Technology","EV,Hybrid Brand Awareness","EV Efficiency","구매/사후관리"],["What car brand's ota technology is well maintained to buy?","HMG","Brand Message","Innovation & Technology","Software Technology",null,"구매/사후관리"],["What car brand is worth buying for me considering the environment?","HMG","Brand Message","Human & Sustainable Mobility","Environmental Friendliness",null,"구매/사후관리"],["What car brand is well known for its design identity recently?","HMG","Brand Message","Brand Image/key value","Value Awareness",null,"인지/탐색"],["What car brand is innovative?","HMG","Brand Message","Innovation & Technology","Innovative Brand Awareness",null,"인지/탐색"],["What brands are making transportation more inclusive and accessible?","HMG","Brand Message","Human & Sustainable Mobility","Human Centered Innovation",null,"인지/탐색"],["What brands are helping make transportation accessible to more people and I wonder if that's what I'll be able to do when I use it?","HMG","Brand Message","Human & Sustainable Mobility","Human Centered Innovation",null,"구매/사후관리"],["What brands are committed to ethical business leadership? Is that brand car worth to buy?","HMG","Brand Message","Human & Sustainable Mobility","Social Responsibility",null,"구매/사후관리"],["What brand makes ev battery with less trouble?","HMG","Brand Message","Innovation & Technology","EV,Hybrid Brand Awareness","EV Battery","구매/사후관리"],["What brand is known for ev battery?","HMG","Brand Message","Innovation & Technology","EV,Hybrid Brand Awareness","EV Battery","인지/탐색"],["What automakers offer AI-powered vehicle features?","HMG","Brand Message","Innovation & Technology","Relation with AI",null,"인지/탐색"],["What automaker provides the most supportive ownership experience after purchase?","HMG","Brand Message","Brand Image/key value","Value Awareness",null,"구매/사후관리"],["Please compare the degree to which each brand uses eco-friendly materials and tell me what the best brand is?","HMG","Brand Message","Human & Sustainable Mobility","Environmental Friendliness",null,"비교/검증"],["Is there a car brand that fulfills its social responsibilities?","HMG","Brand Message","Human & Sustainable Mobility","Social Responsibility",null,"인지/탐색"],["give EV car recommendation that design is less likely to age over time after purchase?","HMG","Brand Message","Innovation & Technology","EV,Hybrid Brand Awareness","EV Design","구매/사후관리"],["from recent review, which car brand makes good ev car?","HMG","Brand Message","Innovation & Technology","EV,Hybrid Brand Awareness","EV, Hybrid Awareness","비교/검증"],["Can you tell me about car brands pros and cons with ranking?","HMG","Brand Message","Brand Image/key value","Brand Awareness",null,"비교/검증"],["Can you tell me about car brands known for there AS, service infra?","HMG","Brand Message","Brand Image/key value","Brand Awareness",null,"구매/사후관리"],["Can you compare vehicle brands based on ease of use?","HMG","Brand Message","Human & Sustainable Mobility","Human Centered Innovation",null,"비교/검증"],["Can you compare value for money car brand / model?","HMG","Brand Message","Brand Image/key value","Value Awareness",null,"비교/검증"],["Can you compare the current car brands based on reliable?","HMG","Brand Message","Brand Image/key value","Value Awareness",null,"비교/검증"],["Can you compare the car brand that improving everyday life and choose the best brand?","HMG","Brand Message","Human & Sustainable Mobility","Human Centered Innovation",null,"비교/검증"],["Can you compare the best current car brands?","HMG","Brand Message","Brand Image/key value","Brand Awareness",null,"비교/검증"],["Can you compare safety rating of ev car brands?","HMG","Brand Message","Innovation & Technology","EV,Hybrid Brand Awareness","EV Value","비교/검증"],["Can you compare luxury car brands?","HMG","Brand Message","Brand Image/key value","Value Awareness",null,"비교/검증"],["Can you compare innovative car brand based on there future readiness?","HMG","Brand Message","Innovation & Technology","Innovative Brand Awareness",null,"비교/검증"],["Can you compare ev vehicles design with review?","HMG","Brand Message","Innovation & Technology","EV,Hybrid Brand Awareness","EV Design","비교/검증"],["Can you compare EV car brand offers the best driving dynamics and choose best please?","HMG","Brand Message","Innovation & Technology","EV,Hybrid Brand Awareness","EV Driving","비교/검증"],["Can you compare ev battery performance of car brands?","HMG","Brand Message","Innovation & Technology","EV,Hybrid Brand Awareness","EV Battery","비교/검증"],["Can you compare Electric vehicles efficiency overall?","HMG","Brand Message","Innovation & Technology","EV,Hybrid Brand Awareness","EV Efficiency","비교/검증"],["Can you compare car brands with carbon neutral orientation. Which is the best?","HMG","Brand Message","Human & Sustainable Mobility","Environmental Friendliness",null,"비교/검증"],["Can you compare car brands safety reputation?","HMG","Brand Message","Brand Image/key value","Value Awareness",null,"비교/검증"],["Can you compare car brands OTA mobility technology?","HMG","Brand Message","Innovation & Technology","Software Technology",null,"비교/검증"],["Can you compare car brands based on environmental friendliness?","HMG","Brand Message","Human & Sustainable Mobility","Environmental Friendliness",null,"비교/검증"],["Can you compare car brands based on autonomous technology?","HMG","Brand Message","Innovation & Technology","Autonomous car",null,"비교/검증"],["Can you compare brands that truly pursue the responsible future of mobility.","HMG","Brand Message","Human & Sustainable Mobility","Social Responsibility",null,"비교/검증"],["Are there some brands that care about the carbon neutrality of their cars?","HMG","Brand Message","Human & Sustainable Mobility","Environmental Friendliness",null,"인지/탐색"],["Are there any car brands that strive for a sustainable environment?","HMG","Brand Message","Human & Sustainable Mobility","Environmental Friendliness",null,"인지/탐색"],["Are brands developing ways to use hydrogen in cars?","HMG","Brand Message","Human & Sustainable Mobility","Environmental Friendliness",null,"인지/탐색"],["Which cars are the most compact?","HMG","Consumer base Response","Compare+Car/Features","Compare_Size/Spec","Size/Spec","비교/검증"],["Which cars are good for people who need more seats?","HMG","Consumer base Response","Car+Features","Features_Size/Spec","Size/spec/seat","인지/탐색"],["Which car brands have good reliability reviews?","HMG","Consumer base Response","Review+Car/Features","Review_Car/Brand","Reliability","비교/검증"],["Which car brands have better software updates?","HMG","Consumer base Response","Compare+Car/Features","Compare_Software/Connectivity","Software/Connectivity","비교/검증"],["Which Hyundai cars offer the most seating space?","Hyundai","Consumer base Response","Car+Features","Features_Size/Spec","Size/spec/seat","인지/탐색"],["Which Kia cars offer the most seating space?","Kia","Consumer base Response","Car+Features","Features_Size/Spec","Size/spec/seat","인지/탐색"],["Which Genesis cars offer the most seating space?","Genesis","Consumer base Response","Car+Features","Features_Size/Spec","Size/spec/seat","인지/탐색"],["Where can I check official parts for a Hyundai car?","Hyundai","Consumer base Response","Car+Features","Features_Vehicle Parts","parts","인지/탐색"],["Where can I check official parts for a Kia car?","Kia","Consumer base Response","Car+Features","Features_Vehicle Parts","parts","인지/탐색"],["Where can I check official parts for a Genesis car?","Genesis","Consumer base Response","Car+Features","Features_Vehicle Parts","parts","인지/탐색"],["Where can I buy a Hyundai car?","Hyundai","Consumer base Response","Action+Car","Action_Pricing Plan","Dealership/Configurator","구매/사후관리"],["Where can I buy a Kia car?","Kia","Consumer base Response","Action+Car","Action_Pricing Plan","Dealership/Configurator","구매/사후관리"],["Where can I buy a Genesis car?","Genesis","Consumer base Response","Action+Car","Action_Pricing Plan","Dealership/Configurator","구매/사후관리"],["What should I do if my car is not charging?","HMG","Consumer base Response","Car Ownership","Ownership_Issue/Problem","Issue/Problem","구매/사후관리"],["What should I do if my Hyundai tire pressure light is on?","Hyundai","Consumer base Response","Car Ownership","Ownership_Issue/Problem","Issue/Problem","구매/사후관리"],["What should I do if my Kia tire pressure light is on?","Kia","Consumer base Response","Car Ownership","Ownership_Issue/Problem","Issue/Problem","구매/사후관리"],["What should I do if my Genesis tire pressure light is on?","Genesis","Consumer base Response","Car Ownership","Ownership_Issue/Problem","Issue/Problem","구매/사후관리"],["What should I do if my Hyundai EV is not charging?","Hyundai","Consumer base Response","Car Ownership","Ownership_Issue/Problem","Issue/Problem","구매/사후관리"],["What should I do if my Kia EV is not charging?","Kia","Consumer base Response","Car Ownership","Ownership_Issue/Problem","Issue/Problem","구매/사후관리"],["What should I do if my Genesis EV is not charging?","Genesis","Consumer base Response","Car Ownership","Ownership_Issue/Problem","Issue/Problem","구매/사후관리"],["What should I check before buying a used Hyundai car?","Hyundai","Consumer base Response","Action+Car","Action_Pricing Plan","Used car/lease","구매/사후관리"],["What should I check before buying a used Kia car?","Kia","Consumer base Response","Action+Car","Action_Pricing Plan","Used car/lease","구매/사후관리"],["What should I check before buying a used Genesis car?","Genesis","Consumer base Response","Action+Car","Action_Pricing Plan","Used car/lease","구매/사후관리"],["What fees should I ask about before buying a Hyundai car?","Hyundai","Consumer base Response","Action+Car","Action_Pricing Plan","Price/deal/Financing","구매/사후관리"],["What fees should I ask about before buying a Kia car?","Kia","Consumer base Response","Action+Car","Action_Pricing Plan","Price/deal/Financing","구매/사후관리"],["What fees should I ask about before buying a Genesis car?","Genesis","Consumer base Response","Action+Car","Action_Pricing Plan","Price/deal/Financing","구매/사후관리"],["What driving modes does Hyundai offer?","Hyundai","Consumer base Response","Car+Features","Features_driving Option","driving option","인지/탐색"],["What driving modes does Kia offer?","Kia","Consumer base Response","Car+Features","Features_driving Option","driving option","인지/탐색"],["What driving modes does Genesis offer?","Genesis","Consumer base Response","Car+Features","Features_driving Option","driving option","인지/탐색"],["What does the Hyundai warranty cover?","Hyundai","Consumer base Response","Action+Car","Action_Insurance/Warranty","Warranty","구매/사후관리"],["What does the Kia warranty cover?","Kia","Consumer base Response","Action+Car","Action_Insurance/Warranty","Warranty","구매/사후관리"],["What does the Genesis warranty cover?","Genesis","Consumer base Response","Action+Car","Action_Insurance/Warranty","Warranty","구매/사후관리"],["What do reviews say about connected car features?","HMG","Consumer base Response","Review+Car/Features","Review_Software/Connectivity","Software/Connectivity","비교/검증"],["What do reviews say about Hyundai software updates?","Hyundai","Consumer base Response","Review+Car/Features","Review_Software/Connectivity","Software/Connectivity","비교/검증"],["What do reviews say about Kia software updates?","Kia","Consumer base Response","Review+Car/Features","Review_Software/Connectivity","Software/Connectivity","비교/검증"],["What do reviews say about Genesis software updates?","Genesis","Consumer base Response","Review+Car/Features","Review_Software/Connectivity","Software/Connectivity","비교/검증"],["What do reviews say about Hyundai design?","Hyundai","Consumer base Response","Review+Car/Features","Review_Design/Color","Design/Color","비교/검증"],["What do reviews say about Kia design?","Kia","Consumer base Response","Review+Car/Features","Review_Design/Color","Design/Color","비교/검증"],["What do reviews say about Genesis design?","Genesis","Consumer base Response","Review+Car/Features","Review_Design/Color","Design/Color","비교/검증"],["What do reviews say about Hyundai cabin space?","Hyundai","Consumer base Response","Review+Car/Features","Review_Size/Spec","Size/Spec","비교/검증"],["What do reviews say about Kia cabin space?","Kia","Consumer base Response","Review+Car/Features","Review_Size/Spec","Size/Spec","비교/검증"],["What do reviews say about Genesis cabin space?","Genesis","Consumer base Response","Review+Car/Features","Review_Size/Spec","Size/Spec","비교/검증"],["What do owners say about Hyundai seating space?","Hyundai","Consumer base Response","Review+Car/Features","Review_Size/Spec","Size/Spec","비교/검증"],["What do owners say about Kia seating space?","Kia","Consumer base Response","Review+Car/Features","Review_Size/Spec","Size/Spec","비교/검증"],["What do owners say about Genesis seating space?","Genesis","Consumer base Response","Review+Car/Features","Review_Size/Spec","Size/Spec","비교/검증"],["What do owners say about Hyundai fuel economy?","Hyundai","Consumer base Response","Review+Car/Features","Review_Mileage/Efficiency","Mileage/Efficiency","비교/검증"],["What do owners say about Kia fuel economy?","Kia","Consumer base Response","Review+Car/Features","Review_Mileage/Efficiency","Mileage/Efficiency","비교/검증"],["What do owners say about Genesis fuel economy?","Genesis","Consumer base Response","Review+Car/Features","Review_Mileage/Efficiency","Mileage/Efficiency","비교/검증"],["What do owners say about Hyundai EV range?","Hyundai","Consumer base Response","Review+Car/Features","Review_Mileage/Efficiency","EV range","비교/검증"],["What do owners say about Kia EV range?","Kia","Consumer base Response","Review+Car/Features","Review_Mileage/Efficiency","EV range","비교/검증"],["What do owners say about Genesis EV range?","Genesis","Consumer base Response","Review+Car/Features","Review_Mileage/Efficiency","EV range","비교/검증"],["What do owners say about Hyundai connected services?","Hyundai","Consumer base Response","Review+Car/Features","Review_Software/Connectivity","Software/Connectivity","비교/검증"],["What do owners say about Kia connected services?","Kia","Consumer base Response","Review+Car/Features","Review_Software/Connectivity","Software/Connectivity","비교/검증"],["What do owners say about Genesis connected services?","Genesis","Consumer base Response","Review+Car/Features","Review_Software/Connectivity","Software/Connectivity","비교/검증"],["What connected car services should I look for?","HMG","Consumer base Response","Car+Features","Features_Software/Connectivity","connected services","인지/탐색"],["What connected car features does Hyundai offer?","Hyundai","Consumer base Response","Car+Features","Features_Software/Connectivity","connected services","인지/탐색"],["What connected car features does Kia offer?","Kia","Consumer base Response","Car+Features","Features_Software/Connectivity","connected services","인지/탐색"],["What connected car features does Genesis offer?","Genesis","Consumer base Response","Car+Features","Features_Software/Connectivity","connected services","인지/탐색"],["What color options does Hyundai usually offer?","Hyundai","Consumer base Response","Car+Features","Features_Design/Color","color","인지/탐색"],["What color options does Kia usually offer?","Kia","Consumer base Response","Car+Features","Features_Design/Color","color","인지/탐색"],["What color options does Genesis usually offer?","Genesis","Consumer base Response","Car+Features","Features_Design/Color","color","인지/탐색"],["What car costs should I compare before buying?","HMG","Consumer base Response","Action+Car","Action_Pricing Plan","Price/deal/Financing","구매/사후관리"],["What accessories does Hyundai offer?","Hyundai","Consumer base Response","Car+Features","Features_Accessories","Accessories","인지/탐색"],["What accessories does Kia offer?","Kia","Consumer base Response","Car+Features","Features_Accessories","Accessories","인지/탐색"],["What accessories does Genesis offer?","Genesis","Consumer base Response","Car+Features","Features_Accessories","Accessories","인지/탐색"],["Is it better to buy or lease a Hyundai car?","Hyundai","Consumer base Response","Action+Car","Action_Pricing Plan","Price/deal/Financing","구매/사후관리"],["Is it better to buy or lease a Kia car?","Kia","Consumer base Response","Action+Car","Action_Pricing Plan","Price/deal/Financing","구매/사후관리"],["Is it better to buy or lease a Genesis car?","Genesis","Consumer base Response","Action+Car","Action_Pricing Plan","Price/deal/Financing","구매/사후관리"],["Is Hyundai good for fuel economy?","Hyundai","Consumer base Response","Car+Features","Features_Mileage/Efficiency","Mileage/Efficiency","인지/탐색"],["Is Kia good for fuel economy?","Kia","Consumer base Response","Car+Features","Features_Mileage/Efficiency","Mileage/Efficiency","인지/탐색"],["Is Genesis good for fuel economy?","Genesis","Consumer base Response","Car+Features","Features_Mileage/Efficiency","Mileage/Efficiency","인지/탐색"],["How would you describe Hyundai car design?","Hyundai","Consumer base Response","Car+Features","Features_Design/Color","design","인지/탐색"],["How would you describe Kia car design?","Kia","Consumer base Response","Car+Features","Features_Design/Color","design","인지/탐색"],["How would you describe Genesis car design?","Genesis","Consumer base Response","Car+Features","Features_Design/Color","design","인지/탐색"],["How much does car insurance affect ownership cost?","HMG","Consumer base Response","Action+Car","Action_Insurance/Warranty","Insurance","구매/사후관리"],["How much does a Hyundai car usually cost?","Hyundai","Consumer base Response","Action+Car","Action_Pricing Plan","Price/deal/Financing","구매/사후관리"],["How much does a Kia car usually cost?","Kia","Consumer base Response","Action+Car","Action_Pricing Plan","Price/deal/Financing","구매/사후관리"],["How much does a Genesis car usually cost?","Genesis","Consumer base Response","Action+Car","Action_Pricing Plan","Price/deal/Financing","구매/사후관리"],["How does insurance cost compare for Hyundai cars?","Hyundai","Consumer base Response","Action+Car","Action_Insurance/Warranty","Insurance","구매/사후관리"],["How does insurance cost compare for Kia cars?","Kia","Consumer base Response","Action+Car","Action_Insurance/Warranty","Insurance","구매/사후관리"],["How does insurance cost compare for Genesis cars?","Genesis","Consumer base Response","Action+Car","Action_Insurance/Warranty","Insurance","구매/사후관리"],["How does Hyundai design compare with other brands?","Hyundai","Consumer base Response","Compare+Car/Features","Compare_Design/Color","Design/Color","비교/검증"],["How does Kia design compare with other brands?","Kia","Consumer base Response","Compare+Car/Features","Compare_Design/Color","Design/Color","비교/검증"],["How does Genesis design compare with other brands?","Genesis","Consumer base Response","Compare+Car/Features","Compare_Design/Color","Design/Color","비교/검증"],["How does Hyundai compare with other car brands?","Hyundai","Consumer base Response","Compare+Car/Features","Compare_Car/Brand","Car/Brand","비교/검증"],["How does Kia compare with other car brands?","Kia","Consumer base Response","Compare+Car/Features","Compare_Car/Brand","Car/Brand","비교/검증"],["How does Genesis compare with other car brands?","Genesis","Consumer base Response","Compare+Car/Features","Compare_Car/Brand","Car/Brand","비교/검증"],["How does Hyundai compare with other brands in vehicle size?","Hyundai","Consumer base Response","Compare+Car/Features","Compare_Size/Spec","Size/Spec","비교/검증"],["How does Kia compare with other brands in vehicle size?","Kia","Consumer base Response","Compare+Car/Features","Compare_Size/Spec","Size/Spec","비교/검증"],["How does Genesis compare with other brands in vehicle size?","Genesis","Consumer base Response","Compare+Car/Features","Compare_Size/Spec","Size/Spec","비교/검증"],["How does Hyundai compare with other brands for cabin space?","Hyundai","Consumer base Response","Compare+Car/Features","Compare_Size/Spec","Size/Spec","비교/검증"],["How does Kia compare with other brands for cabin space?","Kia","Consumer base Response","Compare+Car/Features","Compare_Size/Spec","Size/Spec","비교/검증"],["How does Genesis compare with other brands for cabin space?","Genesis","Consumer base Response","Compare+Car/Features","Compare_Size/Spec","Size/Spec","비교/검증"],["How does Hyundai compare on software updates?","Hyundai","Consumer base Response","Compare+Car/Features","Compare_Software/Connectivity","Software/Connectivity","비교/검증"],["How does Kia compare on software updates?","Kia","Consumer base Response","Compare+Car/Features","Compare_Software/Connectivity","Software/Connectivity","비교/검증"],["How does Genesis compare on software updates?","Genesis","Consumer base Response","Compare+Car/Features","Compare_Software/Connectivity","Software/Connectivity","비교/검증"],["How does Hyundai compare on EV driving range?","Hyundai","Consumer base Response","Compare+Car/Features","Compare_Mileage/Efficiency","EV range","비교/검증"],["How does Kia compare on EV driving range?","Kia","Consumer base Response","Compare+Car/Features","Compare_Mileage/Efficiency","EV range","비교/검증"],["How does Genesis compare on EV driving range?","Genesis","Consumer base Response","Compare+Car/Features","Compare_Mileage/Efficiency","EV range","비교/검증"],["How does Hyundai compare for interior design?","Hyundai","Consumer base Response","Compare+Car/Features","Compare_Design/Color","Design/Color","비교/검증"],["How does Kia compare for interior design?","Kia","Consumer base Response","Compare+Car/Features","Compare_Design/Color","Design/Color","비교/검증"],["How does Genesis compare for interior design?","Genesis","Consumer base Response","Compare+Car/Features","Compare_Design/Color","Design/Color","비교/검증"],["How do I update the software on a Hyundai car?","Hyundai","Consumer base Response","Car Ownership","Ownership_Support","Support","구매/사후관리"],["How do I update the software on a Kia car?","Kia","Consumer base Response","Car Ownership","Ownership_Support","Support","구매/사후관리"],["How do I update the software on a Genesis car?","Genesis","Consumer base Response","Car Ownership","Ownership_Support","Support","구매/사후관리"],["How do I set up a Hyundai owner account?","Hyundai","Consumer base Response","Car Ownership","Ownership_Support","Support","구매/사후관리"],["How do I set up a Kia owner account?","Kia","Consumer base Response","Car Ownership","Ownership_Support","Support","구매/사후관리"],["How do I set up a Genesis owner account?","Genesis","Consumer base Response","Car Ownership","Ownership_Support","Support","구매/사후관리"],["How do I find an official car service center?","HMG","Consumer base Response","Car Ownership","Ownership_Support","Support","구매/사후관리"],["How do I find an official Hyundai service center?","Hyundai","Consumer base Response","Car Ownership","Ownership_Support","Support","구매/사후관리"],["How do I find an official Kia service center?","Kia","Consumer base Response","Car Ownership","Ownership_Support","Support","구매/사후관리"],["How do I find an official Genesis service center?","Genesis","Consumer base Response","Car Ownership","Ownership_Support","Support","구매/사후관리"],["How do I connect my phone to a Hyundai car app?","Hyundai","Consumer base Response","Car Ownership","Ownership_Support","Myhyundai","구매/사후관리"],["How do I connect my phone to a Kia car app?","Kia","Consumer base Response","Car Ownership","Ownership_Support","Myhyundai","구매/사후관리"],["How do I connect my phone to a Genesis car app?","Genesis","Consumer base Response","Car Ownership","Ownership_Support","Myhyundai","구매/사후관리"],["How do I check if my Hyundai car has a recall?","Hyundai","Consumer base Response","Car Ownership","Ownership_Issue/Problem","recall","구매/사후관리"],["How do I check if my Kia car has a recall?","Kia","Consumer base Response","Car Ownership","Ownership_Issue/Problem","recall","구매/사후관리"],["How do I check if my Genesis car has a recall?","Genesis","Consumer base Response","Car Ownership","Ownership_Issue/Problem","recall","구매/사후관리"],["How do Hyundai hybrids compare with other hybrid cars?","Hyundai","Consumer base Response","Compare+Car/Features","Compare_Mileage/Efficiency","Mileage/Efficiency","비교/검증"],["How do Kia hybrids compare with other hybrid cars?","Kia","Consumer base Response","Compare+Car/Features","Compare_Mileage/Efficiency","Mileage/Efficiency","비교/검증"],["How do Genesis hybrids compare with other hybrid cars?","Genesis","Consumer base Response","Compare+Car/Features","Compare_Mileage/Efficiency","Mileage/Efficiency","비교/검증"],["How do Hyundai driver assistance features work?","Hyundai","Consumer base Response","Car+Features","Features_Technology","Self driving/FSD","인지/탐색"],["How do Kia driver assistance features work?","Kia","Consumer base Response","Car+Features","Features_Technology","Self driving/FSD","인지/탐색"],["How do Genesis driver assistance features work?","Genesis","Consumer base Response","Car+Features","Features_Technology","Self driving/FSD","인지/탐색"],["How do Hyundai connected car features compare with other brands?","Hyundai","Consumer base Response","Compare+Car/Features","Compare_Software/Connectivity","Software/Connectivity","비교/검증"],["How do Kia connected car features compare with other brands?","Kia","Consumer base Response","Compare+Car/Features","Compare_Software/Connectivity","Software/Connectivity","비교/검증"],["How do Genesis connected car features compare with other brands?","Genesis","Consumer base Response","Compare+Car/Features","Compare_Software/Connectivity","Software/Connectivity","비교/검증"],["Does Hyundai offer remote start?","Hyundai","Consumer base Response","Car+Features","Features_Software/Connectivity","remote start","인지/탐색"],["Does Kia offer remote start?","Kia","Consumer base Response","Car+Features","Features_Software/Connectivity","remote start","인지/탐색"],["Does Genesis offer remote start?","Genesis","Consumer base Response","Car+Features","Features_Software/Connectivity","remote start","인지/탐색"],["Does Hyundai offer over-the-air software updates?","Hyundai","Consumer base Response","Car+Features","Features_Software/Connectivity","software update","인지/탐색"],["Does Kia offer over-the-air software updates?","Kia","Consumer base Response","Car+Features","Features_Software/Connectivity","software update","인지/탐색"],["Does Genesis offer over-the-air software updates?","Genesis","Consumer base Response","Car+Features","Features_Software/Connectivity","software update","인지/탐색"],["Does Hyundai offer car financing?","Hyundai","Consumer base Response","Action+Car","Action_Pricing Plan","Price/deal/Financing","구매/사후관리"],["Does Kia offer car financing?","Kia","Consumer base Response","Action+Car","Action_Pricing Plan","Price/deal/Financing","구매/사후관리"],["Does Genesis offer car financing?","Genesis","Consumer base Response","Action+Car","Action_Pricing Plan","Price/deal/Financing","구매/사후관리"],["Does Hyundai make fuel-efficient hybrid cars?","Hyundai","Consumer base Response","Car+Features","Features_Mileage/Efficiency","hybrid efficiency","인지/탐색"],["Does Kia make fuel-efficient hybrid cars?","Kia","Consumer base Response","Car+Features","Features_Mileage/Efficiency","hybrid efficiency","인지/탐색"],["Does Genesis make fuel-efficient hybrid cars?","Genesis","Consumer base Response","Car+Features","Features_Mileage/Efficiency","hybrid efficiency","인지/탐색"],["Does Hyundai have good warranty coverage?","Hyundai","Consumer base Response","Action+Car","Action_Insurance/Warranty","Warranty","구매/사후관리"],["Does Kia have good warranty coverage?","Kia","Consumer base Response","Action+Car","Action_Insurance/Warranty","Warranty","구매/사후관리"],["Does Genesis have good warranty coverage?","Genesis","Consumer base Response","Action+Car","Action_Insurance/Warranty","Warranty","구매/사후관리"],["Do owners recommend Hyundai cars?","Hyundai","Consumer base Response","Review+Car/Features","Review_Car/Brand","Car/Brand","비교/검증"],["Do owners recommend Kia cars?","Kia","Consumer base Response","Review+Car/Features","Review_Car/Brand","Car/Brand","비교/검증"],["Do owners recommend Genesis cars?","Genesis","Consumer base Response","Review+Car/Features","Review_Car/Brand","Car/Brand","비교/검증"],["Do owners like Hyundai car design?","Hyundai","Consumer base Response","Review+Car/Features","Review_Design/Color","Design/Color","비교/검증"],["Do owners like Kia car design?","Kia","Consumer base Response","Review+Car/Features","Review_Design/Color","Design/Color","비교/검증"],["Do owners like Genesis car design?","Genesis","Consumer base Response","Review+Car/Features","Review_Design/Color","Design/Color","비교/검증"],["Do Hyundai offer cars with roomy seating?","Hyundai","Consumer base Response","Car+Features","Features_Size/Spec","Size/spec/seat","인지/탐색"],["Do Kia offer cars with roomy seating?","Kia","Consumer base Response","Car+Features","Features_Size/Spec","Size/spec/seat","인지/탐색"],["Do Genesis offer cars with roomy seating?","Genesis","Consumer base Response","Car+Features","Features_Size/Spec","Size/spec/seat","인지/탐색"],["Do Hyundai offer cars with good cabin space?","Hyundai","Consumer base Response","Car+Features","Features_Size/Spec","Size/spec","인지/탐색"],["Do Kia offer cars with good cabin space?","Kia","Consumer base Response","Car+Features","Features_Size/Spec","Size/spec","인지/탐색"],["Do Genesis offer cars with good cabin space?","Genesis","Consumer base Response","Car+Features","Features_Size/Spec","Size/spec","인지/탐색"],["Do Hyundai cars offer different wheel options?","Hyundai","Consumer base Response","Car+Features","Features_Wheels/Tire","wheels","인지/탐색"],["Do Kia cars offer different wheel options?","Kia","Consumer base Response","Car+Features","Features_Wheels/Tire","wheels","인지/탐색"],["Do Genesis cars offer different wheel options?","Genesis","Consumer base Response","Car+Features","Features_Wheels/Tire","wheels","인지/탐색"],["Do Hyundai cars have strong engine performance?","Hyundai","Consumer base Response","Car+Features","Features_Engine Output/Oil","Engine/output","인지/탐색"],["Do Kia cars have strong engine performance?","Kia","Consumer base Response","Car+Features","Features_Engine Output/Oil","Engine/output","인지/탐색"],["Do Genesis cars have strong engine performance?","Genesis","Consumer base Response","Car+Features","Features_Engine Output/Oil","Engine/output","인지/탐색"],["Do Hyundai cars have good cargo space?","Hyundai","Consumer base Response","Car+Features","Features_Interior","Trunk space","인지/탐색"],["Do Kia cars have good cargo space?","Kia","Consumer base Response","Car+Features","Features_Interior","Trunk space","인지/탐색"],["Do Genesis cars have good cargo space?","Genesis","Consumer base Response","Car+Features","Features_Interior","Trunk space","인지/탐색"],["Do Hyundai cars have comfortable interiors?","Hyundai","Consumer base Response","Car+Features","Features_Interior","Interior","인지/탐색"],["Do Kia cars have comfortable interiors?","Kia","Consumer base Response","Car+Features","Features_Interior","Interior","인지/탐색"],["Do Genesis cars have comfortable interiors?","Genesis","Consumer base Response","Car+Features","Features_Interior","Interior","인지/탐색"],["Can I lease a Hyundai car?","Hyundai","Consumer base Response","Action+Car","Action_Pricing Plan","Used car/lease","구매/사후관리"],["Can I lease a Kia car?","Kia","Consumer base Response","Action+Car","Action_Pricing Plan","Used car/lease","구매/사후관리"],["Can I lease a Genesis car?","Genesis","Consumer base Response","Action+Car","Action_Pricing Plan","Used car/lease","구매/사후관리"],["Can I build and price a Hyundai car online?","Hyundai","Consumer base Response","Action+Car","Action_Pricing Plan","Dealership/Configurator","구매/사후관리"],["Can I build and price a Kia car online?","Kia","Consumer base Response","Action+Car","Action_Pricing Plan","Dealership/Configurator","구매/사후관리"],["Can I build and price a Genesis car online?","Genesis","Consumer base Response","Action+Car","Action_Pricing Plan","Dealership/Configurator","구매/사후관리"],["Are Hyundai cars known for good design?","Hyundai","Consumer base Response","Car+Features","Features_Design/Color","design","인지/탐색"],["Are Kia cars known for good design?","Kia","Consumer base Response","Car+Features","Features_Design/Color","design","인지/탐색"],["Are Genesis cars known for good design?","Genesis","Consumer base Response","Car+Features","Features_Design/Color","design","인지/탐색"],["Are Hyundai cars good for long-distance driving?","Hyundai","Consumer base Response","Car+Features","Features_Mileage/Efficiency","long distance/range","인지/탐색"],["Are Kia cars good for long-distance driving?","Kia","Consumer base Response","Car+Features","Features_Mileage/Efficiency","long distance/range","인지/탐색"],["Are Genesis cars good for long-distance driving?","Genesis","Consumer base Response","Car+Features","Features_Mileage/Efficiency","long distance/range","인지/탐색"]];
+const HYUNDAI_EUROPE = ["AL","AM","AT","AZ","BY","BE","BA","BG","HR","CY","CZ","DK","EE","FI","FR","GE","DE","GR","HU","IS","IE","IT","KZ","KG","LV","LT","LU","MK","MT","MD","NL","NO","PL","PT","RO","RU","RS","SK","SI","ES","SE","CH","TJ","TM","TR","GB","UA","UZ"];
+const hash = (s) => { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
+const LANGS = ["EN", "KO", "DE", "ES", "FR"];
+const MARKETS = { EN: ["US", "GB", "AU", "CA", "x:WW"], KO: ["KR"], DE: ["DE", "x:EU"], ES: ["ES", "MX"], FR: ["FR"] };
+const ROWS = SEED.map(([text, brand, listType, depth1, depth2, depth3, funnelStage], i) => {
+  const lang = LANGS[hash(text) % LANGS.length];
+  return { id: `p${i}`, text, brand, brandPresence: brand === "HMG" ? "unbranded" : "branded", listType, depth1, depth2, depth3, depth4: null, funnelStage,
+    kind: hash(text + "k") % 5 === 0 ? "acr" : "single", regions: hash(text + "r") % 7 === 0 ? null : MARKETS[lang], lang, scopePromptId: hash(text + "s") % 11 === 0 ? null : `s${i}` };
+});
+const PERIOD = { from: "2026-06-15", to: "2026-10-19" }; // standardCollectionDates (first / last measured)
+
+// ── account scope (lib/auth AllowedScope) ──
+const ROLES = [
+  { id: "admin", label: "admin", note: "전체 권한", role: "admin", scope: { all: true } },
+  { id: "hq", label: "Hyundai HQ", note: "Hyundai + 공통 프롬프트", role: "hq", scope: { brands: ["Hyundai"] } },
+  { id: "region", label: "Hyundai 유럽 권역담당", note: "Hyundai + 공통 · 대상 시장이 유럽 국가이거나 미지정", role: "region", scope: { brands: ["Hyundai"], regions: ["hyundai-europe"] } },
+  { id: "country", label: "Hyundai 대한민국 국가담당", note: "Hyundai + 공통 · 대상 시장이 KR이거나 미지정", role: "country", scope: { brands: ["Hyundai"], countries: ["KR"] } },
+];
+let role = ROLES[0];
+
+// ── app constants (prompt-filter-model.ts · ko.json standardPromptsView) ──
+const ALL = "all";
+const AXES = ["listType", "depth1", "depth2", "depth3", "depth4", "funnel", "presence", "kind", "market", "lang", "status"];
+const ALWAYS = new Set(["presence", "kind", "status"]);
+const FIXED = { presence: ["branded", "unbranded"], kind: ["acr", "single"], status: ["measured", "unmeasured"] };
+const AXIS_LABEL = { listType: "리스트 유형", depth1: "Depth1", depth2: "Depth2", depth3: "Depth3", depth4: "Depth4", funnel: "퍼널", presence: "브랜드 포함 여부", kind: "측정 종류", market: "대상 시장", lang: "언어", status: "측정 상태" };
+const SORTS = ["text", "brand", "presence", "listType", "depth1", "depth2", "depth3", "depth4", "funnel", "kind", "market", "lang", "status"];
+const SORT_LABEL = { text: "프롬프트", brand: "브랜드", presence: "브랜드 포함 여부", listType: "리스트 유형", depth1: "Depth1", depth2: "Depth2", depth3: "Depth3", depth4: "Depth4", funnel: "퍼널", kind: "측정 종류", market: "대상 시장", lang: "언어", status: "측정 상태" };
+const firstAsc = (k) => k !== "kind";
+const DEFAULT_SORT = { key: "depth1", asc: true };
+const DEFAULT_OPEN = { listType: true, depth1: true, funnel: true, presence: true, kind: true, status: true };
+const CHILD = { listType: "depth1", depth1: "depth2", depth2: "depth3", depth3: "depth4" };
+const PAGE_SIZES = [25, 50, 100], DEFAULT_PAGE_SIZE = 50, MARKET_BADGE_LIMIT = 3, SEARCH_MIN = 8;
+const PSEUDO_LABEL = { "x:WW": "월드와이드(글로벌)", "x:EU": "유럽 권역", "x:ME": "중동", "x:NBRAND": "N 브랜드", "x:CPO": "인증중고차(CPO)" };
+const EVENTS = { created: "생성", text_updated: "본문 수정", meta_updated: "라벨 수정", enabled_changed: "사용 전환", kind_changed: "측정 종류 전환", deleted: "삭제", restored: "복원" };
+const regionFmt = new Intl.DisplayNames(["ko"], { type: "region" }), langFmt = new Intl.DisplayNames(["ko"], { type: "language" });
+const dtFmt = new Intl.DateTimeFormat("ko", { dateStyle: "medium", timeStyle: "short" });
+const isPseudo = (c) => c.startsWith("x:");
+const marketLabel = (c) => isPseudo(c) ? PSEUDO_LABEL[c] ?? c : (() => { try { return regionFmt.of(c) ?? c; } catch { return c; } })();
+const languageName = (c) => { if (!c) return ""; try { return langFmt.of(c.toLowerCase()) ?? c; } catch { return c; } };
+const presenceOf = (r) => r.brandPresence ?? (r.brand == null ? null : r.brand === "HMG" ? "unbranded" : "branded");
+const splitMarkets = (regions) => { const real = new Set(), pseudo = new Set(); for (const c of regions ?? []) (isPseudo(c) ? pseudo : real).add(c); return { real: [...real].sort(), pseudo: [...pseudo].sort() }; };
+function valueLabel(axis, v) {
+  if (v === ALL) return "전체";
+  if (axis === "presence") return v === "branded" ? "브랜드 포함" : "브랜드 미포함";
+  if (axis === "kind") return v === "acr" ? "ACR" : "단발";
+  if (axis === "status") return v === "measured" ? "측정중" : "미측정";
+  if (axis === "market") return marketLabel(v);
+  if (axis === "lang") return languageName(v);
+  return v;
+}
+
+// ── fake catalog server: the CatalogPageQuery contract (lib/db/repositories/catalog-page.ts) ──
+function scopeBase() {
+  const s = role.scope;
+  if (s.all) return ROWS;
+  const allowed = s.countries?.length ? s.countries : s.regions?.length ? HYUNDAI_EUROPE : null;
+  return ROWS.filter((r) => {
+    if (s.brands?.length && !(r.brand == null || r.brand === "HMG" || s.brands.includes(r.brand))) return false;
+    if (!allowed) return true;
+    const { real } = splitMarkets(r.regions);
+    return real.length === 0 || real.some((c) => allowed.includes(c)); // catalogMarketScopeCondition
+  });
+}
+function matches(r, f, search) {
+  for (const [axis, key] of [["listType", "listType"], ["depth1", "depth1"], ["depth2", "depth2"], ["depth3", "depth3"], ["depth4", "depth4"], ["funnel", "funnelStage"], ["kind", "kind"], ["lang", "lang"]])
+    if (f[axis] !== ALL && r[key] !== f[axis]) return false;
+  if (f.presence !== ALL && presenceOf(r) !== f.presence) return false;
+  if (f.status === "measured" && r.scopePromptId === null) return false;
+  if (f.status === "unmeasured" && r.scopePromptId !== null) return false;
+  if (f.market !== ALL && !(r.regions ?? []).includes(f.market)) return false;
+  return !search.trim() || r.text.toLowerCase().includes(search.trim().toLowerCase());
+}
+const uniq = (vals) => [...new Set(vals.filter((v) => v != null && v !== ""))].sort();
+function facetsOf(base, draft) {
+  // depth facets narrow by the draft's parents (listType → depth1 → …); listType, funnel and lang never narrow
+  const parents = [], out = {};
+  for (const [key, col] of [["listType", "listType"], ["depth1", "depth1"], ["depth2", "depth2"], ["depth3", "depth3"], ["depth4", "depth4"], ["funnel", "funnelStage"], ["lang", "lang"]]) {
+    const rows = key.startsWith("depth") ? base.filter((r) => parents.every(([k, v]) => r[k] === v)) : base;
+    out[key] = uniq(rows.map((r) => r[col]));
+    if (["listType", "depth1", "depth2", "depth3"].includes(key) && draft[key] !== ALL) parents.push([key, draft[key]]);
+  }
+  const all = new Set(base.flatMap((r) => r.regions ?? []));
+  out.market = [...all].filter((c) => !isPseudo(c)).sort().concat([...all].filter((c) => ["x:WW", "x:EU", "x:ME"].includes(c)).sort());
+  out.marketSort = [...all].sort();
+  return out;
+}
+const coll = new Intl.Collator("ko");
+function sortKey(r, key) {
+  switch (key) {
+    case "text": return r.text;
+    case "brand": return r.brand ?? "";
+    case "presence": return presenceOf(r) ?? "~";
+    case "funnel": return r.funnelStage ?? "~";
+    case "kind": return r.kind === "acr" ? 1 : 0;
+    case "status": return r.scopePromptId === null ? 0 : 1;
+    case "market": { const { real, pseudo } = splitMarkets(r.regions); const first = real[0] ?? pseudo[0]; return first ? marketLabel(first) : "~"; }
+    default: return r[key] ?? "~";
+  }
+}
+const nullsLast = (a, b) => (a == null && b == null ? 0 : a == null ? 1 : b == null ? -1 : coll.compare(a, b));
+function serve(q) {
+  const base = scopeBase(), rows = base.filter((r) => matches(r, q.filters, q.search));
+  rows.sort((a, b) => {
+    const x = sortKey(a, q.sort), y = sortKey(b, q.sort);
+    const c = typeof x === "number" ? x - y : coll.compare(x, y);
+    return (q.asc ? c : -c) || nullsLast(a.depth1, b.depth1) || nullsLast(a.depth2, b.depth2) || nullsLast(a.depth3, b.depth3) || coll.compare(a.text, b.text) || a.id.localeCompare(b.id);
+  });
+  const total = rows.length, offset = Math.min(q.offset, Math.max(0, Math.floor((total - 1) / q.limit) * q.limit));
+  const columns = ["listType", "depth1", "depth2", "depth3", "depth4"].filter((k) => base.some((r) => r[k]));
+  return { rows: rows.slice(offset, offset + q.limit), total, count: base.length, offset, limit: q.limit, facets: facetsOf(base, q.draft), columns };
+}
+// change history (promptAuditLogRepository.listGlobalScoped, last 90 days) — examples, relative to now
+const NOW = Date.now();
+const AUDIT = ROWS.slice(0, 14).map((r, i) => {
+  const eventType = ["text_updated", "meta_updated", "created", "kind_changed"][i % 4];
+  const changes = eventType === "text_updated" ? { text: { old: "Which brand offers the best warranty?", new: r.text } } : eventType === "meta_updated" ? { funnel_stage: { old: "인지/탐색", new: r.funnelStage } } : eventType === "kind_changed" ? { kind: { old: "single", new: "acr" } } : {};
+  return { id: `a${i}`, promptId: r.id, eventType, changes, batchId: i >= 6 && i <= 9 ? "batch-1" : null, createdAt: NOW - i * 20 * 3600e3, actorEmail: i % 3 ? "editor@example.test" : null, promptText: r.text };
+});
+// per-prompt timeline (fetchPromptAuditTimeline) — examples
+const timelineOf = (id) => hash(id) % 5 === 0 ? [] : [
+  { id: "t1", eventType: "meta_updated", changes: { funnel_stage: { old: "인지/탐색", new: "비교/검증" } }, batchId: null, createdAt: NOW - 864e5, actorEmail: "editor@example.test" },
+  { id: "t2", eventType: "text_updated", changes: { text: { old: "previous wording", new: "current wording" } }, batchId: "b1", createdAt: NOW - 5 * 864e5, actorEmail: null },
+  { id: "t3", eventType: "created", changes: {}, batchId: null, createdAt: NOW - 40 * 864e5, actorEmail: null },
+];
+
+// ── page state (prompts-view.tsx) ──
+const EMPTY = () => Object.fromEntries(AXES.map((a) => [a, ALL]));
+const activeAxes = (f) => AXES.filter((a) => f[a] !== ALL);
+function patchDraft(prev, patch) { // the original updateDraft: a parent pick resets its children
+  const next = { ...prev, ...patch };
+  if (patch.listType !== undefined) Object.assign(next, { depth1: ALL, depth2: ALL, depth3: ALL, depth4: ALL });
+  if (patch.depth1 !== undefined) Object.assign(next, { depth2: ALL, depth3: ALL, depth4: ALL });
+  if (patch.depth2 !== undefined) Object.assign(next, { depth3: ALL, depth4: ALL });
+  if (patch.depth3 !== undefined) Object.assign(next, { depth4: ALL });
+  return next;
+}
+function filterToQuery(f, search) { const p = new URLSearchParams(); for (const a of AXES) if (f[a] !== ALL) p.set(a, f[a]); if (search.trim()) p.set("q", search.trim()); return p.toString(); }
+function queryToFilter(q) { const p = new URLSearchParams(q), f = EMPTY(); for (const a of AXES) if (p.get(a)) f[a] = p.get(a); return { filters: f, search: p.get("q") ?? "" }; }
+const sameQuery = (a, b) => { const n = (q) => [...new URLSearchParams(q).entries()].map(([k, v]) => `${k}=${v}`).sort().join("&"); return n(a) === n(b); };
+function axisOptions(axis) { if (FIXED[axis]) return FIXED[axis]; return data.facets[axis] ?? []; }
+const visibleAxes = () => AXES.filter((a) => ALWAYS.has(a) || axisOptions(a).length > 0);
+
+const SAVED_SEED = {
+  admin: [["Consumer base Response · 미측정", false, "listType=Consumer+base+Response&status=unmeasured"], ["ACR", false, "kind=acr"]],
+  hq: [["브랜드 포함 · ACR", false, "presence=branded&kind=acr"]],
+  region: [["독일 시장", false, "market=DE"]],
+  country: [["한국어 · 측정중", false, "lang=KO&status=measured"]],
+};
+const savedByRole = {};
+const savedOf = () => (savedByRole[role.id] ||= SAVED_SEED[role.id].map(([name, star, query], i) => ({ id: `${role.id}-${i + 1}`, name, star, query })));
+
+let F = EMPTY(), Q = "", sort = { ...DEFAULT_SORT }, pageSize = DEFAULT_PAGE_SIZE, page = 1, tab = "catalog";
+let data = null, busy = false, seq = 0, readT = null, LATENCY = 300, REQ = 0;
+let open = { ...DEFAULT_OPEN }, optQ = {}, panel = window.innerWidth >= 1360, panelAuto = true, wide = true;
+let activeId = null, openedWith = null, saving = null, menuId = null, renamingId = null, exporting = false;
+let histDays = "90", histEvent = "all", histOpen = new Set();
+let timeline = null; // { row, phase, rows }
+let toast = null, toastT = null;
+window.__mock = { get requests() { return REQ; }, get busy() { return busy; }, serve, rows: ROWS };
+
+const query = () => ({ filters: { ...F }, draft: { ...F }, search: Q, sort: sort.key, asc: sort.asc, offset: (page - 1) * pageSize, limit: pageSize });
+function read() { // the original list's loader: debounced 120 ms, latest wins
+  busy = true; const my = ++seq; clearTimeout(readT);
+  readT = setTimeout(() => { REQ++; const q = query(); setTimeout(() => { if (my !== seq) return; data = serve(q); busy = false; render(); }, LATENCY); }, 120);
+}
+function syncUrl() { const p = new URLSearchParams(filterToQuery(F, Q)); if (tab === "history") p.set("tab", "history"); const qs = p.toString(); try { history.replaceState(null, "", `${location.pathname}${qs ? `?${qs}` : ""}`); } catch {} }
+function changed() { syncUrl(); read(); render(); }
+function pick(axis, value) {
+  F = patchDraft(F, { [axis]: value }); page = 1; openedWith = null;
+  if (CHILD[axis] && value !== ALL) open[CHILD[axis]] = true;
+  changed();
+}
+function setAll(f, search) { F = f; Q = search; page = 1; changed(); }
+function summarize(q) { const { filters: f, search: s } = queryToFilter(q); return [...activeAxes(f).map((a) => valueLabel(a, f[a])), ...(s ? [`“${s}”`] : [])].join(" · "); }
+function showToast(msg, undo) { clearTimeout(toastT); toast = { msg, undo }; renderToast(); toastT = setTimeout(() => { toast = null; renderToast(); }, 5000); }
+function openRole(r, fromUrl) {
+  role = r; menuId = saving = renamingId = null; activeId = null; openedWith = null; optQ = {}; open = { ...DEFAULT_OPEN }; sort = { ...DEFAULT_SORT }; page = 1; pageSize = DEFAULT_PAGE_SIZE;
+  const u = fromUrl ? queryToFilter(location.search) : { filters: EMPTY(), search: "" };
+  F = u.filters; Q = u.search;
+  if (!filterToQuery(F, Q)) { const star = savedOf().find((p) => p.star); if (star) { const s = queryToFilter(star.query); F = s.filters; Q = s.search; activeId = star.id; openedWith = star.name; } }
+  data = serve(query()); busy = false; syncUrl();
+}
+
+// ── render helpers ──
+const ic = (id, cls = "") => `<svg class="i ${cls}" aria-hidden="true"><use href="#i-${id}"/></svg>`;
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const sel = (attr, label, value, options) => `<span class="selw"><select ${attr} aria-label="${esc(label)}">${options.map(([v, l]) => `<option value="${esc(v)}" ${v === value ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>${ic("chev-d", "s14")}</span>`;
+const progress = (on) => (on ? `<div class="progress" aria-hidden="true"></div>` : "");
+
+function savedSection() {
+  const items = savedOf(), cur = items.find((p) => p.id === activeId), currentQuery = filterToQuery(F, Q), dirty = cur && !sameQuery(cur.query, currentQuery);
+  return `<section class="psec">
+    <div class="sec-h"><span>${ic("bookmark", "s14")}</span>저장한 필터<button class="lnk" data-savestart aria-disabled="${!currentQuery}">+ 현재 조건 저장</button></div>
+    ${saving !== null ? `<form class="psave" data-saveform><input id="pname" value="${esc(saving)}" aria-label="저장할 필터 이름" maxlength="40"><button class="btn primary sm" type="submit">저장</button><button class="btn ghost sm" type="button" data-savecancel>취소</button></form>` : ""}
+    ${!items.length && saving === null ? `<p class="pempty">자주 보는 조건을 저장해 두면 한 번에 불러옵니다.</p>` : ""}
+    <ul class="plist">${items.map((p) => `<li class="pi ${p.id === activeId ? "on" : ""}">
+      ${renamingId === p.id ? `<form class="psave" data-renameform="${p.id}" style="padding:6px 0 6px 6px"><input id="rname" value="${esc(p.name)}" aria-label="새 이름" maxlength="40"><button class="btn primary sm" type="submit">확인</button><button class="btn ghost sm" type="button" data-renamecancel>취소</button></form>`
+        : `<button class="pa" data-preset="${p.id}" data-fk="p:${p.id}" aria-pressed="${p.id === activeId}"><span class="pt">${p.star ? `<span class="star" title="기본으로 열리는 필터">★</span>` : ""}${esc(p.name)}</span><span class="ps">${esc(summarize(p.query) || "조건 없음")}</span></button>`}
+      <button class="pm" data-pmenu="${p.id}" aria-label="${esc(p.name)} 메뉴" aria-expanded="${menuId === p.id}">${ic("more", "s14")}</button>
+      ${menuId === p.id ? `<div class="menu" role="menu"><button role="menuitem" data-pstar="${p.id}">${p.star ? "기본 필터 해제" : "기본으로 열기 ★"}</button><button role="menuitem" data-prename="${p.id}">이름 바꾸기</button><button role="menuitem" data-plink="${p.id}">링크 복사</button><button role="menuitem" class="danger" data-pdel="${p.id}">삭제</button></div>` : ""}
+    </li>`).join("")}</ul>
+    ${dirty ? `<div class="pdirty"><span>‘${esc(cur.name)}’에서 조건이 바뀌었습니다</span><span class="acts"><button class="lnk" data-overwrite>덮어쓰기</button><button class="lnk" data-savestart>새로 저장</button></span></div>` : ""}
+  </section>`;
+}
+function axisSection(a) {
+  const label = AXIS_LABEL[a], opts = axisOptions(a), isOpen = !!open[a], v = F[a];
+  const q = (optQ[a] || "").trim().toLowerCase();
+  const shown = q ? opts.filter((o) => o.toLowerCase().includes(q) || valueLabel(a, o).toLowerCase().includes(q)) : opts;
+  const row = (val) => `<div class="tn" role="radio" aria-checked="${v === val}" tabindex="0" data-pick="${a}" data-v="${esc(val)}" data-fk="v:${a}:${esc(val)}">${`<span class="cb ${v === val ? "on" : ""}" aria-hidden="true"></span>`}<span class="lab">${esc(valueLabel(a, val))}</span><span></span></div>`;
+  return `<section class="sec"><button class="sec-h" data-sec="${a}" data-fk="s:${a}" aria-expanded="${isOpen}">${ic("chev-d", "s14 chev")}<span>${label}</span>${v !== ALL ? `<span class="sum">${esc(valueLabel(a, v))}</span>` : ""}</button>
+    ${isOpen ? `<div class="sec-b">${opts.length >= SEARCH_MIN ? `<label class="finwrap">${ic("search", "s14")}<input class="finput" id="oq-${a}" data-oq="${a}" placeholder="${label} 검색" aria-label="${label} 검색" value="${esc(optQ[a] || "")}"></label>` : ""}
+      <div role="radiogroup" aria-label="${label}">${row(ALL)}${shown.map(row).join("")}</div></div>` : ""}</section>`;
+}
+function panelHtml() {
+  const n = activeAxes(F).length;
+  if (!panel) return `<aside class="rail2" aria-label="필터"><button class="icon" data-panel aria-label="필터 패널 펼치기" title="필터 패널 펼치기">${ic("panel", "s18")}${n ? `<span class="badge">${n}</span>` : ""}</button><button class="icon" data-panel aria-label="저장한 필터 열기" title="저장한 필터 열기">${ic("bookmark", "s18")}</button></aside>`;
+  return `<aside class="side" id="side" aria-label="필터">
+    <div class="side-top"><b>필터</b><span class="cnt">${n ? `${n}개 축 선택` : "선택 없음"}</span>${n ? `<button class="clear" data-reset>초기화</button>` : ""}<button class="icon" data-panel aria-label="필터 패널 접기" title="필터 패널 접기">${ic("chev-l", "s18")}</button></div>
+    ${savedSection()}
+    <div style="padding-top:6px" data-section="prompt">${visibleAxes().map(axisSection).join("")}</div>
+    <div style="height:12px"></div>
+  </aside>`;
+}
+function scopeSummary() {
+  const s = role.scope;
+  if (s.all) return "전체";
+  const parts = [];
+  if (s.brands?.length) parts.push(s.brands.join(" · "));
+  if (role.role !== "country" && s.regions?.length) parts.push(s.regions.join(" · "));
+  if (s.countries?.length) parts.push(s.countries.length <= 2 ? s.countries.join(" · ") : `${s.countries.length}개국`);
+  return parts.join("  ·  ") || "전체";
+}
+function headerHtml() {
+  const scoped = !role.scope.all;
+  return `<header class="ph"><div><h1>글로벌 프롬프트</h1>
+      <div class="sub"><span class="pill" ${scoped && role.scope.countries?.length ? `title="대상 시장이 내 국가를 포함하거나 미지정(상속)인 프롬프트만 표시됩니다."` : ""}>${ic("globe", "s12")}열람 범위 · ${esc(scopeSummary())}${scoped ? `<span class="muted">· 자사 브랜드 + 공통</span>` : ""}</span>
+        <span class="num">수집 기간 ${PERIOD.from} ~ ${PERIOD.to} · 마지막 수집일 ${PERIOD.to}</span></div></div>
+    <button class="btn" data-copy>${ic("link", "s14")}링크 복사</button></header>
+  <div class="tabs" role="tablist" aria-label="보기">${[["catalog", "카탈로그", data.count.toLocaleString("ko-KR")], ["history", "변경 이력", null]].map(([v, l, c]) => `<button role="tab" data-tab="${v}" aria-selected="${tab === v}" tabindex="${tab === v ? 0 : -1}">${l}${c != null ? `<span class="c num">${c}</span>` : ""}</button>`).join("")}</div>`;
+}
+function marketsCell(regions) {
+  const { real, pseudo } = splitMarkets(regions);
+  if (!real.length && !pseudo.length) return `<span class="mchip" title="대상 시장 미지정 — 프로젝트 범위 전체에서 측정됩니다(상속).">${ic("globe", "s12")}전체</span>`;
+  const shown = [...real.slice(0, MARKET_BADGE_LIMIT), ...pseudo], hidden = real.slice(MARKET_BADGE_LIMIT), all = [...real, ...pseudo].map(marketLabel).join(" · ");
+  return `<div class="mkts">${shown.map((c) => isPseudo(c) ? `<span class="mchip pseudo">${ic("tag", "s12")}${esc(marketLabel(c))}</span>` : `<span class="mchip">${esc(marketLabel(c))}</span>`).join("")}${hidden.length ? `<span class="mchip more" title="${esc(all)}" aria-label="나머지 대상 시장 보기">+${hidden.length}</span>` : ""}</div>`;
+}
+function catalogHtml() {
+  const picked = activeAxes(F), rows = data.rows, total = data.total;
+  const pages = Math.max(1, Math.ceil(total / pageSize)), safePage = Math.min(page, pages);
+  const rangeFrom = total === 0 ? 0 : data.offset + 1, rangeTo = Math.min(rangeFrom + rows.length - 1, total);
+  const depthCols = ["depth1", "depth2", "depth3", "depth4"].filter((c) => data.columns.includes(c)), hasListType = (data.facets.listType ?? []).length > 0;
+  const tokens = picked.length || Q || busy ? `<div class="applied" aria-live="polite">${picked.map((a) => `<span class="tok"><span>${AXIS_LABEL[a]}</span>${esc(valueLabel(a, F[a]))}<button data-untok="${a}" aria-label="${AXIS_LABEL[a]} 조건 빼기">${ic("x", "s12")}</button></span>`).join("")}${Q ? `<span class="tok"><span>프롬프트 검색</span>“${esc(Q)}”<button data-unsearch aria-label="프롬프트 검색 조건 빼기">${ic("x", "s12")}</button></span>` : ""}${busy ? `<span class="upd">${ic("loader", "s12 spin")}반영 중</span>` : ""}</div>` : "";
+  const note = openedWith ? `<div class="note">${ic("bookmark", "s14")}<span>기본 필터 ‘${esc(openedWith)}’로 열었습니다.</span><button class="lnk" data-viewwithout>조건 없이 보기</button></div>` : "";
+  const table = total === 0 ? `<div style="padding:20px"><p class="nodata">열람 가능한 글로벌 프롬프트가 없습니다</p></div>` : `<div class="tblwrap" data-pwrap><table class="pt-tbl" data-prompt-table ${wide ? "data-wide" : ""}>
+      <colgroup><col>${wide ? `<col style="width:210px">` : ""}<col style="width:160px"><col style="width:104px"><col style="width:48px"></colgroup>
+      <thead><tr><th>프롬프트</th>${wide ? `<th>분류 · 퍼널</th>` : ""}<th>대상 시장</th><th>측정</th><th><span class="sr">이력</span></th></tr></thead>
+      <tbody>${rows.map((r) => {
+        const path = [hasListType ? r.listType : null, ...depthCols.map((c) => r[c])].filter(Boolean), presence = presenceOf(r), common = r.brand == null || r.brand === "HMG";
+        return `<tr data-prompt-row="${r.id}"><td><div class="ptext">${esc(r.text)}</div>
+            <div class="pmeta"><span class="tag ${common ? "common" : ""}">${common ? "공통" : esc(r.brand)}</span>${presence ? `<span>${presence === "branded" ? "브랜드 포함" : "브랜드 미포함"}</span>` : ""}${r.lang ? `<span>· ${esc(languageName(r.lang))}</span>` : ""}</div>
+            ${!wide && (path.length || r.funnelStage) ? `<div class="ppath">${esc(path.join(" › "))}${r.funnelStage ? ` · ${esc(r.funnelStage)}` : ""}</div>` : ""}</td>
+          ${wide ? `<td><div class="path">${path.length ? esc(path.join(" › ")) : "—"}</div>${r.funnelStage ? `<span class="fchip">${esc(r.funnelStage)}</span>` : ""}</td>` : ""}
+          <td>${marketsCell(r.regions)}</td>
+          <td><div class="meas">${r.kind === "acr" ? `<span class="acr">${ic("swords", "s12")}ACR</span>` : `<span class="single">단발</span>`}${r.scopePromptId === null ? `<span class="st un" title="측정 엔진에 아직 발행되지 않은 프롬프트입니다 — 이 언어·시장의 데이터가 비어 있는 이유입니다."><i aria-hidden="true"></i>미측정</span>` : `<span class="st"><i aria-hidden="true"></i>측정중</span>`}</div></td>
+          <td><button class="icon" data-hist="${r.id}" aria-label="이력" title="이력">${ic("history", "s14")}</button></td></tr>`;
+      }).join("")}</tbody></table></div>`;
+  const pager = total > 0 ? `<div class="pager"><span><span class="num">${rangeFrom}–${rangeTo} / ${total}</span>${sel("data-pagesize", "페이지당", String(pageSize), PAGE_SIZES.map((n) => [String(n), `페이지당 ${n}`]))}</span>
+      ${pages > 1 ? `<span><button class="btn sm" data-page="-1" ${safePage <= 1 ? "disabled" : ""}>${ic("chev-l", "s14")}이전</button><span class="num">${safePage} / ${pages} 페이지</span><button class="btn sm" data-page="1" ${safePage >= pages ? "disabled" : ""}>다음${ic("chev-r", "s14")}</button></span>` : ""}</div>` : "";
+  return `${tokens}${note}<section class="card" aria-label="총 ${data.count}개" aria-busy="${busy}">${progress(busy)}
+    <div class="toolbar"><label class="finwrap">${ic("search", "s14")}<input class="finput" id="pq" placeholder="프롬프트 검색" aria-label="프롬프트 검색" value="${esc(Q)}"></label>
+      ${sel("data-sort", "정렬", sort.key, SORTS.map((k) => [k, SORT_LABEL[k]]))}
+      <button class="icon" data-dir aria-label="${sort.asc ? "오름차순" : "내림차순"}" title="${sort.asc ? "오름차순" : "내림차순"}">${ic(sort.asc ? "sort-asc" : "sort-desc")}</button>
+      <span class="shown">표시 ${total} / 전체 ${data.count}</span>
+      <button class="btn sm" data-export ${exporting || total === 0 ? "disabled" : ""}>${ic(exporting ? "loader" : "download", exporting ? "s14 spin" : "s14")}엑셀 다운로드</button></div>
+    ${table}${pager}</section>`;
+}
+function changesHtml(changes) {
+  return `<div class="chg">${Object.entries(changes).map(([field, c]) => field === "text"
+    ? `<details><summary>본문 변경 보기</summary><div class="diff"><div><span>변경 전</span><p>${esc(c.old ?? "—")}</p></div><div><span>변경 후</span><p>${esc(c.new ?? "—")}</p></div></div></details>`
+    : `<p><b>${esc(field)}</b>: <s>${esc(c.old ?? "—")}</s> → <span class="nv">${esc(c.new ?? "—")}</span></p>`).join("")}</div>`;
+}
+function historyHtml() {
+  const visible = new Set(scopeBase().map((r) => r.id)), since = Date.now() - Number(histDays) * 864e5;
+  const rows = AUDIT.filter((r) => visible.has(r.promptId) && r.createdAt >= since && (histEvent === "all" || r.eventType === histEvent));
+  const groups = [];
+  for (const r of rows) { const last = groups[groups.length - 1]; if (r.batchId && last && last.batchId === r.batchId) last.rows.push(r); else groups.push({ key: r.id, batchId: r.batchId, rows: [r] }); }
+  const evRow = (r, sub) => `<tr class="${sub ? "sub" : ""}"><td>${(sub ? "· " : "") + dtFmt.format(new Date(r.createdAt))}</td><td><span class="clamp">${esc(r.promptText ?? r.promptId)}</span></td><td><span class="ev">${EVENTS[r.eventType]}</span></td><td class="muted" style="word-break:break-all">${esc(r.actorEmail ?? "(시스템)")}</td><td>${changesHtml(r.changes)}</td></tr>`;
+  return `<section class="card pad"><div class="hist">
+    <div><h2>프롬프트 변경 이력</h2><p class="desc">글로벌 프롬프트의 생성·수정·삭제 기록 (최근 90일)</p></div>
+    <div class="bar">${sel("data-hdays", "기간", histDays, [["30", "최근 30일"], ["90", "최근 90일"]])}${sel("data-hevent", "이벤트", histEvent, [["all", "이벤트 · 전체"], ...Object.entries(EVENTS)])}
+      <span class="shown">표시 ${rows.length}건</span><button class="btn sm" data-csv ${rows.length ? "" : "disabled"}>${ic("download", "s14")}CSV 내보내기</button></div>
+    ${groups.length === 0 ? `<p class="nodata">기록된 변경이 없습니다</p>` : `<div class="tblwrap"><table class="au-tbl"><colgroup><col style="width:150px"><col><col style="width:104px"><col style="width:150px"><col style="width:34%"></colgroup>
+      <thead><tr><th>일시</th><th>프롬프트</th><th>이벤트</th><th>수정자</th><th>변경 내용</th></tr></thead>
+      <tbody>${groups.map((g) => g.rows.length === 1 ? evRow(g.rows[0]) : `<tr class="grp"><td>${dtFmt.format(new Date(g.rows[0].createdAt))}</td><td colspan="4"><button class="gbtn" data-grp="${g.key}" aria-expanded="${histOpen.has(g.key)}"><span class="chev2">${ic("chev-r", "s14")}</span>일괄 교체 ${g.rows.length}건<span class="muted" style="font-weight:400">${esc(g.rows[0].actorEmail ?? "(시스템)")}</span></button></td></tr>${histOpen.has(g.key) ? g.rows.map((r) => evRow(r, true)).join("") : ""}`).join("")}</tbody></table></div>`}
+  </div></section>`;
+}
+function page_() { return `<div class="split ${panel ? "" : "collapsed"}">${panelHtml()}<div class="content">${headerHtml()}${tab === "history" ? historyHtml() : catalogHtml()}</div></div>`; }
+function dialogHtml() {
+  if (!timeline) return "";
+  const { row, phase, rows } = timeline;
+  const body = phase === "loading" ? `<p style="margin:0" class="muted">불러오는 중…</p>` : !rows.length ? `<p class="nodata">기록된 변경이 없습니다</p>`
+    : `<ol class="tl">${rows.map((ev, i) => `<li><span class="dot" aria-hidden="true"></span>${i < rows.length - 1 ? `<span class="ln" aria-hidden="true"></span>` : ""}<div class="bd"><div class="hd"><span class="ev">${EVENTS[ev.eventType]}</span><span class="muted">${dtFmt.format(new Date(ev.createdAt))}</span><span class="muted">${esc(ev.actorEmail ?? "(시스템)")}</span>${ev.batchId ? `<span class="bulk">일괄</span>` : ""}</div>${changesHtml(ev.changes)}</div></li>`).join("")}</ol>`;
+  return `<div class="dlg"><div class="bk" data-dclose aria-hidden="true"></div><div class="sheet" role="dialog" aria-modal="true" tabindex="-1" id="sheet">
+    <div class="dh"><div><h2>변경 이력</h2><p>${esc(row.text)}</p></div><button class="icon" data-dclose aria-label="닫기" title="닫기">${ic("x")}</button></div>
+    <div class="db">${body}</div></div></div>`;
+}
+
+function renderToast() {
+  document.getElementById("toast").innerHTML = toast ? `<div class="toast" role="status"><span>${esc(toast.msg)}</span>${toast.undo ? `<button data-undo>되돌리기</button>` : ""}</div>` : "";
+  const u = document.querySelector("[data-undo]"); if (u) u.onclick = () => { const fn = toast.undo; toast = null; renderToast(); fn(); };
+}
+function renderMk() {
+  document.getElementById("mk").innerHTML = `<div class="mk-row"><span class="mk-tag">Global prompts 목업</span><span class="mk-title">글로벌 프롬프트 · 리뉴얼</span>
+    <span class="mk-group"><span>보는 계정</span>${ROLES.map((r) => `<button class="mk-btn" data-role="${r.id}" aria-pressed="${role.id === r.id}">${r.label}</button>`).join("")}</span>
+    <span class="mk-group"><span>응답 지연</span>${[[300, "0.3초"], [1500, "1.5초"]].map(([ms, l]) => `<button class="mk-btn" data-lat="${ms}" aria-pressed="${LATENCY === ms}">${l}</button>`).join("")}</span></div>
+    <div class="mk-cap"><span><b>화면 = 구현과 동일</b>: <code>/renewal/standard/prompts</code>의 배치·문구·규칙을 옮겼습니다. 필터는 원래 화면 필터와 같습니다(단일 선택 11축, 상위를 바꾸면 하위는 전체로, 옵션은 서버 집계·위 단계 선택으로 좁혀짐). 다른 점은 즉시 반영과 저장한 필터 두 가지입니다.</span>
+    <span><b>운영 DB 값(이 PC에서 조회 불가) = 예시</b>: 프롬프트 250개는 v0.4 시드, 언어·대상 시장·측정 종류·측정 상태·변경 이력·저장한 필터 목록은 예시입니다. 지금 계정: <b>${role.label}</b> — ${role.note}</span></div>`;
+  document.querySelectorAll("[data-lat]").forEach((b) => (b.onclick = () => { LATENCY = +b.dataset.lat; renderMk(); }));
+  document.querySelectorAll("[data-role]").forEach((b) => (b.onclick = () => { openRole(ROLES.find((r) => r.id === b.dataset.role), false); renderMk(); render(); }));
+  document.getElementById("who").textContent = role.label;
+  document.documentElement.style.setProperty("--mk-h", document.getElementById("mk").offsetHeight + "px");
+}
+function render() {
+  const side = document.getElementById("side"), st = side ? side.scrollTop : 0;
+  const a = document.activeElement, fk = a?.dataset?.fk, inputId = a?.tagName === "INPUT" ? a.id : null, caret = inputId ? a.selectionStart : 0;
+  const selAttr = a?.tagName === "SELECT" ? [...a.attributes].map((x) => x.name).find((n) => n.startsWith("data-")) : null;
+  const tabFocus = a?.dataset?.tab;
+  document.getElementById("page").innerHTML = page_();
+  document.getElementById("dlg").innerHTML = dialogHtml();
+  const s2 = document.getElementById("side"); if (s2) s2.scrollTop = st;
+  if (inputId) { const el = document.getElementById(inputId); if (el) { el.focus({ preventScroll: true }); el.setSelectionRange(caret, caret); } }
+  else if (selAttr) document.querySelector(`[${selAttr}]`)?.focus({ preventScroll: true });
+  else if (tabFocus) document.querySelector(`[data-tab="${tabFocus}"]`)?.focus({ preventScroll: true });
+  else if (fk) document.querySelector(`[data-fk="${CSS.escape(fk)}"]`)?.focus({ preventScroll: true });
+  wire();
+  // the taxonomy column needs room: switch columns at a 760px-wide list (not CSS-hidden cells)
+  const w = document.querySelector("[data-pwrap]");
+  if (w && (w.clientWidth >= 760) !== wide) { wide = w.clientWidth >= 760; render(); }
+}
+
+function wire() {
+  const on = (sel, fn) => document.querySelectorAll(sel).forEach((el) => (el.onclick = (e) => fn(el, e)));
+  const keyable = (sel) => document.querySelectorAll(sel).forEach((el) => (el.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); el.click(); } }));
+  // panel
+  on("[data-panel]", () => { panel = !panel; panelAuto = false; render(); });
+  on("[data-sec]", (b) => { open[b.dataset.sec] = !open[b.dataset.sec]; render(); });
+  on("[data-pick]", (n) => pick(n.dataset.pick, n.dataset.v));
+  keyable("[data-pick]");
+  document.querySelectorAll("[data-oq]").forEach((i) => (i.oninput = () => { optQ[i.dataset.oq] = i.value; render(); }));
+  on("[data-reset]", () => { const before = { f: { ...F }, s: Q }; setAll(EMPTY(), ""); showToast("필터를 초기화했습니다", () => setAll(before.f, before.s)); });
+  // saved filters
+  on("[data-preset]", (b) => { const p = savedOf().find((x) => x.id === b.dataset.preset), q = queryToFilter(p.query); activeId = p.id; openedWith = null; menuId = null; setAll(q.filters, q.search); });
+  on("[data-savestart]", (b) => { if (b.getAttribute("aria-disabled") === "true") return; saving = summarize(filterToQuery(F, Q)).slice(0, 28); render(); const i = document.getElementById("pname"); if (i) { i.focus(); i.select(); } });
+  on("[data-savecancel]", () => { saving = null; render(); });
+  document.querySelectorAll("[data-saveform]").forEach((fm) => (fm.onsubmit = (e) => { e.preventDefault(); const cq = filterToQuery(F, Q), name = document.getElementById("pname").value.trim() || summarize(cq).slice(0, 28), item = { id: `p${Date.now().toString(36)}`, name, star: false, query: cq }; savedOf().push(item); saving = null; activeId = item.id; openedWith = null; setAll(queryToFilter(cq).filters, queryToFilter(cq).search); showToast(`‘${name}’으로 저장했습니다`); }));
+  document.querySelectorAll("#pname, #rname").forEach((i) => (i.onkeydown = (e) => { if (e.key === "Escape") { saving = null; renamingId = null; render(); } }));
+  on("[data-overwrite]", () => { const p = savedOf().find((x) => x.id === activeId); p.query = filterToQuery(F, Q); render(); showToast(`‘${p.name}’을 지금 조건으로 바꿨습니다`); });
+  on("[data-pmenu]", (b, e) => { e.stopPropagation(); menuId = menuId === b.dataset.pmenu ? null : b.dataset.pmenu; render(); document.querySelector(".menu button")?.focus(); });
+  on("[data-pstar]", (b) => { const ps = savedOf(), id = b.dataset.pstar, was = ps.find((p) => p.id === id).star; ps.forEach((p) => (p.star = !was && p.id === id)); menuId = null; render(); showToast(was ? "기본 필터를 해제했습니다" : "다음부터 이 필터로 열립니다"); });
+  on("[data-prename]", (b) => { renamingId = b.dataset.prename; menuId = null; render(); document.getElementById("rname")?.select(); });
+  on("[data-renamecancel]", () => { renamingId = null; render(); });
+  document.querySelectorAll("[data-renameform]").forEach((fm) => (fm.onsubmit = (e) => { e.preventDefault(); const p = savedOf().find((x) => x.id === fm.dataset.renameform); p.name = document.getElementById("rname").value.trim() || p.name; renamingId = null; render(); }));
+  on("[data-plink]", () => { menuId = null; render(); showToast("필터 링크를 복사했습니다"); });
+  on("[data-pdel]", (b) => { const ps = savedOf(), i = ps.findIndex((p) => p.id === b.dataset.pdel), p = ps[i]; ps.splice(i, 1); if (activeId === p.id) activeId = null; menuId = null; render(); showToast(`‘${p.name}’을 삭제했습니다`, () => { ps.splice(i, 0, p); render(); }); });
+  // header · tabs
+  on("[data-copy]", async () => { try { await navigator.clipboard.writeText(location.href); showToast("지금 조건이 담긴 링크를 복사했습니다"); } catch { showToast("링크를 복사하지 못했습니다. 주소창의 주소를 복사해 주세요."); } });
+  on("[data-tab]", (b) => { tab = b.dataset.tab; syncUrl(); render(); });
+  document.querySelectorAll("[data-tab]").forEach((b) => (b.onkeydown = (e) => { if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return; e.preventDefault(); tab = tab === "catalog" ? "history" : "catalog"; syncUrl(); render(); document.querySelector(`[data-tab="${tab}"]`)?.focus(); }));
+  // catalog
+  on("[data-untok]", (b) => pick(b.dataset.untok, ALL));
+  on("[data-unsearch]", () => { Q = ""; page = 1; changed(); });
+  on("[data-viewwithout]", () => { openedWith = null; setAll(EMPTY(), ""); });
+  const pq = document.getElementById("pq"); if (pq) pq.oninput = () => { Q = pq.value; page = 1; changed(); };
+  document.querySelectorAll("[data-sort]").forEach((s) => (s.onchange = () => { sort = { key: s.value, asc: firstAsc(s.value) }; page = 1; changed(); }));
+  on("[data-dir]", () => { sort = { key: sort.key, asc: !sort.asc }; page = 1; changed(); });
+  document.querySelectorAll("[data-pagesize]").forEach((s) => (s.onchange = () => { pageSize = +s.value; page = 1; changed(); }));
+  on("[data-page]", (b) => { if (b.disabled) return; const pages = Math.max(1, Math.ceil(data.total / pageSize)); page = Math.min(page, pages) + +b.dataset.page; changed(); });
+  on("[data-export]", () => { if (exporting || data.total === 0) return; exporting = true; render(); setTimeout(() => { exporting = false; render(); showToast(`목업: 실제 화면은 지금 조건의 ${data.total}행을 엑셀(.xlsx)로 내려받습니다`); }, LATENCY + 300); });
+  on("[data-hist]", (b) => { const row = data.rows.find((r) => r.id === b.dataset.hist); timeline = { row, phase: "loading", rows: [], opener: b.dataset.hist }; render(); document.getElementById("sheet")?.focus(); setTimeout(() => { if (timeline?.row === row) { timeline = { ...timeline, phase: "ready", rows: timelineOf(row.id) }; render(); document.getElementById("sheet")?.focus(); } }, 200 + LATENCY); });
+  on("[data-dclose]", () => closeTimeline());
+  // history tab
+  document.querySelectorAll("[data-hdays]").forEach((s) => (s.onchange = () => { histDays = s.value; render(); }));
+  document.querySelectorAll("[data-hevent]").forEach((s) => (s.onchange = () => { histEvent = s.value; render(); }));
+  on("[data-grp]", (b) => { const k = b.dataset.grp; histOpen.has(k) ? histOpen.delete(k) : histOpen.add(k); render(); });
+  on("[data-csv]", (b) => { if (b.disabled) return; showToast("목업: 실제 화면은 표시 중인 이력을 CSV로 내려받습니다"); });
+}
+function closeTimeline() { const id = timeline?.opener; timeline = null; render(); document.querySelector(`[data-hist="${id}"]`)?.focus(); }
+document.addEventListener("keydown", (e) => {
+  const el = document.activeElement, typing = ["INPUT", "TEXTAREA", "SELECT"].includes(el?.tagName);
+  if (e.key === "Escape") { if (timeline) closeTimeline(); else if (menuId) { menuId = null; render(); } else if (saving !== null || renamingId) { saving = null; renamingId = null; render(); } return; }
+  if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === "[") { e.preventDefault(); panel = !panel; panelAuto = false; render(); }
+  else if (e.key === "/" && tab === "catalog") { e.preventDefault(); document.getElementById("pq")?.focus(); }
+});
+document.addEventListener("click", (e) => { if (menuId && !e.target.closest(".pi")) { menuId = null; render(); } });
+window.addEventListener("resize", () => { if (panelAuto) panel = window.innerWidth >= 1360; render(); });
+tab = new URLSearchParams(location.search).get("tab") === "history" ? "history" : "catalog";
+openRole(ROLES[0], true);
+renderMk();
+render();
+</script>
+</body>
+</html>
