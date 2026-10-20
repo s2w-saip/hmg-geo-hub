@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>리뉴얼 화면 인계 — Overview · 글로벌 프롬프트</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1c1f24; --muted: #5b6370; --line: #dde1e6; --card: #f6f7f9;
+    --accent: #2457c5; --warn-bg: #fff5e0; --warn-line: #e3a008; --ok: #1f7a3d; --code-bg: #f1f3f5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15181c; --fg: #e6e8eb; --muted: #9aa3ad; --line: #2c323a; --card: #1c2026;
+      --accent: #7aa2ff; --warn-bg: #2d2412; --warn-line: #b7860b; --ok: #5fc27e; --code-bg: #1f242b;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15181c; --fg: #e6e8eb; --muted: #9aa3ad; --line: #2c323a; --card: #1c2026;
+    --accent: #7aa2ff; --warn-bg: #2d2412; --warn-line: #b7860b; --ok: #5fc27e; --code-bg: #1f242b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+    font: 15px/1.65 "Pretendard", system-ui, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif; }
+  main { max-width: 920px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  h2 { font-size: 19px; margin: 36px 0 10px; padding-top: 12px; border-top: 1px solid var(--line); }
+  h3 { font-size: 16px; margin: 22px 0 6px; }
+  .sub { color: var(--muted); margin: 0 0 18px; }
+  .banner { background: var(--warn-bg); border-left: 4px solid var(--warn-line); padding: 12px 14px; border-radius: 6px; margin: 16px 0; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 10px 0; }
+  code { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 13px; background: var(--code-bg); padding: 1px 4px; border-radius: 4px; }
+  pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px; overflow-x: auto; font-size: 13px; line-height: 1.5; }
+  :not(pre) > code { overflow-wrap: anywhere; }
+  pre code { background: none; padding: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 14px; }
+  th, td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: var(--card); }
+  .pass { color: var(--ok); font-weight: 600; }
+  .muted { color: var(--muted); }
+  a { color: var(--accent); }
+  .table-wrap { overflow-x: auto; }
+</style>
+</head>
+<body>
+<main>
+<h1>리뉴얼 화면 인계 — Overview · 글로벌 프롬프트</h1>
+<p class="sub">작성 2026-10-21 · 다음 작업: 운영 데이터 대조(stg 또는 미리보기 배포) → 알려진 문제 수정 여부 결정 → 글로벌 프롬프트 1만 건 대응 결정</p>
+
+<div class="banner">
+  <strong>상태: 구현·목업 완료, 운영 데이터 검증 전.</strong> 두 리뉴얼 화면과 목업은 main 에 푸시되어 있습니다.
+  작성한 기기에는 운영 DB·stg 접근이 없어, 합성 데이터와 실제 컴포넌트 하네스로만 확인했습니다.
+  화면 숫자가 기존 화면과 같은지는 아직 아무도 보지 않았습니다. 3장의 절차가 첫 작업입니다.
+</div>
+
+<div class="card">
+  <strong>푸시된 커밋</strong>
+  <div class="table-wrap"><table>
+    <tr><th>커밋</th><th>내용</th></tr>
+    <tr><td><code>f962655</code></td><td>feat(renewal): 리뉴얼 Overview·글로벌 프롬프트 페이지, 자체 디자인 라이브러리, 메뉴·권한 추가</td></tr>
+    <tr><td><code>1eb3c18</code></td><td>docs(design): 구현과 같게 맞춘 목업 2개(<code>docs/design/ui</code>)</td></tr>
+  </table></div>
+</div>
+
+<h2>1. 무엇이 있나</h2>
+<div class="table-wrap"><table>
+  <tr><th>화면</th><th>주소</th><th>원래 화면</th><th>핵심 파일</th></tr>
+  <tr><td>Overview (Renewal)</td><td><code>/{locale}/renewal/dashboard</code></td><td><code>/{locale}/dashboard</code></td>
+    <td><code>front/app/[locale]/(dash)/renewal/dashboard/page.tsx</code><br><code>…/renewal/dashboard/_components/overview-body.tsx</code></td></tr>
+  <tr><td>Global prompts (Renewal)</td><td><code>/{locale}/renewal/standard/prompts</code></td><td><code>/{locale}/standard/prompts</code></td>
+    <td><code>…/renewal/standard/prompts/page.tsx</code><br><code>…/_components/prompts-view.tsx</code> · <code>prompt-filter-model.ts</code> · <code>prompt-history.tsx</code></td></tr>
+</table></div>
+<ul>
+  <li><strong>공용 리뉴얼 부품</strong> <code>front/app/[locale]/(dash)/renewal/_components/</code>:
+    <code>filter-runtime.tsx</code>(즉시 반영: 120ms 디바운스 후 <code>router.replace</code>, 진행 중 표시),
+    <code>filter-split.tsx</code>(필터 패널, 1360px 이상에서 자동으로 펼침, <code>[</code> 키로 토글),
+    <code>saved-filters.tsx</code>(저장한 필터, 사용자별 localStorage <code>rn:saved-filters:v1:&lt;page&gt;:&lt;userId&gt;</code>),
+    <code>overview-filters.tsx</code> · <code>overview-filter-model.ts</code>(Overview 필터 = 앱 규칙).</li>
+  <li><strong>디자인 라이브러리</strong> <code>front/components/renewal-ui/</code> + <code>front/app/renewal-theme.css</code>(rn- 토큰, <code>globals.css</code> 에서 import).
+    shadcn/radix 를 쓰지 않으며, 리뉴얼 화면에서만 씁니다. 기존 화면은 rn- 클래스를 쓰지 않으므로 토큰을 바꿔도 기존 화면에는 영향이 없습니다.</li>
+  <li><strong>메뉴·권한</strong>: <code>front/lib/auth/route-policy.ts</code>(원래 화면과 같은 역할), <code>front/components/dash/sidebar.tsx</code>(원래 항목 바로 아래),
+    <code>front/components/dash/filter-carry.ts</code>, <code>messages/{ko,en}.json</code> 의 <code>nav.renewal*</code>·<code>renewal.*</code>.</li>
+  <li><strong>공용 코드 변경은 추가만 했습니다</strong>: <code>components/dash/dimension-filter-panel.tsx</code> 의 export 추가(로직 변경 없음),
+    GEO 행의 답변 수(<code>dashboard/_data/live.ts</code>, <code>lib/hgh/adapters/dashboard.ts</code>).</li>
+  <li><strong>데이터</strong>: 두 페이지는 원래 페이지와 같은 읽기를 같은 순서로 합니다(legacy 경로와 <code>HGH_SOURCE_*=api</code> 경로 모두).
+    원래 페이지의 읽기를 바꾸면 리뉴얼 <code>page.tsx</code> 도 같이 바꿔야 합니다(파일 머리 주석에 적어 둠).</li>
+</ul>
+
+<h2>2. 사용자 결정(2026-10-20)</h2>
+<ul>
+  <li>주소는 <code>/renewal/...</code>, 메뉴는 원래 항목 바로 아래, 원래 화면은 그대로 둔다(두 화면을 서비스에서 나란히 비교).</li>
+  <li>디자인 라이브러리는 Tailwind + 자체 컴포넌트로 새로 만들고 리뉴얼 화면만 쓴다.</li>
+  <li>필터는 앱과 정확히 같게 한다(축·옵션·라벨·선택 규칙·권한별 숨김). "필터의 종류와 데이터가 일치해야 개발에 반영할 때 다르지 않다."
+    앱 위에 더한 것은 <strong>즉시 반영</strong>과 <strong>저장한 필터</strong> 두 가지뿐이다.</li>
+  <li>Overview 국가별 증감 열은 데이터 소스가 없어 뺀다.</li>
+  <li>글로벌 프롬프트 필터는 원래 화면과 100% 같다(단일 선택 11축, 측정 상태 포함).</li>
+  <li>목업은 손으로 관리하는 HTML+CSS 로 두고 구현과 같게 유지한다(React 로 생성하는 방식은 채택하지 않음).</li>
+</ul>
+
+<h2>3. 다음 작업 1 — 운영 데이터 대조</h2>
+<p>리뉴얼 화면은 원래 화면과 같은 읽기를 쓰므로 <strong>같은 조건에서 숫자가 모두 같아야</strong> 합니다. 다르면 리뉴얼 쪽 결함입니다.
+stg 또는 미리보기 배포에서, 계정 4종(admin, HQ, 권역 담당, 국가 담당)으로 확인합니다.</p>
+
+<h3>단계 1 — Overview</h3>
+<p>Overview 는 두 화면이 같은 URL 쿼리를 읽습니다. 같은 쿼리로 <code>/ko/dashboard?…</code> 와 <code>/ko/renewal/dashboard?…</code> 를 나란히 엽니다.</p>
+<div class="table-wrap"><table>
+  <tr><th>조건(쿼리)</th><th>계정</th></tr>
+  <tr><td>(필터 없음)</td><td>admin, HQ, 권역, 국가</td></tr>
+  <tr><td><code>brand=Hyundai</code></td><td>admin</td></tr>
+  <tr><td><code>brand=Hyundai&amp;geography=DE~FR</code> (여러 값 구분자는 <code>~</code>)</td><td>admin</td></tr>
+  <tr><td><code>time=&lt;from&gt;..&lt;to&gt;</code> 월간 프리셋(패널에서 선택)</td><td>admin, HQ</td></tr>
+  <tr><td><code>engine=chatgpt&amp;promptContext=비교/검증</code></td><td>국가</td></tr>
+</table></div>
+<p>비교 항목: KPI 5종 값, 증감(기간을 고르면 기간 비교 칩과 열 제목), 1위 경쟁사, 브랜드 비교 값·순위, 시장 타일 값, 권역 행 값·답변 수, 국가 행 값·최대 경쟁사·답변 수.</p>
+<p><span class="pass">통과 기준</span>: 모든 숫자가 원래 화면과 같음. 원래 화면에 없는 표시(브랜드 비교의 당사 행 이름 등)는 5장 참고.</p>
+
+<h3>단계 2 — 글로벌 프롬프트</h3>
+<p>두 화면에서 같은 조건을 고른 뒤 비교합니다. 조건: 없음 / 리스트 유형 하나 / Depth1 하나 / 대상 시장 하나 / 측정 상태 = 미측정 / 검색어 하나.</p>
+<p>비교 항목: 전체 건수와 필터 결과 건수, 기본 정렬(Depth1 오름차순) 첫 페이지 행과 순서, 축별 옵션 목록, 엑셀 행 수, 변경 이력 탭 건수.</p>
+<p><span class="pass">통과 기준</span>: 모두 같음.</p>
+
+<h3>단계 3 — 운영 규모에서의 체감 속도</h3>
+<ul>
+  <li>필터를 하나 눌렀을 때 진행 표시가 사라질 때까지 걸리는 시간(두 화면 모두).</li>
+  <li>글로벌 프롬프트: 옵션 집계(상위 축을 바꿀 때마다 다시 계산), 검색 응답, 엑셀 다운로드 시간. 프롬프트가 1만 건을 넘는다는 전제로 봅니다.</li>
+</ul>
+
+<h3>단계 4 — 보고</h3>
+<p>단계별 결과를 표로 정리해 사용자에게 보고합니다. 다른 숫자가 있으면 원인을 찾아 수정안을 제시하고, 승인 후 수정합니다.</p>
+
+<h2>4. 확인한 것</h2>
+<div class="table-wrap"><table>
+  <tr><th>항목</th><th>결과</th><th>위치</th></tr>
+  <tr><td>Overview 필터 = 앱 필터(실제 앱 패널을 렌더링해 비교)</td><td class="pass">10/10</td><td><code>renewal/_components/overview-filter-model.parity.test.tsx</code></td></tr>
+  <tr><td>글로벌 프롬프트 필터 = 원래 화면 필터(뮤테이션 확인)</td><td class="pass">4/4</td><td><code>renewal/standard/prompts/_components/prompt-filter-model.parity.test.tsx</code></td></tr>
+  <tr><td>타입 검사, 린트(새 경고 없음), 하드코딩 문구 검사, <code>next build</code>(두 경로 컴파일)</td><td class="pass">통과</td><td>front</td></tr>
+  <tr><td>DB 없이 앱 실행(합성 데이터): admin 로그인, 리뉴얼 2개 + 원래 Overview 200, 페이지 오류 없음</td><td class="pass">통과</td><td>로컬 E2E 스택(6장)</td></tr>
+  <tr><td>실제 컴포넌트 하네스 동작 검사(Overview 27, 글로벌 프롬프트 15), 대비·넘침 점검</td><td class="pass">통과</td><td>작성 기기 임시 폴더(레포에 없음)</td></tr>
+  <tr><td>운영·stg 데이터로 원래 화면과 숫자 대조</td><td>미실시</td><td>3장</td></tr>
+</table></div>
+
+<h2>5. 알려진 문제(구현 중 발견, 수정 안 함 — 수정 여부는 사용자 결정 대기)</h2>
+<div class="table-wrap"><table>
+  <tr><th>#</th><th>내용</th><th>위치</th></tr>
+  <tr><td>1</td><td>글로벌 프롬프트 변경 이력 탭의 '프롬프트' 열이 1440 폭에서 약 47px(1920 에서 121px)로 좁아져 본문이 거의 보이지 않음. 다른 열이 150/104/150px·34% 로 고정이라 남는 폭이 없음.</td><td><code>prompt-history.tsx</code> <code>RnAuditHistory</code> 의 <code>colgroup</code></td></tr>
+  <tr><td>2</td><td>Overview 브랜드 비교의 당사 행 이름이 HQ·권역·국가 계정에서 "Hyundai, HMG" 로 나옴. <code>readStandardFilters</code> 가 브랜드 계정의 <code>filters.brand</code> 에 HMG 엄브렐러를 넣기 때문.</td><td><code>renewal/dashboard/page.tsx</code> 의 <code>ownLabel</code></td></tr>
+  <tr><td>3</td><td>글로벌 프롬프트 열람 범위 표시에 권역 내부 ID(예: <code>hyundai-europe</code>)가 그대로 보임. 원래 화면도 같아서 우선순위는 낮음.</td><td><code>prompts-view.tsx</code> <code>scopeSummary</code>(원래 <code>prompt-list-readonly.tsx</code> 도 같음)</td></tr>
+</table></div>
+<p>고칠 때는 목업(<code>docs/design/ui</code>)도 같이 맞춥니다.</p>
+
+<h2>6. 다음 작업 2 — 글로벌 프롬프트 1만 건 대응(결정 대기)</h2>
+<p>지금 화면은 알고 있는 프롬프트를 찾는 데는 충분하지만, 1만 건 전체를 파악하기에는 부족하다는 판단입니다.
+막히는 지점은 다섯 가지입니다.</p>
+<ul>
+  <li>옵션별 건수가 없어 0건 조합에 자주 빠짐.</li>
+  <li>한 축에서 하나만 고를 수 있음.</li>
+  <li>전체 요약이 '표시 N / 전체 M' 하나뿐.</li>
+  <li>같은 원문의 언어·시장 버전이 흩어짐.</li>
+  <li>검색이 본문 부분 일치뿐.</li>
+</ul>
+<div class="table-wrap"><table>
+  <tr><th>안</th><th>내용</th><th>비용</th></tr>
+  <tr><td>A</td><td>옵션별 건수 표시, 0건 옵션은 흐리게</td><td>서버 집계 쿼리 확장(<code>front/lib/db/repositories/catalog-page.ts</code> <code>scopeMeta</code>, api 경로 포함)</td></tr>
+  <tr><td>B</td><td>한 축 안 다중 선택(OR)</td><td>서버 필터·URL 형식 변경. "원래 화면과 100% 같은 필터" 결정 번복</td></tr>
+  <tr><td>C</td><td>상단 요약표(시장·언어·퍼널별 건수, 측정중/미측정), 누르면 필터</td><td>집계 API 추가</td></tr>
+  <tr><td>D</td><td>원문 기준 묶어 보기(언어·시장 버전을 한 행으로)</td><td><code>prompts</code> 테이블에 원문을 잇는 키가 없음 → 데이터 모델부터</td></tr>
+  <tr><td>E</td><td>촘촘한 보기, 검색어 강조, 분류명 검색</td><td>프론트만</td></tr>
+</table></div>
+<p>사용자에게 받아야 할 답: (1) 1만 건의 구성(원문 수백 개의 언어·시장 버전인지, 서로 다른 프롬프트인지 — D 필요 여부),
+(2) 사용자가 이 화면에서 주로 하는 일(찾기 / 시장·언어별 확인 / 미측정 점검 / 엑셀 추출 — A·B 와 C 의 순서).</p>
+<p class="muted">A·B 와 분류 트리는 2026-10-20 의 S급 목업 초안(다중 선택·옵션 건수·분류 트리)에 있던 설계입니다. 그 초안은 커밋된 적이 없고 작성 기기 임시 폴더의 백업에만 있습니다.
+지금 <code>docs/design/ui/global-prompts-filters.html</code> 은 구현과 같게 다시 쓴 판입니다.</p>
+
+<h2>7. 목업 관리</h2>
+<ul>
+  <li><code>docs/design/ui/overview-mockup.html</code>, <code>docs/design/ui/global-prompts-filters.html</code>: 파일 하나로 열리는 HTML+CSS(더블클릭). 왼쪽 메뉴로 서로 이동.</li>
+  <li>구현과 1:1 로 맞춘 기준: rn- 토큰 이름, Rn 컴포넌트 단위의 클래스, <code>ko.json</code> 문구, 앱 필터 규칙, 카탈로그 서버의 옵션·정렬·권한 규칙.
+    숫자와 프롬프트의 언어·대상 시장·측정 종류·측정 상태·변경 이력은 예시입니다(프롬프트 본문·분류는 v0.4 시드 250건).</li>
+  <li>리뉴얼 코드가 바뀌면 목업도 손으로 고칩니다. 대조 스크립트(목업 ↔ 앱 필터, 목업 ↔ 실제 컴포넌트 하네스)는 작성 기기 임시 폴더에만 있습니다.
+    다른 기기에서 계속 쓰려면 레포로 옮길지 사용자에게 먼저 묻습니다.</li>
+</ul>
+
+<h2>8. 로컬 실행(DB 접근 없이 합성 데이터로)</h2>
+<pre><code>bash front/e2e/stack.sh up      # DB 클론, mock auth :54399, backend :18080, tap :18081, next dev :3100
+bash front/e2e/stack.sh status
+bash front/e2e/stack.sh down</code></pre>
+<ul>
+  <li>열기: <code>http://127.0.0.1:3100/ko/renewal/dashboard</code>, <code>http://127.0.0.1:3100/ko/renewal/standard/prompts</code></li>
+  <li>계정: <code>front/e2e/accounts.json</code>(예: <code>t-admin@example.test</code>, <code>t-hq-h@example.test</code>, 비밀번호는 같은 파일의 <code>password</code>).</li>
+  <li><code>stack.sh</code> 는 <code>lsof</code>·<code>setsid</code> 가 필요해 macOS/Linux 용입니다. Windows 에서는 같은 구성을 손으로 띄웠습니다:
+    Docker <code>hgh-dev-pg</code>(<code>back/db/dev-db.sh</code>) → <code>clone e2e_front</code> → <code>back/tests/dbforward.py</code> → ACCOUNTS_SQL,
+    uvicorn 은 <code>HGH_SQL_GUARD=0</code>(Windows 에 <code>pglast</code> 없음), next dev 의 원천 플래그는 <code>node front/e2e/lib/stack-helper.mjs flags</code>.</li>
+</ul>
+
+<h2>9. 작업 규칙(이 레포에서 지켜온 것)</h2>
+<ul>
+  <li>원래 화면의 동작은 바꾸지 않습니다. 공용 코드 변경은 추가만 합니다.</li>
+  <li>브랜치를 만들지 않고 <code>main</code> 에 직접 커밋·푸시합니다. 커밋·푸시는 사용자가 명시적으로 요청할 때만 하고, 푸시 전에 <code>git fetch</code> 를 합니다.</li>
+  <li>커밋 작성자는 환경변수로 지정합니다(git config 변경 금지):
+    <code>GIT_AUTHOR_NAME=taeho-s2w GIT_AUTHOR_EMAIL=taeho_kr@s2w.inc</code>(COMMITTER 도 같게). 커밋 메시지는 영어, 끝에 <code>Co-Authored-By</code> 줄.</li>
+  <li>front 검사: <code>npx tsc --noEmit</code>, <code>npm run lint</code>, <code>npm run check:strings</code>, <code>npx vitest run</code>.
+    전체 vitest 에서 시간 의존 시험 2건(generate-cycle CLI, answer-set-budget)이 가끔 실패하지만 단독으로는 통과합니다.
+    vitest 가 스냅샷 파일의 줄바꿈만 바꾸면 <code>git checkout</code> 으로 되돌립니다.</li>
+  <li>UI 는 HMG 토큰 안에서 과감한 상용 수준을 기대합니다. 기존 화면을 다듬는 수준의 제안은 받아들여지지 않았습니다.</li>
+</ul>
+</main>
+</body>
+</html>
