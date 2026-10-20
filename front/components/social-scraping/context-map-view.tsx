@@ -1517,7 +1517,7 @@ function dominant(p: PerspectiveBreakdown): Perspective {
 
 function PerspectiveBadge({ p }: { p: PerspectiveBreakdown }) {
   const t = useTranslations("socialScraping.contextMap.perspective");
-  const top = dominant(p);
+  const top = p.dominant ?? dominant(p);   // API 원천은 반올림 전 건수로 정한 값(toPerspective)
   const cls =
     top === "buyer"
       ? "bg-teal-100 text-teal-900"

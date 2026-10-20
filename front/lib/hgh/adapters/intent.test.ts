@@ -201,19 +201,27 @@ describe("context map conversions", () => {
   });
 
   it("perspective = Math.round(part / total * 100); empty -> neutral 100", () => {
-    expect(I.toPerspective(sent(3, 1, 3))).toEqual({ buyer: 43, seller: 14, neutral: 43 });
-    expect(I.toPerspective(sent(1, 1, 0))).toEqual({ buyer: 50, seller: 50, neutral: 0 });
-    expect(I.toPerspective(sent(0, 0, 0))).toEqual({ buyer: 0, seller: 0, neutral: 100 });
+    expect(I.toPerspective(sent(3, 1, 3))).toEqual({ buyer: 43, seller: 14, neutral: 43, dominant: "buyer" });
+    expect(I.toPerspective(sent(1, 1, 0))).toEqual({ buyer: 50, seller: 50, neutral: 0, dominant: "buyer" });
+    expect(I.toPerspective(sent(0, 0, 0))).toEqual({ buyer: 0, seller: 0, neutral: 100, dominant: "neutral" });
+  });
+
+  it("the dominant perspective is decided on the raw counts, not on the rounded shares", () => {
+    // 긍정 100 · 부정 101: 반올림하면 50 · 50 동률 → 종전 배지는 '긍정'. 실제 다수는 부정
+    const p = I.toPerspective(sent(100, 101, 0));
+    expect([p.buyer, p.seller]).toEqual([50, 50]);
+    expect(p.dominant).toBe("seller");
+    expect(I.toPerspective(sent(10, 3, 11)).dominant).toBe("neutral");
   });
 
   it("rows, detail and stats keep the legacy field names", () => {
     const id = "e0000000-0000-4000-8000-000000000001";
     expect(
       I.toContextRow({ id, name: "Family", theme_id: "lifestage", theme_name: "생애주기", mention_count: 9, utterance_count: 12, sentiment: sent(2, 1, 1), linked_count: 4 }),
-    ).toEqual({ id, name: "Family", themeId: "lifestage", themeName: "생애주기", mentionCount: 9, perspective: { buyer: 50, seller: 25, neutral: 25 }, linkedCount: 4 });
+    ).toEqual({ id, name: "Family", themeId: "lifestage", themeName: "생애주기", mentionCount: 9, perspective: { buyer: 50, seller: 25, neutral: 25, dominant: "buyer" }, linkedCount: 4 });
     expect(
       I.toConditionRow({ id, name: "연비", category: "연비·동력", mention_count: 3, utterance_count: 3, sentiment: sent(0, 0, 0), linked_count: 0 }),
-    ).toEqual({ id, name: "연비", categoryId: "연비·동력", mentionCount: 3, perspective: { buyer: 0, seller: 0, neutral: 100 }, linkedCount: 0 });
+    ).toEqual({ id, name: "연비", categoryId: "연비·동력", mentionCount: 3, perspective: { buyer: 0, seller: 0, neutral: 100, dominant: "neutral" }, linkedCount: 0 });
     expect(
       I.toCombinationRow({ id: `${id}:x`, cond_a_id: id, cond_a_name: "A", cond_b_id: "x", cond_b_name: "B", co_count: 7, frequency: "medium" }),
     ).toEqual({ id: `${id}:x`, condAId: id, condAName: "A", condBId: "x", condBName: "B", coOccurrenceCount: 7, frequency: "medium" });
@@ -237,7 +245,7 @@ describe("context map conversions", () => {
       id,
       name: "Family",
       mentionCount: 9,
-      perspective: { buyer: 50, seller: 0, neutral: 50 },
+      perspective: { buyer: 50, seller: 0, neutral: 50, dominant: "buyer" },
       evidenceQuotes: [
         { quote: "q1", sourceTitle: "a.test", sourceUrl: "https://a.test/1", perspective: "buyer" },
         { quote: "q2", sourceTitle: "", sourceUrl: "", perspective: "seller" },

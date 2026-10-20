@@ -14,6 +14,11 @@ export type PerspectiveBreakdown = {
   buyer: number;
   seller: number;
   neutral: number;
+  /**
+   * 우세 관점 — 반올림 전 건수로 정한 값(API 원천). 반올림된 비율로 고르면 1%p 안쪽 차이가 동률이 되어 다수가 뒤집힌다
+   * (긍정 100 · 부정 101 → 50 · 50). 없으면(샘플·legacy) 표시 비율로 고른다.
+   */
+  dominant?: Perspective;
 };
 
 export type EvidenceQuote = {

@@ -628,12 +628,18 @@ export async function listStandardKeywordTabs(): Promise<KeywordTab[]> {
 
 // ── context map conversions ─────────────────────────────────────────────────
 
-/** Legacy sentimentPerspective: Math.round(part / total * 100), empty -> neutral 100. */
+/**
+ * Legacy sentimentPerspective: Math.round(part / total * 100), empty -> neutral 100. The dominant perspective
+ * (the badge) is decided on the raw counts with the badge's tie rule (seller / neutral only when strictly larger):
+ * rounded shares within 1 pp of each other tie and flip the majority (positive 100 · negative 101 -> 50 · 50).
+ */
 export function toPerspective(s: ApiSentiment): PerspectiveBreakdown {
   const den = s.positive.den;
-  if (!den) return { buyer: 0, seller: 0, neutral: 100 };
+  if (!den) return { buyer: 0, seller: 0, neutral: 100, dominant: "neutral" };
   const pct = (num: number) => Math.round((num / den) * 100);
-  return { buyer: pct(s.positive.num), seller: pct(s.negative.num), neutral: pct(s.neutral.num) };
+  const [pos, neg, neu] = [s.positive.num, s.negative.num, s.neutral.num];
+  const dominant = neg > pos && neg > neu ? "seller" : neu > pos && neu > neg ? "neutral" : "buyer";
+  return { buyer: pct(pos), seller: pct(neg), neutral: pct(neu), dominant };
 }
 
 export function toContextRow(r: ApiContextRow): ContextListRow {

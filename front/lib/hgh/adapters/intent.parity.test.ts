@@ -756,18 +756,48 @@ function diffPaths(a: unknown, b: unknown, path = ""): string[] {
   return [path || "$"];
 }
 
-/** Both sides, then the diff must be exactly the declared known differences. */
+/** Value at a diffPaths path (`a.b[0].c`), undefined when absent. */
+function valueAt(root: unknown, path: string): unknown {
+  return path
+    .split(/\.|(?=\[)/)
+    .filter(Boolean)
+    .reduce<unknown>((v, k) => {
+      if (v == null || typeof v !== "object") return undefined;
+      const m = /^\[(\d+)\]$/.exec(k);
+      return m ? (v as unknown[])[Number(m[1])] : (v as Record<string, unknown>)[k];
+    }, root);
+}
+
+/**
+ * Both sides, then the diff must be exactly the declared known differences.
+ * `apiOnly`: a declared field the API side adds on every row it applies to (e.g. the context-map perspective's
+ * `dominant`, decided on the raw counts). Its paths must exist on the API side, be absent on legacy, and appear at
+ * least once; every other difference still has to be declared in `known`.
+ */
 async function parity<T>(
   run: (source: Source) => Promise<T>,
   known: Record<string, string> = {},
+  apiOnly?: RegExp,
 ): Promise<{ legacy: T; api: T }> {
   const legacy = await run("legacy");
   await seedLegacy();
   const api = await run("api");
-  const diffs = diffPaths(legacy, api).sort();
+  let diffs = diffPaths(legacy, api).sort();
+  if (apiOnly) {
+    const extra = diffs.filter((p) => apiOnly.test(p));
+    expect(extra.length, `declared api-only field ${apiOnly} present`).toBeGreaterThan(0);
+    for (const p of extra) {
+      expect(valueAt(legacy, p), `legacy has no ${p}`).toBeUndefined();
+      expect(valueAt(api, p), `api has ${p}`).not.toBeUndefined();
+    }
+    diffs = diffs.filter((p) => !apiOnly.test(p));
+  }
   expect(diffs, JSON.stringify({ legacy, api }).slice(0, 4000)).toEqual(Object.keys(known).sort());
   return { legacy, api };
 }
+
+// 맥락 지도 관점의 우세 관점(API 만): 반올림 전 건수로 정한다(toPerspective). legacy 는 표시 비율로 배지가 고른다.
+const PERSPECTIVE_DOMINANT = /\.perspective\.dominant$/;
 
 function findProps(node: ReactNode, type: unknown): Record<string, unknown> | null {
   if (!isValidElement(node)) {
@@ -827,6 +857,7 @@ describe("pages", () => {
         "generatedPrompts[1].id": "U10-N6",
         "generatedPrompts[2].id": "U10-N6",
       },
+      PERSPECTIVE_DOMINANT,
     );
     expect((api.generatedPrompts as { id: string }[]).map((p) => p.id)).toEqual([u(0x601), u(0x602), u(0x603)]);
     expect((legacy.generatedPrompts as { similarTo: unknown }[])[0].similarTo).not.toBeNull();
@@ -889,6 +920,7 @@ describe("/api/context-map", () => {
         "cond.body.paged.nextCursor": "D5 cursor (api only)",
         "combo.body.paged.nextCursor": "D5 cursor (api only)",
       },
+      PERSPECTIVE_DOMINANT,
     );
     expect(cursor).toBeTruthy();
   });
