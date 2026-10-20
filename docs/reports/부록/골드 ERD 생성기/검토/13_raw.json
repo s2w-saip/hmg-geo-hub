@@ -1,0 +1,462 @@
+{
+ "T:answer_body:head": {
+  "t": "{\"name\":\"answer_body\",\"s\":\"gold\",\"fam\":\"silver\",\"grain\":\"답변 본문·메타\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:2219-2222 (rd.v_answer_body: answer_text·model_slug·measured_at·status …) · 설계: 이름 answer_body, fam 표기"
+ },
+ "T:answer_body:col:0": {
+  "t": "[\"answer_key\",\"PF\",\"\",\"job_index\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_body.answer_key (= rd.job.answer_key) · back/db/DB-v2.32.sql:2220-2222"
+ },
+ "T:answer_body:col:1": {
+  "t": "[\"job_id · run_id · prompt_run_id\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_body.job_id · run_id · prompt_run_id"
+ },
+ "T:answer_body:col:2": {
+  "t": "[\"surface · project_key · geo_key · bgrp\",\"\",\"접근 범위\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_body surface·project_key·geo_key·bgrp (rd.job 스코프 열) · back/db/DB-v2.32.sql:629"
+ },
+ "T:answer_body:col:3": {
+  "t": "[\"answer_text\",\"\",\"답변 본문\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_body.answer_text (ing.answer.answer_text)"
+ },
+ "T:answer_body:col:4": {
+  "t": "[\"model_slug\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_body.model_slug"
+ },
+ "T:answer_body:col:5": {
+  "t": "[\"measured_at\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_body.measured_at (ing.answer.measured_at)"
+ },
+ "T:answer_body:col:6": {
+  "t": "[\"status · analysis_status\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_body.status · analysis_status · back/app/features/qa/answers/detail/schemas.py:25"
+ },
+ "T:answer_body:col:7": {
+  "t": "[\"region\",\"\",\"Scope 측정 지역\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_body.region (ing.answer.region) · back/ingest/project/apply/queries.py:869 (region → dim_country 코드)"
+ },
+ "T:answer_body:grain": {
+  "t": "job 1건(모든 상태)의 본문과 측정 메타 = 1행.",
+  "v": "cur",
+  "e": "sql: pg_get_viewdef(rd.v_answer_body) = rd.job ⋈ ing.answer_key_map(PK job_id) ⋈ ing.answer(PK run_month, job_id) · back/db/DB-v2.32.sql:439 (rd.job 모든 status) · back/ingest/project/apply/queries.py:183-189 (rd.job 원천도 같은 조인)"
+ },
+ "T:answer_body:pk": {
+  "t": "answer_key",
+  "v": "cur",
+  "e": "sql: rd.job PK answer_key · ing.answer_key_map PK job_id · ing.answer PK (run_month, job_id) → 뷰 행 answer_key 유일"
+ },
+ "T:answer_body:inputs": {
+  "t": "데이터 분석팀",
+  "v": "des",
+  "e": "검토/README.md 4장 inputs 규칙 · 5-2·5-4 (원문 뷰는 골드, 데이터 분석팀). 현행 원천 = back/db/DB-v2.32.sql:2219-2222 (ing)"
+ },
+ "T:answer_body:uses": {
+  "t": "답변 모달 원문, 검수 상세, Entity catalog 언급 샘플",
+  "v": "cur",
+  "e": "back/app/features/analytics/answers/detail/queries.py:94-96 · back/app/features/qa/answers/detail/queries.py:7 · back/app/features/admin/entities/versions/queries.py:262 · front/app/[locale]/(dash)/admin/standards/entities/_components/entity-drawer.tsx:142 · inventory.json Entity catalog 언급 샘플"
+ },
+ "T:answer_body:rule:0": {
+  "t": "접근 범위 열(surface · project_key · geo_key · bgrp)을 둡니다. 답변 모달은 answer_key 와 함께 surface · project_key 를 다시 걸어 읽습니다(fail-closed).",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:629 (스코프 열 노출, fail-closed) · back/app/features/analytics/answers/detail/queries.py:65-68 (_view: answer_key · surface · project_key 재단언)"
+ },
+ "T:answer_registry:head": {
+  "t": "{\"name\":\"answer_registry\",\"s\":\"gold\",\"fam\":\"silver\",\"grain\":\"앵커 고정·드롭 사유\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:1126-1132 (앵커 고정·드롭 사유) · 설계: 이름 answer_registry"
+ },
+ "T:answer_registry:col:0": {
+  "t": "[\"answer_key\",\"PF\",\"\",\"job_index\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_registry.answer_key (= rd.job.answer_key)"
+ },
+ "T:answer_registry:col:1": {
+  "t": "[\"surface · project_key · geo_key · bgrp\",\"\",\"접근 범위\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_registry surface·project_key·geo_key·bgrp"
+ },
+ "T:answer_registry:col:2": {
+  "t": "[\"pin_anchor · pin_reason\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_registry.pin_anchor · pin_reason (ing.answer_anchor_pin anchor · reason)"
+ },
+ "T:answer_registry:col:3": {
+  "t": "[\"drop_reason · dropped_at\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_registry.drop_reason · dropped_at (ing.answer_drop)"
+ },
+ "T:answer_registry:col:4": {
+  "t": "[\"{pin,drop}_source_measured_at\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_registry.pin_source_measured_at · drop_source_measured_at"
+ },
+ "T:answer_registry:grain": {
+  "t": "job 1건 = 1행. 앵커 고정·드롭이 없으면 그 열이 NULL 입니다.",
+  "v": "cur",
+  "e": "sql: pg_get_viewdef(rd.v_answer_registry) = rd.job LEFT JOIN ing.answer_anchor_pin(PK job_id) LEFT JOIN ing.answer_drop(PK job_id)"
+ },
+ "T:answer_registry:pk": {
+  "t": "answer_key",
+  "v": "cur",
+  "e": "sql: rd.job PK answer_key · ing.answer_anchor_pin·ing.answer_drop PK job_id"
+ },
+ "T:answer_registry:inputs": {
+  "t": "데이터 분석팀",
+  "v": "des",
+  "e": "검토/README.md 7절 inputs 꼴 · 5-2·5-4 (원문 뷰는 골드, 데이터 분석팀). 앵커 고정·드롭 원천은 골드 밖(README 머리 지시)"
+ },
+ "T:answer_registry:uses": {
+  "t": "검수 상세 앵커 고정·드롭 표시",
+  "v": "cur",
+  "e": "back/app/features/qa/answers/detail/queries.py:86"
+ },
+ "T:answer_citation_raw:head": {
+  "t": "{\"name\":\"answer_citation_raw\",\"s\":\"gold\",\"fam\":\"silver\",\"grain\":\"인용 원본\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:1133-1139 · 설계: 이름 answer_citation_raw"
+ },
+ "T:answer_citation_raw:col:0": {
+  "t": "[\"answer_key · ord\",\"PF\",\"\",\"job_index\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_citation_raw.answer_key · ord · sql: ing.citation PK (run_month, job_id, ord)"
+ },
+ "T:answer_citation_raw:col:1": {
+  "t": "[\"surface · project_key · geo_key · bgrp\",\"\",\"접근 범위\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_citation_raw surface·project_key·geo_key·bgrp"
+ },
+ "T:answer_citation_raw:col:2": {
+  "t": "[\"url · title\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_citation_raw.url · title"
+ },
+ "T:answer_citation_raw:col:3": {
+  "t": "[\"ref_index\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_citation_raw.ref_index"
+ },
+ "T:answer_citation_raw:col:4": {
+  "t": "[\"scope_category\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_citation_raw.scope_category"
+ },
+ "T:answer_citation_raw:col:5": {
+  "t": "[\"host · domain_label\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_citation_raw.host · domain_label"
+ },
+ "T:answer_citation_raw:grain": {
+  "t": "답변의 인용 원본 1건 = 1행.",
+  "v": "cur",
+  "e": "sql: pg_get_viewdef(rd.v_answer_citation_raw) = rd.job ⋈ answer_key_map ⋈ ing.citation"
+ },
+ "T:answer_citation_raw:pk": {
+  "t": "answer_key + ord",
+  "v": "cur",
+  "e": "sql: ing.citation PK (run_month, job_id, ord) · ing.answer_key_map answer_key UNIQUE"
+ },
+ "T:answer_citation_raw:inputs": {
+  "t": "데이터 분석팀",
+  "v": "des",
+  "e": "검토/README.md 4장 inputs 규칙 · 5-2·5-4. 현행 원천 = back/db/DB-v2.32.sql:1133-1139 (ing.citation)"
+ },
+ "T:answer_citation_raw:uses": {
+  "t": "검수 목록 인용 수, 검수 상세 인용 블록",
+  "v": "cur",
+  "e": "back/app/features/qa/answers/list/queries.py:71 (CITATION_COUNT_SQL) · back/app/features/qa/answers/detail/queries.py:44"
+ },
+ "T:answer_mention_raw:head": {
+  "t": "{\"name\":\"answer_mention_raw\",\"s\":\"gold\",\"fam\":\"silver\",\"grain\":\"언급 원본\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:1117-1125 · 설계: 이름 answer_mention_raw"
+ },
+ "T:answer_mention_raw:col:0": {
+  "t": "[\"answer_key · ord\",\"PF\",\"\",\"job_index\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_mention_raw.answer_key · ord · sql: ing.mention PK (run_month, job_id, ord)"
+ },
+ "T:answer_mention_raw:col:1": {
+  "t": "[\"surface · project_key · geo_key · bgrp\",\"\",\"접근 범위\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_mention_raw surface·project_key·geo_key·bgrp"
+ },
+ "T:answer_mention_raw:col:2": {
+  "t": "[\"entity_id · entity_key\",\"FK\",\"\",\"dim_entity\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_mention_raw.entity_id · entity_key (LEFT JOIN rd.dim_entity) · back/migration/seed/seed-30-dims.sql:573-577 (언급 엔티티 전부 dim_entity)"
+ },
+ "T:answer_mention_raw:col:3": {
+  "t": "[\"registry_role · entity_type\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_mention_raw.registry_role (rd.dim_entity) · entity_type (ing.mention)"
+ },
+ "T:answer_mention_raw:col:4": {
+  "t": "[\"display_name\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_mention_raw.display_name"
+ },
+ "T:answer_mention_raw:col:5": {
+  "t": "[\"mention_count · avg_position\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_mention_raw.mention_count · avg_position"
+ },
+ "T:answer_mention_raw:col:6": {
+  "t": "[\"brand_rollup_entity_id · surfaces[]\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_mention_raw.brand_rollup_entity_id · surfaces (text[])"
+ },
+ "T:answer_mention_raw:col:7": {
+  "t": "[\"sentiment_{positive,neutral,negative,mixed}\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_mention_raw.sentiment_positive · sentiment_neutral · sentiment_negative · sentiment_mixed · 표기 정리(물리 열 같음)"
+ },
+ "T:answer_mention_raw:col:8": {
+  "t": "[\"type_mention … type_final_choice\",\"\",\"유형 5종\",\"\",[\"type_mention\",\"type_recommendation\",\"type_comparison\",\"type_definition\",\"type_final_choice\"]]",
+  "v": "cur",
+  "e": "db:rd.v_answer_mention_raw.type_mention · type_recommendation · type_comparison · type_definition · type_final_choice"
+ },
+ "T:answer_mention_raw:grain": {
+  "t": "답변의 엔티티 언급 원본 1건 = 1행 (모든 엔티티, 브랜드 롤업 전).",
+  "v": "cur",
+  "e": "sql: pg_get_viewdef(rd.v_answer_mention_raw) = rd.job ⋈ answer_key_map ⋈ ing.mention (엔티티 전량, 롤업 전) · back/db/DB-v2.32.sql:634"
+ },
+ "T:answer_mention_raw:pk": {
+  "t": "answer_key + ord",
+  "v": "cur",
+  "e": "sql: ing.mention PK (run_month, job_id, ord) · ing.answer_key_map answer_key UNIQUE"
+ },
+ "T:answer_mention_raw:inputs": {
+  "t": "데이터 분석팀",
+  "v": "des",
+  "e": "검토/README.md 4장 inputs 규칙 · 5-2·5-4. 현행 원천 = back/db/DB-v2.32.sql:1117-1125 (ing.mention)"
+ },
+ "T:answer_mention_raw:uses": {
+  "t": "답변 모달 차종 언급·감성 귀속, 언급 프롬프트 하이라이트(terms), 검수 목록 언급 수·필터, 검수 상세, Entity catalog 언급 샘플",
+  "v": "cur",
+  "e": "back/app/features/analytics/answers/detail/queries.py:103-110 · back/app/features/analytics/answers/detail/service.py:239-241 (models · 감성 귀속) · back/app/features/analytics/mentions/prompts/queries.py:97-104 · front/lib/hgh/adapters/drilldown.ts:413 (terms: true) · back/app/features/qa/answers/list/queries.py:69 · back/app/features/qa/answers/list/scope.py:362 · back/app/features/qa/answers/detail/queries.py:32 · back/app/features/admin/entities/versions/queries.py:259-260"
+ },
+ "T:answer_occurrence:head": {
+  "t": "{\"name\":\"answer_occurrence\",\"s\":\"gold\",\"fam\":\"silver\",\"grain\":\"본문 안 등장 위치\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:639-642 · 설계: 이름 answer_occurrence"
+ },
+ "T:answer_occurrence:col:0": {
+  "t": "[\"answer_key · ord\",\"PF\",\"\",\"job_index\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_occurrence.answer_key · ord · sql: ing.mention_occurrence PK (run_month, job_id, ord)"
+ },
+ "T:answer_occurrence:col:1": {
+  "t": "[\"surface · project_key · geo_key · bgrp\",\"\",\"접근 범위\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_occurrence surface·project_key·geo_key·bgrp"
+ },
+ "T:answer_occurrence:col:2": {
+  "t": "[\"entity_id · turn_index\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_occurrence.entity_id · turn_index"
+ },
+ "T:answer_occurrence:col:3": {
+  "t": "[\"source_start · source_end\",\"\",\"본문 위치\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_occurrence.source_start · source_end · back/app/features/analytics/answers/detail/render.py:84-90 (본문 스팬)"
+ },
+ "T:answer_occurrence:col:4": {
+  "t": "[\"surface_text\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_occurrence.surface_text"
+ },
+ "T:answer_occurrence:col:5": {
+  "t": "[\"sentiment · mention_role · assertion\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_occurrence.sentiment · mention_role · assertion"
+ },
+ "T:answer_occurrence:col:6": {
+  "t": "[\"context_snippet\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_occurrence.context_snippet"
+ },
+ "T:answer_occurrence:col:7": {
+  "t": "[\"descriptors[] · criteria[]\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_occurrence.descriptors · criteria (text[])"
+ },
+ "T:answer_occurrence:grain": {
+  "t": "답변 본문 안 언급 등장 1건 = 1행.",
+  "v": "cur",
+  "e": "sql: pg_get_viewdef(rd.v_answer_occurrence) = rd.job ⋈ answer_key_map ⋈ ing.mention_occurrence"
+ },
+ "T:answer_occurrence:pk": {
+  "t": "answer_key + ord",
+  "v": "cur",
+  "e": "sql: ing.mention_occurrence PK (run_month, job_id, ord) · ing.answer_key_map answer_key UNIQUE"
+ },
+ "T:answer_occurrence:inputs": {
+  "t": "데이터 분석팀",
+  "v": "des",
+  "e": "검토/README.md 4장 inputs 규칙 · 5-2·5-4. 현행 원천 = back/db/DB-v2.32.sql:639-642 (ing.mention_occurrence)"
+ },
+ "T:answer_occurrence:uses": {
+  "t": "답변 모달 감성 하이라이트, Entity catalog 언급 샘플",
+  "v": "cur",
+  "e": "back/app/features/analytics/answers/detail/queries.py:111-118 · back/app/features/analytics/answers/detail/service.py:241 (build_sentiment) · back/app/features/admin/entities/versions/queries.py:254-258 · back/app/features/admin/entities/versions/service.py:1233-1238"
+ },
+ "T:answer_stance_raw:head": {
+  "t": "{\"name\":\"answer_stance_raw\",\"s\":\"gold\",\"fam\":\"silver\",\"grain\":\"스탠스 근거\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:643-646 · 설계: 이름 answer_stance_raw"
+ },
+ "T:answer_stance_raw:col:0": {
+  "t": "[\"answer_key · turn_index · entity_id\",\"PF\",\"\",\"job_index\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_stance_raw.answer_key · turn_index · entity_id · sql: ing.answer_stance PK (run_month, job_id, turn_index, entity_id)"
+ },
+ "T:answer_stance_raw:col:1": {
+  "t": "[\"surface · project_key · geo_key · bgrp\",\"\",\"접근 범위\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_stance_raw surface·project_key·geo_key·bgrp"
+ },
+ "T:answer_stance_raw:col:2": {
+  "t": "[\"brand_label\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_stance_raw.brand_label"
+ },
+ "T:answer_stance_raw:col:3": {
+  "t": "[\"stance · confidence\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_stance_raw.stance (text) · confidence (real)"
+ },
+ "T:answer_stance_raw:col:4": {
+  "t": "[\"evidence_text\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_stance_raw.evidence_text"
+ },
+ "T:answer_stance_raw:col:5": {
+  "t": "[\"evidence_start · evidence_end\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_stance_raw.evidence_start · evidence_end · sql: ing.answer_stance answer_stance_check"
+ },
+ "T:answer_stance_raw:col:6": {
+  "t": "[\"reason\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.v_answer_stance_raw.reason"
+ },
+ "T:answer_stance_raw:grain": {
+  "t": "답변 × 턴 × 엔티티의 스탠스 근거 = 1행.",
+  "v": "cur",
+  "e": "sql: pg_get_viewdef(rd.v_answer_stance_raw) = rd.job ⋈ answer_key_map ⋈ ing.answer_stance"
+ },
+ "T:answer_stance_raw:pk": {
+  "t": "answer_key + turn_index + entity_id",
+  "v": "cur",
+  "e": "sql: ing.answer_stance PK (run_month, job_id, turn_index, entity_id)"
+ },
+ "T:answer_stance_raw:inputs": {
+  "t": "데이터 분석팀",
+  "v": "des",
+  "e": "검토/README.md 4장 inputs 규칙 · 5-2·5-4. 현행 원천 = back/db/DB-v2.32.sql:643-646 (ing.answer_stance)"
+ },
+ "T:answer_stance_raw:uses": {
+  "t": "답변 모달 스탠스 태그(근거 대조)",
+  "v": "cur",
+  "e": "back/app/features/analytics/answers/detail/queries.py:119-129 · front/app/[locale]/(dash)/standard/answer-analysis/_components/answer-modal.tsx:276-277 (StanceTags)"
+ },
+ "T:acr_cell_run:head": {
+  "t": "{\"name\":\"acr_cell_run\",\"s\":\"gold\",\"fam\":\"silver\",\"grain\":\"ACR 셀 실행\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:2225-2227 (ACR 셀 키 ↔ Scope prompt_run_id) · 설계: 이름 acr_cell_run"
+ },
+ "T:acr_cell_run:col:0": {
+  "t": "[\"acr_cell_key\",\"PF\",\"셀 식별자 (build 무관)\",\"acr_cell_fact\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:308 (ing.acr_prompt_run.acr_cell_key IDENTITY UNIQUE) · 설계: acr_cell_fact 참조, build 무관"
+ },
+ "T:acr_cell_run:col:1": {
+  "t": "[\"prompt_run_id\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.v_acr_cell_run.prompt_run_id (ing.acr_prompt_run PK)"
+ },
+ "T:acr_cell_run:col:2": {
+  "t": "[\"run_id\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.v_acr_cell_run.run_id"
+ },
+ "T:acr_cell_run:grain": {
+  "t": "ACR 셀 1개의 Scope 실행 id = 1행.",
+  "v": "cur",
+  "e": "sql: pg_get_viewdef(rd.v_acr_cell_run) = ing.acr_prompt_run · acr_prompt_run_acr_cell_key_key UNIQUE (acr_cell_key)"
+ },
+ "T:acr_cell_run:pk": {
+  "t": "acr_cell_key",
+  "v": "cur",
+  "e": "sql: acr_prompt_run_acr_cell_key_key UNIQUE (acr_cell_key), NOT NULL"
+ },
+ "T:acr_cell_run:inputs": {
+  "t": "데이터 분석팀",
+  "v": "des",
+  "e": "검토/README.md 4장 inputs 규칙 · 5-2·5-4. 현행 원천 = back/db/DB-v2.32.sql:2225-2227 (ing.acr_prompt_run)"
+ },
+ "T:acr_cell_run:uses": {
+  "t": "검수 상세 ACR 블록 (노트 키 prompt_run_id)",
+  "v": "cur",
+  "e": "back/app/features/qa/answers/detail/queries.py:65-70 · back/db/DB-v2.32.sql:2227 (노트 키 ${promptRunId}:${entityId})"
+ },
+ "T:entity_mention_surface:head": {
+  "t": "{\"name\":\"entity_mention_surface\",\"s\":\"gold\",\"fam\":\"silver\",\"grain\":\"언급 × 관측 표면\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:4416-4419 (ing.mention LEFT JOIN LATERAL unnest(surfaces)) · 설계: 이름 entity_mention_surface"
+ },
+ "T:entity_mention_surface:col:0": {
+  "t": "[\"entity_id\",\"FK\",\"dim_entity.entity_id (UK)\",\"dim_entity\"]",
+  "v": "cur",
+  "e": "db:rd.v_entity_mention_surface.entity_id · sql: dim_entity_entity_id_key UNIQUE (entity_id) · back/migration/seed/seed-30-dims.sql:573-577"
+ },
+ "T:entity_mention_surface:col:1": {
+  "t": "[\"run_month\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.v_entity_mention_surface.run_month (ing.mention.run_month)"
+ },
+ "T:entity_mention_surface:col:2": {
+  "t": "[\"surface\",\"\",\"표면 문자열 (없으면 NULL)\"]",
+  "v": "cur",
+  "e": "db:rd.v_entity_mention_surface.surface (text) · back/db/DB-v2.32.sql:4417 (표면 없는 언급 = surface NULL 1행)"
+ },
+ "T:entity_mention_surface:col:3": {
+  "t": "[\"brand_rollup_entity_id\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.v_entity_mention_surface.brand_rollup_entity_id"
+ },
+ "T:entity_mention_surface:col:4": {
+  "t": "[\"display_name\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.v_entity_mention_surface.display_name · back/db/DB-v2.32.sql:4418 (접두 교정 입력)"
+ },
+ "T:entity_mention_surface:grain": {
+  "t": "언급 1건 × 관측 표면 = 1행. 표면 없는 언급은 surface NULL 1행.",
+  "v": "cur",
+  "e": "sql: pg_get_viewdef(rd.v_entity_mention_surface) = ing.mention m LEFT JOIN LATERAL unnest(m.surfaces) · back/db/DB-v2.32.sql:4417"
+ },
+ "T:entity_mention_surface:pk": {
+  "t": "없음 (같은 값이 여러 행. 조회 때 DISTINCT)",
+  "v": "cur",
+  "e": "sql: ing.mention PK (run_month, job_id, ord) 는 뷰 열에 없음 → 유일 키 없음 · back/app/features/admin/entities/versions/queries.py:130,139,147-149 (SELECT DISTINCT)"
+ },
+ "T:entity_mention_surface:inputs": {
+  "t": "데이터 분석팀",
+  "v": "des",
+  "e": "검토/README.md 4장 inputs 규칙 · 5-2·5-4. 현행 원천 = back/db/DB-v2.32.sql:4416-4419 (ing.mention)"
+ },
+ "T:entity_mention_surface:uses": {
+  "t": "Entity catalog 초안 린트(전역 차단 표면 대조) · 목록·버전 상세의 Scope 롤업 판정",
+  "v": "cur",
+  "e": "back/app/features/admin/entities/versions/service.py:102,692-773 (린트 전역 차단 대조·롤업 역조회) · back/app/features/admin/entities/versions/service.py:265-274,321-353 (목록 자사 귀속·버전 상세 롤업) · back/app/features/admin/entities/versions/queries.py:111-150"
+ }
+}

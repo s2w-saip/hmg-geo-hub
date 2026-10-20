@@ -1,0 +1,402 @@
+{
+ "T:gold_facts:head": {
+  "t": "{\"name\":\"골드 사실·셀 전체\",\"s\":\"key\",\"fam\":\"build\",\"grain\":\"build_id 를 가진 테이블\"}",
+  "v": "des",
+  "e": "골드 build 설계 키 묶음(사용자 지시: 골드 ERD 100% · NEWREQ build 이력/src_v8/newreq.js:4-5)"
+ },
+ "T:gold_facts:col:0": {
+  "t": "[\"build_id\",\"FK\",\"모든 사실·셀 공통\",\"build\"]",
+  "v": "des",
+  "e": "NEWREQ build '모든 사실·셀의 세대' 이력/src_v8/newreq.js:4-5 · 셀 집계는 C 키 build_id (src/tables/01_dim.js:3)"
+ },
+ "T:gold_facts:col:1": {
+  "t": "[\"answer_fact\",\"\",\"\"]",
+  "v": "des",
+  "e": "대조: src/tables/03_fact.js answer_fact build_id PF"
+ },
+ "T:gold_facts:col:2": {
+  "t": "[\"answer_brand_fact · answer_stance_fact\",\"\",\"\"]",
+  "v": "des",
+  "e": "대조: src/tables/03_fact.js answer_brand_fact · answer_stance_fact build_id PF"
+ },
+ "T:gold_facts:col:3": {
+  "t": "[\"citation_fact · catalog_entry\",\"\",\"\"]",
+  "v": "des",
+  "e": "대조: src/tables/03_fact.js citation_fact build_id PF · src/tables/02_prompt.js catalog_entry build_id PF (NEWREQ 이력/src_v8/newreq.js:10-12)"
+ },
+ "T:gold_facts:col:4": {
+  "t": "[\"acr_cell_fact · acr_entity_fact · acr_cell_job\",\"\",\"\"]",
+  "v": "des",
+  "e": "대조: src/tables/06_acr.js acr_cell_fact · acr_entity_fact · acr_cell_job build_id PF"
+ },
+ "T:gold_facts:col:5": {
+  "t": "[\"kpi_cell · kpi_rollup · brand_cell\",\"\",\"C 키의 build_id\"]",
+  "v": "des",
+  "e": "대조: src/tables/04_kpi.js kpi_cell · kpi_rollup · brand_cell 의 C/D 키 → cell_key.build_id (src/tables/01_dim.js:3)"
+ },
+ "T:gold_facts:col:6": {
+  "t": "[\"citation_cell · url_prompt_cell · report_value\",\"\",\"\"]",
+  "v": "des",
+  "e": "대조: src/tables/05_cit.js citation_cell · url_prompt_cell 의 C 키, report_value build_id PK"
+ },
+ "T:gold_facts:col:7": {
+  "t": "[\"page_visibility_daily · page_crawl_daily\",\"\",\"\"]",
+  "v": "des",
+  "e": "대조: src/tables/08_vis.js page_visibility_daily · page_priority build_id PF, page_crawl_daily · page_seo_device_daily 복합 PF · 표기 정리(물리 열 같음)"
+ },
+ "T:gold_facts:col:8": {
+  "t": "[\"page_seo_device_daily · page_priority\",\"\",\"\"]",
+  "v": "des",
+  "e": "대조: src/tables/08_vis.js page_visibility_daily · page_priority build_id PF, page_crawl_daily · page_seo_device_daily 복합 PF · 표기 정리(물리 열 같음)"
+ },
+ "T:gold_facts:col:9": {
+  "t": "[\"acr_iter_fact · acr_iter_shortlist\",\"\",\"\"]",
+  "v": "des",
+  "e": "대조: src/tables/06_acr.js acr_iter_fact · acr_iter_shortlist build_id 복합 PF · 표기 정리(물리 열 같음)"
+ },
+ "T:gold_facts:col:10": {
+  "t": "[\"GA4 · 키워드 · 소셜\",\"\",\"build 없음: 날짜 · call_id · snapshot_id\"]",
+  "v": "des",
+  "e": "대조: src/tables/07_ga4.js ga4_row date · src/tables/09_kw.js call_id · observed_at · src/tables/10_soc.js snapshot_id (build_id 열 없음) · 표기 정리(물리 열 같음)"
+ },
+ "T:gold_facts:grain": {
+  "t": "build_id 로 세대를 나누는 골드 테이블 목록입니다(셀 집계는 C 키의 build_id). GA4 는 날짜, 키워드는 call_id · observed_at, 소셜은 snapshot_id 로 나누고 build_id 가 없습니다.",
+  "v": "des",
+  "e": "src/tables 전수 대조(build_id 열 보유 표 = 이 목록, GA4 · kw · ctx_* 는 build_id 없음) · data_version 설계"
+ },
+ "T:gold_facts:pk": {
+  "t": "—",
+  "v": "lbl",
+  "e": ""
+ },
+ "T:gold_facts:inputs": {
+  "t": "—",
+  "v": "lbl",
+  "e": ""
+ },
+ "T:gold_facts:rule:0": {
+  "t": "조회는 요청 시작에 release 하나를 고정하고, 그 release 가 가리키는 build 의 행만 읽습니다. 카드 읽기는 publication.build_id 의 행을 읽습니다.",
+  "v": "des",
+  "e": "골드 release 설계 (NEWREQ release '한 응답 안의 숫자를 같은 세대로 고정' 이력/src_v8/newreq.js:4-5) · NEWREQ publication.build_id 이력/src_v8/newreq.js:13-14 · 탭 노트 src/views.js:45"
+ },
+ "T:build:head": {
+  "t": "{\"name\":\"build\",\"s\":\"gold\",\"fam\":\"build\",\"grain\":\"빌드 1회\"}",
+  "v": "des",
+  "e": "NEWREQ build 신규 테이블 이력/src_v8/newreq.js:4-5"
+ },
+ "T:build:col:0": {
+  "t": "[\"build_id\",\"PK\",\"\"]",
+  "v": "des",
+  "e": "NEWREQ build 이력/src_v8/newreq.js:4-5"
+ },
+ "T:build:col:1": {
+  "t": "[\"family\",\"\",\"fact · cell · report · acr · vis\"]",
+  "v": "des",
+  "e": "골드 build 패밀리 설계 = build_id 보유 표 묶음(gold_facts): 사실 · 셀 가속 · report_value · ACR · vis"
+ },
+ "T:build:col:2": {
+  "t": "[\"slice_key\",\"\",\"회차 · 발행 · 사이트×일\"]",
+  "v": "des",
+  "e": "슬라이스 설계: 사실 · ACR = 회차, report_value = 발행(pub_id), vis = 사이트 × 일 (src/tables/05_cit.js report_value PK · src/tables/08_vis.js 일 배치)"
+ },
+ "T:build:col:3": {
+  "t": "[\"input_snapshot · watermark\",\"\",\"입력 고정\"]",
+  "v": "des",
+  "e": "골드 build 입력 고정 설계 (NEWREQ build 이력/src_v8/newreq.js:4-5)"
+ },
+ "T:build:col:4": {
+  "t": "[\"profile_signature · metric_version\",\"\",\"규칙 서명\"]",
+  "v": "des",
+  "e": "골드 규칙 서명 설계 · 현행 대응 back/app/core/profile.py 프로필 지문 · back/ingest/frz/freeze.py:29-34"
+ },
+ "T:build:col:5": {
+  "t": "[\"ecat_ver · rule_ver\",\"\",\"판정 버전\"]",
+  "v": "des",
+  "e": "골드 판정 버전 설계 · 현행 대응 rd.answer.ecat_ver · rule_ver (db:rd.answer.ecat_ver)"
+ },
+ "T:build:col:6": {
+  "t": "[\"status\",\"\",\"pending · running · validated · failed\"]",
+  "v": "des",
+  "e": "골드 build 상태 설계 (현행 ing.load status running · committed · failed 를 검증 단계로 확장)"
+ },
+ "T:build:col:7": {
+  "t": "[\"row_counts · verify\",\"\",\"jsonb\"]",
+  "v": "des",
+  "e": "골드 build 설계 (현행 대응 frz.generation.row_counts · verify jsonb)"
+ },
+ "T:build:col:8": {
+  "t": "[\"error · attempt\",\"\",\"\"]",
+  "v": "des",
+  "e": "골드 build 재시도 설계 (현행 대응 ing.load.error)"
+ },
+ "T:build:col:9": {
+  "t": "[\"started_at · finished_at\",\"\",\"\"]",
+  "v": "des",
+  "e": "골드 build 설계 (현행 대응 ing.load.started_at · finished_at)"
+ },
+ "T:build:grain": {
+  "t": "패밀리 × 슬라이스 × 입력·규칙 버전의 빌드 1회 = 1행.",
+  "v": "des",
+  "e": "NEWREQ build 이력/src_v8/newreq.js:4-5"
+ },
+ "T:build:pk": {
+  "t": "build_id (유일: family + slice_key + 입력·규칙 버전)",
+  "v": "des",
+  "e": "골드 build 유일성 설계 (같은 입력·규칙 재빌드 = 같은 build)"
+ },
+ "T:build:inputs": {
+  "t": "데이터 분석팀",
+  "v": "des",
+  "e": "검토/README.md 7절 inputs 꼴 · NEWREQ build '데이터 분석팀 빌드 실행 기록' 이력/src_v8/newreq.js:4-5 · 용어 데이터 분석팀(사용자 10-19)"
+ },
+ "T:build:triggers": {
+  "t": "회차 마감, 재판정, ACR 수집 완료, 보고 유닛 발행값 발행(report_value), 일 배치(vis)",
+  "v": "des",
+  "e": "각 build 패밀리 표의 갱신 시점과 맞춤: src/tables/03_fact.js answer_fact triggers (재판정) · src/tables/06_acr.js (Scope run 적재) · src/tables/05_cit.js report_value (발행 처리) · src/tables/08_vis.js '일 배치' · judgment_change · report_publication 이름은 검토/README.md 7절에 따라 뺌"
+ },
+ "T:build:rule:0": {
+  "t": "build 하나는 한 패밀리 · 슬라이스의 출력 행 묶음입니다. 사실 · 셀 행은 build_id 로 세대를 나누고, release_item · publication 이 build_id 로 공개할 build 를 가리킵니다.",
+  "v": "des",
+  "e": "골드 설계: release_item.build_id · publication.build_id 가 build 참조 (src/tables/12_build.js · src/tables/11_pub.js), 사실 · 셀의 build_id = gold_facts 목록 · NEWREQ build 이력/src_v8/newreq.js:4-5 · 조정자 지시 2026-10-20 (build 역할을 골드 안에서만 서술)"
+ },
+ "T:build:rule:1": {
+  "t": "재시도는 같은 build 출력을 교체·재개합니다. row_counts 를 누적하지 않습니다.",
+  "v": "des",
+  "e": "골드 build 재시도 설계"
+ },
+ "T:build:rule:2": {
+  "t": "실패한 build 는 release 에 넣지 않고 status · error 만 남깁니다.",
+  "v": "des",
+  "e": "골드 release 검증 게이트 설계 (NEWREQ release 이력/src_v8/newreq.js:4-5)"
+ },
+ "T:data_version:head": {
+  "t": "{\"name\":\"data_version\",\"s\":\"gold\",\"fam\":\"build\",\"grain\":\"release 밖 데이터의 버전\"}",
+  "v": "des",
+  "e": "NEWREQ data_version 신규 테이블 이력/src_v8/newreq.js:8-9"
+ },
+ "T:data_version:col:0": {
+  "t": "[\"scope\",\"PK\",\"dim · cycle · job · raw …\"]",
+  "v": "des",
+  "e": "NEWREQ data_version 이력/src_v8/newreq.js:8-9 · (신규) 표지 삭제 = 검토/README.md 7절"
+ },
+ "T:data_version:col:1": {
+  "t": "[\"version\",\"\",\"bigint, 쓸 때마다 +1\"]",
+  "v": "cur",
+  "e": "db:rcache.data_version.version bigint · back/db/DB-v2.32.sql:2386-2390 · back/db/DB-v2.32.sql:2397-2407 (tg_bump 가 +1)"
+ },
+ "T:data_version:col:2": {
+  "t": "[\"updated_at\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rcache.data_version.updated_at · back/db/DB-v2.32.sql:2389"
+ },
+ "T:data_version:grain": {
+  "t": "버전 범위 1개 = 1행.",
+  "v": "des",
+  "e": "NEWREQ data_version 이력/src_v8/newreq.js:8-9"
+ },
+ "T:data_version:pk": {
+  "t": "scope",
+  "v": "des",
+  "e": "NEWREQ data_version 이력/src_v8/newreq.js:8-9"
+ },
+ "T:data_version:inputs": {
+  "t": "데이터 분석팀",
+  "v": "des",
+  "e": "검토/README.md 7절 inputs 꼴 · NEWREQ data_version 'release 밖 gold 테이블을 쓰는 트랜잭션' 이력/src_v8/newreq.js:8-9"
+ },
+ "T:data_version:triggers": {
+  "t": "release 를 거치지 않는 gold 테이블을 쓴 트랜잭션 안에서 함께 증가",
+  "v": "des",
+  "e": "NEWREQ data_version 이력/src_v8/newreq.js:8-9 · 현행 대응 tg_bump 는 쓰기 트랜잭션 안 문장 트리거 back/db/DB-v2.32.sql:2331-2333"
+ },
+ "T:data_version:rule:0": {
+  "t": "차원 · 회차 · job · 답변 원문 · GA4 · 키워드 · 소셜처럼 build 로 나누지 않는 테이블을 쓸 때 해당 scope 의 version 을 반드시 올립니다.",
+  "v": "des",
+  "e": "NEWREQ data_version 이력/src_v8/newreq.js:8-9 · build_id 없는 골드 표(src/tables 01_dim · 13_raw · 07_ga4 · 09_kw · 10_soc · job_index)"
+ },
+ "T:data_version:rule:1": {
+  "t": "version 이 오르면 그 scope 의 골드 데이터가 바뀐 것입니다. 읽는 쪽은 scope 별 version 과 active_release.version 이 모두 그대로이면 읽을 골드 데이터도 그대로라고 봅니다.",
+  "v": "des",
+  "e": "조정자 지시 2026-10-20 (data_version = 읽는 쪽에 build 밖 골드 데이터 변경을 알리는 버전, 캐시 표현 금지) · NEWREQ data_version 이력/src_v8/newreq.js:8-9 · 현행 대응(문서 밖) back/db/DB-v2.32.sql:2435-2443"
+ },
+ "T:release:head": {
+  "t": "{\"name\":\"release\",\"s\":\"gold\",\"fam\":\"build\",\"grain\":\"공개 manifest 1개\"}",
+  "v": "des",
+  "e": "NEWREQ release 신규 테이블 이력/src_v8/newreq.js:4-7"
+ },
+ "T:release:col:0": {
+  "t": "[\"release_id\",\"PK\",\"\"]",
+  "v": "des",
+  "e": "NEWREQ release 이력/src_v8/newreq.js:4-7"
+ },
+ "T:release:col:1": {
+  "t": "[\"read_mode\",\"\",\"live · card · grid\"]",
+  "v": "des",
+  "e": "골드 읽기 모드 설계: LIVE · 카드(freeze_at_publish 카드 뷰) · 격자(글로벌 추이 격자) — 현행 대응 back/app/core/facts.py:41-49 LIVE · CARD · GRID"
+ },
+ "T:release:col:2": {
+  "t": "[\"rule_signature\",\"\",\"규칙 서명\"]",
+  "v": "des",
+  "e": "골드 규칙 서명 설계 (build.profile_signature '규칙 서명' src/tables/12_build.js:8, active_release.rule_signature 와 같은 표기) · BE 프로필 용어 제거 = 검토/README.md 7절"
+ },
+ "T:release:col:3": {
+  "t": "[\"base_release_id\",\"FK\",\"이전 release\",\"release\"]",
+  "v": "des",
+  "e": "NEWREQ release 이력/src_v8/newreq.js:4-7"
+ },
+ "T:release:col:4": {
+  "t": "[\"validated_at\",\"\",\"\"]",
+  "v": "des",
+  "e": "NEWREQ release '검증 통과 build 묶음' 이력/src_v8/newreq.js:4-7"
+ },
+ "T:release:grain": {
+  "t": "불변 공개 manifest 1개 = 1행.",
+  "v": "des",
+  "e": "NEWREQ release 이력/src_v8/newreq.js:4-7"
+ },
+ "T:release:pk": {
+  "t": "release_id",
+  "v": "des",
+  "e": "NEWREQ release 이력/src_v8/newreq.js:4-7"
+ },
+ "T:release:inputs": {
+  "t": "데이터 분석팀 · build",
+  "v": "des",
+  "e": "검토/README.md 7절 inputs 꼴 · NEWREQ release '검증 통과 build 묶음' 이력/src_v8/newreq.js:4-5"
+ },
+ "T:release:rule:0": {
+  "t": "validated build 만 묶습니다.",
+  "v": "des",
+  "e": "NEWREQ release '검증 통과 build 묶음' 이력/src_v8/newreq.js:4-5 · build.status validated (src/tables/12_build.js:9)"
+ },
+ "T:release:rule:1": {
+  "t": "한 요청 안의 숫자는 release 하나로 같은 세대에 고정합니다.",
+  "v": "des",
+  "e": "NEWREQ release '한 응답 안의 숫자를 같은 세대로 고정' 이력/src_v8/newreq.js:4-5"
+ },
+ "T:release_item:head": {
+  "t": "{\"name\":\"release_item\",\"s\":\"gold\",\"fam\":\"build\",\"grain\":\"release × 패밀리 × 슬라이스\"}",
+  "v": "des",
+  "e": "NEWREQ release (release_item 포함) 이력/src_v8/newreq.js:4-7"
+ },
+ "T:release_item:col:0": {
+  "t": "[\"release_id\",\"PF\",\"\",\"release\"]",
+  "v": "des",
+  "e": "NEWREQ release 이력/src_v8/newreq.js:4-7"
+ },
+ "T:release_item:col:1": {
+  "t": "[\"family\",\"PK\",\"\"]",
+  "v": "des",
+  "e": "build.family 와 같은 값 (설계)"
+ },
+ "T:release_item:col:2": {
+  "t": "[\"slice_key\",\"PK\",\"\"]",
+  "v": "des",
+  "e": "build.slice_key 와 같은 값 (설계)"
+ },
+ "T:release_item:col:3": {
+  "t": "[\"build_id\",\"FK\",\"\",\"build\"]",
+  "v": "des",
+  "e": "NEWREQ release 이력/src_v8/newreq.js:4-7"
+ },
+ "T:release_item:col:4": {
+  "t": "[\"state\",\"\",\"ready · empty\"]",
+  "v": "des",
+  "e": "골드 삭제 표현 설계"
+ },
+ "T:release_item:grain": {
+  "t": "release × 패밀리 × 슬라이스 = 1행. 어느 회차·날짜에 어느 build 를 쓸지 정합니다.",
+  "v": "des",
+  "e": "NEWREQ release 이력/src_v8/newreq.js:4-7"
+ },
+ "T:release_item:pk": {
+  "t": "release_id + family + slice_key",
+  "v": "des",
+  "e": "NEWREQ release 이력/src_v8/newreq.js:4-7"
+ },
+ "T:release_item:inputs": {
+  "t": "데이터 분석팀 · build",
+  "v": "des",
+  "e": "검토/README.md 7절 inputs 꼴 · NEWREQ release 이력/src_v8/newreq.js:4-5 · 용어 데이터 분석팀(사용자 10-19)"
+ },
+ "T:release_item:rule:0": {
+  "t": "조회는 release_item 으로 build_id 를 정합니다. 카드 · 격자 읽기는 활성 publication.build_id 를 씁니다.",
+  "v": "des",
+  "e": "탭 노트 build (src/views.js:45 '일반 조회는 active_release → release_item → build_id, 카드는 publication.build_id') · NEWREQ publication.build_id 이력/src_v8/newreq.js:13-14"
+ },
+ "T:release_item:rule:1": {
+  "t": "빈 슬라이스도 empty 로 매핑해 삭제를 표현합니다.",
+  "v": "des",
+  "e": "골드 삭제 표현 설계"
+ },
+ "T:active_release:head": {
+  "t": "{\"name\":\"active_release\",\"s\":\"gold\",\"fam\":\"build\",\"grain\":\"공개 포인터\"}",
+  "v": "cur",
+  "e": "db:rd.surface_generation (표면별 공개 세대 포인터 1행) · 설계: active_release (NEWREQ release 이력/src_v8/newreq.js:4-7)"
+ },
+ "T:active_release:col:0": {
+  "t": "[\"read_mode\",\"PK\",\"읽기 모드\"]",
+  "v": "des",
+  "e": "NEWREQ active_release.read_mode 이력/src_v8/newreq.js:6-7 · (신규) 표지 삭제 = 검토/README.md 7절"
+ },
+ "T:active_release:col:1": {
+  "t": "[\"rule_signature\",\"PK\",\"규칙 서명\"]",
+  "v": "des",
+  "e": "NEWREQ active_release.rule_signature 이력/src_v8/newreq.js:6-7 · (신규) 표지 삭제 = 검토/README.md 7절"
+ },
+ "T:active_release:col:2": {
+  "t": "[\"scope\",\"PK\",\"공개 범위 (표면)\"]",
+  "v": "cur",
+  "e": "db:rd.surface_generation.surface (int2 PK, back/db/DB-v2.32.sql:433) · back/ingest/common/db.py:147-156 (rd 가 바뀐 표면마다 1행) · coverage_data.js COLMAP surface → active_release.scope"
+ },
+ "T:active_release:col:3": {
+  "t": "[\"release_id\",\"FK\",\"현재 release\",\"release\"]",
+  "v": "des",
+  "e": "NEWREQ active_release.release_id 이력/src_v8/newreq.js:6-7 · (신규) 표지 삭제 = 검토/README.md 7절"
+ },
+ "T:active_release:col:4": {
+  "t": "[\"version\",\"\",\"공개 버전 (전환마다 +1)\"]",
+  "v": "des",
+  "e": "골드 설계: 포인터 전환마다 version 증가 (조정자 지시 2026-10-20: 공개 release 변경 신호) · 현행 대응(문서 밖) db:rd.surface_generation.generation · back/ingest/common/db.py:151-156 (적재 finalize 에서 +1)"
+ },
+ "T:active_release:col:5": {
+  "t": "[\"last_build_id\",\"FK\",\"마지막 반영 build\",\"build\"]",
+  "v": "des",
+  "e": "골드 설계: last_build_id = 마지막으로 반영한 build (job_index.last_build_id 와 같은 표기 src/tables/03_fact.js job_index) · 현행 대응(문서 밖) db:rd.surface_generation.last_load_id (back/ingest/common/db.py:154)"
+ },
+ "T:active_release:col:6": {
+  "t": "[\"rule_ver · as_of · updated_at\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.surface_generation.rule_ver · as_of · updated_at · back/ingest/common/db.py:136-156"
+ },
+ "T:active_release:grain": {
+  "t": "읽기 모드 × 규칙 서명 × 공개 범위의 현재 release = 1행.",
+  "v": "des",
+  "e": "NEWREQ release 이력/src_v8/newreq.js:4-7"
+ },
+ "T:active_release:pk": {
+  "t": "read_mode + rule_signature + scope",
+  "v": "des",
+  "e": "NEWREQ release 이력/src_v8/newreq.js:4-7"
+ },
+ "T:active_release:inputs": {
+  "t": "데이터 분석팀 · release",
+  "v": "des",
+  "e": "검토/README.md 7절 inputs 꼴 · NEWREQ release '검증 통과' 이력/src_v8/newreq.js:4-7 · 용어 데이터 분석팀(사용자 10-19)"
+ },
+ "T:active_release:triggers": {
+  "t": "검증 통과 뒤 짧은 트랜잭션으로 포인터 전환 (승인 없는 회차별 자동 생성은 20261015 논의 · A04 진행 중)",
+  "v": "des",
+  "e": "골드 공개 전환 설계 · 회의록: hmg-geo-hub-discussion-history/20261015/01_architecture.md:58 '골드는 승인 없이 회차마다 자동 생성'(논의 · 제안), A04 진행 중 (actions.md:22) · 알려진 오류 12_build"
+ },
+ "T:active_release:rule:0": {
+  "t": "기대한 이전 release 와 입력 버전을 확인한 뒤 전환해, 오래된 build 가 새 입력을 덮지 못하게 합니다.",
+  "v": "des",
+  "e": "골드 공개 전환 설계 (오래된 build 덮어쓰기 방지)"
+ },
+ "T:active_release:rule:1": {
+  "t": "version 이 오르면 공개 release 가 바뀐 것입니다. 읽는 쪽은 version 으로 앞서 읽은 값(목록을 이어 읽는 위치 포함)이 낡았는지 판단합니다.",
+  "v": "des",
+  "e": "조정자 지시 2026-10-20 (active_release.version = 공개 release 변경 신호, 캐시 표현 금지) · 현행 대응(문서 밖): back/app/core/pagination.py:136-137 (세대가 바뀌면 이어 읽기 커서 무효) · back/app/core/cycles.py:166 · back/db/DB-v2.32.sql:2437-2439"
+ }
+}

@@ -1,0 +1,917 @@
+{
+ "K:FAM": {
+  "t": "{\"dim\":\"공통 차원\",\"prompt\":\"프롬프트·웹 유닛\",\"fact\":\"답변 사실\",\"kpi\":\"KPI·언급 셀\",\"cit\":\"인용 셀\",\"acr\":\"ACR\",\"ga4\":\"GA4\",\"kw\":\"키워드\",\"soc\":\"소셜\",\"pub\":\"발행 세대\",\"build\":\"빌드·릴리스\",\"silver\":\"답변 원문\",\"queue\":\"BE 요청 큐\",\"vis\":\"AI Visibility\"}",
+  "v": "lbl",
+  "e": ""
+ },
+ "K:ACCEL": {
+  "t": "선택 사항입니다. 없으면 BE 가 지금처럼 사실 테이블에서 계산하고, 성능 병목이 확인된 계열부터 적재합니다.",
+  "v": "cur",
+  "e": "back/app/core/facts.py:41 (현행 BE 는 rd.answer · answer_brand · answer_stance · citation 을 조회 때 집계) · 설계: 셀 집계 선택(사용자 2026-10-20 결정 1)"
+ },
+ "K:LAYER": {
+  "t": "{\"gold\":\"골드\",\"app\":\"app (GEO HUB 소유)\",\"applist\":\"app (GEO HUB 소유)\",\"key\":\"키 묶음\",\"ghost\":\"\"}",
+  "v": "lbl",
+  "e": ""
+ },
+ "K:KGROUP": {
+  "t": "{\"지표\":\"지표\",\"표·차트\":\"표 · 차트\",\"목록\":\"목록 · 상세\",\"상세\":\"목록 · 상세\",\"필터 옵션\":\"필터 · 상태 표시\",\"고정 옵션\":\"필터 · 상태 표시\",\"상태 표시\":\"필터 · 상태 표시\",\"조작\":\"조작\",\"조회 실행\":\"조작\",\"쓰기\":\"쓰기\",\"쓰기 결과\":\"쓰기\",\"내보내기\":\"내보내기\",\"내보내기(화면 자료)\":\"내보내기\",\"화면 계산\":\"화면 계산\",\"정적 표본\":\"정적 표본\",\"화면 밖\":\"화면 밖 경로\"}",
+  "v": "lbl",
+  "e": "gen_data.py PROF 축약 16종 → 흐름 그림 10묶음, FEATURES 789 전부 매핑(기타 0)"
+ },
+ "K:SRC_LABEL": {
+  "t": "{\"static\":\"정적 표본\",\"client\":\"화면 자료\",\"front\":\"프론트 서버\",\"none\":\"요구 없음\",\"manual\":\"수동\"}",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:GEO HUB 골드 ERD": {
+  "t": "GEO HUB 골드 ERD",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:HMG GEO HUB · gold": {
+  "t": "HMG GEO HUB · gold",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:흐름": {
+  "t": "흐름",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:데이터 분석팀": {
+  "t": "데이터 분석팀",
+  "v": "des",
+  "e": "사용자 10-19 용어(골드를 채우는 쪽 = 데이터 분석팀)"
+ },
+ "H:gold 를 채움": {
+  "t": "gold 를 채움",
+  "v": "des",
+  "e": "사용자 10-19 (데이터 분석팀이 골드를 채움)"
+ },
+ "H:범위 · 적재 방식 협의 중": {
+  "t": "범위 · 적재 방식 협의 중",
+  "v": "dec",
+  "e": "hmg-geo-hub-discussion-history/glossary.md:16 · actions.md 20261015/A02 · 20261015/A04 (🟡 진행) · 20261015/01_architecture.md:54 · 58"
+ },
+ "H:(20261015/A02 · A04)": {
+  "t": "(20261015/A02 · A04)",
+  "v": "dec",
+  "e": "hmg-geo-hub-discussion-history/glossary.md:16 · actions.md 20261015/A02 · 20261015/A04 (🟡 진행) · 20261015/01_architecture.md:54 · 58"
+ },
+ "H:gold": {
+  "t": "gold",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:회차마다 자동 생성 · 검증 통과분만 공개": {
+  "t": "회차마다 자동 생성 · 검증 통과분만 공개",
+  "v": "dec",
+  "e": "hmg-geo-hub-discussion-history/20261015/01_architecture.md:58 (골드는 승인 없이 회차마다 자동 생성, 논의·제안) · 20261015/A04 · 설계: 검증 통과 release 공개(src/tables/12_build.js)"
+ },
+ "H:차원 · 프롬프트 · 웹 보고 유닛": {
+  "t": "차원 · 프롬프트 · 웹 보고 유닛",
+  "v": "des",
+  "e": "ERD 탭 dim · prompt (src/views.js)"
+ },
+ "H:답변 사실 · ACR · GA4 · 키워드 · 소셜": {
+  "t": "답변 사실 · ACR · GA4 · 키워드 · 소셜",
+  "v": "des",
+  "e": "ERD 탭 fact · acr · ga4 · kw · soc (src/views.js)"
+ },
+ "H:AI Visibility · 소셜 리서치 (신규)": {
+  "t": "AI Visibility · 소셜 리서치 (신규)",
+  "v": "des",
+  "e": "ERD 탭 vis · research, 테이블 cur 전부 \"없음 (신규\" (src/tables/08_vis.js · 15_research.js)"
+ },
+ "H:답변 원문 뷰": {
+  "t": "답변 원문 뷰",
+  "v": "des",
+  "e": "ERD 탭 silver · 사용자 2026-10-20 결정 2 (답변 원문 뷰 8개 골드)"
+ },
+ "H:셀 집계 (가속 · 선택)": {
+  "t": "셀 집계 (가속 · 선택)",
+  "v": "des",
+  "e": "ERD 탭 kpi · cit 셀 집계 rules ACCEL · 사용자 2026-10-20 결정 1"
+ },
+ "H:발행 세대 (카드 동결)": {
+  "t": "발행 세대 (카드 동결)",
+  "v": "des",
+  "e": "ERD 탭 pub (src/tables/11_pub.js, 현행 frz)"
+ },
+ "H:build · release · data_version": {
+  "t": "build · release · data_version",
+  "v": "des",
+  "e": "ERD 탭 build (src/tables/12_build.js)"
+ },
+ "H:범위 · 적재 방식 = 제안 (20261015/A02 · A04 진행)": {
+  "t": "범위 · 적재 방식 = 제안 (20261015/A02 · A04 진행)",
+  "v": "dec",
+  "e": "hmg-geo-hub-discussion-history/glossary.md:16 · actions.md 20261015/A02 · 20261015/A04 (🟡 진행) · 20261015/01_architecture.md:54 · 58 · 사용자 2026-10-20 결정 1"
+ },
+ "H:회의 용어집: 골드 = KPI 계산 레이어": {
+  "t": "회의 용어집: 골드 = KPI 계산 레이어",
+  "v": "dec",
+  "e": "hmg-geo-hub-discussion-history/glossary.md:16 (골드(KPI 계산)) · actions.md 20261015/A04 세부정보 · 20261015/01_architecture.md:54"
+ },
+ "H:이 문서: 사실 테이블 + 셀 집계(선택)": {
+  "t": "이 문서: 사실 테이블 + 셀 집계(선택)",
+  "v": "des",
+  "e": "사용자 2026-10-20 결정 1 (사실 테이블 중심 + 셀 집계 선택)"
+ },
+ "H:GEO HUB BE": {
+  "t": "GEO HUB BE",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:gold 읽기 전용": {
+  "t": "gold 읽기 전용",
+  "v": "des",
+  "e": "사용자 10-19 (BE 는 골드만 읽음)"
+ },
+ "H:(SELECT 만)": {
+  "t": "(SELECT 만)",
+  "v": "des",
+  "e": "사용자 10-19 · SCHEMAS gold rule 0"
+ },
+ "H:LIVE": {
+  "t": "LIVE",
+  "v": "des",
+  "e": "src/tables/12_build.js release.read_mode live · active_release"
+ },
+ "H:active_release": {
+  "t": "active_release",
+  "v": "des",
+  "e": "src/tables/12_build.js active_release (LIVE 조회 경로)"
+ },
+ "H:카드 경로 7개": {
+  "t": "카드 경로 7개",
+  "v": "cur",
+  "e": "back/app/core/card_routes.py:25-39 (CARD_ROUTES 7개)"
+ },
+ "H:publication.build_id": {
+  "t": "publication.build_id",
+  "v": "des",
+  "e": "src/tables/11_pub.js publication.build_id (카드 경로 고정 build)"
+ },
+ "H:화면 항목": {
+  "t": "화면 항목",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:지표": {
+  "t": "지표",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:0": {
+  "t": "0",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:표 · 차트": {
+  "t": "표 · 차트",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:목록 · 상세": {
+  "t": "목록 · 상세",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:필터 · 상태 표시": {
+  "t": "필터 · 상태 표시",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:조작": {
+  "t": "조작",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:쓰기": {
+  "t": "쓰기",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:내보내기": {
+  "t": "내보내기",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:화면 계산": {
+  "t": "화면 계산",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:정적 표본": {
+  "t": "정적 표본",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:화면 밖 경로": {
+  "t": "화면 밖 경로",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:합계": {
+  "t": "합계",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:★ 점검표 인벤토리 기준": {
+  "t": "★ 점검표 인벤토리 기준",
+  "v": "cur",
+  "e": "dump_inventory.py (★ 점검표 생성기 build_checklist.py SCREENS · TECHNICAL_AREAS → inventory.json 775 + 14) · gen_data.py FEATURES 789"
+ },
+ "H:적재": {
+  "t": "적재",
+  "v": "des",
+  "e": "데이터 분석팀 → gold 적재 (사용자 10-19)"
+ },
+ "H:SELECT": {
+  "t": "SELECT",
+  "v": "des",
+  "e": "BE 는 gold 를 SELECT 만 (사용자 10-19)"
+ },
+ "H:API": {
+  "t": "API",
+  "v": "lbl",
+  "e": "BE → 화면"
+ },
+ "H:app · GEO HUB 소유": {
+  "t": "app · GEO HUB 소유",
+  "v": "cur",
+  "e": "SCHEMAS app desc · db:app (BE api_rw 쓰기 권한)"
+ },
+ "H:자사 · 타겟 URL · 출처 교정 · 엔티티 · 프롬프트 카탈로그 · GA4 연동": {
+  "t": "자사 · 타겟 URL · 출처 교정 · 엔티티 · 프롬프트 카탈로그 · GA4 연동",
+  "v": "cur",
+  "e": "db:app.owned_base · project_owned_base · project_tracked_url · citation_domain_override · ecat_* · prompt · ga4_property"
+ },
+ "H:요청 큐 · 검수 · 사용자 · 감사": {
+  "t": "요청 큐 · 검수 · 사용자 · 감사",
+  "v": "cur",
+  "e": "db:app.judgment_change · scope_outbox · qa_* · user_account · *_audit_log"
+ },
+ "H:저장": {
+  "t": "저장",
+  "v": "cur",
+  "e": "back/app/core/db.py:47-50 (api_rw 쓰기 풀) · db:api_rw app 권한"
+ },
+ "H:judgment_change · scope_outbox → 재판정 · 수집 · 새 build": {
+  "t": "judgment_change · scope_outbox → 재판정 · 수집 · 새 build",
+  "v": "cur",
+  "e": "back/ingest/cycles/workers/service.py:7 (run_outbox → Scope) · back/ingest/cycles/workers/queries.py:22-24 (judgment_change 처리 · applied_load_id) · back/ingest/cycles/workers/dfs.py:1 (dfs_fetch 수집) · 설계: build (src/tables/12_build.js)"
+ },
+ "H:스키마": {
+  "t": "스키마",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:담는 것": {
+  "t": "담는 것",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:서비스 화면의 분석 데이터 (범위 제안)": {
+  "t": "서비스 화면의 분석 데이터 (범위 제안)",
+  "v": "dec",
+  "e": "hmg-geo-hub-discussion-history/glossary.md:16 · actions.md 20261015/A02 · 20261015/A04 (🟡 진행) · 20261015/01_architecture.md:54 · 58 · 사용자 10-19 (서비스가 필요한 데이터)"
+ },
+ "H:읽기 전용": {
+  "t": "읽기 전용",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:app": {
+  "t": "app",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:GEO HUB 설정 · 요청 큐 · 검수 · BE 전용 데이터": {
+  "t": "GEO HUB 설정 · 요청 큐 · 검수 · BE 전용 데이터",
+  "v": "cur",
+  "e": "APP_GROUPS (db:app 62 객체)"
+ },
+ "H:읽기": {
+  "t": "읽기",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:일부 갱신": {
+  "t": "일부 갱신",
+  "v": "cur",
+  "e": "db:column_privileges loader UPDATE judgment_change · scope_outbox · ecat_apply · ecat_review · project · prompt"
+ },
+ "H:rcache · mig": {
+  "t": "rcache · mig",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:BE 결과 캐시 · 이관 · 병행 운영 원장(migrator 전용)": {
+  "t": "BE 결과 캐시 · 이관 · 병행 운영 원장(migrator 전용)",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:2360 (rcache) · DB-v2.32.sql:744 (mig 이관 · 병행 운영 원장) · db:mig.* grants migrator 만"
+ },
+ "H:—": {
+  "t": "—",
+  "v": "cur",
+  "e": "db:loader 권한 rcache · mig 없음 (information_schema.role_table_grants)"
+ },
+ "H:rcache 읽기 · 쓰기": {
+  "t": "rcache 읽기 · 쓰기",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:2521-2524 (api_ro → result_cache_version · lookup · put)"
+ },
+ "H:현행에서 옮기는 곳:": {
+  "t": "현행에서 옮기는 곳:",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:rd": {
+  "t": "rd",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:→ gold": {
+  "t": "→ gold",
+  "v": "des",
+  "e": "gen_data.py OBJ (rd.* → 골드 테이블)"
+ },
+ "H:rd.v_answer_*": {
+  "t": "rd.v_answer_*",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:·": {
+  "t": "·",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:rd.v_acr_cell_run": {
+  "t": "rd.v_acr_cell_run",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:rd.v_entity_mention_surface": {
+  "t": "rd.v_entity_mention_surface",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:→ gold 답변 원문 뷰": {
+  "t": "→ gold 답변 원문 뷰",
+  "v": "des",
+  "e": "gen_data.py OBJ (rd.v_answer_* 6 · rd.v_acr_cell_run · rd.v_entity_mention_surface → 답변 원문 뷰 8)"
+ },
+ "H:frz": {
+  "t": "frz",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:→ gold 발행 세대": {
+  "t": "→ gold 발행 세대",
+  "v": "des",
+  "e": "gen_data.py OBJ · PATH · FACT_VIEW (frz.* → publication · pub_*)"
+ },
+ "H:ext.ctx_*": {
+  "t": "ext.ctx_*",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:→ gold 소셜": {
+  "t": "→ gold 소셜",
+  "v": "des",
+  "e": "gen_data.py OBJ (ext.ctx_* → ctx_*)"
+ },
+ "H:ing.load": {
+  "t": "ing.load",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:→ gold.build": {
+  "t": "→ gold.build",
+  "v": "des",
+  "e": "src/tables/12_build.js build cur \"ing.load (적재 이력) 의 역할을 대신\""
+ },
+ "H:rcache": {
+  "t": "rcache",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:mig": {
+  "t": "mig",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:→ 그대로": {
+  "t": "→ 그대로",
+  "v": "des",
+  "e": "SCHEMAS app · internal (현행 그대로 유지)"
+ },
+ "H:ERD": {
+  "t": "ERD",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:골드 테이블": {
+  "t": "골드 테이블",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:app (GEO HUB 소유)": {
+  "t": "app (GEO HUB 소유)",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:키 묶음 · 다른 탭 테이블": {
+  "t": "키 묶음 · 다른 탭 테이블",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:PK": {
+  "t": "PK",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:기본 키 ·": {
+  "t": "기본 키 ·",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:FK": {
+  "t": "FK",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:참조 ·": {
+  "t": "참조 ·",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:PF": {
+  "t": "PF",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:둘 다 ·": {
+  "t": "둘 다 ·",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:UK": {
+  "t": "UK",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:유일": {
+  "t": "유일",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:여러 행 쪽": {
+  "t": "여러 행 쪽",
+  "v": "lbl",
+  "e": "render.js:61-62"
+ },
+ "H:한 행 쪽": {
+  "t": "한 행 쪽",
+  "v": "lbl",
+  "e": "render.js:61-63"
+ },
+ "H:파생 · 요청 흐름": {
+  "t": "파생 · 요청 흐름",
+  "v": "lbl",
+  "e": "render.js:66-84 파생 점선 (SUM · 저장 → 요청)"
+ },
+ "H:데이터 분석팀 신규 · 변경 요청": {
+  "t": "데이터 분석팀 신규 · 변경 요청",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:화면 기능 전수 대응": {
+  "t": "화면 기능 전수 대응",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:현행 열 전수 대응": {
+  "t": "현행 열 전수 대응",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:BE 모듈 대응": {
+  "t": "BE 모듈 대응",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:데이터 분석팀이 gold 를 채우고 GEO HUB BE 가 gold 를 읽기 전용으로 읽어 화면에 낸다. BE 가 app 에 저장한 설정과 요청은 judgment_change · scope_outbox 로 데이터 분석팀에 넘어간다. 골드 범위 · 적재 방식은 제안이고 20261015/A02 · A04 에서 협의 중이다. 회의 용어집은 골드를 KPI 계산 레이어로 정의하고, 이 문서는 사실 테이블 + 선택적 셀 집계를 제안한다.": {
+  "t": "데이터 분석팀이 gold 를 채우고 GEO HUB BE 가 gold 를 읽기 전용으로 읽어 화면에 낸다. BE 가 app 에 저장한 설정과 요청은 judgment_change · scope_outbox 로 데이터 분석팀에 넘어간다. 골드 범위 · 적재 방식은 제안이고 20261015/A02 · A04 에서 협의 중이다. 회의 용어집은 골드를 KPI 계산 레이어로 정의하고, 이 문서는 사실 테이블 + 선택적 셀 집계를 제안한다.",
+  "v": "dec",
+  "e": "hmg-geo-hub-discussion-history/glossary.md:16 · actions.md 20261015/A02 · 20261015/A04 (🟡 진행) · 20261015/01_architecture.md:54 · 58 · 사용자 10-19 · 2026-10-20 결정 1"
+ },
+ "H:골드 테이블 묶음": {
+  "t": "골드 테이블 묶음",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:골드 ERD": {
+  "t": "골드 ERD",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:범례": {
+  "t": "범례",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:항목 · 라우트 · API · 테이블 검색": {
+  "t": "항목 · 라우트 · API · 테이블 검색",
+  "v": "lbl",
+  "e": ""
+ },
+ "H:화면 기능 검색": {
+  "t": "화면 기능 검색",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:다른 탭으로 이동: ": {
+  "t": "다른 탭으로 이동: ",
+  "v": "lbl",
+  "e": ""
+ },
+ "J: 탭": {
+  "t": " 탭",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:키 12열 · 공통 차원 탭": {
+  "t": "키 12열 · 공통 차원 탭",
+  "v": "cur",
+  "e": "src/tables/01_dim.js:2-6 (cell_key 물리 열 12: build_id · population_key · surface · project_key · cyc_key · round_date · bucket_date · prompt_key · engine_key · geo_key · lang_key · bgrp) · 탭 라벨 공통 차원"
+ },
+ "J:→ 자기 참조": {
+  "t": "→ 자기 참조",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:골드": {
+  "t": "골드",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:app (GEO HUB 소유)": {
+  "t": "app (GEO HUB 소유)",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:키 묶음": {
+  "t": "키 묶음",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:한 행": {
+  "t": "한 행",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:입력": {
+  "t": "입력",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:갱신": {
+  "t": "갱신",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:용도": {
+  "t": "용도",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:현행": {
+  "t": "현행",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:규칙": {
+  "t": "규칙",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:<thead><tr><th>열</th><th>키</th><th>설명</th><th>참조</th></tr></thead>": {
+  "t": "<thead><tr><th>열</th><th>키</th><th>설명</th><th>참조</th></tr></thead>",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:ERD 에서 보기": {
+  "t": "ERD 에서 보기",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:ERD 밖 테이블": {
+  "t": "ERD 밖 테이블",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:객체": {
+  "t": "객체",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:ERD 탭 열기": {
+  "t": "ERD 탭 열기",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:다른 스키마 참조 ${refs.length}": {
+  "t": "다른 스키마 참조 ${refs.length}",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:${t.id}.${c[0]} → ${ref}: 대상 없음": {
+  "t": "${t.id}.${c[0]} → ${ref}: 대상 없음",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:${t.id}.${c[0]}: 참조인데 FK/PF 표기 없음": {
+  "t": "${t.id}.${c[0]}: 참조인데 FK/PF 표기 없음",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:탭 ${v.id}: ${id} 없음": {
+  "t": "탭 ${v.id}: ${id} 없음",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:${t.id}: 어느 탭에도 없음": {
+  "t": "${t.id}: 어느 탭에도 없음",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:${t.id}: 열 ${x} 중복": {
+  "t": "${t.id}: 열 ${x} 중복",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:설명 없음": {
+  "t": "설명 없음",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:${tb} 없음": {
+  "t": "${tb} 없음",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:${e.t} 없음": {
+  "t": "${e.t} 없음",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:모듈 ${m} 없음": {
+  "t": "모듈 ${m} 없음",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:모듈 ${m} 미대응": {
+  "t": "모듈 ${m} 미대응",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:${r} 없음": {
+  "t": "${r} 없음",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:app.${a} 없음": {
+  "t": "app.${a} 없음",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:원 항목 '${f.ui}' 없음": {
+  "t": "원 항목 '${f.ui}' 없음",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:대응 없음": {
+  "t": "대응 없음",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:원 항목 미대응": {
+  "t": "원 항목 미대응",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:논리 설계 · DDL 아님": {
+  "t": "논리 설계 · DDL 아님",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:화면 항목 대응": {
+  "t": "화면 항목 대응",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:현행 열 대응": {
+  "t": "현행 열 대응",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:BE 모듈 대응": {
+  "t": "BE 모듈 대응",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:ERD 무결성 오류": {
+  "t": "ERD 무결성 오류",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:골드 테이블": {
+  "t": "골드 테이블",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:신규 요청": {
+  "t": "신규 요청",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:기준일": {
+  "t": "기준일",
+  "v": "lbl",
+  "e": "키트 데이터(db_cols.tsv · be_scan.json · inventory.json) 추출일 표기"
+ },
+ "J:미대응: ": {
+  "t": "미대응: ",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:기타": {
+  "t": "기타",
+  "v": "lbl",
+  "e": ""
+ },
+ "J: · ERD 에서 보기": {
+  "t": " · ERD 에서 보기",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:<thead><tr><th>#</th><th>골드 대상</th><th>구분</th><th>받는 화면 기능</th><th>채우는 방법 (제안)</th></tr></thead>": {
+  "t": "<thead><tr><th>#</th><th>골드 대상</th><th>구분</th><th>받는 화면 기능</th><th>채우는 방법 (제안)</th></tr></thead>",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:신규 테이블": {
+  "t": "신규 테이블",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:(화면 밖)": {
+  "t": "(화면 밖)",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:화면": {
+  "t": "화면",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:화면 항목": {
+  "t": "화면 항목",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:화면 밖": {
+  "t": "화면 밖",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:대응": {
+  "t": "대응",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:화면 밖 경로": {
+  "t": "화면 밖 경로",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:화면 ${g.screens.length} · 항목 ${n}": {
+  "t": "화면 ${g.screens.length} · 항목 ${n}",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:항목": {
+  "t": "항목",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:종류": {
+  "t": "종류",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:출처": {
+  "t": "출처",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:app · 요청": {
+  "t": "app · 요청",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:원 항목: ${f.ui}": {
+  "t": "원 항목: ${f.ui}",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:공통 · ": {
+  "t": "공통 · ",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:공통:": {
+  "t": "공통:",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:미대응": {
+  "t": "미대응",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:같은 열": {
+  "t": "같은 열",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:이름 변경": {
+  "t": "이름 변경",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:동결 경로": {
+  "t": "동결 경로",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:파생": {
+  "t": "파생",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:함수 대체": {
+  "t": "함수 대체",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:현행 객체": {
+  "t": "현행 객체",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:열": {
+  "t": "열",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:→ BE 계산": {
+  "t": "→ BE 계산",
+  "v": "cur",
+  "e": "gen_data.py FUNCS (rd.today_kst, OBJMAP 대상 없음) · back/db/DB-v2.32.sql:377"
+ },
+ "J:특이 ${special}": {
+  "t": "특이 ${special}",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:<thead><tr><th>현행 열</th><th>방식</th><th>골드 열</th><th>설명</th><th></th></tr></thead>": {
+  "t": "<thead><tr><th>현행 열</th><th>방식</th><th>골드 열</th><th>설명</th><th></th></tr></thead>",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:모듈": {
+  "t": "모듈",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:현행 객체 (직접)": {
+  "t": "현행 객체 (직접)",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:공통 경로": {
+  "t": "공통 경로",
+  "v": "lbl",
+  "e": ""
+ },
+ "J:app 쓰기 · 요청": {
+  "t": "app 쓰기 · 요청",
+  "v": "lbl",
+  "e": ""
+ }
+}

@@ -1,0 +1,547 @@
+{
+ "T:citation_cell:head": {
+  "t": "{\"name\":\"citation_cell\",\"s\":\"gold\",\"fam\":\"cit\",\"grain\":\"셀 × 관점 × 출처 × 소유 · 가속\"}",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell)"
+ },
+ "T:citation_cell:col:0": {
+  "t": "[\"C\",\"PF\",\"셀 키 12열\",\"cell_key\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · cell_key 12열(01_dim)"
+ },
+ "T:citation_cell:col:1": {
+  "t": "[\"perspective_key\",\"PF\",\"톤 · 유형 판정 관점\",\"dim_perspective\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 톤·유형이 관점 비트에 달림 back/app/core/measure.py:524-527 · back/app/features/analytics/citations/sources/queries.py:52-64"
+ },
+ "T:citation_cell:col:2": {
+  "t": "[\"source_key\",\"PF\",\"0 = 호스트 없음\",\"dim_source\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 현행 back/db/DB-v2.32.sql:507 (rd.citation.source_key DEFAULT 0) · back/app/core/measure.py:565-566 (호스트 있는 인용 = source_key <> 0)"
+ },
+ "T:citation_cell:col:3": {
+  "t": "[\"owner_key\",\"PF\",\"글로벌 자사 베이스 · 0 = 아님\",\"dim_owned_base\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 참조 = 골드 차원 dim_owned_base (README 배너: app 테이블은 골드 차원으로 투영) · 현행 back/db/DB-v2.32.sql:510 (owner_key DEFAULT 0) · back/ingest/project/apply/queries.py:944 (coalesce(u.owner_key, 0))"
+ },
+ "T:citation_cell:col:4": {
+  "t": "[\"category_key\",\"FK\",\"빌드 시점 유효 카테고리\",\"dim_category\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 카테고리는 source_key 종속(유효 카테고리 back/app/core/measure.py:549-553)"
+ },
+ "T:citation_cell:col:5": {
+  "t": "[\"loc_owned · tgt_hit\",\"PK\",\"웹 · 프로젝트 자사 · 타겟 판정\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 현행 back/db/DB-v2.32.sql:512 (rd.citation loc_owned·tgt_hit) · back/app/core/measure.py:536-538"
+ },
+ "T:citation_cell:col:6": {
+  "t": "[\"citations\",\"\",\"인용 원소 수\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 현행 식 back/app/features/analytics/citations/domains/queries.py:207-208 (count(*))"
+ },
+ "T:citation_cell:col:7": {
+  "t": "[\"source_first_count\",\"\",\"Σsrc_first = 인용 답변 수\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 현행 식 back/app/features/analytics/citations/domains/queries.py:210 (citing_answers = count FILTER src_first)"
+ },
+ "T:citation_cell:col:8": {
+  "t": "[\"cit_t_mention … cit_t_final_choice\",\"\",\"유형 신호 당사 답변의 인용\",\"\",[\"cit_t_mention\",\"cit_t_recommendation\",\"cit_t_comparison\",\"cit_t_definition\",\"cit_t_final_choice\"]]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 현행 식 back/app/features/analytics/citations/sources/queries.py:52-64, 94-108 (유형 신호 당사 답변의 인용 수)"
+ },
+ "T:citation_cell:col:9": {
+  "t": "[\"cit_pos · cit_neg\",\"\",\"긍정 · 부정 톤 답변의 인용\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 현행 식 back/app/features/analytics/citations/sources/queries.py:245-312 (tone_sql pos·neg_citations) · back/app/core/measure.py:524-527"
+ },
+ "T:citation_cell:grain": {
+  "t": "셀(C) × 관점 × 출처 × 소유 베이스 × 자사 · 타겟 판정 = 1행.",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell)"
+ },
+ "T:citation_cell:pk": {
+  "t": "C(12) + perspective_key + source_key + owner_key + loc_owned + tgt_hit",
+  "v": "lbl",
+  "e": ""
+ },
+ "T:citation_cell:inputs": {
+  "t": "데이터 분석팀 (출처 제안: 같은 build 의 citation_fact + answer_fact 톤 · 유형 비트)",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 신규 테이블 inputs 형식(README 4)"
+ },
+ "T:citation_cell:triggers": {
+  "t": "사실 build 와 같은 빌드",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell)"
+ },
+ "T:citation_cell:uses": {
+  "t": "Answer analysis › Citation 도메인 순위 · 출처 카테고리 · 유형 × 카테고리 · 톤 인용 수, Overview · Dashboard 도메인 카드, 글로벌 자사 인용 수(국가 2개 이상 · 언어 · 출처 축으로 좁힐 때)",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 현행 소비 back/app/features/analytics/citations/domains/queries.py:183-224 · back/app/features/analytics/citations/sources/queries.py:67-110, 245-312 · inventory.json /v1/citations/domains = Overview · Dashboard · Answer analysis 메뉴 · 글로벌 자사 원소 경로 back/app/core/measure.py:734-753 · README 7 API 경로 삭제"
+ },
+ "T:citation_cell:rule:0": {
+  "t": "선택 사항입니다. 없으면 사실 테이블에서 조회 때 계산하고, 성능 병목이 확인된 계열부터 적재합니다.",
+  "v": "des",
+  "e": "README 5-1 셀 집계는 선택(가속) · 00_head.js ACCEL (page 원장 K:ACCEL)"
+ },
+ "T:citation_cell:rule:1": {
+  "t": "자사 판정은 표면별입니다: global = owner_key = ANY(허용 배열), website = loc_owned ∨ tgt_hit, project = loc_owned.",
+  "v": "cur",
+  "e": "back/app/core/measure.py:530-538 (own_expr)"
+ },
+ "T:citation_cell:rule:2": {
+  "t": "category_key 는 빌드 시점 값입니다. 화면의 유효 카테고리는 조회 때 source_key 로 dim_source.category_key 를 다시 읽어, 셀을 다시 만들기 전의 출처 카테고리 교정도 반영합니다.",
+  "v": "des",
+  "e": "설계: 셀의 category_key 는 빌드 시점 값, 화면 카테고리는 source_key → dim_source.category_key 재조회 · 근거: 현행도 조회 때 유효 카테고리를 다시 풀어 교정을 재판정 전에 반영 back/app/core/measure.py:549-553 (CATEGORY_EXPR) · back/app/features/analytics/citations/sources/queries.py:120-122 (답변 열은 반영된 카테고리, 조회 식은 교정 즉시) · README 7 현행 식·app 삭제"
+ },
+ "T:citation_cell:rule:3": {
+  "t": "자사 미인용 = 인용(호스트 있는)은 1건 이상인데 자사 인용이 0 인 프롬프트입니다.",
+  "v": "cur",
+  "e": "back/app/features/analytics/citations/prompts/queries.py:87-100 (cit_total > 0 ∧ sum(owned_cites) > 0 = owned, NOT owned = n_uncited) · back/app/features/analytics/citations/prompts/service.py:91-92 (호스트 있는 인용)"
+ },
+ "T:citation_cell:rule:4": {
+  "t": "셀로 내지 않는 값은 사실을 읽습니다: 톤 URL 수 · 답변 수와 URL 목록, 언급 브랜드 조건, 도메인 상세 · 답변 표본.",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 셀로 못 내는 값: back/app/features/analytics/citations/sources/queries.py:268-312 (톤 URL 고유 수·답변 수) · back/app/features/analytics/citations/domains/queries.py:93-99 (언급 브랜드 조건) · back/app/features/analytics/citations/domain_detail/queries.py · back/app/features/analytics/citations/prompts/queries.py:110-133 (답변 표본) · README 7 API 파라미터 이름 삭제"
+ },
+ "T:url_prompt_cell:head": {
+  "t": "{\"name\":\"url_prompt_cell\",\"s\":\"gold\",\"fam\":\"cit\",\"grain\":\"셀(C) · 가속\"}",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell)"
+ },
+ "T:url_prompt_cell:col:0": {
+  "t": "[\"C\",\"PF\",\"셀 키 12열\",\"cell_key\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · cell_key 12열(01_dim)"
+ },
+ "T:url_prompt_cell:col:1": {
+  "t": "[\"eligible\",\"\",\"URL 모수 답변 있음\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 현행 식 back/app/core/measure.py:723-726 (url_measured_prompts 모수)"
+ },
+ "T:url_prompt_cell:col:2": {
+  "t": "[\"any_target · any_owned\",\"\",\"타겟 · 자사 인용 답변 있음\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 현행 식 back/app/core/measure.py:727-728 (url_target·owned_prompts)"
+ },
+ "T:url_prompt_cell:col:3": {
+  "t": "[\"url_den\",\"\",\"URL 모수 답변 수 (website = web_reg)\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 현행 식 back/app/core/measure.py:674-675 (website = web_reg, project 게이트 없음)"
+ },
+ "T:url_prompt_cell:col:4": {
+  "t": "[\"tgt_hits · own_url_hits\",\"\",\"타겟 · 자사 URL 인용 답변 수\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 현행 식 back/app/core/measure.py:676-677"
+ },
+ "T:url_prompt_cell:col:5": {
+  "t": "[\"tgt_own_hits\",\"\",\"⑥ 분자 (타겟 ∧ 자사)\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 현행 식 back/app/core/measure.py:678, 881 (citation_accuracy = tgt_own_hits ÷ own_url_hits)"
+ },
+ "T:url_prompt_cell:grain": {
+  "t": "셀(C) 1개 = 1행.",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell)"
+ },
+ "T:url_prompt_cell:pk": {
+  "t": "C(12)",
+  "v": "lbl",
+  "e": ""
+ },
+ "T:url_prompt_cell:inputs": {
+  "t": "데이터 분석팀 (출처 제안: 같은 build 의 answer_fact tgt_cited · own_url_cited · web_reg)",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 신규 테이블 inputs 형식(README 4)"
+ },
+ "T:url_prompt_cell:triggers": {
+  "t": "사실 build 와 같은 빌드",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell)"
+ },
+ "T:url_prompt_cell:uses": {
+  "t": "Website 자사 · 타겟 URL 인용률 카드(라이브 값), ⑥ AI 타겟 출처 인용률 (Website · Project)",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 현행 소비 back/app/features/analytics/kpi/summary/service.py:174-176, 219-227 · inventory.json Website › Overview 자사·타겟 URL 인용률 카드 · AI 타겟 출처 인용률 카드 · Project Dashboard AI 타겟 출처 인용률 · back/app/features/analytics/trend/series/service.py:21-29 · README 7 API 경로 삭제"
+ },
+ "T:url_prompt_cell:rule:0": {
+  "t": "선택 사항입니다. 없으면 사실 테이블에서 조회 때 계산하고, 성능 병목이 확인된 계열부터 적재합니다.",
+  "v": "des",
+  "e": "README 5-1 셀 집계는 선택(가속) · 00_head.js ACCEL (page 원장 K:ACCEL)"
+ },
+ "T:url_prompt_cell:rule:1": {
+  "t": "Website 프롬프트 단위(측정 · 타겟 · 자사 프롬프트 수)는 eligible · any_* 를 prompt_key 로 OR 해 셉니다. 율 · ⑥ 은 답변 수 합입니다.",
+  "v": "cur",
+  "e": "back/app/core/measure.py:23-24, 712-732 (프롬프트 단위 = count DISTINCT prompt_key, bool_or) · back/app/core/measure.py:673-678, 878-881 (율·⑥ = 답변 수) · back/app/features/analytics/kpi/summary/service.py:174-176 (url_prompts 는 website 만) · 설계: any_* OR"
+ },
+ "T:url_prompt_cell:rule:2": {
+  "t": "⑥ 의 다른 정의는 셀로 내지 않습니다: Website 보고 유닛 플래그 기준 · 사이트 타겟 URL 집합(web_target_url) 기준, Project 단일 자사 베이스 · 추적 URL 기준.",
+  "v": "cur",
+  "e": "back/app/core/measure.py:1321-1336 (Website ⑥ 다른 정의: 보고 유닛 플래그 unit_owned·unit_target, 화면 사이트 전체 타겟 URL 집합 rd.web_target_url) · back/app/core/measure.py:1401-1408 (Project ⑥ 다른 정의: 유효 자사 베이스 하나 · 추적 URL 정규형) · 설계: 셀 밖 · README 7 스위치 이름·frz·app 삭제"
+ },
+ "T:report_value:head": {
+  "t": "{\"name\":\"report_value\",\"s\":\"gold\",\"fam\":\"cit\",\"grain\":\"회차일 × 보고 유닛 발행값\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:708-712 (PK (round_date, file_seq)) · back/ingest/cycles/ledger/queries.py:292-304"
+ },
+ "T:report_value:col:0": {
+  "t": "[\"build_id\",\"PF\",\"빌드\",\"build\"]",
+  "v": "cur",
+  "e": "db:rd.report_unit_value.load_id · coverage_data.js COLMAP load_id → build_id · 설계: build_id (PK 포함, build 참조) — 다른 사실 테이블과 같음 · README 7 현행 열 대응 삭제"
+ },
+ "T:report_value:col:1": {
+  "t": "[\"pub_id\",\"\",\"활성 발행 ID\"]",
+  "v": "cur",
+  "e": "back/ingest/cycles/ledger/queries.py:299, 301-302 (p.id, p.status = active)"
+ },
+ "T:report_value:col:2": {
+  "t": "[\"round_date · file_seq\",\"PK\",\"회차일 · 보고 유닛\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:712 PRIMARY KEY (round_date, file_seq)"
+ },
+ "T:report_value:col:3": {
+  "t": "[\"cyc_key\",\"FK\",\"웹 유닛 프로젝트 회차 · NULL 가능\",\"dim_cycle\"]",
+  "v": "cur",
+  "e": "back/ingest/cycles/ledger/queries.py:297-298 (web_unit ⋈ rd.cycle surface 2 의 cyc_key, 없으면 NULL) · back/db/DB-v2.32.sql:708 (cyc_key int4 NULL 허용) · 설계: dim_cycle FK"
+ },
+ "T:report_value:col:4": {
+  "t": "[\"brand · country_code · lang_code\",\"\",\"발행물 표기 (발행 선택 축)\"]",
+  "v": "cur",
+  "e": "back/ingest/cycles/ledger/queries.py:299 · back/app/core/measure.py:925-933 (brand·country_code·lang_code 선택) · back/app/core/measure.py:1100-1144"
+ },
+ "T:report_value:col:5": {
+  "t": "[\"in_headline_pool\",\"\",\"헤드라인 풀\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:709 · back/app/core/measure.py:939-944 (헤드라인 풀)"
+ },
+ "T:report_value:col:6": {
+  "t": "[\"target_hit_prompts · measured_prompts\",\"\",\"타겟 인용 · 측정 프롬프트\"]",
+  "v": "cur",
+  "e": "back/app/core/measure.py:958 (target = target_hit ÷ measured) · back/app/core/measure.py:962"
+ },
+ "T:report_value:col:7": {
+  "t": "[\"owned_prompts · owned_prompts_den\",\"\",\"자사 인용 프롬프트 · 자사 분모\"]",
+  "v": "cur",
+  "e": "back/app/core/measure.py:958 (owned = owned ÷ owned_den)"
+ },
+ "T:report_value:col:8": {
+  "t": "[\"prev_*\",\"\",\"전 회차 4종 · 화면 미사용\",\"\",[\"prev_target_hit_prompts\",\"prev_measured_prompts\",\"prev_owned_prompts\",\"prev_owned_prompts_den\"]]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:711 (prev_* 4열) · back/app 에 prev_* 참조 없음 (grep back/app/**/*.py) → 화면에 닿지 않음"
+ },
+ "T:report_value:grain": {
+  "t": "빌드 × 회차일 × 보고 유닛(file_seq) 1개 = 1행. 그 자리 활성 발행 중 최신 1건의 값입니다.",
+  "v": "cur",
+  "e": "back/ingest/cycles/ledger/queries.py:292-304 (DISTINCT ON (round_date, file_seq), status active) · 설계: build_id"
+ },
+ "T:report_value:pk": {
+  "t": "build_id + round_date + file_seq",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:712 · 설계: build_id 추가"
+ },
+ "T:report_value:inputs": {
+  "t": "데이터 분석팀 (출처 제안: 웹사이트 발행 리포트의 활성 발행본 사이트 값)",
+  "v": "des",
+  "e": "설계: 신규 꼴 inputs (README 7 '데이터 분석팀 (출처 제안: …)') · 현행 원천 back/ingest/cycles/ledger/queries.py:292-304 (app.report_publication ⋈ app.report_site_fact, status active) · README 배너 app 이름 삭제"
+ },
+ "T:report_value:triggers": {
+  "t": "발행 리포트가 바뀔 때 그 발행의 회차일 행 전부 교체",
+  "v": "cur",
+  "e": "back/ingest/cycles/ledger/service.py:301-318 (발행 변경 처리 때 그 발행의 round_date 행 DELETE·INSERT) · back/ingest/cycles/ledger/queries.py:286-291 · 설계: README 7 judgment_change·현행 생산자 서술 삭제"
+ },
+ "T:report_value:uses": {
+  "t": "Website › Overview · Website › Answer analysis › Citation 자사 · 타겟 URL 인용률 카드의 발행값",
+  "v": "cur",
+  "e": "back/app/features/analytics/kpi/summary/service.py:219-227 · back/app/core/measure.py:957-967 · front/lib/hgh/adapters/summary.ts:218-240 · inventory.json Website › Overview · Website › Answer analysis › Citation 자사·타겟 URL 인용률 카드 · README 7 API 경로·화면 없는 용도·R09 삭제"
+ },
+ "T:report_value:rule:0": {
+  "t": "발행값을 원문 재계산값으로 자동 교체하지 않습니다.",
+  "v": "cur",
+  "e": "back/app/core/measure.py:1191-1217 (발행 회차는 발행값 그대로) · back/ingest/cycles/ledger/queries.py:292-304 (report_site_fact 값 복사)"
+ },
+ "T:report_value:rule:1": {
+  "t": "발행 유닛을 답변 수로 가중하지 않습니다 (유닛 프롬프트 수 합).",
+  "v": "cur",
+  "e": "back/app/core/measure.py:940-941, 1147-1156 (유닛 프롬프트 수 합)"
+ },
+ "T:report_value:rule:2": {
+  "t": "같은 (round_date, file_seq) 에 활성 발행이 여럿이면 발행일이 가장 늦은 1건(발행일 없음은 맨 뒤, 같으면 수집 시각이 늦은 것)만 둡니다.",
+  "v": "cur",
+  "e": "back/ingest/cycles/ledger/queries.py:296, 303 (DISTINCT ON (round_date, file_seq) ORDER BY published_on DESC NULLS LAST, ingested_at DESC, id) · README 7 app 열 이름 대신 뜻"
+ },
+ "T:report_value:rule:3": {
+  "t": "웹사이트 활성 발행만 담습니다. 발행값은 엔진 축이 없고 회차가 하나(스냅샷 또는 시작 = 끝)일 때만 쓰고, 그 밖에는 라이브 값입니다. 발행 리포트와 같은 라우팅을 고르면 출처 · 택소노미 · 커스텀 축이나 발행물 선택 거부(권한 · 브랜드 어휘 · 어휘 분기)도 라이브입니다.",
+  "v": "cur",
+  "e": "back/app/core/measure.py:937 (status active ∧ surface website 만 읽음) · back/app/core/measure.py:978-994 (r09_reason: 엔진 축 · 기간 범위면 라이브, 스냅샷 또는 lo = hi 만 발행값) · back/app/core/measure.py:1017 (발행 리포트 라우팅 폴백 축: engine·source·funnel·brand_presence·list_type·depth1~4·custom), 1046-1064 (from = to 하루만) · back/app/core/measure.py:1100-1144 (권한·브랜드 어휘·어휘 분기) · back/app/core/profile.py:132-137 (발행 리포트 라우팅) · 설계: 웹사이트 활성 발행만 담음 (BE 는 골드만 읽음, README 5-2) · README 7 스위치·R09·BE 주어 삭제"
+ },
+ "T:dim_source:head": {
+  "t": "{\"name\":\"dim_source\",\"s\":\"gold\",\"fam\":\"cit\",\"grain\":\"출처(도메인 · 소셜 계정) 1개\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:410-415 · back/ingest/project/apply/queries.py:681 (skey = 소셜 도메인이면 group_key, 아니면 domain)"
+ },
+ "T:dim_source:col:0": {
+  "t": "[\"source_key\",\"PK\",\"int4 · 0 = 호스트 없음\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:410 · db:rd.dim_source source_key 0 행 (skey 빈 문자열) · back/app/core/measure.py:565-566"
+ },
+ "T:dim_source:col:1": {
+  "t": "[\"skey\",\"UK\",\"출처 그룹 키 (공식 소셜 계정은 계정 키)\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:410 (UNIQUE) · back/ingest/project/apply/queries.py:681 · back/migration/seed/seed-3x-common.sql:375-376 (공식 소셜 계정이면 계정 키)"
+ },
+ "T:dim_source:col:2": {
+  "t": "[\"domain · is_social\",\"\",\"대표 도메인 · skey ≠ domain\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:685-687 (대표 도메인 = 첫 발급 값, is_social = skey <> domain)"
+ },
+ "T:dim_source:col:3": {
+  "t": "[\"category_key\",\"FK\",\"\",\"dim_category\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:411 (FK app.citation_category)"
+ },
+ "T:dim_source:col:4": {
+  "t": "[\"category_src\",\"\",\"1 교정 2 공식 소셜 3 당사 도메인 4 시드 5 규칙 6 Other\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:412 (CHECK 1~6) · back/migration/seed/seed-3x-common.sql:351-357 (1 교정 2 공식 소셜 3 당사 도메인 4 시드 5 규칙 6 Other)"
+ },
+ "T:dim_source:col:5": {
+  "t": "[\"owned_brand_bit\",\"\",\"당사 공식 도메인 비트 · 0 = 아님\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:413 · back/ingest/project/apply/queries.py:693 (coalesce(ob.brand_bit, 0)) · back/migration/seed/seed-3x-common.sql:342-346"
+ },
+ "T:dim_source:col:6": {
+  "t": "[\"competitor_brand_key\",\"FK\",\"공식(경쟁사) 도메인 브랜드\",\"dim_brand\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:414 · back/ingest/project/apply/queries.py:690 (Official (Competitor) → competitor_brand_of)"
+ },
+ "T:dim_source:col:7": {
+  "t": "[\"rule_ver\",\"\",\"판정 규칙 버전\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:415 · back/ingest/project/apply/queries.py:693 ($1 = rule_ver)"
+ },
+ "T:dim_source:grain": {
+  "t": "출처 그룹 키 1개 = 1행.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:410 (skey UNIQUE)"
+ },
+ "T:dim_source:pk": {
+  "t": "source_key",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:410"
+ },
+ "T:dim_source:inputs": {
+  "t": "데이터 분석팀 · dim_category · dim_brand",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:692-698 (category_key = app.citation_category 조인 → 골드 dim_category, competitor_brand_key = rd.dim_brand_name 조인 → 골드 dim_brand) · README 7 inputs 꼴 '데이터 분석팀 · <골드 테이블>' · app 이름 삭제"
+ },
+ "T:dim_source:uses": {
+  "t": "도메인 순위 · 출처 카테고리 · 경쟁사 출처 · 추이 출처 구성 · 출처 필터 옵션 · 답변 도메인 필터 · 답변 인용 카테고리 · Admin › Global config › 인용 출처 분류",
+  "v": "cur",
+  "e": "back/app/features/analytics/citations/domains/queries.py:222-223 · back/app/features/analytics/citations/sources/queries.py:96-104 · back/app/features/analytics/citations/prompts/service.py:92 · back/app/features/analytics/trend/series/queries.py:193-197 · back/app/features/analytics/filters/options/queries.py:77-84 · back/app/features/analytics/answers/list/queries.py:40 · back/app/features/analytics/answers/detail/queries.py:138 · back/app/features/admin/citation_sources/overrides/queries.py:29, 68-71 · README 7 API 경로 삭제"
+ },
+ "T:dim_url:head": {
+  "t": "{\"name\":\"dim_url\",\"s\":\"gold\",\"fam\":\"cit\",\"grain\":\"URL 1개 (인용 · 자사 페이지)\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:417-419 · 설계: 자사 페이지 행 (NEWREQ dim_url)"
+ },
+ "T:dim_url:col:0": {
+  "t": "[\"url_key\",\"PK\",\"int4 · 0 예약\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:417 (0 예약)"
+ },
+ "T:dim_url:col:1": {
+  "t": "[\"url_hash\",\"UK\",\"sha256(원문 URL)\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:418 (UNIQUE) · back/ingest/project/apply/queries.py:677 (sha256(convert_to(url)))"
+ },
+ "T:dim_url:col:2": {
+  "t": "[\"url · title\",\"\",\"원문 · 최빈 제목\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:418-419 · back/ingest/project/apply/queries.py:673-679 (title = 최빈)"
+ },
+ "T:dim_url:col:3": {
+  "t": "[\"url_norm · url_base_norm\",\"\",\"정규형 · 베이스 정규형\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:677 (cit_norm · cit_base_norm)"
+ },
+ "T:dim_url:col:4": {
+  "t": "[\"host · domain\",\"\",\"host (최빈, 없으면 URL) · 최빈 도메인\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:673-679 (host = 최빈, 없으면 cit_norm 첫 마디 · domain = 최빈)"
+ },
+ "T:dim_url:col:5": {
+  "t": "[\"source_key\",\"FK\",\"\",\"dim_source\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:419 (FK rd.dim_source)"
+ },
+ "T:dim_url:col:6": {
+  "t": "[\"owner_key\",\"FK\",\"글로벌 자사 베이스 · NULL = 아님\",\"dim_owned_base\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:419 (owner_key NULL 허용) · back/ingest/project/apply/queries.py:682 · back/migration/seed/seed-3x-common.sql:390-398 (owner_key_of) · 설계: 참조 = 골드 차원 dim_owned_base (README 배너)"
+ },
+ "T:dim_url:col:7": {
+  "t": "[\"rule_ver\",\"\",\"판정 규칙 버전\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:419"
+ },
+ "T:dim_url:grain": {
+  "t": "원문 URL 1개 = 1행. 인용 URL 과 자사 사이트 페이지를 담습니다.",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:664-680 (원문 url 단위) · 설계: 자사 사이트 페이지 행 (NEWREQ dim_url)"
+ },
+ "T:dim_url:pk": {
+  "t": "url_key",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:417"
+ },
+ "T:dim_url:inputs": {
+  "t": "데이터 분석팀 · dim_source · dim_owned_base (출처 제안: 인용 URL + 자사 사이트 페이지 목록)",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:681-682 (skey → dim_source, owner_key_of → owned_base) · back/migration/seed/seed-3x-common.sql:390-398 · 설계: 골드 차원 dim_source·dim_owned_base, 자사 사이트 페이지 목록 출처 제안 (NEWREQ dim_url)"
+ },
+ "T:dim_url:uses": {
+  "t": "인용 URL 목록(톤 · 도메인 상세), 답변 · 검수 상세 인용, Project ⑥ 단일 자사 베이스 판정(url_norm), AI Visibility 페이지 URL",
+  "v": "cur",
+  "e": "back/app/features/analytics/citations/tone/queries.py:33 · back/app/features/analytics/citations/domain_detail/queries.py:53 · back/app/features/analytics/answers/detail/queries.py:137 · back/app/features/qa/answers/detail/queries.py:38-56 · back/app/core/measure.py:1401-1408, 1476-1478 (Project ⑥ 단일 자사 베이스 판정 url_norm) · 설계: AI Visibility 페이지 (08_vis) · README 7 API 경로·(신규 공급)·레거시 표지 삭제"
+ },
+ "T:dim_url:rule:0": {
+  "t": "url_key 는 원문 URL(url_hash = sha256(url)) 단위입니다. 인용되지 않은 자사 사이트 페이지도 행을 만들고, AI Visibility 페이지는 url_norm 으로 인용 URL 과 맞춥니다.",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:677 · back/ingest/project/apply/queries.py:710-728 (url_hash 로 갱신·삽입) · 설계: NEWREQ dim_url (자사 페이지 · url_norm 대응)"
+ },
+ "T:dim_category:head": {
+  "t": "{\"name\":\"dim_category\",\"s\":\"gold\",\"fam\":\"cit\",\"grain\":\"출처 카테고리 1개\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:56 · db:app.citation_category 13행"
+ },
+ "T:dim_category:col:0": {
+  "t": "[\"category_key\",\"PK\",\"int2 · 1~13\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:56 · back/migration/seed/seed-10-app.sql:49-50 (키 1..13)"
+ },
+ "T:dim_category:col:1": {
+  "t": "[\"name\",\"UK\",\"Official (HMG) … Other\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:56 (name UNIQUE) · db:app.citation_category (Official (HMG) ~ Other)"
+ },
+ "T:dim_category:col:2": {
+  "t": "[\"slug\",\"\",\"camelCase 코드\"]",
+  "v": "cur",
+  "e": "db:app.citation_category slug (officialHmg 등) · back/migration/seed/seed-10-app.sql:49-50"
+ },
+ "T:dim_category:col:3": {
+  "t": "[\"ord\",\"\",\"표시 순서\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:56 (ord) · back/app/features/analytics/citations/domains/shared.py:98 (ord 순)"
+ },
+ "T:dim_category:grain": {
+  "t": "출처 카테고리 1개 = 1행.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:56"
+ },
+ "T:dim_category:pk": {
+  "t": "category_key",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:56"
+ },
+ "T:dim_category:inputs": {
+  "t": "데이터 분석팀 (출처 제안: GEO HUB 출처 카테고리 코드표의 투영)",
+  "v": "des",
+  "e": "설계: 골드 차원 투영 (README 배너 · 사용자 지시 2026-10-20) · README 7 inputs 꼴 '데이터 분석팀 (출처 제안: …)' · 원천 back/db/DB-v2.32.sql:56 (13행 코드표)"
+ },
+ "T:dim_category:uses": {
+  "t": "출처 카테고리 분포 · 추이 · 필터 옵션, 공식(HMG) · 딜러·마켓 비중, 인용 출처 분류 카테고리 목록",
+  "v": "cur",
+  "e": "back/app/features/analytics/citations/sources/service.py:3 · back/app/features/analytics/filters/options/queries.py:84 · back/app/features/admin/citation_sources/overrides/router.py:49 · back/app/features/analytics/trend/series/queries.py:182-197 (category 구성) · inventory.json Global › Answer analysis › Citation 공식(HMG)·딜러·마켓 인용 비중 카드"
+ },
+ "T:dim_category:rule:0": {
+  "t": "category_key k 는 answer_fact.cit_c<k> 열의 번호입니다 (1~13).",
+  "v": "cur",
+  "e": "back/app/features/analytics/citations/sources/queries.py:116 (cit_c<k> = 출처 카테고리 category_key k 인 수), 124 (CAT_KEYS 1..13 = cit_c1..cit_c13) · 03_fact answer_fact 'cit_c1 … cit_c13'"
+ },
+ "T:dim_owned_base:head": {
+  "t": "{\"name\":\"dim_owned_base\",\"s\":\"gold\",\"fam\":\"cit\",\"grain\":\"당사 소유 URL 베이스 1개\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:59-61 (app.owned_base 당사 소유 URL 베이스) · 설계: 골드 차원 dim_owned_base 로 투영 (README 배너)"
+ },
+ "T:dim_owned_base:col:0": {
+  "t": "[\"owner_key\",\"PK\",\"int2 · 0 = 자사 아님 표식\"]",
+  "v": "des",
+  "e": "db:app.owned_base.owner_key (int2) · 설계: 0 = 자사 아님 표식 행 (citation_cell.owner_key 0 = 아님, src/tables/05_cit.js; dim_country geo_key 0 · dim_url url_key 0 예약과 같은 방식)"
+ },
+ "T:dim_owned_base:col:1": {
+  "t": "[\"kind\",\"\",\"base · root_home\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:59 CHECK (base, root_home)"
+ },
+ "T:dim_owned_base:col:2": {
+  "t": "[\"prefix · host\",\"\",\"접두 · 호스트 · UNIQUE(kind, prefix)\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:60-61 UNIQUE (kind, prefix)"
+ },
+ "T:dim_owned_base:col:3": {
+  "t": "[\"brand_code · brand_bit\",\"\",\"Hyundai 1 · Kia 2 · Genesis 4\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:60 (brand_code) · back/migration/seed/seed-10-app.sql:75-286 (brand_code 값 Hyundai·Kia·Genesis) · db:app.brand.brand_bit (Hyundai 1·Kia 2·Genesis 4) · 설계: app.brand FK 대신 brand_bit 값 열 — 관점 own_bits 와 맞추는 비트, 현행 back/app/core/filters.py:804-811 · back/app/core/measure.py:100-121 · back/app/core/codes.py:146-158 (관점 비트 → brand_code)"
+ },
+ "T:dim_owned_base:col:4": {
+  "t": "[\"geo_code · language\",\"\",\"국가 · 언어 필터 좁힘\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:60 · back/app/core/measure.py:100-121 (국가·언어로 허용 배열 좁힘)"
+ },
+ "T:dim_owned_base:grain": {
+  "t": "당사 소유 URL 베이스 1개 = 1행.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:59 (owner_key PK = 베이스 1개)"
+ },
+ "T:dim_owned_base:pk": {
+  "t": "owner_key",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:59"
+ },
+ "T:dim_owned_base:inputs": {
+  "t": "데이터 분석팀 (출처 제안: GEO HUB 자사 URL 베이스 설정의 투영)",
+  "v": "des",
+  "e": "설계: 골드 차원 투영 (README 배너 · 조정자 지시: GEO HUB 자사 베이스 설정의 투영, app 이름 없이) · README 7 inputs 꼴 '데이터 분석팀 (출처 제안: …)' · 원천 back/db/DB-v2.32.sql:59-61"
+ },
+ "T:dim_owned_base:triggers": {
+  "t": "자사 URL 베이스 설정이 바뀔 때",
+  "v": "des",
+  "e": "설계: 설정이 바뀌면 다시 만듦 · 현행 재판정 kind owned_base back/ingest/project/apply/rejudge.py:7"
+ },
+ "T:dim_owned_base:uses": {
+  "t": "Global 자사 인용 판정(도메인 순위 · 인용 프롬프트 · 답변 모달 · 도메인 상세의 자사 표시와 수), Admin › Global config › 인용 출처 분류 자사 도메인 분류 경고, 도메인 상세 URL 국가",
+  "v": "cur",
+  "e": "back/app/core/filters.py:804-811 · back/app/core/measure.py:100-121, 530-535 (global own_expr = owner_key = ANY) · back/app/features/analytics/citations/domains/shared.py:9 · back/app/features/analytics/citations/prompts/service.py:6 · back/app/features/analytics/answers/detail/queries.py:133 · back/app/features/analytics/citations/domain_detail/queries.py:41-53 (own · geo_code) · back/app/features/analytics/citations/domain_detail/schemas.py:37 · back/app/features/admin/citation_sources/overrides/queries.py:44, 68 · inventory.json Admin › Global config › 인용 출처 분류 자사 도메인 분류 경고"
+ },
+ "T:dim_owned_base:rule:0": {
+  "t": "허용 배열(Global 자사 판정의 베이스 목록): brand_bit 가 관점 own_bits 에 드는 행(kind 둘 다) → 요청 iso 국가의 geo_code 로 좁힘 → 요청 언어의 language 로 좁힘. 좁힌 결과가 비면 그 단계는 좁히지 않고, 관점 브랜드의 행이 없으면 전체 행입니다.",
+  "v": "cur",
+  "e": "back/app/core/measure.py:100-121 (allowed_owner_keys: 관점 브랜드 행(kind 둘 다) → 국가 → 언어, 비면 안 좁힘, 관점 브랜드 행 없으면 전체) · back/app/core/filters.py:804-811 (iso 국가만, 관점 비트 → brand_code) · 설계: brand_bit 로 관점 매칭"
+ },
+ "T:dim_owned_base:rule:1": {
+  "t": "dim_url.owner_key: URL 베이스 정규형이 root_home 접두와 같은 행(공유 글로벌 호스트 제외)이 먼저, 없으면 호스트가 같고 접두가 맞는 가장 긴 base 행입니다.",
+  "v": "cur",
+  "e": "back/migration/seed/seed-3x-common.sql:389-398 (owner_key_of: root_home 접두 = bn ∧ 공유 호스트 제외 먼저, 다음 호스트 일치 최장 base 접두) · back/ingest/project/apply/queries.py:682"
+ },
+ "T:dim_owned_base:rule:2": {
+  "t": "Project 인용 자사 판정(loc_owned) 접두에는 프로젝트와 브랜드 · 국가가 같은 base 행의 접두를 더하고, 프로젝트 접두 아래의 더 깊은 base 접두(프로젝트 접두가 아닌 것)는 자사에서 뺍니다.",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:922-938 (_ig_pprefix: 설정 base 또는 도메인 + owned_base kind base ∧ brand_code·geo_code = 프로젝트, _ig_psib: 프로젝트 접두 아래 더 깊은 base 접두 중 프로젝트 접두 아닌 것) · back/ingest/project/apply/queries.py:964-970 (loc_owned 에서 _ig_psib 제외)"
+ },
+ "T:dim_owned_base:rule:3": {
+  "t": "Website 자사 판정은 이 표가 아니라 web_unit 의 base · sibs 를 씁니다.",
+  "v": "cur",
+  "e": "back/ingest/project/apply/rejudge.py:205-250 (web_unit base·sibs = app.website_prompt) · back/ingest/project/apply/queries.py:944-960 (loc_owned)"
+ },
+ "T:dim_owned_base:rule:4": {
+  "t": "베이스가 바뀌면 dim_url.owner_key 와 그 URL 을 인용한 답변의 글로벌 자사 인용 수(cit_own_*)를 다시 판정하고, 영향 회차를 새 build 로 만듭니다.",
+  "v": "cur",
+  "e": "back/ingest/project/apply/rejudge.py:7 (owned_base: dim_url.owner_key 재판정 → 바뀐 URL 을 인용한 답변 cit_own_* 재계산) · 설계: 영향 회차 새 build · README 7 judgment_change·마이그레이션 서술 삭제"
+ },
+ "T:dim_owned_base:rule:5": {
+  "t": "owner_key 0 은 \"자사 아님\" 표식 행입니다(kind · prefix 비움). citation_cell.owner_key 0 이 이 행을 가리킵니다.",
+  "v": "des",
+  "e": "설계: citation_cell.owner_key PF → dim_owned_base 가 0 = 아님 을 쓰므로 표식 행 필요 (src/tables/05_cit.js citation_cell col owner_key)"
+ }
+}

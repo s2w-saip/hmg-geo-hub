@@ -1,0 +1,557 @@
+{
+ "T:dim_prompt:head": {
+  "t": "{\"name\":\"dim_prompt\",\"s\":\"gold\",\"fam\":\"prompt\",\"grain\":\"측정 프롬프트 1개\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:390-395"
+ },
+ "T:dim_prompt:col:0": {
+  "t": "[\"prompt_key\",\"PK\",\"int4\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:390 prompt_key int4 PK"
+ },
+ "T:dim_prompt:col:1": {
+  "t": "[\"prompt_id\",\"UK\",\"uuid\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:390 prompt_id uuid UNIQUE"
+ },
+ "T:dim_prompt:col:2": {
+  "t": "[\"surface · kind\",\"\",\"표면 · single · acr\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:391 CHECK (kind IN (single, acr)) · db:rd.dim_prompt.surface"
+ },
+ "T:dim_prompt:col:3": {
+  "t": "[\"project_key\",\"FK\",\"\",\"dim_project\"]",
+  "v": "cur",
+  "e": "db:rd.dim_prompt.project_key"
+ },
+ "T:dim_prompt:col:4": {
+  "t": "[\"text\",\"\",\"프롬프트 본문 (표시 · 검색)\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:392 (ing.prompt.text 투영, QA 텍스트 검색) · back/app/features/qa/answers/list/scope.py:348 · back/app/features/qa/answers/list/queries.py:67"
+ },
+ "T:dim_prompt:col:5": {
+  "t": "[\"lang_key\",\"FK\",\"\",\"dim_lang\"]",
+  "v": "cur",
+  "e": "db:rd.dim_prompt.lang_key"
+ },
+ "T:dim_prompt:col:6": {
+  "t": "[\"funnel_key\",\"FK\",\"\",\"dim_taxon\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:394 funnel_key · back/ingest/project/apply/queries.py:382 (tf.taxon_key = rd.dim_taxon axis funnel)"
+ },
+ "T:dim_prompt:col:7": {
+  "t": "[\"presence_key · list_type_key\",\"FK\",\"project 프롬프트 택소노미\",\"dim_taxon\"]",
+  "v": "des",
+  "e": "조정자 결정 2026-10-20 (골드 소비자가 필요한 app 데이터는 골드로 투영) · 근거 back/app/core/filters.py:565-587 (project 택소노미 필터 = 그 프로젝트 비삭제 app.prompt 행의 brand_presence · list_type 코드 일치) · back/app/core/filters.py:798-801 · back/db/DB-v2.32.sql:149-150 (brand_presence CHECK branded · unbranded, list_type)"
+ },
+ "T:dim_prompt:col:8": {
+  "t": "[\"depth1~4_key\",\"FK\",\"project 프롬프트 택소노미\",\"dim_taxon\"]",
+  "v": "des",
+  "e": "조정자 결정 2026-10-20 (골드 소비자가 필요한 app 데이터는 골드로 투영) · 근거 back/app/core/filters.py:565-587 (project depth1~3 · depth4 코드 일치, depth4 BG-03) · back/db/DB-v2.32.sql:150 (depth1 · depth2 · depth3 · depth4)"
+ },
+ "T:dim_prompt:col:9": {
+  "t": "[\"in_project_catalog\",\"\",\"프로젝트 프롬프트 행 있음 (삭제 아님)\"]",
+  "v": "des",
+  "e": "조정자 결정 2026-10-20 · 근거 back/app/core/filters.py:572 (p.project_id = 프로젝트 ∧ p.deleted_at IS NULL 행만 필터에 맞음) · back/app/features/analytics/filters/options/queries.py:99-104 (project 옵션도 비삭제 행) · back/app/features/projects/prompts/lifecycle/queries.py:48-50 (소프트 삭제 = deleted_at, 사실 이력은 남음)"
+ },
+ "T:dim_prompt:col:10": {
+  "t": "[\"cat_mask · cat_mask_all\",\"\",\"루트 카탈로그 브랜드 비트 · 삭제 포함\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:360-366 (표준 루트 카탈로그 행 브랜드 비트 OR, 비삭제 · 삭제 포함) · back/db/DB-v2.32.sql:3143-3144"
+ },
+ "T:dim_prompt:col:11": {
+  "t": "[\"in_root_catalog · in_root_catalog_all\",\"\",\"루트 카탈로그 소속 · 삭제 포함\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:382 (cat_mask IS NOT NULL) · back/ingest/project/apply/queries.py:387 (삭제 포함) · back/db/DB-v2.32.sql:3145-3146"
+ },
+ "T:dim_prompt:col:12": {
+  "t": "[\"unit_key\",\"FK\",\"웹 유닛\",\"web_unit\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:395 unit_key REFERENCES rd.web_unit · back/ingest/project/apply/queries.py:368-375"
+ },
+ "T:dim_prompt:col:13": {
+  "t": "[\"targets[]\",\"\",\"웹 타겟 URL 정규형\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:384-385 (cit_norm(website_prompt.target_url) 집합)"
+ },
+ "T:dim_prompt:col:14": {
+  "t": "[\"web_reg\",\"\",\"웹 카탈로그 등록\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:386 (app.website_prompt 존재)"
+ },
+ "T:dim_prompt:col:15": {
+  "t": "[\"regions[] · is_korean\",\"\",\"Scope 시장 태그 · 한글 본문\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:387 (ip.regions · text ~ 한글)"
+ },
+ "T:dim_prompt:col:16": {
+  "t": "[\"rule_ver\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.dim_prompt.rule_ver"
+ },
+ "T:dim_prompt:grain": {
+  "t": "측정 프롬프트 1개 = 1행 (single · acr).",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:390-391 (prompt_id UNIQUE, kind single · acr)"
+ },
+ "T:dim_prompt:pk": {
+  "t": "prompt_key",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:390"
+ },
+ "T:dim_prompt:inputs": {
+  "t": "데이터 분석팀",
+  "v": "des",
+  "e": "검토/README.md 7 inputs 형식 '데이터 분석팀' (app 삭제) · 사용자 지시 10-19"
+ },
+ "T:dim_prompt:uses": {
+  "t": "프롬프트 본문 · 퍼널 표시(답변 목록·상세 · 인용 프롬프트 · 톤 · 도메인 상세 · ACR · 검수), KPI 적용 프롬프트 수(website = web_reg), Global › Global prompts · Website › Prompts · Admin › Global config › Global prompts 카탈로그, Project › Prompt 영향 수, 검수 목록 · 노트, Project › (프로젝트) › Dashboard · Analysis › Mention · Citation 필터 바의 택소노미 필터",
+  "v": "cur",
+  "e": "back/app/features/analytics/answers/list/queries.py:134 · back/app/features/analytics/answers/detail/queries.py:76-77 · back/app/features/analytics/citations/prompts/queries.py:97 · back/app/features/analytics/citations/tone/queries.py:56 · back/app/features/analytics/citations/domain_detail/queries.py:64 · back/app/features/analytics/funnel/acr/queries.py:114 · back/app/features/qa/answers/detail/queries.py:14 · back/app/core/measure.py:1729 (website applied web_reg) · back/app/features/catalog/prompts/catalog/queries.py:147 (Global › Global prompts) · back/app/features/admin/catalog/prompts/queries.py:39 · back/app/features/projects/prompts/lifecycle/queries.py:4 · back/app/features/qa/notes/notes/queries.py:27 · back/app/core/filters.py:798-801 (project 택소노미 필터 → prompt_key) · front/app/[locale]/(dash)/projects/[id]/page.tsx:16 · front/app/[locale]/(dash)/projects/[id]/analysis/mention/page.tsx:100 · front/app/[locale]/(dash)/projects/[id]/analysis/citation/page.tsx:87 · 설계: project 택소노미 열"
+ },
+ "T:dim_prompt:rule:0": {
+  "t": "cat_mask_all · in_root_catalog_all 은 삭제 행 포함 카탈로그 기준입니다. Global 의 삭제 행 포함 모수(std_in_nc · cit_in_nc)에 카탈로그 게이트를 걸 때와 KPI 적용 프롬프트 수를 셀 때 씁니다.",
+  "v": "cur",
+  "e": "back/app/core/measure.py:251-252 (catalog_all = A41 ∧ global) · back/app/core/measure.py:194-195 (scope_where 카탈로그 게이트) · back/app/core/measure.py:256-283 (cat_mask_all = ANY(관점) · in_root_catalog_all) · back/app/core/measure.py:352 · back/app/core/measure.py:409 (std_in_nc · cit_in_nc) · back/app/core/measure.py:1709-1716 (적용 프롬프트 수) · back/app/core/profile.py:84-92"
+ },
+ "T:dim_prompt:rule:1": {
+  "t": "presence_key · list_type_key · depth1~4_key · in_project_catalog 는 project 프롬프트만 채웁니다(그 프로젝트의 삭제되지 않은 프롬프트 행 값, 없으면 NULL · 거짓). project 택소노미 필터(funnel · brand_presence · list_type · depth1~4)는 in_project_catalog ∧ 축 코드 일치로 겁니다. global 택소노미는 catalog_entry 로 겁니다.",
+  "v": "des",
+  "e": "조정자 결정 2026-10-20 (project 택소노미를 골드로 투영) · 현행 근거 back/app/core/filters.py:565-587 (그 프로젝트 비삭제 app.prompt 행의 funnel_stage · brand_presence · list_type · depth1~3 · depth4 코드 일치) · back/app/core/filters.py:788-801 (global = catalog_entry, project = app.prompt) · back/ingest/project/apply/queries.py:357-359 (funnel_key = 비삭제 행 우선 퍼널)"
+ },
+ "T:dim_prompt:rule:2": {
+  "t": "프로젝트 안에서 Scope 프롬프트 하나에 살아 있는 프롬프트 행은 하나여야 합니다. 여럿이면 택소노미 값을 하나로 정할 수 없습니다.",
+  "v": "des",
+  "e": "db:app.prompt (project_id, scope_prompt_id) 유일 제약 없음 (G1 확인) · back/app/core/filters.py:581-584 (DISTINCT prompt_key) · 설계: 프롬프트당 택소노미 값 1개"
+ },
+ "T:dim_prompt:rule:3": {
+  "t": "project 택소노미 필터 옵션은 dim_prompt(측정된 프롬프트)에 담긴 값입니다.",
+  "v": "des",
+  "e": "설계: Project 택소노미 = dim_prompt 축 키 (src/tables/02_prompt.js) · 현행은 측정 안 된 프롬프트 행 값도 옵션에 나옴 (back/app/core/filters.py:565-587) — 골드 설계로 측정 프롬프트 기준"
+ },
+ "T:catalog_entry:head": {
+  "t": "{\"name\":\"catalog_entry\",\"s\":\"gold\",\"fam\":\"prompt\",\"grain\":\"빌드 × 루트 카탈로그 행 (비삭제)\"}",
+  "v": "cur",
+  "e": "back/migration/seed/seed-30-dims.sql:388 (표준 루트 카탈로그 행, 비삭제) · back/ingest/project/apply/rejudge.py:86 (deleted_at IS NULL) · 설계: build 세대 (NEWREQ catalog_entry 정의 변경)"
+ },
+ "T:catalog_entry:col:0": {
+  "t": "[\"catalog_row_id\",\"PK\",\"카탈로그 행 uuid\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:398 (catalog_row_id uuid PK) · back/ingest/project/apply/rejudge.py:81 (c.prompt_id = 표준 루트 카탈로그 행 id) · back/app/core/filters.py:25"
+ },
+ "T:catalog_entry:col:1": {
+  "t": "[\"prompt_key\",\"FK\",\"미발행 행 NULL\",\"dim_prompt\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:398 REFERENCES rd.dim_prompt · back/migration/seed/seed-30-dims.sql:390 (미발행 행 NULL)"
+ },
+ "T:catalog_entry:col:2": {
+  "t": "[\"brand_bit\",\"\",\"행 브랜드 비트 (없음 = 엄브렐러)\"]",
+  "v": "cur",
+  "e": "back/migration/seed/seed-30-dims.sql:389 (브랜드 없음·엄브렐러 = 엄브렐러 비트) · back/ingest/project/apply/rejudge.py:81"
+ },
+ "T:catalog_entry:col:3": {
+  "t": "[\"kind\",\"\",\"single · acr\"]",
+  "v": "cur",
+  "e": "db:rd.catalog_entry.kind = app.prompt.kind · db:app.prompt CHECK prompt_kind_check (single, acr)"
+ },
+ "T:catalog_entry:col:4": {
+  "t": "[\"presence_key\",\"FK\",\"\",\"dim_taxon\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/rejudge.py:90 · db:rd.catalog_entry.presence_key"
+ },
+ "T:catalog_entry:col:5": {
+  "t": "[\"funnel_key · list_type_key\",\"FK\",\"\",\"dim_taxon\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/rejudge.py:91-92 · db:rd.catalog_entry.funnel_key · db:rd.catalog_entry.list_type_key"
+ },
+ "T:catalog_entry:col:6": {
+  "t": "[\"depth1~3_key\",\"FK\",\"\",\"dim_taxon\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/rejudge.py:93-95 · db:rd.catalog_entry.depth1_key"
+ },
+ "T:catalog_entry:col:7": {
+  "t": "[\"depth4_key\",\"FK\",\"카탈로그 depth4\",\"dim_taxon\"]",
+  "v": "des",
+  "e": "설계: depth4 를 dim_taxon 축으로 (현행 depth4 = 카탈로그 행 app.prompt.depth4, back/app/core/filters.py:503-513) · 검토/README.md 7 현행 열 대응 · (신규) 표지 삭제"
+ },
+ "T:catalog_entry:col:8": {
+  "t": "[\"build_id\",\"PF\",\"빌드(세대)\",\"build\"]",
+  "v": "des",
+  "e": "골드 설계: build 세대 (12_build build) · 검토/README.md 7 현행 열 대응(load_id) 삭제 · 사용자 지시 2026-10-19 골드 = build 세대"
+ },
+ "T:catalog_entry:grain": {
+  "t": "빌드 × 표준 루트 카탈로그 행(비삭제) 1개 = 1행. 한 프롬프트에 여러 행이 붙을 수 있습니다.",
+  "v": "cur",
+  "e": "back/migration/seed/seed-30-dims.sql:388 · back/ingest/project/apply/rejudge.py:86 · 설계: build 세대 (NEWREQ catalog_entry)"
+ },
+ "T:catalog_entry:pk": {
+  "t": "build_id + catalog_row_id",
+  "v": "des",
+  "e": "NEWREQ catalog_entry 정의 변경 (build_id 를 PK 에 포함)"
+ },
+ "T:catalog_entry:inputs": {
+  "t": "데이터 분석팀",
+  "v": "des",
+  "e": "검토/README.md 7 inputs 형식 '데이터 분석팀' (app 삭제) · 사용자 지시 10-19"
+ },
+ "T:catalog_entry:uses": {
+  "t": "global 택소노미 · depth4 필터의 프롬프트 키 해석(답변 목록 · 언급 · 인용 · ACR · 국가별 GEO · KPI), KPI 적용 프롬프트 수, 필터 옵션 카탈로그 택소노미, 답변 상세 택소노미",
+  "v": "cur",
+  "e": "back/app/core/filters.py:462-515 · back/app/core/measure.py:1725 · back/app/features/analytics/kpi/summary/queries.py:56 · back/app/features/analytics/filters/options/queries.py:86-90 · back/app/features/analytics/answers/detail/queries.py:82 · back/app/features/analytics/geo/markets/service.py:47"
+ },
+ "T:catalog_entry:rule:0": {
+  "t": "한 프롬프트에 여러 카탈로그 행이 붙으므로 프롬프트 수는 DISTINCT prompt_key 로 셉니다.",
+  "v": "cur",
+  "e": "back/app/core/measure.py:1725 (count(DISTINCT ce.prompt_key)) · back/app/core/filters.py:515 (SELECT DISTINCT ce.prompt_key)"
+ },
+ "T:catalog_entry:rule:1": {
+  "t": "depth4 필터도 다른 택소노미 축처럼 관점 카탈로그 행(brand_bit)의 depth4_key 로 겁니다.",
+  "v": "des",
+  "e": "설계: depth4_key 로 필터 · 현행 근거 back/app/core/filters.py:22-27 · back/app/core/filters.py:503-513 (depth4 도 관점 카탈로그 행 brand_bit ∈ pop_bits 범위, 다른 축과 같은 행 조건)"
+ },
+ "T:dim_taxon:head": {
+  "t": "{\"name\":\"dim_taxon\",\"s\":\"gold\",\"fam\":\"prompt\",\"grain\":\"택소노미 코드 1개\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:385-386"
+ },
+ "T:dim_taxon:col:0": {
+  "t": "[\"taxon_key\",\"PK\",\"int2\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:385"
+ },
+ "T:dim_taxon:col:1": {
+  "t": "[\"axis\",\"\",\"funnel · presence · list_type · depth1~3 · depth4\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:385 CHECK (funnel, presence, list_type, depth1, depth2, depth3) · 설계: depth4 축 (catalog_entry.depth4_key · dim_prompt.depth4_key)"
+ },
+ "T:dim_taxon:col:2": {
+  "t": "[\"code\",\"\",\"(axis, code, parent_key) 유일\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:386 UNIQUE NULLS NOT DISTINCT (axis, code, parent_key)"
+ },
+ "T:dim_taxon:col:3": {
+  "t": "[\"parent_key\",\"FK\",\"상위 코드\",\"dim_taxon\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/rejudge.py:52-70 (depth2 · depth3 의 parent_key)"
+ },
+ "T:dim_taxon:grain": {
+  "t": "택소노미 코드 1개 = 1행.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:385-386"
+ },
+ "T:dim_taxon:pk": {
+  "t": "taxon_key",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:385"
+ },
+ "T:dim_taxon:inputs": {
+  "t": "데이터 분석팀",
+  "v": "des",
+  "e": "검토/README.md 7 inputs 형식 '데이터 분석팀' (app 삭제) · 사용자 지시 10-19"
+ },
+ "T:dim_taxon:uses": {
+  "t": "택소노미 필터 해석 · 필터 옵션, 퍼널 코드 표시(KPI 퍼널별 측정 수 · 인용 프롬프트 · 언급 프롬프트 · 도메인 상세 · 검수 상세), 답변 상세 택소노미",
+  "v": "cur",
+  "e": "back/app/core/filters.py:469 · back/app/features/analytics/filters/options/queries.py:96 · back/app/features/analytics/kpi/summary/service.py:145 · back/app/features/analytics/citations/prompts/queries.py:73 · back/app/features/analytics/mentions/prompts/queries.py:58 · back/app/features/analytics/citations/domain_detail/queries.py:65 · back/app/features/qa/answers/detail/queries.py:14 · back/app/features/analytics/answers/detail/queries.py:76-85"
+ },
+ "T:dim_taxon:rule:0": {
+  "t": "global 루트 카탈로그 행(catalog_entry)과 project 프롬프트(dim_prompt)의 택소노미 코드를 모두 담습니다.",
+  "v": "des",
+  "e": "조정자 결정 2026-10-20 (project 택소노미 골드 투영) · 현행은 funnel 만 전 app.prompt, presence · list_type · depth1~3 은 표준 루트 카탈로그 행에서 만듦 (back/ingest/project/apply/rejudge.py:40-70)"
+ },
+ "T:dim_taxon:rule:1": {
+  "t": "depth2 · depth3 은 상위 코드(parent_key) 아래 코드라 같은 코드가 여러 키일 수 있습니다. 필터는 코드를 그 코드의 키 전부로 풉니다.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:386 UNIQUE NULLS NOT DISTINCT (axis, code, parent_key) · back/ingest/project/apply/rejudge.py:52-70 (depth2 · depth3 parent_key) · back/app/core/filters.py:472 (같은 코드 여러 키) · back/app/core/filters.py:488-494 (코드 → 키 전부)"
+ },
+ "T:web_unit:head": {
+  "t": "{\"name\":\"web_unit\",\"s\":\"gold\",\"fam\":\"prompt\",\"grain\":\"웹사이트 유닛 (프로젝트 × file_seq)\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:387-389 UNIQUE (project_key, file_seq) · back/migration/seed/seed-30-dims.sql:198"
+ },
+ "T:web_unit:col:0": {
+  "t": "[\"unit_key\",\"PK\",\"int2\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:387"
+ },
+ "T:web_unit:col:1": {
+  "t": "[\"project_key\",\"FK\",\"\",\"dim_project\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:387 REFERENCES rd.dim_project"
+ },
+ "T:web_unit:col:2": {
+  "t": "[\"file_seq\",\"UK\",\"project_key 와 복합 유일\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:389 UNIQUE (project_key, file_seq) · db:rd.web_unit web_unit_project_key_file_seq_key"
+ },
+ "T:web_unit:col:3": {
+  "t": "[\"lang_codes[]\",\"\",\"소문자 언어 코드\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/rejudge.py:242-243 (lower(lang_code) 배열)"
+ },
+ "T:web_unit:col:4": {
+  "t": "[\"base · base_src\",\"\",\"자사 base · decl · heur\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:388 CHECK (base_src IN (decl, heur)) · back/migration/seed/seed-30-dims.sql:199-200"
+ },
+ "T:web_unit:col:5": {
+  "t": "[\"sibs[] · home_host\",\"\",\"하위 선언 base · base 호스트\"]",
+  "v": "cur",
+  "e": "back/migration/seed/seed-30-dims.sql:201 (sibs = 이 base 아래 선언 base) · back/migration/seed/seed-30-dims.sql:202 (home_host = base 호스트)"
+ },
+ "T:web_unit:col:6": {
+  "t": "[\"turls[]\",\"\",\"타겟 URL 정규형\"]",
+  "v": "cur",
+  "e": "back/migration/seed/seed-30-dims.sql:203 (turls = 타겟 URL tracked NORM 집합)"
+ },
+ "T:web_unit:col:7": {
+  "t": "[\"excluded\",\"\",\"Website 모수에서 뺀 보고 유닛\"]",
+  "v": "des",
+  "e": "조정자 지시 2026-10-20 (app.website_report_excluded 를 web_unit 열로 투영) · 근거 back/db/DB-v2.32.sql:3753-3757 (file_seq PK, 보고서 제외 유닛) · back/app/core/measure.py:293-305 (Website 카드 모수 게이트에서 제외)"
+ },
+ "T:web_unit:col:8": {
+  "t": "[\"rule_ver\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.web_unit.rule_ver"
+ },
+ "T:web_unit:grain": {
+  "t": "웹사이트 유닛(사이트 프로젝트 × file_seq) 1개 = 1행.",
+  "v": "cur",
+  "e": "back/migration/seed/seed-30-dims.sql:198 (웹사이트 측정 유닛 = 사이트 × file_seq) · back/db/DB-v2.32.sql:389"
+ },
+ "T:web_unit:pk": {
+  "t": "unit_key (프로젝트 × file_seq 유일)",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:387-389"
+ },
+ "T:web_unit:inputs": {
+  "t": "데이터 분석팀",
+  "v": "des",
+  "e": "검토/README.md 7 inputs 형식 '데이터 분석팀' (app 삭제) · 사용자 지시 10-19"
+ },
+ "T:web_unit:uses": {
+  "t": "Website 자사 · 타겟 URL 인용률 카드의 발행값 범위(허용 프로젝트 유닛의 file_seq 만 합산), Website › Overview 카드 모수의 제외 유닛(excluded)",
+  "v": "cur",
+  "e": "back/app/core/measure.py:917-926 · back/app/core/measure.py:1522-1530 (발행값 · 발행물 프로젝트 범위 rd.web_unit, web_url_rate 끔 경로. 켬 경로는 같은 유닛 정보를 app.website_prompt 에서 읽음 back/app/core/measure.py:1079-1092) · back/app/features/analytics/kpi/summary/service.py:219 · back/app/core/measure.py:293-305 (제외 유닛 게이트) · front/lib/hgh/adapters/dashboard.ts:71-91 (Website › Overview 카드)"
+ },
+ "T:web_unit:rule:0": {
+  "t": "base · sibs · home_host · turls 로 웹사이트 인용의 자사 판정(loc_owned)을 합니다. 타겟 판정(tgt_hit)은 dim_prompt.targets 로 합니다.",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:951-962 (loc_owned = base · sibs · home_host · turls) · back/ingest/project/apply/queries.py:963 (tgt_hit = c.targets)"
+ },
+ "T:web_unit:rule:1": {
+  "t": "excluded 는 file_seq 단위 값입니다(같은 file_seq 의 유닛은 같은 값). 보고 유닛 file_seq 가 excluded 유닛의 file_seq 인 답변은 Website › Overview 카드 모수에서 뺍니다.",
+  "v": "des",
+  "e": "설계: 제외 유닛 file_seq 를 web_unit.excluded 로 투영 (조정자 지시 2026-10-20) · 현행 근거 back/db/DB-v2.32.sql:3754 (제외 키 = file_seq 하나, 프로젝트 무관) · back/app/core/measure.py:304-305 · back/app/core/measure.py:313-314 (report_fs <> ALL(제외 file_seq)) · back/app/core/measure.py:286-291 (website ∧ 카드 요청) · front/lib/hgh/adapters/dashboard.ts:71-91"
+ },
+ "T:web_report_prompt:head": {
+  "t": "{\"name\":\"web_report_prompt\",\"s\":\"gold\",\"fam\":\"prompt\",\"grain\":\"프롬프트의 보고 유닛 소속\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:3758-3762"
+ },
+ "T:web_report_prompt:col:0": {
+  "t": "[\"prompt_key\",\"PF\",\"\",\"dim_prompt\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:3759 (PK, FK 없음) · 설계: dim_prompt 참조"
+ },
+ "T:web_report_prompt:col:1": {
+  "t": "[\"report_fs\",\"\",\"소속 보고 유닛 file_seq (여럿이면 최소)\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:3760 (website_prompt.file_seq, 여러 유닛이면 최소) · back/db/DB-v2.32.sql:3775-3787"
+ },
+ "T:web_report_prompt:grain": {
+  "t": "보고 유닛에 속한 웹 프롬프트 1개 = 1행. 행이 없으면 유닛 밖입니다.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:3761-3762 (없는 프롬프트 = 유닛 밖)"
+ },
+ "T:web_report_prompt:pk": {
+  "t": "prompt_key",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:3759"
+ },
+ "T:web_report_prompt:inputs": {
+  "t": "데이터 분석팀",
+  "v": "des",
+  "e": "검토/README.md 7 inputs 형식 '데이터 분석팀' (app 삭제) · 사용자 지시 10-19"
+ },
+ "T:web_report_prompt:uses": {
+  "t": "Website › Overview 의 KPI 카드(①~⑤) · 경쟁사 SOV 비교 · 증감 표시 · 기간 비교 칩 · 엔진 간 일관성 배지 · KPI 추이 · 시장별 GEO · 출처별 구성비(기간 없음) 모수 게이트: 보고 유닛 소속 ∧ 제외 유닛(web_unit.excluded) 아님",
+  "v": "cur",
+  "e": "back/app/core/measure.py:286-291 (web_registered_only ∧ website ∧ 카드 요청) · back/app/core/measure.py:293-305 (보고 유닛 소속 ∧ 제외 아님) · back/app/core/profile.py:145-150 · front/lib/hgh/adapters/dashboard.ts:71-91 (카드 요청 = 요약 · 브랜드 · 추이 · GEO · 웹 엔진 배지 · 기간 없는 도메인 · compare) · front/lib/hgh/adapters/dashboard.ts:232 · front/lib/hgh/adapters/dashboard.ts:260 · front/lib/hgh/adapters/dashboard.ts:322 · front/lib/hgh/adapters/dashboard.ts:342 · front/lib/hgh/adapters/dashboard.ts:349 · front/lib/hgh/adapters/dashboard.ts:804 · front/lib/hgh/adapters/compare.ts:172 · front/app/[locale]/(dash)/website/page.tsx:64-72 (Website › Overview 만 website 카드 · compare 호출) · inventory.json Website › Overview 항목 이름"
+ },
+ "T:web_report_prompt:rule:0": {
+  "t": "report_fs 는 web_unit.file_seq 와 같은 값입니다. web_unit 은 (project_key, file_seq) 로 유일해 report_fs 혼자로는 FK 를 걸지 않습니다.",
+  "v": "des",
+  "e": "설계: report_fs 에 FK 없음 · 근거 back/db/DB-v2.32.sql:3759-3760 (report_fs = website_prompt.file_seq, FK 없음) · back/db/DB-v2.32.sql:389 UNIQUE (project_key, file_seq) · back/ingest/project/apply/rejudge.py:205-212 (web_unit.file_seq = website_prompt.file_seq)"
+ },
+ "T:web_report_prompt:rule:1": {
+  "t": "발행 세대로 읽는 창은 이 테이블 대신 발행 시점 소속(pub_cell_web.report_fs)으로 거릅니다. 제외 유닛은 두 경우 모두 조회 때 web_unit.excluded 로 뺍니다.",
+  "v": "cur",
+  "e": "back/app/core/measure.py:317-324 unit_gate_of (동결 읽기 = frz.card_web 생성 시점 report_fs, 아니면 rd.web_report_prompt) · back/app/core/measure.py:308-314 · back/db/DB-v2.32.sql:7597 (동결 웹 카드 뷰 unit_in = report_fs ∧ 조회 때 제외 file_seq) · 설계: frz.card_web → pub_cell_web, app.website_report_excluded → web_unit.excluded"
+ },
+ "T:web_target_url:head": {
+  "t": "{\"name\":\"web_target_url\",\"s\":\"gold\",\"fam\":\"prompt\",\"grain\":\"프로젝트 × 언어 × 타겟 URL\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:5002-5006"
+ },
+ "T:web_target_url:col:0": {
+  "t": "[\"project_key\",\"PF\",\"\",\"dim_project\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:5003 (FK 없음) · 설계: dim_project 참조"
+ },
+ "T:web_target_url:col:1": {
+  "t": "[\"lang_key\",\"PF\",\"\",\"dim_lang\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:5004 (FK 없음) · 설계: dim_lang 참조"
+ },
+ "T:web_target_url:col:2": {
+  "t": "[\"url_key\",\"PF\",\"\",\"dim_url\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:5005 (FK 없음) · 설계: dim_url 참조"
+ },
+ "T:web_target_url:grain": {
+  "t": "웹 프로젝트 × 언어 × 타겟 URL = 1행. 타겟 정규형을 dim_url 키로 미리 풀어 둡니다.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:5007-5008 (웹 프롬프트 타겟 정규형과 url_norm 이 같은 dim_url 행, 프로젝트·언어 단위)"
+ },
+ "T:web_target_url:pk": {
+  "t": "project_key + lang_key + url_key",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:5006"
+ },
+ "T:web_target_url:inputs": {
+  "t": "데이터 분석팀",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:5011-5019 (rd.dim_prompt.targets × rd.dim_url, app 없음) · back/ingest/project/apply/service.py:64-70"
+ },
+ "T:web_target_url:uses": {
+  "t": "Website › Overview AI 타겟 출처 인용률(⑥) 카드 · KPI 추이 ⑥ 선의 타겟 URL 집합",
+  "v": "cur",
+  "e": "back/app/core/measure.py:1373-1377 (rd.web_target_url, ⑥ screen 경로) · back/app/features/analytics/kpi/summary/service.py:158-160 · back/app/features/analytics/trend/series/service.py:390-392 · back/app/core/profile.py:151-161 (web_accuracy_flat, website) · inventory.json Website › Overview 'AI 타겟 출처 인용률 카드' · 'KPI 추이 차트(①~⑤ + ⑥ 선)'"
+ },
+ "T:web_target_url:rule:0": {
+  "t": "⑥ 은 발행 세대로 읽는 기간 없는 카드 · 카드 추이면 발행 시점 유닛 판정(pub_cell_web.unit_owned · unit_target)으로 세고, 기간을 고른 카드나 발행 세대로 읽지 않는 창이면 이 집합으로 셉니다. 타겟 = 인용 URL 중 하나라도 이 집합에 있는 답변입니다.",
+  "v": "cur",
+  "e": "back/app/core/measure.py:1343-1346 accuracy_mode (카드 ∧ 기간 없음 = unit, 그 밖 screen; 추이는 has_period=False) · back/app/core/measure.py:1361-1367 (unit = 동결 읽기 frz.card_web unit_owned · unit_target) · back/app/core/measure.py:1352-1355 (세대 없는 창이면 비카드로 내려옴) · back/app/core/measure.py:1373-1386 (screen = 인용 url_key ∈ web_target_url 인 답변이 타겟) · 설계: frz.card_web → pub_cell_web"
+ },
+ "T:dim_custom_field:head": {
+  "t": "{\"name\":\"dim_custom_field\",\"s\":\"gold\",\"fam\":\"prompt\",\"grain\":\"프로젝트 커스텀 필드 1개\"}",
+  "v": "des",
+  "e": "db:app.project_custom_field 의 골드 투영 (사용자 결정 2026-10-20: app 참조는 골드 차원으로)"
+ },
+ "T:dim_custom_field:col:0": {
+  "t": "[\"field_id\",\"PK\",\"uuid\"]",
+  "v": "cur",
+  "e": "db:app.project_custom_field.field_id (PRIMARY KEY)"
+ },
+ "T:dim_custom_field:col:1": {
+  "t": "[\"project_key\",\"FK\",\"\",\"dim_project\"]",
+  "v": "des",
+  "e": "db:app.project_custom_field.project_id → 골드 dim_project.project_key"
+ },
+ "T:dim_custom_field:col:2": {
+  "t": "[\"label\",\"\",\"필드 이름 · 프로젝트 안 유일\"]",
+  "v": "cur",
+  "e": "db:app.project_custom_field.label · UNIQUE (project_id, label)"
+ },
+ "T:dim_custom_field:col:3": {
+  "t": "[\"archived\",\"\",\"보관\"]",
+  "v": "cur",
+  "e": "db:app.project_custom_field.archived"
+ },
+ "T:dim_custom_field:col:4": {
+  "t": "[\"created_at\",\"\",\"필드 순서 (생성 순)\"]",
+  "v": "cur",
+  "e": "db:app.project_custom_field.created_at · back/app/features/analytics/filters/options/queries.py:116 (ORDER BY f.created_at, f.field_id)"
+ },
+ "T:dim_custom_field:grain": {
+  "t": "프로젝트 커스텀 필드(태그 열) 1개 = 1행.",
+  "v": "des",
+  "e": "db:app.project_custom_field (PK field_id) · front/app/[locale]/(dash)/projects/[id]/prompt 태그 열 추가 (inventory Project › Prompt 태그 열)"
+ },
+ "T:dim_custom_field:pk": {
+  "t": "field_id",
+  "v": "cur",
+  "e": "db:app.project_custom_field PRIMARY KEY (field_id)"
+ },
+ "T:dim_custom_field:inputs": {
+  "t": "데이터 분석팀 (출처 제안: GEO HUB 프로젝트 커스텀 필드 설정의 투영)",
+  "v": "des",
+  "e": "설계: GEO HUB 설정의 투영 (사용자 결정 2026-10-20)"
+ },
+ "T:dim_custom_field:triggers": {
+  "t": "커스텀 필드 설정이 바뀔 때",
+  "v": "des",
+  "e": "설계: 투영 원천이 바뀔 때"
+ },
+ "T:dim_custom_field:uses": {
+  "t": "Project › Dashboard · Analysis › Mention · Analysis › Citation 의 커스텀 태그 필터 (필드 이름 · 순서)",
+  "v": "cur",
+  "e": "front/app/[locale]/(dash)/projects/[id]/page.tsx:121-132 · front/app/[locale]/(dash)/projects/[id]/analysis/mention/page.tsx:65-77 · front/app/[locale]/(dash)/projects/[id]/analysis/citation/page.tsx:57-80 (archived 제외 필드 = 필터 축) · inventory.json Project › Analysis › Mention 커스텀 태그 필터"
+ },
+ "T:dim_custom_field:rule:0": {
+  "t": "보관(archived) 필드는 필터 옵션에서 뺍니다.",
+  "v": "cur",
+  "e": "front/app/[locale]/(dash)/projects/[id]/analysis/citation/page.tsx:70 (filter !archived) · back/app/features/analytics/filters/options/queries.py:115 (NOT f.archived)"
+ },
+ "T:dim_custom_field:rule:1": {
+  "t": "필드 순서는 created_at, field_id 순입니다.",
+  "v": "cur",
+  "e": "back/app/features/analytics/filters/options/queries.py:116 (ORDER BY f.created_at, f.field_id)"
+ },
+ "T:prompt_custom_value:head": {
+  "t": "{\"name\":\"prompt_custom_value\",\"s\":\"gold\",\"fam\":\"prompt\",\"grain\":\"프롬프트 × 커스텀 필드 값\"}",
+  "v": "des",
+  "e": "db:app.prompt_custom_field_value 의 골드 투영 (사용자 결정 2026-10-20)"
+ },
+ "T:prompt_custom_value:col:0": {
+  "t": "[\"prompt_key\",\"PF\",\"\",\"dim_prompt\"]",
+  "v": "des",
+  "e": "db:app.prompt_custom_field_value.prompt_id → 골드 dim_prompt.prompt_key (back/app/core/filters.py:581-584 의 prompt_id → scope_prompt_id → prompt_key 조인)"
+ },
+ "T:prompt_custom_value:col:1": {
+  "t": "[\"field_id\",\"PF\",\"\",\"dim_custom_field\"]",
+  "v": "cur",
+  "e": "db:app.prompt_custom_field_value.field_id · FK (project_id, field_id) → project_custom_field"
+ },
+ "T:prompt_custom_value:col:2": {
+  "t": "[\"value\",\"\",\"태그 값\"]",
+  "v": "cur",
+  "e": "db:app.prompt_custom_field_value.value (text)"
+ },
+ "T:prompt_custom_value:grain": {
+  "t": "프로젝트 프롬프트 × 커스텀 필드 = 1행 (값 1개).",
+  "v": "cur",
+  "e": "db:app.prompt_custom_field_value PRIMARY KEY (prompt_id, field_id) — 프롬프트 × 필드 값 1개"
+ },
+ "T:prompt_custom_value:pk": {
+  "t": "prompt_key + field_id",
+  "v": "des",
+  "e": "db:app.prompt_custom_field_value PRIMARY KEY (prompt_id, field_id) → 골드 prompt_key + field_id"
+ },
+ "T:prompt_custom_value:inputs": {
+  "t": "데이터 분석팀 (출처 제안: GEO HUB 프롬프트 태그 값의 투영)",
+  "v": "des",
+  "e": "설계: GEO HUB 설정의 투영 (사용자 결정 2026-10-20)"
+ },
+ "T:prompt_custom_value:triggers": {
+  "t": "프롬프트 태그 값이 바뀔 때",
+  "v": "des",
+  "e": "설계: 투영 원천이 바뀔 때"
+ },
+ "T:prompt_custom_value:uses": {
+  "t": "Project › Dashboard · Analysis › Mention · Analysis › Citation 의 커스텀 태그 필터 (값 옵션 · 거르기)",
+  "v": "cur",
+  "e": "front/app/[locale]/(dash)/projects/[id]/page.tsx:114-132 (값 필터를 KPI 집계에 반영) · front/app/[locale]/(dash)/projects/[id]/analysis/mention/page.tsx:65-77 · front/app/[locale]/(dash)/projects/[id]/analysis/citation/page.tsx:57-80 (값 옵션 = 붙은 값) · back/app/core/filters.py:580-583 (거르기)"
+ },
+ "T:prompt_custom_value:rule:0": {
+  "t": "필터는 한 필드 안 값은 OR, 필드끼리 AND 로 겁니다. 빈 값만 준 필드는 결과가 0 입니다.",
+  "v": "cur",
+  "e": "back/app/core/filters.py:118-120 (한 필드 안 OR, 필드끼리 AND, 빈 값만 준 필드는 결과 0) · :580-583"
+ },
+ "T:prompt_custom_value:rule:1": {
+  "t": "필터 옵션 값은 그 프로젝트에 살아 있는 프롬프트(dim_prompt.in_project_catalog)에 붙은 값입니다.",
+  "v": "des",
+  "e": "back/app/features/analytics/filters/options/queries.py:110-112 (살아 있는 프롬프트에 붙은 값) · 설계: dim_prompt.in_project_catalog 로 표현"
+ }
+}

@@ -1,0 +1,18 @@
+/* ── AI Visibility ── */
+tbl('dim_crawl_bot', { s: 'gold', name: 'dim_crawl_bot', fam: 'vis', grain: 'AI 크롤러 1개', cols: [['bot_key', 'PK', 'int2'], ['code', 'UK', 'UA 토큰 (예: ChatGPT-User)'], ['engine_key', 'FK', '측정 엔진 · 없으면 0', 'dim_engine']], d: {
+  grain: 'AI 크롤러 1개 = 1행.', pk: 'bot_key', inputs: '데이터 분석팀 (출처 제안: 크롤러 UA 목록)', uses: 'AI Visibility AI 크롤 수의 봇 구성 · 엔진 필터',
+  rules: ['엔진 필터는 AI 크롤 수만 좁힙니다 (engine_key 가 그 엔진인 봇의 hits). 검색 노출에는 엔진이 없습니다.'] } });
+tbl('page_visibility_daily', { s: 'gold', name: 'page_visibility_daily', fam: 'vis', grain: '사이트 × 페이지 × 일', cols: [
+  ['build_id', 'PF', '', 'build'], ['project_key', 'PF', '사이트 · 프로젝트', 'dim_project'], ['url_key', 'PF', '페이지', 'dim_url'], ['geo_key', 'FK', '페이지 시장 · 국가 축', 'dim_country'], ['date', 'PK', '기간 축'], ['seo_impressions', '', '검색 노출수 · 출처 제안 GSC'], ['ai_crawls', '', 'AI 크롤 수 · 봇 합계'] ], d: {
+  grain: '빌드 × 사이트 · 프로젝트 × 페이지 × 일 = 1행.', pk: 'build_id + project_key + url_key + date', inputs: '데이터 분석팀 (출처 제안: GSC 페이지 노출 · 서버 크롤 로그 AI 봇 집계)', triggers: '일 배치 (제안)',
+  uses: 'AI Visibility (Global · Project) 4분면 카드 · 산점도 · 페이지 진단 표',
+  rules: ['url_key 는 dim_url 에서 받습니다. 인용된 적 없는 자사 페이지도 dim_url 행을 만들고, 인용 URL 과는 url_norm 으로 맞춥니다.', 'Global 화면은 웹사이트 사이트(dim_project surface 2) 행의 페이지 전체, Project 화면은 그 프로젝트 project_key 행을 읽습니다. 프로젝트 행의 페이지는 그 프로젝트 자사 기준 URL 아래 페이지입니다.', '분면 · 카드 수 · 중앙값은 저장하지 않고, 필터 후 페이지 집합의 기간 합으로 조회 때 계산합니다. 중앙값은 정렬 후 floor(n/2) 번째 값이고, 그 이상이면 높음입니다.', '프롬프트 축(프롬프트 퍼널 · 브랜드 포함 여부 · 리스트 타입 · Depth 1~4 · 브랜드) · 경쟁사 축은 그 페이지와 url_norm 이 같은 URL 을 인용한 답변의 프롬프트 · 언급 브랜드로 겁니다 (citation_fact ⋈ dim_url ⋈ answer_brand_fact). 택소노미 값은 Global = catalog_entry, Project = 그 프로젝트 프롬프트의 택소노미로 풉니다.', '국가 축 = geo_key (Project 는 프로젝트 국가로 잠김), 출처 축 = dim_url.source_key → dim_source.category_key, 기기 축 = page_seo_device_daily (검색 노출만), 방문자 유형 축 = GA4 입구 페이지(ga4_row report 4, ga4_value.url_key) 중 그 유형 세션이 있는 페이지입니다.', '화면 필터에 언어 축이 없어 언어 열은 두지 않습니다.'] } });
+tbl('page_crawl_daily', { s: 'gold', name: 'page_crawl_daily', fam: 'vis', grain: '페이지 × 일 × 크롤러', cols: [['build_id · project_key · url_key · date', 'PF', '', 'page_visibility_daily'], ['bot_key', 'PF', '', 'dim_crawl_bot'], ['hits', '', '크롤 수']], d: {
+  grain: '빌드 × 사이트 · 프로젝트 × 페이지 × 일 × AI 크롤러 = 1행.', pk: 'page_visibility_daily PK + bot_key', inputs: '데이터 분석팀 (출처 제안: 서버 크롤 로그 UA → dim_crawl_bot)', triggers: '일 배치 (제안)',
+  uses: 'AI Visibility 엔진 필터를 건 AI 크롤 수', rules: ['Σhits = page_visibility_daily.ai_crawls 입니다.'] } });
+tbl('page_seo_device_daily', { s: 'gold', name: 'page_seo_device_daily', fam: 'vis', grain: '페이지 × 일 × 기기', cols: [['build_id · project_key · url_key · date', 'PF', '', 'page_visibility_daily'], ['device_key', 'PF', '기기 · ga4_value kind=device', 'ga4_value'], ['seo_impressions', '', '기기별 검색 노출수']], d: {
+  grain: '빌드 × 사이트 · 프로젝트 × 페이지 × 일 × 기기 = 1행.', pk: 'page_visibility_daily PK + device_key', inputs: '데이터 분석팀 (출처 제안: GSC device 차원)', triggers: '일 배치 (제안)', uses: 'AI Visibility 기기 필터를 건 검색 노출수',
+  rules: ['Σseo_impressions = page_visibility_daily.seo_impressions 입니다. 기기 값은 필터의 GA4 기기 코드(mobile · desktop · tablet)에 맞춥니다.'] } });
+tbl('page_priority', { s: 'gold', name: 'page_priority', fam: 'vis', grain: '사이트 × 페이지 우선순위', cols: [['build_id', 'PF', '', 'build'], ['project_key', 'PF', '', 'dim_project'], ['url_key', 'PF', '', 'dim_url'], ['priority', '', '1 높음 · 2 · 3 낮음'], ['rule_ver', '', '산정 규칙 버전']], d: {
+  grain: '빌드 × 사이트 · 프로젝트 × 페이지 = 1행.', pk: 'build_id + project_key + url_key', inputs: '데이터 분석팀', uses: 'AI Visibility 페이지 진단 표 우선 열 · 기본 정렬',
+  rules: ['산정 규칙은 데이터 분석팀이 정하고(미정) rule_ver 로 남깁니다. 이 테이블이 우선순위 정의의 출처입니다. 기본 정렬은 priority 오름차순입니다.'] } });

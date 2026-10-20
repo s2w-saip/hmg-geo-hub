@@ -1,0 +1,117 @@
+{
+ "AG:판정 입력 · BE 편집": {
+  "t": "{\"title\":\"판정 입력 · BE 편집\",\"note\":\"BE 가 쓰고 데이터 분석팀이 적재 · 재판정 때 읽습니다. 판정에 쓰는 값을 바꾸면 judgment_change 가 쌓입니다(BE: project_owned_base · project_tracked_url · citation_domain_override, DB 트리거: prompt 의 카탈로그 · kind 열, project 의 domain · brand_code · country_code · ai_engines). 데이터 분석팀은 Scope 연결 id(project.scope_project_id · prompt.scope_prompt_id)도 씁니다.\",\"items\":[\"project\",\"prompt\",\"project_owned_base\",\"project_tracked_url\",\"citation_domain_override\"]}",
+  "v": "cur",
+  "e": "BE 쓰기: back/app/features/projects/settings/owned_bases/service.py:32 · back/app/features/projects/settings/tracked_urls/service.py:110 · back/app/features/admin/citation_sources/overrides/service.py:159 (enqueue_change) · 트리거 back/db/DB-v2.32.sql:977-979 (project 4열) · DB-v2.32.sql:1052-1055 (prompt 카탈로그 · kind 열) · 적재기 읽기: back/ingest/project/apply/queries.py:926 · 975 · back/migration/seed/seed-3x-common.sql §9 (citation_domain_override, ingest/common/rules.py:30 FUNC_SECTIONS) · Scope id: back/ingest/cycles/workers/queries.py:66 · 69"
+ },
+ "AG:판정 입력 · 시드": {
+  "t": "{\"title\":\"판정 입력 · 시드\",\"note\":\"데이터 분석팀이 적재 · 재판정 때 읽습니다. 현행 BE 쓰기 경로가 없고 이관 시드 · migrator 스크립트만 씁니다. 그래서 judgment_change kind owned_base · brand_rule · competitor_token · hidden_market · website_catalog · rule_param 은 지금 생산자가 없습니다.\",\"items\":[\"owned_base\",\"website_site\",\"website_prompt\",\"website_report_unit\",\"citation_category\",\"brand\",\"brand_name_prefix\",\"brand_display_alias\",\"competitor_domain_token\",\"non_competitor_name\",\"rhq_region_country\",\"hidden_market\",\"rule_param\",\"rule_set\"]}",
+  "v": "cur",
+  "e": "BE 쓰기 SQL 없음(back/app INSERT/UPDATE/DELETE app.<표> 0건, scan) · 쓰기 = back/migration/seed/seed-10-app.sql:39 · 50 · 290 · 305 · 322 · 364 · 580 · 1027 · 1041 · 1163 · 1169 · 1283, back/migration/fill-v216.sql:144 (website_report_unit), back/migration/seed/gen_seed10.py:248 (hidden_market) · 적재기 읽기: back/ingest/project/apply/queries.py:227-262 · 740-774 · back/ingest/cycles/ledger/queries.py:23 · back/ingest/common/db.py:107 · back/db/DB-v2.32.sql:3776-3786 (rd.web_report_prompt_expected ← ingest/project/apply/service.py:79) · seed-3x-common.sql §3 · §7 · §9 · kind 생산자 없음: BE enqueue_change kind 목록(citation_override · cycle_admin · anchor_pin · answer_drop · entity · entity_version · ga4_* · dfs_fetch · project_owned_base · project_setting · project_target_url) · db:app.judgment_change CHECK"
+ },
+ "AG:조회 설정 · 시드": {
+  "t": "{\"title\":\"조회 설정 · 시드\",\"note\":\"BE 가 조회 때 읽습니다(권역 스코프 · 제외 보고 유닛). 현행 BE 쓰기 경로가 없고 이관 시드 · migrator 스크립트만 쓰며, 데이터 분석팀은 읽지 않습니다.\",\"items\":[\"rhq_region\",\"website_report_excluded\"]}",
+  "v": "cur",
+  "e": "BE 읽기: back/app/core/measure.py:293-311 (website_report_excluded) · back/db/DB-v2.32.sql:1472 (rhq_region 스코프 트리거) · BE 쓰기 SQL 없음 · 쓰기 = back/migration/seed/seed-10-app.sql:1024 · back/migration/fill-v216.sql:151-152 · 적재기 참조 0건(back/ingest · seed-3x-common §1-4 · 7 · 9 · 10)"
+ },
+ "AG:엔티티 카탈로그": {
+  "t": "{\"title\":\"엔티티 카탈로그\",\"note\":\"BE 가 버전 · 초안을 편집하고 반영(ecat_apply)을 요청합니다. 데이터 분석팀이 읽어서 반영하고 app.ecat_activate 로 활성 버전을 entity_registry · entity_alias 에 투영합니다(활성 버전이 없을 때는 BE 가 entity_registry 를 직접 씁니다). ecat_apply 진행 · ecat_review 신규 표면 제안 · ecat_audit_log 도 데이터 분석팀이 씁니다.\",\"items\":[\"ecat_version\",\"ecat_entity\",\"ecat_surface\",\"ecat_surface_def\",\"ecat_apply\",\"ecat_review\",\"ecat_audit_log\",\"ecat_alias_active\",\"ecat_registry_active\",\"entity_registry\",\"entity_alias\"]}",
+  "v": "cur",
+  "e": "back/app/features/admin/entities/versions/service.py:8 · 23 (초안 편집 · 반영 요청, 활성화는 적재기만) · back/ingest/project/apply/ecat_engine.py:290 (app.ecat_activate) · back/db/DB-v2.32.sql:4301-4356 (ecat_project_legacy 투영 entity_registry · entity_alias) · back/app/features/admin/entities/registry/service.py:16-19 (컷오버 전 BE 직접 쓰기) · db:loader 권한 ecat_apply UPDATE · ecat_review INSERT/UPDATE · ecat_audit_log INSERT"
+ },
+ "AG:요청 · 연동 큐": {
+  "t": "{\"title\":\"요청 · 연동 큐\",\"note\":\"BE 가 쌓고 데이터 분석팀이 처리하며 상태를 갱신합니다. judgment_change 는 app.prompt · app.project DB 트리거와 데이터 분석팀(scope_prompt)도 쌓습니다. scope_outbox 는 데이터 분석팀이 Scope 에 쓰고 받은 id 를 app.project · app.prompt 에 되씁니다.\",\"items\":[\"judgment_change\",\"scope_outbox\"]}",
+  "v": "cur",
+  "e": "back/app/core/write.py:136 · 147 · back/db/DB-v2.32.sql:967 · 1052-1055 (트리거) · back/ingest/cycles/watch/service.py:201 (scope_prompt) · back/ingest/cycles/workers/queries.py:22-24 · 42-57 (상태 갱신) · back/ingest/cycles/workers/README.md:20 (run_outbox → Scope id 되쓰기) · queries.py:66 · 69"
+ },
+ "AG:GA4 연동": {
+  "t": "{\"title\":\"GA4 연동\",\"note\":\"BE 가 쓰고 읽습니다. ga4_property · ga4_tracked_event 저장은 같은 이름의 judgment_change 를 쌓지만, 현행 적재기는 그 kind 를 집지 않고(외부 적재, 소유 미정) 이 테이블들도 읽지 않습니다.\",\"items\":[\"ga4_property\",\"ga4_tracked_event\",\"ga4_market_pending\"]}",
+  "v": "cur",
+  "e": "back/app/features/admin/integrations/ga4/service.py:203 · 229 · 245 (enqueue_change ga4_property · ga4_tracked_event) · back/app/features/admin/integrations/ga4/queries.py:77 · 105 · back/ingest/cycles/workers/service.py:12 (외부 적재 IG-4, 소유 미정 → 집지 않음) · back/ingest/cycles/watch/service.py:133 · 적재기 참조 0건"
+ },
+ "AG:발행 리포트": {
+  "t": "{\"title\":\"발행 리포트\",\"note\":\"웹사이트 발행 리포트 원장입니다. 현행 BE 쓰기 경로가 없고 이관 시드가 씁니다. 데이터 분석팀이 report_publication ⋈ report_site_fact 로 rd.report_unit_value(골드 report_value)를 만듭니다. report_site_engine_fact 는 BE · 적재기 모두 읽지 않습니다. judgment_change kind report_publication 은 지금 생산자가 없습니다.\",\"items\":[\"report_publication\",\"report_site_fact\",\"report_site_engine_fact\"]}",
+  "v": "cur",
+  "e": "BE 쓰기 SQL 없음 · back/migration/seed/seed-10-app.sql:1201-1215 · back/ingest/cycles/ledger/queries.py:301-307 (report_publication ⋈ report_site_fact → rd.report_unit_value) · report_site_engine_fact 참조 0건(back/app · back/ingest) · BE enqueue_change kind 목록에 report_publication 없음(back/app/features/**) · db:app.judgment_change CHECK"
+ },
+ "AG:BE 전용": {
+  "t": "{\"title\":\"BE 전용\",\"note\":\"BE 가 쓰고 읽습니다. 데이터 분석팀(현행 적재기)은 읽지 않습니다.\",\"items\":[\"user_account\",\"project_member\",\"project_engine_history\",\"project_custom_field\",\"prompt_custom_field_value\",\"prompt_candidate\",\"project_tracked_brand\",\"project_tracked_competitor\",\"project_tracked_vehicle\",\"project_tracked_keyword\",\"standard_keyword\",\"standard_source\",\"kw_prompt_draft\",\"ctx_generated_prompt\"]}",
+  "v": "cur",
+  "e": "BE 쓰기 예: back/app/features/projects/members/roster/queries.py:43 · back/app/features/intent/keywords/tracked/queries.py:25 · back/app/features/admin/interest/keywords/queries.py:10 · back/app/features/admin/interest/sources/queries.py:10 · back/app/features/projects/settings/tracked_targets/queries.py:14 (14개 모두 back/app 쓰기 SQL 있음) · 적재기 참조 0건: back/ingest 전체 · back/migration/seed/seed-3x-common.sql 적재기 절(ingest/common/rules.py:30-31 FUNC_SECTIONS · TABLE_SECTIONS) · DDL 함수"
+ },
+ "AG:검수 · 감사": {
+  "t": "{\"title\":\"검수 · 감사\",\"note\":\"검수 리뷰 · 노트 · 잠금(BE qa_gate 풀)과 감사 로그입니다. 감사 로그는 BE 가 쓰고, prompt_audit_log · permission_audit_log 는 DB 트리거가 씁니다. 데이터 분석팀은 읽지 않고 access_audit_log 월 파티션만 미리 만듭니다.\",\"items\":[\"qa_review_session\",\"qa_answer_review\",\"qa_review_note\",\"qa_answer_lock\",\"access_audit_log\",\"member_audit_log\",\"permission_audit_log\",\"prompt_audit_log\"]}",
+  "v": "cur",
+  "e": "back/app/core/auth.py:923-927 (QaConn = qa_gate) · back/app/features/qa/review/lock/queries.py:7 · back/app/core/write.py:322 (access_audit_log) · back/app/features/projects/members/roster/queries.py:43 (member_audit_log) · back/db/DB-v2.32.sql:1041 (prompt_audit_log 트리거) · DB-v2.32.sql:1504 (permission_audit_log 트리거) · back/ingest/cycles/workers/queries.py:75 (access_audit_log 월 leaf)"
+ },
+ "IN:rcache · 결과 캐시": {
+  "t": "{\"title\":\"rcache · 결과 캐시\",\"note\":\"BE 결과 캐시입니다. 현행 키의 데이터 버전은 app.result_cache_version() = rd.surface_generation · judgment_change 최대 change_id · rcache.data_version 트리거 카운터 합 · KST 오늘입니다. 골드 설계에서는 rd.surface_generation 과 rd 19표 · frz.generation 트리거 카운터 자리를 gold.active_release.version · gold.data_version 이 대신하고, app 13표 카운터 · change_id · KST 오늘은 그대로 둡니다.\",\"items\":[\"rcache.entry\",\"rcache.stat\",\"rcache.data_version\"]}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:2435-2443 (app.result_cache_version) · DB-v2.32.sql:2396-2431 + sql: information_schema.triggers rcache.tg_bump 33표(app 13 · frz 1 · rd 19) · 설계: src/tables/12_build.js data_version uses (rd 19표 · frz.generation 대체, app 13표 · jc · d 유지)"
+ },
+ "IN:mig · 이관 · 병행 운영 원장": {
+  "t": "{\"title\":\"mig · 이관 · 병행 운영 원장\",\"note\":\"원천 복사 · 재구축 · 대조 · 화면 그룹 전환 · 보관 기록 원장입니다. 권한은 migrator 만 있고, 현행 BE · 적재기 코드는 읽거나 쓰지 않습니다.\",\"items\":[\"mig.source_snapshot\",\"mig.copy_chunk\",\"mig.rebuild_batch\",\"mig.partition_checksum\",\"mig.run_fingerprint\",\"mig.parity_run\",\"mig.parity_result\",\"mig.known_diff\",\"mig.row_oracle_diff\",\"mig.screen_group\",\"mig.cutover_event\",\"mig.repull_log\",\"mig.archive_manifest\"]}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:744-788 (mig 9절: 이관 · 병행 운영 원장) · db:mig.* 권한 migrator 만 (information_schema.role_table_grants) · back/app · back/ingest · back/migration 의 mig.<표> 참조 0건(주석 제외)"
+ },
+ "SC:gold": {
+  "t": "{\"label\":\"gold\",\"sub\":\"데이터 분석팀 쓰기 · BE 읽기 전용\",\"chips\":[[\"쓰기\",\"데이터 분석팀 (loader)\"],[\"읽기\",\"BE (api_ro · admin_long · qa_gate)\"]]}",
+  "v": "des",
+  "e": "사용자 10-19 (데이터 분석팀이 채움, BE 는 골드만 읽음) · 읽기 풀 = back/app/core/db.py:47-50 (api_ro · admin_long · api_rw · qa_gate 중 읽기 풀)"
+ },
+ "SC:gold:desc": {
+  "t": "서비스 화면이 읽는 분석 데이터입니다(설정 · 요청은 app). ERD 탭 14개의 골드 테이블을 한 스키마에 둡니다. 범위 · 적재 방식은 제안이고 20261015/A02 · A04 에서 협의 중입니다. 회의 용어집은 골드를 KPI 계산 레이어로 정의하지만, 이 문서는 사실 테이블 + 선택적 셀 집계(가속)를 제안합니다.",
+  "v": "dec",
+  "e": "hmg-geo-hub-discussion-history/glossary.md:16 (골드 = KPI 계산) · actions.md 20261015/A02 · 20261015/A04 (🟡 진행) · 20261015/01_architecture.md:54 · 사용자 2026-10-20 결정 1 (사실 테이블 + 선택적 셀 집계, 제안 표기)"
+ },
+ "SC:gold:rule:0": {
+  "t": "BE 는 SELECT 만 합니다. 정정이 필요하면 app.judgment_change 로 요청합니다.",
+  "v": "des",
+  "e": "사용자 10-19 (BE 는 골드만 읽음) · 정정 경로 app.judgment_change (src/tables/14_queue.js)"
+ },
+ "SC:gold:rule:1": {
+  "t": "답변 · 언급 · 스탠스 · 인용 사실은 스키마를 나누지 않고 표면(LIST) × 회차일 월 범위(RANGE)로 파티션합니다 (현행 rd.answer · answer_brand · answer_stance · citation 과 같음).",
+  "v": "cur",
+  "e": "sql: pg_get_partkeydef — rd.answer · answer_brand · answer_stance · citation = LIST (surface), 하위 *_g · *_w · *_p = RANGE (round_date) · back/ingest/cycles/workers/README.md:16 (월 leaf)"
+ },
+ "SC:gold:rule:2": {
+  "t": "공개는 active_release 포인터 전환으로 일어납니다. 계열이 한 스키마에 있어 여러 계열을 한 트랜잭션에서 함께 바꿀 수 있습니다.",
+  "v": "des",
+  "e": "src/tables/12_build.js active_release (포인터 전환) · 사용자 10-19 (한 스키마)"
+ },
+ "SC:app": {
+  "t": "{\"label\":\"app\",\"sub\":\"BE 쓰기 · 데이터 분석팀 읽기 · 일부 갱신\",\"chips\":[[\"쓰기\",\"BE (api_rw · qa_gate)\"],[\"읽기\",\"데이터 분석팀 (loader)\"],[\"데이터 분석팀 갱신\",\"judgment_change · scope_outbox · ecat_apply · ecat_review · ecat_audit_log · project · prompt · app.ecat_activate 투영\"]]}",
+  "v": "cur",
+  "e": "db:information_schema.role_table_grants (api_rw app INSERT 55 · UPDATE 50, qa_gate qa_* 4, loader app SELECT 62) · column_privileges loader UPDATE judgment_change · scope_outbox · ecat_apply · ecat_review · project · prompt, INSERT judgment_change · ecat_review · ecat_audit_log · back/db/DB-v2.32.sql:4347-4356 (ecat_activate)"
+ },
+ "SC:app:desc": {
+  "t": "GEO HUB BE 가 소유하는 설정 · 요청 · 운영 데이터입니다. 현행 app 스키마 테이블 60개 · 뷰 2개를 쓰고 읽는 쪽 기준으로 나눴습니다. 데이터 분석팀 쓰기는 현행 적재기 코드 · loader 권한에서 확인한 것입니다.",
+  "v": "cur",
+  "e": "sql: pg_class app relkind r/p 60 · v 2 (ecat_alias_active · ecat_registry_active) · 그룹 = APP_GROUPS (62 항목 = DB 와 일치)"
+ },
+ "SC:app:rule:0": {
+  "t": "현행 데이터 분석팀(loader) 쓰기: 큐 · 반영 상태 열, Scope 연결 id, judgment_change scope_prompt 행, ecat_review · ecat_audit_log 행, app.ecat_activate 투영(ecat_version · entity_registry · entity_alias), access_audit_log 월 파티션. 그 밖의 설정 값은 BE 또는 이관 시드가 씁니다.",
+  "v": "cur",
+  "e": "back/ingest/cycles/workers/queries.py:22-24 · 42-57 · 66 · 69 · 75 · back/ingest/cycles/watch/service.py:201 · back/ingest/project/apply/ecat_engine.py:290 · back/db/DB-v2.32.sql:4301-4356 · db:column_privileges loader · 시드 back/migration/seed/seed-10-app.sql"
+ },
+ "SC:app:rule:1": {
+  "t": "현행 DDL 에는 스키마를 넘는 FK 가 4개 있습니다: rd.dim_source → app.citation_category, rd.dim_url → app.owned_base, ing.hub_match · ing.hub_match_scan → app.ecat_surface_def. 소유자가 갈라지면 FK 를 유지할지 빌드 검증으로 바꿀지 정해야 합니다.",
+  "v": "cur",
+  "e": "sql: pg_constraint contype f, 스키마가 다른 4건 = ing.hub_match · ing.hub_match_scan → app.ecat_surface_def, rd.dim_source → app.citation_category, rd.dim_url → app.owned_base · 설계 판단 필요"
+ },
+ "SC:internal": {
+  "t": "{\"label\":\"rcache · mig\",\"sub\":\"BE · 이관 내부\",\"chips\":[[\"rcache\",\"api_ro 가 app.result_cache_* 함수로 읽고 씀 · migrator 무효화\"],[\"mig\",\"migrator 전용\"]]}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:2360 (rcache = SECURITY DEFINER 함수로만) · DB-v2.32.sql:2521-2524 (result_cache_version · lookup · put → api_ro, invalidate → migrator) · db:mig.* grants migrator 만"
+ },
+ "SC:internal:desc": {
+  "t": "rcache 는 BE 결과 캐시, mig 는 이관 · 병행 운영 원장입니다. 골드 설계와 무관하게 그대로 둡니다.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:2360 · 2374 · DB-v2.32.sql:744 (mig 이관 · 병행 운영 원장) · 설계: 골드와 무관하게 유지"
+ },
+ "SC:internal:rule:0": {
+  "t": "골드 전환 뒤 캐시 키의 데이터 버전 = active_release.version · data_version + app 표 카운터 · judgment_change 최대 change_id · KST 오늘입니다.",
+  "v": "des",
+  "e": "src/tables/12_build.js data_version uses ('BE 결과 캐시 키 = active_release.version + data_version … app 13표 카운터 · jc · d 는 유지')"
+ }
+}

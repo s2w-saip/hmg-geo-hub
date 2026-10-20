@@ -1,4 +1,4 @@
-"""인벤토리 항목의 api_call 문자열 → BE 라우트(모듈) 매칭."""
+"""인벤토리 항목의 api_call 문자열 · api_keys → BE 라우트(모듈) 매칭."""
 import json, os, re, sys, collections
 S = os.path.dirname(os.path.abspath(__file__))
 inv = json.load(open(os.path.join(S, 'inventory.json'), encoding='utf-8'))
@@ -46,7 +46,7 @@ def rx_ok(h, p):
 
 out, miss = [], []
 for i, it in enumerate(inv['items'] + [dict(t, route='(화면 밖)', menu='화면 밖 경로', profile='화면 밖') for t in inv['technical']]):
-    hits = find(it['api_call'])
+    hits = sorted(set(find(it['api_call'])) | set(find(' '.join(it.get('api_keys') or []))))  # 자유 텍스트 + 구조화 키
     rec = {'i': i, 'menu': it['menu'], 'route': it['route'], 'label': it['label'], 'profile': it['profile'],
            'api_call': it['api_call'], 'source_label': it.get('source_label'), 'hits': hits}
     out.append(rec)

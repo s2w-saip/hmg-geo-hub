@@ -1,0 +1,188 @@
+/* v8 섹션 */
+main.wrap > *, .detail > *, .sch-panel > *, .d-grid > * { min-width: 0; }
+.refs span, dl.kv dd, .gn { overflow-wrap: anywhere; }
+.chip { max-width: 100%; } .sch-chips .chip { white-space: normal; overflow-wrap: anywhere; }
+.view-note { font-size: 12.5px; color: var(--muted); margin: 0 0 10px; max-width: 90ch; }
+.view-note:empty { display: none; }
+.bar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.q { font: 13px var(--font-body); padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); width: min(420px, 100%); margin-bottom: 10px; }
+.fx-list { min-width: 1000px; }
+details.fx { border-bottom: 1px solid var(--line); }
+details.fx > summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto 72px; gap: 10px; padding: 7px 14px; font-size: 13px; align-items: baseline; }
+details.fx > summary::-webkit-details-marker { display: none; }
+.fx-name::before { content: "›"; color: var(--muted); display: inline-block; width: 12px; transition: transform .15s; }
+details[open] > summary .fx-name::before { transform: rotate(90deg); }
+.fx-route { font: 11.5px var(--font-mono); color: var(--muted); }
+.fx-ok { font: 600 12px var(--font-mono); color: var(--gold-ink); text-align: right; }
+.fx-bad { font: 600 12px var(--font-mono); color: var(--bronze); text-align: right; }
+.fx-note { font-size: 11px; color: var(--muted); background: var(--surface-2); border-radius: 999px; padding: 0 7px; margin-left: 6px; }
+.fx-note:empty { display: none; }
+.fx-items { padding: 2px 14px 12px; display: grid; }
+.fx-row { display: grid; grid-template-columns: minmax(0, 1.3fr) 92px 64px minmax(0, 1.5fr) minmax(0, 1fr) 52px; gap: 10px; align-items: start; font-size: 12.5px; padding: 5px 0; border-top: 1px dashed var(--line); }
+.fx-hd { font-size: 11.5px; color: var(--muted); border-top: 0; }
+.fx-k { font-size: 11.5px; color: var(--muted); }
+.fx-src { font: 11.5px var(--font-mono); color: var(--muted); }
+.pill.p-col { cursor: default; background: var(--gold-weak); border-color: var(--gold-line); color: var(--gold-ink); }
+.pill.p-kind { cursor: default; background: var(--app-weak); border-color: var(--app); color: var(--app); }
+.cm { min-width: 760px; }
+.cm .cm-x td { background: var(--gold-weak); }
+.md { min-width: 1000px; }
+.md-row { display: grid; grid-template-columns: 230px minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 0.8fr) minmax(0, 1fr) 52px; gap: 10px; padding: 6px 14px; border-bottom: 1px solid var(--line); font-size: 12.5px; align-items: start; }
+.md-hd { font-size: 11.5px; color: var(--muted); }
+.md-objs { font: 11px var(--font-mono); color: var(--muted); overflow-wrap: anywhere; }
+.cov-alert { margin-top: 10px; padding: 8px 12px; border: 1px solid var(--bronze); background: var(--bronze-weak); border-radius: 6px; font-size: 12.5px; }
+.nr td.what { font-size: 12.5px; }
+.st { font-size: 12.5px; color: var(--muted); margin-top: 8px; max-width: 90ch; }
+</style>
+</head>
+<body>
+<header class="wrap">
+  <div class="eyebrow"><span class="medal"><i class="m-g"></i></span>HMG GEO HUB · gold</div>
+  <h1>GEO HUB 골드 ERD</h1>
+  <div class="meta" id="meta"></div>
+</header>
+
+<main class="wrap">
+
+<section id="flow" aria-labelledby="flow-h">
+  <div class="sec-head">
+    <h2 id="flow-h">흐름</h2>
+  </div>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 1120 520" role="img" aria-label="데이터 분석팀이 gold 를 채우고 GEO HUB BE 가 gold 를 읽기 전용으로 읽어 화면에 낸다. BE 가 app 에 저장한 설정과 요청은 judgment_change · scope_outbox 로 데이터 분석팀에 넘어간다. 골드 범위 · 적재 방식은 제안이고 20261015/A02 · A04 에서 협의 중이다. 회의 용어집은 골드를 KPI 계산 레이어로 정의하고, 이 문서는 사실 테이블 + 선택적 셀 집계를 제안한다." style="min-width:900px">
+      <defs>
+        <marker id="gf-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="ov-head" d="M0,1 L9,5 L0,9 Z"/></marker>
+        <marker id="gf-arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="ov-head-a" d="M0,1 L9,5 L0,9 Z"/></marker>
+      </defs>
+      <rect class="ov-box" x="20" y="40" width="180" height="360" rx="8" style="fill:var(--surface-2);stroke:var(--edge);stroke-dasharray:6 4"/>
+      <text class="ov-title" x="110" y="206" text-anchor="middle">데이터 분석팀</text>
+      <text class="ov-sub" x="110" y="226" text-anchor="middle">gold 를 채움</text>
+      <text class="ov-sub" x="110" y="244" text-anchor="middle">범위 · 적재 방식 협의 중</text>
+      <text class="ov-sub" x="110" y="260" text-anchor="middle">(20261015/A02 · A04)</text>
+
+      <rect class="ov-box ov-g" x="250" y="40" width="330" height="300" rx="8" style="stroke-width:1.4"/>
+      <text class="ov-title" x="266" y="62">gold</text><text class="ov-sub" x="306" y="62">회차마다 자동 생성 · 검증 통과분만 공개</text>
+      <rect class="ov-box ov-scr" x="266" y="74" width="298" height="30" rx="4"/><text class="ov-t" x="415" y="93" text-anchor="middle">차원 · 프롬프트 · 웹 보고 유닛</text>
+      <rect class="ov-box ov-scr" x="266" y="112" width="298" height="30" rx="4"/><text class="ov-t" x="415" y="131" text-anchor="middle">답변 사실 · ACR · GA4 · 키워드 · 소셜</text>
+      <rect class="ov-box ov-scr" x="266" y="150" width="298" height="30" rx="4"/><text class="ov-t" x="415" y="169" text-anchor="middle">AI Visibility · 소셜 리서치 (신규)</text>
+      <rect class="ov-box ov-scr" x="266" y="188" width="298" height="30" rx="4"/><text class="ov-t" x="415" y="207" text-anchor="middle">답변 원문 뷰</text>
+      <rect class="ov-box ov-scr" x="266" y="226" width="298" height="30" rx="4" style="stroke-dasharray:4 3"/><text class="ov-t" x="415" y="245" text-anchor="middle">셀 집계 (가속 · 선택)</text>
+      <rect class="ov-box ov-scr" x="266" y="264" width="298" height="30" rx="4"/><text class="ov-t" x="415" y="283" text-anchor="middle">발행 세대 (카드 동결)</text>
+      <rect class="ov-box ov-scr" x="266" y="302" width="298" height="30" rx="4"/><text class="ov-t" x="415" y="321" text-anchor="middle">build · release · data_version</text>
+      <text class="ov-tm" x="266" y="360">범위 · 적재 방식 = 제안 (20261015/A02 · A04 진행)</text>
+      <text class="ov-tm" x="266" y="376">회의 용어집: 골드 = KPI 계산 레이어</text>
+      <text class="ov-tm" x="266" y="392">이 문서: 사실 테이블 + 셀 집계(선택)</text>
+
+      <rect class="ov-box ov-scr" x="650" y="40" width="190" height="360" rx="8" style="stroke-width:1.4"/>
+      <text class="ov-title" x="745" y="64" text-anchor="middle">GEO HUB BE</text>
+      <text class="ov-tm" x="666" y="98">gold 읽기 전용</text><text class="ov-tm" x="666" y="114">(SELECT 만)</text>
+      <text class="ov-tm" x="666" y="148">LIVE</text><text class="ov-num" x="666" y="164" style="font-size:11px">active_release</text>
+      <text class="ov-tm" x="666" y="194">카드 경로 7개</text><text class="ov-num" x="666" y="210" style="font-size:11px">publication.build_id</text>
+
+      <rect class="ov-box ov-scr" x="900" y="40" width="200" height="360" rx="8"/>
+      <text class="ov-title" x="914" y="64">화면 항목</text>
+      <text class="ov-t" x="914" y="92">지표</text><text class="ov-num" x="1086" y="92" text-anchor="end" data-kg="지표">0</text>
+      <text class="ov-t" x="914" y="116">표 · 차트</text><text class="ov-num" x="1086" y="116" text-anchor="end" data-kg="표 · 차트">0</text>
+      <text class="ov-t" x="914" y="140">목록 · 상세</text><text class="ov-num" x="1086" y="140" text-anchor="end" data-kg="목록 · 상세">0</text>
+      <text class="ov-t" x="914" y="164">필터 · 상태 표시</text><text class="ov-num" x="1086" y="164" text-anchor="end" data-kg="필터 · 상태 표시">0</text>
+      <text class="ov-t" x="914" y="188">조작</text><text class="ov-num" x="1086" y="188" text-anchor="end" data-kg="조작">0</text>
+      <text class="ov-t" x="914" y="212">쓰기</text><text class="ov-num" x="1086" y="212" text-anchor="end" data-kg="쓰기">0</text>
+      <text class="ov-t" x="914" y="236">내보내기</text><text class="ov-num" x="1086" y="236" text-anchor="end" data-kg="내보내기">0</text>
+      <text class="ov-t" x="914" y="260">화면 계산</text><text class="ov-num" x="1086" y="260" text-anchor="end" data-kg="화면 계산">0</text>
+      <text class="ov-t" x="914" y="284">정적 표본</text><text class="ov-num" x="1086" y="284" text-anchor="end" data-kg="정적 표본">0</text>
+      <text class="ov-t" x="914" y="308">화면 밖 경로</text><text class="ov-num" x="1086" y="308" text-anchor="end" data-kg="화면 밖 경로">0</text>
+      <line x1="914" x2="1086" y1="324" y2="324" style="stroke:var(--line)"/>
+      <text class="ov-t" x="914" y="348">합계</text><text class="ov-num" x="1086" y="348" text-anchor="end" id="flow-total">0</text>
+      <text class="ov-tm" x="914" y="370">★ 점검표 인벤토리 기준</text>
+
+      <path class="ov-line" d="M200,190 H248" marker-end="url(#gf-arrow)"/><text class="ov-lbl" x="224" y="182" text-anchor="middle">적재</text>
+      <path class="ov-line" d="M580,190 H648" marker-end="url(#gf-arrow)"/><text class="ov-lbl" x="614" y="182" text-anchor="middle">SELECT</text>
+      <path class="ov-line" d="M840,210 H898" marker-end="url(#gf-arrow)"/><text class="ov-lbl" x="869" y="202" text-anchor="middle">API</text>
+
+      <rect class="ov-box ov-a" x="650" y="436" width="450" height="58" rx="6"/>
+      <text class="ov-t" x="666" y="456">app · GEO HUB 소유</text>
+      <text class="ov-tm" x="666" y="473">자사 · 타겟 URL · 출처 교정 · 엔티티 · 프롬프트 카탈로그 · GA4 연동</text>
+      <text class="ov-tm" x="666" y="488">요청 큐 · 검수 · 사용자 · 감사</text>
+      <path class="ov-app-line" d="M745,400 V434" marker-end="url(#gf-arrow-a)"/><text class="ov-lbl-a" x="753" y="422">저장</text>
+      <path class="ov-app-line" d="M650,465 H110 V402" marker-end="url(#gf-arrow-a)"/><text class="ov-lbl-a" x="380" y="457" text-anchor="middle">judgment_change · scope_outbox → 재판정 · 수집 · 새 build</text>
+    </svg>
+    </div>
+  </figure>
+</section>
+
+<section id="schema" aria-labelledby="sch-h">
+  <div class="sec-head">
+    <h2 id="sch-h">스키마</h2>
+  </div>
+  <div class="scroll">
+    <table class="acc">
+      <thead><tr><th>스키마</th><th>담는 것</th><th>데이터 분석팀</th><th>GEO HUB BE</th></tr></thead>
+      <tbody>
+        <tr><td>gold</td><td class="what">서비스 화면의 분석 데이터 (범위 제안)</td><td><span class="r r-w">쓰기</span></td><td><span class="r r-r">읽기 전용</span></td></tr>
+        <tr><td>app</td><td class="what">GEO HUB 설정 · 요청 큐 · 검수 · BE 전용 데이터</td><td><span class="r r-r">읽기</span> <span class="r r-u">일부 갱신</span></td><td><span class="r r-w">쓰기</span></td></tr>
+        <tr><td>rcache · mig</td><td class="what">BE 결과 캐시 · 이관 · 병행 운영 원장(migrator 전용)</td><td><span class="r r-n">—</span></td><td><span class="r r-w">rcache 읽기 · 쓰기</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="mv"><span>현행에서 옮기는 곳:</span><span><code>rd</code> → gold</span><span><code>rd.v_answer_*</code> · <code>rd.v_acr_cell_run</code> · <code>rd.v_entity_mention_surface</code> → gold 답변 원문 뷰</span><span><code>frz</code> → gold 발행 세대</span><span><code>ext.ctx_*</code> → gold 소셜</span><span><code>ing.load</code> → gold.build</span><span><code>app</code> · <code>rcache</code> · <code>mig</code> → 그대로</span></div>
+  <div class="sch-tabs" role="tablist" id="sch-tabs" aria-label="스키마"></div>
+  <div class="sch-panel" id="sch-panel" role="tabpanel" aria-live="polite"></div>
+</section>
+
+<section id="erd" aria-labelledby="erd-h">
+  <div class="sec-head">
+    <h2 id="erd-h">ERD</h2>
+  </div>
+  <div class="tabs" role="tablist" id="tabs" aria-label="골드 테이블 묶음"></div>
+  <p class="view-note" id="view-note"></p>
+  <figure>
+    <div class="scroll" id="erd-scroll">
+      <svg id="erd-svg" role="img" aria-label="골드 ERD"></svg>
+    </div>
+    <figcaption class="legend" aria-label="범례">
+      <span><i class="sw sw-g"></i>골드 테이블</span>
+      <span><i class="sw sw-a"></i>app (GEO HUB 소유)</span>
+      <span><i class="sw sw-k"></i>키 묶음 · 다른 탭 테이블</span>
+      <span><b class="kb" style="color:var(--gold-ink)">PK</b> 기본 키 · <b class="kb" style="color:var(--app)">FK</b> 참조 · <b class="kb" style="color:var(--gold-ink)">PF</b> 둘 다 · <b class="kb" style="color:var(--muted)">UK</b> 유일</span>
+      <span><svg viewBox="0 0 26 14" aria-hidden="true"><path d="M2,7 H24 M2,2 L12,7 M2,12 L12,7 M15,2 V12" fill="none" style="stroke:var(--edge)" stroke-width="1.2"/></svg>여러 행 쪽</span>
+      <span><svg viewBox="0 0 26 14" aria-hidden="true"><path d="M2,7 H24 M16,2 V12 M20,2 V12" fill="none" style="stroke:var(--edge)" stroke-width="1.2"/></svg>한 행 쪽</span>
+      <span><svg viewBox="0 0 26 14" aria-hidden="true"><path d="M2,7 H22" fill="none" style="stroke:var(--edge)" stroke-width="1.2" stroke-dasharray="4 3"/><path d="M20,3 L25,7 L20,11 Z" style="fill:var(--edge)"/></svg>파생 · 요청 흐름</span>
+    </figcaption>
+  </figure>
+  <div class="detail" id="detail" aria-live="polite"></div>
+</section>
+
+<section id="newreq-sec" aria-labelledby="nr-h">
+  <div class="sec-head">
+    <h2 id="nr-h">데이터 분석팀 신규 · 변경 요청</h2>
+  </div>
+  <div class="scroll" id="newreq"></div>
+</section>
+
+<section id="feat-sec" aria-labelledby="feat-h">
+  <div class="sec-head">
+    <h2 id="feat-h">화면 기능 전수 대응</h2>
+  </div>
+  <div class="bar" id="feat-bar"></div>
+  <input class="q" id="feat-q" type="search" placeholder="항목 · 라우트 · API · 테이블 검색" aria-label="화면 기능 검색">
+  <div class="scroll"><div class="fx-list" id="feat"></div></div>
+</section>
+
+<section id="colmap-sec" aria-labelledby="cm-h">
+  <div class="sec-head">
+    <h2 id="cm-h">현행 열 전수 대응</h2>
+  </div>
+  <div class="bar" id="colmap-bar"></div>
+  <div class="scroll"><div class="fx-list" id="colmap"></div></div>
+</section>
+
+<section id="mods-sec" aria-labelledby="md-h">
+  <div class="sec-head">
+    <h2 id="md-h">BE 모듈 대응</h2>
+  </div>
+  <div class="scroll"><div class="md" id="mods"></div></div>
+  <div class="sch-groups" id="mods-groups" style="margin-top:12px"></div>
+</section>
+
+</main>

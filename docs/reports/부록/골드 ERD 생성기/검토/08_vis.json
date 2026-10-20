@@ -1,0 +1,297 @@
+{
+ "T:dim_crawl_bot:head": {
+  "t": "{\"name\":\"dim_crawl_bot\",\"s\":\"gold\",\"fam\":\"vis\",\"grain\":\"AI 크롤러 1개\"}",
+  "v": "des",
+  "e": "화면: AI Visibility 'AI 크롤 수' (front/app/[locale]/(dash)/standard/ai-funnel/_data/sample.ts:9 aiCrawls = ChatGPT-User + Claude-Web + PerplexityBot + Googlebot-Vertex) · 엔진 필터 (visibility-view.tsx:106-114 ALL_GROUPS_EXCEPT_LANGUAGE)"
+ },
+ "T:dim_crawl_bot:col:0": {
+  "t": "[\"bot_key\",\"PK\",\"int2\"]",
+  "v": "des",
+  "e": "신규 차원 키 (sample.ts:9 봇 목록을 키로)"
+ },
+ "T:dim_crawl_bot:col:1": {
+  "t": "[\"code\",\"UK\",\"UA 토큰 (예: ChatGPT-User)\"]",
+  "v": "des",
+  "e": "UA 토큰 예시 = AI 크롤 수를 이루는 봇 ChatGPT-User · Claude-Web · PerplexityBot · Googlebot-Vertex (front/app/[locale]/(dash)/standard/ai-funnel/_data/sample.ts:9 주석)"
+ },
+ "T:dim_crawl_bot:col:2": {
+  "t": "[\"engine_key\",\"FK\",\"측정 엔진 · 없으면 0\",\"dim_engine\"]",
+  "v": "des",
+  "e": "엔진 필터(visibility-view.tsx:109 ALL_GROUPS_EXCEPT_LANGUAGE 에 engine 포함) · 0 행: sql: select * from rd.dim_engine (hmg_synth: 0 '' · chatgpt · gemini · deepseek) — Claude-Web · PerplexityBot 은 측정 엔진 없음"
+ },
+ "T:dim_crawl_bot:grain": {
+  "t": "AI 크롤러 1개 = 1행.",
+  "v": "des",
+  "e": "신규 차원 그레인"
+ },
+ "T:dim_crawl_bot:pk": {
+  "t": "bot_key",
+  "v": "des",
+  "e": "신규 차원 PK"
+ },
+ "T:dim_crawl_bot:inputs": {
+  "t": "데이터 분석팀 (출처 제안: 크롤러 UA 목록)",
+  "v": "des",
+  "e": "신규 테이블: 출처 제안 (지침 4 inputs). 현행 수집 없음 (inventory: API 없음, 정적 표본 D9 a)"
+ },
+ "T:dim_crawl_bot:uses": {
+  "t": "AI Visibility AI 크롤 수의 봇 구성 · 엔진 필터",
+  "v": "des",
+  "e": "화면: /standard/ai-funnel/visibility · /projects/[id]/ai-funnel/visibility AI 크롤 수 (visibility-view.tsx:60, 173, 238-240) · 엔진 필터 (dimension-filter-panel.tsx:303-328)"
+ },
+ "T:dim_crawl_bot:rule:0": {
+  "t": "엔진 필터는 AI 크롤 수만 좁힙니다 (engine_key 가 그 엔진인 봇의 hits). 검색 노출에는 엔진이 없습니다.",
+  "v": "des",
+  "e": "설계: 검색 노출(GSC)에는 엔진 차원이 없음 · 화면 엔진 필터 visibility-view.tsx:109"
+ },
+ "T:page_visibility_daily:head": {
+  "t": "{\"name\":\"page_visibility_daily\",\"s\":\"gold\",\"fam\":\"vis\",\"grain\":\"사이트 × 페이지 × 일\"}",
+  "v": "des",
+  "e": "화면: AI Visibility 4분면 카드 · 산점도 · 페이지 진단 표 (visibility-view.tsx:116-270) · 표본 필드 sample.ts:6-12"
+ },
+ "T:page_visibility_daily:col:0": {
+  "t": "[\"build_id\",\"PF\",\"\",\"build\"]",
+  "v": "des",
+  "e": "골드 공통 build_id (12_build build)"
+ },
+ "T:page_visibility_daily:col:1": {
+  "t": "[\"project_key\",\"PF\",\"사이트 · 프로젝트\",\"dim_project\"]",
+  "v": "des",
+  "e": "Global · Project 두 화면이 같은 VisibilityView 를 씀 (standard/ai-funnel/visibility/page.tsx:36-40, projects/[id]/ai-funnel/visibility/page.tsx:25)"
+ },
+ "T:page_visibility_daily:col:2": {
+  "t": "[\"url_key\",\"PF\",\"페이지\",\"dim_url\"]",
+  "v": "des",
+  "e": "표의 URL 열 (visibility-view.tsx:215, 234; sample.ts:7 url)"
+ },
+ "T:page_visibility_daily:col:3": {
+  "t": "[\"geo_key\",\"FK\",\"페이지 시장 · 국가 축\",\"dim_country\"]",
+  "v": "des",
+  "e": "국가 축: Global 옵션 주입(standard/ai-funnel/visibility/page.tsx:24-31, 39) · Project 는 국가 잠금 (projects/[id]/ai-funnel/_lib/auth-and-locks.ts:66, lib/hgh/adapters/project-gate.ts:181)"
+ },
+ "T:page_visibility_daily:col:4": {
+  "t": "[\"date\",\"PK\",\"기간 축\"]",
+  "v": "des",
+  "e": "기간(time) 축 = ALL_GROUPS_EXCEPT_LANGUAGE 에 포함 (dimension-filter-panel.tsx:303-328)"
+ },
+ "T:page_visibility_daily:col:5": {
+  "t": "[\"seo_impressions\",\"\",\"검색 노출수 · 출처 제안 GSC\"]",
+  "v": "des",
+  "e": "산점도 X · 표 '검색 노출수' (visibility-view.tsx:59, 166, 218, 236) · sample.ts:8 'GSC impressions (대용)' → 출처 제안"
+ },
+ "T:page_visibility_daily:col:6": {
+  "t": "[\"ai_crawls\",\"\",\"AI 크롤 수 · 봇 합계\"]",
+  "v": "des",
+  "e": "산점도 Y · 표 'AI 크롤 수' (visibility-view.tsx:60, 173, 221, 239) · sample.ts:9 봇 4종 합"
+ },
+ "T:page_visibility_daily:grain": {
+  "t": "빌드 × 사이트 · 프로젝트 × 페이지 × 일 = 1행.",
+  "v": "des",
+  "e": "신규 테이블 그레인 (기간 축 · 사이트/프로젝트 · 페이지)"
+ },
+ "T:page_visibility_daily:pk": {
+  "t": "build_id + project_key + url_key + date",
+  "v": "des",
+  "e": "신규 테이블 PK"
+ },
+ "T:page_visibility_daily:inputs": {
+  "t": "데이터 분석팀 (출처 제안: GSC 페이지 노출 · 서버 크롤 로그 AI 봇 집계)",
+  "v": "des",
+  "e": "신규 테이블 출처 제안 (sample.ts:8-9 GSC · AI 봇)"
+ },
+ "T:page_visibility_daily:triggers": {
+  "t": "일 배치 (제안)",
+  "v": "des",
+  "e": "제안 (현행 갱신 경로 없음)"
+ },
+ "T:page_visibility_daily:uses": {
+  "t": "AI Visibility (Global · Project) 4분면 카드 · 산점도 · 페이지 진단 표",
+  "v": "des",
+  "e": "화면: Global › AI Agent Funnel › AI Visibility · Project › AI Agent Funnel › AI Visibility (inventory.json menu) 카드 · 산점도 · 표 (visibility-view.tsx:116-270)"
+ },
+ "T:page_visibility_daily:rule:0": {
+  "t": "url_key 는 dim_url 에서 받습니다. 인용된 적 없는 자사 페이지도 dim_url 행을 만들고, 인용 URL 과는 url_norm 으로 맞춥니다.",
+  "v": "des",
+  "e": "설계: 05_cit dim_url rule 0 (url_key = 원문 URL 단위, 자사 미인용 페이지 행 신규, url_norm 으로 맞춤)"
+ },
+ "T:page_visibility_daily:rule:1": {
+  "t": "Global 화면은 웹사이트 사이트(dim_project surface 2) 행의 페이지 전체, Project 화면은 그 프로젝트 project_key 행을 읽습니다. 프로젝트 행의 페이지는 그 프로젝트 자사 기준 URL 아래 페이지입니다.",
+  "v": "des",
+  "e": "설계: Global = 웹사이트 사이트 행 (surface 2 = website, back/app/core/codes.py:18) · Project = 그 프로젝트 project_key 행 (두 화면이 같은 VisibilityView: front/app/[locale]/(dash)/standard/ai-funnel/visibility/page.tsx:36-40, projects/[id]/ai-funnel/visibility/page.tsx:25) · 프로젝트 페이지 범위 = 그 프로젝트 자사 기준 URL 아래 (적재 때 데이터 분석팀이 정함, app 참조 없음 · 사용자 지시 2026-10-20 골드 밖 FK 금지)"
+ },
+ "T:page_visibility_daily:rule:2": {
+  "t": "분면 · 카드 수 · 중앙값은 저장하지 않고, 필터 후 페이지 집합의 기간 합으로 조회 때 계산합니다. 중앙값은 정렬 후 floor(n/2) 번째 값이고, 그 이상이면 높음입니다.",
+  "v": "des",
+  "e": "설계: 저장하지 않고 조회 때 계산 · 중앙값 정의 = 화면 front/app/[locale]/(dash)/standard/ai-funnel/_components/visibility-view.tsx:91-96 (정렬 후 Math.floor(n/2) 번째) · '이상이면 높음'은 표본 분면과 일치 (front/app/[locale]/(dash)/standard/ai-funnel/_data/sample.ts:20 /palisade SEO 5800 = 중앙값 → star, front/app/[locale]/(dash)/standard/ai-funnel/_data/sample.ts:23 /hyundai-mobility AI 220 = 중앙값 → seoGap)"
+ },
+ "T:page_visibility_daily:rule:3": {
+  "t": "프롬프트 축(프롬프트 퍼널 · 브랜드 포함 여부 · 리스트 타입 · Depth 1~4 · 브랜드) · 경쟁사 축은 그 페이지와 url_norm 이 같은 URL 을 인용한 답변의 프롬프트 · 언급 브랜드로 겁니다 (citation_fact ⋈ dim_url ⋈ answer_brand_fact). 택소노미 값은 Global = catalog_entry, Project = 그 프로젝트 프롬프트의 택소노미로 풉니다.",
+  "v": "des",
+  "e": "설계: 축 술어를 url_norm 이 같은 인용 답변(citation_fact ⋈ dim_url ⋈ answer_brand_fact)으로 페이지에 적용 · 화면 축 = ALL_GROUPS_EXCEPT_LANGUAGE (front/components/dash/dimension-filter-panel.tsx:303-328) · 축 이름 = front/messages/ko.json:159-170 dashboard.filters.group (프롬프트 퍼널 · 브랜드 포함 여부 · 리스트 타입 · Depth 1~4 · 브랜드 · 경쟁사) · 택소노미 해석 Global = catalog_entry (back/app/core/filters.py:470-480), Project = 그 프로젝트 프롬프트의 택소노미 (filters.py:565-587)"
+ },
+ "T:page_visibility_daily:rule:4": {
+  "t": "국가 축 = geo_key (Project 는 프로젝트 국가로 잠김), 출처 축 = dim_url.source_key → dim_source.category_key, 기기 축 = page_seo_device_daily (검색 노출만), 방문자 유형 축 = GA4 입구 페이지(ga4_row report 4, ga4_value.url_key) 중 그 유형 세션이 있는 페이지입니다.",
+  "v": "des",
+  "e": "설계: Project 국가 잠금 project-gate.ts:181 · 기기 옵션 mobile · desktop · tablet (dimension-filter-panel.tsx:299) · ga4_row report 4 = landing (back/db/DB-v2.32.sql:686)"
+ },
+ "T:page_visibility_daily:rule:5": {
+  "t": "화면 필터에 언어 축이 없어 언어 열은 두지 않습니다.",
+  "v": "cur",
+  "e": "front/app/[locale]/(dash)/standard/ai-funnel/_components/visibility-view.tsx:109 (onlyGroups = ALL_GROUPS_EXCEPT_LANGUAGE) · front/components/dash/dimension-filter-panel.tsx:326-328 (language 축만 뺌) · 설계: 언어 열 없음"
+ },
+ "T:page_crawl_daily:head": {
+  "t": "{\"name\":\"page_crawl_daily\",\"s\":\"gold\",\"fam\":\"vis\",\"grain\":\"페이지 × 일 × 크롤러\"}",
+  "v": "des",
+  "e": "화면: 엔진 필터를 건 AI 크롤 수 (visibility-view.tsx:109, 173)"
+ },
+ "T:page_crawl_daily:col:0": {
+  "t": "[\"build_id · project_key · url_key · date\",\"PF\",\"\",\"page_visibility_daily\"]",
+  "v": "des",
+  "e": "page_visibility_daily 키 묶음"
+ },
+ "T:page_crawl_daily:col:1": {
+  "t": "[\"bot_key\",\"PF\",\"\",\"dim_crawl_bot\"]",
+  "v": "des",
+  "e": "봇 차원 (sample.ts:9)"
+ },
+ "T:page_crawl_daily:col:2": {
+  "t": "[\"hits\",\"\",\"크롤 수\"]",
+  "v": "des",
+  "e": "봇별 크롤 수"
+ },
+ "T:page_crawl_daily:grain": {
+  "t": "빌드 × 사이트 · 프로젝트 × 페이지 × 일 × AI 크롤러 = 1행.",
+  "v": "des",
+  "e": "신규 테이블 그레인"
+ },
+ "T:page_crawl_daily:pk": {
+  "t": "page_visibility_daily PK + bot_key",
+  "v": "des",
+  "e": "신규 테이블 PK"
+ },
+ "T:page_crawl_daily:inputs": {
+  "t": "데이터 분석팀 (출처 제안: 서버 크롤 로그 UA → dim_crawl_bot)",
+  "v": "des",
+  "e": "신규 테이블 출처 제안"
+ },
+ "T:page_crawl_daily:triggers": {
+  "t": "일 배치 (제안)",
+  "v": "des",
+  "e": "제안"
+ },
+ "T:page_crawl_daily:uses": {
+  "t": "AI Visibility 엔진 필터를 건 AI 크롤 수",
+  "v": "des",
+  "e": "화면: AI Visibility engine 축 (dimension-filter-panel.tsx:303-328)"
+ },
+ "T:page_crawl_daily:rule:0": {
+  "t": "Σhits = page_visibility_daily.ai_crawls 입니다.",
+  "v": "des",
+  "e": "설계 정합 규칙"
+ },
+ "T:page_seo_device_daily:head": {
+  "t": "{\"name\":\"page_seo_device_daily\",\"s\":\"gold\",\"fam\":\"vis\",\"grain\":\"페이지 × 일 × 기기\"}",
+  "v": "des",
+  "e": "화면: AI Visibility device 축 (ALL_GROUPS_EXCEPT_LANGUAGE, dimension-filter-panel.tsx:318)"
+ },
+ "T:page_seo_device_daily:col:0": {
+  "t": "[\"build_id · project_key · url_key · date\",\"PF\",\"\",\"page_visibility_daily\"]",
+  "v": "des",
+  "e": "page_visibility_daily 키 묶음"
+ },
+ "T:page_seo_device_daily:col:1": {
+  "t": "[\"device_key\",\"PF\",\"기기 · ga4_value kind=device\",\"ga4_value\"]",
+  "v": "des",
+  "e": "기기 옵션 mobile · desktop · tablet (dimension-filter-panel.tsx:299) · 07_ga4 ga4_value kind device"
+ },
+ "T:page_seo_device_daily:col:2": {
+  "t": "[\"seo_impressions\",\"\",\"기기별 검색 노출수\"]",
+  "v": "des",
+  "e": "기기 필터 후 검색 노출수 (visibility-view.tsx:59)"
+ },
+ "T:page_seo_device_daily:grain": {
+  "t": "빌드 × 사이트 · 프로젝트 × 페이지 × 일 × 기기 = 1행.",
+  "v": "des",
+  "e": "신규 테이블 그레인"
+ },
+ "T:page_seo_device_daily:pk": {
+  "t": "page_visibility_daily PK + device_key",
+  "v": "des",
+  "e": "신규 테이블 PK"
+ },
+ "T:page_seo_device_daily:inputs": {
+  "t": "데이터 분석팀 (출처 제안: GSC device 차원)",
+  "v": "des",
+  "e": "신규 테이블 출처 제안"
+ },
+ "T:page_seo_device_daily:triggers": {
+  "t": "일 배치 (제안)",
+  "v": "des",
+  "e": "제안"
+ },
+ "T:page_seo_device_daily:uses": {
+  "t": "AI Visibility 기기 필터를 건 검색 노출수",
+  "v": "des",
+  "e": "화면: AI Visibility device 축"
+ },
+ "T:page_seo_device_daily:rule:0": {
+  "t": "Σseo_impressions = page_visibility_daily.seo_impressions 입니다. 기기 값은 필터의 GA4 기기 코드(mobile · desktop · tablet)에 맞춥니다.",
+  "v": "des",
+  "e": "설계 정합 규칙 · 기기 코드 dimension-filter-panel.tsx:295-299"
+ },
+ "T:page_priority:head": {
+  "t": "{\"name\":\"page_priority\",\"s\":\"gold\",\"fam\":\"vis\",\"grain\":\"사이트 × 페이지 우선순위\"}",
+  "v": "des",
+  "e": "화면: 페이지 진단 표 '우선' 열 (visibility-view.tsx:227, 254-264)"
+ },
+ "T:page_priority:col:0": {
+  "t": "[\"build_id\",\"PF\",\"\",\"build\"]",
+  "v": "des",
+  "e": "골드 공통 build_id"
+ },
+ "T:page_priority:col:1": {
+  "t": "[\"project_key\",\"PF\",\"\",\"dim_project\"]",
+  "v": "des",
+  "e": "page_visibility_daily 와 같은 사이트 · 프로젝트 키"
+ },
+ "T:page_priority:col:2": {
+  "t": "[\"url_key\",\"PF\",\"\",\"dim_url\"]",
+  "v": "des",
+  "e": "페이지 키"
+ },
+ "T:page_priority:col:3": {
+  "t": "[\"priority\",\"\",\"1 높음 · 2 · 3 낮음\"]",
+  "v": "des",
+  "e": "front/app/[locale]/(dash)/standard/ai-funnel/_data/sample.ts:11 'priority: 1 | 2 | 3; // 1=high' · visibility-view.tsx:74 (1 먼저)"
+ },
+ "T:page_priority:col:4": {
+  "t": "[\"rule_ver\",\"\",\"산정 규칙 버전\"]",
+  "v": "des",
+  "e": "설계: 산정 규칙 재현용 (화면에 규칙이 없음, sample.ts:11)"
+ },
+ "T:page_priority:grain": {
+  "t": "빌드 × 사이트 · 프로젝트 × 페이지 = 1행.",
+  "v": "des",
+  "e": "신규 테이블 그레인"
+ },
+ "T:page_priority:pk": {
+  "t": "build_id + project_key + url_key",
+  "v": "des",
+  "e": "신규 테이블 PK"
+ },
+ "T:page_priority:inputs": {
+  "t": "데이터 분석팀",
+  "v": "des",
+  "e": "설계: 산정 규칙은 데이터 분석팀 소관 (화면에 산정 규칙 없음, front/app/[locale]/(dash)/standard/ai-funnel/_data/sample.ts:11 픽스처 값) · 지침 7 inputs 꼴"
+ },
+ "T:page_priority:uses": {
+  "t": "AI Visibility 페이지 진단 표 우선 열 · 기본 정렬",
+  "v": "des",
+  "e": "화면: 페이지 진단 표 우선 열 · 기본 정렬 (visibility-view.tsx:85-87, 227)"
+ },
+ "T:page_priority:rule:0": {
+  "t": "산정 규칙은 데이터 분석팀이 정하고(미정) rule_ver 로 남깁니다. 이 테이블이 우선순위 정의의 출처입니다. 기본 정렬은 priority 오름차순입니다.",
+  "v": "cur",
+  "e": "front/app/[locale]/(dash)/standard/ai-funnel/_components/visibility-view.tsx:87 (defaultKey priority, defaultAsc true) · front/app/[locale]/(dash)/standard/ai-funnel/_data/sample.ts:11 (1=high) · 설계: 산정 규칙 · rule_ver (화면에 산정 규칙 없음)"
+ }
+}

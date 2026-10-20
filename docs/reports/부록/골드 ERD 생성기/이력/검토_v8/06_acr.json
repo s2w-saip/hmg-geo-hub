@@ -1,0 +1,357 @@
+{
+ "T:acr_cell_fact:head": {
+  "t": "{\"name\":\"acr_cell_fact\",\"s\":\"gold\",\"fam\":\"acr\",\"grain\":\"빌드 × ACR 셀\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:655-659 (rd.acr_cell PK acr_cell_key) · 설계: build_id 그레인(src/newreq.js build)"
+ },
+ "T:acr_cell_fact:col:0": {
+  "t": "[\"build_id\",\"PF\",\"빌드 (신규)\",\"build\"]",
+  "v": "des",
+  "e": "NEWREQ build '모든 사실·셀의 세대'; db_cols.tsv rd.acr_cell 에 build_id 없음 → (신규)"
+ },
+ "T:acr_cell_fact:col:1": {
+  "t": "[\"acr_cell_key\",\"PK\",\"ACR 셀 = Scope prompt-run\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:655 PRIMARY KEY · back/ingest/project/apply/queries.py:1485-1490 ACR_ASSERT prompt-run 1:1 · back/ingest/project/apply/service.py:316"
+ },
+ "T:acr_cell_fact:col:2": {
+  "t": "[\"C 좌표\",\"FK\",\"surface·cyc·prompt·project·engine·geo·lang·bgrp\",\"cell_key\",[\"surface\",\"cyc_key\",\"prompt_key\",\"project_key\",\"engine_key\",\"geo_key\",\"lang_key\",\"bgrp\"]]",
+  "v": "cur",
+  "e": "db:rd.acr_cell (surface·cyc_key·prompt_key·project_key·engine_key·geo_key·lang_key·bgrp) back/db/DB-v2.32.sql:655-657"
+ },
+ "T:acr_cell_fact:col:3": {
+  "t": "[\"round_date · measured_date\",\"\",\"회차일 · 측정일(KST)\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:1439-1447 (round_date = rd.cycle.round_date, measured_date = coalesce((measured_at AT TIME ZONE 'Asia/Seoul')::date, anchor_date))"
+ },
+ "T:acr_cell_fact:col:4": {
+  "t": "[\"cat_mask\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.acr_cell.cat_mask"
+ },
+ "T:acr_cell_fact:col:5": {
+  "t": "[\"planned · valid_turn1 · valid_acr\",\"\",\"반복 수: 계획 · 1턴 유효 · ACR 유효\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:1439-1447 (planned_iterations · valid_turn1_iterations · valid_acr_iterations)"
+ },
+ "T:acr_cell_fact:col:6": {
+  "t": "[\"co_single · co_conditional · co_generic\",\"\",\"결과 유형별 수\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:1439-1447 (co_single_entity · co_conditional_multiple · co_generic_category → co_*)"
+ },
+ "T:acr_cell_fact:col:7": {
+  "t": "[\"co_off_shortlist · co_unresolved · co_none\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.acr_cell (co_off_shortlist · co_unresolved · co_none) back/db/DB-v2.32.sql:658"
+ },
+ "T:acr_cell_fact:col:8": {
+  "t": "[\"is_rep · acr_in\",\"\",\"회차 대표 셀 · ACR 모수 게이트\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:1428-1437 (acr_in) · back/ingest/project/apply/queries.py:1473-1483 (is_rep = (cyc, prompt, engine, geo) 안 acr_in 최신 셀)"
+ },
+ "T:acr_cell_fact:col:9": {
+  "t": "[\"rule_ver\",\"\",\"적재 규칙 버전 (app.rule_set)\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/service.py:346 (ctx.rule_ver) · back/ingest/common/db.py:106-107 (max(rule_ver) FROM app.rule_set)"
+ },
+ "T:acr_cell_fact:grain": {
+  "t": "빌드 × ACR 셀(Scope prompt-run 1개 = 프롬프트 × 엔진 × 지역의 반복 측정 묶음) = 1행.",
+  "v": "cur",
+  "e": "back/ingest/project/apply/service.py:316 'ACR(prompt-run 1:1)' · db:ing.acr_prompt_run (run_id·prompt_id·target·region) · 설계: build 그레인"
+ },
+ "T:acr_cell_fact:pk": {
+  "t": "build_id + acr_cell_key",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:655 PRIMARY KEY (acr_cell_key) · 설계: + build_id"
+ },
+ "T:acr_cell_fact:inputs": {
+  "t": "데이터 분석팀 · app.prompt (루트 카탈로그) · app.hidden_market (global acr_in)",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:404-430 (DIM_PROMPT_REFRESH app.prompt 루트 카탈로그 → in_root_catalog·cat_mask) · back/ingest/project/apply/queries.py:1428-1437 (ACR_PREP acr_in: app.hidden_market global)"
+ },
+ "T:acr_cell_fact:triggers": {
+  "t": "Scope run 적재, 재판정(judgment_change)",
+  "v": "cur",
+  "e": "back/ingest/project/apply/service.py:1-6 (apply 적재 · reproject · rejudge) · back/ingest/project/apply/service.py:316-317"
+ },
+ "T:acr_cell_fact:uses": {
+  "t": "Global ACR 의 셀 선택 · 분모: Top1 · Top5 ACR 카드, 답변 수 카드, 측정 프롬프트 · 셀 · 반복 수 주석, 선택률 추이 분모 → /v1/funnel/acr. 검수 상세 ACR 롤업 블록 → /v1/qa/answers/{job_id}. Website · Project ACR (신규 공급, 현행 정적 표본)",
+  "v": "cur",
+  "e": "back/app/features/analytics/funnel/acr/queries.py:23-86 (cells·totals·trend 분모) · front/app/[locale]/(dash)/standard/ai-funnel/_components/acr-live-view.tsx:315-350,660-668 · back/app/features/qa/answers/detail/queries.py:64-72 · inventory.json (Global › AI Agent Funnel › ACR (beta) 카드·주석, 검수 상세 'ACR 롤업 · 상세 블록') · front/app/[locale]/(dash)/website/ai-funnel/acr/page.tsx:13 (정적 표본) · 설계: Website · Project 신규 공급"
+ },
+ "T:acr_cell_fact:cur": {
+  "t": "rd.acr_cell (열 전부 + build_id)",
+  "v": "cur",
+  "e": "db_cols.tsv rd.acr_cell 24열 = 골드 열(build_id 제외) 전부"
+ },
+ "T:acr_cell_fact:rule:0": {
+  "t": "현행 Top1 ACR = 브랜드 Σchoice ÷ 셀 Σvalid_acr · Top5(후보군 포함율) = 등장 셀 수 ÷ 셀 수",
+  "v": "cur",
+  "e": "back/app/features/analytics/funnel/acr/service.py:252-253 (choice_share = choice/iterations, coverage = cells/prompt_runs) · back/app/features/analytics/funnel/acr/queries.py:47-54"
+ },
+ "T:acr_entity_fact:head": {
+  "t": "{\"name\":\"acr_entity_fact\",\"s\":\"gold\",\"fam\":\"acr\",\"grain\":\"빌드 × ACR 셀 × 레벨 × 엔티티\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:667-676 (rd.acr_choice PK (level, acr_cell_key, entity_key)) · 설계: build_id"
+ },
+ "T:acr_entity_fact:col:0": {
+  "t": "[\"build_id · acr_cell_key\",\"PF\",\"\",\"acr_cell_fact\"]",
+  "v": "cur",
+  "e": "db:rd.acr_choice.acr_cell_key · 설계: build_id + FK acr_cell_fact"
+ },
+ "T:acr_entity_fact:col:1": {
+  "t": "[\"level\",\"PK\",\"1 브랜드 · 2 차종 · 3 회사\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:674-676 (LIST 1·2·3) · back/ingest/project/apply/queries.py:1449-1471 (brand→1, product→2, 그 밖→3)"
+ },
+ "T:acr_entity_fact:col:2": {
+  "t": "[\"entity_key\",\"PF\",\"\",\"dim_entity\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:673 PRIMARY KEY (level, acr_cell_key, entity_key)"
+ },
+ "T:acr_entity_fact:col:3": {
+  "t": "[\"brand_key · parent_brand_key\",\"FK\",\"레벨1 표시 브랜드 · 차종 소속 (그 밖 0)\",\"dim_brand\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:668-669,672 (brand_key 레벨1 표시 브랜드, parent_brand_key product→소속 브랜드, CHECK level = 1 OR brand_key = 0)"
+ },
+ "T:acr_entity_fact:col:4": {
+  "t": "[\"own_bit · name_own\",\"\",\"당사 비트: 명부 · 표시 이름\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:1449-1471 (own_bit = _acr_nm 명부 비트, name_own = dim_brand_name.own_bit) · migration/seed/seed-3x-common.sql:128-138 (_roster)"
+ },
+ "T:acr_entity_fact:col:5": {
+  "t": "[\"appearance · choice · cond_choice\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.acr_choice (appearance · choice · cond_choice)"
+ },
+ "T:acr_entity_fact:col:6": {
+  "t": "[\"off_shortlist · unresolved · generic\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.acr_choice (off_shortlist · unresolved · generic)"
+ },
+ "T:acr_entity_fact:col:7": {
+  "t": "[\"keep\",\"\",\"false = 비경쟁 이름 (표시 제외)\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:555-585 (keep = brand_competitive) · migration/seed/seed-3x-common.sql:55-61 (app.non_competitor_name) · back/app/features/analytics/funnel/acr/queries.py:10,66"
+ },
+ "T:acr_entity_fact:grain": {
+  "t": "빌드 × ACR 셀 × 레벨 × 엔티티 = 1행.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:673 · 설계: build_id"
+ },
+ "T:acr_entity_fact:pk": {
+  "t": "build_id + acr_cell_key + level + entity_key",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:673 PRIMARY KEY (level, acr_cell_key, entity_key) · 설계: + build_id"
+ },
+ "T:acr_entity_fact:inputs": {
+  "t": "데이터 분석팀 · app.brand · app 엔티티 카탈로그(ecat) · app.non_competitor_name (keep)",
+  "v": "cur",
+  "e": "migration/seed/seed-3x-common.sql:55-61,115-138 (app.non_competitor_name · app.brand · ecat/entity_registry 명부) · back/ingest/common/rules.py:41-54 (적재기가 seed-3x-common 을 실행)"
+ },
+ "T:acr_entity_fact:uses": {
+  "t": "Global ACR 브랜드별 ACR 표, Top1 · Top5 ACR · 1순위 횟수 카드, 선택률 추이 분자, 모델별 선택 구도 표, 차종별 선택 전환율 표, 모델별 점유 맵 → /v1/funnel/acr. 검수 상세 ACR 롤업 블록. Website · Project ACR (신규 공급, 현행 정적 표본)",
+  "v": "cur",
+  "e": "back/app/features/analytics/funnel/acr/queries.py:57-168 (brands·trend·battle·models·territory) · front/app/[locale]/(dash)/standard/ai-funnel/_components/acr-live-view.tsx:315-350 · back/app/features/qa/answers/detail/queries.py:74-82 · inventory.json · 설계: Website · Project 신규 공급"
+ },
+ "T:acr_entity_fact:cur": {
+  "t": "rd.acr_choice (열 전부 + build_id, 레벨 파티션)",
+  "v": "cur",
+  "e": "db_cols.tsv rd.acr_choice 14열 = 골드 열(build_id 제외) 전부 · back/db/DB-v2.32.sql:673-676 LIST(level)"
+ },
+ "T:acr_entity_fact:rule:0": {
+  "t": "배틀 승자는 필터를 건 셀을 (프롬프트, 엔진)으로 합산한 뒤 고릅니다 (현행). 골드는 국가별 승자만 저장하지 않습니다.",
+  "v": "cur",
+  "e": "back/app/features/analytics/funnel/acr/queries.py:89-107 (필터 건 cells → (prompt, engine) 합산 뒤 DISTINCT ON 승자) · 설계: 골드는 국가별 승자 저장 안 함"
+ },
+ "T:acr_entity_fact:rule:1": {
+  "t": "현행 차종 전환율 = 표시 이름 × 소속 브랜드로 묶은 Σchoice ÷ 차종 행이 붙은 셀의 valid_acr 합. 같은 이름 엔티티 둘이 한 셀에 있으면 분모가 두 번 더해질 수 있으나 실데이터 발생 여부는 미확인입니다 (stg 조사 대기).",
+  "v": "cur",
+  "e": "back/app/features/analytics/funnel/acr/queries.py:128-145 · docs/handoff/p4-acr-model-denominator.html (§1 의심 결함, 상태 대기 · stg 미조회)"
+ },
+ "T:acr_entity_fact:rule:2": {
+  "t": "appearance 는 언급 기반이라 반복 수보다 클 수 있습니다. 골드는 후보군 등장 반복 수를 acr_iter_shortlist 로 셉니다.",
+  "v": "cur",
+  "e": "front/app/[locale]/(dash)/standard/ai-funnel/_components/acr-live-view.tsx:40-41 (appearance 언급 횟수 기반, 반복 수 초과 가능) · 설계: acr_iter_shortlist"
+ },
+ "T:acr_iter_fact:head": {
+  "t": "{\"name\":\"acr_iter_fact\",\"s\":\"gold\",\"fam\":\"acr\",\"grain\":\"빌드 × ACR 셀 × 반복\"}",
+  "v": "des",
+  "e": "NEWREQ acr_iter_fact (모델별 점유 맵 반복별 승자)"
+ },
+ "T:acr_iter_fact:col:0": {
+  "t": "[\"build_id · acr_cell_key\",\"PF\",\"\",\"acr_cell_fact\"]",
+  "v": "des",
+  "e": "NEWREQ acr_iter_fact"
+ },
+ "T:acr_iter_fact:col:1": {
+  "t": "[\"iter_no\",\"PK\",\"= answer_fact.acr_iter_rank (최신 = 1)\"]",
+  "v": "des",
+  "e": "NEWREQ acr_iter_fact · 현행 acr_iter_rank = run-셀 안 measured_at DESC row_number: back/ingest/project/apply/queries.py:904-909"
+ },
+ "T:acr_iter_fact:col:2": {
+  "t": "[\"answer_key\",\"FK\",\"반복 job\",\"job_index\"]",
+  "v": "des",
+  "e": "NEWREQ acr_iter_fact · 반복 = source_job_ids 원소 job (back/db/DB-v2.32.sql:665)"
+ },
+ "T:acr_iter_fact:col:3": {
+  "t": "[\"result_type\",\"\",\"1 single · 2 conditional · 3 generic · 4 off_shortlist · 5 unresolved · 6 none\"]",
+  "v": "des",
+  "e": "NEWREQ acr_iter_fact · 코드값은 rd.acr_cell co_* 6종과 1:1 (back/db/DB-v2.32.sql:658)"
+ },
+ "T:acr_iter_fact:col:4": {
+  "t": "[\"winner_brand_key\",\"FK\",\"0 = 선택 없음\",\"dim_brand\"]",
+  "v": "des",
+  "e": "NEWREQ acr_iter_fact · 화면 '선택 없음' (front/messages/ko.json territory.noChoice)"
+ },
+ "T:acr_iter_fact:col:5": {
+  "t": "[\"winner_entity_key\",\"FK\",\"차종 · 없으면 0\",\"dim_entity\"]",
+  "v": "des",
+  "e": "NEWREQ acr_iter_fact"
+ },
+ "T:acr_iter_fact:col:6": {
+  "t": "[\"own_bit\",\"\",\"\"]",
+  "v": "des",
+  "e": "NEWREQ acr_iter_fact (당사 강조)"
+ },
+ "T:acr_iter_fact:grain": {
+  "t": "빌드 × ACR 셀 × 반복 1회 = 1행.",
+  "v": "des",
+  "e": "NEWREQ acr_iter_fact"
+ },
+ "T:acr_iter_fact:pk": {
+  "t": "build_id + acr_cell_key + iter_no",
+  "v": "des",
+  "e": "NEWREQ acr_iter_fact"
+ },
+ "T:acr_iter_fact:inputs": {
+  "t": "데이터 분석팀 (출처 제안: Scope ACR 반복 job 별 최종 선택. 현행 acr_summary 는 prompt-run 단위 합계뿐)",
+  "v": "des",
+  "e": "출처 제안 · 현행 근거: back/ingest/pull/sync/stage.py:9 (acr_summary = prompt_run_id 단위) · db_cols.tsv ing.acr_prompt_run/acr_rollup_row (반복 단위 열 없음)"
+ },
+ "T:acr_iter_fact:triggers": {
+  "t": "acr_cell_fact 와 같은 빌드",
+  "v": "des",
+  "e": "설계: acr_cell_fact 와 같은 build (src/newreq.js build)"
+ },
+ "T:acr_iter_fact:uses": {
+  "t": "(신규 공급) 모델별 점유 맵의 반복 칸별 승자 · 최빈 브랜드. Website · Project ACR 은 현행 정적 표본(반복 1–10), Global ACR 은 현행 선택 분포로 그림",
+  "v": "des",
+  "e": "화면 항목: inventory.json Website · Project ACR '모델별 점유 맵' 없음 — 정적 표본 · front/messages/ko.json:1286-1287 (반복 1–10) · front/app/[locale]/(dash)/standard/ai-funnel/_components/acr-view.tsx:404,461-473 (최빈) · acr-live-view.tsx:43-44 (Global 분포)"
+ },
+ "T:acr_iter_fact:cur": {
+  "t": "없음 (신규. 현행 Global ACR 점유 맵은 반복 순서가 없어 선택 횟수 분포로 그림)",
+  "v": "cur",
+  "e": "front/app/[locale]/(dash)/standard/ai-funnel/_components/acr-live-view.tsx:43-44,596-640 · front/messages/ko.json:1408 territoryHint · 설계: 신규"
+ },
+ "T:acr_iter_fact:rule:0": {
+  "t": "골드에서는 셀의 반복 행을 result_type 별로 센 값이 acr_cell_fact.co_* 와 같아야 합니다.",
+  "v": "des",
+  "e": "설계 검증 규칙 (result_type ↔ co_* 1:1)"
+ },
+ "T:acr_iter_fact:rule:1": {
+  "t": "골드에서는 반복 열 수 = acr_cell_fact.planned 입니다 (정적 표본 화면은 10 고정).",
+  "v": "des",
+  "e": "설계 · 현행 정적 표본 10 고정: front/app/[locale]/(dash)/standard/ai-funnel/_components/acr-view.tsx:404 colSpan 10 · sample.ts:129"
+ },
+ "T:acr_iter_shortlist:head": {
+  "t": "{\"name\":\"acr_iter_shortlist\",\"s\":\"gold\",\"fam\":\"acr\",\"grain\":\"반복 × 레벨 × 후보 엔티티\"}",
+  "v": "des",
+  "e": "NEWREQ acr_iter_shortlist"
+ },
+ "T:acr_iter_shortlist:col:0": {
+  "t": "[\"build_id · acr_cell_key · iter_no\",\"PF\",\"\",\"acr_iter_fact\"]",
+  "v": "des",
+  "e": "NEWREQ acr_iter_shortlist"
+ },
+ "T:acr_iter_shortlist:col:1": {
+  "t": "[\"level\",\"PK\",\"1 브랜드 · 2 차종 · 3 회사\"]",
+  "v": "des",
+  "e": "NEWREQ acr_iter_shortlist · 레벨 코드 = rd.acr_choice (back/db/DB-v2.32.sql:674-676)"
+ },
+ "T:acr_iter_shortlist:col:2": {
+  "t": "[\"entity_key\",\"PF\",\"\",\"dim_entity\"]",
+  "v": "des",
+  "e": "NEWREQ acr_iter_shortlist"
+ },
+ "T:acr_iter_shortlist:col:3": {
+  "t": "[\"brand_key · parent_brand_key\",\"FK\",\"\",\"dim_brand\"]",
+  "v": "des",
+  "e": "NEWREQ acr_iter_shortlist"
+ },
+ "T:acr_iter_shortlist:col:4": {
+  "t": "[\"is_choice\",\"\",\"그 반복의 최종 선택\"]",
+  "v": "des",
+  "e": "NEWREQ acr_iter_shortlist"
+ },
+ "T:acr_iter_shortlist:grain": {
+  "t": "빌드 × ACR 셀 × 반복 × 레벨 × 후보 엔티티 = 1행.",
+  "v": "des",
+  "e": "NEWREQ acr_iter_shortlist"
+ },
+ "T:acr_iter_shortlist:pk": {
+  "t": "build_id + acr_cell_key + iter_no + level + entity_key",
+  "v": "des",
+  "e": "NEWREQ acr_iter_shortlist"
+ },
+ "T:acr_iter_shortlist:inputs": {
+  "t": "데이터 분석팀 (출처 제안: Scope ACR 반복 job 별 후보군 · 최종 선택. 현행 acr_summary 는 prompt-run 단위 합계뿐)",
+  "v": "des",
+  "e": "출처 제안 · 현행 근거: back/ingest/pull/sync/stage.py:9 (acr_summary prompt-run 단위)"
+ },
+ "T:acr_iter_shortlist:uses": {
+  "t": "(신규 공급) 차종별 선택 전환율 표의 후보군 등장 · 1위 선택 · 전환율 = 최종 선택 ÷ 후보로 등장한 회차(반복) (화면 정의). 현행 Global 은 등장 셀 수 · 셀 valid_acr 합으로 계산, Website · Project 는 정적 표본",
+  "v": "des",
+  "e": "화면 정의 front/messages/ko.json:1305 ('최종 선택 ÷ 후보로 등장한 회차') · 현행 Global: front/lib/hgh/adapters/funnel.ts:144-150 (shortlistCount = cells) · back/app/features/analytics/funnel/acr/queries.py:128-145 · inventory.json Website · Project '차종별 선택 전환율 표' 정적 표본"
+ },
+ "T:acr_iter_shortlist:cur": {
+  "t": "없음 (신규)",
+  "v": "des",
+  "e": "NEWREQ acr_iter_shortlist (현행 객체 없음, uses.js)"
+ },
+ "T:acr_cell_job:head": {
+  "t": "{\"name\":\"acr_cell_job\",\"s\":\"gold\",\"fam\":\"acr\",\"grain\":\"ACR 셀 × 소속 job\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:665-666 · 설계: build_id"
+ },
+ "T:acr_cell_job:col:0": {
+  "t": "[\"build_id\",\"PF\",\"빌드 (신규)\",\"build\"]",
+  "v": "des",
+  "e": "NEWREQ build; db_cols.tsv rd.acr_cell_job 에 build_id 없음 → (신규)"
+ },
+ "T:acr_cell_job:col:1": {
+  "t": "[\"answer_key\",\"PF\",\"\",\"job_index\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:665-666 PRIMARY KEY (answer_key, acr_cell_key)"
+ },
+ "T:acr_cell_job:col:2": {
+  "t": "[\"acr_cell_key\",\"PF\",\"\",\"acr_cell_fact\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:665-666 PRIMARY KEY (answer_key, acr_cell_key)"
+ },
+ "T:acr_cell_job:grain": {
+  "t": "빌드 × ACR 셀 × 소속 job 1건 = 1행.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:665 (source_job_ids 원소 1개 = 1행) · 설계: build_id"
+ },
+ "T:acr_cell_job:pk": {
+  "t": "build_id + answer_key + acr_cell_key",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:666 · 설계: + build_id"
+ },
+ "T:acr_cell_job:inputs": {
+  "t": "데이터 분석팀 (Scope prompt-run source_job_ids)",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:1449-1452 (unnest(source_job_ids))"
+ },
+ "T:acr_cell_job:uses": {
+  "t": "검수 상세 ACR 롤업 블록: job → ACR 셀 (/v1/qa/answers/{job_id})",
+  "v": "cur",
+  "e": "back/app/features/qa/answers/detail/queries.py:64-72 · inventory.json 검수 상세 'ACR 롤업 · 상세 블록' (GET /v1/qa/answers/{job_id})"
+ },
+ "T:acr_cell_job:cur": {
+  "t": "rd.acr_cell_job (열 전부 + build_id)",
+  "v": "cur",
+  "e": "db_cols.tsv rd.acr_cell_job 2열 = 골드 열(build_id 제외) 전부"
+ }
+}

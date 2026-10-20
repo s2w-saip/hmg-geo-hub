@@ -1,0 +1,292 @@
+{
+ "T:app_inputs:head": {
+  "t": "{\"name\":\"app 입력 설정\",\"s\":\"applist\",\"fam\":\"queue\",\"grain\":\"데이터 분석팀이 판정에 읽는 GEO HUB 설정\"}",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py · back/ingest/project/apply/rejudge.py · back/migration/seed/seed-3x-common.sql (back/ingest/common/rules.py:1-12 가 적재기 연결에 올림) — 아래 열별 근거 · 용어 데이터 분석팀(사용자 10-19)"
+ },
+ "T:app_inputs:col:0": {
+  "t": "[\"owned_base · project_owned_base\",\"\",\"자사 판정\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:926 (app.project_owned_base) · back/ingest/project/apply/queries.py:931-937,1031 (app.owned_base) · back/migration/seed/seed-3x-common.sql §9"
+ },
+ "T:app_inputs:col:1": {
+  "t": "[\"project_tracked_url · website_report_unit\",\"\",\"타겟 URL · 웹 보고 유닛\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:975 (app.project_tracked_url) · back/db/DB-v2.32.sql:3775-3782 rd.web_report_prompt_expected 가 app.website_report_unit 을 읽고 back/ingest/project/apply/service.py:73-79 가 rd.refresh_web_report_prompt 호출"
+ },
+ "T:app_inputs:col:2": {
+  "t": "[\"website_prompt · website_site\",\"\",\"웹 카탈로그 · 사이트\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/rejudge.py:210,228 · back/ingest/project/apply/queries.py:227 · back/migration/seed/seed-3x-common.sql:272 (§7)"
+ },
+ "T:app_inputs:col:3": {
+  "t": "[\"citation_category · citation_domain_override\",\"\",\"출처 분류\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:695 · back/ingest/project/apply/rejudge.py:125-130 (app.citation_category) · back/migration/seed/seed-3x-common.sql:359 (§9 category_of 가 app.citation_domain_override 를 읽음)"
+ },
+ "T:app_inputs:col:4": {
+  "t": "[\"brand · brand_display_alias · brand_name_prefix\",\"\",\"브랜드 표기\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:741,773 (app.brand · app.brand_display_alias) · back/migration/seed/seed-3x-common.sql:47-49 (§3 app.brand_name_prefix)"
+ },
+ "T:app_inputs:col:5": {
+  "t": "[\"competitor_domain_token · non_competitor_name\",\"\",\"경쟁 판정\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:740,755 · back/ingest/project/apply/rejudge.py:140-143,177"
+ },
+ "T:app_inputs:col:6": {
+  "t": "[\"ecat_{version,entity,surface,surface_def,apply}\",\"\",\"엔티티 카탈로그\"]",
+  "v": "cur",
+  "e": "back/migration/seed/seed-3x-common.sql:77-107 (§4 ecat_version · ecat_entity · ecat_surface · ecat_surface_def) · back/ingest/ecat/queries.py:14-26 · back/ingest/project/apply/ecat_engine.py:3,491 (app.ecat_apply 요청 행)"
+ },
+ "T:app_inputs:col:7": {
+  "t": "[\"entity_registry · entity_alias\",\"\",\"엔티티 명부 · 별칭\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:822,828 · back/ingest/project/apply/rejudge.py:185 (app.entity_registry) · back/ingest/cycles/watch/service.py:435 · back/migration/seed/seed-3x-common.sql:107 (app.entity_alias)"
+ },
+ "T:app_inputs:col:8": {
+  "t": "[\"prompt · project\",\"\",\"카탈로그 · 프로젝트\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/rejudge.py:42-84 (app.prompt ⋈ app.project standard_root) · back/ingest/project/apply/queries.py:228"
+ },
+ "T:app_inputs:col:9": {
+  "t": "[\"hidden_market · rhq_region_country\",\"\",\"숨김 시장 · 국가 표기\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:228,245-248,262 (app.rhq_region_country · app.hidden_market) · back/ingest/project/apply/rejudge.py:158"
+ },
+ "T:app_inputs:col:10": {
+  "t": "[\"rule_param · rule_set\",\"\",\"규칙 값 · 규칙 세트\"]",
+  "v": "cur",
+  "e": "back/ingest/cycles/ledger/queries.py:23,152-154 · back/migration/seed/seed-3x-common.sql:370 (app.rule_param) · back/ingest/common/db.py:107 (app.rule_set max(rule_ver))"
+ },
+ "T:app_inputs:col:11": {
+  "t": "[\"report_publication · report_site_fact\",\"\",\"발행 리포트\"]",
+  "v": "cur",
+  "e": "back/ingest/cycles/ledger/queries.py:288-307 (app.report_publication ⋈ app.report_site_fact → rd.report_unit_value)"
+ },
+ "T:app_inputs:grain": {
+  "t": "GEO HUB app 스키마 중 현행 적재기(back/ingest)가 판정에 읽는 테이블 묶음입니다.",
+  "v": "cur",
+  "e": "grep 'app\\.' back/ingest (테스트 제외) + 적재기가 올리는 back/migration/seed/seed-3x-common.sql §1·2·3·9·10·4·7 (back/ingest/common/rules.py:27-28) · ga4_property · ga4_tracked_event 는 적재기가 읽지 않음 (back/ingest/cycles/workers/service.py:12)"
+ },
+ "T:app_inputs:pk": {
+  "t": "—",
+  "v": "lbl",
+  "e": ""
+ },
+ "T:app_inputs:inputs": {
+  "t": "BE 관리 · 프로젝트 설정 쓰기 (쓰기 경로 없는 표는 규칙 참조)",
+  "v": "cur",
+  "e": "back/app/features/projects/settings/owned_bases/queries.py:9 · back/app/features/projects/settings/tracked_urls/queries.py:18 · back/app/features/admin/citation_sources/overrides/queries.py:90 · back/app/features/admin/entities/versions/queries.py:28 · back/app/features/admin/catalog/prompts/service.py:273 (BE 쓰기 경로) · 쓰기 없는 표는 규칙 0"
+ },
+ "T:app_inputs:triggers": {
+  "t": "DB 트리거는 app.prompt · app.project 둘. 그 밖은 BE 서비스가 enqueue_change 로 judgment_change 적재",
+  "v": "cur",
+  "e": "sql: pg_trigger 중 judgment_change INSERT 함수 = app.prompt prompt_catalog_change · app.project project_setting_change 뿐 (hmg_tpl) · back/db/DB-v2.32.sql:963-980,1050-1060 · back/app/core/write.py:96-145 (enqueue_change)"
+ },
+ "T:app_inputs:uses": {
+  "t": "현행 적재기 판정 · 재판정 입력 (골드에서는 데이터 분석팀)",
+  "v": "cur",
+  "e": "back/ingest/project/apply/rejudge.py:33-37 (IG-2 재판정 kind) · back/ingest/project/apply/queries.py (적재 판정) · 용어 데이터 분석팀(사용자 10-19)"
+ },
+ "T:app_inputs:cur": {
+  "t": "app 스키마 (현행 그대로)",
+  "v": "cur",
+  "e": "db:app (위 표 전부 현행 app 스키마, sql: pg_class nspname='app')"
+ },
+ "T:app_inputs:rule:0": {
+  "t": "현행 BE 쓰기 경로 없음: owned_base · brand · brand_display_alias · brand_name_prefix · competitor_domain_token · non_competitor_name · hidden_market · rhq_region_country · rule_param · rule_set · website_prompt · website_site · website_report_unit · citation_category · report_publication · report_site_fact · entity_alias.",
+  "v": "cur",
+  "e": "grep '(INSERT INTO|UPDATE|DELETE FROM) app.<표>' back/app (테스트 제외) = 0건: owned_base · brand · brand_display_alias · brand_name_prefix · competitor_domain_token · non_competitor_name · hidden_market · rhq_region_country · rule_param · rule_set · website_prompt · website_site · website_report_unit · citation_category · report_publication · report_site_fact · entity_alias · 채우기는 back/migration/seed/seed-10-app.body.sql · back/migration/fill-v216.sql"
+ },
+ "T:app_inputs:rule:1": {
+  "t": "현행 적재기 쓰기: judgment_change 상태 · scope_prompt 행, project.scope_project_id, prompt.scope_prompt_id, ecat_apply · ecat_review · ecat_audit_log, app.ecat_activate(ecat_version · entity_registry · entity_alias), scope_outbox 처리 표시, access_audit_log 파티션.",
+  "v": "cur",
+  "e": "back/ingest/cycles/workers/queries.py:22-39 (judgment_change 상태) · back/ingest/cycles/watch/service.py:200-203 (scope_prompt INSERT) · back/ingest/cycles/workers/queries.py:44-57,66,69,75 · back/ingest/project/apply/ecat_engine.py:267-380 · back/ingest/cycles/watch/service.py:568-585 · back/db/DB-v2.32.sql:4347-4357 (app.ecat_activate) · back/db/DB-v2.32.sql:841,861 (loader 상태 열 권한)"
+ },
+ "T:judgment_change:head": {
+  "t": "{\"name\":\"judgment_change\",\"s\":\"app\",\"fam\":\"queue\",\"grain\":\"재판정 · 운영 · 수집 요청 1건\"}",
+  "v": "cur",
+  "e": "db:app.judgment_change · back/db/DB-v2.32.sql:72-86 ('재판정·운영 요청 큐') · dfs_fetch 외부 수집 back/db/DB-v2.32.sql:925-934"
+ },
+ "T:judgment_change:col:0": {
+  "t": "[\"change_id\",\"PK\",\"\"]",
+  "v": "cur",
+  "e": "db:app.judgment_change.change_id (bigint identity PK)"
+ },
+ "T:judgment_change:col:1": {
+  "t": "[\"kind\",\"FK\",\"현행 22종 + ctx_research\",\"judgment_kind\"]",
+  "v": "cur",
+  "e": "db:app.judgment_change judgment_change_kind_check (22종) · back/db/DB-v2.32.sql:4130-4135 · 설계: ctx_research 추가 NEWREQ src/newreq.js:34"
+ },
+ "T:judgment_change:col:2": {
+  "t": "[\"subject_uuids · subject_texts\",\"\",\"요청 대상\"]",
+  "v": "cur",
+  "e": "db:app.judgment_change.subject_uuids uuid[] · subject_texts text[] · back/app/core/write.py:113-119 (요청 대상으로 중복 판정)"
+ },
+ "T:judgment_change:col:3": {
+  "t": "[\"payload\",\"\",\"jsonb\"]",
+  "v": "cur",
+  "e": "db:app.judgment_change.payload jsonb"
+ },
+ "T:judgment_change:col:4": {
+  "t": "[\"requested_by · requested_at\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:app.judgment_change.requested_by · requested_at"
+ },
+ "T:judgment_change:col:5": {
+  "t": "[\"status\",\"\",\"pending · running · applied · failed · escalated_rebuild\"]",
+  "v": "cur",
+  "e": "db:app.judgment_change judgment_change_status_check ('pending','running','applied','failed','escalated_rebuild')"
+ },
+ "T:judgment_change:col:6": {
+  "t": "[\"claimed_at · applied_at\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:app.judgment_change.claimed_at · applied_at"
+ },
+ "T:judgment_change:col:7": {
+  "t": "[\"applied_build_id\",\"FK\",\"현행 applied_load_id\",\"build\"]",
+  "v": "cur",
+  "e": "db:app.judgment_change.applied_load_id (→ ing.load) · back/app/features/admin/changes/queue/queries.py:9 · 설계: applied_build_id 로 개명(build 참조)"
+ },
+ "T:judgment_change:col:8": {
+  "t": "[\"error\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:app.judgment_change.error"
+ },
+ "T:judgment_change:grain": {
+  "t": "재판정 · 운영 · 외부 수집 요청 1건 = 1행.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:72-86,925-934 · back/ingest/cycles/workers/service.py:1-15"
+ },
+ "T:judgment_change:pk": {
+  "t": "change_id",
+  "v": "cur",
+  "e": "db:app.judgment_change judgment_change_pkey (change_id)"
+ },
+ "T:judgment_change:inputs": {
+  "t": "BE enqueue_change · DB 트리거 2개(app.prompt · app.project) · 적재기(scope_prompt)",
+  "v": "cur",
+  "e": "back/app/core/write.py:96-145 (enqueue_change) · back/db/DB-v2.32.sql:963-980,1050-1060 (트리거 2개) · back/ingest/cycles/watch/service.py:200-203,329 (scope_prompt)"
+ },
+ "T:judgment_change:triggers": {
+  "t": "현행 적재기 60초 큐 소비: running → applied · failed · escalated_rebuild (ga4_* 는 대기 유지)",
+  "v": "cur",
+  "e": "back/ingest/cycles/workers/service.py:5-7,12,50-53,253 (run_queue 60초, applied·failed·escalated_rebuild, ga4_* 대기 유지) · back/ingest/cycles/workers/queries.py:22-39"
+ },
+ "T:judgment_change:uses": {
+  "t": "쓰기 API 202 change_id, 대기 상태(프롬프트 상세 · GA4 · 엔티티 반영 · 키워드 수집), /v1/admin/changes(Admin › Keyword tools 수집 대기)",
+  "v": "cur",
+  "e": "back/app/core/write.py:61-64 (WriteAccepted change_id) · back/app/features/admin/catalog/prompts/queries.py:61-65 · back/app/features/admin/integrations/ga4/queries.py:44-50 · back/app/features/admin/entities/versions/queries.py:205-213 · back/app/features/intent/keywords/fetches/queries.py:5-8 · back/app/features/admin/changes/queue/queries.py:8-26 · front/lib/hgh/adapters/admin.ts:1412-1452 (Keyword tools 수집 대기)"
+ },
+ "T:judgment_change:cur": {
+  "t": "app.judgment_change (applied_load_id → applied_build_id)",
+  "v": "cur",
+  "e": "db:app.judgment_change (12열, applied_load_id 만 개명) · 설계: applied_build_id"
+ },
+ "T:judgment_change:rule:0": {
+  "t": "payload 필수: cycle_admin · anchor_pin · answer_drop(CHECK), entity_version(apply_id · op CHECK), dfs_fetch(BE 계약).",
+  "v": "cur",
+  "e": "db:app.judgment_change judgment_change_check (cycle_admin·anchor_pin·answer_drop → payload NOT NULL) · judgment_change_entity_version_payload (apply_id·op) back/db/DB-v2.32.sql:4136-4137 · back/app/core/contracts.py:177-178 (_CHANGE_REQUIRED dfs_fetch 포함)"
+ },
+ "T:judgment_change:rule:1": {
+  "t": "scope_prompt 행은 적재기 수집 감시가 투영 공백을 채울 때만 넣습니다. Scope 쪽 regions · lang · kind 변경은 큐 없이 바로 재판정합니다.",
+  "v": "cur",
+  "e": "back/ingest/cycles/watch/service.py:195-203,329 (투영 공백 자동 채움만 scope_prompt INSERT) · back/ingest/pull/sync/service.py:5-6,151-153 (rejudge('scope_prompt') 직접 호출) · back/app/core/write.py:57 (앱 금지)"
+ },
+ "T:judgment_kind:head": {
+  "t": "{\"name\":\"요청 종류 23\",\"s\":\"key\",\"fam\":\"queue\",\"grain\":\"judgment_change.kind 값\"}",
+  "v": "cur",
+  "e": "db:app.judgment_change judgment_change_kind_check 22종 + NEWREQ ctx_research src/newreq.js:34"
+ },
+ "T:judgment_kind:col:0": {
+  "t": "[\"카탈로그 · 프롬프트\",\"\",\"catalog · prompt_kind · website_catalog · scope_prompt\"]",
+  "v": "cur",
+  "e": "db:app.judgment_change judgment_change_kind_check (catalog·prompt_kind·website_catalog·scope_prompt)"
+ },
+ "T:judgment_kind:col:1": {
+  "t": "[\"엔티티 · 브랜드\",\"\",\"entity · entity_version · brand_rule · competitor_token\"]",
+  "v": "cur",
+  "e": "db:app.judgment_change judgment_change_kind_check (entity·entity_version·brand_rule·competitor_token)"
+ },
+ "T:judgment_kind:col:2": {
+  "t": "[\"출처 · 자사 판정\",\"\",\"citation_override · owned_base · project_owned_base · project_target_url\"]",
+  "v": "cur",
+  "e": "db:app.judgment_change judgment_change_kind_check (citation_override·owned_base·project_owned_base·project_target_url)"
+ },
+ "T:judgment_kind:col:3": {
+  "t": "[\"프로젝트 · 노출\",\"\",\"project_setting · hidden_market · rule_param\"]",
+  "v": "cur",
+  "e": "db:app.judgment_change judgment_change_kind_check (project_setting·hidden_market·rule_param)"
+ },
+ "T:judgment_kind:col:4": {
+  "t": "[\"회차 · 답변 운영\",\"\",\"cycle_admin · anchor_pin · answer_drop\"]",
+  "v": "cur",
+  "e": "db:app.judgment_change judgment_change_kind_check (cycle_admin·anchor_pin·answer_drop)"
+ },
+ "T:judgment_kind:col:5": {
+  "t": "[\"발행\",\"\",\"report_publication\"]",
+  "v": "cur",
+  "e": "db:app.judgment_change judgment_change_kind_check (report_publication)"
+ },
+ "T:judgment_kind:col:6": {
+  "t": "[\"외부 수집 요청\",\"\",\"dfs_fetch · ga4_property · ga4_tracked_event · ctx_research (신규)\"]",
+  "v": "cur",
+  "e": "db:app.judgment_change judgment_change_kind_check (dfs_fetch·ga4_property·ga4_tracked_event) · 설계: ctx_research NEWREQ src/newreq.js:34"
+ },
+ "T:judgment_kind:grain": {
+  "t": "judgment_change.kind 값 23개(현행 22 + 리서치 실행 요청 ctx_research 1)를 7개 묶음으로 나눈 것입니다 (CHECK 제약).",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:4130-4135 (22종) · 설계: ctx_research NEWREQ src/newreq.js:34"
+ },
+ "T:judgment_kind:pk": {
+  "t": "—",
+  "v": "lbl",
+  "e": ""
+ },
+ "T:judgment_kind:inputs": {
+  "t": "—",
+  "v": "lbl",
+  "e": ""
+ },
+ "T:judgment_kind:uses": {
+  "t": "kind 별 처리기 선택 (현행 적재기 _dispatch)",
+  "v": "cur",
+  "e": "back/ingest/cycles/workers/service.py:132-170 (_dispatch: IG2 rejudge · cycle_admin · report_publication · anchor_pin · answer_drop · entity_version) · back/ingest/project/apply/rejudge.py:33-37"
+ },
+ "T:judgment_kind:cur": {
+  "t": "app.judgment_change kind CHECK 22종",
+  "v": "cur",
+  "e": "db:app.judgment_change judgment_change_kind_check (hmg_tpl 22종) · back/db/DB-v2.32.sql:4130-4135"
+ },
+ "T:judgment_kind:rule:0": {
+  "t": "DB 트리거 생산: catalog · prompt_kind (app.prompt), project_setting (app.project, BE tracked_targets 도 넣음).",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:1050-1060 (app.prompt 트리거 catalog·prompt_kind) · back/db/DB-v2.32.sql:963-980 (app.project 트리거 project_setting) · back/app/features/projects/settings/tracked_targets/service.py:39"
+ },
+ "T:judgment_kind:rule:1": {
+  "t": "BE 생산: entity · entity_version · citation_override · project_owned_base · project_target_url · cycle_admin · anchor_pin · answer_drop · dfs_fetch · ga4_property · ga4_tracked_event.",
+  "v": "cur",
+  "e": "back/app/features/admin/entities/registry/service.py:152 · back/app/features/admin/entities/versions/service.py:955 · back/app/features/admin/citation_sources/overrides/service.py:159,173 · back/app/features/projects/settings/owned_bases/service.py:32 · back/app/features/projects/settings/tracked_urls/service.py:110 · back/app/features/admin/cycles/cycles/service.py:193 · back/app/features/admin/cycles/jobs/service.py:62,82 · back/app/features/admin/integrations/keyword_tools/service.py:113 · back/app/features/intent/keywords/fetches/service.py:105 · back/app/features/admin/integrations/ga4/service.py:203,229,245"
+ },
+ "T:judgment_kind:rule:2": {
+  "t": "적재기 생산: scope_prompt (1회 보정 스크립트 fix-sync-s1-rules.sql 도 넣음).",
+  "v": "cur",
+  "e": "back/ingest/cycles/watch/service.py:200-203,329 · back/migration/fix-sync-s1-rules.sql:8-9,136-145 (1회 보정 scope_prompt INSERT)"
+ },
+ "T:judgment_kind:rule:3": {
+  "t": "BE · 적재기 런타임 생산자 없음: website_catalog · brand_rule · competitor_token · owned_base · hidden_market · rule_param · report_publication. owned_base · hidden_market 은 1회 보정 스크립트(fix-sync-s1-rules.sql)만 넣고, report_publication 발행 행은 시드로만 들어옵니다.",
+  "v": "cur",
+  "e": "grep enqueue_change · INSERT INTO app.judgment_change back/app · back/ingest (런타임 생산 0) · sql: pg_proc prosrc 의 judgment_change INSERT = 트리거 2개뿐 · back/migration/fix-sync-s1-rules.sql:3-6,136-142 (hidden_market · owned_base 1회 보정 INSERT, '작성만, 실행은 메인 결정 뒤') · back/migration/seed/seed-10-app.sql:1174 (app.report_publication 시드) · back/db/DB-v2.32.sql:209 주석의 '발행 적재 트랜잭션' 코드 없음"
+ },
+ "T:judgment_kind:rule:4": {
+  "t": "현행 적재기가 처리하지 않음: ga4_property · ga4_tracked_event (대기 유지).",
+  "v": "cur",
+  "e": "back/ingest/cycles/workers/service.py:12,50-53 (QUEUE_KINDS 에 ga4_* 없음) · back/ingest/cycles/watch/service.py:133 · back/ingest/cycles/workers/README.md:19"
+ },
+ "T:judgment_kind:rule:5": {
+  "t": "ctx_research 는 골드 신규 요청입니다 (리서치 실행, BE 쓰기).",
+  "v": "des",
+  "e": "NEWREQ judgment_change 'kind ctx_research 추가 (리서치 실행 요청, BE 쓰기)' src/newreq.js:34 · 현행 코드에 ctx_research 없음"
+ }
+}

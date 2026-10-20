@@ -1,0 +1,272 @@
+{
+ "T:dim_keyword:head": {
+  "t": "{\"name\":\"dim_keyword\",\"s\":\"gold\",\"fam\":\"kw\",\"grain\":\"검색어 1개\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:696"
+ },
+ "T:dim_keyword:col:0": {
+  "t": "[\"kw_key\",\"PK\",\"int4\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:696 kw_key int4 GENERATED ALWAYS AS IDENTITY PRIMARY KEY"
+ },
+ "T:dim_keyword:col:1": {
+  "t": "[\"term\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.dim_keyword.term · back/ingest/cycles/workers/queries.py:87-91 (btrim 원문)"
+ },
+ "T:dim_keyword:col:2": {
+  "t": "[\"term_norm\",\"UK\",\"정규화 (app.term_norm)\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:696 term_norm UNIQUE · back/db/DB-v2.32.sql:1940-1943 (app.term_norm 정본) · back/ingest/cycles/workers/queries.py:87-91"
+ },
+ "T:dim_keyword:grain": {
+  "t": "검색어 1개 = 1행.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:696 UNIQUE (term_norm)"
+ },
+ "T:dim_keyword:pk": {
+  "t": "kw_key",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:696"
+ },
+ "T:dim_keyword:inputs": {
+  "t": "데이터 분석팀 (DataForSEO 수집 때 term_norm 으로 발급)",
+  "v": "cur",
+  "e": "back/ingest/cycles/workers/queries.py:87-91 (KW_KEY: term_norm 충돌 없으면 INSERT) · back/ingest/cycles/workers/dfs.py:120-121,152,159,168,174"
+ },
+ "T:dim_keyword:uses": {
+  "t": "Google keywords · Google Keyword · Keyword tools 의 검색어 → kw_key 조회",
+  "v": "cur",
+  "e": "back/app/features/intent/keywords/research/queries.py:9-11 · back/app/features/admin/integrations/keyword_tools/queries.py:8-12 · inventory.json (Global › Customer interest › Google keywords · Project › Intent › Google Keyword · Admin › Keyword tools)"
+ },
+ "T:dim_keyword:cur": {
+  "t": "rd.dim_keyword (열 전부)",
+  "v": "cur",
+  "e": "db_cols.tsv rd.dim_keyword 3열 = 골드 3열"
+ },
+ "T:kw_volume_monthly:head": {
+  "t": "{\"name\":\"kw_volume_monthly\",\"s\":\"gold\",\"fam\":\"kw\",\"grain\":\"검색어 × 지역 × 언어 × 월\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:697-699"
+ },
+ "T:kw_volume_monthly:col:0": {
+  "t": "[\"kw_key\",\"PF\",\"\",\"dim_keyword\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:697,699 (REFERENCES rd.dim_keyword, PK 선두)"
+ },
+ "T:kw_volume_monthly:col:1": {
+  "t": "[\"location_code · language_code\",\"PK\",\"\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:697,699 PK 열"
+ },
+ "T:kw_volume_monthly:col:2": {
+  "t": "[\"month\",\"PK\",\"월 1일\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:698 CHECK (extract(day FROM month) = 1)"
+ },
+ "T:kw_volume_monthly:col:3": {
+  "t": "[\"search_volume\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.kw_volume_monthly.search_volume"
+ },
+ "T:kw_volume_monthly:col:4": {
+  "t": "[\"competition · competition_index · cpc\",\"\",\"LOW·MEDIUM·HIGH 라벨 · 지수 · CPC\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:2194-2196 CHECK competition IN ('LOW','MEDIUM','HIGH') · db:rd.kw_volume_monthly (competition_index · cpc)"
+ },
+ "T:kw_volume_monthly:col:5": {
+  "t": "[\"call_id\",\"\",\"수집 호출\"]",
+  "v": "cur",
+  "e": "back/ingest/cycles/workers/dfs.py:141,155 (ext.dfs_call call_id)"
+ },
+ "T:kw_volume_monthly:col:6": {
+  "t": "[\"observed_at\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.kw_volume_monthly.observed_at"
+ },
+ "T:kw_volume_monthly:grain": {
+  "t": "검색어 × 지역 × 언어 × 월 = 1행.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:699 PRIMARY KEY (kw_key, location_code, language_code, month)"
+ },
+ "T:kw_volume_monthly:pk": {
+  "t": "kw_key + location_code + language_code + month",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:699"
+ },
+ "T:kw_volume_monthly:inputs": {
+  "t": "데이터 분석팀 (DataForSEO google_ads search_volume)",
+  "v": "cur",
+  "e": "back/ingest/cycles/workers/dfs.py:5,148-157 (search_volume 응답 monthly_searches)"
+ },
+ "T:kw_volume_monthly:triggers": {
+  "t": "BE 요청 (judgment_change dfs_fetch: volume · insight)",
+  "v": "cur",
+  "e": "back/ingest/cycles/workers/dfs.py:1-6 (dfs_fetch: volume = search_volume, insight = search_volume + serp_organic) · back/ingest/cycles/workers/service.py:362-403"
+ },
+ "T:kw_volume_monthly:uses": {
+  "t": "Google keywords · Google Keyword 관심도 추이 차트 · 평균 관심도 (/v1/intent/insight, 24시간 신선도), Keyword tools 키워드 수 · 평균 · 총 검색량 · 고·중·저볼륨 카드 · 검색량 결과 표 · 생성 프롬프트 표 검색량 (7일 신선도)",
+  "v": "cur",
+  "e": "back/app/features/intent/keywords/research/queries.py:14-20 · back/app/features/intent/keywords/research/intent_common.py:34 (insight 24시간) · back/app/features/admin/integrations/keyword_tools/service.py:4,49,146 (7일) · front/lib/hgh/adapters/intent.ts:597-600 (추적 탭 include_volume=false) · inventory.json"
+ },
+ "T:kw_volume_monthly:cur": {
+  "t": "rd.kw_volume_monthly (열 전부)",
+  "v": "cur",
+  "e": "db_cols.tsv rd.kw_volume_monthly 10열 = 골드 10열"
+ },
+ "T:kw_volume_monthly:rule:0": {
+  "t": "competition 은 키워드 단위 값이 월 행마다 반복됩니다. 경쟁도 · CPC 는 월 · 키워드끼리 더하지 않습니다.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:2195-2196 (competition 키워드 단위 값, 월 행마다 반복) · 설계: 경쟁도·CPC 합산 금지"
+ },
+ "T:kw_volume_monthly:rule:1": {
+  "t": "월 행은 성공한 최신 수집이 덮어씁니다(upsert). 실패한 수집(HTTP ≥ 400 · task 오류)은 요청 전체가 실패해 이전 값을 덮지 않습니다.",
+  "v": "cur",
+  "e": "back/ingest/cycles/workers/queries.py:93-100 (ON CONFLICT DO UPDATE) · back/ingest/cycles/workers/dfs.py:115-116,144-145 · back/ingest/cycles/workers/service.py:364,399-410 (HTTP 오류면 요청 전체 실패, 부분 적재 없음)"
+ },
+ "T:kw_serp:head": {
+  "t": "{\"name\":\"kw_serp\",\"s\":\"gold\",\"fam\":\"kw\",\"grain\":\"호출 × 순위\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:700-702"
+ },
+ "T:kw_serp:col:0": {
+  "t": "[\"call_id\",\"PK\",\"\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:702 PRIMARY KEY (call_id, rank)"
+ },
+ "T:kw_serp:col:1": {
+  "t": "[\"rank\",\"PK\",\"\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:702 PRIMARY KEY (call_id, rank)"
+ },
+ "T:kw_serp:col:2": {
+  "t": "[\"kw_key\",\"FK\",\"\",\"dim_keyword\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:700 REFERENCES rd.dim_keyword"
+ },
+ "T:kw_serp:col:3": {
+  "t": "[\"location_code · language_code\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.kw_serp (location_code · language_code)"
+ },
+ "T:kw_serp:col:4": {
+  "t": "[\"url · domain\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.kw_serp (url · domain)"
+ },
+ "T:kw_serp:col:5": {
+  "t": "[\"title · snippet\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.kw_serp (title · snippet) · back/ingest/cycles/workers/dfs.py:164-165"
+ },
+ "T:kw_serp:col:6": {
+  "t": "[\"observed_at\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.kw_serp.observed_at"
+ },
+ "T:kw_serp:grain": {
+  "t": "수집 호출 × 순위 = 1행. 집계 없이 화면에 그대로 나갑니다.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:702 · back/app/features/intent/keywords/research/queries.py:23-34 (최신 호출 행 그대로)"
+ },
+ "T:kw_serp:pk": {
+  "t": "call_id + rank",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:702"
+ },
+ "T:kw_serp:inputs": {
+  "t": "데이터 분석팀 (DataForSEO serp_organic, organic 행만)",
+  "v": "cur",
+  "e": "back/ingest/cycles/workers/dfs.py:158-166 (serp_organic, type = organic 행만)"
+ },
+ "T:kw_serp:triggers": {
+  "t": "BE 요청 (judgment_change dfs_fetch: insight)",
+  "v": "cur",
+  "e": "back/ingest/cycles/workers/dfs.py:5 (insight = search_volume + serp_organic)"
+ },
+ "T:kw_serp:uses": {
+  "t": "Google keywords · Google Keyword 검색 결과 표 (최신 호출) · 제안 프롬프트 초안 (/v1/intent/serp-drafts)",
+  "v": "cur",
+  "e": "back/app/features/intent/keywords/research/queries.py:23-34 · back/app/features/intent/keywords/serp_drafts/queries.py:1-9 · inventory.json (검색 결과 표 · 제안 프롬프트 · POST /v1/intent/serp-drafts)"
+ },
+ "T:kw_serp:cur": {
+  "t": "rd.kw_serp (열 전부)",
+  "v": "cur",
+  "e": "db_cols.tsv rd.kw_serp 10열 = 골드 10열"
+ },
+ "T:kw_suggestion:head": {
+  "t": "{\"name\":\"kw_suggestion\",\"s\":\"gold\",\"fam\":\"kw\",\"grain\":\"호출 × 위치\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:704-706"
+ },
+ "T:kw_suggestion:col:0": {
+  "t": "[\"call_id\",\"PK\",\"\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:706 PRIMARY KEY (call_id, pos)"
+ },
+ "T:kw_suggestion:col:1": {
+  "t": "[\"pos\",\"PK\",\"\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:706 PRIMARY KEY (call_id, pos)"
+ },
+ "T:kw_suggestion:col:2": {
+  "t": "[\"seed_kw_key\",\"FK\",\"시드\",\"dim_keyword\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:704 seed_kw_key REFERENCES rd.dim_keyword"
+ },
+ "T:kw_suggestion:col:3": {
+  "t": "[\"kw_key\",\"FK\",\"\",\"dim_keyword\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:705 kw_key REFERENCES rd.dim_keyword"
+ },
+ "T:kw_suggestion:col:4": {
+  "t": "[\"location_code · language_code\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.kw_suggestion (location_code · language_code)"
+ },
+ "T:kw_suggestion:col:5": {
+  "t": "[\"search_volume · intent\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.kw_suggestion (search_volume · intent) · back/ingest/cycles/workers/dfs.py:175-176"
+ },
+ "T:kw_suggestion:col:6": {
+  "t": "[\"total_count\",\"\",\"호출 단위 연관어 총수 (BG-39)\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:2191-2193 ('그 호출의 DataForSEO keyword_suggestions total_count(호출 단위 같은 값)') · back/db/DB-v2.32.sql:2095 (BG-39)"
+ },
+ "T:kw_suggestion:col:7": {
+  "t": "[\"is_seed · observed_at\",\"\",\"seed 행 · 7일 신선도\"]",
+  "v": "cur",
+  "e": "back/ingest/cycles/workers/dfs.py:176 (is_seed = seed 와 같은 kw_key) · back/app/features/intent/keywords/research/intent_common.py:34 (related · search 7일)"
+ },
+ "T:kw_suggestion:grain": {
+  "t": "수집 호출 × 위치 = 1행. 집계 없이 화면에 그대로 나갑니다.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:706 · back/app/features/intent/keywords/research/queries.py:37-46 (최신 호출 행 그대로)"
+ },
+ "T:kw_suggestion:pk": {
+  "t": "call_id + pos",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:706"
+ },
+ "T:kw_suggestion:inputs": {
+  "t": "데이터 분석팀 (DataForSEO keyword_suggestions)",
+  "v": "cur",
+  "e": "back/ingest/cycles/workers/dfs.py:6,167-178 (keyword_suggestions)"
+ },
+ "T:kw_suggestion:triggers": {
+  "t": "BE 요청 (judgment_change dfs_fetch: related · search)",
+  "v": "cur",
+  "e": "back/ingest/cycles/workers/dfs.py:6 (related · search = keyword_suggestions)"
+ },
+ "T:kw_suggestion:uses": {
+  "t": "Google keywords · Google Keyword 관련 검색어 표, Google Keyword 발견 검색어 수 · 키워드 검색 시작 (검색량 · 의도 · 관련어), 수집 신선도 판정 (related · search 7일)",
+  "v": "cur",
+  "e": "back/app/features/intent/keywords/research/queries.py:37-79 · back/app/features/intent/keywords/research/service.py:142-143,166-172 · front/lib/hgh/adapters/intent.ts:46-47,291-302 (foundCount = total_count) · back/app/features/intent/keywords/fetches/service.py:5-7 · inventory.json"
+ },
+ "T:kw_suggestion:cur": {
+  "t": "rd.kw_suggestion (열 전부)",
+  "v": "cur",
+  "e": "db_cols.tsv rd.kw_suggestion 11열 = 골드 11열"
+ }
+}

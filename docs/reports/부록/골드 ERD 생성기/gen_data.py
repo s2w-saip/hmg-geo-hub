@@ -45,16 +45,16 @@ PATH = {
     'frz.card_brand_name': ('pub_brand_name', '활성 발행의 pub_brand_name'),
     'frz.card_web': ('pub_cell_web', '활성 발행의 pub_cell_web'),
 }
-FACT_VIEW = {  # 뷰 → (사실 테이블, 설명)
-    'frz.card_answer': ('answer_fact', '카드: pub_cell ⋈ pub_prompt(in_full_cycle) ⋈ answer_fact @ publication.build_id'),
-    'frz.card_answer_w': ('answer_fact', '웹 카드: 위 + pub_cell_web'),
-    'frz.grid_answer': ('answer_fact', '격자: pub_cell ⋈ answer_fact @ publication.build_id'),
-    'frz.card_answer_brand': ('answer_brand_fact', '카드: pub_cell ⋈ answer_brand_fact @ publication.build_id'),
-    'frz.card_answer_brand_w': ('answer_brand_fact', '웹 카드: 위 + pub_cell_web'),
-    'frz.grid_answer_brand': ('answer_brand_fact', '격자: pub_cell ⋈ answer_brand_fact @ publication.build_id'),
-    'frz.card_citation': ('citation_fact', '카드: pub_cell ⋈ citation_fact @ publication.build_id'),
-    'frz.card_citation_w': ('citation_fact', '웹 카드: 위 + pub_cell_web'),
-    'frz.grid_citation': ('citation_fact', '격자: pub_cell ⋈ citation_fact @ publication.build_id'),
+FACT_VIEW = {  # 뷰 → (사실 테이블, 설명). 현행 frz 카드 · 격자 뷰(DB-v2.23 P124 · P125, v2.24 P126 · P127, v2.32 P153 · P154)의 골드 경로
+    'frz.card_answer': ('answer_fact', '카드: pub_cell ⋈ pub_prompt(in_full_cycle) ⋈ answer_fact @ publication.build_id, 글로벌 bgrp = pub_prompt.cat_mask'),
+    'frz.card_answer_w': ('answer_fact', '웹 카드: pub_cell ⋈ pub_cell_web ⋈ answer_fact @ publication.build_id (프롬프트 축 조인 없음)'),
+    'frz.grid_answer': ('answer_fact', '격자: pub_cell ⋈ pub_prompt ⋈ answer_fact @ publication.build_id, 글로벌 bgrp = pub_prompt.cat_mask'),
+    'frz.card_answer_brand': ('answer_brand_fact', '카드: pub_cell ⋈ pub_prompt(in_full_cycle) ⋈ answer_brand_fact @ publication.build_id, 글로벌 bgrp = pub_prompt.cat_mask'),
+    'frz.card_answer_brand_w': ('answer_brand_fact', '웹 카드: pub_cell ⋈ pub_cell_web ⋈ answer_brand_fact @ publication.build_id (프롬프트 축 조인 없음)'),
+    'frz.grid_answer_brand': ('answer_brand_fact', '격자: pub_cell ⋈ pub_prompt ⋈ answer_brand_fact @ publication.build_id, 글로벌 bgrp = pub_prompt.cat_mask'),
+    'frz.card_citation': ('citation_fact', '카드: pub_cell ⋈ pub_prompt(in_full_cycle) ⋈ citation_fact @ publication.build_id, 글로벌 bgrp = pub_prompt.cat_mask'),
+    'frz.card_citation_w': ('citation_fact', '웹 카드: pub_cell ⋈ pub_cell_web ⋈ citation_fact @ publication.build_id (프롬프트 축 조인 없음)'),
+    'frz.grid_citation': ('citation_fact', '격자: pub_cell ⋈ pub_prompt ⋈ citation_fact @ publication.build_id, 글로벌 bgrp = pub_prompt.cat_mask'),
 }
 WEBCOLS = {'unit_owned', 'unit_target', 'url_registered', 'url_owned_hit', 'url_target_hit'}
 FUNCS = {'rd.today_kst': 'BE 가 KST 오늘 날짜를 직접 계산 (데이터 아님)'}
@@ -122,7 +122,7 @@ for o in READ_OBJS:
         tgt, note = FACT_VIEW[o]
         for c in cols:
             if c == 'unit_in':
-                COLMAP.append({'o': o, 'c': c, 't': 'pub_cell_web.report_fs', 'h': 'derived', 'n': 'report_fs ∉ app.website_report_excluded'})
+                COLMAP.append({'o': o, 'c': c, 't': 'pub_cell_web.report_fs', 'h': 'derived', 'n': 'report_fs IS NOT NULL ∧ report_fs ∉ app.website_report_excluded'})
             elif c in WEBCOLS:
                 COLMAP.append({'o': o, 'c': c, 't': f'pub_cell_web.{c}', 'h': 'path', 'n': note})
             else:

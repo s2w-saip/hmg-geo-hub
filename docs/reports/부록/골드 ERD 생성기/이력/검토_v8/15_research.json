@@ -1,0 +1,462 @@
+{
+ "T:ctx_group:head": {
+  "t": "{\"name\":\"ctx_group\",\"s\":\"gold\",\"fam\":\"soc\",\"grain\":\"스냅샷 × 테마·카테고리\"}",
+  "v": "des",
+  "e": "화면: 표 주제 · 카테고리 열 (front/components/social-scraping/context-map-view.tsx:925, 1020) · 그래프 테마/카테고리 노드 (node-map/build-graph.ts:62-79, 122-139) · 표본 themes · categories (sample-data.ts:68-71, 215-218)"
+ },
+ "T:ctx_group:col:0": {
+  "t": "[\"snapshot_id\",\"PF\",\"\",\"ctx_snapshot\"]",
+  "v": "des",
+  "e": "스냅샷 소속"
+ },
+ "T:ctx_group:col:1": {
+  "t": "[\"group_id\",\"PK\",\"\"]",
+  "v": "des",
+  "e": "신규 키 (표본 themeId · categoryId, front/components/social-scraping/types.ts:27-31, 44-48)"
+ },
+ "T:ctx_group:col:2": {
+  "t": "[\"side\",\"\",\"context 테마 · condition 카테고리\"]",
+  "v": "des",
+  "e": "그래프 좌 테마 · 우 카테고리 (build-graph.ts:58-79 context_theme, 118-139 category)"
+ },
+ "T:ctx_group:col:3": {
+  "t": "[\"name\",\"\",\"\"]",
+  "v": "des",
+  "e": "표본 name · theme_name · category_name (types.ts:29, 46; node-map/types.ts:74, 80)"
+ },
+ "T:ctx_group:col:4": {
+  "t": "[\"description\",\"\",\"설명문\"]",
+  "v": "des",
+  "e": "그래프 그룹 설명 (context-node-map-view.tsx:1031, 1164; build-graph.ts:77, 137)"
+ },
+ "T:ctx_group:col:5": {
+  "t": "[\"sort_order\",\"\",\"표시 순서\"]",
+  "v": "des",
+  "e": "그래프는 그룹 순서로 각도 · 목록을 놓음 (build-graph.ts:62-66, 122-125; context-node-map-view.tsx:115-127)"
+ },
+ "T:ctx_group:grain": {
+  "t": "스냅샷 × 테마 또는 카테고리 1개 = 1행.",
+  "v": "des",
+  "e": "신규 테이블 그레인"
+ },
+ "T:ctx_group:pk": {
+  "t": "snapshot_id + group_id",
+  "v": "des",
+  "e": "신규 테이블 PK"
+ },
+ "T:ctx_group:inputs": {
+  "t": "데이터 분석팀 (스냅샷과 함께)",
+  "v": "des",
+  "e": "신규 테이블 · 스냅샷과 함께 적재"
+ },
+ "T:ctx_group:uses": {
+  "t": "Social Scraping 표의 주제 · 카테고리 열, 그래프 테마 · 카테고리 노드 이름 · 설명 (신규 공급)",
+  "v": "des",
+  "e": "화면: Project · Global · Admin Social Scraping 표 주제 · 카테고리 (context-map-view.tsx:925, 1020) · Global 그래프 (context-node-map-view.tsx:1031, 1164)"
+ },
+ "T:ctx_group:cur": {
+  "t": "없음 (신규. 현행은 BE 코드의 DIMENSION_THEME 맵 · 이름 정규식 분류)",
+  "v": "cur",
+  "e": "back/app/features/intent/social/context_map/service.py:62-71, 78-86, 172-176 · front/lib/db/repositories/scope-context-map.ts:57-83"
+ },
+ "T:ctx_combination_evidence:head": {
+  "t": "{\"name\":\"ctx_combination_evidence\",\"s\":\"gold\",\"fam\":\"soc\",\"grain\":\"조합 × 근거 발화\"}",
+  "v": "des",
+  "e": "화면: 그래프 조합 상세 근거 · 출처 링크 (front/components/social-scraping/node-map/context-node-map-view.tsx:1724-1755) · 표본 evidence_quotes · source_urls (node-map/types.ts:64, 69)"
+ },
+ "T:ctx_combination_evidence:col:0": {
+  "t": "[\"snapshot_id · combo_id\",\"PF\",\"\",\"ctx_combination\"]",
+  "v": "des",
+  "e": "ctx_combination 키 묶음 (골드 PK snapshot_id + combo_id)"
+ },
+ "T:ctx_combination_evidence:col:1": {
+  "t": "[\"seq\",\"PK\",\"\"]",
+  "v": "des",
+  "e": "표시 순서 키"
+ },
+ "T:ctx_combination_evidence:col:2": {
+  "t": "[\"quote\",\"\",\"\"]",
+  "v": "des",
+  "e": "근거 인용 (context-node-map-view.tsx:1809-1832)"
+ },
+ "T:ctx_combination_evidence:col:3": {
+  "t": "[\"source_title · source_url\",\"\",\"\"]",
+  "v": "des",
+  "e": "링크 텍스트 · URL (context-node-map-view.tsx:1833-1846) · 출처 링크 목록 = source_url 고유값 (1728-1755)"
+ },
+ "T:ctx_combination_evidence:col:4": {
+  "t": "[\"perspective\",\"\",\"buyer · seller · neutral\"]",
+  "v": "des",
+  "e": "구매자 · 판매자 배지 (context-node-map-view.tsx:1823-1828) · 값 buyer · seller · neutral (node-map/types.ts:11, 14-18)"
+ },
+ "T:ctx_combination_evidence:grain": {
+  "t": "스냅샷 × 조건 조합 × 근거 발화 1개 = 1행.",
+  "v": "des",
+  "e": "신규 테이블 그레인 (조합 = 쌍 또는 3조건 이상)"
+ },
+ "T:ctx_combination_evidence:pk": {
+  "t": "snapshot_id + combo_id + seq",
+  "v": "des",
+  "e": "신규 테이블 PK"
+ },
+ "T:ctx_combination_evidence:inputs": {
+  "t": "데이터 분석팀 (스냅샷과 함께)",
+  "v": "des",
+  "e": "신규 테이블 · 스냅샷과 함께 적재"
+ },
+ "T:ctx_combination_evidence:uses": {
+  "t": "Global > Customer interest > Social Scraping 그래프 조합 상세의 근거 인용 · 출처 링크 (20개 + 외 n건) (신규 공급)",
+  "v": "des",
+  "e": "화면: Global › Customer interest › Social Scraping 컨텍스트 맵 뷰 조합 상세 (context-node-map-view.tsx:1724-1757: slice(0, 20) · 외 n건)"
+ },
+ "T:ctx_combination_evidence:cur": {
+  "t": "없음 (신규)",
+  "v": "des",
+  "e": "현행 객체 없음 (ext.ctx_* 에 조합 근거 없음, back/db/DB-v2.32.sql:734-735)"
+ },
+ "T:ctx_claim:head": {
+  "t": "{\"name\":\"ctx_claim\",\"s\":\"gold\",\"fam\":\"soc\",\"grain\":\"조건 × 심층 근거\"}",
+  "v": "des",
+  "e": "화면: 그래프 조건 심층 근거 (front/components/social-scraping/node-map/context-node-map-view.tsx:1496-1563) · 표본 deep_evidence 는 조건당 1개 객체 (node-map/types.ts:46-54)"
+ },
+ "T:ctx_claim:col:0": {
+  "t": "[\"snapshot_id · entity_id\",\"PF\",\"조건\",\"ctx_entity\"]",
+  "v": "des",
+  "e": "조건(ConsumerRequirement) 1개당 1행 (node-map/types.ts:46 deep_evidence?: 단일 객체)"
+ },
+ "T:ctx_claim:col:1": {
+  "t": "[\"claim\",\"\",\"주장문\"]",
+  "v": "des",
+  "e": "주장문 (context-node-map-view.tsx:1500-1502)"
+ },
+ "T:ctx_claim:col:2": {
+  "t": "[\"supporting · contradicting · neutral\",\"\",\"지지 · 반박 · 중립 수\"]",
+  "v": "des",
+  "e": "지지 · 반박 · 중립 막대와 수 (context-node-map-view.tsx:1505-1538)"
+ },
+ "T:ctx_claim:col:3": {
+  "t": "[\"total_scanned\",\"\",\"검토 소스 수\"]",
+  "v": "des",
+  "e": "'{n}개 소스 검토' (context-node-map-view.tsx:1540-1550; messages ko detail.scanned)"
+ },
+ "T:ctx_claim:col:4": {
+  "t": "[\"confidence\",\"\",\"high · medium · low\"]",
+  "v": "des",
+  "e": "context-node-map-view.tsx:1543-1548 (high · low · 그 밖 medium) · 표본 sample-matrix.ts:220, 330"
+ },
+ "T:ctx_claim:grain": {
+  "t": "스냅샷 × 심층 근거가 있는 조건 1개 = 1행.",
+  "v": "des",
+  "e": "신규 테이블 그레인 (조건당 심층 근거 1개, node-map/types.ts:46)"
+ },
+ "T:ctx_claim:pk": {
+  "t": "snapshot_id + entity_id",
+  "v": "des",
+  "e": "신규 테이블 PK"
+ },
+ "T:ctx_claim:inputs": {
+  "t": "데이터 분석팀 (출처 제안: 심층 근거 검증)",
+  "v": "des",
+  "e": "출처 제안 · 원 파이프라인의 심층 근거 단계는 비활성 (front/docs/social-scraping-screen-design.md:343, 357)"
+ },
+ "T:ctx_claim:uses": {
+  "t": "Global > Customer interest > Social Scraping 그래프 조건 상세의 심층 근거 · 점선 링 · 심층 n 배지 (신규 공급)",
+  "v": "des",
+  "e": "화면: 조건 상세 심층 근거 (context-node-map-view.tsx:1496-1563) · 점선 링 (575-583) · 툴바 '심층 n' 배지 = deep_evidence_linked (307-311) · 목록 배지 (1210)"
+ },
+ "T:ctx_claim:cur": {
+  "t": "없음 (신규)",
+  "v": "des",
+  "e": "현행 객체 없음 (ext.ctx_* 에 없음, back/db/DB-v2.32.sql:724-740)"
+ },
+ "T:ctx_claim_quote:head": {
+  "t": "{\"name\":\"ctx_claim_quote\",\"s\":\"gold\",\"fam\":\"soc\",\"grain\":\"심층 근거 × 인용 표본\"}",
+  "v": "des",
+  "e": "화면: 심층 근거 표본 인용 (front/components/social-scraping/node-map/context-node-map-view.tsx:1552-1563) · node-map/types.ts:53"
+ },
+ "T:ctx_claim_quote:col:0": {
+  "t": "[\"snapshot_id · entity_id\",\"PF\",\"\",\"ctx_claim\"]",
+  "v": "des",
+  "e": "ctx_claim 키 묶음"
+ },
+ "T:ctx_claim_quote:col:1": {
+  "t": "[\"seq\",\"PK\",\"\"]",
+  "v": "des",
+  "e": "표시 순서 키 (앞 3개 표시, context-node-map-view.tsx:1554)"
+ },
+ "T:ctx_claim_quote:col:2": {
+  "t": "[\"quote\",\"\",\"\"]",
+  "v": "des",
+  "e": "인용 앞 100자 표시 (context-node-map-view.tsx:1558-1560)"
+ },
+ "T:ctx_claim_quote:col:3": {
+  "t": "[\"source\",\"\",\"출처 도메인\"]",
+  "v": "des",
+  "e": "'- {source}' 표시 (context-node-map-view.tsx:1561) · 표본 값은 도메인 (sample-matrix.ts:224, 229)"
+ },
+ "T:ctx_claim_quote:col:4": {
+  "t": "[\"stance\",\"\",\"supporting · contradicting · neutral\"]",
+  "v": "des",
+  "e": "점 색 supporting · contradicting · 그 밖 (context-node-map-view.tsx:1557) · 표본 sample-matrix.ts:225, 230"
+ },
+ "T:ctx_claim_quote:grain": {
+  "t": "심층 근거 × 인용 표본 1개 = 1행.",
+  "v": "des",
+  "e": "신규 테이블 그레인"
+ },
+ "T:ctx_claim_quote:pk": {
+  "t": "snapshot_id + entity_id + seq",
+  "v": "des",
+  "e": "신규 테이블 PK"
+ },
+ "T:ctx_claim_quote:inputs": {
+  "t": "데이터 분석팀 (출처 제안: 심층 근거 검증)",
+  "v": "des",
+  "e": "출처 제안 (ctx_claim 과 같음)"
+ },
+ "T:ctx_claim_quote:uses": {
+  "t": "그래프 심층 근거의 표본 인용 (앞 3개 표시) (신규 공급)",
+  "v": "des",
+  "e": "화면: 심층 근거 표본 인용 slice(0, 3) (context-node-map-view.tsx:1552-1563)"
+ },
+ "T:ctx_claim_quote:cur": {
+  "t": "없음 (신규)",
+  "v": "des",
+  "e": "현행 객체 없음"
+ },
+ "T:ctx_research_run:head": {
+  "t": "{\"name\":\"ctx_research_run\",\"s\":\"gold\",\"fam\":\"soc\",\"grain\":\"리서치 실행 1회\"}",
+  "v": "des",
+  "e": "화면: Admin › Global config › Customer interest config 소셜 리서치 (front/app/[locale]/(dash)/admin/standards/customer-interest/page.tsx:46-51) 입력 → 탐색 → 지도"
+ },
+ "T:ctx_research_run:col:0": {
+  "t": "[\"run_id\",\"PK\",\"uuid\"]",
+  "v": "des",
+  "e": "신규 키"
+ },
+ "T:ctx_research_run:col:1": {
+  "t": "[\"keyword\",\"\",\"키워드 / 토픽\"]",
+  "v": "des",
+  "e": "입력 '키워드 / 토픽' (front/components/social-scraping/input-view.tsx:83-95) · 탐색 제목 (exploring-view.tsx:107)"
+ },
+ "T:ctx_research_run:col:2": {
+  "t": "[\"geo_key\",\"FK\",\"지역\",\"dim_country\"]",
+  "v": "des",
+  "e": "입력 '지역 / 언어' (input-view.tsx:109-125) · 옵션 = 계정 국가 (admin/standards/customer-interest/page.tsx:37)"
+ },
+ "T:ctx_research_run:col:3": {
+  "t": "[\"lang_key\",\"FK\",\"지역 프리셋 언어\",\"dim_lang\"]",
+  "v": "des",
+  "e": "지역 프리셋의 language_code 표시 (input-view.tsx:49-57, 120-121)"
+ },
+ "T:ctx_research_run:col:4": {
+  "t": "[\"purpose_preset · purpose_text\",\"\",\"리서치 목적 프리셋 · 본문\"]",
+  "v": "des",
+  "e": "리서치 목적 선택 · 본문 (input-view.tsx:129-154) · 프리셋 purchase-context · competitor-voc · feature-demand · custom (sample-data.ts:31-36)"
+ },
+ "T:ctx_research_run:col:5": {
+  "t": "[\"status\",\"\",\"queued · exploring · confirm · done · failed\"]",
+  "v": "des",
+  "e": "화면 상태: 리서치 중 · 탐색 완료 (exploring-view.tsx:102-107) · 확인 배너 '더 탐색' · '구매 맥락 지도 생성' (174-200) · 흐름 input → exploring → context-map (social-scraping-flow.tsx:138-154)"
+ },
+ "T:ctx_research_run:col:6": {
+  "t": "[\"requested_by\",\"FK\",\"요청 관리자 (감사)\",\"app.user_account\"]",
+  "v": "des",
+  "e": "설계: 감사용 요청자 (화면은 관리자 전용, admin/standards/customer-interest/page.tsx:35) · db:app.user_account.user_id"
+ },
+ "T:ctx_research_run:col:7": {
+  "t": "[\"search_count · source_count · worker_count\",\"\",\"검색 · 소스 · 완료 워커 수\"]",
+  "v": "des",
+  "e": "탐색 카운터 워커 · 소스 · 검색 (exploring-view.tsx:68, 109-111; messages ko socialScraping.exploring workers · sources · firecrawl)"
+ },
+ "T:ctx_research_run:col:8": {
+  "t": "[\"snapshot_id\",\"FK\",\"결과 지도\",\"ctx_snapshot\"]",
+  "v": "des",
+  "e": "탐색 완료 후 지도 (social-scraping-flow.tsx:153, 156-171)"
+ },
+ "T:ctx_research_run:grain": {
+  "t": "리서치 실행 1회 = 1행.",
+  "v": "des",
+  "e": "신규 테이블 그레인"
+ },
+ "T:ctx_research_run:pk": {
+  "t": "run_id",
+  "v": "des",
+  "e": "신규 테이블 PK"
+ },
+ "T:ctx_research_run:inputs": {
+  "t": "데이터 분석팀 (요청: judgment_change ctx_research, 신규 kind)",
+  "v": "des",
+  "e": "NEWREQ judgment_change kind ctx_research 추가 · 현행 CHECK 에 없음 (back/db/DB-v2.32.sql:75-78)"
+ },
+ "T:ctx_research_run:triggers": {
+  "t": "요청 접수 · 진행 · 완료 때 갱신 (제안)",
+  "v": "des",
+  "e": "제안"
+ },
+ "T:ctx_research_run:uses": {
+  "t": "Admin > Global config > Customer interest config 리서치 입력 폼 · 탐색 화면 상태 · 카운터 · 결과 지도 (신규 공급)",
+  "v": "des",
+  "e": "화면: Admin › Global config › Customer interest config '리서치 입력 폼' · '리서치 탐색 화면' (inventory.json) · input-view.tsx · exploring-view.tsx"
+ },
+ "T:ctx_research_run:cur": {
+  "t": "없음 (신규. 현행은 스크립트 픽스처이고 입력 폼은 지역 · 목적을 버림)",
+  "v": "cur",
+  "e": "front/components/social-scraping/exploring-view.tsx:16, 40, 54-59 (getExploringSteps 스크립트를 타이머로 재생) · sample-data.ts:985-1014 · input-view.tsx:92, 157 (onStart(keyword.trim()) — 지역 · 목적 미전달) · social-scraping-flow.tsx:144-147"
+ },
+ "T:ctx_research_wave:head": {
+  "t": "{\"name\":\"ctx_research_wave\",\"s\":\"gold\",\"fam\":\"soc\",\"grain\":\"실행 × 탐색 웨이브\"}",
+  "v": "des",
+  "e": "화면: 탐색 화면 Wave 카드 (front/components/social-scraping/exploring-view.tsx:117-134)"
+ },
+ "T:ctx_research_wave:col:0": {
+  "t": "[\"run_id\",\"PF\",\"\",\"ctx_research_run\"]",
+  "v": "des",
+  "e": "실행 소속"
+ },
+ "T:ctx_research_wave:col:1": {
+  "t": "[\"wave_no\",\"PK\",\"\"]",
+  "v": "des",
+  "e": "'Wave {wave}' (exploring-view.tsx:123) · types.ts:142"
+ },
+ "T:ctx_research_wave:col:2": {
+  "t": "[\"strategy\",\"\",\"탐색 전략 문구\"]",
+  "v": "des",
+  "e": "전략 문구 (exploring-view.tsx:125) · types.ts:142, 170"
+ },
+ "T:ctx_research_wave:grain": {
+  "t": "실행 × 웨이브 1개 = 1행.",
+  "v": "des",
+  "e": "신규 테이블 그레인"
+ },
+ "T:ctx_research_wave:pk": {
+  "t": "run_id + wave_no",
+  "v": "des",
+  "e": "신규 테이블 PK"
+ },
+ "T:ctx_research_wave:inputs": {
+  "t": "데이터 분석팀 (리서치 진행 기록)",
+  "v": "des",
+  "e": "신규 테이블 · 리서치 실행 진행 기록"
+ },
+ "T:ctx_research_wave:uses": {
+  "t": "탐색 화면 Wave 목록 (신규 공급)",
+  "v": "des",
+  "e": "화면: exploring-view.tsx:117-134"
+ },
+ "T:ctx_research_wave:cur": {
+  "t": "없음 (신규)",
+  "v": "des",
+  "e": "현행 객체 없음 (스크립트 픽스처, sample-data.ts:986, 1001)"
+ },
+ "T:ctx_research_worker:head": {
+  "t": "{\"name\":\"ctx_research_worker\",\"s\":\"gold\",\"fam\":\"soc\",\"grain\":\"실행 × 워커\"}",
+  "v": "des",
+  "e": "화면: 탐색 화면 워커 칩 (front/components/social-scraping/exploring-view.tsx:118, 128-130, 233-267)"
+ },
+ "T:ctx_research_worker:col:0": {
+  "t": "[\"run_id\",\"PF\",\"\",\"ctx_research_run\"]",
+  "v": "des",
+  "e": "실행 소속"
+ },
+ "T:ctx_research_worker:col:1": {
+  "t": "[\"worker_id\",\"PK\",\"\"]",
+  "v": "des",
+  "e": "표본 workerId (types.ts:145-146)"
+ },
+ "T:ctx_research_worker:col:2": {
+  "t": "[\"wave_no\",\"\",\"소속 Wave\"]",
+  "v": "des",
+  "e": "Wave 별 묶음 (exploring-view.tsx:118)"
+ },
+ "T:ctx_research_worker:col:3": {
+  "t": "[\"label · query\",\"\",\"칩 이름 · 검색어\"]",
+  "v": "des",
+  "e": "칩 이름 · title=검색어 (exploring-view.tsx:252-261) · types.ts:163-164"
+ },
+ "T:ctx_research_worker:col:4": {
+  "t": "[\"status\",\"\",\"searching · analyzing · completed\"]",
+  "v": "des",
+  "e": "WorkerStatus searching · analyzing · completed (front/components/social-scraping/types.ts:120; exploring-view.tsx:244-260)"
+ },
+ "T:ctx_research_worker:col:5": {
+  "t": "[\"source_count\",\"\",\"수집 소스 수\"]",
+  "v": "des",
+  "e": "칩의 ·{sourceCount} (exploring-view.tsx:262-264) · types.ts:166"
+ },
+ "T:ctx_research_worker:grain": {
+  "t": "실행 × 워커 1개 = 1행.",
+  "v": "des",
+  "e": "신규 테이블 그레인"
+ },
+ "T:ctx_research_worker:pk": {
+  "t": "run_id + worker_id",
+  "v": "des",
+  "e": "신규 테이블 PK"
+ },
+ "T:ctx_research_worker:inputs": {
+  "t": "데이터 분석팀 (리서치 진행 기록)",
+  "v": "des",
+  "e": "신규 테이블 · 리서치 실행 진행 기록"
+ },
+ "T:ctx_research_worker:uses": {
+  "t": "탐색 화면 워커 칩 · 완료 워커 수 (신규 공급)",
+  "v": "des",
+  "e": "화면: 워커 칩 · 완료 워커 수 (exploring-view.tsx:68, 109, 128-130, 183-186)"
+ },
+ "T:ctx_research_worker:cur": {
+  "t": "없음 (신규)",
+  "v": "des",
+  "e": "현행 객체 없음 (스크립트 픽스처, sample-data.ts:987-989)"
+ },
+ "T:ctx_research_log:head": {
+  "t": "{\"name\":\"ctx_research_log\",\"s\":\"gold\",\"fam\":\"soc\",\"grain\":\"실행 × 활동 로그\"}",
+  "v": "des",
+  "e": "화면: 탐색 화면 활동 로그 (front/components/social-scraping/exploring-view.tsx:142-171)"
+ },
+ "T:ctx_research_log:col:0": {
+  "t": "[\"run_id\",\"PF\",\"\",\"ctx_research_run\"]",
+  "v": "des",
+  "e": "실행 소속"
+ },
+ "T:ctx_research_log:col:1": {
+  "t": "[\"seq\",\"PK\",\"표시 순서\"]",
+  "v": "des",
+  "e": "로그는 쌓인 순서대로 표시 (exploring-view.tsx:63, 149)"
+ },
+ "T:ctx_research_log:col:2": {
+  "t": "[\"kind\",\"\",\"wave · reasoning · search · discover · worker · confirmation · complete\"]",
+  "v": "des",
+  "e": "ActivityLogKind 7종 (front/components/social-scraping/types.ts:122-129) · 색 LOG_TONE (exploring-view.tsx:21-29)"
+ },
+ "T:ctx_research_log:col:3": {
+  "t": "[\"title · detail\",\"\",\"\"]",
+  "v": "des",
+  "e": "exploring-view.tsx:157-160 · types.ts:134-135"
+ },
+ "T:ctx_research_log:grain": {
+  "t": "실행 × 로그 1줄 = 1행.",
+  "v": "des",
+  "e": "신규 테이블 그레인"
+ },
+ "T:ctx_research_log:pk": {
+  "t": "run_id + seq",
+  "v": "des",
+  "e": "신규 테이블 PK"
+ },
+ "T:ctx_research_log:inputs": {
+  "t": "데이터 분석팀 (리서치 진행 기록)",
+  "v": "des",
+  "e": "신규 테이블 · 리서치 실행 진행 기록"
+ },
+ "T:ctx_research_log:uses": {
+  "t": "탐색 화면 활동 로그 (신규 공급)",
+  "v": "des",
+  "e": "화면: exploring-view.tsx:142-171"
+ },
+ "T:ctx_research_log:cur": {
+  "t": "없음 (신규)",
+  "v": "des",
+  "e": "현행 객체 없음 (스크립트 픽스처, sample-data.ts:985)"
+ }
+}

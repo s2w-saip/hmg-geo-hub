@@ -1,0 +1,77 @@
+{
+ "CN:카드: pub_cell ⋈ pub_prompt(in_full_cycle) ⋈ answer_fact @ publication.build_id, 글로벌 bgrp = pub_prompt.cat_mask": {
+  "t": "카드: pub_cell ⋈ pub_prompt(in_full_cycle) ⋈ answer_fact @ publication.build_id, 글로벌 bgrp = pub_prompt.cat_mask",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:7553-7584 (frz.card_answer = frz.cell ⋈ frz.prompt q.in_full_cycle ⋈ rd.answer ∪ frz.keep_answer, 글로벌 bgrp = q.cat_mask) · 설계: pub_cell · pub_prompt(cat_mask) · publication.build_id (src/tables/11_pub.js)"
+ },
+ "CN:카드: pub_cell ⋈ pub_prompt(in_full_cycle) ⋈ answer_brand_fact @ publication.build_id, 글로벌 bgrp = pub_prompt.cat_mask": {
+  "t": "카드: pub_cell ⋈ pub_prompt(in_full_cycle) ⋈ answer_brand_fact @ publication.build_id, 글로벌 bgrp = pub_prompt.cat_mask",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:7553-7584 (frz.card_answer_brand 같은 식, rd.answer_brand) · db:rd.answer_brand.bgrp · 설계: src/tables/11_pub.js"
+ },
+ "CN:웹 카드: pub_cell ⋈ pub_cell_web ⋈ answer_brand_fact @ publication.build_id (프롬프트 축 조인 없음)": {
+  "t": "웹 카드: pub_cell ⋈ pub_cell_web ⋈ answer_brand_fact @ publication.build_id (프롬프트 축 조인 없음)",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:7590-7623 (frz.card_answer_brand_w = frz.cell ⋈ rd.answer_brand ⟕ frz.cell_web, '웹은 프롬프트 축을 조인하지 않는다') · 설계: src/tables/11_pub.js pub_cell_web"
+ },
+ "CN:report_fs IS NOT NULL ∧ report_fs ∉ app.website_report_excluded": {
+  "t": "report_fs IS NOT NULL ∧ report_fs ∉ app.website_report_excluded",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:7597 (unit_in = w.report_fs IS NOT NULL AND w.report_fs <> ALL(app.website_report_excluded.file_seq)) · 설계: pub_cell_web.report_fs"
+ },
+ "CN:웹 카드: pub_cell ⋈ pub_cell_web ⋈ answer_fact @ publication.build_id (프롬프트 축 조인 없음)": {
+  "t": "웹 카드: pub_cell ⋈ pub_cell_web ⋈ answer_fact @ publication.build_id (프롬프트 축 조인 없음)",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:7590-7623 (frz.card_answer_w) · 설계: src/tables/11_pub.js pub_cell_web"
+ },
+ "CN:활성 발행의 pub_prompt_axis": {
+  "t": "활성 발행의 pub_prompt_axis",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:6129-6132 (frz.card_axis = frz.prompt_axis ⋈ generation state 'active') · 설계: pub_prompt_axis · publication.state"
+ },
+ "CN:활성 발행의 pub_brand_name": {
+  "t": "활성 발행의 pub_brand_name",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:6142-6144 (frz.card_brand_name = frz.brand_name ⋈ generation active, cyc_key = generation) · 설계: pub_brand_name · publication.cyc_key"
+ },
+ "CN:카드: pub_cell ⋈ pub_prompt(in_full_cycle) ⋈ citation_fact @ publication.build_id, 글로벌 bgrp = pub_prompt.cat_mask": {
+  "t": "카드: pub_cell ⋈ pub_prompt(in_full_cycle) ⋈ citation_fact @ publication.build_id, 글로벌 bgrp = pub_prompt.cat_mask",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:7553-7584 (frz.card_citation 같은 식, rd.citation) · db:rd.citation.bgrp · 설계: src/tables/11_pub.js"
+ },
+ "CN:웹 카드: pub_cell ⋈ pub_cell_web ⋈ citation_fact @ publication.build_id (프롬프트 축 조인 없음)": {
+  "t": "웹 카드: pub_cell ⋈ pub_cell_web ⋈ citation_fact @ publication.build_id (프롬프트 축 조인 없음)",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:7590-7623 (frz.card_citation_w) · 설계: src/tables/11_pub.js pub_cell_web"
+ },
+ "CN:활성 발행의 pub_cell_web": {
+  "t": "활성 발행의 pub_cell_web",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:6068-6070 (frz.card_web = frz.cell_web ⋈ generation active) · 설계: pub_cell_web"
+ },
+ "CN:격자: pub_cell ⋈ pub_prompt ⋈ answer_fact @ publication.build_id, 글로벌 bgrp = pub_prompt.cat_mask": {
+  "t": "격자: pub_cell ⋈ pub_prompt ⋈ answer_fact @ publication.build_id, 글로벌 bgrp = pub_prompt.cat_mask",
+  "v": "cur",
+  "e": "sql: pg_get_viewdef('frz.grid_answer') = frz.cell ⋈ generation active ⋈ frz.prompt(in_full_cycle 없음) ⋈ rd.answer ∪ keep, bgrp = q.cat_mask (DB-v2.24 P126 주석) · back/db/DB-v2.32.sql:5852 · 설계: src/tables/11_pub.js"
+ },
+ "CN:격자: pub_cell ⋈ pub_prompt ⋈ answer_brand_fact @ publication.build_id, 글로벌 bgrp = pub_prompt.cat_mask": {
+  "t": "격자: pub_cell ⋈ pub_prompt ⋈ answer_brand_fact @ publication.build_id, 글로벌 bgrp = pub_prompt.cat_mask",
+  "v": "cur",
+  "e": "sql: pg_get_viewdef('frz.grid_answer_brand') (frz.grid_answer 와 같은 식) · back/db/DB-v2.32.sql:5852 · 설계: src/tables/11_pub.js"
+ },
+ "CN:격자: pub_cell ⋈ pub_prompt ⋈ citation_fact @ publication.build_id, 글로벌 bgrp = pub_prompt.cat_mask": {
+  "t": "격자: pub_cell ⋈ pub_prompt ⋈ citation_fact @ publication.build_id, 글로벌 bgrp = pub_prompt.cat_mask",
+  "v": "cur",
+  "e": "sql: pg_get_viewdef('frz.grid_citation') (같은 식) · back/db/DB-v2.32.sql:5852 · 설계: src/tables/11_pub.js"
+ },
+ "CN:행 존재 = answer_fact.rep_cit_xor 참": {
+  "t": "행 존재 = answer_fact.rep_cit_xor 참",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:4800-4807 (rd.rep_cit_delta = 인용 대표가 is_rep 과 다른 답변 키, 모수 = is_rep XOR 소속) · 설계: src/tables/03_fact.js answer_fact.rep_cit_xor"
+ },
+ "CN:BE 가 KST 오늘 날짜를 직접 계산 (데이터 아님)": {
+  "t": "BE 가 KST 오늘 날짜를 직접 계산 (데이터 아님)",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:377 (rd.today_kst = (now() AT TIME ZONE 'Asia/Seoul')::date, 표를 읽지 않음) · 설계: 골드에 함수 없이 BE 계산"
+ }
+}

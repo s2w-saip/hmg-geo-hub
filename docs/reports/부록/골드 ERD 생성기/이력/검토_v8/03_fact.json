@@ -1,0 +1,657 @@
+{
+ "T:job_index:head": {
+  "t": "{\"name\":\"job_index\",\"s\":\"gold\",\"fam\":\"fact\",\"grain\":\"Scope job 1건 (모든 상태)\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:439 (rd.job = Scope job 1건, 모든 status·드롭 포함) · 설계: 골드 이름 job_index"
+ },
+ "T:job_index:col:0": {
+  "t": "[\"answer_key\",\"PK\",\"int4\"]",
+  "v": "cur",
+  "e": "db:rd.job.answer_key (integer) · back/db/DB-v2.32.sql:441 PRIMARY KEY"
+ },
+ "T:job_index:col:1": {
+  "t": "[\"job_id\",\"UK\",\"uuid\"]",
+  "v": "cur",
+  "e": "db:rd.job.job_id (uuid) · sql: job_job_id_key UNIQUE (job_id)"
+ },
+ "T:job_index:col:2": {
+  "t": "[\"run_key\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.job.run_key"
+ },
+ "T:job_index:col:3": {
+  "t": "[\"C 좌표\",\"FK\",\"cyc·prompt·project·engine·geo·lang·bgrp\",\"cell_key\",[\"cyc_key\",\"prompt_key\",\"project_key\",\"engine_key\",\"geo_key\",\"lang_key\",\"bgrp\"]]",
+  "v": "cur",
+  "e": "db:rd.job cyc_key·prompt_key·project_key·engine_key·geo_key·lang_key·bgrp · back/db/DB-v2.32.sql:441-443 · 설계: cell_key 묶음 참조"
+ },
+ "T:job_index:col:4": {
+  "t": "[\"surface · round_date\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.job.surface · db:rd.job.round_date"
+ },
+ "T:job_index:col:5": {
+  "t": "[\"measured_at\",\"\",\"측정 시각\"]",
+  "v": "cur",
+  "e": "db:rd.job.measured_at · back/ingest/project/apply/queries.py:840 (ing.answer.measured_at)"
+ },
+ "T:job_index:col:6": {
+  "t": "[\"status_code\",\"\",\"0 완료 · 1 대기·실행 · 2 실패 · 3 기타\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:444 (0 completed 1 pending·running 2 failed 3 기타) · back/app/core/codes.py:36 · back/ingest/project/apply/queries.py:857-859"
+ },
+ "T:job_index:col:7": {
+  "t": "[\"analysis_code\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.job.analysis_code · back/db/DB-v2.32.sql:1103"
+ },
+ "T:job_index:col:8": {
+  "t": "[\"dropped · served\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.job.dropped · db:rd.job.served · back/db/DB-v2.32.sql:446"
+ },
+ "T:job_index:col:9": {
+  "t": "[\"last_build_id\",\"FK\",\"마지막 반영 build (현행 load_id)\",\"build\"]",
+  "v": "cur",
+  "e": "db:rd.job.load_id · back/ingest/project/apply/queries.py:1193-1198 (재삽입마다 그 적재 load_id) · 설계: build 참조로 이름 변경 (coverage_data.js COLMAP rename)"
+ },
+ "T:job_index:grain": {
+  "t": "Scope job 1건 = 1행. 대기·실행·실패·드롭까지 모든 상태를 담습니다.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:439 · back/ingest/project/apply/queries.py:857-860 (status_code 0~3, dropped)"
+ },
+ "T:job_index:pk": {
+  "t": "answer_key (job_id 유일)",
+  "v": "cur",
+  "e": "sql: job_pkey PRIMARY KEY (answer_key) · job_job_id_key UNIQUE (job_id) · back/db/DB-v2.32.sql:441"
+ },
+ "T:job_index:inputs": {
+  "t": "데이터 분석팀",
+  "v": "des",
+  "e": "검토/README.md 4장 inputs 규칙 · 5-4 사용자 10-19 용어(데이터 분석팀). 현행 쓰기 = back/ingest/project/apply/queries.py:1193"
+ },
+ "T:job_index:triggers": {
+  "t": "적재마다, 회차 재평가의 run 귀속 이동, judgment_change 처리(재판정 · 앵커 고정 · 드롭 등)",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:1193-1198 (apply 삽입) · back/ingest/cycles/workers/service.py:105-111 (cycles_tick moved_runs → apply) · back/ingest/cycles/workers/service.py:146-166 (rejudge · anchor_pin · answer_drop → reproject)"
+ },
+ "T:job_index:uses": {
+  "t": "답변 모달 헤더·범위 검사, 언급·인용 프롬프트·도메인 상세의 답변 참조(job_id), 추이 측정 일수(/v1/trend), 글로벌 필터 옵션(filter_options 스위치), 원본 데이터 검수 목록·진행률·상세·노트, Project › Setting › General 분석 연결 진단, 회차·job 관제 API(화면 없음)",
+  "v": "cur",
+  "e": "back/app/features/analytics/answers/detail/queries.py:22,42 · back/app/features/analytics/mentions/prompts/queries.py:85 · back/app/features/analytics/citations/prompts/queries.py:127 · back/app/features/analytics/citations/domain_detail/queries.py:77 · back/app/features/analytics/trend/series/queries.py:84 · back/app/features/analytics/filters/options/queries.py:31-47 · back/app/core/profile.py:162-165 · back/app/features/qa/answers/list/queries.py:49-62 · back/app/features/qa/notes/notes/queries.py:33 · back/app/features/projects/settings/scope_link/queries.py:18-24 · back/app/features/admin/cycles/cycles/queries.py:42-52 · front/lib/hgh/api-types.ts:387 (admin cycles·jobs 는 어댑터 호출 없음)"
+ },
+ "T:job_index:cur": {
+  "t": "rd.job (load_id → last_build_id)",
+  "v": "cur",
+  "e": "db:rd.job 18열 (load_id 외 이름 같음) · coverage_data.js COLMAP rd.job.load_id → job_index.last_build_id"
+ },
+ "T:job_index:rule:0": {
+  "t": "served = 완료 ∧ 드롭 아님. answer_fact 는 served job 만 가집니다.",
+  "v": "cur",
+  "e": "sql: job_check CHECK (served = (status_code = 0 AND NOT dropped)) · back/ingest/project/apply/queries.py:902 (rd.answer 원천 = status_code 0 ∧ NOT dropped)"
+ },
+ "T:job_index:rule:1": {
+  "t": "job_id ↔ answer_key 해석과 접근 범위 검사(fail-closed)가 이 테이블을 거칩니다.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:440 · back/app/features/analytics/answers/detail/queries.py:3 · back/app/features/qa/answers/list/scope.py:394-397"
+ },
+ "T:job_index:rule:2": {
+  "t": "골드에서는 build 로 나누지 않는 현재 상태 원장입니다. 대기·실행·실패가 build 없이 바로 보여야 해서 release 밖에 두고, 바뀌면 data_version 을 올립니다.",
+  "v": "des",
+  "e": "src/tables/12_build.js data_version 설계 · 현행 rd.job 은 제자리 갱신(back/ingest/project/apply/queries.py:1136-1198) · 검수 목록 모집단 = rd.job 전체(back/app/features/qa/answers/list/scope.py:10)"
+ },
+ "T:answer_fact:head": {
+  "t": "{\"name\":\"answer_fact\",\"s\":\"gold\",\"fam\":\"fact\",\"grain\":\"빌드 × 정상 완료 답변 1건\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:454 (완료·비드롭 job 1건) · 설계: build (src/tables/12_build.js gold_facts)"
+ },
+ "T:answer_fact:col:0": {
+  "t": "[\"build_id\",\"PF\",\"빌드 (현행 load_id)\",\"build\"]",
+  "v": "cur",
+  "e": "db:rd.answer.load_id · coverage_data.js COLMAP rd.answer.load_id → answer_fact.build_id · 설계: build 참조·PK 편입"
+ },
+ "T:answer_fact:col:1": {
+  "t": "[\"surface · round_date\",\"PK\",\"파티션\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:473-476 (PK (surface, round_date, answer_key), LIST(surface) → RANGE(round_date))"
+ },
+ "T:answer_fact:col:2": {
+  "t": "[\"answer_key\",\"PF\",\"\",\"job_index\"]",
+  "v": "cur",
+  "e": "db:rd.answer.answer_key · back/db/DB-v2.32.sql:473"
+ },
+ "T:answer_fact:col:3": {
+  "t": "[\"C 좌표\",\"FK\",\"cyc·run·prompt·project·engine·geo·lang·bgrp\",\"cell_key\",[\"cyc_key\",\"run_key\",\"prompt_key\",\"project_key\",\"engine_key\",\"geo_key\",\"lang_key\",\"bgrp\"]]",
+  "v": "cur",
+  "e": "db:rd.answer cyc_key·run_key·prompt_key·project_key·engine_key·geo_key·lang_key·bgrp · back/db/DB-v2.32.sql:455-458"
+ },
+ "T:answer_fact:col:4": {
+  "t": "[\"anchor_date · anchor_src · region_geo_key\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.answer.anchor_date · anchor_src · region_geo_key"
+ },
+ "T:answer_fact:col:5": {
+  "t": "[\"cat_mask · acr_iter_rank · analysis_state\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.answer.cat_mask · acr_iter_rank · analysis_state"
+ },
+ "T:answer_fact:col:6": {
+  "t": "[\"elig · dflt · is_acr · is_rep · web_reg\",\"\",\"게이트\"]",
+  "v": "cur",
+  "e": "db:rd.answer.elig · dflt · is_acr · is_rep · web_reg · back/db/DB-v2.32.sql:465-467"
+ },
+ "T:answer_fact:col:7": {
+  "t": "[\"std_in · cit_in · gap · acr_in\",\"\",\"모수·갭 (현행 생성 열)\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:468-471 (acr_in · gap · std_in · cit_in GENERATED ALWAYS … STORED)"
+ },
+ "T:answer_fact:col:8": {
+  "t": "[\"elig_nc · std_in_nc · cit_in_nc\",\"\",\"프로필 대체 모수\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:3164-3169 · back/app/core/measure.py:352,409"
+ },
+ "T:answer_fact:col:9": {
+  "t": "[\"own_mask · own_rk_{h,k,g} · t_own\",\"\",\"당사 비트 · 경쟁 순위 · 유형\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:1096-1116 (own_mask = bit_or own_bit, own_rk_* = 경쟁 rk 최솟값, t_own = 유형 비트) · back/db/DB-v2.32.sql:4610-4612"
+ },
+ "T:answer_fact:col:10": {
+  "t": "[\"own_fp_{h,k,g}\",\"\",\"텍스트 첫 등장 순서 (신규)\"]",
+  "v": "des",
+  "e": "docs/reports/부록/지표 점검표 생성기/progress.py:11-13 (레거시 = 답변 텍스트상 첫 등장 순서, rd 에 first_rank 없음) · NEWREQ answer_fact.own_fp_{h,k,g}"
+ },
+ "T:answer_fact:col:11": {
+  "t": "[\"ment_total · ment_{h,k,g}\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.answer.ment_total · ment_h · ment_k · ment_g"
+ },
+ "T:answer_fact:col:12": {
+  "t": "[\"sent_{pos,neg,all}_{h,k,g}\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.answer.sent_pos_h … sent_all_g 9열 · back/db/DB-v2.32.sql:462-464"
+ },
+ "T:answer_fact:col:13": {
+  "t": "[\"cit_n · cit_n_all · cit_off\",\"\",\"호스트 인용 · 전체 · Official\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:1293 (cit_n 호스트 있는 인용) · back/db/DB-v2.32.sql:3131-3132 (cit_n_all 모든 인용) · back/db/DB-v2.32.sql:2722-2723 (cit_off Official (HMG))"
+ },
+ "T:answer_fact:col:14": {
+  "t": "[\"cit_own_{h,k,g}[c] · cit_own_x\",\"\",\"글로벌 자사 인용 수\",\"\",[\"cit_own_h\",\"cit_own_k\",\"cit_own_g\",\"cit_own_hc\",\"cit_own_kc\",\"cit_own_gc\",\"cit_own_x\"]]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:1294-1300 (글로벌 자사 인용 수 h·k·g, 국가 일치 hc·kc·gc, x)"
+ },
+ "T:answer_fact:col:15": {
+  "t": "[\"cit_loc · cit_tgt · cit_loc_tgt\",\"\",\"자사 · 타겟 · 자사∨타겟 인용 수\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:1301-1303 · back/ingest/project/apply/queries.py:1009-1011 (loc_owned · tgt_hit · loc_owned OR tgt_hit 인용 수)"
+ },
+ "T:answer_fact:col:16": {
+  "t": "[\"cit_c1 … cit_c13\",\"\",\"카테고리별\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:3133-3134 (cit_c1..13 = app.citation_category 1..13)"
+ },
+ "T:answer_fact:col:17": {
+  "t": "[\"has_cit · tgt_cited · own_url_cited\",\"\",\"인용 여부 · URL 인용률\"]",
+  "v": "cur",
+  "e": "sql: answer_cit_flags ((cit_n > 0) = has_cit, (cit_tgt > 0) = tgt_cited, (cit_loc_tgt > 0) = own_url_cited) · back/app/core/measure.py:20,676-678 (URL 인용률)"
+ },
+ "T:answer_fact:col:18": {
+  "t": "[\"rep_cit_xor\",\"\",\"인용 대표 보정 (신규)\"]",
+  "v": "des",
+  "e": "back/db/DB-v2.32.sql:4800-4806 (현행 rd.rep_cit_delta 행) · NEWREQ answer_fact.rep_cit_xor"
+ },
+ "T:answer_fact:col:19": {
+  "t": "[\"ecat_ver · rule_ver\",\"\",\"판정 버전\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:4123-4125 (ecat_ver) · db:rd.answer.rule_ver"
+ },
+ "T:answer_fact:grain": {
+  "t": "빌드 × 정상 완료 답변 1건 = 1행 (ACR 반복 포함, 본문 제외).",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:454 (완료·비드롭 job 1건, ACR 반복 포함) · 본문은 ing.answer(rd.v_answer_body) · 설계: build"
+ },
+ "T:answer_fact:pk": {
+  "t": "build_id + surface + round_date + answer_key",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:473 PRIMARY KEY (surface, round_date, answer_key) · 설계: build_id 추가"
+ },
+ "T:answer_fact:inputs": {
+  "t": "데이터 분석팀 · app.hidden_market · app.owned_base · app.citation_category · app.ecat_* (엔티티 버전)",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:883 (app.hidden_market → elig) · back/ingest/project/apply/queries.py:1031 (app.owned_base → cit_own_*) · back/ingest/project/apply/queries.py:1013 (app.citation_category → cit_off) · back/migration/seed/seed-3x-common.sql:144-169 (app.ecat_* → 언급 열) · 사용자 10-19 용어 데이터 분석팀"
+ },
+ "T:answer_fact:triggers": {
+  "t": "현행: 적재마다, 회차 재평가의 run 귀속 이동, judgment_change 처리(재판정 · 앵커 고정 · 드롭 · 엔티티 버전). 골드는 새 build 로 반영",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:1200 (apply 삽입) · back/ingest/cycles/workers/service.py:105-111 (cycles_tick moved_runs) · back/ingest/cycles/workers/service.py:134-166 (rejudge · cycle_admin · anchor_pin · answer_drop · entity_version) · 설계: build"
+ },
+ "T:answer_fact:uses": {
+  "t": "KPI 카드·엔진·비교·추이·국가별 GEO, 언급·인용 분석 전반(core.measure), 답변 상세 API 분석 상태(모달은 안 읽음), Website › Prompts 측정 메타, Project › Prompt 영향 답변 수, 답변 목록·회차 관제 API(화면 없음)",
+  "v": "cur",
+  "e": "back/app/core/measure.py:4-24 · back/app/features/analytics/geo/markets/service.py:40 · back/app/features/analytics/answers/detail/queries.py:89-92 (analysis_state·gap·is_acr) · front/lib/hgh/adapters/answers.ts:28-40 (모달 필드 표에 분석 상태 없음) · back/app/features/catalog/prompts/catalog/queries.py:7,138 · back/app/features/projects/prompts/lifecycle/queries.py:34 · back/app/features/analytics/answers/list/queries.py:134 · back/app/features/admin/cycles/cycles/queries.py:55-65 · front/lib/hgh/adapters/answers.ts:175 (/v1/answers 목록 호출 없음)"
+ },
+ "T:answer_fact:cur": {
+  "t": "rd.answer (load_id → build_id, own_fp_* 신규) + rd.rep_cit_delta (→ rep_cit_xor)",
+  "v": "cur",
+  "e": "db:rd.answer 79열 (load_id 외 이름 같음) · db:rd.rep_cit_delta (answer_key·surface·round_date) · coverage_data.js COLMAP"
+ },
+ "T:answer_fact:rule:0": {
+  "t": "골드는 현행 rd.answer 열을 모두 둡니다. *_nc 열은 레거시 프로필 스위치(catalog_incl_deleted · freeze_at_publish · rep_pick_latest_first)가 읽는 대체 모수입니다.",
+  "v": "cur",
+  "e": "back/app/core/measure.py:352,370,409 · back/app/core/profile.py:84-92 · back/ingest/project/apply/queries.py:1295-1301 (rep_pick_latest_first 대표 게이트 elig_nc) · 설계: 열 유지"
+ },
+ "T:answer_fact:rule:1": {
+  "t": "현행 우선 노출도는 AI 우선 노출도 카드 · 국가별 GEO 현황 모두 경쟁 순위(own_rk_*, rk)입니다. 골드는 레거시(답변 텍스트상 첫 등장 순서)와 맞추려고 own_fp_{h,k,g} 를 새로 둡니다.",
+  "v": "cur",
+  "e": "back/app/features/analytics/kpi/summary/service.py:190 (카드 position = rank_avg) · back/app/core/measure.py:505-520,656 · back/app/features/analytics/geo/markets/service.py:85,96 · back/ingest/project/apply/queries.py:1086-1099 (rk = 경쟁 행 avg_position 순위) · docs/reports/부록/지표 점검표 생성기/progress.py:11-13 · 설계: own_fp"
+ },
+ "T:answer_fact:rule:2": {
+  "t": "골드에서는 현행 rd.rep_cit_delta(행 존재)를 rep_cit_xor 열로 접습니다. rep_round_date_cell 스위치의 인용 계열 셀 대표 = is_rep XOR rep_cit_xor (동결 읽기 제외).",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:4807-4809 · back/app/core/measure.py:423-445 (REP_PATH·rep_term, 동결 읽기면 is_rep) · back/app/core/profile.py:48-57 · 설계: rep_cit_xor 열"
+ },
+ "T:answer_brand_fact:head": {
+  "t": "{\"name\":\"answer_brand_fact\",\"s\":\"gold\",\"fam\":\"fact\",\"grain\":\"빌드 × 답변 × 표시 브랜드 × 경쟁\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:478 (답변 × 표시 브랜드 × 경쟁 여부) · 설계: build"
+ },
+ "T:answer_brand_fact:col:0": {
+  "t": "[\"build_id\",\"PF\",\"빌드 (신규)\",\"build\"]",
+  "v": "des",
+  "e": "src/tables/12_build.js gold_facts (모든 사실 build_id) · 현행 rd.answer_brand 에 load_id 없음 (db_cols.tsv)"
+ },
+ "T:answer_brand_fact:col:1": {
+  "t": "[\"surface · round_date · answer_key\",\"PF\",\"\",\"answer_fact\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:487 PRIMARY KEY (surface, round_date, answer_key, brand_key, competitive)"
+ },
+ "T:answer_brand_fact:col:2": {
+  "t": "[\"brand_key\",\"PF\",\"\",\"dim_brand\"]",
+  "v": "cur",
+  "e": "db:rd.answer_brand.brand_key · back/ingest/project/apply/queries.py:1076 (rd.dim_brand_name bare 조인)"
+ },
+ "T:answer_brand_fact:col:3": {
+  "t": "[\"competitive\",\"PK\",\"경쟁 여부 (비경쟁 명단 판정)\"]",
+  "v": "cur",
+  "e": "sql: answer_brand_pkey (…, brand_key, competitive) · back/ingest/project/apply/queries.py:543 · back/migration/seed/seed-3x-common.sql:55-61 (brand_competitive: app.non_competitor_name)"
+ },
+ "T:answer_brand_fact:col:4": {
+  "t": "[\"C 좌표 사본\",\"FK\",\"\",\"cell_key\",[\"cyc_key\",\"prompt_key\",\"project_key\",\"engine_key\",\"geo_key\",\"lang_key\",\"bgrp\"]]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:479-480 · back/ingest/project/apply/queries.py:1227-1236"
+ },
+ "T:answer_brand_fact:col:5": {
+  "t": "[\"own_bit · entity_rows · rid_n\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.answer_brand.own_bit · entity_rows · rid_n · back/db/DB-v2.32.sql:3173-3174"
+ },
+ "T:answer_brand_fact:col:6": {
+  "t": "[\"mention_count · rk\",\"\",\"언급 수 · 경쟁 순위\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:1081-1094 (mention_count 합, rk = 경쟁 행 avg_position 순위) · sql: answer_brand_check (competitive OR rk = 0)"
+ },
+ "T:answer_brand_fact:col:7": {
+  "t": "[\"first_pos\",\"\",\"텍스트 첫 등장 순서 (신규)\"]",
+  "v": "des",
+  "e": "docs/reports/부록/지표 점검표 생성기/progress.py:11-13 · NEWREQ answer_brand_fact.first_pos"
+ },
+ "T:answer_brand_fact:col:8": {
+  "t": "[\"s_pos · s_neu · s_neg · s_mix\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.answer_brand.s_pos · s_neu · s_neg · s_mix"
+ },
+ "T:answer_brand_fact:col:9": {
+  "t": "[\"t_mention … t_final_choice\",\"\",\"유형 5종\",\"\",[\"t_mention\",\"t_recommendation\",\"t_comparison\",\"t_definition\",\"t_final_choice\"]]",
+  "v": "cur",
+  "e": "db:rd.answer_brand.t_mention · t_recommendation · t_comparison · t_definition · t_final_choice"
+ },
+ "T:answer_brand_fact:col:10": {
+  "t": "[\"std_in · elig · dflt · is_rep · std_in_nc\",\"\",\"게이트 사본\"]",
+  "v": "cur",
+  "e": "db:rd.answer_brand.std_in · elig · dflt · is_rep · std_in_nc · back/db/DB-v2.32.sql:485,3110,3170"
+ },
+ "T:answer_brand_fact:col:11": {
+  "t": "[\"rule_ver\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.answer_brand.rule_ver"
+ },
+ "T:answer_brand_fact:grain": {
+  "t": "빌드 × 답변 × 표시 브랜드 × 경쟁 여부 = 1행.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:478 · 설계: build"
+ },
+ "T:answer_brand_fact:pk": {
+  "t": "build_id + 답변 PK + brand_key + competitive",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:487 · 설계: build_id 추가"
+ },
+ "T:answer_brand_fact:inputs": {
+  "t": "데이터 분석팀 · app.ecat_* (엔티티 버전) · app.non_competitor_name",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:1050-1076 (FACT_MR: _ecat_x 엔티티 버전 오버레이) · back/migration/seed/seed-3x-common.sql:144-169 (app.ecat_*) · back/migration/seed/seed-3x-common.sql:55-61 (app.non_competitor_name)"
+ },
+ "T:answer_brand_fact:uses": {
+  "t": "경쟁사 표·브랜드 순위·헤드투헤드(/v1/mentions/brands), 국가별 GEO 경쟁사, 멘션 유형·유형 추이, 언급 프롬프트, 답변 모달 언급 브랜드, 인용 도메인의 언급 브랜드 조건·유형 × 카테고리, Project › Prompt 영향 언급 수, Entity catalog 언급 샘플, 답변 목록 API(화면 없음)",
+  "v": "cur",
+  "e": "back/app/core/measure.py:1584-1611 · back/app/features/analytics/mentions/brands/queries.py:35 · back/app/features/analytics/geo/markets/service.py:154 · back/app/features/analytics/mentions/types/queries.py:34 · back/app/features/analytics/trend/series/queries.py:60 · back/app/features/analytics/mentions/prompts/queries.py:56,79 · back/app/features/analytics/answers/detail/queries.py:101 · back/app/features/analytics/citations/domains/queries.py:93-98 · back/app/features/analytics/citations/sources/queries.py:50-62 · back/app/features/projects/prompts/lifecycle/queries.py:35 · back/app/features/admin/entities/versions/queries.py:248-253 · front/app/[locale]/(dash)/admin/standards/entities/_components/entity-drawer.tsx:142 · back/app/features/analytics/answers/list/queries.py:106-114 · inventory.json 헤드투헤드 = /v1/mentions/brands"
+ },
+ "T:answer_brand_fact:cur": {
+  "t": "rd.answer_brand (+ build_id · first_pos 신규)",
+  "v": "cur",
+  "e": "db:rd.answer_brand 32열 (이름 같음, load_id 없음)"
+ },
+ "T:answer_brand_fact:rule:0": {
+  "t": "게이트 열은 answer_fact 사본입니다. 현행은 rd.propagate_answer_gates(std_in · elig · dflt · is_rep · cyc_key)와 rd.fill_answer_nc(std_in_nc)가 복사합니다.",
+  "v": "cur",
+  "e": "sql: pg_get_functiondef(rd.propagate_answer_gates) answer_brand SET std_in·elig·dflt·cyc_key·is_rep · back/db/DB-v2.32.sql:3591-3625 (rd.fill_answer_nc → std_in_nc)"
+ },
+ "T:answer_brand_fact:rule:1": {
+  "t": "first_pos 는 레거시 우선 노출도(답변 텍스트상 첫 등장 순서)와 맞추려는 신규 열입니다.",
+  "v": "des",
+  "e": "docs/reports/부록/지표 점검표 생성기/progress.py:11-13 · NEWREQ answer_brand_fact.first_pos"
+ },
+ "T:answer_brand_fact:rule:2": {
+  "t": "exposure_answers 는 기본 행 수이고, brand_exposure_per_alias 스위치일 때만 Σrid_n 입니다.",
+  "v": "cur",
+  "e": "back/app/core/measure.py:1605-1607 (g20 이면 sum(rid_n), 아니면 count(*)) · back/app/core/profile.py:103-108"
+ },
+ "T:answer_stance_fact:head": {
+  "t": "{\"name\":\"answer_stance_fact\",\"s\":\"gold\",\"fam\":\"fact\",\"grain\":\"빌드 × 답변 × 턴 × 엔티티\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:496-501 · 설계: build"
+ },
+ "T:answer_stance_fact:col:0": {
+  "t": "[\"build_id\",\"PF\",\"빌드 (신규)\",\"build\"]",
+  "v": "des",
+  "e": "src/tables/12_build.js gold_facts · 현행 rd.answer_stance 에 load_id 없음 (db_cols.tsv)"
+ },
+ "T:answer_stance_fact:col:1": {
+  "t": "[\"surface · round_date · answer_key\",\"PF\",\"\",\"answer_fact\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:501 PRIMARY KEY (surface, round_date, answer_key, turn_index, entity_key)"
+ },
+ "T:answer_stance_fact:col:2": {
+  "t": "[\"turn_index\",\"PK\",\"\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:498,501"
+ },
+ "T:answer_stance_fact:col:3": {
+  "t": "[\"entity_key\",\"PF\",\"\",\"dim_entity\"]",
+  "v": "cur",
+  "e": "db:rd.answer_stance.entity_key · back/ingest/project/apply/queries.py:1247 (rd.dim_entity 조인)"
+ },
+ "T:answer_stance_fact:col:4": {
+  "t": "[\"brand_key\",\"FK\",\"\",\"dim_brand\"]",
+  "v": "cur",
+  "e": "db:rd.answer_stance.brand_key · back/ingest/project/apply/queries.py:1241,1251"
+ },
+ "T:answer_stance_fact:col:5": {
+  "t": "[\"cyc_key\",\"\",\"\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:1660,1670"
+ },
+ "T:answer_stance_fact:col:6": {
+  "t": "[\"own_bit · stance\",\"\",\"1 긍정 2 중립 3 혼합 4 부정\"]",
+  "v": "cur",
+  "e": "sql: answer_stance_stance_check (stance BETWEEN 1 AND 4) · back/app/core/codes.py:38 · back/db/DB-v2.32.sql:498"
+ },
+ "T:answer_stance_fact:col:7": {
+  "t": "[\"first_turn\",\"\",\"대표 턴\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:499 · back/app/features/analytics/mentions/types/schemas.py:70 (대표 턴)"
+ },
+ "T:answer_stance_fact:col:8": {
+  "t": "[\"std_in · is_rep · std_in_nc\",\"\",\"게이트 사본\"]",
+  "v": "cur",
+  "e": "db:rd.answer_stance.std_in · is_rep · std_in_nc · back/db/DB-v2.32.sql:3112,3171"
+ },
+ "T:answer_stance_fact:grain": {
+  "t": "빌드 × 답변 × 턴 × 엔티티 = 1행.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:496,501 · 설계: build"
+ },
+ "T:answer_stance_fact:pk": {
+  "t": "build_id + 답변 PK + turn_index + entity_key",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:501 · 설계: build_id 추가"
+ },
+ "T:answer_stance_fact:inputs": {
+  "t": "데이터 분석팀 · app.ecat_* (엔티티 버전)",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:1238-1252 (_ecat_x 제거 엔티티 제외) · back/migration/seed/seed-3x-common.sql:144-169 (app.ecat_*)"
+ },
+ "T:answer_stance_fact:uses": {
+  "t": "/v1/mentions/types 당사 스탠스 4계열 (Global › Answer analysis › Mention 스탠스 카드, 현재 꺼짐)",
+  "v": "cur",
+  "e": "back/app/features/analytics/mentions/types/queries.py:40-50 · back/app/core/facts.py:14 · front/app/[locale]/(dash)/standard/answer-analysis/_data/kpi-view.ts:1401 (STANCE_CARD_ENABLED = false) · front/app/[locale]/(dash)/standard/answer-analysis/mention/page.tsx:407"
+ },
+ "T:answer_stance_fact:cur": {
+  "t": "rd.answer_stance (+ build_id 신규)",
+  "v": "cur",
+  "e": "db:rd.answer_stance 13열 (이름 같음, load_id 없음)"
+ },
+ "T:answer_stance_fact:rule:0": {
+  "t": "first_turn = (답변, 엔티티) 안 가장 이른 턴. 스탠스 집계는 first_turn 만 셉니다.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:499 · back/ingest/project/apply/queries.py:1243 · back/app/features/analytics/mentions/types/queries.py:45"
+ },
+ "T:answer_stance_fact:rule:1": {
+  "t": "카드 경로는 스탠스를 읽지 않아 발행 세대에 넣지 않습니다.",
+  "v": "cur",
+  "e": "back/app/core/facts.py:14,43-48 (카드·격자 자리도 rd.answer_stance) · 설계: 발행 세대 밖"
+ },
+ "T:citation_fact:head": {
+  "t": "{\"name\":\"citation_fact\",\"s\":\"gold\",\"fam\":\"fact\",\"grain\":\"빌드 × 인용 원소 1건\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:506 (인용 원소 1건) · 설계: build"
+ },
+ "T:citation_fact:col:0": {
+  "t": "[\"build_id\",\"PF\",\"빌드 (신규)\",\"build\"]",
+  "v": "des",
+  "e": "src/tables/12_build.js gold_facts · 현행 rd.citation 에 load_id 없음 (db_cols.tsv)"
+ },
+ "T:citation_fact:col:1": {
+  "t": "[\"surface · round_date · answer_key\",\"PF\",\"\",\"answer_fact\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:513 PRIMARY KEY (surface, round_date, answer_key, ord)"
+ },
+ "T:citation_fact:col:2": {
+  "t": "[\"ord\",\"PK\",\"인용 순서\"]",
+  "v": "cur",
+  "e": "db:rd.citation.ord · back/ingest/project/apply/queries.py:944 (ing.citation ord)"
+ },
+ "T:citation_fact:col:3": {
+  "t": "[\"url_key\",\"FK\",\"\",\"dim_url\"]",
+  "v": "cur",
+  "e": "db:rd.citation.url_key · back/ingest/project/apply/queries.py:944,948 (rd.dim_url url_hash)"
+ },
+ "T:citation_fact:col:4": {
+  "t": "[\"source_key\",\"FK\",\"\",\"dim_source\"]",
+  "v": "cur",
+  "e": "db:rd.citation.source_key · back/ingest/project/apply/queries.py:944"
+ },
+ "T:citation_fact:col:5": {
+  "t": "[\"C 좌표 사본\",\"FK\",\"\",\"cell_key\",[\"cyc_key\",\"prompt_key\",\"project_key\",\"engine_key\",\"geo_key\",\"lang_key\",\"bgrp\"]]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:507-509 · back/ingest/project/apply/queries.py:1254-1260"
+ },
+ "T:citation_fact:col:6": {
+  "t": "[\"scope_key · owner_key\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.citation.scope_key · owner_key · back/ingest/project/apply/queries.py:944,965,979"
+ },
+ "T:citation_fact:col:7": {
+  "t": "[\"cit_in · gap · dflt · is_rep · cit_in_nc\",\"\",\"게이트 사본\"]",
+  "v": "cur",
+  "e": "sql: pg_get_functiondef(rd.propagate_answer_gates) citation SET cit_in·gap·dflt·cyc_key·is_rep · back/db/DB-v2.32.sql:3114,3172"
+ },
+ "T:citation_fact:col:8": {
+  "t": "[\"loc_owned · tgt_hit · src_first\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.citation.loc_owned · tgt_hit · src_first · back/ingest/project/apply/queries.py:950-984"
+ },
+ "T:citation_fact:col:9": {
+  "t": "[\"rule_ver\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.citation.rule_ver"
+ },
+ "T:citation_fact:grain": {
+  "t": "빌드 × 인용 원소 1건 = 1행.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:506 · 설계: build"
+ },
+ "T:citation_fact:pk": {
+  "t": "build_id + 답변 PK + ord",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:513 · 설계: build_id 추가"
+ },
+ "T:citation_fact:inputs": {
+  "t": "데이터 분석팀 · app.owned_base · app.project_owned_base · app.project_tracked_url",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:926 (app.project_owned_base) · back/ingest/project/apply/queries.py:931-937 (app.owned_base) · back/ingest/project/apply/queries.py:975 (app.project_tracked_url)"
+ },
+ "T:citation_fact:uses": {
+  "t": "출처·도메인·톤·카테고리, 인용 프롬프트·도메인 상세, 추이 상위 도메인, 답변 모달 인용, 검수 상세 정규화 URL, Admin › 인용 출처 분류 도메인 인용 수, Project › Prompt 영향 인용 수",
+  "v": "cur",
+  "e": "back/app/features/analytics/citations/sources/queries.py:77 · back/app/features/analytics/citations/domains/queries.py:131 · back/app/features/analytics/citations/tone/queries.py:71 · back/app/features/analytics/citations/prompts/queries.py:121 · back/app/features/analytics/citations/domain_detail/queries.py:44 · back/app/features/analytics/trend/series/queries.py:7 · back/app/features/analytics/answers/detail/queries.py:137 · back/app/features/qa/answers/detail/queries.py:49-56 · back/app/features/admin/citation_sources/overrides/queries.py:20-26 · back/app/features/projects/prompts/lifecycle/queries.py:36"
+ },
+ "T:citation_fact:cur": {
+  "t": "rd.citation (+ build_id 신규)",
+  "v": "cur",
+  "e": "db:rd.citation 24열 (이름 같음, load_id 없음)"
+ },
+ "T:citation_fact:rule:0": {
+  "t": "URL 문자열은 두지 않고 url_key 로 dim_url 을 참조합니다.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:507 (url_key 만) · back/app/features/analytics/answers/detail/queries.py:137 (rd.dim_url 조인)"
+ },
+ "T:citation_fact:rule:1": {
+  "t": "고유 URL 수는 기간 전체에서 count(DISTINCT url_key) 로 셉니다. 일별 값을 더하지 않습니다.",
+  "v": "cur",
+  "e": "back/app/features/analytics/citations/tone/queries.py:71-72 (count(DISTINCT c.url_key)) · 설계: 일별 합산 금지"
+ },
+ "T:dim_brand:head": {
+  "t": "{\"name\":\"dim_brand\",\"s\":\"gold\",\"fam\":\"kpi\",\"grain\":\"표시 브랜드 1개\"}",
+  "v": "cur",
+  "e": "back/migration/seed/seed-30-dims.sql:407 (표시 브랜드 1개 = 1행) · 설계: 이름 dim_brand, fam 표기"
+ },
+ "T:dim_brand:col:0": {
+  "t": "[\"brand_key\",\"PK\",\"int4\"]",
+  "v": "cur",
+  "e": "sql: dim_brand_name_pkey PRIMARY KEY (brand_key) · db:rd.dim_brand_name.brand_key (integer)"
+ },
+ "T:dim_brand:col:1": {
+  "t": "[\"name\",\"UK\",\"표시명\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:403 (name UNIQUE) · back/ingest/project/apply/queries.py:744-749 (대표 표기 선택)"
+ },
+ "T:dim_brand:col:2": {
+  "t": "[\"bare\",\"UK\",\"정본명 키 (기본 소문자·트림)\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:403 (bare UNIQUE) · back/migration/seed/seed-3x-common.sql:29-45 (name_key = 기본 lower(js_trim), NAME 스위치면 정본 표시명 그대로)"
+ },
+ "T:dim_brand:col:3": {
+  "t": "[\"kind\",\"\",\"0 이름 없음 · 1 자사 · 2 경쟁 · 3 비경쟁\"]",
+  "v": "cur",
+  "e": "sql: dim_brand_name_kind_check kind IN (0,1,2,3) · back/migration/seed/seed-30-dims.sql:415 (0 이름 없음 · 1 자사 · 3 비경쟁 등재 · 2 그 밖)"
+ },
+ "T:dim_brand:col:4": {
+  "t": "[\"own_bit\",\"\",\"0 · 1 Hyundai · 2 Kia · 4 Genesis\"]",
+  "v": "cur",
+  "e": "sql: dim_brand_name_own_bit_check own_bit IN (0,1,2,4) · back/db/DB-v2.32.sql:1294-1296 (1 Hyundai · 2 Kia · 4 Genesis)"
+ },
+ "T:dim_brand:col:5": {
+  "t": "[\"first_seen\",\"\",\"행 생성일\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:405 (first_seen date DEFAULT current_date) · back/ingest/project/apply/queries.py:753 (INSERT 열에 first_seen 없음)"
+ },
+ "T:dim_brand:grain": {
+  "t": "표시 브랜드 1개 = 1행 (brand_key 0 = 이름 없음).",
+  "v": "cur",
+  "e": "back/migration/seed/seed-30-dims.sql:407,423 (brand_key 0 = (이름 없음))"
+ },
+ "T:dim_brand:pk": {
+  "t": "brand_key",
+  "v": "cur",
+  "e": "sql: dim_brand_name_pkey PRIMARY KEY (brand_key)"
+ },
+ "T:dim_brand:inputs": {
+  "t": "데이터 분석팀 · app.brand · app.brand_display_alias · app.competitor_domain_token · app.non_competitor_name",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:740-755 (app.competitor_domain_token · app.brand · app.brand_display_alias · app.non_competitor_name)"
+ },
+ "T:dim_brand:uses": {
+  "t": "브랜드 이름·자사 비트: 경쟁사 표·브랜드 순위·헤드투헤드, 국가별 GEO, 추이, 인용 도메인, ACR 브랜드 표, 답변 모달·언급 프롬프트, 검수 상세, Entity catalog",
+  "v": "cur",
+  "e": "node uses.js dim_brand 직접 모듈 13개 · back/app/features/analytics/mentions/brands/queries.py:35 · back/app/features/analytics/funnel/acr/queries.py:139 · back/app/features/analytics/answers/detail/queries.py:101 · back/app/features/qa/answers/detail/queries.py:79 · back/app/features/admin/entities/versions/queries.py:105 · back/app/core/entities.py:39-44"
+ },
+ "T:dim_brand:cur": {
+  "t": "rd.dim_brand_name",
+  "v": "cur",
+  "e": "db:rd.dim_brand_name 6열 (이름 같음)"
+ },
+ "T:dim_brand:rule:0": {
+  "t": "kind = 1 ⇔ own_bit ≠ 0 (당사 브랜드).",
+  "v": "cur",
+  "e": "sql: dim_brand_name_check CHECK ((kind = 1) = (own_bit <> 0)) · back/db/DB-v2.32.sql:405"
+ },
+ "T:dim_entity:head": {
+  "t": "{\"name\":\"dim_entity\",\"s\":\"gold\",\"fam\":\"kpi\",\"grain\":\"엔티티 1개\"}",
+  "v": "cur",
+  "e": "back/migration/seed/seed-30-dims.sql:449 · 설계: fam 표기"
+ },
+ "T:dim_entity:col:0": {
+  "t": "[\"entity_key\",\"PK\",\"int4\"]",
+  "v": "cur",
+  "e": "sql: dim_entity_pkey PRIMARY KEY (entity_key) · db:rd.dim_entity.entity_key (integer)"
+ },
+ "T:dim_entity:col:1": {
+  "t": "[\"entity_id\",\"UK\",\"uuid\"]",
+  "v": "cur",
+  "e": "sql: dim_entity_entity_id_key UNIQUE (entity_id) · db:rd.dim_entity.entity_id (uuid)"
+ },
+ "T:dim_entity:col:2": {
+  "t": "[\"entity_type · registry_role\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.dim_entity.entity_type · registry_role · back/db/DB-v2.32.sql:406-407"
+ },
+ "T:dim_entity:col:3": {
+  "t": "[\"rep_name\",\"\",\"대표 표시명\"]",
+  "v": "cur",
+  "e": "back/migration/seed/seed-30-dims.sql:450 (rep_name = 롤업 대표 표기, 없으면 자기 표기 최빈)"
+ },
+ "T:dim_entity:col:4": {
+  "t": "[\"brand_key\",\"FK\",\"\",\"dim_brand\"]",
+  "v": "cur",
+  "e": "sql: dim_entity_brand_key_fkey FOREIGN KEY (brand_key) REFERENCES rd.dim_brand_name(brand_key)"
+ },
+ "T:dim_entity:col:5": {
+  "t": "[\"first_seen\",\"\",\"행 생성 시각\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:408 (first_seen timestamptz DEFAULT now()) · back/ingest/project/apply/queries.py:826 (INSERT 열에 first_seen 없음)"
+ },
+ "T:dim_entity:grain": {
+  "t": "Scope 엔티티 1개 = 1행 (언급·스탠스·ACR 에 나온 전부, entity_type Brand · Product 등).",
+  "v": "cur",
+  "e": "back/migration/seed/seed-30-dims.sql:449-450 · front/lib/scope/types.ts:376 (Brand · Product · Company …) · sql: hmg_synth rd.dim_entity entity_type = Brand·Product·Feature"
+ },
+ "T:dim_entity:pk": {
+  "t": "entity_key",
+  "v": "cur",
+  "e": "sql: dim_entity_pkey PRIMARY KEY (entity_key)"
+ },
+ "T:dim_entity:inputs": {
+  "t": "데이터 분석팀 · app.entity_registry",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:822,828 (app.entity_registry → registry_role)"
+ },
+ "T:dim_entity:uses": {
+  "t": "ACR 차종 전환율 이름, 명부 제외 브랜드 판정(순위·목록), Entity catalog, 답변 모달·언급 프롬프트의 엔티티 → 브랜드, 검수 상세 이름·ACR",
+  "v": "cur",
+  "e": "back/app/features/analytics/funnel/acr/queries.py:128-138 · back/app/core/entities.py:39-44 · back/app/features/admin/entities/registry/queries.py:20 · back/app/features/admin/entities/versions/queries.py:98-124 · back/app/features/analytics/answers/detail/queries.py:108-109 · back/app/features/analytics/mentions/prompts/queries.py:103-104 · back/app/features/qa/answers/detail/queries.py:36,78"
+ },
+ "T:dim_entity:cur": {
+  "t": "rd.dim_entity",
+  "v": "cur",
+  "e": "db:rd.dim_entity 7열 (이름 같음)"
+ }
+}

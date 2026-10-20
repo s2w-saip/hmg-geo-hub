@@ -1,0 +1,22 @@
+/* ── serve 뷰 ── */
+const SCOPE = ['surface · project_key · geo_key · bgrp', '', '접근 범위'];
+tbl('answer_body', { s: 'gold', name: 'answer_body', fam: 'silver', grain: '답변 본문·메타', cols: [['answer_key', 'PF', '', 'job_index'], ['job_id · run_id · prompt_run_id', '', ''], SCOPE, ['answer_text', '', '답변 본문'], ['model_slug', '', ''], ['measured_at', '', ''], ['status · analysis_status', '', ''], ['region', '', 'Scope 측정 지역']], d: {
+  grain: 'job 1건(모든 상태)의 본문과 측정 메타 = 1행.', pk: 'answer_key', inputs: '데이터 분석팀', uses: '답변 모달 원문, 검수 상세, Entity catalog 언급 샘플',
+  rules: ['접근 범위 열(surface · project_key · geo_key · bgrp)을 둡니다. 답변 모달은 answer_key 와 함께 surface · project_key 를 다시 걸어 읽습니다(fail-closed).'] } });
+tbl('answer_registry', { s: 'gold', name: 'answer_registry', fam: 'silver', grain: '앵커 고정·드롭 사유', cols: [['answer_key', 'PF', '', 'job_index'], SCOPE, ['pin_anchor · pin_reason', '', ''], ['drop_reason · dropped_at', '', ''], ['{pin,drop}_source_measured_at', '', '']], d: {
+  grain: 'job 1건 = 1행. 앵커 고정·드롭이 없으면 그 열이 NULL 입니다.', pk: 'answer_key', inputs: '데이터 분석팀',
+  uses: '검수 상세 앵커 고정·드롭 표시' } });
+tbl('answer_citation_raw', { s: 'gold', name: 'answer_citation_raw', fam: 'silver', grain: '인용 원본', cols: [['answer_key · ord', 'PF', '', 'job_index'], SCOPE, ['url · title', '', ''], ['ref_index', '', ''], ['scope_category', '', ''], ['host · domain_label', '', '']], d: {
+  grain: '답변의 인용 원본 1건 = 1행.', pk: 'answer_key + ord', inputs: '데이터 분석팀', uses: '검수 목록 인용 수, 검수 상세 인용 블록' } });
+tbl('answer_mention_raw', { s: 'gold', name: 'answer_mention_raw', fam: 'silver', grain: '언급 원본', cols: [['answer_key · ord', 'PF', '', 'job_index'], SCOPE, ['entity_id · entity_key', 'FK', '', 'dim_entity'], ['registry_role · entity_type', '', ''], ['display_name', '', ''], ['mention_count · avg_position', '', ''], ['brand_rollup_entity_id · surfaces[]', '', ''], ['sentiment_{positive,neutral,negative,mixed}', '', ''], ['type_mention … type_final_choice', '', '유형 5종', '', ['type_mention', 'type_recommendation', 'type_comparison', 'type_definition', 'type_final_choice']]], d: {
+  grain: '답변의 엔티티 언급 원본 1건 = 1행 (모든 엔티티, 브랜드 롤업 전).', pk: 'answer_key + ord', inputs: '데이터 분석팀',
+  uses: '답변 모달 차종 언급·감성 귀속, 언급 프롬프트 하이라이트(terms), 검수 목록 언급 수·필터, 검수 상세, Entity catalog 언급 샘플' } });
+tbl('answer_occurrence', { s: 'gold', name: 'answer_occurrence', fam: 'silver', grain: '본문 안 등장 위치', cols: [['answer_key · ord', 'PF', '', 'job_index'], SCOPE, ['entity_id · turn_index', '', ''], ['source_start · source_end', '', '본문 위치'], ['surface_text', '', ''], ['sentiment · mention_role · assertion', '', ''], ['context_snippet', '', ''], ['descriptors[] · criteria[]', '', '']], d: {
+  grain: '답변 본문 안 언급 등장 1건 = 1행.', pk: 'answer_key + ord', inputs: '데이터 분석팀', uses: '답변 모달 감성 하이라이트, Entity catalog 언급 샘플' } });
+tbl('answer_stance_raw', { s: 'gold', name: 'answer_stance_raw', fam: 'silver', grain: '스탠스 근거', cols: [['answer_key · turn_index · entity_id', 'PF', '', 'job_index'], SCOPE, ['brand_label', '', ''], ['stance · confidence', '', ''], ['evidence_text', '', ''], ['evidence_start · evidence_end', '', ''], ['reason', '', '']], d: {
+  grain: '답변 × 턴 × 엔티티의 스탠스 근거 = 1행.', pk: 'answer_key + turn_index + entity_id', inputs: '데이터 분석팀', uses: '답변 모달 스탠스 태그(근거 대조)' } });
+tbl('acr_cell_run', { s: 'gold', name: 'acr_cell_run', fam: 'silver', grain: 'ACR 셀 실행', cols: [['acr_cell_key', 'PF', '셀 식별자 (build 무관)', 'acr_cell_fact'], ['prompt_run_id', '', ''], ['run_id', '', '']], d: {
+  grain: 'ACR 셀 1개의 Scope 실행 id = 1행.', pk: 'acr_cell_key', inputs: '데이터 분석팀', uses: '검수 상세 ACR 블록 (노트 키 prompt_run_id)' } });
+tbl('entity_mention_surface', { s: 'gold', name: 'entity_mention_surface', fam: 'silver', grain: '언급 × 관측 표면', cols: [['entity_id', 'FK', 'dim_entity.entity_id (UK)', 'dim_entity'], ['run_month', '', ''], ['surface', '', '표면 문자열 (없으면 NULL)'], ['brand_rollup_entity_id', '', ''], ['display_name', '', '']], d: {
+  grain: '언급 1건 × 관측 표면 = 1행. 표면 없는 언급은 surface NULL 1행.', pk: '없음 (같은 값이 여러 행. 조회 때 DISTINCT)', inputs: '데이터 분석팀',
+  uses: 'Entity catalog 초안 린트(전역 차단 표면 대조) · 목록·버전 상세의 Scope 롤업 판정' } });

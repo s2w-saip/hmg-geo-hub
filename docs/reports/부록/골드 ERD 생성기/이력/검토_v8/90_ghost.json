@@ -1,0 +1,107 @@
+{
+ "T:dim_prompt_ref:ghost": {
+  "t": "{\"name\":\"dim_prompt\",\"cols\":[[\"prompt_key\",\"PK\",\"\"]]}",
+  "v": "lbl",
+  "e": "src/tables/02_prompt.js dim_prompt PK 열(PK · PF) 과 같음 — 표 정의의 사본 상자"
+ },
+ "T:dim_project_ref:ghost": {
+  "t": "{\"name\":\"dim_project\",\"cols\":[[\"project_key\",\"PK\",\"\"]]}",
+  "v": "lbl",
+  "e": "src/tables/01_dim.js dim_project PK 열(PK · PF) 과 같음 — 표 정의의 사본 상자"
+ },
+ "T:dim_lang_ref:ghost": {
+  "t": "{\"name\":\"dim_lang\",\"cols\":[[\"lang_key\",\"PK\",\"\"]]}",
+  "v": "lbl",
+  "e": "src/tables/01_dim.js dim_lang PK 열(PK · PF) 과 같음 — 표 정의의 사본 상자"
+ },
+ "T:dim_url_ref:ghost": {
+  "t": "{\"name\":\"dim_url\",\"cols\":[[\"url_key\",\"PK\",\"\"]]}",
+  "v": "lbl",
+  "e": "src/tables/05_cit.js dim_url PK 열(PK · PF) 과 같음 — 표 정의의 사본 상자"
+ },
+ "T:dim_brand_ref:ghost": {
+  "t": "{\"name\":\"dim_brand\",\"cols\":[[\"brand_key\",\"PK\",\"\"]]}",
+  "v": "lbl",
+  "e": "src/tables/03_fact.js dim_brand PK 열(PK · PF) 과 같음 — 표 정의의 사본 상자"
+ },
+ "T:dim_entity_ref:ghost": {
+  "t": "{\"name\":\"dim_entity\",\"cols\":[[\"entity_key\",\"PK\",\"\"]]}",
+  "v": "lbl",
+  "e": "src/tables/03_fact.js dim_entity PK 열(PK · PF) 과 같음 — 표 정의의 사본 상자"
+ },
+ "T:dim_source_ref:ghost": {
+  "t": "{\"name\":\"dim_source\",\"cols\":[[\"source_key\",\"PK\",\"\"]]}",
+  "v": "lbl",
+  "e": "src/tables/05_cit.js dim_source PK 열(PK · PF) 과 같음 — 표 정의의 사본 상자"
+ },
+ "T:dim_cycle_ref:ghost": {
+  "t": "{\"name\":\"dim_cycle\",\"cols\":[[\"cyc_key\",\"PK\",\"\"]]}",
+  "v": "lbl",
+  "e": "src/tables/01_dim.js dim_cycle PK 열(PK · PF) 과 같음 — 표 정의의 사본 상자"
+ },
+ "T:dim_taxon_ref:ghost": {
+  "t": "{\"name\":\"dim_taxon\",\"cols\":[[\"taxon_key\",\"PK\",\"\"]]}",
+  "v": "lbl",
+  "e": "src/tables/02_prompt.js dim_taxon PK 열(PK · PF) 과 같음 — 표 정의의 사본 상자"
+ },
+ "T:dim_engine_ref:ghost": {
+  "t": "{\"name\":\"dim_engine\",\"cols\":[[\"engine_key\",\"PK\",\"\"]]}",
+  "v": "lbl",
+  "e": "src/tables/01_dim.js dim_engine PK 열(PK · PF) 과 같음 — 표 정의의 사본 상자"
+ },
+ "T:dim_country_ref:ghost": {
+  "t": "{\"name\":\"dim_country\",\"cols\":[[\"geo_key\",\"PK\",\"\"]]}",
+  "v": "lbl",
+  "e": "src/tables/01_dim.js dim_country PK 열(PK · PF) 과 같음 — 표 정의의 사본 상자"
+ },
+ "T:answer_fact_ref:ghost": {
+  "t": "{\"name\":\"answer_fact\",\"cols\":[[\"build_id\",\"PK\",\"\"],[\"surface · round_date · answer_key\",\"PK\",\"\"]]}",
+  "v": "lbl",
+  "e": "src/tables/03_fact.js answer_fact PK 열(PK · PF) 과 같음 — 표 정의의 사본 상자"
+ },
+ "T:answer_brand_fact_ref:ghost": {
+  "t": "{\"name\":\"answer_brand_fact\",\"cols\":[[\"build_id · 답변 PK\",\"PK\",\"\"],[\"brand_key · competitive\",\"PK\",\"\"]]}",
+  "v": "lbl",
+  "e": "src/tables/03_fact.js answer_brand_fact PK 열(PK · PF) 과 같음 — 표 정의의 사본 상자"
+ },
+ "T:answer_stance_fact_ref:ghost": {
+  "t": "{\"name\":\"answer_stance_fact\",\"cols\":[[\"build_id · 답변 PK\",\"PK\",\"\"],[\"turn_index · entity_key\",\"PK\",\"\"]]}",
+  "v": "lbl",
+  "e": "src/tables/03_fact.js answer_stance_fact PK 열(PK · PF) 과 같음 — 표 정의의 사본 상자"
+ },
+ "T:citation_fact_ref:ghost": {
+  "t": "{\"name\":\"citation_fact\",\"cols\":[[\"build_id · 답변 PK\",\"PK\",\"\"],[\"ord\",\"PK\",\"\"]]}",
+  "v": "lbl",
+  "e": "src/tables/03_fact.js citation_fact PK 열(PK · PF) 과 같음 — 표 정의의 사본 상자"
+ },
+ "T:job_index_ref:ghost": {
+  "t": "{\"name\":\"job_index\",\"cols\":[[\"answer_key\",\"PK\",\"\"]]}",
+  "v": "lbl",
+  "e": "src/tables/03_fact.js job_index PK 열(PK · PF) 과 같음 — 표 정의의 사본 상자"
+ },
+ "T:build_ref:ghost": {
+  "t": "{\"name\":\"build\",\"cols\":[[\"build_id\",\"PK\",\"\"]]}",
+  "v": "lbl",
+  "e": "src/tables/12_build.js build PK 열(PK · PF) 과 같음 — 표 정의의 사본 상자"
+ },
+ "T:publication_ref:ghost": {
+  "t": "{\"name\":\"publication\",\"cols\":[[\"gen_key\",\"PK\",\"\"],[\"build_id\",\"FK\",\"\",\"build\"]]}",
+  "v": "lbl",
+  "e": "src/tables/11_pub.js publication PK 열(PK · PF) 과 같음 — 표 정의의 사본 상자"
+ },
+ "T:ga4_value_ref:ghost": {
+  "t": "{\"name\":\"ga4_value\",\"cols\":[[\"kind · value_key\",\"PK\",\"\"]]}",
+  "v": "lbl",
+  "e": "src/tables/07_ga4.js ga4_value PK 열(PK · PF) 과 같음 — 표 정의의 사본 상자"
+ },
+ "T:ctx_snapshot_ref:ghost": {
+  "t": "{\"name\":\"ctx_snapshot\",\"cols\":[[\"snapshot_id\",\"PK\",\"\"]]}",
+  "v": "lbl",
+  "e": "src/tables/10_soc.js ctx_snapshot PK 열(PK · PF) 과 같음 — 표 정의의 사본 상자"
+ },
+ "T:judgment_change_ref:ghost": {
+  "t": "{\"name\":\"judgment_change\",\"cols\":[[\"change_id\",\"PK\",\"\"],[\"applied_build_id\",\"FK\",\"\",\"build\"]]}",
+  "v": "lbl",
+  "e": "src/tables/14_queue.js judgment_change PK 열(PK · PF) 과 같음 — 표 정의의 사본 상자"
+ }
+}

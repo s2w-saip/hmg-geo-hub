@@ -1,0 +1,40 @@
+/* 골드 ERD */
+main.wrap > *, .detail > *, .d-grid > * { min-width: 0; }
+dl.kv dd { overflow-wrap: anywhere; }
+.chip { max-width: 100%; }
+.view-note { font-size: 12.5px; color: var(--muted); margin: 0 0 10px; max-width: 90ch; }
+.view-note:empty { display: none; }
+</style>
+</head>
+<body>
+<header class="wrap">
+  <div class="eyebrow"><span class="medal"><i class="m-g"></i></span>HMG GEO HUB · gold</div>
+  <h1>GEO HUB 골드 ERD</h1>
+  <div class="meta" id="meta"></div>
+</header>
+
+<main class="wrap">
+
+<section id="erd" aria-labelledby="erd-h">
+  <div class="sec-head">
+    <h2 id="erd-h">ERD</h2>
+  </div>
+  <div class="tabs" role="tablist" id="tabs" aria-label="골드 테이블 묶음"></div>
+  <p class="view-note" id="view-note"></p>
+  <figure>
+    <div class="scroll" id="erd-scroll">
+      <svg id="erd-svg" role="img" aria-label="골드 ERD"></svg>
+    </div>
+    <figcaption class="legend" aria-label="범례">
+      <span><i class="sw sw-g"></i>골드 테이블</span>
+      <span><i class="sw sw-k"></i>키 묶음 · 다른 탭 테이블</span>
+      <span><b class="kb" style="color:var(--gold-ink)">PK</b> 기본 키 · <b class="kb" style="color:var(--app)">FK</b> 참조 · <b class="kb" style="color:var(--gold-ink)">PF</b> 둘 다 · <b class="kb" style="color:var(--muted)">UK</b> 유일</span>
+      <span><svg viewBox="0 0 26 14" aria-hidden="true"><path d="M2,7 H24 M2,2 L12,7 M2,12 L12,7 M15,2 V12" fill="none" style="stroke:var(--edge)" stroke-width="1.2"/></svg>여러 행 쪽</span>
+      <span><svg viewBox="0 0 26 14" aria-hidden="true"><path d="M2,7 H24 M16,2 V12 M20,2 V12" fill="none" style="stroke:var(--edge)" stroke-width="1.2"/></svg>한 행 쪽</span>
+      <span><svg viewBox="0 0 26 14" aria-hidden="true"><path d="M2,7 H22" fill="none" style="stroke:var(--edge)" stroke-width="1.2" stroke-dasharray="4 3"/><path d="M20,3 L25,7 L20,11 Z" style="fill:var(--edge)"/></svg>파생 (같은 build 에서 합계)</span>
+    </figcaption>
+  </figure>
+  <div class="detail" id="detail" aria-live="polite"></div>
+</section>
+
+</main>

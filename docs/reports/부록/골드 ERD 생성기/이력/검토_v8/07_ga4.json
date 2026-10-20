@@ -1,0 +1,297 @@
+{
+ "T:ga4_property:head": {
+  "t": "{\"name\":\"ga4_property\",\"s\":\"gold\",\"fam\":\"ga4\",\"grain\":\"GA4 속성 1개\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:681 (rd.ga4_dim_property PK prop_key)"
+ },
+ "T:ga4_property:col:0": {
+  "t": "[\"prop_key\",\"PK\",\"int2\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:681 prop_key int2 PRIMARY KEY"
+ },
+ "T:ga4_property:col:1": {
+  "t": "[\"property_id\",\"UK\",\"\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:681 property_id text NOT NULL UNIQUE · sql: ga4_dim_property_property_id_key UNIQUE (property_id)"
+ },
+ "T:ga4_property:col:2": {
+  "t": "[\"brand_bit\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.ga4_dim_property.brand_bit"
+ },
+ "T:ga4_property:col:3": {
+  "t": "[\"geo_key\",\"FK\",\"\",\"dim_country\"]",
+  "v": "cur",
+  "e": "db:rd.ga4_dim_property.geo_key · back/app/features/analytics/funnel/conversion/queries.py:35-42 (geo_key 로 시장 매칭) · 논리 FK(DDL FK 없음)"
+ },
+ "T:ga4_property:col:4": {
+  "t": "[\"status\",\"\",\"active · pending_grant · unmapped\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:682 CHECK status IN ('active','pending_grant','unmapped')"
+ },
+ "T:ga4_property:col:5": {
+  "t": "[\"source\",\"\",\"registry · project_override · env\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:682 CHECK source IN ('registry','project_override','env')"
+ },
+ "T:ga4_property:col:6": {
+  "t": "[\"conv_basis\",\"\",\"전환 분자: 1 key_events 폴백 · 2 추적 이벤트 event_count\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:1194-1196 (CHECK conv_basis IN (1, 2), '1 key events 폴백 2 추적 이벤트 event_count') · back/app/features/analytics/funnel/conversion/queries.py:20"
+ },
+ "T:ga4_property:grain": {
+  "t": "GA4 속성 1개 = 1행.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:681"
+ },
+ "T:ga4_property:pk": {
+  "t": "prop_key",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:681"
+ },
+ "T:ga4_property:inputs": {
+  "t": "데이터 분석팀 · app.ga4_property · app.project.ga4_property_id · env 매핑 (source 3종). 현행 GA4 적재(IG-4)는 소유 미정 · back/ingest 에 없음 · judgment_change ga4_property 미처리",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:682 (source 3종) · back/app/features/analytics/funnel/conversion/queries.py:139-142 (app.project.ga4_property_id) · back/ingest/cycles/workers/service.py:12 (ga4_property 큐 대기 유지, IG-4 소유 미정) · back/CORE-REQUESTS/ingest.md:98"
+ },
+ "T:ga4_property:uses": {
+  "t": "AI Conversion(Global · Website · Project) 시장 · 속성 해석, 미연동 · 측정 대기 안내, 전환 분자(conv_basis), Global · Website 측정 커버리지 · 국가별 AI 전환율 표, Project Dashboard AI 유입 전환율 카드, GA4 이벤트 목록(Admin GA4 연동 · 전환 화면)",
+  "v": "cur",
+  "e": "back/app/features/analytics/funnel/conversion/service.py:4-13,275-290 · back/app/features/analytics/funnel/conversion/queries.py:35-42,99-113 · back/app/features/admin/integrations/ga4/service.py:118-135 (load_events _dims) · inventory.json (AI Conversion 3화면 · Project Dashboard AI 유입 전환율 카드 · Admin › GA4 연동 GA4 이벤트 목록)"
+ },
+ "T:ga4_property:cur": {
+  "t": "rd.ga4_dim_property (열 전부)",
+  "v": "cur",
+  "e": "db_cols.tsv rd.ga4_dim_property 7열 = 골드 7열"
+ },
+ "T:ga4_value:head": {
+  "t": "{\"name\":\"ga4_value\",\"s\":\"gold\",\"fam\":\"ga4\",\"grain\":\"GA4 값 사전\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:683-684"
+ },
+ "T:ga4_value:col:0": {
+  "t": "[\"kind · value_key\",\"PK\",\"channel · source · device · nvr · event · page\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:683-684 CHECK kind IN ('channel','source','device','nvr','event','page'), PRIMARY KEY (kind, value_key)"
+ },
+ "T:ga4_value:col:1": {
+  "t": "[\"value\",\"\",\"빈 문자열 = 0 · page = 입구 페이지\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:684 '빈 문자열 = value_key 0' · back/db/DB-v2.32.sql:367-369 (ing.ga4_row.landing_page) · back/app/features/analytics/funnel/conversion/queries.py:132-133"
+ },
+ "T:ga4_value:col:2": {
+  "t": "[\"url_key\",\"FK\",\"kind=page 의 URL (신규)\",\"dim_url\"]",
+  "v": "des",
+  "e": "NEWREQ ga4_value.url_key (Visibility 방문자 유형 필터)"
+ },
+ "T:ga4_value:grain": {
+  "t": "GA4 차원 값 1개 = 1행.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:684 PRIMARY KEY (kind, value_key)"
+ },
+ "T:ga4_value:pk": {
+  "t": "kind + value_key",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:684"
+ },
+ "T:ga4_value:inputs": {
+  "t": "데이터 분석팀 (GA4 보고서 차원 값)",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:680,683-684 (ing.ga4_row 차원 값 사전) · back/ingest/cycles/workers/service.py:12 (GA4 적재 IG-4 외부)"
+ },
+ "T:ga4_value:uses": {
+  "t": "기기 · 방문자 유형 필터 값 → 키, 페이지별 전환 · 입구 페이지별 방문 표 URL, GA4 이벤트 목록 이벤트 이름",
+  "v": "cur",
+  "e": "back/app/features/analytics/funnel/conversion/service.py:239-256 (device·nvr 값 → 키) · back/app/features/analytics/funnel/conversion/queries.py:132-133 (page URL) · back/app/features/admin/integrations/ga4/queries.py:56-64 (event 이름) · inventory.json"
+ },
+ "T:ga4_value:cur": {
+  "t": "rd.ga4_dim_value (열 전부 + url_key)",
+  "v": "cur",
+  "e": "db_cols.tsv rd.ga4_dim_value 3열 = 골드 열(url_key 제외) 전부"
+ },
+ "T:ga4_row:head": {
+  "t": "{\"name\":\"ga4_row\",\"s\":\"gold\",\"fam\":\"ga4\",\"grain\":\"속성 × 일 × report × 차원\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:685-693"
+ },
+ "T:ga4_row:col:0": {
+  "t": "[\"prop_key\",\"PF\",\"\",\"ga4_property\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:685,693 PK 선두 prop_key"
+ },
+ "T:ga4_row:col:1": {
+  "t": "[\"date\",\"PK\",\"\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:685,693 (PK · RANGE(date))"
+ },
+ "T:ga4_row:col:2": {
+  "t": "[\"report\",\"PK\",\"1 traffic_total · 2 traffic_ai · 3 events · 4 landing · 5 totals\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:686 CHECK (report BETWEEN 1 AND 5) '1 traffic_total 2 traffic_ai 3 events 4 landing 5 totals' · back/db/DB-v2.32.sql:364"
+ },
+ "T:ga4_row:col:3": {
+  "t": "[\"channel_key · source_key\",\"PF\",\"\",\"ga4_value\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:687,693 (PK 열)"
+ },
+ "T:ga4_row:col:4": {
+  "t": "[\"device_key · nvr_key\",\"PF\",\"\",\"ga4_value\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:687,693 (PK 열)"
+ },
+ "T:ga4_row:col:5": {
+  "t": "[\"page_key · event_key\",\"PF\",\"\",\"ga4_value\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:687,693 (PK 열)"
+ },
+ "T:ga4_row:col:6": {
+  "t": "[\"is_ai\",\"\",\"AI Assistant 채널\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:688 (channel_group = 'AI Assistant')"
+ },
+ "T:ga4_row:col:7": {
+  "t": "[\"engine_key\",\"FK\",\"AI 행 sessionSource · 그 밖 0\",\"dim_engine\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:689 (AI 행의 sessionSource 매핑, 그 외 0)"
+ },
+ "T:ga4_row:col:8": {
+  "t": "[\"is_conv\",\"\",\"추적 이벤트 · key event 폴백\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:690 (추적 이벤트 또는 key event 폴백)"
+ },
+ "T:ga4_row:col:9": {
+  "t": "[\"sessions · users_day\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.ga4_row (sessions · users_day) back/db/DB-v2.32.sql:691"
+ },
+ "T:ga4_row:col:10": {
+  "t": "[\"page_views · key_events · event_count\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.ga4_row (page_views · key_events · event_count) back/db/DB-v2.32.sql:692"
+ },
+ "T:ga4_row:grain": {
+  "t": "속성 × 보고일 × report × 차원 조합 = 1행.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:680,693 (ing.ga4_row 1:1 그레인)"
+ },
+ "T:ga4_row:pk": {
+  "t": "prop_key + report + date + channel_key + source_key + device_key + nvr_key + page_key + event_key",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:693 · sql: ga4_row_pkey PRIMARY KEY (prop_key, report, date, channel_key, source_key, device_key, nvr_key, page_key, event_key)"
+ },
+ "T:ga4_row:inputs": {
+  "t": "데이터 분석팀 · app.ga4_tracked_event (is_conv 판정, DDL 주석). 현행 GA4 적재(IG-4)는 소유 미정 · back/ingest 에 없음",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:1194 (GA4 적재자가 app.ga4_tracked_event 로 판정) · back/db/DB-v2.32.sql:690 · back/ingest/cycles/workers/service.py:12 · back/CORE-REQUESTS/ingest.md:98"
+ },
+ "T:ga4_row:triggers": {
+  "t": "GA4 일 적재 · 추적 이벤트 변경 시 is_conv 전 기간 재투영 (현행 적재기 소유 미정, 큐 미처리)",
+  "v": "cur",
+  "e": "back/CORE-REQUESTS/ingest.md:98 (GA4 일 적재 IG-4 소유 미정) · back/db/DB-v2.32.sql:927 (ga4_tracked_event 전 기간 재투영) · back/ingest/cycles/workers/service.py:12 (큐 대기 유지)"
+ },
+ "T:ga4_row:uses": {
+  "t": "AI Conversion(Global · Website · Project) 전환율 카드 · 추이, 방문 수 추이, 엔진별 전환, 페이지별 전환 표, 방문 수 카드 · 입구 페이지별 방문 표 세션, Global · Website 측정 커버리지 · 국가별 AI 전환율 표, Project Dashboard AI 유입 전환율 카드, GA4 이벤트 목록(90일 eventCount)",
+  "v": "cur",
+  "e": "back/app/features/analytics/funnel/conversion/queries.py:52-181 · back/app/features/analytics/funnel/conversion/service.py:275-290 (as_of → 커버리지) · back/app/features/admin/integrations/ga4/queries.py:56-64 · back/app/features/admin/integrations/ga4/service.py:57 (EVENT_WINDOW_DAYS 90) · inventory.json"
+ },
+ "T:ga4_row:cur": {
+  "t": "rd.ga4_row (열 전부)",
+  "v": "cur",
+  "e": "db_cols.tsv rd.ga4_row 17열 = 골드 17열"
+ },
+ "T:ga4_row:rule:0": {
+  "t": "sessions · page_views · key_events · event_count 는 날짜 · 차원끼리 더해도 됩니다. users_day 는 행끼리 더하지 않습니다 (골드의 기간 사용자 수는 ga4_users_window).",
+  "v": "cur",
+  "e": "back/app/features/analytics/funnel/conversion/queries.py:92-94,108-109 (sessions·page_views·conv 합) · back/db/DB-v2.32.sql:691 (users_day 행 사이 합 금지) · 설계: ga4_users_window"
+ },
+ "T:ga4_users_window:head": {
+  "t": "{\"name\":\"ga4_users_window\",\"s\":\"gold\",\"fam\":\"ga4\",\"grain\":\"속성 × 기간 × 코호트 × 필터 조합 × 입구 페이지\"}",
+  "v": "des",
+  "e": "NEWREQ ga4_users_window · back/CORE-REQUESTS/bg-funnel.md:7-25 (BG-32 창 사용자 수 원천 제안)"
+ },
+ "T:ga4_users_window:col:0": {
+  "t": "[\"prop_key\",\"PF\",\"\",\"ga4_property\"]",
+  "v": "des",
+  "e": "NEWREQ ga4_users_window"
+ },
+ "T:ga4_users_window:col:1": {
+  "t": "[\"window_end · window_days\",\"PK\",\"창 끝일 · 7 · 28 · 90일(카드 · 표) · 1(일별 추이)\"]",
+  "v": "des",
+  "e": "NEWREQ ga4_users_window · 창 7·28·90: front/lib/ga4/conversion-window.ts:6-7 · 카드 = 창 activeUsers: docs/design/api/DECISIONS-API.md:272 (결정 6 (b)), front/lib/ga4/conversion.ts:334-345 · 일별 추이: front/lib/ga4/conversion.ts:349-373 (date 차원)"
+ },
+ "T:ga4_users_window:col:2": {
+  "t": "[\"cohort\",\"PK\",\"ai · total · general\"]",
+  "v": "des",
+  "e": "NEWREQ ga4_users_window · front/lib/ga4/conversion.ts:330-345 (total · ai 두 조회)"
+ },
+ "T:ga4_users_window:col:3": {
+  "t": "[\"engine_mask\",\"PK\",\"AI 엔진 비트 조합 · 0 = 필터 없음\"]",
+  "v": "des",
+  "e": "NEWREQ ga4_users_window · front/lib/ga4/conversion.ts:181-188 (engine → sessionSource)"
+ },
+ "T:ga4_users_window:col:4": {
+  "t": "[\"device_mask · nvr_mask\",\"PK\",\"기기 · 신규/재방문 비트 조합 · 0 = 필터 없음\"]",
+  "v": "des",
+  "e": "NEWREQ ga4_users_window · front/lib/ga4/conversion.ts:163-168 (deviceCategory · newVsReturning)"
+ },
+ "T:ga4_users_window:col:5": {
+  "t": "[\"page_key\",\"PF\",\"0 = 전체 · 그 밖 = 입구 페이지\",\"ga4_value\"]",
+  "v": "des",
+  "e": "NEWREQ ga4_users_window · front/lib/ga4/conversion.ts:726-748 (landingPagePlusQueryString 별 activeUsers)"
+ },
+ "T:ga4_users_window:col:6": {
+  "t": "[\"users\",\"\",\"순 방문자 (기간 중복 제거)\"]",
+  "v": "des",
+  "e": "NEWREQ ga4_users_window · docs/design/db/DECISIONS.md:208 G-12 (활성 사용자 비가산)"
+ },
+ "T:ga4_users_window:grain": {
+  "t": "속성 × 기간 × 코호트 × 엔진·기기·신규/재방문 필터 조합 × 입구 페이지 = 1행.",
+  "v": "des",
+  "e": "NEWREQ ga4_users_window"
+ },
+ "T:ga4_users_window:pk": {
+  "t": "prop_key + window_end + window_days + cohort + engine_mask + device_mask + nvr_mask + page_key",
+  "v": "des",
+  "e": "NEWREQ ga4_users_window"
+ },
+ "T:ga4_users_window:inputs": {
+  "t": "데이터 분석팀 (출처 제안: GA4 Data API activeUsers 기간 조회. AI 조건 = sessionDefaultChannelGroup \"AI Assistant\" ∧ sessionSource ∈ 선택 엔진 호스트, 레거시 lib/ga4 와 같음)",
+  "v": "des",
+  "e": "출처 제안 · 레거시 조건: front/lib/ga4/conversion.ts:150-188 (sessionDefaultChannelGroup EXACT 'AI Assistant', sessionSource inList) · front/lib/ga4/client.ts:78"
+ },
+ "T:ga4_users_window:triggers": {
+  "t": "ga4_row 와 같은 GA4 일 적재",
+  "v": "des",
+  "e": "설계 · back/CORE-REQUESTS/bg-funnel.md:21 (IG-4 GA4 일 적재로 창 교체 적재 제안)"
+ },
+ "T:ga4_users_window:uses": {
+  "t": "(신규 공급) AI Conversion(Global · Website · Project) 레거시 사용자 기준 값: 전환율 카드 · 국가별 · 엔진별 분모 = 창 activeUsers, 전환율 추이 = 일별 activeUsers, 페이지별 전환 표 AI · 일반 사용자, 방문 블록 순 방문자 · 방문 빈도 카드, 입구 페이지별 방문 표 사용자 열. Project Dashboard AI 유입 전환율 카드 = 28일 창. 현행 API 분모 = 세션(G-12 a), 사용자 수 없음(방문 카드 · 열 숨김). BG-32 보류",
+  "v": "des",
+  "e": "화면 항목: inventory.json AI Conversion 3화면 (전환율 카드 · 추이 · 엔진별 · 국가별 · 페이지별 전환 표 · 순 방문자 · 방문 빈도 · 입구 페이지별 방문 표) · Project Dashboard AI 유입 전환율 카드 · 레거시: front/lib/ga4/conversion.ts:334-373,380-428,435-458,657-664 (28일),726-798 · docs/design/api/DECISIONS-API.md:272 · 현행 API: front/lib/hgh/adapters/funnel.ts:23,35-36,390 · docs/design/db/DECISIONS.md:208 G-12 (a) · back/CORE-REQUESTS/bg-disposition.md:11"
+ },
+ "T:ga4_users_window:cur": {
+  "t": "없음 (신규. 레거시는 GA4 Data API 를 직접 호출(24시간 캐시), API 경로는 사용자 수 null)",
+  "v": "cur",
+  "e": "front/lib/ga4/conversion.ts:11,771-812 (runReport 직접 호출 · unstable_cache 24시간) · front/lib/hgh/adapters/funnel.ts:390 (totalUsers: null) · back/app/features/analytics/funnel/conversion/service.py:40 · 설계: 신규"
+ },
+ "T:ga4_users_window:rule:0": {
+  "t": "순 방문자는 더할 수 없어서 필터 조합마다 행을 둡니다. 골드에서는 화면의 모든 조합(엔진 · 기기 · 신규/재방문 다중 선택)을 비트 조합으로 미리 계산하고 근사하지 않습니다.",
+  "v": "des",
+  "e": "설계 · back/CORE-REQUESTS/bg-funnel.md:16 (필터 조합마다 창 사용자 수가 다름, 비가산)"
+ },
+ "T:ga4_users_window:rule:1": {
+  "t": "cohort: ai = AI 유입, total = 엔진 조건 없이 기기·신규/재방문만 건 전체, general = 비AI 값 (레거시 일반 = total − ai 도 재현 가능).",
+  "v": "cur",
+  "e": "front/lib/ga4/conversion.ts:163-168,330-345 (total = 기기·방문자 유형만, ai = 채널+엔진) · front/lib/ga4/conversion.ts:485 (human = total − ai) · 설계: general 코호트"
+ },
+ "T:ga4_users_window:rule:2": {
+  "t": "골드에서는 입구 페이지 행(page_key ≠ 0)을 창 · 필터 조합마다 AI 세션 상위 15(입구 페이지별 방문 표 · 현행 API 목록) ∪ AI 사용자 상위 12(레거시 페이지별 전환 표) 페이지에 둡니다. total · general 페이지 행은 engine_mask 0 으로, 같은 기기 · 신규/재방문 조합에서 뽑힌 페이지마다 둡니다.",
+  "v": "des",
+  "e": "설계 · 레거시 페이지별 전환 표 = AI 사용자 상위 12 + 페이지별 total(기기·방문자만): front/lib/ga4/conversion.ts:380-428 · 레거시 방문 표 = AI 세션 상위 15: front/lib/ga4/conversion.ts:726-748 · 현행 API = AI 세션 상위 15 목록, 전환 표는 앞 12: back/app/features/analytics/funnel/conversion/schemas.py:26, front/lib/hgh/adapters/funnel.ts:212-213,327-334,390-394 (U8-N6)"
+ },
+ "T:ga4_users_window:rule:3": {
+  "t": "골드에서는 7 · 28 · 90일 행의 window_end = 그 속성의 마지막 적재일, 일별 행(window_days 1)은 날짜마다입니다. 현행 API 창 끝 = 고른 속성들의 최신 적재일 중 최댓값 (U8-N5), 레거시 창 = NdaysAgo..today (오늘 포함 N+1일).",
+  "v": "des",
+  "e": "설계 · 현행 API: back/app/features/analytics/funnel/conversion/service.py:284-290 (latest = max(as_of)) · front/lib/hgh/adapters/funnel.ts:37 (U8-N5) · 레거시 창: front/lib/ga4/client.ts:86-89 (NdaysAgo..today) · docs/design/api/DECISIONS-API.md:272 (28daysAgo..today, 29일)"
+ }
+}

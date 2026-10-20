@@ -1,0 +1,432 @@
+{
+ "T:dim_perspective:head": {
+  "t": "{\"name\":\"dim_perspective\",\"s\":\"gold\",\"fam\":\"kpi\",\"grain\":\"당사 브랜드 조합 1개\"}",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 관점 = 당사 브랜드 비트 조합 back/app/core/codes.py:22"
+ },
+ "T:dim_perspective:col:0": {
+  "t": "[\"perspective_key\",\"PK\",\"int2\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell)"
+ },
+ "T:dim_perspective:col:1": {
+  "t": "[\"own_bits\",\"\",\"1 현대 · 2 기아 · 4 제네시스 합\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 비트 정의 back/app/core/codes.py:22 · back/app/core/measure.py:164"
+ },
+ "T:dim_perspective:col:2": {
+  "t": "[\"label\",\"\",\"단일 = brand_code · 복수 = 엄브렐러\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 현행 표시 규칙 back/app/features/analytics/geo/markets/service.py:56-60 · back/app/core/measure.py:176-181"
+ },
+ "T:dim_perspective:grain": {
+  "t": "당사 브랜드 비트 조합 1개 = 1행. 실제 쓰는 조합만 둡니다 (최대 7개).",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 비트 1·2·4 의 비지 않은 조합 7개"
+ },
+ "T:dim_perspective:pk": {
+  "t": "perspective_key",
+  "v": "lbl",
+  "e": ""
+ },
+ "T:dim_perspective:inputs": {
+  "t": "데이터 분석팀 (출처 제안: own_bits 1~7 고정 코드표)",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 신규 테이블 inputs 형식(README 4)"
+ },
+ "T:dim_perspective:uses": {
+  "t": "kpi_cell · kpi_rollup · citation_cell 의 관점 축 (요청 관점 브랜드 → own_bits)",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · kpi_cell·kpi_rollup·citation_cell 의 perspective_key 참조"
+ },
+ "T:dim_perspective:cur": {
+  "t": "없음 (신규). 현행은 요청 관점 비트(MeasureScope.own_bits)로 rd.answer 의 _h · _k · _g 열을 고릅니다.",
+  "v": "cur",
+  "e": "back/app/core/measure.py:129 (MeasureScope.own_bits) · back/app/core/measure.py:490-521 (own_cols 가 _h·_k·_g 열 선택) · db_cols.tsv 에 dim_perspective 없음"
+ },
+ "T:dim_perspective:rule:0": {
+  "t": "조회는 관점 1개를 명시해 중복 합산을 막습니다.",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell)"
+ },
+ "T:dim_perspective:rule:1": {
+  "t": "복수 관점의 노출 · 순위는 브랜드 행 합이 아니라 답변 단위 판정입니다 (노출 = 어느 한 브랜드 언급, 순위 = 0 을 뺀 최솟값). 그래서 조합마다 행을 둡니다.",
+  "v": "cur",
+  "e": "back/app/core/measure.py:516-520 (복수 관점 순위 LEAST(NULLIF…)) · back/app/core/measure.py:650 (노출 = own_mask & mask)"
+ },
+ "T:kpi_cell:head": {
+  "t": "{\"name\":\"kpi_cell\",\"s\":\"gold\",\"fam\":\"kpi\",\"grain\":\"셀(C) × 관점 · 가속\"}",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell)"
+ },
+ "T:kpi_cell:col:0": {
+  "t": "[\"C\",\"PF\",\"셀 키 12열\",\"cell_key\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · cell_key 12열(01_dim)"
+ },
+ "T:kpi_cell:col:1": {
+  "t": "[\"perspective_key\",\"PF\",\"\",\"dim_perspective\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell)"
+ },
+ "T:kpi_cell:col:2": {
+  "t": "[\"answers · tracked\",\"\",\"노출률\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 현행 식 back/app/core/measure.py:649-650, 872"
+ },
+ "T:kpi_cell:col:3": {
+  "t": "[\"own_mentions · total_mentions\",\"\",\"점유율\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 현행 식 back/app/core/measure.py:651-652, 873"
+ },
+ "T:kpi_cell:col:4": {
+  "t": "[\"sent_pos · sent_neg · sent_all\",\"\",\"우호도\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 현행 식 back/app/core/measure.py:653-655, 874"
+ },
+ "T:kpi_cell:col:5": {
+  "t": "[\"st_pos · st_neu · st_mix · st_neg\",\"\",\"스탠스 4종 · 현행 화면 꺼짐\"]",
+  "v": "cur",
+  "e": "back/app/features/analytics/mentions/types/queries.py:40-52 (stance_sql 대표 턴 4종) · back/app/core/codes.py:38 · front/app/[locale]/(dash)/standard/answer-analysis/_data/kpi-view.ts:1401 (STANCE_CARD_ENABLED = false) · front/lib/hgh/adapters/mentions.ts:189-201 (include_stance=false) · 설계: 셀 열"
+ },
+ "T:kpi_cell:col:6": {
+  "t": "[\"rank_sum · ranked\",\"\",\"우선 노출도 (경쟁 순위)\"]",
+  "v": "cur",
+  "e": "back/app/core/measure.py:656-657, 875 (position = rank_sum, ranked) · back/app/features/analytics/kpi/summary/service.py:190 · 설계: 셀 열"
+ },
+ "T:kpi_cell:col:7": {
+  "t": "[\"top1 · top3\",\"\",\"대표 순위 1 · 3 이하 답변\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 알려진 오류 04_kpi top1·top3 · 현행 식 back/app/core/measure.py:668-669 · back/app/features/analytics/kpi/engines/queries.py:23"
+ },
+ "T:kpi_cell:col:8": {
+  "t": "[\"fp_sum · fp_n\",\"\",\"텍스트 첫 등장 순서 (신규)\"]",
+  "v": "des",
+  "e": "설계: 레거시 우선 노출도 동등화 신규 열 · docs/reports/부록/지표 점검표 생성기/progress.py:11-13 · NEWREQ answer_fact.own_fp_{h,k,g}"
+ },
+ "T:kpi_cell:col:9": {
+  "t": "[\"multi_answers · multi_mentions\",\"\",\"당사 언급 2회 이상\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 현행 식 back/app/core/measure.py:667 (multi) · back/app/features/analytics/mentions/brands/queries.py:63-75 (ma·mm)"
+ },
+ "T:kpi_cell:col:10": {
+  "t": "[\"t_mention … t_final_choice\",\"\",\"유형 신호 당사 답변 수\",\"\",[\"t_mention\",\"t_recommendation\",\"t_comparison\",\"t_definition\",\"t_final_choice\"]]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 현행 식 back/app/features/analytics/trend/series/queries.py:52-63 (유형 신호 당사 답변 수) · back/app/features/analytics/mentions/types/queries.py:23-37 (당사 a_i)"
+ },
+ "T:kpi_cell:col:11": {
+  "t": "[\"gap_answers · gap_base\",\"\",\"분석 누락 · 인용 모수 답변\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 현행 식 back/app/core/measure.py:671-672 (gap_base = 인용 모수 FILTER) · back/app/features/analytics/kpi/compare/service.py:244-250 (gap_base = cit_answers)"
+ },
+ "T:kpi_cell:col:12": {
+  "t": "[\"cit_total · cit_total_all\",\"\",\"⑤ 분모 · 호스트 없는 인용 포함\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 현행 식 back/app/core/measure.py:477-484, 681-682 (cit_n · m05_den_hostless 면 cit_n_all)"
+ },
+ "T:kpi_cell:col:13": {
+  "t": "[\"cit_m05 · cit_target\",\"\",\"⑤ 분자 · 타겟 인용\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 알려진 오류 04_kpi cit_target · 현행 식 back/app/core/measure.py:683, 688-690"
+ },
+ "T:kpi_cell:col:14": {
+  "t": "[\"cit_owned · cit_owned_c\",\"\",\"자사 인용 · 국가 좁힘판\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 알려진 오류 04_kpi 국가 좁힘판 · 현행 식 back/app/core/measure.py:595-602, 684-687"
+ },
+ "T:kpi_cell:col:15": {
+  "t": "[\"has_measured · has_mention · has_multi\",\"\",\"고유 프롬프트 수용\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 현행 count(DISTINCT prompt_key) back/app/core/measure.py:705-706 · back/app/features/analytics/mentions/brands/queries.py:70-73 (p·mp)"
+ },
+ "T:kpi_cell:grain": {
+  "t": "셀(C) × 관점 1개 = 1행. 언급·인용이 0 이어도 분모 셀은 남깁니다.",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell)"
+ },
+ "T:kpi_cell:pk": {
+  "t": "C(12) + perspective_key",
+  "v": "lbl",
+  "e": ""
+ },
+ "T:kpi_cell:inputs": {
+  "t": "데이터 분석팀 (출처 제안: 같은 build 의 answer_fact · answer_stance_fact 합)",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 신규 테이블 inputs 형식(README 4)"
+ },
+ "T:kpi_cell:triggers": {
+  "t": "사실 build 와 같은 빌드",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell)"
+ },
+ "T:kpi_cell:uses": {
+  "t": "Overview · Dashboard · Answer analysis 의 KPI 카드 · 엔진 · 비교 · 국가 · 추이, 언급 표 당사 행, 인용 프롬프트 → /v1/kpi/summary · engines · compare, /v1/geo, /v1/trend, /v1/mentions/brands · types, /v1/citations/prompts",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 현행 소비 back/app/features/analytics/kpi/summary/service.py:180 · kpi/engines/service.py:74 · kpi/compare/service.py:244 · geo/markets/service.py:153 · trend/series/service.py:21-23 · mentions/brands/service.py:238-240 · mentions/types/service.py:3-5 · citations/prompts/service.py:92 · inventory.json 메뉴 대응"
+ },
+ "T:kpi_cell:cur": {
+  "t": "없음 (신규 가속층). 현행은 조회 때마다 rd.answer (유형 · 스탠스는 rd.answer_brand · rd.answer_stance)를 집계",
+  "v": "cur",
+  "e": "back/app/core/measure.py:605-697 (rd.answer 조회 때 집계) · back/app/features/analytics/mentions/types/queries.py:23-52 (answer_brand·answer_stance) · back/app/features/analytics/trend/series/queries.py:52-63"
+ },
+ "T:kpi_cell:rule:0": {
+  "t": "선택 사항입니다. 없으면 BE 가 지금처럼 사실 테이블에서 계산하고, 성능 병목이 확인된 계열부터 적재합니다.",
+  "v": "des",
+  "e": "README 5-1 셀 집계는 선택(가속) · 00_head.js ACCEL"
+ },
+ "T:kpi_cell:rule:1": {
+  "t": "M05 인용 점유율 분자 = cit_m05: global 은 Σcit_off (카테고리 Official (HMG)), website · project 는 표면 자사 (cit_owned 와 같은 값). global 에서 cit_owned 로 대신하지 않습니다.",
+  "v": "cur",
+  "e": "back/app/core/measure.py:7-12, 688-690, 863-877 (ratios citation_share = cit_m05) · back/app/features/analytics/kpi/engines/queries.py:17-24 · db:app.citation_category name Official (HMG)"
+ },
+ "T:kpi_cell:rule:2": {
+  "t": "글로벌 자사 인용: 허용 배열을 국가로 좁히지 않으면 cit_owned, 국가 1개로 좁히면 cit_owned_c. 국가 2개 이상 · 언어로 좁힘은 citation_cell 의 owner_key = ANY(허용 배열) 합, 출처 카테고리 축이면 인용 열 전부를 citation_cell 에서 셉니다.",
+  "v": "cur",
+  "e": "back/app/core/measure.py:14-19, 92-97, 595-602, 683-687 (brand = Σcit_own_*, country1 = Σcit_own_*c) · back/app/core/measure.py:734-753 (countryN cross · scan) · back/db/DB-v2.32.sql:1251-1256 · 설계: 국가 2개 이상·언어·출처 축은 citation_cell owner_key 합"
+ },
+ "T:kpi_cell:rule:3": {
+  "t": "⑤ 분모: 기본 cit_total (호스트 있는 인용), m05_den_hostless 스위치면 cit_total_all. 인용 화면 프롬프트 목록은 스위치와 무관하게 cit_total 입니다.",
+  "v": "cur",
+  "e": "back/app/core/measure.py:477-484, 681 · back/app/core/profile.py:109-114 · back/app/features/analytics/citations/prompts/service.py:91-92 (m05_den=False)"
+ },
+ "T:kpi_cell:rule:4": {
+  "t": "우선 노출도: 현행 카드 · 국가별 GEO 현황 모두 경쟁 순위(rank_sum ÷ ranked)입니다. fp_sum · fp_n 은 레거시 동등화(답변 텍스트상 첫 등장 순서)용 신규 열입니다.",
+  "v": "cur",
+  "e": "back/app/features/analytics/kpi/summary/service.py:190 · back/app/features/analytics/geo/markets/service.py:85, 96 · back/app/core/measure.py:656-657 · 설계 근거 docs/reports/부록/지표 점검표 생성기/progress.py:11-13"
+ },
+ "T:kpi_cell:rule:5": {
+  "t": "셀로 내지 않는 값은 사실을 읽습니다: 멘션 유형 표의 비교 측 답변 수 · 유형별 행 수 · 유형 × 감성 매트릭스 (answer_brand_fact), 추이 측정 일수 (job_index).",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 셀로 못 내는 값: back/app/features/analytics/mentions/types/queries.py:23-37 (측별 답변 bool_or·행 수·감성 매트릭스) · back/app/features/analytics/trend/series/queries.py:66-88 (measured_days = rd.job.measured_at 고유 일수)"
+ },
+ "T:kpi_rollup:head": {
+  "t": "{\"name\":\"kpi_rollup\",\"s\":\"gold\",\"fam\":\"kpi\",\"grain\":\"상위 합계 D × 관점 · 가속\"}",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell)"
+ },
+ "T:kpi_rollup:col:0": {
+  "t": "[\"D\",\"PF\",\"C − prompt_key\",\"cell_key\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell)"
+ },
+ "T:kpi_rollup:col:1": {
+  "t": "[\"perspective_key\",\"PF\",\"\",\"dim_perspective\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell)"
+ },
+ "T:kpi_rollup:col:2": {
+  "t": "[\"(가산 열)\",\"\",\"kpi_cell 합 열 (has_* 제외)\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · has_* 는 고유 프롬프트 수용이라 가산 아님"
+ },
+ "T:kpi_rollup:grain": {
+  "t": "D(= C − prompt_key) × 관점 1개 = 1행.",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell)"
+ },
+ "T:kpi_rollup:pk": {
+  "t": "D + perspective_key",
+  "v": "lbl",
+  "e": ""
+ },
+ "T:kpi_rollup:inputs": {
+  "t": "데이터 분석팀 (출처 제안: 같은 build 의 kpi_cell 합)",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 신규 테이블 inputs 형식(README 4)"
+ },
+ "T:kpi_rollup:triggers": {
+  "t": "사실 build 와 같은 빌드",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell)"
+ },
+ "T:kpi_rollup:uses": {
+  "t": "프롬프트 단위 조건이 없는 KPI 카드 · 엔진 · 국가 · 추이 합계 (/v1/kpi/*, /v1/geo, /v1/trend)",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell)"
+ },
+ "T:kpi_rollup:cur": {
+  "t": "없음 (신규 가속층)",
+  "v": "des",
+  "e": "신규 · db_cols.tsv 에 없음"
+ },
+ "T:kpi_rollup:rule:0": {
+  "t": "선택 사항입니다. 없으면 BE 가 지금처럼 사실 테이블에서 계산하고, 성능 병목이 확인된 계열부터 적재합니다.",
+  "v": "des",
+  "e": "README 5-1 셀 집계는 선택(가속) · 00_head.js ACCEL"
+ },
+ "T:kpi_rollup:rule:1": {
+  "t": "프롬프트 단위 조건(택소노미 · 커스텀 필드, 삭제 포함 카탈로그 catalog_incl_deleted, 보고 유닛 web_registered_only)이 걸리면 kpi_cell 을 읽습니다.",
+  "v": "cur",
+  "e": "back/app/core/measure.py:207-213 (prompt_keys 술어) · back/app/core/measure.py:251-283 (catalog_incl_deleted 프롬프트 단위 카탈로그 술어) · back/app/core/measure.py:286-305 (web_registered_only = prompt_key IN rd.web_report_prompt) · 설계: rollup 대신 kpi_cell"
+ },
+ "T:kpi_rollup:rule:2": {
+  "t": "고유 프롬프트 수(측정 · 언급 · 복수 언급 프롬프트)는 더할 수 없어 kpi_cell 에서 셉니다.",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 현행 고유 프롬프트 수 back/app/core/measure.py:705-706, 726-728"
+ },
+ "T:brand_cell:head": {
+  "t": "{\"name\":\"brand_cell\",\"s\":\"gold\",\"fam\":\"kpi\",\"grain\":\"셀(C) × 브랜드 × 경쟁 · 가속\"}",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell)"
+ },
+ "T:brand_cell:col:0": {
+  "t": "[\"C\",\"PF\",\"셀 키 12열\",\"cell_key\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell)"
+ },
+ "T:brand_cell:col:1": {
+  "t": "[\"brand_key\",\"PF\",\"\",\"dim_brand\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell)"
+ },
+ "T:brand_cell:col:2": {
+  "t": "[\"competitive\",\"PK\",\"경쟁 행 여부\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · answer_brand PK 의 competitive (03_fact)"
+ },
+ "T:brand_cell:col:3": {
+  "t": "[\"mention_count\",\"\",\"언급 수\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 현행 식 back/app/core/measure.py:1605, 1608"
+ },
+ "T:brand_cell:col:4": {
+  "t": "[\"answers_present · rid_n_sum\",\"\",\"노출 답변: 행 수 · Σrid_n\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 알려진 오류 04_kpi answers_present · 현행 식 back/app/core/measure.py:1602-1608 (기본 count(*), G20 이면 sum(rid_n))"
+ },
+ "T:brand_cell:col:5": {
+  "t": "[\"rank_sum · ranked\",\"\",\"경쟁 순위 (rk > 0)\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 현행 식 back/app/core/measure.py:1609"
+ },
+ "T:brand_cell:col:6": {
+  "t": "[\"fp_sum · fp_n\",\"\",\"텍스트 첫 등장 순서 (신규)\"]",
+  "v": "des",
+  "e": "설계: 레거시 우선 노출도 동등화 신규 열 · docs/reports/부록/지표 점검표 생성기/progress.py:11-13 · NEWREQ answer_brand_fact.first_pos"
+ },
+ "T:brand_cell:col:7": {
+  "t": "[\"s_pos · s_neu · s_neg · s_mix\",\"\",\"감성 4종\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 현행 식 back/app/core/measure.py:1610"
+ },
+ "T:brand_cell:col:8": {
+  "t": "[\"t_mention … t_final_choice\",\"\",\"유형 5종 언급 수\",\"\",[\"t_mention\",\"t_recommendation\",\"t_comparison\",\"t_definition\",\"t_final_choice\"]]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 현행 식 back/app/features/analytics/mentions/brands/queries.py:52, 55 (sum(t_*)) · back/app/features/analytics/mentions/types/queries.py:30 (n_i = 유형 언급 수)"
+ },
+ "T:brand_cell:col:9": {
+  "t": "[\"multi_answers · multi_mentions\",\"\",\"mention_count 2 이상\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 현행 식 back/app/features/analytics/mentions/brands/queries.py:49-51, 53-54 (mention_count >= 2 의 ma·mm)"
+ },
+ "T:brand_cell:col:10": {
+  "t": "[\"has_brand · has_multi\",\"\",\"고유 프롬프트 수용\"]",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 현행 고유 프롬프트 수 back/app/features/analytics/mentions/brands/queries.py:53-54 (prompts·multi_prompts)"
+ },
+ "T:brand_cell:grain": {
+  "t": "셀(C) × 표시 브랜드 × 경쟁 여부 = 1행.",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell)"
+ },
+ "T:brand_cell:pk": {
+  "t": "C(12) + brand_key + competitive",
+  "v": "lbl",
+  "e": ""
+ },
+ "T:brand_cell:inputs": {
+  "t": "데이터 분석팀 (출처 제안: 같은 build 의 answer_brand_fact 합)",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 신규 테이블 inputs 형식(README 4)"
+ },
+ "T:brand_cell:triggers": {
+  "t": "사실 build 와 같은 빌드",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell)"
+ },
+ "T:brand_cell:uses": {
+  "t": "언급 표 경쟁 행 · 당사 감성 · 유형, 국가별 GEO 경쟁사, 추이 브랜드 계열 → /v1/mentions/brands, /v1/geo, /v1/trend (dimension=brand)",
+  "v": "des",
+  "e": "설계: 셀 집계는 선택 가속층(README 5-1 · NEWREQ kpi_cell) · 현행 소비 back/app/features/analytics/mentions/brands/service.py:240-246, 287-297 · geo/markets/service.py:154 · trend/series/service.py:32 (dimension brand = brand_rows)"
+ },
+ "T:brand_cell:cur": {
+  "t": "없음 (신규 가속층). 현행은 rd.answer_brand 를 조회 때 집계",
+  "v": "cur",
+  "e": "back/app/core/measure.py:1584-1613 (rd.answer_brand 조회 때 집계) · back/app/features/analytics/mentions/brands/queries.py:27-60"
+ },
+ "T:brand_cell:rule:0": {
+  "t": "선택 사항입니다. 없으면 BE 가 지금처럼 사실 테이블에서 계산하고, 성능 병목이 확인된 계열부터 적재합니다.",
+  "v": "des",
+  "e": "README 5-1 셀 집계는 선택(가속) · 00_head.js ACCEL"
+ },
+ "T:brand_cell:rule:1": {
+  "t": "당사 행: 노출 · 언급 · 순위 · 복수 언급은 kpi_cell 관점 행(현행 rd.answer 당사 열), 감성 4종 · 유형 5종은 관점 비트 당사 브랜드 행의 합(현행 rd.answer_brand)입니다.",
+  "v": "cur",
+  "e": "back/app/features/analytics/mentions/brands/service.py:4-6, 238-246, 284-297 · back/app/features/analytics/mentions/brands/queries.py:27-38 (당사 감성 = answer_brand own_bit = ANY), 63-75 (당사 복수 = rd.answer) · 설계: 셀 대응"
+ },
+ "T:brand_cell:rule:2": {
+  "t": "노출 답변 수: 기본은 행 수(answers_present), brand_exposure_per_alias 스위치면 Σrid_n(rid_n_sum).",
+  "v": "cur",
+  "e": "back/app/core/measure.py:1602-1608 · back/app/core/profile.py:103-108 · 설계: 열 이름"
+ },
+ "T:brand_cell:rule:3": {
+  "t": "형제 HMG 브랜드는 경쟁 행에 남습니다 (M-1). /v1/geo 경쟁사는 HMG 브랜드를 뺍니다 (own_bit = 0).",
+  "v": "cur",
+  "e": "back/app/core/measure.py:27, 1586-1599 (hmg_siblings) · back/app/features/analytics/geo/markets/service.py:16-18, 154 (hmg_siblings=False)"
+ },
+ "T:entity_mention_total:head": {
+  "t": "{\"name\":\"entity_mention_total\",\"s\":\"gold\",\"fam\":\"kpi\",\"grain\":\"엔티티 전 기간 합계\"}",
+  "v": "cur",
+  "e": "db:rd.entity_mention_total · back/db/DB-v2.32.sql:6443-6449"
+ },
+ "T:entity_mention_total:col:0": {
+  "t": "[\"entity_id\",\"PF\",\"uuid · dim_entity.entity_id (UK)\",\"dim_entity\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:6444 (entity_id uuid PK) · back/db/DB-v2.32.sql:406 (rd.dim_entity entity_id UNIQUE) · 설계: dim_entity 참조"
+ },
+ "T:entity_mention_total:col:1": {
+  "t": "[\"answers\",\"\",\"언급 답변 수 (고유 job)\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:6445 (count(DISTINCT job_id))"
+ },
+ "T:entity_mention_total:col:2": {
+  "t": "[\"mentions\",\"\",\"Σmention_count\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:6446 (sum(mention_count))"
+ },
+ "T:entity_mention_total:col:3": {
+  "t": "[\"updated_at\",\"\",\"마지막 반영 시각\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:6447, 6548, 6582"
+ },
+ "T:entity_mention_total:grain": {
+  "t": "엔티티 1개의 전 기간 합계 = 1행. Brand · 표시명 있는 언급만, 드롭 답변 제외, 기간·게이트 없음. 합계 0 이면 행이 없습니다.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:6448-6449 · back/db/DB-v2.32.sql:6515-6523 (Brand ∧ display_name 있음 ∧ 드롭 제외, 기간·게이트 없음) · back/db/DB-v2.32.sql:6406, 6592 (합계 0 = 행 없음)"
+ },
+ "T:entity_mention_total:pk": {
+  "t": "entity_id",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:6444"
+ },
+ "T:entity_mention_total:inputs": {
+  "t": "데이터 분석팀",
+  "v": "cur",
+  "e": "back/ingest/common/db.py:164 (적재기 finalize) · README 5-4 용어 데이터 분석팀"
+ },
+ "T:entity_mention_total:triggers": {
+  "t": "적재 마무리마다 차분 반영 (현행 rd.flush_entity_mention_total)",
+  "v": "cur",
+  "e": "back/ingest/common/db.py:164 · back/db/DB-v2.32.sql:6407-6408 (finalize 가 flush 로 차분 반영)"
+ },
+ "T:entity_mention_total:uses": {
+  "t": "Admin › Global config › Entity catalog 엔티티 표의 답변 · 언급 수와 답변 수 정렬 → /v1/admin/entities",
+  "v": "cur",
+  "e": "back/app/features/admin/entities/registry/queries.py:13-33 (answers·mentions 열), 40-41 (answers_desc 정렬) · inventory.json Admin › Global config › Entity catalog 브랜드 엔티티 표 (sort=answers_desc)"
+ },
+ "T:entity_mention_total:cur": {
+  "t": "rd.entity_mention_total (열 전부)",
+  "v": "cur",
+  "e": "db:rd.entity_mention_total · db_cols.tsv (entity_id·answers·mentions·updated_at)"
+ }
+}

@@ -1,0 +1,412 @@
+{
+ "T:publication:head": {
+  "t": "{\"name\":\"publication\",\"s\":\"gold\",\"fam\":\"pub\",\"grain\":\"회차 × 발행 세대\"}",
+  "v": "cur",
+  "e": "db:frz.generation · back/db/DB-v2.32.sql:5155-5172 (회차당 세대, 활성 1) · 이름 publication = 골드 개명(설계)"
+ },
+ "T:publication:col:0": {
+  "t": "[\"gen_key\",\"PK\",\"세대 키 (identity)\"]",
+  "v": "cur",
+  "e": "db:frz.generation.gen_key (int4 GENERATED ALWAYS AS IDENTITY, PK) · back/db/DB-v2.32.sql:5156"
+ },
+ "T:publication:col:1": {
+  "t": "[\"cyc_key\",\"FK\",\"\",\"dim_cycle\"]",
+  "v": "cur",
+  "e": "db:frz.generation.cyc_key · back/db/DB-v2.32.sql:5157 (rd.cycle.cyc_key, 현행 FK 제약 없음 = 논리 참조) · 설계: dim_cycle FK"
+ },
+ "T:publication:col:2": {
+  "t": "[\"surface\",\"\",\"CHECK 1~3 · 발행은 1 · 2\"]",
+  "v": "cur",
+  "e": "db:frz.generation generation_surface_check CHECK (surface IN (1,2,3)) · back/db/DB-v2.32.sql:5158 · freeze_cycle 은 global·website 만: back/db/DB-v2.32.sql:6253-6255 · back/ingest/frz/freeze.py:26-27"
+ },
+ "T:publication:col:3": {
+  "t": "[\"source\",\"\",\"ops 이관 · hub 발행\"]",
+  "v": "cur",
+  "e": "db:frz.generation generation_source_check ('ops','hub') · back/db/DB-v2.32.sql:5159 (ops = 운영 이관, hub = 허브 발행)"
+ },
+ "T:publication:col:4": {
+  "t": "[\"state\",\"\",\"building · active · retired\"]",
+  "v": "cur",
+  "e": "db:frz.generation generation_state_check ('building','active','retired') · back/db/DB-v2.32.sql:5160"
+ },
+ "T:publication:col:5": {
+  "t": "[\"build_id\",\"FK\",\"고정한 사실 build (신규)\",\"build\"]",
+  "v": "des",
+  "e": "NEWREQ publication.build_id (src/newreq.js:8) · 알려진 오류 11_pub: build_id 고정이 frz.kept·keep_* 보관 장치를 대체하는 설계"
+ },
+ "T:publication:col:6": {
+  "t": "[\"ops_{cycle_id,generation_id,generator_version}\",\"\",\"ops 이관 세대 원값\"]",
+  "v": "cur",
+  "e": "db:frz.generation.ops_cycle_id·ops_generation_id·ops_generator_version · CHECK (source='ops') = (ops_generation_id IS NOT NULL) back/db/DB-v2.32.sql:5161,5166 · 표기 정리(물리 열 같음)"
+ },
+ "T:publication:col:7": {
+  "t": "[\"ops_started_at · ops_finished_at\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:frz.generation.ops_started_at·ops_finished_at · back/db/DB-v2.32.sql:5161"
+ },
+ "T:publication:col:8": {
+  "t": "[\"judgment\",\"\",\"판정 입력 버전 jsonb\"]",
+  "v": "cur",
+  "e": "db:frz.generation.judgment jsonb · back/db/DB-v2.32.sql:5162 (판정 입력 버전 포인터) · back/db/DB-v2.32.sql:6261-6270"
+ },
+ "T:publication:col:9": {
+  "t": "[\"row_counts · verify\",\"\",\"행 수 · 단언 결과\"]",
+  "v": "cur",
+  "e": "db:frz.generation.row_counts·verify · back/db/DB-v2.32.sql:5163-5164 (세대 행 수 · 이관 단언 결과) · back/db/DB-v2.32.sql:6326-6330"
+ },
+ "T:publication:col:10": {
+  "t": "[\"created_at · activated_at · retired_{at,reason}\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:frz.generation.created_at·activated_at·retired_at·retired_reason · back/db/DB-v2.32.sql:5165 · 표기 정리(물리 열 같음)"
+ },
+ "T:publication:grain": {
+  "t": "회차 × 발행 세대 1개 = 1행. 회차당 active · building 은 각 1개입니다.",
+  "v": "cur",
+  "e": "db:frz.generation generation_active_uq·generation_building_uq UNIQUE (cyc_key) WHERE state · back/db/DB-v2.32.sql:5169-5170"
+ },
+ "T:publication:pk": {
+  "t": "gen_key",
+  "v": "cur",
+  "e": "db:frz.generation generation_pkey (gen_key)"
+ },
+ "T:publication:inputs": {
+  "t": "데이터 분석팀 · app.ecat_version · app.rule_set (판정 버전)",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:6261-6270 (freeze_cycle judgment = app.ecat_version 활성 ver · app.rule_set max(rule_ver) · rd.cycle ecat_ver · surface_generation) · back/ingest/frz/freeze.py:29-34 · 설계: 데이터 분석팀(사용자 10-19)"
+ },
+ "T:publication:triggers": {
+  "t": "현행 회차 발행 직후 자동 생성(global · website) · ops 이관 CLI · cycle_admin regenerate(BE 경로 없음)",
+  "v": "cur",
+  "e": "back/ingest/frz/freeze.py:1-6,37-55 (발행 직후 freeze_published: cycles_tick·process_change·pull) · back/ingest/cycles/workers/service.py:112,158 · back/ingest/pull/sync/service.py:428 · back/ingest/cli.py:12,49 (frz-import-ops) · back/ingest/cycles/ledger/service.py:226-259 (regenerate) · back/app/features/admin/cycles/cycles/router.py:48-66 (BE 는 hide·unhide·close·view-date 만)"
+ },
+ "T:publication:uses": {
+  "t": "freeze_at_publish 켬일 때 카드 경로 7개(kpi/summary · mentions/brands · trend · geo · kpi/engines website · citations/domains 기간 없음 · kpi/compare)의 동결 읽기, 글로벌 추이 격자, 창 판정(세대 없는 회차가 끼면 비카드), 카드 스냅샷 회차, URL 인용률 커버 판정(judgment)",
+  "v": "cur",
+  "e": "back/app/core/card_routes.py:6-8,25-41 · back/app/core/facts.py:52-66 · back/app/core/profile.py:186-198 · back/app/core/cycles.py:198-213,226-235,253,334 · back/app/core/measure.py:1285-1296 (judgment url_hits_covered)"
+ },
+ "T:publication:cur": {
+  "t": "frz.generation (열 전부 + build_id 신규). frz.ops_judgment(감사 사본, BE 미사용)는 두지 않음",
+  "v": "cur",
+  "e": "db:frz.generation (17열 = 상자 열과 이름 같음) · back/db/DB-v2.32.sql:5198-5201 frz.ops_judgment COMMENT '감사용, 읽기 경로는 쓰지 않는다' · grep back/app 에 ops_judgment 없음, 쓰기는 back/ingest/frz/ops_import.py:76 뿐 · 설계: build_id 신규(src/newreq.js:8), 골드 = 서비스 필요 데이터(README 5-5)"
+ },
+ "T:publication:rule:0": {
+  "t": "현행 카드 뷰는 frz.cell 셀의 rd 행을 라이브로 읽고, 보관 표시(frz.kept src apply · bulk · ops · seat · fold)된 답변만 frz.keep_* 옛 행으로 읽습니다.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:6007-6034 (card·grid 뷰: frz.cell ⋈ rd 행 WHERE NOT EXISTS frz.kept ∪ frz.keep_*) · back/db/DB-v2.32.sql:6093-6104 (card_*_w) · db:frz.kept kept_src_check (apply·bulk·ops·seat·fold) · back/db/DB-v2.32.sql:6877"
+ },
+ "T:publication:rule:1": {
+  "t": "골드에서는 build_id 로 발행 시점 사실 build 를 고정해 보관 행을 없앱니다. 발행 뒤 재판정은 새 build 로만 들어갑니다.",
+  "v": "des",
+  "e": "알려진 오류 11_pub (build_id 고정 = 보관 장치 대체 설계) · NEWREQ publication.build_id src/newreq.js:8"
+ },
+ "T:publication:rule:2": {
+  "t": "골드에서는 활성 발행이 가리키는 build 를 지우지 않습니다.",
+  "v": "des",
+  "e": "골드 build·release 설계 (NEWREQ build src/newreq.js:9) · 카드 고정 build 보존 요구"
+ },
+ "T:publication:rule:3": {
+  "t": "골드에서는 ops 이관 세대도 운영 원값 build 를 만들어 가리킵니다 (현행 kept src ops · fold 대체).",
+  "v": "des",
+  "e": "NEWREQ publication.build_id 'ops 이관 세대도 build 로' src/newreq.js:8 · 현행 kept src ops·fold: back/db/DB-v2.32.sql:6877, back/ingest/frz/ops_import.py:264-307"
+ },
+ "T:publication:rule:4": {
+  "t": "골드에서는 고정 build 가 발행 당시 규칙 서명(profile_signature)으로 만든 것이어야 합니다.",
+  "v": "des",
+  "e": "골드 build.profile_signature 설계 · 현행 대응: back/ingest/frz/freeze.py:29-34 judgment_pointer(profile_on) · back/app/core/profile.py:11-13 freeze 종류 스위치는 재생성 필요"
+ },
+ "T:pub_cell:head": {
+  "t": "{\"name\":\"pub_cell\",\"s\":\"gold\",\"fam\":\"pub\",\"grain\":\"발행 × 셀 대표 답변\"}",
+  "v": "cur",
+  "e": "db:frz.cell · back/db/DB-v2.32.sql:5174-5183 COMMENT '회차 셀 집합(셀당 대표 답변 1건)'"
+ },
+ "T:pub_cell:col:0": {
+  "t": "[\"gen_key\",\"PF\",\"\",\"publication\"]",
+  "v": "cur",
+  "e": "db:frz.cell cell_gen_key_fkey → frz.generation · back/db/DB-v2.32.sql:5175"
+ },
+ "T:pub_cell:col:1": {
+  "t": "[\"answer_key\",\"PF\",\"셀 대표\",\"answer_fact\"]",
+  "v": "cur",
+  "e": "db:frz.cell.answer_key · back/db/DB-v2.32.sql:5176 ('셀 대표 답변(rd.job·rd.answer 키)', 논리 참조) · PK (gen_key, answer_key)"
+ },
+ "T:pub_cell:col:2": {
+  "t": "[\"surface · cyc_key\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:frz.cell.surface·cyc_key · back/db/DB-v2.32.sql:5177"
+ },
+ "T:pub_cell:col:3": {
+  "t": "[\"round_date\",\"\",\"동결 좌석\"]",
+  "v": "cur",
+  "e": "db:frz.cell.round_date · back/db/DB-v2.32.sql:5178 ('동결 좌석(rd.cycle.round_date)')"
+ },
+ "T:pub_cell:col:4": {
+  "t": "[\"prompt_key · engine_key · geo_key\",\"\",\"셀 좌표\"]",
+  "v": "cur",
+  "e": "db:frz.cell.prompt_key·engine_key·geo_key · back/db/DB-v2.32.sql:5179"
+ },
+ "T:pub_cell:grain": {
+  "t": "발행 세대 × 셀 대표 답변 1건 = 1행.",
+  "v": "cur",
+  "e": "db:frz.cell PK (gen_key, answer_key) · back/db/DB-v2.32.sql:5180,5183"
+ },
+ "T:pub_cell:pk": {
+  "t": "gen_key + answer_key",
+  "v": "cur",
+  "e": "db:frz.cell cell_pkey (gen_key, answer_key)"
+ },
+ "T:pub_cell:inputs": {
+  "t": "데이터 분석팀 · app.website_prompt · app.website_site (웹 셀 국가)",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:6273-6286 (셀 후보: ing.cycle_run·ing.answer·rd.job served·미러 시각·앵커 핀 + app.website_prompt·app.website_site 로 웹 셀 국가) · 설계: 데이터 분석팀(사용자 10-19)"
+ },
+ "T:pub_cell:uses": {
+  "t": "카드 · 격자 동결 읽기의 셀 집합",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:6024-6034 (frz.card_*·grid_* 가 frz.cell 조인) · back/db/DB-v2.32.sql:6093-6104 (card_*_w) · back/app/core/facts.py:43-66"
+ },
+ "T:pub_cell:cur": {
+  "t": "frz.cell (열 전부)",
+  "v": "cur",
+  "e": "db:frz.cell (gen_key·answer_key·surface·cyc_key·round_date·prompt_key·engine_key·geo_key = 상자 열 전부)"
+ },
+ "T:pub_cell:rule:0": {
+  "t": "셀 대표 = 회차 run 서빙 답변 중 셀(프롬프트 × 엔진 × 국가)당 1건, 미러 시각 > 앵커 핀 접기 > 원본 시각 최신순(NULL 먼저) · job_id. LIVE 의 is_rep 와 다를 수 있습니다.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:6273-6288 (DISTINCT ON (prompt_id, target, cell_country) ORDER BY rd.rep_order_at(measured_at, mirror, pin) DESC NULLS FIRST, job_id) · sql: rd.rep_order_at = coalesce 순 미러 시각 > 핀 접기 > 원본 · back/app/core/profile.py:47-49 (답변분석 is_rep 는 다른 대표)"
+ },
+ "T:pub_cell_web:head": {
+  "t": "{\"name\":\"pub_cell_web\",\"s\":\"gold\",\"fam\":\"pub\",\"grain\":\"웹 셀 판정\"}",
+  "v": "cur",
+  "e": "db:frz.cell_web · back/db/DB-v2.32.sql:6052-6067"
+ },
+ "T:pub_cell_web:col:0": {
+  "t": "[\"gen_key · answer_key\",\"PF\",\"\",\"pub_cell\"]",
+  "v": "cur",
+  "e": "db:frz.cell_web cell_web_gen_key_answer_key_fkey → frz.cell (gen_key, answer_key) ON DELETE CASCADE · back/db/DB-v2.32.sql:6063"
+ },
+ "T:pub_cell_web:col:1": {
+  "t": "[\"cyc_key\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:frz.cell_web.cyc_key"
+ },
+ "T:pub_cell_web:col:2": {
+  "t": "[\"report_fs\",\"\",\"보고 유닛 (NULL = 밖)\"]",
+  "v": "cur",
+  "e": "db:frz.cell_web.report_fs · back/db/DB-v2.32.sql:6066 COMMENT 'report_fs(보고 유닛 file_seq, NULL = 유닛 밖)'"
+ },
+ "T:pub_cell_web:col:3": {
+  "t": "[\"unit_owned · unit_target\",\"\",\"⑥ 유닛 자사 · 타겟 인용\"]",
+  "v": "cur",
+  "e": "db:frz.cell_web.unit_owned·unit_target · back/db/DB-v2.32.sql:6066-6067 (유닛 자사 인용 · 같은 유닛 전 프롬프트 타겟 URL 인용) · back/app/core/measure.py:1349-1367 (⑥ unit 경로)"
+ },
+ "T:pub_cell_web:col:4": {
+  "t": "[\"url_registered · url_owned_hit · url_target_hit\",\"\",\"URL 률 플래그 (이관만)\"]",
+  "v": "cur",
+  "e": "db:frz.cell_web.url_registered·url_owned_hit·url_target_hit · back/db/DB-v2.32.sql:6181-6191 (bake_hub 는 url_* 를 넣지 않음) · back/ingest/frz/ops_import.py:142-144 (이관만 채움)"
+ },
+ "T:pub_cell_web:grain": {
+  "t": "웹 셀 1개의 발행 시점 판정 = 1행.",
+  "v": "cur",
+  "e": "db:frz.cell_web PK (gen_key, answer_key) · back/db/DB-v2.32.sql:6062,6066"
+ },
+ "T:pub_cell_web:pk": {
+  "t": "gen_key + answer_key",
+  "v": "cur",
+  "e": "db:frz.cell_web cell_web_pkey (gen_key, answer_key)"
+ },
+ "T:pub_cell_web:inputs": {
+  "t": "데이터 분석팀 (발행 시점 web_report_prompt · answer_fact · citation_fact · dim_prompt.targets)",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:6172-6191 (bake_hub: rd.web_report_prompt.report_fs · rd.answer.own_url_cited · rd.citation ⋈ rd.dim_url ∈ rd.dim_prompt.targets) · 설계: 데이터 분석팀(사용자 10-19)"
+ },
+ "T:pub_cell_web:uses": {
+  "t": "Website 카드 동결 읽기: 유닛 게이트(web_registered_only) · ⑥ 유닛 몫(web_accuracy_flat) · URL 인용률 플래그",
+  "v": "cur",
+  "e": "back/app/core/measure.py:286-325 (web_registered_only 유닛 게이트, unit_in) · back/app/core/measure.py:1349-1367 (web_accuracy_flat ⑥ unit) · back/app/core/measure.py:714-722 (URL 인용률 url_* coalesce) · back/app/core/profile.py:145-155"
+ },
+ "T:pub_cell_web:cur": {
+  "t": "frz.cell_web (열 전부, 읽기 = frz.card_web · card_*_w)",
+  "v": "cur",
+  "e": "db:frz.cell_web (9열 = 상자 열 전부) · back/db/DB-v2.32.sql:6068-6071 (frz.card_web) · back/db/DB-v2.32.sql:6077-6110 (frz.card_*_w)"
+ },
+ "T:pub_cell_web:rule:0": {
+  "t": "url_* 는 ops 이관 세대만 채웁니다. 비면 답변 행 열(web_reg · tgt_cited · own_url_cited)을 씁니다.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:6181-6191 (허브 bake_hub 는 url_* NULL) · back/ingest/frz/ops_import.py:142-144 · back/app/core/measure.py:719-721 (coalesce(url_registered, web_reg) 등)"
+ },
+ "T:pub_prompt:head": {
+  "t": "{\"name\":\"pub_prompt\",\"s\":\"gold\",\"fam\":\"pub\",\"grain\":\"발행 × 프롬프트\"}",
+  "v": "cur",
+  "e": "db:frz.prompt · back/db/DB-v2.32.sql:5185-5196"
+ },
+ "T:pub_prompt:col:0": {
+  "t": "[\"gen_key\",\"PF\",\"\",\"publication\"]",
+  "v": "cur",
+  "e": "db:frz.prompt prompt_gen_key_fkey → frz.generation · back/db/DB-v2.32.sql:5186"
+ },
+ "T:pub_prompt:col:1": {
+  "t": "[\"prompt_key\",\"PF\",\"\",\"dim_prompt\"]",
+  "v": "cur",
+  "e": "db:frz.prompt.prompt_key (rd.dim_prompt.prompt_key 논리 참조, back/db/DB-v2.32.sql:6310 LEFT JOIN rd.dim_prompt) · PK (gen_key, prompt_key)"
+ },
+ "T:pub_prompt:col:2": {
+  "t": "[\"cyc_key\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:frz.prompt.cyc_key"
+ },
+ "T:pub_prompt:col:3": {
+  "t": "[\"in_full_cycle · expected_cells · window_cells\",\"\",\"풀 사이클 판정 (웹 = 참)\"]",
+  "v": "cur",
+  "e": "db:frz.prompt.in_full_cycle·expected_cells·window_cells · back/db/DB-v2.32.sql:6299-6301 (website = 참·expected NULL)"
+ },
+ "T:pub_prompt:col:4": {
+  "t": "[\"in_root_catalog · catalog_deleted · cat_mask\",\"\",\"동결 카탈로그 비트\"]",
+  "v": "cur",
+  "e": "db:frz.prompt.in_root_catalog·catalog_deleted·cat_mask · back/db/DB-v2.32.sql:5189-5190,6302-6304 · back/db/DB-v2.32.sql:6014,6020 (글로벌 bgrp = q.cat_mask)"
+ },
+ "T:pub_prompt:col:5": {
+  "t": "[\"funnel_key · presence_key · list_type_key · depth1~3_key\",\"\",\"생성 시점 축 (BE 미사용)\"]",
+  "v": "cur",
+  "e": "db:frz.prompt.funnel_key·presence_key·list_type_key·depth1_key~depth3_key · back/db/DB-v2.32.sql:6305 · grep back/app: frz.prompt 읽기는 back/app/core/filters.py:348 cat_mask 와 뷰의 in_full_cycle·cat_mask 뿐 (축은 frz.card_axis)"
+ },
+ "T:pub_prompt:col:6": {
+  "t": "[\"regions · is_korean · report_fs\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:frz.prompt.regions·is_korean·report_fs · back/db/DB-v2.32.sql:5192"
+ },
+ "T:pub_prompt:col:7": {
+  "t": "[\"src\",\"\",\"원값 jsonb (감사 · 대조)\"]",
+  "v": "cur",
+  "e": "db:frz.prompt.src jsonb · back/db/DB-v2.32.sql:5193 ('운영 원값 … 감사·대조용') · back/db/DB-v2.32.sql:6307-6308 (허브 catalog_entries·live 값)"
+ },
+ "T:pub_prompt:grain": {
+  "t": "발행 세대 × 셀 프롬프트 1개 = 1행.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:6295,6309 (셀 프롬프트만: FROM frz.cell GROUP BY prompt_key) · db:frz.prompt PK (gen_key, prompt_key)"
+ },
+ "T:pub_prompt:pk": {
+  "t": "gen_key + prompt_key",
+  "v": "cur",
+  "e": "db:frz.prompt prompt_pkey (gen_key, prompt_key)"
+ },
+ "T:pub_prompt:inputs": {
+  "t": "데이터 분석팀 (발행 시점 dim_prompt · catalog_entry · web_report_prompt · 회차 셀 측정)",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:6296-6319 (rd.dim_prompt · ing.full_cycle_expected · rd.web_report_prompt · rd.catalog_entry) · 설계: 데이터 분석팀(사용자 10-19)"
+ },
+ "T:pub_prompt:uses": {
+  "t": "글로벌 카드의 in_full_cycle 게이트 · 동결 카탈로그 비트(bgrp = cat_mask, 버림 판정)",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:6014-6029 (card 뷰 q.in_full_cycle 게이트·surface 1 bgrp = q.cat_mask, 웹 _w 뷰는 축 조인 없음 6075-6077) · back/app/core/measure.py:264 · back/app/core/filters.py:336-350"
+ },
+ "T:pub_prompt:cur": {
+  "t": "frz.prompt (열 전부)",
+  "v": "cur",
+  "e": "db:frz.prompt (19열 = 상자 열 전부)"
+ },
+ "T:pub_prompt_axis:head": {
+  "t": "{\"name\":\"pub_prompt_axis\",\"s\":\"gold\",\"fam\":\"pub\",\"grain\":\"발행 × 프롬프트 택소노미\"}",
+  "v": "cur",
+  "e": "db:frz.prompt_axis · back/db/DB-v2.32.sql:6113-6128"
+ },
+ "T:pub_prompt_axis:col:0": {
+  "t": "[\"gen_key · prompt_key\",\"PF\",\"\",\"pub_prompt\"]",
+  "v": "cur",
+  "e": "db:frz.prompt_axis prompt_axis_gen_key_prompt_key_fkey → frz.prompt ON DELETE CASCADE · back/db/DB-v2.32.sql:6124"
+ },
+ "T:pub_prompt_axis:col:1": {
+  "t": "[\"cyc_key\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:frz.prompt_axis.cyc_key"
+ },
+ "T:pub_prompt_axis:col:2": {
+  "t": "[\"funnel_key\",\"FK\",\"\",\"dim_taxon\"]",
+  "v": "cur",
+  "e": "db:frz.prompt_axis.funnel_key · back/db/DB-v2.32.sql:6229 (rd.dim_taxon axis funnel 키, 논리 참조)"
+ },
+ "T:pub_prompt_axis:col:3": {
+  "t": "[\"presence_keys[]\",\"\",\"presence 키 집합\"]",
+  "v": "cur",
+  "e": "db:frz.prompt_axis.presence_keys smallint[] · back/db/DB-v2.32.sql:6126-6128 COMMENT 'presence_keys = 행별 해석 존재값 키 집합'"
+ },
+ "T:pub_prompt_axis:col:4": {
+  "t": "[\"list_type_key\",\"FK\",\"\",\"dim_taxon\"]",
+  "v": "cur",
+  "e": "db:frz.prompt_axis.list_type_key · back/db/DB-v2.32.sql:6230"
+ },
+ "T:pub_prompt_axis:col:5": {
+  "t": "[\"depth1~3_key\",\"FK\",\"\",\"dim_taxon\"]",
+  "v": "cur",
+  "e": "db:frz.prompt_axis.depth1_key·depth2_key·depth3_key · back/db/DB-v2.32.sql:6231-6233"
+ },
+ "T:pub_prompt_axis:grain": {
+  "t": "발행 세대 × 프롬프트의 택소노미 축 = 1행.",
+  "v": "cur",
+  "e": "db:frz.prompt_axis PK (gen_key, prompt_key) · back/db/DB-v2.32.sql:6123"
+ },
+ "T:pub_prompt_axis:pk": {
+  "t": "gen_key + prompt_key",
+  "v": "cur",
+  "e": "db:frz.prompt_axis prompt_axis_pkey (gen_key, prompt_key)"
+ },
+ "T:pub_prompt_axis:inputs": {
+  "t": "데이터 분석팀 · app.prompt · app.brand (발행 시점 축)",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:6205-6234 (bake_hub cat: app.prompt funnel_stage·list_type·depth1~3·brand_presence ⋈ app.brand is_umbrella, 글로벌 = app.project standard_root, → rd.dim_taxon) · 설계: 데이터 분석팀(사용자 10-19)"
+ },
+ "T:pub_prompt_axis:uses": {
+  "t": "카드 동결 읽기의 택소노미 필터 · 버림 판정",
+  "v": "cur",
+  "e": "back/app/core/measure.py:222-237 (frozen_taxon_pred, frz.card_axis) · back/app/core/filters.py:336-360 (frozen_drops)"
+ },
+ "T:pub_prompt_axis:cur": {
+  "t": "frz.prompt_axis (열 전부, 읽기 = frz.card_axis)",
+  "v": "cur",
+  "e": "db:frz.prompt_axis (9열 = 상자 열 전부) · back/db/DB-v2.32.sql:6129-6132 (frz.card_axis = 활성 세대 축)"
+ },
+ "T:pub_brand_name:head": {
+  "t": "{\"name\":\"pub_brand_name\",\"s\":\"gold\",\"fam\":\"pub\",\"grain\":\"발행 × 브랜드 표시명\"}",
+  "v": "cur",
+  "e": "db:frz.brand_name · back/db/DB-v2.32.sql:6135-6141"
+ },
+ "T:pub_brand_name:col:0": {
+  "t": "[\"gen_key\",\"PF\",\"\",\"publication\"]",
+  "v": "cur",
+  "e": "db:frz.brand_name brand_name_gen_key_fkey → frz.generation"
+ },
+ "T:pub_brand_name:col:1": {
+  "t": "[\"brand_key\",\"PF\",\"\",\"dim_brand\"]",
+  "v": "cur",
+  "e": "db:frz.brand_name.brand_key (rd.dim_brand_name.brand_key, back/db/DB-v2.32.sql:6152) · 골드 dim_brand cur = rd.dim_brand_name (src/tables/03_fact.js:39)"
+ },
+ "T:pub_brand_name:col:2": {
+  "t": "[\"name\",\"\",\"발행 시점 표시명\"]",
+  "v": "cur",
+  "e": "db:frz.brand_name.name · back/db/DB-v2.32.sql:6140-6141 COMMENT '현행 summary_brand_mentions.brand_name 의 생성 시점 값'"
+ },
+ "T:pub_brand_name:grain": {
+  "t": "발행 세대 × 브랜드(셀 답변 브랜드 ∪ 당사) = 1행.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:6151-6156 (_bake_names: kind = 1 당사 ∪ 셀 답변 answer_brand 의 brand_key) · db:frz.brand_name PK (gen_key, brand_key)"
+ },
+ "T:pub_brand_name:pk": {
+  "t": "gen_key + brand_key",
+  "v": "cur",
+  "e": "db:frz.brand_name brand_name_pkey (gen_key, brand_key)"
+ },
+ "T:pub_brand_name:inputs": {
+  "t": "데이터 분석팀 (발행 시점 dim_brand 표시명)",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:6147-6161 (rd.dim_brand_name.name 굽는 시점 값) · 설계: 데이터 분석팀(사용자 10-19)"
+ },
+ "T:pub_brand_name:uses": {
+  "t": "카드 동결 읽기의 브랜드 표시명 (창의 가장 늦은 회차 이름, 개명 브랜드는 이름별 행)",
+  "v": "cur",
+  "e": "back/app/core/measure.py:1300-1319 (frozen_brand_names: 창의 가장 늦은 회차 세대 이름) · back/app/core/measure.py:1675-1680 (RENAMED_SQL 개명 브랜드 이름별 행)"
+ },
+ "T:pub_brand_name:cur": {
+  "t": "frz.brand_name (열 전부, 읽기 = frz.card_brand_name)",
+  "v": "cur",
+  "e": "db:frz.brand_name (gen_key·brand_key·name = 상자 열 전부) · back/db/DB-v2.32.sql:6142-6144 (frz.card_brand_name)"
+ }
+}

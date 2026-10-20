@@ -1,7 +1,7 @@
 """★ 점검표 생성기의 화면 항목 인벤토리(775)를 읽기 전용으로 덤프한다. 생성기 파일은 쓰지 않는다."""
 import json, os, sys
-GEN = sys.argv[1]
-OUT = sys.argv[2]
+GEN = os.path.abspath(sys.argv[1])
+OUT = os.path.abspath(sys.argv[2])
 sys.path.insert(0, GEN)
 os.chdir(GEN)
 src = open(os.path.join(GEN, 'build_checklist.py'), encoding='utf-8').read()

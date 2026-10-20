@@ -1,0 +1,437 @@
+{
+ "T:ctx_snapshot:head": {
+  "t": "{\"name\":\"ctx_snapshot\",\"s\":\"gold\",\"fam\":\"soc\",\"grain\":\"분석 스냅샷 1개\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:724-726 (ext.ctx_snapshot) · 설계: 골드 소셜 계열"
+ },
+ "T:ctx_snapshot:col:0": {
+  "t": "[\"snapshot_id\",\"PK\",\"int2\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:724 snapshot_id int2 PRIMARY KEY · db:ext.ctx_snapshot.snapshot_id"
+ },
+ "T:ctx_snapshot:col:1": {
+  "t": "[\"industry_entity_id\",\"\",\"산업 엔티티\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:724 industry_entity_id uuid NOT NULL · back/app/features/intent/social/context_map/service.py:120-123"
+ },
+ "T:ctx_snapshot:col:2": {
+  "t": "[\"source\",\"\",\"\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:724 source text NOT NULL · db:ext.ctx_snapshot.source"
+ },
+ "T:ctx_snapshot:col:3": {
+  "t": "[\"utterance_total\",\"\",\"\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:725 utterance_total int · db:ext.ctx_snapshot.utterance_total"
+ },
+ "T:ctx_snapshot:col:4": {
+  "t": "[\"taken_at\",\"\",\"기준일 (as_of)\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:725 taken_at · back/app/features/intent/social/context_map/router.py:46 (as_of = as_of_date(taken_at))"
+ },
+ "T:ctx_snapshot:col:5": {
+  "t": "[\"is_active\",\"\",\"산업당 활성 1개\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:725-726 (UNIQUE INDEX ctx_snapshot_one_active (industry_entity_id) WHERE is_active)"
+ },
+ "T:ctx_snapshot:col:6": {
+  "t": "[\"keyword\",\"\",\"지도 제목 키워드\"]",
+  "v": "des",
+  "e": "화면: 지도 제목 '구매 맥락 지도: {keyword}' (front/components/social-scraping/context-map-view.tsx:367; social-scraping-flow.tsx:131-136, 160) · 그래프 루트 노드 (node-map/build-graph.ts:48-56, sample-matrix.ts:16)"
+ },
+ "T:ctx_snapshot:col:7": {
+  "t": "[\"worker_total · source_total\",\"\",\"분석 표본 · 출처 수\"]",
+  "v": "des",
+  "e": "화면: 그래프 통계 '분석 표본' · '출처' (front/components/social-scraping/node-map/context-node-map-view.tsx:71-77) · 출처 막대 분모 (1169-1175) · 클러스터 분모 (866-867, 1354-1360, 1475-1481) · 표본 enrichment_stats.total_workers 120 · total_sources 85 (sample-matrix.ts:570-573)"
+ },
+ "T:ctx_snapshot:grain": {
+  "t": "구매 맥락 분석 스냅샷 1개 = 1행.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:724 (PK snapshot_id)"
+ },
+ "T:ctx_snapshot:pk": {
+  "t": "snapshot_id",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:724"
+ },
+ "T:ctx_snapshot:inputs": {
+  "t": "데이터 분석팀 (출처 제안: 소셜 코퍼스 · 리서치 실행 결과)",
+  "v": "des",
+  "e": "설계: 출처 제안 (지침 7 inputs 꼴) · 리서치 실행 결과 = ctx_research_run.snapshot_id 결과 지도 (Admin 탐색 완료 → 지도, front/components/social-scraping/social-scraping-flow.tsx:152-171)"
+ },
+ "T:ctx_snapshot:triggers": {
+  "t": "스냅샷 전체 적재 후 활성 전환 (제안)",
+  "v": "des",
+  "e": "제안 (현행 적재 경로 없음, 마이그레이션 부록 B HUB 매핑.md:151) · 활성 1개 규칙 DB-v2.32.sql:726"
+ },
+ "T:ctx_snapshot:uses": {
+  "t": "Project > Intent > Social Scraping 활성 스냅샷 · 기준일, Global > Customer interest > Social Scraping 지도 제목 · 그래프 통계, Admin > Global config > Customer interest config 지도 제목",
+  "v": "cur",
+  "e": "back/app/features/intent/social/context_map/router.py:45-54 · service.py:120-135 (활성 스냅샷 · meta source) · front/app/[locale]/(dash)/projects/[id]/intent/social-scraping/page.tsx:77-88 · 설계: Global 표 제목 · 그래프 통계 (social-scraping-tabs.tsx:29-36; context-map-view.tsx:367; context-node-map-view.tsx:71-77) · Admin 은 표 보기만 (admin/standards/customer-interest/page.tsx:50; context-map-view.tsx:81-86)"
+ },
+ "T:ctx_snapshot:rule:0": {
+  "t": "Project > Intent > Social Scraping 은 활성(is_active) 스냅샷을 읽습니다. 활성 스냅샷은 산업(industry_entity_id)당 1개입니다. 리서치 결과 지도는 ctx_research_run.snapshot_id 의 스냅샷입니다.",
+  "v": "cur",
+  "e": "back/app/features/intent/social/context_map/service.py:120-128 (active_snapshot) · queries.py:9-17 (WHERE is_active) · back/db/DB-v2.32.sql:724-726 (UNIQUE INDEX ctx_snapshot_one_active (industry_entity_id) WHERE is_active) · 설계: 리서치 결과 지도 = ctx_research_run.snapshot_id (social-scraping-flow.tsx:152-171 탐색 완료 → 지도)"
+ },
+ "T:ctx_snapshot:rule:1": {
+  "t": "그래프의 클러스터 표시는 ctx_entity.mention_count / worker_total, 비율은 mention_count ÷ worker_total 이고 조회 때 계산합니다.",
+  "v": "des",
+  "e": "화면: front/components/social-scraping/node-map/context-node-map-view.tsx:1354-1360, 1475-1481 (mention_count/total_workers · Math.round(mention_rate*100)), 866-867 (툴팁 m/w) · 설계: 분모 = ctx_snapshot.worker_total, 조회 때 계산"
+ },
+ "T:ctx_entity:head": {
+  "t": "{\"name\":\"ctx_entity\",\"s\":\"gold\",\"fam\":\"soc\",\"grain\":\"스냅샷 × 맥락·조건\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:727-731 (ext.ctx_entity)"
+ },
+ "T:ctx_entity:col:0": {
+  "t": "[\"snapshot_id\",\"PF\",\"\",\"ctx_snapshot\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:727 snapshot_id int2 NOT NULL REFERENCES ext.ctx_snapshot"
+ },
+ "T:ctx_entity:col:1": {
+  "t": "[\"id\",\"PK\",\"uuid\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:727, 730 id uuid · PRIMARY KEY (snapshot_id, id)"
+ },
+ "T:ctx_entity:col:2": {
+  "t": "[\"type\",\"\",\"ConsumerContext · ConsumerRequirement\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:728 CHECK (type IN ('ConsumerContext','ConsumerRequirement'))"
+ },
+ "T:ctx_entity:col:3": {
+  "t": "[\"canonical_name\",\"\",\"\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:728 canonical_name text NOT NULL"
+ },
+ "T:ctx_entity:col:4": {
+  "t": "[\"dimension\",\"\",\"맥락 테마 코드 (맥락만)\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:728 dimension text · back/app/features/intent/social/context_map/service.py:62-63, 85-86, 171-174 (맥락만 theme_of) · 조건은 이름 정규식 service.py:78-82, 176 · front/lib/db/schema.ts:1394 'ConsumerContext only'"
+ },
+ "T:ctx_entity:col:5": {
+  "t": "[\"mention_count · utterance_count\",\"\",\"\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:729 mention_count · utterance_count"
+ },
+ "T:ctx_entity:col:6": {
+  "t": "[\"sentiment_{positive,negative,neutral}\",\"\",\"표의 감성 분포\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:730 · back/app/features/intent/social/context_map/service.py:96-98 · front/lib/hgh/adapters/intent.ts:636-643 · 표 열 '감성' 긍정 · 부정 · 중립 (front/messages/ko.json socialScraping.contextMap.col.perspective · perspective.buyer=긍정) · 표기 정리(물리 열 같음)"
+ },
+ "T:ctx_entity:col:7": {
+  "t": "[\"group_id\",\"FK\",\"테마 · 카테고리\",\"ctx_group\"]",
+  "v": "des",
+  "e": "화면: 표 주제 · 카테고리 (context-map-view.tsx:925, 1020) · 그래프 테마/카테고리 (node-map/build-graph.ts:62-79, 122-139)"
+ },
+ "T:ctx_entity:col:8": {
+  "t": "[\"unique_source_count\",\"\",\"고유 출처 수\"]",
+  "v": "des",
+  "e": "화면: 그래프 출처 수 · 노드 숫자 · 출처 막대 (context-node-map-view.tsx:613-621, 816-818, 862-866, 1169-1175, 1342, 1463) · node-map/types.ts:26"
+ },
+ "T:ctx_entity:col:9": {
+  "t": "[\"perspective_{buyer,seller,neutral}\",\"\",\"구매자 · 판매자 · 중립 관점\"]",
+  "v": "des",
+  "e": "화면: 그래프 관점 필터 · 관점 막대 · 툴팁 구매자/판매자 (context-node-map-view.tsx:90-112, 822-835, 954-971, 1367-1368) · messages ko customerInterestSocialScraping.contextMap.perspective (관점 · 구매자 · 판매자 · 중립) · 표기 정리(물리 열 같음)"
+ },
+ "T:ctx_entity:col:10": {
+  "t": "[\"related_ids[]\",\"\",\"연관 조건 id · 조건만\"]",
+  "v": "des",
+  "e": "화면: 조건 툴팁 '연관' · 상세 '연관 조건' (front/components/social-scraping/node-map/context-node-map-view.tsx:878-880, 1625-1639) · node-map/types.ts:40 related_conditions · 표본 sample-matrix.ts:201, 242, 263, 284, 311, 352, 376, 403, 424, 454"
+ },
+ "T:ctx_entity:grain": {
+  "t": "스냅샷 × 구매 맥락 또는 구매 조건 1개 = 1행.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:727-730"
+ },
+ "T:ctx_entity:pk": {
+  "t": "snapshot_id + id",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:730 PRIMARY KEY (snapshot_id, id)"
+ },
+ "T:ctx_entity:inputs": {
+  "t": "데이터 분석팀",
+  "v": "des",
+  "e": "설계: 지침 7 inputs 꼴 (데이터 분석팀) · 스냅샷과 함께 공개되는 하위 표 (snapshot_id 가 PK 일부)"
+ },
+ "T:ctx_entity:triggers": {
+  "t": "스냅샷 적재 때 함께 (제안)",
+  "v": "des",
+  "e": "설계 제안: 스냅샷 단위 공개 (snapshot_id 가 PK 일부, ctx_snapshot 갱신 = 스냅샷 전체 적재 후 활성 전환)"
+ },
+ "T:ctx_entity:uses": {
+  "t": "Project > Intent > Social Scraping 맥락 · 조건 수 · 표 · 상세 · 내보내기 · 프롬프트 시드, Global · Admin 표 · 상세, Global 그래프 노드 · 연관 조건",
+  "v": "cur",
+  "e": "back/app/features/intent/social/context_map/queries.py:19-33, 59-72, 83-109 · service.py:138-179, 239-253, 283-297 · back/app/features/intent/social/prompts/service.py:59-97 · 설계: Global · Admin 표 · 상세 (social-scraping-flow.tsx:156-171) · Global 그래프 노드 · 연관 조건 (build-graph.ts:58-177; context-node-map-view.tsx:1625-1639) 신규 공급 · Admin 은 그래프 없음 (admin/standards/customer-interest/page.tsx:50)"
+ },
+ "T:ctx_entity:rule:0": {
+  "t": "표의 감성(긍정 · 부정 · 중립)은 sentiment_*, 그래프의 관점(구매자 · 판매자 · 중립)은 perspective_* 입니다.",
+  "v": "cur",
+  "e": "front/messages/ko.json socialScraping.contextMap.perspective (buyer 긍정 · seller 부정 · neutral 중립 = 표 감성) · customerInterestSocialScraping.contextMap.perspective (관점: 구매자 · 판매자 · 중립 = 그래프) · front/lib/hgh/adapters/intent.ts:636-643 (표 감성 = sentiment_positive · negative · neutral) · 설계: 그래프 관점 = perspective_*"
+ },
+ "T:ctx_entity:rule:1": {
+  "t": "연관 조건은 조합에서 나오지 않는 별도 목록입니다.",
+  "v": "des",
+  "e": "설계: 연관 조건은 조합과 별개 목록 (화면 표본 node-map/sample-matrix.ts:352, 454 의 연관 쌍이 조합 목록 473-551 에 없음) · 화면 연관 조건 front/components/social-scraping/node-map/context-node-map-view.tsx:878-880, 1625-1639"
+ },
+ "T:ctx_drive:head": {
+  "t": "{\"name\":\"ctx_drive\",\"s\":\"gold\",\"fam\":\"soc\",\"grain\":\"맥락 → 조건 연결\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:732-733 (ext.ctx_drive)"
+ },
+ "T:ctx_drive:col:0": {
+  "t": "[\"snapshot_id\",\"PK\",\"\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:732-733 PRIMARY KEY (snapshot_id, context_id, requirement_id)"
+ },
+ "T:ctx_drive:col:1": {
+  "t": "[\"context_id\",\"PF\",\"\",\"ctx_entity\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:732 context_id uuid NOT NULL · 조인 queries.py:53-56 · 설계: ctx_entity FK (DDL 에는 FK 없음)"
+ },
+ "T:ctx_drive:col:2": {
+  "t": "[\"requirement_id\",\"PF\",\"\",\"ctx_entity\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:732 requirement_id uuid NOT NULL · 조인 queries.py:46-49 · 설계: ctx_entity FK (DDL 에는 FK 없음)"
+ },
+ "T:ctx_drive:col:3": {
+  "t": "[\"co_count\",\"\",\"동시 출현\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:732 co_count int · front/lib/db/schema.ts:1405-1406 (co-mention)"
+ },
+ "T:ctx_drive:col:4": {
+  "t": "[\"strength_score\",\"\",\"그래프 유발 강도\"]",
+  "v": "des",
+  "e": "화면: 그래프 유발 강도 숫자 · 막대 · 링크 굵기 (context-node-map-view.tsx:1378-1407, 1580-1613; build-graph.ts:192) · 표본 strength 3~9 (sample-matrix.ts:51)"
+ },
+ "T:ctx_drive:grain": {
+  "t": "스냅샷 × 맥락 × 조건 = 1행.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:732-733"
+ },
+ "T:ctx_drive:pk": {
+  "t": "snapshot_id + context_id + requirement_id",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:733"
+ },
+ "T:ctx_drive:inputs": {
+  "t": "데이터 분석팀",
+  "v": "des",
+  "e": "설계: 지침 7 inputs 꼴 (데이터 분석팀) · 스냅샷과 함께 공개되는 하위 표 (snapshot_id 가 PK 일부)"
+ },
+ "T:ctx_drive:triggers": {
+  "t": "스냅샷 적재 때 함께 (제안)",
+  "v": "des",
+  "e": "설계 제안: 스냅샷 단위 공개 (snapshot_id 가 PK 일부, ctx_snapshot 갱신 = 스냅샷 전체 적재 후 활성 전환)"
+ },
+ "T:ctx_drive:uses": {
+  "t": "Project > Intent > Social Scraping 관계 수 · 연결 수 · 상세 연결 항목 · 프롬프트 시드, Global 그래프 유발 링크",
+  "v": "cur",
+  "e": "back/app/features/intent/social/context_map/queries.py:22, 45-57, 62, 69, 99-104 · service.py:141-142, 162, 246-253 · prompts/service.py:65-72 · 설계: Global 그래프 유발 링크 (build-graph.ts:179-203) 신규 공급"
+ },
+ "T:ctx_combination:head": {
+  "t": "{\"name\":\"ctx_combination\",\"s\":\"gold\",\"fam\":\"soc\",\"grain\":\"조건 조합 (2개 이상)\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:734-735 (ext.ctx_combination) · 설계: 3조건 이상 조합 (front/components/social-scraping/node-map/sample-matrix.ts:520; node-map/types.ts:61 attributes: string[])"
+ },
+ "T:ctx_combination:col:0": {
+  "t": "[\"snapshot_id\",\"PK\",\"\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:734-735 PRIMARY KEY (snapshot_id, cond_a, cond_b)"
+ },
+ "T:ctx_combination:col:1": {
+  "t": "[\"combo_id\",\"PK\",\"조건 id 를 : 로 이음\"]",
+  "v": "des",
+  "e": "현행 API 조합 id = '{cond_a}:{cond_b}' (back/app/features/intent/social/context_map/schemas.py:55; service.py:235) 를 N조건으로 확장"
+ },
+ "T:ctx_combination:col:2": {
+  "t": "[\"cond_a · cond_b\",\"FK\",\"첫째 · 둘째 조건\",\"ctx_entity\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:734 cond_a · cond_b uuid NOT NULL · 조인 queries.py:75-79 · 설계: ctx_entity FK (DDL 에는 FK 없음), 골드 PK 는 combo_id"
+ },
+ "T:ctx_combination:col:3": {
+  "t": "[\"cond_more[]\",\"\",\"셋째 이후 조건 id\"]",
+  "v": "des",
+  "e": "화면: 그래프 조합의 셋째 조건 (sample-matrix.ts:520 '2열 풀플랫' · '1500W 인버터' · 'AWD 4륜구동'; 목록 context-node-map-view.tsx:1270-1279; 상세 제목 1650; 링크 build-graph.ts:206-231)"
+ },
+ "T:ctx_combination:col:4": {
+  "t": "[\"co_count\",\"\",\"동시 출현\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:734 co_count int · 표 '동시 언급' context-map-view.tsx:1113 · 그래프 '동시출현' context-node-map-view.tsx:1694 · 표본 co_occurrence_count (sample-matrix.ts:477)"
+ },
+ "T:ctx_combination:col:5": {
+  "t": "[\"description\",\"\",\"조합 시나리오\"]",
+  "v": "des",
+  "e": "화면: 그래프 조합 목록 · 상세 '시나리오' (context-node-map-view.tsx:1293-1296, 1715-1720) · 표본 description (sample-matrix.ts:475-476)"
+ },
+ "T:ctx_combination:col:6": {
+  "t": "[\"total_speakers · unique_source_count\",\"\",\"중첩률 분모 · 고유 출처 수\"]",
+  "v": "des",
+  "e": "화면: 중첩률 (total_speakers > 0 일 때, context-node-map-view.tsx:1706-1707) · 근거 문구 (1288-1290, 1662-1664) · 출처 수 (1700) · 표본 total_speakers 120 · unique_source_count (sample-matrix.ts:478, 480)"
+ },
+ "T:ctx_combination:grain": {
+  "t": "스냅샷 × 조건 조합 1개 (쌍 또는 3개 이상) = 1행.",
+  "v": "des",
+  "e": "설계: 3조건 조합 공급 (sample-matrix.ts:520) · 현행 쌍 그레인 back/db/DB-v2.32.sql:734-735"
+ },
+ "T:ctx_combination:pk": {
+  "t": "snapshot_id + combo_id. 쌍 행(cond_more 없음)은 snapshot_id + cond_a + cond_b 로도 유일",
+  "v": "des",
+  "e": "설계: 골드 PK snapshot_id + combo_id · 쌍 유일은 back/db/DB-v2.32.sql:735 PRIMARY KEY (snapshot_id, cond_a, cond_b) 를 이어 받음"
+ },
+ "T:ctx_combination:inputs": {
+  "t": "데이터 분석팀",
+  "v": "des",
+  "e": "설계: 지침 7 inputs 꼴 (데이터 분석팀) · 스냅샷과 함께 공개되는 하위 표 (snapshot_id 가 PK 일부)"
+ },
+ "T:ctx_combination:triggers": {
+  "t": "스냅샷 적재 때 함께 (제안)",
+  "v": "des",
+  "e": "설계 제안: 스냅샷 단위 공개 (snapshot_id 가 PK 일부, ctx_snapshot 갱신 = 스냅샷 전체 적재 후 활성 전환)"
+ },
+ "T:ctx_combination:uses": {
+  "t": "Project > Intent > Social Scraping 관계 수 · 조합 패턴 표 · 내보내기 · 프롬프트 시드, Global · Admin 조합 표, Global 그래프 조합 목록 · 상세",
+  "v": "cur",
+  "e": "back/app/features/intent/social/context_map/queries.py:23, 27, 74-81, 90-97 · service.py:141-142, 203-231, 295-296 · prompts/service.py:64 · 설계: Global · Admin 조합 표 (context-map-view.tsx:1050-1115) · Global 그래프 조합 (build-graph.ts:205-232; context-node-map-view.tsx:1259-1300, 1641-1757) 신규 공급"
+ },
+ "T:ctx_combination:rule:0": {
+  "t": "조합 1개 = 1행입니다. 첫째 · 둘째 조건은 cond_a · cond_b, 셋째부터는 cond_more 에 둡니다. combo_id 는 구성 조건 id 를 : 로 이은 값입니다. 쌍 기준인 Project 표 · 내보내기 · 프롬프트 시드는 cond_more 가 빈 행만 읽습니다.",
+  "v": "cur",
+  "e": "back/app/features/intent/social/context_map/queries.py:74-97 (EXPORT_COMBINATIONS · POOL_COMBINATIONS = cond_a · cond_b 쌍) · service.py:203-231 (조합 표) · prompts/service.py:64 (시드) · 표 열 조건 A · 조건 B (front/messages/ko.json socialScraping.contextMap.col conditionA · conditionB) · 설계: cond_more · combo_id (화면 3조건 조합 node-map/sample-matrix.ts:520; 쌍 id = cond_a:cond_b, schemas.py:55)"
+ },
+ "T:ctx_combination:rule:1": {
+  "t": "그래프 중첩률 = co_count ÷ total_speakers, 근거 문구 = \"{total_speakers}명 중 {co_count}명 ({반올림 %})\" 이고, 저장하지 않고 조회 때 만듭니다.",
+  "v": "des",
+  "e": "화면: front/components/social-scraping/node-map/context-node-map-view.tsx:1706-1707 (Math.round(co_occurrence_rate*100)), 1288-1290 · 1662-1664 (근거 문구 표시) · 문구 형식 node-map/sample-matrix.ts:477-481 ('120명 중 14명 (12%)') · 설계: co_count ÷ total_speakers 로 조회 때 계산"
+ },
+ "T:ctx_domain:head": {
+  "t": "{\"name\":\"ctx_domain\",\"s\":\"gold\",\"fam\":\"soc\",\"grain\":\"엔티티 × 출처 host\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:739-740 (ext.ctx_domain)"
+ },
+ "T:ctx_domain:col:0": {
+  "t": "[\"snapshot_id\",\"PK\",\"\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:739-740 PRIMARY KEY (snapshot_id, entity_id, host)"
+ },
+ "T:ctx_domain:col:1": {
+  "t": "[\"entity_id\",\"PF\",\"\",\"ctx_entity\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:739 entity_id uuid · 설계: ctx_entity FK (DDL 에는 FK 없음)"
+ },
+ "T:ctx_domain:col:2": {
+  "t": "[\"host\",\"PK\",\"\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:739-740 host text NOT NULL · PK 일부"
+ },
+ "T:ctx_domain:col:3": {
+  "t": "[\"n\",\"\",\"\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:739 n int · queries.py:41-43"
+ },
+ "T:ctx_domain:grain": {
+  "t": "스냅샷 × 엔티티 × 출처 host = 1행.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:739-740"
+ },
+ "T:ctx_domain:pk": {
+  "t": "snapshot_id + entity_id + host",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:740"
+ },
+ "T:ctx_domain:inputs": {
+  "t": "데이터 분석팀",
+  "v": "des",
+  "e": "설계: 지침 7 inputs 꼴 (데이터 분석팀) · 스냅샷과 함께 공개되는 하위 표 (snapshot_id 가 PK 일부)"
+ },
+ "T:ctx_domain:triggers": {
+  "t": "스냅샷 적재 때 함께 (제안)",
+  "v": "des",
+  "e": "설계 제안: 스냅샷 단위 공개 (snapshot_id 가 PK 일부, ctx_snapshot 갱신 = 스냅샷 전체 적재 후 활성 전환)"
+ },
+ "T:ctx_domain:uses": {
+  "t": "Project > Intent > Social Scraping 출처 도메인 수 · 상세 소스 도메인, Global · Admin 상세 소스 도메인, Global 그래프 도메인별 출처",
+  "v": "cur",
+  "e": "back/app/features/intent/social/context_map/queries.py:24, 41-43 · service.py:245, 251 · 설계: Global · Admin 상세 소스 도메인 (context-map-view.tsx:1776-1806) · Global 그래프 도메인별 출처 (context-node-map-view.tsx:1856-1876) 신규 공급"
+ },
+ "T:ctx_evidence:head": {
+  "t": "{\"name\":\"ctx_evidence\",\"s\":\"gold\",\"fam\":\"soc\",\"grain\":\"근거 발화 1개\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:736-738 (ext.ctx_evidence)"
+ },
+ "T:ctx_evidence:col:0": {
+  "t": "[\"snapshot_id\",\"PK\",\"\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:736-737 PRIMARY KEY (snapshot_id, id)"
+ },
+ "T:ctx_evidence:col:1": {
+  "t": "[\"id\",\"PK\",\"uuid\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:736-737 id uuid"
+ },
+ "T:ctx_evidence:col:2": {
+  "t": "[\"entity_id\",\"FK\",\"\",\"ctx_entity\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:736, 738 entity_id uuid · 인덱스 ctx_evidence_entity · 설계: ctx_entity FK (DDL 에는 FK 없음)"
+ },
+ "T:ctx_evidence:col:3": {
+  "t": "[\"utterance_id\",\"\",\"\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:736 utterance_id uuid NOT NULL"
+ },
+ "T:ctx_evidence:col:4": {
+  "t": "[\"quote\",\"\",\"근거 인용\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:737 quote text NOT NULL · 화면 근거 인용 context-map-view.tsx:1741-1773"
+ },
+ "T:ctx_evidence:col:5": {
+  "t": "[\"source_host · source_url\",\"\",\"\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:737 source_host · source_url · queries.py:35-39"
+ },
+ "T:ctx_evidence:col:6": {
+  "t": "[\"sentiment\",\"\",\"\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:737 sentiment text · queries.py:36"
+ },
+ "T:ctx_evidence:col:7": {
+  "t": "[\"source_title · rank\",\"\",\"출처 제목 · 표시 순서\"]",
+  "v": "des",
+  "e": "화면: 근거 링크 텍스트 sourceTitle (context-map-view.tsx:1767; context-node-map-view.tsx:1839-1846) · 앞 1~2개만 툴팁 (context-node-map-view.tsx:839-846, 869-876) → 표시 순서"
+ },
+ "T:ctx_evidence:col:8": {
+  "t": "[\"perspective\",\"\",\"buyer · seller · neutral 관점\"]",
+  "v": "des",
+  "e": "화면: 그래프 근거 인용의 구매자 · 판매자 배지 (context-node-map-view.tsx:1823-1828) · 표본 evidence_quotes.perspective (node-map/types.ts:7-12)"
+ },
+ "T:ctx_evidence:grain": {
+  "t": "스냅샷 × 근거 발화 1개 = 1행.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:736-737"
+ },
+ "T:ctx_evidence:pk": {
+  "t": "snapshot_id + id",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:737 PRIMARY KEY (snapshot_id, id)"
+ },
+ "T:ctx_evidence:inputs": {
+  "t": "데이터 분석팀",
+  "v": "des",
+  "e": "설계: 지침 7 inputs 꼴 (데이터 분석팀) · 스냅샷과 함께 공개되는 하위 표 (snapshot_id 가 PK 일부)"
+ },
+ "T:ctx_evidence:triggers": {
+  "t": "스냅샷 적재 때 함께 (제안)",
+  "v": "des",
+  "e": "설계 제안: 스냅샷 단위 공개 (snapshot_id 가 PK 일부, ctx_snapshot 갱신 = 스냅샷 전체 적재 후 활성 전환)"
+ },
+ "T:ctx_evidence:uses": {
+  "t": "Project > Intent > Social Scraping 상세 근거 인용, Global · Admin 상세 근거 인용, Global 그래프 근거 인용",
+  "v": "cur",
+  "e": "back/app/features/intent/social/context_map/queries.py:35-39 · service.py:60, 244, 251 · router.py:96-104 · 설계: Global · Admin 상세 근거 (context-map-view.tsx:1741-1773) · Global 그래프 근거 (context-node-map-view.tsx:1415-1416, 1488-1489, 1724-1725) 신규 공급"
+ },
+ "T:ctx_evidence:rule:0": {
+  "t": "엔티티 상세의 근거 인용은 rank 순으로 읽고, 출처 제목 자리에는 source_title 을 씁니다.",
+  "v": "des",
+  "e": "설계: rank 순 · source_title · 화면 출처 제목 자리 sourceTitle (front/components/social-scraping/context-map-view.tsx:1745, 1767; front/components/social-scraping/node-map/context-node-map-view.tsx:1839)"
+ }
+}

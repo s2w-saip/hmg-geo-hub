@@ -1,0 +1,547 @@
+{
+ "T:cell_key:head": {
+  "t": "{\"name\":\"C 공통 셀 키\",\"s\":\"key\",\"fam\":\"dim\",\"grain\":\"셀 집계 PK 의 앞부분 · 사실의 필터 열\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:441-444 (rd.job 필터 열) · back/db/DB-v2.32.sql:455-458 (rd.answer 필터 열) · 설계: 셀 집계 PK 앞부분 = 골드 키 묶음 (NEWREQ kpi_cell)"
+ },
+ "T:cell_key:col:0": {
+  "t": "[\"build_id\",\"FK\",\"빌드(세대)\",\"build\"]",
+  "v": "des",
+  "e": "골드 설계: build 세대 (12_build build 테이블) · 사용자 지시 2026-10-19 골드 = build 세대 · 검토/README.md 7 (신규) 표지 삭제"
+ },
+ "T:cell_key:col:1": {
+  "t": "[\"population_key\",\"FK\",\"모수 규칙\",\"dim_population\"]",
+  "v": "des",
+  "e": "골드 설계: 셀 집계(kpi_cell · brand_cell · citation_cell · url_prompt_cell) 모수 구분 = dim_population · 검토/README.md 7 (신규) 표지 삭제"
+ },
+ "T:cell_key:col:2": {
+  "t": "[\"surface\",\"\",\"1 global · 2 website · 3 project\"]",
+  "v": "cur",
+  "e": "back/app/core/codes.py:18 SURFACE_CODE · db:rd.answer.surface"
+ },
+ "T:cell_key:col:3": {
+  "t": "[\"project_key\",\"FK\",\"\",\"dim_project\"]",
+  "v": "cur",
+  "e": "db:rd.answer.project_key · db:rd.job.project_key"
+ },
+ "T:cell_key:col:4": {
+  "t": "[\"cyc_key\",\"FK\",\"회차\",\"dim_cycle\"]",
+  "v": "cur",
+  "e": "db:rd.answer.cyc_key · back/db/DB-v2.32.sql:426"
+ },
+ "T:cell_key:col:5": {
+  "t": "[\"round_date · bucket_date\",\"\",\"회차일 · 지표별 버킷\"]",
+  "v": "cur",
+  "e": "db:rd.answer.round_date · back/ingest/project/apply/queries.py:842 (c.round_date = 회차 round_date) · 설계: bucket_date = 지표별 버킷 (골드 셀 집계)"
+ },
+ "T:cell_key:col:6": {
+  "t": "[\"prompt_key\",\"FK\",\"\",\"dim_prompt\"]",
+  "v": "cur",
+  "e": "db:rd.answer.prompt_key"
+ },
+ "T:cell_key:col:7": {
+  "t": "[\"engine_key\",\"FK\",\"\",\"dim_engine\"]",
+  "v": "cur",
+  "e": "db:rd.answer.engine_key"
+ },
+ "T:cell_key:col:8": {
+  "t": "[\"geo_key\",\"FK\",\"국가\",\"dim_country\"]",
+  "v": "cur",
+  "e": "db:rd.answer.geo_key"
+ },
+ "T:cell_key:col:9": {
+  "t": "[\"lang_key\",\"FK\",\"\",\"dim_lang\"]",
+  "v": "cur",
+  "e": "db:rd.answer.lang_key"
+ },
+ "T:cell_key:col:10": {
+  "t": "[\"bgrp\",\"\",\"브랜드 비트 (카탈로그·사이트·프로젝트)\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:854-856 (bgrp = global cat_mask · website 사이트 브랜드 비트 · project 프로젝트 브랜드 비트) · back/app/core/filters.py:42-43"
+ },
+ "T:cell_key:grain": {
+  "t": "테이블이 아니라 키 묶음입니다. 셀 집계(kpi_cell · brand_cell · citation_cell · url_prompt_cell)의 PK 앞부분이고, 사실 테이블(job_index · answer_fact · answer_brand_fact · citation_fact · acr_cell_fact)은 이 중 회차 · 프롬프트 · 프로젝트 · 엔진 · 국가 · 언어 · bgrp 를 일반 열로 가집니다.",
+  "v": "des",
+  "e": "골드 구조 설계: 04_kpi · 05_cit 셀 집계의 C(12) PK, 03_fact · 06_acr 의 C 좌표 열 (NEWREQ kpi_cell)"
+ },
+ "T:cell_key:pk": {
+  "t": "—",
+  "v": "lbl",
+  "e": "키 묶음이라 PK 없음"
+ },
+ "T:cell_key:inputs": {
+  "t": "데이터 분석팀",
+  "v": "des",
+  "e": "검토/README.md 4 inputs 규칙 · 사용자 지시 10-19 (골드를 채우는 쪽 = 데이터 분석팀)"
+ },
+ "T:cell_key:uses": {
+  "t": "필터·권한 축: 표면, 프로젝트, 회차·기간, 프롬프트(택소노미), 엔진, 국가(계정 권역 스코프 포함), 언어, 브랜드(bgrp)",
+  "v": "cur",
+  "e": "back/app/core/measure.py:184-215 scope_where (project_key · bgrp · engine_key · geo_key · lang_key · prompt_key) · back/app/core/filters.py:619 resolve_read_context · back/app/core/cycles.py:158-159 (surface · 회차 창) · back/app/core/filters.py:462-515 (택소노미 → prompt_key) · back/app/core/auth.py:679-684 (계정 권역 → 국가)"
+ },
+ "T:cell_key:rule:0": {
+  "t": "bucket_date 의 의미(측정일 · 회차일 · 앵커일)를 지표별로 고정하고 섞지 않습니다.",
+  "v": "des",
+  "e": "골드 셀 집계 설계: 지표별 버킷 기준 고정 (cell_key.bucket_date) · 검토/README.md 7 rules 접두 삭제"
+ },
+ "T:cell_key:rule:1": {
+  "t": "프로젝트 · 브랜드 · 엔진 · 국가 · 언어 · 프롬프트 권한과 필터는 이 열로 겁니다. 상위 합계에서도 권한 축을 지우지 않습니다.",
+  "v": "cur",
+  "e": "back/app/core/measure.py:184-215 scope_where (project_key · bgrp · engine_key · geo_key · lang_key · prompt_key) · back/app/core/filters.py:619 resolve_read_context · 설계: 골드 상위 합계(kpi_rollup)도 권한 축 유지"
+ },
+ "T:cell_key_c:ghost": {
+  "t": "{\"name\":\"C 공통 셀 키\",\"cols\":[[\"build · population\",\"\",\"\"],[\"surface · project · cyc\",\"\",\"\"],[\"round_date · bucket\",\"\",\"\"],[\"prompt · engine\",\"\",\"\"],[\"geo · lang · bgrp\",\"\",\"\"]]}",
+  "v": "lbl",
+  "e": "cell_key 열 이름의 줄임 표기"
+ },
+ "T:dim_population:head": {
+  "t": "{\"name\":\"dim_population\",\"s\":\"gold\",\"fam\":\"dim\",\"grain\":\"모수 규칙 1개\"}",
+  "v": "des",
+  "e": "NEWREQ kpi_cell (선택 가속층) · 신규 차원"
+ },
+ "T:dim_population:col:0": {
+  "t": "[\"population_key\",\"PK\",\"int2\"]",
+  "v": "des",
+  "e": "신규 차원 (골드 설계)"
+ },
+ "T:dim_population:col:1": {
+  "t": "[\"code\",\"\",\"mentions · citations · gap · url · acr\"]",
+  "v": "des",
+  "e": "신규 차원 · 현행 모수 계열: back/app/core/measure.py:327 mention_population · back/app/core/measure.py:391 citation_population"
+ },
+ "T:dim_population:col:2": {
+  "t": "[\"gate\",\"\",\"std_in · cit_in · gap · web_reg · acr_in · *_nc\"]",
+  "v": "des",
+  "e": "신규 차원 · 게이트 열 근거 back/db/DB-v2.32.sql:467-471 (acr_in · gap · std_in · cit_in) · back/db/DB-v2.32.sql:3150 (*_nc)"
+ },
+ "T:dim_population:col:3": {
+  "t": "[\"rep_mode\",\"\",\"대표 답변 선택 규칙\"]",
+  "v": "des",
+  "e": "신규 차원 · 대표 선택 근거 back/app/core/measure.py:327-361 (cell_rep · is_rep)"
+ },
+ "T:dim_population:grain": {
+  "t": "셀 집계(kpi_cell · brand_cell · citation_cell · url_prompt_cell)의 모수 규칙 1개 = 1행.",
+  "v": "des",
+  "e": "골드 설계: cell_key.population_key 가 셀 집계(kpi_cell · brand_cell · citation_cell · url_prompt_cell) PK 앞부분 · 옛 uses(셀 집계 모수 구분)를 grain 으로 옮김 (검토/README.md 7 uses 는 화면만)"
+ },
+ "T:dim_population:pk": {
+  "t": "population_key",
+  "v": "des",
+  "e": "신규 차원 (골드 설계)"
+ },
+ "T:dim_population:inputs": {
+  "t": "데이터 분석팀 (출처 제안: answer_fact 의 게이트 · 모수 열 정의)",
+  "v": "des",
+  "e": "검토/README.md 7 inputs 형식 '데이터 분석팀 (출처 제안: …)' · 출처 제안 = 03_fact answer_fact 의 게이트 · 모수 열(elig · is_rep · web_reg · std_in · cit_in · gap · acr_in · *_nc) 정의"
+ },
+ "T:dim_population:rule:0": {
+  "t": "언급(std_in) · 인용(cit_in, 결손 포함) · URL(web_reg) · ACR(acr_in) 모수가 서로 달라 답변 수 하나로 모든 분모를 대신할 수 없습니다.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:467-471 (std_in = elig ∧ acr_in ∧ analysis_state < 2, cit_in 결손 포함) · back/app/core/measure.py:674 (URL 분모 web_reg) · back/app/core/measure.py:327 · back/app/core/measure.py:391"
+ },
+ "T:dim_population:rule:1": {
+  "t": "삭제 행 포함 카탈로그 모수(std_in_nc · cit_in_nc), 셀 대표 답변(is_rep), 보고 유닛 게이트처럼 모수를 바꾸는 조합은 모수 규칙 행 하나로 둡니다.",
+  "v": "des",
+  "e": "설계: 모수 조합 = 모수 규칙 행 · 현행 근거 back/app/core/measure.py:352 (std_in_nc) · back/app/core/measure.py:409 (cit_in_nc) · back/app/core/measure.py:356 (is_rep) · back/app/core/measure.py:317-324 (보고 유닛 게이트) · 검토/README.md 7 스위치 이름 삭제"
+ },
+ "T:dim_project:head": {
+  "t": "{\"name\":\"dim_project\",\"s\":\"gold\",\"fam\":\"dim\",\"grain\":\"Scope 프로젝트 1개\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:383 (scope_project_id UNIQUE) · back/ingest/project/apply/queries.py:308-332"
+ },
+ "T:dim_project:col:0": {
+  "t": "[\"project_key\",\"PK\",\"int2\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:383"
+ },
+ "T:dim_project:col:1": {
+  "t": "[\"scope_project_id\",\"UK\",\"uuid\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:383 · db:rd.dim_project.scope_project_id"
+ },
+ "T:dim_project:col:2": {
+  "t": "[\"surface\",\"\",\"1 global · 2 website · 3 project\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:383 CHECK (surface IN (1,2,3)) · back/app/core/codes.py:18"
+ },
+ "T:dim_project:col:3": {
+  "t": "[\"is_root\",\"\",\"표준 루트 (global 1개)\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:324 (sf = 1 ∧ kind standard_root) · back/migration/seed/seed-30-dims.sql:160 (루트 1개 단언)"
+ },
+ "T:dim_project:col:4": {
+  "t": "[\"project_id\",\"\",\"프로젝트 ID (루트 · 고객 프로젝트)\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:322-330 (app.project p.project_id, scope_project_id 일치 · is_root = standard_root) · back/app/core/auth.py:722 (surface 3 고객 프로젝트 키) · back/app/features/qa/answers/detail/queries.py:24 (surface 1 루트의 project_id) · 설계: 골드 밖 FK 없음, 참조 없는 식별자 (검토/README.md 7)"
+ },
+ "T:dim_project:col:5": {
+  "t": "[\"site_id\",\"\",\"웹사이트 사이트 ID\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:322-331 (app.website_site w.site_id, scope_project_id 일치) · back/app/core/filters.py:740-743 (사이트 선택 p.site_id) · 설계: 골드 밖 FK 없음, 참조 없는 식별자 (검토/README.md 7)"
+ },
+ "T:dim_project:col:6": {
+  "t": "[\"site_brand_bit · site_geo_key\",\"\",\"사이트 브랜드 비트 · 국가\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:325 · back/ingest/project/apply/queries.py:330-331 (app.brand brand_bit · rd.dim_country geo_key) · back/db/DB-v2.32.sql:384"
+ },
+ "T:dim_project:col:7": {
+  "t": "[\"regions[]\",\"\",\"Scope 시장 설정\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:1104 (ing.sync_cursor.regions = Scope getProject 시장 설정 1:1 투영)"
+ },
+ "T:dim_project:grain": {
+  "t": "Scope 프로젝트 1개 = 1행. global 루트, 웹사이트 사이트, 고객 프로젝트의 Scope 프로젝트가 모두 들어갑니다.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:383 · back/ingest/project/apply/queries.py:308-332 · back/migration/seed/seed-30-dims.sql:129"
+ },
+ "T:dim_project:pk": {
+  "t": "project_key",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:383"
+ },
+ "T:dim_project:inputs": {
+  "t": "데이터 분석팀",
+  "v": "des",
+  "e": "검토/README.md 7 inputs 형식 '데이터 분석팀' · 사용자 지시 10-19 (골드를 채우는 쪽 = 데이터 분석팀)"
+ },
+ "T:dim_project:uses": {
+  "t": "표면·프로젝트 범위(global 루트 · 웹사이트 사이트 선택 · Project 화면의 프로젝트 키), 답변 상세 프로젝트 확인, Admin › Global config › Global prompts 시장 어휘(regions)",
+  "v": "cur",
+  "e": "back/app/core/codes.py:223-225 (Refs.projects surface 1·2) · back/app/core/filters.py:724-745 (웹 사이트 선택) · back/app/core/auth.py:722 (project 표면 키) · back/app/features/analytics/answers/detail/queries.py:22 · back/app/features/admin/catalog/reference/router.py:24 · front/lib/hgh/adapters/admin.ts:474"
+ },
+ "T:dim_cycle:head": {
+  "t": "{\"name\":\"dim_cycle\",\"s\":\"gold\",\"fam\":\"dim\",\"grain\":\"회차 1개\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:426 · 설계: 이름 rd.cycle → dim_cycle"
+ },
+ "T:dim_cycle:col:0": {
+  "t": "[\"cyc_key\",\"PK\",\"회차 키\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:426"
+ },
+ "T:dim_cycle:col:1": {
+  "t": "[\"cycle_id\",\"UK\",\"uuid\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:427 cycle_id UNIQUE"
+ },
+ "T:dim_cycle:col:2": {
+  "t": "[\"surface · ledger_backed\",\"\",\"표면 · 원장 회차(파생 아님)\"]",
+  "v": "cur",
+  "e": "back/ingest/cycles/ledger/queries.py:19 (ledger_backed = anchor_source <> derived)"
+ },
+ "T:dim_cycle:col:3": {
+  "t": "[\"project_key\",\"FK\",\"\",\"dim_project\"]",
+  "v": "cur",
+  "e": "db:rd.cycle.project_key"
+ },
+ "T:dim_cycle:col:4": {
+  "t": "[\"round_date · anchor_date\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.cycle.round_date · db:rd.cycle.anchor_date"
+ },
+ "T:dim_cycle:col:5": {
+  "t": "[\"status · servable\",\"\",\"상태 · 서빙 가능\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:1094 · back/ingest/cycles/ledger/queries.py:20-21"
+ },
+ "T:dim_cycle:col:6": {
+  "t": "[\"view_date · hidden_scope · hidden_reason\",\"\",\"노출일 · 숨김 범위 · 숨김 사유\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:1095-1096 · back/ingest/cycles/ledger/queries.py:22-27"
+ },
+ "T:dim_cycle:col:7": {
+  "t": "[\"expected_units · completed_units\",\"\",\"진행률\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:1097-1098 · back/app/features/admin/cycles/cycles/router.py:43"
+ },
+ "T:dim_cycle:col:8": {
+  "t": "[\"completed_answers · gap_answers\",\"\",\"\"]",
+  "v": "cur",
+  "e": "db:rd.cycle.completed_answers · db:rd.cycle.gap_answers"
+ },
+ "T:dim_cycle:col:9": {
+  "t": "[\"generation · ecat_ver\",\"\",\"표면 세대 · 고정 엔티티 버전\"]",
+  "v": "cur",
+  "e": "back/ingest/common/db.py:158-161 (generation = rd.surface_generation) · back/db/DB-v2.32.sql:4127 (ecat_ver = 노출 전이 때 고정한 엔티티 버전)"
+ },
+ "T:dim_cycle:grain": {
+  "t": "회차 1개 = 1행. 프로젝트 가상 회차도 같은 발급처에서 키를 받습니다.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:426 (= ing.cycle.cyc_key, 프로젝트 가상 회차 포함, 발급처 하나)"
+ },
+ "T:dim_cycle:pk": {
+  "t": "cyc_key",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:426"
+ },
+ "T:dim_cycle:inputs": {
+  "t": "데이터 분석팀",
+  "v": "des",
+  "e": "검토/README.md 7 inputs 형식 '데이터 분석팀' (app · judgment_change 삭제) · 사용자 지시 10-19"
+ },
+ "T:dim_cycle:uses": {
+  "t": "분석 화면의 기간·회차 창(servable ∧ view_date ≤ 오늘), 추이 · 기간 비교, 답변 상세 노출 게이트, Project › Prompt 영향 수, Project › Setting › General 분석 연결 진단, Entity catalog 버전 고정(ecat_ver)",
+  "v": "cur",
+  "e": "back/app/core/cycles.py:158-159 _CAND · back/app/core/cycles.py:299 resolve_window · back/app/features/analytics/kpi/compare/service.py:72 · back/app/features/analytics/trend/series/service.py:10 · back/app/features/analytics/answers/detail/queries.py:3 · back/app/features/projects/prompts/lifecycle/queries.py:18 · back/app/features/projects/settings/scope_link/queries.py:13 · back/app/features/admin/entities/versions/queries.py:154-158"
+ },
+ "T:dim_cycle:rule:0": {
+  "t": "servable · view_date · hidden_scope 는 조회 때 거는 게이트입니다(사실 행은 그대로). release 를 거치지 않고 바뀐 즉시 보이며, 바뀌면 data_version 을 올립니다.",
+  "v": "cur",
+  "e": "back/ingest/cycles/ledger/service.py:9 · back/ingest/cycles/ledger/service.py:216 (사실 행 불변, 조회 시 판정) · back/app/core/cycles.py:158-159 · 설계: release 밖 + data_version (12_build data_version)"
+ },
+ "T:dim_cycle:rule:1": {
+  "t": "status 0 open · 1 closed · 2 published · 3 stale. servable = published ∧ 함대 가시 (project 표면은 항상 참).",
+  "v": "cur",
+  "e": "back/app/core/codes.py:39 CYCLE_STATUS · back/db/DB-v2.32.sql:1094 · back/ingest/cycles/ledger/queries.py:21"
+ },
+ "T:dim_cycle:rule:2": {
+  "t": "hidden_scope 0 없음 · 1 all · 2 citations · 3 mentions, hidden_reason 0 없음 · 1 collection_error · 2 operator. 둘은 함께 0 이거나 함께 0 이 아닙니다.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:1095-1096 · back/app/core/codes.py:41 · back/db/DB-v2.32.sql:1088 rd_cycle_hidden_pair ((hidden_scope = 0) = (hidden_reason = 0))"
+ },
+ "T:dim_cycle:rule:3": {
+  "t": "최종 KPI 는 중간 집계 없이 회차 분석이 끝난 뒤 계산합니다 (20261015/D07).",
+  "v": "dec",
+  "e": "hmg-geo-hub-discussion-history/20261015/01_architecture.md D07 (최종 KPI 는 전체 분석 후, 중간 집계 없이)"
+ },
+ "T:cycle_pick_basis:head": {
+  "t": "{\"name\":\"cycle_pick_basis\",\"s\":\"gold\",\"fam\":\"dim\",\"grain\":\"회차 1개의 창 판정 근거\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:7375-7382"
+ },
+ "T:cycle_pick_basis:col:0": {
+  "t": "[\"cyc_key\",\"PF\",\"\",\"dim_cycle\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:7376 (PK, FK 없음) · 설계: dim_cycle 참조"
+ },
+ "T:cycle_pick_basis:col:1": {
+  "t": "[\"fleet_visible\",\"\",\"주 묶음 대표 회차 (함대 가시)\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:7400-7406 (표면·프로젝트·주 묶음 row_number = 1, 파생 회차 거짓)"
+ },
+ "T:cycle_pick_basis:col:2": {
+  "t": "[\"gap_ratio\",\"\",\"판정 갭 비율 numeric(6,5)\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:7378 · db:rd.cycle_pick_basis.gap_ratio"
+ },
+ "T:cycle_pick_basis:col:3": {
+  "t": "[\"gap_src\",\"\",\"ops · hub\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:7379 CHECK (gap_src IN (ops, hub))"
+ },
+ "T:cycle_pick_basis:col:4": {
+  "t": "[\"ops_status\",\"\",\"ops 회차 closed · generating · published\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:7370 (ops_status CHECK closed · generating · published, NOT NULL) · back/db/DB-v2.32.sql:7409-7413 (ops 행이 있으면 gap_src ops 이고 ops_status 값, 없으면 hub · NULL)"
+ },
+ "T:cycle_pick_basis:col:5": {
+  "t": "[\"updated_at\",\"\",\"\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:7381"
+ },
+ "T:cycle_pick_basis:grain": {
+  "t": "회차 1개 = 1행.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:7376"
+ },
+ "T:cycle_pick_basis:pk": {
+  "t": "cyc_key",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:7376"
+ },
+ "T:cycle_pick_basis:inputs": {
+  "t": "데이터 분석팀",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:7385-7426 (ing.cycle · ing.cycle_ops_gap 만 읽음, app 없음)"
+ },
+ "T:cycle_pick_basis:triggers": {
+  "t": "회차 개설 · 귀속 · 카운터 · 종결 · 발행 때마다",
+  "v": "cur",
+  "e": "back/ingest/cycles/ledger/service.py:141-143 (개설·귀속·카운터·종결·발행이 이 투영을 지남)"
+ },
+ "T:cycle_pick_basis:uses": {
+  "t": "Global · Website 카드(Overview 카드 · 추이 격자)와 기간 비교(Δ)의 누적 창(기간 선택 · 최근 N)을 발행 세대로 읽을지 판정",
+  "v": "cur",
+  "e": "back/app/core/cycles.py:210-212 frz_eligible (카드 ∧ global·website) · back/app/core/cycles.py:356-357 · back/app/core/cycles.py:369-370 (기간 선택 누적 창) · back/app/core/cycles.py:442-443 (최근 N) · back/app/core/cycles.py:705 (추이 격자) · back/app/features/analytics/kpi/compare/service.py:197-201 (기간 비교 스캔 창) · front/lib/hgh/adapters/dashboard.ts:71-91 (카드 = global · website Overview 요약 · 브랜드 · 추이 · GEO · 엔진 배지 · 도메인, compare 는 모든 화면) · 설계: frz.generation → publication"
+ },
+ "T:cycle_pick_basis:rule:0": {
+  "t": "gap_src ops 회차의 gap_ratio 는 운영 원값, hub 회차는 gap_answers ÷ completed_answers (소수 5자리) 입니다.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:7409-7412 (ops = g.analysis_gap_ratio 원값, hub = round(gap_answers / completed_answers, 5))"
+ },
+ "T:cycle_pick_basis:rule:1": {
+  "t": "생성 대기 회차 = 닫힘 ∧ 원장 회차 ∧ 숨김 아님 ∧ (website 면 fleet_visible) ∧ gap_ratio ≤ 0.05 ∧ ops_status ≠ generating ∧ 활성 발행 세대 없음. 누적 창에 생성 대기 회차가 있으면 발행 세대 대신 최신 사실로 읽습니다.",
+  "v": "cur",
+  "e": "back/app/core/cycles.py:238 ANALYSIS_GAP_MAX 0.05 · back/app/core/cycles.py:245-255 _PICK_HOLE_SQL (status closed ∧ ledger_backed ∧ hidden_scope 0 ∧ (website 면 fleet_visible) ∧ gap_ratio ≤ 0.05 ∧ ops_status IS DISTINCT FROM generating ∧ 활성 frz.generation 없음) · back/app/core/cycles.py:357 · back/app/core/cycles.py:370 · back/app/core/cycles.py:705-706 (구멍이면 frz=False = 라이브) · 설계: frz.generation → publication, 라이브 → 최신 사실"
+ },
+ "T:cycle_pick_basis:rule:2": {
+  "t": "바뀌면 data_version 을 올립니다.",
+  "v": "des",
+  "e": "골드 설계: release 밖 데이터 = data_version (12_build data_version) · 검토/README.md 7 rcache 삭제"
+ },
+ "T:dim_engine:head": {
+  "t": "{\"name\":\"dim_engine\",\"s\":\"gold\",\"fam\":\"dim\",\"grain\":\"AI 엔진 1개\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:378"
+ },
+ "T:dim_engine:col:0": {
+  "t": "[\"engine_key\",\"PK\",\"int2\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:378"
+ },
+ "T:dim_engine:col:1": {
+  "t": "[\"code\",\"UK\",\"AI 엔진 코드\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:378 code UNIQUE"
+ },
+ "T:dim_engine:col:2": {
+  "t": "[\"is_default\",\"\",\"기본 엔진 (engine 미지정 시)\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:210-217 (app.rule_param default_engines) · back/app/core/codes.py:192-194 (engine[] 비면 기본 엔진)"
+ },
+ "T:dim_engine:grain": {
+  "t": "AI 엔진 1개 = 1행.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:378"
+ },
+ "T:dim_engine:pk": {
+  "t": "engine_key",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:378"
+ },
+ "T:dim_engine:inputs": {
+  "t": "데이터 분석팀",
+  "v": "des",
+  "e": "검토/README.md 7 inputs 형식 '데이터 분석팀' (app.rule_param 삭제) · 사용자 지시 10-19"
+ },
+ "T:dim_engine:uses": {
+  "t": "엔진 필터 · 기본 엔진, 엔진 코드 표기(답변 · 인용 · ACR), 필터 옵션 엔진 목록, 프로젝트 만들기 · 엔진 설정의 엔진 어휘, 검수 목록 엔진 필터",
+  "v": "cur",
+  "e": "back/app/core/filters.py:769 · back/app/core/measure.py:200 · back/app/features/analytics/answers/list/service.py:89 · back/app/features/analytics/citations/domains/shared.py:99 · back/app/features/analytics/funnel/acr/service.py:86 · back/app/features/analytics/filters/options/service.py:136 · back/app/features/projects/project/core/shared.py:66-70 · back/app/features/projects/settings/engines/service.py:4 · back/app/features/qa/answers/list/scope.py:182"
+ },
+ "T:dim_country:head": {
+  "t": "{\"name\":\"dim_country\",\"s\":\"gold\",\"fam\":\"dim\",\"grain\":\"국가(시장) 1개\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:380-381"
+ },
+ "T:dim_country:col:0": {
+  "t": "[\"geo_key\",\"PK\",\"int2\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:380"
+ },
+ "T:dim_country:col:1": {
+  "t": "[\"code\",\"UK\",\"국가 코드 (대소문자 무시 유일)\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:380 code UNIQUE · back/db/DB-v2.32.sql:2302 dim_country_code_upper_uq (upper(code))"
+ },
+ "T:dim_country:col:2": {
+  "t": "[\"region_key\",\"FK\",\"대륙\",\"dim_region\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:380 REFERENCES rd.dim_region · back/migration/seed/seed-30-dims.sql:76 (대륙 권역) · back/ingest/project/apply/queries.py:266"
+ },
+ "T:dim_country:col:3": {
+  "t": "[\"kind · virtual_brand_bit\",\"\",\"iso · pseudo · virtual_brand · unknown · 가상 브랜드 비트\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:381 CHECK (iso · pseudo · virtual_brand · unknown) · back/ingest/project/apply/queries.py:260-262"
+ },
+ "T:dim_country:col:4": {
+  "t": "[\"hidden_standard\",\"\",\"global 숨김 시장\"]",
+  "v": "cur",
+  "e": "back/ingest/project/apply/queries.py:262 (app.hidden_market surface global) · back/app/features/analytics/filters/options/service.py:11"
+ },
+ "T:dim_country:grain": {
+  "t": "국가(시장) 1개 = 1행.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:380"
+ },
+ "T:dim_country:pk": {
+  "t": "geo_key",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:380"
+ },
+ "T:dim_country:inputs": {
+  "t": "데이터 분석팀",
+  "v": "des",
+  "e": "검토/README.md 7 inputs 형식 '데이터 분석팀' (app 삭제) · 사용자 지시 10-19"
+ },
+ "T:dim_country:uses": {
+  "t": "국가 필터·권한(가상 브랜드 코드 포함), 국가 코드 표기(국가별 GEO 현황 · 답변 · 인용 · ACR), global 숨김 시장, AI Conversion 시장 ↔ GA4 속성 매핑, Website 자사 · 타겟 URL 인용률 카드의 발행값 국가 범위, Admin › User management 계정 국가 스코프 검증",
+  "v": "cur",
+  "e": "back/app/core/filters.py:662-737 · back/app/core/auth.py:529-530 · back/app/features/analytics/geo/markets/service.py:188 · back/app/features/analytics/answers/list/service.py:90 · back/app/features/analytics/citations/prompts/service.py:102 · back/app/features/analytics/funnel/acr/queries.py:43 · back/app/features/analytics/filters/options/service.py:146 · back/app/features/analytics/funnel/conversion/service.py:114 · back/app/core/measure.py:917-929 (website 발행값 국가 범위 → 자사 · 타겟 URL 인용률) · back/db/DB-v2.32.sql:2604-2631 (계정 국가 스코프 검증)"
+ },
+ "T:dim_country:rule:0": {
+  "t": "kind unknown 은 geo_key 0 표식 행입니다.",
+  "v": "cur",
+  "e": "back/migration/seed/seed-30-dims.sql:79 · back/migration/seed/seed-30-dims.sql:86 (geo_key 0, kind unknown)"
+ },
+ "T:dim_region:head": {
+  "t": "{\"name\":\"dim_region\",\"s\":\"gold\",\"fam\":\"dim\",\"grain\":\"대륙 1개\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:379 · back/migration/seed/seed-3x-rules.sql:62-63 (_r_iso_region)"
+ },
+ "T:dim_region:col:0": {
+  "t": "[\"region_key\",\"PK\",\"int2\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:379"
+ },
+ "T:dim_region:col:1": {
+  "t": "[\"code\",\"UK\",\"대륙 (ISO 국가 → 대륙 매핑)\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:379 code UNIQUE · back/ingest/project/apply/queries.py:266-272 (_r_iso_region)"
+ },
+ "T:dim_region:grain": {
+  "t": "대륙 1개 = 1행.",
+  "v": "cur",
+  "e": "back/migration/seed/seed-30-dims.sql:82-84"
+ },
+ "T:dim_region:pk": {
+  "t": "region_key",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:379"
+ },
+ "T:dim_region:inputs": {
+  "t": "데이터 분석팀",
+  "v": "des",
+  "e": "검토/README.md 7 inputs 형식 '데이터 분석팀' · ISO → 대륙 매핑은 code 열 설명에 있음 · 화면 용도 없어 uses 삭제 (front/lib/hgh/adapters/catalog.ts:322 area 미사용)"
+ },
+ "T:dim_region:rule:0": {
+  "t": "code 는 Africa · Asia · Europe · Latin America · Middle East · North America · Oceania 와 key 0 빈 코드입니다. 계정 권역(RHQ)과는 다른 개념입니다.",
+  "v": "cur",
+  "e": "back/migration/seed/seed-3x-rules.sql:62-63 (_r_iso_region 값 7종) · back/migration/seed/seed-30-dims.sql:82 (0 빈 코드) · sql: SELECT code FROM rd.dim_region (hmg_synth 8행) · back/app/core/codes.py:214-217 (계정 권역 = app.rhq_region, 다른 개념)"
+ },
+ "T:dim_lang:head": {
+  "t": "{\"name\":\"dim_lang\",\"s\":\"gold\",\"fam\":\"dim\",\"grain\":\"언어 1개\"}",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:382"
+ },
+ "T:dim_lang:col:0": {
+  "t": "[\"lang_key\",\"PK\",\"int2\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:382"
+ },
+ "T:dim_lang:col:1": {
+  "t": "[\"code\",\"UK\",\"소문자 언어 코드\"]",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:382 UNIQUE CHECK (code = lower(code))"
+ },
+ "T:dim_lang:grain": {
+  "t": "언어 1개 = 1행.",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:382"
+ },
+ "T:dim_lang:pk": {
+  "t": "lang_key",
+  "v": "cur",
+  "e": "back/db/DB-v2.32.sql:382"
+ },
+ "T:dim_lang:inputs": {
+  "t": "데이터 분석팀",
+  "v": "des",
+  "e": "검토/README.md 7 inputs 형식 '데이터 분석팀' (app 삭제) · 사용자 지시 10-19"
+ },
+ "T:dim_lang:uses": {
+  "t": "언어 필터, 언어 코드 표기(ACR · 검수)",
+  "v": "cur",
+  "e": "back/app/core/codes.py:213 (Refs.langs → 필터 lang_keys) · back/app/features/analytics/funnel/acr/queries.py:35 · back/app/features/qa/answers/detail/queries.py:13 · back/app/features/qa/answers/list/scope.py:186"
+ }
+}

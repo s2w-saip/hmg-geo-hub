@@ -64,6 +64,11 @@
     "GET",
     "/v1/kpi/summary",
     "analytics/kpi/summary"
+   ],
+   [
+    "GET",
+    "/v1/mentions/brands",
+    "analytics/mentions/brands"
    ]
   ]
  },
@@ -80,6 +85,11 @@
     "GET",
     "/v1/kpi/summary",
     "analytics/kpi/summary"
+   ],
+   [
+    "GET",
+    "/v1/mentions/brands",
+    "analytics/mentions/brands"
    ]
   ]
  },
@@ -96,6 +106,11 @@
     "GET",
     "/v1/kpi/summary",
     "analytics/kpi/summary"
+   ],
+   [
+    "GET",
+    "/v1/mentions/brands",
+    "analytics/mentions/brands"
    ]
   ]
  },
@@ -112,6 +127,11 @@
     "GET",
     "/v1/kpi/summary",
     "analytics/kpi/summary"
+   ],
+   [
+    "GET",
+    "/v1/mentions/brands",
+    "analytics/mentions/brands"
    ]
   ]
  },
@@ -128,6 +148,11 @@
     "GET",
     "/v1/kpi/summary",
     "analytics/kpi/summary"
+   ],
+   [
+    "GET",
+    "/v1/mentions/brands",
+    "analytics/mentions/brands"
    ]
   ]
  },
@@ -487,6 +512,11 @@
   "hits": [
    [
     "GET",
+    "/v1/filters/dates",
+    "analytics/filters/dates"
+   ],
+   [
+    "GET",
     "/v1/filters/options",
     "analytics/filters/options"
    ],
@@ -513,6 +543,11 @@
   "hits": [
    [
     "GET",
+    "/v1/filters/dates",
+    "analytics/filters/dates"
+   ],
+   [
+    "GET",
     "/v1/filters/options",
     "analytics/filters/options"
    ],
@@ -537,6 +572,11 @@
   "api_call": "/v1/mentions/brands meta, /v1/filters/options·dates, /v1/kpi/compare",
   "source_label": "기준일 · 필터 바 · 기간 비교",
   "hits": [
+   [
+    "GET",
+    "/v1/filters/dates",
+    "analytics/filters/dates"
+   ],
    [
     "GET",
     "/v1/filters/options",
@@ -575,6 +615,11 @@
    ],
    [
     "GET",
+    "/v1/mentions/brands",
+    "analytics/mentions/brands"
+   ],
+   [
+    "GET",
     "/v1/trend",
     "analytics/trend/series"
    ]
@@ -598,6 +643,11 @@
     "GET",
     "/v1/kpi/summary",
     "analytics/kpi/summary"
+   ],
+   [
+    "GET",
+    "/v1/mentions/brands",
+    "analytics/mentions/brands"
    ],
    [
     "GET",
@@ -627,6 +677,11 @@
    ],
    [
     "GET",
+    "/v1/mentions/brands",
+    "analytics/mentions/brands"
+   ],
+   [
+    "GET",
     "/v1/trend",
     "analytics/trend/series"
    ]
@@ -650,6 +705,11 @@
     "GET",
     "/v1/kpi/summary",
     "analytics/kpi/summary"
+   ],
+   [
+    "GET",
+    "/v1/mentions/brands",
+    "analytics/mentions/brands"
    ],
    [
     "GET",
@@ -716,6 +776,11 @@
    ],
    [
     "GET",
+    "/v1/mentions/brands",
+    "analytics/mentions/brands"
+   ],
+   [
+    "GET",
     "/v1/trend",
     "analytics/trend/series"
    ]
@@ -734,6 +799,11 @@
     "GET",
     "/v1/kpi/engines",
     "analytics/kpi/engines"
+   ],
+   [
+    "GET",
+    "/v1/mentions/brands",
+    "analytics/mentions/brands"
    ],
    [
     "GET",
@@ -807,6 +877,11 @@
     "GET",
     "/v1/kpi/engines",
     "analytics/kpi/engines"
+   ],
+   [
+    "GET",
+    "/v1/trend",
+    "analytics/trend/series"
    ]
   ]
  },
@@ -823,6 +898,11 @@
     "GET",
     "/v1/kpi/engines",
     "analytics/kpi/engines"
+   ],
+   [
+    "GET",
+    "/v1/trend",
+    "analytics/trend/series"
    ]
   ]
  },
@@ -947,6 +1027,11 @@
   "hits": [
    [
     "GET",
+    "/v1/mentions/brands",
+    "analytics/mentions/brands"
+   ],
+   [
+    "GET",
     "/v1/trend",
     "analytics/trend/series"
    ]
@@ -1063,6 +1148,16 @@
    ],
    [
     "GET",
+    "/v1/citations/sources",
+    "analytics/citations/sources"
+   ],
+   [
+    "GET",
+    "/v1/filters/dates",
+    "analytics/filters/dates"
+   ],
+   [
+    "GET",
     "/v1/filters/options",
     "analytics/filters/options"
    ],
@@ -1086,6 +1181,16 @@
     "GET",
     "/v1/citations/domains",
     "analytics/citations/domains"
+   ],
+   [
+    "GET",
+    "/v1/citations/sources",
+    "analytics/citations/sources"
+   ],
+   [
+    "GET",
+    "/v1/filters/dates",
+    "analytics/filters/dates"
    ],
    [
     "GET",
@@ -1115,6 +1220,16 @@
    ],
    [
     "GET",
+    "/v1/citations/sources",
+    "analytics/citations/sources"
+   ],
+   [
+    "GET",
+    "/v1/filters/dates",
+    "analytics/filters/dates"
+   ],
+   [
+    "GET",
     "/v1/filters/options",
     "analytics/filters/options"
    ],
@@ -1134,6 +1249,11 @@
   "api_call": "/v1/citations/sources, /v1/trend (none·category)",
   "source_label": "인용 현황 · 공식(HMG)/딜러·마켓 인용 비중",
   "hits": [
+   [
+    "GET",
+    "/v1/citations/domains",
+    "analytics/citations/domains"
+   ],
    [
     "GET",
     "/v1/citations/sources",
@@ -1157,6 +1277,11 @@
   "hits": [
    [
     "GET",
+    "/v1/citations/domains",
+    "analytics/citations/domains"
+   ],
+   [
+    "GET",
     "/v1/citations/sources",
     "analytics/citations/sources"
    ],
@@ -1176,6 +1301,11 @@
   "api_call": "/v1/citations/sources, /v1/trend (none·category)",
   "source_label": "인용 현황 · 공식(HMG)/딜러·마켓 인용 비중",
   "hits": [
+   [
+    "GET",
+    "/v1/citations/domains",
+    "analytics/citations/domains"
+   ],
    [
     "GET",
     "/v1/citations/sources",
@@ -1199,6 +1329,11 @@
   "hits": [
    [
     "GET",
+    "/v1/citations/domains",
+    "analytics/citations/domains"
+   ],
+   [
+    "GET",
     "/v1/citations/sources",
     "analytics/citations/sources"
    ],
@@ -1220,8 +1355,18 @@
   "hits": [
    [
     "GET",
+    "/v1/citations/domains",
+    "analytics/citations/domains"
+   ],
+   [
+    "GET",
     "/v1/citations/prompts",
     "analytics/citations/prompts"
+   ],
+   [
+    "GET",
+    "/v1/citations/sources",
+    "analytics/citations/sources"
    ]
   ]
  },
@@ -1236,8 +1381,18 @@
   "hits": [
    [
     "GET",
+    "/v1/citations/domains",
+    "analytics/citations/domains"
+   ],
+   [
+    "GET",
     "/v1/citations/prompts",
     "analytics/citations/prompts"
+   ],
+   [
+    "GET",
+    "/v1/citations/sources",
+    "analytics/citations/sources"
    ]
   ]
  },
@@ -1250,6 +1405,11 @@
   "api_call": "/v1/citations/sources, /v1/trend dimension=category",
   "source_label": "출처 카테고리별 현황",
   "hits": [
+   [
+    "GET",
+    "/v1/citations/domains",
+    "analytics/citations/domains"
+   ],
    [
     "GET",
     "/v1/citations/sources",
@@ -1273,6 +1433,11 @@
   "hits": [
    [
     "GET",
+    "/v1/citations/domains",
+    "analytics/citations/domains"
+   ],
+   [
+    "GET",
     "/v1/citations/sources",
     "analytics/citations/sources"
    ],
@@ -1292,6 +1457,11 @@
   "api_call": "/v1/citations/sources (by_engine)",
   "source_label": "엔진별 출처 카테고리 구성",
   "hits": [
+   [
+    "GET",
+    "/v1/citations/domains",
+    "analytics/citations/domains"
+   ],
    [
     "GET",
     "/v1/citations/sources",
@@ -1358,6 +1528,16 @@
   "hits": [
    [
     "GET",
+    "/v1/citations/domains",
+    "analytics/citations/domains"
+   ],
+   [
+    "GET",
+    "/v1/citations/sources",
+    "analytics/citations/sources"
+   ],
+   [
+    "GET",
     "/v1/trend",
     "analytics/trend/series"
    ]
@@ -1376,6 +1556,11 @@
     "GET",
     "/v1/citations/domains",
     "analytics/citations/domains"
+   ],
+   [
+    "GET",
+    "/v1/citations/sources",
+    "analytics/citations/sources"
    ]
   ]
  },
@@ -3385,6 +3570,11 @@
   "hits": [
    [
     "GET",
+    "/v1/kpi/engines",
+    "analytics/kpi/engines"
+   ],
+   [
+    "GET",
     "/v1/kpi/summary",
     "analytics/kpi/summary"
    ],
@@ -3404,6 +3594,11 @@
   "api_call": "loadMentionsLive → GET /v1/mentions/brands + GET /v1/kpi/summary",
   "source_label": "전체 언급 수 · 언급 브랜드 수 · 측정 프롬프트 수",
   "hits": [
+   [
+    "GET",
+    "/v1/kpi/engines",
+    "analytics/kpi/engines"
+   ],
    [
     "GET",
     "/v1/kpi/summary",
@@ -3427,6 +3622,11 @@
   "hits": [
    [
     "GET",
+    "/v1/kpi/engines",
+    "analytics/kpi/engines"
+   ],
+   [
+    "GET",
     "/v1/kpi/summary",
     "analytics/kpi/summary"
    ],
@@ -3446,6 +3646,11 @@
   "api_call": "loadMentionsLive → GET /v1/mentions/brands + GET /v1/kpi/summary",
   "source_label": "전체 언급 수 · 언급 브랜드 수 · 측정 프롬프트 수",
   "hits": [
+   [
+    "GET",
+    "/v1/kpi/engines",
+    "analytics/kpi/engines"
+   ],
    [
     "GET",
     "/v1/kpi/summary",
@@ -3469,6 +3674,11 @@
   "hits": [
    [
     "GET",
+    "/v1/kpi/engines",
+    "analytics/kpi/engines"
+   ],
+   [
+    "GET",
     "/v1/kpi/summary",
     "analytics/kpi/summary"
    ],
@@ -3488,6 +3698,11 @@
   "api_call": "loadMentionsLive → GET /v1/mentions/brands + GET /v1/kpi/summary",
   "source_label": "전체 언급 수 · 언급 브랜드 수 · 측정 프롬프트 수",
   "hits": [
+   [
+    "GET",
+    "/v1/kpi/engines",
+    "analytics/kpi/engines"
+   ],
    [
     "GET",
     "/v1/kpi/summary",
@@ -4958,6 +5173,11 @@
     "POST",
     "/v1/projects/{project_id}/members/me/accept",
     "projects/members/invites"
+   ],
+   [
+    "POST",
+    "/v1/projects/{project_id}/members/me/reject",
+    "projects/members/invites"
    ]
   ]
  },
@@ -4973,6 +5193,11 @@
    [
     "POST",
     "/v1/projects/{project_id}/members/me/accept",
+    "projects/members/invites"
+   ],
+   [
+    "POST",
+    "/v1/projects/{project_id}/members/me/reject",
     "projects/members/invites"
    ]
   ]
@@ -6499,6 +6724,11 @@
     "GET",
     "/v1/mentions/prompts",
     "analytics/mentions/prompts"
+   ],
+   [
+    "GET",
+    "/v1/projects/{project_id}",
+    "projects/project/core"
    ]
   ]
  },
@@ -6557,6 +6787,11 @@
     "GET",
     "/v1/mentions/prompts",
     "analytics/mentions/prompts"
+   ],
+   [
+    "GET",
+    "/v1/projects/{project_id}",
+    "projects/project/core"
    ]
   ]
  },
@@ -6578,6 +6813,11 @@
     "GET",
     "/v1/citations/domains/{skey:path}",
     "analytics/citations/domain_detail"
+   ],
+   [
+    "GET",
+    "/v1/projects/{project_id}",
+    "projects/project/core"
    ]
   ]
  },
@@ -6594,6 +6834,11 @@
     "GET",
     "/v1/answers/{job_id}",
     "analytics/answers/detail"
+   ],
+   [
+    "GET",
+    "/v1/projects/{project_id}",
+    "projects/project/core"
    ]
   ]
  },
@@ -6863,6 +7108,11 @@
     "GET",
     "/v1/citations/domains",
     "analytics/citations/domains"
+   ],
+   [
+    "GET",
+    "/v1/projects/{project_id}",
+    "projects/project/core"
    ]
   ]
  },
@@ -6879,6 +7129,11 @@
     "GET",
     "/v1/citations/domains/{skey:path}",
     "analytics/citations/domain_detail"
+   ],
+   [
+    "GET",
+    "/v1/projects/{project_id}",
+    "projects/project/core"
    ]
   ]
  },
@@ -6895,6 +7150,11 @@
     "GET",
     "/v1/citations/domains/{skey:path}",
     "analytics/citations/domain_detail"
+   ],
+   [
+    "GET",
+    "/v1/projects/{project_id}",
+    "projects/project/core"
    ]
   ]
  },
@@ -6937,6 +7197,11 @@
     "GET",
     "/v1/citations/domains/{skey:path}",
     "analytics/citations/domain_detail"
+   ],
+   [
+    "GET",
+    "/v1/projects/{project_id}",
+    "projects/project/core"
    ]
   ]
  },
@@ -7814,6 +8079,11 @@
     "POST",
     "/v1/projects/{project_id}/prompts/{prompt_id}/pause",
     "projects/prompts/lifecycle"
+   ],
+   [
+    "POST",
+    "/v1/projects/{project_id}/prompts/{prompt_id}/resume",
+    "projects/prompts/lifecycle"
    ]
   ]
  },
@@ -7829,6 +8099,11 @@
    [
     "POST",
     "/v1/projects/{project_id}/prompts/{prompt_id}/pause",
+    "projects/prompts/lifecycle"
+   ],
+   [
+    "POST",
+    "/v1/projects/{project_id}/prompts/{prompt_id}/resume",
     "projects/prompts/lifecycle"
    ]
   ]
@@ -7948,6 +8223,11 @@
   "api_call": "api.setPromptCustomFieldValue → PUT /v1/projects/{project_id}/prompts/{prompt_id}/fields/{field_id}; api.clearPromptCustomFieldValue → DELETE 동일 경로",
   "source_label": "쓰기: 셀 인라인 태그 값 편집(blur 저장, 비우면 삭제)",
   "hits": [
+   [
+    "DELETE",
+    "/v1/projects/{project_id}/prompts/{prompt_id}/fields/{field_id}",
+    "projects/prompts/fields"
+   ],
    [
     "PUT",
     "/v1/projects/{project_id}/prompts/{prompt_id}/fields/{field_id}",
@@ -8821,6 +9101,11 @@
     "GET",
     "/v1/intent/keywords",
     "intent/keywords/tracked"
+   ],
+   [
+    "GET",
+    "/v1/projects/{project_id}",
+    "projects/project/core"
    ]
   ]
  },
@@ -8842,6 +9127,11 @@
     "GET",
     "/v1/intent/insight",
     "intent/keywords/research"
+   ],
+   [
+    "GET",
+    "/v1/projects/{project_id}",
+    "projects/project/core"
    ],
    [
     "POST",
@@ -8870,6 +9160,11 @@
     "intent/keywords/research"
    ],
    [
+    "GET",
+    "/v1/projects/{project_id}",
+    "projects/project/core"
+   ],
+   [
     "POST",
     "/v1/intent/fetches",
     "intent/keywords/fetches"
@@ -8887,8 +9182,23 @@
   "hits": [
    [
     "GET",
+    "/v1/intent/fetches/{change_id}",
+    "intent/keywords/fetches"
+   ],
+   [
+    "GET",
     "/v1/intent/insight",
     "intent/keywords/research"
+   ],
+   [
+    "GET",
+    "/v1/projects/{project_id}",
+    "projects/project/core"
+   ],
+   [
+    "POST",
+    "/v1/intent/fetches",
+    "intent/keywords/fetches"
    ],
    [
     "POST",
@@ -8908,8 +9218,23 @@
   "hits": [
    [
     "GET",
+    "/v1/intent/fetches/{change_id}",
+    "intent/keywords/fetches"
+   ],
+   [
+    "GET",
     "/v1/intent/insight",
     "intent/keywords/research"
+   ],
+   [
+    "GET",
+    "/v1/projects/{project_id}",
+    "projects/project/core"
+   ],
+   [
+    "POST",
+    "/v1/intent/fetches",
+    "intent/keywords/fetches"
    ],
    [
     "POST",
@@ -8929,8 +9254,23 @@
   "hits": [
    [
     "GET",
+    "/v1/intent/fetches/{change_id}",
+    "intent/keywords/fetches"
+   ],
+   [
+    "GET",
     "/v1/intent/related",
     "intent/keywords/research"
+   ],
+   [
+    "GET",
+    "/v1/projects/{project_id}",
+    "projects/project/core"
+   ],
+   [
+    "POST",
+    "/v1/intent/fetches",
+    "intent/keywords/fetches"
    ]
   ]
  },
@@ -8945,8 +9285,23 @@
   "hits": [
    [
     "GET",
+    "/v1/intent/fetches/{change_id}",
+    "intent/keywords/fetches"
+   ],
+   [
+    "GET",
     "/v1/intent/related",
     "intent/keywords/research"
+   ],
+   [
+    "GET",
+    "/v1/projects/{project_id}",
+    "projects/project/core"
+   ],
+   [
+    "POST",
+    "/v1/intent/fetches",
+    "intent/keywords/fetches"
    ]
   ]
  },
@@ -8961,8 +9316,23 @@
   "hits": [
    [
     "GET",
+    "/v1/intent/fetches/{change_id}",
+    "intent/keywords/fetches"
+   ],
+   [
+    "GET",
     "/v1/intent/lookup",
     "intent/keywords/research"
+   ],
+   [
+    "GET",
+    "/v1/projects/{project_id}",
+    "projects/project/core"
+   ],
+   [
+    "POST",
+    "/v1/intent/fetches",
+    "intent/keywords/fetches"
    ]
   ]
  },
@@ -9074,6 +9444,11 @@
     "GET",
     "/v1/intent/social/context-map/stats",
     "intent/social/context_map"
+   ],
+   [
+    "GET",
+    "/v1/projects/{project_id}",
+    "projects/project/core"
    ]
   ]
  },
@@ -9090,6 +9465,11 @@
     "GET",
     "/v1/intent/social/context-map/stats",
     "intent/social/context_map"
+   ],
+   [
+    "GET",
+    "/v1/projects/{project_id}",
+    "projects/project/core"
    ]
   ]
  },
@@ -9106,6 +9486,11 @@
     "GET",
     "/v1/intent/social/context-map/stats",
     "intent/social/context_map"
+   ],
+   [
+    "GET",
+    "/v1/projects/{project_id}",
+    "projects/project/core"
    ]
   ]
  },
@@ -9122,6 +9507,11 @@
     "GET",
     "/v1/intent/social/context-map/stats",
     "intent/social/context_map"
+   ],
+   [
+    "GET",
+    "/v1/projects/{project_id}",
+    "projects/project/core"
    ]
   ]
  },
@@ -9408,8 +9798,18 @@
   "hits": [
    [
     "GET",
+    "/v1/intent/fetches/{change_id}",
+    "intent/keywords/fetches"
+   ],
+   [
+    "GET",
     "/v1/intent/insight",
     "intent/keywords/research"
+   ],
+   [
+    "POST",
+    "/v1/intent/fetches",
+    "intent/keywords/fetches"
    ]
   ]
  },
@@ -9424,8 +9824,18 @@
   "hits": [
    [
     "GET",
+    "/v1/intent/fetches/{change_id}",
+    "intent/keywords/fetches"
+   ],
+   [
+    "GET",
     "/v1/intent/insight",
     "intent/keywords/research"
+   ],
+   [
+    "POST",
+    "/v1/intent/fetches",
+    "intent/keywords/fetches"
    ]
   ]
  },
@@ -9440,8 +9850,18 @@
   "hits": [
    [
     "GET",
+    "/v1/intent/fetches/{change_id}",
+    "intent/keywords/fetches"
+   ],
+   [
+    "GET",
     "/v1/intent/insight",
     "intent/keywords/research"
+   ],
+   [
+    "POST",
+    "/v1/intent/fetches",
+    "intent/keywords/fetches"
    ],
    [
     "POST",
@@ -9461,8 +9881,18 @@
   "hits": [
    [
     "GET",
+    "/v1/intent/fetches/{change_id}",
+    "intent/keywords/fetches"
+   ],
+   [
+    "GET",
     "/v1/intent/insight",
     "intent/keywords/research"
+   ],
+   [
+    "POST",
+    "/v1/intent/fetches",
+    "intent/keywords/fetches"
    ],
    [
     "POST",
@@ -9482,8 +9912,18 @@
   "hits": [
    [
     "GET",
+    "/v1/intent/fetches/{change_id}",
+    "intent/keywords/fetches"
+   ],
+   [
+    "GET",
     "/v1/intent/insight",
     "intent/keywords/research"
+   ],
+   [
+    "POST",
+    "/v1/intent/fetches",
+    "intent/keywords/fetches"
    ],
    [
     "POST",
@@ -9503,8 +9943,18 @@
   "hits": [
    [
     "GET",
+    "/v1/intent/fetches/{change_id}",
+    "intent/keywords/fetches"
+   ],
+   [
+    "GET",
     "/v1/intent/insight",
     "intent/keywords/research"
+   ],
+   [
+    "POST",
+    "/v1/intent/fetches",
+    "intent/keywords/fetches"
    ],
    [
     "POST",
@@ -9524,8 +9974,18 @@
   "hits": [
    [
     "GET",
+    "/v1/intent/fetches/{change_id}",
+    "intent/keywords/fetches"
+   ],
+   [
+    "GET",
     "/v1/intent/related",
     "intent/keywords/research"
+   ],
+   [
+    "POST",
+    "/v1/intent/fetches",
+    "intent/keywords/fetches"
    ]
   ]
  },
@@ -9893,6 +10353,11 @@
   "hits": [
    [
     "GET",
+    "/v1/admin/ga4/markets",
+    "admin/integrations/ga4"
+   ],
+   [
+    "GET",
     "/v1/admin/ga4/properties",
     "admin/integrations/ga4"
    ]
@@ -10203,6 +10668,11 @@
   "source_label": "생성 프롬프트 표(원 입력·질문·검색 의도·검색량)",
   "hits": [
    [
+    "GET",
+    "/v1/admin/changes/{change_id}",
+    "admin/changes/queue"
+   ],
+   [
     "POST",
     "/v1/admin/keyword-tools/to-prompt",
     "admin/integrations/keyword_tools"
@@ -10509,6 +10979,16 @@
     "GET",
     "/v1/admin/catalog/markets",
     "admin/catalog/reference"
+   ],
+   [
+    "PATCH",
+    "/v1/admin/catalog/prompts/{prompt_id:uuid}/labels",
+    "admin/catalog/prompts"
+   ],
+   [
+    "PATCH",
+    "/v1/admin/catalog/prompts/{prompt_id:uuid}/regions",
+    "admin/catalog/prompts"
    ],
    [
     "PATCH",
@@ -11365,6 +11845,11 @@
   "hits": [
    [
     "DELETE",
+    "/v1/admin/entities/versions/{ver}/entities/{entity_id}",
+    "admin/entities/versions"
+   ],
+   [
+    "DELETE",
     "/v1/admin/entities/versions/{ver}/surfaces/{surface_id}",
     "admin/entities/versions"
    ],
@@ -11394,6 +11879,11 @@
   "api_call": "entityMentionsAction → GET /v1/admin/entities/{entity_id}/mentions; putDraftEntity → PUT /v1/admin/entities/versions/{ver}/entities/{entity_id}; deleteDraftEntity → DELETE 같은 경로; addDraftSurface → POST /v1/admin/entities/versions/{ver}/surfaces; deleteDraftSurface → DELETE /v1/admin/entities/versions/{ver}/surfaces/{surface_id}",
   "source_label": "언급 샘플 + 쓰기: 초안 엔티티 편집·삭제, 표면 추가·삭제",
   "hits": [
+   [
+    "DELETE",
+    "/v1/admin/entities/versions/{ver}/entities/{entity_id}",
+    "admin/entities/versions"
+   ],
    [
     "DELETE",
     "/v1/admin/entities/versions/{ver}/surfaces/{surface_id}",
@@ -11427,6 +11917,11 @@
   "hits": [
    [
     "DELETE",
+    "/v1/admin/entities/versions/{ver}/entities/{entity_id}",
+    "admin/entities/versions"
+   ],
+   [
+    "DELETE",
     "/v1/admin/entities/versions/{ver}/surfaces/{surface_id}",
     "admin/entities/versions"
    ],
@@ -11458,6 +11953,11 @@
   "hits": [
    [
     "DELETE",
+    "/v1/admin/entities/versions/{ver}/entities/{entity_id}",
+    "admin/entities/versions"
+   ],
+   [
+    "DELETE",
     "/v1/admin/entities/versions/{ver}/surfaces/{surface_id}",
     "admin/entities/versions"
    ],
@@ -11487,6 +11987,11 @@
   "api_call": "entityMentionsAction → GET /v1/admin/entities/{entity_id}/mentions; putDraftEntity → PUT /v1/admin/entities/versions/{ver}/entities/{entity_id}; deleteDraftEntity → DELETE 같은 경로; addDraftSurface → POST /v1/admin/entities/versions/{ver}/surfaces; deleteDraftSurface → DELETE /v1/admin/entities/versions/{ver}/surfaces/{surface_id}",
   "source_label": "언급 샘플 + 쓰기: 초안 엔티티 편집·삭제, 표면 추가·삭제",
   "hits": [
+   [
+    "DELETE",
+    "/v1/admin/entities/versions/{ver}/entities/{entity_id}",
+    "admin/entities/versions"
+   ],
    [
     "DELETE",
     "/v1/admin/entities/versions/{ver}/surfaces/{surface_id}",
@@ -12225,7 +12730,32 @@
   "hits": [
    [
     "POST",
+    "/v1/admin/entities/applies/{apply_id}/abandon",
+    "admin/entities/versions"
+   ],
+   [
+    "POST",
+    "/v1/admin/entities/applies/{apply_id}/approve",
+    "admin/entities/versions"
+   ],
+   [
+    "POST",
     "/v1/admin/entities/applies/{apply_id}/preview",
+    "admin/entities/versions"
+   ],
+   [
+    "POST",
+    "/v1/admin/entities/applies/{apply_id}/reject",
+    "admin/entities/versions"
+   ],
+   [
+    "POST",
+    "/v1/admin/entities/applies/{apply_id}/resume",
+    "admin/entities/versions"
+   ],
+   [
+    "POST",
+    "/v1/admin/entities/applies/{apply_id}/rollback",
     "admin/entities/versions"
    ]
   ]
@@ -12241,7 +12771,32 @@
   "hits": [
    [
     "POST",
+    "/v1/admin/entities/applies/{apply_id}/abandon",
+    "admin/entities/versions"
+   ],
+   [
+    "POST",
+    "/v1/admin/entities/applies/{apply_id}/approve",
+    "admin/entities/versions"
+   ],
+   [
+    "POST",
     "/v1/admin/entities/applies/{apply_id}/preview",
+    "admin/entities/versions"
+   ],
+   [
+    "POST",
+    "/v1/admin/entities/applies/{apply_id}/reject",
+    "admin/entities/versions"
+   ],
+   [
+    "POST",
+    "/v1/admin/entities/applies/{apply_id}/resume",
+    "admin/entities/versions"
+   ],
+   [
+    "POST",
+    "/v1/admin/entities/applies/{apply_id}/rollback",
     "admin/entities/versions"
    ]
   ]
@@ -12257,7 +12812,32 @@
   "hits": [
    [
     "POST",
+    "/v1/admin/entities/applies/{apply_id}/abandon",
+    "admin/entities/versions"
+   ],
+   [
+    "POST",
+    "/v1/admin/entities/applies/{apply_id}/approve",
+    "admin/entities/versions"
+   ],
+   [
+    "POST",
     "/v1/admin/entities/applies/{apply_id}/preview",
+    "admin/entities/versions"
+   ],
+   [
+    "POST",
+    "/v1/admin/entities/applies/{apply_id}/reject",
+    "admin/entities/versions"
+   ],
+   [
+    "POST",
+    "/v1/admin/entities/applies/{apply_id}/resume",
+    "admin/entities/versions"
+   ],
+   [
+    "POST",
+    "/v1/admin/entities/applies/{apply_id}/rollback",
     "admin/entities/versions"
    ]
   ]
@@ -12273,7 +12853,32 @@
   "hits": [
    [
     "POST",
+    "/v1/admin/entities/applies/{apply_id}/abandon",
+    "admin/entities/versions"
+   ],
+   [
+    "POST",
+    "/v1/admin/entities/applies/{apply_id}/approve",
+    "admin/entities/versions"
+   ],
+   [
+    "POST",
     "/v1/admin/entities/applies/{apply_id}/preview",
+    "admin/entities/versions"
+   ],
+   [
+    "POST",
+    "/v1/admin/entities/applies/{apply_id}/reject",
+    "admin/entities/versions"
+   ],
+   [
+    "POST",
+    "/v1/admin/entities/applies/{apply_id}/resume",
+    "admin/entities/versions"
+   ],
+   [
+    "POST",
+    "/v1/admin/entities/applies/{apply_id}/rollback",
     "admin/entities/versions"
    ]
   ]
@@ -12289,7 +12894,32 @@
   "hits": [
    [
     "POST",
+    "/v1/admin/entities/applies/{apply_id}/abandon",
+    "admin/entities/versions"
+   ],
+   [
+    "POST",
+    "/v1/admin/entities/applies/{apply_id}/approve",
+    "admin/entities/versions"
+   ],
+   [
+    "POST",
     "/v1/admin/entities/applies/{apply_id}/preview",
+    "admin/entities/versions"
+   ],
+   [
+    "POST",
+    "/v1/admin/entities/applies/{apply_id}/reject",
+    "admin/entities/versions"
+   ],
+   [
+    "POST",
+    "/v1/admin/entities/applies/{apply_id}/resume",
+    "admin/entities/versions"
+   ],
+   [
+    "POST",
+    "/v1/admin/entities/applies/{apply_id}/rollback",
     "admin/entities/versions"
    ]
   ]
@@ -12305,7 +12935,32 @@
   "hits": [
    [
     "POST",
+    "/v1/admin/entities/applies/{apply_id}/abandon",
+    "admin/entities/versions"
+   ],
+   [
+    "POST",
+    "/v1/admin/entities/applies/{apply_id}/approve",
+    "admin/entities/versions"
+   ],
+   [
+    "POST",
     "/v1/admin/entities/applies/{apply_id}/preview",
+    "admin/entities/versions"
+   ],
+   [
+    "POST",
+    "/v1/admin/entities/applies/{apply_id}/reject",
+    "admin/entities/versions"
+   ],
+   [
+    "POST",
+    "/v1/admin/entities/applies/{apply_id}/resume",
+    "admin/entities/versions"
+   ],
+   [
+    "POST",
+    "/v1/admin/entities/applies/{apply_id}/rollback",
     "admin/entities/versions"
    ]
   ]
@@ -13324,6 +13979,16 @@
     "DELETE",
     "/v1/qa/answers/{job_id}/lock",
     "qa/review/lock"
+   ],
+   [
+    "PATCH",
+    "/v1/qa/answers/{job_id}/lock",
+    "qa/review/lock"
+   ],
+   [
+    "POST",
+    "/v1/qa/answers/{job_id}/lock",
+    "qa/review/lock"
    ]
   ]
  },
@@ -13340,6 +14005,16 @@
     "DELETE",
     "/v1/qa/answers/{job_id}/lock",
     "qa/review/lock"
+   ],
+   [
+    "PATCH",
+    "/v1/qa/answers/{job_id}/lock",
+    "qa/review/lock"
+   ],
+   [
+    "POST",
+    "/v1/qa/answers/{job_id}/lock",
+    "qa/review/lock"
    ]
   ]
  },
@@ -13354,6 +14029,16 @@
   "hits": [
    [
     "DELETE",
+    "/v1/qa/answers/{job_id}/lock",
+    "qa/review/lock"
+   ],
+   [
+    "PATCH",
+    "/v1/qa/answers/{job_id}/lock",
+    "qa/review/lock"
+   ],
+   [
+    "POST",
     "/v1/qa/answers/{job_id}/lock",
     "qa/review/lock"
    ]

@@ -1,0 +1,167 @@
+{
+ "V:dim": {
+  "t": "{\"g\":\"차원\",\"label\":\"공통 차원\",\"main\":\"cell_key\"}",
+  "v": "lbl",
+  "e": "탭 라벨 · 묶음 · 기본 선택"
+ },
+ "V:dim:note": {
+  "t": "셀 집계가 공유하는 키 묶음(C)과 공통 차원입니다. 정수 키는 발급 원장이라 재번호하지 않습니다. 차원은 build 로 나누지 않는 현재값이고, 바뀌면 data_version 을 올립니다.",
+  "v": "des",
+  "e": "src/tables/01_dim.js (cell_key 키 묶음 · 차원) · src/tables/12_build.js data_version (scope dim) · 정수 키 발급 원장: 검토/01_dim.json 각 PK 근거"
+ },
+ "V:prompt": {
+  "t": "{\"g\":\"차원\",\"label\":\"프롬프트·웹 유닛\",\"main\":\"dim_prompt\"}",
+  "v": "lbl",
+  "e": "탭 라벨"
+ },
+ "V:prompt:note": {
+  "t": "프롬프트 · 카탈로그 행 · 택소노미 · 프로젝트 커스텀 필드와 웹사이트 보고 유닛 · 유닛 소속 · 타겟 URL 입니다. 택소노미는 Global = catalog_entry, Project = dim_prompt 의 축 키입니다. dim_prompt → dim_project · dim_lang 관계는 열 옆에만 표시했습니다.",
+  "v": "des",
+  "e": "src/tables/02_prompt.js (dim_prompt 축 키 · catalog_entry · dim_custom_field · prompt_custom_value · web_*) · src/views.js prompt skip ['dim_prompt>dim_project_ref','dim_prompt>dim_lang_ref']"
+ },
+ "V:fact": {
+  "t": "{\"g\":\"답변 계열\",\"label\":\"답변 사실\",\"main\":\"answer_fact\"}",
+  "v": "lbl",
+  "e": "탭 라벨"
+ },
+ "V:fact:note": {
+  "t": "답변 단위 사실 층입니다. 사실은 build_id 로 세대를 나누고(job_index 는 last_build_id), 셀 집계는 같은 build 의 사실에서 만듭니다. answer_brand_fact · citation_fact 의 C 좌표 사본은 선이 겹쳐 생략했습니다.",
+  "v": "des",
+  "e": "src/tables/03_fact.js (사실 4종 build_id PF, job_index last_build_id) · src/tables/04_kpi.js · 05_cit.js 셀 inputs (같은 build 의 사실) · src/views.js fact skip"
+ },
+ "V:kpi": {
+  "t": "{\"g\":\"답변 계열\",\"label\":\"KPI·언급 셀\",\"main\":\"kpi_cell\"}",
+  "v": "lbl",
+  "e": "탭 라벨"
+ },
+ "V:kpi:note": {
+  "t": "kpi_cell · kpi_rollup · brand_cell 은 노출률 · 점유율 · 우호도 · 우선 노출도 · 스탠스와 경쟁 브랜드 비교를 셀 단위로 미리 더한 가속층(선택)입니다. entity_mention_total 은 엔티티별 전 기간 합계입니다. 점선 화살표는 같은 build 의 사실에서 만든다는 뜻입니다.",
+  "v": "des",
+  "e": "src/tables/04_kpi.js (kpi_cell · kpi_rollup · brand_cell = ACCEL 가속층, entity_mention_total 전 기간 합계) · src/views.js kpi derive (점선)"
+ },
+ "V:kpi:derive:0": {
+  "t": "[\"answer_fact_ref\",\"kpi_cell\",\"SUM\"]",
+  "v": "des",
+  "e": "kpi_cell inputs = answer_fact · answer_stance_fact (같은 build), src/tables/04_kpi.js kpi_cell d.inputs"
+ },
+ "V:kpi:derive:1": {
+  "t": "[\"answer_stance_fact_ref\",\"kpi_cell\",\"SUM\"]",
+  "v": "des",
+  "e": "kpi_cell inputs = answer_fact · answer_stance_fact (같은 build), src/tables/04_kpi.js kpi_cell d.inputs (스탠스 4종 열)"
+ },
+ "V:kpi:derive:2": {
+  "t": "[\"kpi_cell\",\"kpi_rollup\",\"SUM (가산 열)\"]",
+  "v": "des",
+  "e": "kpi_rollup inputs = kpi_cell (같은 build 에서 SUM), 열 '(가산 열) kpi_cell 과 동일' src/tables/04_kpi.js"
+ },
+ "V:kpi:derive:3": {
+  "t": "[\"answer_brand_fact_ref\",\"brand_cell\",\"SUM\"]",
+  "v": "des",
+  "e": "brand_cell inputs = answer_brand_fact (같은 build), src/tables/04_kpi.js brand_cell d.inputs"
+ },
+ "V:cit": {
+  "t": "{\"g\":\"답변 계열\",\"label\":\"인용 셀\",\"main\":\"citation_cell\"}",
+  "v": "lbl",
+  "e": "탭 라벨"
+ },
+ "V:cit:note": {
+  "t": "출처 · 카테고리 · 자사 판정과 URL 인용률입니다. citation_cell · url_prompt_cell 은 가속층(선택)이고, report_value 는 웹사이트 발행 리포트 값이라 사실에서 다시 계산하지 않습니다.",
+  "v": "cur",
+  "e": "src/tables/05_cit.js citation_cell · url_prompt_cell cur '없음 (신규 가속층)' rules ACCEL · report_value 원천 = back/ingest/cycles/ledger/queries.py:301-307 (app.report_publication ⋈ app.report_site_fact, 발행 리포트 값)"
+ },
+ "V:cit:derive:0": {
+  "t": "[\"citation_fact_ref\",\"citation_cell\",\"SUM\"]",
+  "v": "des",
+  "e": "citation_cell inputs = citation_fact (+ answer_fact 톤), src/tables/05_cit.js"
+ },
+ "V:cit:derive:1": {
+  "t": "[\"answer_fact_ref\",\"url_prompt_cell\",\"SUM\"]",
+  "v": "des",
+  "e": "url_prompt_cell inputs = answer_fact (tgt_cited · own_url_cited · web_reg), src/tables/05_cit.js"
+ },
+ "V:acr": {
+  "t": "{\"g\":\"기타 계열\",\"label\":\"ACR\",\"main\":\"acr_cell_fact\"}",
+  "v": "lbl",
+  "e": "탭 라벨"
+ },
+ "V:acr:note": {
+  "t": "ACR(AI Choice Rate, AI 선택률)입니다. 셀 단위 반복 모수와 엔티티 단위 선택 수를 나눠 담고, 모델별 선택 구도 표의 칸 승자는 저장하지 않고 필터를 건 뒤 조회 때 고릅니다.",
+  "v": "des",
+  "e": "src/tables/06_acr.js acr_cell_fact · acr_entity_fact · acr_entity_fact rule 0 (칸 승자 미저장, 조회 때 고름) · front/messages/en.json ACR = AI Choice Rate"
+ },
+ "V:ga4": {
+  "t": "{\"g\":\"기타 계열\",\"label\":\"GA4\",\"main\":\"ga4_row\"}",
+  "v": "lbl",
+  "e": "탭 라벨 (노트 없음)"
+ },
+ "V:kw": {
+  "t": "{\"g\":\"기타 계열\",\"label\":\"키워드\",\"main\":\"kw_volume_monthly\"}",
+  "v": "lbl",
+  "e": "탭 라벨"
+ },
+ "V:kw:note": {
+  "t": "키워드는 수집한 값을 그대로 담습니다. 데이터 분석팀이 외부 호출에 성공한 값만 씁니다. SERP 와 연관 검색어는 최신 호출 행을 집계 없이 그대로 씁니다.",
+  "v": "des",
+  "e": "src/tables/09_kw.js (kw_volume_monthly rule: 성공한 수집만 반영, back/ingest/cycles/workers/service.py:399-410) · kw_serp · kw_suggestion grain (집계 없이)"
+ },
+ "V:soc": {
+  "t": "{\"g\":\"기타 계열\",\"label\":\"소셜\",\"main\":\"ctx_entity\"}",
+  "v": "lbl",
+  "e": "탭 라벨"
+ },
+ "V:soc:note": {
+  "t": "소셜 구매 맥락은 스냅샷 단위로 공개합니다. 모든 테이블의 snapshot_id 는 ctx_snapshot 의 스냅샷이고, 선은 ctx_group · ctx_entity 쪽만 그렸습니다.",
+  "v": "des",
+  "e": "src/tables/10_soc.js (ctx_snapshot 단위) · 선: ctx_group · ctx_entity 의 snapshot_id 만 ctx_snapshot 참조(PF), 나머지 snapshot_id 는 참조 없음 (src/tables/10_soc.js)"
+ },
+ "V:research": {
+  "t": "{\"g\":\"기타 계열\",\"label\":\"소셜 리서치\",\"main\":\"ctx_research_run\"}",
+  "v": "lbl",
+  "e": "탭 라벨"
+ },
+ "V:research:note": {
+  "t": "Admin › Global config › Customer interest config 의 리서치 입력 · 탐색 화면 · 결과 지도가 읽는 리서치 실행 기록입니다. 데이터 분석팀이 진행 기록과 결과 스냅샷을 쓰고, 진행 화면은 이 테이블을 반복 조회해 갱신합니다.",
+  "v": "des",
+  "e": "src/tables/15_research.js ctx_research_* uses · triggers (리서치 진행 중 추가 · 갱신) · inventory.json Admin › Global config › Customer interest config"
+ },
+ "V:vis": {
+  "t": "{\"g\":\"기타 계열\",\"label\":\"AI Visibility\",\"main\":\"page_visibility_daily\"}",
+  "v": "lbl",
+  "e": "탭 라벨"
+ },
+ "V:vis:note": {
+  "t": "AI Visibility 화면이 읽는 페이지 단위 노출 · 크롤 데이터입니다. 분면 · 카드 수 · 중앙값은 저장하지 않고 필터를 건 페이지 집합에서 조회 때 계산합니다. 프롬프트 · 브랜드 · 경쟁사 필터는 그 페이지와 url_norm 이 같은 URL 을 인용한 답변으로 겁니다 (citation_fact ⋈ dim_url).",
+  "v": "des",
+  "e": "src/tables/08_vis.js page_visibility_daily rules (분면 · 카드 수 · 중앙값 미저장, url_norm 인용 답변 필터) · src/tables/05_cit.js dim_url"
+ },
+ "V:pub": {
+  "t": "{\"g\":\"공개\",\"label\":\"발행 세대\",\"main\":\"publication\"}",
+  "v": "lbl",
+  "e": "탭 라벨"
+ },
+ "V:pub:note": {
+  "t": "대시보드 카드 · 기간 비교가 읽는 회차별 동결 값입니다. 발행 세대가 그 회차의 사실 build 를 고정하고, 셀 대표 집합 · 프롬프트 게이트 · 택소노미 · 표시명 · 웹 셀 판정을 발행 시점 값으로 보관합니다.",
+  "v": "des",
+  "e": "src/tables/11_pub.js publication · pub_* uses (Global · Website Overview 카드, Global › Answer analysis › Mention 기간 비교) · 고정 build 규칙"
+ },
+ "V:build": {
+  "t": "{\"g\":\"공개\",\"label\":\"빌드·릴리스\",\"main\":\"build\"}",
+  "v": "lbl",
+  "e": "탭 라벨"
+ },
+ "V:build:note": {
+  "t": "골드를 회차마다 자동 생성하되(20261015 논의 · A04 협의 중) 검증을 통과한 세대만 보이게 하는 제어 테이블입니다. 일반 조회는 active_release → release_item → build_id, 카드 · 격자는 publication.build_id 를 읽습니다.",
+  "v": "des",
+  "e": "hmg-geo-hub-discussion-history/20261015/01_architecture.md:58 (승인 없이 회차마다 자동 생성, 논의) · actions.md:22 (A04 진행) · src/tables/12_build.js (release_item · active_release) · src/tables/11_pub.js (카드 · 격자 = publication.build_id)"
+ },
+ "V:silver": {
+  "t": "{\"g\":\"답변 계열\",\"label\":\"답변 원문\",\"main\":\"answer_body\"}",
+  "v": "lbl",
+  "e": "탭 라벨"
+ },
+ "V:silver:note": {
+  "t": "답변 모달 · 언급 프롬프트 드릴다운 · 검수 · 엔티티 카탈로그 화면이 읽는 원문 조회 뷰입니다. answer_* 6개에는 접근 범위 열(surface · project_key · geo_key · bgrp)이 있고, acr_cell_run · entity_mention_surface 에는 없습니다 (entity_mention_surface.surface 는 관측 표면 문자열).",
+  "v": "des",
+  "e": "src/tables/13_raw.js (SCOPE 열: answer_body · answer_registry · answer_citation_raw · answer_mention_raw · answer_occurrence · answer_stance_raw; acr_cell_run · entity_mention_surface 에 없음, entity_mention_surface.surface = 관측 표면) · uses 화면"
+ }
+}
