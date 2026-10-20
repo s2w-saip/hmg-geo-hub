@@ -369,7 +369,7 @@ export function toTypesByBrand(data: ApiBrandsData): MentionTypesByBrand | null 
 /**
  * B3 -> MentionTrend (the bottom "주별 브랜드 언급 수" chart). Series = the trend series of
  * share_of_voice (own first, API order); a point = that round's mention count, its week = the
- * Monday of the round date (rounds of one week are summed, as the legacy same-week fold); gap
+ * Monday of the round date (a week keeps its latest valued round: legacy keeps the latest answer per cell within a week); gap
  * rounds become gap weeks. Fewer than two valued weeks -> null (buildMentionTrend rule).
  */
 export function toMentionTrend(data: TrendResponse["data"]): MentionTrend | null {
@@ -393,7 +393,13 @@ export function toMentionTrend(data: TrendResponse["data"]): MentionTrend | null
       entries.push({ date: round, week: mondayOf(round), brand: label, count: p.ratio.num });
     }
   }
-  return buildMentionTrend(entries, labels, [...gapWeeks].sort());
+  // 한 주의 값 = 그 주 셀별 최신 답변(화면 정의 mentions.trend.hint, legacy 주별 스냅샷 2026-08-12). 회차 버킷은 회차마다 셀 대표를
+  // 내므로 같은 주 회차를 더하면 재측정 셀이 두 번 들어간다 → 주마다 마지막 값 있는 회차만 남긴다. 그 회차가 앞 회차의 셀을 다 재측정한
+  // 경우 셀별 최신과 같다(앞 회차에만 있는 셀은 빠진다 — 셀 단위 주 대표는 백엔드 집계가 필요하다)
+  const latestOfWeek = new Map<string, string>();
+  for (const e of entries) if ((latestOfWeek.get(e.week) ?? "") < e.date) latestOfWeek.set(e.week, e.date);
+  const weekly = entries.filter((e) => latestOfWeek.get(e.week) === e.date);
+  return buildMentionTrend(weekly, labels, [...gapWeeks].sort());
 }
 
 /** The legacy empty shape (EMPTY_MENTIONS, AGG:5513). */
@@ -445,7 +451,7 @@ export function toMentionsLive(p: MentionsParts): ApiMentionsLive | null {
     typeTotals: p.types && !wholeSuppression(p.types.meta) ? toTypeTotals(p.types.data, d.brands) : null,
     typesByBrand: toTypesByBrand(d),
     hasPosition: d.brands.some((b) => (b.avg_rank?.count ?? 0) > 0),
-    own: { share: pct1OrZero(d.own.share), avgPosition: rankAvg(d.own.avg_rank) },
+    own: { share: pct1OrZero(d.own.share), avgPosition: rankAvg(d.own.avg_rank), mentionRate: pct1OrZero(d.own.exposure) },
     trend: p.trend ? toMentionTrend(p.trend.data) : null,
     ...(p.trendFailed ? { trendDegraded: true } : {}),
   };

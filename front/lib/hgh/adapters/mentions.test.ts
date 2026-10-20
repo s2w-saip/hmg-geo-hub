@@ -227,27 +227,26 @@ describe("toMentionsLive: B-2 assembly", () => {
 });
 
 describe("toMentionTrend: weekly chart through the unchanged legacy builder", () => {
-  it("rounds of one week summed on the Monday, own series first, the gap round is a gap week", () => {
+  it("a week is its latest round on the Monday (a re-measure in one week is not counted twice), own series first, the gap round is a gap week", () => {
     const t = M.toMentionTrend(trendData())!;
     expect(t.series).toEqual(["Hyundai", "Kia", "Toyota"]);
-    // week 08-31 (Mon) = rounds 09-01 + 09-03: Hyundai 10+20, Kia 1+2, Toyota 5+6 ; week 09-07 =
-    // the collection-error round (all null + gap, inside the axis) ; week 09-14 = round 09-15
+    // week 08-31 (Mon) = rounds 09-01 and 09-03 of the same cells: the latest, 09-03 (Hyundai 20, Kia 2, Toyota 6) — not 10+20.
+    // week 09-07 = the collection-error round (all null + gap, inside the axis) ; week 09-14 = round 09-15
     expect(t.points.map((p) => [p.week, p.Hyundai, p.Kia, p.Toyota])).toEqual([
-      ["2026-08-31", 30, 3, 11],
+      ["2026-08-31", 20, 2, 6],
       ["2026-09-07", null, null, null],
       ["2026-09-14", 30, 3, 7],
     ]);
     expect(t.points[1].gap).toBeDefined();
   });
   it("parity: equals buildMentionTrend on the legacy weekly entries of the same WORLD", () => {
+    // legacy keeps the latest answer per cell within a week (scope-aggregates.ts 주별 스냅샷, 2026-08-12) before the builder:
+    // the 09-01 answers of re-measured cells are dropped, so week 08-31 carries the 09-03 values only
     const legacyEntries = [
-      { date: "2026-09-01", brand: "Hyundai", count: 10 },
       { date: "2026-09-03", brand: "Hyundai", count: 20 },
       { date: "2026-09-15", brand: "Hyundai", count: 30 },
-      { date: "2026-09-01", brand: "Kia", count: 1 },
       { date: "2026-09-03", brand: "Kia", count: 2 },
       { date: "2026-09-15", brand: "Kia", count: 3 },
-      { date: "2026-09-01", brand: "Toyota", count: 5 },
       { date: "2026-09-03", brand: "Toyota", count: 6 },
       { date: "2026-09-15", brand: "Toyota", count: 7 },
     ];

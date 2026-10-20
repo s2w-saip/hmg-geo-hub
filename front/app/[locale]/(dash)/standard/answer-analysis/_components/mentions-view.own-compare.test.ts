@@ -28,6 +28,16 @@ describe("ownCompareRow", () => {
     expect(r.mentionRate).toBe(25);
   });
 
+  it("without sub KPIs, takes the mention rate from the server own block (M01), not the brand-row maximum", () => {
+    // 브랜드 최댓값 25 는 하한일 뿐이다(두 브랜드가 다른 답변에 나오면 당사 등장 답변은 25% 보다 많다)
+    const r = ownCompareRow(own, { share: 40.2, avgPosition: 3.1, mentionRate: 31.5 }, null, "당사");
+    expect(r.mentionRate).toBe(31.5);
+    // sub KPI 값이 있으면 그 값이 우선이다(종전 그대로)
+    expect(ownCompareRow(own, { share: 40.2, avgPosition: 3.1, mentionRate: 31.5 }, 30.9, "당사").mentionRate).toBe(30.9);
+    // 서버 own 블록에 언급률이 없는 옛 캐시 항목은 종전 하한으로
+    expect(ownCompareRow(own, { share: 40.2, avgPosition: 3.1 }, null, "당사").mentionRate).toBe(25);
+  });
+
   it("shows no position when the server reports none", () => {
     expect(ownCompareRow(own, { share: 40.2, avgPosition: null }, null, "당사").avgPosition).toBeNull();
   });

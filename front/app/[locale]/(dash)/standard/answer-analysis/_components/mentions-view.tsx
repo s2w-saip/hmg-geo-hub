@@ -255,8 +255,11 @@ export function MentionsView({
  * 최상위 순위의 평균)와 다르다. 없으면(legacy 원천) 종전 합산 그대로.
  *
  * 언급률은 답변 단위 비율이라 브랜드 간 가산 불가(복수 브랜드 동시 언급이 중복 계상돼 3사 합이 100을 넘으면
- * 클램프로 100% 고정되던 버그). 서버의 답변 단위 DISTINCT 값(subKpis.ownMentionRate)을 쓰고, 없으면 하한인
- * 브랜드별 최대값으로 폴백한다.
+ * 클램프로 100% 고정되던 버그). 서버의 답변 단위 DISTINCT 값(subKpis.ownMentionRate)을 쓰고, 없으면(sub KPI 조회
+ * 일시 실패 등) 같은 정의의 서버 own 블록 M01 노출률, 그것도 없으면(legacy 원천·옛 캐시) 하한인 브랜드별 최대값으로 폴백한다.
+ *
+ * 평균 순위 M04 는 '당사'를 한 주체로 본 값이다: 답변마다 당사 브랜드 순위 중 최상위(back own_rk_* = 답변 안 그 브랜드
+ * 행 rk 의 min, 경쟁사 행과 같은 척도) 하나를 세므로, 한 답변에 당사 브랜드가 둘 나와도 두 번 세지 않는다.
  */
 export function ownCompareRow(
   ownRows: MentionsBrandLive[],
@@ -276,7 +279,7 @@ export function ownCompareRow(
     mentions: ownRows.reduce((s, b) => s + b.mentions, 0),
     prompts: ownRows.reduce((s, b) => s + b.prompts, 0),
     share: own ? own.share : ownRows.reduce((s, b) => s + b.share, 0),
-    mentionRate: ownMentionRate ?? ownRows.reduce((s, b) => Math.max(s, b.mentionRate), 0),
+    mentionRate: ownMentionRate ?? own?.mentionRate ?? ownRows.reduce((s, b) => Math.max(s, b.mentionRate), 0),
     avgPosition: own
       ? own.avgPosition
       : posWeighted.n > 0
