@@ -29,8 +29,12 @@ type CountrySortKey =
   | "humanRate"
   | "lift";
 
-const pct = (n: number, d: number): number =>
-  d > 0 ? Math.round((n / d) * 1000) / 10 : 0;
+// 분모(사용자·세션) 0 = 측정값 없음 → null("—"). 0.0% 로 그리면 격차가 −일반 전환율이 되어 표 맨 아래로 가라앉는다.
+const pct = (n: number, d: number): number | null =>
+  d > 0 ? Math.round((n / d) * 1000) / 10 : null;
+const gap = (ai: number | null, human: number | null): number | null =>
+  ai == null || human == null ? null : Math.round((ai - human) * 10) / 10;
+const fmtRate = (v: number | null) => (v == null ? "—" : `${v.toFixed(1)}%`);
 
 interface RegionGroup {
   region: string; // catalog region key
@@ -38,9 +42,9 @@ interface RegionGroup {
   // 권역 가중 합산 — 측정된 시장만 (분모/분자 모두 합산).
   aiUsersSum: number;
   humanUsersSum: number;
-  aiConvRate: number;
-  humanConvRate: number;
-  lift: number;
+  aiConvRate: number | null;
+  humanConvRate: number | null;
+  lift: number | null;
 }
 
 /** 권역(RHQ)별 묶음 + 권역 가중 전환율. 순수 함수(표 컴포넌트·시험이 같이 쓴다). */
@@ -62,9 +66,9 @@ export function groupConversionByRegion(
     // 반올림된 전환율 × 사용자로 되살린다(그 경우 최대 0.1%p 어긋난다).
     const aiUsersSum = rs.reduce((s, r) => s + r.aiUsers, 0);
     const humanUsersSum = rs.reduce((s, r) => s + r.humanUsers, 0);
-    const aiKeySum = rs.reduce((s, r) => s + (r.aiKeyEvents ?? (r.aiConvRate / 100) * r.aiUsers), 0);
+    const aiKeySum = rs.reduce((s, r) => s + (r.aiKeyEvents ?? ((r.aiConvRate ?? 0) / 100) * r.aiUsers), 0);
     const humanKeySum = rs.reduce(
-      (s, r) => s + (r.humanKeyEvents ?? (r.humanConvRate / 100) * r.humanUsers),
+      (s, r) => s + (r.humanKeyEvents ?? ((r.humanConvRate ?? 0) / 100) * r.humanUsers),
       0,
     );
     const aiConvRate = pct(aiKeySum, aiUsersSum);
@@ -76,7 +80,7 @@ export function groupConversionByRegion(
       humanUsersSum,
       aiConvRate,
       humanConvRate,
-      lift: Math.round((aiConvRate - humanConvRate) * 10) / 10,
+      lift: gap(aiConvRate, humanConvRate),
     });
   }
   // Biggest region (by AI users) first.
@@ -156,9 +160,9 @@ function RegionSection({
           <p className="text-[11px] text-muted-foreground">
             {t("region.summary", {
               count: group.rows.length,
-              ai: group.aiConvRate.toFixed(1),
-              human: group.humanConvRate.toFixed(1),
-              lift: `${group.lift >= 0 ? "+" : ""}${group.lift.toFixed(1)}`,
+              ai: fmtRate(group.aiConvRate),
+              human: fmtRate(group.humanConvRate),
+              lift: group.lift == null ? "—" : `${group.lift >= 0 ? "+" : ""}${group.lift.toFixed(1)}pp`,
             })}
           </p>
         </div>
@@ -180,20 +184,19 @@ function RegionSection({
               <td className="px-3 py-2 text-foreground">{r.countryLabel}</td>
               <td className="px-3 py-2 text-right text-foreground">{r.aiUsers.toLocaleString()}</td>
               <td className="px-3 py-2 text-right text-muted-foreground">{r.humanUsers.toLocaleString()}</td>
-              <td className="px-3 py-2 text-right font-medium text-foreground">{r.aiConvRate.toFixed(1)}%</td>
-              <td className="px-3 py-2 text-right text-muted-foreground">{r.humanConvRate.toFixed(1)}%</td>
+              <td className="px-3 py-2 text-right font-medium text-foreground">{fmtRate(r.aiConvRate)}</td>
+              <td className="px-3 py-2 text-right text-muted-foreground">{fmtRate(r.humanConvRate)}</td>
               <td
                 className={cn(
                   "px-3 py-2 text-right font-semibold",
-                  r.lift > 0
+                  r.lift != null && r.lift > 0
                     ? "text-emerald-600"
-                    : r.lift < 0
+                    : r.lift != null && r.lift < 0
                       ? "text-destructive"
                       : "text-muted-foreground",
                 )}
               >
-                {r.lift > 0 ? "+" : ""}
-                {r.lift.toFixed(1)}pp
+                {r.lift == null ? "—" : `${r.lift > 0 ? "+" : ""}${r.lift.toFixed(1)}pp`}
               </td>
             </tr>
           ))}

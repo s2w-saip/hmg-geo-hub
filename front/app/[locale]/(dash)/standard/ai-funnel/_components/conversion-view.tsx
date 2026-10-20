@@ -40,10 +40,16 @@ import type {
   ConversionLive,
   AiTrafficConversionRollup,
   AiVisitsTrendPoint,
+  ConversionPageRow,
   EngineBreakdownRow,
 } from "@/lib/ga4/conversion";
 import { CountryConversionTable } from "./conversion-countries-table";
 import { ConversionPeriodSelect } from "./conversion-period-select";
+
+// 전환율 null = 그 코호트 세션(분모) 0 이라 측정값이 없다(API 원천) → "—". 격차도 한쪽 비율이 없으면 "—".
+const fmtRate = (v: number | null) => (v == null ? "—" : `${v.toFixed(1)}%`);
+const fmtLift = (v: number | null) => (v == null ? "—" : `${v >= 0 ? "+" : ""}${v.toFixed(1)}pp`);
+const liftColor = (v: number | null) => (v == null ? "text-muted-foreground" : v >= 0 ? "text-emerald-600" : "text-destructive");
 
 // Locale-independent proper nouns — mirrors dimension-filter-panel's
 // ENGINE_LABEL (not exported there; this view only ever shows the two engines
@@ -187,10 +193,7 @@ export function ConversionView({
     });
   }, [sig, liveData]);
 
-  const { sorted: pagesSorted, headerProps } = useSortableTable<
-    (typeof SAMPLE_CONVERSION_PAGES)[number],
-    ConversionSortKey
-  >(
+  const { sorted: pagesSorted, headerProps } = useSortableTable<ConversionPageRow, ConversionSortKey>(
     pages,
     {
       url: (p) => p.url,
@@ -224,7 +227,7 @@ export function ConversionView({
           <RateCard
             icon={Sparkles}
             label={t("kpi.ai")}
-            value={`${rollupData.aiConvRate.toFixed(1)}%`}
+            value={fmtRate(rollupData.aiConvRate)}
             hint={t("kpi.frac", {
               events: rollupData.totalAiKeyEvents.toLocaleString(),
               users: rollupData.totalAiUsers.toLocaleString(),
@@ -234,7 +237,7 @@ export function ConversionView({
           <RateCard
             icon={Users}
             label={t("kpi.human")}
-            value={`${rollupData.humanConvRate.toFixed(1)}%`}
+            value={fmtRate(rollupData.humanConvRate)}
             hint={t("kpi.frac", {
               events: rollupData.totalHumanKeyEvents.toLocaleString(),
               users: rollupData.totalHumanUsers.toLocaleString(),
@@ -244,9 +247,9 @@ export function ConversionView({
           <RateCard
             icon={TrendingUp}
             label={t("kpi.lift")}
-            value={`${rollupData.lift >= 0 ? "+" : ""}${rollupData.lift.toFixed(1)}pp`}
+            value={fmtLift(rollupData.lift)}
             hint={t("kpi.liftHint")}
-            color={rollupData.lift >= 0 ? "text-emerald-600" : "text-destructive"}
+            color={liftColor(rollupData.lift)}
           />
         </div>
         <div className="rounded-lg border border-border bg-card px-4 py-3 text-[12px] text-muted-foreground">
@@ -287,7 +290,7 @@ export function ConversionView({
         <RateCard
           icon={Sparkles}
           label={t("kpi.ai")}
-          value={`${summary.aiConvRate.toFixed(1)}%`}
+          value={fmtRate(summary.aiConvRate)}
           hint={t("kpi.frac", {
             events: summary.aiKeyEvents.toLocaleString(),
             users: summary.aiUsersTotal.toLocaleString(),
@@ -298,7 +301,7 @@ export function ConversionView({
         <RateCard
           icon={Users}
           label={t("kpi.human")}
-          value={`${summary.humanConvRate.toFixed(1)}%`}
+          value={fmtRate(summary.humanConvRate)}
           hint={t("kpi.frac", {
             events: summary.humanKeyEvents.toLocaleString(),
             users: summary.humanUsersTotal.toLocaleString(),
@@ -308,9 +311,9 @@ export function ConversionView({
         <RateCard
           icon={TrendingUp}
           label={t("kpi.lift")}
-          value={`${summary.lift >= 0 ? "+" : ""}${summary.lift.toFixed(1)}pp`}
+          value={fmtLift(summary.lift)}
           hint={t("kpi.liftHint")}
-          color={summary.lift >= 0 ? "text-emerald-600" : "text-destructive"}
+          color={liftColor(summary.lift)}
         />
       </div>
       </TooltipProvider>
@@ -419,23 +422,22 @@ export function ConversionView({
                   {p.humanUsers.toLocaleString()}
                 </td>
                 <td className="px-3 py-2 text-right font-medium text-foreground">
-                  {p.aiConvRate.toFixed(1)}%
+                  {fmtRate(p.aiConvRate)}
                 </td>
                 <td className="px-3 py-2 text-right text-muted-foreground">
-                  {p.humanConvRate.toFixed(1)}%
+                  {fmtRate(p.humanConvRate)}
                 </td>
                 <td
                   className={cn(
                     "px-3 py-2 text-right font-semibold",
-                    p.lift > 0
+                    p.lift != null && p.lift > 0
                       ? "text-emerald-600"
-                      : p.lift < 0
+                      : p.lift != null && p.lift < 0
                         ? "text-destructive"
                         : "text-muted-foreground",
                   )}
                 >
-                  {p.lift > 0 ? "+" : ""}
-                  {p.lift.toFixed(1)}pp
+                  {p.lift == null ? "—" : `${p.lift > 0 ? "+" : ""}${p.lift.toFixed(1)}pp`}
                 </td>
               </tr>
             ))}
@@ -515,8 +517,8 @@ function EngineBreakdownCard({ rows }: { rows: EngineBreakdownRow[] }) {
           rows={rows}
           max={100}
           barClassName="bg-brand-700"
-          value={(r) => r.convRate}
-          format={(r) => `${r.convRate.toFixed(1)}%`}
+          value={(r) => r.convRate ?? 0}
+          format={(r) => fmtRate(r.convRate)}
         />
         <EngineBarGroup
           label={t("col.users")}

@@ -50,6 +50,7 @@ from app.features.analytics.funnel.acr.schemas import (
     AcrData,
     AcrModelRow,
     AcrOptions,
+    AcrOwn,
     AcrParams,
     AcrTerritoryEntry,
     AcrTerritoryRow,
@@ -252,6 +253,13 @@ async def build(conn: Any, ctx: ReadContext, params: AcrParams, *, today: date |
                        cells=int(r["cells"]), choice_share=ratio(r["choice"], totals.iterations),
                        coverage=ratio(r["cells"], totals.prompt_runs)) for r in table_rows]
 
+    # 2b 당사 합계(KPI 카드): 브랜드 행은 브랜드별·상한이라 다중 관점 당사(HMG)를 합치지 못하고 상한 밖 당사를 놓친다(queries.own_sql)
+    oq = q.own_sql(ms, win)
+    o = await fetch_one(conn, oq.text, oq.params) or {}
+    own_choice, own_cells = int(o.get("choice") or 0), int(o.get("cells") or 0)
+    own = AcrOwn(choice=own_choice, appearance=int(o.get("appearance") or 0), cells=own_cells,
+                 choice_share=ratio(own_choice, totals.iterations), coverage=ratio(own_cells, totals.prompt_runs))
+
     # 3 추이: 당사 우선 + 상위(현행 topBrands.slice(0, 5)), 명부 제외를 거르기 전 행에서
     trend = await _trend(conn, ctx, ms, win, params, today=today, brand_rows=brand_rows)
 
@@ -284,7 +292,7 @@ async def build(conn: Any, ctx: ReadContext, params: AcrParams, *, today: date |
         sheets[k].rows.append(AcrTerritoryRow(prompt_id=r["prompt_id"], prompt_text=r["prompt_text"], valid_acr=int(r["valid_acr"]),
                                               entries=[AcrTerritoryEntry(**e) for e in _json(r["entries"])]))
 
-    data = AcrData(totals=totals, brands=brands, trend=trend, battle=battle, model_conversion=models, territory=list(sheets.values()),
+    data = AcrData(totals=totals, brands=brands, own=own, trend=trend, battle=battle, model_conversion=models, territory=list(sheets.values()),
                    options=options)
     return Envelope(data=data, meta=meta())
 

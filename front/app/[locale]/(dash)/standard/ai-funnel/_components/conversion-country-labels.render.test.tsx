@@ -79,3 +79,21 @@ describe("groupConversionByRegion", () => {
     expect(g.aiConvRate).toBe(13.7);
   });
 });
+
+describe("no session = no rate (accuracy audit G6, D02)", () => {
+  // AI 세션 0 · 일반 50 세션에 전환 2: AI 전환율은 측정값이 없다 — 0.0% 와 격차 −4.0pp 가 아니라 "—"
+  const noAi = { brand: "Hyundai", country: "US", aiConvRate: null, humanConvRate: 4, lift: null, aiUsers: 0, humanUsers: 50, aiKeyEvents: 0, humanKeyEvents: 2 };
+
+  it("the region rate of a region without AI sessions is null, and so is its gap", () => {
+    const [g] = groupConversionByRegion([noAi], null);
+    expect([g.aiConvRate, g.humanConvRate, g.lift]).toEqual([null, 4, null]);
+  });
+
+  it("the table and the region line show — instead of 0.0% / a negative gap", () => {
+    const html = render(<CountryConversionTable rows={[noAi]} activeBrand={null} />);
+    expect(html).not.toContain("0.0%");
+    expect(html).not.toContain("-4.0pp");
+    expect(html).toContain("AI — ");
+    expect(html).toContain("4.0%");
+  });
+});

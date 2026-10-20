@@ -3333,6 +3333,8 @@ export interface components {
             model_conversion: components["schemas"]["AcrModelRow"][];
             /** @description ACR 모집단 언어·국가 옵션(BG-33). /v1/filters/options 는 답변 모집단이라 다르다 */
             options?: components["schemas"]["AcrOptions"];
+            /** @description 관점 당사(합친 당사) 합계 — KPI 카드 원천. 브랜드 표 상한(top_brands) 밖 당사도 센다. 셀이 없으면 null */
+            own?: components["schemas"]["AcrOwn"] | null;
             /** Territory */
             territory: components["schemas"]["AcrTerritorySheet"][];
             totals: components["schemas"]["AcrTotals"];
@@ -3380,6 +3382,28 @@ export interface components {
              * @description ACR 셀이 있는 언어(소문자 BCP-47, 오름차순). 창·스코프 브랜드·country[] 만 적용하고 lang[]·engine[](전 엔진)·택소노미·커스텀 축은 적용하지 않는다(현행 listMeasuredAcrLanguages)
              */
             langs?: string[];
+        };
+        /** AcrOwn */
+        AcrOwn: {
+            /**
+             * Appearance
+             * @description 관점 당사 브랜드 등장 합
+             */
+            appearance: number;
+            /**
+             * Cells
+             * @description 당사 행이 있는 셀 수(DISTINCT: 당사 브랜드가 여럿 있어도 셀당 1)
+             */
+            cells: number;
+            /**
+             * Choice
+             * @description 관점 당사 브랜드 선택 합(1순위 횟수)
+             */
+            choice: number;
+            /** @description choice / totals.iterations (Top1) */
+            choice_share: components["schemas"]["Ratio"];
+            /** @description cells / totals.prompt_runs (Top5 후보군 포함) */
+            coverage: components["schemas"]["Ratio"];
         };
         /** AcrTerritoryEntry */
         AcrTerritoryEntry: {

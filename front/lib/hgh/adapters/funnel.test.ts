@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api-types";
+import { acrCardRow } from "@/app/[locale]/(dash)/standard/ai-funnel/_data/acr-card";
 
 // AI funnel adapter (unit U8): hand-computed conversions (ACR A1..A7, GA4 conversion C1..C7,
 // conversion events), the page branches, the query each call sends (filters through
@@ -43,6 +44,24 @@ function acr(o: Partial<S["AcrData"]> = {}): S["AcrData"] {
     ...o,
   };
 }
+
+describe("ACR KPI cards read the viewpoint own total (accuracy audit G5, D03)", () => {
+  it("toStandardAcr maps the own block; the cards take it over the first own brand row", () => {
+    // HMG 관점: Hyundai 7 + Kia 5 = 선택 12 / 반복 20 = 60.0%, 당사 셀 6 / 8 = 75.0%(합집합) — Hyundai 행만이면 35.0% · 37.5%
+    const a = F.toStandardAcr(acr({ own: { choice: 12, appearance: 18, cells: 6, choice_share: { num: 12, den: 20 }, coverage: { num: 6, den: 8 } } }), meta());
+    expect(a.own).toEqual({ choiceCount: 12, appearanceCount: 18, choiceShare: 60, coverage: 75 });
+    expect(acrCardRow(a)).toEqual(a.own);
+    // own brand with no choice and no cell is a measured 0, not "—"
+    expect(F.toStandardAcr(acr({ own: { choice: 0, appearance: 0, cells: 0, choice_share: { num: 0, den: 20 }, coverage: { num: 0, den: 8 } } }), meta()).own)
+      .toEqual({ choiceCount: 0, appearanceCount: 0, choiceShare: 0, coverage: 0 });
+  });
+
+  it("without the own block (legacy, older cache) the cards keep the first own brand row", () => {
+    const a = F.toStandardAcr(acr(), meta());
+    expect(a.own).toBeUndefined();
+    expect(acrCardRow(a)).toEqual(a.brands[0]);
+  });
+});
 
 describe("toStandardAcr: A1..A7, hand-computed", () => {
   it("brands, trend, battle, models, territory, totals", () => {
@@ -131,20 +150,30 @@ describe("toConversionLive: C1..C4, hand-computed", () => {
     // 7/200 = 3.5 ; 12/1000 = 1.2 ; lift 2.3
     expect(live.summary).toEqual({ aiConvRate: 3.5, humanConvRate: 1.2, lift: 2.3, aiUsersTotal: 200, humanUsersTotal: 1000, aiKeyEvents: 7, humanKeyEvents: 12 });
     expect(live.propertyId).toBe("123");
-    // 201/400 -> legacy pct Math.round(502.49..)/10 = 50.2 ; 1/16 -> 6.3 ; 1/3 -> 33.3 ; 0/0 -> 0
+    // 201/400 -> legacy pct Math.round(502.49..)/10 = 50.2 ; 1/16 -> 6.3 ; 1/3 -> 33.3 ; 0/0 -> null (no session = no rate, a gap point)
     expect(live.trend).toEqual([
       { date: "2026-09-01", ai: 50.2, human: 6.3 },
-      { date: "2026-09-02", ai: 33.3, human: 0 },
+      { date: "2026-09-02", ai: 33.3, human: null },
     ]);
     expect(live.pages).toHaveLength(12);
     // 3/100 = 3 ; 1/10 = 10 ; lift -7
     expect(live.pages[0]).toEqual({ url: "/p0", aiUsers: 100, humanUsers: 10, aiConvRate: 3, humanConvRate: 10, lift: -7 });
     expect(live.pages.map((p) => p.url)).toEqual(Array.from({ length: 12 }, (_, i) => `/p${i}`));
-    // engine filter not applied (by_engine_all, BG-31); gemini missing -> 0 row; perplexity/other dropped
+    // engine filter not applied (by_engine_all, BG-31); gemini missing -> 0-session row with no rate; perplexity/other dropped
     expect(live.byEngine).toEqual([
       { engine: "chatgpt", users: 150, keyEvents: 6, convRate: 4 },
-      { engine: "gemini", users: 0, keyEvents: 0, convRate: 0 },
+      { engine: "gemini", users: 0, keyEvents: 0, convRate: null },
     ]);
+  });
+
+  it("a cohort with no session has no rate and no gap (e.g. engine=gemini with 0 Gemini sessions)", () => {
+    // 0 AI sessions, 1,000 human sessions with 32 conversions: AI rate is no measurement, so the gap is undefined (not 0.0 % / −3.2pp)
+    const d = conv({ summary: { ai: { sessions: 0, conversions: 0, page_views: 0, conv: { num: 0, den: 0 } }, human: { sessions: 1000, conversions: 32, conv: { num: 32, den: 1000 } } } });
+    const live = F.toConversionLive(d, "123")!;
+    expect([live.summary.aiConvRate, live.summary.humanConvRate, live.summary.lift]).toEqual([null, 3.2, null]);
+    const r = F.toConversionRollup({ ...d, by_country: [{ brand: "Kia", country: "IT", ai: { sessions: 0, conversions: 0 }, human: { sessions: 50, conversions: 2 } }] } as Conv);
+    expect([r.aiConvRate, r.humanConvRate, r.lift]).toEqual([null, 3.2, null]);
+    expect([r.byCountry[0].aiConvRate, r.byCountry[0].humanConvRate, r.byCountry[0].lift]).toEqual([null, 4, null]);
   });
 
   it("no session in either cohort -> null (legacy 'no data' -> pending notice)", () => {
@@ -238,13 +267,13 @@ describe("toConversionScreen: the legacy page branches", () => {
     expect([r.measuredMarkets, r.totalMarkets]).toEqual([1, 2]);
   });
 
-  it("several markets, none active: zero rollup (legacy mapped.length 0 shape)", () => {
+  it("several markets, none active: rollup with no rate (0 sessions is no measurement, not 0.0 %)", () => {
     const zero = conv({
       summary: { ai: { sessions: 0, conversions: 0, page_views: 0, conv: { num: 0, den: 0 } }, human: { sessions: 0, conversions: 0, conv: { num: 0, den: 0 } } },
       coverage: cov([market("unmapped", "IT", "Kia", null), market("unmapped", "DE", "Kia", null)]),
     });
     expect(F.toConversionScreen(zero, meta({ suppressed: { "*": "source_pending" } })).rollupData).toEqual({
-      aiConvRate: 0, humanConvRate: 0, lift: 0, measuredMarkets: 0, totalMarkets: 2,
+      aiConvRate: null, humanConvRate: null, lift: null, measuredMarkets: 0, totalMarkets: 2,
       totalAiUsers: 0, totalHumanUsers: 0, totalAiKeyEvents: 0, totalHumanKeyEvents: 0, byCountry: [],
     });
   });

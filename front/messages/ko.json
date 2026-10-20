@@ -1367,7 +1367,7 @@
         "descriptionFiltered": "선택한 필터 조건에 해당하는 AI 유입 데이터가 없습니다. 필터를 줄이거나 해제해 보세요."
       },
       "region": {
-        "summary": "{count}국 측정 · AI {ai}% · 일반 {human}% · Lift {lift}pp"
+        "summary": "{count}국 측정 · AI {ai} · 일반 {human} · Lift {lift}"
       },
       "regionUnknown": "기타"
     },

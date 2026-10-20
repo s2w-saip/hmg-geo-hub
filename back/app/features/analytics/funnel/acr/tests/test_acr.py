@@ -147,6 +147,21 @@ async def test_period_mode_and_trend_cycles(client_as):
     assert r.status_code == 200 and r.json()["data"]["totals"]["prompt_runs"] == 0 and r.json()["meta"]["suppressed"] == {}
 
 
+async def test_own_totals_cover_every_own_brand_outside_the_table_cap(client_as):
+    """KPI 카드(Top1 · Top5 · 1순위 횟수)는 관점 당사 합계다. 관리자(HMG) = Hyundai 5 + Kia 2 = 선택 7, 등장 7 + 3 = 10,
+    당사 행이 있는 셀 3(DISTINCT: Hyundai·Kia 가 같은 셀에 있어도 1). 브랜드 표 상한(top_brands=1)으로 Kia 행이 빠져도 합계는 같다.
+    수정 전: 카드가 브랜드 행 중 첫 당사 행(Hyundai 5/9)만 읽었고, 상한 밖 당사는 '—'(1순위 횟수 0)였다."""
+    own = {"choice": 7, "appearance": 10, "cells": 3, "choice_share": {"num": 7, "den": 9}, "coverage": {"num": 3, "den": 3}}
+    for params in ({}, {"top_brands": 1}):
+        d = (await _get(client_as, ADMIN, surface="global", **params)).json()["data"]
+        assert d["own"] == own, params
+    # 단일 관점(Hyundai)이면 합계 = 그 브랜드 행
+    body = (await _get(client_as, HQ_HYUNDAI, surface="global")).json()
+    h = _brands(body)["Hyundai"]
+    assert {k: body["data"]["own"][k] for k in ("choice", "cells", "choice_share", "coverage")} == {
+        k: h[k] for k in ("choice", "cells", "choice_share", "coverage")}
+
+
 async def test_limits_cap_sections(client_as):
     r = await _get(client_as, ADMIN, surface="global", battle_limit=1, territory_limit=1, model_limit=1)
     d = r.json()["data"]

@@ -82,7 +82,7 @@ import type { StandardFilters } from "@/lib/scope/result-adapter";
 import type { VisitsViewData } from "@/app/[locale]/(dash)/standard/ai-funnel/_components/visits-view";
 import type { components } from "../api-types";
 import { hghGet, hghPut } from "../client";
-import { filterNotices, pct1OrNull, pct1OrZero, wholeSuppression, type ApiMeta, type FilterNotices } from "../convert";
+import { filterNotices, pct1OrNull, wholeSuppression, type ApiMeta, type FilterNotices } from "../convert";
 import { withParams, type Surface } from "../query";
 import { analysisQuery, type AnalysisQueryContext } from "./filters";
 
@@ -120,6 +120,17 @@ export function toStandardAcr(d: ApiAcrData, meta: Pick<ApiMeta, "suppressed">):
       choiceShare: pct1OrNull(b.choice_share),
       coverage: pct1OrNull(b.coverage),
     })),
+    // KPI 카드: 관점 당사 합계(상위 12 밖 당사·여러 당사 브랜드 합)
+    ...(d.own
+      ? {
+          own: {
+            choiceCount: d.own.choice,
+            appearanceCount: d.own.appearance,
+            choiceShare: pct1OrNull(d.own.choice_share),
+            coverage: pct1OrNull(d.own.coverage),
+          },
+        }
+      : {}),
     // A3 (DC-09, U8-N1): one bucket per round with cells; value = choice / that round's iterations.
     trend: d.trend.buckets
       .filter((b) => !b.gap && b.den > 0)
@@ -212,9 +223,15 @@ export const CONVERSION_PANEL_ENGINES = ["chatgpt", "gemini"] as const;
 export const CONVERSION_PAGE_LIMIT = 15;
 export const CONVERSION_PAGE_TABLE_ROWS = 12;
 
-/** Legacy GA4 percent: Math.round(n / d * 1000) / 10, d 0 -> 0 (conversion.ts pct). */
-const pct = (num: number, den: number): number => pct1OrZero({ num, den });
-const lift = (ai: number, human: number): number => Math.round((ai - human) * 10) / 10;
+/**
+ * Legacy GA4 percent: Math.round(n / d * 1000) / 10. A cohort with no session (d 0) has no rate: null ("—"), not 0.0 %
+ * (legacy pct gave 0, so an engine with no Gemini session read AI 0.0 % and a gap of minus the human rate).
+ */
+export const conversionPct = (num: number, den: number): number | null => (den > 0 ? Math.round((num / den) * 1000) / 10 : null);
+const pct = conversionPct;
+/** Gap in pp; undefined (null) when either rate is. */
+const lift = (ai: number | null, human: number | null): number | null =>
+  ai == null || human == null ? null : Math.round((ai - human) * 10) / 10;
 
 export interface ConversionMarketView {
   brand: string;

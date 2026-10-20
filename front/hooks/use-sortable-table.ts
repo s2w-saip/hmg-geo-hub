@@ -21,7 +21,8 @@ import { useMemo, useState } from "react";
 //     Mentions
 //   </SortableHeader>
 
-export type Sorter<T> = (row: T) => string | number;
+/** null = 값 없음(예: 분모 0 이라 비율이 없는 행) — 방향과 무관하게 항상 맨 뒤. */
+export type Sorter<T> = (row: T) => string | number | null;
 
 export type UseSortableTableOptions<K extends string> = {
   defaultKey: K;
@@ -75,6 +76,7 @@ export function useSortableTable<T, K extends string>(
     return [...rows].sort((a, b) => {
       const av = sorter(a);
       const bv = sorter(b);
+      if (av === null || bv === null) return av === bv ? 0 : av === null ? 1 : -1;
       if (typeof av === "string" && typeof bv === "string") {
         return dir * av.localeCompare(bv);
       }

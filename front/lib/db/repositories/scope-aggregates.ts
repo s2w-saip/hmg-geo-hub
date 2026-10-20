@@ -9408,6 +9408,11 @@ export interface AcrTerritorySheet {
 export interface StandardAcr {
   measured: boolean; // rollup이 하나라도 있는가 (없으면 측정 대기 상태)
   brands: AcrBrandAgg[];
+  /**
+   * 관점 당사(합친 당사) 합계 — KPI 카드 원천(API 원천만). 브랜드 행은 브랜드별·상위 12 라 다중 관점(HMG)은 첫 당사만,
+   * 상한 밖 당사는 값이 없었다. 없으면(legacy·옛 캐시) 카드는 첫 당사 브랜드 행을 읽는다.
+   */
+  own?: Omit<AcrBrandAgg, "brand" | "isOurs">;
   trend: AcrTrendBucket[];
   battle: AcrBattleRow[];
   modelConversion: AcrModelConversionRow[];

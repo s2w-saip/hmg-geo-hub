@@ -30,6 +30,7 @@ import { useSortableTable } from "@/hooks/use-sortable-table";
 import { SortableHeader } from "@/components/ui/sortable-header";
 import type { StandardAcr } from "@/lib/db/repositories/scope-aggregates";
 import { BATTLE_BRAND_COLORS, ACR_SERIES_FALLBACK } from "../_data/sample";
+import { acrCardRow } from "../_data/acr-card";
 
 // 표준 ACR — scope 2턴 선택 측정(prompt kind='acr')의 실데이터 뷰.
 // 섹션 구성·문구는 기획 확정본(샘플 AcrView, aiFunnelView.acr 딕셔너리)을
@@ -111,7 +112,8 @@ export function AcrLiveView({
   const t = useTranslations("aiFunnelView.acr");
   const tLive = useTranslations("aiFunnelView.acrLive");
 
-  const ours = data?.brands.find((b) => b.isOurs) ?? null;
+  // KPI 카드 = 관점 당사 합계(API own: 여러 당사 브랜드 합·상위 12 밖 당사 포함). legacy 는 첫 당사 브랜드 행
+  const ours = acrCardRow(data);
 
   const trendBrands = useMemo(() => {
     const set = new Set<string>();

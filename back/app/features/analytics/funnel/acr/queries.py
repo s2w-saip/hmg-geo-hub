@@ -71,6 +71,19 @@ def brands_sql(ms: MeasureScope, win: Window, *, limit: int) -> Sql:
     return b.sql(t)
 
 
+def own_sql(ms: MeasureScope, win: Window) -> Sql:
+    """관점 당사(합친 당사) 합계: KPI 카드(Top1·Top5·1순위 횟수) 원천. 브랜드 행(brands_sql)은 브랜드별·상한(top_brands)이라
+    다중 관점(HMG = Hyundai·Kia·Genesis)이면 첫 당사 행만, 상한 밖 당사는 아예 못 낸다. 행 조건은 brands_sql 과 같다(keep, 이름 있음).
+    선택: 한 반복의 최종 선택은 엔티티 하나라 당사 브랜드끼리 더해도 겹치지 않는다. 셀: 당사 행이 있는 셀 DISTINCT(여러 당사가 있어도 1)."""
+    b = Binder("w")
+    t = (f"WITH {cells_cte(ms, win, b)}\n"
+         "SELECT coalesce(sum(ch.choice), 0)::int AS choice, coalesce(sum(ch.appearance), 0)::int AS appearance,\n"
+         "       count(DISTINCT ch.acr_cell_key)::int AS cells\n"
+         "  FROM cells JOIN rd.acr_choice ch ON ch.level = 1 AND ch.acr_cell_key = cells.acr_cell_key\n"
+         f" WHERE ch.keep AND ch.brand_key <> 0 AND ch.own_bit = ANY({b.ints(ms.own_bits)})")
+    return b.sql(t)
+
+
 def trend_sql(ms: MeasureScope, win: Window, *, series_brand_keys: Sequence[int]) -> Sql:
     """회차 버킷 추이(구 Q3). 분모(brand_key NULL 행) = 회차별 Σvalid_acr, 분자 = 회차 × 시리즈 브랜드 선택 합.
     분자·분모가 같은 cells(같은 게이트)를 쓴다."""

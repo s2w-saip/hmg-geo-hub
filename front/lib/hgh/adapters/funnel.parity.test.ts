@@ -208,6 +208,29 @@ function legacyHumanShift(prop: string[], f: ConversionFilters, pick: (r: Row) =
   return { sessions: rows.reduce((s, r) => s + r.sessions, 0), keyEvents: rows.reduce((s, r) => s + r.keyEvents, 0) };
 }
 
+/**
+ * Declared difference (accuracy audit G6, D02): the API has no rate for a cohort with no session (null, shown "—");
+ * legacy pct gave 0 and computed the gap from that 0. Where the API side is null, the legacy side must be 0 for a rate,
+ * or a number for a gap whose row has a null rate. Every other value must still be equal.
+ */
+const RATE_KEYS = new Set(["aiConvRate", "humanConvRate", "convRate", "ai", "human"]);
+function legacyAsNoSession<T>(legacy: T, api: unknown): T {
+  if (Array.isArray(legacy) && Array.isArray(api)) return legacy.map((x, i) => legacyAsNoSession(x, api[i])) as T;
+  if (legacy && api && typeof legacy === "object" && typeof api === "object") {
+    const a = api as Record<string, unknown>;
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(legacy as Record<string, unknown>)) {
+      const noSession =
+        a[k] === null &&
+        typeof v === "number" &&
+        ((RATE_KEYS.has(k) && v === 0) || (k === "lift" && (a.aiConvRate === null || a.humanConvRate === null)));
+      out[k] = noSession ? null : legacyAsNoSession(v, a[k]);
+    }
+    return out as T;
+  }
+  return legacy;
+}
+
 describe("country leaf: live conversion and visits (legacy GA4 functions vs adapter)", () => {
   for (const c of FILTER_CASES) {
     it(c.name, async () => {
@@ -218,26 +241,27 @@ describe("country leaf: live conversion and visits (legacy GA4 functions vs adap
       expect(live!.range).toEqual({ start: "90daysAgo", end: "today" });
       expect(screen.liveData!.range).toEqual({ start: "2026-06-18", end: "2026-09-15" });
       const api = screen.liveData!;
+      const L = legacyAsNoSession(live!, api);
       if (c.f.engine?.length) {
         // AI side identical; the human side differs by exactly the other AI engines (U8-N16)
         const shift = legacyHumanShift(["111"], c.f);
         expect(shift.sessions).toBeGreaterThan(0);
         expect([api.summary.aiConvRate, api.summary.aiUsersTotal, api.summary.aiKeyEvents]).toEqual([
-          live!.summary.aiConvRate,
-          live!.summary.aiUsersTotal,
-          live!.summary.aiKeyEvents,
+          L.summary.aiConvRate,
+          L.summary.aiUsersTotal,
+          L.summary.aiKeyEvents,
         ]);
-        expect(live!.summary.humanUsersTotal - api.summary.humanUsersTotal).toBe(shift.sessions);
-        expect(live!.summary.humanKeyEvents - api.summary.humanKeyEvents).toBe(shift.keyEvents);
-        expect(api.trend.map((p) => [p.date, p.ai])).toEqual(live!.trend.map((p) => [p.date, p.ai]));
-        expect(api.pages.map((p) => [p.url, p.aiUsers, p.aiConvRate])).toEqual(live!.pages.map((p) => [p.url, p.aiUsers, p.aiConvRate]));
+        expect(L.summary.humanUsersTotal - api.summary.humanUsersTotal).toBe(shift.sessions);
+        expect(L.summary.humanKeyEvents - api.summary.humanKeyEvents).toBe(shift.keyEvents);
+        expect(api.trend.map((p) => [p.date, p.ai])).toEqual(L.trend.map((p) => [p.date, p.ai]));
+        expect(api.pages.map((p) => [p.url, p.aiUsers, p.aiConvRate])).toEqual(L.pages.map((p) => [p.url, p.aiUsers, p.aiConvRate]));
         for (const p of api.pages) {
-          const lp = live!.pages.find((x) => x.url === p.url)!;
+          const lp = L.pages.find((x) => x.url === p.url)!;
           expect(lp.humanUsers - p.humanUsers).toBe(legacyHumanShift(["111"], c.f, (r) => r.landing === p.url).sessions);
         }
-        expect(api.byEngine).toEqual(live!.byEngine);
+        expect(api.byEngine).toEqual(L.byEngine);
       } else {
-        expect({ ...api, range: null }).toEqual({ ...live!, range: null });
+        expect({ ...api, range: null }).toEqual({ ...L, range: null });
       }
 
       if (visits === null) {
@@ -263,20 +287,21 @@ describe("region rollup (legacy getAiTrafficConversionRollup vs adapter)", () =>
       const screen = F.toConversionScreen(backend(["111", "222", "333"], c.f), META);
       expect(screen.isCountryLeaf).toBe(false);
       const api = screen.rollupData!;
+      const R = legacyAsNoSession(rollup, api);
       if (c.f.engine?.length) {
         // U8-N16 again: AI side identical, human side short by the other AI engines
         const shift = legacyHumanShift(["111", "222", "333"], c.f);
         expect([api.aiConvRate, api.totalAiUsers, api.totalAiKeyEvents, api.totalMarkets]).toEqual([
-          rollup.aiConvRate,
-          rollup.totalAiUsers,
-          rollup.totalAiKeyEvents,
-          rollup.totalMarkets,
+          R.aiConvRate,
+          R.totalAiUsers,
+          R.totalAiKeyEvents,
+          R.totalMarkets,
         ]);
-        expect(rollup.totalHumanUsers - api.totalHumanUsers).toBe(shift.sessions);
-        expect(rollup.totalHumanKeyEvents - api.totalHumanKeyEvents).toBe(shift.keyEvents);
-        expect(api.byCountry.map((r) => [r.country, r.aiUsers, r.aiConvRate])).toEqual(rollup.byCountry.map((r) => [r.country, r.aiUsers, r.aiConvRate]));
+        expect(R.totalHumanUsers - api.totalHumanUsers).toBe(shift.sessions);
+        expect(R.totalHumanKeyEvents - api.totalHumanKeyEvents).toBe(shift.keyEvents);
+        expect(api.byCountry.map((r) => [r.country, r.aiUsers, r.aiConvRate])).toEqual(R.byCountry.map((r) => [r.country, r.aiUsers, r.aiConvRate]));
       } else {
-        expect(api).toEqual(rollup);
+        expect(api).toEqual(R);
       }
     });
   }

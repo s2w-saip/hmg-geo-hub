@@ -1367,7 +1367,7 @@
         "descriptionFiltered": "No AI-traffic data matches the selected filters. Try narrowing fewer axes or clearing them."
       },
       "region": {
-        "summary": "{count} markets · AI {ai}% · Human {human}% · Lift {lift}pp"
+        "summary": "{count} markets · AI {ai} · Human {human} · Lift {lift}"
       },
       "regionUnknown": "Other"
     },

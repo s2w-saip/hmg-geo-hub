@@ -51,6 +51,14 @@ class AcrBrand(BaseModel):
     coverage: Ratio = Field(description="등장 셀 / totals.prompt_runs")
 
 
+class AcrOwn(BaseModel):
+    choice: int = Field(description="관점 당사 브랜드 선택 합(1순위 횟수)")
+    appearance: int = Field(description="관점 당사 브랜드 등장 합")
+    cells: int = Field(description="당사 행이 있는 셀 수(DISTINCT: 당사 브랜드가 여럿 있어도 셀당 1)")
+    choice_share: Ratio = Field(description="choice / totals.iterations (Top1)")
+    coverage: Ratio = Field(description="cells / totals.prompt_runs (Top5 후보군 포함)")
+
+
 class AcrTrendPoint(BaseModel):
     brand: str
     num: int = Field(description="그 회차 그 브랜드 선택 수(분모는 버킷 den)")
@@ -123,6 +131,8 @@ class AcrOptions(BaseModel):
 class AcrData(BaseModel):
     totals: AcrTotals
     brands: list[AcrBrand]
+    own: AcrOwn | None = Field(None, description=(
+        "관점 당사(합친 당사) 합계 — KPI 카드 원천. 브랜드 표 상한(top_brands) 밖 당사도 센다. 셀이 없으면 null"))
     trend: AcrTrend
     battle: list[AcrBattleRow]
     model_conversion: list[AcrModelRow]

@@ -26,10 +26,11 @@ export const GA4_CACHE_TAG = "ga4";
 // channel started 2026-06-05 on Kia/IT, so 28d / 90d windows are
 // 데이터-누적-중. Tooltip must say so.
 
+// 전환율·격차 null = 그 코호트 세션(분모)이 0 이라 측정값이 없다(API 원천). legacy GA4 경로는 종전대로 숫자(0)를 낸다.
 export interface ConversionSummary {
-  aiConvRate: number; // %
-  humanConvRate: number; // %
-  lift: number; // pp
+  aiConvRate: number | null; // %
+  humanConvRate: number | null; // %
+  lift: number | null; // pp
   aiUsersTotal: number; // 분모 (활성사용자)
   humanUsersTotal: number;
   aiKeyEvents: number; // 분자 (key events) — rate = keyEvents ÷ users
@@ -39,14 +40,14 @@ export interface ConversionPageRow {
   url: string;
   aiUsers: number;
   humanUsers: number;
-  aiConvRate: number;
-  humanConvRate: number;
-  lift: number;
+  aiConvRate: number | null;
+  humanConvRate: number | null;
+  lift: number | null;
 }
 export interface ConversionTrendPoint {
   date: string; // YYYY-MM-DD
-  ai: number; // %
-  human: number; // %
+  ai: number | null; // % (null = 그날 그 코호트 세션 0)
+  human: number | null; // %
 }
 // Per-engine (AI source) split, ALWAYS across every filterable engine — even
 // when an `engine` filter is active — so the view can compare the selected
@@ -59,7 +60,7 @@ export interface EngineBreakdownRow {
   engine: string; // panel canonical token — "chatgpt" | "gemini"
   users: number;
   keyEvents: number;
-  convRate: number; // %
+  convRate: number | null; // % (null = 세션 0)
 }
 
 export interface ConversionLive {
@@ -91,9 +92,9 @@ export interface AiTrafficConversionKpi {
 export interface AiTrafficConversionCountry {
   brand: string;
   country: string; // ISO alpha-2
-  aiConvRate: number;
-  humanConvRate: number;
-  lift: number;
+  aiConvRate: number | null;
+  humanConvRate: number | null;
+  lift: number | null;
   aiUsers: number;
   humanUsers: number;
   /**
@@ -104,9 +105,9 @@ export interface AiTrafficConversionCountry {
   humanKeyEvents?: number;
 }
 export interface AiTrafficConversionRollup {
-  aiConvRate: number; // 활성사용자 가중 합산
-  humanConvRate: number;
-  lift: number;
+  aiConvRate: number | null; // 활성사용자 가중 합산
+  humanConvRate: number | null;
+  lift: number | null;
   measuredMarkets: number; // GA4 호출이 데이터 리턴한 시장 수
   totalMarkets: number; // scope 안에 들어오는 카탈로그 시장 수
   totalAiUsers: number; // 분모
