@@ -106,6 +106,8 @@ export interface MarketCompetition {
   metrics?: GeoMetrics;
   /** 참 = 답변은 있는데 브랜드 언급이 0(점유율 0/0). hmgSov 0·hmgRank 는 측정값이 아니다 — 스냅샷은 "—". API 원천만 싣는다. */
   noMentions?: boolean;
+  /** Completed answers in this market (country = its own, region = sum of its countries). Read only by the renewal Overview. */
+  answers?: number;
 }
 export interface GeoCountryRow extends MarketCompetition {
   code: string; // ISO alpha-2 (scope region)
@@ -241,6 +243,7 @@ export function buildGeo(
       country,
       ...marketStats(brands, ourBrands),
       metrics: marketMetrics(brands, totals, ourBrands),
+      answers: totals.answers,
     });
     const bm = regionBrands.get(regionId) ?? regionBrands.set(regionId, new Map()).get(regionId)!;
     for (const b of brands) {
@@ -285,6 +288,7 @@ export function buildGeo(
       region: regionId,
       ...marketStats(brands, ourBrands),
       metrics: marketMetrics(brands, regionTotals.get(regionId) ?? zero(), ourBrands),
+      answers: (regionTotals.get(regionId) ?? zero()).answers,
       countries,
     });
   }

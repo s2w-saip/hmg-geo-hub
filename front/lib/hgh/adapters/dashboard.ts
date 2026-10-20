@@ -635,6 +635,7 @@ function marketOf(row: ApiGeoRow): MarketCompetition {
     topBrand: row.top_own_brand ? { name: row.top_own_brand.brand, sov: pct1OrZero(row.top_own_brand.share_of_voice) } : null,
     topRival: row.top_rival ? { name: row.top_rival.brand, sov: pct1OrZero(row.top_rival.metrics.share_of_voice) } : null,
     metrics: geoMetrics(row.own, row.top_rival),
+    answers: row.answers,
     // 언급 0(점유율 분모 0): 0.0%·순위는 측정값이 아니다(지도는 mirrorPct 로 이미 "—")
     ...(!(row.own.share_of_voice && row.own.share_of_voice.den > 0) ? { noMentions: true } : {}),
   };

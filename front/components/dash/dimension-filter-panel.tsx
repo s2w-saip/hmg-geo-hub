@@ -837,7 +837,7 @@ export interface CatalogTaxonomyRow {
 
 // 카탈로그 축(브랜드 유형 + listType/depth 캐스케이드) — catalogRows(프로젝트·
 // 스코프별 실데이터)가 오면 그 모집단에 값이 없는 축은 죽은 필터라 숨긴다.
-const CATALOG_AXES = new Set<DimensionGroup>([
+export const CATALOG_AXES = new Set<DimensionGroup>([
   "brandPresence",
   "listType",
   "depth1",
@@ -845,7 +845,7 @@ const CATALOG_AXES = new Set<DimensionGroup>([
   "depth3",
   "depth4",
 ]);
-function catalogAxisHasValues(
+export function catalogAxisHasValues(
   g: DimensionGroup,
   rows: CatalogTaxonomyRow[],
 ): boolean {
@@ -869,7 +869,7 @@ const CASCADE_PARENT: Partial<Record<DimensionGroup, DimensionGroup>> = {
   depth3: "depth2",
   depth4: "depth3",
 };
-const CASCADE_FIELDS = new Set<DimensionGroup>([
+export const CASCADE_FIELDS = new Set<DimensionGroup>([
   "listType",
   "depth1",
   "depth2",
@@ -946,7 +946,7 @@ export function clearDescendantsIfEmpty(draft: Draft, group: DimensionGroup): Dr
 // Compute the option list for one cascade axis given catalog rows + the
 // active draft of all ancestor selections. Empty parent selection = no
 // narrowing (every value visible).
-function catalogOptionsFor(
+export function catalogOptionsFor(
   group: DimensionGroup,
   rows: CatalogTaxonomyRow[],
   draft: Partial<Record<DimensionGroup, string[]>>,
@@ -976,7 +976,7 @@ function catalogOptionsFor(
 
 // Re-prune children whose ancestor selections no longer match. Returns a
 // possibly-modified draft (same identity if nothing pruned).
-function pruneCascade(
+export function pruneCascade(
   draft: Partial<Record<DimensionGroup, string[]>>,
   rows: CatalogTaxonomyRow[],
 ): Partial<Record<DimensionGroup, string[]>> {
@@ -1012,7 +1012,7 @@ function pruneCascade(
 // in the checkbox list; the URL still stores the canonical value. Others (US/KR,
 // 2026, brand names, and the new HMG 3-stage Korean funnel values like 인지/탐색
 // — already readable) display as-is.
-const LABELED_VALUES = new Set([
+export const LABELED_VALUES = new Set([
   "owned",
   "external",
   "branded",
@@ -1028,7 +1028,7 @@ const LABELED_VALUES = new Set([
 // Engine: canonical value = scope target token (lowercase); display = proper
 // product name. Locale-independent proper nouns (like the geography Intl path),
 // so a static map rather than an i18n key. Mirrors result-adapter's TARGET_LABEL.
-const ENGINE_LABEL: Record<string, string> = {
+export const ENGINE_LABEL: Record<string, string> = {
   chatgpt: "ChatGPT",
   gemini: "Gemini",
   deepseek: "DeepSeek",
@@ -2012,7 +2012,7 @@ export function DimensionFilterPanel({
 export type TimePreset = "weekly" | "biweekly" | "monthly" | "yearly";
 
 /** 로컬 캘린더 기준 YYYY-MM-DD (toISOString 은 UTC라 KST 자정 부근에 하루 밀린다). */
-function isoDay(d: Date): string {
+export function isoDay(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
     d.getDate(),
   ).padStart(2, "0")}`;

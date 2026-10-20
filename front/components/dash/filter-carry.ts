@@ -38,6 +38,8 @@ const MEASUREMENT_AXES = [
 // 부모 경로(answer-analysis / ai-funnel)는 대표 자식과 동일 축으로 등재한다.
 const STANDARD_FILTER_CARRY: Record<string, readonly string[]> = {
   "/dashboard": MEASUREMENT_AXES,
+  // Renewal Overview (2026-10-20) reads the same filters as /dashboard.
+  "/renewal/dashboard": MEASUREMENT_AXES,
   "/standard/answer-analysis": MEASUREMENT_AXES,
   "/standard/answer-analysis/mention": MEASUREMENT_AXES,
   "/standard/answer-analysis/citation": [...MEASUREMENT_AXES, "source"],

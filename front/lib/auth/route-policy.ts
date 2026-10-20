@@ -55,6 +55,15 @@ export const ROUTES = [
     roles: STANDARD_VIEWERS,
     group: "standard" as const,
   },
+  // Renewal pages (2026-10-20): the redesigned Overview / Global prompts run side by
+  // side with the originals so both can be compared in the service. Same roles as
+  // the originals; each sits right after its original so the SNB order matches.
+  {
+    path: "/renewal/dashboard",
+    key: "renewalDashboard",
+    roles: STANDARD_VIEWERS,
+    group: "standard" as const,
+  },
   // 표준 프롬프트 (열람 전용) — role-scoped read-only view of the standard
   // prompt catalog (2026-06-15). Brand-scoped per account; no scope filter UI.
   // Mirrors the admin /admin/standards/prompts catalog source but read-only and
@@ -62,6 +71,12 @@ export const ROUTES = [
   {
     path: "/standard/prompts",
     key: "standardPrompts",
+    roles: STANDARD_VIEWERS,
+    group: "standard" as const,
+  },
+  {
+    path: "/renewal/standard/prompts",
+    key: "renewalStandardPrompts",
     roles: STANDARD_VIEWERS,
     group: "standard" as const,
   },

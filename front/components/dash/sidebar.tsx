@@ -64,7 +64,9 @@ const ROUTE_ICON: Record<RouteKey, ComponentType<{ className?: string }>> = {
   // 표준 — standard routes are rendered via STANDARD_SUB_ITEMS, not flat
   // leafs. The icon map only matters for the (now empty) fallback path.
   dashboard: LayoutDashboard,
+  renewalDashboard: LayoutDashboard,
   standardPrompts: ListChecks,
+  renewalStandardPrompts: ListChecks,
   answerAnalysis: MessageSquareText,
   answerAnalysisMention: MessageCircle,
   answerAnalysisCitation: Link2,
@@ -128,10 +130,21 @@ const STANDARD_SUB_ITEMS: StandardSubItem[] = [
     i18nKey: "dashboard",
     icon: LayoutDashboard,
   },
+  // Renewal pages (2026-10-20) — shown right under their originals for comparison.
+  {
+    path: "/renewal/dashboard",
+    i18nKey: "renewalDashboard",
+    icon: Sparkles,
+  },
   {
     path: "/standard/prompts",
     i18nKey: "standardPrompts",
     icon: ListChecks,
+  },
+  {
+    path: "/renewal/standard/prompts",
+    i18nKey: "renewalStandardPrompts",
+    icon: Sparkles,
   },
   {
     path: "/standard/answer-analysis",

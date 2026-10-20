@@ -24,9 +24,12 @@ const PROJECT_ROLES: Role[] = ["hq", "region", "country", "admin", "vendor"];
 // citation children, AI Funnel + Customer Interest each got an explicit
 // parent route (children stayed). Order mirrors ROUTES declaration order
 // since visibleRoutes preserves it.
+// 2026-10-20: renewal pages sit right after their originals.
 const NON_VENDOR_STANDARD_PATHS = [
   "/dashboard",
+  "/renewal/dashboard",
   "/standard/prompts",
+  "/renewal/standard/prompts",
   "/standard/answer-analysis",
   "/standard/answer-analysis/mention",
   "/standard/answer-analysis/citation",
@@ -285,8 +288,20 @@ describe("route-policy — guard bypass and default landing", () => {
 });
 
 describe("route-policy — ROUTES table integrity", () => {
-  it("exposes 30 routes (인용 출처 분류 추가)", () => {
-    expect(ROUTES).toHaveLength(30);
+  it("exposes 32 routes (renewal Overview / Global prompts 추가)", () => {
+    expect(ROUTES).toHaveLength(32);
+  });
+
+  it("renewal pages open to exactly the roles of their originals", () => {
+    for (const [renewal, original] of [
+      ["/renewal/dashboard", "/dashboard"],
+      ["/renewal/standard/prompts", "/standard/prompts"],
+    ]) {
+      for (const role of roles) {
+        expect(canAccessRoute(role, `/ko${renewal}`)).toBe(canAccessRoute(role, original));
+      }
+    }
+    expect(canAccessRoute("admin", "/renewal")).toBe(false);
   });
 
   it("/projects/new is hidden from SNB", () => {

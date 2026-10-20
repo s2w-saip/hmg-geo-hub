@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+/* Renewal design library tokens (rn-*) — used only by /renewal/* pages. */
+@import "./renewal-theme.css";
 
 /* Activate the `dark:` variant when an ancestor carries the `.dark` class.
    Tailwind v4 ships without a built-in dark variant; this `@custom-variant`

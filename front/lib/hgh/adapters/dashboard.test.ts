@@ -305,6 +305,8 @@ describe("GEO toLiveGeo", () => {
       topBrand: { name: "Kia", sov: 33.3 },
       topRival: { name: "Toyota", sov: 41.7 },
       metrics,
+      // answer count per market (renewal Overview, 2026-10-20)
+      answers: 40,
     };
     expect(g).toEqual({
       markets: [{ region: "kia-europe", ...base, countries: [{ code: "DE", country: "Germany", ...base }] }],
