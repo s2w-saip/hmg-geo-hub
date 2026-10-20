@@ -72,7 +72,7 @@ _JOB = ("answer_key", "job_id", "run_key", "prompt_key", "cyc_key", "round_date"
         "geo_key", "lang_key", "bgrp", "status_code", "analysis_code", "dropped", "served", "load_id")
 _ANS = ("round_date", "answer_key", "anchor_date", "cyc_key", "run_key", "prompt_key", "surface", "project_key", "engine_key", "geo_key",
         "lang_key", "cat_mask", "bgrp", "anchor_src", "analysis_state", "own_mask", "own_rk_h", "ment_total", "ment_h", "elig", "dflt",
-        "is_rep", "rule_ver", "load_id")
+        "is_rep", "rule_ver", "load_id", "own_rk_k", "own_rk_g", "ment_k", "ment_g")
 _AB = ("round_date", "answer_key", "brand_key", "cyc_key", "prompt_key", "surface", "project_key", "engine_key", "geo_key", "lang_key", "bgrp",
        "own_bit", "entity_rows", "mention_count", "rk", "s_pos", "s_neu", "s_neg", "s_mix", "t_mention", "t_recommendation", "t_comparison",
        "t_definition", "t_final_choice", "competitive", "std_in", "elig", "dflt", "rule_ver")
@@ -95,7 +95,8 @@ class BrandRow:
 
 @dataclasses.dataclass(frozen=True)
 class SynthAnswer:
-    """글로벌 표면 std_in 답변 1건(현대 당사 열 ment_h·own_rk_h 만 쓴다). run_key·load_id 는 기존 픽스처 job 에서 빌린다."""
+    """글로벌 표면 std_in 답변 1건. 당사 요약 열(own_mask·own_rk_{h,k,g}·ment_{h,k,g})은 own_bit 1·2·4 행에서 적재기와 같은 식으로
+    채운다(순위 = 그 비트 행 rk 의 최소, 언급 = 합). run_key·load_id 는 기존 픽스처 job 에서 빌린다."""
     answer_key: int
     cyc: CycleRow
     prompt_key: int
@@ -114,16 +115,16 @@ async def insert_answers(c: Raw, answers: Iterable[SynthAnswer], *, run_key: int
     abr: list[dict[str, Any]] = []
     for a in answers:
         d = a.cyc.round_date
-        own = [b for b in a.brands if b.own_bit == 1]
         ment_total = sum(b.mentions for b in a.brands)
-        ment_h = sum(b.mentions for b in own)
-        rk_h = min((b.rk for b in own if b.rk), default=0)
+        ment = {bit: sum(b.mentions for b in a.brands if b.own_bit == bit) for bit in (1, 2, 4)}
+        rk = {bit: min((b.rk for b in a.brands if b.own_bit == bit and b.rk), default=0) for bit in (1, 2, 4)}
+        own_mask = sum(bit for bit in (1, 2, 4) if ment[bit])
         at = a.measured_at or datetime(d.year, d.month, d.day, 1, tzinfo=UTC)
         jobs.append(dict(zip(_JOB, (a.answer_key, uuid.UUID(int=a.answer_key), run_key, a.prompt_key, a.cyc.cyc_key, d, at, 1,
                                     a.cyc.project_key, a.engine_key, a.geo_key, a.lang_key, a.bgrp, 0, 0, False, True, load_id), strict=True)))
         ans.append(dict(zip(_ANS, (d, a.answer_key, d, a.cyc.cyc_key, run_key, a.prompt_key, 1, a.cyc.project_key, a.engine_key, a.geo_key,
-                                   a.lang_key, a.bgrp, a.bgrp, 2, 0, 1 if own and ment_h else 0, rk_h, ment_total, ment_h, True, True,
-                                   a.is_rep, 1, load_id), strict=True)))
+                                   a.lang_key, a.bgrp, a.bgrp, 2, 0, own_mask, rk[1], ment_total, ment[1], True, True,
+                                   a.is_rep, 1, load_id, rk[2], rk[4], ment[2], ment[4]), strict=True)))
         abr += [dict(zip(_AB, (d, a.answer_key, b.brand_key, a.cyc.cyc_key, a.prompt_key, 1, a.cyc.project_key, a.engine_key, a.geo_key,
                                a.lang_key, a.bgrp, b.own_bit, 1, b.mentions, b.rk, b.pos, b.neu, b.neg, b.mix,
                                *(b.types or (b.mentions, 0, 0, 0, 0)), True, True, True, True, 1), strict=True)) for b in a.brands]

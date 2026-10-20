@@ -388,22 +388,29 @@ def frozen_gate(ms: MeasureScope, a: str, table: PopTable = "answer") -> list[st
     return [f"{a}.{FROZEN_GATE_COL[table]}"]
 
 
-def citation_population(ms: MeasureScope, a: str, table: PopTable = "answer", *, unit_gate: bool = True, analysis_path: bool = False) -> str:
+def citation_population(ms: MeasureScope, a: str, table: PopTable = "answer", *, unit_gate: bool = True, analysis_path: bool = False,
+                        rep: str = "c") -> str:
     """인용 계열 모수(M05·M06·M07): 기본 = cit_in(elig ∧ ACR 첫 반복, 결손 포함 G-21 g). table = answer(rd.answer) | citation(rd.citation).
     현행 프로필 자리: cell_rep(A1, WU-2: is_rep [∧ cit_in(A15 꺼짐)]), acr_iter_unfolded(A15, WU-2), web_registered_only(WEBREG16, WU-7 구현:
     웹 집계층 = 보고서 유닛 소속 프롬프트만, web_unit_pred), freeze_at_publish(GEN, 신규), catalog_incl_deleted(A41, WU-4: 글로벌은 cit_in 자리가
     cit_in_nc, scope_where 와 한 쌍). A16 은 인용 계열에 영향이 없다(인용 모수는 원래 결손 포함).
     unit_gate=False: WEBREG16 게이트를 걸지 않는다(URL 인용률 프롬프트 단위 url_prompts 전용: 현행 summaryPromptHitRatesSql
-    summary-website-aggregates.ts:1244-1271 은 sharedWhere 만 쓰고 유닛 게이트가 없다)."""
+    summary-website-aggregates.ts:1244-1271 은 sharedWhere 만 쓰고 유닛 게이트가 없다).
+
+    rep: 셀 대표를 어느 계열로 고르나. 'c'(기본) = 인용 계열 대표(rep_term 'c'). 'm' = 언급 계열 대표(is_rep): 언급 대표 답변 자신의
+    인용·측정일을 읽는 자리(답변 목록 include_gap 끔의 인용 술어, 추이 측정 일수 = 현행 언급 계열 셀 대표). mention_population(rep=)의 짝.
+    자리 규칙(rep_round_date_cell)이 아니면 두 대표가 같다(is_rep)."""
     require_slot(ms.profile, "cell_rep", "acr_iter_unfolded", "web_registered_only", "freeze_at_publish")
     if table not in ("answer", "citation"):
         raise ValueError(f"인용 모수 표가 아니다: {table}")
+    if rep not in ("m", "c"):
+        raise ValueError(f"대표 계열: {rep}")
     p = ms.profile
     cit = f"{a}.cit_in_nc" if catalog_all(ms) else f"{a}.cit_in"
     unit = unit_gate_of(ms, a, table) if unit_gate else []
     if not p.cell_rep:
         return _and([cit] + unit)
-    t = [rep_term(ms, a, "c", analysis_path=analysis_path)] + ([] if p.acr_iter_unfolded else [cit])
+    t = [f"{a}.is_rep" if rep == "m" else rep_term(ms, a, "c", analysis_path=analysis_path)] + ([] if p.acr_iter_unfolded else [cit])
     return _and(t + [g for g in frozen_gate(ms, a, table) if g not in t] + unit)
 
 

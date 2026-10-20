@@ -95,6 +95,9 @@ _ROW_COLS = """a.answer_key, a.round_date, a.anchor_date, a.cyc_key, a.engine_ke
 def _base_where(plan: ListPlan, win: Window, b: Binder) -> list[str]:
     w = win.where("a", "row", b, keys=plan.keys) + scope_where(plan.ms, "a", b)
     w.append(citation_population(plan.ms, "a") if plan.include_gap else mention_population(plan.ms, "a"))
+    # 아래 EXISTS 는 목록에 오른 그 답변 자신의 언급·인용을 본다(현행 드릴다운 규칙). 자리 규칙에서 두 계열 대표가 갈리면 WHERE 와 같은
+    # 계열 대표로 걸어야 셀이 빠지지 않는다: include_gap = 인용 대표 목록, 끔 = 언급 대표 목록. 자리 규칙이 아니면 둘 다 is_rep(문장 같음)
+    rep = "c" if plan.include_gap else "m"
     if plan.q_pattern is not None:
         w.append(f"a.prompt_key IN (SELECT dp.prompt_key FROM {fact_tables(plan.ms).prompt} dp WHERE dp.surface = {b.v(plan.ms.sf, 'int2')} "
                  f"AND dp.project_key = ANY({b.ints(plan.ms.project_keys)}) AND dp.text ILIKE {b.v(plan.q_pattern)} ESCAPE '\\')")
@@ -102,7 +105,7 @@ def _base_where(plan: ListPlan, win: Window, b: Binder) -> list[str]:
         sub = win.where("ab", "row", b, keys=plan.keys)
         w.append(f"EXISTS (SELECT 1 FROM {fact_tables(plan.ms).answer_brand} ab WHERE " + " AND ".join(sub) +
                  f" AND ab.answer_key = a.answer_key AND ab.round_date = a.round_date"
-                 f" AND ab.brand_key = {b.v(plan.mention_brand_key, 'int4')} AND {mention_population(plan.ms, 'ab', 'brand')})")
+                 f" AND ab.brand_key = {b.v(plan.mention_brand_key, 'int4')} AND {mention_population(plan.ms, 'ab', 'brand', rep=rep)})")
     if plan.signal_col is not None:
         col = plan.signal_col
         if col not in _SIGNAL_COL_SET:          # 열 이름은 화이트리스트 값만(사용자 문자열 금지)
@@ -110,7 +113,7 @@ def _base_where(plan: ListPlan, win: Window, b: Binder) -> list[str]:
         sub = win.where("sg", "row", b, keys=plan.keys)
         w.append(f"EXISTS (SELECT 1 FROM {fact_tables(plan.ms).answer_brand} sg WHERE " + " AND ".join(sub) +
                  f" AND sg.answer_key = a.answer_key AND sg.round_date = a.round_date"
-                 f" AND sg.own_bit = ANY({b.ints(plan.own_bits)}) AND {mention_population(plan.ms, 'sg', 'brand')} AND sg.{col} > 0)")
+                 f" AND sg.own_bit = ANY({b.ints(plan.own_bits)}) AND {mention_population(plan.ms, 'sg', 'brand', rep=rep)} AND sg.{col} > 0)")
     if plan.has_citation_pred:
         sub = win.where("c", "row", b, keys=plan.keys)
         extra = []
@@ -120,7 +123,7 @@ def _base_where(plan: ListPlan, win: Window, b: Binder) -> list[str]:
             extra += source_where(dataclasses.replace(plan.ms, source_category_keys=plan.category_keys), "c", b)
         w.append(f"EXISTS (SELECT 1 FROM {fact_tables(plan.ms).citation} c WHERE " + " AND ".join(sub) +
                  " AND c.answer_key = a.answer_key AND c.round_date = a.round_date AND "
-                 + citation_population(plan.ms, "c", "citation") + " AND " + " AND ".join(extra) + ")")
+                 + citation_population(plan.ms, "c", "citation", rep=rep) + " AND " + " AND ".join(extra) + ")")
     return w
 
 

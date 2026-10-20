@@ -67,11 +67,14 @@ def measured_days_sql(ms: MeasureScope, win: Window, group: str, families: Seque
     """버킷별 측정 일수: 버킷 답변(families 회차 합집합 ∧ cit_in ∧ 필터 축)의 measured_at KST 날짜 고유 수.
     성능(A1, 2026-09-30 stg 조사): count(DISTINCT 날짜) 는 병렬 집계를 막아 조인 결과 15만 행을 Gather Merge·정렬로 모았다.
     (버킷, KST 날짜) 로 먼저 묶고(병렬 부분 집계 가능) 바깥에서 날짜 수를 센다. measured_at NULL 은 안쪽에서 NULL 날짜 그룹이 되므로
-    바깥은 count(day)(NULL 제외) = count(DISTINCT) 와 같은 값이다. 결과 행(버킷 집합)도 같다(안쪽 그룹이 있는 버킷 = 조인 행이 있는 버킷)."""
+    바깥은 count(day)(NULL 제외) = count(DISTINCT) 와 같은 값이다. 결과 행(버킷 집합)도 같다(안쪽 그룹이 있는 버킷 = 조인 행이 있는 버킷).
+    셀 대표: 언급 계열이 창에 있으면 언급 계열 대표(현행 추이 overview·brand·engine·first-position 은 언급 계열 게이트 위 셀 대표의 측정일을
+    센다, 갭 답변 포함 = cit_in), 인용 계열만이면 인용 계열 대표. 자리 규칙이 아니면 둘 다 is_rep 이라 문장이 같다(citation_population rep)."""
     b = Binder("d")
     name, expr = _bucket(group, "a")
     keys = win.union_keys(*families)
-    w = win.where("a", "row", b, keys=keys) + scope_where(ms, "a", b) + [citation_population(ms, "a")]
+    pop = citation_population(ms, "a", rep="m" if "mentions" in families else "c")
+    w = win.where("a", "row", b, keys=keys) + scope_where(ms, "a", b) + [pop]
     jw = [f"j.surface = {b.v(win.sf, 'int2')}", f"j.cyc_key = ANY({b.ints(keys, 'int4')})", "j.served"]
     if win.lo is not None and win.hi is not None:
         jw.append(f"j.round_date BETWEEN {b.date(win.lo)} AND {b.date(win.hi)}")

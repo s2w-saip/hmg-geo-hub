@@ -281,6 +281,61 @@ async def test_citation_rows_read_mentions_of_citation_rep(client_as, settings):
     assert (d_on["summary"], d_on["items"]) == (d_off["summary"], d_off["items"])
 
 
+# 목록·측정 일수(P2 잔여): 언급 숨김 형제 CY2 면 자리 언급 대표 = 회차 11 의 J9, 인용 대표 = CY2 의 JX(Hyundai 언급 1·유형 mention 1).
+# 측정 일수 시나리오: J9 를 KST 다음 날(09-15 00:30)로, JX 를 그 뒤(09-15 01:00)로 옮긴다. 셀 최신 = JX 라 인용 대표 = JX(보정 표에 J9),
+# 언급 대표 = J9(CY2 는 언급 숨김). 다른 픽스처 답변은 전부 KST 09-14(UTC 01:00~05:00).
+J9_NEXT_KST_DAY = f"UPDATE ing.answer SET measured_at = '2026-09-14 15:30+00' WHERE job_id = '{J9}'"
+JX_NEXT_KST_DAY = f"UPDATE ing.answer SET measured_at = '2026-09-14 16:00+00' WHERE job_id = '{JX}'"
+
+
+async def _list_ids(client_as, settings, params: dict[str, Any]) -> set[str]:
+    v = await _sibling_values(client_as, settings, _impl_spec(True), extra=(K1_LATEST,), calls=(("/v1/answers", params),), cards=(False,))
+    return {i["id"] for i in v[("/v1/answers", False)]["items"]}
+
+
+async def test_answer_list_filters_read_the_listed_answer(client_as, settings):
+    """인용 숨김 형제 CY2 + k1 셀 최신(K1_LATEST)이면 자리 언급 대표 = JX, 인용 대표 = k1(보정 표). include_gap 목록(인용 모수)은 k1 을 싣고,
+    브랜드·신호 필터는 그 답변 자신의 언급으로 판정한다(현행 드릴다운: scope-aggregates.ts snapshotRunFilter 의 같은 job scope_mentions,
+    인용 출처 탭 brandJobs = 그 인용 대표 답변의 resolved_mentions). 수정 전: 필터 EXISTS 가 언급 대표(is_rep)로 걸려 k1 이 빠졌다.
+    (언급 숨김 회차의 답변은 언급 필터가 창 회차를 언급 계열로 좁혀 원래 빠진다: service 의 계열 교집합, 현행 언급 드릴다운도 언급 계열)"""
+    assert K1 in await _list_ids(client_as, settings, {"include_gap": "true"})
+    assert K1 in await _list_ids(client_as, settings, {"include_gap": "true", "mention_brand": "Hyundai"})
+    assert K1 in await _list_ids(client_as, settings, {"include_gap": "true", "signal": "mention"})
+
+
+async def test_measured_days_count_the_mention_rep(client_as, settings):
+    """측정 일수(BG-10)는 언급 계열 대표의 측정일이다(현행 추이 overview·brand·engine·first-position: excludeHiddenCycleRuns(…, "mention")
+    위에서 셀 대표를 DISTINCT ON … measured_at_orig DESC 로 고르고 갭 답변도 센다). 언급 대표 J9 만 KST 09-15 라 측정일은 09-14·09-15 의
+    2 일이다(추이 창은 자리마다 회차 하나라 CY2 의 JX 는 창 밖). 수정 전: 인용 대표만 세어(J9 = is_rep XOR 보정 = 거짓) 09-15 가 빠져 1 일."""
+    v = await _sibling_values(client_as, settings, _impl_spec(True), hidden="mentions", extra=(J9_NEXT_KST_DAY, JX_NEXT_KST_DAY),
+                              calls=(("/v1/trend", {}),), cards=(False,))
+    assert [b["measured_days"] for b in v[("/v1/trend", False)]["buckets"]] == [2]
+
+
+def test_same_answer_rep_choice_changes_sql_only_under_seat_rule():
+    """목록 EXISTS·측정 일수가 고르는 대표 계열(rep)은 자리 규칙일 때만 문장을 바꾼다: 끔·자리 규칙 없는 구현 프로필이면 두 계열 대표가
+    is_rep 하나라 문장이 바이트 같다. 목록은 WHERE 와 같은 계열로 EXISTS 를 건다(include_gap 끔 = 언급 대표 → 인용 EXISTS 도 언급 대표)."""
+    from app.core.sqlb import Binder
+    from app.features.analytics.answers.list import queries as LQ
+    from tests.core.test_legacy_profile import WIN, _ms
+
+    def where(ms: M.MeasureScope, gap: bool) -> str:
+        plan = LQ.ListPlan(ms=ms, keys=(11,), include_gap=gap, own_bits=(1,), limit=10, mention_brand_key=7, signal_col="t_mention",
+                           source_keys=(3,))
+        return " AND ".join(LQ._base_where(plan, WIN, Binder()))
+
+    for spec in ("off", _impl_spec(False)):
+        ms = _ms(1, P.parse_profile(spec))
+        assert M.citation_population(ms, "a", rep="m") == M.citation_population(ms, "a")
+        assert M.mention_population(ms, "ab", "brand", rep="c") == M.mention_population(ms, "ab", "brand")
+    ms = _ms(1, P.parse_profile(_impl_spec(True)))
+    cm, cc = M.citation_population(ms, "c", "citation", rep="m"), M.citation_population(ms, "c", "citation")
+    assert cm != cc
+    assert cm in where(ms, False) and cc not in where(ms, False)                  # 언급 대표 목록 → 그 답변 자신의 인용
+    assert M.mention_population(ms, "ab", "brand", rep="c") in where(ms, True)     # 인용 대표 목록 → 그 답변 자신의 언급
+    assert M.mention_population(ms, "sg", "brand", rep="c") in where(ms, True)
+
+
 def test_card_citation_fix_leaves_non_card_sql_unchanged(monkeypatch):
     """int2 반례 수정은 카드 요청의 인용 계열만 바꾼다: 비카드(card 없음) 문장은 수정 전 대응표(카드 인용 = is_rep)와 바이트 같다.
     카드 요청 문장은 인용 계열만 달라진다(언급 계열 문장 = 같다)."""

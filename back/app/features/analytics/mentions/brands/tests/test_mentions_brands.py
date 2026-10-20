@@ -237,6 +237,28 @@ async def test_cumulative_both_cycles_non_empty(ro, refs):
         assert (snap.totals.answers, snap.totals.mentions_total, snap.own.mentions) == (3, 11, 5)
 
 
+async def test_multi_own_avg_rank_counts_each_answer_once(ro, refs):
+    """다중 관점(HMG) 당사 M04 = 답변마다 당사 브랜드 순위 중 최상위 하나의 평균(헤드투헤드 '당사' 행이 이 값을 쓴다).
+    픽스처 답변은 당사 브랜드가 하나씩만 순위를 가져(off: 합 4 / 3) 이 경로를 타지 않는다. 한 답변에 Hyundai rk 3 · Kia rk 1 을 넣으면
+    그 답변은 1 하나로 센다 → 순위 합 +1, 순위 답변 +1. 브랜드 행을 합치면 +4 / +2 가 되어 같은 답변을 두 번 센다.
+    값은 넣기 전 대비 증분으로 본다(프로필마다 픽스처 모수가 달라도 같은 답변 하나의 몫은 같다)."""
+    async with rollback_tx() as (c, tx):
+        _, before = await _service(tx, ro, refs, ADMIN)
+        k = await brand_keys(tx, NAMES)
+        run_key, load_id = await borrowed_run(c, J1)
+        cyc11 = await cycle_row(tx, 1, GLOBAL_SNAPSHOT)
+        await insert_answers(c, [SynthAnswer(
+            answer_key=9_201, cyc=cyc11, prompt_key=await prompt_key(tx, P1), engine_key=refs.engines["chatgpt"][0],
+            geo_key=refs.geo_key("US"), lang_key=refs.langs["en"], bgrp=5,
+            brands=(BrandRow(k["Hyundai"], 1, 1, rk=3), BrandRow(k["Kia"], 2, 2, rk=1), BrandRow(k["Toyota"], 0, 1, rk=2)))],
+            run_key=run_key, load_id=load_id)
+        _, d = await _service(tx, ro, refs, ADMIN)
+        assert d.own.vp_label == before.own.vp_label == "HMG"
+        r0 = before.own.avg_rank.model_dump() if before.own.avg_rank else {"sum": 0, "count": 0}
+        assert (d.own.mentions - before.own.mentions, d.own.exposure.num - before.own.exposure.num,
+                d.own.avg_rank.sum - r0["sum"], d.own.avg_rank.count - r0["count"]) == (3, 1, 1, 1)
+
+
 async def test_hyundai_n_only_prompt_excluded_from_hyundai(ro, refs):
     """G-01 결정: Hyundai N 전용(bgrp 16) 답변은 현대 관점 모수에서 빠지고 Hyundai N 관점에는 들어간다(core.measure bgrps).
     회차 11 에 bgrp 16 std_in 답변(Hyundai 당사 2·rk 1, BMW 1)을 넣고 전후 차이로 본다."""
