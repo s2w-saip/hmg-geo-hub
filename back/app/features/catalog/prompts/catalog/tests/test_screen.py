@@ -55,6 +55,25 @@ async def test_large_catalog_filter_count_facets_and_last_page(client_as, seeded
         assert admin["stats"]["total"] >= 12005
 
 
+async def test_admin_count_is_the_view_population(client_as):
+    """관리자 '전체'(count) 는 보기(활성·삭제) 모집단이다 — 필터 없이 count == total, 활성 보기 count == 통계 줄 total.
+    수정 전: count 가 루트 전체(삭제 포함)를 세어 활성 300 · 삭제 12 면 '표시 300 / 전체 312', 통계 줄은 '전체 300'."""
+    seed = Sql("""
+      SELECT set_config('app.actor_id', '5eed0000-0000-4000-8000-000000000001', true);
+      INSERT INTO app.prompt (project_id, text, depth1, kind, regions, lang, created_by, deleted_at)
+      SELECT (SELECT project_id FROM app.project WHERE kind='standard_root'), 'deleted-screen-' || n, 'deleted-only', 'single',
+             ARRAY['KR'], 'KO', app.actor(), now() FROM generate_series(1, 3) n;
+    """)
+    async with staged(seed), client_as(ADMIN) as client:
+        got = {}
+        for view in ("active", "deleted"):
+            response = await client.post("/v1/admin/catalog/prompts/screen", json={"filters": {"view": view}})
+            assert response.status_code == 200, response.text
+            got[view] = response.json()["data"]
+            assert got[view]["count"] == got[view]["total"], (view, got[view]["count"], got[view]["total"])
+        assert got["deleted"]["count"] >= 3
+        assert got["active"]["count"] == got["active"]["stats"]["total"]
+
 async def test_filtering_does_not_shrink_option_population_and_search_is_literal(client_as):
     async with client_as(ADMIN) as client:
         before = await client.post("/v1/prompts/screen", json={})

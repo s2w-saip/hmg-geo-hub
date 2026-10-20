@@ -131,8 +131,10 @@ async def catalog_screen(conn, principal, request: CatalogScreenQuery, *, admin=
     base_where = " AND ".join(base)
     filters = request.filters
     where = list(base)
-    if admin:
-        where.append("p.deleted_at IS NOT NULL" if filters.view == "deleted" else "p.deleted_at IS NULL")
+    # 관리자 보기(활성·삭제): 목록·'표시' 와 '전체'(count) 가 같은 모수여야 한다 — count 가 base(삭제 포함)를 세면 '표시 300 / 전체 312'
+    view_pred = ("p.deleted_at IS NOT NULL" if filters.view == "deleted" else "p.deleted_at IS NULL") if admin else None
+    if view_pred:
+        where.append(view_pred)
     for key, col in AXES.items():
         value = getattr(filters, key)
         if value != "all":
@@ -167,7 +169,8 @@ async def catalog_screen(conn, principal, request: CatalogScreenQuery, *, admin=
             if key in ("listType", "depth1", "depth2", "depth3") and getattr(request.draft, key) != "all":
                 parents.append(f"p.{col} = {b.v(getattr(request.draft, key))}")
         flags = ", ".join(f"bool_or(p.{AXES[key]} IS NOT NULL AND p.{AXES[key]} <> '') AS \"has_{key}\"" for key in ("listType", "depth1", "depth2", "depth3", "depth4"))
-        meta = await fetch_one(conn, f"SELECT count(*) AS count, {', '.join(facets)}, {flags} FROM app.prompt p WHERE {base_where}", b.params)
+        count_col = f"count(*) FILTER (WHERE {view_pred})" if view_pred else "count(*)"   # 패싯·열 플래그는 종전대로 base 전체
+        meta = await fetch_one(conn, f"SELECT {count_col} AS count, {', '.join(facets)}, {flags} FROM app.prompt p WHERE {base_where}", b.params)
         markets = await fetch_all(conn, f"SELECT DISTINCT {NORMAL_MARKET} AS code FROM app.prompt p CROSS JOIN LATERAL unnest(p.regions) m WHERE {base_where} AND btrim(m) <> ''", b.params)
         count = int(meta["count"])
         options = {key: sorted(meta[key] or []) for key in ("listType", "depth1", "depth2", "depth3", "depth4", "funnel", "lang")}
