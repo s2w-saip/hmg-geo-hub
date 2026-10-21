@@ -45,7 +45,7 @@
 <body>
 <main>
 <h1>리뉴얼 화면 인계 — Overview · 글로벌 프롬프트</h1>
-<p class="sub">작성 2026-10-21 · 다음 작업: 운영 데이터 대조(stg 또는 미리보기 배포) → 알려진 문제 수정 여부 결정 → 글로벌 프롬프트 1만 건 대응 결정</p>
+<p class="sub">작성 2026-10-21 · 다음 작업: 운영 데이터 대조(stg 또는 미리보기 배포) → 글로벌 프롬프트 1만 건 대응 결정 · 알려진 문제 3건은 2026-10-21 수정(5장)</p>
 
 <div class="banner">
   <strong>상태: 구현·목업 완료, 운영 데이터 검증 전.</strong> 두 리뉴얼 화면과 목업은 main 에 푸시되어 있습니다.
@@ -139,14 +139,14 @@ stg 또는 미리보기 배포에서, 계정 4종(admin, HQ, 권역 담당, 국�
   <tr><td>운영·stg 데이터로 원래 화면과 숫자 대조</td><td>미실시</td><td>3장</td></tr>
 </table></div>
 
-<h2>5. 알려진 문제(구현 중 발견, 수정 안 함 — 수정 여부는 사용자 결정 대기)</h2>
+<h2>5. 알려진 문제(구현 중 발견 — 2026-10-21 모두 수정)</h2>
 <div class="table-wrap"><table>
-  <tr><th>#</th><th>내용</th><th>위치</th></tr>
-  <tr><td>1</td><td>글로벌 프롬프트 변경 이력 탭의 '프롬프트' 열이 1440 폭에서 약 47px(1920 에서 121px)로 좁아져 본문이 거의 보이지 않음. 다른 열이 150/104/150px·34% 로 고정이라 남는 폭이 없음.</td><td><code>prompt-history.tsx</code> <code>RnAuditHistory</code> 의 <code>colgroup</code></td></tr>
-  <tr><td>2</td><td>Overview 브랜드 비교의 당사 행 이름이 HQ·권역·국가 계정에서 "Hyundai, HMG" 로 나옴. <code>readStandardFilters</code> 가 브랜드 계정의 <code>filters.brand</code> 에 HMG 엄브렐러를 넣기 때문.</td><td><code>renewal/dashboard/page.tsx</code> 의 <code>ownLabel</code></td></tr>
-  <tr><td>3</td><td>글로벌 프롬프트 열람 범위 표시에 권역 내부 ID(예: <code>hyundai-europe</code>)가 그대로 보임. 원래 화면도 같아서 우선순위는 낮음.</td><td><code>prompts-view.tsx</code> <code>scopeSummary</code>(원래 <code>prompt-list-readonly.tsx</code> 도 같음)</td></tr>
+  <tr><th>#</th><th>내용</th><th>위치</th><th>수정</th></tr>
+  <tr><td>1</td><td>글로벌 프롬프트 변경 이력 탭의 '프롬프트' 열이 1440 폭에서 약 47px(1920 에서 121px)로 좁아져 본문이 거의 보이지 않음. 다른 열이 150/104/150px·34% 로 고정이라 남는 폭이 없음.</td><td><code>prompt-history.tsx</code> <code>RnAuditHistory</code> 의 <code>colgroup</code></td><td>수정자를 일시 칸 둘째 줄로, 이벤트 배지를 프롬프트 칸 위로 옮겨 열을 3개(156px / 나머지 / 34%)로 줄임. 프롬프트 열: 1280 필터 펼침 190px, 1440 펼침 295px, 1920 접힘 530px.</td></tr>
+  <tr><td>2</td><td>Overview 브랜드 비교의 당사 행 이름이 HQ·권역·국가 계정에서 "Hyundai, HMG" 로 나옴. <code>readStandardFilters</code> 가 브랜드 계정의 <code>filters.brand</code> 에 HMG 엄브렐러를 넣기 때문.</td><td><code>renewal/dashboard/page.tsx</code> 의 <code>ownLabel</code></td><td>라벨에서 엄브렐러(<code>UMBRELLA_BRAND</code>)를 뺌. 데이터 필터는 그대로.</td></tr>
+  <tr><td>3</td><td>글로벌 프롬프트 열람 범위 표시에 권역 내부 ID(예: <code>hyundai-europe</code>)가 그대로 보임. 원래 화면도 같아서 우선순위는 낮음.</td><td><code>prompts-view.tsx</code> <code>scopeSummary</code>(원래 <code>prompt-list-readonly.tsx</code> 도 같음)</td><td>리뉴얼 화면만 <code>rhqLabel</code> 로 권역명 표시(예: 유럽). 원래 화면은 그대로.</td></tr>
 </table></div>
-<p>고칠 때는 목업(<code>docs/design/ui</code>)도 같이 맞춥니다.</p>
+<p>목업(<code>docs/design/ui</code>)도 같은 내용으로 맞췄습니다.</p>
 
 <h2>6. 다음 작업 2 — 글로벌 프롬프트 1만 건 대응(결정 대기)</h2>
 <p>지금 화면은 알고 있는 프롬프트를 찾는 데는 충분하지만, 1만 건 전체를 파악하기에는 부족하다는 판단입니다.

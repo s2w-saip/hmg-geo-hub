@@ -22,6 +22,7 @@ import {
   wasDegraded,
 } from "@/lib/scope/server";
 import { narrowScopeBrands } from "@/lib/scope/hmg-brands";
+import { UMBRELLA_BRAND } from "@/lib/scope/brand-presence";
 import type { StandardFilters } from "@/lib/scope/result-adapter";
 import { readStandardFilters } from "@/components/dash/standard-filters";
 import { OVERVIEW_COMPARE_METRICS } from "@/components/dash/period-delta-metrics";
@@ -251,7 +252,10 @@ async function OverviewSection({ filters, locale, qs, showGeo }: { filters: Stan
   }
   const deltas = handled(deltaTrend.then((d) => applyTrendDeltas(live.kpis, d)));
   const trend = handled(weeklyTrend.then(sparklineTrend));
-  const ownLabel = filters.brand?.length ? filters.brand.join(", ") : "HMG";
+  // brand-scoped accounts carry the HMG umbrella in filters.brand (readStandardFilters);
+  // it is a prompt tag, not a brand, so it stays out of the own-row label
+  const ownBrands = (filters.brand ?? []).filter((b) => b !== UMBRELLA_BRAND);
+  const ownLabel = ownBrands.length ? ownBrands.join(", ") : UMBRELLA_BRAND;
   return (
     <>
       <RnOverviewBody

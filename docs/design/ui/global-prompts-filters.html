@@ -221,7 +221,9 @@
   .hist .bar .shown { margin-left: auto; font-size: 12px; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
   .au-tbl th:first-child { padding: 0 12px 0 4px; }
   .au-tbl td { padding: 10px 12px; font-size: 12px; }
-  .au-tbl td:first-child { padding-left: 4px; white-space: nowrap; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+  .au-tbl td:first-child { padding-left: 4px; color: var(--ink-muted); }
+  .au-tbl .when { display: block; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .au-tbl .who { display: block; margin-top: 2px; font-size: 11px; word-break: break-all; }
   .au-tbl tr.grp td { background: var(--sand-light); padding-top: 8px; padding-bottom: 8px; }
   .au-tbl tr.sub td { background: var(--sand-light); }
   .clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: var(--ink); }
@@ -533,12 +535,14 @@ function panelHtml() {
     <div style="height:12px"></div>
   </aside>`;
 }
+// rhqLabel(id, "ko") — lib/rhq/_data/rhq-map.json
+const RHQ_LABEL = { "hyundai-europe": "유럽", "hyundai-asia-pacific": "아시아 & 태평양", "hyundai-latin-america": "중남미", "hyundai-africa": "아프리카", "hyundai-middle-east": "중동", "hyundai-north-america": "북아메리카" };
 function scopeSummary() {
   const s = role.scope;
   if (s.all) return "전체";
   const parts = [];
   if (s.brands?.length) parts.push(s.brands.join(" · "));
-  if (role.role !== "country" && s.regions?.length) parts.push(s.regions.join(" · "));
+  if (role.role !== "country" && s.regions?.length) parts.push(s.regions.map((r) => RHQ_LABEL[r] ?? r).join(" · "));
   if (s.countries?.length) parts.push(s.countries.length <= 2 ? s.countries.join(" · ") : `${s.countries.length}개국`);
   return parts.join("  ·  ") || "전체";
 }
@@ -596,14 +600,14 @@ function historyHtml() {
   const rows = AUDIT.filter((r) => visible.has(r.promptId) && r.createdAt >= since && (histEvent === "all" || r.eventType === histEvent));
   const groups = [];
   for (const r of rows) { const last = groups[groups.length - 1]; if (r.batchId && last && last.batchId === r.batchId) last.rows.push(r); else groups.push({ key: r.id, batchId: r.batchId, rows: [r] }); }
-  const evRow = (r, sub) => `<tr class="${sub ? "sub" : ""}"><td>${(sub ? "· " : "") + dtFmt.format(new Date(r.createdAt))}</td><td><span class="clamp">${esc(r.promptText ?? r.promptId)}</span></td><td><span class="ev">${EVENTS[r.eventType]}</span></td><td class="muted" style="word-break:break-all">${esc(r.actorEmail ?? "(시스템)")}</td><td>${changesHtml(r.changes)}</td></tr>`;
+  const evRow = (r, sub) => `<tr class="${sub ? "sub" : ""}"><td><span class="when">${(sub ? "· " : "") + dtFmt.format(new Date(r.createdAt))}</span><span class="who">${esc(r.actorEmail ?? "(시스템)")}</span></td><td><span class="ev">${EVENTS[r.eventType]}</span><span class="clamp" style="margin-top:4px">${esc(r.promptText ?? r.promptId)}</span></td><td>${changesHtml(r.changes)}</td></tr>`;
   return `<section class="card pad"><div class="hist">
     <div><h2>프롬프트 변경 이력</h2><p class="desc">글로벌 프롬프트의 생성·수정·삭제 기록 (최근 90일)</p></div>
     <div class="bar">${sel("data-hdays", "기간", histDays, [["30", "최근 30일"], ["90", "최근 90일"]])}${sel("data-hevent", "이벤트", histEvent, [["all", "이벤트 · 전체"], ...Object.entries(EVENTS)])}
       <span class="shown">표시 ${rows.length}건</span><button class="btn sm" data-csv ${rows.length ? "" : "disabled"}>${ic("download", "s14")}CSV 내보내기</button></div>
-    ${groups.length === 0 ? `<p class="nodata">기록된 변경이 없습니다</p>` : `<div class="tblwrap"><table class="au-tbl"><colgroup><col style="width:150px"><col><col style="width:104px"><col style="width:150px"><col style="width:34%"></colgroup>
-      <thead><tr><th>일시</th><th>프롬프트</th><th>이벤트</th><th>수정자</th><th>변경 내용</th></tr></thead>
-      <tbody>${groups.map((g) => g.rows.length === 1 ? evRow(g.rows[0]) : `<tr class="grp"><td>${dtFmt.format(new Date(g.rows[0].createdAt))}</td><td colspan="4"><button class="gbtn" data-grp="${g.key}" aria-expanded="${histOpen.has(g.key)}"><span class="chev2">${ic("chev-r", "s14")}</span>일괄 교체 ${g.rows.length}건<span class="muted" style="font-weight:400">${esc(g.rows[0].actorEmail ?? "(시스템)")}</span></button></td></tr>${histOpen.has(g.key) ? g.rows.map((r) => evRow(r, true)).join("") : ""}`).join("")}</tbody></table></div>`}
+    ${groups.length === 0 ? `<p class="nodata">기록된 변경이 없습니다</p>` : `<div class="tblwrap"><table class="au-tbl"><colgroup><col style="width:156px"><col><col style="width:34%"></colgroup>
+      <thead><tr><th>일시 · 수정자</th><th>이벤트 · 프롬프트</th><th>변경 내용</th></tr></thead>
+      <tbody>${groups.map((g) => g.rows.length === 1 ? evRow(g.rows[0]) : `<tr class="grp"><td>${dtFmt.format(new Date(g.rows[0].createdAt))}</td><td colspan="2"><button class="gbtn" data-grp="${g.key}" aria-expanded="${histOpen.has(g.key)}"><span class="chev2">${ic("chev-r", "s14")}</span>일괄 교체 ${g.rows.length}건<span class="muted" style="font-weight:400">${esc(g.rows[0].actorEmail ?? "(시스템)")}</span></button></td></tr>${histOpen.has(g.key) ? g.rows.map((r) => evRow(r, true)).join("") : ""}`).join("")}</tbody></table></div>`}
   </div></section>`;
 }
 function page_() { return `<div class="split ${panel ? "" : "collapsed"}">${panelHtml()}<div class="content">${headerHtml()}${tab === "history" ? historyHtml() : catalogHtml()}</div></div>`; }

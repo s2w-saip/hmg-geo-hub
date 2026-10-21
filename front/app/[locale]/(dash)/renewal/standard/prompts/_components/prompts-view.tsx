@@ -42,6 +42,7 @@ import {
 } from "@/lib/standards/catalog-page";
 import { brandPresenceOf, UMBRELLA_BRAND } from "@/lib/scope/brand-presence";
 import { countryName } from "@/lib/geo-catalog/country-name";
+import { rhqLabel } from "@/lib/rhq";
 import { languageName } from "@/lib/geo-catalog/language-name";
 import { isMarketUnset, isPseudoRegion, pseudoRegionLabelKey, splitMarkets } from "@/lib/standards/prompt-markets";
 import { downloadXlsx } from "@/lib/export/xlsx";
@@ -312,10 +313,10 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
     if (scopeAll) return t("scopeAll");
     const parts: string[] = [];
     if (scopeBrands.length) parts.push(scopeBrands.join(" · "));
-    if (showRegions) parts.push(scopeRegions.join(" · "));
+    if (showRegions) parts.push(scopeRegions.map((r) => rhqLabel(r, locale === "en" ? "en" : "ko") ?? r).join(" · "));
     if (scopeCountries.length) parts.push(scopeCountries.length <= 2 ? scopeCountries.join(" · ") : t("scopeCountryCount", { count: scopeCountries.length }));
     return parts.join("  ·  ") || t("scopeAll");
-  }, [scopeAll, scopeBrands, showRegions, scopeRegions, scopeCountries, t]);
+  }, [scopeAll, scopeBrands, showRegions, scopeRegions, scopeCountries, locale, t]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

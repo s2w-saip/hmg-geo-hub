@@ -724,10 +724,10 @@ function compute(f) {
     const big = [...cs].sort((a, b) => b.answers - a.answers)[0];
     return { id, countries: cs, answers: ws, v, rival: big.rival };
   }).sort((a, b) => b.v.shareOfVoice - a.v.shareOfVoice) : [];
-  // own row label = filters.brand joined (scoped accounts carry their brands + the HMG umbrella), else "HMG"
+  // own row label = filters.brand without the HMG umbrella (scoped accounts carry their brands + the umbrella), else "HMG"
   const scoped = !role.scope.all && role.scope.brands?.length ? [...role.scope.brands, "HMG"] : null;
   const brandParam = scoped ?? f.brand;
-  return { markets, regions, hero, period: periodCompare(f, ctx), activeBrand: d.activeBrand, ownLabel: brandParam.length ? brandParam.join(", ") : "HMG", empty: markets.length === 0 };
+  return { markets, regions, hero, period: periodCompare(f, ctx), activeBrand: d.activeBrand, ownLabel: brandParam.filter((b) => b !== "HMG").join(", ") || "HMG", empty: markets.length === 0 };
 }
 
 // ── tokens under the title (one per axis, app group labels) ──

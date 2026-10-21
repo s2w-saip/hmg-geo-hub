@@ -141,14 +141,14 @@ export function RnAuditHistory({ initialRows }: { initialRows: PromptAuditLogVie
     );
   const eventRow = (r: PromptAuditLogView, indent = false) => (
     <tr key={r.id} className={cx("align-top", indent && "bg-rn-page")}>
-      <td className="border-b border-rn-line py-2.5 pr-3 pl-1 text-rn-12 whitespace-nowrap text-rn-muted tabular-nums">{(indent ? "· " : "") + fmt.format(new Date(r.createdAt))}</td>
+      <td className="border-b border-rn-line py-2.5 pr-3 pl-1 text-rn-12 text-rn-muted">
+        <span className="block whitespace-nowrap tabular-nums">{(indent ? "· " : "") + fmt.format(new Date(r.createdAt))}</span>
+        <span className="mt-0.5 block break-all text-rn-11">{r.actorEmail ?? t("actorUnknown")}</span>
+      </td>
       <td className="border-b border-rn-line px-3 py-2.5 text-rn-12 text-rn-ink">
-        <span className="line-clamp-2">{r.promptText ?? r.promptId}</span>
-      </td>
-      <td className="border-b border-rn-line px-3 py-2.5">
         <span className="rounded-md bg-rn-navy/8 px-1.5 py-px text-rn-12 font-bold text-rn-navy">{t(`events.${r.eventType}` as "events.created")}</span>
+        <span className="mt-1 line-clamp-2">{r.promptText ?? r.promptId}</span>
       </td>
-      <td className="border-b border-rn-line px-3 py-2.5 text-rn-12 break-all text-rn-muted">{r.actorEmail ?? t("actorUnknown")}</td>
       <td className="border-b border-rn-line px-3 py-2.5">
         <Changes changes={r.changes} textToggle={th("viewTextDiff")} />
       </td>
@@ -179,16 +179,16 @@ export function RnAuditHistory({ initialRows }: { initialRows: PromptAuditLogVie
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full table-fixed border-separate border-spacing-0 text-rn-13">
+            {/* the actor sits under the date and the event badge above the prompt (not their
+                own columns) so the prompt column stays readable with the filter panel open */}
             <colgroup>
-              <col className="w-[150px]" />
+              <col className="w-[156px]" />
               <col />
-              <col className="w-[104px]" />
-              <col className="w-[150px]" />
               <col className="w-[34%]" />
             </colgroup>
             <thead>
               <tr className="text-left text-rn-12 font-semibold text-rn-muted">
-                {[th("colWhen"), th("colPrompt"), th("colEvent"), th("colActor"), th("colChanges")].map((h, i) => (
+                {[`${th("colWhen")} · ${th("colActor")}`, `${th("colEvent")} · ${th("colPrompt")}`, th("colChanges")].map((h, i) => (
                   <th key={h} scope="col" className={cx("h-[38px] border-b border-rn-line-2 font-semibold", i === 0 ? "pr-3 pl-1" : "px-3")}>
                     {h}
                   </th>
@@ -203,7 +203,7 @@ export function RnAuditHistory({ initialRows }: { initialRows: PromptAuditLogVie
                   <Fragment key={g.key}>
                     <tr className="bg-rn-page">
                       <td className="border-b border-rn-line py-2 pr-3 pl-1 text-rn-12 whitespace-nowrap text-rn-muted tabular-nums">{fmt.format(new Date(g.rows[0].createdAt))}</td>
-                      <td colSpan={4} className="border-b border-rn-line px-3 py-2">
+                      <td colSpan={2} className="border-b border-rn-line px-3 py-2">
                         <button
                           type="button"
                           aria-expanded={open.has(g.key)}
