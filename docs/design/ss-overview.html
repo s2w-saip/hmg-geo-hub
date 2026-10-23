@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overview SS 설계</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1c1f24; --muted: #5b6370; --line: #dde1e6; --card: #f6f7f9;
+    --accent: #2457c5; --warn-bg: #fff5e0; --warn-line: #e3a008; --ok: #1f7a3d; --code-bg: #f1f3f5;
+    --p1: #002c5f; --p1-bg: #e6eaf0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15181c; --fg: #e6e8eb; --muted: #9aa3ad; --line: #2c323a; --card: #1c2026;
+      --accent: #7aa2ff; --warn-bg: #2d2412; --warn-line: #b7860b; --ok: #5fc27e; --code-bg: #1f242b;
+      --p1: #aacae6; --p1-bg: #1d2a3a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15181c; --fg: #e6e8eb; --muted: #9aa3ad; --line: #2c323a; --card: #1c2026;
+    --accent: #7aa2ff; --warn-bg: #2d2412; --warn-line: #b7860b; --ok: #5fc27e; --code-bg: #1f242b;
+    --p1: #aacae6; --p1-bg: #1d2a3a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+    font: 15px/1.65 "Pretendard", system-ui, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif; }
+  main { max-width: 1080px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  h2 { font-size: 19px; margin: 36px 0 10px; padding-top: 12px; border-top: 1px solid var(--line); }
+  h3 { font-size: 16px; margin: 22px 0 6px; }
+  .sub { color: var(--muted); margin: 0 0 18px; }
+  .banner { background: var(--warn-bg); border-left: 4px solid var(--warn-line); padding: 12px 14px; border-radius: 6px; margin: 16px 0; }
+  code { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 13px; background: var(--code-bg); padding: 1px 4px; border-radius: 4px; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 14px; }
+  th, td { border: 1px solid var(--line); padding: 7px 9px; text-align: left; vertical-align: top; }
+  th { background: var(--card); white-space: nowrap; }
+  td.c { text-align: center; white-space: nowrap; }
+  .tag { display: inline-block; font-size: 12px; font-weight: 700; padding: 0 7px; border-radius: 5px; white-space: nowrap; }
+  .tag.ok { background: var(--p1); color: var(--bg); }
+  .tag.x { background: var(--card); color: var(--muted); border: 1px solid var(--line); }
+  .tag.new { background: var(--p1-bg); color: var(--p1); }
+  .muted { color: var(--muted); }
+  .table-wrap { overflow-x: auto; }
+  ul li, ol li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<main>
+<h1>Overview SS 설계 — 변화의 이유 · 근거</h1>
+<p class="sub">2026-10-22 · 단계 O1(위치표 + 목업, 승인 전) · 합격 기준: <code>docs/design/ss-grade-criteria.html</code> 조건 3 · 4 · 목업: <code>docs/design/ui/overview-mockup.html</code></p>
+
+<div class="banner">
+  <strong>이 문서의 쓰임</strong> — Overview 에서 조건 3(변화의 이유)과 4(근거까지)를 판정하는 기준표입니다.
+  2장 · 3장의 위치 목록이 검증 스크립트의 입력이 되고, 4장 · 5장이 목업과 구현의 명세입니다.
+  조건 5(다음 행동)는 ‘이번 회차 요약’이 있는 화면의 조건이라 Overview 에는 해당하지 않습니다(다음 화면 Mention 에서 처음 다룹니다).
+</div>
+
+<h2>1. 정한 것(합격 기준 문서 1장 5–9)</h2>
+<ul>
+  <li>데이터는 기존 경로(legacy: Next.js 가 미러 · 요약 사실표를 직접 읽음). 새 백엔드는 범위 밖.</li>
+  <li>증감 기준 = 직전 회차. 분해는 회차 대 회차만, 기간 비교 칩은 분해하지 않는다. 화면 숫자는 그대로 둔다.</li>
+  <li>이전 회차는 ‘변화의 이유’ 서랍 위 <b>회차별 증감 이력 띠</b>로 본다. 회차를 누르면 그 회차와 그 직전 회차 사이의 분해로 바뀌고, 근거 목록도 그 회차를 따른다.</li>
+  <li>격차(당사 − 경쟁사)는 당사 | 경쟁사 답변 목록을 열면 통과. ‘비교 브랜드 N개 중 M위’ 같은 순위 문구는 조건 4 대상 아님.</li>
+  <li>페이지 안 스크롤 이동 없음 — 모든 분해 · 목록은 서랍으로 연다.</li>
+</ul>
+
+<h2>2. 증감 위치 목록(조건 3)</h2>
+<p>합격선: 아래 ‘대상’ 위치에서 1클릭으로 엔진 · 국가 · 프롬프트별 기여가 열리고, 기여의 합이 그 위치의 증감과 같다(±0.1pp, 순위는 ±0.1번째).</p>
+<div class="table-wrap"><table>
+  <tr><th>#</th><th>위치</th><th>지금 증감의 원천</th><th>판정</th><th>1클릭</th></tr>
+  <tr><td>D1</td><td>KPI 5종 카드의 증감 칩(당사 · 5지표)</td>
+    <td>카드 추이(요약 추이층)의 값이 있는 마지막 두 회차 자리의 차 — <code>overviewCardDelta</code></td>
+    <td><span class="tag ok">대상</span></td><td>변화의 이유(당사 · 그 지표 · 최신 회차)</td></tr>
+  <tr><td>D2</td><td>브랜드 비교 당사 행의 증감(5지표)</td><td>D1 과 같은 숫자</td><td><span class="tag ok">대상</span></td><td>D1 과 같음</td></tr>
+  <tr><td>D3</td><td>브랜드 비교 경쟁사 행의 증감(노출률 · 점유율 · 우선 노출도)</td>
+    <td>경쟁사 추이(<code>brandTrend</code> · 순위는 <code>firstPosition</code>)의 마지막 두 값</td>
+    <td><span class="tag ok">대상</span></td><td>변화의 이유(그 경쟁사 · 그 지표)</td></tr>
+  <tr><td>—</td><td>기간을 고른 뒤의 KPI 증감 칩(기간 비교)</td><td>기간 창 대 직전 창</td>
+    <td><span class="tag x">대상 아님</span></td><td>누르면 변화의 이유가 열리되, 머리에 ‘기간 비교는 분해하지 않습니다 — 회차별로 봅니다’를 적고 기간 안의 회차 이력을 보인다</td></tr>
+  <tr><td>—</td><td>경쟁사 우호도 · 인용 점유율, 시장별 현황</td><td>증감을 표시하지 않음</td><td><span class="tag x">해당 없음</span></td><td>—</td></tr>
+</table></div>
+
+<h2>3. 숫자 위치 목록(조건 4)</h2>
+<p>합격선: 아래 ‘대상’ 위치마다 2클릭 안에 그 숫자를 만든 답변 원문 목록이 열린다. 클릭 수는 숫자를 누르는 것부터 셉니다.</p>
+<div class="table-wrap"><table>
+  <tr><th>#</th><th>위치</th><th>1클릭</th><th>2클릭</th><th>판정</th></tr>
+  <tr><td>N1</td><td>KPI 값(5)</td><td>근거 — 당사 · 그 지표 · 최신 회차</td><td>—</td><td class="c"><span class="tag ok">1</span></td></tr>
+  <tr><td>N2</td><td>KPI 증감(5)</td><td>변화의 이유</td><td>행 또는 요약의 ‘근거’ → 근거(그 조각, 이번 | 직전 회차)</td><td class="c"><span class="tag ok">2</span></td></tr>
+  <tr><td>N3</td><td>KPI 추이 선(5)</td><td>변화의 이유(이력 띠에서 회차 고르기)</td><td>‘이 회차 근거’ → 근거(고른 회차)</td><td class="c"><span class="tag ok">2</span></td></tr>
+  <tr><td>N4</td><td>‘비교 브랜드 N개 중 M위’(5), 브랜드 비교 열 머리 ‘당사 M위 / N’</td><td colspan="2">순위 문구 — 합격 기준 1장 9</td><td class="c"><span class="tag x">대상 아님</span></td></tr>
+  <tr><td>N5</td><td>브랜드 비교 값 칸(브랜드 × 지표, ‘—’ 제외)</td><td>근거 — 그 브랜드 · 그 지표</td><td>—</td><td class="c"><span class="tag ok">1</span></td></tr>
+  <tr><td>N6</td><td>브랜드 비교 증감(D2 · D3)</td><td>변화의 이유</td><td>근거</td><td class="c"><span class="tag ok">2</span></td></tr>
+  <tr><td>N7</td><td>시장별 현황 권역 행 값(지표 5)</td><td>근거 — 그 권역의 국가들</td><td>—</td><td class="c"><span class="tag ok">1</span></td></tr>
+  <tr><td>N8</td><td>시장별 현황 국가 칸 값(국가 × 지표)</td><td>근거 — 그 국가</td><td>—</td><td class="c"><span class="tag ok">1</span></td></tr>
+  <tr><td>N9</td><td>칸의 작은 숫자 = 최대 경쟁사 대비 격차</td><td>근거 — 탭 ‘당사 | 그 경쟁사’</td><td>—</td><td class="c"><span class="tag ok">1</span></td></tr>
+  <tr><td>N10</td><td>‘답변 N개’(권역 · 국가)</td><td>근거 — 노출률 · 그 시장의 모든 답변</td><td>—</td><td class="c"><span class="tag ok">1</span></td></tr>
+  <tr><td>—</td><td>머리의 ‘측정 회차 … 기준’, ‘최근 5회차’ 같은 날짜 · 개수 안내</td><td colspan="2">값이 아니라 기준 표시</td><td class="c"><span class="tag x">대상 아님</span></td></tr>
+</table></div>
+<p class="muted">누를 수 있는 숫자는 마우스를 올리면 밑줄과 손가락 커서, 키보드 초점 링을 보입니다(디자인 규칙에 추가). 표의 칸 전체가 아니라 숫자 묶음(값 + 증감)이 누름 대상입니다.</p>
+
+<h2>4. 서랍 명세</h2>
+<p>두 서랍은 같은 오른쪽 시트(<code>RnDrawer</code>, 폭 720px로 넓힘) 하나 안의 두 화면입니다. ‘변화의 이유 → 근거’는 서랍을 새로 쌓지 않고 같은 시트에서 넘어가며, 머리 왼쪽 ‘‹ 변화의 이유’로 돌아옵니다. Esc · 바깥 누름 = 닫기, 초점은 연 숫자로 돌아갑니다.</p>
+
+<h3>4-1. 변화의 이유</h3>
+<ol>
+  <li><b>머리</b> — 제목 ‘변화의 이유’, 부제 ‘{지표} · {브랜드} · 직전 회차 대비’.</li>
+  <li><b>회차별 증감 이력 띠</b> — 최근 회차들의 ‘직전 대비 증감’을 날짜와 함께 작은 막대(0 기준 위 · 아래)로 나열. 최대 12칸(추이 자리 13개 = 증감 12개), 오래된 것 → 최신. 기본 선택 = 최신 칸 = 화면의 증감. 칸을 누르면 아래 전체가 그 회차로 바뀐다. 직전 회차가 없는 첫 칸은 ‘비교 없음’.</li>
+  <li><b>고른 회차 요약</b> — ‘{직전 날짜} → {고른 날짜}’, 큰 증감, ‘{직전 값} → {이번 값}’, 분모 ‘{지표 분모 이름} {직전} → {이번}’, 오른쪽 ‘이 회차 근거’.</li>
+  <li><b>축 탭</b> — 엔진 · 국가 · 프롬프트. 국가 담당 계정은 국가 탭이 없다(자기 국가 안에서 엔진 · 프롬프트). 권역 계정의 국가 탭은 권역 안 국가만.</li>
+  <li><b>기여 표</b> — 열: 항목 | 기여(0 기준 막대 + 값) | 직전 → 이번(그 조각의 지표 값) | 비중(분모 중 그 조각의 몫, 직전 → 이번) | 근거. 정렬 = 기여 크기(절댓값) 큰 순. 행에 마우스를 올리면 ‘값 변화 몫 · 비중 변화 몫 · 분모 수’.
+    <ul>
+      <li>국가 · 프롬프트는 상위 10행 + ‘그 외 N개’ 한 행(합 유지). ‘모두 보기’는 서랍 안에서 펼친다.</li>
+      <li>프롬프트 탭은 두 행을 따로 둔다: ‘새로 측정된 프롬프트 N개’(이번 회차에만), ‘측정에서 빠진 프롬프트 N개’(직전 회차에만).</li>
+      <li>맨 아래 ‘합계’ 행 = 화면의 증감. 행마다 0.01 단위(소수 둘째 자리)로 보이되 최대 잔여 반올림으로 합을 화면 숫자에 맞춘다. 0.01 인 이유: 프롬프트 수백 개 · 국가 수십 개로 흩어지면 한 조각의 기여가 0.0x 라 0.1 단위로는 모두 0.0 이 된다(목업 검토).</li>
+      <li>색은 방향(좋아짐 / 나빠짐)만 — 우선 노출도는 낮을수록 좋으므로 반대. 단위는 pp, 우선 노출도는 ‘번째’.</li>
+    </ul></li>
+  <li><b>읽는 법 안내(ⓘ)</b> — ‘기여 = 값 변화 몫 + 비중 변화 몫. 값이 떨어진 항목은 보통 −, 평균보다 높은 항목의 비중이 커지면 +.’ 산식은 4-3.</li>
+  <li><b>상태</b> — 로딩(뼈대), 지연(‘반영 중’), 오류(다시 시도), 회차 기준 데이터 없음(요약 사실표를 읽지 못해 미러로 떨어진 경우 — 이유 문장), 직전 회차 없음, 그 회차의 세부 데이터 없음(보존 기간 밖), 기간 비교 칩에서 연 경우의 안내.</li>
+</ol>
+
+<h3>4-2. 근거(답변 목록)</h3>
+<ol>
+  <li><b>머리</b> — 제목 ‘근거’, 부제 ‘{지표} · {브랜드} · {회차 날짜} 회차’ + 조각 칩(엔진 · 국가 · 프롬프트 중 고른 것).</li>
+  <li><b>회차 토글</b> — 변화의 이유에서 왔을 때만: ‘이번 회차 {날짜} | 직전 회차 {날짜}’.</li>
+  <li><b>표본 줄</b> — 지표의 분자 / 분모와 값(예: ‘답변 2,735개 중 당사 언급 1,664개 · 60.8%’). 화면 값과 같은 숫자다(조건 1 의 표본 수도 여기서 충족).</li>
+  <li><b>나눔 탭</b> — 분자에 든 답변 | 나머지. 지표별 정의는 아래 표.</li>
+  <li><b>행</b> — 프롬프트 본문(1줄), ‘엔진 · 국가 · 언어 · 측정일’, 당사 표시(언급 수 · 순위 · 감정 · 인용 도메인 중 그 지표에 맞는 것), 원문 발췌 2줄(브랜드 강조). 행을 누르면 같은 서랍 안에서 원문 전체(인용 목록 포함)를 연다.</li>
+  <li><b>분량</b> — 50행씩 ‘더 보기’, 총 개수 표시. 정렬 = 프롬프트 · 엔진 · 국가 순.</li>
+  <li><b>격차에서 연 경우</b> — 탭 ‘당사 | {경쟁사}’ 두 개(나눔 탭은 각 탭 안에).</li>
+</ol>
+<div class="table-wrap"><table>
+  <tr><th>지표</th><th>표본 줄</th><th>분자에 든 답변</th><th>나머지</th><th>행의 당사 표시</th></tr>
+  <tr><td>AI 노출률</td><td>답변 D개 중 언급 N개</td><td>당사 언급 답변</td><td>당사 미언급 답변</td><td>당사 언급 수</td></tr>
+  <tr><td>AI 점유율</td><td>전체 브랜드 언급 D회 중 당사 N회</td><td>당사 언급이 있는 답변</td><td>경쟁사만 언급한 답변</td><td>당사 언급 수 / 답변의 전체 언급 수</td></tr>
+  <tr><td>AI 우호도</td><td>당사 감정 신호 D개 중 긍정 N개</td><td>긍정 신호가 있는 답변</td><td>긍정 없이 중립 · 부정 · 혼합만</td><td>신호 수 긍 · 중 · 부 · 혼</td></tr>
+  <tr><td>AI 우선 노출도</td><td>순위 있는 답변 D개 · 평균 N번째</td><td>1번째</td><td>2번째 이하</td><td>당사 순위</td></tr>
+  <tr><td>AI 인용 점유율</td><td>전체 인용 D회 중 공식(HMG) N회</td><td>공식(HMG) 인용이 있는 답변</td><td>공식(HMG) 인용 없는 답변</td><td>인용 도메인(공식 표시)</td></tr>
+</table></div>
+
+<h3>4-3. 기여 산식</h3>
+<p>조각 i 의 분모 비중 w<sub>i</sub> = d<sub>i</sub> ÷ D, 값 r<sub>i</sub> = n<sub>i</sub> ÷ d<sub>i</sub>, 전체 두 회차 평균 r̄ = (V<sup>0</sup> + V<sup>1</sup>) ÷ 2 일 때</p>
+<p style="padding:8px 12px;background:var(--card);border-radius:6px"><b>기여<sub>i</sub> = w̄<sub>i</sub> · (r<sub>i</sub><sup>1</sup> − r<sub>i</sub><sup>0</sup>) + (r̄<sub>i</sub> − r̄) · (w<sub>i</sub><sup>1</sup> − w<sub>i</sub><sup>0</sup>)</b>
+  &nbsp;= 값 변화 몫 + 비중 변화 몫 &nbsp;(w̄<sub>i</sub>, r̄<sub>i</sub> = 그 조각의 두 회차 평균)</p>
+<ul>
+  <li>합 = V<sup>1</sup> − V<sup>0</sup> 정확히(Σ(w<sup>1</sup> − w<sup>0</sup>) = 0 이라 평균을 빼도 합이 같다). 새로 측정된 조각 = (r<sub>i</sub><sup>1</sup> − r̄) · w<sub>i</sub><sup>1</sup>, 빠진 조각 = −(r<sub>i</sub><sup>0</sup> − r̄) · w<sub>i</sub><sup>0</sup> — 평균과 같은 값으로 들어오면 0.</li>
+  <li>왜 이 식인가: ‘이번 몫 − 직전 몫’(w<sup>1</sup>r<sup>1</sup> − w<sup>0</sup>r<sup>0</sup>)도 합은 같지만, 값이 떨어진 조각이 비중만 늘어 + 로 보인다(목업 검토: ChatGPT 67.7% → 67.1% 가 +0.1pp). 평균을 뺀 식에서는 같은 조각이 −0.3pp 다.</li>
+  <li>순위(우선 노출도)도 같은 식(값 = 순위 합 ÷ 순위 있는 답변). 단위는 ‘번째’, 좋아짐 = 음수.</li>
+  <li>표시: 행마다 0.01 단위, 최대 잔여 반올림으로 합을 화면 증감에 맞춘다. 화면 증감이 반올림 값끼리의 차(round1(round1(v<sup>1</sup>) − round1(v<sup>0</sup>)))라 정확한 차와 0.1 다를 수 있어도 같은 방식으로 맞춘다.</li>
+</ul>
+
+<h2>5. 데이터 원천(legacy)</h2>
+<ul>
+  <li><b>회차 자리</b> — 카드 추이와 같은 회차 묶음 함수(<code>lib/summary/read/cycle-set.ts</code>)를 그대로 쓴다. 증감 이력 띠의 값 = 카드 추이 자리 값의 차라서 화면 증감과 같은 숫자다.</li>
+  <li><b>엔진 · 국가 분해</b> — 요약 추이층 <code>summary_trend_own</code>(당사) · <code>summary_trend_brands</code>(경쟁사)의 키에 이미 engine · country 가 있다(<code>fold.ts</code> AGG_DIMS). 카드 값과 <em>같은 행</em>을 엔진 또는 국가로 묶기만 하므로 기여의 합이 구성상 카드 증감과 같다. 엔진별 ①–④ 는 이미 추이 배열에 실려 온다(<code>summary-global-trend-read.ts</code> engines).</li>
+  <li><b>프롬프트 분해</b> — 추이층에는 프롬프트 열이 없다. 세부층(<code>summary_answers</code> · <code>summary_brand_mentions</code> · <code>summary_domain_citations</code>)의 두 회차를 접기(fold) 규칙 그대로 <code>prompt_id</code> 로 접는다. 본문은 <code>summary_prompt_dim.text</code>.
+    접기와 글자 그대로 같은 식을 써야 하는 곳: ② 분모(경쟁 통과 언급 <code>comp_mentions</code>), ④ 표시명 접기 순위, ⑤ 공식(HMG) 판정(변형 · 스코프별), 경쟁사 순위(<code>comp_rank_sum</code>).
+    시험: 프롬프트 합 = 추이층 자리 값(두 회차 모두).</li>
+  <li><b>근거 목록</b> — 세부층의 job(회차 고정) → 미러 <code>scope_answers</code> 원문. 거름 = 엔진 · 국가 · 프롬프트 · 브랜드, 인용은 <code>group_key</code>. 기존 서랍 라우트(기간 내 누적으로 고정)는 쓰지 않는다.</li>
+  <li><b>계정 범위</b> — 세션 scope 로 <code>readStandardFilters</code> 를 만들고 같은 필터 객체를 쓴다. 새 리더는 <code>lib/scope/server.ts</code> 의 <code>withStandardRoot</code> 안에 둔다.</li>
+  <li><b>캐시</b> — <code>mirrorCache</code> + 요약 태그(무효화는 기존 sync-mirror 와 같다).</li>
+  <li><b>회차 기준 데이터 없음</b> — 요약 사실표 읽기가 꺼져 카드가 미러로 떨어지면 증감이 ‘직전 측정일’ 기준이 되므로 분해하지 않고 서랍에 그 사실을 적는다. 경쟁사 추이가 주 단위 미러 버킷일 때(경쟁사 화면 키 꺼짐)도 같다.
+    이때 근거(값을 누름)는 카드 값과 같은 미러 스냅샷 빌더로 연다(직전 회차 토글 없음).</li>
+</ul>
+
+<h2>6. 검증</h2>
+<div class="table-wrap"><table>
+  <tr><th>무엇</th><th>어떻게</th><th>통과</th></tr>
+  <tr><td>분해 산식 · 반올림</td><td>단위 시험: 무작위 조각 2만 건 + 진입 · 이탈 · 0 분모 경계, 순위 지표 포함</td><td>표시 합 = 표시 증감 100%</td></tr>
+  <tr><td>원천 일치</td><td>PGlite 두 회차 시드(미러 + 요약 세부층 + 추이층): 엔진 · 국가 합 = 카드 증감, 프롬프트 합 = 추이층 자리 값</td><td>5지표 × 축 3 × 당사 · 경쟁사 일치</td></tr>
+  <tr><td>위치 · 클릭 수</td><td>하네스(실제 컴포넌트)에서 2 · 3장 위치를 모두 눌러 클릭 수 측정, 계정 4종(admin · HQ · 권역 · 국가)</td><td>대상 위치 100% ≤ 기준 클릭</td></tr>
+  <tr><td>계정 범위</td><td>국가 계정 = 국가 탭 없음, 권역 계정 = 권역 국가만, 목록에 범위 밖 답변 0건</td><td>4종 모두</td></tr>
+  <tr><td>실데이터</td><td>미리보기 배포에서 같은 계정 4종으로 확인(이 PC 에서는 legacy 경로를 데이터와 함께 띄울 수 없음)</td><td>사용자 확인</td></tr>
+</table></div>
+
+<h2>7. 남은 확인</h2>
+<ul>
+  <li>요약 세부층의 실제 보존 기간 — 설계는 13주이나 지우는 코드가 없다. 이력 띠 12칸이 세부층 범위를 넘으면 그 칸은 ‘세부 데이터 없음’.</li>
+  <li>운영의 요약 사실표 설정값(읽기 켜짐 · 화면 키) — 코드 · 문서로 확정 불가. 2026-10-21 운영 화면에서 추이 격자가 켜져 있었다.</li>
+  <li>프롬프트 본문은 측정 언어 그대로 보인다(번역 없음).</li>
+</ul>
+</main>
+</body>
+</html>

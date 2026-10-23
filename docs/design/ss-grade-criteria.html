@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>리뉴얼 SS급 합격 기준</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1c1f24; --muted: #5b6370; --line: #dde1e6; --card: #f6f7f9;
+    --accent: #2457c5; --warn-bg: #fff5e0; --warn-line: #e3a008; --ok: #1f7a3d; --code-bg: #f1f3f5;
+    --p1: #002c5f; --p1-bg: #e6eaf0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15181c; --fg: #e6e8eb; --muted: #9aa3ad; --line: #2c323a; --card: #1c2026;
+      --accent: #7aa2ff; --warn-bg: #2d2412; --warn-line: #b7860b; --ok: #5fc27e; --code-bg: #1f242b;
+      --p1: #aacae6; --p1-bg: #1d2a3a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15181c; --fg: #e6e8eb; --muted: #9aa3ad; --line: #2c323a; --card: #1c2026;
+    --accent: #7aa2ff; --warn-bg: #2d2412; --warn-line: #b7860b; --ok: #5fc27e; --code-bg: #1f242b;
+    --p1: #aacae6; --p1-bg: #1d2a3a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+    font: 15px/1.65 "Pretendard", system-ui, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif; }
+  main { max-width: 1040px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  h2 { font-size: 19px; margin: 36px 0 10px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .sub { color: var(--muted); margin: 0 0 18px; }
+  .banner { background: var(--warn-bg); border-left: 4px solid var(--warn-line); padding: 12px 14px; border-radius: 6px; margin: 16px 0; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 10px 0; }
+  code { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 13px; background: var(--code-bg); padding: 1px 4px; border-radius: 4px; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 14px; }
+  th, td { border: 1px solid var(--line); padding: 7px 9px; text-align: left; vertical-align: top; }
+  th { background: var(--card); white-space: nowrap; }
+  .pr { display: inline-block; font-size: 12px; font-weight: 700; padding: 0 7px; border-radius: 5px; white-space: nowrap; }
+  .pr.a { background: var(--p1); color: var(--bg); }
+  .pr.b { background: var(--p1-bg); color: var(--p1); }
+  .pr.c { background: var(--card); color: var(--muted); border: 1px solid var(--line); }
+  .st { font-size: 13px; color: var(--muted); }
+  .muted { color: var(--muted); }
+  .table-wrap { overflow-x: auto; }
+  ol.dec li { margin: 6px 0; }
+</style>
+</head>
+<body>
+<main>
+<h1>리뉴얼 SS급 합격 기준</h1>
+<p class="sub">확정 2026-10-22 · 대상: 리뉴얼 화면 5개(Overview · 글로벌 프롬프트 · 언급 분석 · 인용 분석 · ACR)와 그 목업 · 판정: 사용자 본인</p>
+
+<div class="banner">
+  <strong>이 문서의 쓰임</strong> — 리뉴얼 화면의 새 작업은 이 표의 합격선으로 끝을 판단합니다.
+  ‘좋아 보인다’가 아니라 각 조건의 <em>검증 방법</em>을 통과했는지로 봅니다. 조건을 바꾸려면 이 문서를 먼저 고칩니다.
+</div>
+
+<h2>1. 정한 것</h2>
+<ol class="dec">
+  <li><strong>주 사용자 · 장면 = 권역 · 국가 담당자의 주간 점검.</strong> 매주 회차가 나오면 내 시장에서 무엇이 바뀌었는지, 왜 바뀌었는지, 무엇을 할지 찾는다.
+    → ‘변화의 이유 · 근거 · 다음 행동’이 1순위. 본사 보고용 정기 리포트는 SS 필수 조건이 아니다. 시장 간 비교보다 <em>내 시장 안</em>의 분해(엔진 · 프롬프트 · 경쟁사)가 중요하다.</li>
+  <li><strong>판정 = 사용자 본인(내부).</strong> 비교 대상 제품은 두지 않는다 → 합격선은 숫자와 동작으로 쓴다.</li>
+  <li><strong>범위 = 측정 데이터는 그대로, HMG GEO 백엔드는 자유롭게.</strong> 무엇을 수집 · 저장하는지는 바꾸지 않고, 그 위의 집계 쿼리 · API · 캐시 · 미리 계산한 표는 새로 만들 수 있다.
+    → 국가 · 프롬프트별 증감 분해, 모든 숫자의 표본 수, 속도 목표가 범위 안에 든다.</li>
+  <li><strong>조건 추가 없음.</strong> 아래 9개로 확정.</li>
+</ol>
+
+<h3 style="font-size:16px;margin:22px 0 6px">1순위 설계 착수 때 정한 것(2026-10-22)</h3>
+<ol class="dec" start="5">
+  <li><strong>데이터는 기존 경로(legacy)부터.</strong> 새 집계 · 답변 목록 · 대상 목록은 Next.js 가 기존 DB(미러 · 요약 사실표)를 직접 읽는 경로에 만든다. 새 백엔드(FastAPI · rd.*)는 이번 범위가 아니다.</li>
+  <li><strong>화면 하나씩.</strong> 리뉴얼 화면을 한꺼번에 하지 않는다. 한 화면을 설계 → 목업 → 승인 → 구현까지 끝낸 뒤 다음 화면으로 간다. 첫 화면은 Overview. 공용 서랍은 처음 필요한 화면에서 만든다.</li>
+  <li><strong>증감 기준 = 직전 회차.</strong> 분해는 회차 대 회차(요약 사실표의 회차 자리)만 보여 준다. 기간을 골라 증감이 기간 비교로 바뀐 칩은 분해하지 않는다.
+    회차 기준 데이터가 없을 때(요약 사실표를 못 읽어 미러로 떨어진 경우)는 서랍에 ‘회차 기준 데이터 없음’과 이유를 보인다.</li>
+  <li><strong>이전 회차도 본다 = 회차별 증감 이력.</strong> ‘변화의 이유’ 서랍 위에 최근 회차들의 ‘직전 대비 증감’ 띠를 두고, 회차를 누르면 그 회차와 그 직전 회차 사이의 분해로 바뀐다. 근거 서랍의 답변 목록도 고른 회차를 따른다. 화면의 증감 숫자는 직전 회차 그대로다.</li>
+  <li><strong>조건 4 의 파생 숫자.</strong> 격차(당사 − 경쟁사)는 당사 | 경쟁사 답변 목록을 열면 통과로 센다. ‘비교 브랜드 N개 중 M위’ 같은 순위 문구는 조건 4 대상에서 뺀다.</li>
+</ol>
+
+<h2>2. 조건과 합격선</h2>
+<div class="table-wrap"><table>
+  <tr><th>우선</th><th>조건</th><th>합격선</th><th>검증 방법</th><th>지금(2026-10-22)</th></tr>
+  <tr><td><span class="pr a">1순위</span></td><td><strong>3 · 변화의 이유</strong></td>
+    <td>화면의 모든 증감(Δ)에서 1클릭 안에 <em>엔진 · 국가 · 프롬프트별 기여</em>를 본다. 기여의 합은 전체 증감과 같다(±0.1pp). 국가 담당 계정은 자기 국가 안에서 엔진 · 프롬프트로 분해된다.
+      직전 회차 증감이 대상이고, 기간 비교 칩은 대상 아님(1장 7).</td>
+    <td>분해 합 = 전체 증감 단위 테스트 · 화면별 증감 위치 목록에서 분해 도달 100% · 계정 4종 확인</td>
+    <td class="st">규칙 기반 요약 4개뿐, 분해 없음</td></tr>
+  <tr><td><span class="pr a">1순위</span></td><td><strong>4 · 근거까지</strong></td>
+    <td>어느 숫자(KPI · 표 칸 · 차트 점)에서든 2클릭 안에 그 숫자를 만든 실제 AI 답변 원문 목록에 닿는다. 서랍이나 다른 화면으로 열고, 페이지 안 스크롤 이동은 쓰지 않는다.
+      격차는 당사 | 경쟁사 목록, 순위 문구는 대상 아님(1장 9).</td>
+    <td>화면별 숫자 위치 목록 × 클릭 수 측정, 2클릭 이하 100%</td>
+    <td class="st">언급 · 인용 일부만. Overview 표 · 시장 표는 막힘</td></tr>
+  <tr><td><span class="pr a">1순위</span></td><td><strong>5 · 다음 행동</strong></td>
+    <td>‘이번 회차 요약’의 모든 발견에 할 일과 그 대상 목록이 있다(예: 공식 URL로 보강할 프롬프트, 뒤처진 엔진의 프롬프트, 새로 앞선 경쟁사의 근거 답변). 목록은 서랍 · 다른 화면으로 연다.</td>
+    <td>발견 유형별 ‘할 일 · 대상 목록’ 정의표 100%, 목록이 비지 않는지 확인</td>
+    <td class="st">인용의 미인용 프롬프트 정도. 요약 카드는 지금 읽기 전용</td></tr>
+  <tr><td><span class="pr b">2순위</span></td><td><strong>6 · 체감 속도</strong></td>
+    <td>운영 데이터 · 운영 배포 기준 p75: 첫 숫자 표시 ≤ 1.0초, 필터를 고르고 ‘반영 중’이 사라지기까지 ≤ 0.5초, 화면 밀림(CLS) ≤ 0.05.</td>
+    <td>스테이징 또는 운영 실측(같은 조건 20회, p75)</td>
+    <td class="st">스트리밍 구조는 있음, 운영 실측 없음</td></tr>
+  <tr><td><span class="pr b">2순위</span></td><td><strong>1 · 숫자 신뢰</strong></td>
+    <td>화면의 모든 지표 값(KPI · 표 · 차트 툴팁)에서 1클릭(ⓘ 또는 툴팁) 안에 정의 · 산식 · 기준(회차 또는 기간) · 표본 수(분모)를 본다.</td>
+    <td>화면별 지표 목록 대조 체크리스트 100%</td>
+    <td class="st">정의 · 산식 · 기준 칩은 있음, 표본 수는 일부</td></tr>
+  <tr><td><span class="pr c">유지</span></td><td><strong>2 · 화면 간 일관성</strong></td>
+    <td>같은 지표 · 같은 조건이면 어느 화면(원본 포함)에서도 같은 값.</td>
+    <td>자동 대조 테스트(원본 ↔ 리뉴얼, 리뉴얼 화면끼리) 통과</td>
+    <td class="st">대조 테스트 있음(Overview 25/25 · 시장 43개국 등)</td></tr>
+  <tr><td><span class="pr c">유지</span></td><td><strong>8 · 시각 완성도</strong></td>
+    <td>디자인 규칙(<code>docs/design/ui/design-rules.html</code>) 위반 0. 모든 카드에 로딩 · 빈 상태 · 지연 · 오류 상태가 정의되어 있다.</td>
+    <td>디자인 규칙 체크 + 카드별 상태 목록</td>
+    <td class="st">S급 틀 적용(목업). 구현은 승인 후</td></tr>
+  <tr><td><span class="pr c">유지</span></td><td><strong>9 · 접근성 · 다국어</strong></td>
+    <td>1280 · 1440 · 1920에서 대비 · 잘림 · 이름 없는 컨트롤 · 가로 넘침 0건. 키보드만으로 모든 조작. 영문 화면 문구 누락 0.</td>
+    <td>감사 스크립트 · 키보드 시나리오 · en 문구 검사</td>
+    <td class="st">대비 · 잘림 0건. 키보드 · 영문은 일부만 확인</td></tr>
+  <tr><td><span class="pr c">낮춤</span></td><td><strong>7 · 공유</strong></td>
+    <td>링크 하나로 같은 화면(필터 · 탭 · 정렬 · 보기)을 100% 재현한다. 정기 리포트 · 알림은 SS 조건이 아니다.</td>
+    <td>링크 재현 테스트</td>
+    <td class="st">링크 복사 있음, 탭 · 정렬 재현은 일부</td></tr>
+</table></div>
+
+<h2>3. 함께 지키는 규칙(기존 결정)</h2>
+<ul>
+  <li>페이지 안 스크롤 이동 없음 — 섹션 빠른 이동, 클릭하면 내려가는 링크, 탭 클릭 시 자동 스크롤을 두지 않는다(4 · 5의 목록은 서랍 · 다른 화면으로).</li>
+  <li>필터는 왼쪽 패널, 축 · 옵션 · 규칙은 앱과 같다. 남색 강조는 페이지당 하나. 머리는 제목 → 설명 → 기준 칩.</li>
+  <li>목업 = 구현: 문구 · 순서 · 규칙이 같다.</li>
+</ul>
+
+<h2>4. 다음 단계</h2>
+<p>1순위 조건(3 · 4 · 5)을 화면 하나씩 설계 · 구현합니다. 첫 화면 Overview 의 위치표와 서랍 명세는 <code>docs/design/ss-overview.html</code>.</p>
+<p class="muted">조사(2026-10-22, 코드 확인): 모든 KPI 가 답변(ACR 은 셀) 단위의 정수 분자 · 분모 합이라, 엔진 · 국가 · 프롬프트 조각의 기여 합이 전체 증감과 정확히 같게 나눌 수 있다.
+  기여 산식은 평균을 뺀 ‘값 변화 몫 + 비중 변화 몫’(ss-overview.html 4-3) — ‘이번 몫 − 직전 몫’은 값이 떨어진 조각이 + 로 보일 수 있어 쓰지 않는다.
+  표시할 때 행마다 0.1 로 반올림하면 합이 최대 0.7pp 어긋나므로, 반올림 오차를 큰 행부터 나눠 맞춘다(최대 잔여 반올림).</p>
+</main>
+</body>
+</html>

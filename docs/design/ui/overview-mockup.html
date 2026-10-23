@@ -317,14 +317,385 @@
   .cal-f b { color: var(--ink-2); }
   .side-foot { flex-direction: column; }
   .mk-cap code { font-family: var(--mono); font-size: 11px; color: #fff; }
+  /* ── Overview at a glance (2026-10-22): no KPI pick — read-only KPI row, brand × KPI and market × KPI tables ── */
+  .pg { display: flex; flex-direction: column; gap: 20px; }
+  /* KPI 5종: five read-only cells (no hover, no selected state) */
+  .okg { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 0 8px 16px; }
+  @container (max-width: 600px) { .okg { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 14px; } }
+  .ok { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 4px 14px; border-left: 1px solid var(--line); }
+  .ok:first-child { border-left: 0; }
+  @container (max-width: 600px) { .ok:nth-child(3n + 1) { border-left: 0; } }
+  .ok-n { position: relative; display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: var(--ink-2); }
+  .ok-n:has(.info:hover) .tip, .ok-n:has(.info:focus-visible) .tip { display: block; }
+  .ok-n .tip { left: 0; width: 320px; }
+  .ok:nth-child(n + 4) .ok-n .tip { left: auto; right: 0; }
+  .ok-v { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.05; color: var(--ink); white-space: nowrap; }
+  .ok-v small { font-size: 14px; font-weight: 600; margin-left: 1px; letter-spacing: 0; }
+  .ok-d { display: flex; }
+  .ok-sp { margin-top: 2px; }
+  .ok-sp .spark { height: 30px; }
+  .ok-x { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+  .ok-r { font-size: 12px; color: var(--ink-muted); }
+  .ok-r b { color: var(--ink-2); }
+  .ok-go { display: inline-flex; align-items: center; gap: 3px; align-self: flex-start; font-size: 12px; font-weight: 600; color: var(--navy); text-decoration: none; }
+  .ok-go:hover { text-decoration: underline; }
+  .ok-go:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; border-radius: 3px; }
+  /* 브랜드 비교: brands × KPIs */
+  .bm col.bm-nc { width: 168px; }
+  .bm th { vertical-align: bottom; height: auto; padding-top: 8px; padding-bottom: 8px; }
+  .bm-h { display: flex; flex-direction: column; gap: 1px; color: var(--ink-2); }
+  .bm-h small { font-size: 11px; font-weight: 500; color: var(--ink-muted); }
+  .bm td { padding-top: 9px; padding-bottom: 9px; }
+  .bm tr.own td { background: var(--navy-25); }
+  .bm-n { display: flex; align-items: center; gap: 6px; font-weight: 600; min-width: 0; }
+  .bm-n > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bm-n .own { font-size: 11px; font-weight: 700; color: var(--navy); background: var(--navy-tint); padding: 0 6px; border-radius: 4px; }
+  .bm-c { display: flex; flex-direction: column; gap: 3px; }
+  .bm-c b { font-weight: 600; }
+  .bm-c.lead b { font-weight: 800; }
+  .bm-bar { height: 4px; border-radius: 2px; background: var(--sand-light); overflow: hidden; max-width: 96px; }
+  .bm-bar i { display: block; height: 100%; border-radius: 2px; background: var(--ink-faint); }
+  .bm tr.own .bm-bar { background: var(--white); }
+  .bm tr.own .bm-bar i { background: var(--navy); }
+  .bm-d { font-size: 11px; font-weight: 600; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+  .bm-d.good { color: #1d6b40; }
+  .bm-d.bad { color: #b42318; }
+  .bm-na { color: var(--ink-muted); }
+  .bm-f, .mx-k { margin: 0; padding: 10px 24px 16px; font-size: 11px; line-height: 1.55; color: var(--ink-muted); }
+  .mx-k { padding: 0 24px 12px; font-size: 12px; }
+  .mx-k b { color: var(--ink-2); }
+  /* 시장별 현황: regions › countries × KPIs, heat cells */
+  .mx col.mx-nc { width: 176px; }
+  .mx th { padding: 0 6px; }
+  .mx th:first-child { padding-left: 24px; }
+  .mx-sort { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 6px; border-radius: 6px; font-weight: 600; color: var(--ink-muted); }
+  .mx-sort:hover { background: var(--sand-light); color: var(--ink-2); }
+  .mx-sort.on { color: var(--ink); }
+  .mx-sort:focus-visible { outline: 2px solid var(--navy); }
+  .mx-ar { font-size: 11px; color: var(--ink-muted); }
+  .mx-sort.on .mx-ar { color: var(--navy); }
+  .mx td { padding: 6px 8px; }
+  .mx td:first-child { padding-left: 24px; }
+  .mx tr.cty td:first-child { padding-left: 40px; }
+  .mx-cn { display: flex; align-items: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mx-sub { display: block; margin-top: 1px; font-size: 11px; line-height: 1.4; font-weight: 500; color: var(--ink-muted); }
+  .mx-sub > span { white-space: nowrap; }
+  .mx tr.reg .mx-sub { padding-left: 26px; }
+  .mx .hm { border-bottom: 2px solid var(--white); border-left: 2px solid var(--white); color: var(--ink); }
+  .mx .hm b, .mx .mx-rv b { display: block; font-size: 13px; font-weight: 600; line-height: 1.3; }
+  .mx .hm small, .mx .mx-rv small { display: block; font-size: 11px; line-height: 1.3; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .mx .hm.dk { color: #fff; }
+  .mx .hm.dk small { color: rgba(255,255,255,.86); }
+  .mx .mx-rv b { font-weight: 700; }
+  .mx tr.cty:hover td { box-shadow: inset 0 1px 0 var(--navy-300), inset 0 -1px 0 var(--navy-300); }
+  .mx tr.cty:hover td:first-child { background: var(--navy-25); }
+  .mx tr.cty { cursor: default; }
+  .mx td, .bm td { vertical-align: top; }
+  .bm td:first-child { padding-top: 10px; }
+  /* ── SS 1순위 (2026-10-22): 누를 수 있는 숫자 → 근거 / 변화의 이유 서랍 ── */
+  /* 숫자 버튼: 모양은 그대로, 올리면 점선 밑줄 + 손가락, 키보드 초점 링 */
+  :where(.ssn) { appearance: none; background: none; border: 0; margin: 0; padding: 0; font: inherit; color: inherit; text-align: inherit; cursor: pointer; border-radius: 4px; }
+  .ssn:hover b, .ssn.ok-v:hover, .ssn:hover .ss-u { text-decoration: underline dotted; text-decoration-thickness: 1.5px; text-underline-offset: 4px; }
+  .ssn:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
+  .sx .okc .ssn:focus-visible { outline-color: var(--sky); }
+  .ssn .dlt { transition: box-shadow .12s var(--ease); }
+  .ssn:hover .dlt { box-shadow: 0 0 0 2px var(--navy-300); }
+  .sx .okc .ssn:hover .dlt { box-shadow: 0 0 0 2px rgba(255,255,255,.6); }
+  button.ok-v { display: block; align-self: flex-start; }
+  button.ok-sp { display: block; width: 100%; border-radius: 6px; padding: 2px 4px; margin: 0 -4px; width: calc(100% + 8px); }
+  button.ok-sp:hover { background: rgba(255,255,255,.08); }
+  .bm-c .ssn { align-self: flex-start; }
+  .bm-c .ssn.bm-dv:hover .bm-d { text-decoration: underline dotted; text-underline-offset: 3px; }
+  .mx .ssn { display: block; }
+  .mx .ssn:hover small { text-decoration: underline dotted; text-underline-offset: 3px; }
+  .mx-sub .ssn { display: inline; color: inherit; }
+  .mx-sub .ssn:hover { color: var(--ink-2); text-decoration: underline dotted; text-underline-offset: 3px; }
+
+  /* 서랍(RnDrawer 720): 변화의 이유 → 근거 → 원문, 같은 시트 안에서 넘어가고 ‹ 로 돌아온다 */
+  .ss-scrim { position: fixed; inset: 0; z-index: 140; background: rgba(10,9,8,.28); }
+  .ss-scrim.anim { animation: ssfade .18s; }
+  .ss-dw { position: fixed; top: 0; right: 0; bottom: 0; z-index: 150; width: min(720px, 100vw); background: var(--white); box-shadow: var(--shadow-3); display: flex; flex-direction: column; outline: none; }
+  .ss-dw.anim { animation: ssin .22s var(--ease); }
+  @keyframes ssfade { from { opacity: 0; } }
+  @keyframes ssin { from { transform: translateX(28px); opacity: 0; } }
+  .ss-hd { padding: 18px 24px 14px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 14px; }
+  .ss-top { display: flex; align-items: flex-start; gap: 12px; }
+  .ss-top > div { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+  .ss-back { appearance: none; border: 0; background: none; padding: 2px 6px 2px 0; display: inline-flex; align-items: center; gap: 2px; font: inherit; font-size: 12px; font-weight: 600; color: var(--navy); cursor: pointer; border-radius: 4px; }
+  .ss-back:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .ss-hd h2 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+  .ss-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-2); }
+  .ss-chip { display: inline-flex; align-items: center; font-size: 11px; font-weight: 700; color: var(--navy); background: var(--navy-tint); border-radius: 4px; padding: 1px 6px; white-space: nowrap; }
+  .ss-chip.g { color: var(--ink-2); background: var(--sand-light); font-weight: 600; }
+  .ss-x { appearance: none; border: 0; background: none; width: 32px; height: 32px; display: grid; place-items: center; border-radius: 8px; color: var(--ink-2); cursor: pointer; flex-shrink: 0; }
+  .ss-x:hover { background: var(--sand-light); }
+  .ss-bd { flex: 1; min-height: 0; overflow: auto; padding: 16px 24px 32px; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 14px; }
+  .ss-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  /* 회차별 증감 이력 띠: 오래된 → 최신, 0 기준 위(오름) · 아래(내림), 색 = 좋아짐 · 나빠짐(옅은 칠) */
+  .ss-hs-h { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; font-size: 12px; }
+  .ss-hs-h b { font-weight: 700; color: var(--ink-2); }
+  .ss-hs-h span { color: var(--ink-muted); }
+  .ss-hs { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 2px; }
+  .ss-hc { appearance: none; border: 1px solid transparent; background: none; border-radius: 8px; padding: 5px 1px 4px; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; font: inherit; color: var(--ink-2); min-width: 0; }
+  .ss-hc:hover { background: var(--sand-light); }
+  .ss-hc[aria-checked="true"] { border-color: var(--navy); background: var(--navy-25); }
+  .ss-hv { font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .ss-hv.good, .ss-cv.good { color: #1d6b40; }
+  .ss-hv.bad, .ss-cv.bad { color: #b42318; }
+  .ss-hv.flat, .ss-cv.flat { color: var(--ink-muted); }
+  .ss-hb { position: relative; width: 16px; height: 30px; }
+  .ss-hb::before { content: ""; position: absolute; left: -8px; right: -8px; top: 15px; border-top: 1px solid var(--line-2); }
+  .ss-hb i { position: absolute; left: 3px; right: 3px; border-radius: 2px; }
+  .ss-hb i.pos { bottom: 15px; }
+  .ss-hb i.neg { top: 16px; }
+  .ss-hb i.good, .ss-bar i.good { background: rgba(45,146,87,.42); }
+  .ss-hb i.bad, .ss-bar i.bad { background: rgba(230,51,18,.34); }
+  .ss-hb i.flat, .ss-bar i.flat { background: var(--line-2); }
+  .ss-hd8 { font-size: 11px; color: var(--ink-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  /* 고른 회차 요약 */
+  .ss-sum { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; border-radius: 12px; background: var(--sand-light); }
+  .ss-sum > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .ss-sum .when { font-size: 12px; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+  .ss-sum .big { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .ss-sum .vals { font-size: 15px; color: var(--ink-2); }
+  .ss-sum .vals b { font-size: 20px; color: var(--ink); }
+  .ss-sum .den { font-size: 12px; color: var(--ink-muted); }
+  .ss-note { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; background: var(--navy-25); color: var(--ink-2); font-size: 12px; line-height: 1.55; }
+  .ss-note svg { margin-top: 2px; color: var(--navy); }
+
+  /* 탭 · 나눔 */
+  .ss-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); }
+  .ss-tabs button { appearance: none; border: 0; background: none; padding: 9px 10px 11px; font: inherit; font-size: 13px; font-weight: 600; color: var(--ink-muted); cursor: pointer; box-shadow: inset 0 -2px 0 transparent; display: inline-flex; align-items: center; gap: 6px; }
+  .ss-tabs button:hover { color: var(--ink-2); }
+  .ss-tabs button[aria-selected="true"] { color: var(--ink); box-shadow: inset 0 -2px 0 var(--navy); }
+  .ss-seg { display: inline-flex; align-self: flex-start; padding: 3px; background: var(--sand-inset); border-radius: 9px; gap: 2px; }
+  .ss-seg button { appearance: none; border: 0; background: none; height: 28px; padding: 0 12px; border-radius: 7px; font: inherit; font-size: 12px; font-weight: 600; color: var(--ink-muted); cursor: pointer; white-space: nowrap; }
+  .ss-seg button .num { font-weight: 500; margin-left: 4px; }
+  .ss-seg button[aria-checked="true"] { background: var(--white); color: var(--ink); box-shadow: var(--shadow-1); }
+
+  /* 기여 표 */
+  .ss-ct { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 13px; }
+  .ss-ct col.c-bar { width: 132px; } .ss-ct col.c-cv { width: 64px; } .ss-ct col.c-vv { width: 118px; } .ss-ct col.c-dv { width: 118px; } .ss-ct col.c-go { width: 36px; }
+  .ss-ct th { font-size: 11px; font-weight: 600; color: var(--ink-muted); text-align: left; padding: 6px 6px 8px; border-bottom: 1px solid var(--line); }
+  .ss-ct th.r { text-align: right; }
+  .ss-ct td { padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  .ss-ct td:first-child, .ss-ct th:first-child { padding-left: 0; }
+  .ss-ct td:last-child, .ss-ct th:last-child { padding-right: 0; }
+  .ss-ct tr.rest td, .ss-ct tr.in td, .ss-ct tr.out td { background: var(--sand-light); }
+  .ss-ct tfoot td { font-weight: 700; border-top: 2px solid var(--line-2); border-bottom: 0; }
+  .ss-nm { display: flex; align-items: center; gap: 6px; min-width: 0; font-weight: 600; color: var(--ink); }
+  .ss-nm .code { font-family: var(--mono); font-size: 11px; font-weight: 600; background: var(--sand-inset); color: var(--ink-2); padding: 0 5px; border-radius: 4px; }
+  .ss-nm.pr, .ss-nm.flow { flex-direction: column; align-items: flex-start; gap: 1px; }
+  .ss-nm.pr .t, .ss-nm.flow .t { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-weight: 600; line-height: 1.4; }
+  .ss-nm small { font-size: 11px; font-weight: 500; color: var(--ink-muted); }
+  .ss-bar { position: relative; display: block; height: 16px; }
+  .ss-bar::before { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; border-left: 1px solid var(--line-2); }
+  .ss-bar i { position: absolute; top: 3px; height: 10px; border-radius: 2px; }
+  .ss-cv { text-align: right; font-weight: 700; white-space: nowrap; }
+  .ss-vv, .ss-dv { font-size: 12px; color: var(--ink-2); white-space: nowrap; }
+  .ss-go { appearance: none; border: 0; background: none; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 7px; color: var(--navy); cursor: pointer; }
+  .ss-go:hover { background: var(--navy-25); }
+  .ss-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .ss-how { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--ink-muted); cursor: help; }
+  .ss-alld summary { cursor: pointer; font-size: 12px; font-weight: 600; color: var(--ink-2); padding: 4px 0 6px; }
+  .ss-ct.mini col { width: auto; }
+  .ss-ct.mini td { padding: 6px 6px; font-size: 12px; }
+
+  /* 근거 목록 */
+  .ss-samp { margin: 0; font-size: 13px; color: var(--ink-2); }
+  .ss-samp b { color: var(--ink); }
+  .ss-list { list-style: none; margin: 0 -8px; padding: 0; }
+  .ss-row { appearance: none; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); padding: 11px 8px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 16px; cursor: pointer; font: inherit; color: inherit; border-radius: 8px; }
+  .ss-row:hover { background: var(--sand-light); }
+  .ss-row .p { font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ss-row .o { font-size: 12px; font-weight: 600; color: var(--navy); white-space: nowrap; text-align: right; }
+  .ss-row .m { grid-column: 1 / -1; font-size: 12px; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+  .ss-row .x { grid-column: 1 / -1; font-size: 12.5px; line-height: 1.55; color: var(--ink-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .ss-row mark, .ss-ans mark { background: rgba(170,202,230,.55); color: inherit; border-radius: 2px; padding: 0 1px; }
+  .ss-more { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 4px; font-size: 12px; }
+
+  /* 원문 */
+  .ss-q { margin: 0; padding: 12px 14px; border-radius: 10px; background: var(--sand-light); font-size: 15px; font-weight: 600; line-height: 1.5; color: var(--ink); }
+  .ss-am { margin: 0; font-size: 12px; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+  .ss-ag { display: grid; grid-template-columns: minmax(0, 1fr) 200px; gap: 24px; }
+  .ss-ans { font-size: 14px; line-height: 1.8; color: var(--ink-2); }
+  .ss-ans p { margin: 0 0 12px; }
+  .ss-ag h5 { margin: 0 0 6px; font-size: 11px; font-weight: 700; color: var(--ink-muted); }
+  .ss-ml { list-style: none; margin: 0 0 16px; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
+  .ss-ml li { display: flex; flex-direction: column; gap: 1px; }
+  .ss-ml li span { color: var(--ink-muted); }
+  .ss-ml .url { font-family: var(--mono); color: var(--ink-2); overflow-wrap: anywhere; }
+
+  /* 상태 */
+  .ss-sk { display: flex; flex-direction: column; gap: 12px; padding-top: 4px; }
+  .ss-sk i { display: block; height: 14px; border-radius: 6px; background: linear-gradient(90deg, var(--sand-light), var(--sand-inset), var(--sand-light)); background-size: 200% 100%; animation: sssk 1.2s linear infinite; }
+  @keyframes sssk { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+  .ss-state { display: flex; gap: 12px; align-items: flex-start; padding: 16px; border-radius: 12px; background: var(--sand-light); color: var(--ink-2); }
+  .ss-state svg { color: var(--navy); margin-top: 2px; }
+  .ss-state b { display: block; color: var(--ink); margin-bottom: 4px; }
+  .ss-state p { margin: 0; font-size: 12px; line-height: 1.6; }
+  /* shared mockup frame — every mockup (source: _scratch/387b177e/menu/mock-menu.cjs) */
+  .snb a { text-decoration: none; }
+  .snb .grp { padding: 14px 12px 4px; font-size: 11px; font-weight: 700; letter-spacing: .04em; color: var(--ink-muted); }
+  .snb a.sub { padding-left: 24px; }
+  .snb a.sub::before { content: ""; width: 4px; height: 4px; border-radius: 50%; background: currentColor; opacity: .45; }
+  .snb .beta { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--navy); background: var(--navy-tint); border-radius: 4px; padding: 0 5px; }
+  .pg { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+  .ph > div:first-child { flex: 1 1 0; min-width: 0; }
+  .ph .sub .desc { width: 100%; margin: 0; font-size: 13px; color: var(--ink-muted); }
+  .ph .beta-p { display: inline-block; vertical-align: middle; margin-left: 8px; padding: 0 6px; border-radius: 4px; font-size: 11px; font-weight: 700; line-height: 1.45; letter-spacing: 0; color: var(--navy); background: rgba(0,44,95,.08); }
+  /* /shared mockup frame */
+  /* ══ S-grade frame (2026-10-22) — every renewal mockup (source: _scratch/387b177e/s) ══
+     renewal-only shell (one sidebar, no top bar), compact page header, the left filter panel as before (user
+     2026-10-22: keep the panel), card tiers and one navy hero per page. Loaded after the page CSS. */
+  :root { --side-w: 232px; --r-card: 16px; --shadow-card: 0 1px 2px rgba(10,9,8,.04), 0 0 0 1px var(--line); --navy-ink: #00244f; --hero-bg: radial-gradient(120% 140% at 0% 0%, #0b3b74 0%, var(--navy) 46%, var(--navy-ink) 100%); --hero-shadow: 0 18px 40px -24px rgba(0,28,61,.75); }
+  body { background: #f4f1ee; }
+
+  /* shell: one sidebar (brand · workspace · menu · account), content scrolls with the page */
+  .sx { display: grid; grid-template-columns: var(--side-w) minmax(0, 1fr); min-height: calc(100vh - var(--mk-h, 0px)); }
+  .sx-side { position: sticky; top: var(--mk-h, 0px); height: calc(100vh - var(--mk-h, 0px)); display: flex; flex-direction: column; gap: 14px; padding: 18px 12px 14px; background: var(--white); border-right: 1px solid var(--line); overflow-y: auto; }
+  .sx-brand { display: flex; align-items: center; gap: 10px; padding: 2px 8px 4px; }
+  .sx-mark { width: 28px; height: 28px; border-radius: 8px; background: var(--navy); color: #fff; display: grid; place-items: center; font-size: 12px; font-weight: 800; letter-spacing: -.02em; }
+  .sx-wm { display: flex; flex-direction: column; line-height: 1.15; }
+  .sx-wm b { font-size: 14px; font-weight: 800; color: var(--navy); letter-spacing: -.01em; }
+  .sx-wm small { font-size: 11px; color: var(--ink-muted); }
+  /* Global · Website = top sections (each folds); Project · Admin = the bundle at the bottom (2026-10-22) */
+  .sx-side .snb .sec { display: flex; flex-direction: column; gap: 1px; border-bottom: 0; }
+  .sx-side .snb .sec > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 8px; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--ink); }
+  .sx-side .snb .sec > summary::-webkit-details-marker { display: none; }
+  .sx-side .snb .sec > summary::after { content: ""; margin-left: auto; width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(-45deg); opacity: .55; transition: transform .15s var(--ease); }
+  .sx-side .snb .sec[open] > summary::after { transform: rotate(45deg); margin-top: -3px; }
+  .sx-side .snb .sec > summary:hover { background: var(--sand-light); }
+  .sx-side .snb .sec > summary:focus-visible { outline: 2px solid var(--navy); outline-offset: -2px; }
+  .sx-side .snb .sec + .sec { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+  .sx-side .snb a.out { color: var(--ink-muted); }
+  .sx-side .snb a.out:hover { color: var(--ink-2); }
+  .sx-side .snb-more { padding-top: 8px; border-top: 1px solid var(--line); gap: 2px; }
+  .sx-side .snb .sec[hidden] { display: none; }
+  .sx-side .snb a.par:not(.out) { color: var(--ink-2); }
+  .sx-out { margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--navy-25); color: var(--ink-2); font-size: 11px; line-height: 1.5; }
+  .sx-side .snb { width: auto; padding: 0; border: 0; background: none; display: flex; flex-direction: column; gap: 1px; }
+  .sx-side .snb a { position: relative; padding: 7px 10px; font-size: 13px; color: var(--ink-2); }
+  .sx-side .snb a.on { background: var(--navy-tint); color: var(--navy); font-weight: 700; }
+  .sx-side .snb a.on::after { content: ""; position: absolute; left: -12px; top: 6px; bottom: 6px; width: 3px; border-radius: 0 3px 3px 0; background: var(--navy); }
+  .sx-side .snb .grp { padding: 14px 10px 4px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+  .sx-foot { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
+  .sx-mock { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 10px; background: #fbf6e6; color: #6b5a1f; font-size: 11px; }
+  .sx-mock a { color: #5a4910; font-weight: 700; text-decoration: none; }
+  .sx-mock a:hover { text-decoration: underline; }
+  .sx-acct { display: flex; align-items: center; gap: 10px; padding: 8px 8px 2px; border-top: 1px solid var(--line); }
+  .sx-av { width: 30px; height: 30px; border-radius: 50%; background: var(--navy-50); color: var(--navy); display: grid; place-items: center; font-size: 12px; font-weight: 800; flex-shrink: 0; }
+  .sx-who { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+  .sx-acct b { font-size: 12px; color: var(--ink); }
+  .sx-acct small { font-size: 11px; color: var(--ink-muted); }
+  .sx-acct .lang { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--ink-muted); }
+  .sx .main { padding: 24px 32px 72px; }
+  .sx .wrap { max-width: 1480px; }
+
+  /* page header: compact — title (+ 베타), one line of description · basis pill; actions on the right */
+  .sx .pg { gap: 16px; }
+  .sx .ph { align-items: center; gap: 10px 20px; }
+  .sx .ph h1 { font-size: 26px; letter-spacing: -0.025em; line-height: 1.25; }
+  .sx .ph .sub { margin-top: 6px; gap: 6px 12px; }
+  .sx .ph .sub .desc { width: auto; }
+
+  /* filter panel (left, as before — the same sections, rules and saved filters): the S card look */
+  .sx .split { gap: 20px; }
+  .sx .side, .sx .rail2 { border-radius: var(--r-card); box-shadow: var(--shadow-card); top: calc(var(--mk-h, 0px) + 16px); }
+  .sx .side-top { border-radius: var(--r-card) var(--r-card) 0 0; }
+  .sx .applied .tok { border-radius: 8px; }
+  .sx .content > .note { border-radius: 12px; }
+  /* page controls (compare brands · density) stay in their sticky bar at the top of the content */
+  .sx .cbar { border-radius: 14px; box-shadow: 0 1px 2px rgba(10,9,8,.05), 0 0 0 1px var(--line), 0 8px 24px -18px rgba(10,9,8,.35); top: calc(var(--mk-h, 0px) + 10px); }
+
+  /* content: card tiers — hero (navy, one per page), primary (white), secondary (quiet) */
+  .sx .content { gap: 16px; }
+  .sx .card { border-radius: var(--r-card); box-shadow: var(--shadow-card); }
+  .sx .card-h { padding: 18px 22px 12px 24px; }
+  .sx .card-h h2 { font-size: 16px; letter-spacing: -0.01em; }
+
+  /* hero = Overview's KPI 5종 */
+  .sx .okc { background-color: var(--navy); background-image: var(--hero-bg); color: #fff; box-shadow: var(--hero-shadow); }
+  .sx .okc .card-h h2 { color: #fff; }
+  .sx .okc .card-h .hint { color: rgba(255,255,255,.72); }
+  .sx .okc .okg { padding: 2px 10px 20px; }
+  .sx .okc .ok { border-left-color: rgba(255,255,255,.14); gap: 7px; padding: 4px 16px; }
+  .sx .okc .ok-n { color: rgba(255,255,255,.86); }
+  .sx .okc .ok-v { color: #fff; font-size: 34px; letter-spacing: -0.03em; }
+  .sx .okc .ok-v small { color: rgba(255,255,255,.8); }
+  .sx .okc .dlt { background: var(--white); color: var(--ink-2); }
+  .sx .okc .dlt.none { color: var(--ink-muted); }
+  .sx .okc .spark .ln { stroke: var(--sky); }
+  .sx .okc .spark .ar { fill: rgba(170,202,230,.16); }
+  .sx .okc .spark .pt { fill: #fff; }
+  .sx .okc .ok-x, .sx .okc .ok-r { color: rgba(255,255,255,.72); }
+  .sx .okc .ok-r b { color: #fff; }
+  .sx .okc .ok-go { color: var(--sky); }
+  .sx .okc .ok-go:focus-visible, .sx .okc .info:focus-visible { outline-color: var(--sky); }
+  .sx .okc .info { color: rgba(255,255,255,.8); }
+  .sx .okc .progress { background: rgba(255,255,255,.25); }
+
+  /* hero = the analysis pages' 이번 회차 요약 (headline on navy, findings as white tiles) */
+  .sx .card.ins { background-color: var(--navy); background-image: var(--hero-bg); color: #fff; box-shadow: var(--hero-shadow); }
+  .sx .card.ins .card-h h2 { color: #fff; }
+  .sx .card.ins .card-h .info { color: rgba(255,255,255,.8); }
+  .sx .card.ins .card-h .info:focus-visible { outline-color: var(--sky); }
+  .sx .card.ins .bchip { background: rgba(255,255,255,.12); color: rgba(255,255,255,.9); }
+  .sx .card.ins .bchip .i { color: var(--sky); }
+  .sx .card.ins .ins-h { color: rgba(255,255,255,.88); font-size: 16px; }
+  .sx .card.ins .ins-h b { color: #fff; }
+  .sx .card.ins .ins-i { background: var(--white); }
+  .sx .card.ins .progress { background: rgba(255,255,255,.25); }
+
+  /* tables in primary cards: a calmer header band */
+  .sx .bm thead th, .sx .mx thead th { background: #faf8f6; }
+  .sx .bm td, .sx .mx td { border-color: var(--line); }
+  .sx .bm-f, .sx .mx-k { color: var(--ink-muted); }
+  .sx .bm-bar { max-width: 148px; height: 5px; }
+
+  @media (max-width: 1279px) { :root { --side-w: 208px; } .sx .main { padding: 20px 24px 64px; } }
+  /* ══ /S-grade frame ══ */
 </style>
 </head>
 <body>
 <div class="mk" id="mk"></div>
-<header class="hdr"><div class="wordmark">HMG GEO <small>모니터링</small></div><span class="muted" id="who" style="font-size:12px">admin</span></header>
-<div class="shell">
-  <nav class="rail"><a class="on"><svg class="i s20"><use href="#i-globe"/></svg>Global</a><a><svg class="i s20"><use href="#i-monitor"/></svg>Website</a></nav>
-  <nav class="snb" aria-label="메뉴"><a class="on" href="overview-mockup.html" aria-current="page">Overview</a><a href="global-prompts-filters.html">Global prompts</a><a href="answer-analysis-mockup.html#mention">Answer analysis</a><a aria-disabled="true" title="이 화면은 목업이 없습니다">AI Agent Funnel</a></nav>
+<div class="sx">
+  <aside class="sx-side" aria-label="사이드 메뉴">
+    <div class="sx-brand"><span class="sx-mark" aria-hidden="true">G</span><span class="sx-wm"><b>HMG GEO</b><small>AI 답변 모니터링</small></span></div>
+    <nav class="snb" aria-label="메뉴"><details class="sec" data-sec="global" open><summary>Global</summary><a class="d1 on" href="overview-mockup.html" aria-current="page">Overview</a><a class="d1" href="global-prompts-filters.html">Global prompts</a><a class="d1 par" href="answer-analysis-mockup.html#mention" data-parent>Answer analysis</a><a class="sub" href="answer-analysis-mockup.html#mention">Mention</a><a class="sub" href="answer-analysis-mockup.html#citation">Citation</a><a class="d1 par" href="ai-funnel-mockup.html#acr" data-parent>AI Agent Funnel</a><a class="sub" href="ai-funnel-mockup.html#acr">ACR<span class="beta">β</span></a><a class="sub" href="ai-funnel-mockup.html#conversion">AI Conversion<span class="beta">β</span></a></details><details class="sec" data-sec="website"><summary>Website</summary><a class="d1 out" href="/website" data-out="Website › Overview" title="목업 밖 — 앱에서는 원본 화면(/website)이 열립니다">Overview</a><a class="d1 out" href="/website/prompts" data-out="Website › Prompts" title="목업 밖 — 앱에서는 원본 화면(/website/prompts)이 열립니다">Prompts</a><a class="d1 par out" href="/website/answer-analysis" data-out="Website › Answer analysis" title="목업 밖 — 앱에서는 원본 화면(/website/answer-analysis)이 열립니다" data-parent>Answer analysis</a><a class="sub out" href="/website/answer-analysis/mention" data-out="Website › Mention" title="목업 밖 — 앱에서는 원본 화면(/website/answer-analysis/mention)이 열립니다">Mention</a><a class="sub out" href="/website/answer-analysis/citation" data-out="Website › Citation" title="목업 밖 — 앱에서는 원본 화면(/website/answer-analysis/citation)이 열립니다">Citation</a><a class="d1 par out" href="/website/ai-funnel" data-out="Website › AI Agent Funnel" title="목업 밖 — 앱에서는 원본 화면(/website/ai-funnel)이 열립니다" data-parent>AI Agent Funnel</a><a class="sub out" href="/website/ai-funnel/conversion" data-out="Website › AI Conversion" title="목업 밖 — 앱에서는 원본 화면(/website/ai-funnel/conversion)이 열립니다">AI Conversion<span class="beta">β</span></a></details></nav>
+    <div class="sx-foot">
+      <nav class="snb snb-more" aria-label="프로젝트 · 관리"><details class="sec" data-sec="project"><summary>Project</summary><a class="d1 out" href="/projects" data-out="Project › Project list" title="목업 밖 — 앱에서는 원본 화면(/projects)이 열립니다">Project list</a></details><details class="sec" data-sec="admin" data-admin-only><summary>Admin</summary><a class="d1 out" href="/admin" data-out="Admin › User management" title="목업 밖 — 앱에서는 원본 화면(/admin)이 열립니다">User management</a><a class="d1 par out" href="/admin/standards" data-out="Admin › Global config" title="목업 밖 — 앱에서는 원본 화면(/admin/standards)이 열립니다" data-parent>Global config</a><a class="sub out" href="/admin/standards/prompts" data-out="Admin › Global prompts" title="목업 밖 — 앱에서는 원본 화면(/admin/standards/prompts)이 열립니다">Global prompts</a><a class="sub out" href="/admin/standards/customer-interest" data-out="Admin › Customer interest config" title="목업 밖 — 앱에서는 원본 화면(/admin/standards/customer-interest)이 열립니다">Customer interest config</a><a class="sub out" href="/admin/standards/entities" data-out="Admin › Entity catalog" title="목업 밖 — 앱에서는 원본 화면(/admin/standards/entities)이 열립니다">Entity catalog</a><a class="sub out" href="/admin/standards/citation-sources" data-out="Admin › 인용 출처 분류" title="목업 밖 — 앱에서는 원본 화면(/admin/standards/citation-sources)이 열립니다">인용 출처 분류</a><a class="d1 out" href="/admin/keyword-tools" data-out="Admin › Keyword tools" title="목업 밖 — 앱에서는 원본 화면(/admin/keyword-tools)이 열립니다">Keyword tools</a><a class="d1 out" href="/admin/ga4" data-out="Admin › GA4 연동" title="목업 밖 — 앱에서는 원본 화면(/admin/ga4)이 열립니다">GA4 연동</a><a class="d1 out" href="/admin/analysis" data-out="Admin › 분석 엔진" title="목업 밖 — 앱에서는 원본 화면(/admin/analysis)이 열립니다">분석 엔진</a><a class="d1 par out" href="/admin/credits" data-out="Admin › 측정 크레딧" title="목업 밖 — 앱에서는 원본 화면(/admin/credits)이 열립니다" data-parent>측정 크레딧</a><a class="sub out" href="/admin/credits/reconcile" data-out="Admin › 크레딧 대조 리포트" title="목업 밖 — 앱에서는 원본 화면(/admin/credits/reconcile)이 열립니다">크레딧 대조 리포트</a><a class="sub out" href="/admin/credits/billing" data-out="Admin › 결제 계정 이전" title="목업 밖 — 앱에서는 원본 화면(/admin/credits/billing)이 열립니다">결제 계정 이전</a></details></nav>
+      <p class="sx-out" id="sx-out" role="status" hidden></p>
+      <div class="sx-mock"><span>목업 전용 영역</span><a href="design-rules.html">디자인 규칙 보기 →</a></div>
+      <div class="sx-acct"><span class="sx-av" aria-hidden="true">A</span><span class="sx-who"><b id="who">admin</b><small>계정 권한 범위로 조회</small></span><span class="lang" title="언어">KO</span></div>
+    </div>
+  </aside>
+  <script>
+  (() => { // 목업 밖 메뉴(Website · Project · Admin)는 앱에서 원본 화면을 연다 → 여기서는 안내만. Admin = admin 계정만.
+    const side = document.querySelector(".sx-side"), who = document.getElementById("who"), tip = document.getElementById("sx-out");
+    const sync = () => side.querySelectorAll("[data-admin-only]").forEach((a) => (a.hidden = who.textContent.trim() !== "admin"));
+    new MutationObserver(sync).observe(who, { childList: true, characterData: true, subtree: true });
+    sync();
+    let t;
+    window.MOCK_SEC_OPEN = window.MOCK_SEC_OPEN || {};
+    // capture on window: runs before any page handler that re-renders the menu on click (answer-analysis does)
+    window.addEventListener("click", (e) => {
+      if (!side.contains(e.target)) return;
+      // section fold: the state is kept for re-renders (MOCK_SEC_OPEN, read by mockMenuHtml)
+      const sm = e.target.closest(".snb details.sec > summary");
+      if (sm) { e.preventDefault(); const d = sm.parentElement; d.open = !d.open; window.MOCK_SEC_OPEN[d.dataset.sec] = d.open; return; }
+      const a = e.target.closest("[data-out]");
+      if (!a) return;
+      e.preventDefault();
+      tip.textContent = `목업 밖 메뉴 — 앱에서는 ‘${a.dataset.out}’ 원본 화면이 열립니다(리뉴얼 범위는 Global).`;
+      tip.hidden = false;
+      clearTimeout(t);
+      t = setTimeout(() => (tip.hidden = true), 3000);
+    }, true);
+  })();
+  </script>
   <main class="main"><div class="wrap" id="page"></div></main>
 </div>
 <div id="toast"></div>
@@ -905,75 +1276,561 @@ function spark(series, invert) {
 const BINS = ["#f2f5fd", "#e6eaf0", "#aacae6", "#1a4d8e", "#002c5f"];
 function binsFor(k, values) { const sorted = [...values].sort((a, b) => a - b); return (v) => { const b = Math.min(4, Math.floor((sorted.indexOf(v) / Math.max(1, sorted.length)) * 5)); return isRank(k) ? 4 - b : b; }; }
 const busy = () => (pending ? `<div class="progress"></div>` : "");
-function boardHtml() {
-  const H = S.data.hero, title = S.data.period ? S.data.period.title : COMPARE;
-  return `<section class="card board" aria-label="KPI 5종" aria-busy="${pending}">${busy()}
-    <div class="card-h"><h2>KPI 5종</h2><span class="hint">줄을 누르면 아래 시장·브랜드 비교가 그 지표로 바뀝니다</span></div>
-    <div class="bh"><span>지표</span><span>값</span><span>${esc(title)}</span><span>추이</span><span class="rvh">1위 경쟁사</span><span></span></div>
-    <div role="radiogroup" aria-label="지표 선택">${KEYS.map((k) => { const h = H[k], on = k === focus, top = h.rivals[0]; return `<div class="kr ${on ? "on" : ""}" data-kpi="${k}" data-fk="k:${k}" role="radio" aria-checked="${on}" tabindex="${on ? 0 : -1}">
-      <div class="kn"><b>${KPI[k].name}<button class="info" data-info aria-label="${KPI[k].name} 정의 보기">${ic("info", "s14")}</button></b><small>${KPI[k].question}</small>
-        <div class="tip" role="tooltip"><b>정의</b>${esc(KPI[k].definition)}<b>산식</b>${esc(KPI[k].formula)}</div></div>
-      <div class="kv num" data-hero="${k}">${fmtBig(k, h.value)}</div>
-      <div>${deltaCell(k)}</div>
-      <div>${spark(h.series, isRank(k))}</div>
-      <div class="rv">${top ? `<b>${esc(top.name)}</b> ${fmt(k, top.v)}` : NO_COMPETITOR}</div>
-      <a class="go" href="#" data-detail="${k}" aria-label="${KPI[k].name} 상세 보기" title="상세 보기">${ic("arrow-ur", "s18")}</a>
-    </div>`; }).join("")}</div>
+// ── Overview at a glance (2026-10-22 rework, replaces the KPI folder) ── a pick that drives the cards below was
+// never read as a switch, so there is no pick: the 5 KPIs are a read-only summary, and the market and brand
+// cards show all 5 KPIs side by side (rows × KPI columns). The country tiles map is folded into the market table.
+// Sparkline y-domain = the original card rule (sparkYDomain): rates 0–100, rank [1, max(5, ⌈max⌉)] reversed
+// (customer QA 2nd round #1). User 2026-10-22: rates keep the original 0–100 axis (not a 10pp minimum range).
+function kDomain(series, rank) {
+  const vals = series.filter((v) => v != null);
+  if (rank) return [1, Math.max(5, Math.ceil(Math.max(...vals)))];
+  return [0, 100];
+}
+function kSpark(series, rank) {
+  const w = 120, h = 36, p = 3, [lo, hi] = kDomain(series, rank), rng = hi - lo || 1;
+  const step = series.length > 1 ? (w - 2 * p) / (series.length - 1) : 0;
+  const y = (v) => { const t = (v - lo) / rng; return h - p - (rank ? 1 - t : t) * (h - 2 * p); };
+  const pts = series.map((v, i) => [series.length > 1 ? p + i * step : w / 2, y(v)]);
+  const line = pts.map(([x, yy]) => `${x.toFixed(1)},${yy.toFixed(1)}`).join(" "), last = pts[pts.length - 1];
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">${pts.length > 1 ? `<polygon class="ar" points="${pts[0][0].toFixed(1)},${h} ${line} ${last[0].toFixed(1)},${h}"/><polyline class="ln" points="${line}"/>` : ""}<circle class="pt" cx="${last[0]}" cy="${last[1]}" r="3"/></svg>`;
+}
+// the dates of the hero series = the last rounds of the shown window (a picked period has only its own rounds)
+const seriesDates = (n) => {
+  const t = S.f.time;
+  const ds = t ? ROUND_DATES.filter((d) => (!t.from || d >= t.from) && (!t.to || d <= t.to)) : ROUND_DATES.filter((d) => d <= LATEST_ROUND);
+  return ds.slice(-n);
+};
+// formatTrendBucketMD: "9. 14."
+const mdOf = (d) => `${+d.slice(5, 7)}. ${+d.slice(8, 10)}.`;
+const shortName = (k) => KPI[k].name.replace(/^AI /, "");
+const better = (k) => (a, b) => (isRank(k) ? a - b : b - a); // best first
+// 당사 + the KPI's compared competitors (the card's 4: competitorMinis / competitorCitationShares), best first
+function standing(k) {
+  const h = S.data.hero[k], rows = [{ name: S.data.ownLabel, v: h.value, own: true }, ...h.rivals];
+  rows.sort((a, b) => better(k)(a.v, b.v));
+  return { rank: rows.findIndex((r) => r.own) + 1, n: rows.length };
+}
+
+// 1. KPI 5종 — read-only: no hover, no selected state; ⓘ and 상세 are the only controls
+function kpiCards() {
+  const H = S.data.hero, P = S.data.period;
+  return `<section class="card okc" aria-label="KPI 5종" aria-busy="${pending}">${busy()}
+    <div class="card-h"><h2>KPI 5종</h2><span class="hint">증감 = ${esc(P ? P.title : COMPARE)} · 추이 = 최근 ${H.visibility.series.length}회차</span></div>
+    <div class="okg">${KEYS.map((k) => {
+      const h = H[k], s = h.series, dates = seriesDates(s.length), st = standing(k);
+      return `<div class="ok" data-ok="${k}">
+        <div class="ok-n">${KPI[k].name}<button class="info" data-info aria-label="${KPI[k].name} 정의 보기">${ic("info", "s14")}</button><div class="tip" role="tooltip"><b>정의</b>${esc(KPI[k].definition)}<b>산식</b>${esc(KPI[k].formula)}</div></div>
+        <button class="ok-v num ssn" data-at="kpi" data-ss="ev" data-k="${k}" data-b="own" aria-label="${KPI[k].name} ${fmt(k, h.value)} — 근거 보기">${fmtBig(k, h.value)}</button>
+        <div class="ok-d">${h.delta == null && !S.data.period?.results[k] ? deltaCell(k) : `<button class="ssn" data-at="kpi" data-ss="why" data-k="${k}" data-b="own" aria-label="${KPI[k].name} 증감 — 변화의 이유 보기">${deltaCell(k)}</button>`}</div>
+        ${s.length > 1 ? `<button class="ok-sp ssn" data-at="kpi" data-ss="hist" data-k="${k}" data-b="own" aria-label="${KPI[k].name} 추이 — 회차별 증감 보기">${kSpark(s, isRank(k))}<span class="ok-x"><span>${mdOf(dates[0])}</span><span>${mdOf(dates[dates.length - 1])}</span></span></button>` : `<div class="ok-sp">${kSpark(s, isRank(k))}</div>`}
+        <div class="ok-r">${st.n > 1 ? `비교 브랜드 ${st.n}개 중 <b>${st.rank}위</b>` : NO_COMPETITOR}</div>
+        <a class="ok-go" href="#" data-detail="${k}">상세 ${ic("arrow-ur", "s12")}</a>
+      </div>`;
+    }).join("")}</div>
   </section>`;
 }
-function tilesHtml() {
-  const k = focus, regions = S.data.regions, name = KPI[k].name;
-  const bin = binsFor(k, regions.flatMap((r) => r.countries.map((m) => m.v[k])));
-  const sortv = (a, b) => isRank(k) ? a.v[k] - b.v[k] : b.v[k] - a.v[k];
-  const tile = (m) => {
-    const b = bin(m.v[k]), rv = m.rival.v[k];
-    const title = [cname(m.code), `${name} ${fmt(k, m.v[k])}`, `최대 경쟁사 ${rv == null ? "—" : `${m.rival.name} ${fmt(k, rv)}`}`, `답변 수 ${m.answers.toLocaleString("ko-KR")}`].join("\n");
-    return `<button class="tile ${b >= 3 ? "dark" : ""} ${hiMkt === m.code ? "hi" : ""}" style="background:${BINS[b]}" data-tile="${m.code}" aria-pressed="${hiMkt === m.code}" aria-label="${esc(cname(m.code))} ${fmt(k, m.v[k])}" title="${esc(title)}"><span class="c">${m.code}</span><span class="v num">${fmt(k, m.v[k])}</span></button>`;
+
+// 2. 브랜드 비교 — brands × 5 KPIs. Rows: 당사, the mention KPIs' competitors (one set of 4), then the citation
+// share's own competitors. Δ: every row on the same basis (직전 회차 대비 — the trend Δ), so a picked period does
+// not mix bases in one table (it shows on the KPI cards above).
+function brandMatrix() {
+  const H = S.data.hero;
+  const names = [...new Set([...H.shareOfVoice.rivals, ...H.citationShare.rivals].map((r) => r.name))];
+  const rows = [{ name: S.data.ownLabel, own: true }, ...names.map((name) => ({ name, own: false }))];
+  const cellOf = (k, r) => (r.own ? { v: H[k].value, d: H[k].delta } : H[k].rivals.find((x) => x.name === r.name) ?? null);
+  const cols = KEYS.map((k) => {
+    const vals = rows.map((r) => cellOf(k, r)?.v).filter((v) => v != null), best = [...vals].sort(better(k))[0], max = Math.max(...vals);
+    return { k, best, max, st: standing(k) };
+  });
+  const width = (c, v) => (isRank(c.k) ? Math.max(6, (1 - (v - 1) / c.max) * 100) : Math.max(2, (v / c.max) * 100));
+  const dTxt = (k, d) => {
+    if (d == null) return "";
+    const r = Math.round(d * 10) / 10, good = isRank(k) ? r < 0 : r > 0;
+    return r === 0 ? `<span class="bm-d">변화 없음</span>` : `<span class="bm-d ${good ? "good" : "bad"}" title="${good ? "개선" : "악화"} · ${COMPARE}">${r > 0 ? "▲" : "▼"}${fmtDelta(k, r)}</span>`;
   };
-  const legend = regions.length ? `<span class="r"><span class="legend" title="${esc(isRank(k) ? `${name} — 색이 진할수록 순위가 앞섬(낮음)` : `${name} — 색이 진할수록 높음`)}">${isRank(k) ? "순위 뒤" : "낮음"}${BINS.map((c) => `<i style="background:${c}"></i>`).join("")}${isRank(k) ? "순위 앞" : "높음"}</span></span>` : "";
-  return `<section class="card" aria-label="시장별 ${name}" aria-busy="${pending}">${busy()}
-    <div class="card-h"><h2>시장별 ${name}</h2>${legend}</div>
-    ${regions.length ? `<div class="tiles">${regions.map((r) => `<div class="rg"><h4>${esc(RHQ_LABEL.get(r.id))}<span>${r.countries.length}개국</span></h4><div class="tg">${[...r.countries].sort(sortv).map(tile).join("")}</div></div>`).join("")}</div>` : `<p class="nodata">${BRAND_REQUIRED}</p>`}
-  </section>`;
-}
-function brandsHtml() {
-  const k = focus, h = S.data.hero[k], P = S.data.period;
-  // own delta: a picked period wins (a suppressed result stays suppressed), else the trend Δ
-  const ownDelta = P?.results[k] ? P.results[k].delta : h.delta;
-  const rows = [{ name: S.data.ownLabel, v: h.value, d: ownDelta, own: true }, ...h.rivals.map((r) => ({ ...r, own: false }))].sort((a, b) => isRank(k) ? a.v - b.v : b.v - a.v);
-  const rank = rows.findIndex((r) => r.own) + 1;
-  const width = (v) => isRank(k) ? Math.max(4, Math.min(100, ((30 - v) / 29) * 100)) : Math.max(0, Math.min(100, v));
   return `<section class="card" aria-label="브랜드 비교" aria-busy="${pending}">${busy()}
-    <div class="card-h"><h2>브랜드 비교</h2><span class="hint">${isRank(k) ? "낮을수록 앞섬 · " : ""}당사 남색 · 경쟁사 회색</span>${rows.length > 1 ? `<span class="r rank">당사 ${rank}위 / ${rows.length}개 브랜드</span>` : ""}</div>
-    <div class="brands" data-brands="${k}">${rows.map((b) => `<div class="br ${b.own ? "ours" : ""}"><span class="nm"><span>${esc(b.name)}</span>${b.own ? `<span class="own">당사</span>` : ""}</span><span class="bar"><i style="width:${width(b.v)}%"></i></span><span class="v num">${fmt(k, b.v)}</span><span class="dl">${deltaChip(k, b.d)}</span></div>`).join("")}
-      ${rows.length === 1 ? `<p class="nodata" style="margin:4px 0 0">${NO_COMPETITOR}</p>` : ""}</div>
+    <div class="card-h"><h2>브랜드 비교</h2><span class="hint">5개 지표를 한 표에 · 막대는 열마다 최고값 기준 · 우선 노출도는 낮을수록 앞섬 · 증감 = 모든 행 ${COMPARE}</span></div>
+    <div class="tblwrap"><table class="bm"><colgroup><col class="bm-nc">${KEYS.map(() => "<col>").join("")}</colgroup>
+      <thead><tr><th>브랜드</th>${cols.map((c) => `<th title="${esc(KPI[c.k].name)}"><span class="bm-h">${shortName(c.k)}<small>당사 ${c.st.rank}위 / ${c.st.n}</small></span></th>`).join("")}</tr></thead>
+      <tbody>${rows.map((r) => `<tr class="${r.own ? "own" : ""}"><td><span class="bm-n"><span>${esc(r.name)}</span>${r.own ? `<span class="own">당사</span>` : ""}</span></td>${cols.map((c) => {
+        const x = cellOf(c.k, r);
+        if (!x) return `<td class="bm-na" title="${esc(KPI[c.k].name)}의 비교 경쟁사(상위 4)에 없는 브랜드입니다">—</td>`;
+        const b = r.own ? "own" : esc(r.name);
+        return `<td><div class="bm-c ${x.v === c.best ? "lead" : ""}"><button class="ssn" data-at="bm" data-ss="ev" data-k="${c.k}" data-b="${b}" aria-label="${esc(r.name)} ${KPI[c.k].name} ${fmt(c.k, x.v)} — 근거 보기"><b class="num">${fmt(c.k, x.v)}</b></button><span class="bm-bar"><i style="width:${width(c, x.v).toFixed(1)}%"></i></span>${x.d == null ? "" : `<button class="ssn bm-dv" data-at="bm" data-ss="why" data-k="${c.k}" data-b="${b}" aria-label="${esc(r.name)} ${KPI[c.k].name} 증감 — 변화의 이유 보기">${dTxt(c.k, x.d)}</button>`}</div></td>`;
+      }).join("")}</tr>`).join("")}</tbody></table></div>
+    <p class="bm-f">‘—’ = 그 지표의 비교 경쟁사(상위 4)에 없는 브랜드 · 인용 점유율은 인용 기준 경쟁사가 따로 있습니다 · 우호도 · 인용 점유율은 경쟁사 증감을 제공하지 않습니다</p>
   </section>`;
 }
-function tableHtml() {
-  const k = focus, regions = S.data.regions, name = KPI[k].name;
-  if (!regions.length) return ""; // MarketTable renders nothing without 권역 data
-  const pct = (v) => isRank(k) ? Math.max(4, Math.min(100, ((30 - v) / 29) * 100)) : Math.max(0, Math.min(100, v));
-  const valueCell = (v) => `<div class="vb"><b>${fmt(k, v)}</b><span class="bar"><i style="width:${pct(v)}%"></i></span></div>`;
-  const rivalCell = (m) => { const rv = m.rival.v[k]; return rv == null ? `<span class="rival">—</span>` : `<span class="rival"><b>${esc(m.rival.name)}</b> ${fmt(k, rv)}</span>`; };
-  const sortv = (a, b) => isRank(k) ? a.v[k] - b.v[k] : b.v[k] - a.v[k];
+
+// 3. 시장별 현황 — 권역 › 국가 × 5 KPIs. Cell colour = the country's level within that KPI (5 bins over the shown
+// countries, rank: lower = darker); the small figure = gap to the market's biggest competitor (+ = ahead).
+// a pastel navy ramp (tints between navy-25 and sky), not the tiles map's navy bins: a table of 5 × N cells with text
+// must stay readable — ink text on every step; the steps are evenly spaced in lightness so the order still reads
+const MX_BINS = ["#f4f7fb", "#e3ebf5", "#cddcee", "#b1c9e4", "#8fb0d8"];
+let mxSort = { k: "shareOfVoice", worst: false };
+function marketMatrix() {
+  const regions = S.data.regions;
+  const head = `<div class="card-h"><h2>시장별 현황</h2>${regions.length ? `<span class="r"><span class="legend" title="같은 지표 안에서 국가끼리 비교한 5단계 — 지표마다 따로 매깁니다">칸 색: 지표별 국가 순위 · 뒤${MX_BINS.map((c) => `<i style="background:${c}"></i>`).join("")}앞</span></span>` : ""}</div>`;
+  if (!regions.length) return `<section class="card" aria-label="시장별 현황" aria-busy="${pending}">${busy()}${head}<p class="nodata">${BRAND_REQUIRED}</p></section>`;
+  const all = regions.flatMap((r) => r.countries), bins = Object.fromEntries(KEYS.map((k) => [k, binsFor(k, all.map((m) => m.v[k]))]));
+  const rankIn = Object.fromEntries(KEYS.map((k) => [k, [...all].sort((a, b) => better(k)(a.v[k], b.v[k]))]));
+  const gap = (k, v, rv) => { if (rv == null) return null; const g = isRank(k) ? rv - v : v - rv; const a = Math.abs(g).toFixed(1); return { g, t: `${a === "0.0" ? "±" : g > 0 ? "+" : "−"}${a}${isRank(k) ? "" : "pp"}` }; };
+  const sortv = (a, b) => better(mxSort.k)(a.v[mxSort.k], b.v[mxSort.k]) * (mxSort.worst ? -1 : 1);
+  const th = (k) => { const on = mxSort.k === k, dir = on ? (mxSort.worst ? "뒤진 순" : "앞선 순") : ""; return `<th aria-sort="${on ? (isRank(k) !== mxSort.worst ? "ascending" : "descending") : "none"}"><button class="mx-sort ${on ? "on" : ""}" data-mxsort="${k}" title="${esc(KPI[k].name)} — 국가 정렬${on ? ` (지금 ${dir})` : ""}">${shortName(k)}<span class="mx-ar" aria-hidden="true">${on ? (mxSort.worst ? "↑" : "↓") : "↕"}</span></button></th>`; };
+  const at = (r, attr) => `data-k="${attr.k}" ${r.code ? `data-cty="${r.code}"` : `data-reg="${r.id}"`}`;
+  const mname = (r) => (r.code ? cname(r.code) : RHQ_LABEL.get(r.id));
+  const vBtn = (r, k) => `<button class="ssn" data-at="mx" data-ss="ev" data-w="v" ${at(r, { k })} aria-label="${esc(mname(r))} ${KPI[k].name} ${fmt(k, r.v[k])} — 근거 보기"><b class="num">${fmt(k, r.v[k])}</b></button>`;
+  const gBtn = (r, k, g) => (g ? `<button class="ssn" data-at="mx" data-ss="gap" ${at(r, { k })} aria-label="${esc(mname(r))} ${KPI[k].name} 최대 경쟁사 ${esc(r.rival.name)} 대비 ${g.t} — 당사 · 경쟁사 근거 보기"><small>${g.t}</small></button>` : "");
+  const aBtn = (r) => `<button class="ssn" data-at="mx" data-ss="ev" data-w="ans" ${at(r, { k: "visibility" })} aria-label="${esc(mname(r))} 답변 ${r.answers.toLocaleString("ko-KR")}개 — 근거 보기">답변 ${r.answers.toLocaleString("ko-KR")}개</button>`;
+  const regCell = (r, k) => { const g = gap(k, r.v[k], r.rival.v[k]); return `<td class="mx-rv">${vBtn(r, k)}${gBtn(r, k, g)}</td>`; };
+  const cell = (m, k) => {
+    const b = bins[k](m.v[k]), rv = m.rival.v[k], g = gap(k, m.v[k], rv), nth = rankIn[k].indexOf(m) + 1;
+    const tip = [`${cname(m.code)} · ${KPI[k].name} ${fmt(k, m.v[k])}`, `국가 ${all.length}개 중 ${nth}위`, rv == null ? "최대 경쟁사 값 없음" : `최대 경쟁사 ${m.rival.name} ${fmt(k, rv)} · 격차 ${g.t}`].join("\n");
+    return `<td class="hm" style="background:${MX_BINS[b]}" title="${esc(tip)}">${vBtn(m, k)}${gBtn(m, k, g)}</td>`;
+  };
   const body = regions.map((r) => {
     const open = !closedRegions.has(r.id), label = RHQ_LABEL.get(r.id);
-    return `<tr class="reg"><td><button class="regbtn" data-reg="${r.id}" aria-expanded="${open}" aria-label="${esc(label)} ${open ? "접기" : "펼치기"}"><span class="chev2 ${open ? "open" : ""}">${ic("chev-r", "s14")}</span>${esc(label)}<span class="muted" style="font-weight:500">${r.countries.length}개국</span></button></td><td>${valueCell(r.v[k])}</td><td>${rivalCell(r)}</td><td class="r num muted">${r.answers.toLocaleString("ko-KR")}</td></tr>`
-      + (open ? [...r.countries].sort(sortv).map((m) => `<tr class="cty ${hiMkt === m.code ? "hi" : ""}" data-row="${m.code}" aria-selected="${hiMkt === m.code}"><td><span class="code">${m.code}</span>${esc(cname(m.code))}</td><td>${valueCell(m.v[k])}</td><td>${rivalCell(m)}</td><td class="r num muted">${m.answers.toLocaleString("ko-KR")}</td></tr>`).join("") : "");
+    return `<tr class="reg"><td><button class="regbtn" data-reg="${r.id}" aria-expanded="${open}" aria-label="${esc(label)} ${open ? "접기" : "펼치기"}"><span class="chev2 ${open ? "open" : ""}">${ic("chev-r", "s14")}</span>${esc(label)}<span class="muted" style="font-weight:500">${r.countries.length}개국</span></button><span class="mx-sub"><span>${aBtn(r)}</span> · <span>vs ${esc(r.rival.name)}</span></span></td>${KEYS.map((k) => regCell(r, k)).join("")}</tr>`
+      + (open ? [...r.countries].sort(sortv).map((m) => `<tr class="cty"><td><span class="mx-cn"><span class="code">${m.code}</span>${esc(cname(m.code))}</span><span class="mx-sub"><span>${aBtn(m)}</span> · <span>vs ${esc(m.rival.name)}</span></span></td>${KEYS.map((k) => cell(m, k)).join("")}</tr>`).join("") : "");
   }).join("");
-  return `<section class="card" aria-label="권역 › 국가별 ${name}" aria-busy="${pending}">${busy()}
-    <div class="card-h"><h2>권역 › 국가별 ${name}</h2><span class="hint">행이나 타일을 누르면 서로 강조됩니다</span></div>
-    <div class="tblwrap"><table data-geo-table><colgroup><col><col style="width:30%"><col style="width:190px"><col style="width:88px"></colgroup>
-      <thead><tr><th>권역/국가</th><th>${name}</th><th title="최대 경쟁사 = 그 시장에서 언급이 가장 많은 경쟁사">최대 경쟁사</th><th class="r">답변 수</th></tr></thead>
+  return `<section class="card" aria-label="시장별 현황" aria-busy="${pending}">${busy()}${head}
+    <p class="mx-k">칸의 작은 숫자 = 그 시장 <b>최대 경쟁사</b>(언급이 가장 많은 경쟁사, 국가 아래 ‘vs’) 대비 격차 · + 앞섬 / − 뒤짐 · 인용 점유율은 경쟁사 값이 없습니다 · 열 이름을 누르면 국가 순서가 그 지표로 바뀝니다</p>
+    <div class="tblwrap"><table class="mx"><colgroup><col class="mx-nc">${KEYS.map(() => "<col>").join("")}</colgroup>
+      <thead><tr><th>권역 / 국가</th>${KEYS.map(th).join("")}</tr></thead>
       <tbody>${body}</tbody></table></div></section>`;
 }
+function headerTop() {
+  const asOf = asOfDay();
+  // RnPageHeader: title → description → basis pill (the shared frame order, 2026-10-22)
+  return `<header class="ph"><div><h1>AI 답변 성과 요약</h1>
+      <div class="sub"><span class="desc">HMG 브랜드가 AI 답변에서 얼마나 보이고, 어떤 출처로 신뢰를 얻고, 실제 방문으로 이어지는지 한 화면에서 봅니다.</span><span class="pill">${ic("cal", "s12")}주 1회 측정<span class="divider" aria-hidden="true"></span><b class="num" style="font-weight:600">${asOf ? `측정 회차 ${asOf} 기준` : "—"}</b></span></div></div>
+    <button class="btn" data-copy>${ic("link", "s14")}링크 복사</button></header>`;
+}
+function appliedTop() {
+  const t = tokens(F), cur = presetsOf().find((p) => p.id === activeId);
+  return `${t.length || pending ? `<div class="applied" aria-live="polite">${t.map(([k, v, id]) => `<span class="tok"><span>${k}</span>${esc(v)}<button data-untok="${esc(id)}" aria-label="${esc(k)} 조건 빼기">${ic("x", "s12")}</button></span>`).join("")}${pending ? `<span class="upd">${ic("loader", "s12")}반영 중</span>` : ""}</div>` : ""}
+  ${openedWithDefault && cur && cur.star ? `<div class="note">${ic("bookmark", "s14")}<span>기본 필터 ‘${esc(cur.name)}’로 열었습니다.</span><button class="lnk" data-reset>조건 없이 보기</button></div>` : ""}`;
+}
+// ── SS 1순위 — 변화의 이유 · 근거 (2026-10-22, 설계 O1 · docs/design/ss-overview.html) ──
+// 값을 누르면 근거(그 숫자를 만든 답변 목록), 증감 · 추이를 누르면 변화의 이유(엔진 · 국가 · 프롬프트별 기여)가
+// 오른쪽 서랍 하나에서 열린다(변화의 이유 → 근거 → 원문은 같은 서랍 안에서 넘어가고 ‹ 로 돌아온다).
+// 페이지 스크롤은 움직이지 않는다. 숫자는 예시지만 규칙은 구현과 같다:
+//   기여 = 값 변화 몫 + 비중 변화 몫 = w̄ᵢ·(rᵢ¹ − rᵢ⁰) + (r̄ᵢ − r̄)·(wᵢ¹ − wᵢ⁰)  (w = 분모 비중, r̄ = 전체 두 회차 평균)
+//     → 합 = 화면 증감(정확히). ‘이번 몫 − 직전 몫’(wᵢ¹rᵢ¹ − wᵢ⁰rᵢ⁰)도 합은 같지만, 값이 떨어진 항목이 비중만 늘어
+//       + 로 보이는 일이 생겨(목업 검토 2026-10-22: ChatGPT 67.7% → 67.1% 가 +0.1pp) 평균을 뺀 이 식을 쓴다.
+//     새로 측정된 항목 = (rᵢ¹ − r̄)·wᵢ¹, 빠진 항목 = −(rᵢ⁰ − r̄)·wᵢ⁰ — 평균과 같은 값으로 들어오면 0
+//   표시 반올림 = 최대 잔여(행마다 0.01 로 자르고 남는 0.01 을 끝자리가 큰 행부터) → 표시 합 = 표시 증감.
+//     0.01 단위인 이유: 프롬프트 수백 개 · 국가 수십 개로 흩어지면 한 조각의 기여가 0.0x 라 0.1 단위로는 모두 0.0 이 된다
+//   증감 기준 = 직전 회차 · 이전 회차는 이력 띠(최대 12칸)에서 고른다 · 기간 비교 칩은 분해하지 않는다
+//   국가 담당 계정은 국가 탭이 없고, 권역 계정의 국가 탭은 권역 안 국가만(시장 = 계정 범위)
+const SS_STEPS = 12;
+const SS_TOP = 10;
+const SS_PAGE = 50;
+let ssd = null; // { stack: [view], loading, opener, anim }
+let ssRoundData = true; // 목업 바: 요약 사실표 회차 자리를 읽음 / 미러로 떨어짐(직전 측정일 기준)
+let ssLoadT = null;
+(() => { // 근거 아이콘(문서) — svg defs 줄을 건드리지 않으려고 실행 때 붙인다
+  const defs = document.querySelector('svg[width="0"] defs');
+  if (defs && !document.getElementById("i-doc")) defs.insertAdjacentHTML("beforeend", '<symbol id="i-doc" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></symbol>');
+})();
+
+// 분모 · 분자 이름(지표 정의 = KPI 카드 ⓘ 와 같은 말)
+const SS_DEN = {
+  visibility: { f: 1, unit: "개", den: "답변", num: "당사 언급 답변" },
+  shareOfVoice: { f: 2.6, unit: "회", den: "전체 브랜드 언급", num: "당사 언급" },
+  sentiment: { f: 1.08, unit: "개", den: "당사 감정 신호", num: "긍정 신호" },
+  position: { f: 0.61, unit: "개", den: "순위 있는 답변", num: "순위 합" },
+  citationShare: { f: 3.1, unit: "회", den: "전체 인용", num: "공식(HMG) 인용" },
+};
+// 예시 프롬프트: v0.4 시드 48건 + 측정 언어 그대로 보이는 현지어 몇 건(번역하지 않는다)
+const SS_PROMPTS = [
+  ["who is leading self driving technology?", "인지/탐색"], ["Which car brands have strong AI technology capabilities to buy?", "구매/사후관리"],
+  ["Which car brand is the good to buy?", "구매/사후관리"], ["Which car brand has the best consumer ratings?", "비교/검증"],
+  ["Which automaker is building a better future that I can support through my purchase?", "구매/사후관리"],
+  ["What is the trustworthy EV carmaker to buy due to good management and after-sales service, etc?", "구매/사후관리"],
+  ["What is people's reputation for the social responsibility of car brands?", "비교/검증"], ["What car brand is worth buying for me considering the environment?", "구매/사후관리"],
+  ["What brands are committed to ethical business leadership? Is that brand car worth to buy?", "구매/사후관리"],
+  ["Please compare the degree to which each brand uses eco-friendly materials and tell me what the best brand is?", "비교/검증"],
+  ["Can you tell me about car brands known for there AS, service infra?", "구매/사후관리"], ["Can you compare the best current car brands?", "비교/검증"],
+  ["Can you compare EV car brand offers the best driving dynamics and choose best please?", "비교/검증"], ["Can you compare car brands OTA mobility technology?", "비교/검증"],
+  ["Are there any car brands that strive for a sustainable environment?", "인지/탐색"], ["Which car brands have better software updates?", "비교/검증"],
+  ["Where can I check official parts for a Kia car?", "인지/탐색"], ["What should I do if my car is not charging?", "구매/사후관리"],
+  ["What should I do if my Kia EV is not charging?", "구매/사후관리"], ["What fees should I ask about before buying a Hyundai car?", "구매/사후관리"],
+  ["What driving modes does Genesis offer?", "인지/탐색"], ["What do reviews say about Hyundai software updates?", "비교/검증"],
+  ["What do reviews say about Genesis design?", "비교/검증"], ["What do owners say about Kia seating space?", "비교/검증"],
+  ["What do owners say about Hyundai EV range?", "비교/검증"], ["What do owners say about Genesis connected services?", "비교/검증"],
+  ["What color options does Hyundai usually offer?", "인지/탐색"], ["What accessories does Kia offer?", "인지/탐색"],
+  ["Is Hyundai good for fuel economy?", "인지/탐색"], ["How would you describe Genesis car design?", "인지/탐색"],
+  ["How does insurance cost compare for Hyundai cars?", "구매/사후관리"], ["How does Genesis design compare with other brands?", "비교/검증"],
+  ["How does Kia compare with other brands in vehicle size?", "비교/검증"], ["How does Hyundai compare on software updates?", "비교/검증"],
+  ["How does Genesis compare on EV driving range?", "비교/검증"], ["How do I update the software on a Kia car?", "구매/사후관리"],
+  ["How do I find an official car service center?", "구매/사후관리"], ["How do I connect my phone to a Kia car app?", "구매/사후관리"],
+  ["How do Hyundai hybrids compare with other hybrid cars?", "비교/검증"], ["How do Genesis driver assistance features work?", "인지/탐색"],
+  ["Does Kia offer remote start?", "인지/탐색"], ["Does Hyundai offer car financing?", "구매/사후관리"],
+  ["Does Genesis make fuel-efficient hybrid cars?", "인지/탐색"], ["Do owners recommend Kia cars?", "비교/검증"],
+  ["Do Hyundai offer cars with roomy seating?", "인지/탐색"], ["Do Genesis offer cars with good cabin space?", "인지/탐색"],
+  ["Do Kia cars have strong engine performance?", "인지/탐색"], ["Do Hyundai cars have comfortable interiors?", "인지/탐색"],
+  ["전기차 충전이 편한 자동차 브랜드는 어디인가요?", "인지/탐색", "ko"], ["현대자동차 하이브리드 연비는 어떤가요?", "인지/탐색", "ko"],
+  ["가족용 SUV로 어떤 브랜드를 추천하나요?", "구매/사후관리", "ko"], ["기아 전기차가 충전되지 않을 때 어떻게 해야 하나요?", "구매/사후관리", "ko"],
+  ["Welche Automarke bietet den besten Kundenservice?", "비교/검증", "de"], ["Wie zuverlässig sind Elektroautos von Hyundai?", "비교/검증", "de"],
+  ["Welches Elektroauto hat die beste Reichweite?", "비교/검증", "de"], ["¿Qué marca de autos tiene la mejor garantía?", "비교/검증", "es"],
+  ["¿Es Kia una buena marca para comprar?", "구매/사후관리", "es"], ["燃費の良いハイブリッド車のおすすめは？", "구매/사후관리", "ja"],
+].map(([t, stage, lang = "en"], i) => ({ i, t, stage, lang }));
+const SS_FEAT = ["reliability", "warranty coverage", "EV range", "safety ratings", "value for money", "interior quality", "charging speed", "software updates", "resale value", "design"];
+const SS_FEAT_KO = ["신뢰성", "보증 기간", "주행거리", "안전 평가", "가성비", "실내 품질", "충전 속도", "소프트웨어 업데이트", "잔존 가치", "디자인"];
+const SS_DOMAINS = [["hyundai.com", "공식(HMG)"], ["kia.com", "공식(HMG)"], ["genesis.com", "공식(HMG)"], ["caranddriver.com", "전문 매체"], ["edmunds.com", "전문 매체"],
+  ["motortrend.com", "전문 매체"], ["reddit.com", "커뮤니티"], ["topgear.com", "전문 매체"], ["consumerreports.org", "리뷰 · 평가"], ["youtube.com", "동영상"], ["wikipedia.org", "백과"], ["toyota.com", "공식(경쟁사)"]];
+
+// ── 예시 데이터 ──
+const ssClamp = (k, v) => (isRank(k) ? Math.max(1, Math.min(6, v)) : Math.max(0.5, Math.min(99.5, v)));
+const ssDates = () => seriesDates(SS_STEPS + 1);
+const ssBrandName = (b) => (b === "own" ? S.data.ownLabel : b);
+const ssOwnTerms = () => (S.data.ownLabel === "HMG" ? ["Hyundai", "Kia", "Genesis"] : S.data.ownLabel.split(", "));
+// 그 브랜드 · 지표의 회차 값 계열(카드 추이 끝 몇 점 = 화면 값, 그 앞은 같은 걸음으로 이어 붙인 예시)
+function ssSeries(k, b) {
+  const H = S.data.hero[k], dates = ssDates(), n = dates.length;
+  let tail;
+  if (b === "own") tail = H.series.slice();
+  else { const r = H.rivals.find((x) => x.name === b); tail = r.d == null ? [r.v] : [r.v - r.d, r.v]; }
+  const vals = new Array(n), m = Math.min(n, tail.length);
+  for (let i = 0; i < m; i++) vals[n - m + i] = tail[tail.length - m + i];
+  for (let i = n - m - 1; i >= 0; i--) vals[i] = ssClamp(k, vals[i + 1] - (rnd(b, k, "w", dates[i]) - 0.5) * (isRank(k) ? 0.36 : 2.8));
+  return { dates, vals };
+}
+// 그 회차 · 지금 범위의 분모(최신 회차 답변 = 시장별 현황의 답변 수 합)
+function ssDen(k, date, latest) {
+  const base = S.data.markets.reduce((s, m) => s + m.answers, 0);
+  const a = date === latest ? base : Math.round(base * (1 + (rnd("ans", role.id, date) - 0.6) * 0.05));
+  return Math.round(a * SS_DEN[k].f);
+}
+// 정수 배분: total 을 weights 비율로 나누되 합이 정확히 total(최대 잔여)
+function ssAlloc(total, weights) {
+  const sw = weights.reduce((s, w) => s + w, 0) || 1, raw = weights.map((w) => (total * w) / sw), fl = raw.map(Math.floor);
+  let need = total - fl.reduce((s, v) => s + v, 0);
+  raw.map((v, i) => [v - fl[i], i]).sort((a, b) => b[0] - a[0]).forEach(([, i]) => { if (need > 0 && weights[i] > 0) { fl[i]++; need--; } });
+  return fl;
+}
+// 조각 값: 분모를 정수로 나누고 값을 조각마다 흩은 뒤, 분모 가중 평균이 화면 값(V0 · V1)과 같도록 맞춘다
+//   → 기여 c = 값 변화 + 비중 변화 의 합 = V1 − V0 (정확히)
+function ssSlices(items, V0, V1, D0, D1, seed, spread, rank) {
+  const w1 = items.map((it, i) => (it.only === "prev" ? 0 : it.w * (it.fixW ? 1 : 1 + (rnd(seed, i, "w1") - 0.5) * 0.1)));
+  const w0 = items.map((it, i) => (it.only === "cur" ? 0 : it.w * (1 + (rnd(seed, i, "w0") - 0.5) * 0.16)));
+  const d1 = ssAlloc(D1, w1), d0 = ssAlloc(D0, w0);
+  const rows = items.map((it, i) => {
+    const r1 = it.base + (it.fixW ? 0 : (rnd(seed, i, "r1") - 0.5) * spread);
+    const r0 = r1 - (V1 - V0) + (rnd(seed, i, "r0") - 0.5) * spread * 0.45;
+    return { ...it, d0: d0[i], d1: d1[i], r0, r1 };
+  });
+  const a1 = rows.reduce((s, r) => s + r.d1 * r.r1, 0) / D1, a0 = rows.reduce((s, r) => s + r.d0 * r.r0, 0) / D0;
+  for (const r of rows) {
+    r.r1 += V1 - a1; r.r0 += V0 - a0;
+    if (!rank) { r.r1 = Math.max(0, Math.min(100, r.r1)); r.r0 = Math.max(0, Math.min(100, r.r0)); }
+  }
+  // 범위를 넘어 자른 조각이 있으면 남은 차이를 가장 큰 조각에 되돌린다(합 = 화면 값 유지)
+  const big1 = rows.reduce((a, r) => (r.d1 > a.d1 ? r : a), rows[0]), big0 = rows.reduce((a, r) => (r.d0 > a.d0 ? r : a), rows[0]);
+  big1.r1 += (V1 * D1 - rows.reduce((s, r) => s + r.d1 * r.r1, 0)) / (big1.d1 || 1);
+  big0.r0 += (V0 * D0 - rows.reduce((s, r) => s + r.d0 * r.r0, 0)) / (big0.d0 || 1);
+  const rb = (V0 + V1) / 2;
+  for (const r of rows) {
+    r.w0 = r.d0 / D0; r.w1 = r.d1 / D1;
+    if (r.d0 && r.d1) { r.rate = ((r.w0 + r.w1) / 2) * (r.r1 - r.r0); r.mix = ((r.r0 + r.r1) / 2 - rb) * (r.w1 - r.w0); }
+    else if (r.d1) { r.rate = 0; r.mix = (r.r1 - rb) * r.w1; }
+    else { r.rate = 0; r.mix = -(r.r0 - rb) * r.w0; }
+    r.c = r.rate + r.mix;
+  }
+  return rows;
+}
+// 표시 반올림(최대 잔여): 0.01 단위로 내린 뒤 모자란 0.01 을 끝자리가 큰 행부터 → 표시 합 = target
+const SS_Q = 100;
+function ssRound(values, target) {
+  const u = values.map((v) => v * SS_Q), fl = u.map(Math.floor);
+  let need = Math.round(target * SS_Q) - fl.reduce((s, v) => s + v, 0);
+  const order = u.map((v, i) => [v - fl[i], Math.abs(v), i]).sort((a, b) => b[0] - a[0] || b[1] - a[1]).map((x) => x[2]);
+  for (let j = 0; need > 0; j++, need--) fl[order[j % order.length]]++;
+  for (let j = order.length - 1; need < 0; j--, need++) fl[order[((j % order.length) + order.length) % order.length]]--;
+  return fl.map((v) => v / SS_Q);
+}
+function ssPromptItems(seed, V1, sp, latest) {
+  const langs = new Set(["en", ...S.data.markets.flatMap((m) => LANGS_OF[m.code] ?? [])]);
+  const ps = SS_PROMPTS.filter((p) => langs.has(p.lang));
+  // 진입 · 이탈(최신 회차 예시: 2건 새로 측정, 1건 빠짐)
+  const ent = latest ? new Set([ps[ps.length - 1].i, ps[7].i]) : new Set(), ex = latest ? new Set([ps[12].i]) : new Set();
+  return ps.map((p) => ({ key: "p" + p.i, label: p.t, sub: p.stage, lang: p.lang, w: 0.6 + rnd(seed, p.i, "w"), base: V1 + (rnd(seed, p.i, "b") - 0.5) * sp * 1.8, only: ent.has(p.i) ? "cur" : ex.has(p.i) ? "prev" : null }));
+}
+// 분해: 회차 step(이력 띠 칸) · 축 → 표에 그릴 행
+function ssDecomp(k, b, step, axis) {
+  const { dates, vals } = ssSeries(k, b), latest = dates[dates.length - 1], isLatest = step === dates.length - 1;
+  const V0 = vals[step - 1], V1 = vals[step], D0 = ssDen(k, dates[step - 1], latest), D1 = ssDen(k, dates[step], latest);
+  const seed = [role.id, b, k, dates[step], axis].join("|"), rank = isRank(k);
+  const sp = rank ? 0.8 : Math.max(4, Math.min(V1, 100 - V1) * 0.6);
+  let items;
+  if (axis === "engine") items = Object.keys(ENGINE_LABEL).map((e, j) => ({ key: e, label: ENGINE_LABEL[e], w: j ? 0.47 : 0.53, base: V1 + (j ? -1 : 1) * sp * 0.22 }));
+  else if (axis === "country") items = S.data.markets.map((m) => ({ key: m.code, label: cname(m.code), sub: m.code, w: m.answers, base: b === "own" && isLatest ? m.v[k] : V1 + (rnd(seed, m.code) - 0.5) * sp, fixW: b === "own" && isLatest }));
+  else items = ssPromptItems(seed, V1, sp, isLatest);
+  const rows = ssSlices(items, V0, V1, D0, D1, seed, sp, rank);
+  const flowIn = rows.filter((r) => r.only === "cur"), flowOut = rows.filter((r) => r.only === "prev");
+  const main = rows.filter((r) => !r.only).sort((a, b2) => Math.abs(b2.c) - Math.abs(a.c));
+  const top = axis === "engine" ? main : main.slice(0, SS_TOP), rest = axis === "engine" ? [] : main.slice(SS_TOP);
+  const sum = (rs, f) => rs.reduce((s, r) => s + f(r), 0);
+  const agg = (rs) => { const d0 = sum(rs, (r) => r.d0), d1 = sum(rs, (r) => r.d1); return { d0, d1, w0: d0 / D0, w1: d1 / D1, r0: d0 ? sum(rs, (r) => r.d0 * r.r0) / d0 : null, r1: d1 ? sum(rs, (r) => r.d1 * r.r1) / d1 : null, c: sum(rs, (r) => r.c), rate: sum(rs, (r) => r.rate), mix: sum(rs, (r) => r.mix), keys: rs.map((r) => r.key), n: rs.length }; };
+  const parts = [...top.map((r) => ({ kind: "row", ...r }))];
+  if (rest.length) parts.push({ kind: "rest", label: `그 외 ${rest.length}${axis === "country" ? "개국" : "개 프롬프트"}`, ...agg(rest) });
+  if (flowIn.length) parts.push({ kind: "in", label: `새로 측정된 프롬프트 ${flowIn.length}개`, sub: "이번 회차에만 있음", ...agg(flowIn) });
+  if (flowOut.length) parts.push({ kind: "out", label: `측정에서 빠진 프롬프트 ${flowOut.length}개`, sub: "직전 회차에만 있음", ...agg(flowOut) });
+  const total = Math.round((V1 - V0) * 10) / 10;
+  ssRound(parts.map((p) => p.c), total).forEach((v, i) => (parts[i].shown = v));
+  return { dates, step, V0, V1, D0, D1, total, parts, all: main, axis };
+}
+
+// ── 서랍 상태 ──
+function ssScope() { // 축 탭: 국가 계정 = 국가 탭 없음
+  return S.data.markets.length > 1 ? ["engine", "country", "prompt"] : ["engine", "prompt"];
+}
+const SS_AXIS = { engine: "AI 엔진", country: "국가", prompt: "프롬프트" };
+function ssOpen(view, opener) {
+  clearTimeout(ssLoadT);
+  ssd = { stack: [view], opener, anim: true, role: role.id };
+  ssLoad();
+}
+function ssPush(view) { ssd.stack.push(view); ssd.anim = false; ssLoad(); }
+function ssBack() { ssd.stack.pop(); ssd.anim = false; ssRender(); document.querySelector(".ss-dw")?.focus(); }
+function ssClose() {
+  const op = ssd?.opener; ssd = null; clearTimeout(ssLoadT); ssRender();
+  if (op) document.querySelector(op)?.focus({ preventScroll: true });
+}
+function ssLoad() { // 응답 지연(목업 바)만큼 뼈대 → 내용
+  ssd.loading = true; ssRender(); document.querySelector(".ss-dw")?.focus();
+  ssLoadT = setTimeout(() => { if (!ssd) return; ssd.loading = false; ssd.anim = false; ssRender(); }, Math.max(150, LATENCY - 100));
+}
+const ssTop = () => ssd.stack[ssd.stack.length - 1];
+
+// 페이지의 숫자 → 서랍
+function ssFromEl(el) {
+  const k = el.dataset.k, b = el.dataset.b ?? "own", kind = el.dataset.ss; // 시장 표 = 당사
+  const opener = Object.entries(el.dataset).map(([n, v]) => `[data-${n}="${CSS.escape(v)}"]`).join("");
+  if (kind === "why" || kind === "hist") {
+    const { dates } = ssSeries(k, b);
+    ssOpen({ v: "why", k, b, step: dates.length - 1, axis: "engine", fromPeriod: kind === "why" && b === "own" && !!S.data.period?.results[k], hist: kind === "hist", all: false }, opener);
+    return;
+  }
+  // 근거: 값 · 격차 · 답변 수
+  const latest = ssDates().at(-1);
+  let label = null, r, d, gap = null, keys = null;
+  if (el.dataset.cty || el.dataset.reg) {
+    const reg = el.dataset.reg ? S.data.regions.find((x) => x.id === el.dataset.reg) : null, m = reg ?? S.data.markets.find((x) => x.code === el.dataset.cty);
+    label = reg ? `${RHQ_LABEL.get(reg.id)} ${reg.countries.length}개국` : cname(m.code);
+    keys = reg ? reg.countries.map((c) => c.code) : [m.code];
+    r = m.v[k]; d = Math.round(m.answers * SS_DEN[k].f);
+    if (kind === "gap") gap = { name: m.rival.name, r: m.rival.v[k], d: Math.round(m.answers * SS_DEN[k].f * (isRank(k) ? 0.9 : 1)) };
+  } else {
+    r = b === "own" ? S.data.hero[k].value : S.data.hero[k].rivals.find((x) => x.name === b).v;
+    d = Math.round(ssDen(k, latest, latest) * (b === "own" || !isRank(k) ? 1 : 0.8));
+  }
+  ssOpen({ v: "ev", k, b, rounds: { cur: { date: latest, r, d } }, round: "cur", split: "num", slice: label ? { axis: "country", label, keys } : null, gap, tab: "own", shown: SS_PAGE }, opener);
+}
+
+// ── 근거 목록(예시 행) ──
+function ssPop(k, r, d) { // 목록의 모집단(답변 단위) · 분자 쪽 답변 수
+  const A = Math.round(d / SS_DEN[k].f);
+  if (k === "visibility") { const n = Math.round((d * r) / 100); return { pop: d, num: n }; }
+  if (k === "shareOfVoice") { const pop = Math.round(A * 0.93); return { pop, num: Math.round(pop * Math.min(0.95, (r * 2.2) / 100)) }; }
+  if (k === "sentiment") { const pop = Math.round(d / 1.8); return { pop, num: Math.round(pop * Math.min(0.97, (r / 100) * 1.15)) }; }
+  if (k === "position") return { pop: d, num: Math.round(d * Math.max(0.05, Math.min(0.9, (2.7 - r) / 2.4))) };
+  const pop = Math.round(A * 0.82); return { pop, num: Math.round(pop * Math.min(0.9, (r / 100) * 2.4)) };
+}
+function ssSample(k, r, d, brand) {
+  const n = (x) => x.toLocaleString("ko-KR"), N = Math.round((d * r) / 100);
+  if (k === "visibility") return `답변 <b>${n(d)}</b>개 중 ${esc(brand)} 언급 <b>${n(N)}</b>개 · <b>${fmt(k, r)}</b>`;
+  if (k === "shareOfVoice") return `전체 브랜드 언급 <b>${n(d)}</b>회 중 ${esc(brand)} <b>${n(N)}</b>회 · <b>${fmt(k, r)}</b>`;
+  if (k === "sentiment") return `${esc(brand)} 감정 신호 <b>${n(d)}</b>개 중 긍정 <b>${n(N)}</b>개 · <b>${fmt(k, r)}</b>`;
+  if (k === "position") return `순위 있는 답변 <b>${n(d)}</b>개 · 평균 <b>${fmt(k, r)}</b>`;
+  return `전체 인용 <b>${n(d)}</b>회 중 공식(HMG) <b>${n(N)}</b>회 · <b>${fmt(k, r)}</b>`;
+}
+const SS_SPLIT = {
+  visibility: ["언급한 답변", "언급 없는 답변"], shareOfVoice: ["언급한 답변", "경쟁사만 언급"], sentiment: ["긍정 있는 답변", "중립 · 부정 · 혼합만"],
+  position: ["1번째", "2번째 이하"], citationShare: ["공식(HMG) 인용 있음", "공식(HMG) 인용 없음"],
+};
+function ssRowsCtx(view) { // 지금 보는 근거의 (회차, 탭) 값
+  const rd = view.rounds[view.round], g = view.gap && view.tab === "rival";
+  return { date: rd.date, r: g ? view.gap.r : rd.r, d: g ? view.gap.d : rd.d, brand: g ? view.gap.name : ssBrandName(view.b), rival: g };
+}
+function ssRow(view, i) {
+  const c = ssRowsCtx(view), num = view.split === "num", seed = [role.id, view.k, view.b, c.date, view.tab, view.split, view.slice?.label ?? "", i].join("|");
+  const sl = view.slice, langs = new Set(["en", ...S.data.markets.flatMap((m) => LANGS_OF[m.code] ?? [])]);
+  const speaks = (code, lang) => lang === "en" || (LANGS_OF[code] ?? []).includes(lang);
+  const pool0 = sl?.axis === "country" ? sl.keys : S.data.markets.map((m) => m.code);
+  let p, cty;
+  if (sl?.axis === "prompt" && sl.keys?.length) {
+    p = SS_PROMPTS[+sl.keys[Math.floor(rnd(seed, "pk") * sl.keys.length)].slice(1)];
+    const pool = pool0.filter((c) => speaks(c, p.lang)); cty = (pool.length ? pool : pool0)[Math.floor(rnd(seed, "c") * (pool.length || pool0.length))];
+  } else {
+    cty = pool0[Math.floor(rnd(seed, "c") * pool0.length)];
+    const ps = SS_PROMPTS.filter((x) => langs.has(x.lang) && speaks(cty, x.lang)); p = ps[Math.floor(rnd(seed, "p") * ps.length)];
+  }
+  const engines = Object.keys(ENGINE_LABEL), engine = sl?.axis === "engine" ? sl.keys[0] : engines[Math.floor(rnd(seed, "e") * engines.length)];
+  const day = addDays(c.date, Math.floor(rnd(seed, "day") * 2)), hh = String(8 + Math.floor(rnd(seed, "h") * 12)).padStart(2, "0"), mm = String(Math.floor(rnd(seed, "m") * 60)).padStart(2, "0");
+  const lang = p.lang;
+  const own = c.rival ? [c.brand] : ssOwnTerms(), term = own[Math.floor(rnd(seed, "t") * own.length)];
+  const rivals = ["Toyota", "Tesla", "BMW", "Volkswagen", "BYD", "Honda"].filter((x) => !own.includes(x));
+  const ra = rivals[Math.floor(rnd(seed, "ra") * rivals.length)], rb = rivals[(Math.floor(rnd(seed, "ra") * rivals.length) + 2) % rivals.length];
+  const ko = p.lang === "ko", F = ko ? SS_FEAT_KO : SS_FEAT, f1 = F[Math.floor(rnd(seed, "f1") * F.length)], f2 = F[(Math.floor(rnd(seed, "f1") * F.length) + 3) % F.length];
+  const mk = (s) => `<mark>${esc(s)}</mark>`;
+  const mentioned = view.k === "visibility" || view.k === "shareOfVoice" ? num : true;
+  const ex = mentioned
+    ? ko ? `… ${esc(ra)}와 ${mk(term)}가 ${esc(f1)} 면에서 자주 추천됩니다. 특히 ${mk(term)}는 ${esc(f2)}이 강점으로 꼽힙니다 …`
+      : `… ${esc(ra)} and ${mk(term)} are often recommended for ${esc(f1)}; ${mk(term)} also stands out for its ${esc(f2)} …`
+    : ko ? `… ${esc(f1)}에서는 ${esc(ra)}가 가장 앞서고, ${esc(rb)}가 뒤를 잇습니다 …` : `… ${esc(ra)} leads on ${esc(f1)}, followed closely by ${esc(rb)} …`;
+  const n1 = 1 + Math.floor(rnd(seed, "n") * 3), tot = n1 + 2 + Math.floor(rnd(seed, "tot") * 6), rk = num ? 1 : 2 + Math.floor(rnd(seed, "rk") * 4);
+  const dom = SS_DOMAINS[Math.floor(rnd(seed, "dm") * 3)][0], other = SS_DOMAINS[3 + Math.floor(rnd(seed, "do") * 7)][0];
+  const o = {
+    visibility: num ? `${esc(c.brand)} ${n1}회 언급` : "언급 없음",
+    shareOfVoice: num ? `${esc(c.brand)} ${n1} / 전체 ${tot}회` : `경쟁사 ${tot}회 · ${esc(c.brand)} 0`,
+    sentiment: num ? `긍 ${n1} · 중 ${Math.floor(rnd(seed, "ne") * 2)} · 부 0` : `중 ${n1} · 부 ${Math.floor(rnd(seed, "ng") * 2)}`,
+    position: `${esc(c.brand)} ${rk}번째`,
+    citationShare: num ? `공식 ${dom}` : `인용 ${tot}회 · ${other}`,
+  }[view.k];
+  return { p, engine, cty, lang, when: `${mdOf(day)} ${hh}:${mm}`, ex, o, term, ra, rb, f1, f2, ko, num, mentioned, dom, other, n1, tot, rk };
+}
+
+// ── 그리기 ──
+const ssSign = (k, v, dp = 1) => { const q = 10 ** dp, r = Math.round(v * q) / q; return r === 0 ? `${(0).toFixed(dp)}${isRank(k) ? "" : "pp"}` : `${r > 0 ? "+" : "−"}${Math.abs(r).toFixed(dp)}${isRank(k) ? "" : "pp"}`; };
+const ssTone = (k, v, dp = 1) => { const q = 10 ** dp, r = Math.round(v * q) / q; return r === 0 ? "flat" : (isRank(k) ? r < 0 : r > 0) ? "good" : "bad"; };
+const ssN = (x) => x.toLocaleString("ko-KR");
+function ssHead(view) {
+  const prev = ssd.stack.length > 1 ? ssd.stack[ssd.stack.length - 2] : null;
+  const back = prev ? `<button class="ss-back" data-ssback>${ic("chev-l", "s14")}${prev.v === "why" ? "변화의 이유" : "근거"}</button>` : "";
+  const name = `${KPI[view.k].name} · ${esc(ssBrandName(view.b))}`;
+  let title, sub;
+  if (view.v === "why") { title = "변화의 이유"; sub = `<span>${name}</span><span class="ss-chip">직전 회차 대비</span>`; }
+  else if (view.v === "ev") {
+    title = "근거"; const c = ssRowsCtx(view);
+    sub = `<span>${name}</span><span class="ss-chip">${mdOf(c.date)} 회차</span>${view.slice ? `<span class="ss-chip">${esc(SS_AXIS[view.slice.axis])} · ${esc(view.slice.label)}</span>` : ""}`;
+  } else { title = "답변 원문"; sub = `<span>${name}</span>`; }
+  return `<div class="ss-hd"><div class="ss-top"><div>${back}<h2 id="ss-t">${title}</h2><div class="ss-sub">${sub}</div></div>
+    <button class="ss-x" data-ssclose aria-label="닫기">${ic("x", "s18")}</button></div>${view.v === "why" && !ssd.loading && ssRoundData ? ssStrip(view) : ""}</div>`;
+}
+function ssStrip(view) {
+  const { dates, vals } = ssSeries(view.k, view.b), steps = [];
+  for (let i = 1; i < dates.length; i++) steps.push({ i, d: dates[i], v: Math.round((vals[i] - vals[i - 1]) * 10) / 10 });
+  const max = Math.max(isRank(view.k) ? 0.2 : 1, ...steps.map((s) => Math.abs(s.v)));
+  return `<div class="ss-hs-w"><div class="ss-hs-h"><b>회차별 증감</b><span>직전 회차 대비 · 칸을 누르면 그 회차의 분해</span></div>
+    <div class="ss-hs" role="radiogroup" aria-label="회차별 증감">${steps.map((s) => {
+      const t = ssTone(view.k, s.v), h = Math.max(s.v === 0 ? 0 : 2, (Math.abs(s.v) / max) * 14);
+      return `<button class="ss-hc" role="radio" aria-checked="${s.i === view.step}" data-ssstep="${s.i}" aria-label="${mdOf(s.d)} ${ssSign(view.k, s.v)}">
+        <span class="ss-hv ${t}">${ssSign(view.k, s.v)}</span><span class="ss-hb"><i class="${s.v >= 0 ? "pos" : "neg"} ${t}" style="height:${h.toFixed(1)}px"></i></span><span class="ss-hd8">${mdOf(s.d)}</span></button>`;
+    }).join("")}</div></div>`;
+}
+function ssSkel(rows = 6) { return `<div class="ss-sk" aria-busy="true">${Array.from({ length: rows }, (_, i) => `<i style="width:${92 - (i % 3) * 14}%"></i>`).join("")}</div>`; }
+function ssWhyBody(view) {
+  if (!ssRoundData) return `<div class="ss-state">${ic("info", "s18")}<div><b>회차 기준 데이터가 없어 분해하지 않습니다</b><p>요약 사실표를 읽지 못해 이 화면의 숫자가 미러 기준으로 계산되었습니다. 이때 증감은 ‘직전 측정일’ 대비라 회차 대 회차 분해와 맞지 않습니다. 근거(답변 목록)는 값을 눌러 볼 수 있습니다.</p></div></div>`;
+  const k = view.k, D = ssDecomp(k, view.b, view.step, view.axis), unit = SS_DEN[k];
+  const note = view.fromPeriod ? `<div class="ss-note">${ic("info", "s14")}<span>기간을 고르면 카드 칩은 기간 비교(${esc(S.data.period.title)})입니다. 기간 비교는 분해하지 않습니다 — 아래는 기간 안의 회차별 증감입니다.</span></div>` : "";
+  const sum = `<div class="ss-sum"><div><span class="when">${mdOf(D.dates[D.step - 1])} → ${mdOf(D.dates[D.step])}</span>
+      <div class="big">${deltaChip(k, D.V1 - D.V0)}<span class="vals num">${fmt(k, D.V0)} → <b>${fmt(k, D.V1)}</b></span></div>
+      <span class="den num">${unit.den} ${ssN(D.D0)} → ${ssN(D.D1)}${unit.unit}</span></div>
+    <button class="btn sm" data-ssev="all">${ic("doc", "s14")}이 회차 근거</button></div>`;
+  const axes = ssScope();
+  const tabs = `<div class="ss-tabs" role="tablist" aria-label="분해 축">${axes.map((a) => `<button role="tab" aria-selected="${view.axis === a}" data-ssaxis="${a}">${SS_AXIS[a]}</button>`).join("")}</div>`;
+  const max = Math.max(isRank(k) ? 0.02 : 0.05, ...D.parts.filter((p) => p.kind !== "rest").map((p) => Math.abs(p.shown)));
+  const bar = (p) => { const v = p.shown; if (p.kind === "rest") return `<span class="ss-bar rest" title="여러 항목의 합 — 막대 없음"></span>`; const w = (Math.abs(v) / max) * 50, t = ssTone(k, v, 2); return `<span class="ss-bar"><i class="${t}" style="${v >= 0 ? "left:50%" : `left:${(50 - w).toFixed(1)}%`};width:${w.toFixed(1)}%"></i></span>`; };
+  const vtxt = (p) => p.kind === "in" ? `— → ${fmt(k, p.r1)}` : p.kind === "out" ? `${fmt(k, p.r0)} → —` : `${fmt(k, p.r0)} → ${fmt(k, p.r1)}`;
+  const nameCell = (p) => p.kind === "row"
+    ? D.axis === "country" ? `<span class="ss-nm"><span class="code">${p.sub}</span>${esc(p.label)}</span>`
+      : D.axis === "prompt" ? `<span class="ss-nm pr" title="${esc(p.label)}"><span class="t">${esc(p.label)}</span><small>${esc(p.sub)}${p.lang !== "en" ? ` · ${p.lang}` : ""}</small></span>` : `<span class="ss-nm">${esc(p.label)}</span>`
+    : `<span class="ss-nm flow"><span class="t">${esc(p.label)}</span>${p.sub ? `<small>${esc(p.sub)}</small>` : ""}</span>`;
+  const pct = (w) => `${(w * 100).toFixed(1)}%`;
+  const why = (p) => `값 변화 ${ssSign(k, p.rate, 2)} · 비중 변화 ${ssSign(k, p.mix, 2)} · ${unit.den} ${ssN(p.d0)} → ${ssN(p.d1)}${unit.unit}`;
+  const rows = D.parts.map((p, i) => `<tr class="${p.kind}" title="${esc(why(p))}"><td>${nameCell(p)}</td><td>${bar(p)}</td><td class="num ss-cv ${ssTone(k, p.shown, 2)}">${ssSign(k, p.shown, 2)}</td>
+      <td class="num ss-vv">${vtxt(p)}</td><td class="num ss-dv">${p.kind === "in" ? "—" : pct(p.w0)} → ${p.kind === "out" ? "—" : pct(p.w1)}</td>
+      <td><button class="ss-go" data-ssev="${i}" aria-label="${esc(p.label)} 근거 보기" title="근거 보기">${ic("doc", "s14")}</button></td></tr>`).join("");
+  const more = D.axis !== "engine" && D.all.length > SS_TOP ? `<button class="lnk ss-all" data-ssall>${view.all ? "상위 10개만 보기" : `${D.all.length}개 모두 보기`}</button>` : "";
+  const allRows = view.all && D.axis !== "engine" ? `<details open class="ss-alld"><summary>${SS_AXIS[D.axis]} ${D.all.length}개 전체(기여 큰 순)</summary><table class="ss-ct mini"><tbody>${D.all.map((r) => `<tr><td>${nameCell({ ...r, kind: "row" })}</td><td class="num ss-cv ${ssTone(k, r.c, 2)}">${ssSign(k, r.c, 2)}</td><td class="num ss-vv">${fmt(k, r.r0)} → ${fmt(k, r.r1)}</td></tr>`).join("")}</tbody></table></details>` : "";
+  return `${note}${sum}${tabs}
+    <table class="ss-ct"><colgroup><col><col class="c-bar"><col class="c-cv"><col class="c-vv"><col class="c-dv"><col class="c-go"></colgroup>
+      <thead><tr><th>${SS_AXIS[D.axis]}</th><th>기여</th><th class="r">${isRank(k) ? "번째" : "pp"}</th><th>직전 → 이번</th><th title="${unit.den} 중 그 항목의 몫">비중</th><th><span class="ss-sr">근거</span></th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr><td>합계 = 화면 증감</td><td></td><td class="num ss-cv ${ssTone(k, D.total)}">${ssSign(k, D.total)}</td><td class="num ss-vv">${fmt(k, D.V0)} → ${fmt(k, D.V1)}</td><td class="num ss-dv">100%</td><td></td></tr></tfoot></table>
+    <div class="ss-foot">${more}<span class="ss-how" title="기여 = 값 변화 몫(그 항목의 값 변화 × 평균 비중) + 비중 변화 몫((그 항목 값 − 전체 평균) × 비중 변화). 값이 떨어진 항목은 보통 −, 평균보다 높은 항목의 비중이 커지면 +. 새로 측정된 항목은 평균보다 높을 때 +. 행에 마우스를 올리면 두 몫을 따로 봅니다. 행 숫자는 0.01 단위로 반올림하되 합이 화면 증감과 같도록 맞췄습니다.">${ic("info", "s14")}읽는 법 — 기여 = 값 변화 몫 + 비중 변화 몫, 합 = 화면 증감</span></div>${allRows}`;
+}
+function ssEvBody(view) {
+  const k = view.k, c = ssRowsCtx(view), pop = ssPop(k, c.r, c.d), [sNum, sRest] = SS_SPLIT[k];
+  const n = view.split === "num" ? pop.num : pop.pop - pop.num;
+  const toggle = view.rounds.prev ? `<div class="ss-seg" role="radiogroup" aria-label="회차">${["cur", "prev"].map((r) => `<button role="radio" aria-checked="${view.round === r}" data-ssround="${r}">${r === "cur" ? "이번 회차" : "직전 회차"} <span class="num">${mdOf(view.rounds[r].date)}</span></button>`).join("")}</div>` : "";
+  const gapTabs = view.gap ? `<div class="ss-tabs" role="tablist" aria-label="격차 브랜드">${[["own", ssBrandName(view.b)], ["rival", view.gap.name]].map(([t, l]) => `<button role="tab" aria-selected="${view.tab === t}" data-sstab="${t}">${esc(l)}${t === "own" ? ` <span class="ss-chip">당사</span>` : ""}</button>`).join("")}</div>` : "";
+  const split = `<div class="ss-seg" role="radiogroup" aria-label="나눔">${[["num", sNum, pop.num], ["rest", sRest, pop.pop - pop.num]].map(([s, l, x]) => `<button role="radio" aria-checked="${view.split === s}" data-sssplit="${s}">${l} <span class="num">${ssN(x)}</span></button>`).join("")}</div>`;
+  const shown = Math.min(view.shown, n), rows = Array.from({ length: shown }, (_, i) => ssRow(view, i));
+  const list = n === 0 ? `<p class="nodata">해당하는 답변이 없습니다</p>` : `<ul class="ss-list">${rows.map((r, i) => `<li><button class="ss-row" data-ssrow="${i}">
+      <span class="p">${esc(r.p.t)}</span><span class="o">${r.o}</span>
+      <span class="m">${ENGINE_LABEL[r.engine]} · ${esc(cname(r.cty))} · ${r.lang} · ${r.when}</span>
+      <span class="x">${r.ex}</span></button></li>`).join("")}</ul>
+    <div class="ss-more"><span class="muted num">${ssN(shown)} / ${ssN(n)}개</span>${shown < n ? `<button class="btn sm" data-ssmore>${ssN(Math.min(SS_PAGE, n - shown))}개 더 보기</button>` : ""}</div>`;
+  return `${gapTabs}${toggle}<p class="ss-samp num">${ssSample(k, c.r, c.d, c.brand)}</p>${split}${list}`;
+}
+function ssTextBody(view) {
+  const r = view.row, P = view.parent;
+  const mk = (s) => `<mark>${esc(s)}</mark>`;
+  const own = r.mentioned ? r.term : null;
+  const para = r.ko
+    ? [`질문하신 내용에 대해 여러 브랜드를 비교해 보면, ${esc(r.ra)}는 ${esc(r.f1)}에서 꾸준히 좋은 평가를 받습니다. ${own ? `${mk(own)} 역시 ${esc(r.f2)}과 ${esc(r.f1)}에서 경쟁력이 높아 자주 함께 추천됩니다.` : `${esc(r.rb)}도 ${esc(r.f2)}에서 강점이 있습니다.`}`,
+       `실제 구매를 고려한다면 시승과 보증 조건을 함께 비교해 보세요. ${own ? `${mk(own)}는 보증 기간이 긴 편이고 충전 인프라 제휴도 넓습니다.` : `지역 서비스망과 잔존 가치도 함께 보는 것이 좋습니다.`}`,
+       `정리하면 ${esc(r.f1)}가 가장 중요하다면 ${own ? mk(own) : esc(r.ra)}, 균형을 원한다면 ${esc(r.rb)}를 함께 검토해 보시기 바랍니다.`]
+    : [`There is no single answer, but a few brands consistently come up. ${esc(r.ra)} is widely praised for ${esc(r.f1)}${own ? `, and ${mk(own)} has become a frequent recommendation thanks to its ${esc(r.f2)} and strong ${esc(r.f1)}.` : `, while ${esc(r.rb)} is often noted for its ${esc(r.f2)}.`}`,
+       `${own ? `${mk(own)} also offers one of the longest warranties in the segment, which reviewers at ${esc(r.dom)} and ${esc(r.other)} highlight.` : `Reviewers at ${esc(r.other)} suggest comparing total cost of ownership and local service coverage.`} Test-driving two or three options is still the best way to decide.`,
+       `In short: if ${esc(r.f1)} matters most, ${own ? mk(own) : esc(r.ra)} is a strong choice; otherwise ${esc(r.ra)} and ${esc(r.rb)} are worth a close look.`];
+  const ments = [own ? [own, r.n1, r.num ? 1 : r.rk, "긍정"] : null, [r.ra, 2, own ? 2 : 1, "중립"], [r.rb, 1, own ? 3 : 2, "중립"]].filter(Boolean);
+  const cits = [[r.dom, "공식(HMG)"], [r.other, SS_DOMAINS.find((d) => d[0] === r.other)?.[1] ?? "기타"], ["reddit.com", "커뮤니티"]].filter((x, i) => P.k !== "citationShare" || r.num || i > 0);
+  return `<p class="ss-q">${esc(r.p.t)}</p><p class="ss-am">${ENGINE_LABEL[r.engine]} · ${esc(cname(r.cty))} · ${r.lang} · 측정 ${r.when} · ${esc(r.p.stage)}</p>
+    <div class="ss-ag"><div class="ss-ans">${para.map((x) => `<p>${x}</p>`).join("")}</div>
+    <aside><h5>브랜드 언급</h5><ul class="ss-ml">${ments.map(([n, c, rk, s]) => `<li><b>${esc(n)}</b><span>${c}회 · ${rk}번째 · ${s}</span></li>`).join("")}</ul>
+      <h5>인용</h5><ul class="ss-ml">${cits.map(([d, cat]) => `<li><span class="url">${esc(d)}</span><span class="ss-chip ${cat === "공식(HMG)" ? "" : "g"}">${esc(cat)}</span></li>`).join("")}</ul></aside></div>`;
+}
+function ssRender() {
+  let root = document.getElementById("ssroot");
+  if (!root) { root = document.createElement("div"); root.id = "ssroot"; document.body.appendChild(root); }
+  if (ssd && ssd.role !== role.id) ssd = null;
+  if (!ssd) { root.innerHTML = ""; return; }
+  const view = ssTop();
+  const body = ssd.loading ? ssSkel(view.v === "ev" ? 8 : 6) : view.v === "why" ? ssWhyBody(view) : view.v === "ev" ? ssEvBody(view) : ssTextBody(view);
+  root.innerHTML = `<div class="ss-scrim ${ssd.anim ? "anim" : ""}" data-ssclose></div>
+    <div class="ss-dw ${ssd.anim ? "anim" : ""}" role="dialog" aria-modal="true" aria-labelledby="ss-t" tabindex="-1">${ssHead(view)}<div class="ss-bd" aria-busy="${!!ssd.loading}">${body}</div></div>`;
+  ssWireDrawer(root, view);
+}
+function ssWireDrawer(root, view) {
+  const on = (sel, fn) => root.querySelectorAll(sel).forEach((el) => (el.onclick = (e) => fn(el, e)));
+  on("[data-ssclose]", () => ssClose());
+  on("[data-ssback]", () => ssBack());
+  on("[data-ssstep]", (b) => { view.step = +b.dataset.ssstep; view.all = false; ssd.anim = false; ssLoad(); root.querySelector(`[data-ssstep="${view.step}"]`)?.focus(); });
+  on("[data-ssaxis]", (b) => { view.axis = b.dataset.ssaxis; view.all = false; ssd.anim = false; ssLoad(); root.querySelector(`[data-ssaxis="${view.axis}"]`)?.focus(); });
+  on("[data-ssall]", () => { view.all = !view.all; ssRender(); });
+  on("[data-ssev]", (b) => {
+    const D = ssDecomp(view.k, view.b, view.step, view.axis), p = b.dataset.ssev === "all" ? null : D.parts[+b.dataset.ssev];
+    const cur = { date: D.dates[D.step], r: p ? p.r1 : D.V1, d: p ? p.d1 : D.D1 }, prev = { date: D.dates[D.step - 1], r: p ? p.r0 : D.V0, d: p ? p.d0 : D.D0 };
+    const keys = p ? (p.kind === "row" ? [p.key] : p.keys) : null;
+    const slice = p ? { axis: D.axis, label: p.kind === "row" ? (D.axis === "prompt" ? (p.label.length > 28 ? p.label.slice(0, 27) + "…" : p.label) : p.label) : p.label, keys } : null;
+    // 진입(이번 회차에만) · 이탈(직전 회차에만)은 그 회차만 있다
+    const rounds = p?.kind === "in" ? { cur } : p?.kind === "out" ? { prev } : { cur, prev };
+    ssPush({ v: "ev", k: view.k, b: view.b, rounds, round: rounds.cur ? "cur" : "prev", split: "num", slice, gap: null, tab: "own", shown: SS_PAGE });
+  });
+  on("[data-ssround]", (b) => { view.round = b.dataset.ssround; view.shown = SS_PAGE; ssd.anim = false; ssLoad(); });
+  on("[data-sssplit]", (b) => { view.split = b.dataset.sssplit; view.shown = SS_PAGE; ssRender(); root.querySelector(`[data-sssplit="${view.split}"]`)?.focus(); });
+  on("[data-sstab]", (b) => { view.tab = b.dataset.sstab; view.shown = SS_PAGE; ssd.anim = false; ssLoad(); });
+  on("[data-ssmore]", () => { view.shown += SS_PAGE; ssRender(); });
+  on("[data-ssrow]", (b) => ssPush({ v: "text", k: view.k, b: view.b, row: ssRow(view, +b.dataset.ssrow), parent: view }));
+}
+// 페이지 쪽: render() 끝에서 숫자 버튼을 묶는다
+function ssWire(on) {
+  on("[data-ss]", (el, e) => { e.preventDefault(); e.stopPropagation(); ssFromEl(el); });
+}
+document.addEventListener("keydown", (e) => { if (ssd && e.key === "Escape") { e.preventDefault(); e.stopImmediatePropagation(); ssClose(); } }, true);
 // showsGeoMap: admin, HQ and 권역 accounts see the market section; a country account sees the brand comparison only
 const showsGeo = () => !!role.scope.all || role.id === "hq" || role.id === "region";
 function page() {
+  // brand comparison before the (long) market table so it is not buried; a country account has no market card
   const body = S.data.empty
     ? `<section class="card" aria-busy="${pending}">${busy()}<p class="nodata" style="margin:24px">측정 데이터가 아직 없습니다</p></section>`
-    : showsGeo() ? `${boardHtml()}<div class="focus-g">${tilesHtml()}${brandsHtml()}</div>${tableHtml()}` : `${boardHtml()}${brandsHtml()}`;
-  return `<div class="split ${panel ? "" : "collapsed"}">${panelHtml()}<div class="content">${headerHtml()}${body}</div></div>`;
+    : `${kpiCards()}${brandMatrix()}${showsGeo() ? marketMatrix() : ""}`;
+  // header across the full width, then filter | content (the renewal layout since 2026-10-21)
+  return `<div class="pg">${headerTop()}<div class="split ${panel ? "" : "collapsed"}">${panelHtml()}<div class="content">${appliedTop()}${body}</div></div></div>`;
 }
 
 function renderToast() {
@@ -983,10 +1840,12 @@ function renderToast() {
 function renderMk() {
   document.getElementById("mk").innerHTML = `<div class="mk-row"><span class="mk-tag">Overview 목업</span><span class="mk-title">AI 답변 성과 요약 · 리뉴얼</span>
     <span class="mk-group"><span>보는 계정</span>${ROLES.map((r) => `<button class="mk-btn" data-role="${r.id}" aria-pressed="${role.id === r.id}">${r.label}</button>`).join("")}</span>
-    <span class="mk-group"><span>응답 지연</span>${[[300, "0.3초"], [1500, "1.5초"]].map(([ms, l]) => `<button class="mk-btn" data-lat="${ms}" aria-pressed="${LATENCY === ms}">${l}</button>`).join("")}</span></div>
-    <div class="mk-cap"><span><b>화면 = 구현과 동일</b>: <code>/renewal/dashboard</code>의 배치·문구·표시 규칙을 옮겼습니다. 필터 축·옵션·선택 규칙·권한별 숨김은 앱 필터(<code>dimension-filter-panel.tsx</code>)와 같고, 다른 점은 즉시 반영과 저장한 필터 두 가지입니다. 기간을 고르면 증감 열이 기간 비교로 바뀝니다.</span>
+    <span class="mk-group"><span>응답 지연</span>${[[300, "0.3초"], [1500, "1.5초"]].map(([ms, l]) => `<button class="mk-btn" data-lat="${ms}" aria-pressed="${LATENCY === ms}">${l}</button>`).join("")}</span>
+    <span class="mk-group"><span>회차 데이터</span>${[[1, "요약 사실표"], [0, "미러로 떨어짐"]].map(([v, l]) => `<button class="mk-btn" data-ssrd="${v}" aria-pressed="${ssRoundData === !!v}">${l}</button>`).join("")}</span></div>
+    <div class="mk-cap"><span><b>화면 = 구현과 동일</b>: <code>/renewal/dashboard</code>의 배치·문구·표시 규칙을 옮겼습니다. 필터 축·옵션·선택 규칙·권한별 숨김은 앱 필터(<code>dimension-filter-panel.tsx</code>)와 같고, 다른 점은 즉시 반영과 저장한 필터 두 가지입니다. KPI는 고르지 않습니다 — 5개 지표가 읽기 전용 요약이고, 브랜드 비교·시장별 현황은 5개 지표를 한 표에 함께 보여 줍니다(국가 타일 지도는 시장별 표로 합침). 기간을 고르면 KPI 카드의 증감이 기간 비교로 바뀝니다. <b>SS 1순위(설계 O1)</b>: 값을 누르면 근거(그 숫자를 만든 답변 목록), 증감 · 추이를 누르면 변화의 이유(엔진 · 국가 · 프롬프트별 기여, 회차별 증감 이력)가 오른쪽 서랍으로 열립니다 — <code>docs/design/ss-overview.html</code>.</span>
     <span><b>운영 DB 값(이 PC에서 조회 불가) = 예시</b>: 측정 국가·언어 조합, 리스트 타입·Depth 카탈로그(v0.4 시드), 회차 날짜, 저장한 필터 목록, 화면의 모든 숫자. 지금 계정: <b>${role.label}</b> — ${role.note}</span></div>`;
   document.querySelectorAll("[data-lat]").forEach((b) => (b.onclick = () => { LATENCY = +b.dataset.lat; renderMk(); }));
+  document.querySelectorAll("[data-ssrd]").forEach((b) => (b.onclick = () => { ssRoundData = b.dataset.ssrd === "1"; renderMk(); }));
   document.querySelectorAll("[data-role]").forEach((b) => (b.onclick = () => { openRole(ROLES.find((r) => r.id === b.dataset.role)); renderMk(); render(); }));
   document.getElementById("who").textContent = role.label;
   document.documentElement.style.setProperty("--mk-h", document.getElementById("mk").offsetHeight + "px");
@@ -999,6 +1858,7 @@ function render() {
   if (inputId) { const el = document.getElementById(inputId); if (el) { el.focus({ preventScroll: true }); el.setSelectionRange(caret, caret); } }
   else if (fk) { const el = document.querySelector(`[data-fk="${CSS.escape(fk)}"]`); if (el) el.focus({ preventScroll: true }); }
   wire();
+  ssRender();
 }
 
 function wire() {
@@ -1017,7 +1877,9 @@ function wire() {
   // tile ↔ row highlight (the tile title carries the country's numbers)
   on("[data-tile]", (b) => { hiMkt = hiMkt === b.dataset.tile ? null : b.dataset.tile; render(); });
   on("[data-row]", (r) => { hiMkt = hiMkt === r.dataset.row ? null : r.dataset.row; render(); });
+  on("[data-mxsort]", (b) => { const k = b.dataset.mxsort; mxSort = mxSort.k === k ? { k, worst: !mxSort.worst } : { k, worst: false }; render(); });
   on("[data-reg]", (c) => { const id = c.dataset.reg; closedRegions.has(id) ? closedRegions.delete(id) : closedRegions.add(id); render(); });
+  ssWire(on);
   // panel
   on("[data-sec]", (b) => { secOpen[b.dataset.sec] = !secOpen[b.dataset.sec]; render(); });
   on("[data-panel]", () => { panel = !panel; panelAuto = false; render(); });

@@ -66,6 +66,17 @@
   .snb a[href] { cursor: pointer; }
   .snb a[href]:not(.on):hover { background: rgba(0,44,95,.06); color: var(--navy); }
   .snb a[aria-disabled="true"] { color: rgba(10,9,8,.4); cursor: default; }
+  /* shared mockup frame — every mockup (source: _scratch/387b177e/menu/mock-menu.cjs) */
+  .snb a { text-decoration: none; }
+  .snb .grp { padding: 14px 12px 4px; font-size: 11px; font-weight: 700; letter-spacing: .04em; color: var(--ink-muted); }
+  .snb a.sub { padding-left: 24px; }
+  .snb a.sub::before { content: ""; width: 4px; height: 4px; border-radius: 50%; background: currentColor; opacity: .45; }
+  .snb .beta { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--navy); background: var(--navy-tint); border-radius: 4px; padding: 0 5px; }
+  .pg { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+  .ph > div:first-child { flex: 1 1 0; min-width: 0; }
+  .ph .sub .desc { width: 100%; margin: 0; font-size: 13px; color: var(--ink-muted); }
+  .ph .beta-p { display: inline-block; vertical-align: middle; margin-left: 8px; padding: 0 6px; border-radius: 4px; font-size: 11px; font-weight: 700; line-height: 1.45; letter-spacing: 0; color: var(--navy); background: rgba(0,44,95,.08); }
+  /* /shared mockup frame */
   .main { flex: 1; min-width: 0; padding: 32px 40px 72px; }
   .wrap { max-width: 1152px; margin: 0 auto; }
 
@@ -266,14 +277,155 @@
   .toast-wrap { position: fixed; left: 0; right: 0; bottom: 24px; z-index: 120; display: flex; justify-content: center; padding: 0 16px; pointer-events: none; }
   .toast { pointer-events: auto; background: var(--ink); color: #fff; border-radius: 10px; box-shadow: var(--shadow-3); padding: 10px 10px 10px 16px; display: flex; align-items: center; gap: 14px; font-size: 13px; }
   .toast button { all: unset; cursor: pointer; font-weight: 700; color: var(--sky); padding: 4px 8px; border-radius: 6px; }
+  /* ══ S-grade frame (2026-10-22) — every renewal mockup (source: _scratch/387b177e/s) ══
+     renewal-only shell (one sidebar, no top bar), compact page header, the left filter panel as before (user
+     2026-10-22: keep the panel), card tiers and one navy hero per page. Loaded after the page CSS. */
+  :root { --side-w: 232px; --r-card: 16px; --shadow-card: 0 1px 2px rgba(10,9,8,.04), 0 0 0 1px var(--line); --navy-ink: #00244f; --hero-bg: radial-gradient(120% 140% at 0% 0%, #0b3b74 0%, var(--navy) 46%, var(--navy-ink) 100%); --hero-shadow: 0 18px 40px -24px rgba(0,28,61,.75); }
+  body { background: #f4f1ee; }
+
+  /* shell: one sidebar (brand · workspace · menu · account), content scrolls with the page */
+  .sx { display: grid; grid-template-columns: var(--side-w) minmax(0, 1fr); min-height: calc(100vh - var(--mk-h, 0px)); }
+  .sx-side { position: sticky; top: var(--mk-h, 0px); height: calc(100vh - var(--mk-h, 0px)); display: flex; flex-direction: column; gap: 14px; padding: 18px 12px 14px; background: var(--white); border-right: 1px solid var(--line); overflow-y: auto; }
+  .sx-brand { display: flex; align-items: center; gap: 10px; padding: 2px 8px 4px; }
+  .sx-mark { width: 28px; height: 28px; border-radius: 8px; background: var(--navy); color: #fff; display: grid; place-items: center; font-size: 12px; font-weight: 800; letter-spacing: -.02em; }
+  .sx-wm { display: flex; flex-direction: column; line-height: 1.15; }
+  .sx-wm b { font-size: 14px; font-weight: 800; color: var(--navy); letter-spacing: -.01em; }
+  .sx-wm small { font-size: 11px; color: var(--ink-muted); }
+  /* Global · Website = top sections (each folds); Project · Admin = the bundle at the bottom (2026-10-22) */
+  .sx-side .snb .sec { display: flex; flex-direction: column; gap: 1px; border-bottom: 0; }
+  .sx-side .snb .sec > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 8px; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--ink); }
+  .sx-side .snb .sec > summary::-webkit-details-marker { display: none; }
+  .sx-side .snb .sec > summary::after { content: ""; margin-left: auto; width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(-45deg); opacity: .55; transition: transform .15s var(--ease); }
+  .sx-side .snb .sec[open] > summary::after { transform: rotate(45deg); margin-top: -3px; }
+  .sx-side .snb .sec > summary:hover { background: var(--sand-light); }
+  .sx-side .snb .sec > summary:focus-visible { outline: 2px solid var(--navy); outline-offset: -2px; }
+  .sx-side .snb .sec + .sec { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+  .sx-side .snb a.out { color: var(--ink-muted); }
+  .sx-side .snb a.out:hover { color: var(--ink-2); }
+  .sx-side .snb-more { padding-top: 8px; border-top: 1px solid var(--line); gap: 2px; }
+  .sx-side .snb .sec[hidden] { display: none; }
+  .sx-side .snb a.par:not(.out) { color: var(--ink-2); }
+  .sx-out { margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--navy-25); color: var(--ink-2); font-size: 11px; line-height: 1.5; }
+  .sx-side .snb { width: auto; padding: 0; border: 0; background: none; display: flex; flex-direction: column; gap: 1px; }
+  .sx-side .snb a { position: relative; padding: 7px 10px; font-size: 13px; color: var(--ink-2); }
+  .sx-side .snb a.on { background: var(--navy-tint); color: var(--navy); font-weight: 700; }
+  .sx-side .snb a.on::after { content: ""; position: absolute; left: -12px; top: 6px; bottom: 6px; width: 3px; border-radius: 0 3px 3px 0; background: var(--navy); }
+  .sx-side .snb .grp { padding: 14px 10px 4px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+  .sx-foot { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
+  .sx-mock { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 10px; background: #fbf6e6; color: #6b5a1f; font-size: 11px; }
+  .sx-mock a { color: #5a4910; font-weight: 700; text-decoration: none; }
+  .sx-mock a:hover { text-decoration: underline; }
+  .sx-acct { display: flex; align-items: center; gap: 10px; padding: 8px 8px 2px; border-top: 1px solid var(--line); }
+  .sx-av { width: 30px; height: 30px; border-radius: 50%; background: var(--navy-50); color: var(--navy); display: grid; place-items: center; font-size: 12px; font-weight: 800; flex-shrink: 0; }
+  .sx-who { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+  .sx-acct b { font-size: 12px; color: var(--ink); }
+  .sx-acct small { font-size: 11px; color: var(--ink-muted); }
+  .sx-acct .lang { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--ink-muted); }
+  .sx .main { padding: 24px 32px 72px; }
+  .sx .wrap { max-width: 1480px; }
+
+  /* page header: compact — title (+ 베타), one line of description · basis pill; actions on the right */
+  .sx .pg { gap: 16px; }
+  .sx .ph { align-items: center; gap: 10px 20px; }
+  .sx .ph h1 { font-size: 26px; letter-spacing: -0.025em; line-height: 1.25; }
+  .sx .ph .sub { margin-top: 6px; gap: 6px 12px; }
+  .sx .ph .sub .desc { width: auto; }
+
+  /* filter panel (left, as before — the same sections, rules and saved filters): the S card look */
+  .sx .split { gap: 20px; }
+  .sx .side, .sx .rail2 { border-radius: var(--r-card); box-shadow: var(--shadow-card); top: calc(var(--mk-h, 0px) + 16px); }
+  .sx .side-top { border-radius: var(--r-card) var(--r-card) 0 0; }
+  .sx .applied .tok { border-radius: 8px; }
+  .sx .content > .note { border-radius: 12px; }
+  /* page controls (compare brands · density) stay in their sticky bar at the top of the content */
+  .sx .cbar { border-radius: 14px; box-shadow: 0 1px 2px rgba(10,9,8,.05), 0 0 0 1px var(--line), 0 8px 24px -18px rgba(10,9,8,.35); top: calc(var(--mk-h, 0px) + 10px); }
+
+  /* content: card tiers — hero (navy, one per page), primary (white), secondary (quiet) */
+  .sx .content { gap: 16px; }
+  .sx .card { border-radius: var(--r-card); box-shadow: var(--shadow-card); }
+  .sx .card-h { padding: 18px 22px 12px 24px; }
+  .sx .card-h h2 { font-size: 16px; letter-spacing: -0.01em; }
+
+  /* hero = Overview's KPI 5종 */
+  .sx .okc { background-color: var(--navy); background-image: var(--hero-bg); color: #fff; box-shadow: var(--hero-shadow); }
+  .sx .okc .card-h h2 { color: #fff; }
+  .sx .okc .card-h .hint { color: rgba(255,255,255,.72); }
+  .sx .okc .okg { padding: 2px 10px 20px; }
+  .sx .okc .ok { border-left-color: rgba(255,255,255,.14); gap: 7px; padding: 4px 16px; }
+  .sx .okc .ok-n { color: rgba(255,255,255,.86); }
+  .sx .okc .ok-v { color: #fff; font-size: 34px; letter-spacing: -0.03em; }
+  .sx .okc .ok-v small { color: rgba(255,255,255,.8); }
+  .sx .okc .dlt { background: var(--white); color: var(--ink-2); }
+  .sx .okc .dlt.none { color: var(--ink-muted); }
+  .sx .okc .spark .ln { stroke: var(--sky); }
+  .sx .okc .spark .ar { fill: rgba(170,202,230,.16); }
+  .sx .okc .spark .pt { fill: #fff; }
+  .sx .okc .ok-x, .sx .okc .ok-r { color: rgba(255,255,255,.72); }
+  .sx .okc .ok-r b { color: #fff; }
+  .sx .okc .ok-go { color: var(--sky); }
+  .sx .okc .ok-go:focus-visible, .sx .okc .info:focus-visible { outline-color: var(--sky); }
+  .sx .okc .info { color: rgba(255,255,255,.8); }
+  .sx .okc .progress { background: rgba(255,255,255,.25); }
+
+  /* hero = the analysis pages' 이번 회차 요약 (headline on navy, findings as white tiles) */
+  .sx .card.ins { background-color: var(--navy); background-image: var(--hero-bg); color: #fff; box-shadow: var(--hero-shadow); }
+  .sx .card.ins .card-h h2 { color: #fff; }
+  .sx .card.ins .card-h .info { color: rgba(255,255,255,.8); }
+  .sx .card.ins .card-h .info:focus-visible { outline-color: var(--sky); }
+  .sx .card.ins .bchip { background: rgba(255,255,255,.12); color: rgba(255,255,255,.9); }
+  .sx .card.ins .bchip .i { color: var(--sky); }
+  .sx .card.ins .ins-h { color: rgba(255,255,255,.88); font-size: 16px; }
+  .sx .card.ins .ins-h b { color: #fff; }
+  .sx .card.ins .ins-i { background: var(--white); }
+  .sx .card.ins .progress { background: rgba(255,255,255,.25); }
+
+  /* tables in primary cards: a calmer header band */
+  .sx .bm thead th, .sx .mx thead th { background: #faf8f6; }
+  .sx .bm td, .sx .mx td { border-color: var(--line); }
+  .sx .bm-f, .sx .mx-k { color: var(--ink-muted); }
+  .sx .bm-bar { max-width: 148px; height: 5px; }
+
+  @media (max-width: 1279px) { :root { --side-w: 208px; } .sx .main { padding: 20px 24px 64px; } }
+  /* ══ /S-grade frame ══ */
 </style>
 </head>
 <body>
 <div class="mk" id="mk"></div>
-<header class="hdr"><div class="wordmark">HMG GEO <small>모니터링</small></div><span class="muted" id="who" style="font-size:12px">admin</span></header>
-<div class="shell">
-  <nav class="rail"><a class="on"><svg class="i s20"><use href="#i-globe"/></svg>Global</a><a><svg class="i s20"><use href="#i-monitor"/></svg>Website</a></nav>
-  <nav class="snb" aria-label="메뉴"><a href="overview-mockup.html">Overview</a><a class="on" href="global-prompts-filters.html" aria-current="page">Global prompts</a><a href="answer-analysis-mockup.html#mention">Answer analysis</a><a aria-disabled="true" title="이 화면은 목업이 없습니다">AI Agent Funnel</a></nav>
+<div class="sx">
+  <aside class="sx-side" aria-label="사이드 메뉴">
+    <div class="sx-brand"><span class="sx-mark" aria-hidden="true">G</span><span class="sx-wm"><b>HMG GEO</b><small>AI 답변 모니터링</small></span></div>
+    <nav class="snb" aria-label="메뉴"><details class="sec" data-sec="global" open><summary>Global</summary><a class="d1" href="overview-mockup.html">Overview</a><a class="d1 on" href="global-prompts-filters.html" aria-current="page">Global prompts</a><a class="d1 par" href="answer-analysis-mockup.html#mention" data-parent>Answer analysis</a><a class="sub" href="answer-analysis-mockup.html#mention">Mention</a><a class="sub" href="answer-analysis-mockup.html#citation">Citation</a><a class="d1 par" href="ai-funnel-mockup.html#acr" data-parent>AI Agent Funnel</a><a class="sub" href="ai-funnel-mockup.html#acr">ACR<span class="beta">β</span></a><a class="sub" href="ai-funnel-mockup.html#conversion">AI Conversion<span class="beta">β</span></a></details><details class="sec" data-sec="website"><summary>Website</summary><a class="d1 out" href="/website" data-out="Website › Overview" title="목업 밖 — 앱에서는 원본 화면(/website)이 열립니다">Overview</a><a class="d1 out" href="/website/prompts" data-out="Website › Prompts" title="목업 밖 — 앱에서는 원본 화면(/website/prompts)이 열립니다">Prompts</a><a class="d1 par out" href="/website/answer-analysis" data-out="Website › Answer analysis" title="목업 밖 — 앱에서는 원본 화면(/website/answer-analysis)이 열립니다" data-parent>Answer analysis</a><a class="sub out" href="/website/answer-analysis/mention" data-out="Website › Mention" title="목업 밖 — 앱에서는 원본 화면(/website/answer-analysis/mention)이 열립니다">Mention</a><a class="sub out" href="/website/answer-analysis/citation" data-out="Website › Citation" title="목업 밖 — 앱에서는 원본 화면(/website/answer-analysis/citation)이 열립니다">Citation</a><a class="d1 par out" href="/website/ai-funnel" data-out="Website › AI Agent Funnel" title="목업 밖 — 앱에서는 원본 화면(/website/ai-funnel)이 열립니다" data-parent>AI Agent Funnel</a><a class="sub out" href="/website/ai-funnel/conversion" data-out="Website › AI Conversion" title="목업 밖 — 앱에서는 원본 화면(/website/ai-funnel/conversion)이 열립니다">AI Conversion<span class="beta">β</span></a></details></nav>
+    <div class="sx-foot">
+      <nav class="snb snb-more" aria-label="프로젝트 · 관리"><details class="sec" data-sec="project"><summary>Project</summary><a class="d1 out" href="/projects" data-out="Project › Project list" title="목업 밖 — 앱에서는 원본 화면(/projects)이 열립니다">Project list</a></details><details class="sec" data-sec="admin" data-admin-only><summary>Admin</summary><a class="d1 out" href="/admin" data-out="Admin › User management" title="목업 밖 — 앱에서는 원본 화면(/admin)이 열립니다">User management</a><a class="d1 par out" href="/admin/standards" data-out="Admin › Global config" title="목업 밖 — 앱에서는 원본 화면(/admin/standards)이 열립니다" data-parent>Global config</a><a class="sub out" href="/admin/standards/prompts" data-out="Admin › Global prompts" title="목업 밖 — 앱에서는 원본 화면(/admin/standards/prompts)이 열립니다">Global prompts</a><a class="sub out" href="/admin/standards/customer-interest" data-out="Admin › Customer interest config" title="목업 밖 — 앱에서는 원본 화면(/admin/standards/customer-interest)이 열립니다">Customer interest config</a><a class="sub out" href="/admin/standards/entities" data-out="Admin › Entity catalog" title="목업 밖 — 앱에서는 원본 화면(/admin/standards/entities)이 열립니다">Entity catalog</a><a class="sub out" href="/admin/standards/citation-sources" data-out="Admin › 인용 출처 분류" title="목업 밖 — 앱에서는 원본 화면(/admin/standards/citation-sources)이 열립니다">인용 출처 분류</a><a class="d1 out" href="/admin/keyword-tools" data-out="Admin › Keyword tools" title="목업 밖 — 앱에서는 원본 화면(/admin/keyword-tools)이 열립니다">Keyword tools</a><a class="d1 out" href="/admin/ga4" data-out="Admin › GA4 연동" title="목업 밖 — 앱에서는 원본 화면(/admin/ga4)이 열립니다">GA4 연동</a><a class="d1 out" href="/admin/analysis" data-out="Admin › 분석 엔진" title="목업 밖 — 앱에서는 원본 화면(/admin/analysis)이 열립니다">분석 엔진</a><a class="d1 par out" href="/admin/credits" data-out="Admin › 측정 크레딧" title="목업 밖 — 앱에서는 원본 화면(/admin/credits)이 열립니다" data-parent>측정 크레딧</a><a class="sub out" href="/admin/credits/reconcile" data-out="Admin › 크레딧 대조 리포트" title="목업 밖 — 앱에서는 원본 화면(/admin/credits/reconcile)이 열립니다">크레딧 대조 리포트</a><a class="sub out" href="/admin/credits/billing" data-out="Admin › 결제 계정 이전" title="목업 밖 — 앱에서는 원본 화면(/admin/credits/billing)이 열립니다">결제 계정 이전</a></details></nav>
+      <p class="sx-out" id="sx-out" role="status" hidden></p>
+      <div class="sx-mock"><span>목업 전용 영역</span><a href="design-rules.html">디자인 규칙 보기 →</a></div>
+      <div class="sx-acct"><span class="sx-av" aria-hidden="true">A</span><span class="sx-who"><b id="who">admin</b><small>계정 권한 범위로 조회</small></span><span class="lang" title="언어">KO</span></div>
+    </div>
+  </aside>
+  <script>
+  (() => { // 목업 밖 메뉴(Website · Project · Admin)는 앱에서 원본 화면을 연다 → 여기서는 안내만. Admin = admin 계정만.
+    const side = document.querySelector(".sx-side"), who = document.getElementById("who"), tip = document.getElementById("sx-out");
+    const sync = () => side.querySelectorAll("[data-admin-only]").forEach((a) => (a.hidden = who.textContent.trim() !== "admin"));
+    new MutationObserver(sync).observe(who, { childList: true, characterData: true, subtree: true });
+    sync();
+    let t;
+    window.MOCK_SEC_OPEN = window.MOCK_SEC_OPEN || {};
+    // capture on window: runs before any page handler that re-renders the menu on click (answer-analysis does)
+    window.addEventListener("click", (e) => {
+      if (!side.contains(e.target)) return;
+      // section fold: the state is kept for re-renders (MOCK_SEC_OPEN, read by mockMenuHtml)
+      const sm = e.target.closest(".snb details.sec > summary");
+      if (sm) { e.preventDefault(); const d = sm.parentElement; d.open = !d.open; window.MOCK_SEC_OPEN[d.dataset.sec] = d.open; return; }
+      const a = e.target.closest("[data-out]");
+      if (!a) return;
+      e.preventDefault();
+      tip.textContent = `목업 밖 메뉴 — 앱에서는 ‘${a.dataset.out}’ 원본 화면이 열립니다(리뉴얼 범위는 Global).`;
+      tip.hidden = false;
+      clearTimeout(t);
+      t = setTimeout(() => (tip.hidden = true), 3000);
+    }, true);
+  })();
+  </script>
   <main class="main"><div class="wrap" id="page"></div></main>
 </div>
 <div id="dlg"></div><div class="toast-wrap" aria-live="polite" id="toast"></div>
@@ -551,8 +703,11 @@ function headerHtml() {
   return `<header class="ph"><div><h1>글로벌 프롬프트</h1>
       <div class="sub"><span class="pill" ${scoped && role.scope.countries?.length ? `title="대상 시장이 내 국가를 포함하거나 미지정(상속)인 프롬프트만 표시됩니다."` : ""}>${ic("globe", "s12")}열람 범위 · ${esc(scopeSummary())}${scoped ? `<span class="muted">· 자사 브랜드 + 공통</span>` : ""}</span>
         <span class="num">수집 기간 ${PERIOD.from} ~ ${PERIOD.to} · 마지막 수집일 ${PERIOD.to}</span></div></div>
-    <button class="btn" data-copy>${ic("link", "s14")}링크 복사</button></header>
-  <div class="tabs" role="tablist" aria-label="보기">${[["catalog", "카탈로그", data.count.toLocaleString("ko-KR")], ["history", "변경 이력", null]].map(([v, l, c]) => `<button role="tab" data-tab="${v}" aria-selected="${tab === v}" tabindex="${tab === v ? 0 : -1}">${l}${c != null ? `<span class="c num">${c}</span>` : ""}</button>`).join("")}</div>`;
+    <button class="btn" data-copy>${ic("link", "s14")}링크 복사</button></header>`;
+}
+// 카탈로그 | 변경 이력 — at the top of the content column (the page header runs across the full width above)
+function tabsHtml() {
+  return `<div class="tabs" role="tablist" aria-label="보기">${[["catalog", "카탈로그", data.count.toLocaleString("ko-KR")], ["history", "변경 이력", null]].map(([v, l, c]) => `<button role="tab" data-tab="${v}" aria-selected="${tab === v}" tabindex="${tab === v ? 0 : -1}">${l}${c != null ? `<span class="c num">${c}</span>` : ""}</button>`).join("")}</div>`;
 }
 function marketsCell(regions) {
   const { real, pseudo } = splitMarkets(regions);
@@ -610,7 +765,7 @@ function historyHtml() {
       <tbody>${groups.map((g) => g.rows.length === 1 ? evRow(g.rows[0]) : `<tr class="grp"><td>${dtFmt.format(new Date(g.rows[0].createdAt))}</td><td colspan="2"><button class="gbtn" data-grp="${g.key}" aria-expanded="${histOpen.has(g.key)}"><span class="chev2">${ic("chev-r", "s14")}</span>일괄 교체 ${g.rows.length}건<span class="muted" style="font-weight:400">${esc(g.rows[0].actorEmail ?? "(시스템)")}</span></button></td></tr>${histOpen.has(g.key) ? g.rows.map((r) => evRow(r, true)).join("") : ""}`).join("")}</tbody></table></div>`}
   </div></section>`;
 }
-function page_() { return `<div class="split ${panel ? "" : "collapsed"}">${panelHtml()}<div class="content">${headerHtml()}${tab === "history" ? historyHtml() : catalogHtml()}</div></div>`; }
+function page_() { return `<div class="pg">${headerHtml()}<div class="split ${panel ? "" : "collapsed"}">${panelHtml()}<div class="content">${tabsHtml()}${tab === "history" ? historyHtml() : catalogHtml()}</div></div></div>`; }
 function dialogHtml() {
   if (!timeline) return "";
   const { row, phase, rows } = timeline;
