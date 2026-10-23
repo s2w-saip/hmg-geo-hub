@@ -66,12 +66,12 @@
 <div class="table-wrap"><table>
   <tr><th>화면</th><th>주소</th><th>원래 화면</th><th>핵심 파일</th></tr>
   <tr><td>Overview (Renewal)</td><td><code>/{locale}/renewal/dashboard</code></td><td><code>/{locale}/dashboard</code></td>
-    <td><code>front/app/[locale]/(dash)/renewal/dashboard/page.tsx</code><br><code>…/renewal/dashboard/_components/overview-body.tsx</code></td></tr>
+    <td><code>front/app/[locale]/(renewal)/renewal/dashboard/page.tsx</code><br><code>…/renewal/dashboard/_components/overview-body.tsx</code></td></tr>
   <tr><td>Global prompts (Renewal)</td><td><code>/{locale}/renewal/standard/prompts</code></td><td><code>/{locale}/standard/prompts</code></td>
     <td><code>…/renewal/standard/prompts/page.tsx</code><br><code>…/_components/prompts-view.tsx</code> · <code>prompt-filter-model.ts</code> · <code>prompt-history.tsx</code></td></tr>
 </table></div>
 <ul>
-  <li><strong>공용 리뉴얼 부품</strong> <code>front/app/[locale]/(dash)/renewal/_components/</code>:
+  <li><strong>공용 리뉴얼 부품</strong> <code>front/app/[locale]/(renewal)/renewal/_components/</code>:
     <code>filter-runtime.tsx</code>(즉시 반영: 120ms 디바운스 후 <code>router.replace</code>, 진행 중 표시),
     <code>filter-split.tsx</code>(필터 패널, 1360px 이상에서 자동으로 펼침, <code>[</code> 키로 토글),
     <code>saved-filters.tsx</code>(저장한 필터, 사용자별 localStorage <code>rn:saved-filters:v1:&lt;page&gt;:&lt;userId&gt;</code>),
@@ -184,10 +184,19 @@ stg 또는 미리보기 배포에서, 계정 4종(admin, HQ, 권역 담당, 국�
   <li><strong>공통 틀(2026-10-22)</strong>: 네 목업과 구현의 페이지 틀이 같습니다 — 제목 줄이 전체 폭으로 맨 위, 그 아래 필터 | 본문.
     머리 = 제목(+ 베타: 언급 · 인용 · ACR) → 설명 → 기준 칩('측정 회차 {날짜} 기준', 기간이면 '기간 누적 {시작} ~ {끝}'), 링크 복사는 오른쪽. 제목 위 상위 메뉴명은 쓰지 않습니다.
     제목은 'AI 답변 성과 요약' · '글로벌 프롬프트' · '언급 분석' · '인용 분석' · 'ACR · AI Choice Rate'. 공통 틀 CSS 도 메뉴 원본(<code>mock-menu.cjs</code>)에 있습니다.</li>
-  <li><strong>S급 테마(2026-10-22, 목업만 — 구현은 승인 후)</strong>: 네 목업에 리뉴얼 전용 껍데기(사이드바 하나: 브랜드 · 메뉴 = Global | Website 최상위 구역(각각 접기) · 아래 Project · Admin 묶음(Admin 은 admin 계정만) · 계정, 위 상단 바 없음 — 2026-10-22 사용자 결정으로 Global/Website 탭을 구역으로 바꿈. Website · Project · Admin 은 리뉴얼 범위 밖이라 앱에서는 원본 화면을 연다), 압축 머리(제목 26px, 설명 · 기준 칩 한 줄),
+  <li><strong>스크롤 영역(2026-10-23, 사용자 요청)</strong>: 창 전체는 스크롤하지 않고 콘텐츠 영역만, 필터와 본문은 따로 스크롤합니다("컨텐츠를 스크롤하면 필터를 볼 수 없거나 위치가 바뀌는 것은 나쁜 경험").
+    머리(제목 · 설명 · 기준 칩, 언급은 지표 탭까지)는 제자리, 그 아래 필터 패널은 카드 안에서, 본문은 창 오른쪽 끝까지 이어진 영역에서 스크롤합니다. 페이지 조작 바는 본문 영역 맨 위에 붙고, 머리는 본문 스크롤바 자리를 비워 오른쪽 끝을 맞춥니다.
+    구현: <code>RnPageFrame</code> · <code>RnFilterSplit</code>(<code>renewal/_components/filter-split.tsx</code>)이 루트에 <code>[data-rn-frame]</code> 을 달고, <code>app/renewal-theme.css</code> 가 리뉴얼 껍데기의 사이드바 옆 화면 높이 전체(100vh, lg 미만은 메뉴 바 3rem 아래)를 채웁니다. 여백 32px(1279 이하 24px) · 본문 1480px. 원본 화면은 그대로(창 스크롤).
+    목업: 다섯 파일(네 목업 + <code>design-rules.html</code>) <code>&lt;style&gt;</code> 끝의 '스크롤 영역' 블록 + render 의 본문 스크롤 위치 보존 · 섹션 이동 · 스크롤 스파이를 본문 영역 기준으로 손으로 고쳤습니다. 메뉴 원본(<code>apply-menu.cjs</code>)으로 다시 만들면 사라지므로, 다시 만들 때는 같은 블록과 JS 를 원본에 옮깁니다.</li>
+  <li><strong>S급 테마(2026-10-22 목업 → 2026-10-23 구현, 사용자 승인 "목업을 실제 프로젝트에 적용")</strong>: 네 목업에 리뉴얼 전용 껍데기(사이드바 하나: 브랜드 · 메뉴 = Global | Website 최상위 구역(각각 접기) · 아래 Project · Admin 묶음(Admin 은 admin 계정만) · 계정, 위 상단 바 없음 — 2026-10-22 사용자 결정으로 Global/Website 탭을 구역으로 바꿈. Website · Project · Admin 은 리뉴얼 범위 밖이라 앱에서는 원본 화면을 연다), 압축 머리(제목 26px, 설명 · 기준 칩 한 줄),
     페이지당 남색 강조 하나(Overview = KPI 5종, 언급 · 인용 · ACR = 이번 회차 요약, Global prompts = 없음), 카드 모서리 16px · 1px 선. <strong>필터는 왼쪽 패널 그대로</strong>(상단 필터 바 안은 사용자가 되돌림).
     규칙 한 장: <code>docs/design/ui/design-rules.html</code>(사이드바 아래 '디자인 규칙 보기'). 원본 <code>_scratch/387b177e/s/</code>, 네 목업 + 규칙 페이지를 <code>menu/apply-menu.cjs</code> 한 번으로 다시 만듭니다.
-    구현하려면 리뉴얼 화면만 다른 레이아웃을 쓰도록 라우트 묶음을 나눠야 합니다(원본 화면 껍데기는 그대로).</li>
+    <strong>구현(2026-10-23)</strong>: 리뉴얼 화면을 라우트 묶음 <code>front/app/[locale]/(renewal)/renewal/**</code> 로 옮겼습니다(주소 그대로). 자체 레이아웃 <code>(renewal)/layout.tsx</code> 가 (dash) 레이아웃과 같은 세션 · 가드 · 탭 제목을 하고(바꿀 때 둘 다), 껍데기는 <code>(renewal)/_shell/rn-sidebar.tsx</code> 하나입니다.
+    메뉴 = 원본 메뉴 트리(<code>components/dash/sidebar.tsx</code> 에서 export 만 추가) + <code>visibleRoutes</code> 권한 필터. Global 은 리뉴얼 짝이 있는 항목(Overview · Global prompts · Mention · Citation · ACR)을 리뉴얼로, 나머지(AI Conversion)와 Website · Project · Admin 은 원본 화면(원본 껍데기)으로 엽니다. 부모 항목은 첫 자식으로. 계정 블록 = 핸들 · 역할, 언어(쿼리 유지 — 원본 LocaleSwitcher 는 쿼리를 버림), 로그아웃. lg 미만은 메뉴 바 + 오프캔버스.
+    <strong>베타 안내</strong>(사용자 결정 2026-10-23): 위 띠 대신 우측 하단 토스트(<code>_shell/beta-toast.tsx</code>, 같은 문구 · 메일 두 주소 복사, × = 그 브라우저 세션 동안 숨김). 첫 진입 팝업(BetaNoticeDialog)은 원본과 같게 유지. sonner 토스트는 아래 가운데.
+    테마: <code>app/renewal-theme.css</code> 토큰(카드 16px · <code>shadow-rn-card</code> · <code>rn-canvas</code> · 26/16/34 글자) + <code>.rn-hero</code>(남색 강조 카드, <code>RnCard tone="hero"</code>, 안쪽 부품은 <code>[.rn-hero_&amp;]</code> 변형). 원본 (dash) 파일은 바뀌지 않았습니다(export 추가 2곳 제외).
+    시험: <code>(renewal)/layout.test.ts</code>(세션 · 가드 · menuGroups · 사이드바 경로 · 탭 제목 8건), <code>nav-prefetch.test.ts</code> 에 새 사이드바 추가.
+    남은 것: Overview 서랍(SS 1순위)은 다음 단계 — 프롬프트별 분해 · 회차별 근거 목록에 새 SQL 리더가 필요합니다.</li>
   <li><strong>SS 1순위 — Overview 서랍(2026-10-22, 설계 O1 · 승인 전)</strong>: 합격 기준 <code>docs/design/ss-grade-criteria.html</code> 조건 3 · 4, 명세 <code>docs/design/ss-overview.html</code>.
     Overview 목업의 값을 누르면 근거(답변 목록), 증감 · 추이를 누르면 변화의 이유(회차별 증감 이력 띠 · 엔진 | 국가 | 프롬프트 기여)가 오른쪽 서랍으로 열립니다. 목업 바의 ‘회차 데이터’로 회차 기준 데이터 없음 상태를 봅니다.
     원본 <code>_scratch/387b177e/fold/ov-ss.js</code> · <code>ov-ss.css</code>(숫자 버튼은 <code>ov-glance.js</code>), <code>apply-ov2.py</code> 가 주입하고 <code>menu/apply-menu.cjs</code> 로 같이 다시 만듭니다.
