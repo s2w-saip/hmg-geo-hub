@@ -35,7 +35,8 @@ const SESSION_SHOWN_KEY = "ggmd-beta-notice-shown";
 // 컨텍스트·권한 거부에서 실패할 수 있어 execCommand 폴백을 두고, 둘 다 실패하면
 // 실패 상태를 노출한다 — 주소 텍스트는 항상 화면에 남아 있으므로 수동 선택이
 // 최후 수단이 된다.
-function useCopyEmails() {
+// Exported for the renewal shell's beta notice toast (app/[locale]/(renewal)/_shell/beta-toast.tsx).
+export function useCopyEmails() {
   const [state, setState] = useState<"idle" | "copied" | "error">("idle");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -60,7 +61,7 @@ function useCopyEmails() {
 }
 
 // 아이콘 + 상태 문구. 문구는 aria-live 라 스크린리더에도 결과가 전달된다.
-function CopyStatus({
+export function CopyStatus({
   state,
   t,
 }: {

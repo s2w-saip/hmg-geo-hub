@@ -5,7 +5,7 @@ import { Sparkles, TrendingUp, TriangleAlert } from "lucide-react";
 import { cx } from "./cx";
 
 // Page frame of the analysis renewal pages (ACR, Mention, Citation): section heads, a control
-// bar that stays under the app header (page-level controls), the "이번 회차 요약" finding grid, one card head anatomy (title · ⓘ · basis chips ·
+// bar that stays at the top of the content area (page-level controls), the "이번 회차 요약" finding grid, one card head anatomy (title · ⓘ · basis chips ·
 // controls · actions) and a segmented radio group. Copy comes in through props.
 // A `.rn-dense` ancestor (density toggle) tightens the rhythm and hides helper copy.
 
@@ -21,8 +21,9 @@ export function RnSectionHead({ id, title, chip, desc }: { id: string; title: Re
 }
 
 /**
- * Bar that sticks under the app header with the page-level controls (KPI in view, compare
- * brands, density). No section quick-nav (user 2026-10-22: "빠른 이동 UI는 필요하지 않아").
+ * Bar that sticks to the top of the content scroll area with the page-level controls (KPI in
+ * view, compare brands, density). -top-1 = over the scroll area's pt-1, flush with its top edge.
+ * No section quick-nav (user 2026-10-22: "빠른 이동 UI는 필요하지 않아").
  */
 export function RnControlBar({
   label,
@@ -37,7 +38,7 @@ export function RnControlBar({
       role="region"
       aria-label={label}
       data-rn-cbar=""
-      className="sticky top-16 z-20 flex flex-wrap items-center justify-end gap-x-3.5 gap-y-2 rounded-xl bg-rn-surface py-2 pr-2.5 pl-2 shadow-[var(--shadow-rn-1),0_0_0_1px_var(--color-rn-line)]"
+      className="sticky -top-1 z-20 flex flex-wrap items-center justify-end gap-x-3.5 gap-y-2 rounded-[14px] bg-rn-surface py-2 pr-2.5 pl-2 shadow-rn-bar"
     >
       {children}
     </div>
@@ -69,7 +70,7 @@ export function RnFindingGrid({ items }: { items: ReadonlyArray<RnFinding> }) {
           <div
             key={x.key}
             data-rn-finding={x.key}
-            className={cx("flex min-w-0 flex-col gap-1 rounded-[10px] bg-rn-page pt-2.5 pr-3.5 pb-3 pl-4 break-keep [.rn-dense_&]:py-2", TONE_BAR[x.tone])}
+            className={cx("flex min-w-0 flex-col gap-1 rounded-[10px] bg-rn-page pt-2.5 pr-3.5 pb-3 pl-4 break-keep [.rn-dense_&]:py-2 [.rn-hero_&]:bg-rn-surface", TONE_BAR[x.tone])}
           >
             <span className="flex items-center gap-1.5 text-rn-11 font-bold text-rn-muted">
               <Icon className={cx("size-3", TONE_ICON[x.tone])} aria-hidden />
@@ -87,7 +88,7 @@ export function RnFindingGrid({ items }: { items: ReadonlyArray<RnFinding> }) {
 /** Basis chip on a card head ("측정 기준일 …", "추이 12회차"). */
 export function RnBasisChip({ icon, children }: { icon?: ReactNode; children: ReactNode }) {
   return (
-    <span className="inline-flex h-[22px] items-center gap-1 rounded-full bg-rn-page px-2 text-rn-11 font-semibold whitespace-nowrap text-rn-muted [&_svg]:text-rn-faint">
+    <span className="inline-flex h-[22px] items-center gap-1 rounded-full bg-rn-page px-2 text-rn-11 font-semibold whitespace-nowrap text-rn-muted [&_svg]:text-rn-faint [.rn-hero_&]:bg-white/12 [.rn-hero_&]:text-white/90 [.rn-hero_&_svg]:text-rn-sky">
       {icon}
       {children}
     </span>
@@ -111,8 +112,8 @@ export function RnCardHead({
   sub?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2 pt-4 pr-5 pb-3 pl-6 [.rn-dense_&]:pt-2.5 [.rn-dense_&]:pb-2 [.rn-dense_&]:pl-4.5">
-      <h2 className="m-0 text-rn-15 font-bold text-rn-ink">{title}</h2>
+    <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2 pt-[18px] pr-[22px] pb-3 pl-6 [.rn-dense_&]:pt-2.5 [.rn-dense_&]:pb-2 [.rn-dense_&]:pl-4.5">
+      <h2 className="m-0 text-rn-16 font-bold tracking-[-0.01em] text-rn-ink [.rn-hero_&]:text-white">{title}</h2>
       {info}
       {chips}
       {controls || actions ? (

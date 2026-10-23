@@ -13,7 +13,16 @@ import { readFileSync } from "node:fs";
 // 이 파일들에 <Link 를 새로 추가할 때 prefetch={false} 를 빠뜨리면 그 경로가
 // 되살아나므로, 파일 안의 모든 <Link 가 가드를 갖는지 기계로 고정한다.
 
-const FILES = ["components/dash/sidebar.tsx", "components/dash/gnb-rail.tsx"];
+// 리뉴얼 껍데기의 사이드바(2026-10-23)도 같은 규칙.
+const FILES = [
+  "components/dash/sidebar.tsx",
+  "components/dash/gnb-rail.tsx",
+  "app/[locale]/(renewal)/_shell/rn-sidebar.tsx",
+  // 리뉴얼 본문 안의 링크(2026-10-23): 프로덕션에서 auto 프리페치가 원본 화면을 미리 렌더하던 것 차단
+  "app/[locale]/(renewal)/renewal/dashboard/_components/overview-body.tsx",
+  "app/[locale]/(renewal)/renewal/standard/answer-analysis/citation/_components/citation-body.tsx",
+  "app/[locale]/(renewal)/renewal/standard/answer-analysis/citation/_components/citation-subpages.tsx",
+];
 
 describe("대시보드 내비 링크 prefetch 가드", () => {
   for (const file of FILES) {

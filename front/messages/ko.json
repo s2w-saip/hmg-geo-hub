@@ -3964,6 +3964,16 @@
     }
   },
   "renewal": {
+    "shell": {
+      "brand": "HMG GEO",
+      "brandSub": "AI 답변 모니터링",
+      "sideLabel": "사이드 메뉴",
+      "menuLabel": "메뉴",
+      "moreLabel": "프로젝트 · 관리",
+      "closeMenu": "메뉴 닫기",
+      "beta": "베타",
+      "closeNotice": "안내 닫기"
+    },
     "acr": {
       "title": "ACR · AI Choice Rate",
       "beta": "베타",

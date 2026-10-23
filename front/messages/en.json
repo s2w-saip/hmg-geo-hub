@@ -3964,6 +3964,16 @@
     }
   },
   "renewal": {
+    "shell": {
+      "brand": "HMG GEO",
+      "brandSub": "AI answer monitoring",
+      "sideLabel": "Side menu",
+      "menuLabel": "Menu",
+      "moreLabel": "Project · Admin",
+      "closeMenu": "Close menu",
+      "beta": "Beta",
+      "closeNotice": "Close notice"
+    },
     "acr": {
       "title": "ACR · AI Choice Rate",
       "beta": "Beta",

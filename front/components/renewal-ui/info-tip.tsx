@@ -18,7 +18,7 @@ export function RnInfoTip({ label, children, align = "start" }: { label: string;
           e.preventDefault();
           e.stopPropagation();
         }}
-        className="inline-grid cursor-help place-items-center opacity-70 hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-current"
+        className="inline-grid cursor-help place-items-center opacity-70 hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-current [.rn-hero_&]:opacity-80 [.rn-hero_&]:focus-visible:outline-rn-sky"
       >
         <Info className="size-3.5" aria-hidden />
       </button>

@@ -28,7 +28,7 @@ export function RnToken({
   removeLabel: string;
 }) {
   return (
-    <span className="inline-flex min-h-7 items-center gap-1.5 rounded-md bg-rn-navy/8 pr-1.5 pl-2.5 text-rn-12 font-bold text-rn-navy">
+    <span className="inline-flex min-h-7 items-center gap-1.5 rounded-lg bg-rn-navy/8 pr-1.5 pl-2.5 text-rn-12 font-bold text-rn-navy">
       <span className="font-medium">{label}</span>
       {value}
       <button

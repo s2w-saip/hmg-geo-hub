@@ -13,12 +13,18 @@
 @theme {
   --color-rn-navy: #002c5f;
   --color-rn-navy-900: #001533;
+  /* the deep end of the hero (navy accent card) gradient */
+  --color-rn-navy-ink: #00244f;
   --color-rn-navy-500: #1a4d8e;
   --color-rn-navy-300: #6b89b3;
   --color-rn-navy-50: #e6eaf0;
   --color-rn-navy-25: #f2f5fd;
   --color-rn-sky: #aacae6;
   --color-rn-page: #f6f3f2;
+  /* S급 shell (2026-10-23): the page background next to the sidebar — rn-page stays for quiet surfaces */
+  --color-rn-canvas: #f4f1ee;
+  /* table head row on the S급 Overview tables */
+  --color-rn-head: #faf8f6;
   --color-rn-inset: #eee9e2;
   --color-rn-sand: #e4dcd3;
   --color-rn-surface: #ffffff;
@@ -61,16 +67,61 @@
   --text-rn-28--line-height: 1.1;
   --text-rn-24: 1.5rem;
   --text-rn-24--line-height: 1.15;
+  /* S급 (2026-10-23): page title · key number on the hero card · card title */
+  --text-rn-26: 1.625rem;
+  --text-rn-26--line-height: 1.25;
+  --text-rn-34: 2.125rem;
+  --text-rn-34--line-height: 1.05;
+  --text-rn-16: 1rem;
+  --text-rn-16--line-height: 1.4;
 
-  --radius-rn-card: 14px;
+  --radius-rn-card: 16px;
   --radius-rn-control: 8px;
 
   --shadow-rn-1: 0 1px 2px rgba(10, 9, 8, 0.05), 0 1px 3px rgba(10, 9, 8, 0.06);
   --shadow-rn-3: 0 24px 56px -16px rgba(10, 9, 8, 0.3), 0 6px 16px rgba(10, 9, 8, 0.08);
+  /* S급 cards: a 1px line + a very faint shadow (shadow-rn-1 stays for segmented / tab pills) */
+  --shadow-rn-card: 0 1px 2px rgba(10, 9, 8, 0.04), 0 0 0 1px var(--color-rn-line);
+  --shadow-rn-bar: 0 1px 2px rgba(10, 9, 8, 0.05), 0 0 0 1px var(--color-rn-line), 0 8px 24px -18px rgba(10, 9, 8, 0.35);
+  --shadow-rn-hero: 0 18px 40px -24px rgba(0, 28, 61, 0.75);
 
   --animate-rn-progress: rn-progress 1s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
   @keyframes rn-progress {
     from { left: -35%; }
     to { left: 100%; }
   }
+}
+
+/* ---------------------------------------------------------------------------
+ * The one navy accent per page (S급 테마, 2026-10-23): Overview = KPI 5종,
+ * Mention · Citation · ACR = 이번 회차 요약. RnCard tone="hero" sets it;
+ * parts inside read `[.rn-hero_&]` variants for their on-navy tone.
+ * ------------------------------------------------------------------------- */
+.rn-hero {
+  background-color: var(--color-rn-navy);
+  background-image: radial-gradient(120% 140% at 0% 0%, #0b3b74 0%, var(--color-rn-navy) 46%, var(--color-rn-navy-ink) 100%);
+  box-shadow: var(--shadow-rn-hero);
+  color: #fff;
+}
+
+/* ---------------------------------------------------------------------------
+ * Viewport frame of the renewal pages (2026-10-23, user: only the content area
+ * scrolls, never the whole window; the filters and the content scroll apart).
+ *
+ * RnPageFrame / RnFilterSplit mark their root [data-rn-frame]. The renewal
+ * shell (app/[locale]/(renewal)/layout.tsx) has no top bar, so the frame takes
+ * the full viewport height next to the sidebar (below lg: under the 3rem menu
+ * bar). --rn-edge = the S급 page gutter (32px, 24px up to 1279px, 16px below
+ * lg) around a 1480px column (100cqw = the frame's width).
+ * ------------------------------------------------------------------------- */
+[data-rn-frame] {
+  --rn-gutter: 1.5rem;
+  --rn-edge: max(var(--rn-gutter), (100cqw - 1480px) / 2);
+  height: 100vh;
+}
+@media (width >= 80rem) {
+  [data-rn-frame] { --rn-gutter: 2rem; }
+}
+@media (width < 64rem) {
+  [data-rn-frame] { --rn-gutter: 1rem; height: calc(100vh - 3rem); }
 }

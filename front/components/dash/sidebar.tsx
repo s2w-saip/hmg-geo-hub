@@ -125,9 +125,11 @@ type StandardSubLeaf = {
   // 단계인 화면(ACR·AI Conversion·Social Scraping)에 표시 — 2026-09-04 제품 결정.
   beta?: boolean;
 };
-type StandardSubItem = StandardSubLeaf & { children?: StandardSubLeaf[] };
+export type StandardSubItem = StandardSubLeaf & { children?: StandardSubLeaf[] };
 
-const STANDARD_SUB_ITEMS: StandardSubItem[] = [
+// Exported (read-only) for the renewal shell's sidebar (app/[locale]/(renewal)/_shell/rn-sidebar.tsx),
+// which lists the same items in its own layout.
+export const STANDARD_SUB_ITEMS: StandardSubItem[] = [
   {
     path: "/dashboard",
     i18nKey: "dashboard",
@@ -232,7 +234,7 @@ const STANDARD_SUB_ITEMS: StandardSubItem[] = [
 ];
 
 // Admin group sub-nav tree (same shape as STANDARD_SUB_ITEMS).
-const ADMIN_SUB_ITEMS: StandardSubItem[] = [
+export const ADMIN_SUB_ITEMS: StandardSubItem[] = [
   {
     path: "/admin",
     i18nKey: "admin",
@@ -281,7 +283,7 @@ const ADMIN_SUB_ITEMS: StandardSubItem[] = [
 // / AI 퍼널). 라벨은 표준과 동일하므로 기존 nav.* i18n 키를 그대로 재사용한다 —
 // 단 프롬프트만 예외: 표준프롬프트가 아니라 웹사이트 전용 카탈로그라 자체 라벨
 // (nav.websitePrompts)을 쓴다(route-policy 의 website 블록 참고).
-const WEBSITE_SUB_ITEMS: StandardSubItem[] = [
+export const WEBSITE_SUB_ITEMS: StandardSubItem[] = [
   {
     path: "/website",
     i18nKey: "dashboard",
