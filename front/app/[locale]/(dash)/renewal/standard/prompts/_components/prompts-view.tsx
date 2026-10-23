@@ -380,39 +380,44 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
 
   return (
     <div className="flex flex-col gap-4">
-      <RnFilterSplit panel={panel} rail={<PromptRail count={picked.length} />}>
-        <RnPageHeader
-          title={t("title")}
-          meta={
-            <>
-              <RnPill title={!scopeAll && scopeCountries.length ? t("scopeMarketHintDetail") : undefined}>
-                <Globe className="size-3 text-rn-muted" aria-hidden />
-                {tp("scopePill", { scope: scopeSummary })}
-                {!scopeAll ? <span className="text-rn-muted">· {t("scopeCommonHint")}</span> : null}
-              </RnPill>
-              {period ? (
-                <span className="tabular-nums">
-                  {t("collectionPeriod", { from: period.from, to: period.to })} · {t("lastCollectedAt", { date: period.to })}
-                </span>
-              ) : null}
-            </>
-          }
-          actions={
-            <RnButton
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(window.location.href);
-                  toast(tp("linkCopied"));
-                } catch {
-                  toast(ts("linkFailed"));
-                }
-              }}
-            >
-              <Link2 className="size-3.5" aria-hidden />
-              {tp("copyLink")}
-            </RnButton>
-          }
-        />
+      <RnFilterSplit
+        header={
+          <RnPageHeader
+            title={t("title")}
+            meta={
+              <>
+                <RnPill title={!scopeAll && scopeCountries.length ? t("scopeMarketHintDetail") : undefined}>
+                  <Globe className="size-3 text-rn-muted" aria-hidden />
+                  {tp("scopePill", { scope: scopeSummary })}
+                  {!scopeAll ? <span className="text-rn-muted">· {t("scopeCommonHint")}</span> : null}
+                </RnPill>
+                {period ? (
+                  <span className="tabular-nums">
+                    {t("collectionPeriod", { from: period.from, to: period.to })} · {t("lastCollectedAt", { date: period.to })}
+                  </span>
+                ) : null}
+              </>
+            }
+            actions={
+              <RnButton
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(window.location.href);
+                    toast(tp("linkCopied"));
+                  } catch {
+                    toast(ts("linkFailed"));
+                  }
+                }}
+              >
+                <Link2 className="size-3.5" aria-hidden />
+                {tp("copyLink")}
+              </RnButton>
+            }
+          />
+        }
+        panel={panel}
+        rail={<PromptRail count={picked.length} />}
+      >
         <RnTabs
           className="self-start"
           label={tp("tabsLabel")}

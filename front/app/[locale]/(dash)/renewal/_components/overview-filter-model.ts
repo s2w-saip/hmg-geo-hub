@@ -1,7 +1,7 @@
 // Renewal Overview filter model — pure. Every rule here is the app's DimensionFilterPanel
 // rule for the Overview (overview-filters.tsx → DimensionFilterPanel stage "overview"),
 // built from the panel's own exported functions so the two cannot drift:
-//   axes        = overviewOnlyGroups + admin brand slot − locked axes − empty catalog axes
+//   axes        = overviewOnlyGroups (stage "acr": acrOnlyGroups, "mention" / "citation": composeGroups) + admin brand slot − locked axes − empty catalog axes
 //   sections    = FILTER_SECTIONS rows (디멘션 / 프롬프트 필터), empty rows dropped
 //   권역 axis   = single active brand, >1 measured region, not a region-pinned account
 //   국가/언어   = option matrix narrowed by the picked brand(s) and countries
@@ -29,6 +29,8 @@ import {
   type MeasuredScopeCombo,
 } from "@/components/dash/dimension-filter-panel";
 import { overviewOnlyGroups } from "@/app/[locale]/(dash)/dashboard/_components/overview-filters";
+import { acrOnlyGroups } from "@/app/[locale]/(dash)/standard/ai-funnel/_components/acr-live-view";
+import { STANDARD_CITATION_V2_ONLY_GROUPS, composeGroups } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/filter-groups";
 import { VIRTUAL_GEO_CODES } from "@/lib/geo-catalog/geo-code-label";
 import { pseudoCountryParent } from "@/lib/geo-catalog/pseudo-country";
 import { rhqForCountry } from "@/lib/rhq";
@@ -36,6 +38,12 @@ import { scopeForGeoSurface } from "@/lib/scope/website-virtual-geo";
 import type { AllowedScope } from "@/lib/auth/types";
 
 export interface OverviewPanelInput {
+  /**
+   * The app panel this one mirrors: the Overview (default), the ACR page (acr-live-view.tsx
+   * acrOnlyGroups), the Mention page (analysis-filter-bar.tsx composeGroups "mentions") or the
+   * Citation page (composeGroups "citations" with STANDARD_CITATION_V2_ONLY_GROUPS = + 출처 카테고리 · 경쟁사).
+   */
+  stage?: "overview" | "acr" | "mention" | "citation";
   scope?: AllowedScope;
   catalogRows?: CatalogTaxonomyRow[];
   geographyOptions?: string[];
@@ -70,13 +78,21 @@ const insertBrand = (base: DimensionGroup[]): DimensionGroup[] => {
 };
 
 export function overviewPanelModel(input: OverviewPanelInput, draft: Draft): OverviewPanelModel {
-  const { scope, catalogRows, geographyOptions, languageOptions, optionMatrix } = input;
+  const { stage, scope, catalogRows, geographyOptions, languageOptions, optionMatrix } = input;
   const isAdmin = scope?.all === true;
   const viewScope = scope ? scopeForGeoSurface(scope, "standard") : scope;
   const lock = new Set<DimensionGroup>();
   if (!isAdmin) lock.add("brand");
   if (!isAdmin && viewScope?.countries?.length === 1) lock.add("geography");
-  const base = isAdmin ? insertBrand(overviewOnlyGroups(languageOptions)) : overviewOnlyGroups(languageOptions);
+  const only =
+    stage === "acr"
+      ? acrOnlyGroups(languageOptions)
+      : stage === "mention"
+        ? composeGroups("mentions", { languageOptions }).only
+        : stage === "citation"
+          ? composeGroups("citations", { onlyGroups: STANDARD_CITATION_V2_ONLY_GROUPS, languageOptions }).only
+          : overviewOnlyGroups(languageOptions);
+  const base = isAdmin ? insertBrand(only) : only;
   const visibleGroups = base.filter((g) => {
     if (lock.has(g)) return false;
     if (catalogRows && CATALOG_AXES.has(g)) return catalogAxisHasValues(g, catalogRows);

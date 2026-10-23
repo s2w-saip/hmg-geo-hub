@@ -9801,6 +9801,39 @@ export async function aggregateAcrFromMirror(
   return { measured: true, brands, trend, battle, modelConversion, territory, totals };
 }
 
+// 당사 합계 (renewal ACR, 2026-10-21) — the backend's own_sql on the mirror. The brand
+// rows above are per brand and capped at 12, so the legacy cards read the first own row
+// only (an HMG admin sees Hyundai alone) and miss own brands below the cap. Same row
+// conditions as the brand rows (Q2: brand level, name resolved, non-competitor brands
+// excluded); choices add up without overlap (one pick per repetition); a cell counts once
+// however many own brands it holds. Ratios use aggregateAcrFromMirror's totals.
+export interface AcrOwnCounts {
+  choiceCount: number;
+  appearanceCount: number;
+  cells: number;
+}
+
+export async function aggregateAcrOwnFromMirror(
+  filters: StandardFilters = {},
+): Promise<AcrOwnCounts> {
+  await ensureColumnAvailability();
+  await ensureAnchorAxis();
+  const db = getDb();
+  const latest = latestAcrPromptRunIds(filters);
+  const tracked = trackedRollupIn(filters);
+  const rows = (await db.execute(sql`
+    SELECT COALESCE(sum(x.choice_count), 0)::int AS choice,
+      COALESCE(sum(x.appearance_count), 0)::int AS appearance,
+      count(DISTINCT x.prompt_run_id)::int AS cells
+    FROM scope_acr_rollups x ${ACR_NAME_JOIN}
+    WHERE x.prompt_run_id IN ${latest}
+      AND x.rollup_level = 'brand' AND ${ACR_BRAND_NAME} IS NOT NULL
+      AND ${excludeNonCompetitorBrandsSql(ACR_BRAND_NAME, sql`x.brand`)}
+      AND (${canonRollupSql(filters, "x")} IN ${tracked} OR x.entity_id IN ${tracked})
+  `)) as unknown as Array<{ choice: number; appearance: number; cells: number }>;
+  return { choiceCount: num(rows[0]?.choice), appearanceCount: num(rows[0]?.appearance), cells: num(rows[0]?.cells) };
+}
+
 // ── 글로벌 프롬프트 수집 기간 (2026-07-23 피드백 ③) ─────────────────────────
 // /standard/prompts 헤더의 "수집 기간 · 마지막 수집일". 계정 scope로 좁힌
 // 글로벌(루트) 카탈로그 프롬프트의 completed 답변에서 measured_at min/max를

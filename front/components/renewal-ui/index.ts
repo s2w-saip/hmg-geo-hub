@@ -18,3 +18,7 @@ export { RnPageHeader } from "./page-header";
 export { RnTabs } from "./tabs";
 export { RnDrawer } from "./drawer";
 export { RnSelect } from "./select";
+export { RnBasisChip, RnCardHead, RnControlBar, RnFindingGrid, RnSectionHead, RnSegmented, type RnFinding, type RnFindingTone } from "./frame";
+export { RnCardActions } from "./card-actions";
+export { RnHighlightProvider, rnHighlightState, useRnHighlight, useRnHighlightKey } from "./highlight";
+export { RnLineChart, RnScatterChart, rnNiceTicks, type RnLineSeries, type RnScatterPoint } from "./charts";

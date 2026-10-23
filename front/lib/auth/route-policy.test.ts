@@ -32,10 +32,13 @@ const NON_VENDOR_STANDARD_PATHS = [
   "/renewal/standard/prompts",
   "/standard/answer-analysis",
   "/standard/answer-analysis/mention",
+  "/renewal/standard/answer-analysis/mention",
   "/standard/answer-analysis/citation",
+  "/renewal/standard/answer-analysis/citation",
   "/standard/ai-funnel",
   "/standard/ai-funnel/visibility",
   "/standard/ai-funnel/acr",
+  "/renewal/standard/ai-funnel/acr",
   "/standard/ai-funnel/conversion",
   "/customer-interest",
   "/customer-interest/google-keywords",
@@ -288,14 +291,19 @@ describe("route-policy — guard bypass and default landing", () => {
 });
 
 describe("route-policy — ROUTES table integrity", () => {
-  it("exposes 32 routes (renewal Overview / Global prompts 추가)", () => {
-    expect(ROUTES).toHaveLength(32);
+  it("exposes 35 routes (renewal Overview / Global prompts / ACR / Mention / Citation 추가)", () => {
+    expect(ROUTES).toHaveLength(35);
   });
 
   it("renewal pages open to exactly the roles of their originals", () => {
     for (const [renewal, original] of [
       ["/renewal/dashboard", "/dashboard"],
       ["/renewal/standard/prompts", "/standard/prompts"],
+      ["/renewal/standard/ai-funnel/acr", "/standard/ai-funnel/acr"],
+      ["/renewal/standard/answer-analysis/mention", "/standard/answer-analysis/mention"],
+      ["/renewal/standard/answer-analysis/citation", "/standard/answer-analysis/citation"],
+      ["/renewal/standard/answer-analysis/citation/prompts", "/standard/answer-analysis/citation/prompts"],
+      ["/renewal/standard/answer-analysis/citation/tone-urls", "/standard/answer-analysis/citation/tone-urls"],
     ]) {
       for (const role of roles) {
         expect(canAccessRoute(role, `/ko${renewal}`)).toBe(canAccessRoute(role, original));

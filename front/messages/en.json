@@ -23,6 +23,7 @@
     "renewalDashboard": "Overview (Renewal)",
     "standardPrompts": "Global prompts",
     "renewalStandardPrompts": "Global prompts (Renewal)",
+    "renewalAiFunnelAcr": "ACR (Renewal)",
     "answerAnalysis": "Answer analysis",
     "answerAnalysisMention": "Mention",
     "answerAnalysisCitation": "Citation",
@@ -77,7 +78,9 @@
     "openSidebar": "Open menu",
     "closeSidebar": "Close menu",
     "websitePrompts": "Prompts",
-    "adminCitationSources": "Citation Sources"
+    "adminCitationSources": "Citation Sources",
+    "renewalAnswerAnalysisMention": "Mention (Renewal)",
+    "renewalAnswerAnalysisCitation": "Citation (Renewal)"
   },
   "locale": {
     "label": "Language",
@@ -3961,6 +3964,249 @@
     }
   },
   "renewal": {
+    "acr": {
+      "title": "ACR · AI Choice Rate",
+      "beta": "Beta",
+      "cadence": "Measured weekly",
+      "snapshot": "Latest round snapshot",
+      "periodRange": "Period total {from} ~ {to}",
+      "bar": {
+        "label": "Page controls"
+      },
+      "sec": {
+        "overview": "Overview",
+        "comp": "Competition",
+        "prompt": "Engines · prompts",
+        "model": "Models",
+        "dist": "Choice spread",
+        "overviewDesc": "How often AI's final recommendation goes to us — our brands combined.",
+        "compDesc": "Who takes the final pick, and who makes the shortlist but is not picked.",
+        "promptDesc": "Which engine and which questions we win or lose.",
+        "modelDesc": "How often a shortlisted model is actually picked.",
+        "distDesc": "Per question, which brand was picked how many times across repetitions."
+      },
+      "compare": {
+        "label": "Compare",
+        "auto": "auto",
+        "change": "Change",
+        "add": "Add brand",
+        "dialog": "Choose brands to compare",
+        "hint": "Up to {max} rivals with a trend · orange, teal, violet in pick order. Every chart on the page uses the same colours.",
+        "reset": "Default (the top rival by Top1 ACR)",
+        "close": "Close",
+        "max": "You can compare up to {max} brands",
+        "remove": "Stop comparing {brand}",
+        "search": "Search brands",
+        "none": "No matching brand",
+        "empty": "No rival has a trend"
+      },
+      "density": {
+        "label": "Density",
+        "normal": "Default",
+        "dense": "Compact"
+      },
+      "summary": {
+        "title": "This round",
+        "titlePeriod": "This period",
+        "howLabel": "How it is made",
+        "how": "Rules over the numbers on this page (no new data): our rank and gap, where we are shortlisted but not picked, top brands per engine and prompt, model conversion and the biggest mover, ranked by importance; the top four are shown.",
+        "chipSnapshot": "Latest round · vs the previous round",
+        "chipPeriod": "Period total",
+        "headline": "<b>{own}</b> — Top1 ACR <b>#{rank}</b> {share}{delta}, shortlist rate {coverage}, picked first {count} times · {prompts} prompts × {engines} engines"
+      },
+      "find": {
+        "standing": {
+          "tag": "Competition",
+          "titleFirst": "#1 in Top1 ACR — {gap}pp ahead of {rival}",
+          "titleBehind": "Top1 ACR {gap}pp behind {rival}",
+          "detailWidened": "The gap widened by {move}pp since the previous round",
+          "detailNarrowed": "The gap narrowed by {move}pp since the previous round",
+          "detail": "Us {own}% · {rival} {rivalShare}%"
+        },
+        "leak": {
+          "tag": "Shortlist → pick",
+          "title": "{own} is shortlisted as often as {rival} but picked {gap}pp less",
+          "detail": "Shortlist rate {ownCov}% vs {rivalCov}% · Top1 ACR {ownTop1}% vs {rivalTop1}%"
+        },
+        "engine": {
+          "tag": "AI engine",
+          "title": "We top {wins}/{total} prompts on {engine} — {diff} fewer than on {other}",
+          "detail": "By the brand picked most per prompt × engine"
+        },
+        "sweep": {
+          "tag": "Prompts",
+          "title": "{rival} tops {count} prompts on every engine",
+          "detail": "Questions where we top no engine — content candidates"
+        },
+        "model": {
+          "tag": "Models",
+          "title": "{model} converts {rate}% — our best model",
+          "detail": "Lowest: {worst} at {worstRate}% · how often a shortlisted model is picked"
+        },
+        "mover": {
+          "tag": "Change",
+          "title": "{brand} Top1 ACR {delta} — the biggest move",
+          "detail": "Among brands with a trend, vs the previous round"
+        },
+        "dist": {
+          "tag": "Choice spread",
+          "title": "{zero} prompts in {sheet} never picked us",
+          "detail": "Out of {rows} prompts in this sheet"
+        }
+      },
+      "hero": {
+        "label": "Top1 ACR (final pick rate)",
+        "basisRound": "vs the previous round",
+        "basisPeriod": "Period total — see the trend for change",
+        "basisDay": "The trend is by measurement day, so no change is shown",
+        "standing": "<b>#{rank}</b> of {n} brands",
+        "leadFirst": "+{gap}pp over #2 {brand}",
+        "leadBehind": "{gap}pp vs #1 {brand}",
+        "coverage": "Shortlist rate",
+        "choices": "Picked first",
+        "cells": "Cells measured",
+        "iterations": "Repetitions",
+        "times": "{n}",
+        "count": "{n}",
+        "ownSum": "Us = {brands} combined",
+        "trendTitle": "Top1 ACR trend",
+        "trendNoteLabel": "Trend",
+        "trendNoteRound": "Final pick rate per round (that round's repetitions). Only we and the top rivals have a trend (up to 5 brands, ours first) — compare brands come from them. The last point is the value above (latest round).",
+        "trendNoteDay": "Final pick rate per measurement day. A round measured over several days is split, so the last point may differ from the value above (latest round snapshot). Only we and the top rivals have a trend.",
+        "own": "Us",
+        "tooltipRound": "Round {x}",
+        "trendAria": "Top1 ACR trend",
+        "noTrend": "No trend data"
+      },
+      "board": {
+        "title": "ACR by brand",
+        "infoLabel": "How to read",
+        "info": "Top1 ACR = the brand's share of AI's final picks (per repetition — brands add up to at most 100%; the rest is brands below the top 12 and no pick). Bar length is relative to #1. Shortlist rate = the share of cells where the brand was shortlisted at least once in ~10 repetitions (per cell, 0–100%). The units differ, so the two bars are drawn apart. Pick and mention counts are in the row tooltip and the table view. Only we and the top rivals have a trend.",
+        "chip": "Top 12 · by final picks",
+        "sub": "Select a rival row that has a trend to add or remove it as a compare brand — every chart on the page follows.",
+        "sortLabel": "Sort",
+        "sortTop1": "Top1 ACR",
+        "sortCoverage": "Shortlist rate",
+        "sortDelta": "Change",
+        "colBrand": "Brand",
+        "colTop1": "Top1 ACR",
+        "colTrend": "Trend",
+        "colDelta": "Change",
+        "colCoverage": "Shortlist rate",
+        "colChoices": "Final picks",
+        "colMentions": "Mentions",
+        "ownTotal": "Us combined",
+        "own": "Us",
+        "sibling": "HMG",
+        "noTrend": "No trend",
+        "noTrendTip": "Only we and the top rivals have a trend",
+        "noCompare": "No trend, so it cannot be compared",
+        "rowTip": "Top1 ACR {top1} · shortlist rate {coverage} · {choices} final picks · {mentions} mentions",
+        "ownTip": "Top1 ACR {top1} · shortlist rate {coverage} · {choices} final picks"
+      },
+      "map": {
+        "title": "Shortlist → final pick",
+        "infoLabel": "How to read",
+        "info": "x = shortlist rate, y = Top1 ACR. Dashed = the brand average line (Σ Top1 ACR ÷ Σ shortlist rate of the brands shown). Above it = picked more than brands shortlisted as often; below = picked less. The units differ (repetition · cell), so the line is a reference, not a conversion rate. No new data.",
+        "chip": "{n} brands · vs the average line",
+        "x": "Shortlist rate →",
+        "y": "↑ Top1 ACR",
+        "line": "Brand average",
+        "above": "Above: picked more than average",
+        "below": "Below: picked less than average",
+        "aria": "Top1 ACR against the shortlist rate, with the brand average line",
+        "tip": "{brand} — shortlist rate {x} · Top1 ACR {y} · vs average {dev}",
+        "colDev": "vs average"
+      },
+      "battle": {
+        "title": "Picks by AI engine",
+        "infoLabel": "How to read",
+        "info": "For each prompt × engine cell, the brand picked most (countries added up; ties by brand name). Bars = how many prompts each brand tops on that engine.",
+        "chip": "{prompts} prompts × {engines} engines",
+        "viewLabel": "Prompt view",
+        "all": "All",
+        "notOwn": "We are not #1",
+        "split": "Engines disagree",
+        "ownWins": "<b>{wins}</b>/{total} with us at #1",
+        "others": "Other brands",
+        "noWinner": "No pick",
+        "colPrompt": "Prompt",
+        "more": "Show {count} more",
+        "less": "Show less",
+        "empty": "No prompt matches",
+        "segTip": "{engine} · {brand} — tops {count} prompts",
+        "gridAria": "Top brand per prompt × engine",
+        "ownLabel": "Us"
+      },
+      "models": {
+        "title": "Pick rate by model",
+        "infoLabel": "How to read",
+        "info": "How likely a shortlisted model is picked as the final recommendation. ‘Shortlisted’ = cells where it was a candidate; ‘Picked first’ = final picks. The rate divides by the repetitions of those cells, so it is not the two numbers divided. Top 12 models with at least one pick.",
+        "chip": "Top 12 · by rate",
+        "sortLabel": "Sort",
+        "colBrand": "Brand",
+        "colModel": "Model",
+        "colRate": "Pick rate",
+        "colShortlist": "Shortlisted (cells)",
+        "colTop1": "Picked first",
+        "empty": "No model was picked",
+        "rowTip": "{brand} {model} — pick rate {rate} · shortlisted in {shortlist} cells · picked first {top1} times"
+      },
+      "dist": {
+        "title": "Picks per prompt",
+        "infoLabel": "How to read",
+        "info": "Per country × engine sheet, the brands picked across the repetitions of each prompt (bar length = picks, not their order). Hatching = no pick. Only we and the compare brands are coloured; other brands are grey — hover for the name.",
+        "chip": "{n} sheets · largest first",
+        "sheets": "Sheets",
+        "zero": "Only prompts that never picked us",
+        "sortLabel": "Sort",
+        "sortText": "By prompt",
+        "sortOwn": "Our share, lowest first",
+        "colPrompt": "Prompt",
+        "colDist": "Picks",
+        "colOwn": "Us",
+        "colTop": "Most picked",
+        "more": "Show all {count}",
+        "less": "Show 20",
+        "empty": "No prompt matches",
+        "segTip": "{brand} — {n} of {total} repetitions",
+        "noneTip": "No pick — {n} of {total} repetitions",
+        "gridAria": "Picks per prompt in {sheet}"
+      },
+      "foot": {
+        "snapshot": "Latest round snapshot — {prompts} prompts · {cells} cells (prompt × engine × country) · {iterations} repetitions",
+        "period": "Period total — {prompts} prompts · {cells} cells (prompt × engine × country) · {iterations} repetitions"
+      },
+      "states": {
+        "noResultTitle": "No ACR measurement for these filters",
+        "noResultDesc": "ACR runs in some countries and languages only. Try fewer country, language or catalog filters.",
+        "reset": "Clear filters"
+      },
+      "card": {
+        "table": "Show as table",
+        "chart": "Show as chart",
+        "menu": "Card menu",
+        "csv": "Export CSV",
+        "link": "Copy a link to this card",
+        "csvDone": "CSV downloaded",
+        "linkDone": "Link to this card copied",
+        "linkFailed": "Could not copy the link"
+      },
+      "def": {
+        "definition": "Definition",
+        "formula": "Formula",
+        "infoAria": "Show the definition",
+        "coverageTitle": "Shortlist rate",
+        "coverage": "Even without the final pick, the share of measured cells (question × AI engine × country) where the brand was in the recommended shortlist at least once. Each cell runs about 10 times; one appearance counts. It tells whether we make the shortlist at all.",
+        "coverageFormula": "Cells where shortlisted ÷ all cells"
+      },
+      "delta": {
+        "up": "Better",
+        "down": "Worse",
+        "flat": "No change",
+        "none": "−"
+      }
+    },
     "filters": {
       "title": "Filters",
       "selectedAxes": "{count} filters on",
@@ -3978,7 +4224,9 @@
       "applying": "Updating",
       "resetDone": "Filters cleared",
       "undo": "Undo",
-      "shortcutPanel": "Collapse panel"
+      "shortcutPanel": "Collapse panel",
+      "defaultScopeHintSnapshot": "With no filter, everything in your account scope is shown (no period = the latest round snapshot).",
+      "axisNeedsCompetitor": "Needs Official (Competitor)"
     },
     "saved": {
       "title": "Saved filters",
@@ -4013,13 +4261,6 @@
     "overview": {
       "copyLink": "Copy link",
       "linkCopied": "Link with the current conditions copied",
-      "boardTitle": "5 KPIs",
-      "boardHint": "Pick a row to switch the market and brand comparison below to that KPI",
-      "colKpi": "KPI",
-      "colValue": "Value",
-      "colTrend": "Trend",
-      "colTopRival": "Top competitor",
-      "kpiPicker": "Choose a KPI",
       "definition": "Definition",
       "formula": "Formula",
       "infoLabel": "What {name} means",
@@ -4027,27 +4268,46 @@
       "deltaUp": "Better",
       "deltaDown": "Worse",
       "deltaFlat": "No change",
-      "marketsTitle": "{kpi} by market",
-      "legendLow": "Low",
-      "legendHigh": "High",
-      "legendRankBack": "Behind",
-      "legendRankFront": "Ahead",
       "brandsTitle": "Brand comparison",
-      "brandsHint": "Ours in navy · competitors in grey",
-      "rankHint": "Lower is ahead",
-      "ourRank": "Ours #{rank} of {count} brands",
       "ownTag": "Ours",
-      "tableTitleRegion": "{kpi} by region › country",
-      "tableHint": "Pick a row or a tile to highlight both",
-      "colAnswers": "Answers",
       "collapseRegion": "Collapse {region}",
       "expandRegion": "Expand {region}",
       "noMarkets": "No measured country matches these conditions.",
       "answersMeta": "{count} answers",
       "periodMeta": "Period {from} – {to}",
       "roundMeta": "Round {date}",
-      "rivalBasis": "Top competitor = the competitor mentioned most in that market",
-      "countryCount": "{count} countries"
+      "countryCount": "{count} countries",
+      "kpiTitle": "5 KPIs",
+      "kpiHintDelta": "Δ = {compare}",
+      "kpiHintTrend": "trend = last {count} rounds",
+      "detail": "Details",
+      "standing": "<b>#{rank}</b> of {count} compared brands",
+      "brandsHint": "All 5 KPIs in one table · bars scale to each column's best · a lower Average Position is ahead · Δ = {compare} on every row",
+      "colBrand": "Brand",
+      "colStanding": "Ours #{rank} / {count}",
+      "short": {
+        "visibility": "Visibility",
+        "shareOfVoice": "Share of Voice",
+        "sentiment": "Sentiment",
+        "position": "Avg. Position",
+        "citationShare": "Citation Share"
+      },
+      "notCompared": "Not among the compared competitors (top 4) of {kpi}",
+      "deltaTitle": "{dir} · {compare}",
+      "brandsFoot": "‘—’ = not among that KPI's compared competitors (top 4) · Citation Share has its own citation-based competitors · Sentiment and Citation Share have no competitor Δ",
+      "marketsTitle": "Markets",
+      "heatLegend": "Cell colour: country rank per KPI · behind",
+      "heatLegendFront": "ahead",
+      "heatLegendTitle": "5 steps comparing countries within one KPI — ranked per KPI",
+      "marketsKey": "Small figure = gap to the market's <b>biggest competitor</b> (most mentions, the ‘vs’ under each country) · + ahead / − behind · Citation Share has no competitor value · click a column name to order countries by that KPI",
+      "sortTitle": "{kpi} — sort countries",
+      "sortTitleOn": "{kpi} — sort countries (now {dir})",
+      "sortBest": "leaders first",
+      "sortWorst": "laggards first",
+      "vsRival": "vs {name}",
+      "cellPlace": "#{rank} of {count} countries",
+      "cellRival": "Biggest competitor {name} {value} · gap {gap}",
+      "cellNoRival": "No competitor value"
     },
     "prompts": {
       "columnTaxonomy": "Taxonomy · funnel",
@@ -4062,6 +4322,550 @@
       "optionSearch": "Search {label}",
       "copyLink": "Copy link",
       "linkCopied": "Link with the current conditions copied"
+    },
+    "mention": {
+      "title": "Mention",
+      "beta": "Beta",
+      "periodRange": "Period total {from} ~ {to}",
+      "bar": {
+        "label": "Page controls"
+      },
+      "sec": {
+        "overview": "Status and trend",
+        "comp": "Competition",
+        "compDesc": "Who leads and who is catching up — click a row to add or remove it as a compare brand.",
+        "mix": "Engines · types",
+        "mixDesc": "Which AI engines mention you, and how.",
+        "favDist": "Sentiment mix",
+        "favDistDesc": "The sentiment signals on our mentions — click an item to see the prompts and answers behind it.",
+        "favMix": "Sentiment by type",
+        "favMixDesc": "Which kinds of mention carry the most positive signals.",
+        "rank": "Ranking",
+        "rankDesc": "How early each brand is named in answers — a longer bar means named earlier.",
+        "brands": "Brand detail",
+        "brandsDesc": "Brand mention ranking and mix — click a brand to go down to its prompts and the real AI answers."
+      },
+      "compare": {
+        "label": "Compare",
+        "auto": "auto",
+        "remove": "Stop comparing {brand}",
+        "change": "Change",
+        "add": "Add brand",
+        "dialog": "Choose compare brands",
+        "hint": "Up to {max} of the top brands with a trend · orange, teal, violet in pick order. Every chart on the page uses the same colours.",
+        "empty": "No competitor has a trend",
+        "reset": "Default (top competitor by share)",
+        "close": "Close",
+        "max": "You can compare up to {max} brands"
+      },
+      "density": {
+        "label": "Density",
+        "normal": "Default",
+        "dense": "Compact"
+      },
+      "delta": {
+        "up": "Improved",
+        "down": "Worse",
+        "flat": "No change",
+        "none": "No change data",
+        "label": "Change basis",
+        "basisPeriod": "vs the equal period just before",
+        "basisCycle": "vs the previous round ({date})",
+        "basisCycleNoDate": "vs the previous round",
+        "basisPrev": "vs the cumulative at the period's first measurement ({date})",
+        "noteCycle": "▲▼ Changes are against the previous round ({date}), computed from the same aggregate with the same rule as the Overview cards.",
+        "notePrev": "▲▼ Changes are period-cumulative: compared with the cumulative at the period's first measurement ({date}).",
+        "notePeriod": "▲▼ Changes compare the selected period with the equal period just before it.",
+        "noteRank": "▲▼ Changes are the shift in average position (places) against the previous round. Negative (named earlier) is better."
+      },
+      "card": {
+        "menu": "Card menu",
+        "table": "Show as table",
+        "chart": "Show as chart",
+        "csv": "Export CSV",
+        "csvDone": "CSV downloaded",
+        "link": "Copy link to this card",
+        "linkDone": "Link copied",
+        "linkFailed": "Could not copy the link"
+      },
+      "states": {
+        "noResultTitle": "No results for these filters",
+        "noResultDesc": "No AI answers match the selected filters. Narrow fewer filters or reset them.",
+        "reset": "Reset filters"
+      },
+      "tabs": {
+        "label": "KPI",
+        "viewing": "Viewing",
+        "basis": "Based on {kpi}",
+        "deltaTitle": "{dir} · {basis}"
+      },
+      "summary": {
+        "title": "This round at a glance",
+        "titlePeriod": "Selected period at a glance",
+        "howLabel": "How this is made",
+        "how": "A rule-based summary of the numbers on this page (no new data). It ranks our standing and gap, the mention types where we trail, the competitor that moved most, the engine gap, sharp mention-rank changes and rising negative signals, and picks four.",
+        "chipSnapshot": "As of {date} · vs previous round",
+        "chipPeriod": "Selected period, cumulative",
+        "headline": "<b>{own}</b> — exposure <b>{expRank}</b> {exp}, share of voice <b>{sovRank}</b> {sov}, favorability {fav}, first position {pos}.",
+        "empty": "Nothing to summarise",
+        "rank": "#{rank}"
+      },
+      "find": {
+        "standingLead": {
+          "tag": "Competition",
+          "title": "#1 in exposure — {gap}pp ahead of #2 {rival}"
+        },
+        "standingTrail": {
+          "tag": "Competition",
+          "title": "#{rank} in exposure — {gap}pp behind #1 {rival}"
+        },
+        "standingWidened": "The gap widened by {move}pp since the previous round",
+        "standingNarrowed": "The gap narrowed by {move}pp since the previous round",
+        "standingDetail": "Us {own}",
+        "typeTrail": {
+          "tag": "Mention type",
+          "title": "{gap}pp behind {ref} in {type}"
+        },
+        "typeLead": {
+          "tag": "Mention type",
+          "title": "Ahead in every type — closest in {type} ({gap})"
+        },
+        "typeStrong": "Recommendation and final choice carry the strongest purchase intent",
+        "typeDetail": "Share within the type · us {own}",
+        "competitorAvg": "competitor average",
+        "mover": {
+          "tag": "Change",
+          "title": "{brand} share {delta} — the biggest move"
+        },
+        "moverDetail": "Among competitors with a trend, vs previous round · us {own}",
+        "engine": {
+          "tag": "AI engine",
+          "title": "{gap} vs the competitor average on {engine}"
+        },
+        "engineDetail": "Smallest gap across engines · {next} {nextGap}",
+        "engineDetailOne": "Exposure basis",
+        "climb": {
+          "tag": "Rank change",
+          "title": "{brand} mention rank #{from} → #{to}"
+        },
+        "climbDetail": "Last {weeks} rounds · us + top 10",
+        "negative": {
+          "tag": "Favorability",
+          "title": "Negative signal share {pct} ({delta})"
+        },
+        "negativeDetail": "Sentiment signals on our mentions"
+      },
+      "hero": {
+        "trendTitleExposure": "Exposure by brand",
+        "trendTitleSov": "Share of voice by brand",
+        "trendNoteLabel": "Metric note",
+        "trendNote": "{metric} (%) by brand — the weekly ranking under ‘Brand detail’ counts mentions, a different metric. With no compare brand the line is the average of the competitors with a trend.",
+        "standing": "<b>#{rank}</b> of {n} brands compared",
+        "leadFirst": "+{gap}pp over #2 {brand}",
+        "leadBehind": "{gap}pp vs #1 {brand}",
+        "ownSum": "Us = {brands} combined",
+        "asOf": "As of {date}",
+        "average": "Competitor average",
+        "noTrend": "No trend data",
+        "tooltip": "Round {x}",
+        "trendAria": "{metric} trend of us and the compare brands",
+        "own": "Us"
+      },
+      "board": {
+        "title": "Competitors ({metric})",
+        "infoLabel": "How to read",
+        "infoExposure": "Share of all AI answers in which the brand appears. Values are the snapshot of the measurement date; trends and changes are per round. Trends exist for us and the top 10 brands by mentions only (the rest show ‘no trend’). vs us = competitor − us.",
+        "infoSov": "Each brand's share of all brand mentions. Values are the snapshot of the measurement date; trends and changes are per round. Trends exist for us and the top 10 brands by mentions only (the rest show ‘no trend’). vs us = competitor − us.",
+        "chipSnapshot": "Measurement-date snapshot",
+        "chipTrend": "{n}-round trend",
+        "sub": "Click a row to add or remove it as a compare brand — every chart on the page follows.",
+        "colBrand": "Brand",
+        "colTrend": "Trend",
+        "colDelta": "Change",
+        "colGap": "vs us",
+        "own": "Us",
+        "sibling": "HMG group",
+        "noTrend": "No trend",
+        "noTrendTip": "Trends exist for us and the top 10 brands by mentions only",
+        "noCompare": "No trend, so it cannot be a compare brand",
+        "more": "Show the other {n} brands",
+        "less": "Top 5 + compare brands only",
+        "empty": "No brand data to compare"
+      },
+      "engine": {
+        "titleExposure": "Exposure by AI engine",
+        "titleSov": "Share of voice by AI engine",
+        "infoLabel": "This card",
+        "infoExposure": "Our exposure by AI engine. The reference is the average of the competitors mentioned on that engine (top 30 per engine), independent of the page's compare brands. The line is our trend — the data has no round trend of the competitor average.",
+        "infoSov": "Our share of all brand mentions by AI engine. The reference is the average of the competitors mentioned on that engine (top 30 per engine), independent of the page's compare brands. The line is our trend — the data has no round trend of the competitor average.",
+        "chip": "Reference = competitor average",
+        "own": "Us",
+        "avg": "Competitor average (top {n})",
+        "avgShort": "Competitor average",
+        "gapTitle": "Us − competitor average",
+        "trendAria": "{engine}: our {metric} trend"
+      },
+      "type": {
+        "titleExposure": "Exposure by mention type",
+        "titleSov": "Share of voice by mention type",
+        "infoLabel": "What this shows",
+        "info": "Not how often but how AI mentions us (plain mention · recommendation · comparison · definition · final choice), from the type signals the answer analyser puts on each brand mention. One mention can carry several types, so types do not add up. Competition = each brand's share of the type's signals; the bar span = the gap between us and the reference (the leading compare brand, else the competitor average).",
+        "chip": "Type signals",
+        "sub": "Strongest endorsement first — leading in final choice and recommendation matters most.",
+        "viewLabel": "View",
+        "viewCompare": "Competition",
+        "viewOwnExposure": "Our exposure trend",
+        "viewOwnSov": "Our type mix",
+        "unitLabel": "Unit",
+        "unitPct": "Rate",
+        "unitCount": "Count",
+        "avg": "Competitor average (top {n})",
+        "vs": "vs {brand}",
+        "colType": "Type",
+        "colOwnExposure": "Our exposure",
+        "colOwnSov": "Our type mix",
+        "colSignals": "Our type signals",
+        "colValue": "Value",
+        "colDelta": "Change",
+        "colTrend": "Trend",
+        "colGap": "Gap",
+        "signals": "{n}",
+        "footExposure": "Denominator = all answers — of 100 answers, how many named us with that type",
+        "footSov": "Denominator = our type signals (mix across types)",
+        "footCompare": "Share within the type = each brand's part of the type's signals",
+        "dotTip": "{type} · {who}\nShare within the type {value}",
+        "rowAria": "{type}: us {own}, {ref} {refValue}",
+        "aria": "Share within each mention type"
+      },
+      "favor": {
+        "label": "AI favorability",
+        "positive": "Positive signal share",
+        "negative": "Negative signal share",
+        "negativeBasisLabel": "Negative share basis",
+        "posCount": "Our positive signals",
+        "total": "Our sentiment signals",
+        "chipSignal": "Sentiment signals (per mention)",
+        "trendTitle": "Positive and negative share",
+        "trendAria": "Positive and negative signal share trend",
+        "distInfoLabel": "Unit",
+        "distChip": "{n} signals",
+        "distGo": "See prompts",
+        "distAria": "Sentiment mix",
+        "matrixAria": "Sentiment by mention type"
+      },
+      "rank": {
+        "label": "AI first position",
+        "unit": "#{n}",
+        "basis": "vs previous round · negative is better",
+        "ranked": "Ranked answers",
+        "ahead": "Brands named before us",
+        "count": "{n}",
+        "trackTitle": "Average position by brand",
+        "trackNote": "Further left = named earlier",
+        "trackAria": "Average position by brand",
+        "trendTitle": "Average position trend",
+        "trendAria": "Average position trend of us and the compare brands",
+        "tableTitle": "AI first position",
+        "tableInfo": "A longer bar means named earlier. ‘vs us’ positive = the brand is named after us. Trends exist for us and the top 10 brands by mentions only.",
+        "chipTrend": "4-round trend",
+        "ladder": "By rank",
+        "colBar": "Average position bar",
+        "colAvg": "Avg position",
+        "colWow": "WoW",
+        "colGap": "vs us",
+        "unitPrefix": "#",
+        "unitSuffix": ""
+      },
+      "bump": {
+        "title": "Weekly mention rank · share",
+        "infoLabel": "How it is counted",
+        "info": "Each week ranks us and the top 10 brands by mention count. Dot size is the brand's share of all brand mentions that week (share of voice) — the same unit as above. ▲▼ on the right = rank change since the first round. Hover a line or name to isolate it; the same brand lights up across the page.",
+        "chip": "Us + top 10 · {n} rounds",
+        "needTwo": "Rank changes appear once there are two or more rounds",
+        "size": "Dot size = that week's share",
+        "aria": "Weekly brand mention rank",
+        "tip": "{brand} · round {x}\n#{rank} · share {share} · {mentions} mentions",
+        "colRank": "Rank",
+        "colShare": "Share",
+        "colMentions": "Mentions"
+      },
+      "brands": {
+        "title": "Brand mention ranking (top 100)",
+        "viewLabel": "View",
+        "viewMap": "Treemap",
+        "viewTable": "Table",
+        "colDelta": "Change",
+        "deltaInfo": "Share change vs the previous round. Trends exist for us and the top 10 brands by mentions only.",
+        "multiNoDelta": "Multi-mentions have no trend",
+        "rowTip": "Click to see this brand's prompts and real AI answers",
+        "groupOnly": "{group} only",
+        "clearGroup": "Clear group filter",
+        "count": "{shown} brands"
+      },
+      "treemap": {
+        "legend": "Share change (vs previous round)",
+        "steps": "−1.0pp or less,−0.5,−0.2,within ±0.2,+0.2,+0.5,+1.0pp or more",
+        "na": "No trend",
+        "all": "All groups",
+        "drill": "{n} brands",
+        "nonAuto": "Non-automotive",
+        "fold": "Others",
+        "toTable": "Show this group in the table",
+        "partial": "Only some brands have a trend, so the group change is partial",
+        "aria": "Brand mentions by parent group",
+        "back": "Back to all groups",
+        "groupTip": "{group} · share {share}\nchange {delta} · {n} brands",
+        "brandTip": "{brand} · share {share}\nchange {delta} · {mentions} mentions",
+        "noDeltaTitle": "No change data",
+        "groupName": "{name} Group"
+      },
+      "drawer": {
+        "close": "Close",
+        "subtitle": "Share {share} · {mentions} mentions · mention rate {rate}",
+        "answersTitle": "{n} answers",
+        "openAnswer": "View answer",
+        "back": "Back to prompts",
+        "rankLine": "#{rank} by mentions · current filters"
+      }
+    },
+    "citation": {
+      "title": "Citation",
+      "beta": "Beta",
+      "periodRange": "Period total {from} ~ {to}",
+      "states": {
+        "noResultTitle": "No citations for these filters",
+        "noResultDesc": "No AI answer citations match the selected filters. Narrow fewer filters or reset them.",
+        "reset": "Reset filters"
+      },
+      "sec": {
+        "overview": "Overview",
+        "overviewDesc": "Size and quality of citations — the official share and the prompts that did or did not cite our official URLs.",
+        "comp": "Source mix",
+        "compDesc": "Which kinds of sources AI answers rely on — click a row to look at that source only, across the page.",
+        "mix": "Context",
+        "mixDesc": "Which AI engines, kinds of mention and answer tones cite what.",
+        "dom": "Domains",
+        "domDesc": "Which domains are cited and how often — click a domain to go down to its URLs, prompts and the real answers."
+      },
+      "density": {
+        "label": "Density",
+        "normal": "Default",
+        "dense": "Compact"
+      },
+      "delta": {
+        "basisPrev": "vs the previous round ({date})",
+        "basisPrevNoDate": "vs the previous round"
+      },
+      "summary": {
+        "title": "This round at a glance",
+        "titlePeriod": "The selected period at a glance",
+        "howLabel": "How it is built",
+        "how": "A rule-based summary of the numbers on this page (no new data). It ranks the standing of Official (HMG), the source that moved most, the official-citation gaps by engine and mention type, prompts that never cite our official URLs (the opportunity), engine and type source preferences and sharp domain-rank changes, and picks four.",
+        "chipSnapshot": "As of {date} · vs the previous round",
+        "chipPeriod": "Cumulative over the selected period",
+        "headline": "<b>Official (HMG) share {hmg}</b>{delta} · <b>{rank}</b> among source categories, dealer & marketplace {dealer}{prompts}.",
+        "headlineNoHmg": "The source filter leaves Official (HMG) out — dealer & marketplace {dealer}, {total} citations, {domains} cited domains.",
+        "rank": "#{rank}",
+        "prompts": ", prompts citing our official URLs {owned} / not citing {uncited}",
+        "empty": "No change worth summarizing"
+      },
+      "find": {
+        "noDelta": "No previous round to compare with",
+        "deltaDetail": "Official (HMG) share {delta} vs the previous round",
+        "tagEngine": "AI engine",
+        "tagType": "Mention type",
+        "standingLead": {
+          "tag": "Source mix",
+          "title": "Official (HMG) is the most cited source — {gap}pp ahead of {rival}"
+        },
+        "standingTrail": {
+          "tag": "Source mix",
+          "title": "Official (HMG) share ranks #{rank} at {share} — {leader} leads at {leaderShare}"
+        },
+        "mover": {
+          "tag": "Change",
+          "title": "{category} share {delta} — the biggest move"
+        },
+        "moverDetail": "vs the previous round · now {share}",
+        "engineGap": {
+          "title": "{low} cites Official (HMG) at {share} — {gap}pp below {high}"
+        },
+        "engineGapDetail": "From the source preference matrix",
+        "typeGap": {
+          "titleLow": "Recommendation answers cite Official (HMG) at {share} — {gap}pp below plain mentions",
+          "titleHigh": "Recommendation answers cite Official (HMG) more ({share})"
+        },
+        "typeGapDetail": "The stronger the purchase intent, the more it matters that answers rest on official sources",
+        "opportunity": {
+          "tag": "Opportunity",
+          "title": "{n} prompts never cite our official URLs ({share}%)"
+        },
+        "opportunityDetail": "These are the topics to cover with official content",
+        "skew": {
+          "title": "{col} cites {category} {gap} vs all"
+        },
+        "skewDetail": "{share} · all {base} — source preference matrix",
+        "climb": {
+          "tag": "Rank change",
+          "title": "{domain} moved from #{from} to #{to}"
+        },
+        "climbDetail": "Last {weeks} weeks · among the top {n} domains"
+      },
+      "lens": {
+        "label": "Citation KPIs",
+        "total": "{n} citations",
+        "domains": "{n} cited domains",
+        "basisPeriod": "Cumulative over the selected period",
+        "basisSnapshot": "Snapshot as of {date}",
+        "defLabel": "Definition",
+        "formulaLabel": "Formula",
+        "unit": "",
+        "open": "See prompts",
+        "hmg": {
+          "name": "Official (HMG) share",
+          "question": "How much AI answers rest on HMG official sites",
+          "def": "The share of all citations classified as HMG group official sites. Same value as Official (HMG) in the source mix below; the change uses the Overview card's basis (previous round).",
+          "formula": "Official (HMG) citations ÷ all citations × 100 (citations, not domains)",
+          "excluded": "The source filter leaves Official (HMG) out"
+        },
+        "dealer": {
+          "name": "Dealer & marketplace share",
+          "question": "How much sales channels are cited",
+          "def": "The share of all citations in the Dealer & Marketplace category. The change is vs the previous round.",
+          "formula": "Dealer & marketplace citations ÷ all citations × 100",
+          "excluded": "The source filter leaves Dealer & Marketplace out"
+        },
+        "owned": {
+          "name": "Prompts citing our official URLs",
+          "question": "Prompts that cited an official URL of ours at least once"
+        },
+        "uncited": {
+          "name": "Prompts not citing our official URLs",
+          "question": "Prompts that never did — the opportunity"
+        },
+        "split": {
+          "noOwnCategory": "Counted only while Official (HMG) is in the source filter",
+          "notComputed": "Not computed while a source filter is on",
+          "noOwned": "No prompt cited an official URL of ours"
+        }
+      },
+      "comp": {
+        "title": "Source category mix",
+        "infoLabel": "How to read",
+        "info": "Citations of AI answers grouped by source category — share and count (citations, not domains). Change = vs the previous round (pp), drawn as a bar around 0 on one axis for every row (the largest change on screen, at least ±{cap}pp), so bar lengths compare. Blue = up, orange = down (direction, not good or bad). Trend = weekly share — wobbles under {span}pp are drawn nearly flat so only real trends tilt. Hover to see the category's top 3 domains and their share.",
+        "chipSnapshot": "Snapshot as of the measurement date",
+        "chipPeriod": "Cumulative over the selected period",
+        "chipDelta": "Change = vs the previous round ({date})",
+        "sub": "Click a row to filter by that category (several allowed) — the whole page then looks at that source only.",
+        "empty": "No cited sources",
+        "col": {
+          "category": "Category",
+          "share": "Share",
+          "prev": "Previous round",
+          "citations": "Citations",
+          "pct": "Share",
+          "delta": "Change",
+          "trend": "Weekly trend",
+          "pctCount": "Share · citations",
+          "deltaAxis": "vs previous round"
+        },
+        "tipCitations": "{n} citations",
+        "tipTop": "Top domains (within this category): {list}",
+        "tipToggle": "Click to filter by this category (again to clear)",
+        "up": "Up",
+        "down": "Down",
+        "axisNote": "Change bars share one axis (at least ±{cap}pp) · trends flatten wobbles under {span}pp",
+        "tipDelta": "change {delta} (previous round {prev})"
+      },
+      "matrix": {
+        "title": "Source preference matrix",
+        "infoLabel": "How to read",
+        "infoEngine": "The category mix of the sources each AI engine cited (each column sums to 100%). Number = that engine's share, colour = the gap to the All column — blue sources are cited more than average by that engine, orange less. All = the sum of the engines in the table. Columns with fewer than {min} citations stay uncoloured: the gap may be chance.",
+        "infoType": "The category mix of the sources cited by answers whose mention of us carries that type signal (final choice · recommendation · comparison · definition · mention; each column sums to 100%). An answer with several signals counts in each; All = the sum of the types in the table. Colours as in the engine view; columns with fewer than {min} citations stay uncoloured.",
+        "chip": "Colour = gap vs all",
+        "axisLabel": "Columns",
+        "axisEngine": "AI engine",
+        "axisType": "Mention type",
+        "subEngine": "Blue = sources an engine relies on more than average, orange = less — an engine with an orange Official (HMG) row is the one to work on.",
+        "subType": "In endorsement order (final choice → mention) — the colour of the Official (HMG) row in recommendation and final-choice answers matters most.",
+        "colCategory": "Source category",
+        "colAll": "All",
+        "n": "{n}",
+        "csvGap": "gap vs all (pp)",
+        "tipShare": "share {share} · all {base} ({gap})",
+        "tipThin": "{n} citations — under {min}, left uncoloured",
+        "single": "Only one column — nothing to compare. Try the other view or widen the filters.",
+        "oneSource": "One source picked, so every column is 100% — the cells show citation counts.",
+        "less": "Cited less than all",
+        "more": "more",
+        "cap": "Strongest at ±{cap}pp · grey = no gap",
+        "thin": "faded column = under {min} citations"
+      },
+      "tone": {
+        "title": "Citations by answer tone",
+        "infoLabel": "Tone",
+        "info": "Tone = whichever is larger in an answer: the positive or the negative signals on our mention (ties excluded). URLs count distinct URLs.",
+        "chipApi": "Answer-level tone · source filter applied",
+        "chipLegacy": "Answer-level tone · all citations, regardless of the source filter",
+        "subtitle": "The sources negative answers rest on show which content to respond with.",
+        "positive": {
+          "name": "URLs cited in positive answers"
+        },
+        "negative": {
+          "name": "URLs cited in negative answers"
+        },
+        "urlUnit": "URLs",
+        "sub": "{citations} citations · {answers} answers",
+        "open": "See URLs",
+        "none": "No URLs"
+      },
+      "bump": {
+        "title": "Weekly domain citation rank",
+        "infoLabel": "How to read",
+        "info": "Each week, the top domains ranked by citations. Coloured = Official (HMG) domains (navy) and the 3 domains whose rank changed most since the first week; the rest is grey — hover a line or a legend item to isolate it, click to open the domain. Right = last week's rank · citations · rank change (▲▼).",
+        "chip": "Top {n} domains · {weeks} weeks",
+        "colRank": "rank",
+        "colCitations": "citations",
+        "colDomain": "Domain",
+        "needTwo": "Rank changes show once two or more weeks are measured",
+        "twin": "#{rank} · {n}",
+        "legendOwn": "Official (HMG) domains",
+        "legendRest": "Other domains",
+        "aria": "Bump chart of weekly domain citation ranks",
+        "tip": "{x} · {domain} — #{rank} · {n} citations"
+      },
+      "table": {
+        "title": "Domain citation ranking",
+        "infoLabel": "How to read",
+        "info": "The most cited domains. Click a row to go down to its cited URLs, prompts and the real answers. To see how concentrated a category is, hover its row in the source mix or filter by category here.",
+        "chip": "Top {n} · by citations",
+        "defLabel": "Definition",
+        "formulaLabel": "Formula",
+        "search": "Search domains",
+        "category": "Category",
+        "categoryLabel": "Filter by category",
+        "categoryAll": "All",
+        "matches": "{n} matches",
+        "showFirst": "Show the first {n}",
+        "showAll": "Show all {n}"
+      },
+      "drawer": {
+        "close": "Close",
+        "tabs": "Domain detail",
+        "urls": "Cited URLs",
+        "prompts": "Prompts",
+        "noAnswer": "No linked answer"
+      },
+      "sub": {
+        "ownedTitle": "Prompts citing our official URLs",
+        "ownedSub": "Prompts whose answers rested on an official URL of ours at least once — the strong areas. Click a prompt to open the real answers.",
+        "uncitedTitle": "Prompts not citing our official URLs",
+        "uncitedSub": "Prompts whose answers never rested on an official URL of ours — the opportunity for official content. Click a prompt to open the real answers.",
+        "positiveTitle": "URLs cited in positive answers",
+        "positiveSub": "URLs that answers leaning positive on us rested on — sources to keep and spread.",
+        "negativeTitle": "URLs cited in negative answers",
+        "negativeSub": "URLs that answers leaning negative on us rested on — sources that need a response."
+      }
     }
   }
 }

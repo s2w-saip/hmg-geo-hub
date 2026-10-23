@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Suspense, createContext, use, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { Bookmark, CalendarDays, ChevronLeft, Link2, Loader2, PanelLeft } from "lucide-react";
@@ -8,6 +8,7 @@ import {
   ENGINE_LABEL,
   LABELED_VALUES,
   buildCommitParams,
+  competitorAxisEnabled,
   isoDay,
   resolveTimeRangeView,
   type DimensionGroup,
@@ -17,6 +18,7 @@ import { encodeTimeRange, splitFilterValues } from "@/components/dash/filter-enc
 import { kstToday } from "@/components/dash/selectable-dates";
 import { isRegionSelected, toggleRhqRegion } from "@/components/dash/rhq-region-toggle";
 import { geoCodeLabel } from "@/lib/geo-catalog/geo-code-label";
+import { citationCategorySlug } from "@/lib/citation-categorizer/taxonomy";
 import { rhqLabel } from "@/lib/rhq";
 import {
   RnButton,
@@ -53,6 +55,11 @@ import { RnSavedFiltersSection, sameQuery, useSavedFilters, type SavedFilter } f
 const SEARCH_MIN = 8; // the app's FacetedFilter shows its search box from 8 options
 
 export interface OverviewFilterProps extends OverviewPanelInput {
+  /**
+   * 경쟁사 축 옵션(인용 도메인, stage "citation") — the original passes them as a promise from the
+   * heavy citation read so only that axis waits (analysis-filter-bar.tsx competitorOptions).
+   */
+  competitorOptions?: Promise<string[]>;
   collectionStartDay?: string | null;
   latestAnchorDay?: string | null;
   selectableDates?: string[];
@@ -96,6 +103,7 @@ export function RnOverviewFilters({ props, storageKey, children }: { props: Over
   const tf = useTranslations("dashboard.filters");
   const tTime = useTranslations("dashboard.filters.timeRange");
   const tr = useTranslations("renewal.filters");
+  const tCat = useTranslations("citationCategories");
   const locale = useLocale();
   const sp = useSearchParams();
   const { commit } = useRnFilterRuntime();
@@ -212,9 +220,15 @@ export function RnOverviewFilters({ props, storageKey, children }: { props: Over
         }
       }
       if (g === "engine") return ENGINE_LABEL[v] ?? v;
+      if (g === "source") {
+        const slug = citationCategorySlug(v);
+        return slug ? tCat(slug) : v;
+      }
+      // 경쟁사 values are domains — shown as they are (the app's facet does the same)
+      if (g === "competitor") return v;
       return LABELED_VALUES.has(v) ? tf(`value.${v}` as "value.branded") : v;
     },
-    [langFmt, locale, tf],
+    [langFmt, locale, tCat, tf],
   );
   const regionLabel = useCallback((id: string) => rhqLabel(id, locale === "en" ? "en" : "ko") ?? id, [locale]);
   const timeView = useTimeView(props, draft);
@@ -331,7 +345,7 @@ export function RnOverviewFilterPanel({ onCollapse: onCollapseProp, defaultOpen 
   const split = useRnSplit();
   const onCollapse = onCollapseProp ?? split.collapse;
   const ctx = useFilters();
-  const { model, draft, change, saved, activeId, setActiveId, filterQuery, applyQuery } = ctx;
+  const { model, draft, change, saved, activeId, setActiveId, filterQuery, applyQuery, props } = ctx;
   const tf = useTranslations("dashboard.filters");
   const tr = useTranslations("renewal.filters");
   const { summarize } = useSummaries();
@@ -381,13 +395,22 @@ export function RnOverviewFilterPanel({ onCollapse: onCollapseProp, defaultOpen 
       {model.sections.map((s) => (
         <div key={s.id} data-rn-section={s.id}>
           <RnPanelGroupLabel>{tf(`section.${s.id}` as "section.dimension")}</RnPanelGroupLabel>
-          {s.axes.map((axis) => (
-            <AxisSection key={axis} axis={axis} open={open[axis] ?? false} onToggle={() => setOpen((o) => ({ ...o, [axis]: !(o[axis] ?? false) }))} />
-          ))}
+          {s.axes.map((axis) => {
+            const toggle = () => setOpen((o) => ({ ...o, [axis]: !(o[axis] ?? false) }));
+            if (axis === "competitor" && props.competitorOptions) {
+              return (
+                <Suspense key={axis} fallback={<AxisSection axis={axis} open={false} onToggle={toggle} options={[]} />}>
+                  <CompetitorSection options={props.competitorOptions} open={open[axis] ?? false} onToggle={toggle} />
+                </Suspense>
+              );
+            }
+            return <AxisSection key={axis} axis={axis} open={open[axis] ?? false} onToggle={toggle} />;
+          })}
         </div>
       ))}
       <div className="flex flex-col gap-1 px-4.5 pt-3 pb-3.5 text-rn-12 text-rn-muted">
-        {count === 0 ? <span>{tf("defaultScopeHint")}</span> : null}
+        {/* the app's hint says "최근 7일"; ACR reads the latest round when no period is picked */}
+        {count === 0 ? <span>{props.stage === "acr" || props.stage === "mention" || props.stage === "citation" ? tr("defaultScopeHintSnapshot") : tf("defaultScopeHint")}</span> : null}
       </div>
     </aside>
   );
@@ -412,10 +435,26 @@ export function RnOverviewFilterRail({ onExpand: onExpandProp }: { onExpand?: ()
   );
 }
 
-function AxisSection({ axis, open, onToggle }: { axis: PanelAxis; open: boolean; onToggle: () => void }) {
+/**
+ * 경쟁사 axis (citation): the app's rule (dimension-filter-panel renderGroup "competitor") —
+ * options are the cited 공식(경쟁사) domains; the axis is disabled with a hint while the 출처
+ * selection leaves 공식(경쟁사) out; empty options remove the axis only when the APPLIED 출처 allows
+ * competitors (a user-excluded axis stays visible, disabled, so the reason can be read).
+ */
+function CompetitorSection({ options: pending, open, onToggle }: { options: Promise<string[]>; open: boolean; onToggle: () => void }) {
+  const options = use(pending);
+  const { draft } = useFilters();
+  const sp = useSearchParams();
+  const applied = splitFilterValues(sp.get("source"));
+  if (options.length === 0 && competitorAxisEnabled(applied)) return null;
+  return <AxisSection axis="competitor" open={open} onToggle={onToggle} options={options} disabled={!competitorAxisEnabled(draft.source)} />;
+}
+
+function AxisSection({ axis, open, onToggle, options, disabled }: { axis: PanelAxis; open: boolean; onToggle: () => void; options?: readonly string[]; disabled?: boolean }) {
   const ctx = useFilters();
   const { model, draft, change, regionLabel } = ctx;
   const tf = useTranslations("dashboard.filters");
+  const tr = useTranslations("renewal.filters");
   const title = axis === "rhqRegion" ? tf("group.rhqRegion") : tf(`group.${axis}` as "group.geography");
   const selectedRegions = axis === "rhqRegion" ? model.regions.filter((id) => isRegionSelected(id, draft.geography ?? [], model.countryToRhq)) : [];
   const picked = axis === "rhqRegion" ? selectedRegions.length : (draft[axis]?.length ?? 0);
@@ -427,7 +466,7 @@ function AxisSection({ axis, open, onToggle }: { axis: PanelAxis; open: boolean;
     } else change((d) => ({ draft: normalizeDraft(clearGroup(d, axis), axis, ctx.props.catalogRows) }));
   };
   return (
-    <RnPanelSection title={title} open={open} onToggle={onToggle} badge={axis === "time" ? undefined : picked} summary={timeSummary} focusKey={`s:${axis}`}>
+    <RnPanelSection title={title} open={open} onToggle={onToggle} badge={axis === "time" ? undefined : picked} summary={timeSummary} note={disabled ? tr("axisNeedsCompetitor") : undefined} focusKey={`s:${axis}`}>
       {axis === "time" ? (
         <TimeBody />
       ) : axis === "rhqRegion" ? (
@@ -449,7 +488,7 @@ function AxisSection({ axis, open, onToggle }: { axis: PanelAxis; open: boolean;
           ))}
         </div>
       ) : (
-        <ValueList group={axis} />
+        <ValueList group={axis} options={options} disabled={disabled} />
       )}
       {picked > 0 || (axis === "time" && draft.time?.length) ? (
         <RnTextButton className="mx-2.5 mt-1.5" onClick={clear}>
@@ -460,19 +499,19 @@ function AxisSection({ axis, open, onToggle }: { axis: PanelAxis; open: boolean;
   );
 }
 
-function ValueList({ group }: { group: DimensionGroup }) {
+function ValueList({ group, options: given, disabled = false }: { group: DimensionGroup; options?: readonly string[]; disabled?: boolean }) {
   const ctx = useFilters();
   const { model, draft, nav, change, valueLabel, regionLabel, props } = ctx;
   const tf = useTranslations("dashboard.filters");
   const tr = useTranslations("renewal.filters");
   const [q, setQ] = useState("");
-  const options = axisOptions(model, props, draft, group, nav);
+  const options = given ?? axisOptions(model, props, draft, group, nav);
   const query = q.trim().toLowerCase();
   const shown = query ? options.filter((o) => o.toLowerCase().includes(query) || valueLabel(group, o).toLowerCase().includes(query)) : options;
   const selected = draft[group] ?? [];
   const toggle = (v: string) => change((d) => ({ draft: normalizeDraft(toggleValue(d, group, v), group, props.catalogRows) }));
   const row = (v: string) => (
-    <RnCheckRow key={v} checked={selected.includes(v)} label={valueLabel(group, v)} focusKey={`c:${group}:${v}`} onToggle={() => toggle(v)} />
+    <RnCheckRow key={v} checked={selected.includes(v)} label={valueLabel(group, v)} focusKey={`c:${group}:${v}`} onToggle={() => toggle(v)} disabled={disabled} title={disabled ? tf("competitorNeedsOfficialCompetitor") : undefined} />
   );
   let list: ReactNode;
   if (shown.length === 0) list = <p className="m-0 px-2.5 py-2 text-rn-12 text-rn-muted">—</p>;
@@ -514,6 +553,7 @@ function ValueList({ group }: { group: DimensionGroup }) {
   } else list = shown.map(row);
   return (
     <>
+      {disabled ? <p className="m-0 px-2.5 pb-1.5 text-rn-12 text-rn-muted">{tf("competitorNeedsOfficialCompetitor")}</p> : null}
       {options.length >= SEARCH_MIN ? (
         <RnSearchField className="mx-0.5 mb-1.5" value={q} onChange={setQ} placeholder={tf("searchPlaceholder")} label={tf("searchPlaceholder")} />
       ) : null}
@@ -673,6 +713,25 @@ export function RnOverviewApplied() {
         </RnNote>
       ) : null}
     </>
+  );
+}
+
+/** Clears every filter (with the panel's undo toast) — for "no result" cards in the page body. */
+export function useRnFilterReset(): () => void {
+  const { change } = useFilters();
+  const tr = useTranslations("renewal.filters");
+  return useCallback(() => change(() => ({ draft: {}, nav: [] }), { undoMsg: tr("resetDone") }), [change, tr]);
+}
+
+/**
+ * Toggles one value of an axis from outside the panel (a chart row, e.g. 출처 카테고리) through
+ * the panel's own rules — normalize (경쟁사 cleared when 공식(경쟁사) leaves the 출처) and apply.
+ */
+export function useRnFilterToggle(): (group: DimensionGroup, value: string) => void {
+  const { change, props } = useFilters();
+  return useCallback(
+    (group: DimensionGroup, value: string) => change((d) => ({ draft: normalizeDraft(toggleValue(d, group, value), group, props.catalogRows) })),
+    [change, props.catalogRows],
   );
 }
 

@@ -108,14 +108,17 @@ export default async function RenewalDashboardPage({
             <RnPageHeader
               title={t("overview.title")}
               meta={
-                <RnPill>
-                  <CalendarDays className="size-3 text-rn-muted" aria-hidden />
-                  {t("overview.cadence")}
-                  <span aria-hidden className="h-3 w-px bg-rn-line-2" />
-                  <Suspense fallback={<RnSkeleton className="h-3 w-24" />}>
-                    <LastMeasured asOf={asOf} />
-                  </Suspense>
-                </RnPill>
+                <>
+                  <span className="w-full text-rn-13 text-rn-muted">{t("subtitle")}</span>
+                  <RnPill>
+                    <CalendarDays className="size-3 text-rn-muted" aria-hidden />
+                    {t("overview.cadence")}
+                    <span aria-hidden className="h-3 w-px bg-rn-line-2" />
+                    <Suspense fallback={<RnSkeleton className="h-3 w-24" />}>
+                      <LastMeasured asOf={asOf} />
+                    </Suspense>
+                  </RnPill>
+                </>
               }
               actions={<RnCopyLinkButton />}
             />
@@ -200,8 +203,7 @@ async function RenewalOverview({
   const props = await filterOptions(scope, filters, locale);
   return (
     <RnOverviewFilters props={props} storageKey={`rn:saved-filters:v1:overview:${userId}`}>
-      <RnFilterSplit panel={<RnOverviewFilterPanel />} rail={<RnOverviewFilterRail />}>
-        {header}
+      <RnFilterSplit header={header} panel={<RnOverviewFilterPanel />} rail={<RnOverviewFilterRail />}>
         <RnOverviewApplied />
         <RnBusyScope className="flex flex-col gap-4">
           <Suspense fallback={<BodySkeleton />}>
@@ -319,12 +321,14 @@ function qsFrom(sp: Record<string, string | string[] | undefined>): string {
 
 function PageSkeleton({ title }: { title: string }) {
   return (
-    <div className="grid items-start gap-5 grid-cols-[52px_minmax(0,1fr)] min-[1360px]:grid-cols-[296px_minmax(0,1fr)]">
-      <RnCard className="hidden h-[480px] min-[1360px]:block" />
-      <RnCard className="h-24 min-[1360px]:hidden" />
-      <div className="flex min-w-0 flex-col gap-4">
-        <RnPageHeader title={title} />
-        <BodySkeleton />
+    <div className="flex flex-col gap-5">
+      <RnPageHeader title={title} />
+      <div className="grid items-start gap-5 grid-cols-[52px_minmax(0,1fr)] min-[1360px]:grid-cols-[296px_minmax(0,1fr)]">
+        <RnCard className="hidden h-[480px] min-[1360px]:block" />
+        <RnCard className="h-24 min-[1360px]:hidden" />
+        <div className="flex min-w-0 flex-col gap-4">
+          <BodySkeleton />
+        </div>
       </div>
     </div>
   );

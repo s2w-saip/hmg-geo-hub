@@ -1,14 +1,18 @@
 "use client";
 
-// Renewal Overview body — KPI scoreboard (5 rows) driving the market tiles, the brand
-// comparison and the 권역 › 국가 table. Every number is the original /dashboard's:
+// Renewal Overview body — "at a glance" (2026-10-22, replaces the KPI pick that drove the
+// cards below: it was never read as a switch). Three cards, no KPI selection:
+//   KPI 5종        read-only: value, Δ, spark, standing among the card's competitors, 상세
+//   브랜드 비교    brands × 5 KPIs (당사 + every KPI's compared competitors)
+//   시장별 현황    권역 › 국가 × 5 KPIs, heat cells + gap to the market's biggest competitor
+// Every number is the original /dashboard's:
 //   value / pending   overviewCardState (the card rule)
-//   Δ                 applyTrendDeltas result, or the period-compare chip when a period
-//                     is chosen (selectPeriodResult + periodChip, same as PeriodDeltaSlot)
-//   trend             sparkPoints (last 5 buckets of the card trend)
+//   Δ                 KPI row: applyTrendDeltas result, or the period-compare chip when a
+//                     period is chosen (selectPeriodResult + periodChip, as PeriodDeltaSlot);
+//                     brand table: the trend Δ on every row (one basis per table)
+//   trend             sparkPoints (last 5 buckets of the card trend), y = sparkYDomain
 //   competitors       competitorMinis / competitorCitationShares + competitorDeltas
 //   markets           LiveGeo (metricValue, metrics[k].rival, answers)
-// Only the layout differs; the per-country Δ column is left out (no data source).
 
 import { Suspense, use, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
@@ -35,6 +39,7 @@ import {
   competitorMinis,
   detailHref,
   sparkPoints,
+  sparkYDomain,
   type CompetitorMini,
   type OverviewCompetitorSources,
 } from "@/app/[locale]/(dash)/dashboard/_components/overview-kpi-cards";
@@ -46,8 +51,22 @@ import { selectPeriodResult } from "@/components/dash/period-delta-slot";
 import { compareMetricForKpiKey } from "@/components/dash/period-delta-metrics";
 import { labelKeyOf, periodCaption, periodChip, periodChipText, type PeriodLabelCtx } from "@/lib/kpi/period-compare-view";
 import type { CompareResult } from "@/lib/kpi/period-compare";
+import { formatTrendBucketMD, trendBucketDisplays } from "@/lib/as-of-date";
 import { countryName } from "@/lib/geo-catalog";
 import { rhqLabel } from "@/lib/rhq";
+import {
+  barWidth,
+  brandMatrix,
+  gapOf,
+  isRank,
+  marketColumns,
+  marketRival,
+  rivalValue,
+  sortCountries,
+  standing,
+  type MarketColumn,
+  type MarketSort,
+} from "./overview-model";
 
 export interface OverviewDeferredData {
   deltas: Promise<KpiSummary[]>;
@@ -55,9 +74,8 @@ export interface OverviewDeferredData {
   competitors: Promise<OverviewCompetitorSources | null>;
 }
 
-const isRank = (k: OverviewKpiKey) => k === "position";
 const infoKeyOf = (k: OverviewKpiKey) => (k === "citationShare" ? "citationShareGlobal" : k);
-const BINS = ["bg-rn-navy-25", "bg-rn-navy-50", "bg-rn-sky", "bg-rn-navy-500", "bg-rn-navy"] as const;
+const HEAT = ["bg-rn-heat-0", "bg-rn-heat-1", "bg-rn-heat-2", "bg-rn-heat-3", "bg-rn-heat-4"] as const;
 
 function useFormat() {
   const tUnit = useTranslations("metricUnit");
@@ -89,32 +107,19 @@ export function RnOverviewBody({
   ownLabel: string;
   qs: string;
 }) {
-  const [focus, setFocus] = useState<OverviewKpiKey>("visibility");
-  const [hi, setHi] = useState<string | null>(null);
   const byKey = useMemo(() => new Map(kpis.map((k) => [k.key, k])), [kpis]);
-  const brands = (
-    <Suspense fallback={<CardSkeleton rows={5} />}>
-      <BrandCompare focus={focus} kpi={byKey.get(focus)} deferred={deferred} periodCompare={periodCompare} ownLabel={ownLabel} />
-    </Suspense>
-  );
   return (
     <>
-      <KpiBoard byKey={byKey} focus={focus} onFocus={setFocus} deferred={deferred} periodCompare={periodCompare} periodDays={periodDays} periodLabelCtx={periodLabelCtx} qs={qs} />
+      <KpiRow byKey={byKey} deferred={deferred} periodCompare={periodCompare} periodDays={periodDays} periodLabelCtx={periodLabelCtx} qs={qs} />
+      {/* brand comparison before the (long) market table so it is not buried */}
+      <Suspense fallback={<CardSkeleton rows={5} />}>
+        <BrandMatrix byKey={byKey} deferred={deferred} ownLabel={ownLabel} />
+      </Suspense>
       {geo ? (
-        <>
-          <div className="grid grid-cols-1 gap-4 @min-[1100px]/rncontent:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-            <Suspense fallback={<CardSkeleton rows={6} />}>
-              <MarketTiles geo={geo} focus={focus} hi={hi} onHi={setHi} />
-            </Suspense>
-            {brands}
-          </div>
-          <Suspense fallback={<CardSkeleton rows={8} />}>
-            <MarketTable geo={geo} focus={focus} hi={hi} onHi={setHi} />
-          </Suspense>
-        </>
-      ) : (
-        brands
-      )}
+        <Suspense fallback={<CardSkeleton rows={8} />}>
+          <MarketMatrix geo={geo} />
+        </Suspense>
+      ) : null}
     </>
   );
 }
@@ -132,14 +137,17 @@ function CardSkeleton({ rows }: { rows: number }) {
   );
 }
 
-// ─── KPI scoreboard ─────────────────────────────────────────────────────────
+/** The card's competitor row, kpi-wise (citation share folds official competitor domains). */
+function minisFor(src: OverviewCompetitorSources | null, k: OverviewKpiKey): CompetitorMini[] {
+  if (k === "citationShare") return competitorCitationShares(src?.citationDomains ?? null, undefined, src?.citationTotal ?? null);
+  const deltas = competitorDeltas(src, k);
+  return competitorMinis(src?.brands ?? [], k).map((m) => ({ ...m, delta: deltas.get(m.brand) ?? null }));
+}
 
-const BOARD_COLS = "grid-cols-[minmax(150px,1.3fr)_100px_96px_minmax(88px,1fr)_minmax(120px,1fr)_32px] @max-[700px]/rnboard:grid-cols-[minmax(150px,1.3fr)_100px_96px_minmax(88px,1fr)_32px]";
+// ─── KPI 5종 (read-only) ────────────────────────────────────────────────────
 
-function KpiBoard({
+function KpiRow({
   byKey,
-  focus,
-  onFocus,
   deferred,
   periodCompare,
   periodDays,
@@ -147,8 +155,6 @@ function KpiBoard({
   qs,
 }: {
   byKey: Map<string, KpiSummary>;
-  focus: OverviewKpiKey;
-  onFocus: (k: OverviewKpiKey) => void;
   deferred: OverviewDeferredData;
   periodCompare: readonly CompareResult[] | null;
   periodDays?: number;
@@ -160,7 +166,7 @@ function KpiBoard({
   const tP = useTranslations("periodCompare");
   const tKpi = useTranslations("dashboard.kpi");
   const locale = useLocale();
-  // Column title = what the Δ compares against (the card's label rule).
+  // What the Δ compares against (the card's label rule).
   const sample = periodCompare?.[0] ?? null;
   const presetKey = sample ? labelKeyOf({ days: periodDays ?? 0, ...periodLabelCtx }) : null;
   const compareTitle = sample
@@ -168,92 +174,61 @@ function KpiBoard({
       ? tP(`label.${presetKey}` as "label.weekly")
       : tP("window", { curCycles: sample.cyclesCur, prevCycles: sample.cyclesPrev })
     : tO("compare");
-  const move = (dir: 1 | -1) => {
-    const i = OVERVIEW_KPI_KEYS.indexOf(focus);
-    const next = OVERVIEW_KPI_KEYS[(i + dir + OVERVIEW_KPI_KEYS.length) % OVERVIEW_KPI_KEYS.length];
-    onFocus(next);
-    requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-rn-kpi="${next}"]`)?.focus());
-  };
   return (
-    <RnCard className="@container/rnboard" aria-label={t("boardTitle")}>
-      <RnCardHeader title={t("boardTitle")} hint={t("boardHint")} />
-      <div className={cx("grid h-[34px] items-center gap-3 border-y border-rn-line pr-4 pl-6 text-rn-12 font-semibold text-rn-muted", BOARD_COLS)}>
-        <span>{t("colKpi")}</span>
-        <span>{t("colValue")}</span>
-        <span>{compareTitle}</span>
-        <span>{t("colTrend")}</span>
-        <span className="@max-[700px]/rnboard:hidden">{t("colTopRival")}</span>
-        <span />
-      </div>
-      <div role="radiogroup" aria-label={t("kpiPicker")}>
+    <RnCard className="@container/rnkpi" aria-label={t("kpiTitle")}>
+      <RnCardHeader
+        title={t("kpiTitle")}
+        hint={
+          <>
+            {t("kpiHintDelta", { compare: compareTitle })}
+            <Suspense fallback={null}>
+              <TrendCount trend={deferred.trend} />
+            </Suspense>
+          </>
+        }
+      />
+      <div className="grid grid-cols-5 px-2 pb-4 @max-[600px]/rnkpi:grid-cols-3 @max-[600px]/rnkpi:gap-y-3.5">
         {OVERVIEW_KPI_KEYS.map((key, i) => {
           const state = overviewCardState(byKey.get(key));
-          const on = key === focus;
           const name = tKpi(`name.${key}`);
           return (
             <div
               key={key}
-              role="radio"
-              aria-checked={on}
-              tabIndex={on ? 0 : -1}
               data-rn-kpi={key}
-              onClick={() => onFocus(key)}
-              onKeyDown={(e) => {
-                if (e.key === "ArrowDown" || e.key === "ArrowRight") {
-                  e.preventDefault();
-                  move(1);
-                } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
-                  e.preventDefault();
-                  move(-1);
-                } else if (e.key === " " || e.key === "Enter") {
-                  e.preventDefault();
-                  onFocus(key);
-                }
-              }}
-              className={cx(
-                "relative grid min-h-[72px] cursor-pointer items-center gap-3 pr-4 pl-6 outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rn-sky",
-                BOARD_COLS,
-                i < OVERVIEW_KPI_KEYS.length - 1 && "border-b border-rn-line",
-                i === OVERVIEW_KPI_KEYS.length - 1 && "rounded-b-rn-card",
-                on ? "bg-rn-navy text-white before:absolute before:inset-y-0 before:left-0 before:w-1 before:bg-rn-sky" : "text-rn-ink hover:bg-rn-navy-25",
-              )}
+              className="flex min-w-0 flex-col gap-1.5 border-l border-rn-line px-3.5 py-1 first:border-l-0 @max-[600px]/rnkpi:nth-[3n+1]:border-l-0"
             >
-              <div className="flex min-w-0 flex-col gap-0.5 py-3">
-                <b className="inline-flex items-center gap-1.5 text-rn-15 font-bold">
-                  {name}
-                  <RnInfoTip label={t("infoLabel", { name })}>
-                    <RnInfoTipItem label={t("definition")}>{tKpi(`definition.${infoKeyOf(key)}` as "definition.visibility")}</RnInfoTipItem>
-                    <RnInfoTipItem label={t("formula")}>{tKpi(`formula.${infoKeyOf(key)}` as "formula.visibility")}</RnInfoTipItem>
-                  </RnInfoTip>
-                </b>
-                <small className={cx("text-rn-12", on ? "text-white/75" : "text-rn-muted")}>{tKpi(`question.${QUESTION_KEY[key]}` as "question.coverage")}</small>
-              </div>
+              <span className="flex items-center gap-1 text-rn-13 font-bold text-rn-ink-2">
+                <span className="truncate">{name}</span>
+                <RnInfoTip label={t("infoLabel", { name })} align={i >= 3 ? "end" : "start"}>
+                  <RnInfoTipItem label={t("definition")}>{tKpi(`definition.${infoKeyOf(key)}` as "definition.visibility")}</RnInfoTipItem>
+                  <RnInfoTipItem label={t("formula")}>{tKpi(`formula.${infoKeyOf(key)}` as "formula.visibility")}</RnInfoTipItem>
+                </RnInfoTip>
+              </span>
               <KpiValue k={key} value={state.value} />
-              <div>
-                <DeltaCell k={key} pending={state.pending} deferred={deferred} periodCompare={periodCompare} periodDays={periodDays} periodLabelCtx={periodLabelCtx} onDark={on} />
-              </div>
-              <div>
+              <span className="flex min-h-6">
+                <DeltaCell k={key} pending={state.pending} deferred={deferred} periodCompare={periodCompare} periodDays={periodDays} periodLabelCtx={periodLabelCtx} />
+              </span>
+              <div className="mt-0.5 min-h-[46px]">
                 {state.pending ? null : (
-                  <Suspense fallback={<RnSkeleton className="h-9 w-full" />}>
-                    <SparkCell k={key} trend={deferred.trend} onDark={on} />
+                  <Suspense fallback={<RnSkeleton className="h-[30px] w-full" />}>
+                    <SparkCell k={key} trend={deferred.trend} />
                   </Suspense>
                 )}
               </div>
-              <div className={cx("text-rn-12 leading-snug @max-[700px]/rnboard:hidden", on ? "text-white/75" : "text-rn-muted")}>
+              <span className="min-h-[18px] text-rn-12 text-rn-muted">
                 {state.pending ? null : (
                   <Suspense fallback={<RnSkeleton className="h-4 w-24" />}>
-                    <TopRivalCell k={key} competitors={deferred.competitors} onDark={on} />
+                    <StandingLine k={key} own={state.value} competitors={deferred.competitors} />
                   </Suspense>
                 )}
-              </div>
+              </span>
               <Link
                 href={detailHref(key, locale, qs)}
                 aria-label={t("detailLabel", { name })}
-                title={tO("openDetail")}
-                onClick={(e) => e.stopPropagation()}
-                className={cx("grid size-8 place-items-center rounded-rn-control focus-visible:outline-2 focus-visible:outline-current", on ? "text-white hover:bg-white/14" : "text-rn-muted hover:bg-rn-inset hover:text-rn-ink")}
+                className="inline-flex items-center gap-0.5 self-start rounded-[3px] text-rn-12 font-semibold text-rn-navy hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rn-navy"
               >
-                <ArrowUpRight className="size-[18px]" aria-hidden />
+                {t("detail")}
+                <ArrowUpRight className="size-3" aria-hidden />
               </Link>
             </div>
           );
@@ -263,25 +238,24 @@ function KpiBoard({
   );
 }
 
-const QUESTION_KEY: Record<OverviewKpiKey, string> = {
-  visibility: "coverage",
-  shareOfVoice: "density",
-  sentiment: "favorability",
-  position: "priority",
-  citationShare: "citationVolume",
-};
+function TrendCount({ trend }: { trend: Promise<LiveTrend | null> }) {
+  const t = useTranslations("renewal.overview");
+  const n = sparkPoints(use(trend), "visibility").length;
+  return n > 1 ? <> · {t("kpiHintTrend", { count: n })}</> : null;
+}
 
 function KpiValue({ k, value }: { k: OverviewKpiKey; value: number | null }) {
   const tO = useTranslations("dashboard.overview");
   const tUnit = useTranslations("metricUnit");
-  if (value == null) return <span className="text-rn-13 font-semibold opacity-75">{tO("cardEmpty")}</span>;
+  const big = "text-rn-28 leading-[1.05] font-bold tracking-[-0.02em] whitespace-nowrap text-rn-ink tabular-nums";
+  if (value == null) return <span className="text-rn-15 leading-[1.9] font-semibold text-rn-muted">{tO("cardEmpty")}</span>;
   if (isRank(k)) {
     // "{n}번째" — the number big, the unit word small (same string as the card).
     const full = tUnit("position", { n: value.toFixed(1) });
     const n = value.toFixed(1);
     const at = full.indexOf(n);
     return (
-      <span className="text-rn-32 leading-none font-bold tracking-[-0.02em] tabular-nums" data-rn-value={k}>
+      <span className={big} data-rn-value={k}>
         {at >= 0 ? (
           <>
             {full.slice(0, at)}
@@ -295,7 +269,7 @@ function KpiValue({ k, value }: { k: OverviewKpiKey; value: number | null }) {
     );
   }
   return (
-    <span className="text-rn-32 leading-none font-bold tracking-[-0.02em] tabular-nums" data-rn-value={k}>
+    <span className={big} data-rn-value={k}>
       {value.toFixed(1)}
       <small className="ml-px text-rn-15 font-semibold">%</small>
     </span>
@@ -309,7 +283,6 @@ function DeltaCell({
   periodCompare,
   periodDays,
   periodLabelCtx,
-  onDark,
 }: {
   k: OverviewKpiKey;
   pending: boolean;
@@ -317,7 +290,6 @@ function DeltaCell({
   periodCompare: readonly CompareResult[] | null;
   periodDays?: number;
   periodLabelCtx: PeriodLabelCtx;
-  onDark: boolean;
 }) {
   const t = useTranslations("renewal.overview");
   const tP = useTranslations("periodCompare");
@@ -328,273 +300,229 @@ function DeltaCell({
     const caption = periodCaption(result, { days: periodDays ?? 0, ...periodLabelCtx });
     const tone: RnTone = chip.suppressed ? "none" : chip.direction;
     return (
-      <RnToneChip tone={tone} onDark={onDark} title={caption.key === "window" ? undefined : tP(caption.key, caption.params)}>
+      <RnToneChip tone={tone} title={caption.key === "window" ? undefined : tP(caption.key, caption.params)}>
         {periodChipText(chip)}
       </RnToneChip>
     );
   }
   return (
     <Suspense fallback={<RnSkeleton className="h-6 w-16" />}>
-      <TrendDelta k={k} deltas={deferred.deltas} onDark={onDark} labels={{ up: t("deltaUp"), down: t("deltaDown"), flat: t("deltaFlat") }} />
+      <TrendDelta k={k} deltas={deferred.deltas} labels={{ up: t("deltaUp"), down: t("deltaDown"), flat: t("deltaFlat") }} />
     </Suspense>
   );
 }
 
-function TrendDelta({ k, deltas, onDark, labels }: { k: OverviewKpiKey; deltas: Promise<KpiSummary[]>; onDark: boolean; labels: { up: string; down: string; flat: string } }) {
+function TrendDelta({ k, deltas, labels }: { k: OverviewKpiKey; deltas: Promise<KpiSummary[]>; labels: { up: string; down: string; flat: string } }) {
   const applied = use(deltas);
   const f = useFormat();
   const d = overviewCardState(applied.find((x) => x.key === k)).delta;
-  return <RnDeltaChip delta={d} lowerIsBetter={isRank(k)} format={(r) => f.delta(k, r)} emptyText={NO_DELTA} labels={labels} onDark={onDark} />;
+  return <RnDeltaChip delta={d} lowerIsBetter={isRank(k)} format={(r) => f.delta(k, r)} emptyText={NO_DELTA} labels={labels} />;
 }
 
-function SparkCell({ k, trend, onDark }: { k: OverviewKpiKey; trend: Promise<LiveTrend | null>; onDark: boolean }) {
+// The spark draws on the original card's y domain (rates 0–100, rank [1, max(5, ⌈max⌉)]),
+// with the first and last shown rounds under it.
+function SparkCell({ k, trend }: { k: OverviewKpiKey; trend: Promise<LiveTrend | null> }) {
   const points = sparkPoints(use(trend), k);
   if (!points.some((p) => p.value != null)) return null;
-  return <RnSparkline values={points.map((p) => p.value)} invert={isRank(k)} tone={onDark ? "onDark" : "default"} />;
-}
-
-/** The card's competitor row, kpi-wise (citation share folds official competitor domains). */
-function minisFor(src: OverviewCompetitorSources | null, k: OverviewKpiKey): CompetitorMini[] {
-  if (k === "citationShare") return competitorCitationShares(src?.citationDomains ?? null, undefined, src?.citationTotal ?? null);
-  const deltas = competitorDeltas(src, k);
-  return competitorMinis(src?.brands ?? [], k).map((m) => ({ ...m, delta: deltas.get(m.brand) ?? null }));
-}
-
-function TopRivalCell({ k, competitors, onDark }: { k: OverviewKpiKey; competitors: Promise<OverviewCompetitorSources | null>; onDark: boolean }) {
-  const tO = useTranslations("dashboard.overview");
-  const f = useFormat();
-  const top = minisFor(use(competitors), k)[0];
-  if (!top) return <span>{tO("noCompetitorData")}</span>;
+  const labels = trendBucketDisplays(points);
+  const md = (key: string) => {
+    const d = labels.get(key);
+    return d ? formatTrendBucketMD(d) : "";
+  };
   return (
-    <span>
-      <b className={cx("font-semibold", onDark ? "text-white" : "text-rn-ink-2")}>{top.brand}</b> {f.value(k, top.value, "—")}
-    </span>
+    <>
+      <RnSparkline values={points.map((p) => p.value)} invert={isRank(k)} domain={sparkYDomain(points, isRank(k))} className="h-[30px]" />
+      {points.length > 1 ? (
+        <span className="flex justify-between text-rn-11 text-rn-muted tabular-nums">
+          <span>{md(points[0].bucketStart)}</span>
+          <span>{md(points[points.length - 1].bucketStart)}</span>
+        </span>
+      ) : null}
+    </>
   );
 }
 
-// ─── brand comparison (own value + the card's 4 competitors) ───────────────
+function StandingLine({ k, own, competitors }: { k: OverviewKpiKey; own: number | null; competitors: Promise<OverviewCompetitorSources | null> }) {
+  const t = useTranslations("renewal.overview");
+  const tO = useTranslations("dashboard.overview");
+  const st = standing(k, own, minisFor(use(competitors), k));
+  if (!st) return <>{tO("noCompetitorData")}</>;
+  return <>{t.rich("standing", { b: (c) => <b className="font-semibold text-rn-ink-2">{c}</b>, rank: st.rank, count: st.count })}</>;
+}
 
-function BrandCompare({
-  focus,
-  kpi,
-  deferred,
-  periodCompare,
-  ownLabel,
-}: {
-  focus: OverviewKpiKey;
-  kpi: KpiSummary | undefined;
-  deferred: OverviewDeferredData;
-  periodCompare: readonly CompareResult[] | null;
-  ownLabel: string;
-}) {
+// ─── 브랜드 비교 (brands × KPIs) ────────────────────────────────────────────
+
+function BrandMatrix({ byKey, deferred, ownLabel }: { byKey: Map<string, KpiSummary>; deferred: OverviewDeferredData; ownLabel: string }) {
   const t = useTranslations("renewal.overview");
   const tO = useTranslations("dashboard.overview");
   const tKpi = useTranslations("dashboard.kpi.name");
   const f = useFormat();
   const src = use(deferred.competitors);
   const applied = use(deferred.deltas);
-  const state = overviewCardState(kpi);
-  // A chosen period wins (a suppressed result stays suppressed — the card rule).
-  const periodResult = selectPeriodResult(periodCompare, compareMetricForKpiKey(focus));
-  const ownDelta = periodResult ? periodResult.delta : overviewCardState(applied.find((x) => x.key === focus)).delta;
-  const rows = [
-    { brand: ownLabel, value: state.value, delta: ownDelta, own: true },
-    ...minisFor(src, focus).map((m) => ({ brand: m.brand, value: m.value, delta: m.delta ?? null, own: false })),
-  ];
-  rows.sort((a, b) => {
-    if (a.value == null && b.value == null) return 0;
-    if (a.value == null) return 1;
-    if (b.value == null) return -1;
-    return isRank(focus) ? a.value - b.value : b.value - a.value;
-  });
-  const rank = rows.findIndex((r) => r.own) + 1;
-  const width = (v: number | null) => (v == null ? 0 : isRank(focus) ? Math.max(4, Math.min(100, ((30 - v) / 29) * 100)) : Math.max(0, Math.min(100, v)));
-  const labels = { up: t("deltaUp"), down: t("deltaDown"), flat: t("deltaFlat") };
-  return (
-    <RnCard aria-label={t("brandsTitle")}>
-      <RnCardHeader
-        title={t("brandsTitle")}
-        hint={`${isRank(focus) ? `${t("rankHint")} · ` : ""}${t("brandsHint")}`}
-        actions={state.value != null && rows.length > 1 ? <span className="text-rn-12 text-rn-muted">{t("ourRank", { rank, count: rows.length })}</span> : null}
-      />
-      {state.pending ? (
-        <RnEmpty className="mx-6 mb-5">{tO("cardEmpty")}</RnEmpty>
-      ) : (
-        <div className="flex flex-col gap-2 px-6 pb-5" data-rn-brands={focus} aria-label={tKpi(focus)}>
-          {rows.map((r) => (
-            <div key={`${r.own ? "own:" : ""}${r.brand}`} className="grid grid-cols-[minmax(0,120px)_minmax(40px,1fr)_72px_84px] items-center gap-2.5 text-rn-13">
-              <span className="flex min-w-0 items-center gap-1.5 font-semibold text-rn-ink">
-                <span className="truncate">{r.brand}</span>
-                {r.own ? <RnTag>{t("ownTag")}</RnTag> : null}
-              </span>
-              <span className="h-2.5 overflow-hidden rounded-[3px] bg-rn-page">
-                <i className={cx("block h-full rounded-[3px]", r.own ? "bg-rn-navy" : "bg-rn-faint")} style={{ width: `${width(r.value)}%` }} />
-              </span>
-              <span className="text-right font-bold tabular-nums text-rn-ink">{f.value(focus, r.value, "—")}</span>
-              <span className="text-right">
-                <RnDeltaChip delta={r.delta} lowerIsBetter={isRank(focus)} format={(x) => f.delta(focus, x)} emptyText={NO_DELTA} labels={labels} />
-              </span>
-            </div>
-          ))}
-          {rows.length === 1 ? <RnEmpty className="mt-1">{tO("noCompetitorData")}</RnEmpty> : null}
-        </div>
-      )}
-    </RnCard>
-  );
-}
-
-// ─── markets (LiveGeo) ──────────────────────────────────────────────────────
-
-function useGeoView(geo: LiveGeo | null, focus: OverviewKpiKey) {
-  return useMemo(() => {
-    const markets = geo?.markets ?? [];
-    const sortv = (a: MarketCompetition, b: MarketCompetition) => {
-      const av = metricValue(a, focus);
-      const bv = metricValue(b, focus);
-      if (av == null && bv == null) return 0;
-      if (av == null) return 1;
-      if (bv == null) return -1;
-      return isRank(focus) ? av - bv : bv - av;
-    };
-    const regions = markets.map((m) => ({ ...m, countries: [...m.countries].sort(sortv) }));
-    const values = regions.flatMap((m) => m.countries.map((c) => metricValue(c, focus))).filter((v): v is number => v != null).sort((a, b) => a - b);
-    // 5 quantile bins over this view's countries; rank: lower (= ahead) is darker.
-    const bin = (v: number | null): number | null => {
-      if (v == null || values.length === 0) return null;
-      const b = Math.min(4, Math.floor((values.indexOf(v) / values.length) * 5));
-      return isRank(focus) ? 4 - b : b;
-    };
-    return { regions, bin };
-  }, [geo, focus]);
-}
-
-const rivalOf = (m: MarketCompetition, k: OverviewKpiKey) =>
-  m.metrics?.[k]?.rival ?? (k === "shareOfVoice" && m.topRival ? { name: m.topRival.name, value: m.topRival.sov } : null);
-
-function MarketTiles({ geo: geoP, focus, hi, onHi }: { geo: Promise<LiveGeo | null>; focus: OverviewKpiKey; hi: string | null; onHi: (c: string | null) => void }) {
-  const geo = use(geoP);
-  const t = useTranslations("renewal.overview");
-  const tO = useTranslations("dashboard.overview");
-  const tKpi = useTranslations("dashboard.kpi.name");
-  const locale = useLocale();
-  const f = useFormat();
-  const { regions, bin } = useGeoView(geo, focus);
-  const kpi = tKpi(focus);
-  return (
-    <RnCard aria-label={t("marketsTitle", { kpi })}>
-      <RnCardHeader
-        title={t("marketsTitle", { kpi })}
-        actions={
-          regions.length ? (
-            <span className="inline-flex items-center gap-1.5 text-rn-12 text-rn-muted" title={isRank(focus) ? tO("geo.mapCaptionRank", { label: kpi }) : tO("geo.mapCaption", { label: kpi })}>
-              {isRank(focus) ? t("legendRankBack") : t("legendLow")}
-              {BINS.map((c) => (
-                <i key={c} className={cx("inline-block h-2.5 w-5 rounded-[2px]", c)} />
-              ))}
-              {isRank(focus) ? t("legendRankFront") : t("legendHigh")}
-            </span>
-          ) : null
-        }
-      />
-      {regions.length === 0 ? (
-        <RnEmpty className="mx-6 mb-5">{tO("geo.brandRequired")}</RnEmpty>
-      ) : (
-        <div className="flex flex-wrap items-start gap-x-6 gap-y-3.5 px-6 pt-1 pb-5">
-          {regions.map((m) => (
-            <div key={m.region} className="max-w-full">
-              <h4 className="m-0 mb-1.5 flex items-baseline gap-2 text-rn-12 font-bold text-rn-ink-2">
-                {rhqLabel(m.region, locale === "en" ? "en" : "ko") ?? m.region}
-                <span className="font-medium text-rn-muted">{t("countryCount", { count: m.countries.length })}</span>
-              </h4>
-              <div className="flex flex-wrap gap-1">
-                {m.countries.map((c) => {
-                  const v = metricValue(c, focus);
-                  const b = bin(v);
-                  const rival = rivalOf(c, focus);
-                  return (
-                    <button
-                      key={c.code}
-                      type="button"
-                      data-rn-tile={c.code}
-                      aria-pressed={hi === c.code}
-                      aria-label={`${countryName(c.code, locale)} ${f.value(focus, v, "—")}`}
-                      title={[
-                        countryName(c.code, locale),
-                        `${kpi} ${f.value(focus, v, "—")}`,
-                        `${tO("geo.colRival")} ${rival ? `${rival.name} ${f.value(focus, rival.value, "—")}` : tO("geo.noRival")}`,
-                        c.answers != null ? `${t("colAnswers")} ${c.answers.toLocaleString(locale)}` : null,
-                      ]
-                        .filter(Boolean)
-                        .join("\n")}
-                      onClick={() => onHi(hi === c.code ? null : c.code)}
-                      className={cx(
-                        "relative flex h-[50px] w-16 cursor-pointer flex-col items-center justify-center gap-px rounded-md tabular-nums shadow-[inset_0_0_0_1px_rgba(10,9,8,0.06)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rn-navy",
-                        b == null ? "bg-rn-page text-rn-muted" : BINS[b],
-                        b != null && b >= 3 ? "text-white" : "text-rn-ink",
-                        hi === c.code && "z-[1] shadow-[0_0_0_2px_var(--color-rn-surface),0_0_0_4px_var(--color-rn-ink)]",
-                      )}
-                    >
-                      <span className="font-mono text-rn-11 font-bold tracking-[0.04em]">{c.code}</span>
-                      <span className="text-rn-12 font-semibold">{f.value(focus, v, "—")}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </RnCard>
-  );
-}
-
-function MarketTable({ geo: geoP, focus, hi, onHi }: { geo: Promise<LiveGeo | null>; focus: OverviewKpiKey; hi: string | null; onHi: (c: string | null) => void }) {
-  const geo = use(geoP);
-  const t = useTranslations("renewal.overview");
-  const tO = useTranslations("dashboard.overview");
-  const tKpi = useTranslations("dashboard.kpi.name");
-  const locale = useLocale();
-  const f = useFormat();
-  const { regions } = useGeoView(geo, focus);
-  const [closed, setClosed] = useState<Set<string>>(new Set());
-  if (regions.length === 0) return null;
-  const kpi = tKpi(focus);
-  const barPct = (v: number | null) => (v == null ? 0 : isRank(focus) ? Math.max(4, Math.min(100, ((30 - v) / 29) * 100)) : Math.max(0, Math.min(100, v)));
-  const valueCell = (v: number | null, strong: boolean) => (
-    <div className="grid grid-cols-[64px_minmax(0,1fr)] items-center gap-2.5">
-      <b className={cx("text-right tabular-nums", strong ? "font-bold" : "font-semibold")}>{f.value(focus, v, "—")}</b>
-      <span className="h-2 overflow-hidden rounded-[3px] bg-rn-page">
-        <i className={cx("block h-full rounded-[3px]", strong ? "bg-rn-navy-500" : "bg-rn-navy")} style={{ width: `${barPct(v)}%` }} />
+  const { rows, cols } = useMemo(() => {
+    const values = {} as Record<OverviewKpiKey, number | null>;
+    const deltas = {} as Record<OverviewKpiKey, number | null>;
+    const rivals = {} as Record<OverviewKpiKey, CompetitorMini[]>;
+    for (const k of OVERVIEW_KPI_KEYS) {
+      values[k] = overviewCardState(byKey.get(k)).value;
+      deltas[k] = overviewCardState(applied.find((x) => x.key === k)).delta;
+      rivals[k] = minisFor(src, k);
+    }
+    return brandMatrix({ label: ownLabel, values, deltas }, rivals);
+  }, [byKey, applied, src, ownLabel]);
+  const deltaText = (k: OverviewKpiKey, d: number | null) => {
+    if (d == null) return null;
+    const r = Math.round(d * 10) / 10;
+    if (r === 0) return <span className="text-rn-11 font-semibold text-rn-muted">{t("deltaFlat")}</span>;
+    const good = isRank(k) ? r < 0 : r > 0;
+    return (
+      <span className={cx("text-rn-11 font-semibold tabular-nums", good ? "text-rn-up-ink" : "text-rn-danger-ink")} title={t("deltaTitle", { dir: good ? t("deltaUp") : t("deltaDown"), compare: tO("compare") })}>
+        {r > 0 ? "▲" : "▼"}
+        {f.delta(k, r)}
       </span>
-    </div>
-  );
-  const rivalCell = (m: MarketCompetition) => {
-    const r = rivalOf(m, focus);
-    return r ? (
-      <span className="text-rn-12 text-rn-muted">
-        <b className="font-semibold text-rn-ink-2">{r.name}</b> {f.value(focus, r.value, "—")}
-      </span>
-    ) : (
-      <span className="text-rn-12 text-rn-muted">{tO("geo.noRival")}</span>
     );
   };
   return (
-    <RnCard aria-label={t("tableTitleRegion", { kpi })}>
-      <RnCardHeader title={t("tableTitleRegion", { kpi })} hint={t("tableHint")} />
+    <RnCard aria-label={t("brandsTitle")}>
+      <RnCardHeader title={t("brandsTitle")} hint={t("brandsHint", { compare: tO("compare") })} />
       <div className="overflow-x-auto">
-        <table className="w-full table-fixed border-separate border-spacing-0 text-rn-13" data-rn-geo-table="">
+        <table className="w-full min-w-[640px] table-fixed border-separate border-spacing-0 text-rn-13" data-rn-brand-matrix="">
           <colgroup>
-            <col />
-            <col className="w-[30%]" />
-            <col className="w-[190px]" />
-            <col className="w-[88px]" />
+            <col className="w-[168px]" />
+            {OVERVIEW_KPI_KEYS.map((k) => (
+              <col key={k} />
+            ))}
           </colgroup>
           <thead>
-            <tr className="text-left text-rn-12 font-semibold text-rn-muted">
+            <tr className="text-left text-rn-12 text-rn-muted">
+              <th scope="col" className="border-y border-rn-line py-2 pr-3 pl-6 align-bottom font-semibold">{t("colBrand")}</th>
+              {cols.map((c) => (
+                <th key={c.key} scope="col" title={tKpi(c.key)} className="border-y border-rn-line px-3 py-2 align-bottom font-semibold">
+                  <span className="flex flex-col gap-px text-rn-ink-2">
+                    {t(`short.${c.key}`)}
+                    {c.standing ? <small className="text-rn-11 font-medium text-rn-muted">{t("colStanding", { rank: c.standing.rank, count: c.standing.count })}</small> : null}
+                  </span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={`${r.own ? "own:" : ""}${r.name}`} data-rn-brand-row={r.own ? "own" : r.name} className={r.own ? "bg-rn-navy-25" : undefined}>
+                <td className="border-b border-rn-line pt-2.5 pr-3 pb-2 pl-6 align-top">
+                  <span className="flex min-w-0 items-center gap-1.5 font-semibold text-rn-ink">
+                    <span className="truncate">{r.name}</span>
+                    {r.own ? <RnTag>{t("ownTag")}</RnTag> : null}
+                  </span>
+                </td>
+                {cols.map((c) => {
+                  const cell = r.cells[c.key];
+                  if (!cell)
+                    return (
+                      <td key={c.key} className="border-b border-rn-line px-3 py-2 align-top text-rn-muted" title={t("notCompared", { kpi: tKpi(c.key) })}>
+                        —
+                      </td>
+                    );
+                  return (
+                    <td key={c.key} className="border-b border-rn-line px-3 py-2 align-top">
+                      <div className="flex flex-col gap-[3px]">
+                        <b className={cx("tabular-nums text-rn-ink", cell.value != null && cell.value === c.best ? "font-extrabold" : "font-semibold")}>{f.value(c.key, cell.value, "—")}</b>
+                        <span className={cx("h-1 max-w-24 overflow-hidden rounded-[2px]", r.own ? "bg-rn-surface" : "bg-rn-page")}>
+                          <i className={cx("block h-full rounded-[2px]", r.own ? "bg-rn-navy" : "bg-rn-faint")} style={{ width: `${barWidth(c.key, cell.value, c.max).toFixed(1)}%` }} />
+                        </span>
+                        {deltaText(c.key, cell.delta)}
+                      </div>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {rows.length === 1 ? <RnEmpty className="mx-6 mt-3">{tO("noCompetitorData")}</RnEmpty> : null}
+      <p className="m-0 px-6 pt-2.5 pb-4 text-rn-11 leading-[1.55] break-keep text-rn-muted">{t("brandsFoot")}</p>
+    </RnCard>
+  );
+}
+
+// ─── 시장별 현황 (권역 › 국가 × KPIs) ───────────────────────────────────────
+
+function MarketMatrix({ geo: geoP }: { geo: Promise<LiveGeo | null> }) {
+  const geo = use(geoP);
+  const t = useTranslations("renewal.overview");
+  const tO = useTranslations("dashboard.overview");
+  const tKpi = useTranslations("dashboard.kpi.name");
+  const locale = useLocale();
+  const f = useFormat();
+  const [sort, setSort] = useState<MarketSort>({ key: "shareOfVoice", worst: false });
+  const [closed, setClosed] = useState<ReadonlySet<string>>(new Set());
+  const regions = useMemo(() => geo?.markets ?? [], [geo]);
+  const cols = useMemo(() => marketColumns(regions), [regions]);
+  const head = (
+    <RnCardHeader
+      title={t("marketsTitle")}
+      actions={
+        regions.length ? (
+          <span className="inline-flex items-center gap-1.5 text-rn-12 text-rn-muted" title={t("heatLegendTitle")}>
+            {t("heatLegend")}
+            {HEAT.map((c) => (
+              <i key={c} className={cx("inline-block h-2.5 w-5 rounded-[2px] shadow-[inset_0_0_0_1px_rgba(10,9,8,0.06)]", c)} />
+            ))}
+            {t("heatLegendFront")}
+          </span>
+        ) : null
+      }
+    />
+  );
+  if (regions.length === 0) {
+    return (
+      <RnCard aria-label={t("marketsTitle")}>
+        {head}
+        <RnEmpty className="mx-6 mb-5">{tO("geo.brandRequired")}</RnEmpty>
+      </RnCard>
+    );
+  }
+  const gapText = (k: OverviewKpiKey, g: number | null) => {
+    if (g == null) return null;
+    const a = Math.abs(g).toFixed(1);
+    return `${a === "0.0" ? "±" : g > 0 ? "+" : "−"}${a}${isRank(k) ? "" : "pp"}`;
+  };
+  const sub = (m: MarketCompetition) => {
+    const rival = marketRival(m);
+    return (
+      <span className="mt-px block text-rn-11 leading-[1.4] font-medium text-rn-muted">
+        {m.answers != null ? <span className="whitespace-nowrap">{t("answersMeta", { count: m.answers.toLocaleString(locale) })}</span> : null}
+        {m.answers != null && rival ? " · " : null}
+        {rival ? <span className="whitespace-nowrap">{t("vsRival", { name: rival })}</span> : null}
+      </span>
+    );
+  };
+  const toggleRegion = (id: string) =>
+    setClosed((cur) => {
+      const n = new Set(cur);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  return (
+    <RnCard aria-label={t("marketsTitle")}>
+      {head}
+      <p className="m-0 px-6 pb-3 text-rn-12 leading-[1.55] break-keep text-rn-muted">{t.rich("marketsKey", { b: (c) => <b className="font-semibold text-rn-ink-2">{c}</b> })}</p>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[720px] table-fixed border-separate border-spacing-0 text-rn-13" data-rn-geo-table="">
+          <colgroup>
+            <col className="w-[176px]" />
+            {OVERVIEW_KPI_KEYS.map((k) => (
+              <col key={k} />
+            ))}
+          </colgroup>
+          <thead>
+            <tr className="text-left text-rn-12 text-rn-muted">
               <th scope="col" className="h-[38px] border-y border-rn-line pr-3 pl-6 font-semibold">{tO("geo.colRegion")}</th>
-              <th scope="col" className="h-[38px] border-y border-rn-line px-3 font-semibold">{kpi}</th>
-              <th scope="col" className="h-[38px] border-y border-rn-line px-3 font-semibold" title={t("rivalBasis")}>{tO("geo.colRival")}</th>
-              <th scope="col" className="h-[38px] border-y border-rn-line pr-6 pl-3 text-right font-semibold">{t("colAnswers")}</th>
+              {OVERVIEW_KPI_KEYS.map((k) => (
+                <SortHead key={k} k={k} sort={sort} onSort={setSort} label={t(`short.${k}`)} kpi={tKpi(k)} />
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -603,47 +531,44 @@ function MarketTable({ geo: geoP, focus, hi, onHi }: { geo: Promise<LiveGeo | nu
               const label = rhqLabel(m.region, locale === "en" ? "en" : "ko") ?? m.region;
               return (
                 <RegionRows key={m.region}>
-                  <tr className="bg-rn-page font-bold">
-                    <td className="border-b border-rn-line py-2.5 pr-3 pl-6">
+                  <tr className="bg-rn-page" data-rn-region={m.region}>
+                    <td className="border-b border-rn-line py-2 pr-3 pl-6 align-top">
                       <button
                         type="button"
                         aria-expanded={open}
                         aria-label={open ? t("collapseRegion", { region: label }) : t("expandRegion", { region: label })}
-                        onClick={() =>
-                          setClosed((cur) => {
-                            const n = new Set(cur);
-                            if (n.has(m.region)) n.delete(m.region);
-                            else n.add(m.region);
-                            return n;
-                          })
-                        }
-                        className="inline-flex cursor-pointer items-center gap-1.5 text-left focus-visible:outline-2 focus-visible:outline-rn-navy"
+                        onClick={() => toggleRegion(m.region)}
+                        className="inline-flex cursor-pointer items-center gap-1.5 text-left font-bold text-rn-ink focus-visible:outline-2 focus-visible:outline-rn-navy"
                       >
                         <ChevronRight aria-hidden className={cx("size-3.5 text-rn-muted transition-transform", open && "rotate-90")} />
                         {label}
                         <span className="font-medium text-rn-muted">{t("countryCount", { count: m.countries.length })}</span>
                       </button>
+                      <span className="block pl-5">{sub(m)}</span>
                     </td>
-                    <td className="border-b border-rn-line px-3 py-2.5">{valueCell(metricValue(m, focus), true)}</td>
-                    <td className="border-b border-rn-line px-3 py-2.5">{rivalCell(m)}</td>
-                    <td className="border-b border-rn-line py-2.5 pr-6 pl-3 text-right font-semibold text-rn-muted tabular-nums">{m.answers != null ? m.answers.toLocaleString(locale) : "—"}</td>
+                    {OVERVIEW_KPI_KEYS.map((k) => {
+                      const v = metricValue(m, k);
+                      return (
+                        <td key={k} className="border-b border-rn-line px-2 py-1.5 align-top">
+                          <b className="block text-rn-13 leading-[1.3] font-bold tabular-nums text-rn-ink">{f.value(k, v, "—")}</b>
+                          <small className="block text-rn-11 leading-[1.3] text-rn-ink-2 tabular-nums">{gapText(k, gapOf(k, v, rivalValue(m, k)))}</small>
+                        </td>
+                      );
+                    })}
                   </tr>
                   {open
-                    ? m.countries.map((c) => (
-                        <tr
-                          key={c.code}
-                          data-rn-row={c.code}
-                          aria-selected={hi === c.code}
-                          onClick={() => onHi(hi === c.code ? null : c.code)}
-                          className={cx("cursor-pointer hover:bg-rn-navy-25", hi === c.code && "bg-rn-navy-25 shadow-[inset_0_1px_0_var(--color-rn-navy-300),inset_0_-1px_0_var(--color-rn-navy-300)]")}
-                        >
-                          <td className="border-b border-rn-line py-2.5 pr-3 pl-12">
-                            <span className="mr-1.5 rounded bg-rn-inset px-1.5 py-px font-mono text-rn-11 font-semibold tracking-[0.04em] text-rn-ink-2">{c.code}</span>
-                            {countryName(c.code, locale)}
+                    ? sortCountries(m.countries, sort).map((c) => (
+                        <tr key={c.code} data-rn-row={c.code} className="group/cty">
+                          <td className="border-b border-rn-line py-1.5 pr-3 pl-10 align-top group-hover/cty:bg-rn-navy-25">
+                            <span className="flex items-center overflow-hidden whitespace-nowrap">
+                              <span className="mr-1.5 rounded bg-rn-inset px-1.5 py-px font-mono text-rn-11 font-semibold tracking-[0.04em] text-rn-ink-2">{c.code}</span>
+                              <span className="truncate">{countryName(c.code, locale)}</span>
+                            </span>
+                            {sub(c)}
                           </td>
-                          <td className="border-b border-rn-line px-3 py-2.5">{valueCell(metricValue(c, focus), false)}</td>
-                          <td className="border-b border-rn-line px-3 py-2.5">{rivalCell(c)}</td>
-                          <td className="border-b border-rn-line py-2.5 pr-6 pl-3 text-right text-rn-muted tabular-nums">{c.answers != null ? c.answers.toLocaleString(locale) : "—"}</td>
+                          {OVERVIEW_KPI_KEYS.map((k) => (
+                            <HeatCell key={k} k={k} m={c} name={countryName(c.code, locale)} col={cols[k]} gap={gapText(k, gapOf(k, metricValue(c, k), rivalValue(c, k)))} />
+                          ))}
                         </tr>
                       ))
                     : null}
@@ -653,7 +578,63 @@ function MarketTable({ geo: geoP, focus, hi, onHi }: { geo: Promise<LiveGeo | nu
           </tbody>
         </table>
       </div>
+      <div className="h-4" />
     </RnCard>
+  );
+}
+
+function SortHead({ k, sort, onSort, label, kpi }: { k: OverviewKpiKey; sort: MarketSort; onSort: (s: MarketSort) => void; label: string; kpi: string }) {
+  const t = useTranslations("renewal.overview");
+  const on = sort.key === k;
+  const dir = on ? t(sort.worst ? "sortWorst" : "sortBest") : null;
+  // best first = descending values for rates, ascending for rank
+  const ariaSort = on ? (isRank(k) !== sort.worst ? "ascending" : "descending") : "none";
+  return (
+    <th scope="col" aria-sort={ariaSort} className="h-[38px] border-y border-rn-line px-1.5 font-semibold">
+      <button
+        type="button"
+        data-rn-sort={k}
+        title={dir ? t("sortTitleOn", { kpi, dir }) : t("sortTitle", { kpi })}
+        onClick={() => onSort(on ? { key: k, worst: !sort.worst } : { key: k, worst: false })}
+        className={cx(
+          "inline-flex h-7 max-w-full cursor-pointer items-center gap-1 rounded-md px-1.5 font-semibold hover:bg-rn-page hover:text-rn-ink-2 focus-visible:outline-2 focus-visible:outline-rn-navy",
+          on ? "text-rn-ink" : "text-rn-muted",
+        )}
+      >
+        <span className="truncate">{label}</span>
+        <span aria-hidden className={cx("text-rn-11", on ? "text-rn-navy" : "text-rn-muted")}>
+          {on ? (sort.worst ? "↑" : "↓") : "↕"}
+        </span>
+      </button>
+    </th>
+  );
+}
+
+function HeatCell({ k, m, name, col, gap }: { k: OverviewKpiKey; m: MarketCompetition & { code: string }; name: string; col: MarketColumn; gap: string | null }) {
+  const t = useTranslations("renewal.overview");
+  const tKpi = useTranslations("dashboard.kpi.name");
+  const f = useFormat();
+  const v = metricValue(m, k);
+  const bin = col.bin(v);
+  const nth = col.nth(m.code);
+  const rival = marketRival(m);
+  const rv = rivalValue(m, k);
+  const tip = [
+    `${name} · ${tKpi(k)} ${f.value(k, v, "—")}`,
+    nth != null ? t("cellPlace", { count: col.count, rank: nth }) : null,
+    rv == null || !rival ? t("cellNoRival") : t("cellRival", { name: rival, value: f.value(k, rv, "—"), gap: gap ?? "—" }),
+  ]
+    .filter(Boolean)
+    .join("\n");
+  return (
+    <td
+      title={tip}
+      data-rn-heat={bin ?? ""}
+      className={cx("border-b-2 border-l-2 border-rn-surface px-2 py-1.5 align-top text-rn-ink", bin == null ? "bg-rn-surface text-rn-muted" : HEAT[bin])}
+    >
+      <b className="block text-rn-13 leading-[1.3] font-semibold tabular-nums">{f.value(k, v, "—")}</b>
+      {gap ? <small className="block text-rn-11 leading-[1.3] text-rn-ink-2 tabular-nums">{gap}</small> : null}
+    </td>
   );
 }
 

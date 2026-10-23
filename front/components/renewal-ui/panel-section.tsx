@@ -12,6 +12,7 @@ export function RnPanelSection({
   onToggle,
   badge,
   summary,
+  note,
   focusKey,
   children,
 }: {
@@ -22,6 +23,8 @@ export function RnPanelSection({
   badge?: number;
   /** Short text instead of a count (e.g. a date range). */
   summary?: string;
+  /** Muted short state when there is no badge or summary (e.g. why the axis is disabled). */
+  note?: string;
   focusKey?: string;
   children: ReactNode;
 }) {
@@ -40,6 +43,8 @@ export function RnPanelSection({
           <RnCountBadge className="ml-auto">{badge}</RnCountBadge>
         ) : summary ? (
           <span className="ml-auto max-w-[150px] text-right text-rn-12 font-semibold text-rn-navy">{summary}</span>
+        ) : note ? (
+          <span className="ml-auto max-w-[150px] text-right text-rn-11 font-medium text-rn-muted">{note}</span>
         ) : null}
       </button>
       {open ? <div className="px-2 pb-3">{children}</div> : null}

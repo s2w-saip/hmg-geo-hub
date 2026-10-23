@@ -9,12 +9,18 @@ export function RnSparkline({
   values,
   tone = "default",
   invert = false,
+  minSpan = 0,
+  domain,
   className,
 }: {
   values: ReadonlyArray<number | null>;
   tone?: "default" | "onDark";
   /** Draw lower values higher (rank: 1 is best). */
   invert?: boolean;
+  /** Smallest value range drawn (around the middle) — wobbles below it stay nearly flat. */
+  minSpan?: number;
+  /** Fixed value range [low, high] (e.g. 0–100 for rates); overrides the auto range and minSpan. */
+  domain?: readonly [number, number];
   className?: string;
 }) {
   const w = 120;
@@ -22,9 +28,10 @@ export function RnSparkline({
   const p = 3;
   const nums = values.filter((v): v is number => v != null);
   if (nums.length === 0) return <svg aria-hidden className={cx("block h-9 w-full", className)} viewBox={`0 0 ${w} ${h}`} />;
-  const min = Math.min(...nums);
-  const max = Math.max(...nums);
-  const span = max - min || 1;
+  const lo = domain ? domain[0] : Math.min(...nums);
+  const hi = domain ? domain[1] : Math.max(...nums);
+  const span = domain ? hi - lo || 1 : Math.max(hi - lo, minSpan) || 1;
+  const min = domain ? lo : (lo + hi) / 2 - span / 2;
   const step = values.length > 1 ? (w - 2 * p) / (values.length - 1) : 0;
   const y = (v: number) => {
     const t = (v - min) / span;

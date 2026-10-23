@@ -97,9 +97,23 @@ export const ROUTES = [
     roles: STANDARD_VIEWERS,
     group: "standard" as const,
   },
+  // Renewal Mention (2026-10-21) — next to the original, same roles (see the renewal note above).
+  {
+    path: "/renewal/standard/answer-analysis/mention",
+    key: "renewalAnswerAnalysisMention",
+    roles: STANDARD_VIEWERS,
+    group: "standard" as const,
+  },
   {
     path: "/standard/answer-analysis/citation",
     key: "answerAnalysisCitation",
+    roles: STANDARD_VIEWERS,
+    group: "standard" as const,
+  },
+  // Renewal Citation (2026-10-21) — next to the original, same roles; covers its prompts / tone-urls sub pages.
+  {
+    path: "/renewal/standard/answer-analysis/citation",
+    key: "renewalAnswerAnalysisCitation",
     roles: STANDARD_VIEWERS,
     group: "standard" as const,
   },
@@ -125,6 +139,13 @@ export const ROUTES = [
   {
     path: "/standard/ai-funnel/acr",
     key: "aiFunnelAcr",
+    roles: STANDARD_VIEWERS,
+    group: "standard" as const,
+  },
+  // Renewal ACR (2026-10-21) — next to the original, same roles (see the renewal note above).
+  {
+    path: "/renewal/standard/ai-funnel/acr",
+    key: "renewalAiFunnelAcr",
     roles: STANDARD_VIEWERS,
     group: "standard" as const,
   },

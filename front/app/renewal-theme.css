@@ -31,6 +31,14 @@
   --color-rn-up: #2d9257;
   --color-rn-down: #e63312;
   --color-rn-danger-ink: #b42318;
+  /* text tone of a good value (6.2:1 on white) — rn-up stays for icons and tints */
+  --color-rn-up-ink: #1f6f43;
+  /* Overview market heat table: a pastel navy ramp (ink text stays AA on every step), evenly spaced in lightness */
+  --color-rn-heat-0: #f4f7fb;
+  --color-rn-heat-1: #e3ebf5;
+  --color-rn-heat-2: #cddcee;
+  --color-rn-heat-3: #b1c9e4;
+  --color-rn-heat-4: #8fb0d8;
 
   --text-rn-40: 2.5rem;
   --text-rn-40--line-height: 1.15;
@@ -46,6 +54,13 @@
   --text-rn-12--line-height: 1.5;
   --text-rn-11: 0.6875rem;
   --text-rn-11--line-height: 1.45;
+  /* analysis renewal (2026-10-21): hero value · KPI value · card stat value */
+  --text-rn-56: 3.5rem;
+  --text-rn-56--line-height: 1;
+  --text-rn-28: 1.75rem;
+  --text-rn-28--line-height: 1.1;
+  --text-rn-24: 1.5rem;
+  --text-rn-24--line-height: 1.15;
 
   --radius-rn-card: 14px;
   --radius-rn-control: 8px;

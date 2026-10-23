@@ -69,10 +69,13 @@ const ROUTE_ICON: Record<RouteKey, ComponentType<{ className?: string }>> = {
   renewalStandardPrompts: ListChecks,
   answerAnalysis: MessageSquareText,
   answerAnalysisMention: MessageCircle,
+  renewalAnswerAnalysisMention: Sparkles,
   answerAnalysisCitation: Link2,
+  renewalAnswerAnalysisCitation: Sparkles,
   aiFunnel: FlaskConical,
   aiFunnelVisibility: Eye,
   aiFunnelAcr: Trophy,
+  renewalAiFunnelAcr: Sparkles,
   aiFunnelConversion: TrendingUp,
   customerInterest: Heart,
   customerInterestGoogleKeywords: Globe,
@@ -156,10 +159,24 @@ const STANDARD_SUB_ITEMS: StandardSubItem[] = [
         i18nKey: "answerAnalysisMention",
         icon: MessageCircle,
       },
+      // Renewal Mention (2026-10-21) — right under the original for comparison.
+      {
+        path: "/renewal/standard/answer-analysis/mention",
+        i18nKey: "renewalAnswerAnalysisMention",
+        icon: Sparkles,
+        beta: true,
+      },
       {
         path: "/standard/answer-analysis/citation",
         i18nKey: "answerAnalysisCitation",
         icon: Link2,
+      },
+      // Renewal Citation (2026-10-21) — right under the original for comparison.
+      {
+        path: "/renewal/standard/answer-analysis/citation",
+        i18nKey: "renewalAnswerAnalysisCitation",
+        icon: Sparkles,
+        beta: true,
       },
     ],
   },
@@ -177,6 +194,13 @@ const STANDARD_SUB_ITEMS: StandardSubItem[] = [
         path: "/standard/ai-funnel/acr",
         i18nKey: "aiFunnelAcr",
         icon: Trophy,
+        beta: true,
+      },
+      // Renewal ACR (2026-10-21) — right under the original for comparison.
+      {
+        path: "/renewal/standard/ai-funnel/acr",
+        i18nKey: "renewalAiFunnelAcr",
+        icon: Sparkles,
         beta: true,
       },
       {

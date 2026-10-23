@@ -28,7 +28,7 @@ vi.mock("@/lib/period/anchor-axis-state", async (importOriginal) => ({
   anchorAxisKnownEnabled: () => false,
 }));
 
-const { aggregateAcrFromMirror } = await import("@/lib/db/repositories/scope-aggregates");
+const { aggregateAcrFromMirror, aggregateAcrOwnFromMirror } = await import("@/lib/db/repositories/scope-aggregates");
 const { HMG_BRAND_ENTITY_IDS } = await import("@/lib/scope/hmg-brands");
 const { createTableFrom, MIG_DIR } = await import("@/scripts/db/answer-cycle-anchors-pglite-fixture");
 const F = await import("./funnel");
@@ -306,5 +306,21 @@ describe("ACR legacy (aggregateAcrFromMirror on PGlite) vs api (backend model ->
     expect(legacy.trend[2].series.Kia).toBe(60); // 3 / 5 on 09-11
     // same series brands (ours first, then the top brands)
     expect(Object.keys(api.trend[1].series).sort()).toEqual(Object.keys(legacy.trend[1].series).sort());
+  });
+
+  it("renewal 당사 합계: aggregateAcrOwnFromMirror = the backend own_sql (every own brand, a cell once)", async () => {
+    const own = await aggregateAcrOwnFromMirror({});
+    // own_sql over the snapshot cells: own brand rows summed, cells DISTINCT
+    const rows = CELLS.filter((c) => c.round === SNAPSHOT_ROUND).flatMap((c) => c.brands.filter((x) => x.b.ours).map((x) => ({ cell: c, ...x })));
+    expect(own).toEqual({
+      choiceCount: rows.reduce((s, r) => s + r.choice, 0),
+      appearanceCount: rows.reduce((s, r) => s + r.appearance, 0),
+      cells: new Set(rows.map((r) => r.cell)).size,
+    });
+    // hand check: Kia 7+1+3 + Hyundai 3+1 = 15 choices; the US cell holds both and counts once → 4 of 5 cells
+    expect(own).toEqual({ choiceCount: 15, appearanceCount: 24, cells: 4 });
+    // what the legacy cards show instead: the first own brand row (Kia, 11 choices in 3 cells)
+    const legacy = await aggregateAcrFromMirror({});
+    expect(legacy.brands.find((b) => b.isOurs)).toMatchObject({ brand: "Kia", choiceCount: 11, coverage: 60 });
   });
 });

@@ -290,6 +290,8 @@ import {
   type StandardSubKpis,
   type OverviewCardValues,
   aggregateAcrFromMirror,
+  aggregateAcrOwnFromMirror,
+  type AcrOwnCounts,
   type StandardAcr,
   aggregateSignalPromptsFromMirror,
   type SignalKey,
@@ -1507,6 +1509,9 @@ const cachedPromptTopics = mirrorCache("prompt-topics",
 
 const cachedStandardAcr = mirrorCache("standard-acr",
   (filters: StandardFilters) => aggregateAcrFromMirror(filters));
+
+const cachedStandardAcrOwn = mirrorCache("standard-acr-own",
+  (filters: StandardFilters) => aggregateAcrOwnFromMirror(filters));
 
 // Every StandardFilters axis that must survive normalizeFilters so it reaches
 // the SQL aggregate / in-memory gate. Derived from the single manifest in
@@ -3828,6 +3833,15 @@ export async function fetchStandardAcr(
   // 제외 엔티티는 ACR 브랜드 목록(선택 점유율 표)에서만 뺀다: 값은 서버 계산 그대로.
   return withExcludedBrands(
     await withStandardRoot("standardAcr", null, cachedStandardAcr, filters), filterAcr);
+}
+
+// 당사 합계 (renewal ACR, 2026-10-21) — the API path carries it as `own`; the legacy path
+// gets it here (every own brand, not the first own row). Counts only: ratios use the
+// totals of fetchStandardAcr for the same filters. Excluded entities are never own.
+export async function fetchStandardAcrOwn(
+  filters: StandardFilters = {},
+): Promise<AcrOwnCounts | null> {
+  return withStandardRoot("standardAcr", null, cachedStandardAcrOwn, filters);
 }
 
 // KPI ⑥ AI 타겟 URL 인용률 — 프로젝트별 라벨링된 추적 URL 기준. 라벨 0개면

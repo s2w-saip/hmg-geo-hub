@@ -3,9 +3,11 @@ import { Info } from "lucide-react";
 
 /**
  * ⓘ button with a dark tooltip shown on hover and on keyboard focus. Clicking the
- * button does nothing else (it must not trigger a clickable parent row).
+ * button does nothing else (it must not trigger a clickable parent row). The hidden
+ * tooltip takes no space (no page overflow near the right edge); `align="end"` opens
+ * it leftwards for an ⓘ that sits on the right of a card.
  */
-export function RnInfoTip({ label, children }: { label: string; children: ReactNode }) {
+export function RnInfoTip({ label, children, align = "start" }: { label: string; children: ReactNode; align?: "start" | "end" }) {
   return (
     <span className="group/tip relative inline-flex">
       <button
@@ -22,7 +24,7 @@ export function RnInfoTip({ label, children }: { label: string; children: ReactN
       </button>
       <span
         role="tooltip"
-        className="pointer-events-none invisible absolute top-full left-0 z-30 mt-1.5 w-[360px] max-w-[min(360px,80vw)] rounded-[10px] bg-rn-ink px-3.5 py-3 text-left text-rn-12 font-normal whitespace-normal text-white shadow-rn-3 group-focus-within/tip:visible group-hover/tip:visible"
+        className={`pointer-events-none absolute top-full z-30 mt-1.5 hidden w-[360px] max-w-[min(360px,80vw)] rounded-[10px] bg-rn-ink px-3.5 py-3 text-left text-rn-12 font-normal whitespace-normal text-white shadow-rn-3 group-focus-within/tip:block group-hover/tip:block ${align === "end" ? "right-0" : "left-0"}`}
       >
         {children}
       </span>

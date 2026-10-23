@@ -23,6 +23,7 @@
     "renewalDashboard": "Overview (Renewal)",
     "standardPrompts": "Global prompts",
     "renewalStandardPrompts": "Global prompts (Renewal)",
+    "renewalAiFunnelAcr": "ACR (Renewal)",
     "answerAnalysis": "Answer analysis",
     "answerAnalysisMention": "Mention",
     "answerAnalysisCitation": "Citation",
@@ -77,7 +78,9 @@
     "openSidebar": "Open menu",
     "closeSidebar": "Close menu",
     "websitePrompts": "Prompts",
-    "adminCitationSources": "인용 출처 분류"
+    "adminCitationSources": "인용 출처 분류",
+    "renewalAnswerAnalysisMention": "Mention (Renewal)",
+    "renewalAnswerAnalysisCitation": "Citation (Renewal)"
   },
   "locale": {
     "label": "언어",
@@ -3961,6 +3964,249 @@
     }
   },
   "renewal": {
+    "acr": {
+      "title": "ACR · AI Choice Rate",
+      "beta": "베타",
+      "cadence": "주 1회 측정",
+      "snapshot": "최신 회차 스냅샷",
+      "periodRange": "기간 누적 {from} ~ {to}",
+      "bar": {
+        "label": "페이지 조작"
+      },
+      "sec": {
+        "overview": "개요",
+        "comp": "경쟁 구도",
+        "prompt": "엔진·프롬프트",
+        "model": "차종",
+        "dist": "선택 분포",
+        "overviewDesc": "당사가 AI의 최종 추천을 얼마나 받는지 — 당사 합계 기준.",
+        "compDesc": "누가 최종 선택을 가져가는지, 후보에 오르고도 선택받지 못하는 브랜드는 누구인지.",
+        "promptDesc": "어느 엔진, 어떤 질문에서 이기고 지는지.",
+        "modelDesc": "후보에 오른 차종이 실제로 선택되는 정도.",
+        "distDesc": "질문마다 반복 측정에서 어느 브랜드가 몇 번 선택됐는지."
+      },
+      "compare": {
+        "label": "비교 브랜드",
+        "auto": "자동",
+        "change": "바꾸기",
+        "add": "브랜드 추가",
+        "dialog": "비교 브랜드 선택",
+        "hint": "추이가 있는 경쟁사에서 최대 {max}개 · 고른 순서대로 주황 · 청록 · 보라. 페이지의 모든 차트에 같은 색으로 나옵니다.",
+        "reset": "기본 (Top1 ACR 1위 경쟁사)",
+        "close": "닫기",
+        "max": "비교 브랜드는 최대 {max}개까지 고를 수 있습니다",
+        "remove": "{brand} 비교 해제",
+        "search": "브랜드 검색",
+        "none": "일치하는 브랜드가 없습니다",
+        "empty": "추이가 있는 경쟁사가 없습니다"
+      },
+      "density": {
+        "label": "보기 밀도",
+        "normal": "기본",
+        "dense": "촘촘"
+      },
+      "summary": {
+        "title": "이번 회차 요약",
+        "titlePeriod": "이 기간 요약",
+        "howLabel": "만드는 방법",
+        "how": "이 페이지 카드들의 숫자에서 규칙으로 뽑은 요약입니다(새 데이터 없음). 당사 순위와 격차, 후보에 오르고도 선택되지 않는 지점, 엔진·프롬프트별 1위, 차종 전환, 가장 크게 움직인 브랜드 순으로 중요도를 매겨 4개를 고릅니다.",
+        "chipSnapshot": "최신 회차 · 직전 회차 대비",
+        "chipPeriod": "기간 누적",
+        "headline": "<b>{own}</b> — Top1 ACR <b>{rank}위</b> {share}{delta}, 후보군 포함율 {coverage}, 1순위 선택 {count}회 · 프롬프트 {prompts}개 × 엔진 {engines}개"
+      },
+      "find": {
+        "standing": {
+          "tag": "경쟁 구도",
+          "titleFirst": "Top1 ACR 1위 — {rival}보다 {gap}pp 앞섬",
+          "titleBehind": "Top1 ACR {rival}에 {gap}pp 뒤짐",
+          "detailWidened": "격차가 직전 회차보다 {move}pp 벌어졌습니다",
+          "detailNarrowed": "격차가 직전 회차보다 {move}pp 좁혀졌습니다",
+          "detail": "당사 {own}% · {rival} {rivalShare}%"
+        },
+        "leak": {
+          "tag": "후보 → 선택",
+          "title": "{own}, 후보군은 {rival}와 비슷하지만 선택은 {gap}pp 적음",
+          "detail": "후보군 포함율 {ownCov}% vs {rivalCov}% · Top1 ACR {ownTop1}% vs {rivalTop1}%"
+        },
+        "engine": {
+          "tag": "AI 엔진",
+          "title": "{engine}에서 당사 1위 프롬프트 {wins}/{total} — {other}보다 {diff}개 적음",
+          "detail": "프롬프트 × 엔진에서 가장 많이 최종 선택된 브랜드 기준"
+        },
+        "sweep": {
+          "tag": "프롬프트",
+          "title": "{rival}가 모든 엔진에서 1위인 프롬프트 {count}개",
+          "detail": "당사가 한 엔진에서도 1위가 아닌 질문 — 콘텐츠 보강 후보"
+        },
+        "model": {
+          "tag": "차종",
+          "title": "{model} 전환율 {rate}% — 당사 차종 중 최고",
+          "detail": "가장 낮은 {worst}은 {worstRate}% · 후보에 오르면 실제로 선택되는 정도"
+        },
+        "mover": {
+          "tag": "변화",
+          "title": "{brand} Top1 ACR {delta} — 가장 큰 변화",
+          "detail": "추이가 있는 브랜드 중 직전 회차 대비"
+        },
+        "dist": {
+          "tag": "선택 분포",
+          "title": "{sheet}에서 당사가 한 번도 선택되지 않은 프롬프트 {zero}개",
+          "detail": "이 시트 프롬프트 {rows}개 중"
+        }
+      },
+      "hero": {
+        "label": "Top1 ACR (최종 선택률)",
+        "basisRound": "직전 회차 대비",
+        "basisPeriod": "기간 누적 — 증감은 추이로 봅니다",
+        "basisDay": "측정일 단위 추이라 증감을 표시하지 않습니다",
+        "standing": "브랜드 {n}개 중 <b>{rank}위</b>",
+        "leadFirst": "2위 {brand}와 +{gap}pp",
+        "leadBehind": "1위 {brand}와 {gap}pp",
+        "coverage": "후보군 포함율",
+        "choices": "1순위 선택",
+        "cells": "측정 셀",
+        "iterations": "반복 측정",
+        "times": "{n}회",
+        "count": "{n}개",
+        "ownSum": "당사 = {brands} 합산",
+        "trendTitle": "Top1 ACR 추이",
+        "trendNoteLabel": "추이",
+        "trendNoteRound": "회차별 최종 선택률(그 회차 반복 측정 기준)입니다. 당사와 상위 경쟁사만 추이를 계산합니다(최대 5개 브랜드, 당사 브랜드 우선) — 비교 브랜드는 그중에서 고릅니다. 마지막 점 = 위 값(최신 회차).",
+        "trendNoteDay": "측정일별 최종 선택률입니다. 회차 하나가 여러 날에 걸쳐 측정되면 날짜가 나뉘어 마지막 점이 위 값(최신 회차 스냅샷)과 다를 수 있습니다. 당사와 상위 경쟁사만 계산합니다.",
+        "own": "당사",
+        "tooltipRound": "{x} 회차",
+        "trendAria": "Top1 ACR 추이",
+        "noTrend": "추이 데이터가 없습니다"
+      },
+      "board": {
+        "title": "브랜드별 ACR",
+        "infoLabel": "읽는 법",
+        "info": "Top1 ACR = AI가 최종 선택한 브랜드의 몫(반복 단위 — 브랜드끼리 더하면 100% 이하, 나머지는 상위 12 밖 브랜드·선택 없음). 막대 길이는 1위 대비. 후보군 포함율 = 약 10번 반복 중 한 번이라도 후보로 언급된 셀의 비율(셀 단위, 0–100%). 단위가 달라 두 막대를 따로 그립니다. 최종 선택·언급 횟수는 행에 올리거나 표 보기에서 봅니다. 추이·증감은 당사와 상위 경쟁사만 계산합니다.",
+        "chip": "상위 12 · 최종 선택 순",
+        "sub": "추이가 있는 경쟁사 행을 누르면 비교 브랜드로 넣고 뺍니다 — 페이지의 모든 차트가 같은 브랜드로 바뀝니다.",
+        "sortLabel": "정렬",
+        "sortTop1": "Top1 ACR",
+        "sortCoverage": "후보군 포함율",
+        "sortDelta": "증감",
+        "colBrand": "브랜드",
+        "colTop1": "Top1 ACR",
+        "colTrend": "추이",
+        "colDelta": "증감",
+        "colCoverage": "후보군 포함율",
+        "colChoices": "최종 선택",
+        "colMentions": "언급 수",
+        "ownTotal": "당사 합계",
+        "own": "당사",
+        "sibling": "HMG 계열",
+        "noTrend": "추이 미산출",
+        "noTrendTip": "추이는 당사와 상위 경쟁사만 계산합니다",
+        "noCompare": "추이가 없어 비교 브랜드로 고를 수 없습니다",
+        "rowTip": "Top1 ACR {top1} · 후보군 포함율 {coverage} · 최종 선택 {choices}회 · 언급 {mentions}회",
+        "ownTip": "Top1 ACR {top1} · 후보군 포함율 {coverage} · 최종 선택 {choices}회"
+      },
+      "map": {
+        "title": "후보 → 최종 선택",
+        "infoLabel": "읽는 법",
+        "info": "가로 = 후보군 포함율, 세로 = Top1 ACR. 점선 = 브랜드 평균선(표시된 브랜드의 Top1 ACR 합 ÷ 후보군 포함율 합). 선보다 위 = 비슷하게 후보에 오르는 다른 브랜드보다 최종 선택을 더 받는 브랜드, 아래 = 덜 받는 브랜드. 두 지표는 단위가 달라(반복 · 셀) 선은 비교 기준일 뿐 전환율이 아닙니다. 새 데이터 없음.",
+        "chip": "브랜드 {n}개 · 평균선 대비",
+        "x": "후보군 포함율 →",
+        "y": "↑ Top1 ACR",
+        "line": "브랜드 평균선",
+        "above": "선 위: 평균보다 선택을 더 받음",
+        "below": "선 아래: 평균보다 선택을 덜 받음",
+        "aria": "후보군 포함율 대비 Top1 ACR, 브랜드 평균선",
+        "tip": "{brand} — 후보군 포함율 {x} · Top1 ACR {y} · 평균선 대비 {dev}",
+        "colDev": "평균선 대비"
+      },
+      "battle": {
+        "title": "AI 엔진별 선택 구도",
+        "infoLabel": "읽는 법",
+        "info": "프롬프트 × 엔진 셀마다 가장 많이 최종 선택된 브랜드(국가 합산, 동점이면 브랜드 이름순)입니다. 위 막대 = 엔진마다 각 브랜드가 1위인 프롬프트 수.",
+        "chip": "프롬프트 {prompts}개 × 엔진 {engines}개",
+        "viewLabel": "프롬프트 보기",
+        "all": "전체",
+        "notOwn": "당사 1위 아님",
+        "split": "엔진별 결과 다름",
+        "ownWins": "<b>{wins}</b>/{total} 당사 1위",
+        "others": "그 외 브랜드",
+        "noWinner": "선택 없음",
+        "colPrompt": "프롬프트",
+        "more": "나머지 {count}개 더 보기",
+        "less": "접기",
+        "empty": "조건에 맞는 프롬프트가 없습니다",
+        "segTip": "{engine} · {brand} — 1위 프롬프트 {count}개",
+        "gridAria": "프롬프트 × 엔진 1위 브랜드",
+        "ownLabel": "당사"
+      },
+      "models": {
+        "title": "차종별 선택 전환율",
+        "infoLabel": "읽는 법",
+        "info": "후보군에 등장한 뒤 최종 추천으로 선택될 확률입니다. ‘후보 등장’ = 그 차종이 후보로 오른 셀 수, ‘1위 선택’ = 최종 선택 횟수. 전환율의 분모는 그 셀들의 반복 측정 합이라, 두 수를 바로 나눈 값과는 다릅니다. 최종 선택이 1회 이상인 차종 중 상위 12개.",
+        "chip": "상위 12 · 전환율 순",
+        "sortLabel": "정렬",
+        "colBrand": "브랜드",
+        "colModel": "차종",
+        "colRate": "전환율",
+        "colShortlist": "후보 등장(셀)",
+        "colTop1": "1위 선택(회)",
+        "empty": "최종 선택된 차종이 없습니다",
+        "rowTip": "{brand} {model} — 전환율 {rate} · 후보 등장 {shortlist}셀 · 1위 선택 {top1}회"
+      },
+      "dist": {
+        "title": "프롬프트별 선택 분포",
+        "infoLabel": "읽는 법",
+        "info": "국가 × 엔진 시트별로, 프롬프트(행)의 반복 측정에서 최종 추천된 브랜드 분포입니다(막대 길이 = 선택 횟수, 반복 순서 아님). 빗금 = 선택 없음. 색은 당사와 비교 브랜드만, 나머지 브랜드는 회색 — 이름은 마우스를 올리면 보입니다.",
+        "chip": "시트 {n}개 · 행이 많은 순",
+        "sheets": "시트",
+        "zero": "당사 0회 프롬프트만",
+        "sortLabel": "정렬",
+        "sortText": "프롬프트 순",
+        "sortOwn": "당사 몫 낮은 순",
+        "colPrompt": "프롬프트",
+        "colDist": "선택 분포",
+        "colOwn": "당사",
+        "colTop": "최빈",
+        "more": "{count}개 모두 보기",
+        "less": "20개만 보기",
+        "empty": "조건에 맞는 프롬프트가 없습니다",
+        "segTip": "{brand} — {n}회 / 반복 {total}회",
+        "noneTip": "선택 없음 — {n}회 / 반복 {total}회",
+        "gridAria": "{sheet} 프롬프트별 선택 분포"
+      },
+      "foot": {
+        "snapshot": "최신 회차 스냅샷 — 프롬프트 {prompts}개 · 셀(프롬프트×엔진×국가) {cells}개 · 반복 {iterations}회",
+        "period": "기간 누적 — 프롬프트 {prompts}개 · 셀(프롬프트×엔진×국가) {cells}개 · 반복 {iterations}회"
+      },
+      "states": {
+        "noResultTitle": "이 조건에는 ACR 측정 결과가 없습니다",
+        "noResultDesc": "ACR은 일부 국가·언어에서만 측정합니다. 국가·언어·카탈로그 조건을 줄여 보세요.",
+        "reset": "필터 초기화"
+      },
+      "card": {
+        "table": "표로 보기",
+        "chart": "차트로 보기",
+        "menu": "카드 메뉴",
+        "csv": "CSV 내보내기",
+        "link": "이 카드 링크 복사",
+        "csvDone": "CSV 를 내려받았습니다",
+        "linkDone": "이 카드로 바로 오는 링크를 복사했습니다",
+        "linkFailed": "링크를 복사하지 못했습니다"
+      },
+      "def": {
+        "definition": "정의",
+        "formula": "산식",
+        "infoAria": "지표 정의 보기",
+        "coverageTitle": "후보군 포함율",
+        "coverage": "최종 선택까지는 아니어도, 추천 후보 목록에 최소 한 번이라도 오른 측정 셀(질문 × AI 엔진 × 국가)의 비율입니다. 셀마다 약 10번 반복해 그중 한 번이라도 후보로 언급되면 포함으로 셉니다. ‘일단 후보에 드는가’를 봅니다.",
+        "coverageFormula": "후보로 등장한 셀 수 ÷ 전체 셀 수"
+      },
+      "delta": {
+        "up": "개선",
+        "down": "악화",
+        "flat": "변화 없음",
+        "none": "−"
+      }
+    },
     "filters": {
       "title": "필터",
       "selectedAxes": "{count}개 축 선택",
@@ -3978,7 +4224,9 @@
       "applying": "반영 중",
       "resetDone": "필터를 초기화했습니다",
       "undo": "되돌리기",
-      "shortcutPanel": "패널 접기"
+      "shortcutPanel": "패널 접기",
+      "defaultScopeHintSnapshot": "필터를 선택하지 않으면 계정 권한 범위의 전체 데이터가 조회됩니다 (기간 미선택 시 최신 회차 스냅샷).",
+      "axisNeedsCompetitor": "공식(경쟁사) 포함 시"
     },
     "saved": {
       "title": "저장한 필터",
@@ -4013,13 +4261,6 @@
     "overview": {
       "copyLink": "링크 복사",
       "linkCopied": "지금 조건이 담긴 링크를 복사했습니다",
-      "boardTitle": "KPI 5종",
-      "boardHint": "줄을 누르면 아래 시장·브랜드 비교가 그 지표로 바뀝니다",
-      "colKpi": "지표",
-      "colValue": "값",
-      "colTrend": "추이",
-      "colTopRival": "1위 경쟁사",
-      "kpiPicker": "지표 선택",
       "definition": "정의",
       "formula": "산식",
       "infoLabel": "{name} 정의 보기",
@@ -4027,27 +4268,46 @@
       "deltaUp": "개선",
       "deltaDown": "악화",
       "deltaFlat": "변화 없음",
-      "marketsTitle": "시장별 {kpi}",
-      "legendLow": "낮음",
-      "legendHigh": "높음",
-      "legendRankBack": "순위 뒤",
-      "legendRankFront": "순위 앞",
       "brandsTitle": "브랜드 비교",
-      "brandsHint": "당사 남색 · 경쟁사 회색",
-      "rankHint": "낮을수록 앞섬",
-      "ourRank": "당사 {rank}위 / {count}개 브랜드",
       "ownTag": "당사",
-      "tableTitleRegion": "권역 › 국가별 {kpi}",
-      "tableHint": "행이나 타일을 누르면 서로 강조됩니다",
-      "colAnswers": "답변 수",
       "collapseRegion": "{region} 접기",
       "expandRegion": "{region} 펼치기",
       "noMarkets": "조건에 맞는 측정 국가가 없습니다.",
       "answersMeta": "답변 {count}개",
       "periodMeta": "기간 {from} ~ {to}",
       "roundMeta": "측정 회차 {date}",
-      "rivalBasis": "최대 경쟁사 = 그 시장에서 언급이 가장 많은 경쟁사",
-      "countryCount": "{count}개국"
+      "countryCount": "{count}개국",
+      "kpiTitle": "KPI 5종",
+      "kpiHintDelta": "증감 = {compare}",
+      "kpiHintTrend": "추이 = 최근 {count}회차",
+      "detail": "상세",
+      "standing": "비교 브랜드 {count}개 중 <b>{rank}위</b>",
+      "brandsHint": "5개 지표를 한 표에 · 막대는 열마다 최고값 기준 · 우선 노출도는 낮을수록 앞섬 · 증감 = 모든 행 {compare}",
+      "colBrand": "브랜드",
+      "colStanding": "당사 {rank}위 / {count}",
+      "short": {
+        "visibility": "노출률",
+        "shareOfVoice": "점유율",
+        "sentiment": "우호도",
+        "position": "우선 노출도",
+        "citationShare": "인용 점유율"
+      },
+      "notCompared": "{kpi}의 비교 경쟁사(상위 4)에 없는 브랜드입니다",
+      "deltaTitle": "{dir} · {compare}",
+      "brandsFoot": "‘—’ = 그 지표의 비교 경쟁사(상위 4)에 없는 브랜드 · 인용 점유율은 인용 기준 경쟁사가 따로 있습니다 · 우호도 · 인용 점유율은 경쟁사 증감을 제공하지 않습니다",
+      "marketsTitle": "시장별 현황",
+      "heatLegend": "칸 색: 지표별 국가 순위 · 뒤",
+      "heatLegendFront": "앞",
+      "heatLegendTitle": "같은 지표 안에서 국가끼리 비교한 5단계 — 지표마다 따로 매깁니다",
+      "marketsKey": "칸의 작은 숫자 = 그 시장 <b>최대 경쟁사</b>(언급이 가장 많은 경쟁사, 국가 아래 ‘vs’) 대비 격차 · + 앞섬 / − 뒤짐 · 인용 점유율은 경쟁사 값이 없습니다 · 열 이름을 누르면 국가 순서가 그 지표로 바뀝니다",
+      "sortTitle": "{kpi} — 국가 정렬",
+      "sortTitleOn": "{kpi} — 국가 정렬 (지금 {dir})",
+      "sortBest": "앞선 순",
+      "sortWorst": "뒤진 순",
+      "vsRival": "vs {name}",
+      "cellPlace": "국가 {count}개 중 {rank}위",
+      "cellRival": "최대 경쟁사 {name} {value} · 격차 {gap}",
+      "cellNoRival": "최대 경쟁사 값 없음"
     },
     "prompts": {
       "columnTaxonomy": "분류 · 퍼널",
@@ -4062,6 +4322,550 @@
       "optionSearch": "{label} 검색",
       "copyLink": "링크 복사",
       "linkCopied": "지금 조건이 담긴 링크를 복사했습니다"
+    },
+    "mention": {
+      "title": "언급 분석",
+      "beta": "베타",
+      "periodRange": "기간 누적 {from} ~ {to}",
+      "bar": {
+        "label": "페이지 조작"
+      },
+      "sec": {
+        "overview": "현황과 추이",
+        "comp": "경쟁 구도",
+        "compDesc": "누가 앞서고 누가 쫓아오는지 — 행을 누르면 비교 브랜드로 넣고 뺍니다.",
+        "mix": "엔진·유형",
+        "mixDesc": "어느 AI 엔진에서, 어떤 방식으로 언급되는지 봅니다.",
+        "favDist": "감정 분포",
+        "favDistDesc": "당사 언급에 붙은 감정 신호를 나눠 봅니다 — 항목을 누르면 그 신호가 나온 프롬프트와 답변으로 내려갑니다.",
+        "favMix": "유형별 감정",
+        "favMixDesc": "어떤 방식으로 언급될 때 긍정이 많은지 봅니다.",
+        "rank": "순위표",
+        "rankDesc": "각 브랜드가 답변에서 몇 번째로 언급되는지 — 막대가 길수록 먼저 언급됩니다.",
+        "brands": "브랜드 상세",
+        "brandsDesc": "브랜드별 언급 순위와 구성 — 브랜드를 누르면 프롬프트와 실제 AI 답변까지 내려갑니다."
+      },
+      "compare": {
+        "label": "비교 브랜드",
+        "auto": "자동",
+        "remove": "{brand} 비교 해제",
+        "change": "바꾸기",
+        "add": "브랜드 추가",
+        "dialog": "비교 브랜드 선택",
+        "hint": "추이가 있는 상위 브랜드에서 최대 {max}개 · 고른 순서대로 주황 · 청록 · 보라. 페이지의 모든 차트에 같은 색으로 나옵니다.",
+        "empty": "추이가 있는 경쟁 브랜드가 없습니다",
+        "reset": "기본 (점유율 1위 경쟁사)",
+        "close": "닫기",
+        "max": "비교 브랜드는 최대 {max}개까지 고를 수 있습니다"
+      },
+      "density": {
+        "label": "보기 밀도",
+        "normal": "기본",
+        "dense": "촘촘"
+      },
+      "delta": {
+        "up": "개선",
+        "down": "악화",
+        "flat": "변화 없음",
+        "none": "증감 없음",
+        "label": "증감 기준",
+        "basisPeriod": "선택 기간 직전의 같은 길이 기간 대비",
+        "basisCycle": "직전 회차({date}) 대비",
+        "basisCycleNoDate": "직전 회차 대비",
+        "basisPrev": "기간 첫 측정일({date}) 누적 대비",
+        "noteCycle": "▲▼ 증감은 직전 회차({date}) 대비입니다. Overview 카드와 같은 집계에서 같은 규칙으로 계산합니다.",
+        "notePrev": "▲▼ 증감은 기간 내 누적 기준입니다: 기간 첫 측정일({date}) 시점의 누적과 비교합니다.",
+        "notePeriod": "▲▼ 증감은 선택한 기간과 바로 앞 같은 길이의 기간을 비교한 값입니다.",
+        "noteRank": "▲▼ 증감은 직전 회차 대비 평균 위치 변화(번째)입니다. 음수(앞 순서로 이동)가 개선입니다."
+      },
+      "card": {
+        "menu": "카드 메뉴",
+        "table": "표로 보기",
+        "chart": "차트로 보기",
+        "csv": "CSV 내보내기",
+        "csvDone": "CSV 파일을 내려받았습니다",
+        "link": "이 카드 링크 복사",
+        "linkDone": "링크를 복사했습니다",
+        "linkFailed": "링크를 복사하지 못했습니다"
+      },
+      "states": {
+        "noResultTitle": "이 필터 조합에는 측정 결과가 없습니다",
+        "noResultDesc": "선택한 필터에 해당하는 AI 답변이 없습니다. 필터를 줄이거나 초기화해 보세요.",
+        "reset": "필터 초기화"
+      },
+      "tabs": {
+        "label": "KPI",
+        "viewing": "보는 지표",
+        "basis": "{kpi} 기준",
+        "deltaTitle": "{dir} · {basis}"
+      },
+      "summary": {
+        "title": "이번 회차 요약",
+        "titlePeriod": "선택 기간 요약",
+        "howLabel": "만드는 방법",
+        "how": "이 페이지 카드들의 숫자에서 규칙으로 뽑은 요약입니다(새 데이터 없음). 당사 순위와 격차, 당사가 뒤지는 유형, 가장 크게 움직인 경쟁사, 엔진 격차, 언급 순위 급변, 부정 신호 증가 순으로 중요도를 매겨 4개를 고릅니다.",
+        "chipSnapshot": "{date} 기준 · 직전 회차 대비",
+        "chipPeriod": "선택 기간 누적 기준",
+        "headline": "<b>{own}</b> — 노출률 <b>{expRank}</b> {exp}, 점유율 <b>{sovRank}</b> {sov}, 우호도 {fav}, 우선 노출도 {pos}.",
+        "empty": "요약할 수 있는 변화가 없습니다",
+        "rank": "{rank}위"
+      },
+      "find": {
+        "standingLead": {
+          "tag": "경쟁 구도",
+          "title": "노출률 1위 — 2위 {rival}보다 {gap}pp 앞섬"
+        },
+        "standingTrail": {
+          "tag": "경쟁 구도",
+          "title": "노출률 {rank}위 — 1위 {rival}보다 {gap}pp 뒤짐"
+        },
+        "standingWidened": "격차가 직전 회차보다 {move}pp 벌어졌습니다",
+        "standingNarrowed": "격차가 직전 회차보다 {move}pp 좁혀졌습니다",
+        "standingDetail": "당사 {own}",
+        "typeTrail": {
+          "tag": "멘션 유형",
+          "title": "{type}에서 {ref}에 {gap}pp 뒤짐"
+        },
+        "typeLead": {
+          "tag": "멘션 유형",
+          "title": "모든 유형에서 앞섬 — {type} 차이가 가장 작음({gap})"
+        },
+        "typeStrong": "추천·최종 선택은 구매 의도가 가장 강한 유형입니다",
+        "typeDetail": "유형 안 점유율 · 당사 {own}",
+        "competitorAvg": "경쟁사 평균",
+        "mover": {
+          "tag": "변화",
+          "title": "{brand} 점유율 {delta} — 가장 큰 변화"
+        },
+        "moverDetail": "추이가 있는 경쟁사 중 직전 회차 대비 · 당사 {own}",
+        "engine": {
+          "tag": "AI 엔진",
+          "title": "{engine}에서 경쟁사 평균 대비 {gap}"
+        },
+        "engineDetail": "엔진 중 가장 작은 격차 · {next} {nextGap}",
+        "engineDetailOne": "노출률 기준",
+        "climb": {
+          "tag": "순위 변화",
+          "title": "{brand} 언급 순위 {from}위 → {to}위"
+        },
+        "climbDetail": "최근 {weeks}회차 · 당사 + 상위 10 기준",
+        "negative": {
+          "tag": "우호도",
+          "title": "부정 신호 비율 {pct} ({delta})"
+        },
+        "negativeDetail": "당사 언급에 붙은 감정 신호 기준"
+      },
+      "hero": {
+        "trendTitleExposure": "브랜드별 노출률 추이",
+        "trendTitleSov": "브랜드별 점유율 추이",
+        "trendNoteLabel": "지표 차이",
+        "trendNote": "브랜드별 {metric}(%) 추이입니다 — 아래 ‘브랜드 상세’의 주별 순위는 언급 수 기준이라 지표가 다릅니다. 비교 브랜드가 없으면 추이가 있는 경쟁사의 평균을 그립니다.",
+        "standing": "비교 {n}개 브랜드 중 <b>{rank}위</b>",
+        "leadFirst": "2위 {brand}와 +{gap}pp",
+        "leadBehind": "1위 {brand}와 {gap}pp",
+        "ownSum": "당사 = {brands} 합산",
+        "asOf": "측정 기준일 {date}",
+        "average": "경쟁사 평균",
+        "noTrend": "추이 데이터가 없습니다",
+        "tooltip": "{x} 회차",
+        "trendAria": "당사와 비교 브랜드의 {metric} 추이",
+        "own": "당사"
+      },
+      "board": {
+        "title": "경쟁사 분석({metric})",
+        "infoLabel": "읽는 법",
+        "infoExposure": "전체 AI 답변 중 브랜드가 등장한 비율입니다. 값은 측정 기준일 스냅샷, 추이·증감은 회차 집계입니다. 추이는 당사와 언급 상위 10개 브랜드만 계산합니다(그 밖은 ‘추이 미산출’). 당사 대비 = 경쟁사 값 − 당사 값.",
+        "infoSov": "전체 브랜드 언급 중 각 브랜드가 차지하는 비율입니다. 값은 측정 기준일 스냅샷, 추이·증감은 회차 집계입니다. 추이는 당사와 언급 상위 10개 브랜드만 계산합니다(그 밖은 ‘추이 미산출’). 당사 대비 = 경쟁사 값 − 당사 값.",
+        "chipSnapshot": "측정 기준일 스냅샷",
+        "chipTrend": "추이 {n}회차",
+        "sub": "행을 누르면 비교 브랜드로 넣고 뺍니다 — 페이지의 모든 차트가 같은 브랜드로 바뀝니다.",
+        "colBrand": "브랜드",
+        "colTrend": "추이",
+        "colDelta": "증감",
+        "colGap": "당사 대비",
+        "own": "당사",
+        "sibling": "HMG 계열",
+        "noTrend": "추이 미산출",
+        "noTrendTip": "당사와 언급 상위 10개 브랜드만 추이를 계산합니다",
+        "noCompare": "추이가 없어 비교 브랜드로 고를 수 없습니다",
+        "more": "나머지 {n}개 브랜드 더 보기",
+        "less": "상위 5 + 비교 브랜드만 보기",
+        "empty": "비교할 브랜드 데이터가 없습니다"
+      },
+      "engine": {
+        "titleExposure": "AI 엔진별 노출",
+        "titleSov": "AI 엔진별 점유율",
+        "infoLabel": "이 카드",
+        "infoExposure": "AI 엔진별 당사 노출률입니다. 비교 기준은 그 엔진에서 언급이 있는 경쟁사(엔진별 상위 30개사)의 평균이며, 페이지의 비교 브랜드와 무관합니다. 선은 당사 추이입니다 — 경쟁사 평균의 회차 추이는 데이터에 없습니다.",
+        "infoSov": "전체 브랜드 언급 중 당사 점유율을 AI 엔진별로 나타냅니다. 비교 기준은 그 엔진에서 언급이 있는 경쟁사(엔진별 상위 30개사)의 평균이며, 페이지의 비교 브랜드와 무관합니다. 선은 당사 추이입니다 — 경쟁사 평균의 회차 추이는 데이터에 없습니다.",
+        "chip": "비교 = 경쟁사 평균",
+        "own": "당사",
+        "avg": "경쟁사 평균 (상위 {n}개사)",
+        "avgShort": "경쟁사 평균",
+        "gapTitle": "당사 − 경쟁사 평균",
+        "trendAria": "{engine} 당사 {metric} 추이"
+      },
+      "type": {
+        "titleExposure": "멘션 유형별 노출",
+        "titleSov": "멘션 유형별 점유율",
+        "infoLabel": "이 카드가 보여 주는 것",
+        "info": "AI가 당사를 얼마나가 아니라 어떤 식으로 언급하는지(단순 언급 · 추천 · 비교 · 정의 · 최종 선택)입니다. 답변 분석기가 브랜드 언급마다 붙이는 유형 신호 기준이며, 한 언급이 여러 유형을 가질 수 있어 유형끼리 더하지 않습니다. 경쟁 비교 = 그 유형의 전 브랜드 신호 중 각 브랜드의 몫, 막대 구간 = 당사와 기준(가장 앞선 비교 브랜드, 없으면 경쟁사 평균)의 차이.",
+        "chip": "유형 신호 기준",
+        "sub": "위에서부터 추천 강도 순 — 최종 선택 · 추천에서 앞서는지가 가장 중요합니다.",
+        "viewLabel": "보기",
+        "viewCompare": "경쟁 비교",
+        "viewOwnExposure": "당사 노출률 추이",
+        "viewOwnSov": "당사 유형 구성",
+        "unitLabel": "단위",
+        "unitPct": "비율",
+        "unitCount": "건수",
+        "avg": "경쟁사 평균 (상위 {n}개사)",
+        "vs": "vs {brand}",
+        "colType": "유형",
+        "colOwnExposure": "당사 노출률",
+        "colOwnSov": "당사 유형 구성",
+        "colSignals": "당사 유형 신호 수",
+        "colValue": "값",
+        "colDelta": "증감",
+        "colTrend": "추이",
+        "colGap": "차이",
+        "signals": "{n}건",
+        "footExposure": "분모 = 전체 답변 수 — 답변 100개 중 당사가 그 유형으로 나온 답변 수",
+        "footSov": "분모 = 당사 유형 신호 합 (유형 간 구성비)",
+        "footCompare": "유형 안 점유율 = 그 유형의 전 브랜드 신호 중 각 브랜드의 몫",
+        "dotTip": "{type} · {who}\n유형 안 점유율 {value}",
+        "rowAria": "{type}: 당사 {own}, {ref} {refValue}",
+        "aria": "멘션 유형별 유형 안 점유율"
+      },
+      "favor": {
+        "label": "AI 우호도",
+        "positive": "긍정 신호 비율",
+        "negative": "부정 신호 비율",
+        "negativeBasisLabel": "부정 비율 기준",
+        "posCount": "당사 긍정 신호 수",
+        "total": "당사 전체 신호 수",
+        "chipSignal": "감정 신호(언급 단위)",
+        "trendTitle": "긍정·부정 신호 비율 추이",
+        "trendAria": "긍정·부정 신호 비율 추이",
+        "distInfoLabel": "단위",
+        "distChip": "신호 {n}건",
+        "distGo": "프롬프트 보기",
+        "distAria": "감정 분포",
+        "matrixAria": "멘션 유형별 감정 분포"
+      },
+      "rank": {
+        "label": "AI 우선 노출도",
+        "unit": "{n}번째",
+        "basis": "직전 회차 대비 · 음수가 개선",
+        "ranked": "순위 답변",
+        "ahead": "당사보다 앞선 브랜드",
+        "count": "{n}개",
+        "trackTitle": "브랜드별 평균 위치",
+        "trackNote": "왼쪽일수록 먼저 언급",
+        "trackAria": "브랜드별 평균 위치",
+        "trendTitle": "평균 위치 추이",
+        "trendAria": "당사와 비교 브랜드의 평균 위치 추이",
+        "tableTitle": "AI 우선 노출도",
+        "tableInfo": "막대가 길수록 먼저 언급됩니다. ‘당사 대비’ 양수 = 그 브랜드가 당사보다 뒤에 언급됨. 추이는 당사와 언급 상위 10개 브랜드만 계산합니다.",
+        "chipTrend": "추이 4회차",
+        "ladder": "순위별 보기",
+        "colBar": "평균 위치 막대",
+        "colAvg": "평균 위치",
+        "colWow": "WoW",
+        "colGap": "당사 대비",
+        "unitPrefix": "",
+        "unitSuffix": "번째"
+      },
+      "bump": {
+        "title": "주별 언급 순위 · 점유율",
+        "infoLabel": "집계 기준",
+        "info": "주마다 당사와 상위 10개 브랜드를 언급 수로 줄 세운 순위입니다. 점 크기는 그 주 전체 브랜드 언급 중 이 브랜드의 비중(점유율) — 위 점유율과 같은 단위입니다. 오른쪽 ▲▼ = 첫 회차 대비 순위 변화. 선이나 이름에 올리면 그 브랜드만 남고, 페이지의 같은 브랜드도 함께 강조됩니다.",
+        "chip": "당사 + 상위 10 · {n}회차",
+        "needTwo": "순위 변화는 측정 회차가 2회 이상일 때 표시됩니다",
+        "size": "점 크기 = 그 주 점유율",
+        "aria": "주별 브랜드 언급 순위",
+        "tip": "{brand} · {x} 회차\n{rank}위 · 점유율 {share} · 언급 {mentions}회",
+        "colRank": "순위",
+        "colShare": "점유율",
+        "colMentions": "언급 수"
+      },
+      "brands": {
+        "title": "브랜드 언급 순위 (상위 100)",
+        "viewLabel": "보기",
+        "viewMap": "트리맵",
+        "viewTable": "순위표",
+        "colDelta": "증감",
+        "deltaInfo": "점유율 증감(직전 회차 대비). 당사와 언급 상위 10개 브랜드만 추이를 계산합니다.",
+        "multiNoDelta": "복수 언급은 추이가 없습니다",
+        "rowTip": "누르면 이 브랜드의 프롬프트와 실제 AI 답변을 봅니다",
+        "groupOnly": "{group} 그룹만 보기",
+        "clearGroup": "그룹 필터 해제",
+        "count": "{shown}개 브랜드"
+      },
+      "treemap": {
+        "legend": "점유율 증감 (직전 회차 대비)",
+        "steps": "−1.0pp 이하,−0.5,−0.2,±0.2 이내,+0.2,+0.5,+1.0pp 이상",
+        "na": "추이 미산출",
+        "all": "전체 그룹",
+        "drill": "브랜드 {n}",
+        "nonAuto": "자동차 외",
+        "fold": "그 외",
+        "toTable": "이 그룹 순위표로 보기",
+        "partial": "일부 브랜드만 추이가 있어 그룹 증감이 부분값입니다",
+        "aria": "모그룹별 브랜드 언급 트리맵",
+        "back": "전체 그룹으로",
+        "groupTip": "{group} · 점유율 {share}\n증감 {delta} · 브랜드 {n}개",
+        "brandTip": "{brand} · 점유율 {share}\n증감 {delta} · 언급 {mentions}회",
+        "noDeltaTitle": "증감 없음",
+        "groupName": "{name} 그룹"
+      },
+      "drawer": {
+        "close": "닫기",
+        "subtitle": "점유율 {share} · 언급 {mentions}회 · 언급률 {rate}",
+        "answersTitle": "답변 {n}개",
+        "openAnswer": "답변 보기",
+        "back": "프롬프트 목록으로",
+        "rankLine": "언급 수 {rank}위 · 현재 필터 기준"
+      }
+    },
+    "citation": {
+      "title": "인용 분석",
+      "beta": "베타",
+      "periodRange": "기간 누적 {from} ~ {to}",
+      "states": {
+        "noResultTitle": "이 필터 조합에는 인용 데이터가 없습니다",
+        "noResultDesc": "선택한 필터에 해당하는 AI 답변의 인용이 없습니다. 필터를 줄이거나 초기화해 보세요.",
+        "reset": "필터 초기화"
+      },
+      "sec": {
+        "overview": "개요",
+        "overviewDesc": "인용의 크기와 질 — 공식 출처 비중과, 공식(당사) URL이 인용된·안 된 프롬프트.",
+        "comp": "출처 구성",
+        "compDesc": "AI가 어떤 종류의 출처를 근거로 쓰는지 — 줄을 누르면 페이지 전체가 그 출처만 봅니다.",
+        "mix": "맥락",
+        "mixDesc": "어느 AI 엔진에서, 어떤 언급 방식에서, 어떤 톤의 답변에서 인용되는지 봅니다.",
+        "dom": "도메인",
+        "domDesc": "어느 도메인이 얼마나 인용되는지 — 도메인을 누르면 인용 URL과 프롬프트, 실제 답변까지 내려갑니다."
+      },
+      "density": {
+        "label": "보기 밀도",
+        "normal": "기본",
+        "dense": "촘촘"
+      },
+      "delta": {
+        "basisPrev": "직전 회차({date}) 대비",
+        "basisPrevNoDate": "직전 회차 대비"
+      },
+      "summary": {
+        "title": "이번 회차 요약",
+        "titlePeriod": "선택 기간 요약",
+        "howLabel": "만드는 방법",
+        "how": "이 페이지 카드들의 숫자에서 규칙으로 뽑은 요약입니다(새 데이터 없음). 공식(HMG)의 위치, 가장 크게 움직인 출처, 엔진·멘션 유형별 공식 인용 격차, 공식(당사) URL 미인용 프롬프트(기회), 엔진·유형의 출처 선호, 도메인 순위 급변 순으로 중요도를 매겨 4개를 고릅니다.",
+        "chipSnapshot": "{date} 기준 · 직전 회차 대비",
+        "chipPeriod": "선택 기간 누적 기준",
+        "headline": "<b>공식(HMG) 인용 비중 {hmg}</b>{delta} · 출처 카테고리 중 <b>{rank}</b>, 딜러·마켓 {dealer}{prompts}.",
+        "headlineNoHmg": "공식(HMG) 카테고리가 출처 필터에서 빠져 있습니다 — 딜러·마켓 {dealer}, 인용 {total}회, 인용 도메인 {domains}개.",
+        "rank": "{rank}위",
+        "prompts": ", 공식(당사) URL 인용 프롬프트 {owned}개 / 미인용 {uncited}개",
+        "empty": "요약할 수 있는 변화가 없습니다"
+      },
+      "find": {
+        "noDelta": "직전 회차 값이 없어 증감은 없습니다",
+        "deltaDetail": "공식(HMG) 비중 직전 회차 대비 {delta}",
+        "tagEngine": "AI 엔진",
+        "tagType": "멘션 유형",
+        "standingLead": {
+          "tag": "출처 구성",
+          "title": "공식(HMG)이 가장 많이 인용된 출처 — 2위 {rival}보다 {gap}pp 많음"
+        },
+        "standingTrail": {
+          "tag": "출처 구성",
+          "title": "공식(HMG) 인용 비중 {rank}위 {share} — 1위 {leader} {leaderShare}"
+        },
+        "mover": {
+          "tag": "변화",
+          "title": "{category} 인용 비중 {delta} — 가장 큰 변화"
+        },
+        "moverDetail": "직전 회차 대비 · 지금 {share}",
+        "engineGap": {
+          "title": "{low}의 공식(HMG) 인용 {share} — {high}보다 {gap}pp 낮음"
+        },
+        "engineGapDetail": "출처 선호 매트릭스 기준",
+        "typeGap": {
+          "titleLow": "추천 답변의 공식(HMG) 인용 {share} — 단순 언급보다 {gap}pp 낮음",
+          "titleHigh": "추천 답변에서 공식(HMG)이 더 많이 인용됨 ({share})"
+        },
+        "typeGapDetail": "구매 의도가 강한 답변일수록 공식 출처가 근거로 쓰이는지가 중요합니다",
+        "opportunity": {
+          "tag": "기회",
+          "title": "공식(당사) URL이 한 번도 인용되지 않은 프롬프트 {n}개 ({share}%)"
+        },
+        "opportunityDetail": "이 프롬프트들이 공식 콘텐츠로 보강할 주제입니다",
+        "skew": {
+          "title": "{col}에서 {category} 인용이 전체보다 {gap}"
+        },
+        "skewDetail": "{share} · 전체 {base} — 출처 선호 매트릭스",
+        "climb": {
+          "tag": "순위 변화",
+          "title": "{domain} 인용 순위 {from}위 → {to}위"
+        },
+        "climbDetail": "최근 {weeks}주 · 상위 {n}개 도메인 기준"
+      },
+      "lens": {
+        "label": "인용 KPI",
+        "total": "전체 인용 {n}회",
+        "domains": "인용 도메인 {n}개",
+        "basisPeriod": "선택 기간 누적",
+        "basisSnapshot": "측정 기준일 {date} 스냅샷",
+        "defLabel": "정의",
+        "formulaLabel": "계산식",
+        "unit": "개",
+        "open": "프롬프트 보기",
+        "hmg": {
+          "name": "공식(HMG) 인용 비중",
+          "question": "AI가 HMG 공식 사이트를 근거로 얼마나 쓰나",
+          "def": "전체 인용 중 HMG 그룹 공식 사이트로 분류된 인용의 비중입니다. 아래 출처 구성의 공식(HMG) 비중과 같은 값이고, 증감은 Overview 카드와 같은 기준(직전 회차)입니다.",
+          "formula": "공식(HMG) 인용 수 ÷ 전체 인용 수 × 100 (도메인 수가 아닌 인용 수 기준)",
+          "excluded": "공식(HMG) 카테고리가 출처 필터에서 빠져 있습니다"
+        },
+        "dealer": {
+          "name": "딜러·마켓 인용 비중",
+          "question": "판매 채널 출처가 얼마나 인용되나",
+          "def": "전체 인용 중 딜러·마켓플레이스 카테고리의 비중입니다. 증감은 직전 회차 대비입니다.",
+          "formula": "딜러·마켓 인용 수 ÷ 전체 인용 수 × 100",
+          "excluded": "딜러·마켓 카테고리가 출처 필터에서 빠져 있습니다"
+        },
+        "owned": {
+          "name": "공식(당사) URL 인용 프롬프트",
+          "question": "당사 공식 URL을 1회 이상 인용한 프롬프트"
+        },
+        "uncited": {
+          "name": "공식(당사) URL 미인용 프롬프트",
+          "question": "한 번도 인용하지 않은 프롬프트 — 보강 기회"
+        },
+        "split": {
+          "noOwnCategory": "공식(HMG) 카테고리가 포함될 때만 셉니다",
+          "notComputed": "출처 필터가 걸리면 이 수를 계산하지 않습니다",
+          "noOwned": "공식(당사) URL이 인용된 프롬프트가 없습니다"
+        }
+      },
+      "comp": {
+        "title": "출처 카테고리 구성",
+        "infoLabel": "읽는 법",
+        "info": "AI 답변이 근거로 인용한 출처를 카테고리로 나눈 인용 비중과 인용 수입니다(도메인 수가 아니라 인용 수). 증감 = 직전 회차 대비 변화(pp) — 0을 가운데 둔 막대로, 모든 줄이 같은 축(이 화면에서 가장 큰 변화 기준, 최소 ±{cap}pp)이라 막대 길이끼리 비교할 수 있습니다. 파랑 = 늘어남, 주황 = 줄어듦(좋고 나쁨이 아니라 방향). 추이 = 주별 비중 — {span}pp보다 작은 흔들림은 거의 평평하게 그려 실제 추세만 기울어 보입니다. 올리면 그 카테고리의 상위 도메인 3개와 점유를 보여 줍니다.",
+        "chipSnapshot": "측정 기준일 스냅샷",
+        "chipPeriod": "선택 기간 누적",
+        "chipDelta": "증감 = 직전 회차({date}) 대비",
+        "sub": "줄을 누르면 그 카테고리로 필터합니다(여러 개 가능) — 페이지 전체가 그 출처만 봅니다.",
+        "empty": "인용된 출처가 없습니다",
+        "col": {
+          "category": "카테고리",
+          "share": "인용 비중",
+          "prev": "직전 회차",
+          "citations": "인용 수",
+          "pct": "비중",
+          "delta": "증감",
+          "trend": "주별 추이",
+          "pctCount": "비중 · 인용 수",
+          "deltaAxis": "직전 회차 대비"
+        },
+        "tipCitations": "인용 {n}회",
+        "tipTop": "상위 도메인(이 카테고리 인용 중): {list}",
+        "tipToggle": "누르면 이 카테고리로 필터 (다시 누르면 해제)",
+        "up": "늘어남",
+        "down": "줄어듦",
+        "axisNote": "증감 막대는 모든 줄이 같은 축(최소 ±{cap}pp) · 추이는 {span}pp 미만 흔들림을 평평하게",
+        "tipDelta": "증감 {delta} (직전 회차 {prev})"
+      },
+      "matrix": {
+        "title": "출처 선호 매트릭스",
+        "infoLabel": "읽는 법",
+        "infoEngine": "AI 엔진마다 인용한 출처의 카테고리 구성비입니다(열마다 합 100%). 칸의 숫자 = 그 엔진의 비중, 칸의 색 = ‘전체’ 열과의 차이 — 파랑은 그 엔진이 평균보다 더, 주황은 덜 근거로 쓰는 출처입니다. 전체 = 표에 있는 엔진 인용의 합 기준. 인용이 {min}회 미만인 열은 차이가 우연일 수 있어 색을 칠하지 않습니다.",
+        "infoType": "당사 언급이 그 유형 신호(최종 선택 · 추천 · 비교 · 정의 · 단순 언급)를 가진 답변들이 인용한 출처의 구성비입니다(열마다 합 100%). 한 답변이 여러 유형 신호를 가지면 중복 계상되며, 전체 = 표에 있는 유형의 합 기준입니다. 색은 엔진 보기와 같고, 인용이 {min}회 미만인 열은 칠하지 않습니다.",
+        "chip": "색 = 전체 대비 차이",
+        "axisLabel": "열 기준",
+        "axisEngine": "AI 엔진",
+        "axisType": "멘션 유형",
+        "subEngine": "파랑 = 그 엔진이 평균보다 더 근거로 쓰는 출처, 주황 = 덜 쓰는 출처 — 공식(HMG) 줄이 주황인 엔진이 보강 대상입니다.",
+        "subType": "추천 강도 순(최종 선택 → 단순 언급) — 추천·최종 선택 답변에서 공식(HMG) 줄의 색이 가장 중요합니다.",
+        "colCategory": "출처 카테고리",
+        "colAll": "전체",
+        "n": "{n}회",
+        "csvGap": "전체 대비(pp)",
+        "tipShare": "비중 {share} · 전체 {base} ({gap})",
+        "tipThin": "인용 {n}회 — {min}회 미만이라 색을 칠하지 않았습니다",
+        "single": "열이 하나뿐이라 비교할 대상이 없습니다 — 다른 축으로 보거나 필터를 넓혀 보세요.",
+        "oneSource": "출처를 하나만 골라 열마다 100%입니다 — 칸의 숫자는 인용 수입니다.",
+        "less": "전체보다 덜 인용",
+        "more": "더 인용",
+        "cap": "±{cap}pp에서 가장 진함 · 회색 = 차이 없음",
+        "thin": "흐린 열 = 인용 {min}회 미만"
+      },
+      "tone": {
+        "title": "답변 우호도별 인용",
+        "infoLabel": "톤",
+        "info": "톤 = 답변 안 당사 언급의 긍정 신호 합과 부정 신호 합을 비교해 큰 쪽(동률 제외). URL 수는 서로 다른 URL 개수입니다.",
+        "chipApi": "답변 단위 톤 · 출처 필터 적용",
+        "chipLegacy": "답변 단위 톤 · 출처 필터와 무관한 전체 인용",
+        "subtitle": "부정 답변이 어떤 출처를 근거로 쓰는지 보면 대응할 콘텐츠가 보입니다.",
+        "positive": {
+          "name": "긍정 답변에 인용된 URL"
+        },
+        "negative": {
+          "name": "부정 답변에 인용된 URL"
+        },
+        "urlUnit": "개 URL",
+        "sub": "인용 {citations}회 · 답변 {answers}개",
+        "open": "URL 보기",
+        "none": "URL 없음"
+      },
+      "bump": {
+        "title": "주별 도메인 인용 순위",
+        "infoLabel": "읽는 법",
+        "info": "주마다 상위 도메인을 인용 수로 줄 세운 순위입니다. 색 = 공식(HMG) 도메인(남색)과 첫 주 대비 순위가 가장 많이 바뀐 도메인 3개, 나머지는 회색 — 선이나 범례에 올리면 그 도메인만 강조되고, 누르면 도메인 상세가 열립니다. 오른쪽 = 마지막 주 순위 · 인용 수 · 순위 변화(▲▼).",
+        "chip": "상위 {n} 도메인 · {weeks}주",
+        "colRank": "순위",
+        "colCitations": "인용 수",
+        "colDomain": "도메인",
+        "needTwo": "순위 변화는 2주 이상 측정되면 표시됩니다",
+        "twin": "{rank}위 · {n}회",
+        "legendOwn": "공식(HMG) 도메인",
+        "legendRest": "그 외 도메인",
+        "aria": "주별 도메인 인용 순위 범프 차트",
+        "tip": "{x} · {domain} — {rank}위 · 인용 {n}회"
+      },
+      "table": {
+        "title": "도메인 인용 순위",
+        "infoLabel": "읽는 법",
+        "info": "인용 수 상위 도메인입니다. 줄을 누르면 인용 URL · 프롬프트 · 실제 답변으로 내려갑니다. 카테고리 안에서 어느 도메인에 몰렸는지는 출처 구성 줄에 올려 보거나, 여기서 카테고리로 걸러 봅니다.",
+        "chip": "상위 {n} · 인용 수 기준",
+        "defLabel": "정의",
+        "formulaLabel": "계산식",
+        "search": "도메인 검색",
+        "category": "카테고리",
+        "categoryLabel": "카테고리로 거르기",
+        "categoryAll": "전체",
+        "matches": "일치 {n}개",
+        "showFirst": "{n}개만 보기",
+        "showAll": "{n}개 모두 보기"
+      },
+      "drawer": {
+        "close": "닫기",
+        "tabs": "도메인 상세",
+        "urls": "인용 URL",
+        "prompts": "프롬프트",
+        "noAnswer": "연결된 답변이 없습니다"
+      },
+      "sub": {
+        "ownedTitle": "공식(당사) URL을 인용한 프롬프트",
+        "ownedSub": "AI가 당사 공식 URL을 1회 이상 근거로 쓴 프롬프트 — 강점 영역입니다. 프롬프트를 누르면 실제 답변이 열립니다.",
+        "uncitedTitle": "공식(당사) URL을 인용하지 않은 프롬프트",
+        "uncitedSub": "한 번도 당사 공식 URL을 근거로 쓰지 않은 프롬프트 — 공식 콘텐츠로 보강할 기회입니다. 프롬프트를 누르면 실제 답변이 열립니다.",
+        "positiveTitle": "긍정 답변에 인용된 URL",
+        "positiveSub": "당사 언급이 긍정으로 기운 답변이 근거로 쓴 URL — 유지·확산할 출처입니다.",
+        "negativeTitle": "부정 답변에 인용된 URL",
+        "negativeSub": "당사 언급이 부정으로 기운 답변이 근거로 쓴 URL — 대응 콘텐츠가 필요한 출처입니다."
+      }
     }
   }
 }

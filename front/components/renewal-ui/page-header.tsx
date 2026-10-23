@@ -4,7 +4,8 @@ import type { ReactNode } from "react";
 export function RnPageHeader({ title, meta, actions }: { title: ReactNode; meta?: ReactNode; actions?: ReactNode }) {
   return (
     <header className="flex flex-wrap items-end justify-between gap-x-5 gap-y-3">
-      <div className="min-w-0">
+      {/* flex-1: a long meta line (page description) wraps inside instead of pushing the actions to a new row */}
+      <div className="min-w-0 flex-1">
         <h1 className="m-0 text-rn-32 font-bold tracking-[-0.03em] text-balance text-rn-ink">{title}</h1>
         {meta ? <div className="mt-2 flex flex-wrap items-center gap-2 text-rn-13 text-rn-muted">{meta}</div> : null}
       </div>
