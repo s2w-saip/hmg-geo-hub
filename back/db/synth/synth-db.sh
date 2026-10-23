@@ -11,7 +11,7 @@
 #                        이미지 = back 테스트 이미지(hgh-renewal-tests:local, requirements-dev.lock). JWKS = 호스트의 mock auth
 #   api-down             백엔드 정지
 #   demo                 호스트에 mock auth(front/e2e/mock-auth, 127.0.0.1:SYNTH_AUTH_PORT 기본 54599: Windows 예약 대역 54467-54566 밖)와
-#                        화면 next dev(127.0.0.1:SYNTH_FRONT_PORT 기본 3200, 외부 통신 차단 훅, 모든 화면 그룹 = 백엔드 경로)를 띄운다.
+#                        화면 next dev(Turbopack, 127.0.0.1:SYNTH_FRONT_PORT 기본 3200, 외부 통신 차단 훅, 모든 화면 그룹 = 백엔드 경로)를 띄운다.
 #                        로그 = back/db/synth/out/run/. 로그인 admin@admin / admin(SYNTH_DEMO_PASSWORD, 로컬 mock auth 전용).
 #                        mock auth 계정 파일은 out/run/demo-accounts.json 으로 새로 만든다(E2E 계정 + 데모 관리자, 비밀번호 공통).
 #                        mock auth 를 새로 띄우면 서명 키가 바뀌므로 백엔드 컨테이너를 재시작해 JWKS 캐시를 비운다
@@ -141,7 +141,7 @@ PY
          NEXT_PUBLIC_SUPABASE_URL="http://127.0.0.1:${AUTH_PORT}" NEXT_PUBLIC_SUPABASE_ANON_KEY=e2e-anon \
          HGH_API_BASE_URL="http://127.0.0.1:${API_PORT}" HGH_SOURCE_SESSION=api HGH_SOURCE_G1=api HGH_SOURCE_G2=api \
          HGH_SOURCE_G3=api HGH_SOURCE_G4=api HGH_SOURCE_G5=api HGH_SOURCE_G6=api HGH_SOURCE_G7=api \
-         nohup node node_modules/next/dist/bin/next dev -p "$FRONT_PORT" -H 127.0.0.1 >"$RUN/front.log" 2>&1 </dev/null &)
+         nohup node node_modules/next/dist/bin/next dev -p "$FRONT_PORT" --turbopack -H 127.0.0.1 >"$RUN/front.log" 2>&1 </dev/null &)
       wait_http front "http://127.0.0.1:${FRONT_PORT}/ko/login" 300
     fi
     api_db="$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$API" 2>/dev/null | sed -n 's#^HGH_DB_URL=.*/##p')"
