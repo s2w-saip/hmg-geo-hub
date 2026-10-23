@@ -111,7 +111,8 @@ stg 또는 미리보기 배포에서, 계정 4종(admin, HQ, 권역 담당, 국�
   <tr><td><code>time=&lt;from&gt;..&lt;to&gt;</code> 월간 프리셋(패널에서 선택)</td><td>admin, HQ</td></tr>
   <tr><td><code>engine=chatgpt&amp;promptContext=비교/검증</code></td><td>국가</td></tr>
 </table></div>
-<p>비교 항목: KPI 5종 값, 증감(기간을 고르면 기간 비교 칩과 열 제목), 1위 경쟁사, 브랜드 비교 값·순위, 시장 타일 값, 권역 행 값·답변 수, 국가 행 값·최대 경쟁사·답변 수.</p>
+<p>비교 항목(2026-10-22 개편 기준, 10장): KPI 5종 값·증감(기간을 고르면 기간 비교 칩)·비교 브랜드 중 순위, 브랜드 비교 표(브랜드 × 5지표 값, 경쟁사는 원래 카드의 경쟁사 4곳),
+  시장별 현황 표(권역·국가 × 5지표 값, 최대 경쟁사 이름과 그 값 = 값 − 격차, 답변 수).</p>
 <p><span class="pass">통과 기준</span>: 모든 숫자가 원래 화면과 같음. 원래 화면에 없는 표시(브랜드 비교의 당사 행 이름 등)는 5장 참고.</p>
 
 <h3>단계 2 — 글로벌 프롬프트</h3>
@@ -173,7 +174,24 @@ stg 또는 미리보기 배포에서, 계정 4종(admin, HQ, 권역 담당, 국�
 
 <h2>7. 목업 관리</h2>
 <ul>
-  <li><code>docs/design/ui/overview-mockup.html</code>, <code>docs/design/ui/global-prompts-filters.html</code>: 파일 하나로 열리는 HTML+CSS(더블클릭). 왼쪽 메뉴로 서로 이동.</li>
+  <li><code>docs/design/ui/overview-mockup.html</code>, <code>global-prompts-filters.html</code>, <code>answer-analysis-mockup.html</code>(#mention · #citation), <code>ai-funnel-mockup.html</code>(#acr · #conversion):
+    파일 하나로 열리는 HTML+CSS(더블클릭). 네 목업이 <strong>같은 왼쪽 메뉴</strong>(Overview · Global prompts · Answer analysis › Mention · Citation · AI Agent Funnel › ACR · AI Conversion)로 서로 이동합니다(2026-10-22).
+    화면 안 전환 탭(언급 분석 | 인용 분석, ACR | AI Conversion)은 앱에 없어서 뺐습니다. 메뉴 원본은 작성 기기 임시 폴더 <code>_scratch/387b177e/menu/menu-src.js</code>(<code>apply-menu.cjs</code> 로 네 목업 재생성).</li>
+  <li><strong>메뉴 내용 = 레거시 웹(2026-10-22)</strong>: Global · Website · Project · Admin 네 그룹의 항목 · 이름(ko) · 순서 · 단계를 운영 레거시 웹(<code>hmg-geo.vercel.app</code>, admin 계정)에서 읽은 그대로 씁니다(기록 <code>menu/legacy-menu-2026-10-22.json</code>, 검사 <code>menu/verify-menu.cjs</code>의 <code>APP</code>).
+    표시는 목업대로(사용자 결정: 아래 S급 껍데기의 구역 · 묶음, β 배지, 아이콘 없음) — 레거시의 80px 레일 + 그룹별 메뉴, 아이콘, '(beta)' 글자는 따르지 않습니다.
+    레거시 웹 Admin 에는 이 저장소에 없는 <strong>분석 엔진</strong>(<code>/admin/analysis</code>) · <strong>측정 크레딧</strong>(<code>/admin/credits</code> › 크레딧 대조 리포트 · 결제 계정 이전)이 있습니다 — 운영은 이 저장소보다 새 코드에서 배포됩니다. 운영에는 <code>/renewal</code> 경로가 아직 없습니다.
+    권한별 차이는 admin 화면만 확인했습니다(다른 계정은 미확인).</li>
+  <li><strong>공통 틀(2026-10-22)</strong>: 네 목업과 구현의 페이지 틀이 같습니다 — 제목 줄이 전체 폭으로 맨 위, 그 아래 필터 | 본문.
+    머리 = 제목(+ 베타: 언급 · 인용 · ACR) → 설명 → 기준 칩('측정 회차 {날짜} 기준', 기간이면 '기간 누적 {시작} ~ {끝}'), 링크 복사는 오른쪽. 제목 위 상위 메뉴명은 쓰지 않습니다.
+    제목은 'AI 답변 성과 요약' · '글로벌 프롬프트' · '언급 분석' · '인용 분석' · 'ACR · AI Choice Rate'. 공통 틀 CSS 도 메뉴 원본(<code>mock-menu.cjs</code>)에 있습니다.</li>
+  <li><strong>S급 테마(2026-10-22, 목업만 — 구현은 승인 후)</strong>: 네 목업에 리뉴얼 전용 껍데기(사이드바 하나: 브랜드 · 메뉴 = Global | Website 최상위 구역(각각 접기) · 아래 Project · Admin 묶음(Admin 은 admin 계정만) · 계정, 위 상단 바 없음 — 2026-10-22 사용자 결정으로 Global/Website 탭을 구역으로 바꿈. Website · Project · Admin 은 리뉴얼 범위 밖이라 앱에서는 원본 화면을 연다), 압축 머리(제목 26px, 설명 · 기준 칩 한 줄),
+    페이지당 남색 강조 하나(Overview = KPI 5종, 언급 · 인용 · ACR = 이번 회차 요약, Global prompts = 없음), 카드 모서리 16px · 1px 선. <strong>필터는 왼쪽 패널 그대로</strong>(상단 필터 바 안은 사용자가 되돌림).
+    규칙 한 장: <code>docs/design/ui/design-rules.html</code>(사이드바 아래 '디자인 규칙 보기'). 원본 <code>_scratch/387b177e/s/</code>, 네 목업 + 규칙 페이지를 <code>menu/apply-menu.cjs</code> 한 번으로 다시 만듭니다.
+    구현하려면 리뉴얼 화면만 다른 레이아웃을 쓰도록 라우트 묶음을 나눠야 합니다(원본 화면 껍데기는 그대로).</li>
+  <li><strong>SS 1순위 — Overview 서랍(2026-10-22, 설계 O1 · 승인 전)</strong>: 합격 기준 <code>docs/design/ss-grade-criteria.html</code> 조건 3 · 4, 명세 <code>docs/design/ss-overview.html</code>.
+    Overview 목업의 값을 누르면 근거(답변 목록), 증감 · 추이를 누르면 변화의 이유(회차별 증감 이력 띠 · 엔진 | 국가 | 프롬프트 기여)가 오른쪽 서랍으로 열립니다. 목업 바의 ‘회차 데이터’로 회차 기준 데이터 없음 상태를 봅니다.
+    원본 <code>_scratch/387b177e/fold/ov-ss.js</code> · <code>ov-ss.css</code>(숫자 버튼은 <code>ov-glance.js</code>), <code>apply-ov2.py</code> 가 주입하고 <code>menu/apply-menu.cjs</code> 로 같이 다시 만듭니다.
+    검사 <code>fold/verify-ss.cjs aa/audit-fn.js</code>(계정 4종 분해 합 · 누름 숫자 전부의 클릭 수 · Esc/초점 · 서랍 감사). 언급 · ACR 목업 빌드는 영향 없음(전체 재빌드 후 바이트 동일 확인).</li>
   <li>구현과 1:1 로 맞춘 기준: rn- 토큰 이름, Rn 컴포넌트 단위의 클래스, <code>ko.json</code> 문구, 앱 필터 규칙, 카탈로그 서버의 옵션·정렬·권한 규칙.
     숫자와 프롬프트의 언어·대상 시장·측정 종류·측정 상태·변경 이력은 예시입니다(프롬프트 본문·분류는 v0.4 시드 250건).</li>
   <li>리뉴얼 코드가 바뀌면 목업도 손으로 고칩니다. 대조 스크립트(목업 ↔ 앱 필터, 목업 ↔ 실제 컴포넌트 하네스)는 작성 기기 임시 폴더에만 있습니다.
@@ -202,6 +220,34 @@ bash front/e2e/stack.sh down</code></pre>
     전체 vitest 에서 시간 의존 시험 2건(generate-cycle CLI, answer-set-budget)이 가끔 실패하지만 단독으로는 통과합니다.
     vitest 가 스냅샷 파일의 줄바꿈만 바꾸면 <code>git checkout</code> 으로 되돌립니다.</li>
   <li>UI 는 HMG 토큰 안에서 과감한 상용 수준을 기대합니다. 기존 화면을 다듬는 수준의 제안은 받아들여지지 않았습니다.</li>
+</ul>
+
+<h2>10. 2026-10-22 개편 — Overview "전환 없이 한눈에", Mention 페이지 탭</h2>
+<p>사용자가 목업(<code>overview-mockup.html</code>, <code>answer-analysis-mockup.html#mention</code>)을 승인한 뒤 구현했습니다. 읽기(데이터)는 바꾸지 않았고 화면 구성만 바뀌었습니다.</p>
+<div class="table-wrap"><table>
+  <tr><th>화면</th><th>바뀐 것</th><th>핵심 파일</th></tr>
+  <tr><td>Overview</td><td>KPI 를 고르는 동작을 없앴습니다(고르는 줄이 스위치로 읽히지 않았음). 카드 3장:
+    <strong>KPI 5종</strong>(읽기 전용: 값, 증감, 추이와 첫·끝 회차 날짜, "비교 브랜드 N개 중 M위", 상세 링크) →
+    <strong>브랜드 비교</strong>(당사 + 지표별 비교 경쟁사의 합집합 × 5지표, 그 지표의 경쟁사가 아니면 '—', 증감은 모든 행 직전 회차 대비) →
+    <strong>시장별 현황</strong>(권역 › 국가 × 5지표 히트 표, 칸 색 = 지표 안에서 국가 순위 5단계, 작은 숫자 = 그 시장 최대 경쟁사 대비 격차, 열 이름으로 정렬). 국가 타일 지도는 이 표로 합쳤습니다.</td>
+    <td><code>renewal/dashboard/_components/overview-body.tsx</code>, <code>overview-model.ts</code>(+ 시험 15건)</td></tr>
+  <tr><td>Mention</td><td>KPI 타일을 원래 화면과 같은 밑줄 탭으로 되돌렸습니다. 제목 아래 전체 폭 한 줄(제목 › 탭 › 필터 | 본문), 탭 이름이 주인공이고 값·증감은 작은 글자.
+    탭은 링크(<code>?kpi=</code>, <code>aria-current</code>)이며 일반 클릭은 페이지 이동 없이 본문만 바꾸고, '현황과 추이'가 화면 밖이면 그 섹션으로 내려갑니다.
+    탭이 바꾸는 섹션 제목에 "X 기준" 칩, 고정 바 = 보는 지표 · 비교 브랜드 · 보기 밀도.</td>
+    <td><code>…/mention/_components/mention-tabs.tsx</code>(탭 + 페이지 공용 provider), <code>mention-body.tsx</code>, <code>mention/page.tsx</code></td></tr>
+  <tr><td>공용(ACR · Mention · Citation)</td><td>섹션 빠른 이동 줄을 없앴습니다(사용자: "빠른 이동 UI는 필요하지 않아"). Citation 은 고정 바에 남는 것이 밀도뿐이라 바를 없애고 밀도 토글을 제목 줄(링크 복사 옆)로 옮겼습니다.
+    이어서 같은 날 <strong>페이지 안 스크롤 이동을 모두 없앴습니다</strong>(사용자: "페이지의 스크롤 바로이동하는 기능은 없애자"):
+    Mention 탭을 눌러도 스크롤은 그대로, 고정 바 '보는 지표'는 표시만, 요약의 발견은 누를 수 없는 정보 카드('이동' 글자 없음 — Citation 의 공식 URL 미인용 발견도 링크가 아님, 개요 타일 링크는 그대로),
+    경쟁 구도의 '브랜드 상세로' 버튼 삭제. 공용 <code>rnJumpTo</code> 도 지웠습니다.</td>
+    <td><code>components/renewal-ui/frame.tsx</code>, <code>…/citation/_components/citation-density.tsx</code></td></tr>
+</table></div>
+<ul>
+  <li><strong>결정</strong>: 비율 지표 스파크라인 세로축은 원래 카드와 같은 0–100(순위는 [1, max(5, ⌈최댓값⌉)]) — 원래 <code>sparkYDomain</code> 을 그대로 씁니다(<code>RnSparkline</code> 의 <code>domain</code>).</li>
+  <li><strong>확인</strong>: 합성 데이터 스택에서 원래 <code>/ko/dashboard</code> 와 숫자 대조 — 필터 없음 25/25, <code>brand=Hyundai</code> 25/25 + 시장 표 43개국 값·최대 경쟁사·그 값 모두 일치.
+    Mention 탭 동작 22/22. 타입 검사, 린트, 문구 검사, 전체 vitest(부하 시간 초과 2건은 단독 통과), <code>next build</code> 통과. 목업 검사 Overview 18/18, 언급·인용 128/128, 대비·넘침 0.</li>
+  <li><strong>로컬 합성 스택</strong>(Windows 가능): <code>bash back/db/synth/synth-db.sh up|api|demo</code> → <code>http://127.0.0.1:3200/ko/login</code>(admin@admin / admin, 모든 원천 = api).
+    Next 15 는 dev 와 build 가 <code>.next</code> 를 같이 쓰므로 build 전에는 3200 의 next dev 를 내리고, 끝나면 <code>demo</code> 로 다시 띄웁니다.</li>
+  <li>남은 일: 운영·stg 데이터로 원래 화면과 대조(3장), 다음 리뉴얼 대상(AI Conversion).</li>
 </ul>
 </main>
 </body>
