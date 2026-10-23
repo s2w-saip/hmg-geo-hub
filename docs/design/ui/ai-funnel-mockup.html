@@ -1191,6 +1191,28 @@
 
   @media (max-width: 1279px) { :root { --side-w: 208px; } .sx .main { padding: 20px 24px 64px; } }
   /* ══ /S-grade frame ══ */
+
+  /* ── 스크롤 영역(2026-10-23, 사용자): 창 전체가 아니라 콘텐츠 영역만 스크롤하고, 필터와 콘텐츠는 따로 스크롤합니다.
+       사이드바 · 페이지 머리(제목 · 설명 · 기준 칩, 언급은 지표 탭까지)는 제자리, 그 아래 필터 패널은 카드 안에서,
+       본문은 창 오른쪽 끝까지 이어진 영역에서 스크롤 — 본문을 내려도 필터의 위치는 그대로입니다.
+       구현 = RnPageFrame · RnFilterSplit(front/app/[locale]/(dash)/renewal/_components/filter-split.tsx) + app/renewal-theme.css [data-rn-frame].
+       .fr = 이 틀을 쓰는 페이지(머리 + 필터 | 본문, 또는 머리 + 본문). 틀이 없는 페이지(디자인 규칙)는 본문 영역 전체가 스크롤. ── */
+  .sx { height: calc(100vh - var(--mk-h, 0px)); min-height: 0; }
+  .sx-side { position: static; height: auto; min-height: 0; }
+  .sx .main { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+  .sx .main:has(.fr) { --gut: 32px; --edge: max(var(--gut), (100cqw - 1480px) / 2); container-type: inline-size; padding: 0; overflow: hidden; }
+  .sx .wrap:has(> .fr) { max-width: none; height: 100%; }
+  .sx .fr { height: 100%; padding-top: 24px; }
+  /* 머리: 본문과 같은 스크롤바 자리를 비워 두어 오른쪽 끝이 본문 카드와 맞습니다 */
+  .sx .fr > :not(.split, .content) { flex-shrink: 0; padding-inline: var(--edge); overflow: hidden; scrollbar-gutter: stable; }
+  .sx .fr > .split { flex: 1 1 auto; min-height: 0; margin-top: -4px; gap: 0; grid-template-rows: minmax(0, 1fr); padding-left: var(--edge); }
+  .sx .fr > .split > .side, .sx .fr > .split > .rail2 { position: static; margin-top: 4px; }
+  .sx .fr > .split > .side { max-height: calc(100% - 20px); }
+  .sx .fr > .split > .content, .sx .fr > .content { align-self: stretch; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; padding: 4px var(--edge) 72px 20px; }
+  .sx .fr > .content { flex: 1 1 auto; margin-top: -4px; padding-left: var(--edge); }
+  .sx .fr > .split > .content > *, .sx .fr > .content > * { flex-shrink: 0; }
+  .sx .fr .cbar { top: -4px; }
+  @media (max-width: 1279px) { .sx .main:has(.fr) { --gut: 24px; } .sx .fr { padding-top: 20px; } .sx .fr > .split > .content, .sx .fr > .content { padding-bottom: 64px; } }
 </style>
 </head>
 <body>
@@ -2049,7 +2071,8 @@ const insightGrid = (items) => {
 };
 
 // ── section jumps · scroll spy · linked highlight ──
-const stickyOff = () => (document.getElementById("mk")?.offsetHeight ?? 0) + (document.querySelector(".cbar")?.offsetHeight ?? 0) + 12;
+// offsets inside the content scroll area (the window does not scroll): the sticky bar + a gap
+const stickyOff = () => (document.querySelector(".cbar")?.offsetHeight ?? 0) + 12;
 function markSec(id) {
   curSec = id;
   document.querySelectorAll(".snav [data-sec-jump]").forEach((b) => { const on = b.dataset.secJump === id; b.classList.toggle("on", on); if (on) b.setAttribute("aria-current", "true"); else b.removeAttribute("aria-current"); });
@@ -2057,7 +2080,8 @@ function markSec(id) {
 function jumpTo(id) {
   const el = document.getElementById(id); if (!el) return;
   markSec(id);
-  window.scrollTo({ top: Math.max(0, el.getBoundingClientRect().top + window.scrollY - stickyOff()), behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  const sc = document.querySelector("#page .content"); if (!sc) return;
+  sc.scrollTo({ top: Math.max(0, el.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop - stickyOff()), behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
 }
 function runJump() {
   if (!pendingJump) return;
@@ -2070,10 +2094,11 @@ function runJump() {
 function spy() {
   spyRaf = 0;
   if (!document.querySelector(".snav")) return;
-  const ids = secList().map(([id]) => id), off = stickyOff() + 120; // a section counts once its heading nears the bars
+  const sc = document.querySelector("#page .content"); if (!sc) return;
+  const ids = secList().map(([id]) => id), off = sc.getBoundingClientRect().top + stickyOff() + 120; // a section counts once its heading nears the bars
   let cur = ids[0];
   for (const id of ids) { const el = document.getElementById(id); if (el && el.getBoundingClientRect().top <= off) cur = id; }
-  if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) cur = ids[ids.length - 1];
+  if (sc.clientHeight + sc.scrollTop >= sc.scrollHeight - 4) cur = ids[ids.length - 1];
   if (cur !== curSec) markSec(cur);
 }
 // one brand under the pointer lights up in every chart and list; 당사 (합계) also lights every own brand
@@ -2641,7 +2666,7 @@ function compute(f) {
 function page() {
   CH = {};
   const body = view === "acr" ? acrPage() : convPage();
-  return `<div class="pg">${headerHtml()}<div class="split ${panel ? "" : "collapsed"}">${panelHtml()}<div class="content ${pending ? "pending" : ""} ${dense ? "dense" : ""}">${appliedTop()}${body}</div></div></div>`;
+  return `<div class="pg fr">${headerHtml()}<div class="split ${panel ? "" : "collapsed"}">${panelHtml()}<div class="content ${pending ? "pending" : ""} ${dense ? "dense" : ""}">${appliedTop()}${body}</div></div></div>`;
 }
 const ACR_NOTES = [
   ["ux", "S급 틀 (10/22)", "리뉴얼 전용 껍데기: 사이드바 하나(브랜드 · 메뉴 = Global | Website 구역 · 아래 Project · Admin · 계정), 위 상단 바 없음 → 본문이 넓어짐. 머리는 제목(+ 베타) 아래 설명 · 기준 칩 한 줄. 필터는 왼쪽 패널 그대로(같은 축 · 옵션 · 규칙 · 저장한 필터). 페이지마다 남색 강조는 하나 — 이번 회차 요약. 카드 모서리 16px, 1px 선. 규칙은 디자인 규칙 페이지(사이드바 아래)."],
@@ -2673,13 +2698,14 @@ const ACR_NOTES = [
   ["same", "측정 대기", "측정 전에는 ‘ACR 측정 대기’ 카드만 — 문구 그대로(지정된 ACR 프롬프트 수)."],
 ];
 function render() {
-  const side = document.getElementById("side"), st = side ? side.scrollTop : 0;
+  const side = document.getElementById("side"), st = side ? side.scrollTop : 0, ct = document.querySelector("#page .content")?.scrollTop ?? 0;
   const a = document.activeElement, fk = a?.dataset?.fk, inputId = a?.tagName === "INPUT" ? a.id : null, caret = inputId ? a.selectionStart : 0;
   hideTip();
   renderSnb();
   document.getElementById("page").innerHTML = page();
   document.getElementById("drawer").innerHTML = notesHtml();
   const s2 = document.getElementById("side"); if (s2) s2.scrollTop = st;
+  const c2 = document.querySelector("#page .content"); if (c2) c2.scrollTop = ct;
   if (inputId) { const el = document.getElementById(inputId); if (el) { el.focus({ preventScroll: true }); el.setSelectionRange(caret, caret); } }
   else if (fk) { const el = document.querySelector(`[data-fk="${CSS.escape(fk)}"]`); if (el) el.focus({ preventScroll: true }); }
   drawCharts();
@@ -2728,8 +2754,9 @@ document.addEventListener("click", (e) => {
 });
 let resizeT = null;
 window.addEventListener("resize", () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (panelAuto && panel !== (window.innerWidth >= 1360)) { panel = window.innerWidth >= 1360; render(); } else { drawCharts(); wire(); applyHb(hbKey); } }, 80); });
-window.addEventListener("hashchange", () => { parseHash(); cmpOpen = false; cmenu = null; curSec = "sec-summary"; S = { f: clone(S.f), data: compute(S.f) }; renderMk(); render(); window.scrollTo(0, 0); });
-window.addEventListener("scroll", () => { if (!spyRaf) spyRaf = requestAnimationFrame(spy); }, { passive: true });
+window.addEventListener("hashchange", () => { parseHash(); cmpOpen = false; cmenu = null; curSec = "sec-summary"; S = { f: clone(S.f), data: compute(S.f) }; renderMk(); render(); document.querySelector("#page .content")?.scrollTo(0, 0); });
+// the content area scrolls (and is rebuilt on render): listen in the capture phase
+document.addEventListener("scroll", () => { if (!spyRaf) spyRaf = requestAnimationFrame(spy); }, { passive: true, capture: true });
 document.addEventListener("pointerover", (e) => {
   if (Date.now() < flashUntil) return; // a finding's flash runs its course
   const t = e.target.closest?.("[data-b], .chart .s[data-s]");
