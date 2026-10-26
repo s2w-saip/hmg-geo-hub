@@ -105,8 +105,8 @@
 }
 
 /* ---------------------------------------------------------------------------
- * Viewport frame of the renewal pages (2026-10-23, user: only the content area
- * scrolls, never the whole window; the filters and the content scroll apart).
+ * Viewport frame of the renewal pages (2026-10-23): only the content area
+ * scrolls, never the whole window; the filters and the content scroll apart.
  *
  * RnPageFrame / RnFilterSplit mark their root [data-rn-frame]. The renewal
  * shell (app/[locale]/(renewal)/layout.tsx) has no top bar, so the frame takes

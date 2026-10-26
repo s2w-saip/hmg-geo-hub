@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Info, X } from "lucide-react";
 import { CopyStatus, FEEDBACK_EMAILS, useCopyEmails } from "@/components/dash/beta-notice";
 
-// Beta-period notice of the renewal shell (2026-10-23, user: "베타 안내를 우측 하단 토스트로").
+// Beta-period notice of the renewal shell (2026-10-23): a toast at the bottom right.
 // The original shell's strip under the header (BetaNoticeBanner) has no place in the S급
 // shell (no top bar), so the same copy and the same two-address copy button sit in a card at
 // the bottom right. × hides it for this browser session; the first-entry popup

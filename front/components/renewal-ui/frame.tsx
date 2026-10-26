@@ -23,7 +23,7 @@ export function RnSectionHead({ id, title, chip, desc }: { id: string; title: Re
 /**
  * Bar that sticks to the top of the content scroll area with the page-level controls (KPI in
  * view, compare brands, density). -top-1 = over the scroll area's pt-1, flush with its top edge.
- * No section quick-nav (user 2026-10-22: "빠른 이동 UI는 필요하지 않아").
+ * No section quick-nav.
  */
 export function RnControlBar({
   label,
@@ -60,7 +60,7 @@ const TONE_BAR: Record<RnFindingTone, string> = {
 };
 const TONE_ICON: Record<RnFindingTone, string> = { warn: "text-[#d65a43]", good: "text-rn-up", info: "text-rn-navy-300" };
 
-/** "이번 회차 요약" findings: up to four read-only cards (no jump to the card — user 2026-10-22: no scroll jumps). */
+/** "이번 회차 요약" findings: up to four read-only cards (no jump to the card, no scroll jumps). */
 export function RnFindingGrid({ items }: { items: ReadonlyArray<RnFinding> }) {
   return (
     <div className="grid grid-cols-1 gap-2.5 px-6 @min-[900px]/rnpage:grid-cols-4 @min-[560px]/rnpage:grid-cols-2 [.rn-dense_&]:px-4.5">

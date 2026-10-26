@@ -227,7 +227,7 @@ function Summary() {
   }, [rows, l, picked, live, typeRows]);
   const isPeriod = Boolean(input.period);
   const colName = (axis: "engine" | "type" | undefined, key: string) => (axis === "type" ? tType(key as "mention") : engineLabel(key));
-  // read-only findings (user 2026-10-22: no jump to the card)
+  // read-only findings (no jump to the card)
   const n1 = (v: string | number) => (typeof v === "number" ? v.toFixed(1) : v);
   const items: RnFinding[] = list.map((f, i) => {
     const p = f.params;

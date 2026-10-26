@@ -243,7 +243,7 @@ function AcrFindings({ period }: { period: boolean }) {
   const { view, data, ownLabel, engineLabel, countryLabel } = useAcr();
   const t = useTranslations("renewal.acr");
   const o = view.own;
-  // read-only findings (user 2026-10-22: no jump to the card)
+  // read-only findings (no jump to the card)
   const items: RnFinding[] = view.findings.map((f, i) => findingCopy(f, i, t, { engineLabel, countryLabel }));
   return (
     <RnCard id="sec-summary" aria-label={t(period ? "summary.titlePeriod" : "summary.title")} tone="hero" className="pb-[18px] [.rn-dense_&]:pb-3">

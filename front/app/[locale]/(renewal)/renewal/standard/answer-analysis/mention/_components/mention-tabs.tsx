@@ -5,8 +5,8 @@
 // underline tabs: one full-width rail under the title (header › tabs › filter | content), the
 // tab name leads, the value and Δ ride along in small text. A tab is a link (?kpi= is the
 // source of truth, aria-current marks the page); a plain click swaps the body in place —
-// every tab reads the same data here — and leaves the scroll position alone (user
-// 2026-10-22: no scroll jumps on the page).
+// every tab reads the same data here — and leaves the scroll position alone (no scroll jumps
+// on the page).
 //
 // The provider sits above RnFilterSplit (the rail lives in the header slot, the body in the
 // content column) and holds the page's reads once for both.

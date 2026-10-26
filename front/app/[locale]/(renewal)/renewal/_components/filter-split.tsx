@@ -13,8 +13,8 @@ export function useRnSplit() {
 }
 
 // ─── viewport frame ──────────────────────────────────────────────────────────
-// The window never scrolls on a renewal page (2026-10-23, user: "브라우저 전체가 아니라 컨텐츠
-// 영역만 스크롤", "필터와 컨텐츠의 스크롤 영역을 따로"). The frame takes the viewport next to the
+// The window never scrolls on a renewal page (2026-10-23): only the content area scrolls, and the
+// filter panel scrolls apart from it. The frame takes the viewport next to the
 // renewal shell's sidebar (app/renewal-theme.css, [data-rn-frame]); the page header stays put and
 // the content area scrolls on its own, out to the right edge of the window. --rn-edge is the S급
 // gutter around a 1480px column; top 24px / bottom 72px (20 / 64 up to 1279px), the mockups'
@@ -37,8 +37,8 @@ export function RnPageFrame({ header, children }: { header: ReactNode; children:
 }
 
 /**
- * Page layout: the page header across the full width on top (2026-10-21, user: "페이지 제목이
- * 상단을 차지하고 필터는 본 내용과 같이 하단에"), then the filter panel | content row below it.
+ * Page layout: the page header across the full width on top (2026-10-21), then the filter panel |
+ * content row below it.
  * The panel and the content scroll apart (the panel card scrolls inside its own height), so
  * scrolling the content never moves the filters.
  */

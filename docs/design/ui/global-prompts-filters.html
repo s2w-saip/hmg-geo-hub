@@ -278,8 +278,7 @@
   .toast { pointer-events: auto; background: var(--ink); color: #fff; border-radius: 10px; box-shadow: var(--shadow-3); padding: 10px 10px 10px 16px; display: flex; align-items: center; gap: 14px; font-size: 13px; }
   .toast button { all: unset; cursor: pointer; font-weight: 700; color: var(--sky); padding: 4px 8px; border-radius: 6px; }
   /* ══ S-grade frame (2026-10-22) — every renewal mockup (source: _scratch/387b177e/s) ══
-     renewal-only shell (one sidebar, no top bar), compact page header, the left filter panel as before (user
-     2026-10-22: keep the panel), card tiers and one navy hero per page. Loaded after the page CSS. */
+     renewal-only shell (one sidebar, no top bar), compact page header, the left filter panel as before, card tiers and one navy hero per page. Loaded after the page CSS. */
   :root { --side-w: 232px; --r-card: 16px; --shadow-card: 0 1px 2px rgba(10,9,8,.04), 0 0 0 1px var(--line); --navy-ink: #00244f; --hero-bg: radial-gradient(120% 140% at 0% 0%, #0b3b74 0%, var(--navy) 46%, var(--navy-ink) 100%); --hero-shadow: 0 18px 40px -24px rgba(0,28,61,.75); }
   body { background: #f4f1ee; }
 
@@ -388,7 +387,7 @@
   @media (max-width: 1279px) { :root { --side-w: 208px; } .sx .main { padding: 20px 24px 64px; } }
   /* ══ /S-grade frame ══ */
 
-  /* ── 스크롤 영역(2026-10-23, 사용자): 창 전체가 아니라 콘텐츠 영역만 스크롤하고, 필터와 콘텐츠는 따로 스크롤합니다.
+  /* ── 스크롤 영역(2026-10-23): 창 전체가 아니라 콘텐츠 영역만 스크롤하고, 필터와 콘텐츠는 따로 스크롤합니다.
        사이드바 · 페이지 머리(제목 · 설명 · 기준 칩, 언급은 지표 탭까지)는 제자리, 그 아래 필터 패널은 카드 안에서,
        본문은 창 오른쪽 끝까지 이어진 영역에서 스크롤 — 본문을 내려도 필터의 위치는 그대로입니다.
        구현 = RnPageFrame · RnFilterSplit(front/app/[locale]/(dash)/renewal/_components/filter-split.tsx) + app/renewal-theme.css [data-rn-frame].

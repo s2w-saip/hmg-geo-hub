@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { usePathname } from "@/i18n/navigation";
 import { cx } from "@/components/renewal-ui";
 
-// Instant feedback for a menu click (2026-10-23, user: "메뉴 이동이 너무 느려 … 피드백도 느리고").
+// Instant feedback for a menu click (2026-10-23).
 // The sidebar links keep prefetch={false} (the 2026-08-27 production rule), so the next page
 // needs a server round trip before anything on screen changes — measured 0.4–2.2s of nothing on
 // the dev stack. A click now marks its target at once: the item turns active with a spinner,
