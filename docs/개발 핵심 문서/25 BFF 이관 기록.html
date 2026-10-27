@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GEO HUB — BFF 이관 기록</title>
+<style>
+:root{--ink:#19333d;--muted:#556c76;--line:#d5e0e5;--accent:#096c75;--bg:#f0f5f7}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.75 "Malgun Gothic",system-ui,sans-serif;word-break:keep-all}main{max-width:1220px;margin:auto;padding:32px 24px 60px}header{background:#173d46;color:white;padding:28px;border-radius:12px}h1{font-size:29px;margin:8px 0 14px}h2{font-size:21px;margin:0 0 14px}h3{font-size:16px;margin:18px 0 8px}p{margin:10px 0}section{background:white;border:1px solid var(--line);border-radius:10px;margin-top:20px;padding:24px}a{color:var(--accent);text-underline-offset:3px}.meta,small{font-size:12px;color:var(--muted)}header .meta{color:#c8e0e4}.lead{font-size:19px}.note{padding:14px 18px;background:#fff4df;border-left:4px solid #cb8a24;margin-top:16px}.scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:14px}th,td{border:1px solid var(--line);padding:12px;vertical-align:top;text-align:left}th{background:#eaf2f4}td:first-child{min-width:145px}code{font-size:12px;background:#edf2f5;padding:2px 4px;overflow-wrap:anywhere}li{margin:8px 0}pre{background:#edf2f5;padding:14px;border-radius:8px;overflow-x:auto;font-size:13px;line-height:1.5}@media print{body{background:white;font-size:11px}main{max-width:none;padding:0}header{background:white;color:var(--ink);border:1px solid var(--line)}header .meta{color:var(--muted)}section{padding:15px;break-inside:auto}.scroll{overflow:visible}table{font-size:10px}tr{break-inside:avoid}a{color:inherit}@page{size:A4 landscape;margin:12mm}}
+</style>
+</head>
+<body><main>
+<header>
+<div class="meta">후속 기록 · 2026-10-27 · s2w-saip/hmg-geo-hub main 작업 트리(미커밋) · 로컬 읽기 전용 스택(Next :3200 → back/bff :18091 → Gold DB · hmg_analytics)</div>
+<h1>Next 는 불러와서 보여주기만 한다 — 화면 계산을 FastAPI BFF 로 옮겼다</h1>
+<p class="lead"><strong>분석 화면의 모든 계산(합·비율·Δ·순위·정렬·상위 N·기간 해석·인사이트 규칙·기준 데이터)을 <code>back/bff/screens</code> 의 화면 계층으로 옮기고, Next 는 완성된 화면 모델을 받아 그리기만 하게 했다.</strong></p>
+<p>화면·문구·숫자는 바꾸지 않았다. 옮긴 계산은 옛 TypeScript 결과를 녹화한 골든과 Python 결과를 대조해 1:1 이식을 증명했고, 이전/이후 화면을 같은 API·같은 시각에 나란히 띄워 DOM·픽셀을 비교했다.</p>
+<p class="meta">운영 API·인증·DB 쓰기 0건. 외부 Gold DB 는 읽기 전용 계정으로만 읽었다.</p>
+</header>
+
+<section>
+<h2>구조</h2>
+<div class="scroll"><table>
+<thead><tr><th></th><th>이전</th><th>이후</th></tr></thead>
+<tbody>
+<tr><td>데이터 경로</td><td>Next 서버(어댑터 <code>lib/hgh/adapters/*</code>) → <code>/v1/*</code> 를 화면당 여러 번 호출 → Next 서버·브라우저가 화면 모델을 계산</td><td>Next 서버 → <code>GET /v1/screens/&lt;화면&gt;/&lt;섹션&gt;</code> 한 번(섹션 = Suspense 경계) → 완성된 화면 모델을 그대로 렌더</td></tr>
+<tr><td>계산 위치</td><td>어댑터·<code>lib/kpi</code>·<code>lib/period</code>·<code>lib/scope</code>·<code>_data/*-view.ts</code>·리뉴얼 <code>*-model.ts</code>·컴포넌트 안 <code>useMemo</code></td><td><code>back/bff/screens/*.py</code> (화면 모듈 26개, 화면 77개). 원본 조회는 같은 프로세스 안에서 기존 <code>/v1</code> 읽기를 그대로 호출(<code>bff.api.get</code>, 동시에 같은 조회는 한 번만 실행, 조회당 20초 제한)</td></tr>
+<tr><td>정렬</td><td>브라우저 <code>localeCompare</code>·표 헤더 클릭 정렬</td><td>API 가 ICU(ko-KR) 정렬과 열마다 오름·내림 순서를 미리 계산(<code>useOrderedTable</code> 은 순서를 고르기만 함)</td></tr>
+<tr><td>Next 에 남은 것</td><td>—</td><td>표시(숫자·날짜 포맷, 라벨·색 매핑), 차트 기하, UI 상태(탭·선택·펼침·검색어), 필터 패널(아래 예외), 인증·권한 게이트, 화면 요청</td></tr>
+</tbody>
+</table></div>
+<pre>Browser ─▶ Next (RSC · screenGet) ─▶ /v1/screens/* (back/bff, FastAPI) ─▶ bff.api.get ─▶ gold_reader ─▶ Gold DB · hub_stores ─▶ hmg_analytics</pre>
+</section>
+
+<section>
+<h2>화면 계층(Python)</h2>
+<div class="scroll"><table>
+<thead><tr><th>묶음</th><th>모듈</th><th>화면</th></tr></thead>
+<tbody>
+<tr><td>공유</td><td><code>_js</code>(JS 수치 규칙) · <code>_sort</code>(ICU·UTF-16 정렬, 표 순서) · <code>_convert</code> · <code>_query</code>(URL→필터→API 질의) · <code>_filters</code>(필터 옵션·달력·프로젝트 게이트) · <code>_summary</code> · <code>_trend</code> · <code>_compare</code> · <code>_period</code> · <code>_competitors</code></td><td><code>shared/*</code></td></tr>
+<tr><td>대시보드</td><td><code>overview.py</code></td><td><code>overview/*</code> · <code>website/*</code> (카드·추이·경쟁사·GEO·구성·필터)</td></tr>
+<tr><td>언급 분석</td><td><code>mention*.py</code></td><td><code>mention/*</code> (KPI 탭·즐겨찾기·첫 순위·프롬프트·드릴다운·리뉴얼)</td></tr>
+<tr><td>인용 분석</td><td><code>citation*.py</code></td><td><code>citation/*</code> (표준·웹사이트·프로젝트·하위 페이지·도메인 라우트·리뉴얼)</td></tr>
+<tr><td>ACR</td><td><code>acr.py</code></td><td><code>acr/*</code></td></tr>
+<tr><td>Gold 직결</td><td><code>sources.py</code> · <code>website_prompts.py</code></td><td>GA4 전환·SEO 노출, 프로젝트, 키워드·소셜, 프롬프트 목록·내보내기</td></tr>
+</tbody>
+</table></div>
+</section>
+
+<section>
+<h2>검증</h2>
+{{VERIFICATION}}
+</section>
+
+<section>
+<h2>바뀐 동작</h2>
+<p>화면에 보이는 값은 같다. 바뀐 것은 요청 경로와 실패·지연 방식이다.</p>
+<div class="scroll"><table>
+<thead><tr><th>항목</th><th>이전</th><th>이후</th></tr></thead>
+<tbody>
+<tr><td>요청 수</td><td>섹션마다 Next 가 <code>/v1/*</code> 를 여러 번 호출</td><td>섹션마다 <code>/v1/screens/*</code> 한 번. 같은 원본 조회는 API 안에서 한 번만 실행</td></tr>
+<tr><td>느린 원본</td><td>Next 어댑터가 응답을 기다림</td><td>화면 안의 <code>/v1</code> 읽기 하나가 20초(<code>HGH_SCREEN_READ_TIMEOUT_MS</code>)를 넘으면 504 → 그 섹션만 오류 상태. Next 의 화면 요청은 60초(<code>HGH_SCREEN_TIMEOUT_MS</code>) 제한, 연결 오류는 200ms 뒤 한 번 재시도</td></tr>
+<tr><td>언급 분석 맞대결 경쟁사 선택</td><td>브라우저가 받은 행으로 바로 계산</td><td>선택할 때마다 <code>GET /api/scope/mention-compare</code> 왕복. 결과는 같고 응답 시간만큼 늦게 바뀜</td></tr>
+<tr><td>표 정렬</td><td>헤더 클릭 때 브라우저 <code>localeCompare</code></td><td>API 가 열마다 오름·내림 순서를 미리 보냄(ICU ko-KR). 클릭은 순서만 고름</td></tr>
+<tr><td><code>/api/filters/options</code></td><td>Next 가 옵션 계산</td><td>게이트 후 화면 <code>shared/panel-options</code> 로 전달만</td></tr>
+<tr><td>Global 프롬프트(<code>/standard/prompts</code>, 리뉴얼)</td><td>로컬 읽기 전용 모드에서는 간이 표(<code>GoldPrompts</code>)만 표시</td><td>원래 화면 그대로(목록·필터·정렬·내보내기·변경 이력·행 이력). 브라우저 읽기는 <code>GET /api/standard/prompts/[view]</code>. 로컬 Gold 에는 이력 원천이 없어 변경 이력·행 이력은 '이용 불가'로 표시</td></tr>
+<tr><td>레거시 경로</td><td>BFF 화면 페이지에 레거시 프로필·<code>back/app</code> 분기</td><td>분기 제거. 분석 화면은 항상 <code>/v1/screens</code> 로 읽음</td></tr>
+</tbody>
+</table></div>
+</section>
+
+<section>
+<h2>남은 것과 결정이 필요한 것</h2>
+<h3>결정 필요</h3>
+<div class="scroll"><table>
+<thead><tr><th>항목</th><th>지금</th><th>선택지</th></tr></thead>
+<tbody>
+<tr><td>필터 패널 초안 연쇄</td><td><code>dimension-filter-panel</code> · 리뉴얼 <code>overview-filter-model</code> 은 고르는 중인 초안에 맞춰 하위 옵션을 브라우저에서 좁힌다(옵션 원본은 API). Global 프롬프트 화면은 같은 연쇄를 API(<code>d.&lt;축&gt;</code>)로 한다</td><td>(a) 필터 크롬 예외로 Next 에 둔다 — 클릭 즉시 반응 · (b) 클릭마다 API 왕복 — 규칙 일원화, 클릭당 지연</td></tr>
+</tbody>
+</table></div>
+<h3>Next 에 남긴 것(계산 아님으로 판단)</h3>
+<ul>
+<li>차트 기하: <code>lib/viz</code> trend-gap 계열, 스파크라인 축 범위, 트리맵 배치, 순위 사다리 배치, 도넛 조각, 지도 도형, 순위 축 눈금. <code>mention-screen.ladderMarks</code> 는 행 사이 최소·최대를 써서 경계 사례다.</li>
+<li>표시 매핑: 값 포맷, 지표 키 → 라벨·링크, 비어 있음 문구 키, UI 상태로 미리 계산된 막대 고르기.</li>
+<li>UI 상태: 검색어, 국가·경쟁사 토글, KPI 탭 URL, 표 순서 선택. GEO 지도에서 국가를 고르면 색 범위를 고른 국가로 다시 잡는다(고르지 않았을 때 범위는 API 값).</li>
+<li>인용 표 CSV·XLSX 파일 만들기(받은 행 그대로), 요청 배관(<code>screen.ts</code>, 프로젝트 게이트, 일시 오류 → 축소 화면).</li>
+</ul>
+<h3>손대지 않은 것</h3>
+<ul>
+<li>Gold 계약의 빈 곳(예: GEO 우선 노출도의 첫 순위 열)은 그대로다. 화면 계층은 원본이 주는 값만 옮겼다.</li>
+<li>BFF 화면이 아닌 곳: 관리자·QA·프로젝트 생성·프로젝트 쓰기 기능, 레거시 cron.</li>
+<li>더는 쓰이지 않지만 범위 밖이라 남긴 코드: 프로젝트 쓰기 기능 컴포넌트, <code>project-custom-field-filters.ts</code>, <code>lib/db/repositories/project-prompt-page.ts</code>, <code>components/dash/standard-filters.ts</code>(타입만 참조), 비로컬 프로젝트 대시보드의 <code>SummaryTiles</code> · <code>LiveTrendChart</code> · <code>SparkArea</code>.</li>
+<li>로컬 API 컨테이너가 고정 이미지(<code>hgh-gold-api:local</code>, 소스 마운트 없음)로 뜨면 화면 코드를 고친 뒤 이미지를 다시 빌드해야 반영된다.</li>
+</ul>
+</section>
+</main></body>
+</html>
