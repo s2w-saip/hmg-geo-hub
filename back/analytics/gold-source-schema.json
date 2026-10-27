@@ -1,0 +1,2020 @@
+{
+  "source": "Gold ERD 07_ga4 / 08_vis and live Gold schema",
+  "columns": [
+    {
+      "table_name": "build",
+      "column_name": "build_id",
+      "data_type": "bigint",
+      "udt_name": "int8",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 64,
+      "numeric_scale": 0,
+      "ordinal_position": 1
+    },
+    {
+      "table_name": "build",
+      "column_name": "family",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 2
+    },
+    {
+      "table_name": "build",
+      "column_name": "slice_key",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 3
+    },
+    {
+      "table_name": "build",
+      "column_name": "input_snapshot",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 4
+    },
+    {
+      "table_name": "build",
+      "column_name": "watermark",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 5
+    },
+    {
+      "table_name": "build",
+      "column_name": "profile_signature",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 6
+    },
+    {
+      "table_name": "build",
+      "column_name": "metric_version",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 7
+    },
+    {
+      "table_name": "build",
+      "column_name": "ecat_ver",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 8
+    },
+    {
+      "table_name": "build",
+      "column_name": "rule_ver",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 9
+    },
+    {
+      "table_name": "build",
+      "column_name": "status",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 10
+    },
+    {
+      "table_name": "build",
+      "column_name": "row_counts",
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 11
+    },
+    {
+      "table_name": "build",
+      "column_name": "verify",
+      "data_type": "jsonb",
+      "udt_name": "jsonb",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 12
+    },
+    {
+      "table_name": "build",
+      "column_name": "error",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 13
+    },
+    {
+      "table_name": "build",
+      "column_name": "attempt",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 14
+    },
+    {
+      "table_name": "build",
+      "column_name": "started_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 15
+    },
+    {
+      "table_name": "build",
+      "column_name": "finished_at",
+      "data_type": "timestamp with time zone",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 16
+    },
+    {
+      "table_name": "dim_brand",
+      "column_name": "brand_key",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 1
+    },
+    {
+      "table_name": "dim_brand",
+      "column_name": "name",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 2
+    },
+    {
+      "table_name": "dim_brand",
+      "column_name": "bare",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 3
+    },
+    {
+      "table_name": "dim_brand",
+      "column_name": "kind",
+      "data_type": "smallint",
+      "udt_name": "int2",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 16,
+      "numeric_scale": 0,
+      "ordinal_position": 4
+    },
+    {
+      "table_name": "dim_brand",
+      "column_name": "own_bit",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 5
+    },
+    {
+      "table_name": "dim_brand",
+      "column_name": "first_seen",
+      "data_type": "date",
+      "udt_name": "date",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 6
+    },
+    {
+      "table_name": "dim_category",
+      "column_name": "category_key",
+      "data_type": "smallint",
+      "udt_name": "int2",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 16,
+      "numeric_scale": 0,
+      "ordinal_position": 1
+    },
+    {
+      "table_name": "dim_category",
+      "column_name": "name",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 2
+    },
+    {
+      "table_name": "dim_category",
+      "column_name": "slug",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 3
+    },
+    {
+      "table_name": "dim_category",
+      "column_name": "ord",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 4
+    },
+    {
+      "table_name": "dim_country",
+      "column_name": "geo_key",
+      "data_type": "smallint",
+      "udt_name": "int2",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 16,
+      "numeric_scale": 0,
+      "ordinal_position": 1
+    },
+    {
+      "table_name": "dim_country",
+      "column_name": "code",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 2
+    },
+    {
+      "table_name": "dim_country",
+      "column_name": "region_key",
+      "data_type": "smallint",
+      "udt_name": "int2",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 16,
+      "numeric_scale": 0,
+      "ordinal_position": 3
+    },
+    {
+      "table_name": "dim_country",
+      "column_name": "kind",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 4
+    },
+    {
+      "table_name": "dim_country",
+      "column_name": "virtual_brand_bit",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 5
+    },
+    {
+      "table_name": "dim_country",
+      "column_name": "hidden_standard",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 6
+    },
+    {
+      "table_name": "dim_crawl_bot",
+      "column_name": "bot_key",
+      "data_type": "smallint",
+      "udt_name": "int2",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 16,
+      "numeric_scale": 0,
+      "ordinal_position": 1
+    },
+    {
+      "table_name": "dim_crawl_bot",
+      "column_name": "code",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 2
+    },
+    {
+      "table_name": "dim_crawl_bot",
+      "column_name": "engine_key",
+      "data_type": "smallint",
+      "udt_name": "int2",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 16,
+      "numeric_scale": 0,
+      "ordinal_position": 3
+    },
+    {
+      "table_name": "dim_engine",
+      "column_name": "engine_key",
+      "data_type": "smallint",
+      "udt_name": "int2",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 16,
+      "numeric_scale": 0,
+      "ordinal_position": 1
+    },
+    {
+      "table_name": "dim_engine",
+      "column_name": "code",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 2
+    },
+    {
+      "table_name": "dim_engine",
+      "column_name": "is_default",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 3
+    },
+    {
+      "table_name": "dim_project",
+      "column_name": "project_key",
+      "data_type": "smallint",
+      "udt_name": "int2",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 16,
+      "numeric_scale": 0,
+      "ordinal_position": 1
+    },
+    {
+      "table_name": "dim_project",
+      "column_name": "scope_project_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 2
+    },
+    {
+      "table_name": "dim_project",
+      "column_name": "surface",
+      "data_type": "smallint",
+      "udt_name": "int2",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 16,
+      "numeric_scale": 0,
+      "ordinal_position": 3
+    },
+    {
+      "table_name": "dim_project",
+      "column_name": "is_root",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 4
+    },
+    {
+      "table_name": "dim_project",
+      "column_name": "project_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 5
+    },
+    {
+      "table_name": "dim_project",
+      "column_name": "site_id",
+      "data_type": "uuid",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 6
+    },
+    {
+      "table_name": "dim_project",
+      "column_name": "site_brand_bit",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 7
+    },
+    {
+      "table_name": "dim_project",
+      "column_name": "site_geo_key",
+      "data_type": "smallint",
+      "udt_name": "int2",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 16,
+      "numeric_scale": 0,
+      "ordinal_position": 8
+    },
+    {
+      "table_name": "dim_project",
+      "column_name": "regions",
+      "data_type": "ARRAY",
+      "udt_name": "_text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 9
+    },
+    {
+      "table_name": "dim_region",
+      "column_name": "region_key",
+      "data_type": "smallint",
+      "udt_name": "int2",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 16,
+      "numeric_scale": 0,
+      "ordinal_position": 1
+    },
+    {
+      "table_name": "dim_region",
+      "column_name": "code",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 2
+    },
+    {
+      "table_name": "dim_source",
+      "column_name": "source_key",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 1
+    },
+    {
+      "table_name": "dim_source",
+      "column_name": "skey",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 2
+    },
+    {
+      "table_name": "dim_source",
+      "column_name": "domain",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 3
+    },
+    {
+      "table_name": "dim_source",
+      "column_name": "is_social",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 4
+    },
+    {
+      "table_name": "dim_source",
+      "column_name": "category_key",
+      "data_type": "smallint",
+      "udt_name": "int2",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 16,
+      "numeric_scale": 0,
+      "ordinal_position": 5
+    },
+    {
+      "table_name": "dim_source",
+      "column_name": "category_src",
+      "data_type": "smallint",
+      "udt_name": "int2",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 16,
+      "numeric_scale": 0,
+      "ordinal_position": 6
+    },
+    {
+      "table_name": "dim_source",
+      "column_name": "owned_brand_bit",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 7
+    },
+    {
+      "table_name": "dim_source",
+      "column_name": "competitor_brand_key",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 8
+    },
+    {
+      "table_name": "dim_source",
+      "column_name": "rule_ver",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 9
+    },
+    {
+      "table_name": "dim_url",
+      "column_name": "url_key",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 1
+    },
+    {
+      "table_name": "dim_url",
+      "column_name": "url_hash",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 2
+    },
+    {
+      "table_name": "dim_url",
+      "column_name": "url",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 3
+    },
+    {
+      "table_name": "dim_url",
+      "column_name": "title",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 4
+    },
+    {
+      "table_name": "dim_url",
+      "column_name": "url_norm",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 5
+    },
+    {
+      "table_name": "dim_url",
+      "column_name": "url_base_norm",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 6
+    },
+    {
+      "table_name": "dim_url",
+      "column_name": "host",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 7
+    },
+    {
+      "table_name": "dim_url",
+      "column_name": "domain",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 8
+    },
+    {
+      "table_name": "dim_url",
+      "column_name": "source_key",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 9
+    },
+    {
+      "table_name": "dim_url",
+      "column_name": "owner_key",
+      "data_type": "smallint",
+      "udt_name": "int2",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 16,
+      "numeric_scale": 0,
+      "ordinal_position": 10
+    },
+    {
+      "table_name": "dim_url",
+      "column_name": "rule_ver",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 11
+    },
+    {
+      "table_name": "ga4_property",
+      "column_name": "prop_key",
+      "data_type": "smallint",
+      "udt_name": "int2",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 16,
+      "numeric_scale": 0,
+      "ordinal_position": 1
+    },
+    {
+      "table_name": "ga4_property",
+      "column_name": "property_id",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 2
+    },
+    {
+      "table_name": "ga4_property",
+      "column_name": "brand_bit",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 3
+    },
+    {
+      "table_name": "ga4_property",
+      "column_name": "geo_key",
+      "data_type": "smallint",
+      "udt_name": "int2",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 16,
+      "numeric_scale": 0,
+      "ordinal_position": 4
+    },
+    {
+      "table_name": "ga4_property",
+      "column_name": "status",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 5
+    },
+    {
+      "table_name": "ga4_property",
+      "column_name": "source",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 6
+    },
+    {
+      "table_name": "ga4_property",
+      "column_name": "conv_basis",
+      "data_type": "smallint",
+      "udt_name": "int2",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 16,
+      "numeric_scale": 0,
+      "ordinal_position": 7
+    },
+    {
+      "table_name": "ga4_row",
+      "column_name": "prop_key",
+      "data_type": "smallint",
+      "udt_name": "int2",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 16,
+      "numeric_scale": 0,
+      "ordinal_position": 1
+    },
+    {
+      "table_name": "ga4_row",
+      "column_name": "date",
+      "data_type": "date",
+      "udt_name": "date",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 2
+    },
+    {
+      "table_name": "ga4_row",
+      "column_name": "report",
+      "data_type": "smallint",
+      "udt_name": "int2",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 16,
+      "numeric_scale": 0,
+      "ordinal_position": 3
+    },
+    {
+      "table_name": "ga4_row",
+      "column_name": "channel_key",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 4
+    },
+    {
+      "table_name": "ga4_row",
+      "column_name": "source_key",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 5
+    },
+    {
+      "table_name": "ga4_row",
+      "column_name": "device_key",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 6
+    },
+    {
+      "table_name": "ga4_row",
+      "column_name": "nvr_key",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 7
+    },
+    {
+      "table_name": "ga4_row",
+      "column_name": "page_key",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 8
+    },
+    {
+      "table_name": "ga4_row",
+      "column_name": "event_key",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 9
+    },
+    {
+      "table_name": "ga4_row",
+      "column_name": "is_ai",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 10
+    },
+    {
+      "table_name": "ga4_row",
+      "column_name": "engine_key",
+      "data_type": "smallint",
+      "udt_name": "int2",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 16,
+      "numeric_scale": 0,
+      "ordinal_position": 11
+    },
+    {
+      "table_name": "ga4_row",
+      "column_name": "is_conv",
+      "data_type": "boolean",
+      "udt_name": "bool",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 12
+    },
+    {
+      "table_name": "ga4_row",
+      "column_name": "sessions",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 13
+    },
+    {
+      "table_name": "ga4_row",
+      "column_name": "users_day",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 14
+    },
+    {
+      "table_name": "ga4_row",
+      "column_name": "page_views",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 15
+    },
+    {
+      "table_name": "ga4_row",
+      "column_name": "key_events",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 16
+    },
+    {
+      "table_name": "ga4_row",
+      "column_name": "event_count",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 17
+    },
+    {
+      "table_name": "ga4_users_window",
+      "column_name": "prop_key",
+      "data_type": "smallint",
+      "udt_name": "int2",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 16,
+      "numeric_scale": 0,
+      "ordinal_position": 1
+    },
+    {
+      "table_name": "ga4_users_window",
+      "column_name": "window_end",
+      "data_type": "date",
+      "udt_name": "date",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 2
+    },
+    {
+      "table_name": "ga4_users_window",
+      "column_name": "window_days",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 3
+    },
+    {
+      "table_name": "ga4_users_window",
+      "column_name": "cohort",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 4
+    },
+    {
+      "table_name": "ga4_users_window",
+      "column_name": "engine_mask",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 5
+    },
+    {
+      "table_name": "ga4_users_window",
+      "column_name": "device_mask",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 6
+    },
+    {
+      "table_name": "ga4_users_window",
+      "column_name": "nvr_mask",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 7
+    },
+    {
+      "table_name": "ga4_users_window",
+      "column_name": "page_key",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 8
+    },
+    {
+      "table_name": "ga4_users_window",
+      "column_name": "users",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 9
+    },
+    {
+      "table_name": "ga4_value",
+      "column_name": "kind",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 1
+    },
+    {
+      "table_name": "ga4_value",
+      "column_name": "value_key",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 2
+    },
+    {
+      "table_name": "ga4_value",
+      "column_name": "value",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 3
+    },
+    {
+      "table_name": "ga4_value",
+      "column_name": "url_key",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 4
+    },
+    {
+      "table_name": "page_crawl_daily",
+      "column_name": "build_id",
+      "data_type": "bigint",
+      "udt_name": "int8",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 64,
+      "numeric_scale": 0,
+      "ordinal_position": 1
+    },
+    {
+      "table_name": "page_crawl_daily",
+      "column_name": "project_key",
+      "data_type": "smallint",
+      "udt_name": "int2",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 16,
+      "numeric_scale": 0,
+      "ordinal_position": 2
+    },
+    {
+      "table_name": "page_crawl_daily",
+      "column_name": "url_key",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 3
+    },
+    {
+      "table_name": "page_crawl_daily",
+      "column_name": "date",
+      "data_type": "date",
+      "udt_name": "date",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 4
+    },
+    {
+      "table_name": "page_crawl_daily",
+      "column_name": "bot_key",
+      "data_type": "smallint",
+      "udt_name": "int2",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 16,
+      "numeric_scale": 0,
+      "ordinal_position": 5
+    },
+    {
+      "table_name": "page_crawl_daily",
+      "column_name": "hits",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 6
+    },
+    {
+      "table_name": "page_priority",
+      "column_name": "build_id",
+      "data_type": "bigint",
+      "udt_name": "int8",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 64,
+      "numeric_scale": 0,
+      "ordinal_position": 1
+    },
+    {
+      "table_name": "page_priority",
+      "column_name": "project_key",
+      "data_type": "smallint",
+      "udt_name": "int2",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 16,
+      "numeric_scale": 0,
+      "ordinal_position": 2
+    },
+    {
+      "table_name": "page_priority",
+      "column_name": "url_key",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 3
+    },
+    {
+      "table_name": "page_priority",
+      "column_name": "priority",
+      "data_type": "smallint",
+      "udt_name": "int2",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 16,
+      "numeric_scale": 0,
+      "ordinal_position": 4
+    },
+    {
+      "table_name": "page_priority",
+      "column_name": "rule_ver",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 5
+    },
+    {
+      "table_name": "page_seo_device_daily",
+      "column_name": "build_id",
+      "data_type": "bigint",
+      "udt_name": "int8",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 64,
+      "numeric_scale": 0,
+      "ordinal_position": 1
+    },
+    {
+      "table_name": "page_seo_device_daily",
+      "column_name": "project_key",
+      "data_type": "smallint",
+      "udt_name": "int2",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 16,
+      "numeric_scale": 0,
+      "ordinal_position": 2
+    },
+    {
+      "table_name": "page_seo_device_daily",
+      "column_name": "url_key",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 3
+    },
+    {
+      "table_name": "page_seo_device_daily",
+      "column_name": "date",
+      "data_type": "date",
+      "udt_name": "date",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 4
+    },
+    {
+      "table_name": "page_seo_device_daily",
+      "column_name": "device_key",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 5
+    },
+    {
+      "table_name": "page_seo_device_daily",
+      "column_name": "seo_impressions",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 6
+    },
+    {
+      "table_name": "page_visibility_daily",
+      "column_name": "build_id",
+      "data_type": "bigint",
+      "udt_name": "int8",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 64,
+      "numeric_scale": 0,
+      "ordinal_position": 1
+    },
+    {
+      "table_name": "page_visibility_daily",
+      "column_name": "project_key",
+      "data_type": "smallint",
+      "udt_name": "int2",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 16,
+      "numeric_scale": 0,
+      "ordinal_position": 2
+    },
+    {
+      "table_name": "page_visibility_daily",
+      "column_name": "url_key",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 3
+    },
+    {
+      "table_name": "page_visibility_daily",
+      "column_name": "geo_key",
+      "data_type": "smallint",
+      "udt_name": "int2",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 16,
+      "numeric_scale": 0,
+      "ordinal_position": 4
+    },
+    {
+      "table_name": "page_visibility_daily",
+      "column_name": "date",
+      "data_type": "date",
+      "udt_name": "date",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 5
+    },
+    {
+      "table_name": "page_visibility_daily",
+      "column_name": "seo_impressions",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 6
+    },
+    {
+      "table_name": "page_visibility_daily",
+      "column_name": "ai_crawls",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 7
+    },
+    {
+      "table_name": "dim_owned_base",
+      "column_name": "owner_key",
+      "data_type": "smallint",
+      "udt_name": "int2",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 16,
+      "numeric_scale": 0,
+      "ordinal_position": 1
+    },
+    {
+      "table_name": "dim_owned_base",
+      "column_name": "kind",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 2
+    },
+    {
+      "table_name": "dim_owned_base",
+      "column_name": "prefix",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 3
+    },
+    {
+      "table_name": "dim_owned_base",
+      "column_name": "host",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 4
+    },
+    {
+      "table_name": "dim_owned_base",
+      "column_name": "brand_code",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 5
+    },
+    {
+      "table_name": "dim_owned_base",
+      "column_name": "brand_bit",
+      "data_type": "integer",
+      "udt_name": "int4",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": 32,
+      "numeric_scale": 0,
+      "ordinal_position": 6
+    },
+    {
+      "table_name": "dim_owned_base",
+      "column_name": "geo_code",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 7
+    },
+    {
+      "table_name": "dim_owned_base",
+      "column_name": "language",
+      "data_type": "text",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null,
+      "numeric_precision": null,
+      "numeric_scale": null,
+      "ordinal_position": 8
+    }
+  ],
+  "constraints": [
+    {
+      "table_name": "build",
+      "conname": "build_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (build_id)",
+      "referenced_table": null
+    },
+    {
+      "table_name": "dim_brand",
+      "conname": "dim_brand_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (brand_key)",
+      "referenced_table": null
+    },
+    {
+      "table_name": "dim_brand",
+      "conname": "dim_brand_bare_key",
+      "contype": "u",
+      "definition": "UNIQUE (bare)",
+      "referenced_table": null
+    },
+    {
+      "table_name": "dim_brand",
+      "conname": "dim_brand_name_key",
+      "contype": "u",
+      "definition": "UNIQUE (name)",
+      "referenced_table": null
+    },
+    {
+      "table_name": "dim_category",
+      "conname": "dim_category_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (category_key)",
+      "referenced_table": null
+    },
+    {
+      "table_name": "dim_category",
+      "conname": "dim_category_name_key",
+      "contype": "u",
+      "definition": "UNIQUE (name)",
+      "referenced_table": null
+    },
+    {
+      "table_name": "dim_country",
+      "conname": "dim_country_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (geo_key)",
+      "referenced_table": null
+    },
+    {
+      "table_name": "dim_crawl_bot",
+      "conname": "dim_crawl_bot_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (bot_key)",
+      "referenced_table": null
+    },
+    {
+      "table_name": "dim_crawl_bot",
+      "conname": "dim_crawl_bot_code_key",
+      "contype": "u",
+      "definition": "UNIQUE (code)",
+      "referenced_table": null
+    },
+    {
+      "table_name": "dim_engine",
+      "conname": "dim_engine_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (engine_key)",
+      "referenced_table": null
+    },
+    {
+      "table_name": "dim_engine",
+      "conname": "dim_engine_code_key",
+      "contype": "u",
+      "definition": "UNIQUE (code)",
+      "referenced_table": null
+    },
+    {
+      "table_name": "dim_project",
+      "conname": "dim_project_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (project_key)",
+      "referenced_table": null
+    },
+    {
+      "table_name": "dim_project",
+      "conname": "dim_project_scope_project_id_key",
+      "contype": "u",
+      "definition": "UNIQUE (scope_project_id)",
+      "referenced_table": null
+    },
+    {
+      "table_name": "dim_region",
+      "conname": "dim_region_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (region_key)",
+      "referenced_table": null
+    },
+    {
+      "table_name": "dim_region",
+      "conname": "dim_region_code_key",
+      "contype": "u",
+      "definition": "UNIQUE (code)",
+      "referenced_table": null
+    },
+    {
+      "table_name": "dim_source",
+      "conname": "dim_source_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (source_key)",
+      "referenced_table": null
+    },
+    {
+      "table_name": "dim_source",
+      "conname": "dim_source_skey_key",
+      "contype": "u",
+      "definition": "UNIQUE (skey)",
+      "referenced_table": null
+    },
+    {
+      "table_name": "dim_url",
+      "conname": "dim_url_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (url_key)",
+      "referenced_table": null
+    },
+    {
+      "table_name": "dim_url",
+      "conname": "dim_url_url_hash_key",
+      "contype": "u",
+      "definition": "UNIQUE (url_hash)",
+      "referenced_table": null
+    },
+    {
+      "table_name": "ga4_property",
+      "conname": "ga4_property_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (prop_key)",
+      "referenced_table": null
+    },
+    {
+      "table_name": "ga4_property",
+      "conname": "ga4_property_property_id_key",
+      "contype": "u",
+      "definition": "UNIQUE (property_id)",
+      "referenced_table": null
+    },
+    {
+      "table_name": "ga4_row",
+      "conname": "ga4_row_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (prop_key, report, date, channel_key, source_key, device_key, nvr_key, page_key, event_key)",
+      "referenced_table": null
+    },
+    {
+      "table_name": "ga4_users_window",
+      "conname": "ga4_users_window_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (prop_key, window_end, window_days, cohort, engine_mask, device_mask, nvr_mask, page_key)",
+      "referenced_table": null
+    },
+    {
+      "table_name": "ga4_value",
+      "conname": "ga4_value_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (kind, value_key)",
+      "referenced_table": null
+    },
+    {
+      "table_name": "page_crawl_daily",
+      "conname": "page_crawl_daily_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (build_id, project_key, url_key, date, bot_key)",
+      "referenced_table": null
+    },
+    {
+      "table_name": "page_priority",
+      "conname": "page_priority_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (build_id, project_key, url_key)",
+      "referenced_table": null
+    },
+    {
+      "table_name": "page_seo_device_daily",
+      "conname": "page_seo_device_daily_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (build_id, project_key, url_key, date, device_key)",
+      "referenced_table": null
+    },
+    {
+      "table_name": "page_visibility_daily",
+      "conname": "page_visibility_daily_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (build_id, project_key, url_key, date)",
+      "referenced_table": null
+    },
+    {
+      "table_name": "dim_owned_base",
+      "conname": "dim_owned_base_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (owner_key)",
+      "referenced_table": null
+    },
+    {
+      "table_name": "dim_owned_base",
+      "conname": "dim_owned_base_kind_prefix_key",
+      "contype": "u",
+      "definition": "UNIQUE (kind, prefix)",
+      "referenced_table": null
+    }
+  ],
+  "indexes": [
+    {
+      "tablename": "build",
+      "indexname": "build_pkey",
+      "indexdef": "CREATE UNIQUE INDEX build_pkey ON gold.build USING btree (build_id)"
+    },
+    {
+      "tablename": "dim_brand",
+      "indexname": "dim_brand_bare_key",
+      "indexdef": "CREATE UNIQUE INDEX dim_brand_bare_key ON gold.dim_brand USING btree (bare)"
+    },
+    {
+      "tablename": "dim_brand",
+      "indexname": "dim_brand_name_key",
+      "indexdef": "CREATE UNIQUE INDEX dim_brand_name_key ON gold.dim_brand USING btree (name)"
+    },
+    {
+      "tablename": "dim_brand",
+      "indexname": "dim_brand_pkey",
+      "indexdef": "CREATE UNIQUE INDEX dim_brand_pkey ON gold.dim_brand USING btree (brand_key)"
+    },
+    {
+      "tablename": "dim_category",
+      "indexname": "dim_category_name_key",
+      "indexdef": "CREATE UNIQUE INDEX dim_category_name_key ON gold.dim_category USING btree (name)"
+    },
+    {
+      "tablename": "dim_category",
+      "indexname": "dim_category_pkey",
+      "indexdef": "CREATE UNIQUE INDEX dim_category_pkey ON gold.dim_category USING btree (category_key)"
+    },
+    {
+      "tablename": "dim_country",
+      "indexname": "dim_country_code_key",
+      "indexdef": "CREATE UNIQUE INDEX dim_country_code_key ON gold.dim_country USING btree (lower(code))"
+    },
+    {
+      "tablename": "dim_country",
+      "indexname": "dim_country_pkey",
+      "indexdef": "CREATE UNIQUE INDEX dim_country_pkey ON gold.dim_country USING btree (geo_key)"
+    },
+    {
+      "tablename": "dim_crawl_bot",
+      "indexname": "dim_crawl_bot_code_key",
+      "indexdef": "CREATE UNIQUE INDEX dim_crawl_bot_code_key ON gold.dim_crawl_bot USING btree (code)"
+    },
+    {
+      "tablename": "dim_crawl_bot",
+      "indexname": "dim_crawl_bot_pkey",
+      "indexdef": "CREATE UNIQUE INDEX dim_crawl_bot_pkey ON gold.dim_crawl_bot USING btree (bot_key)"
+    },
+    {
+      "tablename": "dim_engine",
+      "indexname": "dim_engine_code_key",
+      "indexdef": "CREATE UNIQUE INDEX dim_engine_code_key ON gold.dim_engine USING btree (code)"
+    },
+    {
+      "tablename": "dim_engine",
+      "indexname": "dim_engine_pkey",
+      "indexdef": "CREATE UNIQUE INDEX dim_engine_pkey ON gold.dim_engine USING btree (engine_key)"
+    },
+    {
+      "tablename": "dim_project",
+      "indexname": "dim_project_pkey",
+      "indexdef": "CREATE UNIQUE INDEX dim_project_pkey ON gold.dim_project USING btree (project_key)"
+    },
+    {
+      "tablename": "dim_project",
+      "indexname": "dim_project_scope_project_id_key",
+      "indexdef": "CREATE UNIQUE INDEX dim_project_scope_project_id_key ON gold.dim_project USING btree (scope_project_id)"
+    },
+    {
+      "tablename": "dim_region",
+      "indexname": "dim_region_code_key",
+      "indexdef": "CREATE UNIQUE INDEX dim_region_code_key ON gold.dim_region USING btree (code)"
+    },
+    {
+      "tablename": "dim_region",
+      "indexname": "dim_region_pkey",
+      "indexdef": "CREATE UNIQUE INDEX dim_region_pkey ON gold.dim_region USING btree (region_key)"
+    },
+    {
+      "tablename": "dim_source",
+      "indexname": "dim_source_pkey",
+      "indexdef": "CREATE UNIQUE INDEX dim_source_pkey ON gold.dim_source USING btree (source_key)"
+    },
+    {
+      "tablename": "dim_source",
+      "indexname": "dim_source_skey_key",
+      "indexdef": "CREATE UNIQUE INDEX dim_source_skey_key ON gold.dim_source USING btree (skey)"
+    },
+    {
+      "tablename": "dim_url",
+      "indexname": "dim_url_pkey",
+      "indexdef": "CREATE UNIQUE INDEX dim_url_pkey ON gold.dim_url USING btree (url_key)"
+    },
+    {
+      "tablename": "dim_url",
+      "indexname": "dim_url_url_hash_key",
+      "indexdef": "CREATE UNIQUE INDEX dim_url_url_hash_key ON gold.dim_url USING btree (url_hash)"
+    },
+    {
+      "tablename": "ga4_property",
+      "indexname": "ga4_property_pkey",
+      "indexdef": "CREATE UNIQUE INDEX ga4_property_pkey ON gold.ga4_property USING btree (prop_key)"
+    },
+    {
+      "tablename": "ga4_property",
+      "indexname": "ga4_property_property_id_key",
+      "indexdef": "CREATE UNIQUE INDEX ga4_property_property_id_key ON gold.ga4_property USING btree (property_id)"
+    },
+    {
+      "tablename": "ga4_row",
+      "indexname": "ga4_row_pkey",
+      "indexdef": "CREATE UNIQUE INDEX ga4_row_pkey ON gold.ga4_row USING btree (prop_key, report, date, channel_key, source_key, device_key, nvr_key, page_key, event_key)"
+    },
+    {
+      "tablename": "ga4_users_window",
+      "indexname": "ga4_users_window_pkey",
+      "indexdef": "CREATE UNIQUE INDEX ga4_users_window_pkey ON gold.ga4_users_window USING btree (prop_key, window_end, window_days, cohort, engine_mask, device_mask, nvr_mask, page_key)"
+    },
+    {
+      "tablename": "ga4_value",
+      "indexname": "ga4_value_pkey",
+      "indexdef": "CREATE UNIQUE INDEX ga4_value_pkey ON gold.ga4_value USING btree (kind, value_key)"
+    },
+    {
+      "tablename": "page_crawl_daily",
+      "indexname": "page_crawl_daily_pkey",
+      "indexdef": "CREATE UNIQUE INDEX page_crawl_daily_pkey ON gold.page_crawl_daily USING btree (build_id, project_key, url_key, date, bot_key)"
+    },
+    {
+      "tablename": "page_priority",
+      "indexname": "page_priority_pkey",
+      "indexdef": "CREATE UNIQUE INDEX page_priority_pkey ON gold.page_priority USING btree (build_id, project_key, url_key)"
+    },
+    {
+      "tablename": "page_seo_device_daily",
+      "indexname": "page_seo_device_daily_pkey",
+      "indexdef": "CREATE UNIQUE INDEX page_seo_device_daily_pkey ON gold.page_seo_device_daily USING btree (build_id, project_key, url_key, date, device_key)"
+    },
+    {
+      "tablename": "page_visibility_daily",
+      "indexname": "page_visibility_daily_pkey",
+      "indexdef": "CREATE UNIQUE INDEX page_visibility_daily_pkey ON gold.page_visibility_daily USING btree (build_id, project_key, url_key, date)"
+    }
+  ]
+}

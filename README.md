@@ -1,4 +1,50 @@
-# HMG-GEO-HUB 외부 검토용 스냅샷
+# HMG-GEO-HUB
+
+현재 로컬 서비스는 외부 Gold, HUB 데이터 DB, HUB 운영 DB를 읽습니다. DB 접속 계정은 서버에서만 사용하며,
+웹 로그인 없이 `127.0.0.1:3200`에서 읽기 전용으로 실행합니다.
+
+HUB 데이터 DB `hmg_analytics`는 GA4·SEO와 프로젝트·프롬프트 버전을 관리하고,
+별도 운영 DB `hmg_operations`는 사용자·권한·SW 설정·감사 이력을 관리합니다.
+[운영/데이터 DB 분리와 실행 안내](back/hub_storage/README.md), [GA4·SEO 스키마·ERD](back/analytics/README.md)를 참고하십시오.
+GA4·SEO 화면은 데이터 DB로 연결했고, 실제 수집기는 아직 연결하지 않았습니다.
+
+1. `.env.gold.example`을 `.env.gold.local`로 복사하고 제공받은 실제 접속 정보를 입력합니다.
+2. `front/.env.example`을 `front/.env.local`로 복사합니다. 최초 설치 시 `front`에서 `npm ci`를 실행합니다.
+3. 저장소 루트에서 `powershell -File scripts/start-hub-storage.ps1`을 실행합니다. 두 HUB DB 구성·검증, API 시작, 실제 Gold 카탈로그 가져오기를 수행합니다.
+4. 이후 API만 재시작하려면 `powershell -File scripts/start-gold.ps1`을 실행합니다. 각 DB의 조회 계정만 API에 전달합니다.
+
+현재 FastAPI BFF/API는 `back/bff/`에 있습니다(화면 계층 `screens/`, 외부 Gold DB 읽기 `gold_reader/`, HUB 자체 저장소 읽기 `hub_stores/`). Gold는 `active_release`와 검증 완료된 빌드를 고정해서 조회합니다.
+서비스의 DB 조회는 읽기 전용 트랜잭션입니다. 관리 명령은 별도 쓰기 계정으로 실제 카탈로그 정의와 UUID 참조를 등록합니다.
+합성 DB·시드·가상 계정·측정값 생성기는 사용하지 않습니다.
+시장별 현황은 기존 GeoJSON 지도에 Gold 국가별 KPI를 연결합니다. 원천에서 제공되지 않는 값은 채우지 않습니다.
+
+| 화면·지표 | 현재 데이터 원천 | 미제공·미수집 시 표시 |
+| --- | --- | --- |
+| 국가별 GEO·언급·인용·답변·프롬프트·ACR | 외부 Gold의 발행된 활성 빌드 | 데이터 없음 |
+| 키워드 검색량·검색 결과·관련 키워드 | Gold `kw_volume_monthly`·`kw_serp`·`kw_suggestion` | 데이터 없음 |
+| 소셜 맥락·요구·조합·관계·근거 발화 | Gold의 활성 `ctx_snapshot` 및 연관 데이터 | 데이터 없음 |
+| GA4 세션·기간 사용자·전환·이벤트·페이지 | HUB `hmg_analytics.analytics.ga4_*` | 현재 미수집: 데이터 없음 |
+| SEO 노출·크롤러·기기·페이지 우선순위 | HUB의 게시된 `analytics.current_page_*` 뷰 | 현재 미수집: 데이터 없음 |
+| 프로젝트 이름·멤버·생성 이력·생성 프롬프트 | Gold에 제공되지 않음 | 데이터 없음 |
+| HUB 프로젝트·프롬프트 버전 카탈로그 | 데이터 DB `catalog.*` / 내부 `/v1/hub/*` API | 원천에 없는 이름은 null |
+| 사용자·멤버십·SW 설정·감사 이력 | 운영 DB `system.*` | 실제 사용자/설정 등록 전 빈 상태 |
+
+실측 0은 0으로 유지하고, 관측 행/필드가 없으면 null과 `데이터 없음`을 사용합니다. GA4 사용자 수는
+일별 행을 더하지 않고 정확한 기간 창을 읽습니다. 서로 다른 GA4 보고서를 합산하지 않습니다.
+프로젝트 화면의 키워드·소셜 코퍼스는 공통 수집 데이터이며 프로젝트별 데이터로 가장하지 않습니다.
+
+현재 서비스 아키텍처: [PNG](docs/architecture/hmg-geo-hub-current.png) · [SVG](docs/architecture/hmg-geo-hub-current.svg) · [Mermaid 원본](docs/architecture/hmg-geo-hub-current.mmd).
+Next.js는 화면 렌더링과 API 호출을 담당하고, FastAPI가 BFF와 데이터 조회를 담당합니다.
+FastAPI는 세 DB에 독립된 읽기 전용 연결을 사용합니다. 외부 소비자 계정은 데이터 DB의 명시 승인된 `published.*` 뷰만 조회할 수 있습니다.
+
+검증: `front`에서 `npm run typecheck`. API 실행 후 저장소 루트에서
+`$env:HGH_GOLD_TEST_BASE_URL='http://127.0.0.1:18091'; python -X utf8 -m unittest discover -s back/bff/tests -v`.
+API 계약 검사에는 개발 환경의 `jsonschema`가 필요합니다.
+집계 규칙 단위 검증은 `Get-Content -Raw back/bff/tests/test_analytics.py | docker exec -i hgh-gold-api python -`로 실행합니다.
+
+아래 내용은 이전 재설계 스냅샷의 기록입니다. 현재 로컬 서비스의 실행 방법은 위 안내를 사용합니다.
+
+## 외부 검토용 스냅샷 기록
 
 > 이 레포는 **2026-10-02 기준 외부 검토·자문용 스냅샷**입니다. 개발 레포의 통합 브랜치
 > 리비전 `72c260a3` 트리를 단일 커밋으로 옮긴 것이며, 커밋 이력은 포함하지 않습니다.

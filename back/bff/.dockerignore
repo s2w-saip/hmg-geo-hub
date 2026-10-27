@@ -1,0 +1,5 @@
+__pycache__
+*.pyc
+tests
+api-contract.json
+gold_reader/source-schema.json

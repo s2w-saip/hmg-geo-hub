@@ -1,0 +1,4424 @@
+[
+  {
+    "table_name": "acr_cell_fact",
+    "columns": [
+      {
+        "name": "build_id",
+        "type": "int8"
+      },
+      {
+        "name": "acr_cell_key",
+        "type": "int4"
+      },
+      {
+        "name": "surface",
+        "type": "int2"
+      },
+      {
+        "name": "cyc_key",
+        "type": "int4"
+      },
+      {
+        "name": "prompt_key",
+        "type": "int4"
+      },
+      {
+        "name": "project_key",
+        "type": "int2"
+      },
+      {
+        "name": "engine_key",
+        "type": "int2"
+      },
+      {
+        "name": "geo_key",
+        "type": "int2"
+      },
+      {
+        "name": "lang_key",
+        "type": "int2"
+      },
+      {
+        "name": "bgrp",
+        "type": "int4"
+      },
+      {
+        "name": "round_date",
+        "type": "date"
+      },
+      {
+        "name": "measured_date",
+        "type": "date"
+      },
+      {
+        "name": "cat_mask",
+        "type": "int4"
+      },
+      {
+        "name": "planned",
+        "type": "int4"
+      },
+      {
+        "name": "valid_turn1",
+        "type": "int4"
+      },
+      {
+        "name": "valid_acr",
+        "type": "int4"
+      },
+      {
+        "name": "co_single",
+        "type": "int4"
+      },
+      {
+        "name": "co_conditional",
+        "type": "int4"
+      },
+      {
+        "name": "co_generic",
+        "type": "int4"
+      },
+      {
+        "name": "co_off_shortlist",
+        "type": "int4"
+      },
+      {
+        "name": "co_unresolved",
+        "type": "int4"
+      },
+      {
+        "name": "co_none",
+        "type": "int4"
+      },
+      {
+        "name": "is_rep",
+        "type": "bool"
+      },
+      {
+        "name": "acr_in",
+        "type": "bool"
+      },
+      {
+        "name": "rule_ver",
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "table_name": "acr_cell_job",
+    "columns": [
+      {
+        "name": "build_id",
+        "type": "int8"
+      },
+      {
+        "name": "answer_key",
+        "type": "int4"
+      },
+      {
+        "name": "acr_cell_key",
+        "type": "int4"
+      }
+    ]
+  },
+  {
+    "table_name": "acr_cell_run",
+    "columns": [
+      {
+        "name": "acr_cell_key",
+        "type": "int4"
+      },
+      {
+        "name": "prompt_run_id",
+        "type": "uuid"
+      },
+      {
+        "name": "run_id",
+        "type": "uuid"
+      }
+    ]
+  },
+  {
+    "table_name": "acr_entity_fact",
+    "columns": [
+      {
+        "name": "build_id",
+        "type": "int8"
+      },
+      {
+        "name": "acr_cell_key",
+        "type": "int4"
+      },
+      {
+        "name": "level",
+        "type": "int2"
+      },
+      {
+        "name": "entity_key",
+        "type": "int4"
+      },
+      {
+        "name": "brand_key",
+        "type": "int4"
+      },
+      {
+        "name": "parent_brand_key",
+        "type": "int4"
+      },
+      {
+        "name": "own_bit",
+        "type": "int4"
+      },
+      {
+        "name": "name_own",
+        "type": "int4"
+      },
+      {
+        "name": "appearance",
+        "type": "int4"
+      },
+      {
+        "name": "choice",
+        "type": "int4"
+      },
+      {
+        "name": "cond_choice",
+        "type": "int4"
+      },
+      {
+        "name": "off_shortlist",
+        "type": "int4"
+      },
+      {
+        "name": "unresolved",
+        "type": "int4"
+      },
+      {
+        "name": "generic",
+        "type": "int4"
+      },
+      {
+        "name": "keep",
+        "type": "bool"
+      }
+    ]
+  },
+  {
+    "table_name": "acr_iter_fact",
+    "columns": [
+      {
+        "name": "build_id",
+        "type": "int8"
+      },
+      {
+        "name": "acr_cell_key",
+        "type": "int4"
+      },
+      {
+        "name": "iter_no",
+        "type": "int4"
+      },
+      {
+        "name": "answer_key",
+        "type": "int4"
+      },
+      {
+        "name": "result_type",
+        "type": "int2"
+      },
+      {
+        "name": "winner_brand_key",
+        "type": "int4"
+      },
+      {
+        "name": "winner_entity_key",
+        "type": "int4"
+      },
+      {
+        "name": "own_bit",
+        "type": "int4"
+      }
+    ]
+  },
+  {
+    "table_name": "acr_iter_shortlist",
+    "columns": [
+      {
+        "name": "build_id",
+        "type": "int8"
+      },
+      {
+        "name": "acr_cell_key",
+        "type": "int4"
+      },
+      {
+        "name": "iter_no",
+        "type": "int4"
+      },
+      {
+        "name": "level",
+        "type": "int2"
+      },
+      {
+        "name": "entity_key",
+        "type": "int4"
+      },
+      {
+        "name": "brand_key",
+        "type": "int4"
+      },
+      {
+        "name": "parent_brand_key",
+        "type": "int4"
+      },
+      {
+        "name": "is_choice",
+        "type": "bool"
+      }
+    ]
+  },
+  {
+    "table_name": "active_release",
+    "columns": [
+      {
+        "name": "read_mode",
+        "type": "text"
+      },
+      {
+        "name": "rule_signature",
+        "type": "text"
+      },
+      {
+        "name": "scope",
+        "type": "text"
+      },
+      {
+        "name": "release_id",
+        "type": "int8"
+      },
+      {
+        "name": "version",
+        "type": "int8"
+      },
+      {
+        "name": "last_build_id",
+        "type": "int8"
+      },
+      {
+        "name": "rule_ver",
+        "type": "text"
+      },
+      {
+        "name": "as_of",
+        "type": "date"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamptz"
+      }
+    ]
+  },
+  {
+    "table_name": "answer_body",
+    "columns": [
+      {
+        "name": "answer_key",
+        "type": "int4"
+      },
+      {
+        "name": "job_id",
+        "type": "uuid"
+      },
+      {
+        "name": "run_id",
+        "type": "uuid"
+      },
+      {
+        "name": "prompt_run_id",
+        "type": "uuid"
+      },
+      {
+        "name": "surface",
+        "type": "int2"
+      },
+      {
+        "name": "project_key",
+        "type": "int2"
+      },
+      {
+        "name": "geo_key",
+        "type": "int2"
+      },
+      {
+        "name": "bgrp",
+        "type": "int4"
+      },
+      {
+        "name": "answer_text",
+        "type": "text"
+      },
+      {
+        "name": "model_slug",
+        "type": "text"
+      },
+      {
+        "name": "measured_at",
+        "type": "timestamptz"
+      },
+      {
+        "name": "status",
+        "type": "text"
+      },
+      {
+        "name": "analysis_status",
+        "type": "text"
+      },
+      {
+        "name": "region",
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "table_name": "answer_brand_fact",
+    "columns": [
+      {
+        "name": "build_id",
+        "type": "int8"
+      },
+      {
+        "name": "surface",
+        "type": "int2"
+      },
+      {
+        "name": "round_date",
+        "type": "date"
+      },
+      {
+        "name": "answer_key",
+        "type": "int4"
+      },
+      {
+        "name": "brand_key",
+        "type": "int4"
+      },
+      {
+        "name": "competitive",
+        "type": "bool"
+      },
+      {
+        "name": "cyc_key",
+        "type": "int4"
+      },
+      {
+        "name": "prompt_key",
+        "type": "int4"
+      },
+      {
+        "name": "project_key",
+        "type": "int2"
+      },
+      {
+        "name": "engine_key",
+        "type": "int2"
+      },
+      {
+        "name": "geo_key",
+        "type": "int2"
+      },
+      {
+        "name": "lang_key",
+        "type": "int2"
+      },
+      {
+        "name": "bgrp",
+        "type": "int4"
+      },
+      {
+        "name": "own_bit",
+        "type": "int4"
+      },
+      {
+        "name": "entity_rows",
+        "type": "int4"
+      },
+      {
+        "name": "rid_n",
+        "type": "int4"
+      },
+      {
+        "name": "mention_count",
+        "type": "int4"
+      },
+      {
+        "name": "rk",
+        "type": "int4"
+      },
+      {
+        "name": "first_pos",
+        "type": "int4"
+      },
+      {
+        "name": "s_pos",
+        "type": "int4"
+      },
+      {
+        "name": "s_neu",
+        "type": "int4"
+      },
+      {
+        "name": "s_neg",
+        "type": "int4"
+      },
+      {
+        "name": "s_mix",
+        "type": "int4"
+      },
+      {
+        "name": "t_mention",
+        "type": "int4"
+      },
+      {
+        "name": "t_recommendation",
+        "type": "int4"
+      },
+      {
+        "name": "t_comparison",
+        "type": "int4"
+      },
+      {
+        "name": "t_definition",
+        "type": "int4"
+      },
+      {
+        "name": "t_final_choice",
+        "type": "int4"
+      },
+      {
+        "name": "std_in",
+        "type": "bool"
+      },
+      {
+        "name": "elig",
+        "type": "bool"
+      },
+      {
+        "name": "dflt",
+        "type": "bool"
+      },
+      {
+        "name": "is_rep",
+        "type": "bool"
+      },
+      {
+        "name": "std_in_nc",
+        "type": "bool"
+      },
+      {
+        "name": "rule_ver",
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "table_name": "answer_citation_raw",
+    "columns": [
+      {
+        "name": "answer_key",
+        "type": "int4"
+      },
+      {
+        "name": "ord",
+        "type": "int4"
+      },
+      {
+        "name": "surface",
+        "type": "int2"
+      },
+      {
+        "name": "project_key",
+        "type": "int2"
+      },
+      {
+        "name": "geo_key",
+        "type": "int2"
+      },
+      {
+        "name": "bgrp",
+        "type": "int4"
+      },
+      {
+        "name": "url",
+        "type": "text"
+      },
+      {
+        "name": "title",
+        "type": "text"
+      },
+      {
+        "name": "ref_index",
+        "type": "int4"
+      },
+      {
+        "name": "scope_category",
+        "type": "text"
+      },
+      {
+        "name": "host",
+        "type": "text"
+      },
+      {
+        "name": "domain_label",
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "table_name": "answer_fact",
+    "columns": [
+      {
+        "name": "build_id",
+        "type": "int8"
+      },
+      {
+        "name": "surface",
+        "type": "int2"
+      },
+      {
+        "name": "round_date",
+        "type": "date"
+      },
+      {
+        "name": "answer_key",
+        "type": "int4"
+      },
+      {
+        "name": "cyc_key",
+        "type": "int4"
+      },
+      {
+        "name": "run_key",
+        "type": "int4"
+      },
+      {
+        "name": "prompt_key",
+        "type": "int4"
+      },
+      {
+        "name": "project_key",
+        "type": "int2"
+      },
+      {
+        "name": "engine_key",
+        "type": "int2"
+      },
+      {
+        "name": "geo_key",
+        "type": "int2"
+      },
+      {
+        "name": "lang_key",
+        "type": "int2"
+      },
+      {
+        "name": "bgrp",
+        "type": "int4"
+      },
+      {
+        "name": "anchor_date",
+        "type": "date"
+      },
+      {
+        "name": "anchor_src",
+        "type": "text"
+      },
+      {
+        "name": "region_geo_key",
+        "type": "int2"
+      },
+      {
+        "name": "cat_mask",
+        "type": "int4"
+      },
+      {
+        "name": "acr_iter_rank",
+        "type": "int4"
+      },
+      {
+        "name": "analysis_state",
+        "type": "int2"
+      },
+      {
+        "name": "elig",
+        "type": "bool"
+      },
+      {
+        "name": "dflt",
+        "type": "bool"
+      },
+      {
+        "name": "is_acr",
+        "type": "bool"
+      },
+      {
+        "name": "is_rep",
+        "type": "bool"
+      },
+      {
+        "name": "web_reg",
+        "type": "bool"
+      },
+      {
+        "name": "std_in",
+        "type": "bool"
+      },
+      {
+        "name": "cit_in",
+        "type": "bool"
+      },
+      {
+        "name": "gap",
+        "type": "bool"
+      },
+      {
+        "name": "acr_in",
+        "type": "bool"
+      },
+      {
+        "name": "elig_nc",
+        "type": "bool"
+      },
+      {
+        "name": "std_in_nc",
+        "type": "bool"
+      },
+      {
+        "name": "cit_in_nc",
+        "type": "bool"
+      },
+      {
+        "name": "own_mask",
+        "type": "int4"
+      },
+      {
+        "name": "own_rk_h",
+        "type": "int4"
+      },
+      {
+        "name": "own_rk_k",
+        "type": "int4"
+      },
+      {
+        "name": "own_rk_g",
+        "type": "int4"
+      },
+      {
+        "name": "t_own",
+        "type": "int4"
+      },
+      {
+        "name": "own_fp_h",
+        "type": "int4"
+      },
+      {
+        "name": "own_fp_k",
+        "type": "int4"
+      },
+      {
+        "name": "own_fp_g",
+        "type": "int4"
+      },
+      {
+        "name": "ment_total",
+        "type": "int4"
+      },
+      {
+        "name": "ment_h",
+        "type": "int4"
+      },
+      {
+        "name": "ment_k",
+        "type": "int4"
+      },
+      {
+        "name": "ment_g",
+        "type": "int4"
+      },
+      {
+        "name": "sent_pos_h",
+        "type": "int4"
+      },
+      {
+        "name": "sent_pos_k",
+        "type": "int4"
+      },
+      {
+        "name": "sent_pos_g",
+        "type": "int4"
+      },
+      {
+        "name": "sent_neg_h",
+        "type": "int4"
+      },
+      {
+        "name": "sent_neg_k",
+        "type": "int4"
+      },
+      {
+        "name": "sent_neg_g",
+        "type": "int4"
+      },
+      {
+        "name": "sent_all_h",
+        "type": "int4"
+      },
+      {
+        "name": "sent_all_k",
+        "type": "int4"
+      },
+      {
+        "name": "sent_all_g",
+        "type": "int4"
+      },
+      {
+        "name": "cit_n",
+        "type": "int4"
+      },
+      {
+        "name": "cit_n_all",
+        "type": "int4"
+      },
+      {
+        "name": "cit_off",
+        "type": "int4"
+      },
+      {
+        "name": "cit_own_h",
+        "type": "int4"
+      },
+      {
+        "name": "cit_own_k",
+        "type": "int4"
+      },
+      {
+        "name": "cit_own_g",
+        "type": "int4"
+      },
+      {
+        "name": "cit_own_hc",
+        "type": "int4"
+      },
+      {
+        "name": "cit_own_kc",
+        "type": "int4"
+      },
+      {
+        "name": "cit_own_gc",
+        "type": "int4"
+      },
+      {
+        "name": "cit_own_x",
+        "type": "int4"
+      },
+      {
+        "name": "cit_loc",
+        "type": "int4"
+      },
+      {
+        "name": "cit_tgt",
+        "type": "int4"
+      },
+      {
+        "name": "cit_loc_tgt",
+        "type": "int4"
+      },
+      {
+        "name": "cit_c1",
+        "type": "int4"
+      },
+      {
+        "name": "cit_c2",
+        "type": "int4"
+      },
+      {
+        "name": "cit_c3",
+        "type": "int4"
+      },
+      {
+        "name": "cit_c4",
+        "type": "int4"
+      },
+      {
+        "name": "cit_c5",
+        "type": "int4"
+      },
+      {
+        "name": "cit_c6",
+        "type": "int4"
+      },
+      {
+        "name": "cit_c7",
+        "type": "int4"
+      },
+      {
+        "name": "cit_c8",
+        "type": "int4"
+      },
+      {
+        "name": "cit_c9",
+        "type": "int4"
+      },
+      {
+        "name": "cit_c10",
+        "type": "int4"
+      },
+      {
+        "name": "cit_c11",
+        "type": "int4"
+      },
+      {
+        "name": "cit_c12",
+        "type": "int4"
+      },
+      {
+        "name": "cit_c13",
+        "type": "int4"
+      },
+      {
+        "name": "has_cit",
+        "type": "bool"
+      },
+      {
+        "name": "tgt_cited",
+        "type": "bool"
+      },
+      {
+        "name": "own_url_cited",
+        "type": "bool"
+      },
+      {
+        "name": "rep_cit_xor",
+        "type": "bool"
+      },
+      {
+        "name": "ecat_ver",
+        "type": "text"
+      },
+      {
+        "name": "rule_ver",
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "table_name": "answer_mention_raw",
+    "columns": [
+      {
+        "name": "answer_key",
+        "type": "int4"
+      },
+      {
+        "name": "ord",
+        "type": "int4"
+      },
+      {
+        "name": "surface",
+        "type": "int2"
+      },
+      {
+        "name": "project_key",
+        "type": "int2"
+      },
+      {
+        "name": "geo_key",
+        "type": "int2"
+      },
+      {
+        "name": "bgrp",
+        "type": "int4"
+      },
+      {
+        "name": "entity_id",
+        "type": "uuid"
+      },
+      {
+        "name": "entity_key",
+        "type": "int4"
+      },
+      {
+        "name": "registry_role",
+        "type": "text"
+      },
+      {
+        "name": "entity_type",
+        "type": "text"
+      },
+      {
+        "name": "display_name",
+        "type": "text"
+      },
+      {
+        "name": "mention_count",
+        "type": "int4"
+      },
+      {
+        "name": "avg_position",
+        "type": "numeric"
+      },
+      {
+        "name": "brand_rollup_entity_id",
+        "type": "uuid"
+      },
+      {
+        "name": "surfaces",
+        "type": "_text"
+      },
+      {
+        "name": "sentiment_positive",
+        "type": "int4"
+      },
+      {
+        "name": "sentiment_neutral",
+        "type": "int4"
+      },
+      {
+        "name": "sentiment_negative",
+        "type": "int4"
+      },
+      {
+        "name": "sentiment_mixed",
+        "type": "int4"
+      },
+      {
+        "name": "type_mention",
+        "type": "int4"
+      },
+      {
+        "name": "type_recommendation",
+        "type": "int4"
+      },
+      {
+        "name": "type_comparison",
+        "type": "int4"
+      },
+      {
+        "name": "type_definition",
+        "type": "int4"
+      },
+      {
+        "name": "type_final_choice",
+        "type": "int4"
+      }
+    ]
+  },
+  {
+    "table_name": "answer_occurrence",
+    "columns": [
+      {
+        "name": "answer_key",
+        "type": "int4"
+      },
+      {
+        "name": "ord",
+        "type": "int4"
+      },
+      {
+        "name": "surface",
+        "type": "int2"
+      },
+      {
+        "name": "project_key",
+        "type": "int2"
+      },
+      {
+        "name": "geo_key",
+        "type": "int2"
+      },
+      {
+        "name": "bgrp",
+        "type": "int4"
+      },
+      {
+        "name": "entity_id",
+        "type": "uuid"
+      },
+      {
+        "name": "turn_index",
+        "type": "int4"
+      },
+      {
+        "name": "source_start",
+        "type": "int4"
+      },
+      {
+        "name": "source_end",
+        "type": "int4"
+      },
+      {
+        "name": "surface_text",
+        "type": "text"
+      },
+      {
+        "name": "sentiment",
+        "type": "text"
+      },
+      {
+        "name": "mention_role",
+        "type": "text"
+      },
+      {
+        "name": "assertion",
+        "type": "text"
+      },
+      {
+        "name": "context_snippet",
+        "type": "text"
+      },
+      {
+        "name": "descriptors",
+        "type": "_text"
+      },
+      {
+        "name": "criteria",
+        "type": "_text"
+      }
+    ]
+  },
+  {
+    "table_name": "answer_registry",
+    "columns": [
+      {
+        "name": "answer_key",
+        "type": "int4"
+      },
+      {
+        "name": "surface",
+        "type": "int2"
+      },
+      {
+        "name": "project_key",
+        "type": "int2"
+      },
+      {
+        "name": "geo_key",
+        "type": "int2"
+      },
+      {
+        "name": "bgrp",
+        "type": "int4"
+      },
+      {
+        "name": "pin_anchor",
+        "type": "date"
+      },
+      {
+        "name": "pin_reason",
+        "type": "text"
+      },
+      {
+        "name": "drop_reason",
+        "type": "text"
+      },
+      {
+        "name": "dropped_at",
+        "type": "timestamptz"
+      },
+      {
+        "name": "pin_source_measured_at",
+        "type": "timestamptz"
+      },
+      {
+        "name": "drop_source_measured_at",
+        "type": "timestamptz"
+      }
+    ]
+  },
+  {
+    "table_name": "answer_stance_fact",
+    "columns": [
+      {
+        "name": "build_id",
+        "type": "int8"
+      },
+      {
+        "name": "surface",
+        "type": "int2"
+      },
+      {
+        "name": "round_date",
+        "type": "date"
+      },
+      {
+        "name": "answer_key",
+        "type": "int4"
+      },
+      {
+        "name": "turn_index",
+        "type": "int4"
+      },
+      {
+        "name": "entity_key",
+        "type": "int4"
+      },
+      {
+        "name": "brand_key",
+        "type": "int4"
+      },
+      {
+        "name": "cyc_key",
+        "type": "int4"
+      },
+      {
+        "name": "own_bit",
+        "type": "int4"
+      },
+      {
+        "name": "stance",
+        "type": "int2"
+      },
+      {
+        "name": "first_turn",
+        "type": "bool"
+      },
+      {
+        "name": "std_in",
+        "type": "bool"
+      },
+      {
+        "name": "is_rep",
+        "type": "bool"
+      },
+      {
+        "name": "std_in_nc",
+        "type": "bool"
+      }
+    ]
+  },
+  {
+    "table_name": "answer_stance_raw",
+    "columns": [
+      {
+        "name": "answer_key",
+        "type": "int4"
+      },
+      {
+        "name": "turn_index",
+        "type": "int4"
+      },
+      {
+        "name": "entity_id",
+        "type": "uuid"
+      },
+      {
+        "name": "surface",
+        "type": "int2"
+      },
+      {
+        "name": "project_key",
+        "type": "int2"
+      },
+      {
+        "name": "geo_key",
+        "type": "int2"
+      },
+      {
+        "name": "bgrp",
+        "type": "int4"
+      },
+      {
+        "name": "brand_label",
+        "type": "text"
+      },
+      {
+        "name": "stance",
+        "type": "text"
+      },
+      {
+        "name": "confidence",
+        "type": "numeric"
+      },
+      {
+        "name": "evidence_text",
+        "type": "text"
+      },
+      {
+        "name": "evidence_start",
+        "type": "int4"
+      },
+      {
+        "name": "evidence_end",
+        "type": "int4"
+      },
+      {
+        "name": "reason",
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "table_name": "brand_cell",
+    "columns": [
+      {
+        "name": "build_id",
+        "type": "int8"
+      },
+      {
+        "name": "population_key",
+        "type": "int2"
+      },
+      {
+        "name": "surface",
+        "type": "int2"
+      },
+      {
+        "name": "project_key",
+        "type": "int2"
+      },
+      {
+        "name": "cyc_key",
+        "type": "int4"
+      },
+      {
+        "name": "round_date",
+        "type": "date"
+      },
+      {
+        "name": "bucket_date",
+        "type": "date"
+      },
+      {
+        "name": "prompt_key",
+        "type": "int4"
+      },
+      {
+        "name": "engine_key",
+        "type": "int2"
+      },
+      {
+        "name": "geo_key",
+        "type": "int2"
+      },
+      {
+        "name": "lang_key",
+        "type": "int2"
+      },
+      {
+        "name": "bgrp",
+        "type": "int4"
+      },
+      {
+        "name": "brand_key",
+        "type": "int4"
+      },
+      {
+        "name": "competitive",
+        "type": "bool"
+      },
+      {
+        "name": "mention_count",
+        "type": "int4"
+      },
+      {
+        "name": "answers_present",
+        "type": "int4"
+      },
+      {
+        "name": "rid_n_sum",
+        "type": "int4"
+      },
+      {
+        "name": "rank_sum",
+        "type": "int4"
+      },
+      {
+        "name": "ranked",
+        "type": "int4"
+      },
+      {
+        "name": "fp_sum",
+        "type": "int4"
+      },
+      {
+        "name": "fp_n",
+        "type": "int4"
+      },
+      {
+        "name": "s_pos",
+        "type": "int4"
+      },
+      {
+        "name": "s_neu",
+        "type": "int4"
+      },
+      {
+        "name": "s_neg",
+        "type": "int4"
+      },
+      {
+        "name": "s_mix",
+        "type": "int4"
+      },
+      {
+        "name": "t_mention",
+        "type": "int4"
+      },
+      {
+        "name": "t_recommendation",
+        "type": "int4"
+      },
+      {
+        "name": "t_comparison",
+        "type": "int4"
+      },
+      {
+        "name": "t_definition",
+        "type": "int4"
+      },
+      {
+        "name": "t_final_choice",
+        "type": "int4"
+      },
+      {
+        "name": "multi_answers",
+        "type": "int4"
+      },
+      {
+        "name": "multi_mentions",
+        "type": "int4"
+      },
+      {
+        "name": "has_brand",
+        "type": "bool"
+      },
+      {
+        "name": "has_multi",
+        "type": "bool"
+      }
+    ]
+  },
+  {
+    "table_name": "build",
+    "columns": [
+      {
+        "name": "build_id",
+        "type": "int8"
+      },
+      {
+        "name": "family",
+        "type": "text"
+      },
+      {
+        "name": "slice_key",
+        "type": "text"
+      },
+      {
+        "name": "input_snapshot",
+        "type": "text"
+      },
+      {
+        "name": "watermark",
+        "type": "text"
+      },
+      {
+        "name": "profile_signature",
+        "type": "text"
+      },
+      {
+        "name": "metric_version",
+        "type": "text"
+      },
+      {
+        "name": "ecat_ver",
+        "type": "text"
+      },
+      {
+        "name": "rule_ver",
+        "type": "text"
+      },
+      {
+        "name": "status",
+        "type": "text"
+      },
+      {
+        "name": "row_counts",
+        "type": "jsonb"
+      },
+      {
+        "name": "verify",
+        "type": "jsonb"
+      },
+      {
+        "name": "error",
+        "type": "text"
+      },
+      {
+        "name": "attempt",
+        "type": "int4"
+      },
+      {
+        "name": "started_at",
+        "type": "timestamptz"
+      },
+      {
+        "name": "finished_at",
+        "type": "timestamptz"
+      }
+    ]
+  },
+  {
+    "table_name": "catalog_entry",
+    "columns": [
+      {
+        "name": "catalog_row_id",
+        "type": "uuid"
+      },
+      {
+        "name": "prompt_key",
+        "type": "int4"
+      },
+      {
+        "name": "brand_bit",
+        "type": "int4"
+      },
+      {
+        "name": "kind",
+        "type": "text"
+      },
+      {
+        "name": "presence_key",
+        "type": "int2"
+      },
+      {
+        "name": "funnel_key",
+        "type": "int2"
+      },
+      {
+        "name": "list_type_key",
+        "type": "int2"
+      },
+      {
+        "name": "depth1_key",
+        "type": "int2"
+      },
+      {
+        "name": "depth2_key",
+        "type": "int2"
+      },
+      {
+        "name": "depth3_key",
+        "type": "int2"
+      },
+      {
+        "name": "depth4_key",
+        "type": "int2"
+      },
+      {
+        "name": "build_id",
+        "type": "int8"
+      }
+    ]
+  },
+  {
+    "table_name": "citation_cell",
+    "columns": [
+      {
+        "name": "build_id",
+        "type": "int8"
+      },
+      {
+        "name": "population_key",
+        "type": "int2"
+      },
+      {
+        "name": "surface",
+        "type": "int2"
+      },
+      {
+        "name": "project_key",
+        "type": "int2"
+      },
+      {
+        "name": "cyc_key",
+        "type": "int4"
+      },
+      {
+        "name": "round_date",
+        "type": "date"
+      },
+      {
+        "name": "bucket_date",
+        "type": "date"
+      },
+      {
+        "name": "prompt_key",
+        "type": "int4"
+      },
+      {
+        "name": "engine_key",
+        "type": "int2"
+      },
+      {
+        "name": "geo_key",
+        "type": "int2"
+      },
+      {
+        "name": "lang_key",
+        "type": "int2"
+      },
+      {
+        "name": "bgrp",
+        "type": "int4"
+      },
+      {
+        "name": "perspective_key",
+        "type": "int2"
+      },
+      {
+        "name": "source_key",
+        "type": "int4"
+      },
+      {
+        "name": "owner_key",
+        "type": "int2"
+      },
+      {
+        "name": "category_key",
+        "type": "int2"
+      },
+      {
+        "name": "loc_owned",
+        "type": "bool"
+      },
+      {
+        "name": "tgt_hit",
+        "type": "bool"
+      },
+      {
+        "name": "citations",
+        "type": "int4"
+      },
+      {
+        "name": "source_first_count",
+        "type": "int4"
+      },
+      {
+        "name": "cit_t_mention",
+        "type": "int4"
+      },
+      {
+        "name": "cit_t_recommendation",
+        "type": "int4"
+      },
+      {
+        "name": "cit_t_comparison",
+        "type": "int4"
+      },
+      {
+        "name": "cit_t_definition",
+        "type": "int4"
+      },
+      {
+        "name": "cit_t_final_choice",
+        "type": "int4"
+      },
+      {
+        "name": "cit_pos",
+        "type": "int4"
+      },
+      {
+        "name": "cit_neg",
+        "type": "int4"
+      }
+    ]
+  },
+  {
+    "table_name": "citation_fact",
+    "columns": [
+      {
+        "name": "build_id",
+        "type": "int8"
+      },
+      {
+        "name": "surface",
+        "type": "int2"
+      },
+      {
+        "name": "round_date",
+        "type": "date"
+      },
+      {
+        "name": "answer_key",
+        "type": "int4"
+      },
+      {
+        "name": "ord",
+        "type": "int4"
+      },
+      {
+        "name": "url_key",
+        "type": "int4"
+      },
+      {
+        "name": "source_key",
+        "type": "int4"
+      },
+      {
+        "name": "cyc_key",
+        "type": "int4"
+      },
+      {
+        "name": "prompt_key",
+        "type": "int4"
+      },
+      {
+        "name": "project_key",
+        "type": "int2"
+      },
+      {
+        "name": "engine_key",
+        "type": "int2"
+      },
+      {
+        "name": "geo_key",
+        "type": "int2"
+      },
+      {
+        "name": "lang_key",
+        "type": "int2"
+      },
+      {
+        "name": "bgrp",
+        "type": "int4"
+      },
+      {
+        "name": "scope_key",
+        "type": "int4"
+      },
+      {
+        "name": "owner_key",
+        "type": "int2"
+      },
+      {
+        "name": "cit_in",
+        "type": "bool"
+      },
+      {
+        "name": "gap",
+        "type": "bool"
+      },
+      {
+        "name": "dflt",
+        "type": "bool"
+      },
+      {
+        "name": "is_rep",
+        "type": "bool"
+      },
+      {
+        "name": "cit_in_nc",
+        "type": "bool"
+      },
+      {
+        "name": "loc_owned",
+        "type": "bool"
+      },
+      {
+        "name": "tgt_hit",
+        "type": "bool"
+      },
+      {
+        "name": "src_first",
+        "type": "bool"
+      },
+      {
+        "name": "rule_ver",
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "table_name": "ctx_claim",
+    "columns": [
+      {
+        "name": "snapshot_id",
+        "type": "int2"
+      },
+      {
+        "name": "entity_id",
+        "type": "uuid"
+      },
+      {
+        "name": "claim",
+        "type": "text"
+      },
+      {
+        "name": "supporting",
+        "type": "int4"
+      },
+      {
+        "name": "contradicting",
+        "type": "int4"
+      },
+      {
+        "name": "neutral",
+        "type": "int4"
+      },
+      {
+        "name": "total_scanned",
+        "type": "int4"
+      },
+      {
+        "name": "confidence",
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "table_name": "ctx_claim_quote",
+    "columns": [
+      {
+        "name": "snapshot_id",
+        "type": "int2"
+      },
+      {
+        "name": "entity_id",
+        "type": "uuid"
+      },
+      {
+        "name": "seq",
+        "type": "int4"
+      },
+      {
+        "name": "quote",
+        "type": "text"
+      },
+      {
+        "name": "source",
+        "type": "text"
+      },
+      {
+        "name": "stance",
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "table_name": "ctx_combination",
+    "columns": [
+      {
+        "name": "snapshot_id",
+        "type": "int2"
+      },
+      {
+        "name": "combo_id",
+        "type": "text"
+      },
+      {
+        "name": "cond_a",
+        "type": "uuid"
+      },
+      {
+        "name": "cond_b",
+        "type": "uuid"
+      },
+      {
+        "name": "cond_more",
+        "type": "_uuid"
+      },
+      {
+        "name": "co_count",
+        "type": "int4"
+      },
+      {
+        "name": "description",
+        "type": "text"
+      },
+      {
+        "name": "total_speakers",
+        "type": "int4"
+      },
+      {
+        "name": "unique_source_count",
+        "type": "int4"
+      }
+    ]
+  },
+  {
+    "table_name": "ctx_combination_evidence",
+    "columns": [
+      {
+        "name": "snapshot_id",
+        "type": "int2"
+      },
+      {
+        "name": "combo_id",
+        "type": "text"
+      },
+      {
+        "name": "seq",
+        "type": "int4"
+      },
+      {
+        "name": "quote",
+        "type": "text"
+      },
+      {
+        "name": "source_title",
+        "type": "text"
+      },
+      {
+        "name": "source_url",
+        "type": "text"
+      },
+      {
+        "name": "perspective",
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "table_name": "ctx_domain",
+    "columns": [
+      {
+        "name": "snapshot_id",
+        "type": "int2"
+      },
+      {
+        "name": "entity_id",
+        "type": "uuid"
+      },
+      {
+        "name": "host",
+        "type": "text"
+      },
+      {
+        "name": "n",
+        "type": "int4"
+      }
+    ]
+  },
+  {
+    "table_name": "ctx_drive",
+    "columns": [
+      {
+        "name": "snapshot_id",
+        "type": "int2"
+      },
+      {
+        "name": "context_id",
+        "type": "uuid"
+      },
+      {
+        "name": "requirement_id",
+        "type": "uuid"
+      },
+      {
+        "name": "co_count",
+        "type": "int4"
+      },
+      {
+        "name": "strength_score",
+        "type": "numeric"
+      }
+    ]
+  },
+  {
+    "table_name": "ctx_entity",
+    "columns": [
+      {
+        "name": "snapshot_id",
+        "type": "int2"
+      },
+      {
+        "name": "id",
+        "type": "uuid"
+      },
+      {
+        "name": "type",
+        "type": "text"
+      },
+      {
+        "name": "canonical_name",
+        "type": "text"
+      },
+      {
+        "name": "dimension",
+        "type": "text"
+      },
+      {
+        "name": "mention_count",
+        "type": "int4"
+      },
+      {
+        "name": "utterance_count",
+        "type": "int4"
+      },
+      {
+        "name": "sentiment_positive",
+        "type": "int4"
+      },
+      {
+        "name": "sentiment_negative",
+        "type": "int4"
+      },
+      {
+        "name": "sentiment_neutral",
+        "type": "int4"
+      },
+      {
+        "name": "group_id",
+        "type": "text"
+      },
+      {
+        "name": "unique_source_count",
+        "type": "int4"
+      },
+      {
+        "name": "perspective_buyer",
+        "type": "int4"
+      },
+      {
+        "name": "perspective_seller",
+        "type": "int4"
+      },
+      {
+        "name": "perspective_neutral",
+        "type": "int4"
+      },
+      {
+        "name": "related_ids",
+        "type": "_uuid"
+      }
+    ]
+  },
+  {
+    "table_name": "ctx_evidence",
+    "columns": [
+      {
+        "name": "snapshot_id",
+        "type": "int2"
+      },
+      {
+        "name": "id",
+        "type": "uuid"
+      },
+      {
+        "name": "entity_id",
+        "type": "uuid"
+      },
+      {
+        "name": "utterance_id",
+        "type": "text"
+      },
+      {
+        "name": "quote",
+        "type": "text"
+      },
+      {
+        "name": "source_host",
+        "type": "text"
+      },
+      {
+        "name": "source_url",
+        "type": "text"
+      },
+      {
+        "name": "sentiment",
+        "type": "text"
+      },
+      {
+        "name": "source_title",
+        "type": "text"
+      },
+      {
+        "name": "rank",
+        "type": "int4"
+      },
+      {
+        "name": "perspective",
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "table_name": "ctx_group",
+    "columns": [
+      {
+        "name": "snapshot_id",
+        "type": "int2"
+      },
+      {
+        "name": "group_id",
+        "type": "text"
+      },
+      {
+        "name": "side",
+        "type": "text"
+      },
+      {
+        "name": "name",
+        "type": "text"
+      },
+      {
+        "name": "description",
+        "type": "text"
+      },
+      {
+        "name": "sort_order",
+        "type": "int4"
+      }
+    ]
+  },
+  {
+    "table_name": "ctx_research_log",
+    "columns": [
+      {
+        "name": "run_id",
+        "type": "uuid"
+      },
+      {
+        "name": "seq",
+        "type": "int4"
+      },
+      {
+        "name": "kind",
+        "type": "text"
+      },
+      {
+        "name": "title",
+        "type": "text"
+      },
+      {
+        "name": "detail",
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "table_name": "ctx_research_run",
+    "columns": [
+      {
+        "name": "run_id",
+        "type": "uuid"
+      },
+      {
+        "name": "keyword",
+        "type": "text"
+      },
+      {
+        "name": "geo_key",
+        "type": "int2"
+      },
+      {
+        "name": "lang_key",
+        "type": "int2"
+      },
+      {
+        "name": "purpose_preset",
+        "type": "text"
+      },
+      {
+        "name": "purpose_text",
+        "type": "text"
+      },
+      {
+        "name": "status",
+        "type": "text"
+      },
+      {
+        "name": "search_count",
+        "type": "int4"
+      },
+      {
+        "name": "source_count",
+        "type": "int4"
+      },
+      {
+        "name": "worker_count",
+        "type": "int4"
+      },
+      {
+        "name": "snapshot_id",
+        "type": "int2"
+      }
+    ]
+  },
+  {
+    "table_name": "ctx_research_wave",
+    "columns": [
+      {
+        "name": "run_id",
+        "type": "uuid"
+      },
+      {
+        "name": "wave_no",
+        "type": "int4"
+      },
+      {
+        "name": "strategy",
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "table_name": "ctx_research_worker",
+    "columns": [
+      {
+        "name": "run_id",
+        "type": "uuid"
+      },
+      {
+        "name": "worker_id",
+        "type": "text"
+      },
+      {
+        "name": "wave_no",
+        "type": "int4"
+      },
+      {
+        "name": "label",
+        "type": "text"
+      },
+      {
+        "name": "query",
+        "type": "text"
+      },
+      {
+        "name": "status",
+        "type": "text"
+      },
+      {
+        "name": "source_count",
+        "type": "int4"
+      }
+    ]
+  },
+  {
+    "table_name": "ctx_snapshot",
+    "columns": [
+      {
+        "name": "snapshot_id",
+        "type": "int2"
+      },
+      {
+        "name": "industry_entity_id",
+        "type": "uuid"
+      },
+      {
+        "name": "source",
+        "type": "text"
+      },
+      {
+        "name": "utterance_total",
+        "type": "int4"
+      },
+      {
+        "name": "taken_at",
+        "type": "date"
+      },
+      {
+        "name": "is_active",
+        "type": "bool"
+      },
+      {
+        "name": "keyword",
+        "type": "text"
+      },
+      {
+        "name": "worker_total",
+        "type": "int4"
+      },
+      {
+        "name": "source_total",
+        "type": "int4"
+      }
+    ]
+  },
+  {
+    "table_name": "cycle_pick_basis",
+    "columns": [
+      {
+        "name": "cyc_key",
+        "type": "int4"
+      },
+      {
+        "name": "fleet_visible",
+        "type": "bool"
+      },
+      {
+        "name": "gap_ratio",
+        "type": "numeric"
+      },
+      {
+        "name": "gap_src",
+        "type": "text"
+      },
+      {
+        "name": "ops_status",
+        "type": "text"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamptz"
+      }
+    ]
+  },
+  {
+    "table_name": "data_version",
+    "columns": [
+      {
+        "name": "scope",
+        "type": "text"
+      },
+      {
+        "name": "version",
+        "type": "int8"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamptz"
+      }
+    ]
+  },
+  {
+    "table_name": "dim_brand",
+    "columns": [
+      {
+        "name": "brand_key",
+        "type": "int4"
+      },
+      {
+        "name": "name",
+        "type": "text"
+      },
+      {
+        "name": "bare",
+        "type": "text"
+      },
+      {
+        "name": "kind",
+        "type": "int2"
+      },
+      {
+        "name": "own_bit",
+        "type": "int4"
+      },
+      {
+        "name": "first_seen",
+        "type": "date"
+      }
+    ]
+  },
+  {
+    "table_name": "dim_category",
+    "columns": [
+      {
+        "name": "category_key",
+        "type": "int2"
+      },
+      {
+        "name": "name",
+        "type": "text"
+      },
+      {
+        "name": "slug",
+        "type": "text"
+      },
+      {
+        "name": "ord",
+        "type": "int4"
+      }
+    ]
+  },
+  {
+    "table_name": "dim_country",
+    "columns": [
+      {
+        "name": "geo_key",
+        "type": "int2"
+      },
+      {
+        "name": "code",
+        "type": "text"
+      },
+      {
+        "name": "region_key",
+        "type": "int2"
+      },
+      {
+        "name": "kind",
+        "type": "text"
+      },
+      {
+        "name": "virtual_brand_bit",
+        "type": "int4"
+      },
+      {
+        "name": "hidden_standard",
+        "type": "bool"
+      }
+    ]
+  },
+  {
+    "table_name": "dim_crawl_bot",
+    "columns": [
+      {
+        "name": "bot_key",
+        "type": "int2"
+      },
+      {
+        "name": "code",
+        "type": "text"
+      },
+      {
+        "name": "engine_key",
+        "type": "int2"
+      }
+    ]
+  },
+  {
+    "table_name": "dim_custom_field",
+    "columns": [
+      {
+        "name": "field_id",
+        "type": "uuid"
+      },
+      {
+        "name": "project_key",
+        "type": "int2"
+      },
+      {
+        "name": "label",
+        "type": "text"
+      },
+      {
+        "name": "archived",
+        "type": "bool"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamptz"
+      }
+    ]
+  },
+  {
+    "table_name": "dim_cycle",
+    "columns": [
+      {
+        "name": "cyc_key",
+        "type": "int4"
+      },
+      {
+        "name": "cycle_id",
+        "type": "uuid"
+      },
+      {
+        "name": "surface",
+        "type": "int2"
+      },
+      {
+        "name": "ledger_backed",
+        "type": "bool"
+      },
+      {
+        "name": "project_key",
+        "type": "int2"
+      },
+      {
+        "name": "round_date",
+        "type": "date"
+      },
+      {
+        "name": "anchor_date",
+        "type": "date"
+      },
+      {
+        "name": "status",
+        "type": "int2"
+      },
+      {
+        "name": "servable",
+        "type": "bool"
+      },
+      {
+        "name": "view_date",
+        "type": "date"
+      },
+      {
+        "name": "hidden_scope",
+        "type": "int2"
+      },
+      {
+        "name": "hidden_reason",
+        "type": "int2"
+      },
+      {
+        "name": "expected_units",
+        "type": "int4"
+      },
+      {
+        "name": "completed_units",
+        "type": "int4"
+      },
+      {
+        "name": "completed_answers",
+        "type": "int4"
+      },
+      {
+        "name": "gap_answers",
+        "type": "int4"
+      },
+      {
+        "name": "generation",
+        "type": "int4"
+      },
+      {
+        "name": "ecat_ver",
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "table_name": "dim_engine",
+    "columns": [
+      {
+        "name": "engine_key",
+        "type": "int2"
+      },
+      {
+        "name": "code",
+        "type": "text"
+      },
+      {
+        "name": "is_default",
+        "type": "bool"
+      }
+    ]
+  },
+  {
+    "table_name": "dim_entity",
+    "columns": [
+      {
+        "name": "entity_key",
+        "type": "int4"
+      },
+      {
+        "name": "entity_id",
+        "type": "uuid"
+      },
+      {
+        "name": "entity_type",
+        "type": "text"
+      },
+      {
+        "name": "registry_role",
+        "type": "text"
+      },
+      {
+        "name": "rep_name",
+        "type": "text"
+      },
+      {
+        "name": "brand_key",
+        "type": "int4"
+      },
+      {
+        "name": "first_seen",
+        "type": "timestamptz"
+      }
+    ]
+  },
+  {
+    "table_name": "dim_keyword",
+    "columns": [
+      {
+        "name": "kw_key",
+        "type": "int4"
+      },
+      {
+        "name": "term",
+        "type": "text"
+      },
+      {
+        "name": "term_norm",
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "table_name": "dim_lang",
+    "columns": [
+      {
+        "name": "lang_key",
+        "type": "int2"
+      },
+      {
+        "name": "code",
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "table_name": "dim_owned_base",
+    "columns": [
+      {
+        "name": "owner_key",
+        "type": "int2"
+      },
+      {
+        "name": "kind",
+        "type": "text"
+      },
+      {
+        "name": "prefix",
+        "type": "text"
+      },
+      {
+        "name": "host",
+        "type": "text"
+      },
+      {
+        "name": "brand_code",
+        "type": "text"
+      },
+      {
+        "name": "brand_bit",
+        "type": "int4"
+      },
+      {
+        "name": "geo_code",
+        "type": "text"
+      },
+      {
+        "name": "language",
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "table_name": "dim_perspective",
+    "columns": [
+      {
+        "name": "perspective_key",
+        "type": "int2"
+      },
+      {
+        "name": "own_bits",
+        "type": "int4"
+      },
+      {
+        "name": "label",
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "table_name": "dim_population",
+    "columns": [
+      {
+        "name": "population_key",
+        "type": "int2"
+      },
+      {
+        "name": "code",
+        "type": "text"
+      },
+      {
+        "name": "gate",
+        "type": "text"
+      },
+      {
+        "name": "rep_mode",
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "table_name": "dim_project",
+    "columns": [
+      {
+        "name": "project_key",
+        "type": "int2"
+      },
+      {
+        "name": "scope_project_id",
+        "type": "uuid"
+      },
+      {
+        "name": "surface",
+        "type": "int2"
+      },
+      {
+        "name": "is_root",
+        "type": "bool"
+      },
+      {
+        "name": "project_id",
+        "type": "uuid"
+      },
+      {
+        "name": "site_id",
+        "type": "uuid"
+      },
+      {
+        "name": "site_brand_bit",
+        "type": "int4"
+      },
+      {
+        "name": "site_geo_key",
+        "type": "int2"
+      },
+      {
+        "name": "regions",
+        "type": "_text"
+      }
+    ]
+  },
+  {
+    "table_name": "dim_prompt",
+    "columns": [
+      {
+        "name": "prompt_key",
+        "type": "int4"
+      },
+      {
+        "name": "prompt_id",
+        "type": "uuid"
+      },
+      {
+        "name": "surface",
+        "type": "int2"
+      },
+      {
+        "name": "kind",
+        "type": "text"
+      },
+      {
+        "name": "project_key",
+        "type": "int2"
+      },
+      {
+        "name": "text",
+        "type": "text"
+      },
+      {
+        "name": "lang_key",
+        "type": "int2"
+      },
+      {
+        "name": "funnel_key",
+        "type": "int2"
+      },
+      {
+        "name": "presence_key",
+        "type": "int2"
+      },
+      {
+        "name": "list_type_key",
+        "type": "int2"
+      },
+      {
+        "name": "depth1_key",
+        "type": "int2"
+      },
+      {
+        "name": "depth2_key",
+        "type": "int2"
+      },
+      {
+        "name": "depth3_key",
+        "type": "int2"
+      },
+      {
+        "name": "depth4_key",
+        "type": "int2"
+      },
+      {
+        "name": "in_project_catalog",
+        "type": "bool"
+      },
+      {
+        "name": "cat_mask",
+        "type": "int4"
+      },
+      {
+        "name": "cat_mask_all",
+        "type": "int4"
+      },
+      {
+        "name": "in_root_catalog",
+        "type": "bool"
+      },
+      {
+        "name": "in_root_catalog_all",
+        "type": "bool"
+      },
+      {
+        "name": "unit_key",
+        "type": "int2"
+      },
+      {
+        "name": "targets",
+        "type": "_text"
+      },
+      {
+        "name": "web_reg",
+        "type": "bool"
+      },
+      {
+        "name": "regions",
+        "type": "_text"
+      },
+      {
+        "name": "is_korean",
+        "type": "bool"
+      },
+      {
+        "name": "rule_ver",
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "table_name": "dim_region",
+    "columns": [
+      {
+        "name": "region_key",
+        "type": "int2"
+      },
+      {
+        "name": "code",
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "table_name": "dim_source",
+    "columns": [
+      {
+        "name": "source_key",
+        "type": "int4"
+      },
+      {
+        "name": "skey",
+        "type": "text"
+      },
+      {
+        "name": "domain",
+        "type": "text"
+      },
+      {
+        "name": "is_social",
+        "type": "bool"
+      },
+      {
+        "name": "category_key",
+        "type": "int2"
+      },
+      {
+        "name": "category_src",
+        "type": "int2"
+      },
+      {
+        "name": "owned_brand_bit",
+        "type": "int4"
+      },
+      {
+        "name": "competitor_brand_key",
+        "type": "int4"
+      },
+      {
+        "name": "rule_ver",
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "table_name": "dim_taxon",
+    "columns": [
+      {
+        "name": "taxon_key",
+        "type": "int2"
+      },
+      {
+        "name": "axis",
+        "type": "text"
+      },
+      {
+        "name": "code",
+        "type": "text"
+      },
+      {
+        "name": "parent_key",
+        "type": "int2"
+      }
+    ]
+  },
+  {
+    "table_name": "dim_url",
+    "columns": [
+      {
+        "name": "url_key",
+        "type": "int4"
+      },
+      {
+        "name": "url_hash",
+        "type": "text"
+      },
+      {
+        "name": "url",
+        "type": "text"
+      },
+      {
+        "name": "title",
+        "type": "text"
+      },
+      {
+        "name": "url_norm",
+        "type": "text"
+      },
+      {
+        "name": "url_base_norm",
+        "type": "text"
+      },
+      {
+        "name": "host",
+        "type": "text"
+      },
+      {
+        "name": "domain",
+        "type": "text"
+      },
+      {
+        "name": "source_key",
+        "type": "int4"
+      },
+      {
+        "name": "owner_key",
+        "type": "int2"
+      },
+      {
+        "name": "rule_ver",
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "table_name": "entity_mention_surface",
+    "columns": [
+      {
+        "name": "entity_id",
+        "type": "uuid"
+      },
+      {
+        "name": "run_month",
+        "type": "date"
+      },
+      {
+        "name": "surface",
+        "type": "text"
+      },
+      {
+        "name": "brand_rollup_entity_id",
+        "type": "uuid"
+      },
+      {
+        "name": "display_name",
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "table_name": "entity_mention_total",
+    "columns": [
+      {
+        "name": "entity_id",
+        "type": "uuid"
+      },
+      {
+        "name": "answers",
+        "type": "int4"
+      },
+      {
+        "name": "mentions",
+        "type": "int4"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamptz"
+      }
+    ]
+  },
+  {
+    "table_name": "ga4_property",
+    "columns": [
+      {
+        "name": "prop_key",
+        "type": "int2"
+      },
+      {
+        "name": "property_id",
+        "type": "text"
+      },
+      {
+        "name": "brand_bit",
+        "type": "int4"
+      },
+      {
+        "name": "geo_key",
+        "type": "int2"
+      },
+      {
+        "name": "status",
+        "type": "text"
+      },
+      {
+        "name": "source",
+        "type": "text"
+      },
+      {
+        "name": "conv_basis",
+        "type": "int2"
+      }
+    ]
+  },
+  {
+    "table_name": "ga4_row",
+    "columns": [
+      {
+        "name": "prop_key",
+        "type": "int2"
+      },
+      {
+        "name": "date",
+        "type": "date"
+      },
+      {
+        "name": "report",
+        "type": "int2"
+      },
+      {
+        "name": "channel_key",
+        "type": "int4"
+      },
+      {
+        "name": "source_key",
+        "type": "int4"
+      },
+      {
+        "name": "device_key",
+        "type": "int4"
+      },
+      {
+        "name": "nvr_key",
+        "type": "int4"
+      },
+      {
+        "name": "page_key",
+        "type": "int4"
+      },
+      {
+        "name": "event_key",
+        "type": "int4"
+      },
+      {
+        "name": "is_ai",
+        "type": "bool"
+      },
+      {
+        "name": "engine_key",
+        "type": "int2"
+      },
+      {
+        "name": "is_conv",
+        "type": "bool"
+      },
+      {
+        "name": "sessions",
+        "type": "int4"
+      },
+      {
+        "name": "users_day",
+        "type": "int4"
+      },
+      {
+        "name": "page_views",
+        "type": "int4"
+      },
+      {
+        "name": "key_events",
+        "type": "int4"
+      },
+      {
+        "name": "event_count",
+        "type": "int4"
+      }
+    ]
+  },
+  {
+    "table_name": "ga4_users_window",
+    "columns": [
+      {
+        "name": "prop_key",
+        "type": "int2"
+      },
+      {
+        "name": "window_end",
+        "type": "date"
+      },
+      {
+        "name": "window_days",
+        "type": "int4"
+      },
+      {
+        "name": "cohort",
+        "type": "text"
+      },
+      {
+        "name": "engine_mask",
+        "type": "int4"
+      },
+      {
+        "name": "device_mask",
+        "type": "int4"
+      },
+      {
+        "name": "nvr_mask",
+        "type": "int4"
+      },
+      {
+        "name": "page_key",
+        "type": "int4"
+      },
+      {
+        "name": "users",
+        "type": "int4"
+      }
+    ]
+  },
+  {
+    "table_name": "ga4_value",
+    "columns": [
+      {
+        "name": "kind",
+        "type": "text"
+      },
+      {
+        "name": "value_key",
+        "type": "int4"
+      },
+      {
+        "name": "value",
+        "type": "text"
+      },
+      {
+        "name": "url_key",
+        "type": "int4"
+      }
+    ]
+  },
+  {
+    "table_name": "job_index",
+    "columns": [
+      {
+        "name": "answer_key",
+        "type": "int4"
+      },
+      {
+        "name": "job_id",
+        "type": "uuid"
+      },
+      {
+        "name": "run_key",
+        "type": "int4"
+      },
+      {
+        "name": "cyc_key",
+        "type": "int4"
+      },
+      {
+        "name": "prompt_key",
+        "type": "int4"
+      },
+      {
+        "name": "project_key",
+        "type": "int2"
+      },
+      {
+        "name": "engine_key",
+        "type": "int2"
+      },
+      {
+        "name": "geo_key",
+        "type": "int2"
+      },
+      {
+        "name": "lang_key",
+        "type": "int2"
+      },
+      {
+        "name": "bgrp",
+        "type": "int4"
+      },
+      {
+        "name": "surface",
+        "type": "int2"
+      },
+      {
+        "name": "round_date",
+        "type": "date"
+      },
+      {
+        "name": "measured_at",
+        "type": "timestamptz"
+      },
+      {
+        "name": "status_code",
+        "type": "int2"
+      },
+      {
+        "name": "analysis_code",
+        "type": "text"
+      },
+      {
+        "name": "dropped",
+        "type": "bool"
+      },
+      {
+        "name": "served",
+        "type": "bool"
+      },
+      {
+        "name": "last_build_id",
+        "type": "int8"
+      }
+    ]
+  },
+  {
+    "table_name": "kpi_cell",
+    "columns": [
+      {
+        "name": "build_id",
+        "type": "int8"
+      },
+      {
+        "name": "population_key",
+        "type": "int2"
+      },
+      {
+        "name": "surface",
+        "type": "int2"
+      },
+      {
+        "name": "project_key",
+        "type": "int2"
+      },
+      {
+        "name": "cyc_key",
+        "type": "int4"
+      },
+      {
+        "name": "round_date",
+        "type": "date"
+      },
+      {
+        "name": "bucket_date",
+        "type": "date"
+      },
+      {
+        "name": "prompt_key",
+        "type": "int4"
+      },
+      {
+        "name": "engine_key",
+        "type": "int2"
+      },
+      {
+        "name": "geo_key",
+        "type": "int2"
+      },
+      {
+        "name": "lang_key",
+        "type": "int2"
+      },
+      {
+        "name": "bgrp",
+        "type": "int4"
+      },
+      {
+        "name": "perspective_key",
+        "type": "int2"
+      },
+      {
+        "name": "answers",
+        "type": "int4"
+      },
+      {
+        "name": "tracked",
+        "type": "int4"
+      },
+      {
+        "name": "own_mentions",
+        "type": "int4"
+      },
+      {
+        "name": "total_mentions",
+        "type": "int4"
+      },
+      {
+        "name": "sent_pos",
+        "type": "int4"
+      },
+      {
+        "name": "sent_neg",
+        "type": "int4"
+      },
+      {
+        "name": "sent_all",
+        "type": "int4"
+      },
+      {
+        "name": "st_pos",
+        "type": "int4"
+      },
+      {
+        "name": "st_neu",
+        "type": "int4"
+      },
+      {
+        "name": "st_mix",
+        "type": "int4"
+      },
+      {
+        "name": "st_neg",
+        "type": "int4"
+      },
+      {
+        "name": "rank_sum",
+        "type": "int4"
+      },
+      {
+        "name": "ranked",
+        "type": "int4"
+      },
+      {
+        "name": "top1",
+        "type": "int4"
+      },
+      {
+        "name": "top3",
+        "type": "int4"
+      },
+      {
+        "name": "fp_sum",
+        "type": "int4"
+      },
+      {
+        "name": "fp_n",
+        "type": "int4"
+      },
+      {
+        "name": "multi_answers",
+        "type": "int4"
+      },
+      {
+        "name": "multi_mentions",
+        "type": "int4"
+      },
+      {
+        "name": "t_mention",
+        "type": "int4"
+      },
+      {
+        "name": "t_recommendation",
+        "type": "int4"
+      },
+      {
+        "name": "t_comparison",
+        "type": "int4"
+      },
+      {
+        "name": "t_definition",
+        "type": "int4"
+      },
+      {
+        "name": "t_final_choice",
+        "type": "int4"
+      },
+      {
+        "name": "gap_answers",
+        "type": "int4"
+      },
+      {
+        "name": "gap_base",
+        "type": "int4"
+      },
+      {
+        "name": "cit_total",
+        "type": "int4"
+      },
+      {
+        "name": "cit_total_all",
+        "type": "int4"
+      },
+      {
+        "name": "cit_m05",
+        "type": "int4"
+      },
+      {
+        "name": "cit_target",
+        "type": "int4"
+      },
+      {
+        "name": "cit_owned",
+        "type": "int4"
+      },
+      {
+        "name": "cit_owned_c",
+        "type": "int4"
+      },
+      {
+        "name": "has_measured",
+        "type": "bool"
+      },
+      {
+        "name": "has_mention",
+        "type": "bool"
+      },
+      {
+        "name": "has_multi",
+        "type": "bool"
+      }
+    ]
+  },
+  {
+    "table_name": "kpi_rollup",
+    "columns": [
+      {
+        "name": "build_id",
+        "type": "int8"
+      },
+      {
+        "name": "population_key",
+        "type": "int2"
+      },
+      {
+        "name": "surface",
+        "type": "int2"
+      },
+      {
+        "name": "project_key",
+        "type": "int2"
+      },
+      {
+        "name": "cyc_key",
+        "type": "int4"
+      },
+      {
+        "name": "round_date",
+        "type": "date"
+      },
+      {
+        "name": "bucket_date",
+        "type": "date"
+      },
+      {
+        "name": "engine_key",
+        "type": "int2"
+      },
+      {
+        "name": "geo_key",
+        "type": "int2"
+      },
+      {
+        "name": "lang_key",
+        "type": "int2"
+      },
+      {
+        "name": "bgrp",
+        "type": "int4"
+      },
+      {
+        "name": "perspective_key",
+        "type": "int2"
+      },
+      {
+        "name": "answers",
+        "type": "int4"
+      },
+      {
+        "name": "tracked",
+        "type": "int4"
+      },
+      {
+        "name": "own_mentions",
+        "type": "int4"
+      },
+      {
+        "name": "total_mentions",
+        "type": "int4"
+      },
+      {
+        "name": "sent_pos",
+        "type": "int4"
+      },
+      {
+        "name": "sent_neg",
+        "type": "int4"
+      },
+      {
+        "name": "sent_all",
+        "type": "int4"
+      },
+      {
+        "name": "st_pos",
+        "type": "int4"
+      },
+      {
+        "name": "st_neu",
+        "type": "int4"
+      },
+      {
+        "name": "st_mix",
+        "type": "int4"
+      },
+      {
+        "name": "st_neg",
+        "type": "int4"
+      },
+      {
+        "name": "rank_sum",
+        "type": "int4"
+      },
+      {
+        "name": "ranked",
+        "type": "int4"
+      },
+      {
+        "name": "top1",
+        "type": "int4"
+      },
+      {
+        "name": "top3",
+        "type": "int4"
+      },
+      {
+        "name": "fp_sum",
+        "type": "int4"
+      },
+      {
+        "name": "fp_n",
+        "type": "int4"
+      },
+      {
+        "name": "multi_answers",
+        "type": "int4"
+      },
+      {
+        "name": "multi_mentions",
+        "type": "int4"
+      },
+      {
+        "name": "t_mention",
+        "type": "int4"
+      },
+      {
+        "name": "t_recommendation",
+        "type": "int4"
+      },
+      {
+        "name": "t_comparison",
+        "type": "int4"
+      },
+      {
+        "name": "t_definition",
+        "type": "int4"
+      },
+      {
+        "name": "t_final_choice",
+        "type": "int4"
+      },
+      {
+        "name": "gap_answers",
+        "type": "int4"
+      },
+      {
+        "name": "gap_base",
+        "type": "int4"
+      },
+      {
+        "name": "cit_total",
+        "type": "int4"
+      },
+      {
+        "name": "cit_total_all",
+        "type": "int4"
+      },
+      {
+        "name": "cit_m05",
+        "type": "int4"
+      },
+      {
+        "name": "cit_target",
+        "type": "int4"
+      },
+      {
+        "name": "cit_owned",
+        "type": "int4"
+      },
+      {
+        "name": "cit_owned_c",
+        "type": "int4"
+      }
+    ]
+  },
+  {
+    "table_name": "kw_serp",
+    "columns": [
+      {
+        "name": "call_id",
+        "type": "text"
+      },
+      {
+        "name": "rank",
+        "type": "int4"
+      },
+      {
+        "name": "kw_key",
+        "type": "int4"
+      },
+      {
+        "name": "location_code",
+        "type": "int4"
+      },
+      {
+        "name": "language_code",
+        "type": "text"
+      },
+      {
+        "name": "url",
+        "type": "text"
+      },
+      {
+        "name": "domain",
+        "type": "text"
+      },
+      {
+        "name": "title",
+        "type": "text"
+      },
+      {
+        "name": "snippet",
+        "type": "text"
+      },
+      {
+        "name": "observed_at",
+        "type": "timestamptz"
+      }
+    ]
+  },
+  {
+    "table_name": "kw_suggestion",
+    "columns": [
+      {
+        "name": "call_id",
+        "type": "text"
+      },
+      {
+        "name": "pos",
+        "type": "int4"
+      },
+      {
+        "name": "seed_kw_key",
+        "type": "int4"
+      },
+      {
+        "name": "kw_key",
+        "type": "int4"
+      },
+      {
+        "name": "location_code",
+        "type": "int4"
+      },
+      {
+        "name": "language_code",
+        "type": "text"
+      },
+      {
+        "name": "search_volume",
+        "type": "int4"
+      },
+      {
+        "name": "intent",
+        "type": "text"
+      },
+      {
+        "name": "total_count",
+        "type": "int4"
+      },
+      {
+        "name": "is_seed",
+        "type": "bool"
+      },
+      {
+        "name": "observed_at",
+        "type": "timestamptz"
+      }
+    ]
+  },
+  {
+    "table_name": "kw_volume_monthly",
+    "columns": [
+      {
+        "name": "kw_key",
+        "type": "int4"
+      },
+      {
+        "name": "location_code",
+        "type": "int4"
+      },
+      {
+        "name": "language_code",
+        "type": "text"
+      },
+      {
+        "name": "month",
+        "type": "date"
+      },
+      {
+        "name": "search_volume",
+        "type": "int4"
+      },
+      {
+        "name": "competition",
+        "type": "text"
+      },
+      {
+        "name": "competition_index",
+        "type": "int4"
+      },
+      {
+        "name": "cpc",
+        "type": "numeric"
+      },
+      {
+        "name": "call_id",
+        "type": "text"
+      },
+      {
+        "name": "observed_at",
+        "type": "timestamptz"
+      }
+    ]
+  },
+  {
+    "table_name": "page_crawl_daily",
+    "columns": [
+      {
+        "name": "build_id",
+        "type": "int8"
+      },
+      {
+        "name": "project_key",
+        "type": "int2"
+      },
+      {
+        "name": "url_key",
+        "type": "int4"
+      },
+      {
+        "name": "date",
+        "type": "date"
+      },
+      {
+        "name": "bot_key",
+        "type": "int2"
+      },
+      {
+        "name": "hits",
+        "type": "int4"
+      }
+    ]
+  },
+  {
+    "table_name": "page_priority",
+    "columns": [
+      {
+        "name": "build_id",
+        "type": "int8"
+      },
+      {
+        "name": "project_key",
+        "type": "int2"
+      },
+      {
+        "name": "url_key",
+        "type": "int4"
+      },
+      {
+        "name": "priority",
+        "type": "int2"
+      },
+      {
+        "name": "rule_ver",
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "table_name": "page_seo_device_daily",
+    "columns": [
+      {
+        "name": "build_id",
+        "type": "int8"
+      },
+      {
+        "name": "project_key",
+        "type": "int2"
+      },
+      {
+        "name": "url_key",
+        "type": "int4"
+      },
+      {
+        "name": "date",
+        "type": "date"
+      },
+      {
+        "name": "device_key",
+        "type": "int4"
+      },
+      {
+        "name": "seo_impressions",
+        "type": "int4"
+      }
+    ]
+  },
+  {
+    "table_name": "page_visibility_daily",
+    "columns": [
+      {
+        "name": "build_id",
+        "type": "int8"
+      },
+      {
+        "name": "project_key",
+        "type": "int2"
+      },
+      {
+        "name": "url_key",
+        "type": "int4"
+      },
+      {
+        "name": "geo_key",
+        "type": "int2"
+      },
+      {
+        "name": "date",
+        "type": "date"
+      },
+      {
+        "name": "seo_impressions",
+        "type": "int4"
+      },
+      {
+        "name": "ai_crawls",
+        "type": "int4"
+      }
+    ]
+  },
+  {
+    "table_name": "prompt_custom_value",
+    "columns": [
+      {
+        "name": "prompt_key",
+        "type": "int4"
+      },
+      {
+        "name": "field_id",
+        "type": "uuid"
+      },
+      {
+        "name": "value",
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "table_name": "pub_brand_name",
+    "columns": [
+      {
+        "name": "gen_key",
+        "type": "int4"
+      },
+      {
+        "name": "brand_key",
+        "type": "int4"
+      },
+      {
+        "name": "name",
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "table_name": "pub_cell",
+    "columns": [
+      {
+        "name": "gen_key",
+        "type": "int4"
+      },
+      {
+        "name": "answer_key",
+        "type": "int4"
+      },
+      {
+        "name": "surface",
+        "type": "int2"
+      },
+      {
+        "name": "cyc_key",
+        "type": "int4"
+      },
+      {
+        "name": "round_date",
+        "type": "date"
+      },
+      {
+        "name": "prompt_key",
+        "type": "int4"
+      },
+      {
+        "name": "engine_key",
+        "type": "int2"
+      },
+      {
+        "name": "geo_key",
+        "type": "int2"
+      }
+    ]
+  },
+  {
+    "table_name": "pub_cell_web",
+    "columns": [
+      {
+        "name": "gen_key",
+        "type": "int4"
+      },
+      {
+        "name": "answer_key",
+        "type": "int4"
+      },
+      {
+        "name": "cyc_key",
+        "type": "int4"
+      },
+      {
+        "name": "report_fs",
+        "type": "int4"
+      },
+      {
+        "name": "unit_owned",
+        "type": "bool"
+      },
+      {
+        "name": "unit_target",
+        "type": "bool"
+      },
+      {
+        "name": "url_registered",
+        "type": "bool"
+      },
+      {
+        "name": "url_owned_hit",
+        "type": "bool"
+      },
+      {
+        "name": "url_target_hit",
+        "type": "bool"
+      }
+    ]
+  },
+  {
+    "table_name": "pub_prompt",
+    "columns": [
+      {
+        "name": "gen_key",
+        "type": "int4"
+      },
+      {
+        "name": "prompt_key",
+        "type": "int4"
+      },
+      {
+        "name": "cyc_key",
+        "type": "int4"
+      },
+      {
+        "name": "in_full_cycle",
+        "type": "bool"
+      },
+      {
+        "name": "expected_cells",
+        "type": "int4"
+      },
+      {
+        "name": "window_cells",
+        "type": "int4"
+      },
+      {
+        "name": "in_root_catalog",
+        "type": "bool"
+      },
+      {
+        "name": "catalog_deleted",
+        "type": "bool"
+      },
+      {
+        "name": "cat_mask",
+        "type": "int4"
+      },
+      {
+        "name": "funnel_key",
+        "type": "int2"
+      },
+      {
+        "name": "presence_key",
+        "type": "int2"
+      },
+      {
+        "name": "list_type_key",
+        "type": "int2"
+      },
+      {
+        "name": "depth1_key",
+        "type": "int2"
+      },
+      {
+        "name": "depth2_key",
+        "type": "int2"
+      },
+      {
+        "name": "depth3_key",
+        "type": "int2"
+      },
+      {
+        "name": "regions",
+        "type": "_text"
+      },
+      {
+        "name": "is_korean",
+        "type": "bool"
+      },
+      {
+        "name": "report_fs",
+        "type": "int4"
+      },
+      {
+        "name": "src",
+        "type": "jsonb"
+      }
+    ]
+  },
+  {
+    "table_name": "pub_prompt_axis",
+    "columns": [
+      {
+        "name": "gen_key",
+        "type": "int4"
+      },
+      {
+        "name": "prompt_key",
+        "type": "int4"
+      },
+      {
+        "name": "cyc_key",
+        "type": "int4"
+      },
+      {
+        "name": "funnel_key",
+        "type": "int2"
+      },
+      {
+        "name": "presence_keys",
+        "type": "_int2"
+      },
+      {
+        "name": "list_type_key",
+        "type": "int2"
+      },
+      {
+        "name": "depth1_key",
+        "type": "int2"
+      },
+      {
+        "name": "depth2_key",
+        "type": "int2"
+      },
+      {
+        "name": "depth3_key",
+        "type": "int2"
+      }
+    ]
+  },
+  {
+    "table_name": "publication",
+    "columns": [
+      {
+        "name": "gen_key",
+        "type": "int4"
+      },
+      {
+        "name": "cyc_key",
+        "type": "int4"
+      },
+      {
+        "name": "surface",
+        "type": "int2"
+      },
+      {
+        "name": "source",
+        "type": "text"
+      },
+      {
+        "name": "state",
+        "type": "text"
+      },
+      {
+        "name": "build_id",
+        "type": "int8"
+      },
+      {
+        "name": "ops_cycle_id",
+        "type": "uuid"
+      },
+      {
+        "name": "ops_generation_id",
+        "type": "uuid"
+      },
+      {
+        "name": "ops_generator_version",
+        "type": "text"
+      },
+      {
+        "name": "ops_started_at",
+        "type": "timestamptz"
+      },
+      {
+        "name": "ops_finished_at",
+        "type": "timestamptz"
+      },
+      {
+        "name": "judgment",
+        "type": "jsonb"
+      },
+      {
+        "name": "row_counts",
+        "type": "jsonb"
+      },
+      {
+        "name": "verify",
+        "type": "jsonb"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamptz"
+      },
+      {
+        "name": "activated_at",
+        "type": "timestamptz"
+      },
+      {
+        "name": "retired_at",
+        "type": "timestamptz"
+      },
+      {
+        "name": "retired_reason",
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "table_name": "release",
+    "columns": [
+      {
+        "name": "release_id",
+        "type": "int8"
+      },
+      {
+        "name": "read_mode",
+        "type": "text"
+      },
+      {
+        "name": "rule_signature",
+        "type": "text"
+      },
+      {
+        "name": "base_release_id",
+        "type": "int8"
+      },
+      {
+        "name": "validated_at",
+        "type": "timestamptz"
+      }
+    ]
+  },
+  {
+    "table_name": "release_item",
+    "columns": [
+      {
+        "name": "release_id",
+        "type": "int8"
+      },
+      {
+        "name": "family",
+        "type": "text"
+      },
+      {
+        "name": "slice_key",
+        "type": "text"
+      },
+      {
+        "name": "build_id",
+        "type": "int8"
+      },
+      {
+        "name": "state",
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "table_name": "report_value",
+    "columns": [
+      {
+        "name": "build_id",
+        "type": "int8"
+      },
+      {
+        "name": "pub_id",
+        "type": "text"
+      },
+      {
+        "name": "round_date",
+        "type": "date"
+      },
+      {
+        "name": "file_seq",
+        "type": "int4"
+      },
+      {
+        "name": "cyc_key",
+        "type": "int4"
+      },
+      {
+        "name": "brand",
+        "type": "text"
+      },
+      {
+        "name": "country_code",
+        "type": "text"
+      },
+      {
+        "name": "lang_code",
+        "type": "text"
+      },
+      {
+        "name": "in_headline_pool",
+        "type": "bool"
+      },
+      {
+        "name": "target_hit_prompts",
+        "type": "int4"
+      },
+      {
+        "name": "measured_prompts",
+        "type": "int4"
+      },
+      {
+        "name": "owned_prompts",
+        "type": "int4"
+      },
+      {
+        "name": "owned_prompts_den",
+        "type": "int4"
+      },
+      {
+        "name": "prev_target_hit_prompts",
+        "type": "int4"
+      },
+      {
+        "name": "prev_measured_prompts",
+        "type": "int4"
+      },
+      {
+        "name": "prev_owned_prompts",
+        "type": "int4"
+      },
+      {
+        "name": "prev_owned_prompts_den",
+        "type": "int4"
+      }
+    ]
+  },
+  {
+    "table_name": "url_prompt_cell",
+    "columns": [
+      {
+        "name": "build_id",
+        "type": "int8"
+      },
+      {
+        "name": "population_key",
+        "type": "int2"
+      },
+      {
+        "name": "surface",
+        "type": "int2"
+      },
+      {
+        "name": "project_key",
+        "type": "int2"
+      },
+      {
+        "name": "cyc_key",
+        "type": "int4"
+      },
+      {
+        "name": "round_date",
+        "type": "date"
+      },
+      {
+        "name": "bucket_date",
+        "type": "date"
+      },
+      {
+        "name": "prompt_key",
+        "type": "int4"
+      },
+      {
+        "name": "engine_key",
+        "type": "int2"
+      },
+      {
+        "name": "geo_key",
+        "type": "int2"
+      },
+      {
+        "name": "lang_key",
+        "type": "int2"
+      },
+      {
+        "name": "bgrp",
+        "type": "int4"
+      },
+      {
+        "name": "eligible",
+        "type": "bool"
+      },
+      {
+        "name": "any_target",
+        "type": "bool"
+      },
+      {
+        "name": "any_owned",
+        "type": "bool"
+      },
+      {
+        "name": "url_den",
+        "type": "int4"
+      },
+      {
+        "name": "tgt_hits",
+        "type": "int4"
+      },
+      {
+        "name": "own_url_hits",
+        "type": "int4"
+      },
+      {
+        "name": "tgt_own_hits",
+        "type": "int4"
+      }
+    ]
+  },
+  {
+    "table_name": "web_report_prompt",
+    "columns": [
+      {
+        "name": "prompt_key",
+        "type": "int4"
+      },
+      {
+        "name": "report_fs",
+        "type": "int4"
+      }
+    ]
+  },
+  {
+    "table_name": "web_target_url",
+    "columns": [
+      {
+        "name": "project_key",
+        "type": "int2"
+      },
+      {
+        "name": "lang_key",
+        "type": "int2"
+      },
+      {
+        "name": "url_key",
+        "type": "int4"
+      }
+    ]
+  },
+  {
+    "table_name": "web_unit",
+    "columns": [
+      {
+        "name": "unit_key",
+        "type": "int2"
+      },
+      {
+        "name": "project_key",
+        "type": "int2"
+      },
+      {
+        "name": "file_seq",
+        "type": "int4"
+      },
+      {
+        "name": "lang_codes",
+        "type": "_text"
+      },
+      {
+        "name": "base",
+        "type": "text"
+      },
+      {
+        "name": "base_src",
+        "type": "text"
+      },
+      {
+        "name": "sibs",
+        "type": "_text"
+      },
+      {
+        "name": "home_host",
+        "type": "text"
+      },
+      {
+        "name": "turls",
+        "type": "_text"
+      },
+      {
+        "name": "excluded",
+        "type": "bool"
+      },
+      {
+        "name": "rule_ver",
+        "type": "text"
+      }
+    ]
+  }
+]

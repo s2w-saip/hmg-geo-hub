@@ -18,3 +18,6 @@ infra/_secret/
 .ruff_cache/
 # 합성 데이터 산출물(back/db/synth, 재생성 가능·대용량)
 back/db/synth/out/
+
+# Local Gold runtime logs
+.local/

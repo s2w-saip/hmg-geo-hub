@@ -1,0 +1,26 @@
+name: hmg-geo-hub-operations
+services:
+  db:
+    image: postgres:17@sha256:2d2b8998d31037bf721cfdf764d76ba74171b4fab3431b7f72c27c56ddbdf9e3
+    container_name: hgh-operations-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: hmg_operations
+      POSTGRES_USER: hmg_operations_admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run the HUB storage initializer first}
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+    ports:
+      - "127.0.0.1:${HGH_OPERATIONS_DB_PORT:-55437}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hmg_operations_admin -d hmg_operations"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+volumes:
+  pgdata:
+    name: hgh-operations-pgdata
+networks:
+  default:
+    name: hgh-operations-network
