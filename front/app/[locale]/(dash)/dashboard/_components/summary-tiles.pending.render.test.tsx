@@ -2,8 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { NextIntlClientProvider } from "next-intl";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import type { KpiSummary } from "../_data/sample";
-import { SummaryTiles } from "./summary-tiles";
+import type { KpiSummary } from "../_data/model";
+import { SummaryTilesView } from "./summary-tiles";
+import { tilesViewFor } from "./__fixtures__/tiles-views";
 
 // 측정 대기 타일은 Δ 를 그리지 않는다(Overview overviewCardState 와 같은 규칙). 웹사이트·프로젝트 타일은 Δ 를 추이의 마지막 두
 // 회차(applyTrendDeltas)에서 채우므로, 카드가 대기여도 직전 회차들의 Δ 가 칩으로 새어 나왔다. 분모가 없는 0(0/0)도 측정된 0 이
@@ -22,7 +23,7 @@ async function render(items: KpiSummary[]): Promise<string> {
   return renderToStaticMarkup(
     <NextIntlClientProvider locale="ko" messages={messages} timeZone="Asia/Seoul">
       <TooltipProvider>
-        <SummaryTiles items={items} perturb={false} />
+        <SummaryTilesView view={tilesViewFor(items)} />
       </TooltipProvider>
     </NextIntlClientProvider>,
   );

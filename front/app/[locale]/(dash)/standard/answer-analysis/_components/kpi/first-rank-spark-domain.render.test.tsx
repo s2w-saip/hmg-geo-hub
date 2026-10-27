@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { NextIntlClientProvider } from "next-intl";
 import ko from "@/messages/ko.json";
 import type { FirstPositionResult } from "@/lib/db/repositories/scope-aggregates";
-import { FirstRankKpiTab } from "./first-rank-kpi-tab";
+import { FirstRankKpiTabFromLegacy as FirstRankKpiTab } from "../../_data/mention-screen.test-utils";
 import { SPARK_BOX } from "./spark-line";
 
 // 2026-09-11 독립 검증 2차 지적 — **호출부 회귀 가드**.

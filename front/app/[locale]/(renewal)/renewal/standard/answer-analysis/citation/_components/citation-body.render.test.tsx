@@ -9,7 +9,8 @@ import type { CitationDomainLive, CitationsLive } from "@/lib/scope/result-adapt
 // Renewal Citation body — static render of the states the local api demo cannot show
 // ════════════════════════════════════════════════════════════════════════════
 // Every read is a settled promise (React's use() reads it synchronously), so the whole body
-// renders in one pass: prompt tiles with counts and links, the legacy "not computed" reason under
+// renders in one pass. The renewal model comes precomputed from the screen (rn); the fixture builds
+// it with the same rules from the parts below and the page URL (citation-rn.fixture.ts): prompt tiles with counts and links, the legacy "not computed" reason under
 // a 출처 filter, a competitor pick, one picked 출처 (counts in the matrix), the empty / delayed states.
 
 let SEARCH = "";
@@ -22,6 +23,7 @@ vi.mock("next/navigation", () => ({
 const { RnFilterRuntime } = await import("@/app/[locale]/(renewal)/renewal/_components/filter-runtime");
 const { RnOverviewFilters } = await import("@/app/[locale]/(renewal)/renewal/_components/overview-filters");
 const { RnCitationBody } = await import("./citation-body");
+const { rnVmFor } = await import("./citation-rn.fixture");
 type Input = import("./citation-input").RnCitationInput;
 
 const settled = <T,>(v: T): Promise<T> => Object.assign(Promise.resolve(v), { status: "fulfilled", value: v });
@@ -62,26 +64,44 @@ const live = (over: Partial<CitationsLive> = {}): CitationsLive => ({
   promptSplit: { owned: [], uncited: [], ownedCount: 57, uncitedCount: 39 },
   ...over,
 });
-const input = (over: Partial<Input> = {}, liveOver: Partial<CitationsLive> = {}): Input => ({
+const parts = (over: Partial<Parts> = {}, liveOver: Partial<CitationsLive> = {}): Parts => ({
   api: false,
-  period: null,
   filtered: false,
-  data: settled(live(liveOver)),
-  dataDegraded: settled(false),
-  sectionDegraded: settled(null),
-  officialDelta: settled({ delta: -1.4, basisDate: "2026-10-05" }),
-  prevCategories: settled({ totals: { total: 1000, byCategory: { [AUTO]: 380, [HMG]: 270, [COMP]: 150, [NEWS]: 200 } }, asOf: "2026-10-05" }),
-  typeCategories: settled([
+  data: live(liveOver),
+  dataDegraded: false,
+  officialDelta: { delta: -1.4, basisDate: "2026-10-05" },
+  prevCategories: { totals: { total: 1000, byCategory: { [AUTO]: 380, [HMG]: 270, [COMP]: 150, [NEWS]: 200 } }, asOf: "2026-10-05" },
+  typeCategories: [
     { type: "mention", total: 500, byCategory: { [AUTO]: 200, [HMG]: 150, [NEWS]: 150 } },
     { type: "recommendation", total: 200, byCategory: { [AUTO]: 120, [HMG]: 30, [NEWS]: 50 } },
-  ]),
-  toneSummary: settled({ positive: { urls: 120, citations: 300, answers: 90 }, negative: { urls: 12, citations: 20, answers: 8 } }),
-  tableSource: settled(null),
-  periodView: settled(null),
+  ],
   ...over,
 });
-const render = (i: Input, search = "") => {
+type Parts = {
+  api: boolean;
+  filtered: boolean;
+  data: CitationsLive | null;
+  dataDegraded: boolean;
+  officialDelta: { delta: number; basisDate: string } | null;
+  prevCategories: { totals: { total: number; byCategory: Record<string, number> }; asOf: string };
+  typeCategories: import("@/lib/db/repositories/scope-aggregates").CitationTypeCategoryRow[] | null;
+};
+const input = parts;
+const render = (p: Parts, search = "") => {
   SEARCH = search;
+  const i: Input = {
+    api: p.api,
+    period: null,
+    filtered: p.filtered,
+    data: settled(p.data),
+    dataDegraded: settled(p.dataDegraded),
+    sectionDegraded: settled(null),
+    prevCategories: settled(p.prevCategories),
+    toneSummary: settled({ positive: { urls: 120, citations: 300, answers: 90 }, negative: { urls: 12, citations: 20, answers: 8 } }),
+    tableSource: settled(null),
+    periodView: settled(null),
+    rn: settled(rnVmFor({ live: p.data, prev: p.prevCategories, card: p.officialDelta, typeRows: p.typeCategories, sections: null, search })),
+  };
   return renderToStaticMarkup(
     <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
       <RnFilterRuntime>
@@ -108,12 +128,12 @@ describe("renewal Citation body", () => {
     expect(html).toContain("공식(당사) URL 인용 프롬프트 57개 / 미인용 39개");
   });
   it("legacy + 출처 filter: the split is not computed — the tiles say so", () => {
-    const html = render(input({ data: settled(live({ promptSplit: undefined })) }), `source=${encodeURIComponent(HMG)}`);
+    const html = render(input({ data: live({ promptSplit: undefined }) }), `source=${encodeURIComponent(HMG)}`);
     expect(html).toContain(T.lens.split.notComputed);
     expect(html).not.toContain(T.lens.split.noOwnCategory);
   });
   it("출처 filter without 공식(HMG): the HMG tile and the prompt tiles explain why", () => {
-    const html = render(input({ data: settled(live({ categories: [{ name: AUTO, value: 400 }], promptSplit: undefined })) }), `source=${encodeURIComponent(AUTO)}`);
+    const html = render(input({ data: live({ categories: [{ name: AUTO, value: 400 }], promptSplit: undefined }) }), `source=${encodeURIComponent(AUTO)}`);
     expect(html).toContain(T.lens.hmg.excluded);
     expect(html).toContain(T.lens.split.noOwnCategory);
     expect(html).toContain(T.matrix.oneSource);
@@ -148,9 +168,9 @@ describe("renewal Citation body", () => {
     expect(html).not.toContain("-translate-x-1/2 rounded-[1px] bg-rn-ink");
   });
   it("no data: empty, filtered and delayed states", () => {
-    expect(render(input({ data: settled(null) }))).toContain(ko.answerAnalysis.empty);
-    expect(render(input({ data: settled(null), filtered: true }))).toContain(T.states.noResultTitle);
-    expect(render(input({ data: settled(null), dataDegraded: settled(true) }))).toContain(ko.answerAnalysis.mentions.kpi.degraded);
+    expect(render(input({ data: null }))).toContain(ko.answerAnalysis.empty);
+    expect(render(input({ data: null, filtered: true }))).toContain(T.states.noResultTitle);
+    expect(render(input({ data: null, dataDegraded: true }))).toContain(ko.answerAnalysis.mentions.kpi.degraded);
   });
   it("tone tiles: api vs legacy basis chip", () => {
     expect(render(input())).toContain(T.tone.chipLegacy);

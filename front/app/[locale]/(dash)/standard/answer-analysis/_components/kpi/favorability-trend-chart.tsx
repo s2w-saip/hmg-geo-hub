@@ -21,8 +21,7 @@ import {
   trendGapBridgeLines,
   trendGapHidesTooltip,
 } from "@/components/dash/trend-gap-overlay";
-import type { FavorabilityTrendPoint } from "../../_data/kpi-view";
-import { favorabilityCoverage } from "../../_data/kpi-view";
+import type { CoverageEntry, FavorabilityTrendPoint } from "../../_data/mention-screen";
 import { DeltaBadge } from "./kpi-bits";
 import { bucketMD, CoverageLabel } from "./kpi-trend-chart";
 import { AUTO_PCT_DOMAIN, BandedGrid, ChartBox } from "./chart-box";
@@ -36,14 +35,15 @@ export const FAVORABILITY_LINES = [
 
 export function FavorabilityTrendChart({
   points,
+  coverage,
   height = 220,
 }: {
   points: FavorabilityTrendPoint[];
+  /** Coverage label entries (the measured slots of `points`), computed by the screen. */
+  coverage: CoverageEntry[];
   height?: number;
 }) {
   const t = useTranslations("answerAnalysis.mentions.kpi");
-  // 커버리지는 **원본** points 로 센다 — 보조 키가 더해진 행을 세면 의도가 흐려진다.
-  const coverage = favorabilityCoverage(points);
   // 수집 오류 회차 — 음영 + 이웃 연결(KpiTrendChart 와 같은 자세). 시리즈는 긍정·부정 둘.
   const gapPlan = planTrendGaps(points, {
     xKey: "bucketStart",

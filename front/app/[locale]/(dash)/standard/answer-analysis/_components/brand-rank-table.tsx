@@ -17,6 +17,7 @@
 //                  standard/prompts prompt-list-readonly.tsx 의 내보내기와 같은 패턴).
 
 import { useDeferredValue, useMemo, useRef, useState, type ReactNode } from "react";
+import { useOrderedTable } from "@/hooks/use-ordered-table";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ArrowDown, ArrowUp, ArrowUpDown, Download, Search } from "lucide-react";
@@ -27,7 +28,7 @@ import { dateStamp } from "@/lib/export/csv";
 import { downloadXlsx } from "@/lib/export/xlsx";
 import { cn } from "@/lib/utils";
 import type { MentionsBrandLive, MentionsPromptLive } from "@/lib/scope/result-adapter";
-import { brandRowValues, type BrandRowValues } from "../_data/prompt-rank";
+import type { BrandRowValues, BrandSortKey, BrandTableView } from "../_data/mention-screen";
 import { TRUNCATED_ROW_CLASS, TruncatedNote } from "./citation-domain-table";
 import { MentionsDrilldown } from "./mentions-drilldown";
 
@@ -43,37 +44,31 @@ function ownTargetOf(row: MentionsBrandLive): { code: string | null } | null {
   return { code: typeof code === "string" && code ? code : null };
 }
 
-type SortKey =
-  | "brand"
-  | "mentions"
-  | "share"
-  | "avgPosition"
-  | "prompts"
-  | "mentionRate"
-  | "multiMentions"
-  | "multiRate";
+type SortKey = BrandSortKey;
+
+const ASC_BY_DEFAULT: SortKey[] = ["brand"];
 
 export function BrandRankTable({
   brands,
+  table,
   perBrandPrompts,
   isWebsite = false,
   lazyPrompts = false,
   multiToggle = false,
   showRank = false,
   limit,
-  totalAnswers = null,
   initialMulti = false,
   total,
 }: {
   brands: MentionsBrandLive[];
+  /** 행별 값(일반·복수 언급)·기본 순번·열별 정렬 순서 — 화면이 계산해 보낸다(`brands` 와 같은 순서). */
+  table: BrandTableView;
   perBrandPrompts: Record<string, MentionsPromptLive[]>;
   isWebsite?: boolean;
   lazyPrompts?: boolean;
   multiToggle?: boolean;
   showRank?: boolean;
   limit?: number;
-  /** 복수 언급 모드의 언급률 분모(측정 답변 수). 없으면 그 열은 "—". */
-  totalAnswers?: number | null;
   /** 렌더 테스트 seam — 토글 초기값. 화면 기본은 꺼짐. */
   initialMulti?: boolean;
   /** 서버 상한에서 잘린 전량 목록의 잘리기 전 브랜드 수(B039). 안 잘렸으면 미전달. */
@@ -86,78 +81,28 @@ export function BrandRankTable({
   const tExport = useTranslations("standardPromptsView");
 
   const [search, setSearch] = useState("");
-  // 입력은 즉시, 목록 재계산(filtered→sorted→전 행 리렌더)은 낮은 우선순위로 —
-  // 키 입력마다 동기 재계산이 돌던 INP 병목(citations-view 와 동일).
   const deferredSearch = useDeferredValue(search);
-  const [sortKey, setSortKey] = useState<SortKey>("mentions");
-  const [asc, setAsc] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [multi, setMulti] = useState(multiToggle && initialMulti);
 
-  // 복수 언급 모드의 점유율 분모 — 전 브랜드 복수 언급 합(검색 전).
-  const multiTotal = useMemo(
-    () => brands.reduce((s, b) => s + (b.multi?.mentions ?? 0), 0),
-    [brands],
-  );
-  // 기본 열은 토글과 무관하게 **항상 전체 기준**이다(2026-09-02 피그마 1:1, 제품 결정 Q42):
-  // 복수 언급 ON 은 값을 갈아끼우는 것이 아니라 '브랜드 복수 언급 수'·'복수 언급률' 2열을
-  // **추가**한다 — 두 값을 나란히 비교할 수 있고 안내 행이 필요 없다.
-  const valuesOf = useMemo(() => {
-    const m = new Map<string, BrandRowValues>();
-    for (const b of brands) m.set(b.brand, brandRowValues(b, { multi: false, multiTotalMentions: multiTotal, totalAnswers }));
-    return m;
-  }, [brands, multiTotal, totalAnswers]);
-  const multiOf = useMemo(() => {
-    const m = new Map<string, BrandRowValues>();
-    for (const b of brands) m.set(b.brand, brandRowValues(b, { multi: true, multiTotalMentions: multiTotal, totalAnswers }));
-    return m;
-  }, [brands, multiTotal, totalAnswers]);
+  // 행과 화면 값(순번·일반·복수 언급 값)을 짝지어 둔다 — 정렬 순서는 이 배열의 인덱스다.
+  const items = useMemo(() => brands.map((row, i) => ({ row, view: table.rows[i] })), [brands, table]);
+  const { sorted: ordered, sortKey, asc, toggleSort } = useOrderedTable(items, table.orders, {
+    defaultKey: "mentions",
+    ascByDefault: ASC_BY_DEFAULT,
+  });
 
-  const filtered = useMemo(() => {
-    const q = deferredSearch.trim().toLowerCase();
-    return brands.filter((r) => !q || r.brand.toLowerCase().includes(q));
-  }, [brands, deferredSearch]);
-
-  // #순번 — 서버 기본 정렬(언급 수 desc) 기준의 고정 순번. 사용자가 다른 컬럼으로
-  // 재정렬해도 각 행의 순번은 유지된다(줄만 다시 선다, 2026-08-12 피드백 ③).
-  const rankByBrand = useMemo(() => {
-    const m = new Map<string, number>();
-    brands.forEach((b, i) => m.set(b.brand, i + 1));
-    return m;
-  }, [brands]);
-
+  // 검색은 이미 정렬된 목록 위의 표시 필터(입력 문자열)이고, 상한은 그 앞부분만 보여 준다.
   const sorted = useMemo(() => {
-    const arr = [...filtered];
-    const v = (r: MentionsBrandLive) => valuesOf.get(r.brand)!;
-    const mv = (r: MentionsBrandLive) => multiOf.get(r.brand)!;
-    arr.sort((a, b) => {
-      const dir = asc ? 1 : -1;
-      if (sortKey === "brand") return dir * a.brand.localeCompare(b.brand);
-      if (sortKey === "avgPosition") {
-        return dir * ((a.avgPosition ?? Infinity) - (b.avgPosition ?? Infinity));
-      }
-      // 값 없음(null)은 정렬 방향과 무관하게 맨 뒤.
-      const key = sortKey === "multiMentions" ? "mentions" : sortKey === "multiRate" ? "mentionRate" : sortKey;
-      const src = sortKey === "multiMentions" || sortKey === "multiRate" ? mv : v;
-      const av = src(a)[key];
-      const bv = src(b)[key];
-      if (av == null && bv == null) return 0;
-      if (av == null) return 1;
-      if (bv == null) return -1;
-      return dir * (av - bv);
-    });
+    const q = deferredSearch.trim().toLowerCase();
+    const arr = q ? ordered.filter((it) => it.row.brand.toLowerCase().includes(q)) : ordered;
     return limit != null ? arr.slice(0, limit) : arr;
-  }, [filtered, sortKey, asc, valuesOf, multiOf, limit]);
+  }, [ordered, deferredSearch, limit]);
 
   function clickHeader(k: SortKey) {
-    if (sortKey === k) setAsc((v) => !v);
-    else {
-      setSortKey(k);
-      setAsc(k === "brand");
-    }
+    toggleSort(k);
   }
 
-  // Excel 생성 중 — 버튼을 막고(state) 같은 클릭이 두 번 생성하지 않게(ref) 한다(B040).
   const [exporting, setExporting] = useState(false);
   const exportingRef = useRef(false);
 
@@ -178,8 +123,8 @@ export function BrandRankTable({
           t("table.col.prompts"),
           t("table.col.rate"),
         ],
-        sorted.map((r) => {
-          const v = valuesOf.get(r.brand)!;
+        sorted.map(({ row: r, view }) => {
+          const v = view.values;
           return [
             r.brand,
             fmt(v.mentions),
@@ -201,7 +146,7 @@ export function BrandRankTable({
     }
   }
 
-  const multiUnavailable = multi && brands.some((b) => !b.multi);
+  const multiUnavailable = multi && table.multiUnavailable;
 
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-card">
@@ -347,13 +292,13 @@ export function BrandRankTable({
               </td>
             </tr>
           ) : (
-            sorted.map((r) => (
+            sorted.map(({ row: r, view }) => (
               <BrandRow
                 key={r.brand}
                 row={r}
-                values={valuesOf.get(r.brand)!}
-                multiValues={multi ? multiOf.get(r.brand) ?? null : null}
-                rank={rankByBrand.get(r.brand) ?? 0}
+                values={view.values}
+                multiValues={multi ? view.multiValues : null}
+                rank={view.rank}
                 prompts={perBrandPrompts[r.brand] ?? []}
                 open={expanded === r.brand}
                 onToggle={() => setExpanded((cur) => (cur === r.brand ? null : r.brand))}

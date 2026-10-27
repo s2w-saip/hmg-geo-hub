@@ -151,7 +151,7 @@ function UserTile({ user, locale }: { user: RailUser; locale: string }) {
       >
         {tRoles(user.role)}
       </span>
-      <form action={logout}>
+      {user.role !== "local_reader" && <form action={logout}>
         <input type="hidden" name="locale" value={locale} />
         <Button
           type="submit"
@@ -163,7 +163,7 @@ function UserTile({ user, locale }: { user: RailUser; locale: string }) {
         >
           <LogOut className="h-4 w-4" aria-hidden />
         </Button>
-      </form>
+      </form>}
     </div>
   );
 }

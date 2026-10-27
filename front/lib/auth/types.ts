@@ -5,7 +5,7 @@
 // official-site dashboards for their profile scope (own brand×country site),
 // no standard/project/admin menus. Data scope comes from the profile like every
 // other role; the role only decides which menus exist.
-export type Role = "hq" | "region" | "country" | "admin" | "vendor" | "website";
+export type Role = "hq" | "region" | "country" | "admin" | "vendor" | "website" | "local_reader";
 
 // A user's allowed data scope. `all: true` means no restriction (HQ / admin).
 // Otherwise the listed dimensions constrain what scope data the user may see.

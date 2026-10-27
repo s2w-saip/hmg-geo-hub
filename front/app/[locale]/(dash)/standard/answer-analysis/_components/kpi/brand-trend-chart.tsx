@@ -20,7 +20,7 @@ import {
   YAxis,
 } from "recharts";
 import { CHART_TOOLTIP_STYLE } from "@/lib/viz/chart-tooltip";
-import type { BrandTrendChartData, KpiMetric } from "../../_data/kpi-view";
+import type { BrandTrendChartData, KpiMetric } from "../../_data/mention-screen";
 import { brandColor } from "./series-colors";
 import { bucketMD, CoverageLabel } from "./kpi-trend-chart";
 import { BandedGrid, ChartBox } from "./chart-box";

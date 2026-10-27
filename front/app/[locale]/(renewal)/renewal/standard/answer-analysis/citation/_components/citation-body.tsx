@@ -26,26 +26,17 @@ import { PeriodDeltaLine } from "@/components/dash/period-delta-line";
 import { useRnFilterReset, useRnFilterToggle } from "@/app/[locale]/(renewal)/renewal/_components/overview-filters";
 import { useActiveCitationCategories, useActiveCompetitors } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/citation-url-axes";
 import type { CitationDomainLive, CitationsLive } from "@/lib/scope/result-adapter";
-import type { RnCitationInput } from "./citation-input";
-import { useCitationDensity } from "./citation-density";
+import { DEALER_CATEGORY, OFFICIAL_HMG_CATEGORY } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/citation-view";
 import {
-  DEALER_CATEGORY,
   DELTA_AXIS_MIN,
   MATRIX_MIN_N,
   SPARK_MIN_SPAN,
-  OFFICIAL_HMG_CATEGORY,
-  categoryRows,
-  deltaAxis,
-  domainBump,
-  engineMatrix,
-  findings,
-  lens,
-  typeMatrix,
-  type CategoryRow,
-  type Matrix,
   type RnCitationDelta,
-  type SplitState,
-} from "./citation-model";
+  type RnCitationInput,
+  type RnCitationVm,
+  type RnMatrixView,
+} from "./citation-input";
+import { useCitationDensity } from "./citation-density";
 import { CitationCardActions, CitationProvider, DIV_LEGEND, DIV_LESS, DIV_MORE, divBg, engineLabel, useCatLabel, useCitation, type CitationCtx, type MatrixAxis } from "./citation-context";
 import { CardSkeleton, DegradedNote, DeltaChip, InfoTip, StateCard } from "../../mention/_components/mention-kit";
 import { numTxt, pctTxt, deltaTxt } from "../../mention/_components/mention-context";
@@ -184,16 +175,13 @@ function useDeltaBasis(): (d: RnCitationDelta) => string | null {
   return (d) => (d.basis == null ? null : d.date ? t("basisPrev", { date: d.date.slice(0, 10) }) : t("basisPrevNoDate"));
 }
 
-function useModel() {
-  const { input, live, picked, active } = useCitation();
+/** The renewal model the screen computed (rows, lens, matrices, findings, bump, table) + the Δ round and the degrade flags. */
+function useModel(): { rn: RnCitationVm; rows: RnCitationVm["rows"]; lens: RnCitationVm["lens"]; prev: Awaited<RnCitationInput["prevCategories"]>; sections: Awaited<RnCitationInput["sectionDegraded"]> } {
+  const { input } = useCitation();
+  const rn = use(input.rn) as RnCitationVm;
   const prev = use(input.prevCategories);
-  const card = use(input.officialDelta);
   const sections = use(input.sectionDegraded);
-  return useMemo(() => {
-    const rows = categoryRows({ live, prev, card, picked });
-    const l = lens({ live, prev, card, active, sections });
-    return { rows, lens: l, prev, sections };
-  }, [live, prev, card, picked, active, sections]);
+  return { rn, rows: rn.rows, lens: rn.lens, prev, sections };
 }
 
 // ── 이번 회차 요약 ─────────────────────────────────────────────────────────────
@@ -207,24 +195,12 @@ function SummarySkeleton() {
 }
 
 function Summary() {
-  const { input, live, picked } = useCitation();
+  const { input, live } = useCitation();
   const t = useTranslations("renewal.citation");
   const tType = useTranslations("answerAnalysis.mentions.breakdown.type");
   const cat = useCatLabel();
-  const { rows, lens: l } = useModel();
-  const typeRows = use(input.typeCategories);
-  const list = useMemo(() => {
-    const order = rows.map((r) => r.name);
-    return findings({
-      rows,
-      hmgDelta: l.hmg.delta.value,
-      picked,
-      engine: engineMatrix(live.engineCategories, order),
-      type: typeMatrix(typeRows, order),
-      split: l.split,
-      bump: domainBump(live.trend, live.domains),
-    });
-  }, [rows, l, picked, live, typeRows]);
+  const { rn, lens: l } = useModel();
+  const list = rn.findings;
   const isPeriod = Boolean(input.period);
   const colName = (axis: "engine" | "type" | undefined, key: string) => (axis === "type" ? tType(key as "mention") : engineLabel(key));
   // read-only findings (no jump to the card)
@@ -270,7 +246,7 @@ function Summary() {
     const tag = f.kind === "engineGap" || (f.kind === "skew" && f.axis === "engine") ? t("find.tagEngine") : f.kind === "typeGap" || f.kind === "skew" ? t("find.tagType") : t(`find.${f.kind}.tag`);
     return { key: `${f.kind}-${i}`, tone: f.tone, tag, title, detail };
   });
-  const rank = rows.findIndex((r) => r.name === OFFICIAL_HMG_CATEGORY) + 1;
+  const rank = rn.hmgRank;
   const split = l.split;
   const title = t(isPeriod ? "summary.titlePeriod" : "summary.title");
   return (
@@ -375,7 +351,7 @@ function ShareTile({ kind }: { kind: "hmg" | "dealer" }) {
             </>
           )}
         </span>
-        {tile.value != null && tile.spark.some((v) => v != null) ? <RnSparkline values={tile.spark} className="mb-1 h-7 w-[72px]" /> : null}
+        {tile.sparkOn ? <RnSparkline values={tile.spark} className="mb-1 h-7 w-[72px]" /> : null}
       </span>
       {tile.value == null ? (
         <span className="text-rn-12 text-rn-muted">{t(`${kind}.excluded`)}</span>
@@ -394,7 +370,7 @@ function PromptTile({ kind }: { kind: "owned" | "uncited" }) {
   const tK = useTranslations("answerAnalysis.mentions.kpi");
   const href = useSubpageHref();
   const { lens: l } = useModel();
-  const s: SplitState = l.split;
+  const s = l.split;
   const head = (
     <>
       <span className="flex items-center gap-1 text-rn-13 font-bold text-rn-ink">
@@ -415,7 +391,7 @@ function PromptTile({ kind }: { kind: "owned" | "uncited" }) {
     );
   }
   const n = kind === "owned" ? s.owned : s.uncited;
-  const all = s.owned + s.uncited;
+  const pct = kind === "owned" ? s.ownedPct : s.uncitedPct;
   return (
     <Link prefetch={false} href={href("prompts", { tab: kind })} data-rn-tile={kind} className={cx(TILE, "no-underline transition-shadow hover:shadow-[var(--shadow-rn-1),0_0_0_1px_var(--color-rn-line-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rn-navy")}>
       {head}
@@ -424,7 +400,7 @@ function PromptTile({ kind }: { kind: "owned" | "uncited" }) {
           {numTxt(n)}
           <small className="ml-0.5 text-rn-15 font-semibold">{t("unit")}</small>
         </span>
-        <span className="text-rn-13 font-bold text-rn-muted tabular-nums">{all > 0 ? `${Math.round((100 * n) / all)}%` : "—"}</span>
+        <span className="text-rn-13 font-bold text-rn-muted tabular-nums">{pct != null ? `${pct}%` : "—"}</span>
       </span>
       <span className="text-rn-12 font-semibold text-rn-navy">{t("open")}</span>
     </Link>
@@ -444,11 +420,9 @@ function CompositionCard() {
   const tK = useTranslations("answerAnalysis.mentions.kpi");
   const cat = useCatLabel();
   const toggle = useRnFilterToggle();
-  const { rows, prev, sections } = useModel();
+  const { rn, rows, prev, sections } = useModel();
   const isPeriod = Boolean(input.period);
-  const trendOn = rows.some((r) => r.trend?.some((v) => v != null));
-  const max = Math.max(1, ...rows.map((r) => r.pct ?? 0));
-  const cap = deltaAxis(rows);
+  const { trendOn, maxPct: max, cap } = rn;
   const keys = rows.map((r) => r.name);
   const csv = () => ({
     name: "citation-categories",
@@ -517,7 +491,7 @@ function CompositionCard() {
 const DELTA_UP = `rgb(${DIV_MORE.join(",")})`;
 const DELTA_DOWN = `rgb(${DIV_LESS.join(",")})`;
 
-function CategoryLine({ r, max, cap, trendOn, pressed, lit, keys, onToggle }: { r: CategoryRow; max: number; cap: number; trendOn: boolean; pressed: boolean; lit: string | null; keys: string[]; onToggle: () => void }) {
+function CategoryLine({ r, max, cap, trendOn, pressed, lit, keys, onToggle }: { r: RnCitationVm["rows"][number]; max: number; cap: number; trendOn: boolean; pressed: boolean; lit: string | null; keys: string[]; onToggle: () => void }) {
   const { hover } = useCitation();
   const t = useTranslations("renewal.citation.comp");
   const cat = useCatLabel();
@@ -526,7 +500,7 @@ function CategoryLine({ r, max, cap, trendOn, pressed, lit, keys, onToggle }: { 
   const dim = lit != null && keys.includes(lit) && !on;
   const top = r.top.map((x) => `${x.domain} ${x.pct.toFixed(0)}%`).join(" · ");
   const d = r.deltaHidden ? null : r.delta;
-  const moved = d != null && Math.abs(d) >= 0.05;
+  const moved = r.moved;
   const half = d != null && moved ? Math.min(50, (Math.abs(d) / cap) * 50) : 0;
   const tip = [
     `${cat(r.name)} · ${t("tipCitations", { n: numTxt(r.value) })} · ${pctTxt(r.pct)}`,
@@ -614,18 +588,10 @@ function MatrixCard() {
   );
 }
 
-function useMatrix(): { m: Matrix | null; status: "ok" | "pending" | "degraded" } {
-  const { input, live, axis } = useCitation();
-  const { rows } = useModel();
-  const typeRows = use(input.typeCategories);
-  const order = rows.map((r) => r.name);
-  if (axis === "engine") {
-    const m = engineMatrix(live.engineCategories, order);
-    return { m, status: m ? "ok" : "pending" };
-  }
-  if (typeRows == null) return { m: null, status: "degraded" };
-  const m = typeMatrix(typeRows, order);
-  return { m, status: m ? "ok" : "pending" };
+function useMatrix(): { m: RnMatrixView | null; status: "ok" | "pending" | "degraded" } {
+  const { axis } = useCitation();
+  const { rn } = useModel();
+  return axis === "engine" ? rn.engineMatrix : rn.typeMatrix;
 }
 
 function useColName(): (key: string) => string {
@@ -642,14 +608,14 @@ function MatrixActions() {
   const csv = () => ({
     name: "citation-source-matrix",
     rows: m
-      ? [[t("colCategory"), t("colAll"), ...m.cols.flatMap((c) => [col(c.key), `${col(c.key)} ${t("csvGap")}`])], ...m.rows.map((k) => [cat(k), m.base[k].toFixed(1), ...m.cols.flatMap((c) => [c.shares[k].toFixed(1), (c.shares[k] - m.base[k]).toFixed(1)])])]
+      ? [[t("colCategory"), t("colAll"), ...m.cols.flatMap((c) => [col(c.key), `${col(c.key)} ${t("csvGap")}`])], ...m.rows.map((k) => [cat(k), m.base[k].toFixed(1), ...m.cols.flatMap((c) => [c.shares[k].toFixed(1), m.gaps[c.key][k].toFixed(1)])])]
       : [],
   });
   return <CitationCardActions section="sec-mix" csv={csv} />;
 }
 
 function MatrixBody() {
-  const { active, lit, hover } = useCitation();
+  const { lit, hover } = useCitation();
   const t = useTranslations("renewal.citation.matrix");
   const tA = useTranslations("answerAnalysis");
   const tK = useTranslations("answerAnalysis.mentions.kpi");
@@ -659,7 +625,7 @@ function MatrixBody() {
   if (status === "degraded") return <div className="px-6 pb-5"><DegradedNote>{tK("degraded")}</DegradedNote></div>;
   if (!m) return <p className="m-0 px-6 pb-5 text-rn-12 text-rn-muted">{tA("pending")}</p>;
   // one 출처 picked: every column is 100% of it — the original draws absolute counts then
-  const counts = active.length === 1;
+  const counts = m.oneSource;
   const live = new Set(m.live);
   return (
     <>
@@ -689,9 +655,9 @@ function MatrixBody() {
                   <th scope="row" className={cx("h-[34px] px-2.5 text-left font-medium whitespace-nowrap", own ? "font-bold text-rn-navy" : "text-rn-ink-2", (own || on) && "shadow-[inset_3px_0_0_var(--color-rn-navy)]", on && "text-rn-navy")}>
                     {cat(k)}
                   </th>
-                  <td className="h-[34px] px-2.5 text-right font-semibold whitespace-nowrap text-rn-ink-2 tabular-nums shadow-[inset_-2px_0_0_var(--color-rn-line)]">{counts ? numTxt(Math.round((m.base[k] * m.total) / 100)) : pctTxt(m.base[k])}</td>
+                  <td className="h-[34px] px-2.5 text-right font-semibold whitespace-nowrap text-rn-ink-2 tabular-nums shadow-[inset_-2px_0_0_var(--color-rn-line)]">{counts ? numTxt(m.baseCounts[k]) : pctTxt(m.base[k])}</td>
                   {m.cols.map((c) => {
-                    const gap = c.shares[k] - m.base[k];
+                    const gap = m.gaps[c.key][k];
                     const paint = !counts && live.has(c.key);
                     return (
                       <td
@@ -721,7 +687,7 @@ function MatrixBody() {
           <span>{t("more")}</span>
           <span className="text-rn-muted">
             {t("cap", { cap: m.cap })}
-            {m.cols.some((c) => c.thin) ? ` · ${t("thin", { min: MATRIX_MIN_N })}` : ""}
+            {m.anyThin ? ` · ${t("thin", { min: MATRIX_MIN_N })}` : ""}
           </span>
         </div>
       )}

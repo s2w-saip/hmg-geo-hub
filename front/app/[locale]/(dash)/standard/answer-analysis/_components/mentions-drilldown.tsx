@@ -6,14 +6,14 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { MessageSquareText, Loader2, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useSortableTable } from "@/hooks/use-sortable-table";
+import { useOrderedTable, type TableOrders } from "@/hooks/use-ordered-table";
 import { SortableHeader } from "@/components/ui/sortable-header";
 import { ColInfo } from "@/components/dash/col-info";
 import { cn } from "@/lib/utils";
 import type { MentionsPromptLive, CitationDomainLive } from "@/lib/scope/result-adapter";
 import { AnswerModal } from "./answer-modal";
 import { CitationDomainTable, TRUNCATED_ROW_CLASS, TruncatedNote } from "./citation-domain-table";
-import { isTopRank, promptBestRank } from "../_data/prompt-rank";
+import type { DrillPromptRow, PromptSortKey } from "../_data/drilldown-screen-types";
 
 // Per-brand drilldown rendered inline when a Brand row is clicked — LIVE only.
 //   - "Prompts" tab: the prompts where this brand appeared (real: text,
@@ -32,6 +32,11 @@ import { isTopRank, promptBestRank } from "../_data/prompt-rank";
 // prompts / no sources" (the signal dialog and the row detail already did this). B008: when the
 // route cut a list it sends `total` (before the cap) and the table adds the existing
 // "{total}개 중 {shown}개 표시" line; a list that fits renders exactly as before.
+//
+// The route answers precomputed values (screen mention/drill-brand-prompts): each prompt row's best
+// rank and TOP 3 flag, each answer's highlighter terms, and the table's column orders (`orders`,
+// useOrderedTable). The table keeps only the UI state (sort column and direction). Rows handed in
+// without orders (the eager `prompts` prop) render in their given order.
 
 /** Project id of a /projects/<id>/... page, else null (same rule as answer-modal.tsx). */
 export function projectIdFromPath(pathname: string | null | undefined): string | null {
@@ -109,13 +114,16 @@ export function MentionsDrilldown({
   );
 }
 
-/** A lazily loaded drilldown list; total = rows before the route's cap, only when it cut the list (B008). */
+/**
+ * A lazily loaded drilldown list; total = rows before the route's cap, only when it cut the list
+ * (B008); orders = the route's precomputed column orders, when it sends them.
+ */
 export type ListState<T> =
   | { status: "loading" }
-  | { status: "ready"; list: T[]; total?: number }
+  | { status: "ready"; list: T[]; total?: number; orders?: TableOrders<string> }
   | { status: "error" };
 
-type PromptsState = ListState<MentionsPromptLive>;
+type PromptsState = ListState<DrillPromptRow>;
 
 /**
  * One lazy drilldown list load (the effect body of useBrandPrompts and BrandCitationsTab): `key` is
@@ -132,9 +140,14 @@ export function startListLoad<T>(
   setState({ status: "loading" });
   fetchImpl(url, { signal: ctrl.signal })
     .then((r) => (r.ok ? r.json() : Promise.reject(new Error("failed"))))
-    .then((d: { prompts?: T[]; domains?: T[]; total?: number }) => {
+    .then((d: { prompts?: T[]; domains?: T[]; total?: number; orders?: TableOrders<string> }) => {
       const list = d[key] ?? [];
-      setState(typeof d.total === "number" ? { status: "ready", list, total: d.total } : { status: "ready", list });
+      setState({
+        status: "ready",
+        list,
+        ...(typeof d.total === "number" ? { total: d.total } : {}),
+        ...(d.orders && typeof d.orders === "object" ? { orders: d.orders } : {}),
+      });
     })
     .catch((e: unknown) => {
       if (e instanceof DOMException && e.name === "AbortError") return;
@@ -164,7 +177,7 @@ function useBrandPrompts(
       return;
     }
     const params = drilldownParams(spStr, { brand, own, isWebsite, projectId });
-    return startListLoad<MentionsPromptLive>(`/api/scope/brand-mention-prompts?${params.toString()}`, "prompts", setState);
+    return startListLoad<DrillPromptRow>(`/api/scope/brand-mention-prompts?${params.toString()}`, "prompts", setState);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- eager only read on !lazy
   }, [brand, own?.code, own === null, spStr, isWebsite, projectId, lazy]);
   return state;
@@ -188,7 +201,7 @@ export function BrandPromptsPanel({
   ) : state.list.length === 0 ? (
     <Empty label={t("noPrompts")} />
   ) : (
-    <PromptsTable rows={state.list} total={state.total} brand={brand} showRank={showRank} />
+    <PromptsTable rows={state.list} total={state.total} orders={state.orders} brand={brand} showRank={showRank} />
   );
 }
 
@@ -210,36 +223,33 @@ function ErrorBox({ label }: { label: string }) {
   );
 }
 
-type PromptsSortKey = "prompt" | "rank" | "mentions" | "share" | "funnel" | "providers";
+/** No precomputed orders: every column keeps the given row order. */
+const NO_ORDERS = {} as TableOrders<PromptSortKey>;
+const ASC_BY_DEFAULT: PromptSortKey[] = ["prompt", "funnel", "rank"];
 
 function PromptsTable({
   rows,
   total,
+  orders,
   brand,
   showRank = false,
 }: {
-  rows: MentionsPromptLive[];
+  rows: DrillPromptRow[];
   /** Prompts before the route's cap, only when it cut the list (B008). */
   total?: number;
+  /** The route's column orders (no rank = after every rank ascending, before descending). */
+  orders?: TableOrders<string>;
   brand: string;
   showRank?: boolean;
 }) {
   const t = useTranslations("answerAnalysis.mentions.drilldown");
   const tModal = useTranslations("answerAnalysis.mentions.answerModal");
-  const [selected, setSelected] = useState<MentionsPromptLive | null>(null);
+  const [selected, setSelected] = useState<DrillPromptRow | null>(null);
 
-  const { sorted, headerProps } = useSortableTable<MentionsPromptLive, PromptsSortKey>(
+  const { sorted, headerProps } = useOrderedTable<DrillPromptRow, PromptSortKey>(
     rows,
-    {
-      prompt: (r) => r.promptText,
-      // 순위 없음은 맨 뒤로(Infinity) — 0 으로 두면 "1위보다 앞"으로 정렬된다.
-      rank: (r) => promptBestRank(r) ?? Number.POSITIVE_INFINITY,
-      mentions: (r) => r.mentions,
-      share: (r) => r.share,
-      funnel: (r) => r.funnelStage ?? "",
-      providers: (r) => r.providers.length,
-    },
-    { defaultKey: "mentions", defaultAsc: false, ascByDefault: ["prompt", "funnel", "rank"] },
+    (orders as TableOrders<PromptSortKey> | undefined) ?? NO_ORDERS,
+    { defaultKey: "mentions", defaultAsc: false, ascByDefault: ASC_BY_DEFAULT },
   );
 
   return (
@@ -284,7 +294,7 @@ function PromptsTable({
               // Every drilldown prompt has ≥1 measured answer (the brand was
               // mentioned in ≥1 job for it), so every row opens the real answer.
               const hasAnswers = (r.answers?.length ?? 0) > 0;
-              const rank = showRank ? promptBestRank(r) : null;
+              const rank = showRank ? (r.bestRank ?? null) : null;
               return (
                 <tr
                   key={r.id}
@@ -323,7 +333,7 @@ function PromptsTable({
                   </td>
                   {showRank ? (
                     <td className="px-3 py-2 text-right">
-                      {isTopRank(rank) ? (
+                      {r.topRank ? (
                         <span
                           className="inline-flex items-center rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-700"
                           data-top3

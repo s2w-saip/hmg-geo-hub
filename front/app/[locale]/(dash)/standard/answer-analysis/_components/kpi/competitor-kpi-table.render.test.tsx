@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { NextIntlClientProvider } from "next-intl";
 import ko from "@/messages/ko.json";
 import en from "@/messages/en.json";
-import type { CompetitorKpiRow, KpiMetric } from "../../_data/kpi-view";
+import type { CompetitorKpiRow, KpiMetric } from "../../_data/mention-screen";
 
 // QA 2차 #4 — 경쟁사 분석(노출률) 도넛.
 //
@@ -37,7 +37,9 @@ vi.mock("recharts", () => ({
   ),
 }));
 
-const { CompetitorKpiTable, donutSlices } = await import("./competitor-kpi-table");
+const { donutSlices } = await import("./competitor-kpi-table");
+const { CompetitorKpiTableFromLegacy: CompetitorKpiTable } = await import("../../_data/mention-screen.test-utils");
+const { ownShareDonut } = await import("../../_data/mention-screen.test-utils");
 
 function row(over: Partial<CompetitorKpiRow> & { brand: string }): CompetitorKpiRow {
   return {
@@ -219,7 +221,7 @@ describe("CompetitorKpiTable — 상대 비중 각주(제품 책임자 D3)", () 
 describe("donutSlices — 값 계약", () => {
   const args = (selected: string[]) => ({
     rows: ROWS,
-    ownPct: 58.3,
+    donut: ownShareDonut(58.3),
     selected,
     ownLabel: "당사 1사 합산",
     restLabel: "그 외",
@@ -253,7 +255,7 @@ describe("donutSlices — 값 계약", () => {
   });
 
   it("returns null when there is no own value to anchor the donut", () => {
-    expect(donutSlices({ ...args(["Toyota"]), ownPct: null })).toBeNull();
+    expect(donutSlices({ ...args(["Toyota"]), donut: ownShareDonut(null) })).toBeNull();
   });
 
   it("gives every slice a unique react key", () => {

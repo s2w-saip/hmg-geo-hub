@@ -39,7 +39,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSortableTable } from "@/hooks/use-sortable-table";
 import { cn } from "@/lib/utils";
 import { isAlreadyAdded } from "@/lib/social-scraping/catalog-added";
-import { getGeneratedPrompts } from "./sample-data";
+import { getGeneratedPrompts } from "./source-model";
 import {
   pageSampleCombinations,
   pageSampleConditions,

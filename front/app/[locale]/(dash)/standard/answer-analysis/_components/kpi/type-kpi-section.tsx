@@ -36,7 +36,7 @@ import { cn } from "@/lib/utils";
 import { ColInfo } from "@/components/dash/col-info";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MENTION_TYPE_KEYS_UI, type KpiMetric, type TypeComboPoint, type TypeKpiBar, type TypeScope } from "../../_data/kpi-view";
+import { MENTION_TYPE_KEYS_UI, type KpiMetric, type TypeComboPoint, type TypeKpiBar, type TypeScope } from "../../_data/mention-screen";
 import { pctText } from "./kpi-bits";
 import { bucketMD, CoverageLabel } from "./kpi-trend-chart";
 import { AUTO_PCT_DOMAIN, BandedGrid, ChartBox, PILL_BAR_RADIUS } from "./chart-box";

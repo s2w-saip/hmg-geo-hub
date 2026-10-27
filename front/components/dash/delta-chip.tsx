@@ -17,12 +17,8 @@
 import { TrendingDown, TrendingUp, Minus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
-import {
-  SUPPRESSED_GLYPH,
-  periodChipText,
-  type PeriodCaptionMessage,
-  type PeriodChip,
-} from "@/lib/kpi/period-compare-view";
+import type { PeriodCaptionMessage, PeriodChip } from "@/lib/kpi/period-compare-view";
+import { SUPPRESSED_GLYPH, periodChipText } from "@/lib/period-chip-text";
 
 export type DeltaChipSize = "sm" | "md";
 export type DeltaChipGlyph = "icon" | "triangle" | "none";

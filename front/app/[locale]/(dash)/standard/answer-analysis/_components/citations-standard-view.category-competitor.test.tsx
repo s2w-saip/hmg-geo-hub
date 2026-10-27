@@ -4,10 +4,13 @@ import { NextIntlClientProvider } from "next-intl";
 import ko from "@/messages/ko.json";
 import type { CitationsLive } from "@/lib/scope/result-adapter";
 import { CitationsStandardView } from "./citations-standard-view";
+import { standardVmFor } from "./citation-vm.fixture";
 
 // QA 2차 #5-(c) — "경쟁사 선택 시 출처 카테고리별 현황 공식(경쟁사)에 수치가
 // 반영되지 않음". `?competitor=` 는 도메인 표(DomainsBlock)에만 전달됐다.
 // 반영 범위 = 출처 카테고리별 현황 + 도메인 표 (제품 결정 D6), Δ 는 선택 중 숨김(D5).
+// 값은 화면 API(back/bff/screens/citation.py)가 URL 의 선택으로 계산해 vm 으로 보낸다 — 이 파일은
+// 그 vm(같은 규칙의 fixture)을 그리는 쪽을 고정한다.
 
 let SEARCH = "";
 vi.mock("next/navigation", () => ({
@@ -58,11 +61,9 @@ function view() {
   return render(
     <CitationsStandardView
       data={LIVE}
-      prevSubKpis={null}
-      prevBasisDate={null}
-      typeCategories={null}
+      vm={standardVmFor(LIVE, { search: SEARCH, prev: PREV })}
+      typeChart={null}
       toneSummary={null}
-      prevCategories={PREV}
     />,
   );
 }

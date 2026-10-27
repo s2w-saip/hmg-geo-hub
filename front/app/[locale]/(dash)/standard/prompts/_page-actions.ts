@@ -5,7 +5,7 @@ import { getSession } from "@/lib/auth/session";
 import { UnauthorizedError } from "@/lib/auth/errors";
 import { canAccessRoute } from "@/lib/auth/route-policy";
 import { readCatalogPage, readCatalogRows } from "@/lib/db/repositories/catalog-page";
-import { isAnalysisApi } from "@/lib/hgh/adapters/filters";
+import { isAnalysisApi } from "@/lib/hgh/analysis-access";
 import { isAdminApi } from "@/lib/hgh/adapters/admin";
 import { hghPost } from "@/lib/hgh/client";
 import { CATALOG_PAGE_LIMIT_MAX, catalogPageQuery, collationOf, type CatalogPageQuery, type CatalogPage, type CatalogRowsPage } from "@/lib/standards/catalog-page";

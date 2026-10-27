@@ -14,7 +14,7 @@ export type ProjectMetaForSnb = {
   id: string;
   name: string;
   description: string | null;
-  createdAt: string; // ISO
+  createdAt: string | null; // ISO, null when the source does not supply it
 };
 
 let current: ProjectMetaForSnb | null = null;

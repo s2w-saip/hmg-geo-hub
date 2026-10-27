@@ -18,7 +18,7 @@ import {
 } from "@/components/dash/filter-transition";
 import type { CitationOwnedPromptPage } from "@/lib/db/repositories/scope-aggregates";
 import { cn } from "@/lib/utils";
-import { pageWindow } from "../_data/citation-view";
+import type { PageWindow } from "../_data/citation-view";
 import {
   applySearchEvent,
   buildSubpageHref,
@@ -32,8 +32,9 @@ import { AnswerModal } from "./answer-modal";
 /**
  * API 원천(unit U7, D5)의 페이지: 오프셋 대신 키셋 커서다. `nextCursor` 가 실려 있으면 이 페이지는
  * 커서 모드로 넘긴다(다음 = 그 커서, 이전 = 이 화면이 기억한 커서 또는 첫 페이지, U7-N7).
+ * `win` = 화면 API 가 계산한 페이지 창(페이지 수·표시 범위, pageWindow).
  */
-export type CursorAware<P> = P & { nextCursor?: string | null };
+export type CursorAware<P> = P & { nextCursor?: string | null; win: PageWindow };
 
 export function CitationPromptsPage(props: {
   tab: "owned" | "uncited";
@@ -68,7 +69,7 @@ function PromptsView({
   const tKpi = useTranslations("answerAnalysis.mentions.kpi");
   const nav = useSubpageNav();
   const [selected, setSelected] = useState<CitationOwnedPromptPage["rows"][number] | null>(null);
-  const win = page ? pageWindow(page.total, page.page, page.pageSize) : null;
+  const win = page?.win ?? null;
   const cursorNav = useCursorPaging(page);
 
   return (
@@ -270,7 +271,7 @@ export function Pager({
   onPage,
   hasNext,
 }: {
-  win: ReturnType<typeof pageWindow>;
+  win: PageWindow;
   onPage: (p: number) => void;
   /** 커서 모드: 다음 커서가 있는가(없으면 총계로 판정하는 종전 규칙). */
   hasNext?: boolean;

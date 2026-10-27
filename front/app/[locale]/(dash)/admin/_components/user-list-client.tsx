@@ -67,6 +67,7 @@ function roleBadgeVariant(
       // secondary tone — vendor sits at the same "external partner" tier.
       return "secondary";
     case "website":
+    case "local_reader":
       // Read-only single-surface viewer — recedes like country.
       return "outline";
   }

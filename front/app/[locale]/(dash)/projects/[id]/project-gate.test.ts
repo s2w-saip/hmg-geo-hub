@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Session } from "@/lib/auth/types";
 
-// Legacy <-> api parity of the project gates owned by U2:
-//   projects/[id]/layout.tsx, analysis/_lib/auth-and-locks.ts, ai-funnel/_lib/auth-and-locks.ts.
+// The project gates: projects/[id]/layout.tsx (the API gate only: GET /v1/projects/{id}) and the
+// legacy <-> api parity of analysis/_lib/auth-and-locks.ts. (The project ai-funnel pages read their
+// screens now; their gate module went with them.)
 // One world (session, project row, membership) drives both sources:
 //   legacy = projectRepository / projectMemberRepository mocks (the rollback path);
 //   api    = fetch mock answering GET /v1/projects/{id} the way the backend does for that world
@@ -61,7 +62,6 @@ vi.mock("@/lib/db/repositories/project-members", () => ({
 const { bindHghAuth } = await import("@/lib/hgh/auth");
 const { default: ProjectLayout } = await import("./layout");
 const { loadProjectAnalysisContext } = await import("./analysis/_lib/auth-and-locks");
-const { loadProjectFunnelContext } = await import("./ai-funnel/_lib/auth-and-locks");
 const { ProjectMetaBroadcast } = await import("@/components/dash/project-meta-broadcast");
 const { DEMO_PROJECT_ID } = await import("@/lib/demo");
 
@@ -155,7 +155,6 @@ async function layoutMeta(locale: string, id: string) {
 const SURFACES = {
   layout: (id: string) => layoutMeta("ko", id),
   analysis: (id: string) => loadProjectAnalysisContext("ko", id),
-  funnel: (id: string) => loadProjectFunnelContext("ko", id),
 } as const;
 
 async function both(surface: keyof typeof SURFACES, id = PID) {
@@ -179,10 +178,9 @@ const WORLDS: Record<string, World> = {
   noSession: { session: null, project: project(), membership: null },
 };
 
-// The one allowed difference: the project LAYOUT used to check existence only (visibility
-// was each leaf page's job); the API gate hides non-members already there. Every leaf under
-// it (page, member, setting, prompt, intent/*, analysis/*, ai-funnel/*) notFound()s the same
-// viewers, so the rendered result is the same 404 (asserted per leaf gate below).
+// The project LAYOUT is the API gate on both sources (it used to check existence only on legacy;
+// visibility was each leaf page's job). It hides non-members already there; the legacy leaf gate
+// notFound()s the same viewers, so the rendered result is the same 404 (asserted below).
 const LAYOUT_EARLY_404 = new Set(["pendingOwner", "inScopeNonMember"]);
 // No session never reaches the project layout: the (dash) layout redirects to /login first
 // (app/[locale]/(dash)/layout.test.ts). The layout itself only sees a missing token on api.
@@ -200,13 +198,7 @@ describe.each(Object.keys(WORLDS))("world %s", (name) => {
     expect(r.apiRepoCalls).toBe(0);
   });
 
-  it("funnel gate: legacy == api (locks, brand, country, GA4 property, conversion editing)", async () => {
-    const r = await both("funnel");
-    expect(r.api).toEqual(r.legacy);
-    expect(r.apiRepoCalls).toBe(0);
-  });
-
-  it("project layout: legacy == api (meta broadcast or 404)", async () => {
+  it("project layout: the API gate decides (meta broadcast or 404)", async () => {
     if (name === LAYOUT_NO_SESSION) {
       bindHghAuth({ getAccessToken: async () => null });
       const r = await both("layout");
@@ -214,35 +206,26 @@ describe.each(Object.keys(WORLDS))("world %s", (name) => {
       return;
     }
     const r = await both("layout");
-    if (LAYOUT_EARLY_404.has(name)) {
-      expect(r.legacy).toMatchObject({ ok: expect.anything() });
-      expect(r.api).toEqual({ thrown: "NOT_FOUND" });
-      // ...and the leaf gates 404 the same viewer on both sources:
-      expect((await both("analysis")).legacy).toEqual({ thrown: "NOT_FOUND" });
-      expect((await both("funnel")).legacy).toEqual({ thrown: "NOT_FOUND" });
-      return;
-    }
+    // One gate whatever HGH_SOURCE_SESSION says: the layout never reads the repositories.
     expect(r.api).toEqual(r.legacy);
+    if (LAYOUT_EARLY_404.has(name)) {
+      expect(r.api).toEqual({ thrown: "NOT_FOUND" });
+      // ...and the legacy leaf gate 404s the same viewer:
+      expect((await both("analysis")).legacy).toEqual({ thrown: "NOT_FOUND" });
+    }
   });
 });
 
 describe("expected outcomes (not just equal)", () => {
-  it("owner: locks + GA4 + editing; viewer: read-only; admin: editing without membership", async () => {
+  it("owner and viewer: the project country lock; admin passes without membership", async () => {
     world.current = WORLDS.activeOwner;
-    expect((await both("funnel")).api).toEqual({
-      ok: {
-        locks: [{ group: "geography", value: "US" }],
-        lockedGroups: ["geography"],
-        brand: "Kia",
-        country: "US",
-        ga4PropertyId: "123",
-        canEditConversion: true,
-      },
+    expect((await both("analysis")).api).toEqual({
+      ok: { locks: [{ group: "geography", value: "US" }], lockedGroups: ["geography"] },
     });
     world.current = WORLDS.activeViewer;
-    expect((await both("funnel")).api).toMatchObject({ ok: { canEditConversion: false } });
+    expect((await both("analysis")).api).toMatchObject({ ok: { lockedGroups: ["geography"] } });
     world.current = WORLDS.adminNonMember;
-    expect((await both("funnel")).api).toMatchObject({ ok: { canEditConversion: true } });
+    expect((await both("analysis")).api).toMatchObject({ ok: { lockedGroups: ["geography"] } });
   });
 
   it("layout meta string is byte-identical to the legacy Date#toISOString", async () => {
@@ -286,7 +269,7 @@ describe("expected outcomes (not just equal)", () => {
     answer(401, "token_expired");
     await expect(loadProjectAnalysisContext("en", PID)).rejects.toThrow("REDIRECT:/en/login");
     answer(403, "role_forbidden");
-    await expect(loadProjectFunnelContext("en", PID)).rejects.toThrow("REDIRECT:/en/no-access");
+    await expect(loadProjectAnalysisContext("en", PID)).rejects.toThrow("REDIRECT:/en/no-access");
     answer(500, "internal");
     await expect(layoutMeta("en", PID)).rejects.toMatchObject({ status: 500, code: "internal" });
   });

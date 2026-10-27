@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { NextIntlClientProvider } from "next-intl";
 import ko from "@/messages/ko.json";
 import en from "@/messages/en.json";
-import { StanceTags, type AnswerStanceTag } from "./answer-modal";
+import { StanceTags, type AnswerStanceGroup, type AnswerStanceTag } from "./answer-modal";
 
 // 답변 단위 브랜드 스탠스 태그(0072 · WU8 ①)의 렌더 계약.
 //
@@ -54,10 +54,13 @@ const RIVAL: AnswerStanceTag = {
   reason: "장점만 제시됨",
 };
 
+/** The route's stanceGroups for one-turn tags (turn 0). */
+const turn0 = (...stances: AnswerStanceTag[]): AnswerStanceGroup[] => [{ turnIndex: 0, stances }];
+
 describe("StanceTags — 답변 단위 브랜드 스탠스 태그", () => {
   it.each(["ko", "en"] as const)("브랜드·스탠스·축 문구가 나오고 원시 키가 없다 (%s)", (locale) => {
     const msgs = locale === "ko" ? ko : en;
-    const html = render(<StanceTags stances={[OWN, RIVAL]} />, locale);
+    const html = render(<StanceTags groups={turn0(OWN, RIVAL)} />, locale);
     expect(html).not.toMatch(RAW_KEY);
     const s = msgs.answerAnalysis.mentions.answerModal.stance;
     expect(html).toContain(s.tagTitle);
@@ -73,27 +76,27 @@ describe("StanceTags — 답변 단위 브랜드 스탠스 태그", () => {
 
   it("세 상태가 서로 다른 문구다 — 확인됨 / 불일치 / 대조 불가 (F5)", () => {
     const s = ko.answerAnalysis.mentions.answerModal.stance;
-    const verified = render(<StanceTags stances={[OWN, RIVAL]} initialOpenId="0:e-hyundai" />);
+    const verified = render(<StanceTags groups={turn0(OWN, RIVAL)} initialOpenId="0:e-hyundai" />);
     expect(verified).toContain(OWN.evidenceText!);
     expect(verified).toContain(s.evidenceVerified);
     expect(verified).not.toContain(s.evidenceMismatch);
 
     // 불일치 — 인용문은 보여주되 **원문 위치를 주장하지 않는다**.
-    const mismatch = render(<StanceTags stances={[OWN, RIVAL]} initialOpenId="0:e-toyota" />);
+    const mismatch = render(<StanceTags groups={turn0(OWN, RIVAL)} initialOpenId="0:e-toyota" />);
     expect(mismatch).toContain(RIVAL.evidenceText!);
     expect(mismatch).toContain(s.evidenceMismatch);
     expect(mismatch).not.toContain(s.evidenceVerified);
 
     // 대조 불가(turn>0 등) — "코어가 환각했다"와 구분되는 별도 문구.
     const na: AnswerStanceTag = { ...RIVAL, turnIndex: 1, evidenceMatch: "unavailable" };
-    const unavailable = render(<StanceTags stances={[OWN, na]} initialOpenId="1:e-toyota" />);
+    const unavailable = render(<StanceTags groups={[{ turnIndex: 0, stances: [OWN] }, { turnIndex: 1, stances: [na] }]} initialOpenId="1:e-toyota" />);
     expect(unavailable).toContain(s.evidenceUnavailable);
     expect(unavailable).not.toContain(s.evidenceMismatch);
     expect(unavailable).not.toContain(s.evidenceVerified);
   });
 
   it("근거 패널은 기본 닫힘 — 태그 줄만 나온다", () => {
-    const html = render(<StanceTags stances={[OWN]} />);
+    const html = render(<StanceTags groups={turn0(OWN)} />);
     expect(html).not.toContain(ko.answerAnalysis.mentions.answerModal.stance.evidenceTitle);
   });
 
@@ -112,7 +115,7 @@ describe("StanceTags — 답변 단위 브랜드 스탠스 태그", () => {
       ...OWN, turnIndex: 1, stance: "negative", reason: "후속 선택에서 제외됨",
       evidenceMatch: "unavailable",
     };
-    const html = render(<StanceTags stances={[OWN, t2]} />);
+    const html = render(<StanceTags groups={[{ turnIndex: 0, stances: [OWN] }, { turnIndex: 1, stances: [t2] }]} />);
     const s = ko.answerAnalysis.mentions.answerModal.stance;
     // 턴이 둘이면 턴 헤더가 붙는다.
     expect(html).toContain(s.turn.replace("{n}", "1"));
@@ -124,7 +127,7 @@ describe("StanceTags — 답변 단위 브랜드 스탠스 태그", () => {
   });
 
   it("턴이 하나면 턴 헤더를 달지 않는다 (대다수 답변)", () => {
-    const html = render(<StanceTags stances={[OWN, RIVAL]} />);
+    const html = render(<StanceTags groups={turn0(OWN, RIVAL)} />);
     expect(html).not.toContain(ko.answerAnalysis.mentions.answerModal.stance.turn.replace("{n}", "1"));
   });
 
@@ -133,9 +136,19 @@ describe("StanceTags — 답변 단위 브랜드 스탠스 태그", () => {
       ...OWN, turnIndex: 1, stance: "negative", evidenceMatch: "unavailable",
       evidenceText: "후속 질문에서는 선택되지 않았다", reason: "후속 선택에서 제외됨",
     };
-    const html = render(<StanceTags stances={[OWN, t2]} initialOpenId="1:e-hyundai" />);
+    const html = render(<StanceTags groups={[{ turnIndex: 0, stances: [OWN] }, { turnIndex: 1, stances: [t2] }]} initialOpenId="1:e-hyundai" />);
     expect(html).toContain(t2.evidenceText!);
     expect(html).not.toContain(OWN.evidenceText!);
+  });
+
+  it("턴 묶음은 라우트가 보낸 순서 그대로 그린다 (모달은 정렬·그룹을 다시 하지 않는다)", () => {
+    const later: AnswerStanceTag = { ...RIVAL, turnIndex: 1 };
+    const html = render(<StanceTags groups={[{ turnIndex: 0, stances: [RIVAL, OWN] }, { turnIndex: 1, stances: [later] }]} />);
+    const s = ko.answerAnalysis.mentions.answerModal.stance;
+    expect(html.indexOf("Toyota")).toBeLessThan(html.indexOf("Hyundai"));
+    expect(html.indexOf(s.turn.replace("{n}", "1"))).toBeLessThan(html.indexOf(s.turn.replace("{n}", "2")));
+    expect(SRC).toContain("groups={body.detail.stanceGroups ?? []}");
+    expect(SRC).not.toMatch(/new Set\(stances/);
   });
 
   it("AC7 — 기존 밑줄·범례 배선은 무변경", () => {

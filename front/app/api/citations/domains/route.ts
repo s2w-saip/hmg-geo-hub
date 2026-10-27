@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import { hghErrorResponse } from "@/lib/hgh/errors";
-import { readCursorParam } from "@/lib/hgh/paginate";
-import { DOMAIN_PAGE, DOMAIN_SORTS, listCitationDomains, type DomainSort } from "@/lib/hgh/adapters/citations";
+import { DOMAIN_PAGE, DOMAIN_SORTS } from "@/lib/hgh/citation-route";
+import { screenGet } from "@/lib/screen";
+import type { DomainListPageView } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/citation-view";
 import { openCitationRoute, routeFail, routeJson } from "../_lib/route";
 
 // BFF: citation domain table pages read by the client (unit U7, BG-21 search / sort, D5 cursor).
@@ -9,10 +10,10 @@ import { openCitationRoute, routeFail, routeJson } from "../_lib/route";
 //   GET /api/citations/domains?<the screen's filter params>[&surface=website][&projectId=<uuid>]
 //       [&q=<text>][&sort=citations|share|coverage|prompts|skey][&dir=asc|desc]
 //       [&limit=1..200][&cursor=<next_cursor>]
-//   200 {rows: CitationDomainLive[] (+ skey, rank, matchRank), nextCursor, total}
+//   200 {rows: CitationDomainLive[] (+ skey, rank, matchRank, no = the row's '#'), nextCursor, total, views}
 //
-// The standard screen sends its ?competitor= picks too (they are part of its filter params), so
-// the backend numbers rank after the pick as the legacy table did. A bad sort / dir / limit ->
+// A thin proxy to the screen citation/domains (back/bff/screens/citation.py). The standard screen
+// sends its ?competitor= picks too (they are part of its filter params). A bad sort / dir / limit ->
 // 422 invalid_value; 409 cursor_stale is passed through (the client restarts from page one).
 // Gates and source: ../_lib/route.ts.
 export const dynamic = "force-dynamic";
@@ -30,15 +31,7 @@ export async function GET(req: NextRequest) {
   const opened = await openCitationRoute(q);
   if (opened instanceof Response) return opened;
   try {
-    const page = await listCitationDomains(opened.filters, opened.ctx, {
-      limit,
-      cursor: readCursorParam(q.get("cursor")),
-      q: search,
-      sort: sort as DomainSort,
-      ...(dir ? { dir: dir as "asc" | "desc" } : {}),
-      competitor: opened.competitor,
-    });
-    return routeJson(page);
+    return routeJson(await screenGet<DomainListPageView>("citation/domains", opened.query));
   } catch (e) {
     return hghErrorResponse(e);
   }

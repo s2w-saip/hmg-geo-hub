@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from "next-intl";
 import ko from "@/messages/ko.json";
 import type { CitationsLive } from "@/lib/scope/result-adapter";
 import { CitationsStandardView } from "./citations-standard-view";
+import { standardVmFor } from "./citation-vm.fixture";
 
 // GGMD "KPI 고도화 QA" #12 — "인용 화면에서 도메인 카테고리·경쟁사를 고른 뒤 적용이
 // 되지 않는다(기존 필터와 함께 적용돼야 함)".
@@ -50,10 +51,10 @@ function render(node: React.ReactNode) {
 
 describe("CitationsStandardView — 경쟁사 필터는 URL 축이다 (QA #12)", () => {
   const html = render(
-    <CitationsStandardView data={LIVE} prevSubKpis={null} prevBasisDate={null} typeCategories={null} toneSummary={null} />,
+    <CitationsStandardView data={LIVE} vm={standardVmFor(LIVE, { search: "geography=KR&competitor=bmw.com" })} typeChart={null} toneSummary={null} />,
   );
 
-  it("?competitor= 만으로 도메인 표가 좁혀진다 (seam prop 없이)", () => {
+  it("?competitor= 로 좁힌 서버 vm 의 도메인 표를 그린다", () => {
     const tbody = html.slice(html.indexOf("<tbody"), html.indexOf("</tbody>"));
     expect(tbody).toContain("bmw.com");
     expect(tbody).not.toContain("toyota.com");

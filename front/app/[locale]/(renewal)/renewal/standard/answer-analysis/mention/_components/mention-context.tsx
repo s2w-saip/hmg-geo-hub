@@ -5,9 +5,8 @@ import { useTranslations } from "next-intl";
 import { RnCardActions, useRnToast } from "@/components/renewal-ui";
 import { downloadCsv, type CsvCell } from "@/app/[locale]/(renewal)/renewal/_components/csv";
 import type { KpiTab } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/kpi-tab";
-import type { MentionsBrandLive } from "@/lib/scope/result-adapter";
 import type { RnMentionInput } from "./mention-input";
-import { OWN_KEY } from "./mention-model";
+import { OWN_KEY, type RnDrawerBrand } from "../_data/screen-types";
 
 // Shared state of the renewal Mention body: the reads (promises), the KPI tab, the compare
 // brands (colour follows the brand: 당사 navy, compare slots in pick order, the rest grey), the
@@ -32,8 +31,8 @@ export interface MentionCtx {
   kpi: KpiTab;
   setKpi: (k: KpiTab) => void;
   ownLabel: string;
-  /** brand rows of the body aggregate (all brands, server order = mentions desc) */
-  brands: MentionsBrandLive[];
+  /** the brand drawer's rows (one per body brand, server order = mentions desc) */
+  drawer: RnDrawerBrand[];
   /** tracked (당사) brand names */
   ownBrands: string[];
   pick: ComparePick;
@@ -56,19 +55,16 @@ export function useMention(): MentionCtx {
 }
 
 /**
- * Compare brands, resolved against the brand-trend series (only brands with a trend can be
- * compared). Suspends on the brand trend — call inside a card's <Suspense>.
+ * Compare brands, resolved against the covered competitors (only brands with a round trend can
+ * be compared; the API orders them by share of voice). Suspends on that read — call inside a
+ * card's <Suspense>. The pick is UI state: auto = the first covered brand.
  */
 export function useCompare(): { compare: string[]; covered: string[]; colorOf: (brand: string) => string; toggle: (brand: string) => void } {
-  const { input, pick, setPick, brands, ownBrands } = useMention();
-  const trend = use(input.brandTrend);
+  const { input, pick, setPick, ownBrands } = useMention();
+  const { covered } = use(input.compare);
   const t = useTranslations("renewal.mention.compare");
   const toast = useRnToast();
   return useMemo(() => {
-    const series = new Set((trend?.brands ?? []).filter((b) => !b.isTracked).map((b) => b.brand));
-    // covered competitors in share-of-voice order (the body aggregate's snapshot values)
-    const covered = [...brands].filter((b) => !b.isTracked && series.has(b.brand)).sort((a, b) => b.share - a.share).map((b) => b.brand);
-    for (const b of series) if (!covered.includes(b)) covered.push(b);
     const compare = pick.auto ? covered.slice(0, 1) : pick.brands.filter((b) => covered.includes(b));
     const colorOf = (brand: string) => {
       if (brand === OWN_KEY || ownBrands.includes(brand)) return OWN_COLOR;
@@ -82,7 +78,7 @@ export function useCompare(): { compare: string[]; covered: string[]; colorOf: (
       else setPick({ auto: false, brands: [...compare, brand] });
     };
     return { compare, covered, colorOf, toggle };
-  }, [trend, brands, ownBrands, pick, setPick, t, toast]);
+  }, [covered, ownBrands, pick, setPick, t, toast]);
 }
 
 export const pctTxt = (v: number | null | undefined) => (v == null ? "—" : `${v.toFixed(1)}%`);

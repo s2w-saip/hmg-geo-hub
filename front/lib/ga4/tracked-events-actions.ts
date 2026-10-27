@@ -13,14 +13,14 @@ import {
 import type { User } from "@/lib/auth/types";
 import { getTranslations } from "next-intl/server";
 import { canAccessRoute } from "@/lib/auth/route-policy";
-import { canReadAnalysis, isAnalysisApi } from "@/lib/hgh/adapters/filters";
+import { canReadAnalysis, isAnalysisApi } from "@/lib/hgh/analysis-access";
 import {
   fetchAdminConversionEvents,
   fetchConversionEvents,
   putAdminConversionEvents,
   putConversionEvents,
   toEventRows,
-} from "@/lib/hgh/adapters/funnel";
+} from "@/lib/hgh/conversion-events";
 import { hghSource, sourceGroupFor } from "@/lib/hgh/client";
 import { describeHghError, errorKindOf, isHghApiError } from "@/lib/hgh/errors";
 

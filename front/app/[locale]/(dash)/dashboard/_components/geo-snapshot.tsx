@@ -4,14 +4,21 @@ import { useTranslations, useLocale } from "next-intl";
 import { cn } from "@/lib/utils";
 import { countryName } from "@/lib/geo-catalog";
 import { rhqLabel } from "@/lib/rhq";
-import type { LiveGeo } from "../_data/live";
+import type { MarketCompetition } from "../_data/live-types";
+
+// The fields this snapshot draws (LiveGeo and the screens' GeoView both carry them).
+type SnapshotGeo = {
+  markets: (MarketCompetition & { region: string; countries: (MarketCompetition & { code: string })[] })[];
+  pending: string[];
+  ourLabel: string;
+};
 
 // GEO 스냅샷 — "시장별 경쟁 위치". 각 시장(권역→국가)에서 HMG가 경쟁사 대비 어디에
 // 서 있는지: HMG 합산 점유율(SoV) + 순위 + 최대 경쟁사. 국가 드릴다운은 그 시장의
 // 선두 HMG 브랜드를 보여줘 "독일=Kia, 한국=Hyundai" 같은 차이를 드러낸다. 권역(RHQ)은
 // 활성 브랜드 정본(lib/rhq)에서 파생 — 라벨은 권역 id로 조회. 미측정 권역은 "측정 예정".
 
-export function GeoSnapshot({ geo }: { geo: LiveGeo }) {
+export function GeoSnapshot({ geo }: { geo: SnapshotGeo }) {
   const t = useTranslations("dashboard.geo");
   const locale = useLocale();
   const { markets, pending } = geo;

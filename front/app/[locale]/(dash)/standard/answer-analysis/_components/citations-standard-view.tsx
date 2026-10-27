@@ -8,10 +8,10 @@
 // 답변 우호도별 인용 도메인(링크 타일) → 인용 도메인(주별 Top10 + 순위 표, 탭 드릴다운).
 //
 // 스트리밍 규약은 mention 탭과 같다 — 각 prop 은 값 또는 프로미스(useAwaited).
-// 인용 집계(data)는 하나의 큰 프로미스라 대부분 섹션이 그것을 기다리지만, 유형별
-// 구성·우호도 요약은 별도 집계라 자기 경계에서 따로 도착한다.
+// 숫자(비중·Δ·기준일·막대·도넛 중앙·엔진/유형 구성·표의 '#')는 화면 API(back/bff/screens/
+// citation.py, `citation/standard` 의 `vm`)가 계산해 보낸다 — 이 뷰는 그리기만 한다.
 
-import { Suspense, useDeferredValue, useMemo, useState } from "react";
+import { Suspense, useDeferredValue, useState } from "react";
 import { SectionDoneMarker } from "@/components/perf/section-marker";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -23,8 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useFilterTransition } from "@/components/dash/filter-transition";
-import type { CitationCategoryTotals, CitationToneSummary, CitationTypeCategoryRow, StandardSubKpis } from "@/lib/db/repositories/scope-aggregates";
-import type { OverviewCardDelta } from "@/lib/kpi/overview-card-values";
+import type { CitationToneSummary } from "@/lib/db/repositories/scope-aggregates";
 import type { CitationsLive } from "@/lib/scope/result-adapter";
 import { citationCategorySlug } from "@/lib/citation-categorizer/taxonomy";
 import { dateStamp } from "@/lib/export/csv";
@@ -32,19 +31,13 @@ import { downloadXlsx } from "@/lib/export/xlsx";
 import { cn } from "@/lib/utils";
 import { KpiHeroSkeleton, KpiSectionSkeleton } from "@/components/dash/section-skeleton";
 import {
-  DEALER_CATEGORY,
-  OFFICIAL_HMG_CATEGORY,
-  applyCompetitorPick,
-  applyCompetitorPickToCategories,
-  categoryBars,
-  categoryIncluded,
-  categoryShare,
   OFFICIAL_COMPETITOR_CATEGORY,
-  typeCategoryBars,
+  categoryIncluded,
   type CitationSectionDegraded,
+  type CitationStandardVm,
   type CitationTableSource,
+  type CitationTypeChart,
 } from "../_data/citation-view";
-import { deltaPp } from "../_data/kpi-view";
 import { DeltaBadge, pctText } from "./kpi/kpi-bits";
 import { useAwaited, type Awaitable } from "./kpi/mention-kpi-tab";
 import { EmptyState, PendingCard } from "./mentions-view";
@@ -61,38 +54,18 @@ import {
   useExportFailedNotice,
   useExportTask,
   useServerDomainTable,
-  type RankedDomainRow,
 } from "./citations-view";
-import { useActiveCitationCategories, useActiveCompetitors } from "./citation-url-axes";
+import { useActiveCitationCategories } from "./citation-url-axes";
 import { TypeCategoryChart } from "./type-category-chart";
 
 type Props = {
   data: Awaitable<CitationsLive | null>;
   /**
-   * @deprecated 2026-09-29 — 공식(HMG) 인용 비중의 Δ 가 더 이상 이 값을 읽지 않는다
-   * (종전 base URL 정의의 엔진 분해행 합이라 카테고리 정의와 다른 양이다). 호출부 호환을
-   * 위해 받기만 한다.
+   * 멘션 유형별 출처 카테고리 구성(유형 5행 × 100% 스택, 공식(HMG) 비중) — 화면 API 가 계산한 막대.
+   * null = 유형 집계가 일시 실패(지연 안내).
    */
-  prevSubKpis?: Awaitable<StandardSubKpis | null>;
-  /** @deprecated 2026-09-29 — `prevSubKpis` 와 같은 이유로 읽지 않는다. */
-  prevBasisDate?: Awaitable<string | null>;
-  /**
-   * 공식(HMG) 인용 비중의 **카드 Δ 정본**(`lib/kpi/overview-card-values.ts::overviewCardDelta`)
-   * — Overview ⑤ 카드 Δ 와 같은 함수·같은 입력이다. ⑤ 의 글로벌 분자가 공식(HMG) 카테고리로
-   * 바뀌어(제품 책임자 2026-09-29) 이 Δ 도 카테고리 기준이다.
-   *
-   * `null` 이면(격자 키 off · 조회 실패 · 자리가 2개 미만) **직전 회차 카테고리 합계**
-   * (`prevCategories`)으로 낸다 — 딜러·카테고리 바 Δ 와 같은 기준이다. 종전 폴백
-   * (`prevSubKpis` = base URL 정의의 엔진 분해행 합)은 정의가 달라 쓰지 않는다.
-   */
-  officialDelta?: Awaitable<OverviewCardDelta | null>;
-  typeCategories: Awaitable<CitationTypeCategoryRow[] | null>;
+  typeChart: Awaitable<CitationTypeChart | null>;
   toneSummary: Awaitable<CitationToneSummary | null>;
-  /**
-   * **직전 회차 자리**의 카테고리별 인용 수 — 딜러 비중 Δ·카테고리 바 Δ(피그마 D13).
-   * 자리는 Overview 카드 Δ 와 같다(`server.ts::citationCategoriesPrevRound`). 없으면 Δ 생략.
-   */
-  prevCategories?: Awaitable<{ totals: CitationCategoryTotals; asOf: string; current?: CitationCategoryTotals } | null>;
   /**
    * `data` 의 `null` 이 **예산 초과**인가(= 데이터 없음이 아니라 지연).
    * 판정은 서버의 요청 스코프 표식(`wasDegraded("standardCitations")`)이라 이 클라이언트
@@ -107,8 +80,12 @@ type Props = {
    * 안내(answerAnalysis.mentions.kpi.degraded)를 낸다. 없으면 종전 그대로.
    */
   sectionDegraded?: Awaitable<CitationSectionDegraded | null>;
-  /** 렌더 테스트 seam. */
-  initialCompetitors?: string[];
+  /**
+   * 화면 API 가 계산한 숫자(`citation/standard` 의 `vm`): 인용 현황 비중·Δ(Overview 카드 Δ 정본, 없으면
+   * 직전 회차 카테고리 합계 대비)·기준일, 카테고리 막대·도넛 중앙(경쟁사 선택 반영), 엔진 구성, 표의 첫
+   * 행(경쟁사 선택 뒤, '#' 포함). `data` 가 null 이면 null.
+   */
+  vm: Awaitable<CitationStandardVm | null>;
   /**
    * API 원천(unit U7)일 때만: 도메인 표의 검색·정렬(전 출처 대상, BG-21)과 행 드릴다운을 읽을
    * BFF 조건. 없거나 null 이면 종전 그대로(받은 행을 클라이언트에서 검색·정렬, 인라인 드릴다운).
@@ -119,46 +96,32 @@ type Props = {
 export const DOMAIN_RANK_LIMIT = 100;
 
 export function CitationsStandardView(props: Props) {
-  // 경쟁사 선택은 클라이언트 state 가 아니라 **URL 축(`?competitor=`)** 이다(QA #12) —
-  // 카테고리 칩·필터 적용으로 서버 렌더가 돌아도 유지되고, 하위 페이지 링크에도
-  // 다른 필터와 함께 실려 나간다. initialCompetitors 는 렌더 테스트 seam.
-  const urlCompetitors = useActiveCompetitors();
-  const competitorKey = urlCompetitors.join("~");
-  const picked = useMemo(
-    () => new Set<string>(props.initialCompetitors ?? urlCompetitors),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [props.initialCompetitors, competitorKey],
-  );
+  // 경쟁사 선택은 클라이언트 state 가 아니라 **URL 축(`?competitor=`)** 이다(QA #12) — 서버가 그
+  // 선택을 반영한 카테고리 값·표 행을 `vm` 으로 보낸다.
   return (
     <TooltipProvider delayDuration={200}>
       <div className="flex flex-col gap-6">
         {/* QA 2차 #2(2026-09-10) — 출처 카테고리·경쟁사는 칩이 아니라 **필터 패널 축**이다
             (DimensionFilterPanel 의 `답변 필터` 행). 이 본문은 URL 축을 읽기만 한다. */}
         <Suspense fallback={<KpiHeroSkeleton />}>
-          <StatusBlock
-            data={props.data}
-            officialDelta={props.officialDelta ?? null}
-            prevCategories={props.prevCategories ?? null}
-            dataDegraded={props.dataDegraded ?? false}
-            sectionDegraded={props.sectionDegraded ?? null}
-          />
+          <StatusBlock data={props.data} vm={props.vm} dataDegraded={props.dataDegraded ?? false} />
         </Suspense>
         <Suspense fallback={<KpiSectionSkeleton />}>
-          <CategoryBlock data={props.data} prevCategories={props.prevCategories ?? null} picked={picked} sectionDegraded={props.sectionDegraded ?? null} />
+          <CategoryBlock data={props.data} vm={props.vm} sectionDegraded={props.sectionDegraded ?? null} />
         </Suspense>
         <div className="grid gap-6 lg:grid-cols-2">
           <Suspense fallback={<KpiSectionSkeleton />}>
-            <EngineBlock data={props.data} />
+            <EngineBlock data={props.data} vm={props.vm} />
           </Suspense>
           <Suspense fallback={<KpiSectionSkeleton />}>
-            <TypeBlock typeCategories={props.typeCategories} />
+            <TypeBlock typeChart={props.typeChart} />
           </Suspense>
         </div>
         <Suspense fallback={<KpiSectionSkeleton />}>
           <ToneBlock toneSummary={props.toneSummary} />
         </Suspense>
         <Suspense fallback={<KpiSectionSkeleton />}>
-          <DomainsBlock data={props.data} picked={picked} tableSource={props.tableSource ?? null} sectionDegraded={props.sectionDegraded ?? null} />
+          <DomainsBlock data={props.data} vm={props.vm} tableSource={props.tableSource ?? null} sectionDegraded={props.sectionDegraded ?? null} />
         </Suspense>
       </div>
     </TooltipProvider>
@@ -186,31 +149,18 @@ function useSubpageHref() {
 }
 
 // ─── 인용 현황 ────────────────────────────────────────────────────────────────
-/** 직전 스냅샷의 카테고리 비중(%) — Δ(pp) 계산용. */
-function prevCategoryShare(prev: { totals: CitationCategoryTotals } | null | undefined, name: string): number | null {
-  if (!prev || prev.totals.total <= 0) return null;
-  return Math.round((1000 * (prev.totals.byCategory[name] ?? 0)) / prev.totals.total) / 10;
-}
-
-function StatusBlock({
-  data,
-  officialDelta,
-  prevCategories,
-  dataDegraded,
-  sectionDegraded,
-}: Pick<Props, "data" | "officialDelta" | "prevCategories" | "dataDegraded" | "sectionDegraded">) {
+function StatusBlock({ data, vm, dataDegraded }: Pick<Props, "data" | "vm" | "dataDegraded">) {
   const t = useTranslations("answerAnalysis.citations.v2.status");
   const tRoot = useTranslations("answerAnalysis");
   const tKpi = useTranslations("answerAnalysis.mentions.kpi");
   const live = useAwaited(data);
+  const model = useAwaited(vm);
   const degraded = useAwaited(dataDegraded ?? false);
-  const sections = useAwaited(sectionDegraded ?? null);
-  const active = useActiveCitationCategories();
   const href = useSubpageHref();
   // `live == null` 은 두 뜻이다 — ① 이 필터에 데이터가 없다 ② 집계가 예산에 걸렸다.
   // 값으로는 구분이 안 돼(둘 다 null) 종전에는 ②를 "데이터 없음"으로 오독했다.
   // 유형별 구성 블록(TypeBlock)이 이미 쓰는 문구를 그대로 재사용한다(새 문자열 없음).
-  if (!live)
+  if (!live || !model)
     return (
       <>
         {degraded ? (
@@ -222,16 +172,10 @@ function StatusBlock({
       </>
     );
   // 공식(HMG) 인용 비중 = 아래 "출처 카테고리별 현황" 의 Official (HMG) 비중과 **같은 값**
-  // (제품 책임자 2026-09-29) — 같은 `live.categories`(같은 분류·같은 오버라이드·같은 `?source=`
-  // 모집단)에서 같은 함수로 낸다. 종전의 `live.summary.officialOwnShare`(base URL prefix
-  // 행 단위 매칭)는 website·project 인용 화면(`CitationsView`)에서만 쓴다.
-  const officialOwn = categoryShare(live.categories, OFFICIAL_HMG_CATEGORY);
-  const dealer = categoryShare(live.categories, DEALER_CATEGORY);
-  const ownIncluded = categoryIncluded(active, OFFICIAL_HMG_CATEGORY);
-  const split = live.promptSplit ?? null;
-  // 분할 조회가 일시 실패(P6 B041)면 빈('—') 비활성 타일 대신 기존 지연 안내 — 아래 우호도 블록이
-  // 요약 실패 때 타일 자리에 내는 것과 같은 문단이다. 공식(HMG) 미포함이면 종전대로 비활성 타일.
-  const splitDegraded = ownIncluded && !split && Boolean(sections?.split);
+  // (제품 책임자 2026-09-29) — 서버가 같은 카테고리 합계에서 같은 규칙으로 낸다. Δ 는 카드 Δ 정본이
+  // 있으면 그것, 없으면 직전 회차 카테고리 합계 대비다. 분할 조회가 일시 실패(P6 B041)면 빈('—')
+  // 비활성 타일 대신 기존 지연 안내(splitDegraded). 공식(HMG) 미포함이면 종전대로 비활성 타일.
+  const s = model.status;
   return (
     <>
       <section className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
@@ -244,39 +188,35 @@ function StatusBlock({
           <div className="flex min-h-[110px] flex-col justify-center gap-1.5 rounded-lg border border-border p-5">
             <div className="text-sm font-medium text-ink-700/80">{t("officialOwn")}</div>
             <div className="flex items-baseline gap-2">
-              <span className="text-[28px] leading-none font-bold tracking-tight tabular-nums">{pctText(officialOwn)}</span>
-              <Suspense fallback={null}>
-                <OfficialDelta officialDelta={officialDelta ?? null} prevCategories={prevCategories} current={officialOwn} />
-              </Suspense>
+              <span className="text-[28px] leading-none font-bold tracking-tight tabular-nums">{pctText(s.officialOwn)}</span>
+              <DeltaBadge value={s.officialDelta} unit="pp" size="md" />
             </div>
           </div>
           <div className="flex min-h-[110px] flex-col justify-center gap-1.5 rounded-lg border border-border p-5">
             <div className="text-sm font-medium text-ink-700/80">{t("dealer")}</div>
             <div className="flex items-baseline gap-2">
-              <span className="text-[28px] leading-none font-bold tracking-tight tabular-nums">{pctText(dealer)}</span>
-              <Suspense fallback={null}>
-                <CategoryDelta prevCategories={prevCategories} name={DEALER_CATEGORY} current={dealer} />
-              </Suspense>
+              <span className="text-[28px] leading-none font-bold tracking-tight tabular-nums">{pctText(s.dealer)}</span>
+              <DeltaBadge value={s.dealerDelta} unit="pp" size="md" />
             </div>
           </div>
           <div className="flex flex-col gap-2">
-            {splitDegraded ? (
+            {s.splitDegraded ? (
               <p className="py-4 text-center text-xs text-muted-foreground">{tKpi("degraded")}</p>
             ) : (
               <>
                 <LinkTile
                   label={t("ownedPrompts")}
-                  count={split?.ownedCount ?? null}
+                  count={s.ownedCount}
                   href={href("prompts", { tab: "owned" })}
-                  disabled={!ownIncluded || !split}
+                  disabled={s.tilesDisabled}
                   disabledHint={t("requiresOwn")}
                   tone="brand"
                 />
                 <LinkTile
                   label={t("uncitedPrompts")}
-                  count={split?.uncitedCount ?? null}
+                  count={s.uncitedCount}
                   href={href("prompts", { tab: "uncited" })}
-                  disabled={!ownIncluded || !split}
+                  disabled={s.tilesDisabled}
                   disabledHint={t("requiresOwn")}
                   tone="warn"
                 />
@@ -285,57 +225,28 @@ function StatusBlock({
           </div>
         </div>
       </section>
-      <Suspense fallback={null}>
-        <StatusBasis prevCategories={prevCategories} officialDelta={officialDelta ?? null} />
-      </Suspense>
+      <StatusBasis basis={s.basis} />
       <SectionDoneMarker id="standard-citation:status" />
     </>
   );
 }
 
-function CategoryDelta({ prevCategories, name, current, size = "md" }: { prevCategories: Props["prevCategories"]; name: string; current: number | null; size?: "sm" | "md" }) {
-  const prev = useAwaited(prevCategories ?? null);
-  const previous = prevCategoryShare(prev, name);
-  if (previous == null) return null;
-  // 두 값은 같은 단위(회차 하나)여야 한다. API 원천은 직전 회차와 같은 추이의 마지막 회차(`current`)를 싣는다 — 기간이면 카드는
-  // 기간 누적이라 카드 − 직전 회차는 증감이 아니다(공식(HMG) Δ 정본도 추이 마지막 − 직전). 없으면(legacy) 종전대로 카드 값.
-  const base = prev?.current ? prevCategoryShare({ totals: prev.current }, name) : current;
-  return <DeltaBadge value={deltaPp(base, previous)} unit="pp" size={size} />;
-}
-
-/**
- * 공식(HMG) 인용 비중의 Δ. **카드 Δ 정본이 있으면 그것을 그대로 쓴다** — 계산하지 않는다
- * (`Props.officialDelta` 머리 주석). 없으면 직전 회차 카테고리 합계 대비다(딜러와 같은 기준).
- */
-function OfficialDelta({ officialDelta, prevCategories, current }: {
-  officialDelta: Awaitable<OverviewCardDelta | null> | null;
-  prevCategories: Props["prevCategories"];
-  current: number | null;
-}) {
-  const card = useAwaited(officialDelta ?? null);
-  if (card) return <DeltaBadge value={card.delta} unit="pp" size="md" />;
-  return <CategoryDelta prevCategories={prevCategories} name={OFFICIAL_HMG_CATEGORY} current={current} />;
-}
 /** Δ 기준일 — 본문 문단이 아니라 배지 title(툴팁)로만(제품 결정: 오독 방지용 외 ⓘ). */
-function StatusBasis({ prevCategories, officialDelta }: Pick<Props, "prevCategories"> & {
-  officialDelta: Awaitable<OverviewCardDelta | null> | null;
-}) {
+function StatusBasis({ basis }: { basis: CitationStandardVm["status"]["basis"] }) {
   const t = useTranslations("answerAnalysis.citations.v2.status");
-  const card = useAwaited(officialDelta ?? null);
-  const prev = useAwaited(prevCategories ?? null);
   // 카드 Δ 정본을 쓰는 동안 공식(HMG)의 기준은 **직전 회차**다 — 날짜도 그 Δ 가 실어 온 자리 날짜.
-  if (card) {
+  if (basis?.kind === "card") {
     return (
       <p className="sr-only">
-        {t("deltaBasisOwnRound", { date: card.basisDate })}{" "}
-        {t("deltaBasisCategory", { date: prev?.asOf ?? card.basisDate })}
+        {t("deltaBasisOwnRound", { date: basis.ownDate })}{" "}
+        {t("deltaBasisCategory", { date: basis.categoryDate })}
       </p>
     );
   }
   // 폴백에서는 공식(HMG)·딜러·카테고리 Δ 가 **같은 기준**(직전 회차 카테고리 합계)이라
   // 한 문장이면 된다.
-  if (!prev) return null;
-  return <p className="sr-only">{t("deltaBasisCategory", { date: prev.asOf })}</p>;
+  if (!basis) return null;
+  return <p className="sr-only">{t("deltaBasisCategory", { date: basis.categoryDate })}</p>;
 }
 
 function LinkTile({ label, count, href, disabled, disabledHint, tone, size = "md" }: {
@@ -403,41 +314,22 @@ function useSourceToggle() {
   };
 }
 
-function CategoryBlock({
-  data,
-  prevCategories,
-  picked,
-  sectionDegraded,
-}: Pick<Props, "data" | "prevCategories" | "sectionDegraded"> & { picked: ReadonlySet<string> }) {
+function CategoryBlock({ data, vm, sectionDegraded }: Pick<Props, "data" | "vm" | "sectionDegraded">) {
   const t = useTranslations("answerAnalysis.citations.v2.categoryStatus");
   const tCit = useTranslations("answerAnalysis.citations");
   const tComp = useTranslations("answerAnalysis.citations.v2.competitor");
   const tKpi = useTranslations("answerAnalysis.mentions.kpi");
   const live = useAwaited(data);
+  const model = useAwaited(vm);
   const sections = useAwaited(sectionDegraded ?? null);
   const label = useCatLabel();
   const active = useActiveCitationCategories();
   const toggleSource = useSourceToggle();
-  // QA 2차 #5-(c): 경쟁사 선택(`?competitor=`)이 도메인 표에만 걸려 있어 공식(경쟁사)
-  // 값이 늘 전량이었다. 반영 범위는 이 섹션 + 도메인 표까지(제품 결정 D6) — 서버 축
-  // 승격은 엔진별·유형별까지 좁혀 고객이 요구하지 않은 화면이 전부 바뀐다.
-  // 막대·도넛·공용 범례가 **같은 배열**을 봐야 서로 어긋나지 않는다.
-  const categories = useMemo(
-    () => applyCompetitorPickToCategories(live?.categories, live?.domains ?? [], picked),
-    [live, picked],
-  );
-  // 분모 = 경쟁사 선택 **전** 전체 인용 수(제품 책임자 2026-09-29). 선택은 공식(경쟁사) 값만 줄이고
-  // 다른 카테고리 비중은 그대로 둔다 — 공식(HMG) 이 인용 현황 카드·Overview ⑤ 와 같은 값을 유지한다.
-  const fullTotal = useMemo(
-    () => (live?.categories ?? []).reduce((s, c) => s + c.value, 0),
-    [live],
-  );
-  const bars = useMemo(() => categoryBars(categories, fullTotal), [categories, fullTotal]);
-  const single = active.length === 1;
-  // Δ 는 직전 회차 **전량** 기준이다. 분모를 전체로 유지하므로 선택 중에도 다른 카테고리 Δ 는
-  // 그대로 유효하고, 값이 선택분으로 줄어든 공식(경쟁사) 막대 Δ 만 숨긴다(제품 결정 D5 의 범위 축소).
-  const competitorPicked = picked.size > 0;
-  if (!live) return null;
+  if (!live || !model) return null;
+  // QA 2차 #5-(c): 경쟁사 선택(`?competitor=`)은 이 섹션 + 도메인 표까지 반영한다(제품 결정 D6). 서버가
+  // 공식(경쟁사) 값을 선택분으로 바꾼 카테고리(도넛)와 막대를 보낸다 — 분모는 선택 **전** 전체 인용 수
+  // (제품 책임자 2026-09-29). Δ 는 직전 회차 전량 기준이고, 선택 중 공식(경쟁사) 막대 Δ 만 없다(D5).
+  const { bars, categories, competitorPicked, single } = model.category;
   return (
     <section className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
       <header className="flex flex-col gap-0.5">
@@ -470,9 +362,7 @@ function CategoryBlock({
                   <span className="shrink-0 whitespace-nowrap text-right tabular-nums text-foreground">{b.value.toLocaleString()}</span>
                   <span className="shrink-0 whitespace-nowrap text-right">
                     {competitorPicked && b.name === OFFICIAL_COMPETITOR_CATEGORY ? null : (
-                      <Suspense fallback={null}>
-                        <CategoryDelta prevCategories={prevCategories} name={b.name} current={b.pct} size="sm" />
-                      </Suspense>
+                      <DeltaBadge value={b.delta} unit="pp" size="sm" />
                     )}
                   </span>
                 </li>
@@ -485,7 +375,7 @@ function CategoryBlock({
             title={t("shareTitle")}
             centerLabel={t("officialCenter")}
             data={categories}
-            total={fullTotal}
+            officialPct={model.category.officialPct}
             activeCategories={active}
             onSliceClick={toggleSource}
             label={label}
@@ -523,23 +413,23 @@ function CategoryBlock({
 }
 
 // ─── 엔진별 · 유형별 ─────────────────────────────────────────────────────────
-function EngineBlock({ data }: Pick<Props, "data">) {
+function EngineBlock({ data, vm }: Pick<Props, "data" | "vm">) {
   const tCit = useTranslations("answerAnalysis.citations");
   const tRoot = useTranslations("answerAnalysis");
   const live = useAwaited(data);
+  const model = useAwaited(vm);
   const label = useCatLabel();
-  const active = useActiveCitationCategories();
   const done = <SectionDoneMarker id="standard-citation:engine" />;
-  if (!live) return done;
+  if (!live || !model) return done;
   return (
     <>
-      {live.engineCategories?.length ? (
+      {model.engineChart ? (
         <EngineCategoryChart
           title={tCit("engineCategory.title")}
           hint={tCit("engineCategory.hint")}
-          data={live.engineCategories}
+          chart={model.engineChart}
           label={label}
-          absolute={active.length === 1}
+          absolute={model.category.single}
           variant="standard"
         />
       ) : (
@@ -549,14 +439,13 @@ function EngineBlock({ data }: Pick<Props, "data">) {
     </>
   );
 }
-function TypeBlock({ typeCategories }: Pick<Props, "typeCategories">) {
+function TypeBlock({ typeChart }: Pick<Props, "typeChart">) {
   const t = useTranslations("answerAnalysis.citations.v2.typeCategory");
   const tKpi = useTranslations("answerAnalysis.mentions.kpi");
-  const rows = useAwaited(typeCategories);
+  const chart = useAwaited(typeChart);
   const label = useCatLabel();
-  const vm = useMemo(() => typeCategoryBars(rows), [rows]);
   const done = <SectionDoneMarker id="standard-citation:type" />;
-  if (rows == null)
+  if (chart == null)
     return (
       <>
         <PendingCard title={t("title")} label={tKpi("degraded")} />
@@ -565,7 +454,7 @@ function TypeBlock({ typeCategories }: Pick<Props, "typeCategories">) {
     );
   return (
     <>
-      <TypeCategoryChart series={vm.series} bars={vm.bars} label={label} />
+      <TypeCategoryChart series={chart.series} bars={chart.bars} hasAny={chart.hasAny} label={label} />
       {done}
     </>
   );
@@ -602,12 +491,12 @@ type SortKey = "domain" | "citations" | "share" | "coverageRate";
 
 function DomainsBlock({
   data,
-  picked,
+  vm,
   tableSource,
   sectionDegraded,
 }: {
   data: Props["data"];
-  picked: Set<string>;
+  vm: Props["vm"];
   tableSource: Awaitable<CitationTableSource | null>;
   sectionDegraded: Awaitable<CitationSectionDegraded | null>;
 }) {
@@ -617,6 +506,7 @@ function DomainsBlock({
   const tKpi = useTranslations("answerAnalysis.mentions.kpi");
   const tFilter = useTranslations("answerAnalysis.filters");
   const live = useAwaited(data);
+  const model = useAwaited(vm);
   const source = useAwaited(tableSource);
   const sections = useAwaited(sectionDegraded);
   // 엑셀 생성은 한 번에 하나(버튼 비활성), 실패는 기존 문구 토스트(P6 B048).
@@ -628,30 +518,17 @@ function DomainsBlock({
   const [asc, setAsc] = useState(false);
   const [expanded, setExpanded] = useState<{ domain: string; mode: "urls" | "prompts" } | null>(null);
 
-  const legacySorted = useMemo(() => {
-    const q = deferredSearch.trim().toLowerCase();
-    const base = applyCompetitorPick(live?.domains ?? [], picked).map((r, i) => ({ ...r, rank: i + 1 }));
-    const arr = base.filter((r) => !q || r.domain.toLowerCase().includes(q));
-    arr.sort((a, b) => {
-      const dir = asc ? 1 : -1;
-      if (sortKey === "domain") return dir * a.domain.localeCompare(b.domain);
-      return dir * (a[sortKey] - b[sortKey]);
-    });
-    return arr.slice(0, DOMAIN_RANK_LIMIT);
-  }, [live, picked, deferredSearch, sortKey, asc]);
-  // API 원천: 검색·정렬은 서버가 전 출처에서 하고(U7-N5), '#' 은 경쟁사 선택 뒤·검색 전 인용
-  // 순위(rank)다. 현행이 선택 뒤 번호를 매기고 검색한 것과 같은 규칙이다. 표는 여전히 상위 100.
+  // 검색·정렬은 서버가 전 출처에서 하고(U7-N5), '#'(no) 은 경쟁사 선택 뒤·검색 전 인용 순위(rank)다.
+  // 첫 행(경쟁사 선택 반영)은 화면 API 가 보낸다. 표는 여전히 상위 100.
   const table = useServerDomainTable({
     source,
-    initial: applyCompetitorPick((live?.domains ?? []) as RankedDomainRow[], picked),
+    initial: model?.domains ?? [],
     q: deferredSearch,
     sortKey,
     asc,
     pageSize: DOMAIN_RANK_LIMIT,
   });
-  const sorted = table.active
-    ? table.rows.slice(0, DOMAIN_RANK_LIMIT).map((r, i) => ({ ...r, rank: r.rank ?? i + 1 }))
-    : legacySorted;
+  const sorted = (table.active ? table.rows : (model?.domains ?? [])).slice(0, DOMAIN_RANK_LIMIT);
 
   if (!live) return null;
   function clickHeader(k: SortKey) {
@@ -659,7 +536,7 @@ function DomainsBlock({
     else { setSortKey(k); setAsc(k === "domain"); }
   }
   function onExport() {
-    const rows = sorted.map((r) => [r.rank, r.domain, r.category ? label(r.category) : "", r.citations, r.share.toFixed(1), r.prompts, r.coverageRate.toFixed(1)]);
+    const rows = sorted.map((r) => [r.no, r.domain, r.category ? label(r.category) : "", r.citations, r.share.toFixed(1), r.prompts, r.coverageRate.toFixed(1)]);
     void exportTask.run(() =>
       downloadXlsx(
         `citation-sources-${dateStamp()}`,
@@ -728,7 +605,7 @@ function DomainsBlock({
                 <DomainRow
                   key={r.domain}
                   row={r}
-                  rank={r.rank}
+                  rank={r.no}
                   detailQuery={source?.query}
                   openMode={expanded?.domain === r.domain ? expanded.mode : null}
                   onToggle={(mode) => setExpanded((cur) => (cur && cur.domain === r.domain ? null : { domain: r.domain, mode }))}

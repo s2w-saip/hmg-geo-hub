@@ -29,8 +29,7 @@ import {
   trendGapBridgeLines,
   trendGapHidesTooltip,
 } from "@/components/dash/trend-gap-overlay";
-import type { KpiMetric, KpiTrendPoint } from "../../_data/kpi-view";
-import { coverageEntries } from "../../_data/kpi-view";
+import type { CoverageEntry, KpiMetric, KpiTrendPoint } from "../../_data/mention-screen";
 import { DeltaBadge } from "./kpi-bits";
 import { AUTO_PCT_DOMAIN, BandedGrid, ChartBox } from "./chart-box";
 
@@ -47,16 +46,16 @@ interface TooltipPayloadItem {
 export function KpiTrendChart({
   metric,
   points,
+  coverage,
   height = 220,
 }: {
   metric: KpiMetric;
   points: KpiTrendPoint[];
+  /** Coverage label entries (the measured slots of `points`), computed by the screen. */
+  coverage: CoverageEntry[];
   height?: number;
 }) {
   const t = useTranslations("answerAnalysis.mentions.kpi");
-  // 커버리지는 **원본** points 로 센다 — 갭 슬롯은 measuredDays 0 이라 어차피 항목이
-  // 없다(계획은 행을 건드리지 않으므로 `gapPlan.rows` 와 같은 배열이다).
-  const coverage = coverageEntries(points);
   // 수집 오류 회차 — 음영 + 이웃 연결(BrandTrendChart 와 같은 자세). 시리즈는 하나뿐이다.
   const gapPlan = planTrendGaps(points, { xKey: "bucketStart", seriesKeys: ["pct"], family: "mention" });
 

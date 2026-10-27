@@ -6,6 +6,7 @@ import { hghSource } from "@/lib/hgh/client";
 import { getSessionFromApi } from "@/lib/hgh/adapters/session";
 import { effectiveMenuGroups } from "./menu-groups";
 import type { AllowedScope, Session, User } from "./types";
+import { localReadOnly } from "@/lib/local-readonly";
 
 // Resolves the authenticated user into our domain Session.
 //
@@ -23,9 +24,14 @@ import type { AllowedScope, Session, User } from "./types";
 // Wrapped in React cache(): within a single request the DashLayout, the page it
 // renders, and any nested layout each call getSession(). cache() collapses them
 // into ONE verification + ONE profile query (or ONE /v1/auth/me) per request.
-export const getSession = cache(async (): Promise<Session | null> =>
-  hghSource("SESSION") === "api" ? getSessionFromApi() : getSessionLegacy(),
-);
+export const getSession = cache(async (): Promise<Session | null> => {
+  if (localReadOnly()) {
+    // This identifies the configured database reader, not a simulated website account.
+    return { user: { id: "geo_readonly", email: "geo_readonly", role: "local_reader",
+      scope: { all: true }, operator: "none", menuGroups: ["standard", "website", "project"] } };
+  }
+  return hghSource("SESSION") === "api" ? getSessionFromApi() : getSessionLegacy();
+});
 
 // Legacy source (unchanged body of the previous getSession).
 //

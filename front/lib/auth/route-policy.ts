@@ -25,13 +25,13 @@ import type { Role, MenuGroup } from "./types";
 
 // 내부 4역할 — 표준(글로벌) 그룹의 기본 시청자. vendor(외부 수행사)와
 // website(웹사이트 전용 열람)는 제외.
-const STANDARD_VIEWERS: Role[] = ["hq", "region", "country", "admin"];
+const STANDARD_VIEWERS: Role[] = ["hq", "region", "country", "admin", "local_reader"];
 // 웹사이트 그룹 = 내부 4역할 + website (2026-07-22: [글로벌X, 웹O, 프로젝트X]
 // 계정 — 본인 공식 사이트 대시보드만 확인). GNB/랜딩 특수처리는 불필요:
 // visibleGroups()가 website 탭만 그리고 defaultLandingFor()가 /website 로 보낸다.
 const WEBSITE_VIEWERS: Role[] = [...STANDARD_VIEWERS, "website"];
 // 프로젝트 그룹 — vendor 포함, website 제외(피드백: 프로젝트X).
-const PROJECT_VIEWERS: Role[] = ["hq", "region", "country", "admin", "vendor"];
+const PROJECT_VIEWERS: Role[] = ["hq", "region", "country", "admin", "vendor", "local_reader"];
 const ADMIN_ONLY: Role[] = ["admin"];
 // Project creation is a COST action — route access is necessary but not
 // sufficient. The actual create gate is the orthogonal operator authority
@@ -408,7 +408,7 @@ export function visibleRoutes(
   return ROUTES.filter(
     (r) =>
       r.roles.includes(role) &&
-      !("hidden" in r && r.hidden === true) &&
+      !("hidden" in r && r.hidden === true && !(role === "local_reader" && ["aiFunnelVisibility", "customerInterest", "customerInterestGoogleKeywords", "customerInterestSocialScraping", "websiteAiFunnelAcr"].includes(r.key))) &&
       groupAllowed(r.group, menuGroups),
   );
 }

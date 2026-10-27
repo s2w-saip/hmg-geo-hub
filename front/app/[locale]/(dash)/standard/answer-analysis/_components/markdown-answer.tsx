@@ -11,6 +11,7 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import type { Sentiment, SentimentSpan } from "@/lib/answer-sentiment/spans";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import type { HighlightTerm } from "../_data/drilldown-screen-types";
 
 // Renders a real AI answer body as markdown and paints the drilled brand + the
 // models that scope's ontology rolls up to it like a highlighter pen.
@@ -20,6 +21,12 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 // hit in a <mark> tagged brand vs model so two-tone CSS + a staggered sweep
 // animation (.geo-hl in globals.css) can light them up. Code / pre / existing
 // marks are skipped so we never rewrite literal code or double-wrap.
+//
+// The term list (which surfaces, which colour, longest first, exact-case short forms) comes
+// precomputed with the answer reference (`highlightTerms`, screen mention/drill-*). A caller that
+// only has the raw surfaces (brandTerms / modelTerms, e.g. the raw-data QA pane) gets the same list
+// from highlightTermsOf. Likewise each sentiment span arrives with its sentence (`text`); a span
+// without it is cut from the answer text here.
 
 type HastNode = {
   type: string;
@@ -35,9 +42,11 @@ function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-// Builds a unified rehype plugin bound to the given terms, or null when there is
-// nothing to highlight (caller then renders plain markdown).
-function makeHighlightPlugin(brandTerms: string[], modelTerms: string[]) {
+/**
+ * The highlighter's term list from raw surfaces (for callers without precomputed `highlightTerms`;
+ * the drilldown routes send the same list, back/bff/screens/mention_drilldown.py highlight_terms).
+ */
+export function highlightTermsOf(brandTerms: string[], modelTerms: string[]): HighlightTerm[] {
   const kind = new Map<string, "brand" | "model">();
   // Short surfaces (≤3 chars — e.g. the Lexus model codes "IS"/"ES") collide with
   // ordinary words ("is", or "es" inside "best/uses/series/…"). For those we keep
@@ -60,7 +69,17 @@ function makeHighlightPlugin(brandTerms: string[], modelTerms: string[]) {
   for (const t of modelTerms) add(t, "model");
   for (const t of brandTerms) add(t, "brand");
   const terms = [...kind.keys()].sort((a, b) => b.length - a.length); // longest first
-  if (terms.length === 0) return null;
+  return terms.map((term) => ({ term, kind: kind.get(term)!, ...(shortForms.has(term) ? { forms: [...shortForms.get(term)!] } : {}) }));
+}
+
+// Builds a unified rehype plugin bound to the given term list (longest first), or null when there
+// is nothing to highlight (caller then renders plain markdown).
+function makeHighlightPlugin(list: readonly HighlightTerm[]) {
+  if (list.length === 0) return null;
+  const terms = list.map((h) => h.term);
+  const kind = new Map<string, "brand" | "model">(list.map((h) => [h.term, h.kind]));
+  // Short surfaces (≤3 chars) keep their original-case forms: only an exact-case hit paints.
+  const shortForms = new Map<string, Set<string>>(list.filter((h) => h.forms).map((h) => [h.term, new Set(h.forms)]));
   // Token boundaries, script-aware. A surface must not match inside a longer word
   // — that is what stops "es" painting every "best/uses/vehicles".
   //
@@ -194,15 +213,20 @@ function isAllPhrasing(children: HastNode[]): boolean {
 // 문장이 마크다운 문법 안에서 갈려(`**정숙성**` 처럼) 어느 phrasing 컨테이너 안에서도
 // 안 찾아지면 그 span 은 칠하지 않는다 — 조용히 엉뚱한 문장을 칠하는 것보다 낫다.
 // 못 칠한 수는 onUnpainted 로 올린다(모달 캡션).
+/** A sentiment span, with its sentence (the answer text between start and end, trimmed) when the route sent it. */
+export type SentimentSpanWithText = SentimentSpan & { text?: string };
+
 function makeSentimentPlugin(
   answerText: string,
-  spans: SentimentSpan[],
+  spans: SentimentSpanWithText[],
   enabled: ReadonlySet<Sentiment>,
   onUnpainted: (n: number) => void,
 ) {
-  const cp = Array.from(answerText);
+  let cp: string[] | null = null;
+  const sentenceOf = (s: SentimentSpanWithText) => s.text ?? (cp ??= Array.from(answerText)).slice(s.start, s.end).join("").trim();
+  // 칩 토글(enabled)은 이미 받은 span 중 무엇을 칠할지만 고른다(화면 상호작용).
   const targets = spans
-    .map((s, i) => ({ i, text: cp.slice(s.start, s.end).join("").trim(), sentiment: s.sentiment }))
+    .map((s, i) => ({ i, text: sentenceOf(s), sentiment: s.sentiment }))
     // 길이 하한 없음(리뷰 M4). `>= 4` 를 두면 짧은 문장이 **칠해지지도 않고 미확인
     // 수에도 안 잡혀** 조용히 사라졌다. 빈 문자열만 뺀다 — indexOf("") 는 항상 0 이라
     // 아무 자리나 칠해 버린다.
@@ -381,6 +405,7 @@ export function MarkdownAnswer({
   text,
   brandTerms,
   modelTerms,
+  highlightTerms,
   className,
   sentimentSpans,
   enabledSentiments,
@@ -389,14 +414,16 @@ export function MarkdownAnswer({
   text: string;
   brandTerms: string[];
   modelTerms: string[];
+  /** The precomputed term list (the drilldown routes); brandTerms / modelTerms are used without it. */
+  highlightTerms?: HighlightTerm[];
   className?: string;
-  sentimentSpans?: SentimentSpan[];
+  sentimentSpans?: SentimentSpanWithText[];
   enabledSentiments?: ReadonlySet<Sentiment>;
   onSentimentUnpainted?: (n: number) => void;
 }) {
   const plugin = useMemo(
-    () => makeHighlightPlugin(brandTerms, modelTerms),
-    [brandTerms, modelTerms],
+    () => makeHighlightPlugin(highlightTerms ?? highlightTermsOf(brandTerms, modelTerms)),
+    [highlightTerms, brandTerms, modelTerms],
   );
   // 못 칠한 수는 렌더 중(rehype transform 안)에 확정되지만, 그 자리에서 바로
   // onSentimentUnpainted 를 부르면 부모 setState 가 렌더 도중 실행될 수 있다 —

@@ -2,10 +2,12 @@
 
 // Overview "국가별 GEO 현황"(디자인 611:135, 2026-09-02) — KPI 칩 5 · 국가 선택(다중·검색,
 // 디자이너 주석) · 시장 지도(선택 KPI 로 채색) · 권역/국가 트리표(값 막대 + 최대 경쟁사).
-// 데이터는 LiveGeo(권역→국가, 각 행에 metrics 5종). 국가 선택은 클라이언트에서 좁힌다 —
-// 권역 행 값은 그대로(권역 합계), 국가 행만 선택된 것으로 줄어든다.
+// 데이터는 overview/geo 의 GeoView: 권역→국가 행마다 KPI 값·최대 경쟁사가 계산돼 오고, 국가 메뉴의
+// 순서(현지화 이름순)·권역 묶음, 지도 바인딩과 색 범위도 API 가 낸다. 국가 선택·검색은 화면 상태라
+// 여기서 좁힌다 — 권역 행 값은 그대로(권역 합계), 국가 행만 선택된 것으로 줄어든다(선택이 있을 때만
+// 지도 색 범위를 보이는 국가로 다시 잡는다).
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { ChevronDown, Search, SquareMinus, SquarePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,8 +23,8 @@ import {
 import { cn } from "@/lib/utils";
 import { countryName } from "@/lib/geo-catalog";
 import { rhqLabel } from "@/lib/rhq";
-import type { GeoRegionRow, LiveGeo, MarketCompetition } from "../_data/live";
-import { OVERVIEW_KPI_KEYS, metricValue, type OverviewKpiKey } from "../_data/overview-metrics";
+import type { GeoCountryView, GeoRegionView, GeoView } from "../_data/screen-types";
+import { OVERVIEW_KPI_KEYS, type OverviewKpiKey } from "../_data/overview-metrics";
 import { GeoMapLazy } from "./geo-map-lazy";
 
 // "빈 집합 = 전체" 는 내부 의미(및 있다면 URL 파라미터)의 정본이라 바꾸지 않는다
@@ -90,11 +92,13 @@ export function GeoOverview({
   geo,
   initialMetric = "visibility",
   initialCountries,
+  title,
 }: {
-  geo: LiveGeo;
+  geo: GeoView;
   /** 렌더 테스트 seam. */
   initialMetric?: OverviewKpiKey;
   initialCountries?: string[];
+  title?: string;
 }) {
   const t = useTranslations("dashboard.overview");
   const tKpi = useTranslations("dashboard.kpi.name");
@@ -104,25 +108,51 @@ export function GeoOverview({
   const [picked, setPicked] = useState<Set<string>>(new Set(initialCountries ?? []));
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<Set<string>>(() => new Set(geo.markets.map((m) => m.region)));
+  const [activeCountry, setActiveCountry] = useState<string | null>(null);
+  const countryListRef = useRef<HTMLDivElement>(null);
+  const hoverSource = useRef<"map" | "list">("list");
 
+  // 국가 메뉴 — API 가 정한 순서(현지화 이름순)·권역 묶음에 표시명만 붙인다.
   const countries = useMemo(
-    () => geo.markets.flatMap((m) => m.countries.map((c) => ({ code: c.code, name: countryName(c.code, locale) })))
-      .sort((a, b) => a.name.localeCompare(b.name)),
+    () => geo.countryOrder.map((code) => ({ code, name: countryName(code, locale) })),
     [geo, locale],
   );
-  const regionOfCountry = useMemo(() => {
-    const map = new Map<string, string>();
-    geo.markets.forEach((m) => m.countries.forEach((c) => map.set(c.code, m.region)));
-    return map;
-  }, [geo]);
-  const filteredGeo: LiveGeo = useMemo(() => {
+  const regionOfCountry = useMemo(
+    () => new Map(geo.countryGroups.flatMap((g) => g.codes.map((code) => [code, g.region] as const))),
+    [geo],
+  );
+  const hoverCountryFromMap = useCallback((code: string | null) => {
+    hoverSource.current = "map";
+    setActiveCountry(code);
+    const region = code ? regionOfCountry.get(code) : undefined;
+    if (region !== undefined) setOpen(current => current.has(region) ? current : new Set([...current, region]));
+  }, [regionOfCountry]);
+  const hoverCountryFromList = useCallback((code: string | null) => {
+    hoverSource.current = "list";
+    setActiveCountry(code);
+  }, []);
+  useEffect(() => {
+    if (!activeCountry || hoverSource.current !== "map") return;
+    const list = countryListRef.current;
+    const row = list?.querySelector<HTMLElement>(`[data-geo-country="${CSS.escape(activeCountry)}"]`);
+    if (!list || !row) return;
+    const box = list.getBoundingClientRect();
+    const target = row.getBoundingClientRect();
+    const header = list.querySelector("thead")?.getBoundingClientRect().height ?? 0;
+    // Scroll the list only. A map hover must never move the page itself.
+    if (target.top < box.top + header) list.scrollTop -= box.top + header - target.top;
+    else if (target.bottom > box.bottom) list.scrollTop += target.bottom - box.bottom;
+  }, [activeCountry, open]);
+  const filteredGeo: GeoView = useMemo(() => {
     if (picked.size === 0) return geo;
     const markets = geo.markets
       .map((m) => ({ ...m, countries: m.countries.filter((c) => picked.has(c.code)) }))
       .filter((m) => m.countries.length > 0);
     return { ...geo, markets };
   }, [geo, picked]);
-  const label = (regionId: string) => rhqLabel(regionId, locale === "en" ? "en" : "ko") ?? regionId;
+  // 지도 색 범위 — 선택이 없으면 API 의 범위, 국가를 골랐으면 보이는 국가들로 다시 잡는다(화면 상태 의존).
+  const mapDomain = picked.size === 0 ? geo.domains[metric] : pickedDomain(filteredGeo, metric);
+  const label = (regionId: string) => regionId ? rhqLabel(regionId, locale === "en" ? "en" : "ko") ?? regionId : t("geo.unassignedRegion");
   const metricLabel = tKpi(metric);
   // QA #9 — 화면 기본값(빈 집합)은 "전체"를 뜻하지만, 기존엔 이 상태에서 드롭다운
   // 체크박스가 전부 비어 보였다(내부 의미와 표시가 불일치). realPickedCount 는
@@ -132,8 +162,9 @@ export function GeoOverview({
   const filteredCountries = countries.filter((c) => !q.trim() || c.name.toLowerCase().includes(q.trim().toLowerCase()));
   // 드롭다운은 국가를 권역별로 묶어 보여준다(11) — 순서는 geo.markets 순서, 헤더는
   // 트라이스테이트 체크(전부/일부/없음)로 그 권역 국가를 일괄 토글한다.
-  const groupedCountries = geo.markets
-    .map((m) => ({ region: m.region, items: filteredCountries.filter((c) => regionOfCountry.get(c.code) === m.region) }))
+  const shown = new Set(filteredCountries.map((c) => c.code));
+  const groupedCountries = geo.countryGroups
+    .map((g) => ({ region: g.region, items: g.codes.filter((code) => shown.has(code)).map((code) => ({ code, name: countryName(code, locale) })) }))
     .filter((g) => g.items.length > 0);
   // 우선 노출도 단위는 지면 공통 정본(`metricUnit.position`)이다. Overview KPI 카드·
   // 답변분석 탭·지도 툴팁이 같은 키를 쓴다(표기 드리프트 방지).
@@ -154,7 +185,7 @@ export function GeoOverview({
     // 피그마 611:135 GEO 섹션: px-6 py-8·gap-5, 제목 20px, 국가 선택은 칩 행 우측.
     <section className="flex flex-col gap-5 rounded-lg border border-border bg-card px-6 py-8" aria-labelledby="geo-overview-heading">
       <header className="flex">
-        <h3 id="geo-overview-heading" className="text-xl font-semibold tracking-tight text-foreground/80">{t("geo.title")}</h3>
+        <h3 id="geo-overview-heading" className="text-xl font-semibold tracking-tight text-foreground/80">{title ?? t("geo.title")}</h3>
       </header>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -236,10 +267,11 @@ export function GeoOverview({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.1fr_1fr]">
-        <GeoMapLazy geo={filteredGeo} metric={metric} metricLabel={metricLabel} bare />
-        <div className="overflow-x-auto">
+        <GeoMapLazy geo={filteredGeo} metric={metric} metricLabel={metricLabel} bare level="country" domain={mapDomain ?? undefined} activeCountry={activeCountry} onCountryHover={hoverCountryFromMap} />
+        <div className="min-h-0 lg:relative" data-geo-list-frame>
+        <div ref={countryListRef} role="region" aria-label={t("geo.countryList")} tabIndex={0} className="max-h-[360px] overflow-auto overscroll-contain [scrollbar-gutter:stable] lg:absolute lg:inset-0 lg:max-h-none" data-geo-country-list>
           <table className="w-full text-xs" data-geo-table>
-            <thead>
+            <thead className="sticky top-0 z-10">
               <tr className="h-[30px] border-b border-border bg-bg-soft text-left text-[11px] text-foreground">
                 <th scope="col" className="px-5 font-medium">{t("geo.colRegion")}</th>
                 <th scope="col" className="px-5 font-medium">{metricLabel}</th>
@@ -258,19 +290,30 @@ export function GeoOverview({
                   fmt={fmt}
                   barPct={barPct}
                   countryLabel={(code) => countryName(code, locale)}
+                  activeCountry={activeCountry}
+                  onCountryHover={hoverCountryFromList}
                 />
               ))}
             </tbody>
           </table>
+        </div>
         </div>
       </div>
     </section>
   );
 }
 
-function RivalCell({ m, metric, fmt }: { m: MarketCompetition; metric: OverviewKpiKey; fmt: (v: number | null) => string }) {
+/** 국가를 고른 화면의 지도 색 범위 — 보이는 국가(지도 폴리곤 id 기준, 뒤의 행이 이긴다)의 값 최소·최대. */
+function pickedDomain(geo: GeoView, metric: OverviewKpiKey): [number, number] | null {
+  const byNumeric = new Map<string, GeoCountryView>();
+  for (const m of geo.markets) for (const c of m.countries) if (c.numeric) byNumeric.set(c.numeric, c);
+  const values = [...byNumeric.values()].map((c) => c.values[metric]).filter((v): v is number => v != null);
+  return values.length ? [Math.min(...values), Math.max(...values)] : null;
+}
+
+function RivalCell({ m, metric, fmt }: { m: GeoRegionView | GeoCountryView; metric: OverviewKpiKey; fmt: (v: number | null) => string }) {
   const t = useTranslations("dashboard.overview");
-  const rival = m.metrics?.[metric]?.rival ?? (metric === "shareOfVoice" && m.topRival ? { name: m.topRival.name, value: m.topRival.sov } : null);
+  const rival = m.rivals[metric];
   if (!rival) return <span className="text-muted-foreground">{t("geo.noRival")}</span>;
   return (
     <span className="inline-flex items-baseline gap-1.5">
@@ -291,9 +334,11 @@ function ValueCell({ v, fmt, barPct, strong }: { v: number | null; fmt: (v: numb
   );
 }
 
-function RegionRows({ market, label, open, onToggle, metric, fmt, barPct, countryLabel }: {
-  market: GeoRegionRow; label: string; open: boolean; onToggle: () => void; metric: OverviewKpiKey;
+function RegionRows({ market, label, open, onToggle, metric, fmt, barPct, countryLabel, activeCountry, onCountryHover }: {
+  market: GeoRegionView; label: string; open: boolean; onToggle: () => void; metric: OverviewKpiKey;
   fmt: (v: number | null) => string; barPct: (v: number | null) => number; countryLabel: (code: string) => string;
+  activeCountry: string | null;
+  onCountryHover: (code: string | null) => void;
 }) {
   return (
     <>
@@ -305,13 +350,16 @@ function RegionRows({ market, label, open, onToggle, metric, fmt, barPct, countr
             {label}
           </button>
         </th>
-        <td className="px-5"><ValueCell v={metricValue(market, metric)} fmt={fmt} barPct={barPct} strong /></td>
+        <td className="px-5"><ValueCell v={market.values[metric]} fmt={fmt} barPct={barPct} strong /></td>
         <td className="px-5 text-right"><RivalCell m={market} metric={metric} fmt={fmt} /></td>
       </tr>
       {open ? market.countries.map((c) => (
-        <tr key={c.code} className="h-[38px] border-b border-border/60" data-geo-country={c.code}>
+        <tr key={c.code} tabIndex={0} data-highlighted={activeCountry === c.code ? "true" : undefined}
+          onMouseEnter={() => onCountryHover(c.code)} onMouseLeave={() => onCountryHover(null)}
+          onFocus={() => onCountryHover(c.code)} onBlur={() => onCountryHover(null)}
+          className={cn("h-[38px] border-b border-border/60 transition-colors focus-visible:outline-2 focus-visible:outline-brand-700", activeCountry === c.code && "bg-brand-50 ring-1 ring-inset ring-brand-300")} data-geo-country={c.code}>
           <th scope="row" className="px-5 pl-10 text-left font-normal text-foreground">{countryLabel(c.code)}</th>
-          <td className="px-5"><ValueCell v={metricValue(c, metric)} fmt={fmt} barPct={barPct} /></td>
+          <td className="px-5"><ValueCell v={c.values[metric]} fmt={fmt} barPct={barPct} /></td>
           <td className="px-5 text-right"><RivalCell m={c} metric={metric} fmt={fmt} /></td>
         </tr>
       )) : null}

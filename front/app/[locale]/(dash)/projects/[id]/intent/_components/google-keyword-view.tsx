@@ -42,7 +42,7 @@ import { useSortableTable } from "@/hooks/use-sortable-table";
 import { SortableHeader } from "@/components/ui/sortable-header";
 import { TooltipProvider as InfoTooltipProvider } from "@/components/ui/tooltip";
 import { ColInfo } from "@/components/dash/col-info";
-import { type SearchIntent } from "../_data/sample";
+import { type SearchIntent } from "../_data/model";
 import {
   addCandidate,
   addCandidates,

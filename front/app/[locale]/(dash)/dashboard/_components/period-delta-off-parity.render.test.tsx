@@ -7,9 +7,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import ko from "@/messages/ko.json";
 import en from "@/messages/en.json";
 import type { CompetitorBrandValue } from "@/lib/scope/result-adapter";
-import type { KpiSummary } from "../_data/sample";
+import type { KpiSummary } from "../_data/model";
 import { OverviewKpiCards } from "./overview-kpi-cards";
-import { SummaryTiles } from "./summary-tiles";
+import { SummaryTilesView } from "./summary-tiles";
+import { tilesViewFor } from "./__fixtures__/tiles-views";
+import { cardsOf, competitorsOf, done, trendOf } from "./__fixtures__/overview-views";
 
 // `useFilterSignal` 이 `useSearchParams()` 를 부른다 — 라우터 컨텍스트가 없는 정적
 // 렌더에서는 null 이므로 빈 쿼리스트링으로 고정한다(필터 무선택 = 기본 화면).
@@ -105,11 +107,16 @@ function snapshot(): Record<string, string> {
   const out: Record<string, string> = {};
   for (const locale of ["ko", "en"] as const) {
     out[`overviewKpiCards/${locale}`] = render(
-      <OverviewKpiCards kpis={KPIS} trend={null} brands={BRANDS} locale={locale} />,
+      // The screens' views of the same KPIs (overview/cards + card-trend + card-competitors).
+      <OverviewKpiCards
+        cards={cardsOf(KPIS)}
+        locale={locale}
+        deferred={{ trend: done(trendOf(KPIS, null)), competitors: done(competitorsOf(BRANDS)) }}
+      />,
       locale,
     );
     out[`summaryTiles/${locale}`] = render(
-      <SummaryTiles items={TILE_ITEMS} perturb={false} />,
+      <SummaryTilesView view={tilesViewFor(TILE_ITEMS)} />,
       locale,
     );
   }

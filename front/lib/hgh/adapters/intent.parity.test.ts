@@ -105,7 +105,7 @@ const SocialPage = (await import("@/app/[locale]/(dash)/projects/[id]/intent/soc
 const StandardKeywordsPage = (await import("@/app/[locale]/(dash)/customer-interest/google-keywords/page")).default;
 const { GoogleKeywordView } = await import("@/app/[locale]/(dash)/projects/[id]/intent/_components/google-keyword-view");
 const { SocialScrapingFlow } = await import("@/components/social-scraping/social-scraping-flow");
-const { DEFAULT_KEYWORD_TERMS } = await import("@/app/[locale]/(dash)/projects/[id]/intent/_data/sample");
+const { DEFAULT_KEYWORD_TERMS } = await import("@/app/[locale]/(dash)/projects/[id]/intent/_data/model");
 
 // ── WORLD ───────────────────────────────────────────────────────────────────
 

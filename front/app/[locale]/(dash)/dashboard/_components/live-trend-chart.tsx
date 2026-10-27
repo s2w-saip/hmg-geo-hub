@@ -21,15 +21,11 @@ import {
   trendGapAreas,
   trendGapBridgeLines,
 } from "@/components/dash/trend-gap-overlay";
-import { planTrendGaps, trendGapApplies, type TrendGap } from "@/lib/viz/trend-gap";
+import { planTrendGaps, type TrendGap } from "@/lib/viz/trend-gap";
 import { mixedTrendGapFamily } from "../_data/trend-kpi-family";
-import {
-  trendBucketDisplayDay,
-  trendBucketDisplays,
-  type TrendBucketDisplay,
-} from "@/lib/as-of-date";
 import type { PromptAuditDailyCount } from "@/lib/db/repositories/prompt-audit-logs";
-import type { LiveTrend, TrendKpiKey } from "../_data/live";
+import type { TrendKpiKey } from "../_data/live-types";
+import type { TrendChartView } from "../_data/screen-types";
 
 // 라이브 추이 — 미러에 쌓인 measured_at 을 주/일 버킷으로 normalize 한 KPI 시계열.
 // 샘플용 TrendChart 와 달리 (1) 가짜 scale 없음 (2) connectNulls=false 로 측정
@@ -61,59 +57,16 @@ type Row = {
   gap?: TrendGap;
 } & Partial<Record<TrendKpiKey, number>>;
 
-// X축 라벨 — 실제 측정일(M/D). 주 단위는 그 주 첫 측정일(firstAt), 일 단위는 그 날.
+// X축 라벨 — 화면이 보낸 행 날짜(YYYY-MM-DD, website/trend)를 M/D 로 찍는다.
 // timeZone 은 UTC 로 고정한다 (hydration 결정론 — React #418 수정, 2026-07-22):
-// firstAt 은 풀 타임스탬프(min(measured_at))라 timeZone 미지정 시 서버(UTC)가 만든
-// SSR 텍스트와 브라우저(뷰어 TZ)의 hydration 렌더가 달라진다. 버킷 경계 자체가 SQL
-// date_trunc(UTC) 산출이므로 UTC 표기가 데이터와도 일치한다.
+// `new Date("YYYY-MM-DD")` 는 UTC 자정이라 timeZone 미지정 시 서버(UTC)가 만든 SSR 텍스트와
+// 브라우저(뷰어 TZ)의 hydration 렌더가 하루 어긋날 수 있다.
 export function trendBucketLabelFormatter(locale: string): Intl.DateTimeFormat {
   return new Intl.DateTimeFormat(locale, {
     month: "numeric",
     day: "numeric",
     timeZone: "UTC",
   });
-}
-
-//
-// ⚠️ **회차 버킷**(`cycleAnchorAt` 있음)은 위 규칙의 예외다 — 앵커의 **KST 달력 날짜**를
-// 그린다(2026-09-28). 회차 키·`firstAt` 은 앵커의 UTC 시각이라 KST 자정 직후 앵커
-// (…T15:48Z = KST 다음 날 00:48)가 하루 앞서 보였다. KST 일은 `trendBucketDisplays` 가
-// 문자열(YYYY-MM-DD)로 먼저 확정하고, 여기서는 그 날의 UTC 자정을 UTC 포매터로 찍으므로
-// 하이드레이션 결정론은 그대로다. 같은 KST 날에 회차가 둘이면 `display.time` 이 붙는다.
-/**
- * x축 라벨.
- *
- * ⚠️ **앵커 축이면 버킷 키가 곧 라벨이다**(2026-09-20). 종전에는 주 단위에서 항상
- *    `firstAt`(그 버킷의 첫 측정 시각)을 썼는데, 축 on 에서는 버킷 키가 귀속 날짜
- *    (`round_date`/`anchor_week`)라 라벨만 다른 시계에 남았다. 실제 결함 셋:
- *      · website 추이 x축이 목·월·화가 섞인 **측정 시작일**로 찍혔다
- *      · 두 버킷의 첫 측정일이 같은 날이면 **같은 라벨이 두 번**(`7. 27.` × 2)
- *      · 마지막 점 라벨이 카드 기준일과 달랐다(09-17 vs 09-11)
- *    축 off 는 종전 그대로다 — `axis` 가 없거나 `"measured"` 면 한 글자도 안 바뀐다.
- *
- * `bucketStart` 는 `YYYY-MM-DD` 라 `new Date()` 가 **UTC 자정**으로 파싱하고
- * 포매터도 `timeZone: "UTC"` 라 날짜가 그대로 나온다(hydration 결정론도 유지).
- */
-export function trendBucketLabel(
-  fmt: Intl.DateTimeFormat,
-  point: LiveTrend["points"][number],
-  unit: LiveTrend["unit"],
-  axis?: LiveTrend["axis"],
-  display?: TrendBucketDisplay,
-): string {
-  // 축 on 주 단위 라벨은 **그 버킷의 귀속 날짜**다 — 버킷 키(주 월요일)가 아니라.
-  // 글로벌은 귀속이 월요일이라 둘이 같고, website 는 금요일이라 다르다(`9. 11.`).
-  // 달력에서 고르는 날짜·카드 기준일·추이 라벨이 같아야 한다는 것이 전환의 목적이다.
-  if (axis === "anchor") return fmt.format(new Date(point.roundDate ?? point.bucketStart));
-  // 축 off 의 회차 버킷(`cycleAnchorAt` 있음)은 앵커의 KST 달력 날짜(2026-09-28).
-  if (point.cycleAnchorAt) {
-    const day = display?.day ?? trendBucketDisplayDay(point);
-    const md = fmt.format(new Date(`${day}T00:00:00Z`));
-    return display?.time ? `${md} ${display.time}` : md;
-  }
-  return fmt.format(
-    new Date(unit !== "week" ? point.bucketStart : (point.firstAt ?? point.bucketStart)),
-  );
 }
 
 // 툴팁 값 포맷 — % 축 KPI 는 단위를 붙이고(2026-09-03 고객 요청), 순위 축은 그대로.
@@ -128,13 +81,43 @@ export function formatTrendTooltipValue(
   return SERIES_AXIS[String(dataKey)] === "pct" ? `${value}%` : String(value);
 }
 
-export function LiveTrendChart({
-  trend,
+/** One chart slot as the screen sends it: the x label, the values and the gap marker per gap family. */
+export interface TrendChartPoint {
+  label: string;
+  measuredDays: number;
+  answers: number;
+  values: Partial<Record<TrendKpiKey, number>>;
+  gap: { mention: TrendGap | null; citation: TrendGap | null };
+}
+
+/**
+ * The KPI trend chart of the website overview: rows and series from website/trend
+ * (back/bff/screens/overview.py trend_chart_view); the x label is the row's date, formatted here.
+ */
+export function LiveTrendChartView({
+  view,
   promptChanges,
 }: {
-  trend: LiveTrend;
-  // 프롬프트 변경 마커 (catalog-prompt-audit) — 글로벌 카탈로그 변경의 일 단위
-  // 카운트. 표준 dashboard만 전달한다(프로젝트/웹사이트 추이는 해당 없음).
+  view: TrendChartView;
+  promptChanges?: PromptAuditDailyCount[];
+}) {
+  const locale = useLocale();
+  const fmt = useMemo(() => trendBucketLabelFormatter(locale), [locale]);
+  const points = useMemo<TrendChartPoint[]>(
+    () => view.rows.map((r) => ({ label: fmt.format(new Date(r.day)), measuredDays: r.measuredDays, answers: r.answers, values: r.values, gap: r.gap })),
+    [view.rows, fmt],
+  );
+  return <TrendChartBody points={points} seriesKeys={view.availableSeries} promptChanges={promptChanges} />;
+}
+
+function TrendChartBody({
+  points,
+  seriesKeys,
+  promptChanges,
+}: {
+  points: TrendChartPoint[];
+  /** The series that have a value somewhere (TREND_SERIES order). */
+  seriesKeys: readonly TrendKpiKey[];
   promptChanges?: PromptAuditDailyCount[];
 }) {
   const tKpi = useTranslations("dashboard.kpi.name");
@@ -147,27 +130,23 @@ export function LiveTrendChart({
 
   const fmt = useMemo(() => trendBucketLabelFormatter(locale), [locale]);
 
-  // 이 플롯이 지금 말하는 **계열**(0071). 혼합 차트라 시리즈 목록에서 도출한다 —
-  // 음영(`ReferenceArea`)은 플롯 전체 높이를 덮으므로 "이 슬롯엔 값이 없다"는 주장이고,
-  // 언급 라인이 관통하는 슬롯을 덮으면 화면이 스스로 모순된다. 그래서 그리는 시리즈가
-  // **전부 인용 계열일 때만** 인용으로 본다(`mixedTrendGapFamily`).
+  // 이 플롯이 지금 말하는 **계열**(0071) — 그리는 시리즈(사용자 토글)가 전부 인용 계열일 때만 인용.
+  // 음영(`ReferenceArea`)은 플롯 전체 높이를 덮으므로, 언급 라인이 관통하는 슬롯을 덮으면 안 된다.
   const gapFamily = useMemo(() => mixedTrendGapFamily(visible), [visible]);
 
-  const rows = useMemo<Row[]>(() => {
-    const displays = trendBucketDisplays(trend.points);
-    return trend.points.map((p) => ({
-      label: trendBucketLabel(fmt, p, trend.unit, trend.axis, displays.get(p.bucketStart)),
-      measuredDays: p.measuredDays,
-      answers: p.answers,
-      ...p.values,
-      // 계열이 안 맞는 마커는 **행에서** 잘라야 한다 — 툴팁(`GapAwareTooltip`)은
-      // plan 이 아니라 행을 읽으므로, 남겨 두면 값이 있는 슬롯에서 **툴팁이 통째로
-      // 사라진다**(갭 행에서는 아무것도 안 낸다 — 2026-09-11 제품 책임자).
-      ...(trendGapApplies(p.gap, gapFamily) ? { gap: p.gap } : {}),
-    }));
-  }, [trend.points, trend.unit, trend.axis, fmt, gapFamily]);
-  // 수집 오류 회차 — 음영 슬롯 + 이웃 연결용 보조 라인. 토글(visible)과 무관하게
-  // 한 번만 계산하고, 숨겨진 시리즈는 아래 styleOf 가 걸러낸다.
+  const rows = useMemo<Row[]>(
+    () =>
+      points.map((p) => ({
+        label: p.label,
+        measuredDays: p.measuredDays,
+        answers: p.answers,
+        ...p.values,
+        // 그 계열이 읽는 마커만 행에 싣는다 — 툴팁(`GapAwareTooltip`)은 행을 읽는다.
+        ...(p.gap[gapFamily] ? { gap: p.gap[gapFamily]! } : {}),
+      })),
+    [points, gapFamily],
+  );
+  // 수집 오류 회차 — 음영 슬롯 + 이웃 연결용 보조 라인. 숨겨진 시리즈는 아래 styleOf 가 걸러낸다.
   const gapPlan = useMemo(
     () =>
       planTrendGaps(rows, {
@@ -179,11 +158,8 @@ export function LiveTrendChart({
   );
 
   const availableSeries = useMemo(
-    () =>
-      TREND_SERIES.filter((series) =>
-        trend.points.some((point) => typeof point.values[series.key] === "number"),
-      ),
-    [trend.points],
+    () => TREND_SERIES.filter((series) => seriesKeys.includes(series.key)),
+    [seriesKeys],
   );
 
   // 프롬프트 변경 마커 — rows와 같은 fmt로 day→label을 만들어 X축 카테고리에

@@ -57,10 +57,7 @@ describe("캐시 키에 분기가 실린다", () => {
 // 같은 화면의 추이가 축 두 벌을 갖지 않게 **같은 키**를 재사용한다. 새 키를 두면 기본
 // off 로 나가므로, 이미 켜져 있는 `S2.mentionTrend`(주별 브랜드 언급 수)와 갈려 배포
 // 직후 이 PR 이 고치려던 상태가 그대로 재현된다. 이유는 `server.ts::KpiTabWeekAxis` 주석.
-const PAGE_SRC = readFileSync(
-  new URL("../../app/[locale]/(dash)/standard/answer-analysis/mention/page.tsx", import.meta.url),
-  "utf8",
-);
+// (언급 KPI 탭 화면은 이제 API 추이를 읽는다 — 페이지 호출부 대조는 화면 이관으로 끝났다.)
 
 /**
  * 함수 하나의 **본문 슬라이스**(선언 ~ 열 0 의 닫는 중괄호). `server.ts` 의 함수는 전부
@@ -136,18 +133,5 @@ describe("KPI 탭 추이의 주 격자 축", () => {
     ]) {
       expect(fnBody(SERVER_SRC, fn)).not.toContain("weekAxis");
     }
-  });
-
-  it("글로벌 언급 KPI 탭의 추이 3종이 **전부** 그 축을 넘긴다", () => {
-    // 노출률/점유율 탭 = 엔진(히어로·엔진별·유형) + 브랜드(경쟁사·스파크), 우호도 탭 = 엔진.
-    expect(
-      PAGE_SRC.match(/fetchStandardKpiEngineTrend\(filters, \{ weekAxis: "S2\.mentionTrend" \}\)/g),
-    ).toHaveLength(2);
-    expect(PAGE_SRC).toContain(
-      'fetchStandardKpiBrandTrend(filters, { weekAxis: "S2.mentionTrend" })',
-    );
-    // 축 없이 부르는 자리가 이 페이지에 남아 있으면 탭 간 축이 갈린다.
-    expect(PAGE_SRC).not.toMatch(/fetchStandardKpiEngineTrend\(filters\)/);
-    expect(PAGE_SRC).not.toMatch(/fetchStandardKpiBrandTrend\(filters\)/);
   });
 });

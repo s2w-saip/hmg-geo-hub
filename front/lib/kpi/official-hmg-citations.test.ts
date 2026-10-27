@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import { PgDialect } from "drizzle-orm/pg-core";
 import {
   isOfficialHmgGroupKey,
-  officialHmgCitationsOf,
   officialHmgGroupKeys,
   OFFICIAL_HMG_CATEGORY,
 } from "./official-hmg-citations";
@@ -28,8 +27,6 @@ import {
   toSeries,
   toStandardTrendBuckets,
 } from "@/lib/db/repositories/summary-global-trend-read";
-import { buildMirrorKpis } from "@/app/[locale]/(dash)/dashboard/_data/live";
-import { categoryShare } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/citation-view";
 import { OWN_VARIANT_ALL } from "@/lib/summary/generate/fold";
 import type { CycleSet } from "@/lib/summary/read/cycle-set";
 import type { StandardAggregates } from "@/lib/scope/result-adapter";
@@ -37,10 +34,11 @@ import type { StandardAggregates } from "@/lib/scope/result-adapter";
 // 글로벌 ⑤ "AI 인용 점유율" = 공식(HMG) 카테고리 인용 ÷ 전체 인용(제품 책임자 2026-09-29).
 //
 // 수용 기준: **같은 입력에서 세 값이 같은 수**다.
-//   ① Overview ⑤ 카드(`buildMirrorKpis` ← 사실표 S1 `toStandardAggregates`) · 그 추이 점
+//   ① Overview ⑤ 카드의 분자·분모(`citationShareNumerator` ← 사실표 S1 `toStandardAggregates`) · 그 추이 점
 //      (`overviewTrendValues` ← 사실표 코어 `toSeries` 의 회차별 `officialCitations`)
-//   ② 인용 현황 카드(`citations-standard-view.tsx::StatusBlock` = `categoryShare(live.categories)`)
-//   ③ 출처 카테고리 차트의 Official (HMG) 비중(같은 `live.categories`, `foldCitationsLive`)
+//   ② 인용 현황 카드 = ③ 출처 카테고리 차트의 Official (HMG) 비중(같은 `live.categories`,
+//      `foldCitationsLive`). 그 비중은 인용 화면(back/bff/screens/citation.py)이 같은 식으로 낸다 —
+//      아래 `shareOf` 는 그 식(카테고리 합 대비, 1자리 반올림)이다.
 // 캐시 경계는 JSON 라운드트립으로 흉내 낸다(Map 반환 결함 전례 — 셀 값은 직렬화 가능해야 한다).
 
 const rt = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
@@ -65,6 +63,13 @@ const OVERRIDES: CitationOverrideMap = new Map([["my-dealer.example", OFFICIAL_H
 const TOTAL = GROUPS.reduce((s, g) => s + g.citations, 0);
 const OWNED_BASE = GROUPS.reduce((s, g) => s + g.owned, 0);
 const pct = (n: number, d: number) => Math.round((n / d) * 1000) / 10;
+/** A category's share (%) of the slices, one decimal; null when the slices sum to 0 (the citation screen's rule). */
+const shareOf = (categories: Array<{ name: string; value: number }> | null | undefined, name: string): number | null => {
+  if (!categories) return null;
+  const total = categories.reduce((s, c) => s + c.value, 0);
+  if (total <= 0) return null;
+  return Math.round(((100 * (categories.find((c) => c.name === name)?.value ?? 0)) / total) * 10) / 10;
+};
 
 const UUID = (n: number) => `${String(n).padStart(8, "0")}-0000-0000-0000-000000000000`;
 const A1 = "2026-09-20T15:00:00.000Z";
@@ -175,26 +180,25 @@ describe("수용 기준 — 세 값이 같은 입력에서 같은 수", () => {
   const EXPECTED = pct(OFFICIAL, TOTAL);
 
   it("③ 카테고리 차트의 Official (HMG) 비중", () => {
-    expect(categoryShare(rt(foldLive()).categories, OFFICIAL_HMG_CATEGORY)).toBe(EXPECTED);
+    expect(shareOf(rt(foldLive()).categories, OFFICIAL_HMG_CATEGORY)).toBe(EXPECTED);
   });
 
-  it("② 인용 현황 카드 = ③ (같은 `live.categories` · 같은 함수)", () => {
+  it("② 인용 현황 카드 = ③ (같은 `live.categories` · 같은 식)", () => {
     const live = rt(foldLive());
-    // StatusBlock 이 쓰는 식 그대로(`citations-standard-view.tsx`).
-    const status = categoryShare(live.categories, OFFICIAL_HMG_CATEGORY);
+    const status = shareOf(live.categories, OFFICIAL_HMG_CATEGORY);
     expect(status).toBe(EXPECTED);
     // 종전 값(base URL prefix 분자)은 다른 수였다 — 이 변경이 실제로 값을 바꾼다는 확인.
     expect(live.summary.officialOwnShare).toBe(pct(OWNED_BASE, TOTAL));
     expect(live.summary.officialOwnShare).not.toBe(EXPECTED);
   });
 
-  it("① Overview 카드(사실표 S1 → buildMirrorKpis, 캐시 라운드트립 포함) = ③", () => {
+  it("① Overview 카드의 분자·분모(사실표 S1, 캐시 라운드트립 포함) = ③", () => {
     const own = s1Agg().own[0];
     const agg = rt(__trendTestables.toStandardAggregates(s1Agg(), SET, own, OVERRIDES));
     expect(agg.citations.officialHmgCitations).toBe(OFFICIAL);
-    const card = buildMirrorKpis(agg).find((k) => k.key === "citationShare");
-    expect(card?.value).toBe(EXPECTED);
-    expect(card?.ratio).toEqual({ numerator: OFFICIAL, denominator: TOTAL });
+    expect(citationShareNumerator(agg.citations)).toBe(OFFICIAL);
+    expect(agg.citations.totalCitations).toBe(TOTAL);
+    expect(pct(citationShareNumerator(agg.citations), agg.citations.totalCitations)).toBe(EXPECTED);
   });
 
   it("① 추이 마지막 점(사실표 코어 → overviewTrendValues) = 카드 값", () => {
@@ -210,7 +214,7 @@ describe("수용 기준 — 세 값이 같은 입력에서 같은 수", () => {
   it("`?source=` 로 공식(HMG)을 빼면 ②·③ 이 같은 지점에서 0 이 된다(모집단이 함께 좁혀진다)", () => {
     const live = foldLive(["Other", "Wiki & Reference", "Social & Video"]);
     expect(live.summary.total).toBe(70 + 50 + 9);
-    expect(categoryShare(live.categories, OFFICIAL_HMG_CATEGORY)).toBe(0);
+    expect(shareOf(live.categories, OFFICIAL_HMG_CATEGORY)).toBe(0);
   });
 });
 
@@ -221,7 +225,7 @@ describe("표면 분기 — website·project 는 종전 정의 그대로", () =>
     expect(citationShareNumerator({ ownedCitations: 7, officialHmgCitations: 0 })).toBe(0);
   });
 
-  it("buildMirrorKpis 는 필드가 없으면 종전 값을 낸다", () => {
+  it("카드 분자는 필드가 없으면 종전 값이다", () => {
     const agg = {
       rootProjectId: "p", totalAnswers: 10, totalMentions: 0, trackedAnswerCount: 1,
       brands: [], regions: [],
@@ -229,7 +233,8 @@ describe("표면 분기 — website·project 는 종전 정의 그대로", () =>
       position: { avgPosition: null, sampledAnswers: 0 },
       sentiment: { positiveRate: null, positiveMentions: 0, sampledMentions: 0 },
     } as StandardAggregates;
-    expect(buildMirrorKpis(agg).find((k) => k.key === "citationShare")?.value).toBe(15);
+    expect(citationShareNumerator(agg.citations)).toBe(30);
+    expect(pct(citationShareNumerator(agg.citations), agg.citations.totalCitations)).toBe(15);
   });
 
   it("추이 버킷도 필드가 없으면 종전 값이다", () => {
@@ -314,8 +319,8 @@ describe("SQL — 분류 어휘 없이 키 목록 멤버십만, 추가 문장·�
 });
 
 describe("Overview GEO 국가별 ⑤ — 카드와 같은 분자", () => {
-  it("사실표 S1 국가 축의 공식(HMG) 열이 국가 행에 실리고, 지표는 그 분자를 쓴다", async () => {
-    const { marketMetrics } = await import("@/app/[locale]/(dash)/dashboard/_data/overview-metrics");
+  // 국가 지표(공식(HMG) 열 ÷ 인용 총수)는 overview/geo 화면(back/bff/screens/overview.py)이 낸다.
+  it("사실표 S1 국가 축의 공식(HMG) 열이 국가 행에 실린다", async () => {
     const agg: TrendAggregates = {
       ...s1Agg(),
       own: [
@@ -337,12 +342,6 @@ describe("Overview GEO 국가별 ⑤ — 카드와 같은 분자", () => {
     const geo = rt(__trendTestables.toGeoKpi(agg));
     const kr = geo!.codes.find((c) => c.code === "KR")!;
     expect(kr.citOfficialHmg).toBe(50);
-    expect(marketMetrics(geo!.brands.filter((b) => b.code === "KR"), kr, null).citationShare.ours).toBe(25);
-  });
-
-  it("공식(HMG) 열이 없으면(website·project·구 셀) 종전 분자다", async () => {
-    const { marketMetrics } = await import("@/app/[locale]/(dash)/dashboard/_data/overview-metrics");
-    const totals = { code: "KR", answers: 10, ownAnswers: 1, citTotal: 200, citOwned: 10 };
-    expect(marketMetrics([], totals, null).citationShare.ours).toBe(5);
+    expect(kr.citTotal).toBe(200);
   });
 });

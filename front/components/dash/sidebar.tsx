@@ -474,7 +474,7 @@ function ProjectHeader({ meta, locale }: { meta: ProjectMetaForSnb; locale: stri
   // timeZone: UTC 고정 — createdAt은 풀 타임스탬프라 미지정 시 서버(UTC) SSR
   // 텍스트와 브라우저(뷰어 TZ) hydration 렌더의 날짜가 자정 부근에서 갈려
   // hydration 불일치(React #418)가 된다 (live-trend-chart와 동일 계열, 2026-07-22).
-  const d = new Date(meta.createdAt);
+  const d = new Date(meta.createdAt ?? "");
   const dateLabel = isNaN(d.getTime())
     ? ""
     : d.toLocaleDateString(locale === "ko" ? "ko-KR" : "en-US", {

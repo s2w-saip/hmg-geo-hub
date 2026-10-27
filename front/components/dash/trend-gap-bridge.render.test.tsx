@@ -41,20 +41,16 @@ vi.mock("recharts", async () => {
 import { DefaultZIndexes } from "recharts";
 import type { TrendGap, TrendGapRow } from "@/lib/viz/trend-gap";
 import type { CitationTrend, MentionTrend } from "@/lib/scope/result-adapter";
-import type { BrandTrendChartData, RankTrendChartData } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/kpi-view";
-import type { LiveTrend } from "@/app/[locale]/(dash)/dashboard/_data/live";
+import type { BrandTrendChartData, RankTrendChartData } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/mention-screen";
+import type { SparkPointView, TrendChartView } from "@/app/[locale]/(dash)/dashboard/_data/screen-types";
 import { CitationTrendChart } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/citations-view";
 import { MentionTrendChart } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/mentions-view";
 import { BrandTrendChart } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/kpi/brand-trend-chart";
 import { RankTrendChart } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/kpi/rank-trend-chart";
 import { KpiTrendChart } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/kpi/kpi-trend-chart";
+import { SparkAreaView } from "@/app/[locale]/(dash)/dashboard/_components/overview-kpi-cards";
 import {
-  SparkArea,
-  sparkPoints,
-} from "@/app/[locale]/(dash)/dashboard/_components/overview-kpi-cards";
-import {
-  LiveTrendChart,
-  trendBucketLabel,
+  LiveTrendChartView,
   trendBucketLabelFormatter,
 } from "@/app/[locale]/(dash)/dashboard/_components/live-trend-chart";
 
@@ -133,7 +129,7 @@ describe("MentionTrendChart (언급 · 당사/경쟁사)", () => {
   it("경쟁사 보조선만 점선·투명도를 유지한다(당사는 실선)", () => {
     axis.xs = WEEK_AXIS;
     const drawn = bridges(
-      wrap(<MentionTrendChart title="M" trend={trend} trackedBrands={new Set(["Hyundai"])} />),
+      wrap(<MentionTrendChart title="M" trend={trend} series={{ own: ["Hyundai"], competitors: ["BMW"] }} />),
     );
     expect(drawn).toHaveLength(2);
     const own = drawn[0];
@@ -151,7 +147,7 @@ describe("MentionTrendChart (언급 · 당사/경쟁사)", () => {
   it("점선 보조선은 갭 창 [8/17, 8/31] 안에서 시작하고 끝난다", () => {
     axis.xs = WEEK_AXIS;
     const drawn = bridges(
-      wrap(<MentionTrendChart title="M" trend={trend} trackedBrands={new Set(["Hyundai"])} />),
+      wrap(<MentionTrendChart title="M" trend={trend} series={{ own: ["Hyundai"], competitors: ["BMW"] }} />),
     );
     for (const b of drawn) {
       const n = b.d.match(/-?\d+(?:\.\d+)?/g)!.map(Number);
@@ -217,7 +213,7 @@ describe("KpiTrendChart (4-KPI 탭 히어로)", () => {
     axis.xs = WEEK_AXIS;
     const drawn = bridges(
       // 데이터 타입은 화면 쪽 KpiTrendPoint — 픽스처는 그 모양을 그대로 흉내낸다.
-      wrap(<KpiTrendChart metric="sov" points={points as never} />),
+      wrap(<KpiTrendChart metric="sov" points={points as never} coverage={[]} />),
     );
     expect(drawn).toHaveLength(1);
     expect(isSmoothCubic(drawn[0].d)).toBe(true);
@@ -228,32 +224,45 @@ describe("KpiTrendChart (4-KPI 탭 히어로)", () => {
   it("갭 없는 데이터에서는 아무것도 더하지 않는다", () => {
     axis.xs = WEEK_AXIS;
     const clean = points.filter((p) => !("gap" in p && p.gap));
-    expect(bridges(wrap(<KpiTrendChart metric="sov" points={clean as never} />))).toEqual([]);
+    expect(bridges(wrap(<KpiTrendChart metric="sov" points={clean as never} coverage={[]} />))).toEqual([]);
   });
 });
 
 // ── 대시보드 두 종 ──────────────────────────────────────────────────────────
 
-const LIVE_POINTS: LiveTrend["points"] = [
-  { bucketStart: "2026-08-10", firstAt: "2026-08-10T00:00:00.000Z", lastAt: null, measuredDays: 7, answers: 10, values: { visibility: 10, shareOfVoice: 5 } },
-  { bucketStart: "2026-08-17", firstAt: "2026-08-17T00:00:00.000Z", lastAt: null, measuredDays: 7, answers: 10, values: { visibility: 30, shareOfVoice: 12 } },
-  { bucketStart: "2026-08-24", firstAt: "2026-08-24T00:00:00.000Z", lastAt: null, measuredDays: 0, answers: 0, values: {}, gap: GAP },
-  { bucketStart: "2026-08-31", firstAt: "2026-08-31T00:00:00.000Z", lastAt: null, measuredDays: 7, answers: 12, values: { visibility: 70, shareOfVoice: 30 } },
-  { bucketStart: "2026-09-07", firstAt: "2026-09-07T00:00:00.000Z", lastAt: null, measuredDays: 7, answers: 12, values: { visibility: 76, shareOfVoice: 33 } },
+/** website/trend rows (gap marker per gap family; a gap without scope applies to both). */
+const LIVE_ROWS: TrendChartView["rows"] = [
+  { key: "2026-08-10", day: "2026-08-10", measuredDays: 7, answers: 10, values: { visibility: 10, shareOfVoice: 5 }, gap: { mention: null, citation: null } },
+  { key: "2026-08-17", day: "2026-08-17", measuredDays: 7, answers: 10, values: { visibility: 30, shareOfVoice: 12 }, gap: { mention: null, citation: null } },
+  { key: "2026-08-24", day: "2026-08-24", measuredDays: 0, answers: 0, values: {}, gap: { mention: GAP, citation: GAP } },
+  { key: "2026-08-31", day: "2026-08-31", measuredDays: 7, answers: 12, values: { visibility: 70, shareOfVoice: 30 }, gap: { mention: null, citation: null } },
+  { key: "2026-09-07", day: "2026-09-07", measuredDays: 7, answers: 12, values: { visibility: 76, shareOfVoice: 33 }, gap: { mention: null, citation: null } },
 ];
-const LIVE_TREND: LiveTrend = {
-  unit: "week",
-  lastMeasuredAt: "2026-09-07T00:00:00.000Z",
-  totalAnswers: 44,
-  points: LIVE_POINTS,
+const LIVE_VIEW: TrendChartView = { rows: LIVE_ROWS, availableSeries: ["visibility", "shareOfVoice"] };
+/** x labels as the chart formats the row days. */
+const liveLabels = (rows: TrendChartView["rows"]) => {
+  const fmt = trendBucketLabelFormatter("ko");
+  return rows.map((r) => fmt.format(new Date(r.day)));
 };
 
-describe("LiveTrendChart (대시보드 히어로 추이)", () => {
+/** overview/card-trend sparkline points of the visibility card (Δ vs the previous valued point). */
+const SPARK_POINTS: SparkPointView[] = [
+  { bucketStart: "2026-08-10", value: 10, wow: null },
+  { bucketStart: "2026-08-17", value: 30, wow: 20 },
+  { bucketStart: "2026-08-24", value: null, wow: null, gap: GAP },
+  { bucketStart: "2026-08-31", value: 70, wow: null },
+  { bucketStart: "2026-09-07", value: 76, wow: 6 },
+];
+const SPARK_DAYS = SPARK_POINTS.map((p) => p.bucketStart);
+const Spark = ({ points }: { points: SparkPointView[] }) => (
+  <SparkAreaView points={points} domain={[0, 100]} hasValue kpiKey="visibility" isRank={false} fmt={(v) => String(v)} />
+);
+
+describe("LiveTrendChartView (대시보드 히어로 추이)", () => {
   it("보이는 시리즈만 곡선 보조선을 얻는다 (기본 노출률·SoV 2개)", () => {
-    // x축은 포맷된 라벨이다 — 차트가 쓰는 것과 같은 헬퍼로 만든다.
-    const fmt = trendBucketLabelFormatter("ko");
-    axis.xs = LIVE_POINTS.map((p) => trendBucketLabel(fmt, p, "week"));
-    const drawn = bridges(wrap(<LiveTrendChart trend={LIVE_TREND} />));
+    // x축은 포맷된 라벨이다 — 차트가 쓰는 것과 같은 포매터로 만든다.
+    axis.xs = liveLabels(LIVE_ROWS);
+    const drawn = bridges(wrap(<LiveTrendChartView view={LIVE_VIEW} />));
     expect(drawn).toHaveLength(2);
     expect(drawn.every((b) => isSmoothCubic(b.d))).toBe(true);
     // 8/17(x 40) → 8/31(x 120).
@@ -264,31 +273,25 @@ describe("LiveTrendChart (대시보드 히어로 추이)", () => {
   });
 
   it("갭 없는 추이는 보조선이 없다", () => {
-    const fmt = trendBucketLabelFormatter("ko");
-    const clean = LIVE_POINTS.filter((p) => !p.gap);
-    axis.xs = clean.map((p) => trendBucketLabel(fmt, p, "week"));
-    expect(bridges(wrap(<LiveTrendChart trend={{ ...LIVE_TREND, points: clean }} />))).toEqual([]);
+    const clean = LIVE_ROWS.filter((r) => !r.gap.mention);
+    axis.xs = liveLabels(clean);
+    expect(bridges(wrap(<LiveTrendChartView view={{ ...LIVE_VIEW, rows: clean }} />))).toEqual([]);
   });
 });
 
-describe("SparkArea (오버뷰 KPI 카드 스파크라인)", () => {
+describe("SparkAreaView (오버뷰 KPI 카드 스파크라인)", () => {
   it("스파크라인에도 곡선 보조선이 걸린다", () => {
-    axis.xs = LIVE_POINTS.map((p) => p.bucketStart);
-    const pts = sparkPoints(LIVE_TREND, "visibility");
-    const drawn = bridges(
-      wrap(<SparkArea points={pts} kpiKey="visibility" isRank={false} fmt={(v) => String(v)} />),
-    );
+    axis.xs = SPARK_DAYS;
+    const drawn = bridges(wrap(<Spark points={SPARK_POINTS} />));
     expect(drawn).toHaveLength(1);
     expect(isSmoothCubic(drawn[0].d)).toBe(true);
     expect(drawn[0].stroke).toBe("var(--color-brand-700)");
   });
 
   it("갭이 없으면 보조선이 없다", () => {
-    axis.xs = LIVE_POINTS.map((p) => p.bucketStart);
-    const clean = sparkPoints({ ...LIVE_TREND, points: LIVE_POINTS.filter((p) => !p.gap) }, "visibility");
-    expect(
-      bridges(wrap(<SparkArea points={clean} kpiKey="visibility" isRank={false} fmt={(v) => String(v)} />)),
-    ).toEqual([]);
+    axis.xs = SPARK_DAYS;
+    const clean = SPARK_POINTS.filter((p) => !p.gap);
+    expect(bridges(wrap(<Spark points={clean} />))).toEqual([]);
   });
 });
 
@@ -350,7 +353,7 @@ describe("갭 슬롯 툴팁 — 차트를 통과시켜 렌더로 확인", () => 
                 { week: "2026-08-31", Hyundai: 70, BMW: 30 },
               ],
             }}
-            trackedBrands={new Set(["Hyundai"])}
+            series={{ own: ["Hyundai"], competitors: ["BMW"] }}
           />,
         ),
       gap: tip({ week: "2026-08-24", Hyundai: null, BMW: null, gap: GAP }, null, "Hyundai"),
@@ -399,34 +402,25 @@ describe("갭 슬롯 툴팁 — 차트를 통과시켜 렌더로 확인", () => 
       setup: () => {
         axis.xs = WEEK_AXIS;
       },
-      render: () => wrap(<KpiTrendChart metric="sov" points={KPI_POINTS as never} />),
+      render: () => wrap(<KpiTrendChart metric="sov" points={KPI_POINTS as never} coverage={[]} />),
       gap: tip(KPI_POINTS[2], null, "pct"),
       measured: tip(KPI_POINTS[1], 30, "pct"),
     },
     {
-      label: "LiveTrendChart",
+      label: "LiveTrendChartView",
       setup: () => {
-        const fmt = trendBucketLabelFormatter("ko");
-        axis.xs = LIVE_POINTS.map((p) => trendBucketLabel(fmt, p, "week"));
+        axis.xs = liveLabels(LIVE_ROWS);
       },
-      render: () => wrap(<LiveTrendChart trend={LIVE_TREND} />),
+      render: () => wrap(<LiveTrendChartView view={LIVE_VIEW} />),
       gap: tip({ label: "8/24", gap: GAP, visibility: null }, null, "visibility"),
       measured: tip({ label: "8/17", visibility: 30 }, 30, "visibility"),
     },
     {
-      label: "SparkArea (오버뷰 카드)",
+      label: "SparkAreaView (오버뷰 카드)",
       setup: () => {
-        axis.xs = LIVE_POINTS.map((p) => p.bucketStart);
+        axis.xs = SPARK_DAYS;
       },
-      render: () =>
-        wrap(
-          <SparkArea
-            points={sparkPoints(LIVE_TREND, "visibility")}
-            kpiKey="visibility"
-            isRank={false}
-            fmt={(v) => String(v)}
-          />,
-        ),
+      render: () => wrap(<Spark points={SPARK_POINTS} />),
       gap: tip({ bucketStart: "2026-08-24", value: null, wow: null, gap: GAP }, null, "value"),
       measured: tip({ bucketStart: "2026-08-17", value: 30, wow: 20 }, 30, "value"),
     },
@@ -473,10 +467,9 @@ describe("보조선 z-order — 갭 음영 위에 그린다", () => {
     expect(new Set(layers)).toEqual(new Set([String(DefaultZIndexes.line)]));
   });
 
-  it("yAxisId 를 쓰는 차트(LiveTrendChart)에서도 층에 들어간다", () => {
-    const fmt = trendBucketLabelFormatter("ko");
-    axis.xs = LIVE_POINTS.map((p) => trendBucketLabel(fmt, p, "week"));
-    const html = wrap(<LiveTrendChart trend={LIVE_TREND} />);
+  it("yAxisId 를 쓰는 차트(LiveTrendChartView)에서도 층에 들어간다", () => {
+    axis.xs = liveLabels(LIVE_ROWS);
+    const html = wrap(<LiveTrendChartView view={LIVE_VIEW} />);
     expect(bridgeLayers(html)).toEqual([
       String(DefaultZIndexes.line),
       String(DefaultZIndexes.line),
@@ -484,11 +477,8 @@ describe("보조선 z-order — 갭 음영 위에 그린다", () => {
   });
 
   it("스파크라인(축 id 없음)도 마찬가지다", () => {
-    axis.xs = LIVE_POINTS.map((p) => p.bucketStart);
-    const pts = sparkPoints(LIVE_TREND, "visibility");
-    const html = wrap(
-      <SparkArea points={pts} kpiKey="visibility" isRank={false} fmt={(v) => String(v)} />,
-    );
+    axis.xs = SPARK_DAYS;
+    const html = wrap(<Spark points={SPARK_POINTS} />);
     expect(bridgeLayers(html)).toEqual([String(DefaultZIndexes.line)]);
   });
 });

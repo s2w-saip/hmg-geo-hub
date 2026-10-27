@@ -29,64 +29,21 @@ const SERVER_SRC = read(SERVER_TS);
  * **시간 축이 뜨는 모든 지면**과 그 달력 배선. 새 지면이 `selectableDates` 없이 기간
  * 필터를 렌더하면 여기서 깨져야 한다(검증 W1: 종전 5지면만 열거해 7곳 누락을 놓쳤다).
  *
- * 계열은 D1 의 지면 단위 규칙을 따른다 — 그 지면의 데이터 리더가 쓰는 계열과 같다.
+ * 달력(선택 가능한 회차)은 그 지면의 화면(back/bff/screens)이 계열(D1)까지 정해 payload 에
+ * 싣는다. 페이지는 받은 값을 패널에 넘기기만 한다 — 그 배선을 여기서 고정한다.
  */
 const CALENDAR_SURFACES: ReadonlyArray<[label: string, file: string, expr: string]> = [
-  [
-    "글로벌 Overview",
-    "app/[locale]/(dash)/dashboard/page.tsx",
-    'selectableDates={await fetchSelectableAnchorDates("global", filters, "all")}',
-  ],
-  [
-    "글로벌 언급",
-    "app/[locale]/(dash)/standard/answer-analysis/mention/page.tsx",
-    'selectableDates={await fetchSelectableAnchorDates("global", filters, "mentions")}',
-  ],
-  [
-    "글로벌 인용",
-    "app/[locale]/(dash)/standard/answer-analysis/citation/page.tsx",
-    'selectableDates={await fetchSelectableAnchorDates("global", filters, "citations")}',
-  ],
-  [
-    "글로벌 ACR",
-    "app/[locale]/(dash)/standard/ai-funnel/acr/page.tsx",
-    'selectableDates={await fetchSelectableAnchorDates("global", filters, "all")}',
-  ],
-  [
-    "website Overview",
-    "app/[locale]/(dash)/website/page.tsx",
-    'selectableDates={await fetchSelectableAnchorDates("website", filters, "all")}',
-  ],
-  [
-    "website 언급",
-    "app/[locale]/(dash)/website/answer-analysis/mention/page.tsx",
-    'selectableDates={await fetchSelectableAnchorDates("website", filters, "mentions")}',
-  ],
-  [
-    "website 인용",
-    "app/[locale]/(dash)/website/answer-analysis/citation/page.tsx",
-    'selectableDates={await fetchSelectableAnchorDates("website", filters, "citations")}',
-  ],
-  [
-    "website 프롬프트",
-    "app/[locale]/(dash)/website/prompts/page.tsx",
-    'selectableDates={await fetchSelectableAnchorDates("website", {}, "all")}',
-  ],
-  [
-    "프로젝트 대시보드",
-    "app/[locale]/(dash)/projects/[id]/_components/project-dashboard.tsx",
-    'selectableDates={await fetchProjectSelectableAnchorDates(projectId, filters, "all")}',
-  ],
-  [
-    "프로젝트 언급",
-    "app/[locale]/(dash)/projects/[id]/analysis/mention/page.tsx",
-    'selectableDates={await fetchProjectSelectableAnchorDates(id, filters, "mentions")}',
-  ],
-  [
-    "프로젝트 인용",
-    "app/[locale]/(dash)/projects/[id]/analysis/citation/page.tsx",
-    'selectableDates={await fetchProjectSelectableAnchorDates(id, filters, "citations")}',
-  ],
+  ["글로벌 Overview", "app/[locale]/(dash)/dashboard/page.tsx", "selectableDates={v.selectableDates}"],
+  ["글로벌 언급", "app/[locale]/(dash)/standard/answer-analysis/mention/page.tsx", "selectableDates={dates.selectableDates ?? undefined}"],
+  ["글로벌 인용", "app/[locale]/(dash)/standard/answer-analysis/citation/page.tsx", "selectableDates={bar.dates.selectableDates}"],
+  // acr/standard 의 panel(AcrScreen.panel: selectableDates 포함)을 통째로 넘긴다.
+  ["글로벌 ACR", "app/[locale]/(dash)/standard/ai-funnel/acr/page.tsx", "<AcrLiveView vm={view} scope={session?.user.scope} {...panel} />"],
+  ["website Overview", "app/[locale]/(dash)/website/page.tsx", "selectableDates={v.selectableDates}"],
+  ["website 언급", "app/[locale]/(dash)/website/answer-analysis/mention/page.tsx", "selectableDates={dates.selectableDates ?? undefined}"],
+  ["website 인용", "app/[locale]/(dash)/website/answer-analysis/citation/page.tsx", "selectableDates={bar.dates.selectableDates}"],
+  ["website 프롬프트", "app/[locale]/(dash)/website/prompts/page.tsx", "selectableDates={options.selectableDates ?? undefined}"],
+  ["프로젝트 언급", "app/[locale]/(dash)/projects/[id]/analysis/mention/page.tsx", "selectableDates={panel?.selectableDates ?? undefined}"],
+  ["프로젝트 인용", "app/[locale]/(dash)/projects/[id]/analysis/citation/page.tsx", "selectableDates={s.selectableDates}"],
 ];
 
 /**
@@ -94,24 +51,9 @@ const CALENDAR_SURFACES: ReadonlyArray<[label: string, file: string, expr: strin
  *
  * 근거가 파일에서 사라지면(= 그 화면이 실데이터를 읽기 시작하면) 이 가드가 깨져
  * 배선을 다시 검토하게 만든다. 빈 목록으로 두고 조용히 넘어가지 않는 것이 요점이다.
+ * (지금은 없다 — 픽스처 뷰 둘이 화면 이관으로 사라졌다.)
  */
-const CALENDAR_EXEMPT: ReadonlyArray<[label: string, file: string, reason: string]> = [
-  [
-    "ai-funnel 가시성",
-    "app/[locale]/(dash)/standard/ai-funnel/_components/visibility-view.tsx",
-    // 이 화면은 DB 를 전혀 읽지 않는다(픽스처). 회차 목록을 읽어 봐야 달력만 잠그고
-    // 왕복이 는다. 실데이터로 바뀌면 아래 문장이 사라져 이 가드가 깨진다.
-    "../_data/sample",
-  ],
-  [
-    // 프로젝트 ACR·웹사이트 ACR 두 라우트가 쓰는 뷰(N6). `onlyGroups` 를 안 줘서
-    // `ALL_GROUPS`(기간 축 포함)를 띄우지만 값은 픽스처다 — 실데이터 ACR 지면은
-    // `acr-live-view.tsx` 쪽이고 그쪽은 배선돼 있다.
-    "ai-funnel ACR (픽스처 뷰)",
-    "app/[locale]/(dash)/standard/ai-funnel/_components/acr-view.tsx",
-    "../_data/sample",
-  ],
-];
+const CALENDAR_EXEMPT: ReadonlyArray<[label: string, file: string, reason: string]> = [];
 
 /** 지면 → 패널 사이에 prop 을 **중계**하는 컴포넌트들(끊기면 값이 조용히 사라진다). */
 const CALENDAR_RELAYS: ReadonlyArray<[label: string, file: string]> = [
@@ -148,13 +90,15 @@ describe("플래그 → 달력 (스펙 §5.1)", () => {
     expect(src).toContain("selectableDates={selectableDates}");
   });
 
-  it.each(CALENDAR_EXEMPT)("%s 는 면제이고 근거가 파일에 남아 있다", (_l, file, reason) => {
-    const src = read(file);
-    expect(src).not.toContain("selectableDates");
-    expect(src, `면제 근거 "${reason}" 가 사라졌다 — 배선을 다시 검토할 것`).toContain(
-      reason,
-    );
-  });
+  if (CALENDAR_EXEMPT.length > 0) {
+    it.each(CALENDAR_EXEMPT)("%s 는 면제이고 근거가 파일에 남아 있다", (_l, file, reason) => {
+      const src = read(file);
+      expect(src).not.toContain("selectableDates");
+      expect(src, `면제 근거 "${reason}" 가 사라졌다 — 배선을 다시 검토할 것`).toContain(
+        reason,
+      );
+    });
+  }
 
   // ⚠️ 목록은 낡는다. 그래서 **패널을 그리는 파일을 소스에서 다시 세어**, 그중
   //    `selectableDates` 를 받지도 넘기지도 않는 것이 있으면 깨뜨린다.
@@ -451,18 +395,17 @@ describe("숨김 계열 일관성", () => {
   });
 
   it("그 지면의 달력이 같은 계열을 받는다", () => {
-    // CALENDAR_SURFACES 가 지면 파일의 3번째 인자를 이미 고정한다. 여기서는 그 값이
-    // 위 표와 같은 낱말인지만 본다 (지면 파일과 리더가 따로 표류하지 않게).
+    // 달력 계열은 지면의 화면이 정한다(Overview·website = all, 인용 = citations). 페이지가
+    // 계열을 직접 고르는 곳은 공용 달력 화면(shared/filter-dates)을 읽는 언급 지면뿐이고,
+    // 그 낱말이 위 표(언급 = mentions)와 같아야 한다.
     const byPage: ReadonlyArray<[file: string, family: string]> = [
-      ["app/[locale]/(dash)/dashboard/page.tsx", "all"],
-      ["app/[locale]/(dash)/website/page.tsx", "all"],
-      ["app/[locale]/(dash)/projects/[id]/_components/project-dashboard.tsx", "all"],
       ["app/[locale]/(dash)/standard/answer-analysis/mention/page.tsx", "mentions"],
-      ["app/[locale]/(dash)/standard/answer-analysis/citation/page.tsx", "citations"],
+      ["app/[locale]/(dash)/website/answer-analysis/mention/page.tsx", "mentions"],
+      ["app/[locale]/(renewal)/renewal/standard/answer-analysis/mention/page.tsx", "mentions"],
     ];
     for (const [file, family] of byPage) {
-      expect(read(file), `${file}: 달력 계열이 ${family} 가 아니다`).toContain(
-        `filters, "${family}")`,
+      expect(read(file), `${file}: 달력 계열이 ${family} 가 아니다`).toMatch(
+        new RegExp(`"shared/filter-dates", \\{ surface: "\\w+", family: "${family}" \\}`),
       );
     }
   });

@@ -5,22 +5,17 @@ import { PageHeader } from "@/components/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getSession } from "@/lib/auth/session";
 import { canAccessRoute } from "@/lib/auth/route-policy";
-import { promptAuditLogRepository } from "@/lib/db/repositories/prompt-audit-logs";
-import { standardCollectionDates } from "@/lib/db/repositories/scope-aggregates";
-import { isAnalysisApi } from "@/lib/hgh/adapters/filters";
-import { listGlobalAuditApi, standardCollectionPeriodApi } from "@/lib/hgh/adapters/catalog";
-import { loadCatalogPage, loadCatalogRows } from "./_page-actions";
 import { throwForPage } from "@/lib/hgh/errors";
+import { scopeForGeoSurface } from "@/lib/scope/website-virtual-geo";
+import { loadPromptsScreens } from "./_data/server";
 import { StandardPromptReadonlyList } from "./_components/prompt-list-readonly";
 import { AuditHistoryView } from "./_components/audit-history-view";
-import { scopeForGeoSurface } from "@/lib/scope/website-virtual-geo";
 
 // 표준 — 표준 프롬프트 (열람 전용). The read-only twin of the admin standard
-// prompt catalog: same root source (listStandardCatalog* on the `prompts` root
-// project) but BRAND-SCOPED to the caller's account and stripped of all CRUD /
-// scope-link operational chrome. Scope is derived server-side from the session
-// (never the client); there is no scope filter UI — the visible set varies by
-// account. Multi-brand "잘못" rows are hidden by the backend exclusion list.
+// prompt catalog, scoped to the caller's account and stripped of all CRUD /
+// scope-link operational chrome; there is no scope filter UI.
+// Rows, options, order, pages, the collection period and the change history come
+// from the screens catalog/prompts-* (back/bff/screens/standard_prompts.py); this page renders them.
 export default async function StandardPromptsPage({
   params,
   searchParams,
@@ -42,53 +37,29 @@ export default async function StandardPromptsPage({
 
   const scope = session.user.scope;
   const { tab } = await searchParams;
-  const { catalog, from, to, auditRows } = isAnalysisApi("prompts", "global")
-    ? await loadApi()
-    : await loadLegacy();
+  const { catalog, header, history } = await load();
 
-  // Bounded catalog page, collection period and 90-day history are read independently.
-  // The server applies account scope before catalog counts, facets and pagination.
-  async function loadApi() {
+  // The first catalog page, the header period and the 90-day history are read independently.
+  async function load() {
     try {
-      const [catalog, period, audit] = await Promise.all([
-        loadCatalogPage(false, {}),
-        standardCollectionPeriodApi(),
-        listGlobalAuditApi(),
-      ]);
-      return { catalog, from: period.from, to: period.to, auditRows: audit };
+      return await loadPromptsScreens();
     } catch (e) {
       throwForPage(e, locale);
     }
   }
 
-  async function loadLegacy() {
-    // 변경 이력(catalog-prompt-audit)은 뷰어와 같은 브랜드 스코프 술어로 90일 창.
-    const AUDIT_WINDOW_DAYS = 90;
-    const [catalog, collection, auditRows] = await Promise.all([
-      loadCatalogPage(false, {}),
-      standardCollectionDates(scope),
-      promptAuditLogRepository.listGlobalScoped({
-        scope,
-        from: new Date(Date.now() - AUDIT_WINDOW_DAYS * 24 * 60 * 60 * 1000),
-      }),
-    ]);
-    // 수집 기간 헤더 (2026-07-23 피드백 ③): 계정 scope 범위의 completed 답변
-    // measured_at min~max. UTC 달력일 — 측정 타임스탬프 저장 기준과 동일.
-    const day = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null);
-    return { catalog, from: day(collection.firstMeasuredAt), to: day(collection.lastMeasuredAt), auditRows };
-  }
-
+  const period = header.period;
   return (
     <div className="flex animate-fade-in flex-col gap-6">
       <PageHeader
         title={t("title")}
         description={t("subtitle")}
         meta={
-          from && to ? (
+          period ? (
             <span>
-              {t("collectionPeriod", { from, to })}
+              {t("collectionPeriod", { from: period.from, to: period.to })}
               <span className="mx-1.5 text-border">·</span>
-              {t("lastCollectedAt", { date: to })}
+              {t("lastCollectedAt", { date: period.to })}
             </span>
           ) : null
         }
@@ -101,8 +72,7 @@ export default async function StandardPromptsPage({
         <TabsContent value="catalog" className="mt-0">
           <SectionCard title={t("count", { count: catalog.count })}>
             <StandardPromptReadonlyList
-              rows={catalog.rows}
-              remote={{ initial: catalog, load: loadCatalogPage.bind(null, false), rows: loadCatalogRows.bind(null, false) }}
+              remote={{ initial: catalog }}
               scopeAll={scope.all}
               scopeRole={session.user.role}
               scopeBrands={scope.brands ?? []}
@@ -114,7 +84,7 @@ export default async function StandardPromptsPage({
         </TabsContent>
         <TabsContent value="history" className="mt-0">
           <SectionCard title={tAudit("sectionTitle")} description={tAudit("sectionDescription")}>
-            <AuditHistoryView initialRows={auditRows} />
+            <AuditHistoryView initial={history} />
           </SectionCard>
         </TabsContent>
       </Tabs>

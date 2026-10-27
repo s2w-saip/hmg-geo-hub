@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { use, useCallback, useDeferredValue, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { ArrowDown, ArrowUp, ArrowUpDown, ExternalLink, Globe, MessageSquareText } from "lucide-react";
 import {
@@ -17,12 +17,12 @@ import {
 } from "@/components/renewal-ui";
 import { AnswerModal } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/answer-modal";
 import { TruncatedNote } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/citation-domain-table";
-import { TableStatus, useDomainDetail, useServerDomainTable, type RankedDomainRow } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/citations-view";
-import { citationDrilldownEmptyKey, domainDetailUrl, type DomainTableSortKey } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/citation-view";
+import { TableStatus, useDomainDetail, useServerDomainTable } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/citations-view";
+import { citationDrilldownEmptyKey, domainDetailUrl, type DomainDetailView, type DomainTableSortKey } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/citation-view";
 import { displayCitationUrl } from "@/lib/url-display";
 import { countryName } from "@/lib/geo-catalog";
 import type { CitationDomainLive, CitationPromptLive } from "@/lib/scope/result-adapter";
-import { domainBump, rankedDomains, type DomainBump } from "./citation-model";
+import type { RnCitationVm } from "./citation-input";
 import { CONTEXT_COLOR, MOVER_COLORS, OWN_COLOR, CitationCardActions, engineLabel, useCatLabel, useCitation } from "./citation-context";
 import { DegradedNote, InfoTip, TwinTable } from "../../mention/_components/mention-kit";
 import { numTxt, pctTxt, slotLabel } from "../../mention/_components/mention-context";
@@ -51,9 +51,9 @@ export function DomainBumpCard() {
   const tA = useTranslations("answerAnalysis");
   const tK = useTranslations("answerAnalysis.mentions.kpi");
   const sections = use(input.sectionDegraded);
-  const d = useMemo(() => domainBump(live.trend, live.domains), [live]);
+  const d = (use(input.rn) as RnCitationVm).bump;
   const tableOn = tables.has("bump");
-  const measured = d ? d.x.filter((_, i) => d.series.some((s) => s.ranks[i] != null)).length : 0;
+  const measured = d ? d.measured : 0;
   const csv = () => ({
     name: "citation-weekly-domain-rank",
     rows: [["", ...(d?.x ?? []).flatMap((x) => [`${x} ${t("colRank")}`, `${x} ${t("colCitations")}`])], ...(d?.series ?? []).map((s) => [s.key, ...s.ranks.flatMap((r, i) => [r, s.values[i]])])],
@@ -84,7 +84,9 @@ export function DomainBumpCard() {
 const ROW = 24;
 const LABEL_W = 236;
 
-function BumpChart({ d }: { d: DomainBump }) {
+type BumpView = NonNullable<RnCitationVm["bump"]>;
+
+function BumpChart({ d }: { d: BumpView }) {
   const { lit, hover, live, openDomain } = useCitation();
   const t = useTranslations("renewal.citation.bump");
   const [ref, width] = useWidth<HTMLDivElement>();
@@ -100,7 +102,8 @@ function BumpChart({ d }: { d: DomainBump }) {
   const keys = d.series.map((s) => s.key);
   const fading = lit != null && keys.includes(lit);
   const emph = (s: { key: string; own: boolean }) => s.own || movers.has(s.key);
-  const order = [...d.series].sort((a, b) => Number(emph(a)) - Number(emph(b)) || Number(a.own) - Number(b.own));
+  // draw order (context first, then movers, own last) from the screen
+  const order = d.drawOrder.map((i) => d.series[i]);
   const path = (ranks: (number | null)[]) => {
     let p = "";
     let prev: [number, number] | null = null;
@@ -119,8 +122,8 @@ function BumpChart({ d }: { d: DomainBump }) {
     });
     return p;
   };
-  const open = (key: string) => {
-    const row = live.domains.find((r) => r.domain === key);
+  const open = (s: BumpView["series"][number]) => {
+    const row = s.domainIndex >= 0 ? live.domains[s.domainIndex] : undefined;
     if (row) openDomain(row);
   };
   return (
@@ -170,7 +173,7 @@ function BumpChart({ d }: { d: DomainBump }) {
               const on = emph(s);
               const dim = fading && lit !== s.key;
               return (
-                <g key={s.key} data-rn-b={s.key} data-rn-series={s.own ? "own" : on ? "mover" : "ctx"} opacity={dim ? 0.15 : 1} onPointerEnter={() => hover(s.key)} onClick={() => open(s.key)} className="cursor-pointer">
+                <g key={s.key} data-rn-b={s.key} data-rn-series={s.own ? "own" : on ? "mover" : "ctx"} opacity={dim ? 0.15 : 1} onPointerEnter={() => hover(s.key)} onClick={() => open(s)} className="cursor-pointer">
                   <path d={path(s.ranks)} fill="none" stroke={color} strokeWidth={s.own ? 3 : on ? 2.4 : 1.5} strokeLinecap="round" />
                   {s.ranks.map((r, i) =>
                     r == null ? null : (
@@ -184,14 +187,13 @@ function BumpChart({ d }: { d: DomainBump }) {
             })}
             {d.series.map((s) => {
               const r1 = s.ranks[d.last];
-              const r0 = s.ranks[d.first];
               if (r1 == null) return null;
-              const move = r0 != null ? r0 - r1 : null;
+              const move = s.move;
               const on = emph(s);
               const dim = fading && lit !== s.key;
               const x0 = left + plotW + 18;
               return (
-                <g key={`l-${s.key}`} data-rn-b={s.key} opacity={dim ? 0.3 : 1} onPointerEnter={() => hover(s.key)} onClick={() => open(s.key)} className="cursor-pointer">
+                <g key={`l-${s.key}`} data-rn-b={s.key} opacity={dim ? 0.3 : 1} onPointerEnter={() => hover(s.key)} onClick={() => open(s)} className="cursor-pointer">
                   <text x={x0} y={y(r1) + 4} fontSize={11} fill="var(--color-rn-muted)">
                     {r1}
                   </text>
@@ -227,7 +229,7 @@ const FIRST = 20;
 type SortKey = DomainTableSortKey;
 
 export function DomainTableCard() {
-  const { input, live, picked, lit, hover, openDomain } = useCitation();
+  const { input, lit, hover, openDomain } = useCitation();
   const t = useTranslations("renewal.citation.table");
   const tC = useTranslations("answerAnalysis.citations.table");
   const cat = useCatLabel();
@@ -238,25 +240,18 @@ export function DomainTableCard() {
   const [asc, setAsc] = useState(false);
   const [category, setCategory] = useState("");
   const [all, setAll] = useState(false);
-  const initial = useMemo(() => rankedDomains(live.domains, picked), [live, picked]);
-  const legacy = useMemo(() => {
-    const qq = deferred.trim().toLowerCase();
-    const arr = initial.filter((r) => !qq || r.domain.toLowerCase().includes(qq));
-    arr.sort((a, b) => {
-      const dir = asc ? 1 : -1;
-      if (sortKey === "domain") return dir * a.domain.localeCompare(b.domain);
-      return dir * (a[sortKey] - b[sortKey]);
-    });
-    return arr.slice(0, LIMIT);
-  }, [initial, deferred, sortKey, asc]);
-  // api: search and sort run on the server over every source (BG-21); '#' = the rank after the pick
-  const table = useServerDomainTable({ source, initial: initial as RankedDomainRow[], q: deferred, sortKey, asc, pageSize: LIMIT });
-  const base: (CitationDomainLive & { rank: number })[] = table.active ? table.rows.slice(0, LIMIT).map((r, i) => ({ ...r, rank: r.rank ?? i + 1 })) : legacy;
-  const rows = category ? base.filter((r) => r.category === category) : base;
+  // the first rows after the competitor pick (# = the rank after the pick) and their category
+  // views come with the screen; search and sort run on the server over every source (BG-21)
+  const model = (use(input.rn) as RnCitationVm).table;
+  const table = useServerDomainTable({ source, initial: model.rows, initialViews: model.views, q: deferred, sortKey, asc, pageSize: LIMIT });
+  const base = (table.active ? table.rows : model.rows).slice(0, LIMIT);
+  // the category select: the server's row list and bar scales per category (first 100 rows)
+  const view = (table.active ? table.views : model.views)?.[category];
+  const rows = view ? view.idx.map((i) => base[i]) : category ? [] : base;
   const shown = all ? rows : rows.slice(0, FIRST);
-  const maxCit = Math.max(1, ...rows.map((r) => r.citations));
-  const maxCov = Math.max(1, ...rows.map((r) => r.coverageRate));
-  const cats = useMemo(() => (live.categories ?? []).slice().sort((a, b) => b.value - a.value).map((c) => c.name), [live]);
+  const maxCit = view?.maxCit ?? 1;
+  const maxCov = view?.maxCov ?? 1;
+  const cats = model.categories;
   const clickHeader = (k: SortKey) => {
     if (sortKey === k) setAsc((v) => !v);
     else {
@@ -266,7 +261,7 @@ export function DomainTableCard() {
   };
   const csv = () => ({
     name: "citation-domains",
-    rows: [[tC("col.rank"), tC("col.domain"), tC("col.category"), tC("col.citations"), tC("col.share"), tC("col.prompts"), tC("col.coverage")], ...rows.map((r) => [r.rank, r.domain, r.category ? cat(r.category) : "", r.citations, r.share.toFixed(1), r.prompts, r.coverageRate.toFixed(1)])],
+    rows: [[tC("col.rank"), tC("col.domain"), tC("col.category"), tC("col.citations"), tC("col.share"), tC("col.prompts"), tC("col.coverage")], ...rows.map((r) => [r.no, r.domain, r.category ? cat(r.category) : "", r.citations, r.share.toFixed(1), r.prompts, r.coverageRate.toFixed(1)])],
   });
   const th = (k: SortKey | null, label: string, right: boolean, info?: { def: string; formula: string }) => (
     <th scope="col" className={cx("px-2.5 py-2 text-rn-12 font-semibold whitespace-nowrap text-rn-muted", right ? "text-right" : "text-left")} aria-sort={k && sortKey === k ? (asc ? "ascending" : "descending") : undefined}>
@@ -349,7 +344,7 @@ export function DomainTableCard() {
                     lit === r.domain && "bg-rn-navy-25",
                   )}
                 >
-                  <td className="px-2.5 py-2.5 text-right text-rn-muted tabular-nums">{r.rank}</td>
+                  <td className="px-2.5 py-2.5 text-right text-rn-muted tabular-nums">{r.no}</td>
                   <td className="px-2.5 py-2.5">
                     <span className="flex min-w-0 items-center gap-1.5">
                       <b className={cx("truncate font-semibold", r.isOurs ? "text-rn-navy" : "text-rn-ink")}>{r.domain}</b>
@@ -521,12 +516,13 @@ function UrlList({ row, urls, total }: { row: CitationDomainLive; urls: Citation
   );
 }
 
-function PromptList({ row, prompts, total, onAnswer }: { row: CitationDomainLive; prompts: CitationPromptLive[]; total?: number; onAnswer: (p: CitationPromptLive) => void }) {
+function PromptList({ row, prompts, total, onAnswer }: { row: CitationDomainLive; prompts: DomainDetailView["promptList"]; total?: number; onAnswer: (p: CitationPromptLive) => void }) {
   const tC = useTranslations("answerAnalysis.citations");
   const tMd = useTranslations("answerAnalysis.mentions.drilldown");
   const t = useTranslations("renewal.citation.drawer");
   if (!prompts.length) return <p className="m-0 rounded-lg bg-rn-page px-4 py-6 text-center text-rn-12 text-rn-muted">{tC(citationDrilldownEmptyKey(row, "prompts"))}</p>;
-  const list = [...prompts].sort((a, b) => b.citations - a.citations);
+  // the server's order (citations desc) and each prompt's share of the source's citations
+  const list = prompts;
   return (
     <div className="flex flex-col gap-2">
       <p className="m-0 text-rn-11 text-rn-muted">{tC("v2.drilldownTabs.promptsCaption")}</p>
@@ -562,7 +558,7 @@ function PromptList({ row, prompts, total, onAnswer }: { row: CitationDomainLive
               </span>
             </span>
             <span className="text-right font-semibold text-rn-ink tabular-nums">{numTxt(p.citations)}</span>
-            <span className="text-right text-rn-ink-2 tabular-nums">{row.citations > 0 ? pctTxt((100 * p.citations) / row.citations) : "—"}</span>
+            <span className="text-right text-rn-ink-2 tabular-nums">{p.share != null ? pctTxt(p.share) : "—"}</span>
           </button>
         );
       })}

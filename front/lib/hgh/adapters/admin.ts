@@ -312,6 +312,7 @@ export function pointsToEmail(details: unknown): boolean {
 
 /** POST /v1/admin/users (D10: role and scope come from the form). */
 export async function createAccount(input: AccountCreateInput): Promise<AccountResult<{ email: string; tempPassword: string }>> {
+  if (input.role === "local_reader") return { ok: false, errorKey: ERR("createFailed") };
   const admin = input.role === "admin";
   try {
     const res = await hghPost("/v1/admin/users", {
@@ -366,6 +367,7 @@ const UPDATE_ERRORS: CodeTable = {
  * arrays (the backend refuses null); scopeAll empties them, as legacy normalized.
  */
 export async function patchAccount(userId: string, patch: AccountPatchInput, rowVersion: number | undefined): Promise<AccountResult> {
+  if (patch.role === "local_reader") return { ok: false, errorKey: ERR("updateFailed") };
   if (rowVersion === undefined || !Number.isInteger(rowVersion)) {
     // The dialog always carries the version on the api source; without it the backend
     // answers 428. Report a stale screen instead of sending a request that must fail.

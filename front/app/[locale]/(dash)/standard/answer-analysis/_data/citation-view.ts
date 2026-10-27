@@ -1,63 +1,32 @@
-// 인용 개편(PR ④, 디자인 571:380)의 view-model — 순수 함수만. kpi-view.ts 와 같은
-// 방침: 분기·산식은 여기 한 곳에, 컴포넌트는 그리기만.
+// 인용 화면(PR ④, 디자인 571:380)의 payload 타입·카테고리 상수·표 경로·빈 상태 키. 값은 인용 화면
+// (back/bff/screens/citation.py)이 계산하고, 컴포넌트는 그리기만 한다.
 
+import type { CitationTypeCategoryRow } from "@/lib/db/repositories/scope-aggregates";
+import type { CitationCategorySlice, CitationDomainLive, CitationsLive } from "@/lib/scope/result-adapter";
 import type {
-  CitationTypeCategoryRow,
-  StandardSubKpis,
+  CitationCategoryTotals,
+  CitationOwnedPromptPage,
+  CitationToneSummary,
+  CitationToneUrlPage,
 } from "@/lib/db/repositories/scope-aggregates";
-import type { CitationCategorySlice, CitationDomainLive } from "@/lib/scope/result-adapter";
+import type { OverviewCardDelta } from "@/lib/kpi/overview-card-values";
+import type { PeriodDeltaView } from "@/lib/kpi/period-compare-view";
+import type { FilterDatesView, PanelFilterOptions } from "@/lib/hgh/filter-types";
 import {
   OFFICIAL_COMPETITOR_CATEGORY,
   OFFICIAL_HMG_CATEGORY,
 } from "@/lib/citation-categorizer/taxonomy";
 
-const round1 = (n: number) => Math.round(n * 10) / 10;
 // 정본은 택소노미 — 필터 패널(components/dash)도 같은 값을 봐야 한다.
 // (종전에는 여기서 "Official (HMG)" 를 따로 선언해 세 번째 사본이 됐다.)
 export { OFFICIAL_COMPETITOR_CATEGORY, OFFICIAL_HMG_CATEGORY };
 export const DEALER_CATEGORY = "Dealer & Marketplace";
 
-/** 카테고리 슬라이스의 비중(%). 합 0 → null. */
-export function categoryShare(
-  categories: CitationCategorySlice[] | null | undefined,
-  name: string,
-): number | null {
-  if (!categories) return null;
-  const total = categories.reduce((s, c) => s + c.value, 0);
-  if (total <= 0) return null;
-  const v = categories.find((c) => c.name === name)?.value ?? 0;
-  return round1((100 * v) / total);
-}
-
-/**
- * 직전 스냅샷의 공식(당사) 인용 비중 — Sub KPI `citations` 파트(Q4) 엔진 행 합.
- * 현재 값(CitationsLive.summary.officialOwnShare)과 같은 분자·분모 규칙(KPI ⑤).
- */
-export function officialOwnShareFromSub(sub: StandardSubKpis | null): number | null {
-  const rows = sub?.rows ?? [];
-  const total = rows.reduce((s, r) => s + r.citTotal, 0);
-  const owned = rows.reduce((s, r) => s + r.citOwned, 0);
-  return total > 0 ? round1((100 * owned) / total) : null;
-}
-
+/** One category bar of the 출처 카테고리 현황 (value desc, share of all citations). */
 export interface CategoryBar {
   name: string;
   value: number;
   pct: number | null;
-}
-/** 카테고리별 인용 수 막대 — 값 내림차순, 비중은 전체 합 대비. */
-export function categoryBars(
-  categories: CitationCategorySlice[] | null | undefined,
-  // 비중의 분모. 생략 = 입력 합. 경쟁사 선택(`applyCompetitorPickToCategories`)은 공식(경쟁사)
-  // 값만 줄이는데, 분모까지 줄면 공식(HMG) 비중이 올라가 인용 현황 카드·Overview ⑤ 와
-  // 갈린다 → 선택 중에도 **전체 인용 수**를 분모로 넘긴다(제품 책임자 2026-09-29).
-  totalOverride?: number,
-): CategoryBar[] {
-  if (!categories) return [];
-  const total = totalOverride ?? categories.reduce((s, c) => s + c.value, 0);
-  return [...categories]
-    .sort((a, b) => b.value - a.value || a.name.localeCompare(b.name))
-    .map((c) => ({ name: c.name, value: c.value, pct: total > 0 ? round1((100 * c.value) / total) : null }));
 }
 
 export interface TypeCategoryBar {
@@ -67,108 +36,6 @@ export interface TypeCategoryBar {
   segments: Array<{ name: string; value: number; pct: number }>;
   officialPct: number | null;
 }
-/**
- * 멘션 유형별 출처 카테고리 구성(100% 스택). 시리즈(색·범례) 순서는 전 유형 합
- * 내림차순으로 고정 — 유형마다 순서가 바뀌면 색이 어긋난다(EngineCategoryChart 규칙).
- */
-export function typeCategoryBars(rows: CitationTypeCategoryRow[] | null | undefined): {
-  series: string[];
-  bars: TypeCategoryBar[];
-} {
-  if (!rows || rows.length === 0) return { series: [], bars: [] };
-  const totals = new Map<string, number>();
-  for (const r of rows) for (const [c, v] of Object.entries(r.byCategory)) totals.set(c, (totals.get(c) ?? 0) + v);
-  const series = [...totals.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([c]) => c);
-  const bars = rows.map((r) => {
-    const total = r.total;
-    const values = series.map((name) => r.byCategory[name] ?? 0);
-    const tenths = largestRemainderTenths(values);
-    const segments = series
-      .map((name, i) => ({ name, value: values[i], pct: tenths[i] / 10 }))
-      .filter((s) => s.value > 0 || s.pct > 0);
-    const official = r.byCategory[OFFICIAL_HMG_CATEGORY] ?? 0;
-    return { type: r.type, total, segments, officialPct: total > 0 ? round1((100 * official) / total) : null };
-  });
-  return { series, bars };
-}
-
-/**
- * 구성비를 0.1%p 단위로 나눠 합이 정확히 100.0(= 1000 칸)이 되게 한다 — 최대잉여(largest remainder) 배분.
- * 각 값의 정확한 비율을 0.1 단위로 내림하고, 모자란 0.1 들을 내림에서 버려진 나머지가 큰 값부터 하나씩 준다.
- * 그래서 칸마다 정확한 비율과의 차이가 0.1%p 미만이고, 0 건 칸은 나머지가 0 이라 받지 않는다(빈 시리즈가 그려지지 않는다).
- * 나머지가 같으면 뒤 칸이 먼저 받는다(종전 '마지막 칸이 잔여를 받는다' 규칙과 같은 쪽).
- * 분모 = 값의 합. 두 원천 모두 유형 total 이 카테고리 합이라(API back sources/service.py, legacy scope-aggregates.ts) total 과 같다.
- */
-function largestRemainderTenths(values: number[]): number[] {
-  const den = values.reduce((s, v) => s + v, 0);
-  if (!(den > 0)) return values.map(() => 0);
-  const out = values.map((v) => Math.floor((1000 * v) / den));
-  const rem = values.map((v, i) => 1000 * v - out[i] * den);   // 정수 건수면 정확한 정수 나머지
-  let left = 1000 - out.reduce((s, x) => s + x, 0);
-  const order = values.map((_, i) => i).sort((a, b) => rem[b] - rem[a] || b - a);
-  for (const i of order) {
-    if (left <= 0 || rem[i] <= 0) break;
-    out[i] += 1;
-    left -= 1;
-  }
-  return out;
-}
-
-/** "경쟁사" 드롭다운 옵션 — 공식(경쟁사)로 분류된 도메인(인용 수 내림차순). */
-export function competitorDomainOptions(domains: CitationDomainLive[]): string[] {
-  return domains
-    .filter((d) => d.category === OFFICIAL_COMPETITOR_CATEGORY)
-    .sort((a, b) => b.citations - a.citations || a.domain.localeCompare(b.domain))
-    .map((d) => d.domain);
-}
-
-/**
- * 경쟁사 선택 적용 — 공식(경쟁사) 행 중 선택된 도메인만 남기고, 다른 카테고리 행은
- * 그대로. 선택이 비었으면 전부.
- */
-export function applyCompetitorPick<T extends { domain: string; category: string | null }>(
-  rows: T[],
-  picked: ReadonlySet<string>,
-): T[] {
-  if (picked.size === 0) return rows;
-  return rows.filter((r) => r.category !== OFFICIAL_COMPETITOR_CATEGORY || picked.has(r.domain));
-}
-
-/**
- * 경쟁사 선택을 **카테고리 합계**에 반영한다 — 공식(경쟁사) 행의 값만 선택 도메인의
- * 인용 수 합으로 대체하고 나머지 행은 그대로 둔다(비중은 소비처가 새 합으로 재산출).
- *
- * QA 2차 #5-(c): `?competitor=` 는 도메인 표에만 걸려 있어 "출처 카테고리별 현황"의
- * 공식(경쟁사) 값이 선택과 무관하게 전량이었다. 반영 범위는 카테고리 현황 + 도메인
- * 표까지(제품 결정 D6) — 서버 축으로 승격하면 엔진별·유형별까지 전부 좁혀져 고객이
- * 요구하지 않은 화면이 바뀌고 캐시키·집계 SQL 까지 건드려야 한다.
- *
- * 선택이 비면 **입력 배열 그대로**(같은 참조) 돌려준다 — useMemo 소비처가 불필요한
- * 리렌더를 하지 않도록.
- *
- * 전제(2026-09-10 라이브 미러 실측): 도메인 → 카테고리는 1:1 이므로 대체값이 카테고리
- * 합계와 같은 척도다. `result-adapter` 는 같은 루프에서 `categoryTotals[cat]++` 와
- * `domain.citations++` 를 함께 올리고, `cat` 은 그룹키의 순수 함수다 —
- * `scope_citations.category` 는 3,243,442 행 중 656 행만 비어 있지 않고 그 5개 값
- * (`뉴스/미디어`·`커뮤니티/UGC`·`백과사전`·`정부/공공` 등)은 전부 택소노미 **밖**이라
- * `resolveCitationCategory` 가 버린다. 그래서 한 도메인의 행이 서로 다른 카테고리로
- * 갈리지 않는다.
- */
-export function applyCompetitorPickToCategories(
-  categories: CitationCategorySlice[] | null | undefined,
-  domains: readonly CitationDomainLive[],
-  picked: ReadonlySet<string>,
-): CitationCategorySlice[] | null {
-  if (!categories) return null;
-  if (picked.size === 0) return categories;
-  const value = domains
-    .filter((d) => d.category === OFFICIAL_COMPETITOR_CATEGORY && picked.has(d.domain))
-    .reduce((s, d) => s + d.citations, 0);
-  return categories.map((c) =>
-    c.name === OFFICIAL_COMPETITOR_CATEGORY ? { ...c, value } : c,
-  );
-}
-
 /**
  * 카테고리 필터(?source=)가 걸린 상태에서 어떤 카테고리가 "포함"됐는가 — 필터가
  * 비었으면 전부 포함(디자인 주석: 공식(당사)/(경쟁사) 미포함 시 Disabled).
@@ -182,13 +49,6 @@ export interface PageWindow {
   pages: number;
   from: number;
   to: number;
-}
-export function pageWindow(total: number, page: number, pageSize: number): PageWindow {
-  const pages = Math.max(1, Math.ceil(total / pageSize));
-  const p = Math.min(Math.max(1, page), pages);
-  const from = total === 0 ? 0 : (p - 1) * pageSize + 1;
-  const to = Math.min(total, p * pageSize);
-  return { page: p, pages, from, to };
 }
 
 // ── 도메인 드릴다운의 "빈 목록" 문구 ────────────────────────────────────────
@@ -337,4 +197,169 @@ export interface CitationSectionDegraded {
   categoryTrend?: boolean;
   /** 자사 인용/미인용 프롬프트 분할 */
   split?: boolean;
+}
+
+// ── BFF screen payloads (back/bff/screens/citation.py) ──────────────────────
+// The citation pages read finished view models from GET /v1/screens/citation/*; the numbers the
+// components used to compute arrive precomputed next to the data they came from.
+
+/** A domain table row with its '#' (global: rank, website/project: matchRank or the loaded position). */
+export type NumberedDomainRow = CitationDomainLive & { rank?: number; matchRank?: number; no: number };
+
+/** The table's category select views (renewal): row indices of the first 100 rows and the bar scales. */
+export type DomainTableViews = Record<string, { idx: number[]; maxCit: number; maxCov: number }>;
+
+/** /api/citations/domains answer (screen citation/domains). */
+export interface DomainListPageView {
+  rows: NumberedDomainRow[];
+  nextCursor: string | null;
+  total: number | null;
+  views?: DomainTableViews;
+}
+
+/** /api/citations/domains/[skey] answer (screen citation/domain-detail). */
+export interface DomainDetailView {
+  urls: CitationDomainLive["urls"];
+  promptList: (CitationDomainLive["promptList"][number] & { share?: number | null })[];
+  urlTotal?: number;
+  promptTotal?: number;
+  /** Row orders of the prompt table per sort header (prompt = localeCompare, citations / share = citations). */
+  promptOrders?: Record<"prompt" | "citations" | "share", { asc: number[]; desc: number[] }>;
+}
+
+export interface CitationDegradedFlags {
+  data: boolean;
+  trend: boolean;
+  categoryTrend: boolean;
+  split: boolean;
+}
+
+/** The dash engine chart (EngineCategoryChart): series by total desc, one 0-filled row per engine. */
+export interface EngineChartView {
+  series: string[];
+  rows: Array<{ engine: string } & Record<string, number | string>>;
+}
+
+/** CitationsStandardView numbers. */
+export interface CitationStandardVm {
+  status: {
+    officialOwn: number | null;
+    dealer: number | null;
+    officialDelta: number | null;
+    dealerDelta: number | null;
+    ownIncluded: boolean;
+    splitDegraded: boolean;
+    tilesDisabled: boolean;
+    ownedCount: number | null;
+    uncitedCount: number | null;
+    /** The Δ basis line: card = own round + category round, category = the category round. */
+    basis: { kind: "card"; ownDate: string; categoryDate: string } | { kind: "category"; categoryDate: string } | null;
+  };
+  category: {
+    competitorPicked: boolean;
+    bars: (CategoryBar & { delta: number | null })[];
+    /** The donut slices (Official (Competitor) = the picked competitors' sum while a pick is on). */
+    categories: CitationCategorySlice[] | null;
+    officialPct: number | null;
+    /** One source category picked: absolute counts instead of 100% stacks. */
+    single: boolean;
+  };
+  engineChart: EngineChartView | null;
+  /** The table's first rows after the competitor pick, numbered. */
+  domains: NumberedDomainRow[];
+}
+
+/** The mention type composition bars (TypeCategoryChart) + whether any type has citations. */
+export interface CitationTypeChart {
+  series: string[];
+  bars: TypeCategoryBar[];
+  hasAny: boolean;
+}
+
+/** CitationsView (website / project) numbers. */
+export interface CitationsViewVm {
+  /** Dealer tile share (unrounded; the tile prints toFixed(1)), null = "—". */
+  dealerShare: number | null;
+  officialPct: number | null;
+  engineChart: EngineChartView | null;
+  domains: NumberedDomainRow[];
+}
+
+/** Screen citation/standard: the standard body (and with variant=renewal the renewal model, typed there). */
+export interface StandardCitationScreen<Rn = unknown> {
+  live: CitationsLive | null;
+  dataDegraded: boolean;
+  sectionDegraded: CitationDegradedFlags;
+  officialDelta: OverviewCardDelta | null;
+  prevCategories: { totals: CitationCategoryTotals; asOf: string; current?: CitationCategoryTotals } | null;
+  typeCategories: CitationTypeCategoryRow[] | null;
+  /** typeCategoryBars of typeCategories (null when that read failed). */
+  typeChart: CitationTypeChart | null;
+  toneSummary: CitationToneSummary | null;
+  tableSource: CitationTableSource | null;
+  periodView: PeriodDeltaView | null;
+  vm: CitationStandardVm | null;
+  rn?: Rn | null;
+}
+
+/** Screen citation/website. */
+export interface WebsiteCitationScreen {
+  live: CitationsLive | null;
+  targetHitRate: {
+    hitPrompts: number;
+    ownedPrompts: number;
+    measuredPrompts: number;
+    rate: number | null;
+    ownedRate: number | null;
+    source?: "published" | "live";
+    publication?: { cycleLabel: string | null; cycleLabelEn: string | null; roundDate: string; siteCount: number };
+    unit?: "measurement";
+  };
+  tableSource: CitationTableSource | null;
+  dataDegraded: boolean;
+  degradedSections: CitationDegradedFlags;
+  vm: CitationsViewVm | null;
+}
+
+/** Screen citation/project. */
+export interface ProjectCitationScreen {
+  live: CitationsLive | null;
+  options: Pick<PanelFilterOptions, "catalogRows" | "engineOptions"> & { dynamicAxes: NonNullable<PanelFilterOptions["dynamicAxes"]> };
+  selectableDates: string[] | undefined;
+  tableSource: CitationTableSource | null;
+  dataDegraded: boolean;
+  degradedSections: CitationDegradedFlags;
+  vm: CitationsViewVm | null;
+}
+
+/** Screen citation/filter-bar. */
+export interface CitationFilterBarScreen {
+  options: PanelFilterOptions;
+  dates: FilterDatesView;
+}
+
+/** Screen citation/as-of: the header pill date and the filter bar's competitor options. */
+export interface CitationAsOfScreen {
+  asOf: string | null;
+  competitorOptions: string[];
+}
+
+type SubpageWindow = { win: PageWindow; nextCursor: string | null };
+
+/** Screen citation/prompts. */
+export interface CitationPromptsScreen {
+  tab: "owned" | "uncited";
+  q: string;
+  page: (CitationOwnedPromptPage & SubpageWindow) | null;
+  ownedCount: number | null;
+  uncitedCount: number | null;
+}
+
+/** Screen citation/tone-urls. */
+export interface CitationToneUrlsScreen {
+  tone: "positive" | "negative";
+  q: string;
+  byDomain: boolean;
+  page: (CitationToneUrlPage & SubpageWindow) | null;
+  counts: { positive: number | null; negative: number | null } | null;
 }

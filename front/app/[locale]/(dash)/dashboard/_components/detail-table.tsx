@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { useSortableTable } from "@/hooks/use-sortable-table";
 import { SortableHeader } from "@/components/ui/sortable-header";
-import { KPI_DEFINITIONS, type DetailRow, type KpiUnit } from "../_data/sample";
+import { KPI_DEFINITIONS, type DetailRow, type KpiUnit } from "../_data/model";
 
 type SortKey = "kpi" | "start" | "end" | "delta";
 

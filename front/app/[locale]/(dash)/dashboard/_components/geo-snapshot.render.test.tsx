@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { NextIntlClientProvider } from "next-intl";
-import type { GeoRegionRow, LiveGeo } from "../_data/live";
+import type { GeoRegionRow, LiveGeo } from "../_data/live-types";
 import { GeoSnapshot } from "./geo-snapshot";
 
 // 답변은 있는데 브랜드 언급이 0 인 시장은 점유율 0/0 이다 — 순위 "#1"·"0.0%" 가 아니라 "—"(지도와 같은 표기).

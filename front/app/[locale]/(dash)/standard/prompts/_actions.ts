@@ -9,8 +9,8 @@ import {
   type PromptAuditLogView,
 } from "@/lib/db/repositories/prompt-audit-logs";
 import { listStandardCatalogScoped } from "@/lib/db/repositories/standards";
-import { canReadAnalysis, isAnalysisApi } from "@/lib/hgh/adapters/filters";
-import { fetchAdminPromptTimelineApi, fetchPromptTimelineApi } from "@/lib/hgh/adapters/catalog";
+import { canReadAnalysis, isAnalysisApi } from "@/lib/hgh/analysis-access";
+import { fetchAdminPromptTimelineApi, fetchPromptTimelineApi } from "@/lib/hgh/prompt-timeline";
 import { hghSource, sourceGroupFor } from "@/lib/hgh/client";
 import { errorKindOf, isHghApiError } from "@/lib/hgh/errors";
 

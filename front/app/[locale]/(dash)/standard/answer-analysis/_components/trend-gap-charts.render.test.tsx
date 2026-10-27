@@ -4,7 +4,7 @@ import { NextIntlClientProvider } from "next-intl";
 import ko from "@/messages/ko.json";
 import { planTrendGaps, type TrendGap, type TrendGapRow } from "@/lib/viz/trend-gap";
 import type { CitationTrend, MentionTrend } from "@/lib/scope/result-adapter";
-import type { BrandTrendChartData, RankTrendChartData } from "../_data/kpi-view";
+import type { BrandTrendChartData, RankTrendChartData } from "../_data/mention-screen";
 import { CitationTrendChart } from "./citations-view";
 import { MentionTrendChart } from "./mentions-view";
 import { BrandTrendChart } from "./kpi/brand-trend-chart";
@@ -77,7 +77,7 @@ describe("MentionTrendChart", () => {
 
   it("renders the gap week", () => {
     const trend: MentionTrend = { series, points };
-    const html = wrap(<MentionTrendChart title="M" trend={trend} trackedBrands={tracked} />);
+    const html = wrap(<MentionTrendChart title="M" trend={trend} series={{ own: trend.series.filter((b) => tracked.has(b)), competitors: trend.series.filter((b) => !tracked.has(b)) }} />);
     expect(html).toContain("M");
     expect(html).not.toContain("trend.gap");
   });

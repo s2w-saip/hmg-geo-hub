@@ -31,7 +31,7 @@ import {
   trendGapBridgeLines,
 } from "@/components/dash/trend-gap-overlay";
 import { cn } from "@/lib/utils";
-import type { EngineCompetitorBar, EngineKpiBar, KpiMetric } from "../../_data/kpi-view";
+import type { EngineCompetitorBar, EngineKpiBar, KpiMetric } from "../../_data/mention-screen";
 import { seriesColor } from "./series-colors";
 import { pctText, ValueBar } from "./kpi-bits";
 import { bucketMD, CoverageLabel } from "./kpi-trend-chart";

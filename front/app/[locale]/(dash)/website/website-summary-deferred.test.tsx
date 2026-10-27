@@ -13,12 +13,9 @@ import { use } from "react";
 import { renderToReadableStream } from "react-dom/server";
 import { NextIntlClientProvider } from "next-intl";
 import ko from "@/messages/ko.json";
-import type { KpiSummary } from "../dashboard/_data/sample";
-import {
-  SummaryTilesDeferredDeltas,
-  type DeferredDeltaMap,
-} from "../dashboard/_components/summary-tiles-deferred-deltas";
-import { SummaryTiles } from "../dashboard/_components/summary-tiles";
+import type { TilesView, TileView } from "../dashboard/_data/screen-types";
+import { SummaryTilesDeferredDeltas } from "../dashboard/_components/summary-tiles-deferred-deltas";
+import { SummaryTilesView } from "../dashboard/_components/summary-tiles";
 
 // PR③-a 회귀 고정 — **/website 타일 값이 Sub-KPI·추이를 기다리지 않는다.**
 //
@@ -32,13 +29,22 @@ import { SummaryTiles } from "../dashboard/_components/summary-tiles";
 // 여기서는 지연 맵을 일부러 늦게 풀어 **첫 flush 에 값이 있고 배지·Δ 는 없는지**를
 // 스트림 산출로 본다. 구조가 되돌아가면 첫 청크에서 값이 사라져 이 테스트가 깨진다.
 
-const kpi = (over: Partial<KpiSummary> = {}): KpiSummary => ({
+// The tiles as website/summary sends them (one tile), and as website/summary-deferred sends them.
+const tile = (over: Partial<TileView> = {}): TileView => ({
   key: "visibility",
+  unit: "percent",
   value: 73.1,
+  pending: false,
   delta: null,
   direction: "flat",
+  tone: "flat",
+  period: null,
   ratio: { numerator: 1, denominator: 100 },
   ...over,
+});
+const tiles = (over: Partial<TileView> = {}): TilesView => ({
+  groups: [{ category: "content", tiles: [tile(over)] }],
+  suppressionCaption: null,
 });
 
 /**
@@ -54,7 +60,7 @@ const kpi = (over: Partial<KpiSummary> = {}): KpiSummary => ({
  * 경계를 지우면 트리 전체가 서스펜드해 영영 반환되지 않는다. 이건 타이밍이 아니라
  * 구조의 차이라 흔들리지 않는다.
  */
-const NEVER = new Promise<DeferredDeltaMap>(() => {});
+const NEVER = new Promise<TilesView>(() => {});
 
 async function shellReadyWithin(node: React.ReactElement, ms: number): Promise<boolean> {
   // ⚠️ `AbortController` 로 정리하지 않는다 — React 가 abort 를 거부로 올려
@@ -80,9 +86,9 @@ async function chunks(node: React.ReactElement): Promise<string[]> {
   return out;
 }
 
-const wrap = (deltas: Promise<DeferredDeltaMap>) => (
+const wrap = (deferred: Promise<TilesView>) => (
   <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
-    <SummaryTilesDeferredDeltas items={[kpi()]} deltas={deltas} />
+    <SummaryTilesDeferredDeltas tiles={tiles()} deferred={deferred} />
   </NextIntlClientProvider>
 );
 
@@ -96,8 +102,7 @@ describe("/website 요약 타일 — 값은 Sub-KPI·추이를 기다리지 않�
     // 직접 `use()` 하는 컴포넌트를 경계 없이 렌더. 구조가 그렇게 되돌아가면 위 테스트가
     // 이렇게 실패한다.
     function NoBoundary() {
-      const map = use(NEVER);
-      return <SummaryTiles items={[kpi(map.visibility ?? {})]} perturb={false} />;
+      return <SummaryTilesView view={use(NEVER)} />;
     }
     expect(
       await shellReadyWithin(
@@ -112,9 +117,7 @@ describe("/website 요약 타일 — 값은 Sub-KPI·추이를 기다리지 않�
   it("배지·Δ 가 풀리면 타일에 병합된다", async () => {
     const html = (
       await chunks(
-        wrap(Promise.resolve({
-          visibility: { delta: -4.4, direction: "down", engineConsistency: 88.5 },
-        })),
+        wrap(Promise.resolve(tiles({ delta: -4.4, direction: "down", tone: "bad", engineConsistency: 88.5 }))),
       )
     ).join("");
     expect(html).toContain("73.1");
@@ -123,13 +126,13 @@ describe("/website 요약 타일 — 값은 Sub-KPI·추이를 기다리지 않�
     expect(html).toContain("4.4");
   });
 
-  it("지연 맵이 비어도(둘 다 실패) 타일 값은 그대로다 — 카드가 안 깨진다", async () => {
-    const cs = await chunks(wrap(Promise.resolve({} as DeferredDeltaMap)));
+  it("지연 읽기가 실패해 같은 타일이 와도 타일 값은 그대로다 — 카드가 안 깨진다", async () => {
+    const cs = await chunks(wrap(Promise.resolve(tiles())));
     expect(cs.join("")).toContain("73.1");
   });
 
   it("i18n 원시 키가 마크업에 남지 않는다", async () => {
-    const html = (await chunks(wrap(Promise.resolve({} as DeferredDeltaMap)))).join("");
+    const html = (await chunks(wrap(Promise.resolve(tiles())))).join("");
     expect(html).not.toMatch(/dashboard\.[a-zA-Z.]+/);
   });
 });
@@ -147,16 +150,15 @@ describe("WebsiteSummarySection — 타일이 기다리는 read (PR③-a)", () =
   const body = src.slice(src.indexOf("async function WebsiteSummarySection"));
   const section = body.slice(0, body.indexOf("\n}\n"));
 
-  it("`live` 하나만 await 한다 — Promise.all 로 되돌리면 깨진다", () => {
-    expect(section).toContain("const dash = await live;");
-    expect(section).not.toMatch(/await Promise\.all\(\[\s*live/);
+  it("타일 화면(`summary`) 하나만 await 한다 — Promise.all 로 되돌리면 깨진다", () => {
+    expect(section).toContain("view = await summary;");
+    expect(section).not.toMatch(/await Promise\.all\(/);
   });
 
-  it("`subKpis`·`trend` 는 지연 맵 안에서만 소비된다", () => {
-    // 둘 다 `deferred` 프로미스 체인 안에서만 등장해야 한다(직접 await 금지).
-    expect(section).not.toMatch(/await subKpis/);
-    expect(section).not.toMatch(/await trend/);
-    expect(section).toContain("subKpis.then(");
+  it("Δ·배지 화면(`deferred`)은 타일 안쪽 경계에서만 소비된다", () => {
+    // 프로미스 체인으로만 등장해야 한다(직접 await 금지).
+    expect(section).not.toMatch(/await deferred/);
+    expect(section).toMatch(/= deferred\s*\.then\(/);
   });
 
   it("마커가 갈려 있다 — 타일 도착과 배지·Δ 도착", () => {

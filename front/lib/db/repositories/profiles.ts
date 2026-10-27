@@ -108,6 +108,7 @@ export const profileRepository: ProfileRepository = {
   },
 
   async insert(input) {
+    if (input.role === "local_reader") throw new Error("Local readers are not stored user accounts");
     const rows = await getDb()
       .insert(profiles)
       .values({

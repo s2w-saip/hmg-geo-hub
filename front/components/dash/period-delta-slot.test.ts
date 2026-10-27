@@ -1,53 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { selectPeriodResult } from "./period-delta-slot";
 import {
   KPI_KEY_TO_COMPARE_METRIC,
   PRESET_DAYS,
   compareMetricForKpiKey,
   compareMetricForKpiTab,
-  windowDaysOf,
 } from "./period-delta-metrics";
-import type { CompareResult } from "@/lib/kpi/period-compare";
+import { selectedWindowDays as windowDaysOf } from "@/lib/kpi/calendar-month-window";
 
-// C4 의 "분기 1곳" 규율을 값으로 고정한다. 슬롯 컴포넌트의 렌더는
-// `delta-chip.render.test.tsx` 와 off 패리티 골든이 덮는다.
+// 지표 대응표를 값으로 고정한다. 칩·캡션은 화면(API)이 만든다(back/bff/screens/mention.py
+// period_slots, bff.tests.test_screens_mention); 슬롯 렌더는 off 패리티 골든이 덮는다.
 
-const r = (metric: CompareResult["metric"]): CompareResult => ({
-  metric,
-  unit: "pp",
-  prev: 1,
-  cur: 2,
-  delta: 1,
-  suppressed: false,
-  reason: null,
-  cyclesPrev: 1,
-  cyclesCur: 1,
-  plannedPrev: 10,
-  plannedCur: 10,
-  missingSharePrev: 0,
-  missingShareCur: 0,
-});
-
-describe("selectPeriodResult — 켜짐 판정", () => {
-  it("결과가 없으면 null (= 종전 Δ 경로)", () => {
-    expect(selectPeriodResult(null, "visibility")).toBeNull();
-    expect(selectPeriodResult(undefined, "visibility")).toBeNull();
-    expect(selectPeriodResult([], "visibility")).toBeNull();
-  });
-
-  it("지표가 null 이면 null — 계약 6지표 밖 카드는 종전 Δ 를 그린다", () => {
-    expect(selectPeriodResult([r("visibility")], null)).toBeNull();
-    expect(selectPeriodResult([r("visibility")], undefined)).toBeNull();
-  });
-
-  it("목록에 그 지표가 없으면 null", () => {
-    expect(selectPeriodResult([r("visibility")], "position")).toBeNull();
-  });
-
-  it("있으면 그 결과를 고른다", () => {
-    expect(selectPeriodResult([r("visibility"), r("position")], "position")?.metric).toBe("position");
-  });
-});
 
 describe("지표 대응표", () => {
   it("대시보드·웹사이트 타일의 4개 코어 KPI 만 매핑된다", () => {

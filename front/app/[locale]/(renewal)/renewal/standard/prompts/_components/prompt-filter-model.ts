@@ -5,7 +5,7 @@
 //   options   the server's facets (cascading by the current picks); presence / kind / status are fixed
 //   shown     an axis with no options is hidden (presence / kind / status always show)
 //   cascade   picking a parent resets its children to "전체"
-//   read      the same CatalogPageQuery the original list sends (filters = draft, since picks apply at once)
+//   read      the same query the original list sends (filters = draft, since picks apply at once)
 // Parity is pinned by prompt-filter-model.parity.test.tsx (renders the original list).
 
 import {
@@ -14,8 +14,8 @@ import {
   STATUS_UNMEASURED,
   type FilterState,
 } from "@/app/[locale]/(dash)/standard/prompts/_components/prompt-list-readonly";
-import { marketFilterOptions } from "@/lib/standards/prompt-markets";
-import type { CatalogPageQuery, CatalogSort } from "@/lib/standards/catalog-page";
+import type { PromptsQuery } from "@/app/[locale]/(dash)/standard/prompts/_data/screen-types";
+import type { CatalogSort } from "@/lib/standards/catalog-page";
 
 export { EMPTY_FILTER, type FilterState };
 export const ALL = "all";
@@ -30,54 +30,13 @@ const FIXED: Partial<Record<PromptAxis, readonly string[]>> = {
   status: [STATUS_MEASURED, STATUS_UNMEASURED],
 };
 
-export interface PromptRowLike {
-  listType: string | null;
-  depth1: string | null;
-  depth2: string | null;
-  depth3: string | null;
-  depth4: string | null;
-  funnelStage: string | null;
-  regions: string[] | null;
-  lang: string | null;
+/** Options of one axis: the server facets (presence / kind / status are fixed). */
+export function axisOptions(axis: PromptAxis, facets: Record<string, string[]>): readonly string[] {
+  return FIXED[axis] ?? facets[axis] ?? [];
 }
 
-const sortedUnique = (values: (string | null)[]) => [...new Set(values.filter((v): v is string => !!v))].sort();
-
-/** Options of one axis: the server facets, or (no remote page) the rows like the original list. */
-export function axisOptions(axis: PromptAxis, facets: Record<string, string[]> | null | undefined, rows: readonly PromptRowLike[], draft: FilterState): readonly string[] {
-  if (FIXED[axis]) return FIXED[axis]!;
-  if (facets) {
-    const key = axis === "funnel" ? "funnel" : axis;
-    return facets[key] ?? [];
-  }
-  const under = (r: PromptRowLike, upTo: number) => {
-    const chain: PromptAxis[] = ["listType", "depth1", "depth2", "depth3"];
-    return chain.slice(0, upTo).every((k) => draft[k] === ALL || r[k as keyof PromptRowLike] === draft[k]);
-  };
-  switch (axis) {
-    case "listType":
-      return sortedUnique(rows.map((r) => r.listType));
-    case "depth1":
-      return sortedUnique(rows.filter((r) => under(r, 1)).map((r) => r.depth1));
-    case "depth2":
-      return sortedUnique(rows.filter((r) => under(r, 2)).map((r) => r.depth2));
-    case "depth3":
-      return sortedUnique(rows.filter((r) => under(r, 3)).map((r) => r.depth3));
-    case "depth4":
-      return sortedUnique(rows.filter((r) => under(r, 4)).map((r) => r.depth4));
-    case "funnel":
-      return sortedUnique(rows.map((r) => r.funnelStage));
-    case "market":
-      return marketFilterOptions(rows.map((r) => r.regions));
-    case "lang":
-      return sortedUnique(rows.map((r) => r.lang));
-    default:
-      return [];
-  }
-}
-
-export function visibleAxes(facets: Record<string, string[]> | null | undefined, rows: readonly PromptRowLike[], draft: FilterState): PromptAxis[] {
-  return PROMPT_AXES.filter((a) => ALWAYS.has(a) || axisOptions(a, facets, rows, draft).length > 0);
+export function visibleAxes(facets: Record<string, string[]>): PromptAxis[] {
+  return PROMPT_AXES.filter((a) => ALWAYS.has(a) || axisOptions(a, facets).length > 0);
 }
 
 /** The original updateDraft: a parent pick resets its children to "전체". */
@@ -109,17 +68,17 @@ export function readQuery(args: {
   collation: "ko" | "en";
   marketCodes: readonly string[];
   marketLabel: (code: string) => string;
-}): CatalogPageQuery {
+}): PromptsQuery {
   return {
     filters: args.filters,
     draft: args.filters,
     search: args.search,
     sort: args.sort,
     asc: args.asc,
-    offset: (args.page - 1) * args.pageSize,
+    page: args.page,
     limit: args.pageSize,
     collation: args.collation,
-    market_labels: Object.fromEntries(args.marketCodes.map((code) => [code, args.marketLabel(code)])),
+    marketLabels: Object.fromEntries(args.marketCodes.map((code) => [code, args.marketLabel(code)])),
   };
 }
 

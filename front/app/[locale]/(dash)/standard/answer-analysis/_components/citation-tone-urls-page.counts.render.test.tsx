@@ -19,12 +19,13 @@ vi.mock("next/navigation", () => ({
 
 const { CitationToneUrlsPage, recallToneCounts, rememberToneCounts, toneCountsKey } = await import("./citation-tone-urls-page");
 
-const PAGE: CitationToneUrlPage & { nextCursor?: string | null } = {
+const PAGE: CitationToneUrlPage & { nextCursor?: string | null; win: { page: number; pages: number; from: number; to: number } } = {
   rows: [{ url: "https://hyundai.news/eu/x", domain: "hyundai.news", title: "Hyundai news", promptText: null, citations: 42, providers: ["ChatGPT"], category: "Official (HMG)" }],
   total: 120,
   page: 2,
   pageSize: 50,
   nextCursor: "n3",
+  win: { page: 2, pages: 3, from: 51, to: 100 },
 };
 const T = ko.answerAnalysis.citations.v2.toneUrlsPage;
 const tab = (k: "positiveTab" | "negativeTab", n: string) => T[k].replace("{n}", n);

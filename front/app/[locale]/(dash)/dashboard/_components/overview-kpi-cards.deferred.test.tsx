@@ -3,9 +3,10 @@ import { renderToReadableStream } from "react-dom/server";
 import { NextIntlClientProvider } from "next-intl";
 import ko from "@/messages/ko.json";
 import type { MentionsBrandLive } from "@/lib/scope/result-adapter";
-import type { KpiSummary } from "../_data/sample";
-import type { LiveTrend } from "../_data/live";
+import type { KpiSummary } from "../_data/model";
+import type { LiveTrend } from "../_data/live-types";
 import { OverviewKpiCards } from "./overview-kpi-cards";
+import { cardsOf, competitorsOf, done, trendOf } from "./__fixtures__/overview-views";
 
 // E-1(2026-09-10) 회귀 고정 — **카드 값이 extras 를 기다리지 않는다**.
 //
@@ -53,12 +54,11 @@ describe("OverviewKpiCards — 값은 Δ·스파크·경쟁사를 기다리지 �
     const cs = await chunks(
       <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
         <OverviewKpiCards
-          kpis={KPIS}
+          cards={cardsOf(KPIS)}
           locale="ko"
           deferred={{
-            deltas: late(WITH_DELTA),
-            trend: late<LiveTrend | null>(TREND),
-            competitors: late({ brands: BRANDS, brandTrend: null, firstPosition: null, citationDomains: null }),
+            trend: late(trendOf(WITH_DELTA, TREND)),
+            competitors: late(competitorsOf(BRANDS)),
           }}
         />
       </NextIntlClientProvider>,
@@ -80,10 +80,14 @@ describe("OverviewKpiCards — 값은 Δ·스파크·경쟁사를 기다리지 �
     expect(rest).toContain("4.4pp");
   });
 
-  it("deferred 없이 값으로 넘기면 종전대로 한 번에 그린다(테스트·mock 경로)", async () => {
+  it("이미 도착한 조각은 한 번에 그린다(경계가 서스펜드하지 않는다)", async () => {
     const cs = await chunks(
       <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
-        <OverviewKpiCards kpis={WITH_DELTA} trend={TREND} brands={BRANDS} locale="ko" />
+        <OverviewKpiCards
+          cards={cardsOf(WITH_DELTA)}
+          locale="ko"
+          deferred={{ trend: done(trendOf(WITH_DELTA, TREND)), competitors: done(competitorsOf(BRANDS)) }}
+        />
       </NextIntlClientProvider>,
     );
     const all = cs.join("");

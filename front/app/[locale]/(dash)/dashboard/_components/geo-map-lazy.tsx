@@ -1,14 +1,14 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import type { LiveGeo } from "../_data/live";
+import type { GeoView } from "../_data/screen-types";
 import type { OverviewKpiKey } from "../_data/overview-metrics";
 
 // GeoMap 지연 로더.
 //
-// 왜 필요한가: geo-map.tsx는 world-atlas TopoJSON(~105KB)을 **정적 import**한다.
+// 왜 필요한가: geo-map.tsx는 world-atlas TopoJSON을 **정적 import**한다.
 // 정적 import는 showsGeoMap 게이트와 무관하게 라우트 청크에 들어가므로, 지도를 볼
-// 권한이 없는 국가 스코프 사용자까지 105KB를 내려받았다. 여기서 잘라내면 TopoJSON과
+// 권한이 없는 국가 스코프 사용자까지 지도 데이터를 내려받았다. 여기서 잘라내면 TopoJSON과
 // d3-geo가 별도 청크로 빠지고, 지도가 실제로 렌더될 때만 받는다.
 //
 // ssr:false인 이유: 지도는 폴드 아래의 순수 시각화라 LCP 후보가 아니고, 서버에서
@@ -33,11 +33,19 @@ export function GeoMapLazy({
   metric,
   metricLabel,
   bare,
+  level,
+  domain,
+  activeCountry,
+  onCountryHover,
 }: {
-  geo: LiveGeo;
+  geo: GeoView;
   metric?: OverviewKpiKey;
   metricLabel?: string;
   bare?: boolean;
+  level?: "region" | "country";
+  domain?: readonly [number, number];
+  activeCountry?: string | null;
+  onCountryHover?: (code: string | null) => void;
 }) {
-  return <GeoMap geo={geo} metric={metric} metricLabel={metricLabel} bare={bare} />;
+  return <GeoMap geo={geo} metric={metric} metricLabel={metricLabel} bare={bare} level={level} domain={domain} activeCountry={activeCountry} onCountryHover={onCountryHover} />;
 }

@@ -32,7 +32,6 @@ const { HghApiError } = await import("./errors");
 const client = await import("./client");
 const { hghDelete, hghGet, hghPost, hghRaw, readHghConfig, hghSource, sourceGroupFor, clientIpFromHeaders, RELAY_HEADERS, fillPath, selectTraceValues } =
   client;
-const { toCommonQuery } = await import("./query");
 
 const TOKEN = "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJ1In0.c2ln";
 const FRESH = "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJ2In0.bmV3";
@@ -120,7 +119,7 @@ describe("config", () => {
 describe("request shape", () => {
   it("GET: base + path + sorted query, Bearer, Accept json, X-Request-Id, no-store, no redirects followed", async () => {
     mockFetch(ok({ role: "admin" }));
-    const { query } = toCommonQuery({ engine: ["gemini", "chatgpt"], region: ["US"] }, { surface: "global", scope: { all: true } });
+    const query = { surface: "global" as const, country: ["US"], engine: ["chatgpt", "gemini"] };
     const out = await hghGet("/v1/kpi/summary", { query });
     expect(out).toEqual({ data: { role: "admin" }, meta: { mode: "snapshot" } });
     const [c] = calls;
@@ -137,10 +136,8 @@ describe("request shape", () => {
   it("cf custom fields are sent as cf.<uuid> next to the typed query", async () => {
     mockFetch(ok());
     const field = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
-    const { query, cf } = toCommonQuery(
-      {},
-      { surface: "project", projectId: "0f8fad5b-d9cb-469f-a165-70867728950e", scope: { all: true }, customFields: { [field]: ["b", "a"] } },
-    );
+    const query = { surface: "project" as const, project_id: "0f8fad5b-d9cb-469f-a165-70867728950e" };
+    const cf = { [field]: ["a", "b"] };
     await hghGet("/v1/kpi/summary", { query: { ...query, cycle_offset: 0 }, cf });
     expect(new URL(calls[0].url).searchParams.getAll(`cf.${field}`)).toEqual(["a", "b"]);
     expect(new URL(calls[0].url).search).toBe(

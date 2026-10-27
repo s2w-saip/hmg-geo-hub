@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { PieChart, Pie, Cell, Tooltip as RTooltip, ResponsiveContainer } from "recharts";
 import { CHART_TOOLTIP_STYLE } from "@/lib/viz/chart-tooltip";
-import type { LiveTopicSlice, LiveSourceSlice } from "../_data/live";
+import type { LiveTopicSlice, LiveSourceSlice } from "../_data/live-types";
 
 // 구성 분석 — #21 프롬프트 주제별 / #22 출처별 구성비. 둘 다 다범주 분포라
 // Core 카드 칩이 아닌 미니 도넛으로 요약 노출(상세는 답변분석/인용분석 화면).

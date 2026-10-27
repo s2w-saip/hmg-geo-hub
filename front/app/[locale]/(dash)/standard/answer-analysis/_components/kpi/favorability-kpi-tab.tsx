@@ -12,37 +12,28 @@
 // 스트리밍 규약은 mention-kpi-tab.tsx 와 같다 — 각 prop 은 값 또는 프로미스, 섹션마다
 // 자기 <Suspense> 경계에서 `useAwaited` 로 푼다.
 
-import { Suspense, useMemo, useState, type ReactNode } from "react";
+import { Suspense, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import type {
-  AnswerStanceDistribution,
-  EngineKpiTrend,
-  StandardSubKpis,
-  TypeKpi,
-} from "@/lib/db/repositories/scope-aggregates";
-import type { MentionSentimentBreakdown } from "@/lib/scope/types";
 import { cn } from "@/lib/utils";
 import { KpiChartSlotSkeleton, KpiHeroSkeleton, KpiSectionSkeleton } from "@/components/dash/section-skeleton";
 import {
-  favorabilityHero,
-  overviewDeltaFromSlots,
-  favorabilityTrendPoints,
-  deltaPp,
-  sentimentSegments,
-  stanceSegments,
   STANCE_CARD_ENABLED,
-  typeSentimentRows,
+  type FavorDeltaScreen,
+  type FavorHeroScreen,
+  type FavorMatrixScreen,
+  type FavorSentimentScreen,
+  type FavorTrendScreen,
   type SentimentKey,
+  type SentimentSegment,
   type TypeSentimentRowVM,
-} from "../../_data/kpi-view";
+} from "../../_data/mention-screen";
 import { ColInfo } from "@/components/dash/col-info";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { DeltaBadge, pctText } from "./kpi-bits";
 import { useAwaited, type Awaitable } from "./mention-kpi-tab";
 import { FavorabilityTrendChart } from "./favorability-trend-chart";
 import { SignalPromptsDialog } from "../signal-prompts-dialog";
-import { PeriodDeltaSlot } from "@/components/dash/period-delta-slot";
-import type { CompareResult } from "@/lib/kpi/period-compare";
+import { PeriodDeltaSlot, type PeriodSlots } from "@/components/dash/period-delta-slot";
 
 /** 감정 4분류 색 — 기존 감정 분포 카드(mentions-view.tsx)와 동일. */
 // 2026-09-02 피그마 327:981 감정 4색 — globals.css 의 --color-sentiment-* 토큰(제품 결정).
@@ -53,50 +44,49 @@ export const SENTIMENT_CLASS: Record<SentimentKey, string> = {
   negative: "bg-sentiment-negative",
 };
 
+/** 답변 축 스탠스 분포(0072): 4계열 구성비와 쌍 수. 카드는 꺼져 있다(STANCE_CARD_ENABLED). */
+export interface StanceView {
+  pairs: number;
+  segments: SentimentSegment[];
+}
+
 type TabProps = {
-  subKpis: Awaitable<StandardSubKpis | null>;
-  prevSubKpis: Awaitable<StandardSubKpis | null>;
-  prevBasisDate: Awaitable<string | null>;
-  /** null = 집계 degrade → 추이 지면만 대체 문구. */
-  engineTrend: Awaitable<EngineKpiTrend | null>;
-  /** 언급 집계(MentionsLive)의 감정 총량 — 감정 분포 카드의 원천(**발생 축**). */
-  sentimentTotals: Awaitable<MentionSentimentBreakdown | null>;
+  /** mention/favor-hero — 긍정·부정 비율, 일시 실패 표식, 기준 차이 각주 여부. */
+  hero: Awaitable<FavorHeroScreen>;
+  /** mention/favor-delta — 두 카드의 Δ 폴백 값과 기준일 문구. */
+  delta: Awaitable<FavorDeltaScreen>;
+  /** mention/favor-trend — 긍정·부정 비율 추이(또는 degrade). */
+  trend: Awaitable<FavorTrendScreen>;
+  /** mention/favor-sentiment — 감정 분포 카드(**발생 축**). */
+  sentiment: Awaitable<FavorSentimentScreen>;
   /**
-   * 답변 단위 브랜드 스탠스 분포(0072 — **답변 축**). 기존 감정 분포를 대체하지 않고
-   * 그 옆에 **병치**한다. null = 스탠스 축이 아직 없는 배포·회차(테이블 미적용 또는
-   * 코어 미배포) → 카드가 "수집 대기" 문구로 떨어진다. 발생 감성으로 대체하지 않는다.
+   * 답변 단위 브랜드 스탠스 분포(0072 — **답변 축**). null = 스탠스 축이 아직 없는 배포·회차
+   * → 카드가 "수집 대기" 문구로 떨어진다. 카드는 꺼져 있다(STANCE_CARD_ENABLED).
    */
-  stanceDist: Awaitable<AnswerStanceDistribution | null>;
-  typeKpi: Awaitable<TypeKpi | null>;
+  stance?: Awaitable<StanceView | null>;
+  /** mention/favor-matrix — 유형 × 감정 매트릭스. */
+  matrix: Awaitable<FavorMatrixScreen>;
   /** 렌더 테스트 seam — 건수 모드 분기. 화면 기본은 비율. */
   initialCounts?: boolean;
   /**
    * 기간 비교 Δ (GGMD-107 P2 F1). `null`·미전달이면 종전 Δ 그대로 — 판정은
    * `PeriodDeltaSlot` 한 곳에서만 한다.
    */
-  periodCompare?: readonly CompareResult[] | null;
+  periodCompare?: PeriodSlots | null;
   /** 선택된 구간의 길이(일) — 억제 캡션 입력. */
   periodDays?: number;
-  /**
-   * `subKpis` 의 빈 값이 **일시 실패**인가(= 측정 없음이 아니라 지연, mention-kpi-tab 과 같은 짝).
-   * 판정은 서버의 요청 스코프 표식(wasKpiTabDegraded("hero"))이라 페이지가 같은 집계 뒤에 이어 붙여
-   * 넘긴다. 참이면 히어로 아래에 기존 degraded 문구 한 줄. 미전달이면 종전 그대로다.
-   */
-  heroDegraded?: Awaitable<boolean>;
 };
 
 export function FavorabilityKpiTab({
-  subKpis,
-  prevSubKpis,
-  prevBasisDate,
-  engineTrend,
-  sentimentTotals,
-  stanceDist,
-  typeKpi,
+  hero,
+  delta,
+  trend,
+  sentiment,
+  stance = null,
+  matrix,
   initialCounts,
   periodCompare,
   periodDays,
-  heroDegraded,
 }: TabProps) {
   const t = useTranslations("answerAnalysis.mentions");
   const [signal, setSignal] = useState<{ signal: string; label: string } | null>(null);
@@ -108,11 +98,9 @@ export function FavorabilityKpiTab({
         <FavorabilityHero
           periodCompare={periodCompare}
           periodDays={periodDays}
-          subKpis={subKpis}
-          prevSubKpis={prevSubKpis}
-          prevBasisDate={prevBasisDate}
-          engineTrend={engineTrend}
-          heroDegraded={heroDegraded}
+          hero={hero}
+          delta={delta}
+          trend={trend}
         />
       </Suspense>
 
@@ -123,12 +111,12 @@ export function FavorabilityKpiTab({
       <div className="grid gap-3 md:grid-cols-2 md:gap-6">
         <Suspense fallback={<KpiSectionSkeleton />}>
           <SentimentDistCard
-            sentimentTotals={sentimentTotals}
+            sentiment={sentiment}
             onSignalClick={(k, label) => setSignal({ signal: k, label })}
           />
         </Suspense>
         <Suspense fallback={<KpiSectionSkeleton />}>
-          <TypeSentimentMatrix typeKpi={typeKpi} initialCounts={initialCounts} />
+          <TypeSentimentMatrix matrix={matrix} initialCounts={initialCounts} />
         </Suspense>
       </div>
       {/* 답변 축(0072) — 발생 축 카드들 **아래 새 행**. 축 라벨이 카드 헤더에 붙고,
@@ -136,7 +124,7 @@ export function FavorabilityKpiTab({
       {STANCE_CARD_ENABLED ? (
         <div className="grid gap-3 md:grid-cols-2 md:gap-6">
           <Suspense fallback={<KpiSectionSkeleton />}>
-            <StanceDistCard stanceDist={stanceDist} />
+            <StanceDistCard stance={stance} />
           </Suspense>
         </div>
       ) : null}
@@ -159,22 +147,14 @@ export function FavorabilityKpiTab({
 
 // ─── ① 히어로 ────────────────────────────────────────────────────────────────
 function FavorabilityHero({
-  subKpis,
-  prevSubKpis,
-  prevBasisDate,
-  engineTrend,
+  hero: heroScreen,
+  delta,
+  trend,
   periodCompare,
   periodDays,
-  heroDegraded,
-}: Pick<
-  TabProps,
-  "subKpis" | "prevSubKpis" | "prevBasisDate" | "engineTrend" | "periodCompare" | "periodDays" | "heroDegraded"
->) {
+}: Pick<TabProps, "hero" | "delta" | "trend" | "periodCompare" | "periodDays">) {
   const t = useTranslations("answerAnalysis.mentions.kpi");
-  const sub = useAwaited(subKpis);
-  // `undefined` 면 `use()` 를 부르지 않는다(mention-kpi-tab 의 heroDegraded 와 같은 이유).
-  const degraded = useAwaited(heroDegraded ?? false);
-  const hero = useMemo(() => favorabilityHero(sub), [sub]);
+  const { hero, degraded } = useAwaited(heroScreen);
   return (
     <>
       {/* 피그마 327:981 히어로: 바깥 p-5·gap-3, 좌열 267px(다른 3탭 KpiHero 와 동일), 카드 gap-3.5. */}
@@ -188,14 +168,7 @@ function FavorabilityHero({
             pct={hero.positivePct}
             deltaSlot={
               <Suspense fallback={null}>
-                <HeroDelta
-                  kind="positive"
-                  prevSubKpis={prevSubKpis}
-                  engineTrend={engineTrend}
-                  current={hero.positivePct}
-                  periodCompare={periodCompare}
-                  periodDays={periodDays}
-                />
+                <HeroDelta kind="positive" delta={delta} periodCompare={periodCompare} periodDays={periodDays} />
               </Suspense>
             }
           />
@@ -205,22 +178,22 @@ function FavorabilityHero({
             pct={hero.negativePct}
             deltaSlot={
               <Suspense fallback={null}>
-                <HeroDelta kind="negative" prevSubKpis={prevSubKpis} current={hero.negativePct} />
+                <HeroDelta kind="negative" delta={delta} />
               </Suspense>
             }
           />
         </div>
         <Suspense fallback={<KpiChartSlotSkeleton className="h-52" />}>
-          <HeroTrend engineTrend={engineTrend} />
+          <HeroTrend trend={trend} />
         </Suspense>
       </div>
       {/* 비율 집계가 일시 실패했으면 "—" 가 "측정 없음"으로 읽히지 않게 기존 degraded 문구를 히어로
           아래 캡션 자리에 한 줄 둔다(mention-kpi-tab 과 같은 마크업). 정상 경로에서는 아무것도 없다. */}
       {degraded ? <p className="-mt-4 text-[11px] text-muted-foreground">{t("degraded")}</p> : null}
       <Suspense fallback={null}>
-        <DeltaBasis prevBasisDate={prevBasisDate} engineTrend={engineTrend} />
+        <DeltaBasis delta={delta} />
       <Suspense fallback={null}>
-        <NegativeBasisNote subKpis={subKpis} />
+        <NegativeBasisNote hero={heroScreen} />
       </Suspense>
       </Suspense>
     </>
@@ -258,39 +231,28 @@ function RatioCard({
 
 function HeroDelta({
   kind,
-  prevSubKpis,
-  engineTrend,
-  current,
+  delta,
   periodCompare,
-  periodDays,
 }: {
   kind: "positive" | "negative";
-  prevSubKpis: TabProps["prevSubKpis"];
-  /** 긍정 카드에만 넘어온다 — 부정은 Overview 에 대응 값이 없다(favorabilityHero 주석). */
-  engineTrend?: TabProps["engineTrend"];
-  current: number | null;
-  periodCompare?: readonly CompareResult[] | null;
+  delta: TabProps["delta"];
+  periodCompare?: PeriodSlots | null;
   periodDays?: number;
 }) {
-  const prev = useAwaited(prevSubKpis);
-  const engine = useAwaited(engineTrend ?? null);
-  const prevHero = useMemo(() => favorabilityHero(prev), [prev]);
-  const previous = kind === "positive" ? prevHero.positivePct : prevHero.negativePct;
-  // 긍정 비율은 Overview 카드와 **같은 규칙**(값 있는 마지막 두 자리)으로 Δ 를 낸다.
-  const cycleDelta =
-    kind === "positive" ? overviewDeltaFromSlots(engine?.overviewDeltaSlots, "sentiment") : null;
+  // 긍정 = Overview 카드와 같은 규칙(값 있는 마지막 두 자리) → 직전 스냅샷, 부정 = 직전 스냅샷(화면이 고른다).
+  const vm = useAwaited(delta);
   // 부정 비율은 **올라가면 나쁘다** → 색만 뒤집는다(invert).
   return (
     <PeriodDeltaSlot
-      compare={periodCompare}
+      slots={periodCompare}
       // 계약의 `favorability` 는 **긍정 비율**이다. 부정 비율 카드에 대응하는 지표가
       // 없으므로 그 카드는 종전 Δ 를 그대로 그린다(null → fallback).
       metric={kind === "positive" ? "favorability" : null}
-      days={periodDays}
+
       withCaption
       fallback={
         <DeltaBadge
-          value={cycleDelta ? cycleDelta.pp : prev ? deltaPp(current, previous) : null}
+          value={kind === "positive" ? vm.positive : vm.negative}
           unit="pp"
           invert={kind === "negative"}
         />
@@ -303,23 +265,11 @@ function HeroDelta({
  * Δ 의 기준일 문구. **긍정 카드가 회차 Δ 를 쓰면 문구도 그것을 말해야 한다** — 배지와
  * 각주가 서로 다른 비교를 말하면 숫자는 맞고 설명이 틀린 화면이 된다(노출률과 같은 수리).
  */
-function DeltaBasis({
-  prevBasisDate,
-  engineTrend,
-}: Pick<TabProps, "prevBasisDate" | "engineTrend">) {
+function DeltaBasis({ delta }: Pick<TabProps, "delta">) {
   const t = useTranslations("answerAnalysis.mentions.kpi");
-  const basis = useAwaited(prevBasisDate);
-  const engine = useAwaited(engineTrend);
-  const cycleDelta = overviewDeltaFromSlots(engine?.overviewDeltaSlots, "sentiment");
-  if (cycleDelta) {
-    return (
-      <p className="-mt-4 text-[11px] text-muted-foreground">
-        {t("hero.deltaBasisCycle", { date: cycleDelta.basisDate })}
-      </p>
-    );
-  }
+  const { basis } = useAwaited(delta);
   if (!basis) return null;
-  return <p className="-mt-4 text-[11px] text-muted-foreground">{t("hero.deltaBasis", { date: basis })}</p>;
+  return <p className="-mt-4 text-[11px] text-muted-foreground">{t(basis.key, { date: basis.date })}</p>;
 }
 
 /**
@@ -330,10 +280,10 @@ function DeltaBasis({
  *
  * 전환이 안 일어난 상태(격자 off)에서는 두 값이 같은 원천이라 각주를 그리지 않는다.
  */
-function NegativeBasisNote({ subKpis }: Pick<TabProps, "subKpis">) {
+function NegativeBasisNote({ hero }: Pick<TabProps, "hero">) {
   const t = useTranslations("answerAnalysis.mentions.kpi");
-  const sub = useAwaited(subKpis);
-  if (!sub?.overviewCards) return null;
+  const { negativeBasisNote } = useAwaited(hero);
+  if (!negativeBasisNote) return null;
   return (
     <p className="-mt-3 text-[11px] text-muted-foreground">
       {t("favorability.negativeBasisNote")}
@@ -341,33 +291,30 @@ function NegativeBasisNote({ subKpis }: Pick<TabProps, "subKpis">) {
   );
 }
 
-function HeroTrend({ engineTrend }: Pick<TabProps, "engineTrend">) {
+function HeroTrend({ trend }: Pick<TabProps, "trend">) {
   const t = useTranslations("answerAnalysis.mentions.kpi");
-  const engine = useAwaited(engineTrend);
-  const points = useMemo(() => favorabilityTrendPoints(engine), [engine]);
-  if (engine == null || engine.trendDegraded === true) {
+  const vm = useAwaited(trend);
+  if (vm.unavailable) {
     return (
       <div className="flex flex-1 items-center justify-center rounded-md border border-dashed border-border px-4 py-10 text-xs text-muted-foreground">
         {t("degraded")}
       </div>
     );
   }
-  return <FavorabilityTrendChart points={points} />;
+  return <FavorabilityTrendChart points={vm.points} coverage={vm.coverage} />;
 }
 
 // ─── ② 감정 분포 ─────────────────────────────────────────────────────────────
 function SentimentDistCard({
-  sentimentTotals,
+  sentiment,
   onSignalClick,
 }: {
-  sentimentTotals: TabProps["sentimentTotals"];
+  sentiment: TabProps["sentiment"];
   onSignalClick: (signal: SentimentKey, label: string) => void;
 }) {
   const t = useTranslations("answerAnalysis.mentions.kpi.favorability.dist");
   const tLabel = useTranslations("answerAnalysis.mentions.breakdown");
-  const totals = useAwaited(sentimentTotals);
-  const segs = useMemo(() => sentimentSegments(totals), [totals]);
-  const hasAny = segs.some((s) => s.count > 0);
+  const { segments: segs, hasAny } = useAwaited(sentiment);
 
   return (
     <section className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
@@ -449,11 +396,11 @@ function AxisBadge({ axis }: { axis: "occurrence" | "answer" }) {
 //   · dist === null  → 축 자체가 없다(테이블 미적용·코어 미배포) → pendingNote
 //   · dist.pairs === 0 → 축은 있는데 이 필터에 행이 없다 → empty
 //   · 그 외 → 4계열 스택바. **샘플·발생 감성 대체는 없다.**
-function StanceDistCard({ stanceDist }: Pick<TabProps, "stanceDist">) {
+function StanceDistCard({ stance }: { stance: Awaitable<StanceView | null> }) {
   const t = useTranslations("answerAnalysis.mentions.kpi.favorability.stance");
   const tLabel = useTranslations("answerAnalysis.mentions.breakdown");
-  const dist = useAwaited(stanceDist);
-  const segs = useMemo(() => stanceSegments(dist), [dist]);
+  const dist = useAwaited(stance);
+  const segs = dist?.segments ?? [];
   const hasAny = dist != null && dist.pairs > 0;
 
   return (
@@ -503,18 +450,16 @@ function StanceDistCard({ stanceDist }: Pick<TabProps, "stanceDist">) {
 
 // ─── ③ 멘션 유형별 감정 분포 ─────────────────────────────────────────────────
 function TypeSentimentMatrix({
-  typeKpi,
+  matrix,
   initialCounts = false,
 }: {
-  typeKpi: TabProps["typeKpi"];
+  matrix: TabProps["matrix"];
   initialCounts?: boolean;
 }) {
   const t = useTranslations("answerAnalysis.mentions.kpi.favorability.matrix");
   const tType = useTranslations("answerAnalysis.mentions.breakdown.type");
-  const kpi = useAwaited(typeKpi);
-  const rows = useMemo(() => typeSentimentRows(kpi, "own"), [kpi]);
+  const { rows, hasAny } = useAwaited(matrix);
   const [counts, setCounts] = useState(initialCounts);
-  const hasAny = rows.some((r) => r.total > 0);
 
   return (
     <section className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">

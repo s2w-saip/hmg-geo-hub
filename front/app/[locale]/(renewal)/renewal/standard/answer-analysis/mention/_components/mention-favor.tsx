@@ -1,11 +1,10 @@
 "use client";
 
-import { Suspense, use, useMemo, useState } from "react";
+import { Suspense, use, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { ChevronRight } from "lucide-react";
 import { RnBasisChip, RnCard, RnCardHead, RnEmpty, RnLineChart, RnSectionHead, RnSegmented, cx } from "@/components/renewal-ui";
-import { SENTIMENT_KEYS, type SentimentKey } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/kpi-view";
-import { favorDistribution, favorHero, favorMatrix } from "./mention-model";
+import { SENTIMENT_KEYS, type SentimentKey } from "../_data/screen-types";
 import { MentionCardActions, numTxt, pctTxt, slotLabel, useMention } from "./mention-context";
 import { CardSkeleton, DegradedNote, DeltaChip, InfoTip, Legend, Stat, TwinTable, useDeltaBasis, useDeltaNote } from "./mention-kit";
 import { KpiBasisChip } from "./mention-tabs";
@@ -46,12 +45,8 @@ function FavorHeroCard() {
   const tK = useTranslations("answerAnalysis.mentions.kpi");
   const tDef = useTranslations("dashboard.kpi");
   const locale = useLocale();
-  const sub = use(input.sub.favorability);
-  const prev = use(input.prev.favorability);
-  const engine = use(input.engineTrend);
-  const period = use(input.periodCompare);
-  const degraded = use(input.degraded.hero);
-  const h = useMemo(() => favorHero(sub, prev, engine, period), [sub, prev, engine, period]);
+  const h = use(input.favorHero);
+  const degraded = h.degraded;
   const basis = useDeltaBasis();
   const note = useDeltaNote();
   const foot = note(h.positiveDelta);
@@ -134,9 +129,7 @@ function Distribution() {
   const tF = useTranslations("answerAnalysis.mentions.kpi.favorability");
   const tS = useTranslations("answerAnalysis.mentions.breakdown");
   const locale = useLocale();
-  const totals = use(input.sentimentTotals);
-  const segs = favorDistribution(totals);
-  const total = segs.reduce((s, x) => s + x.count, 0);
+  const { segments: segs, total } = use(input.favorDist);
   const csv = () => ({ name: "mention-sentiment", rows: [["", "%", "n"], ...segs.map((s) => [tS(s.key), s.pct, s.count])] });
   return (
     <>
@@ -190,8 +183,7 @@ function Matrix() {
   const tS = useTranslations("answerAnalysis.mentions.breakdown");
   const tType = useTranslations("answerAnalysis.mentions.breakdown.type");
   const locale = useLocale();
-  const kpi = use(input.typeKpi);
-  const rows = favorMatrix(kpi);
+  const { rows } = use(input.favorMatrix);
   const [unit, setUnit] = useState<"pct" | "count">("pct");
   const name = (type: string) => (type === "all" ? tF("matrix.all") : tType(type as "mention"));
   const csv = () => ({ name: "mention-sentiment-by-type", rows: [["", ...SENTIMENT_KEYS.map((k) => tS(k)), tF("matrix.positiveCol")], ...rows.map((r) => [name(r.type), ...r.segments.map((s) => s.count), r.positivePct])] });

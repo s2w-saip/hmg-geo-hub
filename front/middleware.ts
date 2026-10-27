@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import createIntlMiddleware from "next-intl/middleware";
 import { routing } from "./i18n/routing";
 import { isBlockedCrawler } from "./lib/crawlers";
+import { localReadOnly } from "./lib/local-readonly";
 
 const intlMiddleware = createIntlMiddleware(routing);
 
@@ -14,6 +15,22 @@ const intlMiddleware = createIntlMiddleware(routing);
 const PUBLIC_PATHS = ["/login", "/raw-data-qa"];
 
 export async function middleware(req: NextRequest) {
+  if (localReadOnly()) {
+    if (!["localhost", "127.0.0.1", "[::1]", "::1"].includes(req.nextUrl.hostname)) {
+      return new NextResponse("Local access only", { status: 403 });
+    }
+    if (!["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+      return NextResponse.json({ error: { code: "read_only", message: "Gold 데이터는 읽기 전용입니다." } }, { status: 405 });
+    }
+    if (req.nextUrl.pathname.startsWith("/api/")) return NextResponse.next();
+    if (/^\/(ko|en)\/login\/?$/.test(req.nextUrl.pathname)) {
+      return NextResponse.redirect(new URL(req.nextUrl.pathname.replace(/login\/?$/, "dashboard"), req.url));
+    }
+    const response = intlMiddleware(req);
+    response.headers.set("x-pathname", req.nextUrl.pathname);
+    return response;
+  }
+  if (req.nextUrl.pathname.startsWith("/api/")) return NextResponse.next();
   // 0. Known crawlers (search, AI, SEO scrapers) get 410 Gone. robots.txt and
   // noindex are advisory; this is enforcement — and 410 is the status Google
   // treats as "remove from index permanently", which 403 is not guaranteed to
@@ -81,5 +98,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next|_vercel|.*\\..*).*)"],
+  matcher: ["/((?!api|_next|_vercel|.*\\..*).*)", "/api/:path*"],
 };

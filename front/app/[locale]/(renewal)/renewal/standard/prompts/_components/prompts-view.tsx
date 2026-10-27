@@ -29,26 +29,16 @@ import {
   RnToken,
   useRnToast,
 } from "@/components/renewal-ui";
-import {
-  CATALOG_EXPORT_PAGE_SIZE,
-  collationOf,
-  exportCatalogPages,
-  rereadAfterHydration,
-  reuseCatalogMeta,
-  type CatalogPage,
-  type CatalogSort,
-  type RemoteCatalog,
-} from "@/lib/standards/catalog-page";
-import { brandPresenceOf, UMBRELLA_BRAND } from "@/lib/scope/brand-presence";
+import { collationOf, rereadAfterHydration, type CatalogSort } from "@/lib/standards/catalog-page";
 import { countryName } from "@/lib/geo-catalog/country-name";
 import { rhqLabel } from "@/lib/rhq";
 import { languageName } from "@/lib/geo-catalog/language-name";
-import { isMarketUnset, isPseudoRegion, pseudoRegionLabelKey, splitMarkets } from "@/lib/standards/prompt-markets";
+import { isPseudoRegion, pseudoRegionLabelKey } from "@/lib/standards/prompt-markets";
 import { downloadXlsx } from "@/lib/export/xlsx";
 import type { Role } from "@/lib/auth/types";
-import type { PromptAuditLogView } from "@/lib/db/repositories/prompt-audit-logs";
 import { buildStandardPromptSheet, exportFilename, type StandardPromptExportLabels } from "@/app/[locale]/(dash)/standard/prompts/_components/prompt-export";
-import type { StandardPromptViewRow } from "@/app/[locale]/(dash)/standard/prompts/_components/prompt-list-readonly";
+import type { HistoryQuery, PromptRow, PromptsHistory, PromptsPage, PromptsRemote } from "@/app/[locale]/(dash)/standard/prompts/_data/screen-types";
+import { fetchPromptsExport, fetchPromptsPage } from "@/app/[locale]/(dash)/standard/prompts/_data/prompts-client";
 import { RnFilterSplit, useRnSplit } from "../../../_components/filter-split";
 import { RnSavedFiltersSection, useSavedFilters, type SavedFilter } from "../../../_components/saved-filters";
 import { RnAuditHistory, RnPromptTimeline } from "./prompt-history";
@@ -78,14 +68,15 @@ const DEFAULT_OPEN: Partial<Record<PromptAxis, boolean>> = { listType: true, dep
 const CHILD: Partial<Record<PromptAxis, PromptAxis>> = { listType: "depth1", depth1: "depth2", depth2: "depth3", depth3: "depth4" };
 
 export interface PromptsViewProps {
-  remote: RemoteCatalog;
+  remote: PromptsRemote;
   scopeAll: boolean;
   scopeRole: Role;
   scopeBrands: string[];
   scopeRegions: string[];
   scopeCountries: string[];
   period: { from: string; to: string } | null;
-  auditRows: PromptAuditLogView[];
+  history: PromptsHistory;
+  loadHistory?: (query: HistoryQuery) => Promise<PromptsHistory>;
   initialTab: "catalog" | "history";
   storageKey: string;
   /** "all" opens every filter section (parity test). */
@@ -100,7 +91,7 @@ export function RnPromptsView(props: PromptsViewProps) {
   );
 }
 
-function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, scopeCountries, period, auditRows, initialTab, storageKey, defaultOpen }: PromptsViewProps) {
+function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, scopeCountries, period, history, loadHistory, initialTab, storageKey, defaultOpen }: PromptsViewProps) {
   const t = useTranslations("standardPromptsView");
   const tVal = useTranslations("dashboard.filters.value");
   const tAudit = useTranslations("promptAudit.history");
@@ -118,7 +109,7 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
   const [sort, setSort] = useState(DEFAULT_SORT);
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
   const [page, setPage] = useState(1);
-  const [data, setData] = useState<CatalogPage>(remote.initial);
+  const [data, setData] = useState<PromptsPage>(remote.initial);
   const [busy, setBusy] = useState(false);
   const [readError, setReadError] = useState<Error | null>(null);
   const [timelineRow, setTimelineRow] = useState<{ id: string; text: string } | null>(null);
@@ -144,7 +135,7 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
     },
     [locale, tVal],
   );
-  const rows = data.rows as unknown as StandardPromptViewRow[];
+  const rows: PromptRow[] = data.rows;
   const facets = data.facets;
   const valueLabel = useCallback(
     (axis: PromptAxis, v: string): string => {
@@ -177,8 +168,8 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
   );
 
   // ── reads: the original list's loader and query, debounced 120 ms, latest wins ──
-  const load = useMemo(() => reuseCatalogMeta(remote), [remote]);
-  const marketCodes = data.facets.marketSort ?? axisOptions("market", data.facets, rows, filters);
+  const load = remote.load ?? fetchPromptsPage;
+  const marketCodes = data.facets.marketSort ?? [];
   const collation = collationOf(typeof Intl !== "undefined" ? Intl.Collator().resolvedOptions().locale : "en");
   const query = readQuery({ filters, search, sort: sort.key, asc: sort.asc, page, pageSize, collation, marketCodes, marketLabel });
   const readKey = JSON.stringify(query);
@@ -262,7 +253,7 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
     [valueLabel],
   );
 
-  // ── export: every filtered page in server order (the original handleExport) ──
+  // ── export: every filtered row in server order (the original handleExport) ──
   const [exporting, setExporting] = useState(false);
   async function handleExport() {
     if (exporting || data.total === 0) return;
@@ -291,9 +282,8 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
         statusMeasured: t("statusMeasured"),
         statusUnmeasured: t("statusUnmeasured"),
       };
-      const exportRows = remote.rows ? await exportCatalogPages(remote.rows, query, CATALOG_EXPORT_PAGE_SIZE) : await exportCatalogPages(remote.load, query);
-      const columnRows = [Object.fromEntries(data.columns.map((key) => [key, "present"]))] as unknown as StandardPromptViewRow[];
-      const sheet = buildStandardPromptSheet(exportRows as unknown as StandardPromptViewRow[], columnRows, labels, {
+      const exported = await (remote.exportRows ?? fetchPromptsExport)(query);
+      const sheet = buildStandardPromptSheet(exported.rows, exported.columns, labels, {
         market: marketLabel,
         language: (code) => languageName(code, locale),
       });
@@ -330,21 +320,18 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
   }, []);
 
   if (readError) throw readError;
-  const total = data.total;
-  const pages = Math.max(1, Math.ceil(total / pageSize));
-  const safePage = Math.min(page, pages);
-  const rangeFrom = total === 0 ? 0 : data.offset + 1;
-  const rangeTo = Math.min(rangeFrom + rows.length - 1, total);
-  const axes = visibleAxes(facets, rows, filters);
+  // The page actually read (a page past the end falls back to the last one) and its labels.
+  const { total, page: safePage, pages, rangeFrom, rangeTo } = data;
+  const axes = visibleAxes(facets);
   const picked = activeAxes(filters);
   const depthCols = (["depth1", "depth2", "depth3", "depth4"] as const).filter((c) => data.columns.includes(c));
-  const hasListType = axisOptions("listType", facets, rows, filters).length > 0;
+  const hasListType = axisOptions("listType", facets).length > 0;
 
   const panel = (
     <PromptPanel
       axes={axes}
       filters={filters}
-      options={(a) => axisOptions(a, facets, rows, filters)}
+      options={(a) => axisOptions(a, facets)}
       axisLabel={axisLabel}
       valueLabel={valueLabel}
       onPick={pick}
@@ -429,7 +416,7 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
         />
         {tab === "history" ? (
           <RnCard className="p-5">
-            <RnAuditHistory initialRows={auditRows} />
+            <RnAuditHistory initial={history} load={loadHistory} />
           </RnCard>
         ) : (
           <>
@@ -525,16 +512,15 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
                     <tbody>
                       {rows.map((r) => {
                         const path = [hasListType ? r.listType : null, ...depthCols.map((c) => r[c])].filter(Boolean) as string[];
-                        const presence = brandPresenceOf(r.brand, r.brandPresence);
                         return (
                           <tr key={r.id} data-rn-prompt-row={r.id} className="align-top hover:bg-rn-navy-25/60">
                             <td className="border-b border-rn-line py-3 pr-3 pl-5">
                               <div className="leading-snug text-rn-ink">{r.text}</div>
                               <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-rn-12 text-rn-muted">
-                                <RnTag className={r.brand == null || r.brand === UMBRELLA_BRAND ? "bg-rn-inset text-rn-ink-2" : undefined}>
-                                  {r.brand == null || r.brand === UMBRELLA_BRAND ? t("common") : r.brand}
+                                <RnTag className={r.common ? "bg-rn-inset text-rn-ink-2" : undefined}>
+                                  {r.common ? t("common") : r.brand}
                                 </RnTag>
-                                {presence ? <span>{tVal(presence as "branded")}</span> : null}
+                                {r.presence ? <span>{tVal(r.presence)}</span> : null}
                                 {r.lang ? <span>· {languageName(r.lang, locale)}</span> : null}
                               </div>
                               {!wide && (path.length || r.funnelStage) ? (
@@ -551,7 +537,7 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
                               </td>
                             ) : null}
                             <td className="border-b border-rn-line px-3 py-3">
-                              <Markets regions={r.regions} labelOf={marketLabel} allLabel={t("marketAll")} allHint={t("marketAllHint")} moreHint={t("marketMoreHint")} />
+                              <Markets markets={r.markets} labelOf={marketLabel} allLabel={t("marketAll")} allHint={t("marketAllHint")} moreHint={t("marketMoreHint")} />
                             </td>
                             <td className="border-b border-rn-line px-3 py-3">
                               <div className="flex flex-col items-start gap-1.5">
@@ -660,8 +646,9 @@ function sortLabel(k: CatalogSort, t: (key: "textLabel" | "brandLabel" | "presen
 }
 
 /** The original MarketCell rule: real countries first (top 3 + "+N"), pseudo slots always shown, unset = "전체". */
-function Markets({ regions, labelOf, allLabel, allHint, moreHint }: { regions: string[] | null; labelOf: (c: string) => string; allLabel: string; allHint: string; moreHint: string }) {
-  if (isMarketUnset(regions)) {
+function Markets({ markets, labelOf, allLabel, allHint, moreHint }: { markets: PromptRow["markets"]; labelOf: (c: string) => string; allLabel: string; allHint: string; moreHint: string }) {
+  const { real, pseudo } = markets;
+  if (real.length === 0 && pseudo.length === 0) {
     return (
       <span title={allHint} className="inline-flex items-center gap-1 rounded-md bg-rn-inset px-1.5 py-px text-rn-12 text-rn-ink-2">
         <Globe className="size-3" aria-hidden />
@@ -669,7 +656,6 @@ function Markets({ regions, labelOf, allLabel, allHint, moreHint }: { regions: s
       </span>
     );
   }
-  const { real, pseudo } = splitMarkets(regions);
   const shown = [...real.slice(0, MARKET_BADGE_LIMIT), ...pseudo];
   const hidden = real.slice(MARKET_BADGE_LIMIT);
   const all = [...real, ...pseudo].map(labelOf).join(" · ");

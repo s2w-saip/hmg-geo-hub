@@ -3,8 +3,9 @@ import { NextRequest } from "next/server";
 
 // /api/citations/domains, /[skey], /export (unit U7): validation, then session, the place gate
 // and the project gate on BOTH sources (U4 verification F1), then the source switch (api only:
-// the legacy screens never call these routes). The api answer is the adapter's shape; backend
-// errors keep their status with {error:{code}}.
+// the legacy screens never call these routes). Then each route is a thin proxy to its screen
+// (back/bff/screens/citation.py): the answer is the screen's; screen errors keep their status
+// with {error:{code}}.
 
 const st = vi.hoisted(() => ({
   session: null as unknown,
@@ -19,7 +20,7 @@ vi.mock("@/lib/db/repositories/request-cache", () => ({
 }));
 
 const { bindHghAuth } = await import("@/lib/hgh/auth");
-const { encodeSkey } = await import("@/lib/hgh/adapters/citations");
+const { encodeSkey } = await import("@/lib/hgh/citation-route");
 const list = await import("./route");
 const detail = await import("./[skey]/route");
 const exporter = await import("./export/route");
@@ -36,35 +37,15 @@ const getDetail = (skey: string, qs: string) =>
 const getExport = (qs: string) => exporter.GET(req("/api/citations/domains/export", qs));
 
 const apiLog: URL[] = [];
-const ROW = {
-  skey: "a.example", domain: "a.example", is_social: false, category: null, citations: 3, share: { num: 3, den: 6 },
-  citing_answers: 2, citing_prompts: 2, coverage: { num: 2, den: 10 }, is_own: false, is_target: false, own_citations: 0,
-  competitor_brand: null, rank: 4, match_rank: 1,
-};
+const ROW = { domain: "a.example", citations: 3, share: 50, prompts: 2, coverageRate: 20, urls: [], promptList: [], isOurs: false, category: null, subcategory: null, skey: "a.example", rank: 4, no: 4 };
 let backend: (url: URL) => Response;
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+// The routes are thin proxies to the screens (back/bff/screens/citation.py): the stub answers them.
 const defaultBackend = (url: URL): Response => {
-  if (url.pathname === "/v1/citations/domains")
-    return json({
-      data: { summary: { total_citations: 6, unique_sources: 2, own_share: { num: 0, den: 6 }, answers_den: 10 }, items: [ROW], competitor_totals: [] },
-      meta: { mode: "cumulative", page: { limit: 200, next_cursor: "n1", total: 201 } },
-    });
-  if (url.pathname.startsWith("/v1/citations/domains/") && url.pathname !== "/v1/citations/domains/export")
-    return json({
-      data: {
-        source: { skey: "x", domain: "x", is_social: true, category: null },
-        citations: 1,
-        own_citations: 0,
-        urls: [{ url: "https://www.instagram.com/hyundai/p/1", title: "P", citations: 1, engines: ["gemini"], prompt_text: "q", country: null }],
-        prompts: [],
-      },
-      meta: { mode: "cumulative" },
-    });
-  if (url.pathname === "/v1/citations/domains/export")
-    return new Response("bytes", {
-      status: 200,
-      headers: { "content-type": "text/csv", "content-disposition": 'attachment; filename="d.csv"', "x-export-truncated": "true", "set-cookie": "no=1" },
-    });
+  if (url.pathname === "/v1/screens/citation/domains") return json({ rows: [ROW], nextCursor: "n1", total: 201, views: { "": { idx: [0], maxCit: 3, maxCov: 20 } } });
+  if (url.pathname === "/v1/screens/citation/domain-detail")
+    return json({ urls: [{ url: "https://www.instagram.com/hyundai/p/1", title: "P", count: 1, aiProvider: "Gemini", promptText: "q", country: null }], promptList: [], promptOrders: { prompt: { asc: [], desc: [] }, citations: { asc: [], desc: [] }, share: { asc: [], desc: [] } } });
+  if (url.pathname === "/v1/screens/citation/domains-export") return json({ error: { code: "not_found", message: "Source not present in Gold" } }, 404);
   if (url.pathname.startsWith("/v1/projects/")) return json({ error: { code: "not_found" } }, 404);
   return json({ error: { code: "not_found" } }, 404);
 };
@@ -157,20 +138,22 @@ describe("gates on both sources", () => {
   });
 });
 
-describe("api answers", () => {
-  it("list: adapter rows (skey, ranks), cursor and total; the page filters re-read like the page (website country axis)", async () => {
+describe("api answers (screen proxies)", () => {
+  it("list: the request params as they came + the route context to citation/domains; the screen answer as is", async () => {
     st.session = session({ role: "admin", scope: { all: true } });
     const r = await getList("surface=website&geography=US~HYUNDAI-N&engine=gemini&q=kia&sort=share&dir=asc&cursor=abc&limit=50");
     expect(r.status).toBe(200);
     expect(r.headers.get("cache-control")).toBe("no-store");
-    const body = (await r.json()) as { rows: { domain: string; skey: string; rank: number; matchRank: number; prompts: number }[]; nextCursor: string; total: number };
-    expect(body.rows).toEqual([expect.objectContaining({ domain: "a.example", skey: "a.example", rank: 4, matchRank: 1, prompts: 2, share: 50, coverageRate: 20 })]);
+    const body = (await r.json()) as { rows: { domain: string; no: number }[]; nextCursor: string; total: number };
+    expect(body.rows).toEqual([expect.objectContaining({ domain: "a.example", skey: "a.example", rank: 4, no: 4 })]);
     expect([body.nextCursor, body.total]).toEqual(["n1", 201]);
+    expect(apiLog.map((u) => u.pathname)).toEqual(["/v1/screens/citation/domains"]);
     const q = apiLog[0].searchParams;
-    expect([q.get("surface"), q.getAll("country"), q.getAll("engine"), q.get("q"), q.get("sort"), q.get("dir"), q.get("cursor"), q.get("limit")]).toEqual([
+    expect([q.get("ctx.surface"), q.get("ctx.role"), q.get("geography"), q.get("engine"), q.get("q"), q.get("sort"), q.get("dir"), q.get("cursor"), q.get("limit")]).toEqual([
       "website",
-      ["HYUNDAI-N", "US"],
-      ["gemini"],
+      "admin",
+      "US~HYUNDAI-N",
+      "gemini",
       "kia",
       "share",
       "asc",
@@ -179,37 +162,37 @@ describe("api answers", () => {
     ]);
   });
 
-  it("list: the standard competitor pick is forwarded; scope comes from the session, never from the query", async () => {
+  it("list: the standard competitor pick is forwarded as the URL param; scope comes from the session, never from the query", async () => {
     st.session = session({ role: "hq", scope: { brands: ["Hyundai"], regions: [], countries: ["US", "KR"] } });
     await getList("competitor=toyota.com~honda.com&own_brand=Kia&scope=all");
     const q = apiLog[0].searchParams;
-    expect([q.get("surface"), q.getAll("competitor"), q.get("own_brand"), q.get("scope"), q.get("limit")]).toEqual(["global", ["honda.com", "toyota.com"], null, null, "200"]);
+    expect([q.get("ctx.surface"), q.get("competitor"), q.get("ctx.scope")]).toEqual(["global", "toyota.com~honda.com", null]);
   });
 
-  it("detail: base64url segment -> the source key as the backend path parameter; project id and cf filters", async () => {
+  it("detail: base64url segment -> ctx.skey; project id and cf filters as the route context and params", async () => {
     const field = "0b1c2d3e-4f50-4a6b-8c7d-8e9fa0b1c2d3";
     const r = await getDetail(encodeSkey("instagram.com/hyundai"), `projectId=${PROJECT}&cf_${field}=a~b`);
     expect(r.status).toBe(200);
-    const body = (await r.json()) as { urls: { url: string; aiProvider: string; promptText: string }[]; promptList: unknown[] };
+    const body = (await r.json()) as { urls: { aiProvider: string; promptText: string }[]; promptList: unknown[] };
     expect(body.urls.map((u) => [u.aiProvider, u.promptText])).toEqual([["Gemini", "q"]]);
-    expect(apiLog[0].pathname).toBe("/v1/citations/domains/instagram.com%2Fhyundai");
-    expect([apiLog[0].searchParams.get("project_id"), apiLog[0].searchParams.getAll(`cf.${field}`)]).toEqual([PROJECT, ["a", "b"]]);
-  });
-
-  it("export: streamed with the relay header whitelist (no set-cookie), same search and sort", async () => {
-    const r = await getExport("surface=website&q=kia&sort=coverage&locale=en&max_rows=100");
-    expect(r.status).toBe(200);
-    expect(await r.text()).toBe("bytes");
-    expect([r.headers.get("content-disposition"), r.headers.get("x-export-truncated"), r.headers.get("set-cookie")]).toEqual([
-      'attachment; filename="d.csv"',
-      "true",
-      null,
-    ]);
     const q = apiLog[0].searchParams;
-    expect([apiLog[0].pathname, q.get("q"), q.get("sort"), q.get("locale"), q.get("max_rows")]).toEqual(["/v1/citations/domains/export", "kia", "coverage", "en", "100"]);
+    expect([apiLog[0].pathname, q.get("ctx.skey"), q.get("ctx.surface"), q.get("ctx.project_id"), q.get(`cf_${field}`)]).toEqual([
+      "/v1/screens/citation/domain-detail",
+      "instagram.com/hyundai",
+      "project",
+      PROJECT,
+      "a~b",
+    ]);
   });
 
-  it("backend errors keep their status: 409 cursor_stale (client restarts), 404 detail, 503", async () => {
+  it("export: the Gold source has no export (404 from the screen) -> 404 as before; the params reach the screen", async () => {
+    const r = await getExport("surface=website&q=kia&sort=coverage&locale=en&max_rows=100");
+    expect([r.status, await code(r)]).toEqual([404, "not_found"]);
+    const q = apiLog[0].searchParams;
+    expect([apiLog[0].pathname, q.get("q"), q.get("sort"), q.get("locale"), q.get("max_rows")]).toEqual(["/v1/screens/citation/domains-export", "kia", "coverage", "en", "100"]);
+  });
+
+  it("screen errors keep their status: 409 cursor_stale (client restarts), 404 detail, 503", async () => {
     backend = () => json({ error: { code: "cursor_stale", message: "m", details: [] } }, 409);
     let r = await getList("cursor=old");
     expect([r.status, await code(r)]).toEqual([409, "cursor_stale"]);

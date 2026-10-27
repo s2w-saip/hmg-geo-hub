@@ -1,28 +1,15 @@
-import { getTranslations, setRequestLocale } from "next-intl/server";
-import { DimensionLockChipGroup } from "@/components/dash/dimension-lock-chip";
-import { VisibilityView } from "../../../../standard/ai-funnel/_components/visibility-view";
-import { loadProjectFunnelContext } from "../_lib/auth-and-locks";
+import { SourceAnalytics } from "@/components/source-analytics";
+import { setRequestLocale } from "next-intl/server";
 
+// Data and every calculation come from the API (screen sources/analytics, back/bff/screens/); this page only renders.
 export default async function ProjectAiFunnelVisibilityPage({
   params,
+  searchParams,
 }: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
   params: Promise<{ locale: string; id: string }>;
 }) {
   const { locale, id } = await params;
   setRequestLocale(locale);
-  const t = await getTranslations("aiFunnelVisibility");
-  const { locks, lockedGroups } = await loadProjectFunnelContext(locale, id);
-
-  return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1.5">
-        <h2 className="font-head text-lg font-semibold tracking-tight text-foreground">
-          {t("title")}
-        </h2>
-        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
-        <DimensionLockChipGroup locks={locks} className="mt-1" />
-      </div>
-      <VisibilityView lockedGroups={lockedGroups} />
-    </div>
-  );
+  return <SourceAnalytics kind="visibility" sp={await searchParams} projectId={id} />;
 }

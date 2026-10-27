@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { feature } from "topojson-client";
 import type { GeometryCollection, Topology } from "topojson-specification";
-import worldTopo from "world-atlas/countries-110m.json";
-import type { GeoRegionRow } from "../_data/live";
+import worldTopo from "world-atlas/countries-50m.json";
+import type { GeoRegionRow } from "../_data/live-types";
 import { buildGeoShapes, type RegionDatum, type WorldFeature } from "./geo-map";
 
 // GeoShapes keys each polygon by shape id. world-atlas has features without an id; String(f.id)

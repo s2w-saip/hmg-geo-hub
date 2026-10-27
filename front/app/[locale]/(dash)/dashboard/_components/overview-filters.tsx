@@ -71,6 +71,7 @@ export function OverviewFilters({
   latestAnchorDay,
   selectableDates,
   asOfSlot,
+  onlyGroups,
 }: {
   scope?: import("@/lib/auth/types").AllowedScope;
   catalogRows?: CatalogTaxonomyRow[];
@@ -97,6 +98,9 @@ export function OverviewFilters({
   // 측정 기준일 슬롯 — 서버에서 렌더된 <Suspense> 노드를 그대로 받아 패널 최상단에
   // 꽂는다(답변분석 AnalysisFilterBar 와 동일 패턴). 값이 늦게 와도 행 높이 유지.
   asOfSlot?: ReactNode;
+  /** The panel's axes as the overview screen computed them (overview/filters). Without it (other
+   *  callers) the axes follow overviewOnlyGroups(languageOptions). */
+  onlyGroups?: DimensionGroup[];
 }) {
   return (
     <DimensionFilterPanel
@@ -121,7 +125,7 @@ export function OverviewFilters({
       collectionStartDay={collectionStartDay}
       latestAnchorDay={latestAnchorDay}
       selectableDates={selectableDates}
-      onlyGroups={overviewOnlyGroups(languageOptions)}
+      onlyGroups={onlyGroups ?? overviewOnlyGroups(languageOptions)}
     />
   );
 }

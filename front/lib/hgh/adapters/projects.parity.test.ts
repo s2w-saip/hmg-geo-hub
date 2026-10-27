@@ -1,7 +1,9 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { isValidElement, type ReactElement } from "react";
 
-// Legacy <-> API parity for the project management screens and actions (unit U9).
+// Legacy <-> API parity for the project management screens and actions (unit U9). The project list
+// and the member / setting / prompt pages render their screens now (components/gold-projects.tsx,
+// gold-project-metadata.tsx), so the page parity left here is /projects/new and /projects/by-scope.
 //
 // Method (U12 / U4 precedent). One neutral WORLD (accounts, projects, memberships, audit rows,
 // candidates, prompts, tags, tracked entities, owned bases, tracked URLs, engine history) is
@@ -78,33 +80,13 @@ vi.mock("@/lib/audit", () => ({ auditDataAccess: () => undefined, auditScopeCall
 const { withRequestScope } = await import("@/test/request-scope");
 const { bindHghAuth } = await import("@/lib/hgh/auth");
 const { UnauthorizedError } = await import("@/lib/auth/errors");
-const ProjectsPage = (await import("@/app/[locale]/(dash)/projects/page")).default;
 const NewProjectPage = (await import("@/app/[locale]/(dash)/projects/new/page")).default;
 const ByScopePage = (await import("@/app/[locale]/(dash)/projects/by-scope/[scopeId]/page")).default;
-const MemberPage = (await import("@/app/[locale]/(dash)/projects/[id]/member/page")).default;
-const SettingPage = (await import("@/app/[locale]/(dash)/projects/[id]/setting/page")).default;
-const PromptPage = (await import("@/app/[locale]/(dash)/projects/[id]/prompt/page")).default;
 const memberActions = await import("@/app/[locale]/(dash)/projects/[id]/member/_actions");
 const settingActions = await import("@/app/[locale]/(dash)/projects/[id]/setting/_actions");
 const promptActions = await import("@/app/[locale]/(dash)/projects/[id]/prompt/_actions");
 const newActions = await import("@/app/[locale]/(dash)/projects/new/_actions");
-const { ProjectList } = await import("@/app/[locale]/(dash)/projects/_components/project-list");
-const { ProjectsOverview } = await import("@/app/[locale]/(dash)/projects/_components/projects-overview");
-const { PendingInvitesPanel } = await import("@/app/[locale]/(dash)/projects/_components/pending-invites");
-const { PageHeader } = await import("@/components/page-header");
 const { NewProjectForm } = await import("@/app/[locale]/(dash)/projects/new/_form");
-const { InviteForm } = await import("@/app/[locale]/(dash)/projects/[id]/member/_components/invite-form");
-const { MemberList } = await import("@/app/[locale]/(dash)/projects/[id]/member/_components/member-list");
-const { AuditLog } = await import("@/app/[locale]/(dash)/projects/[id]/member/_components/audit-log");
-const { GeneralForm } = await import("@/app/[locale]/(dash)/projects/[id]/setting/_components/general-form");
-const { AiEnginesPanel } = await import("@/app/[locale]/(dash)/projects/[id]/setting/_components/ai-engines-panel");
-const { OwnedBasesPanel } = await import("@/app/[locale]/(dash)/projects/[id]/setting/_components/owned-bases");
-const { TrackedUrlsPanel } = await import("@/app/[locale]/(dash)/projects/[id]/setting/_components/tracked-urls");
-const { TrackedEntitiesPanel } = await import("@/app/[locale]/(dash)/projects/[id]/setting/_components/tracked-entities");
-const { DangerZone } = await import("@/app/[locale]/(dash)/projects/[id]/setting/_components/danger-zone");
-const { CandidateList } = await import("@/app/[locale]/(dash)/projects/[id]/prompt/_components/candidate-list");
-const { ManualPromptInput } = await import("@/app/[locale]/(dash)/projects/[id]/prompt/_components/manual-input");
-const { PromptList, usedTagFieldIds } = await import("@/app/[locale]/(dash)/projects/[id]/prompt/_components/prompt-list");
 
 // ── WORLD ───────────────────────────────────────────────────────────────────
 
@@ -530,16 +512,6 @@ function* walk(node: unknown): Generator<ReactElement> {
 function propsOf(tree: unknown, type: unknown): Record<string, unknown>[] {
   return [...walk(tree)].filter((e) => e.type === type).map((e) => e.props as Record<string, unknown>);
 }
-function strings(tree: unknown): string[] {
-  const out: string[] = [];
-  const visit = (n: unknown) => {
-    if (typeof n === "string") out.push(n);
-    else if (Array.isArray(n)) n.forEach(visit);
-    else if (isValidElement(n)) Object.values((n.props ?? {}) as Record<string, unknown>).forEach(visit);
-  };
-  visit(tree);
-  return out;
-}
 const without = (o: Record<string, unknown> | undefined, ...keys: string[]) => {
   if (!o) return o;
   const c = { ...o };
@@ -615,62 +587,6 @@ beforeEach(async () => {
 
 // ── pages ───────────────────────────────────────────────────────────────────
 
-async function listView(source: Source, account: Account) {
-  const tree = await render(source, account, () => ProjectsPage(params({})));
-  const overview = propsOf(tree, ProjectsOverview)[0];
-  return {
-    meta: propsOf(tree, PageHeader)[0]?.meta,
-    cards: propsOf(tree, ProjectList)[0]?.projects,
-    pending: propsOf(tree, PendingInvitesPanel)[0]?.pending,
-    overview: {
-      // What ProjectsOverview reads (projects-overview.tsx:45-51) plus the totals.
-      projects: (overview?.projects as Array<{ id: string; brand: string | null; country: string; createdAt: Date }> | undefined)?.map((p) => ({
-        id: p.id,
-        brand: p.brand,
-        country: p.country,
-        createdAt: p.createdAt.toISOString(),
-      })),
-      totalActiveMembers: overview?.totalActiveMembers,
-      totalQueuedPrompts: overview?.totalQueuedPrompts,
-    },
-  };
-}
-
-describe("/projects list", () => {
-  it("owner: same cards, counts, totals, distribution input; pending panel absent for both", async () => {
-    const legacy = await listView("legacy", OWNER);
-    expect(legacy.cards).toEqual([
-      { id: PB, name: "Genesis AE", domain: null, role: "viewer", promptCount: 1, activeMembers: 2, createdAt: T(3) },
-      { id: PA, name: "Kia US", domain: "kia.com/us", role: "owner", promptCount: 3, activeMembers: 2, createdAt: T(2) },
-    ]);
-    expect(legacy.overview.totalActiveMembers).toBe(4);
-    expect(legacy.overview.totalQueuedPrompts).toBe(2);
-    expect(legacy.meta).toBe("2개 프로젝트");
-    expectDiff(legacy, await listView("api", OWNER), {});
-  });
-
-  it("invitee: pending invites (oldest first); membershipId is the project id on the api source", async () => {
-    const legacy = await listView("legacy", INVITEE);
-    const api = await listView("api", INVITEE);
-    expect((api.pending as Array<{ projectId: string }>).map((p) => p.projectId)).toEqual([PA, PB]);
-    expectDiff(legacy, api, {
-      // The API has no membership id: accept/reject address /members/me/* by project id.
-      "^\\.pending\\[\\d\\]\\.membershipId$": "membership id -> project id (by design)",
-    });
-  });
-
-  it("admin: every customer project; legacy also listed the standard root row (U9-N1)", async () => {
-    const legacy = await listView("legacy", ADMIN);
-    const api = await listView("api", ADMIN);
-    expect((legacy.cards as Array<{ id: string }>).map((c) => c.id)).toEqual([PB, PA, ROOT]);
-    expectDiff(legacy, api, {
-      "^\\.meta$": "U9-N1: '3개 프로젝트' -> '2개 프로젝트'",
-      "^\\.cards\\.length$": "U9-N1",
-      "^\\.overview\\.projects\\.length$": "U9-N1",
-    });
-  });
-});
-
 describe("/projects/new", () => {
   it("scoped account: same brand / country choices in the same order, same lock", async () => {
     const scope = { all: false, brands: ["Kia"], regions: undefined, countries: ["US", "DE", "KR"] };
@@ -731,172 +647,6 @@ describe("/projects/by-scope/[scopeId]", () => {
   it("a project the viewer may not open: legacy redirects and the detail 404s; api 404s at once (same end)", async () => {
     expect(await go("legacy", OUTSIDER, SCOPE_A)).toEqual({ thrown: `REDIRECT:/ko/projects/${PA}` });
     expect(await go("api", OUTSIDER, SCOPE_A)).toEqual({ thrown: "NOT_FOUND" });
-  });
-});
-
-describe("/projects/[id]/member", () => {
-  const view = async (source: Source, account: Account, id = PA) => {
-    const tree = await render(source, account, () => MemberPage(params({ id })));
-    if ((tree as { thrown?: string }).thrown) return tree;
-    return {
-      invite: propsOf(tree, InviteForm).length,
-      list: propsOf(tree, MemberList)[0],
-      audit: propsOf(tree, AuditLog)[0],
-    };
-  };
-  const ids = {
-    "^\\.list\\.members\\[\\d\\]\\.id$": "member id: membership id -> user id (/members/{user_id})",
-    "^\\.audit\\.entries\\[\\d\\]\\.id$": "audit id: uuid -> audit_id",
-  };
-  it("owner (edit), viewer (read only), admin without membership (edit): same rows, order, flags", async () => {
-    for (const account of [OWNER, VIEWER, ADMIN]) expectDiff(await view("legacy", account), await view("api", account), ids);
-  });
-  it("pending invitee, outsider, unknown project: notFound on both", async () => {
-    for (const [account, id] of [
-      [INVITEE, PA],
-      [OUTSIDER, PA],
-      [OWNER, u(0x777)],
-    ] as const) {
-      expect(await view("legacy", account, id)).toEqual({ thrown: "NOT_FOUND" });
-      expect(await view("api", account, id)).toEqual({ thrown: "NOT_FOUND" });
-    }
-  });
-});
-
-describe("/projects/[id]/setting", () => {
-  const view = async (source: Source, account: Account) => {
-    const tree = await render(source, account, () => SettingPage(params({ id: PA })));
-    if ((tree as { thrown?: string }).thrown) return tree;
-    return {
-      general: propsOf(tree, GeneralForm)[0],
-      engines: propsOf(tree, AiEnginesPanel)[0],
-      owned: propsOf(tree, OwnedBasesPanel)[0],
-      urls: propsOf(tree, TrackedUrlsPanel)[0],
-      tracked: propsOf(tree, TrackedEntitiesPanel)[0],
-      danger: propsOf(tree, DangerZone)[0] ?? null,
-      scopeKeys: strings(tree).filter((s) => s.startsWith("scopeLink.")).sort(),
-    };
-  };
-  const ids = {
-    "^\\.engines\\.history\\[\\d\\]\\.id$": "history id: uuid -> history_id",
-    "^\\.engines\\.keptCollects$":
-      "#16: api's backend schedule (outbox set_targets) measures the kept engines, legacy pushes only the front vocabulary to Scope (no checkbox = collection stops there)",
-    "^\\.owned\\.rows\\[\\d\\]\\.id$": "owned base id: uuid -> base_norm",
-    "^\\.urls\\.rows\\[\\d\\]\\.id$": "tracked URL id: uuid -> url_norm",
-    "^\\.tracked\\.brands\\[\\d\\]\\.id$": "competitor id: uuid -> brand_name",
-    "^\\.tracked\\.vehicles\\[\\d\\]\\.id$": "vehicle id: uuid -> brand + NUL + model",
-  };
-  it("owner: same forms, rows (order), aliases, engine state, flags, scope status", async () => {
-    const legacy = (await view("legacy", OWNER)) as Record<string, Record<string, unknown>>;
-    expect(legacy.tracked.ownBrandAliases).toEqual(["기아"]);
-    expect((legacy.tracked.brands as Array<{ brandName: string }>).map((b) => b.brandName)).toEqual(["Honda", "Toyota"]);
-    expect((legacy.urls.rows as Array<{ url: string }>).map((r) => r.url)).toEqual(["https://kia.com/us/k5", "https://kia.com/us/ev9"]);
-    expect(legacy.engines).toMatchObject({ initial: ["chatgpt", "gemini"], explicit: true, disabled: false });
-    expect(legacy.scopeKeys).toContain("scopeLink.statusValue.linked");
-    expectDiff(legacy, await view("api", OWNER), ids);
-  });
-  it("#16 a stored engine outside the front vocabulary: no checkbox, carried as kept on both sources", async () => {
-    const pa = PROJECTS.find((p) => p.id === PA)!;
-    const stored = pa.engines;
-    pa.engines = ["chatgpt", "gemini", "perplexity"];
-    try {
-      await pg.query("UPDATE projects SET ai_engines = $1 WHERE id = $2", [pa.engines, PA]);
-      const legacy = (await view("legacy", OWNER)) as Record<string, Record<string, unknown>>;
-      expect(legacy.engines).toMatchObject({ initial: ["chatgpt", "gemini"], explicit: true, kept: ["perplexity"], disabled: false });
-      expectDiff(legacy, await view("api", OWNER), ids);
-    } finally {
-      pa.engines = stored;
-    }
-  });
-  it("#16 legacy save (real repository): the kept engine survives a checkbox change and comes back as kept", async () => {
-    await pg.query("UPDATE projects SET ai_engines = $1 WHERE id = $2", [["chatgpt", "gemini", "perplexity"], PA]);
-    as("legacy", OWNER);
-    await expect(settingActions.updateProjectEngines(PA, ["chatgpt"], ["perplexity"])).resolves.toEqual({
-      ok: true,
-      value: { engines: ["chatgpt"], changed: true, pushed: true, kept: ["perplexity"] },
-    });
-    const row = await pg.query("SELECT ai_engines FROM projects WHERE id = $1", [PA]);
-    expect((row.rows[0] as { ai_engines: string[] }).ai_engines).toEqual(["chatgpt", "perplexity"]);
-    const legacy = (await view("legacy", OWNER)) as Record<string, Record<string, unknown>>;
-    expect(legacy.engines).toMatchObject({ initial: ["chatgpt"], explicit: true, kept: ["perplexity"] });
-  });
-  it("viewer: everything disabled, no danger zone, on both", async () => {
-    const api = (await view("api", VIEWER)) as { general: { disabled: boolean }; danger: unknown };
-    expect(api.general.disabled).toBe(true);
-    expect(api.danger).toBeNull();
-    expectDiff(await view("legacy", VIEWER), api, ids);
-  });
-  it("admin: the Scope diagnostic block is the API state model (C2)", async () => {
-    expectDiff(await view("legacy", ADMIN), await view("api", ADMIN), {
-      ...ids,
-      "^\\.scopeKeys": "C2: analysisProbe (mention/citation live probes) -> linkProbe (state, round, jobs, outbox)",
-    });
-  });
-  it("outsider: notFound on both", async () => {
-    expect(await view("legacy", OUTSIDER)).toEqual({ thrown: "NOT_FOUND" });
-    expect(await view("api", OUTSIDER)).toEqual({ thrown: "NOT_FOUND" });
-  });
-  it("admin, Scope-link diagnostic unavailable (5xx): the legacy block in its error state, rest of the page unchanged (B018)", async () => {
-    const legacy = (await view("legacy", ADMIN)) as { scopeKeys: string[] } & Record<string, unknown>;
-    const apiOk = (await view("api", ADMIN)) as { scopeKeys: string[] } & Record<string, unknown>;
-    vi.stubGlobal("fetch", async (input: string, init: RequestInit = {}) => {
-      const url = new URL(String(input));
-      return url.pathname.endsWith("/settings/scope-link") ? fail(503, "unavailable") : backend(String(init.method ?? "GET"), url.pathname, url.searchParams);
-    });
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const apiDown = (await view("api", ADMIN)) as { scopeKeys: string[] } & Record<string, unknown>;
-    warn.mockRestore();
-    // The legacy probe reported a failed call inside the block: overall "error", both rows "error".
-    const legacyFailed = legacy.scopeKeys
-      .map((k) => k.replace(/\.overall\.healthy$/, ".overall.error").replace(/\.state\.ok$/, ".state.error").replace(/\.fix\.healthy$/, ".fix.error"))
-      .sort();
-    expect(apiDown.scopeKeys).toEqual(legacyFailed);
-    expect(apiDown.scopeKeys).toContain("scopeLink.analysisProbe.overall.error");
-    expectDiff(without(apiOk, "scopeKeys"), without(apiDown, "scopeKeys"), {});
-  });
-});
-
-function pagingProps(props: Record<string, unknown>) {
-  const remote = props.remote as { initial: unknown };
-  return { ...props, remote: { initial: remote.initial } };
-}
-
-describe("/projects/[id]/prompt", () => {
-  const view = async (source: Source, account: Account) => {
-    const tree = await render(source, account, () => PromptPage(params({ id: PA })));
-    if ((tree as { thrown?: string }).thrown) return tree;
-    return {
-      candidates: pagingProps(propsOf(tree, CandidateList)[0]),
-      manual: propsOf(tree, ManualPromptInput).length,
-      list: pagingProps(propsOf(tree, PromptList)[0]),
-    };
-  };
-  it("owner and viewer: same candidates, prompts (oldest first, tags), fields, edit flags", async () => {
-    const legacy = (await view("legacy", OWNER)) as Record<string, Record<string, unknown>>;
-    expect((legacy.list.prompts as Array<{ id: string }>).map((p) => p.id)).toEqual([u(0x500), u(0x501), u(0x502)]);
-    expect((legacy.list.prompts as Array<{ customValues: unknown }>)[0].customValues).toEqual({ [u(0x600)]: "SUV" });
-    expect((legacy.candidates.candidates as Array<{ id: string }>).map((c) => c.id)).toEqual([u(0x401), u(0x400)]);
-    expect(legacy.manual).toBe(1);
-    expect((await view("legacy", VIEWER)) as Record<string, unknown>).toMatchObject({ manual: 0 });
-    for (const account of [OWNER, VIEWER, ADMIN]) {
-      expectDiff(await view("legacy", account), await view("api", account), {
-        // B016: the server's project-wide value count rides on the api rows (the list reads 200 rows at a
-        // time); legacy rows have none and keep the loaded-rows rule.
-        "^\\.list\\.customFields\\[\\d\\]\\.valueCount$": "B016: value_count kept for the tag-column delete confirmation",
-      });
-    }
-    const api = (await view("api", OWNER)) as Record<string, Record<string, unknown>>;
-    type Fields = Parameters<typeof usedTagFieldIds>[0];
-    type Rows = Parameters<typeof usedTagFieldIds>[1];
-    expect((api.list.customFields as Fields).map((f) => [f.label, f.valueCount])).toEqual([["Segment", 1], ["Old", 0]]);
-    // Every row of this world is loaded, so the delete confirmation picks the same columns on both sources.
-    const used = (v: Record<string, Record<string, unknown>>) => usedTagFieldIds(v.list.customFields as Fields, v.list.prompts as Rows);
-    expect(used(api)).toEqual(used(legacy));
-    expect(used(api)).toEqual(new Set([u(0x600)]));
-  });
-  it("pending invitee: notFound on both (PJ-3 active members only)", async () => {
-    expect(await view("legacy", INVITEE)).toEqual({ thrown: "NOT_FOUND" });
-    expect(await view("api", INVITEE)).toEqual({ thrown: "NOT_FOUND" });
   });
 });
 

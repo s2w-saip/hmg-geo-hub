@@ -6,51 +6,24 @@ import { UnauthorizedError } from "@/lib/auth/errors";
 import { showsGeoMap } from "@/lib/auth/scope-policy";
 import type { AllowedScope } from "@/lib/auth/types";
 import { formatAsOfDate } from "@/lib/as-of-date";
-import { listCatalogTaxonomy } from "@/lib/db/repositories/standards";
-import {
-  listMeasuredRegions,
-  listMeasuredScopeMatrix,
-  listMeasuredStandardLanguages,
-  standardCollectionDates,
-} from "@/lib/db/repositories/scope-aggregates";
-import {
-  fetchLatestAnchorDay,
-  fetchPeriodCompare,
-  fetchSelectableAnchorDates,
-  fetchStandardAggregates,
-  fetchStandardCompetitorSources,
-  wasDegraded,
-} from "@/lib/scope/server";
-import { narrowScopeBrands } from "@/lib/scope/hmg-brands";
-import { UMBRELLA_BRAND } from "@/lib/scope/brand-presence";
-import type { StandardFilters } from "@/lib/scope/result-adapter";
-import { readStandardFilters } from "@/components/dash/standard-filters";
-import { OVERVIEW_COMPARE_METRICS } from "@/components/dash/period-delta-metrics";
-import { kstToday } from "@/components/dash/selectable-dates";
-import { resolveRequestComparePeriodShape } from "@/lib/period/compare-shape";
-import { isAnalysisApi, loadPanelOptions } from "@/lib/hgh/adapters/filters";
-import { fetchPeriodCompareApi } from "@/lib/hgh/adapters/compare";
+import { screenGet, type ScreenQuery } from "@/lib/screen";
 import { throwForPage } from "@/lib/hgh/errors";
+import type {
+  AsOfView,
+  BrandMatrixView,
+  CardCompetitorsView,
+  CardsView,
+  CardTrendView,
+  FilterBarView,
+  OverviewGeoView,
+} from "@/app/[locale]/(dash)/dashboard/_data/screen-types";
 import {
-  afterFirstRender,
-  isTransientApiFailure,
-  loadCompetitorSources,
-  loadDashboardAsOf,
-  loadEssentialFilterDates,
-  orNullOnTransient,
-  type DashboardCtx,
-} from "@/lib/hgh/adapters/dashboard";
-import { markDegraded } from "@/lib/scope/degrade-registry";
-import {
-  applyTrendDeltas,
-  deltaTrendFilters,
-  DELTA_TREND_BUCKET,
-  getLiveDashboard,
-  getLiveGeo,
-  getLiveTrend,
-  sparklineTrend,
-} from "@/app/[locale]/(dash)/dashboard/_data/live";
-import { COMPETITOR_LABELS, EXTRAS_LABELS } from "@/app/[locale]/(dash)/dashboard/_components/degrade-notice";
+  DEGRADED_CARD_COMPETITORS,
+  DEGRADED_CARD_TREND,
+  handled,
+  isTransientScreenError,
+  onTransient,
+} from "@/app/[locale]/(dash)/dashboard/_data/screen-fallbacks";
 import { RnCard, RnEmpty, RnNote, RnPageHeader, RnPill, RnSkeleton } from "@/components/renewal-ui";
 import { RnBusyScope, RnFilterRuntime } from "../_components/filter-runtime";
 import {
@@ -64,23 +37,20 @@ import {
 } from "../_components/overview-filters";
 import { RnOverviewBody } from "./_components/overview-body";
 
-// Renewal Overview (2026-10-20) — the redesigned /dashboard, served side by side with
-// the original for comparison. Data: the SAME reads as /dashboard/page.tsx (both the
-// legacy path and the HGH_SOURCE_G1=api path), issued in the same order; only the
+// Renewal Overview (2026-10-20) — the redesigned /dashboard, served side by side with the original.
+// Data: the SAME overview screens as /dashboard/page.tsx (back/bff/screens/overview.py), plus the
+// renewal-only parts (ctx.view=renewal competitor standing, overview/brand-matrix); only the
 // presentation and the filter panel (instant apply + saved filters) differ.
-// Keep the reads below in step with /dashboard/page.tsx.
 export const maxDuration = 120;
 
-const G1 = { surface: "global" as const };
-const g1Api = () => isAnalysisApi("dashboard", "global");
-const GEO_LABELS = ["standardGeoCompetition"] as const;
+type SP = Record<string, string | string[] | undefined>;
 
 export default async function RenewalDashboardPage({
   params,
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
+  searchParams: Promise<SP>;
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
@@ -88,17 +58,14 @@ export default async function RenewalDashboardPage({
   const session = await getSession();
   if (!session) throw new UnauthorizedError();
   const sp = await searchParams;
-  // 기간 의미론 = /dashboard: 필터 없음 = 최신 1회차 스냅샷, 기간 설정 = 그 기간 회차 누적.
-  const rawFilters = readStandardFilters(sp, session.user.scope);
-  const filters = { ...rawFilters, cumulative: Boolean(rawFilters.dateFrom || rawFilters.dateTo) };
-  const asOf = g1Api()
-    ? orNullOnTransient(loadDashboardAsOf(filters, { ...G1, scope: session.user.scope })).catch((e: unknown) => throwForPage(e, locale))
-    : fetchStandardAggregates(filters).then((d) => d?.asOf ?? null);
+  const asOf = screenGet<AsOfView>("overview/as-of", { ...sp, "ctx.surface": "global" })
+    .then((v) => v.asOf)
+    .catch((e: unknown) => (isTransientScreenError(e) ? null : throwForPage(e, locale)));
   return (
     <RnFilterRuntime>
       <Suspense fallback={<PageSkeleton title={t("overview.title")} />}>
         <RenewalOverview
-          filters={filters}
+          sp={sp}
           scope={session.user.scope}
           userId={session.user.id}
           showGeo={showsGeoMap(session.user)}
@@ -135,56 +102,28 @@ async function LastMeasured({ asOf }: { asOf: Promise<string | null> }) {
   return <span className="font-semibold tabular-nums text-rn-ink-2">{date ? t("lastMeasured", { date: formatAsOfDate(date) }) : "—"}</span>;
 }
 
-// Filter panel options — the same reads as /dashboard's OverviewFiltersSection(Api).
-async function filterOptions(scope: AllowedScope, filters: StandardFilters, locale: string): Promise<OverviewFilterProps> {
-  if (g1Api()) {
-    const ctx: DashboardCtx = { ...G1, scope };
-    try {
-      const [options, dates] = await Promise.all([
-        afterFirstRender(filters, ctx, () =>
-          loadPanelOptions({ surface: "global", scope, filters, dateFrom: filters.dateFrom, dateTo: filters.dateTo }),
-        ),
-        loadEssentialFilterDates(ctx),
-      ]);
-      return {
-        scope,
-        catalogRows: options.catalogRows,
-        geographyOptions: options.geographyOptions,
-        languageOptions: options.languageOptions,
-        optionMatrix: options.optionMatrix,
-        collectionStartDay: dates?.collectionStartDay ?? null,
-        latestAnchorDay: dates?.latestAnchorDay ?? null,
-        selectableDates: dates?.selectableDates,
-      };
-    } catch (e) {
-      throwForPage(e, locale);
-    }
+// Filter panel options — the same screen as /dashboard's filter bar.
+async function filterOptions(scope: AllowedScope, sp: SP, locale: string): Promise<OverviewFilterProps> {
+  let v: FilterBarView;
+  try {
+    v = await screenGet<FilterBarView>("overview/filters", { ...sp, "ctx.surface": "global" });
+  } catch (e) {
+    throwForPage(e, locale);
   }
-  const optionScope = narrowScopeBrands(scope, filters.brand);
-  const dateRange = { dateFrom: filters.dateFrom, dateTo: filters.dateTo };
-  const [catalogRows, geographyOptions, languageOptions, optionMatrix, collection, latestAnchorDay, selectableDates] = await Promise.all([
-    listCatalogTaxonomy(),
-    listMeasuredRegions(optionScope, undefined, true, dateRange),
-    listMeasuredStandardLanguages(optionScope, undefined, dateRange),
-    listMeasuredScopeMatrix(scope, dateRange),
-    standardCollectionDates(scope).catch(() => null),
-    fetchLatestAnchorDay("global", filters),
-    fetchSelectableAnchorDates("global", filters, "all"),
-  ]);
   return {
     scope,
-    catalogRows,
-    geographyOptions,
-    languageOptions,
-    optionMatrix,
-    collectionStartDay: collection?.firstMeasuredAt?.toISOString() ?? null,
-    latestAnchorDay,
-    selectableDates,
+    catalogRows: v.catalogRows,
+    geographyOptions: v.geographyOptions,
+    languageOptions: v.languageOptions,
+    optionMatrix: v.optionMatrix,
+    collectionStartDay: v.collectionStartDay,
+    latestAnchorDay: v.latestAnchorDay,
+    selectableDates: v.selectableDates,
   };
 }
 
 async function RenewalOverview({
-  filters,
+  sp,
   scope,
   userId,
   showGeo,
@@ -192,7 +131,7 @@ async function RenewalOverview({
   qs,
   header,
 }: {
-  filters: StandardFilters;
+  sp: SP;
   scope: AllowedScope;
   userId: string;
   showGeo: boolean;
@@ -200,14 +139,14 @@ async function RenewalOverview({
   qs: string;
   header: ReactNode;
 }) {
-  const props = await filterOptions(scope, filters, locale);
+  const props = await filterOptions(scope, sp, locale);
   return (
     <RnOverviewFilters props={props} storageKey={`rn:saved-filters:v1:overview:${userId}`}>
       <RnFilterSplit header={header} panel={<RnOverviewFilterPanel />} rail={<RnOverviewFilterRail />}>
         <RnOverviewApplied />
         <RnBusyScope className="flex flex-col gap-4">
           <Suspense fallback={<BodySkeleton />}>
-            <OverviewSection filters={filters} locale={locale} qs={qs} showGeo={showGeo} />
+            <OverviewSection sp={sp} locale={locale} qs={qs} showGeo={showGeo} />
           </Suspense>
         </RnBusyScope>
       </RnFilterSplit>
@@ -215,81 +154,65 @@ async function RenewalOverview({
   );
 }
 
-// The KPI reads of /dashboard's KpiCardsSection + GeoSection, issued together.
-async function OverviewSection({ filters, locale, qs, showGeo }: { filters: StandardFilters; locale: string; qs: string; showGeo: boolean }) {
+// The reads of /dashboard's KpiCardsSection + GeoSection (+ the renewal parts), issued together.
+async function OverviewSection({ sp, locale, qs, showGeo }: { sp: SP; locale: string; qs: string; showGeo: boolean }) {
   const t = await getTranslations("dashboard");
   const tKpi = await getTranslations("answerAnalysis.mentions.kpi");
-  const api = g1Api();
-  const livePromise = getLiveDashboard(filters);
-  const deltaTrend = handled(getLiveTrend(api ? filters : deltaTrendFilters(filters), DELTA_TREND_BUCKET));
-  const weeklyTrend = api ? deltaTrend : handled(getLiveTrend(filters, "week"));
-  const session = api ? await getSession() : null;
-  const ctx: DashboardCtx = { ...G1, scope: session?.user.scope ?? null };
+  const q: ScreenQuery = sp;
+  const trend = handled(onTransient(screenGet<CardTrendView>("overview/card-trend", q), DEGRADED_CARD_TREND));
   const competitors = handled(
-    api
-      ? afterFirstRender(filters, ctx, () => loadCompetitorSources(filters, ctx, { onFailure: (label, e) => onTransient(label, e) }))
-      : fetchStandardCompetitorSources(filters),
+    onTransient(screenGet<CardCompetitorsView>("overview/card-competitors", { ...q, "ctx.view": "renewal" }), DEGRADED_CARD_COMPETITORS),
   );
-  const geo = showGeo ? handled(api ? getLiveGeo(filters).catch((e: unknown) => throwForPage(e, locale)) : getLiveGeo(filters)) : null;
-  const shape = await resolveRequestComparePeriodShape(filters.dateFrom, filters.dateTo, { area: "dashboard", surface: "global" });
-  const periodCompare = api
-    ? await afterFirstRender(filters, ctx, () =>
-        orNullOnTransient(fetchPeriodCompareApi(filters, { ...ctx, kind: shape.kind, metrics: OVERVIEW_COMPARE_METRICS })),
-      ).catch((e: unknown) => throwForPage(e, locale))
-    : await fetchPeriodCompare(filters, {
-        surface: "global",
-        family: "mention",
-        kind: shape.kind,
-        metrics: OVERVIEW_COMPARE_METRICS,
-        ...(shape.months ? { months: shape.months } : {}),
-        ...(shape.weeks ? { weeks: shape.weeks } : {}),
-      });
-  const live = api ? await livePromise.catch((e: unknown) => throwForPage(e, locale)) : await livePromise;
-  if (!live) {
+  const matrix = handled(onTransient(screenGet<BrandMatrixView | null>("overview/brand-matrix", q), null));
+  const geo = showGeo
+    ? handled(
+        screenGet<OverviewGeoView>("overview/geo", { ...q, "ctx.locale": locale }).catch((e: unknown) =>
+          isTransientScreenError(e) ? { geo: null, degraded: true } : throwForPage(e, locale),
+        ),
+      )
+    : null;
+  let view: CardsView;
+  try {
+    view = await screenGet<CardsView>("overview/cards", q);
+  } catch (e) {
+    if (!isTransientScreenError(e)) throwForPage(e, locale);
+    view = { state: "degraded" };
+  }
+  if (view.state !== "ok") {
     return (
       <RnCard className="p-6">
-        <RnEmpty>{wasDegraded("standardAggregates") ? tKpi("degraded") : t("empty")}</RnEmpty>
+        <RnEmpty>{view.state === "degraded" ? tKpi("degraded") : t("empty")}</RnEmpty>
       </RnCard>
     );
   }
-  const deltas = handled(deltaTrend.then((d) => applyTrendDeltas(live.kpis, d)));
-  const trend = handled(weeklyTrend.then(sparklineTrend));
-  // brand-scoped accounts carry the HMG umbrella in filters.brand (readStandardFilters);
-  // it is a prompt tag, not a brand, so it stays out of the own-row label
-  const ownBrands = (filters.brand ?? []).filter((b) => b !== UMBRELLA_BRAND);
-  const ownLabel = ownBrands.length ? ownBrands.join(", ") : UMBRELLA_BRAND;
   return (
     <>
       <RnOverviewBody
-        kpis={live.kpis}
-        deferred={{ deltas, trend, competitors }}
-        periodCompare={periodCompare}
-        periodDays={shape.days ?? undefined}
-        periodLabelCtx={{ kind: shape.kind, curLo: shape.weeks?.cur.lo ?? shape.months?.cur.lo ?? filters.dateFrom, todayKst: kstToday() }}
+        cards={view.cards}
+        compareTitle={view.compareTitle}
+        deferred={{ trend, competitors, matrix }}
         geo={geo}
-        ownLabel={ownLabel}
         qs={qs}
       />
       <Suspense fallback={null}>
-        <DegradeNote wait={Promise.all([deltas, trend])} labels={EXTRAS_LABELS} title={t("trend.title")} />
+        <DegradeNote wait={trend.then((v) => v.degraded)} title={t("trend.title")} />
       </Suspense>
       <Suspense fallback={null}>
-        <DegradeNote wait={competitors} labels={COMPETITOR_LABELS} title={t("summary.label")} />
+        <DegradeNote wait={competitors.then((v) => v.degraded.length > 0)} title={t("summary.label")} />
       </Suspense>
       {geo ? (
         <Suspense fallback={null}>
-          <DegradeNote wait={geo} labels={GEO_LABELS} title={t("overview.geo.title")} />
+          <DegradeNote wait={geo.then((v) => v.degraded)} title={t("overview.geo.title")} />
         </Suspense>
       ) : null}
     </>
   );
 }
 
-// Budget-exceeded reads arrive as null / empty — say so instead of looking like "no data"
-// (same request-scope marker as /dashboard's DegradeNotice).
-async function DegradeNote({ wait, labels, title }: { wait: Promise<unknown>; labels: readonly string[]; title: string }) {
-  await wait.catch(() => null);
-  if (!labels.some((l) => wasDegraded(l))) return null;
+// A section that degraded says so instead of looking like "no data" (the payload / a transient
+// failure of its screen decides).
+async function DegradeNote({ wait, title }: { wait: Promise<boolean>; title: string }) {
+  if (!(await wait.catch(() => false))) return null;
   const tKpi = await getTranslations("answerAnalysis.mentions.kpi");
   return (
     <RnNote>
@@ -299,18 +222,7 @@ async function DegradeNote({ wait, labels, title }: { wait: Promise<unknown>; la
   );
 }
 
-function onTransient(label: string, e: unknown): void {
-  if (!isTransientApiFailure(e)) throw e;
-  markDegraded(label);
-}
-
-// Attach a rejection handler before anyone awaits (an early failure must not crash the process).
-function handled<T>(p: Promise<T>): Promise<T> {
-  p.catch(() => {});
-  return p;
-}
-
-function qsFrom(sp: Record<string, string | string[] | undefined>): string {
+function qsFrom(sp: SP): string {
   const params = new URLSearchParams();
   for (const [k, v] of Object.entries(sp)) {
     if (v == null) continue;

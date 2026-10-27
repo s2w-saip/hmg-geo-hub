@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   LineChart,
@@ -18,6 +18,7 @@ import {
   FILTER_SECTIONS,
   type DimensionGroup,
 } from "@/components/dash/dimension-filter-panel";
+import type { AllowedScope } from "@/lib/auth/types";
 import {
   Tooltip as InfoTooltip,
   TooltipContent as InfoTooltipContent,
@@ -26,41 +27,23 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { CHART_TOOLTIP_STYLE } from "@/lib/viz/chart-tooltip";
-import { useSortableTable } from "@/hooks/use-sortable-table";
+import { useOrderedTable } from "@/hooks/use-ordered-table";
 import { SortableHeader } from "@/components/ui/sortable-header";
-import type { StandardAcr } from "@/lib/db/repositories/scope-aggregates";
-import { BATTLE_BRAND_COLORS, ACR_SERIES_FALLBACK } from "../_data/sample";
-import { acrCardRow } from "../_data/acr-card";
+import type { AcrBrandSortKey, AcrConvSortKey, AcrLiveBrand, AcrLiveModel, AcrLiveVm, AcrPanelProps } from "../_data/acr-screen";
 
 // 표준 ACR — scope 2턴 선택 측정(prompt kind='acr')의 실데이터 뷰.
 // 섹션 구성·문구는 기획 확정본(샘플 AcrView, aiFunnelView.acr 딕셔너리)을
-// 따르고 데이터만 미러 집계(fetchStandardAcr)로 교체한다. 산식(전부 0~100%
-// 보장, scope-aggregates ACR 섹션 주석 참조):
+// 따른다. 값은 전부 API 화면 모델(acr/standard, acr/gold — back/bff/screens/acr.py)이
+// 계산해 보낸다: KPI(관점 당사 합계), 추이 행, 브랜드 색, 표 정렬 순서, 배틀 피벗·상위 30,
+// 테리토리 범례·선택 분포, 언어 축 노출(onlyGroups). 이 뷰는 서식과 UI 상태만 갖는다.
 //   Top1 ACR = 최종 선택 ÷ 전체 유효 반복 (선택 점유율)
 //   Top5 ACR(후보군 포함율) = 등장한 측정 셀 ÷ 전체 셀
-//   ※ scope의 appearance_count/appearance_rate/acr 원필드는 언급 횟수 기반
-//     (반복 수 초과 가능, 2026-07-08 실측)이라 비율 지표로 쓰지 않는다.
-// 기획 확정본과 다른 두 가지: ① 브랜드별 ACR을 필(태그)이 아니라 정렬 가능한
-// 표로 (2026-07-08 피드백), ② 테리토리 맵은 반복 "순서"가 공개 API에 없어
-// 선택 횟수 분포로 그린다. 측정 전에는 대기 상태 — 샘플 폴백 없음.
+// 측정 전에는 대기 상태 — 샘플 폴백 없음.
 
-type ConvSortKey = "brand" | "model" | "conv" | "shortlist" | "top1";
-type BrandSortKey = "brand" | "top1" | "coverage" | "choices" | "appearances";
-
-// ACR 필터 축 = aggregateAcrFromMirror::acrWhere 가 실제로 좁히는 축만 노출.
-// (mentions/citations 뷰가 STANDARD_*_ONLY_GROUPS 로 하는 것과 동일 패턴 —
-// 패널이 competitor/source/language/device/visitorType/depth4 처럼 acrWhere 가
-// 무시하는 축을 띄우면 "적용해도 아무 변화 없는" 죽은 필터가 되어 필터 스키마와
-// 데이터 스키마가 어긋난다.) brand 는 admin 일 때 패널이 자동 삽입(acrWhere 도
-// 카탈로그 brand 를 honor)하므로 여기 나열하지 않는다.
-// 퍼널(promptContext) 제외 (2026-07-08): 표준 ACR 지정 프롬프트 69개가 전부
-// '비교/검증' 단일 단계라 퍼널 필터는 값이 하나뿐인 죽은 축 — 인지/구매 단계에
-// ACR 프롬프트가 생기면 재도입.
-// language (2026-09-03): 표준 ACR 롤업은 21개 언어에 걸쳐 있어(운영 DB 실측) 죽은
-// 단일값 축이 아니다. 축을 켜기 **전에** acrWhere 에 표준 언어 술어를 먼저 넣었고
-// (scope-aggregates::acrWhere → langAxisPred), 옵션도 이 화면의 모집단인
-// scope_acr_rollups 에서 낸다(listMeasuredAcrLanguages). 옵션이 비면 아래
-// acrOnlyGroups 가 축을 도로 내린다 — 위 "죽은 필터 금지" 원칙 그대로.
+// ACR 필터 축 = ACR 리더가 실제로 좁히는 축만 (퍼널·depth4·경쟁사 등 죽은 축 제외), language 는
+// 실측 ACR 언어가 있을 때만. 이 화면은 API 가 같은 규칙으로 낸 onlyGroups prop 을 쓴다
+// (acr.py only_groups). 아래 함수는 리뉴얼 필터 모델(overview-filter-model.ts, stage "acr")이
+// 아직 직접 부르므로 남겨 둔다 — exported for that model and tests.
 const STANDARD_ACR_ONLY_GROUPS: DimensionGroup[] = [
   "geography",
   "language",
@@ -72,9 +55,6 @@ const STANDARD_ACR_ONLY_GROUPS: DimensionGroup[] = [
   "depth2",
   "depth3",
 ];
-
-// 실측 언어가 없으면 language 축을 뺀 목록 — 대시보드(overviewOnlyGroups)와 같은 규칙.
-// exported for tests.
 export function acrOnlyGroups(languageOptions?: string[]): DimensionGroup[] {
   return languageOptions?.length
     ? STANDARD_ACR_ONLY_GROUPS
@@ -82,116 +62,43 @@ export function acrOnlyGroups(languageOptions?: string[]): DimensionGroup[] {
 }
 const STANDARD_ACR_PRIMARY: DimensionGroup[] = ["geography", "engine", "time"];
 
-// Battle grid 는 측정된 프롬프트가 많을 수 있어(표준 루트 67개) 상위 N개만 펼치고
-// 나머지는 접어서 노출 — "N개 더 보기"로 펼침.
-const BATTLE_VISIBLE = 30;
-
 export function AcrLiveView({
-  data,
-  acrPromptCount,
+  vm,
   scope,
   catalogRows,
   geographyOptions,
   languageOptions,
   selectableDates,
+  onlyGroups,
 }: {
-  data: StandardAcr | null;
-  acrPromptCount: number;
-  scope?: import("@/lib/auth/types").AllowedScope;
-  catalogRows?: import("@/components/dash/dimension-filter-panel").CatalogTaxonomyRow[];
-  geographyOptions?: string[];
-  // ACR 롤업이 실제로 보유한 언어(소문자 BCP-47) — scope-aggregates::
-  // listMeasuredAcrLanguages. 표준 답변 옵션(28종)이 아니라 ACR 모집단(21종)에서
-  // 내야 "고르면 빈 화면"인 죽은 옵션 7개가 안 생긴다.
-  languageOptions?: string[];
-  /** 앵커 축(스펙 §5.1) — 회차가 있는 KST 날짜. 지면 계열은 ACR 리더와 같다. */
-  selectableDates?: string[];
-}) {
+  vm: AcrLiveVm;
+  scope?: AllowedScope;
+} & AcrPanelProps) {
   // 기획 확정 문구는 aiFunnelView.acr(샘플과 공유), 실데이터 전용 문구(대기
   // 상태·분포 주석)는 aiFunnelView.acrLive.
   const t = useTranslations("aiFunnelView.acr");
   const tLive = useTranslations("aiFunnelView.acrLive");
-
-  // KPI 카드 = 관점 당사 합계(API own: 여러 당사 브랜드 합·상위 12 밖 당사 포함). legacy 는 첫 당사 브랜드 행
-  const ours = acrCardRow(data);
-
-  const trendBrands = useMemo(() => {
-    const set = new Set<string>();
-    for (const b of data?.trend ?? []) for (const k of Object.keys(b.series)) set.add(k);
-    return [...set];
-  }, [data]);
-  const trendRows = useMemo(
-    () => (data?.trend ?? []).map((b) => ({ date: b.date, ...b.series })),
-    [data],
-  );
-
-  // 브랜드 → 색 고정 맵 — 추이·범례·분포 셀이 같은 브랜드에 항상 같은 색을
-  // 쓰도록 한 곳에서 배정 (행/차트마다 인덱스가 달라지는 색 흔들림 방지).
-  const brandColorMap = useMemo(() => {
-    const map = new Map<string, string>();
-    let i = 0;
-    const assign = (brand: string) => {
-      if (map.has(brand)) return;
-      map.set(
-        brand,
-        BATTLE_BRAND_COLORS[brand] ?? ACR_SERIES_FALLBACK[i++ % ACR_SERIES_FALLBACK.length],
-      );
-    };
-    for (const b of data?.brands ?? []) assign(b.brand);
-    for (const b of trendBrands) assign(b);
-    for (const s of data?.territory ?? [])
-      for (const row of s.rows) for (const e of row.entries) assign(e.brand);
-    return map;
-  }, [data, trendBrands]);
-  const brandColor = (brand: string): string =>
-    brandColorMap.get(brand) ?? "var(--color-ink-300)";
+  const tGold = useTranslations("gold");
 
   // 브랜드별 ACR 표 — 기본 Top1(선택 점유율) 내림차순, 헤더로 재정렬 가능.
-  const { sorted: brandRanked, headerProps: brandHeader } = useSortableTable<
-    StandardAcr["brands"][number],
-    BrandSortKey
-  >(
-    data?.brands ?? [],
-    {
-      brand: (r) => r.brand,
-      top1: (r) => r.choiceShare ?? -1,
-      coverage: (r) => r.coverage ?? -1,
-      choices: (r) => r.choiceCount,
-      appearances: (r) => r.appearanceCount,
-    },
-    { defaultKey: "top1", defaultAsc: false, ascByDefault: ["brand"] },
-  );
+  const { sorted: brandRanked, headerProps: brandHeader } = useOrderedTable<AcrLiveBrand, AcrBrandSortKey>(vm.brands, vm.brandOrders, {
+    defaultKey: "top1",
+    defaultAsc: false,
+    ascByDefault: ["brand"],
+  });
 
-  const { sorted: convRanked, headerProps: convHeader } = useSortableTable<
-    StandardAcr["modelConversion"][number],
-    ConvSortKey
-  >(
-    data?.modelConversion ?? [],
-    {
-      brand: (r) => r.brand ?? "",
-      model: (r) => r.model,
-      conv: (r) => r.conversionRate ?? -1,
-      shortlist: (r) => r.shortlistCount,
-      top1: (r) => r.top1Count,
-    },
-    { defaultKey: "conv", defaultAsc: false, ascByDefault: ["brand", "model"] },
-  );
+  const { sorted: convRanked, headerProps: convHeader } = useOrderedTable<AcrLiveModel, AcrConvSortKey>(vm.models, vm.modelOrders, {
+    defaultKey: "conv",
+    defaultAsc: false,
+    ascByDefault: ["brand", "model"],
+  });
 
-  const engines = data?.totals.engines ?? [];
-  const territory = data?.territory ?? [];
+  const engines = vm.totals.engines;
+  const territory = vm.territory;
   const [activeSheetIdx, setActiveSheetIdx] = useState(0);
   const [battleExpanded, setBattleExpanded] = useState(false);
-  const battleAll = data?.battle ?? [];
-  const battleRows = battleExpanded ? battleAll : battleAll.slice(0, BATTLE_VISIBLE);
-  const battleHidden = battleAll.length - battleRows.length;
+  const battleRows = battleExpanded ? vm.battle : vm.battle.slice(0, vm.battleVisible);
   const activeSheet = territory[Math.min(activeSheetIdx, Math.max(0, territory.length - 1))];
-  // 범례: 활성 시트에 등장하는 브랜드 (선택 수 내림차순).
-  const legendBrands = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const row of activeSheet?.rows ?? [])
-      for (const e of row.entries) counts.set(e.brand, (counts.get(e.brand) ?? 0) + e.choice);
-    return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([brand]) => brand);
-  }, [activeSheet]);
 
   return (
     <InfoTooltipProvider delayDuration={200}>
@@ -199,7 +106,7 @@ export function AcrLiveView({
       <DimensionFilterPanel
         stage="acr"
         selectableDates={selectableDates}
-        onlyGroups={acrOnlyGroups(languageOptions)}
+        onlyGroups={onlyGroups}
         primaryGroups={STANDARD_ACR_PRIMARY}
         sections={FILTER_SECTIONS}
         scope={scope}
@@ -209,12 +116,12 @@ export function AcrLiveView({
         sticky
       />
 
-      {!data || !data.measured ? (
+      {!vm.measured ? (
         <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border bg-card px-6 py-14 text-center">
           <Hourglass className="h-6 w-6 text-muted-foreground" aria-hidden />
           <p className="text-sm font-semibold text-foreground">{tLive("empty.title")}</p>
           <p className="max-w-md text-xs leading-relaxed text-muted-foreground">
-            {tLive("empty.desc", { count: acrPromptCount })}
+            {vm.acrPromptCount === null ? tGold("noData") : tLive("empty.desc", { count: vm.acrPromptCount })}
           </p>
         </div>
       ) : (
@@ -278,7 +185,7 @@ export function AcrLiveView({
                       <span className="inline-flex items-center gap-1.5">
                         <span
                           className="h-2.5 w-2.5 rounded-[2px]"
-                          style={{ backgroundColor: brandColor(b.brand) }}
+                          style={{ backgroundColor: b.color }}
                           aria-hidden
                         />
                         {b.brand}
@@ -319,7 +226,7 @@ export function AcrLiveView({
             <KpiCard
               icon={Trophy}
               label={t("kpi.top1")}
-              value={ours?.choiceShare != null ? `${ours.choiceShare.toFixed(1)}%` : "—"}
+              value={vm.kpi.top1 != null ? `${vm.kpi.top1.toFixed(1)}%` : "—"}
               hint={t("kpi.top1Hint")}
               info={{
                 title: t("def.top1.title"),
@@ -330,7 +237,7 @@ export function AcrLiveView({
             <KpiCard
               icon={Trophy}
               label={t("kpi.top5")}
-              value={ours?.coverage != null ? `${ours.coverage.toFixed(1)}%` : "—"}
+              value={vm.kpi.top5 != null ? `${vm.kpi.top5.toFixed(1)}%` : "—"}
               hint={t("kpi.top5Hint")}
               info={{
                 title: t("def.coverage.title"),
@@ -341,19 +248,19 @@ export function AcrLiveView({
             <KpiCard
               icon={BarChart3}
               label={t("kpi.answers")}
-              value={data.totals.iterations.toLocaleString()}
+              value={vm.totals.iterations.toLocaleString()}
               hint={t("kpi.answersHint")}
             />
             <KpiCard
               icon={Hash}
               label={t("kpi.rank1")}
-              value={(ours?.choiceCount ?? 0).toLocaleString()}
+              value={vm.kpi.rank1.toLocaleString()}
               hint={t("kpi.rank1Hint")}
             />
           </div>
 
           {/* Trend chart — 일별 선택률 */}
-          {trendRows.length > 0 ? (
+          {vm.trendRows.length > 0 ? (
             <div className="rounded-lg border border-border bg-card">
               <div className="border-b border-border px-4 py-3">
                 <h3 className="text-sm font-semibold tracking-tight text-foreground">
@@ -367,18 +274,18 @@ export function AcrLiveView({
                   height="100%"
                   initialDimension={{ width: 640, height: 256 }}
                 >
-                  <LineChart data={trendRows} margin={{ left: -16, right: 8, top: 4, bottom: 0 }}>
+                  <LineChart data={vm.trendRows} margin={{ left: -16, right: 8, top: 4, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
                     <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="rgba(0,0,0,0.4)" />
                     <YAxis tick={{ fontSize: 11 }} stroke="rgba(0,0,0,0.4)" unit="%" />
                     <Tooltip contentStyle={CHART_TOOLTIP_STYLE} itemSorter={(item) => -Number(item.value ?? 0)} wrapperStyle={{ zIndex: 50 }} />
                     <Legend wrapperStyle={{ fontSize: 11 }} />
-                    {trendBrands.map((brand, i) => (
+                    {vm.trendBrands.map(({ brand, color }) => (
                       <Line
                         key={brand}
                         type="monotone"
                         dataKey={brand}
-                        stroke={brandColor(brand)}
+                        stroke={color}
                         strokeWidth={2}
                         dot={{ r: 2.5 }}
                         connectNulls
@@ -391,7 +298,7 @@ export function AcrLiveView({
           ) : null}
 
           {/* Battle grid — 프롬프트 × 엔진 승자 */}
-          {data.battle.length > 0 ? (
+          {vm.battle.length > 0 ? (
             <div className="overflow-hidden rounded-lg border border-border bg-card">
               <div className="border-b border-border px-4 py-3">
                 <h3 className="text-sm font-semibold tracking-tight text-foreground">
@@ -415,10 +322,10 @@ export function AcrLiveView({
                     {battleRows.map((row) => (
                       <tr key={row.promptId} className="border-t border-border first:border-t-0">
                         <td className="max-w-md px-3 py-2 text-foreground">
-                          <span className="line-clamp-2">{row.promptText ?? row.promptId}</span>
+                          <span className="line-clamp-2">{row.label}</span>
                         </td>
-                        {engines.map((m) => {
-                          const cell = row.cells.find((c) => c.engine === m);
+                        {engines.map((m, ci) => {
+                          const cell = row.cells[ci];
                           return (
                             <td key={m} className="px-3 py-2 text-center">
                               {cell?.winner ? (
@@ -443,7 +350,7 @@ export function AcrLiveView({
                   </tbody>
                 </table>
               </div>
-              {battleAll.length > BATTLE_VISIBLE ? (
+              {vm.battleHidden > 0 ? (
                 <div className="border-t border-border px-4 py-2">
                   <button
                     type="button"
@@ -452,7 +359,7 @@ export function AcrLiveView({
                   >
                     {battleExpanded
                       ? t("battle.showLess")
-                      : t("battle.showMore", { count: battleHidden })}
+                      : t("battle.showMore", { count: vm.battleHidden })}
                   </button>
                 </div>
               ) : null}
@@ -579,11 +486,11 @@ export function AcrLiveView({
 
               {/* Legend */}
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2 text-[10px] text-muted-foreground">
-                {legendBrands.map((brand, i) => (
+                {activeSheet.legend.map(({ brand, color }) => (
                   <span key={brand} className="inline-flex items-center gap-1.5">
                     <span
                       className="h-2.5 w-2.5 rounded-[2px]"
-                      style={{ backgroundColor: brandColor(brand) }}
+                      style={{ backgroundColor: color }}
                       aria-hidden
                     />
                     {brand}
@@ -609,28 +516,26 @@ export function AcrLiveView({
                   </thead>
                   <tbody>
                     {activeSheet.rows.map((row) => {
-                      const chosen = row.entries.reduce((s, e) => s + e.choice, 0);
-                      const noChoice = Math.max(0, row.validAcr - chosen);
-                      const dom = row.entries[0] ?? null;
+                      const dom = row.dominant;
                       return (
                         <tr key={row.promptId}>
                           <td className="max-w-sm px-2 py-1 text-foreground">
-                            <span className="line-clamp-1">{row.promptText ?? row.promptId}</span>
+                            <span className="line-clamp-1">{row.label}</span>
                           </td>
                           <td className="px-0.5 py-1" colSpan={10}>
                             <div className="flex items-center gap-0.5">
-                              {row.entries.flatMap((e, ei) =>
+                              {row.entries.flatMap((e) =>
                                 Array.from({ length: e.choice }, (_, n) => (
                                   <span
                                     key={`${e.brand}-${n}`}
                                     className="inline-block h-4 w-4 rounded-[2px]"
-                                    style={{ backgroundColor: brandColor(e.brand) }}
+                                    style={{ backgroundColor: e.color }}
                                     title={e.brand}
                                     aria-label={e.brand}
                                   />
                                 )),
                               )}
-                              {Array.from({ length: noChoice }, (_, n) => (
+                              {Array.from({ length: row.noChoice }, (_, n) => (
                                 <span
                                   key={`nc-${n}`}
                                   className="mx-[5px] inline-block h-1.5 w-1.5 rounded-full bg-muted-foreground/30"
@@ -644,7 +549,7 @@ export function AcrLiveView({
                               <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-foreground">
                                 <span
                                   className="h-2.5 w-2.5 rounded-[2px]"
-                                  style={{ backgroundColor: brandColor(dom.brand) }}
+                                  style={{ backgroundColor: dom.color }}
                                   aria-hidden
                                 />
                                 {dom.brand} {dom.choice}
@@ -664,9 +569,9 @@ export function AcrLiveView({
 
           <p className="text-[11px] text-muted-foreground">
             {tLive("measuredNote", {
-              prompts: data.totals.prompts,
-              promptRuns: data.totals.promptRuns,
-              iterations: data.totals.iterations,
+              prompts: vm.totals.prompts,
+              promptRuns: vm.totals.promptRuns,
+              iterations: vm.totals.iterations,
             })}
           </p>
         </>

@@ -11,7 +11,7 @@
 
 import type { CompareMetricKey } from "@/lib/kpi/period-compare";
 
-/** 대시보드·웹사이트 타일의 KPI 키(`app/[locale]/(dash)/dashboard/_data/sample.ts::KpiKey`). */
+/** 대시보드·웹사이트 타일의 KPI 키(`app/[locale]/(dash)/dashboard/_data/model.ts::KpiKey`). */
 export const KPI_KEY_TO_COMPARE_METRIC: Readonly<Record<string, CompareMetricKey | null>> = {
   visibility: "visibility",
   shareOfVoice: "share",
@@ -53,7 +53,6 @@ export const PRESET_DAYS: Readonly<Record<string, number>> = {
  * `?time=lo..hi` 로 확정된 구간의 길이(일, 양 끝 포함). 구현은 `lib/kpi` 한 곳이다 —
  * 같은 규칙이 두 벌이면 조용히 갈린다(이 리포가 반복해서 값을 튀어나가게 만든 형태).
  */
-export { selectedWindowDays as windowDaysOf } from "@/lib/kpi/calendar-month-window";
 
 /**
  * 대시보드·웹사이트 Overview 가 요청하는 지표 — 카드/타일이 그리는 코어 4개.

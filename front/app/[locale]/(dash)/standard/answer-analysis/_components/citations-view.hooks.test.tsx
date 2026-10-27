@@ -217,6 +217,7 @@ const row = (domain: string, rank: number) => ({
   skey: domain,
   rank,
   matchRank: rank,
+  no: rank,
 });
 const INITIAL = [row("a", 1), row("b", 2)];
 const useTable = (p: TableProps) =>

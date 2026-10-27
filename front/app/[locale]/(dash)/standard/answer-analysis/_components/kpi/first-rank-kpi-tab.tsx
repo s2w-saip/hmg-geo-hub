@@ -36,8 +36,6 @@
 import { Suspense, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronDown, Search, TrendingDown, TrendingUp } from "lucide-react";
-import type { FirstPositionResult } from "@/lib/db/repositories/scope-aggregates";
-import type { CompetitorBrandValue } from "@/lib/scope/result-adapter";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,25 +51,17 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ColInfo } from "@/components/dash/col-info";
 import { KpiChartSlotSkeleton, KpiHeroSkeleton, KpiSectionSkeleton } from "@/components/dash/section-skeleton";
 import {
-  firstRankCompetitorCards,
-  firstRankHero,
-  overlayFirstPositionValues,
+  ladderMarks,
   positionText,
-  rankLadder,
-  rankTableRows,
-  rankTrendChart,
+  type FirstRankScreen,
   type RankTableRow,
-} from "../../_data/kpi-view";
+} from "../../_data/mention-screen";
 import { brandColor } from "./series-colors";
-import { orderRankRows } from "./first-rank-row-order";
 import { ladderLabelTops } from "./rank-ladder-layout";
 import { SparkLine } from "./spark-line";
 import { useAwaited, type Awaitable } from "./mention-kpi-tab";
 import { RankTrendChart } from "./rank-trend-chart";
-import { PeriodDeltaSlot } from "@/components/dash/period-delta-slot";
-import type { CompareResult } from "@/lib/kpi/period-compare";
-
-const SPARK_CYCLES = 4;
+import { PeriodDeltaSlot, type PeriodSlots } from "@/components/dash/period-delta-slot";
 
 /** 경쟁사 복수 선택 상한(2026-09-20). 넘으면 미선택 항목이 비활성되고 안내 문구가 뜬다. */
 export const COMPETITOR_LIMIT = 5;
@@ -133,14 +123,11 @@ const LADDER_TRACK_PX = 375;
 const LADDER_LABEL_PX = 26;
 
 type TabProps = {
-  /** null = 집계 degrade → 지면 전체가 대체 문구(이 탭의 유일한 원천). */
-  firstPosition: Awaitable<FirstPositionResult | null>;
   /**
-   * 브랜드별 **값**의 정본: Overview 경쟁사 행과 같은 리더가 낸 행들
-   * (`server.ts::fetchStandardMentionCompetitorBrands`, 노출률·점유율 탭과 같은 prop).
-   * `null`·미전달이면 미러 값 그대로다(격자 off·degrade). 행 목록은 여기서 오지 않는다.
+   * mention/first-rank — 히어로·순위 섹션이 같은 결과 하나를 본다. `available:false` = 원천
+   * 집계 degrade → 차트 자리가 대체 문구(이 탭의 유일한 원천).
    */
-  competitorValues?: Awaitable<CompetitorBrandValue[] | null>;
+  firstRank: Awaitable<FirstRankScreen>;
   /** 렌더 테스트 seam — 래더 분기. 화면 기본은 **펼침**(피그마 프레임). */
   initialLadder?: boolean;
   /**
@@ -154,43 +141,28 @@ type TabProps = {
    * 기간 비교 Δ (GGMD-107 P2 F1). `null`·미전달이면 종전 Δ 그대로 — 판정은
    * `PeriodDeltaSlot` 한 곳에서만 한다.
    */
-  periodCompare?: readonly CompareResult[] | null;
+  periodCompare?: PeriodSlots | null;
   /** 선택된 구간의 길이(일) — 억제 캡션 입력. */
   periodDays?: number;
-  /**
-   * 히어로 값(평균 순위·Δ)을 받치는 집계 일부가 **일시 실패**했는가(= 측정 없음이 아니라 지연,
-   * mention-kpi-tab 과 같은 짝). 판정은 서버의 요청 스코프 표식이라 페이지가 같은 집계 뒤에 이어
-   * 붙여 넘긴다. 참이면 히어로 아래에 기존 degraded 문구 한 줄. 미전달이면 종전 그대로다.
-   */
-  heroDegraded?: Awaitable<boolean>;
 };
 
 export function FirstRankKpiTab({
-  firstPosition,
-  competitorValues,
+  firstRank,
   initialLadder,
   initialCompetitor,
   initialCompetitors,
   periodCompare,
   periodDays,
-  heroDegraded,
 }: TabProps) {
   return (
     <TooltipProvider delayDuration={200}>
       <div className="flex flex-col gap-6">
         <Suspense fallback={<KpiHeroSkeleton />}>
-          <RankHero
-            firstPosition={firstPosition}
-            competitorValues={competitorValues}
-            periodCompare={periodCompare}
-            periodDays={periodDays}
-            heroDegraded={heroDegraded}
-          />
+          <RankHero firstRank={firstRank} periodCompare={periodCompare} periodDays={periodDays} />
         </Suspense>
         <Suspense fallback={<KpiSectionSkeleton />}>
           <RankSection
-            firstPosition={firstPosition}
-            competitorValues={competitorValues}
+            firstRank={firstRank}
             initialLadder={initialLadder}
             initialCompetitor={initialCompetitor}
             initialCompetitors={initialCompetitors}
@@ -238,40 +210,15 @@ export function RankDelta({
   );
 }
 
-/**
- * 탭의 원천 하나: 미러 결과에 Overview 경쟁사 값을 덮은 것. 히어로·순위 섹션이 **같은 함수**로
- * 받아야 타일·표·래더가 같은 행을 본다(두 경계가 각자 덮으면 규칙이 갈릴 수 있다).
- * `competitorValues` 가 `undefined` 면 `use()` 를 부르지 않는다(`useAwaited` 계약).
- */
-function useFirstPosition(
-  firstPosition: TabProps["firstPosition"],
-  competitorValues: TabProps["competitorValues"],
-): FirstPositionResult | null {
-  const raw = useAwaited(firstPosition);
-  const values = useAwaited(competitorValues ?? null);
-  return useMemo(() => overlayFirstPositionValues(raw, values), [raw, values]);
-}
-
 // ─── ① 히어로 ────────────────────────────────────────────────────────────────
 function RankHero({
-  firstPosition,
-  competitorValues,
+  firstRank,
   periodCompare,
-  periodDays,
-  heroDegraded,
-}: Pick<TabProps, "firstPosition" | "competitorValues" | "periodCompare" | "periodDays" | "heroDegraded">) {
+}: Pick<TabProps, "firstRank" | "periodCompare" | "periodDays">) {
   const t = useTranslations("answerAnalysis.mentions.kpi");
   const tUnit = useTranslations("metricUnit");
-  const fp = useFirstPosition(firstPosition, competitorValues);
-  // `undefined` 면 `use()` 를 부르지 않는다(mention-kpi-tab 의 heroDegraded 와 같은 이유).
-  const degraded = useAwaited(heroDegraded ?? false);
-  // 같은 프라미스라 `use()` 는 useFirstPosition 안의 것과 같은 값을 돌려준다(재요청 없음).
-  const values = useAwaited(competitorValues ?? null);
-  const hero = useMemo(() => firstRankHero(fp), [fp]);
-  const rows = useMemo(() => rankTableRows(fp, { sparkCycles: SPARK_CYCLES }), [fp]);
-  // 타일 4개 = Overview 카드 경쟁사 행 4개(후보 규칙 한 벌, 2026-09-29).
-  const cards = useMemo(() => firstRankCompetitorCards(rows, values), [rows, values]);
-  const chart = useMemo(() => rankTrendChart(fp, rows), [fp, rows]);
+  // 히어로 값·타일 4개(= Overview 카드 경쟁사 행 4개)·차트 모두 화면이 계산해 보낸다.
+  const { available, degraded, hero, cards, chart } = useAwaited(firstRank);
 
   return (
     <>
@@ -285,9 +232,9 @@ function RankHero({
                 {hero.avgPosition == null ? t("firstRank.noRank") : tUnit("position", { n: positionText(hero.avgPosition) })}
               </span>
               <PeriodDeltaSlot
-                compare={periodCompare}
+                slots={periodCompare}
                 metric="position"
-                days={periodDays}
+
                 size="md"
                 fallback={<RankDelta value={hero.delta} size="md" />}
               />
@@ -316,7 +263,7 @@ function RankHero({
             </div>
           ) : null}
         </div>
-        {fp == null ? (
+        {!available ? (
           <div className="flex flex-1 items-center justify-center rounded-md border border-dashed border-border px-4 py-10 text-xs text-muted-foreground">
             {t("degraded")}
           </div>
@@ -329,7 +276,7 @@ function RankHero({
       {/* 히어로 집계 일부가 일시 실패했으면 "측정 없음"·빈 Δ 로 읽히지 않게 기존 degraded 문구를 히어로
           아래 캡션 자리에 한 줄 둔다(mention-kpi-tab 과 같은 마크업). 원천 전체가 실패(fp null)면
           차트 자리가 이미 같은 문구를 내므로 한 번만. 정상 경로에서는 아무것도 없다. */}
-      {degraded && fp != null ? <p className="-mt-4 text-[11px] text-muted-foreground">{t("degraded")}</p> : null}
+      {degraded && available ? <p className="-mt-4 text-[11px] text-muted-foreground">{t("degraded")}</p> : null}
       <p className="-mt-4 text-[11px] text-muted-foreground">
         {t("firstRank.deltaBasis")}
       </p>
@@ -339,15 +286,14 @@ function RankHero({
 
 // ─── ② 순위 섹션 ─────────────────────────────────────────────────────────────
 function RankSection({
-  firstPosition,
-  competitorValues,
+  firstRank,
   initialLadder = true,
   initialCompetitor = null,
   initialCompetitors,
 }: TabProps) {
   const t = useTranslations("answerAnalysis.mentions.kpi.firstRank");
-  const fp = useFirstPosition(firstPosition, competitorValues);
-  const rows = useMemo(() => rankTableRows(fp, { sparkCycles: SPARK_CYCLES }), [fp]);
+  const vm = useAwaited(firstRank);
+  const rows = vm.rows;
   const [ladder, setLadder] = useState(initialLadder);
   // 경쟁사 선택은 **복수**(2026-09-20 고객 요구 ②). URL 축이 아니라 이 섹션의 로컬
   // 상태다. 이 지면의 `?competitor=` 는 필터 패널의 **데이터 필터 축**이라 여기에
@@ -359,9 +305,12 @@ function RankSection({
   const competitors = rows.filter((r) => !r.isTracked);
   const pickedSet = useMemo(() => new Set(picked), [picked]);
   const atLimit = picked.length >= COMPETITOR_LIMIT;
-  // 표 행 순서: 토글 OFF 면 당사가 위(정본 = first-rank-row-order). 선택 필터는 그
+  // 표 행 순서: 토글 OFF 면 당사가 위(화면이 두 순서를 미리 보낸다). 선택 필터는 그
   // **뒤에** 건다: 순서를 정한 다음 걸러야 번호가 화면 순서와 어긋나지 않는다.
-  const ordered = useMemo(() => orderRankRows(rows, { ownFirst: !ladder }), [rows, ladder]);
+  const ordered = useMemo(
+    () => (ladder ? vm.orders.ladder : vm.orders.ownFirst).map((i) => rows[i]),
+    [rows, ladder, vm.orders],
+  );
   const visible = useMemo(
     () =>
       picked.length === 0
@@ -373,19 +322,20 @@ function RankSection({
     const q = query.trim().toLowerCase();
     return q ? competitors.filter((c) => c.brand.toLowerCase().includes(q)) : competitors;
   }, [competitors, query]);
-  // 래더 마커 = 당사 + 선택 경쟁사 **전부**(미선택 시 순위 최상위 경쟁사 1개).
+  // 래더 마커 = 당사 + 선택 경쟁사 **전부**(미선택 시 화면이 고른 순위 최상위 경쟁사 1개).
   const ladderRows = useMemo(() => {
     const own = rows.filter((r) => r.isTracked);
     const comp =
       picked.length > 0
         ? rows.filter((r) => pickedSet.has(r.brand))
-        : competitors.filter((r) => r.avgPosition != null).slice(0, 1);
+        : competitors.filter((r) => r.brand === vm.ladderDefault);
     return [...own, ...comp];
-  }, [rows, competitors, picked, pickedSet]);
-  const marks = useMemo(() => rankLadder(ladderRows), [ladderRows]);
-  // 바 축 — 관측 최대 순위 기준. 순위가 낮을수록(좋을수록) 막대가 길다.
-  const worst = Math.max(1, ...rows.map((r) => r.avgPosition ?? 0));
-  const cycles = rows[0]?.spark.length ?? SPARK_CYCLES;
+  }, [rows, competitors, picked, pickedSet, vm.ladderDefault]);
+  // 래더 트랙 위 위치(선택한 마커들의 관측 범위로 정규화) — 그리기 좌표다.
+  const marks = useMemo(() => ladderMarks(ladderRows), [ladderRows]);
+  // 바 축 — 관측 최대 순위 기준(화면이 계산). 순위가 낮을수록(좋을수록) 막대가 길다.
+  const worst = vm.worst;
+  const cycles = vm.cycles;
   // 추이 스파크라인의 **표 공유 y 축**(2026-09-11 검증자 2차 지적으로 설계 변경).
   //  · 도메인은 **지금 표시하는 행들이 실제로 그리는 값**(과거 회차 포함)에서 나온다
   //    → 축과 값의 모수가 같아, 종전 `worst + 1 - v`(축=최신 스냅샷 / 값=과거 회차)가
@@ -662,7 +612,7 @@ function RankLadder({
   marks,
   total,
 }: {
-  marks: ReturnType<typeof rankLadder>;
+  marks: ReturnType<typeof ladderMarks>;
   total: number;
 }) {
   const t = useTranslations("answerAnalysis.mentions.kpi.firstRank");

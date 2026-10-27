@@ -155,3 +155,41 @@ describe("B008 truncation line: only when the route cut the list", () => {
     expect(render(<TruncatedNote shown={10} className="x" />)).toBe("");
   });
 });
+
+// The route answers precomputed values (screen mention/drill-brand-prompts): the table's column
+// orders, each row's best rank and TOP 3 flag. The component only picks the order of the active
+// column and draws the fields.
+describe("precomputed orders and rank fields", () => {
+  const row = (id: string, text: string, mentions: number, bestRank: number | null, topRank: boolean) => ({
+    ...prompt(id, text),
+    mentions,
+    bestRank,
+    topRank,
+  });
+
+  it("startListLoad keeps the route's orders (and total)", async () => {
+    const list = [prompt("p1", "best EV"), prompt("p2", "best SUV")];
+    const orders = { mentions: { asc: [1, 0], desc: [0, 1] } };
+    expect(await load<MentionsPromptLive>("prompts", reply(200, { prompts: list, orders, total: 9 }))).toEqual({ status: "ready", list, total: 9, orders });
+    expect(await load<MentionsPromptLive>("prompts", reply(200, { prompts: list }))).toEqual({ status: "ready", list });
+  });
+
+  it("rows follow the default column's order (mentions, descending); rank and badge come from the row", () => {
+    const list = [row("p1", "first row", 1, null, false), row("p2", "second row", 5, 2.5, true), row("p3", "third row", 3, 4, false)];
+    const orders = { mentions: { asc: [0, 2, 1], desc: [1, 2, 0] } };
+    const html = render(<BrandPromptsPanel state={{ status: "ready", list, orders }} brand="Toyota" showRank />);
+    const at = (s: string) => html.indexOf(s);
+    expect(at("second row")).toBeLessThan(at("third row"));
+    expect(at("third row")).toBeLessThan(at("first row"));
+    expect(html).toContain("2.5");
+    expect(html).toContain("4.0");
+    expect(html.match(/data-top3/g)?.length).toBe(1);
+  });
+
+  it("rows without orders keep their given order; no rank column without showRank", () => {
+    const list = [row("p1", "first row", 1, 1, true), row("p2", "second row", 5, null, false)];
+    const html = render(<BrandPromptsPanel state={{ status: "ready", list }} brand="Toyota" />);
+    expect(html.indexOf("first row")).toBeLessThan(html.indexOf("second row"));
+    expect(html).not.toContain("data-top3");
+  });
+});

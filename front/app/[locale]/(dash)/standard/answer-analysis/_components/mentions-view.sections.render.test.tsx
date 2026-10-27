@@ -12,13 +12,13 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { NextIntlClientProvider } from "next-intl";
 import ko from "@/messages/ko.json";
 import type { MentionsLive } from "@/lib/scope/result-adapter";
-import type { MentionSubKpis } from "../_data/sub-kpis";
+import type { MentionSubKpisView as MentionSubKpis } from "../_data/mention-screen";
 import {
-  MentionsRankSection,
-  MentionsSummarySection,
-  MentionsTrendSection,
-  MentionsView,
-} from "./mentions-view";
+  MentionsRankSectionFromLegacy as MentionsRankSection,
+  MentionsSummarySectionFromLegacy as MentionsSummarySection,
+  MentionsTrendSectionFromLegacy as MentionsTrendSection,
+  MentionsViewFromLegacy as MentionsView,
+} from "../_data/mention-screen.test-utils";
 
 // 2026-09-03 구획 분할의 **렌더 실측**. 정적 검사가 아니라 실제 렌더러
 // (react-dom/server)로 마크업을 뽑아 확인한다.

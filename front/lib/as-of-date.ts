@@ -38,73 +38,15 @@ export function formatAsOfDate(value: string): string {
   return `${pick("year")}-${pick("month")}-${pick("day")}`;
 }
 
-// ── 추이 x축 라벨 — 회차 버킷은 앵커의 KST 달력 날짜 ───────────────────────────
+// ── 추이 x축 라벨 ──────────────────────────────────────────────────────────────
 //
-// 글로벌 추이의 버킷 키(`bucketStart`)는 **앵커의 UTC 일**이다(summary-global-trend-read
-// `toSeries` · 웹사이트 `websiteTrendBucketsFrom`). 그 키로 같은 날 앵커를 접고 브랜드
-// 2단 결과를 조인하므로 **키는 그대로 둔다**(2026-09-18 제품 결정). 그런데 키를 그대로
-// 라벨로 그리면 KST 자정 직후 앵커(15:00Z~23:59Z)가 하루 앞서 보인다 — 2026-09-28 현대
-// 필리핀 계정 실측: 앵커 2026-09-13T15:48Z·2026-09-20T15:50Z 가 "9. 13.·9. 20." 로 찍혀
-// 상단 pill("2026-09-21 기준", KST)과 한 화면에서 어긋났다. 그래서 **표시만** 앵커의
-// KST 일로 바꾼다. 앵커가 없는 버킷(미러 주/일 격자)은 종전 그대로 키를 쓴다.
-
-const kstTime = new Intl.DateTimeFormat("en-GB", {
-  timeZone: DISPLAY_TIME_ZONE,
-  hour: "2-digit",
-  minute: "2-digit",
-  hourCycle: "h23",
-});
-
-/** 라벨 원천 — 추이 점이면 무엇이든(키 + 회차 앵커). */
-export interface TrendBucketLabelSource {
-  bucketStart: string;
-  /** 회차 버킷의 대표 앵커(ISO). 없으면 미러 격자 버킷이다. */
-  cycleAnchorAt?: string | null;
-}
+// 회차 버킷의 표시일(앵커의 KST 달력 날짜, 같은 KST 날에 키가 둘이면 KST 시각)은 화면
+// (back/bff/screens/overview.py)이 점마다 계산해 보낸다. 여기서는 그 표시값 하나를 찍기만 한다.
 
 /** 버킷 하나의 표시값 — `day` 는 YYYY-MM-DD, `time` 은 같은 날 충돌 시에만 KST HH:mm. */
 export interface TrendBucketDisplay {
   day: string;
   time: string | null;
-}
-
-/** 버킷 하나의 표시일 — 회차 버킷이면 앵커의 KST 일, 아니면 키 그대로. */
-export function trendBucketDisplayDay(p: TrendBucketLabelSource): string {
-  return p.cycleAnchorAt ? formatAsOfDate(p.cycleAnchorAt) : p.bucketStart;
-}
-
-/**
- * 키 → 표시값. 순수 함수 — 차트는 x 값(키)만 받는 `tickFormatter` 에서 이 맵을 본다.
- *
- * ⚠️ **같은 KST 날에 서로 다른 키가 둘이면** 라벨이 같아진다. 키는 UTC 일이라
- *    `…T15:48Z`(KST 다음 날 00:48)와 다음 UTC 일 `…T03:00Z`(KST 같은 날 12:00)는 서로 다른
- *    점인데 둘 다 같은 날로 표시된다. 점을 접으면 키를 바꾸는 것이라(결정 위반) 접지 않고,
- *    **충돌한 점에만 KST 시각을 붙여** 구분한다("9. 14. 00:48" · "9. 14. 12:00").
- *    x 값을 라벨 문자열로 쓰는 차트(`LiveTrendChart`)는 이 구분이 없으면 같은 범주가 둘
- *    생겨 음영·밴드가 첫 점에 붙는다.
- */
-export function trendBucketDisplays(
-  points: readonly TrendBucketLabelSource[],
-): Map<string, TrendBucketDisplay> {
-  const out = new Map<string, TrendBucketDisplay>();
-  const keysByDay = new Map<string, Set<string>>();
-  for (const p of points) {
-    if (out.has(p.bucketStart)) continue;
-    const day = trendBucketDisplayDay(p);
-    out.set(p.bucketStart, { day, time: null });
-    const keys = keysByDay.get(day) ?? new Set<string>();
-    keys.add(p.bucketStart);
-    keysByDay.set(day, keys);
-  }
-  for (const p of points) {
-    const d = out.get(p.bucketStart);
-    if (!d || d.time !== null || !p.cycleAnchorAt) continue;
-    if ((keysByDay.get(d.day)?.size ?? 0) < 2) continue;
-    const ms = Date.parse(p.cycleAnchorAt);
-    if (!Number.isFinite(ms)) continue;
-    d.time = kstTime.format(new Date(ms));
-  }
-  return out;
 }
 
 /** 표시값 → "9. 14."(충돌 시 "9. 14. 00:48"). 문자열 조립이라 로케일·TZ 무관(하이드레이션 안전). */

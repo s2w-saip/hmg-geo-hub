@@ -15,7 +15,6 @@ vi.mock("react", async () => {
 const { withRequestScope } = await import("@/test/request-scope");
 const { bindHghAuth } = await import("./auth");
 const { HGH_MAX_CONCURRENT_CALLS, HghCallLimiter, hghGet, hghPost, requestCallLimiter } = await import("./client");
-const D = await import("./adapters/dashboard");
 
 const TOKEN = "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJ1In0.c2ln";
 const FRESH = "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJ2In0.bmV3";
@@ -62,21 +61,6 @@ function gatedFetch() {
       init.signal?.addEventListener("abort", () => close() && reject(init.signal?.reason), { once: true });
       pending.push(entry);
     });
-  });
-  vi.stubGlobal("fetch", fn);
-  return fn;
-}
-
-/** Every fetch answers 200 by itself after `ms` (counts what is in flight at once). */
-function autoFetch(ms: number, body: (path: string) => unknown = () => ({ data: {}, meta: { mode: "snapshot" } })) {
-  const fn = vi.fn(async (input: string | URL | Request) => {
-    const u = new URL(String(input));
-    started.push(`${u.pathname}${u.search}`);
-    inFlight += 1;
-    maxInFlight = Math.max(maxInFlight, inFlight);
-    await new Promise((r) => setTimeout(r, ms));
-    inFlight -= 1;
-    return json(200, body(u.pathname));
   });
   vi.stubGlobal("fetch", fn);
   return fn;
@@ -308,38 +292,6 @@ describe("request scope: at most HGH_MAX_CONCURRENT_CALLS backend calls in fligh
     });
     expect(started.filter((k) => k === "/v1/auth/me")).toHaveLength(2);
     expect(maxInFlight).toBe(4);
-  });
-
-  it("D6 kept promises: the essentials gate, 6 sections behind it and the shell calendar finish, 4 at most at once", async () => {
-    autoFetch(5);
-    const filters = { cumulative: false };
-    const ctx = D.dashboardCtx("global", null);
-    const sections = [
-      "/v1/trend",
-      "/v1/geo",
-      "/v1/kpi/engines",
-      "/v1/citations/domains",
-      "/v1/filters/options",
-      "/v1/mentions/brands",
-    ] as const;
-    const out = await withRequestScope(() =>
-      Promise.allSettled([
-        D.essentialsGate(filters, ctx),
-        ...sections.map((route, i) =>
-          D.afterFirstRender(filters, ctx, () => hghGet(route as "/v1/geo", { query: { surface: "global", top: i } as never })),
-        ),
-        D.loadEssentialFilterDates(ctx),
-        D.essentialsGate(filters, ctx),
-      ]),
-    );
-    expect(out).toHaveLength(9);
-    expect(maxInFlight).toBe(4);
-    // the three global essentials went out first (kept promises: each sent once), then the sections
-    const paths = started.map((k) => k.split("?")[0]);
-    expect(new Set(paths.slice(0, 3))).toEqual(new Set(["/v1/kpi/summary", "/v1/mentions/brands", "/v1/filters/dates"]));
-    expect(paths).not.toContain("/v1/funnel/conversion");
-    expect(paths.filter((p) => p === "/v1/filters/dates")).toHaveLength(1);
-    expect(started).toHaveLength(3 + sections.length);
   });
 });
 

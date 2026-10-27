@@ -35,23 +35,36 @@ export interface CursorPaging {
   nextCursor: string | null;
 }
 
-export function WebsitePromptTable({
-  rows,
-  total,
-  page,
-  pageSize,
-  sort,
-  dir,
-  cursorPaging,
-}: {
+/** Screen website/prompts-list: one page plus the paging labels computed by the API. */
+export interface WebsitePromptTableProps {
   rows: WebsitePromptViewRow[];
   total: number;
   page: number;
   pageSize: number;
   sort: WebsitePromptSortKey;
   dir: "asc" | "desc";
-  cursorPaging?: CursorPaging;
-}) {
+  cursorPaging: CursorPaging;
+  /** Page count (at least 1). */
+  pages: number;
+  /** "from–to of total" label values. */
+  rangeFrom: number;
+  rangeTo: number;
+  /** The ?page label written with the next cursor. */
+  nextPage: number;
+}
+
+export function WebsitePromptTable({
+  rows,
+  total,
+  page,
+  sort,
+  dir,
+  cursorPaging,
+  pages,
+  rangeFrom: from,
+  rangeTo: to,
+  nextPage,
+}: WebsitePromptTableProps) {
   const t = useTranslations("website.prompts");
   const locale = useLocale();
   const router = useRouter();
@@ -111,18 +124,15 @@ export function WebsitePromptTable({
     });
   };
 
-  const goPage = (n: number) => push((p) => p.set("page", String(n)));
   const goNext = () => {
-    if (!cursorPaging) return goPage(page + 1);
     const next = cursorPaging.nextCursor;
     if (!next) return;
     push((p) => {
       p.set("cursor", next);
-      p.set("page", String(page + 1));
+      p.set("page", String(nextPage));
     });
   };
   const goPrev = () => {
-    if (!cursorPaging) return goPage(page - 1);
     if (page <= 2) {
       push((p) => {
         p.delete("cursor");
@@ -139,10 +149,7 @@ export function WebsitePromptTable({
     onClick: () => toggleSort(key),
   });
 
-  const pages = Math.max(1, Math.ceil(total / pageSize));
-  const nextDisabled = cursorPaging ? !cursorPaging.nextCursor : page >= pages;
-  const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
-  const to = Math.min(page * pageSize, total);
+  const nextDisabled = !cursorPaging.nextCursor;
 
   return (
     <div className="flex flex-col gap-3">

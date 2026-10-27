@@ -179,7 +179,7 @@ export default async function DashLayout({
   // 터져 페이지 전체가 500 이 된다(2026-08-14 by-scope 라이브 실증).
   const UUID_RE =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (projectMatch && UUID_RE.test(projectMatch[1])) {
+  if (session.user.role !== "local_reader" && projectMatch && UUID_RE.test(projectMatch[1])) {
     projectMeta =
       hghSource("SESSION") === "api"
         ? await projectMetaForSnb(projectMatch[1], locale)

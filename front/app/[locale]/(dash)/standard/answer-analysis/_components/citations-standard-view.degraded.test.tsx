@@ -5,6 +5,7 @@ import ko from "@/messages/ko.json";
 import type { CitationsLive } from "@/lib/scope/result-adapter";
 import type { CitationSectionDegraded } from "../_data/citation-view";
 import { CitationsStandardView } from "./citations-standard-view";
+import { standardVmFor } from "./citation-vm.fixture";
 
 // 인용 집계가 `null` 일 때 화면이 두 사실을 구분하는가 (E-2 degrade-registry 연계).
 //
@@ -40,9 +41,8 @@ function render(dataDegraded: boolean | undefined) {
     <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
       <CitationsStandardView
         data={null}
-        prevSubKpis={null}
-        prevBasisDate={null}
-        typeCategories={null}
+        vm={null}
+        typeChart={null}
         toneSummary={null}
         dataDegraded={dataDegraded}
       />
@@ -102,7 +102,7 @@ const LIVE: CitationsLive = {
 function renderLive(sectionDegraded: CitationSectionDegraded | null | undefined) {
   return renderToStaticMarkup(
     <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
-      <CitationsStandardView data={LIVE} typeCategories={[]} toneSummary={null} dataDegraded={false} sectionDegraded={sectionDegraded} />
+      <CitationsStandardView data={LIVE} vm={standardVmFor(LIVE, { sections: sectionDegraded })} typeChart={{ series: [], bars: [], hasAny: false }} toneSummary={null} dataDegraded={false} sectionDegraded={sectionDegraded} />
     </NextIntlClientProvider>,
   );
 }

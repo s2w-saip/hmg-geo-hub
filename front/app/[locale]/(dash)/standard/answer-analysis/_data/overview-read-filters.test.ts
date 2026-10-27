@@ -19,7 +19,7 @@ import type { StandardFilters } from "@/lib/scope/result-adapter";
 // (`lib/summary/read/gate.ts`) 사실표를 포기한다. 그러면 언급 카드만 미러 스냅샷으로
 // 떨어지는데, 미러 스냅샷에는 `in_full_cycle` 게이트가 없어 **모집단이 다르다**.
 
-/** 대시보드(`dashboard/page.tsx`)의 필터 구성 — `cumulative` 를 기간 유무로 가른다. */
+/** 대시보드 경로(읽기 계층의 Overview 원천)의 필터 구성 — `cumulative` 를 기간 유무로 가른다. */
 function dashboardFilters(sp: Record<string, string | string[] | undefined>): StandardFilters {
   const raw = readStandardFilters(sp);
   return { ...raw, cumulative: Boolean(raw.dateFrom || raw.dateTo) };
@@ -95,19 +95,11 @@ describe("Overview 원천 밖 read 는 누적 의미론 그대로다", () => {
     ).toBe(3);
   });
 
-  it("언급 페이지는 여전히 `cumulative: true` 를 만든다 (다른 지표용)", () => {
-    const PAGE = readFileSync(
-      fileURLToPath(new URL("../mention/page.tsx", import.meta.url)),
+  it("언급 화면은 여전히 `cumulative: true` 를 만든다 (다른 지표용, back/bff/screens/mention_data.py)", () => {
+    const SCREEN = readFileSync(
+      fileURLToPath(new URL("../../../../../../../back/bff/screens/mention_data.py", import.meta.url)),
       "utf8",
     );
-    expect(PAGE).toContain("cumulative: true");
-  });
-
-  it("대시보드의 `cumulative` 식이 이 테스트의 모델과 같다", () => {
-    const PAGE = readFileSync(
-      fileURLToPath(new URL("../../../dashboard/page.tsx", import.meta.url)),
-      "utf8",
-    );
-    expect(PAGE).toContain("cumulative: Boolean(rawFilters.dateFrom || rawFilters.dateTo)");
+    expect(SCREEN).toContain('filters = {**read_standard_filters(sp, scope), "cumulative": True}');
   });
 });

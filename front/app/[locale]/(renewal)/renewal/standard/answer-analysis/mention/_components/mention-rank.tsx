@@ -1,10 +1,9 @@
 "use client";
 
-import { Suspense, use, useMemo, useState } from "react";
+import { Suspense, use, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { RnBasisChip, RnCard, RnCardHead, RnEmpty, RnLineChart, RnSectionHead, RnSparkline, cx, rnHighlightState } from "@/components/renewal-ui";
-import { overlayFirstPositionValues, rankAxisTicks } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/kpi-view";
-import { OWN_KEY, rankBoard, rankHero, rankSeriesOf } from "./mention-model";
+import { OWN_KEY, pickKey, type RankRow } from "../_data/screen-types";
 import { CONTEXT_COLOR, MentionCardActions, OWN_COLOR, numTxt, posTxt, slotLabel, useCompare, useMention } from "./mention-context";
 import { BrandName, CardSkeleton, DegradedNote, DeltaChip, InfoTip, Legend, Stat, TwinTable, useDeltaBasis } from "./mention-kit";
 import { KpiBasisChip } from "./mention-tabs";
@@ -30,18 +29,11 @@ export function RankBody() {
 
 function useRank() {
   const { input } = useMention();
-  const fp = use(input.firstPosition);
-  const values = use(input.competitorValues);
-  const period = use(input.periodCompare);
-  return useMemo(() => {
-    const overlaid = overlayFirstPositionValues(fp, values);
-    const hero = rankHero(overlaid, period);
-    return { fp: overlaid, hero, ...rankBoard(fp, values, hero) };
-  }, [fp, values, period]);
+  return use(input.rank);
 }
 
 function RankHeroCard() {
-  const { input, ownLabel, lit, hover, tables } = useMention();
+  const { ownLabel, lit, hover, tables } = useMention();
   const { compare, colorOf } = useCompare();
   const t = useTranslations("renewal.mention.rank");
   const tH = useTranslations("renewal.mention.hero");
@@ -49,15 +41,16 @@ function RankHeroCard() {
   const tK = useTranslations("answerAnalysis.mentions.kpi");
   const tDef = useTranslations("dashboard.kpi");
   const locale = useLocale();
-  const degraded = use(input.degraded.firstRank);
-  const { fp, hero, rows, ahead } = useRank();
+  const vm = useRank();
+  const { hero, rows, ahead, degraded } = vm;
   const basis = useDeltaBasis();
+  // the picked brands' lines (looked up; a brand without a value is left out)
+  const at = (b: string) => vm.covered.indexOf(b);
   const series = [
-    ...compare.map((b) => ({ key: b, name: b, color: colorOf(b), values: rankSeriesOf(fp, b, hero.axis) })).filter((s) => s.values.some((v) => v != null)),
+    ...compare.filter((b) => vm.hasValue[at(b)]).map((b) => ({ key: b, name: b, color: colorOf(b), values: vm.series[at(b)] })),
     { key: OWN_KEY, name: ownLabel, color: OWN_COLOR, values: hero.series, own: true },
   ];
-  const observed = Math.max(0, ...series.flatMap((s) => s.values).filter((v): v is number => v != null));
-  const hi = Math.max(5, Math.ceil(observed));
+  const hi = vm.options[pickKey(compare, vm.covered)] ?? 5;
   const x = hero.axis.map(slotLabel);
   const tableOn = tables.has("rank-trend");
   return (
@@ -93,7 +86,7 @@ function RankHeroCard() {
           <h3 className="m-0 text-rn-13 font-bold text-rn-ink">{t("trackTitle")}</h3>
           <span className="text-rn-12 text-rn-muted">{t("trackNote")}</span>
         </div>
-        <Track rows={rows} />
+        <Track rows={rows} track={vm.track} />
         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
           <h3 className="m-0 text-rn-13 font-bold text-rn-ink">{t("trendTitle")}</h3>
           <InfoTip label={tH("trendNoteLabel")} items={[[tH("trendNoteLabel"), tFR("chartNote")]]} />
@@ -102,7 +95,7 @@ function RankHeroCard() {
           </span>
         </div>
         <Legend items={[...series].reverse()} />
-        {!fp ? (
+        {!vm.fp ? (
           <DegradedNote>{tK("degraded")}</DegradedNote>
         ) : !hero.axis.length ? (
           <RnEmpty>{tH("noTrend")}</RnEmpty>
@@ -114,7 +107,7 @@ function RankHeroCard() {
             series={series}
             height={190}
             invert
-            domain={{ lo: 1, hi, ticks: rankAxisTicks(hi) }}
+            domain={{ lo: 1, hi, ticks: vm.ticks[String(hi)] ?? [1] }}
             yTick={(v) => `${v}`}
             value={(v) => t("unit", { n: v.toFixed(1) })}
             tooltipTitle={(d) => tH("tooltip", { x: d })}
@@ -129,14 +122,13 @@ function RankHeroCard() {
 }
 
 /** Brands along the average-position axis (left = named earlier); 당사 and compare brands labelled. */
-function Track({ rows }: { rows: ReturnType<typeof rankBoard>["rows"] }) {
+function Track({ rows, track }: { rows: RankRow[]; track: { lo: number; hi: number } | null }) {
   const { ownLabel, lit, hover } = useMention();
   const { compare, colorOf } = useCompare();
   const t = useTranslations("renewal.mention.rank");
   const pts = rows.filter((r) => r.avgPosition != null);
-  if (!pts.length) return null;
-  const lo = Math.min(...pts.map((r) => r.avgPosition!));
-  const hi = Math.max(...pts.map((r) => r.avgPosition!));
+  if (!pts.length || !track) return null;
+  const { lo, hi } = track;
   const at = (v: number) => (hi > lo ? ((v - lo) / (hi - lo)) * 100 : 50);
   const keys = pts.map((r) => r.key);
   const emph = pts.filter((r) => r.own || compare.includes(r.key));
@@ -173,10 +165,10 @@ function RankTable() {
   const { compare, covered, colorOf, toggle } = useCompare();
   const t = useTranslations("renewal.mention");
   const tFR = useTranslations("answerAnalysis.mentions.kpi.firstRank");
-  const { rows } = useRank();
+  const { rows, ownFirst, barMax } = useRank();
   const [ladder, setLadder] = useState(true);
-  const shown = ladder ? rows : [...rows.filter((r) => r.own), ...rows.filter((r) => !r.own)];
-  const max = Math.max(1, ...rows.map((r) => r.avgPosition ?? 0));
+  const shown = ladder ? rows : ownFirst.map((i) => rows[i]);
+  const max = barMax;
   const keys = rows.map((r) => r.key);
   const name = (k: string) => (k === OWN_KEY ? ownLabel : k);
   const csv = () => ({ name: "mention-first-position", rows: [["#", t("board.colBrand"), t("rank.colAvg"), t("rank.colWow"), t("rank.colGap")], ...rows.map((r, i) => [i + 1, name(r.key), r.avgPosition, r.delta, r.gap])] });
@@ -217,7 +209,7 @@ function RankTable() {
             const st = rnHighlightState(lit, [r.key], keys);
             const cells = (
               <>
-                <span className="text-rn-12 text-rn-muted tabular-nums">{rows.indexOf(r) + 1}</span>
+                <span className="text-rn-12 text-rn-muted tabular-nums">{r.pos}</span>
                 <span className="flex min-w-0 items-center gap-2">
                   <i aria-hidden className={cx("size-3 shrink-0 rounded-full", !r.own && !on && "shadow-[inset_0_0_0_1.5px_var(--color-rn-line-2)]")} style={r.own || on ? { background: color } : undefined} />
                   <BrandName name={name(r.key)} own={r.own} sibling={r.sibling} />
@@ -226,8 +218,8 @@ function RankTable() {
                   <i className="block h-full rounded" style={{ width: `${r.avgPosition == null ? 0 : Math.max(4, (1 - (r.avgPosition - 1) / max) * 100)}%`, background: color }} />
                 </span>
                 <span className="text-right text-rn-13 font-bold text-rn-ink tabular-nums">{r.avgPosition == null ? tFR("noRank") : posTxt(r.avgPosition)}</span>
-                <span className="@max-[720px]/rnpage:hidden">{r.spark.some((v) => v != null) ? <RnSparkline values={r.spark} invert className="h-[26px]" /> : <span className="text-rn-11 text-rn-muted">{t("board.noTrend")}</span>}</span>
-                <span className="justify-self-end">{r.spark.some((v) => v != null) ? <DeltaChip value={r.delta} rank /> : <span className="text-rn-11 text-rn-muted">—</span>}</span>
+                <span className="@max-[720px]/rnpage:hidden">{r.hasSpark ? <RnSparkline values={r.spark} invert className="h-[26px]" /> : <span className="text-rn-11 text-rn-muted">{t("board.noTrend")}</span>}</span>
+                <span className="justify-self-end">{r.hasSpark ? <DeltaChip value={r.delta} rank /> : <span className="text-rn-11 text-rn-muted">—</span>}</span>
                 <span className={cx("text-right text-rn-12 font-semibold tabular-nums", r.gap == null ? "text-rn-muted" : r.gap > 0 ? "text-rn-up-ink" : "text-rn-danger-ink")}>{r.gap == null ? "—" : `${r.gap > 0 ? "+" : "−"}${Math.abs(r.gap).toFixed(1)}`}</span>
               </>
             );

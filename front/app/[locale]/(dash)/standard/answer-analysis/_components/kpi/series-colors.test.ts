@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { SERIES_COLORS, seriesColor } from "./series-colors";
-import { COMPETITOR_ROW_LIMIT } from "../../_data/kpi-view";
 
 // 검증자 B5(2026-09-10) — **한 도넛 안에서 서로 다른 브랜드가 같은 색**으로 그려졌다.
 // 원인은 `seriesColor(i) = SERIES_COLORS[i % 8]` 인데 색 인덱스가 표 행 순서(0~11)라,
@@ -13,6 +12,9 @@ import { COMPETITOR_ROW_LIMIT } from "../../_data/kpi-view";
 //   1. 팔레트가 **표 행 상한만큼** 있다 — 순환이 한 화면 안에서 되돌아오지 않는다.
 //   2. 이름이 아니라 **실제 색값**이 서로 다르다 — 토큰 두 개가 같은 hex 를 가리키면
 //      배열 길이만 늘려도 화면에서는 여전히 겹치기 때문이다.
+
+/** The competitor table's row cap (당사 포함): back/bff/screens/mention_view.py COMPETITOR_ROW_LIMIT. */
+const COMPETITOR_ROW_LIMIT = 12;
 
 const CSS = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
 

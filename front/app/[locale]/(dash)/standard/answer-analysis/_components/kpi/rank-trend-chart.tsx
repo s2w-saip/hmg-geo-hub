@@ -10,7 +10,7 @@
 import { useTranslations } from "next-intl";
 import { Legend, Line, LineChart, ResponsiveContainer, Tooltip as RTooltip, XAxis, YAxis } from "recharts";
 import { CHART_TOOLTIP_STYLE } from "@/lib/viz/chart-tooltip";
-import { RANK_TOOLTIP_OWN_RANKED, positionText, rankAxisTicks, type RankTrendChartData } from "../../_data/kpi-view";
+import { RANK_TOOLTIP_OWN_RANKED, positionText, rankAxisTicks, type RankTrendChartData } from "../../_data/mention-screen";
 import { brandLineProps } from "./brand-trend-chart";
 import { bucketMD, CoverageLabel } from "./kpi-trend-chart";
 import { BandedGrid, ChartBox } from "./chart-box";

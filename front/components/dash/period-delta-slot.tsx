@@ -12,16 +12,7 @@
 //    (`period-delta-off-parity.render.test.tsx`)이 깨진다.
 
 import type { ReactNode } from "react";
-import {
-  periodCaption,
-  periodChip,
-  type PeriodChip,
-} from "@/lib/kpi/period-compare-view";
-import type {
-  CompareKind,
-  CompareMetricKey,
-  CompareResult,
-} from "@/lib/kpi/period-compare";
+import type { PeriodCaptionMessage, PeriodChip } from "@/lib/kpi/period-compare-view";
 import {
   PeriodDeltaCaption,
   PeriodDeltaChip,
@@ -29,60 +20,42 @@ import {
   type DeltaChipSize,
 } from "./delta-chip";
 
-/**
- * 그 지면이 그릴 지표의 결과를 고른다. 순수 — 테스트 대상.
- * `null` = 기간 비교를 그리지 않는다(= 종전 Δ 경로).
- */
-export function selectPeriodResult(
-  compare: readonly CompareResult[] | null | undefined,
-  metric: CompareMetricKey | null | undefined,
-): CompareResult | null {
-  if (!compare || !metric) return null;
-  return compare.find((r) => r.metric === metric) ?? null;
+/** One metric's period comparison as the API built it (chip + caption). */
+export interface PeriodSlotView {
+  chip: PeriodChip;
+  caption: PeriodCaptionMessage;
 }
 
+/** The screen's `periodSlots`: metric -> slot view; `null` = draw the earlier Δ (no closed period). */
+export type PeriodSlots = Readonly<Record<string, PeriodSlotView>>;
+
 export function PeriodDeltaSlot({
-  compare,
+  slots,
   metric,
-  days,
-  kind = "window",
   fallback = null,
-  render,
   withCaption = false,
   size = "sm",
   glyph = "icon",
   className,
 }: {
-  /** 게이트웨이 결과. `null` = "종전 Δ 를 그려라"(기간 미선택·epoch 이전·스위치 off). */
-  compare?: readonly CompareResult[] | null;
-  /** 이 지면이 그리는 지표. 계약의 6지표 밖이면 `null` 을 넘긴다(= 종전 Δ). */
-  metric?: CompareMetricKey | null;
-  /** 창 길이(일). 억제 캡션(`noPrevWindow` 의 {days}·`noPrevYear` 분기)에 쓰인다. */
-  days?: number;
-  kind?: CompareKind;
-  /** 종전 Δ 노드. off 에서는 이것이 **그대로** 렌더된다. */
+  /** The screen's period slots. `null` = "draw the earlier Δ" (no period, before the epoch, switch off). */
+  slots?: PeriodSlots | null;
+  /** The metric this surface draws. Outside the contract's metrics pass `null` (= earlier Δ). */
+  metric?: string | null;
+  /** The earlier Δ node. When off it is rendered **as is**. */
   fallback?: ReactNode;
-  /**
-   * on 일 때의 렌더. 지면마다 **레이아웃이 다르므로**(카드는 라벨+값 2줄, 타일은 한 줄,
-   * 히어로는 배지 하나) 모양은 지면이 정하고 **판정만 여기서** 한다. 생략하면 칩만 그린다.
-   */
-  render?: (chip: PeriodChip, result: CompareResult) => ReactNode;
-  /** 사유 캡션을 칩 옆에 함께 그릴지(타일처럼 자리가 좁은 지면은 false). */
+  /** Draw the reason caption next to the chip (narrow surfaces such as tiles pass false). */
   withCaption?: boolean;
   size?: DeltaChipSize;
   glyph?: DeltaChipGlyph;
   className?: string;
 }) {
-  const result = selectPeriodResult(compare, metric);
-  if (!result) return <>{fallback}</>;
-  const chip = periodChip({ metric: result.metric, delta: result.delta });
-  if (render) return <>{render(chip, result)}</>;
+  const slot = slots && metric ? slots[metric] : undefined;
+  if (!slot) return <>{fallback}</>;
   return (
     <>
-      <PeriodDeltaChip chip={chip} size={size} glyph={glyph} className={className} />
-      {withCaption ? (
-        <PeriodDeltaCaption caption={periodCaption(result, { days: days ?? 0, kind })} />
-      ) : null}
+      <PeriodDeltaChip chip={slot.chip} size={size} glyph={glyph} className={className} />
+      {withCaption ? <PeriodDeltaCaption caption={slot.caption} /> : null}
     </>
   );
 }

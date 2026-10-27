@@ -109,13 +109,20 @@ const MARKERS: Record<string, string[]> = {
 const FILES = Object.keys(MARKERS);
 const stripComments = (src: string) =>
   src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^[ \t]*\/\/.*$/gm, "");
-const idsIn = (rel: string) => [
-  ...new Set(
-    [...stripComments(read(rel)).matchAll(/<SectionDoneMarker id="([^"]+)"/g)].map(
-      (m) => m[1],
-    ),
-  ),
-];
+/**
+ * The ids a file emits: literal `<SectionDoneMarker id="…">`, plus the ids a section passes down as a
+ * `marker="…"` prop (the dashboard's DeferredNotice renders `<SectionDoneMarker id={marker} />` after
+ * the promise its card slots wait for).
+ */
+const idsIn = (rel: string) => {
+  const src = stripComments(read(rel));
+  return [
+    ...new Set([
+      ...[...src.matchAll(/<SectionDoneMarker id="([^"]+)"/g)].map((m) => m[1]),
+      ...[...src.matchAll(/\smarker="([^"]+)"/g)].map((m) => m[1]),
+    ]),
+  ];
+};
 
 /**
  * 금지 형태 탐지 — 마커가 `<Suspense>` 의 **직속 자식**인가.

@@ -1,68 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { EXTRAS_LABELS, COMPETITOR_LABELS } from "./_components/degrade-notice";
 
-// degrade 고지는 **라벨 문자열 매칭**으로만 성립한다(`degradeAware(<라벨>)` 이 심고
-// `wasDegraded(<라벨>)` 이 읽는다). 오타 하나면 고지가 조용히 사라지는데, `wasDegraded`
-// 는 RSC 요청 스코프 밖에서 fail-closed(false)라 **렌더 테스트로는 못 잡는다**.
-// 그래서 `server.ts` 소스와 직접 대조한다.
+// 읽기 계층(`lib/scope/server.ts`)의 예산 배선과, 화면 기반 섹션의 지연 고지 배선을 소스로 고정한다.
+// (대시보드 화면은 degrade 를 payload 로 알린다 — 종전 라벨 레지스트리 대조는 화면 이관으로 끝났다.)
 const server = readFileSync(
   fileURLToPath(new URL("../../../../lib/scope/server.ts", import.meta.url)),
   "utf8",
 );
 
-/** `degradeAware("x", …)` · `degradeAware(\`x:${u}\`, …)` 의 라벨 원문을 전부 뽑는다. */
-const declared = new Set(
-  [...server.matchAll(/degradeAware\(\s*[`"]([^`"]+)[`"]/g)].map((m) => m[1]),
-);
-
 /** 이 폴더 기준 상대 경로의 소스(줄바꿈은 LF 로 맞춘다 — 체크아웃 설정에 따라 CRLF 일 수 있다). */
 const src = (rel: string) => readFileSync(fileURLToPath(new URL(rel, import.meta.url)), "utf8").replace(/\r\n/g, "\n");
-
-describe("degrade 라벨 정합 — 고지 목록 ↔ server.ts", () => {
-  it("server.ts 가 심는 라벨을 뽑아낸다(추출기 자체가 죽지 않았는지)", () => {
-    expect(declared.size).toBeGreaterThanOrEqual(5);
-    expect(declared).toContain("standardMentions");
-  });
-
-  it("EXTRAS_LABELS — 추이는 단위별로 갈린 라벨이고 둘 다 실재한다", () => {
-    // `standardTrend:${unit}` 는 템플릿이라 원문이 `standardTrend:${unit}` 로 잡힌다.
-    expect(declared).toContain("standardTrend:${unit}");
-    expect([...EXTRAS_LABELS]).toEqual(["standardTrend:day", "standardTrend:week"]);
-    for (const l of EXTRAS_LABELS) expect(l.startsWith("standardTrend:")).toBe(true);
-  });
-
-  it("COMPETITOR_LABELS — 전부 server.ts 가 실제로 심는 라벨이다(죽은 라벨 금지)", () => {
-    for (const l of COMPETITOR_LABELS) expect(declared, l).toContain(l);
-  });
-
-  it("경쟁사 경계의 네 read 가 **전부** 보호돼 있고 넷 다 목록에 있다 (PR④ A3)", () => {
-    // 종전에는 `fetchStandardCitationDomains` 만 `degradeAware` 가 없어 셋이었다.
-    // 그 페처가 상한 없이 돌던 시절엔 붕괴 경로도 없었지만, A3 가 `extras` 예산을
-    // 붙이면서 `57014` 가 실현 가능해졌다 — 보호와 예산은 한 세트다.
-    const i = server.indexOf("export async function fetchStandardCitationDomains");
-    expect(i).toBeGreaterThan(0);
-    const block = server.slice(i, server.indexOf("\n}\n", i));
-    expect(block).toContain('degradeAware("standardCitationDomains"');
-    // 미러 폴백 **두 갈래 다** extras 예산이어야 한다(한쪽만 고치면 경계 최악이 60 s).
-    expect([...block.matchAll(/cachedStandardCitations\(f, "extras"\)/g)]).toHaveLength(2);
-    expect([...COMPETITOR_LABELS]).toContain("standardCitationDomains");
-    expect(COMPETITOR_LABELS).toHaveLength(4);
-    // S3 인용 화면은 종전 예산(`screen`)을 유지한다 — 본문이 degrade 되면 지면이 빈다.
-    expect(server).toContain('cachedStandardCitations(f, "screen")');
-  });
-
-  it("인용 셀은 **프로파일을 캐시 키로** 받는다 — 한 예산을 박아 두면 셀 공유로 되돌아간다", () => {
-    const i = server.indexOf('mirrorCache("standard-citations"');
-    expect(i).toBeGreaterThan(0);
-    const next = server.indexOf("mirrorCache(", i + 20);
-    const block = server.slice(i, next > 0 ? next : i + 1200);
-    expect(block).toContain("profile: CitationsBudgetProfile");
-    expect(block).toContain("citationsBudgetOf(profile)");
-    expect(block).not.toContain("mirrorHeavyBudget()");
-  });
-});
 
 describe("예산 프로파일 기본값 — 화면 쪽이 종전(또는 더 넉넉한) 상한을 유지한다", () => {
   // ⚠️ 이 단언이 없으면 기본값을 `extras` 로 뒤집어도 전 테스트가 통과한다(검증 지적 ⑤).
@@ -122,38 +70,20 @@ describe("예산 프로파일 기본값 — 화면 쪽이 종전(또는 더 넉�
   });
 });
 
-// ── 섹션 지연 고지(B027) — 화면이 읽는 라벨 = 원천이 심는 라벨 ─────────────────────
-// 섹션째 사라지던 일시 실패(글로벌 GEO, 프로젝트 홈 구성·⑦)는 api 원천이 라벨을 남기고 화면이 기존
-// `DegradeNotice`(kpi.degraded)로 그 자리에 고지한다. 고지는 라벨 문자열 매칭뿐이라 위와 같이 소스로 대조한다.
-describe("섹션 지연 고지(B027) — 대시보드·프로젝트 홈", () => {
+// ── 섹션 지연 고지(B027) ─────────────────────────────────────────────────────────
+// 섹션째 사라지던 일시 실패(글로벌 GEO)는 화면이 degraded 로 알리고, 페이지가 그 자리에 기존 지연 고지
+// 카드(kpi.degraded, PendingNotice)를 그린다.
+describe("섹션 지연 고지(B027) — 대시보드", () => {
   const page = src("./page.tsx");
-  const live = src("./_data/live.ts");
-  const adapter = src("../../../../lib/hgh/adapters/dashboard.ts");
-  const projectView = src("../projects/[id]/_components/project-dashboard.tsx");
-  const projectLive = src("../projects/[id]/_data/live.ts");
 
-  it("글로벌 GEO: 페이지 라벨 = 종전 리더 라벨(server.ts) = api 가 남기는 라벨(_data/live.ts)", () => {
-    const m = page.match(/const GEO_LABELS = \[([^\]]*)\] as const;/);
-    expect(m, "GEO_LABELS").not.toBeNull();
-    const labels = [...m![1].matchAll(/"([^"]+)"/g)].map((x) => x[1]);
-    expect(labels).toEqual(["standardGeoCompetition"]);
-    for (const l of labels) {
-      expect(declared, l).toContain(l);
-      expect(live).toContain(`degradeOnApiFailure("${l}"`);
-    }
-    // GeoSection 이 그 목록으로 고지를 그린다(api 경로에서만 — legacy 는 종전 그대로).
+  it("글로벌 GEO: 화면(overview/geo)이 degraded 를 알리면 그 자리에 지연 고지를 그린다", () => {
+    // The degrade registry is gone with the BFF port: overview/geo says `degraded` when /v1/geo failed
+    // transiently (old label standardGeoCompetition), and a transient failure of the screen itself is
+    // read the same way. GeoSection draws the existing notice card (kpi.degraded) in that case only.
     const geo = page.slice(page.indexOf("async function GeoSection("));
-    expect(geo.slice(0, geo.indexOf("\n}\n"))).toContain("<DegradeNotice labels={GEO_LABELS}");
-  });
-
-  it("프로젝트 홈: 구성·⑦ 라벨은 한 상수를 원천(_data/live.ts)과 화면(project-dashboard.tsx)이 함께 쓴다", () => {
-    for (const name of ["PROJECT_COMPOSITION_LABEL", "PROJECT_CONVERSION_LABEL"]) {
-      const m = adapter.match(new RegExp(`export const ${name} = "([^"]+)";`));
-      expect(m, name).not.toBeNull();
-      // 종전 리더에는 이 read 의 라벨이 없었다 — 기존 라벨과 겹치면 다른 read 의 지연이 여기 고지로 샌다.
-      expect(declared).not.toContain(m![1]);
-      expect(projectLive).toContain(`degradeOnApiFailure(${name},`);
-      expect(projectView).toContain(`DegradeNotice({ labels: [${name}]`);
-    }
+    const body = geo.slice(0, geo.indexOf("\n}\n"));
+    expect(body).toContain('screenGet<OverviewGeoView>("overview/geo"');
+    expect(body).toContain("v = { geo: null, degraded: true };");
+    expect(body).toContain('{v.degraded ? <PendingNotice title={tOverview("geo.title")} /> : null}');
   });
 });

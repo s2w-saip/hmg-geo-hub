@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CATALOG_EXPORT_PAGE_SIZE, collationOf, exportCatalogPages, rereadAfterHydration, reuseCatalogMeta, type CatalogPageQuery, type RemoteCatalog } from "@/lib/standards/catalog-page";
+import { collationOf, rereadAfterHydration, type CatalogSort } from "@/lib/standards/catalog-page";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -19,7 +19,7 @@ import {
   Info,
   Download,
 } from "lucide-react";
-import { PromptAuditTimeline } from "@/components/standards/prompt-audit-timeline";
+import { PromptAuditTimelineDialog, type TimelineLoad } from "@/components/standards/prompt-audit-timeline-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,7 +38,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useSortableTable } from "@/hooks/use-sortable-table";
 import { SortableHeader } from "@/components/ui/sortable-header";
 import {
   Tooltip,
@@ -46,17 +45,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { brandPresenceOf, UMBRELLA_BRAND } from "@/lib/scope/brand-presence";
 import { countryName } from "@/lib/geo-catalog/country-name";
 import { languageName } from "@/lib/geo-catalog/language-name";
-import {
-  isPseudoRegion,
-  isMarketUnset,
-  marketFilterOptions,
-  matchesMarket,
-  pseudoRegionLabelKey,
-  splitMarkets,
-} from "@/lib/standards/prompt-markets";
+import { isPseudoRegion, pseudoRegionLabelKey } from "@/lib/standards/prompt-markets";
 import type { Role } from "@/lib/auth/types";
 import { downloadXlsx } from "@/lib/export/xlsx";
 import {
@@ -64,71 +55,32 @@ import {
   exportFilename,
   type StandardPromptExportLabels,
 } from "./prompt-export";
+import type { FilterState, PromptRow, PromptsQuery, PromptsRemote } from "../_data/screen-types";
+import { fetchPromptTimeline, fetchPromptsExport, fetchPromptsPage } from "../_data/prompts-client";
+
+/** A row's change timeline (screen catalog/prompts-timeline). */
+async function loadTimeline(promptId: string): Promise<TimelineLoad> {
+  try {
+    const res = await fetchPromptTimeline(promptId);
+    return res.available ? { phase: "ready", rows: res.rows } : { phase: "unavailable" };
+  } catch {
+    return { phase: "error" };
+  }
+}
+
+export type { FilterState };
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
 const DEFAULT_PAGE_SIZE = 50;
 
-// Read-only row — a subset of StandardCatalogRow. The operational columns
-// (scopePromptId / tracking state / stats) from the admin view are dropped;
-// this is a browse surface, not a management one.
-export interface StandardPromptViewRow {
-  id: string;
-  text: string;
-  brand: string | null;
-  brandPresence: string | null;
-  listType: string | null;
-  depth1: string | null;
-  depth2: string | null;
-  depth3: string | null;
-  depth4: string | null;
-  funnelStage: string | null;
-  // 측정 종류 ('single' | 'acr') — 열람용 배지. 전환은 admin 카탈로그 전용.
-  kind: string;
-  // 대상 시장 (migration 0047). 실국가 ISO alpha-2 + `x:` 접두 의사코드.
-  // NULL·빈 배열 = 미지정(상속) — 화면은 '전체' 배지로 명시한다(빈칸 금지).
-  // ⚠️ 계정 권한 스코프(scopeRegions/scopeCountries)와 다른 축.
-  regions: string[] | null;
-  // 프롬프트 언어 (migration 0047) — 번역 시트 탭 코드(대문자 ISO 639-1).
-  lang: string | null;
-  // scope 링크. null = 아직 발행 안 됨 → '미측정' 상태 배지 (D15).
-  scopePromptId: string | null;
-}
-
-type SortKey =
-  | "text"
-  | "brand"
-  | "presence"
-  | "listType"
-  | "depth1"
-  | "depth2"
-  | "depth3"
-  | "depth4"
-  | "funnel"
-  | "kind"
-  | "market"
-  | "lang"
-  | "status";
+type SortKey = Exclude<CatalogSort, "tracked">;
+// Header sorts that start ascending when picked (the others start descending).
+const ASC_BY_DEFAULT: ReadonlySet<SortKey> = new Set(["text", "brand", "presence", "listType", "depth1", "depth2", "depth3", "depth4", "funnel", "market", "lang", "status"]);
 
 const ALL = "all";
 
 // The deferred filter state — selects edit a `draft`; the table reads `applied`.
 // They diverge until the user presses 적용(Apply); 리셋(Reset) clears both.
-export interface FilterState {
-  listType: string;
-  depth1: string;
-  depth2: string;
-  depth3: string;
-  depth4: string;
-  funnel: string;
-  presence: string;
-  kind: string;
-  // 대상 시장 (실국가 또는 지리 의사코드 1개) — 권한 스코프와 무관한 카탈로그 축.
-  market: string;
-  lang: string;
-  // 측정 상태 — MEASURED(scope 링크 있음) / UNMEASURED(없음). 기본값 전체.
-  status: string;
-}
-
 export const EMPTY_FILTER: FilterState = {
   listType: ALL,
   depth1: ALL,
@@ -150,65 +102,24 @@ export const STATUS_UNMEASURED = "unmeasured";
 // 행 배지 접힘 임계 — 상위 N개만 보이고 나머지는 `+N`(툴팁에 전체).
 const MARKET_BADGE_LIMIT = 3;
 
-// A row is "공통" (common, visible to every brand-scoped user) when it carries
-// no brand or the umbrella brand tag. Mirrors standardPromptInScope.
-function isCommon(brand: string | null): boolean {
-  return brand == null || brand === UMBRELLA_BRAND;
-}
-
-function sortedUnique(values: (string | null)[]): string[] {
-  const set = new Set<string>();
-  for (const v of values) if (v) set.add(v);
-  return [...set].sort();
-}
-
-// 필터 술어 — 순수 함수로 빼 테스트에서 직접 돌린다(브라우저 없이 3축 검증).
-export function filterRows(
-  rows: StandardPromptViewRow[],
-  applied: FilterState,
-  query: string,
-): StandardPromptViewRow[] {
-  const q = query.trim().toLowerCase();
-  return rows.filter((r) => {
-    if (applied.listType !== ALL && r.listType !== applied.listType) return false;
-    if (applied.depth1 !== ALL && r.depth1 !== applied.depth1) return false;
-    if (applied.depth2 !== ALL && r.depth2 !== applied.depth2) return false;
-    if (applied.depth3 !== ALL && r.depth3 !== applied.depth3) return false;
-    if (applied.depth4 !== ALL && r.depth4 !== applied.depth4) return false;
-    if (applied.funnel !== ALL && r.funnelStage !== applied.funnel) return false;
-    if (applied.presence !== ALL && brandPresenceOf(r.brand, r.brandPresence) !== applied.presence)
-      return false;
-    if (applied.kind !== ALL && r.kind !== applied.kind) return false;
-    // 대상 시장: 행의 regions 배열에 그 코드가 있는가 (미지정 행은 안 걸린다).
-    if (applied.market !== ALL && !matchesMarket(r.regions, applied.market)) return false;
-    if (applied.lang !== ALL && r.lang !== applied.lang) return false;
-    if (applied.status !== ALL) {
-      const measured = r.scopePromptId !== null;
-      if (applied.status === STATUS_MEASURED && !measured) return false;
-      if (applied.status === STATUS_UNMEASURED && measured) return false;
-    }
-    if (q && !r.text.toLowerCase().includes(q)) return false;
-    return true;
-  });
-}
-
 // 행의 대상 시장 셀. 실국가 = solid 배지(국가명), 의사코드 = outline + 태그
 // 아이콘으로 **시각적으로 분리**한다(D4). 미지정은 빈칸이 아니라 '전체' 배지 —
 // 빈칸으로 두면 "설정 안 됨 = 측정 안 됨"으로 오독된다(§3-2).
 function MarketCell({
-  regions,
+  markets,
   labelOf,
   allLabel,
   allHint,
   moreHint,
 }: {
-  regions: string[] | null;
+  markets: PromptRow["markets"];
   labelOf: (code: string) => string;
   allLabel: string;
   allHint: string;
   moreHint: string;
 }) {
-  if (isMarketUnset(regions)) {
+  const { real, pseudo } = markets;
+  if (real.length === 0 && pseudo.length === 0) {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
@@ -221,7 +132,6 @@ function MarketCell({
       </Tooltip>
     );
   }
-  const { real, pseudo } = splitMarkets(regions);
   // 접는 것은 **실국가뿐**이다. 의사코드(x:*)는 개수가 5종으로 묶여 있고 "이 행이
   // 글로벌인가/중동인가" 같은 성격 정보라 항상 보여야 한다 — 접기를 배열 순서대로
   // 하면 실국가가 많은 행에서 의사코드가 통째로 `+N` 뒤로 숨어(2026-08-29 렌더
@@ -271,7 +181,6 @@ function MarketCell({
 }
 
 export function StandardPromptReadonlyList({
-  rows,
   remote,
   scopeAll,
   scopeRole,
@@ -279,8 +188,7 @@ export function StandardPromptReadonlyList({
   scopeRegions,
   scopeCountries,
 }: {
-  rows: StandardPromptViewRow[];
-  remote?: RemoteCatalog;
+  remote: PromptsRemote;
   scopeAll: boolean;
   scopeRole: Role;
   scopeBrands: string[];
@@ -312,80 +220,24 @@ export function StandardPromptReadonlyList({
   // table. They only sync when the user presses 적용.
   const [draft, setDraft] = useState<FilterState>(EMPTY_FILTER);
   const [applied, setApplied] = useState<FilterState>(EMPTY_FILTER);
-  const [remotePage, setRemotePage] = useState(remote?.initial);
+  const [remotePage, setRemotePage] = useState(remote.initial);
   const [readError, setReadError] = useState<Error | null>(null);
   const firstRead = useRef(true);
   // 변경 이력 타임라인 다이얼로그 (catalog-prompt-audit — 열람 전용).
   const [timelineRow, setTimelineRow] = useState<{ id: string; text: string } | null>(null);
 
-  // ── Cascading option lists — each depth narrows by the PENDING (draft)
+  // ── Option lists (server facets) — each depth narrows by the PENDING (draft)
   // parent selection so the dropdowns react immediately, even before 적용.
-  const listTypeOptions = useMemo(
-    () => remotePage?.facets.listType ?? sortedUnique(rows.map((r) => r.listType)),
-    [rows, remotePage],
-  );
-  const depth1Options = useMemo(
-    () =>
-      remotePage?.facets.depth1 ?? sortedUnique(
-        rows
-          .filter((r) => draft.listType === ALL || r.listType === draft.listType)
-          .map((r) => r.depth1),
-      ),
-    [rows, draft.listType, remotePage],
-  );
-  const depth2Options = useMemo(
-    () =>
-      remotePage?.facets.depth2 ?? sortedUnique(
-        rows
-          .filter(
-            (r) =>
-              (draft.listType === ALL || r.listType === draft.listType) &&
-              (draft.depth1 === ALL || r.depth1 === draft.depth1),
-          )
-          .map((r) => r.depth2),
-      ),
-    [rows, draft.listType, draft.depth1, remotePage],
-  );
-  const depth3Options = useMemo(
-    () =>
-      remotePage?.facets.depth3 ?? sortedUnique(
-        rows
-          .filter(
-            (r) =>
-              (draft.listType === ALL || r.listType === draft.listType) &&
-              (draft.depth1 === ALL || r.depth1 === draft.depth1) &&
-              (draft.depth2 === ALL || r.depth2 === draft.depth2),
-          )
-          .map((r) => r.depth3),
-      ),
-    [rows, draft.listType, draft.depth1, draft.depth2, remotePage],
-  );
-  const depth4Options = useMemo(
-    () =>
-      remotePage?.facets.depth4 ?? sortedUnique(
-        rows
-          .filter(
-            (r) =>
-              (draft.listType === ALL || r.listType === draft.listType) &&
-              (draft.depth1 === ALL || r.depth1 === draft.depth1) &&
-              (draft.depth2 === ALL || r.depth2 === draft.depth2) &&
-              (draft.depth3 === ALL || r.depth3 === draft.depth3),
-          )
-          .map((r) => r.depth4),
-      ),
-    [rows, draft.listType, draft.depth1, draft.depth2, draft.depth3, remotePage],
-  );
-  const funnelOptions = useMemo(
-    () => remotePage?.facets.funnel ?? sortedUnique(rows.map((r) => r.funnelStage)),
-    [rows, remotePage],
-  );
-  // 시장·언어 옵션은 **표시되는 행 전체**에서 파생한다 — 미측정 행까지 포함(D15).
-  // 별도 어휘 조회 없이 rows 만으로 만든다(기존 funnelStage 패턴과 동일).
-  const marketOptions = useMemo(
-    () => remotePage?.facets.market ?? marketFilterOptions(rows.map((r) => r.regions)),
-    [rows, remotePage],
-  );
-  const langOptions = useMemo(() => remotePage?.facets.lang ?? sortedUnique(rows.map((r) => r.lang)), [rows, remotePage]);
+  const facets = remotePage.facets;
+  const listTypeOptions = facets.listType ?? [];
+  const depth1Options = facets.depth1 ?? [];
+  const depth2Options = facets.depth2 ?? [];
+  const depth3Options = facets.depth3 ?? [];
+  const depth4Options = facets.depth4 ?? [];
+  const funnelOptions = facets.funnel ?? [];
+  // 시장·언어 옵션은 스코프의 행 전체에서 나온다 — 미측정 행까지 포함(D15).
+  const marketOptions = facets.market ?? [];
+  const langOptions = facets.lang ?? [];
 
   // Picking a parent invalidates its children — reset them to "all".
   function updateDraft(patch: Partial<FilterState>) {
@@ -401,82 +253,41 @@ export function StandardPromptReadonlyList({
     });
   }
 
-  const filtered = useMemo(
-    () => filterRows(rows, applied, query),
-    [rows, query, applied],
-  );
-
-  const { sorted, sortKey, asc, headerProps } = useSortableTable<StandardPromptViewRow, SortKey>(
-    filtered,
-    {
-      text: (r) => r.text,
-      brand: (r) => r.brand ?? "",
-      // common rows sort first so the brand-agnostic block groups together.
-      presence: (r) => brandPresenceOf(r.brand, r.brandPresence) ?? "~",
-      listType: (r) => r.listType ?? "~",
-      depth1: (r) => r.depth1 ?? "~",
-      depth2: (r) => r.depth2 ?? "~",
-      depth3: (r) => r.depth3 ?? "~",
-      depth4: (r) => r.depth4 ?? "~",
-      funnel: (r) => r.funnelStage ?? "~",
-      kind: (r) => (r.kind === "acr" ? 1 : 0),
-      // 시장은 첫 배지(실국가 우선 정렬) 기준 — 미지정 행은 뒤로 민다.
-      market: (r) => {
-        const { real, pseudo } = splitMarkets(r.regions);
-        const first = real[0] ?? pseudo[0];
-        return first ? marketLabel(first) : "~";
-      },
-      lang: (r) => r.lang ?? "~",
-      // 미측정이 먼저 오도록(운영자가 결손을 먼저 본다).
-      status: (r) => (r.scopePromptId === null ? 0 : 1),
+  // Header sort (the server orders the rows; the header keeps the former toggle rule).
+  const [sortKey, setSortKey] = useState<SortKey>("depth1");
+  const [asc, setAsc] = useState(true);
+  const headerProps = (key: SortKey) => ({
+    active: sortKey === key,
+    asc,
+    onClick: () => {
+      if (key === sortKey) setAsc((v) => !v);
+      else {
+        setSortKey(key);
+        setAsc(ASC_BY_DEFAULT.has(key));
+      }
     },
-    {
-      defaultKey: "depth1",
-      defaultAsc: true,
-      ascByDefault: [
-        "text",
-        "brand",
-        "presence",
-        "listType",
-        "depth1",
-        "depth2",
-        "depth3",
-        "depth4",
-        "funnel",
-        "market",
-        "lang",
-        "status",
-      ],
-    },
-  );
+  });
 
-  // Keep the existing pager controls. Remote mode reads only the requested page;
+  // Keep the existing pager controls. Each read returns only the requested page;
   // filters, search and sort still reset the visible page to the first one.
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
   const [page, setPage] = useState(1);
-  const total = remotePage?.total ?? sorted.length;
-  const pages = Math.max(1, Math.ceil(total / pageSize));
-  const sortedKey = remote ? JSON.stringify([query, applied, sortKey, asc]) : sorted.map((r) => r.id).join("|");
+  const total = remotePage.total;
+  const sortedKey = JSON.stringify([query, applied, sortKey, asc]);
   useEffect(() => {
     setPage(1);
   }, [sortedKey, pageSize]);
-  const safePage = Math.min(page, pages);
-  const pageRows = useMemo(
-    () => remotePage?.rows ?? sorted.slice((safePage - 1) * pageSize, safePage * pageSize),
-    [sorted, safePage, pageSize, remotePage],
-  );
-  const rangeFrom = total === 0 ? 0 : (remotePage?.offset ?? (safePage - 1) * pageSize) + 1;
-  const rangeTo = Math.min(rangeFrom + pageRows.length - 1, total);
-  const readQuery: CatalogPageQuery = { filters: applied, draft, search: query, sort: sortKey, asc,
-    offset: (safePage - 1) * pageSize, limit: pageSize,
+  const pageRows = remotePage.rows;
+  // The page actually read (a page past the end falls back to the last one) and its labels.
+  const { page: safePage, pages, rangeFrom, rangeTo } = remotePage;
+  const readQuery: PromptsQuery = { filters: applied, draft, search: query, sort: sortKey, asc,
+    page, limit: pageSize,
     collation: collationOf(Intl.Collator().resolvedOptions().locale),
-    market_labels: Object.fromEntries((remotePage?.facets.marketSort ?? marketOptions).map(code => [code, marketLabel(code)])) };
+    marketLabels: Object.fromEntries((facets.marketSort ?? []).map(code => [code, marketLabel(code)])) };
   const readKey = JSON.stringify(readQuery);
-  // Same draft → rows and total only; facets stay from the last read.
-  const load = useMemo(() => (remote ? reuseCatalogMeta(remote) : undefined), [remote]);
-  const initialCollation = remote?.initial.collation;
+  const load = remote.load ?? fetchPromptsPage;
+  const initialCollation = remote.initial.collation;
   useEffect(() => {
-    if (!load) return;
     // The server read sorted with the browser's language (Accept-Language). Re-read only when the browser's comparator differs.
     if (firstRead.current) { firstRead.current = false; if (!rereadAfterHydration({ collation: initialCollation }, JSON.parse(readKey).collation)) return; }
     let active = true;
@@ -489,7 +300,7 @@ export function StandardPromptReadonlyList({
   }, [readKey, load, initialCollation]);
 
   // ── 엑셀 내보내기 ────────────────────────────────────────────────────────
-  // Export follows every filtered page in server order, never only visible rows.
+  // Export is every filtered row in server order, never only visible rows.
   const [exporting, setExporting] = useState(false);
   async function handleExport() {
     if (exporting || total === 0) return;
@@ -518,12 +329,8 @@ export function StandardPromptReadonlyList({
         statusMeasured: t("statusMeasured"),
         statusUnmeasured: t("statusUnmeasured"),
       };
-      // A rows-only reader takes large batches (fewer reads); the full-page loader keeps 500-row pages.
-      const exportRows = remote
-        ? await (remote.rows ? exportCatalogPages(remote.rows, readQuery, CATALOG_EXPORT_PAGE_SIZE) : exportCatalogPages(remote.load, readQuery))
-        : sorted;
-      const columnRows = remotePage ? [Object.fromEntries(remotePage.columns.map(key => [key, "present"]))] as unknown as StandardPromptViewRow[] : rows;
-      const sheet = buildStandardPromptSheet(exportRows, columnRows, labels, {
+      const exported = await (remote.exportRows ?? fetchPromptsExport)(readQuery);
+      const sheet = buildStandardPromptSheet(exported.rows, exported.columns, labels, {
         market: marketLabel,
         language: (code) => languageName(code, locale),
       });
@@ -568,8 +375,8 @@ export function StandardPromptReadonlyList({
     return parts.join("  ·  ") || t("scopeAll");
   }, [scopeAll, scopeBrands, showRegions, scopeRegions, scopeCountries, t]);
 
-  // Depth table columns render only when at least one row carries a value at
-  // that level — same policy as the depth filter selects below.
+  // Depth table columns render only when at least one row of the scope carries a
+  // value at that level (the server's columns) — same policy as the depth selects below.
   const depthColumns = useMemo(
     () =>
       (
@@ -579,8 +386,8 @@ export function StandardPromptReadonlyList({
           { key: "depth3", label: t("filterDepth3") },
           { key: "depth4", label: t("filterDepth4") },
         ] as const
-      ).filter((c) => remotePage ? remotePage.columns.includes(c.key) : rows.some((r) => r[c.key])),
-    [rows, t, remotePage],
+      ).filter((c) => remotePage.columns.includes(c.key)),
+    [t, remotePage],
   );
 
   // depth selects render only when the current parent yields ≥1 real option,
@@ -947,7 +754,7 @@ export function StandardPromptReadonlyList({
           </Button>
 
           <span className="ml-auto self-center text-[11px] tabular-nums text-muted-foreground">
-            {t("filteredCount", { shown: total, total: remotePage?.count ?? rows.length })}
+            {t("filteredCount", { shown: total, total: remotePage.count })}
           </span>
         </div>
       </div>
@@ -1011,7 +818,7 @@ export function StandardPromptReadonlyList({
                 >
                   <td className="px-3 py-3 text-sm text-foreground">{r.text}</td>
                   <td className="px-3 py-3">
-                    {isCommon(r.brand) ? (
+                    {r.common ? (
                       <Badge variant="outline" className="text-[10px] text-muted-foreground">
                         {t("common")}
                       </Badge>
@@ -1054,7 +861,7 @@ export function StandardPromptReadonlyList({
                   </td>
                   <td className="px-3 py-3">
                     <MarketCell
-                      regions={r.regions}
+                      markets={r.markets}
                       labelOf={marketLabel}
                       allLabel={t("marketAll")}
                       allHint={t("marketAllHint")}
@@ -1065,11 +872,11 @@ export function StandardPromptReadonlyList({
                     {r.lang ? languageName(r.lang, locale) : "—"}
                   </td>
                   <td className="px-3 py-3">
-                    {brandPresenceOf(r.brand, r.brandPresence) === "branded" ? (
+                    {r.presence === "branded" ? (
                       <Badge variant="secondary" className="text-[10px]">
                         {tVal("branded")}
                       </Badge>
-                    ) : brandPresenceOf(r.brand, r.brandPresence) === "unbranded" ? (
+                    ) : r.presence === "unbranded" ? (
                       <Badge variant="outline" className="text-[10px] text-muted-foreground">
                         {tVal("unbranded")}
                       </Badge>
@@ -1186,13 +993,14 @@ export function StandardPromptReadonlyList({
         </div>
       ) : null}
       {timelineRow ? (
-        <PromptAuditTimeline
+        <PromptAuditTimelineDialog
           promptId={timelineRow.id}
           promptText={timelineRow.text}
           open={timelineRow !== null}
           onOpenChange={(open) => {
             if (!open) setTimelineRow(null);
           }}
+          load={loadTimeline}
         />
       ) : null}
     </div>

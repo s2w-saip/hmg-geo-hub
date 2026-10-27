@@ -187,37 +187,10 @@ describe("반환 타입", () => {
 
 // ── 차단 3 회귀 가드 (2026-09-20 검증) ──────────────────────────────────────
 //
-// `fetchWebsiteTargetHitRate` 의 소비자는 **둘**이다: 답변분석 인용 화면과 웹사이트
-// 대시보드 KPI 카드 2종. 첫 판은 앞쪽에만 표식을 붙이고 뒤쪽에서는 `source`·
-// `publication` 을 통째로 버렸다 — 키를 켜면 대시보드 카드가 **아무 표식 없이** 값과
-// 모수를 바꾸고, 같은 화면의 다른 타일은 라이브로 남는다. "조용히 섞지 않는다" 가
-// 그 표면에서만 지켜지지 않는 상태였다.
-describe("출처 표식이 **두 소비자 모두**에 도달한다", () => {
-  const dash = readFileSync(
-    fileURLToPath(new URL("../../app/[locale]/(dash)/website/_data/live.ts", import.meta.url)),
-    "utf8",
-  );
-
-  it("웹사이트 대시보드가 source·publication 을 버리지 않는다", () => {
-    expect(dash).toContain("promptRates.source");
-    expect(dash).toContain("promptRates.publication?.cycleLabel");
-    expect(dash).toContain("promptRates.publication?.siteCount");
-  });
-
-  it("카드 2종 **둘 다** provenance 를 싣는다 (한쪽만 달면 같은 화면이 어긋난다)", () => {
-    for (const key of ['key: "ownedUrlRate"', 'key: "targetUrlRate"']) {
-      const i = dash.indexOf(key);
-      expect(i, key).toBeGreaterThan(0);
-      expect(dash.slice(i, dash.indexOf("};", i)), key).toContain("provenance");
-    }
-  });
-
-  it("키가 꺼져 있으면 provenance 가 undefined 다 (종전 타일과 같다)", () => {
-    // `promptRates.source` 가 없으면 삼항이 undefined 를 낸다 — 타일이 아무것도 안 그린다.
-    expect(dash).toMatch(/const provenance = promptRates\.source\s*\?/);
-    expect(dash).toContain(": undefined;");
-  });
-
+// `fetchWebsiteTargetHitRate` 의 표식(source·publication)은 화면 이관 뒤 웹사이트 요약 화면
+// (website/summary, back/bff/screens/overview.py)이 타일의 provenance 로 싣는다. Next 쪽에 남은 것은
+// 타일이 그 표식을 실제로 그리는 배선이다(키가 꺼져 있으면 provenance 가 없어 아무것도 안 그린다).
+describe("출처 표식을 타일이 그린다", () => {
   it("타일이 그 표식을 실제로 렌더한다", () => {
     const tile = readFileSync(
       fileURLToPath(
@@ -225,7 +198,7 @@ describe("출처 표식이 **두 소비자 모두**에 도달한다", () => {
       ),
       "utf8",
     );
-    expect(tile).toContain("summary.provenance");
+    expect(tile).toContain("{tile.provenance ? (");
     expect(tile).toContain('tKpi("provenance.published"');
     expect(tile).toContain('tKpi("provenance.live")');
   });

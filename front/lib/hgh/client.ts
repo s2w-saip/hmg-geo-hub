@@ -51,6 +51,7 @@ import "server-only";
 import { createHash, randomUUID } from "node:crypto";
 import { isIP } from "node:net";
 import { cache } from "react";
+import { localReadOnly } from "@/lib/local-readonly";
 import { dedupeInRequest, stableKey } from "@/lib/request-dedupe";
 import type { paths } from "./api-types";
 import { getAccessToken, qaCookieHeader, refreshAccessToken } from "./auth";
@@ -241,6 +242,7 @@ function warnOnce(key: string, message: string): void {
 
 /** HGH_SOURCE_<group> = api | legacy. Unset or anything else -> legacy (warned once). */
 export function hghSource(group: HghSourceGroup, env: Env = process.env): HghSource {
+  if (localReadOnly(env)) return "api";
   const name = `HGH_SOURCE_${group}`;
   const raw = env[name]?.trim().toLowerCase();
   if (raw === "api") return "api";
@@ -635,6 +637,9 @@ function requestJson(method: HttpMethod, route: string, opts: InternalOptions = 
 }
 
 async function execute(method: HttpMethod, route: string, opts: InternalOptions, mode: "json" | "raw"): Promise<unknown> {
+  if (localReadOnly() && method !== "get") {
+    throw new HghApiError(405, "read_only", "The Gold service is read-only");
+  }
   const cfg = readHghConfig();
   const path = fillPath(route, opts.pathParams);
   const qs = serializeQuery(opts.query, opts.cf);
@@ -646,7 +651,7 @@ async function execute(method: HttpMethod, route: string, opts: InternalOptions,
   const timeoutMs = timeoutFor(method, opts, cfg);
   const encoded = encodeBody(opts.body);
   const extraHeaders = operationHeaders(opts.header);
-  const authMode = opts.auth ?? "session";
+  const authMode = localReadOnly() ? "none" : (opts.auth ?? "session");
   let auth = await resolveAuth(authMode, route);
   const traceQuery = cfg.traceFile ? queryToObject(opts.query, opts.cf) : {};
 

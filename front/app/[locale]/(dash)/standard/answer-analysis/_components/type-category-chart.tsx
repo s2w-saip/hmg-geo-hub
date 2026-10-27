@@ -1,7 +1,7 @@
 "use client";
 
 // 멘션 유형별 출처 카테고리 구성 — 유형 5행 × 100% 스택(디자인 571:380 우측 하단).
-// 색은 카테고리 고정색(categoryColor), 우측 라벨 = 공식(HMG) 비중.
+// 색은 카테고리 고정색(categoryColor), 우측 라벨 = 공식(HMG) 비중. 막대·비중·hasAny 는 화면 API 계산.
 
 import { useTranslations } from "next-intl";
 import type { TypeCategoryBar } from "../_data/citation-view";
@@ -10,15 +10,17 @@ import { categoryColor } from "./citations-view";
 export function TypeCategoryChart({
   series,
   bars,
+  hasAny,
   label,
 }: {
   series: string[];
   bars: TypeCategoryBar[];
+  /** 인용이 있는 유형이 하나라도 있는가(없으면 빈 안내). */
+  hasAny: boolean;
   label: (name: string) => string;
 }) {
   const t = useTranslations("answerAnalysis.citations.v2.typeCategory");
   const tType = useTranslations("answerAnalysis.mentions.breakdown.type");
-  const hasAny = bars.some((b) => b.total > 0);
   return (
     <section className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
       <header className="flex flex-col gap-0.5">

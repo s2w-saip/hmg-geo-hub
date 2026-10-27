@@ -4,7 +4,7 @@ import { NextIntlClientProvider } from "next-intl";
 import ko from "@/messages/ko.json";
 import en from "@/messages/en.json";
 import type { FirstPositionResult } from "@/lib/db/repositories/scope-aggregates";
-import { FirstRankKpiTab } from "./first-rank-kpi-tab";
+import { FirstRankKpiTabFromLegacy as FirstRankKpiTab } from "../../_data/mention-screen.test-utils";
 
 // 고객 QA 2차 #3 — "AI 우선 노출도" 상세 히어로의 경쟁사 2×2 타일에서
 // "19.9위" / "↗1.6위" 가 **글자 중간에서** 두 줄로 꺾인다(고객 원문: "1.6위, 0.9위 등

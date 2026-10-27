@@ -1,13 +1,15 @@
 import { NextRequest } from "next/server";
 import { hghErrorResponse } from "@/lib/hgh/errors";
-import { decodeSkey, loadDomainDrilldown } from "@/lib/hgh/adapters/citations";
+import { decodeSkey } from "@/lib/hgh/citation-route";
+import { screenGet } from "@/lib/screen";
+import type { DomainDetailView } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/citation-view";
 import { openCitationRoute, routeFail, routeJson } from "../../_lib/route";
 
 // BFF: one source's drilldown, loaded when a citation domain row opens (unit U7, design 3.5 #6).
 //
 //   GET /api/citations/domains/<base64url(skey)>?<the screen's filter params>[&surface=website]
 //       [&projectId=<uuid>]
-//   200 {urls: CitationUrlLive[], promptList: CitationPromptLive[]}  (the legacy row fields)
+//   200 {urls, promptList (+ share), urlTotal?, promptTotal?, promptOrders}  (screen citation/domain-detail)
 //
 // The path segment is the source group key in base64url: social account keys are host+path
 // ("instagram.com/hyundai"), and a raw "/" would split the segment. A segment that is not the
@@ -24,7 +26,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ skey
   const opened = await openCitationRoute(req.nextUrl.searchParams);
   if (opened instanceof Response) return opened;
   try {
-    return routeJson(await loadDomainDrilldown(opened.filters, opened.ctx, skey));
+    return routeJson(await screenGet<DomainDetailView>("citation/domain-detail", { ...opened.query, "ctx.skey": skey }));
   } catch (e) {
     return hghErrorResponse(e);
   }

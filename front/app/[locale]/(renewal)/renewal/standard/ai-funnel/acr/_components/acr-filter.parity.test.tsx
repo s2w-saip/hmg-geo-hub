@@ -56,7 +56,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(SEARCH),
 }));
 
-const { AcrLiveView } = await import("@/app/[locale]/(dash)/standard/ai-funnel/_components/acr-live-view");
+const { AcrLiveView, acrOnlyGroups } = await import("@/app/[locale]/(dash)/standard/ai-funnel/_components/acr-live-view");
 const { deriveMatrixOptions } = await import("@/components/dash/dimension-filter-panel");
 const { effectiveScopeCountries } = await import("@/lib/rhq");
 const { RnFilterRuntime } = await import("@/app/[locale]/(renewal)/renewal/_components/filter-runtime");
@@ -115,6 +115,25 @@ function optionsFor(role: keyof typeof SCOPES, url: string) {
   return { scope: { ...scope }, catalogRows: CATALOG, geographyOptions: applied.regions, languageOptions: acrLangs, selectableDates: ROUNDS };
 }
 
+// The app's ACR view in its waiting state (screen acr/standard: measured false), panel props as the
+// screen sends them (onlyGroups = the ACR axis rule over the ACR languages).
+const WAITING = {
+  measured: false,
+  acrPromptCount: 69,
+  brands: [],
+  brandOrders: { brand: { asc: [], desc: [] }, top1: { asc: [], desc: [] }, coverage: { asc: [], desc: [] }, choices: { asc: [], desc: [] }, appearances: { asc: [], desc: [] } },
+  kpi: { top1: null, top5: null, rank1: 0 },
+  totals: { promptRuns: 0, prompts: 0, iterations: 0, engines: [] },
+  trendBrands: [],
+  trendRows: [],
+  battle: [],
+  battleVisible: 30,
+  battleHidden: 0,
+  models: [],
+  modelOrders: { brand: { asc: [], desc: [] }, model: { asc: [], desc: [] }, conv: { asc: [], desc: [] }, shortlist: { asc: [], desc: [] }, top1: { asc: [], desc: [] } },
+  territory: [],
+};
+
 const wrap = (node: ReactNode) =>
   renderToStaticMarkup(
     <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
@@ -140,7 +159,7 @@ describe("renewal ACR filter panel shows exactly the app's ACR filters", () => {
   it.each(CASES)("%s", (_label, role, url) => {
     SEARCH = url;
     const opts = optionsFor(role, url);
-    const app = appStructure(wrap(<AcrLiveView data={null} acrPromptCount={69} {...opts} />));
+    const app = appStructure(wrap(<AcrLiveView vm={WAITING} {...opts} onlyGroups={acrOnlyGroups(opts.languageOptions)} />));
     const renewal = renewalStructure(
       wrap(
         <RnFilterRuntime>

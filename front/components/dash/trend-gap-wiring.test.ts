@@ -8,67 +8,20 @@
  * 눈으로는 더 찾기 어려운 형태였다.
  *
  * 원인은 두 층이 각각 하나씩이었다:
- *   ① 스파크라인 — `sparkPoints` 매핑이 `gap` 마커를 **떨어뜨렸다**(값만 옮겼다).
- *   ② KpiTrendChart — 데이터에는 마커가 있는데(`kpiTrendPoints` 가 얹는다) 차트가
- *      오버레이를 **안 그렸다**.
+ *   ① 스파크라인 — 점 매핑이 `gap` 마커를 **떨어뜨렸다**(값만 옮겼다). 점과 마커는 이제
+ *      overview/card-trend 화면(back/bff/screens/overview.py)이 만든다.
+ *   ② KpiTrendChart — 데이터에는 마커가 있는데 차트가 오버레이를 **안 그렸다**.
  *
  * recharts 는 `renderToStaticMarkup` 에서 SVG 를 내지 않으므로(brand-trend-chart
- * 테스트 헤더 참고) 마크업으로는 음영·보조선을 볼 수 없다. 그래서 ①은 순수 함수로,
- * ②는 소스 대조로 고정한다 — 둘 다 뮤테이션이 드러난다.
+ * 테스트 헤더 참고) 마크업으로는 음영·보조선을 볼 수 없다. 그래서 차트 배선은 소스 대조로
+ * 고정한다(실제 렌더는 trend-gap-bridge.render.test.tsx).
  */
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { planTrendGaps, type TrendGap } from "@/lib/viz/trend-gap";
-import { sparkPoints } from "@/app/[locale]/(dash)/dashboard/_components/overview-kpi-cards";
-import type { LiveTrend } from "@/app/[locale]/(dash)/dashboard/_data/live";
 
 const GAP: TrendGap = { reason: "collection_error" };
-
-// ── ① 스파크라인 매핑이 마커를 옮긴다 ───────────────────────────────────────
-
-const TREND: LiveTrend = {
-  unit: "week",
-  lastMeasuredAt: "2026-08-31T00:00:00.000Z",
-  totalAnswers: 3,
-  points: [
-    { bucketStart: "2026-08-17", firstAt: null, lastAt: null, measuredDays: 7, answers: 10, values: { visibility: 40 } },
-    // 숨긴 회차 — 값이 전부 없고 마커만 있다(계약).
-    { bucketStart: "2026-08-24", firstAt: null, lastAt: null, measuredDays: 0, answers: 0, values: {}, gap: GAP },
-    { bucketStart: "2026-08-31", firstAt: null, lastAt: null, measuredDays: 7, answers: 12, values: { visibility: 46 } },
-  ],
-};
-
-describe("sparkPoints — 갭 마커를 떨어뜨리지 않는다", () => {
-  const pts = sparkPoints(TREND, "visibility");
-
-  it("갭 슬롯에 마커가 실려 온다", () => {
-    expect(pts.map((p) => p.bucketStart)).toEqual(["2026-08-17", "2026-08-24", "2026-08-31"]);
-    expect(pts[1].gap).toEqual(GAP);
-  });
-
-  it("갭 슬롯의 값은 null 이다 — 마커와 값이 같이 있으면 계약 위반", () => {
-    expect(pts[1].value).toBeNull();
-  });
-
-  it("갭이 아닌 슬롯에는 마커가 없다(종전 표시 그대로)", () => {
-    expect(pts[0].gap).toBeUndefined();
-    expect(pts[2].gap).toBeUndefined();
-    expect(pts[0].value).toBe(40);
-    expect(pts[2].value).toBe(46);
-  });
-
-  it("WoW 는 갭을 건너뛰어 계산하지 않는다 — 갭 다음 칸의 직전은 갭(=null)이다", () => {
-    // 8/31 의 직전 슬롯은 갭이라 비교 대상이 없다. 8/17 과 비교하면 2주 변화가
-    // "WoW" 로 위장된다.
-    expect(pts[2].wow).toBeNull();
-  });
-
-  it("갭이 없는 추이는 마커가 하나도 안 붙는다", () => {
-    const clean: LiveTrend = { ...TREND, points: TREND.points.filter((p) => !p.gap) };
-    expect(sparkPoints(clean, "visibility").every((p) => p.gap === undefined)).toBe(true);
-  });
-});
 
 // ── 차트 입력이 **문자 그대로 종전과 같다** ─────────────────────────────────
 //
@@ -186,10 +139,11 @@ describe.each(TARGETS)("%s — 갭 오버레이 배선", (_label, rel, seriesKey
 });
 
 // ── ③ 오버뷰 순위 카드 y 축 배선 (QA 2차 #1) — 순수 함수 테스트는 배선을 못 지킨다 ──────
-describe("오버뷰 순위 카드 y 축 — sparkYDomain 배선", () => {
+describe("오버뷰 순위 카드 y 축 — 화면의 도메인 배선", () => {
   const src = fs.readFileSync(path.join(REPO, TARGETS[0][1]), "utf8");
-  it('YAxis 가 sparkYDomain 을 탄다 — ["auto","auto"] 로 되돌리면 0.5위 변동이 플롯을 다 먹는다', () => {
-    expect(src).toContain("domain={sparkYDomain(points, isRank)}");
+  // 순위 카드의 도메인 [1, max(5, ⌈관측최대⌉)] 은 card-trend 화면이 계산해 보낸다.
+  it('YAxis 가 화면이 보낸 domain 을 탄다 — ["auto","auto"] 로 되돌리면 0.5위 변동이 플롯을 다 먹는다', () => {
+    expect(src).toContain("<YAxis hide domain={domain} reversed={isRank} />");
     expect(src).not.toContain('["auto", "auto"]');
   });
 });
@@ -292,27 +246,5 @@ describe("TypeKpiTrend — 축 id 배선", () => {
   it("음영·보조선이 비율 축(pct)에 붙는다", () => {
     expect(src).toContain('trendGapAreas(gapPlan.areas, { yAxisId: "pct" })');
     expect(src).toMatch(/trendGapBridgeLines\(gapPlan\.bridges,[\s\S]{0,400}?yAxisId: "pct"/);
-  });
-});
-
-// 생산자 — 마커가 없으면 차트를 아무리 배선해도 hasGap:false 라 아무것도 안 그린다.
-describe("kpi-view 생산자 — 갭 마커 부착", () => {
-  const src = fs.readFileSync(
-    path.join(REPO, "app/[locale]/(dash)/standard/answer-analysis/_data/kpi-view.ts"),
-    "utf8",
-  );
-  it.each([
-    ["engineKpiSeries", /export function engineKpiSeries[\s\S]*?\n\}/],
-    ["favorabilityTrendPoints", /export function favorabilityTrendPoints[\s\S]*?\n\}/],
-  ])("%s 가 trendGapMarkSet 을 쓴다", (_name, re) => {
-    const body = re.exec(src)?.[0] ?? "";
-    expect(body).not.toBe("");
-    expect(body).toContain("trendGapMarkSet(axis, trend.gapBuckets)");
-  });
-
-  it("typeComboPoints 는 히어로 추이의 마커를 **옮긴다**(재판정 금지)", () => {
-    const body = /export function typeComboPoints[\s\S]*?\n\}/.exec(src)?.[0] ?? "";
-    expect(body).toContain("...(p.gap ? { gap: p.gap } : {})");
-    expect(body).not.toContain("trendGapMarkSet");
   });
 });

@@ -2,6 +2,7 @@ import "server-only";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema";
+import { localReadOnly } from "@/lib/local-readonly";
 
 // Server-only Postgres connection for Drizzle. Uses the standard connection
 // string (DATABASE_URL) — NOT supabase-js / PostgREST. The browser never reaches
@@ -56,6 +57,7 @@ const POOL_OPTIONS = {
 } as const;
 
 export function getDb() {
+  if (localReadOnly()) throw new Error("Legacy database access is disabled; read the Gold API");
   if (cached) return cached;
   const url = process.env.DATABASE_URL;
   if (!url) {

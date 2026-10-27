@@ -11,6 +11,7 @@ import type { CitationDomainLive, CitationsLive } from "@/lib/scope/result-adapt
 import { CitationsView, LoadMoreRow, hitRateDefPrefix } from "./citations-view";
 import { CitationsStandardView } from "./citations-standard-view";
 import { CitationPromptsPage, cursorPagingStep } from "./citation-prompts-page";
+import { standardVmFor, viewVmFor } from "./citation-vm.fixture";
 import {
   citationDrilldownEmptyKey,
   contentDispositionFilename,
@@ -19,6 +20,7 @@ import {
   domainListUrl,
   encodeSkeyForPath,
   isDefaultDomainQuery,
+  type PageWindow,
 } from "../_data/citation-view";
 
 // API source of the citation screens (unit U7), component side: the table reads its rows' '#'
@@ -33,7 +35,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: () => {}, push: () => {} }),
 }));
 vi.mock("server-only", () => ({}));
-const { encodeSkey } = await import("@/lib/hgh/adapters/citations");
+const { encodeSkey } = await import("@/lib/hgh/citation-route");
 
 const MESSAGES = { ko: deepMergeMessages(ko, u7ko), en: deepMergeMessages(en, u7en) };
 function render(node: React.ReactNode, locale: "ko" | "en" = "ko") {
@@ -75,7 +77,7 @@ const tbodyOf = (html: string) => html.slice(html.lastIndexOf("<tbody"), html.la
 describe("CitationsView (website / project) with an API table source", () => {
   it.each(["ko", "en"] as const)("'#' = match rank, 'load more' while a next cursor exists, no raw keys (%s)", (locale) => {
     const html = render(
-      <CitationsView data={LIVE} hideFilterPanel tableSource={{ query: "surface=website", nextCursor: "n1", total: 480 }} />,
+      <CitationsView data={LIVE} vm={viewVmFor(LIVE)} hideFilterPanel tableSource={{ query: "surface=website", nextCursor: "n1", total: 480 }} />,
       locale,
     );
     expect(html).not.toMatch(RAW);
@@ -86,16 +88,16 @@ describe("CitationsView (website / project) with an API table source", () => {
   });
 
   it("no next cursor -> no 'load more'; legacy props (no tableSource) -> client numbering, no 'load more'", () => {
-    const done = tbodyOf(render(<CitationsView data={LIVE} hideFilterPanel tableSource={{ query: "", nextCursor: null, total: 2 }} />));
+    const done = tbodyOf(render(<CitationsView data={LIVE} vm={viewVmFor(LIVE)} hideFilterPanel tableSource={{ query: "", nextCursor: null, total: 2 }} />));
     expect(done).not.toContain("더 보기");
-    const legacy = tbodyOf(render(<CitationsView data={LIVE} hideFilterPanel />));
+    const legacy = tbodyOf(render(<CitationsView data={LIVE} vm={viewVmFor(LIVE)} hideFilterPanel />));
     expect(legacy).not.toContain("더 보기");
     expect(legacy.indexOf(">1<")).toBeLessThan(legacy.indexOf("hyundai.com"));
   });
 
   it("website cards: values render; the definition text switches to the measurement unit (DC-02) only with unit=measurement", () => {
     const card = { hitPrompts: 7, ownedPrompts: 11, measuredPrompts: 40, rate: 17.5, ownedRate: 27.5 };
-    const api = render(<CitationsView data={LIVE} hideFilterPanel targetHitRate={{ ...card, unit: "measurement" }} />);
+    const api = render(<CitationsView data={LIVE} vm={viewVmFor(LIVE)} hideFilterPanel targetHitRate={{ ...card, unit: "measurement" }} />);
     expect(api).toContain("17.5%");
     expect(api).toContain("27.5%");
     // the tooltip body renders on open only; the key choice is the pure helper the card uses
@@ -117,8 +119,10 @@ describe("CitationsView (website / project): a backend outage shows the existing
   const EMPTY = ko.answerAnalysis.empty;
   const PENDING = ko.answerAnalysis.pending;
   const c = ko.answerAnalysis.citations;
-  const view = (props: Partial<React.ComponentProps<typeof CitationsView>>) =>
-    render(<CitationsView data={LIVE} hideFilterPanel tableSource={{ query: "surface=website", nextCursor: null, total: 2 }} {...props} />);
+  const view = (props: Partial<React.ComponentProps<typeof CitationsView>>) => {
+    const data = props.data === undefined ? LIVE : props.data;
+    return render(<CitationsView data={data} vm={viewVmFor(data)} hideFilterPanel tableSource={{ query: "surface=website", nextCursor: null, total: 2 }} {...props} />);
+  };
 
   it("domains / sources failed (live null + dataDegraded): the delayed card, not 'no data'", () => {
     const html = view({ data: null, dataDegraded: true });
@@ -158,7 +162,7 @@ describe("CitationsView (website / project): a backend outage shows the existing
 });
 
 describe("LoadMoreRow (D3: one request at a time)", () => {
-  const table = { active: true, rows: [], total: 9, nextCursor: "n1", status: "ready" as const, loadingMore: false, loadMore: () => {} };
+  const table = { active: true, rows: [], views: undefined, total: 9, nextCursor: "n1", status: "ready" as const, loadingMore: false, loadMore: () => {} };
   const button = (html: string) => html.match(/<button[^>]*>/)?.[0] ?? "";
   it("the button is disabled and busy while a 'load more' request is out", () => {
     expect(button(render(<table><tbody><LoadMoreRow table={table} colSpan={7} /></tbody></table>))).not.toContain('disabled=""');
@@ -173,9 +177,8 @@ describe("CitationsStandardView with an API table source", () => {
     const html = render(
       <CitationsStandardView
         data={LIVE}
-        prevSubKpis={null}
-        prevBasisDate={null}
-        typeCategories={null}
+        vm={standardVmFor(LIVE)}
+        typeChart={null}
         toneSummary={null}
         tableSource={{ query: "", nextCursor: null, total: 2 }}
       />,
@@ -188,12 +191,13 @@ describe("CitationsStandardView with an API table source", () => {
 });
 
 describe("prompts sub page in cursor mode (D5)", () => {
-  const PAGE: CitationOwnedPromptPage & { nextCursor: string | null } = {
+  const PAGE: CitationOwnedPromptPage & { nextCursor: string | null; win: PageWindow } = {
     rows: [{ id: "p1", promptText: "best EV", funnelStage: null, citations: 3, providers: ["ChatGPT"], answers: [] }],
     total: 120,
     page: 2,
     pageSize: 50,
     nextCursor: null,
+    win: { page: 2, pages: 3, from: 51, to: 100 },
   };
   it("next is disabled without a next cursor even when the total says more pages", () => {
     const html = render(<CitationPromptsPage tab="owned" page={PAGE} q="" ownedCount={2} uncitedCount={5} />);

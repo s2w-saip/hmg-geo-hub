@@ -9,6 +9,7 @@ import type { CitationsLive } from "@/lib/scope/result-adapter";
 import { CitationsStandardView } from "./citations-standard-view";
 import { CitationPromptsPage } from "./citation-prompts-page";
 import { CitationToneUrlsPage } from "./citation-tone-urls-page";
+import { standardVmFor, typeChartFor } from "./citation-vm.fixture";
 
 // next/navigation 훅은 라우터 없는 정적 렌더에서 null 을 준다 — 최소 mock.
 import { vi } from "vitest";
@@ -58,7 +59,7 @@ const RAW = /answerAnalysis\.citations\./;
 
 describe("CitationsStandardView", () => {
   it.each(["ko", "en"] as const)("renders every section without raw i18n keys (%s)", (locale) => {
-    const html = render(<CitationsStandardView data={LIVE} prevSubKpis={null} prevBasisDate={null} typeCategories={TYPES} toneSummary={TONE} />, locale);
+    const html = render(<CitationsStandardView data={LIVE} vm={standardVmFor(LIVE)} typeChart={typeChartFor(TYPES)} toneSummary={TONE} />, locale);
     expect(html).not.toMatch(RAW);
     expect(html).toContain("9.6%"); // 공식(당사) 비중
     expect(html).toContain("14.9%"); // 딜러·마켓 149/1000
@@ -71,30 +72,30 @@ describe("CitationsStandardView", () => {
     expect(html).toContain('href="/ko/standard/answer-analysis/citation/prompts?tab=owned"');
     expect(html).toContain('href="/ko/standard/answer-analysis/citation/tone-urls?tone=positive"');
   });
-  it("narrows competitor-official rows to the picked competitors (seam)", () => {
-    const html = render(<CitationsStandardView data={LIVE} prevSubKpis={null} prevBasisDate={null} typeCategories={TYPES} toneSummary={TONE} initialCompetitors={["bmw.com"]} />);
+  it("narrows competitor-official rows to the picked competitors (the server vm)", () => {
+    const html = render(<CitationsStandardView data={LIVE} vm={standardVmFor(LIVE, { search: "competitor=bmw.com" })} typeChart={typeChartFor(TYPES)} toneSummary={TONE} />);
     const tbody = html.slice(html.indexOf("<tbody"), html.indexOf("</tbody>"));
     expect(tbody).toContain("bmw.com");
     expect(tbody).not.toContain("toyota.com");
     expect(tbody).toContain("jdpower.com"); // 다른 카테고리는 그대로
   });
   it("shows degrade notices when the side aggregates are null and the empty state for a null live", () => {
-    const html = render(<CitationsStandardView data={LIVE} prevSubKpis={null} prevBasisDate={null} typeCategories={null} toneSummary={null} />);
+    const html = render(<CitationsStandardView data={LIVE} vm={standardVmFor(LIVE)} typeChart={null} toneSummary={null} />);
     // 문구에 괄호가 있어 RegExp 대신 split 으로 센다.
     expect(html.split(ko.answerAnalysis.mentions.kpi.degraded).length - 1).toBe(2);
-    expect(render(<CitationsStandardView data={null} prevSubKpis={null} prevBasisDate={null} typeCategories={null} toneSummary={null} />)).toContain(ko.answerAnalysis.empty);
+    expect(render(<CitationsStandardView data={null} vm={null} typeChart={null} toneSummary={null} />)).toContain(ko.answerAnalysis.empty);
   });
 });
 
 describe("subpages", () => {
-  const PROMPTS: CitationOwnedPromptPage = {
+  const PROMPTS = {
     rows: [{ id: "p1", promptText: "What should I do if my Kia's engine shuts down?", funnelStage: "evaluation", citations: 42, providers: ["ChatGPT"], answers: [] }],
-    total: 120, page: 2, pageSize: 50,
-  };
-  const URLS: CitationToneUrlPage = {
+    total: 120, page: 2, pageSize: 50, win: { page: 2, pages: 3, from: 51, to: 100 },
+  } satisfies CitationOwnedPromptPage & { win: unknown };
+  const URLS = {
     rows: [{ url: "https://www.hyundai.news/eu/x", domain: "hyundai.news", title: "The new IONIQ 6", promptText: "Hvad er…", citations: 42, providers: ["ChatGPT"], category: "Official (HMG)" }],
-    total: 60, page: 1, pageSize: 50,
-  };
+    total: 60, page: 1, pageSize: 50, win: { page: 1, pages: 2, from: 1, to: 50 },
+  } satisfies CitationToneUrlPage & { win: unknown };
   it("prompts page renders tabs · range · rows · pager without raw keys", () => {
     const html = render(<CitationPromptsPage tab="owned" page={PROMPTS} q="" ownedCount={348} uncitedCount={665} />);
     expect(html).not.toMatch(RAW);

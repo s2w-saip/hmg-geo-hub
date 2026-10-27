@@ -166,3 +166,35 @@ describe("MarkdownAnswer — 감성 밑줄", () => {
     expect(html).not.toContain("node=");
   });
 });
+
+// The drilldown routes send the highlighter term list and each span's sentence precomputed
+// (screen mention/drill-*); the rendering must equal the one built from the raw surfaces.
+describe("MarkdownAnswer — precomputed highlight terms and span sentences", () => {
+  it("highlightTerms render exactly as brandTerms / modelTerms did", async () => {
+    const { highlightTermsOf } = await import("./markdown-answer");
+    const text = "제네시스 GV70 is the best. The IS and es models; 제네시스가 1위.";
+    const brand = ["제네시스", " Genesis "];
+    const model = ["GV70", "IS", "es"];
+    expect(render(<MarkdownAnswer text={text} brandTerms={[]} modelTerms={[]} highlightTerms={highlightTermsOf(brand, model)} />)).toBe(
+      render(<MarkdownAnswer text={text} brandTerms={brand} modelTerms={model} />),
+    );
+    // longest first (UTF-16 length), ties in first-added order: model surfaces before brand ones
+    expect(highlightTermsOf(brand, model)).toEqual([
+      { term: "genesis", kind: "brand" },
+      { term: "gv70", kind: "model" },
+      { term: "제네시스", kind: "brand" },
+      { term: "is", kind: "model", forms: ["IS"] },
+      { term: "es", kind: "model", forms: ["es"] },
+    ]);
+  });
+
+  it("a span's sentence comes from its `text` when the route sent it", () => {
+    const text = "제네시스 GV70 은 조용하다. 가격은 비싸다.";
+    const spans = [{ start: 0, end: 18, sentiment: "positive" as const, evidence: [] }];
+    const derived = render(<MarkdownAnswer text={text} brandTerms={[]} modelTerms={[]} sentimentSpans={spans} />);
+    const sent = render(<MarkdownAnswer text={text} brandTerms={[]} modelTerms={[]} sentimentSpans={[{ ...spans[0], text: "제네시스 GV70 은 조용하다." }]} />);
+    expect(sent).toBe(derived);
+    const other = render(<MarkdownAnswer text={text} brandTerms={[]} modelTerms={[]} sentimentSpans={[{ ...spans[0], text: "가격은 비싸다." }]} />);
+    expect(other).toMatch(/조용하다\. <mark class="geo-ul geo-ul--positive" data-sentiment-i="0"[^>]*>가격은 비싸다\.<\/mark>/);
+  });
+});

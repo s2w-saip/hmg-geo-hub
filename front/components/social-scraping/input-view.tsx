@@ -16,7 +16,7 @@ import {
 import { cn } from "@/lib/utils";
 import { getPresetById } from "@/lib/keyword/location-presets";
 import { countryName } from "@/lib/geo-catalog/country-name";
-import { RESEARCH_PURPOSES, getSeedKeywords, type ResearchPurposeId } from "./sample-data";
+import { RESEARCH_PURPOSES, getSeedKeywords, type ResearchPurposeId } from "./source-model";
 
 // S1 — research input. The keyword + purpose seed the (fake) research run.
 // `defaultKeyword` lets a parent prefill from the admin's standard keyword.

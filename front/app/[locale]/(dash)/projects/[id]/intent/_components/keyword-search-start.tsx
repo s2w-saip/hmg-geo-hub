@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { type SearchIntent } from "../_data/sample";
+import { type SearchIntent } from "../_data/model";
 import { addTrackedKeywords } from "../_actions";
 
 const INTENT_TONE: Record<SearchIntent, string> = {

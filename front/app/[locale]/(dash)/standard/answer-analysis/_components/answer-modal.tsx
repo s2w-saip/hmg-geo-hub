@@ -13,10 +13,9 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { displayCitationUrl } from "@/lib/url-display";
-import type { MentionAnswerLive } from "@/lib/scope/result-adapter";
 import type { Sentiment, SentimentSpan } from "@/lib/answer-sentiment/spans";
 import type { StanceEvidenceMatch } from "@/lib/answer-sentiment/stance-evidence";
+import type { DrillAnswer } from "../_data/drilldown-screen-types";
 import { MarkdownAnswer } from "./markdown-answer";
 
 // Modal that shows the REAL AI answer behind a (brand, prompt) cell, dressed up
@@ -28,8 +27,15 @@ import { MarkdownAnswer } from "./markdown-answer";
 // job_id (/api/scope/answer, mirror-backed: body + the job's full citation list
 // + per-entity mention counts). "unavailable" now only means the mirror hasn't
 // synced this job's body yet → we still show what we detected (brand + models).
+//
+// The route (screen mention/drill-answer) answers the modal's values precomputed: each citation's
+// label, the own / competitor brand split, the model chip labels, the links found in the text when
+// the job has no citations (`sources`), each sentiment span's sentence (`text`) and the stance
+// tags grouped by turn (`stanceGroups`). The modal only renders them.
 
-// Client contract of /api/scope/answer (MirrorAnswerDetail passthrough).
+type BrandMention = { name: string; count: number; tracked: boolean };
+
+// Client contract of /api/scope/answer.
 interface AnswerDetailPayload {
   available?: boolean;
   answerText?: string;
@@ -39,13 +45,24 @@ interface AnswerDetailPayload {
     domain: string | null;
     title: string | null;
     category: string | null;
+    /** title, else domain, else the display URL (a row without URL: title or domain). */
+    label?: string | null;
+    /** domain shown next to the title (both present). */
+    showDomain?: boolean;
   }[];
-  brandMentions?: { name: string; count: number; tracked: boolean }[];
-  modelMentions?: { name: string; count: number; brand: string | null }[];
-  sentiment?: { spans: SentimentSpan[]; skipped: number };
+  brandMentions?: BrandMention[];
+  ownBrandMentions?: BrandMention[];
+  competitorBrandMentions?: BrandMention[];
+  /** label = the chip text (the rolled-up brand prefixed unless the name holds it). */
+  modelMentions?: { name: string; count: number; brand: string | null; label?: string }[];
+  /** Links found in the answer text (first 12), shown only when there are no citations. */
+  sources?: { url: string; host: string }[];
+  sentiment?: { spans: (SentimentSpan & { text?: string })[]; skipped: number };
   // 답변 단위 브랜드 스탠스(0072). **발생 감성(sentiment.spans)과 다른 축**이라
   // 키가 따로다 — 없으면 줄 자체가 안 그려지고, 발생 감성으로 대체하지 않는다.
   stances?: AnswerStanceTag[];
+  /** stances by turn, turns ascending (within a turn: own first, then brand). */
+  stanceGroups?: AnswerStanceGroup[];
 }
 
 export interface AnswerStanceTag {
@@ -64,6 +81,12 @@ export interface AnswerStanceTag {
    */
   evidenceMatch: StanceEvidenceMatch;
   reason: string | null;
+}
+
+/** The stance tags of one answer turn. */
+export interface AnswerStanceGroup {
+  turnIndex: number;
+  stances: AnswerStanceTag[];
 }
 
 type BodyState =
@@ -86,7 +109,7 @@ export function AnswerModal({
 }: {
   brand: string;
   promptText: string;
-  answers: MentionAnswerLive[];
+  answers: DrillAnswer[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   // "citation": 인용 화면의 프롬프트 열람 — brand 자리에 카드 제목이 들어가
@@ -274,7 +297,7 @@ export function AnswerModal({
                   ) : null}
                 </div>
                 {body?.status === "ready" && body.detail.stances?.length ? (
-                  <StanceTags stances={body.detail.stances} />
+                  <StanceTags groups={body.detail.stanceGroups ?? []} />
                 ) : null}
                 <div className="rounded-2xl rounded-tl-sm border border-border bg-card px-4 py-3 shadow-soft">
                   {body?.status === "ready" ? (
@@ -283,6 +306,7 @@ export function AnswerModal({
                       text={body.text}
                       brandTerms={current.highlights.brand}
                       modelTerms={current.highlights.model}
+                      highlightTerms={current.highlightTerms}
                       sentimentSpans={body.detail.sentiment?.spans}
                       enabledSentiments={enabledSentiments}
                       onSentimentUnpainted={onSentimentUnpainted}
@@ -310,10 +334,12 @@ export function AnswerModal({
                   <>
                     <AnswerCitations
                       citations={body.detail.citations ?? []}
-                      fallbackText={body.text}
+                      sources={body.detail.sources ?? []}
                     />
                     <MentionStats
                       brandMentions={body.detail.brandMentions ?? []}
+                      ownBrandMentions={body.detail.ownBrandMentions ?? []}
+                      competitorBrandMentions={body.detail.competitorBrandMentions ?? []}
                       modelMentions={body.detail.modelMentions ?? []}
                     />
                   </>
@@ -382,17 +408,17 @@ export function AnswerModal({
 }
 
 // The job's cited sources. Primary source is the mirror's scope_citations feed
-// (전수 — "인용된 출처 모두 표기"); when a job has no synced citations we fall
-// back to parsing links out of the answer text (the old heuristic path).
+// (전수 — "인용된 출처 모두 표기"); when a job has no synced citations the route
+// sends the links found in the answer text instead (`sources`, the old heuristic path).
 function AnswerCitations({
   citations,
-  fallbackText,
+  sources,
 }: {
   citations: NonNullable<AnswerDetailPayload["citations"]>;
-  fallbackText: string;
+  sources: NonNullable<AnswerDetailPayload["sources"]>;
 }) {
   const t = useTranslations("answerAnalysis.mentions.answerModal");
-  if (citations.length === 0) return <AnswerSources text={fallbackText} />;
+  if (citations.length === 0) return <AnswerSources sources={sources} />;
   return (
     <div className="mt-2 flex flex-col gap-1.5 rounded-xl border border-border bg-card px-3.5 py-2.5">
       <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-foreground">
@@ -410,15 +436,15 @@ function AnswerCitations({
                 rel="noopener noreferrer"
                 className="inline-flex min-w-0 items-start gap-1 text-[11px] text-brand-700 hover:underline"
               >
-                <span className="min-w-0 break-all">{c.title || c.domain || displayCitationUrl(c.url)}</span>
+                <span className="min-w-0 break-all">{c.label}</span>
                 <ExternalLink className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
               </a>
             ) : (
               <span className="min-w-0 break-all text-[11px] text-foreground">
-                {c.title || c.domain}
+                {c.label}
               </span>
             )}
-            {c.domain && c.title ? (
+            {c.showDomain ? (
               <span className="shrink-0 text-[10px] text-muted-foreground">{c.domain}</span>
             ) : null}
           </li>
@@ -451,10 +477,11 @@ const STANCE_DOT: Record<Sentiment, string> = {
 };
 
 export function StanceTags({
-  stances,
+  groups,
   initialOpenId = null,
 }: {
-  stances: AnswerStanceTag[];
+  /** The answer's stance tags by turn (the route's stanceGroups). */
+  groups: AnswerStanceGroup[];
   /**
    * 렌더 테스트 seam — 근거 패널 분기. 화면 기본은 닫힘(favorability 탭의 initialCounts 와
    * 같은 자세). 값은 `${turnIndex}:${entityId}` (= tagKey).
@@ -463,17 +490,17 @@ export function StanceTags({
 }) {
   const t = useTranslations("answerAnalysis.mentions.answerModal.stance");
   const [openId, setOpenId] = useState<string | null>(initialOpenId);
-  const open = stances.find((s) => tagKey(s) === openId) ?? null;
-  // 턴별 그룹 — 2턴 답변에서 같은 브랜드가 두 번 나오므로 "브랜드가 중복된 배지"로
-  // 보이지 않으려면 턴이 화면에 드러나야 한다. 턴이 하나뿐이면(대다수) 헤더를 안 단다.
-  const turns = [...new Set(stances.map((s) => s.turnIndex))].sort((a, b) => a - b);
-  const multiTurn = turns.length > 1;
+  const open = groups.flatMap((g) => g.stances).find((s) => tagKey(s) === openId) ?? null;
+  // 턴별 그룹(라우트가 턴 오름차순으로 묶어 보낸다) — 2턴 답변에서 같은 브랜드가 두 번 나오므로
+  // "브랜드가 중복된 배지"로 보이지 않으려면 턴이 화면에 드러나야 한다. 턴이 하나뿐이면(대다수)
+  // 헤더를 안 단다.
+  const multiTurn = groups.length > 1;
   return (
     <div className="mb-1.5 flex flex-col gap-1.5">
       <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
         <span className="font-semibold text-foreground">{t("tagTitle")}</span>
       </div>
-      {turns.map((turn) => (
+      {groups.map(({ turnIndex: turn, stances }) => (
         <div key={turn} className="flex flex-wrap items-center gap-1.5 text-[11px]">
           {multiTurn ? (
             <span className="text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
@@ -481,7 +508,6 @@ export function StanceTags({
             </span>
           ) : null}
           {stances
-            .filter((s) => s.turnIndex === turn)
             .map((s) => {
               const key = tagKey(s);
               const detail = s.evidenceText || s.reason;
@@ -550,18 +576,20 @@ export function StanceTags({
 }
 
 // 이 답변에서 감지된 브랜드(자사/경쟁 분리) + 연관 차량모델의 언급 횟수. 자사 =
-// TRACKED(Hyundai/Kia/Genesis) — 미러 detail의 tracked 플래그가 판정 소스.
+// TRACKED(Hyundai/Kia/Genesis) — 미러 detail의 tracked 플래그가 판정 소스(라우트가 나눠 보낸다).
 function MentionStats({
   brandMentions,
+  ownBrandMentions: own,
+  competitorBrandMentions: competitors,
   modelMentions,
 }: {
-  brandMentions: NonNullable<AnswerDetailPayload["brandMentions"]>;
+  brandMentions: BrandMention[];
+  ownBrandMentions: BrandMention[];
+  competitorBrandMentions: BrandMention[];
   modelMentions: NonNullable<AnswerDetailPayload["modelMentions"]>;
 }) {
   const t = useTranslations("answerAnalysis.mentions.answerModal");
   if (brandMentions.length === 0 && modelMentions.length === 0) return null;
-  const own = brandMentions.filter((b) => b.tracked);
-  const competitors = brandMentions.filter((b) => !b.tracked);
   const chip = (name: string, count: number, key: string, highlight: boolean) => (
     <span
       key={key}
@@ -603,16 +631,9 @@ function MentionStats({
           </span>
           <div className="flex flex-wrap gap-1.5">
             {modelMentions.map((m) =>
-              chip(
-                // 모델 display name이 이미 브랜드를 포함하면(예: "Kia Sportage")
-                // 롤업 브랜드를 덧붙이지 않는다.
-                m.brand && !m.name.toLowerCase().includes(m.brand.toLowerCase())
-                  ? `${m.brand} ${m.name}`
-                  : m.name,
-                m.count,
-                `${m.brand}-${m.name}`,
-                false,
-              ),
+              // label: 모델 display name이 이미 브랜드를 포함하면(예: "Kia Sportage")
+              // 롤업 브랜드를 덧붙이지 않은 칩 문구(라우트가 만든다).
+              chip(m.label ?? m.name, m.count, `${m.brand}-${m.name}`, false),
             )}
           </div>
         </div>
@@ -621,28 +642,10 @@ function MentionStats({
   );
 }
 
-// Parse citation sources straight from the answer text (markdown links + bare
-// URLs), deduped by URL — fallback when the mirror has no citations for the job.
-function extractSources(text: string): { url: string; host: string }[] {
-  const urls = new Set<string>();
-  for (const m of text.matchAll(/\]\((https?:\/\/[^\s)]+)\)/g)) urls.add(m[1]);
-  for (const m of text.matchAll(/(https?:\/\/[^\s)<>\]]+)/g)) {
-    urls.add(m[1].replace(/[.,;)]+$/, "")); // trim trailing punctuation
-  }
-  return [...urls].slice(0, 12).map((url) => {
-    let host = url;
-    try {
-      host = new URL(url).hostname.replace(/^www\./, "");
-    } catch {
-      /* keep raw url as the label */
-    }
-    return { url, host };
-  });
-}
-
-function AnswerSources({ text }: { text: string }) {
+// Citation sources parsed from the answer text (markdown links + bare URLs, deduped by URL, first
+// 12, host without "www.") — the route's fallback when the mirror has no citations for the job.
+function AnswerSources({ sources }: { sources: NonNullable<AnswerDetailPayload["sources"]> }) {
   const t = useTranslations("answerAnalysis.mentions.answerModal");
-  const sources = useMemo(() => extractSources(text), [text]);
   if (sources.length === 0) return null;
   return (
     <div className="mt-2 flex flex-col gap-1.5 rounded-xl border border-border bg-card px-3.5 py-2.5">

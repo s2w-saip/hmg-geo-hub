@@ -1,19 +1,18 @@
 import type { ScopeClient } from "./client";
-import { MockScopeClient } from "./mock";
 import { HttpScopeClient } from "./http";
+import { localReadOnly } from "@/lib/local-readonly";
 
 export type { ScopeClient } from "./client";
 export * from "./types";
 
 let cached: ScopeClient | null = null;
 
-// Selects the implementation by SCOPE_MODE (mock | live). Defaults to mock so
-// the app runs fully without a scope API key. Switching to live is env-only —
-// no code change (scope-gateway spec).
+// Legacy API transport only. There is no synthetic implementation or default.
 export function getScopeClient(): ScopeClient {
+  if (localReadOnly()) throw new Error("Scope API access is disabled; read the Gold database");
   if (cached) return cached;
 
-  const mode = process.env.SCOPE_MODE ?? "mock";
+  const mode = process.env.SCOPE_MODE;
   if (mode === "live") {
     const baseUrl = process.env.SCOPE_API_BASE;
     const apiKey = process.env.SCOPE_API_KEY;
@@ -24,11 +23,11 @@ export function getScopeClient(): ScopeClient {
     }
     cached = new HttpScopeClient(baseUrl, apiKey);
   } else {
-    cached = new MockScopeClient();
+    throw new Error("Scope API is not configured; sample data has been removed");
   }
   return cached;
 }
 
 export function isMockMode(): boolean {
-  return (process.env.SCOPE_MODE ?? "mock") !== "live";
+  return false;
 }

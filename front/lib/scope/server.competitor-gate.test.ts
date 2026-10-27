@@ -55,9 +55,11 @@ describe("경쟁사 행 — 화면 키 게이트", () => {
     expect(body).toContain("fetchStandardMentions(filters, { budget: opts.budget })");
   });
 
-  it("대시보드 페이지는 미러 페처를 직접 부르지 않는다 — 경계는 한 곳이다", () => {
-    expect(dashboard).toContain("fetchStandardCompetitorSources(filters)");
+  it("대시보드 페이지는 미러 페처를 직접 부르지 않는다 — 경쟁사 행은 화면 한 곳에서 읽는다", () => {
+    // 경쟁사 행의 값·Δ 는 overview/card-competitors 화면(back/bff/screens/overview.py)이 낸다.
+    expect(dashboard).toContain('screenGet<CardCompetitorsView>("overview/card-competitors"');
     for (const fn of [
+      "fetchStandardCompetitorSources(",
       "fetchStandardMentions(",
       "fetchStandardKpiBrandTrend(",
       "fetchStandardKpiFirstPosition(",
@@ -147,7 +149,7 @@ describe("경쟁사 Δ — 회차 축 2단 (B2)", () => {
     expect(src).not.toContain('mirrorCache("kpi-first-position",');
   });
 
-  it("degrade 라벨은 종전과 같다 — 고지 지면(`COMPETITOR_LABELS`)이 그것을 읽는다", () => {
+  it("degrade 라벨은 종전과 같다", () => {
     for (const [fn, label] of [
       ["fetchStandardCompetitorBrandTrend", "brandTrend"],
       ["fetchStandardCompetitorFirstPosition", "firstPosition"],

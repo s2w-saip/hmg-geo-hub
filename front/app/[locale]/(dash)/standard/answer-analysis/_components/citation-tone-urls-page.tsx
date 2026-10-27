@@ -21,7 +21,6 @@ import type { CitationTone, CitationToneUrlPage } from "@/lib/db/repositories/sc
 import { citationCategorySlug } from "@/lib/citation-categorizer/taxonomy";
 import { displayCitationUrl } from "@/lib/url-display";
 import { cn } from "@/lib/utils";
-import { pageWindow } from "../_data/citation-view";
 import { categoryColor } from "./citations-view";
 import { Pager, SubpageSearchBox, TabLink, useCursorPaging, useSubpageNav, type CursorAware } from "./citation-prompts-page";
 
@@ -110,7 +109,7 @@ function ToneUrlsView({ tone, page, q, byDomain, counts: served }: ToneUrlsProps
   const tKpi = useTranslations("answerAnalysis.mentions.kpi");
   const tCat = useTranslations("citationCategories");
   const nav = useSubpageNav();
-  const win = page ? pageWindow(page.total, page.page, page.pageSize) : null;
+  const win = page?.win ?? null;
   const cursorNav = useCursorPaging(page);
   const label = (name: string) => { const s = citationCategorySlug(name); return s ? tCat(s) : name; };
 

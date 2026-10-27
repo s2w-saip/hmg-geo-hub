@@ -15,20 +15,67 @@
 // 호출부가 이미 판정해 행에 실어 온다.
 
 import type { CompetitorBrandValue } from "./result-adapter";
-import {
-  brandKey,
-  competitorValueOf,
-  COMPETITOR_DELTA_KEYS,
-  type CompetitorMetricKey,
-} from "@/lib/kpi/competitor-values";
 import { RANK_TABLE_TOP_BRANDS } from "@/lib/kpi/first-position-rank";
 
-// 값 산식(`competitorValueOf`)·Δ 키 목록·브랜드 키는 **여기 있지 않다**(2026-09-20).
-// 언급 화면이 같은 값을 내야 해서 `lib/kpi/competitor-values.ts` 로 올렸고, 이 파일은
-// **후보 선정 규칙**(어느 브랜드를 그리는가)만 남는다. 재수출은 종전 호출부 호환용이다 —
-// 구현이 한 벌이라 두 화면이 갈릴 수 없다.
-export { brandKey, competitorValueOf, COMPETITOR_DELTA_KEYS };
-export type { CompetitorMetricKey };
+/**
+ * 카드 5종의 키. `lib/kpi/overview-card-values.ts::OverviewKpiKey` 와 **같은 어휘**여야
+ * 하고, `competitor-row.values.test.ts` 가 그것을 단언한다(둘이 갈리면 Δ 가 조용히 빈다).
+ */
+export type CompetitorMetricKey =
+  | "visibility"
+  | "shareOfVoice"
+  | "sentiment"
+  | "position"
+  | "citationShare";
+
+/**
+ * Δ 를 그리는 지표 — 셋. `citationShare` 는 경쟁사 값이 인용 도메인에서 오고
+ * `sentiment` 는 Δ 원천이 없다.
+ *
+ * ⚠️ 경쟁사 **우호도 Δ 를 새로 만들지 않는다**(제품 책임자 2026-09-20 지시 ⑤). 값을 더하는 것은
+ *    결정 사항이고, 원천은 존재한다 — 회차 축 브랜드 시리즈에 감정 4열이 실려 있다
+ *    (`summary_trend_brands.positive/neutral/negative/mixed`). 다만 오늘 `BrandTrendResult`
+ *    의 버킷 행(`exposurePct`·`sharePct`)에는 그 열이 안 실려 있어, 켜려면 `toBrandTrend`
+ *    가 감정 4열을 버킷에 싣는 변경이 선행돼야 한다.
+ */
+export const COMPETITOR_DELTA_KEYS: readonly CompetitorMetricKey[] = [
+  "visibility",
+  "shareOfVoice",
+  "position",
+];
+
+/** 표기 흔들림(대소문자·앞뒤 공백)까지 접는 브랜드 키 — 중복 행·값 대조의 정본. */
+export const brandKey = (b: string): string => b.trim().toLowerCase();
+
+/**
+ * 지표별 경쟁사 값. `null` = 이 지표로는 그릴 수 없는 행(후보에서 빠진다).
+ *
+ * 입력은 **구조적 상위 타입도 받는다** — `MentionsBrandLive` 는 `CompetitorBrandValue` 의
+ * 상위 타입이라 그대로 들어온다. 그래서 미러 행과 사실표 행에 **같은 식**이 걸린다:
+ * 언급 화면의 종전 삼항식(`b.mentions > 0 ? (exposure ? b.mentionRate : b.share) : null`)과
+ * `visibility`·`shareOfVoice` 가지가 바이트 동일이다(`competitor-row.values.test.ts` 가 단언).
+ */
+export function competitorValueOf(
+  b: CompetitorBrandValue,
+  key: CompetitorMetricKey,
+): number | null {
+  switch (key) {
+    case "visibility":
+      return b.mentions > 0 ? b.mentionRate : null;
+    case "shareOfVoice":
+      return b.mentions > 0 ? b.share : null;
+    case "position":
+      return b.avgPosition;
+    case "sentiment": {
+      const s = b.sentiment;
+      if (!s) return null;
+      const total = s.positive + s.neutral + s.negative + s.mixed;
+      return total > 0 ? Math.round((1000 * s.positive) / total) / 10 : null;
+    }
+    case "citationShare":
+      return null;
+  }
+}
 
 /**
  * 같은 브랜드가 두 번 뜨는 것을 막는다 (QA #22 부수 — 이미지의 Tesla 2행).

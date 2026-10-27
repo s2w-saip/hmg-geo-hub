@@ -6,12 +6,12 @@ import { geoNaturalEarth1, geoPath } from "d3-geo";
 import { feature } from "topojson-client";
 import type { Topology, GeometryCollection } from "topojson-specification";
 import type { Feature, Geometry } from "geojson";
-import worldTopo from "world-atlas/countries-110m.json";
-import { GEO_COUNTRY_NUMERIC } from "@/lib/geo-catalog";
-import { rhqLabel, countriesForRhq } from "@/lib/rhq";
+import worldTopo from "world-atlas/countries-50m.json";
+import { countryName } from "@/lib/geo-catalog";
+import { rhqLabel } from "@/lib/rhq";
 import { cn } from "@/lib/utils";
-import type { GeoRegionRow, LiveGeo } from "../_data/live";
-import { metricValue, type OverviewKpiKey } from "../_data/overview-metrics";
+import type { GeoCountryView, GeoRegionView, GeoView } from "../_data/screen-types";
+import type { OverviewKpiKey } from "../_data/overview-metrics";
 
 // 시장 지도 — live.geo 의 (RHQ 권역, HMG 점유율) 집계를 world-atlas TopoJSON 폴리곤에
 // 칠하는 코로플레스. 단위는 국가가 아니라 **권역**: 한 권역에 속한 모든 국가 폴리곤을
@@ -20,7 +20,8 @@ import { metricValue, type OverviewKpiKey } from "../_data/overview-metrics";
 // 국가" 집합에 fitExtent 되므로 — 데이터가 이미 서버에서 사용자 스코프로 좁혀져 오기
 // 때문에 — HQ/admin 은 사실상 전 세계, 권역(RHQ) 사용자는 자기 권역으로 자동 줌된다.
 // 측정 데이터 없는 국가는 bg-soft 회색 배경. 페어 컴포넌트인 GeoSnapshot 테이블과 동일
-// 데이터(권역 행 = m.hmgSov).
+// 데이터(권역 행 = m.hmgSov). 행의 KPI 값·최대 경쟁사, 폴리곤 바인딩(국가 numeric id, 권역 행의
+// 소속국)과 국가 단위 색 범위는 API(overview/geo · website/geo)가 계산해 온다.
 //
 // 색·테두리는 globals.css 토큰만 사용(컴포넌트 내 hex 금지): fill 은 brand-700,
 // 강도는 fill-opacity 로만 표현.
@@ -35,8 +36,21 @@ export type WorldFeature = Feature<Geometry, { name: string }>;
 // 폴리곤(numeric ISO)마다 그 국가가 속한 **권역**의 집계행을 붙인다 — 색·툴팁 모두
 // 권역 단위. label 은 지역화된 권역명(rhqLabel).
 export interface RegionDatum {
-  market: GeoRegionRow;
+  market: GeoRegionView | GeoCountryView;
   label: string;
+  code?: string;
+}
+
+/** Bind polygons to measured Gold countries; geography never supplies KPI values. */
+export function countryMapData(geo: GeoView, locale: string): Map<string, RegionDatum> {
+  const data = new Map<string, RegionDatum>();
+  for (const region of geo.markets) {
+    for (const country of region.countries) {
+      const numeric = country.numeric;
+      if (numeric) data.set(numeric, { market: country, label: countryName(country.code, locale), code: country.code });
+    }
+  }
+  return data;
 }
 
 // 미리 투영된 폴리곤 1개. id 는 React key: feature id(numeric ISO), 없으면 인덱스 기반.
@@ -57,11 +71,14 @@ export function buildGeoShapes(
   project: (f: WorldFeature) => string | null,
   dataByNumeric: ReadonlyMap<string, RegionDatum>,
 ): GeoShape[] {
+  const usedIds = new Set<string>();
   return features
     .map((f, i) => {
       const hasId = f.id !== null && f.id !== undefined;
-      const id = hasId ? String(f.id) : `noid-${i}`;
-      return { id, d: project(f), datum: hasId ? dataByNumeric.get(id) : undefined };
+      const countryId = hasId ? String(f.id) : `noid-${i}`;
+      const id = usedIds.has(countryId) ? `${countryId}-${i}` : countryId;
+      usedIds.add(id);
+      return { id, d: project(f), datum: hasId ? dataByNumeric.get(countryId) : undefined };
     })
     .filter((s): s is GeoShape => Boolean(s.d));
 }
@@ -75,30 +92,46 @@ const GeoShapes = memo(function GeoShapes({
   metric,
   onHover,
   onLeave,
+  domain,
+  activeCountry,
 }: {
   shapes: readonly GeoShape[];
   metric: OverviewKpiKey;
   onHover: (datum: RegionDatum, clientX: number, clientY: number) => void;
   onLeave: () => void;
+  domain?: readonly [number, number];
+  activeCountry?: string | null;
 }) {
   return (
     <>
       {shapes.map((s) => (
         <path
           key={s.id}
+          data-geo-country={s.datum?.code}
+          tabIndex={s.datum ? 0 : undefined}
+          aria-label={s.datum?.label}
           d={s.d}
           className={cn(
-            "stroke-[var(--color-card)] transition-[fill-opacity]",
+            "transition-[fill-opacity,stroke-width] focus-visible:outline-none",
+            s.datum?.code && s.datum.code === activeCountry
+              ? "stroke-[var(--color-accent-gold)]"
+              : "stroke-[var(--color-card)]",
             s.datum
               ? "cursor-pointer fill-[var(--color-brand-700)]"
               : "fill-[var(--color-bg-soft)]",
           )}
-          strokeWidth={0.4}
-          fillOpacity={s.datum ? metricOpacity(s.datum.market, metric) : 1}
+          data-highlighted={s.datum?.code && s.datum.code === activeCountry ? "true" : undefined}
+          strokeWidth={s.datum?.code && s.datum.code === activeCountry ? 1.8 : 0.4}
+          fillOpacity={s.datum?.code && s.datum.code === activeCountry ? 1 : s.datum ? metricOpacity(s.datum.market, metric, domain) : 1}
           onMouseMove={
             s.datum ? (e) => onHover(s.datum!, e.clientX, e.clientY) : undefined
           }
           onMouseLeave={s.datum ? onLeave : undefined}
+          onFocus={s.datum ? (e) => {
+            const box = e.currentTarget.getBoundingClientRect();
+            onHover(s.datum!, box.x + box.width / 2, box.y + box.height / 2);
+          } : undefined}
+          onBlur={s.datum ? onLeave : undefined}
         />
       ))}
     </>
@@ -110,14 +143,23 @@ export function GeoMap({
   metric = "shareOfVoice",
   metricLabel,
   bare = false,
+  level = "region",
+  domain,
+  activeCountry,
+  onCountryHover,
 }: {
-  geo: LiveGeo;
+  geo: GeoView;
   /** Overview KPI 칩(2026-09-02) — 색 강도·툴팁 값이 이 지표를 따른다. 기본 = 점유율(종전). */
   metric?: OverviewKpiKey;
   /** 지표 표시명(호출부 번역). 미지정 = 종전 "{brand} 점유율". */
   metricLabel?: string;
   /** 테두리·제목 없이 지도만(Overview GEO 섹션 안에 삽입, 피그마 611:135). */
   bare?: boolean;
+  level?: "region" | "country";
+  /** Country level: the colour range of the shown countries (API, or the picked countries). */
+  domain?: readonly [number, number];
+  activeCountry?: string | null;
+  onCountryHover?: (code: string | null) => void;
 }) {
   const t = useTranslations("dashboard.geo");
   const tOv = useTranslations("dashboard.overview");
@@ -136,24 +178,20 @@ export function GeoMap({
     return fc.features.filter((f) => String(f.id) !== ANTARCTICA);
   }, []);
 
-  // numeric ISO → 그 국가가 속한 권역의 집계행. 측정된 국가만이 아니라 권역 정본
-  // (countriesForRhq)의 **모든** 소속 국가를 같은 RegionDatum 으로 칠해, 지도에서
-  // 권역 전체가 한 블록으로 동일 색이 되게 한다(단위 = 권역). 측정값 없는 소속국도
-  // 권역 집계 색을 공유한다.
+  // numeric ISO → 그 국가가 속한 권역의 집계행. 권역 단위는 권역 정본의 **모든** 소속 국가
+  // (API 의 `numerics`)를 같은 RegionDatum 으로 칠해 권역 전체가 한 블록으로 동일 색이 된다.
   const dataByNumeric = useMemo(() => {
+    if (level === "country") return countryMapData(geo, locale);
     const map = new Map<string, RegionDatum>();
     for (const m of geo.markets) {
       const datum: RegionDatum = {
         market: m,
         label: rhqLabel(m.region, locale === "en" ? "en" : "ko") ?? m.region,
       };
-      for (const iso of countriesForRhq(m.region)) {
-        const num = GEO_COUNTRY_NUMERIC[iso];
-        if (num) map.set(num, datum);
-      }
+      for (const num of m.numerics) map.set(num, datum);
     }
     return map;
-  }, [geo, locale]);
+  }, [geo, locale, level]);
 
   // 투영을 "측정된 국가" 집합에 맞춰 줌(권역 담당은 자기 권역으로 자동 줌). 측정값이
   // 없으면 전 세계로 폴백.
@@ -183,8 +221,12 @@ export function GeoMap({
   const handleHover = useCallback((datum: RegionDatum, clientX: number, clientY: number) => {
     const rect = containerRef.current?.getBoundingClientRect();
     setHover({ datum, x: clientX - (rect?.left ?? 0), y: clientY - (rect?.top ?? 0) });
-  }, []);
-  const handleLeave = useCallback(() => setHover(null), []);
+    onCountryHover?.(datum.code ?? null);
+  }, [onCountryHover]);
+  const handleLeave = useCallback(() => {
+    setHover(null);
+    onCountryHover?.(null);
+  }, [onCountryHover]);
 
   if (geo.markets.length === 0) return null;
 
@@ -212,7 +254,7 @@ export function GeoMap({
           aria-label={t("map.title")}
           onMouseLeave={handleLeave}
         >
-          <GeoShapes shapes={shapes} metric={metric} onHover={handleHover} onLeave={handleLeave} />
+          <GeoShapes shapes={shapes} metric={metric} domain={domain} activeCountry={activeCountry} onHover={handleHover} onLeave={handleLeave} />
         </svg>
 
         {hover ? (
@@ -227,7 +269,7 @@ export function GeoMap({
         ) : null}
       </div>
 
-      <Legend ourLabel={geo.ourLabel} metric={metric} metricLabel={metricLabel} />
+      <Legend ourLabel={geo.ourLabel} metric={metric} metricLabel={metricLabel} domain={domain} />
     </div>
   );
 }
@@ -241,14 +283,20 @@ function sovOpacity(sov: number): number {
 
 // KPI 별 색 강도(2026-09-02). 비율 지표는 점유율과 같은 60% 천장, 우선 노출도는
 // 낮을수록 좋으므로 뒤집는다(1위 = 최대 강도, 30위+ = 최소). 값 없음 = 최소 강도.
-export function metricOpacity(m: GeoRegionRow, metric: OverviewKpiKey): number {
-  const v = metricValue(m, metric);
+export function metricOpacity(m: GeoRegionView | GeoCountryView, metric: OverviewKpiKey, domain?: readonly [number, number]): number {
+  const v = m.values[metric];
   if (v == null) return 0.16;
+  if (domain) return scaleOpacity(v, metric, domain);
   if (metric === "position") {
     const t = Math.max(0, Math.min(1, (30 - v) / 29));
     return 0.16 + t * 0.84;
   }
   return sovOpacity(v);
+}
+
+function scaleOpacity(value: number, metric: OverviewKpiKey, [low, high]: readonly [number, number]) {
+  const t = high === low ? 0.5 : Math.max(0, Math.min(1, (value - low) / (high - low)));
+  return 0.16 + (metric === "position" ? 1 - t : t) * 0.84;
 }
 
 /**
@@ -283,12 +331,12 @@ function GeoTooltip({
   const tUnit = useTranslations("metricUnit");
   const positionUnit = (n: string) => tUnit("position", { n });
   const { market, label } = datum;
-  const rival = market.metrics?.[metric]?.rival;
+  // 그 KPI 의 최대 경쟁사(점유율은 없으면 SoV 최대 경쟁사) — API 가 고른다.
+  const rival = market.rivals[metric];
   // 커서 오른쪽 위. 우측 가장자리에서 잘리지 않게 translate 로 좌측 전환.
   const flipX = x > W * 0.6;
-  // 선두(lead) 줄은 헤드라인과 중복일 때(단일 보유 브랜드 = 라벨과 동일) 숨긴다.
-  // admin(라벨 "HMG", 합산)에서는 최강 단일 브랜드라 의미가 있어 노출.
-  const showLead = market.topBrand && market.topBrand.name !== ourLabel;
+  // 선두(lead) 줄은 헤드라인과 중복일 때(단일 보유 브랜드 = 라벨과 동일) 숨긴다(API 의 showLead).
+  const showLead = market.showLead;
   return (
     <div
       className={cn(
@@ -304,7 +352,7 @@ function GeoTooltip({
       <dl className="mt-1.5 flex flex-col gap-0.5 text-[11px]">
         <Stat
           label={metricLabel ?? t("map.share", { brand: ourLabel })}
-          value={formatMetric(metricValue(market, metric), metric, positionUnit)}
+          value={formatMetric(market.values[metric], metric, positionUnit)}
           strong
         />
         {metric === "shareOfVoice" && showLead && market.topBrand ? (
@@ -315,11 +363,6 @@ function GeoTooltip({
         ) : null}
         {rival ? (
           <Stat label={t("rival")} value={`${rival.name} ${formatMetric(rival.value, metric, positionUnit)}`} />
-        ) : metric === "shareOfVoice" && market.topRival ? (
-          <Stat
-            label={t("rival")}
-            value={`${market.topRival.name} ${market.topRival.sov.toFixed(1)}%`}
-          />
         ) : null}
       </dl>
     </div>
@@ -367,23 +410,27 @@ function RankBadge({ rank }: { rank: number }) {
 }
 
 // 점유율 색강도 범례 — 낮음 → 높음.
-function Legend({ ourLabel, metric, metricLabel }: { ourLabel: string; metric: OverviewKpiKey; metricLabel?: string }) {
+function Legend({ ourLabel, metric, metricLabel, domain }: { ourLabel: string; metric: OverviewKpiKey; metricLabel?: string; domain?: readonly [number, number] }) {
   const t = useTranslations("dashboard.geo");
+  const tUnit = useTranslations("metricUnit");
   // 우선 노출도는 방향이 반대(낮을수록 진함) — 범례 스텝도 뒤집는다.
-  const steps = metric === "position" ? [25, 19, 13, 7, 1] : [10, 25, 40, 55, 70];
+  const steps = domain
+    ? [0, 0.25, 0.5, 0.75, 1].map(n => domain[0] + (domain[1] - domain[0]) * (metric === "position" ? 1 - n : n))
+    : metric === "position" ? [25, 19, 13, 7, 1] : [10, 25, 40, 55, 70];
+  const fmt = (v: number) => formatMetric(v, metric, n => tUnit("position", { n }));
   return (
     <div className="flex items-center gap-2 border-t border-border pt-3 text-[11px] text-muted-foreground">
-      <span>{t("map.legendLow")}</span>
+      <span>{domain ? fmt(steps[0]) : t("map.legendLow")}</span>
       <div className="flex h-3 overflow-hidden rounded-sm">
-        {steps.map((s) => (
+        {steps.map((s, i) => (
           <span
-            key={s}
+            key={i}
             className="block h-3 w-6 bg-[var(--color-brand-700)]"
-            style={{ opacity: metric === "position" ? 0.16 + Math.max(0, Math.min(1, (30 - s) / 29)) * 0.84 : sovOpacity(s) }}
+            style={{ opacity: domain ? scaleOpacity(s, metric, domain) : metric === "position" ? 0.16 + Math.max(0, Math.min(1, (30 - s) / 29)) * 0.84 : sovOpacity(s) }}
           />
         ))}
       </div>
-      <span>{t("map.legendHigh")}</span>
+      <span>{domain ? fmt(steps[4]) : t("map.legendHigh")}</span>
       <span className="ml-1">· {metricLabel ?? t("map.share", { brand: ourLabel })}</span>
     </div>
   );

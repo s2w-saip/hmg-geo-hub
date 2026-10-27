@@ -5,9 +5,16 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import ko from "@/messages/ko.json";
 import en from "@/messages/en.json";
 import type { MentionsBrandLive } from "@/lib/scope/result-adapter";
-import type { KpiSummary } from "../_data/sample";
-import type { LiveGeo, LiveTrend } from "../_data/live";
-import { OverviewKpiCards, competitorMinis, detailHref } from "./overview-kpi-cards";
+import type { KpiSummary } from "../_data/model";
+import type { LiveGeo, LiveTrend } from "../_data/live-types";
+import { OverviewKpiCards, detailHref } from "./overview-kpi-cards";
+import { cardsOf, competitorsOf, done, geoViewOf, trendOf } from "./__fixtures__/overview-views";
+import type { CompetitorBrandValue } from "@/lib/scope/result-adapter";
+
+/** The cards as the screens feed them (values / Δ from the KPIs, sparklines from the trend, rows from the brands). */
+const Cards = ({ kpis, trend, brands, locale, qs }: { kpis: KpiSummary[]; trend: LiveTrend | null; brands: CompetitorBrandValue[]; locale: string; qs?: string }) => (
+  <OverviewKpiCards cards={cardsOf(kpis)} locale={locale} qs={qs} deferred={{ trend: done(trendOf(kpis, trend)), competitors: done(competitorsOf(brands)) }} />
+);
 import {
   GeoOverview,
   countryMenuAllChecked,
@@ -67,16 +74,7 @@ function render(node: React.ReactNode, locale: "ko" | "en" = "ko") {
   );
 }
 
-describe("competitorMinis / detailHref", () => {
-  it("ranks competitors per KPI and hides brands without a value", () => {
-    // 후보 선정 = 언급 수 상위(소수 브랜드 100% 방지 가드 유지). Toyota 는 mentions 0
-    // → 노출률/점유율 값 null 로 제외. **표시 순서는 지표 값 기준**(QA #15):
-    // 노출률 = 내림차순(Tesla 40, BMW 35), 우선 노출도 = 오름차순(3.1, 4.4, 5.2).
-    expect(competitorMinis(BRANDS, "visibility").map((c) => c.brand)).toEqual(["Tesla", "BMW"]);
-    expect(competitorMinis(BRANDS, "position").map((c) => c.brand)).toEqual(["Tesla", "Toyota", "BMW"]);
-    expect(competitorMinis(BRANDS, "sentiment")).toEqual([{ brand: "Tesla", value: 80 }]);
-    expect(competitorMinis(BRANDS, "citationShare")).toEqual([]);
-  });
+describe("detailHref", () => {
   it("links each card to its detail tab, carrying the filter query", () => {
     expect(detailHref("visibility", "ko", "brand=Hyundai")).toBe("/ko/standard/answer-analysis/mention?kpi=exposure&brand=Hyundai");
     expect(detailHref("citationShare", "en", "")).toBe("/en/standard/answer-analysis/citation");
@@ -85,7 +83,7 @@ describe("competitorMinis / detailHref", () => {
 
 describe("OverviewKpiCards", () => {
   it.each(["ko", "en"] as const)("renders 5 cards with values · deltas · competitors without raw keys (%s)", (locale) => {
-    const html = render(<OverviewKpiCards kpis={KPIS} trend={TREND} brands={BRANDS} locale={locale} qs="brand=Hyundai" />, locale);
+    const html = render(<Cards kpis={KPIS} trend={TREND} brands={BRANDS} locale={locale} qs="brand=Hyundai" />, locale);
     expect(html).not.toMatch(/dashboard\.(overview|kpi)\./);
     expect((html.match(/data-overview-card=/g) ?? []).length).toBe(5);
     expect(html).toContain("73.1%");
@@ -98,20 +96,20 @@ describe("OverviewKpiCards", () => {
   it("shows the pending label for a null value and drops the competitor row with it", () => {
     // QA #23 — 값이 "측정 대기"면 Δ·스파크라인·경쟁사 행을 함께 내린다. 종전에는
     // 경쟁사 안내문("경쟁사 값을 제공하지 않는 지표입니다")이 그대로 남았다.
-    const html = render(<OverviewKpiCards kpis={[kpi("visibility", null, null)]} trend={null} brands={[]} locale="ko" />);
+    const html = render(<Cards kpis={[kpi("visibility", null, null)]} trend={null} brands={[]} locale="ko" />);
     expect(html).toContain(ko.dashboard.overview.cardEmpty);
     expect(html).not.toContain(ko.dashboard.overview.noCompetitorData);
   });
   it("hides the delta when the card is pending or the value collapsed to 0 (QA #23)", () => {
     // 값 null + Δ -44.4 → Δ 를 찍지 않는다 (이미지의 'AI 우호도 측정 대기 ↘44.4pp').
-    const pending = render(<OverviewKpiCards kpis={[kpi("sentiment", null, -44.4)]} trend={null} brands={[]} locale="ko" />);
+    const pending = render(<Cards kpis={[kpi("sentiment", null, -44.4)]} trend={null} brands={[]} locale="ko" />);
     expect(pending).not.toContain("44.4pp");
     // 값 0 + 분모 0 + Δ -100 (이미지의 'AI 노출률 0.0% ↘100.0pp') → 분모 부재 = 측정 대기.
-    const collapsed = render(<OverviewKpiCards kpis={[{ ...kpi("visibility", 0, -100), ratio: { numerator: 0, denominator: 0 } }]} trend={null} brands={[]} locale="ko" />);
+    const collapsed = render(<Cards kpis={[{ ...kpi("visibility", 0, -100), ratio: { numerator: 0, denominator: 0 } }]} trend={null} brands={[]} locale="ko" />);
     expect(collapsed).not.toContain("100.0pp");
     expect(collapsed).toContain(ko.dashboard.overview.cardEmpty);
     // 값 0 + 분모 120 + Δ -100 → 측정된 진짜 0 의 실제 하락. Δ 를 가리지 않는다 (verifier 2026-09-08).
-    const realZero = render(<OverviewKpiCards kpis={[{ ...kpi("visibility", 0, -100), ratio: { numerator: 0, denominator: 120 } }]} trend={null} brands={[]} locale="ko" />);
+    const realZero = render(<Cards kpis={[{ ...kpi("visibility", 0, -100), ratio: { numerator: 0, denominator: 120 } }]} trend={null} brands={[]} locale="ko" />);
     expect(realZero).toContain("100.0pp");
     expect(realZero).toContain("0.0%");
   });
@@ -119,7 +117,7 @@ describe("OverviewKpiCards", () => {
 
 describe("GeoOverview", () => {
   it("renders KPI chips · tree table with region and country rows · rival column", () => {
-    const html = render(<GeoOverview geo={GEO} />);
+    const html = render(<GeoOverview geo={geoViewOf(GEO)} />);
     expect(html).not.toMatch(/dashboard\.overview\./);
     expect((html.match(/role="tab"/g) ?? []).length).toBe(5);
     expect(html).toContain("42.2%");
@@ -128,17 +126,17 @@ describe("GeoOverview", () => {
     expect(html).toContain("7.3%");
   });
   it("formats the position KPI as a rank", () => {
-    const html = render(<GeoOverview geo={GEO} initialMetric="position" />);
+    const html = render(<GeoOverview geo={geoViewOf(GEO)} initialMetric="position" />);
     // 국가별 GEO 현황도 카드·답변분석 탭과 같은 단위 키를 쓴다(2026-09-20 고객 요구 ⑥).
     expect(html).toContain("9.5번째");
     expect(html).toContain("10.0번째"); // 국가 행
   });
   it("narrows to the picked countries — a region with no picked country disappears", () => {
-    expect(render(<GeoOverview geo={GEO} initialCountries={["DE"]} />)).toContain('data-geo-country="DE"');
-    expect(render(<GeoOverview geo={GEO} initialCountries={["FR"]} />)).not.toContain('data-geo-country="DE"');
+    expect(render(<GeoOverview geo={geoViewOf(GEO)} initialCountries={["DE"]} />)).toContain('data-geo-country="DE"');
+    expect(render(<GeoOverview geo={geoViewOf(GEO)} initialCountries={["FR"]} />)).not.toContain('data-geo-country="DE"');
   });
   it("explains the brand requirement when there are no markets", () => {
-    const html = render(<GeoOverview geo={{ ourLabel: "HMG", pending: [], markets: [] }} />);
+    const html = render(<GeoOverview geo={geoViewOf({ ourLabel: "HMG", pending: [], markets: [] })} />);
     expect(html).toContain(ko.dashboard.overview.geo.brandRequired);
   });
 });

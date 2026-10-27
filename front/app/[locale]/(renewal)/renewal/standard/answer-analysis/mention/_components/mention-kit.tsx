@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { RnDeltaChip, RnInfoTip, RnInfoTipItem, RnSkeleton, RnTag, cx, rnHighlightState } from "@/components/renewal-ui";
-import type { RnDelta } from "./mention-model";
+import type { RnDelta } from "../_data/screen-types";
 import { useMention } from "./mention-context";
 
 // Small building blocks shared by the renewal Mention cards.

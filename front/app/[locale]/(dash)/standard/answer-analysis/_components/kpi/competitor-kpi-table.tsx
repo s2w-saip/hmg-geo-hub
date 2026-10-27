@@ -37,8 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { CHART_TOOLTIP_STYLE } from "@/lib/viz/chart-tooltip";
 import { cn } from "@/lib/utils";
-import type { CompetitorKpiRow, KpiMetric, TrendCoverage } from "../../_data/kpi-view";
-import { ownShareDonut } from "../../_data/kpi-view";
+import type { CompetitorKpiRow, KpiMetric, OwnBrandLabel, TrendCoverage } from "../../_data/mention-screen";
 import { brandColor } from "./series-colors";
 import { DeltaBadge, pctText, ppText, ValueBar } from "./kpi-bits";
 import { SparkLine } from "./spark-line";
@@ -64,20 +63,20 @@ export interface DonutSlice {
  */
 export function donutSlices({
   rows,
-  ownPct,
+  donut,
   selected,
   ownLabel,
   restLabel,
   colorIndex,
 }: {
   rows: CompetitorKpiRow[];
-  ownPct: number | null;
+  /** Own vs the rest (screen: ownShareDonut of the hero value); null = no value, no donut. */
+  donut: { own: number; rest: number } | null;
   selected: string[];
   ownLabel: string;
   restLabel: string;
   colorIndex: Map<string, number>;
 }): DonutSlice[] | null {
-  const donut = ownShareDonut(ownPct);
   if (!donut) return null;
   const picked = new Set(selected);
   const chosen = rows.filter((r) => !r.isTracked && picked.has(r.brand) && r.pct != null);
@@ -98,6 +97,9 @@ export function CompetitorKpiTable({
   metric,
   rows,
   ownPct,
+  donut,
+  barMax,
+  ownBrand,
   coverage,
   selected,
   onSelectedChange,
@@ -106,6 +108,12 @@ export function CompetitorKpiTable({
   rows: CompetitorKpiRow[];
   /** 히어로와 같은 당사 **합산** 값 — 도넛 중앙과 Gap 기준. */
   ownPct: number | null;
+  /** 도넛 기본 조각(당사 · 그 외) — 화면이 계산해 보낸다. */
+  donut: { own: number; rest: number } | null;
+  /** 바 축(표 전체 값의 최대, 최소 1) — 화면이 계산해 보낸다. */
+  barMax: number;
+  /** 도넛 중앙 라벨의 종류: 당사 1개(그 이름) · 여럿(개수) · 없음. */
+  ownBrand: OwnBrandLabel;
   /** 스파크라인 축의 커버리지 — 총 회차·측정 회차·결측 회차. */
   coverage: TrendCoverage;
   /**
@@ -142,26 +150,22 @@ export function CompetitorKpiTable({
     commit(selectedSet.has(brand) ? selected.filter((b) => b !== brand) : [...selected, brand]);
   }
 
-  // 바 축은 표 전체의 최대값으로 고정한다 — 행마다 축이 달라지면 길이 비교가 거짓말이 된다.
-  const barMax = Math.max(1, ...rows.map((r) => r.pct ?? 0));
-
   // 도넛 중앙 라벨 — `ownPct` 는 당사 **합집합**(Hyundai·Kia·Genesis 합산)이다.
   // 종전에는 tracked 첫 행의 브랜드명을 붙여, 표준 루트 무필터에서 중앙이
   // "Hyundai 60.0%" 인데 같은 표의 Hyundai 행은 40.0% 인 모순이 났다
   // (2026-09-01 verifier 지적 F3). 당사가 둘 이상이면 집합 라벨을 쓴다.
-  const trackedRows = rows.filter((r) => r.isTracked);
   const ownBrandLabel =
-    trackedRows.length === 1
-      ? trackedRows[0].brand
-      : trackedRows.length > 1
-        ? t("competitor.ownSet", { n: trackedRows.length })
+    ownBrand.kind === "brand"
+      ? ownBrand.brand
+      : ownBrand.kind === "set"
+        ? t("competitor.ownSet", { n: ownBrand.n })
         : t("competitor.ownDonutLabel");
   const showSeriesFootnote = visible.some((r) => !r.inTrendSeries);
 
   // 도넛 · 범례 · 툴팁이 **같은 배열**을 본다 — 셋이 갈라지면 그림과 라벨이 어긋난다.
   const slices = donutSlices({
     rows,
-    ownPct,
+    donut,
     selected,
     ownLabel: ownBrandLabel,
     restLabel: t("competitor.restLegend"),

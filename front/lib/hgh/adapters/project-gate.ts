@@ -47,6 +47,8 @@ import "server-only";
 //   403 other                                      -> notFound() (project pages hide existence)
 //   5xx, timeout                                   -> thrown to the (dash) error boundary
 import { notFound } from "next/navigation";
+import { localReadOnly } from "@/lib/local-readonly";
+import { screenGet } from "@/lib/screen";
 import type { ProjectMetaForSnb } from "@/components/dash/project-meta-broadcast";
 import type { DimensionGroup } from "@/components/dash/dimension-filter-panel";
 import type { components } from "../api-types";
@@ -73,7 +75,7 @@ export interface GateProject {
   name: string;
   description: string | null;
   /** ISO string in Date#toISOString form (what the legacy gate produced). */
-  createdAt: string;
+  createdAt: string | null;
   brand: string | null;
   country: string;
   ga4PropertyId: string | null;
@@ -113,6 +115,10 @@ export function toGateProject(d: ProjectDetail): GateProject {
  */
 export async function fetchProjectGate(id: string, opts: GateReadOptions = {}): Promise<GateProject | null> {
   if (!isProjectId(id)) return null;
+  if (localReadOnly()) {
+    // The gate shape (name = id, country only for a single region, 404 -> null) is built by the API.
+    return (await screenGet<{ project: GateProject | null }>("shared/project-gate", { project_id: id })).project;
+  }
   const light = opts.light ?? true;
   try {
     const res = await hghGet("/v1/projects/{project_id}", {

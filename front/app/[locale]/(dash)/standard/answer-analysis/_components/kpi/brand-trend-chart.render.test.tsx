@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { NextIntlClientProvider } from "next-intl";
 import ko from "@/messages/ko.json";
-import type { BrandTrendChartData } from "../../_data/kpi-view";
+import type { BrandTrendChartData } from "../../_data/mention-screen";
 import { BrandTrendChart, brandLineProps } from "./brand-trend-chart";
 
 // 히어로 우측 다중 브랜드 라인(디자인 327:550)의 계약.

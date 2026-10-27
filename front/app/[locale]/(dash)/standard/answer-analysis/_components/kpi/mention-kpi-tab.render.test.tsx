@@ -10,8 +10,8 @@ import type {
   TypeKpi,
 } from "@/lib/db/repositories/scope-aggregates";
 import type { MentionsBrandLive, MentionTypesByBrand } from "@/lib/scope/result-adapter";
-import { MentionKpiTab } from "./mention-kpi-tab";
-import type { KpiMetric } from "../../_data/kpi-view";
+import { MentionKpiTabFromLegacy as MentionKpiTab } from "../../_data/mention-screen.test-utils";
+import type { KpiMetric } from "../../_data/mention-screen";
 
 // 탭 본문 전체가 실제로 **렌더된다**는 것을 확인하는 스모크. 순수 함수 테스트는
 // 값이 맞는지만 보는데, 이 화면의 실패 양상은 대개 "렌더 중 throw" 라서(차트

@@ -277,12 +277,12 @@ function Account({ user, locale }: { user: RnShellUser; locale: string }) {
         <ShellIconButton label={`${tLocale("label")}: ${tLocale(next)}`} onClick={switchLocale}>
           <span className="text-rn-11 font-bold uppercase">{current}</span>
         </ShellIconButton>
-        <form action={logout}>
+        {user.role !== "local_reader" && <form action={logout}>
           <input type="hidden" name="locale" value={locale} />
           <ShellIconButton label={tNav("logout")} type="submit">
             <LogOut className="size-3.5" aria-hidden />
           </ShellIconButton>
-        </form>
+        </form>}
       </span>
     </div>
   );

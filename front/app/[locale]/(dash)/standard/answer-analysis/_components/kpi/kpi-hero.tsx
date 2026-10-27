@@ -9,7 +9,7 @@
 
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import type { KpiHeroValue, KpiMetric } from "../../_data/kpi-view";
+import type { KpiHeroValue, KpiMetric } from "../../_data/mention-screen";
 import { pctText } from "./kpi-bits";
 import { KpiGauge } from "./kpi-gauge";
 

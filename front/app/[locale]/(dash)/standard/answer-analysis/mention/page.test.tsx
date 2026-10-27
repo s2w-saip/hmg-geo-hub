@@ -1,14 +1,13 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { isValidElement, type ReactElement } from "react";
 
-// /standard/answer-analysis/mention on the api source (unit U6, HGH_SOURCE_G2=api): every section
-// is fed by the backend adapters in the legacy prop shapes, no legacy reader runs, and the first
-// render starts with the D6 essentials. The server sections are resolved here; client components
-// are not rendered (their props are inspected, promises awaited). The in-request dedupe needs the
-// react-server build, which the page's client imports cannot load: dedupe and the exact D6 order
-// are asserted in lib/hgh/adapters/mentions.test.ts and kpi-tab.test.ts instead.
+// /standard/answer-analysis/mention: every section reads one screen of the API
+// (back/bff/screens/mention.py) with the page's URL params, and passes the payload to the same
+// components. The server sections are resolved here; client components are not rendered (their props
+// are inspected, promises awaited). The screen values themselves are covered by the goldens
+// (test/bff-golden/mention.golden.test.ts) and back/bff/tests/test_screens_mention.py.
 
-const st = vi.hoisted(() => ({ legacy: [] as string[] }));
+const st = vi.hoisted(() => ({ calls: [] as { name: string; query: Record<string, unknown> }[] }));
 vi.mock("@/i18n/navigation", () => ({ Link: () => null, usePathname: () => "/", useRouter: () => ({}) }));
 vi.mock("next/navigation", () => ({ usePathname: () => "/", useRouter: () => ({}), useSearchParams: () => new URLSearchParams(), notFound: () => { throw new Error("nf"); }, redirect: () => { throw new Error("rd"); } }));
 vi.mock("next-intl/server", () => ({
@@ -20,99 +19,25 @@ vi.mock("@/lib/auth/session", () => ({
     user: { id: "u1", email: "x", role: "hq", scope: { all: false, brands: ["Kia"] }, operator: "none", menuGroups: null },
   }),
 }));
-vi.mock("@/lib/scope/server", () =>
-  new Proxy(
-    {},
-    {
-      get: (_t, name) =>
-        name === "then"
-          ? undefined
-          : async () => {
-              st.legacy.push(String(name));
-              return null;
-            },
-    },
-  ),
-);
-vi.mock("@/lib/db/repositories/standards", () => ({ listCatalogTaxonomy: async () => (st.legacy.push("catalog"), []) }));
-vi.mock("@/lib/db/repositories/scope-aggregates", () => ({
-  listMeasuredRegions: async () => (st.legacy.push("regions"), []),
-  listMeasuredStandardLanguages: async () => (st.legacy.push("langs"), []),
-  listMeasuredScopeMatrix: async () => (st.legacy.push("matrix"), []),
-  standardCollectionDates: async () => (st.legacy.push("collection"), null),
+vi.mock("@/lib/screen", () => ({
+  screenGet: async (name: string, query: Record<string, unknown>) => {
+    st.calls.push({ name, query });
+    switch (name) {
+      case "shared/panel-options":
+        return { geographyOptions: ["US"], languageOptions: ["en"], optionMatrix: [], catalogRows: [] };
+      case "shared/filter-dates":
+        return { selectableDates: ["2026-09-07", "2026-09-14"], latestAnchorDay: "2026-09-14", collectionStartDay: null };
+      case "mention/as-of":
+        return { asOf: "2026-09-14" };
+      case "mention/kpi-period":
+        return { periodCompare: null, monthLine: null };
+      default:
+        return { screen: name, query };
+    }
+  },
 }));
 
-const { bindHghAuth } = await import("@/lib/hgh/auth");
 const Page = (await import("./page")).default;
-
-const TOKEN = "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJ1In0.c2ln";
-const log: URL[] = [];
-const meta = { mode: "snapshot", as_of: "2026-09-14", cycles: ["2026-09-14"] };
-const brandsData = {
-  brands: [
-    { name: "Kia", is_own: true, brand_key: 2, mentions: 10, exposure: { num: 5, den: 20 }, share: { num: 10, den: 30 }, avg_rank: { sum: 4, count: 2 }, rank: 2, sentiment: { positive: 2, neutral: 1, negative: 0, mixed: 0 }, prompts: 4, multi: { mentions: 3, answers: 1, prompts: 1 }, types: { mention: 2, recommendation: 0, comparison: 0, definition: 0, final_choice: 0 } },
-    { name: "Toyota", is_own: false, brand_key: 7, mentions: 20, exposure: { num: 8, den: 20 }, share: { num: 20, den: 30 }, avg_rank: null, rank: 1, sentiment: { positive: 0, neutral: 0, negative: 0, mixed: 0 }, prompts: 6, types: { mention: 3, recommendation: 0, comparison: 0, definition: 0, final_choice: 0 } },
-  ],
-  own: { avg_rank: { sum: 4, count: 2 }, brands: ["Kia"], exposure: { num: 5, den: 20 }, mentions: 10, rank: 2, share: { num: 10, den: 30 }, vp_label: "Kia" },
-  totals: { answers: 20, brand_count: 2, mentions_total: 30 },
-  types_total: { mention: 5, recommendation: 0, comparison: 0, definition: 0, final_choice: 0 },
-};
-
-function handler(u: URL): unknown {
-  switch (u.pathname) {
-    case "/v1/filters/options":
-      return { data: { catalog: { rows: [] }, custom_fields: null, engines: [], geo_matrix: [{ brand: "Kia", region: "US", lang: "en" }], languages: [], regions: [], source_categories: [] }, meta };
-    case "/v1/filters/dates":
-      return { data: { dates: ["2026-09-14", "2026-09-07"], dates_truncated: false, first_measured_date: "2026-06-01", latest_round_date: "2026-09-14", presets: [] }, meta };
-    case "/v1/mentions/brands":
-      return { data: u.searchParams.get("group_by") ? { ...brandsData, by_engine: [] } : brandsData, meta };
-    case "/v1/mentions/types":
-      return { data: { answers_total: 20, by_type: [], sentiment_matrix: [], stance: null }, meta };
-    case "/v1/trend":
-      return { data: { bucket: "cycle", dimension: u.searchParams.get("dimension"), own_label: "Kia", buckets: [], series: [] }, meta };
-    case "/v1/kpi/summary":
-      return {
-        data: {
-          visibility: { num: 5, den: 20 },
-          share_of_voice: { num: 10, den: 30 },
-          sentiment: { num: 2, den: 3 },
-          position: { sum: 4, count: 2 },
-          citation_share: null,
-          target_url_rate: null,
-          owned_url_rate: null,
-          citation_accuracy: null,
-          params: { answers: 20, applied_prompts: 9, measured_prompts: 8, prompts_without_brand: 3, measured_by_funnel: null },
-          analysis_gap: { gap_answers: 0, base_answers: 20 },
-        },
-        meta,
-      };
-    case "/v1/kpi/engines":
-      return { data: { engine_consistency: {}, rows: [], total: {} }, meta };
-    default:
-      return { data: null, meta };
-  }
-}
-
-beforeEach(() => {
-  st.legacy = [];
-  log.length = 0;
-  vi.stubEnv("HGH_API_BASE_URL", "https://api.hgh.test");
-  vi.stubEnv("HGH_SOURCE_G2", "api");
-  bindHghAuth({ getAccessToken: async () => TOKEN });
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (u: string) => {
-      const url = new URL(String(u));
-      log.push(url);
-      return new Response(JSON.stringify(handler(url)), { status: 200, headers: { "content-type": "application/json" } });
-    }),
-  );
-});
-afterEach(() => {
-  bindHghAuth(null);
-  vi.unstubAllEnvs();
-  vi.unstubAllGlobals();
-});
 
 const SERVER_SECTIONS = new Set(["MentionsFilterBar", "MentionsKpiBody", "MentionsData"]);
 
@@ -140,48 +65,47 @@ async function collect(node: unknown): Promise<Map<string, Record<string, unknow
   return out;
 }
 
-describe("standard mention page, api source", () => {
-  it("sections in the legacy prop shapes from the adapters; no legacy reader; essentials first", async () => {
-    await (async () => {
-      const tree = await Page({ params: Promise.resolve({ locale: "ko" }), searchParams: Promise.resolve({}) });
-      const got = await collect(tree);
-      expect(await (got.get("LastMeasuredPill")!.asOf as Promise<string | null>)).toBe("2026-09-14");
-      const bar = got.get("AnalysisFilterBar")!;
-      expect([bar.selectableDates, bar.latestAnchorDay, bar.geographyOptions]).toEqual([["2026-09-07", "2026-09-14"], "2026-09-14", ["US"]]);
-      // the measurement overview card is gone on both sources (hmg-geo #305, sync S1)
-      expect(got.has("MeasurementOverviewCard")).toBe(false);
-      const tab = got.get("MentionKpiTab")!;
-      expect((await (tab.subKpis as Promise<{ overviewCards?: unknown }>)).overviewCards).toMatchObject({ visibility: { numerator: 5, denominator: 20 } });
-      expect((await (tab.brands as Promise<{ brand: string }[]>)).map((b) => b.brand)).toEqual(["Kia", "Toyota"]);
-      expect(tab.competitorValues).toBeNull();
-      expect((await (tab.typesByBrand as Promise<{ totals: { mention: number } }>)).totals.mention).toBe(5);
-      await Promise.all([tab.engineTrend, tab.brandTrend, tab.typeKpi, tab.prevSubKpis, tab.prevBasisDate]);
-      const data = got.get("MentionsPromptsSection")!.data as { summary: unknown; brands: unknown[] };
-      expect(data.summary).toEqual({ total: 30, uniqueBrands: 2, totalPrompts: 8, totalAnswers: 20 });
-    })();
-    expect(st.legacy).toEqual([]);
-    // D6: the first four requests are the essentials
-    expect(log.slice(0, 4).map((u) => `${u.pathname}:${u.searchParams.get("dimension") ?? ""}`).sort()).toEqual([
-      "/v1/filters/dates:",
-      "/v1/kpi/summary:",
-      "/v1/mentions/brands:",
-      "/v1/trend:none",
-    ]);
-    // the account's brand lock is never sent
-    expect(log.some((u) => u.searchParams.getAll("brand").length > 0)).toBe(false);
+const render = (sp: Record<string, string>) => Page({ params: Promise.resolve({ locale: "ko" }), searchParams: Promise.resolve(sp) });
+
+beforeEach(() => {
+  st.calls = [];
+});
+
+describe("standard mention page", () => {
+  it("filter bar, header pill, the exposure tab sections and the bottom section read their screens", async () => {
+    const got = await collect(await render({ geography: "US" }));
+    expect(await (got.get("LastMeasuredPill")!.asOf as Promise<string | null>)).toBe("2026-09-14");
+    const bar = got.get("AnalysisFilterBar")!;
+    expect([bar.selectableDates, bar.latestAnchorDay, bar.geographyOptions]).toEqual([["2026-09-07", "2026-09-14"], "2026-09-14", ["US"]]);
+    const tab = got.get("MentionKpiTab")!;
+    expect(tab.metric).toBe("exposure");
+    for (const [prop, screen] of [
+      ["hero", "mention/kpi-hero"],
+      ["heroDelta", "mention/kpi-hero-delta"],
+      ["competitors", "mention/kpi-competitors"],
+      ["heroTrend", "mention/kpi-hero-trend"],
+      ["engines", "mention/kpi-engines"],
+      ["types", "mention/kpi-types"],
+    ]) {
+      expect(await (tab[prop] as Promise<{ screen: string; query: Record<string, unknown> }>)).toEqual({
+        screen,
+        query: { geography: "US", "ctx.metric": "exposure" },
+      });
+    }
+    expect(got.get("MentionsPromptsSection")!.data).toBeNull();
+    const names = st.calls.map((c) => c.name).sort();
+    expect(names).toContain("mention/prompts-section");
+    expect(st.calls.find((c) => c.name === "shared/panel-options")!.query).toEqual({ geography: "US", surface: "global" });
+    expect(st.calls.find((c) => c.name === "shared/filter-dates")!.query).toEqual({ surface: "global", family: "mentions" });
   });
 
-  // P5 leftover: the favorability / first-rank tabs get the hero degrade mark like the exposure tab
-  // (B034). Outside a request scope there is no mark: false (the scoped marks are in kpi-tab.test.ts).
   it.each([
-    ["favorability", "FavorabilityKpiTab", "subKpis"],
-    ["first-rank", "FirstRankKpiTab", "firstPosition"],
-  ])("kpi=%s: heroDegraded follows the hero read", async (kpi, name, source) => {
-    const tree = await Page({ params: Promise.resolve({ locale: "ko" }), searchParams: Promise.resolve({ kpi }) });
-    const tab = (await collect(tree)).get(name)!;
-    expect(tab.heroDegraded).toBeInstanceOf(Promise);
-    await tab[source];
-    expect(await tab.heroDegraded).toBe(false);
-    expect(st.legacy).toEqual([]);
+    ["sov", "MentionKpiTab", "hero", "mention/kpi-hero"],
+    ["favorability", "FavorabilityKpiTab", "hero", "mention/favor-hero"],
+    ["first-rank", "FirstRankKpiTab", "firstRank", "mention/first-rank"],
+  ])("kpi=%s reads its own section screens", async (kpi, component, prop, screen) => {
+    const got = await collect(await render({ kpi }));
+    const payload = await (got.get(component)![prop] as Promise<{ screen: string }>);
+    expect(payload.screen).toBe(screen);
   });
 });

@@ -17,13 +17,16 @@ import {
   cx,
   rnHighlightState,
 } from "@/components/renewal-ui";
-import type { KpiMetric } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/kpi-view";
-import { OWN_KEY, TYPE_AVG_TOP, board, engineRows, heroTrendSeries, rateHero, typeCompareRows, typeOwnRows, type BoardRow } from "./mention-model";
+import { OWN_KEY, firstPicked, pickKey, type BoardRow, type RnRateTypesVM } from "../_data/screen-types";
 import { AVG_COLOR, CONTEXT_COLOR, MentionCardActions, OWN_COLOR, deltaTxt, numTxt, pctTxt, ppTxt, slotLabel, useCompare, useMention } from "./mention-context";
 import { BrandName, CardSkeleton, DegradedNote, DeltaChip, InfoTip, Legend, Stat, TwinTable, useDeltaBasis, useDeltaNote } from "./mention-kit";
 import { KpiBasisChip } from "./mention-tabs";
 
+type KpiMetric = "exposure" | "sov";
+
 const DEF_KEY = { exposure: "visibility", sov: "shareOfVoice" } as const;
+/** Competitors in the type average (the API's top five by mentions). */
+const TYPE_AVG_TOP = 5;
 
 export function RateBody({ metric }: { metric: KpiMetric }) {
   const t = useTranslations("renewal.mention");
@@ -99,9 +102,9 @@ function HeroValue({ metric }: { metric: KpiMetric }) {
   const tTip = useTranslations("answerAnalysis.mentions.kpi.tooltip");
   const tK = useTranslations("answerAnalysis.mentions.kpi");
   const locale = useLocale();
-  const sub = use(input.sub[metric]);
-  const degraded = use(input.degraded.hero);
-  const hero = rateHero(metric, sub, null, null, null);
+  const value = use(input.rateValue);
+  const hero = value[metric];
+  const degraded = value.degraded;
   return (
     <>
       <div className="text-rn-56 font-bold tracking-[-0.035em] text-rn-navy tabular-nums" data-rn-hero={metric}>
@@ -130,11 +133,7 @@ function HeroValue({ metric }: { metric: KpiMetric }) {
 
 function useHero(metric: KpiMetric) {
   const { input } = useMention();
-  const sub = use(input.sub[metric]);
-  const prev = use(input.prev[metric]);
-  const engine = use(input.engineTrend);
-  const period = use(input.periodCompare);
-  return useMemo(() => rateHero(metric, sub, prev, engine, period), [metric, sub, prev, engine, period]);
+  return use(input.rateHero)[metric];
 }
 
 function HeroDelta({ metric }: { metric: KpiMetric }) {
@@ -153,44 +152,35 @@ function HeroDelta({ metric }: { metric: KpiMetric }) {
   );
 }
 
-function useBoard(metric: KpiMetric) {
-  const { input, brands } = useMention();
-  const hero = useHero(metric);
-  const trend = use(input.brandTrend);
-  const values = use(input.competitorValues);
-  return useMemo(() => board({ metric, brands, trend, values, hero }), [metric, brands, trend, values, hero]);
-}
-
 function HeroStanding({ metric }: { metric: KpiMetric }) {
-  const b = useBoard(metric);
+  const st = useHero(metric).standing;
   const t = useTranslations("renewal.mention.hero");
-  const own = b.rows.find((r) => r.own);
-  if (!own || own.pct == null || b.ownRank == null) return null;
-  const other = b.ownRank === 1 ? b.rows[1] : b.rows[0];
-  const gap = other?.pct != null ? Math.round((own.pct - other.pct) * 10) / 10 : null;
+  if (!st) return null;
+  const { rank, gap, other } = st;
   return (
     <div className="flex items-center gap-2 rounded-lg bg-rn-navy-25 px-2.5 py-2 text-rn-12 text-rn-ink-2 [&_b]:text-rn-navy">
-      {b.ownRank === 1 ? <TrendingUp className="size-3.5 shrink-0" aria-hidden /> : <ArrowUpRight className="size-3.5 shrink-0" aria-hidden />}
+      {rank === 1 ? <TrendingUp className="size-3.5 shrink-0" aria-hidden /> : <ArrowUpRight className="size-3.5 shrink-0" aria-hidden />}
       <span>
-        {t.rich("standing", { b: (c) => <b>{c}</b>, n: b.rows.length, rank: b.ownRank })}
-        {other && gap != null ? ` · ${b.ownRank === 1 ? t("leadFirst", { brand: other.key, gap: gap.toFixed(1) }) : t("leadBehind", { brand: other.key, gap: gap.toFixed(1) })}` : ""}
+        {t.rich("standing", { b: (c) => <b>{c}</b>, n: st.n, rank })}
+        {other != null && gap != null ? ` · ${rank === 1 ? t("leadFirst", { brand: other, gap: gap.toFixed(1) }) : t("leadBehind", { brand: other, gap: gap.toFixed(1) })}` : ""}
       </span>
     </div>
   );
 }
 
 function HeroTrend({ metric }: { metric: KpiMetric }) {
-  const { input, ownLabel, lit, hover, tables } = useMention();
+  const { ownLabel, lit, hover, tables } = useMention();
   const { compare, colorOf } = useCompare();
   const t = useTranslations("renewal.mention");
   const tK = useTranslations("answerAnalysis.mentions.kpi");
-  const hero = useHero(metric);
-  const trend = use(input.brandTrend);
-  const s = heroTrendSeries(hero, trend, metric, compare);
+  const s = useHero(metric).trend;
   const name = useMetricShort(metric);
+  // the picked brands' lines (looked up), else the competitors' average
+  const average = compare.length === 0 ? s.average : null;
+  const brands = compare.filter((b) => s.competitors.includes(b)).map((key) => ({ key, values: s.values[s.competitors.indexOf(key)] }));
   const series = [
-    ...(s.average ? [{ key: "__avg", name: t("hero.average"), color: AVG_COLOR, values: s.average, dashed: true }] : []),
-    ...s.brands.map((b) => ({ key: b.key, name: b.key, color: colorOf(b.key), values: b.values })),
+    ...(average ? [{ key: "__avg", name: t("hero.average"), color: AVG_COLOR, values: average, dashed: true }] : []),
+    ...brands.map((b) => ({ key: b.key, name: b.key, color: colorOf(b.key), values: b.values })),
     { key: OWN_KEY, name: ownLabel, color: OWN_COLOR, values: s.own, own: true },
   ];
   const x = s.x.map(slotLabel);
@@ -206,7 +196,7 @@ function HeroTrend({ metric }: { metric: KpiMetric }) {
         </span>
       </div>
       <Legend items={[...series].reverse()} />
-      {hero.trendMissing ? (
+      {s.missing ? (
         <DegradedNote>{tK("degradedTrend")}</DegradedNote>
       ) : !s.x.length ? (
         <RnEmpty>{t("hero.noTrend")}</RnEmpty>
@@ -233,19 +223,18 @@ function HeroTrend({ metric }: { metric: KpiMetric }) {
 
 const BOARD_COLS =
   "grid-cols-[26px_minmax(150px,1.3fr)_minmax(60px,1.4fr)_58px_88px_74px_70px] @max-[720px]/rnpage:grid-cols-[26px_minmax(130px,1.3fr)_minmax(40px,1fr)_58px_74px_64px]";
-const BOARD_TOP = 5;
 
 function Board({ metric }: { metric: KpiMetric }) {
   const { ownLabel, lit, hover } = useMention();
   const { compare, covered, colorOf, toggle } = useCompare();
   const t = useTranslations("renewal.mention");
-  const b = useBoard(metric);
+  const b = useHero(metric).board;
   const [all, setAll] = useState(false);
   const short = useMetricShort(metric);
-  const keep = new Set([...b.rows.filter((r) => !r.own).slice(0, BOARD_TOP).map((r) => r.key), ...compare]);
-  const shown = all ? b.rows : b.rows.filter((r) => r.own || keep.has(r.key));
+  // "more" toggle: the first rows (당사 + the top five) plus the picked compare brands
+  const shown = all ? b.rows : b.rows.filter((r) => r.top || compare.includes(r.key));
   const hidden = b.rows.length - shown.length;
-  const max = Math.max(1, ...b.rows.map((r) => r.pct ?? 0));
+  const max = b.barMax;
   const keys = b.rows.map((r) => r.key);
   const csv = () => ({
     name: `mention-${metric}-competitors`,
@@ -288,7 +277,7 @@ function Board({ metric }: { metric: KpiMetric }) {
               const tip = `${name(r)}\n${short} ${pctTxt(r.pct)} · ${t("board.colDelta")} ${deltaTxt(r.delta)}${r.gap == null ? "" : `\n${t("board.colGap")} ${ppTxt(r.gap)}`}${!r.own && !canCompare ? `\n${t("board.noCompare")}` : ""}`;
               const cells = (
                 <>
-                  <span className="text-rn-12 text-rn-muted tabular-nums">{b.rows.indexOf(r) + 1}</span>
+                  <span className="text-rn-12 text-rn-muted tabular-nums">{r.pos}</span>
                   <span className="flex min-w-0 items-center gap-2">
                     <i aria-hidden className={cx("size-3 shrink-0 rounded-full", !r.own && !on && "shadow-[inset_0_0_0_1.5px_var(--color-rn-line-2)]")} style={r.own || on ? { background: color } : undefined} />
                     <BrandName name={name(r)} own={r.own} sibling={r.sibling} />
@@ -298,7 +287,7 @@ function Board({ metric }: { metric: KpiMetric }) {
                   </span>
                   <span className="text-right text-rn-13 font-bold text-rn-ink tabular-nums">{pctTxt(r.pct)}</span>
                   <span className="@max-[720px]/rnpage:hidden">
-                    {r.spark.some((v) => v != null) ? <RnSparkline values={r.spark} className="h-[26px]" /> : <span className="text-rn-11 text-rn-muted" title={t("board.noTrendTip")}>{t("board.noTrend")}</span>}
+                    {r.hasSpark ? <RnSparkline values={r.spark} className="h-[26px]" /> : <span className="text-rn-11 text-rn-muted" title={t("board.noTrendTip")}>{t("board.noTrend")}</span>}
                   </span>
                   <span className="justify-self-end">{r.covered ? <DeltaChip value={r.delta} /> : <span className="text-rn-11 text-rn-muted">—</span>}</span>
                   <span className={cx("text-right text-rn-12 font-semibold tabular-nums", r.gap == null ? "text-rn-muted" : r.gap < 0 ? "text-rn-up-ink" : "text-rn-danger-ink")}>{r.gap == null ? "—" : ppTxt(r.gap)}</span>
@@ -341,8 +330,7 @@ function Engines({ metric }: { metric: KpiMetric }) {
   const { input, engineLabel, ownLabel } = useMention();
   const t = useTranslations("renewal.mention");
   const tK = useTranslations("answerAnalysis.mentions.kpi");
-  const engine = use(input.engineTrend);
-  const { rows, x, trendMissing } = engineRows(engine, metric);
+  const { rows, x, trendMissing } = use(input.rateEngines)[metric];
   const short = useMetricShort(metric);
   const title = t(metric === "sov" ? "engine.titleSov" : "engine.titleExposure");
   const csv = () => ({
@@ -384,7 +372,7 @@ function Engines({ metric }: { metric: KpiMetric }) {
               </div>
               {trendMissing ? (
                 <DegradedNote>{tK("degradedTrend")}</DegradedNote>
-              ) : r.series.some((v) => v != null) ? (
+              ) : r.hasSeries ? (
                 <RnLineChart
                   x={x.map(slotLabel)}
                   series={[{ key: OWN_KEY, name: ownLabel, color: OWN_COLOR, values: r.series, own: true }]}
@@ -406,20 +394,19 @@ function Engines({ metric }: { metric: KpiMetric }) {
 // ── 멘션 유형 ────────────────────────────────────────────────────────────────
 
 function Types({ metric }: { metric: KpiMetric }) {
-  const { input, brands, ownLabel, tables } = useMention();
+  const { input, ownLabel, tables } = useMention();
   const { compare, colorOf } = useCompare();
   const t = useTranslations("renewal.mention.type");
   const tType = useTranslations("answerAnalysis.mentions.breakdown.type");
   const tK = useTranslations("answerAnalysis.mentions.kpi");
   const locale = useLocale();
-  const typesByBrand = use(input.typesByBrand);
-  const kpi = use(input.typeKpi);
-  const engine = use(input.engineTrend);
-  const degraded = use(input.degraded.types);
+  const vm = use(input.rateTypes);
+  const degraded = vm.degraded;
   const [view, setView] = useState<"cmp" | "own">("cmp");
   const [unit, setUnit] = useState<"pct" | "count">("pct");
-  const cmpRows = useMemo(() => typeCompareRows({ typesByBrand, brands, compare }), [typesByBrand, brands, compare]);
-  const ownRows = useMemo(() => typeOwnRows(kpi, engine, metric), [kpi, engine, metric]);
+  const { rows: cmpRows, top } = useMemo(() => typeRowsOf(vm.cmp, compare), [vm.cmp, compare]);
+  const own = vm.own[metric];
+  const ownRows = own.rows;
   const id = `type-${metric}`;
   const tableOn = tables.has(id);
   const isCmp = view === "cmp";
@@ -479,7 +466,7 @@ function Types({ metric }: { metric: KpiMetric }) {
               rows={cmpRows.map((r) => [tType(r.type), pctTxt(r.own), ...r.dots.map((d) => pctTxt(d.value)), pctTxt(r.avg), r.gap == null ? "—" : `${ppTxt(r.gap)} ${t("vs", { brand: r.ref.brand ?? t("avg", { n: TYPE_AVG_TOP }) })}`])}
             />
           ) : (
-            <TypeDots rows={cmpRows} />
+            <TypeDots rows={cmpRows} top={top} />
           )}
           <p className="m-0 text-rn-11 text-rn-muted">{t("footCompare")}</p>
         </div>
@@ -494,7 +481,7 @@ function Types({ metric }: { metric: KpiMetric }) {
           </div>
           {ownRows.map((r) => {
             const v = unit === "count" ? r.signals : r.pct;
-            const max = Math.max(1, ...ownRows.map((x) => (unit === "count" ? x.signals : x.pct ?? 0)));
+            const max = unit === "count" ? own.maxCount : own.maxPct;
             return (
               <div key={r.type} className="grid min-h-10 grid-cols-[84px_minmax(60px,1fr)_64px_70px_80px] items-center gap-2.5 border-b border-rn-line text-rn-13 last:border-0">
                 <span className="font-semibold text-rn-ink">{tType(r.type)}</span>
@@ -503,7 +490,7 @@ function Types({ metric }: { metric: KpiMetric }) {
                 </span>
                 <span className="text-right font-bold text-rn-ink tabular-nums">{unit === "count" ? t("signals", { n: numTxt(r.signals, locale) }) : pctTxt(r.pct)}</span>
                 <span className="justify-self-end">{unit === "pct" && metric === "exposure" ? <DeltaChip value={r.delta} /> : null}</span>
-                <span>{metric === "exposure" && r.spark.some((s) => s != null) ? <RnSparkline values={r.spark} className="h-[24px]" /> : null}</span>
+                <span>{metric === "exposure" && r.hasSpark ? <RnSparkline values={r.spark} className="h-[24px]" /> : null}</span>
               </div>
             );
           })}
@@ -514,13 +501,44 @@ function Types({ metric }: { metric: KpiMetric }) {
   );
 }
 
-function TypeDots({ rows }: { rows: ReturnType<typeof typeCompareRows> }) {
+interface TypeCompareRow {
+  type: RnRateTypesVM["cmp"]["rows"][number]["type"];
+  own: number | null;
+  avg: number | null;
+  dots: Array<{ brand: string; value: number | null }>;
+  ref: { brand: string | null; value: number | null };
+  gap: number | null;
+  lo: number | null;
+  hi: number | null;
+}
+
+/** The compare view of the picked brands: dots and the reference looked up in the payload. */
+function typeRowsOf(cmp: RnRateTypesVM["cmp"], compare: readonly string[]): { rows: TypeCompareRow[]; top: number } {
+  if (!cmp.rows.length) return { rows: [], top: 10 };
+  const opt = cmp.options[pickKey(compare, cmp.covered)];
+  const cell = (brand: string, t: number) => cmp.dots[cmp.covered.indexOf(brand)]?.[t] ?? null;
+  const rows = cmp.rows.map((r, t) => {
+    const ref = firstPicked(compare, opt?.refs[t] ?? []);
+    const at = (ref != null ? cell(ref, t) : null) ?? cmp.avgRef[t];
+    return {
+      type: r.type,
+      own: r.own,
+      avg: r.avg,
+      dots: compare.map((brand) => ({ brand, value: cell(brand, t)?.value ?? null })),
+      ref: { brand: ref, value: at.value },
+      gap: at.gap,
+      lo: at.lo,
+      hi: at.hi,
+    };
+  });
+  return { rows, top: opt?.top ?? 10 };
+}
+
+function TypeDots({ rows, top }: { rows: TypeCompareRow[]; top: number }) {
   const { ownLabel, lit, hover } = useMention();
   const { colorOf } = useCompare();
   const t = useTranslations("renewal.mention.type");
   const tType = useTranslations("answerAnalysis.mentions.breakdown.type");
-  const vals = rows.flatMap((r) => [r.own, r.avg, ...r.dots.map((d) => d.value)]).filter((v): v is number => v != null);
-  const top = Math.max(10, Math.ceil((Math.max(...vals, 0) * 1.1) / 10) * 10);
   const ticks = [0, top / 4, top / 2, (3 * top) / 4, top];
   const at = (v: number) => `${((v / top) * 100).toFixed(2)}%`;
   const avgName = t("avg", { n: TYPE_AVG_TOP });
@@ -539,8 +557,7 @@ function TypeDots({ rows }: { rows: ReturnType<typeof typeCompareRows> }) {
         <span />
       </div>
       {rows.map((r) => {
-        const lo = r.own != null && r.ref.value != null ? Math.min(r.own, r.ref.value) : null;
-        const hi = r.own != null && r.ref.value != null ? Math.max(r.own, r.ref.value) : null;
+        const { lo, hi } = r;
         const good = (r.gap ?? 0) >= 0;
         const tip = (who: string, v: number | null) => t("dotTip", { type: tType(r.type), who, value: pctTxt(v) });
         return (

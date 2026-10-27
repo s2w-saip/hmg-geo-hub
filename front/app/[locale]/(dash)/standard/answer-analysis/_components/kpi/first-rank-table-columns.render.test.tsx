@@ -4,12 +4,8 @@ import { NextIntlClientProvider } from "next-intl";
 import ko from "@/messages/ko.json";
 import en from "@/messages/en.json";
 import type { FirstPositionResult } from "@/lib/db/repositories/scope-aggregates";
-import {
-  COMPETITOR_LIMIT,
-  FirstRankKpiTab,
-  RANK_COL_CLASS,
-  toggleCompetitor,
-} from "./first-rank-kpi-tab";
+import { COMPETITOR_LIMIT, RANK_COL_CLASS, toggleCompetitor } from "./first-rank-kpi-tab";
+import { FirstRankKpiTabFromLegacy as FirstRankKpiTab } from "../../_data/mention-screen.test-utils";
 
 // 2026-09-11 제품 결정(프로덕션 스크린샷): "AI 우선 노출도" 순위 표의 **지표 정렬이
 // 어긋난다**. 원인은 헤더 4칸 vs 행 5요소 — 순위 셀 하나에 텍스트와 막대를 같이 넣어

@@ -189,14 +189,14 @@ describe("FavorabilityTrendChart — 우호도 추이", () => {
   const gapped = [clean[0], { ...pt("2026-08-24", false), gap: GAP }, clean[1]];
 
   it("갭이 있으면 음영 1 + 긍정·부정 보조선 2", () => {
-    const html = wrap(<FavorabilityTrendChart points={gapped} />);
+    const html = wrap(<FavorabilityTrendChart points={gapped} coverage={gapped.filter((p) => p.measuredDays > 0).map((p) => ({ bucketStart: p.bucketStart, measuredDays: p.measuredDays }))} />);
     expect(areas(html)).toBe(1);
     expect(bridges(html)).toBe(2);
     expectBridgesAreNotSeries(html, 2);
   });
 
   it("갭이 없으면 0/0", () => {
-    const html = wrap(<FavorabilityTrendChart points={clean} />);
+    const html = wrap(<FavorabilityTrendChart points={clean} coverage={clean.filter((p) => p.measuredDays > 0).map((p) => ({ bucketStart: p.bucketStart, measuredDays: p.measuredDays }))} />);
     expect(areas(html)).toBe(0);
     expect(bridges(html)).toBe(0);
   });

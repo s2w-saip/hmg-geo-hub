@@ -37,8 +37,7 @@ vi.mock("@/lib/export/xlsx", () => ({
   },
 }));
 
-const { MentionsPromptsSection } = await import("./mentions-prompts-section");
-const { BrandRankTable } = await import("./brand-rank-table");
+const { MentionsPromptsSectionFromLegacy: MentionsPromptsSection, BrandRankTableFromLegacy: BrandRankTable } = await import("../_data/mention-screen.test-utils");
 
 const DATA: MentionsLive = {
   summary: { total: 300, uniqueBrands: 3, totalPrompts: 50, totalAnswers: 200 },

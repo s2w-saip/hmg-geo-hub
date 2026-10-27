@@ -5,26 +5,23 @@ import { useTranslations } from "next-intl";
 import { RnCardActions, useRnToast } from "@/components/renewal-ui";
 import type { StandardAcr } from "@/lib/db/repositories/scope-aggregates";
 import { downloadCsv, type CsvCell } from "@/app/[locale]/(renewal)/renewal/_components/csv";
-import type { AcrView } from "./acr-model";
+import type { RnAcrView } from "../_data/screen-types";
 
-// Shared state of the renewal ACR body: the data and its view model, the compare brands
+// Shared state of the renewal ACR body: the view model (screen acr/renewal), the compare brands
 // (colour follows the brand: 당사 navy, compare slots in pick order, the rest grey), the
 // lit keys of the linked highlight, and which cards show their table twin.
 
 export const OWN_COLOR = "#002c5f";
 export const COMPARE_COLORS = ["#eb6834", "#1baf7a", "#6250d6"] as const;
 export const CONTEXT_COLOR = "#c9c3bb";
-const HMG_BRANDS = ["Hyundai", "Kia", "Genesis"];
 
 export interface AcrCtx {
-  data: StandardAcr;
-  view: AcrView;
+  view: RnAcrView;
+  totals: StandardAcr["totals"];
   ownLabel: string;
   compare: string[];
   colorOf: (brand: string) => string;
   isOwn: (brand: string) => boolean;
-  /** an HMG brand that is not 당사 for this account (brand accounts see the siblings as brands) */
-  isSibling: (brand: string) => boolean;
   /** keys lit by the linked highlight (당사 ↔ every own brand) */
   lit: string[];
   hover: (key: string | null) => void;
@@ -56,8 +53,6 @@ export function makeColorOf(compare: readonly string[], isOwn: (b: string) => bo
     return i >= 0 ? COMPARE_COLORS[i] : CONTEXT_COLOR;
   };
 }
-
-export const isHmgSibling = (brand: string, own: readonly string[]) => HMG_BRANDS.includes(brand) && !own.includes(brand);
 
 export const pctTxt = (v: number | null | undefined) => (v == null ? "—" : `${v.toFixed(1)}%`);
 export const ppTxt = (v: number) => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}pp`;

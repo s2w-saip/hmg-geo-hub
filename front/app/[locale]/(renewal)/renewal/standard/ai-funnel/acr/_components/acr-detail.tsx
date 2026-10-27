@@ -3,14 +3,13 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { RnBasisChip, RnButton, RnCard, RnCardHead, RnEmpty, RnInfoTip, RnInfoTipItem, RnSegmented, RnTag, cx, rnHighlightState } from "@/components/renewal-ui";
-import { sheetKeyOf } from "./acr-model";
+import type { AcrDistSheet, AcrModelSort } from "../_data/screen-types";
 import { AcrCardActions, CONTEXT_COLOR, OWN_COLOR, pctTxt, useAcr } from "./acr-context";
 
-// 엔진·프롬프트 · 차종 · 선택 분포 cards of the renewal ACR page.
+// 엔진·프롬프트 · 차종 · 선택 분포 cards of the renewal ACR page. Rows, orders, views, scales
+// and the distribution sheets come computed in the view model (screen acr/renewal).
 
 const HATCH = "repeating-linear-gradient(135deg, #f1ede8 0 4px, #ddd6ce 4px 6px)";
-const BATTLE_VISIBLE = 30; // acr-live-view.tsx BATTLE_VISIBLE
-const DIST_VISIBLE = 20;
 
 function WinBadge({ brand }: { brand: string | null }) {
   const { colorOf, isOwn, lit, hover, view } = useAcr();
@@ -36,19 +35,18 @@ function WinBadge({ brand }: { brand: string | null }) {
 }
 
 export function AcrBattle() {
-  const { data, view, compare, colorOf, engineLabel, battle, setBattle, lit, hover } = useAcr();
+  const { view, compare, colorOf, engineLabel, battle, setBattle, lit, hover } = useAcr();
   const t = useTranslations("renewal.acr.battle");
   const [more, setMore] = useState(false);
   const engines = view.engines;
-  const keep = (r: (typeof data.battle)[number]) =>
-    battle === "notown" ? !r.cells.some((c) => c.winnerIsOurs) : battle === "split" ? new Set(r.cells.map((c) => c.winner)).size > 1 : true;
-  const rows = data.battle.filter(keep);
-  const shown = more ? rows : rows.slice(0, BATTLE_VISIBLE);
-  const total = data.battle.length || 1;
+  const grid = view.battle;
+  const rows = grid.views[battle].map((i) => grid.rows[i]);
+  const shown = more ? rows : rows.slice(0, grid.visible);
+  const total = grid.total;
   const cols = { gridTemplateColumns: `minmax(0,1fr) repeat(${engines.length}, minmax(112px, 150px))` };
   const csv = () => ({
     name: "acr-prompt-engine",
-    rows: [[t("colPrompt"), ...engines.map(engineLabel)], ...rows.map((r) => [r.promptText ?? r.promptId, ...engines.map((e) => r.cells.find((c) => c.engine === e)?.winner ?? "")])],
+    rows: [[t("colPrompt"), ...engines.map(engineLabel)], ...rows.map((r) => [r.label, ...r.winners.map((w) => w ?? "")])],
   });
   return (
     <RnCard aria-label={t("title")}>
@@ -59,7 +57,7 @@ export function AcrBattle() {
             <RnInfoTipItem label={t("infoLabel")}>{t("info")}</RnInfoTipItem>
           </RnInfoTip>
         }
-        chips={<RnBasisChip>{t("chip", { prompts: data.battle.length, engines: engines.length })}</RnBasisChip>}
+        chips={<RnBasisChip>{t("chip", { prompts: grid.count, engines: engines.length })}</RnBasisChip>}
         controls={
           <RnSegmented
             label={t("viewLabel")}
@@ -79,8 +77,9 @@ export function AcrBattle() {
       />
       <div className="flex flex-col gap-1 px-6 pb-3 [.rn-dense_&]:px-4.5">
         {view.engineWins.map((w) => {
-          const cmp = compare.map((b) => ({ key: b, name: b, n: w.byBrand.get(b) ?? 0, color: colorOf(b) }));
-          const rest = data.battle.length - w.ownWins - cmp.reduce((s, x) => s + x.n, 0);
+          // the compare brands are UI state: their counts are looked up, the rest is what they leave
+          const cmp = compare.map((b) => ({ key: b, name: b, n: w.byBrand.find((x) => x.brand === b)?.count ?? 0, color: colorOf(b) }));
+          const rest = w.restBase - cmp.reduce((s, x) => s + x.n, 0);
           const segs = [{ key: "__own", name: t("ownLabel"), n: w.ownWins, color: OWN_COLOR }, ...cmp, { key: "__rest", name: t("others"), n: rest, color: CONTEXT_COLOR }].filter((s) => s.n > 0);
           const keys = segs.map((s) => s.key);
           return (
@@ -102,7 +101,7 @@ export function AcrBattle() {
                   );
                 })}
               </span>
-              <span className="text-rn-12 whitespace-nowrap text-rn-muted tabular-nums [&_b]:text-rn-13 [&_b]:text-rn-navy">{t.rich("ownWins", { b: (c) => <b>{c}</b>, wins: w.ownWins, total: data.battle.length })}</span>
+              <span className="text-rn-12 whitespace-nowrap text-rn-muted tabular-nums [&_b]:text-rn-13 [&_b]:text-rn-navy">{t.rich("ownWins", { b: (c) => <b>{c}</b>, wins: w.ownWins, total: grid.count })}</span>
             </div>
           );
         })}
@@ -137,15 +136,15 @@ export function AcrBattle() {
             <div
               role="row"
               key={r.promptId}
-              className={cx("grid min-h-[46px] items-center gap-3 border-b border-rn-line px-6 text-rn-13 [.rn-dense_&]:min-h-[38px] [.rn-dense_&]:px-4.5", !r.cells.some((c) => c.winnerIsOurs) && "shadow-[inset_3px_0_0_#f0a28f]")}
+              className={cx("grid min-h-[46px] items-center gap-3 border-b border-rn-line px-6 text-rn-13 [.rn-dense_&]:min-h-[38px] [.rn-dense_&]:px-4.5", r.notOwn && "shadow-[inset_3px_0_0_#f0a28f]")}
               style={cols}
             >
-              <span role="cell" title={r.promptText ?? r.promptId} className="line-clamp-2 leading-[1.45] text-rn-ink-2">
-                {r.promptText ?? r.promptId}
+              <span role="cell" title={r.label} className="line-clamp-2 leading-[1.45] text-rn-ink-2">
+                {r.label}
               </span>
-              {engines.map((e) => (
+              {engines.map((e, ei) => (
                 <span role="cell" key={e} className="min-w-0">
-                  <WinBadge brand={r.cells.find((c) => c.engine === e)?.winner ?? null} />
+                  <WinBadge brand={r.winners[ei]} />
                 </span>
               ))}
             </div>
@@ -154,10 +153,10 @@ export function AcrBattle() {
           <RnEmpty className="m-4">{t("empty")}</RnEmpty>
         )}
       </div>
-      {rows.length > BATTLE_VISIBLE ? (
+      {grid.hidden[battle] > 0 ? (
         <div className="flex justify-center border-t border-rn-line p-3">
           <RnButton size="sm" onClick={() => setMore((m) => !m)}>
-            {more ? t("less") : t("more", { count: rows.length - BATTLE_VISIBLE })}
+            {more ? t("less") : t("more", { count: grid.hidden[battle] })}
           </RnButton>
         </div>
       ) : null}
@@ -168,15 +167,14 @@ export function AcrBattle() {
 const MODEL_COLS = "grid-cols-[26px_minmax(150px,1.1fr)_minmax(76px,.8fr)_minmax(56px,1.2fr)_56px_96px_80px] @max-[700px]/rnpage:grid-cols-[26px_minmax(146px,1fr)_minmax(76px,.8fr)_minmax(40px,1fr)_56px_80px]";
 
 export function AcrModels() {
-  const { data, colorOf, isOwn, isSibling, lit, hover } = useAcr();
+  const { view, colorOf, lit, hover } = useAcr();
   const t = useTranslations("renewal.acr.models");
   const tb = useTranslations("renewal.acr.board");
   const tDef = useTranslations("aiFunnelView.acr.def");
   const td = useTranslations("renewal.acr.def");
-  const [sort, setSort] = useState<"conversionRate" | "shortlistCount" | "top1Count">("conversionRate");
-  const rows = data.modelConversion.map((r, i) => ({ ...r, rank: i + 1 })).sort((a, b) => (b[sort] ?? -1) - (a[sort] ?? -1) || a.rank - b.rank);
-  const max = Math.max(1, ...data.modelConversion.map((r) => r.conversionRate ?? 0));
-  const keys = ["__own", ...data.modelConversion.map((r) => r.brand ?? "")];
+  const [sort, setSort] = useState<AcrModelSort>("conversionRate");
+  const rows = view.models.orders[sort].map((i) => view.models.rows[i]);
+  const keys = ["__own", ...view.models.rows.map((r) => r.brand ?? "")];
   const csv = () => ({ name: "acr-models", rows: [[t("colBrand"), t("colModel"), t("colRate"), t("colShortlist"), t("colTop1")], ...rows.map((r) => [r.brand ?? "", r.model, r.conversionRate, r.shortlistCount, r.top1Count])] });
   return (
     <RnCard aria-label={t("title")}>
@@ -220,8 +218,8 @@ export function AcrModels() {
       {rows.length ? (
         <div role="list">
           {rows.map((r) => {
-            const brand = r.brand ?? "—";
-            const own = r.isOurs || isOwn(brand);
+            const brand = r.brandLabel;
+            const own = r.own;
             const st = rnHighlightState(lit, [brand], keys);
             return (
               <div
@@ -242,11 +240,11 @@ export function AcrModels() {
                 <span className="flex min-w-0 items-center gap-2">
                   <i aria-hidden className="size-2.5 shrink-0 rounded-[2px]" style={{ background: colorOf(brand) }} />
                   <b className={cx("truncate font-semibold", own ? "text-rn-navy" : "text-rn-ink")}>{brand}</b>
-                  {own ? <RnTag>{tb("own")}</RnTag> : isSibling(brand) ? <RnTag className="bg-transparent text-rn-navy-500 shadow-[inset_0_0_0_1px_var(--color-rn-navy-300)]">{tb("sibling")}</RnTag> : null}
+                  {own ? <RnTag>{tb("own")}</RnTag> : r.sibling ? <RnTag className="bg-transparent text-rn-navy-500 shadow-[inset_0_0_0_1px_var(--color-rn-navy-300)]">{tb("sibling")}</RnTag> : null}
                 </span>
                 <span className="truncate text-rn-ink-2">{r.model}</span>
                 <span className="h-2 overflow-hidden rounded bg-rn-page">
-                  <i className="block h-full rounded" style={{ width: `${((r.conversionRate ?? 0) / max) * 100}%`, background: own ? OWN_COLOR : colorOf(brand) }} />
+                  <i className="block h-full rounded" style={{ width: `${r.bar}%`, background: own ? OWN_COLOR : colorOf(brand) }} />
                 </span>
                 <span className="text-right font-bold text-rn-ink tabular-nums">{pctTxt(r.conversionRate)}</span>
                 <span className="text-right text-rn-12 text-rn-ink-2 tabular-nums @max-[700px]/rnpage:hidden">{r.shortlistCount.toLocaleString()}</span>
@@ -265,24 +263,23 @@ export function AcrModels() {
 const DIST_COLS = "grid-cols-[minmax(0,1.4fr)_minmax(140px,1fr)_52px_minmax(116px,152px)] @max-[700px]/rnpage:grid-cols-[minmax(0,1fr)_minmax(110px,1fr)_48px]";
 
 export function AcrDistribution() {
-  const { data, compare, colorOf, isOwn, countryLabel, engineLabel, sheet, setSheet, lit, hover } = useAcr();
+  const { view, compare, colorOf, isOwn, countryLabel, engineLabel, sheet, setSheet, lit, hover } = useAcr();
   const t = useTranslations("renewal.acr.dist");
   const tb = useTranslations("renewal.acr.battle");
   const [zero, setZero] = useState(false);
   const [sort, setSort] = useState<"text" | "own">("text");
   const [more, setMore] = useState(false);
-  if (!data.territory.length) return null;
-  const cur = data.territory.find((s) => sheetKeyOf(s) === sheet) ?? data.territory[0];
-  const ownN = (r: (typeof cur.rows)[number]) => r.entries.filter((e) => isOwn(e.brand)).reduce((s, e) => s + e.choice, 0);
-  let rows = cur.rows.filter((r) => !zero || ownN(r) === 0);
-  rows = sort === "own" ? [...rows].sort((a, b) => ownN(a) / (a.validAcr || 1) - ownN(b) / (b.validAcr || 1) || (a.promptText ?? "").localeCompare(b.promptText ?? "")) : [...rows].sort((a, b) => (a.promptText ?? "").localeCompare(b.promptText ?? ""));
-  const shown = more ? rows : rows.slice(0, DIST_VISIBLE);
-  const sheetName = (s: (typeof data.territory)[number]) => `${countryLabel(s.region)} · ${engineLabel(s.engine)}`;
-  const present = new Set(cur.rows.flatMap((r) => r.entries.map((e) => e.brand)));
+  const sheets = view.sheets;
+  if (!sheets.length) return null;
+  const cur = sheets.find((s) => s.key === sheet) ?? sheets[0];
+  const rows = cur.orders[zero ? (sort === "own" ? "ownZero" : "textZero") : sort].map((i) => cur.rows[i]);
+  const shown = more ? rows : rows.slice(0, view.distVisible);
+  const sheetName = (s: AcrDistSheet) => `${countryLabel(s.region)} · ${engineLabel(s.engine)}`;
+  const present = cur.present;
   const keys = ["__own", ...present];
   const csv = () => ({
-    name: `acr-picks-${sheetKeyOf(cur).replace("|", "-")}`,
-    rows: [[t("colPrompt"), t("colOwn"), "valid", ...[...present]], ...rows.map((r) => [r.promptText ?? r.promptId, ownN(r), r.validAcr, ...[...present].map((b) => r.entries.find((e) => e.brand === b)?.choice ?? 0)])],
+    name: `acr-picks-${cur.key.replace("|", "-")}`,
+    rows: [[t("colPrompt"), t("colOwn"), "valid", ...present], ...rows.map((r) => [r.label, r.ownN, r.validAcr, ...r.pivot])],
   });
   return (
     <RnCard aria-label={t("title")}>
@@ -293,21 +290,21 @@ export function AcrDistribution() {
             <RnInfoTipItem label={t("infoLabel")}>{t("info")}</RnInfoTipItem>
           </RnInfoTip>
         }
-        chips={<RnBasisChip>{t("chip", { n: data.territory.length })}</RnBasisChip>}
+        chips={<RnBasisChip>{t("chip", { n: sheets.length })}</RnBasisChip>}
         actions={<AcrCardActions section="sec-dist" csv={csv} />}
       />
       <div role="tablist" aria-label={t("sheets")} className="flex flex-wrap gap-1.5 px-6 pb-3 [.rn-dense_&]:px-4.5">
-        {data.territory.map((s) => {
+        {sheets.map((s) => {
           const on = s === cur;
           return (
             <button
-              key={sheetKeyOf(s)}
+              key={s.key}
               type="button"
               role="tab"
               aria-selected={on}
-              data-rn-sheet={sheetKeyOf(s)}
+              data-rn-sheet={s.key}
               onClick={() => {
-                setSheet(sheetKeyOf(s));
+                setSheet(s.key);
                 setMore(false);
               }}
               className={cx(
@@ -352,7 +349,7 @@ export function AcrDistribution() {
             {tb("ownLabel")}
           </span>
           {compare
-            .filter((b) => present.has(b))
+            .filter((b) => present.includes(b))
             .map((b) => (
               <span key={b} className="inline-flex items-center gap-1.5">
                 <i aria-hidden className="size-2.5 rounded-[2px]" style={{ background: colorOf(b) }} />
@@ -382,13 +379,12 @@ export function AcrDistribution() {
         </div>
         {shown.length ? (
           shown.map((r, i) => {
-            const o = ownN(r);
-            const picked = r.entries.reduce((s, e) => s + e.choice, 0);
-            const top = r.entries[0];
+            const o = r.ownN;
+            const top = r.top;
             return (
               <div role="row" key={`${r.promptId}-${i}`} className={cx("grid min-h-[38px] items-center gap-3 border-b border-rn-line px-6 py-1 text-rn-13 [.rn-dense_&]:min-h-8 [.rn-dense_&]:px-4.5", DIST_COLS)}>
-                <span role="cell" title={r.promptText ?? r.promptId} className="line-clamp-2 leading-[1.4] text-rn-ink-2">
-                  {r.promptText ?? r.promptId}
+                <span role="cell" title={r.label} className="line-clamp-2 leading-[1.4] text-rn-ink-2">
+                  {r.label}
                 </span>
                 <span role="cell" className="flex h-4 gap-0.5">
                   {r.entries.map((e) => {
@@ -401,11 +397,11 @@ export function AcrDistribution() {
                         onPointerEnter={() => hover(e.brand)}
                         onPointerLeave={() => hover(null)}
                         className={cx("block h-full min-w-[3px] rounded-[2px] transition-opacity", st === "dim" && "opacity-30", st === "on" && "shadow-[inset_0_0_0_1.5px_var(--color-rn-ink)]")}
-                        style={{ width: `${(e.choice / (r.validAcr || 1)) * 100}%`, background: colorOf(e.brand) }}
+                        style={{ width: `${e.width}%`, background: colorOf(e.brand) }}
                       />
                     );
                   })}
-                  {r.validAcr > picked ? <i title={t("noneTip", { n: r.validAcr - picked, total: r.validAcr })} className="block h-full flex-1 rounded-[2px]" style={{ background: HATCH }} /> : null}
+                  {r.hatch ? <i title={t("noneTip", { n: r.none, total: r.validAcr })} className="block h-full flex-1 rounded-[2px]" style={{ background: HATCH }} /> : null}
                 </span>
                 <span role="cell" className={cx("text-right text-rn-12 tabular-nums", o === 0 ? "font-bold text-rn-danger-ink" : "text-rn-ink-2")}>
                   {o}/{r.validAcr}
@@ -427,7 +423,7 @@ export function AcrDistribution() {
           <RnEmpty className="m-4">{t("empty")}</RnEmpty>
         )}
       </div>
-      {rows.length > DIST_VISIBLE ? (
+      {rows.length > view.distVisible ? (
         <div className="flex justify-center border-t border-rn-line p-3">
           <RnButton size="sm" onClick={() => setMore((m) => !m)}>
             {more ? t("less") : t("more", { count: rows.length })}

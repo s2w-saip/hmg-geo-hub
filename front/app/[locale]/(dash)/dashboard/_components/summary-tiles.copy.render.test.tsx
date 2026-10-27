@@ -2,8 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { NextIntlClientProvider } from "next-intl";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import type { KpiSummary } from "../_data/sample";
-import { SummaryTiles } from "./summary-tiles";
+import type { KpiSummary } from "../_data/model";
+import { SummaryTilesView } from "./summary-tiles";
+import { tilesViewFor } from "./__fixtures__/tiles-views";
 
 // U5 검증 D2: 원천별 카드 문구. messages 는 전역이라 api 문구로 종전 키를 덮으면 legacy(롤백
 // 경로)의 라벨이 틀어진다. 그래서 api 카드만 KpiSummary.copyVariant="api" 를 달고, 타일이
@@ -32,7 +33,7 @@ async function render(items: KpiSummary[], locale: "ko" | "en"): Promise<string>
   return renderToStaticMarkup(
     <NextIntlClientProvider locale={locale} messages={messages} timeZone="Asia/Seoul">
       <TooltipProvider>
-        <SummaryTiles items={items} perturb={false} />
+        <SummaryTilesView view={tilesViewFor(items)} />
       </TooltipProvider>
     </NextIntlClientProvider>,
   );

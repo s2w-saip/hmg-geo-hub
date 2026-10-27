@@ -430,7 +430,6 @@ describe("갭 슬롯 cycleAnchorAt = 숨긴 회차 실앵커 — 키·값 불변
   it("재현: 이웃 9/06T15:48Z·9/20T15:50Z 사이 숨긴 9/13T15:48Z → 라벨 [09-07, 09-14, 09-21]", async () => {
     hiddenCycleSlots.mockResolvedValue([HIDDEN_0913]);
     const { withTrendGapBuckets } = await import("./trend-gaps");
-    const { trendBucketDisplays } = await import("@/lib/as-of-date");
     const out = await withTrendGapBuckets(
       [cycAt("2026-09-06", "2026-09-06T15:48:00.000Z"), cycAt("2026-09-20", "2026-09-20T15:50:51.000Z")],
       "week", "global", [ROOT],
@@ -443,29 +442,28 @@ describe("갭 슬롯 cycleAnchorAt = 숨긴 회차 실앵커 — 키·값 불변
       gap: { reason: "collection_error" }, answers: 0, totalCitations: 0, avgPosition: null,
       measuredDays: 0, firstAt: null, lastAt: null,
     });
-    const d = trendBucketDisplays(out);
-    expect(out.map((b) => d.get(b.bucketStart))).toEqual([
-      { day: "2026-09-07", time: null },
-      { day: "2026-09-14", time: null },
-      { day: "2026-09-21", time: null },
+    // 라벨 원천 = 실앵커(KST 9/14) — 합성 ${key}T00:00Z 가 아니다.
+    expect(out.map((b) => b.cycleAnchorAt)).toEqual([
+      "2026-09-06T15:48:00.000Z",
+      "2026-09-13T15:48:44.000Z",
+      "2026-09-20T15:50:51.000Z",
     ]);
   });
 
-  it("같은 KST 날 충돌 — 가짜 09:00 이 아니라 실시각으로 구분된다", async () => {
+  it("같은 KST 날 충돌 — 가짜 09:00 이 아니라 실시각을 싣는다", async () => {
     hiddenCycleSlots.mockResolvedValue([HIDDEN_0913]);
     const { withTrendGapBuckets } = await import("./trend-gaps");
-    const { trendBucketDisplays, formatTrendBucketMD } = await import("@/lib/as-of-date");
     const out = await withTrendGapBuckets(
       [cycAt("2026-09-06", "2026-09-06T15:48:00.000Z"), cycAt("2026-09-14", "2026-09-14T03:00:00.000Z")],
       "week", "global", [ROOT],
     );
     expect(out.map((b) => b.bucketStart)).toEqual(["2026-09-06", "2026-09-13", "2026-09-14"]);
-    const d = trendBucketDisplays(out);
-    const labels = out.map((b) => formatTrendBucketMD(d.get(b.bucketStart)!));
-    expect(labels).toEqual(["9. 7.", "9. 14. 00:48", "9. 14. 12:00"]);
-    expect(labels.join()).not.toContain("09:00");
-    // 밴드·범주 불변 — 라벨이 점마다 유일하다(LiveTrendChart 는 라벨이 x 범주).
-    expect(new Set(labels).size).toBe(out.length);
+    // 표시(같은 KST 날 충돌 시 시각)는 화면이 이 앵커로 계산한다 — 합성 09:00 이 아니라 실시각.
+    expect(out.map((b) => b.cycleAnchorAt)).toEqual([
+      "2026-09-06T15:48:00.000Z",
+      "2026-09-13T15:48:44.000Z",
+      "2026-09-14T03:00:00.000Z",
+    ]);
   });
 
   it("같은 UTC 일에 숨긴 회차가 여럿이면 최소 실앵커(toSeries 대표값과 같은 규칙)", async () => {

@@ -33,7 +33,7 @@ import {
  * 억제 기호 — **U+2015 HORIZONTAL BAR**. 값 없음의 em dash(U+2014)와 **다른 문자**다.
  * 칩에만 쓴다(문구에는 쓰지 않는다).
  */
-export const SUPPRESSED_GLYPH = "―";
+export { SUPPRESSED_GLYPH, periodChipText } from "@/lib/period-chip-text";
 
 // ── 프리셋 ──────────────────────────────────────────────────────────────────
 
@@ -226,15 +226,6 @@ export function periodChip(m: { metric: CompareMetricKey; delta: number | null }
     // 방향은 **값의 부호**가 아니라 "좋아졌는가" 다(색이 방향에서 나온다).
     direction: better > 0 ? "up" : better < 0 ? "down" : "flat",
   };
-}
-
-/** 칩 본문 텍스트(부호 없음). 단위 접미사는 `pp`·`%`·없음(순위). */
-export function periodChipText(chip: PeriodChip): string {
-  if (chip.suppressed || chip.value == null) return SUPPRESSED_GLYPH;
-  const n = chip.value.toFixed(1);
-  if (chip.unit === "pp") return `${n}pp`;
-  if (chip.unit === "pct") return `${n}%`;
-  return n;
 }
 
 /** 화면이 그릴 순서 — 어느 화면이든 이 순서를 따른다(카드마다 순서가 갈리지 않게). */

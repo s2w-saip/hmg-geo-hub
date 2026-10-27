@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { NextIntlClientProvider } from "next-intl";
 import ko from "@/messages/ko.json";
-import type { CompetitorKpiRow } from "../../_data/kpi-view";
+import type { CompetitorKpiRow } from "../../_data/mention-screen";
 
 // 검증자 뮤테이션 A(2026-09-10) — `onSelectedChange(next.slice(0, 1))` 을 **되돌려도**
 // 83/83 이 초록이었다. 형제 테스트가 전부 `selected` prop 과 초기값 seam 만 쓰고
@@ -72,7 +72,7 @@ vi.mock("@/components/ui/dropdown-menu", () => {
   };
 });
 
-const { CompetitorKpiTable } = await import("./competitor-kpi-table");
+const { CompetitorKpiTableFromLegacy: CompetitorKpiTable } = await import("../../_data/mention-screen.test-utils");
 
 function row(brand: string, over: Partial<CompetitorKpiRow> = {}): CompetitorKpiRow {
   return {

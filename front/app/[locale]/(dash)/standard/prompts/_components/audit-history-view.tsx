@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { ChevronDown, ChevronRight, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -15,54 +15,45 @@ import {
 } from "@/components/ui/select";
 import { downloadCsv, dateStamp } from "@/lib/export/csv";
 import { PROMPT_AUDIT_EVENT_TYPES } from "@/lib/standards/audit";
-import type { PromptAuditLogView } from "@/lib/db/repositories/prompt-audit-logs";
+import type { AuditRow, HistoryQuery, PromptsHistory } from "../_data/screen-types";
+import { fetchPromptsHistory } from "../_data/prompts-client";
 
-// 전역 변경 이력 (catalog-prompt-audit) — /standard/prompts의 이력 탭. 서버가
-// 최근 90일(상한 500건)을 브랜드 스코프로 내려주고, 여기서는 클라이언트 필터
-// (기간·이벤트 종류) + batch 접기 + CSV export만 한다. 카탈로그 규모(수백 행 ×
-// admin 편집)에서 페이지네이션은 YAGNI.
+// 전역 변경 이력 (catalog-prompt-audit) — /standard/prompts의 이력 탭. 기간(30·90일)·이벤트
+// 종류 필터와 bulk 묶음 접기는 screen(catalog/prompts-history)이 하고, 여기서는 그 결과를
+// 그리고 CSV 로 내보낸다. 원천이 변경 이력을 주지 않으면 그 사실을 적는다.
 
-interface BatchGroup {
-  key: string;
-  batchId: string | null;
-  rows: PromptAuditLogView[];
-}
-
-export function AuditHistoryView({ initialRows }: { initialRows: PromptAuditLogView[] }) {
+export function AuditHistoryView({ initial, load = fetchPromptsHistory }: { initial: PromptsHistory; load?: (query: HistoryQuery) => Promise<PromptsHistory> }) {
   const t = useTranslations("promptAudit");
   const th = useTranslations("promptAudit.history");
   const locale = useLocale();
   const [days, setDays] = useState<"30" | "90">("90");
   const [eventFilter, setEventFilter] = useState<string>("all");
   const [openBatches, setOpenBatches] = useState<Set<string>>(new Set());
+  const [history, setHistory] = useState(initial);
+  const [readError, setReadError] = useState<Error | null>(null);
+  const firstRead = useRef(true);
 
   const fmt = useMemo(
     () => new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }),
     [locale],
   );
 
-  const filtered = useMemo(() => {
-    const since = Date.now() - Number(days) * 24 * 60 * 60 * 1000;
-    return initialRows.filter((r) => {
-      if (new Date(r.createdAt).getTime() < since) return false;
-      if (eventFilter !== "all" && r.eventType !== eventFilter) return false;
-      return true;
-    });
-  }, [initialRows, days, eventFilter]);
-
-  // 같은 batchId의 연속 행을 한 그룹으로 접는다 (행은 이미 최신순 정렬).
-  const groups = useMemo<BatchGroup[]>(() => {
-    const out: BatchGroup[] = [];
-    for (const row of filtered) {
-      const last = out[out.length - 1];
-      if (row.batchId && last && last.batchId === row.batchId) {
-        last.rows.push(row);
-      } else {
-        out.push({ key: row.id, batchId: row.batchId, rows: [row] });
-      }
+  useEffect(() => {
+    if (firstRead.current) {
+      firstRead.current = false;
+      return;
     }
-    return out;
-  }, [filtered]);
+    let active = true;
+    load({ days, event: eventFilter })
+      .then((res) => active && setHistory(res))
+      .catch((e: unknown) => active && setReadError(e instanceof Error ? e : new Error("History read failed")));
+    return () => {
+      active = false;
+    };
+  }, [days, eventFilter, load]);
+
+  const groups = history.groups;
+  const filtered = useMemo(() => groups.flatMap((g) => g.rows), [groups]);
 
   function toggleBatch(key: string) {
     setOpenBatches((prev) => {
@@ -89,7 +80,7 @@ export function AuditHistoryView({ initialRows }: { initialRows: PromptAuditLogV
     );
   }
 
-  function eventRow(r: PromptAuditLogView, indent = false) {
+  function eventRow(r: AuditRow, indent = false) {
     return (
       <tr key={r.id} className={"border-t border-border align-top" + (indent ? " bg-muted/20" : "")}>
         <td className="whitespace-nowrap px-3 py-2.5 text-xs tabular-nums text-muted-foreground">
@@ -171,7 +162,7 @@ export function AuditHistoryView({ initialRows }: { initialRows: PromptAuditLogV
           </SelectContent>
         </Select>
         <span className="ml-auto text-[11px] tabular-nums text-muted-foreground">
-          {th("shownCount", { count: filtered.length })}
+          {th("shownCount", { count: history.shown })}
         </span>
         <Button type="button" variant="outline" size="sm" onClick={onExport} disabled={filtered.length === 0}>
           <Download className="h-3.5 w-3.5" aria-hidden />
@@ -179,9 +170,13 @@ export function AuditHistoryView({ initialRows }: { initialRows: PromptAuditLogV
         </Button>
       </div>
 
-      {groups.length === 0 ? (
+      {readError ? (
+        <p className="rounded-md border border-dashed border-border px-4 py-6 text-center text-sm text-destructive">
+          {t("loadFailed")}
+        </p>
+      ) : groups.length === 0 ? (
         <p className="rounded-md border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
-          {t("empty")}
+          {history.available ? t("empty") : t("sourceUnavailable")}
         </p>
       ) : (
         <div className="overflow-x-auto rounded-md border border-border bg-card">

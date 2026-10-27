@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from "next-intl";
 import ko from "@/messages/ko.json";
 import type { CitationsLive } from "@/lib/scope/result-adapter";
 import { CitationsStandardView } from "./citations-standard-view";
+import { standardVmFor } from "./citation-vm.fixture";
 
 // 카테고리 Δ(공식(HMG)·딜러·카테고리 바)의 두 값은 같은 단위여야 한다. 기간(?time=)이 회차 2개 이상이면 카드 값은 기간 누적인데
 // 직전 값은 추이의 직전 회차 하나라, 누적 − 회차 하나가 Δ 로 찍혔다(r1..r4 = 30·10·10·10/100 → 누적 15.0%, 직전 r3 10.0% → ▲5.0pp,
@@ -39,11 +40,9 @@ function view(prevCategories: unknown) {
     <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
       <CitationsStandardView
         data={LIVE}
-        prevSubKpis={null}
-        prevBasisDate={null}
-        typeCategories={null}
+        vm={standardVmFor(LIVE, { prev: prevCategories as never })}
+        typeChart={null}
         toneSummary={null}
-        prevCategories={prevCategories as never}
       />
     </NextIntlClientProvider>,
   );

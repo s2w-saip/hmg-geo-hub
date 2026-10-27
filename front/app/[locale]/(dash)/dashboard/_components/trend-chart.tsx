@@ -14,8 +14,7 @@ import {
 } from "recharts";
 import { cn } from "@/lib/utils";
 import { CHART_TOOLTIP_STYLE } from "@/lib/viz/chart-tooltip";
-import { useFilterSignal } from "@/components/dash/use-filter-signal";
-import type { KpiKey, TrendPoint } from "../_data/sample";
+import type { KpiKey, TrendPoint } from "../_data/model";
 
 // 추이 그래프 — v25에서 7개 Core KPI 모두 토글 가능.
 // 칩 클릭 시 라인 표시 on/off. 단위가 다른 KPI(percent vs score)가 섞여
@@ -43,19 +42,17 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
   const t = useTranslations("dashboard.trend");
   const [visible, setVisible] = useState<Set<KpiKey>>(new Set(DEFAULT_VISIBLE));
 
-  // Dimension filters perturb the fixtures via the deterministic signal.
-  const sig = useFilterSignal();
   const scaled = useMemo(
     () =>
       data.map((pt) => {
         const o = { ...pt };
         for (const s of SERIES) {
           const v = o[s.key];
-          if (typeof v === "number") o[s.key] = Number(sig.scale(v, s.key).toFixed(1));
+          if (typeof v === "number") o[s.key] = Number(v.toFixed(1));
         }
         return o;
       }),
-    [data, sig],
+    [data],
   );
 
   function toggle(k: KpiKey) {

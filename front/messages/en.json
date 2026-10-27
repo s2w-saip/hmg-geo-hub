@@ -1,4 +1,23 @@
 {
+  "gold": {
+    "noData": "No data",
+    "noDataDescription": "Only values supplied by the connected data source are displayed.",
+    "projects": "Project data",
+    "projectId": "Project ID",
+    "prompts": "Prompts",
+    "answers": "Answers",
+    "lastMeasured": "Last measured",
+    "metadataUnavailable": "Project names, members and creation history are not supplied by the data source.",
+    "catalogCount": "{count} prompts",
+    "searchPrompts": "Search prompts",
+    "search": "Search",
+    "brand": "Brand",
+    "language": "Language",
+    "country": "Country",
+    "funnel": "Funnel",
+    "firstPage": "First page",
+    "nextPage": "Next page"
+  },
   "app": {
     "name": "HMG GEO Monitoring",
     "tagline": "Generative Engine Optimization measurement dashboard"
@@ -98,6 +117,7 @@
     "error": "Invalid email or password."
   },
   "roles": {
+    "local_reader": "Read only",
     "hq": "Headquarters (HQ)",
     "region": "Region manager",
     "country": "Country manager",
@@ -241,7 +261,7 @@
           "country": "{count} countries"
         }
       },
-      "defaultScopeHint": "With no filters selected, all data within your account scope is shown (last 7 days unless a period is set).",
+      "defaultScopeHint": "Without filters, the latest measured round is shown. Select a period to aggregate its measured rounds.",
       "competitorNeedsOfficialCompetitor": "Available only when the Official (Competitor) category is included",
       "searchResultCount": "{matched} of {total} match"
     },
@@ -249,8 +269,8 @@
       "infoAriaLabel": "View metric definition",
       "definitionLabel": "Definition",
       "formulaLabel": "Formula",
-      "pending": "Awaiting data",
-      "pendingHint": "Shows automatically once scope supplies this metric",
+      "pending": "No data",
+      "pendingHint": "This metric has not been supplied or measured yet.",
       "coverageLabel": "{measured} / {total} markets measured",
       "category": {
         "content": "Answer content",
@@ -445,7 +465,7 @@
       "competitorDeltaBasis": "Competitor change is the difference between the last two measured points. It shows − when there are fewer than two.",
       "openDetail": "Open detail",
       "sparkTooltipWow": "WoW",
-      "cardEmpty": "Pending",
+      "cardEmpty": "No data",
       "geo": {
         "title": "GEO status by country",
         "kpiSelector": "KPI",
@@ -461,7 +481,9 @@
         "mapCaptionRank": "{label} — darker means an earlier (lower) rank",
         "countryAll": "All countries",
         "selectAll": "Select all",
-        "deselectAll": "Deselect all"
+        "deselectAll": "Deselect all",
+        "unassignedRegion": "Unassigned region",
+        "countryList": "Country performance list"
       }
     }
   },
@@ -513,7 +535,7 @@
     "title": "Answer analysis",
     "weekAxis": "wk of {md}",
     "empty": "No measurement data yet",
-    "pending": "Pending measurement integration — available after the scope data expansion",
+    "pending": "No data · Not enough measured rounds to show a trend.",
     "subtitle": "① Brand Mentions + ② Citation Sources — cross-prompt analysis",
     "tabs": {
       "mentions": "Brand Mentions",
@@ -1407,8 +1429,8 @@
     },
     "acrLive": {
       "empty": {
-        "title": "Awaiting ACR measurement",
-        "desc": "{count} prompts are tagged for ACR (2-turn choice measurement). This page fills with real data from the next measurement cycle."
+        "title": "No data",
+        "desc": "No measured ACR data for this selection."
       },
       "territoryHint": "Per region × engine sheet: distribution of final picks across a prompt's iterations (block count = choices; not iteration order)",
       "territoryDistribution": "Choice distribution",
@@ -2329,6 +2351,7 @@
     "loading": "Loading…",
     "loadFailed": "Failed to load history",
     "empty": "No recorded changes",
+    "sourceUnavailable": "Change history is not supplied by the data source.",
     "actorUnknown": "(system)",
     "bulkBadge": "Bulk",
     "diffOld": "Before",

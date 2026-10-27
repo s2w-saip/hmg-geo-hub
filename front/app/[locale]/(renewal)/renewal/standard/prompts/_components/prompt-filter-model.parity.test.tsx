@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { ReactNode } from "react";
 import { NextIntlClientProvider } from "next-intl";
 import ko from "@/messages/ko.json";
-import type { CatalogPage } from "@/lib/standards/catalog-page";
+import type { PromptsHistory, PromptsPage } from "@/app/[locale]/(dash)/standard/prompts/_data/screen-types";
 
 // ════════════════════════════════════════════════════════════════════════════
 // Renewal Global prompts filters = the original /standard/prompts filters
@@ -59,11 +59,18 @@ const row = (id: string, over: Record<string, unknown> = {}) => ({
   regions: ["KR"],
   lang: "KO",
   scopePromptId: "s1",
+  presence: "branded" as const,
+  common: false,
+  markets: { real: ["KR"], pseudo: [] as string[] },
   ...over,
 });
-function page(facets: Record<string, string[]>, columns: string[]): CatalogPage {
-  const rows = [row("a"), row("b", { kind: "acr", lang: "EN", regions: ["US", "x:WW"] }), row("c", { scopePromptId: null, regions: null })];
-  return { rows: rows as unknown as CatalogPage["rows"], total: rows.length, count: rows.length, offset: 0, limit: 50, facets, columns, collation: "ko" };
+function page(facets: Record<string, string[]>, columns: string[]): PromptsPage {
+  const rows = [
+    row("a"),
+    row("b", { kind: "acr", lang: "EN", regions: ["US", "x:WW"], markets: { real: ["US"], pseudo: ["x:WW"] } }),
+    row("c", { scopePromptId: null, regions: null, markets: { real: [], pseudo: [] } }),
+  ];
+  return { rows, total: rows.length, count: rows.length, offset: 0, limit: 50, page: 1, pages: 1, rangeFrom: 1, rangeTo: rows.length, facets, columns, collation: "ko" };
 }
 const FULL = page(
   {
@@ -134,7 +141,9 @@ const wrap = (node: ReactNode) =>
       {node}
     </NextIntlClientProvider>,
   );
-const remote = (p: CatalogPage) => ({ initial: p, load: async () => p, rows: async () => p });
+const remote = (p: PromptsPage) => ({ initial: p, load: async () => p, exportRows: async () => ({ rows: p.rows, columns: p.columns }) });
+const HISTORY: PromptsHistory = { available: true, shown: 0, groups: [] };
+const loadHistory = async () => HISTORY;
 
 describe("renewal Global prompts filters = the original filters", () => {
   it.each([
@@ -143,7 +152,7 @@ describe("renewal Global prompts filters = the original filters", () => {
   ] as const)("%s", (_l, p) => {
     SEARCH = "";
     const original = originalFilters(
-      wrap(<StandardPromptReadonlyList rows={p.rows as never} remote={remote(p)} scopeAll scopeRole="admin" scopeBrands={[]} scopeRegions={[]} scopeCountries={[]} />),
+      wrap(<StandardPromptReadonlyList remote={remote(p)} scopeAll scopeRole="admin" scopeBrands={[]} scopeRegions={[]} scopeCountries={[]} />),
     );
     const renewal = renewalFilters(
       wrap(
@@ -155,7 +164,8 @@ describe("renewal Global prompts filters = the original filters", () => {
           scopeRegions={[]}
           scopeCountries={[]}
           period={null}
-          auditRows={[]}
+          history={HISTORY}
+          loadHistory={loadHistory}
           initialTab="catalog"
           storageKey="test"
           defaultOpen="all"
@@ -177,7 +187,7 @@ describe("renewal Global prompts filters = the original filters", () => {
     SEARCH = "kind=acr&lang=EN";
     const renewal = renewalFilters(
       wrap(
-        <RnPromptsView remote={remote(FULL)} scopeAll scopeRole="admin" scopeBrands={[]} scopeRegions={[]} scopeCountries={[]} period={null} auditRows={[]} initialTab="catalog" storageKey="test" defaultOpen="all" />,
+        <RnPromptsView remote={remote(FULL)} scopeAll scopeRole="admin" scopeBrands={[]} scopeRegions={[]} scopeCountries={[]} period={null} history={HISTORY} loadHistory={loadHistory} initialTab="catalog" storageKey="test" defaultOpen="all" />,
       ),
     );
     const checked = renewal.flatMap((a) => a.options.filter(([, on]) => on).map(([l]) => `${a.label}=${l}`));

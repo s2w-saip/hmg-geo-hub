@@ -153,12 +153,14 @@ function readNames(src: string): Array<string | null> {
 
 describe("호출부 — 계측이 실제로 걸려 있고, 인자가 리터럴이다", () => {
   it("소스 트리에서 호출부를 실제로 찾아낸다(스캔이 조용히 0건이 되지 않는다)", () => {
-    expect(CALLSITES.length, CALLSITES.map(([f]) => f).join(", ")).toBeGreaterThanOrEqual(2);
+    // 웹사이트 지면의 두 read(summary-deltas/*)는 화면 이관으로 API 쪽(website/summary-deferred)에
+    // 산다 — 남은 계측 호출부는 읽기 계층 한 파일이다.
+    expect(CALLSITES.length, CALLSITES.map(([f]) => f).join(", ")).toBeGreaterThanOrEqual(1);
     // 조립이 읽기 계층으로 내려간 뒤로 경쟁사 경계의 계측은 여기 산다.
     expect(CALLSITES.map(([f]) => f)).toContain("lib/scope/server.ts");
   });
 
-  it("경쟁사 경계 read + 웹 경계 2 read 가 전부 timedRead 를 지난다", () => {
+  it("경쟁사 경계 read 가 전부 timedRead 를 지난다", () => {
     const names = new Set(CALLSITES.flatMap(([, src]) => readNames(src)));
     for (const n of [
       // 두 분기가 **함께** 쓰는 둘 + off 분기(넷 병렬) 둘.
@@ -169,9 +171,6 @@ describe("호출부 — 계측이 실제로 걸려 있고, 인자가 리터럴�
       // on 분기(`S1.competitors`)의 회차 축 2단 — 이름이 갈려야 두 모양을 비교할 수 있다.
       "kpi-competitors/competitorBrandTrend",
       "kpi-competitors/competitorFirstPosition",
-      // 웹사이트 지면.
-      "summary-deltas/subKpis",
-      "summary-deltas/trend",
     ]) {
       expect([...names], n).toContain(n);
     }

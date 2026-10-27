@@ -9,8 +9,7 @@ import type {
   StandardSubKpis,
   TypeKpi,
 } from "@/lib/db/repositories/scope-aggregates";
-import { FavorabilityKpiTab } from "./favorability-kpi-tab";
-import { FirstRankKpiTab } from "./first-rank-kpi-tab";
+import { FavorabilityKpiTabFromLegacy as FavorabilityKpiTab, FirstRankKpiTabFromLegacy as FirstRankKpiTab } from "../../_data/mention-screen.test-utils";
 import { FAVORABILITY_LINES } from "./favorability-trend-chart";
 
 // PR ③ 탭 두 개의 렌더 스모크 — mention-kpi-tab.render.test 와 같은 취지(렌더 중

@@ -5,8 +5,14 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import ko from "@/messages/ko.json";
 import en from "@/messages/en.json";
 import type { CompetitorBrandValue } from "@/lib/scope/result-adapter";
-import type { KpiSummary } from "../_data/sample";
+import type { KpiSummary } from "../_data/model";
 import { OverviewKpiCards } from "./overview-kpi-cards";
+import { cardsOf, competitorsOf, done, trendOf } from "./__fixtures__/overview-views";
+
+/** The cards as the screens feed them (values / Δ from the KPIs, no sparkline, competitor rows from the brands). */
+const Cards = ({ kpis, brands, locale }: { kpis: KpiSummary[]; brands: CompetitorBrandValue[]; locale: string }) => (
+  <OverviewKpiCards cards={cardsOf(kpis)} locale={locale} deferred={{ trend: done(trendOf(kpis, null)), competitors: done(competitorsOf(brands)) }} />
+);
 
 // PR④ B4 — **값 정의 변경의 화면 노출**. PR③ 이후 카드 ①~⑤ 의 Δ 는 주 버킷이 아니라
 // 회차 축(값 있는 마지막 두 점 = 직전 회차 대비)이고, 측정 기준일도 회차 앵커
@@ -53,7 +59,7 @@ describe("오버뷰 문안 — 회차 축 (PR④ B4)", () => {
     expect(ko.dashboard.overview.lastMeasured).not.toContain("최근 측정일");
     expect(en.dashboard.overview.compare).not.toMatch(/period/i);
 
-    const html = render(<OverviewKpiCards kpis={[kpi("visibility", 73.1, -4.4)]} trend={null} brands={BRANDS} locale="ko" />);
+    const html = render(<Cards kpis={[kpi("visibility", 73.1, -4.4)]} brands={BRANDS} locale="ko" />);
     expect(html).toContain(ko.dashboard.overview.compare);
     expect(html).not.toContain("이전 동일 기간 대비");
   });
@@ -75,7 +81,7 @@ describe("오버뷰 문안 — 회차 축 (PR④ B4)", () => {
 describe("경쟁사 행 Δ 기준 안내 (PR④ B4)", () => {
   it.each(["ko", "en"] as const)("경쟁사 값이 있으면 Δ 기준 안내를 함께 낸다 (%s)", (locale) => {
     const msg = (locale === "ko" ? ko : en).dashboard.overview.competitorDeltaBasis;
-    const html = render(<OverviewKpiCards kpis={[kpi("visibility", 73.1, -4.4)]} trend={null} brands={BRANDS} locale={locale} />, locale);
+    const html = render(<Cards kpis={[kpi("visibility", 73.1, -4.4)]} brands={BRANDS} locale={locale} />, locale);
     expect(html).toContain("Tesla");
     expect(html).toContain(msg);
     // 안내는 sr-only 문단 — 보이는 흐름에 줄을 추가하지 않는다(레이아웃 회귀 0).
@@ -85,13 +91,13 @@ describe("경쟁사 행 Δ 기준 안내 (PR④ B4)", () => {
 
   it("경쟁사 값이 없는 지표에는 안내를 내지 않는다 — 설명할 Δ 가 없다", () => {
     // citationShare 는 동기 경로(brands)에서 값 원천이 없어 안내문만 나온다.
-    const html = render(<OverviewKpiCards kpis={[kpi("citationShare", 9.6, 1.3)]} trend={null} brands={BRANDS} locale="ko" />);
+    const html = render(<Cards kpis={[kpi("citationShare", 9.6, 1.3)]} brands={BRANDS} locale="ko" />);
     expect(html).toContain(ko.dashboard.overview.noCompetitorData);
     expect(html).not.toContain(ko.dashboard.overview.competitorDeltaBasis);
   });
 
   it("레이아웃 회귀 0 — 경쟁사 그리드·셀·Δ 칩의 클래스가 그대로다", () => {
-    const html = render(<OverviewKpiCards kpis={[kpi("visibility", 73.1, -4.4)]} trend={null} brands={BRANDS} locale="ko" />);
+    const html = render(<Cards kpis={[kpi("visibility", 73.1, -4.4)]} brands={BRANDS} locale="ko" />);
     expect(html).toContain('<ul class="grid grid-cols-4 gap-4">');
     expect(html).toContain('<li class="flex min-w-0 flex-col gap-3">');
     expect(html).toContain('<div class="flex items-baseline gap-1.5">');

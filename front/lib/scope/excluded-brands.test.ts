@@ -9,7 +9,6 @@ import {
   markExcludedGeo,
   toExcludedBrandSet,
 } from "./excluded-brands";
-import { marketMetrics } from "@/app/[locale]/(dash)/dashboard/_data/overview-metrics";
 import type { MentionsLive } from "./result-adapter";
 import type {
   BrandTrendResult,
@@ -145,23 +144,14 @@ describe("filterFirstPosition: 순위표에서 빼고 순위 열을 다시 매�
   });
 });
 
-describe("markExcludedGeo + marketMetrics: 최대 경쟁사만 바뀌고 SOV 분모는 그대로", () => {
+describe("markExcludedGeo: 제외 행은 표식만 단다", () => {
   const geo = (brand: string, mentions: number, isTracked = false): GeoBrandKpiRow => ({
     code: "IN", brand, mentions, isTracked, answers: 1, posSum: 0, posCnt: 0, sentPositive: 0, sentTotal: 0,
   });
   const rows = [geo("Kia", 50, true), geo("LG전자", 30), geo("Toyota", 20)];
-  const totals = { answers: 10, ownAnswers: 5, citTotal: 0, citOwned: 0 };
   it("제외 행은 표식만 달리고 남는다", () => {
     const marked = markExcludedGeo(rows, EX);
     expect(marked).toHaveLength(3);
     expect(marked.find((r) => r.brand === "LG전자")?.excluded).toBe(true);
-  });
-  it("rival 은 제외 행을 건너뛰고, 당사 SOV 는 제외 행 포함 분모(100) 그대로다", () => {
-    const before = marketMetrics(rows, totals, null);
-    const after = marketMetrics(markExcludedGeo(rows, EX), totals, null);
-    expect(before.shareOfVoice.rival?.name).toBe("LG전자");
-    expect(after.shareOfVoice.rival?.name).toBe("Toyota");
-    expect(after.shareOfVoice.ours).toBe(before.shareOfVoice.ours);
-    expect(after.shareOfVoice.ours).toBe(50);
   });
 });

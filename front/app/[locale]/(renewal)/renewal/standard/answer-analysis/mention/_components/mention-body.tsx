@@ -23,19 +23,7 @@ import {
   type RnFinding,
 } from "@/components/renewal-ui";
 import { useRnFilterReset } from "@/app/[locale]/(renewal)/renewal/_components/overview-filters";
-import { overlayFirstPositionValues } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/kpi-view";
-import type { MentionsBrandLive } from "@/lib/scope/result-adapter";
-import {
-  OWN_KEY,
-  board,
-  bumpData,
-  engineRows,
-  favorHero,
-  findings,
-  rankHero,
-  rateHero,
-  typeCompareRows,
-} from "./mention-model";
+import { OWN_KEY, firstPicked, pickKey, type Finding, type RnShellVM, type TypeFinding } from "../_data/screen-types";
 import { COMPARE_COLORS, MentionProvider, type DrawerTarget, deltaTxt, pctTxt, posTxt, useCompare, useMention, type ComparePick, type MentionCtx } from "./mention-context";
 import { CardSkeleton, InfoTip, StateCard } from "./mention-kit";
 import { RateBody } from "./mention-rate";
@@ -62,14 +50,13 @@ export function RnMentionBody() {
 // The body aggregate decides the page state (원본 MentionsData 와 같은 판정).
 function MentionShell() {
   const { input } = useMentionPage();
-  const data = use(input.mentions);
-  const degraded = use(input.degraded.data);
+  const shell = use(input.shell);
   const t = useTranslations("renewal.mention.states");
   const tA = useTranslations("answerAnalysis");
   const tK = useTranslations("answerAnalysis.mentions.kpi");
   const reset = useRnFilterReset();
-  if (!data || data.brands.length === 0) {
-    if (degraded) return <StateCard icon={<CircleSlash className="size-5" aria-hidden />} title={tK("degraded")} />;
+  if (!shell.measured) {
+    if (shell.degraded) return <StateCard icon={<CircleSlash className="size-5" aria-hidden />} title={tK("degraded")} />;
     return input.filtered ? (
       <StateCard icon={<FilterX className="size-5" aria-hidden />} title={t("noResultTitle")} desc={t("noResultDesc")}>
         <RnButton onClick={reset}>{t("reset")}</RnButton>
@@ -80,12 +67,12 @@ function MentionShell() {
   }
   return (
     <RnHighlightProvider>
-      <Measured brands={data.brands} />
+      <Measured shell={shell} />
     </RnHighlightProvider>
   );
 }
 
-function Measured({ brands }: { brands: MentionsBrandLive[] }) {
+function Measured({ shell }: { shell: RnShellVM }) {
   const t = useTranslations("renewal.mention");
   const tQ = useTranslations("dashboard.kpi.question");
   const { input, kpi, setKpi } = useMentionPage();
@@ -95,14 +82,14 @@ function Measured({ brands }: { brands: MentionsBrandLive[] }) {
   const [drawer, setDrawer] = useState<DrawerTarget | null>(null);
   const key = useRnHighlightKey();
   const { hover, flash } = useRnHighlight();
-  const ownBrands = useMemo(() => brands.filter((b) => b.isTracked).map((b) => b.brand), [brands]);
+  const ownBrands = shell.ownBrands;
   const lit = useMemo(() => (!key ? [] : key === OWN_KEY ? [OWN_KEY, ...ownBrands] : ownBrands.includes(key) ? [key, OWN_KEY] : [key]), [key, ownBrands]);
   const ctx: MentionCtx = {
     input,
     kpi,
     setKpi,
     ownLabel: input.ownLabel,
-    brands,
+    drawer: shell.drawer,
     ownBrands,
     pick,
     setPick,
@@ -231,41 +218,29 @@ function SummarySkeleton() {
   );
 }
 
+/** The type finding of the pick: its leading compare brand is the first picked of the tied candidates. */
+function pickTypeFinding(tf: TypeFinding, compare: readonly string[]): Finding {
+  const { refCands, ...rest } = tf;
+  const ref = refCands.length ? firstPicked(compare, refCands) : null;
+  return { ...rest, ...(ref ? { brand: ref } : {}), params: { ...rest.params, ref: ref ?? "" } };
+}
+
 function Summary() {
-  const { input, brands, ownLabel, engineLabel } = useMention();
+  const { input, ownLabel, engineLabel } = useMention();
   const { compare } = useCompare();
   const t = useTranslations("renewal.mention");
   const tType = useTranslations("answerAnalysis.mentions.breakdown.type");
-  const period = use(input.periodCompare);
-  const [subE, subS, subF, prevE, prevS, prevF] = [use(input.sub.exposure), use(input.sub.sov), use(input.sub.favorability), use(input.prev.exposure), use(input.prev.sov), use(input.prev.favorability)];
-  const engine = use(input.engineTrend);
-  const trend = use(input.brandTrend);
-  const values = use(input.competitorValues);
-  const typesByBrand = use(input.typesByBrand);
-  const fp = use(input.firstPosition);
-  const model = useMemo(() => {
-    const heroE = rateHero("exposure", subE, prevE, engine, period);
-    const heroS = rateHero("sov", subS, prevS, engine, period);
-    const ex = board({ metric: "exposure", brands, trend, values, hero: heroE });
-    const sov = board({ metric: "sov", brands, trend, values, hero: heroS });
-    const favor = favorHero(subF, prevF, engine, period);
-    const rank = rankHero(overlayFirstPositionValues(fp, values), period);
-    const list = findings({
-      exposure: ex,
-      sov,
-      types: typeCompareRows({ typesByBrand, brands, compare }),
-      engines: engineRows(engine, "exposure").rows,
-      bump: bumpData(trend),
-      favor,
-    });
-    return { heroE, heroS, ex, sov, favor, rank, list };
-  }, [subE, subS, subF, prevE, prevS, prevF, engine, trend, values, typesByBrand, fp, brands, compare, period]);
+  const s = use(input.summary);
+  const list = useMemo(() => {
+    const opt = s.options[pickKey(compare, s.covered)] ?? { type: null, order: [] };
+    return opt.order.map((i) => (i < 0 && opt.type != null ? pickTypeFinding(s.typeFindings[opt.type], compare) : s.fixed[i]));
+  }, [s, compare]);
   const isPeriod = Boolean(input.period);
-  const asOf = model.heroE.points.filter((p) => p.pct != null).at(-1)?.key ?? null;
+  const asOf = s.asOf;
   // one flat message (nesting rich texts repeats their element keys)
   const rankTxt = (rank: number | null) => (rank ? t("summary.rank", { rank }) : "");
   const rateTxt = (pct: number | null, d: number | null) => `${pctTxt(pct)}${d != null ? ` (${deltaTxt(d)})` : ""}`;
-  const items: RnFinding[] = model.list.map((f, i) => {
+  const items: RnFinding[] = list.map((f, i) => {
     const p = f.params;
     const n1 = (v: string | number) => (typeof v === "number" ? v.toFixed(1) : v);
     let title = "";
@@ -312,12 +287,12 @@ function Summary() {
         {t.rich("summary.headline", {
           b: (c) => <b>{c}</b>,
           own: ownLabel,
-          expRank: rankTxt(model.ex.ownRank),
-          exp: rateTxt(model.heroE.pct, model.heroE.delta.value),
-          sovRank: rankTxt(model.sov.ownRank),
-          sov: rateTxt(model.heroS.pct, model.heroS.delta.value),
-          fav: pctTxt(model.favor.positivePct),
-          pos: model.rank.avgPosition == null ? "—" : t("rank.unit", { n: posTxt(model.rank.avgPosition) }),
+          expRank: rankTxt(s.exp.rank),
+          exp: rateTxt(s.exp.pct, s.exp.delta),
+          sovRank: rankTxt(s.sov.rank),
+          sov: rateTxt(s.sov.pct, s.sov.delta),
+          fav: pctTxt(s.fav),
+          pos: s.pos == null ? "—" : t("rank.unit", { n: posTxt(s.pos) }),
         })}
       </p>
       {items.length ? <RnFindingGrid items={items} /> : <p className="m-0 px-6 text-rn-12 text-white/72">{t("summary.empty")}</p>}

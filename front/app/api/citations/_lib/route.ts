@@ -4,15 +4,12 @@ import { getSession } from "@/lib/auth/session";
 import { cachedMembership, cachedProjectById } from "@/lib/db/repositories/request-cache";
 import { hghErrorResponse } from "@/lib/hgh/errors";
 import {
-  citationRouteFilters,
   citationRouteGate,
   citationRouteTarget,
   isCitationsApi,
   type CitationRouteTarget,
   type CitationRouteUser,
-  type CitationsContext,
-} from "@/lib/hgh/adapters/citations";
-import type { StandardFilters } from "@/lib/scope/result-adapter";
+} from "@/lib/hgh/citation-route";
 
 // Shared opening of the citation BFF routes (unit U7): /api/citations/domains (list),
 // /api/citations/domains/[skey] (drilldown), /api/citations/domains/export (BG-22 file).
@@ -24,10 +21,10 @@ import type { StandardFilters } from "@/lib/scope/result-adapter";
 //   3. place gate  canReadAnalysis(role, menuGroups, "analysis", surface)   -> 403 forbidden
 //   4. project     demo project admin only, then HGH_SOURCE_SESSION=api -> GET /v1/projects/{id},
 //                  legacy -> project exists and (admin or active member)   -> 404 not_found
-//   5. source      HGH_SOURCE_<G2|G3|G6> must be api: the legacy screens carry every row and its
-//                  drilldown inline and never call these routes             -> 404 not_found
-// Filters are re-read from the request exactly as the screen's page read its URL
-// (citationRouteFilters); scope comes from the session only.
+//   5. source      HGH_SOURCE_<G2|G3|G6> must be api                        -> 404 not_found
+// Then each route is a thin proxy to its screen (back/bff/screens/citation.py): the request's
+// params as they came (the server re-reads the filters exactly as the screen's page read its URL)
+// plus the route context (ctx.surface, ctx.project_id, ctx.role).
 
 const noStore = { "Cache-Control": "no-store" };
 
@@ -46,14 +43,15 @@ async function legacyProjectAllowed(id: string, user: CitationRouteUser): Promis
   return user.role === "admin" || membership?.status === "active";
 }
 
+export type CitationScreenQuery = Record<string, string | string[] | null | undefined>;
+
 export interface OpenedCitationRoute {
   target: CitationRouteTarget;
-  filters: StandardFilters;
-  ctx: CitationsContext;
-  competitor: string[];
+  /** The screen query: the request's params (a repeated key as a list) + the route context. */
+  query: CitationScreenQuery;
 }
 
-/** Steps 1..5 of the header. Returns the route context, or the error response to send. */
+/** Steps 1..5 of the header. Returns the screen query, or the error response to send. */
 export async function openCitationRoute(q: URLSearchParams): Promise<OpenedCitationRoute | Response> {
   const target = citationRouteTarget(q);
   if (!target) return routeFail(422, "invalid_value");
@@ -72,5 +70,13 @@ export async function openCitationRoute(q: URLSearchParams): Promise<OpenedCitat
     return hghErrorResponse(e);
   }
   if (!isCitationsApi(target.surface)) return routeFail(404, "not_found");
-  return { target, ...citationRouteFilters(q, target, user) };
+  const query: CitationScreenQuery = {};
+  for (const key of new Set(q.keys())) {
+    const all = q.getAll(key);
+    query[key] = all.length > 1 ? all : all[0];
+  }
+  query["ctx.surface"] = target.surface;
+  query["ctx.project_id"] = target.projectId ?? null;
+  query["ctx.role"] = user.role;
+  return { target, query };
 }

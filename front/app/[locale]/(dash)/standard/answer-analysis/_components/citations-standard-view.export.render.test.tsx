@@ -29,6 +29,7 @@ vi.mock("./citations-view", async (importOriginal) => {
 });
 
 const { CitationsStandardView } = await import("./citations-standard-view");
+const { standardVmFor } = await import("./citation-vm.fixture");
 const { runExportTask } = await import("./citations-view");
 const { downloadXlsx } = await import("@/lib/export/xlsx");
 
@@ -52,7 +53,7 @@ const LIVE: CitationsLive = {
 function render(data: CitationsLive) {
   return renderToStaticMarkup(
     <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
-      <CitationsStandardView data={data} typeCategories={[]} toneSummary={null} />
+      <CitationsStandardView data={data} vm={standardVmFor(data)} typeChart={{ series: [], bars: [], hasAny: false }} toneSummary={null} />
     </NextIntlClientProvider>,
   );
 }

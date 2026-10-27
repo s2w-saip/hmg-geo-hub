@@ -70,7 +70,13 @@ import {
   type CitationDrilldownEmptyKey,
   type CitationSectionDegraded,
   type CitationTableSource,
+  type CitationsViewVm,
+  type DomainDetailView,
+  type DomainListPageView,
   type DomainTableSortKey,
+  type DomainTableViews,
+  type EngineChartView,
+  type NumberedDomainRow,
 } from "../_data/citation-view";
 import { toast } from "sonner";
 import { dateStamp } from "@/lib/export/csv";
@@ -94,7 +100,6 @@ import type {
   CitationPromptLive,
   CitationTrend,
   CitationUrlLive,
-  EngineCategorySlice,
 } from "@/lib/scope/result-adapter";
 import { PendingCard, EmptyState, weekStartMD } from "./mentions-view";
 import { AnswerModal } from "./answer-modal";
@@ -152,10 +157,10 @@ export const OFFICIAL_COMPETITOR = "Official (Competitor)";
 //   · 행을 펼치면 /api/citations/domains/<skey> 를 한 번 읽는다
 // 없으면(legacy) 종전 그대로 클라이언트 검색·정렬·인라인 드릴다운이다.
 
-/** 행 번호 두 벌(BG-21): rank = 경쟁사 선택 뒤·검색 전, matchRank = 검색 뒤. */
-export type RankedDomainRow = CitationDomainLive & { rank?: number; matchRank?: number };
+/** 행 번호(BG-21): rank = 경쟁사 선택 뒤·검색 전, matchRank = 검색 뒤; `no` = 화면에 보이는 '#'(서버가 정한다). */
+export type RankedDomainRow = NumberedDomainRow;
 
-type TablePage = { rows: RankedDomainRow[]; nextCursor: string | null; total: number | null };
+type TablePage = { rows: NumberedDomainRow[]; nextCursor: string | null; total: number | null; views?: DomainTableViews };
 type TableState = TablePage & {
   key: string;
   status: "loading" | "ready" | "error";
@@ -166,8 +171,8 @@ type TableState = TablePage & {
 async function readTablePage(url: string, signal?: AbortSignal): Promise<TablePage> {
   const r = await fetch(url, { signal });
   if (!r.ok) throw Object.assign(new Error("table page failed"), { status: r.status });
-  const d = (await r.json()) as Partial<TablePage>;
-  return { rows: d.rows ?? [], nextCursor: d.nextCursor ?? null, total: d.total ?? null };
+  const d = (await r.json()) as Partial<DomainListPageView>;
+  return { rows: d.rows ?? [], nextCursor: d.nextCursor ?? null, total: d.total ?? null, ...(d.views ? { views: d.views } : {}) };
 }
 
 /**
@@ -182,14 +187,18 @@ async function readTablePage(url: string, signal?: AbortSignal): Promise<TablePa
  */
 export function useServerDomainTable(opts: {
   source: CitationTableSource | null | undefined;
-  initial: RankedDomainRow[];
+  initial: NumberedDomainRow[];
+  /** The category views of `initial` (renewal table), passed through as `views` on the default order. */
+  initialViews?: DomainTableViews;
   q: string;
   sortKey: DomainTableSortKey;
   asc: boolean;
   pageSize: number;
 }): {
   active: boolean;
-  rows: RankedDomainRow[];
+  rows: NumberedDomainRow[];
+  /** The server's category views of the first page of these rows (renewal table select). */
+  views: DomainTableViews | undefined;
   total: number | null;
   nextCursor: string | null;
   status: "loading" | "ready" | "error";
@@ -197,7 +206,7 @@ export function useServerDomainTable(opts: {
   loadingMore: boolean;
   loadMore: () => void;
 } {
-  const { source, initial, q, sortKey, asc, pageSize } = opts;
+  const { source, initial, initialViews, q, sortKey, asc, pageSize } = opts;
   const t = useMemo(() => ({ q: q.trim(), sortKey, asc }), [q, sortKey, asc]);
   const isDefault = isDefaultDomainQuery(t);
   // 409 재시작 번호. 그 409 가 난 필터 조건(source.query)에만 붙는다: 필터가 바뀌면 서버가 새
@@ -265,6 +274,7 @@ export function useServerDomainTable(opts: {
       .then((p) =>
         settle((prev) => ({
           key: reqKey,
+          views: prev.views,
           rows: [...prev.rows, ...p.rows],
           nextCursor: p.nextCursor,
           total: fromServer ? prev.total : p.total,
@@ -287,6 +297,7 @@ export function useServerDomainTable(opts: {
   return {
     active: Boolean(source),
     rows: base.rows,
+    views: fromServer ? initialViews : base.views,
     total: fromServer ? (source?.total ?? null) : base.total,
     nextCursor: base.nextCursor,
     status: base.status,
@@ -300,11 +311,14 @@ type DetailState = { url: string } & (
   | {
       status: "ready";
       urls: CitationUrlLive[];
-      promptList: CitationPromptLive[];
+      /** 각 프롬프트의 그 출처 인용 점유율(share)은 서버가 계산해 싣는다. */
+      promptList: DomainDetailView["promptList"];
       /** 상세 상한(URL 10) 전 URL 수 — 상한이 목록을 잘랐을 때만(P6 B047). */
       urlTotal?: number;
       /** 상세 상한(프롬프트 12) 전 프롬프트 수 — 상한이 목록을 잘랐을 때만(P6 B047). */
       promptTotal?: number;
+      /** 프롬프트 표의 정렬 헤더별 행 순서(서버 계산). */
+      promptOrders?: DomainDetailView["promptOrders"];
     }
   | { status: "error" }
 );
@@ -325,7 +339,7 @@ export function useDomainDetail(url: string | null, open: boolean): DetailState 
     setState({ url, status: "loading" });
     fetch(url, { signal: ctrl.signal })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error("detail failed"))))
-      .then((d: { urls?: CitationUrlLive[]; promptList?: CitationPromptLive[]; urlTotal?: number; promptTotal?: number }) => {
+      .then((d: Partial<DomainDetailView>) => {
         if (ctrl.signal.aborted) return;
         setState({
           url,
@@ -334,6 +348,7 @@ export function useDomainDetail(url: string | null, open: boolean): DetailState 
           promptList: d.promptList ?? [],
           ...(typeof d.urlTotal === "number" ? { urlTotal: d.urlTotal } : {}),
           ...(typeof d.promptTotal === "number" ? { promptTotal: d.promptTotal } : {}),
+          ...(d.promptOrders ? { promptOrders: d.promptOrders } : {}),
         });
       })
       .catch(() => {
@@ -508,8 +523,14 @@ export function CitationsView({
   tableSource,
   dataDegraded = false,
   degradedSections,
+  vm,
 }: {
   data: CitationsLive | null;
+  /**
+   * 화면 API(`citation/website` · `citation/project`)가 계산한 숫자: 딜러 비중 타일, 도넛 중앙 공식(HMG)
+   * 비중, 엔진별 구성 차트, 표의 첫 행('#' 포함). `data` 가 null 이면 null.
+   */
+  vm: CitationsViewVm | null;
   lockedGroups?: DimensionGroup[];
   // 웹사이트 뷰가 admin 에게 brand(브랜드 통합) 축을 추가 노출하기 위해 사용.
   extraGroups?: DimensionGroup[];
@@ -643,118 +664,21 @@ export function CitationsView({
     mode: "urls" | "prompts";
   } | null>(null);
 
-  const legacySorted = useMemo(() => {
-    const q = deferredSearch.trim().toLowerCase();
-    const arr = (data?.domains ?? [])
-      .filter((r) => !q || r.domain.toLowerCase().includes(q))
-      .map((r, i) => ({ ...r, rank: i + 1 }));
-    arr.sort((a, b) => {
-      const dir = asc ? 1 : -1;
-      if (sortKey === "domain") return dir * a.domain.localeCompare(b.domain);
-      return dir * (a[sortKey] - b[sortKey]);
-    });
-    return arr;
-  }, [data, deferredSearch, sortKey, asc]);
-  // API 원천: 검색·정렬은 서버가 전 행에서 하고, '#' 은 검색 뒤 번호(matchRank)다. 현행
-  // 표가 거른 뒤 매긴 번호와 같은 규칙(U7-N4).
+  // 검색·정렬은 서버가 전 행에서 하고, '#'(no) 은 검색 뒤 번호(matchRank, 없으면 읽은 순서)다. 현행
+  // 표가 거른 뒤 매긴 번호와 같은 규칙(U7-N4). 첫 페이지 행('#' 포함)은 화면 API 가 보낸다.
+  const initialRows = vm?.domains ?? [];
   const table = useServerDomainTable({
     source: tableSource,
-    initial: (data?.domains ?? []) as RankedDomainRow[],
+    initial: initialRows,
     q: deferredSearch,
     sortKey,
     asc,
     pageSize: API_TABLE_PAGE,
   });
-  const sorted = table.active
-    ? table.rows.map((r, i) => ({ ...r, rank: r.matchRank ?? i + 1 }))
-    : legacySorted;
+  const sorted = table.active ? table.rows : initialRows;
 
-  const ownedPromptBuckets = useMemo(() => {
-    if (!data) return null;
-
-    type PromptBucket = {
-      id: string;
-      promptText: string;
-      funnelStage: string | null;
-      citations: number;
-      providers: Set<string>;
-      answers: CitationPromptLive["answers"];
-      ownedCitationCount: number;
-    };
-
-    const allPrompts = new Map<string, PromptBucket>();
-    const ownedPromptIds = new Set<string>();
-
-    for (const domain of data.domains) {
-      for (const prompt of domain.promptList ?? []) {
-        let bucket = allPrompts.get(prompt.id);
-        if (!bucket) {
-          bucket = {
-            id: prompt.id,
-            promptText: prompt.promptText,
-            funnelStage: prompt.funnelStage,
-            citations: 0,
-            providers: new Set(),
-            answers: prompt.answers,
-            ownedCitationCount: 0,
-          };
-          allPrompts.set(prompt.id, bucket);
-        }
-        bucket.citations += prompt.citations;
-        for (const provider of prompt.providers) bucket.providers.add(provider);
-        if ((bucket.answers?.length ?? 0) === 0 && (prompt.answers?.length ?? 0) > 0) {
-          bucket.answers = prompt.answers;
-        }
-        // 자사 판정은 **인용 행 단위**다(2026-09-08). 종전에는 `domain.isOurs`
-        // (도메인 안의 어떤 인용이라도 owned 면 true)로 갈랐는데, genesis.com ·
-        // hyundai.com · kia.com 처럼 국가 경로로 갈리는 공유 호스트에서는 타국·
-        // 글로벌 페이지만 인용한 프롬프트까지 자사로 승격됐다. SQL 경로
-        // (promptSplit)와 같은 규칙을 쓰지 않으면 소스 분류 필터를 켤 때
-        // (= promptSplit 미계산 → 이 폴백) 숫자가 갈린다.
-        // ownedCitations 가 없는 구 캐시 엔트리는 종전 규칙으로 폴백한다.
-        const ownedHere =
-          prompt.ownedCitations === undefined ? domain.isOurs : prompt.ownedCitations > 0;
-        if (ownedHere) {
-          ownedPromptIds.add(prompt.id);
-          bucket.ownedCitationCount += prompt.ownedCitations ?? prompt.citations;
-        }
-      }
-    }
-
-    if (allPrompts.size === 0 || ownedPromptIds.size === 0) return null;
-
-    const owned: CitationPromptLive[] = [];
-    const uncited: CitationPromptLive[] = [];
-
-    for (const prompt of allPrompts.values()) {
-      const row: CitationPromptLive = {
-        id: prompt.id,
-        promptText: prompt.promptText,
-        funnelStage: prompt.funnelStage,
-        citations: prompt.citations,
-        providers: [...prompt.providers],
-        answers: prompt.answers,
-      };
-      if (ownedPromptIds.has(prompt.id)) owned.push(row);
-      else uncited.push(row);
-    }
-
-    owned.sort((a, b) => b.citations - a.citations);
-    uncited.sort((a, b) => b.citations - a.citations);
-
-    return {
-      owned,
-      uncited,
-      ownedCount: owned.length,
-      uncitedCount: uncited.length,
-    };
-  }, [data]);
-
-  // 미러(SQL) 경로는 프롬프트 분할을 서버에서 전량 계산해 promptSplit 으로 싣는다
-  // — 도메인 promptList 가 top-N 캡으로 잘려도 카운트가 정확하도록. undefined
-  // (live/public 경로)면 종전처럼 domains.promptList 를 스캔해 계산한다.
-  const promptBuckets =
-    data && data.promptSplit !== undefined ? data.promptSplit : ownedPromptBuckets;
+  // 자사 인용/미인용 프롬프트 분할은 서버가 전량 계산해 promptSplit 으로 싣는다(null = 자사 인용 없음).
+  const promptBuckets = data?.promptSplit ?? null;
 
   function clickHeader(k: SortKey) {
     if (sortKey === k) setAsc((v) => !v);
@@ -777,7 +701,7 @@ export function CitationsView({
       return;
     }
     const rows = sorted.map((r) => [
-      r.rank,
+      r.no,
       r.domain,
       r.category ? catLabel(r.category) : "",
       r.citations,
@@ -857,38 +781,29 @@ export function CitationsView({
           label={t("summary.categories")}
           value={data.categories ? data.categories.length.toLocaleString() : "—"}
         />
-        {data.summary.officialOwnShare !== undefined ? (
-          // 공식(당사) 인용 비중 — 당사 브랜드 스코프의 owned base 판정 (KPI ⑤
-          // 분자와 동일, 2026-08-05 축E 통일). 분모 0 → "—". 카테고리 파이의
-          // Official (HMG) 슬라이스(전사 분류)와 정의가 다름 — 툴팁이 설명.
-          <SummaryCard
-            icon={ShieldCheck}
-            label={t("summary.officialOwnShare")}
-            value={
-              data.summary.officialOwnShare == null
-                ? "—"
-                : `${data.summary.officialOwnShare.toFixed(1)}%`
-            }
-            accent={categoryColor(OFFICIAL_HMG)}
-            info={{
-              title: t("summary.officialOwnShare"),
-              definition: t("summary.def.officialOwnShare.definition"),
-              formula: t("summary.def.officialOwnShare.formula"),
-            }}
-          />
-        ) : (
-          // 폴백 — 구(officialOwnShare 이전) 캐시 엔트리: 종전 카테고리 슬라이스 타일.
-          <SummaryCard
-            icon={ShieldCheck}
-            label={t("summary.officialShare")}
-            value={formatCategoryShare(data.categories, OFFICIAL_HMG)}
-            accent={categoryColor(OFFICIAL_HMG)}
-          />
-        )}
+        {/* 공식(당사) 인용 비중 — 당사 브랜드 스코프의 owned base 판정 (KPI ⑤
+            분자와 동일, 2026-08-05 축E 통일). 분모 0 → "—". 카테고리 파이의
+            Official (HMG) 슬라이스(전사 분류)와 정의가 다름 — 툴팁이 설명. */}
+        <SummaryCard
+          icon={ShieldCheck}
+          label={t("summary.officialOwnShare")}
+          value={
+            data.summary.officialOwnShare == null
+              ? "—"
+              : `${data.summary.officialOwnShare.toFixed(1)}%`
+          }
+          accent={categoryColor(OFFICIAL_HMG)}
+          info={{
+            title: t("summary.officialOwnShare"),
+            definition: t("summary.def.officialOwnShare.definition"),
+            formula: t("summary.def.officialOwnShare.formula"),
+          }}
+        />
+        {/* 딜러·마켓 비중(카테고리 슬라이스 중) — 서버가 계산한 비율, 표기는 소수 1자리. */}
         <SummaryCard
           icon={Store}
           label={t("summary.dealerShare")}
-          value={formatCategoryShare(data.categories, DEALER_MARKETPLACE)}
+          value={vm?.dealerShare == null ? "—" : `${vm.dealerShare.toFixed(1)}%`}
           accent={categoryColor(DEALER_MARKETPLACE)}
         />
         {/* 자사 URL·타겟 URL 인용률(웹사이트 전용) — 판정 단위가 프롬프트라 위 인용
@@ -978,6 +893,7 @@ export function CitationsView({
             hint={t("pie.clickHint")}
             centerLabel={t("pie.officialCenter")}
             data={data.categories}
+            officialPct={vm?.officialPct ?? null}
             activeCategories={activeCategories}
             onSliceClick={toggleCategoryFilter}
             label={catLabel}
@@ -985,11 +901,11 @@ export function CitationsView({
         ) : (
           <PendingCard title={t("pie.categoryTitle")} label={tRoot("pending")} />
         )}
-        {data.engineCategories?.length ? (
+        {vm?.engineChart ? (
           <EngineCategoryChart
             title={t("engineCategory.title")}
             hint={t("engineCategory.hint")}
-            data={data.engineCategories}
+            chart={vm.engineChart}
             label={catLabel}
           />
         ) : (
@@ -1107,7 +1023,7 @@ export function CitationsView({
                 <DomainRow
                   key={r.domain}
                   row={r}
-                  rank={r.rank}
+                  rank={r.no}
                   detailQuery={tableSource?.query}
                   openMode={expanded?.domain === r.domain ? expanded.mode : null}
                   onToggle={(mode) =>
@@ -1372,19 +1288,6 @@ function SummaryCard({
   );
 }
 
-// 카테고리 비중 (전체 인용 대비 %). 활성 sourceCategory 필터가 있으면 "필터된
-// 집합 내 비중"이 된다 — 타일이 도넛과 항상 같은 데이터를 말하도록 의도된 동작.
-function formatCategoryShare(
-  categories: CitationCategorySlice[] | null,
-  name: string,
-): string {
-  if (!categories?.length) return "—";
-  const total = categories.reduce((s, c) => s + c.value, 0);
-  if (!total) return "—";
-  const v = categories.find((c) => c.name === name)?.value ?? 0;
-  return `${((100 * v) / total).toFixed(1)}%`;
-}
-
 export function Th({
   children,
   onClick,
@@ -1573,6 +1476,7 @@ export function DomainRow({
                 {pending ?? (
                   <CitationPromptsDrilldown
                     prompts={promptList}
+                    orders={loaded?.promptOrders}
                     domain={row.domain}
                     totalCitations={row.citations}
                     emptyKey={noPromptsKey}
@@ -1648,7 +1552,7 @@ export function DomainRow({
         <tr className="border-t border-border bg-muted/20">
           <td colSpan={7} className="px-4 py-4">
             {pending ?? (
-              <CitationPromptsDrilldown prompts={promptList} domain={row.domain} emptyKey={noPromptsKey} total={loaded?.promptTotal} />
+              <CitationPromptsDrilldown prompts={promptList} orders={loaded?.promptOrders} domain={row.domain} emptyKey={noPromptsKey} total={loaded?.promptTotal} />
             )}
           </td>
         </tr>
@@ -1716,14 +1620,18 @@ function UrlList({ urls }: { urls: CitationDomainLive["urls"] }) {
 // mention tab uses), so the path is domain → prompt → actual answer.
 function CitationPromptsDrilldown({
   prompts,
+  orders,
   domain,
   totalCitations,
   emptyKey = "drilldown.noPrompts",
   total,
 }: {
-  prompts: CitationPromptLive[];
+  /** 서버가 각 프롬프트의 그 출처 인용 점유율(share)을 싣는다. */
+  prompts: DomainDetailView["promptList"];
+  /** 정렬 헤더별 행 순서(서버 계산). 없으면 받은 순서(인용 수 내림차순) 그대로. */
+  orders?: DomainDetailView["promptOrders"];
   domain: string;
-  /** 점유율 분모 — 이 도메인의 전체 인용 수(표준 화면 탭 드릴다운, 피그마 571:380 주석). */
+  /** 점유율 열을 보이는가 — 이 도메인의 인용 수가 있을 때(표준 화면 탭 드릴다운, 피그마 571:380 주석). */
   totalCitations?: number;
   /** 빈 목록 문구 키 — 호출부가 행 상태로 결정한다(citationDrilldownEmptyKey). */
   emptyKey?: CitationDrilldownEmptyKey;
@@ -1739,12 +1647,8 @@ function CitationPromptsDrilldown({
     return <p className="text-xs text-muted-foreground">{t(emptyKey)}</p>;
   }
   const withShare = totalCitations != null && totalCitations > 0;
-  const share = (p: CitationPromptLive) => (withShare ? (100 * p.citations) / totalCitations : null);
-  const ranked = [...prompts].sort((a, b) => {
-    const dir = sort.asc ? 1 : -1;
-    if (sort.key === "prompt") return dir * a.promptText.localeCompare(b.promptText);
-    return dir * (a.citations - b.citations);
-  });
+  const order = orders?.[sort.key]?.[sort.asc ? "asc" : "desc"];
+  const ranked = order ? order.map((i) => prompts[i]) : prompts;
   const clickSort = (key: "prompt" | "citations" | "share") =>
     setSort((cur) => (cur.key === key ? { key, asc: !cur.asc } : { key, asc: key === "prompt" }));
 
@@ -1802,7 +1706,7 @@ function CitationPromptsDrilldown({
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums text-foreground">{p.citations.toLocaleString()}</td>
                   {withShare ? (
-                    <td className="px-3 py-2 text-right tabular-nums text-foreground">{`${(share(p) ?? 0).toFixed(1)}%`}</td>
+                    <td className="px-3 py-2 text-right tabular-nums text-foreground">{`${(p.share ?? 0).toFixed(1)}%`}</td>
                   ) : null}
                   <td className="px-3 py-2">
                     {p.funnelStage ? (
@@ -1843,7 +1747,7 @@ export function CategoryDonut({
   hint,
   centerLabel,
   data,
-  total: totalOverride,
+  officialPct: officialPctValue,
   activeCategories,
   onSliceClick,
   label,
@@ -1854,10 +1758,11 @@ export function CategoryDonut({
   centerLabel: string;
   data: CitationCategorySlice[];
   /**
-   * 중앙 비중의 분모. 생략 = `data` 합. 글로벌 인용 탭은 경쟁사 선택 중에도 **전체 인용 수**를
-   * 넘겨 중앙 공식(HMG) 비중이 인용 현황 카드·Overview ⑤ 와 같게 유지한다(제품 책임자 2026-09-29).
+   * 중앙 스탯 = Official (HMG) 비중(%), 서버 계산(인용 현황 카드 categoryShare 와 같은 반올림). 분모는
+   * `data` 합이고, 글로벌 인용 탭은 경쟁사 선택 중에도 **전체 인용 수**다(제품 책임자 2026-09-29).
+   * null = 분모 0(중앙 스탯 없음).
    */
-  total?: number;
+  officialPct: number | null;
   activeCategories: string[];
   onSliceClick: (name: string) => void;
   label: (name: string) => string;
@@ -1869,10 +1774,7 @@ export function CategoryDonut({
 }) {
   const standard = variant === "standard";
   const chartData = data.map((d) => ({ ...d, label: label(d.name) }));
-  const total = totalOverride ?? data.reduce((s, c) => s + c.value, 0);
-  const official = data.find((c) => c.name === OFFICIAL_HMG)?.value ?? 0;
-  // 인용 현황 카드(categoryShare)와 같은 반올림 — toFixed(1) 은 x.x5 경계에서 0.1 갈린다(247/2000: 12.3 대 12.4)
-  const officialPct = total > 0 ? (Math.round(((100 * official) / total) * 10) / 10).toFixed(1) : null;
+  const officialPct = officialPctValue == null ? null : officialPctValue.toFixed(1);
   const dimmed = (name: string) =>
     activeCategories.length > 0 && !activeCategories.includes(name);
   return (
@@ -1988,14 +1890,8 @@ export function CategoryCompositionTrend({
 }) {
   const tRoot = useTranslations("answerAnalysis");
   const weekLabel = (v: unknown) => tRoot("weekAxis", { md: weekStartMD(String(v)) });
-  const zeroFilled = useMemo(
-    () =>
-      trend.points.map((p) => ({
-        ...Object.fromEntries(trend.series.map((s) => [s, 0])),
-        ...p,
-      })),
-    [trend],
-  );
+  // 서버의 추이 행은 모든 시리즈 키를 싣는다(값 · 0 · 갭 슬롯 null) — 스택이 끊기지 않는다.
+  const zeroFilled = trend.points;
   // 수집 오류 주(예: 글로벌 8/25 회차 부분 수집) — 값 대신 음영 + 안내 문구를 낸다.
   // 라인 차트와 다른 점은 **이웃 연결**이다: 여기서 한 카테고리는 선이 아니라 연속한
   // 두 누적 경계 사이의 띠이므로, 갭 창도 닫힌 밴드로 채워야 이어져 보인다.
@@ -2076,37 +1972,24 @@ export function CategoryCompositionTrend({
 export function EngineCategoryChart({
   title,
   hint,
-  data,
+  chart,
   label,
   absolute = false,
   variant = "default",
 }: {
   title: string;
   hint?: string;
-  data: EngineCategorySlice[];
+  /**
+   * 서버 계산: 시리즈 = byCategory 유니온의 전체 합 내림차순(색·범례 순서 고정 기준), 행 = 엔진당
+   * 한 줄(없는 카테고리 0).
+   */
+  chart: EngineChartView;
   label: (name: string) => string;
   /** 카테고리 1개만 활성일 때 100% 스택 대신 절대값(인용 수). */
   absolute?: boolean;
   variant?: "default" | "standard";
 }) {
-  // byCategory 유니온 → 전체 합 내림차순 시리즈 (색·범례 순서 고정 기준).
-  const series = useMemo(() => {
-    const totals = new Map<string, number>();
-    for (const e of data) {
-      for (const [c, v] of Object.entries(e.byCategory)) {
-        totals.set(c, (totals.get(c) ?? 0) + v);
-      }
-    }
-    return [...totals.entries()].sort((a, b) => b[1] - a[1]).map(([c]) => c);
-  }, [data]);
-  const rows = useMemo(
-    () =>
-      data.map((e) => ({
-        engine: e.engine,
-        ...Object.fromEntries(series.map((s) => [s, e.byCategory[s] ?? 0])),
-      })),
-    [data, series],
-  );
+  const { series, rows } = chart;
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-4">
       <h3 className={variant === "standard" ? "text-[15px] font-medium text-ink-700" : "text-sm font-semibold tracking-tight text-foreground"}>{title}</h3>

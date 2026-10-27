@@ -16,9 +16,7 @@ import { useTranslations } from "next-intl";
 import { usePathname, useSearchParams } from "next/navigation";
 import { RnSkeleton, cx } from "@/components/renewal-ui";
 import { kpiTabQuery, type KpiTab } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/kpi-tab";
-import { overlayFirstPositionValues } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/kpi-view";
 import type { RnMentionInput } from "./mention-input";
-import { favorHero, rankHero, rateHero, type LensTile } from "./mention-model";
 import { posTxt } from "./mention-context";
 import { useDeltaBasis } from "./mention-kit";
 
@@ -148,7 +146,7 @@ function TabLink({ k, on, href, onClick, children }: { k: KpiTab; on: boolean; h
 // The value shows as soon as its own read lands; Δ waits for the trend reads.
 function TabValue({ k }: { k: KpiTab }) {
   const { input } = useMentionPage();
-  const value = useLensValue(input, k);
+  const { value } = use(input.tabValue[k]);
   const t = useTranslations("renewal.mention.rank");
   return (
     <>
@@ -163,11 +161,11 @@ function TabValue({ k }: { k: KpiTab }) {
 // Δ as text, not a chip (a chip row reads as a KPI summary): arrow = direction, ink = better / worse.
 function TabDelta({ k }: { k: KpiTab }) {
   const { input } = useMentionPage();
-  const tile = useLensTile(input, k);
+  const delta = use(input.tabDeltas)[k];
   const t = useTranslations("renewal.mention.delta");
   const tt = useTranslations("renewal.mention.tabs");
-  const basis = useDeltaBasis()(tile.delta);
-  const d = tile.delta.value;
+  const basis = useDeltaBasis()(delta);
+  const d = delta.value;
   const rank = k === "first-rank";
   if (d == null) return <span title={t("none")}>−</span>;
   const r = Math.round(d * 10) / 10;
@@ -178,27 +176,4 @@ function TabDelta({ k }: { k: KpiTab }) {
       {r === 0 ? t("flat") : `${r > 0 ? "▲" : "▼"}${Math.abs(r).toFixed(1)}${rank ? "" : "pp"}`}
     </span>
   );
-}
-
-/** The hero value of a KPI from its own read only (Sub KPI part or the first-position read). */
-function useLensValue(input: RnMentionInput, k: KpiTab): number | null {
-  if (k === "first-rank") return rankHero(overlayFirstPositionValues(use(input.firstPosition), use(input.competitorValues)), null).avgPosition;
-  if (k === "favorability") return favorHero(use(input.sub.favorability), null, null, null).positivePct;
-  return rateHero(k, use(input.sub[k]), null, null, null).pct;
-}
-
-/** One tab: the same hero value, spark and Δ the original tab shows for that KPI. */
-function useLensTile(input: RnMentionInput, k: KpiTab): LensTile {
-  const period = use(input.periodCompare);
-  const engine = use(input.engineTrend);
-  if (k === "first-rank") {
-    const h = rankHero(overlayFirstPositionValues(use(input.firstPosition), use(input.competitorValues)), period);
-    return { key: k, value: h.avgPosition, spark: h.series, delta: h.delta };
-  }
-  if (k === "favorability") {
-    const h = favorHero(use(input.sub.favorability), use(input.prev.favorability), engine, period);
-    return { key: k, value: h.positivePct, spark: h.points.map((p) => p.positive), delta: h.positiveDelta };
-  }
-  const h = rateHero(k, use(input.sub[k]), use(input.prev[k]), engine, period);
-  return { key: k, value: h.pct, spark: h.points.map((p) => p.pct), delta: h.delta };
 }

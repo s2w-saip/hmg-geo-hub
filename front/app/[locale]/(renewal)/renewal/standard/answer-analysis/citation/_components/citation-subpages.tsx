@@ -16,7 +16,7 @@ import { FilterContentDim, FilterTransitionProvider } from "@/components/dash/fi
 import { AnswerModal } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/answer-modal";
 import { useCursorPaging, useSubpageNav, type CursorAware } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/citation-prompts-page";
 import { recallToneCounts, rememberToneCounts, toneCountsKey, type ToneCounts } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/citation-tone-urls-page";
-import { pageWindow } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/citation-view";
+import type { PageWindow } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/citation-view";
 import { applySearchEvent, initSearchSync, receiveServerQuery, settleWithServerQuery, type SearchEventDeps } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/subpage-search";
 import type { CitationOwnedPromptPage, CitationTone, CitationToneUrlPage } from "@/lib/db/repositories/scope-aggregates";
 import { displayCitationUrl } from "@/lib/url-display";
@@ -100,7 +100,7 @@ function SubSearch({ q, label }: { q: string; label: string }) {
   );
 }
 
-function SubPager({ win, onPage, hasNext }: { win: ReturnType<typeof pageWindow>; onPage: (p: number) => void; hasNext?: boolean }) {
+function SubPager({ win, onPage, hasNext }: { win: PageWindow; onPage: (p: number) => void; hasNext?: boolean }) {
   const t = useTranslations("answerAnalysis.citations.v2.pager");
   const nextDisabled = hasNext === undefined ? win.page >= win.pages : !hasNext;
   return (
@@ -136,7 +136,7 @@ function PromptsView({ tab, page, q, ownedCount, uncitedCount }: { tab: "owned" 
   const tK = useTranslations("answerAnalysis.mentions.kpi");
   const nav = useSubpageNav();
   const [selected, setSelected] = useState<PromptRow | null>(null);
-  const win = page ? pageWindow(page.total, page.page, page.pageSize) : null;
+  const win = page?.win ?? null;
   const cursorNav = useCursorPaging(page);
   return (
     <div className="flex flex-col gap-4">
@@ -265,7 +265,7 @@ function ToneView({ tone, page, q, byDomain, counts: served }: ToneProps) {
   const tK = useTranslations("answerAnalysis.mentions.kpi");
   const cat = useCatLabel();
   const nav = useSubpageNav();
-  const win = page ? pageWindow(page.total, page.page, page.pageSize) : null;
+  const win = page?.win ?? null;
   const cursorNav = useCursorPaging(page);
   return (
     <div className="flex flex-col gap-4">

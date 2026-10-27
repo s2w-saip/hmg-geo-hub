@@ -5,14 +5,25 @@ import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronRight, Search, X } from "lucide-react";
 import { RnBasisChip, RnCard, RnCardHead, RnDrawer, RnEmpty, RnSegmented, RnTabs, RnTag, RnTextButton, cx, rnHighlightState } from "@/components/renewal-ui";
-import type { CitationDomainLive, MentionsBrandLive, MentionsPromptLive } from "@/lib/scope/result-adapter";
-import { brandRowValues, isTopRank, promptBestRank } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/prompt-rank";
+import type { CitationDomainLive, MentionsPromptLive } from "@/lib/scope/result-adapter";
+import { useOrderedTable } from "@/hooks/use-ordered-table";
+import type { DrillPromptRow } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/drilldown-screen-types";
 import { drilldownParams, projectIdFromPath, startListLoad, type ListState } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/mentions-drilldown";
 import { readSignalReply, type SignalPromptsState } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/signal-prompts-dialog";
 import { AnswerModal } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/answer-modal";
-import { MENTION_TYPE_KEYS_UI, SENTIMENT_KEYS } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/kpi-view";
-import { NON_AUTO_GROUP, parentGroupOf } from "./brand-groups";
-import { OWN_KEY, TREEMAP_FOLD, bumpData, isHmgSibling, shareDeltas, squarify, treemapGroups, type BumpData, type TreemapBrand } from "./mention-model";
+import {
+  MENTION_TYPE_KEYS,
+  NON_AUTO_GROUP,
+  OWN_KEY,
+  SENTIMENT_KEYS,
+  TREEMAP_FOLD,
+  type RankingRow,
+  type RankingSortKey,
+  type RankingValues,
+  type RnBumpVM,
+  type TreemapBrand,
+} from "../_data/screen-types";
+import { squarify } from "./treemap-layout";
 import { CONTEXT_COLOR, MentionCardActions, deltaTxt, numTxt, pctTxt, posTxt, slotLabel, useCompare, useMention, type DrawerTarget } from "./mention-context";
 import { BrandName, CardSkeleton, DegradedNote, DeltaChip, InfoTip, TwinTable } from "./mention-kit";
 import { SENTIMENT_COLOR } from "./mention-favor";
@@ -55,11 +66,11 @@ function BumpCard() {
   const { input, ownLabel, tables } = useMention();
   const t = useTranslations("renewal.mention");
   const tK = useTranslations("answerAnalysis.mentions.kpi");
-  const trend = use(input.brandTrend);
-  const d = useMemo(() => bumpData(trend), [trend]);
+  const vm = use(input.bump);
+  const d = vm.data;
   const name = (k: string) => (k === OWN_KEY ? ownLabel : k);
   const tableOn = tables.has("bump");
-  const measured = d ? d.x.filter((_, i) => d.series.some((s) => s.mentions[i] != null)).length : 0;
+  const measured = vm.measured;
   const csv = () => ({
     name: "mention-weekly-rank",
     rows: [["", ...(d?.x ?? []).flatMap((x) => [`${x} ${t("bump.colRank")}`, `${x} ${t("bump.colShare")}`, `${x} ${t("bump.colMentions")}`])], ...(d?.series ?? []).map((s) => [name(s.key), ...s.ranks.flatMap((r, i) => [r, s.shares[i], s.mentions[i]])])],
@@ -73,7 +84,7 @@ function BumpCard() {
         actions={<MentionCardActions tableId="bump" section="sec-brands" csv={csv} />}
       />
       <div className="px-6 pb-5 [.rn-dense_&]:px-4.5 [.rn-dense_&]:pb-3.5">
-        {!trend ? (
+        {!vm.trend ? (
           <DegradedNote>{tK("degradedTrend")}</DegradedNote>
         ) : !d || measured < 2 ? (
           <RnEmpty>{t("bump.needTwo")}</RnEmpty>
@@ -83,7 +94,7 @@ function BumpCard() {
             rows={d.series.map((s) => [name(s.key), ...s.ranks.map((r, i) => (r == null ? "—" : `${r} · ${pctTxt(s.shares[i])} · ${numTxt(s.mentions[i])}`))])}
           />
         ) : (
-          <BumpChart d={d} />
+          <BumpChart d={d} maxShare={vm.maxShare} />
         )}
       </div>
     </>
@@ -93,7 +104,7 @@ function BumpCard() {
 const ROW = 26;
 const LABEL_W = 210;
 
-function BumpChart({ d }: { d: BumpData }) {
+function BumpChart({ d, maxShare }: { d: NonNullable<RnBumpVM["data"]>; maxShare: number }) {
   const { ownLabel, lit, hover } = useMention();
   const { compare, colorOf } = useCompare();
   const t = useTranslations("renewal.mention.bump");
@@ -105,7 +116,6 @@ function BumpChart({ d }: { d: BumpData }) {
   const plotW = Math.max(120, width - left - LABEL_W);
   const xs = d.x.map((_, i) => left + (d.x.length > 1 ? (i / (d.x.length - 1)) * plotW : plotW / 2));
   const y = (rank: number) => top + (rank - 0.5) * ROW;
-  const maxShare = Math.max(1, ...d.series.flatMap((s) => s.shares.filter((v): v is number => v != null)));
   const colGap = d.x.length > 1 ? plotW / (d.x.length - 1) : plotW;
   const rMax = Math.max(4, Math.min(ROW / 2 - 1.5, colGap / 2 - 1.5, 11));
   const radius = (share: number | null) => (share == null ? 0 : Math.max(2.5, rMax * Math.sqrt(share / maxShare)));
@@ -171,9 +181,8 @@ function BumpChart({ d }: { d: BumpData }) {
           })}
           {d.series.map((s) => {
             const r1 = s.ranks[d.last];
-            const r0 = s.ranks[d.first];
             if (r1 == null) return null;
-            const move = r0 != null ? r0 - r1 : null;
+            const move = s.move;
             const on = emph(s.key);
             const dim = fading && !lit.includes(s.key);
             const x0 = left + plotW + 18;
@@ -220,52 +229,24 @@ function BumpChart({ d }: { d: BumpData }) {
 
 // ── 브랜드 언급 순위: [트리맵 | 순위표] ───────────────────────────────────────
 
-type SortKey = "rank" | "brand" | "mentions" | "share" | "delta" | "avgPosition" | "prompts" | "mentionRate";
-const TOP = 100;
+type SortKey = RankingSortKey;
+const ASC_KEYS: SortKey[] = ["brand", "rank", "avgPosition"];
 
-interface RankRow {
-  row: MentionsBrandLive;
-  rank: number;
-  mentions: number | null;
-  share: number | null;
-  rate: number | null;
-  prompts: number | null;
-  delta: number | null;
-  covered: boolean;
-  own: boolean;
-  sibling: boolean;
-}
+/** A ranking row with the values of the multi toggle state. */
+type RankRow = RankingRow & { v: RankingValues };
 
 function BrandRanking() {
   const { input, openDrawer } = useMention();
   const t = useTranslations("renewal.mention");
   const tT = useTranslations("answerAnalysis.mentions.table");
   const tTm = useTranslations("renewal.mention.treemap");
-  const data = use(input.mentions);
-  const trend = use(input.brandTrend);
+  const vm = use(input.ranking);
   const [view, setView] = useState<"map" | "table">("map");
   const [multi, setMulti] = useState(false);
   const [group, setGroup] = useState<string | null>(null);
-  const deltas = useMemo(() => shareDeltas(trend), [trend]);
-  const rows = useMemo<RankRow[]>(() => {
-    const brands = data?.brands ?? [];
-    const multiTotal = brands.reduce((s, b) => s + (b.multi?.mentions ?? 0), 0);
-    return brands.map((row, i) => {
-      const v = brandRowValues(row, { multi, multiTotalMentions: multiTotal, totalAnswers: data?.summary.totalAnswers ?? null });
-      return {
-        row,
-        rank: i + 1,
-        mentions: v.mentions,
-        share: v.share,
-        rate: v.mentionRate,
-        prompts: v.prompts,
-        delta: multi ? null : deltas.get(row.brand) ?? null,
-        covered: !multi && deltas.has(row.brand),
-        own: row.isTracked,
-        sibling: isHmgSibling(row.brand, row.isTracked),
-      };
-    });
-  }, [data, multi, deltas]);
+  const mode = multi ? "on" : "off";
+  // the API sends both value sets (multi toggle off / on) of the top rows
+  const rows = useMemo<RankRow[]>(() => vm.rows.map((r) => ({ ...r, v: r[mode] })), [vm.rows, mode]);
   // a parent with several brands reads "{name} 그룹" (HMG stays HMG); a single brand is just its name
   const groupName = (g: string, several = false) =>
     g === NON_AUTO_GROUP ? tTm("nonAuto") : g === TREEMAP_FOLD ? tTm("fold") : several && g !== "HMG" ? tTm("groupName", { name: g }) : g;
@@ -300,7 +281,7 @@ function BrandRanking() {
               name: "brand-mentions",
               rows: [
                 ["#", tT("col.brand"), tT("col.mentions"), tT("col.share"), t("brands.colDelta"), tT("col.position"), tT("col.prompts"), tT("col.rate")],
-                ...rows.slice(0, TOP).map((r) => [r.rank, r.row.brand, r.mentions, r.share, r.delta, r.row.avgPosition, r.prompts, r.rate]),
+                ...rows.map((r) => [r.rank, r.brand, r.v.mentions, r.v.share, r.v.delta, r.avgPosition, r.v.prompts, r.v.mentionRate]),
               ],
             })}
           />
@@ -310,7 +291,7 @@ function BrandRanking() {
         <RnEmpty className="mx-6 mb-5">{tT("empty")}</RnEmpty>
       ) : view === "map" ? (
         <Treemap
-          rows={rows.slice(0, TOP)}
+          groups={vm.treemap[mode]}
           multi={multi}
           groupName={groupName}
           onBrand={(b) => openDrawer({ kind: "brand", brand: b })}
@@ -320,7 +301,7 @@ function BrandRanking() {
           }}
         />
       ) : (
-        <RankTable rows={rows} multi={multi} group={group} groupName={groupName} onClearGroup={() => setGroup(null)} total={data?.brandsTotal} />
+        <RankTable rows={rows} orders={vm.orders[mode]} multi={multi} multiUnavailable={vm.multiUnavailable} count={vm.count} group={group} groupName={groupName} onClearGroup={() => setGroup(null)} total={vm.total} />
       )}
     </>
   );
@@ -359,13 +340,13 @@ const textW = (text: string, px: number): number => {
 };
 
 function Treemap({
-  rows,
+  groups,
   multi,
   groupName,
   onBrand,
   onGroupTable,
 }: {
-  rows: RankRow[];
+  groups: import("../_data/screen-types").TreemapGroup[];
   multi: boolean;
   groupName: (g: string, several?: boolean) => string;
   onBrand: (brand: string) => void;
@@ -377,10 +358,6 @@ function Treemap({
   const [ref, width] = useWidth<HTMLDivElement>();
   const [drill, setDrill] = useState<string | null>(null);
   const height = 380;
-  const brands: TreemapBrand[] = rows
-    .filter((r) => (r.mentions ?? 0) > 0)
-    .map((r) => ({ brand: r.row.brand, value: r.mentions ?? 0, share: r.share ?? 0, delta: r.delta, own: r.own, sibling: r.sibling }));
-  const groups = useMemo(() => treemapGroups(brands), [brands]);
   const current = drill ? groups.find((g) => g.key === drill) ?? null : null;
   useEffect(() => {
     if (!drill) return;
@@ -516,7 +493,27 @@ function Treemap({
   );
 }
 
-function RankTable({ rows, multi, group, groupName, onClearGroup, total }: { rows: RankRow[]; multi: boolean; group: string | null; groupName: (g: string, several?: boolean) => string; onClearGroup: () => void; total?: number }) {
+function RankTable({
+  rows,
+  orders,
+  multi,
+  multiUnavailable,
+  count,
+  group,
+  groupName,
+  onClearGroup,
+  total,
+}: {
+  rows: RankRow[];
+  orders: import("../_data/screen-types").RnRankingVM["orders"]["off"];
+  multi: boolean;
+  multiUnavailable: boolean;
+  count: number;
+  group: string | null;
+  groupName: (g: string, several?: boolean) => string;
+  onClearGroup: () => void;
+  total?: number;
+}) {
   const { openDrawer, lit, hover } = useMention();
   const t = useTranslations("renewal.mention");
   const tT = useTranslations("answerAnalysis.mentions.table");
@@ -526,31 +523,22 @@ function RankTable({ rows, multi, group, groupName, onClearGroup, total }: { row
   const locale = useLocale();
   const [q, setQ] = useState("");
   const dq = useDeferredValue(q);
-  const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "rank", dir: 1 });
-  const top = rows.slice(0, TOP);
-  const filtered = top.filter((r) => (!dq || r.row.brand.toLowerCase().includes(dq.trim().toLowerCase())) && (!group || (group === TREEMAP_FOLD ? true : parentGroupOf(r.row.brand) === group)));
-  const val = (r: RankRow, k: SortKey): number | string | null =>
-    k === "rank" ? r.rank : k === "brand" ? r.row.brand : k === "mentions" ? r.mentions : k === "share" ? r.share : k === "delta" ? r.delta : k === "avgPosition" ? r.row.avgPosition : k === "prompts" ? r.prompts : r.rate;
-  const sorted = [...filtered].sort((a, b) => {
-    const va = val(a, sort.key);
-    const vb = val(b, sort.key);
-    if (va == null && vb == null) return 0;
-    if (va == null) return 1;
-    if (vb == null) return -1;
-    return (typeof va === "string" ? va.localeCompare(String(vb)) : va - (vb as number)) * sort.dir;
-  });
+  // sort orders come from the API (useOrderedTable keeps the column / direction); the search box
+  // and the treemap group stay UI filters over the ordered rows
+  const { sorted: ordered, sortKey, asc, toggleSort } = useOrderedTable(rows, orders, { defaultKey: "rank", defaultAsc: true, ascByDefault: ASC_KEYS });
+  const sorted = ordered.filter((r) => (!dq || r.brand.toLowerCase().includes(dq.trim().toLowerCase())) && (!group || group === TREEMAP_FOLD || r.group === group));
   const head = (k: SortKey, label: string, right = true) => (
     <button
       type="button"
-      onClick={() => setSort((s) => (s.key === k ? { key: k, dir: (s.dir * -1) as 1 | -1 } : { key: k, dir: k === "brand" || k === "rank" || k === "avgPosition" ? 1 : -1 }))}
-      aria-sort={sort.key === k ? (sort.dir === 1 ? "ascending" : "descending") : undefined}
-      className={cx("inline-flex cursor-pointer items-center gap-0.5 font-semibold whitespace-nowrap hover:text-rn-ink", right && "justify-end", sort.key === k ? "text-rn-ink" : "text-rn-muted")}
+      onClick={() => toggleSort(k)}
+      aria-sort={sortKey === k ? (asc ? "ascending" : "descending") : undefined}
+      className={cx("inline-flex cursor-pointer items-center gap-0.5 font-semibold whitespace-nowrap hover:text-rn-ink", right && "justify-end", sortKey === k ? "text-rn-ink" : "text-rn-muted")}
     >
       {label}
-      {sort.key === k ? <span aria-hidden>{sort.dir === 1 ? "↑" : "↓"}</span> : null}
+      {sortKey === k ? <span aria-hidden>{asc ? "↑" : "↓"}</span> : null}
     </button>
   );
-  const keys = sorted.map((r) => r.row.brand);
+  const keys = sorted.map((r) => r.brand);
   const COLS = "grid-cols-[34px_minmax(150px,1.6fr)_80px_68px_76px_64px_70px_64px]";
   return (
     <div className="flex flex-col">
@@ -559,7 +547,7 @@ function RankTable({ rows, multi, group, groupName, onClearGroup, total }: { row
           <Search className="size-3.5" aria-hidden />
           <input value={q} onChange={(e) => setQ(e.target.value)} aria-label={tF("brandSearch")} placeholder={tF("brandSearchPlaceholder")} className="min-w-0 flex-1 bg-transparent text-rn-ink outline-none" />
         </label>
-        {dq ? <span className="text-rn-12 text-rn-muted">{tD("searchResultCount", { count: filtered.length })}</span> : null}
+        {dq ? <span className="text-rn-12 text-rn-muted">{tD("searchResultCount", { count: sorted.length })}</span> : null}
         {group ? (
           <span className="inline-flex h-7 items-center gap-1 rounded-full bg-rn-navy-25 pr-1 pl-2.5 text-rn-12 font-semibold text-rn-navy">
             {t("brands.groupOnly", { group: groupName(group, true) })}
@@ -568,7 +556,7 @@ function RankTable({ rows, multi, group, groupName, onClearGroup, total }: { row
             </button>
           </span>
         ) : null}
-        {multi && top.some((r) => !r.row.multi) ? <span className="text-rn-11 text-rn-muted">{tT("multiUnavailable")}</span> : null}
+        {multi && multiUnavailable ? <span className="text-rn-11 text-rn-muted">{tT("multiUnavailable")}</span> : null}
       </div>
       <div className="overflow-x-auto">
         <div className="min-w-[700px]">
@@ -587,16 +575,16 @@ function RankTable({ rows, multi, group, groupName, onClearGroup, total }: { row
               <RnEmpty className="m-6">{tT("empty")}</RnEmpty>
             ) : (
               sorted.map((r) => {
-                const st = rnHighlightState(lit, [r.row.brand, ...(r.own ? [OWN_KEY] : [])], keys);
+                const st = rnHighlightState(lit, [r.brand, ...(r.own ? [OWN_KEY] : [])], keys);
                 return (
                   <button
-                    key={r.row.brand}
+                    key={r.brand}
                     type="button"
-                    data-rn-b={r.row.brand}
+                    data-rn-b={r.brand}
                     data-rn-row={r.rank}
                     title={t("brands.rowTip")}
-                    onClick={() => openDrawer({ kind: "brand", brand: r.row.brand })}
-                    onPointerEnter={() => hover(r.row.brand)}
+                    onClick={() => openDrawer({ kind: "brand", brand: r.brand })}
+                    onPointerEnter={() => hover(r.brand)}
                     onPointerLeave={() => hover(null)}
                     className={cx(
                       "grid min-h-10 w-full cursor-pointer items-center gap-2.5 border-b border-rn-line px-6 text-left text-rn-13 hover:bg-rn-navy-25 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rn-navy [.rn-dense_&]:min-h-8 [.rn-dense_&]:px-4.5",
@@ -607,15 +595,15 @@ function RankTable({ rows, multi, group, groupName, onClearGroup, total }: { row
                   >
                     <span className="text-rn-12 text-rn-muted tabular-nums">{r.rank}</span>
                     <span className="flex min-w-0 items-center gap-2">
-                      <BrandName name={r.row.brand} own={r.own} sibling={r.sibling} />
-                      <span className="truncate text-rn-11 text-rn-muted">{parentGroupOf(r.row.brand) !== r.row.brand ? groupName(parentGroupOf(r.row.brand), true) : ""}</span>
+                      <BrandName name={r.brand} own={r.own} sibling={r.sibling} />
+                      <span className="truncate text-rn-11 text-rn-muted">{r.grouped ? groupName(r.group, true) : ""}</span>
                     </span>
-                    <span className="text-right font-semibold text-rn-ink tabular-nums">{numTxt(r.mentions, locale)}</span>
-                    <span className="text-right text-rn-ink-2 tabular-nums">{pctTxt(r.share)}</span>
-                    <span className="justify-self-end">{multi ? <span className="text-rn-11 text-rn-muted" title={t("brands.multiNoDelta")}>—</span> : r.covered ? <DeltaChip value={r.delta} /> : <span className="text-rn-11 text-rn-muted" title={t("board.noTrendTip")}>{t("board.noTrend")}</span>}</span>
-                    <span className="text-right text-rn-ink-2 tabular-nums">{posTxt(r.row.avgPosition)}</span>
-                    <span className="text-right text-rn-ink-2 tabular-nums">{numTxt(r.prompts, locale)}</span>
-                    <span className="text-right text-rn-ink-2 tabular-nums">{pctTxt(r.rate)}</span>
+                    <span className="text-right font-semibold text-rn-ink tabular-nums">{numTxt(r.v.mentions, locale)}</span>
+                    <span className="text-right text-rn-ink-2 tabular-nums">{pctTxt(r.v.share)}</span>
+                    <span className="justify-self-end">{multi ? <span className="text-rn-11 text-rn-muted" title={t("brands.multiNoDelta")}>—</span> : r.v.covered ? <DeltaChip value={r.v.delta} /> : <span className="text-rn-11 text-rn-muted" title={t("board.noTrendTip")}>{t("board.noTrend")}</span>}</span>
+                    <span className="text-right text-rn-ink-2 tabular-nums">{posTxt(r.avgPosition)}</span>
+                    <span className="text-right text-rn-ink-2 tabular-nums">{numTxt(r.v.prompts, locale)}</span>
+                    <span className="text-right text-rn-ink-2 tabular-nums">{pctTxt(r.v.mentionRate)}</span>
                   </button>
                 );
               })
@@ -623,7 +611,7 @@ function RankTable({ rows, multi, group, groupName, onClearGroup, total }: { row
           </div>
         </div>
       </div>
-      {total !== undefined && total > rows.length ? <p className="m-0 px-6 pt-2 text-rn-11 text-rn-muted">{tTr("truncated", { shown: rows.length, total })}</p> : null}
+      {total !== undefined && total > count ? <p className="m-0 px-6 pt-2 text-rn-11 text-rn-muted">{tTr("truncated", { shown: count, total })}</p> : null}
     </div>
   );
 }
@@ -675,7 +663,7 @@ function useListLoad<T>(path: string | null, key: "prompts" | "domains"): ListSt
 }
 
 function BrandSheet({ brand, hidden, onClose, onAnswer }: { brand: string; hidden: boolean; onClose: () => void; onAnswer: (p: MentionsPromptLive) => void }) {
-  const { brands, input } = useMention();
+  const { drawer } = useMention();
   const t = useTranslations("renewal.mention");
   const tT = useTranslations("answerAnalysis.mentions.table");
   const tDd = useTranslations("answerAnalysis.mentions.drilldown");
@@ -686,18 +674,17 @@ function BrandSheet({ brand, hidden, onClose, onAnswer }: { brand: string; hidde
   const pathname = usePathname();
   const projectId = projectIdFromPath(pathname);
   const [tab, setTab] = useState<"prompts" | "citations">("prompts");
-  const row = brands.find((b) => b.brand === brand);
-  const own = row?.isTracked ? { code: ((row as MentionsBrandLive & { ownBrandCode?: unknown }).ownBrandCode as string | undefined) ?? null } : null;
+  const row = drawer.find((b) => b.brand === brand);
+  const own = row?.own ?? null;
   const spStr = sp.toString();
   const promptsPath = useMemo(() => `/api/scope/brand-mention-prompts?${drilldownParams(spStr, { brand, own, isWebsite: false, projectId }).toString()}`, [spStr, brand, own?.code, own === null, projectId]); // eslint-disable-line react-hooks/exhaustive-deps
   const citationsPath = useMemo(() => (tab === "citations" ? `/api/scope/brand-citations?${drilldownParams(spStr, { brand, isWebsite: false, projectId }).toString()}` : null), [tab, spStr, brand, projectId]);
-  const prompts = useListLoad<MentionsPromptLive>(promptsPath, "prompts");
+  const prompts = useListLoad<DrillPromptRow>(promptsPath, "prompts");
   const citations = useListLoad<CitationDomainLive>(citationsPath, "domains");
-  const typesByBrand = use(input.typesByBrand);
-  const types = typesByBrand?.brands.find((b) => b.brand === brand)?.types ?? null;
+  const types = row?.types ?? null;
   const sent = row?.sentiment ?? null;
-  const sentTotal = sent ? SENTIMENT_KEYS.reduce((s, k) => s + sent[k], 0) : 0;
-  const rank = brands.indexOf(row as MentionsBrandLive) + 1;
+  const sentPct = row?.sentimentPct ?? null;
+  const rank = row?.rank ?? 0;
   return (
     <RnDrawer
       open={!hidden}
@@ -706,7 +693,7 @@ function BrandSheet({ brand, hidden, onClose, onAnswer }: { brand: string; hidde
       title={
         <span className="inline-flex items-center gap-2">
           {brand}
-          {row?.isTracked ? <RnTag>{t("board.own")}</RnTag> : isHmgSibling(brand, Boolean(row?.isTracked)) ? <RnTag>{t("board.sibling")}</RnTag> : null}
+          {row?.isTracked ? <RnTag>{t("board.own")}</RnTag> : row?.sibling ? <RnTag>{t("board.sibling")}</RnTag> : null}
         </span>
       }
       subtitle={rank > 0 ? t("drawer.rankLine", { rank }) : undefined}
@@ -726,17 +713,17 @@ function BrandSheet({ brand, hidden, onClose, onAnswer }: { brand: string; hidde
           ))}
         </dl>
       ) : null}
-      {sent && sentTotal > 0 ? (
+      {sent && sentPct ? (
         <div className="mt-4 flex flex-col gap-1.5">
           <h3 className="m-0 text-rn-12 font-bold text-rn-ink-2">{tB("sentimentTitle")}</h3>
           <span className="flex h-2.5 gap-0.5 overflow-hidden rounded">
-            {SENTIMENT_KEYS.map((k) => (sent[k] ? <i key={k} className="block h-full" style={{ width: `${(100 * sent[k]) / sentTotal}%`, background: SENTIMENT_COLOR[k] }} /> : null))}
+            {SENTIMENT_KEYS.map((k) => (sent[k] ? <i key={k} className="block h-full" style={{ width: `${sentPct[k]}%`, background: SENTIMENT_COLOR[k] }} /> : null))}
           </span>
           <span className="flex flex-wrap gap-x-3 text-rn-11 text-rn-muted">
             {SENTIMENT_KEYS.map((k) => (
               <span key={k} className="inline-flex items-center gap-1">
                 <i aria-hidden className="size-2 rounded-[2px]" style={{ background: SENTIMENT_COLOR[k] }} />
-                {tB(k)} {((100 * sent[k]) / sentTotal).toFixed(0)}%
+                {tB(k)} {sentPct[k].toFixed(0)}%
               </span>
             ))}
           </span>
@@ -746,7 +733,7 @@ function BrandSheet({ brand, hidden, onClose, onAnswer }: { brand: string; hidde
         <div className="mt-4 flex flex-col gap-1.5">
           <h3 className="m-0 text-rn-12 font-bold text-rn-ink-2">{tB("typesTitle")}</h3>
           <span className="flex flex-wrap gap-1.5">
-            {MENTION_TYPE_KEYS_UI.map((k) => (
+            {MENTION_TYPE_KEYS.map((k) => (
               <span key={k} className="inline-flex h-6 items-center gap-1.5 rounded-full bg-rn-page px-2.5 text-rn-12 text-rn-ink-2">
                 {tType(k)}
                 <b className="tabular-nums">{numTxt(types[k], locale)}</b>
@@ -777,14 +764,16 @@ function ListStatus({ state, loading, error, empty }: { state: ListState<unknown
   return null;
 }
 
-function PromptList({ state, onAnswer }: { state: ListState<MentionsPromptLive>; onAnswer: (p: MentionsPromptLive) => void }) {
+function PromptList({ state, onAnswer }: { state: ListState<DrillPromptRow>; onAnswer: (p: MentionsPromptLive) => void }) {
   const { engineLabel } = useMention();
   const tDd = useTranslations("answerAnalysis.mentions.drilldown");
   const tM = useTranslations("answerAnalysis.mentions.answerModal");
   const tTr = useTranslations("answerAnalysis.mentions.kpi.overview.unmeasuredDialog");
   const status = <ListStatus state={state} loading={tDd("promptsLoading")} error={tDd("promptsError")} empty={tDd("noPrompts")} />;
   if (state.status !== "ready" || !state.list.length) return status;
-  const list = [...state.list].sort((a, b) => b.mentions - a.mentions);
+  // mentions desc, best rank and the TOP 3 flag come from the route (screen mention/drill-brand-prompts)
+  const order = state.orders?.mentions?.desc;
+  const list = order ? order.map((i) => state.list[i]) : state.list;
   return (
     <div className="flex flex-col gap-2">
       <p className="m-0 text-rn-11 text-rn-muted">{tM("tableHint")}</p>
@@ -795,13 +784,13 @@ function PromptList({ state, onAnswer }: { state: ListState<MentionsPromptLive>;
         <span className="text-right">{tDd("col.share")}</span>
       </div>
       {list.map((p) => {
-        const best = promptBestRank(p);
+        const best = p.bestRank ?? null;
         return (
           <button key={p.id} type="button" data-rn-prompt={p.id} onClick={() => onAnswer(p)} className="grid cursor-pointer grid-cols-[minmax(0,1fr)_52px_56px_60px] items-start gap-2 rounded-md border-b border-rn-line py-2 text-left text-rn-12 hover:bg-rn-navy-25 focus-visible:outline-2 focus-visible:outline-rn-navy">
             <span className="flex min-w-0 flex-col gap-1">
               <span className="text-rn-13 text-rn-ink">
                 {p.promptText}
-                {isTopRank(best) ? <RnTag className="ml-1.5 align-middle whitespace-nowrap">{tDd("top3Badge")}</RnTag> : null}
+                {p.topRank ? <RnTag className="ml-1.5 align-middle whitespace-nowrap">{tDd("top3Badge")}</RnTag> : null}
               </span>
               <span className="flex flex-wrap gap-1 text-rn-11 text-rn-muted">
                 {p.funnelStage ? <span>{p.funnelStage}</span> : null}

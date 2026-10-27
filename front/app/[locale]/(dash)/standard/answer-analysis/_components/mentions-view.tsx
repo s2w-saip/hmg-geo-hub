@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   MessageCircle,
@@ -38,7 +39,6 @@ import {
   type DimensionGroup,
 } from "@/components/dash/dimension-filter-panel";
 import { cn } from "@/lib/utils";
-import { assignOtherColors, legendFromSegments } from "@/lib/scope/type-breakdown-legend";
 import { CHART_TOOLTIP_STYLE } from "@/lib/viz/chart-tooltip";
 import {
   GapAwareTooltip,
@@ -46,17 +46,19 @@ import {
   trendGapBridgeLines,
 } from "@/components/dash/trend-gap-overlay";
 import { planTrendGaps } from "@/lib/viz/trend-gap";
-import type {
-  MentionsLive,
-  MentionsBrandLive,
-  MentionTrend,
-  MentionTypesByBrand,
-} from "@/lib/scope/result-adapter";
-import type {
-  MentionSentimentBreakdown,
-  MentionTypeBreakdown,
-} from "@/lib/scope/types";
-import type { MentionSubKpis } from "../_data/sub-kpis";
+import type { MentionsLive, MentionTrend } from "@/lib/scope/result-adapter";
+import {
+  OWN_ROW,
+  type BrandTableView,
+  type ComparePartsScreen,
+  type CompareRow,
+  type ComparisonView,
+  type MentionSubKpisView,
+  type MentionViewScreen,
+  type SummaryDelta,
+  type TrendSeriesSplit,
+  type TypeShareView,
+} from "../_data/mention-screen";
 import { composeGroups } from "./filter-groups";
 import { BrandRankTable } from "./brand-rank-table";
 import { SignalPromptsDialog } from "./signal-prompts-dialog";
@@ -101,8 +103,16 @@ export interface MentionsDegradedView {
   subKpis?: boolean;
 }
 
+/** Where the head-to-head fetches a picked target (the page's surface; project id on the project page). */
+export interface CompareSource {
+  surface: "website" | "project";
+  projectId?: string;
+  admin?: boolean;
+}
+
 export function MentionsView({
-  data,
+  vm,
+  compareSource,
   lockedGroups = [],
   extraGroups = [],
   onlyGroups,
@@ -117,13 +127,10 @@ export function MentionsView({
   engineOptions,
   languageOptions,
   dynamicAxes,
-  designatedTargetBrand,
-  subKpis = null,
-  prevSubKpis = null,
-  prevBasisDate = null,
-  degraded,
 }: {
-  data: MentionsViewData | null;
+  /** mention/view — every value of the four sections, computed by the screen. */
+  vm: MentionViewScreen;
+  compareSource: CompareSource;
   lockedGroups?: DimensionGroup[];
   // Appended to onlyGroups/primaryGroups — 웹사이트 뷰가 admin 에게 brand(브랜드
   // 통합) 축을 추가 노출하기 위해 사용. 비어 있으면 표준 필터 구성 그대로.
@@ -136,19 +143,14 @@ export function MentionsView({
   // 인용출처 드릴다운 탭이 표준 루트 대신 website 전용 데이터 소스를 쓰도록
   // 신호(2026-07-06) — /api/scope/brand-citations?surface=website 로 라우팅.
   isWebsite?: boolean;
-  // 2026-08-27 — 필터바를 이 뷰 밖(페이지의 별도 <Suspense> 경계)에서 그릴 때
-  // 켠다. 답변분석 화면은 무거운 집계 하나가 화면 전체를 붙잡고 있었는데, 필터바는
-  // 값싼 옵션 read 만 필요하므로 먼저 그려 **재조회 중에도 필터를 만질 수 있게** 한다.
-  // 켜지면 이 뷰는 본문만 그린다(빈 상태여도 필터바는 페이지에 남는다).
+  // 2026-08-27 — 필터바를 이 뷰 밖(페이지의 별도 <Suspense> 경계)에서 그릴 때 켠다.
   hideFilterPanel?: boolean;
   /**
    * 앵커 축(스펙 §5.1) — 회차가 있는 KST 날짜 목록. `undefined`(축 off·미적용)면
    * 달력은 종전대로 전 날짜를 연다. 계열은 그 지면의 것이다(D1).
    */
   selectableDates?: string[];
-  // 2026-07-08: 표준/웹사이트 mentions 집계는 perBrandPrompts를 슬림화(2MB 캐시
-  // 한도)해 드릴다운을 클릭 시 lazy fetch한다. 프로젝트 경로는 집계에 실려온
-  // prompts를 그대로 쓰므로 false. data.perBrandPrompts가 비어있는(슬림) 경로에서만 켠다.
+  // 드릴다운 프롬프트를 클릭 시 lazy fetch 한다(API 원천은 perBrandPrompts 가 비어 있다).
   lazyPrompts?: boolean;
   scope?: import("@/lib/auth/types").AllowedScope;
   catalogRows?: import("@/components/dash/dimension-filter-panel").CatalogTaxonomyRow[];
@@ -158,28 +160,16 @@ export function MentionsView({
   languageOptions?: string[];
   // 프로젝트 커스텀 태그를 필터 패널의 동적 축으로 주입(프로젝트 mention만).
   dynamicAxes?: import("@/components/dash/dimension-filter-panel").DynamicAxis[];
-  // 프로젝트 하위 tracked_competitors.is_target — 프로젝트 mention 페이지만
-  // 넘긴다(getTargetBrand). undefined/null 이면 항상 자동(SOV 1위 외부 브랜드)
-  // 비교로 폴백 — 표준/웹사이트는 프로젝트에 종속되지 않아 "지정" 개념이 없다.
-  designatedTargetBrand?: string | null;
-  // Sub KPI (미언급 프롬프트 / 복수언급 / Top3 / 감정 3종). 미러 집계라 페이지가
-  // 서버에서 접어 넘긴다 — 없으면(null) 해당 타일·행만 빠지고 화면은 그대로.
-  subKpis?: MentionSubKpis | null;
-  // 직전 측정 스냅샷의 Sub KPI — 증감(Δ) 배지용. null = 비교 대상 없음(배지 숨김).
-  prevSubKpis?: MentionSubKpis | null;
-  // 비교 기준 측정일(YYYY-MM-DD) — 카드 그리드 하단에 명시.
-  prevBasisDate?: string | null;
-  // 일시 실패 표식(B035) — 페이지가 집계 뒤에 읽어 넘긴다. 미전달이면 종전 그대로.
-  degraded?: MentionsDegradedView;
 }) {
   const t = useTranslations("answerAnalysis.mentions");
   const tRoot = useTranslations("answerAnalysis");
+  const data = vm.data;
 
   if (!data) {
     return (
       <div className="flex flex-col gap-6">
         <p className="text-sm text-muted-foreground">{t("description")}</p>
-        <EmptyState label={degraded?.data ? t("kpi.degraded") : tRoot("empty")} />
+        <EmptyState label={vm.degraded.data ? t("kpi.degraded") : tRoot("empty")} />
       </div>
     );
   }
@@ -211,20 +201,12 @@ export function MentionsView({
           asOf={data.asOf}
         />
       )}
-      {/* 본문 3구획 — 각 구획은 페이지에서 **자기 <Suspense> 경계**로 따로
-          그려질 수 있도록 독립 컴포넌트로 갈라 두었다(표준 언급 화면). 이 뷰는
-          website/project 표면용 조립본이라 세 구획을 그대로 이어 붙인다 —
-          렌더 결과는 분리 전과 동일하다. */}
-      <MentionsSummarySection
-        data={data}
-        subKpis={subKpis}
-        prevSubKpis={prevSubKpis}
-        prevBasisDate={prevBasisDate}
-        designatedTargetBrand={designatedTargetBrand}
-        degraded={degraded}
-      />
-      <MentionsTrendSection data={data} />
-      <MentionsRankSection data={data} isWebsite={isWebsite} lazyPrompts={lazyPrompts} />
+      {/* 본문 3구획 — website/project 표면용 조립본이라 세 구획을 그대로 이어 붙인다. */}
+      <MentionsSummarySection vm={vm} compareSource={compareSource} />
+      <MentionsTrendSection data={data} trendSeries={vm.trendSeries ?? null} />
+      {vm.table ? (
+        <MentionsRankSection data={data} table={vm.table} isWebsite={isWebsite} lazyPrompts={lazyPrompts} />
+      ) : null}
     </div>
     </TooltipProvider>
   );
@@ -248,122 +230,64 @@ export function MentionsView({
 // (dashboard/page.tsx 의 섹션 규약과 동일).
 
 /**
- * 헤드투헤드 '당사' 행 — 당사가 여럿이면(admin 무필터 등) 하나로 합친다.
- *
- * 점유율·평균 순위는 서버가 관점 당사로 낸 값(`own`, API 원천)이 있으면 그 값이다: 브랜드 행을 더하면 점유율은
- * 반올림된 브랜드 점유율의 합이 되고, 평균 순위는 언급 수로 가중한 브랜드 평균이 되어 답변 단위 ④(답변별 당사
- * 최상위 순위의 평균)와 다르다. 없으면(legacy 원천) 종전 합산 그대로.
- *
- * 언급률은 답변 단위 비율이라 브랜드 간 가산 불가(복수 브랜드 동시 언급이 중복 계상돼 3사 합이 100을 넘으면
- * 클램프로 100% 고정되던 버그). 서버의 답변 단위 DISTINCT 값(subKpis.ownMentionRate)을 쓰고, 없으면(sub KPI 조회
- * 일시 실패 등) 같은 정의의 서버 own 블록 M01 노출률, 그것도 없으면(legacy 원천·옛 캐시) 하한인 브랜드별 최대값으로 폴백한다.
- *
- * 평균 순위 M04 는 '당사'를 한 주체로 본 값이다: 답변마다 당사 브랜드 순위 중 최상위(back own_rk_* = 답변 안 그 브랜드
- * 행 rk 의 min, 경쟁사 행과 같은 척도) 하나를 세므로, 한 답변에 당사 브랜드가 둘 나와도 두 번 세지 않는다.
+ * The head-to-head target the user picked: the screen recomputes the comparison and the type stack
+ * for it (mention/view-compare through /api/scope/mention-compare). Until it answers, the previous
+ * comparison stays on screen.
  */
-export function ownCompareRow(
-  ownRows: MentionsBrandLive[],
-  own: MentionsLive["own"] | null,
-  ownMentionRate: number | null,
-  label: string,
-): MentionsBrandLive {
-  const posWeighted = ownRows.reduce(
-    (acc, b) =>
-      b.avgPosition != null
-        ? { sum: acc.sum + b.avgPosition * b.mentions, n: acc.n + b.mentions }
-        : acc,
-    { sum: 0, n: 0 },
-  );
-  return {
-    brand: label,
-    mentions: ownRows.reduce((s, b) => s + b.mentions, 0),
-    prompts: ownRows.reduce((s, b) => s + b.prompts, 0),
-    share: own ? own.share : ownRows.reduce((s, b) => s + b.share, 0),
-    mentionRate: ownMentionRate ?? own?.mentionRate ?? ownRows.reduce((s, b) => Math.max(s, b.mentionRate), 0),
-    avgPosition: own
-      ? own.avgPosition
-      : posWeighted.n > 0
-        ? Math.round((posWeighted.sum / posWeighted.n) * 10) / 10
-        : null,
-    isTracked: true,
-  };
+function usePickedCompare(source: CompareSource, manualTarget: string | null): ComparePartsScreen | null {
+  const searchParams = useSearchParams();
+  const spStr = searchParams?.toString() ?? "";
+  const [picked, setPicked] = useState<{ key: string; parts: ComparePartsScreen } | null>(null);
+  const reqKey = manualTarget == null ? null : `${spStr}|${manualTarget}`;
+  const last = useRef<string | null>(null);
+  useEffect(() => {
+    if (reqKey == null || manualTarget == null) return;
+    last.current = reqKey;
+    const params = new URLSearchParams(spStr);
+    params.set("target", manualTarget);
+    params.set("surface", source.surface);
+    if (source.projectId) params.set("projectId", source.projectId);
+    if (source.admin) params.set("admin", "1");
+    const ctrl = new AbortController();
+    fetch(`/api/scope/mention-compare?${params.toString()}`, { signal: ctrl.signal })
+      .then((r) => (r.ok ? (r.json() as Promise<ComparePartsScreen>) : null))
+      .then((parts) => {
+        if (parts && last.current === reqKey) setPicked({ key: reqKey, parts });
+      })
+      .catch(() => {});
+    return () => ctrl.abort();
+  }, [reqKey, manualTarget, spStr, source.surface, source.projectId, source.admin]);
+  return reqKey != null && picked?.key === reqKey ? picked.parts : null;
 }
 
-// ① 요약 카드 + 헤드투헤드 + 감정/유형 — Sub KPI 를 읽는 구획.
 export function MentionsSummarySection({
-  data,
-  subKpis = null,
-  prevSubKpis = null,
-  prevBasisDate = null,
-  designatedTargetBrand,
-  degraded,
+  vm,
+  compareSource,
 }: {
-  data: MentionsViewData | null;
-  subKpis?: MentionSubKpis | null;
-  prevSubKpis?: MentionSubKpis | null;
-  prevBasisDate?: string | null;
-  designatedTargetBrand?: string | null;
-  degraded?: MentionsDegradedView;
+  vm: MentionViewScreen;
+  compareSource: CompareSource;
 }) {
   const t = useTranslations("answerAnalysis.mentions");
   const tRoot = useTranslations("answerAnalysis");
+  const { data, subKpis, prevSubKpis, prevBasisDate, degraded } = vm;
   // 감정·유형 세그먼트 드릴다운 대상 (null = 닫힘).
   const [signal, setSignal] = useState<{ signal: string; label: string } | null>(null);
   // 4.1.7: 헤드투헤드 비교 대상 빠른 전환 — 이미 측정된 외부 브랜드 중 하나를
-  // 직접 골라 즉시 비교(reprocess 불필요, 클라이언트 리렌더). null = 기본
-  // (지정 브랜드 or 자동 SOV 1위).
+  // 직접 골라 비교한다. null = 기본(지정 브랜드 or 자동 SOV 1위, 화면이 고른다).
   const [manualTarget, setManualTarget] = useState<string | null>(null);
-
-
-  // 당사 vs 경쟁사 헤드투헤드 — 검색창 필터와 무관하게 서버가 필터링한 전체
-  // 브랜드 목록(data.brands) 기준. 당사가 여러 개(admin 무필터 등)면 하나로
-  // 합산; designatedTargetBrand 가 있으면 그 브랜드로 고정, 없으면 외부 브랜드
-  // 중 점유율 1위를 자동 선택(KPI⑯과 동일 하이브리드 규칙).
-  const comparison = useMemo(() => {
-    const brands = data?.brands ?? [];
-    const ownRows = brands.filter((b) => b.isTracked);
-    const external = brands.filter((b) => !b.isTracked);
-    if (ownRows.length === 0 || external.length === 0) return null;
-
-    const own = ownCompareRow(ownRows, data?.own ?? null, subKpis?.ownMentionRate ?? null, t("compare.ours"));
-
-    // 드롭다운·자동 폴백용으로 외부 브랜드를 점유율(SOV) 내림차순 정렬.
-    const externalBySov = [...external].sort((a, b) => b.share - a.share);
-    // 우선순위: 사용자 수동 선택 > 프로젝트 지정 > 자동 SOV 1위.
-    const effectiveTarget = manualTarget ?? designatedTargetBrand;
-    const mode: "manual" | "designated" | "auto" = manualTarget
-      ? "manual"
-      : designatedTargetBrand
-        ? "designated"
-        : "auto";
-    const target: MentionsBrandLive = effectiveTarget
-      ? (external.find((b) => b.brand.toLowerCase() === effectiveTarget.toLowerCase()) ?? {
-          brand: effectiveTarget,
-          mentions: 0,
-          prompts: 0,
-          share: 0,
-          mentionRate: 0,
-          avgPosition: null,
-          isTracked: false,
-        })
-      : externalBySov[0];
-    const peers = externalBySov.filter((b) => b.brand !== target.brand).slice(0, 2);
-
-    return {
-      own,
-      target,
-      peers,
-      mode,
-      options: externalBySov.map((b) => b.brand),
-      ownBrands: ownRows.map((b) => b.brand),
-    };
-  }, [data, subKpis, designatedTargetBrand, manualTarget, t]);
+  const picked = usePickedCompare(compareSource, manualTarget);
+  // 고른 대상의 결과가 오기 전에는 직전 결과(기본 또는 직전 선택)를 그대로 둔다.
+  const shown = useRef<ComparePartsScreen>({ comparison: vm.comparison ?? null, typeShare: vm.typeShare ?? null });
+  if (manualTarget == null) shown.current = { comparison: vm.comparison ?? null, typeShare: vm.typeShare ?? null };
+  else if (picked) shown.current = picked;
+  const { comparison, typeShare } = shown.current;
+  const deltas = vm.deltas;
 
   if (!data) {
     return (
       <div className="flex flex-col gap-6">
         <p className="text-sm text-muted-foreground">{t("description")}</p>
-        <EmptyState label={degraded?.data ? t("kpi.degraded") : tRoot("empty")} />
+        <EmptyState label={degraded.data ? t("kpi.degraded") : tRoot("empty")} />
       </div>
     );
   }
@@ -381,7 +305,7 @@ export function MentionsSummarySection({
           value={data.summary.total.toLocaleString()}
           // Δ는 현재/직전 모두 subKpis 총계에서 계산 — 표시값(data.summary)과
           // 산출 경로가 달라도 증감 자체는 동일 기준끼리 비교된다.
-          delta={summaryDelta(subKpis?.totalMentions, prevSubKpis?.totalMentions, "count", true)}
+          delta={deltas?.total ?? null}
           info={{
             title: t("summary.total"),
             definition: t("def.total.definition"),
@@ -403,7 +327,7 @@ export function MentionsSummarySection({
           label={t("summary.totalPrompts")}
           // null = 요약 조회 일시 실패(B035) — 0 을 지어내지 않는다(미언급 프롬프트 카드와 같은 "—").
           value={data.summary.totalPrompts != null ? data.summary.totalPrompts.toLocaleString() : "—"}
-          delta={summaryDelta(subKpis?.measuredPrompts, prevSubKpis?.measuredPrompts, "count", null)}
+          delta={deltas?.totalPrompts ?? null}
           info={{
             title: t("summary.totalPrompts"),
             definition: t("def.totalPrompts.definition"),
@@ -416,7 +340,7 @@ export function MentionsSummarySection({
               icon={EyeOff}
               label={t("summary.missingPrompts")}
               value={subKpis.missingPrompts != null ? subKpis.missingPrompts.toLocaleString() : "—"}
-              delta={summaryDelta(subKpis.missingPrompts, prevSubKpis?.missingPrompts, "count", false)}
+              delta={deltas?.missingPrompts ?? null}
               info={{
                 title: t("summary.missingPrompts"),
                 definition: t("def.missingPrompts.definition"),
@@ -427,7 +351,7 @@ export function MentionsSummarySection({
               icon={Layers}
               label={t("summary.multiMention")}
               value={subKpis.multiMentionAnswers.toLocaleString()}
-              delta={summaryDelta(subKpis.multiMentionAnswers, prevSubKpis?.multiMentionAnswers, "count", true)}
+              delta={deltas?.multiMention ?? null}
               info={{
                 title: t("summary.multiMention"),
                 definition: t("def.multiMention.definition"),
@@ -438,7 +362,7 @@ export function MentionsSummarySection({
               icon={Trophy}
               label={t("summary.top3Rate")}
               value={subKpis.top3Rate != null ? `${subKpis.top3Rate.toFixed(1)}%` : "—"}
-              delta={summaryDelta(subKpis.top3Rate, prevSubKpis?.top3Rate, "pp", true)}
+              delta={deltas?.top3Rate ?? null}
               detail={
                 subKpis.top3Count != null && subKpis.top3Base != null
                   ? t("summary.ratioAnswers", {
@@ -467,7 +391,7 @@ export function MentionsSummarySection({
       ) : null}
       {/* Sub KPI·직전 Sub KPI(Δ)·측정 프롬프트 수 조회가 일시 실패했으면(B035) 빠진 카드·배지·"—" 가
           "측정 없음"으로 읽히지 않게 같은 캡션 자리에 기존 degraded 문구를 둔다. */}
-      {degraded?.subKpis ? (
+      {degraded.subKpis ? (
         <p className="-mt-3 text-[11px] text-muted-foreground">{t("kpi.degraded")}</p>
       ) : null}
 
@@ -487,26 +411,24 @@ export function MentionsSummarySection({
           세그먼트/행 클릭 시 그 신호가 발생한 프롬프트 목록 → 답변 원문
           (2026-08-06 고객 피드백: 상세 분석 기능 부족). */}
       <div className="grid gap-3 md:grid-cols-2">
-        {data.sentimentTotals ? (
+        {vm.sentiment ? (
           <SentimentBreakdown
-            sentiment={data.sentimentTotals}
+            segments={vm.sentiment}
             sub={subKpis}
             onSignalClick={(signal, label) => setSignal({ signal, label })}
           />
         ) : (
           <PendingCard title={t("breakdown.sentimentTitle")} label={tRoot("pending")} />
         )}
-        {data.typeTotals ? (
+        {vm.typeAbs ? (
           <TypeBreakdown
-            types={data.typeTotals}
-            typesByBrand={data.typesByBrand ?? null}
-            trackedBrands={new Set(data.brands.filter((b) => b.isTracked).map((b) => b.brand))}
-            comparisonBrand={comparison?.target.brand ?? null}
+            typeAbs={vm.typeAbs}
+            typeShare={typeShare}
             onSignalClick={(signal, label) => setSignal({ signal, label })}
           />
         ) : (
           // 유형 조회가 일시 실패했으면(B035) '준비 중' 대신 기존 degraded 문구.
-          <PendingCard title={t("breakdown.typesTitle")} label={degraded?.types ? t("kpi.degraded") : tRoot("pending")} />
+          <PendingCard title={t("breakdown.typesTitle")} label={degraded.types ? t("kpi.degraded") : tRoot("pending")} />
         )}
       </div>
       <SignalPromptsDialog
@@ -522,7 +444,14 @@ export function MentionsSummarySection({
 }
 
 // ② 추이 — 언급 집계만 읽는다. 데이터가 없으면 스스로 사라진다(빈 상태는 ①).
-export function MentionsTrendSection({ data }: { data: MentionsViewData | null }) {
+export function MentionsTrendSection({
+  data,
+  trendSeries,
+}: {
+  data: MentionsViewData | null;
+  /** 시리즈 구분(당사 브랜드 · 경쟁사) — 화면이 계산해 보낸다. */
+  trendSeries: TrendSeriesSplit | null;
+}) {
   const t = useTranslations("answerAnalysis.mentions");
   const tRoot = useTranslations("answerAnalysis");
   if (!data) return null;
@@ -530,13 +459,8 @@ export function MentionsTrendSection({ data }: { data: MentionsViewData | null }
     <>
       {/* (c) Trend chart — weekly Top-10 brand mention lines. Needs ≥2 dated
           weeks (data.trend is null otherwise → 준비 중 placeholder). */}
-      {data.trend ? (
-        <MentionTrendChart
-          title={t("trend.title")}
-          trend={data.trend}
-          // 시리즈 키와 brands[].brand 는 동일한 정본 표기(양쪽 다 표기 병합 통과).
-          trackedBrands={new Set(data.brands.filter((b) => b.isTracked).map((b) => b.brand))}
-        />
+      {data.trend && trendSeries ? (
+        <MentionTrendChart title={t("trend.title")} trend={data.trend} series={trendSeries} />
       ) : (
         // null 의 두 사유를 구분한다 — 시간 초과·일시 실패(degrade)와 "2주 미만"(측정 대기).
         // 표준 공통 하단(mentions-prompts-section.tsx)과 같은 판정·같은 문구다(B035).
@@ -553,10 +477,13 @@ export function MentionsTrendSection({ data }: { data: MentionsViewData | null }
 // 이 구획이 소유한다(다른 구획을 리렌더시키지 않는다).
 export function MentionsRankSection({
   data,
+  table,
   isWebsite = false,
   lazyPrompts = false,
 }: {
   data: MentionsViewData | null;
+  /** 브랜드 표의 화면 값(순번·값·정렬 순서). */
+  table: BrandTableView;
   isWebsite?: boolean;
   lazyPrompts?: boolean;
 }) {
@@ -570,6 +497,7 @@ export function MentionsRankSection({
           (website/project)의 마크업·동작은 종전과 동일하다 — 토글·순위 열은 꺼져 있다. */}
       <BrandRankTable
         brands={data.brands}
+        table={table}
         perBrandPrompts={data.perBrandPrompts}
         isWebsite={isWebsite}
         lazyPrompts={lazyPrompts}
@@ -578,31 +506,6 @@ export function MentionsRankSection({
     </div>
     </TooltipProvider>
   );
-}
-
-// 직전 측정 대비 증감 배지 (2026-08-06 고객 피드백: 변화 추이·비교 기준 부재).
-// tone: 지표 방향성 반영 — 미언급 프롬프트는 감소가 개선(good)이다.
-interface SummaryDelta {
-  diff: number;
-  unit: "count" | "pp";
-  tone: "good" | "bad" | "neutral";
-}
-
-function summaryDelta(
-  cur: number | null | undefined,
-  prev: number | null | undefined,
-  unit: "count" | "pp",
-  positiveIsGood: boolean | null,
-): SummaryDelta | null {
-  if (cur == null || prev == null) return null;
-  const diff = Math.round((cur - prev) * 10) / 10;
-  const tone: SummaryDelta["tone"] =
-    diff === 0 || positiveIsGood == null
-      ? "neutral"
-      : (diff > 0) === positiveIsGood
-        ? "good"
-        : "bad";
-  return { diff, unit, tone };
 }
 
 function SummaryCard({
@@ -694,16 +597,17 @@ export function weekStartMD(iso: string): string {
 export function MentionTrendChart({
   title,
   trend,
-  trackedBrands,
+  series,
 }: {
   title: string;
   trend: MentionTrend;
-  trackedBrands: ReadonlySet<string>;
+  /** 시리즈 구분(당사 브랜드 · 경쟁사) — 화면이 계산해 보낸다(시리즈 순서 유지). */
+  series: TrendSeriesSplit;
 }) {
   const tRoot = useTranslations("answerAnalysis");
   const weekLabel = (v: unknown) => tRoot("weekAxis", { md: weekStartMD(String(v)) });
-  const competitors = trend.series.filter((b) => !trackedBrands.has(b));
-  const own = trend.series.filter((b) => trackedBrands.has(b));
+  const { competitors, own } = series;
+  const trackedBrands = new Set(own);
   // 수집 오류 주 — 값 대신 음영 + 안내 문구(lib/viz/trend-gap.ts).
   const gapPlan = planTrendGaps(trend.points, { xKey: "week", seriesKeys: trend.series, family: "mention" });
   const strokeOf = (b: string): string =>
@@ -788,17 +692,8 @@ export function MentionTrendChart({
 }
 
 type ComparisonRole = "ours" | "target" | "peer";
-interface ComparisonData {
-  own: MentionsBrandLive;
-  target: MentionsBrandLive;
-  peers: MentionsBrandLive[];
-  mode: "manual" | "designated" | "auto";
-  // 측정된 외부 브랜드 목록(SOV 내림차순) — 비교 대상 빠른 전환 드롭다운용.
-  options: string[];
-  // '당사'에 합산된 브랜드 목록 — 카드에 포함 범위를 명시하기 위해 전달
-  // (2026-08-06 고객 피드백: '당사' 범위 불명확).
-  ownBrands: string[];
-}
+// 측정된 외부 브랜드 목록(SOV 내림차순, options)과 '당사'에 합산된 브랜드 목록(ownBrands)을 함께 받는다.
+type ComparisonData = ComparisonView;
 
 // 비교 대상 드롭다운의 "기본값(지정/자동)" 옵션 sentinel — Radix Select는 빈
 // 문자열 value를 허용하지 않아 별도 토큰을 쓴다.
@@ -818,7 +713,7 @@ function CompetitorHeadToHead({
 }) {
   const t = useTranslations("answerAnalysis.mentions.compare");
   const { own, target, peers, mode, options, ownBrands } = comparison;
-  const rows: Array<{ row: MentionsBrandLive; role: ComparisonRole }> = [
+  const rows: Array<{ row: CompareRow; role: ComparisonRole }> = [
     { row: own, role: "ours" },
     { row: target, role: "target" },
     ...peers.map((row) => ({ row, role: "peer" as const })),
@@ -903,8 +798,8 @@ function CompetitorHeadToHead({
             종전에는 화면 내 최댓값으로 나눠서 1위 브랜드가 점유율이 얼마든 항상
             꽉 찬 막대였다 — 71.3% 인데 100% 로 보이는 것(GEO-3).
             ⚠️ 노출 순위(position)는 백분율이 아니므로 아래처럼 상대 스케일을 유지한다. */}
-        <CompareMetric title={t("metric.share")} rows={rows} valueKey="share" max={100} suffix="%" />
-        <CompareMetric title={t("metric.rate")} rows={rows} valueKey="mentionRate" max={100} suffix="%" />
+        <CompareMetric title={t("metric.share")} rows={rows} valueKey="share" max={100} suffix="%" oursLabel={t("ours")} />
+        <CompareMetric title={t("metric.rate")} rows={rows} valueKey="mentionRate" max={100} suffix="%" oursLabel={t("ours")} />
         <CompareMetric
           title={t("metric.position")}
           hint={t("positionHint")}
@@ -912,6 +807,7 @@ function CompetitorHeadToHead({
           valueKey="avgPosition"
           max={posWorst}
           invert
+          oursLabel={t("ours")}
         />
       </div>
     </div>
@@ -926,10 +822,13 @@ function CompareMetric({
   max,
   invert = false,
   suffix = "",
+  oursLabel,
 }: {
   title: string;
   hint?: string;
-  rows: Array<{ row: MentionsBrandLive; role: ComparisonRole }>;
+  rows: Array<{ row: CompareRow; role: ComparisonRole }>;
+  /** The own row's name (`compare.ours`): the screen sends it as the OWN_ROW sentinel. */
+  oursLabel: string;
   valueKey: "share" | "mentionRate" | "avgPosition";
   max: number;
   invert?: boolean;
@@ -947,6 +846,7 @@ function CompareMetric({
           const raw = value == null ? 0 : invert ? Math.max(0, max - value) : value;
           const pct = Math.max(2, Math.min(100, (raw / max) * 100));
           const display = value == null ? "—" : value.toFixed(1) + suffix;
+          const name = row.brand === OWN_ROW ? oursLabel : row.brand;
           return (
             <div key={row.brand} className="grid grid-cols-[70px_1fr_44px] items-center gap-2">
               <span
@@ -958,9 +858,9 @@ function CompareMetric({
                       ? "font-bold text-accent-info"
                       : "text-muted-foreground",
                 )}
-                title={row.brand}
+                title={name}
               >
-                {row.brand}
+                {name}
               </span>
               <div className="relative h-2.5 overflow-hidden rounded-full bg-muted">
                 <div
@@ -985,14 +885,15 @@ function CompareMetric({
 }
 
 function SentimentBreakdown({
-  sentiment,
+  segments,
   sub,
   onSignalClick,
 }: {
-  sentiment: MentionSentimentBreakdown;
+  /** 4분류 세그먼트 — 값과 그 비율(화면이 계산해 보낸다). */
+  segments: NonNullable<MentionViewScreen["sentiment"]>;
   // Sub KPI 2종(긍정·부정 키워드 언급 수) — 같은 sentiment 신호에서 나오므로
   // 별도 패널을 만들지 않고 이 패널 하단 행으로 붙인다.
-  sub?: MentionSubKpis | null;
+  sub?: MentionSubKpisView | null;
   // 범례 클릭 → 그 감정 신호가 발생한 프롬프트 목록 (2026-08-06 피드백).
   onSignalClick: (signal: string, label: string) => void;
 }) {
@@ -1000,13 +901,7 @@ function SentimentBreakdown({
   // 짧은 칩 문구는 KPI 사전의 "측정 대기" — answerAnalysis.pending 은 빈 패널용
   // 안내문(한 문장)이라 인라인 칩에는 길다.
   const tKpi = useTranslations("dashboard.kpi");
-  const total = sentiment.positive + sentiment.neutral + sentiment.negative + sentiment.mixed || 1;
-  const segs = [
-    { key: "positive", value: sentiment.positive, cls: "bg-emerald-500", label: t("positive") },
-    { key: "neutral", value: sentiment.neutral, cls: "bg-muted-foreground/40", label: t("neutral") },
-    { key: "mixed", value: sentiment.mixed, cls: "bg-amber-400", label: t("mixed") },
-    { key: "negative", value: sentiment.negative, cls: "bg-destructive", label: t("negative") },
-  ];
+  const segs = segments.map((sg) => ({ key: sg.key, value: sg.value, share: sg.share, cls: sg.cls, label: t(sg.key) }));
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
       <div className="flex items-center gap-2">
@@ -1016,7 +911,7 @@ function SentimentBreakdown({
       <p className="text-[11px] text-muted-foreground">{t("sentimentHint")}</p>
       <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted">
         {segs.map((s) => (
-          <div key={s.key} className={cn("h-full", s.cls)} style={{ width: `${(s.value / total) * 100}%` }} aria-hidden />
+          <div key={s.key} className={cn("h-full", s.cls)} style={{ width: `${s.share}%` }} aria-hidden />
         ))}
       </div>
       <ul className="flex flex-wrap gap-x-4 gap-y-1.5 text-[11px]">
@@ -1030,7 +925,7 @@ function SentimentBreakdown({
             >
               <span className={cn("h-2.5 w-2.5 rounded-[2px]", s.cls)} aria-hidden />
               <span className="text-foreground">{s.label}</span>
-              <span className="tabular-nums">{((s.value / total) * 100).toFixed(1)}%</span>
+              <span className="tabular-nums">{s.share.toFixed(1)}%</span>
             </button>
           </li>
         ))}
@@ -1075,85 +970,22 @@ function SentimentBreakdown({
   );
 }
 
-const TYPE_KEYS = ["mention", "recommendation", "comparison", "definition", "final_choice"] as const;
-// 스택 세그먼트 색 — 당사=brand-700, 비교=accent-gold, 상위 기타 3개=중립 스케일,
-// 잔여 "기타"=ink-100 (hex 리터럴 금지, @theme 토큰).
-const OTHER_SEG_COLORS = ["bg-brand-300", "bg-ink-500", "bg-ink-300"] as const;
 
 function TypeBreakdown({
-  types,
-  typesByBrand,
-  trackedBrands,
-  comparisonBrand,
+  typeAbs,
+  typeShare,
   onSignalClick,
 }: {
-  types: MentionTypeBreakdown;
-  typesByBrand: MentionTypesByBrand | null;
-  trackedBrands: ReadonlySet<string>;
-  comparisonBrand: string | null;
+  /** 당사 유형 구성(절대 건수)과 막대 폭 — 화면이 계산해 보낸다. */
+  typeAbs: NonNullable<MentionViewScreen["typeAbs"]>;
+  /** 유형별 구성비 스택(당사 · 비교 대상 · 상위 3 · 그 외)과 범례 — 헤드투헤드 대상에 따라 화면이 계산한다. */
+  typeShare: TypeShareView | null;
   onSignalClick: (signal: string, label: string) => void;
 }) {
   const t = useTranslations("answerAnalysis.mentions.breakdown");
-
-  // 기타 브랜드 색은 **브랜드별로 고정**한다 (2026-08-31, GEO-5).
-  // 종전에는 각 유형 행 안에서의 순위 index 로 색을 배정해서, 같은 브랜드가
-  // 행마다 다른 색으로 그려졌다 — 그 상태에서는 범례를 만드는 것 자체가
-  // 불가능하다("Honda 는 무슨 색인가"에 답이 없다). 전체 합계 상위 3개를
-  // 먼저 정하고 그 브랜드에 색을 묶으면 행끼리 비교도 가능해진다.
-  const otherColorByBrand = assignOtherColors(
-    typesByBrand
-      ? typesByBrand.brands
-          .filter((b) => !trackedBrands.has(b.brand) && b.brand !== comparisonBrand)
-          .map((b) => ({
-            brand: b.brand,
-            total: TYPE_KEYS.reduce((sum, k) => sum + b.types[k], 0),
-          }))
-      : [],
-    OTHER_SEG_COLORS,
-  );
-
-  // 유형별 100% 스택 행 — 당사(스코프 3사 합) + 비교 브랜드 + 상위 기타 + 잔여.
-  const shareRows = typesByBrand
-    ? TYPE_KEYS.map((type) => {
-        const total = typesByBrand.totals[type];
-        const tracked = typesByBrand.brands
-          .filter((b) => trackedBrands.has(b.brand))
-          .reduce((s, b) => s + b.types[type], 0);
-        const comp = comparisonBrand
-          ? (typesByBrand.brands.find((b) => b.brand === comparisonBrand)?.types[type] ?? 0)
-          : 0;
-        // 색이 고정된 브랜드만 개별 세그먼트로 뺀다 — 나머지는 아래 etc 로 접힌다.
-        // 정렬은 표시 순서용일 뿐 색 배정과 무관하다(그게 종전 결함이었다).
-        const others = typesByBrand.brands
-          .filter((b) => otherColorByBrand.has(b.brand))
-          .map((b) => ({ brand: b.brand, val: b.types[type] }))
-          .filter((o) => o.val > 0)
-          .sort((a, b) => b.val - a.val);
-        const etc = Math.max(
-          0,
-          total - tracked - comp - others.reduce((s, o) => s + o.val, 0),
-        );
-        const segs = [
-          { key: "ours", label: t("ours"), val: tracked, color: "bg-brand-700" },
-          ...(comp > 0 && comparisonBrand
-            ? [{ key: "comp", label: comparisonBrand, val: comp, color: "bg-accent-gold" }]
-            : []),
-          ...others.map((o) => ({
-            key: `o:${o.brand}`,
-            label: o.brand,
-            val: o.val,
-            color: otherColorByBrand.get(o.brand) as string,
-          })),
-          ...(etc > 0 ? [{ key: "etc", label: t("others"), val: etc, color: "bg-ink-100" }] : []),
-        ];
-        return { type, total, trackedShare: total > 0 ? (tracked / total) * 100 : 0, segs };
-      })
-    : null;
-
-  // 실제 그려진 세그먼트 → 범례. 색을 키로 중복을 접는다(브랜드별 색 고정이
-  // 선행 조건 — 그게 없으면 같은 색에 여러 라벨이 붙어 범례가 성립하지 않는다).
-  // 표시 순서는 첫 등장 순서 = 당사 → 비교 → 기타 상위 → 잔여.
-  const legendItems = legendFromSegments(shareRows ?? []);
+  const labelOf = (x: { label?: string; labelKey?: "ours" | "others" }) => (x.labelKey ? t(x.labelKey) : (x.label ?? ""));
+  const shareRows = typeShare?.rows ?? null;
+  const legendItems = (typeShare?.legend ?? []).map((item) => ({ color: item.color, label: labelOf(item) }));
 
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
@@ -1180,8 +1012,8 @@ function TypeBreakdown({
                       <div
                         key={s.key}
                         className={s.color}
-                        style={{ width: `${(s.val / r.total) * 100}%` }}
-                        title={`${s.label}: ${s.val.toLocaleString()}`}
+                        style={{ width: `${s.width}%` }}
+                        title={`${labelOf(s)}: ${s.val.toLocaleString()}`}
                       />
                     ))
                   ) : null}
@@ -1213,9 +1045,7 @@ function TypeBreakdown({
           {t("typesAbsToggle")}
         </summary>
         <ul className="mt-2 flex flex-col gap-1.5">
-          {TYPE_KEYS.map((key) => {
-            const value = types[key];
-            const absMax = Math.max(types.mention, types.recommendation, types.comparison, types.definition, types.final_choice, 1);
+          {typeAbs.map(({ key, value, width }) => {
             return (
               <li key={key}>
                 <button
@@ -1226,7 +1056,7 @@ function TypeBreakdown({
                 >
                   <span className="w-16 shrink-0 text-[11px] text-foreground">{t(`type.${key}`)}</span>
                   <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-muted">
-                    <div className="absolute top-0 left-0 h-full rounded-full bg-brand-700" style={{ width: `${(value / absMax) * 100}%` }} aria-hidden />
+                    <div className="absolute top-0 left-0 h-full rounded-full bg-brand-700" style={{ width: `${width}%` }} aria-hidden />
                   </div>
                   <span className="w-12 shrink-0 text-right text-[11px] font-semibold tabular-nums text-foreground">
                     {value.toLocaleString()}

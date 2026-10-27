@@ -21,7 +21,7 @@ vi.mock("next/headers", () => ({
 vi.mock("@/lib/auth/session", () => ({ getSession: async () => ({ user: { role: "hq", menuGroups: null, scope: { kind: "all" } } }) }));
 vi.mock("@/lib/auth/route-policy", () => ({ canAccessRoute: () => true }));
 vi.mock("@/lib/hgh/adapters/admin", () => ({ isAdminApi: () => h.api }));
-vi.mock("@/lib/hgh/adapters/filters", () => ({ isAnalysisApi: () => h.api }));
+vi.mock("@/lib/hgh/analysis-access", () => ({ isAnalysisApi: () => h.api }));
 vi.mock("@/lib/db/repositories/catalog-page", () => ({
   readCatalogPage: async (_scope: unknown, query: { collation: string }, admin: boolean) => {
     h.legacy.push({ admin, collation: query.collation });

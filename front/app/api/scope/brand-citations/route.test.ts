@@ -1,263 +1,77 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { HghApiError } from "@/lib/hgh/errors";
 
-// GET /api/scope/brand-citations (unit U6): gate first on both sources, legacy readers unchanged
-// (rows with inline drilldown; skey -> 400), api = C-1 list with mention_brand ({domains}, rows
-// carry skey) and the per-source detail (&skey= -> {urls, promptList}).
+// GET /api/scope/brand-citations: a proxy of the screen mention/drill-brand-citations
+// (back/bff/screens/mention_drilldown.py, which decides every status and body; its goldens and
+// tests pin them). The route keeps the session check and relays the screen's {status, body};
+// a failure the screen raises is answered with hghErrorResponse.
 
 const st = vi.hoisted(() => ({
-  session: null as unknown,
-  calls: [] as { fn: string; args: unknown[] }[],
-  membership: { status: "active" } as unknown,
+  session: { user: { id: "geo_readonly", role: "local_reader", scope: { all: true } } } as unknown,
+  calls: [] as { name: string; query: Record<string, unknown> }[],
+  reply: (): Promise<unknown> => Promise.resolve({ status: 200, body: {} }),
 }));
 
 vi.mock("@/lib/auth/session", () => ({ getSession: async () => st.session }));
-vi.mock("@/lib/scope/server", () => {
-  class UnauthorizedError extends Error {}
-  const rec =
-    (fn: string) =>
-    async (...args: unknown[]) => {
-      st.calls.push({ fn, args });
-      return [{ domain: "legacy.example" }];
-    };
-  return { UnauthorizedError, fetchBrandCitations: rec("standard"), fetchWebsiteBrandCitations: rec("website") };
-});
-vi.mock("@/lib/db/repositories/request-cache", () => ({
-  cachedProjectById: async () => ({ id: "p" }),
-  cachedMembership: async () => st.membership,
+vi.mock("@/lib/screen", () => ({
+  screenGet: (name: string, query: Record<string, unknown>) => {
+    st.calls.push({ name, query });
+    return st.reply();
+  },
 }));
 
-const { bindHghAuth } = await import("@/lib/hgh/auth");
 const { GET } = await import("./route");
-
-const TOKEN = "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJ1In0.c2ln";
-const PROJECT = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
-const session = (o: Record<string, unknown> = {}) => ({
-  user: { id: "u1", email: "x", role: "admin", scope: { all: true }, operator: "none", menuGroups: null, ...o },
-});
+const QS = "mentionBrand=Toyota&skey=linkedin.com%2Fhmg&projectId=";
 const req = (qs: string) => new NextRequest(`https://front.test/api/scope/brand-citations?${qs}`);
 
-const apiLog: URL[] = [];
-const LIST = {
-  data: {
-    items: [
-      { category: null, citations: 3, citing_answers: 2, citing_prompts: 2, competitor_brand: null, coverage: { num: 2, den: 10 }, domain: "a.example", is_own: false, is_social: false, is_target: false, match_rank: 1, own_citations: 0, rank: 1, share: { num: 3, den: 6 }, skey: "a.example" },
-    ],
-    competitor_totals: [],
-    summary: { answers_den: 10, own_share: { num: 0, den: 6 }, total_citations: 6, unique_sources: 2 },
-  },
-  meta: { mode: "cumulative", page: { limit: 200, next_cursor: null } },
-};
-const DETAIL = {
-  data: {
-    citations: 3,
-    own_citations: 0,
-    prompts: [],
-    urls: [{ url: "https://a.example/x", title: "X", citations: 3, engines: ["gemini"], prompt_text: "q", country: null }],
-    source: { category: null, domain: "a.example", is_social: false, skey: "a.example" },
-  },
-  meta: { mode: "cumulative" },
-};
-
 beforeEach(() => {
-  st.session = session();
+  st.session = { user: { id: "geo_readonly", role: "local_reader", scope: { all: true } } };
   st.calls = [];
-  st.membership = { status: "active" };
-  apiLog.length = 0;
-  vi.stubEnv("HGH_API_BASE_URL", "https://api.hgh.test");
-  bindHghAuth({ getAccessToken: async () => TOKEN });
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (u: string) => {
-      const url = new URL(String(u));
-      apiLog.push(url);
-      const body = url.pathname === "/v1/citations/domains" ? LIST : DETAIL;
-      return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
-    }),
-  );
-});
-afterEach(() => {
-  bindHghAuth(null);
-  vi.unstubAllEnvs();
-  vi.unstubAllGlobals();
+  st.reply = () => Promise.resolve({ status: 200, body: {"domains":[],"orders":{}} });
 });
 
-const API = { HGH_SOURCE_G2: "api", HGH_SOURCE_G3: "api", HGH_SOURCE_G6: "api" };
-const setSource = (env: Record<string, string>) => {
-  for (const [k, v] of Object.entries(env)) vi.stubEnv(k, v);
-};
+describe("GET /api/scope/brand-citations -> screen mention/drill-brand-citations", () => {
+  it("no session -> 401 {error:'unauthorized'}, nothing read", async () => {
+    st.session = null;
+    const res = await GET(req(QS));
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: "unauthorized" });
+    expect(st.calls).toEqual([]);
+  });
 
-describe.each([
-  ["legacy", {}],
-  ["api", API],
-] as const)("gate on the %s source", (_n, env) => {
-  beforeEach(() => setSource(env));
-  it("vendor on the website drilldown -> 403 {domains:[]}; on the detail -> the detail shape", async () => {
-    st.session = session({ role: "vendor", scope: { all: false, brands: [] } });
-    const list = await GET(req("mentionBrand=Kia&surface=website"));
-    expect([list.status, await list.json()]).toEqual([403, { domains: [] }]);
-    const det = await GET(req("mentionBrand=Kia&surface=website&skey=a.example"));
-    expect([det.status, await det.json()]).toEqual([403, { urls: [], promptList: [] }]);
-    expect([st.calls.length, apiLog.length]).toEqual([0, 0]);
+  it("sends the search params exactly as received (repeated keys, empty values) as ctx.params", async () => {
+    await GET(req(QS));
+    expect(st.calls).toHaveLength(1);
+    expect(st.calls[0].name).toBe("mention/drill-brand-citations");
+    expect(Object.keys(st.calls[0].query)).toEqual(["ctx.params"]);
+    expect(JSON.parse(st.calls[0].query["ctx.params"] as string)).toEqual([...new URLSearchParams(QS)]);
   });
-  it("project page gate -> 404 before any read", async () => {
-    st.session = session({ role: "hq", scope: { all: false, brands: ["Kia"] } });
-    st.membership = { status: "removed" };
-    expect((await GET(req(`mentionBrand=Kia&projectId=${PROJECT}`))).status).toBe(404);
-    expect([st.calls.length, apiLog.length]).toEqual([0, 0]);
-  });
-});
 
-describe("legacy source", () => {
-  it("rows with inline drilldown from the unchanged reader; a detail request -> 400", async () => {
-    expect(await (await GET(req("mentionBrand=Kia"))).json()).toEqual({ domains: [{ domain: "legacy.example" }] });
-    expect(st.calls[0].args[1]).toMatchObject({ cumulative: true });
-    expect((await GET(req("mentionBrand=Kia&skey=a.example"))).status).toBe(400);
+  it("relays the screen's status and body", async () => {
+    const ok = await GET(req(QS));
+    expect(ok.status).toBe(200);
+    expect(await ok.json()).toEqual({"domains":[],"orders":{}});
+    for (const status of [400, 403, 404]) {
+      st.reply = () => Promise.resolve({ status, body: {"urls":[],"promptList":[]} });
+      const res = await GET(req(QS));
+      expect(res.status).toBe(status);
+      expect(await res.json()).toEqual({"urls":[],"promptList":[]});
+    }
+    st.reply = () => Promise.resolve({ status: 401, body: { error: "unauthorized" } });
+    const unauthorized = await GET(req(QS));
+    expect([unauthorized.status, await unauthorized.json()]).toEqual([401, { error: "unauthorized" }]);
   });
-});
 
-describe("api source", () => {
-  beforeEach(() => setSource(API));
-  it("list: rows with skey, empty drilldown; project surface reads the project (U6-N11)", async () => {
-    const body = (await (await GET(req(`mentionBrand=Kia&projectId=${PROJECT}`))).json()) as { domains: { skey: string; urls: unknown[] }[] };
-    expect(body.domains.map((d) => [d.skey, d.urls.length])).toEqual([["a.example", 0]]);
-    expect([apiLog[0].searchParams.get("surface"), apiLog[0].searchParams.get("project_id"), apiLog[0].searchParams.get("mention_brand")]).toEqual([
-      "project",
-      PROJECT,
-      "Kia",
-    ]);
-  });
-  it("detail: {urls, promptList} for the source", async () => {
-    const body = await (await GET(req("mentionBrand=Kia&surface=website&skey=a.example"))).json();
-    expect(body).toEqual({
-      urls: [{ url: "https://a.example/x", title: "X", count: 3, aiProvider: "Gemini", promptText: "q", country: null }],
-      promptList: [],
-    });
-    expect(apiLog[0].pathname).toBe("/v1/citations/domains/a.example");
-  });
-  it("skey validation: empty -> 400", async () => {
-    expect((await GET(req("mentionBrand=Kia&skey="))).status).toBe(400);
-  });
-  it("B006: a backend 403 -> 403 with the empty shape (list and detail); 404 unknown skey -> 200 empty detail", async () => {
-    const reply = (status: number, code: string) =>
-      vi.stubGlobal(
-        "fetch",
-        vi.fn(async (u: string) => {
-          apiLog.push(new URL(String(u)));
-          return new Response(JSON.stringify({ error: { code, message: "internal detail" } }), { status, headers: { "content-type": "application/json" } });
-        }),
-      );
-    reply(403, "role_forbidden");
-    const list = await GET(req("mentionBrand=Kia"));
-    expect([list.status, await list.json()]).toEqual([403, { domains: [] }]);
-    const det = await GET(req("mentionBrand=Kia&skey=a.example"));
-    expect([det.status, await det.json()]).toEqual([403, { urls: [], promptList: [] }]);
-    reply(404, "not_found");
-    const gone = await GET(req("mentionBrand=Kia&skey=gone.example"));
-    expect([gone.status, await gone.json()]).toEqual([200, { urls: [], promptList: [] }]);
-  });
-  it("B010: one request of 2,000; B008: total / urlTotal / promptTotal only when a cap cut the list", async () => {
-    const fit = await (await GET(req("mentionBrand=Kia"))).json();
-    expect(Object.keys(fit)).toEqual(["domains"]);
-    expect(apiLog.map((u) => [u.searchParams.get("limit"), u.searchParams.get("cursor")])).toEqual([["2000", null]]);
-    const det = await (await GET(req("mentionBrand=Kia&skey=a.example"))).json();
-    expect(Object.keys(det)).toEqual(["urls", "promptList"]);
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (u: string) => {
-        const url = new URL(String(u));
-        const body =
-          url.pathname === "/v1/citations/domains"
-            ? { ...LIST, meta: { mode: "cumulative", page: { limit: 2000, next_cursor: "Y3Vy", total: 2100 } } }
-            : { ...DETAIL, data: { ...DETAIL.data, url_total: 14, prompt_total: 0 } };
-        return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
-      }),
-    );
-    expect(((await (await GET(req("mentionBrand=Kia"))).json()) as { total?: number }).total).toBe(2100);
-    const cut = (await (await GET(req("mentionBrand=Kia&skey=a.example"))).json()) as { urlTotal?: number; promptTotal?: number };
-    expect([cut.urlTotal, cut.promptTotal]).toEqual([14, undefined]);
-  });
-});
-
-// ── independent verification (fail) regressions ───────────────────────────
-
-describe("U6 verification D1: legacy project requests read the standard root, so the standard place gate holds too", () => {
-  it("project-only menu account + projectId on the legacy source -> 403 {domains:[]}, no reader call", async () => {
-    st.session = session({ role: "hq", scope: { all: false, brands: ["Kia"] }, menuGroups: ["project"] });
-    const res = await GET(req(`mentionBrand=Toyota&projectId=${PROJECT}`));
-    expect([res.status, await res.json()]).toEqual([403, { domains: [] }]);
-    expect(st.calls).toHaveLength(0);
-    expect((await GET(req("mentionBrand=Toyota"))).status).toBe(403);
-  });
-  it("an active member who may read the standard analysis keeps the legacy behaviour (standard reader)", async () => {
-    st.session = session({ role: "hq", scope: { all: false, brands: ["Kia"] }, menuGroups: null });
-    const res = await GET(req(`mentionBrand=Toyota&projectId=${PROJECT}`));
-    expect([res.status, st.calls[0]?.fn]).toEqual([200, "standard"]);
-  });
-  it("api source: the project surface is read from the project, the menu account passes (U6-N11)", async () => {
-    setSource(API);
-    st.session = session({ role: "hq", scope: { all: false, brands: ["Kia"] }, menuGroups: ["project"] });
-    const res = await GET(req(`mentionBrand=Toyota&projectId=${PROJECT}`));
-    expect(res.status).toBe(200);
-    expect(apiLog[0].searchParams.get("surface")).toBe("project");
-  });
-});
-
-describe.each([
-  ["legacy", {}],
-  ["api", API],
-] as const)("U6 verification D3: project gate backend failures (HGH_SOURCE_SESSION=api, %s source)", (_n, env) => {
-  const gateReplies: { status: number; body: unknown }[] = [];
-  let refreshed = 0;
-  beforeEach(() => {
-    setSource(env);
-    vi.stubEnv("HGH_SOURCE_SESSION", "api");
-    gateReplies.length = 0;
-    refreshed = 0;
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (u: string) => {
-        const url = new URL(String(u));
-        apiLog.push(url);
-        const r =
-          url.pathname === `/v1/projects/${PROJECT}`
-            ? (gateReplies.shift() ?? { status: 200, body: { data: { project_id: PROJECT, name: "p", created_at: "2026-01-01T00:00:00Z", country_code: "US" }, meta: { mode: "crud" } } })
-            : { status: 200, body: url.pathname === "/v1/citations/domains" ? LIST : DETAIL };
-        return new Response(JSON.stringify(r.body), { status: r.status, headers: { "content-type": "application/json" } });
-      }),
-    );
-  });
-  const err = (status: number, code: string) => ({ status, body: { error: { code, message: "internal detail" } } });
-
-  it("401 token_expired that survives the refresh -> 401 {error:'unauthorized'} (not thrown)", async () => {
-    bindHghAuth({ getAccessToken: async () => TOKEN, refreshAccessToken: async () => (refreshed++, null) });
-    gateReplies.push(err(401, "token_expired"));
-    const res = await GET(req(`mentionBrand=Kia&projectId=${PROJECT}`));
-    expect([res.status, await res.json()]).toEqual([401, { error: "unauthorized" }]);
-    expect(refreshed).toBe(1);
-    expect(st.calls).toHaveLength(0);
-  });
-  it("401 token_expired then a refreshed token -> the gate retries once and passes", async () => {
-    bindHghAuth({ getAccessToken: async () => TOKEN, refreshAccessToken: async () => (refreshed++, TOKEN) });
-    gateReplies.push(err(401, "token_expired"));
-    const res = await GET(req(`mentionBrand=Kia&projectId=${PROJECT}`));
-    expect([res.status, apiLog.filter((u) => u.pathname.startsWith("/v1/projects/")).length, refreshed]).toEqual([200, 2, 1]);
-  });
-  it("403 other than role/menu -> 404 (existence hidden), detail shape kept; 403 role_forbidden -> 403", async () => {
-    gateReplies.push(err(403, "owner_only"));
-    const hidden = await GET(req(`mentionBrand=Kia&projectId=${PROJECT}&skey=a.example`));
-    expect([hidden.status, await hidden.json()]).toEqual([404, { urls: [], promptList: [] }]);
-    gateReplies.push(err(403, "role_forbidden"));
-    const role = await GET(req(`mentionBrand=Kia&projectId=${PROJECT}`));
-    expect([role.status, await role.json()]).toEqual([403, { domains: [] }]);
-    expect(st.calls).toHaveLength(0);
-  });
-  it("503 -> 503 {error:{code}} without the backend message", async () => {
-    gateReplies.push(err(503, "unavailable"), err(503, "unavailable"));
-    const res = await GET(req(`mentionBrand=Kia&projectId=${PROJECT}`));
-    const body = await res.json();
-    expect([res.status, body.error.code]).toEqual([503, "unavailable"]);
-    expect(JSON.stringify(body)).not.toContain("internal detail");
-    expect(st.calls).toHaveLength(0);
+  it("a screen failure -> hghErrorResponse ({error:{code}} with its status; anything else 500 internal)", async () => {
+    st.reply = () => Promise.reject(new HghApiError(503, "source_unavailable", "Gold data could not be read"));
+    const res = await GET(req(QS));
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ error: { code: "source_unavailable" } });
+    st.reply = () => Promise.reject(new HghApiError(504, "timeout"));
+    expect((await GET(req(QS))).status).toBe(504);
+    st.reply = () => Promise.reject(new Error("boom"));
+    const internal = await GET(req(QS));
+    expect([internal.status, await internal.json()]).toEqual([500, { error: { code: "internal" } }]);
   });
 });

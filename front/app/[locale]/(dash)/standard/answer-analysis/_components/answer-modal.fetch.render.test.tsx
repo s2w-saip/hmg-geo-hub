@@ -220,3 +220,46 @@ describe("AnswerModal: route status -> body state (B001)", () => {
     ]);
   });
 });
+
+describe("AnswerModal: precomputed values reach the renderers", () => {
+  const TERMS = [{ term: "ioniq 5", kind: "model" as const }, { term: "hyundai", kind: "brand" as const }];
+  const BODY = {
+    available: true,
+    answerText: "Hyundai Ioniq 5 leads.",
+    citations: [],
+    sources: [{ url: "https://kia.com/x", host: "kia.com" }],
+    brandMentions: [{ name: "Hyundai", count: 2, tracked: true }, { name: "Toyota", count: 1, tracked: false }],
+    ownBrandMentions: [{ name: "Hyundai", count: 2, tracked: true }],
+    competitorBrandMentions: [{ name: "Toyota", count: 1, tracked: false }],
+    modelMentions: [{ name: "Ioniq 5", count: 1, brand: "Hyundai", label: "Hyundai Ioniq 5" }],
+    sentiment: { spans: [{ start: 0, end: 7, sentiment: "positive", evidence: [], text: "Hyundai" }], skipped: 0 },
+  };
+
+  async function drawnWith(answer: typeof ANSWER & { highlightTerms?: typeof TERMS }) {
+    reply = json(200, BODY);
+    const h = rt.mount((p: typeof PROPS) => AnswerModal(p), { ...PROPS, answers: [answer] });
+    await flush();
+    return nodes(h.result.current);
+  }
+
+  it("the answer's highlightTerms and the spans (with their sentence) go to MarkdownAnswer", async () => {
+    const md = (await drawnWith({ ...ANSWER, highlightTerms: TERMS })).find((n) => isEl(n) && n.type === MarkdownAnswer) as El;
+    expect(md.props.highlightTerms).toEqual(TERMS);
+    expect(md.props.sentimentSpans).toEqual(BODY.sentiment.spans);
+    const plain = (await drawnWith(ANSWER)).find((n) => isEl(n) && n.type === MarkdownAnswer) as El;
+    expect(plain.props.highlightTerms).toBeUndefined(); // MarkdownAnswer then reads brandTerms / modelTerms
+    expect(plain.props.brandTerms).toEqual(["Hyundai"]);
+  });
+
+  it("the route's sources / own-competitor split / model labels reach the blocks", async () => {
+    const els = (await drawnWith(ANSWER)).filter(isEl);
+    const cites = els.find((n) => typeof n.type === "function" && n.type.name === "AnswerCitations") as El;
+    expect(cites.props.sources).toEqual(BODY.sources);
+    const stats = els.find((n) => typeof n.type === "function" && n.type.name === "MentionStats") as El;
+    expect([stats.props.ownBrandMentions, stats.props.competitorBrandMentions, stats.props.modelMentions]).toEqual([
+      BODY.ownBrandMentions,
+      BODY.competitorBrandMentions,
+      BODY.modelMentions,
+    ]);
+  });
+});

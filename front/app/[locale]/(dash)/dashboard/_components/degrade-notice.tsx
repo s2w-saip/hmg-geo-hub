@@ -1,6 +1,5 @@
 import { Clock } from "lucide-react";
 import { getTranslations } from "next-intl/server";
-import { wasDegraded } from "@/lib/scope/server";
 
 // ⚠️ `PendingCard` 를 `standard/answer-analysis/_components/mentions-view.tsx` 에서
 // import 하지 않는다 — 그 모듈은 `"use client"`(1,165줄, 표·차트·상태 전부 포함)라
@@ -22,35 +21,11 @@ function PendingCard({ title, label }: { title: string; label: string }) {
 }
 
 /**
- * 이 경계의 read 중 **예산에 걸린 것**이 있으면 지연 문구를 낸다.
- *
- * 라벨은 `lib/scope/degrade-registry.ts` 의 요청 스코프 표식이고, 추가 조회가 없다.
- * 문구는 새로 만들지 않고 4-KPI 탭이 이미 쓰는 `answerAnalysis.mentions.kpi.degraded`
- * ("이 구간의 집계가 시간 안에 끝나지 않아 표시하지 않습니다")를 재사용한다.
- * degrade 가 아니면 아무것도 그리지 않는다 — 정상 경로의 마크업은 종전과 같다.
+ * 지연 고지 카드 — 화면 payload(또는 화면 자체의 일시 실패)가 그 섹션이 degrade 됐다고 알리면
+ * 호출부가 판정하고, 이 컴포넌트는 카드만 그린다. 문구는 4-KPI 탭이 이미 쓰는
+ * `answerAnalysis.mentions.kpi.degraded`("이 구간의 집계가 시간 안에 끝나지 않아 표시하지 않습니다")다.
  */
-export async function DegradeNotice({ labels, title }: { labels: readonly string[]; title: string }) {
-  if (!labels.some((l) => wasDegraded(l))) return null;
+export async function PendingNotice({ title }: { title: string }) {
   const tKpi = await getTranslations("answerAnalysis.mentions.kpi");
   return <PendingCard title={title} label={tKpi("degraded")} />;
 }
-
-// ⚠️ 아래 두 목록의 문자열은 `lib/scope/server.ts` 의 `degradeAware(<라벨>)` 과 **정확히**
-// 같아야 한다 — 틀리면 degrade 가 조용히 고지 없이 지나간다(표식은 라벨 문자열 매칭뿐).
-// `wasDegraded` 는 RSC 요청 스코프 밖에서 fail-closed(false)라 렌더 테스트로는 못 잡는다.
-// 그래서 `dashboard.degrade-labels.test.ts` 가 **server.ts 소스와 대조**해 고정한다.
-/** Δ 배지·스파크라인이 기다리는 read — `fetchStandardTrend` 는 단위별로 라벨이 갈린다. */
-export const EXTRAS_LABELS = ["standardTrend:day", "standardTrend:week"] as const;
-/**
- * 경쟁사 행이 기다리는 read 중 **degrade 표식을 내는 것** = 넷 전부(PR④ A3).
- *
- * 종전에는 셋뿐이었다 — 네 번째 `fetchStandardCitationDomains` 에 `degradeAware` 가
- * 없어서, 없는 라벨을 목록에 두면 "고지하는 척"이 되기 때문이었다. A3 가 그 페처에
- * `degradeAware` + `extras` 예산을 붙이면서 넷이 같은 계약이 됐다.
- */
-export const COMPETITOR_LABELS = [
-  "standardMentions",
-  "brandTrend",
-  "firstPosition",
-  "standardCitationDomains",
-] as const;

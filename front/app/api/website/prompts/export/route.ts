@@ -3,19 +3,11 @@ import { getTranslations } from "next-intl/server";
 import { hasLocale } from "next-intl";
 import { routing } from "@/i18n/routing";
 import { getSession } from "@/lib/auth/session";
-import { listWebsitePromptsForExport } from "@/lib/db/repositories/website-sites";
-import {
-  readWebsitePromptQuery,
-  searchParamsToRecord,
-} from "@/lib/website/prompt-query";
-import { buildWebsitePromptSheet } from "@/lib/website/prompt-export";
-import { buildXlsxBuffer, XLSX_MIME } from "@/lib/export/xlsx-server";
+import { searchParamsToRecord } from "@/lib/search-params";
 import { attachmentContentDisposition } from "@/lib/social-scraping/content-disposition";
-import { countryName } from "@/lib/geo-catalog/country-name";
-import { languageName } from "@/lib/geo-catalog/language-name";
-import { canReadAnalysis, isAnalysisApi } from "@/lib/hgh/adapters/filters";
-import { relayWebsitePromptsExport } from "@/lib/hgh/adapters/catalog";
+import { canReadAnalysis } from "@/lib/hgh/analysis-access";
 import { hghErrorResponse } from "@/lib/hgh/errors";
+import { screenRelay } from "@/lib/screen";
 
 // GET /api/website/prompts/export?<화면과 동일한 필터>&locale=ko  → .xlsx bytes
 //
@@ -67,80 +59,24 @@ export async function GET(req: NextRequest) {
     ? rawLocale
     : routing.defaultLocale;
 
-  if (isAnalysisApi("prompts", "website")) {
-    try {
-      const sp = searchParamsToRecord(url.searchParams);
-      const isAdmin = session.user.role === "admin";
-      const { filters, sort, dir } = readWebsitePromptQuery(sp, session.user.scope, isAdmin);
-      const [t, upstream] = await Promise.all([
-        getTranslations({ locale, namespace: "website.prompts" }),
-        relayWebsitePromptsExport({ filters, sort, dir }, session.user.scope ?? null, locale),
-      ]);
-      upstream.headers.set(
-        "Content-Disposition",
-        attachmentContentDisposition(exportFilenameFor(t("exportFilename"))),
-      );
-      return upstream;
-    } catch (err) {
-      return hghErrorResponse(err);
-    }
-  }
-
   try {
-    const sp = searchParamsToRecord(url.searchParams);
-    const isAdmin = session.user.role === "admin";
-    const { filters, sort, dir } = readWebsitePromptQuery(sp, session.user.scope, isAdmin);
-
-    const [t, { rows, truncated }] = await Promise.all([
+    // The API derives the filters, sort and query (same derivation as the list screen) and relays
+    // GET /v1/prompts?...&format=xlsx&columns=screen&locale; the body is streamed through unchanged.
+    const [t, upstream] = await Promise.all([
       getTranslations({ locale, namespace: "website.prompts" }),
-      listWebsitePromptsForExport(session.user.scope, filters, { sort, dir }),
+      screenRelay("website/prompts-export", {
+        ...searchParamsToRecord(url.searchParams),
+        "ctx.locale": locale,
+        "ctx.admin": session.user.role === "admin",
+      }),
     ]);
-
-    const sheet = buildWebsitePromptSheet(
-      rows,
-      {
-        prompt: t("promptLabel"),
-        brand: t("brandLabel"),
-        country: t("countryLabel"),
-        lang: t("langLabel"),
-        targetUrl: t("targetUrlLabel"),
-        answers: t("answersLabel"),
-        lastMeasured: t("lastMeasuredLabel"),
-        engines: t("enginesLabel"),
-        notMeasured: t("notMeasured"),
-      },
-      {
-        country: (code) => countryName(code, locale),
-        language: (code) => languageName(code, locale),
-      },
+    upstream.headers.set(
+      "Content-Disposition",
+      attachmentContentDisposition(exportFilenameFor(t("exportFilename"))),
     );
-
-    const buf = await buildXlsxBuffer(sheet.headers, sheet.rows, t("exportSheetName"));
-    return new NextResponse(new Uint8Array(buf), {
-      headers: {
-        "Content-Type": XLSX_MIME,
-        // 한글 파일명을 헤더에 직접 조립하지 않는다 — HTTP 헤더는 ByteString 이라
-        // 2026-09-03 프로덕션에서 그대로 500 이 났다(content-disposition.ts 머리 주석).
-        "Content-Disposition": attachmentContentDisposition(
-          exportFilenameFor(t("exportFilename")),
-        ),
-        "Content-Length": String(buf.byteLength),
-        // 필터·스코프별로 내용이 다르고 개인 스코프가 걸린 데이터다 — 캐시 금지.
-        "Cache-Control": "no-store",
-        // 상한(WEBSITE_PROMPT_EXPORT_MAX_ROWS)에 닿았음을 알리는 헤더.
-        // ⚠️ 정직하게 적어둔다 — 실사용 경로는 <a href> 라 **사용자에게는 이
-        // 헤더가 보이지 않는다.** 소비자는 이 라우트를 직접 부르는 프로그래매틱
-        // 호출(운영 스크립트·헬스체크)뿐이다. 그래도 남기는 이유: 상한에 닿는
-        // 상황은 정의상 "전량이 아닌 파일이 나갔다"라서, 사후에 그 사실을 알
-        // 수 있는 흔적이 응답 어딘가에는 있어야 한다. 사용자 가시 경로가
-        // 필요해지면 그때는 fetch 기반 다운로드로 바꿔야 하고, 그것은 GET 링크
-        // 유지(제품 책임자 2026-09-16) 결정을 뒤집는 일이라 별도 판단 사안이다.
-        ...(truncated ? { "X-Export-Truncated": "true" } : {}),
-      },
-    });
+    return upstream;
   } catch (err) {
-    console.error("[website/prompts/export] failed:", err);
-    return NextResponse.json({ error: "export failed" }, { status: 500 });
+    return hghErrorResponse(err);
   }
 }
 
