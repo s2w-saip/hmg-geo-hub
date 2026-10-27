@@ -3131,7 +3131,7 @@ function page() {
 const NOTES = [
   ["ux", "S급 틀 (10/22)", "리뉴얼 전용 껍데기: 사이드바 하나(브랜드 · 메뉴 = Global | Website 구역 · 아래 Project · Admin · 계정), 위 상단 바 없음 → 본문이 넓어짐. 머리는 제목(+ 베타) 아래 설명 · 기준 칩 한 줄. 필터는 왼쪽 패널 그대로(같은 축 · 옵션 · 규칙 · 저장한 필터). 페이지마다 남색 강조는 하나 — 이번 회차 요약. 카드 모서리 16px, 1px 선. 규칙은 디자인 규칙 페이지(사이드바 아래)."],
   ["ux", "페이지 머리 통일 (10/22)", "네 목업과 구현의 페이지 머리를 하나로 맞췄습니다: 제목(+ 베타) → 설명 → 기준 칩, 링크 복사는 오른쪽. 제목 위 상위 메뉴명(‘답변 분석’)은 구현에 없어 뺐고, 칩 문구는 ‘측정 회차 {날짜} 기준’ / 기간을 고르면 ‘기간 누적 {시작} ~ {끝}’. 인용 하위 화면은 제목 · 베타 · 설명만(구현과 같음)."],
-  ["ux", "목업 메뉴 통합 (10/22)", "왼쪽 메뉴를 네 목업이 같은 목록으로 씁니다(Overview · Global prompts · Answer analysis › Mention · Citation · AI Agent Funnel › ACR · AI Conversion) — 어느 목업에서든 다른 목업으로 갑니다. 제목 줄의 ‘언급 분석 | 인용 분석’ 전환은 뺐습니다: 실제 앱(원본 · 리뉴얼)은 사이드 메뉴로 나뉘어 있고 화면 안 전환이 없습니다."],
+  ["ux", "목업 메뉴 통합 (10/22)", "왼쪽 메뉴를 네 목업이 같은 목록으로 씁니다(Overview · Global prompts · Answer analysis › Mention · Citation · AI Agent Funnel › AI Visibility · ACR · AI Conversion) — 어느 목업에서든 다른 목업으로 갑니다. 제목 줄의 ‘언급 분석 | 인용 분석’ 전환은 뺐습니다: 실제 앱(원본 · 리뉴얼)은 사이드 메뉴로 나뉘어 있고 화면 안 전환이 없습니다."],
   ["ux", "스크롤 이동 삭제 (10/22)", "페이지 안에서 스크롤 위치를 옮기는 동작을 모두 뺐습니다 — KPI 탭을 눌러도 스크롤은 그대로, 고정 바 ‘보는 지표’는 표시만, 요약의 발견은 누를 수 없는 정보 카드(‘이동’ 글자 없음), 경쟁 구도의 ‘→ 브랜드 상세’ 링크와 트리맵 ‘이 그룹 순위표로 보기’의 카드 스크롤 삭제. 인용 분석의 ‘공식 URL 미인용’ 발견도 프롬프트 페이지로 가지 않습니다(개요 타일의 링크는 그대로)."],
   ["ux", "섹션 빠른 이동 삭제 (10/22)", "고정 바의 섹션 이동 줄(요약 · 개요 · 경쟁 구도 · 엔진·유형 · 브랜드 상세 / 인용: 요약 · 개요 · 출처 구성 · 맥락 · 도메인)을 뺐습니다 — 필요 없다는 결정. 언급 분석의 고정 바에는 보는 지표 · 비교 브랜드 · 보기 밀도만 남습니다. 인용 분석은 남는 것이 보기 밀도뿐이라 고정 바를 없애고 밀도 토글을 제목 줄(링크 복사 옆)로 옮겼습니다."],
   ["ux", "인용 · 프레임", "인용 분석도 언급 분석과 같은 틀: 상단 전체 폭 제목, 그 아래 필터 | 본문, 붙는 컨트롤 바(요약 · 개요 · 출처 구성 · 맥락 · 도메인, 보기 밀도), 카드 구조(제목 · ⓘ · 기준 칩 · 표↔차트 · ⋯), 카테고리·도메인 연결 강조."],
@@ -3212,6 +3212,8 @@ const MOCK_MENU = [
     { id: "citation", href: "answer-analysis-mockup.html#citation", label: "Citation" },
   ] },
   { href: "ai-funnel-mockup.html#acr", label: "AI Agent Funnel", kids: [
+    // AI Visibility: in the renewal menu (2026-10-27) though the app hides the original; the parent still opens ACR, as the app redirects
+    { id: "visibility", href: "ai-funnel-mockup.html#visibility", label: "AI Visibility", beta: true },
     { id: "acr", href: "ai-funnel-mockup.html#acr", label: "ACR", beta: true },
     { id: "conversion", href: "ai-funnel-mockup.html#conversion", label: "AI Conversion", beta: true },
   ] },

@@ -361,7 +361,23 @@ const DEFAULT_OPEN: Partial<Record<PanelAxis, boolean>> = {
   promptContext: true,
 };
 
-export function RnOverviewFilterPanel({ onCollapse: onCollapseProp, defaultOpen }: { onCollapse?: () => void; /** "all" opens every section (parity test). */ defaultOpen?: "all" }) {
+export function RnOverviewFilterPanel({
+  onCollapse: onCollapseProp,
+  defaultOpen,
+  basis,
+  axisHelp,
+  hint,
+}: {
+  onCollapse?: () => void;
+  /** "all" opens every section (parity test). */
+  defaultOpen?: "all";
+  /** A page's own basis row under the saved filters (AI Visibility: 측정 기간). */
+  basis?: ReactNode;
+  /** One line at the top of an axis section (AI Visibility: which number the axis narrows). */
+  axisHelp?: Partial<Record<PanelAxis, ReactNode>>;
+  /** Replaces the no-pick hint at the panel's foot. */
+  hint?: ReactNode;
+}) {
   const split = useRnSplit();
   const onCollapse = onCollapseProp ?? split.collapse;
   const ctx = useFilters();
@@ -412,6 +428,7 @@ export function RnOverviewFilterPanel({ onCollapse: onCollapseProp, defaultOpen 
         summarize={summarize}
         hrefOf={(q) => `${window.location.origin}${window.location.pathname}${q ? `?${q}` : ""}`}
       />
+      {basis}
       {model.sections.map((s) => (
         <div key={s.id} data-rn-section={s.id}>
           <RnPanelGroupLabel>{tf(`section.${s.id}` as "section.dimension")}</RnPanelGroupLabel>
@@ -424,13 +441,13 @@ export function RnOverviewFilterPanel({ onCollapse: onCollapseProp, defaultOpen 
                 </Suspense>
               );
             }
-            return <AxisSection key={axis} axis={axis} open={open[axis] ?? false} onToggle={toggle} />;
+            return <AxisSection key={axis} axis={axis} open={open[axis] ?? false} onToggle={toggle} help={axisHelp?.[axis]} />;
           })}
         </div>
       ))}
       <div className="flex flex-col gap-1 px-4.5 pt-3 pb-3.5 text-rn-12 text-rn-muted">
         {/* the app's hint says "최근 7일"; ACR reads the latest round when no period is picked */}
-        {count === 0 ? <span>{props.stage === "acr" || props.stage === "mention" || props.stage === "citation" ? tr("defaultScopeHintSnapshot") : tf("defaultScopeHint")}</span> : null}
+        {count === 0 ? <span>{hint ?? (props.stage === "acr" || props.stage === "mention" || props.stage === "citation" ? tr("defaultScopeHintSnapshot") : tf("defaultScopeHint"))}</span> : null}
       </div>
     </aside>
   );
@@ -470,7 +487,7 @@ function CompetitorSection({ options: pending, open, onToggle }: { options: Prom
   return <AxisSection axis="competitor" open={open} onToggle={onToggle} options={options} disabled={!competitorAxisEnabled(draft.source)} />;
 }
 
-function AxisSection({ axis, open, onToggle, options, disabled }: { axis: PanelAxis; open: boolean; onToggle: () => void; options?: readonly string[]; disabled?: boolean }) {
+function AxisSection({ axis, open, onToggle, options, disabled, help }: { axis: PanelAxis; open: boolean; onToggle: () => void; options?: readonly string[]; disabled?: boolean; help?: ReactNode }) {
   const ctx = useFilters();
   const { model, draft, change, regionLabel } = ctx;
   const tf = useTranslations("dashboard.filters");
@@ -487,6 +504,7 @@ function AxisSection({ axis, open, onToggle, options, disabled }: { axis: PanelA
   };
   return (
     <RnPanelSection title={title} open={open} onToggle={onToggle} badge={axis === "time" ? undefined : picked} summary={timeSummary} note={disabled ? tr("axisNeedsCompetitor") : undefined} focusKey={`s:${axis}`}>
+      {help ? <p className="mx-2.5 mb-1.5 text-rn-12 leading-[1.45] break-keep text-rn-muted">{help}</p> : null}
       {axis === "time" ? (
         <TimeBody />
       ) : axis === "rhqRegion" ? (

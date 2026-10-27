@@ -3987,6 +3987,380 @@
     }
   },
   "renewal": {
+    "visibility": {
+      "title": "AI Visibility",
+      "beta": "Beta",
+      "subtitle": "The gap between the pages search finds and the pages AI actually reads.",
+      "cadence": "Daily",
+      "periodDays": "Last {n} days",
+      "range": "{from} – {to}",
+      "howToRead": "How to read",
+      "foot": "Period {from} – {to} ({days} measured days) — {sites} sites · {pages} pages · every number is computed from the per-page, per-day search impression and AI crawl rows",
+      "delta": {
+        "up": "Better",
+        "down": "Worse",
+        "flat": "No change"
+      },
+      "unit": {
+        "times": "",
+        "timesN": "{n}"
+      },
+      "density": {
+        "label": "Density",
+        "normal": "Default",
+        "dense": "Compact"
+      },
+      "tabs": {
+        "label": "Views",
+        "sum": "Summary",
+        "page": "Page diagnosis",
+        "engine": "AI engines",
+        "site": "Sites · sections",
+        "sumValue": "P1 coverage <b>{v}</b>",
+        "pageValue": "<b>{n}</b> under-read pages",
+        "engineValue": "<b>{n}</b> engines",
+        "siteValue": "<b>{sites}</b> sites · <b>{sections}</b> sections"
+      },
+      "period": {
+        "label": "Period",
+        "days": "{n} days",
+        "custom": "Custom",
+        "from": "From",
+        "to": "To",
+        "help": "Up to the last measured day, {to} · changes compare with the previous period of the same length",
+        "helpNoData": "Changes compare with the previous period of the same length"
+      },
+      "filters": {
+        "engineHelp": "Applies to AI crawls only — search impressions stay as they are",
+        "deviceHelp": "Applies to search impressions only — AI crawls stay as they are",
+        "hint": "With no filter, every site in your account's scope is shown (the period is set above, under ‘Period’)."
+      },
+      "site": {
+        "unknown": "Unknown site"
+      },
+      "section": {
+        "root": "/ (first page)"
+      },
+      "states": {
+        "downTitle": "The data could not be loaded",
+        "downDesc": "The analytics database could not be reached. Try again shortly — your filters and period are kept.",
+        "emptyTitle": "Waiting for AI visibility data",
+        "emptyDesc": "{n} sites are connected, but there is no measured data for {from} – {to} yet. Change the period or check again after the next collection.",
+        "nomatchTitle": "No site matches these conditions",
+        "nomatchDesc": "Country options are the answer-measurement countries, so a country without a site can be picked. Narrow the country or brand conditions.",
+        "nositeTitle": "No site is connected",
+        "nositeDesc": "AI Visibility is built from the search impressions (Search Console) and AI crawls (server access logs) of site pages. No site is connected in your account's scope yet; this screen fills in once collection is connected.",
+        "reset": "Reset filters"
+      },
+      "def": {
+        "label": "Show definition",
+        "definition": "Definition",
+        "formula": "Formula",
+        "seo": {
+          "d": "How many times a page appeared in search results (Google Search Console impressions).",
+          "f": "Sum of the daily impressions by device"
+        },
+        "ai": {
+          "d": "How many times an AI engine's crawler (bot) requested the page (server access log).",
+          "f": "Sum of the daily requests by crawler"
+        },
+        "cov": {
+          "d": "The share of pages an AI crawler requested at least once in the period — how many pages AI does not see at all.",
+          "f": "Pages with ≥ 1 AI crawl ÷ measured pages × 100"
+        },
+        "int": {
+          "d": "AI crawls per 10,000 search impressions — how much AI reads relative to people's search demand.",
+          "f": "AI crawls ÷ search impressions × 10,000"
+        },
+        "read": {
+          "d": "The share of measured days with at least one AI crawl — how steadily a page is read.",
+          "f": "Days with ≥ 1 AI crawl ÷ measured days (≥ 90% almost daily · 50–90% often · < 50% sometimes)"
+        },
+        "stale": {
+          "d": "Days from the last AI crawl to the last measured day of the period. 7 days or more counts as ‘not read for long’.",
+          "f": "Last measured day − last day with ≥ 1 AI crawl"
+        },
+        "exp": {
+          "d": "How many AI crawls a page would get for its search reach — the AI interest of the whole selection applied to the page. A comparison baseline, not a prediction.",
+          "f": "Expected = page impressions × (AI crawls ÷ impressions of the selection) · achievement = actual ÷ expected · shortfall = expected − actual (positive part)"
+        },
+        "top": {
+          "d": "How much AI crawling piles up on a few pages. The farther the Lorenz curve from the diagonal, the more concentrated.",
+          "f": "AI crawls of the top 10% pages ÷ all AI crawls · Gini = 1 − 2 × area under the curve"
+        },
+        "sec": {
+          "d": "Pages grouped by the first URL path segment after the country / language parts (e.g. /us/en/shopping-tools/offers → /shopping-tools). An address rule, not the site's menu.",
+          "f": "First URL path segment (2-letter country / language segments skipped)"
+        }
+      },
+      "summary": {
+        "title": "This period",
+        "howTitle": "How it is made",
+        "how": "The five metrics above are computed straight from per-page, per-day search impressions and AI crawls (formulas in each ⓘ). The findings below are four picked by rules from this screen's numbers — priority-1 pages not read for long, URL sections whose AI share trails their search share, pages under the baseline, engine coverage gaps, change against the previous period, concentration.",
+        "chipPrev": "{range} · vs previous {days} days",
+        "incomplete": "{n} pages with a day missing in the period are left out of sums and ratios (no observation is not zero). They show as ‘—’ in the tables."
+      },
+      "kpi": {
+        "cov1": "AI crawl coverage · priority 1",
+        "cov1Sub": "All pages {cov} · 7-day trend",
+        "ai": "AI crawls",
+        "aiSub": "Search impressions {seo} · {chg}",
+        "int": "AI interest",
+        "intSub": "AI crawls per 10,000 search impressions",
+        "stale": "Priority 1 not read for {days}+ days",
+        "staleSub": "Priority-1 pages not read in each 7-day block",
+        "top": "Top 10% concentration",
+        "topSub": "Share of AI crawls on {n} pages · Gini {gini}",
+        "prevBasis": "vs previous period",
+        "noPrev": "No previous-period data"
+      },
+      "findings": {
+        "ref": "{page} ({site})",
+        "more": " and {n} more",
+        "stale": {
+          "tag": "Priority 1",
+          "title": "{n} priority-1 pages without an AI crawl for {days}+ days",
+          "detail": "{pages}{more} — check crawler blocks and links"
+        },
+        "section": {
+          "tag": "URL section",
+          "title": "{sec} — {seo} of search impressions, {ai} of AI crawls",
+          "detail": "{int} AI crawls per 10,000 impressions (all: {total}) · coverage {cov}"
+        },
+        "shortfall": {
+          "tag": "vs baseline",
+          "title": "{n} priority 1 · 2 pages get less than half the AI crawls their search reach implies",
+          "detail": "Total shortfall {sum} · largest: {page}"
+        },
+        "engineCoverage": {
+          "tag": "AI engine",
+          "title": "{low} reads only {lowCov} of the pages — {high} {highCov}",
+          "detail": "Priority 1: {low} vs {high}"
+        },
+        "change": {
+          "tag": "Change",
+          "title": "AI crawls {chg} vs the previous {days} days",
+          "detail": "{fresh} pages newly read · {lost} pages no longer read"
+        },
+        "concentration": {
+          "tag": "Concentration",
+          "title": "{top} of AI crawls on the top 10% pages ({n})",
+          "detail": "Gini {gini} · compare with the top 10% share of search impressions"
+        }
+      },
+      "trend": {
+        "title": "AI crawls by engine",
+        "info": "AI crawls stacked by engine per day (daily requests by crawler). Below: search impressions on the same days — hundreds of times larger, so drawn apart. Engines not picked in the engine filter are grey.",
+        "total": "Total",
+        "seo": "Search impressions · daily",
+        "seoName": "Search impressions"
+      },
+      "tier": {
+        "title": "Share by priority",
+        "info": "Each priority's share of pages, search impressions and AI crawls. If priority 1 gets a smaller share of AI crawls than of search impressions, the important pages are not read by AI as much as people search for them.",
+        "rows": {
+          "pages": "Pages",
+          "seo": "Search impr.",
+          "ai": "AI crawls"
+        },
+        "prio": "Priority {p}",
+        "noPrio": "No priority",
+        "legend": "{name} · {n}",
+        "note": "Priority 1 holds <b>{pages}</b> of pages, <b>{seo}</b> of search impressions and <b>{ai}</b> of AI crawls."
+      },
+      "freq": {
+        "title": "How often AI reads",
+        "chip": "{n} measured days",
+        "tip": "{bucket} · {n} of {of} pages",
+        "buckets": {
+          "daily": "Almost daily (≥ 90%)",
+          "often": "Often (50–90%)",
+          "rare": "Sometimes (< 50%)",
+          "none": "Not read"
+        }
+      },
+      "lorenz": {
+        "title": "AI crawl concentration",
+        "top1": "Top 1%",
+        "top10": "Top 10%",
+        "top50": "Top 50%",
+        "gini": "Gini",
+        "equal": "Equality",
+        "x": "Pages (fewest AI crawls first) →"
+      },
+      "device": {
+        "title": "Search impressions by device",
+        "info": "Which device's search results the impressions came from (Search Console device). AI crawls have no device. Devices not picked in the device filter are dimmed.",
+        "off": "Filtered out"
+      },
+      "ago": {
+        "never": "None in period",
+        "today": "Last day",
+        "days": "{n} days ago"
+      },
+      "engine": {
+        "hits": "{n} crawls",
+        "notRead": "not read",
+        "title": "Engines",
+        "info": "Per engine: the requests of its crawlers and the share of pages it read at least once (coverage). Share = of all engines. Engines not picked in the engine filter are dimmed.",
+        "offFilter": "Filtered out",
+        "outsideOptions": "Not a filter option",
+        "hitsShare": "· share {share}",
+        "cov": "Coverage",
+        "cov1": "Priority 1",
+        "bots": "Crawlers",
+        "botsN": "{n}"
+      },
+      "work": {
+        "title": "Under-read pages",
+        "chip": "Baseline = {rate} per 10,000 impressions",
+        "includeP3": "Include priority 3",
+        "sub": "Pages getting less than half the AI crawls their search reach implies, largest shortfall first — the list of what to fix.",
+        "cols": {
+          "prio": "Prio",
+          "page": "Page",
+          "seo": "Search impr.",
+          "ai": "AI crawls — actual / expected",
+          "ach": "Achieved",
+          "read": "Days read",
+          "ago": "Last crawl",
+          "engines": "Engines"
+        },
+        "tip": "Actual {ai} · expected {exp} · short {short}",
+        "actualOf": "{ai} / {exp}",
+        "empty": "No page is below half of the baseline",
+        "more": "Top 15 · all {n} are in the ‘All pages’ table, ordered by shortfall."
+      },
+      "bands": {
+        "none": "No AI crawl",
+        "low": "Under 50% of baseline",
+        "mid": "50–100% of baseline",
+        "high": "At or above baseline"
+      },
+      "gap": {
+        "title": "Search impressions × AI crawls",
+        "chip": "{n} pages · log scale",
+        "sub": "One dot per page, large = priority 1. Solid line = baseline (AI crawls per 10,000 impressions of the selection), dashed = half of it. Orange and red dots below the lines are pages AI reads less than people search for them.",
+        "x": "Search impressions →",
+        "y": "↑ AI crawls",
+        "line": "Baseline",
+        "half": "50% of baseline",
+        "tip": "Search impressions {seo} · AI crawls {ai} (expected {exp})",
+        "prio": "Priority {p}",
+        "unit": "",
+        "bandStats": "Priority 1 <b>{p1}</b> · impressions <b>{seo}</b> · AI crawls <b>{ai}</b>"
+      },
+      "change": {
+        "title": "Change vs the previous period",
+        "info": "AI crawls per page against the previous period of the same length ({days} days). Newly read = 0 before → ≥ 1 now, no longer read = ≥ 1 before → 0 now. Up · down = difference in crawls.",
+        "noPrev": "No data for the previous {days} days, so there is no comparison.",
+        "lost": "No longer read",
+        "fresh": "Newly read",
+        "up": "Largest increases",
+        "down": "Largest decreases",
+        "none": "None",
+        "more": "{n} more — see the All pages table",
+        "prio": "Priority {p}"
+      },
+      "table": {
+        "title": "All pages",
+        "info": "Every page with this screen's metrics in one row. The quadrant filter is the original screen's classification (the median of search impressions and of AI crawls), so its counts match the original.",
+        "all": "All",
+        "quadLabel": "Original quadrant",
+        "p1Only": "Priority 1 only",
+        "search": "Search page name · path",
+        "count": "{n}",
+        "cols": {
+          "prio": "Prio",
+          "page": "Page",
+          "site": "Site",
+          "seo": "Search impr.",
+          "ai": "AI crawls",
+          "short": "Shortfall",
+          "int": "Interest",
+          "read": "Days read",
+          "ago": "Last crawl",
+          "quad": "Original quadrant"
+        },
+        "empty": "No page matches",
+        "less": "Show {n}",
+        "moreAll": "Show all {n}"
+      },
+      "quads": {
+        "seo_only": "Boost AI exposure",
+        "crawl_only": "Boost search",
+        "both": "Strong pages",
+        "neither": "Both low"
+      },
+      "eshare": {
+        "title": "Engine share over time",
+        "info": "Each engine's share of AI crawls per 7-day block counted back from the last measured day (a shorter first block is left out). The date under a bar = the block's last day.",
+        "chip": "{n} 7-day blocks",
+        "need": "Needs at least two 7-day blocks — choose a period of 14 days or more."
+      },
+      "combo": {
+        "title": "Engine combinations reading each page",
+        "info": "For each page, the set of engines that requested it at least once in the period. A page read by one engine only can ground only that engine's answers.",
+        "chip": "{n} combinations",
+        "none": "No engine",
+        "all": "All engines",
+        "without": "All but {engine}",
+        "only": "{engine} only",
+        "rest": "{n} other combinations · {pages} pages",
+        "cols": {
+          "set": "Combination",
+          "pages": "Pages",
+          "share": "Share"
+        }
+      },
+      "esec": {
+        "title": "Engine × URL section coverage",
+        "info": "Cell = the share of the section's pages the engine read at least once. Colours are fixed bands (25 · 50 · 75 · 90%). URL section = the first path segment after the country / language parts.",
+        "cols": {
+          "sec": "URL section",
+          "pages": "Pages"
+        }
+      },
+      "bots": {
+        "title": "Crawlers",
+        "info": "Requests per crawler (bot) and its share of all. The bot-to-engine link follows the crawler reference data. The source has no bot purpose (training · search · user request), so none is shown."
+      },
+      "bench": {
+        "title": "Site benchmark",
+        "info": "This screen's metrics side by side for each brand × country site. Change = AI crawls vs the previous period of the same length. Under-read pages = priority 1 · 2 below half of the baseline. Red tag = priority-1 pages not read for {days}+ days.",
+        "chip": "{n} sites",
+        "cols": {
+          "site": "Site",
+          "pages": "Pages",
+          "ai": "AI crawls",
+          "d": "Change",
+          "cov1": "P1 coverage",
+          "int": "Interest",
+          "read": "Median days read",
+          "top10": "Top 10% conc.",
+          "short": "Under-read"
+        },
+        "staleTag": "P1 {n}",
+        "staleTitle": "Priority-1 pages not read for {days}+ days",
+        "legend": "Cell colours: AI crawls = volume, navy intensity only (no judgement) · change, interest, concentration, under-read = 5 levels by rank in the column (navy good ↔ red bad; lower is better for concentration and under-read) · coverage, days read = fixed bands (95 · 85 · 70 · 50%).",
+        "single": "One site only, so there is no site benchmark — below is this site's URL section analysis."
+      },
+      "secs": {
+        "title": "Search share vs AI share by URL section",
+        "chip": "{n} sections · by search impressions",
+        "sub": "Grey dot = the section's share of search impressions, navy dot = its share of AI crawls. Navy to the left means AI reads the section less than people search for it.",
+        "cols": {
+          "sec": "URL section",
+          "pages": "Pages",
+          "gap": "Gap",
+          "cov": "Coverage",
+          "int": "Interest"
+        },
+        "seoShare": "Search share",
+        "aiShare": "AI crawl share",
+        "tip": "{sec} · search share {seo} · AI crawl share {ai}"
+      }
+    },
     "shell": {
       "brand": "HMG GEO",
       "brandSub": "AI answer monitoring",

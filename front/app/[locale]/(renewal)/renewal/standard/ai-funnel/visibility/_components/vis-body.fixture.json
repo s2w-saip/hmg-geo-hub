@@ -1,0 +1,754 @@
+{
+ "choice": {
+  "days": 14,
+  "from": null,
+  "preset": null,
+  "to": null
+ },
+ "period": {
+  "days": 14,
+  "from": "2026-10-06",
+  "to": "2026-10-19"
+ },
+ "prev": {
+  "from": "2026-09-22",
+  "to": "2026-10-05"
+ },
+ "sites": 2,
+ "state": "ok",
+ "view": {
+  "bands": [
+   {
+    "aiShare": 0.0,
+    "band": "none",
+    "n": 1,
+    "p1": 1,
+    "seoShare": 11.11111111111111
+   },
+   {
+    "aiShare": 1.7543859649122806,
+    "band": "low",
+    "n": 1,
+    "p1": 0,
+    "seoShare": 27.77777777777778
+   },
+   {
+    "aiShare": 0.0,
+    "band": "mid",
+    "n": 0,
+    "p1": 0,
+    "seoShare": 0.0
+   },
+   {
+    "aiShare": 98.24561403508773,
+    "band": "high",
+    "n": 2,
+    "p1": 2,
+    "seoShare": 61.111111111111114
+   }
+  ],
+  "blocks": [
+   [
+    "2026-10-06",
+    "2026-10-12"
+   ],
+   [
+    "2026-10-13",
+    "2026-10-19"
+   ]
+  ],
+  "changes": {
+   "down": [
+    2
+   ],
+   "fresh": [
+    1
+   ],
+   "lost": [
+    2
+   ],
+   "up": [
+    0,
+    1
+   ]
+  },
+  "combos": [
+   {
+    "n": 2,
+    "set": [
+     "chatgpt"
+    ],
+    "share": 50.0
+   },
+   {
+    "n": 1,
+    "set": [
+     "chatgpt",
+     "gemini"
+    ],
+    "share": 25.0
+   },
+   {
+    "n": 1,
+    "set": [],
+    "share": 25.0
+   }
+  ],
+  "days": [
+   "2026-10-06",
+   "2026-10-07",
+   "2026-10-08",
+   "2026-10-09",
+   "2026-10-10",
+   "2026-10-11",
+   "2026-10-12",
+   "2026-10-13",
+   "2026-10-14",
+   "2026-10-15",
+   "2026-10-16",
+   "2026-10-17",
+   "2026-10-18",
+   "2026-10-19"
+  ],
+  "devices": [
+   {
+    "device": "mobile",
+    "imp": 1512,
+    "on": true,
+    "share": 60.0
+   },
+   {
+    "device": "desktop",
+    "imp": 1008,
+    "on": true,
+    "share": 40.0
+   }
+  ],
+  "engineShare": [
+   [
+    79.41176470588235,
+    20.58823529411765
+   ],
+   [
+    75.0,
+    25.0
+   ]
+  ],
+  "engines": [
+   {
+    "bots": [
+     {
+      "code": "GPTBot",
+      "hits": 48,
+      "share": 77.41935483870968
+     }
+    ],
+    "cov": 75.0,
+    "cov1": 66.66666666666667,
+    "d": 6.666666666666667,
+    "engine": "chatgpt",
+    "hits": 48,
+    "on": true,
+    "share": 77.41935483870968,
+    "spark": [
+     27,
+     21
+    ]
+   },
+   {
+    "bots": [
+     {
+      "code": "GoogleOther",
+      "hits": 14,
+      "share": 22.580645161290324
+     }
+    ],
+    "cov": 25.0,
+    "cov1": 33.333333333333336,
+    "d": 600.0,
+    "engine": "gemini",
+    "hits": 14,
+    "on": true,
+    "share": 22.580645161290324,
+    "spark": [
+     7,
+     7
+    ]
+   }
+  ],
+  "expectedRate": 226.19047619047618,
+  "findings": [
+   {
+    "code": "stale",
+    "days": 7,
+    "n": 1,
+    "rows": [
+     2
+    ],
+    "tone": "warn"
+   },
+   {
+    "code": "shortfall",
+    "n": 2,
+    "row": 1,
+    "sum": 21.166666666666664,
+    "tone": "warn"
+   },
+   {
+    "code": "engineCoverage",
+    "high": "chatgpt",
+    "highCov": 75.0,
+    "highCov1": 66.66666666666667,
+    "low": "gemini",
+    "lowCov": 25.0,
+    "lowCov1": 33.333333333333336,
+    "tone": "info"
+   },
+   {
+    "code": "change",
+    "dAi": 21.27659574468085,
+    "fresh": 1,
+    "lost": 1,
+    "tone": "good"
+   }
+  ],
+  "lorenz": {
+   "points": [
+    [
+     0.0,
+     0.0
+    ],
+    [
+     0.25,
+     0.0
+    ],
+    [
+     0.5,
+     0.017543859649122806
+    ],
+    [
+     0.75,
+     0.2631578947368421
+    ],
+    [
+     1.0,
+     1.0
+    ]
+   ],
+   "top1": 73.6842105263158,
+   "top10": 73.6842105263158,
+   "top50": 98.24561403508773
+  },
+  "multiBrand": true,
+  "observed": 14,
+  "orders": {
+   "ago": {
+    "asc": [
+     0,
+     3,
+     1,
+     4,
+     2
+    ],
+    "desc": [
+     2,
+     1,
+     4,
+     0,
+     3
+    ]
+   },
+   "ai": {
+    "asc": [
+     2,
+     1,
+     4,
+     3,
+     0
+    ],
+    "desc": [
+     0,
+     3,
+     4,
+     1,
+     2
+    ]
+   },
+   "int": {
+    "asc": [
+     2,
+     1,
+     0,
+     3,
+     4
+    ],
+    "desc": [
+     3,
+     0,
+     1,
+     2,
+     4
+    ]
+   },
+   "prio": {
+    "asc": [
+     0,
+     2,
+     3,
+     1,
+     4
+    ],
+    "desc": [
+     4,
+     1,
+     0,
+     2,
+     3
+    ]
+   },
+   "read": {
+    "asc": [
+     2,
+     1,
+     4,
+     0,
+     3
+    ],
+    "desc": [
+     0,
+     3,
+     1,
+     4,
+     2
+    ]
+   },
+   "seo": {
+    "asc": [
+     3,
+     2,
+     1,
+     0,
+     4
+    ],
+    "desc": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ]
+   },
+   "short": {
+    "asc": [
+     0,
+     3,
+     2,
+     1,
+     4
+    ],
+    "desc": [
+     1,
+     2,
+     0,
+     3,
+     4
+    ]
+   }
+  },
+  "prevOk": true,
+  "quads": [
+   {
+    "n": 1,
+    "q": "seo_only"
+   },
+   {
+    "n": 1,
+    "q": "crawl_only"
+   },
+   {
+    "n": 1,
+    "q": "both"
+   },
+   {
+    "n": 1,
+    "q": "neither"
+   }
+  ],
+  "rows": [
+   {
+    "ach": 1.3263157894736843,
+    "ago": 0,
+    "ai": 42,
+    "band": "high",
+    "brand": "Hyundai",
+    "country": "US",
+    "d": 12,
+    "eng": [
+     28,
+     14
+    ],
+    "exp": 31.666666666666664,
+    "id": 0,
+    "int": 300.0,
+    "path": "/us/en",
+    "prevAi": 30,
+    "prio": 1,
+    "q": "both",
+    "read": 1.0,
+    "section": "/",
+    "seo": 1400,
+    "short": 0.0,
+    "title": null,
+    "url": "https://www.hyundai.com/us/en"
+   },
+   {
+    "ach": 0.06315789473684211,
+    "ago": 13,
+    "ai": 1,
+    "band": "low",
+    "brand": "Hyundai",
+    "country": "US",
+    "d": 1,
+    "eng": [
+     1,
+     0
+    ],
+    "exp": 15.833333333333332,
+    "id": 1,
+    "int": 14.285714285714286,
+    "path": "/us/en/shopping-tools/offers",
+    "prevAi": 0,
+    "prio": 2,
+    "q": "seo_only",
+    "read": 0.07142857142857142,
+    "section": "/shopping-tools",
+    "seo": 700,
+    "short": 14.833333333333332,
+    "title": null,
+    "url": "https://www.hyundai.com/us/en/shopping-tools/offers"
+   },
+   {
+    "ach": 0.0,
+    "ago": null,
+    "ai": 0,
+    "band": "none",
+    "brand": "Hyundai",
+    "country": "US",
+    "d": -3,
+    "eng": [
+     0,
+     0
+    ],
+    "exp": 6.333333333333333,
+    "id": 2,
+    "int": 0.0,
+    "path": "/us/en/vehicles/ioniq-5",
+    "prevAi": 3,
+    "prio": 1,
+    "q": "neither",
+    "read": 0.0,
+    "section": "/vehicles",
+    "seo": 280,
+    "short": 6.333333333333333,
+    "title": null,
+    "url": "https://www.hyundai.com/us/en/vehicles/ioniq-5"
+   },
+   {
+    "ach": 4.421052631578948,
+    "ago": 0,
+    "ai": 14,
+    "band": "high",
+    "brand": "Kia",
+    "country": "DE",
+    "d": 0,
+    "eng": [
+     14,
+     0
+    ],
+    "exp": 3.1666666666666665,
+    "id": 3,
+    "int": 1000.0,
+    "path": "/de/de/vehicles/ev6",
+    "prevAi": 14,
+    "prio": 1,
+    "q": "crawl_only",
+    "read": 1.0,
+    "section": "/vehicles",
+    "seo": 140,
+    "short": 0.0,
+    "title": null,
+    "url": "https://www.kia.com/de/de/vehicles/ev6"
+   },
+   {
+    "ach": null,
+    "ago": 13,
+    "ai": 5,
+    "band": null,
+    "brand": "Kia",
+    "country": "DE",
+    "d": null,
+    "eng": [
+     5,
+     0
+    ],
+    "exp": null,
+    "id": 4,
+    "int": null,
+    "path": "/de/de/news",
+    "prevAi": null,
+    "prio": 3,
+    "q": null,
+    "read": 0.07142857142857142,
+    "section": "/news",
+    "seo": null,
+    "short": null,
+    "title": null,
+    "url": "https://www.kia.com/de/de/news"
+   }
+  ],
+  "sections": [
+   {
+    "ai": 42,
+    "aiShare": 73.6842105263158,
+    "cov": 100.0,
+    "engCov": [
+     100.0,
+     100.0
+    ],
+    "gap": 18.128654970760238,
+    "int": 300.0,
+    "pages": 1,
+    "sec": "/",
+    "seo": 1400,
+    "seoShare": 55.55555555555556
+   },
+   {
+    "ai": 1,
+    "aiShare": 1.7543859649122806,
+    "cov": 100.0,
+    "engCov": [
+     100.0,
+     0.0
+    ],
+    "gap": -26.023391812865498,
+    "int": 14.285714285714286,
+    "pages": 1,
+    "sec": "/shopping-tools",
+    "seo": 700,
+    "seoShare": 27.77777777777778
+   },
+   {
+    "ai": 14,
+    "aiShare": 24.56140350877193,
+    "cov": 50.0,
+    "engCov": [
+     50.0,
+     0.0
+    ],
+    "gap": 7.894736842105264,
+    "int": 333.3333333333333,
+    "pages": 2,
+    "sec": "/vehicles",
+    "seo": 420,
+    "seoShare": 16.666666666666668
+   }
+  ],
+  "sites": [
+   {
+    "ai": 43,
+    "brand": "Hyundai",
+    "country": "US",
+    "cov1": 50.0,
+    "d": 30.303030303030305,
+    "heat": {
+     "ai": 4,
+     "cov1": 1,
+     "d": 4,
+     "int": 0,
+     "read": 0,
+     "short": 0,
+     "top10": 4
+    },
+    "int": 180.67226890756305,
+    "key": 1,
+    "pages": 3,
+    "read": 7.142857142857142,
+    "seo": 2380,
+    "short": 2,
+    "stale1": 1,
+    "top10": 97.67441860465117
+   },
+   {
+    "ai": 14,
+    "brand": "Kia",
+    "country": "DE",
+    "cov1": 100.0,
+    "d": 0.0,
+    "heat": {
+     "ai": 0,
+     "cov1": 4,
+     "d": 0,
+     "int": 4,
+     "read": 4,
+     "short": 4,
+     "top10": 0
+    },
+    "int": 1000.0,
+    "key": 2,
+    "pages": 1,
+    "read": 100.0,
+    "seo": 140,
+    "short": 0,
+    "stale1": 0,
+    "top10": 100.0
+   }
+  ],
+  "spark": {
+   "ai": [
+    29,
+    28
+   ],
+   "cov1": [
+    66.66666666666667,
+    66.66666666666667
+   ],
+   "int": [
+    230.15873015873018,
+    222.22222222222223
+   ],
+   "stale1": [
+    1,
+    1
+   ]
+  },
+  "staleDays": 7,
+  "tiers": [
+   {
+    "aiShare": 98.24561403508773,
+    "freq": [
+     2,
+     0,
+     0,
+     1
+    ],
+    "pageShare": 75.0,
+    "pages": 3,
+    "prio": 1,
+    "seoShare": 72.22222222222223
+   },
+   {
+    "aiShare": 1.7543859649122806,
+    "freq": [
+     0,
+     0,
+     1,
+     0
+    ],
+    "pageShare": 25.0,
+    "pages": 1,
+    "prio": 2,
+    "seoShare": 27.77777777777778
+   }
+  ],
+  "totals": {
+   "ai": 57,
+   "complete": 4,
+   "cov": 75.0,
+   "cov1": 66.66666666666667,
+   "dAi": 21.27659574468085,
+   "dCov1": -33.33333333333333,
+   "dInt": 21.276595744680844,
+   "dSeo": 0.0,
+   "days": 14,
+   "gini": 0.6096491228070176,
+   "incomplete": 1,
+   "int": 226.19047619047618,
+   "observed": 14,
+   "p1": 3,
+   "pages": 5,
+   "seo": 2520,
+   "sites": 2,
+   "stale1": 1,
+   "top10": 73.6842105263158,
+   "topN": 1
+  },
+  "trend": {
+   "ai": [
+    5,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4
+   ],
+   "engines": [
+    [
+     9,
+     3,
+     3,
+     3,
+     3,
+     3,
+     3,
+     3,
+     3,
+     3,
+     3,
+     3,
+     3,
+     3
+    ],
+    [
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1
+    ]
+   ],
+   "seo": [
+    180,
+    180,
+    180,
+    180,
+    180,
+    180,
+    180,
+    180,
+    180,
+    180,
+    180,
+    180,
+    180,
+    180
+   ]
+  },
+  "work": {
+   "all": [
+    1,
+    2
+   ],
+   "p12": [
+    1,
+    2
+   ]
+  }
+ }
+}

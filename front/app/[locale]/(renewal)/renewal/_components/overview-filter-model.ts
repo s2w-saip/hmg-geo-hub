@@ -42,8 +42,9 @@ export interface OverviewPanelInput {
    * The app panel this one mirrors: the Overview (default), the ACR page (acr-live-view.tsx
    * acrOnlyGroups), the Mention page (analysis-filter-bar.tsx composeGroups "mentions") or the
    * Citation page (composeGroups "citations" with STANDARD_CITATION_V2_ONLY_GROUPS = + 출처 카테고리 · 경쟁사).
+   * "visibility" has no app panel to mirror (the original page takes a date form only): VISIBILITY_ONLY_GROUPS.
    */
-  stage?: "overview" | "acr" | "mention" | "citation";
+  stage?: "overview" | "acr" | "mention" | "citation" | "visibility";
   scope?: AllowedScope;
   catalogRows?: CatalogTaxonomyRow[];
   geographyOptions?: string[];
@@ -71,6 +72,13 @@ export interface OverviewPanelModel {
   countryToRhq: Map<string, string>;
 }
 
+/**
+ * AI Visibility (2026-10-27): the axes the analytics reader applies — 국가 picks sites, AI 엔진 narrows
+ * AI 크롤 only, 디바이스 narrows 검색 노출 only (hub_stores/analytics_reader.py visibility). The period
+ * is days, not rounds: the page's own 측정 기간 row, not the time axis.
+ */
+export const VISIBILITY_ONLY_GROUPS: readonly DimensionGroup[] = ["geography", "engine", "device"];
+
 const insertBrand = (base: DimensionGroup[]): DimensionGroup[] => {
   if (base.includes("brand")) return base;
   const i = base.indexOf("promptContext");
@@ -91,7 +99,9 @@ export function overviewPanelModel(input: OverviewPanelInput, draft: Draft): Ove
         ? composeGroups("mentions", { languageOptions }).only
         : stage === "citation"
           ? composeGroups("citations", { onlyGroups: STANDARD_CITATION_V2_ONLY_GROUPS, languageOptions }).only
-          : overviewOnlyGroups(languageOptions);
+          : stage === "visibility"
+            ? [...VISIBILITY_ONLY_GROUPS]
+            : overviewOnlyGroups(languageOptions);
   const base = isAdmin ? insertBrand(only) : only;
   const visibleGroups = base.filter((g) => {
     if (lock.has(g)) return false;

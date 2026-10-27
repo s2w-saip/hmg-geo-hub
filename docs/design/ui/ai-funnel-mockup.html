@@ -1081,6 +1081,235 @@
   .dense .tsq-r { min-height: 32px; }
   .dense .mc-r { min-height: 34px; }
 
+  /* ── AI 가시성 (2026-10-27 · BI): 측정 기간 행 · 탭 · 요약 지표 · 우선순위 몫 · 읽힌 빈도 · 집중도 · 부족 페이지 · 기대선 산점도 · 변화 · 전체 페이지 · 엔진 · 사이트 벤치마크 · URL 섹션 ── */
+  .vper { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px 14px; border-bottom: 1px solid var(--line); }
+  .vper-t { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--ink); }
+  .vper-t .i { color: var(--ink-muted); }
+  .vper-t .sum { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--ink-muted); }
+  .vper .seg2 { display: flex; }
+  .vper .seg2 button { flex: 1; text-align: center; padding: 0 6px; }
+  .vper-d { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .vper-d label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; font-weight: 600; color: var(--ink-muted); }
+  .vper-d input { min-width: 0; height: 32px; padding: 0 8px; border: 1px solid var(--line-2); border-radius: 8px; font: inherit; font-size: 12px; color: var(--ink); background: var(--white); }
+  .vper-d input:focus { outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(0,44,95,.12); }
+  .vper .sec-help { margin: 0; font-size: 11px; }
+  .notes .tag.calc { background: #8fb8e3; color: #0d1b2b; }
+
+  /* tabs: the rail heads the content column right of the filter panel (= the Mention renewal) */
+  .split.tabbed { grid-template-rows: auto 1fr; row-gap: 16px; }
+  .split.tabbed > .side, .split.tabbed > .rail2 { grid-row: 1 / -1; }
+  .split.tabbed > .ptop { grid-column: 2; grid-row: 1; min-width: 0; }
+  .split.tabbed > .content { grid-column: 2; grid-row: 2; }
+  .sx .fr > .split.tabbed { grid-template-rows: auto minmax(0, 1fr); row-gap: 0; }
+  .sx .fr > .split.tabbed > .ptop { overflow: hidden; scrollbar-gutter: stable; padding: 4px var(--edge) 12px 20px; }
+  .ptabs { display: flex; gap: 0 32px; padding: 0 4px; border-bottom: 1px solid var(--line-2); overflow-x: auto; scrollbar-width: none; }
+  .ptabs .pt { all: unset; box-sizing: border-box; cursor: pointer; flex: none; display: flex; flex-direction: column; gap: 2px; padding: 8px 2px 12px; margin-bottom: -1px; box-shadow: inset 0 -3px 0 transparent; transition: box-shadow .12s; }
+  .ptabs .pt .pt-n { font-size: 15px; font-weight: 600; line-height: 1.4; color: var(--ink-muted); white-space: nowrap; }
+  .ptabs .pt .pt-v { display: flex; align-items: baseline; gap: 4px; font-size: 12px; color: var(--ink-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .ptabs .pt .pt-v b { font-weight: 600; }
+  .ptabs .pt:hover { box-shadow: inset 0 -3px 0 var(--line-2); }
+  .ptabs .pt:hover .pt-n { color: var(--ink-2); }
+  .ptabs .pt.on { box-shadow: inset 0 -3px 0 var(--navy); }
+  .ptabs .pt.on .pt-n, .ptabs .pt.on .pt-v b { color: var(--ink); }
+  .ptabs .pt:focus-visible { outline: 2px solid var(--navy); outline-offset: -2px; border-radius: 4px; }
+
+  /* 요약: five metrics on the navy hero, the findings below as white tiles */
+  .vsc { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 2px 10px 18px; }
+  .vk { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 4px 14px; border-left: 1px solid rgba(255,255,255,.14); }
+  .vk:first-child { border-left: 0; }
+  .vk-n { display: flex; align-items: center; gap: 4px; min-height: 32px; font-size: 12px; font-weight: 600; line-height: 1.35; color: rgba(255,255,255,.86); }
+  .vk-v { font-size: 34px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; color: #fff; }
+  .vk-v small { margin-left: 3px; font-size: 14px; font-weight: 600; letter-spacing: 0; color: rgba(255,255,255,.78); }
+  .vk-d { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 11px; color: rgba(255,255,255,.7); }
+  .vk .dlt { background: var(--white); color: var(--ink-2); }
+  .vk .spark { width: 100%; height: 30px; }
+  .vk .spark .ln { stroke: var(--sky); stroke-width: 1.75; }
+  .vk .spark .ar { fill: rgba(170,202,230,.16); }
+  .vk .spark .pt { fill: #fff; }
+  .vk-x { font-size: 11px; line-height: 1.4; color: rgba(255,255,255,.66); }
+  .vk .info { color: rgba(255,255,255,.8); }
+  .vhero .ins-g { padding-top: 2px; }
+  @container (max-width: 1000px) { .vsc { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 14px; } .vk:nth-child(4) { border-left: 0; } }
+
+  .vsub { margin: 10px 0 4px; } .vsub h3 { margin: 0; font-size: 12px; font-weight: 700; color: var(--ink-muted); }
+  .vg2 { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .vg2.eq { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
+  @container (max-width: 980px) { .vg2, .vg2.eq { grid-template-columns: minmax(0, 1fr); } }
+  .vtier { display: flex; flex-direction: column; gap: 12px; padding: 0 24px 20px; }
+  .vt-r { display: grid; grid-template-columns: 84px minmax(0, 1fr); align-items: center; gap: 12px; }
+  .vt-l { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+  .vt-b { display: flex; gap: 2px; height: 26px; border-radius: 6px; overflow: hidden; background: var(--sand-light); }
+  .vt-b i { display: flex; align-items: center; justify-content: center; height: 100%; color: #fff; font-size: 11px; font-style: normal; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .vt-b i:last-child span { color: var(--ink-2); }
+  .vnote { margin: 0; font-size: 12px; line-height: 1.55; color: var(--ink-2); }
+  .vnote b { color: var(--ink); }
+  .vlz { display: grid; grid-template-columns: minmax(0, 1fr) 112px; gap: 16px; padding: 0 24px 18px; align-items: center; }
+  .vlz-s { display: flex; flex-direction: column; gap: 10px; margin: 0; }
+  .vlz-s dt { font-size: 11px; color: var(--ink-muted); }
+  .vlz-s dd { margin: 0; font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .chart svg.scp text.mid { fill: var(--ink-muted); font-size: 11px; font-weight: 600; paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round; }
+  .chart svg.scp text.mid.hl { fill: var(--navy); }
+  .chart svg.scp path.exp { fill: none; stroke: var(--ink-2); stroke-width: 1.5; }
+  .chart svg.scp path.exp.half { stroke: var(--ink-faint); stroke-dasharray: 4 4; }
+  .chart svg.scp .vpt { opacity: .85; }
+  .chart svg.scp .vpt:hover { opacity: 1; stroke: var(--ink); }
+
+  /* 페이지 진단 */
+  .vq { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 12px 24px; padding: 0 24px 20px; }
+  .vq > .chart { min-width: 0; }
+  .vq-side { display: flex; flex-direction: column; gap: 8px; }
+  .vq-t { display: flex; flex-direction: column; gap: 4px; padding: 11px 14px 12px 16px; border-radius: 10px; background: var(--sand-light); box-shadow: inset 3px 0 0 var(--qc); }
+  .vq-n { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .vq-n b { font-weight: 700; }
+  .vq-c { margin-left: auto; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+  .vq-c small { margin-left: 1px; font-size: 12px; font-weight: 600; color: var(--ink-muted); }
+  .vq-s { display: flex; flex-wrap: wrap; gap: 2px 10px; font-size: 11px; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+  .vq-s b { font-weight: 700; color: var(--ink-2); }
+  @container (max-width: 980px) { .vq { grid-template-columns: minmax(0, 1fr); } .vq-side { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .pr { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 700; background: var(--sand-light); color: var(--ink-muted); }
+  .pr.p1 { background: var(--navy-tint); color: var(--navy); }
+  .pr.p2 { background: var(--sand-inset); color: var(--ink-2); }
+  .vpg { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .vpg b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .vpg .pu { display: inline-flex; align-items: center; gap: 3px; min-width: 0; font-size: 11px; color: var(--ink-muted); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .vpg .pu .i { flex-shrink: 0; opacity: 0; }
+  .vp-r:hover .pu .i { opacity: 1; }
+  .vpg a.pu:hover { color: var(--navy); text-decoration: underline; }
+  .vw-h, .vw-r { display: grid; grid-template-columns: 22px 30px minmax(170px, 2fr) 84px minmax(150px, 1.7fr) 56px 52px 74px 62px; align-items: center; gap: 10px; padding: 0 24px; }
+  .vw-h, .vp-h, .vb-h, .vd-h, .vm-h { min-height: 34px; font-size: 12px; font-weight: 600; color: var(--ink-muted); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); white-space: nowrap; }
+  .vw-h .r, .vw-r .r { text-align: right; justify-self: end; }
+  .vw-r { min-height: 48px; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .vw-r:hover, .vp-r:hover, .vb-r:hover, .vd-r:hover, .vm-r:hover { background: var(--navy-25); }
+  .vw-r .no { font-size: 12px; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+  .vbul { display: grid; grid-template-columns: minmax(40px, 1fr) auto; align-items: center; gap: 8px; min-width: 0; }
+  .vbul > .num { font-size: 12px; color: var(--ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .vbt { position: relative; height: 10px; border-radius: 3px; background: var(--sand-light); }
+  .vbt i.a { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--navy); }
+  .vbt i.e { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--ink); border-radius: 1px; }
+  .ach { font-weight: 700; }
+  .ach.none { color: #c4482f; } .ach.low { color: #b4501f; }
+  .ago { font-size: 12px; color: var(--ink-2); white-space: nowrap; }
+  .ago.old { color: #b4501f; font-weight: 700; }
+  .ago.none { color: #c4482f; font-weight: 700; }
+  .edots { display: inline-flex; gap: 4px; }
+  .edots i { width: 9px; height: 9px; border-radius: 50%; background: transparent; box-shadow: inset 0 0 0 1.5px var(--line-2); }
+  .edots i.on { box-shadow: none; }
+  .vc { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; padding: 0 12px 16px; }
+  .vc-col { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 0 12px; border-left: 1px solid var(--line); }
+  .vc-col:first-child { border-left: 0; }
+  .vc-col h3 { display: flex; align-items: baseline; gap: 6px; margin: 0 0 2px; font-size: 13px; font-weight: 700; }
+  .vc-col h3 .num { margin-left: auto; font-size: 20px; letter-spacing: -0.02em; }
+  .vc-col h3.bad .num { color: #c4482f; } .vc-col h3.good .num { color: var(--up); }
+  .vc-col ol { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .vc-col li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; font-size: 12px; }
+  .vc-col li > .num { font-weight: 700; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .more2 { margin: 2px 0 0; font-size: 11px; color: var(--ink-muted); }
+  .nodata.sm { margin: 0; padding: 8px 10px; }
+  @container (max-width: 980px) { .vc { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 14px; } .vc-col:nth-child(3) { border-left: 0; } }
+  .vp-h, .vp-r { display: grid; grid-template-columns: 30px minmax(170px, 2fr) minmax(80px, .9fr) 84px 72px 72px 60px 58px 82px 108px; align-items: center; gap: 10px; padding: 0 24px; }
+  .vp-h.one, .vp-r.one { grid-template-columns: 30px minmax(190px, 2.4fr) 84px 72px 72px 60px 58px 82px 108px; }
+  .vp-h > span { display: inline-flex; align-items: center; gap: 2px; }
+  .vp-h > .r { justify-content: flex-end; }
+  .vp-h .r, .vp-r .r { justify-self: end; text-align: right; }
+  .vp-r { min-height: 48px; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .vp-r .st { font-size: 12px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .vp-r .num.zero { color: #c4482f; font-weight: 700; }
+  .qc { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px; border-radius: 6px; background: var(--sand-light); font-size: 12px; font-weight: 600; color: var(--ink-2); white-space: nowrap; }
+  .qc i { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+  .qc.seo_only { background: color-mix(in srgb, #eb6834 12%, #fff); color: #9c3c17; }
+  .qc.crawl_only { background: color-mix(in srgb, #6250d6 10%, #fff); color: #4535a0; }
+  .qc.both { background: var(--navy-tint); color: var(--navy); }
+  .vp-h button.srt, .vb-h button.srt { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+  .vp-h button.srt:hover, .vb-h button.srt:hover { color: var(--ink); }
+  .vp-h button.srt > .i, .vb-h button.srt > .i { width: 12px; height: 12px; opacity: 0; }
+  .vp-h button.srt[aria-sort] > .i, .vb-h button.srt[aria-sort] > .i { opacity: 1; color: var(--navy); }
+  .vp-h button.srt:focus-visible, .vb-h button.srt:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; border-radius: 4px; }
+  @container (max-width: 980px) {
+    .vp-h, .vp-r, .vp-h.one, .vp-r.one { grid-template-columns: 30px minmax(150px, 2fr) 80px 66px 66px 74px 104px; }
+    .vp-h > .vc-st, .vp-r > .vc-st, .vp-h > .vc-x, .vp-r > .vc-x { display: none; }
+    .vw-h, .vw-r { grid-template-columns: 22px 30px minmax(140px, 2fr) 78px minmax(120px, 1.6fr) 52px 70px; }
+    .vw-h > :nth-child(7), .vw-r > :nth-child(7), .vw-h > :nth-child(9), .vw-r > :nth-child(9) { display: none; }
+  }
+
+  /* AI 엔진 */
+  .ve { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; padding: 0 24px 20px; }
+  .ve-t { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 14px 16px; border-radius: 12px; background: var(--sand-light); box-shadow: inset 0 3px 0 var(--ec); }
+  .ve-t.off { opacity: .5; }
+  .ve-n { display: flex; align-items: center; gap: 6px; font-size: 13px; } .ve-n b { font-weight: 700; }
+  .ve-v b { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; } .ve-v small { margin-left: 4px; font-size: 12px; color: var(--ink-muted); }
+  .ve-d { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px; min-height: 28px; }
+  .ve-d .spark { width: 100%; height: 28px; } .ve-d .spark .ln { stroke: var(--ink-2); stroke-width: 1.5; } .ve-d .spark .ar { fill: transparent; } .ve-d .spark .pt { fill: var(--ink-2); }
+  .ve-t dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 0; padding-top: 8px; border-top: 1px solid var(--line-2); }
+  .ve-t dt { font-size: 11px; color: var(--ink-muted); } .ve-t dd { margin: 2px 0 0; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  @container (max-width: 980px) { .ve { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .vup { display: flex; flex-direction: column; padding: 0 24px 18px; }
+  .vup-h, .vup-r { display: grid; grid-template-columns: 84px minmax(110px, 1.2fr) minmax(60px, 1fr) 40px 40px; align-items: center; gap: 10px; }
+  .vup-h { min-height: 30px; font-size: 11px; font-weight: 600; color: var(--ink-muted); border-bottom: 1px solid var(--line); }
+  .vup-h .r, .vup-r .v, .vup-r .p { text-align: right; }
+  .vup-r { min-height: 32px; border-bottom: 1px solid var(--line); font-size: 12px; }
+  .vup-d { display: grid; grid-template-columns: repeat(4, 1fr); justify-items: center; position: relative; }
+  .vup-h .vup-d span { font-size: 10px; }
+  .vup-r .vup-d i { width: 10px; height: 10px; border-radius: 50%; background: var(--line-2); }
+  .vup-l { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-2); }
+  .vup-r .bt { height: 8px; border-radius: 4px; overflow: hidden; } .vup-r .bt i { border-radius: 4px; }
+  .vup-r .v { font-weight: 700; } .vup-r .p { color: var(--ink-muted); }
+  .vm { display: flex; flex-direction: column; padding: 0 24px 18px; }
+  .vm-h, .vm-r { display: grid; grid-template-columns: minmax(130px, 1.4fr) 52px repeat(var(--cols), minmax(64px, 1fr)); align-items: center; gap: 6px; }
+  .vm-h .c { display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+  .vm-h .r, .vm-r .r { text-align: right; }
+  .vm-r { min-height: 34px; border-bottom: 1px solid var(--line); font-size: 12px; }
+  .vm-r .nm { font-weight: 600; color: var(--ink-2); }
+  .hm { display: flex; align-items: center; justify-content: center; height: 28px; border-radius: 6px; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink-2); background: var(--sand-light); }
+  .hm.h0 { background: color-mix(in srgb, #c4482f 14%, #fff); color: #8e2f1b; }
+  .hm.h1 { background: color-mix(in srgb, #eb6834 10%, #fff); }
+  .hm.h2 { background: color-mix(in srgb, var(--navy) 10%, #fff); }
+  .hm.h3 { background: color-mix(in srgb, var(--navy) 22%, #fff); color: var(--navy); }
+  .hm.v0 { background: var(--sand-light); } .hm.v1 { background: color-mix(in srgb, var(--navy) 7%, #fff); } .hm.v2 { background: color-mix(in srgb, var(--navy) 14%, #fff); }
+  .hm.v3 { background: color-mix(in srgb, var(--navy) 24%, #fff); color: var(--navy); } .hm.v4 { background: color-mix(in srgb, var(--navy) 36%, #fff); color: #001a3a; font-weight: 700; }
+  .hm.h4 { background: color-mix(in srgb, var(--navy) 38%, #fff); color: #001a3a; font-weight: 700; }
+  .cw { display: flex; flex-direction: column; padding: 0 24px 18px; }
+  .cw-b { display: grid; grid-template-columns: minmax(180px, 1.2fr) minmax(80px, 2fr) 76px 52px; align-items: center; gap: 10px; min-height: 32px; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .cw .nm { display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; font-weight: 600; }
+  .cw .nm .na { font-weight: 500; }
+  .cw .bt { height: 8px; border-radius: 4px; overflow: hidden; } .cw .bt i { border-radius: 4px; }
+  .cw .v { text-align: right; font-weight: 700; } .cw .p { text-align: right; font-size: 12px; color: var(--ink-muted); }
+  .cw .off, .dv-r.off { opacity: .5; }
+  .tag-o { font-size: 10px; font-weight: 700; color: var(--ink-muted); background: var(--sand-inset); border-radius: 4px; padding: 1px 5px; white-space: nowrap; }
+  .dv { display: flex; flex-direction: column; gap: 12px; padding: 0 24px 18px; }
+  .dv-bar { display: flex; gap: 2px; height: 12px; border-radius: 6px; overflow: hidden; background: var(--sand-light); }
+  .dv-bar i { display: block; height: 100%; }
+  .dv-r { display: grid; grid-template-columns: minmax(90px, 1fr) auto 52px; align-items: center; gap: 10px; min-height: 34px; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .dv-r:last-child { border-bottom: 0; }
+  .dv-r .nm { display: flex; align-items: center; gap: 8px; }
+  .dv-r .sq { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  .dv-r .v { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .dv-r .p { text-align: right; font-size: 12px; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+
+  /* 사이트 · 섹션 */
+  .vb-t { display: flex; flex-direction: column; padding: 0 0 8px; overflow-x: auto; }
+  .vb-h, .vb-r { display: grid; grid-template-columns: minmax(130px, 1.3fr) 52px repeat(7, minmax(72px, 1fr)); align-items: center; gap: 6px; padding: 0 24px; min-width: 760px; }
+  .vb-h .r { justify-self: end; }
+  .vb-r { min-height: 42px; border-bottom: 1px solid var(--line); font-size: 12px; }
+  .vb-r .nm { display: flex; flex-direction: column; min-width: 0; } .vb-r .nm b { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .vb-r .nm small { font-size: 11px; color: var(--ink-muted); }
+  .vb-r > .hm:nth-child(2) { background: none; justify-content: flex-end; }
+  .vb-r .hm em { margin-left: 5px; padding: 0 4px; border-radius: 3px; background: #fff; color: #8e2f1b; font-size: 10px; font-style: normal; font-weight: 700; }
+  .vd { display: flex; flex-direction: column; padding: 0 24px 18px; }
+  .vd-h, .vd-r { display: grid; grid-template-columns: minmax(130px, 1.1fr) 48px minmax(180px, 2.6fr) 68px 64px 56px 52px; align-items: center; gap: 10px; }
+  .vd-h .r, .vd-r .r { text-align: right; justify-self: end; }
+  .vd-h .lg { gap: 2px 12px; font-weight: 500; }
+  .vd-r { min-height: 38px; border-bottom: 1px solid var(--line); font-size: 12px; }
+  .vd-r .nm { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+  .vdb { position: relative; height: 18px; margin: 0 6px; background: linear-gradient(var(--line), var(--line)) 0 50% / 100% 1px no-repeat; }
+  .vdb i { position: absolute; top: 50%; transform: translate(-50%, -50%); }
+  .vdb .ln { height: 4px; transform: translateY(-50%); border-radius: 2px; background: color-mix(in srgb, var(--navy) 30%, #fff); }
+  .vdb .ln.neg { background: color-mix(in srgb, #eb6834 45%, #fff); }
+  .vdb .ds, .vdb .da { width: 11px; height: 11px; border-radius: 50%; border: 2px solid #fff; }
+  .vdb .ds { background: #9a928a; } .vdb .da { background: var(--navy); }
+  .vgap { font-weight: 700; } .vgap.neg { color: #b4501f; } .vgap.pos { color: var(--up); }
+  .dense .vw-r, .dense .vp-r { min-height: 38px; }
+  .dense .vb-r { min-height: 34px; }
+  .dense .vk-x, .dense .vq-s { display: none; }
+
   /* ══ S-grade frame (2026-10-22) — every renewal mockup (source: _scratch/387b177e/s) ══
      renewal-only shell (one sidebar, no top bar), compact page header, the left filter panel as before, card tiers and one navy hero per page. Loaded after the page CSS. */
   :root { --side-w: 232px; --r-card: 16px; --shadow-card: 0 1px 2px rgba(10,9,8,.04), 0 0 0 1px var(--line); --navy-ink: #00244f; --hero-bg: radial-gradient(120% 140% at 0% 0%, #0b3b74 0%, var(--navy) 46%, var(--navy-ink) 100%); --hero-shadow: 0 18px 40px -24px rgba(0,28,61,.75); }
@@ -1281,7 +1510,8 @@
 
 <script>
 // ── Data provenance ──
-// Design draft for the renewal of /standard/ai-funnel/acr · /standard/ai-funnel/conversion.
+// Design draft for the renewal of /standard/ai-funnel/acr · /standard/ai-funnel/conversion · /standard/ai-funnel/visibility
+// (AI Visibility: its own provenance note above its section, '══ AI Visibility ══').
 // Same as the app (copied from code / data files):
 //   filter axes, order, sections, labels, options, selection rules and role hiding — the Overview mockup's engine
 //     (dimension-filter-panel.tsx) restricted to acr-live-view.tsx acrOnlyGroups / conversion-view.tsx onlyGroups
@@ -1312,7 +1542,7 @@ const OVERVIEW_GROUPS = ["geography", "language", "engine", "time", "promptConte
 const ACR_GROUPS = ["geography", "language", "engine", "time", "brandPresence", "listType", "depth1", "depth2", "depth3"];
 // conversion-view.tsx: onlyGroups geography · engine · device · visitorType (no catalog axis, no time axis — the period is the basis row)
 const CONV_GROUPS = ["geography", "engine", "device", "visitorType"];
-const viewGroups = () => (view === "acr" ? ACR_GROUPS : CONV_GROUPS);
+const viewGroups = () => (view === "acr" ? ACR_GROUPS : view === "visibility" ? VIS_GROUPS : CONV_GROUPS);
 const DIMENSIONS = { engine: ["chatgpt", "gemini"], promptContext: ["인지/탐색", "비교/검증", "구매/사후관리"], brand: ["Genesis", "Hyundai", "Kia"], brandPresence: ["branded", "unbranded"], device: ["mobile", "desktop", "tablet"], visitorType: ["new", "returning"] };
 const ENGINE_LABEL = { chatgpt: "ChatGPT", gemini: "Gemini" };
 const VALUE_LABEL = { branded: "브랜드 포함", unbranded: "브랜드 미포함", worldwide: "월드와이드(글로벌)", EU: "유럽 허브(EU)", MIDDLEEAST: "중동 허브(MENA)", CPO: "현대 CPO", "HYUNDAI-N": "현대 N", mobile: "모바일", desktop: "데스크톱", tablet: "태블릿", new: "신규", returning: "재방문" };
@@ -1662,7 +1892,7 @@ function axisBody(g, d) {
       return head + optionRows(g, items, F.geography);
     }).join("") || `<p class="sec-help">—</p>`;
   } else list = optionRows(g, shown, F[g]);
-  return searchBox(g, opts.length) + `<div role="group" aria-label="${GROUP_LABEL[g]}">${list}</div>`;
+  return (view === "visibility" && VIS_AXIS_HELP[g] ? `<p class="sec-help">${VIS_AXIS_HELP[g]}</p>` : "") + searchBox(g, opts.length) + `<div role="group" aria-label="${GROUP_LABEL[g]}">${list}</div>`;
 }
 function timeBody() {
   const t = F.time;
@@ -1868,7 +2098,7 @@ function drawLine(spec, W, H) {
     const singles = segs.filter((sg) => sg.length === 1).map((sg) => `<circle cx="${sg[0][0]}" cy="${sg[0][1]}" r="3" fill="${s.color}"/>`).join("");
     const li = lastIdx(s.values), emph = s.own || s.label;
     const dot = li >= 0 && emph ? `<circle cx="${X(li).toFixed(1)}" cy="${Y(s.values[li]).toFixed(1)}" r="4" fill="${s.color}" stroke="#fff" stroke-width="2"/>` : "";
-    g += `<g class="s" data-s="${esc(s.key)}">${area}<path d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.w || 2}" stroke-linejoin="round" stroke-linecap="round"/>${singles}${dot}</g>`;
+    g += `<g class="s" data-s="${esc(s.key)}">${area}<path d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.w || 2}"${s.dash ? ` stroke-dasharray="4 4"` : ""} stroke-linejoin="round" stroke-linecap="round"/>${singles}${dot}</g>`;
   }
   // direct end labels (text in ink, the key carries the colour); collisions → leader lines
   const labs = labeled.map((s) => { const i = lastIdx(s.values); return i < 0 ? null : { s, x: X(i), y0: Y(s.values[i]), v: s.values[i] }; }).filter(Boolean).sort((a, b) => a.y0 - b.y0);
@@ -1924,7 +2154,7 @@ function drawCharts() {
   document.querySelectorAll(".chart[data-ch]").forEach((el) => {
     const spec = CH[el.dataset.ch]; if (!spec || spec.type === "dots") return;
     const W = Math.max(120, el.clientWidth), H = spec.h;
-    const out = spec.type === "cols" ? drawCols(spec, W, H) : spec.type === "track" ? drawTrack(spec, W, H) : spec.type === "treemap" ? drawTreemap(spec, W, H) : spec.type === "bump" ? drawBump(spec, W, H) : spec.type === "scatter" ? drawScatter(spec, W, H) : spec.type === "bars" ? drawBars(spec, W, H) : drawLine(spec, W, H);
+    const out = spec.type === "cols" ? drawCols(spec, W, H) : spec.type === "track" ? drawTrack(spec, W, H) : spec.type === "treemap" ? drawTreemap(spec, W, H) : spec.type === "bump" ? drawBump(spec, W, H) : spec.type === "scatter" ? drawScatter(spec, W, H) : spec.type === "vscatter" ? drawVisScatter(spec, W, H) : spec.type === "vstack" ? drawStack(spec, W, H) : spec.type === "lorenz" ? drawLorenz(spec, W, H) : spec.type === "bars" ? drawBars(spec, W, H) : drawLine(spec, W, H);
     el.innerHTML = out.svg; el.__geo = out.geo; el.__spec = spec;
   });
   wireCharts();
@@ -1949,16 +2179,16 @@ function wireCharts() {
       const i = clamp(Math.round(n > 1 ? (e.clientX - r.left - padL) / step : 0), 0, n - 1);
       const xh = svg.querySelector(".xh"); xh.setAttribute("x1", X(i)); xh.setAttribute("x2", X(i)); xh.setAttribute("visibility", "visible");
       const pts = spec.series.filter((s) => s.values[i] != null);
-      svg.querySelector(".dotg").innerHTML = pts.filter((s) => s.own || s.label || el.classList.contains("fading") === false).map((s) => `<circle cx="${X(i)}" cy="${Y(s.values[i])}" r="4" fill="${s.color}"/>`).join("");
+      svg.querySelector(".dotg").innerHTML = (spec.stack ? [] : pts).filter((s) => s.own || s.label || el.classList.contains("fading") === false).map((s) => `<circle cx="${X(i)}" cy="${Y(s.values[i])}" r="4" fill="${s.color}"/>`).join("");
       const sorted = [...pts].sort((a, b) => (spec.y.invert ? a.values[i] - b.values[i] : b.values[i] - a.values[i]));
-      showTip(`<h5>${spec.x[i]} 회차</h5>${sorted.map((s) => `<div class="r ${s.own ? "em" : ""}"><i style="background:${s.color}"></i><b>${spec.y.val(s.values[i])}</b><span>${esc(s.name)}</span></div>`).join("")}`, e.clientX, e.clientY);
+      showTip(`<h5>${spec.tipX ? esc(spec.tipX(i)) : `${spec.x[i]} 회차`}</h5>${sorted.map((s) => `<div class="r ${s.own ? "em" : ""}"><i style="background:${s.color}"></i><b>${spec.y.val(s.values[i])}</b><span>${esc(s.name)}</span></div>`).join("")}`, e.clientX, e.clientY);
     };
     hit.onpointermove = move; hit.onpointerenter = move;
     hit.onpointerleave = () => { svg.querySelector(".xh").setAttribute("visibility", "hidden"); svg.querySelector(".dotg").innerHTML = ""; hideTip(); };
   });
   document.querySelectorAll(".chart[data-ch] .col").forEach((g) => {
     const el = g.closest(".chart");
-    const show = (e) => { const i = +g.dataset.i, spec = el.__spec, r = g.getBoundingClientRect(); showTip(`<h5>${spec.x[i]} 회차 · 구성비</h5>${spec.stacks.map((s) => ({ s, v: s.values[i] })).filter((p) => p.v > 0).sort((a, b) => b.v - a.v).map((p) => `<div class="r"><i class="sq" style="background:${p.s.color}"></i><b>${p.v.toFixed(1)}%</b><span>${esc(p.s.name)}</span></div>`).join("")}`, e.clientX ?? r.right, e.clientY ?? r.top); };
+    const show = (e) => { const i = +g.dataset.i, spec = el.__spec, r = g.getBoundingClientRect(); showTip(`<h5>${spec.tipX ? esc(spec.tipX(i)) : `${spec.x[i]} 회차`} · 구성비</h5>${spec.stacks.map((s) => ({ s, v: s.values[i] })).filter((p) => p.v > 0).sort((a, b) => b.v - a.v).map((p) => `<div class="r"><i class="sq" style="background:${p.s.color}"></i><b>${p.v.toFixed(1)}%</b><span>${esc(p.s.name)}</span></div>`).join("")}`, e.clientX ?? r.right, e.clientY ?? r.top); };
     g.onpointermove = show; g.onfocus = show; g.onpointerleave = hideTip; g.onblur = hideTip;
   });
   document.querySelectorAll("[data-tip]").forEach((el) => {
@@ -2063,7 +2293,7 @@ function controlBar({ picker = true } = {}) {
   return `<div class="cbar" role="region" aria-label="페이지 조작">
     <span class="cbar-r">${picker ? cmpPicker() : ""}<span class="seg2" role="radiogroup" aria-label="보기 밀도"><button class="${!dense ? "on" : ""}" data-dense="0" role="radio" aria-checked="${!dense}">기본</button><button class="${dense ? "on" : ""}" data-dense="1" role="radio" aria-checked="${dense}">촘촘</button></span></span></div>`;
 }
-const secList = () => (view === "acr" ? ACR_SECS : convSecs());
+const secList = () => (view === "acr" ? ACR_SECS : view === "visibility" ? visSecs() : convSecs());
 const insightGrid = (items) => {
   const icon = { warn: "alert", good: "up", info: "spark" };
   return `<div class="ins-g">${items.map((x) => `<div class="ins-i ${x.tone}">
@@ -2119,15 +2349,15 @@ function applyHb(key) {
 
 // ── mockup bar · side menu · notes ──
 function renderMk() {
-  const isC = view === "conversion";
-  const states = isC ? [] : [["ok", "정상"], ["empty", "측정 대기"], ["degraded", "일부 지연"]];
-  document.getElementById("mk").innerHTML = `<div class="mk-row"><span class="mk-tag">AI Agent Funnel 목업</span><span class="mk-title">ACR · AI 유입 전환 · 리뉴얼 초안</span>
+  const isC = view === "conversion", isV = view === "visibility";
+  const states = isC ? [] : isV ? [["ok", "정상"], ["nosite", "사이트 미연결 (지금 운영)"], ["empty", "측정 대기"], ["down", "연결 실패"]] : [["ok", "정상"], ["empty", "측정 대기"], ["degraded", "일부 지연"]];
+  document.getElementById("mk").innerHTML = `<div class="mk-row"><span class="mk-tag">AI Agent Funnel 목업</span><span class="mk-title">AI 가시성 · ACR · AI 유입 전환 · 리뉴얼 초안</span>
     <span class="mk-group"><span>보는 계정</span>${ROLES.map((r) => `<button class="mk-btn" data-role="${r.id}" aria-pressed="${role.id === r.id}">${r.label}</button>`).join("")}</span>
     ${isC ? convMkGroups() : `<span class="mk-group"><span>데이터</span>${states.map(([k, l]) => `<button class="mk-btn" data-dstate="${k}" aria-pressed="${dataState === k}">${l}</button>`).join("")}</span>`}
     <span class="mk-group"><span>응답 지연</span>${[[300, "0.3초"], [1500, "1.5초"]].map(([ms, l]) => `<button class="mk-btn" data-lat="${ms}" aria-pressed="${LATENCY === ms}">${l}</button>`).join("")}</span>
     <button class="mk-btn" data-notes aria-pressed="${notesOpen}" style="margin-left:auto">검토 메모 ${notesList().length}</button></div>
-    <div class="mk-cap"><span><b>리뉴얼 초안 (디자인 검토용)</b>: <code>/standard/ai-funnel/acr · conversion</code>의 데이터와 동작을 새 디자인에 옮겼습니다. 필터 축·옵션·선택 규칙·권한별 숨김은 앱 필터와 같고, 다른 점은 즉시 반영과 저장한 필터입니다. 지금 화면과 달라지는 점은 오른쪽 위 ‘검토 메모’.</span>
-    <span><b>숫자 = 예시</b>: 측정 국가·언어 조합, ACR 프롬프트 세트, GA4 시장 등록 현황, 회차 날짜와 화면의 모든 숫자. 지금 계정: <b>${role.label}</b> — ${role.note}</span></div>`;
+    <div class="mk-cap"><span><b>리뉴얼 초안 (디자인 검토용)</b>: <code>/standard/ai-funnel/visibility · acr · conversion</code>의 데이터와 동작을 새 디자인에 옮겼습니다. 필터 축·옵션·선택 규칙·권한별 숨김은 앱 필터와 같고, 다른 점은 즉시 반영과 저장한 필터입니다. 지금 화면과 달라지는 점은 오른쪽 위 ‘검토 메모’.</span>
+    <span><b>숫자 = 예시</b>: AI 가시성의 사이트 · 페이지 · 크롤러, 측정 국가·언어 조합, ACR 프롬프트 세트, GA4 시장 등록 현황, 회차 날짜와 화면의 모든 숫자. 지금 계정: <b>${role.label}</b> — ${role.note}</span></div>`;
   document.querySelectorAll("[data-lat]").forEach((b) => (b.onclick = () => { LATENCY = +b.dataset.lat; renderMk(); }));
   document.querySelectorAll("[data-role]").forEach((b) => (b.onclick = () => { openRole(ROLES.find((r) => r.id === b.dataset.role)); cmp = []; cmpAuto = true; drawer = null; renderMk(); render(); }));
   document.querySelectorAll("[data-dstate]").forEach((b) => (b.onclick = () => { dataState = b.dataset.dstate; S = { f: clone(S.f), data: compute(S.f) }; renderMk(); render(); }));
@@ -2154,6 +2384,8 @@ const MOCK_MENU = [
     { id: "citation", href: "answer-analysis-mockup.html#citation", label: "Citation" },
   ] },
   { href: "ai-funnel-mockup.html#acr", label: "AI Agent Funnel", kids: [
+    // AI Visibility: in the renewal menu (2026-10-27) though the app hides the original; the parent still opens ACR, as the app redirects
+    { id: "visibility", href: "ai-funnel-mockup.html#visibility", label: "AI Visibility", beta: true },
     { id: "acr", href: "ai-funnel-mockup.html#acr", label: "ACR", beta: true },
     { id: "conversion", href: "ai-funnel-mockup.html#conversion", label: "AI Conversion", beta: true },
   ] },
@@ -2212,22 +2444,22 @@ function mockMoreHtml() {
 function renderSnb() {
   document.querySelector(".snb").innerHTML = mockMenuHtml(view);
 }
-const notesList = () => (view === "acr" ? ACR_NOTES : CONV_NOTES);
+const notesList = () => (view === "acr" ? ACR_NOTES : view === "visibility" ? VIS_NOTES : CONV_NOTES);
 function notesHtml() {
   if (!notesOpen) return "";
-  return `<aside class="notes" aria-label="검토 메모"><h3>검토 메모 — 지금 화면과 다른 점 (${view === "acr" ? "ACR" : "AI 유입 전환"})</h3><p class="nsub"><span class="tag ux">UX</span>화면 동작 변경 · <span class="tag data">데이터</span>읽기 추가·결정 필요 · <span class="tag same">동일</span>지금과 같음</p>
-    <ol>${notesList().map(([t, h, b]) => `<li><span class="tag ${t}">${t === "ux" ? "UX" : t === "data" ? "데이터" : "동일"}</span><b>${h}</b> — ${b}</li>`).join("")}</ol>
+  return `<aside class="notes" aria-label="검토 메모"><h3>검토 메모 — 지금 화면과 다른 점 (${view === "acr" ? "ACR" : view === "visibility" ? "AI 가시성" : "AI 유입 전환"})</h3><p class="nsub"><span class="tag ux">UX</span>화면 동작 변경 · <span class="tag data">데이터</span>읽기 추가·결정 필요 · <span class="tag same">동일</span>지금과 같음${notesList().some(([x]) => x === "calc") ? ` · <span class="tag calc">계산</span>가공 지표의 산식(원천 열)` : ""}</p>
+    <ol>${notesList().map(([t, h, b]) => `<li><span class="tag ${t}">${t === "ux" ? "UX" : t === "data" ? "데이터" : t === "calc" ? "계산" : "동일"}</span><b>${h}</b> — ${b}</li>`).join("")}</ol>
     <p class="nsub" style="margin-top:16px">색: 당사 = HMG 남색, 비교 브랜드 주황·청록·보라(고른 순서), 나머지 회색 — Mention 리뉴얼과 같은 규칙(dataviz 검증기 통과 팔레트).</p>
     <button class="mk-btn" data-notes style="margin-top:8px">닫기</button></aside>`;
 }
 
 // ── page header (PageHeader + the renewal's meta pill, page switch, applied tokens) ──
 function headerHtml() {
-  const t = tokens(F), cur = presetsOf().find((p) => p.id === activeId), isA = view === "acr";
-  const meta = isA ? (S.f.time ? `<b class="num" style="font-weight:600">기간 누적 ${S.f.time.from ?? "…"} ~ ${S.f.time.to ?? "…"}</b>` : `<b class="num" style="font-weight:600">최신 회차 스냅샷</b>`) : convMetaPill();
-  return `<header class="ph"><div><h1>${isA ? "ACR · AI Choice Rate" : "AI 유입 전환"}<span class="beta-p">베타</span></h1>
-      <div class="sub"><span class="desc">${isA ? "AI 답변이 최종 추천 브랜드로 HMG를 선택하는 비율을 봅니다." : "AI 답변을 통해 유입된 방문이 사이트 안에서 실제 행동으로 이어지는지 봅니다."}</span><span class="pill">${ic("cal", "s12")}${isA ? "주 1회 측정" : "GA4 연동"}<span class="divider" aria-hidden="true"></span>${meta}</span></div></div>
-    <div class="acts"><button class="btn" data-copy>${ic("link", "s14")}링크 복사</button></div></header>`;
+  const t = tokens(F), cur = presetsOf().find((p) => p.id === activeId), isA = view === "acr", isV = view === "visibility";
+  const meta = isV ? visMetaPill() : isA ? (S.f.time ? `<b class="num" style="font-weight:600">기간 누적 ${S.f.time.from ?? "…"} ~ ${S.f.time.to ?? "…"}</b>` : `<b class="num" style="font-weight:600">최신 회차 스냅샷</b>`) : convMetaPill();
+  return `<header class="ph"><div><h1>${isA ? "ACR · AI Choice Rate" : isV ? "AI 가시성" : "AI 유입 전환"}<span class="beta-p">베타</span></h1>
+      <div class="sub"><span class="desc">${isA ? "AI 답변이 최종 추천 브랜드로 HMG를 선택하는 비율을 봅니다." : isV ? "검색에서 발견되는 페이지와 AI가 실제로 읽는 페이지의 간극을 봅니다." : "AI 답변을 통해 유입된 방문이 사이트 안에서 실제 행동으로 이어지는지 봅니다."}</span><span class="pill">${ic("cal", "s12")}${isA ? "주 1회 측정" : isV ? "일 단위 측정" : "GA4 연동"}<span class="divider" aria-hidden="true"></span>${meta}</span></div></div>
+    <div class="acts">${isV ? `<span class="seg2" role="radiogroup" aria-label="보기 밀도"><button class="${!dense ? "on" : ""}" data-dense="0" role="radio" aria-checked="${!dense}">기본</button><button class="${dense ? "on" : ""}" data-dense="1" role="radio" aria-checked="${dense}">촘촘</button></span>` : ""}<button class="btn" data-copy>${ic("link", "s14")}링크 복사</button></div></header>`;
 }
 // applied conditions + the default-filter note: the top of the content column (the header runs above filter | content)
 function appliedTop() {
@@ -2236,8 +2468,8 @@ function appliedTop() {
   ${openedWithDefault && cur && cur.star ? `<div class="note">${ic("bookmark", "s14")}<span>기본 필터 ‘${esc(cur.name)}’로 열었습니다.</span><button class="lnk" data-reset>조건 없이 보기</button></div>` : ""}`;
 }
 // filter panel hooks (patched into the engine's panelHtml)
-const footHint = () => (view === "acr" ? "필터를 선택하지 않으면 계정 권한 범위의 전체 데이터가 조회됩니다 (기간 미선택 시 최신 회차 스냅샷)." : "필터를 선택하지 않으면 계정 권한 범위의 전체 시장이 조회됩니다 (기간은 위 ‘측정 기간’).");
-const basisHtml = () => (view === "conversion" ? convBasisHtml() : "");
+const footHint = () => (view === "visibility" ? "필터를 선택하지 않으면 계정 권한 범위의 전체 사이트가 조회됩니다 (기간은 위 ‘측정 기간’)." : view === "acr" ? "필터를 선택하지 않으면 계정 권한 범위의 전체 데이터가 조회됩니다 (기간 미선택 시 최신 회차 스냅샷)." : "필터를 선택하지 않으면 계정 권한 범위의 전체 시장이 조회됩니다 (기간은 위 ‘측정 기간’).");
+const basisHtml = () => (view === "conversion" ? convBasisHtml() : view === "visibility" ? visBasisHtml() : "");
 
 // extra icons for this mockup
 document.body.insertAdjacentHTML("beforeend", `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
@@ -2659,19 +2891,676 @@ const convData = () => null;
 const convPage = () => `<section class="card wait" aria-label="준비 중"><span class="wi">${ic("clock", "s20")}</span><h2>AI 유입 전환 — 다음 단계에서 만듭니다</h2><p>P2-A(ACR) 검토 후 P2-B 에서 같은 틀로 만듭니다.</p></section>`;
 const wireConv = () => {};
 
+// ══ AI Visibility ══
+// /standard/ai-funnel/visibility → screen sources/analytics (ctx.kind = visibility) → GET /v1/analytics/visibility
+// (back/bff/hub_stores/analytics_reader.py visibility()). What the reader returns — and all this page uses:
+//   pages      page × period: url · title · country · seo_impressions · ai_crawls · quadrant (median rule)
+//   devices    page × day × device: seo_impressions          (Search Console)
+//   bots       page × day × crawler bot (→ engine): hits      (server access log, analytics.dim_crawl_bot)
+//   priorities page: priority (1 = 높음) · rule_ver;  trend day: seo · ai;  properties = sites (brand × country)
+// Every number on the page is a sum, ratio, count, rank or date difference over those rows (the 계산 notes list
+// each one) — nothing is estimated or added. The URL 섹션 is the first path segment after the locale segments.
+// Filters as the reader applies them: brand · country pick sites, device narrows 검색 노출, engine narrows AI 크롤.
+// Illustrative: the site registry, URLs and titles, crawler names and their engines, every number. The real store is
+// empty today (back/analytics/README.md — the GSC · crawl-log collectors are not connected): '사이트 미연결' is production.
+const VIS_GROUPS = ["geography", "engine", "device"];
+const VIS_FIRST = "2026-04-01", VIS_LATEST = "2026-10-19";
+const VIS_SITES = {
+  Hyundai: ["US", "CA", "BR", "GB", "DE", "FR", "ES", "IT", "PL", "TR", "KR", "AU", "IN"],
+  Kia: ["US", "CA", "GB", "DE", "FR", "ES", "IT", "SE", "KR", "AU"],
+  Genesis: ["US", "CA", "KR", "AU", "GB", "DE"],
+};
+const VIS_SIZE = { US: 1, CA: 0.32, BR: 0.3, GB: 0.48, DE: 0.52, FR: 0.36, ES: 0.3, IT: 0.3, PL: 0.16, TR: 0.2, KR: 0.7, AU: 0.34, IN: 0.4, SE: 0.14 };
+const VIS_BRAND = { Hyundai: 1, Kia: 0.9, Genesis: 0.32 };
+const VIS_HOST = { Hyundai: "www.hyundai.com", Kia: "www.kia.com", Genesis: "www.genesis.com" };
+// [path, title, priority, 검색 weight, AI weight] — model pages (priority 1) are added per brand
+const VIS_PAGES = [
+  ["", "Home", 1, 1, 1],
+  ["/vehicles", "All vehicles", 1, 0.42, 0.66],
+  ["/shopping-tools/build-and-price", "Build & Price", 2, 0.36, 0.05],
+  ["/shopping-tools/offers", "Current offers", 2, 0.44, 0.1],
+  ["/shopping-tools/finance", "Finance calculator", 3, 0.12, 0.03],
+  ["/dealer-locator", "Find a dealer", 2, 0.3, 0.08],
+  ["/test-drive", "Book a test drive", 2, 0.16, 0.04],
+  ["/electrified", "Electrified", 1, 0.14, 0.62],
+  ["/electrified/charging", "EV charging guide", 2, 0.09, 0.5],
+  ["/owners/warranty", "Warranty", 3, 0.13, 0.36],
+  ["/technology/safety", "Safety technology", 3, 0.06, 0.32],
+  ["/compare", "Compare models", 3, 0.05, 0.12],
+  ["/news", "Newsroom", 3, 0.05, 0.22],
+  ["/company/careers", "Careers", 3, 0.03, 0.02],
+];
+// crawler bot → engine (analytics.dim_crawl_bot — illustrative) · the share of pages each bot ever reads (example data only)
+const VIS_BOTS = [["OAI-SearchBot", "chatgpt", 0.3, 0.97], ["GPTBot", "chatgpt", 0.22, 0.9], ["ChatGPT-User", "chatgpt", 0.1, 0.7], ["GoogleOther", "gemini", 0.17, 0.86], ["PerplexityBot", "perplexity", 0.12, 0.74], ["ClaudeBot", "claude", 0.09, 0.6]];
+const VIS_ENGINES = ["chatgpt", "gemini", "perplexity", "claude"];
+const VIS_ENGINE = { chatgpt: "ChatGPT", gemini: "Gemini", perplexity: "Perplexity", claude: "Claude" };
+const VIS_ENG_COL = { chatgpt: "#002c5f", gemini: "#1baf7a", perplexity: "#eb6834", claude: "#6250d6" };
+const VIS_DEVICES = ["mobile", "desktop", "tablet"], VIS_DEV_W = [0.6, 0.36, 0.04], VIS_DEV_COL = ["#002c5f", "#5a85b3", "#aec6df"];
+// the original screen's quadrant (median rule) — kept as a filter of the page table so its counts stay comparable
+const VIS_Q = {
+  seo_only: { name: "AI 노출 보강", color: "#eb6834" }, crawl_only: { name: "검색 보강", color: "#6250d6" },
+  both: { name: "우수 페이지", color: COL.own }, neither: { name: "둘 다 낮음", color: COL.ctx },
+};
+const VIS_Q_ORDER = ["seo_only", "crawl_only", "both", "neither"];
+// 기대 대비 (expected = the page's 검색 노출 × the selection's AI 관심도)
+const VIS_BAND = { none: { name: "AI 크롤 없음", color: "#c4482f" }, low: { name: "기대의 50% 미만", color: "#eb6834" }, mid: { name: "기대의 50–100%", color: "#9db5d3" }, high: { name: "기대 이상", color: COL.own } };
+const VIS_BAND_ORDER = ["none", "low", "mid", "high"];
+// 읽힌 날 비율 buckets
+const VIS_FREQ = { daily: { name: "거의 매일 (90% 이상)", color: "#002c5f" }, often: { name: "자주 (50–90%)", color: "#5a85b3" }, rare: { name: "가끔 (50% 미만)", color: "#aec6df" }, none: { name: "읽히지 않음", color: "#e3dcd3" } };
+const VIS_FREQ_ORDER = ["daily", "often", "rare", "none"];
+const VIS_STALE = 7; // 마지막 AI 크롤 후 이 일수 이상 = 오래 안 읽힘
+// each metric: what it means and how it is computed from the reader's rows
+const VDEF = {
+  seo: { d: "검색 결과에 페이지가 표시된 횟수입니다(Google Search Console 노출 수).", f: "devices 행의 seo_impressions 합 (= pages.seo_impressions)" },
+  ai: { d: "AI 엔진의 크롤러(봇)가 페이지를 요청한 횟수입니다(서버 접속 기록).", f: "bots 행의 hits 합 (= pages.ai_crawls)" },
+  cov: { d: "기간 안에 AI 크롤러가 한 번이라도 요청한 페이지의 비율입니다. AI가 아예 못 보고 있는 페이지가 얼마나 되는지 봅니다.", f: "AI 크롤 ≥ 1인 페이지 수 ÷ 측정 페이지 수 × 100" },
+  int: { d: "검색 노출 1만 회마다 AI 크롤이 몇 번 있었는지입니다. 사람의 검색 수요 대비 AI가 읽어 가는 정도를 봅니다.", f: "AI 크롤 합 ÷ 검색 노출 합 × 10,000" },
+  read: { d: "기간의 측정일 중 AI 크롤이 1회 이상 있었던 날의 비율입니다. 얼마나 꾸준히 읽히는지 봅니다.", f: "AI 크롤 ≥ 1인 날 수 ÷ 측정일 수 (bots 행의 날짜)" },
+  stale: { d: `마지막으로 AI 크롤이 있었던 날부터 기간의 마지막 측정일까지 지난 날 수입니다. ${VIS_STALE}일 이상이면 ‘오래 안 읽힘’으로 셉니다.`, f: "마지막 측정일 − AI 크롤 ≥ 1인 마지막 날 (bots 행의 날짜)" },
+  exp: { d: "검색 노출 규모에 맞춰 AI 크롤을 이만큼 받을 법하다는 기준입니다 — 지금 고른 범위 전체의 AI 관심도를 페이지에 그대로 적용합니다. 예측이 아니라 비교 기준선입니다.", f: "기대 크롤 = 페이지 검색 노출 × (범위 AI 크롤 합 ÷ 범위 검색 노출 합) · 달성률 = 실제 ÷ 기대 · 부족분 = 기대 − 실제(양수만)" },
+  top: { d: "AI 크롤이 일부 페이지에 몰리는 정도입니다. 로렌츠 곡선이 대각선에서 멀수록 몰려 있습니다.", f: "AI 크롤 많은 순 상위 10% 페이지의 크롤 합 ÷ 전체 크롤 합 · 지니 계수 = 1 − 2 × 곡선 아래 넓이" },
+  sec: { d: "URL 경로에서 국가 · 언어 부분을 뺀 첫 단계로 페이지를 묶습니다(예: /us/en/shopping-tools/offers → /shopping-tools). 사이트 메뉴 분류가 아니라 주소 규칙입니다.", f: "URL 경로 첫 단계 (2글자 국가 · 언어 단계는 건너뜀)" },
+};
+const VIS_AXIS_HELP = { engine: "AI 크롤 수에만 적용됩니다 — 검색 노출은 그대로", device: "검색 노출 수에만 적용됩니다 — AI 크롤은 그대로" };
+const VIS_TABS = [["sum", "요약"], ["page", "페이지 진단"], ["engine", "AI 엔진"], ["site", "사이트 · 섹션"]];
+
+// view state
+let vPer = { days: 28 }, vTab = "sum", vpQ = "all", vpP1 = false, vpS = "", vpSort = { k: "short", dir: -1 }, vpMore = false, vsSort = { k: "ai", dir: -1 }, vwAll = false;
+
+// fast deterministic noise (the page × day × bot volume is too large for the string hash)
+const nz = (seed, a, b = 0) => fmix((seed ^ Math.imul(a + 1, 0x9e3779b1) ^ Math.imul(b + 7, 0x85ebca6b)) >>> 0) / 4294967296;
+const mdDay = (d) => `${+d.slice(5, 7)}/${+d.slice(8)}`;
+const visK = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(n >= 1e7 ? 0 : 1).replace(/\.0$/, "")}M` : fmtK(n));
+const pctChg = (v) => (v == null ? "—" : Math.abs(v) < 0.05 ? "변화 없음" : `${v >= 0 ? "▲" : "▼"}${Math.abs(v).toFixed(1)}%`);
+const ppChg = (v) => (v == null ? "—" : Math.abs(v) < 0.05 ? "변화 없음" : `${v >= 0 ? "▲" : "▼"}${Math.abs(v).toFixed(1)}pp`);
+const int1 = (v) => (v == null ? "—" : v >= 100 ? fmtN(v) : v.toFixed(1));
+const share = (a, b) => (b ? (a / b) * 100 : null);
+const medianOf = (xs) => { if (!xs.length) return null; const s = [...xs].sort((a, b) => a - b), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+// URL 섹션: the first path segment after the 2-letter country / language segments
+function sectionOf(path) {
+  const segs = path.split("/").filter(Boolean);
+  let i = 0; while (i < segs.length && i < 2 && /^[a-z]{2}(-[a-z]{2})?$/.test(segs[i])) i++;
+  return segs[i] ? `/${segs[i]}` : "/";
+}
+const secLabel = (s) => (s === "/" ? "/ (첫 페이지)" : s);
+function visWindow() {
+  if (vPer.days) return { from: addDays(VIS_LATEST, -(vPer.days - 1)), to: VIS_LATEST, days: vPer.days };
+  let from = vPer.from || addDays(VIS_LATEST, -27), to = vPer.to || VIS_LATEST;
+  if (from > to) [from, to] = [to, from];
+  return { from, to, days: dayDiff(from, to) + 1 };
+}
+// the reader returns rows only for observed days
+const daysOf = (from, to) => { const out = []; for (let d = from < VIS_FIRST ? VIS_FIRST : from; d <= to && d <= VIS_LATEST; d = addDays(d, 1)) out.push(d); return out; };
+// 7-day blocks counted back from the last day; a shorter first block is left out (sparklines · engine share)
+const blocksOf = (n) => { const out = []; for (let e = n - 1; e - 6 >= 0; e -= 7) out.unshift([e - 6, e]); return out; };
+
+let VIS_U = null;
+function visUniverse() {
+  if (VIS_U) return VIS_U;
+  const out = [];
+  for (const [brand, cs] of Object.entries(VIS_SITES)) for (const c of cs) {
+    const size = (VIS_SIZE[c] ?? 0.2) * VIS_BRAND[brand], lang = LANGS_OF[c]?.[0] ?? "en", base = `/${c.toLowerCase()}/${lang}`, site = hash(`vis|${brand}|${c}`);
+    const aiSlope = -0.25 + nz(site, 1) * 0.8, seoSlope = -0.1 + nz(site, 2) * 0.25;
+    const models = (ACR_MODELS[brand] || []).map((m) => { const s = hash(`${m}|${c}`); return [`/vehicles/${m.toLowerCase().replace(/\s+/g, "-")}`, m, 1, 0.28 + nz(s, 3) * 0.3, 0.25 + nz(s, 4) * 0.55]; });
+    for (const [slug, title, prio, sw, aw] of [VIS_PAGES[0], VIS_PAGES[1], ...models, ...VIS_PAGES.slice(2)]) {
+      const seed = hash(`${brand}|${c}|${slug}`), hub = slug === "" || slug === "/vehicles", tool = slug.startsWith("/shopping-tools");
+      const zero = prio < 3 && !hub && nz(seed, 9) < 0.04; // never read by AI in the data span
+      const bw = VIS_BOTS.map(([, , w], j) => w * (0.55 + nz(seed, 20 + j) * 0.9)), bs = sumOf(bw);
+      const dw = VIS_DEV_W.map((w, j) => w * (0.8 + nz(seed, 40 + j) * 0.4)), ds = sumOf(dw);
+      // example data: which bots ever read the page, and a few pages whose crawling stopped / started inside the span
+      const botOn = VIS_BOTS.map(([, , , reach], j) => hub || nz(seed, 60 + j) < reach * (tool ? 0.7 : 1));
+      const r = nz(seed, 70), stopK = !hub && r < 0.035 ? dayDiff(VIS_FIRST, VIS_LATEST) - 8 - Math.floor(nz(seed, 71) * 22) : null;
+      const startK = !hub && r > 0.97 ? dayDiff(VIS_FIRST, VIS_LATEST) - 10 - Math.floor(nz(seed, 72) * 34) : null;
+      out.push({ key: `${brand}|${c}|${slug}`, seed, brand, country: c, prio, name: title, title: `${title} | ${brand} ${c}`,
+        url: `https://${VIS_HOST[brand]}${base}${slug}`, path: `${base}${slug}`, aiSlope, seoSlope, botOn, stopK, startK,
+        seoDay: (900000 / 28) * size * sw * (0.6 + nz(seed, 5) * 0.9), aiDay: zero ? 0 : (2600 / 28) * size * aw * (0.5 + nz(seed, 6) * 1.1),
+        botShare: bw.map((w) => w / bs), devShare: dw.map((w) => w / ds) });
+    }
+  }
+  return (VIS_U = out);
+}
+// one page's days: 검색 노출 by device, AI 크롤 by bot (integers; the parent row = their sum, as the SEO publish check requires)
+const VIS_CACHE = new Map();
+function dailyOf(p, from, to, dates) {
+  const key = `${from}|${to}`;
+  if (!VIS_CACHE.has(key)) { if (VIS_CACHE.size > 6) VIS_CACHE.clear(); VIS_CACHE.set(key, new Map()); }
+  const m = VIS_CACHE.get(key);
+  if (m.has(p.key)) return m.get(p.key);
+  const n = dates.length, seoDev = VIS_DEVICES.map(() => new Array(n)), aiBot = VIS_BOTS.map(() => new Array(n));
+  for (let i = 0; i < n; i++) {
+    const k = dayDiff(VIS_FIRST, dates[i]), t = (k - 100) / 200, we = isoDow(dates[i]) >= 6;
+    const seo = p.seoDay * (we ? 0.78 : 1.07) * (1 + p.seoSlope * t) * (0.85 + nz(p.seed, k, 1) * 0.3);
+    const live = (p.stopK == null || k <= p.stopK) && (p.startK == null || k >= p.startK);
+    const ai = live ? p.aiDay * (1 + p.aiSlope * t) * (0.6 + nz(p.seed, k, 2) * 0.8) : 0;
+    for (let j = 0; j < seoDev.length; j++) seoDev[j][i] = Math.floor(seo * p.devShare[j] + nz(p.seed, k, 30 + j));
+    for (let j = 0; j < aiBot.length; j++) aiBot[j][i] = p.botOn[j] && ai ? Math.floor(ai * p.botShare[j] * (0.8 + nz(p.seed, k, 10 + j) * 0.4) + nz(p.seed, k, 50 + j)) : 0;
+  }
+  const out = { seoDev, aiBot };
+  m.set(p.key, out);
+  return out;
+}
+
+// ── the screen model: what the BFF screen would compute from the reader's rows ──
+function visData(f) {
+  if (dataState === "down") return { state: "down" };
+  const s = role.scope, allowed = scopeCountries(s), brands = s.all ? (f.brand.length ? f.brand : OWN_ALL) : s.brands;
+  // the reader: sites by account scope (server gate), then the picked brands · countries
+  const inScope = visUniverse().filter((p) => brands.includes(p.brand) && (!allowed || allowed.includes(p.country)));
+  const W = visWindow();
+  if (dataState === "nosite" || !inScope.length) return { state: "nosite", W };
+  const picked = f.geography.length ? inScope.filter((p) => f.geography.includes(p.country)) : inScope;
+  if (!picked.length) return { state: "nomatch", W, siteCountries: [...new Set(inScope.map((p) => p.country))] };
+  const sites0 = new Set(picked.map((p) => `${p.brand}|${p.country}`)).size;
+  const dates = daysOf(W.from, W.to), n = dates.length;
+  if (dataState === "empty" || !n) return { state: "empty", W, sites: sites0 };
+  const prevTo = addDays(W.from, -1), prevFrom = addDays(W.from, -W.days), prevDates = prevFrom >= VIS_FIRST ? daysOf(prevFrom, prevTo) : [];
+  const prevOk = prevDates.length === W.days;
+  const engOn = (e) => !f.engine.length || f.engine.includes(e);
+  const botOn = VIS_BOTS.map(([, e]) => engOn(e)), devOn = VIS_DEVICES.map((d) => !f.device.length || f.device.includes(d));
+  const engDay = Object.fromEntries(VIS_ENGINES.map((e) => [e, new Array(n).fill(0)]));
+  const pages = picked.map((p) => {
+    const cur = dailyOf(p, W.from, W.to, dates), seoS = new Array(n), aiS = new Array(n), eng = Object.fromEntries(VIS_ENGINES.map((e) => [e, 0]));
+    let readDays = 0, lastI = -1;
+    for (let i = 0; i < n; i++) {
+      let sv = 0; for (let j = 0; j < VIS_DEVICES.length; j++) if (devOn[j]) sv += cur.seoDev[j][i];
+      let av = 0; for (let j = 0; j < VIS_BOTS.length; j++) { const h = cur.aiBot[j][i], e = VIS_BOTS[j][1]; eng[e] += h; engDay[e][i] += h; if (botOn[j]) av += h; }
+      seoS[i] = sv; aiS[i] = av; if (av > 0) { readDays++; lastI = i; }
+    }
+    let prevSeo = null, prevAi = null, prevEng = null;
+    if (prevOk) {
+      const pv = dailyOf(p, prevFrom, prevTo, prevDates); prevSeo = 0; prevAi = 0; prevEng = Object.fromEntries(VIS_ENGINES.map((e) => [e, 0]));
+      for (let i = 0; i < prevDates.length; i++) {
+        for (let j = 0; j < VIS_DEVICES.length; j++) if (devOn[j]) prevSeo += pv.seoDev[j][i];
+        for (let j = 0; j < VIS_BOTS.length; j++) { const h = pv.aiBot[j][i]; prevEng[VIS_BOTS[j][1]] += h; if (botOn[j]) prevAi += h; }
+      }
+    }
+    return { ...p, seoS, aiS, seo: sumOf(seoS), ai: sumOf(aiS), eng, prevEng, bots: cur.aiBot.map(sumOf), devs: cur.seoDev.map(sumOf), prevSeo, prevAi,
+      readDays, readRate: readDays / n, lastAgo: lastI < 0 ? null : n - 1 - lastI, section: sectionOf(p.path) };
+  });
+  const N = pages.length, P1 = pages.filter((p) => p.prio === 1);
+  const T = { seo: sumOf(pages.map((p) => p.seo)), ai: sumOf(pages.map((p) => p.ai)), pages: N, sites: sites0, days: n, p1: P1.length };
+  T.int = T.seo ? (T.ai / T.seo) * 1e4 : null;
+  T.cov = share(pages.filter((p) => p.ai > 0).length, N); T.cov1 = share(P1.filter((p) => p.ai > 0).length, P1.length);
+  T.stale1 = P1.filter((p) => p.lastAgo == null || p.lastAgo >= VIS_STALE);
+  // the original's quadrant (upper median of the period sums)
+  const seoSorted = pages.map((p) => p.seo).sort((a, b) => a - b), aiSorted = pages.map((p) => p.ai).sort((a, b) => a - b);
+  const seoMid = seoSorted[N >> 1], aiMid = aiSorted[N >> 1];
+  // 기대 대비 · 관심도 · 읽힌 날
+  const r = T.seo ? T.ai / T.seo : 0;
+  for (const p of pages) {
+    p.q = p.seo >= seoMid && p.ai >= aiMid ? "both" : p.seo >= seoMid ? "seo_only" : p.ai >= aiMid ? "crawl_only" : "neither";
+    p.int = p.seo ? (p.ai / p.seo) * 1e4 : null; p.exp = p.seo * r; p.ach = p.exp > 0 ? p.ai / p.exp : null; p.short = Math.max(0, p.exp - p.ai);
+    p.band = p.ai === 0 ? "none" : p.ach != null && p.ach < 0.5 ? "low" : p.ach != null && p.ach < 1 ? "mid" : "high";
+    p.freq = p.readDays === 0 ? "none" : p.readRate >= 0.9 ? "daily" : p.readRate >= 0.5 ? "often" : "rare";
+    p.d = prevOk ? p.ai - p.prevAi : null;
+  }
+  // 집중도
+  const asc = pages.map((p) => p.ai).sort((a, b) => a - b), lor = [[0, 0]]; let acc = 0;
+  asc.forEach((v, i) => { acc += v; lor.push([(i + 1) / N, T.ai ? acc / T.ai : 0]); });
+  const area = lor.reduce((s, [x, y], i) => (i ? s + ((x - lor[i - 1][0]) * (y + lor[i - 1][1])) / 2 : 0), 0);
+  T.gini = 1 - 2 * area;
+  const topN = Math.max(1, Math.round(N / 10)); T.top10 = share(sumOf(asc.slice(-topN)), T.ai); T.topN = topN;
+  // 직전 기간
+  if (prevOk) {
+    T.prevSeo = sumOf(pages.map((p) => p.prevSeo)); T.prevAi = sumOf(pages.map((p) => p.prevAi));
+    T.dAi = T.prevAi ? ((T.ai - T.prevAi) / T.prevAi) * 100 : null; T.dSeo = T.prevSeo ? ((T.seo - T.prevSeo) / T.prevSeo) * 100 : null;
+    const prevInt = T.prevSeo ? (T.prevAi / T.prevSeo) * 1e4 : null; T.dInt = prevInt ? ((T.int - prevInt) / prevInt) * 100 : null;
+    T.dCov1 = T.cov1 != null ? T.cov1 - share(P1.filter((p) => p.prevAi > 0).length, P1.length) : null;
+  }
+  // series: daily totals · engines, 7-day blocks for the sparklines and the engine share
+  const trend = dates.map((d, i) => ({ date: d, seo: sumOf(pages.map((p) => p.seoS[i])), ai: sumOf(pages.map((p) => p.aiS[i])) }));
+  const blocks = blocksOf(n), inBlk = (arr, [a, b]) => { let v = 0; for (let i = a; i <= b; i++) v += arr[i]; return v; };
+  const spark = {
+    ai: blocks.map((b) => inBlk(trend.map((t) => t.ai), b)),
+    int: blocks.map((b) => { const se = inBlk(trend.map((t) => t.seo), b); return se ? (inBlk(trend.map((t) => t.ai), b) / se) * 1e4 : 0; }),
+    cov1: blocks.map((b) => share(P1.filter((p) => inBlk(p.aiS, b) > 0).length, P1.length) ?? 0),
+    stale1: blocks.map((b) => P1.filter((p) => inBlk(p.aiS, b) === 0).length),
+  };
+  const blockLabel = (b) => `${mdDay(dates[b[0]])}–${mdDay(dates[b[1]])}`;
+  // engines (always every engine: the engine filter only greys out the ones not picked)
+  const allHits = sumOf(VIS_ENGINES.map((e) => sumOf(pages.map((p) => p.eng[e]))));
+  const engines = VIS_ENGINES.map((e) => { const hits = sumOf(pages.map((p) => p.eng[e])), prev = prevOk ? sumOf(pages.map((p) => p.prevEng[e])) : null;
+    return { engine: e, on: engOn(e), hits, share: share(hits, allHits), cov: share(pages.filter((p) => p.eng[e] > 0).length, N), cov1: share(P1.filter((p) => p.eng[e] > 0).length, P1.length),
+      d: prev ? ((hits - prev) / prev) * 100 : null, spark: blocks.map((b) => inBlk(engDay[e], b)),
+      bots: VIS_BOTS.map(([code, be], j) => ({ code, hits: be === e ? sumOf(pages.map((p) => p.bots[j])) : -1 })).filter((b) => b.hits >= 0).sort((a, b) => b.hits - a.hits) }; });
+  const engShare = blocks.map((b) => { const tot = sumOf(VIS_ENGINES.map((e) => inBlk(engDay[e], b))); return Object.fromEntries(VIS_ENGINES.map((e) => [e, tot ? (inBlk(engDay[e], b) / tot) * 100 : 0])); });
+  // which engines read each page (combinations, UpSet-style)
+  const combos = new Map();
+  for (const p of pages) { const k = VIS_ENGINES.filter((e) => p.eng[e] > 0).join("+"); combos.set(k, (combos.get(k) || 0) + 1); }
+  const comboRows = [...combos].map(([k, c]) => ({ set: k ? k.split("+") : [], n: c })).sort((a, b) => b.n - a.n || b.set.length - a.set.length);
+  // URL 섹션
+  const secMap = new Map(); for (const p of pages) { if (!secMap.has(p.section)) secMap.set(p.section, []); secMap.get(p.section).push(p); }
+  const devAll = VIS_DEVICES.map((_, j) => sumOf(pages.map((p) => p.devs[j])));
+  const sections = [...secMap].map(([sec, ps]) => { const seo = sumOf(ps.map((p) => p.seo)), ai = sumOf(ps.map((p) => p.ai)), dv = sumOf(ps.map((p) => sumOf(p.devs)));
+    return { sec, pages: ps.length, seo, ai, seoShare: share(seo, T.seo), aiShare: share(ai, T.ai), gap: (share(ai, T.ai) ?? 0) - (share(seo, T.seo) ?? 0),
+      cov: share(ps.filter((p) => p.ai > 0).length, ps.length), int: seo ? (ai / seo) * 1e4 : null, mobile: share(sumOf(ps.map((p) => p.devs[0])), dv),
+      engCov: Object.fromEntries(VIS_ENGINES.map((e) => [e, share(ps.filter((p) => p.eng[e] > 0).length, ps.length)])) }; }).sort((a, b) => b.seo - a.seo);
+  // 우선순위별 몫 · 읽힌 날 분포
+  const tiers = [1, 2, 3].map((k) => { const ps = pages.filter((p) => p.prio === k);
+    return { prio: k, pages: ps.length, pageShare: share(ps.length, N), seoShare: share(sumOf(ps.map((p) => p.seo)), T.seo), aiShare: share(sumOf(ps.map((p) => p.ai)), T.ai),
+      freq: Object.fromEntries(VIS_FREQ_ORDER.map((q) => [q, ps.filter((p) => p.freq === q).length])) }; }).filter((t) => t.pages);
+  // 사이트
+  const bySite = new Map(); for (const p of pages) { const k = `${p.brand}|${p.country}`; if (!bySite.has(k)) bySite.set(k, []); bySite.get(k).push(p); }
+  const sites = [...bySite].map(([key, ps]) => { const seo = sumOf(ps.map((p) => p.seo)), ai = sumOf(ps.map((p) => p.ai)), prev = prevOk ? sumOf(ps.map((p) => p.prevAi)) : null, p1 = ps.filter((p) => p.prio === 1);
+    const desc = ps.map((p) => p.ai).sort((a, b) => b - a), tn = Math.max(1, Math.round(ps.length / 10));
+    return { key, brand: ps[0].brand, country: ps[0].country, pages: ps.length, seo, ai, d: prev ? ((ai - prev) / prev) * 100 : null, int: seo ? (ai / seo) * 1e4 : null,
+      cov1: share(p1.filter((p) => p.ai > 0).length, p1.length), read: medianOf(ps.map((p) => p.readRate * 100)), top10: share(sumOf(desc.slice(0, tn)), ai),
+      short: ps.filter((p) => p.prio <= 2 && (p.band === "none" || p.band === "low")).length, stale1: p1.filter((p) => p.lastAgo == null || p.lastAgo >= VIS_STALE).length }; });
+  const changes = prevOk ? { fresh: pages.filter((p) => p.prevAi === 0 && p.ai > 0), lost: pages.filter((p) => p.prevAi > 0 && p.ai === 0),
+    up: pages.filter((p) => p.d > 0).sort((a, b) => b.d - a.d).slice(0, 5), down: pages.filter((p) => p.d < 0).sort((a, b) => a.d - b.d).slice(0, 5) } : null;
+  return { state: "ok", W, dates, prevOk, pages, T, r, seoMid, aiMid, trend, engDay, blocks, blockLabel, spark, engines, engShare, comboRows, sections, devAll, tiers, sites, changes,
+    quads: VIS_Q_ORDER.map((q) => ({ q, n: pages.filter((p) => p.q === q).length })), multiBrand: new Set(pages.map((p) => p.brand)).size > 1 };
+}
+const siteName = (p) => (S.data.v.multiBrand ? `${cname(p.country)} · ${p.brand}` : cname(p.country));
+const pageRef = (p) => `${p.name} (${siteName(p)})`;
+
+// ── states ──
+function visWait(kind) {
+  const V = S.data.v;
+  if (kind === "down") return `<section class="card wait" aria-label="불러오기 실패"><span class="wi">${ic("alert", "s20")}</span><h2>데이터를 불러오지 못했습니다</h2>
+    <p>분석 DB 연결 상태를 확인할 수 없습니다. 잠시 후 다시 시도하세요 — 필터와 기간은 그대로 둡니다.</p><button class="btn" data-vretry>다시 시도</button></section>`;
+  if (kind === "empty") return `<section class="card wait" aria-label="측정 대기"><span class="wi">${ic("hourglass", "s20")}</span><h2>AI 가시성 측정 대기</h2>
+    <p>사이트 ${V.sites}개가 연결되어 있지만 ${esc(V.W.from)} ~ ${esc(V.W.to)}의 측정 데이터가 아직 없습니다. 기간을 바꾸거나 다음 수집 뒤에 다시 확인하세요.</p></section>`;
+  return `<section class="card wait" aria-label="사이트 미연결"><span class="wi">${ic("plug", "s20")}</span><h2>연결된 사이트가 없습니다</h2>
+    <p>AI 가시성은 사이트 페이지의 검색 노출(Search Console)과 AI 크롤(서버 접속 기록)로 만듭니다. 이 계정 권한 범위에 연결된 사이트가 아직 없어, 수집이 연결되면 이 화면이 채워집니다.</p></section>`;
+}
+function visNoResult() {
+  const cs = S.data.v.siteCountries.map((c) => cname(c));
+  return `<section class="card wait" aria-label="결과 없음"><span class="wi">${ic("filter-x", "s20")}</span><h2>이 조건에 해당하는 사이트가 없습니다</h2>
+    <p>국가 선택지는 답변 측정 국가라 사이트가 없는 국가도 고를 수 있습니다 — 지금 권한에서 사이트가 있는 국가: ${esc(cs.join(", "))}.</p>
+    <button class="btn" data-reset>필터 초기화</button></section>`;
+}
+
+// ── tab rail (머리 › 필터 | 탭 › 본문 — the filter stands beside every tab) ──
+function visTabsHtml() {
+  const V = S.data.v;
+  if (V.state !== "ok") return "";
+  const T = V.T, shortN = V.pages.filter((p) => p.prio <= 2 && (p.band === "none" || p.band === "low")).length;
+  const val = { sum: `P1 커버리지 <b>${pct(T.cov1, 0)}</b>`, page: `부족 페이지 <b>${shortN}</b>`, engine: `엔진 <b>${V.engines.filter((e) => e.hits).length}</b>개`, site: `사이트 <b>${T.sites}</b> · 섹션 <b>${V.sections.length}</b>` };
+  return `<nav class="ptabs" aria-label="보기">${VIS_TABS.map(([k, l]) => `<button class="pt ${vTab === k ? "on" : ""}" data-vtab="${k}" ${vTab === k ? `aria-current="page"` : ""}><span class="pt-n">${l}</span><span class="pt-v">${val[k]}</span></button>`).join("")}</nav>`;
+}
+
+// ══ 요약 ══
+function visInsightList() {
+  const V = S.data.v, T = V.T, out = [];
+  if (T.stale1.length) out.push({ pri: 9, tone: "warn", tag: "우선순위 1", title: `우선순위 1 페이지 ${T.stale1.length}개가 ${VIS_STALE}일 넘게 AI 크롤 없음`,
+    detail: T.stale1.slice(0, 2).map(pageRef).join(" · ") + (T.stale1.length > 2 ? ` 외 ${T.stale1.length - 2}개` : "") + " — 크롤러 차단 · 링크 구조 확인" });
+  const worst = [...V.sections].filter((s) => s.pages >= 3).sort((a, b) => a.gap - b.gap)[0];
+  if (worst && worst.gap <= -5) out.push({ pri: 8, tone: "warn", tag: "URL 섹션", title: `${worst.sec} — 검색 노출의 ${pct(worst.seoShare, 0)}, AI 크롤은 ${pct(worst.aiShare, 0)}`,
+    detail: `검색 1만 노출당 AI 크롤 ${int1(worst.int)}회 (전체 ${int1(T.int)}회) · 커버리지 ${pct(worst.cov, 0)}` });
+  const sh = V.pages.filter((p) => p.prio <= 2 && (p.band === "none" || p.band === "low")).sort((a, b) => b.short - a.short);
+  if (sh.length) out.push({ pri: 7, tone: "warn", tag: "기대 대비", title: `검색 규모에 비해 AI 크롤이 기대의 절반에 못 미치는 우선순위 1·2 페이지 ${sh.length}개`,
+    detail: `부족분 합 ${fmtN(sumOf(sh.map((p) => p.short)))}회 · 가장 큰 곳 ${pageRef(sh[0])}` });
+  const on = V.engines.filter((e) => e.on && e.hits).sort((a, b) => a.cov - b.cov);
+  if (on.length > 1 && on[on.length - 1].cov - on[0].cov >= 15) out.push({ pri: 6, tone: "info", tag: "AI 엔진", title: `${VIS_ENGINE[on[0].engine]}는 페이지의 ${pct(on[0].cov, 0)}만 읽음 — ${VIS_ENGINE[on[on.length - 1].engine]} ${pct(on[on.length - 1].cov, 0)}`,
+    detail: `우선순위 1 기준 ${pct(on[0].cov1, 0)} vs ${pct(on[on.length - 1].cov1, 0)}` });
+  if (V.changes) out.push({ pri: 5, tone: V.changes.lost.length > V.changes.fresh.length ? "warn" : T.dAi >= 0 ? "good" : "warn", tag: "변화", title: `AI 크롤 직전 ${T.days}일 대비 ${pctChg(T.dAi)}`,
+    detail: `새로 읽힌 페이지 ${V.changes.fresh.length}개 · 읽기가 끊긴 페이지 ${V.changes.lost.length}개` });
+  if (T.top10 >= 35) out.push({ pri: 4, tone: "info", tag: "집중도", title: `AI 크롤의 ${pct(T.top10, 0)}가 상위 10% 페이지(${T.topN}개)에 몰림`, detail: `지니 계수 ${T.gini.toFixed(2)} · 검색 노출 상위 10%의 몫과 비교해 보세요` });
+  return out.sort((a, b) => b.pri - a.pri).slice(0, 4);
+}
+function visHero() {
+  const V = S.data.v, T = V.T, sp = V.spark;
+  const tile = ({ name, info, value, unit, d, sub, series, inv }) => `<div class="vk"><span class="vk-n">${name}${info}</span><b class="vk-v num">${value}${unit ? `<small>${unit}</small>` : ""}</b>
+    <span class="vk-d">${d ?? `<span class="dlt none">${NO_DELTA}</span>`}<span>${V.prevOk ? "직전 기간 대비" : "직전 기간 데이터 없음"}</span></span>${series.length > 1 ? spark(series, inv) : ""}<span class="vk-x">${sub}</span></div>`;
+  const tiles = [
+    { name: "AI 크롤 커버리지 · 우선순위 1", info: infoTip(VDEF.cov.d, VDEF.cov.f), value: T.cov1 == null ? "—" : T.cov1.toFixed(1), unit: "%", d: V.prevOk && T.dCov1 != null ? dchip(T.dCov1) : null, sub: `전체 페이지 ${pct(T.cov)} · 7일 단위 추이`, series: sp.cov1 },
+    { name: "AI 크롤", info: infoTip(VDEF.ai.d, VDEF.ai.f), value: fmtN(T.ai), unit: "회", d: V.prevOk ? dchip(T.dAi, { unit: "%" }) : null, sub: `검색 노출 ${visK(T.seo)} · ${pctChg(T.dSeo)}`, series: sp.ai },
+    { name: "AI 관심도", info: infoTip(VDEF.int.d, VDEF.int.f), value: int1(T.int), unit: "회", d: V.prevOk ? dchip(T.dInt, { unit: "%" }) : null, sub: "검색 노출 1만 회당 AI 크롤", series: sp.int },
+    { name: `${VIS_STALE}일 넘게 안 읽힌 우선순위 1`, info: infoTip(VDEF.stale.d, VDEF.stale.f), value: T.stale1.length, unit: `/ ${T.p1}`, d: null, sub: "7일 단위로 한 번도 안 읽힌 P1 수", series: sp.stale1, inv: true },
+    { name: "상위 10% 집중도", info: infoTip(VDEF.top.d, VDEF.top.f), value: T.top10 == null ? "—" : T.top10.toFixed(0), unit: "%", d: null, sub: `페이지 ${T.topN}개가 받은 AI 크롤 몫 · 지니 ${T.gini.toFixed(2)}`, series: [] },
+  ];
+  return `<section class="card ins vhero stale" aria-label="이 기간 요약">${busy()}
+    ${cardHead({ title: "이 기간 요약", info: noteTip("만드는 방법", "위 다섯 지표는 페이지 · 날짜별 검색 노출과 AI 크롤에서 바로 계산합니다(각 ⓘ에 산식). 아래 발견은 이 탭들의 숫자에서 규칙으로 고른 4개입니다 — 오래 안 읽힌 우선순위 1, URL 섹션의 검색 · AI 비중 차이, 기대 대비 부족, 엔진별 커버리지 차이, 직전 기간 대비 변화, 집중도 순."), chips: [bchip(V.prevOk ? `${V.W.from} ~ ${V.W.to} · 직전 ${T.days}일 대비` : `${V.W.from} ~ ${V.W.to}`)] })}
+    <div class="vsc">${tiles.map(tile).join("")}</div>
+    ${insightGrid(visInsightList())}
+  </section>`;
+}
+function visTrendCard() {
+  const V = S.data.v, id = "vis-eng-trend", x = V.dates.map(mdDay), tipX = (i) => V.dates[i];
+  const stack = { type: "vstack", stack: true, x, tipX, series: VIS_ENGINES.map((e) => ({ key: e, name: VIS_ENGINE[e], color: V.engines.find((g) => g.engine === e).on ? VIS_ENG_COL[e] : COL.ctx, values: V.engDay[e] })), y: { fmt: visK, val: (v) => `${fmtN(v)}회` }, label: "엔진별 AI 크롤 일별 누적 영역" };
+  const seo = { type: "line", x, tipX, series: [{ key: "seo", name: "검색 노출", color: "#7a736b", values: V.trend.map((t) => t.seo), area: true }], y: { min: 0, fmt: visK, val: (v) => `${fmtN(v)}회` }, label: "검색 노출 일별 추이" };
+  return `<section class="card stale" aria-label="AI 크롤 추이">${busy()}
+    ${cardHead({ title: "AI 크롤 추이 · 엔진별", info: noteTip("읽는 법", "날마다 엔진별 AI 크롤을 쌓았습니다(bots 행의 날짜 × 엔진 합). 아래는 같은 날짜 축의 검색 노출 — 크기가 수백 배 달라 따로 그립니다. 엔진 필터에서 고르지 않은 엔진은 회색입니다."), chips: [bchip(`${V.W.from} ~ ${V.W.to}`)], id })}
+    <div class="card-b"><span class="lg" style="margin-bottom:8px">${VIS_ENGINES.map((e) => `<span class="k"><i class="sq" style="background:${VIS_ENG_COL[e]}"></i>${VIS_ENGINE[e]}</span>`).join("")}</span>
+      ${chartBox(id, stack, 200)}<div class="ch-h vsub"><h3>검색 노출 · 일별</h3></div>${chartBox("vis-seo", seo, 96)}</div>
+  </section>`;
+}
+// stacked areas (absolute): the hover lists each series that day, no dots (they would sit on the stack, not the value)
+function drawStack(spec, W, H) {
+  const padL = 46, padR = 14, padT = 10, padB = 24, pw = Math.max(40, W - padL - padR), ph = H - padT - padB, n = spec.x.length;
+  const tot = spec.x.map((_, i) => sumOf(spec.series.map((s) => s.values[i])));
+  const ticks = niceTicks(0, Math.max(1, ...tot), 4), hi = ticks[ticks.length - 1];
+  const step = n > 1 ? pw / (n - 1) : 0, X = (i) => padL + (n > 1 ? i * step : pw / 2), Y = (v) => padT + (1 - v / hi) * ph;
+  let g = "";
+  for (const t of ticks) g += `<line class="gl" x1="${padL}" x2="${padL + pw}" y1="${Y(t).toFixed(1)}" y2="${Y(t).toFixed(1)}"/><text x="${padL - 8}" y="${(Y(t) + 4).toFixed(1)}" text-anchor="end">${spec.y.fmt(t)}</text>`;
+  const every = Math.max(1, Math.ceil(n / Math.max(2, Math.floor(pw / 64))));
+  spec.x.forEach((lab, i) => { if ((i % every === 0 || i === n - 1) && !(i !== n - 1 && n - 1 - i < every * 0.6)) g += `<text x="${X(i).toFixed(1)}" y="${H - 6}" text-anchor="middle">${lab}</text>`; });
+  let base = new Array(n).fill(0);
+  for (const s of spec.series) {
+    const top = base.map((b, i) => b + s.values[i]);
+    const up = top.map((v, i) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`), dn = base.map((v, i) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`).reverse();
+    g += `<g class="s" data-s="${esc(s.key)}"><path d="M${up.join("L")}L${dn.join("L")}Z" fill="${s.color}" opacity=".9"/></g>`;
+    base = top;
+  }
+  g += `<line class="xh" x1="0" x2="0" y1="${padT}" y2="${padT + ph}" visibility="hidden"/><g class="dotg"></g><rect class="hit" x="${padL - 6}" y="${padT}" width="${pw + 12}" height="${ph}"/>`;
+  return { svg: `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${g}</svg>`, geo: { X, Y, n, padL, step } };
+}
+function visTierCard() {
+  const V = S.data.v, id = "vis-tier";
+  const rows = [["pageShare", "페이지 수"], ["seoShare", "검색 노출"], ["aiShare", "AI 크롤"]];
+  const tc = { 1: COL.own, 2: "#5a85b3", 3: "#c9d6e6" };
+  const twin = `<div class="twin" style="padding:0 24px 18px"><table><thead><tr><th>우선순위</th><th class="r">페이지</th><th class="r">페이지 몫</th><th class="r">검색 노출 몫</th><th class="r">AI 크롤 몫</th></tr></thead><tbody>${V.tiers.map((t) => `<tr><td>${t.prio}</td><td class="r num">${t.pages}</td><td class="r num">${pct(t.pageShare)}</td><td class="r num">${pct(t.seoShare)}</td><td class="r num">${pct(t.aiShare)}</td></tr>`).join("")}</tbody></table></div>`;
+  const t1 = V.tiers.find((t) => t.prio === 1);
+  return `<section class="card stale" aria-label="우선순위별 몫">${busy()}
+    ${cardHead({ title: "우선순위별 몫", info: noteTip("읽는 법", "우선순위(page_priority)마다 페이지 수 · 검색 노출 · AI 크롤이 전체에서 차지하는 몫입니다. 우선순위 1의 AI 크롤 몫이 검색 노출 몫보다 작으면, 중요한 페이지가 검색 수요만큼 AI에게 읽히지 않는다는 뜻입니다."), id })}
+    ${tableView.has(id) ? twin : `<div class="vtier">${rows.map(([k, l]) => `<div class="vt-r"><span class="vt-l">${l}</span><span class="vt-b">${V.tiers.map((t) => `<i style="width:${(t[k] ?? 0).toFixed(2)}%;background:${tc[t.prio]}" data-tip="${esc(`우선순위 ${t.prio} · ${l}\n${pct(t[k])}`)}">${(t[k] ?? 0) >= 9 ? `<span>${pct(t[k], 0)}</span>` : ""}</i>`).join("")}</span></div>`).join("")}
+      <div class="lg">${V.tiers.map((t) => `<span class="k"><i class="sq" style="background:${tc[t.prio]}"></i>우선순위 ${t.prio} · ${t.pages}개</span>`).join("")}</div>
+      ${t1 ? `<p class="vnote">우선순위 1은 페이지의 <b>${pct(t1.pageShare, 0)}</b>, 검색 노출의 <b>${pct(t1.seoShare, 0)}</b>, AI 크롤의 <b>${pct(t1.aiShare, 0)}</b>를 차지합니다.</p>` : ""}</div>`}
+  </section>`;
+}
+function visFreqCard() {
+  const V = S.data.v, id = "vis-freq";
+  const twin = `<div class="twin" style="padding:0 24px 18px"><table><thead><tr><th>우선순위</th>${VIS_FREQ_ORDER.map((q) => `<th class="r">${VIS_FREQ[q].name}</th>`).join("")}</tr></thead><tbody>${V.tiers.map((t) => `<tr><td>${t.prio}</td>${VIS_FREQ_ORDER.map((q) => `<td class="r num">${t.freq[q]}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+  return `<section class="card stale" aria-label="AI가 얼마나 자주 읽나">${busy()}
+    ${cardHead({ title: "AI가 얼마나 자주 읽나", info: infoTip(VDEF.read.d, VDEF.read.f), chips: [bchip(`측정일 ${V.T.days}일`, "info")], id })}
+    ${tableView.has(id) ? twin : `<div class="vtier">${V.tiers.map((t) => `<div class="vt-r"><span class="vt-l">우선순위 ${t.prio}</span><span class="vt-b">${VIS_FREQ_ORDER.map((q) => { const w = (t.freq[q] / t.pages) * 100; return `<i style="width:${w.toFixed(2)}%;background:${VIS_FREQ[q].color};color:${q === "daily" || q === "often" ? "#fff" : "var(--ink-2)"}" data-tip="${esc(`우선순위 ${t.prio} · ${VIS_FREQ[q].name}\n페이지 ${t.freq[q]}개 / ${t.pages}개`)}">${w >= 9 ? `<span>${t.freq[q]}</span>` : ""}</i>`; }).join("")}</span></div>`).join("")}
+      <div class="lg">${VIS_FREQ_ORDER.map((q) => `<span class="k"><i class="sq" style="background:${VIS_FREQ[q].color}"></i>${VIS_FREQ[q].name}</span>`).join("")}</div></div>`}
+  </section>`;
+}
+function visLorenzCard() {
+  const V = S.data.v, T = V.T, id = "vis-lorenz", asc = V.pages.map((p) => p.ai).sort((a, b) => a - b), N = asc.length;
+  const pts = [[0, 0]]; let acc = 0; asc.forEach((v, i) => { acc += v; if (i % Math.max(1, Math.floor(N / 120)) === 0 || i === N - 1) pts.push([(i + 1) / N, T.ai ? acc / T.ai : 0]); });
+  CH[id] = { type: "lorenz", h: 220, points: pts, top10: T.top10 };
+  const at = (q) => { const k = Math.max(1, Math.round(N * q)); return share(sumOf(asc.slice(-k)), T.ai); };
+  return `<section class="card stale" aria-label="AI 크롤 집중도">${busy()}
+    ${cardHead({ title: "AI 크롤 집중도", info: infoTip(VDEF.top.d, VDEF.top.f), id, table: false })}
+    <div class="vlz"><div class="chart" data-ch="${id}" style="height:220px" role="img" aria-label="AI 크롤 로렌츠 곡선"></div>
+      <dl class="vlz-s"><div><dt>상위 1%</dt><dd>${pct(at(0.01), 0)}</dd></div><div><dt>상위 10%</dt><dd>${pct(at(0.1), 0)}</dd></div><div><dt>상위 50%</dt><dd>${pct(at(0.5), 0)}</dd></div><div><dt>지니 계수</dt><dd>${T.gini.toFixed(2)}</dd></div></dl></div>
+  </section>`;
+}
+function drawLorenz(spec, W, H) {
+  const padL = 40, padR = 12, padT = 10, padB = 28, pw = W - padL - padR, ph = H - padT - padB, X = (x) => padL + x * pw, Y = (y) => padT + (1 - y) * ph;
+  let g = "";
+  for (const t of [0, 0.25, 0.5, 0.75, 1]) g += `<line class="gl" x1="${padL}" x2="${padL + pw}" y1="${Y(t).toFixed(1)}" y2="${Y(t).toFixed(1)}"/><text x="${padL - 6}" y="${(Y(t) + 4).toFixed(1)}" text-anchor="end">${t * 100}%</text><text x="${X(t).toFixed(1)}" y="${H - 10}" text-anchor="middle">${t * 100}%</text>`;
+  g += `<line class="ref" x1="${X(0)}" y1="${Y(0)}" x2="${X(1)}" y2="${Y(1)}"/><text class="qd" x="${X(0.3) - 8}" y="${Y(0.3) + 4}" text-anchor="end">균등선</text>`;
+  const d = spec.points.map(([x, y], i) => `${i ? "L" : "M"}${X(x).toFixed(1)},${Y(y).toFixed(1)}`).join("");
+  g += `<path d="${d}L${X(1)},${Y(0)}Z" fill="${COL.own}" opacity=".08"/><path d="${d}" fill="none" stroke="${COL.own}" stroke-width="2"/>`;
+  const y9 = 1 - (spec.top10 ?? 0) / 100;
+  g += `<line class="ref" x1="${padL}" x2="${X(0.9)}" y1="${Y(y9)}" y2="${Y(y9)}" style="stroke:${COL.own};stroke-dasharray:2 3"/><circle cx="${X(0.9)}" cy="${Y(y9)}" r="4" fill="${COL.own}" stroke="#fff" stroke-width="2"/>`;
+  g += `<text class="ax" x="${padL + pw}" y="${H - 0}" text-anchor="end" dy="-1">페이지 (AI 크롤 적은 순) →</text>`;
+  return { svg: `<svg class="scp" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${g}</svg>`, geo: {} };
+}
+function visDeviceCard() {
+  const V = S.data.v, id = "vis-dev", tot = sumOf(V.devAll) || 1;
+  const devs = VIS_DEVICES.map((d, j) => ({ device: d, imp: V.devAll[j], color: VIS_DEV_COL[j], on: !S.f.device.length || S.f.device.includes(d) }));
+  return `<section class="card stale" aria-label="기기별 검색 노출">${busy()}
+    ${cardHead({ title: "기기별 검색 노출", info: noteTip("읽는 법", "검색 노출이 어느 기기의 검색 결과에서 나왔는지입니다(devices 행). AI 크롤에는 기기 구분이 없습니다. 디바이스 필터에서 고르지 않은 기기는 흐리게 둡니다."), id, table: false })}
+    <div class="dv"><div class="dv-bar" role="img" aria-label="기기별 검색 노출 비중">${devs.map((d) => `<i style="width:${((d.imp / tot) * 100).toFixed(2)}%;background:${d.on ? d.color : COL.ctx}" data-tip="${esc(`${valueLabel("device", d.device)}\n검색 노출 ${fmtN(d.imp)} · ${pct((d.imp / tot) * 100)}`)}"></i>`).join("")}</div>
+      <div>${devs.map((d) => `<div class="dv-r ${d.on ? "" : "off"}"><span class="nm"><i class="sq" style="background:${d.color}"></i>${valueLabel("device", d.device)}${d.on ? "" : `<span class="tag-o">필터로 제외</span>`}</span><span class="v">${fmtN(d.imp)}</span><span class="p">${pct((d.imp / tot) * 100)}</span></div>`).join("")}</div></div>
+  </section>`;
+}
+function visSumTab() {
+  return `${visHero()}${visTrendCard()}<div class="vg2 eq">${visTierCard()}${visFreqCard()}</div><div class="vg2 eq">${visLorenzCard()}${visDeviceCard()}</div>`;
+}
+
+// ══ 페이지 진단 ══
+const engDots = (p) => `<span class="edots">${VIS_ENGINES.map((e) => `<i class="${p.eng[e] > 0 ? "on" : ""}" style="${p.eng[e] > 0 ? `background:${VIS_ENG_COL[e]}` : ""}" title="${VIS_ENGINE[e]} ${p.eng[e] > 0 ? `${fmtN(p.eng[e])}회` : "읽지 않음"}"></i>`).join("")}</span>`;
+const agoTxt = (p) => (p.lastAgo == null ? `<span class="ago none">기간 내 없음</span>` : p.lastAgo === 0 ? `<span class="ago">마지막 날</span>` : `<span class="ago ${p.lastAgo >= VIS_STALE ? "old" : ""}">${p.lastAgo}일 전</span>`);
+function visWorkCard() {
+  const V = S.data.v, rows = V.pages.filter((p) => (vwAll || p.prio <= 2) && (p.band === "none" || p.band === "low")).sort((a, b) => b.short - a.short), shown = rows.slice(0, 15);
+  const max = Math.max(1, ...shown.map((p) => p.exp));
+  return `<section class="card stale" aria-label="AI 크롤 부족 페이지">${busy()}
+    ${cardHead({ title: "AI 크롤 부족 페이지", info: infoTip(VDEF.exp.d, VDEF.exp.f), chips: [bchip(`기대 = 검색 1만 노출당 ${int1(V.T.int)}회`, "info")], id: "vis-work", table: false, right: `<button class="sw" role="switch" aria-checked="${vwAll}" data-vwall><i></i>우선순위 3 포함</button>`,
+      sub: "검색 노출 규모에 비해 AI 크롤이 기대의 절반에 못 미치는 페이지를 부족분이 큰 순서로 — 고칠 곳의 목록입니다." })}
+    <div class="vw-h"><span>#</span><span>우선</span><span>페이지</span><span class="r">검색 노출</span><span>AI 크롤 — 실제 / 기대</span><span class="r">달성률</span><span>읽힌 날</span><span>마지막 크롤</span><span>읽은 엔진</span></div>
+    <div role="list">${shown.length ? shown.map((p, i) => `<div class="vw-r" role="listitem">
+      <span class="no">${i + 1}</span><span><span class="pr p${p.prio}">${p.prio}</span></span>
+      <span class="vpg"><b title="${esc(p.title)}">${esc(p.name)}</b><span class="pu">${esc(siteName(p))} · ${esc(p.path)}</span></span>
+      <span class="r num">${fmtN(p.seo)}</span>
+      <span class="vbul" data-tip="${esc(`${p.name} · ${siteName(p)}\n실제 ${fmtN(p.ai)}회 · 기대 ${fmtN(p.exp)}회 · 부족 ${fmtN(p.short)}회`)}"><span class="vbt"><i class="a" style="width:${((p.ai / max) * 100).toFixed(1)}%"></i><i class="e" style="left:${((p.exp / max) * 100).toFixed(1)}%"></i></span><span class="num">${fmtN(p.ai)} / ${fmtN(p.exp)}</span></span>
+      <span class="r num ach ${p.band}">${p.ach == null ? "—" : pct(p.ach * 100, 0)}</span>
+      <span class="num">${pct(p.readRate * 100, 0)}</span><span>${agoTxt(p)}</span><span>${engDots(p)}</span></div>`).join("") : `<p class="nodata" style="margin:16px 24px">기대의 절반에 못 미치는 페이지가 없습니다</p>`}</div>
+    ${rows.length > 15 ? `<div class="card-f"><span>상위 15개 · 전체 ${rows.length}개는 아래 ‘전체 페이지’ 표에서 ‘부족분’ 순으로 볼 수 있습니다.</span></div>` : ""}
+  </section>`;
+}
+function visGapCard() {
+  const V = S.data.v, id = "vis-gap";
+  CH[id] = { type: "vscatter", h: 360, points: V.pages, r: V.r };
+  const cnt = (b) => V.pages.filter((p) => p.band === b).length;
+  return `<section class="card stale" aria-label="검색 노출 × AI 크롤">${busy()}
+    ${cardHead({ title: "검색 노출 × AI 크롤", info: infoTip(VDEF.exp.d, VDEF.exp.f), chips: [bchip(`페이지 ${fmtN(V.T.pages)}개 · 로그 눈금`, "info")], id, table: false,
+      sub: "점 하나 = 페이지 하나, 큰 점 = 우선순위 1. 실선 = 기대선(범위 전체의 검색 1만 노출당 AI 크롤), 점선 = 기대의 50%. 선 아래 주황 · 빨강 점이 검색 수요만큼 AI에게 읽히지 않는 페이지입니다." })}
+    <div class="vq"><div class="chart" data-ch="${id}" style="height:360px" role="img" aria-label="페이지별 검색 노출 대비 AI 크롤과 기대선"></div>
+      <div class="vq-side">${VIS_BAND_ORDER.map((b) => { const ps = V.pages.filter((p) => p.band === b);
+        return `<div class="vq-t" style="--qc:${VIS_BAND[b].color}"><div class="vq-n"><i class="sq" style="background:${VIS_BAND[b].color}"></i><b>${VIS_BAND[b].name}</b><span class="vq-c num">${cnt(b)}<small>개</small></span></div>
+          <div class="vq-s"><span>우선순위 1 <b>${ps.filter((p) => p.prio === 1).length}</b></span><span>검색 노출 <b>${pct(share(sumOf(ps.map((p) => p.seo)), V.T.seo), 0)}</b></span><span>AI 크롤 <b>${pct(share(sumOf(ps.map((p) => p.ai)), V.T.ai), 0)}</b></span></div></div>`; }).join("")}</div></div>
+  </section>`;
+}
+function drawVisScatter(spec, W, H) {
+  const padL = 50, padR = 16, padT = 20, padB = 40, pw = W - padL - padR, ph = H - padT - padB, L = (v) => Math.log10(v + 1);
+  const xMax = Math.max(2, Math.ceil(L(Math.max(...spec.points.map((p) => p.seo))))), yMax = Math.max(2, Math.ceil(L(Math.max(...spec.points.map((p) => p.ai)))));
+  const X = (v) => padL + (L(v) / xMax) * pw, Y = (v) => padT + (1 - L(v) / yMax) * ph, tick = (e) => (e ? visK(10 ** e) : "0");
+  let g = "";
+  for (let e = 0; e <= xMax; e++) { const x = padL + (e / xMax) * pw; g += `<line class="gl" x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="${padT}" y2="${padT + ph}"/><text x="${x.toFixed(1)}" y="${H - 22}" text-anchor="middle">${tick(e)}</text>`; }
+  for (let e = 0; e <= yMax; e++) { const y = padT + (1 - e / yMax) * ph; g += `<line class="gl" x1="${padL}" x2="${padL + pw}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}"/><text x="${padL - 8}" y="${(y + 4).toFixed(1)}" text-anchor="end">${tick(e)}</text>`; }
+  g += `<text class="ax" x="${padL + pw}" y="${H - 4}" text-anchor="end">검색 노출 →</text><text class="ax" x="${padL}" y="${padT - 8}" text-anchor="start">↑ AI 크롤</text>`;
+  // the expectation lines y = k·r·x (straight in log space), drawn where they are inside the plot
+  for (const [k, cls, lab] of [[1, "exp", "기대선"], [0.5, "exp half", "기대의 50%"]]) {
+    const pts = []; for (let i = 0; i <= 60; i++) { const xv = 10 ** ((i / 60) * xMax) - 1, yv = k * spec.r * xv; if (yv >= 1 && L(yv) <= yMax) pts.push([X(xv), Y(yv)]); }
+    if (pts.length > 1) { g += `<path class="${cls}" d="M${pts.map((q) => `${q[0].toFixed(1)},${q[1].toFixed(1)}`).join("L")}"/>`; const q = pts[0]; g += `<text class="mid" x="${(q[0] + (k === 1 ? -6 : 8)).toFixed(1)}" y="${(q[1] + (k === 1 ? -8 : 14)).toFixed(1)}" text-anchor="${k === 1 ? "end" : "start"}">${lab}</text>`; }
+  }
+  const order = { high: 0, mid: 1, low: 2, none: 3 };
+  for (const p of [...spec.points].sort((a, b) => order[a.band] - order[b.band] || b.prio - a.prio)) {
+    g += `<circle class="vpt" cx="${X(p.seo).toFixed(1)}" cy="${Y(p.ai).toFixed(1)}" r="${p.prio === 1 ? 5 : 3.5}" fill="${VIS_BAND[p.band].color}" stroke="#fff" stroke-width="${p.prio === 1 ? 1.5 : 1}" data-tip="${esc(`${p.name} · ${siteName(p)}\n${p.path}\n검색 노출 ${fmtN(p.seo)} · AI 크롤 ${fmtN(p.ai)} (기대 ${fmtN(p.exp)})\n${VIS_BAND[p.band].name} · 우선순위 ${p.prio}`)}"/>`;
+  }
+  return { svg: `<svg class="scp" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${g}</svg>`, geo: {} };
+}
+function visChangeCard() {
+  const V = S.data.v, C = V.changes;
+  if (!C) return `<section class="card stale" aria-label="기간 대비 변화"><div class="card-h"><h2>직전 기간 대비 변화</h2></div><p class="nodata">직전 같은 길이 기간(${V.T.days}일)이 데이터 시작일(${VIS_FIRST}) 앞이라 비교하지 않습니다.</p></section>`;
+  const col = (title, tone, list, val, empty) => `<div class="vc-col"><h3 class="${tone}">${title}<span class="num">${list.length}</span></h3>${list.length ? `<ol>${list.slice(0, 5).map((p) => `<li><span class="vpg"><b title="${esc(p.title)}">${esc(p.name)}</b><span class="pu">${esc(siteName(p))} · 우선순위 ${p.prio}</span></span><span class="num">${val(p)}</span></li>`).join("")}</ol>${list.length > 5 ? `<p class="more2">외 ${list.length - 5}개 — 전체 페이지 표에서 확인</p>` : ""}` : `<p class="nodata sm">${empty}</p>`}</div>`;
+  return `<section class="card stale" aria-label="기간 대비 변화">${busy()}
+    ${cardHead({ title: "직전 기간 대비 변화", info: noteTip("읽는 법", `직전 같은 길이 기간(${V.T.days}일)과 페이지별 AI 크롤을 비교합니다. 새로 읽힘 = 직전 0회 → 이번 1회 이상, 읽기 끊김 = 직전 1회 이상 → 이번 0회. 증가 · 감소는 크롤 수의 차이.`), chips: [bchip(`직전 ${addDays(V.W.from, -V.T.days)} ~ ${addDays(V.W.from, -1)}`)], id: "vis-chg", table: false })}
+    <div class="vc">${col("읽기가 끊긴 페이지", "bad", C.lost, (p) => `${fmtN(p.prevAi)} → 0`, "없음")}${col("새로 읽힌 페이지", "good", C.fresh, (p) => `0 → ${fmtN(p.ai)}`, "없음")}${col("크게 늘어난 페이지", "good", C.up, (p) => `+${fmtN(p.d)}`, "없음")}${col("크게 줄어든 페이지", "bad", C.down, (p) => `−${fmtN(-p.d)}`, "없음")}</div>
+  </section>`;
+}
+const VP_SORT = { prio: (a, b) => a.prio - b.prio || b.seo - a.seo, seo: (a, b) => a.seo - b.seo, ai: (a, b) => a.ai - b.ai, short: (a, b) => a.short - b.short, int: (a, b) => (a.int ?? -1) - (b.int ?? -1), read: (a, b) => a.readRate - b.readRate, ago: (a, b) => (a.lastAgo ?? 1e9) - (b.lastAgo ?? 1e9), site: (a, b) => siteName(a).localeCompare(siteName(b), "ko") };
+function visTableCard() {
+  const V = S.data.v, s = vpS.trim().toLowerCase(), multi = V.sites.length > 1;
+  const rows = V.pages.filter((p) => (vpQ === "all" || p.q === vpQ) && (!vpP1 || p.prio === 1) && (!s || p.title.toLowerCase().includes(s) || p.path.toLowerCase().includes(s)))
+    .sort((a, b) => VP_SORT[vpSort.k](a, b) * vpSort.dir || a.path.localeCompare(b.path));
+  const shown = vpMore ? rows : rows.slice(0, 20);
+  const th = (key, label, cls = "", info = "") => { const on = vpSort.k === key; return `<span class="${cls}"><button class="srt" data-vpsort="${key}" ${on ? `aria-sort="${vpSort.dir < 0 ? "descending" : "ascending"}"` : ""}>${label}${ic(on && vpSort.dir > 0 ? "up" : "down", "s12")}</button>${info}</span>`; };
+  const segs = [["all", "전체", V.pages.length], ...VIS_Q_ORDER.map((q) => [q, VIS_Q[q].name, V.quads.find((x) => x.q === q).n])];
+  const cls = multi ? "" : "one";
+  return `<section class="card stale" aria-label="전체 페이지">${busy()}
+    ${cardHead({ title: "전체 페이지", info: noteTip("읽는 법", "페이지마다 이 화면의 지표를 한 줄에. 분면 필터는 원본 화면의 분류(검색 노출 · AI 크롤 각각의 중앙값 기준)라 원본과 같은 수가 나옵니다. 추이 = 그 페이지의 일별 AI 크롤."), chips: [bchip(`${V.W.from} ~ ${V.W.to}`)], id: "vis-pages", table: false })}
+    <div class="tool"><span class="seg2" role="radiogroup" aria-label="원본 분면">${segs.map(([k, l, c]) => `<button class="${vpQ === k ? "on" : ""}" data-vpq="${k}" role="radio" aria-checked="${vpQ === k}">${l} <span class="num" style="opacity:.7">${c}</span></button>`).join("")}</span>
+      <button class="sw" role="switch" aria-checked="${vpP1}" data-vpp1><i></i>우선순위 1만</button>
+      <span class="rr"><label class="finwrap">${ic("search", "s14")}<input class="finput" id="vps" data-vps placeholder="페이지 이름 · 경로 검색" value="${esc(vpS)}" aria-label="페이지 검색"></label><span class="cnt2">${fmtN(rows.length)}개</span></span></div>
+    <div class="vp-h ${cls}" role="row">${th("prio", "우선")}<span>페이지</span>${multi ? th("site", "사이트", "vc-st") : ""}${th("seo", "검색 노출", "r", infoTip(VDEF.seo.d, VDEF.seo.f))}${th("ai", "AI 크롤", "r", infoTip(VDEF.ai.d, VDEF.ai.f))}${th("short", "부족분", "r", infoTip(VDEF.exp.d, VDEF.exp.f))}${th("int", "관심도", "r vc-x", infoTip(VDEF.int.d, VDEF.int.f, true))}${th("read", "읽힌 날", "r vc-x")}${th("ago", "마지막 크롤", "r", infoTip(VDEF.stale.d, VDEF.stale.f, true))}<span>원본 분면</span></div>
+    <div role="table" aria-label="전체 페이지">${shown.length ? shown.map((p) => `<div class="vp-r ${cls}" role="row">
+      <span role="cell"><span class="pr p${p.prio}" title="우선순위 ${p.prio}">${p.prio}</span></span>
+      <span class="vpg" role="cell"><b title="${esc(p.title)}">${esc(p.name)}</b><a class="pu" href="${esc(p.url)}" data-vurl title="${esc(p.url)}">${esc(p.path)}${ic("arrow-ur", "s12")}</a></span>
+      ${multi ? `<span class="st vc-st" role="cell">${esc(siteName(p))}</span>` : ""}
+      <span class="r num" role="cell">${fmtN(p.seo)}</span><span class="r num ${p.ai === 0 ? "zero" : ""}" role="cell">${fmtN(p.ai)}</span>
+      <span class="r num ach ${p.short > 0 && (p.band === "low" || p.band === "none") ? p.band : ""}" role="cell">${p.short > 0 ? fmtN(p.short) : "—"}</span>
+      <span class="r num vc-x" role="cell">${int1(p.int)}</span><span class="r num vc-x" role="cell">${pct(p.readRate * 100, 0)}</span><span class="r" role="cell">${agoTxt(p)}</span>
+      <span role="cell"><span class="qc ${p.q}"><i style="background:${VIS_Q[p.q].color}"></i>${VIS_Q[p.q].name}</span></span></div>`).join("") : `<p class="nodata" style="margin:16px 24px">조건에 맞는 페이지가 없습니다</p>`}</div>
+    ${rows.length > 20 ? `<div class="more"><button class="btn sm" data-vpmore>${vpMore ? "20개만 보기" : `${fmtN(rows.length)}개 모두 보기`}</button></div>` : ""}
+  </section>`;
+}
+function visPageTab() {
+  return `${visWorkCard()}${visGapCard()}${visChangeCard()}${visTableCard()}`;
+}
+
+// ══ AI 엔진 ══
+function visEngineTiles() {
+  const V = S.data.v;
+  return `<section class="card stale" aria-label="엔진별 현황">${busy()}
+    ${cardHead({ title: "엔진별 현황", info: noteTip("읽는 법", "엔진마다 그 엔진에 연결된 크롤러들의 요청 합(bots 행)과, 그 엔진이 한 번이라도 읽은 페이지의 비율(커버리지)입니다. 점유 = 모든 엔진 합 대비. 엔진 필터에서 고르지 않은 엔진은 흐리게 둡니다."), chips: [bchip(`${V.W.from} ~ ${V.W.to}`)], id: "vis-eng", table: false })}
+    <div class="ve">${V.engines.map((e) => `<div class="ve-t ${e.on ? "" : "off"}" style="--ec:${VIS_ENG_COL[e.engine]}"><div class="ve-n"><i class="sq" style="background:${VIS_ENG_COL[e.engine]}"></i><b>${VIS_ENGINE[e.engine]}</b>${!e.on ? `<span class="tag-o">필터로 제외</span>` : !DIMENSIONS.engine.includes(e.engine) ? `<span class="tag-o" title="엔진 필터 옵션은 답변 엔진(ChatGPT · Gemini)뿐입니다">필터 옵션 밖</span>` : ""}</div>
+      <div class="ve-v"><b class="num">${fmtN(e.hits)}</b><small>회 · 점유 ${pct(e.share, 0)}</small></div>
+      <div class="ve-d">${V.prevOk ? dchip(e.d, { unit: "%" }) : ""}${e.spark.length > 1 ? spark(e.spark) : ""}</div>
+      <dl><div><dt>커버리지</dt><dd>${pct(e.cov, 0)}</dd></div><div><dt>우선순위 1</dt><dd>${pct(e.cov1, 0)}</dd></div><div><dt>크롤러</dt><dd>${e.bots.length}개</dd></div></dl></div>`).join("")}</div>
+  </section>`;
+}
+function visEngShareCard() {
+  const V = S.data.v, id = "vis-eshare";
+  if (V.blocks.length < 2) return `<section class="card stale"><div class="card-h"><h2>엔진 점유 추이</h2></div><p class="nodata">7일 단위가 2개 이상일 때 그립니다 — 기간을 14일 이상으로 늘려 보세요.</p></section>`;
+  const spec = { type: "cols", x: V.blocks.map((b) => mdDay(V.dates[b[1]])), tipX: (i) => V.blockLabel(V.blocks[i]), stacks: VIS_ENGINES.map((e) => ({ key: e, name: VIS_ENGINE[e], color: VIS_ENG_COL[e], values: V.engShare.map((s) => s[e]) })), label: "7일 단위 엔진 점유" };
+  return `<section class="card stale" aria-label="엔진 점유 추이">${busy()}
+    ${cardHead({ title: "엔진 점유 추이", info: noteTip("읽는 법", "마지막 측정일부터 거꾸로 7일씩 묶은 구간마다 엔진별 AI 크롤의 몫입니다(모자란 첫 구간은 뺍니다). 막대 아래 날짜 = 구간의 마지막 날."), chips: [bchip(`7일 단위 ${V.blocks.length}구간`, "info")], id })}
+    <div class="card-b"><span class="lg" style="margin-bottom:8px">${VIS_ENGINES.map((e) => `<span class="k"><i class="sq" style="background:${VIS_ENG_COL[e]}"></i>${VIS_ENGINE[e]}</span>`).join("")}</span>${chartBox(id, spec, 200)}</div>
+  </section>`;
+}
+function visComboCard() {
+  const V = S.data.v, max = Math.max(1, ...V.comboRows.map((c) => c.n)), rows = V.comboRows.slice(0, 8), rest = V.comboRows.slice(8);
+  const row = (c) => `<div class="vup-r"><span class="vup-d">${VIS_ENGINES.map((e) => `<i class="${c.set.includes(e) ? "on" : ""}" style="${c.set.includes(e) ? `background:${VIS_ENG_COL[e]}` : ""}"></i>`).join("")}</span>
+    <span class="vup-l">${!c.set.length ? "어느 엔진도 읽지 않음" : c.set.length === VIS_ENGINES.length ? "모든 엔진" : c.set.length === VIS_ENGINES.length - 1 ? `${VIS_ENGINE[VIS_ENGINES.find((e) => !c.set.includes(e))]} 빼고 모두` : c.set.map((e) => VIS_ENGINE[e]).join(" + ") + (c.set.length === 1 ? "만" : "")}</span>
+    <span class="bt"><i style="width:${((c.n / max) * 100).toFixed(1)}%;background:${c.set.length ? COL.own : "#c4482f"}"></i></span><span class="v num">${c.n}</span><span class="p num">${pct(share(c.n, V.T.pages), 0)}</span></div>`;
+  return `<section class="card stale" aria-label="페이지를 읽은 엔진 조합">${busy()}
+    ${cardHead({ title: "페이지를 읽은 엔진 조합", info: noteTip("읽는 법", "페이지마다 기간 안에 한 번이라도 요청한 엔진의 조합을 세었습니다(bots 행). 한 엔진만 읽는 페이지는 그 엔진의 답변에만 근거로 쓰일 수 있습니다."), chips: [bchip(`조합 ${V.comboRows.length}개`, "info")], id: "vis-combo", table: false })}
+    <div class="vup"><div class="vup-h"><span class="vup-d">${VIS_ENGINES.map((e) => `<span title="${VIS_ENGINE[e]}">${VIS_ENGINE[e].slice(0, 2)}</span>`).join("")}</span><span>조합</span><span></span><span class="r">페이지</span><span class="r">몫</span></div>
+      ${rows.map(row).join("")}${rest.length ? `<p class="more2">그 밖의 조합 ${rest.length}개 · 페이지 ${sumOf(rest.map((c) => c.n))}개</p>` : ""}</div>
+  </section>`;
+}
+// rank inside the column (ties share the average rank) → 5 levels; `pre` = h (good ↔ bad) or v (volume, no judgement)
+function heatLv(v, col, pre = "h") {
+  const xs = col.filter((x) => x != null);
+  if (v == null || xs.length < 2) return "";
+  const below = xs.filter((x) => x < v).length, same = xs.filter((x) => x === v).length, rk = (below + (same - 1) / 2) / (xs.length - 1);
+  return `${pre}${Math.min(4, Math.floor(rk * 5))}`;
+}
+const fixLv = (v) => (v == null ? "" : v >= 95 ? "h4" : v >= 85 ? "h3" : v >= 70 ? "h2" : v >= 50 ? "h1" : "h0");
+function visEngSecCard() {
+  const V = S.data.v, secs = V.sections;
+  const covCell = (v) => { const lv = v == null ? "" : v >= 90 ? "h4" : v >= 75 ? "h3" : v >= 50 ? "h2" : v >= 25 ? "h1" : "h0"; return `<span class="hm ${lv}">${pct(v, 0)}</span>`; };
+  return `<section class="card stale" aria-label="엔진 × URL 섹션 커버리지">${busy()}
+    ${cardHead({ title: "엔진 × URL 섹션 커버리지", info: noteTip("읽는 법", `칸 = 그 섹션 페이지 중 그 엔진이 한 번이라도 읽은 비율. 색은 고정 구간(25 · 50 · 75 · 90%)입니다. ${VDEF.sec.d}`), id: "vis-esec", table: false })}
+    <div class="vm" style="--cols:${VIS_ENGINES.length}"><div class="vm-h"><span>URL 섹션</span><span class="r">페이지</span>${VIS_ENGINES.map((e) => `<span class="c"><i class="sq" style="background:${VIS_ENG_COL[e]}"></i>${VIS_ENGINE[e]}</span>`).join("")}</div>
+      ${secs.map((s) => `<div class="vm-r"><span class="nm">${esc(secLabel(s.sec))}</span><span class="r num">${s.pages}</span>${VIS_ENGINES.map((e) => covCell(s.engCov[e])).join("")}</div>`).join("")}</div>
+  </section>`;
+}
+function visBotCard() {
+  const V = S.data.v, all = sumOf(V.engines.map((e) => e.hits)) || 1, max = Math.max(1, ...V.engines.flatMap((e) => e.bots.map((b) => b.hits)));
+  return `<section class="card stale" aria-label="크롤러별">${busy()}
+    ${cardHead({ title: "크롤러별", info: noteTip("읽는 법", "크롤러(봇)마다의 요청 수와 전체 대비 몫입니다. 봇과 엔진의 연결은 크롤러 기준 데이터(analytics.dim_crawl_bot)를 따릅니다. 봇의 용도(학습 · 검색 · 사용자 요청)는 원천에 없어 나누지 않습니다."), id: "vis-bots", table: false })}
+    <div class="cw" role="list">${V.engines.flatMap((e) => e.bots.map((b) => `<div class="cw-b ${e.on ? "" : "off"}" role="listitem"><span class="nm"><i class="sq" style="background:${VIS_ENG_COL[e.engine]}"></i>${esc(b.code)}<span class="na">${VIS_ENGINE[e.engine]}</span></span><span class="bt"><i style="width:${((b.hits / max) * 100).toFixed(1)}%;background:${e.on ? VIS_ENG_COL[e.engine] : COL.ctx}"></i></span><span class="v num">${fmtN(b.hits)}</span><span class="p num">${pct((b.hits / all) * 100)}</span></div>`)).join("")}</div>
+  </section>`;
+}
+function visEngineTab() {
+  return `${visEngineTiles()}<div class="vg2 eq">${visEngShareCard()}${visComboCard()}</div>${visEngSecCard()}${visBotCard()}`;
+}
+
+// ══ 사이트 · 섹션 ══
+// [key, label, colour rule]: vol = volume (navy intensity, no judgement) · up = higher is better · down = lower is better · fix = fixed % bands
+const VS_COLS = [["pages", "페이지", ""], ["ai", "AI 크롤", "vol"], ["d", "증감", "up"], ["cov1", "커버리지 P1", "fix"], ["int", "관심도", "up"], ["read", "읽힌 날 중앙값", "fix"], ["top10", "상위 10% 집중", "down"], ["short", "부족 페이지", "down"]];
+function visSiteCard() {
+  const V = S.data.v;
+  if (V.sites.length < 2) return "";
+  const rows = [...V.sites].sort((a, b) => (vsSort.k === "site" ? siteName(a).localeCompare(siteName(b), "ko") : (a[vsSort.k] ?? -1e9) - (b[vsSort.k] ?? -1e9)) * vsSort.dir || a.key.localeCompare(b.key));
+  const colv = Object.fromEntries(VS_COLS.map(([k]) => [k, V.sites.map((s) => s[k])]));
+  const fmtC = { pages: (v) => v, ai: fmtN, d: (v) => (v == null ? "—" : pctChg(v)), cov1: (v) => pct(v, 0), int: int1, read: (v) => pct(v, 0), top10: (v) => pct(v, 0), short: (v) => v };
+  const th = (k, l) => { const on = vsSort.k === k; return `<span class="${k === "site" ? "" : "r"}"><button class="srt" data-vssort="${k}" ${on ? `aria-sort="${vsSort.dir < 0 ? "descending" : "ascending"}"` : ""}>${l}${ic(on && vsSort.dir > 0 ? "up" : "down", "s12")}</button></span>`; };
+  const rhq = (r) => RHQ_LABEL.get(rhqFor(r.brand, r.country)) ?? "";
+  return `<section class="card stale" aria-label="사이트 벤치마크">${busy()}
+    ${cardHead({ title: "사이트 벤치마크", info: noteTip("읽는 법", "브랜드 × 국가 사이트마다 이 화면의 지표를 나란히 둡니다. 칸 색: AI 크롤 = 규모라 남색 농도만(좋고 나쁨 없음), 증감 · 관심도 · 집중도 · 부족 페이지 = 그 열 안 순위 5단계(남색 = 좋음, 붉은색 = 나쁨 — 집중도 · 부족 페이지는 낮을수록 좋음), 커버리지 · 읽힌 날 = 고정 구간(95 · 85 · 70 · 50%). 증감 = 직전 같은 길이 기간 대비 AI 크롤. 부족 페이지 = 우선순위 1 · 2 중 기대의 50% 미만."), chips: [bchip(`사이트 ${rows.length}개`, "info")], id: "vis-sites", table: false })}
+    <div class="vb-t"><div class="vb-h">${th("site", "사이트")}${VS_COLS.map(([k, l]) => th(k, l)).join("")}</div>
+      ${rows.map((r) => `<div class="vb-r"><span class="nm"><b>${esc(siteName(r))}</b><small>${esc(rhq(r))}</small></span>${VS_COLS.map(([k, , rule]) => { const lv = rule === "vol" ? heatLv(r[k], colv[k], "v") : rule === "up" ? heatLv(r[k], colv[k]) : rule === "down" ? heatLv(r[k] == null ? null : -r[k], colv[k].map((x) => (x == null ? null : -x))) : rule === "fix" ? fixLv(r[k]) : ""; return `<span class="hm ${lv}">${fmtC[k](r[k])}${k === "short" && r.stale1 ? `<em title="${VIS_STALE}일 넘게 안 읽힌 우선순위 1">P1 ${r.stale1}</em>` : ""}</span>`; }).join("")}</div>`).join("")}</div>
+  </section>`;
+}
+function visSectionCard() {
+  const V = S.data.v, secs = V.sections, max = Math.max(5, ...secs.flatMap((s) => [s.seoShare ?? 0, s.aiShare ?? 0])) * 1.08, X = (v) => ((v ?? 0) / max) * 100;
+  return `<section class="card stale" aria-label="URL 섹션별 검색 vs AI">${busy()}
+    ${cardHead({ title: "URL 섹션별 검색 비중 vs AI 비중", info: infoTip(VDEF.sec.d, VDEF.sec.f), chips: [bchip(`섹션 ${secs.length}개 · 검색 노출 많은 순`, "info")], id: "vis-sec", table: false,
+      sub: "회색 점 = 검색 노출에서 그 섹션의 몫, 남색 점 = AI 크롤에서의 몫. 남색이 왼쪽에 있으면 검색 수요에 비해 AI가 덜 읽는 섹션입니다." })}
+    <div class="vd"><div class="vd-h"><span>URL 섹션</span><span class="r">페이지</span><span><span class="lg"><span class="k"><i class="dt" style="background:#9a928a"></i>검색 노출 몫</span><span class="k"><i class="dt" style="background:${COL.own}"></i>AI 크롤 몫</span></span></span><span class="r">차이</span><span class="r">커버리지</span><span class="r">관심도</span><span class="r">모바일</span></div>
+      ${secs.map((s) => { const a = X(s.seoShare), b = X(s.aiShare), lo = Math.min(a, b), w = Math.abs(a - b);
+        return `<div class="vd-r"><span class="nm">${esc(secLabel(s.sec))}</span><span class="r num">${s.pages}</span>
+          <span class="vdb" data-tip="${esc(`${secLabel(s.sec)}\n검색 노출 몫 ${pct(s.seoShare)} · AI 크롤 몫 ${pct(s.aiShare)}`)}"><i class="ln ${s.gap < 0 ? "neg" : ""}" style="left:${lo.toFixed(1)}%;width:${w.toFixed(1)}%"></i><i class="ds" style="left:${a.toFixed(1)}%"></i><i class="da" style="left:${b.toFixed(1)}%"></i></span>
+          <span class="r num vgap ${s.gap <= -3 ? "neg" : s.gap >= 3 ? "pos" : ""}">${s.gap >= 0 ? "+" : "−"}${Math.abs(s.gap).toFixed(1)}pp</span><span class="r num">${pct(s.cov, 0)}</span><span class="r num">${int1(s.int)}</span><span class="r num">${pct(s.mobile, 0)}</span></div>`; }).join("")}</div>
+  </section>`;
+}
+function visSiteTab() {
+  const V = S.data.v;
+  return `${V.sites.length > 1 ? visSiteCard() : `<div class="note">${ic("info", "s14")}<span>사이트가 하나라 사이트 벤치마크는 없습니다 — 아래는 이 사이트의 URL 섹션 분석입니다.</span></div>`}${visSectionCard()}`;
+}
+
+// ── page ──
+const visSecs = () => [["sec-summary", "요약"]];
+function visMetaPill() {
+  const W = visWindow();
+  return `<b class="num" style="font-weight:600">${vPer.days ? `최근 ${vPer.days}일 · ` : ""}${W.from} ~ ${W.to}</b>`;
+}
+// panel basis row: the period is days, not rounds (the reader's days · from · to)
+function visBasisHtml() {
+  const W = visWindow(), custom = !vPer.days;
+  return `<section class="vper" aria-label="측정 기간"><div class="vper-t">${ic("cal", "s14")}측정 기간<span class="sum">${custom ? `${W.days}일` : ""}</span></div>
+    <span class="seg2" role="radiogroup" aria-label="측정 기간">${[[7, "7일"], [28, "28일"], [90, "90일"], ["custom", "직접 지정"]].map(([k, l]) => { const on = k === "custom" ? custom : vPer.days === k; return `<button class="${on ? "on" : ""}" data-vdays="${k}" role="radio" aria-checked="${on}">${l}</button>`; }).join("")}</span>
+    ${custom ? `<div class="vper-d"><label>시작<input type="date" id="vfrom" data-vdate="from" min="${VIS_FIRST}" max="${VIS_LATEST}" value="${W.from}"></label><label>끝<input type="date" id="vto" data-vdate="to" min="${VIS_FIRST}" max="${VIS_LATEST}" value="${W.to}"></label></div>` : ""}
+    <p class="sec-help">마지막 측정일 ${VIS_LATEST}까지 · 증감은 직전 같은 길이 기간과 비교합니다</p></section>`;
+}
+function visPage() {
+  const V = S.data.v;
+  if (V.state === "down" || V.state === "nosite" || V.state === "empty") return visWait(V.state);
+  if (V.state === "nomatch") return visNoResult();
+  const T = V.T, body = vTab === "page" ? visPageTab() : vTab === "engine" ? visEngineTab() : vTab === "site" ? visSiteTab() : visSumTab();
+  return `${body}<p class="foot">기간 ${V.W.from} ~ ${V.W.to}(측정일 ${T.days}일) — 사이트 ${T.sites}개 · 페이지 ${fmtN(T.pages)}개 · 마지막 측정일 ${VIS_LATEST} · 모든 수치는 페이지 · 날짜별 검색 노출과 AI 크롤 행에서 계산</p>`;
+}
+function wireVis(on) {
+  const per = (next) => { vPer = next; openedWithDefault = false; request(); render(); };
+  on("[data-vdays]", (b) => { const k = b.dataset.vdays, W = visWindow(); per(k === "custom" ? { from: W.from, to: W.to } : { days: +k }); });
+  document.querySelectorAll("[data-vdate]").forEach((i) => (i.onchange = () => { if (!i.value) return; const W = visWindow(); per({ from: W.from, to: W.to, [i.dataset.vdate]: i.value }); }));
+  // a tab is a different view: the content starts from its top (no jump inside a view)
+  on("[data-vtab]", (b) => { vTab = b.dataset.vtab; render(); document.querySelector("#page .content")?.scrollTo(0, 0); });
+  on("[data-vpq]", (b) => { vpQ = b.dataset.vpq; vpMore = false; render(); });
+  on("[data-vpp1]", () => { vpP1 = !vpP1; vpMore = false; render(); });
+  on("[data-vwall]", () => { vwAll = !vwAll; render(); });
+  document.querySelectorAll("[data-vps]").forEach((i) => (i.oninput = () => { vpS = i.value; vpMore = false; render(); }));
+  on("[data-vpsort]", (b) => { const k = b.dataset.vpsort; vpSort = vpSort.k === k ? { k, dir: -vpSort.dir } : { k, dir: k === "prio" || k === "site" ? 1 : -1 }; render(); });
+  on("[data-vpmore]", () => { vpMore = !vpMore; render(); });
+  on("[data-vssort]", (b) => { const k = b.dataset.vssort; vsSort = vsSort.k === k ? { k, dir: -vsSort.dir } : { k, dir: k === "site" || k === "top10" || k === "short" ? 1 : -1 }; render(); });
+  on("[data-vurl]", (b, e) => { e.preventDefault(); showToast("새 탭에서 페이지를 엽니다 (목업)"); });
+  on("[data-vretry]", () => { dataState = "ok"; S = { f: clone(S.f), data: compute(S.f) }; renderMk(); render(); });
+}
+const VIS_NOTES = [
+  ["ux", "BI 구성 (10/27 2차)", "같은 데이터를 가공해 네 보기로 나눴습니다: 요약(지표 5개 + 발견 4개 · 엔진별 추이 · 우선순위별 몫 · 읽힌 빈도 · 집중도 · 기기) → 페이지 진단(부족 페이지 작업 목록 · 기대선 산점도 · 직전 기간 대비 변화 · 전체 페이지) → AI 엔진(엔진별 현황 · 점유 추이 · 엔진 조합 · 엔진 × 섹션 커버리지 · 크롤러) → 사이트 · 섹션(사이트 벤치마크 · URL 섹션별 검색 vs AI). 탭은 언급 분석과 같은 자리(필터 오른쪽 본문 칸 맨 위)."],
+  ["calc", "AI 크롤 커버리지", "AI 크롤 ≥ 1인 페이지 ÷ 측정 페이지 × 100 — 전체 · 우선순위 1 · 엔진별 · 섹션별. 원천: bots 행(page × day × bot)의 hits."],
+  ["calc", "AI 관심도", "AI 크롤 합 ÷ 검색 노출 합 × 10,000(검색 노출 1만 회당 AI 크롤). 원천: pages 의 ai_crawls · seo_impressions(또는 bots · devices 행 합)."],
+  ["calc", "기대 크롤 · 부족분 · 달성률", "기대 = 페이지 검색 노출 × 지금 고른 범위의 AI 관심도(÷ 10,000). 부족분 = 기대 − 실제(양수만), 달성률 = 실제 ÷ 기대. 예측 모델이 아니라 ‘범위 평균만큼 읽혔다면’의 비교 기준선입니다. 구간: 0회 · 50% 미만 · 50–100% · 100% 이상."],
+  ["calc", "읽힌 날 · 마지막 크롤", "읽힌 날 비율 = AI 크롤 ≥ 1인 날 ÷ 측정일(90% 이상 · 50–90% · 50% 미만 · 0). 마지막 크롤 = 기간의 마지막 측정일 − AI 크롤 ≥ 1인 마지막 날, 7일 이상 = 오래 안 읽힘. 원천: bots 행의 날짜."],
+  ["calc", "집중도", "AI 크롤 많은 순 상위 10%(또는 1% · 50%) 페이지의 크롤 몫, 로렌츠 곡선, 지니 계수 = 1 − 2 × 곡선 아래 넓이. 원천: 페이지별 ai_crawls."],
+  ["calc", "우선순위별 몫", "우선순위(page_priority) 1 · 2 · 3마다 페이지 수 · 검색 노출 · AI 크롤이 전체에서 차지하는 비율."],
+  ["calc", "엔진 · 크롤러", "엔진별 크롤 = 그 엔진에 연결된 봇의 hits 합(analytics.dim_crawl_bot), 점유 = 모든 엔진 합 대비, 엔진 조합 = 페이지마다 1회 이상 읽은 엔진의 집합, 점유 추이 = 마지막 날부터 7일씩 묶은 구간(모자란 첫 구간 제외)."],
+  ["calc", "URL 섹션", "URL 경로에서 2글자 국가 · 언어 단계를 건너뛴 첫 단계(/us/en/shopping-tools/offers → /shopping-tools). 사이트 메뉴 분류가 아니라 주소 규칙 — 사이트마다 경로 구조가 다르면 규칙 확인 필요."],
+  ["calc", "사이트 벤치마크", "사이트(브랜드 × 국가)마다 위 지표를 다시 계산하고, 열 안 순위로 5단계 색(집중도 · 부족 페이지는 낮을수록 좋음)."],
+  ["calc", "직전 기간 대비", "직전 같은 길이 기간을 한 번 더 읽어(같은 API 두 번) 페이지별로 비교 — 새로 읽힘(0 → ≥ 1), 읽기 끊김(≥ 1 → 0), 증가 · 감소 상위, 지표 증감."],
+  ["ux", "원본 분면 유지", "원본 화면의 4분면(검색 노출 · AI 크롤 각각 중앙값 기준)은 ‘전체 페이지’ 표의 필터로 남겨 원본과 같은 수를 확인할 수 있게 했습니다. 산점도는 중앙값 십자선 대신 기대선(범위 평균)으로 — 중앙값 기준은 페이지 절반이 늘 ‘낮음’이라 고칠 곳을 가리키지 못합니다."],
+  ["ux", "필터 · 기간", "앱 필터 패널의 국가(+ 권역) · AI 엔진 · 디바이스(admin 은 브랜드), 패널 위 측정 기간(7 · 28 · 90일, 직접 지정). 엔진은 AI 크롤에만, 디바이스는 검색 노출에만 적용(API 규칙) — 엔진 탭 · 기기 카드에서 고르지 않은 값은 흐리게 남깁니다."],
+  ["ux", "메뉴", "원본은 메뉴에서 숨겨져 있습니다(route-policy hidden). 리뉴얼은 사이드바에 노출(2026-10-27 결정) — AI Agent Funnel 첫 항목, 부모는 앱 리다이렉트대로 ACR. 구현: 같은 날 보기 모드 개편(리뉴얼 사이드바 = 원본 메뉴 전체, lib/nav/view-mode.ts)이 진행 중이라 사이드바 노출은 그 개편이 들어간 뒤 반영합니다(지금은 주소 /renewal/standard/ai-funnel/visibility, 로컬 읽기 계정에서는 메뉴에도 보임)."],
+  ["data", "직전 기간 읽기", "증감 · 변화 카드는 직전 같은 길이 기간을 한 번 더 읽습니다(같은 API 두 번, 새 SQL 없음) — 구현(10/27)은 읽습니다. 빼려면 BFF 화면(back/bff/screens/visibility.py)의 두 번째 읽기만 지우면 변화 카드와 증감 칩이 사라집니다."],
+  ["data", "응답 크기", "API 는 페이지 · 기기 · 봇별 일별 행을 모두 보냅니다. 화면 모델(BFF)에서 계산한 뒤 표 · 차트에 필요한 만큼만 보내도록(예: 표 상위 N + 검색) 정할 것."],
+  ["data", "부분 미측정", "하루라도 값이 없는 페이지가 있으면 API 는 그 페이지의 합계를 null 로 보냅니다(관측 없음 ≠ 0). 구현(10/27): 그 페이지는 표에 ‘—’로 남기고 합계 · 비율 · 분포에서 빼며, 본문 맨 위에 ‘측정이 빠진 날이 있는 페이지 N개는 뺐습니다’ 안내를 띄웁니다."],
+  ["data", "크롤러 · 엔진 · 국가", "크롤러 목록 · 엔진 연결은 analytics.dim_crawl_bot(지금 비어 있음) — 목업의 봇 이름은 예시. 엔진 필터 옵션은 답변 엔진(ChatGPT · Gemini)뿐. 국가 선택지는 답변 측정 국가라 사이트 없는 국가도 고를 수 있음."],
+  ["data", "실데이터 없음", "GSC · 크롤 로그 수집기 미연결(back/analytics/README.md) — 지금은 모든 환경이 ‘사이트 미연결’. 목업 바 ‘데이터’로 각 상태를 봅니다."],
+];
+
 // ══ Page + render ══
 function compute(f) {
-  return { own: ownBrandsOf(f), ownLabel: ownLabelOf(f), a: acrData(f), c: convData(f) };
+  return { own: ownBrandsOf(f), ownLabel: ownLabelOf(f), a: acrData(f), c: convData(f), v: view === "visibility" ? visData(f) : null };
 }
 function page() {
   CH = {};
-  const body = view === "acr" ? acrPage() : convPage();
-  return `<div class="pg fr">${headerHtml()}<div class="split ${panel ? "" : "collapsed"}">${panelHtml()}<div class="content ${pending ? "pending" : ""} ${dense ? "dense" : ""}">${appliedTop()}${body}</div></div></div>`;
+  const body = view === "acr" ? acrPage() : view === "visibility" ? visPage() : convPage();
+  const tabs = view === "visibility" ? visTabsHtml() : "";
+  return `<div class="pg fr">${headerHtml()}<div class="split ${panel ? "" : "collapsed"} ${tabs ? "tabbed" : ""}">${panelHtml()}${tabs ? `<div class="ptop">${tabs}</div>` : ""}<div class="content ${pending ? "pending" : ""} ${dense ? "dense" : ""}">${appliedTop()}${body}</div></div></div>`;
 }
 const ACR_NOTES = [
   ["ux", "S급 틀 (10/22)", "리뉴얼 전용 껍데기: 사이드바 하나(브랜드 · 메뉴 = Global | Website 구역 · 아래 Project · Admin · 계정), 위 상단 바 없음 → 본문이 넓어짐. 머리는 제목(+ 베타) 아래 설명 · 기준 칩 한 줄. 필터는 왼쪽 패널 그대로(같은 축 · 옵션 · 규칙 · 저장한 필터). 페이지마다 남색 강조는 하나 — 이번 회차 요약. 카드 모서리 16px, 1px 선. 규칙은 디자인 규칙 페이지(사이드바 아래)."],
   ["ux", "페이지 머리 · 틀 통일 (10/22)", "네 목업과 구현의 틀을 하나로 맞췄습니다: 제목 줄이 전체 폭으로 맨 위, 그 아래 필터 | 본문(구현과 같음). 머리 = 제목(+ 베타) → 설명 → 기준 칩, 링크 복사는 오른쪽. 제목 위 상위 메뉴명(‘AI Agent Funnel’)은 구현에 없어 뺐고, 칩은 구현 문구(‘최신 회차 스냅샷’ / ‘기간 누적 {시작} ~ {끝}’)."],
-  ["ux", "목업 메뉴 통합 (10/22)", "왼쪽 메뉴를 네 목업이 같은 목록으로 씁니다(Overview · Global prompts · Answer analysis › Mention · Citation · AI Agent Funnel › ACR · AI Conversion) — 어느 목업에서든 다른 목업으로 갑니다. 제목 줄의 ‘ACR | AI Conversion’ 전환은 뺐습니다: 실제 앱은 사이드 메뉴로 나뉘어 있고 화면 안 전환이 없습니다."],
+  ["ux", "목업 메뉴 통합 (10/22)", "왼쪽 메뉴를 네 목업이 같은 목록으로 씁니다(Overview · Global prompts · Answer analysis › Mention · Citation · AI Agent Funnel › AI Visibility · ACR · AI Conversion) — 어느 목업에서든 다른 목업으로 갑니다. 제목 줄의 ‘ACR | AI Conversion’ 전환은 뺐습니다: 실제 앱은 사이드 메뉴로 나뉘어 있고 화면 안 전환이 없습니다."],
   ["ux", "빠른 이동 · 스크롤 이동 삭제 (10/22)", "컨트롤 바의 섹션 이동 줄을 뺐고(비교 브랜드 · 기본/촘촘만 남음), 요약의 발견은 누를 수 없는 정보 카드로 바꿨습니다(‘이동’ 글자 없음, 카드 보기 전환·강조도 없음). 페이지 안에서 스크롤 위치를 옮기는 동작은 없습니다 — 언급·인용 분석과 같은 규칙."],
   ["ux", "이번 회차 요약", "맨 위에 이 페이지 카드들의 숫자에서 규칙으로 뽑은 요약: 당사 한 줄(Top1 ACR 순위·값·증감, 후보군 포함율, 1순위 선택, 측정 규모) + 발견 4개 — 1위와의 격차, 후보군은 비슷한데 선택이 적은 브랜드, 엔진별 당사 1위 수, 한 경쟁사가 모든 엔진에서 1위인 프롬프트, 차종 전환 최고·최저, 가장 크게 움직인 브랜드, 당사가 한 번도 선택되지 않은 프롬프트 중 중요도 순. 새 데이터 없음 — 규칙·문구·임계값은 구현 때 확정."],
   ["ux", "Mention 과 같은 틀", "스크롤해도 위에 붙는 컨트롤 바(비교 브랜드 · 기본/촘촘), 카드 머리(제목 · ⓘ · 기준 칩 · 표/차트 아이콘 · ⋯ 메뉴), 브랜드에 올리면 페이지 전체에서 같은 브랜드를 강조하는 연결 강조."],
@@ -2714,7 +3603,7 @@ function render() {
 }
 function parseHash() {
   const h = decodeURIComponent(location.hash.slice(1)) || "acr";
-  view = h.startsWith("conversion") ? "conversion" : "acr";
+  view = h.startsWith("conversion") ? "conversion" : h.startsWith("visibility") ? "visibility" : "acr";
 }
 function wire() {
   const on = (sel, fn) => document.querySelectorAll(sel).forEach((el) => (el.onclick = (e) => fn(el, e)));
@@ -2734,7 +3623,7 @@ function wire() {
   on("[data-cmenu]", (b, e) => { e.stopPropagation(); cmenu = cmenu === b.dataset.cmenu ? null : b.dataset.cmenu; render(); document.querySelector(".menu.cm button")?.focus({ preventScroll: true }); });
   on("[data-cact]", (b, e) => { e.stopPropagation(); const msg = { csv: "이 카드의 숫자를 CSV 로 내려받습니다 (목업)", png: "이 카드를 PNG 이미지로 저장합니다 (목업)", link: "이 카드로 바로 오는 링크를 복사했습니다 (목업)" }[b.dataset.cact]; cmenu = null; render(); showToast(msg); });
   on("[data-notes]", () => { notesOpen = !notesOpen; renderMk(); render(); });
-  if (view === "acr") wireAcr(on); else wireConv(on);
+  if (view === "acr") wireAcr(on); else if (view === "visibility") wireVis(on); else wireConv(on);
   wirePanel(on, keyable);
 }
 document.addEventListener("keydown", (e) => {
@@ -2754,7 +3643,7 @@ document.addEventListener("click", (e) => {
 });
 let resizeT = null;
 window.addEventListener("resize", () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (panelAuto && panel !== (window.innerWidth >= 1360)) { panel = window.innerWidth >= 1360; render(); } else { drawCharts(); wire(); applyHb(hbKey); } }, 80); });
-window.addEventListener("hashchange", () => { parseHash(); cmpOpen = false; cmenu = null; curSec = "sec-summary"; S = { f: clone(S.f), data: compute(S.f) }; renderMk(); render(); document.querySelector("#page .content")?.scrollTo(0, 0); });
+window.addEventListener("hashchange", () => { parseHash(); dataState = "ok"; cmpOpen = false; cmenu = null; curSec = "sec-summary"; S = { f: clone(S.f), data: compute(S.f) }; renderMk(); render(); document.querySelector("#page .content")?.scrollTo(0, 0); });
 // the content area scrolls (and is rebuilt on render): listen in the capture phase
 document.addEventListener("scroll", () => { if (!spyRaf) spyRaf = requestAnimationFrame(spy); }, { passive: true, capture: true });
 document.addEventListener("pointerover", (e) => {
@@ -2766,7 +3655,7 @@ document.addEventListener("pointerover", (e) => {
   hbT = setTimeout(() => applyHb(key), key ? 90 : 140);
 });
 new ResizeObserver(() => document.documentElement.style.setProperty("--mk-h", document.getElementById("mk").offsetHeight + "px")).observe(document.getElementById("mk"));
-window.__mock = { state: () => ({ view, F: clone(F), d: derive(F), own: S.data.own, a: S.data.a && { totals: S.data.a.totals, own: S.data.a.ownAgg, brands: S.data.a.brands.map((b) => ({ brand: b.brand, isOurs: b.isOurs, choiceShare: b.choiceShare, coverage: b.coverage, choiceCount: b.choiceCount, d: b.d })), trendBrands: S.data.a.trendBrands, battle: S.data.a.battle.length, models: S.data.a.modelConversion.length, sheets: S.data.a.territory.length } }) };
+window.__mock = { state: () => ({ view, F: clone(F), d: derive(F), own: S.data.own, a: S.data.a && { totals: S.data.a.totals, own: S.data.a.ownAgg, brands: S.data.a.brands.map((b) => ({ brand: b.brand, isOurs: b.isOurs, choiceShare: b.choiceShare, coverage: b.coverage, choiceCount: b.choiceCount, d: b.d })), trendBrands: S.data.a.trendBrands, battle: S.data.a.battle.length, models: S.data.a.modelConversion.length, sheets: S.data.a.territory.length }, v: S.data.v && { state: S.data.v.state, T: S.data.v.T, quads: S.data.v.quads, sites: S.data.v.sites?.length, mids: [S.data.v.seoMid, S.data.v.aiMid] } }) };
 parseHash();
 openRole(ROLES[0]);
 renderMk();
