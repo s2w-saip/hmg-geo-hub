@@ -55,16 +55,24 @@ async def get(path: str, params: Mapping[str, Any] | Iterable[tuple[str, Any]] |
     key = f"{path}?{q}"
     pending = _inflight.get(key)
     if pending is None:
-        pending = asyncio.ensure_future(_read_json(path, q))
+        # The shared read is bounded too: a read that never returns (a connection lost mid-query) is
+        # cancelled and leaves the table, so the next request reads again instead of joining it forever.
+        pending = asyncio.ensure_future(asyncio.wait_for(_read_json(path, q), READ_TIMEOUT_S))
         _inflight[key] = pending
-        pending.add_done_callback(lambda _f, k=key: _inflight.pop(k, None))
+        pending.add_done_callback(lambda f, k=key: _forget(k, f))
     try:
         result = await asyncio.wait_for(asyncio.shield(pending), READ_TIMEOUT_S)
     except asyncio.TimeoutError:
         # The front's per-call timeout (HGH_API_TIMEOUT_MS, 20 s): the section degrades, the page
-        # does not wait for one slow read. The shared read keeps running for other waiters.
+        # does not wait for one slow read.
         raise HTTPException(504, "Gold read timed out") from None
     return json.loads(json.dumps(result))
+
+
+def _forget(key: str, done: asyncio.Future) -> None:
+    _inflight.pop(key, None)
+    if not done.cancelled():
+        done.exception()  # read here: when every waiter already answered 504, nobody else does
 
 
 async def _read_json(path: str, q: QueryParams) -> Any:

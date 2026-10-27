@@ -1,7 +1,13 @@
-"""Screen layer basics: JavaScript number semantics and the front-compatible query serializer."""
+"""Screen layer basics: JavaScript number semantics, the front-compatible query serializer and the
+shared in-process reads."""
+import asyncio
 import unittest
+from unittest import mock
 
 try:
+    from fastapi import HTTPException
+
+    from bff import api
     from bff.api import query
     from bff.screens import REGISTRY, screen
     from bff.screens._js import js_round, js_str, rank_value, ratio_value, to_fixed
@@ -35,6 +41,29 @@ class QuerySerializer(unittest.TestCase):
     def test_matches_front_serialization(self):
         q = query({"surface": "global", "brand": ["kia", "hyundai"], "card": True, "full": False, "x": None, "empty": [], "n": 3})
         self.assertEqual(str(q), "brand=kia&brand=hyundai&card=true&full=false&n=3&surface=global")
+
+
+class SharedReads(unittest.TestCase):
+    def test_a_read_that_never_returns_is_dropped_after_the_timeout(self):
+        calls = []
+
+        async def read_json(path, q):
+            calls.append(path)
+            if len(calls) == 1:
+                await asyncio.Event().wait()  # hangs, like a read on a lost connection
+            return {"ok": True}
+
+        async def run():
+            with mock.patch.object(api, "_read_json", read_json), mock.patch.object(api, "READ_TIMEOUT_S", 0.05):
+                with self.assertRaises(HTTPException) as hung:
+                    await api.get("kpi/summary", {"surface": "global"})
+                self.assertEqual(hung.exception.status_code, 504)
+                await asyncio.sleep(0.05)  # the timed-out shared read leaves the table
+                self.assertEqual(api._inflight, {})
+                self.assertEqual(await api.get("kpi/summary", {"surface": "global"}), {"ok": True})
+            self.assertEqual(len(calls), 2)
+
+        asyncio.run(run())
 
 
 class Registry(unittest.TestCase):

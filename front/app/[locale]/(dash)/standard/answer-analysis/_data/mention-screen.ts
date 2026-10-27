@@ -389,19 +389,23 @@ export interface ComparisonView {
   ownBrands: string[];
 }
 
+/** Segment colour classes the screen sends (mention_surfaces.py). They must be written out here: the
+ *  class names arrive as data, and Tailwind only generates classes it finds in the front source. */
+export type TypeShareColor = "bg-brand-700" | "bg-accent-gold" | "bg-brand-300" | "bg-ink-500" | "bg-ink-300" | "bg-ink-100";
+
 /** A stack segment: brand segments carry `label`, the own / rest ones a `labelKey` (breakdown.*). */
 export interface TypeShareSeg {
   key: string;
   label?: string;
   labelKey?: "ours" | "others";
   val: number;
-  color: string;
+  color: TypeShareColor;
   width: number;
 }
 
 export interface TypeShareView {
   rows: Array<{ type: MentionTypeKey; total: number; trackedShare: number; segs: TypeShareSeg[] }>;
-  legend: Array<{ color: string; label?: string; labelKey?: "ours" | "others" }>;
+  legend: Array<{ color: TypeShareColor; label?: string; labelKey?: "ours" | "others" }>;
 }
 
 /** The head-to-head and the type stack that follows its target (mention/view-compare). */
