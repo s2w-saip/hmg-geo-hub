@@ -2,14 +2,14 @@
 
 // KPI page tabs of the renewal Mention page (2026-10-22). The KPI tiles and the attached-tab
 // folder both read as a KPI summary, so nobody took them for a switch; back to the original's
-// underline tabs: one full-width rail under the title (header › tabs › filter | content), the
-// tab name leads, the value and Δ ride along in small text. A tab is a link (?kpi= is the
-// source of truth, aria-current marks the page); a plain click swaps the body in place —
-// every tab reads the same data here — and leaves the scroll position alone (no scroll jumps
-// on the page).
+// underline tabs: the tab name leads, the value and Δ ride along in small text. The rail heads
+// the content column, right of the filter panel (2026-10-27: header › filter | tabs › content),
+// so the filters read as covering every tab. A tab is a link (?kpi= is the source of truth,
+// aria-current marks the page); a plain click swaps the body in place — every tab reads the
+// same data here — and leaves the scroll position alone (no scroll jumps on the page).
 //
-// The provider sits above RnFilterSplit (the rail lives in the header slot, the body in the
-// content column) and holds the page's reads once for both.
+// The provider sits above RnFilterSplit (the rail lives in its top slot, the body in the
+// content scroller) and holds the page's reads once for both.
 
 import { Suspense, createContext, use, useCallback, useContext, useEffect, useState, type MouseEvent, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
@@ -76,7 +76,7 @@ export function KpiViewLabel() {
   );
 }
 
-/** The tab rail under the page title. */
+/** The tab rail atop the content column. */
 export function RnMentionTabs() {
   const { kpi, setKpi } = useMentionPage();
   const pathname = usePathname();
@@ -116,7 +116,7 @@ export function RnMentionTabsFallback({ kpi }: { kpi: KpiTab }) {
 function TabRail({ children }: { children: ReactNode }) {
   const t = useTranslations("renewal.mention.tabs");
   return (
-    <nav id={KPI_TABS_ID} aria-label={t("label")} className="mt-3.5 flex gap-x-8 overflow-x-auto border-b border-rn-line-2 px-1 [scrollbar-width:none]">
+    <nav id={KPI_TABS_ID} aria-label={t("label")} className="flex gap-x-8 overflow-x-auto border-b border-rn-line-2 px-1 [scrollbar-width:none]">
       {children}
     </nav>
   );

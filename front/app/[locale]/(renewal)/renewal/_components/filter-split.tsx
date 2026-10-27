@@ -41,8 +41,11 @@ export function RnPageFrame({ header, children }: { header: ReactNode; children:
  * content row below it.
  * The panel and the content scroll apart (the panel card scrolls inside its own height), so
  * scrolling the content never moves the filters.
+ * `top` (2026-10-27) heads the content column, right of the panel, and stays put above the
+ * scrolling content: a page switch there (Mention's KPI tabs) reads as one more view under the
+ * same filters, the panel standing beside every view.
  */
-export function RnFilterSplit({ header, panel, rail, children }: { header?: ReactNode; panel: ReactNode; rail: ReactNode; children: ReactNode }) {
+export function RnFilterSplit({ header, top, panel, rail, children }: { header?: ReactNode; top?: ReactNode; panel: ReactNode; rail: ReactNode; children: ReactNode }) {
   // null = automatic (open from 1360px wide, collapsed below) until the viewer toggles.
   const [open, setOpen] = useState<boolean | null>(null);
   const isOpenNow = useCallback(() => (open === null ? window.matchMedia("(min-width: 1360px)").matches : open), [open]);
@@ -59,6 +62,12 @@ export function RnFilterSplit({ header, panel, rail, children }: { header?: Reac
   }, [isOpenNow]);
   const auto = open === null;
   const split = useMemo(() => ({ collapse: () => setOpen(false), expand: () => setOpen(true) }), []);
+  // pl-5 = the panel | content gap, inside the scroller so card shadows are not clipped
+  const scroll = (
+    <div data-rn-scroll="" className={cx(FRAME_SCROLL, "pl-5", top ? "flex-1" : "")}>
+      <div className="@container/rncontent flex min-w-0 flex-col gap-4">{children}</div>
+    </div>
+  );
   return (
     <SplitContext.Provider value={split}>
       <div data-rn-frame="" className={FRAME}>
@@ -73,10 +82,17 @@ export function RnFilterSplit({ header, panel, rail, children }: { header?: Reac
           {/* the panel card is max-h-full: it scrolls inside the column, apart from the content */}
           <div className={cx("min-h-0 pt-1 pb-4", auto ? "hidden min-[1360px]:block" : open ? "block" : "hidden")}>{panel}</div>
           <div className={cx("pt-1", auto ? "min-[1360px]:hidden" : open ? "hidden" : "block")}>{rail}</div>
-          {/* pl-5 = the panel | content gap, inside the scroller so card shadows are not clipped */}
-          <div data-rn-scroll="" className={cx(FRAME_SCROLL, "pl-5")}>
-            <div className="@container/rncontent flex min-w-0 flex-col gap-4">{children}</div>
-          </div>
+          {top ? (
+            <div className="flex min-h-0 min-w-0 flex-col">
+              {/* top edge = the panel card's (pt-1); the scrollbar gutter lines its right end up with the content */}
+              <div data-rn-split-top="" className="min-w-0 shrink-0 overflow-hidden pt-1 pr-[var(--rn-edge)] pb-3 pl-5 [scrollbar-gutter:stable]">
+                {top}
+              </div>
+              {scroll}
+            </div>
+          ) : (
+            scroll
+          )}
         </div>
       </div>
     </SplitContext.Provider>

@@ -96,7 +96,7 @@ export default async function RenewalMentionPage({
   };
   return (
     <RnFilterRuntime>
-      <Suspense fallback={<PageSkeleton header={<>{header}<RnMentionTabsFallback kpi={body.kpi} /></>} />}>
+      <Suspense fallback={<PageSkeleton header={header} top={<RnMentionTabsFallback kpi={body.kpi} />} />}>
         <RenewalMention sp={sp} scope={session.user.scope} userId={session.user.id} locale={locale} header={header} body={body} />
       </Suspense>
     </RnFilterRuntime>
@@ -183,15 +183,12 @@ async function RenewalMention({
   const props = await filterProps(sp, scope, locale);
   return (
     <RnOverviewFilters props={props} storageKey={`rn:saved-filters:v1:mention:${userId}`}>
-      {/* the KPI tabs sit under the title, above filter | content (2026-10-22); one provider feeds both */}
+      {/* the KPI tabs head the content column, right of the filter panel (2026-10-27): the filters
+          cover every tab; one provider feeds the tabs and the body */}
       <RnMentionPageProvider input={body}>
         <RnFilterSplit
-          header={
-            <>
-              {header}
-              <RnMentionTabs />
-            </>
-          }
+          header={header}
+          top={<RnMentionTabs />}
           panel={<RnOverviewFilterPanel />}
           rail={<RnOverviewFilterRail />}
         >
@@ -205,9 +202,9 @@ async function RenewalMention({
   );
 }
 
-function PageSkeleton({ header }: { header: ReactNode }) {
+function PageSkeleton({ header, top }: { header: ReactNode; top: ReactNode }) {
   return (
-    <RnFilterSplit header={header} panel={<RnCard className="h-[480px]" />} rail={<RnCard className="h-24" />}>
+    <RnFilterSplit header={header} top={top} panel={<RnCard className="h-[480px]" />} rail={<RnCard className="h-24" />}>
       <RnCard className="h-12" />
       <RnCard className="flex flex-col gap-3 p-6">
         <RnSkeleton className="h-4 w-40" />
