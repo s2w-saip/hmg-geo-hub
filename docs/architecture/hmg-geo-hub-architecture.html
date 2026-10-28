@@ -283,7 +283,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <rect class="box" x="530" y="426" width="160" height="86" rx="6"/>
         <text class="m b" x="544" y="448">api.get()</text>
         <text class="mu" x="544" y="467">같은 읽기는 한 번만</text>
-        <text class="mu" x="544" y="485">20초 제한 · 캐시 없음</text>
+        <text class="mu" x="544" y="485">20초 제한 · 필터만 캐시</text>
         <text class="m mu sm" x="544" y="503">GET /v1/* 도 여기로</text>
 
         <path class="e" d="M610,396V426" marker-end="url(#f1a)"/>
@@ -342,7 +342,11 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
     <li><b>Next는 계산하지 않는다.</b> 페이지는 <code>/v1/screens/{name}</code>에서 완성된 뷰모델을 받아 그리기만 한다.
       지표 계산은 BFF의 <code>screens/</code> 빌더 83개가 맡는다.</li>
     <li><b>빌더는 HTTP를 다시 타지 않는다.</b> <code>api.get()</code>으로 같은 프로세스 안에서 읽고, 동시에 들어온 같은 읽기는 한 번만 실행한다.
-      결과 캐시는 없다(<code>no-store</code>). 한 읽기가 20초를 넘으면 그 구역만 504로 비운다.</li>
+      결과 캐시는 아래 필터 옵션 하나뿐이고, 응답은 모두 <code>no-store</code>다. 한 읽기가 20초를 넘으면 그 구역만 504로 비운다.</li>
+    <li><b>필터 옵션 캐시.</b> <code>/v1/filters/options</code>는 기간을 읽지 않으므로 그 <code>data</code>를 BFF 프로세스 메모리에 둔다(<code>gold_reader/metrics.py</code>).
+      키는 release 빌드, <code>gold.data_version</code> 전체, 기간(<code>from</code>·<code>to</code>·<code>cycle_offset</code>)을 뺀 쿼리다. <code>meta</code>는 요청마다 새로 만든다.
+      Gold는 표를 하나씩 다시 적재하므로, 비었거나 차원 행 없는 키가 보이거나 읽는 사이 <code>data_version</code>이 바뀐 결과는 답하되 두지 않는다.
+      복사본 재적재는 <code>data_version</code>을 바꾸지 않으므로 둔 값도 10분(<code>HGH_FILTER_OPTIONS_CACHE_S</code>, 0이면 끔)이 지나면 다시 읽는다.</li>
     <li><b>읽기 원천은 경로로 갈린다.</b> <code>analytics/conversion</code>·<code>analytics/visibility</code> 두 경로만 HUB 데이터 DB로 가고,
       나머지 <code>/v1/*</code>는 Gold로 간다. Gold는 <code>active_release</code>와 검증된 빌드에 고정해서 읽는다.</li>
   </ul>

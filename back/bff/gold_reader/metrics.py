@@ -1,6 +1,9 @@
 """API view models calculated from the pinned Gold cells and facts."""
 from __future__ import annotations
 
+import copy
+import os
+import time
 from collections import defaultdict
 from datetime import timedelta
 from fastapi import HTTPException
@@ -304,39 +307,83 @@ async def dates(ctx: Context) -> dict:
                           "dates": ctx.dates[:400], "dates_truncated": len(ctx.dates) > 400, "presets": presets})
 
 
+# Filter options read no period: the same release builds, Gold data_version and query (less the period) give
+# the same data, so it is kept across requests (the one result cache; docs/architecture "필터 옵션 캐시").
+# data_version does not move when Gold reloads a copy, so the age bounds what such a read could leave.
+OPTIONS_MAX_AGE_S = int(os.environ.get("HGH_FILTER_OPTIONS_CACHE_S", "600"))
+OPTIONS_CACHE_SIZE = 256
+PERIOD_PARAMS = ("from", "to", "cycle_offset")
+_options_cache: dict[tuple, tuple[float, dict]] = {}
+
+
+async def gold_versions(ctx: Context) -> tuple:
+    return tuple((r["scope"], r["version"]) for r in await ctx.conn.fetch("SELECT scope,version FROM gold.data_version ORDER BY scope"))
+
+
 async def options(ctx: Context) -> dict:
+    versions = await gold_versions(ctx)
+    key = (tuple(sorted((family, tuple(sorted(builds))) for family, builds in ctx.builds.items())), versions,
+           tuple(sorted((k, v) for k, v in ctx.q.multi_items() if k not in PERIOD_PARAMS)))
+    kept = _options_cache.get(key)
+    if kept and time.monotonic() - kept[0] < OPTIONS_MAX_AGE_S:
+        return envelope(ctx, copy.deepcopy(kept[1]))
+    data, consistent = await options_data(ctx)
+    # Gold reloads its tables one by one: a read that saw mixed generations is answered but not kept.
+    if consistent and OPTIONS_MAX_AGE_S > 0 and await gold_versions(ctx) == versions:
+        _options_cache.pop(key, None)
+        if len(_options_cache) >= OPTIONS_CACHE_SIZE:
+            _options_cache.pop(next(iter(_options_cache)))
+        _options_cache[key] = (time.monotonic(), copy.deepcopy(data))
+    return envelope(ctx, data)
+
+
+async def options_data(ctx: Context) -> tuple[dict, bool]:
+    """The options and whether the read was consistent: something to answer from, and no key without its
+    dimension row (the sign of a table read from another generation, as in hub_storage/sync_catalog.py)."""
     b = SQL()
     where = ctx.predicate(b, family="fact", dates=False, dimensions=False, taxonomy=False)
     # Distinct keys over the facts first, codes joined to those few rows (the text DISTINCT sorted every fact).
-    rows = await ctx.conn.fetch(f"""WITH k AS (SELECT DISTINCT f.bgrp,f.geo_key,f.lang_key,f.engine_key FROM gold.answer_fact f WHERE {where})
-        SELECT DISTINCT k.bgrp,c.code AS country,c.kind,r.code AS area,l.code AS lang,e.code AS engine,e.is_default
-        FROM k JOIN gold.dim_country c USING(geo_key) JOIN gold.dim_lang l USING(lang_key)
-        JOIN gold.dim_engine e USING(engine_key) LEFT JOIN gold.dim_region r USING(region_key)
-        WHERE NOT c.hidden_standard""", *b.args)
+    # Left joins so a key with no dimension row shows (orphan); the inner join's rows are the kept ones.
+    found = await ctx.conn.fetch(f"""WITH k AS (SELECT DISTINCT f.bgrp,f.geo_key,f.lang_key,f.engine_key FROM gold.answer_fact f WHERE {where})
+        SELECT DISTINCT k.bgrp,c.code AS country,c.kind,r.code AS area,l.code AS lang,e.code AS engine,e.is_default,
+            c.geo_key IS NOT NULL AND l.lang_key IS NOT NULL AND e.engine_key IS NOT NULL AND c.hidden_standard IS FALSE AS kept,
+            (k.geo_key IS NOT NULL AND c.geo_key IS NULL) OR (k.lang_key IS NOT NULL AND l.lang_key IS NULL)
+            OR (k.engine_key IS NOT NULL AND e.engine_key IS NULL) OR (c.region_key IS NOT NULL AND r.region_key IS NULL) AS orphan
+        FROM k LEFT JOIN gold.dim_country c ON c.geo_key=k.geo_key LEFT JOIN gold.dim_lang l ON l.lang_key=k.lang_key
+        LEFT JOIN gold.dim_engine e ON e.engine_key=k.engine_key LEFT JOIN gold.dim_region r ON r.region_key=c.region_key""", *b.args)
+    rows = [r for r in found if r["kept"]]
+    consistent = bool(rows) and not any(r["orphan"] for r in found)
     geo = sorted({(name, r["country"], r["lang"].lower() if r["lang"] else None)
                   for r in rows for bit, name in BRAND_NAMES.items() if r["bgrp"] & bit}, key=lambda t: tuple(v or "" for v in t))
     catalog = None
     if ctx.sf != 2 and not flag(ctx.q, "geo_only"):
-        taxa = await ctx.conn.fetch("SELECT t.*,p.code AS parent_code FROM gold.dim_taxon t LEFT JOIN gold.dim_taxon p ON p.taxon_key=t.parent_key")
+        taxa = await ctx.conn.fetch("""SELECT t.*,p.code AS parent_code,t.parent_key IS NOT NULL AND p.taxon_key IS NULL AS orphan
+            FROM gold.dim_taxon t LEFT JOIN gold.dim_taxon p ON p.taxon_key=t.parent_key""")
         catalog = {axis: [{"code": r["code"], "parent_code": r["parent_code"]} for r in taxa if r["axis"] == ("presence" if axis == "brand_presence" else axis)] for axis in AXES}
         # Actual catalog combinations, not a Cartesian product of taxonomy values.
         b = SQL()
         build = b.bind(ctx.builds.get("fact", []), "bigint[]")
         # Distinct taxon keys over the catalog first (280k entries -> ~460), codes joined after; ordered as the
-        # text DISTINCT's sort returned them.
+        # text DISTINCT's sort returned them. The orphan flag is one value over all rows, so DISTINCT keeps its rows.
         joins = " ".join(f"LEFT JOIN gold.dim_taxon {axis} ON {axis}.taxon_key=k.{col}" for axis, col in AXES.items())
+        orphan = " OR ".join(f"(k.{col} IS NOT NULL AND {axis}.taxon_key IS NULL)" for axis, col in AXES.items())
         combinations = await ctx.conn.fetch(f"""WITH k AS (SELECT DISTINCT ce.brand_bit,{','.join(f'ce.{col}' for col in AXES.values())}
             FROM gold.catalog_entry ce WHERE ce.build_id=ANY({build}) AND (ce.brand_bit & {b.bind(ctx.bits | 8)})<>0)
-            SELECT DISTINCT k.brand_bit,{','.join(f'{a}.code AS {a}' for a in AXES)} FROM k {joins}
+            SELECT DISTINCT k.brand_bit,{','.join(f'{a}.code AS {a}' for a in AXES)},bool_or({orphan}) OVER () AS orphan FROM k {joins}
             ORDER BY k.brand_bit,{','.join(AXES)}""", *b.args)
         catalog["rows"] = [{"brand": BRAND_NAMES.get(r["brand_bit"]), **{a: r[a] for a in AXES}} for r in combinations]
+        consistent = consistent and bool(taxa) and not any(r["orphan"] for r in (*taxa, *combinations))
         if ctx.sf == 3:
             joins = " ".join(f"LEFT JOIN gold.dim_taxon {axis} ON {axis}.taxon_key=p.{col}" for axis,col in AXES.items())
-            combinations = await ctx.conn.fetch(f"SELECT DISTINCT {','.join(f'{a}.code AS {a}' for a in AXES)} FROM gold.dim_prompt p {joins} WHERE p.project_key=$1",ctx.project_key)
-            catalog["rows"] = [{"brand":None,**dict(r)} for r in combinations]
+            orphan = " OR ".join(f"(p.{col} IS NOT NULL AND {axis}.taxon_key IS NULL)" for axis, col in AXES.items())
+            combinations = await ctx.conn.fetch(f"""SELECT DISTINCT {','.join(f'{a}.code AS {a}' for a in AXES)},bool_or({orphan}) OVER () AS orphan
+                FROM gold.dim_prompt p {joins} WHERE p.project_key=$1""",ctx.project_key)
+            catalog["rows"] = [{"brand":None,**{a: r[a] for a in AXES}} for r in combinations]
+            consistent = consistent and not any(r["orphan"] for r in combinations)
             for axis in AXES:
                 present = {r[axis] for r in combinations if r[axis] is not None}
                 catalog[axis] = [r for r in catalog[axis] if r["code"] in present]
+        consistent = consistent and bool(catalog["rows"])
     custom_fields = None
     if ctx.sf == 3 and not flag(ctx.q,"geo_only"):
         custom_fields = [dict(r) for r in await ctx.conn.fetch("""SELECT cf.field_id,cf.label,
@@ -347,10 +394,13 @@ async def options(ctx: Context) -> dict:
     if "source_categories" in values(ctx.q,"include"):
         b = SQL()
         where = ctx.predicate(b,population="citations",perspective=True,dates=False,dimensions=False,taxonomy=False)
-        source_categories = [dict(r) for r in await ctx.conn.fetch(f"""SELECT DISTINCT c.slug,c.name,c.ord FROM gold.citation_cell f
-            JOIN gold.dim_category c USING(category_key) WHERE {where} ORDER BY c.ord,c.slug""",*b.args)]
-    return envelope(ctx, {"geo_matrix": [{"brand": b, "region": c, "lang": l} for b, c, l in geo],
-                          "regions": [{"code": c, "area": next(r["area"] for r in rows if r["country"] == c), "kind": next(r["kind"] for r in rows if r["country"] == c)} for c in sorted({r["country"] for r in rows})],
-                          "languages": sorted({r["lang"].lower() for r in rows if r["lang"]}),
-                          "engines": [{"code": code, "is_default": next(r["is_default"] for r in rows if r["engine"] == code)} for code in sorted({r["engine"] for r in rows})],
-                          "catalog": catalog, "source_categories": source_categories, "custom_fields": custom_fields})
+        found = await ctx.conn.fetch(f"""SELECT DISTINCT c.slug,c.name,c.ord,c.category_key IS NOT NULL AS kept,
+            f.category_key IS NOT NULL AND c.category_key IS NULL AS orphan
+            FROM gold.citation_cell f LEFT JOIN gold.dim_category c ON c.category_key=f.category_key WHERE {where} ORDER BY c.ord,c.slug""",*b.args)
+        source_categories = [{"slug": r["slug"], "name": r["name"], "ord": r["ord"]} for r in found if r["kept"]]
+        consistent = consistent and not any(r["orphan"] for r in found)
+    return {"geo_matrix": [{"brand": b, "region": c, "lang": l} for b, c, l in geo],
+            "regions": [{"code": c, "area": next(r["area"] for r in rows if r["country"] == c), "kind": next(r["kind"] for r in rows if r["country"] == c)} for c in sorted({r["country"] for r in rows})],
+            "languages": sorted({r["lang"].lower() for r in rows if r["lang"]}),
+            "engines": [{"code": code, "is_default": next(r["is_default"] for r in rows if r["engine"] == code)} for code in sorted({r["engine"] for r in rows})],
+            "catalog": catalog, "source_categories": source_categories, "custom_fields": custom_fields}, consistent

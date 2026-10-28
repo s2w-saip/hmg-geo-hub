@@ -9,7 +9,7 @@ try:
     from starlette.datastructures import QueryParams
 
     from bff.gold_reader import metrics
-    from bff.gold_reader.context import Context
+    from bff.gold_reader.context import AXES, Context
 except ModuleNotFoundError as exc:
     raise unittest.SkipTest("Run inside the BFF image (bff.tests.test_gold_metrics)") from exc
 
@@ -140,6 +140,110 @@ class Summary(unittest.TestCase):
                 data, conn = self.summary(qs)
                 self.assertEqual(data["params"]["applied_prompts"], 3)
                 self.assertEqual(conn.reads("catalog_entry"), 1)
+
+
+def geo_row(country, lang, **flags) -> dict:
+    return {"bgrp": 1, "country": country, "kind": "market", "area": "EU", "lang": lang, "engine": "chatgpt",
+            "is_default": True, "kept": True, "orphan": False, **flags}
+
+
+class OptionsConn:
+    """Stand-in for the filter options' statements; `moves` bumps data_version after that many reads of it."""
+
+    def __init__(self, *, geo=None, taxa=None, combos=None, moves=None):
+        self.versions = [{"scope": "dim", "version": 7}, {"scope": "prompt", "version": 3}]
+        self.geo = [geo_row("DE", "DE"), geo_row("FR", "FR")] if geo is None else geo
+        self.taxa = [{"axis": "funnel", "code": "aware", "parent_code": None, "orphan": False}] if taxa is None else taxa
+        self.combos = [{"brand_bit": 1, **dict.fromkeys(AXES), "funnel": "aware", "orphan": False}] if combos is None else combos
+        self.moves, self.version_reads, self.sql = moves, 0, []
+
+    async def fetch(self, sql, *args):
+        self.sql.append(sql)
+        if "FROM gold.data_version" in sql:
+            self.version_reads += 1
+            if self.moves is not None and self.version_reads > self.moves:
+                return [{**v, "version": v["version"] + 1} for v in self.versions]
+            return self.versions
+        if "FROM gold.answer_fact" in sql:
+            return self.geo
+        if "FROM gold.dim_taxon t" in sql:
+            return self.taxa
+        if "FROM gold.catalog_entry" in sql:
+            return self.combos
+        raise AssertionError(f"unexpected statement: {sql[:120]}")
+
+    def reads(self, table: str) -> int:
+        return sum(f"FROM gold.{table}" in s for s in self.sql)
+
+
+class Options(unittest.TestCase):
+    """The filter options are kept per release builds, Gold data_version and query less the period."""
+
+    def setUp(self):
+        metrics._options_cache.clear()
+
+    def read(self, conn, qs="surface=global", builds=None) -> dict:
+        ctx = context(conn, qs)
+        if builds is not None:
+            ctx.builds = builds
+        return asyncio.run(metrics.options(ctx))
+
+    def test_another_period_is_answered_from_the_kept_options(self):
+        first, second = OptionsConn(), OptionsConn()
+        out = self.read(first, "surface=global&from=2026-09-01&to=2026-09-14")
+        again = self.read(second, "surface=global&to=2026-10-05&from=2026-09-28")
+        self.assertEqual(again["data"], out["data"])
+        self.assertEqual([r["code"] for r in out["data"]["regions"]], ["DE", "FR"])
+        self.assertEqual((first.reads("answer_fact"), second.reads("answer_fact"), second.reads("catalog_entry")), (1, 0, 0))
+        # the period's own part, meta, is the request's
+        self.assertEqual(again["meta"]["cycles"], ["2026-10-05"])
+
+    def test_builds_versions_and_the_query_are_the_key(self):
+        self.read(OptionsConn())
+        changed = {"builds": (OptionsConn(), "surface=global", {"cell": [11], "fact": [13]}),
+                   "data_version": (OptionsConn(moves=0), "surface=global", None),
+                   "geo_only": (OptionsConn(), "surface=global&geo_only=true", None),
+                   "brand": (OptionsConn(), "surface=global&brand=kia", None)}
+        for name, (conn, qs, builds) in changed.items():
+            with self.subTest(name):
+                self.read(conn, qs, builds)
+                self.assertEqual(conn.reads("answer_fact"), 1)
+
+    def test_an_inconsistent_read_is_answered_but_not_kept(self):
+        cases = {"fact key without its country": dict(geo=[geo_row("DE", "DE"), geo_row(None, None, kept=False, orphan=True)]),
+                 "nothing to answer from": dict(geo=[]),
+                 "taxon without its parent": dict(taxa=[{"axis": "funnel", "code": "aware", "parent_code": None, "orphan": True}]),
+                 "no taxonomy": dict(taxa=[]),
+                 "catalog key without its taxon": dict(combos=[{"brand_bit": 1, **dict.fromkeys(AXES), "orphan": True}]),
+                 "no catalog": dict(combos=[])}
+        for name, rows in cases.items():
+            with self.subTest(name):
+                metrics._options_cache.clear()
+                self.read(OptionsConn(**rows))
+                conn = OptionsConn(**rows)
+                self.read(conn)
+                self.assertEqual(conn.reads("answer_fact"), 1)
+        # an orphan read answers the inner join's rows, as before
+        out = self.read(OptionsConn(**cases["fact key without its country"]))
+        self.assertEqual([r["code"] for r in out["data"]["regions"]], ["DE"])
+
+    def test_data_version_moving_during_the_read_is_not_kept(self):
+        self.read(OptionsConn(moves=1))
+        conn = OptionsConn()
+        self.read(conn)
+        self.assertEqual(conn.reads("answer_fact"), 1)
+
+    def test_kept_options_expire(self):
+        from unittest import mock
+        self.read(OptionsConn())
+        conn = OptionsConn()
+        with mock.patch.object(metrics.time, "monotonic", return_value=metrics.time.monotonic() + metrics.OPTIONS_MAX_AGE_S):
+            self.read(conn)
+        self.assertEqual(conn.reads("answer_fact"), 1)
+
+    def test_an_answer_does_not_share_the_kept_data(self):
+        self.read(OptionsConn())["data"]["regions"].clear()
+        self.assertEqual(len(self.read(OptionsConn())["data"]["regions"]), 2)
 
 
 if __name__ == "__main__":

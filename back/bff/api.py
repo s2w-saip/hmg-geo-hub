@@ -50,7 +50,8 @@ async def get(path: str, params: Mapping[str, Any] | Iterable[tuple[str, Any]] |
     """In-process GET returning the same JSON the HTTP route would send.
 
     Identical reads that run at the same time (sections of one page asking for the same
-    summary) share one execution; nothing is kept once it finishes (no result cache)."""
+    summary) share one execution; nothing is kept here once it finishes (the one result cache, the filter
+    options, is gold_reader.metrics.options)."""
     q = query(params)
     key = f"{path}?{q}"
     pending = _inflight.get(key)
