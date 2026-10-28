@@ -4,11 +4,13 @@
 // left filter panel (same 11 single-choice filters, applied at once) + saved filters,
 // and a results card. Reads, export and history use the original page's actions and
 // helpers, so rows, totals, facets and order are the original's for the same picks.
+// The list (2026-10-28, for a 1920×1050 window): one line per prompt, one column per attribute,
+// cut-off cells show their full text on hover, a row opens the detail sheet (prompt-detail.tsx).
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { ArrowDownWideNarrow, ArrowUpNarrowWide, Bookmark, ChevronLeft, ChevronRight, Download, Globe, History, Link2, Loader2, PanelLeft, Swords, Tag } from "lucide-react";
+import { ArrowDown, ArrowDownWideNarrow, ArrowUp, ArrowUpNarrowWide, Bookmark, ChevronLeft, ChevronRight, Download, Globe, Link2, Loader2, PanelLeft, Tag } from "lucide-react";
 import {
   RnButton,
   RnCard,
@@ -27,7 +29,9 @@ import {
   RnTextButton,
   RnToastProvider,
   RnToken,
+  cx,
   useRnToast,
+  useRnTruncTip,
 } from "@/components/renewal-ui";
 import { collationOf, rereadAfterHydration, type CatalogSort } from "@/lib/standards/catalog-page";
 import { countryName } from "@/lib/geo-catalog/country-name";
@@ -41,7 +45,8 @@ import type { HistoryQuery, PromptRow, PromptsHistory, PromptsPage, PromptsRemot
 import { fetchPromptsExport, fetchPromptsPage } from "@/app/[locale]/(dash)/standard/prompts/_data/prompts-client";
 import { RnFilterSplit, useRnSplit } from "../../../_components/filter-split";
 import { RnSavedFiltersSection, useSavedFilters, type SavedFilter } from "../../../_components/saved-filters";
-import { RnAuditHistory, RnPromptTimeline } from "./prompt-history";
+import { RnAuditHistory } from "./prompt-history";
+import { RnPromptDetail } from "./prompt-detail";
 import {
   ALL,
   DEFAULT_SORT,
@@ -62,7 +67,6 @@ import {
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
 const DEFAULT_PAGE_SIZE = 50;
-const MARKET_BADGE_LIMIT = 3;
 const SEARCH_MIN = 8;
 const DEFAULT_OPEN: Partial<Record<PromptAxis, boolean>> = { listType: true, depth1: true, funnel: true, presence: true, kind: true, status: true };
 const CHILD: Partial<Record<PromptAxis, PromptAxis>> = { listType: "depth1", depth1: "depth2", depth2: "depth3", depth3: "depth4" };
@@ -112,20 +116,9 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
   const [data, setData] = useState<PromptsPage>(remote.initial);
   const [busy, setBusy] = useState(false);
   const [readError, setReadError] = useState<Error | null>(null);
-  const [timelineRow, setTimelineRow] = useState<{ id: string; text: string } | null>(null);
+  const [detail, setDetail] = useState<PromptRow | null>(null);
   const filtersRef = useRef(filters);
-  // The taxonomy column needs room; on a narrow card it folds into the prompt cell
-  // (columns are switched, not CSS-hidden: hidden cells would shift into other columns).
-  const listRef = useRef<HTMLDivElement>(null);
-  const [wide, setWide] = useState(true);
-  const listEmpty = data.total === 0;
-  useEffect(() => {
-    const el = listRef.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(([entry]) => setWide(entry.contentRect.width >= 760));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [tab, listEmpty]);
+  const tip = useRnTruncTip();
 
   const marketLabel = useCallback(
     (code: string) => {
@@ -326,6 +319,31 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
   const picked = activeAxes(filters);
   const depthCols = (["depth1", "depth2", "depth3", "depth4"] as const).filter((c) => data.columns.includes(c));
   const hasListType = axisOptions("listType", facets).length > 0;
+  // a row's taxonomy levels: the list type and the Depth columns of the scope ("-" = an unset level)
+  const level = (v: string | null) => (v && v.trim() !== "-" ? v : null);
+  const taxonomy = (r: PromptRow) => [
+    ...(hasListType ? [{ axis: "listType" as PromptAxis, label: axisLabel("listType"), value: level(r.listType) }] : []),
+    ...depthCols.map((c) => ({ axis: c as PromptAxis, label: axisLabel(c), value: level(r[c]) })),
+  ];
+  // a column head sorts by its attribute; the active one flips the direction (the toolbar's sort stays in step)
+  const head = (key: CatalogSort, label: string, className?: string) => {
+    const active = sort.key === key;
+    return (
+      <th scope="col" aria-sort={active ? (sort.asc ? "ascending" : "descending") : undefined} className={cx(TH, className)}>
+        <button
+          type="button"
+          onClick={() => {
+            setSort((s) => (s.key === key ? { key, asc: !s.asc } : { key, asc: firstAsc(key) }));
+            setPage(1);
+          }}
+          className={cx("inline-flex max-w-full cursor-pointer items-center gap-1 rounded-[3px] hover:text-rn-ink focus-visible:outline-2 focus-visible:outline-rn-navy", active && "text-rn-ink")}
+        >
+          <span className="truncate">{label}</span>
+          {active ? sort.asc ? <ArrowUp className="size-3 shrink-0" aria-hidden /> : <ArrowDown className="size-3 shrink-0" aria-hidden /> : null}
+        </button>
+      </th>
+    );
+  };
 
   const panel = (
     <PromptPanel
@@ -489,89 +507,106 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
               {total === 0 ? (
                 <RnEmpty className="m-5">{t("empty")}</RnEmpty>
               ) : (
-                <div ref={listRef} className="overflow-x-auto">
-                  <table className="w-full table-fixed border-separate border-spacing-0 text-rn-13" data-rn-prompt-table="" data-wide={wide || undefined}>
+                <div {...tip.bind}>
+                  <table className="w-full table-fixed border-separate border-spacing-0 text-rn-13" data-rn-prompt-table="">
                     <colgroup>
                       <col />
-                      {wide ? <col className="w-[210px]" /> : null}
-                      <col className="w-[160px]" />
-                      <col className="w-[104px]" />
-                      <col className="w-[48px]" />
+                      <col className="w-[136px]" />
+                      <col className="w-[108px]" />
+                      <col className="w-[208px]" />
+                      <col className="w-[132px]" />
+                      <col className="w-[116px]" />
                     </colgroup>
                     <thead>
-                      <tr className="text-left text-rn-12 font-semibold text-rn-muted">
-                        <th scope="col" className="h-[38px] border-b border-rn-line-2 pr-3 pl-5 font-semibold">{t("textLabel")}</th>
-                        {wide ? <th scope="col" className="h-[38px] border-b border-rn-line-2 px-3 font-semibold">{tp("columnTaxonomy")}</th> : null}
-                        <th scope="col" className="h-[38px] border-b border-rn-line-2 px-3 font-semibold">{t("marketLabel")}</th>
-                        <th scope="col" className="h-[38px] border-b border-rn-line-2 px-3 font-semibold">{tp("columnMeasure")}</th>
-                        <th scope="col" className="h-[38px] border-b border-rn-line-2 pr-4 pl-2 text-right font-semibold">
-                          <span className="sr-only">{t("historyColumn")}</span>
-                        </th>
+                      <tr className="text-left text-rn-12 text-rn-muted">
+                        {head("text", t("textLabel"), "pl-5")}
+                        {head("brand", t("brandLabel"))}
+                        {head("funnel", t("funnelLabel"))}
+                        {head("depth1", tp("columnTaxonomy"))}
+                        {head("market", t("marketLabel"))}
+                        {head("kind", tp("columnMeasure"))}
                       </tr>
                     </thead>
                     <tbody>
                       {rows.map((r) => {
-                        const path = [hasListType ? r.listType : null, ...depthCols.map((c) => r[c])].filter(Boolean) as string[];
+                        // the cell starts at Depth1 (the list type's 3 values would fill it on every row);
+                        // the tip lists every level by name
+                        const levels = taxonomy(r).filter((l) => l.value);
+                        const depths = levels.filter((l) => l.axis !== "listType");
+                        const path = (depths.length ? depths : levels).map((l) => l.value).join(" › ");
                         return (
-                          <tr key={r.id} data-rn-prompt-row={r.id} className="align-top hover:bg-rn-navy-25/60">
-                            <td className="border-b border-rn-line py-3 pr-3 pl-5">
-                              <div className="leading-snug text-rn-ink">{r.text}</div>
-                              <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-rn-12 text-rn-muted">
-                                <RnTag className={r.common ? "bg-rn-inset text-rn-ink-2" : undefined}>
-                                  {r.common ? t("common") : r.brand}
-                                </RnTag>
-                                {r.presence ? <span>{tVal(r.presence)}</span> : null}
-                                {r.lang ? <span>· {languageName(r.lang, locale)}</span> : null}
-                              </div>
-                              {!wide && (path.length || r.funnelStage) ? (
-                                <div className="mt-1 text-rn-12 text-rn-muted">
-                                  {path.join(" › ")}
-                                  {r.funnelStage ? ` · ${r.funnelStage}` : ""}
-                                </div>
-                              ) : null}
-                            </td>
-                            {wide ? (
-                              <td className="border-b border-rn-line px-3 py-3">
-                                <div className="text-rn-12 leading-snug break-words text-rn-ink-2">{path.length ? path.join(" › ") : "—"}</div>
-                                {r.funnelStage ? <span className="mt-1.5 inline-block rounded-md bg-rn-navy/8 px-1.5 py-px text-rn-12 font-semibold text-rn-navy">{r.funnelStage}</span> : null}
-                              </td>
-                            ) : null}
-                            <td className="border-b border-rn-line px-3 py-3">
-                              <Markets markets={r.markets} labelOf={marketLabel} allLabel={t("marketAll")} allHint={t("marketAllHint")} moreHint={t("marketMoreHint")} />
-                            </td>
-                            <td className="border-b border-rn-line px-3 py-3">
-                              <div className="flex flex-col items-start gap-1.5">
-                                {r.kind === "acr" ? (
-                                  <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-px text-rn-12 font-bold text-rn-navy shadow-[inset_0_0_0_1px_var(--color-rn-navy-300)]">
-                                    <Swords className="size-3" aria-hidden />
-                                    {t("kindAcr")}
+                          <tr
+                            key={r.id}
+                            data-rn-prompt-row={r.id}
+                            // a drag that selects text is not a click on the row
+                            onClick={() => !window.getSelection()?.toString() && setDetail(r)}
+                            className="cursor-pointer hover:bg-rn-navy-25/60"
+                          >
+                            <td className={cx(TD, "pl-5")}>
+                              <span className="flex min-w-0 items-center gap-2">
+                                {r.lang ? (
+                                  <span data-rn-tip={languageName(r.lang, locale)} className="w-5 shrink-0 text-rn-11 font-semibold text-rn-faint uppercase">
+                                    {r.lang}
                                   </span>
+                                ) : null}
+                                <button type="button" data-rn-tip="" className="min-w-0 flex-1 cursor-pointer truncate text-left text-rn-ink focus-visible:outline-2 focus-visible:outline-rn-navy">
+                                  {r.text}
+                                </button>
+                              </span>
+                            </td>
+                            <td className={TD}>
+                              <span className="flex min-w-0 items-center gap-1.5">
+                                <RnTag className={cx("shrink-0", r.common && "bg-rn-inset text-rn-ink-2")}>{r.common ? t("common") : r.brand}</RnTag>
+                                {r.presence ? (
+                                  <span data-rn-tip={tVal(r.presence)} className="truncate text-rn-12 text-rn-muted">
+                                    {tp(`presenceShort.${r.presence}`)}
+                                  </span>
+                                ) : null}
+                              </span>
+                            </td>
+                            <td className={TD}>
+                              {r.funnelStage ? (
+                                <span data-rn-tip="" className="inline-block max-w-full truncate rounded-md bg-rn-navy/8 px-1.5 py-px align-middle text-rn-12 font-semibold text-rn-navy">
+                                  {r.funnelStage}
+                                </span>
+                              ) : (
+                                <span className="text-rn-faint">—</span>
+                              )}
+                            </td>
+                            <td className={TD}>
+                              <span data-rn-tip={levels.map((l) => `${l.label}: ${l.value}`).join("\n") || undefined} className="block truncate text-rn-12 text-rn-ink-2">
+                                {path || "—"}
+                              </span>
+                            </td>
+                            <td className={TD}>
+                              <Markets markets={r.markets} labelOf={marketLabel} allLabel={t("marketAll")} allHint={t("marketAllHint")} />
+                            </td>
+                            <td className={TD}>
+                              <span className="flex items-center gap-1.5 text-rn-12 whitespace-nowrap">
+                                {r.kind === "acr" ? (
+                                  <span className="rounded-md px-1.5 py-px font-bold text-rn-navy shadow-[inset_0_0_0_1px_var(--color-rn-navy-300)]">{t("kindAcr")}</span>
                                 ) : (
-                                  <span className="text-rn-12 text-rn-muted">{t("kindSingle")}</span>
+                                  <span className="text-rn-muted">{t("kindSingle")}</span>
                                 )}
                                 {r.scopePromptId === null ? (
-                                  <span className="inline-flex items-center gap-1 text-rn-12 text-rn-muted" title={t("statusUnmeasuredHint")}>
+                                  <span data-rn-tip={t("statusUnmeasuredHint")} className="inline-flex items-center gap-1 text-rn-muted">
                                     <i aria-hidden className="inline-block size-2 rounded-full border border-dashed border-rn-muted" />
                                     {t("statusUnmeasured")}
                                   </span>
                                 ) : (
-                                  <span className="inline-flex items-center gap-1 text-rn-12 text-rn-ink-2">
+                                  <span data-rn-tip={t("statusMeasured")} className="inline-flex p-0.5">
                                     <i aria-hidden className="inline-block size-2 rounded-full bg-rn-navy" />
-                                    {t("statusMeasured")}
+                                    <span className="sr-only">{t("statusMeasured")}</span>
                                   </span>
                                 )}
-                              </div>
-                            </td>
-                            <td className="border-b border-rn-line py-2.5 pr-4 pl-2 text-right">
-                              <RnIconButton label={t("historyColumn")} onClick={() => setTimelineRow({ id: r.id, text: r.text })}>
-                                <History className="size-3.5" aria-hidden />
-                              </RnIconButton>
+                              </span>
                             </td>
                           </tr>
                         );
                       })}
                     </tbody>
                   </table>
+                  {tip.tip}
                 </div>
               )}
               {total > 0 ? (
@@ -607,7 +642,7 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
           </>
         )}
       </RnFilterSplit>
-      <RnPromptTimeline row={timelineRow} onClose={() => setTimelineRow(null)} closeLabel={tp("close")} />
+      <RnPromptDetail row={detail} taxonomy={taxonomy} marketLabel={marketLabel} onClose={() => setDetail(null)} />
     </div>
   );
 }
@@ -645,40 +680,41 @@ function sortLabel(k: CatalogSort, t: (key: "textLabel" | "brandLabel" | "presen
   }
 }
 
-/** The original MarketCell rule: real countries first (top 3 + "+N"), pseudo slots always shown, unset = "전체". */
-function Markets({ markets, labelOf, allLabel, allHint, moreHint }: { markets: PromptRow["markets"]; labelOf: (c: string) => string; allLabel: string; allHint: string; moreHint: string }) {
-  const { real, pseudo } = markets;
-  if (real.length === 0 && pseudo.length === 0) {
+// Cell classes of the one-line list: every cell one 40px line, cut off with "…".
+// The head sticks at the scrolling area's top edge: -top-1 takes back its 4px top padding (filter-split FRAME_SCROLL).
+const TH = "sticky -top-1 z-[1] h-[38px] border-b border-rn-line-2 bg-rn-surface px-3 font-semibold";
+const TD = "h-10 border-b border-rn-line px-3 align-middle";
+
+/**
+ * One line of the original MarketCell's markets (real countries first, then pseudo slots; unset =
+ * "전체"): the first market and "+N", the full list on hover and in the detail sheet.
+ */
+function Markets({ markets, labelOf, allLabel, allHint }: { markets: PromptRow["markets"]; labelOf: (c: string) => string; allLabel: string; allHint: string }) {
+  const codes = [...markets.real, ...markets.pseudo];
+  if (codes.length === 0) {
     return (
-      <span title={allHint} className="inline-flex items-center gap-1 rounded-md bg-rn-inset px-1.5 py-px text-rn-12 text-rn-ink-2">
+      <span data-rn-tip={allHint} className="inline-flex items-center gap-1 rounded-md bg-rn-inset px-1.5 py-px align-middle text-rn-12 text-rn-ink-2">
         <Globe className="size-3" aria-hidden />
         {allLabel}
       </span>
     );
   }
-  const shown = [...real.slice(0, MARKET_BADGE_LIMIT), ...pseudo];
-  const hidden = real.slice(MARKET_BADGE_LIMIT);
-  const all = [...real, ...pseudo].map(labelOf).join(" · ");
+  const [first, ...rest] = codes;
+  const pseudo = isPseudoRegion(first);
   return (
-    <div className="flex flex-wrap items-center gap-1">
-      {shown.map((code) =>
-        isPseudoRegion(code) ? (
-          <span key={code} className="inline-flex items-center gap-1 rounded-md border border-dashed border-rn-faint px-1.5 text-rn-12 text-rn-muted">
-            <Tag className="size-3" aria-hidden />
-            {labelOf(code)}
-          </span>
-        ) : (
-          <span key={code} className="rounded-md bg-rn-inset px-1.5 py-px text-rn-12 text-rn-ink-2">
-            {labelOf(code)}
-          </span>
-        ),
-      )}
-      {hidden.length ? (
-        <span title={all} aria-label={moreHint} className="rounded-md px-1.5 py-px text-rn-12 text-rn-muted tabular-nums shadow-[inset_0_0_0_1px_var(--color-rn-line-2)]">
-          +{hidden.length}
-        </span>
-      ) : null}
-    </div>
+    <span data-rn-tip={rest.length ? codes.map(labelOf).join(" · ") : undefined} className="flex min-w-0 items-center gap-1">
+      <span
+        data-rn-tip={rest.length ? undefined : ""}
+        className={cx(
+          "inline-flex min-w-0 items-center gap-1 rounded-md px-1.5 py-px text-rn-12",
+          pseudo ? "border border-dashed border-rn-faint text-rn-muted" : "bg-rn-inset text-rn-ink-2",
+        )}
+      >
+        {pseudo ? <Tag className="size-3 shrink-0" aria-hidden /> : null}
+        <span className="truncate">{labelOf(first)}</span>
+      </span>
+      {rest.length ? <span className="shrink-0 rounded-md px-1.5 py-px text-rn-12 text-rn-muted tabular-nums shadow-[inset_0_0_0_1px_var(--color-rn-line-2)]">+{rest.length}</span> : null}
+    </span>
   );
 }
 

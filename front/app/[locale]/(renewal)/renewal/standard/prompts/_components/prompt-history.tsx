@@ -2,14 +2,15 @@
 
 // Change history of the renewal Global prompts page — the original page's two history
 // surfaces in the renewal design, with their data and rules unchanged:
-//   RnPromptTimeline  per-prompt timeline (screen catalog/prompts-timeline, newest first)
+//   RnPromptTimeline  per-prompt timeline (screen catalog/prompts-timeline, newest first), the
+//                     history part of the prompt detail sheet (prompt-detail.tsx)
 //   RnAuditHistory    the 90-day feed tab (30/90-day and event filters and bulk grouping by the
 //                     screen catalog/prompts-history; CSV of what it shows)
 
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { ChevronRight, Download } from "lucide-react";
-import { RnButton, RnDrawer, RnEmpty, RnSelect, cx } from "@/components/renewal-ui";
+import { RnButton, RnEmpty, RnSelect, cx } from "@/components/renewal-ui";
 import { PROMPT_AUDIT_EVENT_TYPES } from "@/lib/standards/audit";
 import { dateStamp, downloadCsv } from "@/lib/export/csv";
 import type { PromptAuditLogView } from "@/lib/db/repositories/prompt-audit-logs";
@@ -51,53 +52,44 @@ function Changes({ changes, textToggle }: { changes: PromptAuditLogView["changes
   );
 }
 
-export function RnPromptTimeline({ row, onClose, closeLabel }: { row: { id: string; text: string } | null; onClose: () => void; closeLabel: string }) {
+export function RnPromptTimeline({ id }: { id: string }) {
   const t = useTranslations("promptAudit");
   const th = useTranslations("promptAudit.history");
   const locale = useLocale();
   const [state, setState] = useState<LoadState>({ phase: "loading" });
   useEffect(() => {
-    if (!row) return;
     let cancelled = false;
     setState({ phase: "loading" });
-    fetchPromptTimeline(row.id)
+    fetchPromptTimeline(id)
       .then((res) => !cancelled && setState(res.available ? { phase: "ready", rows: res.rows } : { phase: "unavailable" }))
       .catch(() => !cancelled && setState({ phase: "error" }));
     return () => {
       cancelled = true;
     };
-  }, [row]);
+  }, [id]);
   const fmt = useMemo(() => new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }), [locale]);
+  if (state.phase === "loading") return <p className="m-0 text-rn-13 text-rn-muted">{t("loading")}</p>;
+  if (state.phase === "error") return <p className="m-0 text-rn-13 text-rn-danger-ink">{t("loadFailed")}</p>;
+  if (state.phase === "unavailable") return <RnEmpty>{t("sourceUnavailable")}</RnEmpty>;
+  if (state.rows.length === 0) return <RnEmpty>{t("empty")}</RnEmpty>;
   return (
-    <RnDrawer open={row !== null} onClose={onClose} title={t("timelineTitle")} subtitle={row?.text} closeLabel={closeLabel}>
-      {state.phase === "loading" ? (
-        <p className="m-0 text-rn-13 text-rn-muted">{t("loading")}</p>
-      ) : state.phase === "error" ? (
-        <p className="m-0 text-rn-13 text-rn-danger-ink">{t("loadFailed")}</p>
-      ) : state.phase === "unavailable" ? (
-        <RnEmpty>{t("sourceUnavailable")}</RnEmpty>
-      ) : state.rows.length === 0 ? (
-        <RnEmpty>{t("empty")}</RnEmpty>
-      ) : (
-        <ol className="m-0 flex list-none flex-col gap-0 p-0">
-          {state.rows.map((ev, i) => (
-            <li key={ev.id} className="relative grid grid-cols-[16px_minmax(0,1fr)] gap-3 pb-4">
-              <span aria-hidden className={cx("mt-1 size-2.5 rounded-full", i === 0 ? "bg-rn-navy" : "bg-rn-navy-300")} />
-              {i < state.rows.length - 1 ? <span aria-hidden className="absolute top-4 bottom-0 left-[4px] w-px bg-rn-line-2" /> : null}
-              <div className="flex min-w-0 flex-col gap-1.5">
-                <div className="flex flex-wrap items-center gap-2 text-rn-12">
-                  <span className="rounded-md bg-rn-navy/8 px-1.5 py-px font-bold text-rn-navy">{t(`events.${ev.eventType}` as "events.created")}</span>
-                  <span className="text-rn-muted tabular-nums">{fmt.format(new Date(ev.createdAt))}</span>
-                  <span className="text-rn-muted">{ev.actorEmail ?? t("actorUnknown")}</span>
-                  {ev.batchId ? <span className="rounded-md px-1.5 text-rn-muted shadow-[inset_0_0_0_1px_var(--color-rn-line-2)]">{t("bulkBadge")}</span> : null}
-                </div>
-                <Changes changes={ev.changes} textToggle={th("viewTextDiff")} />
-              </div>
-            </li>
-          ))}
-        </ol>
-      )}
-    </RnDrawer>
+    <ol className="m-0 flex list-none flex-col gap-0 p-0">
+      {state.rows.map((ev, i) => (
+        <li key={ev.id} className="relative grid grid-cols-[16px_minmax(0,1fr)] gap-3 pb-4">
+          <span aria-hidden className={cx("mt-1 size-2.5 rounded-full", i === 0 ? "bg-rn-navy" : "bg-rn-navy-300")} />
+          {i < state.rows.length - 1 ? <span aria-hidden className="absolute top-4 bottom-0 left-[4px] w-px bg-rn-line-2" /> : null}
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <div className="flex flex-wrap items-center gap-2 text-rn-12">
+              <span className="rounded-md bg-rn-navy/8 px-1.5 py-px font-bold text-rn-navy">{t(`events.${ev.eventType}` as "events.created")}</span>
+              <span className="text-rn-muted tabular-nums">{fmt.format(new Date(ev.createdAt))}</span>
+              <span className="text-rn-muted">{ev.actorEmail ?? t("actorUnknown")}</span>
+              {ev.batchId ? <span className="rounded-md px-1.5 text-rn-muted shadow-[inset_0_0_0_1px_var(--color-rn-line-2)]">{t("bulkBadge")}</span> : null}
+            </div>
+            <Changes changes={ev.changes} textToggle={th("viewTextDiff")} />
+          </div>
+        </li>
+      ))}
+    </ol>
   );
 }
 

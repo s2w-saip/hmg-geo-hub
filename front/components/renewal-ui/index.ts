@@ -9,7 +9,7 @@ export { RnPanelGroupLabel, RnPanelSection, RnSearchField } from "./panel-sectio
 export { RnCountBadge, RnPill, RnTag, RnToken } from "./chip";
 export { RnDeltaChip, RnToneChip, type RnTone } from "./delta-chip";
 export { RnSkeleton } from "./skeleton";
-export { RnSparkline } from "./sparkline";
+export { RnSparkAxis, RnSparkline } from "./sparkline";
 export { RnToastProvider, useRnToast } from "./toast";
 export { RnMenu, RnMenuItem } from "./menu";
 export { RnInfoTip, RnInfoTipItem } from "./info-tip";
@@ -17,6 +17,7 @@ export { RnRoundCalendar, type RnDayRange } from "./round-calendar";
 export { RnPageHeader } from "./page-header";
 export { RnTabs } from "./tabs";
 export { RnDrawer } from "./drawer";
+export { useRnTruncTip, type RnTruncTipBind } from "./trunc-tip";
 export { RnSelect } from "./select";
 export { RnBasisChip, RnCardHead, RnControlBar, RnFindingGrid, RnSectionHead, RnSegmented, type RnFinding, type RnFindingTone } from "./frame";
 export { RnCardActions } from "./card-actions";
