@@ -1095,7 +1095,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
       <!-- erd:seo -->
 <svg viewBox="0 0 1200 610" role="img" aria-label="HUB 데이터 DB의 SEO 표와 ops 스키마 ERD. page_* 표는 빌드별로 쌓이고, ops.seo_active_build가 프로젝트·날짜마다 보여 줄 빌드를 정한다.">
 <defs><marker id="seo-a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker><marker id="seo-d" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ahd" d="M0,0L10,5L0,10z"/></marker></defs>
-<rect class="tbox" x="16" y="40" width="250" height="230" rx="6"/>
+<rect class="tbox" x="16" y="40" width="250" height="248" rx="6"/>
 <path class="th" d="M16,70V46q0,-6 6,-6H260q6,0 6,6V70z"/>
 <line class="rule" x1="16" y1="70" x2="266" y2="70"/>
 <line class="hair" x1="28" y1="112" x2="254" y2="112"/>
@@ -1110,14 +1110,14 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 <text class="m" x="64" y="167">slice_key</text>
 <text class="m sm ty" x="256" y="167" text-anchor="end">text</text>
 <text class="m" x="64" y="185">status</text>
-<text class="m sm ty" x="256" y="185" text-anchor="end">text</text>
-<text class="m" x="64" y="203">rule_ver</text>
-<text class="m sm ty" x="256" y="203" text-anchor="end">text</text>
-<text class="m" x="64" y="221">started_at</text>
-<text class="m sm ty" x="256" y="221" text-anchor="end">timestamptz</text>
-<text class="m" x="64" y="239">finished_at</text>
+<text class="m sm val" x="256" y="203" text-anchor="end">pending|running|validated|failed</text>
+<text class="m" x="64" y="221">rule_ver</text>
+<text class="m sm ty" x="256" y="221" text-anchor="end">text</text>
+<text class="m" x="64" y="239">started_at</text>
 <text class="m sm ty" x="256" y="239" text-anchor="end">timestamptz</text>
-<text class="mu sm" x="28" y="257">외 실행 메타 열 9개 (schema.sql)</text>
+<text class="m" x="64" y="257">finished_at</text>
+<text class="m sm ty" x="256" y="257" text-anchor="end">timestamptz</text>
+<text class="mu sm" x="28" y="275">외 실행 메타 열 9개 (schema.sql)</text>
 <rect class="tbox" x="312" y="40" width="280" height="212" rx="6"/>
 <path class="th" d="M312,70V46q0,-6 6,-6H586q6,0 6,6V70z"/>
 <line class="rule" x1="312" y1="70" x2="592" y2="70"/>
@@ -1282,8 +1282,8 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 <path class="e" d="M918,199.0H964" marker-end="url(#seo-a)"/>
 <path class="e" d="M638,361h-8V415h8"/>
 <path class="e" d="M630,388.0H615V235H592" marker-end="url(#seo-a)"/>
-<path class="e" d="M312,379.0H289V235H266" marker-end="url(#seo-a)"/>
-<path class="e" d="M141,310V270" marker-end="url(#seo-a)"/>
+<path class="e" d="M312,379.0H289V253H266" marker-end="url(#seo-a)"/>
+<path class="e" d="M141,310V288" marker-end="url(#seo-a)"/>
 <rect class="vgrp" x="312" y="522" width="606" height="60" rx="8"/>
 <text class="m b" x="328" y="546">analytics.current_page_*<tspan class="mu" dx="10">뷰 4개</tspan></text>
 <text class="mu sm" x="328" y="566">page_* ⋈ ops.seo_active_build · 프로젝트·날짜마다 지정된 빌드의 행만</text>

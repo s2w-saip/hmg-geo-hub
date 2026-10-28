@@ -38,12 +38,17 @@ def wrap(s: str, width: float) -> list[str]:
 
 class Table:
     """rows: (badge, column, right). right is the type, '=a|b' the allowed values,
-    '→ t' a foreign key to a table drawn in another figure, '⇢ t' a reference without a foreign key."""
+    '→ t' a foreign key to a table drawn in another figure, '⇢ t' a reference without a foreign key.
+    Allowed values too long for the row go on a second line under it."""
 
     def __init__(self, name, x, y, w, desc, rows, notes=()):
         self.name, self.x, self.y, self.w, self.desc, self.rows = name, x, y, w, desc, rows
         self.notes = list(notes)
-        self.h = HEAD + DESC + 14 + ROW * (len(rows) + len(self.notes))
+        self.pitch = [2 if right.startswith("=") and not self.fits(column, right[1:]) else 1 for _, column, right in rows]
+        self.h = HEAD + DESC + 14 + ROW * (sum(self.pitch) + len(self.notes))
+
+    def fits(self, column, shown) -> bool:
+        return NAME_X + text_width(column, 6.9) + 12 + text_width(shown, 6.6) + 10 <= self.w
 
     @property
     def bottom(self) -> int:
@@ -51,7 +56,7 @@ class Table:
 
     def row(self, column) -> float:
         i = [r[1] for r in self.rows].index(column)
-        return self.y + HEAD + DESC + 15 + ROW * i
+        return self.y + HEAD + DESC + 15 + ROW * sum(self.pitch[:i])
 
     def svg(self, warn) -> str:
         x, y, w = self.x, self.y, self.w
@@ -76,11 +81,15 @@ class Table:
             if badge:
                 out.append(f'<text class="kb {kind}" x="{x + 10}" y="{cy}">{escape(badge)}</text>')
             out.append(f'<text class="m" x="{x + NAME_X}" y="{cy}">{escape(column)}</text>')
-            out.append(f'<text class="m sm {cls}" x="{x + w - 10}" y="{cy}" text-anchor="end">{escape(shown)}</text>')
-            if NAME_X + text_width(column, 6.9) + 12 + text_width(shown, 6.6) + 10 > w:
+            if not self.fits(column, shown) and cls == "val":
+                cy += ROW
+                if 22 + text_width(shown, 6.6) > w:  # the continuation line has no badge, so it may start at the left pad
+                    warn(f"{self.name}.{column}: allowed values wider than {w} even on their own line")
+            elif not self.fits(column, shown):
                 warn(f"{self.name}.{column}: row wider than {w}")
+            out.append(f'<text class="m sm {cls}" x="{x + w - 10}" y="{cy}" text-anchor="end">{escape(shown)}</text>')
         for i, note in enumerate(self.notes):
-            cy = self.y + HEAD + DESC + 15 + ROW * (len(self.rows) + i) + 4
+            cy = self.y + HEAD + DESC + 15 + ROW * (sum(self.pitch) + i) + 4
             out.append(f'<text class="mu sm" x="{x + 12}" y="{cy}">{escape(note)}</text>')
             if 22 + text_width(note, 6.6) > w:
                 warn(f"{self.name}: note wider than {w}")
@@ -278,7 +287,8 @@ def seo() -> Figure:
     f = Figure("seo", 610, "HUB 데이터 DB의 SEO 표와 ops 스키마 ERD. page_* 표는 빌드별로 쌓이고, "
                "ops.seo_active_build가 프로젝트·날짜마다 보여 줄 빌드를 정한다.")
     f.table("ops.build", 16, 40, 250, "SEO 데이터 빌드 한 번당 한 행으로, 규칙 버전·상태·검증 결과를 담는다.", [
-        ("PK", "build_id", "bigint"), ("", "family", "text"), ("", "slice_key", "text"), ("", "status", "text"),
+        ("PK", "build_id", "bigint"), ("", "family", "text"), ("", "slice_key", "text"),
+        ("", "status", "=pending|running|validated|failed"),
         ("", "rule_ver", "text"), ("", "started_at", "timestamptz"), ("", "finished_at", "timestamptz")],
         notes=["외 실행 메타 열 9개 (schema.sql)"])
     f.table("analytics.page_visibility_daily", 312, 40, 280, "빌드별로 페이지·날짜마다 검색 노출 수와 AI 크롤 수 합계를 담는다.", [
