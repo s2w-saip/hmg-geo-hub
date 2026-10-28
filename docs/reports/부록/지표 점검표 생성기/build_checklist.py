@@ -22,6 +22,7 @@ sys.path.insert(0, HERE)
 from before_data import FN, K  # noqa: E402
 from work_items import WORK  # noqa: E402
 from progress import PROGRESS  # noqa: E402
+from conversion_status import AS_OF, BASIS, BFF_COMMITS, KIND_LABEL, RENEWAL, ROUTE_PATH, done_verdict  # noqa: E402
 from visible_items import visible_inventory  # noqa: E402
 from item_applicability import applicability, validate_inventory, has_explicit_hardcoding_target  # noqa: E402
 
@@ -294,6 +295,8 @@ counts = {"y": 0, "n": 0, "u": 0}
 side_counts = {"B": {"y": 0, "n": 0, "u": 0}, "A": {"y": 0, "n": 0, "u": 0}}
 used_fns, commons = [], []
 n_areas = n_screens = 0
+conversion_tally = {}  # path kind -> {"screens": [menu path], "y"/"n"/"u": DONE items}
+assert not {s["route"] for s in SCREENS} - set(ROUTE_PATH), "screen route without a path kind in conversion_status.py"  # noqa: F821
 
 
 def tally(side, v):
@@ -318,18 +321,20 @@ def pair_cell(vb, tb, va, ta, f):
     return f'<td class="pc t{va}" title="{esc(tip)}">{inner}</td>'
 
 
-def count_cell(cb, ca, f):
-    """Screen row: completed/eligible for DONE; otherwise number of ☒ areas."""
+def count_cell(cb, ca, f, route=None):
+    """Screen row: completed/eligible for DONE (+ the screen's path kind); otherwise number of ☒ areas."""
     if f == 'DONE':
         total = ca['y'] + ca['n'] + ca['u']
         if not total:
             return '<td class="pc cnt tx"></td>'
         completed = ca['y']
+        kind, evidence = ROUTE_PATH[route]
         tint = 'y' if completed == total else ('n' if ca['n'] else 'u')
         tip = (f"After 전환 완료 {completed} / 전체 전환 대상 {total}"
-               f" · 미완료 {ca['n']} · 미확인 {ca['u']} · 해당 없음은 전체에서 제외")
+               f" · 미완료 {ca['n']} · 미확인 {ca['u']} · 해당 없음은 전체에서 제외"
+               f"\n경로: {KIND_LABEL[kind]} · {evidence}")
         return (f'<td class="pc cnt t{tint}" title="{esc(tip)}">'
-                f'<span class="{tint}">{completed} / {total}</span></td>')
+                f'<span class="{tint}">{completed} / {total}</span><span class="val">{KIND_LABEL[kind]}</span></td>')
     def part(c):
         judged = c["y"] + c["n"]
         if c["n"]:
@@ -385,6 +390,7 @@ for s in SCREENS:  # noqa: F821
                 used_fns.append(f)
         cells = []
         shown_factors = []
+        f10_after = 'x'
         for f in FACTORS:
             # Applicability is a gate for every row.
             if f not in applicable:
@@ -396,9 +402,12 @@ for s in SCREENS:  # noqa: F821
                 va, ta = after_cell(a_keys, f, s.get("acommon"), dlabel == "쓰기", s.get("ans"))
             else:
                 vb, tb, va, ta = 'x', '', 'x', ''
-            if f == 'DONE' and va == 'y':
-                # No item has a completed mandatory parity check, so nothing is marked converted.
-                va, ta = 'u', '필수 계산·표시 규칙 동일성 검증 미완료: 전환 완료 처리 불가'
+            if f == 'F10':
+                f10_after = va
+            if f == 'DONE' and va != 'x':
+                # Judged from the screen's current data path (conversion_status.py); no item has a
+                # completed mandatory parity check, so nothing is marked converted.
+                va, ta = done_verdict(s['route'], f10_after)
             if shared:
                 tb += " · 기존 묶음의 공통 근거"
                 ta += " · 기존 묶음의 공통 근거"
@@ -423,7 +432,7 @@ for s in SCREENS:  # noqa: F821
             f'<tr class="block" data-source="{esc(source_area[1])}"><td class="indent" title="{esc(tip)}">{esc(label)}{badge}<span class="val">{esc(sub)}</span></td>'
             f'<td class="pc tx"></td>{"".join(cells)}</tr>')
 
-    cnt_cells = "".join(count_cell(agg[f]["B"], agg[f]["A"], f) for f in FACTORS)
+    cnt_cells = "".join(count_cell(agg[f]["B"], agg[f]["A"], f, s["route"]) for f in FACTORS)
     f1_before = re.sub('<[^>]+>', '', str(bval)) + ' ms' if b in ('y', 'n') else '미측정'
     f1_tip = f"화면 전체의 데이터 로딩 시간 · 재방문 / 첫 방문\nBefore: {f1_before}\nAfter: 미측정\n개별 표시 항목의 F1은 해당 없음"
     f1_cell = (
@@ -437,6 +446,12 @@ for s in SCREENS:  # noqa: F821
     # Visibility/access annotations belong to the tooltip, not the menu path.
     menu_path = re.sub(r"\s*\((?:메뉴 숨김[^)]*|beta|하위 페이지|SNB 숨김[^)]*|EcatNav[^)]*|api 전용|GNB 밖)\)", "", menu_path)
     scr_tip += f"\n메뉴 경로·조건: {s['menu']}"
+    done_a = agg["DONE"]["A"]
+    if done_a["y"] + done_a["n"] + done_a["u"]:
+        conv = conversion_tally.setdefault(ROUTE_PATH[s["route"]][0], {"screens": [], "y": 0, "n": 0, "u": 0})
+        conv["screens"].append(menu_path)
+        for v in "ynu":
+            conv[v] += done_a[v]
     screen_row = (
         f'<tr class="screen" onclick="toggleScreen({sidx})"><td title="{esc(scr_tip)}">{esc(menu_path)}'
         f'<span class="val route">{route_txt}</span></td>'
@@ -559,6 +574,51 @@ progress_html = (f'<section>\n<h2>진행 현황 <span class="muted small">완료
                  '<div class="scroll"><table class="progress"><thead><tr><th>상태</th><th>항목</th><th>대상 · 판정 요소</th><th>비고</th></tr></thead><tbody>\n'
                  + "\n".join(prow) + '\n</tbody></table></div>\n</section>')
 
+# ── Renewal conversion status: the DONE column by path kind + renewal (/renewal) pages ──
+KIND_NOTE = {
+    "bff": f"원래 화면을 그대로 그리고 데이터는 <code>/v1/screens</code>로만 읽습니다. 화면 계산은 <code>back/bff/screens</code>로 옮겼고 legacy 분기를 지웠습니다({BFF_COMMITS}). 세션·프로젝트 게이트의 <code>HGH_SOURCE_SESSION</code> 분기는 남아 있습니다.",
+    "replaced": "<code>/v1/screens</code>로 읽지만 원래 화면 대신 Gold 직결 간이 화면(GoldProject · SourceAnalytics 등)을 그립니다. 원래 표시 항목이 옮겨지지 않았습니다.",
+    "legacy": "<code>HGH_SOURCE_*</code> 분기와 <code>lib/db</code> legacy 경로가 남아 있습니다. 로컬 읽기 전용 모드에서만 API로 고정됩니다.",
+}
+conv_rows = []
+conv_total = {v: 0 for v in "ynu"}
+for kind in ("bff", "replaced", "legacy"):
+    c = conversion_tally.get(kind)
+    if not c:
+        continue
+    for v in "ynu":
+        conv_total[v] += c[v]
+    items = c["y"] + c["n"] + c["u"]
+    verdict = f'<span class="y">☑ {c["y"]}</span> · <span class="n">☒ {c["n"]}</span> · <span class="u">☐ {c["u"]}</span>'
+    conv_rows.append(
+        f'<tr><td class="st">{esc(KIND_LABEL[kind])}</td><td class="small">{len(c["screens"])}개 · 항목 {items}</td>'
+        f'<td class="small">{verdict}</td><td class="small">{KIND_NOTE[kind]}<span class="val">{esc(" · ".join(c["screens"]))}</span></td></tr>')
+conv_all = sum(conv_total.values())
+RN_STATE = {"done": '<span class="y">☑ 구현</span>', "wip": '<span class="y">☑ 구현</span><span class="val">작업 트리 · 미커밋</span>',
+            "todo": '<span class="u">☐ 미구현</span>'}
+rn_rows = []
+for area, item, path, state, screens, checked, commits in RENEWAL:
+    rn_rows.append(
+        f'<tr><td class="small">{esc(area)}</td><td><strong>{esc(item)}</strong><span class="val"><code>{esc(path)}</code></span></td>'
+        f'<td class="st small">{RN_STATE[state]}</td><td class="small"><code>{esc(screens)}</code></td>'
+        f'<td class="small">{esc(checked)}</td><td class="small muted">{esc(commits)}</td></tr>'.replace('<code></code>', ''))
+rn_done = sum(1 for r in RENEWAL if r[3] != "todo")
+rn_wip = sum(1 for r in RENEWAL if r[3] == "wip")
+renewal_html = (
+    f'<section id="renewal-status">\n<h2>리뉴얼 전환 현황 <span class="muted small">{AS_OF} · {esc(BASIS)} 코드 대조</span></h2>\n'
+    f'<h3>API 경로 전환 — 화면별 점검표의 ‘완료’ 열 <span class="muted small">전환 완료 {conv_total["y"]} / {conv_all}</span></h3>\n'
+    '<p class="small">완료(☑)는 legacy 경로 제거 + API 고정 + 필수 계산·표시 규칙 동일성 검증 + F10 통과가 모두 끝난 항목입니다. '
+    '동일성 검증을 마친 항목이 아직 없으므로 완료는 0입니다. 데이터 경로를 옮긴 화면도 F10 ☒ 항목은 ☒, 나머지는 동일성 검증 전이라 ☐입니다. '
+    'F10 판정은 BFF 이관 전(<code>56ad6f9</code>)에 측정한 값입니다.</p>\n'
+    '<div class="scroll"><table class="renewal"><thead><tr><th>경로 상태</th><th>화면 · 완료 열 항목</th><th>판정</th><th>근거 · 화면</th></tr></thead><tbody>\n'
+    + "\n".join(conv_rows) + '\n</tbody></table></div>\n'
+    f'<h3>리뉴얼 화면(/renewal) 구현 <span class="muted small">메뉴 항목 {len(RENEWAL)}개 중 구현 {rn_done}(미커밋 {rn_wip}) · 미구현 {len(RENEWAL) - rn_done}</span></h3>\n'
+    '<p class="small">리뉴얼 주소는 <code>/ko/renewal</code> + 원래 주소입니다. 리뉴얼 메뉴의 모든 항목은 리뉴얼 화면을 열고, 화면이 없으면 리뉴얼 틀 안에서 ‘미구현’ 안내를 띄웁니다(작업 트리). '
+    '리뉴얼 화면은 원래 화면과 같은 BFF 화면을 읽지만, <strong>구현은 위 전환 완료와 별개입니다.</strong> 운영·stg 데이터로 원래 화면과 숫자를 대조한 화면은 아직 없습니다. '
+    '메뉴에서 모든 역할에 숨긴 항목(Customer interest · Website ACR)은 뺐습니다.</p>\n'
+    '<div class="scroll"><table class="renewal"><thead><tr><th>구역</th><th>메뉴 항목 · 원래 주소</th><th>상태</th><th>리뉴얼 화면 데이터</th><th>확인한 것</th><th>커밋</th></tr></thead><tbody>\n'
+    + "\n".join(rn_rows) + '\n</tbody></table></div>\n</section>')
+
 # ── Historical F10 differences: evidence only, no blanket acceptance control ──
 F10_PATH = os.path.join(SURVEY_DIR, "f10_differences.json")
 f10_html = ""
@@ -614,7 +674,8 @@ total = sum(counts.values())
 TEMPLATE = open(TEMPLATE_PATH, encoding="utf-8").read()
 out = TEMPLATE
 for k, v in {
-    "{{ROWS}}": "\n".join(screen_blocks), "{{PROGRESS}}": progress_html, "{{F10}}": f10_html, "{{BEFORE_ROWS}}": "\n".join(brows), "{{K_ROWS}}": "\n".join(krows),
+    "{{ROWS}}": "\n".join(screen_blocks), "{{PROGRESS}}": progress_html, "{{RENEWAL}}": renewal_html, "{{F10}}": f10_html,
+    "{{AS_OF}}": AS_OF, "{{BASIS}}": esc(BASIS), "{{BEFORE_ROWS}}": "\n".join(brows), "{{K_ROWS}}": "\n".join(krows),
     "{{TECHNICAL_ROWS}}": "\n".join(technical_rows), "{{N_TECHNICAL}}": str(len(technical_rows)),
     "{{WORK_ROWS}}": "\n".join(wrows), "{{N_WORK}}": str(len(WORK)), "{{N_WORK_IN}}": str(w_in), "{{N_WORK_OUT}}": str(w_out),
     "{{N_FNS}}": str(len(used_fns)), "{{N_AREAS}}": str(n_areas), "{{N_SCREENS}}": str(n_screens),

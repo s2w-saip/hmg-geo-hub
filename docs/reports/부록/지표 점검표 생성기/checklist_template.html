@@ -96,12 +96,14 @@ td.pc.f1{min-width:168px;font-size:11px;font-weight:400;text-align:left}
 @media print{.metric-popup{display:none!important}.metric-code::after{content:""}.metric-help{cursor:default}}
 
 table.f10 td:nth-child(2){min-width:360px}
+h3{font-size:16px;margin:20px 0 8px}
+table.renewal td.st{white-space:nowrap;font-weight:700}
 </style>
 </head>
 <body><main>
 
 <header>
-<div class="meta">GEO HUB · 프로젝트 상시 문서 · 최종 갱신 2026-10-15 · <strong>사용자에게 보이는 항목 기준</strong>(화면 {{N_SCREENS}}개) · Before: 원본 <code>392ca45</code> 정적 계수(F1은 화면 3개만 운영 실측) · After: 리뉴얼 API 경로 정적 계수(엔드포인트 261개, F1 제외) + 수정 2건 반영 · 판정 근거는 기존 조사 기준</div>
+<div class="meta">GEO HUB · 프로젝트 상시 문서 · 최종 갱신 {{AS_OF}} · <strong>사용자에게 보이는 항목 기준</strong>(화면 {{N_SCREENS}}개) · Before: 원본 <code>392ca45</code> 정적 계수(F1은 화면 3개만 운영 실측) · After: 리뉴얼 API 경로 정적 계수(엔드포인트 261개, F1 제외, BFF 이관 전) + 수정 2건 반영 · 완료 열과 리뉴얼 전환 현황: {{BASIS}} 코드 대조 · 판정 근거는 기존 조사 기준</div>
 <h1>★ 리뉴얼·최적화 지표 점검표</h1>
 <p>사용자가 보는 지표·카드·차트·표·안내문·버튼을 한 항목씩 나눠 리뉴얼 전(Before, legacy)과 후(After, API)를 점검합니다.</p>
 <div class="summary">
@@ -121,6 +123,8 @@ table.f10 td:nth-child(2){min-width:360px}
 
 {{PROGRESS}}
 
+{{RENEWAL}}
+
 {{F10}}
 
 <section id="screen-checklist">
@@ -130,7 +134,7 @@ table.f10 td:nth-child(2){min-width:360px}
 <p class="small muted"><strong>F4 업무 기준값의 하드코딩 제거:</strong> Before에 해당 하드코딩이 없었던 항목은 Before·After 모두 빈칸으로 두고 집계에서 제외합니다. Before에서 확인된 하드코딩이 남아 있으면 ☒, 제거됐으면 ☑입니다. 제거 대상이 해당 항목에 연결돼 있지만 상태 검증이 남았을 때만 ☐를 표시합니다. 묶음에만 상수 기록이 있고 개별 항목과 연결되지 않았으면 체크를 만들지 않고 빈칸으로 둡니다. 이 경우의 불확실성은 아래 ‘F4 항목별 근거 연결 대기’에 별도로 보존하며, 하드코딩 없음으로 판정한 것은 아닙니다.</p>
 <p class="small muted">조회한 옵션을 선택하는 필터·달력은 그 조작 자체에 F4 제거 대상이 없어 빈칸입니다. 함께 조회한 KPI의 계산 상수나 공통 기간 설정을 필터의 하드코딩으로 붙이지 않습니다. 정적 업무 목록을 직접 사용하는 선택 항목(예: 프로젝트 생성의 정적 카탈로그, 고정 키워드 탭)은 F4 대상에 남깁니다. 이 적용 기준 정리는 기존 조사 기록을 사용합니다.</p>
 <p class="small"><strong>F1은 화면 경로 행에서만 점검합니다.</strong> 개별 카드·버튼 행은 빈칸입니다. Before는 {{N_F1_BEFORE}}개 화면만 실측했고, After는 모두 미측정입니다. <strong>열 제목에 커서를 올리거나 누르면</strong> 점검 대상·충족 기준·확인 방법이 표시됩니다.</p>
-<div class="toolbar"><button type="button" onclick="toggleAll(true)">모두 펼치기</button><button type="button" onclick="toggleAll(false)">모두 접기</button><span class="muted small">칸 = <b>Before → After</b>, 칸 색 = After 결과. 화면 행의 숫자 = 그 화면에서 ☒인 항목 수. <b>리뉴얼 전환 완료는 완료된 항목 수 / 전체 전환 대상 항목 수</b>이며, 미확인은 전체에 포함하고 해당 없음은 제외합니다. 화면 행을 누르면 표시 항목이 펼쳐집니다. F10·완료는 After만. 구 F5는 위 필수 동일성 검증에서 별도 관리합니다.</span></div>
+<div class="toolbar"><button type="button" onclick="toggleAll(true)">모두 펼치기</button><button type="button" onclick="toggleAll(false)">모두 접기</button><span class="muted small">칸 = <b>Before → After</b>, 칸 색 = After 결과. 화면 행의 숫자 = 그 화면에서 ☒인 항목 수. <b>리뉴얼 전환 완료는 완료된 항목 수 / 전체 전환 대상 항목 수</b>이며, 미확인은 전체에 포함하고 해당 없음은 제외합니다. 그 아래 작은 글자는 화면의 경로 상태(데이터 경로 전환 · 대체 화면 · legacy 잔존)입니다. 화면 행을 누르면 표시 항목이 펼쳐집니다. F10·완료는 After만. 구 F5는 위 필수 동일성 검증에서 별도 관리합니다.</span></div>
 <div class="scroll"><table class="matrix">
 <thead>
 <tr><th class="namecol" scope="col">화면 경로 · 사용자에게 보이는 항목</th>
@@ -217,7 +221,7 @@ F2 32/46 · F3 64/2 · F4 52/14 · F6 95/1 · F7 21/5 · F8 38/78 · F9 22/24.<b
 <tr data-factor-definition="F8"><td class="id">F8 불필요한 계산·조회 제거</td><td>한 요청 안에서 실행되는 계산·DB 조회</td><td>화면에서 쓰지 않는 값을 계산하거나 같은 조회를 반복하는지 봅니다.</td><td>미사용 계산·중복 계산·동일한 하위 조회의 반복·목록 한 행마다 추가 조회하는 N+1 패턴이 <strong>0건</strong>이어야 합니다.</td><td>호출 코드와 요청당 SQL 로그를 확인합니다. 근거표의 값은 문제가 있는 함수 수이며, 실행 문장 수도 함께 확인합니다.</td></tr>
 <tr data-factor-definition="F9"><td class="id">F9 응답 데이터 전송량·목록 잘림</td><td>서버에서 화면으로 보내는 응답 본문과 목록</td><td>응답 데이터(페이로드)는 서버가 보내는 실제 필드·행·내용입니다. 화면에 필요한 양보다 많이 보내거나 목록 일부가 안내 없이 빠지는지 봅니다.</td><td>표시 범위·페이지에 비해 과도한 데이터를 전송하지 않고, 최대 행 수 제한으로 목록을 자를 때 이를 숨기지 않아야 합니다.</td><td>응답 크기, 전송 행 수, 페이지 처리, 목록 상한과 잘림 안내를 확인합니다. 예: 50행을 보여 주려고 전체 목록을 받는지, 상한 초과 행이 설명 없이 사라지는지 확인합니다.</td></tr>
 <tr data-factor-definition="F10"><td class="id">F10 API 응답 규칙·접근 권한 유지</td><td>리뉴얼 API의 응답과 사용자별 데이터 접근 범위 · After만 판정</td><td>API 응답 규칙은 화면에 전달하는 필드 이름·형식·의미와 오류 응답 방식입니다. 접근 권한은 사용자 역할·브랜드·국가·프로젝트에 따라 볼 수 있는 데이터 범위입니다.</td><td>응답 규칙과 접근 범위가 Before와 같아야 합니다. 화면이 사용하지 않는 필드 추가만 허용합니다. 의도적인 차이도 기존 기준과 다르면 차이로 기록합니다.</td><td>API 명세(OpenAPI), 응답 비교 시험, 역할별 권한 시험을 확인합니다. 지표 계산·표시 규칙의 동일성은 문서 상단의 필수 검증 조건(구 F5)으로 별도 관리합니다. 규칙 변경은 수용할 수 없습니다.</td></tr>
-<tr data-factor-definition="DONE"><td class="id">리뉴얼 전환 완료</td><td>해당 항목의 리뉴얼 전환 상태 · After만 판정</td><td>기존 처리 경로를 걷어내고 리뉴얼 API 경로로 전환을 끝냈는지 봅니다. 화면 경로 행은 <strong>완료된 항목 수 / 전체 전환 대상 항목 수</strong>로 표시합니다. 전체는 완료·미완료·미확인의 합이며 해당 없음은 제외합니다. 전환 대상이 없으면 빈칸입니다.</td><td>기존 legacy 경로 제거 + <code>HGH_SOURCE_*</code> 설정의 API 고정 + 필수 계산·표시 규칙 동일성 검증 완료 + F10 통과가 모두 필요합니다. 규칙 차이가 있거나 동일성 검증이 끝나지 않았으면 완료로 처리할 수 없습니다. 조회·저장 경로 전환과 무관한 단순 표시·조작 항목은 빈칸입니다.</td><td>기존 호출 제거 여부, 배포 설정, 필수 동일성 검증과 F10의 검증 결과를 확인합니다. 화면에 항목이 보인다는 사실만으로 완료 처리하지 않습니다.</td></tr>
+<tr data-factor-definition="DONE"><td class="id">리뉴얼 전환 완료</td><td>해당 항목의 리뉴얼 전환 상태 · After만 판정</td><td>기존 처리 경로를 걷어내고 리뉴얼 API 경로로 전환을 끝냈는지 봅니다. 화면 경로 행은 <strong>완료된 항목 수 / 전체 전환 대상 항목 수</strong>로 표시합니다. 전체는 완료·미완료·미확인의 합이며 해당 없음은 제외합니다. 전환 대상이 없으면 빈칸입니다.</td><td>기존 legacy 경로 제거 + <code>HGH_SOURCE_*</code> 설정의 API 고정 + 필수 계산·표시 규칙 동일성 검증 완료 + F10 통과가 모두 필요합니다. 규칙 차이가 있거나 동일성 검증이 끝나지 않았으면 완료로 처리할 수 없습니다. 조회·저장 경로 전환과 무관한 단순 표시·조작 항목은 빈칸입니다.</td><td>기존 호출 제거 여부, 배포 설정, 필수 동일성 검증과 F10의 검증 결과를 확인합니다. 화면에 항목이 보인다는 사실만으로 완료 처리하지 않습니다. 현재 판정({{AS_OF}}): 화면이 legacy 분기 없이 <code>/v1/screens</code>로만 읽으면 ‘데이터 경로 전환’이며 F10 ☒이면 ☒, 아니면 동일성 검증 전이라 ☐입니다. 원래 화면 대신 Gold 직결 간이 화면이면 ‘대체 화면’(원래 항목 미이식, ☒), <code>HGH_SOURCE_*</code> 분기가 남으면 ‘legacy 잔존’(☒)입니다.</td></tr>
 </tbody>
 </table></div>
 <p class="note">F1의 전후 시간 개선율에는 데이터·서버·네트워크·캐시 등 통제된 조건이 필요합니다. 현재는 각 환경의 시간을 참고값으로 구분하며, 같은 환경을 마련하는 것을 로직 조사 조건으로 요구하지 않습니다. 조회·계산 구조의 개선은 F2·F3·F8 등에서 확인하고 실측 시간 개선과 구분합니다.</p>

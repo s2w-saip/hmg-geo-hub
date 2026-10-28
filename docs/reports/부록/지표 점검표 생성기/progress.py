@@ -41,6 +41,13 @@ PROGRESS = [
     ("done", "#13·DC-23 프로젝트 ⑥ 인용 정확도 산식 = 레거시", "프로젝트 대시보드 ⑥ 카드·추이 선·Δ · 필수 동일성",
      "db44e4b · 백엔드 현행 프로필 스위치 project_accuracy_single_base(유효 owned base 하나의 접두로 자사 판정, 분모 = 자사, 분자 = 자사 ∧ 추적 URL), "
      "프런트 ⑥ 근사식(M06/M07 분자 비) 제거. 같은 입력 반례 레거시 1/2 = 켬 1/2(끔 2/3). 반영하려면 stg·운영 HGH_LEGACY_PROFILE 에 스위치 추가"),
+    ("done", "BFF 이관 — 분석 화면 계산을 back/bff 로 옮기고 legacy 분기 제거", "완료 열 · 아래 '리뉴얼 전환 현황'",
+     "668238d · fb88fe0 · 41022a5 · 2db2c25 · 옛 TypeScript 골든 1,238건 재현, 이관 전후 화면 비교 170건 중 166건 동일(잡음 2 · 잘못된 입력 2). "
+     "프로젝트·퍼널·관심사 화면 일부는 Gold 직결 대체 화면으로 바뀌어 원래 항목 미이식. 동일성 검증(legacy 대비)은 별개"),
+    ("done", "리뉴얼 화면 — Global 6개", "Overview · Global prompts · Mention · Citation · ACR · AI Visibility",
+     "f962655 · 130c3c8 · 9e5488d · 55d6444 · bc2645b · 7a59bee · Admin › Global prompts 는 작업 트리(미커밋)"),
+    ("next", "리뉴얼 화면 운영·stg 숫자 대조", "리뉴얼 화면 · 계정 4종(admin · HQ · 권역 · 국가)",
+     "합성 데이터로만 확인. 절차는 docs/handoff/renewal-pages.html 3장"),
     ("decide", "결정 필요 항목 — 상수 DB화·사전 집계 층·UI 변경·적재", "56항목", "F10 목록과 함께 보고 예정"),
     ("decide", "임계값 확정", "F1 · F2", "지금은 임시(2.5초·5초, 점수 ≤5)"),
 ]
