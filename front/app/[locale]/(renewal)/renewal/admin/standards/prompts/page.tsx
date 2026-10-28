@@ -7,15 +7,24 @@ import { isHghApiError } from "@/lib/hgh/errors";
 import { hubFetch } from "@/lib/hub/client";
 import { hubToken } from "@/lib/hub/session";
 import { RnPageFrame } from "../../../_components/filter-split";
+import { loadSavedFilters } from "../../../_components/saved-filters-server";
 import type { HubOptions, HubPromptPage } from "./_components/hub-prompts-api";
+import { DEFAULT_PAGE_SIZE, DEFAULT_SORT, listSearch, queryToFilter } from "./_components/hub-prompt-filter-model";
 import { HubPromptsManager } from "./_components/hub-prompts-manager";
 
 // Renewal Admin › Global prompts (2026-10-27): Global prompt editing on the HUB data catalog, for the
 // top-level administrator signed in through the HUB login. The original /admin/standards/prompts (legacy
-// sources) stays as it is. First page and the code options are read here; the rest from the browser.
+// sources) stays as it is. The first page (of the URL's picks), the code options and the saved filters are
+// read here; the rest from the browser.
 export const dynamic = "force-dynamic";
 
-export default async function RenewalHubPromptsPage({ params }: { params: Promise<{ locale: string }> }) {
+export default async function RenewalHubPromptsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("hubPrompts");
@@ -41,12 +50,24 @@ export default async function RenewalHubPromptsPage({ params }: { params: Promis
   // An administrator of another sign-in (not the HUB login) has no HUB session.
   const token = await hubToken();
   if (!token) return notice(t("loginRequired"));
+  const url = new URLSearchParams(Object.entries(await searchParams).flatMap(([k, v]) => (typeof v === "string" ? [[k, v]] : [])));
+  const { filters, search } = queryToFilter(url);
+  const initialSearch = listSearch({ filters, search, sort: DEFAULT_SORT.key, asc: DEFAULT_SORT.asc, page: 1, pageSize: DEFAULT_PAGE_SIZE });
   try {
-    const [page, options] = await Promise.all([
-      hubFetch<{ data: HubPromptPage }>("GET", "/v1/hub/global-prompts", { token, query: "status=active&origin=all&limit=50&offset=0" }),
+    const [page, options, saved] = await Promise.all([
+      hubFetch<{ data: HubPromptPage }>("GET", "/v1/hub/global-prompts", { token, query: initialSearch }),
       hubFetch<{ data: HubOptions }>("GET", "/v1/hub/global-prompts/options", { token }),
+      loadSavedFilters("hub-prompts"),
     ]);
-    return <HubPromptsManager initial={page.data} options={options.data} loginHref={loginHref} />;
+    return (
+      <HubPromptsManager
+        initial={page.data}
+        initialSearch={initialSearch}
+        options={options.data}
+        loginHref={loginHref}
+        savedFilters={{ page: "hub-prompts", userId: session.user.id, initial: saved }}
+      />
+    );
   } catch (e) {
     if (!isHghApiError(e)) throw e;
     const code = e.status === 401 ? "unauthorized" : e.status >= 500 ? "source_unavailable" : "failed";

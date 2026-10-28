@@ -6,7 +6,8 @@ import { NO_STORE, hubErrorResponse, hubFail, jsonBody, sameOrigin } from "@/lib
 // Global prompt editing (renewal Admin › Global prompts, 2026-10-27): the browser's calls, passed to the
 // BFF with the HUB session token. The BFF checks the token and the top-level role on every call.
 //
-//   GET  /api/hub/global-prompts?q&status&origin&kind&language&limit&offset  -> list page + counts
+//   GET  /api/hub/global-prompts?q&status&origin&kind&language&region&<label>&sort&order&limit&offset
+//                                                                            -> list page + counts
 //   GET  /api/hub/global-prompts/options                                     -> codes the catalog uses
 //   POST /api/hub/global-prompts                                             -> create (HUB-owned)
 //   GET  /api/hub/global-prompts/<id>                                        -> item + change history
@@ -24,7 +25,8 @@ const ROUTES: ReadonlyArray<readonly [HubMethod, RegExp]> = [
   ["PUT", new RegExp(`^${ID}$`)],
   ["POST", new RegExp(`^${ID}/(archive|restore)$`)],
 ];
-const LIST_PARAMS = ["q", "status", "origin", "kind", "language", "limit", "offset"];
+// <label> = funnel, brandPresence, listType, depth1–4
+const LIST_PARAMS = ["q", "status", "origin", "kind", "language", "region", "sort", "order", "limit", "offset", "funnel", "brandPresence", "listType", "depth1", "depth2", "depth3", "depth4"];
 
 type Ctx = { params: Promise<{ rest?: string[] }> };
 

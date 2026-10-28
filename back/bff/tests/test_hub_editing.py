@@ -326,9 +326,23 @@ class Rules(unittest.TestCase):
                                 "lower(p.definition->>'language')=$4 AND strpos(lower(p.text),lower($5))>0")
         self.assertEqual(args, [project, "hub", "acr", "ko", "50%_off"])
         self.assertEqual(ce.list_filters({}, project)[1], [project, "active"])
-        for bad in ({"status": "deleted"}, {"origin": "x"}, {"kind": "x"}, {"q": "a\nb"}):
+        where, args = ce.list_filters({"funnel": "인지/탐색", "brandPresence": "branded", "depth1": "1. Car+Features", "region": " x:ww "}, project)
+        self.assertEqual(where, "p.project_id=$1 AND coalesce(p.definition->>'status','active')=$2 AND p.definition->>'funnel'=$3 AND "
+                                "p.definition->>'brand_presence'=$4 AND p.definition->>'depth1'=$5 AND "
+                                "p.definition->'regions' @> jsonb_build_array($6::text)")
+        self.assertEqual(args, [project, "active", "인지/탐색", "branded", "1. Car+Features", "x:WW"])
+        for bad in ({"status": "deleted"}, {"origin": "x"}, {"kind": "x"}, {"q": "a\nb"}, {"funnel": "a\tb"}, {"region": "K" * 201}):
             with self.assertRaises(ce.HTTPException):
                 ce.list_filters(bad, project)
+
+    def test_list_order_sorts_by_one_column_then_the_latest_change(self):
+        self.assertEqual(ce.list_order({}), "p.recorded_at DESC NULLS LAST,p.recorded_at DESC,p.prompt_id")
+        self.assertEqual(ce.list_order({"sort": "text"}), "p.text ASC NULLS LAST,p.recorded_at DESC,p.prompt_id")
+        self.assertEqual(ce.list_order({"sort": "depth1", "order": "desc"}), "p.definition->>'depth1' DESC NULLS LAST,p.recorded_at DESC,p.prompt_id")
+        self.assertEqual(ce.list_order({"sort": "status"}), "coalesce(p.definition->>'status','active') ASC NULLS LAST,p.recorded_at DESC,p.prompt_id")
+        for bad in ({"sort": "p.text; DROP"}, {"sort": "text", "order": "up"}):
+            with self.assertRaises(ce.HTTPException):
+                ce.list_order(bad)
 
 
 # ═══ routes ══════════════════════════════════════════════════════════════════════════════════════════════
@@ -496,6 +510,11 @@ class Routes(unittest.TestCase):
         self.assertEqual(body["data"]["listType"], [{"value": "faq", "count": 1}, {"value": "comparison", "count": 0}])
         self.assertEqual(body["data"]["brandPresence"], [{"value": "brand", "count": 1}])
         self.assertEqual(body["data"]["depth4"], [])
+        # the depth codes with their parents (the form's cascade); other axes are not part of it
+        self.assertEqual(body["data"]["taxonomy"], [
+            {"field": "depth1", "code": "charging", "path": []}, {"field": "depth1", "code": "ev", "path": []},
+            {"field": "depth2", "code": "cost", "path": ["charging"]}, {"field": "depth3", "code": "home", "path": ["charging", "cost"]},
+            {"field": "depth2", "code": "range", "path": ["ev"]}])
 
     def test_recorded_taxonomy_codes_are_accepted_and_none_recorded_falls_back(self):
         token = self.token()

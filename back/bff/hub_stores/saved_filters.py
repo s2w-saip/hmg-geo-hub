@@ -23,7 +23,7 @@ from bff.hub_stores.catalog_editor import refused
 from bff.hub_stores.hub_auth import Principal
 
 # The renewal screens with a saved filter list (front: the `page` each gives its filter panel).
-PAGES = ("overview", "mention", "citation", "acr", "visibility", "prompts")
+PAGES = ("overview", "mention", "citation", "acr", "visibility", "prompts", "hub-prompts")
 NAME_MAX = 40
 QUERY_MAX = 4000
 PER_PAGE_MAX = 50

@@ -58,6 +58,11 @@ CURRENT_SQL = """SELECT p.prompt_id,p.project_id,p.origin,p.registered_at,v.vers
 VERSIONS_SQL = """SELECT version,text,definition,recorded_at,recorded_by FROM catalog.prompt_version
     WHERE prompt_id=$1 ORDER BY version DESC LIMIT $2"""
 SCALARS = {"language": "language", **LABELS}
+# sort= of a list page -> its column (the management list's sortable columns)
+SORTS = {"changed": "p.recorded_at", "text": "p.text", "origin": "p.origin",
+         "status": "coalesce(p.definition->>'status','active')", "kind": "coalesce(p.definition->>'kind','single')",
+         "language": "p.definition->>'language'", "region": "p.definition->'regions'->>0",
+         **{api: f"p.definition->>'{key}'" for api, key in LABELS.items()}}
 VOCABULARY_SQL = f"""SELECT k.key,k.value,count(*)::int AS n FROM catalog.current_prompt p
     CROSS JOIN LATERAL (VALUES {",".join(f"('{api}',p.definition->>'{key}')" for api, key in SCALARS.items())}) k(key,value)
     WHERE p.project_id=$1 AND k.value<>'' GROUP BY 1,2
@@ -352,12 +357,35 @@ def list_filters(q: dict, project: UUID) -> tuple[str, list]:
         bind("coalesce(p.definition->>'kind','single')=$?", q["kind"])
     if q.get("language"):
         bind("lower(p.definition->>'language')=$?", q["language"].strip().lower())
+    # the label codes and one market, as the options list them (the list's filter panel)
+    for api, key in LABELS.items():
+        if q.get(api):
+            bind(f"p.definition->>'{key}'=$?", code_param(q[api], api))
+    if q.get("region"):
+        bind("p.definition->'regions' @> jsonb_build_array($?::text)", normalize_region(code_param(q["region"], "region")))
     search = (q.get("q") or "").strip()
     if search:
         if len(search) > 200 or CONTROL.search(search):
             raise refused(422, "invalid_value", "Search text is too long or has control characters")
         bind("strpos(lower(p.text),lower($?))>0", search)
     return " AND ".join(conds), args
+
+
+def code_param(value: str, name: str) -> str:
+    if len(value) > CODE_MAX or CONTROL.search(value):
+        raise refused(422, "invalid_value", f"{name} is too long or has control characters")
+    return value
+
+
+def list_order(q: dict) -> str:
+    """ORDER BY of a list page: the sort column (sort=, order=asc|desc), then the latest change first."""
+    sort = q.get("sort") or "changed"
+    if sort not in SORTS:
+        raise refused(422, "invalid_value", f"sort must be one of {', '.join(SORTS)}")
+    order = q.get("order") or ("desc" if sort == "changed" else "asc")
+    if order not in ("asc", "desc"):
+        raise refused(422, "invalid_value", "order must be asc or desc")
+    return f"{SORTS[sort]} {order.upper()} NULLS LAST,p.recorded_at DESC,p.prompt_id"
 
 
 def page_bounds(q: dict) -> tuple[int, int]:
@@ -375,17 +403,21 @@ async def listing(q: dict) -> dict:
     async with reading() as conn:
         project = await global_project(conn)
         where, args = list_filters(q, project)
+        order = list_order(q)
         total = await conn.fetchval(f"SELECT count(*) FROM catalog.current_prompt p WHERE {where}", *args)
         rows = await conn.fetch(f"""SELECT p.* FROM catalog.current_prompt p WHERE {where}
-            ORDER BY (p.origin='hub') DESC,p.recorded_at DESC,p.prompt_id LIMIT ${len(args) + 1} OFFSET ${len(args) + 2}""",
-                                *args, limit, offset)
+            ORDER BY {order} LIMIT ${len(args) + 1} OFFSET ${len(args) + 2}""", *args, limit, offset)
         counts = dict(await conn.fetchrow(COUNTS_SQL, project))
     return {"items": [item_view(r) for r in rows], "page": {"total": total, "limit": limit, "offset": offset}, "counts": counts}
 
 
 async def options() -> dict:
     async with reading() as conn:
-        return {"kinds": ["single", "acr"], **await vocabulary(conn, await global_project(conn))}
+        taxa = await taxonomy(conn)
+        vocab = await vocabulary(conn, await global_project(conn), taxa)
+    # the depth codes under their parents, as check_taxonomy_path checks them (the form's depth cascade)
+    tree = [{"field": field, "code": code, "path": list(path)} for field, code, path in taxa if field.startswith("depth")]
+    return {"kinds": ["single", "acr"], **vocab, "taxonomy": tree}
 
 
 async def detail(prompt_id: UUID) -> dict:

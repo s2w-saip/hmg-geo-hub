@@ -34,7 +34,14 @@ export interface HubOption {
   count: number;
 }
 
-export type HubOptions = { kinds: HubKind[]; language: HubOption[]; regions: HubOption[] } & Record<LabelField, HubOption[]>;
+/** A depth code under its parents (depth2 under [depth1], depth3 under [depth1, depth2]), as Gold records them. */
+export interface HubTaxon {
+  field: "depth1" | "depth2" | "depth3" | "depth4";
+  code: string;
+  path: string[];
+}
+
+export type HubOptions = { kinds: HubKind[]; language: HubOption[]; regions: HubOption[]; taxonomy: HubTaxon[] } & Record<LabelField, HubOption[]>;
 
 export interface HubHistoryEvent {
   version: number;
@@ -50,27 +57,12 @@ export interface HubPromptDetail {
   history: HubHistoryEvent[];
 }
 
-export interface ListQuery {
-  q: string;
-  status: HubStatus | "all";
-  origin: HubOrigin | "all";
-  offset: number;
-}
-
-export const PAGE_SIZE = 50;
-
-export function listSearch(q: ListQuery): string {
-  const p = new URLSearchParams({ status: q.status, origin: q.origin, limit: String(PAGE_SIZE), offset: String(q.offset) });
-  if (q.q.trim()) p.set("q", q.q.trim());
-  return p.toString();
-}
-
-/** The form's fields (strings as typed); `toBody` turns them into the BFF's input. */
-export type Draft = { text: string; kind: HubKind; language: string; regions: string } & Record<LabelField, string>;
+/** The form's fields ("" = unset); `toBody` turns them into the BFF's input. */
+export type Draft = { text: string; kind: HubKind; language: string; regions: string[] } & Record<LabelField, string>;
 
 export function draftOf(item: HubPrompt | null): Draft {
   const labels = Object.fromEntries(LABEL_FIELDS.map((f) => [f, item?.[f] ?? ""])) as Record<LabelField, string>;
-  return { text: item?.text ?? "", kind: item?.kind ?? "single", language: item?.language ?? "", regions: item?.regions.join(", ") ?? "", ...labels };
+  return { text: item?.text ?? "", kind: item?.kind ?? "single", language: item?.language ?? "", regions: item?.regions ?? [], ...labels };
 }
 
 export function toBody(d: Draft) {
@@ -79,7 +71,7 @@ export function toBody(d: Draft) {
     text: d.text.trim(),
     kind: d.kind,
     language: d.language.trim() || null,
-    regions: d.regions.split(/[\s,]+/).filter(Boolean),
+    regions: d.regions,
     ...labels,
   };
 }
@@ -107,7 +99,8 @@ async function call<T>(path: string, method: "GET" | "POST" | "PUT" = "GET", bod
 }
 
 export const hubApi = {
-  list: (q: ListQuery) => call<HubPromptPage>(`?${listSearch(q)}`),
+  /** `search` = listSearch() of hub-prompt-filter-model.ts */
+  list: (search: string) => call<HubPromptPage>(`?${search}`),
   detail: (id: string) => call<HubPromptDetail>(`/${id}`),
   create: (d: Draft) => call<{ item: HubPrompt; changed: boolean }>("", "POST", toBody(d)),
   update: (id: string, version: number, d: Draft) => call<{ item: HubPrompt; changed: boolean }>(`/${id}`, "PUT", { ...toBody(d), expectedVersion: version }),

@@ -2,52 +2,95 @@
 
 // Renewal Admin › Global prompts (2026-10-27): the top-level administrator manages the HUB catalog's Global
 // prompts. HUB-owned ones are created, edited, archived and restored; Gold-imported ones are shown read-only
-// (the Gold import would overwrite a change). Every change is a new version; the drawer shows the history.
+// (the Gold import would overwrite a change). Every change is a new version; the sheet shows the history.
 // Reads and writes go through /api/hub/global-prompts (hub-prompts-api.ts); the BFF checks every call.
+// The layout (2026-10-28) is Global › Global prompts' (prompts-view.tsx), with the parts both lists share
+// (prompt-list.tsx): left filter panel with saved filters (hub-prompt-filter-model.ts), picks applied at
+// once, one line per prompt with sortable column heads, and a row opens the detail sheet — here with
+// 편집 · 보관 · 복원. The create / edit form is hub-prompt-form.tsx; an unfinished new prompt is kept here
+// when the sheet closes (Esc, backdrop, ×) and comes back with 새 프롬프트.
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Archive, ChevronLeft, ChevronRight, Loader2, Plus, RotateCcw } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { Archive, ArrowDownWideNarrow, ArrowUpNarrowWide, Bookmark, Database, Link2, Loader2, Pencil, Plus, RotateCcw } from "lucide-react";
 import {
   RnButton,
   RnCard,
-  RnCardHeader,
   RnDrawer,
   RnEmpty,
   RnIconButton,
   RnNote,
   RnPageHeader,
+  RnPill,
   RnSearchField,
-  RnSegmented,
   RnSelect,
   RnTag,
+  RnTextButton,
   RnToastProvider,
+  RnToken,
   cx,
   useRnToast,
+  useRnTruncTip,
 } from "@/components/renewal-ui";
-import { RnPageFrame } from "../../../../_components/filter-split";
+import { languageName } from "@/lib/geo-catalog/language-name";
+import { splitMarkets } from "@/lib/standards/prompt-markets";
+import { RnFilterSplit } from "../../../../_components/filter-split";
 import {
-  HubRequestError,
-  LABEL_FIELDS,
-  PAGE_SIZE,
-  draftOf,
-  hubApi,
-  type Draft,
-  type HubHistoryEvent,
-  type HubOptions,
-  type HubPrompt,
-  type HubPromptDetail,
-  type HubPromptPage,
-  type ListQuery,
-} from "./hub-prompts-api";
+  LIST_TD as TD,
+  RnDetailField,
+  RnFilterPanel,
+  RnFilterRail,
+  RnFunnelChip,
+  RnKindMark,
+  RnListPager,
+  RnMarketList,
+  RnMarkets,
+  RnPromptText,
+  RnRadioAxis,
+  RnSortHead,
+  RnTimeline,
+  useRnMarketLabel,
+} from "../../../../_components/prompt-list";
+import { RnSavedFiltersSection, useSavedFilters, type SavedFilter, type SavedFiltersSource } from "../../../../_components/saved-filters";
+import { ErrorNote, HubPromptForm, isBlankDraft, useFieldLabel } from "./hub-prompt-form";
+import { HubRequestError, hubApi, type Draft, type HubOptions, type HubPrompt, type HubPromptDetail, type HubPromptPage } from "./hub-prompts-api";
+import {
+  ALL,
+  DEFAULT_FILTER,
+  DEFAULT_PAGE_SIZE,
+  DEFAULT_SORT,
+  HUB_SORTS,
+  axisOptions,
+  filterToQuery,
+  firstAsc,
+  listSearch,
+  patchFilter,
+  pickedAxes,
+  queryToFilter,
+  visibleAxes,
+  type HubAxis,
+  type HubFilter,
+  type HubSort,
+} from "./hub-prompt-filter-model";
 
-const INPUT =
-  "h-[34px] w-full rounded-rn-control border border-rn-line-2 bg-rn-surface px-2.5 text-rn-13 text-rn-ink outline-none placeholder:text-rn-muted focus:border-rn-navy focus:ring-3 focus:ring-rn-navy/12 disabled:bg-rn-page disabled:text-rn-ink-2";
-const FIELD_LABELS = ["text", "kind", "language", "regions", ...LABEL_FIELDS] as const;
+const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
+const DEFAULT_OPEN: Partial<Record<HubAxis, boolean>> = { status: true, origin: true, listType: true, depth1: true, funnel: true, kind: true };
+const CHILD: Partial<Record<HubAxis, HubAxis>> = { listType: "depth1", depth1: "depth2", depth2: "depth3", depth3: "depth4" };
+const TAXONOMY = ["listType", "depth1", "depth2", "depth3", "depth4"] as const;
 
 type Editing = { mode: "create" } | { mode: "open"; id: string };
 
-export function HubPromptsManager(props: { initial: HubPromptPage; options: HubOptions; loginHref: string }) {
+export interface HubPromptsManagerProps {
+  initial: HubPromptPage;
+  /** The list query the server read `initial` with (listSearch of the URL's picks). */
+  initialSearch: string;
+  options: HubOptions;
+  loginHref: string;
+  savedFilters: SavedFiltersSource;
+}
+
+export function HubPromptsManager(props: HubPromptsManagerProps) {
   return (
     <RnToastProvider>
       <Manager {...props} />
@@ -55,190 +98,480 @@ export function HubPromptsManager(props: { initial: HubPromptPage; options: HubO
   );
 }
 
-function Manager({ initial, options, loginHref }: { initial: HubPromptPage; options: HubOptions; loginHref: string }) {
+function Manager({ initial, initialSearch, options, loginHref, savedFilters }: HubPromptsManagerProps) {
   const t = useTranslations("hubPrompts");
+  const tv = useTranslations("standardPromptsView");
+  const tVal = useTranslations("dashboard.filters.value");
+  const tp = useTranslations("renewal.prompts");
+  const tr = useTranslations("renewal.filters");
+  const ts = useTranslations("renewal.saved");
   const locale = useLocale();
   const toast = useRnToast();
-  const [query, setQuery] = useState<ListQuery>({ q: "", status: "active", origin: "all", offset: 0 });
-  const [search, setSearch] = useState("");
+  const sp = useSearchParams();
+  const fromUrl = useMemo(() => queryToFilter(sp), []); // eslint-disable-line react-hooks/exhaustive-deps
+  const fieldLabel = useFieldLabel();
+  const marketLabel = useRnMarketLabel();
+  const tip = useRnTruncTip();
+
+  const [filters, setFilters] = useState<HubFilter>(fromUrl.filters);
+  const [search, setSearch] = useState(fromUrl.search);
+  const [sort, setSort] = useState(DEFAULT_SORT);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [page, setPage] = useState(1);
   const [data, setData] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
+  const [nonce, setNonce] = useState(0);
   const [editing, setEditing] = useState<Editing | null>(null);
-  const seq = useRef(0);
-  const first = useRef(true);
+  // a new prompt not saved yet: closing the sheet keeps it (취소 and a save drop it)
+  const [createDraft, setCreateDraftState] = useState<Draft | null>(null);
+  const setCreateDraft = useCallback((d: Draft | null) => setCreateDraftState(d && !isBlankDraft(d) ? d : null), []);
+  const filtersRef = useRef(filters);
 
-  const reload = useCallback(async (q: ListQuery) => {
-    const id = ++seq.current;
+  const axisLabel = useCallback((a: HubAxis) => (a === "status" ? t("statusLabel") : a === "origin" ? t("originLabel") : fieldLabel(a)), [t, fieldLabel]);
+  const valueLabel = useCallback(
+    (a: HubAxis, v: string): string => {
+      if (v === ALL) return tv("filterAll");
+      if (a === "status") return t(`status.${v as HubPrompt["status"]}`);
+      if (a === "origin") return t(`origin.${v as HubPrompt["origin"]}`);
+      if (a === "kind") return v === "acr" ? tv("kindAcr") : tv("kindSingle");
+      if (a === "brandPresence") return v === "branded" || v === "unbranded" ? tVal(v) : v;
+      if (a === "region") return marketLabel(v);
+      if (a === "language") return languageName(v, locale);
+      return v;
+    },
+    [locale, marketLabel, t, tv, tVal],
+  );
+
+  // ── reads: debounced 120 ms, latest wins; the server read the first page ──
+  const readKey = listSearch({ filters, search, sort: sort.key, asc: sort.asc, page, pageSize });
+  const firstRead = useRef(true);
+  useEffect(() => {
+    if (firstRead.current) {
+      firstRead.current = false;
+      if (readKey === initialSearch) return;
+    }
+    let active = true;
     setBusy(true);
-    try {
-      const page = await hubApi.list(q);
-      if (id === seq.current) {
-        setData(page);
-        setListError(null);
-      }
-    } catch (e) {
-      if (id === seq.current) setListError(e instanceof HubRequestError ? e.code : "failed");
-    } finally {
-      if (id === seq.current) setBusy(false);
-    }
+    const timer = setTimeout(() => {
+      hubApi.list(readKey).then(
+        (res) => {
+          if (!active) return;
+          // a page past the end (its last prompts archived away) falls back to the last one
+          if (res.items.length === 0 && res.page.offset > 0 && res.page.total > 0) {
+            setPage(Math.ceil(res.page.total / pageSize));
+            return;
+          }
+          setData(res);
+          setListError(null);
+          setBusy(false);
+        },
+        (e: unknown) => {
+          if (!active) return;
+          setListError(e instanceof HubRequestError ? e.code : "failed");
+          setBusy(false);
+        },
+      );
+    }, 120);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [readKey, initialSearch, pageSize, nonce]);
+
+  // URL mirrors the picks (shareable, restorable); shallow — no server round trip.
+  useEffect(() => {
+    const qs = filterToQuery(filters, search);
+    window.history.replaceState(null, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
+  }, [filters, search]);
+
+  const [open, setOpen] = useState<Partial<Record<HubAxis, boolean>>>(DEFAULT_OPEN);
+  const pick = (axis: HubAxis, value: string) => {
+    const next = patchFilter(filtersRef.current, { [axis]: value });
+    filtersRef.current = next;
+    setFilters(next);
+    setPage(1);
+    setOpenedWith(null);
+    const child = CHILD[axis];
+    if (child && value !== ALL) setOpen((o) => ({ ...o, [child]: true }));
+  };
+  const setAll = (next: HubFilter, nextSearch: string) => {
+    filtersRef.current = next;
+    setFilters(next);
+    setSearch(nextSearch);
+    setPage(1);
+  };
+
+  // ── saved filters ──
+  const saved = useSavedFilters(savedFilters);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [openedWith, setOpenedWith] = useState<string | null>(null);
+  const auto = useRef(false);
+  useEffect(() => {
+    if (!saved.ready || auto.current) return;
+    auto.current = true;
+    if (filterToQuery(fromUrl.filters, fromUrl.search)) return;
+    const star = saved.items.find((p) => p.isDefault);
+    if (!star) return;
+    const q = queryToFilter(star.query);
+    setAll(q.filters, q.search);
+    setActiveId(star.id);
+    setOpenedWith(star.name);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saved.ready]);
+  const summarize = useCallback(
+    (q: string) => {
+      const { filters: f, search: s } = queryToFilter(q);
+      return [...pickedAxes(f).map((a) => valueLabel(a, f[a])), ...(s ? [`“${s}”`] : [])].join(" · ");
+    },
+    [valueLabel],
+  );
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "/" || e.metaKey || e.ctrlKey) return;
+      const el = document.activeElement;
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT")) return;
+      e.preventDefault();
+      document.querySelector<HTMLInputElement>("#rn-hub-prompt-search")?.focus();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
   }, []);
-
-  useEffect(() => {
-    if (first.current) {
-      first.current = false;
-      return;
-    }
-    void reload(query);
-  }, [query, reload]);
-
-  // the search applies 300 ms after typing stops, from the first page
-  useEffect(() => {
-    const timer = setTimeout(() => setQuery((q) => (q.q === search ? q : { ...q, q: search, offset: 0 })), 300);
-    return () => clearTimeout(timer);
-  }, [search]);
-
-  const { total } = data.page;
-  const from = total === 0 ? 0 : query.offset + 1;
-  const to = Math.min(query.offset + PAGE_SIZE, total);
-  const fmt = (n: number) => n.toLocaleString(locale);
 
   const changed = (item: HubPrompt, message: string) => {
     toast(message);
-    void reload(query);
+    setNonce((n) => n + 1);
     setEditing({ mode: "open", id: item.id });
   };
 
-  return (
-    <RnPageFrame
-      header={
-        <RnPageHeader
-          title={t("title")}
-          meta={<span>{t("description")}</span>}
-          actions={
-            <RnButton variant="primary" onClick={() => setEditing({ mode: "create" })} data-hub-create="">
-              <Plus className="size-3.5" aria-hidden />
-              {t("create")}
-            </RnButton>
-          }
+  const picked = pickedAxes(filters);
+  const { total, offset } = data.page;
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  const sortLabel = (k: HubSort) => (k === "changed" ? t("columnChanged") : k === "status" || k === "origin" ? axisLabel(k) : fieldLabel(k));
+  const head = (key: HubSort, label: string, className?: string) => (
+    <RnSortHead
+      sortKey={key}
+      label={label}
+      sort={sort}
+      className={className}
+      onSort={(k) => {
+        setSort((s) => (s.key === k ? { key: k, asc: !s.asc } : { key: k, asc: firstAsc(k) }));
+        setPage(1);
+      }}
+    />
+  );
+
+  const panel = (
+    <RnFilterPanel
+      count={picked.length}
+      onReset={() => {
+        const before = { f: filtersRef.current, s: search };
+        setAll(DEFAULT_FILTER, "");
+        toast(tr("resetDone"), { undoLabel: tr("undo"), undo: () => setAll(before.f, before.s) });
+      }}
+      saved={
+        <RnSavedFiltersSection
+          saved={saved}
+          activeId={activeId}
+          onActivate={(item: SavedFilter | null) => {
+            if (!item) {
+              setActiveId(null);
+              return;
+            }
+            const q = queryToFilter(item.query);
+            setAll(q.filters, q.search);
+            setActiveId(item.id);
+            setOpenedWith(null);
+          }}
+          currentQuery={filterToQuery(filters, search)}
+          summarize={summarize}
+          hrefOf={(q) => `${window.location.origin}${window.location.pathname}${q ? `?${q}` : ""}`}
         />
       }
     >
-      <RnNote>
-        <b className="text-rn-ink">{t("notMeasuredTitle")}</b>
-        <span>{t("notMeasured")}</span>
-      </RnNote>
-      <RnCard busy={busy} aria-label={t("listLabel")}>
-        <RnCardHeader
-          title={t("listTitle")}
-          hint={t("counts", { total: fmt(data.counts.total), hub: fmt(data.counts.hub), gold: fmt(data.counts.gold), archived: fmt(data.counts.archived), removed: fmt(data.counts.removed ?? 0) })}
+      {visibleAxes(options).map((a) => (
+        <RnRadioAxis
+          key={a}
+          axis={a}
+          label={axisLabel(a)}
+          value={filters[a]}
+          defaultValue={DEFAULT_FILTER[a]}
+          options={axisOptions(a, options)}
+          valueLabel={(v) => valueLabel(a, v)}
+          allLabel={tv("filterAll")}
+          open={open[a] ?? false}
+          onToggle={() => setOpen((o) => ({ ...o, [a]: !(o[a] ?? false) }))}
+          onPick={(v) => pick(a, v)}
         />
-        <div className="flex flex-wrap items-center gap-2.5 px-6 pb-3">
-          <RnSearchField className="w-[280px] max-w-full" value={search} onChange={setSearch} placeholder={t("searchPlaceholder")} label={t("searchLabel")} />
-          <RnSegmented
-            label={t("statusLabel")}
-            value={query.status}
-            onChange={(status) => setQuery((q) => ({ ...q, status, offset: 0 }))}
-            items={[
-              { value: "active", label: t("status.active") },
-              { value: "archived", label: t("status.archived") },
-              { value: "removed", label: t("status.removed") },
-              { value: "all", label: t("all") },
-            ]}
+      ))}
+    </RnFilterPanel>
+  );
+
+  return (
+    <div className="flex flex-col gap-4">
+      <RnFilterSplit
+        header={
+          <RnPageHeader
+            title={t("title")}
+            meta={
+              <>
+                <RnPill>
+                  <Database className="size-3 text-rn-muted" aria-hidden />
+                  {t("catalogPill")}
+                </RnPill>
+                <span>{t("description")}</span>
+              </>
+            }
+            actions={
+              <>
+                <RnButton
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(window.location.href);
+                      toast(tp("linkCopied"));
+                    } catch {
+                      toast(ts("linkFailed"));
+                    }
+                  }}
+                >
+                  <Link2 className="size-3.5" aria-hidden />
+                  {tp("copyLink")}
+                </RnButton>
+                <RnButton variant="primary" onClick={() => setEditing({ mode: "create" })} data-hub-create="">
+                  <Plus className="size-3.5" aria-hidden />
+                  {t("create")}
+                </RnButton>
+              </>
+            }
           />
-          <RnSegmented
-            label={t("originLabel")}
-            value={query.origin}
-            onChange={(origin) => setQuery((q) => ({ ...q, origin, offset: 0 }))}
-            items={[
-              { value: "all", label: t("all") },
-              { value: "hub", label: t("origin.hub") },
-              { value: "gold", label: t("origin.gold") },
-            ]}
-          />
-        </div>
-        {listError ? (
-          <ErrorNote code={listError} loginHref={loginHref} className="mx-6 mb-5" />
-        ) : data.items.length === 0 ? (
-          <RnEmpty className="mx-6 mb-5">{t("empty")}</RnEmpty>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full table-fixed border-separate border-spacing-0 text-rn-13" data-hub-prompt-table="">
-              <colgroup>
-                <col />
-                <col className="w-[200px]" />
-                <col className="w-[92px]" />
-                <col className="w-[150px]" />
-              </colgroup>
-              <thead>
-                <tr className="text-left text-rn-12 font-semibold text-rn-muted">
-                  <th scope="col" className="h-[38px] border-b border-rn-line-2 pr-3 pl-6 font-semibold">{t("field.text")}</th>
-                  <th scope="col" className="h-[38px] border-b border-rn-line-2 px-3 font-semibold">{t("columnTaxonomy")}</th>
-                  <th scope="col" className="h-[38px] border-b border-rn-line-2 px-3 font-semibold">{t("columnStatus")}</th>
-                  <th scope="col" className="h-[38px] border-b border-rn-line-2 pr-6 pl-3 font-semibold">{t("columnChanged")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.items.map((p) => (
-                  <tr key={p.id} data-hub-prompt-row={p.id} className="cursor-pointer align-top hover:bg-rn-navy-25/60" onClick={() => setEditing({ mode: "open", id: p.id })}>
-                    <td className="border-b border-rn-line py-3 pr-3 pl-6">
-                      <button
-                        type="button"
-                        className="cursor-pointer text-left leading-snug text-rn-ink hover:text-rn-navy focus-visible:outline-2 focus-visible:outline-rn-navy"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditing({ mode: "open", id: p.id });
-                        }}
-                      >
-                        {p.text}
-                      </button>
-                      <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-rn-12 text-rn-muted">
-                        <OriginTag origin={p.origin} />
-                        <span>{t(`kind.${p.kind}`)}</span>
-                        {p.language ? <span>· {p.language}</span> : null}
-                        {p.regions.length ? <span>· {p.regions.join(", ")}</span> : null}
-                      </div>
-                    </td>
-                    <td className="border-b border-rn-line px-3 py-3 text-rn-12 text-rn-ink-2">
-                      {[p.listType, p.depth1, p.depth2, p.depth3, p.depth4].filter(Boolean).join(" › ") || "—"}
-                      {p.funnel ? <div className="mt-1 text-rn-muted">{p.funnel}</div> : null}
-                    </td>
-                    <td className="border-b border-rn-line px-3 py-3 text-rn-12">
-                      <span className={p.status !== "active" ? "text-rn-muted" : "font-semibold text-rn-ink"}>{t(`status.${p.status}`)}</span>
-                    </td>
-                    <td className="border-b border-rn-line py-3 pr-6 pl-3 text-rn-12 text-rn-muted tabular-nums">
-                      v{p.version} · {formatTime(p.recordedAt, locale)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        }
+        panel={panel}
+        rail={<RnFilterRail count={picked.length} />}
+      >
+        <RnNote>
+          <b className="text-rn-ink">{t("notMeasuredTitle")}</b>
+          <span>{t("notMeasured")}</span>
+        </RnNote>
+        {picked.length || search || busy ? (
+          <div aria-live="polite" className="flex min-h-7 flex-wrap items-center gap-2">
+            {picked.map((a) => (
+              <RnToken key={a} label={axisLabel(a)} value={valueLabel(a, filters[a])} removeLabel={tr("removeToken", { label: axisLabel(a) })} onRemove={() => pick(a, DEFAULT_FILTER[a])} />
+            ))}
+            {search ? (
+              <RnToken
+                label={tv("searchPlaceholder")}
+                value={`“${search}”`}
+                removeLabel={tr("removeToken", { label: tv("searchPlaceholder") })}
+                onRemove={() => {
+                  setSearch("");
+                  setPage(1);
+                }}
+              />
+            ) : null}
+            {busy ? (
+              <span className="ml-auto inline-flex items-center gap-1.5 text-rn-12 text-rn-navy">
+                <Loader2 className="size-3 animate-spin" aria-hidden />
+                {tr("applying")}
+              </span>
+            ) : null}
           </div>
-        )}
-        <div className="flex items-center justify-end gap-2 px-6 py-3 text-rn-12 text-rn-muted tabular-nums">
-          <span>{t("range", { from: fmt(from), to: fmt(to), total: fmt(total) })}</span>
-          <RnIconButton label={t("prev")} disabled={query.offset === 0} onClick={() => setQuery((q) => ({ ...q, offset: Math.max(0, q.offset - PAGE_SIZE) }))}>
-            <ChevronLeft className="size-4" aria-hidden />
-          </RnIconButton>
-          <RnIconButton label={t("next")} disabled={to >= total} onClick={() => setQuery((q) => ({ ...q, offset: q.offset + PAGE_SIZE }))}>
-            <ChevronRight className="size-4" aria-hidden />
-          </RnIconButton>
-        </div>
-      </RnCard>
+        ) : null}
+        {openedWith ? (
+          <RnNote>
+            <Bookmark className="size-3.5" aria-hidden />
+            <span>{ts("openedWithDefault", { name: openedWith })}</span>
+            <RnTextButton
+              onClick={() => {
+                setOpenedWith(null);
+                setAll(DEFAULT_FILTER, "");
+              }}
+            >
+              {ts("viewWithout")}
+            </RnTextButton>
+          </RnNote>
+        ) : null}
+        <RnCard busy={busy} aria-label={t("listLabel")}>
+          <div className="flex flex-wrap items-center gap-2 border-b border-rn-line px-5 py-3">
+            <RnSearchField
+              id="rn-hub-prompt-search"
+              className="w-full max-w-[280px] min-w-[180px] flex-1"
+              value={search}
+              onChange={(v) => {
+                setSearch(v);
+                setPage(1);
+              }}
+              placeholder={tv("searchPlaceholder")}
+              label={tv("searchPlaceholder")}
+            />
+            <RnSelect
+              label={tp("sortLabel")}
+              value={sort.key}
+              onChange={(e) => {
+                const key = e.target.value as HubSort;
+                setSort({ key, asc: firstAsc(key) });
+                setPage(1);
+              }}
+              options={HUB_SORTS.map((k) => ({ value: k, label: sortLabel(k) }))}
+            />
+            <RnIconButton
+              label={sort.asc ? tp("sortAsc") : tp("sortDesc")}
+              onClick={() => {
+                setSort((s) => ({ key: s.key, asc: !s.asc }));
+                setPage(1);
+              }}
+            >
+              {sort.asc ? <ArrowUpNarrowWide className="size-4" aria-hidden /> : <ArrowDownWideNarrow className="size-4" aria-hidden />}
+            </RnIconButton>
+            <span className="ml-auto text-rn-12 text-rn-muted tabular-nums">{tv("filteredCount", { shown: total, total: data.counts.total })}</span>
+          </div>
+          {listError ? (
+            <ErrorNote code={listError} loginHref={loginHref} className="m-5" />
+          ) : total === 0 ? (
+            <RnEmpty className="m-5">{t("empty")}</RnEmpty>
+          ) : (
+            <div {...tip.bind}>
+              <table className="w-full table-fixed border-separate border-spacing-0 text-rn-13" data-hub-prompt-table="">
+                <colgroup>
+                  <col />
+                  <col className="w-[76px]" />
+                  <col className="w-[104px]" />
+                  <col className="w-[168px]" />
+                  <col className="w-[128px]" />
+                  <col className="w-[72px]" />
+                  <col className="w-[112px]" />
+                  <col className="w-[132px]" />
+                </colgroup>
+                <thead>
+                  <tr className="text-left text-rn-12 text-rn-muted">
+                    {head("text", tv("textLabel"), "pl-5")}
+                    {head("origin", t("originLabel"))}
+                    {head("funnel", tv("funnelLabel"))}
+                    {head("depth1", tp("columnTaxonomy"))}
+                    {head("region", tv("marketLabel"))}
+                    {head("kind", tp("columnMeasure"))}
+                    {head("status", t("statusLabel"))}
+                    {head("changed", t("columnChanged"), "pr-5")}
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.items.map((p) => {
+                    // the cell starts at Depth1 (as on Global prompts); the tip lists every level by name
+                    const levels = TAXONOMY.filter((f) => p[f]).map((f) => ({ field: f, label: fieldLabel(f), value: p[f] }));
+                    const depths = levels.filter((l) => l.field !== "listType");
+                    const path = (depths.length ? depths : levels).map((l) => l.value).join(" › ");
+                    return (
+                      <tr
+                        key={p.id}
+                        data-hub-prompt-row={p.id}
+                        // a drag that selects text is not a click on the row
+                        onClick={() => !window.getSelection()?.toString() && setEditing({ mode: "open", id: p.id })}
+                        className="cursor-pointer hover:bg-rn-navy-25/60"
+                      >
+                        <td className={cx(TD, "pl-5")}>
+                          <span className="flex min-w-0 items-center gap-2">
+                            {p.language ? (
+                              <span data-rn-tip={languageName(p.language, locale)} className="w-5 shrink-0 text-rn-11 font-semibold text-rn-faint uppercase">
+                                {p.language}
+                              </span>
+                            ) : null}
+                            <button
+                              type="button"
+                              data-rn-tip=""
+                              className={cx(
+                                "min-w-0 flex-1 cursor-pointer truncate text-left focus-visible:outline-2 focus-visible:outline-rn-navy",
+                                p.status === "active" ? "text-rn-ink" : "text-rn-muted",
+                              )}
+                            >
+                              {p.text}
+                            </button>
+                          </span>
+                        </td>
+                        <td className={TD}>
+                          <OriginTag origin={p.origin} />
+                        </td>
+                        <td className={TD}>
+                          <RnFunnelChip value={p.funnel} />
+                        </td>
+                        <td className={TD}>
+                          <span data-rn-tip={levels.map((l) => `${l.label}: ${l.value}`).join("\n") || undefined} className="block truncate text-rn-12 text-rn-ink-2">
+                            {path || "—"}
+                          </span>
+                        </td>
+                        <td className={TD}>
+                          <RnMarkets markets={splitMarkets(p.regions)} labelOf={marketLabel} allLabel={tv("marketAll")} allHint={tv("marketAllHint")} />
+                        </td>
+                        <td className={cx(TD, "text-rn-12 whitespace-nowrap")}>
+                          <RnKindMark acr={p.kind === "acr"} />
+                        </td>
+                        <td className={TD}>
+                          <StatusMark status={p.status} />
+                        </td>
+                        <td className={cx(TD, "pr-5")}>
+                          <span data-rn-tip={formatTime(p.recordedAt, locale)} className="block truncate text-rn-12 text-rn-muted tabular-nums">
+                            v{p.version} · {formatDate(p.recordedAt, locale)}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {tip.tip}
+            </div>
+          )}
+          {total > 0 && !listError ? (
+            <RnListPager
+              rangeFrom={offset + 1}
+              rangeTo={Math.min(offset + data.items.length, total)}
+              total={total}
+              page={Math.floor(offset / pageSize) + 1}
+              pages={pages}
+              pageSize={pageSize}
+              pageSizes={PAGE_SIZE_OPTIONS}
+              onPageSize={(n) => {
+                setPageSize(n);
+                setPage(1);
+              }}
+              onPage={setPage}
+            />
+          ) : null}
+        </RnCard>
+      </RnFilterSplit>
       <RnDrawer
         open={editing != null}
         onClose={() => setEditing(null)}
-        title={editing?.mode === "create" ? t("createTitle") : t("detailTitle")}
+        title={editing?.mode === "create" ? t("createTitle") : tp("detail.title")}
         subtitle={editing?.mode === "create" ? t("createHint") : undefined}
-        closeLabel={t("close")}
+        closeLabel={tp("close")}
       >
         {editing?.mode === "create" ? (
-          <Editor key="create" item={null} options={options} loginHref={loginHref} onSaved={(item) => changed(item, t("toast.created"))} onCancel={() => setEditing(null)} />
+          <HubPromptForm
+            key="create"
+            item={null}
+            initial={createDraft ?? undefined}
+            options={options}
+            loginHref={loginHref}
+            onDraft={setCreateDraft}
+            onSaved={(item, another) => {
+              if (another) {
+                toast(t("form.createdAnother"));
+                setNonce((n) => n + 1);
+                return;
+              }
+              setCreateDraft(null);
+              changed(item, t("toast.created"));
+            }}
+            onCancel={() => {
+              setCreateDraft(null);
+              setEditing(null);
+            }}
+          />
         ) : editing ? (
-          <Detail key={editing.id} id={editing.id} options={options} loginHref={loginHref} onChanged={changed} onCancel={() => setEditing(null)} />
+          <Detail key={editing.id} id={editing.id} options={options} loginHref={loginHref} onChanged={changed} />
         ) : null}
       </RnDrawer>
-    </RnPageFrame>
+    </div>
   );
 }
 
@@ -247,47 +580,40 @@ function OriginTag({ origin }: { origin: HubPrompt["origin"] }) {
   return <RnTag className={origin === "gold" ? "bg-rn-inset text-rn-ink-2" : undefined}>{t(`origin.${origin}`)}</RnTag>;
 }
 
+/** 사용 중 = a filled navy dot (as "measured" on Global prompts); archived / left Gold = a dashed one, muted. */
+function StatusMark({ status }: { status: HubPrompt["status"] }) {
+  const t = useTranslations("hubPrompts");
+  return (
+    <span className={cx("inline-flex max-w-full items-center gap-1.5 text-rn-12", status === "active" ? "text-rn-ink" : "text-rn-muted")}>
+      <i aria-hidden className={cx("inline-block size-2 shrink-0 rounded-full", status === "active" ? "bg-rn-navy" : "border border-dashed border-rn-muted")} />
+      <span className="truncate">{t(`status.${status}`)}</span>
+    </span>
+  );
+}
+
 function formatTime(iso: string, locale: string): string {
   return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
 }
 
-function ErrorNote({ code, fields, loginHref, className }: { code: string; fields?: string[]; loginHref: string; className?: string }) {
-  const t = useTranslations("hubPrompts");
-  const known = ["version_conflict", "duplicate", "unknown_code", "invalid_value", "archived", "gold_owned", "unauthorized", "source_unavailable", "not_found"];
-  const names = (fields ?? []).map((f) => ((FIELD_LABELS as readonly string[]).includes(f) ? t(`field.${f}`) : f)).join(", ");
-  return (
-    <p role="alert" data-hub-error={code} className={cx("m-0 rounded-[10px] bg-rn-page p-3.5 text-rn-12 text-rn-ink-2", className)}>
-      {t(`error.${known.includes(code) ? code : "failed"}`, { fields: names || "—" })}
-      {code === "unauthorized" ? (
-        <>
-          {" "}
-          <a href={loginHref} className="font-semibold text-rn-navy underline-offset-4 hover:underline">
-            {t("login")}
-          </a>
-        </>
-      ) : null}
-    </p>
-  );
+function formatDate(iso: string, locale: string): string {
+  return new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date(iso));
 }
 
-// ─── drawer: an existing prompt ─────────────────────────────────────────────
+// ─── sheet: an existing prompt ──────────────────────────────────────────────
 
-function Detail({
-  id,
-  options,
-  loginHref,
-  onChanged,
-  onCancel,
-}: {
-  id: string;
-  options: HubOptions;
-  loginHref: string;
-  onChanged: (item: HubPrompt, message: string) => void;
-  onCancel: () => void;
-}) {
+function Detail({ id, options, loginHref, onChanged }: { id: string; options: HubOptions; loginHref: string; onChanged: (item: HubPrompt, message: string) => void }) {
   const t = useTranslations("hubPrompts");
+  const tv = useTranslations("standardPromptsView");
+  const tVal = useTranslations("dashboard.filters.value");
+  const tp = useTranslations("renewal.prompts");
+  const locale = useLocale();
+  const fieldLabel = useFieldLabel();
+  const marketLabel = useRnMarketLabel();
   const [detail, setDetail] = useState<HubPromptDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [failure, setFailure] = useState<HubRequestError | null>(null);
   // kept here: a version conflict reloads the prompt, which re-mounts the form with the latest version
   const [conflict, setConflict] = useState(false);
   const [nonce, setNonce] = useState(0);
@@ -315,232 +641,117 @@ function Detail({
   const { item, history } = detail;
   const done = (next: HubPrompt, message: string) => {
     setConflict(false);
+    setEditing(false);
     setNonce((n) => n + 1);
     onChanged(next, message);
   };
-  return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center gap-2 text-rn-12 text-rn-muted">
-        <OriginTag origin={item.origin} />
-        <span className={item.status !== "active" ? undefined : "font-semibold text-rn-ink"}>{t(`status.${item.status}`)}</span>
-        <span className="tabular-nums">· v{item.version}</span>
-      </div>
-      {item.status === "removed" ? <RnNote>{t("removedNote")}</RnNote> : !item.editable ? <RnNote>{t("goldReadOnly")}</RnNote> : item.status === "archived" ? <RnNote>{t("archivedNote")}</RnNote> : null}
-      {conflict ? <ErrorNote code="version_conflict" loginHref={loginHref} /> : null}
-      <Editor
-        key={`${item.id}:${item.version}`}
-        item={item}
-        options={options}
-        loginHref={loginHref}
-        onSaved={(next) => done(next, t("toast.updated"))}
-        onStatus={(next, action) => done(next, t(action === "archive" ? "toast.archived" : "toast.restored"))}
-        onConflict={() => {
-          setConflict(true);
-          setNonce((n) => n + 1);
-        }}
-        onCancel={onCancel}
-      />
-      <History events={history} />
-    </div>
-  );
-}
-
-// ─── drawer: the form (create, edit, archive / restore) ─────────────────────
-
-function Editor({
-  item,
-  options,
-  loginHref,
-  onSaved,
-  onStatus,
-  onConflict,
-  onCancel,
-}: {
-  item: HubPrompt | null;
-  options: HubOptions;
-  loginHref: string;
-  onSaved: (item: HubPrompt) => void;
-  onStatus?: (item: HubPrompt, action: "archive" | "restore") => void;
-  onConflict?: () => void;
-  onCancel: () => void;
-}) {
-  const t = useTranslations("hubPrompts");
-  const [draft, setDraft] = useState<Draft>(() => draftOf(item));
-  const [pending, setPending] = useState(false);
-  const [failure, setFailure] = useState<HubRequestError | null>(null);
-  const readOnly = item != null && (!item.editable || item.status === "archived");
-  const set = (key: keyof Draft, value: string) => setDraft((d) => ({ ...d, [key]: value }));
-
-  async function run(action: () => Promise<{ item: HubPrompt; changed: boolean }>, after: (next: HubPrompt, changed: boolean) => void) {
+  const setStatus = async (action: "archive" | "restore") => {
     setPending(true);
     setFailure(null);
     try {
-      const out = await action();
-      after(out.item, out.changed);
+      const out = await hubApi.setStatus(item.id, item.version, action);
+      done(out.item, t(action === "archive" ? "toast.archived" : "toast.restored"));
     } catch (e) {
       const err = e instanceof HubRequestError ? e : new HubRequestError(0, "failed");
       setFailure(err);
-      if (err.code === "version_conflict") onConflict?.();
+      if (err.code === "version_conflict") setNonce((n) => n + 1);
     } finally {
       setPending(false);
     }
-  }
-
-  const save = () =>
-    run(
-      () => (item ? hubApi.update(item.id, item.version, draft) : hubApi.create(draft)),
-      (next, changed) => (changed ? onSaved(next) : onCancel()),
-    );
-  const setStatus = (action: "archive" | "restore") =>
-    item && run(() => hubApi.setStatus(item.id, item.version, action), (next) => onStatus?.(next, action));
+  };
+  const show = (v: unknown) => (Array.isArray(v) ? v.join(", ") || null : v == null || v === "" ? null : String(v));
+  const markets = splitMarkets(item.regions);
 
   return (
-    <form
-      className="flex flex-col gap-4"
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (!readOnly) void save();
-      }}
-    >
-      <Field label={t("field.text")} htmlFor="hub-text">
-        <textarea
-          id="hub-text"
-          required
-          rows={3}
-          maxLength={2000}
-          disabled={readOnly}
-          value={draft.text}
-          // one line: the catalog refuses line breaks
-          onChange={(e) => set("text", e.target.value.replace(/[\r\n]+/g, " "))}
-          className={cx(INPUT, "h-auto resize-y py-2 leading-snug")}
+    <div className="flex flex-col gap-6">
+      {item.status === "removed" ? <RnNote>{t("removedNote")}</RnNote> : !item.editable ? <RnNote>{t("goldReadOnly")}</RnNote> : item.status === "archived" ? <RnNote>{t("archivedNote")}</RnNote> : null}
+      {conflict ? <ErrorNote code="version_conflict" loginHref={loginHref} /> : null}
+      {editing ? (
+        <HubPromptForm
+          key={`${item.id}:${item.version}`}
+          item={item}
+          options={options}
+          loginHref={loginHref}
+          onSaved={(next) => done(next, t("toast.updated"))}
+          onConflict={() => {
+            setConflict(true);
+            setNonce((n) => n + 1);
+          }}
+          onCancel={() => setEditing(false)}
         />
-      </Field>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label={t("field.kind")} htmlFor="hub-kind">
-          <RnSelect
-            id="hub-kind"
-            label={t("field.kind")}
-            disabled={readOnly}
-            value={draft.kind}
-            onChange={(e) => set("kind", e.target.value)}
-            options={options.kinds.map((k) => ({ value: k, label: t(`kind.${k}`) }))}
+      ) : (
+        <>
+          <RnPromptText
+            text={item.text}
+            actions={
+              item.editable && item.status === "active" ? (
+                <>
+                  <RnButton size="sm" onClick={() => setEditing(true)} data-hub-edit="">
+                    <Pencil className="size-3.5" aria-hidden />
+                    {t("edit")}
+                  </RnButton>
+                  <RnButton size="sm" className="ml-auto" disabled={pending} onClick={() => void setStatus("archive")} data-hub-archive="">
+                    <Archive className="size-3.5" aria-hidden />
+                    {t("archive")}
+                  </RnButton>
+                </>
+              ) : item.editable && item.status === "archived" ? (
+                <RnButton size="sm" variant="primary" className="ml-auto" disabled={pending} onClick={() => void setStatus("restore")} data-hub-restore="">
+                  <RotateCcw className="size-3.5" aria-hidden />
+                  {t("restore")}
+                </RnButton>
+              ) : null
+            }
           />
-        </Field>
-        <CodeField id="hub-language" label={t("field.language")} value={draft.language} onChange={(v) => set("language", v)} options={options.language} disabled={readOnly} />
-      </div>
-      <Field label={t("field.regions")} htmlFor="hub-regions" hint={t("regionsHint")}>
-        <input id="hub-regions" disabled={readOnly} value={draft.regions} onChange={(e) => set("regions", e.target.value)} list="hub-regions-list" className={INPUT} />
-        <datalist id="hub-regions-list">
-          {options.regions.map((o) => (
-            <option key={o.value} value={o.value} />
-          ))}
-        </datalist>
-      </Field>
-      <div className="grid grid-cols-2 gap-3">
-        {LABEL_FIELDS.map((f) => (
-          <CodeField key={f} id={`hub-${f}`} label={t(`field.${f}`)} value={draft[f]} onChange={(v) => set(f, v)} options={options[f]} disabled={readOnly} />
-        ))}
-      </div>
-      {failure ? <ErrorNote code={failure.code} fields={failure.details?.fields} loginHref={loginHref} /> : null}
-      <div className="flex flex-wrap items-center gap-2 border-t border-rn-line pt-4">
-        {!readOnly ? (
-          <RnButton type="submit" variant="primary" disabled={pending} data-hub-save="">
-            {pending ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : null}
-            {item ? t("save") : t("createSubmit")}
-          </RnButton>
-        ) : null}
-        <RnButton onClick={onCancel}>{t("close")}</RnButton>
-        {item?.editable && item.status === "active" ? (
-          <RnButton className="ml-auto" disabled={pending} onClick={() => void setStatus("archive")} data-hub-archive="">
-            <Archive className="size-3.5" aria-hidden />
-            {t("archive")}
-          </RnButton>
-        ) : null}
-        {item?.editable && item.status === "archived" ? (
-          <RnButton className="ml-auto" variant="primary" disabled={pending} onClick={() => void setStatus("restore")} data-hub-restore="">
-            <RotateCcw className="size-3.5" aria-hidden />
-            {t("restore")}
-          </RnButton>
-        ) : null}
-      </div>
-    </form>
-  );
-}
-
-function Field({ label, htmlFor, hint, children }: { label: string; htmlFor: string; hint?: string; children: ReactNode }) {
-  return (
-    <div className="flex min-w-0 flex-col gap-1.5">
-      <label htmlFor={htmlFor} className="text-rn-12 font-semibold text-rn-ink-2">
-        {label}
-      </label>
-      {children}
-      {hint ? <p className="m-0 text-rn-11 text-rn-muted">{hint}</p> : null}
+          {failure ? <ErrorNote code={failure.code} fields={failure.details?.fields} loginHref={loginHref} /> : null}
+          <section>
+            <h3 className="m-0 mb-2 text-rn-13 font-bold text-rn-ink">{tp("detail.attributes")}</h3>
+            <dl className="m-0 grid grid-cols-[112px_minmax(0,1fr)] gap-x-4 gap-y-2.5 text-rn-13">
+              <RnDetailField label={t("originLabel")}>
+                <OriginTag origin={item.origin} />
+              </RnDetailField>
+              <RnDetailField label={fieldLabel("brandPresence")}>{item.brandPresence ? (item.brandPresence === "branded" || item.brandPresence === "unbranded" ? tVal(item.brandPresence) : item.brandPresence) : null}</RnDetailField>
+              <RnDetailField label={fieldLabel("language")}>{item.language ? `${languageName(item.language, locale)} (${item.language.toUpperCase()})` : null}</RnDetailField>
+              {TAXONOMY.filter((f) => f !== "depth4" || item[f]).map((f) => (
+                <RnDetailField key={f} label={fieldLabel(f)}>
+                  {item[f]}
+                </RnDetailField>
+              ))}
+              <RnDetailField label={fieldLabel("funnel")}>{item.funnel}</RnDetailField>
+              <RnDetailField label={fieldLabel("regions")}>
+                <RnMarketList codes={[...markets.real, ...markets.pseudo]} labelOf={marketLabel} allLabel={tv("marketAll")} allHint={tv("marketAllHint")} />
+              </RnDetailField>
+              <RnDetailField label={fieldLabel("kind")}>{item.kind === "acr" ? tv("kindAcr") : tv("kindSingle")}</RnDetailField>
+              <RnDetailField label={t("statusLabel")}>
+                <StatusMark status={item.status} />
+              </RnDetailField>
+              <RnDetailField label={t("version")}>
+                <span className="tabular-nums">
+                  v{item.version} · {formatTime(item.recordedAt, locale)}
+                </span>
+              </RnDetailField>
+              <RnDetailField label={t("registeredAt")}>
+                <span className="tabular-nums">{formatTime(item.registeredAt, locale)}</span>
+              </RnDetailField>
+            </dl>
+          </section>
+        </>
+      )}
+      <section data-hub-history="">
+        <h3 className="m-0 mb-3 text-rn-13 font-bold text-rn-ink">{tp("detail.history")}</h3>
+        <RnTimeline
+          fieldLabel={fieldLabel}
+          events={history.map((e) => ({
+            key: String(e.version),
+            label: t(`event.${e.event}`),
+            at: e.recordedAt,
+            actor: e.actor ? e.actor.displayName || e.actor.login : (e.recordedBy ?? t("goldSync")),
+            marks: [`v${e.version}`],
+            changes: Object.fromEntries(Object.entries(e.changes).map(([f, c]) => [f, { old: show(c.old), new: show(c.new) }])),
+            note: e.event === "updated" ? t("goldOnlyChange") : undefined,
+          }))}
+        />
+      </section>
     </div>
-  );
-}
-
-/** A code typed or picked from the codes the Global catalog already uses (the BFF refuses others). */
-function CodeField({
-  id,
-  label,
-  value,
-  onChange,
-  options,
-  disabled,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: { value: string; count: number }[];
-  disabled: boolean;
-}) {
-  return (
-    <Field label={label} htmlFor={id}>
-      <input id={id} disabled={disabled} value={value} onChange={(e) => onChange(e.target.value)} list={`${id}-list`} className={INPUT} />
-      <datalist id={`${id}-list`}>
-        {options.map((o) => (
-          <option key={o.value} value={o.value} />
-        ))}
-      </datalist>
-    </Field>
-  );
-}
-
-// ─── drawer: change history ─────────────────────────────────────────────────
-
-function History({ events }: { events: HubHistoryEvent[] }) {
-  const t = useTranslations("hubPrompts");
-  const locale = useLocale();
-  const show = (v: unknown) => (Array.isArray(v) ? v.join(", ") || "—" : v == null || v === "" ? "—" : String(v));
-  return (
-    <section aria-label={t("historyTitle")} className="flex flex-col gap-3 border-t border-rn-line pt-5">
-      <h3 className="m-0 text-rn-14 font-bold text-rn-ink">{t("historyTitle")}</h3>
-      <ol className="m-0 flex list-none flex-col gap-3 p-0" data-hub-history="">
-        {events.map((e) => {
-          const fields = Object.entries(e.changes);
-          return (
-            <li key={e.version} className="rounded-[10px] bg-rn-page px-3.5 py-2.5 text-rn-12">
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-rn-muted">
-                <b className="text-rn-ink">{t(`event.${e.event}`)}</b>
-                <span className="tabular-nums">v{e.version} · {formatTime(e.recordedAt, locale)}</span>
-                <span>· {e.actor ? e.actor.displayName || e.actor.login : e.recordedBy ? e.recordedBy : t("goldSync")}</span>
-              </div>
-              {fields.length ? (
-                <ul className="m-0 mt-1.5 flex list-none flex-col gap-1 p-0 text-rn-ink-2">
-                  {fields.map(([field, c]) => (
-                    <li key={field} className="break-words">
-                      <span className="font-semibold">{(FIELD_LABELS as readonly string[]).includes(field) ? t(`field.${field}`) : field}</span>: {show(c.old)} → {show(c.new)}
-                    </li>
-                  ))}
-                </ul>
-              ) : e.event === "updated" ? (
-                <p className="m-0 mt-1.5 text-rn-muted">{t("goldOnlyChange")}</p>
-              ) : null}
-            </li>
-          );
-        })}
-      </ol>
-    </section>
   );
 }

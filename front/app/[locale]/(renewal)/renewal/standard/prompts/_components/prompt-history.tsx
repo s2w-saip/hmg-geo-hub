@@ -13,49 +13,14 @@ import { ChevronRight, Download } from "lucide-react";
 import { RnButton, RnEmpty, RnSelect, cx } from "@/components/renewal-ui";
 import { PROMPT_AUDIT_EVENT_TYPES } from "@/lib/standards/audit";
 import { dateStamp, downloadCsv } from "@/lib/export/csv";
-import type { PromptAuditLogView } from "@/lib/db/repositories/prompt-audit-logs";
 import type { AuditRow, HistoryQuery, PromptsHistory } from "@/app/[locale]/(dash)/standard/prompts/_data/screen-types";
 import { fetchPromptTimeline, fetchPromptsHistory } from "@/app/[locale]/(dash)/standard/prompts/_data/prompts-client";
+import { RnChanges, RnTimeline } from "../../../_components/prompt-list";
 
 type LoadState = { phase: "loading" } | { phase: "error" } | { phase: "unavailable" } | { phase: "ready"; rows: AuditRow[] };
 
-function Changes({ changes, textToggle }: { changes: PromptAuditLogView["changes"]; textToggle: string }) {
-  const t = useTranslations("promptAudit");
-  return (
-    <div className="flex flex-col gap-1.5">
-      {Object.entries(changes).map(([field, c]) =>
-        field === "text" ? (
-          <details key={field} className="group/text">
-            <summary className="cursor-pointer list-none text-rn-12 font-semibold text-rn-navy underline decoration-dotted underline-offset-3 [&::-webkit-details-marker]:hidden">{textToggle}</summary>
-            <div className="mt-1.5 grid grid-cols-2 gap-2 text-rn-12">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-rn-11 font-semibold text-rn-muted">{t("diffOld")}</span>
-                <p className="m-0 rounded-md bg-rn-page p-2 whitespace-pre-wrap text-rn-muted">{c.old ?? "—"}</p>
-              </div>
-              <div className="flex flex-col gap-0.5">
-                <span className="text-rn-11 font-semibold text-rn-muted">{t("diffNew")}</span>
-                <p className="m-0 rounded-md bg-rn-page p-2 whitespace-pre-wrap text-rn-ink">{c.new ?? "—"}</p>
-              </div>
-            </div>
-          </details>
-        ) : (
-          <p key={field} className="m-0 text-rn-12 break-all text-rn-muted">
-            <span className="font-semibold text-rn-ink-2">{field}</span>
-            {": "}
-            <span className="line-through decoration-rn-down/40">{c.old ?? "—"}</span>
-            {" → "}
-            <span className="text-rn-ink">{c.new ?? "—"}</span>
-          </p>
-        ),
-      )}
-    </div>
-  );
-}
-
 export function RnPromptTimeline({ id }: { id: string }) {
   const t = useTranslations("promptAudit");
-  const th = useTranslations("promptAudit.history");
-  const locale = useLocale();
   const [state, setState] = useState<LoadState>({ phase: "loading" });
   useEffect(() => {
     let cancelled = false;
@@ -67,29 +32,21 @@ export function RnPromptTimeline({ id }: { id: string }) {
       cancelled = true;
     };
   }, [id]);
-  const fmt = useMemo(() => new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }), [locale]);
   if (state.phase === "loading") return <p className="m-0 text-rn-13 text-rn-muted">{t("loading")}</p>;
   if (state.phase === "error") return <p className="m-0 text-rn-13 text-rn-danger-ink">{t("loadFailed")}</p>;
   if (state.phase === "unavailable") return <RnEmpty>{t("sourceUnavailable")}</RnEmpty>;
   if (state.rows.length === 0) return <RnEmpty>{t("empty")}</RnEmpty>;
   return (
-    <ol className="m-0 flex list-none flex-col gap-0 p-0">
-      {state.rows.map((ev, i) => (
-        <li key={ev.id} className="relative grid grid-cols-[16px_minmax(0,1fr)] gap-3 pb-4">
-          <span aria-hidden className={cx("mt-1 size-2.5 rounded-full", i === 0 ? "bg-rn-navy" : "bg-rn-navy-300")} />
-          {i < state.rows.length - 1 ? <span aria-hidden className="absolute top-4 bottom-0 left-[4px] w-px bg-rn-line-2" /> : null}
-          <div className="flex min-w-0 flex-col gap-1.5">
-            <div className="flex flex-wrap items-center gap-2 text-rn-12">
-              <span className="rounded-md bg-rn-navy/8 px-1.5 py-px font-bold text-rn-navy">{t(`events.${ev.eventType}` as "events.created")}</span>
-              <span className="text-rn-muted tabular-nums">{fmt.format(new Date(ev.createdAt))}</span>
-              <span className="text-rn-muted">{ev.actorEmail ?? t("actorUnknown")}</span>
-              {ev.batchId ? <span className="rounded-md px-1.5 text-rn-muted shadow-[inset_0_0_0_1px_var(--color-rn-line-2)]">{t("bulkBadge")}</span> : null}
-            </div>
-            <Changes changes={ev.changes} textToggle={th("viewTextDiff")} />
-          </div>
-        </li>
-      ))}
-    </ol>
+    <RnTimeline
+      events={state.rows.map((ev) => ({
+        key: ev.id,
+        label: t(`events.${ev.eventType}` as "events.created"),
+        at: ev.createdAt,
+        actor: ev.actorEmail ?? t("actorUnknown"),
+        marks: ev.batchId ? [t("bulkBadge")] : [],
+        changes: ev.changes,
+      }))}
+    />
   );
 }
 
@@ -149,7 +106,7 @@ export function RnAuditHistory({ initial, load = fetchPromptsHistory }: { initia
         <span className="mt-1 line-clamp-2">{r.promptText ?? r.promptId}</span>
       </td>
       <td className="border-b border-rn-line px-3 py-2.5">
-        <Changes changes={r.changes} textToggle={th("viewTextDiff")} />
+        <RnChanges changes={r.changes} textToggle={th("viewTextDiff")} />
       </td>
     </tr>
   );

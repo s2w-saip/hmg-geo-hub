@@ -6,21 +6,19 @@
 // helpers, so rows, totals, facets and order are the original's for the same picks.
 // The list (2026-10-28, for a 1920×1050 window): one line per prompt, one column per attribute,
 // cut-off cells show their full text on hover, a row opens the detail sheet (prompt-detail.tsx).
+// The panel, list and sheet parts are shared with Admin › Global prompts (_components/prompt-list.tsx).
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { ArrowDown, ArrowDownWideNarrow, ArrowUp, ArrowUpNarrowWide, Bookmark, ChevronLeft, ChevronRight, Download, Globe, Link2, Loader2, PanelLeft, Tag } from "lucide-react";
+import { ArrowDownWideNarrow, ArrowUpNarrowWide, Bookmark, Download, Globe, Link2, Loader2 } from "lucide-react";
 import {
   RnButton,
   RnCard,
-  RnCheckRow,
-  RnCountBadge,
   RnEmpty,
   RnIconButton,
   RnNote,
   RnPageHeader,
-  RnPanelSection,
   RnPill,
   RnSearchField,
   RnSelect,
@@ -34,16 +32,26 @@ import {
   useRnTruncTip,
 } from "@/components/renewal-ui";
 import { collationOf, rereadAfterHydration, type CatalogSort } from "@/lib/standards/catalog-page";
-import { countryName } from "@/lib/geo-catalog/country-name";
 import { rhqLabel } from "@/lib/rhq";
 import { languageName } from "@/lib/geo-catalog/language-name";
-import { isPseudoRegion, pseudoRegionLabelKey } from "@/lib/standards/prompt-markets";
 import { downloadXlsx } from "@/lib/export/xlsx";
 import type { Role } from "@/lib/auth/types";
 import { buildStandardPromptSheet, exportFilename, type StandardPromptExportLabels } from "@/app/[locale]/(dash)/standard/prompts/_components/prompt-export";
 import type { HistoryQuery, PromptRow, PromptsHistory, PromptsPage, PromptsRemote } from "@/app/[locale]/(dash)/standard/prompts/_data/screen-types";
 import { fetchPromptsExport, fetchPromptsPage } from "@/app/[locale]/(dash)/standard/prompts/_data/prompts-client";
-import { RnFilterSplit, useRnSplit } from "../../../_components/filter-split";
+import { RnFilterSplit } from "../../../_components/filter-split";
+import {
+  LIST_TD as TD,
+  RnFilterPanel,
+  RnFilterRail,
+  RnFunnelChip,
+  RnKindMark,
+  RnListPager,
+  RnMarkets as Markets,
+  RnRadioAxis,
+  RnSortHead,
+  useRnMarketLabel,
+} from "../../../_components/prompt-list";
 import { RnSavedFiltersSection, useSavedFilters, type SavedFilter, type SavedFiltersSource } from "../../../_components/saved-filters";
 import { RnAuditHistory } from "./prompt-history";
 import { RnPromptDetail } from "./prompt-detail";
@@ -67,7 +75,6 @@ import {
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
 const DEFAULT_PAGE_SIZE = 50;
-const SEARCH_MIN = 8;
 const DEFAULT_OPEN: Partial<Record<PromptAxis, boolean>> = { listType: true, depth1: true, funnel: true, presence: true, kind: true, status: true };
 const CHILD: Partial<Record<PromptAxis, PromptAxis>> = { listType: "depth1", depth1: "depth2", depth2: "depth3", depth3: "depth4" };
 
@@ -120,14 +127,7 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
   const filtersRef = useRef(filters);
   const tip = useRnTruncTip();
 
-  const marketLabel = useCallback(
-    (code: string) => {
-      if (!isPseudoRegion(code)) return countryName(code, locale);
-      const key = pseudoRegionLabelKey(code);
-      return key ? tVal(key as "pseudoWorldwide") : code;
-    },
-    [locale, tVal],
-  );
+  const marketLabel = useRnMarketLabel();
   const rows: PromptRow[] = data.rows;
   const facets = data.facets;
   const valueLabel = useCallback(
@@ -326,24 +326,18 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
     ...depthCols.map((c) => ({ axis: c as PromptAxis, label: axisLabel(c), value: level(r[c]) })),
   ];
   // a column head sorts by its attribute; the active one flips the direction (the toolbar's sort stays in step)
-  const head = (key: CatalogSort, label: string, className?: string) => {
-    const active = sort.key === key;
-    return (
-      <th scope="col" aria-sort={active ? (sort.asc ? "ascending" : "descending") : undefined} className={cx(TH, className)}>
-        <button
-          type="button"
-          onClick={() => {
-            setSort((s) => (s.key === key ? { key, asc: !s.asc } : { key, asc: firstAsc(key) }));
-            setPage(1);
-          }}
-          className={cx("inline-flex max-w-full cursor-pointer items-center gap-1 rounded-[3px] hover:text-rn-ink focus-visible:outline-2 focus-visible:outline-rn-navy", active && "text-rn-ink")}
-        >
-          <span className="truncate">{label}</span>
-          {active ? sort.asc ? <ArrowUp className="size-3 shrink-0" aria-hidden /> : <ArrowDown className="size-3 shrink-0" aria-hidden /> : null}
-        </button>
-      </th>
-    );
-  };
+  const head = (key: CatalogSort, label: string, className?: string) => (
+    <RnSortHead
+      sortKey={key}
+      label={label}
+      sort={sort}
+      className={className}
+      onSort={(k) => {
+        setSort((s) => (s.key === k ? { key: k, asc: !s.asc } : { key: k, asc: firstAsc(k) }));
+        setPage(1);
+      }}
+    />
+  );
 
   const panel = (
     <PromptPanel
@@ -420,7 +414,7 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
           />
         }
         panel={panel}
-        rail={<PromptRail count={picked.length} />}
+        rail={<RnFilterRail count={picked.length} />}
       >
         <RnTabs
           className="self-start"
@@ -565,13 +559,7 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
                               </span>
                             </td>
                             <td className={TD}>
-                              {r.funnelStage ? (
-                                <span data-rn-tip="" className="inline-block max-w-full truncate rounded-md bg-rn-navy/8 px-1.5 py-px align-middle text-rn-12 font-semibold text-rn-navy">
-                                  {r.funnelStage}
-                                </span>
-                              ) : (
-                                <span className="text-rn-faint">—</span>
-                              )}
+                              <RnFunnelChip value={r.funnelStage} />
                             </td>
                             <td className={TD}>
                               <span data-rn-tip={levels.map((l) => `${l.label}: ${l.value}`).join("\n") || undefined} className="block truncate text-rn-12 text-rn-ink-2">
@@ -583,11 +571,7 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
                             </td>
                             <td className={TD}>
                               <span className="flex items-center gap-1.5 text-rn-12 whitespace-nowrap">
-                                {r.kind === "acr" ? (
-                                  <span className="rounded-md px-1.5 py-px font-bold text-rn-navy shadow-[inset_0_0_0_1px_var(--color-rn-navy-300)]">{t("kindAcr")}</span>
-                                ) : (
-                                  <span className="text-rn-muted">{t("kindSingle")}</span>
-                                )}
+                                <RnKindMark acr={r.kind === "acr"} />
                                 {r.scopePromptId === null ? (
                                   <span data-rn-tip={t("statusUnmeasuredHint")} className="inline-flex items-center gap-1 text-rn-muted">
                                     <i aria-hidden className="inline-block size-2 rounded-full border border-dashed border-rn-muted" />
@@ -610,33 +594,20 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
                 </div>
               )}
               {total > 0 ? (
-                <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 text-rn-12 text-rn-muted">
-                  <span className="flex items-center gap-2">
-                    <span className="tabular-nums">{t("pageRange", { from: rangeFrom, to: rangeTo, total })}</span>
-                    <RnSelect
-                      label={t("pageSize")}
-                      value={String(pageSize)}
-                      onChange={(e) => {
-                        setPageSize(Number(e.target.value));
-                        setPage(1);
-                      }}
-                      options={PAGE_SIZE_OPTIONS.map((n) => ({ value: String(n), label: `${t("pageSize")} ${n}` }))}
-                    />
-                  </span>
-                  {pages > 1 ? (
-                    <span className="flex items-center gap-2">
-                      <RnButton size="sm" disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>
-                        <ChevronLeft className="size-3.5" aria-hidden />
-                        {t("prev")}
-                      </RnButton>
-                      <span className="tabular-nums">{t("pageOf", { page: safePage, pages })}</span>
-                      <RnButton size="sm" disabled={safePage >= pages} onClick={() => setPage(safePage + 1)}>
-                        {t("next")}
-                        <ChevronRight className="size-3.5" aria-hidden />
-                      </RnButton>
-                    </span>
-                  ) : null}
-                </div>
+                <RnListPager
+                  rangeFrom={rangeFrom}
+                  rangeTo={rangeTo}
+                  total={total}
+                  page={safePage}
+                  pages={pages}
+                  pageSize={pageSize}
+                  pageSizes={PAGE_SIZE_OPTIONS}
+                  onPageSize={(n) => {
+                    setPageSize(n);
+                    setPage(1);
+                  }}
+                  onPage={setPage}
+                />
               ) : null}
             </RnCard>
           </>
@@ -680,44 +651,6 @@ function sortLabel(k: CatalogSort, t: (key: "textLabel" | "brandLabel" | "presen
   }
 }
 
-// Cell classes of the one-line list: every cell one 40px line, cut off with "…".
-// The head sticks at the scrolling area's top edge: -top-1 takes back its 4px top padding (filter-split FRAME_SCROLL).
-const TH = "sticky -top-1 z-[1] h-[38px] border-b border-rn-line-2 bg-rn-surface px-3 font-semibold";
-const TD = "h-10 border-b border-rn-line px-3 align-middle";
-
-/**
- * One line of the original MarketCell's markets (real countries first, then pseudo slots; unset =
- * "전체"): the first market and "+N", the full list on hover and in the detail sheet.
- */
-function Markets({ markets, labelOf, allLabel, allHint }: { markets: PromptRow["markets"]; labelOf: (c: string) => string; allLabel: string; allHint: string }) {
-  const codes = [...markets.real, ...markets.pseudo];
-  if (codes.length === 0) {
-    return (
-      <span data-rn-tip={allHint} className="inline-flex items-center gap-1 rounded-md bg-rn-inset px-1.5 py-px align-middle text-rn-12 text-rn-ink-2">
-        <Globe className="size-3" aria-hidden />
-        {allLabel}
-      </span>
-    );
-  }
-  const [first, ...rest] = codes;
-  const pseudo = isPseudoRegion(first);
-  return (
-    <span data-rn-tip={rest.length ? codes.map(labelOf).join(" · ") : undefined} className="flex min-w-0 items-center gap-1">
-      <span
-        data-rn-tip={rest.length ? undefined : ""}
-        className={cx(
-          "inline-flex min-w-0 items-center gap-1 rounded-md px-1.5 py-px text-rn-12",
-          pseudo ? "border border-dashed border-rn-faint text-rn-muted" : "bg-rn-inset text-rn-ink-2",
-        )}
-      >
-        {pseudo ? <Tag className="size-3 shrink-0" aria-hidden /> : null}
-        <span className="truncate">{labelOf(first)}</span>
-      </span>
-      {rest.length ? <span className="shrink-0 rounded-md px-1.5 py-px text-rn-12 text-rn-muted tabular-nums shadow-[inset_0_0_0_1px_var(--color-rn-line-2)]">+{rest.length}</span> : null}
-    </span>
-  );
-}
-
 function PromptPanel({
   axes,
   filters,
@@ -742,99 +675,22 @@ function PromptPanel({
   saved: ReactNode;
 }) {
   const t = useTranslations("standardPromptsView");
-  const tf = useTranslations("dashboard.filters");
-  const tr = useTranslations("renewal.filters");
-  const { collapse } = useRnSplit();
-  const count = activeAxes(filters).length;
   return (
-    <aside id="rn-filter-panel" aria-label={tr("title")} className="max-h-full overflow-auto overscroll-contain rounded-rn-card bg-rn-surface shadow-rn-card">
-      <div className="sticky top-0 z-[2] rounded-t-rn-card flex items-center gap-2 border-b border-rn-line bg-rn-surface py-3 pr-2.5 pl-4.5">
-        <b className="text-rn-15 text-rn-ink">{tr("title")}</b>
-        <span className="text-rn-12 text-rn-muted">{count ? tr("selectedAxes", { count }) : tr("noneSelected")}</span>
-        {count ? (
-          <button type="button" data-rn-reset="" onClick={onReset} className="cursor-pointer text-rn-12 text-rn-muted underline underline-offset-3 hover:text-rn-ink">
-            {tf("reset")}
-          </button>
-        ) : null}
-        <RnIconButton label={tr("collapse")} className="ml-auto" onClick={collapse}>
-          <ChevronLeft className="size-4" aria-hidden />
-        </RnIconButton>
-      </div>
-      {saved}
-      <div className="pt-1.5" data-rn-section="prompt">
-        {axes.map((a) => (
-          <AxisList
-            key={a}
-            axis={a}
-            label={axisLabel(a)}
-            value={filters[a]}
-            options={options(a)}
-            valueLabel={(v) => valueLabel(a, v)}
-            allLabel={t("filterAll")}
-            open={open[a] ?? false}
-            onToggle={() => setOpen((o) => ({ ...o, [a]: !(o[a] ?? false) }))}
-            onPick={(v) => onPick(a, v)}
-          />
-        ))}
-      </div>
-      <div className="h-3" />
-    </aside>
+    <RnFilterPanel count={activeAxes(filters).length} onReset={onReset} saved={saved}>
+      {axes.map((a) => (
+        <RnRadioAxis
+          key={a}
+          axis={a}
+          label={axisLabel(a)}
+          value={filters[a]}
+          options={options(a)}
+          valueLabel={(v) => valueLabel(a, v)}
+          allLabel={t("filterAll")}
+          open={open[a] ?? false}
+          onToggle={() => setOpen((o) => ({ ...o, [a]: !(o[a] ?? false) }))}
+          onPick={(v) => onPick(a, v)}
+        />
+      ))}
+    </RnFilterPanel>
   );
 }
-
-function AxisList({
-  axis,
-  label,
-  value,
-  options,
-  valueLabel,
-  allLabel,
-  open,
-  onToggle,
-  onPick,
-}: {
-  axis: PromptAxis;
-  label: string;
-  value: string;
-  options: readonly string[];
-  valueLabel: (v: string) => string;
-  allLabel: string;
-  open: boolean;
-  onToggle: () => void;
-  onPick: (v: string) => void;
-}) {
-  const tp = useTranslations("renewal.prompts");
-  const [q, setQ] = useState("");
-  const query = q.trim().toLowerCase();
-  const shown = query ? options.filter((o) => o.toLowerCase().includes(query) || valueLabel(o).toLowerCase().includes(query)) : options;
-  return (
-    <RnPanelSection title={label} open={open} onToggle={onToggle} summary={value !== ALL ? valueLabel(value) : undefined} focusKey={`s:${axis}`}>
-      {options.length >= SEARCH_MIN ? (
-        <RnSearchField className="mx-0.5 mb-1.5" value={q} onChange={setQ} placeholder={tp("optionSearch", { label })} label={tp("optionSearch", { label })} />
-      ) : null}
-      <div role="radiogroup" aria-label={label}>
-        <RnCheckRow radio checked={value === ALL} label={allLabel} focusKey={`v:${axis}:${ALL}`} onToggle={() => onPick(ALL)} />
-        {shown.map((v) => (
-          <RnCheckRow key={v} radio checked={value === v} label={valueLabel(v)} focusKey={`v:${axis}:${v}`} onToggle={() => onPick(v)} />
-        ))}
-      </div>
-    </RnPanelSection>
-  );
-}
-
-function PromptRail({ count }: { count: number }) {
-  const tr = useTranslations("renewal.filters");
-  const { expand } = useRnSplit();
-  return (
-    <aside aria-label={tr("title")} className="flex flex-col items-center gap-1.5 rounded-rn-card bg-rn-surface py-2 shadow-rn-card">
-      <RnIconButton label={tr("expand")} className="size-9" onClick={expand}>
-        <PanelLeft className="size-[18px]" aria-hidden />
-        {count ? <RnCountBadge className="absolute -top-0.5 -right-1">{count}</RnCountBadge> : null}
-      </RnIconButton>
-      <RnIconButton label={tr("openSaved")} className="size-9" onClick={expand}>
-        <Bookmark className="size-[18px]" aria-hidden />
-      </RnIconButton>
-    </aside>
-  );
-}
-

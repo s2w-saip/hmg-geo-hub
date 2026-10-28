@@ -65,7 +65,7 @@ python -X utf8 back/hub_storage/manage.py revoke-admin   # 최상위 역할 회�
 
 ## 저장한 필터 (2026-10-28)
 
-리뉴얼 화면 여섯 곳(Overview·언급·인용·ACR·AI 가시성·글로벌 프롬프트) 필터 패널의 **저장한 필터**(불러오기·지금 조건 저장·이름 바꾸기·덮어쓰기·기본으로 열기·삭제와 되돌리기)를 계정마다 운영 DB `system.saved_filter`에 둔다. 예전에는 브라우저 localStorage에만 있어 PC나 브라우저가 바뀌면 사라졌다.
+리뉴얼 화면 일곱 곳(Overview·언급·인용·ACR·AI 가시성·글로벌 프롬프트·Admin 글로벌 프롬프트 관리) 필터 패널의 **저장한 필터**(불러오기·지금 조건 저장·이름 바꾸기·덮어쓰기·기본으로 열기·삭제와 되돌리기)를 계정마다 운영 DB `system.saved_filter`에 둔다. 예전에는 브라우저 localStorage에만 있어 PC나 브라우저가 바뀌면 사라졌다.
 
 - **저장(`003_saved_filters`):** 한 행이 계정·화면(`page`)의 필터 하나다. `query`는 화면의 필터 쿼리 문자열을 그대로 담고 API는 해석하지 않는다. 기본으로 여는 필터는 계정·화면마다 하나(부분 UNIQUE 인덱스)이고, 한 화면에 50개까지 둔다(API).
 - **계정과 권한:** 목록은 운영 DB 조회 계정으로 읽고, 쓰기는 `HGH_SAVED_FILTER_EDITOR_DB_URL`(`hmg_saved_filter_editor`: `system.saved_filter` SELECT·INSERT·UPDATE·DELETE만)로 한다. 계정·자격증명·역할·감사 표는 읽지도 못하고 데이터 DB에는 접속하지 못한다. 모든 문장이 로그인한 계정에 묶여 다른 계정의 행은 보이지도 바뀌지도 않는다(404). 한 계정의 쓰기는 advisory lock으로 차례대로 해서 순서와 기본 필터 하나가 여러 탭에서도 맞는다. 감사 이력에는 남기지 않는다(개인 화면 설정).
