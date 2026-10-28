@@ -141,6 +141,7 @@ export function readHghConfig(env: Env = process.env): HghConfig {
  * concurrent calls from one screen saturate the backend. Decision D6 (b) sends a screen's four
  * essential calls first and the other sections after them; this bound makes the limit hold on
  * the wire too (a section that fans out waits for a slot instead of opening a fifth call).
+ * Screen calls (lib/screen.ts) are exempt: the BFF bounds its own Gold work.
  */
 export const HGH_MAX_CONCURRENT_CALLS = 4;
 

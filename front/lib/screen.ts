@@ -10,7 +10,7 @@ import "server-only";
 // the existing failure states keep working.
 import { HghApiError, LOCAL_CODES, parseErrorBody } from "@/lib/hgh/errors";
 import { dedupeInRequest, stableKey } from "@/lib/request-dedupe";
-import { HGH_TIMEOUTS, requestCallLimiter } from "@/lib/hgh/client";
+import { HGH_TIMEOUTS } from "@/lib/hgh/client";
 import { streamResponse } from "@/lib/hgh/relay";
 
 export type ScreenQueryValue = string | number | boolean | null | undefined | readonly (string | number | boolean)[];
@@ -18,7 +18,8 @@ export type ScreenQuery = Readonly<Record<string, ScreenQueryValue>>;
 
 const DEFAULT_TIMEOUT_MS = 60_000;
 
-function baseUrl(): URL {
+/** HGH_API_BASE_URL, https (http only for localhost). Shared with lib/hub/client.ts. */
+export function baseUrl(): URL {
   const raw = process.env.HGH_API_BASE_URL;
   if (!raw) throw new HghApiError(500, LOCAL_CODES.config, "HGH_API_BASE_URL is not set");
   const url = new URL(raw);
@@ -46,14 +47,17 @@ const RETRY_DELAY_MS = 200;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
- * One screen exchange with the API client's rules: it holds one of the request's call slots
- * (lib/hgh/client requestCallLimiter, HGH_MAX_CONCURRENT_CALLS) only while the exchange runs,
- * and a connection error (no answer, not a timeout) is retried once 200 ms later.
+ * One screen exchange: a connection error (no answer, not a timeout) is retried once 200 ms later.
+ *
+ * Screen calls do not take the request's API call slots (lib/hgh/client requestCallLimiter,
+ * HGH_MAX_CONCURRENT_CALLS, 2026-10-27). That bound (G-25) protects a backend that runs every
+ * call's queries itself; the BFF bounds its Gold work on its own (a 6-connection pool) and runs
+ * identical reads that arrive together once (back/bff/api.py get). So a page's sections go out at
+ * once: held to four at a time, the renewal Mention's 22 sections took 9.7 s, re-running reads
+ * the earlier sections had just done; sent together they share them.
  */
 async function exchange(url: URL, timeoutMs: number, readBody: boolean): Promise<{ res: Response; text: string }> {
-  const limiter = requestCallLimiter();
   for (let attempt = 1; ; attempt += 1) {
-    const slot = limiter ? await limiter.acquire() : null;
     const timeout = AbortSignal.timeout(timeoutMs);
     try {
       const res = await fetch(url, { cache: "no-store", headers: { Accept: "application/json" }, signal: timeout });
@@ -64,13 +68,10 @@ async function exchange(url: URL, timeoutMs: number, readBody: boolean): Promise
         throw new HghApiError(504, LOCAL_CODES.timeout, `no response within ${timeoutMs} ms`, undefined, { method: "GET", path: url.pathname });
       }
       if (attempt === 1) {
-        slot?.release();
         await sleep(RETRY_DELAY_MS);
         continue;
       }
       throw new HghApiError(502, LOCAL_CODES.network, String((e as Error)?.message ?? e), undefined, { method: "GET", path: url.pathname });
-    } finally {
-      slot?.release();
     }
   }
 }

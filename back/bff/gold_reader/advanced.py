@@ -6,6 +6,9 @@ from collections import defaultdict
 from bff.gold_reader.context import BRAND_NAMES, Context, SQL, envelope, flag, rank_avg, ratio
 from bff.gold_reader.metrics import COUNTS, TYPES, brand_rows, counts, metric_values
 
+#: the sentiment matrix keys and their answer_brand_fact columns, in response order
+SENTIMENTS = (("positive", "s_pos"), ("neutral", "s_neu"), ("negative", "s_neg"), ("mixed", "s_mix"))
+
 
 async def geo(ctx: Context) -> dict:
     cs = await counts(ctx, group="country")
@@ -74,8 +77,10 @@ async def types(ctx: Context) -> dict:
     where = ctx.predicate(b, family="fact") + " AND f.std_in AND f.competitive"
     if ctx.card:
         where += " AND f.is_rep"
-    rows = [dict(r) for r in await ctx.conn.fetch(f"""SELECT f.*,br.own_bit AS brand_own_bit
-        FROM gold.answer_brand_fact f JOIN gold.dim_brand br USING(brand_key) WHERE {where}""", *b.args)]
+    # Only the columns block() reads: the fact row is 34 columns and the global read ~80k rows.
+    rows = await ctx.conn.fetch(f"""SELECT f.answer_key,{','.join(f'f.t_{t}' for t in TYPES)},
+        {','.join(f'f.{col}' for _, col in SENTIMENTS)},br.own_bit AS brand_own_bit
+        FROM gold.answer_brand_fact f JOIN gold.dim_brand br USING(brand_key) WHERE {where}""", *b.args)
     total = (await counts(ctx))[0]["answers"]
     stance_rows = None
     if flag(ctx.q, "include_stance", True) and not ctx.card:
@@ -88,18 +93,28 @@ async def types(ctx: Context) -> dict:
     def block(bits):
         by_type, matrix = [], []
         for t in TYPES:
-            matched = [r for r in rows if (r[f"t_{t}"] or 0) > 0]
-            own = [r for r in matched if r["brand_own_bit"] & bits]
-            other = [r for r in matched if not (r["brand_own_bit"] & bits)]
-            own_mentions = sum(r[f"t_{t}"] or 0 for r in own)
-            other_mentions = sum(r[f"t_{t}"] or 0 for r in other)
-            own_answers, other_answers = len({r["answer_key"] for r in own}), len({r["answer_key"] for r in other})
+            # One pass over the rows per type, split own (True) / other (False): the list-and-sum
+            # version walked the rows a dozen times per type (0.55 s of the global read).
+            mentions, answers, n = {True: 0, False: 0}, {True: set(), False: set()}, {True: 0, False: 0}
+            sent = {True: [0] * len(SENTIMENTS), False: [0] * len(SENTIMENTS)}
+            for r in rows:
+                m = r[f"t_{t}"] or 0
+                if m <= 0:
+                    continue
+                own = bool(r["brand_own_bit"] & bits)
+                mentions[own] += m
+                answers[own].add(r["answer_key"])
+                n[own] += 1
+                for i, (_, col) in enumerate(SENTIMENTS):
+                    sent[own][i] += r[col] or 0
+            own_mentions, other_mentions = mentions[True], mentions[False]
+            own_answers, other_answers = len(answers[True]), len(answers[False])
             by_type.append({"type": t, "own_mentions": own_mentions, "other_mentions": other_mentions,
                 "own_answers": own_answers, "other_answers": other_answers, "own_exposure": ratio(own_answers,total),
                 "other_exposure": ratio(other_answers,total), "own_share": ratio(own_mentions,own_mentions+other_mentions)})
-            for label, scope in (("own",own),("all",matched)):
-                matrix.append({"type":t,"scope":label,"rows":len(scope),**{name:sum(r[col] or 0 for r in scope)
-                    for name,col in (("positive","s_pos"),("neutral","s_neu"),("negative","s_neg"),("mixed","s_mix"))}})
+            for label, sides in (("own",(True,)),("all",(True,False))):
+                matrix.append({"type":t,"scope":label,"rows":sum(n[s] for s in sides),**{name:sum(sent[s][i] for s in sides)
+                    for i,(name,_) in enumerate(SENTIMENTS)}})
         stance = None
         if stance_rows is not None:
             stance = {name:sum(r["n"] for r in stance_rows if r["own_bit"] & bits and r["stance"]==i)

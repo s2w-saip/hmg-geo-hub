@@ -48,7 +48,6 @@ DEGRADE_LABEL = {"global": "standardCitations", "website": "websiteCitations", "
 WEBSITE_CITATION_GROUPS = ("geography", "language", "engine", "time", "source")
 NON_FILTER_KEYS = frozenset({"tab", "tone", "q", "page", "by", "cursor", "sort", "dir", "limit", "locale", "surface", "projectId"})
 _CURSOR = re.compile(r"[A-Za-z0-9_-]{1,8192}")
-MAX_CONCURRENT_READS = 4
 
 
 # ── small JS-semantics helpers ──────────────────────────────────────────────
@@ -205,12 +204,11 @@ def active_competitors(sp: dict) -> list[str]:
 # ── loaders (citations.ts) ──────────────────────────────────────────────────
 
 class Reads:
-    """The reads of one screen request (the page's in-request dedupe and D6 first-render budget):
-    identical /v1 reads share one answer, and `later()` runs a second-stage read only after the
-    essentials settled (citationsEssentials: the main domains and sources calls and the citation
-    calendar, plus the K-1 summary on website when its cards apply). The staging keeps the heavy
-    reads from competing with the rest, as the page did, and at most MAX_CONCURRENT_READS of
-    this request's reads run at once (lib/hgh/client.ts HGH_MAX_CONCURRENT_CALLS, design G-25)."""
+    """The reads of one screen request: identical /v1 reads share one answer (the page's in-request
+    dedupe). Every read starts at once (2026-10-27): the screen answers after all of them settled,
+    so the old page's staging (D6: trends and the prompt split after the essentials, at most four
+    calls at a time, G-25) only added the stages up, 4.6 s on the global page. The Gold pool bounds
+    the database work (bff/gold_reader/db.py), as for the mention screens."""
 
     def __init__(self, filters: dict, ctx: dict, competitor: list[str] | None = None) -> None:
         self.filters, self.ctx = filters, ctx
@@ -218,19 +216,12 @@ class Reads:
         self.picks = M.pick_list(competitor) if self.surface == "global" else []
         self.common = common_of(filters, ctx)
         self._memo: dict[str, asyncio.Future] = {}
-        self._essentials: asyncio.Future | None = None
-        self._slots = asyncio.Semaphore(MAX_CONCURRENT_READS)
-
-    async def limited(self, aw):
-        """One read holding a slot of this request (FIFO, like the page's call limiter)."""
-        async with self._slots:
-            return await aw
 
     def get(self, path: str, params: dict) -> asyncio.Future:
         key = f"{path}?{api.query(params)}"
         fut = self._memo.get(key)
         if fut is None:
-            fut = asyncio.ensure_future(self.limited(api.get(path, params)))
+            fut = asyncio.ensure_future(api.get(path, params))
             # an unread failure must not be reported as "never retrieved": it is read where used
             fut.add_done_callback(lambda f: f.exception() if not f.cancelled() else None)
             self._memo[key] = fut
@@ -252,19 +243,6 @@ class Reads:
     def summary(self) -> asyncio.Future:
         return self.get("kpi/summary", summary_query(self.common, {"surface": self.surface}))
 
-    def essentials(self) -> asyncio.Future:
-        if self._essentials is None:
-            calls = [self.domains(), self.sources(), self.dates()]
-            if self.surface == "website" and M.targets_applicable(self.filters):
-                calls.append(self.summary())
-            self._essentials = asyncio.ensure_future(asyncio.gather(*calls, return_exceptions=True))
-        return self._essentials
-
-    async def later(self, run):
-        """afterCitationEssentials: run a second-stage read once the essentials settled."""
-        await self.essentials()
-        return await run()
-
     def trends(self) -> asyncio.Future:
         """fetchCitationTrends: source top 15 with the category top 13 as a dims block of one call."""
         return self.get("trend", trend_query(self.common, {"surface": self.surface, "bucket": "cycle", "dimension": "source",
@@ -279,13 +257,12 @@ def split_citation_trends(res: dict) -> dict:
 
 async def load_view(r: Reads) -> dict:
     """loadCitationsView: {live, table, competitorOptions, degraded}."""
-    r.essentials()
 
     async def core():
         return await asyncio.gather(r.domains(), r.sources())
 
     async def trends():
-        return split_citation_trends(await r.later(r.trends))
+        return split_citation_trends(await r.trends())
 
     async def source_trend():
         return (await trends())["source"]
@@ -294,11 +271,11 @@ async def load_view(r: Reads) -> dict:
         return (await trends())["category"]
 
     async def owned():
-        return await r.later(lambda: r.get("citations/prompts", with_params(r.common, M.prompts_params(M.split_prompts_request(r.surface)))))
+        return await r.get("citations/prompts", with_params(r.common, M.prompts_params(M.split_prompts_request(r.surface))))
 
     async def picked():
         req = {"limit": M.DOMAIN_PAGE, "skey": r.picks, "competitor": r.picks, "competitorTotals": False}
-        return await r.later(lambda: r.get("citations/domains", with_params(r.common, M.domains_params(req))))
+        return await r.get("citations/domains", with_params(r.common, M.domains_params(req)))
 
     async def none():
         return None, False
@@ -327,10 +304,10 @@ async def load_deltas(r: Reads) -> dict:
                                      "metrics": ["visibility", "citation_share"], "measuredDays": False})
 
     async def share():
-        return await r.later(lambda: r.get("trend", share_q))
+        return await r.get("trend", share_q)
 
     async def category():
-        return split_citation_trends(await r.later(r.trends))["category"]
+        return split_citation_trends(await r.trends())["category"]
 
     (share_v, _), (cat, _) = await asyncio.gather(degrade(share()), degrade(category()))
     official = overview_card_delta(to_standard_trend_buckets(share_v["data"]), "citationShare") if share_v else None
@@ -346,13 +323,13 @@ async def load_source_parts(r: Reads) -> dict:
 
 
 async def load_period_view(r: Reads, today: str | None) -> dict | None:
-    """The month line: calendar month only (axis on: month -> week -> window), citations per answer
-    (second stage); a backend outage drops it, toPeriodDeltaView of the results."""
+    """The month line: calendar month only (axis on: month -> week -> window), citations per answer;
+    a backend outage drops it, toPeriodDeltaView of the results."""
     shape = resolve_request_compare_period_shape(r.filters.get("dateFrom"), r.filters.get("dateTo"))
     if not shape.get("months"):
         return None
-    results, _ = await degrade(r.later(lambda: r.limited(fetch_period_compare_api(r.filters, r.common, {
-        "surface": r.surface, "kind": shape["kind"], "metrics": ["citationsPerAnswer"]}))))
+    results, _ = await degrade(fetch_period_compare_api(r.filters, r.common, {
+        "surface": r.surface, "kind": shape["kind"], "metrics": ["citationsPerAnswer"]}))
     if results is None:
         return None
     cur_lo = ((shape.get("weeks") or {}).get("cur") or {}).get("lo") or ((shape.get("months") or {}).get("cur") or {}).get("lo") \
@@ -382,7 +359,7 @@ def to_target_hit_rate_from_summary(res: dict) -> dict:
 
 
 async def load_target_hit_rate(r: Reads) -> dict:
-    """loadTargetHitRate: K-1 url_prompts (an essential), or the empty card under a source category filter."""
+    """loadTargetHitRate: K-1 url_prompts, or the empty card under a source category filter."""
     if not M.targets_applicable(r.filters):
         return M.empty_target_hit_rate()
     return to_target_hit_rate_from_summary(await r.summary())
@@ -481,9 +458,8 @@ async def as_of(q) -> dict:
 
 @screen("citation/filter-bar")
 async def filter_bar(q) -> dict:
-    """The filter panel props: F-1 options of the URL period (after the citation read's essentials, as
-    the page staged it) and the citation calendar (an essential). The competitor options come with
-    citation/as-of (the citation read)."""
+    """The filter panel props: F-1 options of the URL period and the citation calendar. The competitor
+    options come with citation/as-of (the citation read)."""
     ctx, sp = split_context(q)
     surface = "website" if ctx.get("surface") == "website" else "global"
     if surface == "website":
@@ -492,10 +468,9 @@ async def filter_bar(q) -> dict:
     else:
         filters, actx, competitor = global_context(sp)
         r = Reads(filters, actx, competitor)
-    r.essentials()
     options, dates = await asyncio.gather(
-        r.later(lambda: r.limited(load_panel_options({"surface": surface, "dateFrom": filters.get("dateFrom"), "dateTo": filters.get("dateTo"),
-                                                      "scope": READER_SCOPE, "filters": filters}))),
+        load_panel_options({"surface": surface, "dateFrom": filters.get("dateFrom"), "dateTo": filters.get("dateTo"),
+                            "scope": READER_SCOPE, "filters": filters}),
         r.dates())
     return {"options": options, "dates": filter_dates_view(dates)}
 

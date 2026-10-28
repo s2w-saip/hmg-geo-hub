@@ -124,17 +124,16 @@ class Loaders(unittest.TestCase):
         self.assertEqual(out, M.empty_target_hit_rate())
         self.assertEqual(calls, [])
 
-    def test_second_stage_waits_for_the_essentials(self):
-        """D6: trends, the prompt split and the picked rows start only after domains, sources and the calendar settled."""
+    def test_reads_start_at_once(self):
+        """The screen answers once every read settled, so no read waits for another (2026-10-27): staged
+        behind domains, sources and the calendar (the old page's D6), the page took both stages in turn."""
         order = []
         release = asyncio.Event()
 
         async def get(path, params=None):
             order.append(path)
-            if path in ("citations/domains", "citations/sources", "filters/dates") and not params.get("skey"):
-                await release.wait()
-            return {"citations/domains": domains_body(), "citations/sources": SOURCES, "filters/dates": {"data": {}, "meta": META},
-                    "citations/prompts": PROMPTS}.get(path, TREND)
+            await release.wait()
+            return {"citations/domains": domains_body(), "citations/sources": SOURCES, "citations/prompts": PROMPTS}.get(path, TREND)
 
         async def scenario():
             task = asyncio.ensure_future(C.load_view(C.Reads({"cumulative": True}, {"surface": "global", "scope": {"all": True}}, ["a.com"])))
@@ -146,8 +145,7 @@ class Loaders(unittest.TestCase):
             return first
         with mock.patch("bff.api.get", get):
             first = run(scenario())
-        self.assertEqual(sorted(first), ["citations/domains", "citations/sources", "filters/dates"])
-        self.assertEqual(sorted(order[3:]), ["citations/domains", "citations/prompts", "trend"])
+        self.assertEqual(sorted(first), ["citations/domains", "citations/domains", "citations/prompts", "citations/sources", "trend"])
 
 
 class Routes(unittest.TestCase):

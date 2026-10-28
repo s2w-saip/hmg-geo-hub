@@ -22,18 +22,23 @@ async def domains(ctx: Context) -> dict:
     b = SQL()
     where = predicate(ctx, b)
     owned = f"f.owner_key IN (SELECT owner_key FROM gold.dim_owned_base WHERE (brand_bit & {b.bind(ctx.bits)})<>0)" if ctx.sf == 1 else "f.loc_owned"
-    rows = await ctx.conn.fetch(f"""SELECT s.skey,s.domain,s.is_social,s.owned_brand_bit,s.competitor_brand_key,
-        c.category_key,c.slug,c.name AS category_name,br.name AS competitor_brand,
+    # Aggregate the facts per source_key, then join the source dims to the ~26k result rows: the
+    # distinct counts sort the fact rows by a 4-byte key instead of the source's text columns
+    # (2.9 s -> 1.35 s on the global card). source_key and skey are both unique in dim_source, so
+    # the groups are the per-source groups as before.
+    rows = await ctx.conn.fetch(f"""WITH a AS (SELECT f.source_key,
         count(*)::int AS citations,count(DISTINCT f.answer_key)::int AS answers,
         count(DISTINCT f.prompt_key)::int AS prompts,
         count(*) FILTER(WHERE {owned})::int AS owned,
         bool_or(f.tgt_hit) AS target
-        FROM gold.citation_fact f JOIN gold.dim_source s USING(source_key)
+        FROM gold.citation_fact f WHERE {where} GROUP BY f.source_key)
+        SELECT s.skey,s.domain,s.is_social,s.owned_brand_bit,s.competitor_brand_key,
+        c.category_key,c.slug,c.name AS category_name,br.name AS competitor_brand,
+        a.citations,a.answers,a.prompts,a.owned,a.target
+        FROM a JOIN gold.dim_source s USING(source_key)
         LEFT JOIN gold.dim_category c ON c.category_key=s.category_key
         LEFT JOIN gold.dim_brand br ON br.brand_key=s.competitor_brand_key
-        WHERE {where}
-        GROUP BY s.skey,s.domain,s.is_social,s.owned_brand_bit,s.competitor_brand_key,c.category_key,c.slug,c.name,br.name
-        ORDER BY citations DESC,s.skey""", *b.args)
+        ORDER BY a.citations DESC,s.skey""", *b.args)
     total = sum(r["citations"] for r in rows)
     b = SQL()
     where = ctx.predicate(b, family="fact", measure_family="citations") + " AND f.cit_in" + (" AND f.is_rep" if ctx.card else "")
