@@ -1580,8 +1580,9 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   <ul class="points">
     <li><code>back/app/</code>·<code>back/ingest/</code>·<code>back/db/</code>·<code>back/migration/</code>: 이전 재설계(DB / Back / Front 3층)의 기능 모듈 72개, 적재 워커, DDL 사슬, 이관 도구.
       지금 로컬 서비스의 API는 이 코드가 아니라 <code>back/bff/</code>다.</li>
-    <li><code>infra/</code>: AWS stg·prod를 만드는 CLI 스크립트. 경로는 CloudFront(캐시 끔) → ALB(비밀 헤더가 맞을 때만 전달) → 프라이빗 EC2(FastAPI, SSM 관리) → 비공개 RDS PostgreSQL 17.
-      상태·비밀 파일(<code>infra/state.env</code>)은 커밋하지 않는다.</li>
+    <li><code>infra/</code>: 첫 커밋(<code>b18d7e1</code>, 2026-10-02)과 함께 이전 재설계 저장소에서 들여온 AWS stg·prod CLI 스크립트.
+      경로는 CloudFront → ALB → 프라이빗 EC2 → 비공개 RDS PostgreSQL 17이다. 이 저장소의 서비스는 AWS에 배포한 기록이 없고, 앞으로도 AWS에는 올리지 않는다.
+      배포 대상은 내부 VM이다. 예외로 <code>infra/analytics/</code>·<code>infra/operations/</code>의 compose 파일은 HUB 저장소용으로 이 저장소에서 추가했다(<code>668238d</code>).</li>
     <li>Next의 비로컬 모드: Supabase 로그인, Vercel 배포, <code>HGH_SOURCE_*</code> 소스 전환, <code>/raw-data-qa</code> 검수 콘솔. 로컬 모드에서는 쓰지 않는다.</li>
   </ul>
 </section>
