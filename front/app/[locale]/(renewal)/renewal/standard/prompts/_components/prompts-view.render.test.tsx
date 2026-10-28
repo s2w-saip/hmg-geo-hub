@@ -93,7 +93,7 @@ const list = () =>
       period={null}
       history={HISTORY}
       initialTab="catalog"
-      storageKey="test"
+      savedFilters={{ page: "prompts", userId: "test", initial: [] }}
     />,
   );
 /** A row's cells as text, and its markup. */

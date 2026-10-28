@@ -163,7 +163,7 @@ describe("renewal ACR filter panel shows exactly the app's ACR filters", () => {
     const renewal = renewalStructure(
       wrap(
         <RnFilterRuntime>
-          <RnOverviewFilters props={{ ...opts, stage: "acr" }} storageKey="test">
+          <RnOverviewFilters props={{ ...opts, stage: "acr" }} savedFilters={{ page: "acr", userId: "test", initial: [] }}>
             <RnOverviewFilterPanel onCollapse={() => {}} defaultOpen="all" />
           </RnOverviewFilters>
         </RnFilterRuntime>,

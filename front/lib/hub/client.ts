@@ -1,12 +1,13 @@
 import "server-only";
 
-// HUB login and Global prompt editing on the BFF (back/bff/app.py: /v1/auth/*, /v1/hub/global-prompts*).
+// HUB login, Global prompt editing and saved filters on the BFF (back/bff/app.py: /v1/auth/*,
+// /v1/hub/global-prompts*, /v1/hub/saved-filters*).
 // Server only: the token comes from the httpOnly cookie and goes out as `Authorization: Bearer`, so the
 // browser never calls the BFF. Non-2xx -> HghApiError(status, code, message, details) from the envelope.
 import { HghApiError, LOCAL_CODES, isHghApiError, parseErrorBody } from "@/lib/hgh/errors";
 import { baseUrl } from "@/lib/screen";
 
-export type HubMethod = "GET" | "POST" | "PUT";
+export type HubMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 const TIMEOUT_MS = 20_000;
 

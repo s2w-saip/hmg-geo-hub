@@ -1,5 +1,6 @@
-"""Local BFF/API over external Gold and separate HUB data/operations stores. Read-only, except the HUB
-Global prompt editing that the signed-in top-level administrator may do (/v1/auth/*, /v1/hub/global-prompts)."""
+"""Local BFF/API over external Gold and separate HUB data/operations stores. Read-only, except what the
+signed-in top-level administrator may do in the HUB: log in (/v1/auth/*), edit Global prompts
+(/v1/hub/global-prompts) and keep their own saved filters (/v1/hub/saved-filters)."""
 from __future__ import annotations
 
 import json
@@ -14,7 +15,7 @@ from fastapi.responses import JSONResponse
 
 from bff import api, screens
 from bff.gold_reader.db import close_pool, connection, open_pool
-from bff.hub_stores import analytics_db, catalog_editor, hub_auth, hub_catalog, operations_db
+from bff.hub_stores import analytics_db, catalog_editor, hub_auth, hub_catalog, operations_db, saved_filters
 
 log = logging.getLogger("hgh.gold")
 
@@ -25,6 +26,7 @@ async def lifespan(app: FastAPI):
     await analytics_db.open_pool()
     await operations_db.open_pool()
     await catalog_editor.open_pool()
+    await saved_filters.open_pool()
     try:
         yield
     finally:
@@ -32,6 +34,7 @@ async def lifespan(app: FastAPI):
         await analytics_db.close_pool()
         await operations_db.close_pool()
         await catalog_editor.close_pool()
+        await saved_filters.close_pool()
 
 
 app = FastAPI(title="HMG GEO HUB BFF / read-only API", lifespan=lifespan)
@@ -72,11 +75,12 @@ async def healthz():
             "operations": await operations_db.health()}
 
 
-# ─── HUB login and Global prompt editing (top-level administrator only) ─────────────────────────────────
+# ─── HUB login, Global prompt editing and saved filters (top-level administrator only) ────────────────
 # Registered before /v1/hub/{kind} and the read-only catch-all so these paths reach their own handlers.
 
-def hub_json(data, status: int = 200) -> JSONResponse:
-    return JSONResponse(jsonable_encoder({"data": data, "meta": {"source": "hub_data", "database": "hmg_analytics"}}),
+def hub_json(data, status: int = 200, database: str = "hmg_analytics") -> JSONResponse:
+    source = "hub_operations" if database == "hmg_operations" else "hub_data"
+    return JSONResponse(jsonable_encoder({"data": data, "meta": {"source": source, "database": database}}),
                         status_code=status, headers={"Cache-Control": "no-store"})
 
 
@@ -139,6 +143,40 @@ async def global_prompt_status(prompt_id: UUID, action: str, request: Request):
     actor = await hub_auth.principal(request.headers.get("authorization"))
     body = catalog_editor.parse(catalog_editor.VersionRef, await json_body(request))
     return hub_json(await catalog_editor.set_status(prompt_id, body, "archived" if action == "archive" else "active", actor))
+
+
+# The signed-in account's own saved filters of a renewal page (hub_stores/saved_filters.py).
+@app.get("/v1/hub/saved-filters")
+async def saved_filter_list(request: Request):
+    actor = await hub_auth.principal(request.headers.get("authorization"))
+    return hub_json(await saved_filters.listing(request.query_params.get("page"), actor), database="hmg_operations")
+
+
+@app.post("/v1/hub/saved-filters")
+async def saved_filter_create(request: Request):
+    actor = await hub_auth.principal(request.headers.get("authorization"))
+    body = catalog_editor.parse(saved_filters.FilterCreate, await json_body(request), "saved filter")
+    return hub_json(await saved_filters.create(body, actor), 201, database="hmg_operations")
+
+
+@app.post("/v1/hub/saved-filters/import")
+async def saved_filter_import(request: Request):
+    actor = await hub_auth.principal(request.headers.get("authorization"))
+    body = catalog_editor.parse(saved_filters.FilterImport, await json_body(request), "saved filter")
+    return hub_json(await saved_filters.import_items(body, actor), database="hmg_operations")
+
+
+@app.patch("/v1/hub/saved-filters/{filter_id}")
+async def saved_filter_change(filter_id: UUID, request: Request):
+    actor = await hub_auth.principal(request.headers.get("authorization"))
+    body = catalog_editor.parse(saved_filters.FilterChange, await json_body(request), "saved filter")
+    return hub_json(await saved_filters.change(filter_id, body, actor), database="hmg_operations")
+
+
+@app.delete("/v1/hub/saved-filters/{filter_id}")
+async def saved_filter_delete(filter_id: UUID, request: Request):
+    actor = await hub_auth.principal(request.headers.get("authorization"))
+    return hub_json(await saved_filters.remove(filter_id, actor), database="hmg_operations")
 
 
 @app.get("/v1/hub/{kind}")

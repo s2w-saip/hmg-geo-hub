@@ -63,5 +63,25 @@ async def main(config):
     else:
         await forbidden.close()
         raise AssertionError('External API credentials can connect to operations DB')
+    # Saved filter role: system.saved_filter on the operations server only.
+    saved = await asyncpg.connect(config['saved_filter'], timeout=5)
+    try:
+        await saved.fetchval('SELECT count(*) FROM system.saved_filter')
+        try:
+            await saved.execute('SELECT 1 FROM system.user_credential LIMIT 1')
+        except asyncpg.InsufficientPrivilegeError:
+            pass
+        else:
+            raise AssertionError('Saved filter role reads beyond system.saved_filter')
+    finally:
+        await saved.close()
+    try:
+        forbidden = await asyncpg.connect(config['saved_filter_data'], timeout=5)
+    except asyncpg.InvalidAuthorizationSpecificationError:
+        pass
+    else:
+        await forbidden.close()
+        raise AssertionError('Saved filter credentials can connect to the data DB')
     print(json.dumps({'tcp_authentication':'passed','external_operations_access':'denied','api_operations_reader':'read_only',
-                      'ext_api':'scoped_read_only','ext_operations_access':'denied'}))
+                      'ext_api':'scoped_read_only','ext_operations_access':'denied','saved_filter':'one_table',
+                      'saved_filter_data_access':'denied'}))

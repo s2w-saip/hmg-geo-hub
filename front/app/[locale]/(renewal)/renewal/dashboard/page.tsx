@@ -26,6 +26,7 @@ import {
 } from "@/app/[locale]/(dash)/dashboard/_data/screen-fallbacks";
 import { RnCard, RnEmpty, RnNote, RnPageHeader, RnPill, RnSkeleton } from "@/components/renewal-ui";
 import { RnBusyScope, RnFilterRuntime } from "../_components/filter-runtime";
+import { loadSavedFilters } from "../_components/saved-filters-server";
 import {
   RnCopyLinkButton,
   RnFilterSplit,
@@ -142,9 +143,9 @@ async function RenewalOverview({
   qs: string;
   header: ReactNode;
 }) {
-  const props = await filterOptions(scope, sp, locale);
+  const [props, saved] = await Promise.all([filterOptions(scope, sp, locale), loadSavedFilters("overview")]);
   return (
-    <RnOverviewFilters props={props} storageKey={`rn:saved-filters:v1:overview:${userId}`}>
+    <RnOverviewFilters props={props} savedFilters={{ page: "overview", userId, initial: saved }}>
       <RnFilterSplit header={header} panel={<RnOverviewFilterPanel />} rail={<RnOverviewFilterRail />}>
         <RnOverviewApplied />
         <RnBusyScope className="flex flex-col gap-4">

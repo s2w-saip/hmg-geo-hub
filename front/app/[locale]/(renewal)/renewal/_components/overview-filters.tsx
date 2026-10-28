@@ -50,7 +50,7 @@ import {
 import { useRnFilterRuntime } from "./filter-runtime";
 import { useRnSplit } from "./filter-split";
 export { RnFilterSplit } from "./filter-split";
-import { RnSavedFiltersSection, sameQuery, useSavedFilters, type SavedFilter } from "./saved-filters";
+import { RnSavedFiltersSection, sameQuery, useSavedFilters, type SavedFilter, type SavedFiltersSource } from "./saved-filters";
 
 const SEARCH_MIN = 8; // the app's FacetedFilter shows its search box from 8 options
 
@@ -114,7 +114,15 @@ function parseDraft(sp: { get(name: string): string | null }, groups: readonly D
   return d;
 }
 
-export function RnOverviewFilters({ props, storageKey, children }: { props: OverviewFilterProps; storageKey: string; children: ReactNode }) {
+export function RnOverviewFilters({
+  props,
+  savedFilters,
+  children,
+}: {
+  props: OverviewFilterProps;
+  savedFilters: SavedFiltersSource;
+  children: ReactNode;
+}) {
   const tf = useTranslations("dashboard.filters");
   const tTime = useTranslations("dashboard.filters.timeRange");
   const tr = useTranslations("renewal.filters");
@@ -168,7 +176,7 @@ export function RnOverviewFilters({ props, storageKey, children }: { props: Over
     [commit, filterQueryOf, groups, sp],
   );
 
-  const saved = useSavedFilters(storageKey);
+  const saved = useSavedFilters(savedFilters);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [openedWith, setOpenedWith] = useState<string | null>(null);
 
@@ -215,7 +223,7 @@ export function RnOverviewFilters({ props, storageKey, children }: { props: Over
     if (!saved.ready || autoOpened.current) return;
     autoOpened.current = true;
     if (filterQuery) return; // opened with explicit filters (link, back nav)
-    const star = saved.items.find((p) => p.star);
+    const star = saved.items.find((p) => p.isDefault);
     if (!star) return;
     applyQuery(star.query);
     setActiveId(star.id);

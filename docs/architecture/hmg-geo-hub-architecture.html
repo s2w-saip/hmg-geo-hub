@@ -179,11 +179,11 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
     SQL 마이그레이션이고, 이 문서는 그것을 그림으로 옮긴 정본이다. 구조나 스키마를 바꾸는 변경은 같은 커밋에서 이 문서를 고친다.
     방법은 <a href="#maintain">이 문서 고치는 법</a>.</p>
   <p class="asof">마지막 갱신 2026-10-28 · 반영한 스키마: <code>back/analytics/schema.sql</code>·<code>operations.sql</code>,
-    <code>back/hub_storage/data-002~005.sql</code>, <code>operations-001~002.sql</code></p>
+    <code>back/hub_storage/data-002~005.sql</code>, <code>operations-001~003.sql</code></p>
   <dl class="facts">
     <div><dt>프로세스</dt><dd>Next.js <span class="mono">:3333</span> · FastAPI <span class="mono">:5555</span> · 외부 API <span class="mono">:5560</span></dd></div>
     <div><dt>DB</dt><dd>Gold(외부) · 데이터 DB · 운영 DB</dd></div>
-    <div><dt>앱이 DB에 쓰는 곳</dt><dd>글로벌 프롬프트 편집 하나 (INSERT만). 외부 API는 읽기만</dd></div>
+    <div><dt>앱이 DB에 쓰는 곳</dt><dd>글로벌 프롬프트 편집 (INSERT만) · 계정별 저장한 필터. 외부 API는 읽기만</dd></div>
     <div><dt>로그인</dt><dd>모든 화면 · 최상위 관리자만</dd></div>
   </dl>
   <nav class="toc" aria-label="목차">
@@ -197,7 +197,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   <h2 id="h-path">요청이 지나가는 길</h2>
   <figure>
     <div class="scroll">
-      <svg viewBox="0 0 1200 556" role="img" aria-label="브라우저는 Next.js(3333)만 부르고, Next 서버가 FastAPI BFF(5555)를 HTTP로 부른다. BFF는 모듈별로 운영 DB, 데이터 DB, 외부 Gold DB에 연결하며, DB 쓰기는 글로벌 프롬프트 편집의 INSERT 하나뿐이다.">
+      <svg viewBox="0 0 1200 556" role="img" aria-label="브라우저는 Next.js(3333)만 부르고, Next 서버가 FastAPI BFF(5555)를 HTTP로 부른다. BFF는 모듈별로 운영 DB, 데이터 DB, 외부 Gold DB에 연결하며, DB 쓰기는 글로벌 프롬프트 편집의 INSERT와 계정별 저장한 필터 두 가지뿐이다.">
         <defs>
           <marker id="f1a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker>
           <marker id="f1w" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto"><path class="ahw" d="M0,0L10,5L0,10z"/></marker>
@@ -223,14 +223,16 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <text class="m" x="214" y="240">getSession()</text>
         <text class="mu" x="214" y="258">페이지마다 로그인 확인</text>
 
-        <rect class="box" x="200" y="310" width="228" height="190" rx="6"/>
+        <rect class="box" x="200" y="310" width="228" height="202" rx="6"/>
         <text class="b" x="214" y="336">/api/* 라우트 핸들러</text>
-        <text class="m" x="214" y="366">hub/session</text>
-        <text class="mu" x="214" y="384">로그인 · 로그아웃</text>
-        <text class="m" x="214" y="412">hub/global-prompts</text>
-        <text class="mu" x="214" y="430">글로벌 프롬프트 편집</text>
-        <text class="mu" x="214" y="462">토큰은 httpOnly 쿠키에만,</text>
-        <text class="mu" x="214" y="480">BFF 호출 때 Bearer로 붙임</text>
+        <text class="m" x="214" y="362">hub/session</text>
+        <text class="mu" x="214" y="379">로그인 · 로그아웃</text>
+        <text class="m" x="214" y="403">hub/global-prompts</text>
+        <text class="mu" x="214" y="420">글로벌 프롬프트 편집</text>
+        <text class="m" x="214" y="444">hub/saved-filters</text>
+        <text class="mu" x="214" y="461">계정별 저장한 필터</text>
+        <text class="mu" x="214" y="485">토큰은 httpOnly 쿠키에만,</text>
+        <text class="mu" x="214" y="501">BFF 호출 때 Bearer로 붙임</text>
 
         <line class="e" x1="116" y1="195" x2="200" y2="195" marker-end="url(#f1a)"/>
         <text class="mu sm" x="142" y="187" text-anchor="middle">페이지</text>
@@ -246,7 +248,8 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <path class="e" d="M478,118H720" marker-end="url(#f1a)"/>
         <path class="e" d="M478,186H720" marker-end="url(#f1a)"/>
         <path class="e" d="M478,254H720" marker-end="url(#f1a)"/>
-        <path class="e" d="M478,356H530" marker-end="url(#f1a)"/>
+        <path class="e" d="M478,322H720" marker-end="url(#f1a)"/>
+        <path class="e" d="M478,375H530" marker-end="url(#f1a)"/>
         <text class="m mu sm" x="478" y="466" text-anchor="middle">HTTP</text>
         <text class="mu sm" x="478" y="482" text-anchor="middle">서버 간</text>
 
@@ -260,42 +263,47 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <text class="m mu" x="734" y="133">/v1/auth/login · me</text>
 
         <rect class="box" x="720" y="160" width="200" height="52" rx="6"/>
-        <text class="m b" x="734" y="182">catalog_editor</text>
-        <text class="m mu" x="734" y="201">/v1/hub/global-prompts</text>
+        <text class="m b" x="734" y="182">saved_filters</text>
+        <text class="m mu" x="734" y="201">/v1/hub/saved-filters</text>
 
         <rect class="box" x="720" y="228" width="200" height="52" rx="6"/>
-        <text class="m b" x="734" y="250">hub_catalog</text>
-        <text class="m mu" x="734" y="269">/v1/hub/projects·prompts</text>
+        <text class="m b" x="734" y="250">catalog_editor</text>
+        <text class="m mu" x="734" y="269">/v1/hub/global-prompts</text>
 
-        <rect class="box" x="720" y="350" width="200" height="52" rx="6"/>
-        <text class="m b" x="734" y="372">analytics_reader</text>
-        <text class="m mu" x="734" y="391">/v1/analytics/*</text>
+        <rect class="box" x="720" y="296" width="200" height="52" rx="6"/>
+        <text class="m b" x="734" y="318">hub_catalog</text>
+        <text class="m mu" x="734" y="337">/v1/hub/projects·prompts</text>
+
+        <rect class="box" x="720" y="364" width="200" height="52" rx="6"/>
+        <text class="m b" x="734" y="386">analytics_reader</text>
+        <text class="m mu" x="734" y="405">/v1/analytics/*</text>
 
         <rect class="box" x="720" y="446" width="200" height="52" rx="6"/>
         <text class="m b" x="734" y="468">gold_reader</text>
         <text class="mu" x="734" y="487">그 밖의 /v1/* 전부</text>
 
-        <rect class="box" x="530" y="316" width="160" height="80" rx="6"/>
-        <text class="m b" x="544" y="338">screens/</text>
-        <text class="m mu" x="544" y="357">/v1/screens/{name}</text>
-        <text class="mu" x="544" y="378">83개 화면 빌더</text>
+        <rect class="box" x="530" y="340" width="160" height="70" rx="6"/>
+        <text class="m b" x="544" y="362">screens/</text>
+        <text class="m mu" x="544" y="380">/v1/screens/{name}</text>
+        <text class="mu" x="544" y="399">83개 화면 빌더</text>
 
-        <rect class="box" x="530" y="426" width="160" height="86" rx="6"/>
-        <text class="m b" x="544" y="448">api.get()</text>
-        <text class="mu" x="544" y="467">같은 읽기는 한 번만</text>
-        <text class="mu" x="544" y="485">20초 제한 · 필터만 캐시</text>
+        <rect class="box" x="530" y="430" width="160" height="82" rx="6"/>
+        <text class="m b" x="544" y="451">api.get()</text>
+        <text class="mu" x="544" y="469">같은 읽기는 한 번만</text>
+        <text class="mu" x="544" y="486">20초 제한 · 필터만 캐시</text>
         <text class="m mu sm" x="544" y="503">GET /v1/* 도 여기로</text>
 
-        <path class="e" d="M610,396V426" marker-end="url(#f1a)"/>
-        <path class="e" d="M690,440H705V376H720" marker-end="url(#f1a)"/>
+        <path class="e" d="M610,410V430" marker-end="url(#f1a)"/>
+        <path class="e" d="M690,450H705V390H720" marker-end="url(#f1a)"/>
         <path class="e" d="M690,472H720" marker-end="url(#f1a)"/>
 
         <!-- databases -->
-        <rect class="hubbox" x="1010" y="84" width="174" height="100" rx="8"/>
+        <rect class="hubbox" x="1010" y="84" width="174" height="116" rx="8"/>
         <text class="b" x="1024" y="108">HUB 운영 DB</text>
         <text class="m" x="1024" y="128">hmg_operations</text>
         <text class="m mu" x="1024" y="145">:55437</text>
         <text class="mu" x="1024" y="170">system.* 계정·권한·감사</text>
+        <text class="mu sm" x="1024" y="188">계정별 저장한 필터</text>
 
         <rect class="hubbox" x="1010" y="214" width="174" height="206" rx="8"/>
         <text class="b" x="1024" y="238">HUB 데이터 DB</text>
@@ -316,12 +324,14 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 
         <path class="e" d="M920,118H1010" marker-end="url(#f1a)"/>
         <text class="mu sm" x="965" y="110" text-anchor="middle">계정·역할</text>
-        <path class="ew" d="M920,186H966V240H1010" marker-end="url(#f1w)"/>
-        <text class="sm w" x="965" y="178" text-anchor="middle">INSERT만</text>
-        <path class="e" d="M920,254H1010" marker-end="url(#f1a)"/>
-        <text class="mu sm" x="965" y="272" text-anchor="middle">카탈로그</text>
-        <path class="e" d="M920,376H1010" marker-end="url(#f1a)"/>
-        <text class="mu sm" x="965" y="368" text-anchor="middle">GA4·SEO</text>
+        <path class="ew" d="M920,186H1010" marker-end="url(#f1w)"/>
+        <text class="sm w" x="965" y="178" text-anchor="middle">자기 행만</text>
+        <path class="ew" d="M920,254H1010" marker-end="url(#f1w)"/>
+        <text class="sm w" x="965" y="246" text-anchor="middle">INSERT만</text>
+        <path class="e" d="M920,322H1010" marker-end="url(#f1a)"/>
+        <text class="mu sm" x="965" y="314" text-anchor="middle">카탈로그</text>
+        <path class="e" d="M920,390H1010" marker-end="url(#f1a)"/>
+        <text class="mu sm" x="965" y="382" text-anchor="middle">GA4·SEO</text>
         <path class="e" d="M920,472H1010" marker-end="url(#f1a)"/>
         <text class="mu sm" x="965" y="464" text-anchor="middle">측정 사실</text>
       </svg>
@@ -334,7 +344,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <span><svg viewBox="0 0 28 12"><rect x="1" y="1" width="26" height="10" rx="2" class="sw-gold"/></svg>외부 DB</span>
       </div>
       <p><strong>그림 1.</strong> 브라우저 요청은 모두 middleware 관문을 지나 Next 서버에서 끝난다. BFF를 부르는 것은 Next 서버이고,
-        DB 자격증명은 BFF만 갖는다. 빨간 선이 앱이 DB에 쓰는 유일한 경로다.</p>
+        DB 자격증명은 BFF만 갖는다. 빨간 선 두 개가 앱이 DB에 쓰는 경로의 전부다(계정별 저장한 필터, 글로벌 프롬프트 INSERT).</p>
     </figcaption>
   </figure>
 
@@ -353,9 +363,9 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 </section>
 
 <section id="conn" aria-labelledby="h-conn">
-  <h2 id="h-conn">BFF의 DB 연결 네 개</h2>
+  <h2 id="h-conn">BFF의 DB 연결 다섯 개</h2>
   <p class="sub prose">연결마다 계정이 다르고, 모두 <code>statement_timeout</code> 15초가 걸려 있다. Gold 연결이 없으면 API가 뜨지 않고,
-    나머지 셋은 없으면 그 기능만 빠진다. 그래서 HUB 저장소 없이 Gold만으로도 화면 대부분이 돈다.</p>
+    나머지 넷은 없으면 그 기능만 빠진다. 그래서 HUB 저장소 없이 Gold만으로도 화면 대부분이 돈다.</p>
   <div class="table-wrap">
     <table>
       <thead><tr><th>연결</th><th>환경변수</th><th>대상</th><th>할 수 있는 일</th><th>풀</th></tr></thead>
@@ -364,6 +374,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <tr><td class="k">데이터 DB 조회</td><td><code>HGH_ANALYTICS_DB_URL</code></td><td><code>hmg_analytics</code></td><td>읽기 전용</td><td class="mono">≤ 4</td></tr>
         <tr><td class="k">운영 DB 조회</td><td><code>HGH_OPERATIONS_DB_URL</code></td><td><code>hmg_operations</code></td><td>읽기 전용. 로그인 확인과 작성자 이름 표시</td><td class="mono">≤ 2</td></tr>
         <tr><td class="k">카탈로그 편집</td><td><code>HGH_CATALOG_EDITOR_DB_URL</code></td><td><code>hmg_analytics</code><br><span class="muted">계정 hmg_catalog_editor</span></td><td><code>catalog.prompt</code>·<code>prompt_version</code> INSERT와 catalog SELECT만. UPDATE·DELETE 권한 없음</td><td class="mono">≤ 2</td></tr>
+        <tr><td class="k">저장한 필터</td><td><code>HGH_SAVED_FILTER_EDITOR_DB_URL</code></td><td><code>hmg_operations</code><br><span class="muted">계정 hmg_saved_filter_editor</span></td><td><code>system.saved_filter</code> 한 표만 SELECT·INSERT·UPDATE·DELETE. 목록 읽기는 운영 DB 조회 연결로 한다</td><td class="mono">≤ 2</td></tr>
       </tbody>
     </table>
   </div>
@@ -373,7 +384,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   <h2 id="h-writes">누가 어디에 쓰는가</h2>
   <figure>
     <div class="scroll">
-      <svg viewBox="0 0 1200 548" role="img" aria-label="HUB DB에 쓰는 경로는 세 개다. BFF 글로벌 프롬프트 편집이 catalog에 INSERT하고, manage.py 관리 명령이 Gold 정의를 읽어 catalog에 새 버전을 기록하며 운영 DB에 관리자와 UUID 참조를 등록한다. Gold에는 아무도 쓰지 않는다. GA4·SEO 수집기는 아직 없다. 외부 API는 hmg_ext_api 계정으로 ext 뷰만 읽는다.">
+      <svg viewBox="0 0 1200 548" role="img" aria-label="HUB DB에 쓰는 경로는 네 개다. BFF 글로벌 프롬프트 편집이 catalog에 INSERT하고, BFF 저장한 필터가 운영 DB system.saved_filter에 계정마다 자기 행만 쓰고, manage.py 관리 명령이 Gold 정의를 읽어 catalog에 새 버전을 기록하며 운영 DB에 관리자와 UUID 참조를 등록한다. Gold에는 아무도 쓰지 않는다. GA4·SEO 수집기는 아직 없다. 외부 API는 hmg_ext_api 계정으로 ext 뷰만 읽는다.">
         <defs>
           <marker id="f2a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker>
           <marker id="f2w" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto"><path class="ahw" d="M0,0L10,5L0,10z"/></marker>
@@ -434,7 +445,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <text class="mu" x="632" y="375">published: DB 직접 공개 (미개방)</text>
 
         <!-- HUB operations DB -->
-        <rect class="hubbox" x="956" y="190" width="228" height="230" rx="10"/>
+        <rect class="hubbox" x="956" y="190" width="228" height="242" rx="10"/>
         <text class="h" x="972" y="216">HUB 운영 DB</text>
         <text class="m mu" x="972" y="236">hmg_operations :55437</text>
         <text class="m b" x="972" y="264">system.*</text>
@@ -445,6 +456,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <text class="m mu" x="972" y="356">project_reference</text>
         <text class="m mu" x="972" y="374">project_setting_version</text>
         <text class="m mu" x="972" y="392">integration · audit_event</text>
+        <text class="m mu" x="972" y="410">saved_filter (계정별)</text>
 
         <path class="ed" d="M876,305H956"/>
         <text class="mu sm" x="916" y="297" text-anchor="middle">같은 UUID</text>
@@ -457,6 +469,8 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <text class="sm w" x="478" y="148" text-anchor="middle">sync: 바뀐 정의만 새 버전으로</text>
         <path class="ew" d="M876,74H1070V190" marker-end="url(#f2w)"/>
         <text class="sm w" x="973" y="66" text-anchor="middle">관리자 등록 · UUID 참조</text>
+        <path class="ew" d="M1070,464V432" marker-end="url(#f2w)"/>
+        <text class="sm w" x="1080" y="452">자기 행만</text>
 
         <!-- not connected yet -->
         <rect class="ghost" x="336" y="464" width="260" height="64" rx="6"/>
@@ -469,6 +483,10 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <text class="m mu sm" x="736" y="510" text-anchor="middle">hmg_ext_api · ext 뷰 SELECT만</text>
         <path class="e" d="M736,404V464" marker-end="url(#f2a)"/>
         <text class="mu sm" x="746" y="440">키 해시로 호출자 범위</text>
+
+        <rect class="box" x="956" y="464" width="228" height="64" rx="6"/>
+        <text class="b" x="1070" y="490" text-anchor="middle">BFF 저장한 필터</text>
+        <text class="m mu sm" x="1070" y="510" text-anchor="middle">saved_filters · 로그인한 계정</text>
       </svg>
     </div>
     <figcaption>
@@ -479,7 +497,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <span><svg viewBox="0 0 28 12"><rect x="1" y="1" width="26" height="10" rx="2" class="sw-hub"/></svg>HUB가 가진 DB</span>
         <span><svg viewBox="0 0 28 12"><rect x="1" y="1" width="26" height="10" rx="2" class="sw-gold"/></svg>외부 DB</span>
       </div>
-      <p><strong>그림 2.</strong> HUB DB에 쓰는 경로는 빨간 선 세 개가 전부다. 편집과 sync는 같은 advisory lock을 잡아서 한 번에 하나만 기록한다.
+      <p><strong>그림 2.</strong> HUB DB에 쓰는 경로는 빨간 선 네 개가 전부다. 편집과 sync는 같은 advisory lock을 잡아서 한 번에 하나만 기록한다.
         공개 승인과 외부 호출자·키도 <code>manage.py</code> 명령으로만 쓴다. 외부 API는 읽기만 한다.
         Gold에는 아무도 쓰지 않는다. 표 단위 구조는 <a href="#erd-ops">운영 DB ERD</a>와 <a href="#erd-data">데이터 DB ERD</a>에 있다.</p>
     </figcaption>
@@ -492,6 +510,9 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
       데이터 DB 기록 뒤 운영 DB 등록이 실패하면 sync를 다시 돌려 맞춘다.</li>
     <li><b>외부 API는 <code>ext.*</code> 뷰로만 나간다.</b> 호출자에게 허용한 프로젝트 가운데 projects·prompts 승인이 둘 다 있는 것과, 승인한 기준값 종류만 보인다.
       범위는 DB가 강제한다(<a href="#ext">외부 API</a>). <code>published.*</code>와 <code>hmg_data_external</code>은 DB 직접 공개용으로 그대로 두었고 외부에 열지 않았다.</li>
+    <li><b>저장한 필터는 계정의 것이다.</b> 리뉴얼 화면 필터 패널의 저장한 필터는 운영 DB <code>system.saved_filter</code>에 계정·화면마다 쌓여 어느 브라우저에서나 같다.
+      BFF는 모든 문장을 로그인한 계정에 묶고, 한 계정의 쓰기는 advisory lock으로 차례대로 해서 순서와 기본 필터 하나를 지킨다.
+      쓰는 계정은 그 표 하나만 만질 수 있다. 예전 브라우저 저장(localStorage)은 첫 방문 때 한 번 계정으로 옮기고 지운다.</li>
   </ul>
 </section>
 
@@ -636,12 +657,12 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 
 <section id="erd-ops" aria-labelledby="h-erd-ops">
   <h2 id="h-erd-ops">HUB 운영 DB ERD <span class="mono muted" style="font-size:15px;font-weight:400">hmg_operations</span></h2>
-  <p class="sub prose">스키마는 <code>system</code> 하나다. 사용자·권한·설정·감사를 갖고, 프로젝트는 데이터 DB의 UUID를 참조만 한다.
-    근거: <code>back/hub_storage/operations-001.sql</code>, <code>operations-002.sql</code>.</p>
+  <p class="sub prose">스키마는 <code>system</code> 하나다. 사용자·권한·설정·감사와 계정별 저장한 필터를 갖고, 프로젝트는 데이터 DB의 UUID를 참조만 한다.
+    근거: <code>back/hub_storage/operations-001.sql</code>, <code>operations-002.sql</code>, <code>operations-003.sql</code>.</p>
   <figure>
     <div class="scroll">
       <!-- erd:ops -->
-<svg viewBox="0 0 1200 662" role="img" aria-label="HUB 운영 DB system 스키마 ERD. user_account와 project_reference가 중심이고, project_reference는 데이터 DB catalog.project와 같은 UUID만 보관한다.">
+<svg viewBox="0 0 1200 752" role="img" aria-label="HUB 운영 DB system 스키마 ERD. user_account와 project_reference가 중심이고, project_reference는 데이터 DB catalog.project와 같은 UUID만 보관한다. saved_filter는 계정별 저장한 필터다.">
 <defs><marker id="ops-a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker><marker id="ops-d" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ahd" d="M0,0L10,5L0,10z"/></marker></defs>
 <rect class="tbox" x="616" y="40" width="270" height="158" rx="6"/>
 <path class="th" d="M616,70V46q0,-6 6,-6H880q6,0 6,6V70z"/>
@@ -801,7 +822,36 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 <text class="m" x="978" y="607">updated_at</text>
 <text class="m sm ty" x="1174" y="607" text-anchor="end">timestamptz</text>
 <text class="mu sm" x="942" y="625">UNIQUE (project_id, provider)</text>
+<rect class="tbox" x="316" y="470" width="250" height="266" rx="6"/>
+<path class="th" d="M316,500V476q0,-6 6,-6H560q6,0 6,6V500z"/>
+<line class="rule" x1="316" y1="500" x2="566" y2="500"/>
+<line class="hair" x1="328" y1="542" x2="554" y2="542"/>
+<text class="m b" x="328" y="490"><tspan class="tsch">system.</tspan>saved_filter</text>
+<text class="desc" x="328" y="517">계정이 화면마다 저장한 필터로, 화면의</text>
+<text class="desc" x="328" y="533">필터 쿼리를 그대로 담는다.</text>
+<text class="kb pk" x="326" y="561">PK</text>
+<text class="m" x="364" y="561">filter_id</text>
+<text class="m sm ty" x="556" y="561" text-anchor="end">uuid</text>
+<text class="kb fk" x="326" y="579">FK</text>
+<text class="m" x="364" y="579">user_id</text>
+<text class="m sm ty" x="556" y="579" text-anchor="end">uuid</text>
+<text class="m" x="364" y="597">page</text>
+<text class="m sm ty" x="556" y="597" text-anchor="end">text</text>
+<text class="m" x="364" y="615">name</text>
+<text class="m sm ty" x="556" y="615" text-anchor="end">text</text>
+<text class="m" x="364" y="633">query</text>
+<text class="m sm ty" x="556" y="633" text-anchor="end">text</text>
+<text class="m" x="364" y="651">is_default</text>
+<text class="m sm ty" x="556" y="651" text-anchor="end">boolean</text>
+<text class="m" x="364" y="669">position</text>
+<text class="m sm ty" x="556" y="669" text-anchor="end">integer</text>
+<text class="m" x="364" y="687">created_at</text>
+<text class="m sm ty" x="556" y="687" text-anchor="end">timestamptz</text>
+<text class="m" x="364" y="705">updated_at</text>
+<text class="m sm ty" x="556" y="705" text-anchor="end">timestamptz</text>
+<text class="mu sm" x="328" y="723">기본 필터는 user_id·page마다 하나</text>
 <path class="e" d="M266,257.0H316" marker-end="url(#ops-a)"/>
+<path class="e" d="M441,470V430" marker-end="url(#ops-a)"/>
 <path class="e" d="M266,413.0H316" marker-end="url(#ops-a)"/>
 <path class="e" d="M616,145.0H591V323H566" marker-end="url(#ops-a)"/>
 <path class="e" d="M616,377.0H566" marker-end="url(#ops-a)"/>
@@ -825,7 +875,8 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
       <p><strong>그림 4.</strong> 사람 쪽 표는 <code>user_account</code>, 프로젝트 쪽 표는 <code>project_reference</code>에 매달린다.
         <code>project_reference.project_id</code>는 데이터 DB <code>catalog.project</code>와 같은 UUID이고, 관리 명령이 존재를 확인한 뒤 등록한다.
         반대로 데이터 DB <code>catalog.prompt_version.recorded_by</code>가 <code>user_account.user_id</code>를 가리킨다(FK 없음).
-        뷰 <code>system.current_project_setting</code>은 프로젝트별 최신 설정 버전이다.</p>
+        뷰 <code>system.current_project_setting</code>은 프로젝트별 최신 설정 버전이다.
+        <code>saved_filter</code>는 계정·화면(<code>page</code>)마다의 저장한 필터이고, <code>query</code>는 화면의 필터 쿼리 문자열을 그대로 담는다.</p>
     </figcaption>
   </figure>
   <div class="table-wrap">
@@ -836,6 +887,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <tr><td class="k mono">hmg_operations_reader</td><td>API · <code>HGH_OPERATIONS_DB_URL</code></td><td><code>system</code> 전 표 SELECT</td></tr>
         <tr><td class="k mono">hmg_operations_writer</td><td><code>manage.py</code> 실행 중에만</td><td><code>user_account</code>·<code>project_member</code>·<code>integration</code> INSERT·UPDATE, <code>project_member</code> DELETE,
           <code>project_reference</code>·<code>project_setting_version</code>·<code>audit_event</code> INSERT, <code>global_role</code> INSERT·DELETE, <code>user_credential</code> INSERT·UPDATE</td></tr>
+        <tr><td class="k mono">hmg_saved_filter_editor</td><td>API 저장한 필터 · <code>HGH_SAVED_FILTER_EDITOR_DB_URL</code></td><td><code>saved_filter</code> SELECT·INSERT·UPDATE·DELETE만. 계정·자격증명·감사 표는 읽지도 못한다</td></tr>
       </tbody>
     </table>
   </div>
@@ -843,6 +895,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
     <li>설정 버전과 감사 이력은 INSERT만 허용된다. 쓰기 계정도 고치거나 지울 수 없다.</li>
     <li>실제 키·토큰은 DB에 두지 않는다. <code>integration.credential_ref</code>에는 비밀 저장소의 참조만 넣는다.</li>
     <li>로그인 토큰은 <code>user_credential.changed_at</code>을 버전으로 담는다. 비밀번호를 바꾸면 기존 토큰이 모두 무효가 된다.</li>
+    <li>기본으로 여는 저장한 필터는 계정·화면마다 하나다(부분 UNIQUE 인덱스 <code>saved_filter_default</code>). 한 화면에 50개까지 둔다(API).</li>
   </ul>
 </section>
 

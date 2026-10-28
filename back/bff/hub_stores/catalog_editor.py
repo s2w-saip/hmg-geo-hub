@@ -105,13 +105,13 @@ def refused(status: int, code: str, message: str, details: dict | None = None) -
     return HTTPException(status, {"code": code, "message": message, **({"details": details} if details else {})})
 
 
-def parse(model: type[BaseModel], body) -> BaseModel:
+def parse(model: type[BaseModel], body, what: str = "prompt") -> BaseModel:
     """A request body as `model`, or 422 in the error envelope (not FastAPI's default validation shape)."""
     try:
         return model.model_validate(body)
     except ValidationError as e:
         fields = sorted({".".join(str(p) for p in err["loc"]) for err in e.errors()})
-        raise refused(422, "invalid_value", "Invalid prompt fields", {"fields": fields}) from None
+        raise refused(422, "invalid_value", f"Invalid {what} fields", {"fields": fields}) from None
 
 
 def clean(value: str | None) -> str | None:

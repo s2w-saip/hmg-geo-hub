@@ -15,6 +15,7 @@ import type {
 import { STANDARD_CITATION_V2_ONLY_GROUPS } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/filter-groups";
 import { RnCard, RnPageHeader, RnPill, RnSkeleton, RnTag } from "@/components/renewal-ui";
 import { RnBusyScope, RnFilterRuntime } from "../../../_components/filter-runtime";
+import { loadSavedFilters } from "../../../_components/saved-filters-server";
 import {
   RnCopyLinkButton,
   RnFilterSplit,
@@ -170,9 +171,9 @@ async function RenewalCitation({
   header: ReactNode;
   body: RnCitationInput;
 }) {
-  const props = await filterProps(query, meta, scope, locale);
+  const [props, saved] = await Promise.all([filterProps(query, meta, scope, locale), loadSavedFilters("citation")]);
   return (
-    <RnOverviewFilters props={props} storageKey={`rn:saved-filters:v1:citation:${userId}`}>
+    <RnOverviewFilters props={props} savedFilters={{ page: "citation", userId, initial: saved }}>
       <RnFilterSplit header={header} panel={<RnOverviewFilterPanel />} rail={<RnOverviewFilterRail />}>
         <RnOverviewApplied />
         <RnBusyScope className="flex flex-col gap-4">

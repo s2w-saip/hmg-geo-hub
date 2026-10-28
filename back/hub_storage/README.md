@@ -6,7 +6,7 @@
 
 | 저장소 | 실제 DB / 로컬 포트 | 책임 |
 |---|---|---|
-| HUB 운영 DB | `hmg_operations` / `127.0.0.1:55437` | 사용자, 프로젝트 멤버십·권한, SW 설정 버전, 연동 설정, 감사 이력 |
+| HUB 운영 DB | `hmg_operations` / `127.0.0.1:55437` | 사용자, 프로젝트 멤버십·권한, SW 설정 버전, 연동 설정, 감사 이력, 계정별 저장한 필터 |
 | HUB 데이터 DB | `hmg_analytics` / `127.0.0.1:55436` | GA4·SEO, 프로젝트·프롬프트 정의/버전, 외부 공개 정책·뷰 |
 | 외부 Gold DB | `gold` / 사내망 `10.0.20.126:8097` | GEO 측정·응답·멘션·인용 등 원천 데이터, 읽기 전용 |
 
@@ -29,7 +29,7 @@ macOS(Docker 없음)는 네이티브 모드로 같은 일을 한다: `HGH_PYTHON
 
 시작 스크립트는 기존 analytics 마이그레이션을 확인하고 새 DB/증분 마이그레이션을 적용한 뒤 API를 재시작한다. 실제 Gold 프로젝트·프롬프트만 가져온다. 기존 Next 프로세스는 유지한다. 반복 실행은 변경 없는 정의에 새 버전을 만들지 않는다. 적용된 SQL의 체크섬이 바뀌면 중단하므로 변경은 새 마이그레이션으로 추가한다.
 
-로컬 비밀 파일은 git에서 제외하고 Windows에서는 현재 사용자와 SYSTEM에만 ACL을 부여한다. API에는 각 DB의 **조회 계정**과, 글로벌 프롬프트 편집용 **INSERT 전용 편집 계정**(`hmg_catalog_editor`, 아래 절)만 전달한다. 카탈로그 쓰기 계정과 운영 쓰기 계정은 관리 명령이 일시적으로 사용하며 Next나 API 이미지에 넣지 않는다. 초기화 전 기존 데이터 DB 백업을 만들었으며, 이후 두 DB 백업은 위 명령으로 실행한다. 백업 복원 시 두 DB와 비밀 파일을 함께 복원하고 프로젝트 참조를 검사한다.
+로컬 비밀 파일은 git에서 제외하고 Windows에서는 현재 사용자와 SYSTEM에만 ACL을 부여한다. API에는 각 DB의 **조회 계정**과, 글로벌 프롬프트 편집용 **INSERT 전용 편집 계정**(`hmg_catalog_editor`, 아래 절), 저장한 필터용 **한 표 계정**(`hmg_saved_filter_editor`, 아래 절)만 전달한다. 카탈로그 쓰기 계정과 운영 쓰기 계정은 관리 명령이 일시적으로 사용하며 Next나 API 이미지에 넣지 않는다. 초기화 전 기존 데이터 DB 백업을 만들었으며, 이후 두 DB 백업은 위 명령으로 실행한다. 백업 복원 시 두 DB와 비밀 파일을 함께 복원하고 프로젝트 참조를 검사한다.
 
 ## 프로젝트·프롬프트의 기준
 
@@ -62,6 +62,20 @@ python -X utf8 back/hub_storage/manage.py revoke-admin   # 최상위 역할 회�
 ```
 
 로그인은 사이드바 계정 영역의 로그인 아이콘이나 `/ko/login`에서 한다. API: `POST /v1/auth/login`, `GET /v1/auth/me`, `GET|POST /v1/hub/global-prompts`, `GET /v1/hub/global-prompts/options`, `GET|PUT /v1/hub/global-prompts/{id}`, `POST /v1/hub/global-prompts/{id}/archive|restore`. 브라우저는 BFF를 직접 부르지 않고 Next의 `/api/hub/*`를 거친다. 로컬 모드에서 GET이 아닌 요청이 통과하는 곳은 여기뿐이다.
+
+## 저장한 필터 (2026-10-28)
+
+리뉴얼 화면 여섯 곳(Overview·언급·인용·ACR·AI 가시성·글로벌 프롬프트) 필터 패널의 **저장한 필터**(불러오기·지금 조건 저장·이름 바꾸기·덮어쓰기·기본으로 열기·삭제와 되돌리기)를 계정마다 운영 DB `system.saved_filter`에 둔다. 예전에는 브라우저 localStorage에만 있어 PC나 브라우저가 바뀌면 사라졌다.
+
+- **저장(`003_saved_filters`):** 한 행이 계정·화면(`page`)의 필터 하나다. `query`는 화면의 필터 쿼리 문자열을 그대로 담고 API는 해석하지 않는다. 기본으로 여는 필터는 계정·화면마다 하나(부분 UNIQUE 인덱스)이고, 한 화면에 50개까지 둔다(API).
+- **계정과 권한:** 목록은 운영 DB 조회 계정으로 읽고, 쓰기는 `HGH_SAVED_FILTER_EDITOR_DB_URL`(`hmg_saved_filter_editor`: `system.saved_filter` SELECT·INSERT·UPDATE·DELETE만)로 한다. 계정·자격증명·역할·감사 표는 읽지도 못하고 데이터 DB에는 접속하지 못한다. 모든 문장이 로그인한 계정에 묶여 다른 계정의 행은 보이지도 바뀌지도 않는다(404). 한 계정의 쓰기는 advisory lock으로 차례대로 해서 순서와 기본 필터 하나가 여러 탭에서도 맞는다. 감사 이력에는 남기지 않는다(개인 화면 설정).
+- **화면:** 페이지가 처음 그릴 때 목록을 함께 읽고(`saved-filters-server.ts`), 바꾸면 화면에 곧바로 보인 뒤 서버가 답한 목록으로 바꾼다. 서버가 거부하면 되돌리고 알림을 띄운다. 저장은 서버가 받은 뒤에 '저장했습니다'를 띄운다. 이 브라우저의 예전 localStorage 목록(`rn:saved-filters:v1:<page>:<user>`)은 첫 방문 때 계정으로 한 번 옮기고(같은 이름·조건은 건너뜀) 지운다.
+- **API:** `GET /v1/hub/saved-filters?page=`, `POST /v1/hub/saved-filters`(`before`로 되돌리기 자리 지정), `POST /v1/hub/saved-filters/import`, `PATCH|DELETE /v1/hub/saved-filters/{id}`. 브라우저는 Next `/api/hub/saved-filters`를 거친다.
+
+```bash
+HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py init   # 003_saved_filters, hmg_saved_filter_editor, .env.saved-filter-db.local, .env.hub-edit.local에 연결 추가
+HGH_PYTHON=~/micromamba/envs/hgh-bff/bin/python bash scripts/start-local.sh   # API 재시작 (Windows: ./scripts/start-gold.ps1)
+```
 
 ## 외부 API (2026-10-28)
 
@@ -99,6 +113,6 @@ GA4와 프로젝트의 관계는 `catalog.project_ga4_property`에 실제 연동
 
 ## 검증
 
-`verify`는 롤백되는 트랜잭션에서 비공개/선택 공개, 외부 계정의 기본 테이블 접근 차단, 버전 불변성, 운영 설정 이력·감사 이력 보존, 잘못된 참조 차단을 확인한다. 외부 API 경계도 같은 방식으로 확인한다: 키 없음·빈 키·만료·폐기·비활성 호출자는 0행, 다른 호출자의 프로젝트와 미승인 종류는 안 보임, 내부 Gold 식별자 비노출, 쓰기 계정의 `change_seq` 지정 거부, 승인 변경 시 순번 증가, `hmg_ext_api`의 운영 DB 접속 거부. API 통합 검증은 `back/bff/tests/test_hub_storage.py`, 가져오기 규칙은 `test_hub_sync.py`, 외부 API는 `back/ext/tests/test_app.py`를 사용한다. 영구 테스트 사용자나 가상 측정치를 생성하지 않는다.
+`verify`는 롤백되는 트랜잭션에서 비공개/선택 공개, 외부 계정의 기본 테이블 접근 차단, 버전 불변성, 운영 설정 이력·감사 이력 보존, 잘못된 참조 차단을 확인한다. 외부 API 경계도 같은 방식으로 확인한다: 키 없음·빈 키·만료·폐기·비활성 호출자는 0행, 다른 호출자의 프로젝트와 미승인 종류는 안 보임, 내부 Gold 식별자 비노출, 쓰기 계정의 `change_seq` 지정 거부, 승인 변경 시 순번 증가, `hmg_ext_api`의 운영 DB 접속 거부. 저장한 필터 계정은 자기 표만 쓰고(계정·자격증명·역할·감사 표 거부, 데이터 DB 접속 거부), 기본 필터 둘·주인 없는 행·빈 이름은 DB가 거부한다. API 통합 검증은 `back/bff/tests/test_hub_storage.py`, 가져오기 규칙은 `test_hub_sync.py`, 저장한 필터는 `test_saved_filters.py`, 외부 API는 `back/ext/tests/test_app.py`를 사용한다. 영구 테스트 사용자나 가상 측정치를 생성하지 않는다.
 
-마이그레이션: 데이터 DB `002_data_catalog_publication`, `003_published_dimensions`, `004_hub_prompt_editing`, `005_external_api`, 운영 DB `001_operations`, `002_hub_login`. 기존 데이터 DB `001_gold_ga4_seo`는 변경하지 않았다.
+마이그레이션: 데이터 DB `002_data_catalog_publication`, `003_published_dimensions`, `004_hub_prompt_editing`, `005_external_api`, 운영 DB `001_operations`, `002_hub_login`, `003_saved_filters`. 기존 데이터 DB `001_gold_ga4_seo`는 변경하지 않았다.

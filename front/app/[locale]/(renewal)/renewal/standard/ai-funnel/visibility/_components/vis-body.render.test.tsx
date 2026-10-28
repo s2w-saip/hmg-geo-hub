@@ -31,7 +31,7 @@ function render(node: ReactNode, tab: VisTab = "sum"): string {
   return renderToStaticMarkup(
     <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
       <RnFilterRuntime>
-        <RnOverviewFilters props={{ stage: "visibility", scope: { all: true } }} storageKey="test">
+        <RnOverviewFilters props={{ stage: "visibility", scope: { all: true } }} savedFilters={{ page: "visibility", userId: "test", initial: [] }}>
           <RnVisPageProvider initialTab={tab}>{node}</RnVisPageProvider>
         </RnOverviewFilters>
       </RnFilterRuntime>

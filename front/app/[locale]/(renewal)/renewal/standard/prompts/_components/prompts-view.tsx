@@ -44,7 +44,7 @@ import { buildStandardPromptSheet, exportFilename, type StandardPromptExportLabe
 import type { HistoryQuery, PromptRow, PromptsHistory, PromptsPage, PromptsRemote } from "@/app/[locale]/(dash)/standard/prompts/_data/screen-types";
 import { fetchPromptsExport, fetchPromptsPage } from "@/app/[locale]/(dash)/standard/prompts/_data/prompts-client";
 import { RnFilterSplit, useRnSplit } from "../../../_components/filter-split";
-import { RnSavedFiltersSection, useSavedFilters, type SavedFilter } from "../../../_components/saved-filters";
+import { RnSavedFiltersSection, useSavedFilters, type SavedFilter, type SavedFiltersSource } from "../../../_components/saved-filters";
 import { RnAuditHistory } from "./prompt-history";
 import { RnPromptDetail } from "./prompt-detail";
 import {
@@ -82,7 +82,7 @@ export interface PromptsViewProps {
   history: PromptsHistory;
   loadHistory?: (query: HistoryQuery) => Promise<PromptsHistory>;
   initialTab: "catalog" | "history";
-  storageKey: string;
+  savedFilters: SavedFiltersSource;
   /** "all" opens every filter section (parity test). */
   defaultOpen?: "all";
 }
@@ -95,7 +95,7 @@ export function RnPromptsView(props: PromptsViewProps) {
   );
 }
 
-function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, scopeCountries, period, history, loadHistory, initialTab, storageKey, defaultOpen }: PromptsViewProps) {
+function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, scopeCountries, period, history, loadHistory, initialTab, savedFilters, defaultOpen }: PromptsViewProps) {
   const t = useTranslations("standardPromptsView");
   const tVal = useTranslations("dashboard.filters.value");
   const tAudit = useTranslations("promptAudit.history");
@@ -220,7 +220,7 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
   };
 
   // ── saved filters ──
-  const saved = useSavedFilters(storageKey);
+  const saved = useSavedFilters(savedFilters);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [openedWith, setOpenedWith] = useState<string | null>(null);
   const clearOpened = () => setOpenedWith(null);
@@ -230,7 +230,7 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
     if (!saved.ready || auto.current) return;
     auto.current = true;
     if (filterToQuery(fromUrl.filters, fromUrl.search)) return;
-    const star = saved.items.find((p) => p.star);
+    const star = saved.items.find((p) => p.isDefault);
     if (!star) return;
     const q = queryToFilter(star.query);
     setAll(q.filters, q.search);

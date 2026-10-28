@@ -167,7 +167,7 @@ describe("renewal Global prompts filters = the original filters", () => {
           history={HISTORY}
           loadHistory={loadHistory}
           initialTab="catalog"
-          storageKey="test"
+          savedFilters={{ page: "prompts", userId: "test", initial: [] }}
           defaultOpen="all"
         />,
       ),
@@ -187,7 +187,7 @@ describe("renewal Global prompts filters = the original filters", () => {
     SEARCH = "kind=acr&lang=EN";
     const renewal = renewalFilters(
       wrap(
-        <RnPromptsView remote={remote(FULL)} scopeAll scopeRole="admin" scopeBrands={[]} scopeRegions={[]} scopeCountries={[]} period={null} history={HISTORY} loadHistory={loadHistory} initialTab="catalog" storageKey="test" defaultOpen="all" />,
+        <RnPromptsView remote={remote(FULL)} scopeAll scopeRole="admin" scopeBrands={[]} scopeRegions={[]} scopeCountries={[]} period={null} history={HISTORY} loadHistory={loadHistory} initialTab="catalog" savedFilters={{ page: "prompts", userId: "test", initial: [] }} defaultOpen="all" />,
       ),
     );
     const checked = renewal.flatMap((a) => a.options.filter(([, on]) => on).map(([l]) => `${a.label}=${l}`));

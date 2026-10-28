@@ -13,6 +13,7 @@ vi.mock("@/lib/hub/client", () => ({ hubFetch: bff.fetch, hubLogin: bff.login })
 
 const session = await import("./session/route");
 const prompts = await import("./global-prompts/[[...rest]]/route");
+const saved = await import("./saved-filters/[[...rest]]/route");
 
 const ID = "8f6f0c1e-2b7a-4c1e-9d2a-1b2c3d4e5f60";
 const SITE = "http://127.0.0.1:3333";
@@ -102,5 +103,49 @@ describe("/api/hub/global-prompts", () => {
     const res = await prompts.PUT(req("PUT", `/api/hub/global-prompts/${ID}`, { body: { text: "y", expectedVersion: 2 }, cookie: "tok" }), ctx([ID]));
     expect(res.status).toBe(409);
     expect(await res.json()).toEqual({ error: { code: "version_conflict", message: "reload", details: { currentVersion: 4 } } });
+  });
+});
+
+describe("/api/hub/saved-filters", () => {
+  it("lists a page's filters with the token and the page param only", async () => {
+    bff.fetch.mockResolvedValue({ data: { items: [] } });
+    const res = await saved.GET(req("GET", "/api/hub/saved-filters?page=overview&user=someone", { cookie: "tok", origin: null }), ctx());
+    expect(res.status).toBe(200);
+    expect(bff.fetch).toHaveBeenCalledWith("GET", "/v1/hub/saved-filters", { token: "tok", body: undefined, query: "page=overview" });
+  });
+
+  it("saves with 201 and passes the import, changes and deletes through", async () => {
+    bff.fetch.mockResolvedValue({ data: { items: [] } });
+    const body = { page: "overview", name: "독일", query: "geography=DE" };
+    expect((await saved.POST(req("POST", "/api/hub/saved-filters", { body, cookie: "tok" }), ctx())).status).toBe(201);
+    expect(bff.fetch).toHaveBeenLastCalledWith("POST", "/v1/hub/saved-filters", { token: "tok", body, query: "" });
+    expect((await saved.POST(req("POST", "/api/hub/saved-filters/import", { body: { page: "acr", items: [] }, cookie: "tok" }), ctx(["import"]))).status).toBe(200);
+    expect(bff.fetch).toHaveBeenLastCalledWith("POST", "/v1/hub/saved-filters/import", { token: "tok", body: { page: "acr", items: [] }, query: "" });
+    expect((await saved.PATCH(req("PATCH", `/api/hub/saved-filters/${ID}`, { body: { isDefault: true }, cookie: "tok" }), ctx([ID]))).status).toBe(200);
+    expect(bff.fetch).toHaveBeenLastCalledWith("PATCH", `/v1/hub/saved-filters/${ID}`, { token: "tok", body: { isDefault: true }, query: "" });
+    expect((await saved.DELETE(req("DELETE", `/api/hub/saved-filters/${ID}`, { cookie: "tok" }), ctx([ID]))).status).toBe(200);
+    expect(bff.fetch).toHaveBeenLastCalledWith("DELETE", `/v1/hub/saved-filters/${ID}`, { token: "tok", body: undefined, query: "" });
+  });
+
+  it("refuses unknown paths, missing sessions, cross-site writes and bad bodies before the BFF", async () => {
+    const cases: Array<[Promise<Response>, number]> = [
+      [saved.GET(req("GET", `/api/hub/saved-filters/${ID}`, { cookie: "tok" }), ctx([ID])), 404],
+      [saved.PATCH(req("PATCH", "/api/hub/saved-filters", { body: {}, cookie: "tok" }), ctx()), 404],
+      [saved.DELETE(req("DELETE", "/api/hub/saved-filters/x", { cookie: "tok" }), ctx(["x"])), 404],
+      [saved.POST(req("POST", `/api/hub/saved-filters/${ID}`, { body: {}, cookie: "tok" }), ctx([ID])), 404],
+      [saved.GET(req("GET", "/api/hub/saved-filters?page=overview"), ctx()), 401],
+      [saved.DELETE(req("DELETE", `/api/hub/saved-filters/${ID}`, { cookie: "tok", origin: "http://evil.test" }), ctx([ID])), 403],
+      [saved.POST(req("POST", "/api/hub/saved-filters", { cookie: "tok", origin: null, body: {} }), ctx()), 403],
+      [saved.PATCH(req("PATCH", `/api/hub/saved-filters/${ID}`, { cookie: "tok" }), ctx([ID])), 422],
+    ];
+    for (const [res, status] of cases) expect((await res).status).toBe(status);
+    expect(bff.fetch).not.toHaveBeenCalled();
+  });
+
+  it("passes the BFF's refusal with its code and details", async () => {
+    bff.fetch.mockRejectedValue(new HghApiError(409, "limit", "A page keeps at most 50 saved filters", { limit: 50 }));
+    const res = await saved.POST(req("POST", "/api/hub/saved-filters", { body: { page: "overview", name: "n", query: "" }, cookie: "tok" }), ctx());
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: { code: "limit", message: "A page keeps at most 50 saved filters", details: { limit: 50 } } });
   });
 });

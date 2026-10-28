@@ -23,6 +23,7 @@ OPS_SECRET = ROOT / '.env.operations-db.local'
 DATA_SECRET = ROOT / '.env.data-access.local'
 EDIT_SECRET = ROOT / '.env.hub-edit-db.local'      # editor role password + login token secret
 EXT_SECRET = ROOT / '.env.ext-api-db.local'        # external API role password
+FILTER_SECRET = ROOT / '.env.saved-filter-db.local'  # saved filter role password (operations DB)
 OPS_CONTAINER = 'hgh-operations-db'
 OPS_DB = 'hmg_operations'
 # External API (2026-10-28): what a project approval covers, the Gold reference families an approval can
@@ -35,7 +36,7 @@ KEY_LOCK = 617427414     # one key issue at a time, so the per-client limit hold
 
 
 def sanitize(message):
-    for path in (OPS_SECRET, DATA_SECRET, EDIT_SECRET, EXT_SECRET, analytics.SECRET):
+    for path in (OPS_SECRET, DATA_SECRET, EDIT_SECRET, EXT_SECRET, FILTER_SECRET, analytics.SECRET):
         if path.exists():
             for key, value in analytics.env_file(path).items():
                 if ('PASSWORD' in key or 'SECRET' in key) and value:
@@ -170,6 +171,20 @@ GRANT CONNECT ON DATABASE hmg_operations TO hmg_operations_reader,hmg_operations
 COMMIT;""", True)
     migrate('operations-001.sql', '001_operations', True)
     migrate('operations-002.sql', '002_hub_login', True)
+    # Saved filters (2026-10-28): the API's role for system.saved_filter and nothing else.
+    if not FILTER_SECRET.exists() and sql("SELECT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='hmg_saved_filter_editor');", True).stdout.strip() == 't':
+        raise RuntimeError('The saved filter role already exists; restore .env.saved-filter-db.local rather than replacing credentials')
+    saved = create_secret(FILTER_SECRET, {'SAVED_FILTER_EDITOR_PASSWORD': None})
+    sql(f"""BEGIN;
+DO $$ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='hmg_saved_filter_editor') THEN CREATE ROLE hmg_saved_filter_editor LOGIN; END IF;
+END $$;
+ALTER ROLE hmg_saved_filter_editor WITH NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD {analytics.literal(saved['SAVED_FILTER_EDITOR_PASSWORD'])};
+ALTER ROLE hmg_saved_filter_editor SET statement_timeout='15s';
+ALTER ROLE hmg_saved_filter_editor CONNECTION LIMIT 4;
+GRANT CONNECT ON DATABASE hmg_operations TO hmg_saved_filter_editor;
+COMMIT;""", True)
+    migrate('operations-003.sql', '003_saved_filters', True)
     if not DATA_SECRET.exists() and sql("SELECT EXISTS(SELECT 1 FROM pg_roles WHERE rolname IN ('hmg_catalog_writer','hmg_data_external'));").stdout.strip() == 't':
         raise RuntimeError('Data access roles already exist; restore .env.data-access.local rather than replacing credentials')
     data = create_secret(DATA_SECRET, {'CATALOG_WRITER_PASSWORD': None, 'DATA_EXTERNAL_PASSWORD': None})
@@ -227,8 +242,10 @@ COMMIT;""")
         f"HGH_EXT_DB_URL=postgresql://hmg_ext_api:{ext['EXT_API_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n")
     analytics.secure_write(ROOT / '.env.operations.local', '# FastAPI read-only operations connection.\n'
         f"HGH_OPERATIONS_DB_URL=postgresql://hmg_operations_reader:{values['OPERATIONS_READER_PASSWORD']}@{service_host('operations')}/{OPS_DB}\n")
-    analytics.secure_write(ROOT / '.env.hub-edit.local', '# FastAPI Global prompt editing: INSERT-only catalog role and login token secret.\n'
+    analytics.secure_write(ROOT / '.env.hub-edit.local', '# FastAPI HUB writes: Global prompt editing (INSERT-only catalog role), '
+        'saved filters (system.saved_filter only) and the login token secret.\n'
         f"HGH_CATALOG_EDITOR_DB_URL=postgresql://hmg_catalog_editor:{edit['CATALOG_EDITOR_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n"
+        f"HGH_SAVED_FILTER_EDITOR_DB_URL=postgresql://hmg_saved_filter_editor:{saved['SAVED_FILTER_EDITOR_PASSWORD']}@{service_host('operations')}/{OPS_DB}\n"
         f"HGH_AUTH_SECRET={edit['HGH_AUTH_SECRET']}\n")
     analytics.secure_write(ROOT / '.env.data-external.local', '# Local connection only. Empty exports until per-project approval.\n'
         f"HGH_DATA_EXTERNAL_DB_URL=postgresql://hmg_data_external:{data['DATA_EXTERNAL_PASSWORD']}@127.0.0.1:{data_port()}/hmg_analytics\n")
@@ -264,11 +281,14 @@ def verify():
     data, values, ext = analytics.env_file(DATA_SECRET), analytics.env_file(OPS_SECRET), analytics.env_file(EXT_SECRET)
     external = f"postgresql://hmg_data_external:{data['DATA_EXTERNAL_PASSWORD']}"
     ext_api = f"postgresql://hmg_ext_api:{ext['EXT_API_PASSWORD']}"
+    saved = f"postgresql://hmg_saved_filter_editor:{analytics.env_file(FILTER_SECRET)['SAVED_FILTER_EDITOR_PASSWORD']}"
     config = {'external':external+f"@{service_host('analytics')}/hmg_analytics",
               'external_operations':external+f"@{service_host('operations')}/{OPS_DB}",
               'ext':ext_api+f"@{service_host('analytics')}/hmg_analytics",
               'ext_operations':ext_api+f"@{service_host('operations')}/{OPS_DB}",
-              'operations_reader':f"postgresql://hmg_operations_reader:{values['OPERATIONS_READER_PASSWORD']}@{service_host('operations')}/{OPS_DB}"}
+              'operations_reader':f"postgresql://hmg_operations_reader:{values['OPERATIONS_READER_PASSWORD']}@{service_host('operations')}/{OPS_DB}",
+              'saved_filter':saved+f"@{service_host('operations')}/{OPS_DB}",
+              'saved_filter_data':saved+f"@{service_host('analytics')}/hmg_analytics"}
     script = (HERE / 'verify_connections.py').read_text(encoding='utf8') + '\nasyncio.run(main(' + repr(config) + '))\n'
     print(api_python(script).strip())
     print('Verified opt-in exports, grants, immutable versions, operations isolation; all fixture transactions rolled back')

@@ -4668,8 +4668,16 @@
       "linkFailed": "Could not copy the link. Copy the address bar instead.",
       "openedWithDefault": "Opened with your default filter ‘{name}’.",
       "viewWithout": "View without filters",
-      "empty": "Save the conditions you check often and load them in one click.",
-      "noConditions": "No conditions"
+      "empty": "Save the conditions you check often and load them in one click. They are kept in your account, on any PC.",
+      "noConditions": "No conditions",
+      "undo": "Undo",
+      "saving": "Saving…",
+      "loading": "Loading saved filters",
+      "unavailable": "Couldn't load saved filters.",
+      "retry": "Retry",
+      "failedToast": "Couldn't save the change. Try again shortly.",
+      "limitToast": "A page keeps up to {max} saved filters.",
+      "importedToast": "Moved {count, plural, one {# saved filter} other {# saved filters}} from this browser to your account"
     },
     "overview": {
       "copyLink": "Copy link",

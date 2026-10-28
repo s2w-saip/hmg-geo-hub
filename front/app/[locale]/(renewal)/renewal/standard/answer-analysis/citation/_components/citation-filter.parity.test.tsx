@@ -158,7 +158,7 @@ describe("renewal Citation filter panel shows exactly the app's Citation filters
     const appHtml = wrap(<AnalysisFilterBar stage="citations" onlyGroups={STANDARD_CITATION_V2_ONLY_GROUPS} competitorOptions={competitors} sticky={false} {...opts} />);
     const renewalHtml = wrap(
       <RnFilterRuntime>
-        <RnOverviewFilters props={{ ...opts, stage: "citation", competitorOptions: settled(competitors) }} storageKey="test">
+        <RnOverviewFilters props={{ ...opts, stage: "citation", competitorOptions: settled(competitors) }} savedFilters={{ page: "citation", userId: "test", initial: [] }}>
           <RnOverviewFilterPanel onCollapse={() => {}} defaultOpen="all" />
         </RnOverviewFilters>
       </RnFilterRuntime>,

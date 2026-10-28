@@ -226,7 +226,7 @@ describe("renewal Overview filter panel shows exactly the app's filters", () => 
     const renewal = renewalStructure(
       wrap(
         <RnFilterRuntime>
-          <RnOverviewFilters props={opts} storageKey="test">
+          <RnOverviewFilters props={opts} savedFilters={{ page: "overview", userId: "test", initial: [] }}>
             <RnOverviewFilterPanel onCollapse={() => {}} defaultOpen="all" />
           </RnOverviewFilters>
         </RnFilterRuntime>,

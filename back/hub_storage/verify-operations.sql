@@ -21,5 +21,29 @@ DO $$ BEGIN
  BEGIN DELETE FROM system.user_account; RAISE EXCEPTION 'Reader can delete users'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
  BEGIN UPDATE system.user_credential SET password_hash='scrypt$x'; RAISE EXCEPTION 'Reader can change passwords'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
  BEGIN INSERT INTO system.global_role VALUES(gen_random_uuid(),'admin',now()); RAISE EXCEPTION 'Reader can grant roles'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN DELETE FROM system.saved_filter; RAISE EXCEPTION 'Reader can delete saved filters'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
 END $$;
+RESET ROLE;
+-- Saved filters: the API's role writes system.saved_filter and nothing else; one default per account and page.
+INSERT INTO system.user_account(user_id,subject) VALUES('ffffffff-ffff-4fff-8fff-fffffffffff2','rollback-only saved filter fixture');
+SET LOCAL ROLE hmg_saved_filter_editor;
+INSERT INTO system.saved_filter(filter_id,user_id,page,name,query,is_default,position)
+VALUES('ffffffff-ffff-4fff-8fff-fffffffffff3','ffffffff-ffff-4fff-8fff-fffffffffff2','overview','rollback-only','brand=x',true,0);
+UPDATE system.saved_filter SET name='renamed',is_default=false WHERE filter_id='ffffffff-ffff-4fff-8fff-fffffffffff3';
+UPDATE system.saved_filter SET is_default=true WHERE filter_id='ffffffff-ffff-4fff-8fff-fffffffffff3';
+DO $$ BEGIN
+ BEGIN INSERT INTO system.saved_filter(filter_id,user_id,page,name,query,is_default,position)
+       VALUES(gen_random_uuid(),'ffffffff-ffff-4fff-8fff-fffffffffff2','overview','second default','',true,1);
+       RAISE EXCEPTION 'Two default saved filters'; EXCEPTION WHEN unique_violation THEN NULL; END;
+ BEGIN INSERT INTO system.saved_filter(filter_id,user_id,page,name,query,position) VALUES(gen_random_uuid(),gen_random_uuid(),'overview','orphan','',0);
+       RAISE EXCEPTION 'Orphan saved filter allowed'; EXCEPTION WHEN foreign_key_violation THEN NULL; END;
+ BEGIN INSERT INTO system.saved_filter(filter_id,user_id,page,name,query,position) VALUES(gen_random_uuid(),'ffffffff-ffff-4fff-8fff-fffffffffff2','overview','','',2);
+       RAISE EXCEPTION 'Empty saved filter name allowed'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN PERFORM 1 FROM system.user_account; RAISE EXCEPTION 'Saved filter role reads accounts'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN PERFORM 1 FROM system.user_credential; RAISE EXCEPTION 'Saved filter role reads credentials'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN DELETE FROM system.global_role; RAISE EXCEPTION 'Saved filter role revokes roles'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN INSERT INTO system.audit_event(action) VALUES('rollback-only'); RAISE EXCEPTION 'Saved filter role writes audit'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN CREATE TABLE system.forbidden(id int); RAISE EXCEPTION 'Saved filter role can create schema objects'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $$;
+DELETE FROM system.saved_filter WHERE filter_id='ffffffff-ffff-4fff-8fff-fffffffffff3';
 ROLLBACK;

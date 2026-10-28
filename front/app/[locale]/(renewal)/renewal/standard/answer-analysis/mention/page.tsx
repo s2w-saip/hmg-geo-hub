@@ -10,6 +10,7 @@ import { throwForPage } from "@/lib/hgh/errors";
 import { KPI_TAB_PARAM, resolveKpiTab, type KpiTab } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/kpi-tab";
 import { RnCard, RnPageHeader, RnPill, RnSkeleton, RnTag } from "@/components/renewal-ui";
 import { RnBusyScope, RnFilterRuntime } from "../../../_components/filter-runtime";
+import { loadSavedFilters } from "../../../_components/saved-filters-server";
 import {
   RnCopyLinkButton,
   RnFilterSplit,
@@ -180,9 +181,9 @@ async function RenewalMention({
   header: ReactNode;
   body: RnMentionInput;
 }) {
-  const props = await filterProps(sp, scope, locale);
+  const [props, saved] = await Promise.all([filterProps(sp, scope, locale), loadSavedFilters("mention")]);
   return (
-    <RnOverviewFilters props={props} storageKey={`rn:saved-filters:v1:mention:${userId}`}>
+    <RnOverviewFilters props={props} savedFilters={{ page: "mention", userId, initial: saved }}>
       {/* the KPI tabs head the content column, right of the filter panel (2026-10-27): the filters
           cover every tab; one provider feeds the tabs and the body */}
       <RnMentionPageProvider input={body}>

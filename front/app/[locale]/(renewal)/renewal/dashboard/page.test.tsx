@@ -9,6 +9,7 @@ import { isValidElement, type ReactElement } from "react";
 const st = vi.hoisted(() => ({
   calls: [] as { name: string; query: Record<string, unknown> }[],
   holdFilters: false,
+  savedPages: [] as string[],
 }));
 vi.mock("@/i18n/navigation", () => ({ Link: () => null, usePathname: () => "/", useRouter: () => ({}) }));
 vi.mock("next/navigation", () => ({ usePathname: () => "/", useRouter: () => ({}), useSearchParams: () => new URLSearchParams(), notFound: () => { throw new Error("nf"); }, redirect: () => { throw new Error("rd"); } }));
@@ -20,6 +21,13 @@ vi.mock("@/lib/auth/session", () => ({
   getSession: async () => ({
     user: { id: "u1", email: "x", role: "admin", scope: { all: true }, operator: "none", menuGroups: null },
   }),
+}));
+// The account's saved filters, read with the filter options (HUB operations store; per request cookies).
+vi.mock("../_components/saved-filters-server", () => ({
+  loadSavedFilters: async (page: string) => {
+    st.savedPages.push(page);
+    return [{ id: "a", name: "독일", query: "geography=DE", isDefault: true }];
+  },
 }));
 vi.mock("@/lib/screen", () => ({
   screenGet: (name: string, query: Record<string, unknown>) => {
@@ -80,6 +88,7 @@ const render = (sp: Record<string, string>) => Page({ params: Promise.resolve({ 
 beforeEach(() => {
   st.calls = [];
   st.holdFilters = false;
+  st.savedPages = [];
 });
 
 describe("renewal overview page", () => {
@@ -104,5 +113,11 @@ describe("renewal overview page", () => {
     expect(await deferred.trend).toEqual({ degraded: false, cards: {}, count: 1 });
     expect(await deferred.matrix).toEqual({ screen: "overview/brand-matrix" });
     expect(await (body.geo as Promise<unknown>)).toEqual({ geo: null, degraded: false });
+    expect(st.savedPages).toEqual(["overview"]);
+    expect(got.get("RnOverviewFilters")!.savedFilters).toEqual({
+      page: "overview",
+      userId: "u1",
+      initial: [{ id: "a", name: "독일", query: "geography=DE", isDefault: true }],
+    });
   });
 });

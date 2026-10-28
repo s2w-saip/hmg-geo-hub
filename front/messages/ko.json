@@ -4668,8 +4668,16 @@
       "linkFailed": "링크를 복사하지 못했습니다. 주소창의 주소를 복사해 주세요.",
       "openedWithDefault": "기본 필터 ‘{name}’로 열었습니다.",
       "viewWithout": "조건 없이 보기",
-      "empty": "자주 보는 조건을 저장해 두면 한 번에 불러옵니다.",
-      "noConditions": "조건 없음"
+      "empty": "자주 보는 조건을 저장해 두면 한 번에 불러옵니다. 계정에 저장되어 어느 PC에서나 보입니다.",
+      "noConditions": "조건 없음",
+      "undo": "되돌리기",
+      "saving": "저장 중…",
+      "loading": "저장한 필터를 불러오는 중",
+      "unavailable": "저장한 필터를 불러오지 못했습니다.",
+      "retry": "다시 시도",
+      "failedToast": "저장하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+      "limitToast": "한 화면에 저장할 수 있는 필터는 {max}개까지입니다.",
+      "importedToast": "이 브라우저에 있던 저장한 필터 {count}개를 계정으로 옮겼습니다"
     },
     "overview": {
       "copyLink": "링크 복사",

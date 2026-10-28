@@ -8,6 +8,7 @@ import { throwForPage } from "@/lib/hgh/errors";
 import { screenGet } from "@/lib/screen";
 import { RnCard, RnPageHeader, RnPill, RnSkeleton, RnTag } from "@/components/renewal-ui";
 import { RnBusyScope, RnFilterRuntime } from "../../../_components/filter-runtime";
+import { loadSavedFilters } from "../../../_components/saved-filters-server";
 import {
   RnCopyLinkButton,
   RnFilterSplit,
@@ -93,6 +94,7 @@ async function RenewalAcr({
   locale: string;
   header: ReactNode;
 }) {
+  const saved = loadSavedFilters("acr");
   let read: RnAcrScreen;
   try {
     read = await screenGet<RnAcrScreen>("acr/renewal", sp);
@@ -100,7 +102,7 @@ async function RenewalAcr({
     throwForPage(e, locale);
   }
   return (
-    <RnOverviewFilters props={{ ...read.props, scope }} storageKey={`rn:saved-filters:v1:acr:${userId}`}>
+    <RnOverviewFilters props={{ ...read.props, scope }} savedFilters={{ page: "acr", userId, initial: await saved }}>
       <RnFilterSplit header={header} panel={<RnOverviewFilterPanel />} rail={<RnOverviewFilterRail />}>
         <RnOverviewApplied />
         <RnBusyScope className="flex flex-col gap-4">

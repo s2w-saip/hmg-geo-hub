@@ -105,7 +105,7 @@ const render = (p: Parts, search = "") => {
   return renderToStaticMarkup(
     <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
       <RnFilterRuntime>
-        <RnOverviewFilters props={{ stage: "citation", scope: { all: true } }} storageKey="test">
+        <RnOverviewFilters props={{ stage: "citation", scope: { all: true } }} savedFilters={{ page: "citation", userId: "test", initial: [] }}>
           {(<RnCitationBody input={i} />) as ReactNode}
         </RnOverviewFilters>
       </RnFilterRuntime>

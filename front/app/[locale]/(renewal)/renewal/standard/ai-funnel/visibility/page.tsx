@@ -8,6 +8,7 @@ import { throwForPage } from "@/lib/hgh/errors";
 import { screenGet } from "@/lib/screen";
 import { RnCard, RnPageHeader, RnPill, RnSkeleton, RnTag } from "@/components/renewal-ui";
 import { RnBusyScope, RnFilterRuntime } from "../../../_components/filter-runtime";
+import { loadSavedFilters } from "../../../_components/saved-filters-server";
 import {
   RnCopyLinkButton,
   RnFilterSplit,
@@ -90,6 +91,7 @@ export default async function RenewalVisibilityPage({
 
 async function RenewalVisibility({ sp, scope, userId, locale, header }: { sp: Sp; scope: AllowedScope; userId: string; locale: string; header: ReactNode }) {
   const t = await getTranslations("renewal.visibility");
+  const saved = loadSavedFilters("visibility");
   let read: RnVisScreen;
   try {
     read = await screenGet<RnVisScreen>("visibility/renewal", sp);
@@ -98,7 +100,7 @@ async function RenewalVisibility({ sp, scope, userId, locale, header }: { sp: Sp
   }
   const { body } = read;
   return (
-    <RnOverviewFilters props={{ ...read.props, scope }} storageKey={`rn:saved-filters:v1:visibility:${userId}`}>
+    <RnOverviewFilters props={{ ...read.props, scope }} savedFilters={{ page: "visibility", userId, initial: await saved }}>
       <RnFilterSplit
         header={header}
         top={body.state === "ok" ? <RnVisTabs view={body.view} /> : undefined}

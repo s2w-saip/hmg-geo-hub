@@ -140,7 +140,7 @@ describe("renewal Mention filter panel shows exactly the app's Mention filters",
     const renewal = renewalStructure(
       wrap(
         <RnFilterRuntime>
-          <RnOverviewFilters props={{ ...opts, stage: "mention" }} storageKey="test">
+          <RnOverviewFilters props={{ ...opts, stage: "mention" }} savedFilters={{ page: "mention", userId: "test", initial: [] }}>
             <RnOverviewFilterPanel onCollapse={() => {}} defaultOpen="all" />
           </RnOverviewFilters>
         </RnFilterRuntime>,

@@ -162,9 +162,10 @@ class Figure:
 
 
 def operations() -> Figure:
-    """hmg_operations: back/hub_storage/operations-001.sql, operations-002.sql."""
-    f = Figure("ops", 662, "HUB 운영 DB system 스키마 ERD. user_account와 project_reference가 중심이고, "
-               "project_reference는 데이터 DB catalog.project와 같은 UUID만 보관한다.")
+    """hmg_operations: back/hub_storage/operations-001.sql, operations-002.sql, operations-003.sql."""
+    f = Figure("ops", 752, "HUB 운영 DB system 스키마 ERD. user_account와 project_reference가 중심이고, "
+               "project_reference는 데이터 DB catalog.project와 같은 UUID만 보관한다. "
+               "saved_filter는 계정별 저장한 필터다.")
     f.table("system.project_member", 616, 40, 270, "사용자가 어느 프로젝트에 어떤 역할로 속하는지 담는다.", [
         ("PK FK", "project_id", "uuid"), ("PK FK", "user_id", "uuid"), ("", "role", "=owner|editor|viewer"),
         ("", "created_at", "timestamptz")])
@@ -189,7 +190,13 @@ def operations() -> Figure:
         ("PK", "integration_id", "uuid"), ("FK", "project_id", "uuid"), ("", "provider", "=ga4|seo|gold"),
         ("", "config", "jsonb"), ("", "credential_ref", "text"), ("", "enabled", "boolean"),
         ("", "updated_at", "timestamptz")], notes=["UNIQUE (project_id, provider)"])
+    f.table("system.saved_filter", 316, 470, 250, "계정이 화면마다 저장한 필터로, 화면의 필터 쿼리를 그대로 담는다.", [
+        ("PK", "filter_id", "uuid"), ("FK", "user_id", "uuid"), ("", "page", "text"), ("", "name", "text"),
+        ("", "query", "text"), ("", "is_default", "boolean"), ("", "position", "integer"),
+        ("", "created_at", "timestamptz"), ("", "updated_at", "timestamptz")],
+        notes=["기본 필터는 user_id·page마다 하나"])
     f.fk("user_credential", "user_id", "user_account")
+    f.fk("saved_filter", "user_id", "user_account", x=441)
     f.fk("global_role", "user_id", "user_account")
     f.fk("project_member", "user_id", "user_account", via=591, to="user_id")
     f.fk("project_setting_version", "changed_by", "user_account")

@@ -5,6 +5,7 @@ import { canAccessRoute } from "@/lib/auth/route-policy";
 import { throwForPage } from "@/lib/hgh/errors";
 import { scopeForGeoSurface } from "@/lib/scope/website-virtual-geo";
 import { loadPromptsScreens } from "@/app/[locale]/(dash)/standard/prompts/_data/server";
+import { loadSavedFilters } from "../../_components/saved-filters-server";
 import { RnPromptsView } from "./_components/prompts-view";
 
 // Renewal Global prompts (2026-10-20) — the redesigned /standard/prompts, served side by
@@ -27,7 +28,7 @@ export default async function RenewalStandardPromptsPage({
 
   const scope = session.user.scope;
   const { tab } = await searchParams;
-  const { catalog, header, history } = await load();
+  const [{ catalog, header, history }, saved] = await Promise.all([load(), loadSavedFilters("prompts")]);
 
   async function load() {
     try {
@@ -48,7 +49,7 @@ export default async function RenewalStandardPromptsPage({
       period={header.period}
       history={history}
       initialTab={tab === "history" ? "history" : "catalog"}
-      storageKey={`rn:saved-filters:v1:prompts:${session.user.id}`}
+      savedFilters={{ page: "prompts", userId: session.user.id, initial: saved }}
     />
   );
 }
