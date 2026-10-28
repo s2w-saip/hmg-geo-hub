@@ -28,6 +28,8 @@
   h3 { font-size: 16px; margin: 22px 0 6px; }
   .sub { color: var(--muted); margin: 0 0 18px; }
   .banner { background: var(--warn-bg); border-left: 4px solid var(--warn-line); padding: 12px 14px; border-radius: 6px; margin: 16px 0; }
+  .banner.done { background: var(--card); border-left-color: var(--ok); }
+  .banner ul { margin: 6px 0; padding-left: 20px; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 10px 0; }
   code { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 13px; background: var(--code-bg); padding: 1px 4px; border-radius: 4px; }
   pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px; overflow-x: auto; font-size: 13px; line-height: 1.5; }
@@ -45,13 +47,21 @@
 <body>
 <main>
 <h1>P4 인계 — ACR 차종 전환율 분모 중복 확인</h1>
-<p class="sub">작성 2026-10-19 · 다음 세션 최우선 작업 · stg 데이터에 접근할 수 있는 기기에서 진행</p>
+<p class="sub">작성 2026-10-19 · 2026-10-28 완료(Gold 기준 영향 없음, 수정 없음)</p>
 
-<div class="banner">
-  <strong>상태: 대기.</strong> 코드 분석으로 결함 가능성은 확인했고, 실제 데이터에서 발생하는지는 아직 모릅니다.
-  작성한 기기에는 AWS 자격증명과 <code>infra/state.env</code> 가 없어 stg 를 조회하지 못했습니다.
-  아래 절차를 순서대로 진행하고, 각 단계의 통과 기준을 확인한 뒤 다음 단계로 넘어갑니다.
-  수정은 3단계 결과를 사용자에게 보고하고 승인을 받은 뒤에만 합니다.
+<div class="banner done">
+  <strong>상태: 완료 (2026-10-28). Gold 기준 영향 없음, 수정 없음.</strong>
+  stg 대신 지금 서비스가 읽는 Gold(이 저장소의 Mac에서 읽기 전용)로 확인했습니다.
+  <ul>
+    <li>지금 서비스의 차종 전환율은 이 문서의 <code>rd.*</code> 식이 아닙니다. <code>back/bff/gold_reader/acr.py</code> 가
+      <code>gold.acr_iter_shortlist</code> 를 엔티티 단위로 묶어 <code>chosen ÷ appearances</code> 로 냅니다. 이름으로 묶으며 셀의 분모를 겹쳐 더하는 자리가 없습니다.</li>
+    <li>데이터(활성 global 릴리스, acr_in 셀 24,531): 한 셀에서 이름·소속 브랜드가 같은 엔티티가 둘 이상인 경우 0건,
+      화면 차종 행 1,847개 중 같은 이름 0건, 한 반복 안의 중복 0건. 레지스트리(<code>gold.dim_entity</code>)에는 이름·브랜드가 같은 엔티티 24쌍이 있지만 ACR 데이터에는 나오지 않습니다.</li>
+    <li>사용자 결정: 방어 수정 없이 닫는다.</li>
+    <li>함께 본 것: 같은 엔티티가 반복마다 다른 소속 브랜드를 받아 차종 66개가 132행으로 나옵니다(이전 코드·legacy 도 이름 × 소속 브랜드로 묶어 같음).
+      소속은 Silver·Gold 가 가공한 결과이므로 BFF 에서 다시 해석하지 않는다(사용자 결정).</li>
+  </ul>
+  아래 본문은 2026-10-19 작성 당시 그대로이며 이전 재설계(<code>back/app</code>, <code>rd.*</code>, stg) 기준입니다. 6·7절의 과제는 이 결론과 별개로 열려 있습니다.
 </div>
 
 <div class="card">
