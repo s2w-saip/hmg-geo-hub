@@ -38,7 +38,7 @@ Gold만 연결해 API와 프론트를 시작합니다. 이 Python에는 `back/bf
 
 서비스 구조와 HUB DB ERD의 정본(SSOT): [docs/architecture/hmg-geo-hub-architecture.html](docs/architecture/hmg-geo-hub-architecture.html). 구조·스키마를 바꾸면 이 문서를 함께 고칩니다.
 Next.js는 화면 렌더링과 API 호출을 담당하고, FastAPI가 BFF와 데이터 조회를 담당합니다.
-FastAPI는 세 DB에 독립된 읽기 전용 연결을 사용합니다. 외부 소비자 계정은 데이터 DB의 명시 승인된 `published.*` 뷰만 조회할 수 있습니다.
+FastAPI는 세 DB에 독립된 읽기 전용 연결을 사용합니다. 외부 호출자에게는 별도의 외부 API(`back/ext`, 로컬 :5560)가 현재 저장된 프롬프트와 그 수집·가공에 필요한 값을 API 키별 범위로 읽기 전용 제공합니다(정본 문서 `#ext`, 운영 명령은 [HUB 저장소 안내](back/hub_storage/README.md)).
 
 검증: `front`에서 `npm run typecheck`. API 실행 후 저장소 루트에서
 `$env:HGH_GOLD_TEST_BASE_URL='http://127.0.0.1:5555'; python -X utf8 -m unittest discover -s back/bff/tests -v`.

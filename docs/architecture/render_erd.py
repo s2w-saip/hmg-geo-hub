@@ -202,12 +202,12 @@ def operations() -> Figure:
 
 
 def catalog() -> Figure:
-    """hmg_analytics catalog / publication / published: back/hub_storage/data-002.sql, -003, -004."""
+    """hmg_analytics catalog / publication / published: back/hub_storage/data-002.sql, -003, -004, -005."""
     f = Figure("cat", 552, "HUB 데이터 DB의 catalog·publication 스키마 ERD와 published 뷰. 프로젝트와 프롬프트는 "
                "정체성 행과 버전 행으로 나뉘고, publication.project_access 승인을 통과한 것만 published 뷰에 보인다.")
     f.table("catalog.project_version", 16, 40, 260, "프로젝트 정의(JSON)가 바뀔 때마다 버전 한 행을 쌓는다.", [
         ("PK FK", "project_id", "uuid"), ("PK", "version", "integer"), ("", "definition", "jsonb"),
-        ("", "sha256", "text"), ("", "recorded_at", "timestamptz")])
+        ("", "sha256", "text"), ("", "recorded_at", "timestamptz"), ("", "change_seq", "bigint")])
     f.table("catalog.project", 316, 40, 260, "프로젝트의 영구 UUID와 출처(Gold 가져옴·HUB 생성)를 담는 정체성 표다.", [
         ("PK", "project_id", "uuid"), ("", "origin", "=gold|hub"), ("UK", "source_id", "uuid"),
         ("", "registered_at", "timestamptz")])
@@ -217,13 +217,13 @@ def catalog() -> Figure:
     f.table("catalog.prompt_version", 936, 40, 248, "프롬프트 본문과 분류 정의를 버전별로 쌓고, HUB 편집이면 기록자를 남긴다.", [
         ("PK FK", "prompt_id", "uuid"), ("PK", "version", "integer"), ("", "text", "text"),
         ("", "definition", "jsonb"), ("", "sha256", "text"), ("", "recorded_at", "timestamptz"),
-        ("", "recorded_by", "⇢ user_account")])
+        ("", "recorded_by", "⇢ user_account"), ("", "change_seq", "bigint")])
     f.table("catalog.project_ga4_property", 16, 290, 260, "프로젝트와 GA4 속성의 연결이며, 실제 연동이 확인된 것만 등록한다.", [
         ("PK FK", "project_id", "uuid"), ("PK FK", "prop_key", "→ ga4_property")])
     f.table("publication.project_access", 316, 290, 260, "프로젝트별 projects·prompts·ga4·seo 공개 승인 여부와 승인자를 담는다.", [
         ("PK FK", "project_id", "uuid"), ("", "projects", "boolean"), ("", "prompts", "boolean"),
         ("", "ga4", "boolean"), ("", "seo", "boolean"), ("", "approved_by", "text"),
-        ("", "approved_at", "timestamptz")])
+        ("", "approved_at", "timestamptz"), ("", "access_seq", "bigint")])
     f.fk("project_version", "project_id", "project")
     f.fk("prompt", "project_id", "project")
     f.fk("prompt_version", "prompt_id", "prompt")
@@ -247,6 +247,59 @@ def catalog() -> Figure:
           f'<text class="mu sm" x="611" y="{access_y - 8}" text-anchor="middle">승인분만</text>',
           f'<path class="e" d="M756,{prompt_bottom}V{gy}" marker-end="url(#cat-a)"/>',
           f'<text class="mu sm" x="764" y="{(prompt_bottom + gy) // 2 + 4}">current_* 뷰 (최신 버전)</text>']
+    f.raw("\n".join(g))
+    return f
+
+
+def external() -> Figure:
+    """hmg_analytics external API boundary: back/hub_storage/data-005.sql."""
+    f = Figure("ext", 642, "HUB 데이터 DB의 외부 API 경계 ERD. 기준값은 종류별 set과 항목으로 쌓이고, 호출자는 키와 허용 프로젝트를 가지며, "
+               "ext 뷰는 트랜잭션 설정 hgh.key_hash로 한 호출자의 범위만 보여 준다.")
+    f.table("catalog.reference_set", 16, 40, 280, "기준값 한 종류의 한 버전이다. 하나라도 바뀌면 그 종류 전체를 새 set으로 쌓는다.", [
+        ("PK", "set_id", "uuid"), ("UK", "family", "text"), ("UK", "version", "integer"), ("", "item_count", "integer"),
+        ("", "sha256", "text"), ("", "source", "=gold|hub"), ("", "source_release", "jsonb"), ("", "change_seq", "bigint"),
+        ("", "recorded_at", "timestamptz")], notes=["UNIQUE (family, version) · 17종"])
+    f.table("catalog.reference_item", 336, 40, 250, "set에 든 항목 하나로, 자연키와 정의(JSON)를 담는다.", [
+        ("PK FK", "set_id", "uuid"), ("PK", "item_key", "text"), ("", "definition", "jsonb")])
+    f.table("publication.reference_access", 626, 40, 270, "기준값 종류별 공개 승인이다. HUB 코드표 세 종류는 늘 공개된다.", [
+        ("PK", "family", "⇢ reference_set"), ("", "enabled", "boolean"), ("", "approved_by", "text"),
+        ("", "approved_at", "timestamptz"), ("", "access_seq", "bigint")])
+    f.table("catalog.sync_run", 936, 40, 248, "Gold 가져오기 한 번당 한 행으로, 읽은 것과 기록한 것, 거부 사유를 남긴다.", [
+        ("PK", "run_id", "uuid"), ("", "started_at", "timestamptz"), ("", "finished_at", "timestamptz"),
+        ("", "result", "=running|ok|refused|failed"), ("", "reason", "text"), ("", "gold_versions", "jsonb"),
+        ("", "gold_release", "jsonb"), ("", "counts", "jsonb"), ("", "removal_candidates", "jsonb")])
+    y2 = 350
+    f.table("publication.api_key", 16, y2, 280, "호출자의 API 키다. 원문은 발급 때 한 번만 보이고 sha256만 저장한다.", [
+        ("PK", "key_id", "uuid"), ("FK", "client_id", "uuid"), ("UK", "key_hash", "text"), ("", "created_by", "text"),
+        ("", "created_at", "timestamptz"), ("", "expires_at", "timestamptz"), ("", "revoked_at", "timestamptz"),
+        ("", "revoked_by", "text"), ("", "revoke_reason", "text")], notes=["호출자당 유효 키 ≤ 2 (관리 명령)"])
+    f.table("publication.api_client", 336, y2, 250, "외부 API를 부르는 시스템 하나다. 비활성이면 모든 키가 막힌다.", [
+        ("PK", "client_id", "uuid"), ("UK", "name", "text"), ("", "status", "=active|disabled"),
+        ("", "created_by", "text"), ("", "created_at", "timestamptz")])
+    f.table("publication.api_client_project", 626, y2, 270, "호출자에게 허용한 프로젝트다. 회수해도 행은 남고 revoked_at이 찍힌다.", [
+        ("PK FK", "client_id", "uuid"), ("PK FK", "project_id", "→ catalog.project"), ("", "granted_by", "text"),
+        ("", "granted_at", "timestamptz"), ("", "grant_seq", "bigint"), ("", "revoked_at", "timestamptz"),
+        ("", "revoked_by", "text")])
+    f.fk("reference_item", "set_id", "reference_set")
+    f.fk("api_key", "client_id", "api_client")
+    f.fk("api_client_project", "client_id", "api_client")
+
+    gx, gy, gh = 936, y2, 266
+    access_y, grant_y = f["reference_access"].row("access_seq"), f["api_client_project"].row("grant_seq")
+    g = [f'<rect class="vgrp" x="{gx}" y="{gy}" width="248" height="{gh}" rx="8"/>',
+         f'<text class="m b" x="{gx + 16}" y="{gy + 26}">ext.*<tspan class="mu" dx="10">외부 API 계약 · 뷰 6개</tspan></text>',
+         f'<text class="mu sm" x="{gx + 16}" y="{gy + 46}">hmg_ext_api만 SELECT · security_barrier</text>']
+    for i, name in enumerate(("caller", "meta", "projects", "prompts", "reference_sets", "reference_items")):
+        g.append(f'<text class="m" x="{gx + 16 + 116 * (i % 2)}" y="{gy + 78 + 20 * (i // 2)}">{name}</text>')
+    g += [f'<text class="mu sm" x="{gx + 16}" y="{gy + 160}">트랜잭션마다 hgh.key_hash =</text>',
+          f'<text class="mu sm" x="{gx + 16}" y="{gy + 178}">키 원문의 sha256</text>',
+          f'<text class="mu sm" x="{gx + 16}" y="{gy + 204}">키가 없거나 틀리면 모든 뷰 0행</text>',
+          f'<text class="mu sm" x="{gx + 16}" y="{gy + 230}">읽는 곳: catalog.current_* ·</text>',
+          f'<text class="mu sm" x="{gx + 16}" y="{gy + 248}">current_reference · publication.*</text>',
+          f'<path class="e" d="M896,{grant_y}H{gx}" marker-end="url(#ext-a)"/>',
+          f'<text class="mu sm" x="916" y="{grant_y - 8}" text-anchor="middle">허용분</text>',
+          f'<path class="e" d="M896,{access_y}H916V{gy + 30}H{gx}" marker-end="url(#ext-a)"/>',
+          f'<text class="mu sm" x="906" y="{access_y - 8}" text-anchor="middle">승인분</text>']
     f.raw("\n".join(g))
     return f
 
@@ -373,7 +426,7 @@ def ref() -> Figure:
     return f
 
 
-FIGURES = (operations, catalog, ga4, seo, ref)
+FIGURES = (operations, catalog, external, ga4, seo, ref)
 
 
 def render() -> dict[str, str]:

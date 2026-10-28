@@ -54,9 +54,13 @@ const prompt = (over: Partial<HubPrompt>): HubPrompt => ({
   ...over,
 });
 const PAGE: HubPromptPage = {
-  items: [prompt({}), prompt({ id: "0000122c-6880-476f-986a-5004d76eee97", origin: "gold", editable: false, version: 1, text: "Gold prompt", kind: "acr" })],
+  items: [
+    prompt({}),
+    prompt({ id: "0000122c-6880-476f-986a-5004d76eee97", origin: "gold", editable: false, version: 1, text: "Gold prompt", kind: "acr" }),
+    prompt({ id: "0000122c-6880-476f-986a-5004d76eee98", origin: "gold", editable: false, version: 3, text: "Left Gold", status: "removed" }),
+  ],
   page: { total: 120, limit: 50, offset: 0 },
-  counts: { total: 12013, hub: 1, gold: 12012, archived: 0 },
+  counts: { total: 12014, hub: 1, gold: 12013, archived: 0, removed: 1 },
 };
 const OPTIONS = { kinds: ["single", "acr"], language: [], regions: [], funnel: [], brandPresence: [], listType: [], depth1: [], depth2: [], depth3: [], depth4: [] } as HubOptions;
 
@@ -65,8 +69,10 @@ describe("Global prompt management", () => {
     const out = html(<HubPromptsManager initial={PAGE} options={OPTIONS} loginHref="/ko/login" />);
     expect(out).toContain("글로벌 프롬프트 관리");
     expect(out).toContain("측정 미연결");
-    expect(out).toContain("전체 12,013 · HUB 1 · Gold 12,012 · 보관 0");
-    expect(out.match(/data-hub-prompt-row=/g)).toHaveLength(2);
+    expect(out).toContain("전체 12,014 · HUB 1 · Gold 12,013 · 보관 0 · Gold에서 빠짐 1");
+    expect(out.match(/data-hub-prompt-row=/g)).toHaveLength(3);
+    // a Gold prompt that left Gold: its own status label, muted like an archived one
+    expect(out).toContain('<span class="text-rn-muted">Gold에서 빠짐</span>');
     expect(out).toContain(">HUB<");
     expect(out).toContain(">Gold<");
     expect(out).toContain("faq › ev");

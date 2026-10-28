@@ -2,7 +2,8 @@
 // and the browser's calls through /api/hub/global-prompts (app/api/hub/global-prompts/[[...rest]]/route.ts).
 
 export type HubOrigin = "hub" | "gold";
-export type HubStatus = "active" | "archived";
+// removed: a Gold prompt that left Gold (sync_catalog.py records it after two runs miss it); read-only.
+export type HubStatus = "active" | "archived" | "removed";
 export type HubKind = "single" | "acr";
 
 export const LABEL_FIELDS = ["funnel", "brandPresence", "listType", "depth1", "depth2", "depth3", "depth4"] as const;
@@ -25,7 +26,7 @@ export type HubPrompt = {
 export interface HubPromptPage {
   items: HubPrompt[];
   page: { total: number; limit: number; offset: number };
-  counts: { total: number; hub: number; gold: number; archived: number };
+  counts: { total: number; hub: number; gold: number; archived: number; removed: number };
 }
 
 export interface HubOption {
@@ -37,7 +38,7 @@ export type HubOptions = { kinds: HubKind[]; language: HubOption[]; regions: Hub
 
 export interface HubHistoryEvent {
   version: number;
-  event: "created" | "updated" | "archived" | "restored";
+  event: "created" | "updated" | "archived" | "removed" | "restored";
   changes: Record<string, { old: unknown; new: unknown }>;
   recordedAt: string;
   recordedBy: string | null;

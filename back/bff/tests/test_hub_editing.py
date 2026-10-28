@@ -41,6 +41,12 @@ class Catalog:
     def __init__(self):
         self.project = uuid4()
         self.prompts, self.versions, self.locks = {}, {}, 0
+        # catalog.current_reference, family taxon (what the last Gold import recorded)
+        self.taxa = [{"axis": "list_type", "code": "comparison", "path": []}, {"axis": "depth1", "code": "charging", "path": []},
+                     {"axis": "depth1", "code": "ev", "path": []}, {"axis": "depth2", "code": "cost", "path": ["charging"]},
+                     {"axis": "depth3", "code": "home", "path": ["charging", "cost"]}, {"axis": "depth2", "code": "range", "path": ["ev"]},
+                     {"axis": "presence", "code": "brand", "path": []}, {"axis": "unknown_axis", "code": "x", "path": []}]
+
     def add(self, origin, text, definition, project=None, versions=1):
         pid = uuid4()
         self.prompts[pid] = {"project_id": project or self.project, "origin": origin, "registered_at": T0}
@@ -66,7 +72,9 @@ class Conn:
         return Ctx()
 
     async def execute(self, sql, *args):
-        if "pg_advisory_xact_lock" in sql:
+        if sql.startswith("SET LOCAL lock_timeout"):
+            pass
+        elif "pg_advisory_xact_lock" in sql:
             self.c.locks += 1
         elif sql.startswith("INSERT INTO catalog.prompt("):
             pid, project = args
@@ -94,6 +102,8 @@ class Conn:
                 for r in d.get("regions") or []:
                     counts[("regions", r)] = counts.get(("regions", r), 0) + 1
             return [{"key": k, "value": v, "n": n} for (k, v), n in counts.items()]
+        if sql is ce.TAXON_SQL:
+            return [{**t, "path": json.dumps(t["path"])} for t in self.c.taxa]
         if sql is ce.VERSIONS_SQL:
             pid, limit = args
             return list(reversed(self.c.versions[pid]))[:limit]
@@ -107,7 +117,8 @@ class Conn:
         if sql is ce.COUNTS_SQL:
             rows = self.c.currents(args[0])
             return {"total": len(rows), "hub": sum(r["origin"] == "hub" for r in rows), "gold": sum(r["origin"] == "gold" for r in rows),
-                    "archived": sum(json.loads(r["definition"]).get("status") == "archived" for r in rows)}
+                    "archived": sum(json.loads(r["definition"]).get("status") == "archived" for r in rows),
+                    "removed": sum(json.loads(r["definition"]).get("status") == "removed" for r in rows)}
         raise AssertionError(sql)
 
     async def fetchval(self, sql, *args):
@@ -271,6 +282,29 @@ class Rules(unittest.TestCase):
             ce.check_vocabulary(bad, vocab)
         self.assertEqual(cm.exception.detail["details"]["fields"], ["language", "depth1", "regions"])
 
+    def test_taxonomy_path_follows_the_recorded_tree(self):
+        taxa = [("depth1", "charging", ()), ("depth1", "ev", ()), ("depth2", "cost", ("charging",)),
+                ("depth2", "cost", ("ev",)), ("depth3", "home", ("charging", "cost"))]
+        for ok in ({}, {"depth1": "ev"}, {"depth1": "ev", "depth2": "cost"}, {"depth1": "charging", "depth2": "cost", "depth3": "home"}):
+            ce.check_taxonomy_path(ok, taxa)
+        for bad, field in (({"depth1": "ev", "depth2": "cost", "depth3": "home"}, "depth3"),   # home sits under charging / cost
+                           ({"depth2": "cost"}, "depth2"), ({"depth1": "ev", "depth3": "home"}, "depth3"),
+                           ({"depth1": "made-up"}, "depth1")):
+            with self.assertRaises(ce.HTTPException) as cm:
+                ce.check_taxonomy_path(bad, taxa)
+            self.assertEqual((cm.exception.detail["code"], cm.exception.detail["details"]["fields"]), ("invalid_taxonomy", [field]), bad)
+        ce.check_taxonomy_path({"depth2": "anything"}, [])   # nothing recorded yet: nothing to check against
+
+    def test_removed_is_a_status_of_its_own(self):
+        self.assertEqual([ce.status_of({"status": s}) for s in ("active", "archived", "removed", None, "x")],
+                         ["active", "archived", "removed", "active", "active"])
+        project = uuid4()
+        self.assertEqual(ce.list_filters({"status": "removed"}, project)[1], [project, "removed"])
+        base = {**GOLD_DEF, "status": "active"}
+        rows = [{"version": v, "text": "a", "definition": json.dumps({**base, "status": s}), "recorded_at": T0, "recorded_by": None}
+                for v, s in ((1, "active"), (2, "removed"), (3, "active"))]
+        self.assertEqual([e["event"] for e in ce.history(rows)], ["restored", "removed", "created"])
+
     def test_history_events_and_changes(self):
         base = {**GOLD_DEF, "status": "active"}
         rows = [{"version": 1, "text": "a", "definition": json.dumps(base), "recorded_at": T0, "recorded_by": None},
@@ -309,18 +343,8 @@ class Routes(unittest.TestCase):
         async def reader():
             yield Conn(self.catalog)
 
-        @asynccontextmanager
-        async def gold():
-            class G:
-                async def fetch(self, sql):
-                    assert sql is ce.TAXON_SQL
-                    return [{"axis": "list_type", "code": "comparison"}, {"axis": "depth1", "code": "charging"},
-                            {"axis": "presence", "code": "brand"}, {"axis": "unknown_axis", "code": "x"}]
-            yield G()
-
         hub_auth.limiter.failures.clear()
         for p in (mock.patch.dict(os.environ, {"HGH_AUTH_SECRET": SECRET}),
-                  mock.patch.object(ce.gold_db, "connection", gold),
                   mock.patch.object(hub_auth.operations_db, "connection", self.accounts.connection),
                   mock.patch.object(ce.operations_db, "connection", self.accounts.connection),
                   mock.patch.object(ce.analytics_db, "connection", reader),
@@ -462,7 +486,7 @@ class Routes(unittest.TestCase):
         status, body = run(call("GET", "/v1/hub/global-prompts?status=all&limit=10", token=token))
         self.assertEqual(status, 200, body)
         self.assertEqual(body["data"]["page"], {"total": 2, "limit": 10, "offset": 0})
-        self.assertEqual(body["data"]["counts"], {"total": 2, "hub": 1, "gold": 1, "archived": 0})
+        self.assertEqual(body["data"]["counts"], {"total": 2, "hub": 1, "gold": 1, "archived": 0, "removed": 0})
         self.assertEqual(run(call("GET", "/v1/hub/global-prompts?limit=0", token=token))[0], 422)
         status, body = run(call("GET", "/v1/hub/global-prompts/options", token=token))
         self.assertEqual(body["data"]["kinds"], ["single", "acr"])
@@ -473,20 +497,29 @@ class Routes(unittest.TestCase):
         self.assertEqual(body["data"]["brandPresence"], [{"value": "brand", "count": 1}])
         self.assertEqual(body["data"]["depth4"], [])
 
-    def test_gold_taxonomy_codes_are_accepted_and_gold_down_falls_back(self):
+    def test_recorded_taxonomy_codes_are_accepted_and_none_recorded_falls_back(self):
         token = self.token()
-
-        @asynccontextmanager
-        async def down():
-            raise RuntimeError("Gold connection is not initialized")
-            yield
-
-        # Gold unreadable: only codes the catalog already uses; `charging` is Gold-only yet
-        with mock.patch.object(ce.gold_db, "connection", down), self.assertLogs("hgh.hub", "WARNING"):
+        # nothing recorded yet: only codes the catalog already uses; `charging` is taxonomy-only
+        recorded, self.catalog.taxa = self.catalog.taxa, []
+        with self.assertLogs("hgh.hub", "WARNING"):
             status, body = self.new(token, depth1="charging")
         self.assertEqual((status, body["error"]["code"], body["error"]["details"]["fields"]), (422, "unknown_code", ["depth1"]))
-        status, body = self.new(token, listType="comparison", depth1="charging")
-        self.assertEqual((status, body["data"]["item"]["listType"], body["data"]["item"]["depth1"]), (201, "comparison", "charging"))
+        self.catalog.taxa = recorded
+        status, body = self.new(token, listType="comparison", depth1="charging", depth2="cost", depth3="home")
+        self.assertEqual((status, body["data"]["item"]["listType"], body["data"]["item"]["depth3"]), (201, "comparison", "home"))
+        # every code known, but range sits under ev, not charging
+        status, body = self.new(token, text="다른 프롬프트", depth1="charging", depth2="range")
+        self.assertEqual((status, body["error"]["code"], body["error"]["details"]["fields"]), (422, "invalid_taxonomy", ["depth2"]))
+
+    def test_a_running_gold_import_makes_writes_wait_then_503(self):
+        token = self.token()
+
+        async def locked(sql, *args):
+            if "pg_advisory_xact_lock" in sql:
+                raise asyncpg.LockNotAvailableError("lock timeout")
+        with mock.patch.object(Conn, "execute", side_effect=locked, autospec=False):
+            status, body = self.new(token)
+        self.assertEqual((status, body["error"]["code"]), (503, "source_unavailable"))
 
 
 if __name__ == "__main__":

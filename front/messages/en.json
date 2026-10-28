@@ -5319,7 +5319,7 @@
     "detailTitle": "Global prompt",
     "listTitle": "Prompts",
     "listLabel": "Global prompts",
-    "counts": "All {total} · HUB {hub} · Gold {gold} · Archived {archived}",
+    "counts": "All {total} · HUB {hub} · Gold {gold} · Archived {archived} · Left Gold {removed}",
     "searchLabel": "Search text",
     "searchPlaceholder": "Search text",
     "statusLabel": "Status",
@@ -5327,7 +5327,8 @@
     "all": "All",
     "status": {
       "active": "Active",
-      "archived": "Archived"
+      "archived": "Archived",
+      "removed": "Left Gold"
     },
     "origin": {
       "hub": "HUB",
@@ -5353,6 +5354,7 @@
     "loginRequired": "Editing Global prompts needs the HUB top-level administrator sign-in.",
     "goldReadOnly": "Prompts imported from Gold cannot be edited here: the next Gold import would put the original definition back.",
     "archivedNote": "This prompt is archived. Restore it to edit it.",
+    "removedNote": "This prompt left Gold. If it comes back in Gold, the next import makes it active again.",
     "regionsHint": "Separate with commas (e.g. KR, US, x:WW).",
     "historyTitle": "Change history",
     "goldSync": "Gold import",
@@ -5361,6 +5363,7 @@
       "created": "Created",
       "updated": "Edited",
       "archived": "Archived",
+      "removed": "Left Gold",
       "restored": "Restored"
     },
     "field": {

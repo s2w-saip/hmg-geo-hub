@@ -40,4 +40,28 @@ async def main(config):
         await reader.fetchval('SELECT count(*) FROM system.project_reference')
     finally:
         await reader.close()
-    print(json.dumps({'tcp_authentication':'passed','external_operations_access':'denied','api_operations_reader':'read_only'}))
+    # External API role: read-only, the ext views and nothing else; without a key they are empty.
+    ext = await asyncpg.connect(config['ext'], timeout=5)
+    try:
+        assert await ext.fetchval('SHOW transaction_read_only') == 'on'
+        for view in ('caller', 'meta', 'projects', 'prompts', 'reference_sets', 'reference_items'):
+            assert await ext.fetchval(f'SELECT count(*) FROM ext.{view}') == 0, f'ext.{view} answers without a key'
+        for query in ('SELECT 1 FROM catalog.prompt LIMIT 1', 'SELECT 1 FROM publication.api_key LIMIT 1',
+                      'SELECT 1 FROM published.projects LIMIT 1'):
+            try:
+                await ext.execute(query)
+            except asyncpg.InsufficientPrivilegeError:
+                pass
+            else:
+                raise AssertionError('External API role reads beyond ext')
+    finally:
+        await ext.close()
+    try:
+        forbidden = await asyncpg.connect(config['ext_operations'], timeout=5)
+    except asyncpg.InvalidAuthorizationSpecificationError:
+        pass
+    else:
+        await forbidden.close()
+        raise AssertionError('External API credentials can connect to operations DB')
+    print(json.dumps({'tcp_authentication':'passed','external_operations_access':'denied','api_operations_reader':'read_only',
+                      'ext_api':'scoped_read_only','ext_operations_access':'denied'}))

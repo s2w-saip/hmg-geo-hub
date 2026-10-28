@@ -10,6 +10,7 @@ import re
 import secrets
 import sys
 import time
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -21,12 +22,20 @@ import manage as analytics
 OPS_SECRET = ROOT / '.env.operations-db.local'
 DATA_SECRET = ROOT / '.env.data-access.local'
 EDIT_SECRET = ROOT / '.env.hub-edit-db.local'      # editor role password + login token secret
+EXT_SECRET = ROOT / '.env.ext-api-db.local'        # external API role password
 OPS_CONTAINER = 'hgh-operations-db'
 OPS_DB = 'hmg_operations'
+# External API (2026-10-28): what a project approval covers, the Gold reference families an approval can
+# open (the HUB-owned surface/brand_bit/mention_type are always part of the contract), key lifetimes.
+PROJECT_FLAGS = ('projects', 'prompts')
+REFERENCE_FAMILIES = ('engine', 'region', 'country', 'language', 'taxon', 'brand', 'entity', 'source_category',
+                      'source', 'owned_base', 'crawl_bot', 'keyword', 'perspective', 'population')
+KEY_DAYS, KEY_DAYS_MAX, KEYS_PER_CLIENT = 180, 365, 2
+KEY_LOCK = 617427414     # one key issue at a time, so the per-client limit holds
 
 
 def sanitize(message):
-    for path in (OPS_SECRET, DATA_SECRET, EDIT_SECRET, analytics.SECRET):
+    for path in (OPS_SECRET, DATA_SECRET, EDIT_SECRET, EXT_SECRET, analytics.SECRET):
         if path.exists():
             for key, value in analytics.env_file(path).items():
                 if ('PASSWORD' in key or 'SECRET' in key) and value:
@@ -197,6 +206,25 @@ ALTER ROLE hmg_catalog_editor CONNECTION LIMIT 4;
 GRANT CONNECT ON DATABASE hmg_analytics TO hmg_catalog_editor;
 COMMIT;""")
     migrate('data-004.sql', '004_hub_prompt_editing')
+    # External API (2026-10-28): a read-only role that sees the ext schema and nothing else.
+    if not EXT_SECRET.exists() and sql("SELECT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='hmg_ext_api');").stdout.strip() == 't':
+        raise RuntimeError('The external API role already exists; restore .env.ext-api-db.local rather than replacing credentials')
+    ext = create_secret(EXT_SECRET, {'EXT_API_PASSWORD': None})
+    sql(f"""BEGIN;
+DO $$ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='hmg_ext_api') THEN CREATE ROLE hmg_ext_api LOGIN; END IF;
+END $$;
+ALTER ROLE hmg_ext_api WITH NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD {analytics.literal(ext['EXT_API_PASSWORD'])};
+ALTER ROLE hmg_ext_api SET default_transaction_read_only=on;
+ALTER ROLE hmg_ext_api SET statement_timeout='10s';
+ALTER ROLE hmg_ext_api SET idle_in_transaction_session_timeout='15s';
+ALTER ROLE hmg_ext_api SET search_path=ext;
+ALTER ROLE hmg_ext_api CONNECTION LIMIT 8;
+GRANT CONNECT ON DATABASE hmg_analytics TO hmg_ext_api;
+COMMIT;""")
+    migrate('data-005.sql', '005_external_api')
+    analytics.secure_write(ROOT / '.env.ext-api.local', '# External API: the caller-scoped ext views only.\n'
+        f"HGH_EXT_DB_URL=postgresql://hmg_ext_api:{ext['EXT_API_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n")
     analytics.secure_write(ROOT / '.env.operations.local', '# FastAPI read-only operations connection.\n'
         f"HGH_OPERATIONS_DB_URL=postgresql://hmg_operations_reader:{values['OPERATIONS_READER_PASSWORD']}@{service_host('operations')}/{OPS_DB}\n")
     analytics.secure_write(ROOT / '.env.hub-edit.local', '# FastAPI Global prompt editing: INSERT-only catalog role and login token secret.\n'
@@ -214,12 +242,13 @@ def status():
             'migrations',(SELECT json_agg(version ORDER BY version) FROM {'system' if ops else 'ops'}.schema_migration));""", ops).stdout.strip())
 
 
-def sync():
+def sync(args):
     """Import actual Gold catalog definitions only, using transient writer connections."""
     values, data = analytics.env_file(OPS_SECRET), analytics.env_file(DATA_SECRET)
     config = {
         'data': f"postgresql://hmg_catalog_writer:{data['CATALOG_WRITER_PASSWORD']}@{service_host('analytics')}/hmg_analytics",
         'operations': f"postgresql://hmg_operations_writer:{values['OPERATIONS_WRITER_PASSWORD']}@{service_host('operations')}/{OPS_DB}",
+        'allow_removals': args.allow_removals, 'expect_mass_change': args.expect_mass_change,
     }
     # Secrets travel over stdin, never argv, image layers, logs or the frontend.
     script = (HERE / 'sync_catalog.py').read_text(encoding='utf8') + '\nasyncio.run(main(' + repr(config) + '))\n'
@@ -229,13 +258,16 @@ def sync():
 def verify():
     sql((HERE / 'verify-data.sql').read_text(encoding='utf8'))
     sql((HERE / 'verify-operations.sql').read_text(encoding='utf8'), True)
-    for ops, role in ((False, 'hmg_data_external'), (False, 'hmg_analytics_reader'), (True, 'hmg_operations_reader')):
+    for ops, role in ((False, 'hmg_data_external'), (False, 'hmg_ext_api'), (False, 'hmg_analytics_reader'), (True, 'hmg_operations_reader')):
         print(sql("SELECT json_build_object('database',current_database(),'role',current_user,'read_only',current_setting('transaction_read_only'));", ops, role).stdout.strip())
     # Connection checks cannot assume the database has no intentionally approved exports.
-    data, values = analytics.env_file(DATA_SECRET), analytics.env_file(OPS_SECRET)
+    data, values, ext = analytics.env_file(DATA_SECRET), analytics.env_file(OPS_SECRET), analytics.env_file(EXT_SECRET)
     external = f"postgresql://hmg_data_external:{data['DATA_EXTERNAL_PASSWORD']}"
+    ext_api = f"postgresql://hmg_ext_api:{ext['EXT_API_PASSWORD']}"
     config = {'external':external+f"@{service_host('analytics')}/hmg_analytics",
               'external_operations':external+f"@{service_host('operations')}/{OPS_DB}",
+              'ext':ext_api+f"@{service_host('analytics')}/hmg_analytics",
+              'ext_operations':ext_api+f"@{service_host('operations')}/{OPS_DB}",
               'operations_reader':f"postgresql://hmg_operations_reader:{values['OPERATIONS_READER_PASSWORD']}@{service_host('operations')}/{OPS_DB}"}
     script = (HERE / 'verify_connections.py').read_text(encoding='utf8') + '\nasyncio.run(main(' + repr(config) + '))\n'
     print(api_python(script).strip())
@@ -278,6 +310,126 @@ COMMIT;""", True).stdout.strip()
     print(f'{login}: ' + ('top-level role revoked; its sessions have ended' if out == '1' else 'no top-level role to revoke'))
 
 
+# ═══ external API: approvals, callers, keys (data DB; the API itself only reads them) ═══════════════════
+
+def actor():
+    return f'{getpass.getuser()}@manage.py'
+
+
+def uuid_of(value, what):
+    try:
+        return str(uuid.UUID(value))
+    except (ValueError, TypeError):
+        raise ValueError(f'{what} must be a UUID') from None
+
+
+def params(args, minimum, usage):
+    if len(args.params) < minimum:
+        raise ValueError(f'Usage: manage.py {args.command} {usage}')
+    return args.params
+
+
+def set_project_access(args, enabled):
+    """publish-project / unpublish-project <project_id> [projects] [prompts] (default: both)."""
+    project, *flags = params(args, 1, '<project_id> [projects] [prompts]')
+    project, flags = uuid_of(project, 'project_id'), flags or list(PROJECT_FLAGS)
+    if any(f not in PROJECT_FLAGS for f in flags):
+        raise ValueError(f'Flags: {", ".join(PROJECT_FLAGS)}')
+    if sql(f"SELECT count(*) FROM catalog.project WHERE project_id={analytics.literal(project)};").stdout.strip() != '1':
+        raise ValueError('No such project in the HUB catalog')
+    value = 'true' if enabled else 'false'
+    sql(f"""INSERT INTO publication.project_access(project_id,{','.join(flags)},approved_by)
+VALUES({analytics.literal(project)},{','.join(value for _ in flags)},{analytics.literal(actor())})
+ON CONFLICT(project_id) DO UPDATE SET {','.join(f'{f}={value}' for f in flags)},approved_by=EXCLUDED.approved_by,approved_at=now();""")
+    print(f'{project}: {", ".join(flags)} {"published" if enabled else "withdrawn"}')
+
+
+def set_reference_access(args, enabled):
+    """publish-reference / unpublish-reference <family ...|all>."""
+    families = params(args, 1, '<family ...|all>')
+    families = list(REFERENCE_FAMILIES) if families == ['all'] else families
+    if any(f not in REFERENCE_FAMILIES for f in families):
+        raise ValueError(f'Families: {", ".join(REFERENCE_FAMILIES)} or all')
+    rows = ','.join(f"({analytics.literal(f)},{'true' if enabled else 'false'},{analytics.literal(actor())})" for f in families)
+    sql(f"""INSERT INTO publication.reference_access(family,enabled,approved_by) VALUES{rows}
+ON CONFLICT(family) DO UPDATE SET enabled=EXCLUDED.enabled,approved_by=EXCLUDED.approved_by,approved_at=now();""")
+    print(f'{", ".join(families)}: {"published" if enabled else "withdrawn"}')
+
+
+def client_add(args):
+    name = ' '.join(params(args, 1, '<name>')).strip()
+    out = sql(f"""INSERT INTO publication.api_client(client_id,name,created_by)
+VALUES(gen_random_uuid(),{analytics.literal(name)},{analytics.literal(actor())}) RETURNING client_id;""").stdout.strip()
+    print(f'{name}: client {out.splitlines()[0]}')
+
+
+def client_status(args, status):
+    client = uuid_of(params(args, 1, '<client_id>')[0], 'client_id')
+    out = sql(f"UPDATE publication.api_client SET status={analytics.literal(status)} WHERE client_id={analytics.literal(client)} RETURNING 1;").stdout.strip()
+    print(f'{client}: ' + (status if out else 'no such client'))
+
+
+def key_issue(args):
+    """A new key, printed once. At most KEYS_PER_CLIENT unexpired, unrevoked keys per client (rotation overlap)."""
+    client = uuid_of(params(args, 1, '<client_id> [--days N]')[0], 'client_id')
+    days = args.days or KEY_DAYS
+    if not 1 <= days <= KEY_DAYS_MAX:
+        raise ValueError(f'--days must be 1..{KEY_DAYS_MAX}')
+    key_id = uuid.uuid4()
+    key = f'hgh_{key_id.hex}_{secrets.token_urlsafe(32)}'
+    digest = hashlib.sha256(key.encode()).hexdigest()
+    out = sql(f"""BEGIN;
+SELECT pg_advisory_xact_lock({KEY_LOCK});
+DO $$ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM publication.api_client WHERE client_id={analytics.literal(client)} AND status='active') THEN
+   RAISE EXCEPTION 'No active client %', {analytics.literal(client)}; END IF;
+ IF (SELECT count(*) FROM publication.api_key WHERE client_id={analytics.literal(client)} AND revoked_at IS NULL AND expires_at>now())>={KEYS_PER_CLIENT} THEN
+   RAISE EXCEPTION 'The client already has {KEYS_PER_CLIENT} valid keys; revoke one first'; END IF;
+END $$;
+INSERT INTO publication.api_key(key_id,client_id,key_hash,created_by,expires_at)
+VALUES({analytics.literal(str(key_id))},{analytics.literal(client)},{analytics.literal(digest)},{analytics.literal(actor())},now()+interval '{days} days')
+RETURNING expires_at;
+COMMIT;""", check=False)
+    if out.returncode:
+        errors = [line for line in out.stderr.splitlines() if line.startswith('ERROR:')]
+        raise RuntimeError(sanitize(errors[0].removeprefix('ERROR:').strip() if errors else 'Key issue failed'))
+    expires = [line for line in out.stdout.splitlines() if line.strip()][-1]
+    # The secret is shown here once and stored nowhere; only its sha256 is in the database.
+    print(f'key_id {key_id} expires {expires}\n{key}')
+
+
+def key_revoke(args):
+    key, *reason = params(args, 2, '<key_id> <reason>')
+    key = uuid_of(key, 'key_id')
+    out = sql(f"""UPDATE publication.api_key SET revoked_at=now(),revoked_by={analytics.literal(actor())},
+revoke_reason={analytics.literal(' '.join(reason))} WHERE key_id={analytics.literal(key)} AND revoked_at IS NULL RETURNING 1;""").stdout.strip()
+    print(f'{key}: ' + ('revoked' if out else 'no such unrevoked key'))
+
+
+def grant(args, granted):
+    """grant-project / withdraw-project <client_id> <project_id ...>. A withdrawal keeps the row (revoked_at)."""
+    client, *projects = params(args, 2, '<client_id> <project_id ...>')
+    client, projects = uuid_of(client, 'client_id'), [uuid_of(p, 'project_id') for p in projects]
+    who = analytics.literal(actor())
+    if granted:
+        rows = ','.join(f'({analytics.literal(client)},{analytics.literal(p)},{who})' for p in projects)
+        sql(f"""INSERT INTO publication.api_client_project(client_id,project_id,granted_by) VALUES{rows}
+ON CONFLICT(client_id,project_id) DO UPDATE SET granted_by=EXCLUDED.granted_by,granted_at=now(),revoked_at=NULL,revoked_by=NULL;""")
+    else:
+        sql(f"""UPDATE publication.api_client_project SET revoked_at=now(),revoked_by={who}
+WHERE client_id={analytics.literal(client)} AND project_id IN ({','.join(analytics.literal(p) for p in projects)}) AND revoked_at IS NULL;""")
+    print(f'{client}: {len(projects)} project(s) {"granted" if granted else "withdrawn"}')
+
+
+def ext_list(args):
+    print(sql("""SELECT json_build_object(
+ 'clients',(SELECT coalesce(json_agg(json_build_object('client_id',client_id,'name',name,'status',status) ORDER BY name),'[]') FROM publication.api_client),
+ 'keys',(SELECT coalesce(json_agg(json_build_object('key_id',key_id,'client_id',client_id,'expires_at',expires_at,'revoked_at',revoked_at) ORDER BY created_at),'[]') FROM publication.api_key),
+ 'grants',(SELECT coalesce(json_agg(json_build_object('client_id',client_id,'project_id',project_id,'revoked_at',revoked_at)),'[]') FROM publication.api_client_project),
+ 'projects',(SELECT coalesce(json_agg(json_build_object('project_id',project_id,'projects',projects,'prompts',prompts)),'[]') FROM publication.project_access),
+ 'reference',(SELECT coalesce(json_agg(json_build_object('family',family,'enabled',enabled) ORDER BY family),'[]') FROM publication.reference_access));""").stdout.strip())
+
+
 def start():
     """Native mode: start both local servers after a reboot (no migrations; `init` does those)."""
     if not analytics.NATIVE:
@@ -310,13 +462,26 @@ def backup():
     print(f'Backup created: {output}')
 
 
+COMMANDS = {
+    'init': lambda a: initialize(), 'start': lambda a: start(), 'sync-gold-catalog': sync, 'status': lambda a: status(),
+    'verify': lambda a: verify(), 'backup': lambda a: backup(), 'set-admin': lambda a: set_admin(), 'revoke-admin': lambda a: revoke_admin(),
+    'publish-project': lambda a: set_project_access(a, True), 'unpublish-project': lambda a: set_project_access(a, False),
+    'publish-reference': lambda a: set_reference_access(a, True), 'unpublish-reference': lambda a: set_reference_access(a, False),
+    'ext-client-add': client_add, 'ext-client-disable': lambda a: client_status(a, 'disabled'),
+    'ext-client-enable': lambda a: client_status(a, 'active'), 'ext-key-issue': key_issue, 'ext-key-revoke': key_revoke,
+    'grant-project': lambda a: grant(a, True), 'withdraw-project': lambda a: grant(a, False), 'ext-list': ext_list,
+}
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['init', 'start', 'sync-gold-catalog', 'status', 'verify', 'backup', 'set-admin', 'revoke-admin'])
+    parser.add_argument('command', choices=list(COMMANDS))
+    parser.add_argument('params', nargs='*', help='ids, flags or families for the external API commands')
+    parser.add_argument('--allow-removals', type=int, default=0, help='sync: accept up to N Gold removals above the guard')
+    parser.add_argument('--expect-mass-change', action='store_true', help='sync: accept more than the guard share of new revisions')
+    parser.add_argument('--days', type=int, help='ext-key-issue: lifetime in days')
     args = parser.parse_args()
     try:
-        {'init': initialize, 'start': start, 'sync-gold-catalog': sync, 'status': status, 'verify': verify, 'backup': backup,
-         'set-admin': set_admin, 'revoke-admin': revoke_admin}[args.command]()
+        COMMANDS[args.command](args)
     except (OSError, RuntimeError, ValueError, KeyError) as error:
         print(sanitize(str(error)), file=sys.stderr)
         sys.exit(1)

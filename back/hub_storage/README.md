@@ -48,7 +48,8 @@ macOS(Docker 없음)는 네이티브 모드로 같은 일을 한다: `HGH_PYTHON
 - **대상:** Gold 루트 프로젝트(`definition.surface=1`, `is_root=true`)에 속한 프롬프트. `origin=hub`만 편집한다. `origin=gold`는 읽기 전용으로 보여 준다. HUB에서 고쳐도 다음 `sync-gold-catalog`가 Gold 정의를 새 버전으로 다시 기록하기 때문이다.
 - **기록 방식:** 모든 변경은 `catalog.prompt_version`에 새 버전을 추가한다. 삭제는 `definition.status='archived'`인 버전이고, 복원도 버전 하나다. 정체성 행과 이력은 지우지 않는다. 버전마다 `recorded_by`(운영 DB `user_account.user_id`)를 남긴다. Gold 가져오기 버전은 `NULL`이다.
 - **동시 편집:** 쓰기 요청은 보고 있던 버전(`expectedVersion`)을 보낸다. 최신이 아니면 409 `version_conflict`로 거부한다. 쓰기는 Gold 가져오기와 같은 advisory lock을 잡아 한 번에 하나씩만 기록한다.
-- **검증:** 본문은 한 줄, 2000자 이하다. 퍼널·브랜드 언급·목록 유형·분류 코드는 Gold 분류 사전(`gold.dim_taxon`)의 값만, 언어·시장은 글로벌 카탈로그가 이미 쓰는 값만 받는다. Gold는 글로벌 프롬프트의 분류를 `catalog_entry`에 두므로 가져온 정의에는 퍼널만 있다. Gold를 읽을 수 없을 때는 카탈로그가 이미 쓰는 코드만 받는다. 같은 본문·언어의 사용 중 프롬프트가 있으면 409 `duplicate`로 거부한다.
+- **검증:** 본문은 한 줄, 2000자 이하다. 퍼널·브랜드 언급·목록 유형·분류 코드는 마지막 Gold 가져오기가 기록한 분류 체계(`catalog.current_reference`, family `taxon`)의 값만 받고, depth2·depth3은 함께 고른 depth1·depth2 아래에 있어야 한다(같은 코드가 여러 부모 아래 있다). 잠금을 쥔 채 Gold를 부르지 않는다. 언어·시장은 글로벌 카탈로그가 이미 쓰는 값만 받는다. 분류 체계가 아직 기록되지 않았으면 카탈로그가 이미 쓰는 코드만 받는다. 같은 본문·언어의 사용 중 프롬프트가 있으면 409 `duplicate`로 거부한다. Gold 가져오기가 실행 중이면 5초 기다린 뒤 503으로 돌려준다.
+- **Gold에서 빠진 프롬프트:** Gold 출처 프롬프트가 Gold에서 사라지면 가져오기가 `status=removed` 버전을 남긴다(아래 절). 화면에는 'Gold에서 빠짐'으로 읽기 전용으로 보인다.
 - **계정과 권한:** API는 `HGH_CATALOG_EDITOR_DB_URL`(`hmg_catalog_editor`: `catalog.prompt`·`prompt_version` INSERT, catalog SELECT만)로 쓴다. UPDATE·DELETE·프로젝트 정의·공개 정책에는 권한이 없다.
 - **로그인:** 운영 DB `002_hub_login`의 `system.global_role`(admin)과 `system.user_credential`(scrypt)을 쓴다. `POST /v1/auth/login`이 `HGH_AUTH_SECRET`으로 서명한 토큰(기본 8시간)을 주고, Next는 이를 httpOnly·SameSite=Strict 쿠키에 담아 HUB 요청에 Bearer로 붙이고, 화면마다 `GET /v1/auth/me`로 세션을 확인한다. 요청마다 계정 상태·역할·비밀번호 변경 시각을 다시 확인하므로, 비활성화·역할 회수·비밀번호 변경은 즉시 기존 세션을 끝낸다. 같은 아이디로 15분에 5번 틀리면 잠시 막는다(API 프로세스 메모리 기준).
 - **측정:** HUB 프롬프트는 아직 측정에 전달되지 않는다. 전달 방식(측정 요청에 프롬프트를 담아 보내기, 또는 수집 서버가 HUB에서 받아 가기)이 정해지면 `prompt_id`와 버전을 고정해 넘긴다. 받아 가는 방식이면 수집 서버용 인증을 따로 둔다.
@@ -62,20 +63,42 @@ python -X utf8 back/hub_storage/manage.py revoke-admin   # 최상위 역할 회�
 
 로그인은 사이드바 계정 영역의 로그인 아이콘이나 `/ko/login`에서 한다. API: `POST /v1/auth/login`, `GET /v1/auth/me`, `GET|POST /v1/hub/global-prompts`, `GET /v1/hub/global-prompts/options`, `GET|PUT /v1/hub/global-prompts/{id}`, `POST /v1/hub/global-prompts/{id}/archive|restore`. 브라우저는 BFF를 직접 부르지 않고 Next의 `/api/hub/*`를 거친다. 로컬 모드에서 GET이 아닌 요청이 통과하는 곳은 여기뿐이다.
 
-## 외부 조회 경계
+## 외부 API (2026-10-28)
+
+현재 저장된 프롬프트와 그 수집·가공에 필요한 값을 API 키를 가진 외부 호출자에게 읽기 전용으로 준다. 가공 결과(지표·판정·이전 회차 분석), 회차·측정 작업 원장, GA4 속성, 답변·인용 원문은 주지 않는다. 앱은 `back/ext/app.py`, 구조·범위·변경 감지 규칙은 [정본 문서 `#ext`](../../docs/architecture/hmg-geo-hub-architecture.html#ext)에 있다.
+
+- **저장(`005_external_api`):** 프로젝트·프롬프트의 정의가 넓어졌다(커스텀 필드·값, website 측정 단위와 등록 원문 추적 URL, global 카탈로그 소속, 생애 상태). 기준값 17종은 `catalog.reference_set`·`reference_item`에 종류별 set으로 쌓인다. 모든 기록은 `catalog.change_seq` 순번을 받는다. 가져오기 실행은 `catalog.sync_run`에 남는다.
+- **범위:** 외부 API는 `hmg_ext_api`(`.env.ext-api.local`의 `HGH_EXT_DB_URL`)로만 접속하고 `ext` 스키마 뷰만 읽는다. 요청마다 키의 sha256을 트랜잭션 설정 `hgh.key_hash`에 넣으면 뷰가 그 호출자에게 허용·승인된 것만 보인다.
+- **Gold 가져오기 안전장치:** Gold는 표마다 따로 다시 적재되므로, 섞인 읽기(데이터 버전 역행, 코드 없는 키, 빌드 행 수 불일치, 코드표로 풀리지 않는 값)는 아무것도 기록하지 않고 거부한다. Gold에서 사라진 Gold 출처 항목은 30분 이상 떨어진 두 번의 성공 실행이 모두 못 찾을 때만 `removed`가 된다. 한 번에 많이 지우거나(> max(20, 1%)) 많이 새로 쓰면(> 5%) `--allow-removals N`·`--expect-mass-change` 없이는 거부한다. 2026-10-28 첫 실행은 모든 정의에 새 버전이 한 번 생겨 `--expect-mass-change`로 돌렸다. 가져오기는 주기 실행이 필요하고 Gold 재적재 시간을 피해야 한다.
+
+```bash
+m() { HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py "$@"; }   # Windows는 HGH_HUB_NATIVE 없이 같은 명령
+m init                                   # 005_external_api, hmg_ext_api 계정, .env.ext-api.local
+m sync-gold-catalog                      # 정의와 기준값 가져오기 (거부되면 사유를 보고 플래그 판단)
+m publish-project <project_id> [projects] [prompts]     # 공개 승인 (기본 둘 다) · unpublish-project
+m publish-reference <family ...|all>     # 기준값 종류 공개 승인 · unpublish-reference
+m ext-client-add "<호출자 이름>"          # client_id 출력 · ext-client-disable / ext-client-enable
+m ext-key-issue <client_id> [--days N]   # 키를 한 번만 출력 (최대 365일, 호출자당 유효 키 2개)
+m ext-key-revoke <key_id> <사유>
+m grant-project <client_id> <project_id ...>            # 허용 · withdraw-project 로 회수(행은 남음)
+m ext-list                               # 호출자·키(해시 제외)·허용·승인 현황
+cd back && uvicorn ext.app:app --host 127.0.0.1 --port 5560 --log-config ext/logging.json   # .env.ext-api.local 필요
+```
+
+## 외부 조회 경계 (DB 직접 공개, 미개방)
 
 `hmg_data_external` 계정은 `published` 스키마의 SELECT만 가능하다. 내부 카탈로그, GA4·SEO 원본 테이블, 공개 정책, 운영 DB에는 접근할 수 없다. 모든 프로젝트는 기본 비공개다. 외부 네트워크 공개나 계정 전달은 하지 않았다.
 
-관리자는 데이터 DB에서 `publication.project_access`의 `projects`, `prompts`, `ga4`, `seo`를 **각각** 승인한다. 프로젝트 승인만으로 프롬프트나 측정 데이터가 공개되지 않는다. 승인한 범위의 최신 버전만 공개한다. 특정 소비자별 다른 범위가 필요하면 소비자별 역할/정책을 추가해야 한다. 현재 계정은 하나의 공통 승인 범위를 위한 계정이다.
+관리자는 `publication.project_access`의 `projects`, `prompts`, `ga4`, `seo`를 **각각** 승인한다(`projects`·`prompts`는 위 `publish-project` 명령, `ga4`·`seo`는 아직 명령 없이 DB 관리자가 직접). 승인을 바꾸면 트리거가 `access_seq`를 새로 받는다. 프로젝트 승인만으로 프롬프트나 측정 데이터가 공개되지 않는다. 승인한 범위의 최신 버전만 공개한다. 호출자별 범위는 외부 API(`ext`)가 맡는다. 이 계정은 하나의 공통 승인 범위를 위한 계정이고 `ext`는 읽지 못한다.
 
 GA4와 프로젝트의 관계는 `catalog.project_ga4_property`에 실제 연동이 확인된 경우에만 등록한다. 자동 추측하지 않는다. GA4와 SEO에는 아직 수집된 실측 행이 없으므로 공개 뷰도 비어 있다. GA4 `users_day`는 기간 합산하지 않고 정확한 기간 사용자는 `ga4_users_window`를 사용한다. SEO 공개 뷰는 검증 후 발행된 빌드만 사용한다.
 
-내부 API `GET /v1/hub/projects`, `/v1/hub/prompts`는 HUB 카탈로그 조회 계약이다(`limit=1..1000`, `offset>=0`, 선택적 `project_id=UUID`). 로컬 서비스용이며 외부 공개 정책을 적용하는 엔드포인트는 아니다. 외부 소비자는 `published.*` 뷰를 사용한다. 기존 BFF `/v1/screens/*`와 Gold 조회 계약은 보존한다. 현재 GEO 화면의 측정 및 원천 카탈로그는 계속 Gold에서 읽는다.
+내부 API `GET /v1/hub/projects`, `/v1/hub/prompts`는 HUB 카탈로그 조회 계약이다(`limit=1..1000`, `offset>=0`, 선택적 `project_id=UUID`). 로컬 서비스용이며 외부 공개 정책을 적용하는 엔드포인트는 아니다. 외부 호출자는 외부 API를 사용한다. 기존 BFF `/v1/screens/*`와 Gold 조회 계약은 보존한다. 현재 GEO 화면의 측정 및 원천 카탈로그는 계속 Gold에서 읽는다.
 
 `/healthz`는 Gold, 데이터 DB(`analytics`), 운영 DB(`operations`)의 실제 연결과 읽기 전용 여부를 보여준다. Next는 DB 자격 증명을 받지 않고 FastAPI만 호출한다.
 
 ## 검증
 
-`verify`는 롤백되는 트랜잭션에서 비공개/선택 공개, 외부 계정의 기본 테이블 접근 차단, 버전 불변성, 운영 설정 이력·감사 이력 보존, 잘못된 참조 차단을 확인한다. API 통합 검증은 `back/bff/tests/test_hub_storage.py`를 사용한다. 영구 테스트 사용자나 가상 측정치를 생성하지 않는다.
+`verify`는 롤백되는 트랜잭션에서 비공개/선택 공개, 외부 계정의 기본 테이블 접근 차단, 버전 불변성, 운영 설정 이력·감사 이력 보존, 잘못된 참조 차단을 확인한다. 외부 API 경계도 같은 방식으로 확인한다: 키 없음·빈 키·만료·폐기·비활성 호출자는 0행, 다른 호출자의 프로젝트와 미승인 종류는 안 보임, 내부 Gold 식별자 비노출, 쓰기 계정의 `change_seq` 지정 거부, 승인 변경 시 순번 증가, `hmg_ext_api`의 운영 DB 접속 거부. API 통합 검증은 `back/bff/tests/test_hub_storage.py`, 가져오기 규칙은 `test_hub_sync.py`, 외부 API는 `back/ext/tests/test_app.py`를 사용한다. 영구 테스트 사용자나 가상 측정치를 생성하지 않는다.
 
-마이그레이션: 데이터 DB `002_data_catalog_publication`, `003_published_dimensions`, `004_hub_prompt_editing`, 운영 DB `001_operations`, `002_hub_login`. 기존 데이터 DB `001_gold_ga4_seo`는 변경하지 않았다.
+마이그레이션: 데이터 DB `002_data_catalog_publication`, `003_published_dimensions`, `004_hub_prompt_editing`, `005_external_api`, 운영 DB `001_operations`, `002_hub_login`. 기존 데이터 DB `001_gold_ga4_seo`는 변경하지 않았다.

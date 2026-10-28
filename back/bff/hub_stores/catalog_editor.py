@@ -5,10 +5,12 @@ listed read-only: sync_catalog.py records the Gold definition again over any HUB
 Every change is one more catalog.prompt_version row written by the INSERT-only editor role
 (HGH_CATALOG_EDITOR_DB_URL); an archive is a revision with status=archived, so ids and history stay.
 A write names the version it was made against and a stale one is refused with 409 (the revision
-primary key is the last guard). Codes must be Gold's: the taxonomy fields take gold.dim_taxon's codes (Gold
-keeps a Global prompt's taxonomy on its catalog_entry rows, so the imported definitions carry only the funnel),
-language and markets the ones the Global catalog already uses. HUB prompts are not measured until a
-measurement hand-off exists (back/hub_storage/README.md)."""
+primary key is the last guard). Codes must be Gold's: the taxonomy fields take the codes of the taxonomy the
+last Gold import recorded (catalog.current_reference, family taxon; Gold itself is never called while the
+catalog lock is held), and depth2/depth3 must sit under the depth1/depth2 chosen with them. Language and
+markets take the ones the Global catalog already uses. A Gold prompt that left Gold is `removed` (read-only,
+like every Gold prompt). HUB prompts are not measured until a measurement hand-off exists
+(back/hub_storage/README.md)."""
 from __future__ import annotations
 
 import hashlib
@@ -24,7 +26,6 @@ import asyncpg
 from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from bff.gold_reader import db as gold_db
 from bff.hub_stores import analytics_db, operations_db
 from bff.hub_stores.hub_auth import Principal
 
@@ -36,17 +37,21 @@ LABELS = {"funnel": "funnel", "brandPresence": "brand_presence", "listType": "li
 # gold.dim_taxon axis -> API field (Gold has no depth4 axis)
 TAXON_AXES = {"funnel": "funnel", "presence": "brandPresence", "list_type": "listType",
               "depth1": "depth1", "depth2": "depth2", "depth3": "depth3", "depth4": "depth4"}
-TAXON_SQL = "SELECT axis,code FROM gold.dim_taxon WHERE code<>''"
+# The taxonomy as the last Gold import recorded it; path = the ancestor codes (depth3: depth1, depth2).
+TAXON_SQL = """SELECT definition->>'axis' AS axis,definition->>'code' AS code,definition->'path' AS path
+    FROM catalog.current_reference WHERE family='taxon'"""
 TEXT_MAX = 2000
 CODE_MAX = 200
 REGIONS_MAX = 300
 LIST_LIMIT_MAX = 200
 HISTORY_LIMIT = 100
 CATALOG_LOCK = 617427413   # the Gold import's lock (sync_catalog.py): one catalog writer at a time
+LOCK_TIMEOUT = "5s"        # a write waits this long for a running Gold import, then 503
+STATUSES = ("active", "archived", "removed")
 CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 
 GLOBAL_PROJECT_SQL = """SELECT project_id FROM catalog.current_project
-    WHERE definition->>'surface'='1' AND definition->>'is_root'='true'"""
+    WHERE definition->>'surface'='1' AND definition->>'is_root'='true' AND coalesce(definition->>'status','active')<>'removed'"""
 CURRENT_SQL = """SELECT p.prompt_id,p.project_id,p.origin,p.registered_at,v.version,v.text,v.definition,v.sha256,v.recorded_at
     FROM catalog.prompt p JOIN LATERAL (SELECT version,text,definition,sha256,recorded_at FROM catalog.prompt_version
     WHERE prompt_id=p.prompt_id ORDER BY version DESC LIMIT 1) v ON true WHERE p.prompt_id=$1"""
@@ -65,7 +70,8 @@ DUPLICATE_SQL = """SELECT prompt_id FROM catalog.current_prompt WHERE project_id
     AND ($4::uuid IS NULL OR prompt_id<>$4) LIMIT 1"""
 COUNTS_SQL = """SELECT count(*)::int AS total,count(*) FILTER (WHERE origin='hub')::int AS hub,
     count(*) FILTER (WHERE origin='gold')::int AS gold,
-    count(*) FILTER (WHERE coalesce(definition->>'status','active')='archived')::int AS archived
+    count(*) FILTER (WHERE coalesce(definition->>'status','active')='archived')::int AS archived,
+    count(*) FILTER (WHERE coalesce(definition->>'status','active')='removed')::int AS removed
     FROM catalog.current_prompt WHERE project_id=$1"""
 
 
@@ -154,6 +160,26 @@ def check_vocabulary(definition: dict, vocabulary: dict[str, list[dict]]) -> Non
         raise refused(422, "unknown_code", "Use Gold's taxonomy codes and the languages and markets the Global catalog uses", {"fields": unknown})
 
 
+def check_taxonomy_path(definition: dict, taxa: list[tuple[str, str, tuple]]) -> None:
+    """depth2 must sit under the chosen depth1, depth3 under depth1/depth2: the same code exists under
+    several parents (RAV4 under 9 depth2 codes). No recorded taxonomy yet: nothing to check against."""
+    known = {(field, path, code) for field, code, path in taxa}
+    if not known:
+        return
+    chain = []
+    for n in (1, 2, 3):
+        code = definition.get(f"depth{n}")
+        if code is None:
+            deeper = [f"depth{m}" for m in range(n + 1, 4) if definition.get(f"depth{m}") is not None]
+            if deeper:
+                raise refused(422, "invalid_taxonomy", f"Choose depth{n} before {deeper[0]}", {"fields": deeper})
+            return
+        if (f"depth{n}", tuple(chain), code) not in known:
+            raise refused(422, "invalid_taxonomy", f"depth{n} {code} is not under {' / '.join(chain) or 'the top level'}",
+                          {"fields": [f"depth{n}"]})
+        chain.append(code)
+
+
 # ═══ stored rows → views ═════════════════════════════════════════════════════════════════════════════════
 
 def encoded(value) -> str:
@@ -171,7 +197,8 @@ def definition_of(row) -> dict:
 
 
 def status_of(definition: dict) -> str:
-    return "archived" if definition.get("status") == "archived" else "active"
+    status = definition.get("status")
+    return status if status in ("archived", "removed") else "active"
 
 
 def snapshot(text: str, definition: dict) -> dict:
@@ -200,7 +227,7 @@ def history(rows: list) -> list[dict]:
         else:
             changes = {k: {"old": previous[k], "new": v} for k, v in current.items() if k != "status" and previous[k] != v}
             status = current["status"]
-            event = "updated" if previous["status"] == status else "archived" if status == "archived" else "restored"
+            event = "updated" if previous["status"] == status else status if status in ("archived", "removed") else "restored"
         events.append({"version": r["version"], "event": event, "changes": changes, "recordedAt": r["recorded_at"],
                        "recordedBy": str(r["recorded_by"]) if r["recorded_by"] else None})
         previous = current
@@ -234,7 +261,11 @@ async def writing():
     if _pool is None:
         raise HTTPException(503, "HUB catalog editing is not configured (HGH_CATALOG_EDITOR_DB_URL)")
     async with _pool.acquire() as conn, conn.transaction():
-        await conn.execute("SELECT pg_advisory_xact_lock($1)", CATALOG_LOCK)
+        await conn.execute(f"SET LOCAL lock_timeout='{LOCK_TIMEOUT}'")
+        try:
+            await conn.execute("SELECT pg_advisory_xact_lock($1)", CATALOG_LOCK)
+        except asyncpg.LockNotAvailableError:
+            raise HTTPException(503, "The Gold import is writing the catalog; try again shortly") from None
         yield conn
 
 
@@ -254,26 +285,27 @@ async def global_project(conn) -> UUID:
     return rows[0]["project_id"]
 
 
-async def taxonomy() -> list[tuple[str, str]]:
-    """(API field, code) for every gold.dim_taxon code; none when Gold cannot be read (then only the codes
-    the HUB catalog already uses are offered and accepted)."""
-    try:
-        async with gold_db.connection() as conn:
-            rows = await conn.fetch(TAXON_SQL)
-    except (RuntimeError, OSError, asyncpg.PostgresError, TimeoutError) as e:
-        log.warning("Gold taxonomy unavailable for Global prompt codes: %s", type(e).__name__)
-        return []
-    return [(TAXON_AXES[r["axis"]], r["code"]) for r in rows if r["axis"] in TAXON_AXES]
+async def taxonomy(conn) -> list[tuple[str, str, tuple]]:
+    """(API field, code, ancestor codes) for every taxon the last Gold import recorded; none before the first
+    import (then only the codes the HUB catalog already uses are offered and accepted)."""
+    out = []
+    for r in await conn.fetch(TAXON_SQL):
+        if r["axis"] in TAXON_AXES and r["code"]:
+            path = json.loads(r["path"]) if isinstance(r["path"], str) else (r["path"] or [])
+            out.append((TAXON_AXES[r["axis"]], r["code"], tuple(path)))
+    if not out:
+        log.warning("No recorded taxonomy for Global prompt codes; run manage.py sync-gold-catalog")
+    return out
 
 
-async def vocabulary(conn, project: UUID) -> dict[str, list[dict]]:
+async def vocabulary(conn, project: UUID, taxa: list[tuple[str, str, tuple]] | None = None) -> dict[str, list[dict]]:
     """Codes per field with their use in the Global catalog: language and markets as used, the taxonomy
     fields as Gold defines them (an unused code counts 0)."""
     out: dict[str, list[dict]] = {api: [] for api in ("language", "regions", *LABELS)}
     for r in await conn.fetch(VOCABULARY_SQL, project):
         value = r["value"].lower() if r["key"] == "language" else normalize_region(r["value"]) if r["key"] == "regions" else r["value"]
         out[r["key"]].append({"value": value, "count": r["n"]})
-    for field, code in await taxonomy():
+    for field, code, _ in taxa if taxa is not None else await taxonomy(conn):
         out[field].append({"value": code, "count": 0})
     for key, values in out.items():
         merged: dict[str, int] = {}
@@ -305,8 +337,8 @@ def list_filters(q: dict, project: UUID) -> tuple[str, list]:
         conds.append(sql.replace("$?", f"${len(args)}"))
 
     status = q.get("status") or "active"
-    if status not in ("active", "archived", "all"):
-        raise refused(422, "invalid_value", "status must be active, archived or all")
+    if status not in (*STATUSES, "all"):
+        raise refused(422, "invalid_value", "status must be active, archived, removed or all")
     if status != "all":
         bind("coalesce(p.definition->>'status','active')=$?", status)
     origin = q.get("origin") or "all"
@@ -394,6 +426,12 @@ async def editable(conn, prompt_id: UUID, project: UUID, expected: int):
     return row
 
 
+async def check_codes(conn, project: UUID, definition: dict) -> None:
+    taxa = await taxonomy(conn)
+    check_vocabulary(definition, await vocabulary(conn, project, taxa))
+    check_taxonomy_path(definition, taxa)
+
+
 async def record(conn, prompt_id: UUID, version: int, text: str, definition: dict, actor: Principal) -> None:
     try:
         await conn.execute("""INSERT INTO catalog.prompt_version(prompt_id,version,text,definition,sha256,recorded_by)
@@ -407,7 +445,7 @@ async def create(body: PromptFields, actor: Principal) -> dict:
     definition["status"] = "active"
     async with writing() as conn:
         project = await global_project(conn)
-        check_vocabulary(definition, await vocabulary(conn, project))
+        await check_codes(conn, project, definition)
         await refuse_duplicate(conn, project, text, definition, None)
         prompt_id = uuid4()
         await conn.execute("INSERT INTO catalog.prompt(prompt_id,project_id,origin) VALUES($1,$2,'hub')", prompt_id, project)
@@ -426,7 +464,7 @@ async def update(prompt_id: UUID, body: PromptWrite, actor: Principal) -> dict:
             raise refused(409, "archived", "Restore the prompt before editing it")
         if digest(text, definition) == row["sha256"]:
             return {"item": item_view(row), "changed": False}
-        check_vocabulary(definition, await vocabulary(conn, project))
+        await check_codes(conn, project, definition)
         await refuse_duplicate(conn, project, text, definition, prompt_id)
         await record(conn, prompt_id, row["version"] + 1, text, definition, actor)
         row = await conn.fetchrow(CURRENT_SQL, prompt_id)

@@ -131,7 +131,7 @@ function Manager({ initial, options, loginHref }: { initial: HubPromptPage; opti
       <RnCard busy={busy} aria-label={t("listLabel")}>
         <RnCardHeader
           title={t("listTitle")}
-          hint={t("counts", { total: fmt(data.counts.total), hub: fmt(data.counts.hub), gold: fmt(data.counts.gold), archived: fmt(data.counts.archived) })}
+          hint={t("counts", { total: fmt(data.counts.total), hub: fmt(data.counts.hub), gold: fmt(data.counts.gold), archived: fmt(data.counts.archived), removed: fmt(data.counts.removed ?? 0) })}
         />
         <div className="flex flex-wrap items-center gap-2.5 px-6 pb-3">
           <RnSearchField className="w-[280px] max-w-full" value={search} onChange={setSearch} placeholder={t("searchPlaceholder")} label={t("searchLabel")} />
@@ -142,6 +142,7 @@ function Manager({ initial, options, loginHref }: { initial: HubPromptPage; opti
             items={[
               { value: "active", label: t("status.active") },
               { value: "archived", label: t("status.archived") },
+              { value: "removed", label: t("status.removed") },
               { value: "all", label: t("all") },
             ]}
           />
@@ -203,7 +204,7 @@ function Manager({ initial, options, loginHref }: { initial: HubPromptPage; opti
                       {p.funnel ? <div className="mt-1 text-rn-muted">{p.funnel}</div> : null}
                     </td>
                     <td className="border-b border-rn-line px-3 py-3 text-rn-12">
-                      <span className={p.status === "archived" ? "text-rn-muted" : "font-semibold text-rn-ink"}>{t(`status.${p.status}`)}</span>
+                      <span className={p.status !== "active" ? "text-rn-muted" : "font-semibold text-rn-ink"}>{t(`status.${p.status}`)}</span>
                     </td>
                     <td className="border-b border-rn-line py-3 pr-6 pl-3 text-rn-12 text-rn-muted tabular-nums">
                       v{p.version} · {formatTime(p.recordedAt, locale)}
@@ -321,10 +322,10 @@ function Detail({
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center gap-2 text-rn-12 text-rn-muted">
         <OriginTag origin={item.origin} />
-        <span className={item.status === "archived" ? undefined : "font-semibold text-rn-ink"}>{t(`status.${item.status}`)}</span>
+        <span className={item.status !== "active" ? undefined : "font-semibold text-rn-ink"}>{t(`status.${item.status}`)}</span>
         <span className="tabular-nums">· v{item.version}</span>
       </div>
-      {!item.editable ? <RnNote>{t("goldReadOnly")}</RnNote> : item.status === "archived" ? <RnNote>{t("archivedNote")}</RnNote> : null}
+      {item.status === "removed" ? <RnNote>{t("removedNote")}</RnNote> : !item.editable ? <RnNote>{t("goldReadOnly")}</RnNote> : item.status === "archived" ? <RnNote>{t("archivedNote")}</RnNote> : null}
       {conflict ? <ErrorNote code="version_conflict" loginHref={loginHref} /> : null}
       <Editor
         key={`${item.id}:${item.version}`}

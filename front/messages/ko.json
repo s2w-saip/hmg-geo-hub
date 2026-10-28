@@ -5319,7 +5319,7 @@
     "detailTitle": "글로벌 프롬프트",
     "listTitle": "프롬프트 목록",
     "listLabel": "글로벌 프롬프트 목록",
-    "counts": "전체 {total} · HUB {hub} · Gold {gold} · 보관 {archived}",
+    "counts": "전체 {total} · HUB {hub} · Gold {gold} · 보관 {archived} · Gold에서 빠짐 {removed}",
     "searchLabel": "본문 검색",
     "searchPlaceholder": "본문 검색",
     "statusLabel": "상태",
@@ -5327,7 +5327,8 @@
     "all": "전체",
     "status": {
       "active": "사용 중",
-      "archived": "보관됨"
+      "archived": "보관됨",
+      "removed": "Gold에서 빠짐"
     },
     "origin": {
       "hub": "HUB",
@@ -5353,6 +5354,7 @@
     "loginRequired": "글로벌 프롬프트 편집은 HUB 최상위 관리자 로그인이 필요합니다.",
     "goldReadOnly": "Gold에서 가져온 프롬프트는 여기서 고칠 수 없습니다. 고쳐도 다음 Gold 동기화가 원래 정의로 되돌립니다.",
     "archivedNote": "보관된 프롬프트입니다. 고치려면 먼저 복원하세요.",
+    "removedNote": "Gold에서 빠진 프롬프트입니다. Gold에 다시 생기면 다음 동기화가 사용 중으로 되돌립니다.",
     "regionsHint": "쉼표로 구분합니다 (예: KR, US, x:WW).",
     "historyTitle": "변경 이력",
     "goldSync": "Gold 동기화",
@@ -5361,6 +5363,7 @@
       "created": "생성",
       "updated": "수정",
       "archived": "보관",
+      "removed": "Gold에서 빠짐",
       "restored": "복원"
     },
     "field": {
