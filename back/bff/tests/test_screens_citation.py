@@ -9,7 +9,6 @@ try:
     from starlette.datastructures import QueryParams
     from bff.screens import citation as C
     from bff.screens import citation_model as M
-    from bff.screens.citation_geo import geo_country_for_url, url_keys
 except ModuleNotFoundError as exc:
     raise unittest.SkipTest("Run inside the BFF image (bff.tests.test_screens_citation)") from exc
 
@@ -230,15 +229,6 @@ class UrlRules(unittest.TestCase):
         self.assertEqual(C.citation_route_query({f"cf_{field}": "봄", "cf_y": "1"}, "project", "p1", [field]),
                          f"cf_{field}=%EB%B4%84&projectId=p1")
 
-    def test_url_keys(self):
-        self.assertEqual(url_keys("https://WWW.Hyundai.com/KR/ko?country=nz"), ["hyundai.com?country=NZ", "hyundai.com/kr", "hyundai.com"])
-        self.assertEqual(url_keys("https://www.kia.com/./us/../kr/"), ["kia.com/kr", "kia.com"])
-        self.assertEqual(url_keys("https:\\\\www.kia.com\\us"), ["kia.com/us", "kia.com"])
-        self.assertIsNone(url_keys("not a url"))
-        self.assertIsNone(url_keys("https://"))
-        self.assertEqual(geo_country_for_url("https://www.hyundai.com/kr/ko/e"), "South Korea")
-        self.assertIsNone(geo_country_for_url("https://www.hyundai.com/"))
-
     def test_competitor_url_semantics(self):
         # the client reads the first ?competitor= value; the server read joins every value
         sp = {"competitor": ["a.com~b.com", "c.com"]}
@@ -247,6 +237,15 @@ class UrlRules(unittest.TestCase):
 
 
 class Model(unittest.TestCase):
+    def test_domain_url_country_is_golds(self):
+        # The site country of a cited URL is the one the Gold read sends (dim_url.owner_key -> dim_owned_base.geo_code);
+        # the screen keeps no URL -> country table of its own, so a URL Gold leaves without a country shows none.
+        urls = [{"url": "https://www.hyundai.com/kr/ko/e", "title": "a", "citations": 3, "engines": ["chatgpt"], "country": "KR"},
+                {"url": "https://www.hyundai.com/in/en", "title": "b", "citations": 2, "engines": ["gemini"], "country": None},
+                {"url": "https://www.kia.com/ie", "title": "c", "citations": 1, "engines": []}]
+        out = M.to_domain_drilldown({"urls": urls, "prompts": []})
+        self.assertEqual([u["country"] for u in out["urls"]], ["KR", None, None])
+
     def test_status_basis(self):
         prev = {"totals": {"total": 100, "byCategory": {"Official (HMG)": 10}}, "asOf": "2026-09-14"}
         self.assertEqual(M.delta_basis({"delta": 1.5, "basisDate": "2026-09-14"}, None),

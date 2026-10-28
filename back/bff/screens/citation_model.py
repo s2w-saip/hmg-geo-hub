@@ -24,7 +24,6 @@ from bff.screens._convert import as_of_date, pct1_or_zero, round1, whole_suppres
 from bff.screens._js import is_num, js_round, js_str
 from bff.screens._query import CITATION_CATEGORY_SLUGS, js_trim
 from bff.screens._sort import code_unit_compare, code_unit_key, locale_compare, sort_by
-from bff.screens.citation_geo import geo_country_for_url
 
 # ── constants (taxonomy, citations.ts) ───────────────────────────────────────
 
@@ -297,7 +296,7 @@ def to_domain_drilldown(d: dict) -> dict:
     """toDomainDrilldown: URL list (count desc, then url) + prompt list (citations desc), cap totals when cut."""
     urls = [{"url": u["url"], "title": u.get("title") or display_citation_url(u["url"]), "count": u["citations"],
              "aiProvider": ", ".join(provider_label(e) for e in u["engines"]), "promptText": _nn(u.get("prompt_text"), ""),
-             "country": geo_country_for_url(u["url"])} for u in d["urls"]]
+             "country": u.get("country")} for u in d["urls"]]
     urls = sort_by(urls, lambda a, b: (b["count"] - a["count"]) or code_unit_compare(a["url"], b["url"]))
     prompts = []
     for p in d["prompts"]:

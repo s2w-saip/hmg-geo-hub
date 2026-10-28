@@ -16,6 +16,15 @@ Changes since recording (additive, each derived only from functions pinned by ot
   compute in the browser, now built by `mention.period_slots` from `period_chip`/`period_caption`, which the
   `ov` goldens pin to the old TypeScript).
 
+Deliberate changes (what the screen shows changed by decision):
+- 2026-10-28 citation URL country (the user's decision: Gold, not the legacy hard-coded catalog). The domain
+  detail URL country is Gold's — the reader sends `urls[].country` = dim_url.owner_key → dim_owned_base.geo_code
+  (contract DetailUrl.country) and the screen passes it on; the front web-geo catalog port
+  (`citation_geo.py`, `citation_geo_data.py`) and its `citation/fn-geo-country` case are gone.
+  `citation/route-detail-live`: the tape's URLs carry the country Gold gives them today, the output the same.
+  `citation/route-detail-fix`, `citation/fn-to-domain-drilldown`: the fixture URLs carry the code of the country
+  the old case named ("not a url" none), the output the same.
+
 ## Format
 
 Each file is `<family>/<case>.json.gz` (compact JSON, gzip). Two kinds:
@@ -40,7 +49,7 @@ lists in order.
 | `ov` | 120 | summary cards, trends, period compare and labels, competitor rows (library functions) |
 | `overview` | 375 | `/dashboard`, `/website`, `/renewal/dashboard` screens |
 | `mention` | 475 | mention analysis pages, drilldowns, renewal mention |
-| `citation` | 69 | citation analysis pages, sub pages, domain routes, renewal citation |
+| `citation` | 68 | citation analysis pages, sub pages, domain routes, renewal citation |
 | `acr` | 133 | ACR pages (standard, website/project, renewal) |
 | `website-prompts` | 2 | `/website/prompts` query derivation and list key |
 

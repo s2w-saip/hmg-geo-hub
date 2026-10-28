@@ -69,6 +69,15 @@ class GoldLiveReads(unittest.TestCase):
             if not result["meta"]["available"]:
                 self.assertTrue(all(v is None for v in result["data"]["metrics"].values()))
 
+    def test_domain_detail_url_country(self):
+        # DetailUrl.country: the owned base's country code for an own official URL, else null (Gold dim_owned_base.geo_code)
+        urls = self.read("/v1/citations/domains/hyundai.com?surface=global&urls_limit=100")["data"]["urls"]
+        self.assertTrue(urls)
+        self.assertTrue(all("country" in u for u in urls))
+        codes = {u["country"] for u in urls} - {None}
+        self.assertTrue(codes)
+        self.assertTrue(all(len(c) == 2 and c.isupper() for c in codes), sorted(codes))
+
     def test_primary_contracts(self):
         paths = ("filters/options", "filters/dates", "kpi/summary", "kpi/engines", "mentions/brands",
                  "trend", "citations/domains", "citations/sources", "funnel/acr", "prompts", "answers",

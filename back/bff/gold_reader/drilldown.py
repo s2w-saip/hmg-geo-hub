@@ -128,9 +128,12 @@ async def domain(ctx: Context, skey: str) -> dict:
         raise HTTPException(404, "Source not present in Gold")
     b = SQL()
     where = citation_predicate(ctx, b) + f" AND f.source_key={b.bind(source['source_key'])}"
-    rows = await ctx.conn.fetch(f"""SELECT u.url,u.title,count(*)::int AS citations,array_agg(DISTINCT e.code ORDER BY e.code) AS engines
+    # country: the URL's owned base (dim_url.owner_key) country, null for a URL that is no own base
+    rows = await ctx.conn.fetch(f"""SELECT u.url,u.title,count(*)::int AS citations,array_agg(DISTINCT e.code ORDER BY e.code) AS engines,
+        nullif(o.geo_code,'') AS country
         FROM gold.citation_fact f JOIN gold.dim_url u ON u.url_key=f.url_key JOIN gold.dim_engine e ON e.engine_key=f.engine_key
-        WHERE {where} GROUP BY u.url,u.title ORDER BY citations DESC,u.url""", *b.args)
+        LEFT JOIN gold.dim_owned_base o ON o.owner_key=u.owner_key
+        WHERE {where} GROUP BY u.url,u.title,o.geo_code ORDER BY citations DESC,u.url""", *b.args)
     own = f"f.owner_key IN (SELECT owner_key FROM gold.dim_owned_base WHERE (brand_bit & {b.bind(ctx.bits)})<>0)" if ctx.sf == 1 else "f.loc_owned"
     totals = await ctx.conn.fetchrow(f"""SELECT count(*)::int AS citations,count(*) FILTER(WHERE {own})::int AS owned
         FROM gold.citation_fact f WHERE {where}""", *b.args)
