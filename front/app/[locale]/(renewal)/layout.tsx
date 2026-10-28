@@ -7,6 +7,7 @@ import { Toaster } from "sonner";
 import { resolvePageTitleRef } from "@/lib/nav/page-title";
 import { perfNoCacheActive } from "@/lib/perf/nocache-probe";
 import { getSession } from "@/lib/auth/session";
+import { localReadOnly } from "@/lib/local-readonly";
 import { canAccessRoute, isGuardBypass, visibleRoutes } from "@/lib/auth/route-policy";
 import { BetaNoticeDialog } from "@/components/dash/beta-notice";
 import { RnSidebar } from "./_shell/rn-sidebar";
@@ -49,10 +50,10 @@ export default async function RenewalLayout({ children, params }: { children: Re
 
   return (
     <>
-      {/* sidebar 232px (208px up to 1279px, mockup `.sx`); below lg a slim menu bar on top */}
+      {/* sidebar 232px (208px up to 1279px, design-rules.html '틀'); below lg a slim menu bar on top */}
       <RnNavPendingProvider>
         <div className="grid h-screen grid-cols-1 grid-rows-[auto_minmax(0,1fr)] bg-rn-canvas text-rn-ink lg:grid-cols-[208px_minmax(0,1fr)] lg:grid-rows-1 xl:grid-cols-[232px_minmax(0,1fr)]">
-          <RnSidebar routes={visibleRoutes(session.user.role, menuGroups)} user={{ email: session.user.email, role: session.user.role }} locale={locale} />
+          <RnSidebar routes={visibleRoutes(session.user.role, menuGroups)} user={{ email: session.user.email, role: session.user.role, local: localReadOnly() }} locale={locale} />
           {/* the page frame fills this; content that is not in a frame (error, loading) scrolls here.
               A menu click shows its progress here at once (nav-pending.tsx). */}
           <RnNavMain>{children}</RnNavMain>
