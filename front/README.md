@@ -104,7 +104,7 @@ npm run db:drift                                     # schema.ts ↔ DB 일치 �
 
 psql "$DATABASE_URL" -f scripts/db/lockdown.sql     # anon/PostgREST 데이터 접근 차단
 npx tsx --env-file=.env.local scripts/db/seed.ts    # 초기 사용자/역할 시드(데모)
-npm run dev                                          # http://localhost:3000 → /ko/dashboard
+npm run dev                                          # http://127.0.0.1:3333 → /ko/dashboard
 ```
 
 > ⚠️ **`npm run db:migrate`(drizzle-kit migrate)는 차단돼 있다.** 이 리포는 0021 부터

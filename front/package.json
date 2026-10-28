@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev --turbopack --hostname 127.0.0.1 --port 3333",
     "build": "next build",
-    "start": "next start",
+    "start": "next start --hostname 127.0.0.1 --port 3333",
     "lint": "next lint --dir app --dir components --dir hooks --dir i18n --dir lib --dir utils --file middleware.ts",
     "test": "vitest run",
     "check:strings": "node scripts/check-hardcoded-strings.mjs",

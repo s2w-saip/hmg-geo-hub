@@ -1,4 +1,5 @@
-"""Provision the HUB-owned GA4/SEO database. Requires Python 3.12 and Docker Compose."""
+"""Provision the HUB-owned GA4/SEO database. Requires Python 3.12 and Docker Compose, or a local PostgreSQL
+with HGH_HUB_NATIVE=1 (native mode below)."""
 from __future__ import annotations
 
 import argparse
@@ -25,6 +26,13 @@ OWNER = "hmg_analytics_owner"
 READER = "hmg_analytics_reader"
 WRITER = "hmg_analytics_writer"
 MIGRATION = "001_gold_ga4_seo"
+# Native mode (macOS without Docker, 2026-10-28): HGH_HUB_NATIVE=1 runs each store as a local PostgreSQL server
+# in .local/pg/<store> instead of a container: TCP on 127.0.0.1 only (scram), and the admin tools on an
+# owner-only Unix socket (trust there, as `docker exec psql` inside the container). Binaries: HGH_PG_BIN,
+# else next to this Python (a micromamba env with postgresql), else PATH.
+NATIVE = os.environ.get("HGH_HUB_NATIVE") == "1"
+NATIVE_ROOT = ROOT / ".local" / "pg"
+_BIN = Path(os.environ["HGH_PG_BIN"]) if os.environ.get("HGH_PG_BIN") else Path(sys.executable).parent
 
 
 def env_file(path: Path) -> dict[str, str]:
@@ -64,7 +72,48 @@ def secure_write(path: Path, content: str):
         path.chmod(0o600)
 
 
+def pg_tool(name: str) -> str:
+    return str(_BIN / name) if (_BIN / name).exists() else name
+
+
+def native_psql(store: str, port: int, role: str, database: str) -> list[str]:
+    return [pg_tool("psql"), "-X", "-q", "-A", "-t", "-v", "ON_ERROR_STOP=1", "-h", str(NATIVE_ROOT / f"{store}-socket"),
+            "-p", str(port), "-U", role, "-d", database]
+
+
+def native_exists(store: str) -> bool:
+    return (NATIVE_ROOT / store / "PG_VERSION").exists()
+
+
+def native_start(store: str, port: int, admin: str, database: str, password: str):
+    """Start the store's local server (initdb first when new) and create its database if missing."""
+    data, socket = NATIVE_ROOT / store, NATIVE_ROOT / f"{store}-socket"
+    for path in (NATIVE_ROOT, socket):
+        path.mkdir(parents=True, exist_ok=True)
+        path.chmod(0o700)
+    if not native_exists(store):
+        secret = NATIVE_ROOT / f".{store}-initdb"
+        secure_write(secret, password + "\n")
+        try:
+            run([pg_tool("initdb"), "-D", str(data), "-U", admin, f"--pwfile={secret}", "--auth-local=trust",
+                 "--auth-host=scram-sha-256", "-E", "UTF8", "--locale=C"])
+        finally:
+            secret.unlink(missing_ok=True)
+    if run([pg_tool("pg_ctl"), "-D", str(data), "status"], check=False).returncode != 0:
+        run([pg_tool("pg_ctl"), "-D", str(data), "-l", str(NATIVE_ROOT / f"{store}.log"), "-w", "-o",
+             f"-p {port} -k '{socket}' -c listen_addresses=127.0.0.1 -c unix_socket_permissions=0700", "start"])
+    found = run(native_psql(store, port, admin, "postgres"), text=f"SELECT 1 FROM pg_database WHERE datname={literal(database)};")
+    if found.stdout.strip() != "1":
+        run(native_psql(store, port, admin, "postgres"), text=f"CREATE DATABASE {database} OWNER {admin};")
+
+
+def port_of(path: Path, key: str) -> int:
+    return int(env_file(path)[key])
+
+
 def psql(sql: str, role: str = ADMIN, *, check: bool = True) -> subprocess.CompletedProcess:
+    if NATIVE:
+        return run(native_psql("analytics", port_of(SECRET, "HGH_ANALYTICS_DB_PORT"), role, DB), text=sql, check=check)
     return run(["docker", "exec", "-i", CONTAINER, "psql", "-X", "-q", "-A", "-t",
                 "-v", "ON_ERROR_STOP=1", "-U", role, "-d", DB], text=sql, check=check)
 
@@ -75,8 +124,8 @@ def literal(value: str) -> str:
 
 def credentials(port: int) -> dict[str, str]:
     if not SECRET.exists():
-        volume = run(["docker", "volume", "inspect", "hgh-analytics-pgdata"], check=False)
-        if volume.returncode == 0:
+        stored = native_exists("analytics") if NATIVE else run(["docker", "volume", "inspect", "hgh-analytics-pgdata"], check=False).returncode == 0
+        if stored:
             raise RuntimeError("An analytics volume already exists. Restore .env.analytics-db.local; no data was changed.")
         secure_write(SECRET, "\n".join((
             "# Server-only; never commit or expose through the frontend.",
@@ -90,8 +139,9 @@ def credentials(port: int) -> dict[str, str]:
     selected_port = int(values.get("HGH_ANALYTICS_DB_PORT", str(port)))
     if not 1024 <= selected_port <= 65535:
         raise RuntimeError("Invalid analytics DB port")
-    secure_write(ROOT / ".env.analytics.local", "# Reader connection for a service on hgh-analytics-network.\n"
-                 f"HGH_ANALYTICS_DB_URL=postgresql://{READER}:{values['ANALYTICS_READER_PASSWORD']}@{CONTAINER}:5432/{DB}\n")
+    host = f"127.0.0.1:{selected_port}" if NATIVE else f"{CONTAINER}:5432"
+    secure_write(ROOT / ".env.analytics.local", "# Reader connection for a service on hgh-analytics-network (native mode: this host).\n"
+                 f"HGH_ANALYTICS_DB_URL=postgresql://{READER}:{values['ANALYTICS_READER_PASSWORD']}@{host}/{DB}\n")
     secure_write(ROOT / ".env.analytics-ingest.local", "# Writer connection for a collector on this HUB host.\n"
                  f"HGH_ANALYTICS_WRITER_DB_URL=postgresql://{WRITER}:{values['ANALYTICS_WRITER_PASSWORD']}@127.0.0.1:{selected_port}/{DB}\n")
     return values
@@ -99,6 +149,14 @@ def credentials(port: int) -> dict[str, str]:
 
 def initialize(port: int):
     values = credentials(port)
+    if NATIVE:
+        native_start("analytics", int(values["HGH_ANALYTICS_DB_PORT"]), ADMIN, DB, values["POSTGRES_PASSWORD"])
+    else:
+        start_container()
+    install(values)
+
+
+def start_container():
     existing = run(["docker", "inspect", CONTAINER], check=False)
     if existing.returncode == 0:
         labels = json.loads(existing.stdout)[0]["Config"].get("Labels") or {}
@@ -113,6 +171,9 @@ def initialize(port: int):
         time.sleep(0.5)
     else:
         raise RuntimeError("Analytics PostgreSQL did not become ready")
+
+
+def install(values: dict[str, str]):
     # No credentials are placed on process arguments or emitted to logs.
     roles = f"""
 BEGIN;
@@ -198,9 +259,13 @@ def backup(output: Path | None):
         stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
         output = ROOT / ".local" / "analytics-backups" / f"hmg_analytics-{stamp}.dump"
     output.parent.mkdir(parents=True, exist_ok=True)
+    if NATIVE:
+        dump = [pg_tool("pg_dump"), "-h", str(NATIVE_ROOT / "analytics-socket"), "-p", str(port_of(SECRET, "HGH_ANALYTICS_DB_PORT"))]
+    else:
+        dump = ["docker", "exec", CONTAINER, "pg_dump"]
     with output.open("xb") as out:
-        result = subprocess.run(["docker", "exec", CONTAINER, "pg_dump", "-U", ADMIN, "-d", DB,
-                                 "--format=custom", "--no-owner", "--no-acl"], stdout=out, stderr=subprocess.PIPE)
+        result = subprocess.run(dump + ["-U", ADMIN, "-d", DB, "--format=custom", "--no-owner", "--no-acl"],
+                                stdout=out, stderr=subprocess.PIPE)
     if result.returncode:
         raise RuntimeError(sanitized(result.stderr.decode("utf-8", errors="replace")))
     if os.name != "nt":

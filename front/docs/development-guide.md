@@ -9,7 +9,7 @@
 ## Commands
 
 ```bash
-npm run dev            # next dev → http://localhost:3000 (/ko/dashboard)
+npm run dev            # next dev → http://127.0.0.1:3333 (/ko/dashboard)
 npm run build          # production build (includes type check)
 npm run lint           # ESLint — enforces repository-boundary rule for lib/db
 npm test               # vitest run — role/scope isolation tests
