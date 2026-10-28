@@ -98,4 +98,4 @@ GA4 사전의 종류별 FK, SEO 합계 검증·빌드 불변성·이전 포인�
 백업은 `.local/analytics-backups/`에 PostgreSQL custom-format으로 생성합니다. 별도 서버 보관·정기 백업 스케줄은 아직 구성하지 않았습니다.
 복원은 관리자 역할과 스키마 owner 역할을 먼저 준비한 별도 DB에서 `pg_restore`로 수행합니다. 실행 중인 DB를 자동 삭제하거나 덮어쓰는 명령은 제공하지 않습니다.
 
-정본 SQL: [schema.sql](schema.sql), 추출기: [generate_schema.py](generate_schema.py), 분리 ERD: [ERD.md](ERD.md).
+정본 SQL: [schema.sql](schema.sql), 추출기: [generate_schema.py](generate_schema.py), ERD: [구조·ERD 정본](../../docs/architecture/hmg-geo-hub-architecture.html#erd-data).

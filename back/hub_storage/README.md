@@ -2,7 +2,7 @@
 
 두 개의 독립 PostgreSQL 컨테이너·볼륨·계정을 사용한다. 외부 Gold에는 쓰지 않는다.
 
-[분리 ERD](ERD.md) · [현재 서비스 아키텍처](../../docs/architecture/hmg-geo-hub-current.png)
+[서비스 구조·DB ERD 정본](../../docs/architecture/hmg-geo-hub-architecture.html) (운영 DB ERD `#erd-ops`, 데이터 DB ERD `#erd-data`)
 
 | 저장소 | 실제 DB / 로컬 포트 | 책임 |
 |---|---|---|

@@ -33,7 +33,7 @@ GA4·SEO 화면은 데이터 DB로 연결했고, 실제 수집기는 아직 연�
 일별 행을 더하지 않고 정확한 기간 창을 읽습니다. 서로 다른 GA4 보고서를 합산하지 않습니다.
 프로젝트 화면의 키워드·소셜 코퍼스는 공통 수집 데이터이며 프로젝트별 데이터로 가장하지 않습니다.
 
-현재 서비스 아키텍처: [PNG](docs/architecture/hmg-geo-hub-current.png) · [SVG](docs/architecture/hmg-geo-hub-current.svg) · [Mermaid 원본](docs/architecture/hmg-geo-hub-current.mmd).
+서비스 구조와 HUB DB ERD의 정본(SSOT): [docs/architecture/hmg-geo-hub-architecture.html](docs/architecture/hmg-geo-hub-architecture.html). 구조·스키마를 바꾸면 이 문서를 함께 고칩니다.
 Next.js는 화면 렌더링과 API 호출을 담당하고, FastAPI가 BFF와 데이터 조회를 담당합니다.
 FastAPI는 세 DB에 독립된 읽기 전용 연결을 사용합니다. 외부 소비자 계정은 데이터 DB의 명시 승인된 `published.*` 뷰만 조회할 수 있습니다.
 

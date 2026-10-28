@@ -1,0 +1,1611 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HMG-GEO-HUB 아키텍처</title>
+<style>
+/* Layout: one reading column (~70ch) inside a 1180px frame; figures take the full frame and scroll sideways on phones */
+:root {
+  --bg: #F3F5F7;
+  --panel: #FFFFFF;
+  --soft: #E9EEF2;
+  --fg: #17202B;
+  --muted: #586474;
+  --line: #C9D1DB;
+  --gold: #94620A;
+  --gold-bg: #FAF1DF;
+  --hub: #0B706B;
+  --hub-bg: #E2F2EF;
+  --write: #BF3A22;
+  --sans: "Pretendard", system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, "Cascadia Code", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1217; --panel: #161C23; --soft: #1C232C; --fg: #E2E7ED; --muted: #97A2B0; --line: #323B46;
+    --gold: #E0A64B; --gold-bg: #2A2418; --hub: #4FBFB6; --hub-bg: #122A29; --write: #F07B63;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1217; --panel: #161C23; --soft: #1C232C; --fg: #E2E7ED; --muted: #97A2B0; --line: #323B46;
+  --gold: #E0A64B; --gold-bg: #2A2418; --hub: #4FBFB6; --hub-bg: #122A29; --write: #F07B63;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 15px; line-height: 1.7; }
+.wrap {
+  max-width: 1180px; margin: 0 auto;
+  padding-block: 44px 80px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 56px;
+}
+.prose { max-width: 70ch; }
+h1, h2, h3 { text-wrap: balance; line-height: 1.3; margin: 0; }
+h1 { font-size: 34px; font-weight: 600; letter-spacing: -0.01em; }
+h2 { font-size: 22px; font-weight: 600; }
+h3 { font-size: 16px; font-weight: 600; }
+p { margin: 0; }
+a { color: var(--hub); }
+code, .mono { font-family: var(--mono); font-size: 0.88em; }
+code { background: var(--soft); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+
+header { display: grid; gap: 16px; }
+.route {
+  font-family: var(--mono); font-size: 12.5px; color: var(--muted);
+  display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center;
+}
+.route b { color: var(--fg); font-weight: 500; }
+.lede { font-size: 17px; max-width: 64ch; }
+.asof { font-size: 13px; color: var(--muted); }
+.ssot { border: 1px solid var(--hub); background: var(--hub-bg); border-radius: 8px; padding: 12px 16px; font-size: 14px; max-width: 86ch; }
+.ssot strong { color: var(--hub); }
+
+.facts {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0;
+  border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+}
+.facts div { padding: 14px 16px 14px 0; display: grid; gap: 2px; min-width: 0; }
+.facts div + div { padding-left: 16px; border-left: 1px solid var(--line); }
+.facts dt { font-size: 12px; color: var(--muted); letter-spacing: 0.02em; }
+.facts dd { margin: 0; font-size: 14.5px; }
+@media (max-width: 860px) {
+  .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .facts div:nth-child(3) { padding-left: 0; border-left: 0; }
+  .facts div:nth-child(n+3) { border-top: 1px solid var(--line); }
+}
+@media (max-width: 460px) {
+  .facts { grid-template-columns: minmax(0, 1fr); }
+  .facts div + div { padding-left: 0; border-left: 0; border-top: 1px solid var(--line); }
+}
+
+nav.toc { font-size: 14px; display: flex; flex-wrap: wrap; gap: 4px 18px; }
+nav.toc a { text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; }
+
+section { display: grid; gap: 18px; scroll-margin-top: 16px; }
+.sub { color: var(--muted); font-size: 14px; }
+
+figure { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; display: grid; }
+.scroll { overflow-x: auto; padding: 16px 16px 8px; }
+figure svg { display: block; width: 100%; min-width: 920px; height: auto; }
+figcaption { border-top: 1px solid var(--line); padding: 12px 16px 14px; display: grid; gap: 8px; font-size: 13.5px; color: var(--muted); }
+figcaption strong { color: var(--fg); font-weight: 600; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12.5px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend svg { width: 28px; height: 12px; min-width: 0; flex: none; }
+.legend b { font-family: var(--mono); font-size: 11px; }
+.legend .pk { color: var(--hub); }
+.legend .ref { color: var(--hub); font-family: var(--mono); }
+
+/* diagram vocabulary (architecture figures and the ERDs drawn by render_erd.py) */
+svg text { font-family: var(--sans); fill: var(--fg); font-size: 13px; }
+svg .b { font-weight: 600; }
+svg .h { font-size: 15px; font-weight: 600; }
+svg .mu { fill: var(--muted); font-size: 12px; }
+svg .m { font-family: var(--mono); font-size: 11.5px; }
+svg .sm { font-size: 11px; }
+svg .w { fill: var(--write); }
+svg .box { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
+svg .frame { fill: var(--soft); stroke: var(--line); stroke-width: 1; }
+svg .hubbox { fill: var(--hub-bg); stroke: var(--hub); stroke-width: 1.2; }
+svg .goldbox { fill: var(--gold-bg); stroke: var(--gold); stroke-width: 1.2; }
+svg .ghost { fill: none; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 5 4; }
+svg .e { fill: none; stroke: var(--fg); stroke-width: 1.3; }
+svg .ew { fill: none; stroke: var(--write); stroke-width: 1.8; }
+svg .ed { fill: none; stroke: var(--muted); stroke-width: 1.3; stroke-dasharray: 5 4; }
+svg .er { fill: none; stroke: var(--muted); stroke-width: 1.2; }
+svg .gate { fill: none; stroke: var(--muted); stroke-width: 1.6; stroke-dasharray: 2 4; }
+svg .life { fill: none; stroke: var(--line); stroke-width: 1; stroke-dasharray: 4 4; }
+svg .dot { fill: var(--fg); }
+svg .ah { fill: var(--fg); }
+svg .ahw { fill: var(--write); }
+svg .ahd { fill: var(--muted); }
+svg .tbox { fill: var(--panel); stroke: var(--hub); stroke-width: 1; }
+svg .th { fill: var(--hub-bg); }
+svg .rule { stroke: var(--hub); stroke-width: 1; }
+svg .tsch { fill: var(--muted); font-weight: 400; }
+svg .desc { fill: var(--fg); font-size: 11.5px; }
+svg .hair { stroke: var(--line); stroke-width: 1; }
+svg .kb { font-family: var(--mono); font-size: 9.5px; font-weight: 600; fill: var(--muted); }
+svg .kb.pk { fill: var(--hub); }
+svg .kb.fk { fill: var(--fg); }
+svg .ty { fill: var(--muted); }
+svg .val { fill: var(--fg); }
+svg .ref { fill: var(--hub); }
+svg .lref { fill: var(--muted); font-style: italic; }
+svg .vgrp { fill: var(--soft); stroke: var(--line); stroke-width: 1; }
+.legend .sw-hub { fill: var(--hub-bg); stroke: var(--hub); }
+.legend .sw-gold { fill: var(--gold-bg); stroke: var(--gold); }
+
+ul.points { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; max-width: 74ch; }
+ul.points li::marker { color: var(--muted); }
+
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-size: 12.5px; font-weight: 600; color: var(--muted); background: var(--soft); white-space: nowrap; }
+td.k { font-weight: 600; white-space: nowrap; }
+td code { white-space: nowrap; overflow-wrap: normal; }
+.muted { color: var(--muted); }
+.pill { display: inline-block; font-size: 12px; padding: 0 8px; border-radius: 999px; border: 1px solid var(--line); white-space: nowrap; }
+.pill.on { color: var(--hub); border-color: var(--hub); }
+.pill.off { color: var(--muted); border-style: dashed; }
+
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; }
+@media (max-width: 860px) { .two { grid-template-columns: minmax(0, 1fr); } }
+
+footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-top: 1px solid var(--line); padding-top: 18px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="route" aria-label="구성 요약">
+    <span>브라우저</span><span>→</span><b>front :3333</b><span>→</span><b>bff :5555</b><span>→</span>
+    <span>gold · hmg_analytics · hmg_operations</span>
+  </div>
+  <h1>HMG-GEO-HUB 아키텍처</h1>
+  <p class="lede">로컬 서비스는 화면 서버(Next.js)와 API 서버(FastAPI BFF) 두 프로세스, 그리고 DB 세 개로 돌아간다.
+    브라우저는 Next만 부르고, DB에 접속하는 것은 BFF뿐이다. GEO 측정값은 외부 Gold DB에서 읽기만 하고,
+    HUB가 직접 가진 데이터는 데이터 DB와 운영 DB 두 곳에 나눠 둔다.</p>
+  <p class="ssot"><strong>정본(SSOT)</strong> · 서비스 구조와 HUB DB ERD는 이 문서 하나에만 둔다. 테이블·컬럼·권한의 최종 근거는
+    SQL 마이그레이션이고, 이 문서는 그것을 그림으로 옮긴 정본이다. 구조나 스키마를 바꾸는 변경은 같은 커밋에서 이 문서를 고친다.
+    방법은 <a href="#maintain">이 문서 고치는 법</a>.</p>
+  <p class="asof">마지막 갱신 2026-10-28 · 반영한 스키마: <code>back/analytics/schema.sql</code>·<code>operations.sql</code>,
+    <code>back/hub_storage/data-002~004.sql</code>, <code>operations-001~002.sql</code></p>
+  <dl class="facts">
+    <div><dt>프로세스</dt><dd>Next.js <span class="mono">:3333</span> · FastAPI <span class="mono">:5555</span></dd></div>
+    <div><dt>DB</dt><dd>Gold(외부) · 데이터 DB · 운영 DB</dd></div>
+    <div><dt>앱이 DB에 쓰는 곳</dt><dd>글로벌 프롬프트 편집 하나 (INSERT만)</dd></div>
+    <div><dt>로그인</dt><dd>모든 화면 · 최상위 관리자만</dd></div>
+  </dl>
+  <nav class="toc" aria-label="목차">
+    <a href="#path">요청 경로</a><a href="#conn">DB 연결</a><a href="#writes">쓰기 경로</a><a href="#login">로그인</a>
+    <a href="#erd-ops">운영 DB ERD</a><a href="#erd-data">데이터 DB ERD</a><a href="#sources">지표 원천</a>
+    <a href="#run">띄우는 방법</a><a href="#other">로컬 서비스 밖의 코드</a><a href="#maintain">이 문서 고치는 법</a>
+  </nav>
+</header>
+
+<section id="path" aria-labelledby="h-path">
+  <h2 id="h-path">요청이 지나가는 길</h2>
+  <figure>
+    <div class="scroll">
+      <svg viewBox="0 0 1200 556" role="img" aria-label="브라우저는 Next.js(3333)만 부르고, Next 서버가 FastAPI BFF(5555)를 HTTP로 부른다. BFF는 모듈별로 운영 DB, 데이터 DB, 외부 Gold DB에 연결하며, DB 쓰기는 글로벌 프롬프트 편집의 INSERT 하나뿐이다.">
+        <defs>
+          <marker id="f1a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker>
+          <marker id="f1w" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto"><path class="ahw" d="M0,0L10,5L0,10z"/></marker>
+        </defs>
+
+        <!-- browser -->
+        <rect class="box" x="16" y="110" width="100" height="390" rx="8"/>
+        <text class="b" x="66" y="300" text-anchor="middle">브라우저</text>
+        <text class="m mu" x="66" y="320" text-anchor="middle">127.0.0.1</text>
+
+        <!-- Next.js -->
+        <rect class="frame" x="166" y="24" width="280" height="516" rx="10"/>
+        <text class="h" x="200" y="52">Next.js</text>
+        <text class="m mu" x="200" y="72">:3333 · front/</text>
+        <line class="gate" x1="184" y1="96" x2="184" y2="512"/>
+        <text class="m mu sm" x="192" y="530">middleware.ts</text>
+
+        <rect class="box" x="200" y="110" width="228" height="170" rx="6"/>
+        <text class="b" x="214" y="136">페이지 · 서버 컴포넌트</text>
+        <text class="mu" x="214" y="157">(renewal) 리뉴얼 · (dash) 기존</text>
+        <text class="m" x="214" y="190">screenGet()</text>
+        <text class="mu" x="214" y="208">화면 뷰모델을 받아 그림</text>
+        <text class="m" x="214" y="240">getSession()</text>
+        <text class="mu" x="214" y="258">페이지마다 로그인 확인</text>
+
+        <rect class="box" x="200" y="310" width="228" height="190" rx="6"/>
+        <text class="b" x="214" y="336">/api/* 라우트 핸들러</text>
+        <text class="m" x="214" y="366">hub/session</text>
+        <text class="mu" x="214" y="384">로그인 · 로그아웃</text>
+        <text class="m" x="214" y="412">hub/global-prompts</text>
+        <text class="mu" x="214" y="430">글로벌 프롬프트 편집</text>
+        <text class="mu" x="214" y="462">토큰은 httpOnly 쿠키에만,</text>
+        <text class="mu" x="214" y="480">BFF 호출 때 Bearer로 붙임</text>
+
+        <line class="e" x1="116" y1="195" x2="200" y2="195" marker-end="url(#f1a)"/>
+        <text class="mu sm" x="142" y="187" text-anchor="middle">페이지</text>
+        <line class="e" x1="116" y1="405" x2="200" y2="405" marker-end="url(#f1a)"/>
+        <text class="m mu sm" x="146" y="397" text-anchor="middle">/api/*</text>
+
+        <!-- Next server -> BFF (server to server) -->
+        <path class="e" d="M428,220H478"/>
+        <path class="e" d="M428,440H478"/>
+        <path class="e" d="M478,118V440"/>
+        <circle class="dot" cx="478" cy="220" r="2.6"/>
+        <circle class="dot" cx="478" cy="440" r="2.6"/>
+        <path class="e" d="M478,118H720" marker-end="url(#f1a)"/>
+        <path class="e" d="M478,186H720" marker-end="url(#f1a)"/>
+        <path class="e" d="M478,254H720" marker-end="url(#f1a)"/>
+        <path class="e" d="M478,356H530" marker-end="url(#f1a)"/>
+        <text class="m mu sm" x="478" y="466" text-anchor="middle">HTTP</text>
+        <text class="mu sm" x="478" y="482" text-anchor="middle">서버 간</text>
+
+        <!-- BFF -->
+        <rect class="frame" x="510" y="24" width="430" height="516" rx="10"/>
+        <text class="h" x="530" y="52">FastAPI BFF</text>
+        <text class="m mu" x="530" y="72">:5555 · back/bff/ · uvicorn</text>
+
+        <rect class="box" x="720" y="92" width="200" height="52" rx="6"/>
+        <text class="m b" x="734" y="114">hub_auth</text>
+        <text class="m mu" x="734" y="133">/v1/auth/login · me</text>
+
+        <rect class="box" x="720" y="160" width="200" height="52" rx="6"/>
+        <text class="m b" x="734" y="182">catalog_editor</text>
+        <text class="m mu" x="734" y="201">/v1/hub/global-prompts</text>
+
+        <rect class="box" x="720" y="228" width="200" height="52" rx="6"/>
+        <text class="m b" x="734" y="250">hub_catalog</text>
+        <text class="m mu" x="734" y="269">/v1/hub/projects·prompts</text>
+
+        <rect class="box" x="720" y="350" width="200" height="52" rx="6"/>
+        <text class="m b" x="734" y="372">analytics_reader</text>
+        <text class="m mu" x="734" y="391">/v1/analytics/*</text>
+
+        <rect class="box" x="720" y="446" width="200" height="52" rx="6"/>
+        <text class="m b" x="734" y="468">gold_reader</text>
+        <text class="mu" x="734" y="487">그 밖의 /v1/* 전부</text>
+
+        <rect class="box" x="530" y="316" width="160" height="80" rx="6"/>
+        <text class="m b" x="544" y="338">screens/</text>
+        <text class="m mu" x="544" y="357">/v1/screens/{name}</text>
+        <text class="mu" x="544" y="378">83개 화면 빌더</text>
+
+        <rect class="box" x="530" y="426" width="160" height="86" rx="6"/>
+        <text class="m b" x="544" y="448">api.get()</text>
+        <text class="mu" x="544" y="467">같은 읽기는 한 번만</text>
+        <text class="mu" x="544" y="485">20초 제한 · 캐시 없음</text>
+        <text class="m mu sm" x="544" y="503">GET /v1/* 도 여기로</text>
+
+        <path class="e" d="M610,396V426" marker-end="url(#f1a)"/>
+        <path class="e" d="M690,440H705V376H720" marker-end="url(#f1a)"/>
+        <path class="e" d="M690,472H720" marker-end="url(#f1a)"/>
+
+        <!-- databases -->
+        <rect class="hubbox" x="1010" y="84" width="174" height="100" rx="8"/>
+        <text class="b" x="1024" y="108">HUB 운영 DB</text>
+        <text class="m" x="1024" y="128">hmg_operations</text>
+        <text class="m mu" x="1024" y="145">:55437</text>
+        <text class="mu" x="1024" y="170">system.* 계정·권한·감사</text>
+
+        <rect class="hubbox" x="1010" y="214" width="174" height="206" rx="8"/>
+        <text class="b" x="1024" y="238">HUB 데이터 DB</text>
+        <text class="m" x="1024" y="258">hmg_analytics</text>
+        <text class="m mu" x="1024" y="275">:55436</text>
+        <text class="m" x="1024" y="302">catalog.*</text>
+        <text class="mu sm" x="1024" y="319">프로젝트·프롬프트 버전</text>
+        <text class="m" x="1024" y="344">analytics.* · ref.*</text>
+        <text class="mu sm" x="1024" y="361">GA4 · SEO (수집 전)</text>
+        <text class="m" x="1024" y="386">published.*</text>
+        <text class="mu sm" x="1024" y="403">외부 공개용 뷰</text>
+
+        <rect class="goldbox" x="1010" y="440" width="174" height="92" rx="8"/>
+        <text class="b" x="1024" y="464">외부 Gold DB</text>
+        <text class="m" x="1024" y="484">gold · 사내망</text>
+        <text class="mu sm" x="1024" y="504">active_release 고정</text>
+        <text class="mu sm" x="1024" y="521">읽기만 함</text>
+
+        <path class="e" d="M920,118H1010" marker-end="url(#f1a)"/>
+        <text class="mu sm" x="965" y="110" text-anchor="middle">계정·역할</text>
+        <path class="ew" d="M920,186H966V240H1010" marker-end="url(#f1w)"/>
+        <text class="sm w" x="965" y="178" text-anchor="middle">INSERT만</text>
+        <path class="e" d="M920,254H1010" marker-end="url(#f1a)"/>
+        <text class="mu sm" x="965" y="272" text-anchor="middle">카탈로그</text>
+        <path class="e" d="M920,376H1010" marker-end="url(#f1a)"/>
+        <text class="mu sm" x="965" y="368" text-anchor="middle">GA4·SEO</text>
+        <path class="e" d="M920,472H1010" marker-end="url(#f1a)"/>
+        <text class="mu sm" x="965" y="464" text-anchor="middle">측정 사실</text>
+      </svg>
+    </div>
+    <figcaption>
+      <div class="legend" aria-hidden="true">
+        <span><svg viewBox="0 0 28 12"><line x1="1" y1="6" x2="27" y2="6" class="e"/></svg>요청 · 읽기 (DB는 읽기 전용 트랜잭션)</span>
+        <span><svg viewBox="0 0 28 12"><line x1="1" y1="6" x2="27" y2="6" class="ew"/></svg>쓰기</span>
+        <span><svg viewBox="0 0 28 12"><rect x="1" y="1" width="26" height="10" rx="2" class="sw-hub"/></svg>HUB가 가진 DB</span>
+        <span><svg viewBox="0 0 28 12"><rect x="1" y="1" width="26" height="10" rx="2" class="sw-gold"/></svg>외부 DB</span>
+      </div>
+      <p><strong>그림 1.</strong> 브라우저 요청은 모두 middleware 관문을 지나 Next 서버에서 끝난다. BFF를 부르는 것은 Next 서버이고,
+        DB 자격증명은 BFF만 갖는다. 빨간 선이 앱이 DB에 쓰는 유일한 경로다.</p>
+    </figcaption>
+  </figure>
+
+  <ul class="points">
+    <li><b>Next는 계산하지 않는다.</b> 페이지는 <code>/v1/screens/{name}</code>에서 완성된 뷰모델을 받아 그리기만 한다.
+      지표 계산은 BFF의 <code>screens/</code> 빌더 83개가 맡는다.</li>
+    <li><b>빌더는 HTTP를 다시 타지 않는다.</b> <code>api.get()</code>으로 같은 프로세스 안에서 읽고, 동시에 들어온 같은 읽기는 한 번만 실행한다.
+      결과 캐시는 없다(<code>no-store</code>). 한 읽기가 20초를 넘으면 그 구역만 504로 비운다.</li>
+    <li><b>읽기 원천은 경로로 갈린다.</b> <code>analytics/conversion</code>·<code>analytics/visibility</code> 두 경로만 HUB 데이터 DB로 가고,
+      나머지 <code>/v1/*</code>는 Gold로 간다. Gold는 <code>active_release</code>와 검증된 빌드에 고정해서 읽는다.</li>
+  </ul>
+</section>
+
+<section id="conn" aria-labelledby="h-conn">
+  <h2 id="h-conn">BFF의 DB 연결 네 개</h2>
+  <p class="sub prose">연결마다 계정이 다르고, 모두 <code>statement_timeout</code> 15초가 걸려 있다. Gold 연결이 없으면 API가 뜨지 않고,
+    나머지 셋은 없으면 그 기능만 빠진다. 그래서 HUB 저장소 없이 Gold만으로도 화면 대부분이 돈다.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>연결</th><th>환경변수</th><th>대상</th><th>할 수 있는 일</th><th>풀</th></tr></thead>
+      <tbody>
+        <tr><td class="k">Gold 조회</td><td><code>HGH_GOLD_DB_URL</code></td><td><code>gold</code> 사내망</td><td>읽기 전용, repeatable read. 없으면 기동 실패</td><td class="mono">≤ 6</td></tr>
+        <tr><td class="k">데이터 DB 조회</td><td><code>HGH_ANALYTICS_DB_URL</code></td><td><code>hmg_analytics</code></td><td>읽기 전용</td><td class="mono">≤ 4</td></tr>
+        <tr><td class="k">운영 DB 조회</td><td><code>HGH_OPERATIONS_DB_URL</code></td><td><code>hmg_operations</code></td><td>읽기 전용. 로그인 확인과 작성자 이름 표시</td><td class="mono">≤ 2</td></tr>
+        <tr><td class="k">카탈로그 편집</td><td><code>HGH_CATALOG_EDITOR_DB_URL</code></td><td><code>hmg_analytics</code><br><span class="muted">계정 hmg_catalog_editor</span></td><td><code>catalog.prompt</code>·<code>prompt_version</code> INSERT와 catalog SELECT만. UPDATE·DELETE 권한 없음</td><td class="mono">≤ 2</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="writes" aria-labelledby="h-writes">
+  <h2 id="h-writes">누가 어디에 쓰는가</h2>
+  <figure>
+    <div class="scroll">
+      <svg viewBox="0 0 1200 548" role="img" aria-label="HUB DB에 쓰는 경로는 세 개다. BFF 글로벌 프롬프트 편집이 catalog에 INSERT하고, manage.py 관리 명령이 Gold 정의를 읽어 catalog에 새 버전을 기록하며 운영 DB에 관리자와 UUID 참조를 등록한다. Gold에는 아무도 쓰지 않는다. GA4·SEO 수집기와 외부 소비자 연결은 아직 없다.">
+        <defs>
+          <marker id="f2a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker>
+          <marker id="f2w" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto"><path class="ahw" d="M0,0L10,5L0,10z"/></marker>
+          <marker id="f2d" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto"><path class="ahd" d="M0,0L10,5L0,10z"/></marker>
+        </defs>
+
+        <!-- writers and the source -->
+        <rect class="box" x="16" y="24" width="240" height="100" rx="6"/>
+        <text class="b" x="32" y="50">BFF 글로벌 프롬프트 편집</text>
+        <text class="m mu" x="32" y="70">catalog_editor</text>
+        <text class="mu" x="32" y="92">최상위 관리자 토큰 필요</text>
+        <text class="mu" x="32" y="111">보던 버전이 아니면 409</text>
+
+        <rect class="goldbox" x="316" y="24" width="240" height="100" rx="6"/>
+        <text class="b" x="332" y="50">외부 Gold DB</text>
+        <text class="m mu" x="332" y="70">gold · 사내망</text>
+        <text class="mu" x="332" y="92">측정·응답·멘션·인용 원천</text>
+        <text class="mu" x="332" y="111">HUB는 쓰지 않음</text>
+
+        <rect class="box" x="616" y="24" width="260" height="100" rx="6"/>
+        <text class="b" x="632" y="50">manage.py 관리 명령</text>
+        <text class="m mu" x="632" y="70">sync-gold-catalog</text>
+        <text class="m mu" x="632" y="88">set-admin · revoke-admin</text>
+        <text class="mu" x="632" y="111">쓰기 계정은 실행 중에만 씀</text>
+
+        <path class="e" d="M316,74H256" marker-end="url(#f2a)"/>
+        <text class="mu sm" x="286" y="66" text-anchor="middle">분류 코드</text>
+        <path class="e" d="M556,74H616" marker-end="url(#f2a)"/>
+        <text class="mu sm" x="586" y="66" text-anchor="middle">정의 읽기</text>
+
+        <!-- HUB data DB -->
+        <rect class="hubbox" x="16" y="190" width="860" height="230" rx="10"/>
+        <text class="h" x="32" y="216">HUB 데이터 DB</text>
+        <text class="m mu" x="150" y="216">hmg_analytics :55436</text>
+
+        <rect class="box" x="36" y="236" width="280" height="168" rx="6"/>
+        <text class="m b" x="52" y="260">catalog.*</text>
+        <text class="mu" x="52" y="282">project · prompt: 영구 UUID</text>
+        <text class="mu" x="52" y="301">*_version: 바뀔 때 행만 추가</text>
+        <text class="mu" x="52" y="320">origin = gold | hub</text>
+        <text class="mu sm" x="52" y="346">gold 쪽 정의는 sync가 관리,</text>
+        <text class="mu sm" x="52" y="363">hub 쪽만 편집 화면에서 수정</text>
+        <text class="m mu sm" x="52" y="388">recorded_by = 운영 DB user_id</text>
+
+        <rect class="box" x="336" y="236" width="260" height="168" rx="6"/>
+        <text class="m b" x="352" y="260">analytics.* · ref.* · ops.*</text>
+        <text class="mu" x="352" y="282">GA4 세션·사용자·전환·이벤트</text>
+        <text class="mu" x="352" y="301">SEO 노출·크롤러·기기·페이지</text>
+        <text class="mu" x="352" y="320">ops.*: SEO 빌드 발행 기록</text>
+        <text class="mu sm" x="352" y="363">수집기가 없어 지금은 빈 표</text>
+
+        <rect class="box" x="616" y="236" width="240" height="168" rx="6"/>
+        <text class="m b" x="632" y="260">publication.*</text>
+        <text class="mu" x="632" y="282">project_access 승인표</text>
+        <text class="mu sm" x="632" y="301">projects·prompts·ga4·seo 각각</text>
+        <text class="m b" x="632" y="334">published.*</text>
+        <text class="mu" x="632" y="356">승인 범위의 최신 버전만</text>
+        <text class="mu" x="632" y="375">기본은 전부 비공개</text>
+
+        <!-- HUB operations DB -->
+        <rect class="hubbox" x="956" y="190" width="228" height="230" rx="10"/>
+        <text class="h" x="972" y="216">HUB 운영 DB</text>
+        <text class="m mu" x="972" y="236">hmg_operations :55437</text>
+        <text class="m b" x="972" y="264">system.*</text>
+        <text class="m mu" x="972" y="284">user_account</text>
+        <text class="m mu" x="972" y="302">user_credential (scrypt)</text>
+        <text class="m mu" x="972" y="320">global_role (admin)</text>
+        <text class="m mu" x="972" y="338">project_member</text>
+        <text class="m mu" x="972" y="356">project_reference</text>
+        <text class="m mu" x="972" y="374">project_setting_version</text>
+        <text class="m mu" x="972" y="392">integration · audit_event</text>
+
+        <path class="ed" d="M876,305H956"/>
+        <text class="mu sm" x="916" y="297" text-anchor="middle">같은 UUID</text>
+        <text class="mu sm" x="916" y="322" text-anchor="middle">FK 없음</text>
+
+        <!-- writes -->
+        <path class="ew" d="M136,124V236" marker-end="url(#f2w)"/>
+        <text class="sm w" x="146" y="172">INSERT 전용 계정</text>
+        <path class="ew" d="M680,124V156H296V236" marker-end="url(#f2w)"/>
+        <text class="sm w" x="478" y="148" text-anchor="middle">sync: 바뀐 정의만 새 버전으로</text>
+        <path class="ew" d="M876,74H1070V190" marker-end="url(#f2w)"/>
+        <text class="sm w" x="973" y="66" text-anchor="middle">관리자 등록 · UUID 참조</text>
+
+        <!-- not connected yet -->
+        <rect class="ghost" x="336" y="464" width="260" height="64" rx="6"/>
+        <text class="mu" x="466" y="490" text-anchor="middle">GA4 · SEO 수집기</text>
+        <text class="mu sm" x="466" y="510" text-anchor="middle">아직 연결 안 됨</text>
+        <path class="ed" d="M466,464V404" marker-end="url(#f2d)"/>
+
+        <rect class="ghost" x="616" y="464" width="240" height="64" rx="6"/>
+        <text class="mu" x="736" y="490" text-anchor="middle">외부 소비자</text>
+        <text class="m mu sm" x="736" y="510" text-anchor="middle">hmg_data_external</text>
+        <path class="ed" d="M736,404V464" marker-end="url(#f2d)"/>
+        <text class="mu sm" x="746" y="440">SELECT만 · 아직 미개방</text>
+      </svg>
+    </div>
+    <figcaption>
+      <div class="legend" aria-hidden="true">
+        <span><svg viewBox="0 0 28 12"><line x1="1" y1="6" x2="27" y2="6" class="e"/></svg>읽기</span>
+        <span><svg viewBox="0 0 28 12"><line x1="1" y1="6" x2="27" y2="6" class="ew"/></svg>쓰기</span>
+        <span><svg viewBox="0 0 28 12"><line x1="1" y1="6" x2="27" y2="6" class="ed"/></svg>아직 연결 안 됨 · 참조만</span>
+        <span><svg viewBox="0 0 28 12"><rect x="1" y="1" width="26" height="10" rx="2" class="sw-hub"/></svg>HUB가 가진 DB</span>
+        <span><svg viewBox="0 0 28 12"><rect x="1" y="1" width="26" height="10" rx="2" class="sw-gold"/></svg>외부 DB</span>
+      </div>
+      <p><strong>그림 2.</strong> HUB DB에 쓰는 경로는 빨간 선 세 개가 전부다. 편집과 sync는 같은 advisory lock을 잡아서 한 번에 하나만 기록한다.
+        Gold에는 아무도 쓰지 않는다. 표 단위 구조는 <a href="#erd-ops">운영 DB ERD</a>와 <a href="#erd-data">데이터 DB ERD</a>에 있다.</p>
+    </figcaption>
+  </figure>
+
+  <ul class="points">
+    <li><b>카탈로그는 덮어쓰지 않는다.</b> 정의가 바뀔 때마다 <code>*_version</code> 행이 하나 늘고, 보관(archive)과 복원도 버전 하나다.
+      <code>origin=gold</code> 프롬프트는 HUB에서 고쳐도 다음 sync가 Gold 정의로 다시 기록하므로 편집 화면에서 읽기 전용으로 보인다.</li>
+    <li><b>두 HUB DB는 느슨하게 묶여 있다.</b> 운영 DB는 <code>project_reference</code>에 같은 UUID만 둔다. 두 DB 사이에 FK도 공동 트랜잭션도 없어서,
+      데이터 DB 기록 뒤 운영 DB 등록이 실패하면 sync를 다시 돌려 맞춘다.</li>
+    <li><b>외부 공개 창구는 <code>published.*</code> 뷰 하나다.</b> 프로젝트 승인과 prompts·ga4·seo 승인은 따로 하고, 승인 범위의 최신 버전만 보인다.
+      계정은 만들어 두었지만 외부 네트워크에는 아직 열지 않았다.</li>
+  </ul>
+</section>
+
+<section id="login" aria-labelledby="h-login">
+  <h2 id="h-login">로그인과 관문</h2>
+  <figure>
+    <div class="scroll">
+      <svg viewBox="0 0 1200 480" role="img" aria-label="쿠키 없이 페이지를 열면 로그인으로 보내진다. 로그인하면 Next가 BFF에서 받은 서명 토큰을 httpOnly 쿠키에 넣고, 이후 매 페이지마다 BFF가 운영 DB에서 계정을 다시 확인한다.">
+        <defs>
+          <marker id="f3a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker>
+          <marker id="f3r" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto"><path class="ahd" d="M0,0L10,5L0,10z"/></marker>
+        </defs>
+
+        <rect class="box" x="10" y="14" width="200" height="50" rx="6"/>
+        <text class="b" x="110" y="44" text-anchor="middle">브라우저</text>
+        <rect class="box" x="340" y="14" width="200" height="50" rx="6"/>
+        <text class="b" x="440" y="36" text-anchor="middle">Next.js</text>
+        <text class="m mu" x="440" y="54" text-anchor="middle">middleware · /api/hub</text>
+        <rect class="box" x="680" y="14" width="200" height="50" rx="6"/>
+        <text class="b" x="780" y="36" text-anchor="middle">FastAPI BFF</text>
+        <text class="m mu" x="780" y="54" text-anchor="middle">hub_auth</text>
+        <rect class="hubbox" x="990" y="14" width="200" height="50" rx="6"/>
+        <text class="b" x="1090" y="36" text-anchor="middle">HUB 운영 DB</text>
+        <text class="m mu" x="1090" y="54" text-anchor="middle">system.*</text>
+
+        <line class="life" x1="110" y1="64" x2="110" y2="472"/>
+        <line class="life" x1="440" y1="64" x2="440" y2="472"/>
+        <line class="life" x1="780" y1="64" x2="780" y2="472"/>
+        <line class="life" x1="1090" y1="64" x2="1090" y2="472"/>
+
+        <path class="e" d="M110,100H440" marker-end="url(#f3a)"/>
+        <text class="sm" x="275" y="92" text-anchor="middle">페이지 GET · 쿠키 없음</text>
+        <path class="er" d="M440,134H110" marker-end="url(#f3r)"/>
+        <text class="m mu sm" x="275" y="126" text-anchor="middle">307 → /ko/login?next=…</text>
+
+        <path class="e" d="M110,178H440" marker-end="url(#f3a)"/>
+        <text class="m sm" x="275" y="170" text-anchor="middle">POST /api/hub/session {login, password}</text>
+        <path class="e" d="M440,212H780" marker-end="url(#f3a)"/>
+        <text class="m sm" x="610" y="204" text-anchor="middle">POST /v1/auth/login</text>
+        <path class="e" d="M780,246H1090" marker-end="url(#f3a)"/>
+        <text class="sm" x="935" y="238" text-anchor="middle">계정·자격증명·역할 읽기</text>
+        <text class="mu sm" x="770" y="279" text-anchor="end">scrypt 검증 · 같은 아이디 15분에 5번 틀리면 거절</text>
+        <path class="er" d="M780,312H440" marker-end="url(#f3r)"/>
+        <text class="mu sm" x="610" y="304" text-anchor="middle">토큰 (HMAC-SHA256 서명, 기본 8시간)</text>
+        <path class="er" d="M440,346H110" marker-end="url(#f3r)"/>
+        <text class="m mu sm" x="275" y="338" text-anchor="middle">Set-Cookie: httpOnly · SameSite=Strict</text>
+
+        <line class="life" x1="20" y1="374" x2="1180" y2="374"/>
+        <text class="mu sm" x="20" y="392">이후 모든 페이지</text>
+
+        <path class="e" d="M110,412H440" marker-end="url(#f3a)"/>
+        <text class="sm" x="275" y="404" text-anchor="middle">페이지 GET · 쿠키 있음</text>
+        <path class="e" d="M440,438H780" marker-end="url(#f3a)"/>
+        <text class="m sm" x="610" y="430" text-anchor="middle">GET /v1/auth/me · Authorization: Bearer</text>
+        <path class="e" d="M780,464H1090" marker-end="url(#f3a)"/>
+        <text class="sm" x="935" y="456" text-anchor="middle">상태·역할·비밀번호 변경 시각 다시 확인</text>
+      </svg>
+    </div>
+    <figcaption>
+      <p><strong>그림 3.</strong> 검은 화살표는 요청, 회색은 응답이다. 토큰에는 세션 상태가 없고 BFF가 요청마다 운영 DB에서 계정을 다시 읽는다.
+        그래서 계정 비활성화, 역할 회수, 비밀번호 변경이 기존 세션을 곧바로 끊는다. 토큰은 브라우저 스크립트에 노출되지 않는다.</p>
+    </figcaption>
+  </figure>
+
+  <div class="two">
+    <div class="prose" style="display:grid;gap:10px">
+      <h3>middleware 관문 (로컬 모드)</h3>
+      <ul class="points">
+        <li><code>localhost</code>·<code>127.0.0.1</code>이 아닌 호스트는 403.</li>
+        <li>GET·HEAD·OPTIONS가 아닌 요청은 405. 예외는 <code>/api/hub/*</code> 하나이고, 거기서도 같은 출처인지 다시 본다.</li>
+        <li>쿠키가 없으면 페이지는 <code>/login?next=…</code>로, <code>/api/*</code>는 401. <code>/api/hub/session</code>만 열려 있다.</li>
+        <li>middleware는 쿠키가 있는지만 본다. 토큰이 유효한지는 BFF가 판단한다.</li>
+      </ul>
+    </div>
+    <div class="prose" style="display:grid;gap:10px">
+      <h3>로컬 모드가 켜지는 조건</h3>
+      <p><code>HGH_LOCAL_READ_ONLY=1</code>이고 <code>VERCEL</code>이 없을 때다. 실행 스크립트가 이 값과 <code>HGH_API_BASE_URL=http://127.0.0.1:5555</code>를 넣어 Next를 띄운다.
+        이 모드가 꺼지면 middleware와 API 클라이언트는 Supabase 로그인을 쓰는 기존 경로로 돌아간다.</p>
+      <p>관리자 계정은 <code>manage.py set-admin</code>으로만 만든다. 화면에서 계정을 만드는 경로는 없다.</p>
+    </div>
+  </div>
+</section>
+
+<section id="erd-ops" aria-labelledby="h-erd-ops">
+  <h2 id="h-erd-ops">HUB 운영 DB ERD <span class="mono muted" style="font-size:15px;font-weight:400">hmg_operations</span></h2>
+  <p class="sub prose">스키마는 <code>system</code> 하나다. 사용자·권한·설정·감사를 갖고, 프로젝트는 데이터 DB의 UUID를 참조만 한다.
+    근거: <code>back/hub_storage/operations-001.sql</code>, <code>operations-002.sql</code>.</p>
+  <figure>
+    <div class="scroll">
+      <!-- erd:ops -->
+<svg viewBox="0 0 1200 662" role="img" aria-label="HUB 운영 DB system 스키마 ERD. user_account와 project_reference가 중심이고, project_reference는 데이터 DB catalog.project와 같은 UUID만 보관한다.">
+<defs><marker id="ops-a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker><marker id="ops-d" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ahd" d="M0,0L10,5L0,10z"/></marker></defs>
+<rect class="tbox" x="616" y="40" width="270" height="158" rx="6"/>
+<path class="th" d="M616,70V46q0,-6 6,-6H880q6,0 6,6V70z"/>
+<line class="rule" x1="616" y1="70" x2="886" y2="70"/>
+<line class="hair" x1="628" y1="112" x2="874" y2="112"/>
+<text class="m b" x="628" y="60"><tspan class="tsch">system.</tspan>project_member</text>
+<text class="desc" x="628" y="87">사용자가 어느 프로젝트에 어떤 역할로</text>
+<text class="desc" x="628" y="103">속하는지 담는다.</text>
+<text class="kb pk" x="626" y="131">PK FK</text>
+<text class="m" x="664" y="131">project_id</text>
+<text class="m sm ty" x="876" y="131" text-anchor="end">uuid</text>
+<text class="kb pk" x="626" y="149">PK FK</text>
+<text class="m" x="664" y="149">user_id</text>
+<text class="m sm ty" x="876" y="149" text-anchor="end">uuid</text>
+<text class="m" x="664" y="167">role</text>
+<text class="m sm val" x="876" y="167" text-anchor="end">owner|editor|viewer</text>
+<text class="m" x="664" y="185">created_at</text>
+<text class="m sm ty" x="876" y="185" text-anchor="end">timestamptz</text>
+<rect class="tbox" x="316" y="236" width="250" height="194" rx="6"/>
+<path class="th" d="M316,266V242q0,-6 6,-6H560q6,0 6,6V266z"/>
+<line class="rule" x1="316" y1="266" x2="566" y2="266"/>
+<line class="hair" x1="328" y1="308" x2="554" y2="308"/>
+<text class="m b" x="328" y="256"><tspan class="tsch">system.</tspan>user_account</text>
+<text class="desc" x="328" y="283">HUB 사용자 한 명당 한 행으로, 로그인</text>
+<text class="desc" x="328" y="299">아이디·이름·메일·활성 여부를 담는다.</text>
+<text class="kb pk" x="326" y="327">PK</text>
+<text class="m" x="364" y="327">user_id</text>
+<text class="m sm ty" x="556" y="327" text-anchor="end">uuid</text>
+<text class="kb " x="326" y="345">UK</text>
+<text class="m" x="364" y="345">subject</text>
+<text class="m sm ty" x="556" y="345" text-anchor="end">text</text>
+<text class="m" x="364" y="363">display_name</text>
+<text class="m sm ty" x="556" y="363" text-anchor="end">text</text>
+<text class="m" x="364" y="381">email</text>
+<text class="m sm ty" x="556" y="381" text-anchor="end">text</text>
+<text class="m" x="364" y="399">status</text>
+<text class="m sm val" x="556" y="399" text-anchor="end">active|disabled</text>
+<text class="m" x="364" y="417">created_at</text>
+<text class="m sm ty" x="556" y="417" text-anchor="end">timestamptz</text>
+<rect class="tbox" x="16" y="170" width="250" height="140" rx="6"/>
+<path class="th" d="M16,200V176q0,-6 6,-6H260q6,0 6,6V200z"/>
+<line class="rule" x1="16" y1="200" x2="266" y2="200"/>
+<line class="hair" x1="28" y1="242" x2="254" y2="242"/>
+<text class="m b" x="28" y="190"><tspan class="tsch">system.</tspan>user_credential</text>
+<text class="desc" x="28" y="217">사용자 비밀번호의 scrypt 해시와 마지막</text>
+<text class="desc" x="28" y="233">변경 시각을 담는다.</text>
+<text class="kb pk" x="26" y="261">PK FK</text>
+<text class="m" x="64" y="261">user_id</text>
+<text class="m sm ty" x="256" y="261" text-anchor="end">uuid</text>
+<text class="m" x="64" y="279">password_hash</text>
+<text class="m sm val" x="256" y="279" text-anchor="end">scrypt$…</text>
+<text class="m" x="64" y="297">changed_at</text>
+<text class="m sm ty" x="256" y="297" text-anchor="end">timestamptz</text>
+<rect class="tbox" x="16" y="326" width="250" height="140" rx="6"/>
+<path class="th" d="M16,356V332q0,-6 6,-6H260q6,0 6,6V356z"/>
+<line class="rule" x1="16" y1="356" x2="266" y2="356"/>
+<line class="hair" x1="28" y1="398" x2="254" y2="398"/>
+<text class="m b" x="28" y="346"><tspan class="tsch">system.</tspan>global_role</text>
+<text class="desc" x="28" y="373">프로젝트와 무관한 전역 역할을 담으며,</text>
+<text class="desc" x="28" y="389">지금은 최상위 관리자(admin)뿐이다.</text>
+<text class="kb pk" x="26" y="417">PK FK</text>
+<text class="m" x="64" y="417">user_id</text>
+<text class="m sm ty" x="256" y="417" text-anchor="end">uuid</text>
+<text class="m" x="64" y="435">role</text>
+<text class="m sm val" x="256" y="435" text-anchor="end">admin</text>
+<text class="m" x="64" y="453">granted_at</text>
+<text class="m sm ty" x="256" y="453" text-anchor="end">timestamptz</text>
+<rect class="tbox" x="16" y="500" width="250" height="140" rx="6"/>
+<path class="th" d="M16,530V506q0,-6 6,-6H260q6,0 6,6V530z"/>
+<line class="rule" x1="16" y1="530" x2="266" y2="530"/>
+<line class="hair" x1="28" y1="572" x2="254" y2="572"/>
+<text class="m b" x="28" y="520"><tspan class="tsch">system.</tspan>schema_migration</text>
+<text class="desc" x="28" y="547">이 DB에 적용한 마이그레이션 파일과</text>
+<text class="desc" x="28" y="563">체크섬을 기록한다.</text>
+<text class="kb pk" x="26" y="591">PK</text>
+<text class="m" x="64" y="591">version</text>
+<text class="m sm ty" x="256" y="591" text-anchor="end">text</text>
+<text class="m" x="64" y="609">sha256</text>
+<text class="m sm ty" x="256" y="609" text-anchor="end">text</text>
+<text class="m" x="64" y="627">applied_at</text>
+<text class="m sm ty" x="256" y="627" text-anchor="end">timestamptz</text>
+<rect class="tbox" x="616" y="236" width="270" height="176" rx="6"/>
+<path class="th" d="M616,266V242q0,-6 6,-6H880q6,0 6,6V266z"/>
+<line class="rule" x1="616" y1="266" x2="886" y2="266"/>
+<line class="hair" x1="628" y1="308" x2="874" y2="308"/>
+<text class="m b" x="628" y="256"><tspan class="tsch">system.</tspan>project_setting_version</text>
+<text class="desc" x="628" y="283">프로젝트 SW 설정을 바꿀 때마다 새 버전</text>
+<text class="desc" x="628" y="299">행을 쌓는다.</text>
+<text class="kb pk" x="626" y="327">PK FK</text>
+<text class="m" x="664" y="327">project_id</text>
+<text class="m sm ty" x="876" y="327" text-anchor="end">uuid</text>
+<text class="kb pk" x="626" y="345">PK</text>
+<text class="m" x="664" y="345">version</text>
+<text class="m sm ty" x="876" y="345" text-anchor="end">integer</text>
+<text class="m" x="664" y="363">settings</text>
+<text class="m sm ty" x="876" y="363" text-anchor="end">jsonb</text>
+<text class="kb fk" x="626" y="381">FK</text>
+<text class="m" x="664" y="381">changed_by</text>
+<text class="m sm ty" x="876" y="381" text-anchor="end">uuid</text>
+<text class="m" x="664" y="399">created_at</text>
+<text class="m sm ty" x="876" y="399" text-anchor="end">timestamptz</text>
+<rect class="tbox" x="616" y="448" width="270" height="194" rx="6"/>
+<path class="th" d="M616,478V454q0,-6 6,-6H880q6,0 6,6V478z"/>
+<line class="rule" x1="616" y1="478" x2="886" y2="478"/>
+<line class="hair" x1="628" y1="520" x2="874" y2="520"/>
+<text class="m b" x="628" y="468"><tspan class="tsch">system.</tspan>audit_event</text>
+<text class="desc" x="628" y="495">누가 어느 프로젝트에서 무엇을 했는지 남기는</text>
+<text class="desc" x="628" y="511">감사 이력이다.</text>
+<text class="kb pk" x="626" y="539">PK</text>
+<text class="m" x="664" y="539">event_id</text>
+<text class="m sm ty" x="876" y="539" text-anchor="end">bigint identity</text>
+<text class="kb fk" x="626" y="557">FK</text>
+<text class="m" x="664" y="557">actor_id</text>
+<text class="m sm ty" x="876" y="557" text-anchor="end">uuid</text>
+<text class="kb fk" x="626" y="575">FK</text>
+<text class="m" x="664" y="575">project_id</text>
+<text class="m sm ty" x="876" y="575" text-anchor="end">uuid</text>
+<text class="m" x="664" y="593">action</text>
+<text class="m sm ty" x="876" y="593" text-anchor="end">text</text>
+<text class="m" x="664" y="611">details</text>
+<text class="m sm ty" x="876" y="611" text-anchor="end">jsonb</text>
+<text class="m" x="664" y="629">occurred_at</text>
+<text class="m sm ty" x="876" y="629" text-anchor="end">timestamptz</text>
+<rect class="tbox" x="930" y="236" width="254" height="122" rx="6"/>
+<path class="th" d="M930,266V242q0,-6 6,-6H1178q6,0 6,6V266z"/>
+<line class="rule" x1="930" y1="266" x2="1184" y2="266"/>
+<line class="hair" x1="942" y1="308" x2="1172" y2="308"/>
+<text class="m b" x="942" y="256"><tspan class="tsch">system.</tspan>project_reference</text>
+<text class="desc" x="942" y="283">데이터 DB catalog.project에 있음을</text>
+<text class="desc" x="942" y="299">확인한 프로젝트 UUID 목록이다.</text>
+<text class="kb pk" x="940" y="327">PK</text>
+<text class="m" x="978" y="327">project_id</text>
+<text class="m sm lref" x="1174" y="327" text-anchor="end">⇢ catalog.project</text>
+<text class="m" x="978" y="345">validated_at</text>
+<text class="m sm ty" x="1174" y="345" text-anchor="end">timestamptz</text>
+<rect class="tbox" x="930" y="408" width="254" height="230" rx="6"/>
+<path class="th" d="M930,438V414q0,-6 6,-6H1178q6,0 6,6V438z"/>
+<line class="rule" x1="930" y1="438" x2="1184" y2="438"/>
+<line class="hair" x1="942" y1="480" x2="1172" y2="480"/>
+<text class="m b" x="942" y="428"><tspan class="tsch">system.</tspan>integration</text>
+<text class="desc" x="942" y="455">프로젝트별 GA4·SEO·Gold 연동 설정과</text>
+<text class="desc" x="942" y="471">비밀 저장소 참조를 담는다.</text>
+<text class="kb pk" x="940" y="499">PK</text>
+<text class="m" x="978" y="499">integration_id</text>
+<text class="m sm ty" x="1174" y="499" text-anchor="end">uuid</text>
+<text class="kb fk" x="940" y="517">FK</text>
+<text class="m" x="978" y="517">project_id</text>
+<text class="m sm ty" x="1174" y="517" text-anchor="end">uuid</text>
+<text class="m" x="978" y="535">provider</text>
+<text class="m sm val" x="1174" y="535" text-anchor="end">ga4|seo|gold</text>
+<text class="m" x="978" y="553">config</text>
+<text class="m sm ty" x="1174" y="553" text-anchor="end">jsonb</text>
+<text class="m" x="978" y="571">credential_ref</text>
+<text class="m sm ty" x="1174" y="571" text-anchor="end">text</text>
+<text class="m" x="978" y="589">enabled</text>
+<text class="m sm ty" x="1174" y="589" text-anchor="end">boolean</text>
+<text class="m" x="978" y="607">updated_at</text>
+<text class="m sm ty" x="1174" y="607" text-anchor="end">timestamptz</text>
+<text class="mu sm" x="942" y="625">UNIQUE (project_id, provider)</text>
+<path class="e" d="M266,257.0H316" marker-end="url(#ops-a)"/>
+<path class="e" d="M266,413.0H316" marker-end="url(#ops-a)"/>
+<path class="e" d="M616,145.0H591V323H566" marker-end="url(#ops-a)"/>
+<path class="e" d="M616,377.0H566" marker-end="url(#ops-a)"/>
+<path class="e" d="M616,553.0H591V413H566" marker-end="url(#ops-a)"/>
+<path class="e" d="M886,127.0H911V251.0H930" marker-end="url(#ops-a)"/>
+<path class="e" d="M886,323.0H930" marker-end="url(#ops-a)"/>
+<path class="e" d="M886,571.0H911V341H930" marker-end="url(#ops-a)"/>
+<path class="e" d="M1060,408V358" marker-end="url(#ops-a)"/>
+</svg>
+      <!-- /erd:ops -->
+    </div>
+    <figcaption>
+      <div class="legend" aria-hidden="true">
+        <span><b class="pk">PK</b> 기본 키</span><span><b>FK</b> 외래 키</span><span><b>UK</b> 유일</span>
+        <span><svg viewBox="0 0 28 12"><line x1="1" y1="6" x2="27" y2="6" class="e"/></svg>FK: 자식 → 부모</span>
+        <span><span class="ref">→ 표</span> 다른 그림의 표를 가리키는 FK</span>
+        <span><span class="ref" style="color:var(--muted)">⇢ 표</span> DB 간 참조 (FK 없음)</span>
+        <span>오른쪽 열: 타입, 값이 제한된 열은 허용 값</span>
+        <span>제목 아래 문장: 그 표가 담는 데이터</span>
+      </div>
+      <p><strong>그림 4.</strong> 사람 쪽 표는 <code>user_account</code>, 프로젝트 쪽 표는 <code>project_reference</code>에 매달린다.
+        <code>project_reference.project_id</code>는 데이터 DB <code>catalog.project</code>와 같은 UUID이고, 관리 명령이 존재를 확인한 뒤 등록한다.
+        반대로 데이터 DB <code>catalog.prompt_version.recorded_by</code>가 <code>user_account.user_id</code>를 가리킨다(FK 없음).
+        뷰 <code>system.current_project_setting</code>은 프로젝트별 최신 설정 버전이다.</p>
+    </figcaption>
+  </figure>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>계정</th><th>쓰는 곳</th><th>권한</th></tr></thead>
+      <tbody>
+        <tr><td class="k mono">hmg_operations_owner</td><td>마이그레이션</td><td>스키마 소유 (로그인 불가)</td></tr>
+        <tr><td class="k mono">hmg_operations_reader</td><td>API · <code>HGH_OPERATIONS_DB_URL</code></td><td><code>system</code> 전 표 SELECT</td></tr>
+        <tr><td class="k mono">hmg_operations_writer</td><td><code>manage.py</code> 실행 중에만</td><td><code>user_account</code>·<code>project_member</code>·<code>integration</code> INSERT·UPDATE, <code>project_member</code> DELETE,
+          <code>project_reference</code>·<code>project_setting_version</code>·<code>audit_event</code> INSERT, <code>global_role</code> INSERT·DELETE, <code>user_credential</code> INSERT·UPDATE</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <ul class="points">
+    <li>설정 버전과 감사 이력은 INSERT만 허용된다. 쓰기 계정도 고치거나 지울 수 없다.</li>
+    <li>실제 키·토큰은 DB에 두지 않는다. <code>integration.credential_ref</code>에는 비밀 저장소의 참조만 넣는다.</li>
+    <li>로그인 토큰은 <code>user_credential.changed_at</code>을 버전으로 담는다. 비밀번호를 바꾸면 기존 토큰이 모두 무효가 된다.</li>
+  </ul>
+</section>
+
+<section id="erd-data" aria-labelledby="h-erd-data">
+  <h2 id="h-erd-data">HUB 데이터 DB ERD <span class="mono muted" style="font-size:15px;font-weight:400">hmg_analytics</span></h2>
+  <p class="sub prose">스키마 여섯 개를 두 묶음으로 나눠 그린다. <code>catalog</code>·<code>publication</code>·<code>published</code>는 HUB 카탈로그와 외부 공개 경계(그림 5),
+    <code>analytics</code>·<code>ref</code>·<code>ops</code>는 GA4·SEO(그림 6~8)다. 근거: <code>back/hub_storage/data-002~004.sql</code>,
+    <code>back/analytics/schema.sql</code>·<code>operations.sql</code>. 범례는 그림 4와 같다.</p>
+
+  <figure>
+    <div class="scroll">
+      <!-- erd:cat -->
+<svg viewBox="0 0 1200 552" role="img" aria-label="HUB 데이터 DB의 catalog·publication 스키마 ERD와 published 뷰. 프로젝트와 프롬프트는 정체성 행과 버전 행으로 나뉘고, publication.project_access 승인을 통과한 것만 published 뷰에 보인다.">
+<defs><marker id="cat-a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker><marker id="cat-d" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ahd" d="M0,0L10,5L0,10z"/></marker></defs>
+<rect class="tbox" x="16" y="40" width="260" height="176" rx="6"/>
+<path class="th" d="M16,70V46q0,-6 6,-6H270q6,0 6,6V70z"/>
+<line class="rule" x1="16" y1="70" x2="276" y2="70"/>
+<line class="hair" x1="28" y1="112" x2="264" y2="112"/>
+<text class="m b" x="28" y="60"><tspan class="tsch">catalog.</tspan>project_version</text>
+<text class="desc" x="28" y="87">프로젝트 정의(JSON)가 바뀔 때마다 버전</text>
+<text class="desc" x="28" y="103">한 행을 쌓는다.</text>
+<text class="kb pk" x="26" y="131">PK FK</text>
+<text class="m" x="64" y="131">project_id</text>
+<text class="m sm ty" x="266" y="131" text-anchor="end">uuid</text>
+<text class="kb pk" x="26" y="149">PK</text>
+<text class="m" x="64" y="149">version</text>
+<text class="m sm ty" x="266" y="149" text-anchor="end">integer</text>
+<text class="m" x="64" y="167">definition</text>
+<text class="m sm ty" x="266" y="167" text-anchor="end">jsonb</text>
+<text class="m" x="64" y="185">sha256</text>
+<text class="m sm ty" x="266" y="185" text-anchor="end">text</text>
+<text class="m" x="64" y="203">recorded_at</text>
+<text class="m sm ty" x="266" y="203" text-anchor="end">timestamptz</text>
+<rect class="tbox" x="316" y="40" width="260" height="158" rx="6"/>
+<path class="th" d="M316,70V46q0,-6 6,-6H570q6,0 6,6V70z"/>
+<line class="rule" x1="316" y1="70" x2="576" y2="70"/>
+<line class="hair" x1="328" y1="112" x2="564" y2="112"/>
+<text class="m b" x="328" y="60"><tspan class="tsch">catalog.</tspan>project</text>
+<text class="desc" x="328" y="87">프로젝트의 영구 UUID와 출처(Gold</text>
+<text class="desc" x="328" y="103">가져옴·HUB 생성)를 담는 정체성 표다.</text>
+<text class="kb pk" x="326" y="131">PK</text>
+<text class="m" x="364" y="131">project_id</text>
+<text class="m sm ty" x="566" y="131" text-anchor="end">uuid</text>
+<text class="m" x="364" y="149">origin</text>
+<text class="m sm val" x="566" y="149" text-anchor="end">gold|hub</text>
+<text class="kb " x="326" y="167">UK</text>
+<text class="m" x="364" y="167">source_id</text>
+<text class="m sm ty" x="566" y="167" text-anchor="end">uuid</text>
+<text class="m" x="364" y="185">registered_at</text>
+<text class="m sm ty" x="566" y="185" text-anchor="end">timestamptz</text>
+<rect class="tbox" x="626" y="40" width="260" height="176" rx="6"/>
+<path class="th" d="M626,70V46q0,-6 6,-6H880q6,0 6,6V70z"/>
+<line class="rule" x1="626" y1="70" x2="886" y2="70"/>
+<line class="hair" x1="638" y1="112" x2="874" y2="112"/>
+<text class="m b" x="638" y="60"><tspan class="tsch">catalog.</tspan>prompt</text>
+<text class="desc" x="638" y="87">프롬프트의 영구 UUID, 소속 프로젝트,</text>
+<text class="desc" x="638" y="103">출처를 담는 정체성 표다.</text>
+<text class="kb pk" x="636" y="131">PK</text>
+<text class="m" x="674" y="131">prompt_id</text>
+<text class="m sm ty" x="876" y="131" text-anchor="end">uuid</text>
+<text class="kb fk" x="636" y="149">FK</text>
+<text class="m" x="674" y="149">project_id</text>
+<text class="m sm ty" x="876" y="149" text-anchor="end">uuid</text>
+<text class="m" x="674" y="167">origin</text>
+<text class="m sm val" x="876" y="167" text-anchor="end">gold|hub</text>
+<text class="kb " x="636" y="185">UK</text>
+<text class="m" x="674" y="185">source_id</text>
+<text class="m sm ty" x="876" y="185" text-anchor="end">uuid</text>
+<text class="m" x="674" y="203">registered_at</text>
+<text class="m sm ty" x="876" y="203" text-anchor="end">timestamptz</text>
+<rect class="tbox" x="936" y="40" width="248" height="212" rx="6"/>
+<path class="th" d="M936,70V46q0,-6 6,-6H1178q6,0 6,6V70z"/>
+<line class="rule" x1="936" y1="70" x2="1184" y2="70"/>
+<line class="hair" x1="948" y1="112" x2="1172" y2="112"/>
+<text class="m b" x="948" y="60"><tspan class="tsch">catalog.</tspan>prompt_version</text>
+<text class="desc" x="948" y="87">프롬프트 본문과 분류 정의를 버전별로</text>
+<text class="desc" x="948" y="103">쌓고, HUB 편집이면 기록자를 남긴다.</text>
+<text class="kb pk" x="946" y="131">PK FK</text>
+<text class="m" x="984" y="131">prompt_id</text>
+<text class="m sm ty" x="1174" y="131" text-anchor="end">uuid</text>
+<text class="kb pk" x="946" y="149">PK</text>
+<text class="m" x="984" y="149">version</text>
+<text class="m sm ty" x="1174" y="149" text-anchor="end">integer</text>
+<text class="m" x="984" y="167">text</text>
+<text class="m sm ty" x="1174" y="167" text-anchor="end">text</text>
+<text class="m" x="984" y="185">definition</text>
+<text class="m sm ty" x="1174" y="185" text-anchor="end">jsonb</text>
+<text class="m" x="984" y="203">sha256</text>
+<text class="m sm ty" x="1174" y="203" text-anchor="end">text</text>
+<text class="m" x="984" y="221">recorded_at</text>
+<text class="m sm ty" x="1174" y="221" text-anchor="end">timestamptz</text>
+<text class="m" x="984" y="239">recorded_by</text>
+<text class="m sm lref" x="1174" y="239" text-anchor="end">⇢ user_account</text>
+<rect class="tbox" x="16" y="290" width="260" height="122" rx="6"/>
+<path class="th" d="M16,320V296q0,-6 6,-6H270q6,0 6,6V320z"/>
+<line class="rule" x1="16" y1="320" x2="276" y2="320"/>
+<line class="hair" x1="28" y1="362" x2="264" y2="362"/>
+<text class="m b" x="28" y="310"><tspan class="tsch">catalog.</tspan>project_ga4_property</text>
+<text class="desc" x="28" y="337">프로젝트와 GA4 속성의 연결이며, 실제</text>
+<text class="desc" x="28" y="353">연동이 확인된 것만 등록한다.</text>
+<text class="kb pk" x="26" y="381">PK FK</text>
+<text class="m" x="64" y="381">project_id</text>
+<text class="m sm ty" x="266" y="381" text-anchor="end">uuid</text>
+<text class="kb pk" x="26" y="399">PK FK</text>
+<text class="m" x="64" y="399">prop_key</text>
+<text class="m sm ref" x="266" y="399" text-anchor="end">→ ga4_property</text>
+<rect class="tbox" x="316" y="290" width="260" height="212" rx="6"/>
+<path class="th" d="M316,320V296q0,-6 6,-6H570q6,0 6,6V320z"/>
+<line class="rule" x1="316" y1="320" x2="576" y2="320"/>
+<line class="hair" x1="328" y1="362" x2="564" y2="362"/>
+<text class="m b" x="328" y="310"><tspan class="tsch">publication.</tspan>project_access</text>
+<text class="desc" x="328" y="337">프로젝트별 projects·prompts·ga4·seo</text>
+<text class="desc" x="328" y="353">공개 승인 여부와 승인자를 담는다.</text>
+<text class="kb pk" x="326" y="381">PK FK</text>
+<text class="m" x="364" y="381">project_id</text>
+<text class="m sm ty" x="566" y="381" text-anchor="end">uuid</text>
+<text class="m" x="364" y="399">projects</text>
+<text class="m sm ty" x="566" y="399" text-anchor="end">boolean</text>
+<text class="m" x="364" y="417">prompts</text>
+<text class="m sm ty" x="566" y="417" text-anchor="end">boolean</text>
+<text class="m" x="364" y="435">ga4</text>
+<text class="m sm ty" x="566" y="435" text-anchor="end">boolean</text>
+<text class="m" x="364" y="453">seo</text>
+<text class="m sm ty" x="566" y="453" text-anchor="end">boolean</text>
+<text class="m" x="364" y="471">approved_by</text>
+<text class="m sm ty" x="566" y="471" text-anchor="end">text</text>
+<text class="m" x="364" y="489">approved_at</text>
+<text class="m sm ty" x="566" y="489" text-anchor="end">timestamptz</text>
+<path class="e" d="M276,127.0H316" marker-end="url(#cat-a)"/>
+<path class="e" d="M626,145.0H576" marker-end="url(#cat-a)"/>
+<path class="e" d="M936,127.0H886" marker-end="url(#cat-a)"/>
+<path class="e" d="M276,377.0H296V181H316" marker-end="url(#cat-a)"/>
+<path class="e" d="M446,290V198" marker-end="url(#cat-a)"/>
+<rect class="vgrp" x="646" y="310" width="538" height="222" rx="8"/>
+<text class="m b" x="662" y="336">published.*<tspan class="mu" dx="10">외부 공개 계약 v1 · 뷰 14개</tspan></text>
+<text class="mu sm" x="662" y="356">hmg_data_external은 이 스키마만 SELECT · 모두 security_barrier 뷰</text>
+<text class="m" x="662" y="390">projects</text>
+<text class="m" x="662" y="410">prompts</text>
+<text class="m" x="662" y="430">ga4_daily</text>
+<text class="m" x="662" y="450">ga4_users_window</text>
+<text class="m" x="662" y="470">ga4_values</text>
+<text class="m" x="842" y="390">ga4_properties</text>
+<text class="m" x="842" y="410">seo_visibility_daily</text>
+<text class="m" x="842" y="430">seo_crawl_daily</text>
+<text class="m" x="842" y="450">seo_device_daily</text>
+<text class="m" x="842" y="470">seo_priority</text>
+<text class="m" x="1022" y="390">urls</text>
+<text class="m" x="1022" y="410">countries</text>
+<text class="m" x="1022" y="430">crawl_bots</text>
+<text class="m" x="1022" y="450">engines</text>
+<text class="mu sm" x="662" y="500">읽는 곳: catalog.current_* · analytics.ga4_* · analytics.current_page_* · ref.*</text>
+<text class="mu sm" x="662" y="518">사전 뷰(urls·countries·engines…)는 공개된 측정 행이 쓰는 키만 보인다</text>
+<path class="e" d="M576,340H646" marker-end="url(#cat-a)"/>
+<text class="mu sm" x="611" y="332" text-anchor="middle">승인분만</text>
+<path class="e" d="M756,216V310" marker-end="url(#cat-a)"/>
+<text class="mu sm" x="764" y="267">current_* 뷰 (최신 버전)</text>
+</svg>
+      <!-- /erd:cat -->
+    </div>
+    <figcaption>
+      <p><strong>그림 5. 카탈로그와 공개 경계.</strong> 프로젝트와 프롬프트는 지우지 않는 정체성 행(<code>project</code>·<code>prompt</code>)과
+        정의가 바뀔 때마다 늘어나는 버전 행(<code>*_version</code>)으로 나뉜다. <code>catalog.current_project</code>·<code>current_prompt</code> 뷰가 최신 버전을 고른다.
+        <code>origin=gold</code>는 <code>source_id</code>가 필수다. <code>published.*</code> 뷰는 <code>publication.project_access</code>에서 승인된 묶음만 통과시킨다.</p>
+    </figcaption>
+  </figure>
+
+  <figure>
+    <div class="scroll">
+      <!-- erd:ga4 -->
+<svg viewBox="0 0 1200 494" role="img" aria-label="HUB 데이터 DB의 GA4 표 ERD. ga4_row와 ga4_users_window가 ga4_property를 가리키고, 차원 키는 kind별로 ga4_value를 가리킨다.">
+<defs><marker id="ga4-a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker><marker id="ga4-d" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ahd" d="M0,0L10,5L0,10z"/></marker></defs>
+<rect class="tbox" x="70" y="40" width="290" height="392" rx="6"/>
+<path class="th" d="M70,70V46q0,-6 6,-6H354q6,0 6,6V70z"/>
+<line class="rule" x1="70" y1="70" x2="360" y2="70"/>
+<line class="hair" x1="82" y1="112" x2="348" y2="112"/>
+<text class="m b" x="82" y="60"><tspan class="tsch">analytics.</tspan>ga4_row</text>
+<text class="desc" x="82" y="87">GA4 보고서 5종의 세션·사용자·조회·이벤트를</text>
+<text class="desc" x="82" y="103">날짜·차원 조합별로 담는다.</text>
+<text class="kb pk" x="80" y="131">PK FK</text>
+<text class="m" x="118" y="131">prop_key</text>
+<text class="m sm ty" x="350" y="131" text-anchor="end">smallint</text>
+<text class="kb pk" x="80" y="149">PK</text>
+<text class="m" x="118" y="149">report</text>
+<text class="m sm val" x="350" y="149" text-anchor="end">1~5</text>
+<text class="kb pk" x="80" y="167">PK</text>
+<text class="m" x="118" y="167">date</text>
+<text class="m sm ty" x="350" y="167" text-anchor="end">date</text>
+<text class="kb pk" x="80" y="185">PK FK</text>
+<text class="m" x="118" y="185">channel_key</text>
+<text class="m sm ty" x="350" y="185" text-anchor="end">integer</text>
+<text class="kb pk" x="80" y="203">PK FK</text>
+<text class="m" x="118" y="203">source_key</text>
+<text class="m sm ty" x="350" y="203" text-anchor="end">integer</text>
+<text class="kb pk" x="80" y="221">PK FK</text>
+<text class="m" x="118" y="221">device_key</text>
+<text class="m sm ty" x="350" y="221" text-anchor="end">integer</text>
+<text class="kb pk" x="80" y="239">PK FK</text>
+<text class="m" x="118" y="239">nvr_key</text>
+<text class="m sm ty" x="350" y="239" text-anchor="end">integer</text>
+<text class="kb pk" x="80" y="257">PK FK</text>
+<text class="m" x="118" y="257">page_key</text>
+<text class="m sm ty" x="350" y="257" text-anchor="end">integer</text>
+<text class="kb pk" x="80" y="275">PK FK</text>
+<text class="m" x="118" y="275">event_key</text>
+<text class="m sm ty" x="350" y="275" text-anchor="end">integer</text>
+<text class="kb fk" x="80" y="293">FK</text>
+<text class="m" x="118" y="293">engine_key</text>
+<text class="m sm ref" x="350" y="293" text-anchor="end">→ dim_engine</text>
+<text class="m" x="118" y="311">is_ai</text>
+<text class="m sm ty" x="350" y="311" text-anchor="end">boolean</text>
+<text class="m" x="118" y="329">is_conv</text>
+<text class="m sm ty" x="350" y="329" text-anchor="end">boolean</text>
+<text class="m" x="118" y="347">sessions</text>
+<text class="m sm ty" x="350" y="347" text-anchor="end">integer</text>
+<text class="m" x="118" y="365">users_day</text>
+<text class="m sm ty" x="350" y="365" text-anchor="end">integer</text>
+<text class="m" x="118" y="383">page_views</text>
+<text class="m sm ty" x="350" y="383" text-anchor="end">integer</text>
+<text class="m" x="118" y="401">key_events</text>
+<text class="m sm ty" x="350" y="401" text-anchor="end">integer</text>
+<text class="m" x="118" y="419">event_count</text>
+<text class="m sm ty" x="350" y="419" text-anchor="end">integer</text>
+<rect class="tbox" x="410" y="40" width="340" height="212" rx="6"/>
+<path class="th" d="M410,70V46q0,-6 6,-6H744q6,0 6,6V70z"/>
+<line class="rule" x1="410" y1="70" x2="750" y2="70"/>
+<line class="hair" x1="422" y1="112" x2="738" y2="112"/>
+<text class="m b" x="422" y="60"><tspan class="tsch">analytics.</tspan>ga4_property</text>
+<text class="desc" x="422" y="87">수집 대상 GA4 속성과 그 브랜드·국가·연결 상태·전환</text>
+<text class="desc" x="422" y="103">기준을 담는다.</text>
+<text class="kb pk" x="420" y="131">PK</text>
+<text class="m" x="458" y="131">prop_key</text>
+<text class="m sm ty" x="740" y="131" text-anchor="end">smallint</text>
+<text class="kb " x="420" y="149">UK</text>
+<text class="m" x="458" y="149">property_id</text>
+<text class="m sm ty" x="740" y="149" text-anchor="end">text</text>
+<text class="m" x="458" y="167">brand_bit</text>
+<text class="m sm ty" x="740" y="167" text-anchor="end">integer</text>
+<text class="kb fk" x="420" y="185">FK</text>
+<text class="m" x="458" y="185">geo_key</text>
+<text class="m sm ref" x="740" y="185" text-anchor="end">→ dim_country</text>
+<text class="m" x="458" y="203">status</text>
+<text class="m sm val" x="740" y="203" text-anchor="end">active|pending_grant|unmapped</text>
+<text class="m" x="458" y="221">source</text>
+<text class="m sm val" x="740" y="221" text-anchor="end">registry|project_override|env</text>
+<text class="m" x="458" y="239">conv_basis</text>
+<text class="m sm val" x="740" y="239" text-anchor="end">1|2</text>
+<rect class="tbox" x="410" y="300" width="340" height="176" rx="6"/>
+<path class="th" d="M410,330V306q0,-6 6,-6H744q6,0 6,6V330z"/>
+<line class="rule" x1="410" y1="330" x2="750" y2="330"/>
+<line class="hair" x1="422" y1="372" x2="738" y2="372"/>
+<text class="m b" x="422" y="320"><tspan class="tsch">analytics.</tspan>ga4_value</text>
+<text class="desc" x="422" y="347">채널·소스·기기·방문자 유형·이벤트·페이지 값의 사전이다.</text>
+<text class="kb pk" x="420" y="391">PK</text>
+<text class="m" x="458" y="391">kind</text>
+<text class="m sm val" x="740" y="391" text-anchor="end">channel|source|device|nvr|event|page</text>
+<text class="kb pk" x="420" y="409">PK</text>
+<text class="m" x="458" y="409">value_key</text>
+<text class="m sm ty" x="740" y="409" text-anchor="end">integer</text>
+<text class="m" x="458" y="427">value</text>
+<text class="m sm ty" x="740" y="427" text-anchor="end">text</text>
+<text class="kb fk" x="420" y="445">FK</text>
+<text class="m" x="458" y="445">url_key</text>
+<text class="m sm ref" x="740" y="445" text-anchor="end">→ dim_url (page만)</text>
+<text class="mu sm" x="422" y="463">← ga4_row 6개 키 · users_window.page_key</text>
+<rect class="tbox" x="800" y="40" width="300" height="248" rx="6"/>
+<path class="th" d="M800,70V46q0,-6 6,-6H1094q6,0 6,6V70z"/>
+<line class="rule" x1="800" y1="70" x2="1100" y2="70"/>
+<line class="hair" x1="812" y1="112" x2="1088" y2="112"/>
+<text class="m b" x="812" y="60"><tspan class="tsch">analytics.</tspan>ga4_users_window</text>
+<text class="desc" x="812" y="87">기간·코호트·필터별로 중복을 뺀 정확한 사용자</text>
+<text class="desc" x="812" y="103">수를 담는다.</text>
+<text class="kb pk" x="810" y="131">PK FK</text>
+<text class="m" x="848" y="131">prop_key</text>
+<text class="m sm ty" x="1090" y="131" text-anchor="end">smallint</text>
+<text class="kb pk" x="810" y="149">PK</text>
+<text class="m" x="848" y="149">window_end</text>
+<text class="m sm ty" x="1090" y="149" text-anchor="end">date</text>
+<text class="kb pk" x="810" y="167">PK</text>
+<text class="m" x="848" y="167">window_days</text>
+<text class="m sm ty" x="1090" y="167" text-anchor="end">integer</text>
+<text class="kb pk" x="810" y="185">PK</text>
+<text class="m" x="848" y="185">cohort</text>
+<text class="m sm val" x="1090" y="185" text-anchor="end">ai|total|general</text>
+<text class="kb pk" x="810" y="203">PK</text>
+<text class="m" x="848" y="203">engine_mask</text>
+<text class="m sm ty" x="1090" y="203" text-anchor="end">integer</text>
+<text class="kb pk" x="810" y="221">PK</text>
+<text class="m" x="848" y="221">device_mask</text>
+<text class="m sm ty" x="1090" y="221" text-anchor="end">integer</text>
+<text class="kb pk" x="810" y="239">PK</text>
+<text class="m" x="848" y="239">nvr_mask</text>
+<text class="m sm ty" x="1090" y="239" text-anchor="end">integer</text>
+<text class="kb pk" x="810" y="257">PK FK</text>
+<text class="m" x="848" y="257">page_key</text>
+<text class="m sm ty" x="1090" y="257" text-anchor="end">integer</text>
+<text class="m" x="848" y="275">users</text>
+<text class="m sm ty" x="1090" y="275" text-anchor="end">integer</text>
+<path class="e" d="M360,127.0H410" marker-end="url(#ga4-a)"/>
+<path class="e" d="M360,181h8V271h-8"/>
+<path class="e" d="M368,226.0H389V387H410" marker-end="url(#ga4-a)"/>
+<path class="e" d="M800,127.0H750" marker-end="url(#ga4-a)"/>
+<path class="e" d="M800,253.0H775V387H750" marker-end="url(#ga4-a)"/>
+</svg>
+      <!-- /erd:ga4 -->
+    </div>
+    <figcaption>
+      <p><strong>그림 6. GA4.</strong> <code>ga4_row</code>의 차원 키 여섯 개는 각각 <code>(kind, value_key)</code> 복합 FK로 <code>ga4_value</code>를 가리킨다.
+        kind 쪽 값은 생성 열(<code>channel_kind</code> 등)로 고정되어 있어 그림에서는 뺐다. <code>users_day</code>는 일별 값이라 기간 합산하지 않고,
+        기간 사용자 수는 <code>ga4_users_window</code>를 읽는다. 서로 다른 <code>report</code>는 합산하지 않는다.</p>
+    </figcaption>
+  </figure>
+
+  <figure>
+    <div class="scroll">
+      <!-- erd:seo -->
+<svg viewBox="0 0 1200 610" role="img" aria-label="HUB 데이터 DB의 SEO 표와 ops 스키마 ERD. page_* 표는 빌드별로 쌓이고, ops.seo_active_build가 프로젝트·날짜마다 보여 줄 빌드를 정한다.">
+<defs><marker id="seo-a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker><marker id="seo-d" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ahd" d="M0,0L10,5L0,10z"/></marker></defs>
+<rect class="tbox" x="16" y="40" width="250" height="230" rx="6"/>
+<path class="th" d="M16,70V46q0,-6 6,-6H260q6,0 6,6V70z"/>
+<line class="rule" x1="16" y1="70" x2="266" y2="70"/>
+<line class="hair" x1="28" y1="112" x2="254" y2="112"/>
+<text class="m b" x="28" y="60"><tspan class="tsch">ops.</tspan>build</text>
+<text class="desc" x="28" y="87">SEO 데이터 빌드 한 번당 한 행으로,</text>
+<text class="desc" x="28" y="103">규칙 버전·상태·검증 결과를 담는다.</text>
+<text class="kb pk" x="26" y="131">PK</text>
+<text class="m" x="64" y="131">build_id</text>
+<text class="m sm ty" x="256" y="131" text-anchor="end">bigint</text>
+<text class="m" x="64" y="149">family</text>
+<text class="m sm ty" x="256" y="149" text-anchor="end">text</text>
+<text class="m" x="64" y="167">slice_key</text>
+<text class="m sm ty" x="256" y="167" text-anchor="end">text</text>
+<text class="m" x="64" y="185">status</text>
+<text class="m sm ty" x="256" y="185" text-anchor="end">text</text>
+<text class="m" x="64" y="203">rule_ver</text>
+<text class="m sm ty" x="256" y="203" text-anchor="end">text</text>
+<text class="m" x="64" y="221">started_at</text>
+<text class="m sm ty" x="256" y="221" text-anchor="end">timestamptz</text>
+<text class="m" x="64" y="239">finished_at</text>
+<text class="m sm ty" x="256" y="239" text-anchor="end">timestamptz</text>
+<text class="mu sm" x="28" y="257">외 실행 메타 열 9개 (schema.sql)</text>
+<rect class="tbox" x="312" y="40" width="280" height="212" rx="6"/>
+<path class="th" d="M312,70V46q0,-6 6,-6H586q6,0 6,6V70z"/>
+<line class="rule" x1="312" y1="70" x2="592" y2="70"/>
+<line class="hair" x1="324" y1="112" x2="580" y2="112"/>
+<text class="m b" x="324" y="60"><tspan class="tsch">analytics.</tspan>page_visibility_daily</text>
+<text class="desc" x="324" y="87">빌드별로 페이지·날짜마다 검색 노출 수와 AI</text>
+<text class="desc" x="324" y="103">크롤 수 합계를 담는다.</text>
+<text class="kb pk" x="322" y="131">PK FK</text>
+<text class="m" x="360" y="131">build_id</text>
+<text class="m sm ty" x="582" y="131" text-anchor="end">bigint</text>
+<text class="kb pk" x="322" y="149">PK FK</text>
+<text class="m" x="360" y="149">project_key</text>
+<text class="m sm ref" x="582" y="149" text-anchor="end">→ dim_project</text>
+<text class="kb pk" x="322" y="167">PK FK</text>
+<text class="m" x="360" y="167">url_key</text>
+<text class="m sm ref" x="582" y="167" text-anchor="end">→ dim_url</text>
+<text class="kb pk" x="322" y="185">PK</text>
+<text class="m" x="360" y="185">date</text>
+<text class="m sm ty" x="582" y="185" text-anchor="end">date</text>
+<text class="kb fk" x="322" y="203">FK</text>
+<text class="m" x="360" y="203">geo_key</text>
+<text class="m sm ref" x="582" y="203" text-anchor="end">→ dim_country</text>
+<text class="m" x="360" y="221">seo_impressions</text>
+<text class="m sm ty" x="582" y="221" text-anchor="end">integer</text>
+<text class="m" x="360" y="239">ai_crawls</text>
+<text class="m sm ty" x="582" y="239" text-anchor="end">integer</text>
+<rect class="tbox" x="638" y="40" width="280" height="194" rx="6"/>
+<path class="th" d="M638,70V46q0,-6 6,-6H912q6,0 6,6V70z"/>
+<line class="rule" x1="638" y1="70" x2="918" y2="70"/>
+<line class="hair" x1="650" y1="112" x2="906" y2="112"/>
+<text class="m b" x="650" y="60"><tspan class="tsch">analytics.</tspan>page_crawl_daily</text>
+<text class="desc" x="650" y="87">빌드별로 페이지·날짜·크롤러 봇마다 크롤</text>
+<text class="desc" x="650" y="103">횟수를 담는다.</text>
+<text class="kb pk" x="648" y="131">PK FK</text>
+<text class="m" x="686" y="131">build_id</text>
+<text class="m sm ty" x="908" y="131" text-anchor="end">bigint</text>
+<text class="kb pk" x="648" y="149">PK FK</text>
+<text class="m" x="686" y="149">project_key</text>
+<text class="m sm ty" x="908" y="149" text-anchor="end">smallint</text>
+<text class="kb pk" x="648" y="167">PK FK</text>
+<text class="m" x="686" y="167">url_key</text>
+<text class="m sm ty" x="908" y="167" text-anchor="end">integer</text>
+<text class="kb pk" x="648" y="185">PK FK</text>
+<text class="m" x="686" y="185">date</text>
+<text class="m sm ty" x="908" y="185" text-anchor="end">date</text>
+<text class="kb pk" x="648" y="203">PK FK</text>
+<text class="m" x="686" y="203">bot_key</text>
+<text class="m sm ty" x="908" y="203" text-anchor="end">smallint</text>
+<text class="m" x="686" y="221">hits</text>
+<text class="m sm ty" x="908" y="221" text-anchor="end">integer</text>
+<rect class="tbox" x="964" y="112" width="220" height="140" rx="6"/>
+<path class="th" d="M964,142V118q0,-6 6,-6H1178q6,0 6,6V142z"/>
+<line class="rule" x1="964" y1="142" x2="1184" y2="142"/>
+<line class="hair" x1="976" y1="184" x2="1172" y2="184"/>
+<text class="m b" x="976" y="132"><tspan class="tsch">analytics.</tspan>dim_crawl_bot</text>
+<text class="desc" x="976" y="159">AI 크롤러 봇 사전이며, 봇이 속한</text>
+<text class="desc" x="976" y="175">엔진을 가리킨다.</text>
+<text class="kb pk" x="974" y="203">PK</text>
+<text class="m" x="1012" y="203">bot_key</text>
+<text class="m sm ty" x="1174" y="203" text-anchor="end">smallint</text>
+<text class="kb " x="974" y="221">UK</text>
+<text class="m" x="1012" y="221">code</text>
+<text class="m sm ty" x="1174" y="221" text-anchor="end">text</text>
+<text class="kb fk" x="974" y="239">FK</text>
+<text class="m" x="1012" y="239">engine_key</text>
+<text class="m sm ref" x="1174" y="239" text-anchor="end">→ dim_engine</text>
+<rect class="tbox" x="638" y="274" width="280" height="194" rx="6"/>
+<path class="th" d="M638,304V280q0,-6 6,-6H912q6,0 6,6V304z"/>
+<line class="rule" x1="638" y1="304" x2="918" y2="304"/>
+<line class="hair" x1="650" y1="346" x2="906" y2="346"/>
+<text class="m b" x="650" y="294"><tspan class="tsch">analytics.</tspan>page_seo_device_daily</text>
+<text class="desc" x="650" y="321">빌드별로 페이지·날짜·기기마다 검색 노출 수를</text>
+<text class="desc" x="650" y="337">담는다.</text>
+<text class="kb pk" x="648" y="365">PK FK</text>
+<text class="m" x="686" y="365">build_id</text>
+<text class="m sm ty" x="908" y="365" text-anchor="end">bigint</text>
+<text class="kb pk" x="648" y="383">PK FK</text>
+<text class="m" x="686" y="383">project_key</text>
+<text class="m sm ty" x="908" y="383" text-anchor="end">smallint</text>
+<text class="kb pk" x="648" y="401">PK FK</text>
+<text class="m" x="686" y="401">url_key</text>
+<text class="m sm ty" x="908" y="401" text-anchor="end">integer</text>
+<text class="kb pk" x="648" y="419">PK FK</text>
+<text class="m" x="686" y="419">date</text>
+<text class="m sm ty" x="908" y="419" text-anchor="end">date</text>
+<text class="kb pk" x="648" y="437">PK FK</text>
+<text class="m" x="686" y="437">device_key</text>
+<text class="m sm ref" x="908" y="437" text-anchor="end">→ ga4_value</text>
+<text class="m" x="686" y="455">seo_impressions</text>
+<text class="m sm ty" x="908" y="455" text-anchor="end">integer</text>
+<rect class="tbox" x="312" y="292" width="280" height="176" rx="6"/>
+<path class="th" d="M312,322V298q0,-6 6,-6H586q6,0 6,6V322z"/>
+<line class="rule" x1="312" y1="322" x2="592" y2="322"/>
+<line class="hair" x1="324" y1="364" x2="580" y2="364"/>
+<text class="m b" x="324" y="312"><tspan class="tsch">analytics.</tspan>page_priority</text>
+<text class="desc" x="324" y="339">빌드별로 프로젝트 페이지의 우선순위와 산정</text>
+<text class="desc" x="324" y="355">규칙 버전을 담는다.</text>
+<text class="kb pk" x="322" y="383">PK FK</text>
+<text class="m" x="360" y="383">build_id</text>
+<text class="m sm ty" x="582" y="383" text-anchor="end">bigint</text>
+<text class="kb pk" x="322" y="401">PK FK</text>
+<text class="m" x="360" y="401">project_key</text>
+<text class="m sm ref" x="582" y="401" text-anchor="end">→ dim_project</text>
+<text class="kb pk" x="322" y="419">PK FK</text>
+<text class="m" x="360" y="419">url_key</text>
+<text class="m sm ref" x="582" y="419" text-anchor="end">→ dim_url</text>
+<text class="m" x="360" y="437">priority</text>
+<text class="m sm ty" x="582" y="437" text-anchor="end">smallint</text>
+<text class="m" x="360" y="455">rule_ver</text>
+<text class="m sm ty" x="582" y="455" text-anchor="end">text</text>
+<rect class="tbox" x="16" y="310" width="250" height="176" rx="6"/>
+<path class="th" d="M16,340V316q0,-6 6,-6H260q6,0 6,6V340z"/>
+<line class="rule" x1="16" y1="340" x2="266" y2="340"/>
+<line class="hair" x1="28" y1="382" x2="254" y2="382"/>
+<text class="m b" x="28" y="330"><tspan class="tsch">ops.</tspan>seo_active_build</text>
+<text class="desc" x="28" y="357">프로젝트·날짜마다 화면과 공개 뷰에 보일</text>
+<text class="desc" x="28" y="373">검증된 빌드를 가리킨다.</text>
+<text class="kb pk" x="26" y="401">PK FK</text>
+<text class="m" x="64" y="401">project_key</text>
+<text class="m sm ref" x="256" y="401" text-anchor="end">→ dim_project</text>
+<text class="kb pk" x="26" y="419">PK</text>
+<text class="m" x="64" y="419">date</text>
+<text class="m sm ty" x="256" y="419" text-anchor="end">date</text>
+<text class="kb fk" x="26" y="437">FK</text>
+<text class="m" x="64" y="437">build_id</text>
+<text class="m sm ty" x="256" y="437" text-anchor="end">bigint</text>
+<text class="m" x="64" y="455">version</text>
+<text class="m sm ty" x="256" y="455" text-anchor="end">bigint</text>
+<text class="m" x="64" y="473">updated_at</text>
+<text class="m sm ty" x="256" y="473" text-anchor="end">timestamptz</text>
+<rect class="tbox" x="964" y="292" width="220" height="140" rx="6"/>
+<path class="th" d="M964,322V298q0,-6 6,-6H1178q6,0 6,6V322z"/>
+<line class="rule" x1="964" y1="322" x2="1184" y2="322"/>
+<line class="hair" x1="976" y1="364" x2="1172" y2="364"/>
+<text class="m b" x="976" y="312"><tspan class="tsch">ops.</tspan>data_version</text>
+<text class="desc" x="976" y="339">ref·ga4·seo 묶음의 데이터가 바뀔</text>
+<text class="desc" x="976" y="355">때마다 오르는 버전 번호다.</text>
+<text class="kb pk" x="974" y="383">PK</text>
+<text class="m" x="1012" y="383">scope</text>
+<text class="m sm val" x="1174" y="383" text-anchor="end">ref|ga4|seo</text>
+<text class="m" x="1012" y="401">version</text>
+<text class="m sm ty" x="1174" y="401" text-anchor="end">bigint</text>
+<text class="m" x="1012" y="419">updated_at</text>
+<text class="m sm ty" x="1174" y="419" text-anchor="end">timestamptz</text>
+<rect class="tbox" x="964" y="452" width="220" height="140" rx="6"/>
+<path class="th" d="M964,482V458q0,-6 6,-6H1178q6,0 6,6V482z"/>
+<line class="rule" x1="964" y1="482" x2="1184" y2="482"/>
+<line class="hair" x1="976" y1="524" x2="1172" y2="524"/>
+<text class="m b" x="976" y="472"><tspan class="tsch">ops.</tspan>schema_migration</text>
+<text class="desc" x="976" y="499">이 DB에 적용한 마이그레이션 파일과</text>
+<text class="desc" x="976" y="515">체크섬을 기록한다.</text>
+<text class="kb pk" x="974" y="543">PK</text>
+<text class="m" x="1012" y="543">version</text>
+<text class="m sm ty" x="1174" y="543" text-anchor="end">text</text>
+<text class="m" x="1012" y="561">sha256</text>
+<text class="m sm ty" x="1174" y="561" text-anchor="end">text</text>
+<text class="m" x="1012" y="579">applied_at</text>
+<text class="m sm ty" x="1174" y="579" text-anchor="end">timestamptz</text>
+<path class="e" d="M312,127.0H266" marker-end="url(#seo-a)"/>
+<path class="e" d="M638,127h-8V181h8"/>
+<path class="e" d="M630,154.0H592" marker-end="url(#seo-a)"/>
+<path class="e" d="M918,199.0H964" marker-end="url(#seo-a)"/>
+<path class="e" d="M638,361h-8V415h8"/>
+<path class="e" d="M630,388.0H615V235H592" marker-end="url(#seo-a)"/>
+<path class="e" d="M312,379.0H289V235H266" marker-end="url(#seo-a)"/>
+<path class="e" d="M141,310V270" marker-end="url(#seo-a)"/>
+<rect class="vgrp" x="312" y="522" width="606" height="60" rx="8"/>
+<text class="m b" x="328" y="546">analytics.current_page_*<tspan class="mu" dx="10">뷰 4개</tspan></text>
+<text class="mu sm" x="328" y="566">page_* ⋈ ops.seo_active_build · 프로젝트·날짜마다 지정된 빌드의 행만</text>
+<path class="ed" d="M141,486V552H312" marker-end="url(#seo-d)"/>
+<text class="mu sm" x="150" y="520">보일 빌드 지정</text>
+</svg>
+      <!-- /erd:seo -->
+    </div>
+    <figcaption>
+      <p><strong>그림 7. SEO와 빌드 기록.</strong> <code>page_*</code> 표는 빌드(<code>ops.build</code>)마다 쌓이고, 화면과 공개 뷰는
+        <code>ops.seo_active_build</code>가 프로젝트·날짜마다 지정한 빌드만 <code>analytics.current_page_*</code> 뷰로 읽는다.
+        지정은 <code>ops.publish_seo_build()</code> 함수로만 바꾼다. <code>ops.data_version</code>은 ref·ga4·seo 묶음별 데이터 버전이다.</p>
+    </figcaption>
+  </figure>
+
+  <figure>
+    <div class="scroll">
+      <!-- erd:ref -->
+<svg viewBox="0 0 1200 672" role="img" aria-label="HUB 데이터 DB의 ref 사전 ERD. URL은 출처와 자사 기준 주소를, 출처는 분류와 경쟁 브랜드를, 프로젝트는 국가를, 국가는 대륙을 가리킨다.">
+<defs><marker id="ref-a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker><marker id="ref-d" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ahd" d="M0,0L10,5L0,10z"/></marker></defs>
+<rect class="tbox" x="16" y="100" width="260" height="248" rx="6"/>
+<path class="th" d="M16,130V106q0,-6 6,-6H270q6,0 6,6V130z"/>
+<line class="rule" x1="16" y1="130" x2="276" y2="130"/>
+<line class="hair" x1="28" y1="172" x2="264" y2="172"/>
+<text class="m b" x="28" y="120"><tspan class="tsch">ref.</tspan>dim_owned_base</text>
+<text class="desc" x="28" y="147">자사 URL로 판정하는 주소 접두사와 그</text>
+<text class="desc" x="28" y="163">브랜드·국가·언어를 담는다.</text>
+<text class="kb pk" x="26" y="191">PK</text>
+<text class="m" x="64" y="191">owner_key</text>
+<text class="m sm ty" x="266" y="191" text-anchor="end">smallint</text>
+<text class="kb " x="26" y="209">UK</text>
+<text class="m" x="64" y="209">kind</text>
+<text class="m sm ty" x="266" y="209" text-anchor="end">text</text>
+<text class="kb " x="26" y="227">UK</text>
+<text class="m" x="64" y="227">prefix</text>
+<text class="m sm ty" x="266" y="227" text-anchor="end">text</text>
+<text class="m" x="64" y="245">host</text>
+<text class="m sm ty" x="266" y="245" text-anchor="end">text</text>
+<text class="m" x="64" y="263">brand_code</text>
+<text class="m sm ty" x="266" y="263" text-anchor="end">text</text>
+<text class="m" x="64" y="281">brand_bit</text>
+<text class="m sm ty" x="266" y="281" text-anchor="end">integer</text>
+<text class="m" x="64" y="299">geo_code</text>
+<text class="m sm ty" x="266" y="299" text-anchor="end">text</text>
+<text class="m" x="64" y="317">language</text>
+<text class="m sm ty" x="266" y="317" text-anchor="end">text</text>
+<text class="mu sm" x="28" y="335">UNIQUE (kind, prefix)</text>
+<rect class="tbox" x="322" y="40" width="260" height="284" rx="6"/>
+<path class="th" d="M322,70V46q0,-6 6,-6H576q6,0 6,6V70z"/>
+<line class="rule" x1="322" y1="70" x2="582" y2="70"/>
+<line class="hair" x1="334" y1="112" x2="570" y2="112"/>
+<text class="m b" x="334" y="60"><tspan class="tsch">ref.</tspan>dim_url</text>
+<text class="desc" x="334" y="87">측정에 나온 URL 사전으로, 정규화 주소와</text>
+<text class="desc" x="334" y="103">출처·자사 기준을 가리킨다.</text>
+<text class="kb pk" x="332" y="131">PK</text>
+<text class="m" x="370" y="131">url_key</text>
+<text class="m sm ty" x="572" y="131" text-anchor="end">integer</text>
+<text class="kb " x="332" y="149">UK</text>
+<text class="m" x="370" y="149">url_hash</text>
+<text class="m sm ty" x="572" y="149" text-anchor="end">text</text>
+<text class="m" x="370" y="167">url</text>
+<text class="m sm ty" x="572" y="167" text-anchor="end">text</text>
+<text class="m" x="370" y="185">title</text>
+<text class="m sm ty" x="572" y="185" text-anchor="end">text</text>
+<text class="m" x="370" y="203">url_norm</text>
+<text class="m sm ty" x="572" y="203" text-anchor="end">text</text>
+<text class="m" x="370" y="221">url_base_norm</text>
+<text class="m sm ty" x="572" y="221" text-anchor="end">text</text>
+<text class="m" x="370" y="239">host</text>
+<text class="m sm ty" x="572" y="239" text-anchor="end">text</text>
+<text class="m" x="370" y="257">domain</text>
+<text class="m sm ty" x="572" y="257" text-anchor="end">text</text>
+<text class="kb fk" x="332" y="275">FK</text>
+<text class="m" x="370" y="275">source_key</text>
+<text class="m sm ty" x="572" y="275" text-anchor="end">integer</text>
+<text class="kb fk" x="332" y="293">FK</text>
+<text class="m" x="370" y="293">owner_key</text>
+<text class="m sm ty" x="572" y="293" text-anchor="end">smallint</text>
+<text class="m" x="370" y="311">rule_ver</text>
+<text class="m sm ty" x="572" y="311" text-anchor="end">text</text>
+<rect class="tbox" x="628" y="40" width="260" height="248" rx="6"/>
+<path class="th" d="M628,70V46q0,-6 6,-6H882q6,0 6,6V70z"/>
+<line class="rule" x1="628" y1="70" x2="888" y2="70"/>
+<line class="hair" x1="640" y1="112" x2="876" y2="112"/>
+<text class="m b" x="640" y="60"><tspan class="tsch">ref.</tspan>dim_source</text>
+<text class="desc" x="640" y="87">출처 도메인 사전으로, 분류·소셜</text>
+<text class="desc" x="640" y="103">여부·자사·경쟁 브랜드 판정을 담는다.</text>
+<text class="kb pk" x="638" y="131">PK</text>
+<text class="m" x="676" y="131">source_key</text>
+<text class="m sm ty" x="878" y="131" text-anchor="end">integer</text>
+<text class="kb " x="638" y="149">UK</text>
+<text class="m" x="676" y="149">skey</text>
+<text class="m sm ty" x="878" y="149" text-anchor="end">text</text>
+<text class="m" x="676" y="167">domain</text>
+<text class="m sm ty" x="878" y="167" text-anchor="end">text</text>
+<text class="m" x="676" y="185">is_social</text>
+<text class="m sm ty" x="878" y="185" text-anchor="end">boolean</text>
+<text class="kb fk" x="638" y="203">FK</text>
+<text class="m" x="676" y="203">category_key</text>
+<text class="m sm ty" x="878" y="203" text-anchor="end">smallint</text>
+<text class="m" x="676" y="221">category_src</text>
+<text class="m sm ty" x="878" y="221" text-anchor="end">smallint</text>
+<text class="m" x="676" y="239">owned_brand_bit</text>
+<text class="m sm ty" x="878" y="239" text-anchor="end">integer</text>
+<text class="kb fk" x="638" y="257">FK</text>
+<text class="m" x="676" y="257">competitor_brand_key</text>
+<text class="m sm ty" x="878" y="257" text-anchor="end">integer</text>
+<text class="m" x="676" y="275">rule_ver</text>
+<text class="m sm ty" x="878" y="275" text-anchor="end">text</text>
+<rect class="tbox" x="934" y="50" width="250" height="158" rx="6"/>
+<path class="th" d="M934,80V56q0,-6 6,-6H1178q6,0 6,6V80z"/>
+<line class="rule" x1="934" y1="80" x2="1184" y2="80"/>
+<line class="hair" x1="946" y1="122" x2="1172" y2="122"/>
+<text class="m b" x="946" y="70"><tspan class="tsch">ref.</tspan>dim_category</text>
+<text class="desc" x="946" y="97">출처 분류 이름과 표시 순서를 담는다.</text>
+<text class="kb pk" x="944" y="141">PK</text>
+<text class="m" x="982" y="141">category_key</text>
+<text class="m sm ty" x="1174" y="141" text-anchor="end">smallint</text>
+<text class="kb " x="944" y="159">UK</text>
+<text class="m" x="982" y="159">name</text>
+<text class="m sm ty" x="1174" y="159" text-anchor="end">text</text>
+<text class="m" x="982" y="177">slug</text>
+<text class="m sm ty" x="1174" y="177" text-anchor="end">text</text>
+<text class="m" x="982" y="195">ord</text>
+<text class="m sm ty" x="1174" y="195" text-anchor="end">integer</text>
+<rect class="tbox" x="934" y="224" width="250" height="194" rx="6"/>
+<path class="th" d="M934,254V230q0,-6 6,-6H1178q6,0 6,6V254z"/>
+<line class="rule" x1="934" y1="254" x2="1184" y2="254"/>
+<line class="hair" x1="946" y1="296" x2="1172" y2="296"/>
+<text class="m b" x="946" y="244"><tspan class="tsch">ref.</tspan>dim_brand</text>
+<text class="desc" x="946" y="271">자사·경쟁 브랜드 이름 사전이다.</text>
+<text class="kb pk" x="944" y="315">PK</text>
+<text class="m" x="982" y="315">brand_key</text>
+<text class="m sm ty" x="1174" y="315" text-anchor="end">integer</text>
+<text class="kb " x="944" y="333">UK</text>
+<text class="m" x="982" y="333">name</text>
+<text class="m sm ty" x="1174" y="333" text-anchor="end">text</text>
+<text class="kb " x="944" y="351">UK</text>
+<text class="m" x="982" y="351">bare</text>
+<text class="m sm ty" x="1174" y="351" text-anchor="end">text</text>
+<text class="m" x="982" y="369">kind</text>
+<text class="m sm ty" x="1174" y="369" text-anchor="end">smallint</text>
+<text class="m" x="982" y="387">own_bit</text>
+<text class="m sm ty" x="1174" y="387" text-anchor="end">integer</text>
+<text class="m" x="982" y="405">first_seen</text>
+<text class="m sm ty" x="1174" y="405" text-anchor="end">date</text>
+<rect class="tbox" x="16" y="400" width="260" height="248" rx="6"/>
+<path class="th" d="M16,430V406q0,-6 6,-6H270q6,0 6,6V430z"/>
+<line class="rule" x1="16" y1="430" x2="276" y2="430"/>
+<line class="hair" x1="28" y1="472" x2="264" y2="472"/>
+<text class="m b" x="28" y="420"><tspan class="tsch">ref.</tspan>dim_project</text>
+<text class="desc" x="28" y="447">Scope 프로젝트·사이트 UUID에 이 DB의</text>
+<text class="desc" x="28" y="463">프로젝트 키를 매기는 사전이다.</text>
+<text class="kb pk" x="26" y="491">PK</text>
+<text class="m" x="64" y="491">project_key</text>
+<text class="m sm ty" x="266" y="491" text-anchor="end">smallint</text>
+<text class="kb " x="26" y="509">UK</text>
+<text class="m" x="64" y="509">scope_project_id</text>
+<text class="m sm ty" x="266" y="509" text-anchor="end">uuid</text>
+<text class="m" x="64" y="527">surface</text>
+<text class="m sm ty" x="266" y="527" text-anchor="end">smallint</text>
+<text class="m" x="64" y="545">is_root</text>
+<text class="m sm ty" x="266" y="545" text-anchor="end">boolean</text>
+<text class="m" x="64" y="563">project_id</text>
+<text class="m sm ty" x="266" y="563" text-anchor="end">uuid</text>
+<text class="m" x="64" y="581">site_id</text>
+<text class="m sm ty" x="266" y="581" text-anchor="end">uuid</text>
+<text class="m" x="64" y="599">site_brand_bit</text>
+<text class="m sm ty" x="266" y="599" text-anchor="end">integer</text>
+<text class="kb fk" x="26" y="617">FK</text>
+<text class="m" x="64" y="617">site_geo_key</text>
+<text class="m sm ty" x="266" y="617" text-anchor="end">smallint</text>
+<text class="m" x="64" y="635">regions</text>
+<text class="m sm ty" x="266" y="635" text-anchor="end">text[]</text>
+<rect class="tbox" x="322" y="440" width="260" height="212" rx="6"/>
+<path class="th" d="M322,470V446q0,-6 6,-6H576q6,0 6,6V470z"/>
+<line class="rule" x1="322" y1="470" x2="582" y2="470"/>
+<line class="hair" x1="334" y1="512" x2="570" y2="512"/>
+<text class="m b" x="334" y="460"><tspan class="tsch">ref.</tspan>dim_country</text>
+<text class="desc" x="334" y="487">국가 코드 사전으로, 국가가 속한 대륙과</text>
+<text class="desc" x="334" y="503">화면 표시 속성을 담는다.</text>
+<text class="kb pk" x="332" y="531">PK</text>
+<text class="m" x="370" y="531">geo_key</text>
+<text class="m sm ty" x="572" y="531" text-anchor="end">smallint</text>
+<text class="kb " x="332" y="549">UK</text>
+<text class="m" x="370" y="549">code</text>
+<text class="m sm ty" x="572" y="549" text-anchor="end">text</text>
+<text class="kb fk" x="332" y="567">FK</text>
+<text class="m" x="370" y="567">region_key</text>
+<text class="m sm ty" x="572" y="567" text-anchor="end">smallint</text>
+<text class="m" x="370" y="585">kind</text>
+<text class="m sm ty" x="572" y="585" text-anchor="end">text</text>
+<text class="m" x="370" y="603">virtual_brand_bit</text>
+<text class="m sm ty" x="572" y="603" text-anchor="end">integer</text>
+<text class="m" x="370" y="621">hidden_standard</text>
+<text class="m sm ty" x="572" y="621" text-anchor="end">boolean</text>
+<text class="mu sm" x="334" y="639">code는 대소문자 무시 UNIQUE</text>
+<rect class="tbox" x="628" y="470" width="260" height="122" rx="6"/>
+<path class="th" d="M628,500V476q0,-6 6,-6H882q6,0 6,6V500z"/>
+<line class="rule" x1="628" y1="500" x2="888" y2="500"/>
+<line class="hair" x1="640" y1="542" x2="876" y2="542"/>
+<text class="m b" x="640" y="490"><tspan class="tsch">ref.</tspan>dim_region</text>
+<text class="desc" x="640" y="517">국가를 묶는 대륙 사전이다.</text>
+<text class="kb pk" x="638" y="561">PK</text>
+<text class="m" x="676" y="561">region_key</text>
+<text class="m sm ty" x="878" y="561" text-anchor="end">smallint</text>
+<text class="kb " x="638" y="579">UK</text>
+<text class="m" x="676" y="579">code</text>
+<text class="m sm ty" x="878" y="579" text-anchor="end">text</text>
+<rect class="tbox" x="934" y="450" width="250" height="158" rx="6"/>
+<path class="th" d="M934,480V456q0,-6 6,-6H1178q6,0 6,6V480z"/>
+<line class="rule" x1="934" y1="480" x2="1184" y2="480"/>
+<line class="hair" x1="946" y1="522" x2="1172" y2="522"/>
+<text class="m b" x="946" y="470"><tspan class="tsch">ref.</tspan>dim_engine</text>
+<text class="desc" x="946" y="497">AI 엔진 코드 사전이다.</text>
+<text class="kb pk" x="944" y="541">PK</text>
+<text class="m" x="982" y="541">engine_key</text>
+<text class="m sm ty" x="1174" y="541" text-anchor="end">smallint</text>
+<text class="kb " x="944" y="559">UK</text>
+<text class="m" x="982" y="559">code</text>
+<text class="m sm ty" x="1174" y="559" text-anchor="end">text</text>
+<text class="m" x="982" y="577">is_default</text>
+<text class="m sm ty" x="1174" y="577" text-anchor="end">boolean</text>
+<text class="mu sm" x="946" y="595">ga4_row · dim_crawl_bot이 참조</text>
+<path class="e" d="M322,289.0H276" marker-end="url(#ref-a)"/>
+<path class="e" d="M582,271.0H628" marker-end="url(#ref-a)"/>
+<path class="e" d="M888,199.0H934" marker-end="url(#ref-a)"/>
+<path class="e" d="M888,253.0H934" marker-end="url(#ref-a)"/>
+<path class="e" d="M276,613.0H322" marker-end="url(#ref-a)"/>
+<path class="e" d="M582,563.0H628" marker-end="url(#ref-a)"/>
+</svg>
+      <!-- /erd:ref -->
+    </div>
+    <figcaption>
+      <p><strong>그림 8. ref 사전.</strong> 다른 그림의 <span class="mono">→ dim_*</span>가 가리키는 표들이다. <code>dim_project</code>의
+        <code>project_id</code>·<code>scope_project_id</code>·<code>site_id</code>는 공개 SEO 뷰에서 이 순서로 <code>catalog</code> 프로젝트 UUID와 맞춘다(FK 없음).
+        ref의 FK는 모두 트랜잭션 끝에 검사한다(<code>DEFERRABLE INITIALLY DEFERRED</code>).</p>
+    </figcaption>
+  </figure>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>계정</th><th>쓰는 곳</th><th>권한</th></tr></thead>
+      <tbody>
+        <tr><td class="k mono">hmg_analytics_owner</td><td>마이그레이션 · 공개 승인</td><td>스키마 소유 (로그인 불가). <code>publication.project_access</code>는 이 권한으로만 쓴다. 전용 명령은 없고 DB 관리자가 직접 승인한다</td></tr>
+        <tr><td class="k mono">hmg_analytics_reader</td><td>API · <code>HGH_ANALYTICS_DB_URL</code></td><td><code>ref</code>·<code>analytics</code>·<code>ops</code>·<code>catalog</code> SELECT</td></tr>
+        <tr><td class="k mono">hmg_analytics_writer</td><td>GA4·SEO 적재 (수집기 미연결)</td><td><code>ref</code>·<code>analytics</code> 쓰기, <code>ops.build</code> 쓰기, <code>ops.publish_seo_build()</code> 실행</td></tr>
+        <tr><td class="k mono">hmg_catalog_writer</td><td><code>manage.py sync-gold-catalog</code></td><td><code>catalog</code> 네 표 INSERT, <code>catalog</code> SELECT</td></tr>
+        <tr><td class="k mono">hmg_catalog_editor</td><td>API 글로벌 프롬프트 편집 · <code>HGH_CATALOG_EDITOR_DB_URL</code></td><td><code>catalog.prompt</code>·<code>prompt_version</code> INSERT, <code>catalog</code> SELECT</td></tr>
+        <tr><td class="k mono">hmg_data_external</td><td>외부 소비자 (미개방)</td><td><code>published</code> SELECT만</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="sources" aria-labelledby="h-sources">
+  <h2 id="h-sources">화면 지표의 원천</h2>
+  <p class="sub prose">원천에 값이 없으면 채우지 않고 <code>null</code>과 ‘데이터 없음’으로 보인다. 실측 0은 0으로 둔다.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>화면·지표</th><th>원천</th><th>상태</th></tr></thead>
+      <tbody>
+        <tr><td>국가별 GEO·언급·인용·답변·프롬프트·ACR</td><td>Gold 활성 빌드 (<code>answer_fact</code>, <code>citation_fact</code> 등)</td><td><span class="pill on">들어옴</span></td></tr>
+        <tr><td>키워드 검색량·검색 결과·관련 키워드</td><td>Gold <code>kw_volume_monthly</code>·<code>kw_serp</code>·<code>kw_suggestion</code></td><td><span class="pill on">들어옴</span></td></tr>
+        <tr><td>소셜 맥락·요구·근거 발화</td><td>Gold 활성 <code>ctx_snapshot</code>과 연관 데이터</td><td><span class="pill on">들어옴</span></td></tr>
+        <tr><td>GA4 세션·기간 사용자·전환·이벤트</td><td>데이터 DB <code>analytics.ga4_*</code></td><td><span class="pill off">수집 전</span></td></tr>
+        <tr><td>SEO 노출·크롤러·기기·페이지 우선순위</td><td>데이터 DB <code>analytics.current_page_*</code> 뷰</td><td><span class="pill off">수집 전</span></td></tr>
+        <tr><td>프로젝트·프롬프트 버전 카탈로그</td><td>데이터 DB <code>catalog.*</code></td><td><span class="pill on">들어옴</span> <span class="muted">Gold 정의 + HUB 글로벌 프롬프트</span></td></tr>
+        <tr><td>사용자·멤버십·SW 설정·감사 이력</td><td>운영 DB <code>system.*</code></td><td><span class="pill off">관리자 외 비어 있음</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="run" aria-labelledby="h-run">
+  <h2 id="h-run">띄우는 방법</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th></th><th>macOS (Docker 없음)</th><th>Windows</th></tr></thead>
+      <tbody>
+        <tr><td class="k">API</td><td>micromamba Python으로 <code>uvicorn bff.app:app</code></td><td>Docker 컨테이너 <code>hgh-gold-api</code> (<code>back/bff/Dockerfile</code>)</td></tr>
+        <tr><td class="k">HUB DB 두 개</td><td><code>.local/pg/</code>의 네이티브 PostgreSQL</td><td>PostgreSQL 컨테이너·볼륨 두 벌</td></tr>
+        <tr><td class="k">처음 구성</td><td><code>scripts/start-hub-storage.sh</code></td><td><code>scripts/start-hub-storage.ps1</code></td></tr>
+        <tr><td class="k">재시작</td><td><code>scripts/start-local.sh</code></td><td><code>scripts/start-gold.ps1</code></td></tr>
+        <tr><td class="k">화면</td><td colspan="2">두 스크립트 모두 3333이 비어 있으면 Next dev 서버도 띄운다. 첫 화면 <code>/ko/renewal/dashboard</code></td></tr>
+        <tr><td class="k">비밀 파일</td><td colspan="2"><code>.env.gold.local</code> · <code>.env.analytics.local</code> · <code>.env.operations.local</code> · <code>.env.hub-edit.local</code> (모두 git 제외)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="other" aria-labelledby="h-other">
+  <h2 id="h-other">같은 저장소에 있지만 로컬 서비스 밖에 있는 것</h2>
+  <ul class="points">
+    <li><code>back/app/</code>·<code>back/ingest/</code>·<code>back/db/</code>·<code>back/migration/</code>: 이전 재설계(DB / Back / Front 3층)의 기능 모듈 72개, 적재 워커, DDL 사슬, 이관 도구.
+      지금 로컬 서비스의 API는 이 코드가 아니라 <code>back/bff/</code>다.</li>
+    <li><code>infra/</code>: AWS stg·prod를 만드는 CLI 스크립트. 경로는 CloudFront(캐시 끔) → ALB(비밀 헤더가 맞을 때만 전달) → 프라이빗 EC2(FastAPI, SSM 관리) → 비공개 RDS PostgreSQL 17.
+      상태·비밀 파일(<code>infra/state.env</code>)은 커밋하지 않는다.</li>
+    <li>Next의 비로컬 모드: Supabase 로그인, Vercel 배포, <code>HGH_SOURCE_*</code> 소스 전환, <code>/raw-data-qa</code> 검수 콘솔. 로컬 모드에서는 쓰지 않는다.</li>
+  </ul>
+</section>
+
+<section id="maintain" aria-labelledby="h-maintain">
+  <h2 id="h-maintain">이 문서 고치는 법</h2>
+  <ul class="points">
+    <li><b>구조 그림(그림 1~3)</b>은 이 파일의 SVG를 직접 고친다. 색과 글꼴은 위 <code>&lt;style&gt;</code>의 클래스를 쓴다.</li>
+    <li><b>ERD(그림 4~8)</b>는 손으로 고치지 않는다. <code>docs/architecture/render_erd.py</code>의 표 정의(컬럼·키·FK와 표마다 한 문장 설명)를 SQL에 맞게 고친 뒤
+      <code>python3 docs/architecture/render_erd.py</code>를 실행하면 이 파일의 <code>&lt;!-- erd:… --&gt;</code> 구간이 다시 그려진다.
+      상자 폭을 넘는 행이 있으면 실행할 때 경고가 나온다.</li>
+    <li>마이그레이션을 추가하거나 계정 권한을 바꾸는 변경은 같은 커밋에서 ERD, 계정 표, 위의 ‘마지막 갱신’ 줄을 고친다.</li>
+    <li>이 문서를 대신하는 그림(Mermaid, PNG, 별도 ERD 문서)을 따로 만들지 않는다. README 등에서는 이 문서로 링크한다.</li>
+  </ul>
+  <p class="sub">변경 기록 · 2026-10-28 처음 작성. 이전의 <code>docs/architecture/hmg-geo-hub-current.*</code>, <code>back/hub_storage/ERD.md</code>,
+    <code>back/analytics/ERD.md</code>를 이 문서로 합쳤다.</p>
+</section>
+
+<footer>
+  <p>근거: <code>back/bff/app.py</code> · <code>back/bff/api.py</code> · <code>back/bff/hub_stores/*</code> · <code>back/bff/gold_reader/db.py</code> ·
+    <code>back/hub_storage/*.sql</code> · <code>back/analytics/schema.sql</code> · <code>back/hub_storage/README.md</code> · <code>front/middleware.ts</code> ·
+    <code>front/lib/hgh/client.ts</code> · <code>scripts/start-local.sh</code> · <code>scripts/start-gold.ps1</code></p>
+</footer>
+
+</div>
+</body>
+</html>
