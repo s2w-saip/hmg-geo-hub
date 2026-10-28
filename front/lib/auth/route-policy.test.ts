@@ -37,6 +37,8 @@ const NON_VENDOR_STANDARD_PATHS = [
   "/renewal/standard/answer-analysis/citation",
   "/standard/ai-funnel",
   "/standard/ai-funnel/visibility",
+  // 2026-10-27: the renewal AI Visibility is in the menu although its original is hidden
+  "/renewal/standard/ai-funnel/visibility",
   "/standard/ai-funnel/acr",
   "/renewal/standard/ai-funnel/acr",
   "/standard/ai-funnel/conversion",
@@ -291,8 +293,8 @@ describe("route-policy — guard bypass and default landing", () => {
 });
 
 describe("route-policy — ROUTES table integrity", () => {
-  it("exposes 35 routes (renewal Overview / Global prompts / ACR / Mention / Citation 추가)", () => {
-    expect(ROUTES).toHaveLength(35);
+  it("exposes 36 routes (renewal Overview / Global prompts / ACR / Mention / Citation / AI Visibility 추가)", () => {
+    expect(ROUTES).toHaveLength(36);
   });
 
   it("renewal pages open to exactly the roles of their originals", () => {
@@ -300,6 +302,7 @@ describe("route-policy — ROUTES table integrity", () => {
       ["/renewal/dashboard", "/dashboard"],
       ["/renewal/standard/prompts", "/standard/prompts"],
       ["/renewal/standard/ai-funnel/acr", "/standard/ai-funnel/acr"],
+      ["/renewal/standard/ai-funnel/visibility", "/standard/ai-funnel/visibility"],
       ["/renewal/standard/answer-analysis/mention", "/standard/answer-analysis/mention"],
       ["/renewal/standard/answer-analysis/citation", "/standard/answer-analysis/citation"],
       ["/renewal/standard/answer-analysis/citation/prompts", "/standard/answer-analysis/citation/prompts"],

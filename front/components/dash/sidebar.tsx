@@ -74,6 +74,7 @@ const ROUTE_ICON: Record<RouteKey, ComponentType<{ className?: string }>> = {
   renewalAnswerAnalysisCitation: Sparkles,
   aiFunnel: FlaskConical,
   aiFunnelVisibility: Eye,
+  renewalAiFunnelVisibility: Sparkles,
   aiFunnelAcr: Trophy,
   renewalAiFunnelAcr: Sparkles,
   aiFunnelConversion: TrendingUp,
@@ -191,6 +192,13 @@ export const STANDARD_SUB_ITEMS: StandardSubItem[] = [
         path: "/standard/ai-funnel/visibility",
         i18nKey: "aiFunnelVisibility",
         icon: Eye,
+      },
+      // Renewal AI Visibility (2026-10-27) — listed even while the original stays hidden.
+      {
+        path: "/renewal/standard/ai-funnel/visibility",
+        i18nKey: "renewalAiFunnelVisibility",
+        icon: Sparkles,
+        beta: true,
       },
       {
         path: "/standard/ai-funnel/acr",

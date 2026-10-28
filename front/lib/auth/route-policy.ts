@@ -136,6 +136,14 @@ export const ROUTES = [
     group: "standard" as const,
     hidden: true,
   },
+  // Renewal AI Visibility (2026-10-27) — always in the menu, though its original stays hidden:
+  // the renewal page is built on the HUB analytics store. Same roles as the original.
+  {
+    path: "/renewal/standard/ai-funnel/visibility",
+    key: "renewalAiFunnelVisibility",
+    roles: STANDARD_VIEWERS,
+    group: "standard" as const,
+  },
   {
     path: "/standard/ai-funnel/acr",
     key: "aiFunnelAcr",

@@ -27,6 +27,7 @@ const RENEWAL_OF: Record<string, string> = {
   "/standard/prompts": "/renewal/standard/prompts",
   "/standard/answer-analysis/mention": "/renewal/standard/answer-analysis/mention",
   "/standard/answer-analysis/citation": "/renewal/standard/answer-analysis/citation",
+  "/standard/ai-funnel/visibility": "/renewal/standard/ai-funnel/visibility",
   "/standard/ai-funnel/acr": "/renewal/standard/ai-funnel/acr",
 };
 
