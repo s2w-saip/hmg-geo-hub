@@ -5,8 +5,8 @@
  * components/renewal-ui. Existing pages never reference these utilities, so
  * adding or re-tuning a value here cannot change an existing screen.
  *
- * Palette = HMG identity (navy, sand, ink) from the S-grade mockups in
- * docs/design/ui/. Text colours keep WCAG AA on their surfaces; --color-rn-up
+ * Palette = HMG identity (navy, sand, ink) of the S-grade design (rules:
+ * docs/design/ui/design-rules.html). Text colours keep WCAG AA on their surfaces; --color-rn-up
  * and --color-rn-down are for icons and tints only (use rn-danger-ink for text).
  * Type scale is fixed: 40 / 32 / 20 / 15 / 13 / 12 / 11 px.
  * ------------------------------------------------------------------------- */

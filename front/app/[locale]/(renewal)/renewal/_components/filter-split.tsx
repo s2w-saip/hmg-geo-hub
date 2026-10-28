@@ -17,8 +17,8 @@ export function useRnSplit() {
 // filter panel scrolls apart from it. The frame takes the viewport next to the
 // renewal shell's sidebar (app/renewal-theme.css, [data-rn-frame]); the page header stays put and
 // the content area scrolls on its own, out to the right edge of the window. --rn-edge is the S급
-// gutter around a 1480px column; top 24px / bottom 72px (20 / 64 up to 1279px), the mockups'
-// '스크롤 영역' values. Both reserve the scrollbar gutter so the header lines up with the content.
+// gutter around a 1480px column; top 24px / bottom 72px (20 / 64 up to 1279px), the
+// '스크롤 영역' values of docs/design/ui/design-rules.html. Both reserve the scrollbar gutter so the header lines up with the content.
 
 const FRAME = "@container/rnframe flex flex-col pt-6 max-xl:pt-5";
 const FRAME_HEAD = "min-w-0 shrink-0 overflow-hidden px-[var(--rn-edge)] pb-3 [scrollbar-gutter:stable]";

@@ -5,7 +5,8 @@ analytics_reader.py visibility(): pages, devices rows, bots rows, priorities, tr
 the period and once for the previous period of the same length, and derives every number from those
 rows: sums, ratios, counts, ranks and date differences. Nothing is estimated or filled in.
 
-Rules (docs/design/ui/ai-funnel-mockup.html#visibility, 검토 메모 '계산'):
+Rules (first written as the AI Visibility mockup's 검토 메모 '계산'; the mockup was deleted on 2026-10-28 and
+this list is now the source):
 - AI 크롤 = bots hits (the reader's engine filter applies to it), 검색 노출 = devices impressions (the
   device filter applies to it); a page whose period sum is null (a day without an observation) is
   kept in the table and left out of every sum, share and ratio (`incomplete`).

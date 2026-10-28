@@ -47,7 +47,7 @@ PROGRESS = [
     ("done", "리뉴얼 화면 — Global 6개", "Overview · Global prompts · Mention · Citation · ACR · AI Visibility",
      "f962655 · 130c3c8 · 9e5488d · 55d6444 · bc2645b · 7a59bee · Admin › Global prompts 는 작업 트리(미커밋)"),
     ("next", "리뉴얼 화면 운영·stg 숫자 대조", "리뉴얼 화면 · 계정 4종(admin · HQ · 권역 · 국가)",
-     "합성 데이터로만 확인. 절차는 docs/handoff/renewal-pages.html 3장"),
+     "합성 데이터로만 확인. 절차는 docs/handoff/p4-acr-model-denominator.html 7-1절"),
     ("decide", "결정 필요 항목 — 상수 DB화·사전 집계 층·UI 변경·적재", "56항목", "F10 목록과 함께 보고 예정"),
     ("decide", "임계값 확정", "F1 · F2", "지금은 임시(2.5초·5초, 점수 ≤5)"),
 ]

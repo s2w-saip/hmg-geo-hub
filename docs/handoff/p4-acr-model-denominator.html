@@ -245,6 +245,84 @@ SELECT p.rep_name AS model, p.brand, bool_or(p.is_ours) AS is_ours,
       <li>한쪽만 준 GA4 기간을 측정 회차 날짜로 닫음: <code>analytics/funnel/conversion/service.py</code></li>
     </ul></td></tr>
 </table></div>
+
+<h2>7. 리뉴얼 화면 남은 일(2026-10-28 옮김)</h2>
+<p class="muted">리뉴얼 인계 문서(<code>docs/handoff/renewal-pages.html</code>)와 구현이 끝난 화면 목업 네 개(<code>docs/design/ui/</code> 의 overview · answer-analysis · ai-funnel · global-prompts-filters)를 2026-10-28 지우면서
+아직 열린 항목만 옮겼습니다. 구현된 화면은 구현이 기준이고, 화면 규칙은 <code>docs/design/ui/design-rules.html</code> 에 있습니다. 지운 문서는 git 이력에 있습니다(<code>git show d87465b:&lt;경로&gt;</code>).
+‘검토 메모’ 출처 항목은 목업의 검토 메모를 옮긴 것으로, 그 뒤 해결됐는지는 다시 확인하지 않았습니다. 해결된 메모(AI 가시성의 직전 기간 읽기 · 부분 미측정)와 이 문서의 주제(차종 전환율 분모)는 옮기지 않았습니다.
+AI 가시성의 산식은 <code>back/bff/screens/visibility.py</code> 머리 설명이 정본입니다.</p>
+
+<h3>7-1. 운영 데이터 대조(원래 화면과 숫자 일치)</h3>
+<p>리뉴얼 화면은 원래 화면과 같은 읽기를 쓰므로 <strong>같은 조건에서 숫자가 모두 같아야</strong> 합니다. 다르면 리뉴얼 쪽 결함입니다.
+stg 또는 미리보기 배포에서, 계정 4종(admin, HQ, 권역 담당, 국가 담당)으로 확인합니다.</p>
+
+<h4>단계 1 — Overview</h4>
+<p>Overview 는 두 화면이 같은 URL 쿼리를 읽습니다. 같은 쿼리로 <code>/ko/dashboard?…</code> 와 <code>/ko/renewal/dashboard?…</code> 를 나란히 엽니다.</p>
+<div class="table-wrap"><table>
+  <tr><th>조건(쿼리)</th><th>계정</th></tr>
+  <tr><td>(필터 없음)</td><td>admin, HQ, 권역, 국가</td></tr>
+  <tr><td><code>brand=Hyundai</code></td><td>admin</td></tr>
+  <tr><td><code>brand=Hyundai&amp;geography=DE~FR</code> (여러 값 구분자는 <code>~</code>)</td><td>admin</td></tr>
+  <tr><td><code>time=&lt;from&gt;..&lt;to&gt;</code> 월간 프리셋(패널에서 선택)</td><td>admin, HQ</td></tr>
+  <tr><td><code>engine=chatgpt&amp;promptContext=비교/검증</code></td><td>국가</td></tr>
+</table></div>
+<p>비교 항목(2026-10-22 Overview 개편 기준): KPI 5종 값·증감(기간을 고르면 기간 비교 칩)·비교 브랜드 중 순위, 브랜드 비교 표(브랜드 × 5지표 값, 경쟁사는 원래 카드의 경쟁사 4곳),
+  시장별 현황 표(권역·국가 × 5지표 값, 최대 경쟁사 이름과 그 값 = 값 − 격차, 답변 수).</p>
+<p><span class="pass">통과 기준</span>: 모든 숫자가 원래 화면과 같음. 원래 화면에 없는 표시(브랜드 비교의 당사 행 이름 등)는 비교하지 않습니다.</p>
+
+<h4>단계 2 — 글로벌 프롬프트</h4>
+<p>두 화면에서 같은 조건을 고른 뒤 비교합니다. 조건: 없음 / 리스트 유형 하나 / Depth1 하나 / 대상 시장 하나 / 측정 상태 = 미측정 / 검색어 하나.</p>
+<p>비교 항목: 전체 건수와 필터 결과 건수, 기본 정렬(Depth1 오름차순) 첫 페이지 행과 순서, 축별 옵션 목록, 엑셀 행 수, 변경 이력 탭 건수.</p>
+<p><span class="pass">통과 기준</span>: 모두 같음.</p>
+
+<h4>단계 3 — 운영 규모에서의 체감 속도</h4>
+<ul>
+  <li>필터를 하나 눌렀을 때 진행 표시가 사라질 때까지 걸리는 시간(두 화면 모두).</li>
+  <li>글로벌 프롬프트: 옵션 집계(상위 축을 바꿀 때마다 다시 계산), 검색 응답, 엑셀 다운로드 시간. 프롬프트가 1만 건을 넘는다는 전제로 봅니다.</li>
+</ul>
+
+<h4>단계 4 — 보고</h4>
+<p>단계별 결과를 표로 정리해 사용자에게 보고합니다. 다른 숫자가 있으면 원인을 찾아 수정안을 제시하고, 승인 후 수정합니다.</p>
+
+<h3>7-2. 글로벌 프롬프트 1만 건 대응(결정 대기)</h3>
+<p>지금 화면은 알고 있는 프롬프트를 찾는 데는 충분하지만, 1만 건 전체를 파악하기에는 부족하다는 판단입니다.
+막히는 지점은 다섯 가지입니다.</p>
+<ul>
+  <li>옵션별 건수가 없어 0건 조합에 자주 빠짐.</li>
+  <li>한 축에서 하나만 고를 수 있음.</li>
+  <li>전체 요약이 '표시 N / 전체 M' 하나뿐.</li>
+  <li>같은 원문의 언어·시장 버전이 흩어짐.</li>
+  <li>검색이 본문 부분 일치뿐.</li>
+</ul>
+<div class="table-wrap"><table>
+  <tr><th>안</th><th>내용</th><th>비용</th></tr>
+  <tr><td>A</td><td>옵션별 건수 표시, 0건 옵션은 흐리게</td><td>서버 집계 쿼리 확장(<code>front/lib/db/repositories/catalog-page.ts</code> <code>scopeMeta</code>, api 경로 포함)</td></tr>
+  <tr><td>B</td><td>한 축 안 다중 선택(OR)</td><td>서버 필터·URL 형식 변경. "원래 화면과 100% 같은 필터" 결정 번복</td></tr>
+  <tr><td>C</td><td>상단 요약표(시장·언어·퍼널별 건수, 측정중/미측정), 누르면 필터</td><td>집계 API 추가</td></tr>
+  <tr><td>D</td><td>원문 기준 묶어 보기(언어·시장 버전을 한 행으로)</td><td><code>prompts</code> 테이블에 원문을 잇는 키가 없음 → 데이터 모델부터</td></tr>
+  <tr><td>E</td><td>촘촘한 보기, 검색어 강조, 분류명 검색</td><td>프론트만</td></tr>
+</table></div>
+<p>사용자에게 받아야 할 답: (1) 1만 건의 구성(원문 수백 개의 언어·시장 버전인지, 서로 다른 프롬프트인지 — D 필요 여부),
+(2) 사용자가 이 화면에서 주로 하는 일(찾기 / 시장·언어별 확인 / 미측정 점검 / 엑셀 추출 — A·B 와 C 의 순서).</p>
+<p class="muted">A·B 와 분류 트리는 2026-10-20 의 S급 목업 초안(다중 선택·옵션 건수·분류 트리)에 있던 설계입니다. 그 초안은 커밋된 적이 없고 작성 기기 임시 폴더의 백업에만 있습니다.
+지금 <code>docs/design/ui/global-prompts-filters.html</code> 은 구현과 같게 다시 쓴 판입니다.</p>
+
+<h3>7-3. 화면별 미결 사항</h3>
+<div class="table-wrap"><table>
+  <tr><th>#</th><th>화면</th><th>내용</th><th>출처</th></tr>
+  <tr><td>1</td><td>AI 가시성</td><td>실데이터 대조 — GSC · 크롤 로그 수집기가 연결되기 전에는 모든 환경이 ‘연결된 사이트가 없습니다’(<code>back/analytics/README.md</code>).</td><td>인계 11절 ② · 검토 메모</td></tr>
+  <tr><td>2</td><td>AI 가시성</td><td>응답 크기 — API 가 페이지 · 기기 · 봇별 일별 행을 모두 보냅니다. 실데이터 규모를 보고 BFF 가 표 행을 잘라 보낼지(예: 상위 N + 검색) 결정.</td><td>인계 11절 ③ · 검토 메모</td></tr>
+  <tr><td>3</td><td>AI 가시성</td><td>카드 메뉴(CSV · 표/차트 전환)가 아직 없음.</td><td>인계 11절 ④</td></tr>
+  <tr><td>4</td><td>AI 가시성</td><td>크롤러 · 엔진 · 국가 — 크롤러 목록 · 엔진 연결 원천 <code>analytics.dim_crawl_bot</code> 이 비어 있음, 엔진 필터 옵션은 답변 엔진(ChatGPT · Gemini)뿐, 국가 선택지는 답변 측정 국가라 사이트 없는 국가도 고를 수 있음.</td><td>검토 메모</td></tr>
+  <tr><td>5</td><td>ACR</td><td>엔진 미선택 시(DC-01) — 신규 API 는 엔진을 고르지 않으면 기본 엔진만 집계해 엔진별 카드가 한 열이 됨. 결정 필요.</td><td>검토 메모</td></tr>
+  <tr><td>6</td><td>ACR</td><td>추이 단위(U8-N20) — 구 경로는 일별(<code>measured_at</code>), API 는 회차별(최근 12회). 힌트 ‘일별 최종 추천 선택률’ → ‘회차별’.</td><td>검토 메모</td></tr>
+  <tr><td>7</td><td>ACR</td><td>국가 옵션 — 선택지가 답변 측정 국가(ACR 측정 국가가 아님)라 ACR 없는 국가도 고를 수 있음(그때 ‘결과 없음’). ACR 측정 국가로 좁힐지 결정 필요.</td><td>검토 메모</td></tr>
+  <tr><td>8</td><td>ACR</td><td>브랜드 전환율(선택 사항) — ‘후보로 오른 셀에서 실제로 선택된 비율’은 API 에 없음. <code>scope_acr_rollups</code> 의 셀별 유효 반복 수로 브랜드별 Σ 집계 하나를 더하면 차종 전환율과 같은 산식으로 낼 수 있음.</td><td>검토 메모</td></tr>
+  <tr><td>9</td><td>언급</td><td>렌즈의 4개 값 — 타일 4개에 값을 보이려면 히어로 4개를 함께 읽어야 함(각각 스트리밍). 리뉴얼 KPI 탭 구현으로 풀렸는지 확인.</td><td>검토 메모</td></tr>
+  <tr><td>10</td><td>언급</td><td>브랜드 → 모그룹 매핑 — 앱에 모그룹 정보가 없음(<code>entity_registry</code> = 이름 · 역할뿐). 매핑을 새로 두고(정적 파일 또는 엔티티 카탈로그 관리 화면) 없는 브랜드는 ‘미분류’. 합작 · 소수 지분 규칙도 정해야 함(예: Smart = Mercedes · Geely 50:50, Proton = Geely 49.9%, Mitsubishi = Nissan 34%).</td><td>검토 메모</td></tr>
+  <tr><td>11</td><td>인용</td><td>legacy 에서 확인된 것 — ① 출처 필터가 걸리면 인용/미인용 프롬프트 수를 계산하지 않아 타일이 꺼지고 잘못된 안내(리뉴얼 구현은 이유를 바르게 표시) ② 하위 프롬프트 페이지의 당사 판정 단위(도메인)가 메인(인용 행)과 달라 수가 어긋날 수 있음 ③ 증감 기준 문구가 화면 리더 전용이라 보이지 않음 ④ 톤 안내 ‘카테고리 필터와 무관’은 새 백엔드 경로에서 틀림.</td><td>검토 메모</td></tr>
+  <tr><td>12</td><td>Overview</td><td>근거 · 변화의 이유 서랍(SS 1순위, 승인 전) — 명세 <code>docs/design/ss-overview.html</code>, 합격 기준 <code>docs/design/ss-grade-criteria.html</code>. 시각 시안(목업)은 지웠으니 git 이력에서: <code>git show d87465b:docs/design/ui/overview-mockup.html</code>.</td><td>인계 10절 · 목업</td></tr>
+</table></div>
 </main>
 </body>
 </html>
