@@ -19,7 +19,10 @@ async def open_pool() -> None:
         dsn, min_size=1, max_size=6, timeout=8, command_timeout=20,
         statement_cache_size=0,
         server_settings={"application_name": "hmg-geo-hub-gold", "default_transaction_read_only": "on",
-                         "statement_timeout": "15000", "idle_in_transaction_session_timeout": "30000"},
+                         "statement_timeout": "15000", "idle_in_transaction_session_timeout": "30000",
+                         # Our sessions only: compiling each 1-3 s read cost up to 1.2 s and saved less than
+                         # that (citations/domains 2.25 -> 1.85 s without it). No memory settings: Gold is not ours.
+                         "jit": "off"},
     )
     async with connection() as conn:
         if not await conn.fetchval("SELECT to_regclass('gold.active_release') IS NOT NULL"):

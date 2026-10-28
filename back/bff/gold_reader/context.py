@@ -57,6 +57,8 @@ class Context:
         self.project_key: int | None = None
         self.release: dict = {}
         self.builds: dict[str, list[int]] = {}
+        # build -> round date of the cycle slice it publishes (release_item slice_key 'cyc:<cyc_key>')
+        self.build_dates: dict[int, date] = {}
         self.dates: list[date] = []
         self.selected_dates: list[date] = []
 
@@ -72,10 +74,13 @@ class Context:
         if len(rows) != 1:
             raise HTTPException(503, "Multiple Gold rule signatures; configure HGH_GOLD_RULE_SIGNATURE")
         self.release = dict(rows[0])
-        for row in await conn.fetch("""SELECT i.family,i.build_id FROM gold.release_item i
+        for row in await conn.fetch("""SELECT i.family,i.build_id,c.round_date FROM gold.release_item i
                 JOIN gold.build b USING(build_id)
+                LEFT JOIN gold.dim_cycle c ON i.slice_key='cyc:' || c.cyc_key::text
                 WHERE i.release_id=$1 AND i.state='ready' AND b.status='validated'""", self.release["release_id"]):
             self.builds.setdefault(row["family"], []).append(row["build_id"])
+            if row["round_date"] is not None:
+                self.build_dates[row["build_id"]] = row["round_date"]
         project = q.get("project_id")
         if self.sf == 3 and not project:
             raise HTTPException(422, "project_id is required")
@@ -128,13 +133,23 @@ class Context:
             meta["page"] = page
         return meta
 
+    def builds_for(self, family: str, dated: bool) -> list[int]:
+        """The family's release builds; under a date filter only the builds whose cycle falls on a selected
+        date (one build = one cycle slice), so the build_id index reads those slices instead of the whole
+        table (1.1 -> 0.9 s on the Overview's brand rows). A build of no known cycle stays in."""
+        builds = self.builds.get(family, [])
+        if not dated:
+            return builds
+        selected = set(self.selected_dates)
+        return [x for x in builds if x not in self.build_dates or self.build_dates[x] in selected]
+
     def population(self, family: str) -> int:
         return (9 if self.card else 2) if family == "citations" else (8 if self.card else 1)
 
     def predicate(self, b: SQL, alias: str = "f", *, family: str = "cell", population: str | None = None,
                   perspective: bool = False, dates: bool = True, dimensions: bool = True, taxonomy: bool = True,
                   measure_family: str = "mentions") -> str:
-        parts = [f"{alias}.build_id=ANY({b.bind(self.builds.get(family, []), 'bigint[]')})",
+        parts = [f"{alias}.build_id=ANY({b.bind(self.builds_for(family, dates), 'bigint[]')})",
                  f"{alias}.surface={b.bind(self.sf, 'smallint')}"]
         if dates:
             parts.append(f"{alias}.round_date=ANY({b.bind(self.selected_dates, 'date[]')})")

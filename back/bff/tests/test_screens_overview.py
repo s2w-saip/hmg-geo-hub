@@ -42,6 +42,9 @@ def summary(answers: int = 100) -> dict:
             "meta": META}
 
 
+GEO = {"data": {"markets": [], "pending": [], "own_label": "HMG"}, "meta": META}
+
+
 class Router:
     """bff.api.get stand-in: answers by path, raises the configured HTTP status, records the calls."""
 
@@ -140,6 +143,32 @@ class Calls(unittest.TestCase):
         router = Router(router.bodies)
         screen("website/geo", "ctx.admin=false&brand=Kia", router)
         self.assertNotIn("geo", [p for p, _ in router.calls])
+
+    def test_geo_reads_its_markets_with_the_summary(self):
+        # the markets read leaves with the summary, not after it (the summary only decides whether they show)
+        geo_started = asyncio.Event()
+
+        class Gate(Router):
+            async def get(self, path, params=None):
+                if path == "geo":
+                    geo_started.set()
+                elif path == "kpi/summary":
+                    await asyncio.wait_for(geo_started.wait(), 2)
+                return await super().get(path, params)
+
+        out = screen("overview/geo", "", Gate({"kpi/summary": summary(), "geo": GEO}))
+        self.assertIsNotNone(out["geo"], "the summary waited for nothing: the markets read never left")
+        self.assertEqual((out["geo"]["ourLabel"], out["degraded"]), ("HMG", False))
+
+    def test_geo_markets_count_only_when_the_summary_has_answers(self):
+        for fail in (403, 503):
+            with self.subTest(fail=fail):
+                out = screen("overview/geo", "", Router({"kpi/summary": summary(answers=0), "geo": GEO}, {"geo": fail}))
+                self.assertEqual(out, {"geo": None, "degraded": False})
+        out = screen("overview/geo", "", Router({"kpi/summary": summary(), "geo": GEO}, {"geo": 503}))
+        self.assertEqual(out, {"geo": None, "degraded": True})
+        out = screen("overview/geo", "", Router({"kpi/summary": summary(), "geo": GEO}, {"kpi/summary": 503}))
+        self.assertEqual(out, {"geo": None, "degraded": False})
 
     def test_unknown_surface_is_refused(self):
         with self.assertRaises(HTTPException) as cm:

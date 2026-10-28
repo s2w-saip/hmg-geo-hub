@@ -871,16 +871,19 @@ async def geo(q) -> dict:
     (or failed transiently); a transient /v1/geo failure -> degraded (old label standardGeoCompetition)."""
     ctx, sp = split_context(q)
     common = common_params(global_filters(sp), "global")
-    summary = await or_none_on_transient(fetch_dashboard_summary(common, "global"))
+    # The markets read leaves with the summary instead of after it (1.9 s later); its outcome counts only
+    # when the summary has answers.
+    summary, markets = await asyncio.gather(or_none_on_transient(fetch_dashboard_summary(common, "global")),
+                                            fetch_geo(common), return_exceptions=True)
+    if isinstance(summary, BaseException):
+        raise summary
     if not summary or summary_is_empty(summary["data"], summary["meta"]):
         return {"geo": None, "degraded": False}
-    try:
-        data = (await fetch_geo(common))["data"]
-    except Exception as exc:  # noqa: BLE001
-        if not is_transient(exc):
-            raise
+    if isinstance(markets, BaseException):
+        if not is_transient(markets):
+            raise markets
         return {"geo": None, "degraded": True}
-    return {"geo": geo_view(to_live_geo(data), ctx.get("locale", "ko")), "degraded": False}
+    return {"geo": geo_view(to_live_geo(markets["data"]), ctx.get("locale", "ko")), "degraded": False}
 
 
 @screen("overview/brand-matrix")

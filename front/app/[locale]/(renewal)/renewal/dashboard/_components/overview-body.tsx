@@ -1,7 +1,7 @@
 "use client";
 
 // Renewal Overview body — "at a glance" (2026-10-22). Three cards, no KPI selection:
-//   KPI 5종        read-only: value, Δ, spark, standing among the card's competitors, 상세
+//   KPI 5종        read-only: value, Δ, spark, standing among the card's competitors; the card opens its analysis page
 //   브랜드 비교    brands × 5 KPIs (당사 + every KPI's compared competitors)
 //   시장별 현황    기존 GeoJSON 지도, KPI 전환, 국가 선택과 수치 표
 // Every number comes from the overview screens (back/bff/screens/overview.py), the same as /dashboard:
@@ -24,6 +24,7 @@ import {
   RnInfoTip,
   RnInfoTipItem,
   RnSkeleton,
+  RnSparkAxis,
   RnSparkline,
   RnTag,
   RnToneChip,
@@ -42,7 +43,6 @@ import type {
   ScreenMessage,
 } from "@/app/[locale]/(dash)/dashboard/_data/screen-types";
 import { periodChipText } from "@/lib/period-chip-text";
-import { formatTrendBucketMD } from "@/lib/as-of-date";
 import { GeoOverview } from "@/app/[locale]/(dash)/dashboard/_components/geo-overview";
 
 export interface OverviewDeferredData {
@@ -151,14 +151,17 @@ function KpiRow({
             <div
               key={key}
               data-rn-kpi={key}
-              className="flex min-w-0 flex-col gap-[7px] border-l border-white/14 px-4 py-1 first:border-l-0 @max-[600px]/rnkpi:nth-[3n+1]:border-l-0"
+              className="group/kpi relative flex min-w-0 flex-col gap-[7px] border-l border-white/14 px-4 py-1 first:border-l-0 @max-[600px]/rnkpi:nth-[3n+1]:border-l-0"
             >
               <span className="flex items-center gap-1 text-rn-13 font-bold text-white/86">
                 <span className="truncate">{name}</span>
-                <RnInfoTip label={t("infoLabel", { name })} align={i >= 3 ? "end" : "start"}>
-                  <RnInfoTipItem label={t("definition")}>{tKpi(`definition.${infoKeyOf(key)}` as "definition.visibility")}</RnInfoTipItem>
-                  <RnInfoTipItem label={t("formula")}>{tKpi(`formula.${infoKeyOf(key)}` as "formula.visibility")}</RnInfoTipItem>
-                </RnInfoTip>
+                {/* above the card's link, so ⓘ shows its tip instead of opening the page */}
+                <span className="relative z-[1] inline-flex">
+                  <RnInfoTip label={t("infoLabel", { name })} align={i >= 3 ? "end" : "start"}>
+                    <RnInfoTipItem label={t("definition")}>{tKpi(`definition.${infoKeyOf(key)}` as "definition.visibility")}</RnInfoTipItem>
+                    <RnInfoTipItem label={t("formula")}>{tKpi(`formula.${infoKeyOf(key)}` as "formula.visibility")}</RnInfoTipItem>
+                  </RnInfoTip>
+                </span>
               </span>
               <KpiValue k={key} value={card?.value ?? null} />
               <span className="flex min-h-6">
@@ -171,21 +174,28 @@ function KpiRow({
                   </Suspense>
                 )}
               </div>
-              <span className="min-h-[18px] text-rn-12 text-white/72">
+              <span data-rn-standing={key} className="min-h-[18px] text-rn-12 text-white/72">
                 {pending ? null : (
                   <Suspense fallback={<RnSkeleton className="h-4 w-24" />}>
                     <StandingLine k={key} competitors={deferred.competitors} />
                   </Suspense>
                 )}
               </span>
-              <Link prefetch={false}
-                href={detailHref(key, locale, qs)}
+              {/* The whole card opens its analysis page (2026-10-28, in place of a 상세 link) in a new tab,
+                  so the Overview being read stays as it is: the link covers the card, last so it lies
+                  above the card's parts; hover lightens it and shows ↗. */}
+              <Link
+                prefetch={false}
+                href={detailHref(key, locale, qs, "/renewal")}
+                target="_blank"
+                rel="noopener noreferrer"
                 aria-label={t("detailLabel", { name })}
-                className="inline-flex items-center gap-0.5 self-start rounded-[3px] text-rn-12 font-semibold text-rn-sky hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rn-sky"
-              >
-                {t("detail")}
-                <ArrowUpRight className="size-3" aria-hidden />
-              </Link>
+                className="absolute inset-0 rounded-[10px] transition-colors hover:bg-white/6 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rn-sky"
+              />
+              <ArrowUpRight
+                aria-hidden
+                className="pointer-events-none absolute top-1.5 right-3 size-4 text-rn-sky opacity-0 transition-opacity group-focus-within/kpi:opacity-100 group-hover/kpi:opacity-100"
+              />
             </div>
           );
         })}
@@ -269,24 +279,17 @@ function TrendDelta({ k, trend, labels }: { k: OverviewKpiKey; trend: Promise<Ca
   return <RnDeltaChip delta={d} lowerIsBetter={isRank(k)} format={(r) => f.delta(k, r)} emptyText={NO_DELTA} labels={labels} onDark />;
 }
 
-// The spark draws on the card's y domain, with the first and last shown rounds under it.
+// The spark draws on the card's y domain, with every shown round dated (M/D) under its point —
+// 2026-10-28: the first and the last alone read as two rounds. Two rounds on one day show that day twice.
 function SparkCell({ k, trend }: { k: OverviewKpiKey; trend: Promise<CardTrendView> }) {
   const spark = use(trend).cards[k].spark;
   if (!spark.hasValue) return null;
   const points = spark.points;
-  const md = (i: number) => {
-    const d = points[i].display;
-    return d ? formatTrendBucketMD(d) : "";
-  };
+  const md = (day: string | undefined) => (day ? `${+day.slice(5, 7)}/${+day.slice(8, 10)}` : "");
   return (
     <>
       <RnSparkline values={points.map((p) => p.value)} tone="onDark" invert={isRank(k)} domain={spark.domain} className="h-[30px]" />
-      {points.length > 1 ? (
-        <span className="flex justify-between text-rn-11 text-white/72 tabular-nums">
-          <span>{md(0)}</span>
-          <span>{md(points.length - 1)}</span>
-        </span>
-      ) : null}
+      {points.length > 1 ? <RnSparkAxis labels={points.map((p) => md(p.display?.day))} tone="onDark" /> : null}
     </>
   );
 }
@@ -347,7 +350,7 @@ function BrandMatrix({ matrix }: { matrix: Promise<BrandMatrixView | null> }) {
           <tbody>
             {rows.map((r) => (
               <tr key={`${r.own ? "own:" : ""}${r.name}`} data-rn-brand-row={r.own ? "own" : r.name} className={r.own ? "bg-rn-navy-25" : undefined}>
-                <td className="border-b border-rn-line pt-2.5 pr-3 pb-2 pl-6 align-top">
+                <td className="h-10 border-b border-rn-line pr-3 pl-6">
                   <span className="flex min-w-0 items-center gap-1.5 font-semibold text-rn-ink">
                     <span className="truncate">{r.name}</span>
                     {r.own ? <RnTag>{t("ownTag")}</RnTag> : null}
@@ -357,15 +360,17 @@ function BrandMatrix({ matrix }: { matrix: Promise<BrandMatrixView | null> }) {
                   const cell = r.cells[c.key];
                   if (!cell)
                     return (
-                      <td key={c.key} className="border-b border-rn-line px-3 py-2 align-top text-rn-muted" title={t("notCompared", { kpi: tKpi(c.key) })}>
+                      <td key={c.key} className="h-10 border-b border-rn-line px-3 text-rn-muted" title={t("notCompared", { kpi: tKpi(c.key) })}>
                         —
                       </td>
                     );
+                  // one line per cell (2026-10-28, 1920×1050): value · bar · Δ; the value and the bar
+                  // keep fixed widths so the bars of a column start and scale alike down the brands
                   return (
-                    <td key={c.key} className="border-b border-rn-line px-3 py-2 align-top">
-                      <div className="flex flex-col gap-[3px]">
-                        <b className={cx("tabular-nums text-rn-ink", cell.best ? "font-extrabold" : "font-semibold")}>{f.value(c.key, cell.value, "—")}</b>
-                        <span className={cx("h-[5px] max-w-[148px] overflow-hidden rounded-[2px]", r.own ? "bg-rn-surface" : "bg-rn-page")}>
+                    <td key={c.key} className="h-10 border-b border-rn-line px-3">
+                      <div className="flex items-center gap-1.5 whitespace-nowrap">
+                        <b className={cx("w-[52px] shrink-0 tabular-nums text-rn-ink", cell.best ? "font-extrabold" : "font-semibold")}>{f.value(c.key, cell.value, "—")}</b>
+                        <span className={cx("h-[5px] w-14 shrink-0 overflow-hidden rounded-[2px]", r.own ? "bg-rn-surface" : "bg-rn-page")}>
                           <i className={cx("block h-full rounded-[2px]", r.own ? "bg-rn-navy" : "bg-rn-faint")} style={{ width: `${cell.bar.toFixed(1)}%` }} />
                         </span>
                         {deltaText(c.key, cell.deltaMark)}
@@ -390,5 +395,5 @@ function MarketMatrix({ geo: geoP }: { geo: Promise<OverviewGeoView> }) {
   const geo = use(geoP).geo;
   const t = useTranslations("renewal.overview");
   if (!geo) return null;
-  return <GeoOverview geo={geo} title={t("marketsTitle")} />;
+  return <GeoOverview geo={geo} title={t("marketsTitle")} renewal />;
 }

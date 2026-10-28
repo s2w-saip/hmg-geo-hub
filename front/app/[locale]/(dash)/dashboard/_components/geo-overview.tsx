@@ -93,12 +93,15 @@ export function GeoOverview({
   initialMetric = "visibility",
   initialCountries,
   title,
+  renewal = false,
 }: {
   geo: GeoView;
   /** 렌더 테스트 seam. */
   initialMetric?: OverviewKpiKey;
   initialCountries?: string[];
   title?: string;
+  /** 리뉴얼 Overview(2026-10-28): 리뉴얼 카드 틀·카드 제목 크기(rn 토큰), 위아래 여백을 줄인다. */
+  renewal?: boolean;
 }) {
   const t = useTranslations("dashboard.overview");
   const tKpi = useTranslations("dashboard.kpi.name");
@@ -183,9 +186,14 @@ export function GeoOverview({
 
   return (
     // 피그마 611:135 GEO 섹션: px-6 py-8·gap-5, 제목 20px, 국가 선택은 칩 행 우측.
-    <section className="flex flex-col gap-5 rounded-lg border border-border bg-card px-6 py-8" aria-labelledby="geo-overview-heading">
+    <section
+      className={renewal ? "flex flex-col gap-4 rounded-rn-card bg-rn-surface px-6 pt-[18px] pb-6 shadow-rn-card" : "flex flex-col gap-5 rounded-lg border border-border bg-card px-6 py-8"}
+      aria-labelledby="geo-overview-heading"
+    >
       <header className="flex">
-        <h3 id="geo-overview-heading" className="text-xl font-semibold tracking-tight text-foreground/80">{title ?? t("geo.title")}</h3>
+        <h3 id="geo-overview-heading" className={renewal ? "m-0 text-rn-16 font-bold tracking-[-0.01em] text-rn-ink" : "text-xl font-semibold tracking-tight text-foreground/80"}>
+          {title ?? t("geo.title")}
+        </h3>
       </header>
 
       <div className="flex flex-wrap items-center justify-between gap-3">

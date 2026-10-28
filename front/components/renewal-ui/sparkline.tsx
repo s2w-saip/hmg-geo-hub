@@ -1,5 +1,12 @@
 import { cx } from "./cx";
 
+// The line's box: points sit PAD in from either side, evenly spaced (RnSparkAxis puts labels on them).
+const W = 120;
+const PAD = 3;
+
+/** Where point `i` of `n` sits, as a share of the width (the middle when there is one). */
+const pointAt = (i: number, n: number) => (n > 1 ? (PAD + (i * (W - 2 * PAD)) / (n - 1)) / W : 0.5);
+
 /**
  * Minimal inline trend line. `null` points break the line (no interpolation — the
  * same rule as the app's trend charts). The last measured point gets a dot.
@@ -23,16 +30,15 @@ export function RnSparkline({
   domain?: readonly [number, number];
   className?: string;
 }) {
-  const w = 120;
+  const w = W;
   const h = 36;
-  const p = 3;
+  const p = PAD;
   const nums = values.filter((v): v is number => v != null);
   if (nums.length === 0) return <svg aria-hidden className={cx("block h-9 w-full", className)} viewBox={`0 0 ${w} ${h}`} />;
   const lo = domain ? domain[0] : Math.min(...nums);
   const hi = domain ? domain[1] : Math.max(...nums);
   const span = domain ? hi - lo || 1 : Math.max(hi - lo, minSpan) || 1;
   const min = domain ? lo : (lo + hi) / 2 - span / 2;
-  const step = values.length > 1 ? (w - 2 * p) / (values.length - 1) : 0;
   const y = (v: number) => {
     const t = (v - min) / span;
     return h - p - (invert ? 1 - t : t) * (h - 2 * p);
@@ -44,7 +50,7 @@ export function RnSparkline({
     if (v == null) {
       if (cur.length) runs.push(cur);
       cur = [];
-    } else cur.push([values.length > 1 ? p + i * step : w / 2, y(v)]);
+    } else cur.push([pointAt(i, values.length) * w, y(v)]);
   });
   if (cur.length) runs.push(cur);
   const lastRun = runs[runs.length - 1];
@@ -65,5 +71,33 @@ export function RnSparkline({
       })}
       <circle className={dot} cx={last[0]} cy={last[1]} r={3} />
     </svg>
+  );
+}
+
+/** Labels under an RnSparkline of as many values, each centred on its point. */
+export function RnSparkAxis({
+  labels,
+  tone = "default",
+  className,
+}: {
+  labels: ReadonlyArray<string>;
+  tone?: "default" | "onDark";
+  className?: string;
+}) {
+  const n = labels.length;
+  return (
+    <span
+      className={cx(
+        "relative block h-4 text-rn-11 whitespace-nowrap tabular-nums",
+        tone === "onDark" ? "text-white/72" : "text-rn-muted",
+        className,
+      )}
+    >
+      {labels.map((text, i) => (
+        <span key={i} className="absolute top-0 -translate-x-1/2" style={{ left: `${pointAt(i, n) * 100}%` }}>
+          {text}
+        </span>
+      ))}
+    </span>
   );
 }

@@ -40,9 +40,9 @@ import type {
 /** Δ 가 없을 때 찍는 표기(U+2212 MINUS SIGN) — 빈칸이면 "왜 없는지"가 안 보인다(QA #22). */
 export const NO_DELTA = "−";
 
-/** 카드 링크 — 상세 화면(답변분석 탭). */
-export function detailHref(key: OverviewKpiKey, locale: string, qs: string): string {
-  const base = `/${locale}/standard/answer-analysis`;
+/** 카드 링크 — 상세 화면(답변분석 탭). `root` "/renewal" = 리뉴얼 화면(리뉴얼 Overview 는 리뉴얼 셸 안에 머문다, 2026-10-28). */
+export function detailHref(key: OverviewKpiKey, locale: string, qs: string, root: "" | "/renewal" = ""): string {
+  const base = `/${locale}${root}/standard/answer-analysis`;
   const q = qs ? `&${qs}` : "";
   switch (key) {
     case "visibility": return `${base}/mention?kpi=exposure${q}`;

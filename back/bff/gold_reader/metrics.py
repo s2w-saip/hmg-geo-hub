@@ -63,9 +63,13 @@ async def summary(ctx: Context) -> dict:
         data.update(target_url_rate=ratio(rows["tgt_hits"], rows["url_den"]),
                     owned_url_rate=ratio(rows["own_hits"], rows["url_den"]),
                     citation_accuracy=ratio(rows["tgt_own_hits"], rows["own_hits"]))
-    # Applied prompts belong to the catalog even when they have never been measured.
-    from bff.gold_reader.catalog import prompts
-    catalog = await prompts(ctx)
+    # Applied prompts belong to the catalog even when they have never been measured. Counting them reads the
+    # whole catalog (12k rows, ~1 s on the global card), so only when ?parts= asks for them (none = all, B089).
+    applied = None
+    parts = values(ctx.q, "parts")
+    if not parts or "applied" in parts:
+        from bff.gold_reader.catalog import prompts
+        applied = (await prompts(ctx))["meta"]["page"]["total"]
     by_funnel = None
     if flag(ctx.q, "by_funnel"):
         b = SQL()
@@ -75,7 +79,7 @@ async def summary(ctx: Context) -> dict:
             WHERE {where} GROUP BY t.code ORDER BY t.code IS NULL,measured_prompts DESC,t.code""", *b.args)]
     data.update(url_prompts={"measured_prompts": rows["measured"], "target_prompts": rows["target"], "owned_prompts": rows["owned"]} if ctx.sf == 2 else None,
                 params={"answers": mention["answers"], "measured_prompts": mention["measured_prompts"],
-                        "applied_prompts": catalog["meta"]["page"]["total"],
+                        "applied_prompts": applied,
                         "prompts_without_brand": mention["measured_prompts"]-mention["mentioned_prompts"] if ctx.selected_dates else None,
                         "measured_by_funnel": by_funnel},
                 analysis_gap={"gap_answers": citation["gap_answers"], "base_answers": citation["gap_base"]})
@@ -105,11 +109,18 @@ async def engines(ctx: Context) -> dict:
     return envelope(ctx, {"rows": sorted(rows, key=lambda r: r["engine"]), "total": total, "engine_consistency": consistency})
 
 
-async def brand_rows(ctx: Context, *, by_date: bool = False, by_country: bool = False) -> list[dict]:
+async def brand_rows(ctx: Context, *, by_date: bool = False, by_country: bool = False,
+                     brand_keys: list[str] | None = None) -> list[dict]:
     b = SQL()
     where = ctx.predicate(b, population="mentions")
+    if brand_keys:
+        # compared as text, as the ?brand_key= values come
+        where += f" AND f.brand_key::text=ANY({b.bind(brand_keys, 'text[]')})"
     keys = "f.round_date," if by_date else "f.geo_key," if by_country else ""
-    rows = await ctx.conn.fetch(f"""SELECT {keys}f.brand_key,d.name,d.own_bit,
+    # Aggregate per brand_key, then join the names to the result: grouping by the name too sorted every cell
+    # by its text under the collation (0.6 of the 1.1 s on the Overview's brand rows). brand_key decides
+    # the name and own_bit, so the groups are the same.
+    rows = await ctx.conn.fetch(f"""WITH a AS (SELECT {keys}f.brand_key,
         sum(f.mention_count)::bigint AS mentions,sum(f.answers_present)::bigint AS answers,
         sum(f.rank_sum)::bigint AS rank_sum,sum(f.ranked)::bigint AS ranked,
         sum(f.s_pos)::bigint AS positive,sum(f.s_neu)::bigint AS neutral,
@@ -118,9 +129,9 @@ async def brand_rows(ctx: Context, *, by_date: bool = False, by_country: bool = 
         count(DISTINCT f.prompt_key) FILTER(WHERE f.has_brand)::int AS prompts,
         count(DISTINCT f.prompt_key) FILTER(WHERE f.has_multi)::int AS multi_prompts,
         {','.join(f'sum(f.t_{t})::bigint AS t_{t}' for t in TYPES)}
-        FROM gold.brand_cell f JOIN gold.dim_brand d USING(brand_key)
-        WHERE {where} AND f.competitive
-        GROUP BY {keys}f.brand_key,d.name,d.own_bit ORDER BY mentions DESC,d.name""", *b.args)
+        FROM gold.brand_cell f WHERE {where} AND f.competitive GROUP BY {keys}f.brand_key)
+        SELECT a.*,d.name,d.own_bit FROM a JOIN gold.dim_brand d USING(brand_key)
+        ORDER BY a.mentions DESC,d.name""", *b.args)
     return [dict(r) for r in rows]
 
 
@@ -189,15 +200,18 @@ async def trend(ctx: Context) -> dict:
             LEFT JOIN gold.dim_category c ON c.category_key=f.category_key WHERE {where}
             GROUP BY f.round_date,s.skey,s.domain,c.slug,c.name""", *b.args)
         def citation_series(dim, top):
-            grouped, totals, labels = defaultdict(int), defaultdict(int), {}
+            grouped, totals, labels, key_totals = defaultdict(int), defaultdict(int), {}, defaultdict(int)
             for r in rows:
                 day = bucket_key(r["round_date"])
                 key = r["skey"] if dim == "source" else r["slug"]
                 totals[day] += r["citations"]
                 if key is not None:
                     grouped[(day,key)] += r["citations"]
+                    key_totals[key] += r["citations"]
                     labels[key] = (r["domain"] or r["skey"]) if dim == "source" else r["category"]
-            keys = sorted(labels, key=lambda k:(-sum(v for (day,key),v in grouped.items() if key==k),k))[:top]
+            # Rank by each key's total over all buckets, summed once: re-summing the (bucket, key)
+            # cells per key was sources × cells (8 of the 10 s of the Citation source trend).
+            keys = sorted(labels, key=lambda k:(-key_totals[k],k))[:top]
             return [{"metric": "source_share" if dim=="source" else "category_share", "kind":"ratio", "key":key,
                 "label":labels[key], "points":[{"bucket":day,"ratio":ratio(grouped.get((day,key),0),totals.get(day,0)),
                 "gap":not totals.get(day),"gap_reason":"no_answer" if not totals.get(day) else None} for day in buckets]} for key in keys]
@@ -211,6 +225,9 @@ async def trend(ctx: Context) -> dict:
             dims.append({"dimension":dim,"series":citation_series(dim,n),"meta":ctx.meta()})
         return envelope(ctx,{"bucket":bucket,"dimension":dimension,"own_label":ctx.label,"buckets":bucket_rows,
             "series":citation_series(dimension,top),"dims":dims or None})
+    if dimension == "brand":
+        return envelope(ctx, {"bucket": bucket, "dimension": dimension, "own_label": ctx.label, "buckets": bucket_rows,
+                              "series": await brand_series(ctx, wanted, buckets, bucket_key), "dims": None})
     groups: dict[tuple[str, str | None], dict] = {}
     engine_codes = {r["engine_key"]: r["code"] for r in await ctx.conn.fetch("SELECT * FROM gold.dim_engine")}
     grouping = "date_engine" if dimension == "engine" else "date"
@@ -244,34 +261,36 @@ async def trend(ctx: Context) -> dict:
                                "origin": "report" if ctx.card else "live", "negative": c["sent_neg"] if c and metric == "sentiment" else None})
             series.append({"metric": metric, "kind": "rank" if metric == "position" else "ratio", "key": dim,
                            "label": dim or ctx.label, "points": points})
-    if dimension == "brand":
-        # Brand histories must use brand cells; never duplicate the own-brand series as a rival.
-        series = []
-        rows = await brand_rows(ctx, by_date=True)
-        if values(ctx.q, "brand_key"):
-            wanted_keys = set(values(ctx.q, "brand_key"))
-            rows = [r for r in rows if str(r["brand_key"]) in wanted_keys]
-        names = sorted({r["name"] for r in rows}, key=lambda n: -sum(r["mentions"] for r in rows if r["name"] == n))[:int(ctx.q.get("top_n", "10"))]
-        totals = {}
-        for row in await counts(ctx, group="date"):
-            total = totals.setdefault(bucket_key(row["round_date"]), dict.fromkeys(COUNTS, 0))
-            for column in COUNTS:
-                total[column] += row[column]
-        for name in names:
-            for metric in wanted:
-                points = []
-                for key in buckets:
-                    rs = [r for r in rows if r["name"] == name and bucket_key(r["round_date"]) == key]
-                    total = totals.get(key, {})
-                    n = sum(r["mentions"] for r in rs)
-                    v = ratio(n, total.get("total_mentions")) if metric == "share_of_voice" else ratio(sum(r["answers"] for r in rs), total.get("answers")) if metric == "visibility" else rank_avg(sum(r["rank_sum"] for r in rs), sum(r["ranked"] for r in rs)) if metric == "position" else ratio(sum(r["positive"] for r in rs), sum(r["positive"] + r["negative"] + r["neutral"] + r["mixed"] for r in rs)) if metric == "sentiment" else None
-                    points.append({"bucket": key, "rank" if metric == "position" else "ratio": v, "gap": not rs})
-                first = next(r for r in rows if r["name"] == name)
-                series.append({"metric": metric, "kind": "rank" if metric == "position" else "ratio", "key": name,
-                               "label": name, "brand_key": first["brand_key"], "is_own": bool(first["own_bit"] & ctx.bits), "points": points})
     return envelope(ctx, {"bucket": bucket, "dimension": dimension, "own_label": ctx.label,
                           "buckets": bucket_rows,
                           "series": series, "dims": None})
+
+
+async def brand_series(ctx: Context, wanted: list[str], buckets: list[str], bucket_key) -> list[dict]:
+    """Brand histories must use brand cells; never duplicate the own-brand series as a rival. Only the
+    asked brands are read, and the date totals are one scan of the mention cells (the Overview brand
+    trend read every brand and three cell scans, two of them for series it then dropped: 5.4 s)."""
+    rows = await brand_rows(ctx, by_date=True, brand_keys=values(ctx.q, "brand_key"))
+    names = sorted({r["name"] for r in rows}, key=lambda n: -sum(r["mentions"] for r in rows if r["name"] == n))[:int(ctx.q.get("top_n", "10"))]
+    totals = {}
+    for row in await counts(ctx, group="date"):
+        total = totals.setdefault(bucket_key(row["round_date"]), dict.fromkeys(COUNTS, 0))
+        for column in COUNTS:
+            total[column] += row[column]
+    series = []
+    for name in names:
+        for metric in wanted:
+            points = []
+            for key in buckets:
+                rs = [r for r in rows if r["name"] == name and bucket_key(r["round_date"]) == key]
+                total = totals.get(key, {})
+                n = sum(r["mentions"] for r in rs)
+                v = ratio(n, total.get("total_mentions")) if metric == "share_of_voice" else ratio(sum(r["answers"] for r in rs), total.get("answers")) if metric == "visibility" else rank_avg(sum(r["rank_sum"] for r in rs), sum(r["ranked"] for r in rs)) if metric == "position" else ratio(sum(r["positive"] for r in rs), sum(r["positive"] + r["negative"] + r["neutral"] + r["mixed"] for r in rs)) if metric == "sentiment" else None
+                points.append({"bucket": key, "rank" if metric == "position" else "ratio": v, "gap": not rs})
+            first = next(r for r in rows if r["name"] == name)
+            series.append({"metric": metric, "kind": "rank" if metric == "position" else "ratio", "key": name,
+                           "label": name, "brand_key": first["brand_key"], "is_own": bool(first["own_bit"] & ctx.bits), "points": points})
+    return series
 
 
 async def dates(ctx: Context) -> dict:
@@ -288,10 +307,12 @@ async def dates(ctx: Context) -> dict:
 async def options(ctx: Context) -> dict:
     b = SQL()
     where = ctx.predicate(b, family="fact", dates=False, dimensions=False, taxonomy=False)
-    rows = await ctx.conn.fetch(f"""SELECT DISTINCT f.bgrp,c.code AS country,c.kind,r.code AS area,l.code AS lang,e.code AS engine,e.is_default
-        FROM gold.answer_fact f JOIN gold.dim_country c USING(geo_key) JOIN gold.dim_lang l USING(lang_key)
+    # Distinct keys over the facts first, codes joined to those few rows (the text DISTINCT sorted every fact).
+    rows = await ctx.conn.fetch(f"""WITH k AS (SELECT DISTINCT f.bgrp,f.geo_key,f.lang_key,f.engine_key FROM gold.answer_fact f WHERE {where})
+        SELECT DISTINCT k.bgrp,c.code AS country,c.kind,r.code AS area,l.code AS lang,e.code AS engine,e.is_default
+        FROM k JOIN gold.dim_country c USING(geo_key) JOIN gold.dim_lang l USING(lang_key)
         JOIN gold.dim_engine e USING(engine_key) LEFT JOIN gold.dim_region r USING(region_key)
-        WHERE {where} AND NOT c.hidden_standard""", *b.args)
+        WHERE NOT c.hidden_standard""", *b.args)
     geo = sorted({(name, r["country"], r["lang"].lower() if r["lang"] else None)
                   for r in rows for bit, name in BRAND_NAMES.items() if r["bgrp"] & bit}, key=lambda t: tuple(v or "" for v in t))
     catalog = None
@@ -301,8 +322,13 @@ async def options(ctx: Context) -> dict:
         # Actual catalog combinations, not a Cartesian product of taxonomy values.
         b = SQL()
         build = b.bind(ctx.builds.get("fact", []), "bigint[]")
-        joins = " ".join(f"LEFT JOIN gold.dim_taxon {axis} ON {axis}.taxon_key=ce.{col}" for axis, col in AXES.items())
-        combinations = await ctx.conn.fetch(f"SELECT DISTINCT ce.brand_bit,{','.join(f'{a}.code AS {a}' for a in AXES)} FROM gold.catalog_entry ce {joins} WHERE ce.build_id=ANY({build}) AND (ce.brand_bit & {b.bind(ctx.bits | 8)})<>0", *b.args)
+        # Distinct taxon keys over the catalog first (280k entries -> ~460), codes joined after; ordered as the
+        # text DISTINCT's sort returned them.
+        joins = " ".join(f"LEFT JOIN gold.dim_taxon {axis} ON {axis}.taxon_key=k.{col}" for axis, col in AXES.items())
+        combinations = await ctx.conn.fetch(f"""WITH k AS (SELECT DISTINCT ce.brand_bit,{','.join(f'ce.{col}' for col in AXES.values())}
+            FROM gold.catalog_entry ce WHERE ce.build_id=ANY({build}) AND (ce.brand_bit & {b.bind(ctx.bits | 8)})<>0)
+            SELECT DISTINCT k.brand_bit,{','.join(f'{a}.code AS {a}' for a in AXES)} FROM k {joins}
+            ORDER BY k.brand_bit,{','.join(AXES)}""", *b.args)
         catalog["rows"] = [{"brand": BRAND_NAMES.get(r["brand_bit"]), **{a: r[a] for a in AXES}} for r in combinations]
         if ctx.sf == 3:
             joins = " ".join(f"LEFT JOIN gold.dim_taxon {axis} ON {axis}.taxon_key=p.{col}" for axis,col in AXES.items())

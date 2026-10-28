@@ -61,6 +61,9 @@ export default async function RenewalDashboardPage({
   const asOf = screenGet<AsOfView>("overview/as-of", { ...sp, "ctx.surface": "global" })
     .then((v) => v.asOf)
     .catch((e: unknown) => (isTransientScreenError(e) ? null : throwForPage(e, locale)));
+  // The body's reads leave now, with the filter panel's: the body does not use the panel options, and
+  // issued after them every section waited for that read (2.2 s of the 9.4 s page on 2026-10-28).
+  const reads = bodyReads(sp, locale, showsGeoMap(session.user));
   return (
     <RnFilterRuntime>
       <Suspense fallback={<PageSkeleton title={t("overview.title")} />}>
@@ -68,7 +71,7 @@ export default async function RenewalDashboardPage({
           sp={sp}
           scope={session.user.scope}
           userId={session.user.id}
-          showGeo={showsGeoMap(session.user)}
+          reads={reads}
           locale={locale}
           qs={qsFrom(sp)}
           header={
@@ -126,7 +129,7 @@ async function RenewalOverview({
   sp,
   scope,
   userId,
-  showGeo,
+  reads,
   locale,
   qs,
   header,
@@ -134,7 +137,7 @@ async function RenewalOverview({
   sp: SP;
   scope: AllowedScope;
   userId: string;
-  showGeo: boolean;
+  reads: BodyReads;
   locale: string;
   qs: string;
   header: ReactNode;
@@ -146,7 +149,7 @@ async function RenewalOverview({
         <RnOverviewApplied />
         <RnBusyScope className="flex flex-col gap-4">
           <Suspense fallback={<BodySkeleton />}>
-            <OverviewSection sp={sp} locale={locale} qs={qs} showGeo={showGeo} />
+            <OverviewSection reads={reads} locale={locale} qs={qs} />
           </Suspense>
         </RnBusyScope>
       </RnFilterSplit>
@@ -154,26 +157,35 @@ async function RenewalOverview({
   );
 }
 
-// The reads of /dashboard's KpiCardsSection + GeoSection (+ the renewal parts), issued together.
-async function OverviewSection({ sp, locale, qs, showGeo }: { sp: SP; locale: string; qs: string; showGeo: boolean }) {
+// The reads of /dashboard's KpiCardsSection + GeoSection (+ the renewal parts), issued together. Every
+// promise has its rejection handler attached at once: the page may fail (filters) before a section awaits.
+function bodyReads(sp: SP, locale: string, showGeo: boolean) {
+  const q: ScreenQuery = sp;
+  return {
+    cards: handled(screenGet<CardsView>("overview/cards", q)),
+    trend: handled(onTransient(screenGet<CardTrendView>("overview/card-trend", q), DEGRADED_CARD_TREND)),
+    competitors: handled(
+      onTransient(screenGet<CardCompetitorsView>("overview/card-competitors", { ...q, "ctx.view": "renewal" }), DEGRADED_CARD_COMPETITORS),
+    ),
+    matrix: handled(onTransient(screenGet<BrandMatrixView | null>("overview/brand-matrix", q), null)),
+    geo: showGeo
+      ? handled(
+          screenGet<OverviewGeoView>("overview/geo", { ...q, "ctx.locale": locale }).catch((e: unknown) =>
+            isTransientScreenError(e) ? { geo: null, degraded: true } : throwForPage(e, locale),
+          ),
+        )
+      : null,
+  };
+}
+type BodyReads = ReturnType<typeof bodyReads>;
+
+async function OverviewSection({ reads, locale, qs }: { reads: BodyReads; locale: string; qs: string }) {
   const t = await getTranslations("dashboard");
   const tKpi = await getTranslations("answerAnalysis.mentions.kpi");
-  const q: ScreenQuery = sp;
-  const trend = handled(onTransient(screenGet<CardTrendView>("overview/card-trend", q), DEGRADED_CARD_TREND));
-  const competitors = handled(
-    onTransient(screenGet<CardCompetitorsView>("overview/card-competitors", { ...q, "ctx.view": "renewal" }), DEGRADED_CARD_COMPETITORS),
-  );
-  const matrix = handled(onTransient(screenGet<BrandMatrixView | null>("overview/brand-matrix", q), null));
-  const geo = showGeo
-    ? handled(
-        screenGet<OverviewGeoView>("overview/geo", { ...q, "ctx.locale": locale }).catch((e: unknown) =>
-          isTransientScreenError(e) ? { geo: null, degraded: true } : throwForPage(e, locale),
-        ),
-      )
-    : null;
+  const { trend, competitors, matrix, geo } = reads;
   let view: CardsView;
   try {
-    view = await screenGet<CardsView>("overview/cards", q);
+    view = await reads.cards;
   } catch (e) {
     if (!isTransientScreenError(e)) throwForPage(e, locale);
     view = { state: "degraded" };
