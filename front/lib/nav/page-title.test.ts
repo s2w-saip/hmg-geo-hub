@@ -48,3 +48,17 @@ describe("resolvePageTitleRef — website 접두사 처리", () => {
     });
   });
 });
+
+// 2026-10-28: a renewal path without a row of its own (the "not implemented" page) carries its original's label.
+describe("resolvePageTitleRef — renewal paths", () => {
+  it("resolves /renewal/x without its own row to the label of x", () => {
+    expect(resolvePageTitleRef("/ko/renewal/website/prompts")).toEqual({ namespace: "nav", key: "websitePrompts" });
+    expect(resolvePageTitleRef("/en/renewal/website/answer-analysis/citation")).toEqual({ namespace: "nav", key: "answerAnalysisCitation" });
+    expect(resolvePageTitleRef("/ko/renewal/standard/ai-funnel/conversion")).toEqual({ namespace: "nav", key: "aiFunnelConversion" });
+    expect(resolvePageTitleRef("/ko/renewal/admin/credits")).toEqual({ namespace: "nav", key: "adminCredits" });
+  });
+
+  it("keeps a renewal page's own row", () => {
+    expect(resolvePageTitleRef("/ko/renewal/standard/prompts")).toEqual({ namespace: "nav", key: "renewalStandardPrompts" });
+  });
+});

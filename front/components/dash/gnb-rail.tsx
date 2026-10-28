@@ -13,6 +13,7 @@ import { Link, usePathname } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
 import { carryFilterParams } from "@/components/dash/filter-carry";
 import { logout } from "@/lib/auth/actions";
+import { useHubLogout } from "@/components/hub-session";
 import { ROUTES, type RouteGroup } from "@/lib/auth/route-policy";
 import type { Role } from "@/lib/auth/types";
 import { Button } from "@/components/ui/button";
@@ -36,7 +37,8 @@ const GROUP_ICON: Record<RouteGroup, ComponentType<{ className?: string }>> = {
 };
 
 export type RailTab = { group: RouteGroup; href: string };
-export type RailUser = { email: string; role: Role };
+// local: sign-out is the HUB login's (lib/hub, 2026-10-27), not Supabase's
+export type RailUser = { email: string; role: Role; local?: boolean };
 
 export function GnbRail({
   tabs,
@@ -132,6 +134,7 @@ function RailTabLink({ tab, active }: { tab: RailTab; active: boolean }) {
 function UserTile({ user, locale }: { user: RailUser; locale: string }) {
   const tNav = useTranslations("nav");
   const tRoles = useTranslations("roles");
+  const hubLogout = useHubLogout(locale);
   const handle = user.email.split("@")[0] || "user";
   const monogram = handle.charAt(0).toUpperCase();
   return (
@@ -151,7 +154,20 @@ function UserTile({ user, locale }: { user: RailUser; locale: string }) {
       >
         {tRoles(user.role)}
       </span>
-      {user.role !== "local_reader" && <form action={logout}>
+      {/* the local mode's session is always the HUB login (2026-10-28) */}
+      {user.local ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label={tNav("logout")}
+          title={tNav("logout")}
+          onClick={() => void hubLogout()}
+          className="mt-0.5 text-white/85 hover:bg-white/10 hover:text-white"
+        >
+          <LogOut className="h-4 w-4" aria-hidden />
+        </Button>
+      ) : !user.local && user.role !== "local_reader" && <form action={logout}>
         <input type="hidden" name="locale" value={locale} />
         <Button
           type="submit"

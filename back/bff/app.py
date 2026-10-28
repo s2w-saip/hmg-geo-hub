@@ -1,8 +1,11 @@
-"""Local read-only BFF/API over external Gold and separate HUB data/operations stores."""
+"""Local BFF/API over external Gold and separate HUB data/operations stores. Read-only, except the HUB
+Global prompt editing that the signed-in top-level administrator may do (/v1/auth/*, /v1/hub/global-prompts)."""
 from __future__ import annotations
 
+import json
 import logging
 from contextlib import asynccontextmanager
+from uuid import UUID
 
 import asyncpg
 from fastapi import FastAPI, HTTPException, Query, Request
@@ -11,7 +14,7 @@ from fastapi.responses import JSONResponse
 
 from bff import api, screens
 from bff.gold_reader.db import close_pool, connection, open_pool
-from bff.hub_stores import analytics_db, hub_catalog, operations_db
+from bff.hub_stores import analytics_db, catalog_editor, hub_auth, hub_catalog, operations_db
 
 log = logging.getLogger("hgh.gold")
 
@@ -21,28 +24,37 @@ async def lifespan(app: FastAPI):
     await open_pool()
     await analytics_db.open_pool()
     await operations_db.open_pool()
+    await catalog_editor.open_pool()
     try:
         yield
     finally:
         await close_pool()
         await analytics_db.close_pool()
         await operations_db.close_pool()
+        await catalog_editor.close_pool()
 
 
 app = FastAPI(title="HMG GEO HUB BFF / read-only API", lifespan=lifespan)
 
+STATUS_CODES = {401: "unauthorized", 403: "forbidden", 404: "not_found", 405: "read_only", 409: "conflict", 429: "rate_limited"}
+
 
 @app.exception_handler(HTTPException)
 async def http_error(request: Request, exc: HTTPException):
-    code = "read_only" if exc.status_code == 405 else "not_found" if exc.status_code == 404 else "source_unavailable" if exc.status_code >= 500 else "invalid_value"
-    return JSONResponse({"error": {"code": code, "message": str(exc.detail)}}, status_code=exc.status_code)
+    # A dict detail (HUB editing) names its own code and details; a string detail is the message.
+    detail = exc.detail if isinstance(exc.detail, dict) else {"message": str(exc.detail)}
+    code = detail.get("code") or STATUS_CODES.get(exc.status_code) or ("source_unavailable" if exc.status_code >= 500 else "invalid_value")
+    body = {"code": code, "message": detail.get("message", code), **({"details": detail["details"]} if "details" in detail else {})}
+    return JSONResponse({"error": body}, status_code=exc.status_code)
 
 
 @app.exception_handler(asyncpg.PostgresError)
 async def database_error(request: Request, exc: asyncpg.PostgresError):
     # A PostgreSQL message can contain query values. Never return or log it.
-    log.error("Gold query failed: %s SQLSTATE=%s path=%s", type(exc).__name__, exc.sqlstate, request.url.path)
-    return JSONResponse({"error": {"code": "source_unavailable", "message": "Gold data could not be read"}}, status_code=503)
+    hub = request.url.path.startswith(("/v1/auth/", "/v1/hub/"))
+    log.error("%s query failed: %s SQLSTATE=%s path=%s", "HUB" if hub else "Gold", type(exc).__name__, exc.sqlstate, request.url.path)
+    message = "HUB data could not be read or written" if hub else "Gold data could not be read"
+    return JSONResponse({"error": {"code": "source_unavailable", "message": message}}, status_code=503)
 
 
 @app.exception_handler(TimeoutError)
@@ -58,6 +70,75 @@ async def healthz():
         info = dict(await conn.fetchrow("SELECT current_database() AS database,current_user AS role,current_setting('transaction_read_only') AS read_only"))
     return {"ok": True, "source": "gold", **info, "analytics": await analytics_db.health(),
             "operations": await operations_db.health()}
+
+
+# ─── HUB login and Global prompt editing (top-level administrator only) ─────────────────────────────────
+# Registered before /v1/hub/{kind} and the read-only catch-all so these paths reach their own handlers.
+
+def hub_json(data, status: int = 200) -> JSONResponse:
+    return JSONResponse(jsonable_encoder({"data": data, "meta": {"source": "hub_data", "database": "hmg_analytics"}}),
+                        status_code=status, headers={"Cache-Control": "no-store"})
+
+
+async def json_body(request: Request):
+    try:
+        return await request.json()
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        raise HTTPException(422, "Request body must be JSON") from None
+
+
+@app.post("/v1/auth/login")
+async def auth_login(request: Request):
+    body = await json_body(request)
+    if not isinstance(body, dict) or not isinstance(body.get("login"), str) or not isinstance(body.get("password"), str):
+        raise HTTPException(422, "login and password are required")
+    return hub_json(await hub_auth.login(body["login"], body["password"]))
+
+
+@app.get("/v1/auth/me")
+async def auth_me(request: Request):
+    return hub_json({"user": (await hub_auth.principal(request.headers.get("authorization"))).view()})
+
+
+@app.get("/v1/hub/global-prompts")
+async def global_prompts(request: Request):
+    await hub_auth.principal(request.headers.get("authorization"))
+    return hub_json(await catalog_editor.listing(dict(request.query_params)))
+
+
+@app.get("/v1/hub/global-prompts/options")
+async def global_prompt_options(request: Request):
+    await hub_auth.principal(request.headers.get("authorization"))
+    return hub_json(await catalog_editor.options())
+
+
+@app.post("/v1/hub/global-prompts")
+async def global_prompt_create(request: Request):
+    actor = await hub_auth.principal(request.headers.get("authorization"))
+    body = catalog_editor.parse(catalog_editor.PromptFields, await json_body(request))
+    return hub_json(await catalog_editor.create(body, actor), 201)
+
+
+@app.get("/v1/hub/global-prompts/{prompt_id}")
+async def global_prompt(prompt_id: UUID, request: Request):
+    await hub_auth.principal(request.headers.get("authorization"))
+    return hub_json(await catalog_editor.detail(prompt_id))
+
+
+@app.put("/v1/hub/global-prompts/{prompt_id}")
+async def global_prompt_update(prompt_id: UUID, request: Request):
+    actor = await hub_auth.principal(request.headers.get("authorization"))
+    body = catalog_editor.parse(catalog_editor.PromptWrite, await json_body(request))
+    return hub_json(await catalog_editor.update(prompt_id, body, actor))
+
+
+@app.post("/v1/hub/global-prompts/{prompt_id}/{action}")
+async def global_prompt_status(prompt_id: UUID, action: str, request: Request):
+    if action not in ("archive", "restore"):
+        raise HTTPException(404, "Unknown action")
+    actor = await hub_auth.principal(request.headers.get("authorization"))
+    body = catalog_editor.parse(catalog_editor.VersionRef, await json_body(request))
+    return hub_json(await catalog_editor.set_status(prompt_id, body, "archived" if action == "archive" else "active", actor))
 
 
 @app.get("/v1/hub/{kind}")

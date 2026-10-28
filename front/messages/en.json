@@ -63,6 +63,10 @@
     "adminStandardEntities": "Entity catalog",
     "keywordTools": "Keyword tools",
     "adminGa4": "GA4 connection",
+    "adminAnalysis": "Analysis engine",
+    "adminReports": "Report management",
+    "adminCredits": "Measurement credits",
+    "adminCreditAccounts": "Account list",
     "logout": "Log out",
     "groups": {
       "standard": "Global",
@@ -100,7 +104,8 @@
     "websitePrompts": "Prompts",
     "adminCitationSources": "Citation Sources",
     "renewalAnswerAnalysisMention": "Mention (Renewal)",
-    "renewalAnswerAnalysisCitation": "Citation (Renewal)"
+    "renewalAnswerAnalysisCitation": "Citation (Renewal)",
+    "renewalAdminStandardPrompts": "Global prompt management"
   },
   "locale": {
     "label": "Language",
@@ -4672,7 +4677,7 @@
       "definition": "Definition",
       "formula": "Formula",
       "infoLabel": "What {name} means",
-      "detailLabel": "Open {name} details",
+      "detailLabel": "Open {name} details (new tab)",
       "deltaUp": "Better",
       "deltaDown": "Worse",
       "deltaFlat": "No change",
@@ -4688,7 +4693,6 @@
       "kpiTitle": "5 KPIs",
       "kpiHintDelta": "Δ = {compare}",
       "kpiHintTrend": "trend = last {count} rounds",
-      "detail": "Details",
       "standing": "<b>#{rank}</b> of {count} compared brands",
       "brandsHint": "All 5 KPIs in one table · bars scale to each column's best · a lower Average Position is ahead · Δ = {compare} on every row",
       "colBrand": "Brand",
@@ -4718,7 +4722,7 @@
       "cellNoRival": "No competitor value"
     },
     "prompts": {
-      "columnTaxonomy": "Taxonomy · funnel",
+      "columnTaxonomy": "Taxonomy",
       "columnMeasure": "Measurement",
       "sortLabel": "Sort",
       "sortAsc": "Ascending",
@@ -4729,7 +4733,19 @@
       "scopePill": "Viewing · {scope}",
       "optionSearch": "Search {label}",
       "copyLink": "Copy link",
-      "linkCopied": "Link with the current conditions copied"
+      "linkCopied": "Link with the current conditions copied",
+      "presenceShort": {
+        "branded": "Branded",
+        "unbranded": "Unbranded"
+      },
+      "detail": {
+        "title": "Prompt details",
+        "copy": "Copy text",
+        "copied": "Prompt text copied",
+        "copyFailed": "Couldn't copy the text",
+        "attributes": "Attributes",
+        "history": "Change history"
+      }
     },
     "mention": {
       "title": "Mention",
@@ -5275,5 +5291,112 @@
         "negativeSub": "URLs that answers leaning negative on us rested on — sources that need a response."
       }
     }
+  },
+  "hubLogin": {
+    "title": "Admin sign-in",
+    "description": "Sign in with the top-level administrator account to use the HUB.",
+    "login": "Login ID",
+    "password": "Password",
+    "passwordShow": "Show password",
+    "passwordHide": "Hide password",
+    "submit": "Sign in",
+    "error": {
+      "invalid": "The login ID or password is incorrect.",
+      "rateLimited": "Too many failed sign-ins. Try again in 15 minutes.",
+      "unavailable": "Sign-in is not set up yet. Check the HUB stores and HGH_AUTH_SECRET.",
+      "failed": "Could not sign in. Try again shortly."
+    }
+  },
+  "hubPrompts": {
+    "title": "Global prompt management",
+    "description": "Global prompts in the HUB catalog. Only prompts created in the HUB can be edited; prompts imported from Gold are read-only.",
+    "notMeasuredTitle": "Not measured yet",
+    "notMeasured": "Prompts created in the HUB are not sent to measurement yet. Once the measurement hand-off is decided, the latest versions in this list are what it receives.",
+    "create": "New prompt",
+    "createTitle": "New Global prompt",
+    "createHint": "Codes must be ones the Global catalog already uses.",
+    "createSubmit": "Create",
+    "detailTitle": "Global prompt",
+    "listTitle": "Prompts",
+    "listLabel": "Global prompts",
+    "counts": "All {total} · HUB {hub} · Gold {gold} · Archived {archived}",
+    "searchLabel": "Search text",
+    "searchPlaceholder": "Search text",
+    "statusLabel": "Status",
+    "originLabel": "Source",
+    "all": "All",
+    "status": {
+      "active": "Active",
+      "archived": "Archived"
+    },
+    "origin": {
+      "hub": "HUB",
+      "gold": "Gold"
+    },
+    "kind": {
+      "single": "Single",
+      "acr": "ACR"
+    },
+    "columnTaxonomy": "Taxonomy",
+    "columnStatus": "Status",
+    "columnChanged": "Version · last change",
+    "empty": "No prompts match.",
+    "range": "{from}–{to} of {total}",
+    "prev": "Previous page",
+    "next": "Next page",
+    "close": "Close",
+    "loading": "Loading…",
+    "save": "Save",
+    "archive": "Archive",
+    "restore": "Restore",
+    "login": "Sign in",
+    "loginRequired": "Editing Global prompts needs the HUB top-level administrator sign-in.",
+    "goldReadOnly": "Prompts imported from Gold cannot be edited here: the next Gold import would put the original definition back.",
+    "archivedNote": "This prompt is archived. Restore it to edit it.",
+    "regionsHint": "Separate with commas (e.g. KR, US, x:WW).",
+    "historyTitle": "Change history",
+    "goldSync": "Gold import",
+    "goldOnlyChange": "A Gold definition field not shown here changed.",
+    "event": {
+      "created": "Created",
+      "updated": "Edited",
+      "archived": "Archived",
+      "restored": "Restored"
+    },
+    "field": {
+      "text": "Text",
+      "kind": "Measurement kind",
+      "language": "Language",
+      "regions": "Markets",
+      "funnel": "Funnel",
+      "brandPresence": "Brand presence",
+      "listType": "List type",
+      "depth1": "Category 1",
+      "depth2": "Category 2",
+      "depth3": "Category 3",
+      "depth4": "Category 4"
+    },
+    "toast": {
+      "created": "Prompt created.",
+      "updated": "Saved.",
+      "archived": "Archived.",
+      "restored": "Restored."
+    },
+    "error": {
+      "version_conflict": "It was changed elsewhere first. The latest version is loaded again; check it and save again.",
+      "duplicate": "An active prompt with the same text and language already exists.",
+      "unknown_code": "Codes not in the Global catalog: {fields}",
+      "invalid_value": "Check these fields: {fields}",
+      "archived": "Restore an archived prompt before editing it.",
+      "gold_owned": "Prompts imported from Gold cannot be edited.",
+      "unauthorized": "Your sign-in has expired. Sign in again.",
+      "source_unavailable": "The HUB store cannot be used. Check its connection and setup (init · sync-gold-catalog).",
+      "not_found": "Prompt not found.",
+      "failed": "Could not complete it. Try again shortly."
+    }
+  },
+  "unimplemented": {
+    "label": "Not implemented",
+    "body": "This screen is not implemented yet."
   }
 }

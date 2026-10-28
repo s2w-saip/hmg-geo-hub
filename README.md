@@ -1,7 +1,7 @@
 # HMG-GEO-HUB
 
 현재 로컬 서비스는 외부 Gold, HUB 데이터 DB, HUB 운영 DB를 읽습니다. DB 접속 계정은 서버에서만 사용하며,
-웹 로그인 없이 `127.0.0.1:3200`에서 읽기 전용으로 실행합니다.
+`127.0.0.1:3333`에서 읽기 전용으로 실행합니다. 모든 화면은 HUB 로그인(최상위 관리자, `manage.py set-admin`)이 필요합니다.
 
 HUB 데이터 DB `hmg_analytics`는 GA4·SEO와 프로젝트·프롬프트 버전을 관리하고,
 별도 운영 DB `hmg_operations`는 사용자·권한·SW 설정·감사 이력을 관리합니다.
@@ -12,6 +12,9 @@ GA4·SEO 화면은 데이터 DB로 연결했고, 실제 수집기는 아직 연�
 2. `front/.env.example`을 `front/.env.local`로 복사합니다. 최초 설치 시 `front`에서 `npm ci`를 실행합니다.
 3. 저장소 루트에서 `powershell -File scripts/start-hub-storage.ps1`을 실행합니다. 두 HUB DB 구성·검증, API 시작, 실제 Gold 카탈로그 가져오기를 수행합니다.
 4. 이후 API만 재시작하려면 `powershell -File scripts/start-gold.ps1`을 실행합니다. 각 DB의 조회 계정만 API에 전달합니다.
+
+포트는 프론트 `3333`, API `5555`로 고정합니다. Docker 없는 macOS·Linux에서는 `HGH_PYTHON=<Python 3.12 경로> bash scripts/start-local.sh`로
+Gold만 연결해 API와 프론트를 시작합니다. 이 Python에는 `back/bff/requirements.txt`가 설치되어 있어야 하며, HUB 두 DB는 연결하지 않습니다.
 
 현재 FastAPI BFF/API는 `back/bff/`에 있습니다(화면 계층 `screens/`, 외부 Gold DB 읽기 `gold_reader/`, HUB 자체 저장소 읽기 `hub_stores/`). Gold는 `active_release`와 검증 완료된 빌드를 고정해서 조회합니다.
 서비스의 DB 조회는 읽기 전용 트랜잭션입니다. 관리 명령은 별도 쓰기 계정으로 실제 카탈로그 정의와 UUID 참조를 등록합니다.
@@ -38,7 +41,7 @@ Next.js는 화면 렌더링과 API 호출을 담당하고, FastAPI가 BFF와 데
 FastAPI는 세 DB에 독립된 읽기 전용 연결을 사용합니다. 외부 소비자 계정은 데이터 DB의 명시 승인된 `published.*` 뷰만 조회할 수 있습니다.
 
 검증: `front`에서 `npm run typecheck`. API 실행 후 저장소 루트에서
-`$env:HGH_GOLD_TEST_BASE_URL='http://127.0.0.1:18091'; python -X utf8 -m unittest discover -s back/bff/tests -v`.
+`$env:HGH_GOLD_TEST_BASE_URL='http://127.0.0.1:5555'; python -X utf8 -m unittest discover -s back/bff/tests -v`.
 API 계약 검사에는 개발 환경의 `jsonschema`가 필요합니다.
 집계 규칙 단위 검증은 `Get-Content -Raw back/bff/tests/test_analytics.py | docker exec -i hgh-gold-api python -`로 실행합니다.
 

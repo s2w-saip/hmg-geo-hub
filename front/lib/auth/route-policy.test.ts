@@ -7,6 +7,7 @@ import {
   groupForPath,
   defaultLandingFor,
   isGuardBypass,
+  isMenuPath,
 } from "./route-policy";
 import type { Role } from "./types";
 
@@ -37,7 +38,6 @@ const NON_VENDOR_STANDARD_PATHS = [
   "/renewal/standard/answer-analysis/citation",
   "/standard/ai-funnel",
   "/standard/ai-funnel/visibility",
-  // 2026-10-27: the renewal AI Visibility is in the menu although its original is hidden
   "/renewal/standard/ai-funnel/visibility",
   "/standard/ai-funnel/acr",
   "/renewal/standard/ai-funnel/acr",
@@ -50,10 +50,8 @@ const NON_VENDOR_STANDARD_PATHS = [
 // HIDDEN from the 표준 SNB but route access 유지(위 canAccessRoute 커버리지) —
 // visibleRoutes 에서는 빠진다.
 //   - customer-interest (2026-06-23): 표준 메뉴와 성격이 달라 메뉴에서만 숨김.
-//   - ai-funnel/visibility (2026-06-23): mock-only(크롤·SEO 데이터 소스 미연결)라
-//     실데이터 연결 전까지 메뉴에서 숨김. 동일 VisibilityView 를 프로젝트 뷰가 재사용.
+//   (ai-funnel/visibility 는 2026-10-28 메뉴로 돌아옴 — 메뉴 = 운영 웹 + AI Visibility.)
 const HIDDEN_STANDARD_PATHS = [
-  "/standard/ai-funnel/visibility",
   "/customer-interest",
   "/customer-interest/google-keywords",
   "/customer-interest/social-scraping",
@@ -156,6 +154,9 @@ describe("route-policy — Admin group access", () => {
     "/admin/standards/customer-interest",
     "/admin/standards/entities",
     "/admin/standards/citation-sources",
+    "/admin/analysis",
+    "/admin/reports",
+    "/admin/credits",
   ];
   for (const path of adminPaths) {
     it(`admin CAN access ${path}`, () => {
@@ -190,6 +191,7 @@ describe("route-policy — visibleRoutes (SNB list)", () => {
     }
   });
 
+  // 2026-10-28: no role sees a hidden menu (the menu = the production web's + AI Visibility).
   it("admin sees 표준 + website + /projects + admin routes", () => {
     expect(visibleRoutes("admin").map((r) => r.path)).toEqual([
       ...VISIBLE_STANDARD_PATHS,
@@ -198,11 +200,15 @@ describe("route-policy — visibleRoutes (SNB list)", () => {
       "/admin",
       "/admin/standards",
       "/admin/standards/prompts",
+      "/renewal/admin/standards/prompts",
       "/admin/standards/customer-interest",
       "/admin/standards/entities",
       "/admin/standards/citation-sources",
       "/admin/keyword-tools",
       "/admin/ga4",
+      "/admin/analysis",
+      "/admin/reports",
+      "/admin/credits",
     ]);
   });
 });
@@ -293,8 +299,8 @@ describe("route-policy — guard bypass and default landing", () => {
 });
 
 describe("route-policy — ROUTES table integrity", () => {
-  it("exposes 36 routes (renewal Overview / Global prompts / ACR / Mention / Citation / AI Visibility 추가)", () => {
-    expect(ROUTES).toHaveLength(36);
+  it("exposes 40 routes (renewal Overview / Global prompts / ACR / Mention / Citation / AI Visibility, HUB global prompts, production Admin 분석 엔진 / 리포트 관리 / 측정 크레딧 추가)", () => {
+    expect(ROUTES).toHaveLength(40);
   });
 
   it("renewal pages open to exactly the roles of their originals", () => {
@@ -303,6 +309,7 @@ describe("route-policy — ROUTES table integrity", () => {
       ["/renewal/standard/prompts", "/standard/prompts"],
       ["/renewal/standard/ai-funnel/acr", "/standard/ai-funnel/acr"],
       ["/renewal/standard/ai-funnel/visibility", "/standard/ai-funnel/visibility"],
+      ["/renewal/admin/standards/prompts", "/admin/standards/prompts"],
       ["/renewal/standard/answer-analysis/mention", "/standard/answer-analysis/mention"],
       ["/renewal/standard/answer-analysis/citation", "/standard/answer-analysis/citation"],
       ["/renewal/standard/answer-analysis/citation/prompts", "/standard/answer-analysis/citation/prompts"],
@@ -313,6 +320,23 @@ describe("route-policy — ROUTES table integrity", () => {
       }
     }
     expect(canAccessRoute("admin", "/renewal")).toBe(false);
+  });
+
+  // 2026-10-28: the renewal sidebar opens /renewal<path> for every menu item; one without a renewal page
+  // is the "not implemented" page, which has no row — it is permitted exactly as its original.
+  it("a renewal path without a row of its own is permitted exactly as its original", () => {
+    for (const original of ["/website", "/website/prompts", "/website/answer-analysis/mention", "/standard/ai-funnel/conversion", "/projects", "/admin", "/admin/ga4", "/admin/credits", "/customer-interest"]) {
+      for (const role of [...roles, "local_reader"] as Role[]) {
+        expect(canAccessRoute(role, `/ko/renewal${original}`)).toBe(canAccessRoute(role, original));
+      }
+    }
+    expect(canAccessRoute("admin", "/renewal/unknown")).toBe(false);
+    expect(canAccessRoute("admin", "/renewal/renewal")).toBe(false);
+  });
+
+  it("isMenuPath: an exact row that is not hidden", () => {
+    for (const p of ["/dashboard", "/website/prompts", "/standard/ai-funnel/conversion", "/projects", "/admin/credits"]) expect(isMenuPath(p)).toBe(true);
+    for (const p of ["/website/prompts/x", "/projects/new", "/customer-interest", "/website/ai-funnel/acr", "/renewal/dashboard", "/nope"]) expect(isMenuPath(p)).toBe(false);
   });
 
   it("/projects/new is hidden from SNB", () => {

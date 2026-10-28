@@ -87,7 +87,8 @@ export function resolvePageTitleRef(pathname: string): PageTitleRef | null {
   const candidates = ROUTES.filter(
     (r) => path === r.path || path.startsWith(r.path + "/"),
   );
-  if (candidates.length === 0) return null;
+  // a renewal path without a row of its own carries its original's label (as route-policy permits it)
+  if (candidates.length === 0) return path.startsWith("/renewal/") ? resolvePageTitleRef(path.slice("/renewal".length)) : null;
   const best = candidates.reduce((a, b) =>
     b.path.length > a.path.length ? b : a,
   );

@@ -29,6 +29,9 @@ import {
   FolderOpen,
   Sparkles,
   Plug,
+  Cpu,
+  FileChartColumn,
+  Coins,
   Menu,
   X,
   ArrowLeft,
@@ -98,11 +101,15 @@ const ROUTE_ICON: Record<RouteKey, ComponentType<{ className?: string }>> = {
   admin: Shield,
   adminStandards: FileText,
   adminStandardPrompts: FileText,
+  renewalAdminStandardPrompts: FileText,
   adminStandardCustomerInterest: Database,
   adminStandardEntities: Building2,
   adminCitationSources: Link2,
   keywordTools: Sparkles,
   adminGa4: Plug,
+  adminAnalysis: Cpu,
+  adminReports: FileChartColumn,
+  adminCredits: Coins,
 };
 
 // SECTION_ICON: kept around purely for the project-detail virtual section
@@ -130,27 +137,19 @@ export type StandardSubItem = StandardSubLeaf & { children?: StandardSubLeaf[] }
 
 // Exported (read-only) for the renewal shell's sidebar (app/[locale]/(renewal)/_shell/rn-sidebar.tsx),
 // which lists the same items in its own layout.
+// Global menu (2026-10-28) = the production web's (hmg-geo.vercel.app) + AI Visibility, last under AI Agent Funnel.
+// The renewal pages are not rows here — the renewal sidebar opens /renewal<path> for every item (rn-sidebar.tsx);
+// the customer-interest tree stays for its routes, its items are hidden for every role (route-policy).
 export const STANDARD_SUB_ITEMS: StandardSubItem[] = [
   {
     path: "/dashboard",
     i18nKey: "dashboard",
     icon: LayoutDashboard,
   },
-  // Renewal pages (2026-10-20) — shown right under their originals for comparison.
-  {
-    path: "/renewal/dashboard",
-    i18nKey: "renewalDashboard",
-    icon: Sparkles,
-  },
   {
     path: "/standard/prompts",
     i18nKey: "standardPrompts",
     icon: ListChecks,
-  },
-  {
-    path: "/renewal/standard/prompts",
-    i18nKey: "renewalStandardPrompts",
-    icon: Sparkles,
   },
   {
     path: "/standard/answer-analysis",
@@ -162,24 +161,10 @@ export const STANDARD_SUB_ITEMS: StandardSubItem[] = [
         i18nKey: "answerAnalysisMention",
         icon: MessageCircle,
       },
-      // Renewal Mention (2026-10-21) — right under the original for comparison.
-      {
-        path: "/renewal/standard/answer-analysis/mention",
-        i18nKey: "renewalAnswerAnalysisMention",
-        icon: Sparkles,
-        beta: true,
-      },
       {
         path: "/standard/answer-analysis/citation",
         i18nKey: "answerAnalysisCitation",
         icon: Link2,
-      },
-      // Renewal Citation (2026-10-21) — right under the original for comparison.
-      {
-        path: "/renewal/standard/answer-analysis/citation",
-        i18nKey: "renewalAnswerAnalysisCitation",
-        icon: Sparkles,
-        beta: true,
       },
     ],
   },
@@ -189,34 +174,21 @@ export const STANDARD_SUB_ITEMS: StandardSubItem[] = [
     icon: FlaskConical,
     children: [
       {
-        path: "/standard/ai-funnel/visibility",
-        i18nKey: "aiFunnelVisibility",
-        icon: Eye,
-      },
-      // Renewal AI Visibility (2026-10-27) — listed even while the original stays hidden.
-      {
-        path: "/renewal/standard/ai-funnel/visibility",
-        i18nKey: "renewalAiFunnelVisibility",
-        icon: Sparkles,
-        beta: true,
-      },
-      {
         path: "/standard/ai-funnel/acr",
         i18nKey: "aiFunnelAcr",
         icon: Trophy,
-        beta: true,
-      },
-      // Renewal ACR (2026-10-21) — right under the original for comparison.
-      {
-        path: "/renewal/standard/ai-funnel/acr",
-        i18nKey: "renewalAiFunnelAcr",
-        icon: Sparkles,
         beta: true,
       },
       {
         path: "/standard/ai-funnel/conversion",
         i18nKey: "aiFunnelConversion",
         icon: TrendingUp,
+        beta: true,
+      },
+      {
+        path: "/standard/ai-funnel/visibility",
+        i18nKey: "aiFunnelVisibility",
+        icon: Eye,
         beta: true,
       },
     ],
@@ -284,6 +256,29 @@ export const ADMIN_SUB_ITEMS: StandardSubItem[] = [
     path: "/admin/ga4",
     i18nKey: "adminGa4",
     icon: Plug,
+  },
+  // production-web items without a page here yet (route-policy, 2026-10-28): "not implemented"
+  {
+    path: "/admin/analysis",
+    i18nKey: "adminAnalysis",
+    icon: Cpu,
+  },
+  {
+    path: "/admin/reports",
+    i18nKey: "adminReports",
+    icon: FileChartColumn,
+  },
+  {
+    path: "/admin/credits",
+    i18nKey: "adminCredits",
+    icon: Coins,
+    children: [
+      {
+        path: "/admin/credits",
+        i18nKey: "adminCreditAccounts",
+        icon: Users,
+      },
+    ],
   },
 ];
 

@@ -63,6 +63,10 @@
     "adminStandardEntities": "Entity catalog",
     "keywordTools": "Keyword tools",
     "adminGa4": "GA4 연동",
+    "adminAnalysis": "분석 엔진",
+    "adminReports": "리포트 관리",
+    "adminCredits": "측정 크레딧",
+    "adminCreditAccounts": "계정 목록",
     "logout": "Log out",
     "groups": {
       "standard": "Global",
@@ -100,7 +104,8 @@
     "websitePrompts": "Prompts",
     "adminCitationSources": "인용 출처 분류",
     "renewalAnswerAnalysisMention": "Mention (Renewal)",
-    "renewalAnswerAnalysisCitation": "Citation (Renewal)"
+    "renewalAnswerAnalysisCitation": "Citation (Renewal)",
+    "renewalAdminStandardPrompts": "글로벌 프롬프트 관리"
   },
   "locale": {
     "label": "언어",
@@ -4672,7 +4677,7 @@
       "definition": "정의",
       "formula": "산식",
       "infoLabel": "{name} 정의 보기",
-      "detailLabel": "{name} 상세 보기",
+      "detailLabel": "{name} 상세 보기 (새 탭)",
       "deltaUp": "개선",
       "deltaDown": "악화",
       "deltaFlat": "변화 없음",
@@ -4688,7 +4693,6 @@
       "kpiTitle": "KPI 5종",
       "kpiHintDelta": "증감 = {compare}",
       "kpiHintTrend": "추이 = 최근 {count}회차",
-      "detail": "상세",
       "standing": "비교 브랜드 {count}개 중 <b>{rank}위</b>",
       "brandsHint": "5개 지표를 한 표에 · 막대는 열마다 최고값 기준 · 우선 노출도는 낮을수록 앞섬 · 증감 = 모든 행 {compare}",
       "colBrand": "브랜드",
@@ -4718,7 +4722,7 @@
       "cellNoRival": "최대 경쟁사 값 없음"
     },
     "prompts": {
-      "columnTaxonomy": "분류 · 퍼널",
+      "columnTaxonomy": "분류",
       "columnMeasure": "측정",
       "sortLabel": "정렬",
       "sortAsc": "오름차순",
@@ -4729,7 +4733,19 @@
       "scopePill": "열람 범위 · {scope}",
       "optionSearch": "{label} 검색",
       "copyLink": "링크 복사",
-      "linkCopied": "지금 조건이 담긴 링크를 복사했습니다"
+      "linkCopied": "지금 조건이 담긴 링크를 복사했습니다",
+      "presenceShort": {
+        "branded": "포함",
+        "unbranded": "미포함"
+      },
+      "detail": {
+        "title": "프롬프트 상세",
+        "copy": "문장 복사",
+        "copied": "프롬프트 문장을 복사했습니다",
+        "copyFailed": "복사하지 못했습니다",
+        "attributes": "속성",
+        "history": "변경 이력"
+      }
     },
     "mention": {
       "title": "언급 분석",
@@ -5275,5 +5291,112 @@
         "negativeSub": "당사 언급이 부정으로 기운 답변이 근거로 쓴 URL — 대응 콘텐츠가 필요한 출처입니다."
       }
     }
+  },
+  "hubLogin": {
+    "title": "관리자 로그인",
+    "description": "HUB 화면을 보려면 최상위 관리자 계정으로 로그인하세요.",
+    "login": "아이디",
+    "password": "비밀번호",
+    "passwordShow": "비밀번호 보기",
+    "passwordHide": "비밀번호 숨기기",
+    "submit": "로그인",
+    "error": {
+      "invalid": "아이디 또는 비밀번호가 올바르지 않습니다.",
+      "rateLimited": "로그인 실패가 많아 잠시 막혔습니다. 15분 뒤에 다시 시도하세요.",
+      "unavailable": "로그인이 아직 설정되지 않았습니다. HUB 저장소와 HGH_AUTH_SECRET 설정을 확인하세요.",
+      "failed": "로그인하지 못했습니다. 잠시 뒤에 다시 시도하세요."
+    }
+  },
+  "hubPrompts": {
+    "title": "글로벌 프롬프트 관리",
+    "description": "HUB 카탈로그의 글로벌 프롬프트입니다. HUB에서 만든 프롬프트만 고칠 수 있고, Gold에서 가져온 프롬프트는 읽기 전용입니다.",
+    "notMeasuredTitle": "측정 미연결",
+    "notMeasured": "HUB에서 만든 프롬프트는 아직 측정 대상에 전달되지 않습니다. 측정 연결 방식이 정해지면 이 목록의 최신 버전이 전달됩니다.",
+    "create": "새 프롬프트",
+    "createTitle": "새 글로벌 프롬프트",
+    "createHint": "코드는 글로벌 카탈로그에 이미 있는 값만 쓸 수 있습니다.",
+    "createSubmit": "만들기",
+    "detailTitle": "글로벌 프롬프트",
+    "listTitle": "프롬프트 목록",
+    "listLabel": "글로벌 프롬프트 목록",
+    "counts": "전체 {total} · HUB {hub} · Gold {gold} · 보관 {archived}",
+    "searchLabel": "본문 검색",
+    "searchPlaceholder": "본문 검색",
+    "statusLabel": "상태",
+    "originLabel": "출처",
+    "all": "전체",
+    "status": {
+      "active": "사용 중",
+      "archived": "보관됨"
+    },
+    "origin": {
+      "hub": "HUB",
+      "gold": "Gold"
+    },
+    "kind": {
+      "single": "단일",
+      "acr": "ACR"
+    },
+    "columnTaxonomy": "분류",
+    "columnStatus": "상태",
+    "columnChanged": "버전 · 마지막 변경",
+    "empty": "조건에 맞는 프롬프트가 없습니다.",
+    "range": "{from}–{to} / {total}",
+    "prev": "이전 페이지",
+    "next": "다음 페이지",
+    "close": "닫기",
+    "loading": "불러오는 중…",
+    "save": "저장",
+    "archive": "보관",
+    "restore": "복원",
+    "login": "로그인",
+    "loginRequired": "글로벌 프롬프트 편집은 HUB 최상위 관리자 로그인이 필요합니다.",
+    "goldReadOnly": "Gold에서 가져온 프롬프트는 여기서 고칠 수 없습니다. 고쳐도 다음 Gold 동기화가 원래 정의로 되돌립니다.",
+    "archivedNote": "보관된 프롬프트입니다. 고치려면 먼저 복원하세요.",
+    "regionsHint": "쉼표로 구분합니다 (예: KR, US, x:WW).",
+    "historyTitle": "변경 이력",
+    "goldSync": "Gold 동기화",
+    "goldOnlyChange": "이 화면에 없는 Gold 정의 항목이 바뀌었습니다.",
+    "event": {
+      "created": "생성",
+      "updated": "수정",
+      "archived": "보관",
+      "restored": "복원"
+    },
+    "field": {
+      "text": "본문",
+      "kind": "측정 종류",
+      "language": "언어",
+      "regions": "대상 시장",
+      "funnel": "퍼널",
+      "brandPresence": "브랜드 언급",
+      "listType": "목록 유형",
+      "depth1": "분류 1",
+      "depth2": "분류 2",
+      "depth3": "분류 3",
+      "depth4": "분류 4"
+    },
+    "toast": {
+      "created": "프롬프트를 만들었습니다.",
+      "updated": "저장했습니다.",
+      "archived": "보관했습니다.",
+      "restored": "복원했습니다."
+    },
+    "error": {
+      "version_conflict": "다른 곳에서 먼저 바뀌었습니다. 최신 내용을 다시 불러왔으니 확인한 뒤 다시 저장하세요.",
+      "duplicate": "본문과 언어가 같은 사용 중인 프롬프트가 이미 있습니다.",
+      "unknown_code": "글로벌 카탈로그에 없는 코드입니다: {fields}",
+      "invalid_value": "입력값을 확인하세요: {fields}",
+      "archived": "보관된 프롬프트는 복원한 뒤 고칠 수 있습니다.",
+      "gold_owned": "Gold에서 가져온 프롬프트는 고칠 수 없습니다.",
+      "unauthorized": "로그인이 만료되었습니다. 다시 로그인하세요.",
+      "source_unavailable": "HUB 저장소를 쓸 수 없습니다. 저장소 연결과 설정(init · sync-gold-catalog)을 확인하세요.",
+      "not_found": "프롬프트를 찾을 수 없습니다.",
+      "failed": "처리하지 못했습니다. 잠시 뒤에 다시 시도하세요."
+    }
+  },
+  "unimplemented": {
+    "label": "미구현",
+    "body": "아직 구현되지 않은 화면입니다."
   }
 }

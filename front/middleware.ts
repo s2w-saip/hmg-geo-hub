@@ -4,6 +4,7 @@ import createIntlMiddleware from "next-intl/middleware";
 import { routing } from "./i18n/routing";
 import { isBlockedCrawler } from "./lib/crawlers";
 import { localReadOnly } from "./lib/local-readonly";
+import { HUB_SESSION_COOKIE } from "./lib/hub/cookie";
 
 const intlMiddleware = createIntlMiddleware(routing);
 
@@ -13,21 +14,53 @@ const intlMiddleware = createIntlMiddleware(routing);
 // role 스코프 밖이라는 점은 의도된 트레이드오프이며 근거는
 // docs/specs/2026-09-04-raw-data-qa-console-design.md §3 에 있다.
 const PUBLIC_PATHS = ["/login", "/raw-data-qa"];
+// The local mode's: the QA console runs on the legacy database, which the local mode never opens.
+const LOCAL_PUBLIC_PATHS = ["/login"];
+
+// The locale of a path (the default when it has none) and the path after it.
+function splitLocale(pathname: string): { locale: string; rest: string } {
+  const segments = pathname.split("/").filter(Boolean);
+  const locale = routing.locales.includes(
+    segments[0] as (typeof routing.locales)[number],
+  )
+    ? segments[0]
+    : routing.defaultLocale;
+  return { locale, rest: "/" + segments.slice(1).join("/") };
+}
+
+function isPublicPath(rest: string, paths: readonly string[]): boolean {
+  return paths.some((p) => rest === p || rest.startsWith(p + "/"));
+}
 
 export async function middleware(req: NextRequest) {
   if (localReadOnly()) {
+    const { pathname } = req.nextUrl;
     if (!["localhost", "127.0.0.1", "[::1]", "::1"].includes(req.nextUrl.hostname)) {
       return new NextResponse("Local access only", { status: 403 });
     }
-    if (!["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+    // The only writes (2026-10-27): HUB login and Global prompt editing, /api/hub/* route handlers that
+    // check the request origin; the BFF checks the administrator's token on every call.
+    if (!["GET", "HEAD", "OPTIONS"].includes(req.method) && !pathname.startsWith("/api/hub/")) {
       return NextResponse.json({ error: { code: "read_only", message: "Gold 데이터는 읽기 전용입니다." } }, { status: 405 });
     }
-    if (req.nextUrl.pathname.startsWith("/api/")) return NextResponse.next();
-    if (/^\/(ko|en)\/login\/?$/.test(req.nextUrl.pathname)) {
-      return NextResponse.redirect(new URL(req.nextUrl.pathname.replace(/login\/?$/, "dashboard"), req.url));
+    // Every page and read needs the HUB login (2026-10-28). Only the cookie is looked at here; the token
+    // itself is checked by the BFF (getSession -> /v1/auth/me in the layouts, Bearer on every HUB call).
+    const signedIn = Boolean(req.cookies.get(HUB_SESSION_COOKIE)?.value);
+    if (pathname.startsWith("/api/")) {
+      if (signedIn || pathname === "/api/hub/session") return NextResponse.next();
+      return NextResponse.json({ error: { code: "unauthorized", message: "로그인이 필요합니다." } }, { status: 401 });
+    }
+    const { locale, rest } = splitLocale(pathname);
+    if (!signedIn && !isPublicPath(rest, LOCAL_PUBLIC_PATHS)) {
+      // the login returns here (lib/hub/next-path.ts keeps it to this site)
+      const url = req.nextUrl.clone();
+      url.pathname = `/${locale}/login`;
+      url.search = "";
+      url.searchParams.set("next", pathname + req.nextUrl.search);
+      return NextResponse.redirect(url);
     }
     const response = intlMiddleware(req);
-    response.headers.set("x-pathname", req.nextUrl.pathname);
+    response.headers.set("x-pathname", pathname);
     return response;
   }
   if (req.nextUrl.pathname.startsWith("/api/")) return NextResponse.next();
@@ -72,18 +105,9 @@ export async function middleware(req: NextRequest) {
   const user = data?.claims ?? null;
 
   // 3. Auth gate: unauthenticated users may only reach public paths.
-  const segments = req.nextUrl.pathname.split("/").filter(Boolean);
-  const locale = routing.locales.includes(
-    segments[0] as (typeof routing.locales)[number],
-  )
-    ? segments[0]
-    : routing.defaultLocale;
-  const rest = "/" + segments.slice(1).join("/");
-  const isPublic = PUBLIC_PATHS.some(
-    (p) => rest === p || rest.startsWith(p + "/"),
-  );
+  const { locale, rest } = splitLocale(req.nextUrl.pathname);
 
-  if (!isPublic && !user) {
+  if (!isPublicPath(rest, PUBLIC_PATHS) && !user) {
     const url = req.nextUrl.clone();
     url.pathname = `/${locale}/login`;
     return NextResponse.redirect(url);

@@ -33,6 +33,7 @@ import {
   cachedMembership,
 } from "@/lib/db/repositories/request-cache";
 import { hghSource } from "@/lib/hgh/client";
+import { localReadOnly } from "@/lib/local-readonly";
 import { projectMetaForSnb } from "@/lib/hgh/adapters/project-gate";
 import type { User } from "@/lib/auth/types";
 
@@ -157,6 +158,7 @@ export default async function DashLayout({
   const railUser: RailUser = {
     email: session.user.email,
     role,
+    local: localReadOnly(),
   };
 
   // Project context detection: when the URL is inside /projects/[id]/*,

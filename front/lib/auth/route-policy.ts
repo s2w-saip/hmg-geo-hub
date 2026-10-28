@@ -57,7 +57,8 @@ export const ROUTES = [
   },
   // Renewal pages (2026-10-20): the redesigned Overview / Global prompts run side by
   // side with the originals so both can be compared in the service. Same roles as
-  // the originals; each sits right after its original so the SNB order matches.
+  // the originals; each sits right after its original. No menu tree lists them
+  // (2026-10-28): the renewal sidebar opens them for the original items.
   {
     path: "/renewal/dashboard",
     key: "renewalDashboard",
@@ -125,19 +126,17 @@ export const ROUTES = [
     roles: STANDARD_VIEWERS,
     group: "standard" as const,
   },
-  // Hidden from the 표준 SNB (2026-06-23): AI 가시성은 데이터 소스(크롤·SEO 노출)가
-  // scope 측정 surface 밖이라 현재 mock-only — 실데이터 연결 전까지 메뉴에서 숨김.
-  // 라우트 접근은 유지(동일 VisibilityView 를 프로젝트 뷰가 재사용). 부모
-  // /standard/ai-funnel 리다이렉트는 acr 로 이동.
+  // AI 가시성 — back in the Global menu (2026-10-28), the last item of AI Agent Funnel (the menu
+  // is the production web's plus this one). It reads the HUB analytics store (bff screen
+  // sources/analytics). The parent /standard/ai-funnel still redirects to acr.
   {
     path: "/standard/ai-funnel/visibility",
     key: "aiFunnelVisibility",
     roles: STANDARD_VIEWERS,
     group: "standard" as const,
-    hidden: true,
   },
-  // Renewal AI Visibility (2026-10-27) — always in the menu, though its original stays hidden:
-  // the renewal page is built on the HUB analytics store. Same roles as the original.
+  // Renewal AI Visibility (2026-10-27) — same roles as the original; the renewal sidebar opens it
+  // for the original's menu item.
   {
     path: "/renewal/standard/ai-funnel/visibility",
     key: "renewalAiFunnelVisibility",
@@ -296,6 +295,14 @@ export const ROUTES = [
     roles: ADMIN_ONLY,
     group: "admin" as const,
   },
+  // HUB global prompts editor (2026-10-27, lib/hub): same roles as the original admin page;
+  // the renewal sidebar's Admin › Global prompts opens it.
+  {
+    path: "/renewal/admin/standards/prompts",
+    key: "renewalAdminStandardPrompts",
+    roles: ADMIN_ONLY,
+    group: "admin" as const,
+  },
   {
     path: "/admin/standards/customer-interest",
     key: "adminStandardCustomerInterest",
@@ -339,6 +346,28 @@ export const ROUTES = [
     // Admin-only: GA 자격/속성 접근을 다루므로.
     path: "/admin/ga4",
     key: "adminGa4",
+    roles: ADMIN_ONLY,
+    group: "admin" as const,
+  },
+  // 분석 엔진 · 리포트 관리 · 측정 크레딧 (2026-10-28): menu items of the production web
+  // (hmg-geo.vercel.app) with no page in this repo yet — they open the "not implemented" page
+  // ((dash)/admin/[...slug], (renewal)/renewal/[...slug]). 측정 크레딧's one child (계정 목록)
+  // shares its path, as in production.
+  {
+    path: "/admin/analysis",
+    key: "adminAnalysis",
+    roles: ADMIN_ONLY,
+    group: "admin" as const,
+  },
+  {
+    path: "/admin/reports",
+    key: "adminReports",
+    roles: ADMIN_ONLY,
+    group: "admin" as const,
+  },
+  {
+    path: "/admin/credits",
+    key: "adminCredits",
     roles: ADMIN_ONLY,
     group: "admin" as const,
   },
@@ -391,9 +420,13 @@ export function canAccessRoute(
   // Most-specific match wins: a nested path (/admin/standards/prompts) must
   // resolve to its own ROUTES entry, not the broader /admin entry, so its role
   // list applies. Sort by descending path length and pick the first match.
-  const candidates = ROUTES.filter(
-    (r) => normalized === r.path || normalized.startsWith(r.path + "/"),
-  );
+  const matching = (p: string) => ROUTES.filter((r) => p === r.path || p.startsWith(r.path + "/"));
+  let candidates = matching(normalized);
+  // A renewal path without a row of its own (the renewal shell's "not implemented" page,
+  // 2026-10-28) is permitted exactly as its original: /renewal/x as x.
+  if (candidates.length === 0 && normalized.startsWith("/renewal/")) {
+    candidates = matching(normalized.slice("/renewal".length));
+  }
   if (candidates.length === 0) {
     // Unknown path under (dash): default-deny. Callers should not silently
     // open new routes — add them to ROUTES first.
@@ -403,6 +436,14 @@ export function canAccessRoute(
     b.path.length > a.path.length ? b : a,
   );
   return best.roles.includes(role) && groupAllowed(best.group, menuGroups);
+}
+
+/**
+ * A menu item's own path: an exact original row, not hidden (no prefix match; the menu lists no
+ * renewal rows). The "not implemented" pages answer only these.
+ */
+export function isMenuPath(path: string): boolean {
+  return !path.startsWith("/renewal/") && ROUTES.some((r) => r.path === path && !("hidden" in r && r.hidden === true));
 }
 
 export function visibleRoutes(
@@ -416,7 +457,8 @@ export function visibleRoutes(
   return ROUTES.filter(
     (r) =>
       r.roles.includes(role) &&
-      !("hidden" in r && r.hidden === true && !(role === "local_reader" && ["aiFunnelVisibility", "customerInterest", "customerInterestGoogleKeywords", "customerInterestSocialScraping", "websiteAiFunnelAcr"].includes(r.key))) &&
+      // a hidden route is never in the menu, whatever the role (2026-10-28: the menu = the production web's)
+      !("hidden" in r && r.hidden === true) &&
       groupAllowed(r.group, menuGroups),
   );
 }

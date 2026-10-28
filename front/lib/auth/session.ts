@@ -7,6 +7,7 @@ import { getSessionFromApi } from "@/lib/hgh/adapters/session";
 import { effectiveMenuGroups } from "./menu-groups";
 import type { AllowedScope, Session, User } from "./types";
 import { localReadOnly } from "@/lib/local-readonly";
+import { hubAdminUser } from "@/lib/hub/session";
 
 // Resolves the authenticated user into our domain Session.
 //
@@ -26,9 +27,10 @@ import { localReadOnly } from "@/lib/local-readonly";
 // into ONE verification + ONE profile query (or ONE /v1/auth/me) per request.
 export const getSession = cache(async (): Promise<Session | null> => {
   if (localReadOnly()) {
-    // This identifies the configured database reader, not a simulated website account.
-    return { user: { id: "geo_readonly", email: "geo_readonly", role: "local_reader",
-      scope: { all: true }, operator: "none", menuGroups: ["standard", "website", "project"] } };
+    // Only the HUB login (lib/hub/session.ts) opens the local mode (2026-10-28): without one there is no
+    // session, and the layouts send the page to /login.
+    const admin = await hubAdminUser();
+    return admin ? { user: admin } : null;
   }
   return hghSource("SESSION") === "api" ? getSessionFromApi() : getSessionLegacy();
 });

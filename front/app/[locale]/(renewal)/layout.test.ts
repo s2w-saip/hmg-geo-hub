@@ -86,14 +86,15 @@ describe("renewal layout", () => {
     const adminPaths = (admin.props.routes as Array<{ path: string }>).map((r) => r.path);
     expect(adminPaths).toContain("/renewal/dashboard");
     expect(adminPaths).toContain("/admin");
-    expect(admin.props.user).toEqual({ email: "admin@example.test", role: "admin" });
+    // local: the HUB login's sign-in / sign-out (2026-10-27); off outside the local mode
+    expect(admin.props.user).toEqual({ email: "admin@example.test", role: "admin", local: false });
 
     const country = find(await render("/ko/renewal/dashboard", user("country")), RnSidebar)!;
     const countryPaths = (country.props.routes as Array<{ path: string }>).map((r) => r.path);
     expect(countryPaths).toContain("/renewal/standard/ai-funnel/acr");
     expect(countryPaths.some((p) => p.startsWith("/admin"))).toBe(false);
     // hidden routes never reach the menu
-    expect(countryPaths).not.toContain("/standard/ai-funnel/visibility");
+    expect(countryPaths).not.toContain("/customer-interest");
   });
 
   it("titles the tab with the menu label, like the (dash) layout", async () => {

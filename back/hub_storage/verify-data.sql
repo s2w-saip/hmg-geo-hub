@@ -44,4 +44,16 @@ DO $$ BEGIN
  IF has_database_privilege('hmg_data_external','postgres','CONNECT') THEN RAISE EXCEPTION 'External role has default DB access'; END IF;
  BEGIN INSERT INTO catalog.prompt(prompt_id,project_id,origin) VALUES(gen_random_uuid(),gen_random_uuid(),'hub'); RAISE EXCEPTION 'Orphan prompt allowed'; EXCEPTION WHEN foreign_key_violation THEN NULL; END;
 END $$;
+-- The API's Global prompt editor (004): appends prompt revisions, nothing else.
+SET LOCAL ROLE hmg_catalog_editor;
+INSERT INTO catalog.prompt_version(prompt_id,version,text,definition,sha256,recorded_by)
+VALUES('ffffffff-ffff-4fff-8fff-fffffffffff2',2,'rollback-only edit','{"status":"archived"}',repeat('b',64),gen_random_uuid());
+DO $$ BEGIN
+ BEGIN UPDATE catalog.prompt_version SET text='changed'; RAISE EXCEPTION 'Editor can mutate history'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN DELETE FROM catalog.prompt; RAISE EXCEPTION 'Editor can delete stable IDs'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN INSERT INTO catalog.project(project_id,origin) VALUES(gen_random_uuid(),'hub'); RAISE EXCEPTION 'Editor can create projects'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN UPDATE publication.project_access SET prompts=true; RAISE EXCEPTION 'Editor can approve exports'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN PERFORM count(*) FROM analytics.ga4_row; RAISE EXCEPTION 'Editor can read metrics'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $$;
+RESET ROLE;
 ROLLBACK;
