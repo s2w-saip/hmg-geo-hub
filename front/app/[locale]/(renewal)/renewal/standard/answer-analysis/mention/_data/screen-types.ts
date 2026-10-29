@@ -83,6 +83,7 @@ export interface RnShellVM {
   degraded: boolean;
   /** tracked (당사) brand names */
   ownBrands: string[];
+  /** one per brand of the ranking's rows (the first 100 body brands), the only place the drawer opens from */
   drawer: RnDrawerBrand[];
 }
 

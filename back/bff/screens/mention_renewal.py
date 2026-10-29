@@ -432,22 +432,33 @@ def _type_avg_set(tb: dict, brands: list[dict], by_brand: dict) -> list[str]:
     return [b["brand"] for b in _sort(pool, lambda a, b: _sign(b["mentions"] - a["mentions"]))[:TYPE_AVG_TOP]]
 
 
-def type_compare_rows(inp: dict) -> list[dict]:
+def type_compare_base(tb: dict, brands: list[dict]) -> dict:
+    """The part of type_compare_rows no pick changes (the brand index, 당사 and the rival average per type),
+    computed once for the cards that run every pick: per pick it re-sorted every brand (0.5 s a month view)."""
+    by_brand = {b["brand"]: b for b in tb["brands"]}
+    avg_set = _type_avg_set(tb, brands, by_brand)
+    types = []
+    for type_ in TYPE_STRENGTH:
+        total = tb["totals"][type_]
+        own = pct_or_null(_js_sum(b["types"][type_] for b in tb["brands"] if b.get("isTracked")), total)
+        avg_vals = [v for v in (pct_or_null(by_brand[b]["types"][type_], total) for b in avg_set) if v is not None]
+        types.append((type_, total, own, _mean1(avg_vals) if avg_vals else None))
+    return {"byBrand": by_brand, "types": types}
+
+
+def type_compare_rows(inp: dict, base: dict | None = None) -> list[dict]:
+    """`base` = type_compare_base(inp["typesByBrand"], inp["brands"]) when the caller has it."""
     tb = inp.get("typesByBrand")
     if not tb:
         return []
-    by_brand = {b["brand"]: b for b in tb["brands"]}
-    avg_set = _type_avg_set(tb, inp["brands"], by_brand)
+    base = base or type_compare_base(tb, inp["brands"])
+    by_brand = base["byBrand"]
     out = []
-    for type_ in TYPE_STRENGTH:
-        total = tb["totals"][type_]
+    for type_, total, own, avg in base["types"]:
 
         def share(n: Any, total=total) -> Any:
             return pct_or_null(n, total)
 
-        own = share(_js_sum(b["types"][type_] for b in tb["brands"] if b.get("isTracked")))
-        avg_vals = [v for v in (share(by_brand[b]["types"][type_]) for b in avg_set) if v is not None]
-        avg = _mean1(avg_vals) if avg_vals else None
         dots = []
         for brand in inp["compare"]:
             hit = by_brand.get(brand)
@@ -891,7 +902,9 @@ def _drawer_row(row: dict, rank: int, types: Any) -> dict:
 
 
 def shell_payload(data: Any, degraded: bool, types_by_brand: Any) -> dict:
-    """MentionShell (page state) + the brand drawer's rows (one per body brand, first row of a name)."""
+    """MentionShell (page state) + the brand drawer's rows (first row of a name). The drawer opens from the
+    ranking's rows (the first BRANDS_TOP body brands, ranking_payload), so only their names are sent: every
+    body brand made the shell 0.3-0.6 MB, and the whole body waits on it."""
     measured = bool(data) and len(data["brands"]) > 0
     if not measured:
         return {"measured": False, "degraded": bool(degraded), "ownBrands": [], "drawer": []}
@@ -902,7 +915,7 @@ def shell_payload(data: Any, degraded: bool, types_by_brand: Any) -> dict:
             tb_by.setdefault(b["brand"], b["types"])  # brands.find(): a repeated name keeps the first row
     seen: set[str] = set()
     drawer = []
-    for i, row in enumerate(brands):
+    for i, row in enumerate(brands[:BRANDS_TOP]):
         if row["brand"] in seen:
             continue
         seen.add(row["brand"])
@@ -945,8 +958,9 @@ def summary_payload(period: Any, subs: dict, prevs: dict, engine: Any, trend: An
     type_findings: list[dict] = []
     seen: dict[str, int] = {}
     options: dict[str, dict] = {}
+    type_base = type_compare_base(types_by_brand, brands) if types_by_brand else None
     for key, pick in compare_subsets(covered):
-        rows = type_compare_rows({"typesByBrand": types_by_brand, "brands": brands, "compare": pick})
+        rows = type_compare_rows({"typesByBrand": types_by_brand, "brands": brands, "compare": pick}, type_base)
         tf = _type_finding(rows)
         ids: list[tuple[int, dict]] = [(0, standing)] if standing else []
         if tf:
@@ -1052,14 +1066,15 @@ def rate_types_payload(types_by_brand: Any, brands: list[dict], kpi: Any, engine
     of both metrics. `dots[i][t]` = covered[i] on TYPE_STRENGTH[t]; `avgRef[t]` = the competitor
     average as the reference; `options[pick].refs[t]` = the tied leading compare brands."""
     covered = covered_brands(brands, trend)
-    base = type_compare_rows({"typesByBrand": types_by_brand, "brands": brands, "compare": covered})
+    type_base = type_compare_base(types_by_brand, brands) if types_by_brand else None
+    base = type_compare_rows({"typesByBrand": types_by_brand, "brands": brands, "compare": covered}, type_base)
     cmp: dict = {"covered": covered, "rows": [], "avgRef": [], "dots": [], "options": {}}
     if base:
         cmp["rows"] = [{"type": r["type"], "own": r["own"], "avg": r["avg"]} for r in base]
         cmp["avgRef"] = [_dot_cell(r["own"], r["avg"]) for r in base]
         cmp["dots"] = [[_dot_cell(r["own"], r["dots"][i]["value"]) for r in base] for i in range(len(covered))]
         for key, pick in compare_subsets(covered):
-            rows = type_compare_rows({"typesByBrand": types_by_brand, "brands": brands, "compare": pick})
+            rows = type_compare_rows({"typesByBrand": types_by_brand, "brands": brands, "compare": pick}, type_base)
             cmp["options"][key] = {"refs": [ref_candidates(r) for r in rows], "top": type_dots_top(rows)}
     own: dict = {}
     for m in RATE_METRICS:
@@ -1224,9 +1239,9 @@ async def _prevs(md, filters, ctx, metrics=HERO_METRICS) -> dict:
 
 
 async def _body_brands(md, filters, ctx) -> list[dict]:
-    """The body aggregate's brand rows (the client's ctx.brands = loadMentionsLive().brands)."""
-    data = await md.load_mentions_live(filters, ctx)
-    return data["brands"] if data else []
+    """The body aggregate's brand rows (the client's ctx.brands = loadMentionsLive().brands), without the
+    aggregate's other reads."""
+    return await md.load_mentions_brands(filters, ctx) or []
 
 
 @screen("mention/rn-page")
@@ -1270,8 +1285,9 @@ async def rn_tab_deltas(q) -> dict:
 async def rn_shell(q) -> dict:
     _, filters, ctx = _begin(q)
     md = _md()
-    data, tb = await asyncio.gather(md.load_mentions_live(filters, ctx), md.load_types_by_brand(filters, ctx))
-    return shell_payload(data, md.mentions_degraded(ctx)["data"], tb)
+    # the brand rows only: the whole body waits on this section, and the aggregate's brand trend took twice as long
+    brands, tb = await asyncio.gather(md.load_mentions_brands(filters, ctx), md.load_types_by_brand(filters, ctx))
+    return shell_payload(None if brands is None else {"brands": brands}, md.mentions_degraded(ctx)["data"], tb)
 
 
 @screen("mention/rn-compare")

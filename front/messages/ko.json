@@ -4813,11 +4813,6 @@
         "close": "닫기",
         "max": "비교 브랜드는 최대 {max}개까지 고를 수 있습니다"
       },
-      "density": {
-        "label": "보기 밀도",
-        "normal": "기본",
-        "dense": "촘촘"
-      },
       "delta": {
         "up": "개선",
         "down": "악화",
@@ -4850,8 +4845,9 @@
         "reset": "필터 초기화"
       },
       "tabs": {
-        "label": "KPI",
-        "viewing": "보는 지표",
+        "label": "보기",
+        "brands": "브랜드 상세",
+        "brandsHint": "언급 순위·구성",
         "basis": "{kpi} 기준",
         "deltaTitle": "{dir} · {basis}"
       },

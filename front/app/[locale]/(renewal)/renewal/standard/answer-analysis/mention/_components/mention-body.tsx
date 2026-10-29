@@ -14,10 +14,8 @@ import {
   RnFindingGrid,
   RnHighlightProvider,
   RnSectionHead,
-  RnSegmented,
   RnSkeleton,
   RnTextButton,
-  cx,
   useRnHighlight,
   useRnHighlightKey,
   type RnFinding,
@@ -30,16 +28,21 @@ import { RateBody } from "./mention-rate";
 import { FavorBody } from "./mention-favor";
 import { RankBody } from "./mention-rank";
 import { BrandDetail, BrandDrawer } from "./mention-brands";
-import { KPI_QUESTION, KpiBasisChip, KpiViewLabel, useMentionPage } from "./mention-tabs";
+import { KPI_QUESTION, KpiBasisChip, RnMentionTabs, RnMentionTabsFallback, useMentionPage } from "./mention-tabs";
 
-/** The page body; the reads and the KPI tab come from RnMentionPageProvider (mention-tabs). */
+/** The page body; the reads and the view (KPI tab or 브랜드 상세) come from RnMentionPageProvider (mention-tabs). */
 export function RnMentionBody() {
+  const { kpi, view } = useMentionPage();
   return (
     <Suspense
       fallback={
-        <RnCard className="p-6">
-          <RnSkeleton className="h-40 w-full" />
-        </RnCard>
+        <div className="rn-dense flex flex-col gap-2.5">
+          <SummarySkeleton />
+          <RnMentionTabsFallback kpi={kpi} view={view} />
+          <RnCard className="p-6">
+            <RnSkeleton className="h-40 w-full" />
+          </RnCard>
+        </div>
       }
     >
       <MentionShell />
@@ -75,9 +78,8 @@ function MentionShell() {
 function Measured({ shell }: { shell: RnShellVM }) {
   const t = useTranslations("renewal.mention");
   const tQ = useTranslations("dashboard.kpi.question");
-  const { input, kpi, setKpi } = useMentionPage();
+  const { input, kpi, view, setKpi } = useMentionPage();
   const [pick, setPick] = useState<ComparePick>({ auto: true, brands: [] });
-  const [dense, setDense] = useState(false);
   const [tables, setTables] = useState<ReadonlySet<string>>(new Set());
   const [drawer, setDrawer] = useState<DrawerTarget | null>(null);
   const key = useRnHighlightKey();
@@ -110,30 +112,30 @@ function Measured({ shell }: { shell: RnShellVM }) {
   const closeDrawer = useCallback(() => setDrawer(null), []);
   return (
     <MentionProvider value={ctx}>
-      <div className={cx("@container/rnpage flex flex-col gap-4", dense && "rn-dense gap-2.5")}>
+      {/* always the compact rhythm (2026-10-29, the user's call: the 기본 / 촘촘 toggle is gone) */}
+      <div className="@container/rnpage rn-dense flex flex-col gap-2.5">
         <RnControlBar label={t("bar.label")}>
-          <KpiViewLabel />
           <Suspense fallback={<span className="text-rn-12 font-semibold text-rn-muted">{t("compare.label")}</span>}>
             <ComparePicker />
           </Suspense>
-          <RnSegmented
-            label={t("density.label")}
-            value={dense ? "dense" : "normal"}
-            onChange={(v) => setDense(v === "dense")}
-            items={[
-              { value: "normal", label: t("density.normal") },
-              { value: "dense", label: t("density.dense") },
-            ]}
-          />
         </RnControlBar>
+        {/* every KPI at once: above the rail, outside what it switches */}
         <Suspense fallback={<SummarySkeleton />}>
           <Summary />
         </Suspense>
-        {/* the KPI tab drives this section and the next two (경쟁 구도 · 엔진·유형 or their favour / rank twins) */}
-        <RnSectionHead id="sec-overview" title={t("sec.overview")} chip={<KpiBasisChip />} desc={tQ(KPI_QUESTION[kpi] as "coverage")} />
-        {kpi === "favorability" ? <FavorBody /> : kpi === "first-rank" ? <RankBody /> : <RateBody metric={kpi} />}
-        <RnSectionHead id="sec-brands" title={t("sec.brands")} desc={t("sec.brandsDesc")} />
-        <BrandDetail />
+        <RnMentionTabs />
+        {view === "brands" ? (
+          <>
+            <RnSectionHead id="sec-brands" title={t("sec.brands")} desc={t("sec.brandsDesc")} />
+            <BrandDetail />
+          </>
+        ) : (
+          <>
+            {/* the KPI tab drives this section and the next two (경쟁 구도 · 엔진·유형 or their favour / rank twins) */}
+            <RnSectionHead id="sec-overview" title={t("sec.overview")} chip={<KpiBasisChip />} desc={tQ(KPI_QUESTION[kpi] as "coverage")} />
+            {kpi === "favorability" ? <FavorBody /> : kpi === "first-rank" ? <RankBody /> : <RateBody metric={kpi} />}
+          </>
+        )}
         <BrandDrawer target={drawer} onClose={closeDrawer} />
       </div>
     </MentionProvider>

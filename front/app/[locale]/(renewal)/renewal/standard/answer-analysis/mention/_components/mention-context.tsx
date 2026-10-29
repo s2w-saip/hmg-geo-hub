@@ -31,7 +31,7 @@ export interface MentionCtx {
   kpi: KpiTab;
   setKpi: (k: KpiTab) => void;
   ownLabel: string;
-  /** the brand drawer's rows (one per body brand, server order = mentions desc) */
+  /** the brand drawer's rows (one per brand of the ranking, server order = mentions desc) */
   drawer: RnDrawerBrand[];
   /** tracked (당사) brand names */
   ownBrands: string[];

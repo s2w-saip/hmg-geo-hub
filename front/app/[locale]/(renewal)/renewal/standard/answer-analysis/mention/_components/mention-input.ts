@@ -25,6 +25,16 @@ import type {
 
 export type HeroMetric = "exposure" | "sov" | "favorability";
 
+/** What sits under the rail: the KPI tab's analysis, or 브랜드 상세 (no KPI: mention counts and shares). */
+export type MentionView = "kpi" | "brands";
+/** `?view=brands` opens 브랜드 상세; no param = the KPI view (`?kpi=` keeps the tab either way). */
+export const MENTION_VIEW_PARAM = "view";
+
+export function resolveMentionView(raw: string | string[] | undefined | null): MentionView {
+  const v = Array.isArray(raw) ? raw[0] : raw;
+  return v === "brands" ? "brands" : "kpi";
+}
+
 /** The period compare block of the original KPI body (the old view model's input). */
 export interface RnMentionPeriod {
   /** null = no period compare (no period, switch off, before the epoch) → the cycle / prev Δ. */
@@ -35,6 +45,7 @@ export interface RnMentionPeriod {
 
 export interface RnMentionInput {
   kpi: KpiTab;
+  view: MentionView;
   /** 당사 label: the applied brands without the HMG umbrella, else "HMG". */
   ownLabel: string;
   /** dateFrom..dateTo when a period is set (cumulative), null = latest round snapshot. */

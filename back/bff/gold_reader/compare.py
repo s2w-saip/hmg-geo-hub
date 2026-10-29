@@ -77,7 +77,7 @@ async def read(ctx):
         for lab in sums:
             ledgers[(lab, family)].published_cycles = len(published[lab])
             ledgers[(lab, family)].first_published = first[family]
-        for row in await counts(scan_ctx, group="date", family=population):
+        for row in await counts(scan_ctx, group="date", family=population, prompts=False):
             lab = window.label_of(row["round_date"])
             for key in COUNTS:
                 if key.startswith("cit_") == (family == "citation"):

@@ -11,11 +11,11 @@ SENTIMENTS = (("positive", "s_pos"), ("neutral", "s_neu"), ("negative", "s_neg")
 
 
 async def geo(ctx: Context) -> dict:
-    cs = await counts(ctx, group="country")
-    citations = {r["geo_key"]: r for r in await counts(ctx, group="country", family="citations")}
+    cs = await counts(ctx, group="country", prompts=False)
+    citations = {r["geo_key"]: r for r in await counts(ctx, group="country", family="citations", prompts=False)}
     for c in cs:
         c.update({k: v for k, v in citations.get(c["geo_key"], {}).items() if k.startswith("cit_")})
-    bs = await brand_rows(ctx, by_country=True)
+    bs = await brand_rows(ctx, by_country=True, extras=frozenset())
     dimensions = {r["geo_key"]: dict(r) for r in await ctx.conn.fetch("""SELECT c.*,r.code AS area
         FROM gold.dim_country c LEFT JOIN gold.dim_region r USING(region_key)""")}
     def row_metrics(c):
@@ -77,11 +77,24 @@ async def types(ctx: Context) -> dict:
     where = ctx.predicate(b, family="fact") + " AND f.std_in AND f.competitive"
     if ctx.card:
         where += " AND f.is_rep"
-    # Only the columns block() reads: the fact row is 34 columns and the global read ~80k rows.
-    rows = await ctx.conn.fetch(f"""SELECT f.answer_key,{','.join(f'f.t_{t}' for t in TYPES)},
-        {','.join(f'f.{col}' for _, col in SENTIMENTS)},br.own_bit AS brand_own_bit
-        FROM gold.answer_brand_fact f JOIN gold.dim_brand br USING(brand_key) WHERE {where}""", *b.args)
-    total = (await counts(ctx))[0]["answers"]
+    # Per side (own = the brand's own_bit meets the block's bits) and type, over the rows that carry the type
+    # (t > 0): the mentions, the rows, the distinct answers and the rows' sentiment sums. Summed in the database,
+    # per answer first so an answer counts once a side: fetching the rows (~1M on a month) and walking them
+    # per type took 2.7 s, 1.7 s of it on the event loop every other screen waits on.
+    bits_ref = f"${len(b.args) + 1}::int"
+    inner, outer = [], []
+    for t in TYPES:
+        hit = f"f.t_{t}>0"
+        inner += [f"sum(f.t_{t}) FILTER(WHERE {hit}) AS m_{t}", f"count(*) FILTER(WHERE {hit}) AS n_{t}",
+                  *(f"sum(f.{col}) FILTER(WHERE {hit}) AS {col}_{t}" for _, col in SENTIMENTS)]
+        outer += [f"coalesce(sum(g.m_{t}),0)::bigint AS m_{t}", f"coalesce(sum(g.n_{t}),0)::bigint AS n_{t}",
+                  f"count(*) FILTER(WHERE g.n_{t}>0)::int AS a_{t}",
+                  *(f"coalesce(sum(g.{col}_{t}),0)::bigint AS {col}_{t}" for _, col in SENTIMENTS)]
+    sides_sql = f"""WITH g AS (SELECT f.answer_key,(br.own_bit & {bits_ref})<>0 AS own,{','.join(inner)}
+        FROM gold.answer_brand_fact f JOIN gold.dim_brand br USING(brand_key) WHERE {where} GROUP BY 1,2)
+        SELECT g.own,{','.join(outer)} FROM g GROUP BY g.own"""
+    fact_args = b.args
+    total = (await counts(ctx, prompts=False))[0]["answers"]
     stance_rows = None
     if flag(ctx.q, "include_stance", True) and not ctx.card:
         b = SQL()
@@ -90,31 +103,20 @@ async def types(ctx: Context) -> dict:
             FROM gold.answer_fact f JOIN gold.answer_stance_fact s
             ON (s.build_id,s.surface,s.round_date,s.answer_key)=(f.build_id,f.surface,f.round_date,f.answer_key)
             WHERE {where} AND s.first_turn AND s.std_in GROUP BY s.own_bit,s.stance""", *b.args)
-    def block(bits):
+    async def block(bits):
+        sides = {r["own"]: r for r in await ctx.conn.fetch(sides_sql, *fact_args, bits)}
+        def v(own, key):
+            return sides[own][key] if own in sides else 0
         by_type, matrix = [], []
         for t in TYPES:
-            # One pass over the rows per type, split own (True) / other (False): the list-and-sum
-            # version walked the rows a dozen times per type (0.55 s of the global read).
-            mentions, answers, n = {True: 0, False: 0}, {True: set(), False: set()}, {True: 0, False: 0}
-            sent = {True: [0] * len(SENTIMENTS), False: [0] * len(SENTIMENTS)}
-            for r in rows:
-                m = r[f"t_{t}"] or 0
-                if m <= 0:
-                    continue
-                own = bool(r["brand_own_bit"] & bits)
-                mentions[own] += m
-                answers[own].add(r["answer_key"])
-                n[own] += 1
-                for i, (_, col) in enumerate(SENTIMENTS):
-                    sent[own][i] += r[col] or 0
-            own_mentions, other_mentions = mentions[True], mentions[False]
-            own_answers, other_answers = len(answers[True]), len(answers[False])
+            own_mentions, other_mentions = v(True, f"m_{t}"), v(False, f"m_{t}")
+            own_answers, other_answers = v(True, f"a_{t}"), v(False, f"a_{t}")
             by_type.append({"type": t, "own_mentions": own_mentions, "other_mentions": other_mentions,
                 "own_answers": own_answers, "other_answers": other_answers, "own_exposure": ratio(own_answers,total),
                 "other_exposure": ratio(other_answers,total), "own_share": ratio(own_mentions,own_mentions+other_mentions)})
-            for label, sides in (("own",(True,)),("all",(True,False))):
-                matrix.append({"type":t,"scope":label,"rows":sum(n[s] for s in sides),**{name:sum(sent[s][i] for s in sides)
-                    for i,(name,_) in enumerate(SENTIMENTS)}})
+            for label, own_sides in (("own",(True,)),("all",(True,False))):
+                matrix.append({"type":t,"scope":label,"rows":sum(v(s, f"n_{t}") for s in own_sides),
+                    **{name:sum(v(s, f"{col}_{t}") for s in own_sides) for name, col in SENTIMENTS}})
         stance = None
         if stance_rows is not None:
             stance = {name:sum(r["n"] for r in stance_rows if r["own_bit"] & bits and r["stance"]==i)
@@ -123,5 +125,5 @@ async def types(ctx: Context) -> dict:
         return {"by_type":by_type,"sentiment_matrix":matrix,"stance":stance}
     split = None
     if flag(ctx.q,"split_own"):
-        split = [{"own_brand_code":name,**block(bit)} for bit,name in BRAND_NAMES.items() if bit & ctx.bits] if len(ctx.own_names)>1 else []
-    return envelope(ctx,{"answers_total":total,**block(ctx.bits),"by_own_brand":split})
+        split = [{"own_brand_code":name,**await block(bit)} for bit,name in BRAND_NAMES.items() if bit & ctx.bits] if len(ctx.own_names)>1 else []
+    return envelope(ctx,{"answers_total":total,**await block(ctx.bits),"by_own_brand":split})

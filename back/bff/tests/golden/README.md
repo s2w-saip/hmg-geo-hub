@@ -103,6 +103,17 @@ Deliberate changes (what the screen shows changed by decision):
   `sheets` / `sheet` (taken from the old sheets: the counts are their rows, `sheet` is the old first one) and the
   `top` of rows without a pick (first sheet: `rn-default` 30 rows, `rn-hmg-us` 53, `rn-kia-period` 31, and 12
   fixtures); the standard and website/project outputs stay.
+- 2026-10-29 renewal Mention load (the user's request to speed the page up; what the page shows is the same). The
+  brand drawer opens from the ranking's rows only (the first 100 body brands), so `mention/rn-shell` sends the drawer
+  rows of those brands, not of every body brand (0.3–0.6 MB the whole body waited on). The 9 `rn-live-*` cases
+  change only in `rn-shell.drawer` (454 → 100, 493, 215, 460, 454, 215, 460, 752, 752 → 100 rows); every kept row is
+  the old one, and each case's ranking brands all keep theirs.
+  The reader then honoured the contract's `mentions/brands` `include` (prompts · multi · types · hmg): a row field
+  and its read only when asked for. The website / project mention views ask for `multi` too (they read it; the
+  reader had sent it unasked) and the period before's read asks for none (it gives the Δ of rate, share, position
+  and sentiment only). Tapes: those 40 entries carry the new request, and every `mentions/brands` body lost the row
+  fields its request does not ask for (`is_hmg_own`, `prompts`, `multi`, `types`, `types_total`) — 307 cases, no
+  output changes.
 - 2026-10-29 ACR 분포 card redesign (the user's picks after the ACR data analysis: 당사's state in three classes with
   filters, 당사 열세 first). The reader sends one row per prompt — its cells in the read window summed (a round
   re-measures a prompt up to 20 times; a period holds its rounds) — with `cells` and each entry's `appearance`. A

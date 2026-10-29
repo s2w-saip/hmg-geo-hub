@@ -14,6 +14,7 @@ from fastapi import HTTPException
 from fastapi.encoders import jsonable_encoder
 from starlette.datastructures import QueryParams
 
+from bff.gold_reader import cache as gold_cache
 from bff.gold_reader.readers import read as read_gold
 from bff.hub_stores import analytics_reader
 from bff.screens._js import js_str
@@ -50,8 +51,7 @@ async def get(path: str, params: Mapping[str, Any] | Iterable[tuple[str, Any]] |
     """In-process GET returning the same JSON the HTTP route would send.
 
     Identical reads that run at the same time (sections of one page asking for the same
-    summary) share one execution; nothing is kept here once it finishes (the one result cache, the filter
-    options, is gold_reader.metrics.options)."""
+    summary) share one execution; a Gold read's answer is kept under Gold's state (gold_reader.cache)."""
     q = query(params)
     key = f"{path}?{q}"
     pending = _inflight.get(key)
@@ -77,4 +77,7 @@ def _forget(key: str, done: asyncio.Future) -> None:
 
 
 async def _read_json(path: str, q: QueryParams) -> Any:
-    return json.loads(json.dumps(jsonable_encoder(await read(path, q))))
+    async def text() -> str:
+        return json.dumps(jsonable_encoder(await read(path, q)))
+    # the HUB analytics store is not Gold: no Gold state to key it on
+    return json.loads(await (text() if path in ANALYTICS else gold_cache.read(f"{path}?{q}", text)))

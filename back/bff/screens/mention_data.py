@@ -92,6 +92,17 @@ async def degrade(label: str, run: Callable[[], Awaitable[Any]], fallback: Any) 
     return fallback if v is None else v
 
 
+def start_early(run: Callable[[], Awaitable[Any]]) -> Callable[[], Awaitable[Any]]:
+    """Start a read now that a loader only uses after an earlier read answered, and hand back the `run` for
+    degrade_on_api_failure: its outcome (value or error) is classified and marked when the loader asks for it,
+    as if it had started then. Started together, the page's identical reads still share one execution
+    (bff.api.get); started after the gate, a read the other sections had just finished ran again (2.5 s of the
+    renewal Mention's month view). A read nobody asks for (the gate failed) ends quietly."""
+    task = asyncio.ensure_future(run())
+    task.add_done_callback(lambda t: t.cancelled() or t.exception())
+    return lambda: task
+
+
 # ── filters ─────────────────────────────────────────────────────────────────
 
 def mention_filters(sp: dict, scope: dict | None = READER_SCOPE) -> tuple[dict, dict]:
@@ -141,7 +152,11 @@ def _qctx(ctx: dict) -> dict:
 # ── calls ───────────────────────────────────────────────────────────────────
 
 BRANDS_TABLE = {"top_n": 100, "sort": "mentions", "split_own": True, "full": True, "include": ["multi", "prompts", "types"]}
-VIEW_BRANDS_TABLE = {**BRANDS_TABLE, "include": ["prompts", "types"]}
+# The website / project views read multi too (MentionView's multi toggle): the reader sent it unasked until it honoured
+# ?include= (2026-10-29), so asking for it keeps what they show.
+VIEW_BRANDS_TABLE = {**BRANDS_TABLE, "include": ["multi", "prompts", "types"]}
+#: the period before: its rows give the Δ of mention rate, share, position and sentiment only (no prompt or multi counts)
+PREV_BRANDS_TABLE = {k: v for k, v in BRANDS_TABLE.items() if k != "include"}
 ENGINE_BRAND_TOP_N = 30
 ENGINE_BRANDS = {"top_n": ENGINE_BRAND_TOP_N, "sort": "mentions", "split_own": True, "group_by": "engine",
                  "engine_only": True}
@@ -440,16 +455,30 @@ def to_standard_sub_kpis(engines: dict, summary: dict | None) -> dict:
 
 async def load_mentions_live(filters: dict, ctx: dict) -> dict | None:
     label = f"{ctx['surface']}Mentions"
+    types_run = start_early(lambda: fetch_mention_types(filters, ctx))
+    summary_run = start_early(lambda: fetch_mention_summary(filters, ctx))
+    trend_run = start_early(lambda: fetch_brand_trend(filters, ctx))
     brands = await degrade_on_api_failure(label, lambda: fetch_mention_brands(filters, ctx))
     if not brands:
         return None
     types, summary, trend = await asyncio.gather(
-        degrade_on_api_failure(f"{label}.types", lambda: fetch_mention_types(filters, ctx)),
-        degrade_on_api_failure(f"{label}.summary", lambda: fetch_mention_summary(filters, ctx)),
-        degrade_on_api_failure(f"{label}.trend", lambda: fetch_brand_trend(filters, ctx)),
+        degrade_on_api_failure(f"{label}.types", types_run),
+        degrade_on_api_failure(f"{label}.summary", summary_run),
+        degrade_on_api_failure(f"{label}.trend", trend_run),
     )
     return to_mentions_live({"brands": brands, "types": types, "summary": summary, "trend": trend,
                              "trendFailed": trend is None})
+
+
+async def load_mentions_brands(filters: dict, ctx: dict) -> list[dict] | None:
+    """load_mentions_live(...)["brands"] without its types / summary / trend reads: None when the read failed
+    (marked as load_mentions_live marks it) or is suppressed, [] on a window without answers."""
+    res = await degrade_on_api_failure(f"{ctx['surface']}Mentions", lambda: fetch_mention_brands(filters, ctx))
+    if not res or whole_suppression(res["meta"]):
+        return None
+    if res["data"]["totals"]["answers"] == 0:
+        return []
+    return [to_mentions_brand_live(b) for b in res["data"]["brands"]]
 
 
 def mentions_degraded(ctx: dict) -> dict:
@@ -745,14 +774,17 @@ def to_engine_kpi_trend(p: dict) -> dict:
 
 
 async def load_engine_kpi_trend(filters: dict, ctx: dict) -> dict | None:
+    brands_run = start_early(lambda: fetch_mention_brands(filters, ctx, ENGINE_BRANDS))
+    trends_run = start_early(lambda: fetch_engine_type_trends(filters, ctx))
+    overview_run = start_early(lambda: fetch_overview_trend(filters, ctx))
     engines = await degrade_on_api_failure(
         "standardKpiEngineTrend", lambda: fetch_engine_rows(filters, ctx, part=KPI_TAB_ENGINE_PART))
     if not engines:
         return None
     latest_brands, trends, overview = await asyncio.gather(
-        degrade_on_api_failure("standardKpiEngineTrend.brands", lambda: fetch_mention_brands(filters, ctx, ENGINE_BRANDS)),
-        degrade_on_api_failure("standardKpiEngineTrend.trend", lambda: fetch_engine_type_trends(filters, ctx)),
-        degrade_on_api_failure("standardKpiEngineTrend.overview", lambda: fetch_overview_trend(filters, ctx)),
+        degrade_on_api_failure("standardKpiEngineTrend.brands", brands_run),
+        degrade_on_api_failure("standardKpiEngineTrend.trend", trends_run),
+        degrade_on_api_failure("standardKpiEngineTrend.overview", overview_run),
     )
     return to_engine_kpi_trend({"engines": engines, "latestBrands": latest_brands,
                                 "engineTrend": (trends or {}).get("engine"), "typeTrend": (trends or {}).get("type"),
@@ -808,14 +840,17 @@ def to_first_position_result_api(p: dict) -> dict:
 
 
 async def load_first_position(filters: dict, ctx: dict) -> dict | None:
+    trend_run = start_early(lambda: fetch_brand_trend(filters, ctx))
+    summary_run = start_early(lambda: fetch_mention_summary(filters, ctx))
+    overview_run = start_early(lambda: fetch_overview_trend(filters, ctx))
     brands = await degrade_on_api_failure("standardKpiFirstPosition", lambda: fetch_mention_brands(filters, ctx))
     if not brands:
         return None
     t_label, s_label, o_label = FIRST_POSITION_HERO_LABELS
     trend, summary, overview = await asyncio.gather(
-        degrade_on_api_failure(t_label, lambda: fetch_brand_trend(filters, ctx)),
-        degrade_on_api_failure(s_label, lambda: fetch_mention_summary(filters, ctx)),
-        degrade_on_api_failure(o_label, lambda: fetch_overview_trend(filters, ctx)),
+        degrade_on_api_failure(t_label, trend_run),
+        degrade_on_api_failure(s_label, summary_run),
+        degrade_on_api_failure(o_label, overview_run),
     )
     return to_first_position_result_api({"trend": trend, "brands": brands, "summary": summary, "overview": overview})
 
@@ -891,7 +926,7 @@ async def load_prev_period_brands(filters: dict, ctx: dict) -> list[dict] | None
     prev = prev_period_filters(filters)
     if prev is None:
         return None
-    res = await degrade_on_api_failure(f"{ctx['surface']}MentionsPrevPeriod", lambda: fetch_mention_brands(prev, ctx))
+    res = await degrade_on_api_failure(f"{ctx['surface']}MentionsPrevPeriod", lambda: fetch_mention_brands(prev, ctx, PREV_BRANDS_TABLE))
     if not res or whole_suppression(res["meta"]) or res["data"]["totals"]["answers"] == 0:
         return []
     return [to_mentions_brand_live(b) for b in res["data"]["brands"]]

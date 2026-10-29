@@ -20,10 +20,10 @@ import {
   RnOverviewFilters,
   type OverviewFilterProps,
 } from "../../../_components/overview-filters";
-import type { RnMentionInput } from "./_components/mention-input";
+import { MENTION_VIEW_PARAM, resolveMentionView, type MentionView, type RnMentionInput } from "./_components/mention-input";
 import type { RnAsOfVM, RnPageVM } from "./_data/screen-types";
 import { RnMentionBody } from "./_components/mention-body";
-import { RnMentionPageProvider, RnMentionTabs, RnMentionTabsFallback } from "./_components/mention-tabs";
+import { RnMentionPageProvider, RnMentionTabsFallback } from "./_components/mention-tabs";
 
 // Renewal Mention (2026-10-21) — the redesigned /standard/answer-analysis/mention, served side
 // by side with the original. Data: the screens "mention/rn-<section>" of the API (one read per
@@ -90,6 +90,7 @@ export default async function RenewalMentionPage({
   );
   const body: RnMentionInput = {
     kpi: resolveKpiTab(sp[KPI_TAB_PARAM]),
+    view: resolveMentionView(sp[MENTION_VIEW_PARAM]),
     ownLabel: head.ownLabel,
     period,
     filtered,
@@ -97,7 +98,7 @@ export default async function RenewalMentionPage({
   };
   return (
     <RnFilterRuntime>
-      <Suspense fallback={<PageSkeleton header={header} top={<RnMentionTabsFallback kpi={body.kpi} />} />}>
+      <Suspense fallback={<PageSkeleton header={header} kpi={body.kpi} view={body.view} />}>
         <RenewalMention sp={sp} scope={session.user.scope} userId={session.user.id} locale={locale} header={header} body={body} />
       </Suspense>
     </RnFilterRuntime>
@@ -117,7 +118,7 @@ async function AsOfText({ asOf }: { asOf: Promise<string | null> }) {
   return <>{day ? t("lastMeasured", { date: day.slice(0, 10) }) : "—"}</>;
 }
 
-type Reads = Omit<RnMentionInput, "kpi" | "ownLabel" | "period" | "filtered">;
+type Reads = Omit<RnMentionInput, "kpi" | "view" | "ownLabel" | "period" | "filtered">;
 
 /** One screen read per section, all started now (the tabs switch in place, every section is needed). */
 function sectionReads(q: ScreenQuery, locale: string): Reads {
@@ -184,15 +185,10 @@ async function RenewalMention({
   const [props, saved] = await Promise.all([filterProps(sp, scope, locale), loadSavedFilters("mention")]);
   return (
     <RnOverviewFilters props={props} savedFilters={{ page: "mention", userId, initial: saved }}>
-      {/* the KPI tabs head the content column, right of the filter panel (2026-10-27): the filters
-          cover every tab; one provider feeds the tabs and the body */}
+      {/* one provider feeds the view rail and the body; the rail sits in the body, under 이번 회차 요약
+          (2026-10-29: it frames only the view it switches) */}
       <RnMentionPageProvider input={body}>
-        <RnFilterSplit
-          header={header}
-          top={<RnMentionTabs />}
-          panel={<RnOverviewFilterPanel />}
-          rail={<RnOverviewFilterRail />}
-        >
+        <RnFilterSplit header={header} panel={<RnOverviewFilterPanel />} rail={<RnOverviewFilterRail />}>
           <RnOverviewApplied />
           <RnBusyScope className="flex flex-col gap-4">
             <RnMentionBody />
@@ -203,14 +199,15 @@ async function RenewalMention({
   );
 }
 
-function PageSkeleton({ header, top }: { header: ReactNode; top: ReactNode }) {
+function PageSkeleton({ header, kpi, view }: { header: ReactNode; kpi: KpiTab; view: MentionView }) {
   return (
-    <RnFilterSplit header={header} top={top} panel={<RnCard className="h-[480px]" />} rail={<RnCard className="h-24" />}>
+    <RnFilterSplit header={header} panel={<RnCard className="h-[480px]" />} rail={<RnCard className="h-24" />}>
       <RnCard className="h-12" />
-      <RnCard className="flex flex-col gap-3 p-6">
+      <RnCard className="flex min-h-[214px] flex-col gap-3 p-6">
         <RnSkeleton className="h-4 w-40" />
         <RnSkeleton className="h-16 w-full" />
       </RnCard>
+      <RnMentionTabsFallback kpi={kpi} view={view} />
       <RnCard className="h-[320px]" />
     </RnFilterSplit>
   );

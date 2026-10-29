@@ -1,22 +1,28 @@
 "use client";
 
-// KPI page tabs of the renewal Mention page (2026-10-22). The KPI tiles and the attached-tab
-// folder both read as a KPI summary, so nobody took them for a switch; back to the original's
-// underline tabs: the tab name leads, the value and Δ ride along in small text. The rail heads
-// the content column, right of the filter panel (2026-10-27: header › filter | tabs › content),
-// so the filters read as covering every tab. A tab is a link (?kpi= is the source of truth,
-// aria-current marks the page); a plain click swaps the body in place — every tab reads the
-// same data here — and leaves the scroll position alone (no scroll jumps on the page).
+// The view rail of the renewal Mention page. Underline tabs (2026-10-22: KPI tiles and an
+// attached-tab folder read as a KPI summary, so nobody took them for a switch): the tab name
+// leads, the value and Δ ride along in small text.
 //
-// The provider sits above RnFilterSplit (the rail lives in its top slot, the body in the
-// content scroller) and holds the page's reads once for both.
+// 2026-10-29 (the user's pick): the rail frames only what it switches. The four KPI tabs switch
+// the analysis sections; 브랜드 상세 (mention counts and shares, no KPI) is a view of its own at
+// the rail's end, behind a divider. The rail sits under 이번 회차 요약 (every KPI at once, so above
+// the rail) and sticks under the page controls once scrolled to, so everything under it is the
+// view it names. It used to head the content column and frame the whole page, which made the
+// summary and 브랜드 상세 read as if they changed with the tab.
+//
+// A tab is a link (`?kpi=` the KPI tab, `?view=brands` 브랜드 상세; aria-current marks the view);
+// a plain click swaps the body in place (every view reads the same data here). A switch with the
+// rail stuck brings the new view's top under the rail, else the scroll stays.
+//
+// The provider sits above RnFilterSplit and holds the page's reads once for the rail and the body.
 
-import { Suspense, createContext, use, useCallback, useContext, useEffect, useState, type MouseEvent, type ReactNode } from "react";
+import { Suspense, createContext, use, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode, type RefObject } from "react";
 import { useTranslations } from "next-intl";
 import { usePathname, useSearchParams } from "next/navigation";
 import { RnSkeleton, cx } from "@/components/renewal-ui";
 import { kpiTabQuery, type KpiTab } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/kpi-tab";
-import type { RnMentionInput } from "./mention-input";
+import { MENTION_VIEW_PARAM, type MentionView, type RnMentionInput } from "./mention-input";
 import { posTxt } from "./mention-context";
 import { useDeltaBasis } from "./mention-kit";
 
@@ -28,21 +34,50 @@ export const KPI_TABS_ID = "rn-kpi-tabs";
 interface PageCtx {
   input: RnMentionInput;
   kpi: KpiTab;
+  view: MentionView;
+  /** the KPI tab's view */
   setKpi: (k: KpiTab) => void;
+  /** 브랜드 상세 (the KPI tab stays for the way back) */
+  showBrands: () => void;
 }
 
 const Ctx = createContext<PageCtx | null>(null);
 
+/** The rail link's query: the URL's params with the view's own swapped in. */
+function viewQuery(current: URLSearchParams, view: MentionView, kpi: KpiTab): string {
+  const next = new URLSearchParams(current.toString());
+  if (view === "brands") {
+    next.set(MENTION_VIEW_PARAM, "brands");
+    const s = next.toString();
+    return s ? `?${s}` : "";
+  }
+  next.delete(MENTION_VIEW_PARAM);
+  return kpiTabQuery(next, kpi);
+}
+
 export function RnMentionPageProvider({ input, children }: { input: RnMentionInput; children: ReactNode }) {
   const [kpi, setKpiState] = useState<KpiTab>(input.kpi);
-  // a server render with another ?kpi (filter change, back nav) wins
+  const [view, setViewState] = useState<MentionView>(input.view);
+  // a server render with another ?kpi / ?view (filter change, back nav) wins
   useEffect(() => setKpiState(input.kpi), [input.kpi]);
-  const setKpi = useCallback((k: KpiTab) => {
-    setKpiState(k);
-    // every tab reads the same data on this page, so the tab is only the URL (no server round trip)
-    window.history.replaceState(null, "", `${window.location.pathname}${kpiTabQuery(new URLSearchParams(window.location.search), k)}`);
+  useEffect(() => setViewState(input.view), [input.view]);
+  // every view reads the same data on this page, so the view is only the URL (no server round trip)
+  const go = useCallback((v: MentionView, k: KpiTab) => {
+    window.history.replaceState(null, "", `${window.location.pathname}${viewQuery(new URLSearchParams(window.location.search), v, k)}`);
   }, []);
-  return <Ctx.Provider value={{ input, kpi, setKpi }}>{children}</Ctx.Provider>;
+  const setKpi = useCallback(
+    (k: KpiTab) => {
+      setKpiState(k);
+      setViewState("kpi");
+      go("kpi", k);
+    },
+    [go],
+  );
+  const showBrands = useCallback(() => {
+    setViewState("brands");
+    go("brands", kpi);
+  }, [go, kpi]);
+  return <Ctx.Provider value={{ input, kpi, view, setKpi, showBrands }}>{children}</Ctx.Provider>;
 }
 
 export function useMentionPage(): PageCtx {
@@ -63,81 +98,157 @@ export function KpiBasisChip() {
   );
 }
 
-/** Control-bar label: the KPI in view (read-only — the tabs above switch it). */
-export function KpiViewLabel() {
-  const { kpi } = useMentionPage();
-  const t = useTranslations("renewal.mention.tabs");
-  const tTab = useTranslations("answerAnalysis.mentions.kpi.tabs");
-  return (
-    <span data-rn-kview="" className="inline-flex h-7 items-center gap-1.5 rounded-full bg-rn-navy-25 px-3 text-rn-12 whitespace-nowrap text-rn-ink-2">
-      {t("viewing")}
-      <b className="text-rn-navy">{tTab(kpi)}</b>
-    </span>
-  );
-}
+const plainClick = (e: MouseEvent<HTMLAnchorElement>) => e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
 
-/** The tab rail atop the content column. */
+/** The view rail under 이번 회차 요약: the four KPI tabs, then 브랜드 상세. */
 export function RnMentionTabs() {
-  const { kpi, setKpi } = useMentionPage();
+  const { kpi, view, setKpi, showBrands } = useMentionPage();
+  const t = useTranslations("renewal.mention.tabs");
   const pathname = usePathname();
   const search = useSearchParams();
-  const onPick = (k: KpiTab) => (e: MouseEvent<HTMLAnchorElement>) => {
-    // modified clicks open the link as usual (new tab / window)
-    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  const rail = useRail();
+  const href = (v: MentionView, k: KpiTab) => `${pathname}${viewQuery(new URLSearchParams(search.toString()), v, k)}`;
+  // modified clicks open the link as usual (new tab / window)
+  const onKpi = (k: KpiTab) => (e: MouseEvent<HTMLAnchorElement>) => {
+    if (!plainClick(e)) return;
     e.preventDefault();
-    if (k !== kpi) setKpi(k);
+    if (view === "kpi" && k === kpi) return;
+    rail.keepTop();
+    setKpi(k);
+  };
+  const onBrands = (e: MouseEvent<HTMLAnchorElement>) => {
+    if (!plainClick(e)) return;
+    e.preventDefault();
+    if (view === "brands") return;
+    rail.keepTop();
+    showBrands();
   };
   return (
-    <TabRail>
+    <TabRail rail={rail}>
       {KPI_TABS.map((k) => (
-        <TabLink key={k} k={k} on={k === kpi} href={`${pathname}${kpiTabQuery(new URLSearchParams(search.toString()), k)}`} onClick={onPick(k)}>
+        <TabLink key={k} id={k} title={k} on={view === "kpi" && k === kpi} href={href("kpi", k)} onClick={onKpi(k)}>
           <Suspense fallback={<RnSkeleton className="h-3.5 w-16" />}>
             <TabValue k={k} />
           </Suspense>
         </TabLink>
       ))}
+      <TabDivider />
+      <TabLink id="brands" name={t("brands")} on={view === "brands"} href={href("brands", kpi)} onClick={onBrands}>
+        {t("brandsHint")}
+      </TabLink>
     </TabRail>
   );
 }
 
-/** The rail before the filter options arrive (names only). */
-export function RnMentionTabsFallback({ kpi }: { kpi: KpiTab }) {
+/** The rail before the body's reads land (names only). */
+export function RnMentionTabsFallback({ kpi, view }: { kpi: KpiTab; view: MentionView }) {
+  const t = useTranslations("renewal.mention.tabs");
   return (
     <TabRail>
       {KPI_TABS.map((k) => (
-        <TabLink key={k} k={k} on={k === kpi}>
+        <TabLink key={k} id={k} title={k} on={view === "kpi" && k === kpi}>
           <RnSkeleton className="h-3.5 w-16" />
         </TabLink>
       ))}
+      <TabDivider />
+      <TabLink id="brands" name={t("brands")} on={view === "brands"}>
+        {t("brandsHint")}
+      </TabLink>
     </TabRail>
   );
 }
 
-function TabRail({ children }: { children: ReactNode }) {
+interface Rail {
+  nav: RefObject<HTMLElement | null>;
+  mark: RefObject<HTMLDivElement | null>;
+  /** where the rail sticks: right under the page controls (RnControlBar) */
+  top: number;
+  /** before a switch: a stuck rail takes the scroll back to where the new view starts */
+  keepTop: () => void;
+}
+
+/** The rail sticks under the control bar, whose height follows its wrapping; `mark` holds the rail's own place. */
+function useRail(): Rail {
+  const nav = useRef<HTMLElement>(null);
+  const mark = useRef<HTMLDivElement>(null);
+  const [top, setTop] = useState(0);
+  useLayoutEffect(() => {
+    const bar = nav.current?.closest("[data-rn-scroll]")?.querySelector<HTMLElement>("[data-rn-cbar]");
+    if (!bar) return;
+    // the bar sticks at -top-1 (over the scroller's pt-1): its bottom edge is 4px short of its height
+    const fit = () => setTop(bar.offsetHeight - 4);
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(bar);
+    return () => ro.disconnect();
+  }, []);
+  const keepTop = useCallback(() => {
+    const el = nav.current;
+    const scroller = el?.closest<HTMLElement>("[data-rn-scroll]");
+    if (!el || !mark.current || !scroller) return;
+    // how far the stuck rail sits below its own place (the rail's negative top margin takes back the column gap
+    // after the mark, so in place it starts where the mark ends)
+    const past = el.getBoundingClientRect().top - mark.current.getBoundingClientRect().bottom;
+    if (past > 0) scroller.scrollTop -= past;
+  }, []);
+  return { nav, mark, top, keepTop };
+}
+
+function TabRail({ rail, children }: { rail?: Rail; children: ReactNode }) {
   const t = useTranslations("renewal.mention.tabs");
   return (
-    <nav id={KPI_TABS_ID} aria-label={t("label")} className="flex gap-x-8 overflow-x-auto border-b border-rn-line-2 px-1 [scrollbar-width:none]">
-      {children}
-    </nav>
+    <>
+      <div ref={rail?.mark} aria-hidden />
+      <nav
+        ref={rail?.nav}
+        id={KPI_TABS_ID}
+        aria-label={t("label")}
+        style={{ top: rail?.top ?? 0 }}
+        className="sticky z-10 -mt-4 flex gap-x-8 overflow-x-auto border-b border-rn-line-2 bg-rn-page px-1 pt-1 [scrollbar-width:none] [.rn-dense_&]:-mt-2.5"
+      >
+        {children}
+      </nav>
+    </>
   );
 }
 
-function TabLink({ k, on, href, onClick, children }: { k: KpiTab; on: boolean; href?: string; onClick?: (e: MouseEvent<HTMLAnchorElement>) => void; children: ReactNode }) {
+function TabDivider() {
+  return <span aria-hidden className="my-3 w-px flex-none bg-rn-line-2" />;
+}
+
+function TabLink({
+  id,
+  title,
+  name,
+  on,
+  href,
+  onClick,
+  children,
+}: {
+  id: string;
+  /** a KPI tab: its name and question tooltip come from the KPI */
+  title?: KpiTab;
+  name?: string;
+  on: boolean;
+  href?: string;
+  onClick?: (e: MouseEvent<HTMLAnchorElement>) => void;
+  children: ReactNode;
+}) {
   const tTab = useTranslations("answerAnalysis.mentions.kpi.tabs");
   const tQ = useTranslations("dashboard.kpi.question");
   return (
     <a
       href={href}
       onClick={onClick}
-      data-rn-tab={k}
+      data-rn-tab={id}
       aria-current={on ? "page" : undefined}
-      title={tQ(KPI_QUESTION[k] as "coverage")}
+      title={title ? tQ(KPI_QUESTION[title] as "coverage") : undefined}
       className={cx(
         "group/tab -mb-px flex flex-none cursor-pointer flex-col gap-0.5 px-0.5 pt-2 pb-3 transition-shadow focus-visible:rounded focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rn-navy",
         on ? "shadow-[inset_0_-3px_0_var(--color-rn-navy)]" : "shadow-[inset_0_-3px_0_transparent] hover:shadow-[inset_0_-3px_0_var(--color-rn-line-2)]",
       )}
     >
-      <span className={cx("text-rn-15 leading-[1.4] font-semibold whitespace-nowrap", on ? "text-rn-ink" : "text-rn-muted group-hover/tab:text-rn-ink-2")}>{tTab(k)}</span>
+      <span className={cx("text-rn-15 leading-[1.4] font-semibold whitespace-nowrap", on ? "text-rn-ink" : "text-rn-muted group-hover/tab:text-rn-ink-2")}>{title ? tTab(title) : name}</span>
       <span className={cx("flex min-h-[18px] items-baseline gap-1.5 text-rn-12 whitespace-nowrap tabular-nums", on ? "text-rn-ink" : "text-rn-muted")}>{children}</span>
     </a>
   );

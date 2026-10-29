@@ -354,7 +354,14 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
       페이지를 연 뒤 브라우저가 더 읽는 부분(글로벌 프롬프트 목록의 다음 쪽, ACR 분포 시트를 탭을 열 때 하나씩)은
       <code>/api/standard/*</code> 얇은 프록시가 같은 방식으로 화면 빌더에 넘긴다.</li>
     <li><b>빌더는 HTTP를 다시 타지 않는다.</b> <code>api.get()</code>으로 같은 프로세스 안에서 읽고, 동시에 들어온 같은 읽기는 한 번만 실행한다.
-      결과 캐시는 아래 필터 옵션 하나뿐이고, 응답은 모두 <code>no-store</code>다. 한 읽기가 20초를 넘으면 그 구역만 504로 비운다.</li>
+      Gold 읽기의 답은 아래 Gold 읽기 캐시에 두고, 브라우저로 가는 응답은 모두 <code>no-store</code>다. 한 읽기가 20초를 넘으면 그 구역만 504로 비운다.</li>
+    <li><b>Gold 읽기 캐시</b>(2026-10-29). 화면 빌더가 읽는 Gold <code>/v1</code> 읽기의 답(JSON)을 BFF 프로세스 메모리에 둔다(<code>gold_reader/cache.py</code>, <code>api.get</code> 안).
+      키는 경로·쿼리이고, 둔 답은 Gold 상태가 그때와 같을 때만 쓴다. Gold 상태 = 쿼리 하나(약 10ms)로 읽는 지문:
+      active release와 그 항목·빌드 상태, <code>gold.data_version</code>, gold 표마다 relfilenode(통째 재적재는 표를 새로 쓴다 — 10-28 재적재는 <code>data_version</code>을 바꾸지 않았다),
+      <code>dim_cycle</code> 노출 열, gold 표 쓰기 수(<code>pg_stat</code>, 트랜잭션 밖이라 1초쯤 늦다), 그리고 날짜(서울).
+      읽기 앞뒤 지문이 같을 때만 둔다(그 사이에 쓰기가 없었다는 뜻 — 적재 도중 두 세대가 섞인 답은 답하되 두지 않는다).
+      최대 10분(<code>HGH_GOLD_CACHE_S</code>, 0이면 끔), 합계 256MB(<code>HGH_GOLD_CACHE_MB</code>)를 넘으면 오래 안 쓴 것부터 버리고, 그 1/10을 넘는 답은 두지 않는다.
+      Gold가 모든 적재에서 버전을 올리고 적재 완료 표시를 두면(개편 Q18) 쓰기 수 대신 그것을 지문에 쓴다.</li>
     <li><b>필터 옵션 캐시.</b> <code>/v1/filters/options</code>는 기간을 읽지 않으므로 그 <code>data</code>를 BFF 프로세스 메모리에 둔다(<code>gold_reader/metrics.py</code>).
       키는 release 빌드, <code>gold.data_version</code> 전체, 기간(<code>from</code>·<code>to</code>·<code>cycle_offset</code>)을 뺀 쿼리다. <code>meta</code>는 요청마다 새로 만든다.
       Gold는 표를 하나씩 다시 적재하므로, 비었거나 차원 행 없는 키가 보이거나 읽는 사이 <code>data_version</code>이 바뀐 결과는 답하되 두지 않는다.

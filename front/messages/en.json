@@ -4813,11 +4813,6 @@
         "close": "Close",
         "max": "You can compare up to {max} brands"
       },
-      "density": {
-        "label": "Density",
-        "normal": "Default",
-        "dense": "Compact"
-      },
       "delta": {
         "up": "Improved",
         "down": "Worse",
@@ -4850,8 +4845,9 @@
         "reset": "Reset filters"
       },
       "tabs": {
-        "label": "KPI",
-        "viewing": "Viewing",
+        "label": "View",
+        "brands": "Brand detail",
+        "brandsHint": "Mention ranking · mix",
         "basis": "Based on {kpi}",
         "deltaTitle": "{dir} · {basis}"
       },
