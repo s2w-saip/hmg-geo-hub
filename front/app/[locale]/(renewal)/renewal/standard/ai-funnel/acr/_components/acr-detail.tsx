@@ -489,10 +489,9 @@ function SheetPicker({
 }
 
 export function AcrDistribution() {
-  const { view, compare, colorOf, isOwn, countryLabel, engineLabel, sheet, setSheet, lit, hover } = useAcr();
+  const { view, compare, colorOf, isOwn, countryLabel, engineLabel, sheet, setSheet, distState: state, setDistState: setState, lit, hover } = useAcr();
   const t = useTranslations("renewal.acr.dist");
   const tb = useTranslations("renewal.acr.battle");
-  const [state, setState] = useState<AcrDistState | "all">("all");
   const [sort, setSort] = useState<AcrDistSort>("gap");
   const [more, setMore] = useState(false);
   const sheets = view.sheets;

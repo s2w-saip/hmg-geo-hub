@@ -126,6 +126,8 @@ const WAITING = {
   totals: { promptRuns: 0, prompts: 0, iterations: 0, engines: [] },
   trendBrands: [],
   trendRows: [],
+  compareRounds: false,
+  held: null,
   battle: [],
   battleVisible: 30,
   battleHidden: 0,

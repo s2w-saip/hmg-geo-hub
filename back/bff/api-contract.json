@@ -7231,6 +7231,18 @@
           "description": "all = 모든 시트가 행을 담는다. first = 첫 시트(행이 가장 많은 시트)만 rows 를 담고 나머지는 rows [] (row_count 는 모두). 리뉴얼 ACR 화면이 쓰고, 다른 시트는 탭을 열 때 /v1/funnel/acr/territory 로 하나씩 읽는다"
         },
         {
+          "name": "include_head_to_head",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "boolean",
+            "default": false,
+            "description": "true = 결선 맞대결(head_to_head)을 함께 읽는다(반복 표본 쿼리 하나 더). 리뉴얼 ACR 화면이 쓴다",
+            "title": "Include Head To Head"
+          },
+          "description": "true = 결선 맞대결(head_to_head)을 함께 읽는다(반복 표본 쿼리 하나 더). 리뉴얼 ACR 화면이 쓴다"
+        },
+        {
           "name": "model_limit",
           "in": "query",
           "required": false,
@@ -15103,7 +15115,8 @@
             "$ref": "#/components/schemas/AcrBattleRow"
           },
           "type": "array",
-          "title": "Battle"
+          "title": "Battle",
+          "description": "선택이 있는 질문마다 한 행. 행은 그 질문의 첫 셀 순서(round_date, acr_cell_key — territory 행과 같은 규칙), 행의 cells는 엔진별 첫 셀 순서"
         },
         "model_conversion": {
           "items": {
@@ -15122,6 +15135,17 @@
         "options": {
           "$ref": "#/components/schemas/AcrOptions",
           "description": "ACR 모집단 언어·국가 옵션(BG-33). /v1/filters/options 는 답변 모집단이라 다르다"
+        },
+        "head_to_head": {
+          "anyOf": [
+            {
+              "$ref": "#/components/schemas/AcrHeadToHead"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "include_head_to_head=true 일 때(셀이 있으면). 아니면 null"
         }
       },
       "type": "object",
@@ -15365,6 +15389,9 @@
           "type": "integer",
           "title": "Row Count",
           "description": "시트의 행(프롬프트) 수. territory_rows=first 로 rows 를 보내지 않은 시트도 센다"
+        },
+        "states": {
+          "$ref": "#/components/schemas/AcrSheetStates"
         }
       },
       "type": "object",
@@ -15372,6 +15399,7 @@
         "country",
         "engine",
         "row_count",
+        "states",
         "rows"
       ],
       "title": "AcrTerritorySheet"
@@ -42006,6 +42034,112 @@
         "meta"
       ],
       "title": "Envelope[AcrTerritoryData]"
+    },
+    "AcrSheetStates": {
+      "properties": {
+        "pick": {
+          "type": "integer",
+          "title": "Pick",
+          "description": "당사가 한 번 이상 선택된 질문 행 수(행의 당사 Σchoice > 0)"
+        },
+        "listed": {
+          "type": "integer",
+          "title": "Listed",
+          "description": "당사가 후보로 올랐지만 선택되지 않은 질문 행 수(Σchoice 0, Σappearance > 0)"
+        },
+        "absent": {
+          "type": "integer",
+          "title": "Absent",
+          "description": "당사가 후보에도 없던 질문 행 수"
+        }
+      },
+      "type": "object",
+      "required": [
+        "pick",
+        "listed",
+        "absent"
+      ],
+      "title": "AcrSheetStates",
+      "description": "시트의 질문 행(rows 와 같은 단위: 읽기 창 안 그 질문의 셀 합)을 당사(관점 합계) 상태로 센 수. 합 = row_count. rows 를 보내지 않은 시트도 센다"
+    },
+    "AcrHeadToHeadRow": {
+      "properties": {
+        "engine": {
+          "type": "string",
+          "title": "Engine"
+        },
+        "brand": {
+          "type": "string",
+          "title": "Brand",
+          "description": "경쟁사(관점 당사가 아닌 브랜드). Gold 의 브랜드 없음 키(brand_key 0, '(이름 없음)')는 뺀다"
+        },
+        "iterations": {
+          "type": "integer",
+          "title": "Iterations",
+          "description": "당사와 이 경쟁사가 같은 후보 목록(acr_iter_shortlist level 1)에 오른 반복 수"
+        },
+        "own_wins": {
+          "type": "integer",
+          "title": "Own Wins",
+          "description": "그중 당사 브랜드가 선택된 반복(acr_iter_fact.winner_brand_key)"
+        },
+        "rival_wins": {
+          "type": "integer",
+          "title": "Rival Wins",
+          "description": "그중 이 경쟁사가 선택된 반복"
+        }
+      },
+      "type": "object",
+      "required": [
+        "engine",
+        "brand",
+        "iterations",
+        "own_wins",
+        "rival_wins"
+      ],
+      "title": "AcrHeadToHeadRow"
+    },
+    "AcrHeadToHeadSample": {
+      "properties": {
+        "iterations": {
+          "type": "integer",
+          "title": "Iterations",
+          "description": "읽기 창 셀의 acr_iter_fact 반복 수(셀마다 약 1개)"
+        },
+        "cells": {
+          "type": "integer",
+          "title": "Cells",
+          "description": "반복이 하나라도 있는 셀 수"
+        }
+      },
+      "type": "object",
+      "required": [
+        "iterations",
+        "cells"
+      ],
+      "title": "AcrHeadToHeadSample"
+    },
+    "AcrHeadToHead": {
+      "properties": {
+        "sample": {
+          "$ref": "#/components/schemas/AcrHeadToHeadSample"
+        },
+        "rows": {
+          "items": {
+            "$ref": "#/components/schemas/AcrHeadToHeadRow"
+          },
+          "type": "array",
+          "title": "Rows",
+          "description": "엔진, 반복 수 많은 순, 브랜드 순"
+        }
+      },
+      "type": "object",
+      "required": [
+        "sample",
+        "rows"
+      ],
+      "title": "AcrHeadToHead",
+      "description": "결선 맞대결: 반복별 후보 목록과 선택이 셀마다 약 1개만 있어 표본이다"
     }
   }
 }

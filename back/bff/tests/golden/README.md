@@ -124,6 +124,50 @@ Deliberate changes (what the screen shows changed by decision):
   was one cell, and the tapes recorded which brands a cell listed, not how often). The 35 `acr/renewal` cases with a
   view change only in `view.sheet`, rebuilt by the new code after checking it against the recorded one: the rest of
   the view, every row's kept fields, the picked entries and the old text / own orders (now `[...]["all"]`) are the same.
+- 2026-10-29 ACR rounds not compared (the user's decision on the measurement break, P1 of
+  docs/handoff/acr-next-session.html: for the same prompts, countries and engines the answers judged generic went
+  76.8 % → 2.6 % from the 09-28 to the 10-05 round, and 27 % → 86 % at 08-31, with the same models and Gold rule,
+  so a Δ, a trend or a period sum across rounds shows a change of measurement as a change of the market). Until Gold
+  marks each round's measurement method `acr.COMPARE_ROUNDS` is off — no date, no inferred boundary: the renewal
+  view sends `compareRounds` false, no trend (`dates` [], `ownTrend` and every brand's `trend` null) and no Δ
+  (`ownDelta`, `d` null, `showDelta` false), so the mover finding and the standing finding's move are gone; a period
+  of several rounds sends `held` {rounds, from, to} and no view. The 41 `acr/renewal` cases: built with the switch
+  on, each equals its recorded output (plus `held` null and `compareRounds` true); with it off they change only in
+  those fields (33 views; `fix-rn-r02` and `fix-rn-r17` are periods of two rounds, held; 9 mover findings dropped,
+  none entered). The standard and website/project outputs stay.
+- 2026-10-29 ACR battle rows in a fixed order (the user's pick when the reader's brand, 당사, battle and model sums
+  moved into the database for speed: 1.2 → 0.86 s, a month 4.3 → 1.6 s). `funnel/acr` sent the battle rows in the
+  entity table's physical order — no contract names it, and a rewrite of the table reshuffles it while the pages show
+  the first 30. A row now comes at its prompt's first cell (round_date, acr_cell_key, the territory rows' rule) and
+  its cells at their engine's first cell. Against live Gold, every other field of 12 reads (snapshot, a month, every
+  round, all sheets, Kia, US·ChatGPT, ko, card, limits, website, two sheets) is the same as before; the battle rows and
+  cells are the same set. The renewal snapshot's first 30 rows stay under 전체 and 당사 미선택; 엔진 갈림 shows the
+  same 30 with 8 moved. No case changes (the tapes hold the reader's answers).
+- 2026-10-29 ACR 후보 → 선택 전환 and 결선 맞대결 cards (the user's approval of their definitions; 후보 탈락 count first
+  with its share shown). The reader: every `funnel/acr` and `funnel/acr/territory` sheet carries `states` {pick, listed,
+  absent} — 당사's state in its prompt rows by the 분포 rows' rule, rows sent or not; `include_head_to_head=true` adds
+  `head_to_head` {sample, rows per engine × rival: iterations, own_wins, rival_wins} from acr_iter_fact and
+  acr_iter_shortlist (about one repetition per cell, a sample the card says; brand_key 0 "(이름 없음)", Gold's no-brand
+  key, is no rival and its wins are no pick). The renewal page asks for it and its view adds `conversion` and `duels`.
+  Tapes: every `funnel/acr` sheet got `states` — from its rows where the tape holds them all, else from the same case's
+  34e2f3b tape, which held every sheet's rows (167 sheets; the 21 renewal first sheets agree both ways); 65 renewal
+  sheets in 8 cases keep a `row_count` above their prompts (the 10-29 migration counted cells), so their states add up
+  to the prompts. Every `funnel/acr` answer got `head_to_head`: null, or an empty sample on the renewal reads, which now
+  ask `include_head_to_head` (no repetitions were recorded). The 33 `acr/renewal` cases with a view change only by the
+  two new keys; the standard and website/project outputs stay. Against live Gold every sheet's `states` equal the
+  screen's own classification of its rows (snapshot, a month, every round, Kia, Genesis card) and the head-to-head gives
+  the 10-29 analysis' figures (Toyota 7.9 % / 35.9 %, Tesla 13.2 / 28.5, BMW 16.5 / 8.0).
+- 2026-10-29 ACR rounds not compared: the reason revised, and the standard and website/project pages too (the user's
+  decision after a trend analysis; they take a measurement-method change as normal, not a reason to hide). The rounds
+  measured different markets and questions — 6–9 countries and 54–88 questions with KR at 38–52 % of the repetitions up
+  to 08-24, 51 countries and 926 questions since 09-28 — so the line showed the measured scope (08-17 → 08-24: −6.0 pp
+  over all cells, +7.0 pp on the questions both rounds measured), and on the same questions every week-on-week move was
+  within sampling noise (e.g. 09-07 → 09-14 −0.3 pp, ±0.4). `COMPARE_ROUNDS` stays off until the user turns it on when
+  rounds on the same scope have built up. `acr/standard` and `acr/gold` (`live_vm`) send no trend (`trendRows`,
+  `trendBrands` []), `compareRounds` and `held` (a period of several rounds: its rounds and an empty view). The 86
+  standard and website/project cases: built with the switch on, each equals its recorded output (plus `compareRounds`
+  true, `held` null); with it off 55 lose their trend only, 27 had none, and `fix-std-r02`, `fix-std-r17`,
+  `fix-gold-r02`, `fix-gold-r17` are periods of two rounds, held.
 
 ## Format
 

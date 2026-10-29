@@ -3,7 +3,7 @@
 ## 다음 세션 최우선 작업
 
 - [x] **P4 ACR 차종 전환율 분모 중복 확인** — 2026-10-28 완료. Gold 기준 영향 없음, 수정 없음. 결과는 `docs/handoff/p4-acr-model-denominator.html` 머리 배너.
-- [ ] **ACR 후속** — `docs/handoff/acr-next-session.html` 2절 순서대로: P1 측정 단절(10-05 회차 경계, 지금 화면의 Δ·추이가 틀림; 처리 방식은 사용자 결정) → P2 업스트림 질문 → P3 새 카드(후보→선택 전환, 결선 맞대결) → P5 성능. 2026-10-29 작업분(분포 시트 분리 로딩·시트 선택 UI·분포 카드 개편)은 미커밋.
+- [ ] **ACR 후속** — `docs/handoff/acr-next-session.html` 2절. 2026-10-29 두 번째 세션에서 P1(회차 간 비교 막기, `screens/acr.py` `COMPARE_ROUNDS`)·P3(후보→선택 전환, 결선 맞대결)·P5(리더 SQL 집계)를 끝냈고 미커밋(첫 세션분은 `03489fe`). 추이·Δ·기간 합산은 리뉴얼·기존 화면 모두 숨김 유지(사용자 결정: 측정 범위가 달라 비교할 이력이 없음 — 측정 방식 변경 자체는 문제 삼지 않음). 다시 여는 것은 같은 범위 회차가 쌓인 뒤 사용자가 정한다(`COMPARE_ROUNDS`). P2 업스트림 질문은 사용자가 보낸다. 미결: cell·fact family의 metric_version 혼재(Mention·Citation 추이).
 
 ## 작업 규칙
 

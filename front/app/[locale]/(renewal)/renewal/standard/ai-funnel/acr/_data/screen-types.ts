@@ -53,6 +53,38 @@ export type AcrDistSort = "gap" | "own" | "text";
 /** 당사 in a row: picked / a candidate never picked / not a candidate */
 export type AcrDistState = "pick" | "listed" | "absent";
 
+/** 후보 → 선택 전환: rows by 후보 탈락 count (default) or share */
+export type AcrConversionSort = "listed" | "share";
+export interface AcrConversionRow {
+  region: string | null;
+  /** prompt rows of the country (every engine summed in the "all" view) */
+  n: number;
+  counts: Record<AcrDistState, number>;
+  /** each count over n, rounded once (null when n is 0) */
+  shares: Record<AcrDistState, number | null>;
+  /** the 분포 sheet the row opens (the country's sheet with the most 후보 탈락 rows) */
+  sheet: string | null;
+}
+export interface AcrConversionView {
+  n: number;
+  counts: Record<AcrDistState, number>;
+  shares: Record<AcrDistState, number | null>;
+  rows: AcrConversionRow[];
+  orders: Record<AcrConversionSort, number[]>;
+}
+export type AcrDuelPart = "own" | "rival" | "rest";
+export interface AcrDuelRow {
+  brand: string;
+  /** repetitions whose shortlist held 당사 and this rival */
+  n: number;
+  counts: Record<AcrDuelPart, number>;
+  shares: Record<AcrDuelPart, number | null>;
+  /** bar widths (% of a half; one scale per view, its largest 당사 or rival share fills its half) */
+  bars: Record<"own" | "rival", number>;
+  sibling: boolean;
+  lead: "own" | "rival" | "even";
+}
+
 export interface AcrDistRow {
   promptId: string;
   label: string;
@@ -118,6 +150,8 @@ export interface RnAcrView {
   /** the compare brands before any pick (the best rival) */
   defaultCompare: string[];
   showDelta: boolean;
+  /** false while the page compares no two rounds (BFF acr.COMPARE_ROUNDS): no trend (dates [], trends null), no Δ */
+  compareRounds: boolean;
   /** 당사 rank among the chosen rivals (the reader's, beyond the table; null without 당사), the leader,
    * 당사 − leader (pp) and the field size (chosen rivals + 당사) */
   rank: number | null;
@@ -151,6 +185,10 @@ export interface RnAcrView {
   /** the first sheet (the others are read when their tab opens) */
   sheet: AcrDistSheet | null;
   distVisible: number;
+  /** 후보 → 선택 전환 per country: views "all" (every engine summed) and per engine */
+  conversion: { engines: string[]; views: Record<string, AcrConversionView>; visible: number };
+  /** 결선 맞대결 per rival (null when not read): views "all" and per engine; the reader's sample of about one repetition per cell */
+  duels: { engines: string[]; views: Record<string, AcrDuelRow[]>; sample: { iterations: number; cells: number } } | null;
 }
 
 export interface RnAcrInput {
@@ -164,6 +202,8 @@ export interface RnAcrInput {
   /** 당사 name (the applied own brands, else the HMG umbrella) */
   ownLabel: string;
   totals: StandardAcr["totals"];
+  /** a period of several rounds while rounds are not compared: its rounds, and no view */
+  held: { rounds: number; from: string; to: string } | null;
   view: RnAcrView | null;
 }
 

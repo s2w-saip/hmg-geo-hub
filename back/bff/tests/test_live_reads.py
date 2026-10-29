@@ -98,6 +98,26 @@ class GoldLiveReads(unittest.TestCase):
                 self.assertEqual(one["data"]["sheet"], s)
         self.assertIsNone(self.read("/v1/funnel/acr/territory?surface=global&sheet_country=ZZ&sheet_engine=chatgpt")["data"]["sheet"])
 
+    def test_acr_sheet_states_and_head_to_head(self):
+        # 2026-10-29: every sheet counts 당사's state in its rows, rows sent or not; the head-to-head on request
+        full = self.read("/v1/funnel/acr?surface=global")["data"]
+        self.assertIsNone(full["head_to_head"])
+        for s in full["territory"]:
+            own = {}
+            for r in s["rows"]:
+                own[r["prompt_id"]] = (sum(e["choice"] for e in r["entries"] if e["is_ours"]),
+                                       sum(e["appearance"] for e in r["entries"] if e["is_ours"]))
+            counted = {"pick": 0, "listed": 0, "absent": 0}
+            for c, a in own.values():
+                counted["pick" if c > 0 else "listed" if a > 0 else "absent"] += 1
+            self.assertEqual(s["states"], counted, (s["country"], s["engine"]))
+        duels = self.read("/v1/funnel/acr?surface=global&territory_rows=first&include_head_to_head=true")
+        self.validate("funnel/acr", duels)
+        h = duels["data"]["head_to_head"]
+        self.assertGreater(h["sample"]["iterations"], 0)
+        self.assertTrue(all(r["own_wins"] + r["rival_wins"] <= r["iterations"] and r["brand"] != "(이름 없음)" for r in h["rows"]))
+        self.assertEqual([s["states"] for s in duels["data"]["territory"]], [s["states"] for s in full["territory"]])
+
     def test_primary_contracts(self):
         paths = ("filters/options", "filters/dates", "kpi/summary", "kpi/engines", "mentions/brands",
                  "trend", "citations/domains", "citations/sources", "funnel/acr", "prompts", "answers",

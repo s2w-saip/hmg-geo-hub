@@ -1,6 +1,7 @@
 """Gold ACR reader (bff.gold_reader.acr) over a stand-in connection: the own total (당사 = every own brand
 of the perspective) wherever the page shows 당사, beyond the brand table's top."""
 import asyncio
+import re
 import unittest
 from datetime import date, timedelta
 
@@ -32,16 +33,63 @@ def model(key, entity_key, name, parent, parent_own_bit, choice, appearance=1):
 
 
 class Conn:
-    """The cell and entity facts of the test; the trend's aggregates are summed from them, over the rounds the
-    statement binds (as the database would)."""
+    """The cell and entity facts of the test; the reader's aggregates (brands per prompt and engine, 당사 cells,
+    models, the trend) are summed from them, over the rounds the statement binds (as the database would)."""
 
     def __init__(self, cells, rows):
-        self.cells, self.rows, self.trend_days = cells, rows, []
+        self.cells = [{**c, "engine_key": c["engine"], "geo_key": c["country"]} for c in cells]
+        self.rows, self.trend_days, self.duels = rows, [], []
 
     def bound_days(self, args):
         return next((a for a in args if isinstance(a, list) and a and isinstance(a[0], date)), [])
 
+    def cell(self, key):
+        return next(c for c in self.cells if c["acr_cell_key"] == key)
+
+    @staticmethod
+    def bits(sql):
+        return int(re.search(r"x\.own_bit & (\d+)", sql).group(1))
+
+    async def fetchval(self, sql, *args):
+        if "count(DISTINCT x.acr_cell_key)" in sql:
+            bits = self.bits(sql)
+            return len({r["acr_cell_key"] for r in self.rows if r["level"] == 1 and r["own_bit"] & bits and r["appearance"]})
+        raise AssertionError(f"unexpected statement: {sql[:120]}")
+
+    async def fetchrow(self, sql, *args):
+        if "count(DISTINCT (i.build_id,i.acr_cell_key))" in sql:
+            return {"iterations": len(self.cells), "cells": len(self.cells)}
+        raise AssertionError(f"unexpected statement: {sql[:120]}")
+
     async def fetch(self, sql, *args):
+        if "gold.acr_iter_shortlist" in sql:
+            return self.duels
+        if "x.level=2" in sql:
+            out = {}
+            for r in self.rows:
+                if r["level"] == 2 and r["model"] and r["appearance"]:
+                    m = out.setdefault((r["entity_key"], r["model"], r["parent_brand"]), {
+                        "entity_key": r["entity_key"], "model": r["model"], "parent_brand": r["parent_brand"],
+                        "own_bit": 0, "choice": 0, "den": 0, "cells": 0})
+                    m["own_bit"] |= r["parent_own_bit"] or 0
+                    m["choice"] += r["choice"] or 0
+                    m["den"] += self.cell(r["acr_cell_key"])["valid_acr"] or 0
+                    m["cells"] += 1
+            return list(out.values())
+        if "x.level=1" in sql:
+            bits, out = self.bits(sql), {}
+            for r in self.rows:
+                if r["level"] == 1 and r["brand"]:
+                    c = self.cell(r["acr_cell_key"])
+                    g = out.setdefault((c["prompt_key"], c["engine_key"], c["geo_key"], r["brand"]), {
+                        "prompt_key": c["prompt_key"], "engine_key": c["engine_key"], "geo_key": c["geo_key"], "brand": r["brand"],
+                        "is_ours": False, "choice": 0, "appearance": 0, "keys": set()})
+                    g["is_ours"] |= bool(r["own_bit"] & bits)
+                    g["choice"] += r["choice"] or 0
+                    g["appearance"] += r["appearance"] or 0
+                    if r["appearance"]:
+                        g["keys"].add(r["acr_cell_key"])
+            return [{**{k: v for k, v in g.items() if k != "keys"}, "cells": len(g["keys"])} for g in out.values()]
         if "sum(f.valid_acr)" in sql:
             self.trend_days = self.bound_days(args)
             out = {}
@@ -53,14 +101,15 @@ class Conn:
             days = {c["acr_cell_key"]: c["round_date"] for c in self.cells if c["round_date"] in self.bound_days(args)}
             out = {}
             for r in self.rows:
-                if r["level"] == 1 and r["acr_cell_key"] in days:
+                if r["level"] == 1 and r["acr_cell_key"] in days and r["choice"] > 0:
                     k = (days[r["acr_cell_key"]], r["brand"], r["own_bit"])
                     out[k] = out.get(k, 0) + r["choice"]
             return [{"round_date": d, "brand": b, "own_bit": o, "choice": n} for (d, b, o), n in out.items()]
         if "FROM gold.acr_cell_fact" in sql:
             return self.cells
-        if "FROM gold.acr_entity_fact" in sql:
-            return self.rows
+        if "FROM gold.acr_entity_fact" in sql and "f.level=1" in sql:
+            keys = set(args[1])
+            return [r for r in self.rows if r["level"] == 1 and r["acr_cell_key"] in keys]
         raise AssertionError(f"unexpected statement: {sql[:120]}")
 
 
@@ -161,6 +210,64 @@ class ReadRange(unittest.TestCase):
                                         {"brand": "Hyundai", "choice": 0, "appearance": 5, "is_ours": True}])
         self.assertEqual([(r["prompt_id"], r["cells"]) for r in sheet["rows"]], [("q", 2), ("r", 1)])
 
+
+
+class BattleOrder(unittest.TestCase):
+    """2026-10-29 (the user's pick when the sums moved into the database): the battle rows came in the entity table's
+    physical order, which no contract names and a rewrite of the table reshuffles (the page shows the first 30); a
+    row now comes at its prompt's first cell (CELL_ORDER, as the 분포 sheets), its engines likewise."""
+
+    def test_rows_and_engines_follow_the_first_cells(self):
+        cells = [cell(1, D2), {**cell(2, D2), "engine": "gemini", "prompt_key": 1, "prompt_id": 1}, cell(3, D2)]
+        # the entity rows read prompt 3 first, then prompt 1 on gemini before chatgpt
+        rows = [entity(3, "Toyota", 0, 4), entity(2, "BMW", 0, 2), entity(1, "Kia", 2, 5)]
+        battle = read(cells, rows, "surface=global", selected=[D2])["battle"]
+        self.assertEqual([(r["prompt_id"], [c["engine"] for c in r["cells"]]) for r in battle],
+                         [("1", ["chatgpt", "gemini"]), ("3", ["chatgpt"])])
+
+
+class SheetStates(unittest.TestCase):
+    """2026-10-29 후보 → 선택 전환: every sheet counts 당사's state in its prompt rows as the 분포 rows read it, whether
+    its rows are sent or not; funnel/acr/territory counts its one sheet the same way."""
+
+    CELLS = [cell(1, D2), {**cell(2, D2), "prompt_id": 1}, cell(3, D2), cell(4, D2), {**cell(5, D2), "engine": "gemini"}]
+    ROWS = [entity(1, "Toyota", 0, 3), entity(2, "Kia", 2, 1),             # prompt 1: 당사 picked in its second cell
+            entity(3, "Hyundai", 1, 0, 4), entity(3, "BMW", 0, 6),           # prompt 3: listed, never picked
+            entity(4, "Tesla", 0, 2),                                        # prompt 4: absent
+            entity(5, "Genesis", 4, 0, 1)]                                   # gemini: listed
+
+    def test_every_sheet_counts_the_states_of_its_prompts(self):
+        sheets = read(self.CELLS, self.ROWS, "surface=global&territory_rows=first", selected=[D2])["territory"]
+        self.assertEqual([(s["engine"], s["states"], len(s["rows"])) for s in sheets],
+                         [("chatgpt", {"pick": 1, "listed": 1, "absent": 1}, 3), ("gemini", {"pick": 0, "listed": 1, "absent": 0}, 0)])
+
+    def test_the_perspective_decides_what_is_own(self):
+        sheets = read(self.CELLS, self.ROWS, "surface=global&brand=Hyundai", selected=[D2])["territory"]
+        self.assertEqual([s["states"] for s in sheets], [{"pick": 0, "listed": 1, "absent": 2}, {"pick": 0, "listed": 0, "absent": 1}])
+
+    def test_a_sheet_read_counts_the_same(self):
+        conn = SheetConn(self.CELLS, self.ROWS)
+        one = read(self.CELLS, self.ROWS, "surface=global&sheet_engine=gemini&sheet_country=US", selected=[D2], conn=conn, reader=acr.territory)
+        self.assertEqual(one["sheet"]["states"], {"pick": 0, "listed": 1, "absent": 0})
+
+
+class HeadToHead(unittest.TestCase):
+    """2026-10-29 결선 맞대결: read on request only (the renewal page), with its sample, the rows by engine then the
+    most repetitions."""
+
+    def test_only_on_request(self):
+        self.assertIsNone(read(CELLS, ROWS, "surface=global", selected=[D2])["head_to_head"])
+
+    def test_the_rows_by_engine_then_size(self):
+        conn = Conn(CELLS, ROWS)
+        conn.duels = [{"engine": "gemini", "brand": "BMW", "iterations": 4, "own_wins": 1, "rival_wins": 2},
+                      {"engine": "chatgpt", "brand": "Tesla", "iterations": 3, "own_wins": 0, "rival_wins": 1},
+                      {"engine": "chatgpt", "brand": "BMW", "iterations": 3, "own_wins": 2, "rival_wins": 0},
+                      {"engine": "chatgpt", "brand": "Toyota", "iterations": 9, "own_wins": 1, "rival_wins": 5}]
+        h = read(CELLS, ROWS, "surface=global&include_head_to_head=true", selected=[D2], conn=conn)["head_to_head"]
+        self.assertEqual(h["sample"], {"iterations": 3, "cells": 3})
+        self.assertEqual([(r["engine"], r["brand"]) for r in h["rows"]],
+                         [("chatgpt", "Toyota"), ("chatgpt", "BMW"), ("chatgpt", "Tesla"), ("gemini", "BMW")])
 
 
 class SheetsOnDemand(unittest.TestCase):

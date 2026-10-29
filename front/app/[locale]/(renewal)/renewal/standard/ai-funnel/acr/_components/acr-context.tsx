@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { RnCardActions, useRnToast } from "@/components/renewal-ui";
 import type { StandardAcr } from "@/lib/db/repositories/scope-aggregates";
 import { downloadCsv, type CsvCell } from "@/app/[locale]/(renewal)/renewal/_components/csv";
-import type { RnAcrView } from "../_data/screen-types";
+import type { AcrDistState, RnAcrView } from "../_data/screen-types";
 
 // Shared state of the renewal ACR body: the view model (screen acr/renewal), the compare brands
 // (colour follows the brand: 당사 navy, compare slots in pick order, the rest grey), the
@@ -36,6 +36,9 @@ export interface AcrCtx {
   /** 선택 분포 sheet (country|engine), null = the first */
   sheet: string | null;
   setSheet: (v: string | null) => void;
+  /** 선택 분포 당사 state chip (후보 → 선택 전환 opens a market on 후보 탈락) */
+  distState: AcrDistState | "all";
+  setDistState: (v: AcrDistState | "all") => void;
 }
 
 const Ctx = createContext<AcrCtx | null>(null);

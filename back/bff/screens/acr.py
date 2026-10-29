@@ -79,6 +79,22 @@ def _cmp_num(d: float) -> int:
 
 # ── AcrData -> StandardAcr (funnel.ts toStandardAcr, rules A1..A7) ───────────
 
+# The ACR pages neither compare nor sum two rounds (2026-10-29, the user's decision after the trend analysis in
+# docs/handoff/acr-next-session.html): the rounds measured different markets and questions (6–9 countries and
+# ~60 questions up to 08-24, 51 countries and 926 questions since 09-28), and on the same questions every
+# week-on-week move was within sampling noise, so a trend showed the measured scope, not the market. The user
+# turns it back on once rounds on the same scope have built up. No date and no inferred boundary in code.
+COMPARE_ROUNDS = False
+
+
+def held_rounds(data: dict, period: bool) -> dict | None:
+    """A period of several rounds while rounds are not compared: its rounds, sent in place of their sums."""
+    rounds = data.get("trend") or []
+    if data.get("measured") and period and not COMPARE_ROUNDS and len(rounds) > 1:
+        return {"rounds": len(rounds), "from": rounds[0]["date"], "to": rounds[-1]["date"]}
+    return None
+
+
 def _empty_acr() -> dict:
     return {"measured": False, "brands": [], "trend": [], "battle": [], "modelConversion": [], "territory": [],
             "totals": {"promptRuns": 0, "prompts": 0, "iterations": 0, "engines": []}}
@@ -124,6 +140,11 @@ def to_standard_acr(d: dict, meta: Any) -> dict:
                                "conversionRate": pct1_or_null(m.get("conversion")), "shortlistCount": m["cells"], "top1Count": m["top1"]}
                               for m in d["model_conversion"]]
     out["territory"] = [_territory_sheet(s) for s in d["territory"]]
+    h = d.get("head_to_head")
+    out["headToHead"] = None if h is None else {
+        "sample": {"iterations": h["sample"]["iterations"], "cells": h["sample"]["cells"]},
+        "rows": [{"engine": r["engine"], "brand": r["brand"], "iterations": r["iterations"], "ownWins": r["own_wins"],
+                  "rivalWins": r["rival_wins"]} for r in h["rows"]]}
     out["totals"] = {"promptRuns": totals["prompt_runs"], "prompts": totals["prompts"], "iterations": totals["iterations"],
                      "engines": list(totals["engines"])}
     return out
@@ -131,19 +152,22 @@ def to_standard_acr(d: dict, meta: Any) -> dict:
 
 def _territory_sheet(s: dict) -> dict:
     """An AcrTerritorySheet of funnel/acr or funnel/acr/territory (rowCount: its rows, sent or not)."""
-    return {"region": _nn(s.get("country")), "engine": s["engine"], "rowCount": s["row_count"],
+    return {"region": _nn(s.get("country")), "engine": s["engine"], "rowCount": s["row_count"], "states": dict(s["states"]),
             "rows": [{"promptId": r["prompt_id"], "promptText": _nn(r.get("prompt_text")), "validAcr": r["valid_acr"], "cells": r["cells"],
                       "entries": [{"brand": e["brand"], "choice": e["choice"], "appearance": e["appearance"], "isOurs": e["is_ours"]}
                                   for e in r["entries"]]}
                      for r in s["rows"]]}
 
 
-async def load_acr_screen(filters: dict, ctx: dict, territory_rows: str = "all") -> dict:
+async def load_acr_screen(filters: dict, ctx: dict, territory_rows: str = "all", duels: bool = False) -> dict:
     """loadAcrScreen: GET /v1/funnel/acr with the screen's filters (analysisQuery) and the B097 flags. The renewal
-    page asks for the first sheet's rows only (territory_rows=first); acr/renewal-sheet reads the others."""
+    page asks for the first sheet's rows only (territory_rows=first; acr/renewal-sheet reads the others) and for the
+    head-to-head (include_head_to_head)."""
     flags: dict[str, Any] = {"include_option_countries": False, "include_catalog_count": False}
     if territory_rows != "all":
         flags["territory_rows"] = territory_rows
+    if duels:
+        flags["include_head_to_head"] = True
     params = to_api_params(analysis_query(filters, ctx), flags)
     res = await api.get("funnel/acr", params)
     data, meta = res["data"], res.get("meta")
@@ -180,10 +204,10 @@ def _panel_props(options: dict, languages: list, dates: dict) -> dict:
     return out
 
 
-async def _global_reads(filters: dict, territory_rows: str = "all") -> tuple[dict, dict, dict]:
+async def _global_reads(filters: dict, territory_rows: str = "all", duels: bool = False) -> tuple[dict, dict, dict]:
     """AcrDataApi's three calls in parallel: ACR, filter options (no period), the round calendar."""
     return await asyncio.gather(
-        load_acr_screen(filters, {"surface": "global", "scope": READER_SCOPE}, territory_rows),
+        load_acr_screen(filters, {"surface": "global", "scope": READER_SCOPE}, territory_rows, duels),
         load_panel_options({"surface": "global", "scope": READER_SCOPE, "filters": filters}),
         load_filter_dates("global", None, "all"),
     )
@@ -247,8 +271,8 @@ def _label(row: dict) -> Any:
     return row["promptId"] if row.get("promptText") is None else row["promptText"]
 
 
-def live_vm(data: dict, acr_prompt_count: Any) -> dict:
-    """Everything AcrLiveView computed from StandardAcr + the waiting-state count."""
+def live_vm(data: dict, acr_prompt_count: Any, compare_rounds: bool = True) -> dict:
+    """Everything AcrLiveView computed from StandardAcr + the waiting-state count; no trend without `compare_rounds`."""
     series_brands = trend_brands(data)
     colors = brand_colors(data, series_brands)
 
@@ -258,7 +282,7 @@ def live_vm(data: dict, acr_prompt_count: Any) -> dict:
     ours = acr_card_row(data)
     brands = [{**b, "color": color(b["brand"])} for b in data["brands"]]
     trend_rows = []
-    for b in data["trend"]:
+    for b in data["trend"] if compare_rounds else []:
         row = {"date": b["date"]}
         for k in js_keys(b["series"]):
             row[k] = b["series"][k]
@@ -304,8 +328,9 @@ def live_vm(data: dict, acr_prompt_count: Any) -> dict:
                 "top5": None if ours is None else ours.get("coverage"),
                 "rank1": 0 if ours is None or ours.get("choiceCount") is None else ours["choiceCount"]},
         "totals": data["totals"],
-        "trendBrands": [{"brand": b, "color": color(b)} for b in series_brands],
+        "trendBrands": [{"brand": b, "color": color(b)} for b in series_brands] if compare_rounds else [],
         "trendRows": trend_rows,
+        "compareRounds": compare_rounds,
         "battle": battle,
         "battleVisible": BATTLE_VISIBLE,
         "battleHidden": len(battle) - min(len(battle), BATTLE_VISIBLE),
@@ -321,6 +346,15 @@ def live_vm(data: dict, acr_prompt_count: Any) -> dict:
     }
 
 
+def legacy_view(data: dict, acr_prompt_count: Any, period: bool) -> dict:
+    """The AcrLiveView model under COMPARE_ROUNDS: a period of several rounds sends its rounds (`held`) and nothing to
+    draw; otherwise the view without a trend."""
+    held = held_rounds(data, period)
+    if held is not None:
+        return {**live_vm(_empty_acr(), acr_prompt_count, False), "measured": True, "held": held}
+    return {**live_vm(data, acr_prompt_count, COMPARE_ROUNDS), "held": None}
+
+
 @screen("acr/standard")
 async def standard(q) -> dict:
     """/standard/ai-funnel/acr: {panel: DimensionFilterPanel option props + onlyGroups, view: AcrLiveVm}."""
@@ -329,7 +363,7 @@ async def standard(q) -> dict:
     acr, options, dates = await _global_reads(filters)
     panel = _panel_props(options, acr["languageOptions"], dates)
     panel["onlyGroups"] = only_groups(acr["languageOptions"])
-    return {"panel": panel, "view": live_vm(acr["data"], acr["acrPromptCount"])}
+    return {"panel": panel, "view": legacy_view(acr["data"], acr["acrPromptCount"], bool(filters.get("dateFrom") or filters.get("dateTo")))}
 
 
 @screen("acr/gold")
@@ -346,7 +380,7 @@ async def gold(q) -> dict:
     langs = list((data.get("options") or {}).get("langs") or [])
     count = data["totals"].get("catalog_acr_prompts")
     return {"panel": {"catalogRows": [], "languageOptions": langs, "onlyGroups": only_groups(langs)},
-            "view": live_vm(to_standard_acr(data, {"suppressed": {}}), count)}
+            "view": legacy_view(to_standard_acr(data, {"suppressed": {}}), count, bool(query.get("from") or query.get("to")))}
 
 
 # ── renewal ACR (acr-model.ts + acr-body.tsx / acr-detail.tsx) ───────────────
@@ -354,6 +388,9 @@ async def gold(q) -> dict:
 ACR_AXES = ("brand", "geography", "language", "engine", "time", "brandPresence", "listType", "depth1", "depth2", "depth3")
 HMG_BRANDS = ("Hyundai", "Kia", "Genesis")
 DIST_VISIBLE = 20
+CONVERSION_VISIBLE = 15
+DUEL_ROWS = 12
+STATES = ("pick", "listed", "absent")
 
 
 def page_state(sp: dict, filters: dict) -> dict:
@@ -375,18 +412,19 @@ def _last_two(vs: list) -> float | None:
     return delta1(vs[idx[0]], vs[idx[1]]) if len(idx) == 2 else None
 
 
-def acr_view(data: dict, own: dict | None, round_buckets: bool, period: bool) -> dict:
+def acr_view(data: dict, own: dict | None, round_buckets: bool, period: bool, compare_rounds: bool = True) -> dict:
     """acr-model.ts acrView (findings included). 당사 (its brands, trend and standing) is the reader's own total:
-    every own brand, not the own brands among the top series (2026-10-29 metric review R1)."""
+    every own brand, not the own brands among the top series (2026-10-29 metric review R1). Without
+    `compare_rounds` there is no trend and no Δ (COMPARE_ROUNDS); the rivals stay the brands with a series."""
     own_brands = list(data.get("ownBrands") or [])
     series_keys = trend_brands(data)
     series_set = set(series_keys)
-    dates = [b["date"] for b in data["trend"]]
-    own_trend = [b["own"] for b in data["trend"]] if own is not None and data["trend"] else None
-    show_delta = bool(round_buckets and not period)
+    dates = [b["date"] for b in data["trend"]] if compare_rounds else []
+    own_trend = [b["own"] for b in data["trend"]] if compare_rounds and own is not None and data["trend"] else None
+    show_delta = bool(compare_rounds and round_buckets and not period)
 
     def series_of(brand: Any) -> list | None:
-        if not isinstance(brand, str) or brand not in series_set:
+        if not compare_rounds or not isinstance(brand, str) or brand not in series_set:
             return None
         return [b["series"].get(brand) for b in data["trend"]]
 
@@ -427,7 +465,7 @@ def acr_view(data: dict, own: dict | None, round_buckets: bool, period: bool) ->
     sweeps = sort_by([{"brand": b, "count": n} for b, n in sweep_count.items()],
                      lambda a, b: _cmp_num(b["count"] - a["count"]) or locale_compare(a["brand"], b["brand"]))
     view = {"own": own, "ownBrands": own_brands, "brands": brands, "dates": dates, "ownTrend": own_trend, "ownDelta": own_delta,
-            "rivals": rivals, "showDelta": show_delta, "rank": standing["rank"], "standingN": standing["of"],
+            "rivals": rivals, "showDelta": show_delta, "compareRounds": compare_rounds, "rank": standing["rank"], "standingN": standing["of"],
             "leader": comps[0] if comps else None, "k": k,
             "engines": engines, "engineWins": engine_wins, "sweeps": sweeps}
     view["findings"] = acr_findings(data, view)
@@ -562,6 +600,72 @@ def _models(data: dict, own_brands: list) -> dict:
     return {"rows": out, "orders": {k: order(k) for k in ("conversionRate", "shortlistCount", "top1Count")}}
 
 
+def _shares(counts: dict, n: int) -> dict:
+    return {k: pct1_or_null({"num": counts[k], "den": n}) for k in counts}
+
+
+def _conversion(data: dict, engines: list[str]) -> dict:
+    """후보 → 선택 전환 (2026-10-29, the user's picks): per country, its prompt rows by 당사's state — the 분포 rows'
+    states, counted by the reader for every sheet — on every engine summed (all) or on one; the rows by 후보 탈락
+    count (the default) or share, each count with its share of the country's rows, rounded once. A row opens the
+    country's 분포 sheet with the most 후보 탈락 rows (on one engine, that engine's)."""
+    views = {}
+    for key in ["all", *engines]:
+        by_country: dict = {}
+        for s in data["territory"]:
+            if key != "all" and s["engine"] != key:
+                continue
+            r = by_country.setdefault(s["region"], {"region": s["region"], **{st: 0 for st in STATES}, "sheet": None, "most": -1})
+            for st in STATES:
+                r[st] += s["states"][st]
+            if s["states"]["listed"] > r["most"]:
+                r["sheet"], r["most"] = sheet_key(s["region"], s["engine"]), s["states"]["listed"]
+        rows = []
+        for r in by_country.values():
+            counts = {st: r[st] for st in STATES}
+            n = sum(counts.values())
+            rows.append({"region": r["region"], "n": n, "counts": counts, "shares": _shares(counts, n), "sheet": r["sheet"]})
+        total = {st: sum(r["counts"][st] for r in rows) for st in STATES}
+        n = sum(total.values())
+        share = [r["counts"]["listed"] / (r["n"] or 1) for r in rows]
+        region = ["" if r["region"] is None else r["region"] for r in rows]
+        idx = list(range(len(rows)))
+        views[key] = {"n": n, "counts": total, "shares": _shares(total, n), "rows": rows,
+                      "orders": {"listed": sorted(idx, key=lambda i: (-rows[i]["counts"]["listed"], -share[i], region[i])),
+                                 "share": sorted(idx, key=lambda i: (-share[i], -rows[i]["counts"]["listed"], region[i]))}}
+    return {"engines": ["all", *engines], "views": views, "visible": CONVERSION_VISIBLE}
+
+
+def _duels(data: dict, engines: list[str], own_brands: list) -> dict | None:
+    """결선 맞대결 (2026-10-29): per rival, the repetitions whose shortlist held 당사 and the rival (the reader's sample of
+    about one repetition per cell), on every engine summed (all) or on one; the DUEL_ROWS rivals met most, then by
+    name; 당사's wins, the rival's and the rest (another brand or no pick), each share rounded once. The bars of a view
+    share one scale: its largest 당사 or rival share fills its half."""
+    h = data.get("headToHead")
+    if h is None:
+        return None
+    views = {}
+    for key in ["all", *engines]:
+        by_brand: dict = {}
+        for r in h["rows"]:
+            if key == "all" or r["engine"] == key:
+                g = by_brand.setdefault(r["brand"], [0, 0, 0])
+                g[0] += r["iterations"]
+                g[1] += r["ownWins"]
+                g[2] += r["rivalWins"]
+        met = sort_by(list(by_brand), lambda a, b: _cmp_num(by_brand[b][0] - by_brand[a][0]) or locale_compare(a, b))[:DUEL_ROWS]
+        top = max((max(by_brand[b][1], by_brand[b][2]) / by_brand[b][0] for b in met), default=0) or 1
+        rows = []
+        for brand in met:
+            n, own, rival = by_brand[brand]
+            counts = {"own": own, "rival": rival, "rest": n - own - rival}
+            rows.append({"brand": brand, "n": n, "counts": counts, "shares": _shares(counts, n),
+                         "bars": {"own": (own / n) / top * 100, "rival": (rival / n) / top * 100}, "sibling": _sibling(brand, own_brands),
+                         "lead": "own" if own > rival else "rival" if rival > own else "even"})
+        views[key] = rows
+    return {"engines": ["all", *engines], "views": views, "sample": dict(h["sample"])}
+
+
 def sheet_key(region: Any, engine: Any) -> str:
     """A 분포 sheet's key (view.sheets[].key, acr/renewal-sheet ?sheet=): `${country ?? ""}|${engine}`."""
     return f"{'' if region is None else _key(region)}|{_key(engine)}"
@@ -627,9 +731,9 @@ def _sheet(s: dict) -> dict:
                        for sort, cmp in (("gap", by_gap), ("own", by_own), ("text", text))}}
 
 
-def renewal_view(data: dict, own: dict | None, round_buckets: bool, period: bool) -> dict:
+def renewal_view(data: dict, own: dict | None, round_buckets: bool, period: bool, compare_rounds: bool = True) -> dict:
     """acrView + every value the renewal cards derived from it."""
-    v = acr_view(data, own, round_buckets, period)
+    v = acr_view(data, own, round_buckets, period, compare_rounds)
     own_brands = v["ownBrands"]
     o = v["own"]
     lead = v["leader"]
@@ -661,6 +765,8 @@ def renewal_view(data: dict, own: dict | None, round_buckets: bool, period: bool
                    for s in data["territory"]],
         "sheet": _sheet(data["territory"][0]) if data["territory"] else None,
         "distVisible": DIST_VISIBLE,
+        "conversion": _conversion(data, v["engines"]),
+        "duels": _duels(data, v["engines"], own_brands),
     })
     for w in v["engineWins"]:
         # 그 외 브랜드 = prompts another brand won: no pick (no winner, or no cell on that engine) is apart (R5)
@@ -683,13 +789,14 @@ async def renewal(q) -> dict:
     _, sp = split_context(q)
     filters = read_standard_filters(sp, READER_SCOPE)
     st = page_state(sp, filters)
-    acr, options, dates = await _global_reads(filters, "first")
+    acr, options, dates = await _global_reads(filters, "first", duels=True)
     props = {"stage": "acr", **_panel_props(options, acr["languageOptions"], dates)}
     data = acr["data"]
     own = dict(data["own"]) if data.get("own") is not None else None
+    held = held_rounds(data, st["period"])
     body = {"measured": bool(data["measured"]), "filtered": st["filtered"], "acrPromptCount": acr["acrPromptCount"],
-            "roundBuckets": True, "period": st["period"], "ownLabel": st["ownLabel"], "totals": data["totals"],
-            "view": renewal_view(data, own, True, st["period"]) if data["measured"] else None}
+            "roundBuckets": True, "period": st["period"], "ownLabel": st["ownLabel"], "totals": data["totals"], "held": held,
+            "view": renewal_view(data, own, True, st["period"], COMPARE_ROUNDS) if data["measured"] and held is None else None}
     return {"props": props, "body": body}
 
 

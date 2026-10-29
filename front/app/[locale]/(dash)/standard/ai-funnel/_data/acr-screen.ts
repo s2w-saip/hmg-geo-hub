@@ -22,9 +22,13 @@ export interface AcrLiveVm {
   /** KPI cards: the viewpoint own total (else the first own brand row) */
   kpi: { top1: number | null; top5: number | null; rank1: number };
   totals: StandardAcr["totals"];
-  /** trend chart: one line per series brand, one row per bucket ({date, [brand]: percent}) */
+  /** trend chart: one line per series brand, one row per bucket ({date, [brand]: percent}); empty while rounds are not compared */
   trendBrands: { brand: string; color: string }[];
   trendRows: Record<string, string | number | null>[];
+  /** false while the ACR pages compare no two rounds (BFF acr.COMPARE_ROUNDS) */
+  compareRounds: boolean;
+  /** a period of several rounds while rounds are not compared: its rounds, and nothing else to draw */
+  held: { rounds: number; from: string; to: string } | null;
   /** battle grid: the winner per totals.engines column (null = no cell) */
   battle: { promptId: string; label: string; cells: ({ winner: string | null; winnerIsOurs: boolean } | null)[] }[];
   battleVisible: number;

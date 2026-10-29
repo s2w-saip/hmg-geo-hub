@@ -2,7 +2,9 @@
 JS key order, the language axis rule, the renewal page state, error propagation and the exact
 query of each read. The computed payloads themselves are proven by the golden cases (family acr)."""
 import asyncio
+import json
 import unittest
+from pathlib import Path
 from unittest import mock
 
 try:
@@ -15,6 +17,24 @@ except ModuleNotFoundError as exc:
 
 def run(coro):
     return asyncio.run(coro)
+
+
+def with_states(sheet: dict) -> dict:
+    """A reader sheet with 당사's state counts as the reader makes them: per prompt of its rows (a sheet sent without
+    rows counts its rows absent)."""
+    if "states" in sheet:
+        return sheet
+    own: dict = {}
+    for r in sheet["rows"]:
+        o = own.setdefault(r["prompt_id"], [0, 0])
+        for e in r["entries"]:
+            if e["is_ours"]:
+                o[0] += e["choice"] or 0
+                o[1] += e["appearance"] or 0
+    states = {"pick": 0, "listed": 0, "absent": 0 if sheet["rows"] else sheet["row_count"]}
+    for choice, appearance in own.values():
+        states["pick" if choice > 0 else "listed" if appearance > 0 else "absent"] += 1
+    return {**sheet, "states": states}
 
 
 def acr_body(**over) -> dict:
@@ -38,6 +58,7 @@ def acr_body(**over) -> dict:
         "options": {"langs": ["de", "en"], "countries": ["DE", "US"]},
     }
     data.update(over)
+    data["territory"] = [with_states(t) for t in data["territory"]]
     return {"data": data, "meta": {"mode": "snapshot", "as_of": "2026-09-14", "suppressed": {}}}
 
 
@@ -282,15 +303,15 @@ class SheetLoading(unittest.TestCase):
         async def get(path, params=None):
             from bff.api import query
             calls.append((path, sorted(query(params).multi_items())))
-            return {"data": {"sheet": sheet}, "meta": {"suppressed": {}}}
+            return {"data": {"sheet": sheet and with_states(sheet)}, "meta": {"suppressed": {}}}
         return get, calls
 
-    def test_the_page_reads_the_first_sheets_rows_only(self):
+    def test_the_page_reads_the_first_sheets_rows_only_and_the_head_to_head(self):
         get, calls = fake_api()
         with mock.patch("bff.api.get", get):
             run(acr.renewal(QueryParams("engine=gemini")))
-        self.assertIn(("funnel/acr", sorted([("engine", "gemini"), ("include_catalog_count", "false"), ("include_option_countries", "false"),
-                                             ("surface", "global"), ("territory_rows", "first")])), calls)
+        self.assertIn(("funnel/acr", sorted([("engine", "gemini"), ("include_catalog_count", "false"), ("include_head_to_head", "true"),
+                                             ("include_option_countries", "false"), ("surface", "global"), ("territory_rows", "first")])), calls)
 
     def test_the_view_has_every_tab_and_the_first_sheet(self):
         first = {"country": None, "engine": "chatgpt", "row_count": 1, "rows": acr_body()["data"]["territory"][0]["rows"]}
@@ -369,6 +390,185 @@ class DistStates(unittest.TestCase):
         self.assertEqual(s["present"], ["Hyundai", "Toyota", "Tesla"])
         self.assertEqual(s["rows"][3]["pivot"], [0, 10, 0])
         self.assertIsNone(s["rows"][4]["top"])
+
+
+def sheet(country, engine, pick, listed, absent):
+    return {"country": country, "engine": engine, "row_count": pick + listed + absent, "rows": [],
+            "states": {"pick": pick, "listed": listed, "absent": absent}}
+
+
+class Conversion(unittest.TestCase):
+    """2026-10-29 후보 → 선택 전환 (the user's picks: 후보 탈락 count first, its share shown too): per country the prompt
+    rows by 당사's state, every engine summed or one, from the reader's per-sheet counts."""
+
+    def view(self):
+        body = acr_body(territory=[sheet("US", "chatgpt", 1, 5, 1), sheet("US", "gemini", 0, 2, 0), sheet("KR", "chatgpt", 6, 2, 0),
+                                   sheet("SA", "gemini", 1, 7, 1), sheet(None, "chatgpt", 0, 1, 0)])["data"]
+        return acr.renewal_view(acr.to_standard_acr(body, {}), None, True, False)["conversion"]
+
+    def test_every_engine_summed_per_country(self):
+        v = self.view()
+        self.assertEqual(v["engines"], ["all", "chatgpt", "gemini"])
+        us = next(r for r in v["views"]["all"]["rows"] if r["region"] == "US")
+        self.assertEqual((us["n"], us["counts"]), (9, {"pick": 1, "listed": 7, "absent": 1}))
+        self.assertEqual(us["shares"], {"pick": 11.1, "listed": 77.8, "absent": 11.1})
+        self.assertEqual((v["views"]["all"]["n"], v["views"]["all"]["counts"]), (27, {"pick": 8, "listed": 17, "absent": 2}))
+
+    def test_the_most_listed_first_or_the_largest_share(self):
+        a = self.view()["views"]["all"]
+        regions = lambda order: [a["rows"][i]["region"] for i in a["orders"][order]]
+        # listed: SA 7 (77.8 %), US 7 (77.8 %) — tie on count and share, then the code — KR 2, none 1
+        self.assertEqual(regions("listed"), ["SA", "US", "KR", None])
+        self.assertEqual(regions("share"), [None, "SA", "US", "KR"])
+
+    def test_a_row_opens_the_sheet_with_the_most_listed(self):
+        v = self.view()
+        self.assertEqual(next(r["sheet"] for r in v["views"]["all"]["rows"] if r["region"] == "US"), "US|chatgpt")
+        self.assertEqual([(r["region"], r["sheet"]) for r in v["views"]["gemini"]["rows"]], [("US", "US|gemini"), ("SA", "SA|gemini")])
+
+
+class Duels(unittest.TestCase):
+    """2026-10-29 결선 맞대결: the reader's per-engine rows summed per rival, the rivals met most."""
+
+    def view(self, rows, own=None):
+        body = acr_body(head_to_head={"sample": {"iterations": 40, "cells": 39}, "rows": rows})["data"]
+        std = acr.to_standard_acr(body, {})
+        if own:
+            std["ownBrands"] = own
+        return acr.renewal_view(std, None, True, False)["duels"]
+
+    def test_summed_over_engines_with_its_sample(self):
+        d = self.view([{"engine": "chatgpt", "brand": "Toyota", "iterations": 7, "own_wins": 1, "rival_wins": 4},
+                       {"engine": "gemini", "brand": "Toyota", "iterations": 5, "own_wins": 1, "rival_wins": 1}])
+        toyota = d["views"]["all"][0]
+        self.assertEqual((toyota["n"], toyota["counts"], toyota["lead"]), (12, {"own": 2, "rival": 5, "rest": 5}, "rival"))
+        self.assertEqual(toyota["shares"], {"own": 16.7, "rival": 41.7, "rest": 41.7})
+        # one scale per view: the largest share (Toyota's 5 of 12) fills its half
+        self.assertEqual({k: round(v, 6) for k, v in toyota["bars"].items()}, {"own": 40.0, "rival": 100.0})
+        self.assertEqual([r["n"] for r in d["views"]["gemini"]], [5])
+        self.assertEqual(d["sample"], {"iterations": 40, "cells": 39})
+
+    def test_the_twelve_rivals_met_most_then_by_name(self):
+        rows = [{"engine": "chatgpt", "brand": f"B{i:02d}", "iterations": 20 - i // 2, "own_wins": 0, "rival_wins": 0} for i in range(15)]
+        names = [r["brand"] for r in self.view(rows)["views"]["all"]]
+        self.assertEqual(names, [f"B{i:02d}" for i in range(12)])
+
+    def test_an_hmg_rival_is_a_sibling(self):
+        d = self.view([{"engine": "chatgpt", "brand": "Hyundai", "iterations": 3, "own_wins": 1, "rival_wins": 1}], own=["Kia"])
+        self.assertEqual((d["views"]["all"][0]["sibling"], d["views"]["all"][0]["lead"]), (True, "even"))
+
+    def test_none_without_the_read(self):
+        self.assertIsNone(acr.renewal_view(acr.to_standard_acr(acr_body()["data"], {}), None, True, False)["duels"])
+
+
+class CrossRoundHeld(unittest.TestCase):
+    """2026-10-29 the user's decision (ACR P1, measurement break): the collected answers changed shape between rounds
+    (generic 76.8 % -> 2.6 % from 09-28 to 10-05, 27 % -> 86 % at 08-31) with the same models and Gold rule, so until
+    Gold marks each round's measurement method the renewal page neither compares nor sums two rounds. No date and no
+    inferred boundary: every cross-round value is held."""
+
+    def body(self, query="", **over):
+        get, _ = fake_api(acr_body(**over))
+        with mock.patch("bff.api.get", get):
+            return run(acr.renewal(QueryParams(query)))["body"]
+
+    def test_a_snapshot_shows_no_trend_and_no_delta(self):
+        v = self.body()["view"]
+        self.assertFalse(v["compareRounds"])
+        self.assertEqual((v["dates"], v["ownTrend"], v["ownDelta"], v["showDelta"]), ([], None, None, False))
+        self.assertEqual([(b["trend"], b["d"]) for b in v["brands"]], [(None, None), (None, None)])
+        self.assertNotIn("mover", [f["kind"] for f in v["findings"]])
+
+    def test_the_standing_finding_keeps_the_round_gap_without_its_move(self):
+        own = {"choice": 7, "appearance": 11, "cells": 3, "choice_share": {"num": 7, "den": 20}, "coverage": {"num": 3, "den": 8},
+               "brands": ["Hyundai"], "rank": 1, "ranked_brands": 2}
+        trend = {"series_brands": ["Hyundai", "Toyota"], "buckets": [
+            {"round_date": "2026-09-03", "gap": False, "den": 16, "own": 1, "series": [{"brand": "Hyundai", "num": 1}, {"brand": "Toyota", "num": 2}]},
+            {"round_date": "2026-09-10", "gap": False, "den": 3, "own": 1, "series": [{"brand": "Hyundai", "num": 1}, {"brand": "Toyota", "num": 2}]}]}
+        standing = next(f for f in self.body(own=own, trend=trend)["view"]["findings"] if f["kind"] == "standing")
+        self.assertEqual((standing["params"]["gap"], standing["params"]["move"], standing["params"]["widened"]), (30.0, "", ""))
+
+    def test_a_period_of_several_rounds_is_held(self):
+        b = self.body("time=2026-09-01..2026-09-30")
+        self.assertIsNone(b["view"])
+        self.assertEqual(b["held"], {"rounds": 2, "from": "2026-09-03", "to": "2026-09-10"})
+        self.assertTrue(b["measured"] and b["period"])
+
+    def test_a_period_of_one_round_is_that_round(self):
+        one = {"series_brands": ["Hyundai"], "buckets": [
+            {"round_date": "2026-09-10", "gap": False, "den": 20, "own": 7, "series": [{"brand": "Hyundai", "num": 7}]}]}
+        b = self.body("time=2026-09-08..2026-09-14", trend=one)
+        self.assertIsNone(b["held"])
+        self.assertFalse(b["view"]["compareRounds"])
+        self.assertEqual(b["view"]["dates"], [])
+
+    def test_a_snapshot_is_not_held(self):
+        self.assertIsNone(self.body()["held"])
+
+    def test_the_computation_behind_the_hold_is_kept(self):
+        # what the page shows again once Gold marks the rounds (the goldens' trend and Δ rules)
+        std = acr.to_standard_acr(acr_body()["data"], {})
+        v = acr.renewal_view(std, None, True, False)
+        self.assertTrue(v["compareRounds"])
+        self.assertEqual(v["dates"], ["2026-09-03", "2026-09-10"])
+        self.assertEqual(v["brands"][0]["trend"], [6.3, 33.3])
+
+
+class LegacyHeld(unittest.TestCase):
+    """2026-10-29 the user's decision after the trend analysis: the standard and website/project ACR pages follow the
+    renewal page — no trend, and a period of several rounds names its rounds instead of their sums."""
+
+    def screen(self, builder, query):
+        get, _ = fake_api(acr_body())
+        with mock.patch("bff.api.get", get):
+            return run(builder(QueryParams(query)))["view"]
+
+    def test_a_snapshot_has_no_trend(self):
+        for builder in (acr.standard, acr.gold):
+            v = self.screen(builder, "")
+            self.assertEqual((v["trendRows"], v["trendBrands"], v["compareRounds"], v["held"]), ([], [], False, None))
+            self.assertTrue(v["measured"] and v["brands"])
+
+    def test_a_period_of_several_rounds_is_held(self):
+        for builder in (acr.standard, acr.gold):
+            v = self.screen(builder, "time=2026-09-01..2026-09-30")
+            self.assertEqual(v["held"], {"rounds": 2, "from": "2026-09-03", "to": "2026-09-10"})
+            self.assertEqual((v["brands"], v["territory"], v["battle"]), ([], [], []))
+
+    def test_compared_the_trend_comes_back(self):
+        with mock.patch.object(acr, "COMPARE_ROUNDS", True):
+            v = self.screen(acr.standard, "")
+        self.assertEqual(([r["date"] for r in v["trendRows"]], v["compareRounds"]), (["2026-09-03", "2026-09-10"], True))
+
+
+FRONT_FIXTURE = Path(__file__).parents[3] / "front/app/[locale]/(renewal)/renewal/standard/ai-funnel/acr/_components/acr-body.fixture.json"
+FIXTURE_OWN = {"choice": 7, "appearance": 11, "cells": 3, "choice_share": {"num": 7, "den": 20}, "coverage": {"num": 3, "den": 8},
+               "brands": ["Hyundai"], "rank": 1, "ranked_brands": 2}
+
+
+FIXTURE_DUELS = {"sample": {"iterations": 8, "cells": 8}, "rows": [
+    {"engine": "chatgpt", "brand": "Toyota", "iterations": 6, "own_wins": 1, "rival_wins": 3},
+    {"engine": "gemini", "brand": "Toyota", "iterations": 2, "own_wins": 1, "rival_wins": 0}]}
+
+
+def front_fixture() -> dict:
+    """acr/renewal bodies for the page's render test: a snapshot held and compared, a period of two rounds held."""
+    get, _ = fake_api(acr_body(own=FIXTURE_OWN, head_to_head=FIXTURE_DUELS))
+    out = {}
+    with mock.patch("bff.api.get", get):
+        out["held"] = run(acr.renewal(QueryParams("")))["body"]
+        out["period"] = run(acr.renewal(QueryParams("time=2026-09-01..2026-09-30")))["body"]
+        with mock.patch.object(acr, "COMPARE_ROUNDS", True):
+            out["compared"] = run(acr.renewal(QueryParams("")))["body"]
+    return json.loads(json.dumps(out))
+
+
+class FrontFixture(unittest.TestCase):
+    """The page's render test draws this screen's own output; regenerate the fixture when the model changes."""
+
+    @unittest.skipUnless(FRONT_FIXTURE.exists(), "front checkout not present (BFF image)")
+    def test_front_fixture_is_current(self):
+        self.assertEqual(json.loads(FRONT_FIXTURE.read_text(encoding="utf-8")), front_fixture())
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { ArrowUpRight, ChevronDown, FilterX, Hourglass, TrendingUp, X } from "lucide-react";
+import { ArrowUpRight, CalendarRange, ChevronDown, CirclePause, FilterX, Hourglass, TrendingUp, X } from "lucide-react";
 import { ENGINE_LABEL } from "@/components/dash/dimension-filter-panel";
 import { geoCodeLabel } from "@/lib/geo-catalog/geo-code-label";
 import {
@@ -19,6 +19,7 @@ import {
   RnInfoTip,
   RnInfoTipItem,
   RnLineChart,
+  RnNote,
   RnScatterChart,
   RnSectionHead,
   RnSegmented,
@@ -32,16 +33,25 @@ import {
   useRnToast,
   type RnFinding,
 } from "@/components/renewal-ui";
-import { useRnFilterReset } from "@/app/[locale]/(renewal)/renewal/_components/overview-filters";
+import { useRnFilterClear, useRnFilterReset } from "@/app/[locale]/(renewal)/renewal/_components/overview-filters";
 import type { AcrFinding, RnAcrInput, RnAcrView } from "../_data/screen-types";
 import { AcrCardActions, AcrProvider, COMPARE_COLORS, OWN_COLOR, deltaTxt, makeColorOf, pctTxt, ppTxt, useAcr, type AcrCtx } from "./acr-context";
 import { AcrBattle, AcrDistribution, AcrModels } from "./acr-detail";
+import { AcrConversion, AcrDuels } from "./acr-funnel";
 
 export function RnAcrBody({ input }: { input: RnAcrInput }) {
   const t = useTranslations("renewal.acr");
   const tLive = useTranslations("aiFunnelView.acrLive");
   const reset = useRnFilterReset();
+  const clear = useRnFilterClear();
   const { view } = input;
+  if (input.held) {
+    return (
+      <StateCard icon={<CalendarRange className="size-5" aria-hidden />} title={t("held.periodTitle")} desc={t("held.periodDesc", input.held)}>
+        <RnButton onClick={() => clear("time")}>{t("held.latest")}</RnButton>
+      </StateCard>
+    );
+  }
   if (!input.measured || !view) {
     return input.filtered ? (
       <StateCard icon={<FilterX className="size-5" aria-hidden />} title={t("states.noResultTitle")} desc={t("states.noResultDesc")}>
@@ -78,6 +88,7 @@ function AcrMeasured({ input, view }: { input: RnAcrInput; view: RnAcrView }) {
   const [tables, setTables] = useState<ReadonlySet<string>>(new Set());
   const [battle, setBattle] = useState<AcrCtx["battle"]>("all");
   const [sheet, setSheet] = useState<string | null>(null);
+  const [distState, setDistState] = useState<AcrCtx["distState"]>("all");
   const toast = useRnToast();
   const key = useRnHighlightKey();
   const { hover } = useRnHighlight();
@@ -117,6 +128,8 @@ function AcrMeasured({ input, view }: { input: RnAcrInput; view: RnAcrView }) {
     setBattle,
     sheet,
     setSheet,
+    distState,
+    setDistState,
   };
   const T = input.totals;
   return (
@@ -134,12 +147,15 @@ function AcrMeasured({ input, view }: { input: RnAcrInput; view: RnAcrView }) {
             ]}
           />
         </RnControlBar>
+        {view.compareRounds ? null : <HeldNote />}
         <AcrFindings period={input.period} />
         <RnSectionHead id="sec-overview" title={t("sec.overview")} desc={t("sec.overviewDesc")} />
         <AcrHero period={input.period} roundBuckets={input.roundBuckets} />
         <RnSectionHead id="sec-comp" title={t("sec.comp")} desc={t("sec.compDesc")} />
         <AcrBoard />
         <AcrMap />
+        <AcrConversion />
+        <AcrDuels />
         <RnSectionHead id="sec-prompt" title={t("sec.prompt")} desc={t("sec.promptDesc")} />
         <AcrBattle />
         <RnSectionHead id="sec-model" title={t("sec.model")} desc={t("sec.modelDesc")} />
@@ -151,6 +167,21 @@ function AcrMeasured({ input, view }: { input: RnAcrInput; view: RnAcrView }) {
         </p>
       </div>
     </AcrProvider>
+  );
+}
+
+// ── rounds not compared (BFF acr.COMPARE_ROUNDS) ──────────────────────────────
+
+function HeldNote() {
+  const t = useTranslations("renewal.acr.held");
+  return (
+    <RnNote>
+      <CirclePause className="size-3.5 shrink-0 text-rn-navy" aria-hidden />
+      <span className="min-w-0 flex-1">{t("note")}</span>
+      <RnInfoTip label={t("whyLabel")} align="end">
+        <RnInfoTipItem label={t("whyLabel")}>{t("why")}</RnInfoTipItem>
+      </RnInfoTip>
+    </RnNote>
   );
 }
 
@@ -235,10 +266,10 @@ function AcrFindings({ period }: { period: boolean }) {
         title={t(period ? "summary.titlePeriod" : "summary.title")}
         info={
           <RnInfoTip label={t("summary.howLabel")}>
-            <RnInfoTipItem label={t("summary.howLabel")}>{t("summary.how")}</RnInfoTipItem>
+            <RnInfoTipItem label={t("summary.howLabel")}>{t(view.compareRounds ? "summary.how" : "summary.howHeld")}</RnInfoTipItem>
           </RnInfoTip>
         }
-        chips={<RnBasisChip>{t(period ? "summary.chipPeriod" : "summary.chipSnapshot")}</RnBasisChip>}
+        chips={<RnBasisChip>{t(period ? "summary.chipPeriod" : view.compareRounds ? "summary.chipSnapshot" : "summary.chipHeld")}</RnBasisChip>}
       />
       <p className="m-0 px-6 pb-3.5 text-rn-16 leading-[1.6] break-keep text-white/88 [.rn-dense_&]:px-4.5 [.rn-dense_&]:pb-2.5 [&_b]:font-bold [&_b]:text-white">
         {t.rich("summary.headline", {
@@ -328,7 +359,7 @@ function AcrHero({ period, roundBuckets }: { period: boolean; roundBuckets: bool
     ...(view.ownTrend ? [{ key: "__own", name: ownLabel, color: OWN_COLOR, values: view.ownTrend, own: true }] : []),
   ].filter((s) => s.values.length);
   const x = view.dates.map((d) => (roundBuckets ? `${+d.slice(5, 7)}/${+d.slice(8, 10)}` : d.slice(5)));
-  const basis = period ? t("hero.basisPeriod") : roundBuckets ? t("hero.basisRound") : t("hero.basisDay");
+  const basis = !view.compareRounds ? t("hero.basisHeld") : period ? t("hero.basisPeriod") : roundBuckets ? t("hero.basisRound") : t("hero.basisDay");
   const tableOn = tables.has("acr-trend");
   return (
     <RnCard aria-label={t("hero.label")}>
@@ -370,39 +401,49 @@ function AcrHero({ period, roundBuckets }: { period: boolean; roundBuckets: bool
             </div>
           ) : null}
         </div>
-        <div className="flex min-w-0 flex-col gap-2">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        {!view.compareRounds ? (
+          <div className="flex min-w-0 flex-col gap-2">
             <h3 className="m-0 text-rn-13 font-bold text-rn-ink">{t("hero.trendTitle")}</h3>
-            <RnInfoTip label={t("hero.trendNoteLabel")}>
-              <RnInfoTipItem label={t("hero.trendNoteLabel")}>{period ? t("hero.trendNotePeriod") : roundBuckets ? t("hero.trendNoteRound") : t("hero.trendNoteDay")}</RnInfoTipItem>
-            </RnInfoTip>
-            <span className="ml-auto">
-              <AcrCardActions
-                tableId="acr-trend"
-                section="sec-overview"
-                csv={() => ({ name: "acr-top1-trend", rows: [[t("hero.trendTitle"), ...view.dates], ...series.map((s) => [s.name, ...s.values])] })}
-              />
-            </span>
+            <RnEmpty className="flex flex-1 items-center justify-center gap-2 text-center">
+              <CirclePause className="size-4 shrink-0" aria-hidden />
+              {t("held.trend")}
+            </RnEmpty>
           </div>
-          <Legend items={[...series].reverse().map((s) => ({ key: s.key, name: s.name, color: s.color, own: "own" in s && !!s.own }))} />
-          {!series.length ? (
-            <RnEmpty>{t("hero.noTrend")}</RnEmpty>
-          ) : tableOn ? (
-            <TwinTable head={["", ...x]} rows={series.map((s) => [s.name, ...s.values.map((v) => pctTxt(v))])} />
-          ) : (
-            <RnLineChart
-              x={x}
-              series={series}
-              height={236}
-              yTick={(v) => `${v}%`}
-              value={(v) => `${v.toFixed(1)}%`}
-              tooltipTitle={(d) => (roundBuckets ? t("hero.tooltipRound", { x: d }) : d)}
-              ariaLabel={t("hero.trendAria")}
-              lit={lit}
-              onHover={hover}
-            />
-          )}
-        </div>
+        ) : (
+          <div className="flex min-w-0 flex-col gap-2">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              <h3 className="m-0 text-rn-13 font-bold text-rn-ink">{t("hero.trendTitle")}</h3>
+              <RnInfoTip label={t("hero.trendNoteLabel")}>
+                <RnInfoTipItem label={t("hero.trendNoteLabel")}>{period ? t("hero.trendNotePeriod") : roundBuckets ? t("hero.trendNoteRound") : t("hero.trendNoteDay")}</RnInfoTipItem>
+              </RnInfoTip>
+              <span className="ml-auto">
+                <AcrCardActions
+                  tableId="acr-trend"
+                  section="sec-overview"
+                  csv={() => ({ name: "acr-top1-trend", rows: [[t("hero.trendTitle"), ...view.dates], ...series.map((s) => [s.name, ...s.values])] })}
+                />
+              </span>
+            </div>
+            <Legend items={[...series].reverse().map((s) => ({ key: s.key, name: s.name, color: s.color, own: "own" in s && !!s.own }))} />
+            {!series.length ? (
+              <RnEmpty>{t("hero.noTrend")}</RnEmpty>
+            ) : tableOn ? (
+              <TwinTable head={["", ...x]} rows={series.map((s) => [s.name, ...s.values.map((v) => pctTxt(v))])} />
+            ) : (
+              <RnLineChart
+                x={x}
+                series={series}
+                height={236}
+                yTick={(v) => `${v}%`}
+                value={(v) => `${v.toFixed(1)}%`}
+                tooltipTitle={(d) => (roundBuckets ? t("hero.tooltipRound", { x: d }) : d)}
+                ariaLabel={t("hero.trendAria")}
+                lit={lit}
+                onHover={hover}
+              />
+            )}
+          </div>
+        )}
       </div>
     </RnCard>
   );
@@ -480,6 +521,9 @@ export function TwinTable({ head, rows }: { head: ReadonlyArray<ReactNode>; rows
 
 const BOARD_COLS =
   "grid-cols-[26px_minmax(150px,1.2fr)_minmax(48px,1.2fr)_54px_72px_70px_minmax(40px,.8fr)_52px] @max-[680px]/rnpage:grid-cols-[26px_minmax(140px,1.2fr)_minmax(36px,1fr)_54px_70px_minmax(32px,.8fr)_52px]";
+// without the trend and Δ columns (rounds not compared)
+const BOARD_COLS_HELD =
+  "grid-cols-[26px_minmax(150px,1.2fr)_minmax(48px,1.2fr)_54px_minmax(40px,.8fr)_52px] @max-[680px]/rnpage:grid-cols-[26px_minmax(140px,1.2fr)_minmax(36px,1fr)_54px_minmax(32px,.8fr)_52px]";
 
 function AcrBoard() {
   const { view, ownLabel, compare, colorOf, lit, hover, toggleCompare, tables } = useAcr();
@@ -490,14 +534,18 @@ function AcrBoard() {
   const o = view.own;
   const multiOwn = view.multiOwn;
   const tableOn = tables.has("acr-board");
+  const held = !view.compareRounds;
+  const cols = held ? BOARD_COLS_HELD : BOARD_COLS;
+  const d = (v: number | null) => (held ? [] : [v]);
   const csv = () => ({
     name: "acr-brands",
     rows: [
-      [t("board.colBrand"), t("board.colTop1"), t("board.colCoverage"), t("board.colDelta"), t("board.colChoices"), t("board.colMentions")],
-      ...(multiOwn && o ? [[`${ownLabel} (${t("board.ownTotal")})`, o.choiceShare, o.coverage, view.ownDelta, o.choiceCount, null]] : []),
-      ...rows.map((r) => [r.brand, r.choiceShare, r.coverage, r.d, r.choiceCount, r.appearanceCount]),
+      [t("board.colBrand"), t("board.colTop1"), t("board.colCoverage"), ...(held ? [] : [t("board.colDelta")]), t("board.colChoices"), t("board.colMentions")],
+      ...(multiOwn && o ? [[`${ownLabel} (${t("board.ownTotal")})`, o.choiceShare, o.coverage, ...d(view.ownDelta), o.choiceCount, null]] : []),
+      ...rows.map((r) => [r.brand, r.choiceShare, r.coverage, ...d(r.d), r.choiceCount, r.appearanceCount]),
     ],
   });
+  const countFrom = held ? 3 : 4;
   const keys = ["__own", ...view.brands.map((b) => b.brand)];
   const row = (r: { key: string; name: string; rank: number | null; top1: number | null; bar: number; cov: number | null; trend: Array<number | null> | null; d: number | null; own: boolean; sibling: boolean; canCompare: boolean; total: boolean; tip: string }) => {
     const on = compare.includes(r.key);
@@ -516,16 +564,20 @@ function AcrBoard() {
           <i className="block h-full rounded" style={{ width: `${r.bar}%`, background: color }} />
         </span>
         <span className="text-right text-rn-13 font-bold text-rn-ink tabular-nums">{pctTxt(r.top1)}</span>
-        <span className="@max-[680px]/rnpage:hidden">{r.trend ? <RnSparkline values={r.trend} className="h-[26px]" /> : <span className="text-rn-11 text-rn-muted">{t("board.noTrend")}</span>}</span>
-        <span className="justify-self-end">
-          {r.trend && view.showDelta ? (
-            <RnDeltaChip delta={r.d} format={(v) => `${Math.abs(v).toFixed(1)}pp`} emptyText={t("delta.none")} labels={DELTA_LABELS(t)} />
-          ) : (
-            <span className="text-rn-11 text-rn-muted" title={r.trend ? undefined : t("board.noTrendTip")}>
-              —
+        {held ? null : (
+          <>
+            <span className="@max-[680px]/rnpage:hidden">{r.trend ? <RnSparkline values={r.trend} className="h-[26px]" /> : <span className="text-rn-11 text-rn-muted">{t("board.noTrend")}</span>}</span>
+            <span className="justify-self-end">
+              {r.trend && view.showDelta ? (
+                <RnDeltaChip delta={r.d} format={(v) => `${Math.abs(v).toFixed(1)}pp`} emptyText={t("delta.none")} labels={DELTA_LABELS(t)} />
+              ) : (
+                <span className="text-rn-11 text-rn-muted" title={r.trend ? undefined : t("board.noTrendTip")}>
+                  —
+                </span>
+              )}
             </span>
-          )}
-        </span>
+          </>
+        )}
         <span className="h-2 overflow-hidden rounded bg-rn-page">
           <i className="block h-full rounded" style={{ width: `${r.cov ?? 0}%`, background: `color-mix(in srgb, ${color} 55%, #ffffff)` }} />
         </span>
@@ -534,7 +586,7 @@ function AcrBoard() {
     );
     const cls = cx(
       "grid min-h-11 w-full items-center gap-2.5 border-b border-rn-line px-6 text-left text-rn-13 [.rn-dense_&]:min-h-[34px] [.rn-dense_&]:px-4.5",
-      BOARD_COLS,
+      cols,
       r.own && (r.total || !multiOwn) && "bg-[linear-gradient(90deg,rgba(0,44,95,.06),rgba(0,44,95,0)_70%)]",
       st === "on" && "bg-rn-navy-25 shadow-[inset_3px_0_0_var(--color-rn-navy)]",
     );
@@ -554,7 +606,7 @@ function AcrBoard() {
         title={t("board.title")}
         info={
           <RnInfoTip label={t("board.infoLabel")}>
-            <RnInfoTipItem label={t("board.infoLabel")}>{t("board.info")}</RnInfoTipItem>
+            <RnInfoTipItem label={t("board.infoLabel")}>{t(held ? "board.infoHeld" : "board.info")}</RnInfoTipItem>
           </RnInfoTip>
         }
         chips={<RnBasisChip>{t("board.chip")}</RnBasisChip>}
@@ -566,20 +618,20 @@ function AcrBoard() {
             items={[
               { value: "choiceShare", label: t("board.sortTop1") },
               { value: "coverage", label: t("board.sortCoverage") },
-              { value: "d", label: t("board.sortDelta") },
+              ...(held ? [] : [{ value: "d" as const, label: t("board.sortDelta") }]),
             ]}
           />
         }
         actions={<AcrCardActions tableId="acr-board" section="sec-comp" csv={csv} />}
-        sub={t("board.sub")}
+        sub={t(held ? "board.subHeld" : "board.sub")}
       />
       {tableOn ? (
         <div className="px-6 pb-4">
-          <TwinTable head={csv().rows[0]} rows={csv().rows.slice(1).map((r) => r.map((c, i) => (i === 0 ? c : typeof c === "number" ? (i === 3 ? deltaTxt(c) : i >= 4 ? c.toLocaleString() : pctTxt(c)) : c == null ? "—" : c)))} />
+          <TwinTable head={csv().rows[0]} rows={csv().rows.slice(1).map((r) => r.map((c, i) => (i === 0 ? c : typeof c === "number" ? (i >= countFrom ? c.toLocaleString() : i === 3 ? deltaTxt(c) : pctTxt(c)) : c == null ? "—" : c)))} />
         </div>
       ) : (
         <>
-          <div className={cx("grid h-[34px] items-center gap-2.5 border-y border-rn-line px-6 text-rn-12 font-semibold whitespace-nowrap text-rn-muted [.rn-dense_&]:px-4.5", BOARD_COLS)}>
+          <div className={cx("grid h-[34px] items-center gap-2.5 border-y border-rn-line px-6 text-rn-12 font-semibold whitespace-nowrap text-rn-muted [.rn-dense_&]:px-4.5", cols)}>
             <span>#</span>
             <span>{t("board.colBrand")}</span>
             <span className="inline-flex items-center gap-1">
@@ -590,8 +642,12 @@ function AcrBoard() {
               </RnInfoTip>
             </span>
             <span />
-            <span className="@max-[680px]/rnpage:hidden">{t("board.colTrend")}</span>
-            <span className="text-right">{t("board.colDelta")}</span>
+            {held ? null : (
+              <>
+                <span className="@max-[680px]/rnpage:hidden">{t("board.colTrend")}</span>
+                <span className="text-right">{t("board.colDelta")}</span>
+              </>
+            )}
             <span className="inline-flex items-center gap-1">
               {t("board.colCoverage")}
               <CoverageTip align="end" />

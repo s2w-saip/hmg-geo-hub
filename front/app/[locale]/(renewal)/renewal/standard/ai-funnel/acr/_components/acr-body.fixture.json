@@ -1,0 +1,1011 @@
+{
+ "held": {
+  "measured": true,
+  "filtered": false,
+  "acrPromptCount": 67,
+  "roundBuckets": true,
+  "period": false,
+  "ownLabel": "HMG",
+  "totals": {
+   "promptRuns": 8,
+   "prompts": 3,
+   "iterations": 20,
+   "engines": [
+    "chatgpt",
+    "gemini"
+   ]
+  },
+  "held": null,
+  "view": {
+   "own": {
+    "choiceCount": 7,
+    "appearanceCount": 11,
+    "choiceShare": 35.0,
+    "coverage": 37.5
+   },
+   "ownBrands": [
+    "Hyundai"
+   ],
+   "brands": [
+    {
+     "brand": "Hyundai",
+     "isOurs": true,
+     "choiceCount": 7,
+     "appearanceCount": 11,
+     "choiceShare": 35.0,
+     "coverage": 37.5,
+     "rank": 1,
+     "trend": null,
+     "d": null,
+     "own": true,
+     "sibling": false,
+     "canCompare": false,
+     "top1Bar": 100.0,
+     "mapX": 37.5,
+     "mapY": 35.0,
+     "dev": 5.0,
+     "devCsv": 5.0
+    },
+    {
+     "brand": "Toyota",
+     "isOurs": false,
+     "choiceCount": 1,
+     "appearanceCount": 2,
+     "choiceShare": 5.0,
+     "coverage": 12.5,
+     "rank": 2,
+     "trend": null,
+     "d": null,
+     "own": false,
+     "sibling": false,
+     "canCompare": true,
+     "top1Bar": 14.285714285714285,
+     "mapX": 12.5,
+     "mapY": 5.0,
+     "dev": -5.0,
+     "devCsv": -5.0
+    }
+   ],
+   "dates": [],
+   "ownTrend": null,
+   "ownDelta": null,
+   "rivals": [
+    "Toyota"
+   ],
+   "showDelta": false,
+   "compareRounds": false,
+   "rank": 1,
+   "standingN": 2,
+   "leader": {
+    "brand": "Toyota",
+    "isOurs": false,
+    "choiceCount": 1,
+    "appearanceCount": 2,
+    "choiceShare": 5.0,
+    "coverage": 12.5
+   },
+   "k": 0.8,
+   "engines": [
+    "chatgpt",
+    "gemini"
+   ],
+   "engineWins": [
+    {
+     "engine": "chatgpt",
+     "ownWins": 1,
+     "noneWins": 0,
+     "byBrand": [
+      {
+       "brand": "Hyundai",
+       "count": 1
+      }
+     ],
+     "restBase": 0
+    },
+    {
+     "engine": "gemini",
+     "ownWins": 0,
+     "noneWins": 1,
+     "byBrand": [
+      {
+       "brand": null,
+       "count": 1
+      }
+     ],
+     "restBase": 0
+    }
+   ],
+   "sweeps": [],
+   "findings": [
+    {
+     "kind": "standing",
+     "tone": "good",
+     "pri": 3,
+     "target": "sec-comp",
+     "brand": "Toyota",
+     "params": {
+      "rival": "Toyota",
+      "gap": 30.0,
+      "first": 1,
+      "move": "",
+      "widened": "",
+      "own": 35.0,
+      "rivalShare": 5.0
+     }
+    }
+   ],
+   "defaultCompare": [
+    "Toyota"
+   ],
+   "multiOwn": false,
+   "gap": 30.0,
+   "boardOrders": {
+    "choiceShare": [
+     0,
+     1
+    ],
+    "coverage": [
+     0,
+     1
+    ],
+    "d": [
+     0,
+     1
+    ]
+   },
+   "ownTop1Bar": 100.0,
+   "battle": {
+    "rows": [
+     {
+      "promptId": "p1",
+      "label": "best suv",
+      "winners": [
+       "Hyundai",
+       null
+      ],
+      "notOwn": false
+     }
+    ],
+    "views": {
+     "all": [
+      0
+     ],
+     "notown": [],
+     "split": [
+      0
+     ]
+    },
+    "hidden": {
+     "all": 0,
+     "notown": 0,
+     "split": 0
+    },
+    "visible": 30,
+    "count": 1,
+    "total": 1
+   },
+   "models": {
+    "rows": [
+     {
+      "brand": null,
+      "model": "Tucson",
+      "isOurs": true,
+      "conversionRate": 66.7,
+      "shortlistCount": 2,
+      "top1Count": 2,
+      "rank": 1,
+      "brandLabel": "—",
+      "own": true,
+      "sibling": false,
+      "bar": 100.0
+     }
+    ],
+    "orders": {
+     "conversionRate": [
+      0
+     ],
+     "shortlistCount": [
+      0
+     ],
+     "top1Count": [
+      0
+     ]
+    }
+   },
+   "sheets": [
+    {
+     "key": "|chatgpt",
+     "region": null,
+     "engine": "chatgpt",
+     "count": 1
+    }
+   ],
+   "sheet": {
+    "key": "|chatgpt",
+    "region": null,
+    "engine": "chatgpt",
+    "rows": [
+     {
+      "promptId": "p1",
+      "label": "p1",
+      "validAcr": 5,
+      "cells": 1,
+      "state": "pick",
+      "candidates": 1,
+      "ownN": 4,
+      "picked": 4,
+      "hatch": true,
+      "none": 1,
+      "top": {
+       "brand": "Hyundai",
+       "choice": 4
+      },
+      "entries": [
+       {
+        "brand": "Hyundai",
+        "choice": 4,
+        "width": 80.0
+       }
+      ],
+      "pivot": [
+       4
+      ]
+     }
+    ],
+    "present": [
+     "Hyundai"
+    ],
+    "counts": {
+     "all": 1,
+     "pick": 1,
+     "listed": 0,
+     "absent": 0
+    },
+    "orders": {
+     "gap": {
+      "all": [
+       0
+      ],
+      "pick": [
+       0
+      ],
+      "listed": [],
+      "absent": []
+     },
+     "own": {
+      "all": [
+       0
+      ],
+      "pick": [
+       0
+      ],
+      "listed": [],
+      "absent": []
+     },
+     "text": {
+      "all": [
+       0
+      ],
+      "pick": [
+       0
+      ],
+      "listed": [],
+      "absent": []
+     }
+    }
+   },
+   "distVisible": 20,
+   "conversion": {
+    "engines": [
+     "all",
+     "chatgpt",
+     "gemini"
+    ],
+    "views": {
+     "all": {
+      "n": 1,
+      "counts": {
+       "pick": 1,
+       "listed": 0,
+       "absent": 0
+      },
+      "shares": {
+       "pick": 100.0,
+       "listed": 0.0,
+       "absent": 0.0
+      },
+      "rows": [
+       {
+        "region": null,
+        "n": 1,
+        "counts": {
+         "pick": 1,
+         "listed": 0,
+         "absent": 0
+        },
+        "shares": {
+         "pick": 100.0,
+         "listed": 0.0,
+         "absent": 0.0
+        },
+        "sheet": "|chatgpt"
+       }
+      ],
+      "orders": {
+       "listed": [
+        0
+       ],
+       "share": [
+        0
+       ]
+      }
+     },
+     "chatgpt": {
+      "n": 1,
+      "counts": {
+       "pick": 1,
+       "listed": 0,
+       "absent": 0
+      },
+      "shares": {
+       "pick": 100.0,
+       "listed": 0.0,
+       "absent": 0.0
+      },
+      "rows": [
+       {
+        "region": null,
+        "n": 1,
+        "counts": {
+         "pick": 1,
+         "listed": 0,
+         "absent": 0
+        },
+        "shares": {
+         "pick": 100.0,
+         "listed": 0.0,
+         "absent": 0.0
+        },
+        "sheet": "|chatgpt"
+       }
+      ],
+      "orders": {
+       "listed": [
+        0
+       ],
+       "share": [
+        0
+       ]
+      }
+     },
+     "gemini": {
+      "n": 0,
+      "counts": {
+       "pick": 0,
+       "listed": 0,
+       "absent": 0
+      },
+      "shares": {
+       "pick": null,
+       "listed": null,
+       "absent": null
+      },
+      "rows": [],
+      "orders": {
+       "listed": [],
+       "share": []
+      }
+     }
+    },
+    "visible": 15
+   },
+   "duels": {
+    "engines": [
+     "all",
+     "chatgpt",
+     "gemini"
+    ],
+    "views": {
+     "all": [
+      {
+       "brand": "Toyota",
+       "n": 8,
+       "counts": {
+        "own": 2,
+        "rival": 3,
+        "rest": 3
+       },
+       "shares": {
+        "own": 25.0,
+        "rival": 37.5,
+        "rest": 37.5
+       },
+       "bars": {
+        "own": 66.66666666666666,
+        "rival": 100.0
+       },
+       "sibling": false,
+       "lead": "rival"
+      }
+     ],
+     "chatgpt": [
+      {
+       "brand": "Toyota",
+       "n": 6,
+       "counts": {
+        "own": 1,
+        "rival": 3,
+        "rest": 2
+       },
+       "shares": {
+        "own": 16.7,
+        "rival": 50.0,
+        "rest": 33.3
+       },
+       "bars": {
+        "own": 33.33333333333333,
+        "rival": 100.0
+       },
+       "sibling": false,
+       "lead": "rival"
+      }
+     ],
+     "gemini": [
+      {
+       "brand": "Toyota",
+       "n": 2,
+       "counts": {
+        "own": 1,
+        "rival": 0,
+        "rest": 1
+       },
+       "shares": {
+        "own": 50.0,
+        "rival": 0.0,
+        "rest": 50.0
+       },
+       "bars": {
+        "own": 100.0,
+        "rival": 0.0
+       },
+       "sibling": false,
+       "lead": "own"
+      }
+     ]
+    },
+    "sample": {
+     "iterations": 8,
+     "cells": 8
+    }
+   }
+  }
+ },
+ "period": {
+  "measured": true,
+  "filtered": true,
+  "acrPromptCount": 67,
+  "roundBuckets": true,
+  "period": true,
+  "ownLabel": "HMG",
+  "totals": {
+   "promptRuns": 8,
+   "prompts": 3,
+   "iterations": 20,
+   "engines": [
+    "chatgpt",
+    "gemini"
+   ]
+  },
+  "held": {
+   "rounds": 2,
+   "from": "2026-09-03",
+   "to": "2026-09-10"
+  },
+  "view": null
+ },
+ "compared": {
+  "measured": true,
+  "filtered": false,
+  "acrPromptCount": 67,
+  "roundBuckets": true,
+  "period": false,
+  "ownLabel": "HMG",
+  "totals": {
+   "promptRuns": 8,
+   "prompts": 3,
+   "iterations": 20,
+   "engines": [
+    "chatgpt",
+    "gemini"
+   ]
+  },
+  "held": null,
+  "view": {
+   "own": {
+    "choiceCount": 7,
+    "appearanceCount": 11,
+    "choiceShare": 35.0,
+    "coverage": 37.5
+   },
+   "ownBrands": [
+    "Hyundai"
+   ],
+   "brands": [
+    {
+     "brand": "Hyundai",
+     "isOurs": true,
+     "choiceCount": 7,
+     "appearanceCount": 11,
+     "choiceShare": 35.0,
+     "coverage": 37.5,
+     "rank": 1,
+     "trend": [
+      6.3,
+      33.3
+     ],
+     "d": 27.1,
+     "own": true,
+     "sibling": false,
+     "canCompare": false,
+     "top1Bar": 100.0,
+     "mapX": 37.5,
+     "mapY": 35.0,
+     "dev": 5.0,
+     "devCsv": 5.0
+    },
+    {
+     "brand": "Toyota",
+     "isOurs": false,
+     "choiceCount": 1,
+     "appearanceCount": 2,
+     "choiceShare": 5.0,
+     "coverage": 12.5,
+     "rank": 2,
+     "trend": [
+      null,
+      66.7
+     ],
+     "d": null,
+     "own": false,
+     "sibling": false,
+     "canCompare": true,
+     "top1Bar": 14.285714285714285,
+     "mapX": 12.5,
+     "mapY": 5.0,
+     "dev": -5.0,
+     "devCsv": -5.0
+    }
+   ],
+   "dates": [
+    "2026-09-03",
+    "2026-09-10"
+   ],
+   "ownTrend": [
+    6.3,
+    33.3
+   ],
+   "ownDelta": 27.1,
+   "rivals": [
+    "Toyota"
+   ],
+   "showDelta": true,
+   "compareRounds": true,
+   "rank": 1,
+   "standingN": 2,
+   "leader": {
+    "brand": "Toyota",
+    "isOurs": false,
+    "choiceCount": 1,
+    "appearanceCount": 2,
+    "choiceShare": 5.0,
+    "coverage": 12.5
+   },
+   "k": 0.8,
+   "engines": [
+    "chatgpt",
+    "gemini"
+   ],
+   "engineWins": [
+    {
+     "engine": "chatgpt",
+     "ownWins": 1,
+     "noneWins": 0,
+     "byBrand": [
+      {
+       "brand": "Hyundai",
+       "count": 1
+      }
+     ],
+     "restBase": 0
+    },
+    {
+     "engine": "gemini",
+     "ownWins": 0,
+     "noneWins": 1,
+     "byBrand": [
+      {
+       "brand": null,
+       "count": 1
+      }
+     ],
+     "restBase": 0
+    }
+   ],
+   "sweeps": [],
+   "findings": [
+    {
+     "kind": "mover",
+     "tone": "good",
+     "pri": 4,
+     "target": "sec-overview",
+     "brand": "Hyundai",
+     "params": {
+      "brand": "Hyundai",
+      "d": 27.1,
+      "ownD": 27.1
+     }
+    },
+    {
+     "kind": "standing",
+     "tone": "good",
+     "pri": 3,
+     "target": "sec-comp",
+     "brand": "Toyota",
+     "params": {
+      "rival": "Toyota",
+      "gap": 30.0,
+      "first": 1,
+      "move": "",
+      "widened": "",
+      "own": 35.0,
+      "rivalShare": 5.0
+     }
+    }
+   ],
+   "defaultCompare": [
+    "Toyota"
+   ],
+   "multiOwn": false,
+   "gap": 30.0,
+   "boardOrders": {
+    "choiceShare": [
+     0,
+     1
+    ],
+    "coverage": [
+     0,
+     1
+    ],
+    "d": [
+     0,
+     1
+    ]
+   },
+   "ownTop1Bar": 100.0,
+   "battle": {
+    "rows": [
+     {
+      "promptId": "p1",
+      "label": "best suv",
+      "winners": [
+       "Hyundai",
+       null
+      ],
+      "notOwn": false
+     }
+    ],
+    "views": {
+     "all": [
+      0
+     ],
+     "notown": [],
+     "split": [
+      0
+     ]
+    },
+    "hidden": {
+     "all": 0,
+     "notown": 0,
+     "split": 0
+    },
+    "visible": 30,
+    "count": 1,
+    "total": 1
+   },
+   "models": {
+    "rows": [
+     {
+      "brand": null,
+      "model": "Tucson",
+      "isOurs": true,
+      "conversionRate": 66.7,
+      "shortlistCount": 2,
+      "top1Count": 2,
+      "rank": 1,
+      "brandLabel": "—",
+      "own": true,
+      "sibling": false,
+      "bar": 100.0
+     }
+    ],
+    "orders": {
+     "conversionRate": [
+      0
+     ],
+     "shortlistCount": [
+      0
+     ],
+     "top1Count": [
+      0
+     ]
+    }
+   },
+   "sheets": [
+    {
+     "key": "|chatgpt",
+     "region": null,
+     "engine": "chatgpt",
+     "count": 1
+    }
+   ],
+   "sheet": {
+    "key": "|chatgpt",
+    "region": null,
+    "engine": "chatgpt",
+    "rows": [
+     {
+      "promptId": "p1",
+      "label": "p1",
+      "validAcr": 5,
+      "cells": 1,
+      "state": "pick",
+      "candidates": 1,
+      "ownN": 4,
+      "picked": 4,
+      "hatch": true,
+      "none": 1,
+      "top": {
+       "brand": "Hyundai",
+       "choice": 4
+      },
+      "entries": [
+       {
+        "brand": "Hyundai",
+        "choice": 4,
+        "width": 80.0
+       }
+      ],
+      "pivot": [
+       4
+      ]
+     }
+    ],
+    "present": [
+     "Hyundai"
+    ],
+    "counts": {
+     "all": 1,
+     "pick": 1,
+     "listed": 0,
+     "absent": 0
+    },
+    "orders": {
+     "gap": {
+      "all": [
+       0
+      ],
+      "pick": [
+       0
+      ],
+      "listed": [],
+      "absent": []
+     },
+     "own": {
+      "all": [
+       0
+      ],
+      "pick": [
+       0
+      ],
+      "listed": [],
+      "absent": []
+     },
+     "text": {
+      "all": [
+       0
+      ],
+      "pick": [
+       0
+      ],
+      "listed": [],
+      "absent": []
+     }
+    }
+   },
+   "distVisible": 20,
+   "conversion": {
+    "engines": [
+     "all",
+     "chatgpt",
+     "gemini"
+    ],
+    "views": {
+     "all": {
+      "n": 1,
+      "counts": {
+       "pick": 1,
+       "listed": 0,
+       "absent": 0
+      },
+      "shares": {
+       "pick": 100.0,
+       "listed": 0.0,
+       "absent": 0.0
+      },
+      "rows": [
+       {
+        "region": null,
+        "n": 1,
+        "counts": {
+         "pick": 1,
+         "listed": 0,
+         "absent": 0
+        },
+        "shares": {
+         "pick": 100.0,
+         "listed": 0.0,
+         "absent": 0.0
+        },
+        "sheet": "|chatgpt"
+       }
+      ],
+      "orders": {
+       "listed": [
+        0
+       ],
+       "share": [
+        0
+       ]
+      }
+     },
+     "chatgpt": {
+      "n": 1,
+      "counts": {
+       "pick": 1,
+       "listed": 0,
+       "absent": 0
+      },
+      "shares": {
+       "pick": 100.0,
+       "listed": 0.0,
+       "absent": 0.0
+      },
+      "rows": [
+       {
+        "region": null,
+        "n": 1,
+        "counts": {
+         "pick": 1,
+         "listed": 0,
+         "absent": 0
+        },
+        "shares": {
+         "pick": 100.0,
+         "listed": 0.0,
+         "absent": 0.0
+        },
+        "sheet": "|chatgpt"
+       }
+      ],
+      "orders": {
+       "listed": [
+        0
+       ],
+       "share": [
+        0
+       ]
+      }
+     },
+     "gemini": {
+      "n": 0,
+      "counts": {
+       "pick": 0,
+       "listed": 0,
+       "absent": 0
+      },
+      "shares": {
+       "pick": null,
+       "listed": null,
+       "absent": null
+      },
+      "rows": [],
+      "orders": {
+       "listed": [],
+       "share": []
+      }
+     }
+    },
+    "visible": 15
+   },
+   "duels": {
+    "engines": [
+     "all",
+     "chatgpt",
+     "gemini"
+    ],
+    "views": {
+     "all": [
+      {
+       "brand": "Toyota",
+       "n": 8,
+       "counts": {
+        "own": 2,
+        "rival": 3,
+        "rest": 3
+       },
+       "shares": {
+        "own": 25.0,
+        "rival": 37.5,
+        "rest": 37.5
+       },
+       "bars": {
+        "own": 66.66666666666666,
+        "rival": 100.0
+       },
+       "sibling": false,
+       "lead": "rival"
+      }
+     ],
+     "chatgpt": [
+      {
+       "brand": "Toyota",
+       "n": 6,
+       "counts": {
+        "own": 1,
+        "rival": 3,
+        "rest": 2
+       },
+       "shares": {
+        "own": 16.7,
+        "rival": 50.0,
+        "rest": 33.3
+       },
+       "bars": {
+        "own": 33.33333333333333,
+        "rival": 100.0
+       },
+       "sibling": false,
+       "lead": "rival"
+      }
+     ],
+     "gemini": [
+      {
+       "brand": "Toyota",
+       "n": 2,
+       "counts": {
+        "own": 1,
+        "rival": 0,
+        "rest": 1
+       },
+       "shares": {
+        "own": 50.0,
+        "rival": 0.0,
+        "rest": 50.0
+       },
+       "bars": {
+        "own": 100.0,
+        "rival": 0.0
+       },
+       "sibling": false,
+       "lead": "own"
+      }
+     ]
+    },
+    "sample": {
+     "iterations": 8,
+     "cells": 8
+    }
+   }
+  }
+ }
+}
