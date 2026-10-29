@@ -177,6 +177,19 @@ Deliberate changes (what the screen shows changed by decision):
   keys are gone from the renewal body, the renewal view and the standard and website/project views, and so are the
   pages' hold notes. The 127 `acr` cases that carried the keys were rebuilt. Each of the 133 outputs now equals its
   341a09e output apart from the renewal `conversion` · `duels`.
+- 2026-10-29 renewal Mention BI review, defects A1–A6 (the user's go-ahead). The Gold reader's `trend` now answers
+  `dimension=type` and `dims` (none · engine · type) as the contract says: M08 type_exposure per bucket and type = the
+  cells' own type answers over the bucket's answers, which equal `mentions/types` own_answers round by round. It
+  answered no dims, so the engine KPI load always lacked its type trend and was marked degraded. Changed cases, all
+  renewal Mention (`rn-*`, 24 files; the tapes hold the reader's answers, so no other case changes):
+  - `rn-favor-hero.trendMissing` follows the rate hero's rule (the overview slots draw): true → false in the 20 cases
+    whose load has slots; the points were already there and are unchanged.
+  - 유형별 감정 `rows[0]` (전체) is every 당사 mention (the `rn-favor-dist` counts, e.g. 175,995 / 325,173 = 54.1 %), not
+    the type rows summed (368,346 / 633,786 = 58.1 %): the bundle cases' 전체 row equals their 감정 분포 segments and
+    the type rows are unchanged; `rn-fn-favor-matrix(-model)` pass no totals and lose the 전체 row.
+  - The 당사 type lines (`rn-fn-rate-types`, `rn-fn-type-own-rows`): a round with type answers draws. The shared
+    `type_combo_points` keeps only rounds with measurement days, which the reader sends as null, so every line was
+    empty; `spark`, `delta` and `hasSpark` change, the legacy page's cases stay.
 
 ## Format
 

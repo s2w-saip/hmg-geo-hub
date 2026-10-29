@@ -158,6 +158,62 @@ class PickOrder(unittest.TestCase):
                     self.assertEqual(old, summary_list(s, list(pick)), (seed, pick))
 
 
+class FavorTrend(unittest.TestCase):
+    """The favourability trend is drawn from the overview slots. A failed sibling read of the same load (the type
+    trend, which the reader did not answer until 2026-10-29) marked the load degraded, and the card said the
+    aggregation had timed out although its points were there."""
+
+    EMPTY = {"rows": [], "promptsWithoutBrand": None, "measuredPrompts": None}
+
+    def engine(self, **over) -> dict:
+        return {"unit": "week", "engines": ["chatgpt"], "buckets": [], "latest": [], "latestBrands": [], "typeTrend": [],
+                "trendDegraded": True, **over}
+
+    def test_the_slots_show_though_a_sibling_read_failed(self):
+        slots = [{"bucketStart": "2026-10-05", "roundDate": "2026-10-05", "gap": None, "positiveMentions": 6, "sentMentions": 10, "measuredDays": 1}]
+        h = rn.favor_hero(self.EMPTY, None, self.engine(overviewSlots=slots), None)
+        self.assertFalse(h["trendMissing"])
+        self.assertEqual([(p["key"], p["positive"]) for p in h["points"]], [("2026-10-05", 60.0)])
+
+    def test_without_slots_a_degraded_load_is_missing(self):
+        self.assertTrue(rn.favor_hero(self.EMPTY, None, self.engine(), None)["trendMissing"])
+        self.assertTrue(rn.favor_hero(self.EMPTY, None, None, None)["trendMissing"])
+
+
+class FavorMatrixTotal(unittest.TestCase):
+    """유형별 감정's 전체 row is every 당사 mention, as the page's headline and 감정 분포 card. A mention can carry several
+    types, so the type rows overlap; their sum (633,786 signals, 58.1 % positive on 2026-10-05) read as a second,
+    contradicting 우호도 next to the page's 54.1 % (325,173 mentions)."""
+
+    KPI = {"sentimentMatrix": {"own": [
+        {"type": "mention", "rows": 3, "positive": 5, "neutral": 4, "mixed": 0, "negative": 1},
+        {"type": "recommendation", "rows": 2, "positive": 4, "neutral": 1, "mixed": 0, "negative": 0}]}}
+
+    def test_the_total_row_is_the_mention_totals(self):
+        rows = rn.favor_matrix_payload(self.KPI, {"positive": 6, "neutral": 3, "mixed": 0, "negative": 1})["rows"]
+        self.assertEqual([r["type"] for r in rows], ["all", "recommendation", "mention"])
+        self.assertEqual((rows[0]["positive"], rows[0]["total"], rows[0]["positivePct"]), (6, 10, 60.0))
+
+    def test_without_the_totals_there_is_no_total_row(self):
+        self.assertEqual([r["type"] for r in rn.favor_matrix_payload(self.KPI, None)["rows"]], ["recommendation", "mention"])
+
+
+class OwnTypeTrend(unittest.TestCase):
+    """멘션 유형 card, 당사 view: each type's line is the type trend's own answers over the round's answers. The
+    rounds were kept only when the trend slot counted measurement days, which the Gold reader sends as null
+    (2026-10-29), so every line was empty; a round with type answers is a measured round."""
+
+    def test_a_round_with_type_answers_draws(self):
+        slots = [{"bucketStart": d, "roundDate": d, "gap": None, "trackedAnswers": 6, "answers": 10, "trackedMentions": 8,
+                  "totalMentions": 20, "measuredDays": 0} for d in ("2026-09-28", "2026-10-05")]
+        engine = {"unit": "week", "engines": [], "buckets": [], "overviewSlots": slots, "trendDegraded": False,
+                  "typeTrend": [{"bucketStart": "2026-09-28", "answers": 10, "byType": {**dict.fromkeys(TYPES, 0), "mention": 5}},
+                                {"bucketStart": "2026-10-05", "answers": 20, "byType": {**dict.fromkeys(TYPES, 0), "mention": 12}}]}
+        kpi = {"rows": [{"type": t, "ownExposurePct": 60.0, "ownMentions": 3} for t in TYPES], "ownMentions": 9}
+        mention = next(r for r in rn.type_own_rows(kpi, engine, "exposure") if r["type"] == "mention")
+        self.assertEqual((mention["spark"], mention["delta"]), ([50.0, 60.0], 10.0))
+
+
 class Helpers(unittest.TestCase):
     def test_rank_axis_ticks_non_finite(self):
         self.assertEqual(rn.rank_axis_ticks(math.inf), [1])

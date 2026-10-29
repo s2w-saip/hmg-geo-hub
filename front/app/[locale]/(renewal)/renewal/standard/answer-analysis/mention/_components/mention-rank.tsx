@@ -196,7 +196,10 @@ function RankTable() {
           <div className={cx("grid h-[34px] items-center gap-2.5 border-y border-rn-line px-6 text-rn-12 font-semibold whitespace-nowrap text-rn-muted [.rn-dense_&]:px-4.5", RANK_COLS)}>
             <span>#</span>
             <span>{t("board.colBrand")}</span>
-            <span className="sr-only">{t("rank.colBar")}</span>
+            {/* the bar column's cell: an sr-only element alone leaves the grid flow and shifts every heading left */}
+            <span>
+              <span className="sr-only">{t("rank.colBar")}</span>
+            </span>
             <span className="text-right">{t("rank.colAvg")}</span>
             <span className="@max-[720px]/rnpage:hidden">{t("board.colTrend")}</span>
             <span className="text-right">{t("rank.colWow")}</span>

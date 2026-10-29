@@ -185,13 +185,13 @@ function Matrix() {
   const locale = useLocale();
   const { rows } = use(input.favorMatrix);
   const [unit, setUnit] = useState<"pct" | "count">("pct");
-  const name = (type: string) => (type === "all" ? tF("matrix.all") : tType(type as "mention"));
+  const name = (type: string) => (type === "all" ? t("favor.matrixAll") : tType(type as "mention"));
   const csv = () => ({ name: "mention-sentiment-by-type", rows: [["", ...SENTIMENT_KEYS.map((k) => tS(k)), tF("matrix.positiveCol")], ...rows.map((r) => [name(r.type), ...r.segments.map((s) => s.count), r.positivePct])] });
   return (
     <>
       <RnCardHead
         title={tF("matrix.title")}
-        info={<InfoTip label={tF("matrix.noteTitle")} items={[[tF("matrix.noteTitle"), tF("matrix.note")]]} />}
+        info={<InfoTip label={t("favor.matrixNoteTitle")} items={[[t("favor.matrixNoteTitle"), t("favor.matrixNote")]]} />}
         controls={
           <RnSegmented
             label={t("type.unitLabel")}

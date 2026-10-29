@@ -300,7 +300,9 @@ def favor_hero(sub: Any, prev: Any, engine: Any, period: Any) -> dict:
         "mixedBasis": _truthy(sub.get("overviewCards")) if isinstance(sub, dict) else False,
         "points": [{"key": x["bucketStart"], "positive": x.get("positivePct"), "negative": x.get("negativePct"), "gap": _truthy(x.get("gap"))}
                    for x in mv.favorability_trend_points(engine)],
-        "trendMissing": not _truthy(engine) or engine.get("trendDegraded") is True,
+        # the points come from the overview slots when the load has them (as the rate hero's trend), so a failed
+        # sibling read of the load does not hide them
+        "trendMissing": not mv.hero_trend_available(engine),
     }
 
 
@@ -479,11 +481,16 @@ def type_own_rows(kpi: Any, engine: Any, metric: str) -> list[dict]:
     if not kpi:
         return []
     mv = _mv()
-    combo = mv.type_combo_points(engine) if metric == "exposure" else []
+    # each type's line on the exposure trend's rounds: the type trend's own answers over the round's answers. A round
+    # with type answers was measured; the shared type_combo_points keeps only rounds with measurement days, which the
+    # Gold reader sends as null, so every line was empty (2026-10-29).
+    type_by = {b["bucketStart"]: b for b in (engine.get("typeTrend") or [])} if isinstance(engine, dict) else {}
+    rounds = [None if p.get("gap") else type_by.get(p["bucketStart"]) for p in mv.kpi_trend_points(engine, "exposure")] \
+        if metric == "exposure" else []
     out = []
     for type_ in TYPE_STRENGTH:
         r = next((x for x in kpi["rows"] if x["type"] == type_), None)
-        spark = [p["byType"][type_] for p in combo]
+        spark = [pct_or_null(b["byType"][type_], b["answers"]) if b else None for b in rounds]
         pct = None
         if r:
             pct = r["ownExposurePct"] if metric == "exposure" else pct_or_null(r["ownMentions"], kpi["ownMentions"])
@@ -499,14 +506,19 @@ def favor_distribution(totals: Any) -> list[dict]:
     return _mv().sentiment_segments(totals)
 
 
-def favor_matrix(kpi: Any) -> list[dict]:
-    """전체 first, then the types strongest endorsement first."""
+def favor_matrix(kpi: Any, totals: Any = None) -> list[dict]:
+    """전체 first, then the types strongest endorsement first. 전체 is every 당사 mention (`totals`, the 감정 분포
+    card's counts), not the type rows summed: a mention can carry several types, so the sum counted it once a type
+    and showed another 우호도 (58.1 % against the page's 54.1 %, 2026-10-29). No totals, no 전체 row."""
     rows = _mv().type_sentiment_rows(kpi, "own")
-    all_row = next((r for r in rows if r["type"] == "all"), None)
-    if not all_row:
+    if not rows:
         return []
     picked = [next((r for r in rows if r["type"] == t), None) for t in TYPE_STRENGTH]
-    return [all_row, *[r for r in picked if r]]
+    segs = favor_distribution(totals)
+    total = _js_sum(x["count"] for x in segs)
+    all_row = {"type": "all", **{x["key"]: x["count"] for x in segs}, "total": total,
+               "positivePct": pct_or_null(totals["positive"], total), "segments": segs} if segs else None
+    return [*([all_row] if all_row else []), *[r for r in picked if r]]
 
 
 # ── 우선 노출도 ───────────────────────────────────────────────────────────────
@@ -1094,8 +1106,8 @@ def favor_dist_payload(totals: Any) -> dict:
     return {"segments": segs, "total": _js_sum(s["count"] for s in segs)}
 
 
-def favor_matrix_payload(kpi: Any) -> dict:
-    return {"rows": favor_matrix(kpi)}
+def favor_matrix_payload(kpi: Any, totals: Any = None) -> dict:
+    return {"rows": favor_matrix(kpi, totals)}
 
 
 def rank_payload(fp: Any, period: Any, brands: list[dict], trend: Any, degraded: bool, prev_brands: list[dict] | None = None) -> dict:
@@ -1377,7 +1389,9 @@ async def rn_favor_dist(q) -> dict:
 @screen("mention/rn-favor-matrix")
 async def rn_favor_matrix(q) -> dict:
     _, filters, ctx = _begin(q)
-    return favor_matrix_payload(await _md().load_type_kpi(filters, ctx))
+    md = _md()
+    kpi, totals = await asyncio.gather(md.load_type_kpi(filters, ctx), md.load_sentiment_totals(filters, ctx))
+    return favor_matrix_payload(kpi, totals)
 
 
 @screen("mention/rn-rank")

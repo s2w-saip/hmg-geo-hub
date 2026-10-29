@@ -9,6 +9,7 @@ import {
   RnCardHead,
   RnEmpty,
   RnLineChart,
+  rnNiceTicks,
   RnSectionHead,
   RnSegmented,
   RnSkeleton,
@@ -225,7 +226,7 @@ const BOARD_COLS =
   "grid-cols-[26px_minmax(150px,1.3fr)_minmax(60px,1.4fr)_58px_88px_74px_70px] @max-[720px]/rnpage:grid-cols-[26px_minmax(130px,1.3fr)_minmax(40px,1fr)_58px_74px_64px]";
 
 function Board({ metric }: { metric: KpiMetric }) {
-  const { ownLabel, lit, hover } = useMention();
+  const { input, ownLabel, lit, hover } = useMention();
   const { compare, covered, colorOf, toggle } = useCompare();
   const t = useTranslations("renewal.mention");
   const b = useHero(metric).board;
@@ -248,7 +249,7 @@ function Board({ metric }: { metric: KpiMetric }) {
         info={<InfoTip label={t("board.infoLabel")} items={[[t("board.infoLabel"), t(metric === "sov" ? "board.infoSov" : "board.infoExposure")]]} />}
         chips={
           <>
-            <RnBasisChip>{t("board.chipSnapshot")}</RnBasisChip>
+            <RnBasisChip>{t(input.period ? "board.chipPeriod" : "board.chipSnapshot")}</RnBasisChip>
             {b.measuredCycles ? <RnBasisChip>{t("board.chipTrend", { n: b.axis.length })}</RnBasisChip> : null}
           </>
         }
@@ -333,6 +334,13 @@ function Engines({ metric }: { metric: KpiMetric }) {
   const { rows, x, trendMissing } = use(input.rateEngines)[metric];
   const short = useMetricShort(metric);
   const title = t(metric === "sov" ? "engine.titleSov" : "engine.titleExposure");
+  // one y scale for the side-by-side engine charts (each chart scaled to its own values made a 2 pp move on one look
+  // like a 10 pp move on the other); the line chart's own rule, over every engine's values
+  const nums = rows.flatMap((r) => r.series).filter((v): v is number => v != null);
+  const lo = nums.length ? Math.min(...nums) : 0;
+  const hi = nums.length ? Math.max(...nums) : 1;
+  const ticks = rnNiceTicks(Math.max(0, lo - (hi - lo) * 0.15), hi, 4);
+  const domain = { lo: ticks[0], hi: ticks[ticks.length - 1], ticks };
   const csv = () => ({
     name: `mention-${metric}-engines`,
     rows: [["AI", t("engine.own"), t("engine.avgShort"), t("engine.gapTitle"), ...x], ...rows.map((r) => [engineLabel(r.engine), r.own, r.avg, r.gap, ...r.series])],
@@ -377,6 +385,7 @@ function Engines({ metric }: { metric: KpiMetric }) {
                   x={x.map(slotLabel)}
                   series={[{ key: OWN_KEY, name: ownLabel, color: OWN_COLOR, values: r.series, own: true }]}
                   height={110}
+                  domain={domain}
                   yTick={(v) => `${v}%`}
                   value={(v) => `${v.toFixed(1)}%`}
                   tooltipTitle={(d) => t("hero.tooltip", { x: d })}

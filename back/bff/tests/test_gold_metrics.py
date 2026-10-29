@@ -162,6 +162,53 @@ class BrandTrend(unittest.TestCase):
                          [("Kia", True, 9), ("Toyota", False, 370)])
 
 
+class TypeTrend(unittest.TestCase):
+    """dims=type and dimension=type (contract P12 B101, M08 type_exposure): per bucket and type, the own answers with
+    that type signal over the bucket's answers, i.e. mentions/types own_exposure round by round. The reader answered
+    no dims (2026-10-29), so the renewal Mention's type trend and its favourability trend never showed."""
+
+    def conn(self, *rows) -> Conn:
+        return Conn(kpi=list(rows) or [counts_row(round_date=D1, engine_key=1, answers=10, t_mention=6, t_final_choice=1),
+                                       counts_row(round_date=D2, engine_key=1, answers=20, t_mention=9, t_final_choice=4)])
+
+    def test_dims_type_comes_with_the_engine_trend_from_its_cells(self):
+        conn = self.conn()
+        ctx = context(conn, "surface=global&bucket=cycle&dimension=engine&metrics=visibility&dims=type:type_exposure")
+        out = asyncio.run(metrics.trend(ctx))["data"]
+        self.assertEqual([s["key"] for s in out["series"]], ["chatgpt"])
+        (block,) = out["dims"]
+        self.assertEqual((block["dimension"], [s["key"] for s in block["series"]]), ("type", list(metrics.TYPES)))
+        self.assertEqual({(s["metric"], s["kind"]) for s in block["series"]}, {("type_exposure", "ratio")})
+        by = {s["key"]: [p["ratio"] for p in s["points"]] for s in block["series"]}
+        self.assertEqual(by["mention"], [{"num": 6, "den": 10}, {"num": 9, "den": 20}])
+        self.assertEqual(by["final_choice"], [{"num": 1, "den": 10}, {"num": 4, "den": 20}])
+        self.assertEqual(by["definition"], [{"num": 0, "den": 10}, {"num": 0, "den": 20}])
+        self.assertEqual(conn.reads("kpi_cell"), 2)  # the engine trend's mention and citation cells, nothing more
+
+    def test_dimension_type(self):
+        out = asyncio.run(metrics.trend(context(self.conn(), "surface=global&bucket=cycle&dimension=type")))["data"]
+        self.assertEqual([(s["key"], s["label"], s["metric"]) for s in out["series"]], [(t, t, "type_exposure") for t in metrics.TYPES])
+
+    def test_a_bucket_without_answers_is_a_gap(self):
+        conn = self.conn(counts_row(round_date=D2, engine_key=1, answers=20, t_mention=9))
+        out = asyncio.run(metrics.trend(context(conn, "surface=global&dimension=engine&dims=type")))["data"]
+        mention = next(s for s in out["dims"][0]["series"] if s["key"] == "mention")
+        self.assertEqual([(p["ratio"], p["gap"]) for p in mention["points"]], [(None, True), ({"num": 9, "den": 20}, False)])
+
+    def test_dims_none_is_the_engines_summed(self):
+        conn = self.conn(counts_row(round_date=D2, engine_key=1, answers=20, tracked=15),
+                         counts_row(round_date=D2, engine_key=2, answers=10, tracked=4))
+        out = asyncio.run(metrics.trend(context(conn, "surface=global&dimension=engine&metrics=visibility&dims=none:visibility")))["data"]
+        (none,) = out["dims"][0]["series"]
+        self.assertEqual([p["ratio"] for p in none["points"]], [None, {"num": 19, "den": 30}])
+
+    def test_an_unsupported_or_repeated_dims_dimension_is_refused(self):
+        for qs in ("dimension=engine&dims=brand", "dimension=engine&dims=engine", "dimension=none&dims=type&dims=type"):
+            with self.subTest(qs), self.assertRaises(metrics.HTTPException) as e:
+                asyncio.run(metrics.trend(context(self.conn(), f"surface=global&{qs}")))
+            self.assertEqual(e.exception.status_code, 422)
+
+
 class Summary(unittest.TestCase):
     CATALOG = [{"catalog_row_id": i, "prompt_id": i, "text": "p", "kind": "std", "measured": True, "brand_bit": 1,
                 "brand_presence": None, "list_type": None, "depth1": None, "depth2": None, "depth3": None,

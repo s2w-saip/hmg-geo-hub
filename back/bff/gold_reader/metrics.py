@@ -250,13 +250,16 @@ async def brands(ctx: Context) -> dict:
     return envelope(ctx, {**data, "by_engine": by_engine, "truncated": False})
 
 
+DEFAULT_TREND_METRICS = ["visibility", "share_of_voice", "sentiment", "position", "citation_share"]
+
+
 async def trend(ctx: Context) -> dict:
     # A trend with no explicit range spans the published calendar, rather than a fabricated window.
     if not ctx.q.get("from") and not ctx.q.get("to"):
         ctx.selected_dates = ctx.dates[:]
     bucket = ctx.q.get("bucket", "cycle")
     dimension = ctx.q.get("dimension", "none")
-    wanted = values(ctx.q, "metrics") or ["visibility", "share_of_voice", "sentiment", "position", "citation_share"]
+    wanted = values(ctx.q, "metrics") or DEFAULT_TREND_METRICS
     if len(wanted) == 1 and "," in wanted[0]:
         wanted = wanted[0].split(",")
     def bucket_key(day):
@@ -305,9 +308,17 @@ async def trend(ctx: Context) -> dict:
     if dimension == "brand":
         return envelope(ctx, {"bucket": bucket, "dimension": dimension, "own_label": ctx.label, "buckets": bucket_rows,
                               "series": await brand_series(ctx, wanted, buckets, bucket_key), "dims": None})
+    # dims (contract P12 B101): the dimensions answered with this one, each as if asked alone. The mention trend
+    # answers none, engine and type; all of them come from the same cells (none = the engines summed).
+    specs: list[tuple[str, list[str]]] = []
+    for spec in values(ctx.q, "dims"):
+        dim, _, mets = spec.split("@", 1)[0].partition(":")
+        if dim not in {"none", "engine", "type"} or dim in {dimension, *(d for d, _ in specs)}:
+            raise HTTPException(422, "Unsupported or repeated trend dims dimension")
+        specs.append((dim, [m for m in mets.split(",") if m] or DEFAULT_TREND_METRICS))
     groups: dict[tuple[str, str | None], dict] = {}
     engine_codes = {r["engine_key"]: r["code"] for r in await ctx.conn.fetch("SELECT * FROM gold.dim_engine")}
-    grouping = "date_engine" if dimension == "engine" else "date"
+    grouping = "date_engine" if "engine" in {dimension, *(d for d, _ in specs)} else "date"
     source_rows = await counts(ctx, group=grouping, prompts=False)
     cite_rows = await counts(ctx, group=grouping, family="citations", prompts=False)
     for row in source_rows:
@@ -325,22 +336,51 @@ async def trend(ctx: Context) -> dict:
             if col.startswith("cit_"):
                 target[col] += row[col]
     buckets = sorted({bucket_key(d) for d in ctx.selected_dates})
-    series = []
-    dims = sorted({d for _, d in groups}, key=lambda x: x or "")
-    for dim in dims:
-        for metric in wanted:
+    by_bucket = groups
+    if grouping == "date_engine":
+        by_bucket = {}
+        for (key, _), c in groups.items():
+            target = by_bucket.setdefault((key, None), {k: 0 for k in COUNTS})
+            for col in COUNTS:
+                target[col] += c[col]
+
+    def plain_series(cells: dict, metrics: list[str]) -> list[dict]:
+        series = []
+        for dim in sorted({d for _, d in cells}, key=lambda x: x or ""):
+            for metric in metrics:
+                points = []
+                for key in buckets:
+                    c = cells.get((key, dim))
+                    val = metric_values(c).get(metric) if c else None
+                    points.append({"bucket": key, "rank" if metric == "position" else "ratio": val,
+                                   "gap": c is None, "gap_reason": "no_answer" if c is None else None,
+                                   "origin": "report" if ctx.card else "live", "negative": c["sent_neg"] if c and metric == "sentiment" else None})
+                series.append({"metric": metric, "kind": "rank" if metric == "position" else "ratio", "key": dim,
+                               "label": dim or ctx.label, "points": points})
+        return series
+
+    def type_series() -> list[dict]:
+        # M08 type_exposure: the cells' t_<type> are the own answers with that type signal (mentions/types own_answers)
+        series = []
+        for t in TYPES:
             points = []
             for key in buckets:
-                c = groups.get((key, dim))
-                val = metric_values(c).get(metric) if c else None
-                points.append({"bucket": key, "rank" if metric == "position" else "ratio": val,
+                c = by_bucket.get((key, None))
+                points.append({"bucket": key, "ratio": ratio(c[f"t_{t}"], c["answers"]) if c else None,
                                "gap": c is None, "gap_reason": "no_answer" if c is None else None,
-                               "origin": "report" if ctx.card else "live", "negative": c["sent_neg"] if c and metric == "sentiment" else None})
-            series.append({"metric": metric, "kind": "rank" if metric == "position" else "ratio", "key": dim,
-                           "label": dim or ctx.label, "points": points})
+                               "origin": "report" if ctx.card else "live"})
+            series.append({"metric": "type_exposure", "kind": "ratio", "key": t, "label": t, "points": points})
+        return series
+
+    def series_of(dim: str, metrics: list[str]) -> list[dict]:
+        if dim == "type":
+            return type_series()
+        return plain_series(groups if dim == "engine" else by_bucket, metrics)
+
     return envelope(ctx, {"bucket": bucket, "dimension": dimension, "own_label": ctx.label,
                           "buckets": bucket_rows,
-                          "series": series, "dims": None})
+                          "series": series_of(dimension, wanted),
+                          "dims": [{"dimension": d, "series": series_of(d, m), "meta": ctx.meta()} for d, m in specs] or None})
 
 
 async def brand_series(ctx: Context, wanted: list[str], buckets: list[str], bucket_key) -> list[dict]:

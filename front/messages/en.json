@@ -4849,9 +4849,9 @@
         "basisPeriod": "vs the equal period just before",
         "basisCycle": "vs the previous round ({date})",
         "basisCycleNoDate": "vs the previous round",
-        "basisPrev": "vs the cumulative at the period's first measurement ({date})",
-        "noteCycle": "▲▼ Changes are against the previous round ({date}), computed from the same aggregate with the same rule as the Overview cards.",
-        "notePrev": "▲▼ Changes are period-cumulative: compared with the cumulative at the period's first measurement ({date}).",
+        "basisPrev": "vs the previous round ({date})",
+        "noteCycle": "▲▼ Changes are against the previous round ({date}).",
+        "notePrev": "▲▼ Changes are against the previous round ({date}).",
         "notePeriod": "▲▼ Changes compare the selected period with the equal period just before it.",
         "noteRank": "▲▼ Changes are the shift in average position (places) against the previous round. Negative (named earlier) is better.",
         "noteRankPeriod": "▲▼ Changes are the shift in average position (places) against the equal period just before. Negative (named earlier) is better."
@@ -4959,6 +4959,7 @@
         "infoExposure": "Share of all AI answers in which the brand appears. Values are the snapshot of the measurement date; trends and changes are per round. Trends exist for us and the top 10 brands by mentions only (the rest show ‘no trend’). vs us = competitor − us.",
         "infoSov": "Each brand's share of all brand mentions. Values are the snapshot of the measurement date; trends and changes are per round. Trends exist for us and the top 10 brands by mentions only (the rest show ‘no trend’). vs us = competitor − us.",
         "chipSnapshot": "Measurement-date snapshot",
+        "chipPeriod": "Selected period, cumulative",
         "chipTrend": "{n}-round trend",
         "sub": "Click a row to add or remove it as a compare brand — every chart on the page follows.",
         "colBrand": "Brand",
@@ -5035,7 +5036,10 @@
         "distChip": "{n} signals",
         "distGo": "See prompts",
         "distAria": "Sentiment mix",
-        "matrixAria": "Sentiment by mention type"
+        "matrixAria": "Sentiment by mention type",
+        "matrixAll": "All mentions",
+        "matrixNoteTitle": "All and the types",
+        "matrixNote": "All mentions is the sentiment of every own mention, the same as the sentiment distribution card above. One mention can carry several type signals, so the type rows add up to more than all mentions."
       },
       "rank": {
         "label": "AI first position",
