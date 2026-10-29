@@ -50,8 +50,10 @@ const NON_VENDOR_STANDARD_PATHS = [
 // HIDDEN from the 표준 SNB but route access 유지(위 canAccessRoute 커버리지) —
 // visibleRoutes 에서는 빠진다.
 //   - customer-interest (2026-06-23): 표준 메뉴와 성격이 달라 메뉴에서만 숨김.
-//   (ai-funnel/visibility 는 2026-10-28 메뉴로 돌아옴 — 메뉴 = 운영 웹 + AI Visibility.)
+//   - ai-funnel/visibility (2026-10-29, 사용자): Gold 가 아닌 HUB GA4·SEO 화면이라 다시 숨김(코드·주소는 유지).
 const HIDDEN_STANDARD_PATHS = [
+  "/standard/ai-funnel/visibility",
+  "/renewal/standard/ai-funnel/visibility",
   "/customer-interest",
   "/customer-interest/google-keywords",
   "/customer-interest/social-scraping",

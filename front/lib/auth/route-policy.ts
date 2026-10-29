@@ -126,22 +126,23 @@ export const ROUTES = [
     roles: STANDARD_VIEWERS,
     group: "standard" as const,
   },
-  // AI 가시성 — back in the Global menu (2026-10-28), the last item of AI Agent Funnel (the menu
-  // is the production web's plus this one). It reads the HUB analytics store (bff screen
-  // sources/analytics). The parent /standard/ai-funnel still redirects to acr.
+  // AI 가시성 — hidden from the menu again (2026-10-29, user): it reads the HUB analytics store
+  // (GA4 · SEO, bff screen sources/analytics), not Gold. The pages and their addresses stay. The
+  // parent /standard/ai-funnel still redirects to acr.
   {
     path: "/standard/ai-funnel/visibility",
     key: "aiFunnelVisibility",
     roles: STANDARD_VIEWERS,
     group: "standard" as const,
+    hidden: true,
   },
-  // Renewal AI Visibility (2026-10-27) — same roles as the original; the renewal sidebar opens it
-  // for the original's menu item.
+  // Renewal AI Visibility (2026-10-27) — same roles as the original; hidden with it.
   {
     path: "/renewal/standard/ai-funnel/visibility",
     key: "renewalAiFunnelVisibility",
     roles: STANDARD_VIEWERS,
     group: "standard" as const,
+    hidden: true,
   },
   {
     path: "/standard/ai-funnel/acr",

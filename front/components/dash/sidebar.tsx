@@ -137,7 +137,8 @@ export type StandardSubItem = StandardSubLeaf & { children?: StandardSubLeaf[] }
 
 // Exported (read-only) for the renewal shell's sidebar (app/[locale]/(renewal)/_shell/rn-sidebar.tsx),
 // which lists the same items in its own layout.
-// Global menu (2026-10-28) = the production web's (hmg-geo.vercel.app) + AI Visibility, last under AI Agent Funnel.
+// Global menu (2026-10-28) = the production web's (hmg-geo.vercel.app). AI Visibility keeps its row, last under
+// AI Agent Funnel, but its route is hidden for every role since 2026-10-29 (route-policy).
 // The renewal pages are not rows here — the renewal sidebar opens /renewal<path> for every item (rn-sidebar.tsx);
 // the customer-interest tree stays for its routes, its items are hidden for every role (route-policy).
 export const STANDARD_SUB_ITEMS: StandardSubItem[] = [

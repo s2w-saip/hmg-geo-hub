@@ -6,7 +6,7 @@ import ko from "@/messages/ko.json";
 import { visibleRoutes } from "@/lib/auth/route-policy";
 import type { Role } from "@/lib/auth/types";
 
-// The renewal menu (2026-10-28) = the production web's (hmg-geo.vercel.app) + AI Visibility, every
+// The renewal menu (2026-10-29) = the production web's (hmg-geo.vercel.app) — AI Visibility is hidden again — every
 // section open down to its sub-items, and every item opens /renewal<path> — its renewal page or the
 // "not implemented" page; no item leaves the renewal shell for an original screen.
 
@@ -57,7 +57,6 @@ const GLOBAL = [
   "AI Agent Funnel (group)",
   "ACR β → /renewal/standard/ai-funnel/acr",
   "AI Conversion β → /renewal/standard/ai-funnel/conversion",
-  "AI Visibility β → /renewal/standard/ai-funnel/visibility",
 ];
 const WEBSITE = [
   "Overview → /renewal/website",
@@ -70,7 +69,7 @@ const WEBSITE = [
 ];
 
 describe("renewal sidebar", () => {
-  it("shows an administrator the production menu + AI Visibility, every section open, every item in the renewal shell", () => {
+  it("shows an administrator the production menu, every section open, every item in the renewal shell", () => {
     expect(menu("admin")).toEqual({
       standard: { open: true, links: GLOBAL },
       website: { open: true, links: WEBSITE },
