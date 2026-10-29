@@ -44,6 +44,43 @@ class AnalyticsRules(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(conversions(rows,[{**PROP,"conv_basis":2}]),90)
         self.assertIsNone(conversions([], [PROP]))
 
+    def test_tracked_events_collected_without_a_tracked_one_are_zero(self):
+        """Basis 2 (2026-10-29): GA4 sends no row for a tracked event that did not happen, so a slice whose events
+        were collected (report 3 rows of that cohort) but holds no tracked event observed zero conversions."""
+        tracked = {**PROP, "conv_basis": 2}
+        seen = [dict(prop_key=1, report=3, is_ai=True, is_conv=False, event_count=40)]
+        self.assertEqual(conversions(seen, [tracked]), 0)
+        self.assertEqual(conversions(seen + [dict(prop_key=1, report=3, is_ai=True, is_conv=True, event_count=3)], [tracked]), 3)
+        self.assertIsNone(conversions([], [tracked]))  # no event collected for the slice: unknown
+        self.assertIsNone(conversions(seen, [tracked], ai=False))  # the other cohort's events were not collected
+
+    async def test_a_collected_day_without_rows_is_zero(self):
+        """2026-10-29: the collector replaces whole days and leaves a daily `total` window for every collected day, so
+        a report without a row on such a day observed zero (GA4 leaves out all-zero rows). A day without that window
+        was not collected and stays unknown."""
+        d1, d2, d3 = date(2026, 10, 23), date(2026, 10, 24), date(2026, 10, 25)
+        de = dict(PROP, prop_key=2, property_id="de", country="DE")
+        def at(day, report, ai, **kw):
+            return {**row(report, ai), "date": day, **kw}
+        rows = [at(d1, 2, True, sessions=4, key_events=1), at(d1, 5, False, sessions=50),
+                at(d2, 5, False, sessions=40),  # a day without AI sessions
+                at(d3, 5, False, sessions=45), at(d3, 2, True, sessions=2),
+                at(d1, 2, True, sessions=3, key_events=1, prop_key=2, engine="perplexity"), at(d1, 5, False, sessions=30, prop_key=2)]
+
+        def daily(prop_key, day):
+            return dict(prop_key=prop_key, window_end=day, window_days=1, cohort="total", page_key=0, engine_mask=0, device_mask=0, nvr_mask=0, users=9)
+        windows = [daily(1, d) for d in (d1, d2, d3)] + [daily(2, d) for d in (d1, d2, d3)]
+        data = (await conversion(Connection([[PROP, de], rows, windows]), QueryParams("from=2026-10-23&to=2026-10-25")))["data"]
+        trend = {t["date"]: t for t in data["trend"]}
+        self.assertEqual((trend[d2]["ai_sessions"], trend[d2]["ai_conversions"]), (0, 0))
+        self.assertEqual((trend[d3]["ai_sessions"], trend[d3]["ai_conversions"]), (2, 0))
+        # Perplexity came to DE only: KR converted zero times from it, the engine's total is DE's
+        self.assertEqual({e["engine"]: e["conversions"] for e in data["engines"]}, {"chatgpt": 1, "perplexity": 1})
+        self.assertEqual(data["metrics"]["ai_conversions"], 2)
+        # without the daily window the day was not collected: unknown, as before
+        gap = (await conversion(Connection([[PROP], rows[:5], [daily(1, d1), daily(1, d3)]]), QueryParams("from=2026-10-23&to=2026-10-25")))["data"]
+        self.assertIsNone({t["date"]: t for t in gap["trend"]}[d2]["ai_sessions"])
+
     async def test_period_users_are_exact_windows_not_daily_sums(self):
         rows = [row(2,True),row(5,False),row(1,False),row(3,True)]
         rows[0].update(sessions=10,key_events=2)

@@ -7,7 +7,13 @@
 #               because the network between the office and the VM passes 80xx ports (8443 and 9443 time out)
 #   sync        cron, hourly: the Gold catalog import (refused reads are recorded and retried next run)
 #   check-sync  cron: WARN when the last successful import is older than HGH_SYNC_STALE_HOURS (3)
-# sync and check-sync append one line each to .local/vm-cron.log.
+#   ga4         the GA4 collector (back/analytics/ga4_collect.py) once, by hand: its arguments pass through
+#               (--dry-run, --backfill 180, --from/--to, --property). It runs in a throwaway container of the BFF
+#               image on the host network (the HUB data DB on 127.0.0.1, GA4 on the internet); the secrets travel in
+#               env files only. Needs .env.ga4.local (GA4 credentials) and .local/ga4-properties.json (the properties).
+#   ga4-cron    cron, daily: `ga4` with its defaults (the last 3 days again). The production and dev builds share
+#               the one HUB data DB, so this one schedule serves both; a run by hand only replaces the same days.
+# sync, check-sync and ga4-cron append one line each to .local/vm-cron.log.
 set -euo pipefail
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$repo"
@@ -19,6 +25,20 @@ ext_ip=172.30.0.11     # fixed, so the proxy's resolved upstream survives an ext
 logs=(--log-opt max-size=10m --log-opt max-file=5)
 log() { mkdir -p .local; echo "$(date -u +%FT%TZ) $*" >>.local/vm-cron.log; }
 replace() { docker rm -f "$1" >/dev/null 2>&1 || true; }
+ga4_run() {
+    for f in .env.analytics-ingest.local .env.ga4.local .local/ga4-properties.json; do
+        [ -f "$f" ] || { echo "$f is missing (back/analytics/README.md, GA4 수집기)" >&2; return 1; }
+    done
+    if grep -q '^GA4_SERVICE_ACCOUNT_FILE=' .env.ga4.local; then
+        echo 'a service account key needs google-auth, which the BFF image does not have: use the OAuth refresh token' >&2; return 1
+    fi
+    docker image inspect hgh-gold-api:local >/dev/null 2>&1 || { echo 'hgh-gold-api:local is missing: run vm.sh bff first' >&2; return 1; }
+    docker run --rm --network host --env-file .env.analytics-ingest.local --env-file .env.ga4.local \
+        -e HGH_GA4_PROPERTIES=/collector/ga4-properties.json \
+        -v "$repo/back/analytics/ga4_collect.py:/collector/ga4_collect.py:ro" \
+        -v "$repo/.local/ga4-properties.json:/collector/ga4-properties.json:ro" \
+        hgh-gold-api:local python -X utf8 /collector/ga4_collect.py "$@"
+}
 
 case "${1:-}" in
 bff)
@@ -83,6 +103,21 @@ check-sync)
         log "check-sync WARN last successful import: $hours h ago (limit $limit h)"; exit 1
     fi
     log "check-sync ok last successful import $hours h ago" ;;
+ga4)
+    shift
+    ga4_run "$@" ;;
+ga4-cron)
+    exec 9>.local/vm-ga4.lock
+    flock -n 9 || { log 'ga4 skipped: the previous run is still going'; exit 0; }
+    if out="$(ga4_run 2>&1)"; then state=ok; else state=FAILED; fi
+    # one line: every property's state, its days and rows, GA4's notes (thresholded · other_row) and errors
+    line="$(printf '%s' "$out" | python3 -c 'import json,sys
+t=sys.stdin.read(); d=json.loads(t[t.index("{"):])
+print(" ".join(p["property"]+"/"+p["country"]+"="+p["status"]+(" "+p["from"]+".."+p["to"]+" rows="+str(p["rows"]) if "rows" in p else "")
+      +("" if not p.get("notes") else " notes="+",".join(p["notes"]))+(" error="+p["error"][:120] if p.get("error") else "") for p in d["properties"]))' 2>/dev/null)" \
+        || line="$(printf '%s' "$out" | tail -1 | cut -c1-400)"
+    log "ga4 $state $line"
+    [ "$state" = ok ] ;;
 *)
-    echo "usage: $0 bff|ext|proxy|sync|check-sync" >&2; exit 2 ;;
+    echo "usage: $0 bff|ext|proxy|sync|check-sync|ga4|ga4-cron" >&2; exit 2 ;;
 esac

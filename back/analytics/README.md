@@ -78,8 +78,38 @@ DB 접속 정보는 프런트의 `NEXT_PUBLIC_*`에 넣지 않습니다. `script
 ## 데이터 수집과 화면 전환
 
 표준·웹사이트·프로젝트의 GA4 전환과 SEO 화면은 이 DB를 조회합니다. API는 `/v1/analytics/conversion`, `/v1/analytics/visibility`이며, 조회 코드는 `back/bff/hub_stores/analytics_reader.py`입니다.
-실제 GA4/GSC 및 서버 크롤 로그 수집기는 아직 연결하지 않았습니다. 속성·사이트 매핑과 측정 행이 없으므로 지표는 null, 화면은 `데이터 없음`입니다.
 Gold의 GA4/SEO 측정값을 복사하거나 가상 계정·샘플 데이터를 적재하지 않았습니다.
+
+### GA4 수집기 (`ga4_collect.py`, 2026-10-29)
+
+GA4 Data API(runReport)를 직접 읽어 `analytics.ga4_*`에 저장합니다. 화면(BFF)과 브라우저는 GA4를 부르지 않고 저장된 행만 읽습니다.
+GA4 자격 증명을 인계받기 전이라 아직 실행하지 않았고, 지금은 속성 행도 측정 행도 없습니다(화면은 `연결된 GA4 속성이 없습니다`).
+
+| 항목 | 내용 |
+| --- | --- |
+| 실행 | 저장소 루트에서 `python -X utf8 back/analytics/ga4_collect.py` — 최근 3일(속성 시간대의 어제까지)을 다시 받아 바꿔 씁니다. 처음은 `--backfill 180`, GA4만 읽고 쓰지 않으려면 `--dry-run`, 기간 지정은 `--from`·`--to`, 속성 하나만은 `--property` |
+| 주기 | 하루 한 번. GA4 값은 며칠 동안 확정되므로 매번 최근 3일을 다시 받습니다 |
+| VM (taeho-dev) | production · dev build가 HUB 데이터 DB 하나를 같이 써서 수집도 하나입니다. 정기 실행은 cron `15 9 * * * bash /home/taeho/hmg-geo-hub/scripts/vm.sh ga4-cron >>/home/taeho/hmg-geo-hub/.local/vm-cron.log 2>&1`(09:15 UTC — 모든 시간대의 어제가 끝난 뒤, 로그에 속성별 한 줄), 수동 실행은 `bash scripts/vm.sh ga4 --dry-run` · `bash scripts/vm.sh ga4 --backfill 180`처럼 수집기 인자를 그대로 넘깁니다. BFF 이미지(`hgh-gold-api:local`)의 일회용 컨테이너가 호스트 네트워크에서 돕니다. 서비스 계정 키는 이미지에 `google-auth`가 없어 아직 쓸 수 없습니다 |
+| 쓰기 계정 | `.env.analytics-ingest.local`의 `HGH_ANALYTICS_WRITER_DB_URL` (`hmg_analytics_writer`). 한 번에 하나만 실행됩니다(advisory lock) |
+| GA4 자격 증명 | `.env.ga4.local`: OAuth `GA4_OAUTH_CLIENT_ID`·`GA4_OAUTH_CLIENT_SECRET`·`GA4_OAUTH_REFRESH_TOKEN`(예전 웹과 같은 이름), 또는 서비스 계정 `GA4_SERVICE_ACCOUNT_FILE`(JSON 키 경로, 서명에 `google-auth` 패키지 필요). 범위는 `analytics.readonly` |
+| 속성 목록 | `.local/ga4-properties.json` (`HGH_GA4_PROPERTIES`로 바꿈, 형식은 `ga4-properties.example.json`): 속성 ID · 브랜드 · 국가 · 전환 기준(`key_events` = GA4 주요 이벤트, `events` = 적은 이벤트만) · `status: unmapped`(등록만, 수집 안 함) |
+| 속성 상태 | 수집하면 `active`, GA4가 거부(403)하면 `pending_grant`로 두고 그 속성의 기존 행은 그대로 둡니다 |
+
+저장하는 것(속성 · 날짜마다, 모든 보고서에 기기 · 신규/재방문을 둬 화면 필터가 똑같이 걸립니다):
+
+| report | 내용 |
+| --- | --- |
+| 1 traffic_total | 채널 그룹별 세션 · 사용자(일) · 주요 이벤트 · 조회 (`is_ai` = AI Assistant 채널) |
+| 2 traffic_ai | AI Assistant 세션을 `sessionSource`별로(→ 엔진: chatgpt · gemini · perplexity · claude · copilot, 그 밖은 엔진 없음) |
+| 3 events | 이벤트별 발생 수 · 주요 이벤트. AI는 `sessionSource`별, 그 밖은 비AI 채널 합. `is_conv` = 전환 기준의 이벤트 |
+| 4 landing | AI 입구 페이지(`sessionSource`별)와, 마지막 적재일까지 90일 안에 AI 유입이 있었던 페이지의 비AI 세션(같은 페이지 기준) |
+| 5 totals | 전체 세션 · 조회 |
+| `ga4_users_window` | GA4가 중복을 뺀 사용자 수: 코호트 ai · general · total을 날마다, 그리고 마지막 적재일과 그 직전 같은 길이 기간의 끝에서 7 · 28 · 90일. 필터 조합(마스크)은 아직 없음 |
+
+수집한 날은 일별 `total` 창이 사용자 0명이라도 남습니다. 리더는 그 날에 행이 없는 값을 0으로 읽습니다(GA4는 모두 0인 행을 보내지 않음). 수집하지 않은 날은 `null`입니다.
+시험: `bff.tests.test_ga4_collect` — GA4 Data API 모사기로 수집한 행을 실제 리더에 넣어, 화면 숫자가 세션 원자료에서 직접 센 값과 같은지 봅니다. `HGH_GA4_TEST_DB_URL`(버려도 되는 DB)을 주면 PostgreSQL에 쓰고 리더 SQL로 다시 읽습니다.
+
+GSC와 서버 크롤 로그(SEO) 수집기는 아직 없습니다.
 프로젝트 매핑은 로컬 참조의 UUID와 국가·브랜드로 해석합니다. 원격 Gold의 정수 키를 이 DB의 키로 사용하지 않습니다.
 엔진·기기·방문자 필터 비트의 정의가 제공되지 않았으므로 정확한 기간 사용자 수는 필터 없음(마스크 0) 창만 읽고, 해석할 수 없는 조합은 null입니다.
 SEO는 현재 게시 뷰만 조회하며, 기기 필터는 검색 노출, 엔진 필터는 크롤링 수에 각각 적용합니다.

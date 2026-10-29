@@ -26,17 +26,33 @@ def observed_sum(rows, column):
     return sum(row[column] for row in rows)
 
 
-def conversions(rows, properties, ai=True):
-    """Each property's declared basis chooses one report, never two overlapping reports."""
+def conversions(rows, properties, ai=True, complete=frozenset()):
+    """Each property's declared basis chooses one report, never two overlapping reports. Basis 2: GA4 sends no row
+    for a tracked event that did not happen, so a slice whose events were collected (report 3 rows of the cohort)
+    without a tracked one observed zero conversions. A property in `complete` was collected on every day of the
+    slice (collected_days), so a count it has no row for is zero there too; anything else without a row stays unknown."""
     totals = []
     for prop in properties:
         if prop["status"] != "active":
             continue
-        basis = prop["conv_basis"]
-        selected = [r for r in rows if r["prop_key"] == prop["prop_key"] and r["is_ai"] is ai
-                    and (r["report"] == (2 if ai else 1) if basis == 1 else r["report"] == 3 and r["is_conv"] is True)]
-        totals.append({"count": observed_sum(selected, "key_events" if basis == 1 else "event_count")})
+        mine = [r for r in rows if r["prop_key"] == prop["prop_key"] and r["is_ai"] is ai]
+        if prop["conv_basis"] == 1:
+            count = observed_sum([r for r in mine if r["report"] == (2 if ai else 1)], "key_events")
+        else:
+            events = [r for r in mine if r["report"] == 3]
+            tracked = [r for r in events if r["is_conv"] is True]
+            count = observed_sum(tracked, "event_count") if tracked else 0 if events else None
+        totals.append({"count": 0 if count is None and prop["prop_key"] in complete else count})
     return observed_sum(totals, "count")
+
+
+def collected_days(windows):
+    """prop_key → the days the collector wrote: its daily `total` users window (written even with zero users)."""
+    out = defaultdict(set)
+    for w in windows:
+        if w["window_days"] == 1 and w["cohort"] == "total" and w["page_key"] == 0 and w["engine_mask"] == w["device_mask"] == w["nvr_mask"] == 0:
+            out[w["prop_key"]].add(w["window_end"])
+    return out
 
 
 def period(q, latest):
@@ -117,17 +133,25 @@ async def conversion(conn, q):
     windows = [dict(r) for r in await conn.fetch("""SELECT w.*,v.value AS page,u.url FROM analytics.ga4_users_window w
         LEFT JOIN analytics.ga4_value v ON v.kind='page' AND v.value_key=w.page_key LEFT JOIN ref.dim_url u ON u.url_key=v.url_key
         WHERE w.prop_key=ANY($1::smallint[]) AND w.window_end BETWEEN $2 AND $3 ORDER BY w.window_end,w.prop_key,w.cohort""", keys, start, end)]
+    # The collector (back/analytics/ga4_collect.py) replaces whole days and leaves a daily `total` window for every
+    # day it collected, so on such a day a report without a row observed zero (GA4 leaves out all-zero rows).
+    collected = collected_days(windows)
+    def complete(days):
+        return frozenset(k for k in keys if days <= collected[k])
+    whole = complete({start + timedelta(days=i) for i in range(days)})
+    def zero_if_collected(value, done=whole, prop_keys=keys):
+        return 0 if value is None and set(prop_keys) <= done else value
     # Reports are separate observations: traffic, events and landing rows must never be added together.
     traffic = [r for r in rows if r["report"] == 2]
     totals = [r for r in rows if r["report"] == 5]
     events = [r for r in rows if r["report"] == 3]
     ai_traffic = [r for r in traffic if r["is_ai"] is True]
-    ai_sessions = observed_sum(ai_traffic, "sessions")
-    total_sessions = observed_sum(totals, "sessions")
+    ai_sessions = zero_if_collected(observed_sum(ai_traffic, "sessions"))
+    total_sessions = zero_if_collected(observed_sum(totals, "sessions"))
     ai_events = [r for r in events if r["is_ai"] is True and r["is_conv"] is True]
     general_events = [r for r in events if r["is_ai"] is False and r["is_conv"] is True]
-    ai_conv = conversions(rows, properties)
-    general_conv = conversions(rows, properties, ai=False)
+    ai_conv = conversions(rows, properties, complete=whole)
+    general_conv = conversions(rows, properties, ai=False, complete=whole)
     # Exact period users are read as a window, not approximated by summing daily users.
     filtered = any(values(q, k) for k in ("engine", "device", "visitor_type"))
     def exact_users(cohort, prop_keys=keys, page_key=0, window_end=end, window_days=days):
@@ -138,18 +162,18 @@ async def conversion(conn, q):
                     and r["engine_mask"] == r["device_mask"] == r["nvr_mask"] == 0]
         return observed_sum(selected, "users") if len(selected) == len(prop_keys) else None
     ai_users, human_users = exact_users("ai"), exact_users("general")
-    human_sessions = observed_sum([r for r in rows if r["report"] == 1 and r["is_ai"] is False], "sessions")
+    human_sessions = zero_if_collected(observed_sum([r for r in rows if r["report"] == 1 and r["is_ai"] is False], "sessions"))
     if human_sessions is None and not values(q,"engine") and total_sessions is not None and ai_sessions is not None and total_sessions >= ai_sessions:
         human_sessions = total_sessions - ai_sessions
     data["metrics"] = {"ai_sessions": ai_sessions, "ai_users": ai_users, "ai_conversions": ai_conv,
         "ai_conversion_rate": percent(ai_conv, ai_users), "human_sessions": human_sessions, "human_users": human_users,
         "human_conversions": general_conv, "human_conversion_rate": percent(general_conv, human_users),
-        "session_share": percent(ai_sessions, total_sessions), "page_views": observed_sum(totals, "page_views")}
-    data["trend"] = [{"date": day, "ai_sessions": observed_sum([r for r in ai_traffic if r["date"] == day], "sessions"),
-        "ai_conversions": conversions([r for r in rows if r["date"] == day], properties),
+        "session_share": percent(ai_sessions, total_sessions), "page_views": zero_if_collected(observed_sum(totals, "page_views"))}
+    data["trend"] = [{"date": day, "ai_sessions": zero_if_collected(observed_sum([r for r in ai_traffic if r["date"] == day], "sessions"), complete({day})),
+        "ai_conversions": conversions([r for r in rows if r["date"] == day], properties, complete=complete({day})),
         "ai_users": exact_users("ai", window_end=day, window_days=1)} for day in sorted({r["date"] for r in rows})]
     data["engines"] = [{"engine": engine, "sessions": observed_sum([r for r in ai_traffic if r["engine"] == engine], "sessions"),
-        "conversions": conversions([r for r in rows if r["engine"] == engine], properties)}
+        "conversions": conversions([r for r in rows if r["engine"] == engine], properties, complete=whole)}
         for engine in sorted({r["engine"] for r in ai_traffic if r["engine"]})]
     landing = [r for r in rows if r["report"] == 4]
     data["pages"] = [{"url": url, "sessions": observed_sum([r for r in landing if (r["url"] or r["page"]) == url and r["is_ai"] is True], "sessions"),
@@ -160,7 +184,8 @@ async def conversion(conn, q):
     data["windows"] = windows
     data["countries"] = [{"property_id": p["property_id"], "country": p["country"], "brand": BRAND_NAMES.get(p["brand_bit"]),
         "ai_users": exact_users("ai", [p["prop_key"]]),
-        "ai_sessions": observed_sum([r for r in ai_traffic if r["prop_key"] == p["prop_key"]], "sessions")} for p in properties]
+        "ai_sessions": zero_if_collected(observed_sum([r for r in ai_traffic if r["prop_key"] == p["prop_key"]], "sessions"), prop_keys=[p["prop_key"]])}
+        for p in properties]
     return result("conversion", data, reason=None if rows or windows else "no_measurements")
 
 
