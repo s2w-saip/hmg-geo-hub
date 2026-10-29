@@ -1,7 +1,0 @@
-{
-  "_comment": "Copy to .local/ga4-properties.json (git-ignored; HGH_GA4_PROPERTIES overrides the path). One entry per GA4 property: brand Hyundai | Kia | Genesis, country ISO-2, conversion.basis key_events (GA4 key events) | events (only the listed events). status unmapped = registered, market not mapped yet: stored, not collected.",
-  "properties": [
-    { "property_id": "469542848", "brand": "Kia", "country": "IT", "conversion": { "basis": "key_events" } },
-    { "property_id": "000000000", "brand": "Hyundai", "country": "DE", "conversion": { "basis": "events", "events": ["test_drive_request", "dealer_contact"] }, "status": "unmapped" }
-  ]
-}

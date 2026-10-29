@@ -135,4 +135,53 @@ DO $$ BEGIN
  BEGIN PERFORM count(*) FROM publication.api_key; RAISE EXCEPTION 'Editor reads keys'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
 END $$;
 RESET ROLE;
+-- GA4 registry: the API's role writes the registry and its history only; the collector reads it and notes its runs.
+SET LOCAL ROLE hmg_ga4_registry_editor;
+INSERT INTO analytics.ga4_registry(property_id,brand,country,conv_basis) VALUES('900000000001','Kia','IT',1);
+INSERT INTO analytics.ga4_registry(property_id,brand,country,conv_basis,conv_events) VALUES('900000000002','Hyundai','DE',2,'{generate_lead}');
+UPDATE analytics.ga4_registry SET conv_basis=2,conv_events='{test_drive}',enabled=false,updated_at=now() WHERE property_id='900000000001';
+INSERT INTO analytics.ga4_registry_event(property_id,action,changes) VALUES('900000000001','update','{"enabled":[true,false]}');
+DO $$ BEGIN
+ BEGIN INSERT INTO analytics.ga4_registry(property_id,brand,country,conv_basis) VALUES('900000000003','Hyundai','DE',1);
+       RAISE EXCEPTION 'Two collected properties in one market'; EXCEPTION WHEN unique_violation THEN NULL; END;
+ BEGIN INSERT INTO analytics.ga4_registry(property_id,brand,country,conv_basis) VALUES('G-123','Kia','IT',1);
+       RAISE EXCEPTION 'A non-numeric property id'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN INSERT INTO analytics.ga4_registry(property_id,brand,country,conv_basis) VALUES('900000000004','Kia','it',1);
+       RAISE EXCEPTION 'A lower-case country'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN INSERT INTO analytics.ga4_registry(property_id,brand,country,conv_basis) VALUES('900000000004','HMG','IT',1);
+       RAISE EXCEPTION 'An unknown brand'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN INSERT INTO analytics.ga4_registry(property_id,brand,country,conv_basis) VALUES('900000000004','Kia','FR',2);
+       RAISE EXCEPTION 'Listed events without an event'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN INSERT INTO analytics.ga4_registry(property_id,brand,country,conv_basis,conv_events) VALUES('900000000004','Kia','FR',1,'{x}');
+       RAISE EXCEPTION 'Events under the key events basis'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN UPDATE analytics.ga4_registry SET property_id='900000000009' WHERE property_id='900000000002';
+       RAISE EXCEPTION 'Registry role changes a property id'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN DELETE FROM analytics.ga4_registry; RAISE EXCEPTION 'Registry role deletes properties'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN UPDATE analytics.ga4_registry_event SET action='create'; RAISE EXCEPTION 'Registry role rewrites history'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN DELETE FROM analytics.ga4_registry_event; RAISE EXCEPTION 'Registry role deletes history'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN INSERT INTO analytics.ga4_collect_status(property_id,checked_at,status) VALUES('900000000001',now(),'collected');
+       RAISE EXCEPTION 'Registry role writes collector results'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN PERFORM 1 FROM analytics.ga4_row; RAISE EXCEPTION 'Registry role reads GA4 rows'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN PERFORM 1 FROM analytics.ga4_property; RAISE EXCEPTION 'Registry role reads collected properties'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN PERFORM 1 FROM catalog.prompt; RAISE EXCEPTION 'Registry role reads the catalog'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN CREATE TABLE analytics.forbidden(id int); RAISE EXCEPTION 'Registry role can create schema objects'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $$;
+RESET ROLE;
+SET LOCAL ROLE hmg_analytics_writer;
+INSERT INTO analytics.ga4_collect_status(property_id,checked_at,status,collected_at,collected_to) VALUES('900000000002',now(),'collected',now(),current_date-1);
+UPDATE analytics.ga4_collect_status SET status='failed',error='rollback-only' WHERE property_id='900000000002';
+DO $$ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM analytics.ga4_registry WHERE property_id='900000000002') THEN RAISE EXCEPTION 'The collector cannot read the registry'; END IF;
+ BEGIN UPDATE analytics.ga4_registry SET enabled=false; RAISE EXCEPTION 'The collector changes the registry'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN INSERT INTO analytics.ga4_collect_status(property_id,checked_at,status) VALUES('900000000005',now(),'collected');
+       RAISE EXCEPTION 'A result for an unregistered property'; EXCEPTION WHEN foreign_key_violation THEN NULL; END;
+END $$;
+RESET ROLE;
+SET LOCAL ROLE hmg_analytics_reader;
+DO $$ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM analytics.ga4_registry r JOIN analytics.ga4_collect_status s USING(property_id))
+    OR NOT EXISTS(SELECT 1 FROM analytics.ga4_registry_event WHERE property_id='900000000001') THEN
+   RAISE EXCEPTION 'The API reader cannot read the registry'; END IF;
+END $$;
+RESET ROLE;
 ROLLBACK;

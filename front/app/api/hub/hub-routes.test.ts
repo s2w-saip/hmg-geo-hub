@@ -14,6 +14,7 @@ vi.mock("@/lib/hub/client", () => ({ hubFetch: bff.fetch, hubLogin: bff.login })
 const session = await import("./session/route");
 const prompts = await import("./global-prompts/[[...rest]]/route");
 const saved = await import("./saved-filters/[[...rest]]/route");
+const ga4 = await import("./ga4-properties/[[...rest]]/route");
 
 const ID = "8f6f0c1e-2b7a-4c1e-9d2a-1b2c3d4e5f60";
 const SITE = "http://127.0.0.1:3333";
@@ -147,5 +148,33 @@ describe("/api/hub/saved-filters", () => {
     const res = await saved.POST(req("POST", "/api/hub/saved-filters", { body: { page: "overview", name: "n", query: "" }, cookie: "tok" }), ctx());
     expect(res.status).toBe(409);
     expect(await res.json()).toEqual({ error: { code: "limit", message: "A page keeps at most 50 saved filters", details: { limit: 50 } } });
+  });
+});
+
+describe("/api/hub/ga4-properties", () => {
+  it("passes the registry calls to the BFF with the token", async () => {
+    bff.fetch.mockResolvedValue({ data: { items: [] } });
+    expect((await ga4.GET(req("GET", "/api/hub/ga4-properties", { cookie: "tok", origin: null }), ctx())).status).toBe(200);
+    expect(bff.fetch).toHaveBeenLastCalledWith("GET", "/v1/hub/ga4-properties", { token: "tok", body: undefined });
+    const body = { propertyId: "469542848", brand: "Kia", country: "IT", basis: "key_events", events: [] };
+    expect((await ga4.POST(req("POST", "/api/hub/ga4-properties", { body, cookie: "tok" }), ctx())).status).toBe(201);
+    expect(bff.fetch).toHaveBeenLastCalledWith("POST", "/v1/hub/ga4-properties", { token: "tok", body });
+    expect((await ga4.GET(req("GET", "/api/hub/ga4-properties/469542848/events", { cookie: "tok", origin: null }), ctx(["469542848", "events"]))).status).toBe(200);
+    expect(bff.fetch).toHaveBeenLastCalledWith("GET", "/v1/hub/ga4-properties/469542848/events", { token: "tok", body: undefined });
+    expect((await ga4.POST(req("POST", "/api/hub/ga4-properties/469542848/stop", { cookie: "tok" }), ctx(["469542848", "stop"]))).status).toBe(200);
+    expect(bff.fetch).toHaveBeenLastCalledWith("POST", "/v1/hub/ga4-properties/469542848/stop", { token: "tok", body: undefined });
+  });
+
+  it("refuses unknown paths, missing sessions and cross-site writes before the BFF", async () => {
+    const cases: Array<[Promise<Response>, number]> = [
+      [ga4.GET(req("GET", "/api/hub/ga4-properties/G-1", { cookie: "tok" }), ctx(["G-1"])), 404],
+      [ga4.POST(req("POST", "/api/hub/ga4-properties/1/delete", { cookie: "tok" }), ctx(["1", "delete"])), 404],
+      [ga4.PUT(req("PUT", "/api/hub/ga4-properties/1/events", { body: {}, cookie: "tok" }), ctx(["1", "events"])), 404],
+      [ga4.GET(req("GET", "/api/hub/ga4-properties"), ctx()), 401],
+      [ga4.POST(req("POST", "/api/hub/ga4-properties/1/stop", { cookie: "tok", origin: "http://evil.test" }), ctx(["1", "stop"])), 403],
+      [ga4.PUT(req("PUT", "/api/hub/ga4-properties/1", { cookie: "tok" }), ctx(["1"])), 422],
+    ];
+    for (const [res, status] of cases) expect((await res).status).toBe(status);
+    expect(bff.fetch).not.toHaveBeenCalled();
   });
 });

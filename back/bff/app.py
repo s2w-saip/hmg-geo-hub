@@ -2,7 +2,8 @@
 login needs a signed-in HUB account (hub_stores/hub_auth.py), and screens and data reads run inside its scope
 (bff/access.py). Read-only, except what the HUB writes: every account changes its own password
 (/v1/auth/password) and keeps its own saved filters (/v1/hub/saved-filters); the top-level administrator also
-manages the accounts (/v1/hub/accounts) and edits Global prompts (/v1/hub/global-prompts)."""
+manages the accounts (/v1/hub/accounts), edits Global prompts (/v1/hub/global-prompts) and keeps the GA4 property
+registry (/v1/hub/ga4-properties)."""
 from __future__ import annotations
 
 import json
@@ -17,7 +18,7 @@ from fastapi.responses import JSONResponse
 
 from bff import access, api, screens
 from bff.gold_reader.db import close_pool, connection, open_pool
-from bff.hub_stores import accounts, analytics_db, catalog_editor, hub_auth, hub_catalog, operations_db, saved_filters
+from bff.hub_stores import accounts, analytics_db, catalog_editor, ga4_registry, hub_auth, hub_catalog, operations_db, saved_filters
 
 log = logging.getLogger("hgh.gold")
 
@@ -30,6 +31,7 @@ async def lifespan(app: FastAPI):
     await catalog_editor.open_pool()
     await saved_filters.open_pool()
     await accounts.open_pool()
+    await ga4_registry.open_pool()
     try:
         yield
     finally:
@@ -39,6 +41,7 @@ async def lifespan(app: FastAPI):
         await catalog_editor.close_pool()
         await saved_filters.close_pool()
         await accounts.close_pool()
+        await ga4_registry.close_pool()
 
 
 app = FastAPI(title="HMG GEO HUB BFF / read-only API", lifespan=lifespan)
@@ -154,6 +157,53 @@ async def account_action(user_id: UUID, action: str, request: Request):
         return hub_json(await accounts.reset_password(user_id, actor), database="hmg_operations")
     return hub_json(await accounts.set_status(user_id, "active" if action == "enable" else "disabled", actor),
                     database="hmg_operations")
+
+
+# Admin › GA4 연동 (hub_stores/ga4_registry.py): the top-level administrator only.
+def ga4_property_id(property_id: str) -> str:
+    if not ga4_registry.PROPERTY.fullmatch(property_id):
+        raise HTTPException(404, "No such GA4 property")
+    return property_id
+
+
+@app.get("/v1/hub/ga4-properties")
+async def ga4_property_list(request: Request):
+    await hub_auth.admin(request.headers.get("authorization"))
+    return hub_json(await ga4_registry.listing())
+
+
+@app.post("/v1/hub/ga4-properties")
+async def ga4_property_create(request: Request):
+    actor = await hub_auth.admin(request.headers.get("authorization"))
+    body = catalog_editor.parse(ga4_registry.PropertyCreate, await json_body(request), "GA4 property")
+    return hub_json(await ga4_registry.create(body, actor), 201)
+
+
+@app.get("/v1/hub/ga4-properties/{property_id}")
+async def ga4_property(property_id: str, request: Request):
+    await hub_auth.admin(request.headers.get("authorization"))
+    return hub_json(await ga4_registry.detail(ga4_property_id(property_id)))
+
+
+@app.put("/v1/hub/ga4-properties/{property_id}")
+async def ga4_property_update(property_id: str, request: Request):
+    actor = await hub_auth.admin(request.headers.get("authorization"))
+    body = catalog_editor.parse(ga4_registry.PropertyUpdate, await json_body(request), "GA4 property")
+    return hub_json(await ga4_registry.update(ga4_property_id(property_id), body, actor))
+
+
+@app.get("/v1/hub/ga4-properties/{property_id}/events")
+async def ga4_property_events(property_id: str, request: Request):
+    await hub_auth.admin(request.headers.get("authorization"))
+    return hub_json(await ga4_registry.events(ga4_property_id(property_id)))
+
+
+@app.post("/v1/hub/ga4-properties/{property_id}/{action}")
+async def ga4_property_action(property_id: str, action: str, request: Request):
+    if action not in ("stop", "resume"):
+        raise HTTPException(404, "Unknown action")
+    actor = await hub_auth.admin(request.headers.get("authorization"))
+    return hub_json(await ga4_registry.set_enabled(ga4_property_id(property_id), action == "resume", actor))
 
 
 @app.get("/v1/hub/global-prompts")

@@ -29,7 +29,7 @@ macOS(Docker 없음)는 네이티브 모드로 같은 일을 한다: `HGH_PYTHON
 
 시작 스크립트는 기존 analytics 마이그레이션을 확인하고 새 DB/증분 마이그레이션을 적용한 뒤 API를 재시작한다. 실제 Gold 프로젝트·프롬프트만 가져온다. 기존 Next 프로세스는 유지한다. 반복 실행은 변경 없는 정의에 새 버전을 만들지 않는다. 적용된 SQL의 체크섬이 바뀌면 중단하므로 변경은 새 마이그레이션으로 추가한다.
 
-로컬 비밀 파일은 git에서 제외하고 Windows에서는 현재 사용자와 SYSTEM에만 ACL을 부여한다. API에는 각 DB의 **조회 계정**과, 글로벌 프롬프트 편집용 **INSERT 전용 편집 계정**(`hmg_catalog_editor`, 아래 절), 저장한 필터용 **한 표 계정**(`hmg_saved_filter_editor`, 아래 절)만 전달한다. 카탈로그 쓰기 계정과 운영 쓰기 계정은 관리 명령이 일시적으로 사용하며 Next나 API 이미지에 넣지 않는다. 초기화 전 기존 데이터 DB 백업을 만들었으며, 이후 두 DB 백업은 위 명령으로 실행한다. 백업 복원 시 두 DB와 비밀 파일을 함께 복원하고 프로젝트 참조를 검사한다.
+로컬 비밀 파일은 git에서 제외하고 Windows에서는 현재 사용자와 SYSTEM에만 ACL을 부여한다. API에는 각 DB의 **조회 계정**과, 글로벌 프롬프트 편집용 **INSERT 전용 편집 계정**(`hmg_catalog_editor`, 아래 절), 저장한 필터용 **한 표 계정**(`hmg_saved_filter_editor`, 아래 절), 계정 관리용 `hmg_account_editor`, GA4 속성 등록부용 `hmg_ga4_registry_editor`(아래 절)만 전달한다. 카탈로그 쓰기 계정과 운영 쓰기 계정은 관리 명령이 일시적으로 사용하며 Next나 API 이미지에 넣지 않는다. 초기화 전 기존 데이터 DB 백업을 만들었으며, 이후 두 DB 백업은 위 명령으로 실행한다. 백업 복원 시 두 DB와 비밀 파일을 함께 복원하고 프로젝트 참조를 검사한다.
 
 ## 프로젝트·프롬프트의 기준
 
@@ -93,6 +93,21 @@ HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py init   # 004_hub_acco
 HGH_PYTHON=~/micromamba/envs/hgh-bff/bin/python bash scripts/start-local.sh   # API 재시작 (Windows: ./scripts/start-gold.ps1)
 ```
 
+## GA4 속성 등록부 (2026-10-29)
+
+리뉴얼 Admin › GA4 연동(`/renewal/admin/ga4`)에서 최상위 관리자가 GA4 수집기(`back/analytics/ga4_collect.py`)가 읽는 속성 목록을 등록하고, 고치고, 중지하고, 재개한다. 예전에는 git 제외 파일 `.local/ga4-properties.json`이었고, 이 파일과 예시 파일은 없앴다(GA4 인계 전이라 옮길 값이 없었다).
+
+- **저장(`006_ga4_registry`, 데이터 DB):** `analytics.ga4_registry`에 속성마다 속성 ID(숫자), 브랜드(Hyundai·Kia·Genesis), 국가(ISO-2), 전환 기준(1 = GA4 주요 이벤트, 2 = 고른 이벤트 1~50개), 수집 여부를 둔다. 예전 파일 등록부의 규칙을 CHECK로 옮겼고, 수집하는 속성은 한 시장(브랜드 × 국가)에 하나다(부분 UNIQUE). 바꿀 때마다 `ga4_registry_event`(`changes = {필드: [전, 후]}`)가 남는다. 속성은 지우지 않고 중지한다. 속성 ID는 바꾸지 못한다.
+- **수집기와의 관계:** `analytics.ga4_property`는 지금처럼 수집기의 기록이다. 수집기는 실행마다 등록부를 읽어 `ga4_property`에 복사한다. 중지한 속성은 `unmapped`로 두어 리더(AI Conversion 화면)가 빼고, 그 속성의 행은 남긴다. 속성마다 결과(`collected`·`pending_grant`·`failed`·`stopped`, 실행 시각, 오류, 마지막 수집일)를 `ga4_collect_status`에 남기고 화면은 그 값을 그대로 보인다. BFF는 GA4를 부르지 않으므로 화면에 '검증' 버튼은 없다(2026-10-29 결정). 등록부가 수집기 실행보다 나중에 바뀌었으면 화면에 '반영 대기'로 보인다. 전환 기준·이벤트를 바꾸면 다음 실행이 그 속성의 저장된 이벤트 행 전체의 `is_conv`를 새 기준으로 다시 정한다.
+- **계정과 권한:** 목록·상세·이벤트 목록은 데이터 DB 조회 계정으로 읽고, 쓰기는 `HGH_GA4_REGISTRY_EDITOR_DB_URL`(`hmg_ga4_registry_editor`: `ga4_registry` INSERT와 속성 ID·등록 시각을 뺀 열 UPDATE, `ga4_registry_event` INSERT, 이 둘과 `ga4_collect_status` SELECT)로 한다. DELETE는 없고 GA4 측정 행·`ga4_property`·카탈로그는 읽지도 못하며 운영 DB에는 접속하지 못한다. 쓰기는 advisory lock 617427421로 하나씩 한다. 수집기 계정(`hmg_analytics_writer`)은 등록부를 SELECT만 하고 `ga4_collect_status`만 쓴다.
+- **전환 이벤트 고르기:** 고른 이벤트 기준이면 수집기가 이미 저장한 그 속성의 최근 90일 이벤트 이름·발생 수(주요 이벤트 표시)를 목록으로 보이고, 수집 전 속성이나 목록에 없는 이벤트는 이름을 입력한다(GA4 이벤트 이름 규칙: 글자로 시작, 글자·숫자·_, 40자 이하).
+- **API:** `GET|POST /v1/hub/ga4-properties`, `GET|PUT /v1/hub/ga4-properties/{id}`, `GET /v1/hub/ga4-properties/{id}/events`, `POST /v1/hub/ga4-properties/{id}/stop|resume`(관리자만). 브라우저는 Next `/api/hub/ga4-properties`를 거친다.
+
+```bash
+HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py init   # 006_ga4_registry, hmg_ga4_registry_editor, .env.ga4-registry-db.local, .env.hub-edit.local에 연결 추가
+HGH_PYTHON=~/micromamba/envs/hgh-bff/bin/python bash scripts/start-local.sh   # API 재시작 (Windows: ./scripts/start-gold.ps1)
+```
+
 ## 외부 API (2026-10-28)
 
 현재 저장된 프롬프트와 그 수집·가공에 필요한 값을 API 키를 가진 외부 호출자에게 읽기 전용으로 준다. 가공 결과(지표·판정·이전 회차 분석), 회차·측정 작업 원장, GA4 속성, 답변·인용 원문은 주지 않는다. 앱은 `back/ext/app.py`, 구조·범위·변경 감지 규칙은 [정본 문서 `#ext`](../../docs/architecture/hmg-geo-hub-architecture.html#ext)에 있다.
@@ -131,6 +146,6 @@ GA4와 프로젝트의 관계는 `catalog.project_ga4_property`에 실제 연동
 
 ## 검증
 
-`verify`는 롤백되는 트랜잭션에서 비공개/선택 공개, 외부 계정의 기본 테이블 접근 차단, 버전 불변성, 운영 설정 이력·감사 이력 보존, 잘못된 참조 차단을 확인한다. 외부 API 경계도 같은 방식으로 확인한다: 키 없음·빈 키·만료·폐기·비활성 호출자는 0행, 다른 호출자의 프로젝트와 미승인 종류는 안 보임, 내부 Gold 식별자 비노출, 쓰기 계정의 `change_seq` 지정 거부, 승인 변경 시 순번 증가, `hmg_ext_api`의 운영 DB 접속 거부. 저장한 필터 계정은 자기 표만 쓰고(계정·자격증명·역할·감사 표 거부, 데이터 DB 접속 거부), 기본 필터 둘·주인 없는 행·빈 이름은 DB가 거부한다. API 통합 검증은 `back/bff/tests/test_hub_storage.py`, 가져오기 규칙은 `test_hub_sync.py`, 저장한 필터는 `test_saved_filters.py`, 외부 API는 `back/ext/tests/test_app.py`를 사용한다. 영구 테스트 사용자나 가상 측정치를 생성하지 않는다.
+`verify`는 롤백되는 트랜잭션에서 비공개/선택 공개, 외부 계정의 기본 테이블 접근 차단, 버전 불변성, 운영 설정 이력·감사 이력 보존, 잘못된 참조 차단을 확인한다. 외부 API 경계도 같은 방식으로 확인한다: 키 없음·빈 키·만료·폐기·비활성 호출자는 0행, 다른 호출자의 프로젝트와 미승인 종류는 안 보임, 내부 Gold 식별자 비노출, 쓰기 계정의 `change_seq` 지정 거부, 승인 변경 시 순번 증가, `hmg_ext_api`의 운영 DB 접속 거부. 저장한 필터 계정은 자기 표만 쓰고(계정·자격증명·역할·감사 표 거부, 데이터 DB 접속 거부), 기본 필터 둘·주인 없는 행·빈 이름은 DB가 거부한다. GA4 등록부 계정은 등록부와 이력만 쓰고(속성 ID 변경·DELETE·이력 고치기·수집 결과 쓰기·GA4 행 읽기 거부, 운영 DB 접속 거부), 한 시장의 두 번째 수집 속성·숫자 아닌 속성 ID·소문자 국가·모르는 브랜드·이벤트 없는 고른 이벤트 기준은 DB가 거부한다. API 통합 검증은 `back/bff/tests/test_hub_storage.py`, 가져오기 규칙은 `test_hub_sync.py`, 저장한 필터는 `test_saved_filters.py`, 외부 API는 `back/ext/tests/test_app.py`를 사용한다. 영구 테스트 사용자나 가상 측정치를 생성하지 않는다.
 
-마이그레이션: 데이터 DB `002_data_catalog_publication`, `003_published_dimensions`, `004_hub_prompt_editing`, `005_external_api`, 운영 DB `001_operations`, `002_hub_login`, `003_saved_filters`. 기존 데이터 DB `001_gold_ga4_seo`는 변경하지 않았다.
+마이그레이션: 데이터 DB `002_data_catalog_publication`, `003_published_dimensions`, `004_hub_prompt_editing`, `005_external_api`, `006_ga4_registry`, 운영 DB `001_operations`, `002_hub_login`, `003_saved_filters`. 기존 데이터 DB `001_gold_ga4_seo`는 변경하지 않았다.

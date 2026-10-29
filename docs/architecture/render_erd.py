@@ -316,9 +316,10 @@ def external() -> Figure:
 
 
 def ga4() -> Figure:
-    """hmg_analytics GA4: back/analytics/schema.sql, operations.sql."""
-    f = Figure("ga4", 494, "HUB 데이터 DB의 GA4 표 ERD. ga4_row와 ga4_users_window가 ga4_property를 가리키고, "
-               "차원 키는 kind별로 ga4_value를 가리킨다.")
+    """hmg_analytics GA4: back/analytics/schema.sql, operations.sql; the registry back/hub_storage/data-006.sql."""
+    f = Figure("ga4", 796, "HUB 데이터 DB의 GA4 표 ERD. ga4_row와 ga4_users_window가 ga4_property를 가리키고, "
+               "차원 키는 kind별로 ga4_value를 가리킨다. 아래 줄은 관리자가 고치는 속성 등록부 ga4_registry와 그 변경 이력, "
+               "수집기가 속성마다 남기는 마지막 결과 ga4_collect_status이고, 수집기가 등록부를 ga4_property로 복사한다.")
     f.table("analytics.ga4_row", 70, 40, 290, "GA4 보고서 5종의 세션·사용자·조회·이벤트를 날짜·차원 조합별로 담는다.", [
         ("PK FK", "prop_key", "smallint"), ("PK", "report", "=1~5"), ("PK", "date", "date"),
         ("PK FK", "channel_key", "integer"), ("PK FK", "source_key", "integer"), ("PK FK", "device_key", "integer"),
@@ -343,6 +344,21 @@ def ga4() -> Figure:
          via=389, to="kind")
     f.fk("ga4_users_window", "prop_key", "ga4_property")
     f.fk("ga4_users_window", "page_key", "ga4_value", via=775, to="kind")
+    # the registry (2026-10-29): the administrator's list the collector reads; no key to ga4_property (copied by the collector)
+    f.table("analytics.ga4_registry_event", 70, 510, 300, "등록부의 변경 이력이다. changes는 {필드: [전, 후]}이고 지우지 않는다.", [
+        ("PK", "event_id", "bigint"), ("FK", "property_id", "text"), ("", "action", "=create|update|stop|resume"),
+        ("", "actor_id", "⇢ user_account"), ("", "changes", "jsonb"), ("", "occurred_at", "timestamptz")])
+    f.table("analytics.ga4_registry", 420, 510, 330, "관리자가 Admin › GA4 연동에서 정하는 수집 대상 속성과 시장·전환 기준이다.", [
+        ("PK", "property_id", "text (숫자)"), ("", "brand", "=Hyundai|Kia|Genesis"), ("", "country", "text (ISO-2)"),
+        ("", "conv_basis", "=1|2"), ("", "conv_events", "text[] (2일 때 1~50개)"), ("", "enabled", "boolean"),
+        ("", "created_at", "timestamptz"), ("", "updated_at", "timestamptz")],
+        notes=["UK (brand, country) WHERE enabled", "⇢ ga4_property.property_id (수집기가 복사)"])
+    f.table("analytics.ga4_collect_status", 800, 510, 300, "수집기가 속성마다 남기는 마지막 실행 결과이고, 실행마다 바뀐다.", [
+        ("PK FK", "property_id", "text"), ("", "checked_at", "timestamptz"),
+        ("", "status", "=collected|pending_grant|failed|stopped"), ("", "error", "text (≤500)"),
+        ("", "collected_at", "timestamptz"), ("", "collected_to", "date")])
+    f.fk("ga4_registry_event", "property_id", "ga4_registry", to="property_id")
+    f.fk("ga4_collect_status", "property_id", "ga4_registry", to="property_id")
     return f
 
 

@@ -87,13 +87,14 @@ GA4 자격 증명을 인계받기 전이라 아직 실행하지 않았고, 지�
 
 | 항목 | 내용 |
 | --- | --- |
-| 실행 | 저장소 루트에서 `python -X utf8 back/analytics/ga4_collect.py` — 최근 3일(속성 시간대의 어제까지)을 다시 받아 바꿔 씁니다. 처음은 `--backfill 180`, GA4만 읽고 쓰지 않으려면 `--dry-run`, 기간 지정은 `--from`·`--to`, 속성 하나만은 `--property` |
+| 실행 | 저장소 루트에서 `python -X utf8 back/analytics/ga4_collect.py` — 최근 3일(속성 시간대의 어제까지)을 다시 받아 바꿔 씁니다. 처음은 `--backfill 180`, 등록부와 GA4만 읽고 쓰지 않으려면 `--dry-run`, 기간 지정은 `--from`·`--to`, 속성 하나만은 `--property` |
 | 주기 | 하루 한 번. GA4 값은 며칠 동안 확정되므로 매번 최근 3일을 다시 받습니다 |
 | VM (taeho-dev) | production · dev build가 HUB 데이터 DB 하나를 같이 써서 수집도 하나입니다. 정기 실행은 cron `15 9 * * * bash /home/taeho/hmg-geo-hub/scripts/vm.sh ga4-cron >>/home/taeho/hmg-geo-hub/.local/vm-cron.log 2>&1`(09:15 UTC — 모든 시간대의 어제가 끝난 뒤, 로그에 속성별 한 줄), 수동 실행은 `bash scripts/vm.sh ga4 --dry-run` · `bash scripts/vm.sh ga4 --backfill 180`처럼 수집기 인자를 그대로 넘깁니다. BFF 이미지(`hgh-gold-api:local`)의 일회용 컨테이너가 호스트 네트워크에서 돕니다. 서비스 계정 키는 이미지에 `google-auth`가 없어 아직 쓸 수 없습니다 |
 | 쓰기 계정 | `.env.analytics-ingest.local`의 `HGH_ANALYTICS_WRITER_DB_URL` (`hmg_analytics_writer`). 한 번에 하나만 실행됩니다(advisory lock) |
 | GA4 자격 증명 | `.env.ga4.local`: OAuth `GA4_OAUTH_CLIENT_ID`·`GA4_OAUTH_CLIENT_SECRET`·`GA4_OAUTH_REFRESH_TOKEN`(예전 웹과 같은 이름), 또는 서비스 계정 `GA4_SERVICE_ACCOUNT_FILE`(JSON 키 경로, 서명에 `google-auth` 패키지 필요). 범위는 `analytics.readonly` |
-| 속성 목록 | `.local/ga4-properties.json` (`HGH_GA4_PROPERTIES`로 바꿈, 형식은 `ga4-properties.example.json`): 속성 ID · 브랜드 · 국가 · 전환 기준(`key_events` = GA4 주요 이벤트, `events` = 적은 이벤트만) · `status: unmapped`(등록만, 수집 안 함) |
-| 속성 상태 | 수집하면 `active`, GA4가 거부(403)하면 `pending_grant`로 두고 그 속성의 기존 행은 그대로 둡니다 |
+| 속성 목록 | 같은 DB의 `analytics.ga4_registry`(2026-10-29, `back/hub_storage/data-006.sql`). 관리자가 리뉴얼 Admin › GA4 연동(`/renewal/admin/ga4`)에서 등록 · 수정 · 중지 · 재개합니다: 속성 ID · 브랜드 · 국가 · 전환 기준(1 = GA4 주요 이벤트, 2 = 고른 이벤트만, 1개 이상) · 수집 여부. 한 시장(브랜드 × 국가)에 수집하는 속성은 하나입니다. 예전 파일 등록부(`.local/ga4-properties.json`)는 없앴습니다 |
+| 속성 상태 | 수집하면 `active`, GA4가 거부(403)하면 `pending_grant`, 등록부에서 중지하면 `unmapped`(리더가 빼고 봄)로 두고, 어느 경우든 그 속성의 기존 행은 그대로 둡니다. 실행마다 속성별 결과(`collected` · `pending_grant` · `failed` · `stopped`, 시각, 오류, 마지막 수집일)를 `analytics.ga4_collect_status`에 남기고 Admin 화면이 그대로 보입니다 |
+| 전환 기준 변경 | 등록부의 전환 기준 · 이벤트를 바꾸면 다음 실행이 그 속성의 저장된 이벤트 행 전체(`report 3`)의 `is_conv`를 새 기준으로 다시 정합니다. 다시 받지 않은 지난 날짜에도 새 기준이 적용됩니다 |
 
 저장하는 것(속성 · 날짜마다, 모든 보고서에 기기 · 신규/재방문을 둬 화면 필터가 똑같이 걸립니다):
 

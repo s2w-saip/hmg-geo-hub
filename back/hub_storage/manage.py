@@ -25,6 +25,7 @@ EDIT_SECRET = ROOT / '.env.hub-edit-db.local'      # editor role password + logi
 EXT_SECRET = ROOT / '.env.ext-api-db.local'        # external API role password
 FILTER_SECRET = ROOT / '.env.saved-filter-db.local'  # saved filter role password (operations DB)
 ACCOUNT_SECRET = ROOT / '.env.account-db.local'    # account editor role password (operations DB)
+GA4_REGISTRY_SECRET = ROOT / '.env.ga4-registry-db.local'  # GA4 registry editor role password (data DB)
 OPS_CONTAINER = 'hgh-operations-db'
 OPS_DB = 'hmg_operations'
 # External API (2026-10-28): what a project approval covers, the Gold reference families an approval can
@@ -253,15 +254,31 @@ ALTER ROLE hmg_ext_api CONNECTION LIMIT 8;
 GRANT CONNECT ON DATABASE hmg_analytics TO hmg_ext_api;
 COMMIT;""")
     migrate('data-005.sql', '005_external_api')
+    # GA4 registry (2026-10-29): the API's role for the registry and its history (Admin › GA4 연동) and nothing else.
+    if not GA4_REGISTRY_SECRET.exists() and sql("SELECT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='hmg_ga4_registry_editor');").stdout.strip() == 't':
+        raise RuntimeError('The GA4 registry role already exists; restore .env.ga4-registry-db.local rather than replacing credentials')
+    registry = create_secret(GA4_REGISTRY_SECRET, {'GA4_REGISTRY_EDITOR_PASSWORD': None})
+    sql(f"""BEGIN;
+DO $$ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='hmg_ga4_registry_editor') THEN CREATE ROLE hmg_ga4_registry_editor LOGIN; END IF;
+END $$;
+ALTER ROLE hmg_ga4_registry_editor WITH NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD {analytics.literal(registry['GA4_REGISTRY_EDITOR_PASSWORD'])};
+ALTER ROLE hmg_ga4_registry_editor SET statement_timeout='15s';
+ALTER ROLE hmg_ga4_registry_editor CONNECTION LIMIT 4;
+GRANT CONNECT ON DATABASE hmg_analytics TO hmg_ga4_registry_editor;
+COMMIT;""")
+    migrate('data-006.sql', '006_ga4_registry')
     analytics.secure_write(ROOT / '.env.ext-api.local', '# External API: the caller-scoped ext views only.\n'
         f"HGH_EXT_DB_URL=postgresql://hmg_ext_api:{ext['EXT_API_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n")
     analytics.secure_write(ROOT / '.env.operations.local', '# FastAPI read-only operations connection.\n'
         f"HGH_OPERATIONS_DB_URL=postgresql://hmg_operations_reader:{values['OPERATIONS_READER_PASSWORD']}@{service_host('operations')}/{OPS_DB}\n")
     analytics.secure_write(ROOT / '.env.hub-edit.local', '# FastAPI HUB writes: Global prompt editing (INSERT-only catalog role), '
-        'saved filters (system.saved_filter only), accounts (the account tables only) and the login token secret.\n'
+        'saved filters (system.saved_filter only), accounts (the account tables only), the GA4 registry (its two tables) '
+        'and the login token secret.\n'
         f"HGH_CATALOG_EDITOR_DB_URL=postgresql://hmg_catalog_editor:{edit['CATALOG_EDITOR_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n"
         f"HGH_SAVED_FILTER_EDITOR_DB_URL=postgresql://hmg_saved_filter_editor:{saved['SAVED_FILTER_EDITOR_PASSWORD']}@{service_host('operations')}/{OPS_DB}\n"
         f"HGH_ACCOUNT_EDITOR_DB_URL=postgresql://hmg_account_editor:{account['ACCOUNT_EDITOR_PASSWORD']}@{service_host('operations')}/{OPS_DB}\n"
+        f"HGH_GA4_REGISTRY_EDITOR_DB_URL=postgresql://hmg_ga4_registry_editor:{registry['GA4_REGISTRY_EDITOR_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n"
         f"HGH_AUTH_SECRET={edit['HGH_AUTH_SECRET']}\n")
     analytics.secure_write(ROOT / '.env.data-external.local', '# Local connection only. Empty exports until per-project approval.\n'
         f"HGH_DATA_EXTERNAL_DB_URL=postgresql://hmg_data_external:{data['DATA_EXTERNAL_PASSWORD']}@127.0.0.1:{data_port()}/hmg_analytics\n")
@@ -299,6 +316,7 @@ def verify():
     ext_api = f"postgresql://hmg_ext_api:{ext['EXT_API_PASSWORD']}"
     saved = f"postgresql://hmg_saved_filter_editor:{analytics.env_file(FILTER_SECRET)['SAVED_FILTER_EDITOR_PASSWORD']}"
     account = f"postgresql://hmg_account_editor:{analytics.env_file(ACCOUNT_SECRET)['ACCOUNT_EDITOR_PASSWORD']}"
+    registry = f"postgresql://hmg_ga4_registry_editor:{analytics.env_file(GA4_REGISTRY_SECRET)['GA4_REGISTRY_EDITOR_PASSWORD']}"
     config = {'external':external+f"@{service_host('analytics')}/hmg_analytics",
               'external_operations':external+f"@{service_host('operations')}/{OPS_DB}",
               'ext':ext_api+f"@{service_host('analytics')}/hmg_analytics",
@@ -307,7 +325,9 @@ def verify():
               'saved_filter':saved+f"@{service_host('operations')}/{OPS_DB}",
               'saved_filter_data':saved+f"@{service_host('analytics')}/hmg_analytics",
               'account':account+f"@{service_host('operations')}/{OPS_DB}",
-              'account_data':account+f"@{service_host('analytics')}/hmg_analytics"}
+              'account_data':account+f"@{service_host('analytics')}/hmg_analytics",
+              'ga4_registry':registry+f"@{service_host('analytics')}/hmg_analytics",
+              'ga4_registry_operations':registry+f"@{service_host('operations')}/{OPS_DB}"}
     script = (HERE / 'verify_connections.py').read_text(encoding='utf8') + '\nasyncio.run(main(' + repr(config) + '))\n'
     print(api_python(script).strip())
     print('Verified opt-in exports, grants, immutable versions, operations isolation; all fixture transactions rolled back')

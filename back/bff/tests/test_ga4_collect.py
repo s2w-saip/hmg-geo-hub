@@ -180,6 +180,37 @@ def reader_rows(collected: dict, prop_key: int = 1) -> tuple[list[dict], list[di
     return rows, windows
 
 
+T_READ = datetime(2026, 10, 29, 9, 15, tzinfo=ga4c.UTC)
+
+
+class RegistryConn:
+    """The collector's data connection: the registry read, the run lock, and what the run writes (executed)."""
+
+    def __init__(self, rows, lock=True):
+        self.rows, self.lock, self.executed, self.locked, self.closed = rows, lock, [], False, False
+
+    async def fetch(self, sql, *args):
+        assert sql == ga4c.REGISTRY_SQL, sql
+        return self.rows
+
+    async def fetchval(self, sql, *args):
+        if "pg_try_advisory_lock" in sql:
+            self.locked = self.lock
+            return self.lock
+        if "ref.dim_country" in sql:
+            return 1
+        if "INSERT INTO analytics.ga4_property" in sql:
+            self.executed.append((sql, args))
+            return 1
+        raise AssertionError(sql)
+
+    async def execute(self, sql, *args):
+        self.executed.append((sql, args))
+
+    async def close(self):
+        self.closed = True
+
+
 class Connection:
     def __init__(self, responses, latest):
         self.responses, self.latest = iter(responses), latest
@@ -203,21 +234,14 @@ def read(collected, lo=END - timedelta(days=27), hi=END, basis=1):
 
 
 class Registry(unittest.TestCase):
-    def test_the_example_loads(self):
-        props = ga4c.load_registry(Path(ga4c.HERE) / "ga4-properties.example.json")
-        self.assertEqual([(p["property_id"], p["brand_bit"], p["country"], p["basis"], p["status"]) for p in props],
-                         [("469542848", 2, "IT", 1, "active"), ("000000000", 1, "DE", 2, "unmapped")])
+    def test_registry_rows_become_properties(self):
+        rows = [{"property_id": "469542848", "brand": "Kia", "country": "IT", "conv_basis": 1, "conv_events": [], "enabled": True, "read_at": T_READ},
+                {"property_id": "8", "brand": "Hyundai", "country": "FR", "conv_basis": 2, "conv_events": ["test_drive_request", "dealer_contact"],
+                 "enabled": False, "read_at": T_READ}]
+        props = asyncio.run(ga4c.load_registry(RegistryConn(rows)))
+        self.assertEqual([(p["property_id"], p["brand_bit"], p["country"], p["basis"], p["enabled"], p["read_at"]) for p in props],
+                         [("469542848", 2, "IT", 1, True, T_READ), ("8", 1, "FR", 2, False, T_READ)])
         self.assertEqual(props[1]["events"], {"test_drive_request", "dealer_contact"})
-
-    def test_rejects(self):
-        base = {"property_id": "1", "brand": "Kia", "country": "IT"}
-        for bad, why in (({**base, "brand": "Toyota"}, "brand"), ({**base, "country": "ITA"}, "country"), ({**base, "property_id": "properties/1"}, "property_id"),
-                         ({**base, "conversion": {"basis": "events"}}, "events"), ({**base, "conversion": {"basis": "key_events", "events": ["x"]}}, "events"),
-                         ({**base, "status": "pending_grant"}, "status")):
-            with self.subTest(why), mock.patch.object(Path, "read_text", return_value=json.dumps({"properties": [bad]})), self.assertRaisesRegex(ValueError, why):
-                ga4c.load_registry(Path("x.json"))
-        with mock.patch.object(Path, "read_text", return_value=json.dumps({"properties": [base, base]})), self.assertRaisesRegex(ValueError, "twice"):
-            ga4c.load_registry(Path("x.json"))
 
     def test_brand_bits_are_the_readers(self):
         self.assertEqual(ga4c.BRAND_BITS, {k: v for k, v in analytics_reader.BRAND_BITS.items() if k != "hmg"})
@@ -350,15 +374,44 @@ class Collected(unittest.TestCase):
         self.assertEqual(m["ai_conversions"], sum(e in ("test_drive_request", "dealer_contact") for s in ai for e in s["events"]))
 
 
+REGISTRY = [{"property_id": "469542848", "brand": "Kia", "country": "IT", "conv_basis": 1, "conv_events": [], "enabled": True, "read_at": T_READ},
+            {"property_id": "9", "brand": "Hyundai", "country": "DE", "conv_basis": 1, "conv_events": [], "enabled": True, "read_at": T_READ},
+            {"property_id": "8", "brand": "Hyundai", "country": "FR", "conv_basis": 1, "conv_events": [], "enabled": False, "read_at": T_READ}]
+
+
 class Run(unittest.TestCase):
-    def test_dry_run_reads_every_property_and_marks_the_refused(self):
-        registry = {"properties": [{"property_id": "469542848", "brand": "Kia", "country": "IT"}, {"property_id": "9", "brand": "Hyundai", "country": "DE"},
-                                   {"property_id": "8", "brand": "Hyundai", "country": "FR", "status": "unmapped"}]}
-        args = ga4c.argparse.Namespace(frm=None, to=None, backfill=None, property=None, dry_run=True)
-        with mock.patch.object(Path, "read_text", return_value=json.dumps(registry)), mock.patch.object(ga4c, "yesterday", lambda tz, now=None: END):
-            out = asyncio.run(ga4c.run(args, {**ENV, "HGH_GA4_PROPERTIES": "x.json"}, client(Emulator(sessions(), deny={"9"}))))
-        self.assertEqual([(r["property"], r["status"]) for r in out], [("469542848", "active"), ("9", "pending_grant"), ("8", "unmapped")])
+    def go(self, dry_run, conn, store=None):
+        args = ga4c.argparse.Namespace(frm=None, to=None, backfill=None, property=None, dry_run=dry_run)
+        with mock.patch("asyncpg.connect", mock.AsyncMock(return_value=conn)), mock.patch.object(ga4c, "yesterday", lambda tz, now=None: END), \
+                mock.patch.object(ga4c, "store", store or mock.AsyncMock(side_effect=AssertionError("a dry run stores nothing"))):
+            return asyncio.run(ga4c.run(args, {**ENV, "HGH_ANALYTICS_WRITER_DB_URL": "postgresql://writer@test/db"}, client(Emulator(sessions(), deny={"9"}))))
+
+    def test_dry_run_reads_the_registry_and_every_property_and_writes_nothing(self):
+        conn = RegistryConn(REGISTRY)
+        out = self.go(True, conn)
+        self.assertEqual([(r["property"], r["status"]) for r in out], [("469542848", "active"), ("9", "pending_grant"), ("8", "stopped")])
         self.assertEqual((out[0]["from"], out[0]["to"]), ((TODAY - timedelta(days=3)).isoformat(), END.isoformat()))
+        self.assertEqual((conn.executed, conn.locked, conn.closed), ([], False, True))
+
+    def test_a_run_notes_each_propertys_result_for_the_admin_screen(self):
+        conn, store = RegistryConn(REGISTRY), mock.AsyncMock(return_value=1)
+        out = self.go(False, conn, store)
+        self.assertEqual([r["status"] for r in out], ["active", "pending_grant", "stopped"])
+        self.assertTrue(conn.locked and conn.closed)
+        self.assertEqual([c.args[1]["property_id"] for c in store.await_args_list], ["469542848"])
+        # the refused and the stopped property are kept with their state; their rows stay
+        saved = [(a[0], a[3]) for sql, a in conn.executed if "ga4_property" in sql]
+        self.assertEqual(saved, [("9", "pending_grant"), ("8", "unmapped")])
+        notes = [a for sql, a in conn.executed if sql == ga4c.STATUS_SQL]
+        self.assertEqual([(a[0], a[1], a[2], a[4]) for a in notes],
+                         [("469542848", T_READ, "collected", END), ("9", T_READ, "pending_grant", None), ("8", T_READ, "stopped", None)])
+        self.assertIn("GA4 403", notes[1][3])
+
+    def test_a_second_collector_waits_its_turn(self):
+        conn = RegistryConn(REGISTRY, lock=False)
+        with self.assertRaisesRegex(RuntimeError, "another GA4 collector"):
+            self.go(False, conn)
+        self.assertTrue(conn.closed)
 
 
 @unittest.skipUnless(os.environ.get("HGH_GA4_TEST_DB_URL"), "HGH_GA4_TEST_DB_URL (a throwaway database with back/analytics/schema.sql) not set")
@@ -379,16 +432,27 @@ class Database(unittest.TestCase):
                 # a refresh of the last 3 days replaces them, nothing is added twice
                 await ga4c.store(conn, KIA_IT, ga4c.collect(g, KIA_IT, END - timedelta(days=2), END), END - timedelta(days=2), END)
                 self.assertEqual(await conn.fetchval("SELECT count(*) FROM analytics.ga4_row"), n)
-                return await analytics_reader.conversion(conn, QueryParams("days=28"))
+                res = await analytics_reader.conversion(conn, QueryParams("days=28"))
+                # a basis change on the registry reaches every stored day at the next run, not only the days read again
+                tracked = {**KIA_IT, "basis": 2, "events": frozenset({"dealer_contact"})}
+                await ga4c.store(conn, tracked, ga4c.collect(g, tracked, END - timedelta(days=2), END), END - timedelta(days=2), END)
+                flags = await conn.fetch("""SELECT v.value,r.is_conv,count(*) AS n FROM analytics.ga4_row r
+                    JOIN analytics.ga4_value v ON v.kind='event' AND v.value_key=r.event_key WHERE r.report=3 GROUP BY 1,2""")
+                tracked_res = await analytics_reader.conversion(conn, QueryParams("days=28"))
+                return res, flags, tracked_res
             finally:
                 await conn.close()
 
-        res = asyncio.run(go())
+        res, flags, tracked_res = asyncio.run(go())
         t = truth(data, END - timedelta(days=27), END)
         m = res["data"]["metrics"]
         self.assertIsNone(res["meta"]["reason"])
         self.assertEqual((m["ai_sessions"], m["ai_users"], m["ai_conversions"], m["human_users"]), (t["ai_sessions"], t["ai_users"], t["ai_conversions"], t["human_users"]))
         self.assertEqual({e["engine"]: e["sessions"] for e in res["data"]["engines"]}, t["engines"])
+        self.assertEqual({(f["value"], f["is_conv"]) for f in flags}, {(f["value"], f["value"] == "dealer_contact") for f in flags})
+        lo = END - timedelta(days=27)
+        ai = [s for s in data if lo <= s["date"] <= END and s["sessionDefaultChannelGroup"] == AI]
+        self.assertEqual(tracked_res["data"]["metrics"]["ai_conversions"], sum(e == "dealer_contact" for s in ai for e in s["events"]))
 
 
 if __name__ == "__main__":

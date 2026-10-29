@@ -108,7 +108,8 @@
     "renewalAnswerAnalysisMention": "Mention (Renewal)",
     "renewalAnswerAnalysisCitation": "Citation (Renewal)",
     "renewalAdminStandardPrompts": "Global prompt management",
-    "renewalAdmin": "User management"
+    "renewalAdmin": "User management",
+    "renewalAdminGa4": "GA4 connection"
   },
   "locale": {
     "label": "Language",
@@ -5776,6 +5777,134 @@
       "source_unavailable": "The HUB operations DB cannot be reached. Try again shortly.",
       "not_found": "No such account.",
       "failed": "That did not work. Try again shortly."
+    }
+  },
+  "hubGa4": {
+    "title": "GA4 connection",
+    "description": "The GA4 properties the collector reads. Set each property's market (brand × country) and conversion basis, and stop or resume its collection.",
+    "storePill": "HUB data DB",
+    "create": "Register property",
+    "createTitle": "Register a GA4 property",
+    "createHint": "The property ID cannot change after registration. To use another property, stop this one and register the other.",
+    "detailTitle": "GA4 property",
+    "listLabel": "GA4 properties",
+    "searchLabel": "Search",
+    "searchPlaceholder": "Search property ID · country · event",
+    "count": "{shown} / {total} properties",
+    "empty": "No GA4 property is registered.",
+    "emptyFiltered": "No property matches.",
+    "loading": "Loading…",
+    "login": "Sign in",
+    "loginRequired": "GA4 connection management needs the HUB sign-in.",
+    "flowNoteTitle": "When changes apply",
+    "flowNote": "The collector reads this list once a day and fetches the data from GA4. A change reaches the AI Conversion screen at its next run and shows as 'Pending' until then. This screen does not connect to GA4: the collection result and the last collected day are what the collector's last run left.",
+    "axis": {
+      "brand": "Brand",
+      "setting": "Collection",
+      "result": "Collection result"
+    },
+    "setting": {
+      "enabled": "Collected",
+      "stopped": "Stopped"
+    },
+    "result": {
+      "collected": "Collected",
+      "pending_grant": "Access pending",
+      "failed": "Failed",
+      "stopped": "Stopped",
+      "never": "Not collected yet"
+    },
+    "column": {
+      "market": "Market",
+      "propertyId": "Property ID",
+      "basis": "Conversion basis",
+      "setting": "Collection",
+      "result": "Collection result",
+      "collectedTo": "Last collected day"
+    },
+    "basis": {
+      "key_events": "GA4 key events",
+      "events": "Listed events"
+    },
+    "basisShort": {
+      "events": "{n} listed events"
+    },
+    "basisHint": {
+      "key_events": "Every event marked as a key event in the GA4 property counts as a conversion.",
+      "events": "Only the events picked below count as conversions."
+    },
+    "pending": "Pending",
+    "pendingTip": "The collector has not read this change yet; its next run applies it.",
+    "checkedAtTip": "Collector run {at}",
+    "collectedAtTip": "Collected {at}",
+    "keyEvent": "Key",
+    "edit": "Edit",
+    "stop": "Stop collection",
+    "resume": "Resume collection",
+    "confirm": {
+      "stopTitle": "Stop collection",
+      "stop": "Stop collecting {market} property {id}. From the next run it is not fetched and leaves the AI Conversion screen. Its data and history stay, and it shows again when resumed.",
+      "stopAction": "Stop"
+    },
+    "attributes": "Details",
+    "created": "Registered",
+    "history": "History",
+    "noHistory": "No recorded change.",
+    "note": {
+      "pending": "The collector has not read the last change yet. Its next run brings it to the AI Conversion screen.",
+      "pendingStop": "Collection stopped. The next run takes it off the AI Conversion screen.",
+      "stopped": "Collection is stopped. Its data stays but is not on the AI Conversion screen."
+    },
+    "event": {
+      "create": "Registered",
+      "update": "Edited",
+      "stop": "Collection stopped",
+      "resume": "Collection resumed"
+    },
+    "toast": {
+      "created": "Property registered.",
+      "updated": "Saved.",
+      "stopped": "Collection stopped.",
+      "resumed": "Collection resumed."
+    },
+    "field": {
+      "propertyId": "Property ID",
+      "brand": "Brand",
+      "country": "Country",
+      "basis": "Conversion basis",
+      "events": "Conversion events",
+      "enabled": "Collection"
+    },
+    "form": {
+      "propertyHint": "The number in GA4 Admin › Property settings, not the measurement ID (G-…).",
+      "countryPlaceholder": "Choose a country",
+      "brandFirst": "Choose the brand first.",
+      "picked": "Picked events",
+      "removeEvent": "Remove {name}",
+      "typeEvent": "Type an event name",
+      "addEvent": "Add",
+      "eventRule": "A GA4 event name starts with a letter and has letters, digits and _ only (40 at most).",
+      "noStoredYet": "Not registered yet, so there is no event list. Type the GA4 event names.",
+      "storedCaption": "Events the collector stored in the last {days} days (to {to}), most frequent first",
+      "noStored": "No event collected yet. Type the GA4 event names.",
+      "unseenEvents": "An event outside the list did not occur in the recent collected days. Check its name.",
+      "createNote": "The collector reads this property at its next run. Without GA4 viewer access for the collector's account it shows as 'Access pending'.",
+      "editNote": "Saving applies at the next run. A conversion basis or event change recounts every collected day by the new basis.",
+      "missing": "Check: {fields}",
+      "create": "Register",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "error": {
+      "property_taken": "This property ID is registered.",
+      "market_taken": "Property {propertyId} is collected for this market (brand × country). A market has one collected property: stop that one first.",
+      "invalid_value": "Check: {fields}",
+      "version_conflict": "This property changed elsewhere in the meantime. It was reopened with the latest values.",
+      "unauthorized": "Your sign-in ended. Sign in again.",
+      "forbidden": "Only the top-level administrator manages the GA4 connection.",
+      "source_unavailable": "The HUB data DB cannot be reached. Try again shortly.",
+      "not_found": "Property not found.",
+      "failed": "Could not complete. Try again shortly."
     }
   },
   "hubPrompts": {

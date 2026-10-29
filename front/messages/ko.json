@@ -108,7 +108,8 @@
     "renewalAnswerAnalysisMention": "Mention (Renewal)",
     "renewalAnswerAnalysisCitation": "Citation (Renewal)",
     "renewalAdminStandardPrompts": "글로벌 프롬프트 관리",
-    "renewalAdmin": "사용자 관리"
+    "renewalAdmin": "사용자 관리",
+    "renewalAdminGa4": "GA4 연동"
   },
   "locale": {
     "label": "언어",
@@ -5775,6 +5776,134 @@
       "forbidden": "최상위 관리자만 계정을 관리할 수 있습니다.",
       "source_unavailable": "HUB 운영 DB에 연결할 수 없습니다. 잠시 뒤에 다시 시도하세요.",
       "not_found": "계정을 찾을 수 없습니다.",
+      "failed": "처리하지 못했습니다. 잠시 뒤에 다시 시도하세요."
+    }
+  },
+  "hubGa4": {
+    "title": "GA4 연동",
+    "description": "수집기가 읽는 GA4 속성 목록입니다. 속성마다 시장(브랜드 × 국가)과 전환 기준을 정하고, 수집을 멈추거나 다시 시작합니다.",
+    "storePill": "HUB 데이터 DB",
+    "create": "속성 등록",
+    "createTitle": "GA4 속성 등록",
+    "createHint": "속성 ID는 등록한 뒤 바꿀 수 없습니다. 다른 속성으로 바꾸려면 이 속성을 중지하고 새로 등록하세요.",
+    "detailTitle": "GA4 속성",
+    "listLabel": "GA4 속성 목록",
+    "searchLabel": "검색",
+    "searchPlaceholder": "속성 ID · 국가 · 이벤트 검색",
+    "count": "{shown} / {total}개 속성",
+    "empty": "등록한 GA4 속성이 없습니다.",
+    "emptyFiltered": "조건에 맞는 속성이 없습니다.",
+    "loading": "불러오는 중…",
+    "login": "로그인",
+    "loginRequired": "GA4 연동 관리는 HUB 로그인이 필요합니다.",
+    "flowNoteTitle": "반영 시점",
+    "flowNote": "수집기는 하루 한 번 이 목록을 읽어 GA4에서 데이터를 받습니다. 바꾼 내용은 다음 수집 때 AI Conversion 화면에 반영되고, 그 전까지 '반영 대기'로 보입니다. 이 화면은 GA4에 접속하지 않습니다. 수집 결과와 마지막 수집일은 수집기가 마지막 실행에서 남긴 값입니다.",
+    "axis": {
+      "brand": "브랜드",
+      "setting": "수집 설정",
+      "result": "수집 결과"
+    },
+    "setting": {
+      "enabled": "수집",
+      "stopped": "중지"
+    },
+    "result": {
+      "collected": "수집됨",
+      "pending_grant": "권한 대기",
+      "failed": "실패",
+      "stopped": "중지됨",
+      "never": "수집 전"
+    },
+    "column": {
+      "market": "시장",
+      "propertyId": "속성 ID",
+      "basis": "전환 기준",
+      "setting": "수집 설정",
+      "result": "수집 결과",
+      "collectedTo": "마지막 수집일"
+    },
+    "basis": {
+      "key_events": "GA4 주요 이벤트",
+      "events": "지정한 이벤트"
+    },
+    "basisShort": {
+      "events": "지정한 이벤트 {n}개"
+    },
+    "basisHint": {
+      "key_events": "GA4 속성에서 주요 이벤트(key event)로 표시한 이벤트를 모두 전환으로 셉니다.",
+      "events": "아래에서 고른 이벤트만 전환으로 셉니다."
+    },
+    "pending": "반영 대기",
+    "pendingTip": "수집기가 아직 이 변경을 읽지 않았습니다. 다음 수집 때 반영됩니다.",
+    "checkedAtTip": "수집기 실행 {at}",
+    "collectedAtTip": "수집 {at}",
+    "keyEvent": "주요",
+    "edit": "수정",
+    "stop": "수집 중지",
+    "resume": "수집 재개",
+    "confirm": {
+      "stopTitle": "수집 중지",
+      "stop": "{market} 속성 {id}의 수집을 멈춥니다. 다음 수집부터 이 속성을 받지 않고 AI Conversion 화면에서도 빠집니다. 이미 받은 데이터와 이력은 남고, 재개하면 다시 보입니다.",
+      "stopAction": "중지"
+    },
+    "attributes": "정보",
+    "created": "등록일",
+    "history": "변경 이력",
+    "noHistory": "기록된 변경이 없습니다.",
+    "note": {
+      "pending": "마지막 변경을 수집기가 아직 읽지 않았습니다. 다음 수집 때 AI Conversion 화면에 반영됩니다.",
+      "pendingStop": "수집을 중지했습니다. 다음 수집 때 AI Conversion 화면에서 빠집니다.",
+      "stopped": "수집을 중지한 속성입니다. 이미 받은 데이터는 남아 있지만 AI Conversion 화면에는 보이지 않습니다."
+    },
+    "event": {
+      "create": "등록",
+      "update": "수정",
+      "stop": "수집 중지",
+      "resume": "수집 재개"
+    },
+    "toast": {
+      "created": "속성을 등록했습니다.",
+      "updated": "저장했습니다.",
+      "stopped": "수집을 중지했습니다.",
+      "resumed": "수집을 다시 시작했습니다."
+    },
+    "field": {
+      "propertyId": "속성 ID",
+      "brand": "브랜드",
+      "country": "국가",
+      "basis": "전환 기준",
+      "events": "전환 이벤트",
+      "enabled": "수집 설정"
+    },
+    "form": {
+      "propertyHint": "GA4 관리 › 속성 설정의 숫자 ID입니다. 측정 ID(G-…)가 아닙니다.",
+      "countryPlaceholder": "국가 선택",
+      "brandFirst": "브랜드를 먼저 고르세요.",
+      "picked": "고른 이벤트",
+      "removeEvent": "{name} 빼기",
+      "typeEvent": "이벤트 이름 입력",
+      "addEvent": "추가",
+      "eventRule": "GA4 이벤트 이름은 글자로 시작하고 글자 · 숫자 · _만 씁니다(40자 이하).",
+      "noStoredYet": "등록 전이라 고를 이벤트 목록이 없습니다. GA4 이벤트 이름을 직접 입력하세요.",
+      "storedCaption": "수집기가 받은 최근 {days}일 이벤트({to}까지), 발생 수 순",
+      "noStored": "아직 수집한 이벤트가 없습니다. GA4 이벤트 이름을 직접 입력하세요.",
+      "unseenEvents": "목록에 없는 이벤트는 최근 수집 기간에 한 번도 발생하지 않았습니다. 이름이 맞는지 확인하세요.",
+      "createNote": "등록하면 다음 수집 때 수집기가 이 속성을 읽습니다. 수집기 계정에 이 속성의 GA4 뷰어 권한이 없으면 '권한 대기'로 보입니다.",
+      "editNote": "저장하면 다음 수집 때 반영됩니다. 전환 기준이나 이벤트를 바꾸면 이미 수집한 기간 전체가 새 기준으로 다시 집계됩니다.",
+      "missing": "확인할 항목: {fields}",
+      "create": "등록",
+      "save": "저장",
+      "cancel": "취소"
+    },
+    "error": {
+      "property_taken": "이미 등록한 속성 ID입니다.",
+      "market_taken": "이 시장(브랜드 × 국가)에는 수집 중인 속성 {propertyId}가 있습니다. 한 시장에는 속성 하나만 수집하므로 그 속성을 먼저 중지하세요.",
+      "invalid_value": "입력을 확인하세요: {fields}",
+      "version_conflict": "그 사이 다른 곳에서 이 속성이 바뀌었습니다. 최신 내용으로 다시 열었습니다.",
+      "unauthorized": "로그인이 끝났습니다. 다시 로그인하세요.",
+      "forbidden": "최상위 관리자만 GA4 연동을 관리할 수 있습니다.",
+      "source_unavailable": "HUB 데이터 DB에 연결할 수 없습니다. 잠시 뒤에 다시 시도하세요.",
+      "not_found": "속성을 찾을 수 없습니다.",
       "failed": "처리하지 못했습니다. 잠시 뒤에 다시 시도하세요."
     }
   },

@@ -319,6 +319,14 @@ export const ROUTES = [
     roles: ADMIN_ONLY,
     group: "admin" as const,
   },
+  // HUB GA4 property registry (2026-10-29, lib/hub): same roles as the original GA4 연동 page; the
+  // renewal sidebar's Admin › GA4 연동 opens it.
+  {
+    path: "/renewal/admin/ga4",
+    key: "renewalAdminGa4",
+    roles: ADMIN_ONLY,
+    group: "admin" as const,
+  },
   {
     path: "/admin/standards/customer-interest",
     key: "adminStandardCustomerInterest",

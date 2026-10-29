@@ -101,6 +101,26 @@ async def main(config):
     else:
         await forbidden.close()
         raise AssertionError('Account credentials can connect to the data DB')
+    # GA4 registry role: the registry tables on the data server only.
+    registry = await asyncpg.connect(config['ga4_registry'], timeout=5)
+    try:
+        await registry.fetchval('SELECT count(*) FROM analytics.ga4_registry')
+        try:
+            await registry.execute('SELECT 1 FROM analytics.ga4_row LIMIT 1')
+        except asyncpg.InsufficientPrivilegeError:
+            pass
+        else:
+            raise AssertionError('GA4 registry role reads beyond the registry tables')
+    finally:
+        await registry.close()
+    try:
+        forbidden = await asyncpg.connect(config['ga4_registry_operations'], timeout=5)
+    except asyncpg.InvalidAuthorizationSpecificationError:
+        pass
+    else:
+        await forbidden.close()
+        raise AssertionError('GA4 registry credentials can connect to the operations DB')
     print(json.dumps({'tcp_authentication':'passed','external_operations_access':'denied','api_operations_reader':'read_only',
                       'ext_api':'scoped_read_only','ext_operations_access':'denied','saved_filter':'one_table',
-                      'saved_filter_data_access':'denied','account':'account_tables','account_data_access':'denied'}))
+                      'saved_filter_data_access':'denied','account':'account_tables','account_data_access':'denied',
+                      'ga4_registry':'registry_tables','ga4_registry_operations_access':'denied'}))

@@ -179,11 +179,11 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
     SQL 마이그레이션이고, 이 문서는 그것을 그림으로 옮긴 정본이다. 구조나 스키마를 바꾸는 변경은 같은 커밋에서 이 문서를 고친다.
     방법은 <a href="#maintain">이 문서 고치는 법</a>.</p>
   <p class="asof">마지막 갱신 2026-10-29 · 반영한 스키마: <code>back/analytics/schema.sql</code>·<code>operations.sql</code>,
-    <code>back/hub_storage/data-002~005.sql</code>, <code>operations-001~004.sql</code></p>
+    <code>back/hub_storage/data-002~006.sql</code>, <code>operations-001~004.sql</code></p>
   <dl class="facts">
     <div><dt>프로세스</dt><dd>Next.js <span class="mono">:3333</span> · FastAPI <span class="mono">:5555</span> · 외부 API <span class="mono">:5560</span></dd></div>
     <div><dt>DB</dt><dd>Gold(외부) · 데이터 DB · 운영 DB</dd></div>
-    <div><dt>앱이 DB에 쓰는 곳</dt><dd>글로벌 프롬프트 편집 (INSERT만) · 계정별 저장한 필터 · 계정 관리. 외부 API는 읽기만</dd></div>
+    <div><dt>앱이 DB에 쓰는 곳</dt><dd>글로벌 프롬프트 편집 (INSERT만) · 계정별 저장한 필터 · 계정 관리 · GA4 속성 등록부. 외부 API는 읽기만</dd></div>
     <div><dt>로그인</dt><dd>모든 화면 · 관리자·HQ·권역·국가 4역할, 관리자 아닌 계정은 자기 범위만</dd></div>
   </dl>
   <nav class="toc" aria-label="목차">
@@ -197,7 +197,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   <h2 id="h-path">요청이 지나가는 길</h2>
   <figure>
     <div class="scroll">
-      <svg viewBox="0 0 1200 556" role="img" aria-label="브라우저는 Next.js(3333)만 부르고, Next 서버가 FastAPI BFF(5555)를 HTTP로 부른다. BFF는 모듈별로 운영 DB, 데이터 DB, 외부 Gold DB에 연결하며, DB 쓰기는 글로벌 프롬프트 편집의 INSERT, 계정별 저장한 필터, 관리자의 계정 관리 세 가지뿐이다. 화면과 데이터 읽기는 로그인한 계정의 범위 안에서만 한다.">
+      <svg viewBox="0 0 1200 556" role="img" aria-label="브라우저는 Next.js(3333)만 부르고, Next 서버가 FastAPI BFF(5555)를 HTTP로 부른다. BFF는 모듈별로 운영 DB, 데이터 DB, 외부 Gold DB에 연결하며, DB 쓰기는 글로벌 프롬프트 편집의 INSERT, 계정별 저장한 필터, 관리자의 계정 관리와 GA4 속성 등록부 네 가지뿐이다. 화면과 데이터 읽기는 로그인한 계정의 범위 안에서만 한다.">
         <defs>
           <marker id="f1a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker>
           <marker id="f1w" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto"><path class="ahw" d="M0,0L10,5L0,10z"/></marker>
@@ -227,8 +227,8 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <text class="b" x="214" y="334">/api/* 라우트 핸들러</text>
         <text class="m" x="214" y="356">hub/session · hub/password</text>
         <text class="mu" x="214" y="372">로그인 · 로그아웃 · 비밀번호 변경</text>
-        <text class="m" x="214" y="394">hub/accounts</text>
-        <text class="mu" x="214" y="410">계정 관리 (관리자)</text>
+        <text class="m" x="214" y="394">hub/accounts · hub/ga4-properties</text>
+        <text class="mu" x="214" y="410">계정 관리 · GA4 연동 (관리자)</text>
         <text class="m" x="214" y="432">hub/global-prompts</text>
         <text class="mu" x="214" y="448">글로벌 프롬프트 편집 (관리자)</text>
         <text class="m" x="214" y="470">hub/saved-filters</text>
@@ -275,9 +275,10 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <text class="m b" x="734" y="318">hub_catalog</text>
         <text class="m mu" x="734" y="337">/v1/hub/projects·prompts</text>
 
-        <rect class="box" x="720" y="364" width="200" height="52" rx="6"/>
-        <text class="m b" x="734" y="386">analytics_reader</text>
-        <text class="m mu" x="734" y="405">/v1/analytics/*</text>
+        <rect class="box" x="720" y="364" width="200" height="66" rx="6"/>
+        <text class="m b" x="734" y="384">analytics_reader</text>
+        <text class="m b" x="734" y="401">ga4_registry</text>
+        <text class="m mu sm" x="734" y="420">/v1/analytics/* · hub/ga4-…</text>
 
         <rect class="box" x="720" y="446" width="200" height="52" rx="6"/>
         <text class="m b" x="734" y="468">gold_reader</text>
@@ -295,7 +296,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <text class="m mu sm" x="544" y="503">GET /v1/* 도 같은 범위로</text>
 
         <path class="e" d="M610,410V430" marker-end="url(#f1a)"/>
-        <path class="e" d="M690,450H705V390H720" marker-end="url(#f1a)"/>
+        <path class="e" d="M690,450H705V384H720" marker-end="url(#f1a)"/>
         <path class="e" d="M690,472H720" marker-end="url(#f1a)"/>
 
         <!-- databases -->
@@ -333,8 +334,10 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <text class="sm w" x="965" y="246" text-anchor="middle">INSERT만</text>
         <path class="e" d="M920,322H1010" marker-end="url(#f1a)"/>
         <text class="mu sm" x="965" y="314" text-anchor="middle">카탈로그</text>
-        <path class="e" d="M920,390H1010" marker-end="url(#f1a)"/>
-        <text class="mu sm" x="965" y="382" text-anchor="middle">GA4·SEO</text>
+        <path class="e" d="M920,384H1010" marker-end="url(#f1a)"/>
+        <text class="mu sm" x="965" y="376" text-anchor="middle">GA4·SEO</text>
+        <path class="ew" d="M920,410H1010" marker-end="url(#f1w)"/>
+        <text class="sm w" x="965" y="430" text-anchor="middle">GA4 등록부만</text>
         <path class="e" d="M920,472H1010" marker-end="url(#f1a)"/>
         <text class="mu sm" x="965" y="464" text-anchor="middle">측정 사실</text>
       </svg>
@@ -347,7 +350,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <span><svg viewBox="0 0 28 12"><rect x="1" y="1" width="26" height="10" rx="2" class="sw-gold"/></svg>외부 DB</span>
       </div>
       <p><strong>그림 1.</strong> 브라우저 요청은 모두 middleware 관문을 지나 Next 서버에서 끝난다. BFF를 부르는 것은 Next 서버이고,
-        DB 자격증명은 BFF만 갖는다. 빨간 선 세 개가 앱이 DB에 쓰는 경로의 전부다(계정 관리, 계정별 저장한 필터, 글로벌 프롬프트 INSERT).
+        DB 자격증명은 BFF만 갖는다. 빨간 선 네 개가 앱이 DB에 쓰는 경로의 전부다(계정 관리, 계정별 저장한 필터, 글로벌 프롬프트 INSERT, GA4 속성 등록부).
         Next 서버는 BFF를 부를 때마다 쿠키의 토큰을 Bearer로 붙이고, BFF는 토큰 없는 화면·데이터 읽기를 401로 거절한다.</p>
     </figcaption>
   </figure>
@@ -383,9 +386,9 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 </section>
 
 <section id="conn" aria-labelledby="h-conn">
-  <h2 id="h-conn">BFF의 DB 연결 여섯 개</h2>
+  <h2 id="h-conn">BFF의 DB 연결 일곱 개</h2>
   <p class="sub prose">연결마다 계정이 다르고, 모두 <code>statement_timeout</code> 15초가 걸려 있다. Gold 연결이 없으면 API가 뜨지 않고,
-    나머지 다섯은 없으면 그 기능만 빠진다. 그래서 HUB 저장소 없이 Gold만으로도 화면 대부분이 돈다.</p>
+    나머지 여섯은 없으면 그 기능만 빠진다. 그래서 HUB 저장소 없이 Gold만으로도 화면 대부분이 돈다.</p>
   <div class="table-wrap">
     <table>
       <thead><tr><th>연결</th><th>환경변수</th><th>대상</th><th>할 수 있는 일</th><th>풀</th></tr></thead>
@@ -396,6 +399,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <tr><td class="k">카탈로그 편집</td><td><code>HGH_CATALOG_EDITOR_DB_URL</code></td><td><code>hmg_analytics</code><br><span class="muted">계정 hmg_catalog_editor</span></td><td><code>catalog.prompt</code>·<code>prompt_version</code> INSERT와 catalog SELECT만. UPDATE·DELETE 권한 없음</td><td class="mono">≤ 2</td></tr>
         <tr><td class="k">저장한 필터</td><td><code>HGH_SAVED_FILTER_EDITOR_DB_URL</code></td><td><code>hmg_operations</code><br><span class="muted">계정 hmg_saved_filter_editor</span></td><td><code>system.saved_filter</code> 한 표만 SELECT·INSERT·UPDATE·DELETE. 목록 읽기는 운영 DB 조회 연결로 한다</td><td class="mono">≤ 2</td></tr>
         <tr><td class="k">계정 관리</td><td><code>HGH_ACCOUNT_EDITOR_DB_URL</code></td><td><code>hmg_operations</code><br><span class="muted">계정 hmg_account_editor</span></td><td>계정 표(<code>user_account</code>·<code>user_credential</code>·<code>global_role</code>) INSERT·UPDATE와 <code>audit_event</code> INSERT만. 지우기 권한 없음. 로그인 시각도 이 연결로 남긴다</td><td class="mono">≤ 2</td></tr>
+        <tr><td class="k">GA4 등록부</td><td><code>HGH_GA4_REGISTRY_EDITOR_DB_URL</code></td><td><code>hmg_analytics</code><br><span class="muted">계정 hmg_ga4_registry_editor</span></td><td><code>analytics.ga4_registry</code> INSERT와 속성 ID 뺀 열 UPDATE, <code>ga4_registry_event</code> INSERT만. 지우기 권한 없음. 목록·이벤트 읽기는 데이터 DB 조회 연결로 한다</td><td class="mono">≤ 2</td></tr>
       </tbody>
     </table>
   </div>
@@ -405,7 +409,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   <h2 id="h-writes">누가 어디에 쓰는가</h2>
   <figure>
     <div class="scroll">
-      <svg viewBox="0 0 1200 556" role="img" aria-label="HUB DB에 쓰는 경로는 네 개다. BFF 글로벌 프롬프트 편집이 catalog에 INSERT하고, BFF 저장한 필터가 운영 DB system.saved_filter에 계정마다 자기 행만 쓰고, BFF 계정 관리가 최상위 관리자의 요청으로 운영 DB 계정 표를 쓰고, manage.py 관리 명령이 Gold 정의를 읽어 catalog에 새 버전을 기록하며 운영 DB에 관리자와 UUID 참조를 등록한다. Gold에는 아무도 쓰지 않는다. GA4 수집기(back/analytics/ga4_collect.py)는 hmg_analytics_writer 계정으로 GA4 Data API 값을 analytics.ga4_*에 쓰도록 만들어 두었지만, GA4 자격 증명을 인계받기 전이라 아직 돌지 않는다. SEO 수집기는 없다. 외부 API는 hmg_ext_api 계정으로 ext 뷰만 읽는다.">
+      <svg viewBox="0 0 1200 556" role="img" aria-label="HUB DB에 쓰는 경로는 다섯 개다. BFF 글로벌 프롬프트 편집이 catalog에 INSERT하고, BFF 저장한 필터가 운영 DB system.saved_filter에 계정마다 자기 행만 쓰고, BFF 계정 관리가 최상위 관리자의 요청으로 운영 DB 계정 표를 쓰고, BFF GA4 연동이 최상위 관리자의 요청으로 데이터 DB의 GA4 속성 등록부(analytics.ga4_registry)와 그 이력을 쓰고, manage.py 관리 명령이 Gold 정의를 읽어 catalog에 새 버전을 기록하며 운영 DB에 관리자와 UUID 참조를 등록한다. Gold에는 아무도 쓰지 않는다. GA4 수집기(back/analytics/ga4_collect.py)는 hmg_analytics_writer 계정으로 그 등록부를 읽어 GA4 Data API 값을 analytics.ga4_*에 쓰고 속성마다 결과를 ga4_collect_status에 남기도록 만들어 두었지만, GA4 자격 증명을 인계받기 전이라 아직 돌지 않는다. SEO 수집기는 없다. 외부 API는 hmg_ext_api 계정으로 ext 뷰만 읽는다.">
         <defs>
           <marker id="f2a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker>
           <marker id="f2w" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto"><path class="ahw" d="M0,0L10,5L0,10z"/></marker>
@@ -453,8 +457,9 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <rect class="box" x="336" y="236" width="260" height="168" rx="6"/>
         <text class="m b" x="352" y="260">analytics.* · ref.* · ops.*</text>
         <text class="mu" x="352" y="282">GA4 세션·사용자·전환·이벤트</text>
-        <text class="mu" x="352" y="301">SEO 노출·크롤러·기기·페이지</text>
-        <text class="mu" x="352" y="320">ops.*: SEO 빌드 발행 기록</text>
+        <text class="m mu sm" x="352" y="300">ga4_registry: 속성 등록부</text>
+        <text class="mu" x="352" y="320">SEO 노출·크롤러·기기·페이지</text>
+        <text class="mu" x="352" y="339">ops.*: SEO 빌드 발행 기록</text>
         <text class="mu sm" x="352" y="363">GA4 수집기 인계 전 · 지금은 빈 표</text>
 
         <rect class="box" x="616" y="236" width="240" height="168" rx="6"/>
@@ -496,8 +501,14 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <!-- not connected yet -->
         <rect class="ghost" x="336" y="464" width="260" height="64" rx="6"/>
         <text class="mu" x="466" y="490" text-anchor="middle">GA4 수집기 · ga4_collect.py</text>
-        <text class="mu sm" x="466" y="510" text-anchor="middle">자격 증명 인계 전 · SEO 수집기 없음</text>
+        <text class="mu sm" x="466" y="510" text-anchor="middle">등록부를 읽음 · 자격 증명 인계 전</text>
         <path class="ed" d="M466,464V404" marker-end="url(#f2d)"/>
+
+        <rect class="box" x="36" y="464" width="280" height="64" rx="6"/>
+        <text class="b" x="176" y="490" text-anchor="middle">BFF GA4 연동 · ga4_registry</text>
+        <text class="m mu sm" x="176" y="510" text-anchor="middle">최상위 관리자만 · 지우기 없음</text>
+        <path class="ew" d="M176,464V444H372V404" marker-end="url(#f2w)"/>
+        <text class="sm w" x="190" y="456">등록부와 이력만</text>
 
         <rect class="box" x="616" y="464" width="240" height="64" rx="6"/>
         <text class="b" x="736" y="490" text-anchor="middle">외부 API · back/ext</text>
@@ -519,9 +530,11 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <span><svg viewBox="0 0 28 12"><rect x="1" y="1" width="26" height="10" rx="2" class="sw-hub"/></svg>HUB가 가진 DB</span>
         <span><svg viewBox="0 0 28 12"><rect x="1" y="1" width="26" height="10" rx="2" class="sw-gold"/></svg>외부 DB</span>
       </div>
-      <p><strong>그림 2.</strong> HUB DB에 쓰는 경로는 빨간 선 네 개가 전부다. 편집과 sync는 같은 advisory lock을 잡아서 한 번에 하나만 기록한다.
+      <p><strong>그림 2.</strong> HUB DB에 쓰는 경로는 빨간 선 다섯 개가 전부다. 편집과 sync는 같은 advisory lock을 잡아서 한 번에 하나만 기록한다.
         오른쪽 아래 선은 두 BFF 연결이다: 저장한 필터는 <code>hmg_saved_filter_editor</code>로 <code>saved_filter</code>만, 계정 관리는 <code>hmg_account_editor</code>로 계정 표만 쓴다.
-        점선의 GA4 수집기(<code>back/analytics/ga4_collect.py</code>)는 <code>hmg_analytics_writer</code>로 속성마다 수집한 날짜를 통째로 바꿔 쓴다.
+        왼쪽 아래 선은 GA4 연동 화면이다: <code>hmg_ga4_registry_editor</code>로 GA4 속성 등록부(<code>ga4_registry</code>)와 그 이력만 쓴다.
+        점선의 GA4 수집기(<code>back/analytics/ga4_collect.py</code>)는 <code>hmg_analytics_writer</code>로 그 등록부를 읽어 속성마다 수집한 날짜를 통째로 바꿔 쓰고,
+        결과(수집됨 · 권한 대기 · 실패 · 중지됨)를 <code>ga4_collect_status</code>에 남긴다. 화면은 그 값을 그대로 보인다.
         GA4 자격 증명(<code>.env.ga4.local</code>)은 이 프로세스만 읽고, BFF와 브라우저는 GA4를 부르지 않는다. 자격 증명을 인계받으면 돌린다.
         공개 승인과 외부 호출자·키도 <code>manage.py</code> 명령으로만 쓴다. 외부 API는 읽기만 한다.
         Gold에는 아무도 쓰지 않는다. 표 단위 구조는 <a href="#erd-ops">운영 DB ERD</a>와 <a href="#erd-data">데이터 DB ERD</a>에 있다.</p>
@@ -1324,7 +1337,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   <figure>
     <div class="scroll">
       <!-- erd:ga4 -->
-<svg viewBox="0 0 1200 494" role="img" aria-label="HUB 데이터 DB의 GA4 표 ERD. ga4_row와 ga4_users_window가 ga4_property를 가리키고, 차원 키는 kind별로 ga4_value를 가리킨다.">
+<svg viewBox="0 0 1200 796" role="img" aria-label="HUB 데이터 DB의 GA4 표 ERD. ga4_row와 ga4_users_window가 ga4_property를 가리키고, 차원 키는 kind별로 ga4_value를 가리킨다. 아래 줄은 관리자가 고치는 속성 등록부 ga4_registry와 그 변경 이력, 수집기가 속성마다 남기는 마지막 결과 ga4_collect_status이고, 수집기가 등록부를 ga4_property로 복사한다.">
 <defs><marker id="ga4-a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker><marker id="ga4-d" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ahd" d="M0,0L10,5L0,10z"/></marker></defs>
 <rect class="tbox" x="70" y="40" width="290" height="392" rx="6"/>
 <path class="th" d="M70,70V46q0,-6 6,-6H354q6,0 6,6V70z"/>
@@ -1452,11 +1465,80 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 <text class="m sm ty" x="1090" y="257" text-anchor="end">integer</text>
 <text class="m" x="848" y="275">users</text>
 <text class="m sm ty" x="1090" y="275" text-anchor="end">integer</text>
+<rect class="tbox" x="70" y="510" width="300" height="194" rx="6"/>
+<path class="th" d="M70,540V516q0,-6 6,-6H364q6,0 6,6V540z"/>
+<line class="rule" x1="70" y1="540" x2="370" y2="540"/>
+<line class="hair" x1="82" y1="582" x2="358" y2="582"/>
+<text class="m b" x="82" y="530"><tspan class="tsch">analytics.</tspan>ga4_registry_event</text>
+<text class="desc" x="82" y="557">등록부의 변경 이력이다. changes는 {필드: [전,</text>
+<text class="desc" x="82" y="573">후]}이고 지우지 않는다.</text>
+<text class="kb pk" x="80" y="601">PK</text>
+<text class="m" x="118" y="601">event_id</text>
+<text class="m sm ty" x="360" y="601" text-anchor="end">bigint</text>
+<text class="kb fk" x="80" y="619">FK</text>
+<text class="m" x="118" y="619">property_id</text>
+<text class="m sm ty" x="360" y="619" text-anchor="end">text</text>
+<text class="m" x="118" y="637">action</text>
+<text class="m sm val" x="360" y="637" text-anchor="end">create|update|stop|resume</text>
+<text class="m" x="118" y="655">actor_id</text>
+<text class="m sm lref" x="360" y="655" text-anchor="end">⇢ user_account</text>
+<text class="m" x="118" y="673">changes</text>
+<text class="m sm ty" x="360" y="673" text-anchor="end">jsonb</text>
+<text class="m" x="118" y="691">occurred_at</text>
+<text class="m sm ty" x="360" y="691" text-anchor="end">timestamptz</text>
+<rect class="tbox" x="420" y="510" width="330" height="266" rx="6"/>
+<path class="th" d="M420,540V516q0,-6 6,-6H744q6,0 6,6V540z"/>
+<line class="rule" x1="420" y1="540" x2="750" y2="540"/>
+<line class="hair" x1="432" y1="582" x2="738" y2="582"/>
+<text class="m b" x="432" y="530"><tspan class="tsch">analytics.</tspan>ga4_registry</text>
+<text class="desc" x="432" y="557">관리자가 Admin › GA4 연동에서 정하는 수집 대상</text>
+<text class="desc" x="432" y="573">속성과 시장·전환 기준이다.</text>
+<text class="kb pk" x="430" y="601">PK</text>
+<text class="m" x="468" y="601">property_id</text>
+<text class="m sm ty" x="740" y="601" text-anchor="end">text (숫자)</text>
+<text class="m" x="468" y="619">brand</text>
+<text class="m sm val" x="740" y="619" text-anchor="end">Hyundai|Kia|Genesis</text>
+<text class="m" x="468" y="637">country</text>
+<text class="m sm ty" x="740" y="637" text-anchor="end">text (ISO-2)</text>
+<text class="m" x="468" y="655">conv_basis</text>
+<text class="m sm val" x="740" y="655" text-anchor="end">1|2</text>
+<text class="m" x="468" y="673">conv_events</text>
+<text class="m sm ty" x="740" y="673" text-anchor="end">text[] (2일 때 1~50개)</text>
+<text class="m" x="468" y="691">enabled</text>
+<text class="m sm ty" x="740" y="691" text-anchor="end">boolean</text>
+<text class="m" x="468" y="709">created_at</text>
+<text class="m sm ty" x="740" y="709" text-anchor="end">timestamptz</text>
+<text class="m" x="468" y="727">updated_at</text>
+<text class="m sm ty" x="740" y="727" text-anchor="end">timestamptz</text>
+<text class="mu sm" x="432" y="745">UK (brand, country) WHERE enabled</text>
+<text class="mu sm" x="432" y="763">⇢ ga4_property.property_id (수집기가 복사)</text>
+<rect class="tbox" x="800" y="510" width="300" height="212" rx="6"/>
+<path class="th" d="M800,540V516q0,-6 6,-6H1094q6,0 6,6V540z"/>
+<line class="rule" x1="800" y1="540" x2="1100" y2="540"/>
+<line class="hair" x1="812" y1="582" x2="1088" y2="582"/>
+<text class="m b" x="812" y="530"><tspan class="tsch">analytics.</tspan>ga4_collect_status</text>
+<text class="desc" x="812" y="557">수집기가 속성마다 남기는 마지막 실행 결과이고,</text>
+<text class="desc" x="812" y="573">실행마다 바뀐다.</text>
+<text class="kb pk" x="810" y="601">PK FK</text>
+<text class="m" x="848" y="601">property_id</text>
+<text class="m sm ty" x="1090" y="601" text-anchor="end">text</text>
+<text class="m" x="848" y="619">checked_at</text>
+<text class="m sm ty" x="1090" y="619" text-anchor="end">timestamptz</text>
+<text class="m" x="848" y="637">status</text>
+<text class="m sm val" x="1090" y="655" text-anchor="end">collected|pending_grant|failed|stopped</text>
+<text class="m" x="848" y="673">error</text>
+<text class="m sm ty" x="1090" y="673" text-anchor="end">text (≤500)</text>
+<text class="m" x="848" y="691">collected_at</text>
+<text class="m sm ty" x="1090" y="691" text-anchor="end">timestamptz</text>
+<text class="m" x="848" y="709">collected_to</text>
+<text class="m sm ty" x="1090" y="709" text-anchor="end">date</text>
 <path class="e" d="M360,127.0H410" marker-end="url(#ga4-a)"/>
 <path class="e" d="M360,181h8V271h-8"/>
 <path class="e" d="M368,226.0H389V387H410" marker-end="url(#ga4-a)"/>
 <path class="e" d="M800,127.0H750" marker-end="url(#ga4-a)"/>
 <path class="e" d="M800,253.0H775V387H750" marker-end="url(#ga4-a)"/>
+<path class="e" d="M370,615.0H395.0V597H420" marker-end="url(#ga4-a)"/>
+<path class="e" d="M800,597.0H750" marker-end="url(#ga4-a)"/>
 </svg>
       <!-- /erd:ga4 -->
     </div>
@@ -1465,7 +1547,10 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         kind 쪽 값은 생성 열(<code>channel_kind</code> 등)로 고정되어 있어 그림에서는 뺐다. <code>users_day</code>는 일별 값이라 기간 합산하지 않고,
         기간 사용자 수는 <code>ga4_users_window</code>를 읽는다. 서로 다른 <code>report</code>는 합산하지 않는다.
         수집기는 속성의 날짜를 통째로 바꿔 쓰고 수집한 날마다 일별 <code>total</code> 창(window_days 1)을 사용자 0명이라도 남긴다. 리더는 그 날을 ‘수집한 날’로 보고,
-        그날 행이 없는 값은 0으로 읽는다(GA4는 지표가 모두 0인 행을 보내지 않는다). 수집하지 않은 날은 <code>null</code>이다.</p>
+        그날 행이 없는 값은 0으로 읽는다(GA4는 지표가 모두 0인 행을 보내지 않는다). 수집하지 않은 날은 <code>null</code>이다.
+        아래 줄(2026-10-29, <code>data-006.sql</code>)은 수집 대상의 정본이다. 최상위 관리자가 리뉴얼 Admin › GA4 연동에서 <code>ga4_registry</code>를 고치고(한 시장에 수집하는 속성 하나,
+        지우지 않고 중지), 바꿀 때마다 <code>ga4_registry_event</code>가 남는다. 수집기는 실행마다 등록부를 읽어 <code>ga4_property</code>에 복사하고(중지한 속성은 <code>unmapped</code>라 리더가 뺀다),
+        결과를 <code>ga4_collect_status</code>에 남긴다. 전환 기준이 바뀌면 그 속성의 저장된 이벤트 행(<code>report</code> 3)의 <code>is_conv</code>를 새 기준으로 다시 정한다.</p>
     </figcaption>
   </figure>
 
@@ -1909,7 +1994,10 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
       <tbody>
         <tr><td class="k mono">hmg_analytics_owner</td><td>마이그레이션 · <code>ext</code> 뷰 소유</td><td>스키마 소유 (로그인 불가). 공개 승인·외부 호출자·키는 DB 관리자 권한으로 <code>manage.py</code> 명령(<a href="#ext">외부 API</a>)이 쓴다</td></tr>
         <tr><td class="k mono">hmg_analytics_reader</td><td>API · <code>HGH_ANALYTICS_DB_URL</code></td><td><code>ref</code>·<code>analytics</code>·<code>ops</code>·<code>catalog</code> SELECT</td></tr>
-        <tr><td class="k mono">hmg_analytics_writer</td><td>GA4 수집기 <code>back/analytics/ga4_collect.py</code> (자격 증명 인계 전) · SEO 적재 (수집기 없음)</td><td><code>ref</code>·<code>analytics</code> 쓰기, <code>ops.build</code> 쓰기, <code>ops.publish_seo_build()</code> 실행</td></tr>
+        <tr><td class="k mono">hmg_analytics_writer</td><td>GA4 수집기 <code>back/analytics/ga4_collect.py</code> (자격 증명 인계 전) · SEO 적재 (수집기 없음)</td><td><code>ref</code>·<code>analytics</code> 쓰기(2026-10-29 이전 표), <code>ops.build</code> 쓰기, <code>ops.publish_seo_build()</code> 실행.
+          <code>ga4_registry</code>는 SELECT만, <code>ga4_collect_status</code>는 SELECT·INSERT·UPDATE</td></tr>
+        <tr><td class="k mono">hmg_ga4_registry_editor</td><td>API GA4 연동 · <code>HGH_GA4_REGISTRY_EDITOR_DB_URL</code></td><td><code>ga4_registry</code> INSERT와 속성 ID·등록 시각 뺀 열 UPDATE, <code>ga4_registry_event</code> INSERT, 이 둘과 <code>ga4_collect_status</code> SELECT. DELETE 없음.
+          GA4 측정 행·<code>ga4_property</code>·카탈로그는 읽지도 못하고 운영 DB에는 접속하지 못한다</td></tr>
         <tr><td class="k mono">hmg_catalog_writer</td><td><code>manage.py sync-gold-catalog</code></td><td><code>catalog</code> 정체성·버전 표와 <code>reference_set</code>·<code>reference_item</code> INSERT(버전 표·set은 <code>change_seq</code> 뺀 열만), <code>sync_run</code> INSERT·결과 열 UPDATE, <code>catalog</code> SELECT</td></tr>
         <tr><td class="k mono">hmg_catalog_editor</td><td>API 글로벌 프롬프트 편집 · <code>HGH_CATALOG_EDITOR_DB_URL</code></td><td><code>catalog.prompt</code> INSERT, <code>prompt_version</code>은 <code>change_seq</code> 뺀 열만 INSERT, <code>catalog</code> SELECT(분류 체계는 <code>current_reference</code>)</td></tr>
         <tr><td class="k mono">hmg_data_external</td><td>DB 직접 공개 (미개방)</td><td><code>published</code> SELECT만. <code>ext</code>는 못 읽는다</td></tr>
@@ -1929,7 +2017,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <tr><td>국가별 GEO·언급·인용·답변·프롬프트·ACR</td><td>Gold 활성 빌드 (<code>answer_fact</code>, <code>citation_fact</code> 등)</td><td><span class="pill on">들어옴</span></td></tr>
         <tr><td>키워드 검색량·검색 결과·관련 키워드</td><td>Gold <code>kw_volume_monthly</code>·<code>kw_serp</code>·<code>kw_suggestion</code></td><td><span class="pill on">들어옴</span></td></tr>
         <tr><td>소셜 맥락·요구·근거 발화</td><td>Gold 활성 <code>ctx_snapshot</code>과 연관 데이터</td><td><span class="pill on">들어옴</span></td></tr>
-        <tr><td>GA4 세션·기간 사용자·전환·이벤트</td><td>데이터 DB <code>analytics.ga4_*</code> ← GA4 수집기 (<code>back/analytics/ga4_collect.py</code>)</td><td><span class="pill off">수집 전</span> <span class="muted">수집기 있음 · GA4 자격 증명 인계 전</span></td></tr>
+        <tr><td>GA4 세션·기간 사용자·전환·이벤트</td><td>데이터 DB <code>analytics.ga4_*</code> ← GA4 수집기 (<code>back/analytics/ga4_collect.py</code>, 속성 목록은 Admin › GA4 연동의 <code>ga4_registry</code>)</td><td><span class="pill off">수집 전</span> <span class="muted">수집기 있음 · GA4 자격 증명 인계 전</span></td></tr>
         <tr><td>SEO 노출·크롤러·기기·페이지 우선순위</td><td>데이터 DB <code>analytics.current_page_*</code> 뷰</td><td><span class="pill off">수집 전</span></td></tr>
         <tr><td>프로젝트·프롬프트 버전 카탈로그</td><td>데이터 DB <code>catalog.*</code></td><td><span class="pill on">들어옴</span> <span class="muted">Gold 정의 + HUB 글로벌 프롬프트</span></td></tr>
         <tr><td>수집·가공 기준값 17종 (외부 API)</td><td>데이터 DB <code>catalog.reference_*</code></td><td><span class="pill on">들어옴</span> <span class="muted">Gold 가져오기 · 브랜드 별칭·자사 도메인·도메인 분류 규칙·비경쟁 명단은 Gold에 없어 아직 없음</span></td></tr>
@@ -1953,7 +2041,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <tr><td class="k">외부 API</td><td colspan="2"><code>back/</code>에서 <code>.env.ext-api.local</code>을 읽고 <code>uvicorn ext.app:app --port 5560 --log-config ext/logging.json</code>. 이미지는 <code>back/ext/Dockerfile</code>.
           Gold 가져오기는 주기 실행(Gold 재적재 시간을 피해서)이 필요하다</td></tr>
         <tr><td class="k">GA4 수집</td><td colspan="2">저장소 루트에서 <code>python -X utf8 back/analytics/ga4_collect.py</code>(최근 3일을 다시 받음, 처음은 <code>--backfill 180</code>, 확인만은 <code>--dry-run</code>).
-          VM에서는 <code>bash scripts/vm.sh ga4 …</code>(수동) · <code>vm.sh ga4-cron</code>(하루 한 번). 속성 목록은 <code>.local/ga4-properties.json</code>(형식: <code>back/analytics/ga4-properties.example.json</code>)</td></tr>
+          VM에서는 <code>bash scripts/vm.sh ga4 …</code>(수동) · <code>vm.sh ga4-cron</code>(하루 한 번). 속성 목록은 데이터 DB <code>analytics.ga4_registry</code>이고 리뉴얼 Admin › GA4 연동(<code>/renewal/admin/ga4</code>)에서 고친다(2026-10-29, 예전 파일 등록부는 없앰)</td></tr>
         <tr><td class="k">비밀 파일</td><td colspan="2"><code>.env.gold.local</code> · <code>.env.analytics.local</code> · <code>.env.operations.local</code> · <code>.env.hub-edit.local</code> · <code>.env.ext-api.local</code>
           · 수집기용 <code>.env.analytics-ingest.local</code> · <code>.env.ga4.local</code> (모두 git 제외)</td></tr>
       </tbody>

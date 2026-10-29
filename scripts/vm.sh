@@ -10,7 +10,8 @@
 #   ga4         the GA4 collector (back/analytics/ga4_collect.py) once, by hand: its arguments pass through
 #               (--dry-run, --backfill 180, --from/--to, --property). It runs in a throwaway container of the BFF
 #               image on the host network (the HUB data DB on 127.0.0.1, GA4 on the internet); the secrets travel in
-#               env files only. Needs .env.ga4.local (GA4 credentials) and .local/ga4-properties.json (the properties).
+#               env files only. Needs .env.ga4.local (GA4 credentials); the properties are the HUB data DB's registry,
+#               kept on the renewal Admin › GA4 연동 screen (analytics.ga4_registry).
 #   ga4-cron    cron, daily: `ga4` with its defaults (the last 3 days again). The production and dev builds share
 #               the one HUB data DB, so this one schedule serves both; a run by hand only replaces the same days.
 # sync, check-sync and ga4-cron append one line each to .local/vm-cron.log.
@@ -26,7 +27,7 @@ logs=(--log-opt max-size=10m --log-opt max-file=5)
 log() { mkdir -p .local; echo "$(date -u +%FT%TZ) $*" >>.local/vm-cron.log; }
 replace() { docker rm -f "$1" >/dev/null 2>&1 || true; }
 ga4_run() {
-    for f in .env.analytics-ingest.local .env.ga4.local .local/ga4-properties.json; do
+    for f in .env.analytics-ingest.local .env.ga4.local; do
         [ -f "$f" ] || { echo "$f is missing (back/analytics/README.md, GA4 수집기)" >&2; return 1; }
     done
     if grep -q '^GA4_SERVICE_ACCOUNT_FILE=' .env.ga4.local; then
@@ -34,9 +35,7 @@ ga4_run() {
     fi
     docker image inspect hgh-gold-api:local >/dev/null 2>&1 || { echo 'hgh-gold-api:local is missing: run vm.sh bff first' >&2; return 1; }
     docker run --rm --network host --env-file .env.analytics-ingest.local --env-file .env.ga4.local \
-        -e HGH_GA4_PROPERTIES=/collector/ga4-properties.json \
         -v "$repo/back/analytics/ga4_collect.py:/collector/ga4_collect.py:ro" \
-        -v "$repo/.local/ga4-properties.json:/collector/ga4-properties.json:ro" \
         hgh-gold-api:local python -X utf8 /collector/ga4_collect.py "$@"
 }
 

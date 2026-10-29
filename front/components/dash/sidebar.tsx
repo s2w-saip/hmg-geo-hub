@@ -104,6 +104,7 @@ const ROUTE_ICON: Record<RouteKey, ComponentType<{ className?: string }>> = {
   adminStandardPrompts: FileText,
   renewalAdminStandardPrompts: FileText,
   renewalAdmin: Shield,
+  renewalAdminGa4: Plug,
   adminStandardCustomerInterest: Database,
   adminStandardEntities: Building2,
   adminCitationSources: Link2,
