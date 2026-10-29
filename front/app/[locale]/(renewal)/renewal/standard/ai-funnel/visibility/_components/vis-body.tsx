@@ -33,7 +33,7 @@ type T = ReturnType<typeof useTranslations<"renewal.visibility">>;
 export function RnVisBody({ input }: { input: RnVisBody }) {
   const t = useTranslations("renewal.visibility");
   const reset = useRnFilterReset();
-  const { tab, dense } = useVisPage();
+  const { tab } = useVisPage();
   const { view } = input;
   if (input.state !== "ok" || !view) {
     const card = {
@@ -50,7 +50,7 @@ export function RnVisBody({ input }: { input: RnVisBody }) {
     );
   }
   return (
-    <div className={cx("@container/rnpage flex flex-col gap-4", dense && "rn-dense gap-2.5")}>
+    <div className="@container/rnpage flex flex-col gap-2.5">
       {view.totals.incomplete > 0 ? (
         <p className="m-0 rounded-xl bg-rn-surface px-4 py-3 text-rn-12 text-rn-ink-2 shadow-rn-card">{t("summary.incomplete", { n: view.totals.incomplete })}</p>
       ) : null}

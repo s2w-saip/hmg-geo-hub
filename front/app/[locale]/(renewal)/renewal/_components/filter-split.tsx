@@ -22,6 +22,9 @@ export function useRnSplit() {
 
 const FRAME = "@container/rnframe flex flex-col pt-6 max-xl:pt-5";
 const FRAME_HEAD = "min-w-0 shrink-0 overflow-hidden px-[var(--rn-edge)] pb-3 [scrollbar-gutter:stable]";
+// Every renewal page is dense (2026-10-29, the user: "기본적으로 UI는 모두 촘촘모드로"): the content column
+// carries .rn-dense — the tight rhythm, no helper copy — and no page has a density toggle.
+const DENSE = "rn-dense flex min-w-0 flex-col gap-2.5";
 const FRAME_SCROLL = "min-h-0 min-w-0 overflow-y-auto overscroll-contain pt-1 pr-[var(--rn-edge)] pb-18 max-xl:pb-16 [scrollbar-gutter:stable]";
 
 /** Page layout without a filter panel: the page header on top, the content scrolling below it. */
@@ -30,7 +33,7 @@ export function RnPageFrame({ header, children }: { header: ReactNode; children:
     <div data-rn-frame="" className={FRAME}>
       <div className={FRAME_HEAD}>{header}</div>
       <div data-rn-scroll="" className={cx(FRAME_SCROLL, "flex-1 pl-[var(--rn-edge)]")}>
-        <div className="flex min-w-0 flex-col gap-5">{children}</div>
+        <div className={DENSE}>{children}</div>
       </div>
     </div>
   );
@@ -65,7 +68,7 @@ export function RnFilterSplit({ header, top, panel, rail, children }: { header?:
   // pl-5 = the panel | content gap, inside the scroller so card shadows are not clipped
   const scroll = (
     <div data-rn-scroll="" className={cx(FRAME_SCROLL, "pl-5", top ? "flex-1" : "")}>
-      <div className="@container/rncontent flex min-w-0 flex-col gap-4">{children}</div>
+      <div className={cx("@container/rncontent", DENSE)}>{children}</div>
     </div>
   );
   return (
@@ -85,7 +88,7 @@ export function RnFilterSplit({ header, top, panel, rail, children }: { header?:
           {top ? (
             <div className="flex min-h-0 min-w-0 flex-col">
               {/* top edge = the panel card's (pt-1); the scrollbar gutter lines its right end up with the content */}
-              <div data-rn-split-top="" className="min-w-0 shrink-0 overflow-hidden pt-1 pr-[var(--rn-edge)] pb-3 pl-5 [scrollbar-gutter:stable]">
+              <div data-rn-split-top="" className="rn-dense min-w-0 shrink-0 overflow-hidden pt-1 pr-[var(--rn-edge)] pb-3 pl-5 [scrollbar-gutter:stable]">
                 {top}
               </div>
               {scroll}

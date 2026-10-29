@@ -84,7 +84,6 @@ function AcrMeasured({ input, view }: { input: RnAcrInput; view: RnAcrView }) {
   const tf = useTranslations("dashboard.filters");
   const locale = useLocale();
   const [pick, setPick] = useState<{ auto: boolean; brands: string[] }>({ auto: true, brands: [] });
-  const [dense, setDense] = useState(false);
   const [tables, setTables] = useState<ReadonlySet<string>>(new Set());
   const [battle, setBattle] = useState<AcrCtx["battle"]>("all");
   const [sheet, setSheet] = useState<string | null>(null);
@@ -134,18 +133,9 @@ function AcrMeasured({ input, view }: { input: RnAcrInput; view: RnAcrView }) {
   const T = input.totals;
   return (
     <AcrProvider value={ctx}>
-      <div className={cx("@container/rnpage flex flex-col gap-4", dense && "rn-dense gap-2.5")}>
+      <div className="@container/rnpage flex flex-col gap-2.5">
         <RnControlBar label={t("bar.label")}>
           <ComparePicker pick={pick} setPick={setPick} />
-          <RnSegmented
-            label={t("density.label")}
-            value={dense ? "dense" : "normal"}
-            onChange={(v) => setDense(v === "dense")}
-            items={[
-              { value: "normal", label: t("density.normal") },
-              { value: "dense", label: t("density.dense") },
-            ]}
-          />
         </RnControlBar>
         {view.compareRounds ? null : <HeldNote />}
         <AcrFindings period={input.period} />

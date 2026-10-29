@@ -1,7 +1,7 @@
 "use client";
 
 // Page state of the renewal AI Visibility page: the view tab (?view=, every tab reads the same
-// screen model, so a tab is only the URL — no server round trip), the density toggle, the 측정 기간
+// screen model, so a tab is only the URL — no server round trip), the 측정 기간
 // row of the filter panel, and the display helpers every card shares (number formats, engine
 // labels and colours, site names). Display only: every value comes from the screen model.
 
@@ -63,20 +63,17 @@ export function useVisFmt(view: VisView | null): VisFmt {
   }, [locale, multiBrand, t, tf]);
 }
 
-// ── page state: tab · density ────────────────────────────────────────────────
+// ── page state: tab ────────────────────────────────────────────────
 
 interface Ctx {
   tab: VisTab;
   setTab: (t: VisTab) => void;
-  dense: boolean;
-  setDense: (v: boolean) => void;
 }
 
-const PageCtx = createContext<Ctx>({ tab: "sum", setTab: () => {}, dense: false, setDense: () => {} });
+const PageCtx = createContext<Ctx>({ tab: "sum", setTab: () => {} });
 
 export function RnVisPageProvider({ initialTab, children }: { initialTab: VisTab; children: ReactNode }) {
   const [tab, setTabState] = useState<VisTab>(initialTab);
-  const [dense, setDense] = useState(false);
   // a server render with another ?view (back nav, a link) wins
   useEffect(() => setTabState(initialTab), [initialTab]);
   const setTab = useCallback((t: VisTab) => {
@@ -85,7 +82,7 @@ export function RnVisPageProvider({ initialTab, children }: { initialTab: VisTab
     // a tab is another view: it starts from its top (no jump inside a view)
     document.querySelector("[data-rn-split] [data-rn-scroll]")?.scrollTo(0, 0);
   }, []);
-  const value = useMemo(() => ({ tab, setTab, dense, setDense }), [tab, setTab, dense]);
+  const value = useMemo(() => ({ tab, setTab }), [tab, setTab]);
   return <PageCtx.Provider value={value}>{children}</PageCtx.Provider>;
 }
 
@@ -93,21 +90,6 @@ export function useVisPage(): Ctx {
   return useContext(PageCtx);
 }
 
-export function RnVisDensityToggle() {
-  const { dense, setDense } = useVisPage();
-  const t = useTranslations("renewal.visibility.density");
-  return (
-    <RnSegmented
-      label={t("label")}
-      value={dense ? "dense" : "normal"}
-      onChange={(v) => setDense(v === "dense")}
-      items={[
-        { value: "normal", label: t("normal") },
-        { value: "dense", label: t("dense") },
-      ]}
-    />
-  );
-}
 
 /** The tab rail atop the content column (the filter panel stands beside every tab). */
 export function RnVisTabs({ view }: { view: VisView | null }) {

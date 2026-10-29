@@ -27,7 +27,6 @@ import {
 } from "../../../_components/overview-filters";
 import type { RnCitationInput, RnCitationVm } from "./_components/citation-input";
 import { RnCitationBody } from "./_components/citation-body";
-import { RnCitationDensityProvider, RnCitationDensityToggle } from "./_components/citation-density";
 
 // Renewal Citation (2026-10-21) — the redesigned /standard/answer-analysis/citation, served side
 // by side with the original. Data: the SAME screens as citation/page.tsx (`citation/as-of` for the
@@ -90,12 +89,7 @@ export default async function RenewalCitationPage({
           </RnPill>
         </>
       }
-      actions={
-        <>
-          <RnCitationDensityToggle />
-          <RnCopyLinkButton />
-        </>
-      }
+      actions={<RnCopyLinkButton />}
     />
   );
   const screen = screenGet<StandardCitationScreen<RnCitationVm>>("citation/standard", { ...query, "ctx.variant": "renewal" }).catch(
@@ -116,11 +110,9 @@ export default async function RenewalCitationPage({
   };
   return (
     <RnFilterRuntime>
-      <RnCitationDensityProvider>
-        <Suspense fallback={<PageSkeleton header={header} />}>
-          <RenewalCitation query={query} meta={meta} scope={session.user.scope} userId={session.user.id} locale={locale} header={header} body={body} />
-        </Suspense>
-      </RnCitationDensityProvider>
+      <Suspense fallback={<PageSkeleton header={header} />}>
+        <RenewalCitation query={query} meta={meta} scope={session.user.scope} userId={session.user.id} locale={locale} header={header} body={body} />
+      </Suspense>
     </RnFilterRuntime>
   );
 }

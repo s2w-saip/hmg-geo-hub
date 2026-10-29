@@ -36,7 +36,6 @@ import {
   type RnCitationVm,
   type RnMatrixView,
 } from "./citation-input";
-import { useCitationDensity } from "./citation-density";
 import { CitationCardActions, CitationProvider, DIV_LEGEND, DIV_LESS, DIV_MORE, divBg, engineLabel, useCatLabel, useCitation, type CitationCtx, type MatrixAxis } from "./citation-context";
 import { CardSkeleton, DegradedNote, DeltaChip, InfoTip, StateCard } from "../../mention/_components/mention-kit";
 import { numTxt, pctTxt, deltaTxt } from "../../mention/_components/mention-context";
@@ -88,7 +87,6 @@ function Measured({ input, live }: { input: RnCitationInput; live: CitationsLive
   const competitorKey = competitors.join("~");
   const picked = useMemo(() => new Set(competitors), [competitorKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const active = useActiveCitationCategories();
-  const { dense } = useCitationDensity();
   const [tables, setTables] = useState<ReadonlySet<string>>(new Set());
   const [axis, setAxis] = useState<MatrixAxis>("engine");
   const [drawer, setDrawer] = useState<CitationDomainLive | null>(null);
@@ -117,7 +115,7 @@ function Measured({ input, live }: { input: RnCitationInput; live: CitationsLive
   const closeDrawer = useCallback(() => setDrawer(null), []);
   return (
     <CitationProvider value={ctx}>
-      <div className={cx("@container/rnpage flex flex-col gap-4", dense && "rn-dense gap-2.5")}>
+      <div className="@container/rnpage flex flex-col gap-2.5">
         <Suspense fallback={<SummarySkeleton />}>
           <Summary />
         </Suspense>

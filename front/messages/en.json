@@ -4011,11 +4011,6 @@
         "times": "",
         "timesN": "{n}"
       },
-      "density": {
-        "label": "Density",
-        "normal": "Default",
-        "dense": "Compact"
-      },
       "tabs": {
         "label": "Views",
         "sum": "Summary",
@@ -4411,11 +4406,6 @@
         "search": "Search brands",
         "none": "No matching brand",
         "empty": "No rival has a trend"
-      },
-      "density": {
-        "label": "Density",
-        "normal": "Default",
-        "dense": "Compact"
       },
       "summary": {
         "title": "This round",
@@ -5156,11 +5146,6 @@
         "mixDesc": "Which AI engines, kinds of mention and answer tones cite what.",
         "dom": "Domains",
         "domDesc": "Which domains are cited and how often — click a domain to go down to its URLs, prompts and the real answers."
-      },
-      "density": {
-        "label": "Density",
-        "normal": "Default",
-        "dense": "Compact"
       },
       "delta": {
         "basisPrev": "vs the previous round ({date})",

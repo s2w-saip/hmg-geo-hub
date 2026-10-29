@@ -18,7 +18,7 @@ import {
   RnOverviewFilters,
 } from "../../../_components/overview-filters";
 import { RnVisBody } from "./_components/vis-body";
-import { RnVisDensityToggle, RnVisPageProvider, RnVisPeriod, RnVisTabs } from "./_components/vis-context";
+import { RnVisPageProvider, RnVisPeriod, RnVisTabs } from "./_components/vis-context";
 import type { RnVisScreen, VisChoice } from "./_data/screen-types";
 import { tabOf } from "./_data/tab";
 
@@ -70,12 +70,7 @@ export default async function RenewalVisibilityPage({
           </RnPill>
         </>
       }
-      actions={
-        <>
-          <RnVisDensityToggle />
-          <RnCopyLinkButton />
-        </>
-      }
+      actions={<RnCopyLinkButton />}
     />
   );
   return (

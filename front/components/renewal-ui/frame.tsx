@@ -7,7 +7,7 @@ import { cx } from "./cx";
 // Page frame of the analysis renewal pages (ACR, Mention, Citation): section heads, a control
 // bar that stays at the top of the content area (page-level controls), the "이번 회차 요약" finding grid, one card head anatomy (title · ⓘ · basis chips ·
 // controls · actions) and a segmented radio group. Copy comes in through props.
-// A `.rn-dense` ancestor (density toggle) tightens the rhythm and hides helper copy.
+// A `.rn-dense` ancestor (every renewal page's content column, filter-split.tsx) tightens the rhythm and hides helper copy.
 
 /** Section heading (20px) with an optional chip (e.g. the KPI it shows) and a one-line description; `id` is the jump target. */
 export function RnSectionHead({ id, title, chip, desc }: { id: string; title: ReactNode; chip?: ReactNode; desc?: ReactNode }) {
