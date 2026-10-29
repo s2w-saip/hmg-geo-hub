@@ -155,7 +155,8 @@ function BumpChart({ d, maxShare }: { d: NonNullable<RnBumpVM["data"]>; maxShare
           {xs.map((x, i) => (
             <g key={i}>
               <line x1={x} x2={x} y1={top - 4} y2={top + n * ROW} stroke="var(--color-rn-line)" />
-              {i === 0 || i === xs.length - 1 || xs.length <= 8 || i % 2 === 0 ? (
+              {/* every other round counted back from the latest, as the line charts */}
+              {xs.length <= 8 || (xs.length - 1 - i) % 2 === 0 ? (
                 <text x={x} y={top + n * ROW + 16} textAnchor="middle" fontSize={11} fill="var(--color-rn-muted)">
                   {slotLabel(d.x[i])}
                 </text>
@@ -198,7 +199,13 @@ function BumpChart({ d, maxShare }: { d: NonNullable<RnBumpVM["data"]>; maxShare
                   {pctTxt(s.shares[d.last])}
                 </text>
                 {move ? (
-                  <text x={x0 + 136} y={y(r1) + 4} fontSize={11} fontWeight={700} fill={move > 0 ? "var(--color-rn-up-ink)" : "var(--color-rn-danger-ink)"}>
+                  <text
+                    x={x0 + 136}
+                    y={y(r1) + 4}
+                    fontSize={11}
+                    fontWeight={700}
+                    fill={s.key !== OWN_KEY ? "var(--color-rn-muted)" : move > 0 ? "var(--color-rn-up-ink)" : "var(--color-rn-danger-ink)"}
+                  >
                     {move > 0 ? "▲" : "▼"}
                     {Math.abs(move)}
                   </text>

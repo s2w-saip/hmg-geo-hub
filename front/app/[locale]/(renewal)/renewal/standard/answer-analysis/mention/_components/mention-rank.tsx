@@ -217,12 +217,19 @@ function RankTable() {
                   <i aria-hidden className={cx("size-3 shrink-0 rounded-full", !r.own && !on && "shadow-[inset_0_0_0_1.5px_var(--color-rn-line-2)]")} style={r.own || on ? { background: color } : undefined} />
                   <BrandName name={name(r.key)} own={r.own} sibling={r.sibling} />
                 </span>
-                <span className="h-2 overflow-hidden rounded bg-rn-page">
-                  <i className="block h-full rounded" style={{ width: `${r.avgPosition == null ? 0 : Math.max(4, (1 - (r.avgPosition - 1) / max) * 100)}%`, background: color }} />
+                {/* a dot on 1번째 (left) … the last brand's position (right), as the hero's strip: a bar's length read as
+                    "more", and the earliest brand had the longest bar */}
+                <span className="relative h-2 rounded bg-rn-page">
+                  {r.avgPosition == null ? null : (
+                    <i
+                      className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-white"
+                      style={{ left: `${max > 1 ? ((r.avgPosition - 1) / (max - 1)) * 100 : 0}%`, background: color }}
+                    />
+                  )}
                 </span>
                 <span className="text-right text-rn-13 font-bold text-rn-ink tabular-nums">{r.avgPosition == null ? tFR("noRank") : posTxt(r.avgPosition)}</span>
                 <span className="@max-[720px]/rnpage:hidden">{r.hasSpark ? <RnSparkline values={r.spark} invert className="h-[26px]" /> : <span className="text-rn-11 text-rn-muted">{t("board.noTrend")}</span>}</span>
-                <span className="justify-self-end">{r.hasSpark ? <DeltaChip value={r.delta} rank /> : <span className="text-rn-11 text-rn-muted">—</span>}</span>
+                <span className="justify-self-end">{r.hasSpark ? <DeltaChip value={r.delta} rank neutral={!r.own} /> : <span className="text-rn-11 text-rn-muted">—</span>}</span>
                 <span className={cx("text-right text-rn-12 font-semibold tabular-nums", r.gap == null ? "text-rn-muted" : r.gap > 0 ? "text-rn-up-ink" : "text-rn-danger-ink")}>{r.gap == null ? "—" : `${r.gap > 0 ? "+" : "−"}${Math.abs(r.gap).toFixed(1)}`}</span>
               </>
             );

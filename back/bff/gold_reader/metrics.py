@@ -254,7 +254,30 @@ DEFAULT_TREND_METRICS = ["visibility", "share_of_voice", "sentiment", "position"
 
 
 async def trend(ctx: Context) -> dict:
-    # A trend with no explicit range spans the published calendar, rather than a fabricated window.
+    """A trend with no explicit range spans the published calendar from the scope's first measured round on (the
+    contract's first_measured_date), rather than a fabricated window."""
+    explicit = bool(ctx.q.get("from") or ctx.q.get("to"))
+    out = await _trend(ctx)
+    if not explicit:
+        from_first_measured(out["data"])
+    return out
+
+
+def from_first_measured(data: dict) -> None:
+    """Leave out the rounds before the first one any series measured. The calendar holds rounds the scope never
+    measured (on 2026-10-29 the global surface's 06-08..06-29: servable, ready facts, no standard-scope cells), and
+    every trend drew them as empty rounds first. A gap after the first measured round stays."""
+    series = data["series"] + [s for d in data.get("dims") or [] for s in d["series"]]
+    measured = [p["bucket"] for s in series for p in s["points"] if not p["gap"]]
+    if not measured:
+        return
+    first = min(measured)
+    data["buckets"] = [b for b in data["buckets"] if b["key"] >= first]
+    for s in series:
+        s["points"] = [p for p in s["points"] if p["bucket"] >= first]
+
+
+async def _trend(ctx: Context) -> dict:
     if not ctx.q.get("from") and not ctx.q.get("to"):
         ctx.selected_dates = ctx.dates[:]
     bucket = ctx.q.get("bucket", "cycle")

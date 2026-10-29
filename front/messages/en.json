@@ -5078,8 +5078,8 @@
         "noteCycle": "▲▼ Changes are against the previous round ({date}).",
         "notePrev": "▲▼ Changes are against the previous round ({date}).",
         "notePeriod": "▲▼ Changes compare the selected period with the equal period just before it.",
-        "noteRank": "▲▼ Changes are the shift in average position (places) against the previous round. Negative (named earlier) is better.",
-        "noteRankPeriod": "▲▼ Changes are the shift in average position (places) against the equal period just before. Negative (named earlier) is better."
+        "noteRank": "▲▼ Changes are the shift in average position (places) against the previous round. A smaller number means named earlier.",
+        "noteRankPeriod": "▲▼ Changes are the shift in average position (places) against the equal period just before. A smaller number means named earlier."
       },
       "card": {
         "menu": "Card menu",
@@ -5269,7 +5269,7 @@
       "rank": {
         "label": "AI first position",
         "unit": "#{n}",
-        "basis": "vs previous round · negative is better",
+        "basis": "vs previous round · a smaller number is named earlier",
         "ranked": "Ranked answers",
         "ahead": "Brands named before us",
         "count": "{n}",
@@ -5279,12 +5279,12 @@
         "trendTitle": "Average position trend",
         "trendAria": "Average position trend of us and the compare brands",
         "tableTitle": "AI first position",
-        "tableInfo": "A longer bar means named earlier. ‘vs us’ positive = the brand is named after us. Trends exist for us and the top 10 brands by mentions only.",
+        "tableInfo": "A dot further left means named earlier (the left end = 1st). ‘vs us’ positive = the brand is named after us. Trends exist for us and the top 10 brands by mentions only.",
         "chipTrend": "4-round trend",
         "ladder": "By rank",
-        "colBar": "Average position bar",
+        "colBar": "Average position dot",
         "colAvg": "Avg position",
-        "colWow": "WoW",
+        "colWow": "Change",
         "colGap": "vs us",
         "unitPrefix": "#",
         "unitSuffix": ""

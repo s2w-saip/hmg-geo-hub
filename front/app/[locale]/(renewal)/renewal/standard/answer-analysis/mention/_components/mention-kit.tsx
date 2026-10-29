@@ -34,12 +34,14 @@ export function DegradedNote({ children }: { children: ReactNode }) {
   return <p className="m-0 rounded-lg bg-rn-page px-3 py-2.5 text-rn-12 text-rn-muted">{children}</p>;
 }
 
-export function DeltaChip({ value, rank = false, invert = false, unit = "pp" }: { value: number | null; rank?: boolean; invert?: boolean; unit?: "pp" | "" }) {
+/** `neutral`: a rival's move (direction only; better/worse is 당사's). */
+export function DeltaChip({ value, rank = false, invert = false, neutral = false, unit = "pp" }: { value: number | null; rank?: boolean; invert?: boolean; neutral?: boolean; unit?: "pp" | "" }) {
   const t = useTranslations("renewal.mention.delta");
   return (
     <RnDeltaChip
       delta={value}
       lowerIsBetter={rank || invert}
+      neutral={neutral}
       format={(r) => `${Math.abs(r).toFixed(1)}${rank ? "" : unit}`}
       emptyText={t("none")}
       labels={{ up: t("up"), down: t("down"), flat: t("flat") }}

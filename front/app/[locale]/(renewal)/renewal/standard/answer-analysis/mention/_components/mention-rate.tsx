@@ -290,7 +290,7 @@ function Board({ metric }: { metric: KpiMetric }) {
                   <span className="@max-[720px]/rnpage:hidden">
                     {r.hasSpark ? <RnSparkline values={r.spark} className="h-[26px]" /> : <span className="text-rn-11 text-rn-muted" title={t("board.noTrendTip")}>{t("board.noTrend")}</span>}
                   </span>
-                  <span className="justify-self-end">{r.covered ? <DeltaChip value={r.delta} /> : <span className="text-rn-11 text-rn-muted">—</span>}</span>
+                  <span className="justify-self-end">{r.covered ? <DeltaChip value={r.delta} neutral={!r.own} /> : <span className="text-rn-11 text-rn-muted">—</span>}</span>
                   <span className={cx("text-right text-rn-12 font-semibold tabular-nums", r.gap == null ? "text-rn-muted" : r.gap < 0 ? "text-rn-up-ink" : "text-rn-danger-ink")}>{r.gap == null ? "—" : ppTxt(r.gap)}</span>
                 </>
               );

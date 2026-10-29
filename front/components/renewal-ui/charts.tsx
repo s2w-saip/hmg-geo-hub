@@ -153,7 +153,8 @@ export function RnLineChart({
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={data} margin={{ top: 10, right, bottom: 0, left: 0 }} onMouseLeave={() => onHover?.(null)}>
           <CartesianGrid vertical={false} stroke="var(--color-rn-line)" />
-          <XAxis dataKey="x" tick={TICK} tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={28} />
+          {/* equal steps counted back from the latest round (preserveStartEnd thinned by fit alone: 7/6, 7/13, 7/27, 8/3 …) */}
+          <XAxis dataKey="x" tick={TICK} tickLine={false} axisLine={false} interval="equidistantPreserveEnd" minTickGap={28} />
           <YAxis width={44} tick={TICK} tickLine={false} axisLine={false} domain={[lo, hi]} ticks={ticks} tickFormatter={yTick} reversed={invert} />
           <Tooltip
             cursor={{ stroke: "var(--color-rn-faint)", strokeDasharray: "3 3" }}

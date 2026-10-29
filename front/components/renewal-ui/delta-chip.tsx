@@ -47,7 +47,8 @@ export function RnToneChip({
   );
 }
 
-/** Signed change → chip. `lowerIsBetter` flips the colour meaning (rank). */
+/** Signed change → chip. `lowerIsBetter` flips the colour meaning (rank); `neutral` keeps the arrow and drops the
+ * better/worse colour (a rival's move is not good or bad in itself). */
 export function RnDeltaChip({
   delta,
   lowerIsBetter = false,
@@ -55,10 +56,12 @@ export function RnDeltaChip({
   emptyText,
   labels,
   onDark = false,
+  neutral = false,
   className,
 }: {
   delta: number | null;
   lowerIsBetter?: boolean;
+  neutral?: boolean;
   /** Formats the rounded signed value, e.g. (0.4) => "0.4pp". */
   format: (rounded: number) => string;
   emptyText: string;
@@ -77,9 +80,10 @@ export function RnDeltaChip({
   const r = Math.round(delta * 10) / 10;
   const flat = r === 0;
   const good = lowerIsBetter ? r < 0 : r > 0;
-  const tone: RnTone = flat ? "flat" : good ? "up" : "down";
+  const tone: RnTone = flat || neutral ? "flat" : good ? "up" : "down";
+  const title = flat ? labels.flat : neutral ? undefined : good ? labels.up : labels.down;
   return (
-    <RnToneChip tone={tone} icon={flat ? "flat" : r > 0 ? "up" : "down"} title={flat ? labels.flat : good ? labels.up : labels.down} onDark={onDark} className={className}>
+    <RnToneChip tone={tone} icon={flat ? "flat" : r > 0 ? "up" : "down"} title={title} onDark={onDark} className={className}>
       {format(r)}
     </RnToneChip>
   );

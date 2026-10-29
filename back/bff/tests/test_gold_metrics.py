@@ -62,6 +62,13 @@ def context(conn: Conn, qs: str) -> Context:
     return ctx
 
 
+def ranged(ctx: Context) -> Context:
+    """What Context.create selects for the from/to of the query (the stand-in context does not read them)."""
+    lo, hi = date.fromisoformat(ctx.q["from"]), date.fromisoformat(ctx.q["to"])
+    ctx.selected_dates = [d for d in ctx.dates if lo <= d <= hi]
+    return ctx
+
+
 class Builds(unittest.TestCase):
     """One release build = one cycle slice: a date-filtered read binds the builds of its dates only."""
 
@@ -191,14 +198,14 @@ class TypeTrend(unittest.TestCase):
 
     def test_a_bucket_without_answers_is_a_gap(self):
         conn = self.conn(counts_row(round_date=D2, engine_key=1, answers=20, t_mention=9))
-        out = asyncio.run(metrics.trend(context(conn, "surface=global&dimension=engine&dims=type")))["data"]
+        out = asyncio.run(metrics.trend(ranged(context(conn, f"surface=global&dimension=engine&dims=type&from={D1}&to={D2}"))))["data"]
         mention = next(s for s in out["dims"][0]["series"] if s["key"] == "mention")
         self.assertEqual([(p["ratio"], p["gap"]) for p in mention["points"]], [(None, True), ({"num": 9, "den": 20}, False)])
 
     def test_dims_none_is_the_engines_summed(self):
         conn = self.conn(counts_row(round_date=D2, engine_key=1, answers=20, tracked=15),
                          counts_row(round_date=D2, engine_key=2, answers=10, tracked=4))
-        out = asyncio.run(metrics.trend(context(conn, "surface=global&dimension=engine&metrics=visibility&dims=none:visibility")))["data"]
+        out = asyncio.run(metrics.trend(ranged(context(conn, f"surface=global&dimension=engine&metrics=visibility&dims=none:visibility&from={D1}&to={D2}"))))["data"]
         (none,) = out["dims"][0]["series"]
         self.assertEqual([p["ratio"] for p in none["points"]], [None, {"num": 19, "den": 30}])
 
@@ -207,6 +214,38 @@ class TypeTrend(unittest.TestCase):
             with self.subTest(qs), self.assertRaises(metrics.HTTPException) as e:
                 asyncio.run(metrics.trend(context(self.conn(), f"surface=global&{qs}")))
             self.assertEqual(e.exception.status_code, 422)
+
+
+class TrendWindow(unittest.TestCase):
+    """Without from/to a trend starts at the scope's first measured round (the contract's first_measured_date). The
+    published calendar holds rounds the scope never measured (2026-06-08..06-29 on the global surface: servable, with
+    ready facts, no standard-scope cells), and every trend drew four empty rounds first, its chip counting 18 rounds
+    where 14 were measured. A gap after the first measured round stays."""
+
+    D0, D3 = date(2026, 9, 21), date(2026, 10, 12)
+
+    def conn(self) -> Conn:
+        # D0 unmeasured, D1 measured, D2 a gap, D3 measured
+        return Conn(kpi=[counts_row(round_date=D1, engine_key=1, answers=10, tracked=6),
+                         counts_row(round_date=self.D3, engine_key=1, answers=20, tracked=9)])
+
+    def ctx(self, qs: str) -> Context:
+        ctx = context(self.conn(), qs)
+        ctx.dates = [self.D3, D2, D1, self.D0]
+        return ctx
+
+    def test_the_leading_unmeasured_rounds_are_left_out(self):
+        for dimension in ("none", "engine", "type"):
+            out = asyncio.run(metrics.trend(self.ctx(f"surface=global&dimension={dimension}&metrics=visibility&dims=none:visibility"
+                                                     if dimension != "none" else "surface=global&metrics=visibility")))["data"]
+            self.assertEqual([b["key"] for b in out["buckets"]], [D1.isoformat(), D2.isoformat(), self.D3.isoformat()], dimension)
+            for s in out["series"] + [s for d in out["dims"] or [] for s in d["series"]]:
+                self.assertEqual([(p["bucket"], p["gap"]) for p in s["points"]],
+                                 [(D1.isoformat(), False), (D2.isoformat(), True), (self.D3.isoformat(), False)], dimension)
+
+    def test_an_explicit_range_keeps_its_rounds(self):
+        out = asyncio.run(metrics.trend(ranged(self.ctx(f"surface=global&metrics=visibility&from={self.D0}&to={self.D3}"))))["data"]
+        self.assertEqual(len(out["buckets"]), 4)
 
 
 class Summary(unittest.TestCase):
