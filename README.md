@@ -66,6 +66,7 @@ Front(Next.js)** 3층으로 다시 짜는 재설계입니다. 아래를 중심�
 | `back/migration/` | 현행 미러에서 새 스키마로의 이관 도구(데이터는 레포에 없음) |
 | `back/CORE-REQUESTS/` | 기능 모듈이 공통 계층(`core/`)에 낸 요청과 처분 기록 |
 | `docs/design/`, `docs/spec/` | 설계 계약, DB·API 결정 기록, 기능·API 명세(HTML) |
+| `docs/catalog/global-renewal-catalog.html` | Global 리뉴얼 변경 정리(내부 개발·사업팀 공유) — 레거시 대비 변경점과 근거 커밋, 고객 어필 포인트·주의, 화면별 전후 캡처. 요약본 4쪽 · 상세본 10쪽 토글(`#short` · `#long`) |
 | `front/` | 현행 대시보드. 화면은 유지하고 서버 데이터 함수만 back API 호출로 교체하는 중 |
 | `infra/` | AWS CLI 구성 스크립트(상태·비밀 파일은 원본에도 커밋되지 않음) |
 | `ANALYSIS-ENGINE-DESIGN.md` | 분석 엔진 Python 통합·분석 버전 관리 **설계 초안**(검토 중, 미구현) |
