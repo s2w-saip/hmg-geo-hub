@@ -1,3 +1,5 @@
+import { readdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ReactNode } from "react";
@@ -26,8 +28,10 @@ vi.mock("@/lib/auth/actions", () => ({ logout: async () => {} }));
 
 const { RnSidebar } = await import("./rn-sidebar");
 const { ADMIN_SUB_ITEMS, STANDARD_SUB_ITEMS, WEBSITE_SUB_ITEMS } = await import("@/components/dash/sidebar");
+const { RENEWAL_PAGES } = await import("./renewal-pages");
 
-/** Section → its open state and its items in order: links as "label → href" (β marks a beta item), a menu
+/** Section → its open state and its items in order: links as "label → href" ("· 미구현" marks an item without a
+ * renewal page, 2026-10-29), a menu
  * parent (a label over its sub-items, not a link) as "label (group)". */
 function html(role: Role): string {
   return renderToStaticMarkup(
@@ -41,7 +45,7 @@ function menu(role: Role): Record<string, { open: boolean; links: string[] }> {
   const out: Record<string, { open: boolean; links: string[] }> = {};
   for (const [, open, id, body] of html(role).matchAll(/<details( open="")?[^>]*data-rn-sec="(\w+)"[^>]*>(.*?)<\/details>/g)) {
     const links = [...body.matchAll(/<a href="([^"]+)"[^>]*>(?:<svg[^>]*>.*?<\/svg>)?<span[^>]*>([^<]*)<\/span>(.*?)<\/a>|<div[^>]*data-rn-nav-group=""[^>]*>(?:<svg[^>]*>.*?<\/svg>)?<span[^>]*>([^<]*)<\/span><\/div>/g)].map(
-      ([, href, label, rest, group]) => (group != null ? `${group} (group)` : `${label}${rest.includes("β") ? " β" : ""} → ${href}`),
+      ([, href, label, rest, group]) => (group != null ? `${group} (group)` : `${label}${rest.includes("data-rn-nav-unimplemented") ? " · 미구현" : ""} → ${href}`),
     );
     out[id] = { open: open != null, links };
   }
@@ -55,17 +59,17 @@ const GLOBAL = [
   "Mention → /renewal/standard/answer-analysis/mention",
   "Citation → /renewal/standard/answer-analysis/citation",
   "AI Agent Funnel (group)",
-  "ACR β → /renewal/standard/ai-funnel/acr",
-  "AI Conversion β → /renewal/standard/ai-funnel/conversion",
+  "ACR → /renewal/standard/ai-funnel/acr",
+  "AI Conversion · 미구현 → /renewal/standard/ai-funnel/conversion",
 ];
 const WEBSITE = [
-  "Overview → /renewal/website",
-  "Prompts → /renewal/website/prompts",
+  "Overview · 미구현 → /renewal/website",
+  "Prompts · 미구현 → /renewal/website/prompts",
   "Answer analysis (group)",
-  "Mention → /renewal/website/answer-analysis/mention",
-  "Citation → /renewal/website/answer-analysis/citation",
+  "Mention · 미구현 → /renewal/website/answer-analysis/mention",
+  "Citation · 미구현 → /renewal/website/answer-analysis/citation",
   "AI Agent Funnel (group)",
-  "AI Conversion β → /renewal/website/ai-funnel/conversion",
+  "AI Conversion · 미구현 → /renewal/website/ai-funnel/conversion",
 ];
 
 describe("renewal sidebar", () => {
@@ -73,25 +77,43 @@ describe("renewal sidebar", () => {
     expect(menu("admin")).toEqual({
       standard: { open: true, links: GLOBAL },
       website: { open: true, links: WEBSITE },
-      project: { open: true, links: ["Project list → /renewal/projects"] },
+      project: { open: true, links: ["Project list · 미구현 → /renewal/projects"] },
       admin: {
         open: true,
         links: [
-          "User management → /renewal/admin",
+          "User management · 미구현 → /renewal/admin",
           "Global config (group)",
           "Global prompts → /renewal/admin/standards/prompts",
-          "Customer interest config → /renewal/admin/standards/customer-interest",
-          "Entity catalog → /renewal/admin/standards/entities",
-          "인용 출처 분류 → /renewal/admin/standards/citation-sources",
-          "Keyword tools → /renewal/admin/keyword-tools",
-          "GA4 연동 → /renewal/admin/ga4",
-          "분석 엔진 → /renewal/admin/analysis",
-          "리포트 관리 → /renewal/admin/reports",
+          "Customer interest config · 미구현 → /renewal/admin/standards/customer-interest",
+          "Entity catalog · 미구현 → /renewal/admin/standards/entities",
+          "인용 출처 분류 · 미구현 → /renewal/admin/standards/citation-sources",
+          "Keyword tools · 미구현 → /renewal/admin/keyword-tools",
+          "GA4 연동 · 미구현 → /renewal/admin/ga4",
+          "분석 엔진 · 미구현 → /renewal/admin/analysis",
+          "리포트 관리 · 미구현 → /renewal/admin/reports",
           "측정 크레딧 (group)",
-          "계정 목록 → /renewal/admin/credits",
+          "계정 목록 · 미구현 → /renewal/admin/credits",
         ],
       },
     });
+  });
+
+  // 2026-10-29 (user): items without a renewal page carry the "not implemented" icon (named for assistive tech and on
+  // hover); no item carries the β badge
+  it("marks the items without a renewal page and shows no beta badge", () => {
+    const out = html("admin");
+    const marks = [...out.matchAll(/<span data-rn-nav-unimplemented="" title="([^"]+)"[^>]*><svg[^>]*>.*?<\/svg><span class="sr-only">([^<]+)<\/span><\/span>/g)];
+    expect(marks.length).toBe(16); // Global 1 · Website 5 · Project 1 · Admin 9
+    for (const [, title, sr] of marks) expect([title, sr]).toEqual([ko.unimplemented.label, ko.unimplemented.label]);
+    expect(out).not.toContain("β");
+  });
+
+  it("knows exactly the renewal pages there are", () => {
+    const root = fileURLToPath(new URL("../renewal/", import.meta.url));
+    const pages = readdirSync(root, { recursive: true, encoding: "utf8" })
+      .filter((f) => f.endsWith("page.tsx") && !f.includes("[...slug]"))
+      .map((f) => "/" + f.replace(/\\/g, "/").replace(/\/?page\.tsx$/, ""));
+    expect([...RENEWAL_PAGES].sort()).toEqual(pages.sort());
   });
 
   // 2026-10-28 (user): Project · Admin follow Global · Website at the top; only the account sits at the bottom
@@ -121,7 +143,8 @@ describe("renewal sidebar", () => {
       expect(icon, label).toBeTruthy();
       expect(cls, label).not.toMatch(/cursor-pointer|hover:/);
       expect(tree, label).toMatch(/^<a href="\/renewal\//);
-      expect(tree, label).not.toContain("<svg");
+      // no menu icon on a sub-item (the "not implemented" mark is a status, not the menu's icon)
+      expect(tree.replace(/<span data-rn-nav-unimplemented="".*?<\/span><\/span>/g, ""), label).not.toContain("<svg");
     }
     expect(out).not.toMatch(/<a [^>]*>(<svg[^>]*>(?:(?!<\/svg>).)*<\/svg>)?(<span[^>]*>)?(Answer analysis|AI Agent Funnel|Global config|측정 크레딧)</);
   });

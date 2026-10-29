@@ -3,7 +3,7 @@
 import { useEffect, useId, useState, type ComponentType, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { Briefcase, ChevronDown, Loader2, LogOut, Menu, X } from "lucide-react";
+import { Briefcase, ChevronDown, Construction, Loader2, LogOut, Menu, X } from "lucide-react";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { carryFilterParams } from "@/components/dash/filter-carry";
@@ -14,6 +14,7 @@ import type { RouteDef } from "@/lib/auth/route-policy";
 import type { Role } from "@/lib/auth/types";
 import { cx } from "@/components/renewal-ui";
 import { useRnNavPending } from "./nav-pending";
+import { RENEWAL_PAGES } from "./renewal-pages";
 
 // Sidebar of the renewal shell (S급 테마, 2026-10-23; rules: docs/design/ui/design-rules.html '틀'):
 // brand · Global | Website sections (each folds) · Project · Admin · account. One sidebar, no
@@ -27,6 +28,7 @@ import { useRnNavPending } from "./nav-pending";
 // Website); first-level items and menu parents carry the original menu's icon; a menu parent is a heading
 // over its sub-items, not a link, and the sub-items sit inside a tree line whose stretch lights up beside
 // the current one.
+// 2026-10-29 (user): an item without a renewal page carries a "not implemented" icon; the β badge is gone.
 // Every link keeps prefetch={false} (the original sidebar's 2026-08-27 production rule).
 
 const RENEWAL = "/renewal";
@@ -37,7 +39,8 @@ interface NavLeaf {
   /** path the link opens (and the active match) */
   path: string;
   label: string;
-  beta?: boolean;
+  /** no renewal page yet: the item opens the "not implemented" page */
+  unimplemented: boolean;
 }
 interface NavItem extends NavLeaf {
   /** first level only (the original menu's icon); sub-items have none */
@@ -80,7 +83,12 @@ export function RnSidebar({ routes, user, locale }: { routes: readonly RouteDef[
     { id: "website", items: menuItems(WEBSITE_SUB_ITEMS, allowed, label) },
   ];
   const more: Array<{ id: SectionId; items: NavItem[] }> = [
-    { id: "project", items: routes.filter((r) => r.group === "project").map((r) => ({ path: RENEWAL + r.path, label: tNav(r.key), icon: Briefcase, children: [] })) },
+    {
+      id: "project",
+      items: routes
+        .filter((r) => r.group === "project")
+        .map((r) => ({ path: RENEWAL + r.path, label: tNav(r.key), unimplemented: !RENEWAL_PAGES.has(r.path), icon: Briefcase, children: [] })),
+    },
     { id: "admin", items: menuItems(ADMIN_SUB_ITEMS, allowed, label) },
   ];
   // the current item: the longest menu path that holds this page (/renewal/website holds every Website page)
@@ -158,7 +166,11 @@ function Brand() {
 
 /** One original tree, permission-filtered on the original rows; every item opens /renewal<path>. */
 function menuItems(tree: StandardSubItem[], allowed: Set<string>, label: (key: string) => string): NavItem[] {
-  const leaf = (x: StandardSubItem | NonNullable<StandardSubItem["children"]>[number]): NavLeaf => ({ path: RENEWAL + x.path, label: label(x.i18nKey), beta: x.beta });
+  const leaf = (x: StandardSubItem | NonNullable<StandardSubItem["children"]>[number]): NavLeaf => ({
+    path: RENEWAL + x.path,
+    label: label(x.i18nKey),
+    unimplemented: !RENEWAL_PAGES.has(x.path),
+  });
   const out: NavItem[] = [];
   for (const item of tree) {
     if (!allowed.has(item.path)) continue;
@@ -225,7 +237,7 @@ function NavGroup({ item, current }: { item: NavItem; current: string | null }) 
 }
 
 function NavLink({ leaf, active, icon: Icon, kid = false }: { leaf: NavLeaf; active: boolean; icon?: NavIcon; kid?: boolean }) {
-  const t = useTranslations("renewal.shell");
+  const tUnimplemented = useTranslations("unimplemented");
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { target, start } = useRnNavPending();
@@ -254,10 +266,10 @@ function NavLink({ leaf, active, icon: Icon, kid = false }: { leaf: NavLeaf; act
       {Icon ? <Icon aria-hidden className={cx("size-4 shrink-0", active ? "text-rn-navy" : "text-rn-faint group-hover/link:text-rn-navy")} /> : null}
       <span className="min-w-0 truncate">{leaf.label}</span>
       {pending ? <Loader2 aria-hidden className="ml-auto size-3.5 shrink-0 animate-spin" /> : null}
-      {leaf.beta ? (
-        <span className="ml-auto rounded bg-rn-navy/8 px-[5px] text-rn-11 font-bold text-rn-navy">
-          <span aria-hidden>β</span>
-          <span className="sr-only">{t("beta")}</span>
+      {leaf.unimplemented ? (
+        <span data-rn-nav-unimplemented="" title={tUnimplemented("label")} className={cx("flex shrink-0", !pending && "ml-auto")}>
+          <Construction aria-hidden className="size-3.5 text-rn-faint" />
+          <span className="sr-only">{tUnimplemented("label")}</span>
         </span>
       ) : null}
     </Link>
