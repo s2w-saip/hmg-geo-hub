@@ -9,14 +9,17 @@ built by the shared query module; the compare params are added on top of it.
 from __future__ import annotations
 
 import re
+from datetime import date
 from typing import Any
 
 from bff import api
+from bff.gold_reader.compare_logic import range_windows
 from bff.screens._convert import filter_notices
+from bff.screens._period import resolve_request_compare_period_shape
 
 COMPARE_METRIC_TO_API = {"visibility": "visibility", "share": "share_of_voice", "favorability": "sentiment",
                          "position": "position", "mentionsPerAnswer": "mentions_per_answer",
-                         "citationsPerAnswer": "citations_per_answer"}
+                         "citationsPerAnswer": "citations_per_answer", "citationShare": "citation_share"}
 API_METRIC_TO_COMPARE = {v: k for k, v in COMPARE_METRIC_TO_API.items()}
 COMPARE_EPOCH_GATED = "before_epoch"
 
@@ -94,10 +97,12 @@ def has_closed_period(filters: dict) -> bool:
 
 def compare_query(common: dict, req: dict) -> dict:
     """Params of GET /v1/kpi/compare: common + kind, metrics (API names, deduped in order), card=true
-    off project (cardParam(surface, true)). req = {surface, kind, metrics}."""
+    off project (cardParam(surface, true)) unless the page shows live values (req card False: Mention,
+    Citation — the Δ compares the values the page shows; 2026-10-29 metric review R3).
+    req = {surface, kind, metrics, card?}."""
     metrics = list(dict.fromkeys(COMPARE_METRIC_TO_API[m] for m in req["metrics"]))
     extra: dict = {"kind": req["kind"], "metrics": metrics}
-    if req["surface"] != "project":
+    if req["surface"] != "project" and req.get("card", True):
         extra["card"] = True
     return {**common, **extra}
 
@@ -122,3 +127,18 @@ async def fetch_period_compare_api(filters: dict, common: dict, req: dict) -> li
     """Drop-in for the legacy fetchPeriodCompare: CompareResult[] or None."""
     view = await fetch_period_compare_view(filters, common, req)
     return view["results"] if view else None
+
+
+# A Δ next to a period total compares it with the period just before — the window /v1/kpi/compare compares
+# 당사 with — for every row and tile, not only 당사 (2026-10-29 metric review R3: rivals, engines and the
+# Citation categories took their last round's Δ).
+def prev_period_filters(filters: dict) -> dict | None:
+    """The same filters on the period just before the URL period; None outside period mode."""
+
+    if not has_closed_period(filters):
+        return None
+    shape = resolve_request_compare_period_shape(filters["dateFrom"], filters["dateTo"])
+    w = range_windows(shape["kind"], date.fromisoformat(filters["dateFrom"]), date.fromisoformat(filters["dateTo"]))
+    if w is None or w.prev is None:
+        return None
+    return {**filters, "dateFrom": w.prev.lo.isoformat(), "dateTo": w.prev.hi.isoformat()}

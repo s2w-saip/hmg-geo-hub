@@ -142,11 +142,6 @@ class Values(unittest.TestCase):
         self.assertNotIn("cycleAnchorAt", out)
         self.assertNotIn("gap", out)
 
-    def test_master_table(self):
-        self.assertEqual(_competitors.competitor_brand_of_domain("www.bmwusa.com"), "BMW")
-        self.assertIsNone(_competitors.competitor_brand_of_domain("mgmotor.com"))  # ambiguous prefix: exact only
-        self.assertEqual(_competitors.competitor_brand_of_domain("mg.co.uk"), "MG")
-
 
 if __name__ == "__main__":
     unittest.main()

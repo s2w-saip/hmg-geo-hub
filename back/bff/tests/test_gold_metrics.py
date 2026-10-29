@@ -116,8 +116,50 @@ class BrandTrend(unittest.TestCase):
                     brands=[brand_row(D2, 370, "Toyota", 0, 10, 8), brand_row(D2, 9, "Kia", 2, 30, 15)])
         ctx = context(conn, "surface=global&card=true&dimension=brand&metrics=share_of_voice&top_n=5")
         out = asyncio.run(metrics.trend(ctx))["data"]
-        self.assertEqual([(s["key"], s["is_own"]) for s in out["series"]], [("Kia", True), ("Toyota", False)])
+        self.assertEqual([(s["key"], s["is_own"]) for s in out["series"]], [("HMG", True), ("Toyota", False)])
         self.assertNotIn("brand_key::text", next(s for s in conn.sql if "brand_cell" in s))
+
+    def test_the_own_series_is_the_perspective_not_one_own_brand(self):
+        # 2026-10-29 metric review R1: 당사 = Hyundai + Kia + Genesis. The own line came from the first own
+        # brand's cells (Kia: rank 3.4, 16.4 %) while the cards read the perspective (2.4, 38.7 %).
+        conn = Conn(kpi=[counts_row(round_date=D1, answers=10, tracked=8, own_mentions=12, total_mentions=30,
+                                    rank_sum=20, ranked=8, sent_pos=6, sent_all=10),
+                         counts_row(round_date=D2, answers=20, tracked=15, own_mentions=25, total_mentions=60,
+                                    rank_sum=33, ranked=15, sent_pos=9, sent_all=20)],
+                    brands=[brand_row(D2, 9, "Kia", 2, 14, 10), brand_row(D2, 7, "Hyundai", 1, 9, 8),
+                            brand_row(D2, 5, "Genesis", 4, 2, 2), brand_row(D2, 370, "Toyota", 0, 10, 8),
+                            brand_row(D1, 9, "Kia", 2, 7, 5), brand_row(D1, 370, "Toyota", 0, 6, 4)])
+        ctx = context(conn, "surface=global&card=true&dimension=brand&metrics=share_of_voice"
+                            "&metrics=visibility&metrics=position&metrics=sentiment")
+        out = asyncio.run(metrics.trend(ctx))["data"]
+        own = [s for s in out["series"] if s["is_own"]]
+        self.assertEqual([(s["key"], s["label"], s["metric"]) for s in own],
+                         [("HMG", "HMG", "share_of_voice"), ("HMG", "HMG", "visibility"),
+                          ("HMG", "HMG", "position"), ("HMG", "HMG", "sentiment")])
+        by = {s["metric"]: [p.get("ratio", p.get("rank")) for p in s["points"]] for s in own}
+        self.assertEqual(by["share_of_voice"], [{"num": 12, "den": 30}, {"num": 25, "den": 60}])
+        self.assertEqual(by["visibility"], [{"num": 8, "den": 10}, {"num": 15, "den": 20}])
+        self.assertEqual(by["position"], [{"sum": 20, "count": 8}, {"sum": 33, "count": 15}])
+        self.assertEqual(by["sentiment"], [{"num": 6, "den": 10}, {"num": 9, "den": 20}])
+        # own brands are never rivals, and the top counts rivals only
+        self.assertEqual(sorted({s["key"] for s in out["series"] if not s["is_own"]}), ["Toyota"])
+        self.assertEqual(conn.reads("kpi_cell"), 1)
+
+    def test_the_top_counts_rivals_after_the_own_series(self):
+        brands = [brand_row(D2, 9, "Kia", 2, 50, 10), brand_row(D2, 7, "Hyundai", 1, 40, 8)]
+        brands += [brand_row(D2, 100 + i, f"R{i}", 0, 30 - i, 5) for i in range(3)]
+        conn = Conn(kpi=[counts_row(round_date=D2, answers=20, total_mentions=200, own_mentions=90)], brands=brands)
+        ctx = context(conn, "surface=global&card=true&dimension=brand&metrics=share_of_voice&top_n=2")
+        out = asyncio.run(metrics.trend(ctx))["data"]
+        self.assertEqual([s["key"] for s in out["series"]], ["HMG", "R0", "R1"])
+
+    def test_one_own_brand_perspective_is_labelled_by_the_brand(self):
+        conn = Conn(kpi=[counts_row(round_date=D2, answers=20, own_mentions=14, total_mentions=40)],
+                    brands=[brand_row(D2, 9, "Kia", 2, 14, 10), brand_row(D2, 370, "Toyota", 0, 10, 8)])
+        ctx = context(conn, "surface=global&card=true&brand=kia&dimension=brand&metrics=share_of_voice")
+        out = asyncio.run(metrics.trend(ctx))["data"]
+        self.assertEqual([(s["key"], s["is_own"], s["brand_key"]) for s in out["series"]],
+                         [("Kia", True, 9), ("Toyota", False, 370)])
 
 
 class Summary(unittest.TestCase):

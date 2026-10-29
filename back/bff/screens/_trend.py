@@ -19,7 +19,7 @@ import math
 from typing import Any
 
 from bff import api
-from bff.screens._convert import filter_notices, pct1_or_null, pct1_or_zero, rank_avg
+from bff.screens._convert import Exact, delta1, filter_notices, pct1_or_null, pct1_or_zero, rank_avg, round1
 from bff.screens._js import js_round
 from bff.screens._period import iso_of_days, iso_parse_days, utc_day_of_week
 
@@ -54,7 +54,7 @@ def _js_text(v: Any) -> str:
 
 
 def _round1(v: float) -> float:
-    return js_round(v * 10) / 10
+    return round1(v)
 
 
 # ── trend-gap rules (lib/viz/trend-gap.ts, data side) ─────────────────────
@@ -140,7 +140,7 @@ def citation_share_numerator(c: dict) -> float:
 
 
 def _pct(n: float, d: Any) -> float:
-    return js_round((n / d) * 1000) / 10 if isinstance(d, (int, float)) and d > 0 else 0
+    return Exact(js_round((n / d) * 1000) / 10, (100 * n) / d) if isinstance(d, (int, float)) and d > 0 else 0
 
 
 def overview_trend_values(b: dict) -> dict:
@@ -172,7 +172,7 @@ def overview_card_delta(slots: list[dict] | None, key: str) -> dict | None:
     if len(valued) < 2:
         return None
     (pv, pat), (lv, _) = valued[-2], valued[-1]
-    return {"delta": _round1(lv - pv), "basisDate": pat}
+    return {"delta": delta1(lv, pv), "basisDate": pat}
 
 
 def delta_trend_filters(filters: dict, now_ms: float | None = None) -> dict:
@@ -434,7 +434,7 @@ def apply_trend_deltas(kpis: list[dict], trend: dict | None) -> list[dict]:
                 if isinstance(v, (int, float)) and not isinstance(v, bool)]
         if len(vals) < 2:
             return None
-        delta = _round1(vals[-1] - vals[-2])
+        delta = delta1(vals[-1], vals[-2])
         return {"delta": delta, "direction": "up" if delta > 0.05 else "down" if delta < -0.05 else "flat"}
 
     out = []
@@ -463,7 +463,7 @@ def spark_points(trend: dict | None, key: str) -> list[dict]:
         if p.get("cycleAnchorAt"):
             row["cycleAnchorAt"] = p["cycleAnchorAt"]
         row["value"] = v
-        row["wow"] = js_round((v - prev) * 10) / 10 if v is not None and prev is not None else None
+        row["wow"] = delta1(v, prev) if v is not None and prev is not None else None
         if trend_gap_applies(p.get("gap"), family):
             row["gap"] = p["gap"]
         out.append(row)

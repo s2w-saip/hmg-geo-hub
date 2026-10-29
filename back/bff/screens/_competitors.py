@@ -3,7 +3,6 @@
 Ports, bit for bit:
   front/lib/kpi/competitor-values.ts                 competitorValueOf, index, overlay decision, Δ
   front/lib/scope/competitor-row.ts                  dedupeBrandRows, candidates, value order, mini picks, Δ brands
-  front/lib/citation-categorizer/competitor-brand.ts official competitor domain -> brand (master table)
   front/lib/kpi/first-position-rank.ts               competition ranks of the first-position table
   front/lib/hgh/adapters/dashboard.ts                toCompetitorBrandValue, candidateBrandKeys, toCompetitorCitationDomains
   dashboard/_components/overview-kpi-cards.tsx       competitorCitationShares, competitorMinis, competitorDeltas,
@@ -17,7 +16,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from bff.screens._convert import pct1_or_zero, rank_avg
+from bff.screens._convert import delta1, pct1_or_zero, rank_avg
 from bff.screens._js import js_round
 from bff.screens._sort import code_unit_compare, locale_compare, sort_by
 
@@ -78,11 +77,11 @@ def resolve_competitor_overlay(rows: list[dict], index: dict) -> dict:
 
 
 def last_two_delta(values: list[float | None]) -> float | None:
-    """Difference of the last two non-null values, round1; None with fewer than two."""
+    """Difference of the last two non-null values (exact, rounded once); None with fewer than two."""
     v = [x for x in values if x is not None]
     if len(v) < 2:
         return None
-    return js_round((v[-1] - v[-2]) * 10) / 10
+    return delta1(v[-1], v[-2])
 
 
 def competitor_trend_deltas(brand_trend: dict | None, key: str) -> dict:
@@ -185,49 +184,6 @@ def competitor_delta_brands(brands: list[dict], limit: int | None = 4) -> list[s
     return [name for name, _ in entries]
 
 
-# ── lib/citation-categorizer/competitor-brand.ts (master data) ─────────────
-
-TOKEN_TO_BRAND = {
-    "toyota": "Toyota", "lexus": "Lexus", "daihatsu": "Daihatsu", "honda": "Honda", "acura": "Acura",
-    "nissan": "Nissan", "infiniti": "Infiniti", "mazda": "Mazda", "subaru": "Subaru", "mitsubishi": "Mitsubishi",
-    "suzuki": "Suzuki", "isuzu": "Isuzu", "bmw": "BMW", "mini": "MINI", "mercedes-benz": "Mercedes-Benz",
-    "mercedes": "Mercedes-Benz", "mbusa": "Mercedes-Benz", "maybach": "Mercedes-Benz", "audi": "Audi",
-    "volkswagen": "Volkswagen", "vw": "Volkswagen", "porsche": "Porsche", "tesla": "Tesla", "ford": "Ford",
-    "lincoln": "Lincoln", "chevrolet": "Chevrolet", "chevy": "Chevrolet", "gmc": "GMC", "cadillac": "Cadillac",
-    "buick": "Buick", "jeep": "Jeep", "dodge": "Dodge", "ram": "Ram", "chrysler": "Chrysler", "volvo": "Volvo",
-    "polestar": "Polestar", "byd": "BYD", "geely": "Geely", "chery": "Chery", "mg": "MG", "skoda": "Škoda",
-    "seat": "SEAT", "cupra": "CUPRA", "renault": "Renault", "dacia": "Dacia", "peugeot": "Peugeot",
-    "citroen": "Citroën", "opel": "Opel", "fiat": "Fiat", "alfa-romeo": "Alfa Romeo", "alfaromeo": "Alfa Romeo",
-    "ferrari": "Ferrari", "lamborghini": "Lamborghini", "maserati": "Maserati", "bentley": "Bentley",
-    "rolls-royce": "Rolls-Royce", "rollsroyce": "Rolls-Royce", "land-rover": "Land Rover",
-    "landrover": "Land Rover", "jaguar": "Jaguar", "aston-martin": "Aston Martin", "astonmartin": "Aston Martin",
-    "lucid": "Lucid", "rivian": "Rivian", "tata": "Tata", "mahindra": "Mahindra", "vinfast": "VinFast",
-    "nio": "NIO", "xpeng": "XPeng", "zeekr": "Zeekr", "lynkco": "Lynk & Co", "smart": "smart",
-}
-_TOKENS = sorted(TOKEN_TO_BRAND, key=lambda t: -len(t))
-_AMBIGUOUS_PREFIX = frozenset({"mg", "ram", "nio", "byd", "seat", "mini", "smart", "tata", "ford"})
-
-
-def domain_first_label(domain: str) -> str:
-    d = domain.lower()
-    if d.startswith("www."):
-        d = d[4:]
-    return d.split(".")[0]
-
-
-def competitor_brand_of_domain(domain: str) -> str | None:
-    """Official (competitor) domain -> brand display name: exact first label, else a distinctive prefix."""
-    label = domain_first_label(domain)
-    if TOKEN_TO_BRAND.get(label):
-        return TOKEN_TO_BRAND[label]
-    for tok in _TOKENS:
-        if len(tok) <= 2 or tok in _AMBIGUOUS_PREFIX:
-            continue
-        if label.startswith(tok):
-            return TOKEN_TO_BRAND[tok]
-    return None
-
-
 # ── lib/kpi/first-position-rank.ts ─────────────────────────────────────────
 
 def rank_first_position_rows(rows: list[dict]) -> list[dict]:
@@ -286,7 +242,8 @@ def candidate_brand_keys(brands: list[dict]) -> list[int]:
 
 
 def to_competitor_citation_domains(data: dict) -> list[dict] | None:
-    """competitor_sources (GET /v1/citations/domains) -> official-competitor domain rows; None = no rows."""
+    """competitor_sources (GET /v1/citations/domains) -> competitor domain rows with Gold's brand and category;
+    None = no rows."""
     sources = data.get("competitor_sources")
     if sources is None:
         return None
@@ -295,8 +252,8 @@ def to_competitor_citation_domains(data: dict) -> list[dict] | None:
     for s in sources:
         row = {"domain": s["domain"], "citations": s["citations"],
                "share": pct1_or_zero({"num": s["citations"], "den": total}), "prompts": 0, "coverageRate": 0,
-               "urls": [], "promptList": [], "isOurs": False, "category": OFFICIAL_COMPETITOR_CATEGORY,
-               "subcategory": None}
+               "urls": [], "promptList": [], "isOurs": False, "category": (s["category"] or {}).get("name"),
+               "subcategory": None, "brand": s["competitor_brand"]}
         if "skey" in s:
             row["skey"] = s["skey"]
         out.append(row)
@@ -307,8 +264,9 @@ def to_competitor_citation_domains(data: dict) -> list[dict] | None:
 
 def competitor_citation_shares(domains: list[dict] | None, limit: int | None = 4,
                                total: float | None = None) -> list[dict]:
-    """Citation-share competitor minis: official competitor domains folded to brands, share summed
-    (or brand citations / total x 100 when total > 0), top N by share then name, one decimal."""
+    """Citation-share competitor minis: the domains Gold files as official competitor, folded to the brand Gold
+    gives them, share summed (or brand citations / total x 100 when total > 0), top N by share then name, one
+    decimal."""
     limit = 4 if limit is None else limit
     if domains is None:
         return []
@@ -316,16 +274,12 @@ def competitor_citation_shares(domains: list[dict] | None, limit: int | None = 4
     for d in domains:
         if d.get("category") != OFFICIAL_COMPETITOR_CATEGORY:
             continue
-        brand = competitor_brand_of_domain(d["domain"])
-        if not brand:
-            continue
-        k = brand_key(brand)
-        cur = acc.get(k)
+        cur = acc.get(d["brand"])
         if cur:
             cur["share"] = cur["share"] + d["share"]
             cur["citations"] = cur["citations"] + d["citations"]
         else:
-            acc[k] = {"brand": brand, "share": d["share"], "citations": d["citations"]}
+            acc[d["brand"]] = {"brand": d["brand"], "share": d["share"], "citations": d["citations"]}
     if total is not None and total > 0:
         for v in acc.values():
             v["share"] = (100 * v["citations"]) / total

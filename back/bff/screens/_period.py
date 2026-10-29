@@ -149,9 +149,10 @@ def diff_days(from_: str, to: str) -> int:
 
 
 COMPARE_METRIC_UNITS = {"visibility": "pp", "share": "pp", "favorability": "pp", "position": "rank",
-                        "mentionsPerAnswer": "pct", "citationsPerAnswer": "pct"}
+                        "mentionsPerAnswer": "pct", "citationsPerAnswer": "pct", "citationShare": "pp"}
 COMPARE_METRIC_FAMILY = {"visibility": "mention", "share": "mention", "favorability": "mention",
-                         "position": "mention", "mentionsPerAnswer": "mention", "citationsPerAnswer": "citation"}
+                         "position": "mention", "mentionsPerAnswer": "mention", "citationsPerAnswer": "citation",
+                         "citationShare": "citation"}
 SUPPRESSION_PRECEDENCE = ("unsupported", "no_prev", "no_data", "missing_share", "start_window", "start_month")
 MISSING_SHARE_MAX = 0.3
 MISSING_SHARE_MIN_WINDOW_DAYS = 30

@@ -16,7 +16,7 @@ import asyncio
 from typing import Any
 
 from bff.screens import screen, split_context
-from bff.screens._convert import round1
+from bff.screens._convert import delta1, round1
 from bff.screens._filters import load_filter_dates, load_panel_options, read_project_custom_field_filters, read_standard_filters
 from bff.screens._js import js_round
 from bff.screens._sort import locale_compare, sort_by
@@ -54,7 +54,7 @@ async def project_filters(sp: dict, project_id: str) -> tuple[dict, dict, dict]:
 def summary_delta(cur: Any, prev: Any, unit: str, positive_is_good: bool | None) -> dict | None:
     if cur is None or prev is None:
         return None
-    diff = js_round((cur - prev) * 10) / 10
+    diff = delta1(cur, prev)
     tone = "neutral" if diff == 0 or positive_is_good is None else "good" if (diff > 0) == positive_is_good else "bad"
     return {"diff": diff, "unit": unit, "tone": tone}
 

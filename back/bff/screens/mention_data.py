@@ -30,7 +30,7 @@ from fastapi import HTTPException
 
 from bff import api
 from bff.screens._competitors import rank_first_position_rows
-from bff.screens._compare import fetch_period_compare_api
+from bff.screens._compare import fetch_period_compare_api, prev_period_filters
 from bff.screens._convert import as_of_date, pct1_or_zero, rank_avg, round1, suppression_of, whole_suppression
 from bff.screens._filters import read_standard_filters
 from bff.screens._period import resolve_request_compare_period_shape
@@ -871,7 +871,7 @@ async def load_period_compare(filters: dict, ctx: dict) -> dict:
     compare = await degrade(
         "standardPeriodCompare",
         lambda: fetch_period_compare_api(filters, common, {"surface": ctx["surface"], "kind": shape["kind"],
-                                                           "metrics": list(MENTION_COMPARE_METRICS)}),
+                                                           "metrics": list(MENTION_COMPARE_METRICS), "card": False}),
         None)
     out: dict = {"compare": compare}
     if shape.get("days") is not None:
@@ -879,6 +879,34 @@ async def load_period_compare(filters: dict, ctx: dict) -> dict:
     out["kind"] = shape["kind"]
     out["shape"] = shape
     return out
+
+
+# ── the period before (period mode) ──────────────────────────────────────────
+# A Δ next to a period total compares it with the period just before — the window /v1/kpi/compare compares
+# 당사 with — for the rivals and the engines too (2026-10-29 metric review R3: their Δ was the last round's).
+
+async def load_prev_period_brands(filters: dict, ctx: dict) -> list[dict] | None:
+    """Period mode: the body's brand rows on the period before ([] = nothing measured then, or the read
+    failed); None outside period mode."""
+    prev = prev_period_filters(filters)
+    if prev is None:
+        return None
+    res = await degrade_on_api_failure(f"{ctx['surface']}MentionsPrevPeriod", lambda: fetch_mention_brands(prev, ctx))
+    if not res or whole_suppression(res["meta"]) or res["data"]["totals"]["answers"] == 0:
+        return []
+    return [to_mentions_brand_live(b) for b in res["data"]["brands"]]
+
+
+async def load_prev_period_engines(filters: dict, ctx: dict) -> dict | None:
+    """Period mode: {engine: the engine card's 당사 point} on the period before; None outside period mode."""
+    prev = prev_period_filters(filters)
+    if prev is None:
+        return None
+    res = await degrade_on_api_failure("standardKpiEngineTrend.prevPeriod",
+                                       lambda: fetch_engine_rows(prev, ctx, part=KPI_TAB_ENGINE_PART))
+    if not res or whole_suppression(res["meta"]):
+        return {}
+    return {p["engine"]: p for p in (to_engine_point(r) for r in res["data"]["rows"])}
 
 
 # ── helpers ─────────────────────────────────────────────────────────────────

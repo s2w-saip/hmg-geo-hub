@@ -65,7 +65,7 @@ export function useDeltaNote(): (d: RnDelta, rank?: boolean) => string | null {
   const t = useTranslations("renewal.mention.delta");
   return (d, rank) => {
     const b = d.basis;
-    if (rank) return t("noteRank");
+    if (rank) return b?.kind === "period" ? t("noteRankPeriod") : t("noteRank");
     if (!b) return null;
     if (b.kind === "period") return t("notePeriod");
     if (b.kind === "cycle") return b.date ? t("noteCycle", { date: b.date }) : null;

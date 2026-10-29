@@ -213,5 +213,38 @@ class Helpers(unittest.TestCase):
         self.assertEqual(ko["markets"][0]["numerics"], ["840", "410", "276"])
 
 
+OFFICIAL_COMPETITOR = {"category_key": 2, "slug": "officialCompetitor", "name": "Official (Competitor)"}
+DEALER = {"category_key": 3, "slug": "dealerMarketplace", "name": "Dealer & Marketplace"}
+
+
+def citation_share_row(sources: list[dict]) -> list[dict]:
+    """The AI 인용 점유율 card's competitor row over the official competitor sources the reader sends."""
+    domains = {"data": {"summary": {"own_share": {"num": 0, "den": 1000}}, "competitor_sources": sources}, "meta": META}
+    router = Router({"mentions/brands": {"data": {"brands": []}, "meta": META}, "citations/domains": domains},
+                    {"brand-trend": 503})
+    return screen("overview/card-competitors", "", router)["rows"]["citationShare"]
+
+
+def source(domain: str, citations: int, brand: str, category: dict = OFFICIAL_COMPETITOR) -> dict:
+    return {"skey": domain, "domain": domain, "citations": citations, "competitor_brand": brand, "category": category}
+
+
+class CompetitorCitations(unittest.TestCase):
+    """2026-10-29 metric review ⚠️: the competitor row guessed each source's brand from its domain (a token table
+    from the old front) and called every source official; the attribution is Gold's (competitor_brand, category)."""
+
+    def test_sources_fold_to_the_brand_gold_gives_them(self):
+        # the table read none of bydauto.com.br, wrote smart for Gold's Smart and folded maybach.com into Mercedes-Benz
+        row = citation_share_row([source("bydauto.com.br", 50, "BYD"), source("smart.com", 40, "Smart"),
+                                  source("byd.com", 30, "BYD"), source("maybach.com", 20, "Maybach"),
+                                  source("mercedes-benz.com", 10, "Mercedes-Benz")])
+        self.assertEqual(row, [{"brand": "BYD", "value": 8.0}, {"brand": "Smart", "value": 4.0},
+                               {"brand": "Maybach", "value": 2.0}, {"brand": "Mercedes-Benz", "value": 1.0}])
+
+    def test_only_sources_gold_files_as_official_competitor_count(self):
+        row = citation_share_row([source("toyotacertified.com", 90, "Toyota", DEALER), source("toyota.com", 30, "Toyota")])
+        self.assertEqual(row, [{"brand": "Toyota", "value": 3.0}])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -20,7 +20,7 @@ import math
 import re
 from typing import Any, Callable
 
-from bff.screens._convert import as_of_date, pct1_or_zero, round1, whole_suppression
+from bff.screens._convert import Exact, as_of_date, delta1, exact, pct1_or_zero, round1, whole_suppression
 from bff.screens._js import is_num, js_round, js_str
 from bff.screens._query import CITATION_CATEGORY_SLUGS, js_trim
 from bff.screens._sort import code_unit_compare, code_unit_key, locale_compare, sort_by
@@ -151,7 +151,8 @@ def to_category_slices(sources: dict) -> list[dict] | None:
     """toCategorySlices: categories in API order; None without citations."""
     if sources["total_citations"] <= 0:
         return None
-    return [{"name": _nn(category_label_of(c["category"]), c["category"].get("name")), "value": c["citations"]}
+    return [{"name": _nn(category_label_of(c["category"]), c["category"].get("name")), "value": c["citations"],
+             "top": list(c["top_sources"])}
             for c in sources["categories"]]
 
 
@@ -342,7 +343,8 @@ def to_citations_live(p: dict) -> dict | None:
         "categoryTrend": (to_citation_trend(category_trend["data"], [c["name"] for c in categories])
                           if category_trend and categories is not None else None),
         "engineCategories": to_engine_categories(p["sources"]["data"]),
-        "promptSplit": to_prompt_split(owned["data"], uncited["data"] if uncited else None) if owned else None,
+        **({} if p.get("splitOff") else
+           {"promptSplit": to_prompt_split(owned["data"], uncited["data"] if uncited else None) if owned else None}),
     }
 
 
@@ -442,6 +444,32 @@ def tone_params(req: dict) -> dict:
 
 
 # ── Δ and the previous round (citations.ts shareDeltas / prevCategoriesOf) ──
+
+def period_categories_of(cur: dict, prev: dict, prev_window: dict) -> dict | None:
+    """Period mode: the category totals of the period (`current`) and of the period before (`totals`), both
+    cumulative, so a share's previous value and Δ compare two periods (2026-10-29 metric review R3)."""
+    def totals(sources: dict) -> dict | None:
+        slices = to_category_slices(sources)
+        if slices is None:
+            return None
+        by_category: dict = {}
+        for c in slices:
+            by_category[c["name"]] = _nn(by_category.get(c["name"]), 0) + c["value"]
+        return {"total": sources["total_citations"], "byCategory": by_category}
+    p, c = totals(prev), totals(cur)
+    if p is None or c is None:
+        return None
+    return {"totals": p, "asOf": prev_window["to"], "current": c, "period": dict(prev_window)}
+
+
+def _category_basis(prev: dict | None, value: float | None) -> dict:
+    """The basis of a category Δ: the round before, or in period mode the period before (from..to)."""
+    if value is None:
+        return {"basis": None, "date": (prev or {}).get("asOf")}
+    if prev and prev.get("period"):
+        return {"basis": "period", "date": prev["period"]["to"], "from": prev["period"]["from"]}
+    return {"basis": "category", "date": (prev or {}).get("asOf")}
+
 
 def prev_categories_of(trend: dict | None) -> dict | None:
     """prevCategoriesOf: the previous and last valued buckets' category totals of the category trend."""
@@ -601,14 +629,15 @@ def prev_category_share(prev: dict | None, name: str) -> float | None:
     """prevCategoryShare: Math.round(1000 * v / total) / 10 of a round's totals; None without totals."""
     if not prev or prev["totals"]["total"] <= 0:
         return None
-    return js_round((1000 * _nn(prev["totals"]["byCategory"].get(name), 0)) / prev["totals"]["total"]) / 10
+    v = _nn(prev["totals"]["byCategory"].get(name), 0)
+    return Exact(js_round((1000 * v) / prev["totals"]["total"]) / 10, (100 * v) / prev["totals"]["total"])
 
 
 def delta_pp(current: float | None, previous: float | None) -> float | None:
-    """_data/kpi-view deltaPp."""
+    """_data/kpi-view deltaPp (exact values, rounded once)."""
     if current is None or previous is None:
         return None
-    return round1(current - previous)
+    return delta1(current, previous)
 
 
 def category_delta(prev: dict | None, name: str, current: float | None) -> float | None:
@@ -763,7 +792,7 @@ def rn_official_delta(card: dict | None, prev: dict | None, current: float | Non
     if card:
         return {"value": card["delta"], "basis": "card", "date": card["basisDate"]}
     value = category_delta(prev, OFFICIAL_HMG_CATEGORY, current)
-    return {"value": value, "basis": None if value is None else "category", "date": (prev or {}).get("asOf")}
+    return {"value": value, **_category_basis(prev, value)}
 
 
 def category_rows(live: dict, prev: dict | None, card: dict | None, picked: list[str]) -> list[dict]:
@@ -772,6 +801,11 @@ def category_rows(live: dict, prev: dict | None, card: dict | None, picked: list
     full_total = _sum(c["value"] for c in live.get("categories") or [])
     shares = category_share_series(live.get("categoryTrend"))
     domains = apply_competitor_pick(live.get("domains") or [], picked)
+    # each category's top sources over every source (the reader's), merged per display label; the picked
+    # competitors' own rows for 공식(경쟁사) while a pick is on
+    tops: dict = {}
+    for c in live.get("categories") or []:
+        tops[c["name"]] = sort_by([*tops.get(c["name"], []), *c["top"]], lambda a, b: b["citations"] - a["citations"])[:3]
     out = []
     for b in category_bars(categories, full_total):
         hidden = len(picked) > 0 and b["name"] == OFFICIAL_COMPETITOR_CATEGORY
@@ -781,17 +815,20 @@ def category_rows(live: dict, prev: dict | None, card: dict | None, picked: list
             delta = rn_official_delta(card, prev, category_share(live.get("categories"), OFFICIAL_HMG_CATEGORY))["value"]
         else:
             delta = category_delta(prev, b["name"], b["pct"])
-        own = [d for d in domains if d.get("category") == b["name"]][:3]
+        own = ([d for d in domains if d.get("category") == b["name"]][:3] if picked and b["name"] == OFFICIAL_COMPETITOR_CATEGORY
+               else tops.get(b["name"], []))
         out.append({"name": b["name"], "value": b["value"], "pct": b["pct"],
                     "prevPct": None if hidden else prev_category_share(prev, b["name"]), "delta": delta,
                     "deltaHidden": hidden, "trend": shares["byCategory"].get(b["name"]) if shares else None,
-                    "top": [{"domain": d["domain"], "pct": round1((100 * d["citations"]) / b["value"])} for d in own] if b["value"] > 0 else []})
+                    # whole percents, as the row tooltip shows them: rounded once (not 0.1 first)
+                    "top": [{"domain": d["domain"], "pct": js_round((100 * d["citations"]) / b["value"])} for d in own] if b["value"] > 0 else []})
     return out
 
 
 def delta_axis(rows: list[dict]) -> float:
-    m = max([0, *(abs(_nn(r.get("delta"), 0)) for r in rows)])
-    return max(DELTA_AXIS_MIN, math.ceil(m * 10) / 10)
+    """The Δ bars' half-width: the largest exact |Δ| rounded up to 0.1 (float noise below 1e-9 dropped)."""
+    m = max([0, *(abs(exact(_nn(r.get("delta"), 0))) for r in rows)])
+    return max(DELTA_AXIS_MIN, math.ceil(round(m * 10, 9)) / 10)
 
 
 def lens(live: dict, prev: dict | None, card: dict | None, active: list[str], sections: dict | None) -> dict:
@@ -815,8 +852,7 @@ def lens(live: dict, prev: dict | None, card: dict | None, active: list[str], se
     dealer_spark = shares["byCategory"].get(DEALER_CATEGORY) if shares else None
     return {
         "hmg": {"value": hmg, "delta": rn_official_delta(card, prev, hmg), "spark": _nn(hmg_spark, [])},
-        "dealer": {"value": dealer, "delta": {"value": dealer_d, "basis": None if dealer_d is None else "category",
-                                              "date": (prev or {}).get("asOf")}, "spark": _nn(dealer_spark, [])},
+        "dealer": {"value": dealer, "delta": {"value": dealer_d, **_category_basis(prev, dealer_d)}, "spark": _nn(dealer_spark, [])},
         "split": state,
     }
 
@@ -890,7 +926,7 @@ def strongest_skew(engine: dict | None, type_: dict | None) -> dict | None:
             for k in m["rows"]:
                 if k == OFFICIAL_HMG_CATEGORY:
                     continue
-                gap = c["shares"][k] - m["base"][k]
+                gap = exact(c["shares"][k]) - exact(m["base"][k])
                 if not best or abs(gap) > abs(best["gap"]):
                     best = {"axis": axis, "col": c["key"], "category": k, "share": c["shares"][k], "base": m["base"][k], "gap": gap}
     return best
@@ -904,7 +940,8 @@ def domain_bump(trend: dict | None, domains: list[dict]) -> dict | None:
     values = [[p.get(s) if not p.get("gap") and is_num(p.get(s)) else None for p in trend["points"]] for s in trend["series"]]
     ranks: list[list] = [[None for _ in x] for _ in trend["series"]]
     for i in range(len(x)):
-        present = [(j, values[j][i]) for j in range(len(trend["series"])) if values[j][i] is not None]
+        # a domain uncited that week has no rank (2026-10-29 metric review R6: kia.com 13위 in a week it had 0)
+        present = [(j, values[j][i]) for j in range(len(trend["series"])) if values[j][i] is not None and values[j][i] > 0]
         present = sort_by(present, lambda a, b: (b[1] - a[1]) or (a[0] - b[0]))
         for r, (j, _) in enumerate(present):
             ranks[j][i] = r + 1
@@ -956,7 +993,7 @@ def findings(rows: list[dict], hmg_delta: float | None, picked: list[str], engin
         delta = hmg_delta if hmg_delta is not None else ""
         if hi == 0:
             out.append({"kind": "standingLead", "tone": "good", "pri": 3, "target": "sec-comp", "key": o["name"],
-                        "params": {"rival": other["name"], "gap": round1(_nn(o["pct"], 0) - _nn(other["pct"], 0)), "delta": delta}})
+                        "params": {"rival": other["name"], "gap": delta1(_nn(o["pct"], 0), _nn(other["pct"], 0)), "delta": delta}})
         else:
             out.append({"kind": "standingTrail", "tone": "warn", "pri": 8, "target": "sec-comp", "key": o["name"],
                         "params": {"rank": hi + 1, "share": _nn(o["pct"], 0), "leader": other["name"],
@@ -973,7 +1010,7 @@ def findings(rows: list[dict], hmg_delta: float | None, picked: list[str], engin
         vals = [{"key": c["key"], "v": c["shares"][OFFICIAL_HMG_CATEGORY]} for c in engine["cols"] if c["key"] in engine["live"]]
         vals = sort_by(vals, lambda a, b: a["v"] - b["v"])
         lo, top = vals[0], vals[-1]
-        gap = round1(top["v"] - lo["v"])
+        gap = delta1(top["v"], lo["v"])
         out.append({"kind": "engineGap", "tone": "warn" if gap >= 4 else "info", "pri": 6 if gap >= 4 else 1, "target": "sec-mix",
                     "key": OFFICIAL_HMG_CATEGORY, "axis": "engine",
                     "params": {"low": lo["key"], "lowShare": lo["v"], "high": top["key"], "gap": gap}})
@@ -982,14 +1019,15 @@ def findings(rows: list[dict], hmg_delta: float | None, picked: list[str], engin
             return next((c for c in type_["cols"] if c["key"] == k and k in type_["live"]), None)
         rec, men = col("recommendation"), col("mention")
         if rec and men:
-            gap = round1(rec["shares"][OFFICIAL_HMG_CATEGORY] - men["shares"][OFFICIAL_HMG_CATEGORY])
+            gap = delta1(rec["shares"][OFFICIAL_HMG_CATEGORY], men["shares"][OFFICIAL_HMG_CATEGORY])
             out.append({"kind": "typeGap", "tone": "warn" if gap < -1.5 else "good", "pri": 7 if gap < -1.5 else 2,
                         "target": "sec-mix", "key": OFFICIAL_HMG_CATEGORY, "axis": "type",
                         "params": {"rec": rec["shares"][OFFICIAL_HMG_CATEGORY], "gap": gap}})
     if split.get("kind") == "ok" and split["owned"] + split["uncited"] > 0 and split["uncited"] > 0:
         sh = round1((100 * split["uncited"]) / (split["owned"] + split["uncited"]))
+        # the sentence shows whole percents: rounded once from the exact share (50.49 → 50, not 50.5 → 51)
         out.append({"kind": "opportunity", "tone": "warn", "pri": 6 if sh >= 40 else 3, "target": "sec-overview", "href": "uncited",
-                    "params": {"n": split["uncited"], "share": sh}})
+                    "params": {"n": split["uncited"], "share": js_round(exact(sh))}})
     sk = strongest_skew(engine, type_)
     if sk and abs(sk["gap"]) >= 1:
         out.append({"kind": "skew", "tone": "info", "pri": 5 if abs(sk["gap"]) >= 5 else 1, "target": "sec-mix", "key": sk["category"],

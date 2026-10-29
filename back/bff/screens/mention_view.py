@@ -13,7 +13,7 @@ from typing import Any
 
 from bff.screens._competitors import (brand_key, competitor_mini_picks, competitor_value_index, competitor_value_of,
                                        rank_first_position_rows, resolve_competitor_overlay)
-from bff.screens._convert import round1
+from bff.screens._convert import Exact, delta1, exact, round1
 from bff.screens._js import is_num, js_round
 from bff.screens._period import iso_of_days, iso_parse_days
 from bff.screens._sort import code_unit_key, locale_compare, sort_by
@@ -79,13 +79,13 @@ def kpi_hero(sub: dict | None, metric: str) -> dict:
 def delta_pp(current: float | None, previous: float | None) -> float | None:
     if current is None or previous is None:
         return None
-    return round1(current - previous)
+    return delta1(current, previous)
 
 
 def wow_pct(current: float | None, previous: float | None) -> float | None:
     if current is None or previous is None or previous == 0:
         return None
-    return round1((100 * (current - previous)) / previous)
+    return round1((100 * (exact(current) - exact(previous))) / exact(previous))
 
 
 # ── axis ────────────────────────────────────────────────────────────────────
@@ -412,11 +412,14 @@ def engine_competitor_bars(trend: dict | None, metric: str) -> list[dict]:
                             for r in comps) if v is not None]
         own = latest_by.get(e["engine"])
         total = 0
+        exact_total = 0
         for v in pcts:
             total = total + v
+            exact_total = exact_total + exact(v)
         out.append({"engine": e["engine"],
                     "ownPct": (own["exposurePct"] if metric == "exposure" else own["sovPct"]) if own else None,
-                    "competitorAvgPct": js_round((total / len(pcts)) * 10) / 10 if pcts else None,
+                    # the average of the rounded values, as shown, keeping the exact average (its gap is exact)
+                    "competitorAvgPct": Exact(js_round((total / len(pcts)) * 10) / 10, exact_total / len(pcts)) if pcts else None,
                     "competitorCount": len(pcts)})
     return out
 
@@ -646,7 +649,7 @@ def _own_weighted_position(points: list[dict]) -> dict:
 def delta_position(current: float | None, previous: float | None) -> float | None:
     if current is None or previous is None:
         return None
-    return round1(current - previous)
+    return delta1(current, previous)
 
 
 def own_position_series(fp: dict) -> list:

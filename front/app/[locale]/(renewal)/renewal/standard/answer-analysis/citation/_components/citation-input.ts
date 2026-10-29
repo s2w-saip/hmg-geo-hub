@@ -18,15 +18,19 @@ export const SPARK_MIN_SPAN = 2;
 /** Columns with fewer citations stay uncoloured: a gap on a thin sample is mostly noise. */
 export const MATRIX_MIN_N = 30;
 
-/** The previous round's category totals (the Δ base), with the last round's when a period is cumulative. */
-export type PrevCategories = { totals: CitationCategoryTotals; asOf: string; current?: CitationCategoryTotals } | null;
+/** The previous round's category totals (the Δ base), with the last round's when a period is cumulative; in period
+ * mode the period before (`period`) and the selected period's totals (`current`), both cumulative. */
+export type PrevCategories = { totals: CitationCategoryTotals; asOf: string; current?: CitationCategoryTotals; period?: { from: string; to: string } } | null;
 
 export interface RnCitationDelta {
   value: number | null;
-  /** card = the Overview card Δ (official share only), category = previous round's category totals */
-  basis: "card" | "category" | null;
-  /** the date of the round compared against */
+  /** card = the Overview card Δ (official share only), category = previous round's category totals,
+   * period = the period before (period mode) */
+  basis: "card" | "category" | "period" | null;
+  /** the date of the round compared against (period: the last day of the period before) */
   date: string | null;
+  /** period: the first day of the period before */
+  from?: string | null;
 }
 
 // ── 출처 구성: one ranked list ────────────────────────────────────────────────

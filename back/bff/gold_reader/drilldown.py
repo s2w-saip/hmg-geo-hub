@@ -101,23 +101,70 @@ async def citation_prompts(ctx: Context) -> dict:
     return envelope(ctx, data, page={"limit": page_limit, "total": len(selected), "next_cursor": str(offset + page_limit) if offset + page_limit < len(selected) else None})
 
 
+DISPLAY_URL = "regexp_replace(regexp_replace(u.url,'^[A-Za-z][A-Za-z0-9+.-]*://',''),'#.*$','')"
+
+
+def like(q: str) -> str:
+    """q as a literal ILIKE pattern (wildcards taken as written)."""
+    return "%" + q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+
+
 async def tone(ctx: Context) -> dict:
+    """URLs (or sources, group_by=source) cited by answers of one tone, paged, searchable, with the two tabs'
+    counts (with_counts) — the contract's /v1/citations/sources/tone (2026-10-29 metric review R4: the reader
+    returned the first page of URLs only: no counts, no next page, no search, no grouping by source). One pass
+    groups the citations per URL (or source) with both tones' counts; the names join the grouped rows only."""
     b = SQL()
     where = citation_predicate(ctx, b)
     positive = "+".join("a." + col for bit, col in ((1, "sent_pos_h"), (2, "sent_pos_k"), (4, "sent_pos_g")) if ctx.bits & bit)
     negative = "+".join("a." + col for bit, col in ((1, "sent_neg_h"), (2, "sent_neg_k"), (4, "sent_neg_g")) if ctx.bits & bit)
-    chosen = f"({negative})>({positive})" if ctx.q.get("tone") == "negative" else f"({positive})>({negative})"
-    rows = await ctx.conn.fetch(f"""SELECT u.url,u.title,s.skey,s.domain,c.category_key,c.slug,c.name AS category_name,
-        count(*)::int AS citations,array_agg(DISTINCT e.code ORDER BY e.code) AS engines,count(*) OVER()::int AS total
-        FROM gold.citation_fact f JOIN gold.answer_fact a ON (a.build_id,a.answer_key)=(f.build_id,f.answer_key)
-        JOIN gold.dim_url u ON u.url_key=f.url_key JOIN gold.dim_source s ON s.source_key=f.source_key
-        LEFT JOIN gold.dim_category c ON c.category_key=s.category_key JOIN gold.dim_engine e ON e.engine_key=f.engine_key
-        WHERE {where} AND {chosen}
-        GROUP BY u.url,u.title,s.skey,s.domain,c.category_key,c.slug,c.name ORDER BY citations DESC,u.url
-        LIMIT {b.bind(limit(ctx.q))} OFFSET {b.bind(max(0, int(ctx.q.get('cursor') or 0)))}""", *b.args)
-    items = [{"key": r["url"], "display": r["url"], "url": r["url"], "title": r["title"], "skey": r["skey"],
-              "domain": r["domain"], "citations": r["citations"], "engines": r["engines"], "category": category(dict(r)), "prompt_text": None} for r in rows]
-    return envelope(ctx, {"items": items}, page={"limit": limit(ctx.q), "total": rows[0]["total"] if rows else 0, "next_cursor": None})
+    is_pos, is_neg = f"({positive})>({negative})", f"({negative})>({positive})"
+    chosen = "neg" if ctx.q.get("tone") == "negative" else "pos"
+    by_source = ctx.q.get("group_by") == "source"
+    key = "f.source_key" if by_source else "f.url_key"
+    q = (ctx.q.get("q") or "").strip()
+    search = f" AND {'s.skey' if by_source else DISPLAY_URL} ILIKE {b.bind(like(q))}" if q else ""
+    with_counts = flag(ctx.q, "with_counts") and not by_source
+    page_limit, offset = limit(ctx.q), max(0, int(ctx.q.get("cursor") or 0))
+    names = ("s.skey,s.domain" if by_source else "u.url,u.title,s.skey,s.domain") + ",c.category_key,c.slug,c.name AS category_name"
+    rows = await ctx.conn.fetch(f"""WITH t AS (SELECT {key} AS k,min(f.source_key) AS source_key,
+            count(*) FILTER(WHERE {is_pos})::int AS pos,count(*) FILTER(WHERE {is_neg})::int AS neg,
+            array_agg(DISTINCT f.engine_key) FILTER(WHERE {is_pos if chosen == 'pos' else is_neg}) AS engine_keys
+          FROM gold.citation_fact f JOIN gold.answer_fact a ON (a.build_id,a.answer_key)=(f.build_id,f.answer_key)
+          WHERE {where} AND ({positive})<>({negative}) GROUP BY {key})
+        SELECT {names},t.{chosen} AS citations,t.engine_keys,count(*) OVER()::int AS total
+          {",(SELECT count(*) FROM t WHERE pos>0)::int AS n_pos,(SELECT count(*) FROM t WHERE neg>0)::int AS n_neg" if with_counts else ""}
+        FROM t JOIN gold.dim_source s ON s.source_key=t.source_key
+          {"" if by_source else "JOIN gold.dim_url u ON u.url_key=t.k"}
+          LEFT JOIN gold.dim_category c ON c.category_key=s.category_key
+        WHERE t.{chosen}>0{search}
+        ORDER BY t.{chosen} DESC,{'s.skey' if by_source else 'u.url'}
+        LIMIT {b.bind(page_limit)} OFFSET {b.bind(offset)}""", *b.args)
+    counts = None
+    if flag(ctx.q, "with_counts"):
+        if with_counts and rows:
+            counts = {"positive": rows[0]["n_pos"], "negative": rows[0]["n_neg"]}
+        else:
+            # source mode, or a page past the end: the distinct URLs of each tone, read on their own
+            b2 = SQL()
+            where2 = citation_predicate(ctx, b2)
+            row = await ctx.conn.fetchrow(f"""SELECT count(DISTINCT f.url_key) FILTER(WHERE {is_pos})::int AS positive,
+                count(DISTINCT f.url_key) FILTER(WHERE {is_neg})::int AS negative
+                FROM gold.citation_fact f JOIN gold.answer_fact a ON (a.build_id,a.answer_key)=(f.build_id,f.answer_key)
+                WHERE {where2}""", *b2.args)
+            counts = {"positive": row["positive"], "negative": row["negative"]}
+    codes = {r["engine_key"]: r["code"] for r in await ctx.conn.fetch("SELECT engine_key,code FROM gold.dim_engine")} if rows else {}
+    items = []
+    for r in rows:
+        engines = sorted(codes[k] for k in (r["engine_keys"] or []))
+        items.append({"key": r["skey"] if by_source else r["url"], "display": r["skey"] if by_source else r["url"],
+                      "url": None if by_source else r["url"], "title": None if by_source else r["title"], "skey": r["skey"],
+                      "domain": r["domain"], "citations": r["citations"], "engines": engines, "category": category(dict(r)),
+                      "prompt_text": None})
+    total = rows[0]["total"] if rows else 0
+    return envelope(ctx, {"items": items, "counts": counts},
+                    page={"limit": page_limit, "total": total,
+                          "next_cursor": str(offset + page_limit) if offset + page_limit < total else None})
 
 
 async def domain(ctx: Context, skey: str) -> dict:

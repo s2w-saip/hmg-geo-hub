@@ -80,20 +80,26 @@ export function AcrBattle() {
           // the compare brands are UI state: their counts are looked up, the rest is what they leave
           const cmp = compare.map((b) => ({ key: b, name: b, n: w.byBrand.find((x) => x.brand === b)?.count ?? 0, color: colorOf(b) }));
           const rest = w.restBase - cmp.reduce((s, x) => s + x.n, 0);
-          const segs = [{ key: "__own", name: t("ownLabel"), n: w.ownWins, color: OWN_COLOR }, ...cmp, { key: "__rest", name: t("others"), n: rest, color: CONTEXT_COLOR }].filter((s) => s.n > 0);
+          // no pick (no winner, or no cell on this engine) is not another brand: its own hatched part (2026-10-29 metric review R5)
+          const segs = [
+            { key: "__own", name: t("ownLabel"), n: w.ownWins, color: OWN_COLOR },
+            ...cmp,
+            { key: "__rest", name: t("others"), n: rest, color: CONTEXT_COLOR },
+            { key: "__none", name: t("noWinner"), n: w.noneWins, color: HATCH },
+          ].filter((s) => s.n > 0);
           const keys = segs.map((s) => s.key);
           return (
             <div key={w.engine} className="grid min-h-7 grid-cols-[72px_minmax(0,1fr)_auto] items-center gap-3">
               <span className="text-rn-12 font-bold text-rn-ink-2">{engineLabel(w.engine)}</span>
               <span className="flex h-3.5 gap-0.5">
                 {segs.map((s) => {
-                  const st = s.key === "__rest" ? "none" : rnHighlightState(lit, [s.key], keys);
+                  const st = s.key === "__rest" || s.key === "__none" ? "none" : rnHighlightState(lit, [s.key], keys);
                   return (
                     <i
                       key={s.key}
-                      data-rn-b={s.key === "__rest" ? undefined : s.key}
+                      data-rn-b={s.key === "__rest" || s.key === "__none" ? undefined : s.key}
                       title={t("segTip", { engine: engineLabel(w.engine), brand: s.name, count: s.n })}
-                      onPointerEnter={() => s.key !== "__rest" && hover(s.key)}
+                      onPointerEnter={() => s.key !== "__rest" && s.key !== "__none" && hover(s.key)}
                       onPointerLeave={() => hover(null)}
                       className={cx("block h-full min-w-[2px] first:rounded-l last:rounded-r transition-opacity", st === "dim" && "opacity-35")}
                       style={{ width: `${(s.n / total) * 100}%`, background: s.color }}

@@ -249,7 +249,11 @@ function Summary() {
       case "standingLead":
       case "standingTrail":
         title = t(`find.${f.kind}.title`, { rank: p.rank, rival: String(p.rival), gap: n1(p.gap) });
-        detail = p.move != null ? t(p.widened === "true" ? "find.standingWidened" : "find.standingNarrowed", { move: n1(p.move) }) : t("find.standingDetail", { own: pctTxt(Number(p.own)) });
+        // in period mode both Δs compare the period with the one before (2026-10-29 metric review R3)
+        detail =
+          p.move != null
+            ? t(p.widened === "true" ? (isPeriod ? "find.standingWidenedPeriod" : "find.standingWidened") : isPeriod ? "find.standingNarrowedPeriod" : "find.standingNarrowed", { move: n1(p.move) })
+            : t("find.standingDetail", { own: pctTxt(Number(p.own)) });
         break;
       case "typeTrail":
       case "typeLead":
@@ -258,7 +262,7 @@ function Summary() {
         break;
       case "mover":
         title = t("find.mover.title", { brand: String(p.brand), delta: deltaTxt(Number(p.delta)) });
-        detail = t("find.moverDetail", { own: p.own === "" ? "—" : deltaTxt(Number(p.own)) });
+        detail = t(isPeriod ? "find.moverDetailPeriod" : "find.moverDetail", { own: p.own === "" ? "—" : deltaTxt(Number(p.own)) });
         break;
       case "engine":
         title = t("find.engine.title", { engine: engineLabel(String(p.engine)), gap: `${Number(p.gap) >= 0 ? "+" : "−"}${Math.abs(Number(p.gap)).toFixed(1)}pp` });

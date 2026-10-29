@@ -71,9 +71,10 @@ from bff.screens._trend import (
 
 OVERVIEW_KPI_KEYS = ("visibility", "shareOfVoice", "sentiment", "position", "citationShare")
 # components/dash/period-delta-metrics.ts KPI_KEY_TO_COMPARE_METRIC (None = out of the compare contract)
+# the AI 인용 점유율 card too (2026-10-29 metric review R3: it alone showed the round Δ in period mode)
 KPI_KEY_TO_COMPARE_METRIC = {"visibility": "visibility", "shareOfVoice": "share", "sentiment": "favorability",
-                             "position": "position"}
-OVERVIEW_COMPARE_METRICS = ["visibility", "share", "favorability", "position"]
+                             "position": "position", "citationShare": "citationShare"}
+OVERVIEW_COMPARE_METRICS = ["visibility", "share", "favorability", "position", "citationShare"]
 CARD_BRANDS_TOP_N = 20
 SOURCE_TOP_N = 7
 BRAND_TREND_TOP = 1
@@ -848,7 +849,7 @@ async def own_card_values(common: dict, surface: str) -> dict | None:
 @screen("overview/card-competitors")
 async def card_competitors(q) -> dict:
     """The deferred competitor row of every card (value-ordered minis with their Δ; citation share =
-    official competitor domains folded to brands). `degraded` = the old labels of the parts that failed
+    the domains Gold files as official competitor, folded to the brand Gold gives them). `degraded` = the old labels of the parts that failed
     transiently. ctx.view=renewal adds 당사's standing among each card's competitors."""
     ctx, sp = split_context(q)
     common = common_params(global_filters(sp), "global")

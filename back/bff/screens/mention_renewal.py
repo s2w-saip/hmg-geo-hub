@@ -26,7 +26,9 @@ from itertools import combinations
 from typing import Any
 
 from bff.screens import screen, split_context
-from bff.screens._js import js_round
+from bff.screens._competitors import competitor_value_of
+from bff.screens._convert import Exact, delta1, exact
+from bff.screens._convert import round1 as _exact_round1
 from bff.screens._period import period_caption
 from bff.screens._sort import locale_compare, table_orders
 
@@ -77,15 +79,26 @@ def _sign(x: float) -> int:
 
 
 def _js_sum(values) -> float:
-    """reduce((s, v) => s + v, 0): left to right (Python's sum() compensates floats)."""
+    """reduce((s, v) => s + v, 0): left to right (Python's sum() compensates floats). A sum of rounded values
+    keeps the sum of their exact values (a Δ of it subtracts exact values)."""
     s = 0
+    e = 0
+    rounded = False
     for v in values:
         s = s + v
-    return s
+        e = e + exact(v)
+        rounded = rounded or isinstance(v, Exact)
+    return Exact(s, e) if rounded else s
 
 
 def round1(n: float) -> float:
-    return js_round(n * 10) / 10
+    return _exact_round1(n)
+
+
+def _mean1(values: list) -> float:
+    """The average rounded to 0.1 from the rounded values, as the front did, keeping the exact average."""
+    s = _js_sum(values)
+    return Exact(round1(s / len(values)), exact(s) / len(values))
 
 
 def _sort(items: list, cmp) -> list:
@@ -325,9 +338,18 @@ def _board_cmp(a: dict, b: dict) -> int:
     return -1 if a["own"] else 1 if b["own"] else locale_compare(a["key"], b["key"])
 
 
+def _prev_value(prev_brands: list[dict], brand: str, key: str) -> Any:
+    """A brand's value on the period before (competitor_value_of the body row), None when it had none."""
+    row = next((b for b in prev_brands if b["brand"] == brand), None)
+    return competitor_value_of(row, key) if row else None
+
+
 def board(inp: dict) -> dict:
+    """경쟁 구도 board. In period mode (`prevBrands` = the rows of the period before) a rival's Δ compares its
+    period total with that period, like 당사's; else the last two rounds of its trend."""
     mv = _mv()
     metric, brands, trend, values, hero = inp["metric"], inp["brands"], inp.get("trend"), inp.get("values"), inp["hero"]
+    prev_brands = inp.get("prevBrands")
     tracked = len([b for b in brands if b.get("isTracked")])
     rows = mv.competitor_kpi_rows({"brands": brands, "trend": trend, "metric": metric, "ownPct": hero["pct"], "values": values,
                                    "limit": tracked + BOARD_COMPETITORS})
@@ -338,8 +360,10 @@ def board(inp: dict) -> dict:
     own_spark = [hero_by.get(k) for k in axis] if axis else [p["pct"] for p in hero["points"]]
     own = {"key": OWN_KEY, "own": True, "sibling": False, "pct": hero["pct"], "mentions": None, "spark": own_spark,
            "delta": hero["delta"]["value"], "gap": None, "covered": True}
+    key = mv.overview_key_of(metric)
     comps = [{"key": r["brand"], "own": False, "sibling": is_hmg_sibling(r["brand"], False), "pct": r["pct"], "mentions": r["mentions"],
-              "spark": r["spark"], "delta": r["wowPp"], "gap": r["gapPp"], "covered": r["brand"] in series}
+              "spark": r["spark"], "gap": r["gapPp"], "covered": r["brand"] in series,
+              "delta": r["wowPp"] if prev_brands is None else delta_pp(r["pct"], _prev_value(prev_brands, r["brand"], key))}
              for r in rows if not r["isTracked"]]
     all_rows = _sort([own, *comps], _board_cmp)
     own_index = next(i for i, r in enumerate(all_rows) if r["own"])
@@ -370,14 +394,16 @@ def hero_trend_series(hero: dict, trend: Any, metric: str, compare: list[str]) -
         average = []
         for k in x:
             vs = [v for v in (value_of(b, k) for b in competitors) if v is not None]
-            average.append(round1(_js_sum(vs) / len(vs)) if vs else None)
+            average.append(_mean1(vs) if vs else None)
     return {"x": x, "own": [p["pct"] for p in hero["points"]], "brands": brands, "average": average}
 
 
 # ── AI 엔진별 ─────────────────────────────────────────────────────────────────
 
 
-def engine_rows(engine: Any, metric: str) -> dict:
+def engine_rows(engine: Any, metric: str, prev_engines: dict | None = None) -> dict:
+    """AI 엔진별 cards; in period mode (`prev_engines` = {engine: 당사 point of the period before}) the Δ compares
+    the period with that period, else the last two rounds."""
     mv = _mv()
     bars = mv.engine_competitor_bars(engine, metric)
     points = mv.engine_kpi_series(engine, metric)["points"]
@@ -388,8 +414,13 @@ def engine_rows(engine: Any, metric: str) -> dict:
         for p in points:
             v = p.get(b["engine"])
             series.append(v if isinstance(v, (int, float)) and not isinstance(v, bool) else None)
+        if prev_engines is None:
+            delta = _last_two(series, delta_pp)
+        else:
+            p = prev_engines.get(b["engine"])
+            delta = delta_pp(b["ownPct"], (p["exposurePct"] if metric == "exposure" else p["sovPct"]) if p else None)
         rows.append({"engine": b["engine"], "own": b["ownPct"], "avg": b["competitorAvgPct"], "avgCount": b["competitorCount"],
-                     "gap": delta_pp(b["ownPct"], b["competitorAvgPct"]), "series": series, "delta": _last_two(series, delta_pp)})
+                     "gap": delta_pp(b["ownPct"], b["competitorAvgPct"]), "series": series, "delta": delta})
     return {"rows": rows, "x": x, "trendMissing": not mv.engine_trend_series_available(engine)}
 
 
@@ -416,7 +447,7 @@ def type_compare_rows(inp: dict) -> list[dict]:
 
         own = share(_js_sum(b["types"][type_] for b in tb["brands"] if b.get("isTracked")))
         avg_vals = [v for v in (share(by_brand[b]["types"][type_]) for b in avg_set) if v is not None]
-        avg = round1(_js_sum(avg_vals) / len(avg_vals)) if avg_vals else None
+        avg = _mean1(avg_vals) if avg_vals else None
         dots = []
         for brand in inp["compare"]:
             hit = by_brand.get(brand)
@@ -481,7 +512,8 @@ def _rank_cmp(a: dict, b: dict) -> int:
     return -1 if a["own"] else 1 if b["own"] else locale_compare(a["key"], b["key"])
 
 
-def rank_board(fp: Any, values: Any, hero: dict) -> dict:
+def rank_board(fp: Any, values: Any, hero: dict, prev_brands: list[dict] | None = None) -> dict:
+    """The 우선 노출도 table; in period mode a rival's Δ compares its period average with the period before."""
     mv = _mv()
     overlaid = mv.overlay_first_position_values(fp, values)
     table = mv.rank_table_rows(overlaid, {"sparkCycles": 4})
@@ -493,8 +525,9 @@ def rank_board(fp: Any, values: Any, hero: dict) -> dict:
         if r["isTracked"]:
             continue
         gap = mv.delta_position(r["avgPosition"], hero["avgPosition"]) if r["avgPosition"] is not None and hero["avgPosition"] is not None else None
+        delta = r["wow"] if prev_brands is None else mv.delta_position(r["avgPosition"], _prev_value(prev_brands, r["brand"], "position"))
         comps.append({"key": r["brand"], "own": False, "sibling": is_hmg_sibling(r["brand"], False), "avgPosition": r["avgPosition"],
-                      "rank": r["rank"], "spark": r["spark"], "delta": r["wow"], "gap": gap, "covered": r["brand"] in series})
+                      "rank": r["rank"], "spark": r["spark"], "delta": delta, "gap": gap, "covered": r["brand"] in series})
     rows = _sort([own, *comps], _rank_cmp)
     ahead = 0 if hero["avgPosition"] is None else len([r for r in comps if r["avgPosition"] is not None and r["avgPosition"] < hero["avgPosition"]])
     return {"rows": rows, "ahead": ahead}
@@ -580,6 +613,17 @@ def share_deltas(trend: Any) -> dict:
     return out
 
 
+def period_share_deltas(brands: list[dict], prev_brands: list[dict]) -> dict:
+    """Period mode: share Δ (pp) of each brand row vs the period before (brands without a value then: none)."""
+    out: dict = {}
+    for b in brands:
+        prev = _prev_value(prev_brands, b["brand"], "shareOfVoice")
+        cur = competitor_value_of(b, "shareOfVoice")
+        if prev is not None and cur is not None:
+            out[b["brand"]] = delta_pp(cur, prev)
+    return out
+
+
 def _group_of(key: str, members: list[dict], total: float) -> dict:
     sorted_m = _sort(list(members), lambda a, b: _sign(b["value"] - a["value"]))
     value = _js_sum(m["value"] for m in sorted_m)
@@ -595,13 +639,14 @@ def _group_of(key: str, members: list[dict], total: float) -> dict:
     }
 
 
-def treemap_groups(rows: list[dict]) -> list[dict]:
-    """Top brands → parent groups; groups under 1.5 % of the shown total (or past the 14th) fold into
-    one block; the group holding 당사 always stays."""
+def treemap_groups(rows: list[dict], total: float) -> list[dict]:
+    """Top brands → parent groups; a group's share is of every mention (`total`, the brands' share base — 2026-10-29
+    metric review R6: it divided by the shown brands'); groups under 1.5 % (or past the 14th) fold into one block;
+    the group holding 당사 always stays."""
     by: dict[str, list[dict]] = {}
     for r in rows:
         by.setdefault(parent_group_of(r["brand"]), []).append(r)
-    total = _js_sum(r["value"] for r in rows) or 1
+    total = total or 1
     groups = _sort([_group_of(k, m, total) for k, m in by.items()], lambda a, b: _sign(b["value"] - a["value"]))
     keep_idx = [i for i, g in enumerate(groups) if g["own"] or (g["key"] != NON_AUTO_GROUP and i < FOLD_AFTER and g["share"] >= FOLD_SHARE)]
     keep = [groups[i] for i in keep_idx]
@@ -626,8 +671,8 @@ def _standing_finding(ex: Any) -> dict | None:
     rival = (rows[1] if len(rows) > 1 else None) if rank == 1 else rows[0]
     if not rival or rival["pct"] is None:
         return None
-    gap = round1(own["pct"] - rival["pct"])
-    move = round1(own["delta"] - rival["delta"]) if own["delta"] is not None and rival["delta"] is not None else None
+    gap = delta1(own["pct"], rival["pct"])
+    move = delta1(own["delta"], rival["delta"]) if own["delta"] is not None and rival["delta"] is not None else None
     lead = rank == 1
     params: dict = {"rank": rank, "rival": rival["key"], "gap": abs(gap), "own": own["pct"]}
     if move is not None:
@@ -657,7 +702,9 @@ def _type_finding(types_rows: Any) -> dict | None:
 
 def _mover_finding(sov: Any) -> dict | None:
     rows = (sov or {}).get("rows") or [] if sov else []
-    movers = _sort([r for r in rows if not r["own"] and r["delta"] is not None], lambda a, b: _sign(abs(b["delta"]) - abs(a["delta"])))
+    # the largest exact move (two moves both shown as 0.3 are told apart by their exact values)
+    movers = _sort([r for r in rows if not r["own"] and r["delta"] is not None],
+                   lambda a, b: _sign(abs(exact(b["delta"])) - abs(exact(a["delta"]))))
     if not movers:
         return None
     m = movers[0]
@@ -877,7 +924,8 @@ def _type_finding_ref_free(tf: dict, rows: list[dict]) -> dict:
 
 
 def summary_payload(period: Any, subs: dict, prevs: dict, engine: Any, trend: Any, types_by_brand: Any, fp: Any,
-                    brands: list[dict]) -> dict:
+                    brands: list[dict], prev_brands: list[dict] | None = None,
+                    prev_engines: dict | None = None) -> dict:
     """이번 회차 요약: headline values + the findings for every compare pick.
 
     `fixed` = the findings that do not depend on the pick (standing, mover, engine, climb,
@@ -885,12 +933,12 @@ def summary_payload(period: Any, subs: dict, prevs: dict, engine: Any, trend: An
     `order` = the four shown, highest priority first (-1 = the type finding)."""
     hero_e = rate_hero("exposure", subs["exposure"], prevs["exposure"], engine, period)
     hero_s = rate_hero("sov", subs["sov"], prevs["sov"], engine, period)
-    ex = board({"metric": "exposure", "brands": brands, "trend": trend, "values": None, "hero": hero_e})
-    sov = board({"metric": "sov", "brands": brands, "trend": trend, "values": None, "hero": hero_s})
+    ex = board({"metric": "exposure", "brands": brands, "trend": trend, "values": None, "hero": hero_e, "prevBrands": prev_brands})
+    sov = board({"metric": "sov", "brands": brands, "trend": trend, "values": None, "hero": hero_s, "prevBrands": prev_brands})
     favor = favor_hero(subs["favorability"], prevs["favorability"], engine, period)
     rank = rank_hero(_mv().overlay_first_position_values(fp, None), period)
     standing = _standing_finding(ex)
-    rest = [f for f in (_mover_finding(sov), _engine_finding(engine_rows(engine, "exposure")["rows"]),
+    rest = [f for f in (_mover_finding(sov), _engine_finding(engine_rows(engine, "exposure", prev_engines)["rows"]),
                         _climb_finding(bump_data(trend)), _negative_finding(favor)) if f]
     fixed = ([standing] if standing else []) + rest
     covered = covered_brands(brands, trend)
@@ -959,17 +1007,18 @@ def _max_from_one(values) -> float:
     return m
 
 
-def rate_hero_payload(metric: str, sub: Any, prev: Any, engine: Any, period: Any, brands: list[dict], trend: Any) -> dict:
+def rate_hero_payload(metric: str, sub: Any, prev: Any, engine: Any, period: Any, brands: list[dict], trend: Any,
+                      prev_brands: list[dict] | None = None) -> dict:
     """HeroDelta · HeroStanding · HeroTrend · Board of one rate metric."""
     hero = rate_hero(metric, sub, prev, engine, period)
-    b = board({"metric": metric, "brands": brands, "trend": trend, "values": None, "hero": hero})
+    b = board({"metric": metric, "brands": brands, "trend": trend, "values": None, "hero": hero, "prevBrands": prev_brands})
     rows = b["rows"]
     own_i = next((i for i, r in enumerate(rows) if r["own"]), None)
     standing = None
     if own_i is not None and rows[own_i]["pct"] is not None and b["ownRank"] is not None:
         own = rows[own_i]
         other = (rows[1] if len(rows) > 1 else None) if b["ownRank"] == 1 else rows[0]
-        gap = round1(own["pct"] - other["pct"]) if other and other["pct"] is not None else None
+        gap = delta1(own["pct"], other["pct"]) if other and other["pct"] is not None else None
         standing = {"n": len(rows), "rank": b["ownRank"], "other": other["key"] if other else None, "gap": gap}
     top_keys = {r["key"] for r in [r for r in rows if not r["own"]][:BOARD_TOP]}
     board_rows = [{**r, "pos": i + 1, "top": r["own"] or r["key"] in top_keys, "hasSpark": _has_value(r["spark"])}
@@ -988,8 +1037,8 @@ def rate_hero_payload(metric: str, sub: Any, prev: Any, engine: Any, period: Any
     }
 
 
-def rate_engines_payload(engine: Any, metric: str) -> dict:
-    e = engine_rows(engine, metric)
+def rate_engines_payload(engine: Any, metric: str, prev_engines: dict | None = None) -> dict:
+    e = engine_rows(engine, metric, prev_engines)
     return {"rows": [{**r, "hasSeries": _has_value(r["series"])} for r in e["rows"]], "x": e["x"], "trendMissing": e["trendMissing"]}
 
 
@@ -1034,12 +1083,12 @@ def favor_matrix_payload(kpi: Any) -> dict:
     return {"rows": favor_matrix(kpi)}
 
 
-def rank_payload(fp: Any, period: Any, brands: list[dict], trend: Any, degraded: bool) -> dict:
+def rank_payload(fp: Any, period: Any, brands: list[dict], trend: Any, degraded: bool, prev_brands: list[dict] | None = None) -> dict:
     """RankHeroCard + RankTable (useRank) and the rank chart's y top for every compare pick."""
     mv = _mv()
     overlaid = mv.overlay_first_position_values(fp, None)
     hero = rank_hero(overlaid, period)
-    rb = rank_board(fp, None, hero)
+    rb = rank_board(fp, None, hero, prev_brands)
     rows = rb["rows"]
     pts = [r["avgPosition"] for r in rows if r["avgPosition"] is not None]
     covered = covered_brands(brands, trend)
@@ -1120,11 +1169,11 @@ def _ranking_value(mode: str, key: str):
     return lambda r: r[mode][key]
 
 
-def ranking_payload(data: Any, trend: Any) -> dict:
+def ranking_payload(data: Any, trend: Any, prev_brands: list[dict] | None = None) -> dict:
     """브랜드 언급 순위: the top rows with both value sets (multi off / on), their sort orders and
     the treemap groups of both."""
     brands = data["brands"] if data else []
-    deltas = share_deltas(trend)
+    deltas = share_deltas(trend) if prev_brands is None else period_share_deltas(brands, prev_brands)
     multi_total = _js_sum((b["multi"]["mentions"] if b.get("multi") else 0) for b in brands)
     total_answers = (data.get("summary") or {}).get("totalAnswers") if data else None
     rows = []
@@ -1145,7 +1194,7 @@ def ranking_payload(data: Any, trend: Any) -> dict:
                "share": r[mode]["share"] if r[mode]["share"] is not None else 0, "delta": r[mode]["delta"], "own": r["own"],
                "sibling": r["sibling"]}
               for r in rows if (r[mode]["mentions"] if r[mode]["mentions"] is not None else 0) > 0]
-        treemap[mode] = treemap_groups(tm)
+        treemap[mode] = treemap_groups(tm, multi_total if mode == "on" else (data.get("summary") or {}).get("total") if data else 0)
     out = {"rows": rows, "count": len(brands), "multiUnavailable": any(not r["hasMulti"] for r in rows), "orders": orders,
            "treemap": treemap}
     if data and data.get("brandsTotal") is not None:
@@ -1237,11 +1286,11 @@ async def rn_compare(q) -> dict:
 async def rn_summary(q) -> dict:
     _, filters, ctx = _begin(q)
     md = _md()
-    period, subs, prevs, engine, trend, tb, fp, brands = await asyncio.gather(
+    period, subs, prevs, engine, trend, tb, fp, brands, prev_brands, prev_engines = await asyncio.gather(
         md.load_period_compare(filters, ctx), _subs(md, filters, ctx), _prevs(md, filters, ctx), md.load_engine_kpi_trend(filters, ctx),
         md.load_brand_trend(filters, ctx), md.load_types_by_brand(filters, ctx), md.load_first_position(filters, ctx),
-        _body_brands(md, filters, ctx))
-    return summary_payload(period, subs, prevs, engine, trend, tb, fp, brands)
+        _body_brands(md, filters, ctx), md.load_prev_period_brands(filters, ctx), md.load_prev_period_engines(filters, ctx))
+    return summary_payload(period, subs, prevs, engine, trend, tb, fp, brands, prev_brands, prev_engines)
 
 
 @screen("mention/rn-rate-value")
@@ -1260,17 +1309,19 @@ async def rn_rate_value(q) -> dict:
 async def rn_rate_hero(q) -> dict:
     _, filters, ctx = _begin(q)
     md = _md()
-    period, subs, prevs, engine, trend, brands = await asyncio.gather(
+    period, subs, prevs, engine, trend, brands, prev_brands = await asyncio.gather(
         md.load_period_compare(filters, ctx), _subs(md, filters, ctx, RATE_METRICS), _prevs(md, filters, ctx, RATE_METRICS),
-        md.load_engine_kpi_trend(filters, ctx), md.load_brand_trend(filters, ctx), _body_brands(md, filters, ctx))
-    return {m: rate_hero_payload(m, subs[m], prevs[m], engine, period, brands, trend) for m in RATE_METRICS}
+        md.load_engine_kpi_trend(filters, ctx), md.load_brand_trend(filters, ctx), _body_brands(md, filters, ctx),
+        md.load_prev_period_brands(filters, ctx))
+    return {m: rate_hero_payload(m, subs[m], prevs[m], engine, period, brands, trend, prev_brands) for m in RATE_METRICS}
 
 
 @screen("mention/rn-rate-engines")
 async def rn_rate_engines(q) -> dict:
     _, filters, ctx = _begin(q)
-    engine = await _md().load_engine_kpi_trend(filters, ctx)
-    return {m: rate_engines_payload(engine, m) for m in RATE_METRICS}
+    md = _md()
+    engine, prev_engines = await asyncio.gather(md.load_engine_kpi_trend(filters, ctx), md.load_prev_period_engines(filters, ctx))
+    return {m: rate_engines_payload(engine, m, prev_engines) for m in RATE_METRICS}
 
 
 @screen("mention/rn-rate-types")
@@ -1319,11 +1370,11 @@ async def rn_rank(q) -> dict:
     md = _md()
     t_fp = asyncio.ensure_future(md.load_first_position(filters, ctx))
     rest = asyncio.ensure_future(asyncio.gather(md.load_period_compare(filters, ctx), _body_brands(md, filters, ctx),
-                                                md.load_brand_trend(filters, ctx)))
+                                                md.load_brand_trend(filters, ctx), md.load_prev_period_brands(filters, ctx)))
     fp = await t_fp
     degraded = md.was_first_position_hero_degraded()
-    period, brands, trend = await rest
-    return rank_payload(fp, period, brands, trend, degraded)
+    period, brands, trend, prev_brands = await rest
+    return rank_payload(fp, period, brands, trend, degraded, prev_brands)
 
 
 @screen("mention/rn-bump")
@@ -1336,5 +1387,6 @@ async def rn_bump(q) -> dict:
 async def rn_ranking(q) -> dict:
     _, filters, ctx = _begin(q)
     md = _md()
-    data, trend = await asyncio.gather(md.load_mentions_live(filters, ctx), md.load_brand_trend(filters, ctx))
-    return ranking_payload(data, trend)
+    data, trend, prev_brands = await asyncio.gather(md.load_mentions_live(filters, ctx), md.load_brand_trend(filters, ctx),
+                                                    md.load_prev_period_brands(filters, ctx))
+    return ranking_payload(data, trend, prev_brands)

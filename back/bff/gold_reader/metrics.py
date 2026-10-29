@@ -112,14 +112,14 @@ async def engines(ctx: Context) -> dict:
     return envelope(ctx, {"rows": sorted(rows, key=lambda r: r["engine"]), "total": total, "engine_consistency": consistency})
 
 
-async def brand_rows(ctx: Context, *, by_date: bool = False, by_country: bool = False,
+async def brand_rows(ctx: Context, *, by_date: bool = False, by_country: bool = False, by_engine: bool = False,
                      brand_keys: list[str] | None = None) -> list[dict]:
     b = SQL()
     where = ctx.predicate(b, population="mentions")
     if brand_keys:
         # compared as text, as the ?brand_key= values come
         where += f" AND f.brand_key::text=ANY({b.bind(brand_keys, 'text[]')})"
-    keys = "f.round_date," if by_date else "f.geo_key," if by_country else ""
+    keys = "f.round_date," if by_date else "f.geo_key," if by_country else "f.engine_key," if by_engine else ""
     # Aggregate per brand_key, then join the names to the result: grouping by the name too sorted every cell
     # by its text under the collation (0.6 of the 1.1 s on the Overview's brand rows). brand_key decides
     # the name and own_bit, so the groups are the same.
@@ -138,9 +138,8 @@ async def brand_rows(ctx: Context, *, by_date: bool = False, by_country: bool = 
     return [dict(r) for r in rows]
 
 
-async def brands(ctx: Context) -> dict:
-    c = (await counts(ctx))[0]
-    rows = await brand_rows(ctx)
+def brand_items(ctx: Context, c: dict, rows: list[dict], own_multi_prompts: int) -> list[dict]:
+    """당사 (the perspective's counts `c`) + every rival row, ranked by mentions (당사 counted in the rank)."""
     own_detail = [r for r in rows if r["own_bit"] & ctx.bits]
     own = {"brand_key": own_detail[0]["brand_key"] if len(ctx.own_names) == 1 and own_detail else None,
            "name": ctx.label, "is_own": True, "rank": 0, "mentions": c["own_mentions"],
@@ -148,12 +147,8 @@ async def brands(ctx: Context) -> dict:
            "avg_rank": rank_avg(c["rank_sum"], c["ranked"]),
            "sentiment": {k: sum(r[k] for r in own_detail) for k in ("positive", "neutral", "mixed", "negative")},
            "is_hmg_own": True, "prompts": c["mentioned_prompts"],
-           "multi": {"answers": c["multi_answers"], "mentions": c["multi_mentions"], "prompts": 0},
+           "multi": {"answers": c["multi_answers"], "mentions": c["multi_mentions"], "prompts": own_multi_prompts},
            "types": {t: sum(r[f"t_{t}"] for r in own_detail) for t in TYPES}}
-    # Multi-prompt counts are not additive; calculate them over the same cell population.
-    b = SQL()
-    where = ctx.predicate(b, population="mentions", perspective=True)
-    own["multi"]["prompts"] = await ctx.conn.fetchval(f"SELECT count(DISTINCT f.prompt_key)::int FROM gold.kpi_cell f WHERE {where} AND f.has_multi", *b.args)
     items = [own]
     for r in rows:
         if r["own_bit"] & ctx.bits:
@@ -168,12 +163,48 @@ async def brands(ctx: Context) -> dict:
     items.sort(key=lambda r: (-r["mentions"], r["name"]))
     for i, row in enumerate(items, 1):
         row["rank"] = i
+    return items
+
+
+async def multi_prompts(ctx: Context, by_engine: bool = False):
+    """Multi-prompt counts are not additive; calculate them over the same cell population."""
+    b = SQL()
+    where = ctx.predicate(b, population="mentions", perspective=True)
+    if not by_engine:
+        return await ctx.conn.fetchval(f"SELECT count(DISTINCT f.prompt_key)::int FROM gold.kpi_cell f WHERE {where} AND f.has_multi", *b.args)
+    return {r["engine_key"]: r["n"] for r in await ctx.conn.fetch(f"""SELECT f.engine_key,count(DISTINCT f.prompt_key)::int AS n
+        FROM gold.kpi_cell f WHERE {where} AND f.has_multi GROUP BY f.engine_key""", *b.args)}
+
+
+async def brands(ctx: Context) -> dict:
     top_n = min(10000, max(0, int(ctx.q.get("top_n", "10"))))
-    chosen = items if flag(ctx.q, "full") else [r for r in items if r["is_own"] or r["rank"] <= top_n]
+
+    def chosen_of(items: list[dict]) -> list[dict]:
+        return items if flag(ctx.q, "full") else [r for r in items if r["is_own"] or r["rank"] <= top_n]
+
+    by_engine = None
+    if ctx.q.get("group_by") == "engine":
+        # 당사 + the rivals within top_n of each engine, counted on that engine's answers (the contract's
+        # BG-16; 2026-10-29 metric review R4: by_engine was never sent, so the engine cards had no rival average)
+        codes = {r["engine_key"]: r["code"] for r in await ctx.conn.fetch("SELECT * FROM gold.dim_engine")}
+        per_engine = {r["engine_key"]: r for r in await counts(ctx, group="engine")}
+        engine_rows = await brand_rows(ctx, by_engine=True)
+        engine_multi = await multi_prompts(ctx, by_engine=True)
+        by_engine = []
+        for key, ec in sorted(per_engine.items(), key=lambda kv: codes[kv[0]]):
+            if not ec["answers"]:
+                continue
+            items = brand_items(ctx, ec, [r for r in engine_rows if r["engine_key"] == key], engine_multi.get(key, 0))
+            by_engine.append({"engine": codes[key], "totals": {"answers": ec["answers"], "mentions_total": ec["total_mentions"],
+                                                               "brand_count": len(items)},
+                              "brands": chosen_of(items), "truncated": False})
+    c = (await counts(ctx))[0]
+    items = brand_items(ctx, c, await brand_rows(ctx), await multi_prompts(ctx))
+    own = items[[r["is_own"] for r in items].index(True)]
     return envelope(ctx, {"totals": {"answers": c["answers"], "mentions_total": c["total_mentions"], "brand_count": len(items)},
                           "own": {"vp_label": ctx.label, "brands": ctx.own_names, **{k: own[k] for k in ("rank", "mentions", "exposure", "share", "avg_rank")}},
-                          "brands": chosen, "types_total": {t: sum(r["types"][t] for r in items) for t in TYPES},
-                          "by_engine": None, "truncated": False})
+                          "brands": chosen_of(items), "types_total": {t: sum(r["types"][t] for r in items) for t in TYPES},
+                          "by_engine": by_engine, "truncated": False})
 
 
 async def trend(ctx: Context) -> dict:
@@ -272,15 +303,29 @@ async def trend(ctx: Context) -> dict:
 async def brand_series(ctx: Context, wanted: list[str], buckets: list[str], bucket_key) -> list[dict]:
     """Brand histories must use brand cells; never duplicate the own-brand series as a rival. Only the
     asked brands are read, and the date totals are one scan of the mention cells (the Overview brand
-    trend read every brand and three cell scans, two of them for series it then dropped: 5.4 s)."""
+    trend read every brand and three cell scans, two of them for series it then dropped: 5.4 s).
+    The own series is the perspective's (the date totals, as brands() and the cards), one per metric:
+    its brands are never rivals, and the top counts rivals only (2026-10-29 metric review R1)."""
     rows = await brand_rows(ctx, by_date=True, brand_keys=values(ctx.q, "brand_key"))
-    names = sorted({r["name"] for r in rows}, key=lambda n: -sum(r["mentions"] for r in rows if r["name"] == n))[:int(ctx.q.get("top_n", "10"))]
+    own_rows = [r for r in rows if r["own_bit"] & ctx.bits]
+    rivals = [r for r in rows if not r["own_bit"] & ctx.bits]
+    names = sorted({r["name"] for r in rivals}, key=lambda n: -sum(r["mentions"] for r in rivals if r["name"] == n))[:int(ctx.q.get("top_n", "10"))]
     totals = {}
     for row in await counts(ctx, group="date"):
         total = totals.setdefault(bucket_key(row["round_date"]), dict.fromkeys(COUNTS, 0))
         for column in COUNTS:
             total[column] += row[column]
     series = []
+    if own_rows:
+        own_key = own_rows[0]["brand_key"] if len(ctx.own_names) == 1 else None
+        for metric in wanted:
+            points = []
+            for key in buckets:
+                c = totals.get(key)
+                points.append({"bucket": key, "rank" if metric == "position" else "ratio": metric_values(c).get(metric) if c else None,
+                               "gap": c is None})
+            series.append({"metric": metric, "kind": "rank" if metric == "position" else "ratio", "key": ctx.label,
+                           "label": ctx.label, "brand_key": own_key, "is_own": True, "points": points})
     for name in names:
         for metric in wanted:
             points = []

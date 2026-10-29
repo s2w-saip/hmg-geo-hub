@@ -28,7 +28,7 @@ def domains_body(total=10):
                      "items": [row] if total else [], "competitor_sources": [{"skey": "toyota.com", "citations": 2}]}, "meta": META}
 
 
-SOURCES = {"data": {"total_citations": 10, "categories": [{"category": CAT, "citations": 10}],
+SOURCES = {"data": {"total_citations": 10, "categories": [{"category": CAT, "citations": 10, "top_sources": []}],
                     "by_engine": [{"engine": "claude-web", "categories": [{"category_key": 1, "citations": 10}]}],
                     "tone": {"positive": {"urls": 1, "citations": 2, "answers": 1}, "negative": {"urls": 0, "citations": 0, "answers": 0}},
                     "types": []}, "meta": META}

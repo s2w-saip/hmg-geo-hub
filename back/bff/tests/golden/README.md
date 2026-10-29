@@ -24,6 +24,74 @@ Deliberate changes (what the screen shows changed by decision):
   `citation/route-detail-live`: the tape's URLs carry the country Gold gives them today, the output the same.
   `citation/route-detail-fix`, `citation/fn-to-domain-drilldown`: the fixture URLs carry the code of the country
   the old case named ("not a url" none), the output the same.
+- 2026-10-29 ACR 당사 = every own brand (metric review R1; the user's go-ahead to fix the review's mismatches).
+  The renewal page summed the own brands among the top series (rounded values, Genesis left out) and counted the
+  standing inside the brand table. The reader now sends `own.brands` · `own.rank` · `own.ranked_brands` and
+  `trend.buckets[].own`, and the renewal view takes 당사's brands, trend and standing from them; the distribution
+  sheet's 당사 column counts every `is_ours` entry. Every `acr/*` tape got the new fields from what it holds (the
+  table's own brands, then the other own brands its sheets show; a one-round trend's own = `own.choice`, else
+  the own series summed; the standing from `choice_share`). Outputs that change, all `acr/renewal`:
+  `rn-default` (ownTrend 11.4 → 12.4 = 4,441 ÷ 35,927, chip + Genesis, sheet 당사 column and orders),
+  `rn-hmg-us` (ownTrend 12.1 → 12.0, rounded once), and 14 fixtures whose `own` is null although cells exist —
+  a state the reader never sends — now show no 당사 (no own brands, rank and field size null, the page hides the
+  standing line), or an own trend where none of the own brands had a series (`fix-rn-r31`: 0.0).
+- 2026-10-29 a Δ or a gap is the exact difference rounded once (metric review R2). The front subtracted two values
+  it had already rounded to 0.1, off by up to 0.1 (Overview AI 우선 노출도 2.286 → 2.345 showed "no change";
+  ACR "Toyota에 5.3pp 뒤짐" for 12.36 vs 17.74). `_convert.Exact` keeps the exact value behind every rounded
+  percent and rank (`round1`, `pct1_or_*`, `rank_avg` and the screens' local rounding), sums keep the sum of exact
+  values, and every Δ and gap subtracts exact values (`delta1`): the Overview cards, sparkline WoW, brand matrix
+  and website tiles, the competitor Δs, the Mention Δs, gaps and averages, the Citation category Δ and finding
+  gaps, the ACR Δ, gap and the map's average line (`k`, `dev`). Two whole-percent displays get a value rounded once
+  from the exact share: the Citation opportunity finding (`params.share`, 50.49 → 50, was 50.5 → "51") and the
+  category tooltip's top domains (`top[].pct`). 109 cases change (screen and function cases), only in those
+  values and what is drawn from them (Δ bar scale `cap`, Δ mark size `deltaMark.r`; the Mention engine cards' gap
+  to the rival average, which keeps its exact mean: `rn-fn-engine-rows`, `rn-fn-rate-engines`, `rn-fn-summary`); function cases whose inputs
+  are already rounded now take Δ from the less rounded intermediate (a sum of shares, an average) — the same rule.
+- 2026-10-29 period mode compares the period with the one before, on the values the page shows (metric review R3).
+  Mention and Citation show live values, so their `kpi/compare` reads lost `card` (the Δ was the card release's);
+  the per-answer citation rate divides by the citation population's answers; a rival's, an engine's and a Citation
+  category's Δ next to a period total compares it with the period before (reads of the period before: Mention
+  `mentions/brands` and `kpi/engines`, Citation `citations/sources`); the AI 인용 점유율 card and tile get the
+  period comparison too (`citation_share`). Tapes: the Mention / Citation `kpi/compare` entries answer without
+  `card` (same recorded body); the Overview / website `kpi/compare` entries gain a `citation_share` item answered
+  as not recorded (`suppressed`, `no_data` — so 5 website cases now show that tile's suppression caption); the
+  reads of the period before were never recorded and answer empty, so those cases show no rival / engine /
+  category Δ in period mode. 25 cases change, only in those Δs, the period blocks and what is drawn from them
+  (findings, orders, `cap`); `ov/fn-to-compare-result` maps `citation_share` (it was dropped).
+- 2026-10-29 the readers apply the filters, picks, sorts and searches of the contract (metric review R4), and the
+  Citation screen follows the 출처 filter. A category tooltip's top domains come from every source
+  (`citations/sources` `categories[].top_sources`, carried as `live.categories[].top`), not the domain table's
+  first page; under a 출처 filter the prompt split is not computed (the original's rule: `promptSplit` absent →
+  `notComputed`, tiles off) and 공식(HMG) takes its category Δ from the filtered category trend (the card trend
+  has no 출처 axis). Tapes: every `citations/sources` category got `top_sources` from the case's own domain read
+  (first three per category, in order — what the old code picked); function cases' citation models got
+  `categories[].top` the same way. 21 cases change: the new `top` key, the 출처-filter cases (`promptSplit`,
+  status tiles, 공식(HMG) Δ), and `fn-rn-category-rows`, whose fixture domains are not in citation order (the
+  top is now by citations).
+- 2026-10-29 ACR read range and model source (metric review R5). A snapshot's trend spans the last 12 ACR rounds
+  (the contract's `trend_cycles`; it held the one snapshot round, so no Δ); a model's conversion is its final picks
+  over the repetitions of the cells it was a candidate in, from every repetition's level-2 row (the contract's
+  AcrModelRow), the models picked at least once, best first, 12 of them (it came from one representative repetition
+  per cell, every model); sheets come most rows first and a sheet row's brands most picked first. The renewal view:
+  the distribution finding counts the sheet's prompts 당사 was never picked in, of its prompts (not rows without a
+  당사 entry, of the cells), and an engine bar keeps prompts nobody was picked in apart (`noneWins`; `restBase` =
+  prompts another brand won). Reader-side changes leave the tapes as recorded; 35 `acr/renewal` cases change, only in
+  `engineWins[].noneWins` / `restBase` and the distribution finding (and the top four findings it enters or leaves).
+- 2026-10-29 metric review R6. A domain uncited in a week has no rank in the Citation bump (it ranked among the
+  cited ones); a Mention treemap group's share is of every mention, the base of the brands' shares (it divided by the
+  shown brands' sum; the 1.5 % fold follows the same base). `rn-fn-treemap-groups` calls get the base as the new
+  argument, set to the shown rows' sum each case used, so their outputs stay. 19 cases change, only in the bump's
+  ranks, moves and movers and the treemap's shares and folded groups.
+- 2026-10-29 the Overview AI 인용 점유율 card's competitor row takes each source's brand and category from Gold
+  (metric review ⚠️, the user's go-ahead): it guessed the brand from the domain's first label with the old front's
+  token table (`competitor-brand.ts` port: bydauto.com.br read as none, smart.com as smart for Gold's Smart,
+  maybach.com folded into Mercedes-Benz) and filed every source as official competitor. The rows now carry
+  `competitor_sources[].competitor_brand` and the category's name, and fold by Gold's brand; the table and its
+  `ov/fn-competitor-brand-of-domain`, `ov/fn-domain-first-label` cases are gone. Tapes: fixture competitor sources
+  (no brand, no category) got the brand the table read from their domain and Official (Competitor); the ones it
+  could not read are dropped (the reader sends only sources Gold gives a brand). Function cases' domain rows got
+  `brand` the same way. Only `ov/fn-to-competitor-citation-domains` changes (rows carry `brand`; the dropped
+  sources' rows are gone); every screen case, the live tapes included, shows the same row.
 
 ## Format
 
@@ -46,7 +114,7 @@ lists in order.
 | Folder | Cases | Covers |
 |---|---|---|
 | `shared` | 64 | URL → filters, filters → API query, filter-bar options and dates, project gate |
-| `ov` | 120 | summary cards, trends, period compare and labels, competitor rows (library functions) |
+| `ov` | 118 | summary cards, trends, period compare and labels, competitor rows (library functions) |
 | `overview` | 375 | `/dashboard`, `/website`, `/renewal/dashboard` screens |
 | `mention` | 475 | mention analysis pages, drilldowns, renewal mention |
 | `citation` | 68 | citation analysis pages, sub pages, domain routes, renewal citation |

@@ -25,9 +25,9 @@ def acr_body(**over) -> dict:
             {"brand": "Toyota", "is_ours": False, "choice": 1, "appearance": 2, "cells": 1, "choice_share": {"num": 1, "den": 20}, "coverage": {"num": 1, "den": 8}},
         ],
         "trend": {"series_brands": ["Hyundai", "Toyota"], "buckets": [
-            {"round_date": "2026-09-10", "gap": False, "den": 3, "series": [{"brand": "Hyundai", "num": 1}, {"brand": "Toyota", "num": 2}]},
-            {"round_date": "2026-09-03", "gap": False, "den": 16, "series": [{"brand": "Hyundai", "num": 1}]},
-            {"round_date": "2026-09-17", "gap": True, "den": 0, "series": []},
+            {"round_date": "2026-09-10", "gap": False, "den": 3, "own": 1, "series": [{"brand": "Hyundai", "num": 1}, {"brand": "Toyota", "num": 2}]},
+            {"round_date": "2026-09-03", "gap": False, "den": 16, "own": 1, "series": [{"brand": "Hyundai", "num": 1}]},
+            {"round_date": "2026-09-17", "gap": True, "den": 0, "own": 0, "series": []},
         ]},
         "battle": [{"prompt_id": "p1", "prompt_text": "best suv", "cells": [
             {"engine": "chatgpt", "winner_brand": "Hyundai", "winner_is_ours": True, "choice": 4},
@@ -158,7 +158,8 @@ class Shapes(unittest.TestCase):
         self.assertFalse(acr.to_standard_acr(acr_body(totals={"prompt_runs": None, "prompts": 0, "iterations": 0, "engines": []})["data"], {})["measured"])
         self.assertEqual(acr.to_standard_acr(acr_body()["data"], {"suppressed": {"*": "hidden"}}), acr._empty_acr())
         self.assertNotIn("own", acr.to_standard_acr(acr_body(own=None)["data"], {}))
-        own = acr.to_standard_acr(acr_body(own={"choice": 0, "appearance": 0, "cells": 0, "choice_share": {"num": 0, "den": 20}, "coverage": {"num": 0, "den": 8}})["data"], {})["own"]
+        own = acr.to_standard_acr(acr_body(own={"choice": 0, "appearance": 0, "cells": 0, "choice_share": {"num": 0, "den": 20}, "coverage": {"num": 0, "den": 8},
+                                                  "brands": [], "rank": 2, "ranked_brands": 2})["data"], {})["own"]
         self.assertEqual(own, {"choiceCount": 0, "appearanceCount": 0, "choiceShare": 0, "coverage": 0})
 
     def test_sheet_key_and_battle_pivot(self):
@@ -169,6 +170,82 @@ class Shapes(unittest.TestCase):
         view = acr.renewal_view(std, None, True, False)
         self.assertEqual(view["sheets"][0]["key"], "|chatgpt")
         self.assertEqual(view["battle"]["views"]["split"], [0])
+
+
+class OwnTotal(unittest.TestCase):
+    """2026-10-29 metric review R1: 당사 = every own brand (Genesis outside the brand table too), on the trend,
+    the "당사 = … 합산" chip, the standing and the distribution's 당사 column."""
+
+    def view(self):
+        body = acr_body(
+            totals={"prompt_runs": 8, "prompts": 3, "iterations": 300, "engines": ["chatgpt"], "catalog_acr_prompts": 67},
+            brands=[
+                {"brand": "Toyota", "is_ours": False, "choice": 53, "appearance": 60, "cells": 5, "choice_share": {"num": 53, "den": 300}, "coverage": {"num": 5, "den": 8}},
+                {"brand": "Hyundai", "is_ours": True, "choice": 20, "appearance": 40, "cells": 5, "choice_share": {"num": 20, "den": 300}, "coverage": {"num": 5, "den": 8}},
+                {"brand": "Kia", "is_ours": True, "choice": 14, "appearance": 30, "cells": 4, "choice_share": {"num": 14, "den": 300}, "coverage": {"num": 4, "den": 8}},
+                {"brand": "Lexus", "is_ours": False, "choice": 0, "appearance": 9, "cells": 3, "choice_share": {"num": 0, "den": 300}, "coverage": {"num": 3, "den": 8}},
+            ],
+            own={"choice": 37, "appearance": 75, "cells": 6, "choice_share": {"num": 37, "den": 300}, "coverage": {"num": 6, "den": 8},
+                 "brands": ["Hyundai", "Kia", "Genesis"], "rank": 2, "ranked_brands": 5},
+            trend={"series_brands": ["Toyota", "Hyundai", "Kia", "Lexus"], "buckets": [
+                {"round_date": "2026-10-05", "gap": False, "den": 300, "own": 37,
+                 "series": [{"brand": "Toyota", "num": 53}, {"brand": "Hyundai", "num": 20}, {"brand": "Kia", "num": 14}, {"brand": "Lexus", "num": 0}]}]},
+            territory=[{"country": "US", "engine": "chatgpt", "rows": [
+                {"prompt_id": "p1", "prompt_text": None, "valid_acr": 10, "entries": [
+                    {"brand": "Toyota", "choice": 5, "is_ours": False}, {"brand": "Genesis", "choice": 3, "is_ours": True},
+                    {"brand": "Kia", "choice": 1, "is_ours": True}]}]}],
+        )["data"]
+        std = acr.to_standard_acr(body, {})
+        return acr.renewal_view(std, std["own"], True, False)
+
+    def test_the_own_trend_is_the_own_total_rounded_once(self):
+        # 37 / 300 = 12.33 -> 12.3; the rounded brand series summed: 6.7 + 4.7 = 11.4 (Genesis missing)
+        self.assertEqual(self.view()["ownTrend"], [12.3])
+
+    def test_the_chip_names_every_own_brand_of_the_total(self):
+        self.assertEqual(self.view()["ownBrands"], ["Hyundai", "Kia", "Genesis"])
+
+    def test_the_standing_is_the_readers(self):
+        v = self.view()
+        self.assertEqual((v["rank"], v["standingN"]), (2, 5))
+
+    def test_the_distribution_counts_every_own_pick(self):
+        self.assertEqual(self.view()["sheets"][0]["rows"][0]["ownN"], 4)
+
+
+class DistAndEngines(unittest.TestCase):
+    """R5: the distribution finding counted rows without any own entry (7 of 80 cells) for prompts 당사 was never
+    picked in (43 of 65); the engine bars put cells nobody was picked in under 그 외 브랜드."""
+
+    def view(self):
+        body = acr_body(
+            territory=[{"country": "US", "engine": "chatgpt", "rows": [
+                {"prompt_id": "p1", "prompt_text": None, "valid_acr": 10, "entries": [
+                    {"brand": "Toyota", "choice": 6, "is_ours": False}, {"brand": "Hyundai", "choice": 0, "is_ours": True}]},
+                {"prompt_id": "p1", "prompt_text": None, "valid_acr": 10, "entries": [{"brand": "Toyota", "choice": 4, "is_ours": False}]},
+                {"prompt_id": "p2", "prompt_text": None, "valid_acr": 10, "entries": [{"brand": "BMW", "choice": 3, "is_ours": False}]},
+                {"prompt_id": "p3", "prompt_text": None, "valid_acr": 10, "entries": [{"brand": "Toyota", "choice": 2, "is_ours": False}]},
+                {"prompt_id": "p4", "prompt_text": None, "valid_acr": 10, "entries": [
+                    {"brand": "Hyundai", "choice": 5, "is_ours": True}, {"brand": "Toyota", "choice": 1, "is_ours": False}]},
+                {"prompt_id": "p5", "prompt_text": None, "valid_acr": 10, "entries": [
+                    {"brand": "Toyota", "choice": 7, "is_ours": False}, {"brand": "Kia", "choice": 0, "is_ours": True}]}]}],
+            battle=[{"prompt_id": "p1", "prompt_text": "a", "cells": [{"engine": "chatgpt", "winner_brand": "Hyundai", "winner_is_ours": True, "choice": 4}]},
+                    {"prompt_id": "p2", "prompt_text": "b", "cells": [{"engine": "chatgpt", "winner_brand": None, "winner_is_ours": False, "choice": 0}]},
+                    {"prompt_id": "p3", "prompt_text": "c", "cells": [{"engine": "chatgpt", "winner_brand": "Toyota", "winner_is_ours": False, "choice": 3}]}],
+            totals={"prompt_runs": 5, "prompts": 4, "iterations": 50, "engines": ["chatgpt"], "catalog_acr_prompts": 67},
+            own={"choice": 5, "appearance": 2, "cells": 2, "choice_share": {"num": 5, "den": 50}, "coverage": {"num": 2, "den": 5},
+                 "brands": ["Hyundai", "Kia"], "rank": 2, "ranked_brands": 3})["data"]
+        std = acr.to_standard_acr(body, {})
+        return acr.renewal_view(std, std["own"], True, False)
+
+    def test_the_distribution_finding_counts_prompts_never_picking_own(self):
+        f = next(x for x in self.view()["findings"] if x["kind"] == "dist")
+        # p1 (two cells, 당사 0), p2, p3 and p5 (당사 listed, 0 picks) of the 5 prompts; rows without a 당사 entry: 3 of 6 cells
+        self.assertEqual((f["params"]["zero"], f["params"]["rows"]), (4, 5))
+
+    def test_no_pick_is_not_another_brand(self):
+        w = self.view()["engineWins"][0]
+        self.assertEqual((w["ownWins"], w["noneWins"], w["restBase"]), (1, 1, 1))
 
 
 if __name__ == "__main__":

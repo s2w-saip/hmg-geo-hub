@@ -32,7 +32,7 @@ from fastapi import HTTPException
 from bff import api
 from bff.screens import screen, split_context
 from bff.screens import citation_model as M
-from bff.screens._compare import fetch_period_compare_api
+from bff.screens._compare import fetch_period_compare_api, prev_period_filters
 from bff.screens._convert import as_of_date
 from bff.screens._filters import (
     filter_dates_view, load_panel_options, read_project_custom_field_filters, read_project_custom_field_filters_raw,
@@ -280,14 +280,18 @@ async def load_view(r: Reads) -> dict:
     async def none():
         return None, False
 
+    # the 출처 filter leaves the prompt split uncomputed, as the original (scope-aggregates wantSplit): under a
+    # source filter it counted only prompts that cited that source (2026-10-29 metric review R4: 미인용 530 for 5,758)
+    split_off = bool(r.filters.get("sourceCategory"))
     (core_v, core_d), (st_v, st_d), (ct_v, ct_d), (own_v, own_d), (pick_v, _) = await asyncio.gather(
-        degrade(core()), degrade(source_trend()), degrade(category_trend()), degrade(owned()),
+        degrade(core()), degrade(source_trend()), degrade(category_trend()), none() if split_off else degrade(owned()),
         degrade(picked()) if r.picks else none())
     degraded = {"data": core_d, "trend": st_d, "categoryTrend": ct_d, "split": own_d}
     if not core_v:
         return {"live": None, "table": None, "competitorOptions": [], "degraded": degraded}
     domains, sources = core_v
-    live = M.to_citations_live({"domains": domains, "sources": sources, "sourceTrend": st_v, "categoryTrend": ct_v, "owned": own_v})
+    live = M.to_citations_live({"domains": domains, "sources": sources, "sourceTrend": st_v, "categoryTrend": ct_v, "owned": own_v,
+                                "splitOff": split_off})
     if live is not None and pick_v:
         have = {row["domain"] for row in live["domains"]}
         for row in pick_v["data"]["items"]:
@@ -299,7 +303,15 @@ async def load_view(r: Reads) -> dict:
 
 
 async def load_deltas(r: Reads) -> dict:
-    """loadCitationDeltas: the Overview card Δ (share trend) and the previous round's category totals."""
+    """loadCitationDeltas: the Overview card Δ (share trend) and the previous round's category totals. In
+    period mode the values are period totals: every share (공식(HMG) too) compares with the period before."""
+    prev_filters = prev_period_filters(r.filters)
+    if prev_filters is not None:
+        before = Reads(prev_filters, r.ctx)
+        (cur, _), (prev, _) = await asyncio.gather(degrade(r.sources()), degrade(before.sources()))
+        window = {"from": prev_filters["dateFrom"], "to": prev_filters["dateTo"]}
+        return {"officialDelta": None,
+                "prevCategories": M.period_categories_of(cur["data"], prev["data"], window) if cur and prev else None}
     share_q = trend_query(r.common, {"surface": r.surface, "bucket": "cycle", "dimension": "none",
                                      "metrics": ["visibility", "citation_share"], "measuredDays": False})
 
@@ -309,7 +321,13 @@ async def load_deltas(r: Reads) -> dict:
     async def category():
         return split_citation_trends(await r.trends())["category"]
 
-    (share_v, _), (cat, _) = await asyncio.gather(degrade(share()), degrade(category()))
+    async def none():
+        return None
+
+    # the Overview card Δ reads cells with no 출처 axis: under a source filter 공식(HMG) takes its category Δ
+    # (2026-10-29 metric review R4: "100.0% ▲1.3pp" for 100 % → 100 %)
+    filtered = bool(r.filters.get("sourceCategory"))
+    (share_v, _), (cat, _) = await asyncio.gather(degrade(none() if filtered else share()), degrade(category()))
     official = overview_card_delta(to_standard_trend_buckets(share_v["data"]), "citationShare") if share_v else None
     return {"officialDelta": official, "prevCategories": M.prev_categories_of(cat)}
 
@@ -329,7 +347,7 @@ async def load_period_view(r: Reads, today: str | None) -> dict | None:
     if not shape.get("months"):
         return None
     results, _ = await degrade(fetch_period_compare_api(r.filters, r.common, {
-        "surface": r.surface, "kind": shape["kind"], "metrics": ["citationsPerAnswer"]}))
+        "surface": r.surface, "kind": shape["kind"], "metrics": ["citationsPerAnswer"], "card": False}))
     if results is None:
         return None
     cur_lo = ((shape.get("weeks") or {}).get("cur") or {}).get("lo") or ((shape.get("months") or {}).get("cur") or {}).get("lo") \

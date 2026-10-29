@@ -254,7 +254,7 @@ function BrandRanking() {
     <>
       <RnCardHead
         title={t("brands.title")}
-        info={<InfoTip label={t("board.infoLabel")} items={[[t("brands.colDelta"), t("brands.deltaInfo")]]} />}
+        info={<InfoTip label={t("board.infoLabel")} items={[[t("brands.colDelta"), t(input.period ? "brands.deltaInfoPeriod" : "brands.deltaInfo")]]} />}
         controls={
           <>
             <RnSegmented
@@ -352,8 +352,9 @@ function Treemap({
   onBrand: (brand: string) => void;
   onGroupTable: (group: string) => void;
 }) {
-  const { lit, hover } = useMention();
+  const { lit, hover, input } = useMention();
   const t = useTranslations("renewal.mention.treemap");
+  const legend = t(input.period ? "legendPeriod" : "legend");
   const locale = useLocale();
   const [ref, width] = useWidth<HTMLDivElement>();
   const [drill, setDrill] = useState<string | null>(null);
@@ -475,8 +476,8 @@ function Treemap({
           : null}
       </div>
       {!multi ? (
-        <div aria-label={t("legend")} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-rn-11 text-rn-muted">
-          <span className="font-semibold">{t("legend")}</span>
+        <div aria-label={legend} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-rn-11 text-rn-muted">
+          <span className="font-semibold">{legend}</span>
           {[DIV_NEG[2], DIV_NEG[1], DIV_NEG[0], DIV_ZERO, DIV_POS[0], DIV_POS[1], DIV_POS[2]].map((c, i) => (
             <span key={c} className="inline-flex items-center gap-1">
               <i aria-hidden className="inline-block size-2.5 rounded-[2px]" style={{ background: c }} />
@@ -514,7 +515,7 @@ function RankTable({
   onClearGroup: () => void;
   total?: number;
 }) {
-  const { openDrawer, lit, hover } = useMention();
+  const { openDrawer, lit, hover, input } = useMention();
   const t = useTranslations("renewal.mention");
   const tT = useTranslations("answerAnalysis.mentions.table");
   const tF = useTranslations("answerAnalysis.filters");
@@ -600,7 +601,7 @@ function RankTable({
                     </span>
                     <span className="text-right font-semibold text-rn-ink tabular-nums">{numTxt(r.v.mentions, locale)}</span>
                     <span className="text-right text-rn-ink-2 tabular-nums">{pctTxt(r.v.share)}</span>
-                    <span className="justify-self-end">{multi ? <span className="text-rn-11 text-rn-muted" title={t("brands.multiNoDelta")}>—</span> : r.v.covered ? <DeltaChip value={r.v.delta} /> : <span className="text-rn-11 text-rn-muted" title={t("board.noTrendTip")}>{t("board.noTrend")}</span>}</span>
+                    <span className="justify-self-end">{multi ? <span className="text-rn-11 text-rn-muted" title={t("brands.multiNoDelta")}>—</span> : r.v.covered ? <DeltaChip value={r.v.delta} /> : <span className="text-rn-11 text-rn-muted" title={t(input.period ? "board.noPrevPeriodTip" : "board.noTrendTip")}>{t(input.period ? "board.noPrevPeriod" : "board.noTrend")}</span>}</span>
                     <span className="text-right text-rn-ink-2 tabular-nums">{posTxt(r.avgPosition)}</span>
                     <span className="text-right text-rn-ink-2 tabular-nums">{numTxt(r.v.prompts, locale)}</span>
                     <span className="text-right text-rn-ink-2 tabular-nums">{pctTxt(r.v.mentionRate)}</span>

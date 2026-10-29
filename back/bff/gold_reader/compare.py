@@ -22,15 +22,17 @@ async def read(ctx):
             if kind == "cycle":
                 latest = ctx.dates[0] if ctx.dates else None
                 window = logic.cycle_windows(latest, ctx.dates[1] if len(ctx.dates) > 1 else None) if latest else None
+            elif start:
+                window = logic.range_windows(kind, start, end)
             elif kind == "window":
                 days = int(ctx.q.get("days", "30"))
-                if not start and days not in {7, 14, 30, 365}:
+                if days not in {7, 14, 30, 365}:
                     raise ValueError()
-                window = logic.windows_from_range(start, end) if start else logic.resolve_windows(end, days)
+                window = logic.resolve_windows(end, days)
             elif kind == "calendarMonth":
-                window = logic.calendar_months(start, end) if start else logic.calendar_months_of(end)
+                window = logic.calendar_months_of(end)
             else:
-                window = logic.calendar_weeks(start, end) if start else logic.calendar_weeks_of(end)
+                window = logic.calendar_weeks_of(end)
             if window is None:
                 raise ValueError()
     except (ValueError, OverflowError):
@@ -39,6 +41,9 @@ async def read(ctx):
     if any(m not in logic.METRIC_FAMILY for m in metrics):
         raise HTTPException(422, "Unknown comparison metric")
     sums = {lab: dict.fromkeys(COUNTS, 0) for lab in ("prev", "cur", "before")}
+    # answers of the citation population: the per-answer citation rate divides within one population
+    # (2026-10-29 metric review R3: the mention population's answers made the month line ▲70.0 % for +52.9 %)
+    cit_base = dict.fromkeys(sums, 0)
     ledgers = {(lab, family): logic.Ledger() for lab in sums for family in ("mention", "citation")}
     first = {"mention": None, "citation": None}
     scan_ctx = copy(ctx)
@@ -77,13 +82,15 @@ async def read(ctx):
             for key in COUNTS:
                 if key.startswith("cit_") == (family == "citation"):
                     sums[lab][key] += row[key]
+            if family == "citation":
+                cit_base[lab] += row["gap_base"]
             if row["answers" if family == "mention" else "cit_total"] > 0:
                 ledgers[(lab, family)].data_cycles += 1
     items, suppressed = [], {}
-    def pairs(row):
+    def pairs(row, base):
         return {**metric_values(row), "mentions_per_answer": {"num": row["own_mentions"], "den": row["answers"]},
-                "citations_per_answer": {"num": row["cit_total"], "den": row["gap_base"]}}
-    prev, cur = pairs(sums["prev"]), pairs(sums["cur"])
+                "citations_per_answer": {"num": row["cit_total"], "den": base}}
+    prev, cur = pairs(sums["prev"], cit_base["prev"]), pairs(sums["cur"], cit_base["cur"])
     for metric in metrics:
         family, unit = logic.METRIC_FAMILY[metric], logic.METRIC_UNIT[metric]
         lp, lc = ledgers[("prev", family)], ledgers[("cur", family)]

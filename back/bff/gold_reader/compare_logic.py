@@ -164,6 +164,17 @@ def calendar_weeks_of(end: date) -> Windows:
     return calendar_weeks(end - timedelta(days=end.isoweekday() - 1), end)  # type: ignore[return-value]
 
 
+def range_windows(kind: str, lo: date, hi: date) -> Windows | None:
+    """The windows of a closed period lo..hi by comparison kind (None when the period does not fit the kind)."""
+    if kind == "window":
+        return windows_from_range(lo, hi)
+    if kind == "calendarMonth":
+        return calendar_months(lo, hi)
+    if kind == "calendarWeek":
+        return calendar_weeks(lo, hi)
+    return None
+
+
 def cycle_windows(cur: date, prev: date | None) -> Windows:
     return Windows("cycle", prev=Span(prev, prev) if prev is not None else None, cur=Span(cur, cur))
 

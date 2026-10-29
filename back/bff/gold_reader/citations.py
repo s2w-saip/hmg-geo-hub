@@ -4,6 +4,43 @@ from __future__ import annotations
 from bff.gold_reader.context import Context, SQL, envelope, flag, limit, ratio, values
 from bff.gold_reader.metrics import TYPES
 
+OFFICIAL_COMPETITOR = "officialCompetitor"
+DOMAIN_SORTS = ("citations", "share", "coverage", "prompts", "skey")
+
+
+def display_pct(r: dict) -> float:
+    """A share as the table shows it: percent rounded to 0.1, halves up (the contract's sort key)."""
+    from math import floor
+    v = 1000 * r["num"] / r["den"] if r["den"] else 0
+    return floor(v + 0.5) / 10
+
+
+def select_domains(ctx: Context, items: list[dict]) -> list[dict]:
+    """The rows of a domains read (contract BG-20/21; 2026-10-29 metric review R4: the reader ignored the
+    pick, sort and skey). competitor = only these 공식(경쟁사) sources, other categories kept, ranks renumbered;
+    q = skey contains q (ranks kept); skey = only these sources; then the sort (ties by rank)."""
+    picks = set(values(ctx.q, "competitor"))
+    if picks:
+        items = [r for r in items if (r["category"] or {}).get("slug") != OFFICIAL_COMPETITOR or r["skey"] in picks]
+        items = [{**r, "rank": i} for i, r in enumerate(items, 1)]
+    q = (ctx.q.get("q") or "").strip().lower()
+    if q:
+        items = [r for r in items if q in r["skey"].lower()]
+    if flag(ctx.q, "own_only"):
+        items = [r for r in items if r["is_own"]]
+    skeys = set(values(ctx.q, "skey"))
+    if skeys:
+        items = [r for r in items if r["skey"] in skeys]
+    sort = ctx.q.get("sort") or "citations"
+    if sort not in DOMAIN_SORTS:
+        sort = "citations"
+    desc = (ctx.q.get("dir") or ("asc" if sort == "skey" else "desc")) == "desc"
+    if sort == "skey":
+        return sorted(items, key=lambda r: (r["skey"], r["rank"]), reverse=desc)
+    value = {"citations": lambda r: r["citations"], "prompts": lambda r: r["citing_prompts"],
+             "share": lambda r: display_pct(r["share"]), "coverage": lambda r: display_pct(r["coverage"])}[sort]
+    return sorted(items, key=lambda r: (-value(r) if desc else value(r), r["rank"]))
+
 
 def predicate(ctx: Context, b: SQL, *, alias: str = "f") -> str:
     where = ctx.predicate(b, alias, family="fact", measure_family="citations") + f" AND {alias}.cit_in"
@@ -57,12 +94,7 @@ async def domains(ctx: Context) -> dict:
             item = competitors.setdefault(r["competitor_brand"], {"brand": r["competitor_brand"], "citations": 0, "sources": 0})
             item["citations"] += r["citations"]
             item["sources"] += 1
-    selected = items
-    q = ctx.q.get("q", "").strip().lower()
-    if q:
-        selected = [r for r in selected if q in r["domain"].lower()]
-    if flag(ctx.q, "own_only"):
-        selected = [r for r in selected if r["is_own"]]
+    selected = select_domains(ctx, items)
     page_limit = limit(ctx.q)
     offset = int(ctx.q.get("cursor") or "0")
     page = {"limit": page_limit, "total": len(selected), "next_cursor": str(offset + page_limit) if offset + page_limit < len(selected) else None}
@@ -75,15 +107,31 @@ async def domains(ctx: Context) -> dict:
 async def sources(ctx: Context) -> dict:
     b = SQL()
     where = predicate(ctx, b)
-    rows = [dict(r) for r in await ctx.conn.fetch(f"""SELECT f.engine_key,c.category_key,c.slug,c.name AS category_name,
-        count(*)::int AS citations FROM gold.citation_fact f JOIN gold.dim_source s USING(source_key)
-        JOIN gold.dim_category c ON c.category_key=s.category_key WHERE {where}
-        GROUP BY f.engine_key,c.category_key,c.slug,c.name ORDER BY citations DESC""", *b.args)]
+    # per engine x source, once: the category totals (per engine too) and each category's top sources over
+    # every source (2026-10-29 metric review R4: the tooltip took them from the domain table's first page)
+    per_source = [dict(r) for r in await ctx.conn.fetch(f"""WITH a AS (SELECT f.engine_key,f.source_key,count(*)::int AS citations
+        FROM gold.citation_fact f WHERE {where} GROUP BY f.engine_key,f.source_key)
+        SELECT a.engine_key,a.citations,s.skey,coalesce(s.domain,s.skey) AS domain,c.category_key,c.slug,c.name AS category_name
+        FROM a JOIN gold.dim_source s USING(source_key) JOIN gold.dim_category c ON c.category_key=s.category_key""", *b.args)]
+    by_engine_category: dict = {}
+    by_source: dict = {}
+    for r in per_source:
+        key = (r["engine_key"], r["category_key"])
+        row = by_engine_category.setdefault(key, {**{k: r[k] for k in ("engine_key", "category_key", "slug", "category_name")}, "citations": 0})
+        row["citations"] += r["citations"]
+        src = by_source.setdefault(r["skey"], {"skey": r["skey"], "domain": r["domain"], "category_key": r["category_key"], "citations": 0})
+        src["citations"] += r["citations"]
+    rows = sorted(by_engine_category.values(), key=lambda r: -r["citations"])
     total = sum(r["citations"] for r in rows)
+    tops: dict = {}
+    for src in sorted(by_source.values(), key=lambda s: (-s["citations"], s["skey"])):
+        top = tops.setdefault(src["category_key"], [])
+        if len(top) < 3:
+            top.append({"skey": src["skey"], "domain": src["domain"], "citations": src["citations"]})
     groups = {}
     for row in rows:
         key = row["category_key"]
-        r = groups.setdefault(key, {"category": category(row), "citations": 0})
+        r = groups.setdefault(key, {"category": category(row), "citations": 0, "top_sources": tops.get(key, [])})
         r["citations"] += row["citations"]
     categories = [{**r, "share": ratio(r["citations"], total)} for r in sorted(groups.values(), key=lambda r: -r["citations"])]
     codes = {r["engine_key"]: r["code"] for r in await ctx.conn.fetch("SELECT * FROM gold.dim_engine")}
@@ -96,6 +144,9 @@ async def sources(ctx: Context) -> dict:
     # Tone and type attribution are stored on citation cells, so no text is classified at query time.
     b = SQL()
     where = ctx.predicate(b, population="citations", perspective=True)
+    if values(ctx.q, "source"):
+        # the 출처 filter narrows the type matrix too (it read every category: R4)
+        where += f" AND f.category_key IN (SELECT category_key FROM gold.dim_category WHERE slug=ANY({b.bind(values(ctx.q, 'source'), 'text[]')}))"
     cells = await ctx.conn.fetch(f"""SELECT f.category_key,coalesce(sum(cit_pos),0)::bigint AS positive,
         coalesce(sum(cit_neg),0)::bigint AS negative,
         {','.join(f'coalesce(sum(cit_t_{t}),0)::bigint AS t_{t}' for t in TYPES)}

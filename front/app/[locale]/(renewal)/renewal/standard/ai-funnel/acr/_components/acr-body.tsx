@@ -244,7 +244,7 @@ function AcrFindings({ period }: { period: boolean }) {
         {t.rich("summary.headline", {
           b: (c) => <b>{c}</b>,
           own: ownLabel,
-          rank: view.rank,
+          rank: view.rank ?? "—",
           share: pctTxt(o?.choiceShare),
           delta: view.ownDelta != null ? ` (${deltaTxt(view.ownDelta)})` : "",
           coverage: pctTxt(o?.coverage),
@@ -349,11 +349,11 @@ function AcrHero({ period, roundBuckets }: { period: boolean; roundBuckets: bool
             {view.showDelta ? <RnDeltaChip delta={view.ownDelta} format={(r) => `${Math.abs(r).toFixed(1)}pp`} emptyText={t("delta.none")} labels={DELTA_LABELS(t)} /> : null}
             <span>{basis}</span>
           </div>
-          {lead ? (
+          {lead && view.rank != null ? (
             <div className="flex items-center gap-2 rounded-lg bg-rn-navy-25 px-2.5 py-2 text-rn-12 text-rn-ink-2 [&_b]:text-rn-navy">
               {view.rank === 1 ? <TrendingUp className="size-3.5" aria-hidden /> : <ArrowUpRight className="size-3.5" aria-hidden />}
               <span>
-                {t.rich("hero.standing", { b: (c) => <b>{c}</b>, n: view.standingN, rank: view.rank })}
+                {t.rich("hero.standing", { b: (c) => <b>{c}</b>, n: view.standingN ?? "—", rank: view.rank })}
                 {gap != null ? ` · ${view.rank === 1 ? t("hero.leadFirst", { brand: lead.brand, gap: gap.toFixed(1) }) : t("hero.leadBehind", { brand: lead.brand, gap: gap.toFixed(1) })}` : ""}
               </span>
             </div>
@@ -374,7 +374,7 @@ function AcrHero({ period, roundBuckets }: { period: boolean; roundBuckets: bool
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
             <h3 className="m-0 text-rn-13 font-bold text-rn-ink">{t("hero.trendTitle")}</h3>
             <RnInfoTip label={t("hero.trendNoteLabel")}>
-              <RnInfoTipItem label={t("hero.trendNoteLabel")}>{roundBuckets ? t("hero.trendNoteRound") : t("hero.trendNoteDay")}</RnInfoTipItem>
+              <RnInfoTipItem label={t("hero.trendNoteLabel")}>{period ? t("hero.trendNotePeriod") : roundBuckets ? t("hero.trendNoteRound") : t("hero.trendNoteDay")}</RnInfoTipItem>
             </RnInfoTip>
             <span className="ml-auto">
               <AcrCardActions

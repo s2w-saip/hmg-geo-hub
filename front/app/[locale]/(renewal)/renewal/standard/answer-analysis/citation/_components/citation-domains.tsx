@@ -248,6 +248,8 @@ export function DomainTableCard() {
   // the category select: the server's row list and bar scales per category (first 100 rows)
   const view = (table.active ? table.views : model.views)?.[category];
   const rows = view ? view.idx.map((i) => base[i]) : category ? [] : base;
+  // a search runs over every source: its count is the server's, not the first page's (2026-10-29 metric review R4)
+  const matched = q.trim() && !category && table.active && table.total != null ? table.total : rows.length;
   const shown = all ? rows : rows.slice(0, FIRST);
   const maxCit = view?.maxCit ?? 1;
   const maxCov = view?.maxCov ?? 1;
@@ -292,7 +294,7 @@ export function DomainTableCard() {
           {t("category")}
           <RnSelect label={t("categoryLabel")} value={category} onChange={(e) => setCategory(e.target.value)} options={[{ value: "", label: t("categoryAll") }, ...cats.map((c) => ({ value: c, label: cat(c) }))]} data-rn-catsel="" />
         </label>
-        {q.trim() || category ? <span className="text-rn-12 text-rn-muted">{t("matches", { n: rows.length })}</span> : null}
+        {q.trim() || category ? <span className="text-rn-12 text-rn-muted">{matched > rows.length ? t("matchesTop", { n: matched, shown: rows.length }) : t("matches", { n: matched })}</span> : null}
       </div>
       <div className="overflow-x-auto" onPointerLeave={() => hover(null)}>
         <table className="w-full min-w-[720px] border-collapse text-rn-13" data-rn-dtable="">

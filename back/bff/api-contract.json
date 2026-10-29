@@ -7166,11 +7166,11 @@
             "type": "integer",
             "maximum": 10,
             "minimum": 1,
-            "description": "추이 시리즈 브랜드 수(당사 우선 + 상위)",
+            "description": "추이 시리즈 브랜드 수(당사 우선 + 상위). Gold 리더는 쓰지 않는다: 시리즈 = 브랜드 표(top_brands)의 브랜드, 당사 합계 = buckets[].own",
             "default": 5,
             "title": "Trend Series"
           },
-          "description": "추이 시리즈 브랜드 수(당사 우선 + 상위)"
+          "description": "추이 시리즈 브랜드 수(당사 우선 + 상위). Gold 리더는 쓰지 않는다: 시리즈 = 브랜드 표(top_brands)의 브랜드, 당사 합계 = buckets[].own"
         },
         {
           "name": "trend_cycles",
@@ -14932,6 +14932,24 @@
         "coverage": {
           "$ref": "#/components/schemas/Ratio",
           "description": "cells / totals.prompt_runs (Top5 후보군 포함)"
+        },
+        "brands": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "title": "Brands",
+          "description": "합산에 든 관점 당사 브랜드(선택 많은 순). 브랜드 표 상한 밖 당사도 든다"
+        },
+        "rank": {
+          "type": "integer",
+          "title": "Rank",
+          "description": "1 + 선택 수가 당사 합계보다 많은 경쟁 브랜드 수(표 상한 밖 포함)"
+        },
+        "ranked_brands": {
+          "type": "integer",
+          "title": "Ranked Brands",
+          "description": "순위 분모: 선택 1회 이상 경쟁 브랜드 수 + 1(당사)"
         }
       },
       "type": "object",
@@ -14940,7 +14958,10 @@
         "appearance",
         "cells",
         "choice_share",
-        "coverage"
+        "coverage",
+        "brands",
+        "rank",
+        "ranked_brands"
       ],
       "title": "AcrOwn"
     },
@@ -15133,6 +15154,11 @@
           },
           "type": "array",
           "title": "Series"
+        },
+        "own": {
+          "type": "integer",
+          "title": "Own",
+          "description": "그 회차 관점 당사 브랜드 전체의 선택 수(분모는 den). 시리즈 상한과 무관"
         }
       },
       "type": "object",
@@ -15140,7 +15166,8 @@
         "round_date",
         "gap",
         "den",
-        "series"
+        "series",
+        "own"
       ],
       "title": "AcrTrendBucket"
     },
@@ -18250,13 +18277,38 @@
         "share": {
           "$ref": "#/components/schemas/Ratio",
           "description": "M09: 이 카테고리 인용 / 전체 인용"
+        },
+        "top_sources": {
+          "type": "array",
+          "title": "Top Sources",
+          "items": {
+            "type": "object",
+            "properties": {
+              "skey": {
+                "type": "string"
+              },
+              "domain": {
+                "type": "string"
+              },
+              "citations": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "skey",
+              "domain",
+              "citations"
+            ]
+          },
+          "description": "그 카테고리 인용 상위 출처 3개(전체 출처 기준, 인용 수 내림차순·동률 skey 순)"
         }
       },
       "type": "object",
       "required": [
         "category",
         "citations",
-        "share"
+        "share",
+        "top_sources"
       ],
       "title": "CategoryCount"
     },

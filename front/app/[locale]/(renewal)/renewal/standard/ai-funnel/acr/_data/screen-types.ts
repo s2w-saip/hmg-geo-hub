@@ -98,16 +98,18 @@ export interface RnAcrView {
   /** the compare brands before any pick (the best rival) */
   defaultCompare: string[];
   showDelta: boolean;
-  /** 당사 rank among the rivals, the leader, 당사 − leader (pp) and the field size */
-  rank: number;
+  /** 당사 rank among the chosen rivals (the reader's, beyond the table; null without 당사), the leader,
+   * 당사 − leader (pp) and the field size (chosen rivals + 당사) */
+  rank: number | null;
   leader: AcrBrand | null;
   gap: number | null;
-  standingN: number;
+  standingN: number | null;
   /** 지도 평균선 slope */
   k: number;
   engines: string[];
-  /** per engine: own wins, wins per winner brand (null = nobody chosen), prompts minus own wins */
-  engineWins: { engine: string; ownWins: number; byBrand: { brand: string | null; count: number }[]; restBase: number }[];
+  /** per engine: own wins, prompts nobody was picked in (or not measured on it), wins per winner brand (null = nobody
+   * chosen), prompts another brand won (prompts − own − none) */
+  engineWins: { engine: string; ownWins: number; noneWins: number; byBrand: { brand: string | null; count: number }[]; restBase: number }[];
   sweeps: Array<{ brand: string; count: number }>;
   findings: AcrFinding[];
   battle: {

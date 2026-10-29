@@ -23,7 +23,7 @@ from typing import Any
 
 from bff import api
 from bff.screens import screen, split_context
-from bff.screens._convert import filter_notices, pct1_or_null, whole_suppression
+from bff.screens._convert import delta1, exact, filter_notices, pct1_or_null, round1, whole_suppression
 from bff.screens._filters import load_filter_dates, load_panel_options, read_standard_filters
 from bff.screens._js import is_num, js_round, js_str
 from bff.screens._query import READER_SCOPE, UMBRELLA_BRAND, analysis_query, to_api_params
@@ -39,8 +39,8 @@ def _n(v: Any) -> Any:
 
 
 def _round1(v: float) -> float:
-    """Math.round(v * 10) / 10."""
-    return js_round(v * 10) / 10
+    """Math.round(v * 10) / 10, keeping the exact value (a Δ or a gap subtracts exact values)."""
+    return round1(v)
 
 
 def _key(v: Any) -> str:
@@ -102,6 +102,9 @@ def to_standard_acr(d: dict, meta: Any) -> dict:
     if isinstance(own, dict):
         out["own"] = {"choiceCount": own.get("choice"), "appearanceCount": own.get("appearance"),
                       "choiceShare": pct1_or_null(own.get("choice_share")), "coverage": pct1_or_null(own.get("coverage"))}
+        # 당사 = every own brand of the total and its standing among the chosen brands (the reader's, beyond the table)
+        out["ownBrands"] = list(own["brands"])
+        out["ownStanding"] = {"rank": own["rank"], "of": own["ranked_brands"]}
     trend = []
     for b in d["trend"]["buckets"]:
         if b.get("gap") or not (is_num(b.get("den")) and b["den"] > 0):
@@ -109,7 +112,7 @@ def to_standard_acr(d: dict, meta: Any) -> dict:
         series: dict[str, Any] = {}
         for p in b["series"]:
             series[_key(p["brand"])] = pct1_or_null({"num": p["num"], "den": b["den"]})
-        trend.append({"date": b["round_date"], "series": series})
+        trend.append({"date": b["round_date"], "series": series, "own": pct1_or_null({"num": b["own"], "den": b["den"]})})
     out["trend"] = sort_by(trend, lambda a, b: locale_compare(a["date"], b["date"]))
     out["battle"] = [{"promptId": r["prompt_id"], "promptText": _nn(r.get("prompt_text")),
                       "cells": [{"engine": c["engine"], "winner": _nn(c.get("winner_brand")), "winnerIsOurs": c["winner_is_ours"],
@@ -358,19 +361,17 @@ def _last_two(vs: list) -> float | None:
         if vs[i] is not None:
             idx.append(i)
         i -= 1
-    return _round1(vs[idx[0]] - vs[idx[1]]) if len(idx) == 2 else None
+    return delta1(vs[idx[0]], vs[idx[1]]) if len(idx) == 2 else None
 
 
 def acr_view(data: dict, own: dict | None, round_buckets: bool, period: bool) -> dict:
-    """acr-model.ts acrView (findings included)."""
-    own_brands = [b["brand"] for b in data["brands"] if b["isOurs"]]
+    """acr-model.ts acrView (findings included). 당사 (its brands, trend and standing) is the reader's own total:
+    every own brand, not the own brands among the top series (2026-10-29 metric review R1)."""
+    own_brands = list(data.get("ownBrands") or [])
     series_keys = trend_brands(data)
     series_set = set(series_keys)
     dates = [b["date"] for b in data["trend"]]
-    own_in_series = [k for k in series_keys if k in own_brands]
-    own_trend = None
-    if own_in_series:
-        own_trend = [_round1(_sum(_n(b["series"].get(k)) for k in own_in_series)) for b in data["trend"]]
+    own_trend = [b["own"] for b in data["trend"]] if own is not None and data["trend"] else None
     show_delta = bool(round_buckets and not period)
 
     def series_of(brand: Any) -> list | None:
@@ -385,10 +386,10 @@ def acr_view(data: dict, own: dict | None, round_buckets: bool, period: bool) ->
     own_delta = _last_two(own_trend) if show_delta and own_trend is not None else None
     rivals = [b["brand"] for b in data["brands"] if not b["isOurs"] and isinstance(b["brand"], str) and b["brand"] in series_set]
     comps = [b for b in data["brands"] if not b["isOurs"]]
-    own_share = None if own is None else own.get("choiceShare")
-    rank = 1 + len([b for b in comps if (-1 if b["choiceShare"] is None else b["choiceShare"]) > (-1 if own_share is None else own_share)])
+    standing = data.get("ownStanding") or {"rank": None, "of": None}
     shown = [b for b in data["brands"] if _n(b["coverage"]) > 0]
-    k = _sum(_n(b["choiceShare"]) for b in shown) / (_sum(_n(b["coverage"]) for b in shown) or 1)
+    # the map's average line from the exact shares (the deviations from it are rounded once, on display)
+    k = _sum(_n(exact(b["choiceShare"])) for b in shown) / (_sum(_n(exact(b["coverage"])) for b in shown) or 1)
 
     if data["totals"]["engines"]:
         engines = list(data["totals"]["engines"])
@@ -404,7 +405,8 @@ def acr_view(data: dict, own: dict | None, round_buckets: bool, period: bool) ->
             by_brand[w] = by_brand.get(w, 0) + 1
             if c is not None and c["winnerIsOurs"]:
                 own_wins += 1
-        engine_wins.append({"engine": engine, "ownWins": own_wins, "byBrand": [{"brand": b, "count": n} for b, n in by_brand.items()]})
+        engine_wins.append({"engine": engine, "ownWins": own_wins, "noneWins": by_brand.get(None, 0),
+                            "byBrand": [{"brand": b, "count": n} for b, n in by_brand.items()]})
     sweep_count: dict[str, int] = {}
     if len(engines) > 1:
         for r in data["battle"]:
@@ -414,7 +416,8 @@ def acr_view(data: dict, own: dict | None, round_buckets: bool, period: bool) ->
     sweeps = sort_by([{"brand": b, "count": n} for b, n in sweep_count.items()],
                      lambda a, b: _cmp_num(b["count"] - a["count"]) or locale_compare(a["brand"], b["brand"]))
     view = {"own": own, "ownBrands": own_brands, "brands": brands, "dates": dates, "ownTrend": own_trend, "ownDelta": own_delta,
-            "rivals": rivals, "showDelta": show_delta, "rank": rank, "leader": comps[0] if comps else None, "k": k,
+            "rivals": rivals, "showDelta": show_delta, "rank": standing["rank"], "standingN": standing["of"],
+            "leader": comps[0] if comps else None, "k": k,
             "engines": engines, "engineWins": engine_wins, "sweeps": sweeps}
     view["findings"] = acr_findings(data, view)
     return view
@@ -426,10 +429,10 @@ def acr_findings(data: dict, v: dict) -> list[dict]:
     o = v["own"]
     lead = v["leader"]
     if o is not None and o.get("choiceShare") is not None and lead is not None and lead.get("choiceShare") is not None:
-        gap = _round1(o["choiceShare"] - lead["choiceShare"])
+        gap = delta1(o["choiceShare"], lead["choiceShare"])
         first = gap >= 0
         lead_row = next((b for b in v["brands"] if b["brand"] == lead["brand"]), None)
-        gap_move = (_round1(v["ownDelta"] - lead_row["d"])
+        gap_move = (delta1(v["ownDelta"], lead_row["d"])
                     if v["ownDelta"] is not None and lead_row is not None and lead_row["d"] is not None else None)
         out.append({"kind": "standing", "tone": "good" if first else "warn", "pri": 3 if first else 9, "target": "sec-comp",
                     "brand": lead["brand"],
@@ -480,11 +483,16 @@ def acr_findings(data: dict, v: dict) -> list[dict]:
                     "params": {"brand": mover["brand"], "d": mover["d"], "ownD": "" if v["ownDelta"] is None else v["ownDelta"]}})
     sheet = data["territory"][0] if data["territory"] else None
     if sheet is not None:
-        zero = len([r for r in sheet["rows"] if not any(e["brand"] in v["ownBrands"] for e in r["entries"])])
+        # prompts of the sheet in which 당사 was never picked, of its prompts (a prompt can hold several cells;
+        # 2026-10-29 metric review R5: rows without a 당사 entry, of the cells — 7 of 80 for 43 of 65)
+        own_picks: dict[Any, float] = {}
+        for r in sheet["rows"]:
+            own_picks[r["promptId"]] = _n(own_picks.get(r["promptId"])) + _sum(_n(e["choice"]) for e in r["entries"] if e["isOurs"])
+        zero = len([p for p, n in own_picks.items() if n == 0])
         if zero >= 3:
             region = "" if sheet["region"] is None else sheet["region"]
             out.append({"kind": "dist", "tone": "warn", "pri": 5, "target": "sec-dist", "act": {"sheet": f"{_key(region)}|{_key(sheet['engine'])}"},
-                        "params": {"region": region, "engine": sheet["engine"], "zero": zero, "rows": len(sheet["rows"])}})
+                        "params": {"region": region, "engine": sheet["engine"], "zero": zero, "rows": len(own_picks)}})
     return sort_by(out, lambda a, b: _cmp_num(b["pri"] - a["pri"]))[:4]
 
 
@@ -554,7 +562,7 @@ def _sheets(data: dict, own_brands: list) -> list[dict]:
             own_n = 0
             picked = 0
             for e in r["entries"]:
-                if e["brand"] in own_brands:
+                if e["isOurs"]:
                     own_n = own_n + _n(e["choice"])
                 picked = picked + _n(e["choice"])
             den = r["validAcr"] or 1
@@ -602,19 +610,18 @@ def renewal_view(data: dict, own: dict | None, round_buckets: bool, period: bool
     max_t1 = max_t1 or 1
     for b in v["brands"]:
         is_own = b["brand"] in own_brands
-        dev = _n(b["choiceShare"]) - v["k"] * _n(b["coverage"])
+        dev = _n(exact(b["choiceShare"])) - v["k"] * _n(exact(b["coverage"]))
         b.update({"own": is_own, "sibling": _sibling(b["brand"], own_brands),
                   "canCompare": (not is_own) and b["brand"] in v["rivals"],
                   "top1Bar": (_n(b["choiceShare"]) / max_t1) * 100,
                   "mapX": _n(b["coverage"]), "mapY": _n(b["choiceShare"]), "dev": dev, "devCsv": js_round(dev * 10) / 10})
     gap = None
     if o is not None and o.get("choiceShare") is not None and lead is not None and lead.get("choiceShare") is not None:
-        gap = js_round((o["choiceShare"] - lead["choiceShare"]) * 10) / 10
+        gap = delta1(o["choiceShare"], lead["choiceShare"])
     v.update({
         "defaultCompare": v["rivals"][:1],
         "multiOwn": len(own_brands) > 1,
         "gap": gap,
-        "standingN": len([b for b in v["brands"] if not b["isOurs"]]) + 1,
         "boardOrders": {key: sort_brand_rows(v["brands"], key) for key in ("choiceShare", "coverage", "d")},
         "ownTop1Bar": None if o is None else (_n(o.get("choiceShare")) / max_t1) * 100,
         "battle": _battle(data, v["engines"]),
@@ -623,7 +630,8 @@ def renewal_view(data: dict, own: dict | None, round_buckets: bool, period: bool
         "distVisible": DIST_VISIBLE,
     })
     for w in v["engineWins"]:
-        w["restBase"] = len(data["battle"]) - w["ownWins"]
+        # 그 외 브랜드 = prompts another brand won: no pick (no winner, or no cell on that engine) is apart (R5)
+        w["restBase"] = len(data["battle"]) - w["ownWins"] - w["noneWins"]
     return v
 
 

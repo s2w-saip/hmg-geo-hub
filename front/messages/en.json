@@ -512,8 +512,8 @@
       "share": "AI Share of Voice",
       "favorability": "AI Favorability",
       "position": "AI First-Rank Exposure",
-      "mentionsPerAnswer": "Mentions",
-      "citationsPerAnswer": "Citations"
+      "mentionsPerAnswer": "Mentions per answer",
+      "citationsPerAnswer": "Citations per answer"
     },
     "basis": "▲▼ Change compares the selected period ({cur}) with the immediately preceding period of the same length ({prev}).",
     "window": "Based on {curCycles} cycle(s) now vs {prevCycles} previously",
@@ -1335,7 +1335,7 @@
         "conversion": {
           "title": "Conversion rate (shortlist → pick)",
           "definition": "Once your brand is on the shortlist, how often it converts to the final #1 recommendation. Measures the shortlist → final-pick step.",
-          "formula": "Final choices ÷ rounds where the brand appeared"
+          "formula": "final picks ÷ the repetitions of the cells it was a candidate in"
         }
       }
     },
@@ -4484,7 +4484,8 @@
         "ownSum": "Us = {brands} combined",
         "trendTitle": "Top1 ACR trend",
         "trendNoteLabel": "Trend",
-        "trendNoteRound": "Final pick rate per round (that round's repetitions). Only we and the top rivals have a trend (up to 5 brands, ours first) — compare brands come from them. The last point is the value above (latest round).",
+        "trendNoteRound": "Final pick rate per round (that round's repetitions). Our line sums all our brands; brand lines cover only the top brands of the table below — compare brands come from the rivals among them. The last point is the value above (latest round).",
+        "trendNotePeriod": "Final pick rate per round (that round's repetitions). Our line sums all our brands; brand lines cover only the top brands of the table below — compare brands come from the rivals among them. The value above is the period total, so it differs from the last point (last round).",
         "trendNoteDay": "Final pick rate per measurement day. A round measured over several days is split, so the last point may differ from the value above (latest round snapshot). Only we and the top rivals have a trend.",
         "own": "Us",
         "tooltipRound": "Round {x}",
@@ -4808,7 +4809,8 @@
         "noteCycle": "▲▼ Changes are against the previous round ({date}), computed from the same aggregate with the same rule as the Overview cards.",
         "notePrev": "▲▼ Changes are period-cumulative: compared with the cumulative at the period's first measurement ({date}).",
         "notePeriod": "▲▼ Changes compare the selected period with the equal period just before it.",
-        "noteRank": "▲▼ Changes are the shift in average position (places) against the previous round. Negative (named earlier) is better."
+        "noteRank": "▲▼ Changes are the shift in average position (places) against the previous round. Negative (named earlier) is better.",
+        "noteRankPeriod": "▲▼ Changes are the shift in average position (places) against the equal period just before. Negative (named earlier) is better."
       },
       "card": {
         "menu": "Card menu",
@@ -4853,6 +4855,8 @@
         },
         "standingWidened": "The gap widened by {move}pp since the previous round",
         "standingNarrowed": "The gap narrowed by {move}pp since the previous round",
+        "standingWidenedPeriod": "The gap widened by {move}pp since the previous period",
+        "standingNarrowedPeriod": "The gap narrowed by {move}pp since the previous period",
         "standingDetail": "Us {own}",
         "typeTrail": {
           "tag": "Mention type",
@@ -4870,6 +4874,7 @@
           "title": "{brand} share {delta} — the biggest move"
         },
         "moverDetail": "Among competitors with a trend, vs previous round · us {own}",
+        "moverDetailPeriod": "Among the competitors of the table, vs the previous period · us {own}",
         "engine": {
           "tag": "AI engine",
           "title": "{gap} vs the competitor average on {engine}"
@@ -4919,6 +4924,8 @@
         "sibling": "HMG group",
         "noTrend": "No trend",
         "noTrendTip": "Trends exist for us and the top 10 brands by mentions only",
+        "noPrevPeriod": "—",
+        "noPrevPeriodTip": "No value for this brand in the previous period, so no change",
         "noCompare": "No trend, so it cannot be a compare brand",
         "more": "Show the other {n} brands",
         "less": "Top 5 + compare brands only",
@@ -5028,6 +5035,7 @@
         "viewTable": "Table",
         "colDelta": "Change",
         "deltaInfo": "Share change vs the previous round. Trends exist for us and the top 10 brands by mentions only.",
+        "deltaInfoPeriod": "Share change vs the equal period just before the selected one. A brand not mentioned then has no change.",
         "multiNoDelta": "Multi-mentions have no trend",
         "rowTip": "Click to see this brand's prompts and real AI answers",
         "groupOnly": "{group} only",
@@ -5036,6 +5044,7 @@
       },
       "treemap": {
         "legend": "Share change (vs previous round)",
+        "legendPeriod": "Share change (vs previous period)",
         "steps": "−1.0pp or less,−0.5,−0.2,within ±0.2,+0.2,+0.5,+1.0pp or more",
         "na": "No trend",
         "all": "All groups",
@@ -5086,7 +5095,8 @@
       },
       "delta": {
         "basisPrev": "vs the previous round ({date})",
-        "basisPrevNoDate": "vs the previous round"
+        "basisPrevNoDate": "vs the previous round",
+        "basisPeriod": "vs the previous period ({from}–{to})"
       },
       "summary": {
         "title": "This round at a glance",
@@ -5103,7 +5113,9 @@
       },
       "find": {
         "noDelta": "No previous round to compare with",
+        "noDeltaPeriod": "No previous period to compare with",
         "deltaDetail": "Official (HMG) share {delta} vs the previous round",
+        "deltaDetailPeriod": "Official (HMG) share {delta} vs the previous period",
         "tagEngine": "AI engine",
         "tagType": "Mention type",
         "standingLead": {
@@ -5119,6 +5131,7 @@
           "title": "{category} share {delta} — the biggest move"
         },
         "moverDetail": "vs the previous round · now {share}",
+        "moverDetailPeriod": "vs the previous period · now {share}",
         "engineGap": {
           "title": "{low} cites Official (HMG) at {share} — {gap}pp below {high}"
         },
@@ -5156,14 +5169,14 @@
         "hmg": {
           "name": "Official (HMG) share",
           "question": "How much AI answers rest on HMG official sites",
-          "def": "The share of all citations classified as HMG group official sites. Same value as Official (HMG) in the source mix below; the change uses the Overview card's basis (previous round).",
+          "def": "The share of all citations classified as HMG group official sites. Same value as Official (HMG) in the source mix below; the change uses the Overview card's basis (previous round), or the equal period just before when a period is selected.",
           "formula": "Official (HMG) citations ÷ all citations × 100 (citations, not domains)",
           "excluded": "The source filter leaves Official (HMG) out"
         },
         "dealer": {
           "name": "Dealer & marketplace share",
           "question": "How much sales channels are cited",
-          "def": "The share of all citations in the Dealer & Marketplace category. The change is vs the previous round.",
+          "def": "The share of all citations in the Dealer & Marketplace category. The change is vs the previous round, or the equal period just before when a period is selected.",
           "formula": "Dealer & marketplace citations ÷ all citations × 100",
           "excluded": "The source filter leaves Dealer & Marketplace out"
         },
@@ -5184,22 +5197,25 @@
       "comp": {
         "title": "Source category mix",
         "infoLabel": "How to read",
-        "info": "Citations of AI answers grouped by source category — share and count (citations, not domains). Change = vs the previous round (pp), drawn as a bar around 0 on one axis for every row (the largest change on screen, at least ±{cap}pp), so bar lengths compare. Blue = up, orange = down (direction, not good or bad). Trend = weekly share — wobbles under {span}pp are drawn nearly flat so only real trends tilt. Hover to see the category's top 3 domains and their share.",
+        "info": "Citations of AI answers grouped by source category — share and count (citations, not domains). Change = vs the previous round (or the equal period just before, when a period is selected) (pp), drawn as a bar around 0 on one axis for every row (the largest change on screen, at least ±{cap}pp), so bar lengths compare. Blue = up, orange = down (direction, not good or bad). Trend = weekly share — wobbles under {span}pp are drawn nearly flat so only real trends tilt. Hover to see the category's top 3 domains and their share.",
         "chipSnapshot": "Snapshot as of the measurement date",
         "chipPeriod": "Cumulative over the selected period",
         "chipDelta": "Change = vs the previous round ({date})",
+        "chipDeltaPeriod": "Change = vs the previous period ({from}–{to})",
         "sub": "Click a row to filter by that category (several allowed) — the whole page then looks at that source only.",
         "empty": "No cited sources",
         "col": {
           "category": "Category",
           "share": "Share",
           "prev": "Previous round",
+          "prevPeriod": "Previous period",
           "citations": "Citations",
           "pct": "Share",
           "delta": "Change",
           "trend": "Weekly trend",
           "pctCount": "Share · citations",
-          "deltaAxis": "vs previous round"
+          "deltaAxis": "vs previous round",
+          "deltaAxisPeriod": "vs previous period"
         },
         "tipCitations": "{n} citations",
         "tipTop": "Top domains (within this category): {list}",
@@ -5207,7 +5223,8 @@
         "up": "Up",
         "down": "Down",
         "axisNote": "Change bars share one axis (at least ±{cap}pp) · trends flatten wobbles under {span}pp",
-        "tipDelta": "change {delta} (previous round {prev})"
+        "tipDelta": "change {delta} (previous round {prev})",
+        "tipDeltaPeriod": "change {delta} (previous period {prev})"
       },
       "matrix": {
         "title": "Source preference matrix",
@@ -5278,6 +5295,7 @@
         "categoryLabel": "Filter by category",
         "categoryAll": "All",
         "matches": "{n} matches",
+        "matchesTop": "{n} matches · top {shown} shown",
         "showFirst": "Show the first {n}",
         "showAll": "Show all {n}"
       },

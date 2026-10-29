@@ -172,7 +172,14 @@ export function useSubpageHref(): (sub: "prompts" | "tone-urls", extra: Record<s
 /** Basis line of a Δ: "직전 회차(10/12) 대비" / "Overview 카드와 같은 Δ". */
 function useDeltaBasis(): (d: RnCitationDelta) => string | null {
   const t = useTranslations("renewal.citation.delta");
-  return (d) => (d.basis == null ? null : d.date ? t("basisPrev", { date: d.date.slice(0, 10) }) : t("basisPrevNoDate"));
+  return (d) =>
+    d.basis == null
+      ? null
+      : d.basis === "period" && d.from && d.date
+        ? t("basisPeriod", { from: d.from.slice(0, 10), to: d.date.slice(0, 10) })
+        : d.date
+          ? t("basisPrev", { date: d.date.slice(0, 10) })
+          : t("basisPrevNoDate");
 }
 
 /** The renewal model the screen computed (rows, lens, matrices, findings, bump, table) + the Δ round and the degrade flags. */
@@ -212,15 +219,15 @@ function Summary() {
     switch (f.kind) {
       case "standingLead":
         title = t("find.standingLead.title", { rival: cat(String(p.rival)), gap: n1(p.gap) });
-        detail = p.delta === "" ? t("find.noDelta") : t("find.deltaDetail", { delta: deltaTxt(Number(p.delta)) });
+        detail = p.delta === "" ? t(isPeriod ? "find.noDeltaPeriod" : "find.noDelta") : t(isPeriod ? "find.deltaDetailPeriod" : "find.deltaDetail", { delta: deltaTxt(Number(p.delta)) });
         break;
       case "standingTrail":
         title = t("find.standingTrail.title", { rank: p.rank, share: pctTxt(Number(p.share)), leader: cat(String(p.leader)), leaderShare: pctTxt(Number(p.leaderShare)) });
-        detail = p.delta === "" ? t("find.noDelta") : t("find.deltaDetail", { delta: deltaTxt(Number(p.delta)) });
+        detail = p.delta === "" ? t(isPeriod ? "find.noDeltaPeriod" : "find.noDelta") : t(isPeriod ? "find.deltaDetailPeriod" : "find.deltaDetail", { delta: deltaTxt(Number(p.delta)) });
         break;
       case "mover":
         title = t("find.mover.title", { category: cat(String(p.category)), delta: deltaTxt(Number(p.delta)) });
-        detail = t("find.moverDetail", { share: pctTxt(Number(p.share)) });
+        detail = t(isPeriod ? "find.moverDetailPeriod" : "find.moverDetail", { share: pctTxt(Number(p.share)) });
         break;
       case "engineGap":
         title = t("find.engineGap.title", { low: engineLabel(String(p.low)), share: pctTxt(Number(p.lowShare)), high: engineLabel(String(p.high)), gap: n1(p.gap) });
@@ -426,7 +433,7 @@ function CompositionCard() {
   const keys = rows.map((r) => r.name);
   const csv = () => ({
     name: "citation-categories",
-    rows: [[t("col.category"), t("col.citations"), t("col.pct"), t("col.prev"), t("col.delta")], ...rows.map((r) => [cat(r.name), r.value, r.pct ?? "", r.prevPct ?? "", r.delta ?? ""])],
+    rows: [[t("col.category"), t("col.citations"), t("col.pct"), t(prev?.period ? "col.prevPeriod" : "col.prev"), t("col.delta")], ...rows.map((r) => [cat(r.name), r.value, r.pct ?? "", r.prevPct ?? "", r.delta ?? ""])],
   });
   return (
     <>
@@ -436,7 +443,7 @@ function CompositionCard() {
         chips={
           <>
             <RnBasisChip>{isPeriod ? t("chipPeriod") : t("chipSnapshot")}</RnBasisChip>
-            {prev ? <RnBasisChip>{t("chipDelta", { date: prev.asOf.slice(0, 10) })}</RnBasisChip> : null}
+            {prev ? <RnBasisChip>{prev.period ? t("chipDeltaPeriod", { from: prev.period.from, to: prev.period.to }) : t("chipDelta", { date: prev.asOf.slice(0, 10) })}</RnBasisChip> : null}
           </>
         }
         actions={<CitationCardActions section="sec-comp" csv={csv} />}
@@ -451,7 +458,7 @@ function CompositionCard() {
             <span>{t("col.share")}</span>
             <span className="text-right">{t("col.pctCount")}</span>
             <span className="flex flex-col gap-0.5">
-              <span className="text-center">{t("col.deltaAxis")}</span>
+              <span className="text-center">{t(prev?.period ? "col.deltaAxisPeriod" : "col.deltaAxis")}</span>
               <span className="flex justify-between font-medium tabular-nums" data-rn-daxis="">
                 <span>−{cap}</span>
                 <span>0</span>
@@ -492,7 +499,7 @@ const DELTA_UP = `rgb(${DIV_MORE.join(",")})`;
 const DELTA_DOWN = `rgb(${DIV_LESS.join(",")})`;
 
 function CategoryLine({ r, max, cap, trendOn, pressed, lit, keys, onToggle }: { r: RnCitationVm["rows"][number]; max: number; cap: number; trendOn: boolean; pressed: boolean; lit: string | null; keys: string[]; onToggle: () => void }) {
-  const { hover } = useCitation();
+  const { hover, input } = useCitation();
   const t = useTranslations("renewal.citation.comp");
   const cat = useCatLabel();
   const own = r.name === OFFICIAL_HMG_CATEGORY;
@@ -504,7 +511,7 @@ function CategoryLine({ r, max, cap, trendOn, pressed, lit, keys, onToggle }: { 
   const half = d != null && moved ? Math.min(50, (Math.abs(d) / cap) * 50) : 0;
   const tip = [
     `${cat(r.name)} · ${t("tipCitations", { n: numTxt(r.value) })} · ${pctTxt(r.pct)}`,
-    d == null ? null : t("tipDelta", { delta: deltaTxt(d), prev: pctTxt(r.prevPct) }),
+    d == null ? null : t(input.period ? "tipDeltaPeriod" : "tipDelta", { delta: deltaTxt(d), prev: pctTxt(r.prevPct) }),
     t("tipTop", { list: top || "—" }),
     t("tipToggle"),
   ]
