@@ -1,0 +1,143 @@
+# 코어↔lane 계약 미러 드리프트 감시.
+#
+# ── 무엇을 보나
+#
+#   `contracts/fixtures/core-mirror/*.json` 은 코어 `lib/measurement-analysis-ticket/__fixtures__/`
+#   의 **바이트 사본**이다(경계 유지를 위해 코어를 import 하지 않는다 — tests/boundary.test.ts).
+#   CI 의 `contracts` 단계는 "사본이 주석의 sha256 그대로인가" 만 본다 — 즉 **사본이 바뀌었는지**는
+#   말하지만 **코어가 바뀌었는지**는 말하지 못한다(tests/contracts.test.ts 의 그 경고문).
+#   재동기가 수동인 동안 그 간극은 사람의 기억이 메우고 있었다. 이 워크플로가 그 자리다.
+#
+# ── ⚠️ 스케줄이 **꺼져 있다 — 이 항목은 미검증이다**
+#
+#   실측(2026-09-13, `gh api repos/Kongventures/scope --jq .private`): 코어 리포는 **private** 다.
+#   워크플로의 기본 `GITHUB_TOKEN` 은 **자기 리포에만** 스코프되므로 같은 org 라도 다른 private
+#   리포의 컨텐츠를 못 읽는다. 그래서 `schedule:` 을 켜면 매일 도는 잡이 매일 인증 실패하거나
+#   (더 나쁘게) 조용히 no-op 한다 — 그건 감시가 아니라 소음/무음 실패다(룰 alert-routing ·
+#   "무음 실패 금지"). 확인되지 않은 것을 켜 두고 "감시 중"이라고 부르지 않는다.
+#
+#   **켜는 절차**(토큰이 생기는 즉시 이 파일 한 곳만 고친다):
+#     1) Kongventures/scope 에 **읽기 전용** 접근을 가진 토큰을 만든다 — GitHub App 설치 토큰
+#        (Contents: Read) 권장, 아니면 fine-grained PAT(Repository access: scope, Contents: Read).
+#     2) `gh secret set CORE_MIRROR_TOKEN -R Kongventures/scope-analysis` 로 등록한다.
+#     3) 아래 `schedule:` 주석을 해제한다(UTC 21:00 = KST 06:00 — 사람이 출근해서 보는 시각).
+#     4) `workflow_dispatch` 로 한 번 돌려 **도달을 실증**한다(룰 alert-routing 4: 배선했으면
+#        실증한다. 실증 못 하면 배선하지 않은 것으로 친다).
+#
+#   토큰이 없는 동안의 대체 경로는 `pnpm sync:analysis-core <코어 워크트리>` 를 사람이 돌리는
+#   것이다 — 그쪽은 로컬 워크트리를 읽으므로 토큰이 필요 없다.
+name: contract-mirror-check
+
+on:
+  workflow_dispatch:
+    inputs:
+      core_ref:
+        description: "코어 ref (sha 또는 브랜치). 기본 main"
+        required: false
+        default: "main"
+  # schedule:
+  #   - cron: "0 21 * * *" # KST 06:00. CORE_MIRROR_TOKEN 을 등록한 뒤 주석 해제할 것.
+
+concurrency:
+  group: contract-mirror-check
+  cancel-in-progress: false
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # alert-routing 룰: 코드 문제의 목적지는 GitHub Issue. 기본 GITHUB_TOKEN 이 리포 설정에 따라
+    # read-only 라 명시 권한이 없으면 이슈가 안 뜬다(push-images-stage.yml 의 같은 흉터).
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 토큰 확인 (없으면 **여기서 죽는다** — 조용히 통과하지 않는다)
+        env:
+          CORE_MIRROR_TOKEN: ${{ secrets.CORE_MIRROR_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CORE_MIRROR_TOKEN:-}" ]; then
+            echo "::error::CORE_MIRROR_TOKEN 이 없다. 코어 리포는 private 이고 기본 GITHUB_TOKEN 은 자기 리포에만 스코프된다 — 이 파일 머리말의 '켜는 절차' 참조."
+            exit 1
+          fi
+
+      - name: 코어 픽스처와 미러를 sha256 으로 대조
+        id: compare
+        env:
+          GH_TOKEN: ${{ secrets.CORE_MIRROR_TOKEN }}
+          CORE_REF: ${{ inputs.core_ref || 'main' }}
+          CORE_REPO: Kongventures/scope
+          CORE_DIR: lib/measurement-analysis-ticket/__fixtures__
+        run: |
+          set -euo pipefail
+          MIRROR_DIR=contracts/fixtures/core-mirror
+          DRIFT=""
+          # ⚠️ 한때 `analysis-context.*.json` 두 개가 **lane 저작**이라 여기서 제외돼 있었다.
+          #    그 예외가 D-5·D-6 의 전파 경로였다(lane 이 지은 픽스처가 lane 의 틀린 가정을
+          #    재생 → 테스트는 초록, 라이브만 죽음). 코어가 자기 타입으로 생성·고정하면서
+          #    (Kongventures/scope#654) 그 예외를 없앴다 — 이제 여섯 파일 전부 바이트 대조 대상이다.
+          #    다시 예외를 만들지 마라. 코어에 대응 픽스처가 없으면 **코어에 만드는 것**이 답이다.
+          # 미러에 있는 파일 집합이 모수다. 코어에 새 픽스처가 생긴 경우는 아래에서 따로 본다.
+          for f in "$MIRROR_DIR"/*.json; do
+            name="$(basename "$f")"
+            # raw 미디어타입으로 **바이트 그대로** 받는다(base64 왕복은 개행을 바꿀 수 있다).
+            if ! gh api -H "Accept: application/vnd.github.raw" \
+                 "repos/${CORE_REPO}/contents/${CORE_DIR}/${name}?ref=${CORE_REF}" > "/tmp/core-${name}" 2>"/tmp/err-${name}"; then
+              DRIFT="${DRIFT}- \`${name}\`: 코어에서 못 읽었다 (삭제·이동·권한) — $(head -c 200 "/tmp/err-${name}")"$'\n'
+              continue
+            fi
+            core_sha="$(sha256sum "/tmp/core-${name}" | cut -d' ' -f1)"
+            mine_sha="$(sha256sum "$f" | cut -d' ' -f1)"
+            if [ "$core_sha" != "$mine_sha" ]; then
+              DRIFT="${DRIFT}- \`${name}\`: core=\`${core_sha}\` mirror=\`${mine_sha}\`"$'\n'
+            else
+              echo "ok  ${name}  ${mine_sha}"
+            fi
+          done
+
+          # 코어에 **새로 생긴** 픽스처도 드리프트다 — 미러에 없으면 lane 이 그 계약을 모른다.
+          gh api -H "Accept: application/vnd.github+json" \
+            "repos/${CORE_REPO}/contents/${CORE_DIR}?ref=${CORE_REF}" --jq '.[].name' | sort > /tmp/core-list.txt
+          ls -1 "$MIRROR_DIR" | sort > /tmp/mirror-list.txt
+          NEW="$(comm -23 /tmp/core-list.txt /tmp/mirror-list.txt || true)"
+          if [ -n "$NEW" ]; then
+            DRIFT="${DRIFT}- 코어에만 있는 픽스처(미러 미등재): $(echo "$NEW" | tr '\n' ' ')"$'\n'
+          fi
+
+          if [ -n "$DRIFT" ]; then
+            {
+              echo "drift<<__EOF__"
+              echo "$DRIFT"
+              echo "__EOF__"
+            } >> "$GITHUB_OUTPUT"
+            echo "::warning::계약 미러 드리프트 감지 — 이슈로 표면화한다"
+          fi
+          echo "core_ref_resolved=$(gh api "repos/${CORE_REPO}/commits/${CORE_REF}" --jq .sha)" >> "$GITHUB_OUTPUT"
+
+      - name: 드리프트를 GitHub Issue 로 표면화 (열린 이슈가 있으면 코멘트)
+        if: steps.compare.outputs.drift != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DRIFT: ${{ steps.compare.outputs.drift }}
+          CORE_SHA: ${{ steps.compare.outputs.core_ref_resolved }}
+        run: |
+          set -euo pipefail
+          URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          BODY=$(printf '%s\n\n%s\n\n%s\n\n%s\n' \
+            "코어 \`Kongventures/scope\` @ \`${CORE_SHA}\` 의 티켓 계약 픽스처가 lane 미러(\`contracts/fixtures/core-mirror/\`)와 다르다." \
+            "$DRIFT" \
+            "재동기 절차: 코어 워크트리에서 픽스처를 다시 복사하고 \`tests/contracts.test.ts\` 의 \`CORE_FIXTURE_SHA256\` 표를 같은 커밋에서 갱신한다. 순수 코드까지 바뀌었으면 \`pnpm sync:analysis-core <코어 워크트리> --ref ${CORE_SHA}\` 도 함께." \
+            "run: $URL")
+          N=$(gh issue list -R "${{ github.repository }}" --label contract-drift --state open --json number --jq '.[0].number // empty' 2>/dev/null || true)
+          if [ -n "$N" ]; then
+            gh issue comment "$N" -R "${{ github.repository }}" -b "$BODY"
+          else
+            gh issue create -R "${{ github.repository }}" -t "계약 미러 드리프트 — 코어 ${CORE_SHA}" -l contract-drift -b "$BODY" \
+              || gh issue create -R "${{ github.repository }}" -t "계약 미러 드리프트 — 코어 ${CORE_SHA}" -b "$BODY"
+          fi
+          # 이슈를 냈으면 **잡도 빨갛게 끝낸다** — 초록 체크로 끝나면 아무도 안 본다.
+          echo "::error::계약 미러 드리프트 (위 이슈 참조)"
+          exit 1

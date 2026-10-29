@@ -1,0 +1,878 @@
+{
+  "website:dry-run": [
+    {
+      "i": 0,
+      "head": "SELECT 1 AS ok FROM pg_attribute WHERE attrelid = to_regclass('public.sc",
+      "md5": "06409fd5eb3d3da16dd6710d487933cf",
+      "md5_raw": "06409fd5eb3d3da16dd6710d487933cf",
+      "params_md5": "30ab5d9f2958dc77a70b9048719ab397"
+    },
+    {
+      "i": 1,
+      "head": "SELECT entity_id, name FROM entity_registry WHERE role = 'own' ORDER BY ",
+      "md5": "01ae871e44306d83adfeb697c9c085c6",
+      "md5_raw": "01ae871e44306d83adfeb697c9c085c6",
+      "params_md5": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "i": 2,
+      "head": "SELECT DISTINCT owned_base_url AS base FROM website_prompts WHERE owned_",
+      "md5": "16f920b962e51c754abd51a9176906f0",
+      "md5_raw": "16f920b962e51c754abd51a9176906f0",
+      "params_md5": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "i": 3,
+      "head": "WITH spec(ix, brand, cc, lang_code, url_like, url_not_like) AS (VALUES (",
+      "md5": "762b0be1f85cfdc09f203b72e7646ee6",
+      "md5_raw": "0b4847c2dc2b135e6531741267e1ba0b",
+      "params_md5": "1ec1223c2ebd5dcaae7f17fab7f3b9f3"
+    },
+    {
+      "i": 4,
+      "head": "SELECT r.project_id::text AS project_id, array_agg(r.run_id::text ORDER ",
+      "md5": "21ac13679b2d702d0ea224a5ec19713b",
+      "md5_raw": "21ac13679b2d702d0ea224a5ec19713b",
+      "params_md5": "895e5f225e9c59f308b2978d1610c810"
+    },
+    {
+      "i": 5,
+      "head": "WITH mem AS ( SELECT r.run_id, r.project_id, r.status FROM scope_runs r ",
+      "md5": "5071b8cad28d1bdf54b69101f917b5ce",
+      "md5_raw": "920361a1140d3504554b328268d0c589",
+      "params_md5": "f7d1772e899d025a35d68d8c5659c21b"
+    },
+    {
+      "i": 6,
+      "head": "WITH names AS ( WITH RECURSIVE _rn_pairs AS ( (SELECT m.entity_id, m.bra",
+      "md5": "84a8030d3878cd4ba7e25d6e56c3c767",
+      "md5_raw": "bf1f414818909036816bfde3d6d64d08",
+      "params_md5": "9453edc50ccf968939a3ba42f5c14e76"
+    },
+    {
+      "i": 7,
+      "head": "WITH mem AS ( SELECT r.run_id, r.project_id, r.status FROM scope_runs r ",
+      "md5": "ea56831aaa2787b79ae8ff2b16d50e39",
+      "md5_raw": "33018602c852069086a136ce8fb246b5",
+      "params_md5": "58af4d5946b1784dcf10ff98514701b7"
+    },
+    {
+      "i": 8,
+      "head": "SELECT count(*)::int AS dim_rows FROM website_prompts wp JOIN website_si",
+      "md5": "c969295d01528a75a1c87c777ba31004",
+      "md5_raw": "c969295d01528a75a1c87c777ba31004",
+      "params_md5": "3dc5ee74139e2f3cc4355199f0cd5342"
+    },
+    {
+      "i": 9,
+      "head": "WITH mem AS ( SELECT r.run_id, r.project_id, r.status FROM scope_runs r ",
+      "md5": "2f144b2b03817fb26bb1d49be692599b",
+      "md5_raw": "1ccc2d871774ed4a553d9a95ba76882e",
+      "params_md5": "f7d1772e899d025a35d68d8c5659c21b"
+    }
+  ],
+  "website:apply": [
+    {
+      "i": 0,
+      "head": "SELECT 1 AS ok FROM pg_attribute WHERE attrelid = to_regclass('public.sc",
+      "md5": "06409fd5eb3d3da16dd6710d487933cf",
+      "md5_raw": "06409fd5eb3d3da16dd6710d487933cf",
+      "params_md5": "30ab5d9f2958dc77a70b9048719ab397"
+    },
+    {
+      "i": 1,
+      "head": "SELECT entity_id, name FROM entity_registry WHERE role = 'own' ORDER BY ",
+      "md5": "01ae871e44306d83adfeb697c9c085c6",
+      "md5_raw": "01ae871e44306d83adfeb697c9c085c6",
+      "params_md5": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "i": 2,
+      "head": "SELECT DISTINCT owned_base_url AS base FROM website_prompts WHERE owned_",
+      "md5": "16f920b962e51c754abd51a9176906f0",
+      "md5_raw": "16f920b962e51c754abd51a9176906f0",
+      "params_md5": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "i": 3,
+      "head": "WITH spec(ix, brand, cc, lang_code, url_like, url_not_like) AS (VALUES (",
+      "md5": "762b0be1f85cfdc09f203b72e7646ee6",
+      "md5_raw": "0b4847c2dc2b135e6531741267e1ba0b",
+      "params_md5": "1ec1223c2ebd5dcaae7f17fab7f3b9f3"
+    },
+    {
+      "i": 4,
+      "head": "SELECT r.project_id::text AS project_id, array_agg(r.run_id::text ORDER ",
+      "md5": "21ac13679b2d702d0ea224a5ec19713b",
+      "md5_raw": "21ac13679b2d702d0ea224a5ec19713b",
+      "params_md5": "895e5f225e9c59f308b2978d1610c810"
+    },
+    {
+      "i": 5,
+      "head": "INSERT INTO summary_cycles (surface, project_id, cycle_anchor_at, cycle_",
+      "md5": "d8ff043e6c6601accb5d0b3db12e576b",
+      "md5_raw": "d8ff043e6c6601accb5d0b3db12e576b",
+      "params_md5": "9e4640d4dd772b8ca877a7816877a5b3"
+    },
+    {
+      "i": 6,
+      "head": "INSERT INTO summary_generations (cycle_id, generator_version, status, ro",
+      "md5": "e4af7e345b01559f441b19d6222d2e44",
+      "md5_raw": "e4af7e345b01559f441b19d6222d2e44",
+      "params_md5": "1296a3d47117eea4ad4aca2c90b24dbd"
+    },
+    {
+      "i": 7,
+      "head": "INSERT INTO summary_cycle_runs (cycle_id, run_id, attributed_by, synced_",
+      "md5": "29b3b55231a148ebbd04cc7761184648",
+      "md5_raw": "29b3b55231a148ebbd04cc7761184648",
+      "params_md5": "2352911f6faa0adc1aa71cbc06926499"
+    },
+    {
+      "i": 8,
+      "head": "INSERT INTO summary_cycle_jobs (cycle_week, cycle_id, generation_id, job",
+      "md5": "5be0a784b6fbe80266e01ba007f050ff",
+      "md5_raw": "e150b815c71e3f5d77c52d358941bb25",
+      "params_md5": "f1ab4f2b272c349b10afd09f7f76f40c"
+    },
+    {
+      "i": 9,
+      "head": "WITH jb AS ( SELECT j.job_id, j.run_id, j.prompt_id, j.engine, j.country",
+      "md5": "66d39692c1a19f848781782b37295391",
+      "md5_raw": "66d39692c1a19f848781782b37295391",
+      "params_md5": "20640cad82dfb1c02012c59b4e27ab90"
+    },
+    {
+      "i": 10,
+      "head": "WITH jb AS ( SELECT j.job_id, j.run_id, j.prompt_id, j.engine, j.country",
+      "md5": "4dae70853ff5b434e1f65bd0c2dad222",
+      "md5_raw": "4dae70853ff5b434e1f65bd0c2dad222",
+      "params_md5": "f1ab4f2b272c349b10afd09f7f76f40c"
+    },
+    {
+      "i": 11,
+      "head": "WITH names AS ( WITH RECURSIVE _rn_pairs AS ( (SELECT m.entity_id, m.bra",
+      "md5": "ad0cbfa6ed5e6a09e0566b05739fd67d",
+      "md5_raw": "a0218557b415afceb76a9a8064aac494",
+      "params_md5": "064e354ab90f1dd2609e5e2952e1a893"
+    },
+    {
+      "i": 12,
+      "head": "WITH names AS ( WITH RECURSIVE _rn_pairs AS ( (SELECT m.entity_id, m.bra",
+      "md5": "27f66c78ca37c32cde52e2ae071e2f55",
+      "md5_raw": "47e3e211140d683806a710ab66f4e166",
+      "params_md5": "15cff6de3a0e095998786673438b1015"
+    },
+    {
+      "i": 13,
+      "head": "WITH jb AS ( SELECT j.job_id, j.run_id, j.prompt_id, j.engine, j.country",
+      "md5": "6617ce46014e5f7b44d80f2dc323b15e",
+      "md5_raw": "1f6f803fa923ae8bd15e1dbd0d98d414",
+      "params_md5": "b789e1bd4ace135b84117fe50351b6ed"
+    },
+    {
+      "i": 14,
+      "head": "WITH jb AS ( SELECT j.job_id, j.run_id, j.prompt_id, j.engine, j.country",
+      "md5": "76b5f3c259c43cf2e726ef5e69eb6171",
+      "md5_raw": "b780a1907f936b4342dee0b9e4390797",
+      "params_md5": "6af3d4a03539211aed2825d072c942ce"
+    },
+    {
+      "i": 15,
+      "head": "WITH jb AS ( SELECT j.job_id, j.run_id, j.prompt_id, j.engine, j.country",
+      "md5": "fbb7f09ee10229c29c68947049160f51",
+      "md5_raw": "4d66cea7c482cd15d86fe0f4933c52a8",
+      "params_md5": "4fe2954db5167a2d1776fd9c42a346c1"
+    },
+    {
+      "i": 16,
+      "head": "SELECT (SELECT count(*) FROM summary_cycle_jobs WHERE generation_id = $1",
+      "md5": "2953db58c632eee4ccb855a9b5939a45",
+      "md5_raw": "2953db58c632eee4ccb855a9b5939a45",
+      "params_md5": "678be2f028904bb2a682ae313ed72097"
+    },
+    {
+      "i": 17,
+      "head": "UPDATE summary_generations SET status = 'ready', row_counts = $1::jsonb ",
+      "md5": "a874df660645b3caa3a945f56381e0ae",
+      "md5_raw": "a874df660645b3caa3a945f56381e0ae",
+      "params_md5": "bed443e137c14c9c248cd580679cd930"
+    },
+    {
+      "i": 18,
+      "head": "SELECT 1 AS ok FROM pg_attribute WHERE attrelid = to_regclass('public.su",
+      "md5": "fb51de3264f415a5614f8607eaa5d5db",
+      "md5_raw": "fb51de3264f415a5614f8607eaa5d5db",
+      "params_md5": "e3e5ec67483a8ee998dfda03600ab068"
+    },
+    {
+      "i": 19,
+      "head": "SELECT to_regclass(x.n)::text AS rel FROM unnest($1::text[]) AS x(n)",
+      "md5": "d637a1b5fd4397410ec623db98ee6455",
+      "md5_raw": "d637a1b5fd4397410ec623db98ee6455",
+      "params_md5": "8e09596606a99749cf581224b72b103d"
+    },
+    {
+      "i": 20,
+      "head": "ANALYZE summary_answers_20260831",
+      "md5": "3328ebeaea59793849a24124a29a7d3a",
+      "md5_raw": "3328ebeaea59793849a24124a29a7d3a",
+      "params_md5": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "i": 21,
+      "head": "ANALYZE summary_brand_mentions_20260831",
+      "md5": "c824b4187da6aa99ee41110d0f599b88",
+      "md5_raw": "c824b4187da6aa99ee41110d0f599b88",
+      "params_md5": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "i": 22,
+      "head": "ANALYZE summary_domain_citations_20260831",
+      "md5": "ed50a9789469e3526f58e22514025dfb",
+      "md5_raw": "ed50a9789469e3526f58e22514025dfb",
+      "params_md5": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "i": 23,
+      "head": "SET LOCAL statement_timeout = '10min'",
+      "md5": "b94c23223a1a099b832efd8bbf0baa1a",
+      "md5_raw": "b94c23223a1a099b832efd8bbf0baa1a",
+      "params_md5": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "i": 24,
+      "head": "SET LOCAL work_mem = '256MB'",
+      "md5": "fd06664bc0ad15c7193257fb57f30f99",
+      "md5_raw": "fd06664bc0ad15c7193257fb57f30f99",
+      "params_md5": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "i": 25,
+      "head": "SELECT to_regclass('public.scope_mirror_progress') AS table_name",
+      "md5": "b0b521b7188e7647d53b8b99eb676d57",
+      "md5_raw": "b0b521b7188e7647d53b8b99eb676d57",
+      "params_md5": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "i": 26,
+      "head": "WITH locked AS ( SELECT r.run_id, r.synced_at FROM scope_runs r WHERE r.",
+      "md5": "1632caf66c57567d8f6b42452ee0cd14",
+      "md5_raw": "1632caf66c57567d8f6b42452ee0cd14",
+      "params_md5": "f0a4c0807f37490518f1fafb03dc80f8"
+    },
+    {
+      "i": 27,
+      "head": "UPDATE summary_generations SET status = 'retired' WHERE cycle_id = $1::u",
+      "md5": "a244231f5289522de5c912144f9037c8",
+      "md5_raw": "a244231f5289522de5c912144f9037c8",
+      "params_md5": "3c867cff67fcb29f8bc048da9bc9c945"
+    },
+    {
+      "i": 28,
+      "head": "DELETE FROM summary_trend_answers WHERE cycle_id = $1::uuid",
+      "md5": "6044d61afd8dade174e089f1c78d84af",
+      "md5_raw": "6044d61afd8dade174e089f1c78d84af",
+      "params_md5": "a8cfc756cd1be74efb0287e4fe7d1d3c"
+    },
+    {
+      "i": 29,
+      "head": "INSERT INTO summary_trend_answers (cycle_id, generation_id, cycle_anchor",
+      "md5": "f2ee2b3b3b96a3e9b2ad390c23ebca57",
+      "md5_raw": "f2ee2b3b3b96a3e9b2ad390c23ebca57",
+      "params_md5": "e9aa6e9f046603d2bbdcc52c8b75d550"
+    },
+    {
+      "i": 30,
+      "head": "DELETE FROM summary_trend_brands WHERE cycle_id = $1::uuid",
+      "md5": "1f0a7193d22146b2a87a34b65c269c4c",
+      "md5_raw": "1f0a7193d22146b2a87a34b65c269c4c",
+      "params_md5": "a8cfc756cd1be74efb0287e4fe7d1d3c"
+    },
+    {
+      "i": 31,
+      "head": "INSERT INTO summary_trend_brands (cycle_id, generation_id, cycle_anchor_",
+      "md5": "5609dd7ad5dd4d2efe2a49f45e90cbc3",
+      "md5_raw": "1721be174a882b6a94116b99946ee0a7",
+      "params_md5": "0bf37c71095336a48f2e407467d77ca2"
+    },
+    {
+      "i": 32,
+      "head": "DELETE FROM summary_trend_domains WHERE cycle_id = $1::uuid",
+      "md5": "55b6a016751e7010b53887a101407761",
+      "md5_raw": "55b6a016751e7010b53887a101407761",
+      "params_md5": "a8cfc756cd1be74efb0287e4fe7d1d3c"
+    },
+    {
+      "i": 33,
+      "head": "INSERT INTO summary_trend_domains (cycle_id, generation_id, cycle_anchor",
+      "md5": "561c098da9200ad0facb4906f78e6b49",
+      "md5_raw": "561c098da9200ad0facb4906f78e6b49",
+      "params_md5": "869bafb935dd6c5030c781990865c1a9"
+    },
+    {
+      "i": 34,
+      "head": "DELETE FROM summary_trend_own WHERE cycle_id = $1::uuid",
+      "md5": "2c511479d1ff9f23c584b6993123675f",
+      "md5_raw": "2c511479d1ff9f23c584b6993123675f",
+      "params_md5": "a8cfc756cd1be74efb0287e4fe7d1d3c"
+    },
+    {
+      "i": 35,
+      "head": "INSERT INTO summary_trend_own (cycle_id, generation_id, cycle_anchor_at,",
+      "md5": "ed70d7022ffdef6fa5b22ae314c89f17",
+      "md5_raw": "0d9aaced10e93231dde98120f734969f",
+      "params_md5": "1e080005eafd1aa28fee2088e18b2df5"
+    },
+    {
+      "i": 36,
+      "head": "UPDATE summary_generations SET status = 'active', finished_at = now() WH",
+      "md5": "c731293407846fa8bde0085a83027932",
+      "md5_raw": "c731293407846fa8bde0085a83027932",
+      "params_md5": "da40c370975debd92543054ab56541fe"
+    },
+    {
+      "i": 37,
+      "head": "UPDATE summary_cycles SET active_generation_id = $1::uuid, view_anchor_a",
+      "md5": "bb2de67c4f5b23e65c072c85e30fab29",
+      "md5_raw": "bb2de67c4f5b23e65c072c85e30fab29",
+      "params_md5": "7ef13ca283167d4ae5f50256193fa509"
+    },
+    {
+      "i": 38,
+      "head": "DELETE FROM summary_cycle_jobs WHERE cycle_week = $1::date AND cycle_id ",
+      "md5": "cfbd0715d1443c52aefb263039c0da3e",
+      "md5_raw": "cfbd0715d1443c52aefb263039c0da3e",
+      "params_md5": "ece3a997ecba7af8e69e7a75ba34a35b"
+    },
+    {
+      "i": 39,
+      "head": "DELETE FROM summary_answers WHERE cycle_week = $1::date AND cycle_id = $",
+      "md5": "c331cbd5fa676a7fa216ea9d0eb1d71b",
+      "md5_raw": "c331cbd5fa676a7fa216ea9d0eb1d71b",
+      "params_md5": "ece3a997ecba7af8e69e7a75ba34a35b"
+    },
+    {
+      "i": 40,
+      "head": "DELETE FROM summary_brand_mentions WHERE cycle_week = $1::date AND cycle",
+      "md5": "4eff18912b648d25f9c125ae6dca4b62",
+      "md5_raw": "4eff18912b648d25f9c125ae6dca4b62",
+      "params_md5": "ece3a997ecba7af8e69e7a75ba34a35b"
+    },
+    {
+      "i": 41,
+      "head": "DELETE FROM summary_domain_citations WHERE cycle_week = $1::date AND cyc",
+      "md5": "e57649e8b93bfe58fbf19e7fc8c3cfcf",
+      "md5_raw": "e57649e8b93bfe58fbf19e7fc8c3cfcf",
+      "params_md5": "ece3a997ecba7af8e69e7a75ba34a35b"
+    },
+    {
+      "i": 42,
+      "head": "DELETE FROM summary_target_hits WHERE cycle_week = $1::date AND cycle_id",
+      "md5": "0aea4bb22a30c08bbe81f5dcf496189b",
+      "md5_raw": "0aea4bb22a30c08bbe81f5dcf496189b",
+      "params_md5": "ece3a997ecba7af8e69e7a75ba34a35b"
+    },
+    {
+      "i": 43,
+      "head": "DELETE FROM summary_prompt_dim WHERE cycle_week = $1::date AND cycle_id ",
+      "md5": "df6a3d1cb7dec6944e60b1ee924eacd6",
+      "md5_raw": "df6a3d1cb7dec6944e60b1ee924eacd6",
+      "params_md5": "ece3a997ecba7af8e69e7a75ba34a35b"
+    },
+    {
+      "i": 44,
+      "head": "SELECT (SELECT count(*) FROM summary_cycles WHERE surface = $1 AND cycle",
+      "md5": "4b667bd6f88fcbdb286711082a646f98",
+      "md5_raw": "4b667bd6f88fcbdb286711082a646f98",
+      "params_md5": "010ba9edff776f7bf137d52cc55ff38f"
+    }
+  ],
+  "global:dry-run": [
+    {
+      "i": 0,
+      "head": "SELECT 1 AS ok FROM pg_attribute WHERE attrelid = to_regclass('public.sc",
+      "md5": "06409fd5eb3d3da16dd6710d487933cf",
+      "md5_raw": "06409fd5eb3d3da16dd6710d487933cf",
+      "params_md5": "30ab5d9f2958dc77a70b9048719ab397"
+    },
+    {
+      "i": 1,
+      "head": "SELECT 1 AS ok FROM pg_attribute WHERE attrelid = to_regclass('public.sc",
+      "md5": "8fcf9e011aca5756c35202c205136dc3",
+      "md5_raw": "8fcf9e011aca5756c35202c205136dc3",
+      "params_md5": "5d508aa612a3336b1111aa2ad5b73d74"
+    },
+    {
+      "i": 2,
+      "head": "SELECT 1 AS ok FROM pg_attribute WHERE attrelid = to_regclass('public.sc",
+      "md5": "8fcf9e011aca5756c35202c205136dc3",
+      "md5_raw": "8fcf9e011aca5756c35202c205136dc3",
+      "params_md5": "2cf76b066d6bc1c779fcf47316b5c2b3"
+    },
+    {
+      "i": 3,
+      "head": "SELECT entity_id, name FROM entity_registry WHERE role = 'own' ORDER BY ",
+      "md5": "01ae871e44306d83adfeb697c9c085c6",
+      "md5_raw": "01ae871e44306d83adfeb697c9c085c6",
+      "params_md5": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "i": 4,
+      "head": "WITH mem AS ( SELECT r.run_id, r.status, r.synced_at, r.cycle_anchor_at,",
+      "md5": "ed096520e5c251b03fa721d0d05adb9a",
+      "md5_raw": "ed096520e5c251b03fa721d0d05adb9a",
+      "params_md5": "43ca688e6b950af9336340712797f4b2"
+    },
+    {
+      "i": 5,
+      "head": "SET LOCAL statement_timeout = '600s'",
+      "md5": "c421c5cb51360fe4f05353c905183946",
+      "md5_raw": "c421c5cb51360fe4f05353c905183946",
+      "params_md5": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "i": 6,
+      "head": "WITH mem AS ( SELECT r.run_id, r.status, r.synced_at, r.cycle_anchor_at,",
+      "md5": "3766ad7876da4b7b354ad4a9bdab590f",
+      "md5_raw": "3766ad7876da4b7b354ad4a9bdab590f",
+      "params_md5": "43ca688e6b950af9336340712797f4b2"
+    },
+    {
+      "i": 7,
+      "head": "SET LOCAL statement_timeout = '600s'",
+      "md5": "c421c5cb51360fe4f05353c905183946",
+      "md5_raw": "c421c5cb51360fe4f05353c905183946",
+      "params_md5": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "i": 8,
+      "head": "WITH mem AS ( SELECT r.run_id, r.status, r.synced_at, r.cycle_anchor_at,",
+      "md5": "c145d9ff2c372d87c4daf4b725387a23",
+      "md5_raw": "c145d9ff2c372d87c4daf4b725387a23",
+      "params_md5": "7add51ca92e7cc973138b9b8bd148d7f"
+    },
+    {
+      "i": 9,
+      "head": "SET LOCAL statement_timeout = '600s'",
+      "md5": "c421c5cb51360fe4f05353c905183946",
+      "md5_raw": "c421c5cb51360fe4f05353c905183946",
+      "params_md5": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "i": 10,
+      "head": "WITH names AS ( WITH RECURSIVE _rn_pairs AS ( (SELECT m.entity_id, m.bra",
+      "md5": "bc1b0cac8bd7d10371bdfddf6cc60a3d",
+      "md5_raw": "bc1b0cac8bd7d10371bdfddf6cc60a3d",
+      "params_md5": "64f7adf43fc0e1e122c058479dbd4fe4"
+    },
+    {
+      "i": 11,
+      "head": "SET LOCAL statement_timeout = '600s'",
+      "md5": "c421c5cb51360fe4f05353c905183946",
+      "md5_raw": "c421c5cb51360fe4f05353c905183946",
+      "params_md5": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "i": 12,
+      "head": "WITH mem AS ( SELECT r.run_id, r.status, r.synced_at, r.cycle_anchor_at,",
+      "md5": "cd79ef10bd82148171518cfd634ab2fe",
+      "md5_raw": "cd79ef10bd82148171518cfd634ab2fe",
+      "params_md5": "1750ff53008ff49bcdf9397ff9cdc3e6"
+    },
+    {
+      "i": 13,
+      "head": "SET LOCAL statement_timeout = '600s'",
+      "md5": "c421c5cb51360fe4f05353c905183946",
+      "md5_raw": "c421c5cb51360fe4f05353c905183946",
+      "params_md5": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "i": 14,
+      "head": "WITH mem AS ( SELECT r.run_id, r.status, r.synced_at, r.cycle_anchor_at,",
+      "md5": "547d7b7c272efcbc6f1b10ce807fd60b",
+      "md5_raw": "11a092b5013a888f634c244b12246156",
+      "params_md5": "1ad781d491089afe84e8b8ebf3e6a302"
+    },
+    {
+      "i": 15,
+      "head": "SET LOCAL statement_timeout = '600s'",
+      "md5": "c421c5cb51360fe4f05353c905183946",
+      "md5_raw": "c421c5cb51360fe4f05353c905183946",
+      "params_md5": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "i": 16,
+      "head": "WITH mem AS ( SELECT r.run_id, r.status, r.synced_at, r.cycle_anchor_at,",
+      "md5": "39f9e70bb5ff456cf2c35727fb5766c5",
+      "md5_raw": "b5ba17b4933ca9783f466b5029113888",
+      "params_md5": "057743e2258fdd326deb93960554bcb2"
+    }
+  ],
+  "global:apply": [
+    {
+      "i": 0,
+      "head": "SELECT 1 AS ok FROM pg_attribute WHERE attrelid = to_regclass('public.sc",
+      "md5": "06409fd5eb3d3da16dd6710d487933cf",
+      "md5_raw": "06409fd5eb3d3da16dd6710d487933cf",
+      "params_md5": "30ab5d9f2958dc77a70b9048719ab397"
+    },
+    {
+      "i": 1,
+      "head": "SELECT 1 AS ok FROM pg_attribute WHERE attrelid = to_regclass('public.sc",
+      "md5": "8fcf9e011aca5756c35202c205136dc3",
+      "md5_raw": "8fcf9e011aca5756c35202c205136dc3",
+      "params_md5": "5d508aa612a3336b1111aa2ad5b73d74"
+    },
+    {
+      "i": 2,
+      "head": "SELECT 1 AS ok FROM pg_attribute WHERE attrelid = to_regclass('public.sc",
+      "md5": "8fcf9e011aca5756c35202c205136dc3",
+      "md5_raw": "8fcf9e011aca5756c35202c205136dc3",
+      "params_md5": "2cf76b066d6bc1c779fcf47316b5c2b3"
+    },
+    {
+      "i": 3,
+      "head": "SELECT entity_id, name FROM entity_registry WHERE role = 'own' ORDER BY ",
+      "md5": "01ae871e44306d83adfeb697c9c085c6",
+      "md5_raw": "01ae871e44306d83adfeb697c9c085c6",
+      "params_md5": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "i": 4,
+      "head": "WITH mem AS ( SELECT r.run_id, r.status, r.synced_at, r.cycle_anchor_at,",
+      "md5": "ed096520e5c251b03fa721d0d05adb9a",
+      "md5_raw": "ed096520e5c251b03fa721d0d05adb9a",
+      "params_md5": "43ca688e6b950af9336340712797f4b2"
+    },
+    {
+      "i": 5,
+      "head": "SET LOCAL statement_timeout = '600s'",
+      "md5": "c421c5cb51360fe4f05353c905183946",
+      "md5_raw": "c421c5cb51360fe4f05353c905183946",
+      "params_md5": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "i": 6,
+      "head": "WITH mem AS ( SELECT r.run_id, r.status, r.synced_at, r.cycle_anchor_at,",
+      "md5": "3766ad7876da4b7b354ad4a9bdab590f",
+      "md5_raw": "3766ad7876da4b7b354ad4a9bdab590f",
+      "params_md5": "43ca688e6b950af9336340712797f4b2"
+    },
+    {
+      "i": 7,
+      "head": "INSERT INTO summary_cycles (surface, project_id, cycle_anchor_at, cycle_",
+      "md5": "d8ff043e6c6601accb5d0b3db12e576b",
+      "md5_raw": "d8ff043e6c6601accb5d0b3db12e576b",
+      "params_md5": "2332a53fb35dbe5224320391b1706a73"
+    },
+    {
+      "i": 8,
+      "head": "INSERT INTO summary_generations (cycle_id, generator_version, status, ro",
+      "md5": "e4af7e345b01559f441b19d6222d2e44",
+      "md5_raw": "e4af7e345b01559f441b19d6222d2e44",
+      "params_md5": "98240b87c22e17bd9e3207e9915b0833"
+    },
+    {
+      "i": 9,
+      "head": "SET LOCAL statement_timeout = '600s'",
+      "md5": "c421c5cb51360fe4f05353c905183946",
+      "md5_raw": "c421c5cb51360fe4f05353c905183946",
+      "params_md5": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "i": 10,
+      "head": "INSERT INTO summary_cycle_runs (cycle_id, run_id, attributed_by, synced_",
+      "md5": "29b3b55231a148ebbd04cc7761184648",
+      "md5_raw": "29b3b55231a148ebbd04cc7761184648",
+      "params_md5": "2352911f6faa0adc1aa71cbc06926499"
+    },
+    {
+      "i": 11,
+      "head": "INSERT INTO summary_cycle_jobs (cycle_week, cycle_id, generation_id, job",
+      "md5": "e0271cf58d3afb7371647742f57096f0",
+      "md5_raw": "49c765892b0bccc30b300b3496b88ee4",
+      "params_md5": "1a9373ac746ed23704272135f84c6f8f"
+    },
+    {
+      "i": 12,
+      "head": "SELECT count(*)::int AS c FROM summary_cycle_jobs WHERE cycle_week = $1:",
+      "md5": "8d2d996f035c1aba5095de9569a25d19",
+      "md5_raw": "8d2d996f035c1aba5095de9569a25d19",
+      "params_md5": "11ee858b37183a2d1bd5b634b0931f9c"
+    },
+    {
+      "i": 13,
+      "head": "UPDATE summary_cycles SET status = 'generating', closed_by = COALESCE(cl",
+      "md5": "189afdae55243350c2e9a72393406c15",
+      "md5_raw": "189afdae55243350c2e9a72393406c15",
+      "params_md5": "13ca4b24fbabcd02a149f33144b600fb"
+    },
+    {
+      "i": 14,
+      "head": "SET LOCAL statement_timeout = '600s'",
+      "md5": "c421c5cb51360fe4f05353c905183946",
+      "md5_raw": "c421c5cb51360fe4f05353c905183946",
+      "params_md5": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "i": 15,
+      "head": "WITH mem AS ( SELECT r.run_id, r.status, r.synced_at, r.cycle_anchor_at,",
+      "md5": "89e594dfc38c60245fcca62acac8c16d",
+      "md5_raw": "2271d7e368f1e6a6c99a21c109cde46f",
+      "params_md5": "aae3487f9e693b90a0c0505d722d5abe"
+    },
+    {
+      "i": 16,
+      "head": "SELECT count(*)::int AS c FROM summary_prompt_dim WHERE cycle_week = $1:",
+      "md5": "80aa05bfbc063302ade48690ef92dbbc",
+      "md5_raw": "80aa05bfbc063302ade48690ef92dbbc",
+      "params_md5": "11ee858b37183a2d1bd5b634b0931f9c"
+    },
+    {
+      "i": 17,
+      "head": "SELECT count(*) FILTER (WHERE in_full_cycle = 1)::int AS pass_prompts, c",
+      "md5": "b036cc6a03dbd6c6689ecdc3038ce728",
+      "md5_raw": "b036cc6a03dbd6c6689ecdc3038ce728",
+      "params_md5": "11ee858b37183a2d1bd5b634b0931f9c"
+    },
+    {
+      "i": 18,
+      "head": "SET LOCAL statement_timeout = '600s'",
+      "md5": "c421c5cb51360fe4f05353c905183946",
+      "md5_raw": "c421c5cb51360fe4f05353c905183946",
+      "params_md5": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "i": 19,
+      "head": "WITH names AS ( WITH RECURSIVE _rn_pairs AS ( (SELECT m.entity_id, m.bra",
+      "md5": "8596855d5718c99da98ea4b229b232f2",
+      "md5_raw": "8596855d5718c99da98ea4b229b232f2",
+      "params_md5": "bf53787dbb312d107600d20bb1bb1fdf"
+    },
+    {
+      "i": 20,
+      "head": "SET LOCAL statement_timeout = '600s'",
+      "md5": "c421c5cb51360fe4f05353c905183946",
+      "md5_raw": "c421c5cb51360fe4f05353c905183946",
+      "params_md5": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "i": 21,
+      "head": "WITH names AS ( WITH RECURSIVE _rn_pairs AS ( (SELECT m.entity_id, m.bra",
+      "md5": "bbb22720504cc85dae0eb626ba6bdab0",
+      "md5_raw": "bbb22720504cc85dae0eb626ba6bdab0",
+      "params_md5": "c84677b72911055cd26a2e3af972bb32"
+    },
+    {
+      "i": 22,
+      "head": "SET LOCAL statement_timeout = '600s'",
+      "md5": "c421c5cb51360fe4f05353c905183946",
+      "md5_raw": "c421c5cb51360fe4f05353c905183946",
+      "params_md5": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "i": 23,
+      "head": "WITH jb AS ( SELECT j.job_id, j.run_id, j.prompt_id, j.engine, j.country",
+      "md5": "16fb7747cff602910d750e96de060535",
+      "md5_raw": "16fb7747cff602910d750e96de060535",
+      "params_md5": "7d641b67f299148b3ddafe4d53a0abe2"
+    },
+    {
+      "i": 24,
+      "head": "SELECT (SELECT count(*) FROM summary_cycle_jobs WHERE generation_id = $1",
+      "md5": "2953db58c632eee4ccb855a9b5939a45",
+      "md5_raw": "2953db58c632eee4ccb855a9b5939a45",
+      "params_md5": "678be2f028904bb2a682ae313ed72097"
+    },
+    {
+      "i": 25,
+      "head": "UPDATE summary_generations SET status = 'ready', row_counts = $1::jsonb ",
+      "md5": "a874df660645b3caa3a945f56381e0ae",
+      "md5_raw": "a874df660645b3caa3a945f56381e0ae",
+      "params_md5": "78f2b3be26ac5187c23a30b5a87a305b"
+    },
+    {
+      "i": 26,
+      "head": "SELECT 1 AS ok FROM pg_attribute WHERE attrelid = to_regclass('public.su",
+      "md5": "fb51de3264f415a5614f8607eaa5d5db",
+      "md5_raw": "fb51de3264f415a5614f8607eaa5d5db",
+      "params_md5": "e3e5ec67483a8ee998dfda03600ab068"
+    },
+    {
+      "i": 27,
+      "head": "SELECT to_regclass(x.n)::text AS rel FROM unnest($1::text[]) AS x(n)",
+      "md5": "d637a1b5fd4397410ec623db98ee6455",
+      "md5_raw": "d637a1b5fd4397410ec623db98ee6455",
+      "params_md5": "8e09596606a99749cf581224b72b103d"
+    },
+    {
+      "i": 28,
+      "head": "ANALYZE summary_answers_20260831",
+      "md5": "3328ebeaea59793849a24124a29a7d3a",
+      "md5_raw": "3328ebeaea59793849a24124a29a7d3a",
+      "params_md5": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "i": 29,
+      "head": "ANALYZE summary_brand_mentions_20260831",
+      "md5": "c824b4187da6aa99ee41110d0f599b88",
+      "md5_raw": "c824b4187da6aa99ee41110d0f599b88",
+      "params_md5": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "i": 30,
+      "head": "ANALYZE summary_domain_citations_20260831",
+      "md5": "ed50a9789469e3526f58e22514025dfb",
+      "md5_raw": "ed50a9789469e3526f58e22514025dfb",
+      "params_md5": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "i": 31,
+      "head": "SET LOCAL statement_timeout = '10min'",
+      "md5": "b94c23223a1a099b832efd8bbf0baa1a",
+      "md5_raw": "b94c23223a1a099b832efd8bbf0baa1a",
+      "params_md5": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "i": 32,
+      "head": "SET LOCAL work_mem = '256MB'",
+      "md5": "fd06664bc0ad15c7193257fb57f30f99",
+      "md5_raw": "fd06664bc0ad15c7193257fb57f30f99",
+      "params_md5": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "i": 33,
+      "head": "SELECT to_regclass('public.scope_mirror_progress') AS table_name",
+      "md5": "b0b521b7188e7647d53b8b99eb676d57",
+      "md5_raw": "b0b521b7188e7647d53b8b99eb676d57",
+      "params_md5": "d751713988987e9331980363e24189ce"
+    },
+    {
+      "i": 34,
+      "head": "WITH locked AS ( SELECT r.run_id, r.synced_at FROM scope_runs r WHERE r.",
+      "md5": "1632caf66c57567d8f6b42452ee0cd14",
+      "md5_raw": "1632caf66c57567d8f6b42452ee0cd14",
+      "params_md5": "f0a4c0807f37490518f1fafb03dc80f8"
+    },
+    {
+      "i": 35,
+      "head": "UPDATE summary_generations SET status = 'retired' WHERE cycle_id = $1::u",
+      "md5": "a244231f5289522de5c912144f9037c8",
+      "md5_raw": "a244231f5289522de5c912144f9037c8",
+      "params_md5": "3c867cff67fcb29f8bc048da9bc9c945"
+    },
+    {
+      "i": 36,
+      "head": "DELETE FROM summary_trend_answers WHERE cycle_id = $1::uuid",
+      "md5": "6044d61afd8dade174e089f1c78d84af",
+      "md5_raw": "6044d61afd8dade174e089f1c78d84af",
+      "params_md5": "a8cfc756cd1be74efb0287e4fe7d1d3c"
+    },
+    {
+      "i": 37,
+      "head": "INSERT INTO summary_trend_answers (cycle_id, generation_id, cycle_anchor",
+      "md5": "f2ee2b3b3b96a3e9b2ad390c23ebca57",
+      "md5_raw": "f2ee2b3b3b96a3e9b2ad390c23ebca57",
+      "params_md5": "be46c687faa05f487dc4a1ec5d7bdcf1"
+    },
+    {
+      "i": 38,
+      "head": "DELETE FROM summary_trend_brands WHERE cycle_id = $1::uuid",
+      "md5": "1f0a7193d22146b2a87a34b65c269c4c",
+      "md5_raw": "1f0a7193d22146b2a87a34b65c269c4c",
+      "params_md5": "a8cfc756cd1be74efb0287e4fe7d1d3c"
+    },
+    {
+      "i": 39,
+      "head": "INSERT INTO summary_trend_brands (cycle_id, generation_id, cycle_anchor_",
+      "md5": "5609dd7ad5dd4d2efe2a49f45e90cbc3",
+      "md5_raw": "1721be174a882b6a94116b99946ee0a7",
+      "params_md5": "1cd1dc6b4ff689904feab9632f1e6294"
+    },
+    {
+      "i": 40,
+      "head": "DELETE FROM summary_trend_domains WHERE cycle_id = $1::uuid",
+      "md5": "55b6a016751e7010b53887a101407761",
+      "md5_raw": "55b6a016751e7010b53887a101407761",
+      "params_md5": "a8cfc756cd1be74efb0287e4fe7d1d3c"
+    },
+    {
+      "i": 41,
+      "head": "INSERT INTO summary_trend_domains (cycle_id, generation_id, cycle_anchor",
+      "md5": "561c098da9200ad0facb4906f78e6b49",
+      "md5_raw": "561c098da9200ad0facb4906f78e6b49",
+      "params_md5": "7ebb34fb766346e646631f882f7559be"
+    },
+    {
+      "i": 42,
+      "head": "DELETE FROM summary_trend_own WHERE cycle_id = $1::uuid",
+      "md5": "2c511479d1ff9f23c584b6993123675f",
+      "md5_raw": "2c511479d1ff9f23c584b6993123675f",
+      "params_md5": "a8cfc756cd1be74efb0287e4fe7d1d3c"
+    },
+    {
+      "i": 43,
+      "head": "INSERT INTO summary_trend_own (cycle_id, generation_id, cycle_anchor_at,",
+      "md5": "4a1d6a4b4778d2e5e2c19e3b0e4cbbf4",
+      "md5_raw": "c8a5c75d705a35610e7a6682a6b7a251",
+      "params_md5": "68f3db5db8ec1777ee5689398ea4d788"
+    },
+    {
+      "i": 44,
+      "head": "UPDATE summary_generations SET status = 'active', finished_at = now() WH",
+      "md5": "c731293407846fa8bde0085a83027932",
+      "md5_raw": "c731293407846fa8bde0085a83027932",
+      "params_md5": "da40c370975debd92543054ab56541fe"
+    },
+    {
+      "i": 45,
+      "head": "UPDATE summary_cycles SET active_generation_id = $1::uuid, view_anchor_a",
+      "md5": "b789f0f7ae68c64df7196034ea6afadc",
+      "md5_raw": "b789f0f7ae68c64df7196034ea6afadc",
+      "params_md5": "7ef13ca283167d4ae5f50256193fa509"
+    },
+    {
+      "i": 46,
+      "head": "DELETE FROM summary_cycle_jobs WHERE cycle_week = $1::date AND cycle_id ",
+      "md5": "cfbd0715d1443c52aefb263039c0da3e",
+      "md5_raw": "cfbd0715d1443c52aefb263039c0da3e",
+      "params_md5": "ece3a997ecba7af8e69e7a75ba34a35b"
+    },
+    {
+      "i": 47,
+      "head": "DELETE FROM summary_answers WHERE cycle_week = $1::date AND cycle_id = $",
+      "md5": "c331cbd5fa676a7fa216ea9d0eb1d71b",
+      "md5_raw": "c331cbd5fa676a7fa216ea9d0eb1d71b",
+      "params_md5": "ece3a997ecba7af8e69e7a75ba34a35b"
+    },
+    {
+      "i": 48,
+      "head": "DELETE FROM summary_brand_mentions WHERE cycle_week = $1::date AND cycle",
+      "md5": "4eff18912b648d25f9c125ae6dca4b62",
+      "md5_raw": "4eff18912b648d25f9c125ae6dca4b62",
+      "params_md5": "ece3a997ecba7af8e69e7a75ba34a35b"
+    },
+    {
+      "i": 49,
+      "head": "DELETE FROM summary_domain_citations WHERE cycle_week = $1::date AND cyc",
+      "md5": "e57649e8b93bfe58fbf19e7fc8c3cfcf",
+      "md5_raw": "e57649e8b93bfe58fbf19e7fc8c3cfcf",
+      "params_md5": "ece3a997ecba7af8e69e7a75ba34a35b"
+    },
+    {
+      "i": 50,
+      "head": "DELETE FROM summary_target_hits WHERE cycle_week = $1::date AND cycle_id",
+      "md5": "0aea4bb22a30c08bbe81f5dcf496189b",
+      "md5_raw": "0aea4bb22a30c08bbe81f5dcf496189b",
+      "params_md5": "ece3a997ecba7af8e69e7a75ba34a35b"
+    },
+    {
+      "i": 51,
+      "head": "DELETE FROM summary_prompt_dim WHERE cycle_week = $1::date AND cycle_id ",
+      "md5": "df6a3d1cb7dec6944e60b1ee924eacd6",
+      "md5_raw": "df6a3d1cb7dec6944e60b1ee924eacd6",
+      "params_md5": "ece3a997ecba7af8e69e7a75ba34a35b"
+    }
+  ]
+}

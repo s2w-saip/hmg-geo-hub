@@ -1,0 +1,426 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1779454187204,
+      "tag": "0000_mute_deathbird",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779948073725,
+      "tag": "0001_handy_santa_claus",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780303457839,
+      "tag": "0002_public_hammerhead",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1780600000000,
+      "tag": "0003_project_brand_description",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1780700000000,
+      "tag": "0004_prompts_and_candidates",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1780800000000,
+      "tag": "0005_standard_catalog",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1780900000000,
+      "tag": "0006_member_audit_logs",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1781000000000,
+      "tag": "0007_tracked_entities",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1781100000000,
+      "tag": "0008_answer_analysis_pipeline",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1781200000000,
+      "tag": "0009_project_scope_link",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1781300000000,
+      "tag": "0010_prompts_depth4",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1781400000000,
+      "tag": "0011_keyword_volume_cache",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1781500000000,
+      "tag": "0012_keyword_cache",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1781600000000,
+      "tag": "0013_profiles_operator",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1781800000000,
+      "tag": "0015_project_tracked_urls",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1781900000000,
+      "tag": "0016_scope_citations_category",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1782000000000,
+      "tag": "0017_project_ga4_property",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1782100000000,
+      "tag": "0018_tracked_keywords",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1782200000000,
+      "tag": "0019_website_sites_prompts",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1782300000000,
+      "tag": "0020_scope_runs_project",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1782386400000,
+      "tag": "0021_project_owned_bases",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1782472800000,
+      "tag": "0022_tracked_competitor_target",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1782559200000,
+      "tag": "0023_entity_registry",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1782645600000,
+      "tag": "0024_project_custom_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1782732000000,
+      "tag": "0025_prompt_kind_acr_rollups",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1782818400000,
+      "tag": "0026_project_custom_fields_text_only",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1782904800000,
+      "tag": "0027_scope_context_map",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1782991200000,
+      "tag": "0028_scope_context_prompt_cache",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1783077600000,
+      "tag": "0029_scope_context_query_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1783164000000,
+      "tag": "0030_scope_context_prompt_cache_version",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1783250400000,
+      "tag": "0031_website_prompt_lens_index",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1783336800000,
+      "tag": "0032_prompt_brand_presence",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1783423200000,
+      "tag": "0033_bff_audit_logs",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1783509600000,
+      "tag": "0034_role_website",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1783596000000,
+      "tag": "0035_migrate_project_framework_axes_to_custom_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1783682400000,
+      "tag": "0036_ga4_properties",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1783768800000,
+      "tag": "0037_ga4_tracked_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1783855200000,
+      "tag": "0038_prompt_status_paused",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1783941600000,
+      "tag": "0039_profiles_menu_groups",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1784028000000,
+      "tag": "0040_entity_registry_alias_rows",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1784114400000,
+      "tag": "0041_prompt_audit_logs",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1784200800000,
+      "tag": "0042_project_ai_engines",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1784287200000,
+      "tag": "0043_scope_sync_cursors",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1784373600000,
+      "tag": "0043_citation_domain_overrides",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1784460000000,
+      "tag": "0044_out_of_band_columns_backfill",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1784546400000,
+      "tag": "0045_perf_indexes_2026_08_26",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1784632800000,
+      "tag": "0046_scope_prompts_is_korean",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1784719200000,
+      "tag": "0047_prompt_lang_regions",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1784805600000,
+      "tag": "0048_scope_prompts_lang_regions",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1788273554671,
+      "tag": "0049_website_prompts_owned_base",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1788359954671,
+      "tag": "0050_perf_root_cycle_cover_2026_09_01",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1788446354671,
+      "tag": "0051_perf_prompts_scope_prompt_id_2026_09_01",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1788532754671,
+      "tag": "0052_scope_citations_url_norm",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1788619154671,
+      "tag": "0053_scope_answer_anchors",
+      "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1788705554671,
+      "tag": "0054_scope_answer_drops",
+      "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1788791954671,
+      "tag": "0055_qa_review_console",
+      "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1788878354671,
+      "tag": "0056_genesis_sa_city_sites",
+      "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1789051154671,
+      "tag": "0058_scope_runs_cycle_anchor",
+      "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1789310354671,
+      "tag": "0061_scope_mention_occurrences",
+      "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1789396754671,
+      "tag": "0073_scope_mirror_progress",
+      "breakpoints": true
+    }
+  ]
+}

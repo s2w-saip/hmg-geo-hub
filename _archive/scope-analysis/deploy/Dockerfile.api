@@ -1,0 +1,33 @@
+# analysis-api — 티켓 접수·상태·reply. 상시 desired 1(스펙 §8.6 D10 · L3).
+#
+# ⚠️ 측정 lane 의 worker 이미지와 달리 **런타임 아티팩트가 없다** — 분석엔 브라우저가 없다.
+#    camoufox 650MB·GTK 라이브러리·매니페스트 SHA 검증이 전부 불필요하고, 그래서 이미지가 작고
+#    기동이 초 단위다. 그 성질이 Fargate 채택(측정의 primary+ASG 웜풀 기각)의 근거다(§8.6).
+FROM node:20-bookworm-slim AS base
+ENV NODE_ENV=production PNPM_HOME=/pnpm PATH=/pnpm:$PATH
+WORKDIR /srv
+RUN corepack enable
+
+# 의존성 레이어(앱 코드와 분리 — 코드 변경이 의존성 레이어를 무효화하지 않게)
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile --prod
+
+COPY tsconfig.json ./
+# ⚠️ **벤더된 순수 분석 코드 + shim.** `contracts/v1.ts` 가 결과 어휘를 여기서 import 하므로
+#    api 컨테이너도 필요하다(worker 만 넣으면 api 가 기동 시점에 모듈 미해석으로 죽는다).
+#    tsconfig 의 `paths` 가 `@/…` 를 이 트리로 보내므로 **경로 구조를 그대로** 복사해야 한다.
+COPY packages ./packages
+COPY contracts ./contracts
+COPY app ./app
+COPY worker ./worker
+COPY migrations ./migrations
+
+# 비루트. uid 는 측정 lane 관례(api 10001 / worker 10002)를 따른다.
+RUN useradd -r -u 10001 -s /usr/sbin/nologin api && chown -R api:api /srv
+USER api
+EXPOSE 8080
+# 기동 자체가 마이그레이션을 적용하므로(app/main.ts) healthz 는 프로세스 생존만 본다.
+# 준비 판정(DB 도달)은 /readyz 이고 ALB·ECS 헬스체크가 그쪽을 본다.
+HEALTHCHECK --interval=15s --timeout=3s CMD node -e "fetch('http://127.0.0.1:8080/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+STOPSIGNAL SIGTERM
+CMD ["node", "--import", "tsx", "app/main.ts"]

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": ["bom1"],
+  "git": {
+    "deploymentEnabled": {
+      "main": false
+    }
+  },
+  "crons": [
+    { "path": "/api/cron/sync-mirror", "schedule": "*/20 * * * *" },
+    { "path": "/api/cron/ga4-prebuild", "schedule": "0 18 * * *" }
+  ]
+}

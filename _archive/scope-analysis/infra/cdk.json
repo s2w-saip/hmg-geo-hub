@@ -1,0 +1,59 @@
+{
+  "app": "node --import tsx bin/app.ts",
+  "watch": {
+    "include": [
+      "**"
+    ],
+    "exclude": [
+      "cdk.out/**",
+      "node_modules/**"
+    ]
+  },
+  "context": {
+    "@aws-cdk/aws-ec2:restrictDefaultSecurityGroup": true,
+    "@aws-cdk/core:checkSecretUsage": true,
+    "stage": "stage",
+    "vpcId": "vpc-074fe92ef5d33734c",
+    "availabilityZones": "us-west-2a,us-west-2b",
+    "privateSubnetIds": "subnet-00c514b92137b45bf,subnet-0d0656f0d00f426f6",
+    "coreClientSecurityGroupId": "sg-04a494f2a75b63414",
+    "vpcCidr": "10.0.0.0/16",
+    "workerMax": "48",
+    "llmTotalConcurrency": "800",
+    "unitConcurrency": "16",
+    "queueDepthPerTaskTarget": "80",
+    "llmTaskModels": {
+      "LLM_TASK_MODEL_measurement_analysis_extract_mentions": "openrouter/openai/gpt-5.6-luna",
+      "LLM_TASK_MODEL_measurement_analysis_mention_semantics": "openrouter/google/gemini-3.1-flash-lite",
+      "LLM_TASK_MODEL_measurement_analysis_resolve_pending_mentions": "openrouter/openai/gpt-5.6-luna",
+      "LLM_TASK_MODEL_measurement_analysis_unknown_discovery": "openrouter/openai/gpt-5.6-luna",
+      "LLM_TASK_MODEL_measurement_analysis_classify_citation_domain": "openrouter/google/gemini-3.1-flash-lite",
+      "LLM_TASK_MODEL_measurement_analysis_answer_brand_stance": "openrouter/google/gemini-3.1-flash-lite"
+    },
+    "llmTaskPools": {
+      "LLM_TASK_POOLS_measurement_analysis_extract_mentions": "openrouter:1",
+      "LLM_TASK_POOLS_measurement_analysis_mention_semantics": "openrouter:1,google_direct:0",
+      "LLM_TASK_POOLS_measurement_analysis_resolve_pending_mentions": "openrouter:1",
+      "LLM_TASK_POOLS_measurement_analysis_classify_citation_domain": "openrouter:1,google_direct:0",
+      "LLM_TASK_POOLS_measurement_analysis_answer_brand_stance": "openrouter:1,google_direct:0"
+    },
+    "llmCacheBust": "false",
+    "contextFetchTimeoutMs": "60000",
+    "ingressCertSecretArn": "arn:aws:secretsmanager:us-west-2:371056712389:secret:scope-analysis/stage/ingress-cert-1Gk13w",
+    "internalTokenSecretArn": "arn:aws:secretsmanager:us-west-2:371056712389:secret:scope-analysis/stage/internal-token-H8CeCF",
+    "engine": "core",
+    "llmSecretArn": "arn:aws:secretsmanager:us-west-2:371056712389:secret:scope/staging/llm-T8DhUP",
+    "llmSecretOpenaiKeyField": "OPENAI_API_KEY",
+    "llmSecretGoogleKeyField": "GOOGLE_AI_API_KEY",
+    "rdsInstanceType": "t4g.medium",
+    "rdsAllocatedGb": "50",
+    "rdsMaxAllocatedGb": "200",
+    "fargateVcpuQuota": "64",
+    "vcpuReserve": "8",
+    "measurementFargateDesired": "10",
+    "prewarmWorkers": "2",
+    "prewarmMeasurementQueueThreshold": "24",
+    "prewarmMeasurementOldestAgeSeconds": "1200",
+    "terminalFailureThreshold": "50"
+  }
+}

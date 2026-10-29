@@ -1,0 +1,234 @@
+{
+  "analysisVersion": "measurement-analysis-v1",
+  "candidates": [
+    {
+      "answerSnippets": [
+        "🚗 투싼 하이브리드가 가장 낫고, 스포티지 하이브리드도 좋습니다. 자동차10년타기시민연합 자료도 참고하세요. 알 수 없는 신형 XQ7 은 판단 보류입니다."
+      ],
+      "candidateKind": "create_product",
+      "metricImpact": {
+        "assertion": "compare",
+        "entity_type": "Product",
+        "mention_role": "comparison_target",
+        "metric_impact": true,
+        "source": "llm_mention_extraction"
+      },
+      "signature": "llm_mention|Product|신형 xq7|comparison_target|compare",
+      "suggestedEntityType": "Product",
+      "surfaceNormalized": "신형 xq7",
+      "surfaceText": "신형 XQ7",
+      "surfaceVariants": [
+        "신형 XQ7"
+      ]
+    }
+  ],
+  "extractionMetadata": {
+    "analysis_llm_calls": 2,
+    "analysis_llm_cost_usd": 0,
+    "analysis_llm_trace_id": "trace-extract",
+    "analysis_resolver_llm_trace_id": "trace-resolve",
+    "conflict_matches": 0,
+    "known_matches": 2,
+    "llm_malformed_count": 0,
+    "llm_mention_count": 3,
+    "llm_mention_enabled": true,
+    "llm_mention_failed": false,
+    "llm_mention_semantics_decisions": 0,
+    "llm_mention_semantics_enabled": false,
+    "llm_mention_semantics_failed": false,
+    "llm_mention_semantics_warnings": [],
+    "llm_mention_warnings": [],
+    "llm_pending_resolver_decisions": 3,
+    "llm_pending_resolver_enabled": true,
+    "llm_pending_resolver_failed": false,
+    "llm_pending_resolver_ignored": 1,
+    "llm_pending_resolver_kept_pending": 1,
+    "llm_pending_resolver_resolved": 0,
+    "llm_pending_resolver_warnings": [],
+    "llm_retry_count": 0,
+    "llm_unknown_enabled": false,
+    "parser_partial": false,
+    "tracked_augment_count": 0,
+    "tracked_augment_enabled": true
+  },
+  "mentions": [
+    {
+      "assertion": "recommend",
+      "contextSnippet": "🚗 투싼 하이브리드가 가장 낫고, 스포티지 하이브리드도 좋습니다. 자동차10년타기시민연합 자료도 참고하세요. 알 수 없는 신형 XQ7 은 판단 보류입니다.",
+      "criteria": [],
+      "descriptors": [
+        "🚗  하이브리드가 가장 낫고",
+        "스포티지 하이브리드도 좋습니다. 자동차10년타기시민연합 자료도 참고하세요. 알 수 없는 신형 XQ7 은 판단 보류입니다."
+      ],
+      "entityId": "00000000-0000-0000-0000-000000000201",
+      "entityType": "Product",
+      "extractionMetadata": {
+        "canonical_name": "Hyundai Tucson",
+        "llm_mention_extraction": {
+          "entity_type_normalized": false,
+          "llm_suggested_entity_type": "Product",
+          "resolution_authority_level": "llm_proposal",
+          "resolution_authority_priority": 5,
+          "source": "llm_mention_extraction",
+          "source_end": 11,
+          "source_sentence_window": {
+            "after": "자동차10년타기시민연합 자료도 참고하세요",
+            "before": null,
+            "sentence": "🚗 투싼 하이브리드가 가장 낫고, 스포티지 하이브리드도 좋습니다."
+          },
+          "source_start": 3,
+          "source_verified": true,
+          "suggested_entity_type": "Product"
+        },
+        "matched_surface": "투싼",
+        "offset_basis": "codepoint",
+        "resolution_authority_level": "alias",
+        "resolution_authority_priority": 2,
+        "source_end": 4,
+        "source_start": 2,
+        "source_verified": true
+      },
+      "mentionPosition": 1,
+      "mentionRole": "single_choice",
+      "resolutionConfidence": 0.98,
+      "resolutionMethod": "alias_exact",
+      "resolutionStatus": "resolved",
+      "sentiment": "positive",
+      "sourceEnd": 4,
+      "sourceStart": 2,
+      "surfaceHash": "47eb207a81a476eb100ff56c3c2002b0799e6fa5584ed7dca922fd6a56ec9407",
+      "surfaceLanguage": "ko",
+      "surfaceNormalized": "투싼",
+      "surfaceText": "투싼"
+    },
+    {
+      "assertion": "mention_only",
+      "contextSnippet": "🚗 투싼 하이브리드가 가장 낫고, 스포티지 하이브리드도 좋습니다. 자동차10년타기시민연합 자료도 참고하세요. 알 수 없는 신형 XQ7 은 판단 보류입니다.",
+      "criteria": [],
+      "descriptors": [
+        "🚗 투싼 하이브리드가 가장 낫고",
+        "하이브리드도 좋습니다. 자동차10년타기시민연합 자료도 참고하세요. 알 수 없는 신형 XQ7 은 판단 보류입니다."
+      ],
+      "entityId": "00000000-0000-0000-0000-000000000202",
+      "entityType": "Product",
+      "extractionMetadata": {
+        "canonical_name": "Kia Sportage",
+        "matched_surface": "스포티지",
+        "offset_basis": "codepoint",
+        "resolution_authority_level": "alias",
+        "resolution_authority_priority": 2,
+        "source_end": 23,
+        "source_start": 19,
+        "source_verified": true
+      },
+      "mentionPosition": 2,
+      "mentionRole": "background",
+      "resolutionConfidence": 0.98,
+      "resolutionMethod": "alias_exact",
+      "resolutionStatus": "resolved",
+      "sentiment": "positive",
+      "sourceEnd": 23,
+      "sourceStart": 19,
+      "surfaceHash": "51c266282b77a72707697319791e2438891ff98d3c596bbdd25e374d6983ca8c",
+      "surfaceLanguage": "ko",
+      "surfaceNormalized": "스포티지",
+      "surfaceText": "스포티지"
+    },
+    {
+      "assertion": "mention_only",
+      "contextSnippet": "🚗 투싼 하이브리드가 가장 낫고, 스포티지 하이브리드도 좋습니다. 자동차10년타기시민연합 자료도 참고하세요. 알 수 없는 신형 XQ7 은 판단 보류입니다.",
+      "criteria": [],
+      "descriptors": [],
+      "entityId": null,
+      "entityType": "Brand",
+      "extractionMetadata": {
+        "entity_type_normalized": false,
+        "llm_pending_resolver": {
+          "action": "ignore_non_metric",
+          "model_slug": "stub-resolve",
+          "reason": "시민단체 — 지표 대상 아님",
+          "trace_id": "trace-resolve"
+        },
+        "llm_suggested_entity_type": "Brand",
+        "offset_basis": "codepoint",
+        "resolution_authority_level": "llm_proposal",
+        "resolution_authority_priority": 5,
+        "source": "llm_mention_extraction",
+        "source_end": 49,
+        "source_sentence_window": {
+          "after": "알 수 없는 신형 XQ7 은 판단 보류입니다",
+          "before": "🚗 투싼 하이브리드가 가장 낫고, 스포티지 하이브리드도 좋습니다",
+          "sentence": "자동차10년타기시민연합 자료도 참고하세요."
+        },
+        "source_start": 37,
+        "source_verified": true,
+        "suggested_entity_type": "Brand"
+      },
+      "mentionPosition": 3,
+      "mentionRole": "background",
+      "resolutionConfidence": 0.55,
+      "resolutionMethod": "llm_proposal",
+      "resolutionStatus": "rejected",
+      "sentiment": "neutral",
+      "sourceEnd": 49,
+      "sourceStart": 37,
+      "surfaceHash": "b0a79b247a88ca29615506638c2b00d8fefbbed3d525eb44b801ba193403da1f",
+      "surfaceLanguage": "ko",
+      "surfaceNormalized": "자동차10년타기시민연합",
+      "surfaceText": "자동차10년타기시민연합"
+    },
+    {
+      "assertion": "compare",
+      "contextSnippet": "🚗 투싼 하이브리드가 가장 낫고, 스포티지 하이브리드도 좋습니다. 자동차10년타기시민연합 자료도 참고하세요. 알 수 없는 신형 XQ7 은 판단 보류입니다.",
+      "criteria": [],
+      "descriptors": [],
+      "entityId": null,
+      "entityType": "Product",
+      "extractionMetadata": {
+        "entity_type_normalized": false,
+        "llm_pending_resolver": {
+          "action": "keep_pending",
+          "model_slug": "stub-resolve",
+          "reason": "카탈로그에 없는 신규 후보",
+          "trace_id": "trace-resolve"
+        },
+        "llm_suggested_entity_type": "Product",
+        "offset_basis": "codepoint",
+        "resolution_authority_level": "llm_proposal",
+        "resolution_authority_priority": 5,
+        "source": "llm_mention_extraction",
+        "source_end": 74,
+        "source_sentence_window": {
+          "after": null,
+          "before": "자동차10년타기시민연합 자료도 참고하세요",
+          "sentence": "알 수 없는 신형 XQ7 은 판단 보류입니다."
+        },
+        "source_start": 68,
+        "source_verified": true,
+        "suggested_entity_type": "Product"
+      },
+      "mentionPosition": 4,
+      "mentionRole": "comparison_target",
+      "resolutionConfidence": 0.55,
+      "resolutionMethod": "llm_proposal",
+      "resolutionStatus": "pending",
+      "sentiment": "neutral",
+      "sourceEnd": 74,
+      "sourceStart": 68,
+      "surfaceHash": "bdbe8aa6245807af5a616ae92cd461108c6055ffe953d3edf7f461cce6fa196c",
+      "surfaceLanguage": "ko",
+      "surfaceNormalized": "신형 xq7",
+      "surfaceText": "신형 XQ7"
+    }
+  ],
+  "modelSlug": "stub-extract",
+  "parserVersion": "parser-v1",
+  "promptVersion": "prompt-v1",
+  "quality": {
+    "answerChars": 87,
+    "qualityState": "valid_answer",
+    "reason": "substantive answer"
+  },
+  "resolverVersion": "resolver-v1",
+  "sourceTurnHash": "47842990e6df7353a09d9dc73e24f4a6c7759802d091243ec4ff75e251acdbe3"
+}

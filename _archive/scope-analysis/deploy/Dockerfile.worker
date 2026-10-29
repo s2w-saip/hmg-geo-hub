@@ -1,0 +1,35 @@
+# analysis-worker — lease · 순수 분석 실행 · LLM 콜. desired 0~48(큐 깊이 타깃추적).
+#
+# ⚠️ 힙 천장 = RAM 의 75%. **통과가 여유를 뜻하지 않는다** — 2026-09-08 OOM(`exit 134` 4회, td 232)은
+#    동시성 자체의 한계가 아니라 힙 상한을 넘긴 것이었고, iMac 러너 실측(16 GB RAM · 힙 8192)이
+#    같은 함정을 보여준다. 출발값 태스크 8 GiB · 힙 6 GiB 는 램프 실측 후 **4 GiB · 3 GiB** 로
+#    내렸다(2026-09-14 · 1 vCPU × 48 전환) — 라이브 메모리 사용률 **8%**(≈650 MB / 8 GiB)가 근거다.
+FROM node:20-bookworm-slim AS base
+ENV NODE_ENV=production PNPM_HOME=/pnpm PATH=/pnpm:$PATH
+WORKDIR /srv
+RUN corepack enable
+
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile --prod
+
+COPY tsconfig.json ./
+# ⚠️ **벤더된 순수 분석 코드 + shim.** `contracts/v1.ts` 가 결과 어휘를 여기서 import 하므로
+#    api 컨테이너도 필요하다(worker 만 넣으면 api 가 기동 시점에 모듈 미해석으로 죽는다).
+#    tsconfig 의 `paths` 가 `@/…` 를 이 트리로 보내므로 **경로 구조를 그대로** 복사해야 한다.
+COPY packages ./packages
+COPY contracts ./contracts
+COPY app ./app
+COPY worker ./worker
+COPY migrations ./migrations
+
+RUN useradd -r -u 10002 -s /usr/sbin/nologin worker && chown -R worker:worker /srv
+USER worker
+ENV ANALYSIS_ENGINE=stub
+# 태스크 4,096 MiB 기준 75%(2026-09-14: 8,192 MiB · 힙 6,144 에서 1 vCPU 전환과 함께 절반).
+# 태스크 메모리를 바꾸면 **여기도 함께** 바꿔야 한다 — 둘을 따로 두면 한쪽만 올라가 OOM 또는
+# 낭비가 된다(infra/lib/analysis-stack.ts 의 `WORKER_MEMORY_MIB` 와 짝이고,
+# tests/deploy-context.test.ts 가 그 75% 를 단언한다).
+ENV NODE_OPTIONS=--max-old-space-size=3072
+# SIGTERM → 새 리스 중지, 보유분만 끝내고 종료(worker/main.ts 의 drain). ECS stopTimeout 과 짝.
+STOPSIGNAL SIGTERM
+CMD ["node", "--import", "tsx", "worker/main.ts"]

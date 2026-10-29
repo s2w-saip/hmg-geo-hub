@@ -1,0 +1,5 @@
+# 개발용 인증서는 절대 커밋하지 않는다(워크스페이스 룰 secrets-handling 1).
+# 라이브 mTLS 자격증명은 Secrets Manager 가 소유하고, 이 디렉터리에는 생성 스크립트만 있다.
+*
+!.gitignore
+!make-dev-certs.sh

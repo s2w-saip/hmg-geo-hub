@@ -1,0 +1,18 @@
+{
+  "date": "2026-09-22",
+  "repositories": [
+    {
+      "name": "hmg-geo",
+      "codeCommit": "04bc8894849cffa40d087eafac6f9516d9a964b6",
+      "node": "24",
+      "packageManager": "npm"
+    },
+    {
+      "name": "scope-analysis",
+      "codeCommit": "18b5a22c1cfce1f203c374d6e1976e8c8f5e76ae",
+      "node": "20",
+      "packageManager": "pnpm@9.15.0"
+    }
+  ],
+  "packaging": "Executable source, tests, migrations, runtime assets and deployment configuration are retained. Handover documentation and environment-template comments are rewritten; internal plans and historical reports are omitted. Git history and secret values are not included. Internal decision annotations, personal names and internal document paths in comments are neutralized; migration SQL of scope-analysis and the pinned analysis-core vendor tree are kept byte-identical because they are checksum-verified."
+}

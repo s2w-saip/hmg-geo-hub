@@ -1,0 +1,213 @@
+{
+  "analysisVersion": "measurement-analysis-v1",
+  "candidates": [],
+  "extractionMetadata": {
+    "analysis_llm_calls": 1,
+    "analysis_llm_cost_usd": 0,
+    "analysis_llm_trace_id": "trace-extract",
+    "conflict_matches": 0,
+    "known_matches": 4,
+    "llm_malformed_count": 0,
+    "llm_mention_count": 2,
+    "llm_mention_enabled": true,
+    "llm_mention_failed": false,
+    "llm_mention_semantics_decisions": 0,
+    "llm_mention_semantics_enabled": false,
+    "llm_mention_semantics_failed": false,
+    "llm_mention_semantics_warnings": [],
+    "llm_mention_warnings": [],
+    "llm_pending_resolver_decisions": 0,
+    "llm_pending_resolver_enabled": false,
+    "llm_pending_resolver_failed": false,
+    "llm_pending_resolver_ignored": 0,
+    "llm_pending_resolver_kept_pending": 0,
+    "llm_pending_resolver_resolved": 0,
+    "llm_pending_resolver_warnings": [],
+    "llm_retry_count": 0,
+    "llm_unknown_enabled": false,
+    "parser_partial": false,
+    "tracked_augment_count": 0,
+    "tracked_augment_enabled": true
+  },
+  "mentions": [
+    {
+      "assertion": "final_choice",
+      "contextSnippet": "현대 투싼과 기아 스포티지를 비교하면, 최종 추천은 현대 투싼입니다.",
+      "criteria": [
+        "safety"
+      ],
+      "descriptors": [
+        "안전"
+      ],
+      "entityId": "00000000-0000-0000-0000-000000000201",
+      "entityType": "Product",
+      "extractionMetadata": {
+        "canonical_name": "Hyundai Tucson",
+        "llm_mention_extraction": {
+          "entity_type_normalized": false,
+          "llm_suggested_entity_type": "Product",
+          "matched_surface": "현대 투싼",
+          "resolution_authority_level": "alias",
+          "resolution_authority_priority": 2,
+          "source": "llm_mention_extraction",
+          "source_end": 5,
+          "source_sentence_window": {
+            "after": null,
+            "before": null,
+            "sentence": "현대 투싼과 기아 스포티지를 비교하면, 최종 추천은 현대 투싼입니다."
+          },
+          "source_start": 0,
+          "source_verified": true,
+          "suggested_entity_type": "Product"
+        },
+        "matched_surface": "현대 투싼",
+        "offset_basis": "codepoint",
+        "resolution_authority_level": "alias",
+        "resolution_authority_priority": 2,
+        "source_end": 5,
+        "source_start": 0,
+        "source_verified": true
+      },
+      "mentionPosition": 1,
+      "mentionRole": "single_choice",
+      "rank": 1,
+      "resolutionConfidence": 0.98,
+      "resolutionMethod": "alias_exact",
+      "resolutionStatus": "resolved",
+      "sentiment": "positive",
+      "sourceEnd": 5,
+      "sourceStart": 0,
+      "surfaceHash": "cf18ec891eaddeef5277030913d06aa322a5282b960ec1e337cb5639bd5e7e5c",
+      "surfaceLanguage": "ko",
+      "surfaceNormalized": "현대 투싼",
+      "surfaceText": "현대 투싼"
+    },
+    {
+      "assertion": "compare",
+      "contextSnippet": "현대 투싼과 기아 스포티지를 비교하면, 최종 추천은 현대 투싼입니다.",
+      "criteria": [],
+      "descriptors": [
+        "현대 투싼과  스포티지를 비교하면",
+        "최종 추천은 현대 투싼입니다."
+      ],
+      "entityId": "00000000-0000-0000-0000-000000000102",
+      "entityType": "Brand",
+      "extractionMetadata": {
+        "canonical_name": "Kia",
+        "llm_mention_extraction": {
+          "entity_type_normalized": false,
+          "llm_suggested_entity_type": "Product",
+          "matched_surface": "스포티지",
+          "resolution_authority_level": "alias",
+          "resolution_authority_priority": 2,
+          "source": "llm_mention_extraction",
+          "source_end": 14,
+          "source_sentence_window": {
+            "after": null,
+            "before": null,
+            "sentence": "현대 투싼과 기아 스포티지를 비교하면, 최종 추천은 현대 투싼입니다."
+          },
+          "source_start": 7,
+          "source_verified": true,
+          "suggested_entity_type": "Product"
+        },
+        "matched_surface": "기아",
+        "offset_basis": "codepoint",
+        "resolution_authority_level": "alias",
+        "resolution_authority_priority": 2,
+        "source_end": 9,
+        "source_start": 7,
+        "source_verified": true
+      },
+      "mentionPosition": 2,
+      "mentionRole": "comparison_target",
+      "rank": 2,
+      "resolutionConfidence": 0.98,
+      "resolutionMethod": "alias_exact",
+      "resolutionStatus": "resolved",
+      "sentiment": "neutral",
+      "sourceEnd": 9,
+      "sourceStart": 7,
+      "surfaceHash": "0c7b941fce6c9c080bd86558ce55a1aecc3144bf6b62ba7e9e4344c3c1d740da",
+      "surfaceLanguage": "ko",
+      "surfaceNormalized": "기아",
+      "surfaceText": "기아"
+    },
+    {
+      "assertion": "recommend",
+      "contextSnippet": "현대 투싼과 기아 스포티지를 비교하면, 최종 추천은 현대 투싼입니다.",
+      "criteria": [],
+      "descriptors": [
+        "현대 투싼과 기아 를 비교하면",
+        "최종 추천은 현대 투싼입니다."
+      ],
+      "entityId": "00000000-0000-0000-0000-000000000202",
+      "entityType": "Product",
+      "extractionMetadata": {
+        "canonical_name": "Kia Sportage",
+        "matched_surface": "스포티지",
+        "offset_basis": "codepoint",
+        "resolution_authority_level": "alias",
+        "resolution_authority_priority": 2,
+        "source_end": 14,
+        "source_start": 10,
+        "source_verified": true
+      },
+      "mentionPosition": 3,
+      "mentionRole": "shortlist_candidate",
+      "resolutionConfidence": 0.98,
+      "resolutionMethod": "alias_exact",
+      "resolutionStatus": "resolved",
+      "sentiment": "positive",
+      "sourceEnd": 14,
+      "sourceStart": 10,
+      "surfaceHash": "51c266282b77a72707697319791e2438891ff98d3c596bbdd25e374d6983ca8c",
+      "surfaceLanguage": "ko",
+      "surfaceNormalized": "스포티지",
+      "surfaceText": "스포티지"
+    },
+    {
+      "assertion": "recommend",
+      "contextSnippet": "현대 투싼과 기아 스포티지를 비교하면, 최종 추천은 현대 투싼입니다.",
+      "criteria": [],
+      "descriptors": [
+        "과 기아 스포티지를 비교하면",
+        "최종 추천은 현대 투싼입니다."
+      ],
+      "entityId": "00000000-0000-0000-0000-000000000201",
+      "entityType": "Product",
+      "extractionMetadata": {
+        "canonical_name": "Hyundai Tucson",
+        "matched_surface": "현대 투싼",
+        "offset_basis": "codepoint",
+        "resolution_authority_level": "alias",
+        "resolution_authority_priority": 2,
+        "source_end": 34,
+        "source_start": 29,
+        "source_verified": true
+      },
+      "mentionPosition": 4,
+      "mentionRole": "shortlist_candidate",
+      "resolutionConfidence": 0.98,
+      "resolutionMethod": "alias_exact",
+      "resolutionStatus": "resolved",
+      "sentiment": "positive",
+      "sourceEnd": 34,
+      "sourceStart": 29,
+      "surfaceHash": "cf18ec891eaddeef5277030913d06aa322a5282b960ec1e337cb5639bd5e7e5c",
+      "surfaceLanguage": "ko",
+      "surfaceNormalized": "현대 투싼",
+      "surfaceText": "현대 투싼"
+    }
+  ],
+  "modelSlug": "stub-extract",
+  "parserVersion": "parser-v1",
+  "promptVersion": "prompt-v1",
+  "quality": {
+    "answerChars": 38,
+    "qualityState": "valid_answer",
+    "reason": "substantive answer"
+  },
+  "resolverVersion": "resolver-v1",
+  "sourceTurnHash": "641caf8d269e4d08145f128d50370e3136a2bb9210cbc8b74a503908ec746d5d"
+}

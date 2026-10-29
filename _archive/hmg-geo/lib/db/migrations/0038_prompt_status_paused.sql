@@ -1,0 +1,12 @@
+-- 프롬프트 라이프사이클에 '측정 중지' 상태 추가 (2026-07-29).
+--
+-- 측정된(비-draft) 프롬프트의 UI 라이프사이클 액션 도입에 따라, "scope 측정만
+-- 중단하고 이력은 보존"한 행을 로컬 카탈로그에서 표현할 값이 필요하다.
+-- scope 쪽은 updatePrompt {active:false}로 중단되지만 로컬 status에 대응 값이
+-- 없으면 목록에서 done과 구분할 수 없다.
+--
+-- paused는 mirror sync의 status 피드백(updateStatusByScopePromptIds)이 건드리지
+-- 않는다 — 그 함수는 queued/running/failed만 갱신 대상으로 삼으므로 추가 가드
+-- 불필요. 재활성(resume) 시 'done'으로 복귀한다(측정 이력이 이미 있는 행만
+-- pause 대상이므로).
+ALTER TYPE prompt_status ADD VALUE IF NOT EXISTS 'paused';

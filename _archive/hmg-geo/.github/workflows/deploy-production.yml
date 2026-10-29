@@ -1,0 +1,90 @@
+# 프로덕션 배포는 이 워크플로가 유일한 경로다.
+#
+# main 머지는 배포를 일으키지 않는다 — vercel.json 의
+# `git.deploymentEnabled.main = false` 가 Git 트리거 배포를 막는다.
+# PR 프리뷰는 그대로 동작한다(피처 브랜치는 차단 대상이 아니다).
+#
+# 실행 방법
+#   - 수동: Actions 탭 → "Deploy production" → Run workflow (ref 기본값 main)
+#   - CLI:  gh workflow run deploy-production.yml -R Kongventures/hmg-geo -f ref=main
+#   - 스케줄: 아래 `schedule:` 블록 주석을 해제 (cron 은 UTC 기준)
+name: Deploy production
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "배포할 브랜치/커밋 SHA (기본: main)"
+        required: false
+        default: main
+  # 스케줄 배포 — 기본 비활성. 켤 때 주석만 해제한다.
+  # cron 은 UTC: '0 1 * * 1-5' = 평일 10:00 KST, '0 1 * * 1' = 월요일 10:00 KST
+  # schedule:
+  #   - cron: "0 1 * * 1-5"
+
+# 프로덕션 배포는 겹치지 않게 한 번에 하나만. 진행 중인 배포를 취소하지 않는다.
+concurrency:
+  group: hmg-geo-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build & deploy to production
+    runs-on: ubuntu-latest
+    # 승인자를 붙이고 싶으면 GitHub Settings → Environments → production 에
+    # Required reviewers 를 추가한다(워크플로 수정 불필요).
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+    env:
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || 'main' }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Preflight — 필수 시크릿·변수 확인
+        run: |
+          missing=""
+          [ -n "$VERCEL_TOKEN" ] || missing="$missing secrets.VERCEL_TOKEN"
+          [ -n "$VERCEL_ORG_ID" ] || missing="$missing vars.VERCEL_ORG_ID"
+          [ -n "$VERCEL_PROJECT_ID" ] || missing="$missing vars.VERCEL_PROJECT_ID"
+          if [ -n "$missing" ]; then
+            echo "::error::누락된 설정:$missing"
+            exit 1
+          fi
+          echo "deploy ref: $(git rev-parse HEAD)"
+
+      - name: Install Vercel CLI
+        run: npm i -g vercel@59
+
+      - name: Pull production env
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Build
+        run: vercel build --prod --token="$VERCEL_TOKEN"
+
+      - name: Deploy (prebuilt)
+        id: deploy
+        run: |
+          url=$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "배포 완료: $url"
+
+      - name: Summary
+        run: |
+          {
+            echo "### 프로덕션 배포 완료"
+            echo ""
+            echo "- ref: \`${{ inputs.ref || 'main' }}\` (\`$(git rev-parse --short HEAD)\`)"
+            echo "- URL: ${{ steps.deploy.outputs.url }}"
+            echo "- trigger: \`${{ github.event_name }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

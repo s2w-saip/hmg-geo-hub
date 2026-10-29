@@ -1,0 +1,147 @@
+{
+  "analysisVersion": "measurement-analysis-v1",
+  "candidates": [],
+  "extractionMetadata": {
+    "analysis_llm_calls": 2,
+    "analysis_llm_cost_usd": 0,
+    "analysis_llm_trace_id": "trace-extract",
+    "analysis_semantics_llm_trace_id": "trace-semantics",
+    "conflict_matches": 0,
+    "known_matches": 2,
+    "llm_malformed_count": 0,
+    "llm_mention_count": 2,
+    "llm_mention_enabled": true,
+    "llm_mention_failed": false,
+    "llm_mention_semantics_decisions": 2,
+    "llm_mention_semantics_enabled": true,
+    "llm_mention_semantics_failed": false,
+    "llm_mention_semantics_warnings": [],
+    "llm_mention_warnings": [],
+    "llm_pending_resolver_decisions": 0,
+    "llm_pending_resolver_enabled": false,
+    "llm_pending_resolver_failed": false,
+    "llm_pending_resolver_ignored": 0,
+    "llm_pending_resolver_kept_pending": 0,
+    "llm_pending_resolver_resolved": 0,
+    "llm_pending_resolver_warnings": [],
+    "llm_retry_count": 0,
+    "llm_unknown_enabled": false,
+    "parser_partial": false,
+    "tracked_augment_count": 0,
+    "tracked_augment_enabled": true
+  },
+  "mentions": [
+    {
+      "assertion": "recommend",
+      "contextSnippet": "🚗 현대 투싼은 만족스럽지만 Kia Sportage 는 아쉽습니다.",
+      "criteria": [],
+      "descriptors": [
+        "🚗 은 만족스럽지만 Kia Sportage 는 아쉽습니다."
+      ],
+      "entityId": "00000000-0000-0000-0000-000000000201",
+      "entityType": "Product",
+      "extractionMetadata": {
+        "canonical_name": "Hyundai Tucson",
+        "llm_mention_extraction": {
+          "entity_type_normalized": false,
+          "llm_suggested_entity_type": "Product",
+          "matched_surface": "현대 투싼",
+          "resolution_authority_level": "alias",
+          "resolution_authority_priority": 2,
+          "source": "llm_mention_extraction",
+          "source_end": 8,
+          "source_sentence_window": {
+            "after": null,
+            "before": null,
+            "sentence": "🚗 현대 투싼은 만족스럽지만 Kia Sportage 는 아쉽습니다."
+          },
+          "source_start": 3,
+          "source_verified": true,
+          "suggested_entity_type": "Product"
+        },
+        "llm_mention_type": "recommend",
+        "llm_sentiment_source": "llm_semantics_pass",
+        "matched_surface": "현대 투싼",
+        "offset_basis": "codepoint",
+        "resolution_authority_level": "alias",
+        "resolution_authority_priority": 2,
+        "source_end": 7,
+        "source_start": 2,
+        "source_verified": true
+      },
+      "mentionPosition": 1,
+      "mentionRole": "single_choice",
+      "resolutionConfidence": 0.98,
+      "resolutionMethod": "alias_exact",
+      "resolutionStatus": "resolved",
+      "sentiment": "positive",
+      "sourceEnd": 7,
+      "sourceStart": 2,
+      "surfaceHash": "cf18ec891eaddeef5277030913d06aa322a5282b960ec1e337cb5639bd5e7e5c",
+      "surfaceLanguage": "ko",
+      "surfaceNormalized": "현대 투싼",
+      "surfaceText": "현대 투싼"
+    },
+    {
+      "assertion": "compare",
+      "contextSnippet": "🚗 현대 투싼은 만족스럽지만 Kia Sportage 는 아쉽습니다.",
+      "criteria": [],
+      "descriptors": [
+        "🚗 현대 투싼은 만족스럽지만  는 아쉽습니다."
+      ],
+      "entityId": "00000000-0000-0000-0000-000000000202",
+      "entityType": "Product",
+      "extractionMetadata": {
+        "canonical_name": "Kia Sportage",
+        "llm_mention_extraction": {
+          "entity_type_normalized": false,
+          "llm_suggested_entity_type": "Product",
+          "matched_surface": "Kia Sportage",
+          "resolution_authority_level": "alias",
+          "resolution_authority_priority": 2,
+          "source": "llm_mention_extraction",
+          "source_end": 29,
+          "source_sentence_window": {
+            "after": null,
+            "before": null,
+            "sentence": "🚗 현대 투싼은 만족스럽지만 Kia Sportage 는 아쉽습니다."
+          },
+          "source_start": 17,
+          "source_verified": true,
+          "suggested_entity_type": "Product"
+        },
+        "llm_mention_type": "reject",
+        "llm_sentiment_source": "llm_semantics_pass",
+        "matched_surface": "Kia Sportage",
+        "offset_basis": "codepoint",
+        "resolution_authority_level": "alias",
+        "resolution_authority_priority": 2,
+        "source_end": 28,
+        "source_start": 16,
+        "source_verified": true
+      },
+      "mentionPosition": 2,
+      "mentionRole": "comparison_target",
+      "resolutionConfidence": 0.98,
+      "resolutionMethod": "alias_exact",
+      "resolutionStatus": "resolved",
+      "sentiment": "negative",
+      "sourceEnd": 28,
+      "sourceStart": 16,
+      "surfaceHash": "ca84b21fa21cc06b255f5e0c411bc6e32ebedb52e8a6550aed812c2d75d7cc8f",
+      "surfaceLanguage": "en",
+      "surfaceNormalized": "kia sportage",
+      "surfaceText": "Kia Sportage"
+    }
+  ],
+  "modelSlug": "stub-extract",
+  "parserVersion": "parser-v1",
+  "promptVersion": "prompt-v1",
+  "quality": {
+    "answerChars": 38,
+    "qualityState": "valid_answer",
+    "reason": "substantive answer"
+  },
+  "resolverVersion": "resolver-v1",
+  "sourceTurnHash": "887aa9d1eec9b48ac78c5df9da34221b253b75dbcea73824954a8a0fbd2a14a9"
+}

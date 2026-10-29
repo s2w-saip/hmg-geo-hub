@@ -1,0 +1,97 @@
+{
+  "version": "5d3b7e10-8a49-4c2f-9b06-3e1d8f5a2c74:bd0d791ba700a186",
+  "snapshot": {
+    "catalog": {
+      "entities": [
+        {
+          "id": "1f2e3d4c-5b6a-4798-8a1b-2c3d4e5f6071",
+          "type": "Brand",
+          "canonicalName": "Hyundai",
+          "aliases": [
+            {
+              "alias": "Hyundai",
+              "language": "en"
+            },
+            {
+              "alias": "현대",
+              "language": "ko"
+            },
+            {
+              "alias": "현대자동차",
+              "language": "ko"
+            }
+          ]
+        },
+        {
+          "id": "2a3b4c5d-6e7f-4801-9b2c-3d4e5f607182",
+          "type": "Brand",
+          "canonicalName": "Genesis",
+          "aliases": [
+            {
+              "alias": "Genesis",
+              "language": "en"
+            },
+            {
+              "alias": "제네시스",
+              "language": "ko"
+            }
+          ]
+        },
+        {
+          "id": "3b4c5d6e-7f80-4912-8c3d-4e5f60718293",
+          "type": "Product",
+          "canonicalName": "Tucson",
+          "aliases": [
+            {
+              "alias": "Tucson",
+              "language": "en"
+            },
+            {
+              "alias": "투싼",
+              "language": "ko"
+            }
+          ]
+        }
+      ],
+      "industry": {
+        "ids": [
+          "00000000-0000-0000-0000-000000000401"
+        ],
+        "name": "Automotive",
+        "source": "project"
+      }
+    },
+    "rels": [
+      {
+        "fromId": "2a3b4c5d-6e7f-4801-9b2c-3d4e5f607182",
+        "type": "SUBSIDIARY_OF",
+        "toId": "1f2e3d4c-5b6a-4798-8a1b-2c3d4e5f6071"
+      },
+      {
+        "fromId": "3b4c5d6e-7f80-4912-8c3d-4e5f60718293",
+        "type": "MADE_BY",
+        "toId": "1f2e3d4c-5b6a-4798-8a1b-2c3d4e5f6071"
+      }
+    ],
+    "grouping": {
+      "entityRules": [],
+      "surfaceRules": []
+    },
+    "trackedAugmentTargets": [
+      {
+        "brandKey": "현대",
+        "representativeEntityId": "1f2e3d4c-5b6a-4798-8a1b-2c3d4e5f6071",
+        "representativeCanonical": "Hyundai",
+        "entityType": "Brand",
+        "entityIds": [
+          "1f2e3d4c-5b6a-4798-8a1b-2c3d4e5f6071"
+        ],
+        "surfaces": [
+          "현대",
+          "Hyundai",
+          "현대자동차"
+        ]
+      }
+    ]
+  }
+}

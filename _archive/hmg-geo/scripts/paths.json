@@ -1,0 +1,16 @@
+{
+  "_note": "리포트/데이터 경로 정본. 디렉터리를 옮기면 이 파일만 고친다 (2026-08-26 재편).",
+  "data": "docs/data",
+  "source": "docs/data/1-source",
+  "extract": "docs/data/2-extract",
+  "citationData": "docs/data/2-extract/citation-data",
+  "raw": "docs/data/2-extract/raw",
+  "ga4": "docs/data/2-extract/ga4",
+  "publish": "docs/data/3-publish",
+  "archive": "docs/data/4-archive",
+  "tmp": "docs/data/_tmp",
+  "manifest": "docs/data/.verify-manifest.json",
+  "indexTmp": "docs/data/_tmp/index-final.tmp.md",
+  "logos": "docs/assets/logos",
+  "templates": "scripts/reports/templates"
+}

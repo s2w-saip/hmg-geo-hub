@@ -1,0 +1,69 @@
+# dependencies
+/node_modules
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# env files
+.env
+.env*.local
+
+# GA4 OAuth token cache (scripts/ga4/probe.ts) — contains a refresh token
+.ga4-token.json
+# GSC OAuth token cache (scripts/gsc/probe.ts) — contains a refresh token
+.gsc-token.json
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# local-only visualization / scratch
+docs/status.html
+
+# personal Claude Code config (per-user, not project)
+.claude/
+
+# Corporate font assets (HMG license — never commit to public repo).
+# Provided by HMG, placed locally for build. The directory is preserved
+# via public/fonts/.gitkeep — see visual-identity spec D3.
+public/fonts/HyundaiSans*
+
+# Corporate source spreadsheets (HMG framework xlsx). Only the *extracted*
+# JSON in lib/standard-prompts/_data/ is committed; the binary source stays
+# local — same policy as the fonts above.
+*.xlsx
+
+.vercel
+
+# fablize goal-tracking state (local session scratch, not repo content)
+.fablize/
+
+# ── 데이터·산출물 루트 (2026-08-26 디렉터리 재편) ────────────────────────
+# docs/data 는 통째로 비추적한다:
+#   1-source/   고객·내부에서 받은 원본 (프레임워크 xlsx, SCOPE csv, 프롬프트 워크시트)
+#   2-extract/  파이프라인 중간 산출 (citation-data, raw, db-exports, ga4)
+#   3-publish/  발행본 (citation-v*_YYYYMMDD, statusboard, completed-sites …)
+#   4-archive/  superseded · out-of-scope · invalid
+#   _tmp/       스크래치 (.extract.tmp.json, 인덱스 초안, v12-inputs …)
+# 경로 정본은 scripts/paths.json — 위치를 옮기면 그 파일만 고친다.
+docs/data/
+
+# drizzle introspect 산출물 (npm run db:drift) — 대상 DB 스냅샷, 커밋하지 않는다
+.drizzle-introspect/
+
+# 파이썬 캐시 (scripts/reports/*.py)
+__pycache__/
+*.pyc

@@ -1,0 +1,455 @@
+name: lane-health
+# 분석 lane 라이브 헬스 — **읽기 전용**으로 상태를 묻고, 판정이 서면 GitHub Issue 로 표면화한다.
+#
+# ── 왜 이 워크플로인가 (A3 · 운영 결정 2026-09-13)
+#
+#   알람 4종(`duplicate-completions` · `queue-stale` · `terminal-failures` · `deferred-residue`)은
+#   만들어져 있지만 **`AlarmActions` 가 비어 있다.** 그것을 SNS 로 채우는 길은 안 간다 —
+#   워크스페이스 룰 alert-routing 4 가 금지하는 "토픽만 만들고 구독하지 않는 것"의 지름길이고,
+#   2026-08-15 실측의 유령 토픽 16개가 정확히 그 결과였다(그 안에 진짜 장애 신호가 섞여 있었다).
+#   **목적지는 GitHub Issue 하나뿐이다. 잔디·메일·SNS 어디에도 보내지 않는다.**
+#
+#   그래서 알람의 *상태* 를 여기서 **당겨 읽는다**. 알람이 액션 없이 지표로 남아 있어도 이 잡이
+#   30분마다 물어보면 도달은 성립한다 — 그리고 도달 경로가 이 리포 안에 있으니 "배선했는데
+#   아무도 안 본다" 가 구조적으로 불가능하다.
+#
+# ── 무엇이 적색인가
+#
+#   ① `scope-analysis-*` 알람 중 하나라도 ALARM
+#   ② `WorkerCount == 0 && QueueDepth > 0`  ← 큐가 있는데 아무도 안 깨어 있다
+#   ③ `OldestQueuedAgeSeconds > 1800`       ← 소비가 멈췄다(알람과 중복이지만 알람이 굶을 수 있다)
+#   ④ 게이지 **무데이터** — api 가 `analysis_lane.gauges` 를 안 찍는다는 뜻이다.
+#      ⚠️ 이 축은 2026-09-13 에 `QueueDepth` 의 `defaultValue: 0` 을 없애고 나서야 관측 가능해졌다.
+#         그 전에는 api 가 죽어도 메트릭이 0 으로 채워져 "큐가 비었다" 로 보였다(C-11).
+#
+# ── 쓰기는 하지 않는다
+#
+#   AWS 쪽 호출은 전부 `describe-*` · `get-metric-data` 다. 이 파일에 쓰기(`update-service` ·
+#   `set-alarm-state` · `put-*`)를 **넣지 마라** — 읽기 전용이 이 워크플로의 계약이고,
+#   OIDC 롤에 쓰기 권한을 요구하게 만드는 순간 그 롤이 이미지 push 용으로도 쓰인다는 사실이
+#   문제가 된다(코어 `ontology-health.yml` 이 같은 계약을 갖는 이유와 동일).
+#
+# ── ⚠️ 선행 조건: 롤 권한 (2026-09-13 현재 **없다**)
+#
+#   `iam get-role-policy --role-name github-deploy-scope-analysis-ecr` 실측 = ECR push 액션뿐이고
+#   CloudWatch·ECS 문장이 하나도 없다. 롤 확장은 코어 배포라 이 lane 의 경계 밖이다.
+#   붙기 전까지 이 잡은 아래 preflight 에서 멈추고 **전용 이슈 1건**만 남긴다(재코멘트 없음).
+#   필요한 최소 권한(전부 읽기):
+#     cloudwatch:DescribeAlarms        Resource: *          (알람 이름 접두사로 필터는 API 쪽에서)
+#     cloudwatch:GetMetricData         Resource: *          (메트릭 데이터 API 는 리소스 수준 권한이 없다)
+#     ecs:DescribeServices             Resource: arn:aws:ecs:us-west-2:371056712389:service/scope-analysis-stage/analysis-worker-stage
+
+on:
+  schedule:
+    # 30분. 큐가 30분 넘게 안 움직이면 `queue-stale` 이 울므로 관측 주기가 그보다 촘촘해야 한다.
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  # 겹쳐 돌면 같은 이슈에 두 번 쓴다.
+  group: lane-health
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-west-2
+  # 역할 ARN 은 비밀이 아니다(계정 id 는 push-images-stage.yml 에도 있다). 리포 변수로 빼지 않은
+  # 것은 의도다 — 변수가 비면 조용히 실패하는 경로가 하나 더 생긴다.
+  OIDC_ROLE_ARN: arn:aws:iam::371056712389:role/github-deploy-scope-analysis-ecr
+  ALARM_PREFIX: scope-analysis
+  METRIC_NS: ScopeAnalysis
+  CLUSTER: scope-analysis-stage
+  WORKER_SERVICE: analysis-worker-stage
+  # 판정 임계 — 스택의 `queue-stale` 알람과 같은 값이다(어긋나면 두 신호가 다른 말을 한다).
+  OLDEST_QUEUED_LIMIT_SECONDS: "1800"
+  ISSUE_LABEL: lane-health
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      # OIDC 는 이것 없이는 조용히 안 된다 — 토큰 요청이 403 이고 메시지가
+      # "Credentials could not be loaded" 라 권한 문제로 보이지 않는다.
+      id-token: write
+      contents: read
+      # 표면화 목적지. 기본 GITHUB_TOKEN 은 리포 설정에 따라 read-only 라 명시가 없으면
+      # 이슈가 안 뜬다(측정 lane 2026-09-01 실증).
+      issues: write
+    steps:
+      # 롤 신뢰 조건이 `ref:refs/heads/main` 뿐이다(두 sub 형태 모두 main 한정). 다른 ref 에서
+      # dispatch 하면 STS 가 `Not authorized to perform sts:AssumeRoleWithWebIdentity` 로 거부하고,
+      # 그 메시지는 권한 설정 문제처럼 보인다 — 먼저 멈춘다.
+      - name: preflight — ref 게이트 (롤 신뢰 조건이 main 전용)
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          if [ "$REF" != "refs/heads/main" ]; then
+            echo "::error::이 워크플로는 main 에서만 돈다. 롤 ${OIDC_ROLE_ARN##*/} 의 신뢰 sub 이 main 뿐이다 (현재 ref: $REF)."
+            exit 1
+          fi
+
+      # 라벨이 없으면 `gh issue create --label` 이 실패한다(폴백으로 무라벨 생성은 되지만, 그러면
+      # 사람이 `lane-health` 로 필터링할 수 없다). 멱등 — 이미 있으면 조용히 지나간다.
+      - name: 라벨 보장 (멱등)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh label create "$ISSUE_LABEL" --repo "$GITHUB_REPOSITORY" --description "분석 lane 라이브 헬스 (lane-health 워크플로)" --color FBCA04 2>/dev/null || true
+
+      - name: aws credentials (OIDC — 장기 키 0)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.OIDC_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: lane-health-${{ github.run_id }}
+
+      # 롤에 CloudWatch·ECS 읽기 권한이 붙기 전까지 여기서 멈춘다. 붙지 않은 상태로 본 스텝에
+      # 들어가면 AccessDenied 가 "lane 이 아프다" 로 위장한다 — 그건 **관측 부재**이지 장애가 아니다.
+      - name: preflight — 읽기 권한 프로브
+        id: perm
+        run: |
+          set -uo pipefail
+          MISSING=""
+          aws cloudwatch describe-alarms --max-records 1 >/dev/null 2>/tmp/cw.err || MISSING="$MISSING cloudwatch:DescribeAlarms"
+          aws cloudwatch get-metric-data \
+            --metric-data-queries '[{"Id":"probe","MetricStat":{"Metric":{"Namespace":"ScopeAnalysis","MetricName":"QueueDepth"},"Period":300,"Stat":"Maximum"},"ReturnData":true}]' \
+            --start-time "$(date -u -d '-10 minutes' +%Y-%m-%dT%H:%M:%SZ)" \
+            --end-time "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >/dev/null 2>/tmp/md.err || MISSING="$MISSING cloudwatch:GetMetricData"
+          aws ecs describe-services --cluster "$CLUSTER" --services "$WORKER_SERVICE" >/dev/null 2>/tmp/ecs.err || MISSING="$MISSING ecs:DescribeServices"
+          MISSING="$(echo "$MISSING" | xargs || true)"
+          echo "missing=$MISSING" >> "$GITHUB_OUTPUT"
+          if [ -n "$MISSING" ]; then
+            echo "::error::OIDC 롤에 읽기 권한이 없다: $MISSING"
+            head -c 300 /tmp/cw.err /tmp/md.err /tmp/ecs.err 2>/dev/null || true
+          fi
+
+      # 권한이 없으면 **전용 이슈 1건**만 남기고 끝낸다. 30분마다 코멘트하지 않는다 —
+      # 이 상태는 "lane 이 아프다" 가 아니라 "아직 배선이 안 끝났다" 이고, 해소는 사람이 롤을
+      # 고쳐야 온다. 스팸으로 만들면 그 이슈 자체를 아무도 안 본다.
+      - name: 권한 미배선을 이슈로 (있으면 재코멘트 없음)
+        if: ${{ steps.perm.outputs.missing != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MISSING: ${{ steps.perm.outputs.missing }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -uo pipefail
+          TITLE="[lane-health] OIDC 롤에 CloudWatch·ECS 읽기 권한이 없다"
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "$TITLE in:title" \
+            --json number --jq '.[0].number // empty' 2>/dev/null || true)
+          if [ -n "$EXISTING" ]; then
+            echo "이미 열린 이슈 #$EXISTING — 재코멘트하지 않는다"
+            exit 1
+          fi
+          BODY="lane-health 가 상태를 읽지 못한다. 거부된 액션: \`$MISSING\`
+
+          실행 로그: $RUN_URL
+
+          **이건 장애가 아니라 관측 부재다.** 롤 \`github-deploy-scope-analysis-ecr\` 의 인라인 정책에
+          아래 **읽기 전용** 문장을 더하면 해소된다(롤 확장 = 코어 배포이므로 이 리포에서 못 고친다).
+
+          \`\`\`json
+          {
+            \"Effect\": \"Allow\",
+            \"Action\": [\"cloudwatch:DescribeAlarms\", \"cloudwatch:GetMetricData\"],
+            \"Resource\": \"*\"
+          },
+          {
+            \"Effect\": \"Allow\",
+            \"Action\": \"ecs:DescribeServices\",
+            \"Resource\": \"arn:aws:ecs:us-west-2:371056712389:service/scope-analysis-stage/analysis-worker-stage\"
+          }
+          \`\`\`
+
+          \`cloudwatch:*\` 두 액션이 \`Resource: \"*\"\` 인 것은 좁힐 수 없어서다 — CloudWatch 의
+          알람 조회·메트릭 데이터 API 는 리소스 수준 권한을 지원하지 않는다. 쓰기 액션은 **하나도**
+          요구하지 않는다."
+          gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --label "$ISSUE_LABEL" --body "$BODY" \
+            || gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body "$BODY"
+          exit 1
+
+      - name: 알람·게이지·ECS 조회 (읽기 전용)
+        id: probe
+        run: |
+          set -euo pipefail
+
+          # ── ① 알람 상태 ──────────────────────────────────────────────────────────
+          aws cloudwatch describe-alarms --alarm-name-prefix "$ALARM_PREFIX" \
+            --query 'MetricAlarms[].{name:AlarmName,state:StateValue,since:StateUpdatedTimestamp}' \
+            --output json > alarms.json
+          # 타깃추적이 만든 알람도 함께 본다 — INSUFFICIENT_DATA 로 굳는 것이 B1 의 지문이었다.
+          aws cloudwatch describe-alarms \
+            --query "MetricAlarms[?contains(AlarmName, '$WORKER_SERVICE')].{name:AlarmName,state:StateValue,since:StateUpdatedTimestamp}" \
+            --output json > autoscale-alarms.json
+
+          # ── ② 게이지 5종 (최근 15분의 마지막 값) ─────────────────────────────────
+          START="$(date -u -d '-15 minutes' +%Y-%m-%dT%H:%M:%SZ)"
+          END="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          python3 - > queries.json <<'PY'
+          import json
+          names = ["QueueDepth", "OldestQueuedAgeSeconds", "FailedTerminal1d", "DeferredStale", "WorkerCount"]
+          print(json.dumps([
+              {
+                  "Id": "m%d" % i,
+                  "Label": n,
+                  "MetricStat": {
+                      "Metric": {"Namespace": "ScopeAnalysis", "MetricName": n},
+                      "Period": 300,
+                      "Stat": "Maximum",
+                  },
+                  "ReturnData": True,
+              }
+              for i, n in enumerate(names)
+          ]))
+          PY
+          aws cloudwatch get-metric-data \
+            --metric-data-queries file://queries.json \
+            --start-time "$START" --end-time "$END" \
+            --query 'MetricDataResults[].{label:Label,values:Values}' --output json > gauges.json
+
+          # ── ②-b 직결 standby 페일오버 (최근 30분 **Sum**) ─────────────────────────
+          # ⚠️ 게이지 5종과 **다른 축**이다: 저것들은 "지금 값"(Maximum, 15분)이고 이것은
+          #    "그 사이에 몇 번 일어났나"(Sum)다. standby 발화는 순간값이 아니라 **사건**이라
+          #    Maximum 으로 보면 콜 1건과 1,000건이 같은 1 로 보인다. 창을 cron 주기(30분)와
+          #    맞춰 회차 사이에 난 발화가 새지 않게 한다.
+          START30="$(date -u -d '-30 minutes' +%Y-%m-%dT%H:%M:%SZ)"
+          aws cloudwatch get-metric-data \
+            --metric-data-queries '[{"Id":"standby","Label":"PoolStandbyCalls","MetricStat":{"Metric":{"Namespace":"ScopeAnalysis","MetricName":"PoolStandbyCalls"},"Period":1800,"Stat":"Sum"},"ReturnData":true}]' \
+            --start-time "$START30" --end-time "$END" \
+            --query 'MetricDataResults[].{label:Label,values:Values}' --output json > standby.json
+
+          # ── ②-c 스탠스 패스 관측 (최근 30분 **Sum**) — WU6 F4 ────────────────────
+          # 세 축을 함께 본다: 켜진 턴(분모)·패스 실패·업스트림 콜 실패. 분모가 없으면
+          # "실패가 늘었다" 와 "물량이 늘었다" 가 구분되지 않는다. 창은 standby 와 같은 30분.
+          aws cloudwatch get-metric-data \
+            --metric-data-queries '[
+              {"Id":"st","Label":"StanceTurns","MetricStat":{"Metric":{"Namespace":"ScopeAnalysis","MetricName":"StanceTurns"},"Period":1800,"Stat":"Sum"},"ReturnData":true},
+              {"Id":"sf","Label":"StanceFailedTurns","MetricStat":{"Metric":{"Namespace":"ScopeAnalysis","MetricName":"StanceFailedTurns"},"Period":1800,"Stat":"Sum"},"ReturnData":true},
+              {"Id":"sc","Label":"StanceFailedCalls","MetricStat":{"Metric":{"Namespace":"ScopeAnalysis","MetricName":"StanceFailedCalls"},"Period":1800,"Stat":"Sum"},"ReturnData":true}
+            ]' \
+            --start-time "$START30" --end-time "$END" \
+            --query 'MetricDataResults[].{label:Label,values:Values}' --output json > stance.json
+
+          # ── ③ ECS running (게이지가 비었을 때의 대체 신호) ───────────────────────
+          aws ecs describe-services --cluster "$CLUSTER" --services "$WORKER_SERVICE" \
+            --query 'services[0].{desired:desiredCount,running:runningCount}' --output json > ecs.json
+
+          # ── 판정 ────────────────────────────────────────────────────────────────
+          python3 - <<'PY' > verdict.json
+          import json, os
+
+          alarms = json.load(open("alarms.json"))
+          as_alarms = json.load(open("autoscale-alarms.json"))
+          ecs = json.load(open("ecs.json"))
+          gauges = {}
+          for r in json.load(open("gauges.json")):
+              vals = r.get("values") or []
+              # get-metric-data 는 최신순으로 준다(ScanBy 기본 TimestampDescending).
+              gauges[r["label"]] = vals[0] if vals else None
+
+          signals = []   # (코드, 사람이 읽는 한 줄)
+
+          firing = [a for a in alarms if a["state"] == "ALARM"]
+          for a in firing:
+              signals.append(("ALARM:" + a["name"], f"알람 `{a['name']}` = ALARM (since {a['since']})"))
+
+          depth = gauges.get("QueueDepth")
+          workers = gauges.get("WorkerCount")
+          oldest = gauges.get("OldestQueuedAgeSeconds")
+          running = ecs.get("running")
+
+          # ④ 게이지 무데이터 = api 가 게이지를 안 찍는다. defaultValue 를 없앤 뒤에야 보이는 축.
+          if depth is None:
+              signals.append(("NO_GAUGE", "게이지 `QueueDepth` 가 최근 15분간 **무데이터** — api 가 `analysis_lane.gauges` 를 안 찍는다(= lane 관측 실명). defaultValue 를 없앤 뒤 보이는 축이다(C-11)"))
+          else:
+              # ② 큐가 있는데 아무도 안 깨어 있다. WorkerCount 가 없으면 ECS running 으로 대신 본다.
+              eff_workers = workers if workers is not None else running
+              src = "WorkerCount 게이지" if workers is not None else "ECS runningCount(게이지 무데이터 대체)"
+              if depth > 0 and eff_workers == 0:
+                  signals.append(("NO_WORKERS", f"큐 깊이 {depth:.0f} 인데 워커 0 ({src}) — 아무도 티켓을 집지 않는다"))
+
+          # ③ 소비 정지. 알람과 겹치지만 알람 자체가 굶을 수 있어 독립으로 본다(B1 의 교훈).
+          limit = float(os.environ["OLDEST_QUEUED_LIMIT_SECONDS"])
+          if oldest is not None and oldest > limit:
+              signals.append(("STALE", f"가장 오래된 대기 티켓 {oldest:.0f}s > {limit:.0f}s"))
+
+          # ⑤ 직결 standby 페일오버. **lane 이 아픈 게 아니라 OpenRouter 가 아픈 것**이고,
+          #    lane 은 설계대로 직결로 받아내고 있다 — 그래서 주의(1) 등급이다.
+          #    ⚠️ `defaultValue: 0` 이 있는 메트릭이라 무데이터와 0 을 구분하지 않는다(그쪽은
+          #       이 축의 관심사가 아니다 — 발화가 있었나만 본다).
+          standby_calls = 0.0
+          for r in json.load(open("standby.json")):
+              standby_calls = sum(r.get("values") or [])
+          gauges["PoolStandbyCalls30m"] = standby_calls
+          if standby_calls > 0:
+              signals.append((
+                  "STANDBY_FAILOVER",
+                  f"직결 standby 페일오버 **{standby_calls:.0f}콜** (최근 30분) — OpenRouter 가 못 받고 있다는 뜻이다. "
+                  "분석은 계속 돈다(설계대로 직결이 받는다). 그 콜들은 단가표 추정으로 장부에 오르고, "
+                  "openai 직결은 `temperature` 기본값(1)으로 돌아 출력 분산이 평시보다 크다",
+              ))
+
+          # ⑥ 스탠스 패스 (WU6 F4). **게이트가 꺼져 있으면 분모가 0 이고 이 블록은 침묵한다** —
+          #    안 켠 기능으로 매 회차 경보를 내면 그 경보는 곧 무시된다.
+          #    목적지는 잔디가 아니라 **GitHub Issue** 다(이 워크플로 전체가 그렇다): 스탠스가
+          #    안 쌓이는 것은 "지금 서비스가 아프다" 가 아니라 "사람이 코드를 고쳐야 한다" 다
+          #    (룰 alert-routing 의 두 목적지 구분).
+          stance = {}
+          for r in json.load(open("stance.json")):
+              stance[r["label"]] = sum(r.get("values") or [])
+          gauges.update({k + "30m": v for k, v in stance.items()})
+          st_turns = stance.get("StanceTurns", 0.0)
+          st_failed = stance.get("StanceFailedTurns", 0.0)
+          st_calls = stance.get("StanceFailedCalls", 0.0)
+          if st_turns > 0:
+              ratio = st_failed / st_turns
+              limit_ratio = float(os.environ.get("STANCE_FAILED_RATIO_LIMIT", "0.10"))
+              if ratio > limit_ratio:
+                  # 두 축이 갈리는 지점이 곧 진단이다 — 그 문장을 이슈 본문에 그대로 싣는다.
+                  where = (
+                      "업스트림(공급자·풀·타임아웃)" if st_calls > 0
+                      else "파싱·브랜드 매칭(모델은 답했다) — 고칠 것은 재시도가 아니라 프롬프트다"
+                  )
+                  signals.append((
+                      "STANCE_FAILING",
+                      f"스탠스 패스 실패율 **{ratio:.0%}** ({st_failed:.0f}/{st_turns:.0f} 턴, 최근 30분) "
+                      f"> {limit_ratio:.0%} · 콜 실패 {st_calls:.0f}건 → 원인은 {where}. "
+                      "⚠️ 턴 분석 자체는 정상이다(FR6 실패 격리) — 조용히 스탠스만 안 쌓인다",
+                  ))
+          elif os.environ.get("STANCE_EXPECTED") == "true":
+              # 게이트를 켰다고 선언한 뒤에만 이 침묵이 이상하다. 기본값에서는 아무 말도 안 한다.
+              signals.append((
+                  "STANCE_SILENT",
+                  "스탠스 게이트를 켰다고 설정돼 있는데 최근 30분 **켜진 턴이 0** 이다 — "
+                  "코어 `enableLlmAnswerBrandStance` 발행·lane 배포 버전을 확인하라",
+              ))
+
+          # 오토스케일 알람이 INSUFFICIENT_DATA 로 굳어 있으면 **오토스케일이 안 돈다**(B1 재발 지문).
+          stuck = [a for a in as_alarms if a["state"] == "INSUFFICIENT_DATA"]
+          if stuck:
+              names = ", ".join("`%s`" % a["name"] for a in stuck)
+              signals.append(("AUTOSCALE_BLIND", f"오토스케일 알람이 INSUFFICIENT_DATA 로 서 있다: {names} — 수식 메트릭이 굶으면 스케일이 **한 번도 안 돈다**(2026-09-12~13 B1 의 지문)"))
+
+          # 등급 — 0=PASS / 1=주의 / 2=긴급 (룰 alert-routing 6). 상시 재발하는 신호를 매번
+          # 적색으로 내면 **긴급이 묻힌다.** standby 발화는 "lane 이 받아내는 중" 이지 "멈췄다"
+          # 가 아니므로 혼자일 때는 주의다. 다른 신호가 하나라도 섞이면 그쪽이 등급을 정한다.
+          # 스탠스 신호가 **주의(1)** 인 이유: FR6 로 턴 분석은 계속 완주한다 — 서비스가 멈춘 게
+          # 아니라 부가 데이터가 안 쌓이는 것이다. 이것을 적색으로 내면 진짜 긴급이 묻힌다.
+          WARN_ONLY = {"STANDBY_FAILOVER", "STANCE_FAILING", "STANCE_SILENT"}
+          level = 0 if not signals else (1 if all(c.split(":")[0] in WARN_ONLY for c, _ in signals) else 2)
+
+          verdict = {
+              "healthy": not signals,
+              "severity": level,
+              "severityLabel": {0: "🟢 정상", 1: "🟡 주의", 2: "🔴 이상"}[level],
+              # 지문 = 신호 코드의 정렬 집합. 같은 지문이면 코멘트하지 않는다(30분 주기 스팸 방지).
+              "fingerprint": "|".join(sorted(c for c, _ in signals)) or "HEALTHY",
+              "lines": [t for _, t in signals],
+              "gauges": gauges,
+              "ecs": ecs,
+              "alarms": {a["name"]: a["state"] for a in alarms},
+              "autoscaleAlarms": {a["name"]: a["state"] for a in as_alarms},
+          }
+          print(json.dumps(verdict, ensure_ascii=False))
+          PY
+
+          python3 -c "import json;v=json.load(open('verdict.json'));print('healthy=%s' % ('true' if v['healthy'] else 'false'));print('fingerprint=%s' % v['fingerprint'])" >> "$GITHUB_OUTPUT"
+          {
+            echo "### lane-health"
+            python3 -c "import json;v=json.load(open('verdict.json'));print('**판정**: ' + v['severityLabel']);print();[print('- ' + l) for l in v['lines']];print();print('게이지: ' + json.dumps(v['gauges'], ensure_ascii=False));print();print('ECS: ' + json.dumps(v['ecs']))"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # ── 표면화 ────────────────────────────────────────────────────────────────
+      # 열린 이슈가 있으면 코멘트, 없으면 생성 — 코어 `ontology-health.yml` 과 같은 패턴이다.
+      # ⚠️ 다만 주기가 **30분**이라 매 회차 코멘트하면 이슈를 못 쓰게 된다. 그래서 신호 집합의
+      #    **지문**이 직전 코멘트와 같으면 침묵한다(상태가 바뀔 때만 말한다).
+      - name: 이상을 이슈로 표면화
+        if: ${{ always() && steps.probe.outputs.healthy == 'false' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FINGERPRINT: ${{ steps.probe.outputs.fingerprint }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -uo pipefail
+          TITLE="[lane-health] 분석 lane 이상"
+          DETAIL="$(python3 -c "import json;v=json.load(open('verdict.json'));print('**등급**: ' + v['severityLabel']);print();print('\n'.join('- ' + l for l in v['lines']))")"
+          STATE="$(python3 -c "import json;v=json.load(open('verdict.json'));print('알람: ' + json.dumps(v['alarms'], ensure_ascii=False) + '\n게이지: ' + json.dumps(v['gauges'], ensure_ascii=False) + '\nECS: ' + json.dumps(v['ecs']))")"
+          BODY="$DETAIL
+
+          $STATE
+
+          실행 로그: $RUN_URL
+          지문: \`$FINGERPRINT\`
+
+          **대응**
+          1. \`WorkerCount==0 && QueueDepth>0\` — 함대 하한부터 본다: \`aws application-autoscaling describe-scalable-targets --service-namespace ecs --resource-ids service/scope-analysis-stage/analysis-worker-stage\`. \`MinCapacity\` 가 0 이면 누군가 \`-c workerMin=0\` 으로 배포했거나 정지 절차가 안 끝났다(README '함대 정지').
+          2. \`AUTOSCALE_BLIND\` — 타깃추적 수식의 메트릭이 굶었다. \`aws cloudwatch list-metrics --namespace ECS/ContainerInsights --metric-name RunningTaskCount\` 로 분모가 실재하는지 먼저 확인한다(B1 재발이면 네임스페이스가 다시 \`AWS/ECS\` 로 돌아간 것이다).
+          3. \`NO_GAUGE\` — **lane 이 아픈 게 아니라 눈이 먼 것**이다. api 서비스(desired 1)가 살아 있는지, 로그 그룹에 \`analysis_lane.gauges\` 가 들어오는지 본다.
+          4. \`ALARM:scope-analysis-terminal-failures-*\` — 결과 없이 태운 LLM 실비다. 워커 로그의 \`analysis_lane.turn_failed\` 분류를 먼저 센다.
+          5. \`ALARM:scope-analysis-duplicate-completions-*\` — **이중 지출이 지금 진행 중**이다. 가장 급하다.
+          6. \`STALE\` — 소비가 멈췄다. 워커 running 수와 리스 만료(리퍼)를 본다.
+          7. \`STANDBY_FAILOVER\`(주의) — **lane 이 아니라 OpenRouter 가 아프다.** 워커 로그의 \`analysis_lane.pool_standby\` 로 어느 태스크·풀인지 보고, \`analysis_lane.pool_standby_wiring_failed\` 가 함께 있으면 그건 공급자 장애가 아니라 **직결 배선 결함**이다(키·모델·요청 형식). \`analysis_lane.pool_primary_missing\` 이 기동 로그에 있으면 OpenRouter 키가 아예 빠진 것이다."
+          # ⚠️ 조회는 **제목으로만** 한다. `--label` 을 걸면 라벨이 아직 리포에 없거나 폴백 경로로
+          #    만들어진 무라벨 이슈를 못 찾아 **매 회차 새 이슈**를 만든다(30분 주기 = 하루 48건).
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+            --search "$TITLE in:title" --json number --jq '.[0].number // empty' 2>/dev/null || true)
+          if [ -z "$EXISTING" ]; then
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --label "$ISSUE_LABEL" --body "$BODY" \
+              || gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body "$BODY"
+            exit 0
+          fi
+          # 같은 지문이면 침묵한다 — 30분 주기에서 매 회차 코멘트는 이슈를 못 쓰게 만든다.
+          LAST=$(gh issue view "$EXISTING" --repo "$GITHUB_REPOSITORY" --json comments \
+            --jq '.comments[-1].body // ""' 2>/dev/null || true)
+          case "$LAST" in
+            *"지문: \`$FINGERPRINT\`"*)
+              echo "이슈 #$EXISTING 의 직전 코멘트와 지문이 같다 — 침묵한다 ($FINGERPRINT)" ;;
+            *)
+              gh issue comment "$EXISTING" --repo "$GITHUB_REPOSITORY" --body "$BODY" ;;
+          esac
+
+      # 해소되면 코멘트 후 **닫는다.** 닫지 않으면 다음 이상이 같은 이슈에 묻힌다.
+      - name: 해소되면 이슈 닫기
+        if: ${{ always() && steps.probe.outputs.healthy == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -uo pipefail
+          TITLE="[lane-health] 분석 lane 이상"
+          # ⚠️ 조회는 **제목으로만** 한다. `--label` 을 걸면 라벨이 아직 리포에 없거나 폴백 경로로
+          #    만들어진 무라벨 이슈를 못 찾아 **매 회차 새 이슈**를 만든다(30분 주기 = 하루 48건).
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+            --search "$TITLE in:title" --json number --jq '.[0].number // empty' 2>/dev/null || true)
+          [ -n "$EXISTING" ] || exit 0
+          STATE="$(python3 -c "import json;v=json.load(open('verdict.json'));print('게이지: ' + json.dumps(v['gauges'], ensure_ascii=False) + '\nECS: ' + json.dumps(v['ecs']))")"
+          gh issue comment "$EXISTING" --repo "$GITHUB_REPOSITORY" \
+            --body "해소됨 — 모든 신호가 정상이다.
+
+          $STATE
+
+          실행 로그: $RUN_URL"
+          gh issue close "$EXISTING" --repo "$GITHUB_REPOSITORY"
+
+      # 잡 자체가 실패하는 경우(권한 외의 이유 — aws cli 오류·타임아웃 등)도 신호다.
+      # ⚠️ 이것이 없으면 **감시가 안 도는 사각지대**가 생긴다(alert-routing 룰 7).
+      - name: 잡 실패를 이슈로 표면화
+        if: ${{ failure() && steps.perm.outputs.missing == '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -uo pipefail
+          TITLE="[lane-health] 헬스 프로브 자체가 실패했다"
+          BODY="lane-health 잡이 실패했다 — **lane 의 상태를 모른다**(정상이라는 뜻이 아니다).
+
+          실행 로그: $RUN_URL"
+          # ⚠️ 조회는 **제목으로만** 한다. `--label` 을 걸면 라벨이 아직 리포에 없거나 폴백 경로로
+          #    만들어진 무라벨 이슈를 못 찾아 **매 회차 새 이슈**를 만든다(30분 주기 = 하루 48건).
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+            --search "$TITLE in:title" --json number --jq '.[0].number // empty' 2>/dev/null || true)
+          if [ -n "$EXISTING" ]; then
+            echo "이미 열린 이슈 #$EXISTING — 재코멘트하지 않는다"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --label "$ISSUE_LABEL" --body "$BODY" \
+              || gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body "$BODY"
+          fi

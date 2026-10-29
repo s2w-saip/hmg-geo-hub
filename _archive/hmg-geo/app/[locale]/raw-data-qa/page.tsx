@@ -1,0 +1,40 @@
+import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { getTranslations, setRequestLocale } from "next-intl/server";
+import { Card } from "@/components/ui/card";
+import { QA_COOKIE, verifyReviewerCookie } from "@/lib/qa/auth";
+import { GateForm } from "./_components/gate-form";
+
+// 검수 게이트. 이름(평문) + 공유 비밀번호만 받는다 — 검수자는 GGMD 계정이 없다.
+
+export default async function RawDataQaGatePage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+
+  // 이미 유효한 세션이면 목록으로. 새로고침마다 이름을 다시 치게 하지 않는다.
+  const jar = await cookies();
+  if (verifyReviewerCookie(jar.get(QA_COOKIE)?.value)) {
+    redirect(`/${locale}/raw-data-qa/answers`);
+  }
+
+  const t = await getTranslations("qaReview.gate");
+
+  return (
+    <main className="grid min-h-dvh place-items-center px-6 py-12">
+      <div className="w-full max-w-sm">
+        <Card className="px-8 py-10">
+          <h1 className="font-head text-lg font-semibold tracking-tight text-foreground">
+            {t("heading")}
+          </h1>
+          <p className="mt-1 text-sm text-ink-500">{t("lead")}</p>
+          <GateForm locale={locale} />
+          <p className="mt-6 text-xs leading-relaxed text-ink-500">{t("notice")}</p>
+        </Card>
+      </div>
+    </main>
+  );
+}

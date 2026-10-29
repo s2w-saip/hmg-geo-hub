@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GEO Citation Report</title>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
+<style>
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --ink:#16181d; --mut:#737880; --line:#dfe2e7; --track:#edeff2; --soft:#f6f7f9;
+    --brand:#002C5F; --brand-soft:#E4EAF1; --brand-ink:#002C5F; --brand-deep:#00142F;
+    --font:'Pretendard','Noto Sans KR',-apple-system,BlinkMacSystemFont,sans-serif;
+  }
+  html{font-size:10pt}
+  body{font-family:var(--font);color:var(--ink);background:#fff;line-height:1.55;
+    -webkit-font-smoothing:antialiased;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  @page{size:A4 portrait;margin:0}
+  .page{position:relative;width:210mm;height:297mm;padding:16mm 15mm 13mm;
+    display:flex;flex-direction:column;overflow:hidden;background:#fff}
+  @media screen{body{background:#8b8e93;padding:22px 0}
+    .page{margin:0 auto 22px;box-shadow:0 6px 28px rgba(0,0,0,.30)}}
+  @media print{.page{break-after:page;page-break-after:always}
+    .page:last-child{break-after:auto;page-break-after:auto}}
+  .num{font-variant-numeric:tabular-nums}
+
+  .ph{display:flex;justify-content:space-between;align-items:flex-end;
+    padding-bottom:11px;border-bottom:2px solid var(--ink);margin-bottom:18px}
+  .ph .l .eb{font-size:8pt;font-weight:700;letter-spacing:.18em;color:var(--brand-ink);text-transform:uppercase}
+  .ph .l h2{font-size:17pt;font-weight:800;letter-spacing:-.02em;margin-top:5px;line-height:1.1}
+  .ph .r{text-align:right;font-size:8pt;color:var(--mut);line-height:1.5}
+  .ph .r b{display:block;font-size:9pt;color:var(--ink);font-weight:700}
+  .pf{margin-top:auto;display:flex;justify-content:space-between;align-items:center;
+    font-size:7.4pt;color:var(--mut);border-top:1px solid var(--line);padding-top:7px}
+  .pf b{color:var(--brand-ink);font-weight:700}
+
+  .cv{padding:0}
+  .cv-bar{height:8px;background:var(--brand)}
+  .cv-in{flex:1;display:flex;flex-direction:column;padding:18mm 18mm 14mm}
+  .cv-top{display:flex;justify-content:space-between;align-items:flex-start}
+  .cv-logo{height:30px}.cv-logo svg{height:100%;width:auto;max-width:175px}
+  .cv-tag{font-size:8.5pt;font-weight:700;letter-spacing:.2em;color:var(--mut);text-transform:uppercase;text-align:right;line-height:1.7}
+  .cv-mid{margin-top:auto;margin-bottom:auto}
+  .cv-eb{font-size:10pt;font-weight:800;letter-spacing:.26em;color:var(--brand-ink);text-transform:uppercase}
+  .cv-h1{font-size:46pt;font-weight:800;letter-spacing:-.035em;line-height:1.02;margin-top:14px}
+  .cv-h2{font-size:16pt;font-weight:600;color:var(--mut);margin-top:12px;letter-spacing:-.01em}
+  .cv-desc{font-size:10.5pt;color:#3a3f47;margin-top:22px;text-align:left;line-height:1.85;word-break:keep-all}
+  .cv-meta{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);margin-top:30px}
+  .cv-meta .c{padding:13px 15px;border-right:1px solid var(--line)}
+  .cv-meta .c:last-child{border-right:0}
+  .cv-meta .k{font-size:7.6pt;color:var(--mut);font-weight:600;letter-spacing:.03em;text-transform:uppercase}
+  .cv-meta .v{font-size:11.5pt;font-weight:700;margin-top:4px;word-break:normal;overflow-wrap:anywhere;line-height:1.3}
+  .cv-meta .vs{font-size:7.6pt;font-weight:600;color:var(--mut);margin-top:3px;line-height:1.3}
+  .mk{font-weight:800;font-size:10pt;line-height:1}
+  .mk-good{color:var(--brand)}
+  .mk-warn{color:#D9822B}
+  .mk-bad{color:#B23A34}
+  .cv-foot{display:flex;justify-content:space-between;align-items:flex-end;margin-top:26px;
+    font-size:8pt;color:var(--mut);border-top:1px solid var(--ink);padding-top:11px}
+
+  .donut text{font-family:var(--font)}
+  .dn-num{font-weight:800;fill:var(--ink)}
+  .dn-unit{font-weight:700;fill:var(--mut)}
+
+  .hero{display:flex;gap:24px;align-items:center;border:1px solid var(--line);
+    border-radius:10px;padding:17px 26px;background:var(--soft)}
+  .hero .ht{flex:1}
+  .hero .ht .big{font-size:13pt;font-weight:800;line-height:1.4;letter-spacing:-.01em}
+  .hero .ht .big em{font-style:normal;color:var(--brand-ink)}
+  .hero .ht .sm{font-size:8.8pt;color:var(--mut);margin-top:9px;line-height:1.6}
+
+  .kpi3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
+  .kpi3 .k3{border:1px solid var(--line);border-radius:9px;padding:14px 16px}
+  .kpi3 .v{font-size:19pt;font-weight:800;letter-spacing:-.02em;color:var(--brand-ink)}
+  .kpi3 .l{font-size:8.6pt;font-weight:700;margin-top:3px}
+  .kpi3 .s{font-size:7.8pt;color:var(--mut);margin-top:2px}
+
+  .dist{margin-top:12px;border:1px solid var(--line);border-radius:9px;padding:14px 22px}
+  .dist-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:13px}
+  .dist-h .t{font-size:9pt;font-weight:800;letter-spacing:.04em;color:var(--brand-ink);text-transform:uppercase}
+  .dist-h .s{font-size:8pt;color:var(--mut);font-weight:600}
+  .dbar{display:flex;height:26px;border-radius:5px;overflow:hidden}
+  .dbar i{display:flex;align-items:center;justify-content:center;font-size:8.4pt;font-weight:800;color:#fff;font-style:normal}
+  .s-good{background:var(--brand)}
+  .s-warn{background:#D9822B}
+  .s-bad{background:#B23A34}
+  .dleg{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:12px;font-size:8.2pt;color:var(--mut)}
+  .dleg .k{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+  .dleg b{color:var(--ink);font-weight:700}
+
+  .find{margin-top:12px;border:1px solid var(--line);border-radius:9px;padding:14px 22px}
+  .find .ft{font-size:8.5pt;font-weight:800;letter-spacing:.06em;color:var(--brand-ink);text-transform:uppercase;margin-bottom:12px}
+  .find ul{list-style:none;counter-reset:f}
+  .find li{font-size:9.6pt;color:#2c3138;padding-left:20px;position:relative;margin-bottom:10px;line-height:1.65}
+  .find li:last-child{margin-bottom:0}
+  .find li::before{content:counter(f);counter-increment:f;position:absolute;left:0;top:2px;
+    width:15px;height:15px;border-radius:50%;background:var(--brand);color:#fff;font-size:7.5pt;
+    font-weight:700;display:flex;align-items:center;justify-content:center}
+  .kpi3 .g{color:var(--brand-ink);font-weight:700}
+  .kpi3 .stp{font-size:7.3pt;font-weight:800;letter-spacing:.06em;color:var(--brand-ink);text-transform:uppercase;margin-bottom:5px}
+  .ddesc{font-size:8.3pt;color:var(--mut);line-height:1.55;margin:-4px 0 12px}
+  .expect{margin-top:12px;border:1px solid var(--brand);border-radius:9px;padding:14px 22px;background:var(--brand-soft)}
+  .expect .xt{font-size:12.5pt;font-weight:800;letter-spacing:-.01em;color:var(--brand-ink);margin-bottom:10px}
+  .expect .xrow{display:flex;gap:10px;margin-bottom:7px;align-items:flex-start}
+  .expect .xk{flex:0 0 auto;font-size:8pt;font-weight:800;color:#fff;background:var(--brand);border-radius:20px;padding:3px 11px;margin-top:2px;white-space:nowrap}
+  .expect .xv{font-size:10.2pt;font-weight:700;color:#16181d;line-height:1.55}
+  .expect .xnote2{font-size:8.3pt;color:var(--mut);margin-top:8px;line-height:1.5}
+  .cv-guide{margin-top:24px;border-left:3px solid var(--brand);padding:4px 0 4px 16px}
+  .cv-guide .gt{font-size:8.5pt;font-weight:800;letter-spacing:.08em;color:var(--brand-ink);text-transform:uppercase;margin-bottom:7px}
+  .cv-guide ul{list-style:none}
+  .cv-guide li{font-size:9.3pt;color:#3a3f47;margin-bottom:5px;line-height:1.6;padding-left:12px;position:relative}
+  .cv-guide li::before{content:'·';position:absolute;left:2px;color:var(--brand);font-weight:800}
+  .miles{margin-top:16px}
+  .miles .mt{font-size:8.5pt;font-weight:800;letter-spacing:.06em;color:var(--brand-ink);text-transform:uppercase;margin-bottom:8px}
+  .miles ul{list-style:none}
+  .miles li{font-size:9.5pt;color:#2c3138;padding-left:14px;position:relative;margin-bottom:5px;line-height:1.5}
+  .miles li::before{content:'·';position:absolute;left:4px;color:var(--brand);font-weight:800}
+
+  .lead-x{font-size:9.3pt;color:var(--mut);margin-bottom:14px;line-height:1.55}
+  .cards{display:flex;flex-direction:column;gap:13px}
+  .card{border:1px solid var(--line);border-radius:10px;padding:16px 20px}
+  .card .ch{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
+  .card .ch .nm{font-size:13pt;font-weight:800;letter-spacing:-.01em}
+  .card .ch .en{font-size:8pt;color:var(--mut);font-weight:600;letter-spacing:.02em}
+  .chip{display:inline-block;font-size:7.8pt;font-weight:700;padding:2.5px 9px;border-radius:20px;letter-spacing:.01em;margin-left:auto}
+  .c-good{color:var(--brand-ink);background:var(--brand-soft)}
+  .c-warn{color:#5a5f66;background:#eceef1}
+  .c-bad{color:#fff;background:var(--brand)}
+  .card .why{font-size:9.8pt;color:#23272d;line-height:1.6}
+  .bench{margin-top:12px;padding-top:11px;border-top:1px solid var(--track);display:flex;flex-direction:column;gap:6px}
+  .bench-row{display:flex;align-items:center;gap:12px}
+  .bench-name{flex:0 0 27mm;font-size:8.2pt;color:var(--mut);font-weight:600}
+  .bench-row.self .bench-name{color:var(--brand-ink);font-weight:800}
+  .bench-track{flex:1;height:9px;background:var(--track);border-radius:5px;overflow:hidden}
+  .bench-fill{height:100%;border-radius:5px;background:#aeb4bc}
+  .bench-row.self .bench-fill{background:var(--brand)}
+  .bench-val{flex:0 0 13mm;text-align:right;font-size:8.6pt;font-weight:700;color:var(--mut)}
+  .bench-row.self .bench-val{color:var(--brand-ink);font-weight:800}
+
+  .legend{display:flex;gap:18px;align-items:center;font-size:8.2pt;color:var(--mut);margin-bottom:13px}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:-1px;margin-right:5px}
+  .d-good{background:var(--brand)}
+  .d-warn{background:#c7ccd2}
+  .d-bad{background:#fff;border:1.5px solid var(--brand)}
+  .grp{border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-bottom:11px}
+  .grp-h{display:flex;align-items:center;gap:13px;padding:8px 15px;background:var(--soft);border-bottom:1px solid var(--line)}
+  .grp-h .gt{font-size:10.5pt;font-weight:800;letter-spacing:-.01em;white-space:nowrap}
+  .grp-h .gt .cnt{color:var(--brand-ink);margin-left:6px}
+  .grp-h .gg{flex:1;font-size:8pt;color:var(--mut);font-weight:600;text-align:right;line-height:1.35}
+  .grp table{width:100%;border-collapse:collapse;table-layout:fixed}
+  .grp th{font-size:7.5pt;color:var(--mut);font-weight:600;padding:5px 0;border-bottom:1px solid var(--track);text-align:center}
+  .grp th.lf{text-align:left;padding-left:15px}
+  .grp td{font-size:8.6pt;padding:6px 0;text-align:center;border-bottom:1px solid var(--track);vertical-align:middle}
+  .grp tr:last-child td{border-bottom:0}
+  .grp td.lf{text-align:left;padding-left:15px;padding-right:10px;color:#3a3f47}
+  .grp td.lf .pt2{line-height:1.4;font-size:8.8pt;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .grp td.lf .pp{font-family:'SF Mono',ui-monospace,monospace;font-size:7.8pt;color:#555;
+    word-break:break-all;overflow-wrap:anywhere;line-height:1.32;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .grp td.mo{color:var(--mut);font-style:italic;font-size:7.5pt;text-align:left;padding:5px 0 7px 15px}
+  .cnote{font-size:9pt;color:#23272d;line-height:1.6;background:var(--brand-soft);border-left:3px solid var(--brand);
+    border-radius:0 6px 6px 0;padding:11px 15px;margin:-4px 0 14px}
+  .xnote{font-size:7.8pt;color:var(--mut);text-align:right;margin-top:3px}
+
+  table.src{width:100%;border-collapse:collapse;border:1px solid var(--line)}
+  table.src th{font-size:7.5pt;color:var(--mut);font-weight:600;padding:6px 0;border-bottom:1px solid var(--line);background:var(--soft);text-align:center}
+  table.src th.lf{text-align:left;padding-left:15px}
+  table.src td{font-size:8.8pt;padding:7px 0;border-bottom:1px solid var(--track);vertical-align:middle;text-align:center}
+  table.src tr:last-child td{border-bottom:0}
+  table.src td.lf{text-align:left;padding-left:15px;font-family:'SF Mono',ui-monospace,monospace;font-size:8.2pt;color:#3a3f47}
+  table.src td.ty{font-size:7.9pt;color:var(--mut);text-align:left;padding-left:8px}
+  table.src tr.ref{background:var(--brand-soft)}
+  table.src tr.ref td.lf{font-weight:800;color:var(--brand-ink)}
+  .sb{height:10px;background:#eef0f3;border-radius:5px;overflow:hidden;margin:0 12px}
+  .sb i{display:block;height:100%;border-radius:5px}
+  .sb .self{background:var(--brand)}
+  .sb .own{background:#6E8CB2}
+  .sb .ext{background:#c3c8cf}
+
+  .diag{border:1px solid var(--line);border-radius:10px;padding:20px 22px}
+  .diag .tag{display:inline-block;font-size:8.2pt;font-weight:800;color:#fff;background:var(--brand);
+    padding:4px 12px;border-radius:20px;margin-bottom:14px;letter-spacing:.02em}
+  .diag ul{list-style:none}
+  .diag li{font-size:9.7pt;color:#2c3138;padding-left:14px;position:relative;margin-bottom:10px;line-height:1.7}
+  .diag li:last-child{margin-bottom:0}
+  .diag li::before{content:'·';position:absolute;left:4px;color:var(--brand);font-weight:800}
+
+  .ax-h{font-size:11pt;font-weight:800;margin:6px 0 10px;letter-spacing:-.01em}
+  .ax-h:not(:first-of-type){margin-top:20px}
+  table.std{width:100%;border-collapse:collapse;border:1px solid var(--line)}
+  table.std th{background:transparent;color:var(--ink);font-size:8.2pt;font-weight:800;text-align:left;padding:8px 12px;border-bottom:2px solid var(--ink)}
+  table.std td{font-size:8.6pt;padding:9px 12px;border-bottom:1px solid var(--track);vertical-align:top;line-height:1.5}
+  table.std tr:last-child td{border-bottom:0}
+  table.std td.lab{font-weight:700;white-space:nowrap;color:var(--brand-ink)}
+  table.std td.lab small{display:block;color:var(--mut);font-weight:500;font-size:7.6pt;margin-top:1px}
+  table.std td.gd{background:var(--brand-soft)}
+  .apx-note{font-size:8pt;color:var(--mut);margin-top:6px}
+</style>
+</head>
+<body>
+<div id="report"></div>
+<script id="report-data" type="application/json">{"brand": "hyundai", "scope": "Hyundai Australia", "org": "Hyundai", "site": "hyundai.com/au", "lang": "ko", "date": "2026.08.06", "round": "2026.07.18 ~ 07.20", "totalPages": 7, "logoSvg": "<svg\n   xmlns:dc=\"http://purl.org/dc/elements/1.1/\"\n   xmlns:cc=\"http://creativecommons.org/ns#\"\n   xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"\n   xmlns:svg=\"http://www.w3.org/2000/svg\"\n   xmlns=\"http://www.w3.org/2000/svg\"\n   xmlns:sodipodi=\"http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd\"\n   xmlns:inkscape=\"http://www.inkscape.org/namespaces/inkscape\"\n   version=\"1.1\"\n   id=\"Layer_1\"\n   width=\"1000\"\n   height=\"128.62\"\n   viewBox=\"0 0 999.99997 128.62\"\n   overflow=\"visible\"\n   enable-background=\"new 0 0 371.549 47.788\"\n   xml:space=\"preserve\"\n   sodipodi:docname=\"Hyundai.svg\"\n   style=\"overflow:visible\"\n   inkscape:version=\"0.92.2 (5c3e80d, 2017-08-06)\"><metadata\n     id=\"metadata839\"><rdf:RDF><cc:Work\n         rdf:about=\"\"><dc:format>image/svg+xml<\/dc:format><dc:type\n           rdf:resource=\"http://purl.org/dc/dcmitype/StillImage\" /><dc:title><\/dc:title><\/cc:Work><\/rdf:RDF><\/metadata><defs\n     id=\"defs837\" /><sodipodi:namedview\n     pagecolor=\"#ffffff\"\n     bordercolor=\"#666666\"\n     borderopacity=\"1\"\n     objecttolerance=\"10\"\n     gridtolerance=\"10\"\n     guidetolerance=\"10\"\n     inkscape:pageopacity=\"0\"\n     inkscape:pageshadow=\"2\"\n     inkscape:window-width=\"1366\"\n     inkscape:window-height=\"705\"\n     id=\"namedview835\"\n     showgrid=\"false\"\n     inkscape:zoom=\"0.59615285\"\n     inkscape:cx=\"561.61885\"\n     inkscape:cy=\"-53.207781\"\n     inkscape:window-x=\"-8\"\n     inkscape:window-y=\"-8\"\n     inkscape:window-maximized=\"1\"\n     inkscape:current-layer=\"Layer_1\" /><g\n     id=\"g832\"\n     transform=\"matrix(2.6914334,0,0,2.6914334,3.9289753e-4,0.00201068)\"><path\n       d=\"m 347.254,12.112 h -15.209 c -2.553,0.151 -3.266,0.784 -3.266,3.883 v 8.543 h 18.475 z m 8.098,-6.841 v 37.252 h -8.098 V 31.815 h -18.475 v 10.708 h -8.098 V 13.319 c 0,-5.16 2.09,-8.048 8.098,-8.048 z m -42.768,8.041 v 20.16 c 0,6.418 -3.605,9.044 -8.099,9.044 H 278.942 V 5.264 h 25.543 c 6.898,0 8.099,4.386 8.099,8.048 z m -8.195,2.242 c 0,-2.041 -1.244,-3.449 -3.422,-3.449 h -13.926 v 23.276 l 13.926,-10e-4 c 3.172,-0.161 3.422,-2.063 3.422,-3.572 z M 113.868,5.264 h 8.098 v 14.683 h 18.118 V 5.264 h 8.098 v 37.251 h -8.098 V 27.313 h -18.118 v 15.202 h -8.098 V 5.264 Z m 48.193,0 10.152,15.229 10.03,-15.229 h 9.833 L 176.258,29.08 v 13.436 h -8.099 V 29.078 L 152.231,5.264 Z m 75.472,0 h 26.096 c 3.719,0 7.32,0.522 7.215,8.048 v 29.204 h -8.098 V 15.988 c 0,-3.208 -0.385,-3.883 -2.902,-3.883 h -14.211 v 30.411 h -8.1 z m 134.016,0.007 v 37.252 h -8.1 V 5.271 Z M 196.126,42.516 h 26.094 c 5.188,0 7.321,-1.501 7.216,-8.981 V 5.264 h -8.098 v 26.593 c 0,3.188 -0.385,3.575 -2.902,3.575 H 204.225 L 204.224,5.264 h -8.098 z\"\n       id=\"path828\"\n       inkscape:connector-curvature=\"0\"\n       style=\"clip-rule:evenodd;fill:#003984;fill-rule:evenodd\" /><path\n       d=\"m 56.707,29.416 c 0.714,3.69 -1.22,6.755 -2.827,9.73 -1.785,2.768 -4.731,5.147 -8.272,4.791 -7.946,-0.119 -15.712,-1.339 -22.914,-3.512 -0.327,-0.089 -0.654,-0.298 -0.833,-0.595 -0.149,-0.417 0.06,-0.804 0.357,-1.071 6.577,-5.327 14.403,-7.796 22.14,-10.386 2.886,-0.833 5.952,-1.726 9.195,-1.309 1.338,0.179 2.677,1.102 3.154,2.352 z M 83.816,13.645 c 3.69,3.035 7.023,7.172 5.892,12.171 -1.845,7.38 -9.879,11.308 -16.277,13.807 -3.482,1.161 -6.993,2.352 -10.802,2.709 -0.238,-0.03 -0.625,0.029 -0.685,-0.328 l 0.089,-0.416 c 5.416,-6.101 9.522,-12.944 13.124,-19.878 1.666,-3.125 3.214,-6.338 4.642,-9.493 0.208,-0.238 0.417,-0.357 0.655,-0.446 1.338,0.118 2.291,1.16 3.362,1.874 z M 31.888,5.789 31.769,6.235 C 23.943,15.132 18.795,25.458 13.915,35.724 12.963,36.617 12.04,35.426 11.177,35.039 6.832,32.183 2.904,27.57 4.035,22.095 5.85,14.954 13.2,11.145 19.331,8.557 c 3.63,-1.369 7.41,-2.47 11.397,-3.095 0.417,-10e-4 0.952,-0.06 1.16,0.327 z m 38.835,1.428 c 0.446,0.238 0.982,0.327 1.25,0.773 0.238,0.506 -0.238,0.833 -0.506,1.161 -6.16,4.82 -13.212,7.499 -20.414,9.85 -3.661,0.893 -7.351,2.5 -11.427,1.607 -0.953,-0.238 -1.815,-0.863 -2.351,-1.786 -1.012,-2.797 0.357,-5.713 1.547,-8.153 1.577,-3.065 4.375,-6.666 8.243,-6.725 8.332,-0.06 16.188,1.19 23.658,3.273 z M 81.019,7.455 C 87.328,10.907 94.47,16.977 93.726,25.071 92.863,32.57 85.87,37.807 79.621,40.962 61.379,49.681 35.758,49.948 16.921,42.331 10.552,39.683 3.41,35.13 0.731,28.285 -1.322,22.661 1.177,16.799 5.374,12.901 14.152,4.926 25.341,2.189 36.858,0.611 c 12.499,-1.518 25.651,-0.179 36.84,3.66 2.5,0.923 4.97,1.935 7.321,3.184 z\"\n       id=\"path830\"\n       inkscape:connector-curvature=\"0\"\n       style=\"clip-rule:evenodd;fill:#003984;fill-rule:evenodd\" /><\/g><\/svg>", "cover": {"kicker": "GEO Citation Report", "h1": "HYUNDAI Australia", "h2": "오피셜 사이트 AI 답변 인용 현황 · 1차 측정", "desc": "본 리포트는 현대자동차 호주 공식 웹사이트(hyundai.com/au)의 Generative Engine Optimization(GEO) 개선 작업에 앞서 현재 상태를 진단한 베이스라인(Baseline) 자료입니다. 주요 프롬프트 100개를 기준으로 2개 AI 엔진에서의 공식 사이트 인용 비율 및 동시 인용 출처 현황을 분석·정리하였습니다.", "meta": [{"k": "진단 대상", "v": "hyundai.com/au"}, {"k": "측정 프롬프트", "v": "100"}, {"k": "AI 답변", "v": "200", "s": "ChatGPT 100 · Gemini 100"}, {"k": "측정일", "v": "2026.07.20"}], "confidential": "Confidential — HMG Internal", "guide": ["AI 답변이 오피셜 사이트를 출처로 인용하는지는 새로운 디지털 노출 지표입니다 — 인용되지 않으면 브랜드 정보의 서술 주도권이 외부 출처로 넘어갑니다.", "모든 수치는 전사 공통 기준 · 최근 측정 라운드 스냅샷으로 산출되어 국가 간 비교가 가능하며, 비교 기준선은 글로벌 평균입니다."]}, "kpis": {"owned": {"v": "71.5", "n": 143, "t": 200, "unit": "답변", "label": "오피셜 인용 답변률", "g": 55.0, "step": "1단계 · 사이트 도달", "def": "전체 답변 중 자사 인용 답변 비중"}, "share": {"v": "30.0", "n": 582, "t": 1939, "unit": "인용", "label": "오피셜 인용 점유율", "g": 23.0, "step": "2단계 · 커버리지", "def": "전체 인용 출처 중 자사 비중"}, "target": {"v": "32.0", "n": 32, "t": 100, "unit": "프롬프트", "label": "타겟 URL 인용률", "g": 24.6, "step": "3단계 · 페이지 도달", "def": "지정 페이지 정확 인용 · 가장 엄격"}}, "sumBig": "답변 200건 중 <em>143건(71.5%)<\/em>이 오피셜 사이트를 인용했으며, 지정 페이지까지 정확히 인용된 프롬프트는 <em>32개(32.0%)<\/em>입니다.", "sumSm": "프롬프트 100개 × AI 엔진 2종(ChatGPT·Gemini) = 답변 200건. 전체 인용 1,939건 중 자사 인용은 582건(30.0%). 판정: 오피셜 인용 상 × 타겟 URL 상 — 기준은 부록 참조.", "dist": {"good": 32, "warn": 60, "bad": 8, "total": 100, "labels": {"good": "지정 페이지까지 정확 인용", "warn": "사이트는 인용, 지정 페이지 미도달", "bad": "사이트 인용 없음"}, "desc": "프롬프트 100개 각각에 대해 답변 인용을 URL 기준으로 판정한 분포입니다: 지정 페이지까지 정확 인용(○) / 사이트는 인용됐으나 지정 페이지에는 미도달(△) / 사이트 인용 없음(✕)."}, "findings": ["답변 200건 중 자사 인용 143건(71.5%) · 전체 인용 1,939건 중 자사 582건(30.0%) · 지정 페이지 정확 인용 32개 프롬프트(32.0%)로, 세 지표 모두 전사 평균을 상회합니다.", "자사 base(582회)가 대체 출처 1위 carexpert.com.au(113회)의 5.2배로, 출처 구조에서 오피셜 사이트가 확실한 우위를 유지하고 있습니다.", "대체 출처 상위가 호주 현지 자동차 전문 미디어(carexpert·carsales·whichcar·drive)로 구성되며, 타국·글로벌 현대 사이트로의 유출은 제한적입니다(합산 226회, 자사 base의 39%).", "사이트 인용이 전혀 없는 프롬프트는 8개(8%)에 그치나, 사이트는 인용되되 지정 페이지에 도달하지 못한 프롬프트가 60개(60%)로 남아 있습니다 — 페이지 단위 도달이 다음 개선 여지입니다."], "milestone": {"t": "예상 마일스톤", "li": ["7월 : 웹사이트 인용 현황 1차 측정 완료 (본 리포트)", "8월 중 : 웹사이트 개선 작업 지원 — 타겟 페이지 도달률 중심", "개선 후 : 재측정으로 인용률 변화 추적 (동일 프롬프트·동일 기준)"]}, "metricsLead": "각 지표가 AI 검색에서 무엇을 의미하며 왜 중요한지, 그리고 전사 측정 사이트(117개) 평균 대비 현재 위치를 함께 표시합니다. 막대 축은 0~100% 고정으로 국가 간 비교 기준이 동일합니다. '답변률'은 전체 답변 중 자사 인용 비중(도달), '점유율'은 전체 인용 출처 중 자사 비중(커버리지)이라는 점에서 다른 지표입니다.", "metrics": [{"label": "오피셜 인용 답변률", "en": "Official Citation Rate", "verdict": "good", "vtext": "상", "why": "AI 답변이 출처로 오피셜 사이트를 실제 인용한 비율입니다. 타국·글로벌 현대 사이트 인용은 인정하지 않습니다. 이 값이 높으면 브랜드 정보의 서술 주도권을 오피셜 사이트가 쥐고 있다는 뜻입니다.", "self": 71.5, "global": 55.0, "brandAvg": 56.9}, {"label": "오피셜 인용 점유율", "en": "Citation Share", "verdict": "good", "vtext": "상", "why": "답변에 등장한 전체 인용(출처 링크) 중 자사 사이트가 차지하는 비중입니다. 답변 하나에 여러 출처가 인용되므로, 점유율이 높을수록 답변 서사에서 자사 페이지의 비중이 큽니다.", "self": 30.0, "global": 23.0, "brandAvg": 24.7}, {"label": "타겟 URL 인용률", "en": "Target URL Hit Rate", "verdict": "good", "vtext": "상", "why": "프롬프트마다 답의 근거가 되어야 할 지정 페이지가 정확히 인용된 비율입니다. 페이지 단위 콘텐츠가 AI에 도달하는지를 측정하는 가장 엄격한 지표로, 상 구간에서도 추가 개선 여지가 가장 큰 지표입니다.", "self": 32.0, "global": 24.6, "brandAvg": 25.6}], "benchNames": {"self": "Hyundai AU", "global": "글로벌 평균", "brand": "Hyundai 평균"}, "casesLead": "프롬프트 원문 일부와 지정 페이지, 답변 2건(엔진 2종) 중 자사 인용 수, 타겟 도달 여부입니다. 전체 100개 내역은 동봉 데이터 파일에 수록합니다.", "caseGroups": [{"label": "인용되고 있는 프롬프트", "count": 32, "gap": "지정 페이지까지 정확 인용 — 차량 모델·보증·서비스 전반에 고르게 분포", "rows": [{"p": "What electric vehicles does Hyundai Australia have in its range?", "u": "/en/cars/eco", "n": "2/2", "v": "good"}, {"p": "What SUV models does Hyundai Australia offer, from compact to 8-seat options?", "u": "/en/cars/suvs", "n": "2/2", "v": "good"}, {"p": "What small cars does Hyundai Australia sell, including hatchbacks, sedans, and performance models?", "u": "/en/cars/small-cars", "n": "2/2", "v": "good"}, {"p": "What commercial vans and trucks does Hyundai Australia sell for businesses?", "u": "/en/cars/people-movers-and-commercial", "n": "2/2", "v": "good"}, {"p": "Can a novated lease on a Hyundai save me income tax, and are there extra benefits for electric cars?", "u": "/en/shop/novated-lease", "n": "2/2", "v": "good"}], "more": "외 27개"}, {"label": "인용되지 않는 프롬프트", "count": 8, "gap": "사이트 인용 없음 — 소수 잔존, 미디어 출처가 대신 인용됨", "rows": [{"p": "What concept cars has Hyundai developed over the years?", "u": "/en/why-hyundai/concept-cars", "n": "0/2", "v": "bad"}, {"p": "What is Hyundai's history in motorsport?", "u": "/en/why-hyundai/performance/hyundai-motorsports", "n": "0/2", "v": "bad"}, {"p": "What is the Hyundai IONIQ 5 and where can I buy one in Australia?", "u": "/en/cars/eco/ioniq5", "n": "0/2", "v": "bad"}, {"p": "What is the difference between a Hyundai SUV and the STARIA People Mover for larger families?", "u": "/en/cars/suvs-and-people-movers", "n": "0/2", "v": "bad"}, {"p": "What performance credentials does the Hyundai IONIQ 6 N offer as an electric sports sedan?", "u": "/en/cars/eco/ioniq6n", "n": "0/2", "v": "bad"}], "more": "외 3개", "note": "※ 측정 프롬프트는 각 페이지의 콘텐츠가 답변의 근거로 인용될 수 있도록 페이지 내용을 기반으로 설계한 질문입니다. 이 때문에 일부 문장이 실제 사용자 표현과 다소 다르게 느껴질 수 있습니다."}], "srcLead": "자사 base와 함께 어떤 출처가 인용되는지입니다. 공유 도메인(hyundai.com 등)은 국가/경로 단위로 분해해 집계했으며, 자사 base 행을 기준으로 함께 표시합니다.", "srcBase": {"k": "hyundai.com/au", "n": 582, "t": "자사 base (기준)"}, "srcMax": 582, "sources": [{"k": "carexpert.com.au", "n": 113, "t": "자동차 미디어(호주)", "c": "ext"}, {"k": "carsales.com.au", "n": 80, "t": "자동차 마켓플레이스(호주)", "c": "ext"}, {"k": "hyundai.news", "n": 58, "t": "자사 뉴스룸(글로벌)", "c": "own"}, {"k": "hyundainews.com", "n": 55, "t": "자사 뉴스룸(미국)", "c": "own"}, {"k": "whichcar.com.au", "n": 46, "t": "자동차 미디어(호주)", "c": "ext"}, {"k": "hyundai.com/content", "n": 41, "t": "자사 공용 리소스 경로", "c": "own"}, {"k": "hyundaiusa.com", "n": 36, "t": "타국 자사(미국)", "c": "own"}, {"k": "hyundai.com/worldwide", "n": 36, "t": "자사 글로벌 페이지", "c": "own"}, {"k": "salehyundai.com.au", "n": 31, "t": "현지 딜러(호주)", "c": "ext"}, {"k": "drive.com.au", "n": 25, "t": "자동차 미디어(호주)", "c": "ext"}], "srcNote": "막대·점유율 = 전체 인용 대비 비중(0~100% 고정 축, 국가 간 비교 동일 기준) · 네이비 = 자사 base · 옅은 네이비 = 자사 계열(글로벌·타국·뉴스룸) · 회색 = 외부 출처", "obs": {"tag": "오피셜 인용 상 × 타겟 URL 상", "li": ["사이트·페이지 모두 안정적으로 인용되고 있으며, AI 답변의 출처 구조에서 오피셜 사이트가 1위를 유지하고 있습니다.", "자사 base(582회)가 대체 출처 1위(현지 미디어 carexpert.com.au, 113회)의 5배 이상으로, 전사 117개 사이트 중 최상위 그룹입니다.", "외부 인용은 호주 현지 자동차 전문 미디어에 집중되고 타국·글로벌 자사 페이지로의 유출이 적습니다 — 국가 사이트가 자국 질문의 정본 역할을 하고 있는 구조입니다.", "남은 여지는 페이지 단위 도달입니다: 사이트는 인용되나 지정 페이지에 도달하지 못한 프롬프트가 60개(60%)로, 해당 페이지의 콘텐츠 보강 시 타겟 URL 인용률(32.0%)의 추가 상승 여지가 있습니다.", "본 측정은 개선 작업 전 기준선입니다. 현 구조를 유지하면서 동일 프롬프트·동일 기준 재측정으로 변화를 추적합니다."]}, "apxCrit": {"t": "판정 기준", "cols": ["지표", "상", "중", "하"], "rows": [{"item": "오피셜 인용 답변률", "sub": "글로벌 평균 55.00%", "good": "60% 이상", "warn": "30 ~ 60%", "bad": "30% 미만"}, {"item": "오피셜 인용 점유율", "sub": "글로벌 평균 23.00%", "good": "25% 이상", "warn": "10 ~ 25%", "bad": "10% 미만"}, {"item": "타겟 URL 인용률", "sub": "글로벌 평균 24.60%", "good": "30% 이상", "warn": "10 ~ 30%", "bad": "10% 미만"}], "note": "종합 구간 판정은 (오피셜 인용 답변률 × 타겟 URL 인용률) 두 지표의 상·중·하 등급 조합으로 나뉩니다.<br>각 지표에서 \"상\" 등급은 글로벌 평균을 상회하는 수준을 뜻합니다.<br>· 답변률 60% (글로벌 평균 55.00%)<br>· 점유율 25% (글로벌 평균 23.00%)<br>· 타겟 URL 30% (글로벌 평균 24.60%)"}, "terms": [{"t": "GEO", "sub": "생성형 엔진 최적화", "d": "ChatGPT·Gemini 같은 생성형 AI가 질문에 답할 때, 우리 페이지를 정확히 발견·이해·인용하도록 만드는 최적화 활동."}, {"t": "base URL", "sub": "자사 기준 주소", "d": "해당 국가 오피셜 사이트의 기준 주소(hyundai.com/au). 이 주소 이하 페이지 인용만 자사 인용으로 인정하며, 타국·글로벌 현대 사이트는 자사 계열로 별도 분류(자사 불인정). 타 브랜드(기아·제네시스)·그룹 지주·미러 호스트는 타사."}, {"t": "인용", "sub": "citation", "d": "AI 답변이 근거로 제시한 출처 링크. 답변 하나에 여러 인용이 포함될 수 있음."}, {"t": "타겟 URL", "sub": "지정 페이지", "d": "프롬프트마다 답의 근거가 되어야 할 페이지로 사전에 지정한 주소. 사이트 인용과 별개로, 이 주소가 정확히 인용됐는지를 판정."}, {"t": "측정 라운드 스냅샷", "sub": "", "d": "사이트별 마지막 측정일 기준 최근 라운드에서, 프롬프트×엔진 쌍마다 가장 최신의 완료 답변 1건씩을 채택한 데이터셋. 국가 간 동일 기준."}, {"t": "프롬프트", "sub": "prompt", "d": "사이트 콘텐츠(모델·견적·시승·보증 등)를 기반으로 설계한 자연어 질문."}], "expect": {"t": "기대 성과", "rows": [{"k": "현재 상황", "v": "전사 상위권 — 세 지표 모두 글로벌 평균 상회"}, {"k": "다음 액션·목표", "v": "지정 페이지 미도달 프롬프트 60개 개선 → 타겟 URL 인용률을 파일럿 성과 수준(80~90%대)까지 상승 (보수적 기대 70%대)"}], "note": "근거: 파일럿(오너스 매뉴얼 최적화) 작업에서 타겟 출처 인용률이 60%대에서 80~90%대로 상승한 실적."}}</script>
+<script>
+const D = JSON.parse(document.getElementById('report-data').textContent);
+const esc = s => String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const dot = k => `<span class="dot d-${k}"></span>`;
+const MARK = {good:'○', warn:'△', bad:'✕'};
+
+function donut(pct, r, sw){
+  const C = 2*Math.PI*r, f = C*pct/100, sz = (r+sw)*2+4, cx = sz/2;
+  return `<svg class="donut" width="${sz}" height="${sz}" viewBox="0 0 ${sz} ${sz}">
+    <circle cx="${cx}" cy="${cx}" r="${r}" fill="none" stroke="var(--track)" stroke-width="${sw}"/>
+    <circle cx="${cx}" cy="${cx}" r="${r}" fill="none" stroke="var(--brand)" stroke-width="${sw}"
+      stroke-dasharray="${f.toFixed(2)} ${(C-f).toFixed(2)}" transform="rotate(-90 ${cx} ${cx})"/>
+    <text class="dn-num" x="${cx}" y="${cx}" text-anchor="middle" dominant-baseline="central"
+      font-size="${r*0.52}">${pct}<tspan class="dn-unit" font-size="${r*0.3}">%</tspan></text>
+  </svg>`;
+}
+function ph(eb,h2,r){return `<div class="ph"><div class="l"><div class="eb">${eb}</div><h2>${h2}</h2></div><div class="r">${r}</div></div>`;}
+function pf(n){return `<div class="pf"><span>GEO Citation Report · <b>${esc(D.scope)}</b></span><span>${esc(D.org)} &nbsp;·&nbsp; ${String(n).padStart(2,'0')} / ${String(D.totalPages).padStart(2,'0')}</span></div>`;}
+const hdrR = `<b>${esc(D.scope)}</b>${esc(D.site)}`;
+
+function cover(){
+  const m = D.cover.meta.map(c=>`<div class="c"><div class="k">${esc(c.k)}</div><div class="v num">${esc(c.v)}</div>${c.s?`<div class="vs num">${esc(c.s)}</div>`:''}</div>`).join('');
+  return `<section class="page cv">
+    <div class="cv-bar"></div>
+    <div class="cv-in">
+      <div class="cv-top">
+        <div class="cv-logo">${D.logoSvg}</div>
+        <div class="cv-tag">Generative Engine<br>Optimization</div>
+      </div>
+      <div class="cv-mid">
+        <div class="cv-eb">${esc(D.cover.kicker)}</div>
+        <div class="cv-h1">${esc(D.cover.h1)}</div>
+        <div class="cv-h2">${esc(D.cover.h2)}</div>
+        <p class="cv-desc">${esc(D.cover.desc)}</p>
+        ${D.cover.guide?`<div class="cv-guide"><div class="gt">이 리포트를 읽는 관점</div><ul>${D.cover.guide.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:''}
+        <div class="cv-meta">${m}</div>
+      </div>
+      <div class="cv-foot"><span>${esc(D.org)} · GEO Citation Report · ${esc(D.date)}</span><span>${esc(D.cover.confidential)}</span></div>
+    </div>
+  </section>`;
+}
+
+function summary(){
+  const K = D.kpis, ds = D.dist, T = ds.total;
+  const pc = n => (n/T*100).toFixed(1)+'%';
+  const gp=Math.round(ds.good/T*100), wp=Math.round(ds.warn/T*100), bp=100-gp-wp;
+  const k3 = ['owned','share','target'].map(k=>`<div class="k3">
+      ${K[k].step?`<div class="stp">${K[k].step}</div>`:''}
+      <div class="v num">${K[k].v}%</div><div class="l">${K[k].label}</div>
+      ${K[k].def?`<div class="s">${K[k].def}</div>`:''}
+      <div class="s num">${K[k].n.toLocaleString()} / ${K[k].t.toLocaleString()} ${K[k].unit}</div>
+      ${K[k].g!=null?`<div class="s num g">글로벌 평균 ${K[k].g}%</div>`:''}</div>`).join('');
+  const fnd = D.findings.map(f=>`<li>${esc(f)}</li>`).join('');
+  return `<section class="page">
+    ${ph('Executive Summary','핵심 측정 요약',hdrR)}
+    <div class="hero">
+      <div class="gauge">${donut(D.kpis.owned.v, 40, 13)}</div>
+      <div class="ht"><div class="big">${D.sumBig}</div><div class="sm">${esc(D.sumSm)}</div></div>
+    </div>
+    <div class="kpi3">${k3}</div>
+    <div class="dist">
+      <div class="dist-h"><span class="t">타겟 URL 도달 분포</span><span class="s num">프롬프트 ${T}개</span></div>
+      ${ds.desc?`<div class="ddesc">${esc(ds.desc)}</div>`:''}
+      <div class="dbar">
+        <i class="s-good" style="width:${pc(ds.good)}">${ds.good}</i>
+        <i class="s-warn" style="width:${pc(ds.warn)}">${ds.warn}</i>
+        <i class="s-bad" style="width:${pc(ds.bad)}">${ds.bad}</i>
+      </div>
+      <div class="dleg">
+        <span><span class="mk mk-good">○</span> ${ds.labels.good} <b class="num">${ds.good}</b> · ${gp}%</span>
+        <span><span class="mk mk-warn">△</span> ${ds.labels.warn} <b class="num">${ds.warn}</b> · ${wp}%</span>
+        <span><span class="mk mk-bad">✕</span> ${ds.labels.bad} <b class="num">${ds.bad}</b> · ${bp}%</span>
+      </div>
+    </div>
+    <div class="find"><div class="ft">핵심 발견</div><ul>${fnd}</ul></div>
+    ${D.expect?`<div class="expect"><div class="xt">${esc(D.expect.t)}</div>
+      ${(D.expect.rows||[]).map(r=>`<div class="xrow"><span class="xk">${esc(r.k)}</span><span class="xv">${esc(r.v)}</span></div>`).join('')}
+      ${D.expect.note?`<div class="xnote2">${esc(D.expect.note)}</div>`:''}</div>`:''}
+    ${pf(2)}
+  </section>`;
+}
+
+function metrics(){
+  const N = D.benchNames;
+  const c = D.metrics.map(m=>{
+    const row = (name, v, self) => `<div class="bench-row ${self?'self':''}">
+      <span class="bench-name">${esc(name)}</span>
+      <div class="bench-track"><div class="bench-fill" style="width:${Math.min(100,v).toFixed(1)}%"></div></div>
+      <span class="bench-val num">${v.toFixed(1)}%</span></div>`;
+    return `<div class="card">
+      <div class="ch"><span class="nm">${esc(m.label)}</span><span class="en">${esc(m.en)}</span>
+        <span class="chip c-${m.verdict}">판정 ${esc(m.vtext)}</span></div>
+      <div class="why">${esc(m.why)}</div>
+      <div class="bench">${row(N.self,m.self,true)}${row(N.global,m.global,false)}${row(N.brand,m.brandAvg,false)}</div>
+    </div>`;
+  }).join('');
+  return `<section class="page">
+    ${ph('Metrics & Benchmark','지표 정의와 전사 대비 위치',hdrR)}
+    <div class="lead-x">${esc(D.metricsLead)}</div>
+    <div class="cards">${c}</div>
+    ${pf(3)}
+  </section>`;
+}
+
+function cases(){
+  const grps = D.caseGroups.map(g=>{
+    const rows = g.rows.map(r=>`<tr>
+      <td class="lf"><div class="pt2">${esc(r.p)}</div></td>
+      <td class="lf"><span class="pp">${esc(r.u)}</span></td>
+      <td class="num">${esc(r.n)}</td>
+      <td><span class="mk mk-${r.v}">${MARK[r.v]}</span></td></tr>`).join('');
+    const more = g.more?`<tr><td class="mo" colspan="4">${esc(g.more)}</td></tr>`:'';
+    return `<div class="grp">
+      <div class="grp-h"><span class="gt">${esc(g.label)}<span class="cnt num">${g.count}</span></span>
+        <span class="gg">${esc(g.gap)}</span></div>
+      <table><colgroup><col style="width:44%"><col style="width:34%"><col style="width:12%"><col style="width:10%"></colgroup>
+      <thead><tr><th class="lf">프롬프트</th><th class="lf">지정 페이지 (base 이하 경로)</th><th>자사 인용 답변</th><th>타겟 도달</th></tr></thead>
+      <tbody>${rows}${more}</tbody></table>
+    </div>`;
+  }).join('');
+  return `<section class="page">
+    ${ph('Prompt-level Detail','프롬프트별 인용 사례',hdrR)}
+    <div class="lead-x">${esc(D.casesLead)}</div>
+    ${D.caseGroups[1]?.note?`<div class="cnote">${esc(D.caseGroups[1].note)}</div>`:''}
+    <div class="legend"><span><span class="mk mk-good">○</span> 지정 페이지까지 정확 인용</span><span><span class="mk mk-warn">△</span> 사이트는 인용, 지정 페이지 미도달</span><span><span class="mk mk-bad">✕</span> 사이트 인용 없음</span></div>
+    ${grps}
+    <div class="xnote">전체 ${D.dist.total}개 프롬프트 점검 내역은 동봉 데이터 파일(.xlsx)에 수록.</div>
+    ${pf(4)}
+  </section>`;
+}
+
+function sources(){
+  const tot = D.kpis.share.t;
+  const pctS = n => (n/tot*100);
+  const bar = (n, cls) => `<div class="sb"><i class="${cls}" style="width:${pctS(n).toFixed(1)}%"></i></div>`;
+  const ref = `<tr class="ref"><td class="num">—</td><td class="lf">${esc(D.srcBase.k)}</td>
+    <td>${bar(D.srcBase.n,'self')}</td><td class="num" style="font-weight:800">${pctS(D.srcBase.n).toFixed(1)}%</td><td class="num" style="font-weight:800">${D.srcBase.n}</td><td class="ty">${esc(D.srcBase.t)}</td></tr>`;
+  const rows = D.sources.map((s,i)=>`<tr><td class="num">${i+1}</td><td class="lf">${esc(s.k)}</td>
+    <td>${bar(s.n,s.c)}</td><td class="num">${pctS(s.n).toFixed(1)}%</td><td class="num">${s.n}</td><td class="ty">${esc(s.t)}</td></tr>`).join('');
+  return `<section class="page">
+    ${ph('Citation Sources','인용 출처 비교 — 자사 base 대비 대체 출처',hdrR)}
+    <div class="lead-x">${esc(D.srcLead)}</div>
+    <table class="src"><colgroup><col style="width:6%"><col style="width:25%"><col style="width:30%"><col style="width:9%"><col style="width:8%"><col style="width:22%"></colgroup>
+      <thead><tr><th>#</th><th class="lf">도메인 / 경로</th><th>인용 점유율 (0~100%)</th><th>점유율</th><th>인용 수</th><th class="lf" style="padding-left:8px">유형</th></tr></thead>
+      <tbody>${ref}${rows}</tbody></table>
+    <div class="xnote">${esc(D.srcNote)}</div>
+    ${pf(5)}
+  </section>`;
+}
+
+function obsApx(){
+  const li = D.obs.li.map(x=>`<li>${esc(x)}</li>`).join('');
+  const cr = D.apxCrit.rows.map(r=>`<tr><td class="lab">${esc(r.item)}${r.sub?`<small>${esc(r.sub)}</small>`:``}</td><td class="gd">${esc(r.good)}</td><td>${esc(r.warn)}</td><td>${esc(r.bad)}</td></tr>`).join('');
+  const tm = D.terms.map(t=>`<tr><td class="lab">${esc(t.t)}${t.sub?`<small>${esc(t.sub)}</small>`:''}</td><td>${esc(t.d)}</td></tr>`).join('');
+  return `<section class="page">
+    ${ph('Observations','관찰 요약',hdrR)}
+    <div class="diag"><span class="tag">${esc(D.obs.tag)}</span><ul>${li}</ul></div>
+    <div class="miles" style="margin-top:16px"><div class="mt">${esc(D.milestone.t)}</div><ul>${D.milestone.li.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
+    ${pf(6)}
+  </section><section class="page">
+    ${ph('Appendix','부록 · 판정 기준과 용어',hdrR)}
+    <div class="ax-h">${esc(D.apxCrit.t)}</div>
+    <table class="std"><thead><tr><th style="width:34mm">${D.apxCrit.cols[0]}</th><th>${D.apxCrit.cols[1]}</th><th>${D.apxCrit.cols[2]}</th><th>${D.apxCrit.cols[3]}</th></tr></thead><tbody>${cr}</tbody></table>
+    <div class="apx-note">${D.apxCrit.note}</div>
+    <div class="ax-h">용어 설명</div>
+    <table class="std"><thead><tr><th style="width:40mm">용어</th><th>설명</th></tr></thead><tbody>${tm}</tbody></table>
+    ${pf(7)}
+  </section>`;
+}
+
+document.getElementById('report').innerHTML = cover()+summary()+metrics()+cases()+sources()+obsApx();
+document.title = `GEO Citation Report — ${D.scope}`;
+</script>
+</body>
+</html>

@@ -1,0 +1,439 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* Activate the `dark:` variant when an ancestor carries the `.dark` class.
+   Tailwind v4 ships without a built-in dark variant; this `@custom-variant`
+   wires `<html class="dark">` (or any nested `.dark`) to the dark tokens
+   declared below. We do NOT install next-themes — the variant exists so
+   shadcn components render correctly if/when a dark trigger is added later. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------------------------------------------------------------------------
+ * HMG GEO — visual identity tokens + shadcn semantic aliases.
+ *
+ * Two families of tokens live in this block:
+ *   1. HMG identity tokens (--color-brand-*, --color-ink-*, --color-bg-*,
+ *      --color-accent-*, --color-danger). These are the corporate vocabulary
+ *      — fixed across light/dark. Components reference them only when they
+ *      must express brand identity explicitly (wordmark color, active nav,
+ *      brand headline, gold accent).
+ *   2. shadcn semantic tokens (--color-background, --color-primary,
+ *      --color-muted, etc.). These are the component library's interface
+ *      contract. They are aliases that point at CSS variables declared in
+ *      :root (light) and .dark (dark) below, so swapping themes only requires
+ *      swapping the :root/.dark layer.
+ *
+ * Editing token values here re-tunes the entire UI — no component change
+ * required. See openspec/changes/adopt-shadcn-design-stack/design.md.
+ * ------------------------------------------------------------------------- */
+@theme {
+  /* === HMG identity (corporate palette) — fixed values === */
+
+  /* Brand — Hyundai Blue (primary) + computed shades around it.
+     #002c5f is the exact corporate value. */
+  --color-brand-50:  #e6eaf0;
+  --color-brand-300: #6b89b3;
+  --color-brand-500: #1a4d8e;
+  --color-brand-700: #002c5f; /* Hyundai Blue */
+  --color-brand-900: #001533;
+
+  /* Ink (text) — warm near-black + grays. Slight warmth aligns with the Sand
+     family, instead of clinical Tailwind neutrals. */
+  --color-ink-100:   #ece8e3;
+  --color-ink-300:   #c7c2bb;
+  --color-ink-400:   #939393; /* PR #228 정본값 — 감성 밑줄 neutral 톤(2026-09-07) */
+  --color-ink-500:   #6b6660;
+  --color-ink-700:   #2b2825;
+  --color-ink-900:   #0a0908;
+
+  /* Backgrounds — White + Hyundai Sand family (warm light). 4-tier scale:
+     bg(white) < bg-soft(page) < bg-subtle(inset) < bg-warm(emphasis chip).
+     The `bg-subtle` tier (2026-06-08) exists because `--muted` was previously
+     equal to `--bg-soft` = page surface, which made every `bg-muted/N` on the
+     page render as fully transparent. Inserting a slightly darker beige gives
+     muted-tinted surfaces just enough delta to be visible on the page. */
+  --color-bg:        #ffffff;
+  --color-bg-soft:   #f6f3f2; /* Hyundai Light Sand — page surface */
+  --color-bg-subtle: #eee9e2; /* inset surfaces (muted/accent) on page bg */
+  --color-bg-warm:   #e4dcd3; /* Hyundai Sand — emphasis chips */
+
+  /* Accent — used sparingly. Gold = premium signal; Active Blue = info badge;
+     Sky Blue = soft chips; Active Red = errors only. */
+  --color-accent-gold:  #a36b4f; /* Hyundai Gold */
+  --color-accent-info:  #00aad2; /* Active Blue */
+  --color-accent-soft:  #aacae6; /* Sky Blue */
+  --color-danger:       #e63312; /* Active Red */
+
+  /* 시맨틱 — 증감·감정 (2026-09-02 피그마 1:1 정합, 운영 결정).
+     positive = 개선 방향 Δ 배지(피그마 #2d9257). 악화는 danger 그대로.
+     sentiment-* = 우호도 화면의 긍정·중립·혼합·부정 4분류(피그마 327:981). */
+  --color-positive:               #2d9257;
+  --color-sentiment-positive:     #58b982;
+  --color-sentiment-positive-ink: #29a65f;
+  --color-sentiment-neutral:      #d9d9d9;
+  --color-sentiment-mixed:        #edbc23;
+  --color-sentiment-negative:     #c94429;
+  --color-sentiment-negative-ink: #b83838;
+  /* 피그마 보조 텍스트 회색·당사 행 배경(가장 가까운 기존 토큰이 없어 신설). */
+  --color-ink-400:  #939393;
+  --color-brand-25: #f2f5fd;
+
+  /* Chart series — 다중 시리즈(브랜드·엔진) 라인·바 색.
+     recharts 는 Tailwind 클래스를 소비하지 못하고 stroke/fill 에 색 문자열을
+     요구한다. 컴포넌트가 hex 를 들고 있으면 팔레트가 파일마다 갈라지므로
+     (그리고 `@theme` 한 곳에서 재도색하는 규칙이 깨지므로) 시리즈 색도 여기서
+     선언하고, 컴포넌트는 `var(--color-series-N)` 문자열만 참조한다.
+     당사 브랜드는 순환 색이 아니라 엔티티 고정색이다 — "색은 순위가 아니라
+     엔티티를 따른다"(mentions-view.tsx 의 기존 규칙과 동일). */
+  --color-series-1: var(--color-accent-info);
+  --color-series-2: var(--color-brand-300);
+  --color-series-3: var(--color-brand-500);
+  --color-series-4: #0d6e2f;
+  --color-series-5: #b8860b;
+  --color-series-6: #c2410c;
+  --color-series-7: #7c3aed;
+  --color-series-8: var(--color-accent-gold);
+  /* 9~12 — 2026-09-10 확장. 경쟁사 표는 당사 포함 **12행**까지 그리고 색 인덱스가
+     곧 행 인덱스인데, 팔레트가 8색이면 idx 3 과 idx 11 이 같은 색을 받는다. 종전엔
+     도넛 조각이 당사+1개뿐이라 안 보였지만 QA 2차 #4(선택 전부를 조각으로) 이후
+     한 도넛 안에 같은 녹색 두 조각이 나왔다(검증자 B5 실측 Tesla·Volvo #0d6e2f).
+     1~8 의 순서·값은 그대로 두고 뒤에만 붙인다 — 다른 화면의 색이 흔들리면 안 된다.
+     고른 근거: 기존 8색이 비워 둔 색상환 구간(teal 175 · magenta 295 · olive 72 ·
+     wine 336)이고, 넷 다 기존 색과의 최소 Lab ΔE 가 31.8 이상 = 이미 배포된 팔레트의
+     최소 간격(#00aad2↔#6b89b3 = 24.6)보다 멀다. 흰 배경 대비는 3.8~7.9:1. */
+  --color-series-9:  #0f766e; /* teal */
+  --color-series-10: #a21caf; /* magenta */
+  --color-series-11: #728d07; /* olive */
+  --color-series-12: #9d174d; /* wine */
+
+  /* 당사(HMG 3사) 고정색 — 필터로 시리즈 구성이 바뀌어도 흔들리지 않는다. */
+  --color-own-hyundai: var(--color-brand-700);
+  --color-own-kia:     var(--color-danger);
+  --color-own-genesis: var(--color-accent-gold);
+  /* Beta — SNB 의 `(beta)` 접미사 전용 파랑. 값은 2026-09-04 운영 목업에서
+     픽셀 추출(파랑 1,175px 중 안티에일리어싱을 뺀 최암부 60px 평균 #0850dc).
+     brand-700(네이비)·accent-info(시안) 어느 쪽도 이 톤이 아니라 별도 토큰으로
+     둔다. 다크 표면에서는 대비가 모자라 --color-beta-dark 를 쓴다. */
+  --color-beta:      #0850dc;
+  --color-beta-dark: #6b9dff;
+
+  /* === shadcn semantic tokens (point at :root / .dark vars) === */
+
+  --color-background:          var(--background);
+  --color-foreground:          var(--foreground);
+  --color-card:                var(--card);
+  --color-card-foreground:     var(--card-foreground);
+  --color-popover:             var(--popover);
+  --color-popover-foreground:  var(--popover-foreground);
+  --color-primary:             var(--primary);
+  --color-primary-foreground:  var(--primary-foreground);
+  --color-secondary:           var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted:               var(--muted);
+  --color-muted-foreground:    var(--muted-foreground);
+  --color-accent:              var(--accent);
+  --color-accent-foreground:   var(--accent-foreground);
+  --color-destructive:         var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border:              var(--border);
+  --color-input:               var(--input);
+  --color-ring:                var(--ring);
+
+  /* Typography stacks. The repository currently ships Pretendard only; keep
+     Hyundai Sans out of the runtime stack until the licensed files exist so
+     every page avoids repeated font 404s. */
+  --font-head: Pretendard, "Apple SD Gothic Neo", "Noto Sans KR", system-ui,
+    -apple-system, "Segoe UI", sans-serif;
+  --font-text: Pretendard, "Apple SD Gothic Neo", "Noto Sans KR", system-ui,
+    -apple-system, "Segoe UI", sans-serif;
+  --font-sans: var(--font-text);
+
+  /* Radii — restrained, modern. shadcn components use `rounded-md` / `rounded-lg`
+     directly; those classes resolve via these tokens. */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 8px;
+}
+
+/* ---------------------------------------------------------------------------
+ * Light / Dark theme variables.
+ *
+ * These declare the actual values that the shadcn semantic aliases above
+ * point at. Switching themes = switching this layer. No component knows
+ * which mode is active — they just consume the semantic tokens.
+ *
+ * NOTE: Dark values are provisional sensible defaults. A real dark-mode
+ * activation effort (adding a toggle, refining contrast, validating brand
+ * appearance) is out of scope for this change — only the variable plumbing
+ * is prepared. See openspec/changes/adopt-shadcn-design-stack/design.md
+ * (Decision 4) for the rationale.
+ * ------------------------------------------------------------------------- */
+:root {
+  /* Background tiers: page sits on Sand, cards/header/sidebar sit on white.
+     This 1-step tone gap is what creates the "cards floating over surface"
+     feel — without it everything reads as one flat sheet. */
+  --background:             var(--color-bg-soft);  /* page surface */
+  --foreground:             var(--color-ink-900);
+  --card:                   var(--color-bg);       /* elevated surface */
+  --card-foreground:        var(--color-ink-900);
+  --popover:                var(--color-bg);
+  --popover-foreground:     var(--color-ink-900);
+  --primary:                var(--color-brand-700);
+  --primary-foreground:     var(--color-bg);
+  --secondary:              var(--color-bg-warm);  /* warmer Sand for chips */
+  --secondary-foreground:   var(--color-ink-700);
+  --muted:                  var(--color-bg-subtle);  /* WAS bg-soft → indistinguishable from page */
+  --muted-foreground:       var(--color-ink-500);
+  --accent:                 var(--color-bg-subtle);  /* same fix as muted */
+  --accent-foreground:      var(--color-ink-900);
+  --destructive:            var(--color-danger);
+  --destructive-foreground: var(--color-bg);
+  --border:                 var(--color-ink-100);
+  --input:                  var(--color-ink-100);
+  --ring:                   var(--color-brand-500);
+}
+
+.dark {
+  --background:             var(--color-ink-900);
+  --foreground:             var(--color-ink-100);
+  --card:                   #14110f; /* slightly raised from --color-ink-900 */
+  --card-foreground:        var(--color-ink-100);
+  --popover:                #14110f;
+  --popover-foreground:     var(--color-ink-100);
+  --primary:                var(--color-brand-300);
+  --primary-foreground:     var(--color-ink-900);
+  --secondary:              var(--color-ink-700);
+  --secondary-foreground:   var(--color-ink-100);
+  --muted:                  var(--color-ink-700);
+  --muted-foreground:       var(--color-ink-300);
+  --accent:                 var(--color-ink-700);
+  --accent-foreground:      var(--color-ink-100);
+  --destructive:            var(--color-danger);
+  --destructive-foreground: var(--color-ink-100);
+  --border:                 var(--color-ink-700);
+  --input:                  var(--color-ink-700);
+  --ring:                   var(--color-brand-300);
+}
+
+/* Pretendard variable — fallback when Hyundai Sans assets are absent. OFL
+   license, safe to commit (public/fonts/PretendardVariable.woff2). */
+@font-face {
+  font-family: "Pretendard";
+  src: url("/fonts/PretendardVariable.woff2") format("woff2-variations"),
+       url("/fonts/PretendardVariable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------------------------------------------------------------------------
+ * Base reset / body typography.
+ * ------------------------------------------------------------------------- */
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Headings default to the Head family — components can opt-out with a
+   `font-text` utility (Tailwind generates this from --font-text). */
+h1, h2, h3 {
+  font-family: var(--font-head);
+}
+
+/* ---------------------------------------------------------------------------
+ * Visual utility classes (adapted from aeorank, toned down to HMG palette).
+ *
+ * These exist because Tailwind's default shadow/border tokens give a flat,
+ * generic-SaaS look. The utilities below tier the surface system so cards,
+ * popovers, and elevated panels all feel like part of the same hierarchy.
+ * Avoid colored / glow shadows — HMG's palette warrants restraint.
+ * ------------------------------------------------------------------------- */
+@layer utilities {
+  /* Soft elevation tiers (low → high). */
+  .shadow-soft {
+    box-shadow:
+      0 1px 3px 0 rgba(10, 9, 8, 0.08),
+      0 1px 2px 0 rgba(10, 9, 8, 0.04);
+  }
+  .shadow-soft-lg {
+    box-shadow:
+      0 4px 6px -1px rgba(10, 9, 8, 0.08),
+      0 2px 4px -1px rgba(10, 9, 8, 0.04);
+  }
+  .shadow-soft-xl {
+    box-shadow:
+      0 10px 15px -3px rgba(10, 9, 8, 0.08),
+      0 4px 6px -2px rgba(10, 9, 8, 0.04);
+  }
+
+  /* Card surface conventions — semantic tokens so they swap with theme. */
+  .card-modern {
+    background-color: var(--color-card);
+    color: var(--color-card-foreground);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow:
+      0 1px 3px 0 rgba(10, 9, 8, 0.08),
+      0 1px 2px 0 rgba(10, 9, 8, 0.04);
+  }
+  /* HMG-toned gradient. Only for hero / login / occasional callouts.
+     Brand-derived, not generic blue. */
+  .gradient-brand {
+    background: linear-gradient(
+      135deg,
+      var(--color-brand-700) 0%,
+      var(--color-brand-500) 100%
+    );
+  }
+  .gradient-sand {
+    background: linear-gradient(
+      135deg,
+      var(--color-bg) 0%,
+      var(--color-bg-soft) 100%
+    );
+  }
+
+  /* Page / element entry animations. Use sparingly — these are for first
+     paint, not constant motion. */
+  .animate-fade-in {
+    animation: hmg-fade-in 200ms ease-out;
+  }
+  .animate-slide-up {
+    animation: hmg-slide-up 250ms ease-out;
+  }
+
+  /* Indeterminate loading bar — rendered by PageSkeleton inside a route's
+     loading.tsx, i.e. for exactly as long as that route's data is in flight.
+     Indeterminate is the honest shape here: the wait is a session + DB (+ AI
+     gate) round-trip with no progress to report, so a percentage would be
+     fabricated. A looping sweep (not a one-shot fill) because the duration is
+     unknown — a bar that parks at 90% reads as "stuck". */
+  /* The chunk is a fixed-width child (w-2/5), so translateX percentages resolve
+     against the CHUNK's width, not the track's: -100% parks it just off the left
+     edge and 250% (= 2.5 × 40% = 100% of the track) just off the right — so it is
+     on screen for essentially the whole cycle.
+     Do NOT reintroduce scaleX here: with a full-width child, -100%..300% put the
+     chunk outside the track for ~64% of each loop, which reads as a broken bar
+     that only occasionally flashes. */
+  .animate-loading-bar {
+    animation: hmg-loading-bar 1.3s ease-in-out infinite;
+    will-change: transform;
+  }
+
+  @keyframes hmg-loading-bar {
+    from { transform: translateX(-100%); }
+    to   { transform: translateX(250%); }
+  }
+
+  /* Shimmer for skeleton blocks. animate-pulse alone was invisible on the
+     placeholders: they were filled bg-card (white) on the near-white page
+     surface, so a route mid-load looked like a page of empty boxes rather than
+     a page loading. The sweep is what reads as "working". */
+  .animate-shimmer {
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      var(--color-card) 50%,
+      transparent 100%
+    );
+    background-repeat: no-repeat;
+    background-size: 60% 100%;
+    animation: hmg-shimmer 1.6s ease-in-out infinite;
+  }
+
+  @keyframes hmg-shimmer {
+    from { background-position: -80% 0; }
+    to   { background-position: 180% 0; }
+  }
+
+  /* Reduced motion: keep the signal, drop the travel. Both cues stay visible —
+     they are the only indication the page is loading rather than empty. */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-loading-bar {
+      animation: none;
+      transform: none;
+      width: 100%;
+      opacity: 0.7;
+    }
+    .animate-shimmer {
+      animation: none;
+      background-image: none;
+    }
+  }
+
+  @keyframes hmg-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes hmg-slide-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Marker-pen highlight for brand / model surface forms inside a rendered AI
+     answer (answer modal). The <mark> is injected by the rehype plugin in
+     markdown-answer.tsx; the background is a low gradient that "draws" left→
+     right via background-size, staggered by the inline --hl-i so the answer
+     lights up term by term. Two tones keep the drilled brand distinct from the
+     models scope's ontology rolls up to it. */
+  .geo-hl {
+    border-radius: 0.18em;
+    padding: 0 0.08em;
+    color: inherit;
+    background-color: transparent;
+    background-repeat: no-repeat;
+    background-position: 0 0;
+    background-size: 0% 100%;
+    animation: geo-hl-sweep 520ms cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+    animation-delay: calc(min(var(--hl-i, 0), 11) * 60ms);
+  }
+  .geo-hl--brand {
+    background-image: linear-gradient(
+      transparent 52%,
+      color-mix(in srgb, var(--color-accent-soft) 88%, transparent) 52%
+    );
+  }
+  .geo-hl--model {
+    background-image: linear-gradient(
+      transparent 52%,
+      color-mix(in srgb, var(--color-accent-gold) 46%, transparent) 52%
+    );
+  }
+  /* Static swatch (legend) — no sweep, fully painted. */
+  .geo-hl--static {
+    animation: none;
+    background-size: 100% 100%;
+  }
+
+  /* 감성 밑줄(답변 모달) — 배경 하이라이트(.geo-hl)와 같은 자리에 겹쳐도 서로 가리지
+     않도록 **밑줄**로 분리한다(스펙 2026-09-07). 애니메이션 없음. 색은 우호도 화면과
+     같은 sentiment 토큰. */
+  .geo-ul {
+    /* UA 기본 <mark> 스타일(background-color: Mark; color: MarkText)을 반드시 끈다 —
+       Tailwind preflight 에는 mark 리셋이 없어서, 이걸 빼면 밑줄 문장이 통째로 노란
+       블록으로 칠해진다(스펙이 거부한 결과 그대로). .geo-hl 이 같은 두 줄을 갖는 이유. */
+    background-color: transparent;
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.18em;
+    text-decoration-skip-ink: none;
+    cursor: help;
+  }
+  .geo-ul--positive { text-decoration-color: var(--color-sentiment-positive-ink); }
+  .geo-ul--negative { text-decoration-color: var(--color-sentiment-negative-ink); }
+  .geo-ul--mixed    { text-decoration-color: var(--color-sentiment-mixed); }
+  .geo-ul--neutral  { text-decoration-color: var(--color-ink-400); }
+  @media (prefers-reduced-motion: reduce) {
+    .geo-hl {
+      animation: none;
+      background-size: 100% 100%;
+    }
+  }
+  @keyframes geo-hl-sweep {
+    to { background-size: 100% 100%; }
+  }
+}

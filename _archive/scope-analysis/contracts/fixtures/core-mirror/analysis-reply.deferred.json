@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "ticketId": "8f2c1a44-3e61-5b2d-9c07-1a4e6b8d0f23",
+  "traceId": "1c9e7b30-45a2-4f8e-b311-77d6c2a90e45",
+  "status": "deferred",
+  "finishedAt": "2026-09-12T12:34:56.000Z",
+  "analysisVersion": "measurement-analysis-v1",
+  "result": null,
+  "evidence": null,
+  "deferred": {
+    "failureClass": "capacity",
+    "retryAfterMs": 45000,
+    "detail": "provider pool saturated"
+  },
+  "failureReason": null,
+  "terminalReason": null
+}

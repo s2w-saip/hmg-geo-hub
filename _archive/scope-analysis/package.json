@@ -1,0 +1,39 @@
+{
+  "name": "scope-analysis",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Scope 분석 lane — 측정 lane 과 동형 티켓 계약의 별도 TS 서비스",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "test:contracts": "node --import tsx --test tests/contracts.test.ts tests/ticket-id.test.ts",
+    "test:boundary": "node --import tsx --test tests/boundary.test.ts",
+    "test:golden": "node --import tsx --test tests/golden-analysis-core.test.ts",
+    "check:analysis-core-pin": "tsx scripts/check-analysis-core-pin.ts",
+    "sync:analysis-core": "tsx scripts/sync-analysis-core.ts",
+    "api": "tsx app/main.ts",
+    "worker": "tsx worker/main.ts",
+    "migrate": "tsx app/migrate.ts",
+    "cdk:synth": "cd infra && ../node_modules/.bin/cdk synth --quiet"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.7",
+    "hono": "^4.6.14",
+    "postgres": "^3.4.5",
+    "tsx": "^4.23.12",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.2.17",
+    "@types/node": "^22.0.0",
+    "aws-cdk": "^2.1136.0",
+    "aws-cdk-lib": "^2.264.0",
+    "constructs": "^10.8.1",
+    "typescript": "^5.7.0"
+  }
+}

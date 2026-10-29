@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "baseUrl": ".",
+    // 벤더된 순수 분석 코드는 코어의 `@/…` alias 를 **소스 그대로** 들고 온다
+    // (`packages/analysis-core/` — 텍스트 치환 0). 그 alias 를 여기서 받는다:
+    //   · 대부분 → 벤더 트리 자신
+    //   · `@/lib/log`·`@/lib/llm/invoke` → lane shim (코어 운영 인프라·DB 를 안 끌고 오려고)
+    // ⚠️ 더 구체적인 키가 wildcard 보다 우선한다 — 두 shim 줄을 `@/lib/*` **위**에 둔다.
+    // ⚠️ tsx 가 런타임에도 이 paths 를 해석한다(2026-09-12 실측). 그래서 소스를 안 고치고도
+    //    `pnpm test`·컨테이너 실행이 같은 해석을 쓴다.
+    "paths": {
+      "@/lib/log": ["./packages/analysis-core/shims/log.ts"],
+      "@/lib/llm/invoke": ["./packages/analysis-core/shims/llm-invoke.ts"],
+      "@/lib/*": ["./packages/analysis-core/vendor/lib/*"],
+      "@/*": ["./packages/analysis-core/vendor/*"]
+    }
+  },
+  "include": ["app", "worker", "contracts", "tests", "scripts", "packages", "infra/bin", "infra/lib"]
+}

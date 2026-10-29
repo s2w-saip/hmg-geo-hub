@@ -1,0 +1,14 @@
+-- 회차(cycle) 기준일 — 표준/전사 화면의 `측정 기준일` 정본을 measured_at 에서
+-- 회차로 옮기기 위한 미러 컬럼.
+--
+-- 배경(2026-09-05 실측): 루트 프로젝트 be28fe15 의 마지막 회차는 앵커 8/31 인데
+-- 그 회차의 측정이 **9/1 15:30 까지** 이어져, asOf = max(measured_at) 인 화면이
+-- "측정 기준일 2026-09-01" 로 표시했다. 회차는 8/31 이므로 사람이 읽는 기준일과
+-- 데이터가 갈린다. 측정 이월은 예외가 아니라 상시 현상이다(8/1 이후 measured_at
+-- ≠ cycle_anchor_at 인 답변 59,527건).
+--
+-- nullable 로 둔다: scope 의 measurements API 가 아직 `cycle_anchor_at` 을
+-- 응답에 싣지 않으므로(lib/measurements/store.ts listRuns/getRun 매핑에 없음)
+-- 당분간 NULL 이고, 읽기 경로는 COALESCE 로 measured_at 에 폴백한다. scope 가
+-- 필드를 노출하면 싱크가 채우기 시작하고 화면은 코드 변경 없이 회차 기준으로 전환된다.
+ALTER TABLE scope_runs ADD COLUMN IF NOT EXISTS cycle_anchor_at timestamptz;

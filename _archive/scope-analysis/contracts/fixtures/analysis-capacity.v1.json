@@ -1,0 +1,25 @@
+{
+  "totalCallSlots": 300,
+  "inflightCalls": 137,
+  "unitSlots": 80,
+  "leasedUnits": 74,
+  "reservedManualUnits": 2,
+  "queueDepth": 512,
+  "oldestQueuedAgeSeconds": 43.5,
+  "workerCount": 2,
+  "coordination": {
+    "measurementQueueDepth": 61,
+    "measurementLeasedSlots": 12,
+    "measurementCompletedPerMin": null,
+    "measurementSampledAt": "2026-09-12T06:02:00.000Z",
+    "measurementSampleError": null,
+    "prewarmDesiredWorkers": 2,
+    "vcpuBudget": {
+      "quota": 300,
+      "reserve": 40,
+      "measurementAssumed": 200,
+      "analysisMaxVcpu": 60,
+      "analysisMaxWorkers": 16
+    }
+  }
+}

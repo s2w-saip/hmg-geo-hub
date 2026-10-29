@@ -1,0 +1,165 @@
+{
+  "analysisVersion": "measurement-analysis-v1",
+  "candidates": [
+    {
+      "answerSnippets": [
+        "현대 투싼과 Kia Sportage 를 비교해 드립니다."
+      ],
+      "candidateKind": "create_product",
+      "metricImpact": {
+        "assertion": "compare",
+        "entity_type": "Product",
+        "mention_role": "comparison_target",
+        "metric_impact": true,
+        "source": "llm_mention_extraction"
+      },
+      "signature": "llm_mention|Product|미지의 표면 zz9|comparison_target|compare",
+      "suggestedEntityType": "Product",
+      "surfaceNormalized": "미지의 표면 zz9",
+      "surfaceText": "미지의 표면 ZZ9",
+      "surfaceVariants": [
+        "미지의 표면 ZZ9"
+      ]
+    }
+  ],
+  "extractionMetadata": {
+    "analysis_llm_calls": 6,
+    "analysis_llm_cost_usd": 0,
+    "analysis_llm_trace_id": "trace-extract",
+    "analysis_resolver_llm_trace_id": "trace-resolve",
+    "analysis_semantics_llm_trace_id": "trace-semantics",
+    "conflict_matches": 0,
+    "known_matches": 2,
+    "llm_malformed_count": 4,
+    "llm_mention_count": 1,
+    "llm_mention_enabled": true,
+    "llm_mention_failed": true,
+    "llm_mention_semantics_decisions": 1,
+    "llm_mention_semantics_enabled": true,
+    "llm_mention_semantics_failed": false,
+    "llm_mention_semantics_warnings": [],
+    "llm_mention_warnings": [
+      "schema_violation"
+    ],
+    "llm_pending_resolver_decisions": 0,
+    "llm_pending_resolver_enabled": true,
+    "llm_pending_resolver_failed": true,
+    "llm_pending_resolver_ignored": 0,
+    "llm_pending_resolver_kept_pending": 1,
+    "llm_pending_resolver_resolved": 0,
+    "llm_pending_resolver_warnings": [
+      "resolver_timeout"
+    ],
+    "llm_retry_count": 1,
+    "llm_unknown_enabled": false,
+    "parser_partial": true,
+    "tracked_augment_count": 0,
+    "tracked_augment_enabled": true
+  },
+  "mentions": [
+    {
+      "assertion": "compare",
+      "contextSnippet": "현대 투싼과 Kia Sportage 를 비교해 드립니다.",
+      "criteria": [],
+      "descriptors": [
+        "과 Kia Sportage 를 비교해 드립니다."
+      ],
+      "entityId": "00000000-0000-0000-0000-000000000201",
+      "entityType": "Product",
+      "extractionMetadata": {
+        "canonical_name": "Hyundai Tucson",
+        "matched_surface": "현대 투싼",
+        "offset_basis": "codepoint",
+        "resolution_authority_level": "alias",
+        "resolution_authority_priority": 2,
+        "source_end": 5,
+        "source_start": 0,
+        "source_verified": true
+      },
+      "mentionPosition": 1,
+      "mentionRole": "comparison_target",
+      "resolutionConfidence": 0.98,
+      "resolutionMethod": "alias_exact",
+      "resolutionStatus": "resolved",
+      "sentiment": "neutral",
+      "sourceEnd": 5,
+      "sourceStart": 0,
+      "surfaceHash": "cf18ec891eaddeef5277030913d06aa322a5282b960ec1e337cb5639bd5e7e5c",
+      "surfaceLanguage": "ko",
+      "surfaceNormalized": "현대 투싼",
+      "surfaceText": "현대 투싼"
+    },
+    {
+      "assertion": "compare",
+      "contextSnippet": "현대 투싼과 Kia Sportage 를 비교해 드립니다.",
+      "criteria": [],
+      "descriptors": [
+        "현대 투싼과  를 비교해 드립니다."
+      ],
+      "entityId": "00000000-0000-0000-0000-000000000202",
+      "entityType": "Product",
+      "extractionMetadata": {
+        "canonical_name": "Kia Sportage",
+        "matched_surface": "Kia Sportage",
+        "offset_basis": "codepoint",
+        "resolution_authority_level": "alias",
+        "resolution_authority_priority": 2,
+        "source_end": 19,
+        "source_start": 7,
+        "source_verified": true
+      },
+      "mentionPosition": 2,
+      "mentionRole": "comparison_target",
+      "resolutionConfidence": 0.98,
+      "resolutionMethod": "alias_exact",
+      "resolutionStatus": "resolved",
+      "sentiment": "neutral",
+      "sourceEnd": 19,
+      "sourceStart": 7,
+      "surfaceHash": "ca84b21fa21cc06b255f5e0c411bc6e32ebedb52e8a6550aed812c2d75d7cc8f",
+      "surfaceLanguage": "en",
+      "surfaceNormalized": "kia sportage",
+      "surfaceText": "Kia Sportage"
+    },
+    {
+      "assertion": "compare",
+      "contextSnippet": "현대 투싼과 Kia Sportage 를 비교해 드립니다.",
+      "criteria": [],
+      "descriptors": [],
+      "entityId": null,
+      "entityType": "Product",
+      "extractionMetadata": {
+        "entity_type_normalized": false,
+        "llm_mention_type": "compare",
+        "llm_sentiment_source": "llm_semantics_pass",
+        "llm_suggested_entity_type": "Product",
+        "offset_basis": "codepoint",
+        "resolution_authority_level": "llm_proposal",
+        "resolution_authority_priority": 5,
+        "source": "llm_mention_extraction",
+        "source_verified": false,
+        "suggested_entity_type": "Product"
+      },
+      "mentionPosition": 3,
+      "mentionRole": "comparison_target",
+      "resolutionConfidence": 0.55,
+      "resolutionMethod": "llm_proposal",
+      "resolutionStatus": "pending",
+      "sentiment": "mixed",
+      "surfaceHash": "0e27ddee957ba0be41c35bf5d5627da0f9151dbc1a97fdabec4884dd0a7adcdc",
+      "surfaceLanguage": "ko",
+      "surfaceNormalized": "미지의 표면 zz9",
+      "surfaceText": "미지의 표면 ZZ9"
+    }
+  ],
+  "modelSlug": "stub-extract",
+  "parserVersion": "parser-v1",
+  "promptVersion": "prompt-v1",
+  "quality": {
+    "answerChars": 31,
+    "qualityState": "valid_answer",
+    "reason": "substantive answer"
+  },
+  "resolverVersion": "resolver-v1",
+  "sourceTurnHash": "44ef933a6fab0acd904056dc9cc3ca803102267ece618827a3aa54936df92926"
+}

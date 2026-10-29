@@ -1,0 +1,294 @@
+name: push-images-stage
+# 분석 lane 이미지 3종을 **ECR 에 push** 한다. 배포(cdk)·서비스 desired 변경은 하지 않는다.
+#
+# ── 왜 이 워크플로가 따로 있나
+#
+#   `ci.yml` 의 `images` 잡은 **빌드만** 한다("Dockerfile 이 깨졌다"를 잡는 게 목적). 그래서
+#   ECR 은 비어 있고, 그 상태로 `analysis-api` 를 desired 1 로 올리면 태스크가 이미지를 못 당겨
+#   `circuitBreaker` 가 서비스 생성을 실패시킨다. **이미지 push 는 desired 1 의 선행 조건이다.**
+#
+# ── 셀프호스트 → GitHub-hosted + OIDC (운영 결정 2026-09-12)
+#
+#   이전 판은 셀프호스트 러너의 **로컬 AWS 프로필**을 썼다. 이유는 "이 리포는 OIDC 로 AWS 에
+#   들어갈 수 없다" 였다 — 코어 `github-deploy-staging` 역할의 신뢰 조건이
+#   `repo:Kongventures/scope:ref:refs/heads/main` 한 줄뿐이었기 때문이다(2026-09-12 실측).
+#   코어 쪽에 **이 리포 전용 ECR push 역할**이 생겨 그 전제가 사라졌다:
+#     role  arn:aws:iam::371056712389:role/github-deploy-scope-analysis-ecr
+#     trust sub = repo:Kongventures/scope-analysis:ref:refs/heads/main   ← **main 뿐**
+#     push  scope-analysis/api-stage · scope-analysis/worker-stage       ← **2리포 뿐**
+#
+#   ⚠️ **그 신뢰 조건은 2026-09-12 첫 dispatch 에서 실패했다 — sub 형태가 다르다.**
+#      이 리포는 GitHub 의 **immutable subject** 가 켜진 상태로 만들어졌다(신규 리포 기본값):
+#        GET /repos/Kongventures/scope-analysis/actions/oidc/customization/sub
+#          → {"use_default":true,"use_immutable_subject":true,
+#             "sub_claim_prefix":"repo:Kongventures@143683294/scope-analysis@1367179595"}
+#      즉 토큰의 sub 은 `repo:Kongventures@143683294/scope-analysis@1367179595:ref:refs/heads/main`
+#      이고, 롤 신뢰의 평문 sub(`repo:Kongventures/scope-analysis:ref:refs/heads/main`)을
+#      **StringEquals 로 걸었으니 절대 매치되지 않는다.** 코어 리포 `Kongventures/scope` 는
+#      `use_immutable_subject:false` 라 같은 형태가 작동한다 — 그래서 "코어에서 되는데 여기선
+#      안 된다" 로 보인다. 에러는 `Not authorized to perform sts:AssumeRoleWithWebIdentity`
+#      한 줄뿐이라 **권한 설정 문제로 오진된다**(ref 게이트는 통과한 뒤에 죽는다).
+#      해소 경로 둘 중 하나가 선행 조건이다(운영 결정):
+#        (A) 롤 신뢰 sub 을 immutable 형태로 교체 (AWS 쪽 1줄 · 리포 rename/transfer 내성 ↑)
+#        (B) 리포의 use_immutable_subject 를 false 로 (GitHub 쪽 · 기존 신뢰가 그대로 맞는다)
+#
+#   ⚠️ **main 에서만 돈다.** 신뢰 조건에 `ref:refs/heads/main` 이 박혀 있어 다른 브랜치에서
+#      dispatch 하면 STS 가 거부하고, 그 에러는 `Not authorized to perform
+#      sts:AssumeRoleWithWebIdentity` 로만 나와 권한 설정 문제처럼 보인다 → 아래 ref 게이트가
+#      먼저 멈춘다.
+#
+#   ⚠️ **인그레스 이미지는 3번째 리포가 아니라 `api-stage` 리포의 `ingress-` 접두사 태그**다.
+#      롤의 push 대상이 2리포뿐이라 리포를 늘리면 밀 수 없다(롤 확장 = 코어 배포 = 경계 밖).
+#      접두사를 빼면 api 의 `stage-current` 를 덮어써 **api 컨테이너가 nginx 로 기동한다.**
+#
+# 배포 순서(README "배포(스테이징)" 참조):
+#   ① cdk deploy (apiDesired=0)  → ECR 리포 3개가 생긴다
+#   ② 이 워크플로                → 이미지가 들어간다 (api·worker·ingress)
+#   ③ 인그레스 인증서 시크릿 주입 → 8443 이 실제로 열릴 수 있게 된다
+#   ④ cdk deploy (apiDesired=1)  → 접수 개시
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "붙일 태그(비우면 현재 커밋 short sha). 롤백 시 이전 sha 를 다시 굽지 말고 ECR 태그를 재사용하라"
+        required: false
+        default: ""
+concurrency:
+  group: push-images-stage
+  cancel-in-progress: false
+env:
+  AWS_REGION: us-west-2
+  REG: 371056712389.dkr.ecr.us-west-2.amazonaws.com
+  # 역할 ARN 은 비밀이 아니다(계정 id 는 위 REG 에도 있다). 리포 변수로 빼지 않은 것은
+  # 의도다 — 변수가 비면 조용히 실패하는 경로가 하나 더 생긴다.
+  OIDC_ROLE_ARN: arn:aws:iam::371056712389:role/github-deploy-scope-analysis-ecr
+  REPO_API: scope-analysis/api-stage
+  REPO_WORKER: scope-analysis/worker-stage
+  # 인그레스는 리포가 아니라 **태그 접두사**로 가른다(위 ⚠️).
+  INGRESS_TAG_PREFIX: ingress-
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    # OIDC 는 `id-token: write` 없이는 조용히 안 된다 — 토큰 요청이 403 이고 메시지가
+    # "Credentials could not be loaded" 라 권한 문제로 보이지 않는다.
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # main 이 아니면 **여기서 멈춘다.** 롤 신뢰 조건이 `ref:refs/heads/main` 뿐이라
+      # 다른 브랜치는 STS 거부로 죽는데, 그 메시지는 롤·권한 설정 문제처럼 보인다.
+      #
+      # ⚠️ `${{ }}` 를 `run:` **본문**에 직접 펼치지 않는다 — 표현식은 셸이 보기 전에 문자열로
+      #    치환되므로 값에 따옴표·`$(…)` 가 들어가면 스크립트가 다른 스크립트로 바뀐다. 값은
+      #    전부 `env:` 로 넘기고 본문은 셸 변수만 읽는다(`inputs.image_tag` 는 사용자 입력이다).
+      - name: preflight — ref 게이트 (롤 신뢰 조건이 main 전용)
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          if [ "$REF" != "refs/heads/main" ]; then
+            echo "::error::이 워크플로는 main 에서만 돈다. 롤 ${OIDC_ROLE_ARN##*/} 의 신뢰 sub 이 repo:Kongventures/scope-analysis:ref:refs/heads/main 뿐이다 (현재 ref: $REF)."
+            exit 1
+          fi
+
+      - id: tag
+        env:
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          set -euo pipefail
+          TAG="$IMAGE_TAG"
+          if [ -z "$TAG" ]; then TAG="$(git rev-parse --short HEAD)"; fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG"
+
+      - name: aws credentials (OIDC — 장기 키 0)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.OIDC_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: push-images-stage-${{ github.run_id }}
+
+      # ECR 이 없으면 **여기서 멈춘다.** 스택 미배포 상태에서 push 를 시도하면
+      # `repository does not exist` 로 빌드 뒤에 죽어 40분을 버린다 — 선행 조건을 먼저 단언한다.
+      - name: preflight — ECR 리포 2개 존재 확인 (스택 1단계 배포 선행)
+        run: |
+          aws ecr describe-repositories \
+            --repository-names "$REPO_API" "$REPO_WORKER" \
+            --query 'repositories[].repositoryName' --output text \
+          || { echo "::error::ECR 리포가 없다. 먼저 ScopeAnalysis-stage 를 배포하라(cdk deploy --exclusively, apiDesired=0)"; exit 1; }
+
+      - uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: aws-actions/amazon-ecr-login@v2
+
+      # ⚠️ 세 이미지 모두 **linux/arm64** 다. 빌드 컨텍스트는 리포 루트이고 Dockerfile 만 다르다.
+      #    `stage-current` 는 **움직이는 포인터**이고 sha 태그가 불변 좌표다 — 롤백은 sha 로 한다.
+      #
+      # ⚠️ **`docker buildx build` 를 run: 에서 직접 쓰지 않는다.** `--cache-to type=gha` 는
+      #    `ACTIONS_RUNTIME_TOKEN`·`ACTIONS_CACHE_URL` 을 요구하는데 그 env 는 **액션에만** 노출되고
+      #    `run:` 스텝에는 오지 않는다 → 캐시 exporter 설정 실패로 빌드가 죽는다. 공식 액션이
+      #    그 인증을 처리하므로 액션을 쓴다(수동 dispatch 워크플로라 PR CI 에서는 드러나지 않는
+      #    실패였다). `provenance: false` = attestation 매니페스트가 lifecycle 이력을 먹지 않게.
+      - name: build + push api
+        id: api
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile.api
+          platforms: linux/arm64
+          push: true
+          provenance: false
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+          tags: |
+            ${{ env.REG }}/${{ env.REPO_API }}:${{ steps.tag.outputs.tag }}
+            ${{ env.REG }}/${{ env.REPO_API }}:stage-current
+
+      - name: build + push worker
+        id: worker
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile.worker
+          platforms: linux/arm64
+          push: true
+          provenance: false
+          cache-from: type=gha,scope=worker
+          cache-to: type=gha,mode=max,scope=worker
+          tags: |
+            ${{ env.REG }}/${{ env.REPO_WORKER }}:${{ steps.tag.outputs.tag }}
+            ${{ env.REG }}/${{ env.REPO_WORKER }}:stage-current
+
+      # ⚠️ 인그레스는 **api 리포 + 태그 접두사**다(헤더 ⚠️). 접두사를 빼면 위 api 태그를 덮는다.
+      - name: build + push ingress (api 리포의 ingress- 접두사 태그)
+        id: ingress
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile.ingress
+          platforms: linux/arm64
+          push: true
+          provenance: false
+          cache-from: type=gha,scope=ingress
+          cache-to: type=gha,mode=max,scope=ingress
+          tags: |
+            ${{ env.REG }}/${{ env.REPO_API }}:${{ env.INGRESS_TAG_PREFIX }}${{ steps.tag.outputs.tag }}
+            ${{ env.REG }}/${{ env.REPO_API }}:${{ env.INGRESS_TAG_PREFIX }}stage-current
+
+      # push 됐다는 주장을 ECR 에 되물어 확인한다(로컬 push 성공 로그만으로 완료를 주장하지 않는다).
+      # 아키텍처도 **단언**한다 — QEMU 설정이 빠지면 x86 이미지가 조용히 올라가고, 그 사고는
+      # 배포 후 `exec format error` 로만 드러난다(pull 은 성공한다).
+      #
+      # ── arm64 를 **어디서** 읽는가 (2026-09-12 실측으로 고친 자리)
+      #
+      #   초판은 `docker buildx imagetools inspect <ref> | grep linux/arm64` 였다. 그것은
+      #   **정상 이미지에서도 반드시 실패한다**: `platforms: linux/arm64` + `provenance: false`
+      #   면 buildx 가 **index 가 아니라 plain manifest** 를 민다
+      #   (실측: mediaType=application/vnd.docker.distribution.manifest.v2+json). `Platform:`
+      #   줄은 index 의 자식 디스크립터에만 찍히므로 plain manifest 의 기본 출력에는 아예 없다
+      #   (실측: nginx:1.27-alpine 의 arm64 자식을 digest 로 inspect → 기본 출력 3줄, grep 0건).
+      #
+      #   그래서 판정을 **두 층**으로 나눈다:
+      #     ① (차단) 빌드 산출물 디스크립터 — `containerimage.descriptor.platform`. buildx
+      #        metadata 에서 오므로 **레지스트리 권한이 0** 이고, "x86 이 올라갔다"를 정확히 잡는다.
+      #        (실측: provenance=false 단일 플랫폼 빌드의 metadata 에 platform.architecture=arm64
+      #        가 들어온다. provenance 가 켜져 있으면 index 라 이 필드가 없다 — 그래서 여기서도
+      #        `provenance: false` 가 전제다.)
+      #     ② (보강) 레지스트리의 진짜 config — `--format '{{json .Image}}'` 의 `architecture`.
+      #        멀티 index 든 단일 plain manifest 든 통과하고 amd64 에서만 실패한다
+      #        (실측 rc: 단일 arm64 = 0 · 단일 amd64 = 1 · 멀티 index = 0).
+      #        ⚠️ config 는 **blob** 이라 `ecr:GetDownloadUrlForLayer` 가 필요한데, 롤
+      #        `github-deploy-scope-analysis-ecr` 의 인라인 정책에는 그 액션이 **없다**
+      #        (2026-09-12 `iam get-role-policy` 실측: BatchGetImage·DescribeImages 까지).
+      #        롤 확장은 코어 배포 = 이 lane 의 경계 밖이므로, 읽히면 단언하고 못 읽으면
+      #        **경고만** 낸다. arm64 보장은 ①이 이미 차단 게이트로 들고 있다.
+      - name: verify in ECR (태그 존재 + arm64 단언)
+        env:
+          T: ${{ steps.tag.outputs.tag }}
+          META_API: ${{ steps.api.outputs.metadata }}
+          META_WORKER: ${{ steps.worker.outputs.metadata }}
+          META_INGRESS: ${{ steps.ingress.outputs.metadata }}
+        run: |
+          set -euo pipefail
+          # (이름, 리포, 태그, 빌드 metadata) 3쌍 — 인그레스는 api 리포 안의 접두사 태그다.
+          NAMES=("api" "worker" "ingress")
+          REPOS=("$REPO_API" "$REPO_WORKER" "$REPO_API")
+          TAGS=("$T" "$T" "${INGRESS_TAG_PREFIX}${T}")
+          METAS=("$META_API" "$META_WORKER" "$META_INGRESS")
+          for i in 0 1 2; do
+            N="${NAMES[$i]}"; R="${REPOS[$i]}"; TAG="${TAGS[$i]}"; META="${METAS[$i]}"
+            aws ecr describe-images --repository-name "$R" --image-ids imageTag="$TAG" \
+              --query 'imageDetails[0].{tags:imageTags,pushed:imagePushedAt,mb:imageSizeInBytes}' --output json
+
+            PROVEN=""
+
+            # ── ① 빌드 산출물의 플랫폼 (레지스트리 권한 불필요) ──
+            #    plain manifest 를 밀 때만 `platform` 이 있다. index(=provenance 켜짐)면 없으므로
+            #    그 경우엔 ②가 차단 게이트를 맡는다 — **둘 중 하나는 반드시 증명해야 한다**(아래 ③).
+            DESC="$(printf '%s' "$META" | jq -c '."containerimage.descriptor" // {}')"
+            if printf '%s' "$DESC" | jq -e 'has("platform")' >/dev/null; then
+              printf '%s' "$DESC" \
+                | jq -e '.platform.os == "linux" and .platform.architecture == "arm64"' >/dev/null \
+                || { echo "::error::$N 빌드 산출물이 linux/arm64 가 아니다 (태스크 정의는 ARM64). descriptor=$DESC"; exit 1; }
+              PROVEN="build-descriptor"
+              echo "::notice::$N arm64 확인(빌드 디스크립터) $(printf '%s' "$DESC" | jq -r '.mediaType + " " + .digest')"
+            else
+              echo "::warning::$N 빌드 디스크립터에 platform 이 없다(index 형태?) — 레지스트리 config 로만 판정한다. descriptor=$DESC"
+            fi
+
+            # ── ② 레지스트리의 진짜 config 의 architecture ──
+            IT="$(mktemp)"; ITERR="$(mktemp)"
+            if docker buildx imagetools inspect "$REG/$R:$TAG" --format '{{json .Image}}' >"$IT" 2>"$ITERR"; then
+              grep -qE '"architecture"[[:space:]]*:[[:space:]]*"arm64"' "$IT" \
+                || { echo "::error::$R:$TAG 의 레지스트리 config 가 arm64 가 아니다 (태스크 정의는 ARM64)"; exit 1; }
+              PROVEN="${PROVEN:+$PROVEN+}registry-config"
+              echo "::notice::$N arm64 확인(레지스트리 config)"
+            else
+              echo "::warning::$R:$TAG 의 config 를 못 읽었다 — 롤에 ecr:GetDownloadUrlForLayer 가 없으면 예상된 결과다. $(head -c 200 "$ITERR" | tr '\n' ' ')"
+            fi
+            rm -f "$IT" "$ITERR"
+
+            # ── ③ **증명 없는 통과 금지.** 이 스텝의 유일한 금지사항이다 — 두 경로가 다 막히면
+            #    "확인했다"가 아니라 "확인하지 못했다" 이므로 실패시킨다.
+            [ -n "$PROVEN" ] || { echo "::error::$N 의 arm64 를 어느 경로로도 증명하지 못했다(디스크립터에 platform 없음 + config 읽기 실패)"; exit 1; }
+          done
+          # 인그레스 태그가 api 태그를 덮지 않았는지 되본다 — 접두사를 빼면 api 컨테이너가
+          # nginx 로 기동하고, 그 사고는 배포 후 헬스체크에서만 드러난다.
+          test "$(aws ecr describe-images --repository-name "$REPO_API" \
+                   --image-ids imageTag="stage-current" --query 'imageDetails[0].imageDigest' --output text)" \
+            != "$(aws ecr describe-images --repository-name "$REPO_API" \
+                   --image-ids imageTag="${INGRESS_TAG_PREFIX}stage-current" --query 'imageDetails[0].imageDigest' --output text)" \
+            || { echo "::error::api 와 인그레스의 stage-current 가 같은 이미지다 — 태그 접두사가 빠졌다"; exit 1; }
+          echo "::notice::배포에 쓸 태그는 cdk context 로 명시하라 — -c apiImageTag=$T -c workerImageTag=$T -c ingressImageTag=${INGRESS_TAG_PREFIX}${T} (미지정 기본값: stage-current / ${INGRESS_TAG_PREFIX}stage-current)"
+
+  on-failure:
+    needs: [push]
+    if: ${{ always() && needs.push.result == 'failure' }}
+    runs-on: ubuntu-latest
+    # alert-routing 룰: 코드·빌드 실패의 목적지는 GitHub Issue. 기본 GITHUB_TOKEN 은 리포 설정에
+    # 따라 read-only 라 명시 권한이 없으면 이슈가 안 뜬다(측정 lane 2026-09-01 실증).
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - name: surface as GitHub Issue
+        env:
+          GH_TOKEN: "${{ github.token }}"
+        run: |
+          TITLE="push-images-stage 실패 — ${{ github.sha }}"
+          URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          N=$(gh issue list -R "${{ github.repository }}" --label deploy-failure --state open --json number --jq '.[0].number // empty' 2>/dev/null || true)
+          if [ -n "$N" ]; then
+            gh issue comment "$N" -R "${{ github.repository }}" -b "재실패: $URL"
+          else
+            gh issue create -R "${{ github.repository }}" -t "$TITLE" -l deploy-failure -b "이미지 push 실패. run: $URL" \
+              || gh issue create -R "${{ github.repository }}" -t "$TITLE" -b "이미지 push 실패. run: $URL"
+          fi

@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "ticketId": "8f2c1a44-3e61-5b2d-9c07-1a4e6b8d0f23",
+  "traceId": "1c9e7b30-45a2-4f8e-b311-77d6c2a90e45",
+  "lineage": {
+    "workspaceId": "2a6f9d81-0c3b-4e57-8a12-6b9f4c0d7e38",
+    "projectId": "5d3b7e10-8a49-4c2f-9b06-3e1d8f5a2c74",
+    "queryRunId": "9b1f4c72-6d85-4a30-8e59-2c7a0b3d6f81",
+    "promptRunId": "7e4a2d19-5b60-4c83-9f27-0a1b8e6d3c95",
+    "turnRunId": "4c8e1b57-2a93-4d06-8b71-5f3a9c2e7d40",
+    "turnIndex": 1,
+    "attemptNumber": 1
+  },
+  "analysisVersion": "measurement-analysis-v1",
+  "industry": {
+    "ids": [
+      "3f7a2c81-9d40-4e16-b5c2-8a0e7d1f4b69"
+    ],
+    "name": "Home Appliances",
+    "source": "project"
+  },
+  "options": {
+    "analysisVersion": "measurement-analysis-v1",
+    "promptVersion": "p1",
+    "parserVersion": "parser-v1",
+    "resolverVersion": "resolver-v1",
+    "enableLlmMentionExtraction": true,
+    "enableLlmPendingResolver": true,
+    "enableLlmUnknownDiscovery": false,
+    "enableLlmMentionSemantics": true,
+    "enableShortAliasLlmGate": true,
+    "enableTrackedBrandAugment": true,
+    "enableLlmAnswerBrandStance": false,
+    "followUpMode": "natural_consumer"
+  },
+  "turn": {
+    "turnRunId": "4c8e1b57-2a93-4d06-8b71-5f3a9c2e7d40",
+    "turnIndex": 1,
+    "promptText": "30평대 아파트에 맞는 건조기를 추천해 줘",
+    "answerText": "LG 트롬 건조기와 삼성 그랑데 AI 를 비교하면...",
+    "sourceTurnHash": "5b2e0c9a7f134d68a0c5e2b7910d4f3c8e6a1b0d2f7c4e93a5b8d1c0f6e2a483",
+    "target": "chatgpt",
+    "region": "KR"
+  },
+  "context": {
+    "ref": "https://scope.example.com/api/internal/analysis-context/2a6f9d81-0c3b-4e57-8a12-6b9f4c0d7e38/5d3b7e10-8a49-4c2f-9b06-3e1d8f5a2c74/5d3b7e10-8a49-4c2f-9b06-3e1d8f5a2c74%3Aa1b2c3d4e5f60718",
+    "contextVersion": "5d3b7e10-8a49-4c2f-9b06-3e1d8f5a2c74:a1b2c3d4e5f60718"
+  },
+  "citationHostsToClassify": [
+    "lge.co.kr",
+    "danawa.com"
+  ],
+  "deadlineAt": "2026-09-12T18:00:00.000Z",
+  "priority": "scheduled",
+  "callbackUrl": "https://scope.example.com/api/internal/analysis-callback?k=redacted&w=2a6f9d81-0c3b-4e57-8a12-6b9f4c0d7e38"
+}

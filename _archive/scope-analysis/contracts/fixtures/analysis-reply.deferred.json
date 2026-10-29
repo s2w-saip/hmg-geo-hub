@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "ticketId": "6f3d6f7a-2f0e-5a2f-9c1b-0d4a3b5c6d7e",
+  "traceId": "b2b5f0a1-7c3d-4e5f-9a8b-1c2d3e4f5a6b",
+  "status": "deferred",
+  "finishedAt": "2026-09-12T06:02:30.000Z",
+  "analysisVersion": "2026-09-01",
+  "result": null,
+  "evidence": null,
+  "deferred": {
+    "failureClass": "capacity",
+    "retryAfterMs": 15000,
+    "detail": "llm slot acquire timed out after 30000ms"
+  },
+  "failureReason": null,
+  "terminalReason": null
+}

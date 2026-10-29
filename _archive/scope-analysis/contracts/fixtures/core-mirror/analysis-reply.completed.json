@@ -1,0 +1,107 @@
+{
+  "version": 1,
+  "ticketId": "8f2c1a44-3e61-5b2d-9c07-1a4e6b8d0f23",
+  "traceId": "1c9e7b30-45a2-4f8e-b311-77d6c2a90e45",
+  "status": "completed",
+  "finishedAt": "2026-09-12T12:34:56.000Z",
+  "analysisVersion": "measurement-analysis-v1",
+  "result": {
+    "turn": {
+      "turnRunId": "4c8e1b57-2a93-4d06-8b71-5f3a9c2e7d40",
+      "quality": {
+        "qualityState": "valid_answer",
+        "reason": "ok",
+        "answerChars": 412
+      },
+      "mentions": [
+        {
+          "entityId": "6a2d9f41-7c83-4b50-9e16-0f5a8c3b7d24",
+          "entityType": "Brand",
+          "surfaceText": "LG 트롬",
+          "surfaceNormalized": "lg 트롬",
+          "surfaceHash": "b7c1e4a908d3f256",
+          "sourceStart": 0,
+          "sourceEnd": 6,
+          "resolutionStatus": "resolved",
+          "resolutionMethod": "alias_exact",
+          "resolutionConfidence": 0.95,
+          "mentionPosition": 1,
+          "mentionRole": "shortlist_candidate",
+          "assertion": "recommend",
+          "sentiment": "positive",
+          "contextSnippet": "LG 트롬 건조기와 삼성 그랑데 AI 를 비교하면",
+          "descriptors": [
+            "대용량"
+          ],
+          "criteria": [
+            "용량"
+          ],
+          "extractionMetadata": {
+            "llm_confidence": 0.9
+          }
+        }
+      ],
+      "candidates": [
+        {
+          "candidateKind": "create_product",
+          "signature": "llm_mention|Product|그랑데 ai|comparison_target|compare",
+          "surfaceText": "그랑데 AI",
+          "surfaceNormalized": "그랑데 ai",
+          "surfaceVariants": [
+            "그랑데 AI"
+          ],
+          "suggestedEntityType": "Product",
+          "confidence": 0.72,
+          "answerSnippets": [
+            "삼성 그랑데 AI 를 비교하면"
+          ],
+          "metricImpact": {
+            "appearance": 1
+          }
+        }
+      ],
+      "modelSlug": "openrouter/luna",
+      "extractionMetadata": {
+        "known_matches": 1,
+        "analysis_llm_calls": 3,
+        "analysis_llm_cost_usd": 0.0041
+      },
+      "sourceTurnHash": "5b2e0c9a7f134d68a0c5e2b7910d4f3c8e6a1b0d2f7c4e93a5b8d1c0f6e2a483",
+      "failed": false,
+      "failureDetail": null
+    },
+    "citationClassifications": [
+      {
+        "host": "lge.co.kr",
+        "category": "Brand owned",
+        "subcategory": null,
+        "method": "table",
+        "modelSlug": null
+      }
+    ]
+  },
+  "evidence": {
+    "llmUsage": [
+      {
+        "task": "measurement.analysis.extract_mentions",
+        "poolKey": "luna-primary",
+        "modelId": "gpt-5.6-luna",
+        "inputTokens": 3120,
+        "outputTokens": 410,
+        "latencyMs": 2840,
+        "costUsd": 0.0021,
+        "attempts": 1
+      }
+    ],
+    "runtime": {
+      "laneRevision": "analysis-lane@abc1234",
+      "contextVersionUsed": "5d3b7e10-8a49-4c2f-9b06-3e1d8f5a2c74:a1b2c3d4e5f60718",
+      "parallelFlags": {
+        "turn_internal_parallel": false
+      }
+    }
+  },
+  "deferred": null,
+  "failureReason": null,
+  "terminalReason": null
+}

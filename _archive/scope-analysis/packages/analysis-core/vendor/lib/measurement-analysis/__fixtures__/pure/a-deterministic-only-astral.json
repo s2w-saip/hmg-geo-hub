@@ -1,0 +1,113 @@
+{
+  "analysisVersion": "measurement-analysis-v1",
+  "candidates": [],
+  "extractionMetadata": {
+    "analysis_llm_calls": 0,
+    "analysis_llm_cost_usd": 0,
+    "conflict_matches": 0,
+    "known_matches": 3,
+    "llm_malformed_count": 0,
+    "llm_mention_count": 0,
+    "llm_mention_enabled": false,
+    "llm_mention_failed": false,
+    "llm_mention_semantics_decisions": 0,
+    "llm_mention_semantics_enabled": false,
+    "llm_mention_semantics_failed": false,
+    "llm_mention_semantics_warnings": [],
+    "llm_mention_warnings": [],
+    "llm_pending_resolver_decisions": 0,
+    "llm_pending_resolver_enabled": false,
+    "llm_pending_resolver_failed": false,
+    "llm_pending_resolver_ignored": 0,
+    "llm_pending_resolver_kept_pending": 0,
+    "llm_pending_resolver_resolved": 0,
+    "llm_pending_resolver_warnings": [],
+    "llm_retry_count": 0,
+    "llm_unknown_enabled": false,
+    "parser_partial": false,
+    "tracked_augment_count": 0,
+    "tracked_augment_enabled": true
+  },
+  "mentions": [
+    {
+      "assertion": "recommend",
+      "contextSnippet": "🚗 1. 현대 투싼 - 안전 사양과 유지비 균형이 좋아 추천합니다. 2. Kia Sportage 도 비교해볼 수 있습니다. 두 차종 모두 안전 등급이 우수합니다. 참고로 Hyund",
+      "criteria": [
+        "safety",
+        "maintenance"
+      ],
+      "descriptors": [
+        "🚗 1.  - 안전 사양과 유지비 균형이 좋아 추천합니다."
+      ],
+      "entityId": "00000000-0000-0000-0000-000000000201",
+      "entityType": "Product",
+      "extractionMetadata": {
+        "canonical_name": "Hyundai Tucson",
+        "matched_surface": "현대 투싼",
+        "offset_basis": "codepoint",
+        "resolution_authority_level": "alias",
+        "resolution_authority_priority": 2,
+        "source_end": 10,
+        "source_start": 5,
+        "source_verified": true
+      },
+      "mentionPosition": 1,
+      "mentionRole": "shortlist_candidate",
+      "resolutionConfidence": 0.98,
+      "resolutionMethod": "alias_exact",
+      "resolutionStatus": "resolved",
+      "sentiment": "positive",
+      "sourceEnd": 10,
+      "sourceStart": 5,
+      "surfaceHash": "cf18ec891eaddeef5277030913d06aa322a5282b960ec1e337cb5639bd5e7e5c",
+      "surfaceLanguage": "ko",
+      "surfaceNormalized": "현대 투싼",
+      "surfaceText": "현대 투싼"
+    },
+    {
+      "assertion": "recommend",
+      "contextSnippet": "🚗 1. 현대 투싼 - 안전 사양과 유지비 균형이 좋아 추천합니다. 2. Kia Sportage 도 비교해볼 수 있습니다. 두 차종 모두 안전 등급이 우수합니다. 참고로 Hyundai Motor 는 이번 SUV 비교와 무관하므로 제외합니다.",
+      "criteria": [
+        "safety"
+      ],
+      "descriptors": [
+        "도 비교해볼 수 있습니다. 두 차종 모두 안전 등급이 우수합니다."
+      ],
+      "entityId": "00000000-0000-0000-0000-000000000202",
+      "entityType": "Product",
+      "extractionMetadata": {
+        "canonical_name": "Kia Sportage",
+        "matched_surface": "Kia Sportage",
+        "offset_basis": "codepoint",
+        "resolution_authority_level": "alias",
+        "resolution_authority_priority": 2,
+        "source_end": 53,
+        "source_start": 41,
+        "source_verified": true
+      },
+      "mentionPosition": 2,
+      "mentionRole": "shortlist_candidate",
+      "rank": 2,
+      "rankGroup": "rank:2",
+      "resolutionConfidence": 0.98,
+      "resolutionMethod": "alias_exact",
+      "resolutionStatus": "resolved",
+      "sentiment": "neutral",
+      "sourceEnd": 53,
+      "sourceStart": 41,
+      "surfaceHash": "ca84b21fa21cc06b255f5e0c411bc6e32ebedb52e8a6550aed812c2d75d7cc8f",
+      "surfaceLanguage": "en",
+      "surfaceNormalized": "kia sportage",
+      "surfaceText": "Kia Sportage"
+    }
+  ],
+  "parserVersion": "parser-v1",
+  "promptVersion": "prompt-v1",
+  "quality": {
+    "answerChars": 135,
+    "qualityState": "valid_answer",
+    "reason": "substantive answer"
+  },
+  "resolverVersion": "resolver-v1",
+  "sourceTurnHash": "fa23f310b44e241ca72d9c20ba889739692e1619fca19151139ffc9b1b856efd"
+}

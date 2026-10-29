@@ -1,0 +1,6 @@
+{
+  "ticketId": "6f3d6f7a-2f0e-5a2f-9c1b-0d4a3b5c6d7e",
+  "status": "queued",
+  "acceptedAt": "2026-09-12T06:00:00.000Z",
+  "idempotentReplay": false
+}

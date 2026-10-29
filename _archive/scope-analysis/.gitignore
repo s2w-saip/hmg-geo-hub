@@ -1,0 +1,14 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.env
+.env.local
+# CDK
+infra/cdk.out/
+cdk.out/
+# 개발용 mTLS 인증서 — 절대 커밋하지 않는다(deploy/certs/make-dev-certs.sh 로 생성)
+deploy/certs/*.crt
+deploy/certs/*.key
+deploy/certs/*.csr
+deploy/certs/*.srl
+.DS_Store

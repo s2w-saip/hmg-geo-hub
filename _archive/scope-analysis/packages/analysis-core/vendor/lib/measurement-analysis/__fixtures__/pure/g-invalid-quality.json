@@ -1,0 +1,40 @@
+{
+  "analysisVersion": "measurement-analysis-v1",
+  "candidates": [],
+  "extractionMetadata": {
+    "analysis_llm_calls": 0,
+    "analysis_llm_cost_usd": 0,
+    "known_matches": 0,
+    "llm_malformed_count": 0,
+    "llm_mention_count": 0,
+    "llm_mention_enabled": true,
+    "llm_mention_failed": false,
+    "llm_mention_semantics_decisions": 0,
+    "llm_mention_semantics_enabled": true,
+    "llm_mention_semantics_failed": false,
+    "llm_mention_semantics_warnings": [],
+    "llm_mention_warnings": [],
+    "llm_pending_resolver_decisions": 0,
+    "llm_pending_resolver_enabled": true,
+    "llm_pending_resolver_failed": false,
+    "llm_pending_resolver_ignored": 0,
+    "llm_pending_resolver_kept_pending": 0,
+    "llm_pending_resolver_resolved": 0,
+    "llm_pending_resolver_warnings": [],
+    "llm_retry_count": 0,
+    "llm_unknown_enabled": false,
+    "parser_partial": false,
+    "tracked_augment_count": 0,
+    "tracked_augment_enabled": true
+  },
+  "mentions": [],
+  "parserVersion": "parser-v1",
+  "promptVersion": "prompt-v1",
+  "quality": {
+    "answerChars": 61,
+    "qualityState": "refusal_or_non_answer",
+    "reason": "matched refusal pattern (?:죄송하지만|미안하지만|저는|제가).{0,40}(?:도와드릴|답변할|제공할) 수 없"
+  },
+  "resolverVersion": "resolver-v1",
+  "sourceTurnHash": "84159085b0bee4836d411bda94631e0395cc5cb9eb50da98b19580e6329d1e71"
+}
