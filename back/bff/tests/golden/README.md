@@ -173,7 +173,10 @@ Deliberate changes (what the screen shows changed by decision):
   is on: every ACR page shows its trend, its Δ and the sums of a period of several rounds. The 121 `acr` cases that
   the hold had changed were rebuilt with the switch on. Each of the 133 outputs equals its 341a09e output (before the
   hold), apart from the keys added since (`compareRounds` true, `held` null, and the renewal `conversion` · `duels`).
-  The hold stays behind the switch, pinned by test_screens_acr `CrossRoundHeld`.
+- 2026-10-29 the ACR hold removed (the user's go-ahead). The switch, `held_rounds` and the `compareRounds` and `held`
+  keys are gone from the renewal body, the renewal view and the standard and website/project views, and so are the
+  pages' hold notes. The 127 `acr` cases that carried the keys were rebuilt. Each of the 133 outputs now equals its
+  341a09e output apart from the renewal `conversion` · `duels`.
 
 ## Format
 

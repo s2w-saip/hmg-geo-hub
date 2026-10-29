@@ -79,21 +79,6 @@ def _cmp_num(d: float) -> int:
 
 # ── AcrData -> StandardAcr (funnel.ts toStandardAcr, rules A1..A7) ───────────
 
-# The ACR pages compare and sum rounds: trend, Δ and period sums (2026-10-29, the user's final call). Each round may
-# measure another way or another scope (6–9 countries up to 08-24, 51 since 09-28); the reader takes that, it is no
-# reason to hide a value. Off, the pages hold every cross-round value (no trend, no Δ, a period of several rounds
-# names its rounds), as they did for part of that day. No date and no inferred boundary in code.
-COMPARE_ROUNDS = True
-
-
-def held_rounds(data: dict, period: bool) -> dict | None:
-    """A period of several rounds while rounds are not compared: its rounds, sent in place of their sums."""
-    rounds = data.get("trend") or []
-    if data.get("measured") and period and not COMPARE_ROUNDS and len(rounds) > 1:
-        return {"rounds": len(rounds), "from": rounds[0]["date"], "to": rounds[-1]["date"]}
-    return None
-
-
 def _empty_acr() -> dict:
     return {"measured": False, "brands": [], "trend": [], "battle": [], "modelConversion": [], "territory": [],
             "totals": {"promptRuns": 0, "prompts": 0, "iterations": 0, "engines": []}}
@@ -270,8 +255,8 @@ def _label(row: dict) -> Any:
     return row["promptId"] if row.get("promptText") is None else row["promptText"]
 
 
-def live_vm(data: dict, acr_prompt_count: Any, compare_rounds: bool = True) -> dict:
-    """Everything AcrLiveView computed from StandardAcr + the waiting-state count; no trend without `compare_rounds`."""
+def live_vm(data: dict, acr_prompt_count: Any) -> dict:
+    """Everything AcrLiveView computed from StandardAcr + the waiting-state count."""
     series_brands = trend_brands(data)
     colors = brand_colors(data, series_brands)
 
@@ -281,7 +266,7 @@ def live_vm(data: dict, acr_prompt_count: Any, compare_rounds: bool = True) -> d
     ours = acr_card_row(data)
     brands = [{**b, "color": color(b["brand"])} for b in data["brands"]]
     trend_rows = []
-    for b in data["trend"] if compare_rounds else []:
+    for b in data["trend"]:
         row = {"date": b["date"]}
         for k in js_keys(b["series"]):
             row[k] = b["series"][k]
@@ -327,9 +312,8 @@ def live_vm(data: dict, acr_prompt_count: Any, compare_rounds: bool = True) -> d
                 "top5": None if ours is None else ours.get("coverage"),
                 "rank1": 0 if ours is None or ours.get("choiceCount") is None else ours["choiceCount"]},
         "totals": data["totals"],
-        "trendBrands": [{"brand": b, "color": color(b)} for b in series_brands] if compare_rounds else [],
+        "trendBrands": [{"brand": b, "color": color(b)} for b in series_brands],
         "trendRows": trend_rows,
-        "compareRounds": compare_rounds,
         "battle": battle,
         "battleVisible": BATTLE_VISIBLE,
         "battleHidden": len(battle) - min(len(battle), BATTLE_VISIBLE),
@@ -345,15 +329,6 @@ def live_vm(data: dict, acr_prompt_count: Any, compare_rounds: bool = True) -> d
     }
 
 
-def legacy_view(data: dict, acr_prompt_count: Any, period: bool) -> dict:
-    """The AcrLiveView model. With COMPARE_ROUNDS off, a period of several rounds sends its rounds (`held`) and nothing
-    to draw, and any other view comes without a trend."""
-    held = held_rounds(data, period)
-    if held is not None:
-        return {**live_vm(_empty_acr(), acr_prompt_count, False), "measured": True, "held": held}
-    return {**live_vm(data, acr_prompt_count, COMPARE_ROUNDS), "held": None}
-
-
 @screen("acr/standard")
 async def standard(q) -> dict:
     """/standard/ai-funnel/acr: {panel: DimensionFilterPanel option props + onlyGroups, view: AcrLiveVm}."""
@@ -362,7 +337,7 @@ async def standard(q) -> dict:
     acr, options, dates = await _global_reads(filters)
     panel = _panel_props(options, acr["languageOptions"], dates)
     panel["onlyGroups"] = only_groups(acr["languageOptions"])
-    return {"panel": panel, "view": legacy_view(acr["data"], acr["acrPromptCount"], bool(filters.get("dateFrom") or filters.get("dateTo")))}
+    return {"panel": panel, "view": live_vm(acr["data"], acr["acrPromptCount"])}
 
 
 @screen("acr/gold")
@@ -379,7 +354,7 @@ async def gold(q) -> dict:
     langs = list((data.get("options") or {}).get("langs") or [])
     count = data["totals"].get("catalog_acr_prompts")
     return {"panel": {"catalogRows": [], "languageOptions": langs, "onlyGroups": only_groups(langs)},
-            "view": legacy_view(to_standard_acr(data, {"suppressed": {}}), count, bool(query.get("from") or query.get("to")))}
+            "view": live_vm(to_standard_acr(data, {"suppressed": {}}), count)}
 
 
 # ── renewal ACR (acr-model.ts + acr-body.tsx / acr-detail.tsx) ───────────────
@@ -411,19 +386,18 @@ def _last_two(vs: list) -> float | None:
     return delta1(vs[idx[0]], vs[idx[1]]) if len(idx) == 2 else None
 
 
-def acr_view(data: dict, own: dict | None, round_buckets: bool, period: bool, compare_rounds: bool = True) -> dict:
+def acr_view(data: dict, own: dict | None, round_buckets: bool, period: bool) -> dict:
     """acr-model.ts acrView (findings included). 당사 (its brands, trend and standing) is the reader's own total:
-    every own brand, not the own brands among the top series (2026-10-29 metric review R1). Without
-    `compare_rounds` there is no trend and no Δ (COMPARE_ROUNDS); the rivals stay the brands with a series."""
+    every own brand, not the own brands among the top series (2026-10-29 metric review R1)."""
     own_brands = list(data.get("ownBrands") or [])
     series_keys = trend_brands(data)
     series_set = set(series_keys)
-    dates = [b["date"] for b in data["trend"]] if compare_rounds else []
-    own_trend = [b["own"] for b in data["trend"]] if compare_rounds and own is not None and data["trend"] else None
-    show_delta = bool(compare_rounds and round_buckets and not period)
+    dates = [b["date"] for b in data["trend"]]
+    own_trend = [b["own"] for b in data["trend"]] if own is not None and data["trend"] else None
+    show_delta = bool(round_buckets and not period)
 
     def series_of(brand: Any) -> list | None:
-        if not compare_rounds or not isinstance(brand, str) or brand not in series_set:
+        if not isinstance(brand, str) or brand not in series_set:
             return None
         return [b["series"].get(brand) for b in data["trend"]]
 
@@ -464,7 +438,7 @@ def acr_view(data: dict, own: dict | None, round_buckets: bool, period: bool, co
     sweeps = sort_by([{"brand": b, "count": n} for b, n in sweep_count.items()],
                      lambda a, b: _cmp_num(b["count"] - a["count"]) or locale_compare(a["brand"], b["brand"]))
     view = {"own": own, "ownBrands": own_brands, "brands": brands, "dates": dates, "ownTrend": own_trend, "ownDelta": own_delta,
-            "rivals": rivals, "showDelta": show_delta, "compareRounds": compare_rounds, "rank": standing["rank"], "standingN": standing["of"],
+            "rivals": rivals, "showDelta": show_delta, "rank": standing["rank"], "standingN": standing["of"],
             "leader": comps[0] if comps else None, "k": k,
             "engines": engines, "engineWins": engine_wins, "sweeps": sweeps}
     view["findings"] = acr_findings(data, view)
@@ -730,9 +704,9 @@ def _sheet(s: dict) -> dict:
                        for sort, cmp in (("gap", by_gap), ("own", by_own), ("text", text))}}
 
 
-def renewal_view(data: dict, own: dict | None, round_buckets: bool, period: bool, compare_rounds: bool = True) -> dict:
+def renewal_view(data: dict, own: dict | None, round_buckets: bool, period: bool) -> dict:
     """acrView + every value the renewal cards derived from it."""
-    v = acr_view(data, own, round_buckets, period, compare_rounds)
+    v = acr_view(data, own, round_buckets, period)
     own_brands = v["ownBrands"]
     o = v["own"]
     lead = v["leader"]
@@ -792,10 +766,9 @@ async def renewal(q) -> dict:
     props = {"stage": "acr", **_panel_props(options, acr["languageOptions"], dates)}
     data = acr["data"]
     own = dict(data["own"]) if data.get("own") is not None else None
-    held = held_rounds(data, st["period"])
     body = {"measured": bool(data["measured"]), "filtered": st["filtered"], "acrPromptCount": acr["acrPromptCount"],
-            "roundBuckets": True, "period": st["period"], "ownLabel": st["ownLabel"], "totals": data["totals"], "held": held,
-            "view": renewal_view(data, own, True, st["period"], COMPARE_ROUNDS) if data["measured"] and held is None else None}
+            "roundBuckets": True, "period": st["period"], "ownLabel": st["ownLabel"], "totals": data["totals"],
+            "view": renewal_view(data, own, True, st["period"]) if data["measured"] else None}
     return {"props": props, "body": body}
 
 

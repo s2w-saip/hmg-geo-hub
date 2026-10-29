@@ -1,5 +1,5 @@
 {
- "held": {
+ "snapshot": {
   "measured": true,
   "filtered": false,
   "acrPromptCount": 67,
@@ -15,7 +15,6 @@
     "gemini"
    ]
   },
-  "held": null,
   "view": {
    "own": {
     "choiceCount": 7,
@@ -35,8 +34,11 @@
      "choiceShare": 35.0,
      "coverage": 37.5,
      "rank": 1,
-     "trend": null,
-     "d": null,
+     "trend": [
+      6.3,
+      33.3
+     ],
+     "d": 27.1,
      "own": true,
      "sibling": false,
      "canCompare": false,
@@ -54,7 +56,10 @@
      "choiceShare": 5.0,
      "coverage": 12.5,
      "rank": 2,
-     "trend": null,
+     "trend": [
+      null,
+      66.7
+     ],
      "d": null,
      "own": false,
      "sibling": false,
@@ -66,14 +71,19 @@
      "devCsv": -5.0
     }
    ],
-   "dates": [],
-   "ownTrend": null,
-   "ownDelta": null,
+   "dates": [
+    "2026-09-03",
+    "2026-09-10"
+   ],
+   "ownTrend": [
+    6.3,
+    33.3
+   ],
+   "ownDelta": 27.1,
    "rivals": [
     "Toyota"
    ],
-   "showDelta": false,
-   "compareRounds": false,
+   "showDelta": true,
    "rank": 1,
    "standingN": 2,
    "leader": {
@@ -117,6 +127,18 @@
    ],
    "sweeps": [],
    "findings": [
+    {
+     "kind": "mover",
+     "tone": "good",
+     "pri": 4,
+     "target": "sec-overview",
+     "brand": "Hyundai",
+     "params": {
+      "brand": "Hyundai",
+      "d": 27.1,
+      "ownD": 27.1
+     }
+    },
     {
      "kind": "standing",
      "tone": "good",
@@ -496,30 +518,6 @@
     "gemini"
    ]
   },
-  "held": {
-   "rounds": 2,
-   "from": "2026-09-03",
-   "to": "2026-09-10"
-  },
-  "view": null
- },
- "compared": {
-  "measured": true,
-  "filtered": false,
-  "acrPromptCount": 67,
-  "roundBuckets": true,
-  "period": false,
-  "ownLabel": "HMG",
-  "totals": {
-   "promptRuns": 8,
-   "prompts": 3,
-   "iterations": 20,
-   "engines": [
-    "chatgpt",
-    "gemini"
-   ]
-  },
-  "held": null,
   "view": {
    "own": {
     "choiceCount": 7,
@@ -543,7 +541,7 @@
       6.3,
       33.3
      ],
-     "d": 27.1,
+     "d": null,
      "own": true,
      "sibling": false,
      "canCompare": false,
@@ -584,12 +582,11 @@
     6.3,
     33.3
    ],
-   "ownDelta": 27.1,
+   "ownDelta": null,
    "rivals": [
     "Toyota"
    ],
-   "showDelta": true,
-   "compareRounds": true,
+   "showDelta": false,
    "rank": 1,
    "standingN": 2,
    "leader": {
@@ -633,18 +630,6 @@
    ],
    "sweeps": [],
    "findings": [
-    {
-     "kind": "mover",
-     "tone": "good",
-     "pri": 4,
-     "target": "sec-overview",
-     "brand": "Hyundai",
-     "params": {
-      "brand": "Hyundai",
-      "d": 27.1,
-      "ownD": 27.1
-     }
-    },
     {
      "kind": "standing",
      "tone": "good",

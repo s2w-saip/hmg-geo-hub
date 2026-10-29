@@ -462,8 +462,8 @@ class Duels(unittest.TestCase):
 
 
 class CrossRoundCompared(unittest.TestCase):
-    """2026-10-29 the user's decision (third, final): the ACR pages compare and sum rounds whatever each round measured;
-    a change of measurement method or of the measured scope is the reader's to take, not a reason to hide a value."""
+    """2026-10-29 the user's decision: the ACR pages compare and sum rounds whatever each round measured; a change of
+    measurement method or of the measured scope is the reader's to take, not a reason to hide a value."""
 
     def body(self, query="", **over):
         get, _ = fake_api(acr_body(**over))
@@ -476,17 +476,14 @@ class CrossRoundCompared(unittest.TestCase):
             return run(builder(QueryParams(query)))["view"]
 
     def test_a_snapshot_shows_the_trend_and_the_delta(self):
-        b = self.body()
-        v = b["view"]
-        self.assertIsNone(b["held"])
-        self.assertTrue(v["compareRounds"] and v["showDelta"])
+        v = self.body()["view"]
+        self.assertTrue(v["showDelta"])
         self.assertEqual(v["dates"], ["2026-09-03", "2026-09-10"])
         self.assertEqual([(x["trend"], x["d"]) for x in v["brands"]], [([6.3, 33.3], 27.1), ([None, 66.7], None)])
         self.assertIn("mover", [f["kind"] for f in v["findings"]])
 
     def test_a_period_of_several_rounds_is_summed(self):
         b = self.body("time=2026-09-01..2026-09-30")
-        self.assertIsNone(b["held"])
         self.assertEqual(b["view"]["dates"], ["2026-09-03", "2026-09-10"])
         self.assertFalse(b["view"]["showDelta"])
 
@@ -494,71 +491,8 @@ class CrossRoundCompared(unittest.TestCase):
         for builder in (acr.standard, acr.gold):
             for query in ("", "time=2026-09-01..2026-09-30"):
                 v = self.screen(builder, query)
-                self.assertEqual(([r["date"] for r in v["trendRows"]], v["compareRounds"], v["held"]),
-                                 (["2026-09-03", "2026-09-10"], True, None))
+                self.assertEqual([r["date"] for r in v["trendRows"]], ["2026-09-03", "2026-09-10"])
                 self.assertTrue(v["brands"])
-
-
-class CrossRoundHeld(unittest.TestCase):
-    """The hold behind `COMPARE_ROUNDS` off (on 2026-10-29 until the user's final call): no trend, no Δ, and a period of
-    several rounds names its rounds instead of their sums. No date and no inferred boundary."""
-
-    def setUp(self):
-        p = mock.patch.object(acr, "COMPARE_ROUNDS", False)
-        p.start()
-        self.addCleanup(p.stop)
-
-    def body(self, query="", **over):
-        get, _ = fake_api(acr_body(**over))
-        with mock.patch("bff.api.get", get):
-            return run(acr.renewal(QueryParams(query)))["body"]
-
-    def screen(self, builder, query):
-        get, _ = fake_api(acr_body())
-        with mock.patch("bff.api.get", get):
-            return run(builder(QueryParams(query)))["view"]
-
-    def test_a_snapshot_shows_no_trend_and_no_delta(self):
-        v = self.body()["view"]
-        self.assertFalse(v["compareRounds"])
-        self.assertEqual((v["dates"], v["ownTrend"], v["ownDelta"], v["showDelta"]), ([], None, None, False))
-        self.assertEqual([(b["trend"], b["d"]) for b in v["brands"]], [(None, None), (None, None)])
-        self.assertNotIn("mover", [f["kind"] for f in v["findings"]])
-
-    def test_the_standing_finding_keeps_the_round_gap_without_its_move(self):
-        own = {"choice": 7, "appearance": 11, "cells": 3, "choice_share": {"num": 7, "den": 20}, "coverage": {"num": 3, "den": 8},
-               "brands": ["Hyundai"], "rank": 1, "ranked_brands": 2}
-        trend = {"series_brands": ["Hyundai", "Toyota"], "buckets": [
-            {"round_date": "2026-09-03", "gap": False, "den": 16, "own": 1, "series": [{"brand": "Hyundai", "num": 1}, {"brand": "Toyota", "num": 2}]},
-            {"round_date": "2026-09-10", "gap": False, "den": 3, "own": 1, "series": [{"brand": "Hyundai", "num": 1}, {"brand": "Toyota", "num": 2}]}]}
-        standing = next(f for f in self.body(own=own, trend=trend)["view"]["findings"] if f["kind"] == "standing")
-        self.assertEqual((standing["params"]["gap"], standing["params"]["move"], standing["params"]["widened"]), (30.0, "", ""))
-
-    def test_a_period_of_several_rounds_is_held(self):
-        b = self.body("time=2026-09-01..2026-09-30")
-        self.assertIsNone(b["view"])
-        self.assertEqual(b["held"], {"rounds": 2, "from": "2026-09-03", "to": "2026-09-10"})
-        self.assertTrue(b["measured"] and b["period"])
-
-    def test_a_period_of_one_round_is_that_round(self):
-        one = {"series_brands": ["Hyundai"], "buckets": [
-            {"round_date": "2026-09-10", "gap": False, "den": 20, "own": 7, "series": [{"brand": "Hyundai", "num": 7}]}]}
-        b = self.body("time=2026-09-08..2026-09-14", trend=one)
-        self.assertIsNone(b["held"])
-        self.assertFalse(b["view"]["compareRounds"])
-        self.assertEqual(b["view"]["dates"], [])
-
-    def test_a_snapshot_is_not_held(self):
-        self.assertIsNone(self.body()["held"])
-
-    def test_the_standard_and_website_project_pages(self):
-        for builder in (acr.standard, acr.gold):
-            v = self.screen(builder, "")
-            self.assertEqual((v["trendRows"], v["trendBrands"], v["compareRounds"], v["held"]), ([], [], False, None))
-            self.assertTrue(v["measured"] and v["brands"])
-            v = self.screen(builder, "time=2026-09-01..2026-09-30")
-            self.assertEqual(v["held"], {"rounds": 2, "from": "2026-09-03", "to": "2026-09-10"})
-            self.assertEqual((v["brands"], v["territory"], v["battle"]), ([], [], []))
 
 
 FRONT_FIXTURE = Path(__file__).parents[3] / "front/app/[locale]/(renewal)/renewal/standard/ai-funnel/acr/_components/acr-body.fixture.json"
@@ -572,15 +506,12 @@ FIXTURE_DUELS = {"sample": {"iterations": 8, "cells": 8}, "rows": [
 
 
 def front_fixture() -> dict:
-    """acr/renewal bodies for the page's render test: a snapshot held and compared, a period of two rounds held."""
+    """acr/renewal bodies for the page's render test: a snapshot and a period of two rounds."""
     get, _ = fake_api(acr_body(own=FIXTURE_OWN, head_to_head=FIXTURE_DUELS))
     out = {}
     with mock.patch("bff.api.get", get):
-        with mock.patch.object(acr, "COMPARE_ROUNDS", False):
-            out["held"] = run(acr.renewal(QueryParams("")))["body"]
-            out["period"] = run(acr.renewal(QueryParams("time=2026-09-01..2026-09-30")))["body"]
-        with mock.patch.object(acr, "COMPARE_ROUNDS", True):
-            out["compared"] = run(acr.renewal(QueryParams("")))["body"]
+        out["snapshot"] = run(acr.renewal(QueryParams("")))["body"]
+        out["period"] = run(acr.renewal(QueryParams("time=2026-09-01..2026-09-30")))["body"]
     return json.loads(json.dumps(out))
 
 

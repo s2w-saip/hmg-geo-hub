@@ -150,8 +150,6 @@ export interface RnAcrView {
   /** the compare brands before any pick (the best rival) */
   defaultCompare: string[];
   showDelta: boolean;
-  /** false while the page compares no two rounds (BFF acr.COMPARE_ROUNDS): no trend (dates [], trends null), no Δ */
-  compareRounds: boolean;
   /** 당사 rank among the chosen rivals (the reader's, beyond the table; null without 당사), the leader,
    * 당사 − leader (pp) and the field size (chosen rivals + 당사) */
   rank: number | null;
@@ -202,8 +200,6 @@ export interface RnAcrInput {
   /** 당사 name (the applied own brands, else the HMG umbrella) */
   ownLabel: string;
   totals: StandardAcr["totals"];
-  /** a period of several rounds while rounds are not compared: its rounds, and no view */
-  held: { rounds: number; from: string; to: string } | null;
   view: RnAcrView | null;
 }
 

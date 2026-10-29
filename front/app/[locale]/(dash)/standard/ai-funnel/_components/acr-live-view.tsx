@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   LineChart,
@@ -14,8 +12,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { Trophy, Hash, BarChart3, Swords, ArrowRightLeft, Hourglass, Info, CalendarRange } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Trophy, Hash, BarChart3, Swords, ArrowRightLeft, Hourglass, Info } from "lucide-react";
 import {
   DimensionFilterPanel,
   FILTER_SECTIONS,
@@ -82,13 +79,6 @@ export function AcrLiveView({
   const t = useTranslations("aiFunnelView.acr");
   const tLive = useTranslations("aiFunnelView.acrLive");
   const tGold = useTranslations("gold");
-  // rounds are not compared (acr.py COMPARE_ROUNDS): the renewal page's wording, and the period cleared for the latest round
-  const tHeld = useTranslations("renewal.acr.held");
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const latestQuery = new URLSearchParams(searchParams.toString());
-  latestQuery.delete("time");
-  const latestHref = latestQuery.size ? `${pathname}?${latestQuery}` : pathname;
 
   // 브랜드별 ACR 표 — 기본 Top1(선택 점유율) 내림차순, 헤더로 재정렬 가능.
   const { sorted: brandRanked, headerProps: brandHeader } = useOrderedTable<AcrLiveBrand, AcrBrandSortKey>(vm.brands, vm.brandOrders, {
@@ -126,16 +116,7 @@ export function AcrLiveView({
         sticky
       />
 
-      {vm.held ? (
-        <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border bg-card px-6 py-14 text-center">
-          <CalendarRange className="h-6 w-6 text-muted-foreground" aria-hidden />
-          <p className="text-sm font-semibold text-foreground">{tHeld("periodTitle")}</p>
-          <p className="max-w-xl text-xs leading-relaxed text-muted-foreground">{tHeld("periodDesc", vm.held)}</p>
-          <Button asChild variant="outline" size="sm" className="mt-1 text-xs">
-            <Link href={latestHref}>{tHeld("latest")}</Link>
-          </Button>
-        </div>
-      ) : !vm.measured ? (
+      {!vm.measured ? (
         <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border bg-card px-6 py-14 text-center">
           <Hourglass className="h-6 w-6 text-muted-foreground" aria-hidden />
           <p className="text-sm font-semibold text-foreground">{tLive("empty.title")}</p>
@@ -314,8 +295,6 @@ export function AcrLiveView({
                 </ResponsiveContainer>
               </div>
             </div>
-          ) : !vm.compareRounds ? (
-            <p className="rounded-lg border border-dashed border-border bg-card px-4 py-3 text-xs text-muted-foreground">{tHeld("trend")}</p>
           ) : null}
 
           {/* Battle grid — 프롬프트 × 엔진 승자 */}

@@ -781,12 +781,6 @@ export function useRnFilterToggle(): (group: DimensionGroup, value: string) => v
   );
 }
 
-/** Clears one axis from outside the panel (ACR's held period → the latest round) through the panel's rules. */
-export function useRnFilterClear(): (group: DimensionGroup) => void {
-  const { change, props } = useFilterActions();
-  return useCallback((group: DimensionGroup) => change((d) => ({ draft: normalizeDraft(clearGroup(d, group), group, props.catalogRows) })), [change, props.catalogRows]);
-}
-
 /** Copies the page URL (current conditions) to the clipboard. */
 export function RnCopyLinkButton() {
   const t = useTranslations("renewal.overview");

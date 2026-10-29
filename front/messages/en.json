@@ -4413,8 +4413,6 @@
         "howLabel": "How it is made",
         "how": "Rules over the numbers on this page (no new data): our rank and gap, where we are shortlisted but not picked, top brands per engine and prompt, model conversion and the biggest mover, ranked by importance; the top four are shown.",
         "chipSnapshot": "Latest round · vs the previous round",
-        "howHeld": "Rules over the numbers on this page (no new data): our rank and gap, where we are shortlisted but not picked, top brands per engine and prompt, and model conversion, ranked by importance; the top four are shown. Changes between rounds are left out for now.",
-        "chipHeld": "Latest round",
         "chipPeriod": "Period total",
         "headline": "<b>{own}</b> — Top1 ACR <b>#{rank}</b> {share}{delta}, shortlist rate {coverage}, picked first {count} times · {prompts} prompts × {engines} engines"
       },
@@ -4461,7 +4459,6 @@
       "hero": {
         "label": "Top1 ACR (final pick rate)",
         "basisRound": "vs the previous round",
-        "basisHeld": "One round · rounds not compared for now",
         "basisPeriod": "Period total — see the trend for change",
         "basisDay": "The trend is by measurement day, so no change is shown",
         "standing": "<b>#{rank}</b> of {n} brands",
@@ -4490,8 +4487,6 @@
         "info": "Top1 ACR = the brand's share of AI's final picks (per repetition — brands add up to at most 100%; the rest is brands below the top 12 and no pick). Bar length is relative to #1. Shortlist rate = the share of cells where the brand was shortlisted at least once in ~10 repetitions (per cell, 0–100%). The units differ, so the two bars are drawn apart. Pick and mention counts are in the row tooltip and the table view. Only we and the top rivals have a trend.",
         "chip": "Top 12 · by final picks",
         "sub": "Select a rival row that has a trend to add or remove it as a compare brand — every chart on the page follows.",
-        "subHeld": "Select a rival row to add or remove it as a compare brand — every chart on the page follows.",
-        "infoHeld": "Top1 ACR = the brand's share of AI's final picks (per repetition — brands add up to at most 100%; the rest is brands below the top 12 and no pick). Bar length is relative to #1. Shortlist rate = the share of cells where the brand was shortlisted at least once in ~10 repetitions (per cell, 0–100%). The units differ, so the two bars are drawn apart. Pick and mention counts are in the row tooltip and the table view. Trends and changes between rounds are hidden for now.",
         "sortLabel": "Sort",
         "sortTop1": "Top1 ACR",
         "sortCoverage": "Shortlist rate",
@@ -4611,15 +4606,6 @@
         "noResultTitle": "No ACR measurement for these filters",
         "noResultDesc": "ACR runs in some countries and languages only. Try fewer country, language or catalog filters.",
         "reset": "Clear filters"
-      },
-      "held": {
-        "note": "Comparisons between rounds (changes and trends) are hidden for now. Each round measured different countries and questions, so there is no comparable history yet. Every value below is from a single round.",
-        "whyLabel": "Why hidden",
-        "why": "Past rounds measured very different sets of countries and questions, so a line across rounds shows the change in measured scope more than performance. Between rounds that re-measured the same questions, the changes stayed within sampling noise. The trend returns once rounds on the same scope build up.",
-        "trend": "The per-round trend is hidden until rounds on the same scope build up. Each round measured different countries and questions, so a line across them shows the change in scope more than performance.",
-        "periodTitle": "Periods spanning several rounds are paused",
-        "periodDesc": "The selected period holds {rounds} measured rounds ({from} – {to}). Each round measured different countries and questions, so adding rounds up mixes in the difference in scope. View the latest round, or narrow the period to one round to view that round.",
-        "latest": "View the latest round"
       },
       "conv": {
         "title": "Our shortlist → pick conversion",
