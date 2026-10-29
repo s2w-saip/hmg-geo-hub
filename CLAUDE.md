@@ -1,6 +1,14 @@
 # hmg-geo-hub — Claude 작업 메모
 
+## 세션 시작 규칙 (절대)
+
+Admin 탭 개발의 정본 todo를 아래 줄이 불러온다(2026-10-29 사용자 결정). 그 내용이 보이지 않으면 다른 일보다 먼저 `docs/handoff/admin-todo.md` 를 직접 읽는다.
+
+@docs/handoff/admin-todo.md
+
 ## 다음 세션 최우선 작업
+
+- [ ] **Admin 탭 남은 페이지** — 순서, 규칙, 결정 대기 항목은 `docs/handoff/admin-todo.md` 하나에만 둔다.
 
 - [x] **P4 ACR 차종 전환율 분모 중복 확인** — 2026-10-28 완료. Gold 기준 영향 없음, 수정 없음. 결과는 `docs/handoff/p4-acr-model-denominator.html` 머리 배너.
 - [ ] **ACR 후속** — `docs/handoff/acr-next-session.html` 2절. 2026-10-29 두 번째 세션에서 P1(회차 간 비교 막기)·P3(후보→선택 전환, 결선 맞대결)·P5(리더 SQL 집계)를 끝내 푸시했다(첫 세션 `341a09e`, 두 번째 세션 `2dfb8ef`). 같은 날 사용자 최종 결정으로 회차 간 비교를 다시 열고 숨김 코드도 지웠다. 추이·Δ·기간 합산을 리뉴얼·기존 화면 모두 보인다. 측정 방식·범위가 매주 달라질 수 있어도 그건 화면 사용자가 감수할 일이다. 숨기거나 경고하지 않는다. P2 업스트림 질문은 사용자가 보낸다. 미결: cell·fact family의 metric_version 혼재(Mention·Citation 추이).
