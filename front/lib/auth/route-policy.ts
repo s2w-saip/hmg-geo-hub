@@ -163,6 +163,13 @@ export const ROUTES = [
     roles: STANDARD_VIEWERS,
     group: "standard" as const,
   },
+  // Renewal AI Conversion (2026-10-29) — next to the original, same roles (see the renewal note above).
+  {
+    path: "/renewal/standard/ai-funnel/conversion",
+    key: "renewalAiFunnelConversion",
+    roles: STANDARD_VIEWERS,
+    group: "standard" as const,
+  },
   // Customer Interest — parent + 2 children. Parent redirects to
   // google-keywords. Overview 폐기 (2026-06-11).
   // Hidden from the 표준 SNB (2026-06-23): 고객 관심은 표준(전사 측정) 메뉴와

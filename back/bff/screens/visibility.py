@@ -24,73 +24,27 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
-from datetime import date, timedelta
 from typing import Any
 from urllib.parse import urlsplit
 
 from bff import api
 from bff.hub_stores.analytics_reader import BRAND_NAMES
 from bff.screens import screen, split_context
+from bff.screens._days import blocks_of, days_of, period_choice, period_params, prev_period, reader_query  # noqa: F401 (period_params: tests)
 from bff.screens._filters import load_panel_options, read_standard_filters, split_filter_values
 from bff.screens._query import READER_SCOPE
 from bff.screens._sort import table_orders
-from bff.screens.sources import source_query
 
 STALE_DAYS = 7
-BLOCK_DAYS = 7
 WORK_ROWS = 15
 CHANGE_ROWS = 5
 COMBO_ROWS = 8
 LORENZ_POINTS = 120
-PRESET_DAYS = (7, 28, 90)
-DEFAULT_DAYS = 28
 TIERS = (1, 2, 3, None)
 BANDS = ("none", "low", "mid", "high")
 FREQS = ("daily", "often", "rare", "none")
 QUADS = ("seo_only", "crawl_only", "both", "neither")
 LOCALE_SEGMENT = re.compile(r"[a-z]{2}(-[a-z]{2})?", re.IGNORECASE)
-
-
-# ── URL → the reader's period ────────────────────────────────────────────────
-
-def _iso(v: Any) -> str | None:
-    if isinstance(v, list):
-        v = v[-1] if v else None
-    try:
-        return date.fromisoformat(str(v)).isoformat() if v else None
-    except ValueError:
-        return None
-
-
-def period_params(sp: dict) -> dict:
-    """days (1–366) or from / to from the URL; anything the reader would reject (422) is dropped.
-    No period at all = the last 28 days up to the last measured day (the reader's default)."""
-    start, end = _iso(sp.get("from")), _iso(sp.get("to"))
-    if start and end and start > end:
-        start, end = end, start
-    if start or end:
-        return {k: v for k, v in (("from", start), ("to", end)) if v}
-    raw = sp.get("days")
-    try:
-        days = int(raw[-1] if isinstance(raw, list) else raw)
-    except (TypeError, ValueError):
-        days = DEFAULT_DAYS
-    return {"days": str(days if 1 <= days <= 366 else DEFAULT_DAYS)}
-
-
-def period_choice(sp: dict) -> dict:
-    """What the period control shows: a preset (7 · 28 · 90) or the custom from / to."""
-    p = period_params(sp)
-    if "days" in p:
-        d = int(p["days"])
-        return {"preset": d if d in PRESET_DAYS else None, "days": d, "from": None, "to": None}
-    return {"preset": None, "days": None, "from": p.get("from"), "to": p.get("to")}
-
-
-def reader_query(sp: dict) -> dict:
-    """source_query (the original's URL → reader params) with this page's period and without the tab."""
-    raw = {k: v for k, v in sp.items() if k not in ("view", "days", "from", "to", "period", "time")}
-    return {**source_query(raw), **period_params(sp)}
 
 
 # ── row helpers ──────────────────────────────────────────────────────────────
@@ -153,21 +107,6 @@ def fixed_level(v: float | None) -> int | None:
     return 4 if v >= 95 else 3 if v >= 85 else 2 if v >= 70 else 1 if v >= 50 else 0
 
 
-def _days(start: str, end: str) -> list[str]:
-    a, b = date.fromisoformat(start), date.fromisoformat(end)
-    return [(a + timedelta(days=i)).isoformat() for i in range((b - a).days + 1)]
-
-
-def blocks_of(days: list[str]) -> list[tuple[int, int]]:
-    """7-day blocks counted back from the last day (index ranges into `days`, inclusive)."""
-    out = []
-    e = len(days) - 1
-    while e - (BLOCK_DAYS - 1) >= 0:
-        out.insert(0, (e - BLOCK_DAYS + 1, e))
-        e -= BLOCK_DAYS
-    return out
-
-
 def _engines_of(bots: list[dict]) -> list[str]:
     return list(dict.fromkeys(r.get("engine") or "unknown" for r in bots))
 
@@ -177,7 +116,7 @@ def _engines_of(bots: list[dict]) -> list[str]:
 def _page_rows(data: dict, sel_engines: list[str], sel_devices: list[str]) -> tuple[list[dict], list[str], list[str], dict[str, int]]:
     """Every page of the reader's answer with its daily AI 크롤 (by engine) and 검색 노출."""
     period = data.get("period") or {}
-    days = _days(period["from"], period["to"]) if period.get("from") and period.get("to") else []
+    days = days_of(period["from"], period["to"]) if period.get("from") and period.get("to") else []
     di = {d: i for i, d in enumerate(days)}
     engines = _engines_of(data.get("bots") or [])
     sites = {r.get("project_key"): r for r in data.get("properties") or []}
@@ -429,14 +368,6 @@ def _state(meta: dict, filtered: bool) -> str:
     return "ok"
 
 
-def _prev_period(period: dict) -> dict | None:
-    if not period.get("from") or not period.get("to"):
-        return None
-    a, b = date.fromisoformat(period["from"]), date.fromisoformat(period["to"])
-    span = (b - a).days + 1
-    return {"from": (a - timedelta(days=span)).isoformat(), "to": (a - timedelta(days=1)).isoformat()}
-
-
 @screen("visibility/renewal-header")
 async def renewal_header(q) -> dict:
     """The page header's period pill (outside the data Suspense): what the URL asks for. No reads."""
@@ -462,7 +393,7 @@ async def renewal(q) -> dict:
                             "period": {"from": period.get("from"), "to": period.get("to"), "days": period.get("days")},
                             "sites": len(data.get("properties") or []), "view": None}
     if body["state"] == "ok":
-        prev_q = _prev_period(period)
+        prev_q = prev_period(period)
         prev = None
         if prev_q:
             prev_res = await api.get("analytics/visibility", {**{k: v for k, v in query.items() if k != "days"}, **prev_q})

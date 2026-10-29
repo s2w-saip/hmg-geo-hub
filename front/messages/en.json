@@ -44,6 +44,7 @@
     "renewalStandardPrompts": "Global prompts (Renewal)",
     "renewalAiFunnelVisibility": "AI Visibility (Renewal)",
     "renewalAiFunnelAcr": "ACR (Renewal)",
+    "renewalAiFunnelConversion": "AI Conversion (Renewal)",
     "answerAnalysis": "Answer analysis",
     "answerAnalysisMention": "Mention",
     "answerAnalysisCitation": "Citation",
@@ -4022,15 +4023,6 @@
         "engineValue": "<b>{n}</b> engines",
         "siteValue": "<b>{sites}</b> sites · <b>{sections}</b> sections"
       },
-      "period": {
-        "label": "Period",
-        "days": "{n} days",
-        "custom": "Custom",
-        "from": "From",
-        "to": "To",
-        "help": "Up to the last measured day, {to} · changes compare with the previous period of the same length",
-        "helpNoData": "Changes compare with the previous period of the same length"
-      },
       "filters": {
         "engineHelp": "Applies to AI crawls only — search impressions stay as they are",
         "deviceHelp": "Applies to search impressions only — AI crawls stay as they are",
@@ -4360,6 +4352,239 @@
         "seoShare": "Search share",
         "aiShare": "AI crawl share",
         "tip": "{sec} · search share {seo} · AI crawl share {ai}"
+      }
+    },
+    "daysPeriod": {
+      "label": "Period",
+      "days": "{n} days",
+      "custom": "Custom",
+      "from": "From",
+      "to": "To",
+      "help": "Up to the last measured day, {to} · changes compare with the previous period of the same length",
+      "helpNoData": "Changes compare with the previous period of the same length"
+    },
+    "conversion": {
+      "title": "AI Conversion",
+      "beta": "Beta",
+      "subtitle": "Whether visits that come in through AI answers convert on the site, measured with GA4.",
+      "cadence": "Measured daily",
+      "periodDays": "Last {n} days",
+      "range": "{from} – {to}",
+      "howToRead": "How to read",
+      "foot": "Period {from} – {to} ({days} measured days) — {props} GA4 properties measuring · every number is computed from GA4 report rows (sessions · conversions · events) and period users",
+      "more": "Show {n} more",
+      "less": "Show less",
+      "delta": {
+        "up": "Better",
+        "down": "Worse",
+        "flat": "No change"
+      },
+      "unit": {
+        "sessions": "",
+        "sessionsN": "{n}",
+        "conv": "",
+        "convN": "{n}",
+        "ppN": "{n}pp"
+      },
+      "filters": {
+        "engineHelp": "Applies to AI traffic only — other traffic stays as it is. With a pick, no rates are computed",
+        "deviceHelp": "Applies to AI and other traffic. With a pick, no rates are computed",
+        "visitorTypeHelp": "New · returning — applies to AI and other traffic. With a pick, no rates are computed",
+        "hint": "With no filter, every connected GA4 property is shown (the period is set above, under ‘Period’)."
+      },
+      "states": {
+        "downTitle": "Could not load the data",
+        "downDesc": "The analytics database could not be reached. Try again in a moment — your filters and period stay as they are.",
+        "nopropTitle": "No GA4 property is connected",
+        "nopropDesc": "AI Conversion is built from the brand sites' GA4 reports (AI Assistant channel traffic · conversion events). No GA4 property is connected yet; the page fills in once properties are registered and collection is connected.",
+        "pendingTitle": "{n} GA4 properties are waiting to connect",
+        "pendingDesc": "The registered properties are not measuring yet (waiting for access or not mapped to a market). Once connected, the page fills in from the next collection.",
+        "emptyTitle": "Waiting for AI Conversion data",
+        "emptyDesc": "{n} GA4 properties are measuring, but there is no data for {from} – {to} yet. Change the period or check again after the next collection.",
+        "emptyDescNoDate": "{n} GA4 properties are measuring, but there is no data yet. Check again after the first collection.",
+        "nomatchTitle": "No data matches these filters",
+        "nomatchDesc": "No GA4 rows match the picked country · brand · engine · device · visitor type. The country options are the answer-measurement countries, so a country without a GA4 property can be picked. Loosen the filters.",
+        "reset": "Reset filters",
+        "propsLabel": "Registered GA4 properties",
+        "propTip": "GA4 property {id}"
+      },
+      "status": {
+        "active": "Measuring",
+        "pending_grant": "Waiting for access",
+        "unmapped": "No market"
+      },
+      "def": {
+        "label": "Show definition",
+        "definition": "Definition",
+        "formula": "Formula",
+        "aiRate": {
+          "d": "The share of users who came in through AI answers (ChatGPT · Gemini …, the GA4 ‘AI Assistant’ channel) and converted.",
+          "f": "AI conversions ÷ AI users (deduplicated over the period) × 100"
+        },
+        "genRate": {
+          "d": "The conversion rate of users who came in any other way. The baseline AI traffic is compared with.",
+          "f": "Other conversions ÷ other users (deduplicated over the period) × 100"
+        },
+        "lift": {
+          "d": "How many points the AI conversion rate is above the other traffic's. Positive means AI traffic converts better.",
+          "f": "AI conversion rate − other conversion rate"
+        },
+        "conv": {
+          "d": "Conversions from AI traffic, counted by each property's own rule — GA4 key events or the chosen conversion events.",
+          "f": "Sum of AI conversions under each property's rule · per 100 sessions = conversions ÷ sessions × 100"
+        },
+        "sessions": {
+          "d": "Sessions that started from the AI Assistant channel — visits, returning ones included.",
+          "f": "Sum of sessions in the GA4 AI traffic report · per user = sessions ÷ AI users"
+        },
+        "share": {
+          "d": "The share of all site sessions that came in through AI.",
+          "f": "AI sessions ÷ all sessions × 100"
+        },
+        "per100": {
+          "d": "There are no users per engine, so engines are compared by conversions per 100 sessions.",
+          "f": "The engine's AI conversions ÷ its AI sessions × 100"
+        },
+        "landing": {
+          "d": "The page an AI session started on (GA4 landing page). Views are the page's views from AI and other traffic together.",
+          "f": "AI sessions per page · share = page sessions ÷ the table's sessions · running = shares added from the top"
+        }
+      },
+      "summary": {
+        "title": "This period",
+        "howTitle": "How it is made",
+        "how": "The six metrics above are computed straight from GA4 session · conversion rows and period users (formulas in each ⓘ). The small lines under conversions and sessions are 7-day sums. The findings below are four picked by rules from this screen's numbers — sample size, the AI vs other conversion gap, measuring properties, change against the previous period, engines, landing pages, session share.",
+        "chipPrev": "{range} · vs previous {days} days",
+        "usersFilter": "With an engine · device · visitor type filter there are no GA4 period users (the rates' denominator), so the rates and the gap are not computed. Sessions and conversions follow the filters.",
+        "usersWindow": "There are no GA4 period users for this period, so the rates and the gap are not computed. Period users exist only for the pre-aggregated periods (last 7 · 28 · 90 days)."
+      },
+      "kpi": {
+        "aiRate": "AI conversion rate",
+        "genRate": "Other conversion rate",
+        "lift": "Rate gap (AI − other)",
+        "conv": "AI conversions",
+        "sessions": "AI sessions",
+        "share": "AI session share",
+        "rateSub": "{conv} conversions ÷ {users} users",
+        "rateSubNoUsers": "{conv} conversions · no users",
+        "liftUp": "AI traffic converts better",
+        "liftDown": "Other traffic converts better",
+        "liftFlat": "Both convert at the same rate",
+        "liftNone": "No rates to compare",
+        "convSub": "{n} per 100 sessions",
+        "sessionsSub": "{users} users · {per} per user",
+        "sessionsSubNoUsers": "No users",
+        "shareSub": "{gen} other sessions",
+        "prevBasis": "vs previous period",
+        "noPrev": "No previous period data"
+      },
+      "findings": {
+        "sample": {
+          "tag": "Small sample",
+          "title": "{users} AI users — under {min}",
+          "detail": "With few users, a handful of conversions moves the rate a lot. Try a longer period."
+        },
+        "lift": {
+          "tag": "AI vs other",
+          "titleUp": "AI conversion rate {ai} — {lift} above other traffic ({gen})",
+          "titleDown": "AI conversion rate {ai} — {lift} below other traffic ({gen})",
+          "titleFlat": "AI and other traffic convert at the same rate ({ai})",
+          "detail": "User-based rates over the same period and properties."
+        },
+        "coverage": {
+          "tag": "Coverage",
+          "title": "{active} of {total} GA4 properties measuring",
+          "detail": "Properties waiting for access or without a market are not in the totals (see ‘GA4 properties · countries’)."
+        },
+        "change": {
+          "tag": "vs previous",
+          "title": "AI sessions {chg} · vs previous {days} days",
+          "detail": "AI conversions {chg}"
+        },
+        "engine": {
+          "tag": "AI engines",
+          "title": "{engine} brings {share} of AI sessions",
+          "detailBest": "Conversions per 100 sessions are highest for {best}, {bestPer100} ({engine} {per100}).",
+          "detailSame": "Conversions per 100 sessions are highest for {engine} too, {per100}."
+        },
+        "pages": {
+          "tag": "Landing pages",
+          "title": "The top {n} pages take {share} of AI sessions",
+          "detail": "Top landing page {page}"
+        },
+        "share": {
+          "tag": "AI session share",
+          "title": "{share} of all sessions come from AI",
+          "detail": "vs previous period {d}"
+        }
+      },
+      "trend": {
+        "title": "AI traffic · conversions by day",
+        "info": "AI sessions and conversions per day. A day without GA4 rows is left blank, not zero. Daily rate = the day's AI conversions ÷ the day's AI users.",
+        "sessions": "AI sessions",
+        "conv": "AI conversions",
+        "rate": "Daily AI conversion rate",
+        "rateName": "Rate",
+        "rateNone": "There are no daily users under these filters, so the rate is not drawn."
+      },
+      "engine": {
+        "title": "AI traffic · conversions by engine",
+        "info": "AI sessions split by the engine they came from (GA4 session source). An engine filter keeps the picked engines only.",
+        "chip": "{n} engines",
+        "cols": {
+          "engine": "Engine",
+          "sessions": "AI sessions",
+          "share": "Share",
+          "conv": "Conv.",
+          "per100": "Per 100",
+          "d": "vs prev."
+        },
+        "none": "No engine rows for these filters.",
+        "rest": "{n} AI sessions without a known engine are left out of the table.",
+        "per100Note": "Per 100 = conversions per 100 sessions — there are no users per engine, so sessions are the base."
+      },
+      "props": {
+        "title": "GA4 properties · countries",
+        "info": "The brand sites' GA4 properties that measure AI Conversion. Only ‘Measuring’ properties are in the totals; conversions follow each property's rule (GA4 key events or the chosen conversion events).",
+        "chip": "Measuring {active} / {total}",
+        "cols": {
+          "prop": "Country · property",
+          "sessions": "AI sessions",
+          "users": "AI users",
+          "status": "Status"
+        },
+        "idBasis": "GA4 {id} · {basis}",
+        "basis": {
+          "b1": "key events",
+          "b2": "chosen events"
+        },
+        "unknown": "Unknown country"
+      },
+      "pages": {
+        "title": "AI landing pages",
+        "chip": "{n} pages",
+        "cols": {
+          "page": "Landing page",
+          "sessions": "AI sessions",
+          "share": "Share",
+          "cum": "Running",
+          "views": "Views (all traffic)",
+          "d": "vs prev."
+        },
+        "none": "No landing page rows for these filters."
+      },
+      "events": {
+        "title": "GA4 events · conversion counting",
+        "info": "The period's GA4 events and counts (AI and other traffic together). ‘Counted’ marks the events a property counts as conversions; the share is among the counted events. Properties on key events count GA4 key events instead.",
+        "chip": "{n} counted events · {sum}",
+        "tracked": "Counted",
+        "cols": {
+          "event": "Event",
+          "kind": "Kind",
+          "count": "Count",
+          "share": "Conv. share"
+        },
+        "none": "No event rows for these filters."
       }
     },
     "shell": {

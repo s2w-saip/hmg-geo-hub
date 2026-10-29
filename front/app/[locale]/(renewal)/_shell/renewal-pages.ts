@@ -9,6 +9,7 @@ export const RENEWAL_PAGES: ReadonlySet<string> = new Set([
   "/standard/answer-analysis/citation/prompts",
   "/standard/answer-analysis/citation/tone-urls",
   "/standard/ai-funnel/acr",
+  "/standard/ai-funnel/conversion",
   "/standard/ai-funnel/visibility",
   "/admin/standards/prompts",
 ]);

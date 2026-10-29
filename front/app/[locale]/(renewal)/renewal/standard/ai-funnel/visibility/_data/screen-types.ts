@@ -2,18 +2,15 @@
 // visibility/renewal (back/bff/screens/visibility.py). Every number is computed there from the
 // analytics reader's rows; the page only formats and draws it. Row ids index into `view.rows`.
 
+import type { RnDaysChoice } from "@/app/[locale]/(renewal)/renewal/_components/days-period";
+
 export type VisState = "ok" | "nosite" | "nomatch" | "empty" | "down";
 export type VisBand = "none" | "low" | "mid" | "high";
 export type VisQuad = "seo_only" | "crawl_only" | "both" | "neither";
 export type VisTab = "sum" | "page" | "engine" | "site";
 
 /** The period the URL asks for: a preset (7 · 28 · 90 days) or a custom from / to. */
-export interface VisChoice {
-  preset: number | null;
-  days: number | null;
-  from: string | null;
-  to: string | null;
-}
+export type VisChoice = RnDaysChoice;
 
 export interface VisRow {
   id: number;

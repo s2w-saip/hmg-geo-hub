@@ -1,22 +1,19 @@
 "use client";
 
 // Page state of the renewal AI Visibility page: the view tab (?view=, every tab reads the same
-// screen model, so a tab is only the URL — no server round trip), the 측정 기간
-// row of the filter panel, and the display helpers every card shares (number formats, engine
-// labels and colours, site names). Display only: every value comes from the screen model.
+// screen model, so a tab is only the URL — no server round trip) and the display helpers every card
+// shares (number formats, engine labels and colours, site names). The 측정 기간 row of the filter
+// panel is the shared RnDaysPeriod. Display only: every value comes from the screen model.
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type MouseEvent, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useSearchParams } from "next/navigation";
-import { CalendarDays } from "lucide-react";
 import { ENGINE_LABEL } from "@/components/dash/dimension-filter-panel";
 import { geoCodeLabel } from "@/lib/geo-catalog/geo-code-label";
-import { RnSegmented, cx } from "@/components/renewal-ui";
-import { useRnFilterRuntime } from "@/app/[locale]/(renewal)/renewal/_components/filter-runtime";
-import type { VisChoice, VisRow, VisTab, VisView } from "../_data/screen-types";
+import { cx } from "@/components/renewal-ui";
+import type { VisRow, VisTab, VisView } from "../_data/screen-types";
 import { VIS_TABS, tabQuery } from "../_data/tab";
 
-const PRESETS = [7, 28, 90] as const;
 // 엔진 colours in the screen's engine order (by AI 크롤): the validated renewal palette, grey beyond it.
 const ENGINE_COLORS = ["#002c5f", "#1baf7a", "#eb6834", "#6250d6"];
 export const CONTEXT_GREY = "#c9c3bb";
@@ -133,59 +130,5 @@ export function RnVisTabs({ view }: { view: VisView | null }) {
         );
       })}
     </nav>
-  );
-}
-
-// ── 측정 기간 (panel basis row): days, not rounds — the reader's days · from · to ──────
-
-export function RnVisPeriod({ choice, period }: { choice: VisChoice; period: { from: string | null; to: string | null; days: number | null } }) {
-  const t = useTranslations("renewal.visibility.period");
-  const sp = useSearchParams();
-  const { commit } = useRnFilterRuntime();
-  const custom = choice.preset == null;
-  const go = (next: Record<string, string | null>) => {
-    const q = new URLSearchParams(sp.toString());
-    for (const k of ["days", "from", "to"]) q.delete(k);
-    for (const [k, v] of Object.entries(next)) if (v) q.set(k, v);
-    commit(q.toString(), { immediate: true });
-  };
-  const pick = (v: string) => {
-    if (v === "custom") go({ from: period.from, to: period.to });
-    else go({ days: v === "28" ? null : v });
-  };
-  return (
-    <section aria-label={t("label")} className="flex flex-col gap-2 border-b border-rn-line px-4.5 pt-3 pb-3.5">
-      <div className="flex items-center gap-1.5 text-rn-13 font-bold text-rn-ink">
-        <CalendarDays className="size-3.5 text-rn-muted" aria-hidden />
-        {t("label")}
-        {custom && choice.days == null && period.days ? <span className="ml-auto text-rn-12 font-semibold text-rn-muted">{t("days", { n: period.days })}</span> : null}
-      </div>
-      <RnSegmented
-        label={t("label")}
-        className="flex [&>button]:flex-1"
-        value={custom ? "custom" : String(choice.preset)}
-        onChange={pick}
-        items={[...PRESETS.map((d) => ({ value: String(d), label: t("days", { n: d }) })), { value: "custom", label: t("custom") }]}
-      />
-      {custom ? (
-        <div className="grid grid-cols-2 gap-2">
-          {(["from", "to"] as const).map((k) => (
-            <label key={k} className="flex flex-col gap-1 text-rn-11 font-semibold text-rn-muted">
-              {t(k)}
-              <input
-                type="date"
-                defaultValue={(k === "from" ? choice.from ?? period.from : choice.to ?? period.to) ?? ""}
-                onChange={(e) => {
-                  if (!e.target.value) return;
-                  go({ from: k === "from" ? e.target.value : choice.from ?? period.from, to: k === "to" ? e.target.value : choice.to ?? period.to });
-                }}
-                className="h-8 min-w-0 rounded-lg border border-rn-line-2 bg-rn-surface px-2 text-rn-12 text-rn-ink focus:border-rn-navy focus:outline-none"
-              />
-            </label>
-          ))}
-        </div>
-      ) : null}
-      <p className="m-0 text-rn-11 break-keep text-rn-muted">{period.to ? t("help", { to: period.to }) : t("helpNoData")}</p>
-    </section>
   );
 }

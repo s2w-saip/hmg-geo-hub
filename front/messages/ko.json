@@ -44,6 +44,7 @@
     "renewalStandardPrompts": "Global prompts (Renewal)",
     "renewalAiFunnelVisibility": "AI Visibility (Renewal)",
     "renewalAiFunnelAcr": "ACR (Renewal)",
+    "renewalAiFunnelConversion": "AI Conversion (Renewal)",
     "answerAnalysis": "Answer analysis",
     "answerAnalysisMention": "Mention",
     "answerAnalysisCitation": "Citation",
@@ -4022,15 +4023,6 @@
         "engineValue": "엔진 <b>{n}</b>개",
         "siteValue": "사이트 <b>{sites}</b> · 섹션 <b>{sections}</b>"
       },
-      "period": {
-        "label": "측정 기간",
-        "days": "{n}일",
-        "custom": "직접 지정",
-        "from": "시작",
-        "to": "끝",
-        "help": "마지막 측정일 {to}까지 · 증감은 직전 같은 길이 기간과 비교합니다",
-        "helpNoData": "증감은 직전 같은 길이 기간과 비교합니다"
-      },
       "filters": {
         "engineHelp": "AI 크롤 수에만 적용됩니다 — 검색 노출은 그대로",
         "deviceHelp": "검색 노출 수에만 적용됩니다 — AI 크롤은 그대로",
@@ -4360,6 +4352,239 @@
         "seoShare": "검색 노출 몫",
         "aiShare": "AI 크롤 몫",
         "tip": "{sec} · 검색 노출 몫 {seo} · AI 크롤 몫 {ai}"
+      }
+    },
+    "daysPeriod": {
+      "label": "측정 기간",
+      "days": "{n}일",
+      "custom": "직접 지정",
+      "from": "시작",
+      "to": "끝",
+      "help": "마지막 측정일 {to}까지 · 증감은 직전 같은 길이 기간과 비교합니다",
+      "helpNoData": "증감은 직전 같은 길이 기간과 비교합니다"
+    },
+    "conversion": {
+      "title": "AI 유입 전환",
+      "beta": "베타",
+      "subtitle": "AI 답변을 통해 들어온 방문이 사이트 안에서 전환으로 이어지는지 GA4로 봅니다.",
+      "cadence": "일 단위 측정",
+      "periodDays": "최근 {n}일",
+      "range": "{from} ~ {to}",
+      "howToRead": "읽는 법",
+      "foot": "기간 {from} ~ {to}(측정일 {days}일) — 측정 중인 GA4 속성 {props}개 · 모든 수치는 GA4 보고서의 세션 · 전환 · 이벤트 행과 기간 사용자 수에서 계산",
+      "more": "{n}개 더 보기",
+      "less": "접기",
+      "delta": {
+        "up": "개선",
+        "down": "악화",
+        "flat": "변화 없음"
+      },
+      "unit": {
+        "sessions": "회",
+        "sessionsN": "{n}회",
+        "conv": "건",
+        "convN": "{n}건",
+        "ppN": "{n}pp"
+      },
+      "filters": {
+        "engineHelp": "AI 유입에만 적용됩니다 — 일반 유입은 그대로. 고르면 전환율은 계산하지 않습니다",
+        "deviceHelp": "AI · 일반 유입 모두에 적용됩니다. 고르면 전환율은 계산하지 않습니다",
+        "visitorTypeHelp": "신규 · 재방문 — AI · 일반 유입 모두에 적용됩니다. 고르면 전환율은 계산하지 않습니다",
+        "hint": "필터를 선택하지 않으면 연결된 GA4 속성 전체가 조회됩니다 (기간은 위 ‘측정 기간’)."
+      },
+      "states": {
+        "downTitle": "데이터를 불러오지 못했습니다",
+        "downDesc": "분석 DB 연결 상태를 확인할 수 없습니다. 잠시 후 다시 시도하세요 — 필터와 기간은 그대로 둡니다.",
+        "nopropTitle": "연결된 GA4 속성이 없습니다",
+        "nopropDesc": "AI 유입 전환은 브랜드 사이트의 GA4 보고서(AI Assistant 채널 유입 · 전환 이벤트)로 만듭니다. 연결된 GA4 속성이 아직 없어, 속성이 등록되고 수집이 연결되면 이 화면이 채워집니다.",
+        "pendingTitle": "GA4 속성 {n}개가 연결을 기다립니다",
+        "pendingDesc": "등록된 속성이 아직 측정 중이 아닙니다(권한 대기 또는 시장 미연결). 연결이 끝나면 다음 수집부터 이 화면이 채워집니다.",
+        "emptyTitle": "AI 유입 전환 측정 대기",
+        "emptyDesc": "측정 중인 GA4 속성 {n}개가 있지만 {from} ~ {to}의 측정 데이터가 아직 없습니다. 기간을 바꾸거나 다음 수집 뒤에 다시 확인하세요.",
+        "emptyDescNoDate": "측정 중인 GA4 속성 {n}개가 있지만 측정 데이터가 아직 없습니다. 첫 수집 뒤에 다시 확인하세요.",
+        "nomatchTitle": "이 조건에 해당하는 측정 데이터가 없습니다",
+        "nomatchDesc": "고른 국가 · 브랜드 · 엔진 · 기기 · 방문자 유형에 맞는 GA4 행이 없습니다. 국가 선택지는 답변 측정 국가라 GA4 속성이 없는 국가도 고를 수 있습니다. 조건을 줄여 보세요.",
+        "reset": "필터 초기화",
+        "propsLabel": "등록된 GA4 속성",
+        "propTip": "GA4 속성 {id}"
+      },
+      "status": {
+        "active": "측정 중",
+        "pending_grant": "권한 대기",
+        "unmapped": "시장 미연결"
+      },
+      "def": {
+        "label": "정의 보기",
+        "definition": "정의",
+        "formula": "산식",
+        "aiRate": {
+          "d": "AI 답변(ChatGPT · Gemini 등, GA4 ‘AI Assistant’ 채널)을 통해 들어온 사용자 중 전환한 비율입니다.",
+          "f": "AI 유입 전환 수 ÷ AI 유입 사용자 수(기간 중복 제거) × 100"
+        },
+        "genRate": {
+          "d": "AI가 아닌 경로로 들어온 사용자의 전환율입니다. AI 유입을 견주는 기준입니다.",
+          "f": "일반 유입 전환 수 ÷ 일반 유입 사용자 수(기간 중복 제거) × 100"
+        },
+        "lift": {
+          "d": "AI 유입 전환율이 일반 유입 전환율보다 몇 %p 높은지입니다. +면 AI 유입이 더 잘 전환합니다.",
+          "f": "AI 유입 전환율 − 일반 유입 전환율"
+        },
+        "conv": {
+          "d": "AI 유입에서 일어난 전환 수입니다. 속성마다 정한 기준으로 셉니다 — GA4 주요 이벤트 또는 지정한 전환 이벤트.",
+          "f": "속성별 전환 기준에 따른 AI 유입 전환의 합 · 세션 100회당 = 전환 ÷ 세션 × 100"
+        },
+        "sessions": {
+          "d": "AI Assistant 채널에서 시작된 세션 수입니다. 재방문을 포함한 방문 횟수(회)입니다.",
+          "f": "GA4 AI 유입 보고서의 세션 합 · 1인 = 세션 ÷ AI 유입 사용자"
+        },
+        "share": {
+          "d": "사이트 전체 세션 중 AI 유입 세션의 비율입니다.",
+          "f": "AI 유입 세션 ÷ 전체 세션 × 100"
+        },
+        "per100": {
+          "d": "엔진별 사용자 수가 없어 엔진끼리는 세션 100회당 전환으로 견줍니다.",
+          "f": "엔진의 AI 유입 전환 ÷ 엔진의 AI 유입 세션 × 100"
+        },
+        "landing": {
+          "d": "AI 유입 세션이 처음 들어온 페이지(GA4 방문 페이지)입니다. 조회 수는 AI · 일반 유입을 합친 그 페이지의 조회입니다.",
+          "f": "페이지별 AI 유입 세션 합 · 비중 = 페이지 세션 ÷ 표 전체 세션 · 누적 = 위에서부터 더한 비중"
+        }
+      },
+      "summary": {
+        "title": "이 기간 요약",
+        "howTitle": "만드는 방법",
+        "how": "위 여섯 지표는 GA4 보고서의 세션 · 전환 행과 기간 사용자 수에서 바로 계산합니다(각 ⓘ에 산식). 전환 · 세션 아래 작은 선은 7일 단위 합의 추이입니다. 아래 발견은 이 화면의 숫자에서 규칙으로 고른 4개입니다 — 표본 크기, AI · 일반 전환율 격차, 측정 중인 속성, 직전 기간 대비 변화, 엔진, 입구 페이지, 세션 비중 순.",
+        "chipPrev": "{range} · 직전 {days}일 대비",
+        "usersFilter": "엔진 · 기기 · 방문자 유형 필터를 고르면 GA4 기간 사용자 수(전환율의 분모)가 없어 전환율과 격차를 계산하지 않습니다. 세션 · 전환 수는 고른 조건 그대로입니다.",
+        "usersWindow": "이 기간의 GA4 기간 사용자 수가 없어 전환율과 격차를 계산하지 않습니다. 기간 사용자 수는 미리 집계한 기간(최근 7 · 28 · 90일)에만 있습니다."
+      },
+      "kpi": {
+        "aiRate": "AI 유입 전환율",
+        "genRate": "일반 유입 전환율",
+        "lift": "전환율 격차 (AI − 일반)",
+        "conv": "AI 유입 전환",
+        "sessions": "AI 유입 세션",
+        "share": "AI 세션 비중",
+        "rateSub": "전환 {conv}건 ÷ 사용자 {users}명",
+        "rateSubNoUsers": "전환 {conv}건 · 사용자 수 없음",
+        "liftUp": "AI 유입이 일반보다 잘 전환합니다",
+        "liftDown": "일반 유입이 AI보다 잘 전환합니다",
+        "liftFlat": "두 유입의 전환율이 같습니다",
+        "liftNone": "전환율이 없어 계산하지 않습니다",
+        "convSub": "세션 100회당 {n}건",
+        "sessionsSub": "사용자 {users}명 · 1인 {per}회",
+        "sessionsSubNoUsers": "사용자 수 없음",
+        "shareSub": "일반 유입 세션 {gen}회",
+        "prevBasis": "직전 기간 대비",
+        "noPrev": "직전 기간 데이터 없음"
+      },
+      "findings": {
+        "sample": {
+          "tag": "표본 작음",
+          "title": "AI 유입 사용자 {users}명 — {min}명 미만",
+          "detail": "사용자가 적으면 전환 몇 건으로도 전환율이 크게 움직입니다. 기간을 늘려 보세요."
+        },
+        "lift": {
+          "tag": "AI vs 일반",
+          "titleUp": "AI 유입 전환율 {ai} — 일반 유입 {gen}보다 {lift} 높음",
+          "titleDown": "AI 유입 전환율 {ai} — 일반 유입 {gen}보다 {lift} 낮음",
+          "titleFlat": "AI 유입과 일반 유입의 전환율이 같습니다({ai})",
+          "detail": "같은 기간 · 같은 속성의 사용자 기준 전환율입니다."
+        },
+        "coverage": {
+          "tag": "측정 범위",
+          "title": "GA4 속성 {total}개 중 {active}개만 측정 중",
+          "detail": "권한 대기 · 시장 미연결 속성은 합계에 들어가지 않습니다(아래 ‘GA4 속성 · 국가’)."
+        },
+        "change": {
+          "tag": "직전 대비",
+          "title": "AI 유입 세션 {chg} · 직전 {days}일 대비",
+          "detail": "AI 유입 전환 {chg}"
+        },
+        "engine": {
+          "tag": "AI 엔진",
+          "title": "{engine} 유입이 AI 유입 세션의 {share}",
+          "detailBest": "세션 100회당 전환은 {best} {bestPer100}건이 가장 높습니다({engine} {per100}건).",
+          "detailSame": "세션 100회당 전환도 {engine} {per100}건으로 가장 높습니다."
+        },
+        "pages": {
+          "tag": "입구 페이지",
+          "title": "상위 {n}개 페이지가 AI 유입 세션의 {share}",
+          "detail": "가장 많이 들어온 페이지 {page}"
+        },
+        "share": {
+          "tag": "AI 세션 비중",
+          "title": "전체 세션의 {share}가 AI 유입",
+          "detail": "직전 기간 대비 {d}"
+        }
+      },
+      "trend": {
+        "title": "일별 AI 유입 · 전환",
+        "info": "AI 유입 세션과 전환을 날짜별로 봅니다. GA4 행이 없는 날은 0이 아니라 빈칸으로 둡니다. 일별 전환율 = 그날의 AI 유입 전환 ÷ 그날의 AI 유입 사용자.",
+        "sessions": "AI 유입 세션",
+        "conv": "AI 유입 전환",
+        "rate": "일별 AI 유입 전환율",
+        "rateName": "전환율",
+        "rateNone": "이 조건에서는 일별 사용자 수가 없어 전환율을 그리지 않습니다."
+      },
+      "engine": {
+        "title": "AI 엔진별 유입 · 전환",
+        "info": "AI 유입 세션을 들어온 엔진(GA4 세션 소스)으로 나눕니다. 엔진 필터를 고르면 고른 엔진만 남습니다.",
+        "chip": "엔진 {n}개",
+        "cols": {
+          "engine": "엔진",
+          "sessions": "AI 유입 세션",
+          "share": "비중",
+          "conv": "전환",
+          "per100": "100회당",
+          "d": "직전 대비"
+        },
+        "none": "이 조건의 엔진별 행이 없습니다.",
+        "rest": "엔진을 알 수 없는 AI 유입 세션 {n}회는 표에서 뺐습니다.",
+        "per100Note": "100회당 = 세션 100회당 전환 — 엔진별 사용자 수가 없어 세션으로 견줍니다."
+      },
+      "props": {
+        "title": "GA4 속성 · 국가",
+        "info": "AI 유입 전환을 재는 브랜드 사이트의 GA4 속성입니다. ‘측정 중’ 속성만 합계에 들어가고, 전환은 속성마다 정한 기준(GA4 주요 이벤트 또는 지정한 전환 이벤트)으로 셉니다.",
+        "chip": "측정 중 {active} / {total}",
+        "cols": {
+          "prop": "국가 · 속성",
+          "sessions": "AI 유입 세션",
+          "users": "AI 사용자",
+          "status": "상태"
+        },
+        "idBasis": "GA4 {id} · {basis}",
+        "basis": {
+          "b1": "주요 이벤트 기준",
+          "b2": "지정 이벤트 기준"
+        },
+        "unknown": "국가 미상"
+      },
+      "pages": {
+        "title": "AI 유입 입구 페이지",
+        "chip": "페이지 {n}개",
+        "cols": {
+          "page": "입구 페이지",
+          "sessions": "AI 유입 세션",
+          "share": "비중",
+          "cum": "누적",
+          "views": "조회(전체 유입)",
+          "d": "직전 대비"
+        },
+        "none": "이 조건의 입구 페이지 행이 없습니다."
+      },
+      "events": {
+        "title": "GA4 이벤트 · 전환 집계",
+        "info": "기간의 GA4 이벤트와 발생 수입니다(AI · 일반 유입 합계). ‘전환 집계’는 속성이 전환으로 세는 이벤트이고, 비중은 전환 집계 이벤트끼리의 몫입니다. 주요 이벤트 기준 속성의 전환은 GA4 주요 이벤트 수로 따로 셉니다.",
+        "chip": "전환 집계 이벤트 {n}개 · {sum}회",
+        "tracked": "전환 집계",
+        "cols": {
+          "event": "이벤트",
+          "kind": "구분",
+          "count": "발생 수",
+          "share": "전환 비중"
+        },
+        "none": "이 조건의 이벤트 행이 없습니다."
       }
     },
     "shell": {

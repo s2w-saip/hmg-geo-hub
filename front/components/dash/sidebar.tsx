@@ -81,6 +81,7 @@ const ROUTE_ICON: Record<RouteKey, ComponentType<{ className?: string }>> = {
   aiFunnelAcr: Trophy,
   renewalAiFunnelAcr: Sparkles,
   aiFunnelConversion: TrendingUp,
+  renewalAiFunnelConversion: Sparkles,
   customerInterest: Heart,
   customerInterestGoogleKeywords: Globe,
   customerInterestSocialScraping: MessagesSquare,

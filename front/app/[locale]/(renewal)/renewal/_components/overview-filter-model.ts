@@ -23,6 +23,7 @@ import {
   orderGeographyOptions,
   pruneCascade,
   pruneToOptions,
+  STAGE_PRIMARY,
   type CatalogTaxonomyRow,
   type DimensionGroup,
   type Draft,
@@ -43,8 +44,9 @@ export interface OverviewPanelInput {
    * acrOnlyGroups), the Mention page (analysis-filter-bar.tsx composeGroups "mentions") or the
    * Citation page (composeGroups "citations" with STANDARD_CITATION_V2_ONLY_GROUPS = + 출처 카테고리 · 경쟁사).
    * "visibility" has no app panel to mirror (the original page takes a date form only): VISIBILITY_ONLY_GROUPS.
+   * "conversion" mirrors the app's conversion stage (STAGE_PRIMARY.conversion): CONVERSION_ONLY_GROUPS.
    */
-  stage?: "overview" | "acr" | "mention" | "citation" | "visibility";
+  stage?: "overview" | "acr" | "mention" | "citation" | "visibility" | "conversion";
   scope?: AllowedScope;
   catalogRows?: CatalogTaxonomyRow[];
   geographyOptions?: string[];
@@ -79,6 +81,13 @@ export interface OverviewPanelModel {
  */
 export const VISIBILITY_ONLY_GROUPS: readonly DimensionGroup[] = ["geography", "engine", "device"];
 
+/**
+ * AI Conversion (2026-10-29): the app's GA4 axes — 국가 picks GA4 properties, AI 엔진 narrows the AI cohort only,
+ * 디바이스 · 방문자 유형 narrow both cohorts (hub_stores/analytics_reader.py conversion). The period is the page's
+ * own 측정 기간 row, as on AI Visibility.
+ */
+export const CONVERSION_ONLY_GROUPS: readonly DimensionGroup[] = STAGE_PRIMARY.conversion;
+
 const insertBrand = (base: DimensionGroup[]): DimensionGroup[] => {
   if (base.includes("brand")) return base;
   const i = base.indexOf("promptContext");
@@ -101,7 +110,9 @@ export function overviewPanelModel(input: OverviewPanelInput, draft: Draft): Ove
           ? composeGroups("citations", { onlyGroups: STANDARD_CITATION_V2_ONLY_GROUPS, languageOptions }).only
           : stage === "visibility"
             ? [...VISIBILITY_ONLY_GROUPS]
-            : overviewOnlyGroups(languageOptions);
+            : stage === "conversion"
+              ? [...CONVERSION_ONLY_GROUPS]
+              : overviewOnlyGroups(languageOptions);
   const base = isAdmin ? insertBrand(only) : only;
   const visibleGroups = base.filter((g) => {
     if (lock.has(g)) return false;

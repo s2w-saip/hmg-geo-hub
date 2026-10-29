@@ -8,6 +8,7 @@ import { throwForPage } from "@/lib/hgh/errors";
 import { screenGet } from "@/lib/screen";
 import { RnCard, RnPageHeader, RnPill, RnSkeleton, RnTag } from "@/components/renewal-ui";
 import { RnBusyScope, RnFilterRuntime } from "../../../_components/filter-runtime";
+import { RnDaysPeriod } from "../../../_components/days-period";
 import { loadSavedFilters } from "../../../_components/saved-filters-server";
 import {
   RnCopyLinkButton,
@@ -18,7 +19,7 @@ import {
   RnOverviewFilters,
 } from "../../../_components/overview-filters";
 import { RnVisBody } from "./_components/vis-body";
-import { RnVisPageProvider, RnVisPeriod, RnVisTabs } from "./_components/vis-context";
+import { RnVisPageProvider, RnVisTabs } from "./_components/vis-context";
 import type { RnVisScreen, VisChoice } from "./_data/screen-types";
 import { tabOf } from "./_data/tab";
 
@@ -101,7 +102,7 @@ async function RenewalVisibility({ sp, scope, userId, locale, header }: { sp: Sp
         top={body.state === "ok" ? <RnVisTabs view={body.view} /> : undefined}
         panel={
           <RnOverviewFilterPanel
-            basis={<RnVisPeriod choice={body.choice} period={body.period} />}
+            basis={<RnDaysPeriod choice={body.choice} period={body.period} />}
             axisHelp={{ engine: t("filters.engineHelp"), device: t("filters.deviceHelp") }}
             hint={t("filters.hint")}
           />

@@ -60,7 +60,7 @@ const GLOBAL = [
   "Citation → /renewal/standard/answer-analysis/citation",
   "AI Agent Funnel (group)",
   "ACR → /renewal/standard/ai-funnel/acr",
-  "AI Conversion · 미구현 → /renewal/standard/ai-funnel/conversion",
+  "AI Conversion → /renewal/standard/ai-funnel/conversion",
 ];
 const WEBSITE = [
   "Overview · 미구현 → /renewal/website",
@@ -103,7 +103,7 @@ describe("renewal sidebar", () => {
   it("marks the items without a renewal page and shows no beta badge", () => {
     const out = html("admin");
     const marks = [...out.matchAll(/<span data-rn-nav-unimplemented="" title="([^"]+)"[^>]*><svg[^>]*>.*?<\/svg><span class="sr-only">([^<]+)<\/span><\/span>/g)];
-    expect(marks.length).toBe(16); // Global 1 · Website 5 · Project 1 · Admin 9
+    expect(marks.length).toBe(15); // Website 5 · Project 1 · Admin 9
     for (const [, title, sr] of marks) expect([title, sr]).toEqual([ko.unimplemented.label, ko.unimplemented.label]);
     expect(out).not.toContain("β");
   });

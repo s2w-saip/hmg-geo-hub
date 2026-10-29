@@ -42,6 +42,7 @@ const NON_VENDOR_STANDARD_PATHS = [
   "/standard/ai-funnel/acr",
   "/renewal/standard/ai-funnel/acr",
   "/standard/ai-funnel/conversion",
+  "/renewal/standard/ai-funnel/conversion",
   "/customer-interest",
   "/customer-interest/google-keywords",
   "/customer-interest/social-scraping",
@@ -301,8 +302,8 @@ describe("route-policy — guard bypass and default landing", () => {
 });
 
 describe("route-policy — ROUTES table integrity", () => {
-  it("exposes 40 routes (renewal Overview / Global prompts / ACR / Mention / Citation / AI Visibility, HUB global prompts, production Admin 분석 엔진 / 리포트 관리 / 측정 크레딧 추가)", () => {
-    expect(ROUTES).toHaveLength(40);
+  it("exposes 41 routes (renewal Overview / Global prompts / ACR / Mention / Citation / AI Visibility / AI Conversion, HUB global prompts, production Admin 분석 엔진 / 리포트 관리 / 측정 크레딧 추가)", () => {
+    expect(ROUTES).toHaveLength(41);
   });
 
   it("renewal pages open to exactly the roles of their originals", () => {
@@ -311,6 +312,7 @@ describe("route-policy — ROUTES table integrity", () => {
       ["/renewal/standard/prompts", "/standard/prompts"],
       ["/renewal/standard/ai-funnel/acr", "/standard/ai-funnel/acr"],
       ["/renewal/standard/ai-funnel/visibility", "/standard/ai-funnel/visibility"],
+      ["/renewal/standard/ai-funnel/conversion", "/standard/ai-funnel/conversion"],
       ["/renewal/admin/standards/prompts", "/admin/standards/prompts"],
       ["/renewal/standard/answer-analysis/mention", "/standard/answer-analysis/mention"],
       ["/renewal/standard/answer-analysis/citation", "/standard/answer-analysis/citation"],
@@ -327,7 +329,7 @@ describe("route-policy — ROUTES table integrity", () => {
   // 2026-10-28: the renewal sidebar opens /renewal<path> for every menu item; one without a renewal page
   // is the "not implemented" page, which has no row — it is permitted exactly as its original.
   it("a renewal path without a row of its own is permitted exactly as its original", () => {
-    for (const original of ["/website", "/website/prompts", "/website/answer-analysis/mention", "/standard/ai-funnel/conversion", "/projects", "/admin", "/admin/ga4", "/admin/credits", "/customer-interest"]) {
+    for (const original of ["/website", "/website/prompts", "/website/answer-analysis/mention", "/website/ai-funnel/conversion", "/projects", "/admin", "/admin/ga4", "/admin/credits", "/customer-interest"]) {
       for (const role of [...roles, "local_reader"] as Role[]) {
         expect(canAccessRoute(role, `/ko/renewal${original}`)).toBe(canAccessRoute(role, original));
       }
