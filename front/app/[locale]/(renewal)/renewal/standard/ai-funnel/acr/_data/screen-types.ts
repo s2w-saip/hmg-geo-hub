@@ -48,24 +48,42 @@ export interface AcrBrandRow extends AcrBrand {
 
 export type AcrBattleView = "all" | "notown" | "split";
 export type AcrModelSort = "conversionRate" | "shortlistCount" | "top1Count";
-export type AcrDistOrder = "text" | "own" | "textZero" | "ownZero";
+/** row sorts: 당사 열세 (the most picked rival's share − 당사's) / 당사 몫, low first / prompt text */
+export type AcrDistSort = "gap" | "own" | "text";
+/** 당사 in a row: picked / a candidate never picked / not a candidate */
+export type AcrDistState = "pick" | "listed" | "absent";
 
 export interface AcrDistRow {
   promptId: string;
   label: string;
+  /** repetitions of the prompt's cells summed (a round's re-measurements, a period's rounds) */
   validAcr: number;
+  cells: number;
+  state: AcrDistState;
+  /** brands on a shortlist in the row */
+  candidates: number;
   /** picks of the own brands, picks of every brand */
   ownN: number;
   picked: number;
   /** validAcr > picked: the "nobody chosen" segment, `none` picks wide */
   hatch: boolean;
   none: number;
-  /** first entry (API order) */
+  /** the most picked brand (first entry); null when nobody was picked */
   top: { brand: string; choice: number } | null;
-  /** segment width = choice / validAcr (%) */
+  /** the brands picked; segment width = choice / validAcr (%) */
   entries: { brand: string; choice: number; width: number }[];
   /** CSV: the choice of every `present` brand */
   pivot: number[];
+}
+
+/** A 분포 sheet tab; its rows come with the page for the first sheet, else from acr/renewal-sheet */
+export interface AcrDistTab {
+  /** `${country ?? ""}|${engine}` */
+  key: string;
+  region: string | null;
+  engine: string;
+  /** rows of the sheet */
+  count: number;
 }
 
 export interface AcrDistSheet {
@@ -74,10 +92,12 @@ export interface AcrDistSheet {
   region: string | null;
   engine: string;
   rows: AcrDistRow[];
-  /** brands present in the sheet (first appearance) */
+  /** brands picked in the sheet (first appearance) */
   present: string[];
-  /** row orders: by prompt text / by own share, all rows / rows without an own pick */
-  orders: Record<AcrDistOrder, number[]>;
+  /** rows per 당사 state */
+  counts: Record<AcrDistState | "all", number>;
+  /** row orders per sort and 당사 state */
+  orders: Record<AcrDistSort, Record<AcrDistState | "all", number[]>>;
 }
 
 export interface RnAcrView {
@@ -126,7 +146,10 @@ export interface RnAcrView {
     rows: (StandardAcr["modelConversion"][number] & { rank: number; brandLabel: string; own: boolean; sibling: boolean; bar: number })[];
     orders: Record<AcrModelSort, number[]>;
   };
-  sheets: AcrDistSheet[];
+  /** every sheet, the most rows first */
+  sheets: AcrDistTab[];
+  /** the first sheet (the others are read when their tab opens) */
+  sheet: AcrDistSheet | null;
   distVisible: number;
 }
 

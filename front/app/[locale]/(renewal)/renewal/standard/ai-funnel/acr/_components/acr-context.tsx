@@ -58,8 +58,9 @@ export const pctTxt = (v: number | null | undefined) => (v == null ? "—" : `${
 export const ppTxt = (v: number) => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}pp`;
 export const deltaTxt = (v: number | null | undefined) => (v == null ? "—" : Math.abs(v) < 0.05 ? "0.0pp" : `${v > 0 ? "▲" : "▼"}${Math.abs(v).toFixed(1)}pp`);
 
-/** Card actions: table twin toggle (when `tableId`) + ⋯ with CSV export and a link to the section. */
-export function AcrCardActions({ tableId, section, csv }: { tableId?: string; section: string; csv: () => { name: string; rows: CsvCell[][] } }) {
+/** Card actions: table twin toggle (when `tableId`) + ⋯ with CSV export (not while `csv` is null: nothing loaded yet)
+ * and a link to the section. */
+export function AcrCardActions({ tableId, section, csv }: { tableId?: string; section: string; csv: (() => { name: string; rows: CsvCell[][] }) | null }) {
   const { tables, toggleTable } = useAcr();
   const t = useTranslations("renewal.acr.card");
   const toast = useRnToast();
@@ -68,15 +69,19 @@ export function AcrCardActions({ tableId, section, csv }: { tableId?: string; se
       menuLabel={t("menu")}
       table={tableId ? { on: tables.has(tableId), onToggle: () => toggleTable(tableId), showTable: t("table"), showChart: t("chart") } : undefined}
       menu={[
-        {
-          key: "csv",
-          label: t("csv"),
-          onSelect: () => {
-            const { name, rows } = csv();
-            downloadCsv(name, rows);
-            toast(t("csvDone"));
-          },
-        },
+        ...(csv
+          ? [
+              {
+                key: "csv",
+                label: t("csv"),
+                onSelect: () => {
+                  const { name, rows } = csv();
+                  downloadCsv(name, rows);
+                  toast(t("csvDone"));
+                },
+              },
+            ]
+          : []),
         {
           key: "link",
           label: t("link"),

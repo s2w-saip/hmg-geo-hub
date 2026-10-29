@@ -78,6 +78,26 @@ class GoldLiveReads(unittest.TestCase):
         self.assertTrue(codes)
         self.assertTrue(all(len(c) == 2 and c.isupper() for c in codes), sorted(codes))
 
+    def validate(self, path, payload):
+        route = next(r for r in CONTRACT["routes"] if r["path"] == "/v1/" + path)
+        schema = {"components": {"schemas": CONTRACT["schemas"]}, **route["response"]}
+        errors = sorted(Draft202012Validator(schema).iter_errors(payload), key=lambda e: str(e.path))
+        self.assertFalse(errors, "\n".join(f"{list(e.path)}: {e.message[:250]}" for e in errors[:8]))
+
+    def test_acr_sheets_on_demand(self):
+        # territory_rows=first: the first sheet's rows only; funnel/acr/territory: one sheet as funnel/acr builds it
+        full = self.read("/v1/funnel/acr?surface=global")["data"]["territory"]
+        first = self.read("/v1/funnel/acr?surface=global&territory_rows=first")
+        self.validate("funnel/acr", first)
+        self.assertEqual(first["data"]["territory"][0], full[0])
+        self.assertEqual([{**s, "rows": []} for s in full[1:]], first["data"]["territory"][1:])
+        for s in [full[0], full[len(full) // 2], full[-1]]:
+            with self.subTest(sheet=(s["country"], s["engine"])):
+                one = self.read(f"/v1/funnel/acr/territory?surface=global&sheet_country={s['country'] or ''}&sheet_engine={s['engine']}")
+                self.validate("funnel/acr/territory", one)
+                self.assertEqual(one["data"]["sheet"], s)
+        self.assertIsNone(self.read("/v1/funnel/acr/territory?surface=global&sheet_country=ZZ&sheet_engine=chatgpt")["data"]["sheet"])
+
     def test_primary_contracts(self):
         paths = ("filters/options", "filters/dates", "kpi/summary", "kpi/engines", "mentions/brands",
                  "trend", "citations/domains", "citations/sources", "funnel/acr", "prompts", "answers",

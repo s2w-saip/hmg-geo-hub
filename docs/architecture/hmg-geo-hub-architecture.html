@@ -285,7 +285,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <rect class="box" x="530" y="340" width="160" height="70" rx="6"/>
         <text class="m b" x="544" y="362">screens/</text>
         <text class="m mu" x="544" y="380">/v1/screens/{name}</text>
-        <text class="mu" x="544" y="399">83개 화면 빌더</text>
+        <text class="mu" x="544" y="399">84개 화면 빌더</text>
 
         <rect class="box" x="530" y="430" width="160" height="82" rx="6"/>
         <text class="m b" x="544" y="451">api.get()</text>
@@ -350,7 +350,9 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 
   <ul class="points">
     <li><b>Next는 계산하지 않는다.</b> 페이지는 <code>/v1/screens/{name}</code>에서 완성된 뷰모델을 받아 그리기만 한다.
-      지표 계산은 BFF의 <code>screens/</code> 빌더 83개가 맡는다.</li>
+      지표 계산은 BFF의 <code>screens/</code> 빌더 84개가 맡는다.
+      페이지를 연 뒤 브라우저가 더 읽는 부분(글로벌 프롬프트 목록의 다음 쪽, ACR 분포 시트를 탭을 열 때 하나씩)은
+      <code>/api/standard/*</code> 얇은 프록시가 같은 방식으로 화면 빌더에 넘긴다.</li>
     <li><b>빌더는 HTTP를 다시 타지 않는다.</b> <code>api.get()</code>으로 같은 프로세스 안에서 읽고, 동시에 들어온 같은 읽기는 한 번만 실행한다.
       결과 캐시는 아래 필터 옵션 하나뿐이고, 응답은 모두 <code>no-store</code>다. 한 읽기가 20초를 넘으면 그 구역만 504로 비운다.</li>
     <li><b>필터 옵션 캐시.</b> <code>/v1/filters/options</code>는 기간을 읽지 않으므로 그 <code>data</code>를 BFF 프로세스 메모리에 둔다(<code>gold_reader/metrics.py</code>).

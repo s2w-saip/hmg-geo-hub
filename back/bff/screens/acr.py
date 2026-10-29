@@ -21,6 +21,8 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
+from fastapi import HTTPException
+
 from bff import api
 from bff.screens import screen, split_context
 from bff.screens._convert import delta1, exact, filter_notices, pct1_or_null, round1, whole_suppression
@@ -121,19 +123,28 @@ def to_standard_acr(d: dict, meta: Any) -> dict:
     out["modelConversion"] = [{"brand": _nn(m.get("brand")), "model": m["model"], "isOurs": m["is_ours"],
                                "conversionRate": pct1_or_null(m.get("conversion")), "shortlistCount": m["cells"], "top1Count": m["top1"]}
                               for m in d["model_conversion"]]
-    out["territory"] = [{"region": _nn(s.get("country")), "engine": s["engine"],
-                         "rows": [{"promptId": r["prompt_id"], "promptText": _nn(r.get("prompt_text")), "validAcr": r["valid_acr"],
-                                   "entries": [{"brand": e["brand"], "choice": e["choice"], "isOurs": e["is_ours"]} for e in r["entries"]]}
-                                  for r in s["rows"]]}
-                        for s in d["territory"]]
+    out["territory"] = [_territory_sheet(s) for s in d["territory"]]
     out["totals"] = {"promptRuns": totals["prompt_runs"], "prompts": totals["prompts"], "iterations": totals["iterations"],
                      "engines": list(totals["engines"])}
     return out
 
 
-async def load_acr_screen(filters: dict, ctx: dict) -> dict:
-    """loadAcrScreen: GET /v1/funnel/acr with the screen's filters (analysisQuery) and the B097 flags."""
-    params = to_api_params(analysis_query(filters, ctx), {"include_option_countries": False, "include_catalog_count": False})
+def _territory_sheet(s: dict) -> dict:
+    """An AcrTerritorySheet of funnel/acr or funnel/acr/territory (rowCount: its rows, sent or not)."""
+    return {"region": _nn(s.get("country")), "engine": s["engine"], "rowCount": s["row_count"],
+            "rows": [{"promptId": r["prompt_id"], "promptText": _nn(r.get("prompt_text")), "validAcr": r["valid_acr"], "cells": r["cells"],
+                      "entries": [{"brand": e["brand"], "choice": e["choice"], "appearance": e["appearance"], "isOurs": e["is_ours"]}
+                                  for e in r["entries"]]}
+                     for r in s["rows"]]}
+
+
+async def load_acr_screen(filters: dict, ctx: dict, territory_rows: str = "all") -> dict:
+    """loadAcrScreen: GET /v1/funnel/acr with the screen's filters (analysisQuery) and the B097 flags. The renewal
+    page asks for the first sheet's rows only (territory_rows=first); acr/renewal-sheet reads the others."""
+    flags: dict[str, Any] = {"include_option_countries": False, "include_catalog_count": False}
+    if territory_rows != "all":
+        flags["territory_rows"] = territory_rows
+    params = to_api_params(analysis_query(filters, ctx), flags)
     res = await api.get("funnel/acr", params)
     data, meta = res["data"], res.get("meta")
     count = data["totals"].get("catalog_acr_prompts")
@@ -169,10 +180,10 @@ def _panel_props(options: dict, languages: list, dates: dict) -> dict:
     return out
 
 
-async def _global_reads(filters: dict) -> tuple[dict, dict, dict]:
+async def _global_reads(filters: dict, territory_rows: str = "all") -> tuple[dict, dict, dict]:
     """AcrDataApi's three calls in parallel: ACR, filter options (no period), the round calendar."""
     return await asyncio.gather(
-        load_acr_screen(filters, {"surface": "global", "scope": READER_SCOPE}),
+        load_acr_screen(filters, {"surface": "global", "scope": READER_SCOPE}, territory_rows),
         load_panel_options({"surface": "global", "scope": READER_SCOPE, "filters": filters}),
         load_filter_dates("global", None, "all"),
     )
@@ -491,7 +502,7 @@ def acr_findings(data: dict, v: dict) -> list[dict]:
         zero = len([p for p, n in own_picks.items() if n == 0])
         if zero >= 3:
             region = "" if sheet["region"] is None else sheet["region"]
-            out.append({"kind": "dist", "tone": "warn", "pri": 5, "target": "sec-dist", "act": {"sheet": f"{_key(region)}|{_key(sheet['engine'])}"},
+            out.append({"kind": "dist", "tone": "warn", "pri": 5, "target": "sec-dist", "act": {"sheet": sheet_key(sheet["region"], sheet["engine"])},
                         "params": {"region": region, "engine": sheet["engine"], "zero": zero, "rows": len(own_picks)}})
     return sort_by(out, lambda a, b: _cmp_num(b["pri"] - a["pri"]))[:4]
 
@@ -551,50 +562,69 @@ def _models(data: dict, own_brands: list) -> dict:
     return {"rows": out, "orders": {k: order(k) for k in ("conversionRate", "shortlistCount", "top1Count")}}
 
 
-def _sheets(data: dict, own_brands: list) -> list[dict]:
-    """acr-detail.tsx AcrDistribution, per sheet: own picks, the four row orders (text / own ratio,
-    all rows / rows without an own pick), the brands present and the CSV pivot."""
-    sheets = []
-    for s in data["territory"]:
-        present = list(dict.fromkeys(e["brand"] for r in s["rows"] for e in r["entries"]))
-        rows = []
-        for r in s["rows"]:
-            own_n = 0
-            picked = 0
-            for e in r["entries"]:
-                if e["isOurs"]:
-                    own_n = own_n + _n(e["choice"])
-                picked = picked + _n(e["choice"])
-            den = r["validAcr"] or 1
-            pivot = []
-            for b in present:
-                e = next((x for x in r["entries"] if x["brand"] == b), None)
-                pivot.append(0 if e is None or e["choice"] is None else e["choice"])
-            top = r["entries"][0] if r["entries"] else None
-            rows.append({"promptId": r["promptId"], "label": _label(r), "validAcr": r["validAcr"], "ownN": own_n, "picked": picked,
-                         "hatch": _n(r["validAcr"]) > picked, "none": _n(r["validAcr"]) - picked,
-                         "top": None if top is None else {"brand": top["brand"], "choice": top["choice"]},
-                         "entries": [{"brand": e["brand"], "choice": e["choice"], "width": (_n(e["choice"]) / den) * 100} for e in r["entries"]],
-                         "pivot": pivot})
+def sheet_key(region: Any, engine: Any) -> str:
+    """A 분포 sheet's key (view.sheets[].key, acr/renewal-sheet ?sheet=): `${country ?? ""}|${engine}`."""
+    return f"{'' if region is None else _key(region)}|{_key(engine)}"
 
-        def text(i: int, j: int) -> int:
-            a, b = s["rows"][i]["promptText"], s["rows"][j]["promptText"]
-            return locale_compare("" if a is None else a, "" if b is None else b)
 
-        def ratio(i: int) -> float:
-            return rows[i]["ownN"] / (s["rows"][i]["validAcr"] or 1)
+def _sheet(s: dict) -> dict:
+    """acr-detail.tsx AcrDistribution, one sheet (2026-10-29 redesign, the user's picks): per row 당사's state —
+    picked, listed (a candidate never picked) or absent (not a candidate) — and the bar of the brands picked (the
+    candidates never picked are counted, not drawn); the brands picked in the sheet and the CSV pivot; row orders per
+    sort (당사 열세 = the most picked rival's share − 당사's, then 당사's share, then the prompt; 당사 몫 low first;
+    prompt) and per state, with the state counts."""
+    present = list(dict.fromkeys(e["brand"] for r in s["rows"] for e in r["entries"] if _n(e["choice"]) > 0))
+    rows = []
+    gaps = []
+    for r in s["rows"]:
+        own_n = 0
+        own_listed = 0
+        picked = 0
+        rival_top = 0
+        first: dict = {}
+        for e in r["entries"]:
+            n = _n(e["choice"])
+            picked = picked + n
+            if e["isOurs"]:
+                own_n = own_n + n
+                own_listed = own_listed + _n(e["appearance"])
+            elif n > rival_top:
+                rival_top = n
+            first.setdefault(e["brand"], e)
+        den = r["validAcr"] or 1
+        gaps.append((rival_top - own_n) / den)
+        # 최빈 = the first (most picked) entry; a row nobody was picked in has none (it showed the first candidate, "Audi 0")
+        top = r["entries"][0] if r["entries"] and _n(r["entries"][0]["choice"]) > 0 else None
+        rows.append({"promptId": r["promptId"], "label": _label(r), "validAcr": r["validAcr"], "cells": r["cells"],
+                     "state": "pick" if own_n > 0 else "listed" if own_listed > 0 else "absent",
+                     "candidates": len([e for e in r["entries"] if _n(e["appearance"]) > 0]), "ownN": own_n, "picked": picked,
+                     "hatch": _n(r["validAcr"]) > picked, "none": _n(r["validAcr"]) - picked,
+                     "top": None if top is None else {"brand": top["brand"], "choice": top["choice"]},
+                     "entries": [{"brand": e["brand"], "choice": e["choice"], "width": (_n(e["choice"]) / den) * 100}
+                                 for e in r["entries"] if _n(e["choice"]) > 0],
+                     "pivot": [0 if b not in first or first[b]["choice"] is None else first[b]["choice"] for b in present]})
 
-        def by_own(i: int, j: int) -> int:
-            d = ratio(i) - ratio(j)
-            return _cmp_num(d) if d == d and d != 0 else text(i, j)
+    def text(i: int, j: int) -> int:
+        a, b = s["rows"][i]["promptText"], s["rows"][j]["promptText"]
+        return locale_compare("" if a is None else a, "" if b is None else b)
 
-        all_idx = list(range(len(rows)))
-        zero_idx = [i for i in all_idx if rows[i]["ownN"] == 0]
-        sheets.append({"key": f"{'' if s['region'] is None else _key(s['region'])}|{_key(s['engine'])}", "region": s["region"], "engine": s["engine"],
-                       "rows": rows, "present": present,
-                       "orders": {"text": sort_by(all_idx, text), "own": sort_by(all_idx, by_own),
-                                  "textZero": sort_by(zero_idx, text), "ownZero": sort_by(zero_idx, by_own)}})
-    return sheets
+    def ratio(i: int) -> float:
+        return rows[i]["ownN"] / (s["rows"][i]["validAcr"] or 1)
+
+    def by_own(i: int, j: int) -> int:
+        d = ratio(i) - ratio(j)
+        return _cmp_num(d) if d == d and d != 0 else text(i, j)
+
+    def by_gap(i: int, j: int) -> int:
+        d = gaps[j] - gaps[i]
+        return _cmp_num(d) if d != 0 else by_own(i, j)
+
+    all_idx = list(range(len(rows)))
+    states = {"all": all_idx, **{st: [i for i in all_idx if rows[i]["state"] == st] for st in ("pick", "listed", "absent")}}
+    return {"key": sheet_key(s["region"], s["engine"]), "region": s["region"], "engine": s["engine"],
+            "rows": rows, "present": present, "counts": {st: len(ix) for st, ix in states.items()},
+            "orders": {sort: {st: sort_by(ix, cmp) for st, ix in states.items()}
+                       for sort, cmp in (("gap", by_gap), ("own", by_own), ("text", text))}}
 
 
 def renewal_view(data: dict, own: dict | None, round_buckets: bool, period: bool) -> dict:
@@ -626,7 +656,10 @@ def renewal_view(data: dict, own: dict | None, round_buckets: bool, period: bool
         "ownTop1Bar": None if o is None else (_n(o.get("choiceShare")) / max_t1) * 100,
         "battle": _battle(data, v["engines"]),
         "models": _models(data, own_brands),
-        "sheets": _sheets(data, own_brands),
+        # the sheet tabs, and the first sheet's rows (acr/renewal-sheet sends the others when their tab opens)
+        "sheets": [{"key": sheet_key(s["region"], s["engine"]), "region": s["region"], "engine": s["engine"], "count": s["rowCount"]}
+                   for s in data["territory"]],
+        "sheet": _sheet(data["territory"][0]) if data["territory"] else None,
         "distVisible": DIST_VISIBLE,
     })
     for w in v["engineWins"]:
@@ -650,7 +683,7 @@ async def renewal(q) -> dict:
     _, sp = split_context(q)
     filters = read_standard_filters(sp, READER_SCOPE)
     st = page_state(sp, filters)
-    acr, options, dates = await _global_reads(filters)
+    acr, options, dates = await _global_reads(filters, "first")
     props = {"stage": "acr", **_panel_props(options, acr["languageOptions"], dates)}
     data = acr["data"]
     own = dict(data["own"]) if data.get("own") is not None else None
@@ -658,3 +691,20 @@ async def renewal(q) -> dict:
             "roundBuckets": True, "period": st["period"], "ownLabel": st["ownLabel"], "totals": data["totals"],
             "view": renewal_view(data, own, True, st["period"]) if data["measured"] else None}
     return {"props": props, "body": body}
+
+
+@screen("acr/renewal-sheet")
+async def renewal_sheet(q) -> dict:
+    """One 분포 sheet of the renewal ACR page, read when its tab opens: ?sheet=<view.sheets[].key> with the page's
+    URL -> {sheet: the sheet as acr/renewal's view.sheet, null when the filters leave it no cell}."""
+    _, sp = split_context(q)
+    key = sp.get("sheet")
+    if not isinstance(key, str) or "|" not in key:
+        raise HTTPException(422, "sheet must be <country>|<engine>")
+    country, _, engine = key.partition("|")
+    filters = read_standard_filters(sp, READER_SCOPE)
+    params = to_api_params(analysis_query(filters, {"surface": "global", "scope": READER_SCOPE}),
+                           {"sheet_country": country, "sheet_engine": engine})
+    res = await api.get("funnel/acr/territory", params)
+    s = res["data"]["sheet"]
+    return {"sheet": None if s is None or whole_suppression(res.get("meta")) else _sheet(_territory_sheet(s))}

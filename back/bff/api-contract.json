@@ -7215,6 +7215,22 @@
           "description": "점유 맵 시트(국가×엔진) 상한"
         },
         {
+          "name": "territory_rows",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "enum": [
+              "all",
+              "first"
+            ],
+            "type": "string",
+            "description": "all = 모든 시트가 행을 담는다. first = 첫 시트(행이 가장 많은 시트)만 rows 를 담고 나머지는 rows [] (row_count 는 모두). 리뉴얼 ACR 화면이 쓰고, 다른 시트는 탭을 열 때 /v1/funnel/acr/territory 로 하나씩 읽는다",
+            "default": "all",
+            "title": "Territory Rows"
+          },
+          "description": "all = 모든 시트가 행을 담는다. first = 첫 시트(행이 가장 많은 시트)만 rows 를 담고 나머지는 rows [] (row_count 는 모두). 리뉴얼 ACR 화면이 쓰고, 다른 시트는 탭을 열 때 /v1/funnel/acr/territory 로 하나씩 읽는다"
+        },
+        {
           "name": "model_limit",
           "in": "query",
           "required": false,
@@ -7251,6 +7267,288 @@
             "title": "Include Catalog Count"
           },
           "description": "false = 카탈로그 ACR 프롬프트 수를 셀이 없는 응답(prompt_runs 0·빈 창·숨김·원천 준비 중)에서만 세고, 셀이 있으면 세지 않고 totals.catalog_acr_prompts = null(측정 대기 안내만 이 값을 읽는다). 다른 값은 같다"
+        }
+      ]
+    },
+    {
+      "path": "/v1/funnel/acr/territory",
+      "response": {
+        "$ref": "#/components/schemas/Envelope_AcrTerritoryData_"
+      },
+      "params": [
+        {
+          "name": "surface",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "enum": [
+              "global",
+              "website",
+              "project"
+            ],
+            "type": "string",
+            "description": "global|website|project",
+            "title": "Surface"
+          },
+          "description": "global|website|project"
+        },
+        {
+          "name": "project_id",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "project 표면 필수. website 는 사이트 하나로 좁힐 때(선택). project 표면은 커스텀 필드 필터 cf.<field_uuid>=값(동적 키, 반복)도 받는다: 한 필드 안 값은 OR, 필드끼리 AND, 키 형식 오류 422, 빈 값만 준 필드는 결과 0. 다른 표면의 cf.* 는 meta.ignored_filters 'custom'",
+            "title": "Project Id"
+          },
+          "description": "project 표면 필수. website 는 사이트 하나로 좁힐 때(선택). project 표면은 커스텀 필드 필터 cf.<field_uuid>=값(동적 키, 반복)도 받는다: 한 필드 안 값은 OR, 필드끼리 AND, 키 형식 오류 422, 빈 값만 준 필드는 결과 0. 다른 표면의 cf.* 는 meta.ignored_filters 'custom'"
+        },
+        {
+          "name": "brand",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "description": "관점 브랜드 좁히기(스코프 안). brand_code",
+            "title": "Brand"
+          },
+          "description": "관점 브랜드 좁히기(스코프 안). brand_code"
+        },
+        {
+          "name": "country",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 300,
+            "description": "ISO 국가(웹사이트는 가상 코드 포함)",
+            "title": "Country"
+          },
+          "description": "ISO 국가(웹사이트는 가상 코드 포함)"
+        },
+        {
+          "name": "lang",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Lang"
+          }
+        },
+        {
+          "name": "engine",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "description": "엔진 코드. 없으면 기본 엔진(dflt)",
+            "title": "Engine"
+          },
+          "description": "엔진 코드. 없으면 기본 엔진(dflt)"
+        },
+        {
+          "name": "from",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "앵커(round_date) 시작. to 만 주면 first_measured_date 로 채운다",
+            "title": "From"
+          },
+          "description": "앵커(round_date) 시작. to 만 주면 first_measured_date 로 채운다"
+        },
+        {
+          "name": "to",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "앵커(round_date) 끝. from 만 주면 최신 회차(latest_round_date, 없으면 오늘 KST)로 채운다",
+            "title": "To"
+          },
+          "description": "앵커(round_date) 끝. from 만 주면 최신 회차(latest_round_date, 없으면 오늘 KST)로 채운다"
+        },
+        {
+          "name": "funnel",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Funnel"
+          }
+        },
+        {
+          "name": "brand_presence",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10,
+            "title": "Brand Presence"
+          }
+        },
+        {
+          "name": "list_type",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "List Type"
+          }
+        },
+        {
+          "name": "depth1",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 200,
+            "title": "Depth1"
+          }
+        },
+        {
+          "name": "depth2",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 200,
+            "title": "Depth2"
+          }
+        },
+        {
+          "name": "depth3",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 200,
+            "title": "Depth3"
+          }
+        },
+        {
+          "name": "depth4",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 200,
+            "description": "카탈로그 depth4(BG-03). 지원 축으로 선언한 엔드포인트만 적용(그 밖은 meta.ignored_filters)",
+            "title": "Depth4"
+          },
+          "description": "카탈로그 depth4(BG-03). 지원 축으로 선언한 엔드포인트만 적용(그 밖은 meta.ignored_filters)"
+        },
+        {
+          "name": "source",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "description": "인용 출처 카테고리 slug",
+            "title": "Source"
+          },
+          "description": "인용 출처 카테고리 slug"
+        },
+        {
+          "name": "card",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "boolean",
+            "description": "대시보드 카드 경로 요청(global·website). 현행 프로필(운영 hmg-geo 재현 스위치)의 카드 정의를 쓴다: card_slot_rep(기간 창 = 자리마다 대표 회차 하나)·summary_all_engines(엔진 필터 없음 = 전 엔진)·web_registered_only(website 모수 = 보고서 유닛 소속). 스위치가 꺼져 있거나 project 표면이면 효과 없음",
+            "default": false,
+            "title": "Card"
+          },
+          "description": "대시보드 카드 경로 요청(global·website). 현행 프로필(운영 hmg-geo 재현 스위치)의 카드 정의를 쓴다: card_slot_rep(기간 창 = 자리마다 대표 회차 하나)·summary_all_engines(엔진 필터 없음 = 전 엔진)·web_registered_only(website 모수 = 보고서 유닛 소속). 스위치가 꺼져 있거나 project 표면이면 효과 없음"
+        },
+        {
+          "name": "sheet_country",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "description": "시트 국가(/v1/funnel/acr territory[].country). 빈 값 = 국가 없는 셀의 시트",
+            "default": "",
+            "title": "Sheet Country"
+          },
+          "description": "시트 국가(/v1/funnel/acr territory[].country). 빈 값 = 국가 없는 셀의 시트"
+        },
+        {
+          "name": "sheet_engine",
+          "in": "query",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "description": "시트 엔진(territory[].engine)",
+            "title": "Sheet Engine"
+          },
+          "description": "시트 엔진(territory[].engine)"
         }
       ]
     },
@@ -14978,12 +15276,18 @@
         "is_ours": {
           "type": "boolean",
           "title": "Is Ours"
+        },
+        "appearance": {
+          "type": "integer",
+          "title": "Appearance",
+          "description": "후보 목록(shortlist)에 오른 반복 수의 합"
         }
       },
       "type": "object",
       "required": [
         "brand",
         "choice",
+        "appearance",
         "is_ours"
       ],
       "title": "AcrTerritoryEntry"
@@ -15015,6 +15319,11 @@
           },
           "type": "array",
           "title": "Entries"
+        },
+        "cells": {
+          "type": "integer",
+          "title": "Cells",
+          "description": "이 행에 합친 측정 셀 수"
         }
       },
       "type": "object",
@@ -15022,9 +15331,11 @@
         "prompt_id",
         "prompt_text",
         "valid_acr",
+        "cells",
         "entries"
       ],
-      "title": "AcrTerritoryRow"
+      "title": "AcrTerritoryRow",
+      "description": "프롬프트 하나 = 읽기 창 안 그 프롬프트의 셀(같은 회차 재측정·기간의 회차) 합. valid_acr·entries[].choice·appearance 는 그 셀들의 합"
     },
     "AcrTerritorySheet": {
       "properties": {
@@ -15049,12 +15360,18 @@
           },
           "type": "array",
           "title": "Rows"
+        },
+        "row_count": {
+          "type": "integer",
+          "title": "Row Count",
+          "description": "시트의 행(프롬프트) 수. territory_rows=first 로 rows 를 보내지 않은 시트도 센다"
         }
       },
       "type": "object",
       "required": [
         "country",
         "engine",
+        "row_count",
         "rows"
       ],
       "title": "AcrTerritorySheet"
@@ -41653,6 +41970,42 @@
       ],
       "title": "PromptItem",
       "description": "프로젝트 프롬프트 1건. 은퇴 축(list_type·depth·funnel·brand_presence)은 노출하지 않는다(모듈-프로젝트 §2)."
+    },
+    "AcrTerritoryData": {
+      "properties": {
+        "sheet": {
+          "anyOf": [
+            {
+              "$ref": "#/components/schemas/AcrTerritorySheet"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "/v1/funnel/acr 가 같은 필터에서 만드는 그 시트(행 순서·항목 순서 같음). 필터가 그 시트에 셀을 남기지 않으면 null"
+        }
+      },
+      "type": "object",
+      "required": [
+        "sheet"
+      ],
+      "title": "AcrTerritoryData"
+    },
+    "Envelope_AcrTerritoryData_": {
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/AcrTerritoryData"
+        },
+        "meta": {
+          "$ref": "#/components/schemas/Meta"
+        }
+      },
+      "type": "object",
+      "required": [
+        "data",
+        "meta"
+      ],
+      "title": "Envelope[AcrTerritoryData]"
     }
   }
 }

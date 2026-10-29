@@ -33,8 +33,8 @@ def acr_body(**over) -> dict:
             {"engine": "chatgpt", "winner_brand": "Hyundai", "winner_is_ours": True, "choice": 4},
             {"engine": "gemini", "winner_brand": None, "winner_is_ours": False, "choice": 0}]}],
         "model_conversion": [{"brand": None, "model": "Tucson", "is_ours": True, "conversion": {"num": 2, "den": 3}, "cells": 2, "top1": 2}],
-        "territory": [{"country": None, "engine": "chatgpt", "rows": [
-            {"prompt_id": "p1", "prompt_text": None, "valid_acr": 5, "entries": [{"brand": "Hyundai", "choice": 4, "is_ours": True}]}]}],
+        "territory": [{"country": None, "engine": "chatgpt", "row_count": 1, "rows": [
+            {"prompt_id": "p1", "prompt_text": None, "valid_acr": 5, "cells": 1, "entries": [{"brand": "Hyundai", "choice": 4, "appearance": 4, "is_ours": True}]}]}],
         "options": {"langs": ["de", "en"], "countries": ["DE", "US"]},
     }
     data.update(over)
@@ -190,10 +190,10 @@ class OwnTotal(unittest.TestCase):
             trend={"series_brands": ["Toyota", "Hyundai", "Kia", "Lexus"], "buckets": [
                 {"round_date": "2026-10-05", "gap": False, "den": 300, "own": 37,
                  "series": [{"brand": "Toyota", "num": 53}, {"brand": "Hyundai", "num": 20}, {"brand": "Kia", "num": 14}, {"brand": "Lexus", "num": 0}]}]},
-            territory=[{"country": "US", "engine": "chatgpt", "rows": [
-                {"prompt_id": "p1", "prompt_text": None, "valid_acr": 10, "entries": [
-                    {"brand": "Toyota", "choice": 5, "is_ours": False}, {"brand": "Genesis", "choice": 3, "is_ours": True},
-                    {"brand": "Kia", "choice": 1, "is_ours": True}]}]}],
+            territory=[{"country": "US", "engine": "chatgpt", "row_count": 1, "rows": [
+                {"prompt_id": "p1", "prompt_text": None, "valid_acr": 10, "cells": 1, "entries": [
+                    {"brand": "Toyota", "choice": 5, "appearance": 5, "is_ours": False}, {"brand": "Genesis", "choice": 3, "appearance": 3, "is_ours": True},
+                    {"brand": "Kia", "choice": 1, "appearance": 1, "is_ours": True}]}]}],
         )["data"]
         std = acr.to_standard_acr(body, {})
         return acr.renewal_view(std, std["own"], True, False)
@@ -210,7 +210,7 @@ class OwnTotal(unittest.TestCase):
         self.assertEqual((v["rank"], v["standingN"]), (2, 5))
 
     def test_the_distribution_counts_every_own_pick(self):
-        self.assertEqual(self.view()["sheets"][0]["rows"][0]["ownN"], 4)
+        self.assertEqual(self.view()["sheet"]["rows"][0]["ownN"], 4)
 
 
 class DistAndEngines(unittest.TestCase):
@@ -219,16 +219,16 @@ class DistAndEngines(unittest.TestCase):
 
     def view(self):
         body = acr_body(
-            territory=[{"country": "US", "engine": "chatgpt", "rows": [
-                {"prompt_id": "p1", "prompt_text": None, "valid_acr": 10, "entries": [
-                    {"brand": "Toyota", "choice": 6, "is_ours": False}, {"brand": "Hyundai", "choice": 0, "is_ours": True}]},
-                {"prompt_id": "p1", "prompt_text": None, "valid_acr": 10, "entries": [{"brand": "Toyota", "choice": 4, "is_ours": False}]},
-                {"prompt_id": "p2", "prompt_text": None, "valid_acr": 10, "entries": [{"brand": "BMW", "choice": 3, "is_ours": False}]},
-                {"prompt_id": "p3", "prompt_text": None, "valid_acr": 10, "entries": [{"brand": "Toyota", "choice": 2, "is_ours": False}]},
-                {"prompt_id": "p4", "prompt_text": None, "valid_acr": 10, "entries": [
-                    {"brand": "Hyundai", "choice": 5, "is_ours": True}, {"brand": "Toyota", "choice": 1, "is_ours": False}]},
-                {"prompt_id": "p5", "prompt_text": None, "valid_acr": 10, "entries": [
-                    {"brand": "Toyota", "choice": 7, "is_ours": False}, {"brand": "Kia", "choice": 0, "is_ours": True}]}]}],
+            territory=[{"country": "US", "engine": "chatgpt", "row_count": 6, "rows": [
+                {"prompt_id": "p1", "prompt_text": None, "valid_acr": 10, "cells": 1, "entries": [
+                    {"brand": "Toyota", "choice": 6, "appearance": 6, "is_ours": False}, {"brand": "Hyundai", "choice": 0, "appearance": 1, "is_ours": True}]},
+                {"prompt_id": "p1", "prompt_text": None, "valid_acr": 10, "cells": 1, "entries": [{"brand": "Toyota", "choice": 4, "appearance": 4, "is_ours": False}]},
+                {"prompt_id": "p2", "prompt_text": None, "valid_acr": 10, "cells": 1, "entries": [{"brand": "BMW", "choice": 3, "appearance": 3, "is_ours": False}]},
+                {"prompt_id": "p3", "prompt_text": None, "valid_acr": 10, "cells": 1, "entries": [{"brand": "Toyota", "choice": 2, "appearance": 2, "is_ours": False}]},
+                {"prompt_id": "p4", "prompt_text": None, "valid_acr": 10, "cells": 1, "entries": [
+                    {"brand": "Hyundai", "choice": 5, "appearance": 5, "is_ours": True}, {"brand": "Toyota", "choice": 1, "appearance": 1, "is_ours": False}]},
+                {"prompt_id": "p5", "prompt_text": None, "valid_acr": 10, "cells": 1, "entries": [
+                    {"brand": "Toyota", "choice": 7, "appearance": 7, "is_ours": False}, {"brand": "Kia", "choice": 0, "appearance": 1, "is_ours": True}]}]}],
             battle=[{"prompt_id": "p1", "prompt_text": "a", "cells": [{"engine": "chatgpt", "winner_brand": "Hyundai", "winner_is_ours": True, "choice": 4}]},
                     {"prompt_id": "p2", "prompt_text": "b", "cells": [{"engine": "chatgpt", "winner_brand": None, "winner_is_ours": False, "choice": 0}]},
                     {"prompt_id": "p3", "prompt_text": "c", "cells": [{"engine": "chatgpt", "winner_brand": "Toyota", "winner_is_ours": False, "choice": 3}]}],
@@ -246,6 +246,129 @@ class DistAndEngines(unittest.TestCase):
     def test_no_pick_is_not_another_brand(self):
         w = self.view()["engineWins"][0]
         self.assertEqual((w["ownWins"], w["noneWins"], w["restBase"]), (1, 1, 1))
+
+
+class DistTop(unittest.TestCase):
+    """2026-10-29: a row nobody was picked in has no 최빈 brand (it showed the alphabetically first candidate, "Audi 0")."""
+
+    def rows(self):
+        body = acr_body(territory=[{"country": "US", "engine": "chatgpt", "row_count": 2, "rows": [
+            {"prompt_id": "p1", "prompt_text": None, "valid_acr": 7, "cells": 1, "entries": [
+                {"brand": "Audi", "choice": 0, "appearance": 1, "is_ours": False}, {"brand": "Hyundai", "choice": 0, "appearance": 1, "is_ours": True}]},
+            {"prompt_id": "p2", "prompt_text": None, "valid_acr": 7, "cells": 1, "entries": [
+                {"brand": "Tesla", "choice": 3, "appearance": 3, "is_ours": False}, {"brand": "Audi", "choice": 0, "appearance": 1, "is_ours": False}]}]}])["data"]
+        std = acr.to_standard_acr(body, {})
+        return acr.renewal_view(std, None, True, False)["sheet"]["rows"]
+
+    def test_a_row_without_picks_has_no_top(self):
+        self.assertIsNone(self.rows()[0]["top"])
+
+    def test_a_row_with_picks_keeps_the_most_picked(self):
+        self.assertEqual(self.rows()[1]["top"], {"brand": "Tesla", "choice": 3})
+
+
+SHEET_US = {"country": "US", "engine": "gemini", "row_count": 2, "rows": [
+    {"prompt_id": "p2", "prompt_text": "b", "valid_acr": 5, "cells": 1, "entries": [{"brand": "Kia", "choice": 2, "appearance": 2, "is_ours": True}]},
+    {"prompt_id": "p1", "prompt_text": "a", "valid_acr": 5, "cells": 1, "entries": [{"brand": "BMW", "choice": 1, "appearance": 1, "is_ours": False}]}]}
+
+
+class SheetLoading(unittest.TestCase):
+    """2026-10-29: the renewal page gets the sheet tabs and the first sheet; acr/renewal-sheet sends a sheet when its
+    tab opens (every sheet's rows were 94% of the page's 4.4 MB)."""
+
+    def sheet_api(self, sheet):
+        calls = []
+
+        async def get(path, params=None):
+            from bff.api import query
+            calls.append((path, sorted(query(params).multi_items())))
+            return {"data": {"sheet": sheet}, "meta": {"suppressed": {}}}
+        return get, calls
+
+    def test_the_page_reads_the_first_sheets_rows_only(self):
+        get, calls = fake_api()
+        with mock.patch("bff.api.get", get):
+            run(acr.renewal(QueryParams("engine=gemini")))
+        self.assertIn(("funnel/acr", sorted([("engine", "gemini"), ("include_catalog_count", "false"), ("include_option_countries", "false"),
+                                             ("surface", "global"), ("territory_rows", "first")])), calls)
+
+    def test_the_view_has_every_tab_and_the_first_sheet(self):
+        first = {"country": None, "engine": "chatgpt", "row_count": 1, "rows": acr_body()["data"]["territory"][0]["rows"]}
+        std = acr.to_standard_acr(acr_body(territory=[first, {**SHEET_US, "rows": []}])["data"], {})
+        view = acr.renewal_view(std, None, True, False)
+        self.assertEqual(view["sheets"], [{"key": "|chatgpt", "region": None, "engine": "chatgpt", "count": 1},
+                                          {"key": "US|gemini", "region": "US", "engine": "gemini", "count": 2}])
+        self.assertEqual(view["sheet"]["key"], "|chatgpt")
+        self.assertIsNone(acr.renewal_view(acr.to_standard_acr(acr_body(territory=[])["data"], {}), None, True, False)["sheet"])
+
+    def test_a_sheet_is_read_with_the_page_filters(self):
+        get, calls = self.sheet_api(SHEET_US)
+        with mock.patch("bff.api.get", get):
+            out = run(acr.renewal_sheet(QueryParams("sheet=US|gemini&engine=gemini&time=2026-09-01..2026-10-05&ctx.surface=global")))
+            run(acr.renewal_sheet(QueryParams("sheet=|chatgpt")))
+        self.assertEqual(calls[0], ("funnel/acr/territory", sorted([("engine", "gemini"), ("from", "2026-09-01"), ("sheet_country", "US"),
+                                                                    ("sheet_engine", "gemini"), ("surface", "global"), ("to", "2026-10-05")])))
+        self.assertIn(("sheet_country", ""), calls[1][1])
+        # the same sheet as the page builds it from funnel/acr
+        std = acr.to_standard_acr(acr_body(territory=[SHEET_US])["data"], {})
+        self.assertEqual(out["sheet"], acr.renewal_view(std, None, True, False)["sheet"])
+        self.assertEqual(out["sheet"]["orders"]["text"]["all"], [1, 0])
+
+    def test_no_cell_is_no_sheet(self):
+        get, _ = self.sheet_api(None)
+        with mock.patch("bff.api.get", get):
+            self.assertEqual(run(acr.renewal_sheet(QueryParams("sheet=US|gemini"))), {"sheet": None})
+
+    def test_a_bad_key_is_refused(self):
+        get, calls = self.sheet_api(SHEET_US)
+        for qs in ("", "sheet=US", "sheet=a&sheet=b|c"):
+            with mock.patch("bff.api.get", get), self.assertRaises(HTTPException) as ctx:
+                run(acr.renewal_sheet(QueryParams(qs)))
+            self.assertEqual(ctx.exception.status_code, 422)
+        self.assertEqual(calls, [])
+
+
+
+class DistStates(unittest.TestCase):
+    """2026-10-29 the 분포 card redesign (the user's picks): 당사's state per row (picked / listed but never picked /
+    absent), filtered by state, sorted by 당사 열세 first; the bar draws the brands picked only."""
+
+    def sheet(self):
+        def row(pid, text, valid, entries):
+            return {"prompt_id": pid, "prompt_text": text, "valid_acr": valid, "cells": 1,
+                    "entries": [{"brand": b, "choice": c, "appearance": a, "is_ours": o} for b, c, a, o in entries]}
+        body = acr_body(territory=[{"country": "US", "engine": "chatgpt", "row_count": 5, "rows": [
+            row("p1", "a", 10, [("Hyundai", 6, 9, True), ("Toyota", 2, 8, False)]),               # picked, 당사 leads: gap -0.4
+            row("p2", "b", 10, [("Toyota", 9, 10, False), ("Kia", 0, 7, True), ("BMW", 0, 4, False)]),  # listed, gap 0.9
+            row("p3", "c", 10, [("Tesla", 5, 6, False), ("Audi", 0, 3, False)]),                  # absent, gap 0.5
+            row("p4", "d", 20, [("Toyota", 10, 12, False), ("Genesis", 0, 0, True)]),             # 당사 row with no appearance: absent, gap 0.5
+            row("p5", "e", 10, [("Mazda", 0, 5, False), ("Hyundai", 0, 2, True)]),                # nobody picked: listed, gap 0
+        ]}])["data"]
+        std = acr.to_standard_acr(body, {})
+        return acr.renewal_view(std, None, True, False)["sheet"]
+
+    def test_the_state_of_each_row(self):
+        self.assertEqual([r["state"] for r in self.sheet()["rows"]], ["pick", "listed", "absent", "absent", "listed"])
+
+    def test_the_counts_and_the_state_filters(self):
+        s = self.sheet()
+        self.assertEqual(s["counts"], {"all": 5, "pick": 1, "listed": 2, "absent": 2})
+        self.assertEqual(s["orders"]["text"], {"all": [0, 1, 2, 3, 4], "pick": [0], "listed": [1, 4], "absent": [2, 3]})
+
+    def test_the_default_sort_puts_the_widest_rival_lead_first(self):
+        # gaps 0.9 (p2), 0.5 (p3, p4: tie -> 당사 share 0 both -> prompt text), 0 (p5), -0.4 (p1)
+        s = self.sheet()
+        self.assertEqual(s["orders"]["gap"]["all"], [1, 2, 3, 4, 0])
+        self.assertEqual(s["orders"]["gap"]["absent"], [2, 3])
+
+    def test_the_bar_draws_the_picked_brands_and_counts_the_candidates(self):
+        s = self.sheet()
+        p2 = s["rows"][1]
+        self.assertEqual([e["brand"] for e in p2["entries"]], ["Toyota"])
+        self.assertEqual((p2["candidates"], p2["picked"], p2["none"], p2["hatch"]), (3, 9, 1, True))
+        self.assertEqual(s["present"], ["Hyundai", "Toyota", "Tesla"])
+        self.assertEqual(s["rows"][3]["pivot"], [0, 10, 0])
+        self.assertIsNone(s["rows"][4]["top"])
 
 
 if __name__ == "__main__":

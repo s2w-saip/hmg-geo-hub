@@ -1,13 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { RnBasisChip, RnButton, RnCard, RnCardHead, RnEmpty, RnInfoTip, RnInfoTipItem, RnSegmented, RnTag, cx, rnHighlightState } from "@/components/renewal-ui";
-import type { AcrDistSheet, AcrModelSort } from "../_data/screen-types";
+import { Check, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  RnBasisChip,
+  RnButton,
+  RnCard,
+  RnCardHead,
+  RnEmpty,
+  RnIconButton,
+  RnInfoTip,
+  RnInfoTipItem,
+  RnSearchField,
+  RnSegmented,
+  RnSkeleton,
+  RnTag,
+  RnTextButton,
+  cx,
+  rnHighlightState,
+} from "@/components/renewal-ui";
+import type { AcrDistRow, AcrDistSheet, AcrDistSort, AcrDistState, AcrDistTab, AcrModelSort } from "../_data/screen-types";
+import { fetchAcrSheet } from "../_data/sheet-client";
 import { AcrCardActions, CONTEXT_COLOR, OWN_COLOR, pctTxt, useAcr } from "./acr-context";
 
 // 엔진·프롬프트 · 차종 · 선택 분포 cards of the renewal ACR page. Rows, orders, views, scales
-// and the distribution sheets come computed in the view model (screen acr/renewal).
+// and the distribution sheets come computed in the view model (screen acr/renewal; the sheets
+// other than the first from acr/renewal-sheet when their tab opens).
 
 const HATCH = "repeating-linear-gradient(135deg, #f1ede8 0 4px, #ddd6ce 4px 6px)";
 
@@ -266,27 +286,232 @@ export function AcrModels() {
   );
 }
 
-const DIST_COLS = "grid-cols-[minmax(0,1.4fr)_minmax(140px,1fr)_52px_minmax(116px,152px)] @max-[700px]/rnpage:grid-cols-[minmax(0,1fr)_minmax(110px,1fr)_48px]";
+const DIST_COLS = "grid-cols-[minmax(0,1.4fr)_minmax(140px,1fr)_132px_minmax(116px,152px)] @max-[700px]/rnpage:grid-cols-[minmax(0,1fr)_minmax(110px,1fr)_120px]";
+
+/** 당사 state badge tones: picked navy, a candidate never picked red (the conversion loss), not a candidate grey */
+const STATE_TONE: Record<AcrDistState, string> = {
+  pick: "bg-rn-navy/8 text-rn-navy",
+  listed: "bg-rn-down/10 text-rn-danger-ink",
+  absent: "bg-rn-inset text-rn-muted",
+};
+const STATE_KEY = { pick: "statePick", listed: "stateListed", absent: "stateAbsent" } as const;
+const STATE_TIP = { pick: "tipPick", listed: "tipListed", absent: "tipAbsent" } as const;
+
+type SheetRead = { sheet: AcrDistSheet | null } | { failed: true };
+
+/** a tab the pointer rests on this long is read ahead (passing over the tab rows reads nothing) */
+const HOVER_INTENT_MS = 150;
+
+/** The 분포 sheet of a tab: the first comes with the page, the others are read when their tab opens, takes the
+ * focus (`load`) or holds the pointer (`point` / `unpoint`), once per page URL — the URL holds the filters the
+ * view was built from. */
+function useAcrSheet(first: AcrDistSheet | null, key: string | null) {
+  const search = useSearchParams().toString();
+  const [reads, setReads] = useState<Record<string, SheetRead>>({});
+  const asked = useRef(new Set<string>());
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const load = useCallback(
+    (k: string) => {
+      const id = `${search}\n${k}`;
+      if (k === first?.key || asked.current.has(id)) return;
+      asked.current.add(id);
+      fetchAcrSheet(search, k).then(
+        (sheet) => setReads((m) => ({ ...m, [id]: { sheet } })),
+        () => {
+          asked.current.delete(id);
+          setReads((m) => ({ ...m, [id]: { failed: true } }));
+        },
+      );
+    },
+    [search, first],
+  );
+  useEffect(() => {
+    if (key) load(key);
+  }, [load, key]);
+  useEffect(() => () => clearTimeout(timer.current), []);
+  const read: SheetRead | undefined = key === null ? undefined : key === first?.key ? { sheet: first } : reads[`${search}\n${key}`];
+  const point = (k: string) => {
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => load(k), HOVER_INTENT_MS);
+  };
+  const unpoint = () => clearTimeout(timer.current);
+  const retry = () => {
+    if (key === null) return;
+    setReads(({ [`${search}\n${key}`]: _failed, ...m }) => m);
+    load(key);
+  };
+  return { read, load, point, unpoint, retry };
+}
+
+/** The sheets are country × engine: an engine toggle (the current country's rows on each engine) and a country list
+ * for the engine (most rows first, searchable, ‹ › steps through it) instead of a chip per sheet. */
+function SheetPicker({
+  tab,
+  onPick,
+  point,
+  unpoint,
+  load,
+}: {
+  tab: AcrDistTab;
+  onPick: (key: string) => void;
+  point: (key: string) => void;
+  unpoint: () => void;
+  load: (key: string) => void;
+}) {
+  const { view, countryLabel, engineLabel } = useAcr();
+  const t = useTranslations("renewal.acr.dist");
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const box = useRef<HTMLDivElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    box.current?.querySelector<HTMLInputElement>("[role=dialog] input")?.focus();
+    const onDown = (e: PointerEvent) => {
+      if (box.current && !box.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setOpen(false);
+      button.current?.focus();
+    };
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+  const sheets = view.sheets;
+  const engines = [...view.engines, ...sheets.map((s) => s.engine)].filter((e, i, all) => all.indexOf(e) === i && sheets.some((s) => s.engine === e));
+  const onEngine = (e: string) => sheets.find((s) => s.engine === e && s.region === tab.region);
+  const countries = sheets.filter((s) => s.engine === tab.engine);
+  const at = countries.indexOf(tab);
+  const prev = countries[at - 1];
+  const next = countries[at + 1];
+  const needle = q.trim().toLocaleLowerCase();
+  const listed = needle ? countries.filter((s) => countryLabel(s.region).toLocaleLowerCase().includes(needle) || (s.region ?? "").toLowerCase().includes(needle)) : countries;
+  const pick = (s: AcrDistTab) => {
+    onPick(s.key);
+    setOpen(false);
+    setQ("");
+  };
+  return (
+    <div role="group" aria-label={t("sheets")} className="flex flex-wrap items-center gap-x-5 gap-y-2 px-6 pb-3 [.rn-dense_&]:px-4.5">
+      <span className="inline-flex items-center gap-2">
+        <span className="text-rn-12 font-semibold text-rn-muted">{t("engine")}</span>
+        <RnSegmented
+          label={t("engine")}
+          value={tab.engine}
+          // the same country on the other engine, else that engine's largest sheet
+          onChange={(e) => onPick((onEngine(e) ?? sheets.find((s) => s.engine === e) ?? tab).key)}
+          items={engines.map((e) => {
+            const peer = onEngine(e);
+            return {
+              value: e,
+              label: (
+                <span className="inline-flex items-center gap-1.5" onPointerEnter={() => peer && point(peer.key)} onPointerLeave={unpoint}>
+                  {engineLabel(e)}
+                  <span className="font-medium text-rn-muted tabular-nums">{peer?.count ?? "–"}</span>
+                </span>
+              ),
+            };
+          })}
+        />
+      </span>
+      <div ref={box} className="relative inline-flex items-center gap-2">
+        <span className="text-rn-12 font-semibold text-rn-muted">{t("country")}</span>
+        <button
+          ref={button}
+          type="button"
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          aria-label={t("countryPick", { country: countryLabel(tab.region), n: tab.count })}
+          data-rn-sheet-picker=""
+          onClick={() => setOpen((o) => !o)}
+          className={cx(
+            "inline-flex h-[30px] min-w-[200px] cursor-pointer items-center gap-2 rounded-md border bg-rn-surface pr-2 pl-2.5 text-rn-12 font-semibold text-rn-ink outline-none focus-visible:border-rn-navy focus-visible:ring-3 focus-visible:ring-rn-navy/12",
+            open ? "border-rn-navy" : "border-rn-line-2 hover:border-rn-faint",
+          )}
+        >
+          {countryLabel(tab.region)}
+          <span className="ml-auto font-medium text-rn-muted tabular-nums">{tab.count}</span>
+          <ChevronDown aria-hidden className={cx("size-3.5 text-rn-muted transition-transform", open && "rotate-180")} />
+        </button>
+        <span className="inline-flex">
+          <RnIconButton label={t("prev")} disabled={!prev} onClick={() => prev && pick(prev)} onPointerEnter={() => prev && point(prev.key)} onPointerLeave={unpoint}>
+            <ChevronLeft className="size-4" aria-hidden />
+          </RnIconButton>
+          <RnIconButton label={t("next")} disabled={!next} onClick={() => next && pick(next)} onPointerEnter={() => next && point(next.key)} onPointerLeave={unpoint}>
+            <ChevronRight className="size-4" aria-hidden />
+          </RnIconButton>
+        </span>
+        <span className="text-rn-12 text-rn-muted tabular-nums">{t("position", { at: at + 1, n: countries.length })}</span>
+        {open ? (
+          <div role="dialog" aria-label={t("country")} className="absolute top-[calc(100%+6px)] left-0 z-40 w-[300px] rounded-xl bg-rn-surface p-2 shadow-[var(--shadow-rn-3),0_0_0_1px_var(--color-rn-line)]">
+            <RnSearchField value={q} onChange={setQ} placeholder={t("countrySearch")} label={t("countrySearch")} />
+            <p className="m-0 flex justify-between px-2.5 pt-2 pb-1 text-rn-11 text-rn-muted">
+              <span>{t("countryHint", { engine: engineLabel(tab.engine) })}</span>
+              <span>{t("countryRows")}</span>
+            </p>
+            <div role="listbox" aria-label={t("country")} className="max-h-[320px] overflow-y-auto">
+              {listed.map((s) => {
+                const on = s === tab;
+                return (
+                  <button
+                    key={s.key}
+                    type="button"
+                    role="option"
+                    aria-selected={on}
+                    data-rn-sheet={s.key}
+                    onPointerEnter={() => point(s.key)}
+                    onPointerLeave={unpoint}
+                    onFocus={() => load(s.key)}
+                    onClick={() => pick(s)}
+                    className={cx(
+                      "flex w-full cursor-pointer items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-rn-13 hover:bg-rn-page focus-visible:bg-rn-page focus-visible:outline-none",
+                      on ? "font-semibold text-rn-navy" : "text-rn-ink-2",
+                    )}
+                  >
+                    <Check aria-hidden className={cx("size-3.5 shrink-0", on ? "text-rn-navy" : "invisible")} />
+                    {countryLabel(s.region)}
+                    <span className="ml-auto text-rn-12 font-medium text-rn-muted tabular-nums">{s.count}</span>
+                  </button>
+                );
+              })}
+              {!listed.length ? <p className="m-0 px-2.5 py-2 text-rn-12 text-rn-muted">{t("countryNone")}</p> : null}
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
 
 export function AcrDistribution() {
   const { view, compare, colorOf, isOwn, countryLabel, engineLabel, sheet, setSheet, lit, hover } = useAcr();
   const t = useTranslations("renewal.acr.dist");
   const tb = useTranslations("renewal.acr.battle");
-  const [zero, setZero] = useState(false);
-  const [sort, setSort] = useState<"text" | "own">("text");
+  const [state, setState] = useState<AcrDistState | "all">("all");
+  const [sort, setSort] = useState<AcrDistSort>("gap");
   const [more, setMore] = useState(false);
   const sheets = view.sheets;
-  if (!sheets.length) return null;
-  const cur = sheets.find((s) => s.key === sheet) ?? sheets[0];
-  const rows = cur.orders[zero ? (sort === "own" ? "ownZero" : "textZero") : sort].map((i) => cur.rows[i]);
+  const tab = sheets.find((s) => s.key === sheet) ?? sheets[0];
+  const { read, load, point, unpoint, retry } = useAcrSheet(view.sheet, tab?.key ?? null);
+  if (!tab) return null;
+  const cur = read && "sheet" in read ? read.sheet : null;
+  const rows = cur ? cur.orders[sort][state].map((i) => cur.rows[i]) : [];
+  const stateLabel = (r: AcrDistRow) => t(STATE_KEY[r.state]);
   const shown = more ? rows : rows.slice(0, view.distVisible);
-  const sheetName = (s: AcrDistSheet) => `${countryLabel(s.region)} · ${engineLabel(s.engine)}`;
-  const present = cur.present;
+  const sheetName = (s: AcrDistTab) => `${countryLabel(s.region)} · ${engineLabel(s.engine)}`;
+  const present = cur?.present ?? [];
   const keys = ["__own", ...present];
-  const csv = () => ({
-    name: `acr-picks-${cur.key.replace("|", "-")}`,
-    rows: [[t("colPrompt"), t("colOwn"), "valid", ...present], ...rows.map((r) => [r.label, r.ownN, r.validAcr, ...r.pivot])],
-  });
+  const csv = cur
+    ? () => ({
+        name: `acr-picks-${cur.key.replace("|", "-")}`,
+        rows: [[t("colPrompt"), t("colState"), t("colOwn"), "valid", ...present], ...rows.map((r) => [r.label, stateLabel(r), r.ownN, r.validAcr, ...r.pivot])],
+      })
+    : null;
   return (
     <RnCard aria-label={t("title")}>
       <RnCardHead
@@ -299,54 +524,48 @@ export function AcrDistribution() {
         chips={<RnBasisChip>{t("chip", { n: sheets.length })}</RnBasisChip>}
         actions={<AcrCardActions section="sec-dist" csv={csv} />}
       />
-      <div role="tablist" aria-label={t("sheets")} className="flex flex-wrap gap-1.5 px-6 pb-3 [.rn-dense_&]:px-4.5">
-        {sheets.map((s) => {
-          const on = s === cur;
-          return (
-            <button
-              key={s.key}
-              type="button"
-              role="tab"
-              aria-selected={on}
-              data-rn-sheet={s.key}
-              onClick={() => {
-                setSheet(s.key);
-                setMore(false);
-              }}
-              className={cx(
-                "inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-full px-2.5 text-rn-12 font-semibold whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rn-navy",
-                on ? "bg-rn-navy text-white" : "text-rn-ink-2 shadow-[inset_0_0_0_1px_var(--color-rn-line-2)] hover:bg-rn-page",
-              )}
-            >
-              {sheetName(s)}
-              <span className={cx("font-medium tabular-nums", on ? "text-white/80" : "text-rn-muted")}>{s.rows.length}</span>
-            </button>
-          );
-        })}
-      </div>
+      <SheetPicker
+        tab={tab}
+        onPick={(key) => {
+          setSheet(key);
+          setMore(false);
+        }}
+        point={point}
+        unpoint={unpoint}
+        load={load}
+      />
       <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2 px-6 pb-3 [.rn-dense_&]:px-4.5">
-        <button
-          type="button"
-          role="switch"
-          aria-checked={zero}
-          onClick={() => {
-            setZero((z) => !z);
-            setMore(false);
-          }}
-          className="inline-flex cursor-pointer items-center gap-2 text-rn-12 font-semibold text-rn-ink-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rn-navy"
-        >
-          <i aria-hidden className={cx("relative h-[18px] w-[30px] rounded-full transition-colors", zero ? "bg-rn-navy" : "bg-rn-line-2")}>
-            <i className={cx("absolute top-0.5 left-0.5 size-3.5 rounded-full bg-white shadow-rn-1 transition-transform", zero && "translate-x-3")} />
-          </i>
-          {t("zero")}
-        </button>
+        <span className="inline-flex items-center gap-2">
+          <span className="text-rn-12 font-semibold text-rn-muted">{t("stateLabel")}</span>
+          <RnSegmented
+            label={t("stateLabel")}
+            value={state}
+            onChange={(v) => {
+              setState(v);
+              setMore(false);
+            }}
+            items={(["all", "pick", "listed", "absent"] as const).map((v) => ({
+              value: v,
+              label: (
+                <span className="inline-flex items-center gap-1.5">
+                  {t(v === "all" ? "stateAll" : STATE_KEY[v])}
+                  <span className="font-medium text-rn-muted tabular-nums">{cur ? cur.counts[v] : "–"}</span>
+                </span>
+              ),
+            }))}
+          />
+        </span>
         <RnSegmented
           label={t("sortLabel")}
           value={sort}
-          onChange={setSort}
+          onChange={(v) => {
+            setSort(v);
+            setMore(false);
+          }}
           items={[
-            { value: "text", label: t("sortText") },
+            { value: "gap", label: t("sortGap") },
             { value: "own", label: t("sortOwn") },
+            { value: "text", label: t("sortText") },
           ]}
         />
         <span className="ml-auto flex flex-wrap gap-x-3 gap-y-1 text-rn-12 text-rn-ink-2">
@@ -372,20 +591,28 @@ export function AcrDistribution() {
           </span>
         </span>
       </div>
-      <div role="table" aria-label={t("gridAria", { sheet: sheetName(cur) })}>
+      <div role="table" aria-label={t("gridAria", { sheet: sheetName(tab) })} aria-busy={read === undefined}>
         <div role="row" className={cx("grid h-[34px] items-center gap-3 border-y border-rn-line px-6 text-rn-12 font-semibold text-rn-muted [.rn-dense_&]:px-4.5", DIST_COLS)}>
           <span role="columnheader">{t("colPrompt")}</span>
           <span role="columnheader">{t("colDist")}</span>
-          <span role="columnheader" className="text-right">
-            {t("colOwn")}
-          </span>
+          <span role="columnheader">{t("colOwn")}</span>
           <span role="columnheader" className="@max-[700px]/rnpage:hidden">
             {t("colTop")}
           </span>
         </div>
-        {shown.length ? (
+        {read === undefined ? (
+          <div role="row" aria-label={t("loading")} className="flex flex-col gap-2.5 px-6 py-3 [.rn-dense_&]:px-4.5">
+            {Array.from({ length: Math.min(tab.count, 6) }, (_, i) => (
+              <RnSkeleton key={i} className="h-[26px] w-full" />
+            ))}
+          </div>
+        ) : "failed" in read ? (
+          <RnEmpty className="m-4">
+            {t("failed")}{" "}
+            <RnTextButton onClick={retry}>{t("retry")}</RnTextButton>
+          </RnEmpty>
+        ) : shown.length ? (
           shown.map((r, i) => {
-            const o = r.ownN;
             const top = r.top;
             return (
               <div role="row" key={`${r.promptId}-${i}`} className={cx("grid min-h-[38px] items-center gap-3 border-b border-rn-line px-6 py-1 text-rn-13 [.rn-dense_&]:min-h-8 [.rn-dense_&]:px-4.5", DIST_COLS)}>
@@ -409,8 +636,17 @@ export function AcrDistribution() {
                   })}
                   {r.hatch ? <i title={t("noneTip", { n: r.none, total: r.validAcr })} className="block h-full flex-1 rounded-[2px]" style={{ background: HATCH }} /> : null}
                 </span>
-                <span role="cell" className={cx("text-right text-rn-12 tabular-nums", o === 0 ? "font-bold text-rn-danger-ink" : "text-rn-ink-2")}>
-                  {o}/{r.validAcr}
+                <span role="cell" className="min-w-0">
+                  <span
+                    data-rn-state={r.state}
+                    title={t(STATE_TIP[r.state], { n: r.ownN, total: r.validAcr, candidates: r.candidates, cells: r.cells })}
+                    className={cx("inline-flex h-6 max-w-full items-center gap-1.5 rounded-md px-2 text-rn-12 font-semibold whitespace-nowrap", STATE_TONE[r.state])}
+                  >
+                    {stateLabel(r)}
+                    <span className="font-medium tabular-nums opacity-80">
+                      {r.ownN}/{r.validAcr}
+                    </span>
+                  </span>
                 </span>
                 <span role="cell" className="min-w-0 @max-[700px]/rnpage:hidden">
                   {top ? (

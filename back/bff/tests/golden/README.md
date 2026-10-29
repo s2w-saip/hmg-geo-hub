@@ -92,6 +92,27 @@ Deliberate changes (what the screen shows changed by decision):
   could not read are dropped (the reader sends only sources Gold gives a brand). Function cases' domain rows got
   `brand` the same way. Only `ov/fn-to-competitor-citation-domains` changes (rows carry `brand`; the dropped
   sources' rows are gone); every screen case, the live tapes included, shows the same row.
+- 2026-10-29 ACR distribution sheets on demand, and no 최빈 without a pick (the user's go-ahead after the ACR load
+  diagnosis: every sheet's rows were 94 % of the renewal page's 4.4 MB answer, and a row nobody was picked in showed
+  its alphabetically first candidate as 최빈, "Audi 0"). The reader sends every territory sheet's `row_count`; with
+  `territory_rows=first` (the renewal page's read) only the first sheet carries its rows, and `funnel/acr/territory`
+  sends one sheet (screen `acr/renewal-sheet`, read when its tab opens). The renewal view: `sheets` are the tabs
+  (`key`, `region`, `engine`, `count`) and `sheet` is the first sheet as it was built; a row whose first entry has no
+  pick has `top` null. Tapes: every `funnel/acr` sheet got `row_count` from its rows; the `acr/renewal` reads ask
+  `territory_rows=first` and keep the first sheet's rows only. The 35 `acr/renewal` cases with a view change, only in
+  `sheets` / `sheet` (taken from the old sheets: the counts are their rows, `sheet` is the old first one) and the
+  `top` of rows without a pick (first sheet: `rn-default` 30 rows, `rn-hmg-us` 53, `rn-kia-period` 31, and 12
+  fixtures); the standard and website/project outputs stay.
+- 2026-10-29 ACR 분포 card redesign (the user's picks after the ACR data analysis: 당사's state in three classes with
+  filters, 당사 열세 first). The reader sends one row per prompt — its cells in the read window summed (a round
+  re-measures a prompt up to 20 times; a period holds its rounds) — with `cells` and each entry's `appearance`. A
+  renewal sheet row carries `state` (pick / listed: a candidate never picked / absent), `candidates` and `cells`; its
+  bar `entries` are the brands picked; `present` and the CSV pivot are the brands picked in the sheet; `counts` per
+  state; `orders[sort][state]` for 당사 열세 (the most picked rival's share − 당사's), 당사 몫 and the prompt.
+  Tapes: every `funnel/acr` sheet row got `cells` 1 and every entry `appearance` = its choice, at least 1 (a tape row
+  was one cell, and the tapes recorded which brands a cell listed, not how often). The 35 `acr/renewal` cases with a
+  view change only in `view.sheet`, rebuilt by the new code after checking it against the recorded one: the rest of
+  the view, every row's kept fields, the picked entries and the old text / own orders (now `[...]["all"]`) are the same.
 
 ## Format
 

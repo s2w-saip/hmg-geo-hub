@@ -5,6 +5,7 @@ import unittest
 from datetime import date, timedelta
 
 try:
+    from fastapi import HTTPException
     from starlette.datastructures import QueryParams
 
     from bff.gold_reader import acr
@@ -63,14 +64,23 @@ class Conn:
         raise AssertionError(f"unexpected statement: {sql[:120]}")
 
 
-def read(cells, rows, qs="surface=global&from=2026-09-28&to=2026-10-05", *, dates=(D2, D1), selected=(D2, D1), conn=None):
+class SheetConn(Conn):
+    """funnel/acr/territory binds the sheet's engine and country last."""
+
+    async def fetch(self, sql, *args):
+        if "FROM gold.acr_cell_fact" in sql and "e.code=" in sql:
+            return [c for c in self.cells if (c["engine"], c["country"]) == (args[-2], args[-1])]
+        return await super().fetch(sql, *args)
+
+
+def read(cells, rows, qs="surface=global&from=2026-09-28&to=2026-10-05", *, dates=(D2, D1), selected=(D2, D1), conn=None, reader=acr.read):
     ctx = Context(conn or Conn(cells, rows), QueryParams(qs))
     ctx.release = {"release_id": 1, "version": 1, "rule_signature": "test"}
     ctx.builds = {"acr": list(range(len(dates)))}  # one ACR build per round
     ctx.build_dates = dict(enumerate(dates))
     ctx.dates = list(dates)
     ctx.selected_dates = list(selected)
-    return asyncio.run(acr.read(ctx))["data"]
+    return asyncio.run(reader(ctx))["data"]
 
 
 # 2026-10-29 metric review R1: Genesis (outside the brand table's top) was left out of 당사 on the ACR page.
@@ -136,6 +146,62 @@ class ReadRange(unittest.TestCase):
         sheets = read(cells, rows, "surface=global", selected=[D2])["territory"]
         self.assertEqual([(s["engine"], len(s["rows"])) for s in sheets], [("gemini", 2), ("chatgpt", 1)])
         self.assertEqual([e["brand"] for e in sheets[1]["rows"][0]["entries"]], ["Kia", "Toyota"])
+
+    def test_a_row_is_a_prompt_with_its_cells_summed(self):
+        # 2026-10-29: a round re-measures a prompt (up to 20 cells) and a period holds its rounds; one row per prompt
+        cells = [{**cell(1, D1), "prompt_id": "q"}, {**cell(2, D2), "prompt_id": "q", "valid_acr": 8}, {**cell(3, D2), "prompt_id": "r"}]
+        rows = [entity(1, "Toyota", 0, 4, 9), entity(1, "Hyundai", 1, 0, 5), entity(2, "Toyota", 0, 2, 6), entity(2, "Kia", 2, 3, 3),
+                entity(3, "BMW", 0, 1)]
+        sheet = read(cells, rows)["territory"][0]
+        self.assertEqual(sheet["row_count"], 2)
+        q = sheet["rows"][0]
+        self.assertEqual((q["prompt_id"], q["valid_acr"], q["cells"]), ("q", 18, 2))
+        self.assertEqual(q["entries"], [{"brand": "Toyota", "choice": 6, "appearance": 15, "is_ours": False},
+                                        {"brand": "Kia", "choice": 3, "appearance": 3, "is_ours": True},
+                                        {"brand": "Hyundai", "choice": 0, "appearance": 5, "is_ours": True}])
+        self.assertEqual([(r["prompt_id"], r["cells"]) for r in sheet["rows"]], [("q", 2), ("r", 1)])
+
+
+
+class SheetsOnDemand(unittest.TestCase):
+    """2026-10-29: territory_rows=first sends the first sheet's rows only, with every sheet's row count;
+    funnel/acr/territory sends one sheet as funnel/acr builds it (the renewal page loads a sheet when its tab opens)."""
+
+    CELLS = [cell(1, D2), {**cell(2, D2), "engine": "gemini"}, {**cell(3, D2), "engine": "gemini"}, {**cell(4, D2), "country": None}]
+    ROWS = [entity(1, "Toyota", 0, 0), entity(1, "Kia", 2, 9), entity(2, "BMW", 0, 2), entity(2, "Kia", 2, 5), entity(3, "Kia", 2, 1),
+            entity(4, "Audi", 0, 3), model(4, 70, "A4", "Audi", 0, 3)]
+
+    def sheets(self, qs="surface=global"):
+        return read(self.CELLS, self.ROWS, qs, selected=[D2])["territory"]
+
+    def sheet(self, qs):
+        return read(self.CELLS, self.ROWS, qs, selected=[D2], conn=SheetConn(self.CELLS, self.ROWS), reader=acr.territory)["sheet"]
+
+    def test_every_sheet_carries_its_row_count(self):
+        self.assertEqual([(s["country"], s["engine"], s["row_count"], len(s["rows"])) for s in self.sheets()],
+                         [("US", "gemini", 2, 2), (None, "chatgpt", 1, 1), ("US", "chatgpt", 1, 1)])
+
+    def test_first_sends_the_first_sheets_rows_only(self):
+        full, first = self.sheets(), self.sheets("surface=global&territory_rows=first")
+        self.assertEqual(first[0], full[0])
+        self.assertEqual([{**s, "rows": []} for s in full[1:]], first[1:])
+
+    def test_a_bad_territory_rows_is_refused(self):
+        with self.assertRaises(HTTPException) as ctx:
+            self.sheets("surface=global&territory_rows=none")
+        self.assertEqual(ctx.exception.status_code, 422)
+
+    def test_a_sheet_is_the_one_funnel_acr_builds(self):
+        for s in self.sheets():
+            self.assertEqual(self.sheet(f"surface=global&sheet_engine={s['engine']}&sheet_country={s['country'] or ''}"), s)
+
+    def test_a_sheet_without_cells_is_null(self):
+        self.assertIsNone(self.sheet("surface=global&sheet_engine=perplexity&sheet_country=US"))
+
+    def test_the_sheet_engine_is_required(self):
+        with self.assertRaises(HTTPException) as ctx:
+            self.sheet("surface=global&sheet_country=US")
+        self.assertEqual(ctx.exception.status_code, 422)
 
 
 if __name__ == "__main__":
