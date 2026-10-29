@@ -49,14 +49,10 @@
 <p class="sub">갱신 2026-10-29(두 번째 세션) · 리뉴얼 ACR(<code>/renewal/standard/ai-funnel/acr</code>)의 측정 단절 처리(P1), 업스트림 질문(P2), 새 카드 두 개(P3), 읽기 성능(P5)을 마치고 남은 일을 넘긴다.</p>
 
 <div class="banner">
-  <strong>커밋 상태.</strong> 첫 세션(분포 시트 분리 로딩·시트 선택 UI·분포 카드 개편)은 <code>03489fe</code>로 커밋했다(푸시 안 함). 이번 세션 작업(P1·P3·P5)은 <strong>미커밋</strong>이다. 커밋은 사용자가 요청할 때만 한다.
-  <ul>
-    <li>같은 작업 트리에서 다른 세션이 Mention 로딩과 Gold 읽기 캐시를 고치고 있다: <code>gold_reader/cache.py</code>·<code>api.py</code>·<code>test_gold_cache.py</code>, <code>screens/mention_*.py</code>, <code>gold_reader/advanced.py</code>·<code>compare.py</code>·<code>metrics.py</code>, mention·overview 골든, <code>docs/catalog/</code>, <code>README.md</code>, <code>docs/design/ui/design-rules.html</code>.</li>
-    <li>함께 고친 파일은 부분만 담는다. 골든 README에서는 Mention 항목을 뺀다. 구조 문서는 캐시 항목만 그쪽 것이고, 이번 ACR 작업은 구조 문서를 고치지 않았다. <code>messages/*.json</code>에서는 <code>mention.tabs</code>를 뺀다.</li>
-  </ul>
+  <strong>커밋 상태.</strong> 첫 세션(분포 시트 분리 로딩·시트 선택 UI·분포 카드 개편)은 <code>341a09e</code>, 이번 세션(P1·P3·P5와 기존 화면의 회차 간 비교 숨김)은 <code>2dfb8ef</code>로 커밋해 푸시했다. 같은 날 Mention 로딩·Gold 읽기 캐시(<code>61984f2</code>), 메뉴 미구현 표시(<code>fef7057</code>), 카탈로그 갱신도 함께 푸시했다.
 </div>
 
-<h2 id="done">1. 이번 세션에서 끝낸 것 (미커밋)</h2>
+<h2 id="done">1. 이번 세션에서 끝낸 것 (<code>2dfb8ef</code>)</h2>
 <table>
   <thead><tr><th>일</th><th>내용</th></tr></thead>
   <tbody>
