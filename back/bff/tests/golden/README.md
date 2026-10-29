@@ -168,6 +168,12 @@ Deliberate changes (what the screen shows changed by decision):
   standard and website/project cases: built with the switch on, each equals its recorded output (plus `compareRounds`
   true, `held` null); with it off 55 lose their trend only, 27 had none, and `fix-std-r02`, `fix-std-r17`,
   `fix-gold-r02`, `fix-gold-r17` are periods of two rounds, held.
+- 2026-10-29 ACR rounds compared again (the user's final call the same day: the measurement method, and with it the
+  measured scope, may change any week, and the reader takes that, so no value is hidden for it). `acr.COMPARE_ROUNDS`
+  is on: every ACR page shows its trend, its Δ and the sums of a period of several rounds. The 121 `acr` cases that
+  the hold had changed were rebuilt with the switch on. Each of the 133 outputs equals its 341a09e output (before the
+  hold), apart from the keys added since (`compareRounds` true, `held` null, and the renewal `conversion` · `duels`).
+  The hold stays behind the switch, pinned by test_screens_acr `CrossRoundHeld`.
 
 ## Format
 

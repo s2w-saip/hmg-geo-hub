@@ -52,6 +52,10 @@
   <strong>커밋 상태.</strong> 첫 세션(분포 시트 분리 로딩·시트 선택 UI·분포 카드 개편)은 <code>341a09e</code>, 이번 세션(P1·P3·P5와 기존 화면의 회차 간 비교 숨김)은 <code>2dfb8ef</code>로 커밋해 푸시했다. 같은 날 Mention 로딩·Gold 읽기 캐시(<code>61984f2</code>), 메뉴 미구현 표시(<code>fef7057</code>), 카탈로그 갱신도 함께 푸시했다.
 </div>
 
+<div class="banner">
+  <strong>P1 최종 결정(2026-10-29 같은 날 늦게).</strong> 사용자는 회차 간 비교를 열라고 했다. "측정 방식은 매주 달라질 수 있지만, 그건 화면 사용자가 감수할 일"이라는 것이다. 측정 범위(국가·질문)가 달라지는 것도 같은 성격으로 본다. 그래서 <code>COMPARE_ROUNDS = True</code>로 바꿨고, 리뉴얼·<code>acr/standard</code>·<code>acr/gold</code> 모두 추이·Δ·기간 합산을 다시 보인다. 값은 숨기기 전(<code>341a09e</code>) 출력과 같다. 아래의 숨김 코드와 <code>renewal.acr.held.*</code> 문구는 스위치를 끈 경우에만 쓰인다. 이 결정을 다시 숨기는 근거로 쓰지 않는다.
+</div>
+
 <h2 id="done">1. 이번 세션에서 끝낸 것 (<code>2dfb8ef</code>)</h2>
 <table>
   <thead><tr><th>일</th><th>내용</th></tr></thead>
@@ -134,12 +138,10 @@
 </table>
 
 <h2 id="next">2. 다음에 할 일</h2>
-<h3>추이를 다시 여는 때</h3>
+<h3>추이 (열었음)</h3>
 <ul>
-  <li>사용자가 정한다. 코드에는 날짜도 규칙도 넣지 않는다.</li>
-  <li>기준은 같은 범위(지금은 51개국·926개 질문)로 잰 회차가 쌓였는가다. 기본 추이 창(12회차)이 그런 회차로만 채워지는 때는 12월 말쯤이다.</li>
-  <li>그때 <code>COMPARE_ROUNDS = True</code>로 바꾸고 안내 문구를 지운다.</li>
-  <li>국가 필터를 걸면 주간 Δ의 잡음 범위가 ±4~12pp라 대부분이 잡음일 수 있다는 것을 함께 알린다.</li>
+  <li>2026-10-29 사용자 최종 결정으로 열었다(머리 배너). 측정 방식이나 범위가 바뀌어 값이 튀어도 숨기거나 경고하지 않는다.</li>
+  <li>숨김 코드(<code>held_rounds</code>, <code>HeldNote</code>, <code>renewal.acr.held.*</code>)는 스위치를 끈 경우에만 쓰인다. 지울지는 사용자에게 물어 정한다.</li>
 </ul>
 <h3>업스트림 질문 (P2)</h3>
 <p>아래 메시지 초안을 사용자에게 넘겼다. 보내는 것은 사용자가 한다. 사용자가 측정 방식 변경은 당연하다고 봐서, 1번은 빼거나 참고용으로 낮출 수 있다(사용자 판단). 답이 오면:</p>
@@ -211,7 +213,7 @@
   </tbody>
 </table></div>
 <p class="muted">rule_ver·profile_signature는 모든 build가 <code>2026-10-25.provisional.2</code>다. dim_cycle에는 generation·ecat_ver가 비어 있고, 측정 방식 표시는 없다.</p>
-<h3>추이 분석 (2026-10-29, 숨김 유지 결정의 근거)</h3>
+<h3>추이 분석 (2026-10-29, 참고 자료. 숨김 결정은 같은 날 철회)</h3>
 <p>행 단위는 (질문, 국가, 엔진)이다. 잡음 범위는 그 단위로 다시 뽑아(클러스터 부트스트랩) 계산한 Δ의 95% 범위다.</p>
 <div class="table-wrap"><table>
   <thead><tr><th>회차 → 회차</th><th>같은 질문 비중</th><th>당사 Δ 전체</th><th>같은 질문만</th><th>잡음 범위</th><th>해석</th></tr></thead>

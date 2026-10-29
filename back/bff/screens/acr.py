@@ -79,12 +79,11 @@ def _cmp_num(d: float) -> int:
 
 # ── AcrData -> StandardAcr (funnel.ts toStandardAcr, rules A1..A7) ───────────
 
-# The ACR pages neither compare nor sum two rounds (2026-10-29, the user's decision after the trend analysis in
-# docs/handoff/acr-next-session.html): the rounds measured different markets and questions (6–9 countries and
-# ~60 questions up to 08-24, 51 countries and 926 questions since 09-28), and on the same questions every
-# week-on-week move was within sampling noise, so a trend showed the measured scope, not the market. The user
-# turns it back on once rounds on the same scope have built up. No date and no inferred boundary in code.
-COMPARE_ROUNDS = False
+# The ACR pages compare and sum rounds: trend, Δ and period sums (2026-10-29, the user's final call). Each round may
+# measure another way or another scope (6–9 countries up to 08-24, 51 since 09-28); the reader takes that, it is no
+# reason to hide a value. Off, the pages hold every cross-round value (no trend, no Δ, a period of several rounds
+# names its rounds), as they did for part of that day. No date and no inferred boundary in code.
+COMPARE_ROUNDS = True
 
 
 def held_rounds(data: dict, period: bool) -> dict | None:
@@ -347,8 +346,8 @@ def live_vm(data: dict, acr_prompt_count: Any, compare_rounds: bool = True) -> d
 
 
 def legacy_view(data: dict, acr_prompt_count: Any, period: bool) -> dict:
-    """The AcrLiveView model under COMPARE_ROUNDS: a period of several rounds sends its rounds (`held`) and nothing to
-    draw; otherwise the view without a trend."""
+    """The AcrLiveView model. With COMPARE_ROUNDS off, a period of several rounds sends its rounds (`held`) and nothing
+    to draw, and any other view comes without a trend."""
     held = held_rounds(data, period)
     if held is not None:
         return {**live_vm(_empty_acr(), acr_prompt_count, False), "measured": True, "held": held}
