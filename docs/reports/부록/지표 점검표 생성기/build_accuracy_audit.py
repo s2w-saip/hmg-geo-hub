@@ -15,7 +15,7 @@ from collections import Counter, OrderedDict
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.normpath(os.path.join(HERE, "..", "..", "..", ".."))
-WORKSPACE = os.path.dirname(REPO)
+WORKSPACE = REPO
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(WORKSPACE, "★ 수치 정확도 점검표.html")
 DATA = os.path.join(HERE, "조사 데이터", "accuracy_audit.json")
 

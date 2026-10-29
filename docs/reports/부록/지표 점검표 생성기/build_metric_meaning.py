@@ -24,7 +24,7 @@ from visible_items import visible_inventory, display_location  # noqa: E402
 import metric_meaning_data as D  # noqa: E402
 
 REPO = os.path.normpath(os.path.join(HERE, "..", "..", "..", ".."))
-WORKSPACE = os.path.dirname(REPO)
+WORKSPACE = REPO
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(WORKSPACE, "★ 수치 유의미성 점검표.html")
 TEMPLATE = os.path.join(HERE, "metric_meaning_template.html")
 SURVEY_ORDER = ["existing3", "global", "website", "project", "project_ops_interest", "admin", "qa_nonscreen"]

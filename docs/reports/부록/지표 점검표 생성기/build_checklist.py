@@ -7,7 +7,7 @@ Data: before_data.py (first 3 screens, legacy measurements, constants K), screen
       visible_items.py (explicit UI splits, source provenance, and technical-only exclusions),
       item_applicability.py + visible_applicability.json (reviewed applicable factors per item).
 usage: python -I build_checklist.py [out.html] [template.html]
-  default out = workspace root "★ 리뉴얼·최적화 지표 점검표.html" (repo/../), default template = sibling file.
+  default out = workspace root "★ 리뉴얼·최적화 지표 점검표.html" (= repo root), default template = sibling file.
   Topic report HTML files are expected beside the output checklist.
 """
 import glob
@@ -27,7 +27,7 @@ from visible_items import visible_inventory  # noqa: E402
 from item_applicability import applicability, validate_inventory, has_explicit_hardcoding_target  # noqa: E402
 
 REPO = os.path.normpath(os.path.join(HERE, "..", "..", "..", ".."))
-OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(REPO), "★ 리뉴얼·최적화 지표 점검표.html")
+OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(REPO, "★ 리뉴얼·최적화 지표 점검표.html")
 TEMPLATE_PATH = sys.argv[2] if len(sys.argv) > 2 else os.path.join(HERE, "checklist_template.html")
 
 exec(open(os.path.join(HERE, "screens_def.py"), encoding="utf-8").read())  # defines SCREENS (first 3)
