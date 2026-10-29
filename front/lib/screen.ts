@@ -7,11 +7,13 @@ import "server-only";
 //
 // Contract: server only, no result cache (`no-store`), one shared request per (name, query)
 // inside a server request, non-2xx -> HghApiError(status, code) from the error envelope so
-// the existing failure states keep working.
+// the existing failure states keep working. Every read carries the request's HUB session token
+// (2026-10-29): the BFF builds the screen inside that account's scope and refuses it without one.
 import { HghApiError, LOCAL_CODES, parseErrorBody } from "@/lib/hgh/errors";
 import { dedupeInRequest, stableKey } from "@/lib/request-dedupe";
 import { HGH_TIMEOUTS } from "@/lib/hgh/client";
 import { streamResponse } from "@/lib/hgh/relay";
+import { hubRequestToken } from "@/lib/hub/token";
 
 export type ScreenQueryValue = string | number | boolean | null | undefined | readonly (string | number | boolean)[];
 export type ScreenQuery = Readonly<Record<string, ScreenQueryValue>>;
@@ -57,10 +59,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * the earlier sections had just done; sent together they share them.
  */
 async function exchange(url: URL, timeoutMs: number, readBody: boolean): Promise<{ res: Response; text: string }> {
+  const token = await hubRequestToken();
+  const headers: Record<string, string> = { Accept: "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) };
   for (let attempt = 1; ; attempt += 1) {
     const timeout = AbortSignal.timeout(timeoutMs);
     try {
-      const res = await fetch(url, { cache: "no-store", headers: { Accept: "application/json" }, signal: timeout });
+      const res = await fetch(url, { cache: "no-store", headers, signal: timeout });
       const text = readBody || !res.ok ? await res.text() : "";
       return { res, text };
     } catch (e) {

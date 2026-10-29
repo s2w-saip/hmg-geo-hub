@@ -29,12 +29,13 @@ import asyncpg
 from fastapi import HTTPException
 
 from bff import api
+from bff.access import reader_scope
 from bff.screens._competitors import rank_first_position_rows
 from bff.screens._compare import fetch_period_compare_api, prev_period_filters
 from bff.screens._convert import as_of_date, pct1_or_zero, rank_avg, round1, suppression_of, whole_suppression
 from bff.screens._filters import read_standard_filters
 from bff.screens._period import resolve_request_compare_period_shape
-from bff.screens._query import READER_SCOPE, analysis_query, to_api_params
+from bff.screens._query import analysis_query, to_api_params
 from bff.screens._sort import code_unit_key
 from bff.screens._summary import summary_query
 from bff.screens._trend import (bucket_round_date, fetch_trend, mirror_pct, monday_of, point_gap, series_label,
@@ -105,9 +106,10 @@ def start_early(run: Callable[[], Awaitable[Any]]) -> Callable[[], Awaitable[Any
 
 # ── filters ─────────────────────────────────────────────────────────────────
 
-def mention_filters(sp: dict, scope: dict | None = READER_SCOPE) -> tuple[dict, dict]:
+def mention_filters(sp: dict) -> tuple[dict, dict]:
     """The standard (global) mention screens: {...readStandardFilters(sp, scope), cumulative: true}
-    and the api context {surface: global, scope}."""
+    and the api context {surface: global, scope}, with the signed-in account's scope."""
+    scope = reader_scope()
     filters = {**read_standard_filters(sp, scope), "cumulative": True}
     return filters, {"surface": "global", "scope": scope}
 
@@ -115,9 +117,10 @@ def mention_filters(sp: dict, scope: dict | None = READER_SCOPE) -> tuple[dict, 
 WEBSITE_ONLY_GROUPS = ("geography", "language", "engine", "time")
 
 
-def website_filters(sp: dict, admin: bool = False, scope: dict | None = READER_SCOPE) -> tuple[dict, dict]:
+def website_filters(sp: dict, admin: bool = False) -> tuple[dict, dict]:
     """The website mention page: readStandardFilters(sp, scope, WEBSITE_ONLY_GROUPS (+brand for an admin),
     "website"), websiteCountry = region, region dropped, cumulative; api ctx website."""
+    scope = reader_scope()
     groups = [*WEBSITE_ONLY_GROUPS, *(["brand"] if admin else [])]
     raw = read_standard_filters(sp, scope, groups, "website")
     filters = {k: v for k, v in raw.items() if k != "region"}

@@ -69,6 +69,7 @@
     "adminCredits": "측정 크레딧",
     "adminCreditAccounts": "계정 목록",
     "logout": "Log out",
+    "changePassword": "비밀번호 변경",
     "groups": {
       "standard": "Global",
       "website": "Website",
@@ -106,7 +107,8 @@
     "adminCitationSources": "인용 출처 분류",
     "renewalAnswerAnalysisMention": "Mention (Renewal)",
     "renewalAnswerAnalysisCitation": "Citation (Renewal)",
-    "renewalAdminStandardPrompts": "글로벌 프롬프트 관리"
+    "renewalAdminStandardPrompts": "글로벌 프롬프트 관리",
+    "renewalAdmin": "사용자 관리"
   },
   "locale": {
     "label": "언어",
@@ -5588,8 +5590,8 @@
     }
   },
   "hubLogin": {
-    "title": "관리자 로그인",
-    "description": "HUB 화면을 보려면 최상위 관리자 계정으로 로그인하세요.",
+    "title": "HUB 로그인",
+    "description": "HUB 화면을 보려면 발급받은 계정으로 로그인하세요.",
     "login": "아이디",
     "password": "비밀번호",
     "passwordShow": "비밀번호 보기",
@@ -5600,6 +5602,180 @@
       "rateLimited": "로그인 실패가 많아 잠시 막혔습니다. 15분 뒤에 다시 시도하세요.",
       "unavailable": "로그인이 아직 설정되지 않았습니다. HUB 저장소와 HGH_AUTH_SECRET 설정을 확인하세요.",
       "failed": "로그인하지 못했습니다. 잠시 뒤에 다시 시도하세요."
+    }
+  },
+  "hubPassword": {
+    "title": "비밀번호 변경",
+    "description": "{login} 계정의 새 비밀번호를 정합니다. 바꾸면 다른 곳의 로그인은 끊깁니다.",
+    "forcedDescription": "관리자가 발급한 임시 비밀번호입니다. 새 비밀번호를 정해야 화면을 볼 수 있습니다.",
+    "current": "현재 비밀번호",
+    "issued": "임시 비밀번호",
+    "new": "새 비밀번호",
+    "confirm": "새 비밀번호 확인",
+    "rule": "{min}자 이상, 지금 비밀번호와 달라야 합니다.",
+    "show": "비밀번호 보기",
+    "hide": "비밀번호 숨기기",
+    "submit": "비밀번호 변경",
+    "cancel": "취소",
+    "otherAccount": "다른 계정으로 로그인",
+    "signIn": "다시 로그인",
+    "error": {
+      "wrongPassword": "현재 비밀번호가 올바르지 않습니다.",
+      "tooShort": "새 비밀번호는 {min}자 이상이어야 합니다.",
+      "same": "새 비밀번호가 지금 비밀번호와 같습니다.",
+      "mismatch": "새 비밀번호 두 칸이 다릅니다.",
+      "signedOut": "로그인이 끝났습니다.",
+      "unavailable": "비밀번호를 바꿀 수 없습니다. HUB 계정 연결(HGH_ACCOUNT_EDITOR_DB_URL)을 확인하세요.",
+      "failed": "비밀번호를 바꾸지 못했습니다. 잠시 뒤에 다시 시도하세요."
+    }
+  },
+  "hubAccounts": {
+    "title": "사용자 관리",
+    "storePill": "HUB 운영 DB",
+    "description": "HUB 계정의 역할과 열람 범위를 정합니다. 관리자가 발급한 임시 비밀번호는 처음 로그인할 때 새 비밀번호로 바뀝니다.",
+    "create": "새 계정",
+    "createTitle": "새 계정",
+    "createHint": "만들면 임시 비밀번호가 한 번 보입니다.",
+    "detailTitle": "계정",
+    "listLabel": "계정 목록",
+    "scopeNoteTitle": "열람 범위",
+    "scopeNote": "관리자가 아닌 계정은 자기 브랜드·권역·국가 안의 Global 화면 데이터만 봅니다. 역할·범위를 바꾸거나 사용 중지하면 열려 있는 화면에도 바로 적용됩니다.",
+    "searchLabel": "계정 검색",
+    "searchPlaceholder": "아이디 · 이름 · 이메일 검색",
+    "count": "{shown} / {total}개 계정",
+    "empty": "계정이 없습니다.",
+    "emptyFiltered": "조건에 맞는 계정이 없습니다.",
+    "me": "나",
+    "noRole": "역할 없음",
+    "scopeAll": "전체",
+    "neverSignedIn": "로그인 기록 없음",
+    "loading": "불러오는 중…",
+    "loginRequired": "계정 관리는 HUB 로그인이 필요합니다.",
+    "login": "로그인",
+    "edit": "편집",
+    "resetPassword": "비밀번호 재설정",
+    "disable": "사용 중지",
+    "enable": "다시 사용",
+    "selfNote": "내 계정은 여기서 바꿀 수 없습니다. 비밀번호는 사이드바의 비밀번호 변경에서 바꿉니다.",
+    "rankNote": "내 권한과 같거나 높은 계정이라 여기서 바꿀 수 없습니다. 관리자 계정은 서버에서 manage.py set-admin · revoke-admin으로 관리합니다.",
+    "attributes": "정보",
+    "history": "변경 이력",
+    "noHistory": "기록된 변경이 없습니다.",
+    "passwordChangedAt": "비밀번호 바꾼 때",
+    "byCommand": "관리 명령(manage.py)",
+    "axis": {
+      "role": "역할",
+      "state": "상태",
+      "brand": "브랜드"
+    },
+    "state": {
+      "active": "사용 중",
+      "pending": "첫 로그인 전",
+      "disabled": "사용 중지"
+    },
+    "status": {
+      "active": "사용 중",
+      "disabled": "사용 중지"
+    },
+    "column": {
+      "login": "아이디",
+      "role": "역할",
+      "scope": "열람 범위",
+      "state": "상태",
+      "lastSignIn": "최근 로그인",
+      "created": "만든 날"
+    },
+    "field": {
+      "login": "아이디",
+      "displayName": "이름",
+      "email": "이메일",
+      "role": "역할",
+      "brands": "브랜드",
+      "regions": "권역",
+      "countries": "국가",
+      "status": "상태",
+      "current": "현재 비밀번호",
+      "new": "새 비밀번호"
+    },
+    "roleHint": {
+      "admin": "모든 브랜드·권역·국가를 보고, Admin 메뉴(계정 · 글로벌 프롬프트 관리)를 씁니다.",
+      "hq": "고른 브랜드의 모든 권역·국가를 봅니다.",
+      "region": "고른 브랜드의 고른 권역(그 안의 모든 국가)을 봅니다.",
+      "country": "고른 브랜드의 고른 국가만 봅니다."
+    },
+    "form": {
+      "loginPlaceholder": "예: kim.hq@hmg",
+      "loginHint": "영문·숫자와 . _ @ - 3~200자. 만든 뒤에는 바꿀 수 없습니다.",
+      "optional": "선택",
+      "countryCount": "{n}개국",
+      "brandsFirst": "브랜드를 먼저 고르세요.",
+      "regionsFirst": "권역을 먼저 고르세요.",
+      "countrySearch": "국가 검색",
+      "passwordNote": "만들면 임시 비밀번호가 발급됩니다. 이 계정은 처음 로그인할 때 새 비밀번호를 정해야 합니다.",
+      "missing": "확인할 항목: {fields}",
+      "create": "만들기",
+      "save": "저장",
+      "cancel": "취소"
+    },
+    "issued": {
+      "title": "임시 비밀번호",
+      "created": "{login} 계정을 만들었습니다.",
+      "reset": "{login} 계정의 비밀번호를 재설정했습니다. 이 계정의 로그인은 모두 끊겼습니다.",
+      "label": "임시 비밀번호",
+      "copy": "복사",
+      "copied": "복사했습니다.",
+      "copyFailed": "복사하지 못했습니다. 직접 선택해 복사하세요.",
+      "hint": "이 비밀번호는 지금만 보입니다. 사용자에게 안전하게 전달하세요. 처음 로그인할 때 새 비밀번호를 정해야 화면을 볼 수 있습니다.",
+      "done": "확인"
+    },
+    "note": {
+      "disabled": "사용 중지된 계정입니다. 로그인할 수 없습니다.",
+      "pending": "아직 임시 비밀번호를 바꾸지 않았습니다. 처음 로그인할 때 새 비밀번호를 정합니다.",
+      "noRole": "역할이 없어 로그인할 수 없습니다. 편집에서 역할을 정하세요."
+    },
+    "confirm": {
+      "reset": "{login} 계정의 비밀번호를 재설정할까요? 지금 로그인은 끊기고, 새 임시 비밀번호로 다시 로그인해야 합니다.",
+      "resetTitle": "비밀번호 재설정",
+      "resetAction": "재설정",
+      "disable": "{login} 계정을 사용 중지할까요? 바로 로그아웃되고, 다시 사용으로 바꿀 때까지 로그인할 수 없습니다.",
+      "disableTitle": "사용 중지",
+      "disableAction": "사용 중지"
+    },
+    "toast": {
+      "updated": "저장했습니다.",
+      "disabled": "사용 중지했습니다.",
+      "enabled": "다시 사용합니다."
+    },
+    "event": {
+      "account_create": "생성",
+      "account_update": "수정",
+      "account_disable": "사용 중지",
+      "account_enable": "다시 사용",
+      "account_reset_password": "비밀번호 재설정",
+      "account_password_change": "비밀번호 변경",
+      "hub_login_set_admin": "관리자 등록",
+      "hub_login_revoke_admin": "관리자 회수"
+    },
+    "eventNote": {
+      "account_create": "계정 생성",
+      "account_update": "바뀐 항목 없음",
+      "account_disable": "사용 중지",
+      "account_enable": "다시 사용",
+      "account_reset_password": "임시 비밀번호 발급",
+      "account_password_change": "본인이 새 비밀번호로 변경",
+      "hub_login_set_admin": "manage.py set-admin",
+      "hub_login_revoke_admin": "manage.py revoke-admin"
+    },
+    "error": {
+      "login_taken": "이미 있는 아이디입니다(대소문자 구분 없음).",
+      "invalid_value": "입력을 확인하세요: {fields}",
+      "version_conflict": "그 사이 다른 곳에서 이 계정이 바뀌었습니다. 최신 내용으로 다시 열었습니다.",
+      "rank": "내 권한과 같거나 높은 계정은 바꿀 수 없고, 그런 역할을 줄 수도 없습니다.",
+      "unauthorized": "로그인이 끝났습니다. 다시 로그인하세요.",
+      "forbidden": "최상위 관리자만 계정을 관리할 수 있습니다.",
+      "source_unavailable": "HUB 운영 DB에 연결할 수 없습니다. 잠시 뒤에 다시 시도하세요.",
+      "not_found": "계정을 찾을 수 없습니다.",
+      "failed": "처리하지 못했습니다. 잠시 뒤에 다시 시도하세요."
     }
   },
   "hubPrompts": {

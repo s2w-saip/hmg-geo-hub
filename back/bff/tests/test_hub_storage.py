@@ -5,13 +5,20 @@ import unittest
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
+from bff.tests import live_auth
+
 BASE = os.environ.get('HGH_GOLD_TEST_BASE_URL')
 
 
 @unittest.skipUnless(BASE, 'Set HGH_GOLD_TEST_BASE_URL to the local read-only API')
 class HubStorageReads(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if live_auth.token(BASE) is None:
+            raise unittest.SkipTest(live_auth.SKIP)
+
     def read(self, path):
-        with urlopen(BASE+path, timeout=15) as response:
+        with urlopen(live_auth.request(BASE, path), timeout=15) as response:
             return json.load(response)
 
     def test_operations_is_separate_and_read_only(self):

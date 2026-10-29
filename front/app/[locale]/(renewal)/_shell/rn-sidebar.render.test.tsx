@@ -81,7 +81,7 @@ describe("renewal sidebar", () => {
       admin: {
         open: true,
         links: [
-          "User management · 미구현 → /renewal/admin",
+          "User management → /renewal/admin",
           "Global config (group)",
           "Global prompts → /renewal/admin/standards/prompts",
           "Customer interest config · 미구현 → /renewal/admin/standards/customer-interest",
@@ -103,7 +103,7 @@ describe("renewal sidebar", () => {
   it("marks the items without a renewal page and shows no beta badge", () => {
     const out = html("admin");
     const marks = [...out.matchAll(/<span data-rn-nav-unimplemented="" title="([^"]+)"[^>]*><svg[^>]*>.*?<\/svg><span class="sr-only">([^<]+)<\/span><\/span>/g)];
-    expect(marks.length).toBe(15); // Website 5 · Project 1 · Admin 9
+    expect(marks.length).toBe(14); // Website 5 · Project 1 · Admin 8
     for (const [, title, sr] of marks) expect([title, sr]).toEqual([ko.unimplemented.label, ko.unimplemented.label]);
     expect(out).not.toContain("β");
   });

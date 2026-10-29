@@ -38,6 +38,9 @@ export interface User {
   // 기본값). 값이 있으면 role 이 허용한 그룹과 **교집합** — role 보다 넓게는 절대
   // 못 준다(권한 상승 방지). 예: hq 계정에 ["project"] → 프로젝트 메뉴만.
   menuGroups: MenuGroup[] | null;
+  // HUB login (local mode, 2026-10-29): an administrator issued the password, so the layouts send every page to
+  // the password change until the account sets its own (the BFF refuses its reads meanwhile).
+  mustChangePassword?: boolean;
 }
 
 export interface Session {

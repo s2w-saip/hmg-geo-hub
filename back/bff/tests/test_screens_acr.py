@@ -109,7 +109,7 @@ class LanguageAxis(unittest.TestCase):
 
 class RenewalPageState(unittest.TestCase):
     def state(self, sp):
-        return acr.page_state(sp, acr.read_standard_filters(sp, acr.READER_SCOPE))
+        return acr.page_state(sp, acr.read_standard_filters(sp, acr.reader_scope()))
 
     def test_filtered_ignores_empty_values_and_other_keys(self):
         self.assertFalse(self.state({})["filtered"])

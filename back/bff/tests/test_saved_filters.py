@@ -26,7 +26,8 @@ class Store:
     def __init__(self):
         self.rows, self.locks, self.clock = [], [], 0
         self.accounts = {uid: {"user_id": uid, "subject": name, "email": None, "display_name": None, "status": "active",
-                               "password_hash": "scrypt$x", "changed_at": T0, "role": "admin"}
+                               "password_hash": "scrypt$x", "changed_at": T0, "must_change": False, "role": "admin",
+                               "brands": [], "regions": [], "countries": []}
                          for uid, name in ((uuid4(), "admin"), (uuid4(), "other"))}
 
     def tick(self):

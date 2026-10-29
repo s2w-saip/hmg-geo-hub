@@ -71,7 +71,7 @@ class ListPage(unittest.TestCase):
 
     def test_page_parsing_like_number_parse_int(self):
         for raw, page in (("2abc", 2), (" 4", 4), ("-1", 1), ("x", 1), ("3.9", 3)):
-            self.assertEqual(wp.read_query({"page": raw}, wp.READER_SCOPE, False)["page"], page, raw)
+            self.assertEqual(wp.read_query({"page": raw}, wp.reader_scope(), False)["page"], page, raw)
 
     def test_a_cursor_error_is_not_retried_with_gold_codes(self):
         # Gold answers 409/422 with code invalid_value, never cursor_stale/cursor_invalid: no restart.
@@ -88,9 +88,9 @@ class ListPage(unittest.TestCase):
 
 class Options(unittest.TestCase):
     def test_list_key_covers_filters_and_paging_params(self):
-        key = wp.suspense_key({"q": "ev", "sort": "brand", "page": "2"}, wp.READER_SCOPE, False)
+        key = wp.suspense_key({"q": "ev", "sort": "brand", "page": "2"}, wp.reader_scope(), False)
         self.assertTrue(key.endswith("|ev|brand||2|"))
-        self.assertNotEqual(key, wp.suspense_key({"q": "ev"}, wp.READER_SCOPE, False))
+        self.assertNotEqual(key, wp.suspense_key({"q": "ev"}, wp.reader_scope(), False))
 
 
 if __name__ == "__main__":

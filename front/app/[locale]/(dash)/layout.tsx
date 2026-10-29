@@ -7,6 +7,7 @@ import { resolvePageTitleRef } from "@/lib/nav/page-title";
 import { perfNoCacheActive } from "@/lib/perf/nocache-probe";
 import { Toaster } from "sonner";
 import { getSession } from "@/lib/auth/session";
+import { passwordChangeHref } from "@/lib/hub/next-path";
 import {
   canAccessRoute,
   visibleRoutes,
@@ -141,6 +142,8 @@ export default async function DashLayout({
   // 밖 그룹이면 차단.
   const menuGroups = session.user.menuGroups;
   const pathname = hdrs.get("x-pathname") ?? "";
+  // An issued password is replaced before any page (HUB login, 2026-10-29); the BFF refuses the reads meanwhile.
+  if (session.user.mustChangePassword) redirect(passwordChangeHref(locale, pathname));
   if (
     pathname &&
     !isGuardBypass(pathname) &&

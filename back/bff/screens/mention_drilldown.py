@@ -28,10 +28,11 @@ from urllib.parse import unquote_to_bytes
 from fastapi import HTTPException
 
 from bff import api
+from bff.access import reader_scope
 from bff.screens import screen, split_context
 from bff.screens._convert import pct1_or_zero
 from bff.screens._filters import load_project_gate, read_project_custom_field_filters_raw, read_standard_filters
-from bff.screens._query import CITATION_CATEGORY_SLUGS, READER_SCOPE, analysis_query, is_uuid, js_trim, to_api_params, url_brands, url_countries
+from bff.screens._query import CITATION_CATEGORY_SLUGS, analysis_query, is_uuid, js_trim, to_api_params, url_brands, url_countries
 from bff.screens._sort import locale_compare, sort_by, table_orders
 
 DRILLDOWN_LIST_LIMIT = 2000
@@ -125,8 +126,8 @@ def drill_query(p: RouteParams, target: dict, website_groups: tuple[str, ...] | 
                "customFields": read_project_custom_field_filters_raw(sp)}
     else:
         website = surface == "website"
-        filters = read_standard_filters(sp, READER_SCOPE, website_groups if website else None, "website" if website else "standard")
-        ctx = {"surface": surface, "scope": READER_SCOPE}
+        filters = read_standard_filters(sp, reader_scope(), website_groups if website else None, "website" if website else "standard")
+        ctx = {"surface": surface, "scope": reader_scope()}
     return analysis_query(filters, ctx)
 
 
@@ -711,7 +712,7 @@ async def answer(q) -> dict:
     if blocked:
         return reply(blocked, {"available": False})
     surface = target["surface"]
-    scope = None if surface == "project" else READER_SCOPE
+    scope = None if surface == "project" else reader_scope()
     filters = read_standard_filters(p.sp(), scope, None, "website" if surface == "website" else "standard")
     query: dict[str, Any] = {"surface": surface, "lite": True}
     if surface == "project":

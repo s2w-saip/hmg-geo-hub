@@ -52,6 +52,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { isIP } from "node:net";
 import { cache } from "react";
 import { localReadOnly } from "@/lib/local-readonly";
+import { hubRequestToken } from "@/lib/hub/token";
 import { dedupeInRequest, stableKey } from "@/lib/request-dedupe";
 import type { paths } from "./api-types";
 import { getAccessToken, qaCookieHeader, refreshAccessToken } from "./auth";
@@ -516,6 +517,11 @@ function encodeBody(body: unknown): EncodedBody {
 
 type AuthHeader = { name: "Authorization" | "Cookie"; value: string } | null;
 
+async function localAuth(): Promise<HghAuthMode> {
+  const token = await hubRequestToken();
+  return token ? { bearer: token } : "none";
+}
+
 async function resolveAuth(mode: HghAuthMode, route: string): Promise<AuthHeader> {
   if (mode === "none") return null;
   if (mode === "session") {
@@ -652,7 +658,8 @@ async function execute(method: HttpMethod, route: string, opts: InternalOptions,
   const timeoutMs = timeoutFor(method, opts, cfg);
   const encoded = encodeBody(opts.body);
   const extraHeaders = operationHeaders(opts.header);
-  const authMode = localReadOnly() ? "none" : (opts.auth ?? "session");
+  // Local mode: the request's HUB session token (2026-10-29), so the BFF reads inside that account's scope.
+  const authMode = localReadOnly() ? await localAuth() : (opts.auth ?? "session");
   let auth = await resolveAuth(authMode, route);
   const traceQuery = cfg.traceFile ? queryToObject(opts.query, opts.cf) : {};
 

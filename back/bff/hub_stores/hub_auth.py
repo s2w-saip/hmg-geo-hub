@@ -1,11 +1,16 @@
-"""HUB login for the top-level administrator (2026-10-27). Writes need it, and since 2026-10-28 the local
-front end's every page too (it asks /v1/auth/me per page).
+"""HUB login (2026-10-27; every role since 2026-10-29). The local front end's every page needs it (it asks
+/v1/auth/me per page), and every screen and data read runs for the signed-in account's scope (bff/access.py).
 
 Next posts the login to POST /v1/auth/login, keeps the returned token in an httpOnly cookie and sends it
-back as `Authorization: Bearer` on every HUB write. The token is stateless (HMAC-SHA256 with
+back as `Authorization: Bearer` on every BFF call. The token is stateless (HMAC-SHA256 with
 HGH_AUTH_SECRET) and names the account and its credential version. Every request reads the account
-again, so disabling it, revoking its role or changing its password ends its sessions at once.
-Accounts are registered by back/hub_storage/manage.py set-admin; nothing here writes them."""
+again, so disabling it, changing its role or scope or its password ends or narrows its sessions at once.
+
+Roles (system.global_role): admin (every scope, the Admin pages and every HUB write), hq, region and country
+(their brands, RHQ regions and countries; read only). An account without a role cannot sign in. Accounts are
+created on the Admin screen (hub_stores/accounts.py) or by back/hub_storage/manage.py set-admin. A password an
+administrator issued (must_change) opens nothing but /v1/auth/me and the password change (accounts.change_password)
+until it is replaced."""
 from __future__ import annotations
 
 import asyncio
@@ -31,9 +36,13 @@ PASSWORD_MAX = 1024
 # Failed logins per login id inside the window before further attempts are refused (one API process).
 FAILURE_LIMIT, FAILURE_WINDOW_S = 5, 15 * 60
 
-ACCOUNT_SQL = """SELECT a.user_id,a.subject,a.email,a.display_name,a.status,c.password_hash,c.changed_at,g.role
+ROLES = ("admin", "hq", "region", "country")
+ACCOUNT_SQL = """SELECT a.user_id,a.subject,a.email,a.display_name,a.status,c.password_hash,c.changed_at,c.must_change,
+    g.role,g.brands,g.regions,g.countries
     FROM system.user_account a JOIN system.user_credential c USING(user_id)
     LEFT JOIN system.global_role g USING(user_id) WHERE {where}"""
+BY_LOGIN = "lower(a.subject)=lower($1)"
+BY_ID = "a.user_id=$1"
 
 
 @dataclass(frozen=True)
@@ -43,14 +52,36 @@ class Principal:
     email: str | None
     display_name: str | None
     role: str
+    brands: tuple[str, ...] = ()
+    regions: tuple[str, ...] = ()
+    countries: tuple[str, ...] = ()
+    must_change: bool = False
+
+    @property
+    def is_admin(self) -> bool:
+        return self.role == "admin"
+
+    def scope(self) -> dict:
+        """front AllowedScope: the administrator every scope, the others their brands, regions and countries."""
+        if self.is_admin:
+            return {"all": True}
+        return {"all": False, "brands": list(self.brands), "regions": list(self.regions), "countries": list(self.countries)}
 
     def view(self) -> dict:
-        return {"id": str(self.user_id), "login": self.login, "email": self.email,
-                "displayName": self.display_name, "role": self.role}
+        return {"id": str(self.user_id), "login": self.login, "email": self.email, "displayName": self.display_name,
+                "role": self.role, "scope": self.scope(), "mustChangePassword": self.must_change}
 
 
-def unauthorized(message: str = "Sign in as the top-level administrator") -> HTTPException:
+def unauthorized(message: str = "Sign in to the HUB") -> HTTPException:
     return HTTPException(401, message)
+
+
+def password_change_required() -> HTTPException:
+    return HTTPException(403, {"code": "password_change_required", "message": "Set a new password first"})
+
+
+def admin_only() -> HTTPException:
+    return HTTPException(403, {"code": "forbidden", "message": "The top-level administrator only"})
 
 
 def secret() -> bytes | None:
@@ -121,11 +152,13 @@ limiter = FailureLimiter()
 
 
 def _principal(row) -> Principal:
-    return Principal(row["user_id"], row["subject"], row["email"], row["display_name"], row["role"])
+    return Principal(row["user_id"], row["subject"], row["email"], row["display_name"], row["role"],
+                     tuple(row["brands"] or ()), tuple(row["regions"] or ()), tuple(row["countries"] or ()),
+                     bool(row["must_change"]))
 
 
-def _active_admin(row) -> bool:
-    return row is not None and row["status"] == "active" and row["role"] == "admin"
+def _active(row) -> bool:
+    return row is not None and row["status"] == "active" and row["role"] in ROLES
 
 
 async def _account(where: str, value):
@@ -147,19 +180,42 @@ async def login(login_id: str, password: str) -> dict:
     bucket = login_id.casefold()
     if limiter.blocked(bucket, now):
         raise HTTPException(429, "Too many failed sign-ins; try again later")
-    row = await _account("a.subject=$1", login_id)
+    row = await _account(BY_LOGIN, login_id)
     # scrypt is CPU-bound: off the event loop. The dummy hash keeps an unknown login as slow as a wrong password.
     ok = await asyncio.to_thread(verify_password, password, row["password_hash"] if row else DUMMY_HASH)
-    if not (ok and _active_admin(row)):
+    if not (ok and _active(row)):
         limiter.fail(bucket, now)
         raise unauthorized("Login ID or password is incorrect")
     limiter.reset(bucket)
+    return _session(key, row, now)
+
+
+def _session(key: bytes, row, now: float) -> dict:
     token, exp = issue(key, row["user_id"], credential_version(row["changed_at"]), now)
     return {"token": token, "expiresAt": exp, "user": _principal(row).view()}
 
 
-async def principal(authorization: str | None) -> Principal:
-    """The signed-in top-level administrator, or 401 (no, bad, expired or revoked session)."""
+async def reissue(user_id: UUID) -> dict:
+    """A new session of the account as it is now (after its password changed, which ended the earlier ones)."""
+    key = secret()
+    if key is None:
+        raise HTTPException(503, "HUB login is not configured (HGH_AUTH_SECRET)")
+    row = await _account(BY_ID, user_id)
+    if not _active(row):
+        raise unauthorized()
+    return _session(key, row, time.time())
+
+
+async def password_matches(user_id: UUID, password: str) -> bool:
+    row = await _account(BY_ID, user_id)
+    if row is None or len(password) > PASSWORD_MAX:
+        return False
+    return await asyncio.to_thread(verify_password, password, row["password_hash"])
+
+
+async def principal(authorization: str | None, *, password_change: bool = False) -> Principal:
+    """The signed-in account, or 401 (no, bad, expired or revoked session). An account that has to replace an
+    issued password gets 403 password_change_required, except where `password_change` lets it through."""
     key = secret()
     if key is None:
         raise HTTPException(503, "HUB login is not configured (HGH_AUTH_SECRET)")
@@ -167,7 +223,18 @@ async def principal(authorization: str | None) -> Principal:
     claims = decode(key, token.strip(), time.time()) if scheme.lower() == "bearer" else None
     if claims is None:
         raise unauthorized()
-    row = await _account("a.user_id=$1", UUID(claims["sub"]))
-    if not _active_admin(row) or credential_version(row["changed_at"]) != claims["cv"]:
+    row = await _account(BY_ID, UUID(claims["sub"]))
+    if not _active(row) or credential_version(row["changed_at"]) != claims["cv"]:
         raise unauthorized()
+    if row["must_change"] and not password_change:
+        raise password_change_required()
     return _principal(row)
+
+
+async def admin(authorization: str | None) -> Principal:
+    """The signed-in top-level administrator: 401 without a session, 403 for another role."""
+    who = await principal(authorization)
+    if not who.is_admin:
+        raise admin_only()
+    return who
+

@@ -69,6 +69,7 @@
     "adminCredits": "Measurement credits",
     "adminCreditAccounts": "Account list",
     "logout": "Log out",
+    "changePassword": "Change password",
     "groups": {
       "standard": "Global",
       "website": "Website",
@@ -106,7 +107,8 @@
     "adminCitationSources": "Citation Sources",
     "renewalAnswerAnalysisMention": "Mention (Renewal)",
     "renewalAnswerAnalysisCitation": "Citation (Renewal)",
-    "renewalAdminStandardPrompts": "Global prompt management"
+    "renewalAdminStandardPrompts": "Global prompt management",
+    "renewalAdmin": "User management"
   },
   "locale": {
     "label": "Language",
@@ -5588,8 +5590,8 @@
     }
   },
   "hubLogin": {
-    "title": "Admin sign-in",
-    "description": "Sign in with the top-level administrator account to use the HUB.",
+    "title": "HUB sign-in",
+    "description": "Sign in with your HUB account to use the HUB.",
     "login": "Login ID",
     "password": "Password",
     "passwordShow": "Show password",
@@ -5600,6 +5602,180 @@
       "rateLimited": "Too many failed sign-ins. Try again in 15 minutes.",
       "unavailable": "Sign-in is not set up yet. Check the HUB stores and HGH_AUTH_SECRET.",
       "failed": "Could not sign in. Try again shortly."
+    }
+  },
+  "hubPassword": {
+    "title": "Change password",
+    "description": "Set a new password for {login}. Your other sessions end when it changes.",
+    "forcedDescription": "An administrator issued this password. Set your own to open the HUB pages.",
+    "current": "Current password",
+    "issued": "Temporary password",
+    "new": "New password",
+    "confirm": "Repeat the new password",
+    "rule": "{min} characters or more, not the current one.",
+    "show": "Show passwords",
+    "hide": "Hide passwords",
+    "submit": "Change password",
+    "cancel": "Cancel",
+    "otherAccount": "Sign in with another account",
+    "signIn": "Sign in again",
+    "error": {
+      "wrongPassword": "The current password is incorrect.",
+      "tooShort": "The new password needs {min} characters or more.",
+      "same": "The new password is the current one.",
+      "mismatch": "The two new passwords differ.",
+      "signedOut": "Your session has ended.",
+      "unavailable": "Passwords cannot be changed now. Check the HUB account connection (HGH_ACCOUNT_EDITOR_DB_URL).",
+      "failed": "The password could not be changed. Try again shortly."
+    }
+  },
+  "hubAccounts": {
+    "title": "User management",
+    "storePill": "HUB operations DB",
+    "description": "Set the HUB accounts' roles and data scope. A temporary password an administrator issues is replaced at the first sign-in.",
+    "create": "New account",
+    "createTitle": "New account",
+    "createHint": "Its temporary password is shown once.",
+    "detailTitle": "Account",
+    "listLabel": "Accounts",
+    "scopeNoteTitle": "Data scope",
+    "scopeNote": "Accounts other than administrators see Global data inside their brands, regions and countries only. A role, scope or status change applies to their open pages at once.",
+    "searchLabel": "Search accounts",
+    "searchPlaceholder": "Search login ID · name · email",
+    "count": "{shown} / {total} accounts",
+    "empty": "No accounts.",
+    "emptyFiltered": "No account matches.",
+    "me": "Me",
+    "noRole": "No role",
+    "scopeAll": "All",
+    "neverSignedIn": "Never signed in",
+    "loading": "Loading…",
+    "loginRequired": "Managing accounts needs the HUB sign-in.",
+    "login": "Sign in",
+    "edit": "Edit",
+    "resetPassword": "Reset password",
+    "disable": "Disable",
+    "enable": "Enable",
+    "selfNote": "Your own account does not change here. Change your password from the sidebar's Change password.",
+    "rankNote": "This account's role is at or above yours, so it does not change here. Administrators are managed on the server with manage.py set-admin / revoke-admin.",
+    "attributes": "Details",
+    "history": "History",
+    "noHistory": "No recorded changes.",
+    "passwordChangedAt": "Password changed",
+    "byCommand": "Management command (manage.py)",
+    "axis": {
+      "role": "Role",
+      "state": "Status",
+      "brand": "Brand"
+    },
+    "state": {
+      "active": "Active",
+      "pending": "Before first sign-in",
+      "disabled": "Disabled"
+    },
+    "status": {
+      "active": "Active",
+      "disabled": "Disabled"
+    },
+    "column": {
+      "login": "Login ID",
+      "role": "Role",
+      "scope": "Data scope",
+      "state": "Status",
+      "lastSignIn": "Last sign-in",
+      "created": "Created"
+    },
+    "field": {
+      "login": "Login ID",
+      "displayName": "Name",
+      "email": "Email",
+      "role": "Role",
+      "brands": "Brands",
+      "regions": "Regions",
+      "countries": "Countries",
+      "status": "Status",
+      "current": "Current password",
+      "new": "New password"
+    },
+    "roleHint": {
+      "admin": "Every brand, region and country, and the Admin menu (accounts · Global prompts).",
+      "hq": "Every region and country of the chosen brands.",
+      "region": "The chosen regions (all their countries) of the chosen brands.",
+      "country": "The chosen countries of the chosen brands only."
+    },
+    "form": {
+      "loginPlaceholder": "e.g. kim.hq@hmg",
+      "loginHint": "3-200 letters, digits and . _ @ -. It cannot change later.",
+      "optional": "Optional",
+      "countryCount": "{n} countries",
+      "brandsFirst": "Choose the brands first.",
+      "regionsFirst": "Choose the regions first.",
+      "countrySearch": "Search countries",
+      "passwordNote": "A temporary password is issued. The account sets its own at the first sign-in.",
+      "missing": "Check: {fields}",
+      "create": "Create",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "issued": {
+      "title": "Temporary password",
+      "created": "{login} is created.",
+      "reset": "The password of {login} is reset. Its sessions have ended.",
+      "label": "Temporary password",
+      "copy": "Copy",
+      "copied": "Copied.",
+      "copyFailed": "Could not copy. Select it and copy it yourself.",
+      "hint": "This password is shown only now. Hand it to the user safely; they set their own at the first sign-in before any page opens.",
+      "done": "Done"
+    },
+    "note": {
+      "disabled": "This account is disabled and cannot sign in.",
+      "pending": "The temporary password is not replaced yet; the account sets its own at the first sign-in.",
+      "noRole": "Without a role this account cannot sign in. Set one with Edit."
+    },
+    "confirm": {
+      "reset": "Reset the password of {login}? Its sessions end and it signs in again with a new temporary password.",
+      "resetTitle": "Reset password",
+      "resetAction": "Reset",
+      "disable": "Disable {login}? It is signed out at once and cannot sign in until enabled again.",
+      "disableTitle": "Disable",
+      "disableAction": "Disable"
+    },
+    "toast": {
+      "updated": "Saved.",
+      "disabled": "Disabled.",
+      "enabled": "Enabled."
+    },
+    "event": {
+      "account_create": "Created",
+      "account_update": "Changed",
+      "account_disable": "Disabled",
+      "account_enable": "Enabled",
+      "account_reset_password": "Password reset",
+      "account_password_change": "Password changed",
+      "hub_login_set_admin": "Administrator set",
+      "hub_login_revoke_admin": "Administrator revoked"
+    },
+    "eventNote": {
+      "account_create": "Account created",
+      "account_update": "Nothing changed",
+      "account_disable": "Disabled",
+      "account_enable": "Enabled",
+      "account_reset_password": "Temporary password issued",
+      "account_password_change": "Changed by the account itself",
+      "hub_login_set_admin": "manage.py set-admin",
+      "hub_login_revoke_admin": "manage.py revoke-admin"
+    },
+    "error": {
+      "login_taken": "That login ID exists (case does not matter).",
+      "invalid_value": "Check: {fields}",
+      "version_conflict": "The account changed elsewhere meanwhile; it is reopened with the latest values.",
+      "rank": "Accounts at or above your role cannot be changed, and such roles cannot be handed out.",
+      "unauthorized": "Your session has ended. Sign in again.",
+      "forbidden": "Only the top-level administrator manages accounts.",
+      "source_unavailable": "The HUB operations DB cannot be reached. Try again shortly.",
+      "not_found": "No such account.",
+      "failed": "That did not work. Try again shortly."
     }
   },
   "hubPrompts": {

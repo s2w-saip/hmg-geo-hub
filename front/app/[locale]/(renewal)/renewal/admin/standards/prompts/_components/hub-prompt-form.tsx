@@ -23,7 +23,7 @@ import { RnMarketList, useRnMarketLabel } from "../../../../_components/prompt-l
 import { HubRequestError, draftOf, hubApi, type Draft, type HubOptions, type HubPrompt } from "./hub-prompts-api";
 
 const TEXT_MAX = 2000;
-const INPUT =
+export const INPUT =
   "h-[34px] w-full rounded-rn-control border border-rn-line-2 bg-rn-surface px-2.5 text-rn-13 text-rn-ink outline-none placeholder:text-rn-muted focus:border-rn-navy focus:ring-3 focus:ring-rn-navy/12 disabled:cursor-not-allowed disabled:bg-rn-page disabled:text-rn-muted aria-invalid:border-rn-down";
 // a catalog field's label = the Global prompts list's name for the same attribute
 const FIELD_KEYS = {
@@ -401,7 +401,7 @@ function withValue(values: readonly string[], value: string): string[] {
 }
 
 /** One attribute row: the sheet's 112px label column, then the control. */
-function Row({ label, htmlFor, invalid, top, children }: { label: string; htmlFor?: string; invalid?: boolean; top?: boolean; children: ReactNode }) {
+export function Row({ label, htmlFor, invalid, top, children }: { label: string; htmlFor?: string; invalid?: boolean; top?: boolean; children: ReactNode }) {
   const cls = cx("text-rn-12 font-semibold", top && "pt-1", invalid ? "text-rn-danger-ink" : "text-rn-muted");
   return (
     <div className={cx("grid grid-cols-[112px_minmax(0,1fr)] gap-x-4", top ? "items-start" : "items-center")}>

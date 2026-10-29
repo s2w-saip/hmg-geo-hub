@@ -1,7 +1,7 @@
 import "server-only";
 
-// HUB login, Global prompt editing and saved filters on the BFF (back/bff/app.py: /v1/auth/*,
-// /v1/hub/global-prompts*, /v1/hub/saved-filters*).
+// HUB login, accounts, Global prompt editing and saved filters on the BFF (back/bff/app.py: /v1/auth/*,
+// /v1/hub/accounts*, /v1/hub/global-prompts*, /v1/hub/saved-filters*).
 // Server only: the token comes from the httpOnly cookie and goes out as `Authorization: Bearer`, so the
 // browser never calls the BFF. Non-2xx -> HghApiError(status, code, message, details) from the envelope.
 import { HghApiError, LOCAL_CODES, isHghApiError, parseErrorBody } from "@/lib/hgh/errors";
@@ -11,12 +11,25 @@ export type HubMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 const TIMEOUT_MS = 20_000;
 
+/** The HUB roles (2026-10-29): admin every scope and the Admin pages; hq, region and country read their scope. */
+export type HubRole = "admin" | "hq" | "region" | "country";
+
 export interface HubUser {
   id: string;
   login: string;
   email: string | null;
   displayName: string | null;
-  role: "admin";
+  role: HubRole;
+  /** {all: true} for the administrator, else the brands, RHQ regions and countries (empty = not narrowed). */
+  scope: { all: boolean; brands?: string[]; regions?: string[]; countries?: string[] };
+  /** An administrator issued the password: the account sets its own before any page opens. */
+  mustChangePassword: boolean;
+}
+
+export interface HubSession {
+  token: string;
+  expiresAt: number;
+  user: HubUser;
 }
 
 export async function hubFetch<T>(
@@ -53,11 +66,16 @@ export async function hubFetch<T>(
   return JSON.parse(text) as T;
 }
 
-export async function hubLogin(login: string, password: string): Promise<{ token: string; expiresAt: number; user: HubUser }> {
-  return (await hubFetch<{ data: { token: string; expiresAt: number; user: HubUser } }>("POST", "/v1/auth/login", { body: { login, password } })).data;
+export async function hubLogin(login: string, password: string): Promise<HubSession> {
+  return (await hubFetch<{ data: HubSession }>("POST", "/v1/auth/login", { body: { login, password } })).data;
 }
 
-/** The token's account while it is a signed-in top-level administrator; null when the BFF refuses it (401). */
+/** The signed-in account replaces its password; the answer is its new session (the earlier ones end). */
+export async function hubChangePassword(token: string, current: string, next: string): Promise<HubSession> {
+  return (await hubFetch<{ data: HubSession }>("POST", "/v1/auth/password", { token, body: { current, new: next } })).data;
+}
+
+/** The token's account while it is signed in; null when the BFF refuses it (401). */
 export async function hubMe(token: string): Promise<HubUser | null> {
   try {
     return (await hubFetch<{ data: { user: HubUser } }>("GET", "/v1/auth/me", { token })).data.user;

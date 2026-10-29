@@ -148,7 +148,8 @@ class Accounts:
 
     def __init__(self, password="correct horse battery"):
         self.row = {"user_id": uuid4(), "subject": "admin", "email": "admin@example.test", "display_name": "Admin",
-                    "status": "active", "password_hash": passwords.hash_password(password), "changed_at": T0, "role": "admin"}
+                    "status": "active", "password_hash": passwords.hash_password(password), "changed_at": T0, "must_change": False,
+                    "role": "admin", "brands": [], "regions": [], "countries": []}
 
     @asynccontextmanager
     async def connection(self):
@@ -156,8 +157,9 @@ class Accounts:
 
         class C:
             async def fetchrow(self, sql, value):
-                key = "subject" if "a.subject=$1" in sql else "user_id"
-                return dict(accounts.row) if accounts.row[key] == value else None
+                if hub_auth.BY_LOGIN in sql:   # login IDs compare without case
+                    return dict(accounts.row) if accounts.row["subject"].lower() == value.lower() else None
+                return dict(accounts.row) if accounts.row["user_id"] == value else None
 
             async def fetch(self, sql, ids):
                 return [{"user_id": accounts.row["user_id"], "subject": "admin", "display_name": "Admin"}] if accounts.row["user_id"] in ids else []
@@ -382,7 +384,8 @@ class Routes(unittest.TestCase):
         status, body = self.login()
         self.assertEqual(status, 200)
         self.assertEqual(body["data"]["user"], {"id": str(self.accounts.row["user_id"]), "login": "admin",
-                                                "email": "admin@example.test", "displayName": "Admin", "role": "admin"})
+                                                "email": "admin@example.test", "displayName": "Admin", "role": "admin",
+                                                "scope": {"all": True}, "mustChangePassword": False})
         status, me = run(call("GET", "/v1/auth/me", token=body["data"]["token"]))
         self.assertEqual((status, me["data"]["user"]["login"]), (200, "admin"))
 
@@ -428,7 +431,8 @@ class Routes(unittest.TestCase):
         status, body = run(call("POST", "/v1/prompts", {}))
         self.assertEqual((status, body["error"]["code"]), (405, "read_only"))
         with mock.patch.object(hub_catalog, "listing", mock.AsyncMock(return_value={"data": {"items": []}})) as listing:
-            self.assertEqual(run(call("GET", "/v1/hub/prompts"))[0], 200)
+            self.assertEqual(run(call("GET", "/v1/hub/prompts"))[0], 401)
+            self.assertEqual(run(call("GET", "/v1/hub/prompts", token=self.token()))[0], 200)
         listing.assert_awaited_once()
 
     # ── editing ─────────────────────────────────────────────────────────────────────────────────────────

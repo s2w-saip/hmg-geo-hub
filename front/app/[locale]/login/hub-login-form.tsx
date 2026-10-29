@@ -6,13 +6,13 @@ import { Eye, EyeOff, Lock, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-// HUB login of the local mode (2026-10-27): the top-level administrator signs in, which every local page
-// needs (2026-10-28). POST /api/hub/session sets the httpOnly session cookie; the page then reloads at `next`
-// so every server component reads the new session.
+// HUB login of the local mode (2026-10-27): an account signs in, which every local page needs (2026-10-28).
+// POST /api/hub/session sets the httpOnly session cookie; the page then reloads at `next` so every server
+// component reads the new session, or at the password change when an administrator issued the password.
 
 type Failure = "invalid" | "rateLimited" | "unavailable" | "failed";
 
-export function HubLoginForm({ next }: { next: string }) {
+export function HubLoginForm({ next, passwordHref }: { next: string; passwordHref: string }) {
   const t = useTranslations("hubLogin");
   const [showPassword, setShowPassword] = useState(false);
   const [pending, setPending] = useState(false);
@@ -30,7 +30,8 @@ export function HubLoginForm({ next }: { next: string }) {
         body: JSON.stringify({ login: String(form.get("login") ?? ""), password: String(form.get("password") ?? "") }),
       });
       if (res.ok) {
-        window.location.assign(next);
+        const out = (await res.json().catch(() => null)) as { user?: { mustChangePassword?: boolean } } | null;
+        window.location.assign(out?.user?.mustChangePassword ? passwordHref : next);
         return;
       }
       setFailure(res.status === 401 || res.status === 422 ? "invalid" : res.status === 429 ? "rateLimited" : res.status === 503 ? "unavailable" : "failed");

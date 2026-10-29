@@ -303,6 +303,14 @@ export const ROUTES = [
     roles: ADMIN_ONLY,
     group: "admin" as const,
   },
+  // HUB accounts (2026-10-29, lib/hub): same roles as the original user management page; the
+  // renewal sidebar's Admin › User management opens it.
+  {
+    path: "/renewal/admin",
+    key: "renewalAdmin",
+    roles: ADMIN_ONLY,
+    group: "admin" as const,
+  },
   // HUB global prompts editor (2026-10-27, lib/hub): same roles as the original admin page;
   // the renewal sidebar's Admin › Global prompts opens it.
   {

@@ -51,7 +51,7 @@ macOS(Docker 없음)는 네이티브 모드로 같은 일을 한다: `HGH_PYTHON
 - **검증:** 본문은 한 줄, 2000자 이하다. 퍼널·브랜드 언급·목록 유형·분류 코드는 마지막 Gold 가져오기가 기록한 분류 체계(`catalog.current_reference`, family `taxon`)의 값만 받고, depth2·depth3은 함께 고른 depth1·depth2 아래에 있어야 한다(같은 코드가 여러 부모 아래 있다). 잠금을 쥔 채 Gold를 부르지 않는다. 언어·시장은 글로벌 카탈로그가 이미 쓰는 값만 받는다. 분류 체계가 아직 기록되지 않았으면 카탈로그가 이미 쓰는 코드만 받는다. 같은 본문·언어의 사용 중 프롬프트가 있으면 409 `duplicate`로 거부한다. Gold 가져오기가 실행 중이면 5초 기다린 뒤 503으로 돌려준다.
 - **Gold에서 빠진 프롬프트:** Gold 출처 프롬프트가 Gold에서 사라지면 가져오기가 `status=removed` 버전을 남긴다(아래 절). 화면에는 'Gold에서 빠짐'으로 읽기 전용으로 보인다.
 - **계정과 권한:** API는 `HGH_CATALOG_EDITOR_DB_URL`(`hmg_catalog_editor`: `catalog.prompt`·`prompt_version` INSERT, catalog SELECT만)로 쓴다. UPDATE·DELETE·프로젝트 정의·공개 정책에는 권한이 없다.
-- **로그인:** 운영 DB `002_hub_login`의 `system.global_role`(admin)과 `system.user_credential`(scrypt)을 쓴다. `POST /v1/auth/login`이 `HGH_AUTH_SECRET`으로 서명한 토큰(기본 8시간)을 주고, Next는 이를 httpOnly·SameSite=Strict 쿠키에 담아 HUB 요청에 Bearer로 붙이고, 화면마다 `GET /v1/auth/me`로 세션을 확인한다. 요청마다 계정 상태·역할·비밀번호 변경 시각을 다시 확인하므로, 비활성화·역할 회수·비밀번호 변경은 즉시 기존 세션을 끝낸다. 같은 아이디로 15분에 5번 틀리면 잠시 막는다(API 프로세스 메모리 기준).
+- **로그인:** 운영 DB `002_hub_login`의 `system.global_role`(2026-10-29부터 관리자·HQ·권역·국가와 범위, 아래 절)과 `system.user_credential`(scrypt)을 쓴다. 글로벌 프롬프트 편집은 관리자만 한다. `POST /v1/auth/login`이 `HGH_AUTH_SECRET`으로 서명한 토큰(기본 8시간)을 주고, Next는 이를 httpOnly·SameSite=Strict 쿠키에 담아 HUB 요청에 Bearer로 붙이고, 화면마다 `GET /v1/auth/me`로 세션을 확인한다. 요청마다 계정 상태·역할·비밀번호 변경 시각을 다시 확인하므로, 비활성화·역할 회수·비밀번호 변경은 즉시 기존 세션을 끝낸다. 같은 아이디로 15분에 5번 틀리면 잠시 막는다(API 프로세스 메모리 기준).
 - **측정:** HUB 프롬프트는 아직 측정에 전달되지 않는다. 전달 방식(측정 요청에 프롬프트를 담아 보내기, 또는 수집 서버가 HUB에서 받아 가기)이 정해지면 `prompt_id`와 버전을 고정해 넘긴다. 받아 가는 방식이면 수집 서버용 인증을 따로 둔다.
 
 ```powershell
@@ -74,6 +74,22 @@ python -X utf8 back/hub_storage/manage.py revoke-admin   # 최상위 역할 회�
 
 ```bash
 HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py init   # 003_saved_filters, hmg_saved_filter_editor, .env.saved-filter-db.local, .env.hub-edit.local에 연결 추가
+HGH_PYTHON=~/micromamba/envs/hgh-bff/bin/python bash scripts/start-local.sh   # API 재시작 (Windows: ./scripts/start-gold.ps1)
+```
+
+## HUB 계정과 열람 범위 (2026-10-29)
+
+리뉴얼 Admin › User management(`/renewal/admin`)에서 최상위 관리자가 HUB 계정을 만들고 고친다. 역할은 관리자·HQ·권역·국가 넷이고, 관리자가 아닌 계정은 자기 범위(브랜드·RHQ 권역·국가) 안의 Global 화면 데이터만 본다. 범위는 BFF가 토큰으로 강제한다(`back/bff/access.py`, [정본 문서 `#path`](../../docs/architecture/hmg-geo-hub-architecture.html#path)).
+
+- **저장(`004_hub_accounts`):** `system.global_role`에 역할(`admin`·`hq`·`region`·`country`)과 `brands`·`regions`·`countries`를 둔다. 역할이 쓰는 축에만 값이 있어야 한다(CHECK: admin 없음, hq 브랜드, region +권역, country +국가). `user_credential.must_change`는 관리자가 발급한 비밀번호, `user_account.last_sign_in_at`은 마지막 로그인이다. 로그인 아이디는 대소문자 없이 유일하고(`lower(subject)` UNIQUE), 로그인도 대소문자를 가리지 않는다.
+- **계정과 권한:** 목록·상세는 운영 DB 조회 계정으로 읽고, 쓰기는 `HGH_ACCOUNT_EDITOR_DB_URL`(`hmg_account_editor`: 계정 표 INSERT·UPDATE, `audit_event` INSERT. 로그인 아이디 변경·DELETE 없음)로 한다. 저장한 필터·멤버십·설정 표는 읽지도 못하고 데이터 DB에는 접속하지 못한다. 쓰기는 advisory lock 617427416으로 하나씩 하고, 바꿀 때마다 `audit_event`(`account.*`, `details.user_id`)를 남긴다.
+- **임시 비밀번호:** 계정을 만들거나 재설정하면 임시 비밀번호(4자 넷, 약 92비트)를 한 번만 보여 준다. 그 계정은 다음 로그인에서 새 비밀번호(12자 이상)를 정하기 전에는 `/v1/auth/me`와 `/v1/auth/password` 말고는 403 `password_change_required`이고, 화면은 `/login/password`로 간다. 재설정·사용 중지는 그 계정의 세션을 곧바로 끝낸다. 계정은 지우지 않는다.
+- **같거나 높은 권한은 못 바꾼다:** 자기보다 낮은 역할의 계정만 고치고·사용 중지하고·비밀번호를 재설정하며, 줄 수 있는 역할도 자기보다 낮은 것뿐이다(403 `rank`, 순서 관리자 > HQ > 권역 > 국가 > 역할 없음). 그래서 관리자는 자기 계정도 다른 관리자 계정도 화면에서 바꾸지 못한다. 관리자 지정·해제는 서버에서 `manage.py set-admin`·`revoke-admin`으로만 하고, 자기 비밀번호는 사이드바의 비밀번호 변경에서 바꾼다.
+- **API:** `POST /v1/auth/password`(로그인한 계정 자신), `GET|POST /v1/hub/accounts`, `GET|PUT /v1/hub/accounts/{id}`, `POST /v1/hub/accounts/{id}/disable|enable|reset-password`(관리자만). 브라우저는 Next `/api/hub/accounts`·`/api/hub/password`를 거친다.
+- **BFF 읽기:** 2026-10-29부터 `/healthz`와 로그인 말고 모든 BFF 경로가 토큰을 요구한다. 실서버 시험(`test_live_reads`·`test_hub_storage`)은 `HGH_TEST_TOKEN`이나 `HGH_TEST_LOGIN`·`HGH_TEST_PASSWORD`(관리자)가 있어야 돈다.
+
+```bash
+HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py init   # 004_hub_accounts, hmg_account_editor, .env.account-db.local, .env.hub-edit.local에 연결 추가
 HGH_PYTHON=~/micromamba/envs/hgh-bff/bin/python bash scripts/start-local.sh   # API 재시작 (Windows: ./scripts/start-gold.ps1)
 ```
 

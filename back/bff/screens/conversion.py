@@ -25,11 +25,11 @@ from __future__ import annotations
 from typing import Any
 
 from bff import api
+from bff.access import reader_scope
 from bff.hub_stores.analytics_reader import BRAND_NAMES
 from bff.screens import screen, split_context
 from bff.screens._days import blocks_of, days_of, period_choice, prev_period, reader_query
 from bff.screens._filters import load_panel_options, read_standard_filters, split_filter_values
-from bff.screens._query import READER_SCOPE
 from bff.screens.visibility import path_of
 
 LOW_SAMPLE_USERS = 50
@@ -196,8 +196,8 @@ async def renewal(q) -> dict:
     """{props: RnOverviewFilters option props (scope added by the page), body: the state and, when measured,
     the whole view model}. Reads: filter options, the period, then the previous period of the same length."""
     _, sp = split_context(q)
-    filters = read_standard_filters(sp, READER_SCOPE)
-    options = await load_panel_options({"surface": "global", "scope": READER_SCOPE, "filters": filters})
+    filters = read_standard_filters(sp, reader_scope())
+    options = await load_panel_options({"surface": "global", "scope": reader_scope(), "filters": filters})
     props = {"stage": "conversion", **({"geographyOptions": options["geographyOptions"]} if options.get("geographyOptions") is not None else {})}
     query = reader_query(sp)
     res = await api.get("analytics/conversion", query)

@@ -11,10 +11,11 @@ from typing import Any
 from fastapi import HTTPException
 
 from bff import api
+from bff.access import reader_scope
 from bff.screens import screen, split_context
 from bff.screens._filters import load_filter_dates, load_website_prompt_options, read_standard_filters, standard_filter_key
 from bff.screens._js import js_parse_int
-from bff.screens._query import READER_SCOPE, analysis_query, js_trim, to_api_params
+from bff.screens._query import analysis_query, js_trim, to_api_params
 
 PAGE_SIZE = 50
 SORT_KEYS = ("prompt", "brand", "country", "lang", "targetUrl", "answers", "lastMeasuredAt")
@@ -70,8 +71,8 @@ def list_query(req: dict, scope: dict | None) -> dict:
 def request_query(sp: dict, is_admin: bool) -> dict:
     """The derivation chain as one pure function (golden-tested against the front's TS):
     readWebsitePromptQuery -> websitePromptQuery, plus the page/cursor read-back."""
-    req = read_query(sp, READER_SCOPE, is_admin)
-    return {"query": list_query(req, READER_SCOPE), "page": req["page"], "cursor": req["cursor"]}
+    req = read_query(sp, reader_scope(), is_admin)
+    return {"query": list_query(req, reader_scope()), "page": req["page"], "cursor": req["cursor"]}
 
 
 def suspense_key(sp: dict, scope: dict | None, is_admin: bool) -> str:
@@ -115,15 +116,15 @@ async def prompts_options(q) -> dict:
     """Filter bar options + calendar + the list's Suspense key."""
     ctx, sp = split_context(q)
     options, dates = await asyncio.gather(load_website_prompt_options(), load_filter_dates("website", None, "all"))
-    return {**options, "selectableDates": dates["selectableDates"], "listKey": suspense_key(sp, READER_SCOPE, is_admin(ctx))}
+    return {**options, "selectableDates": dates["selectableDates"], "listKey": suspense_key(sp, reader_scope(), is_admin(ctx))}
 
 
 @screen("website/prompts-list")
 async def prompts_list(q) -> dict:
     """WebsitePromptTable props, with the paging labels computed here."""
     ctx, sp = split_context(q)
-    req = read_query(sp, READER_SCOPE, is_admin(ctx))
-    res = await list_page(list_query(req, READER_SCOPE), req["cursor"])
+    req = read_query(sp, reader_scope(), is_admin(ctx))
+    res = await list_page(list_query(req, reader_scope()), req["cursor"])
     page = req["page"] if req["cursor"] and not res["restarted"] else 1
     total = res["total"]
     pages = max(1, math.ceil(total / PAGE_SIZE))
@@ -137,5 +138,5 @@ async def prompts_list(q) -> dict:
 async def prompts_export(q) -> Any:
     """The export relay body: /v1/prompts for the same query + format=xlsx, columns=screen, locale."""
     ctx, sp = split_context(q)
-    req = read_query(sp, READER_SCOPE, is_admin(ctx))
-    return await api.get("prompts", {**list_query(req, READER_SCOPE), "format": "xlsx", "columns": "screen", "locale": ctx.get("locale", "ko")})
+    req = read_query(sp, reader_scope(), is_admin(ctx))
+    return await api.get("prompts", {**list_query(req, reader_scope()), "format": "xlsx", "columns": "screen", "locale": ctx.get("locale", "ko")})

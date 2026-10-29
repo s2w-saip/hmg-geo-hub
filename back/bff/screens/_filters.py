@@ -6,8 +6,8 @@ project-custom-field-filters.ts), the panel options (F-1) and the local project 
 
 Python shapes follow the TS ones: `sp` is the Next searchParams object (str or list[str] per key,
 see search_params); result dicts carry the TS camelCase keys and omit what TS left undefined.
-The local read-only session reads with READER_SCOPE ({all: true}); the scope branches are ported
-anyway so a scoped session would get the same filters as the front.
+The screens read with the signed-in account's scope (bff/access.py reader_scope(); the administrator's is
+{all: true}), so a scoped account gets the same filters as the original front gave it.
 """
 from __future__ import annotations
 

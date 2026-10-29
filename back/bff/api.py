@@ -1,7 +1,8 @@
 """The /v1 read routes as plain functions, so screen builders can compose them in-process.
 
 The one channel the screens read through: analytics/* comes from the HUB's GA4/SEO store
-(hub_stores), every other path from the external Gold DB (gold_reader)."""
+(hub_stores), every other path from the external Gold DB (gold_reader). get() reads inside the signed-in
+account's scope (bff/access.py); the /v1 route clamps its query the same way before read()."""
 from __future__ import annotations
 
 import asyncio
@@ -14,6 +15,7 @@ from fastapi import HTTPException
 from fastapi.encoders import jsonable_encoder
 from starlette.datastructures import QueryParams
 
+from bff import access
 from bff.gold_reader import cache as gold_cache
 from bff.gold_reader.readers import read as read_gold
 from bff.hub_stores import analytics_reader
@@ -51,8 +53,10 @@ async def get(path: str, params: Mapping[str, Any] | Iterable[tuple[str, Any]] |
     """In-process GET returning the same JSON the HTTP route would send.
 
     Identical reads that run at the same time (sections of one page asking for the same
-    summary) share one execution; a Gold read's answer is kept under Gold's state (gold_reader.cache)."""
-    q = query(params)
+    summary) share one execution; a Gold read's answer is kept under Gold's state (gold_reader.cache).
+    The read runs inside the request account's scope (access.clamp), before it is keyed: accounts of
+    different scopes never share a read."""
+    q = access.clamp(query(params))
     key = f"{path}?{q}"
     pending = _inflight.get(key)
     if pending is None:

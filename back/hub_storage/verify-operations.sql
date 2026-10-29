@@ -46,4 +46,33 @@ DO $$ BEGIN
  BEGIN CREATE TABLE system.forbidden(id int); RAISE EXCEPTION 'Saved filter role can create schema objects'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
 END $$;
 DELETE FROM system.saved_filter WHERE filter_id='ffffffff-ffff-4fff-8fff-fffffffffff3';
+-- Accounts: the API's role writes the account tables and nothing else; a role's scope keeps its shape.
+SET LOCAL ROLE hmg_account_editor;
+INSERT INTO system.user_account(user_id,subject) VALUES('ffffffff-ffff-4fff-8fff-fffffffffff4','rollback-only account fixture');
+INSERT INTO system.user_credential(user_id,password_hash,must_change) VALUES('ffffffff-ffff-4fff-8fff-fffffffffff4','scrypt$rollback-only',true);
+INSERT INTO system.global_role(user_id,role,brands) VALUES('ffffffff-ffff-4fff-8fff-fffffffffff4','hq','{Genesis}');
+UPDATE system.global_role SET role='region',regions='{genesis-asia-pacific}',updated_at=now() WHERE user_id='ffffffff-ffff-4fff-8fff-fffffffffff4';
+UPDATE system.user_credential SET password_hash='scrypt$rollback-only-2',must_change=false,changed_at=now() WHERE user_id='ffffffff-ffff-4fff-8fff-fffffffffff4';
+UPDATE system.user_account SET status='disabled',display_name='rollback-only',last_sign_in_at=now() WHERE user_id='ffffffff-ffff-4fff-8fff-fffffffffff4';
+INSERT INTO system.audit_event(action,details) VALUES('account.rollback-only','{"user_id":"ffffffff-ffff-4fff-8fff-fffffffffff4"}');
+DO $$ BEGIN
+ BEGIN UPDATE system.global_role SET regions='{}' WHERE user_id='ffffffff-ffff-4fff-8fff-fffffffffff4';
+       RAISE EXCEPTION 'Region account without a region'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN UPDATE system.global_role SET role='admin' WHERE user_id='ffffffff-ffff-4fff-8fff-fffffffffff4';
+       RAISE EXCEPTION 'Administrator with a narrowed scope'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN INSERT INTO system.global_role(user_id,role) VALUES('ffffffff-ffff-4fff-8fff-fffffffffff4','viewer');
+       RAISE EXCEPTION 'Unknown role allowed'; EXCEPTION WHEN unique_violation OR check_violation THEN NULL; END;
+ BEGIN INSERT INTO system.user_account(user_id,subject) VALUES(gen_random_uuid(),'ROLLBACK-ONLY ACCOUNT FIXTURE');
+       RAISE EXCEPTION 'Login IDs differing in case only'; EXCEPTION WHEN unique_violation THEN NULL; END;
+ BEGIN UPDATE system.user_account SET subject='renamed' WHERE user_id='ffffffff-ffff-4fff-8fff-fffffffffff4';
+       RAISE EXCEPTION 'Account role renames login IDs'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN DELETE FROM system.user_account; RAISE EXCEPTION 'Account role deletes accounts'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN DELETE FROM system.global_role; RAISE EXCEPTION 'Account role deletes roles'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN UPDATE system.audit_event SET action='x'; RAISE EXCEPTION 'Account role rewrites audit'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN DELETE FROM system.audit_event; RAISE EXCEPTION 'Account role deletes audit'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN PERFORM 1 FROM system.saved_filter; RAISE EXCEPTION 'Account role reads saved filters'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN PERFORM 1 FROM system.project_member; RAISE EXCEPTION 'Account role reads memberships'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN CREATE TABLE system.forbidden(id int); RAISE EXCEPTION 'Account role can create schema objects'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $$;
+RESET ROLE;
 ROLLBACK;

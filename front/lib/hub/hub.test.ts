@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// HUB login (2026-10-27): the BFF client, the session that turns the local reader into the top-level
-// administrator, the cookie options and the login's return path.
+// HUB login (2026-10-27; every role since 2026-10-29): the BFF client, the session of the signed-in account
+// (role, scope, an issued password), the cookie options and the login's return path.
 
 const jar = vi.hoisted(() => ({ token: undefined as string | undefined }));
 vi.mock("next/headers", () => ({
@@ -10,12 +10,12 @@ vi.mock("next/headers", () => ({
 }));
 
 const { hubFetch, hubMe } = await import("./client");
-const { hubAdminUser } = await import("./session");
+const { hubUser } = await import("./session");
 const { hubCookieOptions } = await import("./cookie");
-const { hubLoginNext } = await import("./next-path");
+const { hubLoginNext, passwordChangeHref } = await import("./next-path");
 const { getSession } = await import("@/lib/auth/session");
 
-const USER = { id: "8f6f0c1e-2b7a-4c1e-9d2a-1b2c3d4e5f60", login: "admin", email: null, displayName: "Admin", role: "admin" };
+const USER = { id: "8f6f0c1e-2b7a-4c1e-9d2a-1b2c3d4e5f60", login: "admin", email: null, displayName: "Admin", role: "admin", scope: { all: true }, mustChangePassword: false };
 const calls: Array<{ url: string; init: RequestInit }> = [];
 
 function answer(status: number, body: unknown) {
@@ -69,12 +69,12 @@ describe("HUB session", () => {
   it("no cookie: no BFF call, no administrator, no session (the local mode needs the login)", async () => {
     const fetch = answer(200, { data: { user: USER } });
     vi.stubGlobal("fetch", fetch);
-    expect(await hubAdminUser()).toBeNull();
+    expect(await hubUser()).toBeNull();
     expect(await getSession()).toBeNull();
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("a valid cookie makes the local session the administrator; a refused or unreachable one is no session", async () => {
+  it("a valid cookie makes the local session the account; a refused or unreachable one is no session", async () => {
     jar.token = "tok";
     vi.stubGlobal("fetch", answer(200, { data: { user: USER } }));
     expect((await getSession())?.user).toEqual({ id: USER.id, email: "admin", role: "admin", scope: { all: true }, operator: "none", menuGroups: null });
@@ -83,6 +83,27 @@ describe("HUB session", () => {
     vi.stubGlobal("fetch", vi.fn(async () => Promise.reject(new TypeError("fetch failed"))));
     vi.spyOn(console, "warn").mockImplementation(() => {});
     expect(await getSession()).toBeNull();
+  });
+});
+
+describe("HUB session of a scoped account", () => {
+  it("carries the role, the axes the scope narrows and an issued password", async () => {
+    jar.token = "tok";
+    const user = { ...USER, login: "kim", email: "kim@example.test", role: "country", mustChangePassword: true,
+      scope: { all: false, brands: ["Kia"], regions: ["kia-north-america"], countries: ["US"] } };
+    vi.stubGlobal("fetch", answer(200, { data: { user } }));
+    expect(await hubUser()).toEqual({ id: USER.id, email: "kim@example.test", role: "country", operator: "none", menuGroups: null, mustChangePassword: true,
+      scope: { all: false, brands: ["Kia"], regions: ["kia-north-america"], countries: ["US"] } });
+    vi.stubGlobal("fetch", answer(200, { data: { user: { ...user, role: "hq", mustChangePassword: false, scope: { all: false, brands: ["Kia"], regions: [], countries: [] } } } }));
+    expect(await hubUser()).toEqual({ id: USER.id, email: "kim@example.test", role: "hq", operator: "none", menuGroups: null,
+      scope: { all: false, brands: ["Kia"], regions: undefined, countries: undefined } });
+  });
+});
+
+describe("password change path", () => {
+  it("returns to the page it came from", () => {
+    expect(passwordChangeHref("ko", "/ko/renewal/standard/prompts")).toBe("/ko/login/password?next=%2Fko%2Frenewal%2Fstandard%2Fprompts");
+    expect(passwordChangeHref("ko", "")).toBe("/ko/login/password");
   });
 });
 

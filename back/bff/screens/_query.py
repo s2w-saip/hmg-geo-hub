@@ -64,7 +64,7 @@ def uniq(values) -> list:
 UMBRELLA_BRAND = "HMG"
 SCOPE_DENY_BRAND = UMBRELLA_BRAND
 SCOPE_DENY_COUNTRY = "ZZ"
-# The local read-only session (lib/auth/session.ts): the database reader, every scope.
+# Every scope (the administrator's). The screens read with the request account's (bff/access.py reader_scope()).
 READER_SCOPE: dict = {"all": True}
 
 WEBSITE_BRAND_GEO_CODES = {"HYUNDAI-N": "Hyundai N"}

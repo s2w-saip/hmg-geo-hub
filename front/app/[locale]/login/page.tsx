@@ -6,7 +6,7 @@ import { Wordmark } from "@/components/wordmark";
 import { Card } from "@/components/ui/card";
 import { getSession } from "@/lib/auth/session";
 import { localReadOnly } from "@/lib/local-readonly";
-import { hubLoginNext } from "@/lib/hub/next-path";
+import { hubLoginNext, passwordChangeHref } from "@/lib/hub/next-path";
 
 // Single centered card layout — modeled after account.hyundai.com. The
 // previous two-column "brand wall + form" arrangement was an editorial
@@ -14,7 +14,7 @@ import { hubLoginNext } from "@/lib/hub/next-path";
 // on a Sand page. We follow that exactly: large H monogram, single-line
 // title in font-head, icon-prefixed inputs, full-width LOGIN button.
 // In the local mode (2026-10-27) the card is the HUB login, which every page needs (2026-10-28); a
-// signed-in visitor goes straight back.
+// signed-in visitor goes straight back (the layouts send an issued password to the change first).
 export default async function LoginPage({
   params,
   searchParams,
@@ -46,7 +46,7 @@ export default async function LoginPage({
             </h1>
             {hub ? <p className="-mt-3 text-center text-sm text-muted-foreground">{tHub("description")}</p> : null}
           </div>
-          {hub ? <HubLoginForm next={next} /> : <LoginForm />}
+          {hub ? <HubLoginForm next={next} passwordHref={passwordChangeHref(locale, next)} /> : <LoginForm />}
         </Card>
       </div>
     </main>

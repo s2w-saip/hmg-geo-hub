@@ -7,3 +7,8 @@ export function hubLoginNext(raw: unknown, locale: string): string {
   if (!raw.startsWith(`/${locale}/`) || raw.includes("//") || raw.includes("\\")) return fallback;
   return raw;
 }
+
+/** The password change an account with an issued password goes to first (2026-10-29), coming back to `pathname`. */
+export function passwordChangeHref(locale: string, pathname: string): string {
+  return `/${locale}/login/password${pathname ? `?next=${encodeURIComponent(pathname)}` : ""}`;
+}

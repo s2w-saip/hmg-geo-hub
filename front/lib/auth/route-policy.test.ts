@@ -203,6 +203,7 @@ describe("route-policy — visibleRoutes (SNB list)", () => {
       "/admin",
       "/admin/standards",
       "/admin/standards/prompts",
+      "/renewal/admin",
       "/renewal/admin/standards/prompts",
       "/admin/standards/customer-interest",
       "/admin/standards/entities",
@@ -302,8 +303,8 @@ describe("route-policy — guard bypass and default landing", () => {
 });
 
 describe("route-policy — ROUTES table integrity", () => {
-  it("exposes 41 routes (renewal Overview / Global prompts / ACR / Mention / Citation / AI Visibility / AI Conversion, HUB global prompts, production Admin 분석 엔진 / 리포트 관리 / 측정 크레딧 추가)", () => {
-    expect(ROUTES).toHaveLength(41);
+  it("exposes 42 routes (renewal Overview / Global prompts / ACR / Mention / Citation / AI Visibility / AI Conversion, HUB accounts and global prompts, production Admin 분석 엔진 / 리포트 관리 / 측정 크레딧 추가)", () => {
+    expect(ROUTES).toHaveLength(42);
   });
 
   it("renewal pages open to exactly the roles of their originals", () => {
@@ -313,6 +314,7 @@ describe("route-policy — ROUTES table integrity", () => {
       ["/renewal/standard/ai-funnel/acr", "/standard/ai-funnel/acr"],
       ["/renewal/standard/ai-funnel/visibility", "/standard/ai-funnel/visibility"],
       ["/renewal/standard/ai-funnel/conversion", "/standard/ai-funnel/conversion"],
+      ["/renewal/admin", "/admin"],
       ["/renewal/admin/standards/prompts", "/admin/standards/prompts"],
       ["/renewal/standard/answer-analysis/mention", "/standard/answer-analysis/mention"],
       ["/renewal/standard/answer-analysis/citation", "/standard/answer-analysis/citation"],

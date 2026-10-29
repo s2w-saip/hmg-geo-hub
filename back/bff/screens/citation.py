@@ -30,6 +30,7 @@ from urllib.parse import quote
 from fastapi import HTTPException
 
 from bff import api
+from bff.access import reader_scope
 from bff.screens import screen, split_context
 from bff.screens import citation_model as M
 from bff.screens._compare import fetch_period_compare_api, prev_period_filters
@@ -39,7 +40,7 @@ from bff.screens._filters import (
     read_standard_filters, split_filter_values,
 )
 from bff.screens._period import kst_today, resolve_request_compare_period_shape, to_period_delta_view
-from bff.screens._query import READER_SCOPE, analysis_query, is_uuid, js_trim, to_api_params, with_params
+from bff.screens._query import analysis_query, is_uuid, js_trim, to_api_params, with_params
 from bff.screens._sort import code_unit_key
 from bff.screens._summary import provenance_of, summary_query, url_prompt_rates
 from bff.screens._trend import overview_card_delta, split_trend_dims, to_standard_trend_buckets, trend_query
@@ -148,8 +149,8 @@ async def _restartable_page(cursor: str | None, run):
 
 def global_context(sp: dict) -> tuple[dict, dict, list[str]]:
     """Standard page: readStandardFilters(sp, scope) + cumulative; the ?competitor= picks (every value)."""
-    filters = {**read_standard_filters(sp, READER_SCOPE), "cumulative": True}
-    return filters, {"surface": "global", "scope": READER_SCOPE}, split_filter_values(sp.get("competitor"))
+    filters = {**read_standard_filters(sp, reader_scope()), "cumulative": True}
+    return filters, {"surface": "global", "scope": reader_scope()}, split_filter_values(sp.get("competitor"))
 
 
 def website_groups(role: str | None) -> list[str]:
@@ -166,8 +167,8 @@ def website_filters(raw: dict) -> dict:
 
 
 def website_context(sp: dict, role: str | None, surface_rule: str = "website") -> tuple[dict, dict]:
-    raw = read_standard_filters(sp, READER_SCOPE, website_groups(role), surface_rule)
-    return website_filters(raw), {"surface": "website", "scope": READER_SCOPE}
+    raw = read_standard_filters(sp, reader_scope(), website_groups(role), surface_rule)
+    return website_filters(raw), {"surface": "website", "scope": reader_scope()}
 
 
 def route_context(sp: dict, surface: str, project_id: str | None, role: str | None) -> tuple[dict, dict, list[str]]:
@@ -488,7 +489,7 @@ async def filter_bar(q) -> dict:
         r = Reads(filters, actx, competitor)
     options, dates = await asyncio.gather(
         load_panel_options({"surface": surface, "dateFrom": filters.get("dateFrom"), "dateTo": filters.get("dateTo"),
-                            "scope": READER_SCOPE, "filters": filters}),
+                            "scope": reader_scope(), "filters": filters}),
         r.dates())
     return {"options": options, "dates": filter_dates_view(dates)}
 

@@ -3,13 +3,14 @@
 import { useEffect, useId, useState, type ComponentType, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { Briefcase, ChevronDown, Construction, Loader2, LogOut, Menu, X } from "lucide-react";
+import { Briefcase, ChevronDown, Construction, KeyRound, Loader2, LogOut, Menu, X } from "lucide-react";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { carryFilterParams } from "@/components/dash/filter-carry";
 import { ADMIN_SUB_ITEMS, STANDARD_SUB_ITEMS, WEBSITE_SUB_ITEMS, type StandardSubItem } from "@/components/dash/sidebar";
 import { useHubLogout } from "@/components/hub-session";
 import { logout } from "@/lib/auth/actions";
+import { passwordChangeHref } from "@/lib/hub/next-path";
 import type { RouteDef } from "@/lib/auth/route-policy";
 import type { Role } from "@/lib/auth/types";
 import { cx } from "@/components/renewal-ui";
@@ -51,7 +52,7 @@ interface NavItem extends NavLeaf {
 export interface RnShellUser {
   email: string;
   role: Role;
-  /** local mode: sign-in / sign-out are the HUB login (the top-level administrator), not Supabase */
+  /** local mode: sign-in / sign-out and the password change are the HUB login's, not Supabase's */
   local?: boolean;
 }
 
@@ -305,7 +306,18 @@ function Account({ user, locale }: { user: RnShellUser; locale: string }) {
         <ShellIconButton label={`${tLocale("label")}: ${tLocale(next)}`} onClick={switchLocale}>
           <span className="text-rn-11 font-bold uppercase">{current}</span>
         </ShellIconButton>
-        {/* the local mode's session is always the HUB login (2026-10-28) */}
+        {/* the local mode's session is always the HUB login (2026-10-28); its password is changed here (2026-10-29) */}
+        {user.local ? (
+          <ShellIconButton
+            label={tNav("changePassword")}
+            onClick={() => {
+              const qs = searchParams.toString();
+              window.location.assign(passwordChangeHref(locale, `/${current}${pathname === "/" ? "" : pathname}${qs ? `?${qs}` : ""}`));
+            }}
+          >
+            <KeyRound className="size-3.5" aria-hidden />
+          </ShellIconButton>
+        ) : null}
         {user.local ? (
           <ShellIconButton label={tNav("logout")} onClick={() => void hubLogout()}>
             <LogOut className="size-3.5" aria-hidden />

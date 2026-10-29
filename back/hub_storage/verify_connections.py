@@ -82,6 +82,25 @@ async def main(config):
     else:
         await forbidden.close()
         raise AssertionError('Saved filter credentials can connect to the data DB')
+    # Account role: the account tables on the operations server only.
+    account = await asyncpg.connect(config['account'], timeout=5)
+    try:
+        await account.fetchval('SELECT count(*) FROM system.global_role')
+        try:
+            await account.execute('SELECT 1 FROM system.saved_filter LIMIT 1')
+        except asyncpg.InsufficientPrivilegeError:
+            pass
+        else:
+            raise AssertionError('Account role reads beyond the account tables')
+    finally:
+        await account.close()
+    try:
+        forbidden = await asyncpg.connect(config['account_data'], timeout=5)
+    except asyncpg.InvalidAuthorizationSpecificationError:
+        pass
+    else:
+        await forbidden.close()
+        raise AssertionError('Account credentials can connect to the data DB')
     print(json.dumps({'tcp_authentication':'passed','external_operations_access':'denied','api_operations_reader':'read_only',
                       'ext_api':'scoped_read_only','ext_operations_access':'denied','saved_filter':'one_table',
-                      'saved_filter_data_access':'denied'}))
+                      'saved_filter_data_access':'denied','account':'account_tables','account_data_access':'denied'}))

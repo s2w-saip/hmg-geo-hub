@@ -24,11 +24,12 @@ from typing import Any
 from fastapi import HTTPException
 
 from bff import api
+from bff.access import reader_scope
 from bff.screens import screen, split_context
 from bff.screens._convert import delta1, exact, filter_notices, pct1_or_null, round1, whole_suppression
 from bff.screens._filters import load_filter_dates, load_panel_options, read_standard_filters
 from bff.screens._js import is_num, js_round, js_str
-from bff.screens._query import READER_SCOPE, UMBRELLA_BRAND, analysis_query, to_api_params
+from bff.screens._query import UMBRELLA_BRAND, analysis_query, to_api_params
 from bff.screens._sort import locale_compare, sort_by, table_orders
 from bff.screens.sources import source_query
 
@@ -191,8 +192,8 @@ def _panel_props(options: dict, languages: list, dates: dict) -> dict:
 async def _global_reads(filters: dict, territory_rows: str = "all", duels: bool = False) -> tuple[dict, dict, dict]:
     """AcrDataApi's three calls in parallel: ACR, filter options (no period), the round calendar."""
     return await asyncio.gather(
-        load_acr_screen(filters, {"surface": "global", "scope": READER_SCOPE}, territory_rows, duels),
-        load_panel_options({"surface": "global", "scope": READER_SCOPE, "filters": filters}),
+        load_acr_screen(filters, {"surface": "global", "scope": reader_scope()}, territory_rows, duels),
+        load_panel_options({"surface": "global", "scope": reader_scope(), "filters": filters}),
         load_filter_dates("global", None, "all"),
     )
 
@@ -333,7 +334,7 @@ def live_vm(data: dict, acr_prompt_count: Any) -> dict:
 async def standard(q) -> dict:
     """/standard/ai-funnel/acr: {panel: DimensionFilterPanel option props + onlyGroups, view: AcrLiveVm}."""
     _, sp = split_context(q)
-    filters = read_standard_filters(sp, READER_SCOPE)
+    filters = read_standard_filters(sp, reader_scope())
     acr, options, dates = await _global_reads(filters)
     panel = _panel_props(options, acr["languageOptions"], dates)
     panel["onlyGroups"] = only_groups(acr["languageOptions"])
@@ -751,7 +752,7 @@ def renewal_view(data: dict, own: dict | None, round_buckets: bool, period: bool
 async def renewal_header(q) -> dict:
     """The renewal ACR page header (outside the data Suspense): the period pill. No reads."""
     _, sp = split_context(q)
-    st = page_state(sp, read_standard_filters(sp, READER_SCOPE))
+    st = page_state(sp, read_standard_filters(sp, reader_scope()))
     return {"period": st["period"], "dateFrom": st["dateFrom"], "dateTo": st["dateTo"]}
 
 
@@ -760,7 +761,7 @@ async def renewal(q) -> dict:
     """The renewal ACR page body: {props: RnOverviewFilters option props (scope added by the page),
     body: the state flags and, when measured, the full view model}."""
     _, sp = split_context(q)
-    filters = read_standard_filters(sp, READER_SCOPE)
+    filters = read_standard_filters(sp, reader_scope())
     st = page_state(sp, filters)
     acr, options, dates = await _global_reads(filters, "first", duels=True)
     props = {"stage": "acr", **_panel_props(options, acr["languageOptions"], dates)}
@@ -781,8 +782,8 @@ async def renewal_sheet(q) -> dict:
     if not isinstance(key, str) or "|" not in key:
         raise HTTPException(422, "sheet must be <country>|<engine>")
     country, _, engine = key.partition("|")
-    filters = read_standard_filters(sp, READER_SCOPE)
-    params = to_api_params(analysis_query(filters, {"surface": "global", "scope": READER_SCOPE}),
+    filters = read_standard_filters(sp, reader_scope())
+    params = to_api_params(analysis_query(filters, {"surface": "global", "scope": reader_scope()}),
                            {"sheet_country": country, "sheet_engine": engine})
     res = await api.get("funnel/acr/territory", params)
     s = res["data"]["sheet"]

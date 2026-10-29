@@ -9,6 +9,8 @@ from urllib.request import Request, urlopen
 
 from jsonschema import Draft202012Validator
 
+from bff.tests import live_auth
+
 BASE = os.environ.get("HGH_GOLD_TEST_BASE_URL")
 CONTRACT = json.loads((Path(__file__).parents[1] / "api-contract.json").read_text(encoding="utf-8"))
 
@@ -21,13 +23,16 @@ class GoldLiveReads(unittest.TestCase):
             try:
                 with urlopen(BASE + "/healthz", timeout=2) as response:
                     if response.status == 200:
-                        return
+                        break
             except OSError:
                 time.sleep(0.5)
-        raise RuntimeError("Gold API did not become ready")
+        else:
+            raise RuntimeError("Gold API did not become ready")
+        if live_auth.token(BASE) is None:
+            raise unittest.SkipTest(live_auth.SKIP)
 
     def read(self, route):
-        with urlopen(BASE + route, timeout=35) as response:
+        with urlopen(live_auth.request(BASE, route), timeout=35) as response:
             return json.load(response)
 
     def test_reader_is_read_only(self):

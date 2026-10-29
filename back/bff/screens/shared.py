@@ -3,12 +3,12 @@ from __future__ import annotations
 
 from fastapi import HTTPException
 
+from bff.access import reader_scope
 from bff.screens import screen
 from bff.screens._filters import (
     load_filter_dates, load_panel_options, load_project_gate, load_website_prompt_options, project_locks,
     read_standard_filters, search_params,
 )
-from bff.screens._query import READER_SCOPE
 
 SURFACES = ("global", "website", "project")
 
@@ -32,7 +32,7 @@ async def panel_options(q) -> dict:
     if surface == "project" and not project_id:
         raise HTTPException(422, "surface=project needs project_id")
     sp = search_params(q)
-    scope = None if surface == "project" else READER_SCOPE
+    scope = None if surface == "project" else reader_scope()
     filters = read_standard_filters(sp, scope)
     return await load_panel_options({"surface": surface, "projectId": project_id, "dateFrom": filters.get("dateFrom"),
                                      "dateTo": filters.get("dateTo"), "geoOnly": q.get("geo_only") in ("true", "1"),

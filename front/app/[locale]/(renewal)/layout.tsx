@@ -7,6 +7,7 @@ import { Toaster } from "sonner";
 import { resolvePageTitleRef } from "@/lib/nav/page-title";
 import { perfNoCacheActive } from "@/lib/perf/nocache-probe";
 import { getSession } from "@/lib/auth/session";
+import { passwordChangeHref } from "@/lib/hub/next-path";
 import { localReadOnly } from "@/lib/local-readonly";
 import { canAccessRoute, isGuardBypass, visibleRoutes } from "@/lib/auth/route-policy";
 import { BetaNoticeDialog } from "@/components/dash/beta-notice";
@@ -44,6 +45,8 @@ export default async function RenewalLayout({ children, params }: { children: Re
   // server-side route guard (route-policy.ts, role + menuGroups) — the same check as (dash)
   const menuGroups = session.user.menuGroups;
   const pathname = hdrs.get("x-pathname") ?? "";
+  // An issued password is replaced before any page (HUB login, 2026-10-29); the BFF refuses the reads meanwhile.
+  if (session.user.mustChangePassword) redirect(passwordChangeHref(locale, pathname));
   if (pathname && !isGuardBypass(pathname) && !canAccessRoute(session.user.role, pathname, menuGroups)) {
     redirect(`/${locale}/no-access`);
   }

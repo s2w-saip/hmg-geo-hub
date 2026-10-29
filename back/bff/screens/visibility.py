@@ -28,11 +28,11 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from bff import api
+from bff.access import reader_scope
 from bff.hub_stores.analytics_reader import BRAND_NAMES
 from bff.screens import screen, split_context
 from bff.screens._days import blocks_of, days_of, period_choice, period_params, prev_period, reader_query  # noqa: F401 (period_params: tests)
 from bff.screens._filters import load_panel_options, read_standard_filters, split_filter_values
-from bff.screens._query import READER_SCOPE
 from bff.screens._sort import table_orders
 
 STALE_DAYS = 7
@@ -380,8 +380,8 @@ async def renewal(q) -> dict:
     """{props: RnOverviewFilters option props (scope added by the page), body: the state and, when measured,
     the whole view model}. Reads: filter options, the period, then the previous period of the same length."""
     _, sp = split_context(q)
-    filters = read_standard_filters(sp, READER_SCOPE)
-    options = await load_panel_options({"surface": "global", "scope": READER_SCOPE, "filters": filters})
+    filters = read_standard_filters(sp, reader_scope())
+    options = await load_panel_options({"surface": "global", "scope": reader_scope(), "filters": filters})
     props = {"stage": "visibility", **({"geographyOptions": options["geographyOptions"]} if options.get("geographyOptions") is not None else {})}
     query = reader_query(sp)
     res = await api.get("analytics/visibility", query)
