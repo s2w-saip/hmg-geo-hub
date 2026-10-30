@@ -18,10 +18,11 @@ export function firstAsc(key: SourceSort): boolean {
   return key === "domain" || key === "category";
 }
 
+/** The values an axis can pick; RnRadioAxis adds its own 전체 (ALL) row in front. */
 export function axisOptions(axis: SourceAxis, categories: readonly string[]): string[] {
-  if (axis === "category") return [ALL, ...categories];
-  if (axis === "source") return [ALL, ...SOURCE_LAYERS];
-  return [ALL, ...SYNC_STATES];
+  if (axis === "category") return [...categories];
+  if (axis === "source") return [...SOURCE_LAYERS];
+  return [...SYNC_STATES];
 }
 
 export function matches(row: SourceRow, f: SourceFilter, search: string, otherOnly: boolean): boolean {

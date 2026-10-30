@@ -6035,6 +6035,280 @@
       "failed": "요청을 처리하지 못했습니다."
     }
   },
+  "hubSourceLists": {
+    "tabs": {
+      "label": "인용 출처 분류 보기",
+      "overrides": "교정",
+      "seeds": "시드",
+      "social": "공식 소셜",
+      "codes": "코드표"
+    },
+    "publishedPill": "업스트림 목록 v{version} · {items}건",
+    "publishedTip": "외부 API {family} 목록 · 순번(change_seq) {seq} · {at} 기록",
+    "roundPill": "Gold {date} 회차 · 글로벌",
+    "storePill": "HUB 데이터 DB",
+    "flowNoteTitle": "반영 시점",
+    "system": "관리 명령",
+    "loading": "불러오는 중…",
+    "history": "변경 이력",
+    "noHistory": "변경 이력이 없습니다.",
+    "historyOpen": "{name} 변경 이력",
+    "searchLabel": "검색",
+    "cancel": "취소",
+    "save": "저장",
+    "origin": {
+      "file_import": "원본 파일에서 가져옴",
+      "hub": "이 화면에서 지정",
+      "import": "처음 값"
+    },
+    "error": {
+      "invalid_value": "입력값을 확인하세요: {fields}",
+      "not_found": "HUB 목록에 없는 항목입니다.",
+      "unauthorized": "로그인이 만료되었습니다. 다시 로그인하세요.",
+      "forbidden": "최상위 관리자만 인용 출처 분류를 관리할 수 있습니다.",
+      "source_unavailable": "HUB 저장소나 Gold를 읽지 못했습니다. 잠시 뒤 다시 시도하세요.",
+      "failed": "요청을 처리하지 못했습니다."
+    },
+    "seeds": {
+      "description": "사람이 정한 도메인별 기본 분류(시드)를 관리합니다. 우선순위는 교정 › 공식 소셜 › 당사 도메인 › 시드 › 규칙 순입니다.",
+      "flowNote": "여기서 고친 시드는 HUB에 저장되고 외부 API 목록(source_seed)으로 파이프라인에 넘어갑니다. 인용 화면 숫자에는 파이프라인이 이 목록을 가져가 Gold를 다시 만든 뒤 반영되고, 그 전까지 '반영 대기'로 보입니다.",
+      "listLabel": "시드 목록",
+      "searchPlaceholder": "도메인 검색",
+      "count": "{shown} / {total}개 · 적용 중 {active} · 제외 {removed} · 반영 대기 {pending} · 업스트림 {upstream}",
+      "empty": "시드가 없습니다.",
+      "emptyFiltered": "조건에 맞는 시드가 없습니다.",
+      "hint": "HUB의 시드 전체와, Gold가 시드로 적용했지만 HUB 목록에는 없는 출처를 보여 줍니다. 인용 수는 Gold {date} 회차(글로벌) 기준입니다.",
+      "axis": {
+        "category": "카테고리",
+        "state": "반영 상태",
+        "status": "상태"
+      },
+      "column": {
+        "domain": "도메인",
+        "citations": "인용 수",
+        "category": "HUB 카테고리",
+        "gold": "Gold 값",
+        "state": "반영",
+        "status": "상태",
+        "actions": "작업"
+      },
+      "state": {
+        "applied": "반영됨",
+        "pending": "반영 대기",
+        "pendingRemove": "제외 대기",
+        "shadowed": "상위 분류 우선",
+        "upstream": "업스트림 시드"
+      },
+      "stateTip": {
+        "applied": "Gold가 이 시드를 적용했습니다.",
+        "pending": "파이프라인이 아직 이 시드를 가져가지 않았습니다. Gold 재가공 뒤 반영됩니다.",
+        "pendingRemove": "파이프라인이 아직 제외를 가져가지 않았습니다. Gold 재가공 뒤 규칙 분류로 돌아갑니다.",
+        "shadowed": "이 출처는 교정 · 공식 소셜 · 당사 도메인 중 하나가 먼저 정합니다. 시드는 그 분류가 없어질 때 쓰입니다.",
+        "upstream": "Gold가 시드로 적용했지만 HUB 목록에는 없습니다. '시드로 추가'를 누르면 HUB 시드가 됩니다.",
+        "none": "Gold에 없는 출처입니다(인용된 적 없음)."
+      },
+      "status": {
+        "active": "적용 중",
+        "removed": "제외됨"
+      },
+      "goldNone": "Gold에 없음",
+      "goldValue": "Gold 값: {category} · {source}",
+      "categoryOf": "{domain} 시드 카테고리",
+      "addAsSeed": "시드로 추가",
+      "remove": "제외",
+      "restore": "복원",
+      "add": {
+        "title": "시드 추가",
+        "domain": "도메인",
+        "domainPlaceholder": "예: carandbike.com",
+        "category": "카테고리",
+        "submit": "추가",
+        "invalid": "도메인 형식을 확인하세요. 소문자 도메인만, 경로 없이 적습니다.",
+        "exists": "이미 있는 시드입니다. 목록에서 카테고리를 바꾸세요."
+      },
+      "toast": {
+        "saved": "{domain} 시드를 저장했습니다. 파이프라인이 가져간 뒤 인용 집계에 반영됩니다.",
+        "removed": "{domain} 시드를 제외했습니다. 파이프라인이 가져간 뒤 규칙 분류로 돌아갑니다."
+      },
+      "detailTitle": "시드",
+      "field": {
+        "citations": "인용 수",
+        "category": "카테고리",
+        "status": "상태",
+        "hub": "HUB 시드",
+        "origin": "처음 값",
+        "gold": "Gold 값",
+        "state": "반영",
+        "note": "메모"
+      },
+      "noSeed": "HUB 시드가 없습니다. '시드로 추가'를 누르면 시드가 생깁니다.",
+      "event": {
+        "import": "가져오기",
+        "add": "추가",
+        "set": "변경",
+        "remove": "제외"
+      }
+    },
+    "social": {
+      "description": "공식(HMG) 소셜 계정 목록을 관리합니다. 계정으로 묶인 인용은 Official (HMG)로 분류되고, 같은 도메인의 나머지 인용과 따로 셉니다.",
+      "flowNote": "여기서 고친 계정은 HUB에 저장되고 외부 API 목록(source_social)으로 파이프라인에 넘어갑니다. 인용 화면 숫자에는 파이프라인이 이 목록을 가져가 Gold를 다시 만든 뒤 반영되고, 그 전까지 '반영 대기'로 보입니다.",
+      "listLabel": "공식 소셜 계정 목록",
+      "count": "{total}개 · 적용 중 {active} · 중지 {stopped} · 반영 대기 {pending}",
+      "empty": "공식 소셜 계정이 없습니다.",
+      "column": {
+        "key": "계정",
+        "domain": "도메인",
+        "matchers": "매칭 규칙",
+        "category": "카테고리",
+        "citations": "인용 수",
+        "state": "반영",
+        "status": "상태",
+        "actions": "작업"
+      },
+      "categoryFixed": "Official (HMG)",
+      "categoryFixedTip": "공식 소셜 계정의 카테고리는 Official (HMG)로 고정입니다.",
+      "matchersMore": "{first} 외 {more}개",
+      "boundaryOn": "경로 경계",
+      "boundaryOff": "접두어 그대로",
+      "state": {
+        "applied": "반영됨",
+        "pending": "반영 대기",
+        "pendingStop": "중지 대기",
+        "upstream": "업스트림 계정"
+      },
+      "stateTip": {
+        "applied": "Gold가 이 계정을 공식 소셜로 적용했습니다.",
+        "pending": "파이프라인이 아직 이 계정을 가져가지 않았습니다. Gold 재가공 뒤 반영됩니다.",
+        "pendingStop": "파이프라인이 아직 중지를 가져가지 않았습니다. Gold 재가공 뒤 도메인 인용으로 돌아갑니다.",
+        "upstream": "Gold가 공식 소셜로 적용했지만 HUB 목록에는 없습니다. '계정으로 추가'를 누르면 HUB 계정이 됩니다.",
+        "none": "Gold에 없는 계정입니다. 인용된 적이 없거나 아직 반영 전입니다(Gold로는 구별할 수 없습니다)."
+      },
+      "status": {
+        "active": "적용 중",
+        "stopped": "중지됨"
+      },
+      "goldNone": "Gold에 없음",
+      "add": "계정 추가",
+      "addAsAccount": "계정으로 추가",
+      "edit": "편집",
+      "stop": "중지",
+      "resume": "재개",
+      "form": {
+        "titleAdd": "공식 소셜 계정 추가",
+        "titleEdit": "매칭 규칙 편집",
+        "key": "계정 키",
+        "keyPlaceholder": "예: instagram.com/hyundai",
+        "keyHint": "도메인/계정 경로. 대소문자는 Gold 표기대로 두고, 저장 뒤에는 바꿀 수 없습니다.",
+        "matchers": "매칭 규칙",
+        "matchersHint": "인용 URL(소문자, www. 없이)이 이 접두어로 시작하면 이 계정으로 묶습니다.",
+        "prefix": "접두어",
+        "boundary": "경로 경계에서 끝남",
+        "boundaryHint": "켜면 접두어 뒤가 '/'이거나 끝이어야 합니다(instagram.com/hyundai는 /hyundaiindia를 잡지 않음). 접두어가 구분자로 끝나면 끕니다.",
+        "addMatcher": "규칙 추가",
+        "removeMatcher": "{n}번 규칙 삭제",
+        "problem": {
+          "key": "계정 키는 '도메인/경로' 형식이고, 도메인에 점이 있으며 www.로 시작하지 않아야 합니다.",
+          "matchers": "매칭 규칙은 1~10개입니다.",
+          "prefix": "접두어는 소문자이고 '도메인/'으로 시작해야 합니다.",
+          "duplicate": "같은 접두어가 두 번 있습니다."
+        }
+      },
+      "toast": {
+        "saved": "{key} 계정을 저장했습니다. 파이프라인이 가져간 뒤 반영됩니다.",
+        "stopped": "{key} 계정을 중지했습니다. 파이프라인이 가져간 뒤 반영됩니다.",
+        "resumed": "{key} 계정을 다시 적용했습니다. 파이프라인이 가져간 뒤 반영됩니다."
+      },
+      "detailTitle": "공식 소셜 계정",
+      "field": {
+        "key": "계정",
+        "domain": "도메인",
+        "matchers": "매칭 규칙",
+        "citations": "인용 수",
+        "status": "상태",
+        "origin": "처음 값",
+        "gold": "Gold 값",
+        "state": "반영",
+        "note": "메모"
+      },
+      "event": {
+        "import": "가져오기",
+        "add": "추가",
+        "set": "규칙 변경",
+        "stop": "중지",
+        "resume": "재개"
+      }
+    },
+    "codes": {
+      "description": "출처 카테고리와 분류 출처의 코드표를 관리합니다. HUB가 정본이고, 외부 API 목록(source_code)으로 파이프라인에 넘어갑니다.",
+      "noteTitle": "고칠 수 있는 범위",
+      "note": "이름(한국어 · 영어), 설명, 카테고리 순서만 고칩니다. 카테고리를 더하거나 빼는 일은 Gold의 열 구조(cit_c1~13)와 묶여 있어 여기서 할 수 없고, 업스트림에 요청합니다. 이 이름은 외부 API 목록에 실리며 HUB 화면 문구에는 아직 쓰이지 않습니다.",
+      "categories": "출처 카테고리",
+      "layers": "분류 출처",
+      "layersHint": "번호가 우선순위입니다(1 교정이 가장 먼저). 순서는 바꿀 수 없습니다.",
+      "count": "{n}개",
+      "column": {
+        "order": "순서",
+        "number": "번호",
+        "code": "코드",
+        "nameKo": "한국어 이름",
+        "nameEn": "영어 이름",
+        "description": "설명",
+        "gold": "Gold 값",
+        "state": "반영",
+        "actions": "작업"
+      },
+      "goldValue": "{name} · {ord}번째",
+      "goldNone": "Gold에 없음",
+      "state": {
+        "applied": "반영됨",
+        "pending": "반영 대기"
+      },
+      "stateTip": {
+        "applied": "Gold dim_category의 이름과 순서가 HUB 값과 같습니다.",
+        "pending": "Gold dim_category의 이름이나 순서가 HUB 값과 다릅니다. 파이프라인이 가져간 뒤 맞춰집니다."
+      },
+      "moveUp": "{name} 위로",
+      "moveDown": "{name} 아래로",
+      "edit": "{name} 편집",
+      "form": {
+        "title": "코드 편집",
+        "nameKo": "한국어 이름",
+        "nameEn": "영어 이름",
+        "description": "설명",
+        "descriptionPlaceholder": "선택 — 이 코드에 드는 출처",
+        "problem": {
+          "nameKo": "한국어 이름은 1~80자입니다.",
+          "nameEn": "영어 이름은 1~80자입니다.",
+          "description": "설명은 500자 이내입니다."
+        }
+      },
+      "toast": {
+        "saved": "{name} 코드를 저장했습니다.",
+        "ordered": "카테고리 순서를 저장했습니다."
+      },
+      "detailTitle": "코드",
+      "field": {
+        "kind": "종류",
+        "code": "코드",
+        "number": "번호",
+        "ord": "순서",
+        "nameKo": "한국어 이름",
+        "nameEn": "영어 이름",
+        "description": "설명",
+        "gold": "Gold 값",
+        "state": "반영"
+      },
+      "kind": {
+        "category": "출처 카테고리",
+        "layer": "분류 출처"
+      },
+      "event": {
+        "import": "가져오기",
+        "set": "변경",
+        "order": "순서 변경"
+      }
+    }
+  },
   "hubPrompts": {
     "title": "글로벌 프롬프트 관리",
     "description": "HUB에서 만든 프롬프트만 고칠 수 있고, Gold에서 가져온 프롬프트는 읽기 전용입니다.",

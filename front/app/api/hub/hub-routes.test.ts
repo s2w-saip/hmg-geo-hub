@@ -16,6 +16,9 @@ const prompts = await import("./global-prompts/[[...rest]]/route");
 const saved = await import("./saved-filters/[[...rest]]/route");
 const ga4 = await import("./ga4-properties/[[...rest]]/route");
 const sources = await import("./source-overrides/[[...rest]]/route");
+const seeds = await import("./source-seeds/[[...rest]]/route");
+const socials = await import("./source-socials/[[...rest]]/route");
+const codes = await import("./source-codes/[[...rest]]/route");
 
 const ID = "8f6f0c1e-2b7a-4c1e-9d2a-1b2c3d4e5f60";
 const SITE = "http://127.0.0.1:3333";
@@ -204,6 +207,46 @@ describe("/api/hub/source-overrides", () => {
       [sources.GET(req("GET", "/api/hub/source-overrides"), ctx()), 401],
       [sources.POST(req("POST", "/api/hub/source-overrides/clear", { body: { skey: "x.com" }, cookie: "tok", origin: "http://evil.test" }), ctx(["clear"])), 403],
       [sources.POST(req("POST", "/api/hub/source-overrides", { cookie: "tok" }), ctx()), 422],
+    ];
+    for (const [res, status] of cases) expect((await res).status).toBe(status);
+    expect(bff.fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("/api/hub/source-seeds · source-socials · source-codes", () => {
+  it("passes the lists, the histories (keys in the query) and the writes to the BFF with the token", async () => {
+    bff.fetch.mockResolvedValue({ data: { items: [] } });
+    expect((await seeds.GET(req("GET", "/api/hub/source-seeds", { cookie: "tok", origin: null }), ctx())).status).toBe(200);
+    expect(bff.fetch).toHaveBeenLastCalledWith("GET", "/v1/hub/source-seeds", { token: "tok", body: undefined });
+    expect((await seeds.GET(req("GET", "/api/hub/source-seeds/history?skey=carandbike.com&x=1", { cookie: "tok", origin: null }), ctx(["history"]))).status).toBe(200);
+    expect(bff.fetch).toHaveBeenLastCalledWith("GET", "/v1/hub/source-seeds/history", { token: "tok", body: undefined, query: "skey=carandbike.com" });
+    expect((await seeds.POST(req("POST", "/api/hub/source-seeds/remove", { body: { skey: "a.com" }, cookie: "tok" }), ctx(["remove"]))).status).toBe(200);
+    expect(bff.fetch).toHaveBeenLastCalledWith("POST", "/v1/hub/source-seeds/remove", { token: "tok", body: { skey: "a.com" } });
+
+    const history = req("GET", "/api/hub/source-socials/history?key=linkedin.com%2Fhyundai-motor-group", { cookie: "tok", origin: null });
+    expect((await socials.GET(history, ctx(["history"]))).status).toBe(200);
+    expect(bff.fetch).toHaveBeenLastCalledWith("GET", "/v1/hub/source-socials/history", { token: "tok", body: undefined, query: "key=linkedin.com%2Fhyundai-motor-group" });
+    for (const action of ["stop", "resume"]) {
+      expect((await socials.POST(req("POST", `/api/hub/source-socials/${action}`, { body: { key: "instagram.com/hyundai" }, cookie: "tok" }), ctx([action]))).status).toBe(200);
+      expect(bff.fetch).toHaveBeenLastCalledWith("POST", `/v1/hub/source-socials/${action}`, { token: "tok", body: { key: "instagram.com/hyundai" } });
+    }
+
+    expect((await codes.GET(req("GET", "/api/hub/source-codes/history?kind=category&code=newsMedia", { cookie: "tok", origin: null }), ctx(["history"]))).status).toBe(200);
+    expect(bff.fetch).toHaveBeenLastCalledWith("GET", "/v1/hub/source-codes/history", { token: "tok", body: undefined, query: "kind=category&code=newsMedia" });
+    const order = { codes: ["officialHmg", "other"] };
+    expect((await codes.POST(req("POST", "/api/hub/source-codes/order", { body: order, cookie: "tok" }), ctx(["order"]))).status).toBe(200);
+    expect(bff.fetch).toHaveBeenLastCalledWith("POST", "/v1/hub/source-codes/order", { token: "tok", body: order });
+  });
+
+  it("refuses unknown paths, missing sessions, cross-site writes and bodiless writes before the BFF", async () => {
+    const cases: Array<[Promise<Response>, number]> = [
+      [seeds.GET(req("GET", "/api/hub/source-seeds/a.com", { cookie: "tok" }), ctx(["a.com"])), 404],
+      [seeds.POST(req("POST", "/api/hub/source-seeds/clear", { body: {}, cookie: "tok" }), ctx(["clear"])), 404],
+      [socials.GET(req("GET", "/api/hub/source-socials/stop", { cookie: "tok" }), ctx(["stop"])), 404],
+      [codes.POST(req("POST", "/api/hub/source-codes/remove", { body: {}, cookie: "tok" }), ctx(["remove"])), 404],
+      [codes.GET(req("GET", "/api/hub/source-codes"), ctx()), 401],
+      [socials.POST(req("POST", "/api/hub/source-socials", { body: { key: "x.com/a" }, cookie: "tok", origin: "http://evil.test" }), ctx()), 403],
+      [seeds.POST(req("POST", "/api/hub/source-seeds", { cookie: "tok" }), ctx()), 422],
     ];
     for (const [res, status] of cases) expect((await res).status).toBe(status);
     expect(bff.fetch).not.toHaveBeenCalled();

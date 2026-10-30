@@ -19,7 +19,7 @@ from fastapi.responses import JSONResponse
 from bff import access, api, screens
 from bff.gold_reader.db import close_pool, connection, open_pool
 from bff.hub_stores import (accounts, analytics_db, catalog_editor, ga4_registry, hub_auth, hub_catalog, operations_db, saved_filters,
-                             source_overrides)
+                             source_lists, source_overrides)
 
 log = logging.getLogger("hgh.gold")
 
@@ -256,6 +256,89 @@ async def source_override_clear(request: Request):
     actor = await hub_auth.admin(request.headers.get("authorization"))
     body = catalog_editor.parse(source_overrides.OverrideClear, await json_body(request), "source correction")
     return hub_json(await source_overrides.clear(body, actor))
+
+
+# Admin › 인용 출처 분류, the seed / official social / code table tabs (hub_stores/source_lists.py): the top-level
+# administrator only; keys travel in the body or the query.
+@app.get("/v1/hub/source-seeds")
+async def source_seed_list(request: Request):
+    await hub_auth.admin(request.headers.get("authorization"))
+    return hub_json(await source_lists.seeds())
+
+
+@app.get("/v1/hub/source-seeds/history")
+async def source_seed_history(request: Request, skey: str | None = Query(None, max_length=400)):
+    await hub_auth.admin(request.headers.get("authorization"))
+    return hub_json(await source_lists.seed_history(skey))
+
+
+@app.post("/v1/hub/source-seeds")
+async def source_seed_set(request: Request):
+    actor = await hub_auth.admin(request.headers.get("authorization"))
+    body = catalog_editor.parse(source_lists.SeedSet, await json_body(request), "seed")
+    return hub_json(await source_lists.set_seed(body, actor))
+
+
+@app.post("/v1/hub/source-seeds/remove")
+async def source_seed_remove(request: Request):
+    actor = await hub_auth.admin(request.headers.get("authorization"))
+    body = catalog_editor.parse(source_lists.SeedKey, await json_body(request), "seed")
+    return hub_json(await source_lists.remove_seed(body, actor))
+
+
+@app.get("/v1/hub/source-socials")
+async def source_social_list(request: Request):
+    await hub_auth.admin(request.headers.get("authorization"))
+    return hub_json(await source_lists.socials())
+
+
+@app.get("/v1/hub/source-socials/history")
+async def source_social_history(request: Request, key: str | None = Query(None, max_length=400)):
+    await hub_auth.admin(request.headers.get("authorization"))
+    return hub_json(await source_lists.social_history(key))
+
+
+@app.post("/v1/hub/source-socials")
+async def source_social_set(request: Request):
+    actor = await hub_auth.admin(request.headers.get("authorization"))
+    body = catalog_editor.parse(source_lists.SocialSet, await json_body(request), "social account")
+    return hub_json(await source_lists.set_social(body, actor))
+
+
+@app.post("/v1/hub/source-socials/{action}")
+async def source_social_status(action: str, request: Request):
+    if action not in ("stop", "resume"):
+        raise HTTPException(404, "Unknown action")
+    actor = await hub_auth.admin(request.headers.get("authorization"))
+    body = catalog_editor.parse(source_lists.SocialKey, await json_body(request), "social account")
+    return hub_json(await source_lists.set_social_status(body, action == "stop", actor))
+
+
+@app.get("/v1/hub/source-codes")
+async def source_code_list(request: Request):
+    await hub_auth.admin(request.headers.get("authorization"))
+    return hub_json(await source_lists.codes())
+
+
+@app.get("/v1/hub/source-codes/history")
+async def source_code_history(request: Request, kind: str | None = Query(None, max_length=20),
+                              code: str | None = Query(None, max_length=64)):
+    await hub_auth.admin(request.headers.get("authorization"))
+    return hub_json(await source_lists.code_history(kind, code))
+
+
+@app.post("/v1/hub/source-codes")
+async def source_code_set(request: Request):
+    actor = await hub_auth.admin(request.headers.get("authorization"))
+    body = catalog_editor.parse(source_lists.CodeSet, await json_body(request), "code")
+    return hub_json(await source_lists.set_code(body, actor))
+
+
+@app.post("/v1/hub/source-codes/order")
+async def source_code_order(request: Request):
+    actor = await hub_auth.admin(request.headers.get("authorization"))
+    body = catalog_editor.parse(source_lists.CodeOrder, await json_body(request), "code order")
+    return hub_json(await source_lists.order_codes(body, actor))
 
 
 @app.get("/v1/hub/global-prompts")

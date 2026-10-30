@@ -6035,6 +6035,280 @@
       "failed": "The request failed."
     }
   },
+  "hubSourceLists": {
+    "tabs": {
+      "label": "Citation source views",
+      "overrides": "Corrections",
+      "seeds": "Seeds",
+      "social": "Official social",
+      "codes": "Code table"
+    },
+    "publishedPill": "Upstream list v{version} · {items}",
+    "publishedTip": "External API {family} list · change_seq {seq} · recorded {at}",
+    "roundPill": "Gold round {date} · global",
+    "storePill": "HUB data DB",
+    "flowNoteTitle": "When it applies",
+    "system": "Admin command",
+    "loading": "Loading…",
+    "history": "History",
+    "noHistory": "No changes yet.",
+    "historyOpen": "History of {name}",
+    "searchLabel": "Search",
+    "cancel": "Cancel",
+    "save": "Save",
+    "origin": {
+      "file_import": "Imported from the original file",
+      "hub": "Set on this screen",
+      "import": "First value"
+    },
+    "error": {
+      "invalid_value": "Check the input: {fields}",
+      "not_found": "Not in the HUB list.",
+      "unauthorized": "Your sign-in expired. Sign in again.",
+      "forbidden": "Only the top-level administrator can manage citation sources.",
+      "source_unavailable": "Could not read the HUB store or Gold. Try again shortly.",
+      "failed": "The request failed."
+    },
+    "seeds": {
+      "description": "Manage the per-domain base classification people set (seeds). Priority: correction › official social › owned domain › seed › rule.",
+      "flowNote": "Seed changes are saved in the HUB and go to the pipeline as the external API list (source_seed). Citation numbers change after the pipeline reads it and rebuilds Gold; until then rows show 'Pending'.",
+      "listLabel": "Seed list",
+      "searchPlaceholder": "Search domains",
+      "count": "{shown} / {total} · active {active} · removed {removed} · pending {pending} · upstream {upstream}",
+      "empty": "No seeds.",
+      "emptyFiltered": "No seeds match.",
+      "hint": "Every HUB seed, plus sources Gold applies as seeds that the HUB list lacks. Citations are Gold round {date} (global).",
+      "axis": {
+        "category": "Category",
+        "state": "Sync",
+        "status": "Status"
+      },
+      "column": {
+        "domain": "Domain",
+        "citations": "Citations",
+        "category": "HUB category",
+        "gold": "Gold value",
+        "state": "Sync",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "state": {
+        "applied": "Applied",
+        "pending": "Pending",
+        "pendingRemove": "Removal pending",
+        "shadowed": "Higher layer wins",
+        "upstream": "Upstream seed"
+      },
+      "stateTip": {
+        "applied": "Gold applies this seed.",
+        "pending": "The pipeline has not taken this seed yet. It applies after Gold is rebuilt.",
+        "pendingRemove": "The pipeline has not taken the removal yet. After the rebuild the rules classify it.",
+        "shadowed": "A correction, official social account or owned domain decides this source first. The seed applies when that goes.",
+        "upstream": "Gold applies it as a seed but the HUB list lacks it. 'Add as seed' makes it a HUB seed.",
+        "none": "Gold has no such source (never cited)."
+      },
+      "status": {
+        "active": "Active",
+        "removed": "Removed"
+      },
+      "goldNone": "Not in Gold",
+      "goldValue": "Gold: {category} · {source}",
+      "categoryOf": "Seed category of {domain}",
+      "addAsSeed": "Add as seed",
+      "remove": "Remove",
+      "restore": "Restore",
+      "add": {
+        "title": "Add a seed",
+        "domain": "Domain",
+        "domainPlaceholder": "e.g. carandbike.com",
+        "category": "Category",
+        "submit": "Add",
+        "invalid": "Check the domain: lower case, no path.",
+        "exists": "This seed exists. Change its category in the list."
+      },
+      "toast": {
+        "saved": "Saved the seed {domain}. It applies after the pipeline takes the list.",
+        "removed": "Removed the seed {domain}. After the pipeline takes the list the rules classify it."
+      },
+      "detailTitle": "Seed",
+      "field": {
+        "citations": "Citations",
+        "category": "Category",
+        "status": "Status",
+        "hub": "HUB seed",
+        "origin": "First value",
+        "gold": "Gold value",
+        "state": "Sync",
+        "note": "Note"
+      },
+      "noSeed": "No HUB seed. 'Add as seed' creates one.",
+      "event": {
+        "import": "Import",
+        "add": "Add",
+        "set": "Change",
+        "remove": "Remove"
+      }
+    },
+    "social": {
+      "description": "Manage the official (HMG) social accounts. Citations grouped under an account count as Official (HMG), apart from the rest of the domain.",
+      "flowNote": "Account changes are saved in the HUB and go to the pipeline as the external API list (source_social). Citation numbers change after the pipeline reads it and rebuilds Gold; until then rows show 'Pending'.",
+      "listLabel": "Official social accounts",
+      "count": "{total} · active {active} · stopped {stopped} · pending {pending}",
+      "empty": "No official social accounts.",
+      "column": {
+        "key": "Account",
+        "domain": "Domain",
+        "matchers": "Matchers",
+        "category": "Category",
+        "citations": "Citations",
+        "state": "Sync",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "categoryFixed": "Official (HMG)",
+      "categoryFixedTip": "Official social accounts are always Official (HMG).",
+      "matchersMore": "{first} and {more} more",
+      "boundaryOn": "segment boundary",
+      "boundaryOff": "plain prefix",
+      "state": {
+        "applied": "Applied",
+        "pending": "Pending",
+        "pendingStop": "Stop pending",
+        "upstream": "Upstream account"
+      },
+      "stateTip": {
+        "applied": "Gold applies this account as official social.",
+        "pending": "The pipeline has not taken this account yet. It applies after Gold is rebuilt.",
+        "pendingStop": "The pipeline has not taken the stop yet. After the rebuild its citations count with the domain.",
+        "upstream": "Gold applies it as official social but the HUB list lacks it. 'Add as account' makes it a HUB account.",
+        "none": "Gold has no such account: never cited, or not applied yet (Gold cannot tell)."
+      },
+      "status": {
+        "active": "Active",
+        "stopped": "Stopped"
+      },
+      "goldNone": "Not in Gold",
+      "add": "Add account",
+      "addAsAccount": "Add as account",
+      "edit": "Edit",
+      "stop": "Stop",
+      "resume": "Resume",
+      "form": {
+        "titleAdd": "Add an official social account",
+        "titleEdit": "Edit matchers",
+        "key": "Account key",
+        "keyPlaceholder": "e.g. instagram.com/hyundai",
+        "keyHint": "domain/account path. Keep Gold's casing; it cannot change after saving.",
+        "matchers": "Matchers",
+        "matchersHint": "A cited URL (lower case, no www.) starting with a prefix is grouped under this account.",
+        "prefix": "Prefix",
+        "boundary": "Ends at a path segment",
+        "boundaryHint": "On: what follows the prefix must be '/' or nothing (instagram.com/hyundai does not catch /hyundaiindia). Off when the prefix ends in its own separator.",
+        "addMatcher": "Add matcher",
+        "removeMatcher": "Remove matcher {n}",
+        "problem": {
+          "key": "The key is 'domain/path', the domain has a dot and no leading www.",
+          "matchers": "1 to 10 matchers.",
+          "prefix": "A prefix is lower case and starts with 'domain/'.",
+          "duplicate": "The same prefix appears twice."
+        }
+      },
+      "toast": {
+        "saved": "Saved the account {key}. It applies after the pipeline takes the list.",
+        "stopped": "Stopped the account {key}. It applies after the pipeline takes the list.",
+        "resumed": "Resumed the account {key}. It applies after the pipeline takes the list."
+      },
+      "detailTitle": "Official social account",
+      "field": {
+        "key": "Account",
+        "domain": "Domain",
+        "matchers": "Matchers",
+        "citations": "Citations",
+        "status": "Status",
+        "origin": "First value",
+        "gold": "Gold value",
+        "state": "Sync",
+        "note": "Note"
+      },
+      "event": {
+        "import": "Import",
+        "add": "Add",
+        "set": "Matchers changed",
+        "stop": "Stop",
+        "resume": "Resume"
+      }
+    },
+    "codes": {
+      "description": "Manage the code table of source categories and classification layers. The HUB owns it; it goes to the pipeline as the external API list (source_code).",
+      "noteTitle": "What you can change",
+      "note": "Names (Korean · English), descriptions and the category order only. Adding or removing a category is tied to Gold's columns (cit_c1~13), so ask upstream. These names go to the external API list; HUB screen labels do not use them yet.",
+      "categories": "Source categories",
+      "layers": "Classification layers",
+      "layersHint": "The number is the priority (1, correction, first). The order cannot change.",
+      "count": "{n}",
+      "column": {
+        "order": "Order",
+        "number": "No.",
+        "code": "Code",
+        "nameKo": "Korean name",
+        "nameEn": "English name",
+        "description": "Description",
+        "gold": "Gold value",
+        "state": "Sync",
+        "actions": "Actions"
+      },
+      "goldValue": "{name} · #{ord}",
+      "goldNone": "Not in Gold",
+      "state": {
+        "applied": "Applied",
+        "pending": "Pending"
+      },
+      "stateTip": {
+        "applied": "Gold dim_category has the HUB's name and order.",
+        "pending": "Gold dim_category's name or order differs from the HUB's. It follows after the pipeline takes the list."
+      },
+      "moveUp": "Move {name} up",
+      "moveDown": "Move {name} down",
+      "edit": "Edit {name}",
+      "form": {
+        "title": "Edit code",
+        "nameKo": "Korean name",
+        "nameEn": "English name",
+        "description": "Description",
+        "descriptionPlaceholder": "Optional — what sources this code holds",
+        "problem": {
+          "nameKo": "Korean name: 1 to 80 characters.",
+          "nameEn": "English name: 1 to 80 characters.",
+          "description": "Description: up to 500 characters."
+        }
+      },
+      "toast": {
+        "saved": "Saved the code {name}.",
+        "ordered": "Saved the category order."
+      },
+      "detailTitle": "Code",
+      "field": {
+        "kind": "Kind",
+        "code": "Code",
+        "number": "No.",
+        "ord": "Order",
+        "nameKo": "Korean name",
+        "nameEn": "English name",
+        "description": "Description",
+        "gold": "Gold value",
+        "state": "Sync"
+      },
+      "kind": {
+        "category": "Source category",
+        "layer": "Classification layer"
+      },
+      "event": {
+        "import": "Import",
+        "set": "Change",
+        "order": "Order change"
+      }
+    }
+  },
   "hubPrompts": {
     "title": "Global prompt management",
     "description": "Only prompts created in the HUB can be edited; prompts imported from Gold are read-only.",

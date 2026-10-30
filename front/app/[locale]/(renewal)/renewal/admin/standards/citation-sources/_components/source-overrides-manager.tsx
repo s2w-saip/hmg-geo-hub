@@ -7,7 +7,7 @@
 // row shows whether Gold applies it yet (반영 대기 / 반영됨). 원복 keeps the correction's row and history. The layout
 // is Admin › GA4 연동's: the left filter panel, one line per source with sortable heads, and a sheet for the history.
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { AlertTriangle, ArrowDownWideNarrow, ArrowUpNarrowWide, Database, History, Loader2, RotateCcw } from "lucide-react";
@@ -51,10 +51,10 @@ import {
   type SourceSort,
 } from "./source-overrides-model";
 
-export function SourceOverridesManager({ initial }: { initial: SourceListing }) {
+export function SourceOverridesManager({ initial, tabs }: { initial: SourceListing; tabs?: ReactNode }) {
   return (
     <RnToastProvider>
-      <Manager initial={initial} />
+      <Manager initial={initial} tabs={tabs} />
     </RnToastProvider>
   );
 }
@@ -72,7 +72,7 @@ function useCategoryLabel(listing: SourceListing) {
   );
 }
 
-function Manager({ initial }: { initial: SourceListing }) {
+function Manager({ initial, tabs }: { initial: SourceListing; tabs?: ReactNode }) {
   const t = useTranslations("hubSourceOverrides");
   const tv = useTranslations("standardPromptsView");
   const tp = useTranslations("renewal.prompts");
@@ -198,6 +198,7 @@ function Manager({ initial }: { initial: SourceListing }) {
                 <span>{t("description")}</span>
               </>
             }
+            actions={tabs}
           />
         }
         panel={panel}

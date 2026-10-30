@@ -78,6 +78,27 @@ describe("citation source list", () => {
     expect(out).toContain(">News &amp; Media</option>".replace("News &amp; Media", ko.citationCategories.newsMedia));
   });
 
+  it("labels a revert Gold still applies as 원복 대기 (state stays pending)", () => {
+    const REVERTED = row({ skey: "rev.example", key: "rev.example", source: "override", gold: { category: "newsMedia", source: "override" },
+      override: { ...OVERRIDE, category: "newsMedia", status: "cleared" }, state: "pending" });
+    const out = html(<SourceOverridesManager initial={{ ...LISTING, items: [REVERTED] }} />);
+    const tr = out.slice(out.indexOf('data-hub-source-row="rev.example"'), out.indexOf("</tr>", out.indexOf('data-hub-source-row="rev.example"')));
+    expect(tr).toContain('data-hub-source-state="pending"');
+    expect(tr).toContain(`>${ko.hubSourceOverrides.state.pendingClear}<`);
+    expect(tr).not.toContain(`>${ko.hubSourceOverrides.state.pending}<`);
+  });
+
+  it("gives each filter axis one 전체 radio, checked only when nothing is picked", () => {
+    // 2026-10-30: axisOptions also listed ALL, so the panel showed 전체 twice (both checked while nothing was picked).
+    const out = html(<SourceOverridesManager initial={LISTING} />);
+    const radios = (axis: string) => [...out.matchAll(new RegExp(`role="radio" aria-checked="(true|false)"[^>]*data-fk="v:${axis}:([^"]+)"`, "g"))].map(([, c, v]) => [v, c === "true"] as const);
+    // source=override is picked in the URL; the state axis is not
+    expect(radios("source").filter(([v]) => v === "all")).toHaveLength(1);
+    expect(radios("source").filter(([, c]) => c)).toEqual([["override", true]]);
+    expect(radios("state").filter(([v]) => v === "all")).toHaveLength(1);
+    expect(radios("state").filter(([, c]) => c)).toEqual([["all", true]]);
+  });
+
   it("filters by category, layer, state, 미분류만 and the search text, and keeps them in the URL", () => {
     const all = LISTING.items;
     expect(all.filter((r) => matches(r, DEFAULT_FILTER, "", true)).map((r) => r.key)).toEqual(["blog.example"]);

@@ -179,7 +179,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
     SQL 마이그레이션이고, 이 문서는 그것을 그림으로 옮긴 정본이다. 구조나 스키마를 바꾸는 변경은 같은 커밋에서 이 문서를 고친다.
     방법은 <a href="#maintain">이 문서 고치는 법</a>.</p>
   <p class="asof">마지막 갱신 2026-10-30 · 반영한 스키마: <code>back/analytics/schema.sql</code>·<code>operations.sql</code>,
-    <code>back/hub_storage/data-002~007.sql</code>, <code>operations-001~004.sql</code></p>
+    <code>back/hub_storage/data-002~008.sql</code>, <code>operations-001~004.sql</code></p>
   <dl class="facts">
     <div><dt>프로세스</dt><dd>Next.js <span class="mono">:3333</span> · FastAPI <span class="mono">:5555</span> · 외부 API <span class="mono">:5560</span></dd></div>
     <div><dt>DB</dt><dd>Gold(외부) · 데이터 DB · 운영 DB</dd></div>
@@ -401,7 +401,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <tr><td class="k">저장한 필터</td><td><code>HGH_SAVED_FILTER_EDITOR_DB_URL</code></td><td><code>hmg_operations</code><br><span class="muted">계정 hmg_saved_filter_editor</span></td><td><code>system.saved_filter</code> 한 표만 SELECT·INSERT·UPDATE·DELETE. 목록 읽기는 운영 DB 조회 연결로 한다</td><td class="mono">≤ 2</td></tr>
         <tr><td class="k">계정 관리</td><td><code>HGH_ACCOUNT_EDITOR_DB_URL</code></td><td><code>hmg_operations</code><br><span class="muted">계정 hmg_account_editor</span></td><td>계정 표(<code>user_account</code>·<code>user_credential</code>·<code>global_role</code>) INSERT·UPDATE와 <code>audit_event</code> INSERT만. 지우기 권한 없음. 로그인 시각도 이 연결로 남긴다</td><td class="mono">≤ 2</td></tr>
         <tr><td class="k">GA4 등록부</td><td><code>HGH_GA4_REGISTRY_EDITOR_DB_URL</code></td><td><code>hmg_analytics</code><br><span class="muted">계정 hmg_ga4_registry_editor</span></td><td><code>analytics.ga4_registry</code> INSERT와 속성 ID 뺀 열 UPDATE, <code>ga4_registry_event</code> INSERT만. 지우기 권한 없음. 목록·이벤트 읽기는 데이터 DB 조회 연결로 한다</td><td class="mono">≤ 2</td></tr>
-        <tr><td class="k">출처 교정</td><td><code>HGH_SOURCE_OVERRIDE_EDITOR_DB_URL</code></td><td><code>hmg_analytics</code><br><span class="muted">계정 hmg_source_override_editor</span></td><td><code>catalog.source_override</code> INSERT와 값·상태·시각·행위자 UPDATE, <code>source_override_event</code> INSERT, 발행 함수 <code>catalog.publish_source_overrides()</code> 실행만. 지우기·<code>reference_set</code> 직접 쓰기 권한 없음. 목록은 데이터 DB 조회 연결과 Gold 조회 연결로 읽는다</td><td class="mono">≤ 2</td></tr>
+        <tr><td class="k">출처 분류 입력</td><td><code>HGH_SOURCE_OVERRIDE_EDITOR_DB_URL</code></td><td><code>hmg_analytics</code><br><span class="muted">계정 hmg_source_override_editor</span></td><td>교정(<code>catalog.source_override</code>)·시드(<code>source_seed</code>)·공식 소셜(<code>source_social</code>) INSERT와 값·상태·시각·행위자 UPDATE, 코드표(<code>source_code</code>) 이름·설명·순서 UPDATE, 이력 표 INSERT, 발행 함수 <code>catalog.publish_source_*()</code> 실행만. 지우기·키 변경·코드 추가·<code>reference_set</code> 직접 쓰기 권한 없음. 목록은 데이터 DB 조회 연결과 Gold 조회 연결로 읽는다</td><td class="mono">≤ 2</td></tr>
       </tbody>
     </table>
   </div>
@@ -537,8 +537,9 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
       <p><strong>그림 2.</strong> HUB DB에 쓰는 경로는 빨간 선 여섯 개가 전부다. 편집과 sync는 같은 advisory lock을 잡아서 한 번에 하나만 기록한다.
         오른쪽 아래 선은 두 BFF 연결이다: 저장한 필터는 <code>hmg_saved_filter_editor</code>로 <code>saved_filter</code>만, 계정 관리는 <code>hmg_account_editor</code>로 계정 표만 쓴다.
         왼쪽 아래 두 선은 GA4 연동과 인용 출처 분류 화면이다: <code>hmg_ga4_registry_editor</code>로 GA4 속성 등록부(<code>ga4_registry</code>)와 그 이력만 쓰고,
-        <code>hmg_source_override_editor</code>로 출처 교정(<code>catalog.source_override</code>)과 그 이력만 쓴다. 교정의 외부 API 목록(기준값 종류 <code>source_override</code>, source <code>hub_edit</code>)은
-        이 계정이 직접 쓰지 못하고 발행 함수 <code>catalog.publish_source_overrides()</code>가 catalog lock 안에서 기록한다(2026-10-30, <code>data-007.sql</code>).
+        <code>hmg_source_override_editor</code>로 출처 분류 입력과 그 이력만 쓴다. 교정(<code>catalog.source_override</code>, <code>data-007.sql</code>)에 더해 2026-10-30부터 시드(<code>source_seed</code>)·공식 소셜 계정(<code>source_social</code>)·코드표(<code>source_code</code>, <code>data-008.sql</code>)도 이 화면에서 고친다.
+        외부 API 목록(기준값 종류 <code>source_override</code>·<code>source_seed</code>·<code>source_social</code>·<code>source_code</code>, source <code>hub_edit</code>)은
+        이 계정이 직접 쓰지 못하고 종류마다 있는 발행 함수 <code>catalog.publish_source_*()</code>가 catalog lock 안에서 기록한다.
         점선의 GA4 수집기(<code>back/analytics/ga4_collect.py</code>)는 <code>hmg_analytics_writer</code>로 그 등록부를 읽어 속성마다 수집한 날짜를 통째로 바꿔 쓰고,
         결과(수집됨 · 권한 대기 · 실패 · 중지됨)를 <code>ga4_collect_status</code>에 남긴다. 화면은 그 값을 그대로 보인다.
         GA4 자격 증명(<code>.env.ga4.local</code>)은 이 프로세스만 읽고, BFF와 브라우저는 GA4를 부르지 않는다. 자격 증명을 인계받으면 돌린다.
@@ -663,6 +664,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <tr><td>기준값 17종: 엔진·권역·국가·언어, 분류 체계(경로 키), 자사 브랜드, 레지스트리 엔티티(역할 지정분), 출처 카테고리, Gold가 적용 중인 사람이 정한 도메인 분류(override·social·seed), 자사 판정 기준, 크롤 봇, 시드 키워드와 수집 조건, 집계 관점·모집단</td><td><code>catalog.reference_set</code>·<code>reference_item</code></td><td>Gold 가져오기</td></tr>
         <tr><td>HUB 코드표: surface 번호, 브랜드 비트(hyundai·kia·genesis·hyundai-n), 언급 유형</td><td>같은 표 (<code>source=hub</code>)</td><td>가져오기가 상수로 기록</td></tr>
         <tr><td>HUB가 정한 출처 카테고리 교정(종류 <code>source_override</code>): 키(소문자·앞 <code>www.</code> 뺀 skey)와 카테고리 slug. 원복한 교정은 빠진다</td><td>같은 표 (<code>source=hub_edit</code>)<br><span class="muted">원본은 <code>catalog.source_override</code></span></td><td>Admin › 인용 출처 분류 저장마다 발행 함수가 기록<br><span class="muted">처음 값은 manage.py import-source-overrides</span></td></tr>
+        <tr><td>HUB가 정본인 시드 · 공식 소셜 계정 · 코드표(종류 <code>source_seed</code>·<code>source_social</code>·<code>source_code</code>): 시드는 도메인과 카테고리, 소셜은 계정 키·도메인·URL 매칭 규칙(카테고리 Official (HMG)), 코드표는 카테고리 13개와 분류 출처 6개의 번호·이름·순서·설명. 뺀 시드와 중지한 계정은 빠진다</td><td>같은 표 (<code>source=hub_edit</code>)<br><span class="muted">원본은 <code>catalog.source_seed</code>·<code>source_social</code>·<code>source_code</code></span></td><td>Admin › 인용 출처 분류 탭에서 저장마다 발행 함수가 기록<br><span class="muted">처음 값은 manage.py import-source-lists (seed.json · official-social.ts · Gold dim_category · 화면 문구)</span></td></tr>
       </tbody>
     </table>
   </div>
@@ -1149,7 +1151,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   <figure>
     <div class="scroll">
       <!-- erd:ext -->
-<svg viewBox="0 0 1200 900" role="img" aria-label="HUB 데이터 DB의 외부 API 경계 ERD. 기준값은 종류별 set과 항목으로 쌓이고, 호출자는 키와 허용 프로젝트를 가지며, ext 뷰는 트랜잭션 설정 hgh.key_hash로 한 호출자의 범위만 보여 준다. 아래 줄은 관리자가 고치는 출처 교정과 그 이력이고, 활성 교정은 기준값 종류 source_override로 발행된다.">
+<svg viewBox="0 0 1200 1230" role="img" aria-label="HUB 데이터 DB의 외부 API 경계 ERD. 기준값은 종류별 set과 항목으로 쌓이고, 호출자는 키와 허용 프로젝트를 가지며, ext 뷰는 트랜잭션 설정 hgh.key_hash로 한 호출자의 범위만 보여 준다. 아래 두 줄은 관리자가 Admin › 인용 출처 분류에서 고치는 출처 분류 입력(교정 · 시드 · 공식 소셜 · 코드표)과 그 이력이고, 각각 기준값 종류 source_override · source_seed · source_social · source_code로 발행된다.">
 <defs><marker id="ext-a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker><marker id="ext-d" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ahd" d="M0,0L10,5L0,10z"/></marker></defs>
 <rect class="tbox" x="16" y="40" width="280" height="266" rx="6"/>
 <path class="th" d="M16,70V46q0,-6 6,-6H290q6,0 6,6V70z"/>
@@ -1179,7 +1181,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 <text class="m sm ty" x="286" y="257" text-anchor="end">bigint</text>
 <text class="m" x="64" y="275">recorded_at</text>
 <text class="m sm ty" x="286" y="275" text-anchor="end">timestamptz</text>
-<text class="mu sm" x="28" y="293">UNIQUE (family, version) · 18종</text>
+<text class="mu sm" x="28" y="293">UNIQUE (family, version) · 21종</text>
 <rect class="tbox" x="336" y="40" width="250" height="140" rx="6"/>
 <path class="th" d="M336,70V46q0,-6 6,-6H580q6,0 6,6V70z"/>
 <line class="rule" x1="336" y1="70" x2="586" y2="70"/>
@@ -1358,6 +1360,111 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 <text class="m" x="384" y="867">updated_by</text>
 <text class="m sm ty" x="576" y="867" text-anchor="end">uuid</text>
 <text class="mu sm" x="348" y="885">활성 행 → set source_override</text>
+<rect class="tbox" x="626" y="650" width="270" height="248" rx="6"/>
+<path class="th" d="M626,680V656q0,-6 6,-6H890q6,0 6,6V680z"/>
+<line class="rule" x1="626" y1="680" x2="896" y2="680"/>
+<line class="hair" x1="638" y1="722" x2="884" y2="722"/>
+<text class="m b" x="638" y="670"><tspan class="tsch">catalog.</tspan>source_seed</text>
+<text class="desc" x="638" y="697">HUB가 정본인 시드 도메인과 카테고리다.</text>
+<text class="desc" x="638" y="713">처음 값은 seed.json이다.</text>
+<text class="kb pk" x="636" y="741">PK</text>
+<text class="m" x="674" y="741">skey</text>
+<text class="m sm ty" x="886" y="741" text-anchor="end">text</text>
+<text class="m" x="674" y="759">category</text>
+<text class="m sm ty" x="886" y="759" text-anchor="end">source_code.code</text>
+<text class="m" x="674" y="777">note</text>
+<text class="m sm ty" x="886" y="777" text-anchor="end">text</text>
+<text class="m" x="674" y="795">status</text>
+<text class="m sm val" x="886" y="795" text-anchor="end">active|removed</text>
+<text class="m" x="674" y="813">origin</text>
+<text class="m sm val" x="886" y="813" text-anchor="end">file_import|hub</text>
+<text class="m" x="674" y="831">created_at</text>
+<text class="m sm ty" x="886" y="831" text-anchor="end">timestamptz</text>
+<text class="m" x="674" y="849">updated_at</text>
+<text class="m sm ty" x="886" y="849" text-anchor="end">timestamptz</text>
+<text class="m" x="674" y="867">updated_by</text>
+<text class="m sm ty" x="886" y="867" text-anchor="end">uuid</text>
+<text class="mu sm" x="638" y="885">활성 행 → set source_seed</text>
+<rect class="tbox" x="936" y="650" width="248" height="266" rx="6"/>
+<path class="th" d="M936,680V656q0,-6 6,-6H1178q6,0 6,6V680z"/>
+<line class="rule" x1="936" y1="680" x2="1184" y2="680"/>
+<line class="hair" x1="948" y1="722" x2="1172" y2="722"/>
+<text class="m b" x="948" y="670"><tspan class="tsch">catalog.</tspan>source_social</text>
+<text class="desc" x="948" y="697">HUB가 정본인 공식 HMG 소셜 계정과 URL</text>
+<text class="desc" x="948" y="713">매칭 규칙이다.</text>
+<text class="kb pk" x="946" y="741">PK</text>
+<text class="m" x="984" y="741">account_key</text>
+<text class="m sm ty" x="1174" y="741" text-anchor="end">text</text>
+<text class="m" x="984" y="759">display_key</text>
+<text class="m sm ty" x="1174" y="759" text-anchor="end">text</text>
+<text class="m" x="984" y="777">domain</text>
+<text class="m sm ty" x="1174" y="777" text-anchor="end">text</text>
+<text class="m" x="984" y="795">matchers</text>
+<text class="m sm ty" x="1174" y="795" text-anchor="end">jsonb</text>
+<text class="m" x="984" y="813">note</text>
+<text class="m sm ty" x="1174" y="813" text-anchor="end">text</text>
+<text class="m" x="984" y="831">status</text>
+<text class="m sm val" x="1174" y="831" text-anchor="end">active|stopped</text>
+<text class="m" x="984" y="849">origin</text>
+<text class="m sm val" x="1174" y="849" text-anchor="end">file_import|hub</text>
+<text class="m" x="984" y="867">updated_at</text>
+<text class="m sm ty" x="1174" y="867" text-anchor="end">timestamptz</text>
+<text class="m" x="984" y="885">updated_by</text>
+<text class="m sm ty" x="1174" y="885" text-anchor="end">uuid</text>
+<text class="mu sm" x="948" y="903">활성 행 → set source_social</text>
+<rect class="tbox" x="16" y="960" width="280" height="266" rx="6"/>
+<path class="th" d="M16,990V966q0,-6 6,-6H290q6,0 6,6V990z"/>
+<line class="rule" x1="16" y1="990" x2="296" y2="990"/>
+<line class="hair" x1="28" y1="1032" x2="284" y2="1032"/>
+<text class="m b" x="28" y="980"><tspan class="tsch">catalog.</tspan>source_code</text>
+<text class="desc" x="28" y="1007">출처 분류 코드표다. category는 cit_c&lt;k&gt;</text>
+<text class="desc" x="28" y="1023">번호, layer는 분류 출처 1~6이다.</text>
+<text class="kb pk" x="26" y="1051">PK</text>
+<text class="m" x="64" y="1051">kind</text>
+<text class="m sm val" x="286" y="1051" text-anchor="end">category|layer</text>
+<text class="kb pk" x="26" y="1069">PK</text>
+<text class="m" x="64" y="1069">code</text>
+<text class="m sm ty" x="286" y="1069" text-anchor="end">text</text>
+<text class="kb " x="26" y="1087">UK</text>
+<text class="m" x="64" y="1087">number</text>
+<text class="m sm ty" x="286" y="1087" text-anchor="end">smallint</text>
+<text class="m" x="64" y="1105">name_en</text>
+<text class="m sm ty" x="286" y="1105" text-anchor="end">text</text>
+<text class="m" x="64" y="1123">name_ko</text>
+<text class="m sm ty" x="286" y="1123" text-anchor="end">text</text>
+<text class="kb " x="26" y="1141">UK</text>
+<text class="m" x="64" y="1141">ord</text>
+<text class="m sm ty" x="286" y="1141" text-anchor="end">smallint</text>
+<text class="m" x="64" y="1159">description</text>
+<text class="m sm ty" x="286" y="1159" text-anchor="end">text</text>
+<text class="m" x="64" y="1177">updated_at</text>
+<text class="m sm ty" x="286" y="1177" text-anchor="end">timestamptz</text>
+<text class="m" x="64" y="1195">updated_by</text>
+<text class="m sm ty" x="286" y="1195" text-anchor="end">uuid</text>
+<text class="mu sm" x="28" y="1213">이름·설명·순서만 고침 → set source_code</text>
+<rect class="tbox" x="336" y="960" width="270" height="212" rx="6"/>
+<path class="th" d="M336,990V966q0,-6 6,-6H600q6,0 6,6V990z"/>
+<line class="rule" x1="336" y1="990" x2="606" y2="990"/>
+<line class="hair" x1="348" y1="1032" x2="594" y2="1032"/>
+<text class="m b" x="348" y="980"><tspan class="tsch">catalog.</tspan>source_*_event</text>
+<text class="desc" x="348" y="1007">시드 · 공식 소셜 · 코드표의 변경 이력(같은</text>
+<text class="desc" x="348" y="1023">모양 세 표)이다.</text>
+<text class="kb pk" x="346" y="1051">PK</text>
+<text class="m" x="384" y="1051">event_id</text>
+<text class="m sm ty" x="596" y="1051" text-anchor="end">bigint</text>
+<text class="kb fk" x="346" y="1069">FK</text>
+<text class="m" x="384" y="1069">(표마다 키)</text>
+<text class="m sm ty" x="596" y="1069" text-anchor="end">text</text>
+<text class="m" x="384" y="1087">action</text>
+<text class="m sm val" x="596" y="1087" text-anchor="end">import|add|set|…</text>
+<text class="m" x="384" y="1105">actor_id</text>
+<text class="m sm ty" x="596" y="1105" text-anchor="end">uuid</text>
+<text class="m" x="384" y="1123">changes</text>
+<text class="m sm ty" x="596" y="1123" text-anchor="end">jsonb</text>
+<text class="m" x="384" y="1141">published_seq</text>
+<text class="m sm ty" x="596" y="1141" text-anchor="end">bigint</text>
+<text class="m" x="384" y="1159">occurred_at</text>
+<text class="m sm ty" x="596" y="1159" text-anchor="end">timestamptz</text>
 <path class="e" d="M296,755.0H316.0V737H336" marker-end="url(#ext-a)"/>
 <path class="e" d="M336,127.0H296" marker-end="url(#ext-a)"/>
 <path class="e" d="M296,455.0H336" marker-end="url(#ext-a)"/>
@@ -1390,6 +1497,9 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         아래 줄(2026-10-30, <code>data-007.sql</code>)은 HUB가 정본인 출처 교정이다. 관리자가 Admin › 인용 출처 분류에서 <code>source_override</code>를 고치고(지우지 않고 원복은 <code>cleared</code>),
         바꿀 때마다 <code>source_override_event</code>가 남는다. 활성 교정은 발행 함수가 기준값 종류 <code>source_override</code>(source <code>hub_edit</code>)의 새 set으로 기록한다.
         <code>hub_edit</code>은 <code>ext.meta.hub_reference</code>에 들지 않아 <code>contract_version</code>을 바꾸지 않고, Gold 종류처럼 공개 승인이 있어야 나간다.
+        맨 아래 줄(2026-10-30, <code>data-008.sql</code>)은 같은 화면의 시드(<code>source_seed</code>, 뺀 시드는 <code>removed</code>)·공식 소셜 계정(<code>source_social</code>, 중지는 <code>stopped</code>)·코드표(<code>source_code</code>)다.
+        코드표 행은 <code>manage.py import-source-lists</code>로만 들어오고 화면에서는 이름·설명·카테고리 순서만 고친다(카테고리 번호는 Gold <code>answer_fact.cit_c&lt;k&gt;</code> 열과 묶여 있다).
+        세 이력 표는 같은 모양이고, 발행 함수가 각각 <code>source_seed</code>·<code>source_social</code>·<code>source_code</code> set을 기록한다.
         Gold 가져오기는 이 표와 이 종류를 쓰지 않는다.</p>
     </figcaption>
   </figure>
@@ -2059,7 +2169,8 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <tr><td class="k mono">hmg_ga4_registry_editor</td><td>API GA4 연동 · <code>HGH_GA4_REGISTRY_EDITOR_DB_URL</code></td><td><code>ga4_registry</code> INSERT와 속성 ID·등록 시각 뺀 열 UPDATE, <code>ga4_registry_event</code> INSERT, 이 둘과 <code>ga4_collect_status</code> SELECT. DELETE 없음.
           GA4 측정 행·<code>ga4_property</code>·카탈로그는 읽지도 못하고 운영 DB에는 접속하지 못한다</td></tr>
         <tr><td class="k mono">hmg_source_override_editor</td><td>API 인용 출처 분류 · <code>HGH_SOURCE_OVERRIDE_EDITOR_DB_URL</code></td><td><code>catalog.source_override</code> INSERT와 <code>category</code>·<code>status</code>·<code>updated_at</code>·<code>updated_by</code> UPDATE,
-          <code>source_override_event</code> INSERT, 이 둘 SELECT, <code>catalog.publish_source_overrides()</code> 실행. 키·출처·메모 변경과 DELETE 없음.
+          <code>source_override_event</code> INSERT, 이 둘 SELECT, <code>catalog.publish_source_overrides()</code> 실행. 2026-10-30부터(<code>data-008.sql</code>) <code>source_seed</code>(카테고리·상태)·<code>source_social</code>(매칭 규칙·상태) INSERT와 UPDATE,
+          <code>source_code</code> 이름·설명·순서 UPDATE(INSERT 없음), 세 이력 표 INSERT, <code>publish_source_seeds()</code>·<code>publish_source_socials()</code>·<code>publish_source_codes()</code> 실행. 키·출처·메모 변경과 DELETE 없음.
           <code>reference_set</code>에 직접 쓰지 못하고(발행 함수만 <code>hub_edit</code> set을 기록, 다른 역할은 트리거가 거부), 다른 catalog 표는 읽지도 못하며 운영 DB에는 접속하지 못한다</td></tr>
         <tr><td class="k mono">hmg_catalog_writer</td><td><code>manage.py sync-gold-catalog</code></td><td><code>catalog</code> 정체성·버전 표와 <code>reference_set</code>·<code>reference_item</code> INSERT(버전 표·set은 <code>change_seq</code> 뺀 열만), <code>sync_run</code> INSERT·결과 열 UPDATE, <code>catalog</code> SELECT</td></tr>
         <tr><td class="k mono">hmg_catalog_editor</td><td>API 글로벌 프롬프트 편집 · <code>HGH_CATALOG_EDITOR_DB_URL</code></td><td><code>catalog.prompt</code> INSERT, <code>prompt_version</code>은 <code>change_seq</code> 뺀 열만 INSERT, <code>catalog</code> SELECT(분류 체계는 <code>current_reference</code>)</td></tr>
@@ -2085,6 +2196,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <tr><td>프로젝트·프롬프트 버전 카탈로그</td><td>데이터 DB <code>catalog.*</code></td><td><span class="pill on">들어옴</span> <span class="muted">Gold 정의 + HUB 글로벌 프롬프트</span></td></tr>
         <tr><td>수집·가공 기준값 17종 (외부 API)</td><td>데이터 DB <code>catalog.reference_*</code></td><td><span class="pill on">들어옴</span> <span class="muted">Gold 가져오기 · 브랜드 별칭·자사 도메인·도메인 분류 규칙·비경쟁 명단은 Gold에 없어 아직 없음</span></td></tr>
         <tr><td>출처 카테고리 교정 (HUB 정본)</td><td>데이터 DB <code>catalog.source_override</code> → 기준값 종류 <code>source_override</code></td><td><span class="pill on">들어옴</span> <span class="muted">Admin › 인용 출처 분류 · 처음 값은 Gold 교정 2건 · 파이프라인이 읽는 합의는 대기</span></td></tr>
+        <tr><td>출처 시드 · 공식 소셜 계정 · 코드표 (HUB 정본)</td><td>데이터 DB <code>catalog.source_seed</code>·<code>source_social</code>·<code>source_code</code> → 기준값 종류 <code>source_seed</code>·<code>source_social</code>·<code>source_code</code></td><td><span class="pill on">들어옴</span> <span class="muted">Admin › 인용 출처 분류 탭 · 처음 값은 원본 앱 파일(시드 795 · 소셜 9)과 코드 19개 · 파이프라인이 읽는 합의는 대기</span></td></tr>
         <tr><td>사용자·멤버십·SW 설정·감사 이력</td><td>운영 DB <code>system.*</code></td><td><span class="pill off">관리자 외 비어 있음</span></td></tr>
       </tbody>
     </table>

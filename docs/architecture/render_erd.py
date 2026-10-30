@@ -263,14 +263,16 @@ def catalog() -> Figure:
 
 
 def external() -> Figure:
-    """hmg_analytics external API boundary: back/hub_storage/data-005.sql; the HUB's source corrections data-007.sql."""
-    f = Figure("ext", 900, "HUB 데이터 DB의 외부 API 경계 ERD. 기준값은 종류별 set과 항목으로 쌓이고, 호출자는 키와 허용 프로젝트를 가지며, "
-               "ext 뷰는 트랜잭션 설정 hgh.key_hash로 한 호출자의 범위만 보여 준다. 아래 줄은 관리자가 고치는 출처 교정과 그 이력이고, "
-               "활성 교정은 기준값 종류 source_override로 발행된다.")
+    """hmg_analytics external API boundary: back/hub_storage/data-005.sql; the HUB's source classification inputs
+    data-007.sql (corrections) and data-008.sql (seeds, official social accounts, code table)."""
+    f = Figure("ext", 1230, "HUB 데이터 DB의 외부 API 경계 ERD. 기준값은 종류별 set과 항목으로 쌓이고, 호출자는 키와 허용 프로젝트를 가지며, "
+               "ext 뷰는 트랜잭션 설정 hgh.key_hash로 한 호출자의 범위만 보여 준다. 아래 두 줄은 관리자가 Admin › 인용 출처 분류에서 고치는 "
+               "출처 분류 입력(교정 · 시드 · 공식 소셜 · 코드표)과 그 이력이고, 각각 기준값 종류 source_override · source_seed · "
+               "source_social · source_code로 발행된다.")
     f.table("catalog.reference_set", 16, 40, 280, "기준값 한 종류의 한 버전이다. 하나라도 바뀌면 그 종류 전체를 새 set으로 쌓는다.", [
         ("PK", "set_id", "uuid"), ("UK", "family", "text"), ("UK", "version", "integer"), ("", "item_count", "integer"),
         ("", "sha256", "text"), ("", "source", "=gold|hub|hub_edit"), ("", "source_release", "jsonb"), ("", "change_seq", "bigint"),
-        ("", "recorded_at", "timestamptz")], notes=["UNIQUE (family, version) · 18종"])
+        ("", "recorded_at", "timestamptz")], notes=["UNIQUE (family, version) · 21종"])
     f.table("catalog.reference_item", 336, 40, 250, "set에 든 항목 하나로, 자연키와 정의(JSON)를 담는다.", [
         ("PK FK", "set_id", "uuid"), ("PK", "item_key", "text"), ("", "definition", "jsonb")])
     f.table("publication.reference_access", 626, 40, 270, "기준값 종류별 공개 승인이다. HUB 코드표 세 종류는 늘 공개된다.", [
@@ -300,6 +302,22 @@ def external() -> Figure:
         ("PK", "skey", "text"), ("", "category", "dim_category.slug"), ("", "note", "text"), ("", "status", "=active|cleared"),
         ("", "origin", "=gold_import|hub"), ("", "created_at", "timestamptz"), ("", "updated_at", "timestamptz"),
         ("", "updated_by", "uuid")], notes=["활성 행 → set source_override"])
+    f.table("catalog.source_seed", 626, y3, 270, "HUB가 정본인 시드 도메인과 카테고리다. 처음 값은 seed.json이다.", [
+        ("PK", "skey", "text"), ("", "category", "source_code.code"), ("", "note", "text"), ("", "status", "=active|removed"),
+        ("", "origin", "=file_import|hub"), ("", "created_at", "timestamptz"), ("", "updated_at", "timestamptz"),
+        ("", "updated_by", "uuid")], notes=["활성 행 → set source_seed"])
+    f.table("catalog.source_social", 936, y3, 248, "HUB가 정본인 공식 HMG 소셜 계정과 URL 매칭 규칙이다.", [
+        ("PK", "account_key", "text"), ("", "display_key", "text"), ("", "domain", "text"), ("", "matchers", "jsonb"),
+        ("", "note", "text"), ("", "status", "=active|stopped"), ("", "origin", "=file_import|hub"),
+        ("", "updated_at", "timestamptz"), ("", "updated_by", "uuid")], notes=["활성 행 → set source_social"])
+    y4 = 960
+    f.table("catalog.source_code", 16, y4, 280, "출처 분류 코드표다. category는 cit_c<k> 번호, layer는 분류 출처 1~6이다.", [
+        ("PK", "kind", "=category|layer"), ("PK", "code", "text"), ("UK", "number", "smallint"), ("", "name_en", "text"),
+        ("", "name_ko", "text"), ("UK", "ord", "smallint"), ("", "description", "text"), ("", "updated_at", "timestamptz"),
+        ("", "updated_by", "uuid")], notes=["이름·설명·순서만 고침 → set source_code"])
+    f.table("catalog.source_*_event", 336, y4, 270, "시드 · 공식 소셜 · 코드표의 변경 이력(같은 모양 세 표)이다.", [
+        ("PK", "event_id", "bigint"), ("FK", "(표마다 키)", "text"), ("", "action", "=import|add|set|…"),
+        ("", "actor_id", "uuid"), ("", "changes", "jsonb"), ("", "published_seq", "bigint"), ("", "occurred_at", "timestamptz")])
     f.fk("source_override_event", "skey", "source_override", to="skey")
     f.fk("reference_item", "set_id", "reference_set")
     f.fk("api_key", "client_id", "api_client")

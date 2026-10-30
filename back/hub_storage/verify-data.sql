@@ -258,4 +258,84 @@ DO $$ BEGIN
    RAISE EXCEPTION 'A reverted correction is still published'; END IF;
 END $$;
 RESET ROLE;
+-- Source lists (008): the same role keeps the seeds, the official social accounts and the code table (names, order,
+-- description only: the code rows are imported, never added or removed), their history, and publishes them through
+-- their own functions. No DELETE, no key or origin change, no set of its own.
+INSERT INTO catalog.source_code(kind,code,number,name_en,name_ko,ord) VALUES('layer','rollbackOnly',99,'Rollback','롤백',99);
+SET LOCAL ROLE hmg_source_override_editor;
+INSERT INTO catalog.source_seed(skey,category,origin,updated_by) VALUES('rollback-only-seed.example','newsMedia','hub',gen_random_uuid());
+UPDATE catalog.source_seed SET category='blogsReviews',status='removed',updated_at=now() WHERE skey='rollback-only-seed.example';
+UPDATE catalog.source_seed SET status='active' WHERE skey='rollback-only-seed.example';
+INSERT INTO catalog.source_seed_event(skey,action,changes) VALUES('rollback-only-seed.example','add','{"category":[null,"newsMedia"]}');
+INSERT INTO catalog.source_social(account_key,display_key,domain,matchers,origin)
+VALUES('rollback-only.example/account','rollback-only.example/Account','rollback-only.example','[{"prefix":"rollback-only.example/account","boundary":true}]','hub');
+UPDATE catalog.source_social SET matchers='[{"prefix":"rollback-only.example/account2","boundary":false}]',status='stopped'
+ WHERE account_key='rollback-only.example/account';
+INSERT INTO catalog.source_social_event(account_key,action,changes) VALUES('rollback-only.example/account','add','{}');
+UPDATE catalog.source_code SET name_ko='롤백 이름',description='x',ord=98,updated_at=now() WHERE kind='layer' AND code='rollbackOnly';
+INSERT INTO catalog.source_code_event(kind,code,action,changes) VALUES('layer','rollbackOnly','set','{}');
+DO $$ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM catalog.publish_source_seeds()) THEN RAISE EXCEPTION 'A changed seed list was not published'; END IF;
+ IF EXISTS(SELECT 1 FROM catalog.publish_source_seeds()) THEN RAISE EXCEPTION 'An unchanged seed list was published again'; END IF;
+ PERFORM 1 FROM catalog.publish_source_socials();
+ IF NOT EXISTS(SELECT 1 FROM catalog.publish_source_codes()) THEN RAISE EXCEPTION 'A changed code table was not published'; END IF;
+ BEGIN UPDATE catalog.source_seed SET skey='other.example' WHERE skey='rollback-only-seed.example';
+       RAISE EXCEPTION 'List role changes a seed key'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN UPDATE catalog.source_seed SET origin='file_import'; RAISE EXCEPTION 'List role changes a seed origin'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN UPDATE catalog.source_seed SET note='x'; RAISE EXCEPTION 'List role writes seed notes'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN DELETE FROM catalog.source_seed; RAISE EXCEPTION 'List role deletes seeds'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN UPDATE catalog.source_social SET display_key='rollback-only.example/ACCOUNT';
+       RAISE EXCEPTION 'List role changes an account key'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN UPDATE catalog.source_social SET domain='other.example'; RAISE EXCEPTION 'List role changes an account domain'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN DELETE FROM catalog.source_social; RAISE EXCEPTION 'List role deletes accounts'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN INSERT INTO catalog.source_code(kind,code,number,name_en,name_ko,ord) VALUES('category','newOne',98,'New','새',98);
+       RAISE EXCEPTION 'List role adds a code'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN UPDATE catalog.source_code SET number=97 WHERE code='rollbackOnly'; RAISE EXCEPTION 'List role renumbers a code'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN UPDATE catalog.source_code SET code='renamed' WHERE code='rollbackOnly'; RAISE EXCEPTION 'List role changes a code'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN DELETE FROM catalog.source_code; RAISE EXCEPTION 'List role deletes codes'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN UPDATE catalog.source_seed_event SET action='remove'; RAISE EXCEPTION 'List role rewrites seed history'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN DELETE FROM catalog.source_social_event; RAISE EXCEPTION 'List role deletes account history'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN DELETE FROM catalog.source_code_event; RAISE EXCEPTION 'List role deletes code history'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN PERFORM 1 FROM catalog.publish_hub_edit('source_seed','[]'); RAISE EXCEPTION 'List role calls the shared publisher';
+       EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN INSERT INTO catalog.reference_set(set_id,family,version,item_count,sha256,source)
+       VALUES(gen_random_uuid(),'source_seed',99999,0,repeat('f',64),'hub_edit');
+       RAISE EXCEPTION 'List role records a set of its own'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN INSERT INTO catalog.source_seed(skey,category,origin) VALUES('slash.example/path','newsMedia','hub');
+       RAISE EXCEPTION 'A seed key with a slash'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN INSERT INTO catalog.source_seed(skey,category,origin,status) VALUES('status.example','newsMedia','hub','cleared');
+       RAISE EXCEPTION 'An unknown seed status'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN INSERT INTO catalog.source_social(account_key,display_key,domain,matchers,origin) VALUES('nopath.example','nopath.example','nopath.example','[{}]','hub');
+       RAISE EXCEPTION 'An account key without a path'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN INSERT INTO catalog.source_social(account_key,display_key,domain,matchers,origin) VALUES('a.example/x','A.example/X','b.example','[{}]','hub');
+       RAISE EXCEPTION 'An account outside its domain'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN INSERT INTO catalog.source_social(account_key,display_key,domain,matchers,origin) VALUES('c.example/x','c.example/x','c.example','[]','hub');
+       RAISE EXCEPTION 'An account without matchers'; EXCEPTION WHEN check_violation THEN NULL; END;
+END $$;
+RESET ROLE;
+SET LOCAL ROLE hmg_catalog_writer;
+DO $$ BEGIN
+ BEGIN INSERT INTO catalog.reference_set(set_id,family,version,item_count,sha256,source)
+       VALUES(gen_random_uuid(),'source_code',99999,0,repeat('f',64),'gold');
+       RAISE EXCEPTION 'A HUB list family under another source'; EXCEPTION WHEN check_violation THEN NULL; END;
+END $$;
+RESET ROLE;
+SET LOCAL ROLE hmg_ext_api;
+DO $$ BEGIN
+ PERFORM set_config('hgh.key_hash',repeat('1',64),true);
+ IF coalesce((SELECT hub_reference FROM ext.meta),'') ~ 'source_(seed|social|code)' THEN RAISE EXCEPTION 'HUB lists change contract_version'; END IF;
+END $$;
+RESET ROLE;
+SET LOCAL ROLE hmg_analytics_reader;
+DO $$ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM catalog.current_reference WHERE family='source_seed' AND item_key='rollback-only-seed.example'
+               AND definition->>'category'='blogsReviews') THEN RAISE EXCEPTION 'The published seed list misses a seed'; END IF;
+ IF EXISTS(SELECT 1 FROM catalog.current_reference WHERE family='source_social' AND item_key='rollback-only.example/account') THEN
+   RAISE EXCEPTION 'A stopped account is published'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM catalog.current_reference WHERE family='source_code' AND item_key='layer:rollbackOnly'
+               AND definition->>'name_ko'='롤백 이름') THEN RAISE EXCEPTION 'The published code table misses a change'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM catalog.source_social_event) OR NOT EXISTS(SELECT 1 FROM catalog.source_code_event) THEN
+   RAISE EXCEPTION 'The API reader cannot read the list history'; END IF;
+END $$;
+RESET ROLE;
 ROLLBACK;

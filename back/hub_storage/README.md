@@ -110,7 +110,7 @@ HGH_PYTHON=~/micromamba/envs/hgh-bff/bin/python bash scripts/start-local.sh   # 
 
 ## 인용 출처 교정 (2026-10-30)
 
-리뉴얼 Admin › 인용 출처 분류(`/renewal/admin/standards/citation-sources`)에서 최상위 관리자가 AI 답변이 인용한 출처의 카테고리를 교정한다. HUB는 사람이 정한 교정만 갖고, 자동 분류와 시드 · 소셜 목록은 Gold 값을 읽기만 한다. 같은 구조를 시드 키워드 · 엔티티 역할도 따른다([`docs/handoff/admin-todo.md`](../../docs/handoff/admin-todo.md) '기준값 편집 공통 구조').
+리뉴얼 Admin › 인용 출처 분류(`/renewal/admin/standards/citation-sources`)에서 최상위 관리자가 AI 답변이 인용한 출처의 카테고리를 교정한다. 사람이 정하는 출처 분류 입력(교정, 그리고 아래 절의 시드 · 공식 소셜 · 코드표)은 HUB가 정본이고, 자동 분류(규칙)는 Gold 값을 읽기만 한다. 같은 구조를 시드 키워드 · 엔티티 역할도 따른다([`docs/handoff/admin-todo.md`](../../docs/handoff/admin-todo.md) '기준값 편집 공통 구조').
 
 - **저장(`007_source_overrides`, 데이터 DB):** `catalog.source_override`에 출처 키(Gold `dim_source.skey`, 소문자 · 앞 `www.` 제거)마다 카테고리(`gold.dim_category.slug`)와 상태(`active` · `cleared`)를 둔다. 지우지 않고, 원복은 `cleared`다. 바꿀 때마다 `source_override_event`(`changes = {필드: [전, 후]}`, 실린 목록의 `published_seq`)가 남는다.
 - **업스트림 전달:** 쓰기마다 같은 트랜잭션에서 발행 함수 `catalog.publish_source_overrides()`가 활성 교정 전체를 기준값 종류 `source_override`(source `hub_edit`)의 새 set으로 기록한다(내용이 같으면 기록 안 함, catalog lock 617427413). 외부 API는 `GET /ext/v1/reference/source_override`로 내보내고, 공개는 `publish-reference source_override`로 승인한다. `hub_edit`은 `ext.meta.hub_reference`에 들지 않아 편집해도 `contract_version`이 바뀌지 않는다. Gold 가져오기는 이 표와 이 종류를 쓰지 않는다.
@@ -123,6 +123,21 @@ HGH_PYTHON=~/micromamba/envs/hgh-bff/bin/python bash scripts/start-local.sh   # 
 HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py init                      # 007_source_overrides, hmg_source_override_editor, .env.source-override-db.local, .env.hub-edit.local에 연결 추가
 HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py import-source-overrides   # 처음 값(한 번만)
 HGH_PYTHON=~/micromamba/envs/hgh-bff/bin/python bash scripts/start-local.sh          # API 재시작 (Windows: ./scripts/start-gold.ps1)
+```
+
+## 출처 시드 · 공식 소셜 계정 · 코드표 (2026-10-30)
+
+같은 화면의 시드 · 공식 소셜 · 코드표 탭이다(admin-todo 결정 코드표 · G · '2 남은 범위'). Gold에는 결과(`dim_category`, `dim_source.category_src` 4 · 2)만 있고, 원래 값은 원본 앱의 분류기 파일이었다(`front/lib/citation-categorizer`: `taxonomy.ts` · `seed.json` · `official-social.ts`). 그 파일들은 기존 화면이 그대로 쓰고, 가져온 뒤의 정본은 이 표들이다.
+
+- **저장(`008_source_lists`, 데이터 DB):** `catalog.source_seed`(도메인 키 → 카테고리, `active` · `removed`), `catalog.source_social`(계정 키 = 표시 키의 소문자, 도메인, 매칭 규칙 `[{prefix, boundary}]` 1~10개, `active` · `stopped`, 카테고리는 Official (HMG) 고정), `catalog.source_code`(`category` 13개: 번호 = Gold `category_key` = `answer_fact.cit_c<k>`, `layer` 6개: 번호 = `category_src` = 우선순위; 이름(영 · 한) · 순서 · 설명). 표마다 이력 표(`*_event`)가 있고 지우지 않는다.
+- **업스트림 전달:** 쓰기마다 `catalog.publish_source_seeds()` · `publish_source_socials()` · `publish_source_codes()`가 기준값 종류 `source_seed` · `source_social` · `source_code`(source `hub_edit`)의 새 set을 기록한다(내용이 같으면 기록 안 함). 공개 승인은 `publish-reference <종류>`.
+- **처음 값:** `import-source-lists`가 목록마다 한 번 넣는다(이미 있는 목록은 그대로 둔다). 코드표는 Gold `dim_category`(번호 · 영문 이름 · 순서)와 화면 문구(`citationCategories`, `hubSourceOverrides.source`), 시드는 `seed.json` 795개(영문 카테고리 이름 → slug), 공식 소셜은 `official-social.ts` 9개.
+- **계정과 권한:** 교정과 같은 `hmg_source_override_editor`가 쓴다(화면 하나의 입력 묶음). 시드는 카테고리 · 상태, 소셜은 매칭 규칙 · 상태, 코드표는 이름 · 설명 · 순서만 UPDATE한다. 코드표 행 추가 · 삭제, 키 · 출처 · 메모 변경, DELETE, 공용 발행 함수 직접 실행은 없다.
+- **API:** `GET|POST /v1/hub/source-seeds`, `POST …/remove`, `GET …/history?skey=`; `GET|POST /v1/hub/source-socials`, `POST …/stop|resume`, `GET …/history?key=`; `GET|POST /v1/hub/source-codes`, `POST …/order`, `GET …/history?kind=&code=` (관리자만). 브라우저는 Next `/api/hub/source-seeds` · `source-socials` · `source-codes`를 거친다.
+
+```bash
+HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py init                  # 008_source_lists (같은 역할에 권한 추가)
+HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py import-source-lists   # 처음 값(목록마다 한 번)
 ```
 
 ## 외부 API (2026-10-28)
@@ -165,4 +180,4 @@ GA4와 프로젝트의 관계는 `catalog.project_ga4_property`에 실제 연동
 
 `verify`는 롤백되는 트랜잭션에서 비공개/선택 공개, 외부 계정의 기본 테이블 접근 차단, 버전 불변성, 운영 설정 이력·감사 이력 보존, 잘못된 참조 차단을 확인한다. 외부 API 경계도 같은 방식으로 확인한다: 키 없음·빈 키·만료·폐기·비활성 호출자는 0행, 다른 호출자의 프로젝트와 미승인 종류는 안 보임, 내부 Gold 식별자 비노출, 쓰기 계정의 `change_seq` 지정 거부, 승인 변경 시 순번 증가, `hmg_ext_api`의 운영 DB 접속 거부. 저장한 필터 계정은 자기 표만 쓰고(계정·자격증명·역할·감사 표 거부, 데이터 DB 접속 거부), 기본 필터 둘·주인 없는 행·빈 이름은 DB가 거부한다. GA4 등록부 계정은 등록부와 이력만 쓰고(속성 ID 변경·DELETE·이력 고치기·수집 결과 쓰기·GA4 행 읽기 거부, 운영 DB 접속 거부), 한 시장의 두 번째 수집 속성·숫자 아닌 속성 ID·소문자 국가·모르는 브랜드·이벤트 없는 고른 이벤트 기준은 DB가 거부한다. 출처 교정 계정은 교정과 이력만 쓰고 발행 함수로만 목록을 기록한다(키 · 출처 · 메모 변경, DELETE, 이력 고치기, `reference_set` 직접 쓰기, catalog · GA4 · 키 읽기, 운영 DB 접속 거부). 대문자 · `www.` 키, slug 아닌 카테고리는 DB가 거부하고, Gold 가져오기 계정은 `hub_edit` set을 쓰지 못한다. 교정 종류는 승인 전에는 외부 API에 나가지 않고 `hub_reference`를 바꾸지 않으며, 원복한 교정은 목록에서 빠진다. API 통합 검증은 `back/bff/tests/test_hub_storage.py`, 가져오기 규칙은 `test_hub_sync.py`, 저장한 필터는 `test_saved_filters.py`, 외부 API는 `back/ext/tests/test_app.py`를 사용한다. 영구 테스트 사용자나 가상 측정치를 생성하지 않는다.
 
-마이그레이션: 데이터 DB `002_data_catalog_publication`, `003_published_dimensions`, `004_hub_prompt_editing`, `005_external_api`, `006_ga4_registry`, `007_source_overrides`, 운영 DB `001_operations`, `002_hub_login`, `003_saved_filters`. 기존 데이터 DB `001_gold_ga4_seo`는 변경하지 않았다.
+마이그레이션: 데이터 DB `002_data_catalog_publication`, `003_published_dimensions`, `004_hub_prompt_editing`, `005_external_api`, `006_ga4_registry`, `007_source_overrides`, `008_source_lists`, 운영 DB `001_operations`, `002_hub_login`, `003_saved_filters`. 기존 데이터 DB `001_gold_ga4_seo`는 변경하지 않았다.

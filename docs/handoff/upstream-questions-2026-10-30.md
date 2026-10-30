@@ -311,7 +311,7 @@
 
 - **화면 영향:** HUB Admin › 인용 출처 분류에서 고친 값이 화면 숫자에 닿으려면 파이프라인이 이 값을 읽어야 한다. 그 전까지 화면은 행마다 '반영 대기'로 보인다.
 - **근거:**
-  - HUB가 출처 카테고리 교정(override)의 정본을 갖는다(2026-10-30 결정 A). 자동 분류와 시드 · 소셜 목록은 파이프라인 소유다.
+  - HUB가 출처 카테고리 교정(override), 출처 분류 코드표(카테고리 13개 · 분류 출처 코드 1~6), 시드 · 공식 소셜 목록의 정본을 갖는다(2026-10-30 결정 A · 코드표 · G). 자동 분류(규칙)는 파이프라인이 정한다. 시드 · 공식 소셜 목록은 원래 원본 HUB 앱 파일(`seed.json` · `official-social.ts`)에서 나왔다.
   - 교정값은 외부 API family `source_override`(source `hub_edit`)로 내보낸다. 키는 소문자 · 앞 `www.`를 뺀 skey이고, 값은 `dim_category.slug`다.
   - 변경은 `change_seq` · etag로 알린다.
   - 처음 값은 Gold에 있던 교정 2건(arxiv.org, danawa.com)이다.
@@ -322,6 +322,7 @@
   4. 키 정규화가 다르면 HUB 키 규칙을 맞추는 마이그레이션을 만든다.
   5. 파이프라인 쪽 직접 교정을 멈추기로 하면 'Gold에만 있음' 상태는 예외로만 남는다.
   6. API 키는 받은 호출자 이름으로 `manage.py ext-key-issue`를 실행해 발급한다.
+  7. 코드표와 시드 · 공식 소셜 목록을 받는 방식을 들으면 2단계 남은 작업(범위 확인 전)의 설계에 반영한다.
   - 3단계 시드 키워드와 4단계 엔티티 역할도 같은 방식으로 넘길 예정이라, 이 합의가 그 둘의 틀이 된다.
 
 ### C팀에 보낼 메시지
@@ -329,7 +330,7 @@
 ```text
 [HMG GEO HUB] 인용 출처 분류 교정값 전달 방식 확인 요청
 
-HUB가 출처 카테고리 교정(override)의 정본을 갖게 되었습니다. 시드·소셜 목록과 자동 분류는 지금처럼 파이프라인 소유입니다. 교정값은 외부 API(https://10.0.20.132:8087/ext/)로 드립니다.
+HUB가 출처 카테고리 교정(override), 출처 분류 코드표, 시드·공식 소셜 목록의 정본을 갖게 되었습니다. 자동 분류(규칙)는 지금처럼 파이프라인이 정합니다. 교정값은 외부 API(https://10.0.20.132:8087/ext/)로 드립니다.
 - GET /ext/v1/reference: family source_override의 change_seq·etag
 - GET /ext/v1/reference/source_override: 활성 교정 전체(키 = 소문자·앞 www. 뺀 skey, category = dim_category.slug)
 
@@ -340,6 +341,7 @@ HUB가 출처 카테고리 교정(override)의 정본을 갖게 되었습니다.
 4. 키 정규화 규칙(소문자, 앞 www. 제거, 소셜은 계정 키)이 파이프라인과 같은가요?
 5. 지금 파이프라인 쪽 교정 2건(arxiv.org, danawa.com)을 HUB 초기값으로 가져왔습니다. 앞으로 파이프라인 쪽에서 직접 교정하지 않는 것으로 정리해도 될까요?
 6. API 키 발급 대상(호출자 이름)을 알려 주세요.
+7. 출처 분류 코드표(카테고리 13개, 분류 출처 코드 1~6)와 시드·공식 소셜 목록도 HUB가 정본으로 관리하고, 같은 방식(외부 API, change_seq)으로 드립니다: GET /ext/v1/reference/source_code · source_seed(도메인 → 카테고리) · source_social(계정 키, 도메인, URL 매칭 규칙 [{prefix, boundary}], 카테고리 officialHmg). 지금 이 값들을 어디서 가져가시는지(dim_category 설명에는 HUB 코드표의 투영이라고 되어 있습니다), 이 목록으로 바꿔도 되는지 알려 주세요.
 
 참고: 다음 단계로 시드 키워드(family keyword)와 엔티티 역할(family entity)도 같은 방식(HUB 정본, 외부 API, change_seq)으로 드릴 예정입니다. 이 방식에 문제가 있으면 함께 알려 주세요.
 ```

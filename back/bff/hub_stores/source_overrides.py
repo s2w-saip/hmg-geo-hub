@@ -1,7 +1,8 @@
 """Source category corrections on the renewal Admin › 인용 출처 분류 screen (2026-10-30).
 
-The HUB owns the corrections people make (the override layer); Gold owns the automatic classification and the social
-and seed lists, and this module only reads them (docs/handoff/admin-todo.md, '기준값 편집 공통 구조'). The list is
+The HUB owns the corrections people make (the override layer); Gold owns the automatic classification. The social and
+seed lists are the HUB's to edit too (admin-todo decision G, not built yet); until then this module reads those layers
+as Gold has them (docs/handoff/admin-todo.md, '기준값 편집 공통 구조'). The list is
 Gold's latest global round (live read mode): its 500 most cited sources, every source the HUB corrected and every
 source Gold applies a correction to, each with Gold's category and classification layer (dim_source.category_src)
 as Gold has them. The HUB's correction is shown next to Gold's, and `state` compares the two: applied when Gold

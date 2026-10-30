@@ -32,9 +32,11 @@ OPS_DB = 'hmg_operations'
 # External API (2026-10-28): what a project approval covers, the Gold reference families an approval can
 # open (the HUB-owned surface/brand_bit/mention_type are always part of the contract), key lifetimes.
 PROJECT_FLAGS = ('projects', 'prompts')
-# source_override (2026-10-30) is the HUB's own corrections (source hub_edit), approved like the Gold families.
+# source_override, source_seed, source_social and source_code (2026-10-30) are the HUB's own source classification
+# inputs (source hub_edit), approved like the Gold families.
 REFERENCE_FAMILIES = ('engine', 'region', 'country', 'language', 'taxon', 'brand', 'entity', 'source_category',
-                      'source', 'owned_base', 'crawl_bot', 'keyword', 'perspective', 'population', 'source_override')
+                      'source', 'owned_base', 'crawl_bot', 'keyword', 'perspective', 'population', 'source_override',
+                      'source_seed', 'source_social', 'source_code')
 KEY_DAYS, KEY_DAYS_MAX, KEYS_PER_CLIENT = 180, 365, 2
 KEY_LOCK = 617427414     # one key issue at a time, so the per-client limit holds
 CATALOG_LOCK = 617427413  # every catalog writer (sync_catalog.py, the HUB editors): change_seq order = commit order
@@ -287,6 +289,9 @@ ALTER ROLE hmg_source_override_editor CONNECTION LIMIT 4;
 GRANT CONNECT ON DATABASE hmg_analytics TO hmg_source_override_editor;
 COMMIT;""")
     migrate('data-007.sql', '007_source_overrides')
+    # The rest of the source classification inputs (2026-10-30): seeds, official social accounts and the code table,
+    # kept by the same role (Admin › 인용 출처 분류).
+    migrate('data-008.sql', '008_source_lists')
     analytics.secure_write(ROOT / '.env.ext-api.local', '# External API: the caller-scoped ext views only.\n'
         f"HGH_EXT_DB_URL=postgresql://hmg_ext_api:{ext['EXT_API_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n")
     analytics.secure_write(ROOT / '.env.operations.local', '# FastAPI read-only operations connection.\n'
@@ -597,6 +602,95 @@ def backup():
     print(f'Backup created: {output}')
 
 
+# Source classification lists (2026-10-30, admin-todo decisions 코드표 and G): the first values come from where the HUB
+# kept them before the DB, the original app's categorizer files and the category labels of front/messages. Gold gives
+# the category numbers (dim_category.category_key, tied to answer_fact.cit_c<k>), English names and order.
+CATEGORIZER = ROOT / 'front' / 'lib' / 'citation-categorizer'
+LAYER_CODES = ('override', 'social', 'owned', 'seed', 'rule', 'fallback')  # dim_source.category_src 1..6, in priority order
+GOLD_CATEGORIES_SCRIPT = '''import asyncio, json, os
+import asyncpg
+async def main():
+    conn = await asyncpg.connect(os.environ['HGH_GOLD_DB_URL'], server_settings={'default_transaction_read_only': 'on', 'statement_timeout': '30000'})
+    try:
+        rows = await conn.fetch("SELECT category_key,slug,name,ord FROM gold.dim_category WHERE coalesce(slug,'')<>'' ORDER BY category_key")
+    finally:
+        await conn.close()
+    print(json.dumps([[r['category_key'], r['slug'], r['name'], r['ord']] for r in rows]))
+asyncio.run(main())
+'''
+SOCIAL_ENTRY = re.compile(r'\{\s*(?://[^\n]*\n\s*)*key:\s*"([^"]+)",\s*domain:\s*"([^"]+)",\s*matchers:\s*\[(.*?)\]\s*,?\s*\}', re.S)
+SOCIAL_MATCHER = re.compile(r'\{\s*prefix:\s*"([^"]+)",\s*boundary:\s*(true|false)\s*\}')
+
+
+def official_social_accounts():
+    """The accounts of official-social.ts, in file order: [{key, domain, matchers: [{prefix, boundary}]}]."""
+    text = (CATEGORIZER / 'official-social.ts').read_text(encoding='utf8')
+    accounts = []
+    for key, domain, body in SOCIAL_ENTRY.findall(text):
+        matchers = [{'prefix': p, 'boundary': b == 'true'} for p, b in SOCIAL_MATCHER.findall(body)]
+        if not matchers or not key.lower().startswith(domain + '/') or any(not m['prefix'].startswith(domain + '/') for m in matchers):
+            raise RuntimeError(f'official-social.ts: cannot read the account {key}; nothing imported')
+        accounts.append({'key': key, 'domain': domain, 'matchers': matchers})
+    if not accounts:
+        raise RuntimeError('official-social.ts: no account found; nothing imported')
+    return accounts
+
+
+def import_source_lists(args):
+    """import-source-lists: the HUB's first code table, seeds and official social accounts (Admin › 인용 출처 분류).
+    Each list is imported once; a list the HUB already has stays as it is. Records the rows (origin file_import),
+    their history and the first source_code / source_seed / source_social sets, in one transaction under the catalog
+    lock."""
+    counts = {name: int(sql(f"SELECT count(*) FROM catalog.{table};").stdout.strip() or 0)
+              for name, table in (('code', 'source_code'), ('seed', 'source_seed'), ('social', 'source_social'))}
+    gold = json.loads(api_python(GOLD_CATEGORIES_SCRIPT).strip().splitlines()[-1])
+    labels = {lang: json.loads((ROOT / 'front' / 'messages' / f'{lang}.json').read_text(encoding='utf8')) for lang in ('ko', 'en')}
+    name_to_slug = {name: slug for _, slug, name, _ in gold}
+    statements, done = [], {}
+    if not counts['code']:
+        rows = [('category', slug, key, name, labels['ko']['citationCategories'][slug], ord) for key, slug, name, ord in gold]
+        rows += [('layer', code, i, labels['en']['hubSourceOverrides']['source'][code], labels['ko']['hubSourceOverrides']['source'][code], i)
+                 for i, code in enumerate(LAYER_CODES, 1)]
+        values = ','.join(f"({analytics.literal(k)},{analytics.literal(c)},{n},{analytics.literal(en)},{analytics.literal(ko)},{o})"
+                          for k, c, n, en, ko, o in rows)
+        statements.append(f"""INSERT INTO catalog.source_code(kind,code,number,name_en,name_ko,ord) VALUES{values};
+SELECT count(*) FROM catalog.publish_source_codes();
+INSERT INTO catalog.source_code_event(kind,code,action,changes,published_seq)
+SELECT kind,code,'import',jsonb_build_object('name_en',jsonb_build_array(NULL,name_en),'name_ko',jsonb_build_array(NULL,name_ko),
+       'ord',jsonb_build_array(NULL,ord)),(SELECT change_seq FROM catalog.current_reference_set WHERE family='source_code')
+FROM catalog.source_code;""")
+        done['code'] = len(rows)
+    if not counts['seed']:
+        seeds = {}
+        for domain, name in json.loads((CATEGORIZER / 'seed.json').read_text(encoding='utf8')).items():
+            key, slug = source_key(domain), name_to_slug.get(name)
+            if slug is None or '/' in key or seeds.get(key, slug) != slug:
+                raise RuntimeError(f'seed.json: {domain} → {name} has no single Gold category; nothing imported')
+            seeds[key] = slug
+        values = ','.join(f"({analytics.literal(k)},{analytics.literal(v)},'file_import')" for k, v in sorted(seeds.items()))
+        statements.append(f"""INSERT INTO catalog.source_seed(skey,category,origin) VALUES{values};
+SELECT count(*) FROM catalog.publish_source_seeds();
+INSERT INTO catalog.source_seed_event(skey,action,changes,published_seq)
+SELECT skey,'import',jsonb_build_object('category',jsonb_build_array(NULL,category)),
+       (SELECT change_seq FROM catalog.current_reference_set WHERE family='source_seed')
+FROM catalog.source_seed;""")
+        done['seed'] = len(seeds)
+    if not counts['social']:
+        accounts = official_social_accounts()
+        values = ','.join(f"({analytics.literal(a['key'].lower())},{analytics.literal(a['key'])},{analytics.literal(a['domain'])},"
+                          f"{analytics.literal(json.dumps(a['matchers']))}::jsonb,'file_import')" for a in accounts)
+        statements.append(f"""INSERT INTO catalog.source_social(account_key,display_key,domain,matchers,origin) VALUES{values};
+SELECT count(*) FROM catalog.publish_source_socials();
+INSERT INTO catalog.source_social_event(account_key,action,changes,published_seq)
+SELECT account_key,'import',jsonb_build_object('matchers',jsonb_build_array(NULL,matchers)),
+       (SELECT change_seq FROM catalog.current_reference_set WHERE family='source_social')
+FROM catalog.source_social;""")
+        done['social'] = len(accounts)
+    if statements:
+        sql(f"BEGIN;\nSELECT pg_advisory_xact_lock({CATALOG_LOCK});\n" + '\n'.join(statements) + '\nCOMMIT;')
+    print(json.dumps({'imported': done, 'already_present': {k: v for k, v in counts.items() if v}}, ensure_ascii=False))
+
+
 COMMANDS = {
     'init': lambda a: initialize(), 'start': lambda a: start(), 'sync-gold-catalog': sync, 'status': lambda a: status(),
     'verify': lambda a: verify(), 'backup': lambda a: backup(), 'set-admin': lambda a: set_admin(), 'revoke-admin': lambda a: revoke_admin(),
@@ -606,6 +700,7 @@ COMMANDS = {
     'ext-client-enable': lambda a: client_status(a, 'active'), 'ext-key-issue': key_issue, 'ext-key-revoke': key_revoke,
     'grant-project': lambda a: grant(a, True), 'withdraw-project': lambda a: grant(a, False), 'ext-list': ext_list,
     'import-source-overrides': import_source_overrides,
+    'import-source-lists': import_source_lists,
 }
 
 if __name__ == '__main__':
