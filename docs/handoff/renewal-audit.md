@@ -6,7 +6,7 @@
 - 병렬 세션으로 나누지 않고 한 세션이 순서대로 한다.
 - 단계마다 새 하위 에이전트가 깨끗한 컨텍스트로 맡는다(B 방식).
 
-**현재 위치:** 2단계(Website 범위 계정 접근) 시작 전. 1단계 끝(결과는 '확인 결과' 표 · 단계 메모). 마지막 커밋: 1단계 결과를 올린 커밋.
+**현재 위치:** 3단계(공통 스파크라인 회차 값 · Overview 표시) 시작 전. 2단계 끝(단계 메모 '2단계'). 마지막 커밋: 2단계를 올린 커밋.
 
 ## 진행 방식 (단계마다 새 하위 에이전트)
 
@@ -90,7 +90,7 @@
 | 단계 | 내용 | 먼저 필요한 것 | 상태 |
 |---|---|---|---|
 | 1 | Gold 확인(읽기 전용)과 업스트림 질문 보강 | — | [x] |
-| 2 | Website 범위 계정 접근 | ⛔J | [ ] |
+| 2 | Website 범위 계정 접근 | ⛔J | [x] |
 | 3 | 공통 스파크라인 회차 값 · Overview 표시 | — | [ ] |
 | 4 | 경쟁사 브랜드 접기(공용 모듈) · Overview 데이터 | 1 | [ ] |
 | 5 | Mention ① KPI 탭: 회차별 분자 · 분모, 답변당 언급 수 Δ, 당사 평균 위치 | 1 | [ ] |
@@ -171,10 +171,10 @@
 - W0 패널의 브랜드 축 기준: `RN/_components/overview-filter-model.ts` ~125-146(scope.all)
 
 **할 일**
-- [ ] 2-1 재현 시험을 쓴다. region 계정 범위로 website를 읽으면 403이 나는 것을 확인한다.
-- [ ] 2-2 clamp를 website에 연다. website 필터 패널(W0)에서도 계정 브랜드 잠금과 국가 좁히기가 원본처럼 보이는지 확인한다.
-- [ ] 2-3 전용 사이트 계정(Hyundai N 등)의 국가 잠금(admin-todo 세션 메모 W0)과 겹치는지 확인한다.
-- [ ] 2-4 docstring과 아키텍처 문서의 계정 · 권한 설명을 고친다.
+- [x] 2-1 재현 시험을 쓴다. region 계정 범위로 website를 읽으면 403이 나는 것을 확인한다.
+- [x] 2-2 clamp를 website에 연다. website 필터 패널(W0)에서도 계정 브랜드 잠금과 국가 좁히기가 원본처럼 보이는지 확인한다.
+- [x] 2-3 전용 사이트 계정(Hyundai N 등)의 국가 잠금(admin-todo 세션 메모 W0)과 겹치는지 확인한다.
+- [x] 2-4 docstring과 아키텍처 문서의 계정 · 권한 설명을 고친다.
 
 **시험**
 - BFF 전체와 관련 프런트 시험.
@@ -578,8 +578,21 @@ Website 인용 도달 Δ도 값 출처(발행 / 실시간)가 다르면 숨긴�
   - **11단계.** U1이 ACR에서 다르다. 이름 목록 대신 Gold 플래그(`acr_entity_fact.own_bit`)를 쓰면 '제네시스 마그마' · 'Hyundai Canada'가 당사(HMG)로 바뀐다. 영향은 live release에서 7행 · appearance 7 · choice 0이다. 명부(`acr_entity_fact.own_bit`)는 ACR 리더가 이미 당사 판정(`is_ours` · `own_cells`)에 쓰는 값이다. `dim_brand.own_bit`로 고르면 지금 이름 목록과 결과가 같다. 두 Gold 값이 서로 다른 것은 D1로 물었고, HUB는 어느 쪽도 고쳐 쓰지 않는다(규칙 5).
   - **13단계.** U8: 빈 값 대체 규칙이 쓰이는 행이 지금 없다. 엄브렐러(brand_bit 8) 행도 없어 '공통' 배지는 0행이다. U12: 계정 국가를 걸 Gold 값 `dim_prompt.regions`가 모든 행에 있고 리더가 이미 보낸다. 측정 국가와도 맞는다. Hyundai N(bit 16, D4)은 website 프롬프트 이야기다.
   - **2단계.** U와 관계없다(⛔J는 admin-todo에서 결정됨, `34a3980`).
+- **2단계(2026-10-31).** ⛔J 추천안대로 website를 범위 계정에게 열었다. project는 그대로 403이다.
+  - **2-1 재현.** 고치기 전에 실패했다. BFF 시험은 clamp website 2개 · 경로 1개였다(`test_hub_accounts`). 실제 API에서도 권역 계정(Genesis · genesis-middle-east)의 `overview/filters`(website) · `website/prompts-options`가 403 `out_of_scope`였다.
+  - **2-2 clamp.** `access.clamp`가 website도 global과 같은 브랜드 · 국가 범위로 바꾼다. 국가는 사이트 국가다. 원본 website 규칙(`back/app/core/auth.py` `website_scope_countries`, 프런트 `withPseudoCountries`)처럼 SA가 범위에 있으면 도시 사이트 SA-Dammam · SA-Jeddah · SA-Riyadh도 읽는다(`access.surface_countries`, `_query.with_pseudo_countries`). 권역 허브 사이트(worldwide · EU · MIDDLEEAST · CPO · CN-BJ)는 국가가 없는 HQ 계정만 읽는다. 패널에서 도시 사이트를 고르면 그대로 걸린다(`read_standard_filters`의 website 허용 목록).
+  - **2-2에서 같이 고친 것(원본 규칙, 재현 시험이 고치기 전에 실패).**
+    - 패널 선택지가 계정 범위로 좁혀지지 않았다. global도 같았다. Gold 선택지 읽기(`metrics.options`)는 국가 축으로 좁히지 않는다. 그래서 권역 계정 Global 패널에 Genesis 국가 28개가 보였다(범위 6개). 읽기는 clamp가 막아 값이 새지는 않았다. `_filters.fetch_filter_options`가 범위 밖 국가의 매트릭스 · 국가 · 언어 행을 뺀다(`options_in_countries`). 원본 API의 선택지 규칙(범위 교집합)과 같다. 관리자 · HQ는 그대로다.
+    - Website Overview 시장별 현황(`website/geo`)이 브랜드 하나인 범위 계정에게 비었다. `active_brand_of`에 원본 `activeBrandFor`의 '범위 브랜드가 하나면 그 브랜드'가 빠져 있었다.
+    - Website Overview(`/renewal/website`)가 관리자를 포함한 모든 계정에서 오류 화면이었다(`f28395f`부터). 서버 페이지가 `"use client"` 모듈(`website-format.tsx`)의 `engineLabel`을 불렀다. 엔진 이름표를 일반 모듈(`components/dash/engine-label.ts`, 패널이 다시 내보냄)과 `_overview/engine-label.ts`로 옮겼다. 시험은 `engine-label.test.ts`다. 따로 커밋했다(`ae8da9d`).
+  - **2-3 재현 안 됨(해당 없음).** HUB 계정은 전용 사이트 코드(worldwide · CPO · HYUNDAI-N)를 가질 수 없다. 계정 관리가 계정 RHQ 권역의 ISO 국가만 받는다(`accounts.scope_of`). 시험 `test_no_account_holds_a_dedicated_site_code`로 확인했다. admin-todo 세션 메모 W0의 차이('전용 사이트 계정의 국가 잠금')는 HUB에서 생기지 않는다. 화면 쪽 전용 사이트 규칙(`website_dedicated_codes`)은 쓰이지 않는 채로 둔다.
+  - **2-4.** `access.py` docstring과 아키텍처 문서 '읽기는 계정 범위 안에서만 한다' 항목 · '마지막 갱신'을 고쳤다. 화면 빌더 수는 그대로다.
+  - **원본 대조.** 권역 계정의 기본 화면과 관리자가 같은 범위(brand=Genesis, 국가 = 범위 + 도시 사이트)를 직접 고른 화면을 BFF로 비교했다. `website/summary` · `summary-deferred` · `trend` · `composition` · `geo`, `mention/rn-summary` · `rn-ranking` · `rn-page` · `view-cards` · `view-weekly`, `citation/as-of`, `website/prompts-page` · `prompts-insights`가 같다. `citation/website`는 값이 같고 URL 쿼리 메아리만 다르다. 다른 것은 의도한 차이다. `citation/filter-bar` 선택지는 관리자에게 좁히지 않는다. `conversion/renewal`은 계정이 읽는 GA4 속성이 없어 noprop이다(관리자는 nomatch). 원본 `/ko/website`도 같은 계정으로 열리고 KPI 숫자 22개가 리뉴얼과 같다(예: 노출률 99.7% = 1,189/1,192, 당사 언급 16,430/17,865). 관리자 숫자는 바뀌지 않는다(golden 그대로).
+  - **e2e(24항목 통과).** 권역 계정으로 Website 5화면을 열었다. 국가 선택지는 AE · BH · KW · OM · QA · SA-Dammam · SA-Jeddah · SA-Riyadh(AI Conversion은 없음)이고 브랜드 축은 없다. 실패 요청은 없다. 아랍에미리트를 고르면 걸린다. `?geography=DE`는 범위 기본값으로 읽고 DE는 선택지에 없다. 원본 `/ko/website` 숫자도 같다. Global 4화면의 국가 선택지도 범위 6개다. 시험 계정 `audit2-region` · `audit2-country` · `audit2-hq@local`은 관리자 API(사용자 관리 화면과 같은 경로)로 만들었고 끝나고 중지했다.
+  - **다음 단계가 알 것.** 범위 계정의 패널 선택지는 이제 global · website 모두 계정 국가 안이다. 범위 계정의 website 읽기 쿼리에는 SA가 있으면 도시 사이트 코드가 붙는다. Website Overview는 2단계에서 처음 실제로 열렸다(관리자 포함). 3단계 이후 Overview 화면을 고치면 실제 화면으로 한 번 연다.
 
 ## 진행 기록
 
 - 2026-10-31 — 계획을 작성했다. 근거는 같은 날 중간점검이다(코드 읽기 다섯 갈래: Overview · Mention · Citation · Prompts · AI Funnel, 큰 지적은 코드로 다시 확인). 처음에는 병렬 세션으로 나누려 했으나 사용자가 한 세션이 순서대로 하는 방식으로 바꿨다. 다음은 1단계다.
 - 2026-10-31 — 1단계: Gold를 읽기 전용(SELECT, release 603 · 3647)으로 U1~U12를 확인해 '확인 결과' 표를 채웠다. 같음 7(U2 · U3 · U4 · U5 · U8 · U10 · U12), 다름 5(U1 ACR만 · U6 · U7 · U9 · U11)다. 업스트림 묶음에 'D. 2026-10-31 점검' 7개를 더했다. U1 · U6에서 나온 2개와 넘겨받은 5개(Hyundai N bit 16, 비완성차 경쟁사, 미측정 website 프롬프트 2,563개, URL 카드 모집단 4 · 10, Kona 귀속)다. `loc_owned` · `cit_m05` 차이는 W6 수정 뒤 같아져(US 19.90 = 19.90) 묻지 않는다. 코드는 고치지 않았다. 다음은 2단계다.
+- 2026-10-31 — 2단계: ⛔J 추천안대로 website를 범위 계정(hq · region · country)에게 열었다(`access.clamp`, 사이트 국가 + SA 도시 사이트, project는 403). 원본 규칙대로 같이 고쳤다: 패널 국가 · 언어 선택지를 계정 범위로 좁힘(global · website), 브랜드 하나인 계정의 Website 시장별 현황, 모든 계정에서 오류였던 Website Overview(`engineLabel` 서버 · 클라이언트 경계, `ae8da9d`). 재현 시험은 고치기 전에 실패했다. 2-3(전용 사이트 계정)은 HUB에 그런 계정이 없어 해당 없음이다. 시험: BFF 34개 모듈 전부(+live 8개), 프런트 관련 시험 · typecheck · lint, e2e 24항목 + Global 4화면. 다음은 3단계다.

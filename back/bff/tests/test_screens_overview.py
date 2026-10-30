@@ -144,6 +144,25 @@ class Calls(unittest.TestCase):
         screen("website/geo", "ctx.admin=false&brand=Kia", router)
         self.assertNotIn("geo", [p for p, _ in router.calls])
 
+    def test_website_geo_of_a_one_brand_account_is_that_brands(self):
+        # the original activeBrandFor: one URL brand, else the scope's one brand (2026-10-31: website opens to
+        # scoped accounts, renewal audit step 2); a scope of two brands has none
+        from bff import access
+        bodies = {"kpi/summary": {**summary(), "meta": {**META, "surface": "website"}},
+                  "mentions/brands": {"data": {"brands": []}, "meta": META}, "geo": GEO}
+        one = {"all": False, "brands": ["Genesis"], "regions": ["genesis-middle-east"], "countries": []}
+        router = Router(bodies)
+        with access.scoped(one):
+            out = screen("website/geo", "ctx.admin=false", router)
+        self.assertIn("geo", [p for p, _ in router.calls])
+        self.assertTrue(out["show"])
+        self.assertEqual(ov.active_brand_of({"brand": ["Genesis", "HMG"]}, one), "Genesis")
+        two = {**one, "brands": ["Genesis", "Kia"], "regions": []}
+        router = Router(bodies)
+        with access.scoped(two):
+            screen("website/geo", "ctx.admin=false", router)
+        self.assertNotIn("geo", [p for p, _ in router.calls])
+
     def test_geo_reads_its_markets_with_the_summary(self):
         # the markets read leaves with the summary, not after it (the summary only decides whether they show)
         geo_started = asyncio.Event()

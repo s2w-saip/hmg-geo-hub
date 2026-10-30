@@ -10,6 +10,7 @@ try:
     from fastapi import HTTPException
     from starlette.datastructures import QueryParams
 
+    from bff import access
     from bff.api import query
     from bff.screens import build
     from bff.screens._filters import (
@@ -138,6 +139,53 @@ class PanelScreen(unittest.IsolatedAsyncioTestCase):
         with mock.patch("bff.api.get", get):
             await build("shared/panel-options", QueryParams(f"surface=global&project_id={PID}&brand=Kia&engine=x&time=2026-09-01..2026-09-14"))
         self.assertEqual(seen, [("filters/options", "from=2026-09-01&surface=global&to=2026-09-14")])
+
+
+ME = {"all": False, "brands": ["Genesis"], "regions": ["genesis-middle-east"], "countries": []}
+OPTIONS = {"data": {
+    "geo_matrix": [{"brand": "Genesis", "region": r, "lang": lang} for r, lang in
+                   (("AE", "ar"), ("AE", "en"), ("DE", "de"), ("MIDDLEEAST", "en"), ("SA-Dammam", "ar"), ("US", "en"), ("worldwide", "en"))],
+    "regions": [{"code": c, "area": None, "kind": "iso" if len(c) == 2 else "pseudo"}
+                for c in ("AE", "DE", "MIDDLEEAST", "SA-Dammam", "US", "worldwide")],
+    "languages": ["ar", "de", "en"], "engines": [], "catalog": None, "custom_fields": None}, "meta": {}}
+
+
+class ScopedOptions(unittest.IsolatedAsyncioTestCase):
+    """2026-10-31 (renewal audit step 2): the panel offers the countries the account can read, as the original API's
+    options did (its scope intersection: brand, scope countries, region expansion). The Gold options read takes the
+    clamp's brand but not its countries (the reader never narrows options by the dimension axes)."""
+
+    async def screen(self, path, qs, scope):
+        async def get(p, params=None):
+            return OPTIONS if p == "filters/options" else {"data": {"dates": []}, "meta": {}}
+        with mock.patch("bff.api.get", get), access.scoped(scope):
+            return await build(path, QueryParams(qs))
+
+    async def test_website_panel_offers_the_accounts_sites(self):
+        out = await self.screen("shared/panel-options", "surface=website", ME)
+        self.assertEqual(out["geographyOptions"], ["AE", "SA-Dammam"])            # city site of SA, no site hub
+        self.assertEqual(out["languageOptions"], ["ar", "en"])
+        self.assertEqual({r["region"] for r in out["optionMatrix"]}, {"AE", "SA-Dammam"})
+        out = await self.screen("website/prompts-options", "", ME)
+        self.assertEqual((out["geographyOptions"], out["languageOptions"]), (["AE", "SA-Dammam"], ["ar", "en"]))
+
+    async def test_global_panel_offers_the_accounts_countries(self):
+        out = await self.screen("shared/panel-options", "surface=global", ME)
+        self.assertEqual(out["geographyOptions"], ["AE"])
+        self.assertEqual({r["region"] for r in out["optionMatrix"]}, {"AE"})
+
+    async def test_every_country_for_the_administrator_and_an_hq_account(self):
+        every = ["AE", "DE", "MIDDLEEAST", "SA-Dammam", "US", "worldwide"]
+        self.assertEqual((await self.screen("shared/panel-options", "surface=website", READER_SCOPE))["geographyOptions"], every)
+        hq = {"all": False, "brands": ["Genesis"], "regions": [], "countries": []}
+        self.assertEqual((await self.screen("shared/panel-options", "surface=website", hq))["geographyOptions"], every)
+
+    def test_a_city_site_pick_stays_inside_the_scope(self):
+        self.assertEqual(read_standard_filters({"geography": "SA-Dammam"}, ME, None, "website")["region"], ["SA-Dammam"])
+        self.assertEqual(read_standard_filters({"geography": "SA-Dammam"}, ME)["region"],
+                         ["BH", "KW", "OM", "QA", "SA", "AE", "IL"])               # global: not a country of the scope
+        self.assertEqual(read_standard_filters({"geography": "worldwide"}, ME, None, "website")["region"],
+                         ["BH", "KW", "OM", "QA", "SA", "AE", "IL"])               # the default stays the scope's
 
 
 if __name__ == "__main__":

@@ -18,12 +18,12 @@ from typing import Any
 
 from fastapi import HTTPException
 
-from bff import api
+from bff import access, api
 from bff.screens._convert import ascending_dates, filter_notices
 from bff.screens._query import (
     SCOPE_DENY_BRAND, UMBRELLA_BRAND, WEBSITE_BRAND_GEO_CODES, analysis_query, effective_scope_countries,
     effective_website_scope_countries, is_iso_day, is_uuid, is_website_brand_geo_code, js_sorted, js_trim,
-    narrow_scope_brands, uniq, website_scope_brands, with_params,
+    narrow_scope_brands, uniq, website_scope_brands, with_params, with_pseudo_countries,
 )
 from bff.screens._sort import code_unit_compare, locale_compare, sort_by
 
@@ -152,7 +152,8 @@ def read_standard_filters(sp: dict, scope: dict | None = None, visible_groups: S
     scope_countries = effective_website_scope_countries(scope) if surface == "website" else effective_scope_countries(scope)
     url_geo = many(param("geography"))
     if url_geo and scope_countries is not None:
-        allowed = set(scope_countries)
+        # website: a picked city site of a scope country stays (the panel offers it, fetch_filter_options)
+        allowed = set(with_pseudo_countries(scope_countries) if surface == "website" else scope_countries)
         scope_brand_set = set(website_scope_brands((scope or {}).get("brands"), (scope or {}).get("countries")))
         intersected = [c for c in url_geo if c in allowed
                        or (is_website_brand_geo_code(c) and WEBSITE_BRAND_GEO_CODES[c] in scope_brand_set)]
@@ -218,11 +219,32 @@ def read_project_custom_field_filters_raw(sp: dict) -> dict | None:
 
 async def fetch_filter_options(req: dict) -> dict:
     """GET /v1/filters/options with surface, project_id and the period only (+ geo_only).
-    req = {surface, projectId?, dateFrom?, dateTo?, geoOnly?}. Returns {"data", "meta"}."""
+    req = {surface, projectId?, dateFrom?, dateTo?, geoOnly?}. Returns {"data", "meta"}, inside the account's
+    countries on the global and website surfaces (options_in_countries)."""
     f = {k: req[k] for k in ("dateFrom", "dateTo") if req.get(k) is not None}
     query = analysis_query(f, {"surface": req["surface"], "projectId": req.get("projectId"), "scope": None})["query"]
     res = await api.get("filters/options", with_params(query, {"geo_only": True}) if req.get("geoOnly") else query)
-    return {"data": res["data"], "meta": res.get("meta")}
+    data = res["data"]
+    if req["surface"] in access.SURFACES and not access.reader_scope().get("all"):
+        data = options_in_countries(data, access.surface_countries(access.reader_scope(), req["surface"]))
+    return {"data": data, "meta": res.get("meta")}
+
+
+def options_in_countries(data: dict, countries: Sequence[str] | None) -> dict:
+    """The options of the countries an account reads (None = every country), as the original API's options were
+    (back/app filters/options: the scope intersection of brand, scope countries and region expansion; 2026-10-31).
+    The Gold options read gets the clamp's brand, but no dimension axis narrows its lists (gold_reader metrics.options),
+    so the countries are applied here: the country × language matrix, the country list, and the languages of the
+    countries left. The values are Gold's; only rows outside the account's countries are left out."""
+    if countries is None:
+        return data
+    inside = {c.upper() for c in countries}
+    matrix = [r for r in data.get("geo_matrix") or [] if str(r.get("region") or "").upper() in inside]
+    out = {**data, "geo_matrix": matrix,
+           "regions": [r for r in data.get("regions") or [] if str(r.get("code") or "").upper() in inside]}
+    if data.get("languages") is not None:
+        out["languages"] = sorted({r["lang"] for r in matrix if r.get("lang")})
+    return out
 
 
 def by_nullable_text(a: str | None, b: str | None) -> int:

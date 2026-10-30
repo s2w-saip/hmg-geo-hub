@@ -95,6 +95,22 @@ RHQ_REGION_COUNTRIES: dict[str, tuple[str, ...]] = {
 }
 
 
+# lib/geo-catalog/pseudo-country.ts PSEUDO_COUNTRIES scopeParent: a website city site a scope with its country also
+# reads (Genesis Saudi Arabia's city sites). CN-BJ has none on purpose (the Beijing Hyundai site is its own account's).
+PSEUDO_COUNTRY_SCOPE_PARENT = {"SA-Dammam": "SA", "SA-Jeddah": "SA", "SA-Riyadh": "SA"}
+
+
+def with_pseudo_countries(countries) -> list[str]:
+    """withPseudoCountries: the countries, then the city sites whose scopeParent is one of them (website)."""
+    out = list(countries or [])
+    seen = {c.upper() for c in out}
+    for code, parent in PSEUDO_COUNTRY_SCOPE_PARENT.items():
+        if parent in seen and code.upper() not in seen:
+            out.append(code)
+            seen.add(code.upper())
+    return out
+
+
 def is_website_brand_geo_code(code: str) -> bool:
     return code in WEBSITE_BRAND_GEO_CODES
 

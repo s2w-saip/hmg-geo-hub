@@ -596,10 +596,15 @@ def empty_geo(active_brand: str | None) -> dict:
             "ourLabel": OWN_LABEL}
 
 
-def active_brand_of(filters: dict) -> str | None:
-    """activeBrandFor(reader scope, filters): one URL brand, else none."""
+def active_brand_of(filters: dict, scope: dict | None = None) -> str | None:
+    """activeBrandFor(reader scope, filters): one URL brand, else the scope's one brand (a scoped account's filters
+    carry its brands and the umbrella), else none."""
+    scope = reader_scope() if scope is None else scope
     brand = filters.get("brand")
-    return brand[0] if brand and len(brand) == 1 else None
+    if brand and len(brand) == 1:
+        return brand[0]
+    brands = scope.get("brands") if not scope.get("all") else None
+    return brands[0] if brands and len(brands) == 1 else None
 
 
 # ── tiles (website SummaryTiles) ───────────────────────────────────────────

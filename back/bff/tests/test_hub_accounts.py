@@ -204,12 +204,44 @@ class Clamp(unittest.TestCase):
         self.assertEqual(str(access.clamp(QueryParams("to=2026-10-01&engine=chatgpt&from=2026-09-01"), self.HQ)),
                          "brand=Genesis&engine=chatgpt&from=2026-09-01&to=2026-10-01")
 
-    def test_a_scoped_read_outside_global_or_without_a_scope_is_refused(self):
-        for query, scope in (("surface=website", self.HQ), ("surface=project", self.REGION),
+    def test_website_reads_inside_the_same_scope(self):
+        # ⛔J (2026-10-31): the website surface is clamped as global is; its countries are site countries
+        self.assertEqual(self.q("surface=website", self.HQ), {"surface": ["website"], "brand": ["Genesis"]})
+        self.assertEqual(self.q("surface=website&brand=hmg&country=KR", self.REGION),
+                         {"surface": ["website"], "brand": ["Kia"], "country": ["CA", "US"]})
+        self.assertEqual(self.q("surface=website&country=FR&country=JP", self.COUNTRY)["country"], ["FR"])
+        # a site hub (worldwide · EU · MIDDLEEAST) is not a country of a region or country account
+        self.assertEqual(self.q("surface=website&country=worldwide&country=EU", self.COUNTRY)["country"], ["DE", "FR"])
+        self.assertEqual(self.q("surface=website&country=worldwide", self.HQ)["country"], ["worldwide"])   # hq: every site
+
+    def test_website_city_sites_follow_their_country(self):
+        # lib/geo-catalog/pseudo-country.ts scopeParent: a scope with SA also reads the Saudi city sites (website only)
+        me = {"all": False, "brands": ["Genesis"], "regions": ["genesis-middle-east"], "countries": []}
+        self.assertEqual(self.q("surface=website", me)["country"],
+                         ["BH", "KW", "OM", "QA", "SA", "AE", "IL", "SA-Dammam", "SA-Jeddah", "SA-Riyadh"])
+        self.assertEqual(self.q("surface=website&country=SA-Dammam", me)["country"], ["SA-Dammam"])
+        self.assertEqual(self.q("surface=global", me)["country"], ["BH", "KW", "OM", "QA", "SA", "AE", "IL"])
+        self.assertEqual(self.q("surface=website", self.COUNTRY)["country"], ["DE", "FR"])
+        self.assertEqual(access.surface_countries(me, "global"), ["BH", "KW", "OM", "QA", "SA", "AE", "IL"])
+        self.assertIsNone(access.surface_countries(self.HQ, "website"))
+
+    def test_a_scoped_read_outside_global_and_website_or_without_a_scope_is_refused(self):
+        for query, scope in (("surface=project", self.REGION), ("surface=project", self.HQ),
+                             ("surface=website", {**self.HQ, "brands": []}),
                              ("", {**self.HQ, "brands": []}), ("", {**self.REGION, "regions": ["nowhere"]})):
             with self.assertRaises(HTTPException) as caught:
                 access.clamp(QueryParams(query), scope)
             self.assertEqual(caught.exception.status_code, 403, query)
+
+    def test_no_account_holds_a_dedicated_site_code(self):
+        # The website-only site codes (worldwide · CPO · HYUNDAI-N, front lib/scope/website-virtual-geo) are no country of
+        # an RHQ region, so the Admin screen cannot give one to an account: the dedicated-site rules never apply here.
+        for code in ("worldwide", "CPO", "HYUNDAI-N", "EU", "MIDDLEEAST", "SA-Dammam"):
+            body = acc.AccountCreate(login="site", role="country", brands=["Hyundai"], regions=["hyundai-middle-east"],
+                                     countries=["SA", code])
+            with self.assertRaises(HTTPException, msg=code) as caught:
+                acc.scope_of(body)
+            self.assertEqual(caught.exception.detail["details"]["fields"], ["countries"], code)
 
     def test_unresolved_regions_deny_rather_than_open(self):
         self.assertEqual(access.scope_countries({"all": False, "regions": ["kia-north-america", "nowhere"]}), [])
@@ -422,6 +454,8 @@ class Routes(unittest.TestCase):
             status, out = run(call("GET", "/v1/summary?brand=hmg&country=KR", token=token))
             self.assertEqual((status, out["q"]), (200, "brand=Kia&country=US"))
             status, out = run(call("GET", "/v1/summary?surface=website", token=token))
+            self.assertEqual((status, out["q"]), (200, "brand=Kia&country=US&surface=website"))
+            status, out = run(call("GET", "/v1/summary?surface=project&project_id=x", token=token))
             self.assertEqual((status, out["error"]["code"]), (403, "out_of_scope"))
             status, out = run(call("GET", "/v1/summary?surface=website&brand=hmg", token=self.token()))
             self.assertEqual((status, out["q"]), (200, "surface=website&brand=hmg"))
