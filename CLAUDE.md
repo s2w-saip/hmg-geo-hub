@@ -8,7 +8,7 @@ Website · Admin 화면 개발의 정본 todo를 아래 줄이 불러온다(2026
 
 ## 다음 세션 최우선 작업
 
-- [ ] **Website 하위 화면 (병렬 세션)** — 2026-10-30 사용자 결정으로 맨 앞. 세션 배정(W0~W5)과 병렬 규칙은 `docs/handoff/admin-todo.md` 'Website 화면' 절.
+- [ ] **리뉴얼 점검 후속 (한 세션, 순서대로)** — 2026-10-31 사용자 결정으로 맨 앞. `docs/handoff/renewal-audit.md`의 '현재 위치'에서 이어 간다. Website 하위 화면(W0~W6)은 커밋 · 푸시했다(`f28395f`, 사용자 확인 대기).
 - [ ] **Admin 탭 남은 페이지** — 순서, 규칙, 결정 대기 항목은 `docs/handoff/admin-todo.md` 하나에만 둔다.
 
 - [x] **P4 ACR 차종 전환율 분모 중복 확인** — 2026-10-28 완료. Gold 기준 영향 없음, 수정 없음. 결과는 `docs/handoff/p4-acr-model-denominator.html` 머리 배너.
