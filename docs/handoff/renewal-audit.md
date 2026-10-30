@@ -6,7 +6,7 @@
 - 병렬 세션으로 나누지 않고 한 세션이 순서대로 한다.
 - 단계마다 새 하위 에이전트가 깨끗한 컨텍스트로 맡는다(B 방식).
 
-**현재 위치:** 3단계(공통 스파크라인 회차 값 · Overview 표시) 시작 전. 2단계 끝(단계 메모 '2단계'). 마지막 커밋: 2단계를 올린 커밋.
+**현재 위치:** 4단계(경쟁사 브랜드 접기(공용 모듈) · Overview 데이터) 시작 전. 3단계 끝(단계 메모 '3단계'). 마지막 커밋: 3단계를 올린 커밋.
 
 ## 진행 방식 (단계마다 새 하위 에이전트)
 
@@ -91,7 +91,7 @@
 |---|---|---|---|
 | 1 | Gold 확인(읽기 전용)과 업스트림 질문 보강 | — | [x] |
 | 2 | Website 범위 계정 접근 | ⛔J | [x] |
-| 3 | 공통 스파크라인 회차 값 · Overview 표시 | — | [ ] |
+| 3 | 공통 스파크라인 회차 값 · Overview 표시 | — | [x] |
 | 4 | 경쟁사 브랜드 접기(공용 모듈) · Overview 데이터 | 1 | [ ] |
 | 5 | Mention ① KPI 탭: 회차별 분자 · 분모, 답변당 언급 수 Δ, 당사 평균 위치 | 1 | [ ] |
 | 6 | Mention ② 브랜드 순위 표 전체 · 열 정의 | — | [ ] |
@@ -193,15 +193,15 @@
 - `RN/website/_overview/`의 해당 파일
 
 **할 일**
-- [ ] 3-1 `RnSparkline`은 aria-hidden SVG라 회차 값을 읽을 수 없다. 선택 prop을 더해 점마다 날짜 · 값 · 직전 회차 Δ를 hover로 보인다.
+- [x] 3-1 `RnSparkline`은 aria-hidden SVG라 회차 값을 읽을 수 없다. 선택 prop을 더해 점마다 날짜 · 값 · 직전 회차 Δ를 hover로 보인다.
   - prop이 없으면 지금과 같다. 다른 사용처(Mention · Citation · ACR · Conversion · Visibility · website 주별 언급)의 render 시험은 그대로 통과해야 한다.
-- [ ] 3-2 Global Overview KPI 카드 스파크라인(`overview-body.tsx` ~296-307)에 회차별 값과 직전 회차 Δ를 붙인다.
+- [x] 3-2 Global Overview KPI 카드 스파크라인(`overview-body.tsx` ~296-307)에 회차별 값과 직전 회차 Δ를 붙인다.
   - 원본은 점마다 '값 · WoW'를 툴팁으로 보였다.
   - BFF `overview/card-trend` spark points에 값이 이미 있다. Δ는 두 Gold 값의 차이다.
-- [ ] 3-3 Website '경쟁사 대비 SOV'에서 당사 SOV가 비면 당사 언급을 0으로 넣어 '0.0배'가 될 수 있다(`BS/overview.py` ~281-283 → `BS/_summary.py` ~236). 값이 없으면 '—'로 보인다. 재현 시험부터 한다.
-- [ ] 3-4 Global 기간 비교 라벨은 `compare[0]` 하나로 모든 카드를 대신한다(`BS/overview.py` ~387-390). 카드마다 자기 비교 라벨을 보인다.
-- [ ] 3-5 Website 기간 hint `comparePeriod`('바로 앞 같은 길이의 기간')는 달력 월 비교(직전 달)에 맞지 않는다. 비교 종류에 맞는 문구로 고친다.
-- [ ] 3-6 정리한다.
+- [x] 3-3 Website '경쟁사 대비 SOV'에서 당사 SOV가 비면 당사 언급을 0으로 넣어 '0.0배'가 될 수 있다(`BS/overview.py` ~281-283 → `BS/_summary.py` ~236). 값이 없으면 '—'로 보인다. 재현 시험부터 한다.
+- [x] 3-4 Global 기간 비교 라벨은 `compare[0]` 하나로 모든 카드를 대신한다(`BS/overview.py` ~387-390). 카드마다 자기 비교 라벨을 보인다.
+- [x] 3-5 Website 기간 hint `comparePeriod`('바로 앞 같은 길이의 기간')는 달력 월 비교(직전 달)에 맞지 않는다. 비교 종류에 맞는 문구로 고친다.
+- [x] 3-6 정리한다.
   - 경쟁사 Δ가 없으면 칸이 빈다(`overview-body.tsx` ~344-345). '—'로 보인다.
   - 상위 컨테이너가 없어 효과가 없는 컨테이너 쿼리를 지운다(`RN/website/_overview/website-markets.tsx` ~98, `website-trend.tsx` ~100).
   - 쓰지 않는 문구 `renewal.overview.heatLegend · marketsKey · cellPlace · cellRival · sort* · vsRival`을 지운다. 지우기 전에 grep으로 다시 확인한다.
@@ -590,9 +590,20 @@ Website 인용 도달 Δ도 값 출처(발행 / 실시간)가 다르면 숨긴�
   - **원본 대조.** 권역 계정의 기본 화면과 관리자가 같은 범위(brand=Genesis, 국가 = 범위 + 도시 사이트)를 직접 고른 화면을 BFF로 비교했다. `website/summary` · `summary-deferred` · `trend` · `composition` · `geo`, `mention/rn-summary` · `rn-ranking` · `rn-page` · `view-cards` · `view-weekly`, `citation/as-of`, `website/prompts-page` · `prompts-insights`가 같다. `citation/website`는 값이 같고 URL 쿼리 메아리만 다르다. 다른 것은 의도한 차이다. `citation/filter-bar` 선택지는 관리자에게 좁히지 않는다. `conversion/renewal`은 계정이 읽는 GA4 속성이 없어 noprop이다(관리자는 nomatch). 원본 `/ko/website`도 같은 계정으로 열리고 KPI 숫자 22개가 리뉴얼과 같다(예: 노출률 99.7% = 1,189/1,192, 당사 언급 16,430/17,865). 관리자 숫자는 바뀌지 않는다(golden 그대로).
   - **e2e(24항목 통과).** 권역 계정으로 Website 5화면을 열었다. 국가 선택지는 AE · BH · KW · OM · QA · SA-Dammam · SA-Jeddah · SA-Riyadh(AI Conversion은 없음)이고 브랜드 축은 없다. 실패 요청은 없다. 아랍에미리트를 고르면 걸린다. `?geography=DE`는 범위 기본값으로 읽고 DE는 선택지에 없다. 원본 `/ko/website` 숫자도 같다. Global 4화면의 국가 선택지도 범위 6개다. 시험 계정 `audit2-region` · `audit2-country` · `audit2-hq@local`은 관리자 API(사용자 관리 화면과 같은 경로)로 만들었고 끝나고 중지했다.
   - **다음 단계가 알 것.** 범위 계정의 패널 선택지는 이제 global · website 모두 계정 국가 안이다. 범위 계정의 website 읽기 쿼리에는 SA가 있으면 도시 사이트 코드가 붙는다. Website Overview는 2단계에서 처음 실제로 열렸다(관리자 포함). 3단계 이후 Overview 화면을 고치면 실제 화면으로 한 번 연다.
+- **3단계(2026-10-31).** 여섯 항목 모두 재현 시험이 고치기 전에 실패했고, 고친 뒤 통과했다.
+  - **3-1.** `RnSparkline`에 선택 prop `tips`(값마다 글 하나, null = 그 점 없음)를 더했다. 있으면 점마다 hover · 초점 영역(`spark-tips.tsx`, 이웃 점과의 중간까지)이 생기고, 공용 `useRnTruncTip` 툴팁과 접근 이름(aria-label)으로 글을 보인다. 올리거나 초점을 둔 점에는 고리가 생긴다. 없으면 svg가 예전과 바이트까지 같다(새 시험 `sparkline.render.test.tsx`가 고치기 전 출력을 고정). 영역은 카드 전체 링크 위에 있다(카드의 ⓘ와 같은 `z-[1]`). 그래서 스파크라인 띠를 누르면 페이지가 열리지 않고, 카드의 나머지 곳은 그대로 연다(실제 화면에서 확인).
+  - **3-2.** Global Overview 카드 스파크라인 점마다 '날짜 · 값'과 '직전 회차 대비 ▲/▼Δ'를 보인다. Δ는 `overview/card-trend` 점의 `wow`(두 Gold 값의 차, 한 번 반올림)이고 0이면 '변화 없음'이다. 그리는 첫 회차와 값 없는 회차 바로 뒤는 Δ 줄이 없다(원본과 같음). 같은 날 두 회차는 앵커 시각을 붙인다. 원본 `/ko/dashboard` 툴팁과 대조했다: 노출률 9/7 73.8% · 9/21 76.3% −0.3pp · 10/5 76.6% −0.2pp, 우선 노출도 2.2 · 2.2 −0.1 · 2.3 +0.1로 같다.
+  - **3-3.** 당사 SOV 분자가 없으면(`share_of_voice` 없음 · num null) 경쟁사 대비 SOV 값이 null이다(`_summary.apply_competitor_sov_from_brands`, `overview.to_dashboard_kpis`). 화면은 '—'다. 당사 언급이 0이면 0.0배 그대로다. 공용 리더라 원본 `/ko/website` 타일도 그 경우 '0.0%' 대신 '측정 대기'가 된다. 실데이터에는 이런 경우가 없다(live golden 그대로, 지금 Website 화면 410.7배 그대로).
+  - **3-4.** `overview/cards`의 `compareTitle`은 기간 블록이 있는 카드들이 같이 가진 라벨이고, 다르면 null이다. 화면은 머리에 '증감 = 카드마다 적은 기간 비교'를 쓰고 카드마다 칩 옆에 자기 라벨을 보인다. 같으면 지금처럼 머리에 한 번만 쓴다(W6 반복 줄이기). 다를 수 있는 것은 window 라벨(지표마다 회차 수)뿐이다. 실데이터 네 조건(7/1~8/20, 8/1~9/10 US, Website 두 조건)은 모두 한 라벨이었다. 기간 블록이 하나도 없으면 예전처럼 첫 결과 라벨을 둔다(브랜드 표가 기간 문구를 고르는 데 씀).
+  - **3-5.** Website 타일도 같은 규칙이다. BFF가 기간 칩이 있는 타일에 `periodLabel`, 타일 묶음에 `compareTitle`을 붙인다(기간 비교가 없으면 둘 다 없음). 머리는 그 라벨을 쓴다: 2026-09 → '전전월 대비', 사용자 지정 기간 → '현재 N회차 / 직전 M회차 수집 기준'. 문구 `renewal.website.overview.comparePeriod`는 지웠다.
+  - **3-6.** 브랜드 표에서 비교한 값의 Δ가 없으면 카드 · Website 브랜드 표와 같은 증감 없음 표시 '−'(`NO_DELTA`, 툴팁 '증감 미제공')를 둔다. 계획의 '—'는 이 표에서 '그 지표의 비교 경쟁사가 아님'(칸 전체, 각주)이라 겹치지 않게 했다. Website 시장별 현황 · KPI 추이의 `/rnpage` 컨테이너 쿼리를 지웠다(그 이름의 컨테이너는 핵심 요약에만 있다). 쓰지 않는 `renewal.overview` 문구는 계획의 9개에 같은 grep으로 찾은 9개(`collapseRegion` · `expandRegion` · `noMarkets` · `answersMeta` · `periodMeta` · `roundMeta` · `heatLegendFront` · `heatLegendTitle` · `cellNoRival`)를 더해 18개를 ko · en에서 지웠다.
+  - **golden.** 26건이 바뀌었다(README 'Deliberate changes' 2026-10-31): 3-3 함수 case 12호출 + website fixture 4건, 3-4 `fix-g-cards-02` · `-03` · `-10`, 3-5 website fixture 20건(키 추가). live case는 그대로다.
+  - **확인.** Global · Website Overview를 로컬 서버에서 열었다(관리자, 1920×915). 오류 화면 · 5xx 없음, 툴팁 · 초점 · 카드 링크가 동작한다. 원본 `/ko/dashboard` 라벨 · 숫자와 같다.
+  - **다음 단계가 알 것.** 10단계는 `RnSparkline`의 `tips`를 쓰면 된다(글은 호출하는 쪽이 만든다). 레거시 `period-delta-off-parity.render.test.tsx`(overviewKpiCards ko · en 2건)는 HEAD에서도 실패한다(이 단계와 관계없음).
 
 ## 진행 기록
 
 - 2026-10-31 — 계획을 작성했다. 근거는 같은 날 중간점검이다(코드 읽기 다섯 갈래: Overview · Mention · Citation · Prompts · AI Funnel, 큰 지적은 코드로 다시 확인). 처음에는 병렬 세션으로 나누려 했으나 사용자가 한 세션이 순서대로 하는 방식으로 바꿨다. 다음은 1단계다.
 - 2026-10-31 — 1단계: Gold를 읽기 전용(SELECT, release 603 · 3647)으로 U1~U12를 확인해 '확인 결과' 표를 채웠다. 같음 7(U2 · U3 · U4 · U5 · U8 · U10 · U12), 다름 5(U1 ACR만 · U6 · U7 · U9 · U11)다. 업스트림 묶음에 'D. 2026-10-31 점검' 7개를 더했다. U1 · U6에서 나온 2개와 넘겨받은 5개(Hyundai N bit 16, 비완성차 경쟁사, 미측정 website 프롬프트 2,563개, URL 카드 모집단 4 · 10, Kona 귀속)다. `loc_owned` · `cit_m05` 차이는 W6 수정 뒤 같아져(US 19.90 = 19.90) 묻지 않는다. 코드는 고치지 않았다. 다음은 2단계다.
 - 2026-10-31 — 2단계: ⛔J 추천안대로 website를 범위 계정(hq · region · country)에게 열었다(`access.clamp`, 사이트 국가 + SA 도시 사이트, project는 403). 원본 규칙대로 같이 고쳤다: 패널 국가 · 언어 선택지를 계정 범위로 좁힘(global · website), 브랜드 하나인 계정의 Website 시장별 현황, 모든 계정에서 오류였던 Website Overview(`engineLabel` 서버 · 클라이언트 경계, `ae8da9d`). 재현 시험은 고치기 전에 실패했다. 2-3(전용 사이트 계정)은 HUB에 그런 계정이 없어 해당 없음이다. 시험: BFF 34개 모듈 전부(+live 8개), 프런트 관련 시험 · typecheck · lint, e2e 24항목 + Global 4화면. 다음은 3단계다.
+- 2026-10-31 — 3단계: 스파크라인 점마다 회차 · 값 · 직전 회차 Δ 툴팁(`RnSparkline` `tips`, Global Overview 카드), 당사 SOV 분자가 없을 때 경쟁사 대비 SOV '—', 비교 라벨을 카드들이 같이 가질 때만 머리에 두고 다르면 카드마다(Global `compareTitle`, Website `periodLabel` · `compareTitle`, Website '같은 길이' 문구 제거), 브랜드 표 Δ 없음 표시, 효과 없는 컨테이너 쿼리 · 쓰지 않는 문구 18개 정리. 재현 시험은 모두 고치기 전에 실패했다. golden 26건 의도 변경. 시험: BFF 34개 모듈 전부(+live 8개), 프런트 관련 23개 파일 181개 · typecheck · lint, 두 Overview 실제 화면 확인 · 원본 툴팁 대조. 다음은 4단계다.

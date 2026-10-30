@@ -5,7 +5,8 @@
 //   브랜드 비교    brands × 5 KPIs (당사 + every KPI's compared competitors)
 //   시장별 현황    기존 GeoJSON 지도, KPI 전환, 국가 선택과 수치 표
 // Every number comes from the overview screens (back/bff/screens/overview.py), the same as /dashboard:
-//   value / pending / period chip + caption   overview/cards (compareTitle = what Δ compares against)
+//   value / pending / period chip + caption   overview/cards (compareTitle = the compare the cards share; when
+//                                             the cards compare different rounds each names its own, audit 3-4)
 //   Δ, sparkline, its domain and labels        overview/card-trend
 //   standing                                   overview/card-competitors (ctx.view=renewal)
 //   brand table (cells, best, bar, Δ marks)    overview/brand-matrix (+ the parts that failed)
@@ -90,12 +91,13 @@ export function RnOverviewBody({
   geo: Promise<OverviewGeoView> | null;
   qs: string;
 }) {
+  const compare = useCompare(cards, compareTitle);
   return (
     <>
-      <KpiRow cards={cards} compareTitle={compareTitle} deferred={deferred} qs={qs} />
+      <KpiRow cards={cards} compare={compare} deferred={deferred} qs={qs} />
       {/* brand comparison before the (long) market table so it is not buried */}
       <Suspense fallback={<CardSkeleton rows={5} />}>
-        <BrandMatrix matrix={deferred.matrix} compareTitle={compareTitle} />
+        <BrandMatrix matrix={deferred.matrix} compare={compare} />
       </Suspense>
       {geo ? (
         <Suspense fallback={<CardSkeleton rows={8} />}>
@@ -104,6 +106,24 @@ export function RnOverviewBody({
       ) : null}
     </>
   );
+}
+
+/** What the cards' Δ compares against: `period` = a period compare answered; `text` = the header's wording (the label
+ * the cards share, "each card names its own" when they differ, else the round wording); `perCard` = each card shows
+ * its own label beside its chip. */
+interface CompareBasis {
+  period: boolean;
+  text: string;
+  perCard: boolean;
+}
+
+function useCompare(cards: OverviewCardView[], compareTitle: ScreenMessage | null): CompareBasis {
+  const t = useTranslations("renewal.overview");
+  const tO = useTranslations("dashboard.overview");
+  const tP = useTranslations("periodCompare");
+  const perCard = compareTitle == null && cards.some((c) => c.period);
+  if (compareTitle) return { period: true, text: tP(compareTitle.key as "label.weekly", compareTitle.params), perCard };
+  return perCard ? { period: true, text: t("comparePerCard"), perCard } : { period: false, text: tO("compare"), perCard };
 }
 
 function CardSkeleton({ rows }: { rows: number }) {
@@ -123,18 +143,16 @@ function CardSkeleton({ rows }: { rows: number }) {
 
 function KpiRow({
   cards,
-  compareTitle,
+  compare,
   deferred,
   qs,
 }: {
   cards: OverviewCardView[];
-  compareTitle: ScreenMessage | null;
+  compare: CompareBasis;
   deferred: OverviewDeferredData;
   qs: string;
 }) {
   const t = useTranslations("renewal.overview");
-  const tO = useTranslations("dashboard.overview");
-  const tP = useTranslations("periodCompare");
   const tKpi = useTranslations("dashboard.kpi");
   const tNav = useTranslations("nav");
   const locale = useLocale();
@@ -145,7 +163,7 @@ function KpiRow({
         title={t("kpiTitle")}
         hint={
           <>
-            {t("kpiHintBasis")} · {t("kpiHintDelta", { compare: compareTitle ? tP(compareTitle.key as "label.weekly", compareTitle.params) : tO("compare") })}
+            {t("kpiHintBasis")} · {t("kpiHintDelta", { compare: compare.text })}
             <Suspense fallback={null}>
               <TrendCount trend={deferred.trend} />
             </Suspense>
@@ -176,8 +194,8 @@ function KpiRow({
                 </span>
               </span>
               <KpiValue k={key} value={card?.value ?? null} />
-              <span className="flex min-h-6">
-                <DeltaCell k={key} card={card} pending={pending} trend={deferred.trend} />
+              <span className="flex min-h-6 flex-wrap items-center gap-x-2 gap-y-0.5">
+                <DeltaCell k={key} card={card} pending={pending} trend={deferred.trend} perCard={compare.perCard} />
               </span>
               <div className="mt-0.5 min-h-[46px]">
                 {pending ? null : (
@@ -260,11 +278,14 @@ function DeltaCell({
   card,
   pending,
   trend,
+  perCard,
 }: {
   k: OverviewKpiKey;
   card: OverviewCardView | undefined;
   pending: boolean;
   trend: Promise<CardTrendView>;
+  /** The cards compare different rounds: this card names its own compare beside the chip. */
+  perCard: boolean;
 }) {
   const t = useTranslations("renewal.overview");
   const tP = useTranslations("periodCompare");
@@ -273,9 +294,16 @@ function DeltaCell({
   if (period) {
     const tone: RnTone = period.chip.suppressed ? "none" : period.chip.direction;
     return (
-      <RnToneChip tone={tone} onDark title={period.caption.key === "window" ? undefined : tP(period.caption.key, period.caption.params)}>
-        {periodChipText(period.chip)}
-      </RnToneChip>
+      <>
+        <RnToneChip tone={tone} onDark title={period.caption.key === "window" ? undefined : tP(period.caption.key, period.caption.params)}>
+          {periodChipText(period.chip)}
+        </RnToneChip>
+        {perCard ? (
+          <span data-rn-compare-label="" className="text-rn-11 text-white/72">
+            {tP(period.label.key as "label.weekly", period.label.params)}
+          </span>
+        ) : null}
+      </>
     );
   }
   return (
@@ -293,14 +321,27 @@ function TrendDelta({ k, trend, labels }: { k: OverviewKpiKey; trend: Promise<Ca
 
 // The spark draws on the card's y domain, with every shown round dated (M/D) under its point —
 // 2026-10-28: the first and the last alone read as two rounds. Two rounds on one day show that day twice.
+// Hovering or focusing a point names its round, its value and the change from the round before (renewal audit 3-2,
+// the original card's "value · WoW" tooltip): wow is the screen's (the two Gold values' difference, rounded once); the
+// first drawn round and a round after one without a value have none. Two rounds on one day add the anchor's time.
 function SparkCell({ k, trend }: { k: OverviewKpiKey; trend: Promise<CardTrendView> }) {
+  const t = useTranslations("renewal.overview");
+  const tO = useTranslations("dashboard.overview");
+  const f = useFormat();
   const spark = use(trend).cards[k].spark;
   if (!spark.hasValue) return null;
   const points = spark.points;
   const md = (day: string | undefined) => (day ? `${+day.slice(5, 7)}/${+day.slice(8, 10)}` : "");
+  const tips = points.map((p) => {
+    const day = p.display?.time ? `${md(p.display.day)} ${p.display.time}` : md(p.display?.day);
+    const head = t("sparkTip", { day, value: f.value(k, p.value, tO("cardEmpty")) });
+    if (p.value == null || p.wow == null) return head;
+    const change = p.wow === 0 ? t("deltaFlat") : `${p.wow > 0 ? "▲" : "▼"}${f.delta(k, p.wow)}`;
+    return `${head}\n${t("sparkTipChange", { delta: change })}`;
+  });
   return (
     <>
-      <RnSparkline values={points.map((p) => p.value)} tone="onDark" invert={isRank(k)} domain={spark.domain} className="h-[30px]" />
+      <RnSparkline values={points.map((p) => p.value)} tone="onDark" invert={isRank(k)} domain={spark.domain} tips={tips} className="h-[30px]" />
       {points.length > 1 ? <RnSparkAxis labels={points.map((p) => md(p.display?.day))} tone="onDark" /> : null}
     </>
   );
@@ -318,10 +359,9 @@ function StandingLine({ k, competitors }: { k: OverviewKpiKey; competitors: Prom
 
 // ─── 브랜드 비교 (brands × KPIs) ────────────────────────────────────────────
 
-function BrandMatrix({ matrix, compareTitle }: { matrix: Promise<RnBrandMatrixRead>; compareTitle: ScreenMessage | null }) {
+function BrandMatrix({ matrix, compare: basis }: { matrix: Promise<RnBrandMatrixRead>; compare: CompareBasis }) {
   const t = useTranslations("renewal.overview");
   const tO = useTranslations("dashboard.overview");
-  const tP = useTranslations("periodCompare");
   const tKpi = useTranslations("dashboard.kpi.name");
   const f = useFormat();
   const m = use(matrix);
@@ -335,14 +375,19 @@ function BrandMatrix({ matrix, compareTitle }: { matrix: Promise<RnBrandMatrixRe
     );
   if (!m) return null;
   const { rows, cols } = m;
-  // A period compare on the cards (compareTitle) compares the period with the one before; the table's Δ stays
-  // the last two rounds of the period, so the hint and the Δ titles say which (review ⚠️ #28).
-  const compare = compareTitle ? t("deltaRounds") : tO("compare");
-  const hint = compareTitle
-    ? t("brandsHintPeriod", { compare: tP(compareTitle.key as "label.weekly", compareTitle.params) })
-    : t("brandsHint", { compare });
+  // A period compare on the cards compares the period with the one before; the table's Δ stays the last two rounds
+  // of the period, so the hint and the Δ titles say which (review ⚠️ #28).
+  const compare = basis.period ? t("deltaRounds") : tO("compare");
+  const hint = basis.period ? t("brandsHintPeriod", { compare: basis.text }) : t("brandsHint", { compare });
   const deltaText = (k: OverviewKpiKey, mark: BrandCellView["deltaMark"]) => {
-    if (mark == null) return null;
+    // a compared value without Δ says so (renewal audit 3-6: the place was left empty) with the cards' no-Δ mark,
+    // as the website brand table does — '—' alone is the cell of a brand not compared on the KPI
+    if (mark == null)
+      return (
+        <span data-rn-no-delta="" className="text-rn-11 text-rn-faint" title={t("noDelta")}>
+          {NO_DELTA}
+        </span>
+      );
     if (mark.tone === "flat") return <span className="text-rn-11 font-semibold text-rn-muted">{t("deltaFlat")}</span>;
     const good = mark.tone === "good";
     return (

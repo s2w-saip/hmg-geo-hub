@@ -398,5 +398,98 @@ class WebsiteBreakdowns(unittest.TestCase):
                 self.assertEqual(router.calls, [])
 
 
+def compare_item(metric: str, unit: str, cycles: tuple) -> dict:
+    """One kpi/compare answer: the period's (cur, prev) rounds, nothing suppressed."""
+    num = {"prev": {"num": 40, "den": 100}, "cur": {"num": 50, "den": 100}}
+    if unit == "rank":
+        num = {"prev": {"sum": 60, "count": 30}, "cur": {"sum": 50, "count": 25}}
+    return {"metric": metric, "family": "citation" if metric == "citation_share" else "mention", "unit": unit, **num,
+            "delta": None, "suppressed": False, "reason": None, "missing_share_prev": 0, "missing_share_cur": 0,
+            "cycles_cur": cycles[0], "cycles_prev": cycles[1], "planned_prev": 10, "planned_cur": 10}
+
+
+def compare_body(cycles: dict) -> dict:
+    """kpi/compare for the five Overview metrics, each with its own (cur, prev) rounds."""
+    units = {"visibility": "pp", "share_of_voice": "pp", "sentiment": "pp", "position": "rank", "citation_share": "pp"}
+    return {"data": [compare_item(m, u, cycles.get(m, (3, 3))) for m, u in units.items()], "meta": META}
+
+
+class CompareLabels(unittest.TestCase):
+    """Renewal audit 3-4 · 3-5 (2026-10-31). The renewal Overview header named compare[0]'s label for every card, though
+    a window compare counts its rounds per metric (현재 3회차 / 직전 0회차 on one card, 2 / 1 on the next); the website
+    header said '바로 앞 같은 길이의 기간' whatever the compare was (a calendar month compares the month before).
+    compareTitle is now the label every compared card shares, None when they differ (each card names its own)."""
+
+    WINDOW = "time=2026-09-01..2026-10-05&ctx.today=2026-10-26"
+    MONTH = "time=2026-10-01..2026-10-31&ctx.today=2026-10-26"
+
+    def bodies(self, cycles: dict | None = None, surface: str = "global") -> dict:
+        return {"kpi/summary": {**summary(), "meta": {**META, "surface": surface}},
+                "mentions/brands": {"data": {"brands": []}, "meta": META},
+                "kpi/compare": compare_body(cycles or {}),
+                "kpi/engines": {"data": {"rows": []}, "meta": META},
+                "trend": {"data": {"bucket": "cycle", "dimension": "none", "own_label": "HMG", "buckets": [], "series": []},
+                          "meta": META}}
+
+    def test_cards_counting_different_rounds_name_their_own_compare(self):
+        out = screen("overview/cards", self.WINDOW, Router(self.bodies({"visibility": (3, 0), "share_of_voice": (2, 1)})))
+        labels = {c["key"]: c["period"]["label"] for c in out["cards"]}
+        self.assertEqual(labels["visibility"], {"key": "window", "params": {"curCycles": 3, "prevCycles": 0}})
+        self.assertEqual(labels["shareOfVoice"], {"key": "window", "params": {"curCycles": 2, "prevCycles": 1}})
+        self.assertIsNone(out["compareTitle"])
+
+    def test_cards_counting_the_same_rounds_share_the_header_label(self):
+        out = screen("overview/cards", self.WINDOW, Router(self.bodies()))
+        self.assertEqual(out["compareTitle"], {"key": "window", "params": {"curCycles": 3, "prevCycles": 3}})
+        month = screen("overview/cards", self.MONTH, Router(self.bodies()))
+        self.assertEqual(month["compareTitle"], {"key": "label.thisMonth", "params": {}})
+
+    def test_website_tiles_name_the_compare_kind(self):
+        for screen_name in ("website/summary", "website/summary-deferred"):
+            with self.subTest(screen=screen_name):
+                tiles = screen(screen_name, self.MONTH, Router(self.bodies(surface="website")))["tiles"]
+                self.assertEqual(tiles["compareTitle"], {"key": "label.thisMonth", "params": {}})
+                compared = [t for g in tiles["groups"] for t in g["tiles"] if t["period"]]
+                self.assertTrue(compared)
+                self.assertTrue(all(t["periodLabel"] == {"key": "label.thisMonth", "params": {}} for t in compared))
+
+    def test_website_tiles_counting_different_rounds_name_their_own_compare(self):
+        tiles = screen("website/summary", self.WINDOW, Router(self.bodies({"visibility": (3, 0)}, "website")))["tiles"]
+        self.assertIn("compareTitle", tiles)
+        self.assertIsNone(tiles["compareTitle"])
+        by_key = {t["key"]: t for g in tiles["groups"] for t in g["tiles"]}
+        self.assertEqual(by_key["visibility"]["periodLabel"], {"key": "window", "params": {"curCycles": 3, "prevCycles": 0}})
+        self.assertEqual(by_key["shareOfVoice"]["periodLabel"], {"key": "window", "params": {"curCycles": 3, "prevCycles": 3}})
+
+    def test_website_tiles_without_a_period_carry_no_compare_label(self):
+        tiles = screen("website/summary", "", Router(self.bodies(surface="website")))["tiles"]
+        self.assertNotIn("compareTitle", tiles)
+        self.assertFalse(any("periodLabel" in t for g in tiles["groups"] for t in g["tiles"]))
+
+
+class CompetitorSov(unittest.TestCase):
+    """Renewal audit 3-3 (2026-10-31): without 당사's share-of-voice numerator the competitor ratio took 당사's mentions as
+    0 and the website tile read '0.0배'. No numerator = no ratio."""
+
+    BRANDS = {"brands": [{"name": "Toyota", "mentions": 120, "is_own": False, "is_hmg_own": False}]}
+
+    def sov_tile(self, sov):
+        s = summary()
+        if sov == "absent":
+            del s["data"]["share_of_voice"]
+        else:
+            s["data"]["share_of_voice"] = sov
+        return next(k for k in ov.to_dashboard_kpis(s, self.BRANDS, True) if k["key"] == "shareOfVoice")
+
+    def test_no_own_numerator_has_no_ratio(self):
+        for sov in (None, {"num": None, "den": 0}, "absent"):
+            with self.subTest(sov=sov):
+                self.assertEqual(self.sov_tile(sov)["competitorSov"], {"brand": "Toyota", "value": None})
+
+    def test_an_own_count_of_zero_is_a_ratio_of_zero(self):
+        self.assertEqual(self.sov_tile({"num": 0, "den": 100})["competitorSov"], {"brand": "Toyota", "value": 0.0})
+        self.assertEqual(self.sov_tile({"num": 30, "den": 100})["competitorSov"], {"brand": "Toyota", "value": 25.0})
+
+
 if __name__ == "__main__":
     unittest.main()

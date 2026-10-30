@@ -53,6 +53,46 @@ describe("renewal Overview KPI spark", () => {
   });
 });
 
+// Renewal audit 3-2 (2026-10-31): the original card showed each round's value and WoW on hover; the renewal spark was an
+// aria-hidden line. Each point now names its round, its value and the change from the round before (overview/card-trend
+// spark points: value, wow = the two Gold values' difference) — the first drawn round and a round after a gap say no change.
+describe("renewal Overview KPI spark values", () => {
+  const point = (i: number, value: number | null, wow: number | null, time: string | null = null) => ({ bucketStart: DAYS[i], value, wow, display: { day: DAYS[i], time } });
+  const rate = { points: [point(0, 70, null), point(1, 71.04, 1), point(2, null, null), point(3, 72.4, null), point(4, 72.4, 0, "10:00")], domain: [0, 100] as [number, number], hasValue: true };
+  const rank = { points: [point(0, 2.31, null), point(1, 2.1, -0.2), point(2, 2.4, 0.3), point(3, 2.4, 0), point(4, 2.5, 0.1)], domain: [1, 5] as [number, number], hasValue: true };
+  const valued: CardTrendView = {
+    degraded: false,
+    count: DAYS.length,
+    cards: Object.fromEntries(OVERVIEW_KPI_KEYS.map((k) => [k, { delta: 0.5, spark: k === "position" ? rank : rate }])) as CardTrendView["cards"],
+  };
+  const out = renderToStaticMarkup(
+    <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
+      <RnOverviewBody cards={cards} compareTitle={null} geo={null} qs="" deferred={{ trend: settled(valued), competitors: settled({ degraded: [], rows: {} as never }), matrix: settled(null) }} />
+    </NextIntlClientProvider>,
+  );
+  const tips = (k: string) => [...card(out, k).matchAll(/data-rn-tip="([^"]*)"/g)].map(([, s]) => s.replace(/&#x27;/g, "'"));
+
+  it("names every round's day and value, and the change from the round before", () => {
+    expect(tips("visibility")).toEqual([
+      "9/7 · 70.0%",
+      "9/14 · 71.0%\n직전 회차 대비 ▲1.0pp",
+      "9/21 · 데이터 없음",
+      "9/28 · 72.4%",
+      "10/5 10:00 · 72.4%\n직전 회차 대비 변화 없음",
+    ]);
+  });
+
+  it("reads the rank card in its unit, the arrow following the value", () => {
+    expect(tips("position")).toEqual([
+      "9/7 · 2.3번째",
+      "9/14 · 2.1번째\n직전 회차 대비 ▼0.2번째",
+      "9/21 · 2.4번째\n직전 회차 대비 ▲0.3번째",
+      "9/28 · 2.4번째\n직전 회차 대비 변화 없음",
+      "10/5 · 2.5번째\n직전 회차 대비 ▲0.1번째",
+    ]);
+  });
+});
+
 // 브랜드 비교 (2026-10-28, 1920×1050): one 40px line per brand — each cell value · bar · Δ side by side
 describe("renewal Overview brand table", () => {
   const cell = (value: number, r: number | null) => ({ value, delta: r, bar: value, best: false, deltaMark: r == null ? null : { r, tone: r > 0 ? ("good" as const) : ("bad" as const) } });
@@ -71,10 +111,11 @@ describe("renewal Overview brand table", () => {
     expect(cells).toHaveLength(5);
     // (the rank KPI's unit word stands where the rates read % / pp)
     for (const c of cells) expect(c).toMatch(/^<div class="flex items-center[^"]*"><b[^>]*>76\.6[^<]+<\/b><span[^>]*><i[^>]*><\/i><\/span><span[^>]*>▼(<!-- -->)?0\.2[^<]+<\/span><\/div>$/);
-    // an uncompared KPI stays a dash; a compared one without Δ ends after its bar
+    // an uncompared KPI stays a dash; a compared one without Δ says so with the no-Δ mark after its bar (renewal
+    // audit 3-6: the place was left empty)
     const bmw = out.slice(out.indexOf('data-rn-brand-row="BMW"'), out.indexOf("</tr>", out.indexOf('data-rn-brand-row="BMW"')));
     expect([...bmw.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].slice(2).map(([, c]) => c)).toEqual(["—", "—", "—", "—"]);
-    expect(bmw).toMatch(/<b[^>]*>31\.2%<\/b><span[^>]*><i[^>]*><\/i><\/span><\/div>/);
+    expect(bmw).toMatch(/<b[^>]*>31\.2%<\/b><span[^>]*><i[^>]*><\/i><\/span><span data-rn-no-delta=""[^>]*>−<\/span><\/div>/);
   });
 });
 
@@ -153,6 +194,41 @@ describe("renewal Overview basis and failure wording", () => {
     const none = render({ matrix: ownOnly() });
     expect(standing(none, "visibility")).toBe(ko.dashboard.overview.noCompetitorData);
     expect(text(brandCard(none))).toContain(ko.dashboard.overview.noCompetitorData);
+  });
+});
+
+// Renewal audit 3-4 (2026-10-31): the header named the first compare result's label for every card. A window compare
+// counts its rounds per metric, so the cards may compare different rounds: the header names the label they share, else
+// says each card names its own, and the card shows it beside its chip.
+describe("renewal Overview period compare labels", () => {
+  const O = ko.renewal.overview;
+  const P = ko.periodCompare;
+  const text = (s: string) => s.replace(/<!-- -->/g, "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  const chip = { unit: "pp" as const, suppressed: false, value: 1.2, direction: "up" as const };
+  const windowOf = (cur: number, prev: number) => ({ key: "window", params: { curCycles: cur, prevCycles: prev } });
+  const withPeriods = (labels: Record<string, { key: string; params: Record<string, number> }>): OverviewCardView[] =>
+    OVERVIEW_KPI_KEYS.map((key) => ({ key, value: 50, pending: false, period: { chip: { ...chip, key: "visibility" }, label: labels[key], caption: { key: "window", params: {} } } }) as OverviewCardView);
+  const render = (cs: OverviewCardView[], compareTitle: { key: string; params: Record<string, number> } | null) =>
+    renderToStaticMarkup(
+      <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
+        <RnOverviewBody cards={cs} compareTitle={compareTitle} geo={null} qs="" deferred={{ trend: settled(trend), competitors: settled({ degraded: [], rows: {} as never }), matrix: settled(null) }} />
+      </NextIntlClientProvider>,
+    );
+  const head = (out: string) => text(out.slice(0, out.indexOf("data-rn-kpi=")));
+  const fill = (s: string, params: Record<string, number | string>) => Object.entries(params).reduce((acc, [k, v]) => acc.replace(`{${k}}`, String(v)), s);
+
+  it("names each card's own compare when the cards compare different rounds", () => {
+    const labels = Object.fromEntries(OVERVIEW_KPI_KEYS.map((k, i) => [k, windowOf(3, i)]));
+    const out = render(withPeriods(labels), null);
+    expect(head(out)).toContain(fill(O.kpiHintDelta, { compare: O.comparePerCard }));
+    OVERVIEW_KPI_KEYS.forEach((k, i) => expect(text(card(out, k)), k).toContain(fill(P.window, { curCycles: 3, prevCycles: i })));
+  });
+
+  it("names the shared compare once in the header, not on every card", () => {
+    const labels = Object.fromEntries(OVERVIEW_KPI_KEYS.map((k) => [k, { key: "label.weekly", params: {} }]));
+    const out = render(withPeriods(labels), { key: "label.weekly", params: {} });
+    expect(head(out)).toContain(fill(O.kpiHintDelta, { compare: P.label.weekly }));
+    for (const k of OVERVIEW_KPI_KEYS) expect(text(card(out, k)), k).not.toContain(P.label.weekly);
   });
 });
 

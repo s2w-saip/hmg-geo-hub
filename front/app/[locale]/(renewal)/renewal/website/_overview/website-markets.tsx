@@ -95,7 +95,7 @@ export function MarketsTable({ geo, onPick }: { geo: GeoView; onPick?: PickRow }
   return (
     <RnCard aria-label={tR("marketsTitle")}>
       <RnCardHeader title={tR("marketsTitle")} hint={t("marketsHint", { brand: geo.ourLabel })} />
-      <div className="grid grid-cols-[minmax(0,0.6fr)_minmax(0,1.7fr)] items-start gap-4 px-6 pb-5 @max-[1100px]/rnpage:grid-cols-1">
+      <div className="grid grid-cols-[minmax(0,0.6fr)_minmax(0,1.7fr)] items-start gap-4 px-6 pb-5">
         <div className="min-w-0" data-rn-market-map={metric}>
           <span className="mb-1 block text-rn-12 font-semibold text-rn-ink-2">{t("mapOf", { kpi: tK(metric), brand: geo.ourLabel })}</span>
           <GeoMapLazy geo={geo} metric={metric} metricLabel={tK(metric)} bare level="country" domain={geo.domains[metric] ?? undefined} activeCountry={active} onCountryHover={onMapHover} />

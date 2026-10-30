@@ -280,7 +280,7 @@ def to_dashboard_kpis(summary: dict, brands: dict | None, url_rates: bool = Fals
         return cards
     sov = data.get("share_of_voice")
     own = sov.get("num") if isinstance(sov, dict) else None
-    return apply_competitor_sov_from_brands(cards, own if own is not None else 0, brands["brands"])
+    return apply_competitor_sov_from_brands(cards, own, brands["brands"])
 
 
 async def load_live_kpis(common: dict, surface: str) -> tuple[str, list[dict] | None]:
@@ -384,8 +384,19 @@ def overview_cards(kpis: list[dict], compare: list[dict] | None, days: int | Non
     return out
 
 
-def compare_title(compare: list[dict] | None, days: int | None, label_ctx: dict) -> dict | None:
-    """Renewal KPI header: what Δ compares against (None = the trend wording "직전 회차 대비")."""
+def shared_label(labels: list[dict]) -> dict | None:
+    """The compare label every card names, None when they differ (renewal audit 3-4: a window compare counts its
+    rounds per metric, 현재 3회차 / 직전 0회차 on one card and 2 / 1 on the next)."""
+    return labels[0] if labels and all(label == labels[0] for label in labels) else None
+
+
+def compare_title(cards: list[dict], compare: list[dict] | None, days: int | None, label_ctx: dict) -> dict | None:
+    """Renewal KPI header: what Δ compares against — the label the cards with a period block share, None when they
+    differ (each card then names its own) or no compare answered (the trend wording "직전 회차 대비"). A compare
+    that answered for no card (every card 측정 대기) keeps its first result's label, as before."""
+    labels = [c["period"]["label"] for c in cards if c.get("period")]
+    if labels:
+        return shared_label(labels)
     sample = compare[0] if compare else None
     return compare_label(sample, days, label_ctx) if sample else None
 
@@ -641,17 +652,29 @@ def tile_view(key: str, unit: str, better_is: str, s: dict, compare: list[dict] 
 
 def tiles_view(items: list[dict], compare: list[dict] | None, days: int | None, label_ctx: dict) -> dict:
     """SummaryTiles: categories with their tiles (KPI_DEFINITIONS order, absent KPIs skipped), and the
-    suppression caption of the first suppressed compare result."""
+    suppression caption of the first suppressed compare result. Under a period compare (some tile has a period
+    chip) every such tile names what it compares against (`periodLabel`) and `compareTitle` is the label they
+    share, None when they differ (renewal audit 3-5: the renewal header said '바로 앞 같은 길이의 기간' for a
+    calendar month too)."""
     item_map = {i["key"]: i for i in items}
     groups = []
+    labels: list[dict] = []
     for cat in TILE_CATEGORIES:
         tiles = [tile_view(key, unit, better, item_map[key], compare)
                  for key, c, unit, better in KPI_DEFINITIONS if c == cat and key in item_map]
+        for t in tiles:
+            r = select_period_result(compare, KPI_KEY_TO_COMPARE_METRIC.get(t["key"])) if t["period"] else None
+            if r:
+                t["periodLabel"] = compare_label(r, days, label_ctx)
+                labels.append(t["periodLabel"])
         if tiles:
             groups.append({"category": cat, "tiles": tiles})
     first = next((r for r in compare or [] if r.get("suppressed") and r.get("reason")), None)
-    return {"groups": groups,
-            "suppressionCaption": period_caption(first, caption_ctx(days, label_ctx)) if first else None}
+    out = {"groups": groups,
+           "suppressionCaption": period_caption(first, caption_ctx(days, label_ctx)) if first else None}
+    if labels:
+        out["compareTitle"] = shared_label(labels)
+    return out
 
 
 # ── trend chart (LiveTrendChart) ───────────────────────────────────────────
@@ -829,8 +852,8 @@ async def cards(q) -> dict:
     )
     if kpis is None:
         return {"state": state}
-    return {"state": "ok", "cards": overview_cards(kpis, compare, days, label_ctx),
-            "compareTitle": compare_title(compare, days, label_ctx)}
+    view = overview_cards(kpis, compare, days, label_ctx)
+    return {"state": "ok", "cards": view, "compareTitle": compare_title(view, compare, days, label_ctx)}
 
 
 @screen("overview/card-trend")

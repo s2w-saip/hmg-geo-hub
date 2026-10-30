@@ -52,6 +52,8 @@ export interface OverviewCardView {
 /** overview/cards — empty = no answers for the filters, degraded = the read failed transiently. */
 export type CardsView =
   | { state: "empty" | "degraded" }
+  /** compareTitle: the label every card with a period block shares; null when they differ (each card names its
+   * own) or no compare answered. */
   | { state: "ok"; cards: OverviewCardView[]; compareTitle: ScreenMessage | null };
 
 export interface SparkPointView {
@@ -161,12 +163,17 @@ export interface TileView extends Pick<KpiSummary, "coverage" | "sparkline" | "r
   direction: KpiSummary["direction"];
   tone: "good" | "bad" | "flat";
   period: PeriodChip | null;
+  /** With `period`: what this tile's Δ compares against (a periodCompare message: label.* or window). */
+  periodLabel?: ScreenMessage;
   engineConsistency?: number;
 }
 
 export interface TilesView {
   groups: { category: "content" | "source" | "conversion"; tiles: TileView[] }[];
   suppressionCaption: PeriodCaptionMessage | null;
+  /** Under a period compare (some tile has `period`): the label every compared tile shares, null when they
+   * differ (each tile names its own). Absent without a period compare. */
+  compareTitle?: ScreenMessage | null;
 }
 
 /** website/summary, website/summary-deferred */

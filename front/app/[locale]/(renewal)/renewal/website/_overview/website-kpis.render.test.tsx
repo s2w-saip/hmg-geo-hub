@@ -35,6 +35,14 @@ describe("renewal Website Overview KPI", () => {
     expect(text(p)).not.toContain("0.0번째");
   });
 
+  it("shows a dash for a 경쟁사 대비 SOV the screen has no value for (renewal audit 3-3: it read 0.0배)", () => {
+    const view: TilesView = { groups: [{ category: "content", tiles: [tile({ key: "shareOfVoice", value: null, pending: true, competitorSov: { brand: "Tata", value: null } })] }], suppressionCaption: null };
+    const out = wrap(<KpiCard view={view} qs="" deltas />);
+    const row = out.slice(out.indexOf('data-rn-competitor-sov=""'), out.indexOf("</div>", out.indexOf('data-rn-competitor-sov=""')));
+    expect(text(row.slice(row.indexOf(">") + 1))).toBe("경쟁사 대비 SOV (vs Tata)—");
+    expect(row).not.toContain("title=");
+  });
+
   it("keeps the 경쟁사 대비 SOV row as the screen computed it, and the provenance line", () => {
     // the same ratio read as a multiple (41067.2% = 410.7배), the percent kept in its title
     expect(text(tileOf(out, "shareOfVoice"))).toContain("경쟁사 대비 SOV (vs Tata)410.7배");
@@ -56,14 +64,37 @@ describe("renewal Website Overview KPI", () => {
 
   it("names the Δ basis: the last round, or the period compare when the tiles carry period chips", () => {
     expect(text(out)).toContain("증감 = 직전 회차 대비");
+    // renewal audit 3-5 (2026-10-31): the header said '바로 앞 같은 길이의 기간' for every compare; a calendar month
+    // compares the month before, so it names the screen's label (the global Overview's wording)
+    const thisMonth = { key: "label.thisMonth", params: {} };
     const period: TilesView = {
-      groups: [{ category: "content", tiles: [tile({ key: "visibility", value: 88, period: { key: "visibility", unit: "pp", suppressed: false, value: 2.1, direction: "up" } })] }],
+      groups: [{ category: "content", tiles: [tile({ key: "visibility", value: 88, period: { key: "visibility", unit: "pp", suppressed: false, value: 2.1, direction: "up" }, periodLabel: thisMonth })] }],
       suppressionCaption: { key: "reason.noPrevWeek", params: {} },
+      compareTitle: thisMonth,
     };
     const p = wrap(<KpiCard view={period} qs="" deltas />);
-    expect(text(p)).toContain("증감 = 선택 기간과 바로 앞 같은 길이의 기간 비교");
+    expect(text(p)).toContain("증감 = 지난달 대비");
+    expect(text(p)).not.toContain("같은 길이");
+    // the shared label stays in the header only
+    expect(text(tileOf(p, "visibility"))).not.toContain("지난달 대비");
     expect(p).toMatch(/data-tone="up"[^>]*>.*2\.1pp/);
     expect(p).toContain('data-rn-period-reason="noPrevWeek"');
+  });
+
+  it("names each tile's own compare when the tiles compare different rounds", () => {
+    const chip = { unit: "pp" as const, suppressed: false, value: 2.1, direction: "up" as const };
+    const view: TilesView = {
+      groups: [{ category: "content", tiles: [
+        tile({ key: "visibility", value: 88, period: { ...chip, key: "visibility" }, periodLabel: { key: "window", params: { curCycles: 3, prevCycles: 0 } } }),
+        tile({ key: "shareOfVoice", value: 96.3, period: { ...chip, key: "share" }, periodLabel: { key: "window", params: { curCycles: 2, prevCycles: 1 } } }),
+      ] }],
+      suppressionCaption: null,
+      compareTitle: null,
+    };
+    const p = wrap(<KpiCard view={view} qs="" deltas />);
+    expect(text(p)).toContain("증감 = 카드마다 적은 기간 비교");
+    expect(text(tileOf(p, "visibility"))).toContain("현재 3회차 / 직전 0회차 수집 기준");
+    expect(text(tileOf(p, "shareOfVoice"))).toContain("현재 2회차 / 직전 1회차 수집 기준");
   });
 
   it("in a period compare, a tile without a period result says so instead of showing its round Δ", () => {

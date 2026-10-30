@@ -223,7 +223,9 @@ def apply_competitor_sov_from_brands(kpis: list[dict], own_mentions: float | Non
                                      designated_target: str | None = None) -> list[dict]:
     """KPI #16 on the shareOfVoice card: own mentions / the reference brand's mentions x 100, one decimal.
     Reference = the designated target (case-insensitive name, mentions 0 when absent) or the most
-    mentioned competitor that is neither own nor an HMG sibling. No competitor -> kpis unchanged."""
+    mentioned competitor that is neither own nor an HMG sibling. No competitor -> kpis unchanged.
+    No own mentions count (None: 당사's share of voice has no numerator) or a reference without mentions
+    -> the row with no value (renewal audit 3-3, 2026-10-31: it was taken as 0 mentions, "0.0배")."""
     competitors = [b for b in brands if not b.get("is_own") and b.get("is_hmg_own") is not True]
     if designated_target:
         t = designated_target.lower()
@@ -233,9 +235,9 @@ def apply_competitor_sov_from_brands(kpis: list[dict], own_mentions: float | Non
         target = ranked[0] if ranked else None
     if not target:
         return kpis
-    ours = own_mentions if own_mentions is not None else 0
     m = target["mentions"]
-    competitor_sov = {"brand": target["name"], "value": js_round((1000 * ours) / m) / 10 if m > 0 else None}
+    value = js_round((1000 * own_mentions) / m) / 10 if own_mentions is not None and m > 0 else None
+    competitor_sov = {"brand": target["name"], "value": value}
     return [{**k, "competitorSov": competitor_sov} if k.get("key") == "shareOfVoice" else k for k in kpis]
 
 

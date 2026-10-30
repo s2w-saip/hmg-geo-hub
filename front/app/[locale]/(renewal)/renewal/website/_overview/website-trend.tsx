@@ -97,7 +97,7 @@ export function TrendMultiples({ view }: { view: TrendChartView }) {
   };
   return (
     <div className="flex flex-col gap-3 px-6 pb-5">
-      <div className="grid grid-cols-3 gap-x-5 gap-y-3 @max-[900px]/rnpage:grid-cols-2" data-rn-multiples="">
+      <div className="grid grid-cols-3 gap-x-5 gap-y-3" data-rn-multiples="">
         {keys.map((k) => {
           const rank = k === "position";
           const values = view.rows.map((r) => r.values[k] ?? null);

@@ -8,6 +8,9 @@
 // Mention), a tile the screen sends no Δ for says so in muted text, not as an empty chip.
 // Design pass (2026-10-30, W6): the category name sits on its rule and the engine badge, the ratio and 경쟁사 대비 SOV
 // read as one list under the value, so the card is shorter with every value kept.
+// Under a period compare the header names the screen's compare label (renewal audit 3-5: it said '바로 앞 같은 길이의
+// 기간' for a calendar month too); when the tiles compare different rounds each tile names its own (the renewal
+// Overview's rule, audit 3-4).
 
 import { Suspense, use, type ReactNode } from "react";
 import Link from "next/link";
@@ -41,12 +44,16 @@ export function KpiCard({ view, qs, deltas = false, findings }: { view: TilesVie
   const t = useTranslations("renewal.website.overview");
   const tO = useTranslations("dashboard.overview");
   const tCat = useTranslations("dashboard.kpi.category");
+  const tR = useTranslations("renewal.overview");
   const tP = useTranslations("periodCompare");
   const period = view.groups.some((g) => g.tiles.some((x) => x.period));
+  const shared = view.compareTitle;
+  const perCard = period && !shared;
+  const compare = !period ? tO("compare") : shared ? tP(shared.key as "label.weekly", shared.params) : tR("comparePerCard");
   const caption = view.suppressionCaption && view.suppressionCaption.key !== "window" ? view.suppressionCaption : null;
   return (
     <RnCard tone="hero" className="@container/rnwkpi" aria-label={t("kpiTitle")}>
-      <RnCardHeader title={t("kpiTitle")} hint={t("kpiHintDelta", { compare: period ? t("comparePeriod") : tO("compare") })} />
+      <RnCardHeader title={t("kpiTitle")} hint={t("kpiHintDelta", { compare })} />
       {findings ? <div className="pb-3">{findings}</div> : null}
       <div className="flex flex-col pb-3">
         {view.groups.map((g) => (
@@ -57,7 +64,7 @@ export function KpiCard({ view, qs, deltas = false, findings }: { view: TilesVie
             </h3>
             <div className="grid grid-cols-4 @max-[760px]/rnwkpi:grid-cols-2 @max-[760px]/rnwkpi:gap-y-3">
               {g.tiles.map((tile, i) => (
-                <Tile key={tile.key} tile={tile} qs={qs} deltas={deltas} end={i % 4 >= 2} periodMode={period} />
+                <Tile key={tile.key} tile={tile} qs={qs} deltas={deltas} end={i % 4 >= 2} periodMode={period} perCard={perCard} />
               ))}
             </div>
           </div>
@@ -72,13 +79,13 @@ export function KpiCard({ view, qs, deltas = false, findings }: { view: TilesVie
   );
 }
 
-function Tile({ tile, qs, deltas, end, periodMode }: { tile: TileView; qs: string; deltas: boolean; end: boolean; periodMode: boolean }) {
+function Tile({ tile, qs, deltas, end, periodMode, perCard }: { tile: TileView; qs: string; deltas: boolean; end: boolean; periodMode: boolean; perCard: boolean }) {
   const tR = useTranslations("renewal.overview");
-  const tO = useTranslations("dashboard.overview");
   const tKpi = useTranslations("dashboard.kpi");
   const locale = useLocale();
   const f = useFormat();
   const t = useTranslations("renewal.website.overview");
+  const tP = useTranslations("periodCompare");
   const name = tKpi(`name.${tile.key}`);
   const hasRatio = tile.ratio?.numerator != null && tile.ratio.denominator != null;
   // the original's copy variant: an "api" tile reads its label and tip from dashboard.kpi.api.* when it has them
@@ -98,6 +105,11 @@ function Tile({ tile, qs, deltas, end, periodMode }: { tile: TileView; qs: strin
       <span className="flex min-h-8 flex-wrap items-center gap-x-2.5 gap-y-1">
         <KpiValue tile={tile} />
         {tile.pending ? null : <TileDelta tile={tile} deltas={deltas} periodMode={periodMode} />}
+        {perCard && tile.period && tile.periodLabel ? (
+          <span data-rn-compare-label="" className="text-rn-11 text-white/72">
+            {tP(tile.periodLabel.key as "label.weekly", tile.periodLabel.params)}
+          </span>
+        ) : null}
       </span>
       {/* the value's base, one list: 엔진 간 일관성, numerator / denominator, KPI #16 경쟁사 대비 SOV (the
           shareOfVoice tile's extra row, the reference brand named) */}
@@ -134,7 +146,8 @@ function Tile({ tile, qs, deltas, end, periodMode }: { tile: TileView; qs: strin
               <dt className="truncate text-white/72">{tKpi("competitorSov", { brand: tile.competitorSov.brand })}</dt>
               {/* the same ratio (legacy KPI #16, own ÷ rival mentions × 100) read as a multiple: 41067.2% = 410.7배 */}
               <dd className="m-0 font-semibold text-white tabular-nums" title={tile.competitorSov.value == null ? undefined : `${tile.competitorSov.value.toFixed(1)}%`}>
-                {tile.competitorSov.value == null ? tO("cardEmpty") : t("timesOf", { n: (tile.competitorSov.value / 100).toFixed(1) })}
+                {/* no value (no 당사 numerator, or a reference without mentions): a dash (renewal audit 3-3) */}
+                {tile.competitorSov.value == null ? "—" : t("timesOf", { n: (tile.competitorSov.value / 100).toFixed(1) })}
               </dd>
             </div>
           ) : null}

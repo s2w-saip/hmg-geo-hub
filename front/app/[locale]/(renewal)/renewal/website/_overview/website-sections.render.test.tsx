@@ -9,6 +9,14 @@ import { part, settled, text, wrap } from "./_fixtures";
 // Renewal Website Overview (W1, 2026-10-30): the trend as small multiples with the rounds' answers and gaps, the
 // sources with their 100% bar, and the markets table with every value website/geo sends.
 
+/** Container query names (`@max-[…]/name:`) the markup uses without an `@container/name` of its own. The page puts
+ * the sections in no named container (website/page.tsx names rnpage around 핵심 요약 only), so such a query never
+ * applies. */
+const orphanQueries = (html: string) => {
+  const defined = new Set([...html.matchAll(/@container\/([\w-]+)/g)].map((m) => m[1]));
+  return [...new Set([...html.matchAll(/@(?:min|max)-\[[^\]]+\]\/([\w-]+):/g)].map((m) => m[1]))].filter((n) => !defined.has(n));
+};
+
 describe("renewal Website Overview trend", () => {
   const view: TrendChartView = {
     rows: ["2026-09-25", "2026-10-02", "2026-10-09"].map((day, i) => ({
@@ -79,6 +87,12 @@ describe("renewal Website Overview trend", () => {
     const out = wrap(<TrendMultiples view={view} />);
     expect(out).not.toMatch(/#e63312|rn-down/i);
     expect(part(out, "data-rn-multiple", "shareOfVoice")).not.toContain("rounded-full");
+  });
+
+  it("uses no container query without its container (renewal audit 3-6: the page names no rnpage around it)", () => {
+    const out = wrap(<RnWebsiteTrend trend={settled({ trend: view })} />);
+    expect(out).toContain("data-rn-multiples=");
+    expect(orphanQueries(out)).toEqual([]);
   });
 
   it("tells a failed read from a trend still accruing", () => {
@@ -167,6 +181,12 @@ describe("renewal Website Overview markets", () => {
   it("asks an administrator to pick one brand; the other accounts have no brand axis", () => {
     expect(text(wrap(<RnWebsiteMarkets geo={settled(shown(empty))} isAdmin />))).toContain("브랜드를 하나 고르면");
     expect(wrap(<RnWebsiteMarkets geo={settled(shown(empty))} isAdmin={false} />)).toBe("");
+  });
+
+  it("uses no container query without its container (renewal audit 3-6: the page names no rnpage around it)", () => {
+    const out = wrap(<RnWebsiteMarkets geo={settled(shown(geo))} isAdmin />);
+    expect(out).toContain("data-rn-market-map=");
+    expect(orphanQueries(out)).toEqual([]);
   });
 
   it("shows nothing without card data and a notice when the read failed", () => {

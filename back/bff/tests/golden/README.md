@@ -228,6 +228,21 @@ Deliberate changes (what the screen shows changed by decision):
   `rn-fix-degraded`, `rn-fix-picks-source`, `rn-fix-rounds`, `rn-live`; `mention/rn-fix-empty`, `rn-fix-names`,
   `rn-fix-nulls`, `rn-fix-period`, `rn-fix-rounds`, `rn-fix-ties`, `rn-fn-findings`, `rn-fn-summary`, and the 9
   `rn-live-*` bundles (`chatgpt`, `en`, `geo`, `kia`, `kpi-fav`, `kpi-rank`, `kpi-sov`, `none`, `period`).
+- 2026-10-31 renewal audit step 3 (Overview). 26 cases change, only in these keys:
+  - 3-3: without 당사's share-of-voice numerator (`share_of_voice` absent or `num` null) the 경쟁사 대비 SOV has no value
+    (`competitorSov.value` null); it took 당사's mentions as 0 and the website tile read "0.0배".
+    `ov/fn-apply-competitor-sov-from-brands` (the 12 calls whose own mentions are null and whose reference has
+    mentions: 0.0 → null) and the website fixtures without that numerator `overview/fix-w-summary-03`, `-06`, `-08`,
+    `fix-w-deferred-09`.
+  - 3-4: `overview/cards` `compareTitle` is the label the cards with a period block share, null when they differ (each
+    card names its own `period.label`); it was the first compare result's label. A compare that answered for no card
+    keeps that old label. `fix-g-cards-02`, `-03` (window labels with different rounds per metric → null),
+    `fix-g-cards-10` (the one compared card's label with its rounds; the first result had none).
+  - 3-5 (additive): under a period compare every website tile with a period chip names what it compares against
+    (`periodLabel`, the `overview/cards` label rule) and `tiles.compareTitle` is the label they share, null when they
+    differ; both are absent without a period compare. The renewal header said '바로 앞 같은 길이의 기간' for a calendar
+    month too. 20 cases: `fix-w-summary-02`…`-06`, `fix-w-summary-admin-02`, `-03`, `-05`, `-06`, `fix-w-deferred-02`…`-06`,
+    `-11`, `fix-w-deferred-admin-02`…`-06`. No live case changes.
 
 ## Format
 
