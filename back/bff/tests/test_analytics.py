@@ -101,6 +101,53 @@ class AnalyticsRules(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((day[d1]["ai_sessions"], day[d1]["total_sessions"]), (7, 80))  # both collected that day
         self.assertEqual((day[d3]["ai_sessions"], day[d3]["total_sessions"]), (None, None))  # DE not collected
 
+    async def test_a_property_missing_days_leaves_the_slices_unknown(self):
+        """Renewal audit 12-1 (2026-10-31): the W6 rule for the period sums holds for every slice of them too. When an
+        active property missed a day of the period (no daily `total` window), the engines, channels, segment
+        conversions, landing pages, event counts are the other properties' only, so they are unknown, not a partial
+        sum; a market is unknown only when its own property missed a day. The reader names the missed days."""
+        d1, d2 = date(2026, 10, 24), date(2026, 10, 25)
+        de = dict(PROP, prop_key=2, property_id="de", country="DE")
+        def at(day, report, ai, prop_key=1, **kw):
+            return {**row(report, ai), "date": day, "prop_key": prop_key, "channel": None, "device": None, "nvr": None, **kw}
+        rows = []
+        for prop_key in (1, 2):
+            for day in (d1, d2):
+                rows += [at(day, 2, True, prop_key, sessions=4, key_events=1, page_views=8, device="mobile", nvr="new"),
+                         at(day, 1, True, prop_key, sessions=4, key_events=1, page_views=8, channel="AI Assistant", device="mobile", nvr="new"),
+                         at(day, 1, False, prop_key, sessions=90, key_events=3, page_views=200, channel="Organic Search", device="desktop", nvr="new"),
+                         at(day, 5, False, prop_key, sessions=94, page_views=208),
+                         at(day, 4, True, prop_key, url=f"https://site/{prop_key}", sessions=3, page_views=5, key_events=1),
+                         at(day, 3, False, prop_key, event="page_view", event_count=300)]
+        def daily(prop_key, day):
+            return dict(prop_key=prop_key, window_end=day, window_days=1, cohort="total", page_key=0, engine_mask=0, device_mask=0, nvr_mask=0, users=9)
+        q = QueryParams("from=2026-10-24&to=2026-10-25")
+        both = (await conversion(Connection([[PROP, de], rows, [daily(k, d) for k in (1, 2) for d in (d1, d2)]]), q))["data"]
+        self.assertEqual(both["missing"], [])
+        self.assertEqual([(e["engine"], e["sessions"], e["conversions"]) for e in both["engines"]], [("chatgpt", 16, 4)])
+        self.assertEqual({c["channel"]: c["sessions"] for c in both["channels"]}, {"AI Assistant": 16, "Organic Search": 360})
+        self.assertEqual({s["value"]: s["ai_conversions"] for s in both["segments"]["device"]}, {"mobile": 4, "desktop": 0})
+        self.assertEqual([p["sessions"] for p in both["pages"]], [6, 6])
+        self.assertEqual([e["count"] for e in both["events"]], [1200])
+        # DE missed 10-25: the slices would be Korea's and DE's 10-24 only (chatgpt 12 of 16 sessions)
+        partial = [r for r in rows if (r["prop_key"], r["date"]) != (2, d2)]
+        gap = (await conversion(Connection([[PROP, de], partial, [daily(1, d1), daily(1, d2), daily(2, d1)]]), q))["data"]
+        self.assertEqual(gap["missing"], [{"property_id": "de", "days": [d2]}])
+        self.assertEqual([(e["engine"], e["sessions"], e["page_views"], e["conversions"]) for e in gap["engines"]], [("chatgpt", None, None, None)])
+        self.assertEqual({c["channel"]: (c["sessions"], c["key_events"], c["page_views"]) for c in gap["channels"]},
+                         {"AI Assistant": (None, None, None), "Organic Search": (None, None, None)})
+        self.assertEqual({s["value"]: (s["ai_conversions"], s["human_conversions"]) for s in gap["segments"]["device"]},
+                         {"mobile": (None, None), "desktop": (None, None)})
+        self.assertTrue(all(v is None for p in gap["pages"] for k, v in p.items() if k != "url"))
+        self.assertEqual([e["count"] for e in gap["events"]], [None])
+        # the markets: Korea collected every day keeps its own values, DE is unknown
+        market = {m["property_id"]: m for m in gap["countries"]}
+        self.assertEqual((market["test"]["ai_sessions"], market["test"]["ai_conversions"], market["test"]["human_conversions"]), (8, 2, 6))
+        self.assertEqual((market["de"]["ai_sessions"], market["de"]["ai_conversions"], market["de"]["human_conversions"]), (None, None, None))
+        # rows from before the collector wrote its daily windows cannot be checked: as before
+        legacy = (await conversion(Connection([[PROP, de], rows, []]), q))["data"]
+        self.assertEqual((legacy["missing"], legacy["engines"][0]["sessions"]), ([], 16))
+
     async def test_channels_are_not_cut_by_an_engine(self):
         """Report 1 (channels) has no engine: an engine pick would drop the AI channel row and leave the site total
         without AI sessions, so the channels are not given under an engine filter (2026-10-30 W6 review)."""

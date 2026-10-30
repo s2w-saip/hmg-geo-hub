@@ -6,7 +6,7 @@
 - 병렬 세션으로 나누지 않고 한 세션이 순서대로 한다.
 - 단계마다 새 하위 에이전트가 깨끗한 컨텍스트로 맡는다(B 방식).
 
-**현재 위치:** 12단계(AI Conversion 부분합 · 문구) 시작 전. 11단계 끝(단계 메모 '11단계'). 마지막 커밋: 11단계를 올린 커밋.
+**현재 위치:** 13단계(Prompts 귀속 · 계정 범위 · 선택지) 시작 전. 12단계 끝(단계 메모 '12단계'). 마지막 커밋: 12단계를 올린 커밋.
 
 ## 진행 방식 (단계마다 새 하위 에이전트)
 
@@ -100,7 +100,7 @@
 | 9 | Citation ① 결함 · 문구 · 귀속 | 1 | [x] |
 | 10 | Citation ② 구성 추이 수치 · Website 도메인 표 전체 | 3 | [x] |
 | 11 | ACR 발견 · 귀속 · 정렬 | 1 | [x] |
-| 12 | AI Conversion 부분합 · 문구 | — | [ ] |
+| 12 | AI Conversion 부분합 · 문구 | — | [x] |
 | 13 | Prompts 귀속 · 계정 범위 · 선택지 | 1 | [ ] |
 | 14 | 기간 비교 억제 | ⛔K | [ ] |
 | 15 | HUB가 만든 평균 기준선 · 분해 | ⛔L | [ ] |
@@ -419,14 +419,14 @@ Global과 Website가 같은 본문을 쓴다. Website는 `mention/rn-*`를 ctx.s
 - `KO renewal.conversion.status` · `states` · `findings`
 
 **할 일**
-- [ ] 12-1 부분합을 없앤다.
+- [x] 12-1 부분합을 없앤다.
   - 빠진 날이 있으면 합계 · 일별은 '모름'으로 나온다(W6).
   - 그런데 다음 값은 부분합이 나가고, 비중 · 순위도 그 부분합으로 계산된다(`conversion.py` ~93-114 · 174-196): 엔진(`analytics_reader.py` ~211-213), 채널(~216-218), 세그먼트 전환(~223-224), 입구 페이지(~227-233), 이벤트 수(~234), 시장 전환(~245 · 248).
   - 같은 규칙으로 맞춘다: 창 안에 빠진 날이 있으면 '모름'이다.
   - 원본 표도 같은 리더라 같이 바뀐다.
-- [ ] 12-2 '사이트 전체'라는 이름이 두 정의에 쓰인다. Hero는 report 5 합계(`conversion.py` ~81, `conv-body.tsx` ~278-284)이고, 채널 카드는 채널 행 합(~104-109, `conv-insights.tsx` ~69-79)이다. 이름을 나누거나 한 정의로 맞춘다.
-- [ ] 12-3 '시장 미연결'(`status.unmapped`, `states.pendingDesc`, `findings.coverage.detail`)을 '수집 중지'로 바꾼다. 수집기에서 `unmapped`는 관리자 중지다. 속성 칩의 total(~213)과 coverage의 total(중지 제외, ~253)도 같게 맞춘다.
-- [ ] 12-4 결과 없음 문구 `states.nomatchDesc`의 '국가 선택지는 답변 측정 국가'는 W0 변경 뒤로 맞지 않는다(지금은 GA4 속성 국가). 고친다. `renewal.visibility.states.nomatchDesc`는 숨긴 화면이라 그 화면 사실에 맞는지만 본다.
+- [x] 12-2 '사이트 전체'라는 이름이 두 정의에 쓰인다. Hero는 report 5 합계(`conversion.py` ~81, `conv-body.tsx` ~278-284)이고, 채널 카드는 채널 행 합(~104-109, `conv-insights.tsx` ~69-79)이다. 이름을 나누거나 한 정의로 맞춘다.
+- [x] 12-3 '시장 미연결'(`status.unmapped`, `states.pendingDesc`, `findings.coverage.detail`)을 '수집 중지'로 바꾼다. 수집기에서 `unmapped`는 관리자 중지다. 속성 칩의 total(~213)과 coverage의 total(중지 제외, ~253)도 같게 맞춘다.
+- [x] 12-4 결과 없음 문구 `states.nomatchDesc`의 '국가 선택지는 답변 측정 국가'는 W0 변경 뒤로 맞지 않는다(지금은 GA4 속성 국가). 고친다. `renewal.visibility.states.nomatchDesc`는 숨긴 화면이라 그 화면 사실에 맞는지만 본다.
 
 **시험.** `test_screens_conversion`, `test_analytics`, Conversion render. GA4 수집 전이라 실제 화면 대조는 없고 fixture로 본다.
 
@@ -764,6 +764,25 @@ Website 인용 도달 Δ도 값 출처(발행 / 실시간)가 다르면 숨긴�
   - **그대로 둔 것.** standing의 격차 변화가 반올림해 0.0이면 '좁혀졌습니다'로 읽힌다. Mention standing도 같은 규칙이다. 리더 안에서 카드마다 당사 판정 Gold 값이 다르다(브랜드 표 = 명부, 차종 · 맞대결 · 추이 당사 합 = dim_brand). 두 이름(choice 0)에서만 갈리고, D1의 답을 기다린다.
   - **다음 단계가 알 것.** ACR 리더의 브랜드 · 차종 · 맞대결 행에 `is_hmg`가 있다. `StandardAcr` 행에는 리더가 보낼 때만 `isHmg`가 있다. `RnAcrView.boardOrders`는 키가 여섯이다. ACR 발견의 `params.dir`(leak)과 `diff` 0(engine)은 화면 문구를 고른다.
 
+- **12단계(2026-10-31).** 네 항목 모두 고쳤다. 재현 시험은 고치기 전에 실패했다(리더 1개 · 화면 2개 · render 3개, 아래). Global · Website 리뉴얼 AI Conversion은 같은 본문 · BFF 화면이라 둘 다 바뀐다. GA4 수집 전이라 실제 숫자 대조는 없고 fixture로 봤다.
+  - **12-1 리더.** 수집기 창(일별 `total` users 창)이 있는데 활성 속성 하나가 기간 중 하루라도 빠졌으면, W6의 합계처럼 그 합계의 조각도 모름(null)이다(`analytics_reader.whole_only`). 엔진(세션 · 조회 · 전환), 채널(세션 · 주요 이벤트 · 조회), 세그먼트 전환, 입구 페이지(여섯 값 모두), 이벤트 발생 수다. 시장(속성별) 전환은 그 속성이 빠졌을 때만 모름이다(세션은 W6부터 그랬다). 창이 하나도 없던 때의 행(확인할 수 없음)은 그대로다. 수집된 날에 행이 없는 조각은 목록에 없으므로 0을 채울 일이 없다.
+    - 재현: DE가 10-25를 빠뜨리면 합계는 이미 모름인데 엔진 세션 12/16 · 전환 3/4, 채널 270/360, 입구 페이지 3/6, 이벤트 900/1,200, DE 시장 전환 1이 부분합으로 나갔다(`test_a_property_missing_days_leaves_the_slices_unknown`).
+    - 리더가 `missing`(빠진 활성 속성의 property_id와 빠진 날)을 보낸다. 원본 `/ko/standard/ai-funnel/conversion` 표(엔진 · 페이지 · 국가 · 이벤트)도 같은 리더라 빠진 날이 있으면 값이 빈칸이 된다(원본 화면은 `missing`을 읽지 않음).
+  - **12-1 화면.** 리더가 비운 값 위의 비중 · 순위는 저절로 비고, 화면에서 따로 부분합을 만들던 둘을 막았다(`test_a_missed_day_leaves_the_shares_and_blocks_unknown`, 고치기 전 실패).
+    - 시장 비중: 활성 속성이 빠지면 속성 합계가 없다(전에는 Kia IT가 부분 합계의 100.0%였다).
+    - 7일 합(Hero 전환 · 세션 작은 선): 빠진 날이 든 블록은 모름이다(전에는 그날을 뺀 합 186). 계획 목록에는 없던 것으로, 같은 규칙이라 같이 고쳤다. 수집됐는데 행이 없는 날은 지금처럼 0으로 더한다.
+    - `view.missing`(id · 국가 · 브랜드 · 빠진 날)으로 Hero에 한 줄 안내를 둔다: 'GA4 속성 n개에 이 기간 수집되지 않은 날이 있습니다(독일 · Hyundai 1일). 기간 합계와 그 합계로 낸 비중 · 순위 · 7일 합은 … 계산하지 않습니다(‘—’)…'(`summary.missing` · `missingItem`). 필터가 없으면 이때 '기간 사용자 수가 없어' 안내는 띄우지 않는다(이유가 다름). 카드마다 같은 안내를 되풀이하지 않았다(W6 반복 줄이기).
+    - 채널 카드: AI 행은 있는데 세션이 모름이면 엔진 필터 문구('AI Assistant 행이 없습니다')를 띄우지 않는다.
+  - **15단계가 알 것(분해).** 분해 입력(두 기간의 AI 세션 · 전환 합계)은 W6부터 이 규칙을 따른다. 빠진 날이 있으면 합계가 모름이라 `decomp`가 null이다(시험에서 확인). 이번에 엔진별 세션 몫의 입력도 같은 규칙이 됐지만, 그때는 합계도 모름이라 따로 갈리는 경우가 없다. 분해를 두 요인의 값 · Δ로 바꿀 때도 입력은 같은 합계다.
+  - **12-2.** 이름을 나눴다. Hero의 '사이트 전체'는 report 5(GA4 전체 트래픽 보고서) 합계 그대로 두고, 채널 카드의 합계 행은 '채널 합계'(채널 행을 더한 값)로 바꿨다. BFF 키도 `channels.site` → `channels.total`, 채널 발견의 `site` → `total`이다. 채널 카드 ⓘ에 두 값이 다른 보고서라 다를 수 있다고 적었다. 문구: `channels.total` · `info` · `take` · `note`, `findings.channel.detail`(ko · en). 다른 안은 한 정의로 맞추기였다. 채널 합계 행을 report 5로 바꾸면 행의 합이 아래 합계 행과 달라지고, 채널 비중의 분모로 report 5를 쓰면 보고서를 섞게 된다('보고서는 서로 더하지 않음').
+  - **12-3.** `status.unmapped`는 '수집 중지'(en 'Collection stopped', Admin › GA4 연동의 '수집 중지'와 같은 말)다. `states.pendingTitle`은 'GA4 속성 {n}개가 아직 측정 중이 아닙니다'(중지 속성은 연결을 기다리지 않음), `pendingDesc`는 권한 대기 · 수집 중지 각각 언제 채워지는지, `findings.coverage.detail`은 카드 이름을 지금 제목('시장(GA4 속성)별 AI · 일반 전환')으로 고쳤다.
+    - total: 중지 속성은 측정 범위 밖이라(W6, Admin 문구 '다음 수집부터 AI Conversion 화면에서 빠집니다') 시장 카드 목록에서 빼고 칩 total에서도 뺀다. 그래서 칩 '측정 중 a / t'와 발견 'GA4 속성 t개 중 a개'가 같은 t다(`coverage.total` = 목록 속성 수, `coverage.unmapped` = 중지 수). 상태 카드(권한 대기 등)의 속성 목록은 중지 속성도 '수집 중지' 표시로 보인다(왜 비었는지 알림). 다른 안은 목록에 남기고 total만 빼기였다. 그러면 칩 수와 행 수가 달라진다. `props.info`에 '수집을 중지한 속성은 이 표에 넣지 않습니다'를 더했다.
+  - **12-4.** `states.nomatchDesc`: '국가 선택지는 계정이 읽을 수 있는 GA4 속성의 시장입니다(수집 중지 속성 제외)'(W0의 `property_options`와 같음). `renewal.visibility.states.nomatchDesc`('국가 선택지는 답변 측정 국가…')는 그 화면이 Gold 패널 선택지(`load_panel_options`, surface global)를 쓰므로 맞다. 고치지 않았다.
+  - **문구.** `renewal.conversion` · `renewal.visibility` 키는 `messages/units`에 없다(확인). en 두 문장은 ICU 복수형이다. `i18n/request.test.ts` 통과.
+  - **golden 없음.** Conversion은 golden case가 없다. 프런트 fixture(`conv-body.fixture.json`, 이 화면의 출력)를 다시 만들었다: `channels.site` → `total`, `missing: []`. 새 BFF 화면 · 프록시 · 권한이 없어 아키텍처 문서는 그대로다.
+  - **화면 확인(1920×915, 관리자).** 리뉴얼 Global · Website AI Conversion과 원본 `/ko/standard/ai-funnel/conversion`이 오류 화면 · 5xx 없이 열린다. 지금 로컬 DB에 GA4 속성이 없어 리뉴얼 둘은 '연결된 GA4 속성이 없습니다'다.
+  - **다음 단계가 알 것.** 리더 `analytics/conversion` 응답에 `missing`이 생겼다. `ConvView`에 `missing`이 있고, `ConvChannels.site`는 `total`이다. 직전 기간에만 빠진 날이 있으면 증감 칩이 '−'인데 이유 안내는 없다(합계 Δ는 W6부터 같았음, 16단계 '다음 일' 후보).
+
 ## 진행 기록
 
 - 2026-10-31 — 계획을 작성했다. 근거는 같은 날 중간점검이다(코드 읽기 다섯 갈래: Overview · Mention · Citation · Prompts · AI Funnel, 큰 지적은 코드로 다시 확인). 처음에는 병렬 세션으로 나누려 했으나 사용자가 한 세션이 순서대로 하는 방식으로 바꿨다. 다음은 1단계다.
@@ -779,3 +798,4 @@ Website 인용 도달 Δ도 값 출처(발행 / 실시간)가 다르면 숨긴�
 - 2026-10-31 — 10단계: Citation 출처 구성 줄의 회차 선이 점마다 회차 · 비중 · 인용 수를 보이고(3단계 `tips`, 인용 수는 같은 화면의 `live.categoryTrend`), 표 보기와 CSV에 회차별 인용 수 · 비중이 생겼다. 출처를 하나 고르면 선은 인용 수다(10-1, Global · Website). Website 도메인 표는 불러온 행을 모두 보이고 원본처럼 route `citation/domains`의 다음 200행을 '더 보기'로 붙인다. 카테고리는 불러온 행 안, 검색은 서버 전체다(10-2, 6단계식 전체 전송은 14,687행이라 고르지 않음). 재현 시험은 고치기 전에 실패했다. golden 1건 의도 변경. 시험: BFF 34개 모듈 589개(live 8개 포함), 프런트 관련 16개 파일 121개(건너뜀 1) · typecheck · lint, 원본 대조(150위 · 201위 · 회차 인용 수), e2e 26항목. 다음은 11단계다.
 - 2026-10-31 — 9-9 후속: 9-9는 재현되지 않았다. `answerAnalysis.citations.drilldown.loading` · `loadFailed`는 처음부터 `messages/units/u7`에 있었고 요청 때 합쳐진다(진행 세션 판단 착오). 9단계가 `ko.json` · `en.json`에 더한 중복 두 키를 지워 `i18n/request.test.ts` 2건 실패를 고쳤다. 서랍 render 시험은 합친 메시지로 본다. '공통 규칙'의 문구 줄에 units 확인과 `i18n/request.test.ts` 실행을 더했다. 시험: `i18n/request.test.ts`, 리뉴얼 표준 · website 인용 · 원본 citations-view render 시험, typecheck · lint.
 - 2026-10-31 — 11단계: ACR 요약 발견을 W6 방식으로 바꿨다. 순서는 고정했고, 문턱을 뺐고, 색은 당사 방향만 나타낸다. '후보군이 비슷한'은 '후보군 포함율이 가장 가까운 경쟁사와의 Top1 차'가 됐다(11-1). 'HMG 계열' 배지는 이름 목록 대신 리더가 행마다 주는 Gold 플래그로 정한다. 그 행의 당사 판정 값을 따르므로 브랜드 행은 명부, 차종 · 맞대결은 dim_brand다(11-2). 차종 당사는 Gold isOurs만이다(11-3). 브랜드 표에 원본 정렬 셋(최종 선택 · 언급 수 · 브랜드)을 되살렸다(11-4). 촘촘 화면에서도 '당사 = … 합산' 칩이 보인다(11-5). 재현 시험은 고치기 전에 실패했다. 11-6은 재현되지 않았다. 리더가 모든 ACR 축을 걸고 무시 · 제외 필터를 보내지 않으며, 시험으로 고정했다. golden은 40개 파일이다(출력 35 · 녹음만 5). 시험: BFF 34개 모듈 606개(live 8개 포함, 건너뜀 5), 프런트 ACR 2개 파일 23개 · i18n · typecheck · lint, 원본 브랜드 표 대조(12행 값 · 정렬 3종), 리뉴얼 ACR 실제 화면(HMG · Kia). 다음은 12단계다.
+- 2026-10-31 — 12단계: AI Conversion에서 수집기가 활성 속성의 하루를 빠뜨리면 합계뿐 아니라 그 조각(엔진 · 채널 · 세그먼트 전환 · 입구 페이지 · 이벤트 수, 그 속성의 시장 전환)도 모름이다. 화면의 시장 비중 · 7일 합도 부분합을 내지 않고, Hero가 빠진 속성 · 날 수를 안내한다(12-1, 리더 `missing`, 원본 표도 같은 리더). 채널 카드 합계 행은 '채널 합계'로 이름을 나눴다(Hero '사이트 전체' = report 5, 12-2). '시장 미연결'은 '수집 중지'이고, 중지 속성은 시장 카드 목록 · 칩 total에서 빠져 측정 범위 발견과 같은 total이다(12-3). 결과 없음 안내의 국가 선택지 설명을 GA4 속성 시장으로 고쳤다(12-4, visibility 문구는 맞아 그대로). 재현 시험은 고치기 전에 실패했다. golden 없음, 프런트 fixture 재생성. 시험: BFF 34개 모듈 609개(live 8개 포함), 프런트 Conversion · Website Conversion · i18n 3개 파일 20개 · typecheck · lint, 리뉴얼 두 화면 · 원본 실제 화면. 다음은 13단계다.

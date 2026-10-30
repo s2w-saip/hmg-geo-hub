@@ -4722,13 +4722,13 @@
         "downDesc": "The analytics database could not be reached. Try again in a moment — your filters and period stay as they are.",
         "nopropTitle": "No GA4 property is connected",
         "nopropDesc": "AI Conversion is built from the brand sites' GA4 reports (AI Assistant channel traffic · conversion events). No GA4 property is connected yet; the page fills in once properties are registered and collection is connected.",
-        "pendingTitle": "{n} GA4 properties are waiting to connect",
-        "pendingDesc": "The registered properties are not measuring yet (waiting for access or not mapped to a market). Once connected, the page fills in from the next collection.",
+        "pendingTitle": "{n, plural, one {# GA4 property is} other {# GA4 properties are}} not measuring yet",
+        "pendingDesc": "A property waiting for access fills the page once GA4 access is granted, a stopped one once an administrator resumes its collection in GA4 connection — from the next collection on.",
         "emptyTitle": "Waiting for AI Conversion data",
         "emptyDesc": "{n} GA4 properties are measuring, but there is no data for {from} – {to} yet. Change the period or check again after the next collection.",
         "emptyDescNoDate": "{n} GA4 properties are measuring, but there is no data yet. Check again after the first collection.",
         "nomatchTitle": "No data matches these filters",
-        "nomatchDesc": "No GA4 rows match the picked country · brand · engine · device · visitor type. The country options are the answer-measurement countries, so a country without a GA4 property can be picked. Loosen the filters.",
+        "nomatchDesc": "No GA4 rows match the picked country · brand · engine · device · visitor type. The country options are the markets of the GA4 properties your account can read (stopped ones left out). Loosen the filters.",
         "reset": "Reset filters",
         "propsLabel": "Registered GA4 properties",
         "propTip": "GA4 property {id}"
@@ -4736,7 +4736,7 @@
       "status": {
         "active": "Measuring",
         "pending_grant": "Waiting for access",
-        "unmapped": "No market"
+        "unmapped": "Collection stopped"
       },
       "def": {
         "label": "Show definition",
@@ -4785,7 +4785,9 @@
         "how": "The six figures come straight from the GA4 session and conversion rows and the period users (formula under each ⓘ). The small lines under conversions and sessions are 7-day sums. The findings restate this page's numbers in one fixed order — the AI vs general gap, measured properties, change vs the previous period (with the conversion change split), channel rank, engines, the same landing page, the top landing pages' share, device, session share — the first four that have values. No threshold filters them, and no significance or 'meaningful change' is judged.",
         "chipPrev": "{range} · vs previous {days} days",
         "usersFilter": "With an engine · device · visitor type filter there are no GA4 period users (the rates' denominator), so the rates and the gap are not computed. Sessions and conversions follow the filters.",
-        "usersWindow": "There are no GA4 period users for this period, so the rates and the gap are not computed. Period users exist only for the pre-aggregated periods (last 7 · 28 · 90 days)."
+        "usersWindow": "There are no GA4 period users for this period, so the rates and the gap are not computed. Period users exist only for the pre-aggregated periods (last 7 · 28 · 90 days).",
+        "missing": "{n, plural, one {# GA4 property was} other {# GA4 properties were}} not collected on some days of this period ({list}). Period sums, and the shares, ranks and 7-day sums built on them, would cover only some days, so they are not computed (‘—’). Days on which every property was collected are in the daily trend; properties collected on every day are in the market table.",
+        "missingItem": "{place}: {n, plural, one {# day} other {# days}}"
       },
       "kpi": {
         "aiRate": "AI conversion rate",
@@ -4818,7 +4820,7 @@
         "coverage": {
           "tag": "Coverage",
           "title": "{active} of {total} GA4 properties measuring",
-          "detail": "Properties waiting for access or without a market are not in the totals (see ‘GA4 properties · countries’). Properties an administrator stopped are not counted."
+          "detail": "Properties waiting for access are not in the totals (see ‘AI vs general conversion by market (GA4 property)’). Properties an administrator stopped are outside the measured scope."
         },
         "change": {
           "tag": "vs previous",
@@ -4845,7 +4847,7 @@
         "channel": {
           "tag": "Channels",
           "title": "AI Assistant: #{rank} of {n} channels by sessions ({share})",
-          "detail": "{per100} key events per 100 sessions — #{rank} · whole site {site}"
+          "detail": "{per100} key events per 100 sessions — #{rank} · all channels {total}"
         },
         "samePage": {
           "tag": "Same landing page",
@@ -4906,7 +4908,7 @@
       },
       "props": {
         "title": "AI vs general conversion by market (GA4 property)",
-        "info": "The GA4 properties of the brand sites. Only 'measuring' properties count in the totals; conversions follow each property's basis (GA4 key events or listed events). Rates use the property's deduplicated period users; gap = AI rate − general rate.",
+        "info": "The GA4 properties of the brand sites. Only 'measuring' properties count in the totals, and properties an administrator stopped are not listed; conversions follow each property's basis (GA4 key events or listed events). Rates use the property's deduplicated period users; gap = AI rate − general rate.",
         "chip": "Measuring {active} / {total}",
         "cols": {
           "prop": "Country · property",
@@ -4971,9 +4973,9 @@
       },
       "channels": {
         "title": "Sessions and key events by channel",
-        "info": "Each GA4 default channel group: sessions, share of all sessions, key events per 100 sessions and pages per session. AI traffic is the 'AI Assistant' channel. Equal values share a rank. With an engine filter the GA4 channel report has no AI row.",
+        "info": "Each GA4 default channel group: sessions, share of all channels' sessions, key events per 100 sessions and pages per session. All channels is the sum of this table's channel rows; the summary's 'Whole site' is GA4's all-traffic report, a separate report, so the two can differ. AI traffic is the 'AI Assistant' channel. Equal values share a rank. With an engine filter the GA4 channel report has no AI row.",
         "chip": "{n} channels",
-        "take": "AI Assistant: #{rank} of {n} channels by sessions ({share}) · #{per100Rank} by key events per 100 sessions ({per100}, whole site {site})",
+        "take": "AI Assistant: #{rank} of {n} channels by sessions ({share}) · #{per100Rank} by key events per 100 sessions ({per100}, all channels {total})",
         "takeNoKe": "AI Assistant: #{rank} of {n} channels by sessions ({share})",
         "noAi": "The GA4 channel report has no AI Assistant row here (an engine filter leaves it out).",
         "cols": {
@@ -4984,10 +4986,10 @@
           "pps": "Pages/session",
           "d": "vs previous"
         },
-        "site": "Whole site",
+        "total": "All channels",
         "none": "No channel rows for these filters.",
         "noneEngine": "GA4 channel reports have no engine, so the channel comparison is not computed when an AI engine is picked.",
-        "note": "Tick = the whole site's key events per 100 sessions. Channels compare on GA4 key events, the same measure for every property (the summary's conversions follow each property's basis)."
+        "note": "Tick = all channels' key events per 100 sessions. Channels compare on GA4 key events, the same measure for every property (the summary's conversions follow each property's basis)."
       },
       "change": {
         "title": "AI conversion change, split",

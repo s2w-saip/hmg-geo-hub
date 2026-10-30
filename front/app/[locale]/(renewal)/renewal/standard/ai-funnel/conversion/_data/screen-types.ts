@@ -125,8 +125,8 @@ export interface ConvChannel {
 
 export interface ConvChannels {
   rows: ConvChannel[];
-  /** the channels' own total */
-  site: { sessions: number | null; keyEvents: number | null; per100: number | null; pps: number | null };
+  /** 채널 합계: the channel rows' own total (the summary's 사이트 전체 is GA4's totals report, a separate observation) */
+  total: { sessions: number | null; keyEvents: number | null; per100: number | null; pps: number | null };
   /** the AI channel's competition ranks (1 = largest) among `n` channels; null without an AI row */
   aiRank: { sessions: number | null; per100: number | null; pps: number | null; n: number } | null;
   /** "engine" = no rows because an engine is picked (report 1 has no engine) */
@@ -182,7 +182,7 @@ export type ConvFinding =
   | { code: "lift"; tone: "good" | "warn" | "info"; ai: number; gen: number; lift: number }
   | { code: "coverage"; tone: "warn"; active: number; total: number }
   | { code: "change"; tone: "good" | "warn" | "info"; sessions: number; conv: number | null; dConv?: number; volume?: number; rate?: number }
-  | { code: "channel"; tone: "info"; rank: number; n: number; share: number | null; per100: number | null; per100Rank: number | null; site: number | null }
+  | { code: "channel"; tone: "info"; rank: number; n: number; share: number | null; per100: number | null; per100Rank: number | null; total: number | null }
   | { code: "samePage"; tone: "info"; page: number; ai: number; gen: number }
   | { code: "device"; tone: "info"; device: string; ai: number; gen: number }
   | { code: "engine"; tone: "info"; engine: string; share: number | null; per100: number | null; best: string; bestPer100: number | null }
@@ -215,7 +215,9 @@ export interface ConvView {
   /** AI sessions without an engine (not in `engines`) */
   engineRest: number | null;
   pages: ConvPage[];
+  /** the markets in the measured scope (a stopped property is not listed) */
   props: ConvProp[];
+  /** total = the listed properties (stopped ones left out); unmapped = the stopped ones */
   coverage: { total: number; active: number; pending_grant: number; unmapped: number };
   multiBrand: boolean;
   events: ConvEvent[];
@@ -227,6 +229,17 @@ export interface ConvView {
   /** null without the previous period */
   decomp: ConvDecomp | null;
   windows: ConvWindow[];
+  /** active properties the collector missed a day of the period for: every period sum over them, and the shares,
+   * ranks and 7-day blocks built on those, are unknown (renewal audit 12-1) */
+  missing: ConvMissing[];
+}
+
+export interface ConvMissing {
+  id: string;
+  country: string | null;
+  brand: string | null;
+  /** the missed days (YYYY-MM-DD) */
+  days: string[];
 }
 
 export interface RnConvBody {

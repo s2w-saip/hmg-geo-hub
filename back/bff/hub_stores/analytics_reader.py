@@ -86,7 +86,7 @@ def empty(kind, reason):
     keys = CONVERSION_KEYS if kind == "conversion" else VISIBILITY_KEYS
     return result(kind, {"metrics": dict.fromkeys(keys), "period": {"from": None, "to": None, "days": None},
                   "properties": [], "pages": [], "trend": [], "engines": [], "countries": [], "events": [],
-                  "windows": [], "channels": [], "segments": {"device": [], "visitor_type": []},
+                  "windows": [], "channels": [], "segments": {"device": [], "visitor_type": []}, "missing": [],
                   "devices": [], "bots": [], "priorities": []}, reason=reason)
 
 
@@ -151,16 +151,26 @@ async def conversion(conn, q):
     collected = collected_days(windows)
     def complete(days):
         return frozenset(k for k in keys if days <= collected[k])
-    whole = complete({start + timedelta(days=i) for i in range(days)})
+    period_days = {start + timedelta(days=i) for i in range(days)}
+    whole = complete(period_days)
     # the collector's daily windows are there to tell a collected day from a missed one (rows from before it wrote them
     # cannot be checked)
     checkable = any(collected.get(k) for k in keys)
+    named = {p["prop_key"]: p["property_id"] for p in properties}
+    # the active properties the collector missed a day of the period for, and those days (the screen says why the sums
+    # are unknown and leaves the 7-day blocks with such a day out)
+    data["missing"] = [{"property_id": named[k], "days": sorted(period_days - collected[k])} for k in keys if k not in whole] if checkable else []
     def zero_if_collected(value, done=whole, prop_keys=keys):
         """A sum over the properties' days: an observed zero when every property was collected on them; unknown when the
         windows show one was not (the sum would be the other properties' only and shrink the total, 2026-10-30 W6)."""
         if set(prop_keys) <= done:
             return 0 if value is None else value
         return None if checkable else value
+    def whole_only(value, prop_keys=keys):
+        """A slice's sum over the period (engine, channel, segment conversions, landing page, event, market): unknown when a
+        property it covers missed a day, like the period sums above (renewal audit 12-1, 2026-10-31). A slice without
+        rows on a collected day is not listed, so there is no zero to fill in."""
+        return value if set(prop_keys) <= whole or not checkable else None
     # Reports are separate observations: traffic, events and landing rows must never be added together.
     traffic = [r for r in rows if r["report"] == 2]
     totals = [r for r in rows if r["report"] == 5]
@@ -208,30 +218,31 @@ async def conversion(conn, q):
                 "human_conversions": conversions(mine, properties, ai=False, complete=done) if whole_day else None,
                 "human_users": exact_users("general", window_end=day, window_days=1)}
     data["trend"] = [day_values(day, mine) for day, mine in sorted(grouped(rows, lambda r: r["date"]).items())]
-    data["engines"] = [{"engine": engine, "sessions": observed_sum(mine, "sessions"), "page_views": observed_sum(mine, "page_views"),
-        "conversions": conversions([r for r in rows if r["engine"] == engine], properties, complete=whole)}
+    data["engines"] = [{"engine": engine, "sessions": whole_only(observed_sum(mine, "sessions")), "page_views": whole_only(observed_sum(mine, "page_views")),
+        "conversions": whole_only(conversions([r for r in rows if r["engine"] == engine], properties, complete=whole))}
         for engine, mine in sorted(grouped([r for r in ai_traffic if r["engine"]], lambda r: r["engine"]).items())]
     # report 1 has no engine: an engine pick would drop the AI channel row and leave the site total without AI sessions
     data["channels_reason"] = "engine" if values(q, "engine") else None
-    data["channels"] = [] if values(q, "engine") else [{"channel": channel, "is_ai": any(r["is_ai"] is True for r in mine), "sessions": observed_sum(mine, "sessions"),
-        "key_events": observed_sum(mine, "key_events"), "page_views": observed_sum(mine, "page_views")}
+    data["channels"] = [] if values(q, "engine") else [{"channel": channel, "is_ai": any(r["is_ai"] is True for r in mine),
+        "sessions": whole_only(observed_sum(mine, "sessions")), "key_events": whole_only(observed_sum(mine, "key_events")),
+        "page_views": whole_only(observed_sum(mine, "page_views"))}
         for channel, mine in sorted(grouped([r for r in rows if r["report"] == 1 and r.get("channel")], lambda r: r["channel"]).items())]
     def segments(kind):
         return [{"value": value,
                  "ai_sessions": zero_if_collected(observed_sum([r for r in mine if r["report"] == 2 and r["is_ai"] is True], "sessions")),
                  "human_sessions": zero_if_collected(observed_sum([r for r in mine if r["report"] == 1 and r["is_ai"] is False], "sessions")),
-                 "ai_conversions": conversions(mine, properties, complete=whole),
-                 "human_conversions": conversions(mine, properties, ai=False, complete=whole)}
+                 "ai_conversions": whole_only(conversions(mine, properties, complete=whole)),
+                 "human_conversions": whole_only(conversions(mine, properties, ai=False, complete=whole))}
                 for value, mine in sorted(grouped([r for r in rows if r.get(kind)], lambda r: r[kind]).items())]
     data["segments"] = {"device": segments("device"), "visitor_type": segments("nvr")}
     landing = [r for r in rows if r["report"] == 4]
     data["pages"] = []
     for url, mine in sorted(grouped([r for r in landing if r["url"] or r["page"]], lambda r: r["url"] or r["page"]).items()):
         ai, general = [r for r in mine if r["is_ai"] is True], [r for r in mine if r["is_ai"] is False]
-        data["pages"].append({"url": url, "sessions": observed_sum(ai, "sessions"), "page_views": observed_sum(mine, "page_views"),
-            "ai_page_views": observed_sum(ai, "page_views"), "ai_key_events": observed_sum(ai, "key_events"),
-            "human_sessions": observed_sum(general, "sessions"), "human_key_events": observed_sum(general, "key_events")})
-    data["events"] = [{"event": event, "count": observed_sum(mine, "event_count"), "tracked": any(r["is_conv"] for r in mine),
+        data["pages"].append({"url": url, "sessions": whole_only(observed_sum(ai, "sessions")), "page_views": whole_only(observed_sum(mine, "page_views")),
+            "ai_page_views": whole_only(observed_sum(ai, "page_views")), "ai_key_events": whole_only(observed_sum(ai, "key_events")),
+            "human_sessions": whole_only(observed_sum(general, "sessions")), "human_key_events": whole_only(observed_sum(general, "key_events"))})
+    data["events"] = [{"event": event, "count": whole_only(observed_sum(mine, "event_count")), "tracked": any(r["is_conv"] for r in mine),
         "ai_count": zero_if_collected(observed_sum([r for r in mine if r["is_ai"] is True], "event_count")),
         "human_count": zero_if_collected(observed_sum([r for r in mine if r["is_ai"] is False], "event_count"))}
         for event, mine in sorted(grouped([r for r in events if r["event"]], lambda r: r["event"]).items())]
@@ -242,10 +253,10 @@ async def conversion(conn, q):
         return {"property_id": p["property_id"], "country": p["country"], "brand": BRAND_NAMES.get(p["brand_bit"]),
                 "ai_users": exact_users("ai", k),
                 "ai_sessions": zero_if_collected(observed_sum([r for r in mine if r["report"] == 2 and r["is_ai"] is True], "sessions"), prop_keys=k),
-                "ai_conversions": conversions(mine, [p], complete=whole),
+                "ai_conversions": whole_only(conversions(mine, [p], complete=whole), prop_keys=k),
                 "human_users": exact_users("general", k),
                 "human_sessions": zero_if_collected(observed_sum([r for r in mine if r["report"] == 1 and r["is_ai"] is False], "sessions"), prop_keys=k),
-                "human_conversions": conversions(mine, [p], ai=False, complete=whole)}
+                "human_conversions": whole_only(conversions(mine, [p], ai=False, complete=whole), prop_keys=k)}
     data["countries"] = [market(p) for p in properties]
     return result("conversion", data, reason=None if rows or windows else "no_measurements")
 

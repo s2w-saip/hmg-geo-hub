@@ -24,10 +24,10 @@ export function ConvChannelCard({ view }: { view: ConvView }) {
   const t = useTranslations("renewal.conversion.channels");
   const fmt = useConvFmt(view);
   const labels = useDeltaLabels();
-  const { rows, site, aiRank } = view.channels;
+  const { rows, total, aiRank } = view.channels;
   const ai = rows.find((r) => r.ai);
   const maxS = Math.max(1, ...rows.map((r) => r.sessions ?? 0));
-  const maxK = Math.max(site.per100 ?? 0, ...rows.map((r) => r.per100 ?? 0)) || 1;
+  const maxK = Math.max(total.per100 ?? 0, ...rows.map((r) => r.per100 ?? 0)) || 1;
   const grid = "grid grid-cols-[minmax(108px,1.1fr)_minmax(84px,1fr)_48px_minmax(140px,1.3fr)_60px_64px] items-center gap-2";
   return (
     <RnCard aria-label={t("title")}>
@@ -35,13 +35,14 @@ export function ConvChannelCard({ view }: { view: ConvView }) {
       <div className="flex flex-col px-6 pb-4.5 [.rn-dense_&]:px-4.5">
         {rows.length ? (
           <>
+            {/* an AI row without a session count (a missed collection day, the summary's note) reads no line, not the engine-filter one */}
             {ai && aiRank && aiRank.sessions != null ? (
               <Takeaway>
                 {aiRank.per100 != null
-                  ? t("take", { n: aiRank.n, rank: aiRank.sessions, share: fmt.pct(ai.share, 2), per100Rank: aiRank.per100, per100: fmt.one(ai.per100), site: fmt.one(site.per100) })
+                  ? t("take", { n: aiRank.n, rank: aiRank.sessions, share: fmt.pct(ai.share, 2), per100Rank: aiRank.per100, per100: fmt.one(ai.per100), total: fmt.one(total.per100) })
                   : t("takeNoKe", { n: aiRank.n, rank: aiRank.sessions, share: fmt.pct(ai.share, 2) })}
               </Takeaway>
-            ) : (
+            ) : ai ? null : (
               <Takeaway>{t("noAi")}</Takeaway>
             )}
             <Head grid={grid} cols={[[t("cols.channel")], [t("cols.sessions")], [t("cols.share"), "r"], [<KeHead key="ke" label={t("cols.per100")} />], [t("cols.pps"), "r"], [t("cols.d"), "r"]]} />
@@ -57,7 +58,7 @@ export function ConvChannelCard({ view }: { view: ConvView }) {
                 </span>
                 <span className="text-right text-rn-12 text-rn-muted tabular-nums">{fmt.pct(r.share, r.share != null && r.share < 10 ? 2 : 1)}</span>
                 <span className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-                  <MarkedBar w={r.per100 == null ? null : (r.per100 / maxK) * 100} mark={site.per100 == null ? null : (site.per100 / maxK) * 100} color={r.ai ? AI_COLOR : GEN_COLOR} />
+                  <MarkedBar w={r.per100 == null ? null : (r.per100 / maxK) * 100} mark={total.per100 == null ? null : (total.per100 / maxK) * 100} color={r.ai ? AI_COLOR : GEN_COLOR} />
                   <span className={cx("text-right tabular-nums", r.ai ? "font-bold" : "font-semibold")}>{fmt.one(r.per100)}</span>
                 </span>
                 <span className="text-right tabular-nums">{fmt.two(r.pps)}</span>
@@ -66,15 +67,15 @@ export function ConvChannelCard({ view }: { view: ConvView }) {
                 </span>
               </div>
             ))}
-            <div data-rn-channel-site="" className={cx(grid, "min-h-9 border-t-2 border-rn-line-2 text-rn-13 text-rn-ink-2")}>
-              <b className="font-semibold">{t("site")}</b>
-              <span className="text-right font-semibold tabular-nums">{fmt.n(site.sessions)}</span>
+            <div data-rn-channel-total="" className={cx(grid, "min-h-9 border-t-2 border-rn-line-2 text-rn-13 text-rn-ink-2")}>
+              <b className="font-semibold">{t("total")}</b>
+              <span className="text-right font-semibold tabular-nums">{fmt.n(total.sessions)}</span>
               <span />
               <span className="flex items-center justify-end gap-1.5 text-right font-semibold tabular-nums">
                 <i aria-hidden className="inline-block h-3 w-0.5 bg-rn-ink-2" />
-                {fmt.one(site.per100)}
+                {fmt.one(total.per100)}
               </span>
-              <span className="text-right tabular-nums">{fmt.two(site.pps)}</span>
+              <span className="text-right tabular-nums">{fmt.two(total.pps)}</span>
               <span />
             </div>
           </>
@@ -96,7 +97,7 @@ function KeHead({ label }: { label: string }) {
   );
 }
 
-/** A bar with the site total's level marked on the same scale. */
+/** A bar with the channels' total level (채널 합계) marked on the same scale. */
 function MarkedBar({ w, mark, color }: { w: number | null; mark: number | null; color: string }) {
   return (
     <span className="relative block h-2 rounded bg-rn-page">

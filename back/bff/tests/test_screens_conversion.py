@@ -145,6 +145,18 @@ def answer(p, query):
 CUR_Q, PREV_Q = "days=14", "from=2026-09-28&to=2026-10-11"
 
 
+def answer_collected(p, query, missed=()):
+    """The reader's answer when the collector left its daily `total` window on every day of every property except the
+    (prop_key, day) pairs in `missed`, whose rows are not there either (renewal audit 12-1)."""
+    rows, windows = ga4(p)
+    rows = [r for r in rows if (r["prop_key"], r["date"]) not in missed]
+    windows += [{"prop_key": k, "window_end": d, "window_days": 1, "cohort": "total", "engine_mask": 0, "device_mask": 0, "nvr_mask": 0,
+                 "page_key": 0, "users": 1, "page": None, "url": None}
+                for k in (1, 2) for d in sorted({r["date"] for r in ga4(p)[0]}) if (k, d) not in missed]
+    res = asyncio.run(read_conversion(Connection(PROPS, rows, windows, p["end"]), QueryParams(query)))
+    return json.loads(json.dumps(jsonable_encoder(res)))
+
+
 def run(coro):
     return asyncio.run(coro)
 
@@ -239,6 +251,45 @@ class View(unittest.TestCase):
         engine = next(f for f in v["findings"] if f["code"] == "engine")
         self.assertEqual((engine["engine"], engine["best"]), ("chatgpt", "gemini"))
 
+    def test_a_missed_day_leaves_the_shares_and_blocks_unknown(self):
+        """Renewal audit 12-1: Hyundai DE was not collected on 10-20. Every period sum over both properties is unknown
+        (the reader), so are the shares, ranks and 7-day blocks built on them; Kia IT's own values stay, and the view
+        names the property and its missed day for the summary's note."""
+        prev = answer_collected(PREV, PREV_Q)["data"]
+        whole = conv.conversion_view(answer_collected(CUR, CUR_Q)["data"], prev, False)
+        self.assertEqual(whole["missing"], [])
+        self.assertEqual(whole["spark"]["sessions"], [217, 217])
+        self.assertAlmostEqual(whole["props"][0]["share"], 294 / 434 * 100)
+        v = conv.conversion_view(answer_collected(CUR, CUR_Q, {(2, date(2026, 10, 20))})["data"], prev, False)
+        self.assertEqual(v["missing"], [{"id": "310000001", "country": "DE", "brand": "Hyundai", "days": ["2026-10-20"]}])
+        self.assertEqual((v["totals"]["aiSessions"], v["totals"]["aiConv"]), (None, None))
+        self.assertEqual(v["spark"]["sessions"], [217, None])  # the block of 10-19 ~ 10-25 holds the missed day
+        self.assertEqual(v["spark"]["conv"][1], None)
+        kia, de = v["props"][0], v["props"][1]
+        self.assertEqual((kia["id"], kia["sessions"], kia["share"]), ("469542848", 294, None))
+        self.assertEqual((de["sessions"], de["conv"], de["share"]), (None, None, None))
+        self.assertTrue(all(e["sessions"] is None and e["share"] is None and e["convShare"] is None for e in v["engines"]))
+        self.assertTrue(all(r["sessions"] is None and r["share"] is None for r in v["channels"]["rows"]))
+        self.assertEqual((v["channels"]["total"]["sessions"], v["channels"]["aiRank"]["sessions"]), (None, None))
+        self.assertTrue(all(p["sessions"] is None and p["share"] is None and p["cum"] is None for p in v["pages"]))
+        self.assertTrue(all(e["count"] is None and e["share"] is None for e in v["events"]))
+        self.assertIsNone(v["tracked"])
+        self.assertTrue(all(r["aiConv"] is None for r in v["segments"]["device"]))
+        self.assertIsNone(v["decomp"])  # its inputs are the period sums (W6)
+        self.assertEqual([f["code"] for f in v["findings"]], ["coverage"])
+
+    def test_a_stopped_property_is_outside_the_measured_scope(self):
+        """Renewal audit 12-3: a property the administrator stopped (unmapped) is outside the measured scope, so the market
+        card neither lists nor counts it, the same total as the coverage finding."""
+        stopped = {**HY_FR, "prop_key": 4, "property_id": "310000003", "status": "unmapped", "country": "JP"}
+        cur = json.loads(json.dumps(self.cur))
+        cur["properties"] = [*cur["properties"], stopped]
+        v = conv.conversion_view(cur, self.prev, False)
+        self.assertEqual(v["coverage"], {"total": 3, "active": 2, "pending_grant": 1, "unmapped": 1})
+        self.assertEqual([p["id"] for p in v["props"]], ["469542848", "310000001", "310000002"])
+        cov = next(f for f in v["findings"] if f["code"] == "coverage")
+        self.assertEqual((cov["active"], cov["total"]), (2, 3))
+
     def test_channels(self):
         ch = self.v["channels"]
         self.assertEqual([(r["channel"], r["ai"], r["sessions"]) for r in ch["rows"]],
@@ -249,8 +300,9 @@ class View(unittest.TestCase):
         self.assertAlmostEqual(ai["share"], 434 / 28434 * 100)
         self.assertAlmostEqual(ai["pps"], (14 * (2 * 21 + 3 * 8 + 2)) / 434)
         self.assertAlmostEqual(ch["rows"][0]["per100"], 210 / 15400 * 100)
-        self.assertEqual(ch["site"]["sessions"], 28434)
-        self.assertAlmostEqual(ch["site"]["per100"], (21 + 420) / 28434 * 100)
+        # 채널 합계 = the channel rows' own total (renewal audit 12-2: the hero's 사이트 전체 is report 5's)
+        self.assertEqual(ch["total"]["sessions"], 28434)
+        self.assertAlmostEqual(ch["total"]["per100"], (21 + 420) / 28434 * 100)
         self.assertEqual(ch["aiRank"], {"sessions": 4, "per100": 1, "pps": 2, "n": 4})  # Direct 4 pages a session > AI 2.19 > the others 2
         self.assertAlmostEqual(ai["d"], (434 - 364) / 364 * 100)
 
@@ -335,13 +387,13 @@ class View(unittest.TestCase):
         """2026-10-30 W6 review: a stopped property (unmapped) is not a coverage gap, and the top landing pages' share
         is stated as it is (it showed only from 50 %)."""
         base = {"totals": {"aiUsers": None, "lift": None, "share": None}, "prevOk": False, "channels": {}, "engines": [],
-                "segments": {}, "coverage": {"total": 3, "active": 2, "pending_grant": 0, "unmapped": 1},
+                "segments": {}, "coverage": {"total": 2, "active": 2, "pending_grant": 0, "unmapped": 1},
                 "pages": [{"id": f"/p{i}", "sessions": 10, "cum": c, "aiKe100": None, "genKe100": None} for i, c in enumerate((10, 20, 30, 40, 100))]}
         got = conv.findings(base)
         self.assertNotIn("coverage", [f["code"] for f in got])
         pages = next(f for f in got if f["code"] == "pages")
         self.assertEqual(pages["share"], 30)
-        pending = {**base, "coverage": {"total": 3, "active": 1, "pending_grant": 1, "unmapped": 1}}
+        pending = {**base, "coverage": {"total": 2, "active": 1, "pending_grant": 1, "unmapped": 1}}
         cov = next(f for f in conv.findings(pending) if f["code"] == "coverage")
         self.assertEqual((cov["active"], cov["total"]), (1, 2))
 

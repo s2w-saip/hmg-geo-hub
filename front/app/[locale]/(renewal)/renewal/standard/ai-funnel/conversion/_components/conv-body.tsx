@@ -206,7 +206,7 @@ function findingItems(view: ConvView, t: T, fmt: ConvFmt): RnFinding[] {
             : t("findings.change.detail", { chg: chg(f.conv) }) };
       case "channel":
         return { key: f.code, tone: f.tone, tag: t("findings.channel.tag"), title: t("findings.channel.title", { rank: f.rank, n: f.n, share: fmt.pct(f.share, 2) }),
-          detail: f.per100 != null && f.per100Rank != null ? t("findings.channel.detail", { per100: fmt.one(f.per100), rank: f.per100Rank, site: fmt.one(f.site) }) : undefined };
+          detail: f.per100 != null && f.per100Rank != null ? t("findings.channel.detail", { per100: fmt.one(f.per100), rank: f.per100Rank, total: fmt.one(f.total) }) : undefined };
       case "samePage":
         return { key: f.code, tone: f.tone, tag: t("findings.samePage.tag"), title: t("findings.samePage.title", { page: view.pages[f.page]?.path ?? "—", ai: fmt.one(f.ai), gen: fmt.one(f.gen) }),
           detail: t("findings.samePage.detail") };
@@ -254,6 +254,8 @@ function ConvHero({ view }: { view: ConvView }) {
     view.prevOk ? <RnDeltaChip onDark delta={d ?? null} format={(r) => `${Math.abs(r).toFixed(1)}${unit}`} emptyText="−" labels={labels} /> : null;
   const span = range(t, view.days[0], view.days[view.days.length - 1]);
   const noRate = T.aiRate == null || T.genRate == null;
+  const note = "m-0 mx-5 mb-3 flex items-start gap-1.5 rounded-lg bg-white/8 px-3 py-2 text-rn-12 leading-[1.5] break-keep text-white/86";
+  const missed = view.missing.map((m) => t("summary.missingItem", { place: fmt.place(m), n: m.days.length })).join(", ");
   return (
     <RnCard id="sec-summary" tone="hero" aria-label={t("summary.title")} className="pb-3">
       <RnCardHead
@@ -282,8 +284,15 @@ function ConvHero({ view }: { view: ConvView }) {
         <span>{t("site.genSessions", { n: fmt.n(T.genSessions) })}</span>
         <span>{t("site.genPer100", { n: fmt.one(T.genPer100) })}</span>
       </p>
-      {noRate ? (
-        <p className="m-0 mx-5 mb-3 flex items-start gap-1.5 rounded-lg bg-white/8 px-3 py-2 text-rn-12 leading-[1.5] break-keep text-white/86">
+      {view.missing.length ? (
+        <p data-rn-missing="" className={note}>
+          <Info className="mt-0.5 size-3.5 flex-none" aria-hidden />
+          {t("summary.missing", { n: view.missing.length, list: missed })}
+        </p>
+      ) : null}
+      {/* without a filter the missed days (above) are why the rates are gone, not the period-user windows */}
+      {noRate && (view.filtered || !view.missing.length) ? (
+        <p className={note}>
           <Info className="mt-0.5 size-3.5 flex-none" aria-hidden />
           {view.filtered ? t("summary.usersFilter") : t("summary.usersWindow")}
         </p>

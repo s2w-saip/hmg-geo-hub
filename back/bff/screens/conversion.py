@@ -11,10 +11,14 @@ Rules:
 - 전환율 = the reader's (conversions ÷ exact period users); 격차 = AI − 일반 in pp, only when both rates exist.
 - 세션 비중 = the reader's (AI sessions ÷ all sessions).
 - 엔진 · 입구 페이지 · 속성 shares are of the rows' own total (rows without a value are left out); an event's share
-  is of the tracked (전환 집계) events only. The engine rows have no users, so engines compare 세션 100회당 전환 =
-  conversions ÷ sessions × 100.
+  is of the tracked (전환 집계) events only; a property's share has no total when an active property missed a day.
+  The engine rows have no users, so engines compare 세션 100회당 전환 = conversions ÷ sessions × 100.
 - 일별 전환율 = the day's conversions ÷ the day's users (1-day windows).
-- 7-day blocks count back from the period's last day; a shorter first block is left out (sparklines).
+- 7-day blocks count back from the period's last day; a shorter first block is left out (sparklines). A block with a
+  day the collector missed for an active property is unknown, not the other days' sum.
+- 빠진 날 (renewal audit 12-1, 2026-10-31): when the collector missed a day of the period for an active property, every
+  period sum over it is unknown — the totals and their slices (the reader) and the shares, ranks and blocks built on
+  them here; `missing` names the properties and days for the summary's note.
 - Changes compare with the previous period of the same length: counts in %, rates and shares in pp, landing
   pages in sessions.
 - 이 기간 요약 = up to four findings in one fixed order; no threshold decides which show (the sample-size verdict and
@@ -23,8 +27,9 @@ Rules:
 2026-10-30 BI rework (W5): slices of the same GA4 rows the reader now sends, and arithmetic on them only — no estimate,
 no fill-in, no significance call.
 - 채널 = GA4's default channel groups (report 1). Their conversions are GA4 주요 이벤트 (key events) for every
-  property, since a tracked-event property counts its events only as AI vs the other channels together; 사이트 전체
-  is the channels' own total. Ranks are competition ranks (ties share a rank).
+  property, since a tracked-event property counts its events only as AI vs the other channels together; 채널 합계
+  is the channels' own total (the summary's 사이트 전체 is report 5, a separate observation: renewal audit 12-2). Ranks
+  are competition ranks (ties share a rank).
 - 기기 · 신규/재방문 = the same AI sessions (report 2) and general sessions (report 1) cut by the row's device and
   new/returning value; conversions follow each property's basis on the slice; per 100 sessions (no exact users by slice).
 - 같은 입구 페이지 = report 4's general sessions of the pages that had AI landings; per-page conversions are GA4 주요
@@ -101,17 +106,18 @@ def _channels(cur: dict, prev: dict, prev_ok: bool) -> dict:
                 "per100": share(c.get("key_events"), s), "pps": pv / s if pv is not None and s else None,
                 "d": change_pct(s, before.get(c.get("channel"))) if prev_ok else None}
     rows = sorted((row(c) for c in raw), key=lambda r: (r["sessions"] is None, -(r["sessions"] or 0), str(r["channel"])))
-    total = {"sessions": _sum(r["sessions"] for r in rows), "keyEvents": _sum(r["keyEvents"] for r in rows),
-             "pageViews": _sum(c.get("page_views") for c in raw)}
+    sums = {"sessions": _sum(r["sessions"] for r in rows), "keyEvents": _sum(r["keyEvents"] for r in rows),
+            "pageViews": _sum(c.get("page_views") for c in raw)}
     for r in rows:
-        r["share"] = share(r["sessions"], total["sessions"])
-    site = {"sessions": total["sessions"], "keyEvents": total["keyEvents"], "per100": share(total["keyEvents"], total["sessions"]),
-            "pps": total["pageViews"] / total["sessions"] if total["pageViews"] is not None and total["sessions"] else None}
+        r["share"] = share(r["sessions"], sums["sessions"])
+    # 채널 합계: the rows' own total (renewal audit 12-2)
+    total = {"sessions": sums["sessions"], "keyEvents": sums["keyEvents"], "per100": share(sums["keyEvents"], sums["sessions"]),
+             "pps": sums["pageViews"] / sums["sessions"] if sums["pageViews"] is not None and sums["sessions"] else None}
     ai = next((r for r in rows if r["ai"]), None)
     rank = None if ai is None else {"sessions": _rank(rows, "sessions", ai), "per100": _rank(rows, "per100", ai),
                                     "pps": _rank(rows, "pps", ai), "n": len(rows)}
     # no rows under an engine pick: report 1 has no engine (the reader says so)
-    return {"rows": rows, "site": site, "aiRank": rank, "reason": cur.get("channels_reason")}
+    return {"rows": rows, "total": total, "aiRank": rank, "reason": cur.get("channels_reason")}
 
 
 def _segments(raw: list[dict]) -> list[dict]:
@@ -166,8 +172,16 @@ def conversion_view(cur: dict, prev: dict | None, filtered: bool) -> dict:
     series["rate"] = [share(c, u) for c, u in zip(series["conv"], series["users"], strict=True)]
     series["genRate"] = [share(c, u) for c, u in zip(series["genConv"], series["genUsers"], strict=True)]
     series["share"] = [share(a, s) for a, s in zip(series["sessions"], series["site"], strict=True)]
+    # the active properties the collector missed a day of the period for (the reader), named as the windows are
+    names = {p.get("prop_key"): p for p in cur.get("properties") or []}
+    by_id = {p.get("property_id"): p for p in cur.get("properties") or []}
+    missing = [{"id": m.get("property_id"), "country": (by_id.get(m.get("property_id")) or {}).get("country"),
+                "brand": BRAND_NAMES.get((by_id.get(m.get("property_id")) or {}).get("brand_bit")),
+                "days": [str(d)[:10] for d in m.get("days") or []]} for m in cur.get("missing") or []]
+    missed = {d for m in missing for d in m["days"]}
     blocks = blocks_of(days)
-    spark = {k: [_sum(series[k][a:b + 1]) for a, b in blocks] for k in ("sessions", "conv")}
+    # a 7-day block with a missed day would be the other properties' days only (12-1)
+    spark = {k: [None if missed.intersection(days[a:b + 1]) else _sum(series[k][a:b + 1]) for a, b in blocks] for k in ("sessions", "conv")}
     # engines
     prev_eng = {e.get("engine"): e.get("sessions") for e in prev.get("engines") or []}
     eng = cur.get("engines") or []
@@ -194,12 +208,15 @@ def conversion_view(cur: dict, prev: dict | None, filtered: bool) -> dict:
                       "genSessions": g, "aiOfPage": share(s, s + g) if s is not None and g is not None else None,
                       "aiKe": p.get("ai_key_events"), "aiKe100": share(p.get("ai_key_events"), s),
                       "genKe": p.get("human_key_events"), "genKe100": share(p.get("human_key_events"), g)})
-    # GA4 properties (with the reader's per-property AI values)
+    # GA4 properties (with the reader's per-property AI values); a stopped one (unmapped) is outside the measured scope
+    # and is not listed (12-3, the W6 rule of the coverage finding)
     per = {c.get("property_id"): c for c in cur.get("countries") or []}
     prev_per = {c.get("property_id"): c.get("ai_sessions") for c in prev.get("countries") or []}
-    s_total = _sum(c.get("ai_sessions") for c in per.values())
+    s_total = None if missing else _sum(c.get("ai_sessions") for c in per.values())
     props = []
     for p in cur.get("properties") or []:
+        if p.get("status") == "unmapped":
+            continue
         c = per.get(p.get("property_id")) or {}
         s = c.get("ai_sessions")
         rate, gen_rate = share(c.get("ai_conversions"), c.get("ai_users")), share(c.get("human_conversions"), c.get("human_users"))
@@ -210,7 +227,8 @@ def conversion_view(cur: dict, prev: dict | None, filtered: bool) -> dict:
                       "genConv": c.get("human_conversions"), "genRate": gen_rate, "lift": gap(rate, gen_rate)})
     rank = {s: i for i, s in enumerate(STATUS_ORDER)}
     props.sort(key=lambda r: (rank.get(r["status"], len(rank)), r["sessions"] is None, -(r["sessions"] or 0), str(r["country"]), str(r["id"])))
-    coverage = {"total": len(props), **{s: sum(1 for r in props if r["status"] == s) for s in STATUS_ORDER}}
+    stopped = sum(1 for p in cur.get("properties") or [] if p.get("status") == "unmapped")
+    coverage = {"total": len(props), **{s: sum(1 for r in props if r["status"] == s) for s in STATUS_ORDER}, "unmapped": stopped}
     # events
     ev = cur.get("events") or []
     tracked = _sum(e.get("count") for e in ev if e.get("tracked"))
@@ -221,7 +239,6 @@ def conversion_view(cur: dict, prev: dict | None, filtered: bool) -> dict:
                       if e.get("ai_count") is not None and e.get("human_count") is not None else None} for e in ev),
                     key=lambda r: (not r["tracked"], r["count"] is None, -(r["count"] or 0), str(r["event"])))
     # period-user windows as the reader sends them (the original screen's 기간 사용자 측정값), named by property
-    names = {p.get("prop_key"): p for p in cur.get("properties") or []}
     windows = sorted(({"end": str(w.get("window_end"))[:10], "days": w.get("window_days"), "id": (names.get(w.get("prop_key")) or {}).get("property_id"),
                        "country": (names.get(w.get("prop_key")) or {}).get("country"), "brand": BRAND_NAMES.get((names.get(w.get("prop_key")) or {}).get("brand_bit")),
                        "cohort": w.get("cohort"), "page": w.get("url") or w.get("page"), "users": w.get("users"),
@@ -236,7 +253,7 @@ def conversion_view(cur: dict, prev: dict | None, filtered: bool) -> dict:
         "tracked": tracked, "channels": _channels(cur, prev, prev_ok),
         "segments": {"device": _segments(segs.get("device") or []), "visitorType": _segments(segs.get("visitor_type") or [])},
         "decomp": _decomposition(totals, _totals(prev.get("metrics") or {}), engines, prev_eng) if prev_ok else None,
-        "windows": windows,
+        "windows": windows, "missing": missing,
     }
     view["findings"] = findings(view)
     return view
@@ -248,11 +265,10 @@ def findings(v: dict) -> list[dict]:
     if t["lift"] is not None:
         tone = "good" if t["lift"] > 0 else "warn" if t["lift"] < 0 else "info"
         out.append((9, {"code": "lift", "tone": tone, "ai": t["aiRate"], "gen": t["genRate"], "lift": t["lift"]}))
-    # a stopped property (unmapped) is the administrator's choice, not a gap in what is measured
+    # a stopped property (unmapped) is the administrator's choice, not a gap in what is measured: coverage counts without it
     cov = v["coverage"]
-    registered = cov["total"] - cov.get("unmapped", 0)
-    if cov["active"] < registered:
-        out.append((8, {"code": "coverage", "tone": "warn", "active": cov["active"], "total": registered}))
+    if cov["active"] < cov["total"]:
+        out.append((8, {"code": "coverage", "tone": "warn", "active": cov["active"], "total": cov["total"]}))
     if v["prevOk"] and t.get("dAiSessions") is not None:
         d, dc = t["dAiSessions"], v.get("decomp")
         change = {"code": "change", "tone": "good" if d > 0 else "warn" if d < 0 else "info", "sessions": d, "conv": t.get("dAiConv")}
@@ -264,7 +280,7 @@ def findings(v: dict) -> list[dict]:
     if rank and rank["n"] > 1 and rank["sessions"] is not None:
         ai = next(r for r in ch["rows"] if r["ai"])
         out.append((6.5, {"code": "channel", "tone": "info", "rank": rank["sessions"], "n": rank["n"], "share": ai["share"],
-                          "per100": ai["per100"], "per100Rank": rank["per100"], "site": ch["site"]["per100"]}))
+                          "per100": ai["per100"], "per100Rank": rank["per100"], "total": ch["total"]["per100"]}))
     measured = [e for e in v["engines"] if e["sessions"]]
     if len(measured) > 1:
         top = measured[0]

@@ -57,9 +57,10 @@ describe("RnConvBody", () => {
     // the change finding carries the split: 7 = 3.8 + 3.2
     expect(html).toContain("AI 유입 전환 ▲35.0% — 전환 +7건 = 유입 규모 +3.8 + 세션당 전환 +3.2");
     expect(html).toContain("AI Assistant 채널: 채널 4개 중 세션 4위 (1.53%)");
-    expect(html).toContain("세션 100회당 주요 이벤트 4.8건 — 1위 · 사이트 전체 1.6건");
+    // 채널 합계 = the channel rows' own total; 사이트 전체 = GA4's totals report on the site line (renewal audit 12-2)
+    expect(html).toContain("세션 100회당 주요 이벤트 4.8건 — 1위 · 채널 합계 1.6건");
     // the site line restores the original's page views
-    expect(html).toContain("사이트 전체");
+    expect(html).toContain('<b class="font-semibold text-white/90">사이트 전체</b>');
     expect(html).toContain("세션 28,434회");
     expect(html).toContain("페이지 조회 84,000회");
     expect(html).toContain("일반 유입 세션 100회당 전환 2.5건");
@@ -79,9 +80,28 @@ describe("RnConvBody", () => {
     const html = render(<RnConvBody input={body} />);
     expect(count(html, "data-rn-channel=")).toBe(4);
     expect(html.indexOf('data-rn-channel="Organic Search"')).toBeLessThan(html.indexOf('data-rn-channel="AI Assistant"'));
-    expect(html).toContain("AI Assistant는 채널 4개 중 세션 4위(1.53%) · 세션 100회당 주요 이벤트 1위(4.8건, 사이트 전체 1.6건)");
-    expect(html).toContain("data-rn-channel-site");
+    expect(html).toContain("AI Assistant는 채널 4개 중 세션 4위(1.53%) · 세션 100회당 주요 이벤트 1위(4.8건, 채널 합계 1.6건)");
+    expect(html).toContain("data-rn-channel-total");
+    expect(html).toMatch(/data-rn-channel-total=""[^>]*><b class="font-semibold">채널 합계<\/b>/);
     expect(html).toContain("28,434");
+  });
+
+  it("a missed collection day: the summary says which property and why the sums read '—' (renewal audit 12-1)", () => {
+    const view = body.view!;
+    const unknown = {
+      ...view,
+      missing: [{ id: "310000001", country: "DE", brand: "Hyundai", days: ["2026-10-20"] }],
+      totals: { ...view.totals, aiSessions: null, aiConv: null, aiRate: null, genRate: null, lift: null, share: null, siteSessions: null, pageViews: null },
+      channels: { ...view.channels, rows: view.channels.rows.map((r) => ({ ...r, sessions: null, share: null, keyEvents: null, per100: null, pps: null })),
+        total: { sessions: null, keyEvents: null, per100: null, pps: null }, aiRank: { sessions: null, per100: null, pps: null, n: 4 } },
+      findings: [],
+    };
+    const html = render(<RnConvBody input={{ ...body, view: unknown }} />);
+    expect(html).toContain("GA4 속성 1개에 이 기간 수집되지 않은 날이 있습니다(독일 · Hyundai 1일)");
+    expect(html).toContain("일부 날짜만의 합이 되므로 계산하지 않습니다");
+    // the AI row is there, its values are unknown: not the engine-filter message
+    expect(html).not.toContain("이 조건에서는 GA4 채널 보고서에 AI Assistant 행이 없습니다");
+    expect(render(<RnConvBody input={body} />)).not.toContain("수집되지 않은 날이 있습니다");
   });
 
   it("the change split: waterfall steps that add up, and the engines' share of the session change", () => {
@@ -166,14 +186,20 @@ describe("RnConvBody", () => {
     const base = { ...body, view: null };
     expect(render(<RnConvBody input={{ ...base, state: "noprop", properties: [] }} />)).toContain("연결된 GA4 속성이 없습니다");
     expect(render(<RnConvBody input={{ ...base, state: "down" }} />)).toContain("데이터를 불러오지 못했습니다");
-    const pending = render(<RnConvBody input={{ ...base, state: "pending", properties: [{ id: "310000002", country: "FR", brand: "Hyundai", status: "pending_grant" }] }} />);
-    expect(pending).toContain("GA4 속성 1개가 연결을 기다립니다");
+    const pending = render(<RnConvBody input={{ ...base, state: "pending", properties: [{ id: "310000002", country: "FR", brand: "Hyundai", status: "pending_grant" }, { id: "310000003", country: "JP", brand: "Hyundai", status: "unmapped" }] }} />);
+    expect(pending).toContain("GA4 속성 2개가 아직 측정 중이 아닙니다");
     expect(pending).toContain("권한 대기");
+    // a stopped property is the administrator's stop (the collector's unmapped), not a market without a link (12-3)
+    expect(pending).toContain("수집 중지");
+    expect(pending).not.toContain("시장 미연결");
     const empty = render(<RnConvBody input={{ ...base, state: "empty", period: { from: null, to: null, days: 28 } }} />);
     expect(empty).toContain("AI 유입 전환 측정 대기");
     expect(empty).toContain("측정 중인 GA4 속성 2개가 있지만 측정 데이터가 아직 없습니다");
     const nomatch = render(<RnConvBody input={{ ...base, state: "nomatch" }} />);
     expect(nomatch).toContain("이 조건에 해당하는 측정 데이터가 없습니다");
+    // the country options are the GA4 properties' markets since W0, not the answer-measurement countries (12-4)
+    expect(nomatch).toContain("국가 선택지는 계정이 읽을 수 있는 GA4 속성의 시장입니다");
+    expect(nomatch).not.toContain("답변 측정 국가");
     expect(nomatch).toContain("필터 초기화");
   });
 });
