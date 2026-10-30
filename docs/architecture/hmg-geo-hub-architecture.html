@@ -358,9 +358,10 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 
   <ul class="points">
     <li><b>Next는 계산하지 않는다.</b> 페이지는 <code>/v1/screens/{name}</code>에서 완성된 뷰모델을 받아 그리기만 한다.
-      지표 계산은 BFF의 <code>screens/</code> 빌더 84개가 맡는다.
-      페이지를 연 뒤 브라우저가 더 읽는 부분(글로벌 프롬프트 목록의 다음 쪽, ACR 분포 시트를 탭을 열 때 하나씩)은
-      <code>/api/standard/*</code> 얇은 프록시가 같은 방식으로 화면 빌더에 넘긴다.</li>
+      지표 계산은 BFF의 <code>screens/</code> 빌더 94개가 맡는다.
+      페이지를 연 뒤 브라우저가 더 읽는 부분(글로벌 · Website 프롬프트 목록의 검색 · 정렬 · 다음 쪽과 엑셀 행, Website 프롬프트 인사이트, ACR 분포 시트를 탭을 열 때 하나씩)은
+      <code>/api/standard/*</code> · <code>/api/website/prompts/*</code> 얇은 프록시가 같은 방식으로 화면 빌더에 넘긴다.
+      로컬 모드는 <code>/api/hub/*</code> 밖의 GET 아닌 요청을 막으므로, 이런 읽기는 서버 액션(POST)이 아니라 GET 프록시로 둔다.</li>
     <li><b>빌더는 HTTP를 다시 타지 않는다.</b> <code>api.get()</code>으로 같은 프로세스 안에서 읽고, 동시에 들어온 같은 읽기는 한 번만 실행한다.
       Gold 읽기의 답은 아래 Gold 읽기 캐시에 두고, 브라우저로 가는 응답은 모두 <code>no-store</code>다. 한 읽기가 20초를 넘으면 그 구역만 504로 비운다.</li>
     <li><b>Gold 읽기 캐시</b>(2026-10-29). 화면 빌더가 읽는 Gold <code>/v1</code> 읽기의 답(JSON)을 BFF 프로세스 메모리에 둔다(<code>gold_reader/cache.py</code>, <code>api.get</code> 안).
@@ -374,7 +375,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
       키는 release 빌드, <code>gold.data_version</code> 전체, 기간(<code>from</code>·<code>to</code>·<code>cycle_offset</code>)을 뺀 쿼리다. <code>meta</code>는 요청마다 새로 만든다.
       Gold는 표를 하나씩 다시 적재하므로, 비었거나 차원 행 없는 키가 보이거나 읽는 사이 <code>data_version</code>이 바뀐 결과는 답하되 두지 않는다.
       복사본 재적재는 <code>data_version</code>을 바꾸지 않으므로 둔 값도 10분(<code>HGH_FILTER_OPTIONS_CACHE_S</code>, 0이면 끔)이 지나면 다시 읽는다.</li>
-    <li><b>읽기 원천은 경로로 갈린다.</b> <code>analytics/conversion</code>·<code>analytics/visibility</code> 두 경로만 HUB 데이터 DB로 가고,
+    <li><b>읽기 원천은 경로로 갈린다.</b> <code>analytics/conversion</code>·<code>analytics/visibility</code>·<code>analytics/properties</code>(AI Conversion 국가 선택지 = 계정이 읽을 수 있는 GA4 속성, 2026-10-30) 세 경로만 HUB 데이터 DB로 가고,
       나머지 <code>/v1/*</code>는 Gold로 간다. Gold는 <code>active_release</code>와 검증된 빌드에 고정해서 읽는다.</li>
     <li><b>읽기는 계정 범위 안에서만 한다</b>(2026-10-29, <code>bff/access.py</code>). 화면과 <code>/v1/*</code> 읽기는 토큰의 계정으로 돌고,
       관리자가 아닌 계정(HQ·권역·국가)은 두 곳에서 좁혀진다. 화면 빌더는 그 계정의 범위로 필터를 읽어 원래 화면처럼 브랜드를 잠그고 국가를 좁힌다.

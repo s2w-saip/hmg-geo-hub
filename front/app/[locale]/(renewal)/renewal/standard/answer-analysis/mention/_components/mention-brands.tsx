@@ -661,6 +661,21 @@ export function BrandDrawer({ target, onClose }: { target: DrawerTarget | null; 
   );
 }
 
+/** A Website page (renewal/website/…, 2026-10-30): the drawer reads the website surface, as the answer view does (answer-modal.tsx). */
+export function isWebsitePath(pathname: string | null | undefined): boolean {
+  return (pathname ?? "").includes("/website/");
+}
+
+/** The signal drawer's route query: the page's filters, the signal, and the project id or the website surface (signal-prompts-dialog.tsx). */
+export function signalPromptsQuery(spStr: string, signal: string, pathname: string | null | undefined): string {
+  const params = new URLSearchParams(spStr);
+  params.set("signal", signal);
+  const projectId = projectIdFromPath(pathname);
+  if (projectId) params.set("projectId", projectId);
+  else if (isWebsitePath(pathname)) params.set("surface", "website");
+  return params.toString();
+}
+
 function useListLoad<T>(path: string | null, key: "prompts" | "domains"): ListState<T> {
   const [state, setState] = useState<ListState<T>>({ status: "loading" });
   useEffect(() => {
@@ -681,12 +696,13 @@ function BrandSheet({ brand, hidden, onClose, onAnswer }: { brand: string; hidde
   const sp = useSearchParams();
   const pathname = usePathname();
   const projectId = projectIdFromPath(pathname);
+  const isWebsite = isWebsitePath(pathname);
   const [tab, setTab] = useState<"prompts" | "citations">("prompts");
   const row = drawer.find((b) => b.brand === brand);
   const own = row?.own ?? null;
   const spStr = sp.toString();
-  const promptsPath = useMemo(() => `/api/scope/brand-mention-prompts?${drilldownParams(spStr, { brand, own, isWebsite: false, projectId }).toString()}`, [spStr, brand, own?.code, own === null, projectId]); // eslint-disable-line react-hooks/exhaustive-deps
-  const citationsPath = useMemo(() => (tab === "citations" ? `/api/scope/brand-citations?${drilldownParams(spStr, { brand, isWebsite: false, projectId }).toString()}` : null), [tab, spStr, brand, projectId]);
+  const promptsPath = useMemo(() => `/api/scope/brand-mention-prompts?${drilldownParams(spStr, { brand, own, isWebsite, projectId }).toString()}`, [spStr, brand, own?.code, own === null, isWebsite, projectId]); // eslint-disable-line react-hooks/exhaustive-deps
+  const citationsPath = useMemo(() => (tab === "citations" ? `/api/scope/brand-citations?${drilldownParams(spStr, { brand, isWebsite, projectId }).toString()}` : null), [tab, spStr, brand, isWebsite, projectId]);
   const prompts = useListLoad<DrillPromptRow>(promptsPath, "prompts");
   const citations = useListLoad<CitationDomainLive>(citationsPath, "domains");
   const types = row?.types ?? null;
@@ -844,16 +860,12 @@ function SignalSheet({ signal, hidden, onClose, onAnswer }: { signal: "positive"
   const tB = useTranslations("answerAnalysis.mentions.breakdown");
   const sp = useSearchParams();
   const pathname = usePathname();
-  const projectId = projectIdFromPath(pathname);
   const [state, setState] = useState<SignalPromptsState>({ status: "loading" });
-  const spStr = sp.toString();
+  const query = signalPromptsQuery(sp.toString(), signal, pathname);
   useEffect(() => {
     setState({ status: "loading" });
     const ctrl = new AbortController();
-    const params = new URLSearchParams(spStr);
-    params.set("signal", signal);
-    if (projectId) params.set("projectId", projectId);
-    fetch(`/api/scope/signal-prompts?${params.toString()}`, { signal: ctrl.signal })
+    fetch(`/api/scope/signal-prompts?${query}`, { signal: ctrl.signal })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error("failed"))))
       .then((d: { prompts?: MentionsPromptLive[]; total?: unknown }) => setState(readSignalReply(d)))
       .catch((e: unknown) => {
@@ -861,7 +873,7 @@ function SignalSheet({ signal, hidden, onClose, onAnswer }: { signal: "positive"
         setState({ status: "error" });
       });
     return () => ctrl.abort();
-  }, [signal, spStr, projectId]);
+  }, [query]);
   const tTr = useTranslations("answerAnalysis.mentions.kpi.overview.unmeasuredDialog");
   return (
     <RnDrawer open={!hidden} onClose={onClose} closeLabel={t("drawer.close")} title={tS("title", { signal: tB(signal) })} subtitle={tS("hint")}>

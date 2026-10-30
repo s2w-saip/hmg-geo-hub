@@ -123,11 +123,13 @@ function Measured({ shell }: { shell: RnShellVM }) {
         <Suspense fallback={<SummarySkeleton />}>
           <Summary />
         </Suspense>
+        {input.afterSummary}
         <RnMentionTabs />
         {view === "brands" ? (
           <>
             <RnSectionHead id="sec-brands" title={t("sec.brands")} desc={t("sec.brandsDesc")} />
             <BrandDetail />
+            {input.brandsExtra}
           </>
         ) : (
           <>
@@ -260,7 +262,7 @@ function Summary() {
       case "typeTrail":
       case "typeLead":
         title = t(`find.${f.kind}.title`, { type: tType(String(p.type) as "mention"), ref: p.ref ? String(p.ref) : t("find.competitorAvg"), gap: f.kind === "typeLead" ? `+${n1(p.gap)}pp` : n1(p.gap) });
-        detail = f.kind === "typeTrail" && p.strong === "true" ? t("find.typeStrong") : t("find.typeDetail", { own: pctTxt(Number(p.own)) });
+        detail = t("find.typeDetail", { own: pctTxt(Number(p.own)) });
         break;
       case "mover":
         title = t("find.mover.title", { brand: String(p.brand), delta: deltaTxt(Number(p.delta)) });

@@ -3998,6 +3998,328 @@
     }
   },
   "renewal": {
+    "website": {
+      "prompts": {
+        "count": "{count} prompts",
+        "basisRounds": "Rounds {from} – {to}",
+        "readFailed": "Could not load the list. Try again in a moment.",
+        "retry": "Try again",
+        "domainLabel": "Domain",
+        "measurement": "Measurement",
+        "measurementLens": "Values within the measurement lens {lens}.",
+        "engineHelp": "Keeps the list as it is and counts only the picked engines' measurements.",
+        "timeHelp": "Keeps the list as it is and counts only the picked rounds' measurements. With none picked, every round counts.",
+        "noPickHint": "With no filter, every site prompt in your account's scope and the measurements of every round are shown.",
+        "countOf": "{count} prompts / {listed} listed",
+        "insights": {
+          "title": "List insights",
+          "basis": "Counted over the list of the current filters, search and lens",
+          "collapse": "Collapse",
+          "expand": "Expand",
+          "jump": "See the narrowed list ({count})",
+          "barTip": "{label} · {prompts} prompts · {measured} measured · {answers} answers"
+        },
+        "kpi": {
+          "prompts": "Listed prompts",
+          "promptsSub": "{sites} target domains · {countries} countries · {langs} languages",
+          "measured": "Measured prompts",
+          "measuredTip": "Keep only the measured prompts",
+          "ofList": "{pct} of the list",
+          "unmeasured": "{count} unmeasured",
+          "unmeasuredTip": "Keep only the unmeasured prompts",
+          "answers": "Answers",
+          "rounds": "Rounds",
+          "roundsValue": "{count}",
+          "roundsRange": "{from} – {to}",
+          "latest": "Measured in the latest round",
+          "latestTip": "Keep only the prompts measured in the {date} round",
+          "latestSub": "{date} round · {pct} of the list"
+        },
+        "rounds": {
+          "title": "Measured prompts per round",
+          "info": "Prompts measured at least once in each round. The dashed line is the number of prompts in the list. Click a bar to keep only the prompts measured in that round.",
+          "listLine": "List {count}",
+          "tip": "{date} round · {count} measured ({pct} of the list)"
+        },
+        "depth": {
+          "title": "Answer depth · engines",
+          "info": "How many answers each prompt has, and the engines that measured it. Click a bar or a set to keep only those prompts.",
+          "tip": "{answers} answers · {count} prompts ({pct} of the list)",
+          "sets": "Engine sets",
+          "noEngine": "No engine (unmeasured)",
+          "setTip": "{engines} · {count} ({pct} of the list)"
+        },
+        "markets": {
+          "title": "Market coverage",
+          "info": "Prompts by site country and brand. Click a country to add it to or remove it from the country filter.",
+          "country": "Country",
+          "total": "Total",
+          "legend": "Shade = up to ¼ · ½ · ¾ · all of the largest cell ({max}) · ‘·’ = 0",
+          "noBrand": "(no name)",
+          "more": "Show all ({count})",
+          "less": "Collapse",
+          "countryTip": "{country} — add to or remove from the country filter",
+          "cellTip": "{country} · {brand} · {count}"
+        },
+        "langs": {
+          "title": "Languages",
+          "info": "Prompts by language. Click one to add it to or remove it from the language filter."
+        },
+        "sites": {
+          "title": "Target domains",
+          "info": "Prompts by the domain of their target URL. Click one to search the list for it."
+        },
+        "columns": {
+          "market": "Market",
+          "rounds": "Rounds",
+          "roundsTip": "Measured in {count}/{total} rounds · first {first} · latest {last}",
+          "roundsNone": "Not measured in this range",
+          "roundsOf": "{count}/{total} rounds",
+          "firstMeasured": "First measured"
+        },
+        "drill": {
+          "label": "Narrow the list",
+          "clear": "Clear all",
+          "remove": "Remove {label}",
+          "m1": "Measured",
+          "m0": "Unmeasured",
+          "rd": "Measured in the {date} round",
+          "last": "{date}",
+          "lastNone": "Unmeasured",
+          "eset": "{engines}",
+          "esetNone": "No engine",
+          "ans": "{count}",
+          "key": {
+            "m": "Measurement",
+            "rd": "Round",
+            "last": "Latest measured",
+            "eset": "Engine set",
+            "ans": "Answers"
+          }
+        },
+        "export": {
+          "roundsCount": "Measured rounds (/{total})",
+          "rounds": "Measured rounds",
+          "engineAnswers": "{engine} answers"
+        }
+      },
+      "overview": {
+        "title": "Website AI answer performance",
+        "noDelta": "No change data",
+        "noPeriodDelta": "No period change",
+        "timesOf": "{n}×",
+        "kpiTitle": "KPIs",
+        "kpiHintDelta": "Change = {compare}",
+        "comparePeriod": "the selected period vs the period of the same length before it",
+        "trendHint": "Last {count} rounds · each KPI on its own axis · a round without a measurement breaks the line · hover an answer count for the change from the round before",
+        "trendFailed": "Could not load the KPI trend. Reopen the page in a moment.",
+        "trendTooltip": "Round {x}",
+        "trendAria": "KPI trend: {series}",
+        "rankUp": "higher up = ahead",
+        "roundsRow": "Round",
+        "answersRow": "Answers",
+        "answersTip": "Round of {day} · {count} answers",
+        "answersTipNone": "Round of {day} · no answer count",
+        "answersTipDelta": "{delta} vs the round before ({prev})",
+        "answersTipSame": "Same as the round before ({prev})",
+        "answersTipFirst": "First round shown, nothing to compare with",
+        "answersTipNoPrev": "The round before ({prev}) has no answer count, so no comparison",
+        "gap": {
+          "all": "Mention · citation gap",
+          "citation": "Citation gap",
+          "mention": "Mention gap"
+        },
+        "sourcesTitle": "Citation sources",
+        "sourcesHint": "Top domains by citations · Others = the rest",
+        "sourcesDetail": "Citation analysis",
+        "sourcesFailed": "Could not load the citation sources. Reopen the page in a moment.",
+        "sourcesBarAria": "Citation sources bar",
+        "citations": "{count}",
+        "brandsTitle": "HMG brands side by side",
+        "brandsHint": "Each brand read on its own · bold = ahead in the column · click a row to see that brand only",
+        "brandsFailed": "Could not load the brand comparison. Reopen the page in a moment.",
+        "brandsRowFailed": "Could not load this brand",
+        "brandsRowEmpty": "No measurement for this brand here",
+        "brandsTotal": "HMG total",
+        "brandsTotalTag": "KPIs above",
+        "colBrand": "Brand",
+        "pickBrand": "Show {brand} only",
+        "brandsFoot": "Bars scale to the column's best (priority exposure: lower is ahead) · change = the KPIs above · the owned and target URL rates have no change",
+        "enginesTitle": "Engines side by side",
+        "enginesHint": "The per-engine values behind 'engine consistency' above · hover a cell for its numerator and denominator · click a row to see that engine only",
+        "enginesFailed": "Could not load the engine values. Reopen the page in a moment.",
+        "enginesEmpty": "No per-engine measurement here.",
+        "colEngine": "Engine",
+        "colAnswers": "Answers",
+        "pickEngine": "Show {engine} only",
+        "consistencyRow": "Engine consistency (lowest ÷ highest)",
+        "legendBest": "ahead",
+        "legendWorst": "behind",
+        "enginesFoot": "Consistency is the badge on the KPI cards above",
+        "ratioPct": "{num} ÷ {den}",
+        "ratioRank": "rank sum {sum} ÷ ranked answers {count}",
+        "marketsFailed": "Could not load the markets. Reopen the page in a moment.",
+        "marketsPickBrand": "Pick one brand to see its markets.",
+        "marketsHint": "{brand} · a cell = our value, under it the same KPI of the market's top-share rival · a column head sets the map and the country order · click a country to see it only",
+        "mapOf": "{kpi} by country ({brand})",
+        "pendingRegions": "Regions to be measured: {regions}",
+        "colMarket": "Region / country",
+        "colRank": "Our rank",
+        "rankTitle": "{brand}'s rank by share of voice (rank / brands compared)",
+        "rankOf": "#{rank} / {count}",
+        "colLead": "Lead brand",
+        "countryCount": "{count}",
+        "pickColumn": "Colour the map and order the countries by {kpi}",
+        "pickCountry": "Show {country} only",
+        "short": {
+          "ownedUrlRate": "Owned URL",
+          "targetUrlRate": "Target URL",
+          "citationAccuracy": "Target source",
+          "trafficConversion": "Conversion"
+        },
+        "findings": {
+          "changeRound": "vs the last round",
+          "changePeriod": "Period compare",
+          "changeCounts": "worse {down} · better {up} · same {flat}",
+          "noChange": "No KPI changed",
+          "engineTag": "Widest engine gap",
+          "engineNote": "{kpi} consistency {consistency}%",
+          "engineAnswers": "{answers} answers",
+          "brandTag": "{kpi} by brand",
+          "sourceTag": "Citation sources",
+          "sourceTop": "#1 {domain}",
+          "sourceOwn": "Ours in the top {top}",
+          "sourceOwnValue": "{own}",
+          "sourceRest": "Others"
+        }
+      },
+      "citation": {
+        "title": "Website citation",
+        "lens": {
+          "hmgDef": "The share of all citations classified as HMG group official sites. The same value as Official (HMG) in the source mix below; the change compares with the previous round as the source mix does, or with the period of the same length before when a period is picked. It is a different basis from the Official (ours) share.",
+          "own": {
+            "name": "Official (ours) citation share",
+            "question": "How much AI rests on our brand's official sites",
+            "def": "The share of all citations judged as our brand's official sites. Our official sites follow the brand scope of the current access and filters, the same judgement as the dashboard's official site citation KPI. Official (HMG) counts the official sites of all three group brands, so the values can differ. The change uses the Overview card's basis (previous round), or the period of the same length before when a period is picked. With a source filter on, the round change and the line are not drawn.",
+            "formula": "Citations matched to our official sites ÷ all citations × 100 (citations, not domains)",
+            "none": "No citations to count"
+          },
+          "categories": "{n} source classes"
+        },
+        "sec": {
+          "reach": "Site citation reach",
+          "reachDesc": "Per prompt · whether AI answers cited an owned URL, and then the intended target page",
+          "prompts": "Prompts",
+          "promptsDesc": "Per prompt · prompts that cited our official URLs and prompts that never did",
+          "share": "Citation shares",
+          "shareDesc": "Per citation · the part of all citations from Official (HMG), Official (ours) and dealers"
+        },
+        "summary": {
+          "piece": "{name} <b>{value}</b>{delta}",
+          "plain": "{name} {value}",
+          "ownedUrl": "Owned URL citation rate",
+          "targetUrl": "Target URL citation rate",
+          "own": "Official (ours) share",
+          "hmg": "Official (HMG)",
+          "dealer": "Dealers"
+        },
+        "reach": {
+          "title": "Owned URL · target page reach",
+          "infoLabel": "How to read",
+          "info": "Counts the measured prompts whose AI answers cited an owned URL (a registered main address or a page under it) at least once, and of those the prompts that cited the target page set for the prompt. The three counts share one denominator (measured prompts) and the target is part of the owned URLs, so the number between two steps is their difference. 전체 in the engine table counts a prompt once whichever engine cited it, so it is not the engines' average. The change compares with the previous round like the other changes on this page, or with the period of the same length before when a period is picked.",
+          "defOwned": "Owned URL citation rate",
+          "defTarget": "Target URL citation rate",
+          "sub": "Measured → owned URL cited → target page cited. The same values as the original page's owned and target URL rate cards.",
+          "notComputed": "Not computed while a source filter is on: the source class is per citation, this card per prompt.",
+          "none": "No measured prompts",
+          "chipSnapshot": "Snapshot of {date}",
+          "chipPeriod": "Selected period total",
+          "chipDelta": "Change = vs previous round ({date})",
+          "chipDeltaPeriod": "Change = vs previous period ({from}~{to})",
+          "step": {
+            "measured": "Measured prompts",
+            "owned": "Owned URL cited",
+            "target": "Target page cited"
+          },
+          "unitPrompts": "prompts",
+          "dropOwned": "No owned URL cited: {n}",
+          "dropTarget": "Owned URL cited, not the target page: {n}",
+          "funnelLabel": "Owned URL · target page reach steps",
+          "tipPrev": "Previous {rate} ({n} / {measured} prompts)",
+          "enginesTitle": "Reach by engine",
+          "enginesNote": "All = prompts cited by any engine (not the engines' average). Each engine measured a different number of prompts.",
+          "colEngine": "Engine",
+          "colMeasured": "Measured prompts",
+          "colOwned": "Prompts citing an owned URL",
+          "colOwnedRate": "Owned URL citation rate",
+          "colTarget": "Prompts citing the target",
+          "colTargetRate": "Target URL citation rate",
+          "all": "All",
+          "tipEngine": "{engine} · owned URL {owned} · target {target} / measured {measured} prompts"
+        },
+        "prompts": {
+          "title": "Prompts citing / not citing our official URLs",
+          "infoLabel": "How to read",
+          "info": "Splits the prompts by whether their citations include one of our official URLs (Gold's rule: a registered owned URL or the target page). The cited count equals the reach card's owned-URL count above. Uncited = at least one citation but none of our official URLs; a prompt without any citation is in neither list. Each list shows the top 5 by all citations; the full lists open from 'View all' with search and pages.",
+          "sub": "The citation analysis's Official (ours) judgement · the same values as the original page's prompt split",
+          "owned": {
+            "name": "Prompts citing our official URLs",
+            "question": "Prompts whose answers rested on our official URL at least once"
+          },
+          "uncited": {
+            "name": "Prompts not citing our official URLs",
+            "question": "Prompts with citations but never our official URL"
+          },
+          "cites": "{n} citations",
+          "engines": "{n} engines",
+          "empty": "No prompts to show",
+          "more": "View all {n}"
+        }
+      },
+      "mention": {
+        "title": "Website mention",
+        "cards": {
+          "title": "KPI breakdown",
+          "desc": "The answer, prompt and mention counts behind the four KPI tabs below. Click a group title to open that KPI.",
+          "chipAsOf": "As of {date}",
+          "chipDelta": "Change = vs previous round ({date})",
+          "chipDeltaPeriod": "Change = vs the cumulative total at the first measurement in range ({date})",
+          "openKpi": "Open {kpi}",
+          "openMissing": "Show the {count} prompts without us"
+        },
+        "missing": {
+          "title": "Prompts without our brand",
+          "subtitle": "Measured prompts where no AI answer named our brand. Click one to read the answers.",
+          "segment": "Show",
+          "all": "All",
+          "withBrands": "Other brands named",
+          "noBrands": "No brand named",
+          "withBrandsHint": "Prompts where the AI named other brands instead of ours.",
+          "noBrandsHint": "Prompts whose AI answers named no brand at all.",
+          "count": "{count}",
+          "answers": "{count} answers",
+          "brandMentions": "{count} brand mentions",
+          "search": "Search prompts",
+          "noMatch": "No prompt matches the search.",
+          "empty": "Every measured prompt names our brand under these filters.",
+          "order": "Prompts with the most brand mentions first."
+        },
+        "weekly": {
+          "title": "Weekly brand mentions",
+          "desc": "Weekly mentions of our brand and the top 10 brands by share. A week starts on Monday (‘wk 6/29’) and holds the round measured in it. Each line has its own scale; compare sizes with the numbers on the right.",
+          "chip": "wk {from} – wk {to} · {n} weeks",
+          "weekOf": "wk {d}",
+          "brand": "Brand",
+          "trend": "Weekly trend",
+          "latest": "Latest week",
+          "delta": "vs previous week",
+          "gapNote": "A break in a line is a week without collection."
+        }
+      },
+      "conversion": {
+        "title": "Website AI Conversion"
+      }
+    },
     "visibility": {
       "title": "AI Visibility",
       "beta": "Beta",
@@ -4422,15 +4744,15 @@
         "definition": "Definition",
         "formula": "Formula",
         "aiRate": {
-          "d": "The share of users who came in through AI answers (ChatGPT · Gemini …, the GA4 ‘AI Assistant’ channel) and converted.",
+          "d": "Conversions per 100 users who came in through AI answers (ChatGPT · Gemini …, the GA4 ‘AI Assistant’ channel). Conversions are events, so one user can count more than once and the rate can pass 100%.",
           "f": "AI conversions ÷ AI users (deduplicated over the period) × 100"
         },
         "genRate": {
-          "d": "The conversion rate of users who came in any other way. The baseline AI traffic is compared with.",
+          "d": "Conversions per 100 users who came in any other way. The baseline AI traffic is compared with.",
           "f": "Other conversions ÷ other users (deduplicated over the period) × 100"
         },
         "lift": {
-          "d": "How many points the AI conversion rate is above the other traffic's. Positive means AI traffic converts better.",
+          "d": "How many points the AI conversion rate is above the other traffic's. Positive means the AI conversion rate is higher.",
           "f": "AI conversion rate − other conversion rate"
         },
         "conv": {
@@ -4452,12 +4774,16 @@
         "landing": {
           "d": "The page an AI session started on (GA4 landing page). Views are the page's views from AI and other traffic together.",
           "f": "AI sessions per page · share = page sessions ÷ the table's sessions · running = shares added from the top"
+        },
+        "ke100": {
+          "d": "Events GA4 marks as key events, per 100 sessions. A property's own tracked conversion events are not split by channel or landing page, so those compare on the same measure: key events.",
+          "f": "key events ÷ sessions × 100"
         }
       },
       "summary": {
         "title": "This period",
         "howTitle": "How it is made",
-        "how": "The six metrics above are computed straight from GA4 session · conversion rows and period users (formulas in each ⓘ). The small lines under conversions and sessions are 7-day sums. The findings below are four picked by rules from this screen's numbers — sample size, the AI vs other conversion gap, measuring properties, change against the previous period, engines, landing pages, session share.",
+        "how": "The six figures come straight from the GA4 session and conversion rows and the period users (formula under each ⓘ). The small lines under conversions and sessions are 7-day sums. The findings restate this page's numbers in one fixed order — the AI vs general gap, measured properties, change vs the previous period (with the conversion change split), channel rank, engines, the same landing page, the top landing pages' share, device, session share — the first four that have values. No threshold filters them, and no significance or 'meaningful change' is judged.",
         "chipPrev": "{range} · vs previous {days} days",
         "usersFilter": "With an engine · device · visitor type filter there are no GA4 period users (the rates' denominator), so the rates and the gap are not computed. Sessions and conversions follow the filters.",
         "usersWindow": "There are no GA4 period users for this period, so the rates and the gap are not computed. Period users exist only for the pre-aggregated periods (last 7 · 28 · 90 days)."
@@ -4471,8 +4797,8 @@
         "share": "AI session share",
         "rateSub": "{conv} conversions ÷ {users} users",
         "rateSubNoUsers": "{conv} conversions · no users",
-        "liftUp": "AI traffic converts better",
-        "liftDown": "Other traffic converts better",
+        "liftUp": "AI traffic has the higher conversion rate",
+        "liftDown": "Other traffic has the higher conversion rate",
         "liftFlat": "Both convert at the same rate",
         "liftNone": "No rates to compare",
         "convSub": "{n} per 100 sessions",
@@ -4483,11 +4809,6 @@
         "noPrev": "No previous period data"
       },
       "findings": {
-        "sample": {
-          "tag": "Small sample",
-          "title": "{users} AI users — under {min}",
-          "detail": "With few users, a handful of conversions moves the rate a lot. Try a longer period."
-        },
         "lift": {
           "tag": "AI vs other",
           "titleUp": "AI conversion rate {ai} — {lift} above other traffic ({gen})",
@@ -4498,12 +4819,13 @@
         "coverage": {
           "tag": "Coverage",
           "title": "{active} of {total} GA4 properties measuring",
-          "detail": "Properties waiting for access or without a market are not in the totals (see ‘GA4 properties · countries’)."
+          "detail": "Properties waiting for access or without a market are not in the totals (see ‘GA4 properties · countries’). Properties an administrator stopped are not counted."
         },
         "change": {
           "tag": "vs previous",
           "title": "AI sessions {chg} · vs previous {days} days",
-          "detail": "AI conversions {chg}"
+          "detail": "AI conversions {chg}",
+          "detailSplit": "AI conversions {chg} — {d} conversions = volume {volume} + per-session {rate}"
         },
         "engine": {
           "tag": "AI engines",
@@ -4520,16 +4842,51 @@
           "tag": "AI session share",
           "title": "{share} of all sessions come from AI",
           "detail": "vs previous period {d}"
+        },
+        "channel": {
+          "tag": "Channels",
+          "title": "AI Assistant: #{rank} of {n} channels by sessions ({share})",
+          "detail": "{per100} key events per 100 sessions — #{rank} · whole site {site}"
+        },
+        "samePage": {
+          "tag": "Same landing page",
+          "title": "{page} — key events per 100 sessions: AI {ai} · general {gen}",
+          "detail": "The landing page with the most AI sessions, against its general sessions in the same period."
+        },
+        "device": {
+          "tag": "Device",
+          "title": "{device} is {ai} of AI sessions — {gen} of general",
+          "detail": "The device mix of sessions in the same period."
         }
       },
       "trend": {
         "title": "AI traffic · conversions by day",
-        "info": "AI sessions and conversions per day. A day without GA4 rows is left blank, not zero. Daily rate = the day's AI conversions ÷ the day's AI users.",
+        "info": "AI sessions and conversions, the daily conversion rate (AI vs general) and the AI share of all sessions by day. A day without GA4 rows stays blank, not zero. Daily rate = the day's conversions ÷ the day's users. 'Table' shows every day's values as numbers.",
         "sessions": "AI sessions",
         "conv": "AI conversions",
-        "rate": "Daily AI conversion rate",
+        "rate": "Daily conversion rate — AI vs general",
         "rateName": "Rate",
-        "rateNone": "There are no daily users under these filters, so the rate is not drawn."
+        "rateNone": "There are no daily users under these filters, so the rate is not drawn.",
+        "chart": "Chart",
+        "table": "Table",
+        "viewLabel": "View",
+        "rateAi": "AI",
+        "rateGen": "General",
+        "share": "Daily AI session share",
+        "shareNone": "No whole-site sessions, so no share is drawn.",
+        "cols": {
+          "date": "Date",
+          "aiSessions": "AI sessions",
+          "aiUsers": "AI users",
+          "aiConv": "AI conv.",
+          "aiRate": "AI rate",
+          "genSessions": "General sessions",
+          "genUsers": "General users",
+          "genConv": "General conv.",
+          "genRate": "General rate",
+          "site": "Site sessions",
+          "share": "AI share"
+        }
       },
       "engine": {
         "title": "AI traffic · conversions by engine",
@@ -4541,28 +4898,33 @@
           "share": "Share",
           "conv": "Conv.",
           "per100": "Per 100",
-          "d": "vs prev."
+          "d": "vs prev.",
+          "pps": "Pages/session"
         },
         "none": "No engine rows for these filters.",
         "rest": "{n} AI sessions without a known engine are left out of the table.",
         "per100Note": "Per 100 = conversions per 100 sessions — there are no users per engine, so sessions are the base."
       },
       "props": {
-        "title": "GA4 properties · countries",
-        "info": "The brand sites' GA4 properties that measure AI Conversion. Only ‘Measuring’ properties are in the totals; conversions follow each property's rule (GA4 key events or the chosen conversion events).",
+        "title": "AI vs general conversion by market (GA4 property)",
+        "info": "The GA4 properties of the brand sites. Only 'measuring' properties count in the totals; conversions follow each property's basis (GA4 key events or listed events). Rates use the property's deduplicated period users; gap = AI rate − general rate.",
         "chip": "Measuring {active} / {total}",
         "cols": {
           "prop": "Country · property",
           "sessions": "AI sessions",
           "users": "AI users",
-          "status": "Status"
+          "status": "Status",
+          "rate": "AI rate",
+          "genRate": "General rate",
+          "lift": "Gap"
         },
         "idBasis": "GA4 {id} · {basis}",
         "basis": {
           "b1": "key events",
           "b2": "chosen events"
         },
-        "unknown": "Unknown country"
+        "unknown": "Unknown country",
+        "pp": "{n}pp"
       },
       "pages": {
         "title": "AI landing pages",
@@ -4573,22 +4935,140 @@
           "share": "Share",
           "cum": "Running",
           "views": "Views (all traffic)",
-          "d": "vs prev."
+          "d": "vs prev.",
+          "keGroup": "Key events / 100 sessions",
+          "aiOfPage": "AI of page",
+          "genSessions": "General sessions",
+          "aiKe100": "AI",
+          "genKe100": "General"
         },
-        "none": "No landing page rows for these filters."
+        "none": "No landing page rows for these filters.",
+        "take": "Top AI landing page {page}: {share} of its sessions are AI · key events per 100 sessions AI {ai} · general {gen}",
+        "takeShare": "Top AI landing page {page}: {share} of its sessions are AI"
       },
       "events": {
         "title": "GA4 events · conversion counting",
-        "info": "The period's GA4 events and counts (AI and other traffic together). ‘Counted’ marks the events a property counts as conversions; the share is among the counted events. Properties on key events count GA4 key events instead.",
+        "info": "GA4 events of the period and their counts. Bars split AI (navy) and general (grey); 'AI part' is the share of the event that came from AI sessions. 'Tracked' events are the ones a property counts as conversions; their share is among the tracked events. Key-event properties count conversions from GA4 key events.",
         "chip": "{n} counted events · {sum}",
         "tracked": "Counted",
         "cols": {
           "event": "Event",
           "kind": "Kind",
           "count": "Count",
-          "share": "Conv. share"
+          "share": "Conv. share",
+          "aiShare": "AI part"
         },
-        "none": "No event rows for these filters."
+        "none": "No event rows for these filters.",
+        "ai": "AI",
+        "gen": "General",
+        "splitTip": "AI {ai} · general {gen}"
+      },
+      "site": {
+        "label": "Whole site",
+        "sessions": "{n} sessions",
+        "views": "{n} page views",
+        "genSessions": "{n} general sessions",
+        "genPer100": "{n} general conversions per 100 sessions"
+      },
+      "channels": {
+        "title": "Sessions and key events by channel",
+        "info": "Each GA4 default channel group: sessions, share of all sessions, key events per 100 sessions and pages per session. AI traffic is the 'AI Assistant' channel. Equal values share a rank. With an engine filter the GA4 channel report has no AI row.",
+        "chip": "{n} channels",
+        "take": "AI Assistant: #{rank} of {n} channels by sessions ({share}) · #{per100Rank} by key events per 100 sessions ({per100}, whole site {site})",
+        "takeNoKe": "AI Assistant: #{rank} of {n} channels by sessions ({share})",
+        "noAi": "The GA4 channel report has no AI Assistant row here (an engine filter leaves it out).",
+        "cols": {
+          "channel": "Channel",
+          "sessions": "Sessions",
+          "share": "Share",
+          "per100": "Key events / 100 sessions",
+          "pps": "Pages/session",
+          "d": "vs previous"
+        },
+        "site": "Whole site",
+        "none": "No channel rows for these filters.",
+        "noneEngine": "GA4 channel reports have no engine, so the channel comparison is not computed when an AI engine is picked.",
+        "note": "Tick = the whole site's key events per 100 sessions. Channels compare on GA4 key events, the same measure for every property (the summary's conversions follow each property's basis)."
+      },
+      "change": {
+        "title": "AI conversion change, split",
+        "howTitle": "How it is split",
+        "info": "The change in AI conversions vs the previous period of the same length, in two parts. Volume = (sessions now − before) × conversions per session before; per-session = conversions now − sessions now × conversions per session before. The parts add up to the actual change exactly (no estimate). Below, the AI session change split into each engine's change; engines with values in both periods show on their own, the rest is one line.",
+        "chip": "vs previous {days} days",
+        "take": "{d} conversions = volume {volume} + per-session {rate}",
+        "basis": "AI sessions {s0} → {s1} · conversions per 100 sessions {p0} → {p1}",
+        "sessionsTitle": "AI session change {d} — by engine",
+        "rest": "Other (no engine · one period only)",
+        "noPrev": "No data for the previous period of the same length, so no split.",
+        "noTotals": "Both periods need AI sessions and conversions for the split.",
+        "steps": {
+          "prev": "Previous conversions",
+          "volume": "Volume",
+          "rate": "Per-session",
+          "cur": "Conversions now",
+          "aria": "previous conversions {prev}, volume {volume}, per-session {rate}, conversions now {cur}"
+        }
+      },
+      "segments": {
+        "title": "Device · new/returning mix",
+        "info": "How AI and general sessions split by device and new/returning, and conversions per 100 sessions of each slice. GA4 has no users per slice, so slices compare per 100 sessions. Conversions follow each property's basis.",
+        "tabsLabel": "Split by",
+        "tabs": {
+          "device": "Device",
+          "visitorType": "New · returning"
+        },
+        "cohorts": {
+          "ai": "AI",
+          "gen": "General"
+        },
+        "cols": {
+          "value": "Slice",
+          "aiShare": "AI share",
+          "genShare": "General share",
+          "gap": "Gap",
+          "aiPer100": "AI /100",
+          "genPer100": "General /100"
+        },
+        "take": "{value} is {ai} of AI sessions — {gen} of general",
+        "pp": "{n}pp",
+        "values": {
+          "desktop": "Desktop",
+          "mobile": "Mobile",
+          "tablet": "Tablet",
+          "smartTv": "Smart TV",
+          "new": "New",
+          "returning": "Returning",
+          "notSet": "Not set"
+        },
+        "none": "No device or new/returning rows for these filters.",
+        "note": "/100 = conversions per 100 sessions. Gap = AI share − general share."
+      },
+      "raw": {
+        "title": "Raw data · period users",
+        "info": "GA4's deduplicated user counts as stored (per property, cohort and window length) — the denominators of the rates above. There are daily windows and pre-counted periods (7 · 28 · 90 days and so on).",
+        "chip": "{n} rows",
+        "open": "Show",
+        "close": "Hide",
+        "lengthLabel": "Window length",
+        "daysN": "{n} d",
+        "cols": {
+          "end": "End",
+          "days": "Length",
+          "place": "Market · property",
+          "cohort": "Cohort",
+          "page": "Page",
+          "users": "Users",
+          "filter": "Filter"
+        },
+        "cohort": {
+          "ai": "AI",
+          "general": "General",
+          "total": "All"
+        },
+        "pageAll": "Whole site",
+        "all": "All",
+        "masked": "Filter combination",
+        "none": "No raw period users."
       }
     },
     "shell": {
@@ -5128,7 +5608,7 @@
         "title": "This round at a glance",
         "titlePeriod": "Selected period at a glance",
         "howLabel": "How this is made",
-        "how": "A rule-based summary of the numbers on this page (no new data). It ranks our standing and gap, the mention types where we trail, the competitor that moved most, the engine gap, sharp mention-rank changes and rising negative signals, and picks four.",
+        "how": "The numbers of this page's cards restated (no new data): our standing and gap → the engine gap → the type gap → the negative-signal share → the competitor that moved most → the competitor whose mention rank rose most, the first four that have values. No threshold filters them and nothing is ranked by importance; the colour shows only the direction for us (ahead · behind, up · down).",
         "chipSnapshot": "As of {date} · basis = every answer · vs previous round",
         "chipPeriod": "Selected period, cumulative · basis = every answer",
         "headline": "<b>{own}</b> — exposure <b>{expRank}</b> {exp}, share of voice <b>{sovRank}</b> {sov}, favorability {fav}, first position {pos}.",
@@ -5157,9 +5637,8 @@
           "tag": "Mention type",
           "title": "Ahead in every type — closest in {type} ({gap})"
         },
-        "typeStrong": "Recommendation and final choice carry the strongest purchase intent",
         "typeDetail": "Share within the type · us {own}",
-        "competitorAvg": "competitor average",
+        "competitorAvg": "competitor average (top 5)",
         "mover": {
           "tag": "Change",
           "title": "{brand} share {delta} — the biggest move"
@@ -5168,7 +5647,7 @@
         "moverDetailPeriod": "Among the competitors of the table, vs the previous period · us {own}",
         "engine": {
           "tag": "AI engine",
-          "title": "{gap} vs the competitor average on {engine}"
+          "title": "{gap} vs the competitor average on {engine} (its top 30)"
         },
         "engineDetail": "Smallest gap across engines · {next} {nextGap}",
         "engineDetailOne": "Exposure basis",
@@ -5244,7 +5723,7 @@
         "infoLabel": "What this shows",
         "info": "Not how often but how AI mentions us (plain mention · recommendation · comparison · definition · final choice), from the type signals the answer analyser puts on each brand mention. A type's exposure is the share of answers that mention us with that type, and an answer that names us in several types counts in each — so the types do not add up. Competition = each brand's share of the type's signals; the bar span = the gap between us and the reference (the leading compare brand, else the competitor average).",
         "chip": "Type signals",
-        "sub": "Strongest endorsement first — leading in final choice and recommendation matters most.",
+        "sub": "From the top: final choice → recommendation → comparison → definition → mention.",
         "viewLabel": "View",
         "viewCompare": "Competition",
         "viewOwnExposure": "Our exposure trend",
@@ -5397,7 +5876,7 @@
         "title": "This round at a glance",
         "titlePeriod": "The selected period at a glance",
         "howLabel": "How it is built",
-        "how": "A rule-based summary of the numbers on this page (no new data). It ranks the standing of Official (HMG), the source that moved most, the official-citation gaps by engine and mention type, prompts that never cite our official URLs (the opportunity), engine and type source preferences and sharp domain-rank changes, and picks four.",
+        "how": "The numbers of this page's cards restated (no new data): the standing of Official (HMG) → the Official (HMG) gap by engine → by mention type → prompts without our official URLs → the source that moved most → engine and type source preferences → domain-rank changes, the first four that have values. No threshold filters them and nothing is ranked by importance; the colour shows the direction only.",
         "chipSnapshot": "As of {date} · vs the previous round",
         "chipPeriod": "Cumulative over the selected period",
         "headline": "<b>Official (HMG) share {hmg}</b>{delta} · <b>{rank}</b> among source categories, dealer & marketplace {dealer}{prompts}.",
@@ -5433,14 +5912,15 @@
         "engineGapDetail": "From the source preference matrix",
         "typeGap": {
           "titleLow": "Recommendation answers cite Official (HMG) at {share} — {gap}pp below plain mentions",
-          "titleHigh": "Recommendation answers cite Official (HMG) more ({share})"
+          "titleHigh": "Recommendation answers cite Official (HMG) more ({share})",
+          "titleSame": "Recommendation answers and plain mentions cite Official (HMG) equally ({share})"
         },
-        "typeGapDetail": "The stronger the purchase intent, the more it matters that answers rest on official sources",
+        "typeGapDetail": "Source preference matrix (mention type)",
         "opportunity": {
-          "tag": "Opportunity",
+          "tag": "Uncited prompts",
           "title": "{n} prompts never cite our official URLs ({share}%)"
         },
-        "opportunityDetail": "These are the topics to cover with official content",
+        "opportunityDetail": "At least one citation but none of our official URLs · the list is in the prompts card",
         "skew": {
           "title": "{col} cites {category} {gap} vs all"
         },
@@ -5449,7 +5929,7 @@
           "tag": "Rank change",
           "title": "{domain} moved from #{from} to #{to} · last {weeks} rounds"
         },
-        "climbDetail": "Last {weeks} weeks · rank within the top {n} domains"
+        "climbDetail": "Last {weeks} rounds · rank within the top {n} domains"
       },
       "lens": {
         "label": "Citation KPIs",
@@ -5481,7 +5961,7 @@
         },
         "uncited": {
           "name": "Prompts not citing our official URLs",
-          "question": "Prompts that never did — the opportunity"
+          "question": "Prompts that never cited an official URL of ours (with at least one citation)"
         },
         "split": {
           "noOwnCategory": "Counted only while Official (HMG) is in the source filter",
@@ -5492,7 +5972,7 @@
       "comp": {
         "title": "Source category mix",
         "infoLabel": "How to read",
-        "info": "Citations of AI answers grouped by source category — share and count (citations, not domains). Change = vs the previous round (or the equal period just before, when a period is selected) (pp), drawn as a bar around 0 on one axis for every row (the largest change on screen, at least ±{cap}pp), so bar lengths compare. Blue = up, orange = down (direction, not good or bad). Trend = weekly share — wobbles under {span}pp are drawn nearly flat so only real trends tilt. Hover to see the category's top 3 domains and their share.",
+        "info": "Citations of AI answers grouped by source category — share and count (citations, not domains). Change = vs the previous round (or the equal period just before, when a period is selected) (pp), drawn as a bar around 0 on one axis for every row (the largest change on screen, at least ±{cap}pp), so bar lengths compare. Blue = up, orange = down (direction, not good or bad). Trend = share per round — each small line spans at least {span}pp vertically, so smaller moves draw gently. Hover to see the category's top 3 domains and their share.",
         "chipSnapshot": "Snapshot as of the measurement date",
         "chipPeriod": "Cumulative over the selected period",
         "chipDelta": "Change = vs the previous round ({date})",
@@ -5507,7 +5987,7 @@
           "citations": "Citations",
           "pct": "Share",
           "delta": "Change",
-          "trend": "Weekly trend",
+          "trend": "Trend by round",
           "pctCount": "Share · citations",
           "deltaAxis": "vs previous round",
           "deltaAxisPeriod": "vs previous period"
@@ -5517,33 +5997,31 @@
         "tipToggle": "Click to filter by this category (again to clear)",
         "up": "Up",
         "down": "Down",
-        "axisNote": "Change bars share one axis (at least ±{cap}pp) · trends flatten wobbles under {span}pp",
+        "axisNote": "Change bars share one axis (at least ±{cap}pp) · trend lines span at least {span}pp",
         "tipDelta": "change {delta} (previous round {prev})",
         "tipDeltaPeriod": "change {delta} (previous period {prev})"
       },
       "matrix": {
         "title": "Source preference matrix",
         "infoLabel": "How to read",
-        "infoEngine": "The category mix of the sources each AI engine cited (each column sums to 100%). Number = that engine's share, colour = the gap to the All column — blue sources are cited more than average by that engine, orange less. All = the sum of the engines in the table. Columns with fewer than {min} citations stay uncoloured: the gap may be chance.",
-        "infoType": "The category mix of the sources cited by answers whose mention of us carries that type signal (final choice · recommendation · comparison · definition · mention; each column sums to 100%). An answer with several signals counts in each; All = the sum of the types in the table. Colours as in the engine view; columns with fewer than {min} citations stay uncoloured.",
+        "infoEngine": "The category mix of the sources each AI engine cited (each column sums to 100%). Number = that engine's share, colour = the gap to the All column — blue sources are cited more than average by that engine, orange less. All = the sum of the engines in the table. Read each column's sample size from the citation count in its head.",
+        "infoType": "The category mix of the sources cited by answers whose mention of us carries that type signal (final choice · recommendation · comparison · definition · mention; each column sums to 100%). An answer with several signals counts in each; All = the sum of the types in the table. Colours as in the engine view.",
         "chip": "Colour = gap vs all",
         "axisLabel": "Columns",
         "axisEngine": "AI engine",
         "axisType": "Mention type",
-        "subEngine": "Blue = sources an engine relies on more than average, orange = less — an engine with an orange Official (HMG) row is the one to work on.",
-        "subType": "In endorsement order (final choice → mention) — the colour of the Official (HMG) row in recommendation and final-choice answers matters most.",
+        "subEngine": "Blue = sources an engine relies on more than average, orange = less.",
+        "subType": "Columns: final choice → recommendation → comparison → definition → mention.",
         "colCategory": "Source category",
         "colAll": "All",
         "n": "{n}",
         "csvGap": "gap vs all (pp)",
         "tipShare": "share {share} · all {base} ({gap})",
-        "tipThin": "{n} citations — under {min}, left uncoloured",
         "single": "Only one column — nothing to compare. Try the other view or widen the filters.",
         "oneSource": "One source picked, so every column is 100% — the cells show citation counts.",
         "less": "Cited less than all",
         "more": "more",
-        "cap": "Strongest at ±{cap}pp · grey = no gap",
-        "thin": "faded column = under {min} citations"
+        "cap": "Strongest at ±{cap}pp · grey = no gap"
       },
       "tone": {
         "title": "Citations by answer tone",
@@ -5564,10 +6042,10 @@
         "none": "No URLs"
       },
       "bump": {
-        "title": "Weekly domain citation rank",
+        "title": "Domain citation rank by round",
         "infoLabel": "How to read",
         "info": "Only the most cited domains over the drawn weeks (the count on the chip), ranked against each other by citations each week — a rank within them, not among all domains, so it can differ from the domain table below. Coloured = Official (HMG) domains (navy) and the 3 domains whose rank changed most since the first week; the rest is grey — hover a line or a legend item to isolate it, click to open the domain. Right = last week's rank · citations · rank change (▲▼).",
-        "chip": "Top {n} domains · {weeks} weeks",
+        "chip": "Top {n} domains · {weeks} rounds",
         "colRank": "rank",
         "colCitations": "citations",
         "colDomain": "Domain",
@@ -5575,7 +6053,7 @@
         "twin": "#{rank} · {n}",
         "legendOwn": "Official (HMG) domains",
         "legendRest": "Other domains",
-        "aria": "Bump chart of weekly domain citation ranks",
+        "aria": "Bump chart of domain citation ranks by round",
         "tip": "{x} · {domain} — #{rank} · {n} citations"
       },
       "table": {
@@ -5606,9 +6084,9 @@
         "colCitations": "All citations",
         "colCitationsTip": "Every citation in this prompt's answers, from any source (not only our official URLs). The list is ordered by it too.",
         "ownedTitle": "Prompts citing our official URLs",
-        "ownedSub": "Prompts whose answers rested on an official URL of ours at least once — the strong areas. Click a prompt to open the real answers.",
+        "ownedSub": "Prompts whose answers rested on an official URL of ours at least once. Click a prompt to open the real answers.",
         "uncitedTitle": "Prompts not citing our official URLs",
-        "uncitedSub": "Prompts whose answers never rested on an official URL of ours — the opportunity for official content. Click a prompt to open the real answers.",
+        "uncitedSub": "Prompts with at least one citation whose answers never rested on an official URL of ours. Click a prompt to open the real answers.",
         "positiveTitle": "URLs cited in positive answers",
         "positiveSub": "URLs that answers leaning positive on us rested on — sources to keep and spread.",
         "negativeTitle": "URLs cited in negative answers",

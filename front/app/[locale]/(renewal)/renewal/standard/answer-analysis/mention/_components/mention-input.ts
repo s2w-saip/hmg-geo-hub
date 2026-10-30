@@ -3,6 +3,7 @@
 // its own inside a <Suspense>, like the original tabs. Neutral module: the server page builds it,
 // the client body consumes it.
 
+import type { ReactNode } from "react";
 import type { CompareKind, CompareResult } from "@/lib/kpi/period-compare";
 import type { KpiTab } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/kpi-tab";
 import type {
@@ -52,6 +53,10 @@ export interface RnMentionInput {
   period: { from: string | null; to: string | null } | null;
   /** any filter axis in the URL (decides "결과 없음" vs "측정 대기"). */
   filtered: boolean;
+  /** A block of the page's own under 이번 회차 요약 (the Website page: its KPI breakdown, 2026-10-30). */
+  afterSummary?: ReactNode;
+  /** A block of the page's own at the end of 브랜드 상세 (the Website page: the weekly brand mentions, 2026-10-30). */
+  brandsExtra?: ReactNode;
   /** the tab rail: each tab's value, then the Δ of all four */
   tabValue: Record<KpiTab, Promise<RnTabValueVM>>;
   tabDeltas: Promise<RnTabDeltasVM>;

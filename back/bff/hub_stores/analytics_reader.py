@@ -11,7 +11,7 @@ from bff.gold_reader.context import SQL, values
 BRAND_BITS = {"hyundai": 1, "kia": 2, "genesis": 4, "hmg": 7}
 BRAND_NAMES = {1: "Hyundai", 2: "Kia", 4: "Genesis"}
 CONVERSION_KEYS = ("ai_sessions", "ai_users", "ai_conversions", "ai_conversion_rate", "human_sessions",
-                   "human_users", "human_conversions", "human_conversion_rate", "session_share", "page_views")
+                   "human_users", "human_conversions", "human_conversion_rate", "session_share", "page_views", "total_sessions")
 VISIBILITY_KEYS = ("seo_impressions", "ai_crawls", "pages", "both", "seo_only", "crawl_only", "neither")
 
 
@@ -24,6 +24,14 @@ def observed_sum(rows, column):
     if not rows or any(row.get(column) is None for row in rows):
         return None
     return sum(row[column] for row in rows)
+
+
+def grouped(rows, key):
+    """key → its rows, in row order (one pass instead of a scan per key)."""
+    out = defaultdict(list)
+    for r in rows:
+        out[key(r)].append(r)
+    return out
 
 
 def conversions(rows, properties, ai=True, complete=frozenset()):
@@ -78,7 +86,8 @@ def empty(kind, reason):
     keys = CONVERSION_KEYS if kind == "conversion" else VISIBILITY_KEYS
     return result(kind, {"metrics": dict.fromkeys(keys), "period": {"from": None, "to": None, "days": None},
                   "properties": [], "pages": [], "trend": [], "engines": [], "countries": [], "events": [],
-                  "windows": [], "devices": [], "bots": [], "priorities": []}, reason=reason)
+                  "windows": [], "channels": [], "segments": {"device": [], "visitor_type": []},
+                  "devices": [], "bots": [], "priorities": []}, reason=reason)
 
 
 def filters(q, b, *, project_alias="p", country_alias="c", brand_column="p.brand_bit"):
@@ -125,10 +134,14 @@ async def conversion(conn, q):
     if values(q, "engine"):
         where.append(f"(NOT r.is_ai OR r.engine_key IN (SELECT engine_key FROM ref.dim_engine WHERE code=ANY({b.bind(values(q, 'engine'), 'text[]')})))")
     rows = [dict(r) for r in await conn.fetch(f"""SELECT r.*,e.code AS engine,v.value AS page,u.url,
-        ev.value AS event FROM analytics.ga4_row r LEFT JOIN ref.dim_engine e USING(engine_key)
+        ev.value AS event,ch.value AS channel,dv.value AS device,nv.value AS nvr
+        FROM analytics.ga4_row r LEFT JOIN ref.dim_engine e USING(engine_key)
         LEFT JOIN analytics.ga4_value v ON v.kind='page' AND v.value_key=r.page_key
         LEFT JOIN ref.dim_url u ON u.url_key=v.url_key
         LEFT JOIN analytics.ga4_value ev ON ev.kind='event' AND ev.value_key=r.event_key
+        LEFT JOIN analytics.ga4_value ch ON ch.kind='channel' AND ch.value_key=r.channel_key
+        LEFT JOIN analytics.ga4_value dv ON dv.kind='device' AND dv.value_key=r.device_key
+        LEFT JOIN analytics.ga4_value nv ON nv.kind='nvr' AND nv.value_key=r.nvr_key
         WHERE {' AND '.join(where)} ORDER BY r.date,r.prop_key,r.report""", *b.args)]
     windows = [dict(r) for r in await conn.fetch("""SELECT w.*,v.value AS page,u.url FROM analytics.ga4_users_window w
         LEFT JOIN analytics.ga4_value v ON v.kind='page' AND v.value_key=w.page_key LEFT JOIN ref.dim_url u ON u.url_key=v.url_key
@@ -139,8 +152,15 @@ async def conversion(conn, q):
     def complete(days):
         return frozenset(k for k in keys if days <= collected[k])
     whole = complete({start + timedelta(days=i) for i in range(days)})
+    # the collector's daily windows are there to tell a collected day from a missed one (rows from before it wrote them
+    # cannot be checked)
+    checkable = any(collected.get(k) for k in keys)
     def zero_if_collected(value, done=whole, prop_keys=keys):
-        return 0 if value is None and set(prop_keys) <= done else value
+        """A sum over the properties' days: an observed zero when every property was collected on them; unknown when the
+        windows show one was not (the sum would be the other properties' only and shrink the total, 2026-10-30 W6)."""
+        if set(prop_keys) <= done:
+            return 0 if value is None else value
+        return None if checkable else value
     # Reports are separate observations: traffic, events and landing rows must never be added together.
     traffic = [r for r in rows if r["report"] == 2]
     totals = [r for r in rows if r["report"] == 5]
@@ -150,8 +170,9 @@ async def conversion(conn, q):
     total_sessions = zero_if_collected(observed_sum(totals, "sessions"))
     ai_events = [r for r in events if r["is_ai"] is True and r["is_conv"] is True]
     general_events = [r for r in events if r["is_ai"] is False and r["is_conv"] is True]
-    ai_conv = conversions(rows, properties, complete=whole)
-    general_conv = conversions(rows, properties, ai=False, complete=whole)
+    whole_period = set(keys) <= whole or not checkable
+    ai_conv = conversions(rows, properties, complete=whole) if whole_period else None
+    general_conv = conversions(rows, properties, ai=False, complete=whole) if whole_period else None
     # Exact period users are read as a window, not approximated by summing daily users.
     filtered = any(values(q, k) for k in ("engine", "device", "visitor_type"))
     def exact_users(cohort, prop_keys=keys, page_key=0, window_end=end, window_days=days):
@@ -162,30 +183,70 @@ async def conversion(conn, q):
                     and r["engine_mask"] == r["device_mask"] == r["nvr_mask"] == 0]
         return observed_sum(selected, "users") if len(selected) == len(prop_keys) else None
     ai_users, human_users = exact_users("ai"), exact_users("general")
-    human_sessions = zero_if_collected(observed_sum([r for r in rows if r["report"] == 1 and r["is_ai"] is False], "sessions"))
-    if human_sessions is None and not values(q,"engine") and total_sessions is not None and ai_sessions is not None and total_sessions >= ai_sessions:
-        human_sessions = total_sessions - ai_sessions
+    def general_sessions(t1, total, ai):
+        """The non-AI channels of report 1 only: reports are separate observations, so report 5's total less report 2's
+        AI sessions is no stand-in (2026-10-30 W6 review)."""
+        return t1
+    human_sessions = general_sessions(zero_if_collected(observed_sum([r for r in rows if r["report"] == 1 and r["is_ai"] is False], "sessions")),
+                                      total_sessions, ai_sessions)
     data["metrics"] = {"ai_sessions": ai_sessions, "ai_users": ai_users, "ai_conversions": ai_conv,
         "ai_conversion_rate": percent(ai_conv, ai_users), "human_sessions": human_sessions, "human_users": human_users,
         "human_conversions": general_conv, "human_conversion_rate": percent(general_conv, human_users),
-        "session_share": percent(ai_sessions, total_sessions), "page_views": zero_if_collected(observed_sum(totals, "page_views"))}
-    data["trend"] = [{"date": day, "ai_sessions": zero_if_collected(observed_sum([r for r in ai_traffic if r["date"] == day], "sessions"), complete({day})),
-        "ai_conversions": conversions([r for r in rows if r["date"] == day], properties, complete=complete({day})),
-        "ai_users": exact_users("ai", window_end=day, window_days=1)} for day in sorted({r["date"] for r in rows})]
-    data["engines"] = [{"engine": engine, "sessions": observed_sum([r for r in ai_traffic if r["engine"] == engine], "sessions"),
+        "session_share": percent(ai_sessions, total_sessions), "page_views": zero_if_collected(observed_sum(totals, "page_views")),
+        "total_sessions": total_sessions}
+    # 2026-10-30: every series below is a slice of the same stored rows (report 1 channels, device × new/returning on
+    # every report, the same-page general sessions of report 4, the AI · general split of report 3); nothing is estimated.
+    def day_values(day, mine):
+        done = complete({day})
+        ai = zero_if_collected(observed_sum([r for r in mine if r["report"] == 2 and r["is_ai"] is True], "sessions"), done)
+        total = zero_if_collected(observed_sum([r for r in mine if r["report"] == 5], "sessions"), done)
+        general = zero_if_collected(observed_sum([r for r in mine if r["report"] == 1 and r["is_ai"] is False], "sessions"), done)
+        whole_day = set(keys) <= done or not checkable
+        return {"date": day, "ai_sessions": ai, "ai_conversions": conversions(mine, properties, complete=done) if whole_day else None,
+                "ai_users": exact_users("ai", window_end=day, window_days=1), "total_sessions": total,
+                "human_sessions": general_sessions(general, total, ai),
+                "human_conversions": conversions(mine, properties, ai=False, complete=done) if whole_day else None,
+                "human_users": exact_users("general", window_end=day, window_days=1)}
+    data["trend"] = [day_values(day, mine) for day, mine in sorted(grouped(rows, lambda r: r["date"]).items())]
+    data["engines"] = [{"engine": engine, "sessions": observed_sum(mine, "sessions"), "page_views": observed_sum(mine, "page_views"),
         "conversions": conversions([r for r in rows if r["engine"] == engine], properties, complete=whole)}
-        for engine in sorted({r["engine"] for r in ai_traffic if r["engine"]})]
+        for engine, mine in sorted(grouped([r for r in ai_traffic if r["engine"]], lambda r: r["engine"]).items())]
+    # report 1 has no engine: an engine pick would drop the AI channel row and leave the site total without AI sessions
+    data["channels_reason"] = "engine" if values(q, "engine") else None
+    data["channels"] = [] if values(q, "engine") else [{"channel": channel, "is_ai": any(r["is_ai"] is True for r in mine), "sessions": observed_sum(mine, "sessions"),
+        "key_events": observed_sum(mine, "key_events"), "page_views": observed_sum(mine, "page_views")}
+        for channel, mine in sorted(grouped([r for r in rows if r["report"] == 1 and r.get("channel")], lambda r: r["channel"]).items())]
+    def segments(kind):
+        return [{"value": value,
+                 "ai_sessions": zero_if_collected(observed_sum([r for r in mine if r["report"] == 2 and r["is_ai"] is True], "sessions")),
+                 "human_sessions": zero_if_collected(observed_sum([r for r in mine if r["report"] == 1 and r["is_ai"] is False], "sessions")),
+                 "ai_conversions": conversions(mine, properties, complete=whole),
+                 "human_conversions": conversions(mine, properties, ai=False, complete=whole)}
+                for value, mine in sorted(grouped([r for r in rows if r.get(kind)], lambda r: r[kind]).items())]
+    data["segments"] = {"device": segments("device"), "visitor_type": segments("nvr")}
     landing = [r for r in rows if r["report"] == 4]
-    data["pages"] = [{"url": url, "sessions": observed_sum([r for r in landing if (r["url"] or r["page"]) == url and r["is_ai"] is True], "sessions"),
-        "page_views": observed_sum([r for r in landing if (r["url"] or r["page"]) == url], "page_views")}
-        for url in sorted({r["url"] or r["page"] for r in landing if r["url"] or r["page"]})]
-    data["events"] = [{"event": event, "count": observed_sum([r for r in events if r["event"] == event], "event_count"),
-        "tracked": any(r["is_conv"] for r in events if r["event"] == event)} for event in sorted({r["event"] for r in events if r["event"]})]
+    data["pages"] = []
+    for url, mine in sorted(grouped([r for r in landing if r["url"] or r["page"]], lambda r: r["url"] or r["page"]).items()):
+        ai, general = [r for r in mine if r["is_ai"] is True], [r for r in mine if r["is_ai"] is False]
+        data["pages"].append({"url": url, "sessions": observed_sum(ai, "sessions"), "page_views": observed_sum(mine, "page_views"),
+            "ai_page_views": observed_sum(ai, "page_views"), "ai_key_events": observed_sum(ai, "key_events"),
+            "human_sessions": observed_sum(general, "sessions"), "human_key_events": observed_sum(general, "key_events")})
+    data["events"] = [{"event": event, "count": observed_sum(mine, "event_count"), "tracked": any(r["is_conv"] for r in mine),
+        "ai_count": zero_if_collected(observed_sum([r for r in mine if r["is_ai"] is True], "event_count")),
+        "human_count": zero_if_collected(observed_sum([r for r in mine if r["is_ai"] is False], "event_count"))}
+        for event, mine in sorted(grouped([r for r in events if r["event"]], lambda r: r["event"]).items())]
     data["windows"] = windows
-    data["countries"] = [{"property_id": p["property_id"], "country": p["country"], "brand": BRAND_NAMES.get(p["brand_bit"]),
-        "ai_users": exact_users("ai", [p["prop_key"]]),
-        "ai_sessions": zero_if_collected(observed_sum([r for r in ai_traffic if r["prop_key"] == p["prop_key"]], "sessions"), prop_keys=[p["prop_key"]])}
-        for p in properties]
+    by_prop = grouped(rows, lambda r: r["prop_key"])
+    def market(p):
+        mine, k = by_prop.get(p["prop_key"], []), [p["prop_key"]]
+        return {"property_id": p["property_id"], "country": p["country"], "brand": BRAND_NAMES.get(p["brand_bit"]),
+                "ai_users": exact_users("ai", k),
+                "ai_sessions": zero_if_collected(observed_sum([r for r in mine if r["report"] == 2 and r["is_ai"] is True], "sessions"), prop_keys=k),
+                "ai_conversions": conversions(mine, [p], complete=whole),
+                "human_users": exact_users("general", k),
+                "human_sessions": zero_if_collected(observed_sum([r for r in mine if r["report"] == 1 and r["is_ai"] is False], "sessions"), prop_keys=k),
+                "human_conversions": conversions(mine, [p], ai=False, complete=whole)}
+    data["countries"] = [market(p) for p in properties]
     return result("conversion", data, reason=None if rows or windows else "no_measurements")
 
 
@@ -258,9 +319,19 @@ async def visibility(conn, q):
     return result("visibility", data, reason=None if rows else "no_measurements")
 
 
+async def properties(conn, q):
+    """The GA4 properties the account can read, every status (the collector's analytics.ga4_property): the AI
+    Conversion panel's 국가 options (2026-10-30)."""
+    b = SQL()
+    parts = filters(q, b)
+    rows = [dict(r) for r in await conn.fetch(f"""SELECT p.property_id,p.brand_bit,p.status,c.code AS country FROM analytics.ga4_property p
+        LEFT JOIN ref.dim_country c USING(geo_key) WHERE {' AND '.join(parts) or 'true'} ORDER BY c.code,p.property_id""", *b.args)]
+    return result("properties", {"properties": rows})
+
+
 async def read(kind, q):
     try:
         async with analytics_db.connection() as conn:
-            return await (conversion(conn, q) if kind == "conversion" else visibility(conn, q))
+            return await {"conversion": conversion, "visibility": visibility, "properties": properties}[kind](conn, q)
     except (ConnectionError, OSError, asyncpg.PostgresError, TimeoutError):
-        return empty(kind, "source_unavailable")
+        return result(kind, {"properties": []}, reason="source_unavailable") if kind == "properties" else empty(kind, "source_unavailable")

@@ -49,7 +49,8 @@ export function DeltaChip({ value, rank = false, invert = false, neutral = false
       delta={value}
       lowerIsBetter={rank || invert}
       neutral={neutral}
-      format={(r) => `${Math.abs(r).toFixed(1)}${rank ? "" : unit}`}
+      // a Δ that rounds to 0 reads 변화 없음 (as the tab rail and the renewal Overview), never "– 0.0"
+      format={(r) => (r === 0 ? t("flat") : `${Math.abs(r).toFixed(1)}${rank ? "" : unit}`)}
       emptyText={t("none")}
       labels={{ up: t("up"), down: t("down"), flat: t("flat") }}
     />

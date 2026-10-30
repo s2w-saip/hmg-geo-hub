@@ -442,6 +442,9 @@ export function RnOverviewFilterPanel({
           <RnPanelGroupLabel>{tf(`section.${s.id}` as "section.dimension")}</RnPanelGroupLabel>
           {s.axes.map((axis) => {
             const toggle = () => setOpen((o) => ({ ...o, [axis]: !(o[axis] ?? false) }));
+            // a 국가 axis with nothing to offer (AI Conversion before any GA4 property, 2026-10-30) is left out,
+            // unless the URL still picks a country and its clear is needed
+            if (axis === "geography" && model.geographyOptions.length === 0 && !draft.geography?.length) return null;
             if (axis === "competitor" && props.competitorOptions) {
               return (
                 <Suspense key={axis} fallback={<AxisSection axis={axis} open={false} onToggle={toggle} options={[]} />}>

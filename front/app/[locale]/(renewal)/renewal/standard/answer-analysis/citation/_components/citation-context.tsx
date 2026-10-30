@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { RnCardActions, useRnToast } from "@/components/renewal-ui";
+import { RnCardActions, RnTag, useRnToast } from "@/components/renewal-ui";
 import { downloadCsv, type CsvCell } from "@/app/[locale]/(renewal)/renewal/_components/csv";
 import { ENGINE_LABEL } from "@/components/dash/dimension-filter-panel";
 import { citationCategorySlug } from "@/lib/citation-categorizer/taxonomy";
@@ -48,6 +48,15 @@ export function useCitation(): CitationCtx {
   const c = useContext(Ctx);
   if (!c) throw new Error("CitationProvider missing");
   return c;
+}
+
+/** The 자사 domain mark (one flag, Gold's 자사 citation): the site brand's 당사 on the Website page, where 자사 is the
+ * site's brand, HMG on the standard page (2026-10-30 W6 review: the Overview marked the same domains 당사). */
+export function OwnTag({ own, className }: { own: boolean; className?: string }) {
+  const c = useContext(Ctx);
+  const t = useTranslations("renewal.overview");
+  if (!own) return null;
+  return <RnTag className={className}>{c?.input.website ? t("ownTag") : "HMG"}</RnTag>;
 }
 
 /** Category display name (the taxonomy value stays the key). */

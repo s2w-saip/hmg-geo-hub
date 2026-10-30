@@ -180,6 +180,13 @@ class Routes(unittest.TestCase):
         status, body = run(call("PATCH", f"/v1/hub/saved-filters/{b}", {"query": ""}, self.token()))
         self.assertEqual((status, body["data"]["item"]["query"]), (200, ""))
 
+    def test_website_pages_keep_their_own_lists(self):
+        for page in ("website-overview", "website-mention", "website-citation", "website-prompts", "website-conversion", "website-acr"):
+            self.save("W", page=page, isDefault=True)
+            self.assertEqual(self.names(page), [("W", True)], page)
+        self.assertEqual(self.listed("overview"), [])
+        self.assertEqual(self.listed("mention"), [])
+
     def test_a_new_default_takes_over(self):
         self.save("A", isDefault=True)
         self.save("B", isDefault=True)

@@ -21,7 +21,7 @@ from bff.gold_reader.readers import read as read_gold
 from bff.hub_stores import analytics_reader
 from bff.screens._js import js_str
 
-ANALYTICS = {"analytics/conversion", "analytics/visibility"}
+ANALYTICS = {"analytics/conversion", "analytics/visibility", "analytics/properties"}
 
 
 async def read(path: str, q: QueryParams) -> dict:

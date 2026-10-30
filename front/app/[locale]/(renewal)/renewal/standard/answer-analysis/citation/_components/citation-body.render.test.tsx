@@ -14,9 +14,10 @@ import type { CitationDomainLive, CitationsLive } from "@/lib/scope/result-adapt
 // a 출처 filter, a competitor pick, one picked 출처 (counts in the matrix), the empty / delayed states.
 
 let SEARCH = "";
+let PATH = "/ko/renewal/standard/answer-analysis/citation";
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: () => {}, push: () => {} }),
-  usePathname: () => "/ko/renewal/standard/answer-analysis/citation",
+  usePathname: () => PATH,
   useSearchParams: () => new URLSearchParams(SEARCH),
 }));
 
@@ -87,8 +88,10 @@ type Parts = {
   typeCategories: import("@/lib/db/repositories/scope-aggregates").CitationTypeCategoryRow[] | null;
 };
 const input = parts;
-const render = (p: Parts, search = "") => {
+// `website`: the website page's parts; its tests reuse the frozen model of the bare URL (`rnSearch`) and parts (`rnBase`)
+const render = (p: Parts, search = "", website?: Input["website"], rnSearch = website ? "" : search, rnBase: Parts = p) => {
   SEARCH = search;
+  PATH = website ? "/ko/renewal/website/answer-analysis/citation" : "/ko/renewal/standard/answer-analysis/citation";
   const i: Input = {
     api: p.api,
     period: null,
@@ -100,7 +103,8 @@ const render = (p: Parts, search = "") => {
     toneSummary: settled({ positive: { urls: 120, citations: 300, answers: 90 }, negative: { urls: 12, citations: 20, answers: 8 } }),
     tableSource: settled(null),
     periodView: settled(null),
-    rn: settled(rnVmFor({ live: p.data, prev: p.prevCategories, card: p.officialDelta, typeRows: p.typeCategories, sections: null, search })),
+    rn: settled(rnVmFor({ live: rnBase.data, prev: rnBase.prevCategories, card: rnBase.officialDelta, typeRows: rnBase.typeCategories, sections: null, search: rnSearch })),
+    website,
   };
   return renderToStaticMarkup(
     <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
@@ -176,5 +180,94 @@ describe("renewal Citation body", () => {
   it("tone tiles: api vs legacy basis chip", () => {
     expect(render(input())).toContain(T.tone.chipLegacy);
     expect(render(input({ api: true }))).toContain(T.tone.chipApi);
+  });
+});
+
+// The website page (W3, 2026-10-30): the same body with the website parts — the screen's model is the frozen
+// one above (its Δ basis does not matter here), the website part comes as citation/website sends it.
+type Website = Awaited<NonNullable<Input["website"]>>;
+type Reach = Extract<Website["reach"], { status: "ok" }>;
+const REACH: Reach = {
+  status: "ok",
+  measured: 10021,
+  owned: 8815,
+  target: 6673,
+  ownedRate: 88.0,
+  targetRate: 66.6,
+  prev: { measured: 9982, owned: 8826, target: 6509, ownedRate: 88.4, targetRate: 65.2 },
+  delta: { ownedRate: -0.5, targetRate: 1.4, basis: "round", date: "2026-10-02" },
+  engines: [
+    { engine: "ChatGPT", measured: 10021, owned: 8016, target: 5333, ownedRate: 80.0, targetRate: 53.2 },
+    { engine: "Gemini", measured: 10021, owned: 6825, target: 4349, ownedRate: 68.1, targetRate: 43.4 },
+  ],
+  enginesDegraded: false,
+  source: "live",
+};
+const OWN: NonNullable<Website["own"]> = { value: 24.9, delta: { value: -3.6, basis: "card", date: "2026-10-02" }, spark: [28.5, 28.5, 24.9], sparkOn: true };
+const site = (over: Partial<Website> = {}) => settled<Website>({ own: OWN, reach: REACH, ...over });
+const W = ko.renewal.website.citation;
+const tile = (html: string, kind: string) => {
+  const at = html.indexOf(`data-rn-tile="${kind}"`);
+  const next = html.indexOf('data-rn-tile="', at + 10);
+  return at < 0 ? "" : html.slice(at, next > 0 ? next : undefined);
+};
+const between = (html: string, from: string, to: string) => {
+  const at = html.indexOf(from);
+  return at < 0 ? "" : html.slice(at, html.indexOf(to, at + from.length));
+};
+const fill = (s: string, v: Record<string, string>) => Object.entries(v).reduce((o, [k, x]) => o.replace(`{${k}}`, x), s);
+
+describe("renewal Citation body — website page", () => {
+  it("sections per prompt first, then per citation", () => {
+    const html = render(input(), "", site());
+    const ids = [...html.matchAll(/id="(sec-[a-z]+)"/g)].map((m) => m[1]);
+    expect(ids).toEqual(["sec-summary", "sec-reach", "sec-prompts", "sec-overview", "sec-comp", "sec-mix", "sec-dom"]);
+  });
+  it("headline: the URL funnel and the shares with their Δ", () => {
+    const html = render(input(), "", site());
+    const head = between(html, 'id="sec-summary"', "</p>");
+    expect(head).toContain(`${W.summary.ownedUrl} <b>88.0%</b> (▼0.5pp)`);
+    expect(head).toContain(`${W.summary.targetUrl} <b>66.6%</b> (▲1.4pp)`);
+    expect(head).toContain(`${W.summary.own} <b>24.9%</b> (▼3.6pp)`);
+  });
+  it("reach: three steps on one denominator, the two drops, the Δ basis and the engines with 전체 first", () => {
+    const html = render(input(), "", site());
+    const reach = between(html, 'data-rn-reach=""', "</table>");
+    expect(between(reach, 'data-rn-step="owned"', "</div>")).toMatch(/8,815.*88\.0%/);
+    expect(between(reach, 'data-rn-step="target"', "</div>")).toMatch(/6,673.*66\.6%/);
+    expect(reach).toContain(fill(W.reach.dropOwned, { n: "1,206" }));
+    expect(reach).toContain(fill(W.reach.dropTarget, { n: "2,142" }));
+    expect(between(reach, 'data-rn-step="owned"', ">")).toContain(fill(W.reach.tipPrev, { rate: "88.4%", n: "8,826", measured: "9,982" }));
+    expect(html).toContain(fill(W.reach.chipDelta, { date: "2026-10-02" }));
+    expect([...reach.matchAll(/data-rn-engine="([^"]+)"/g)].map((m) => m[1])).toEqual(["all", "ChatGPT", "Gemini"]);
+    expect(between(reach, 'data-rn-engine="Gemini"', "</tr>")).toMatch(/68\.1%.*43\.4%/);
+  });
+  it("reach under a 출처 filter says why it is not computed", () => {
+    const html = render(input(), `source=${encodeURIComponent(HMG)}`, site({ reach: { status: "notComputed" } }));
+    expect(html).toContain(W.reach.notComputed);
+    expect(html).not.toContain('data-rn-reach=""');
+  });
+  it("prompts: both buckets with counts, the top prompts and links to the website sub page", () => {
+    const owned = [{ id: "p1", promptText: "best kia suv", funnelStage: null, citations: 203, providers: ["ChatGPT", "Gemini"], answers: [] }];
+    const html = render(input({ data: live({ promptSplit: { owned, uncited: [], ownedCount: 57, uncitedCount: 39 } }) }), "geography=US", site(), "", input());
+    const bucket = between(html, 'data-rn-bucket="owned"', 'data-rn-bucket="uncited"');
+    expect(bucket).toContain("best kia suv");
+    expect(bucket).toContain(fill(W.prompts.cites, { n: "203" }));
+    expect(bucket).toContain('href="/ko/renewal/website/answer-analysis/citation/prompts?geography=US&amp;tab=owned"');
+    expect(between(html, 'data-rn-bucket="uncited"', "</a>")).toContain(W.prompts.empty);
+  });
+  it("shares: 공식(HMG) · 공식(당사) · 딜러 and the original's totals (출처 분류 수 too)", () => {
+    const html = render(input(), "", site());
+    const order = [...html.matchAll(/data-rn-tile="([a-zA-Z]+)"/g)].map((m) => m[1]);
+    expect(order).toEqual(["hmg", "own", "dealer"]);
+    expect(tile(html, "own")).toMatch(/24\.9<small[^>]*>%<\/small>/);
+    expect(tile(html, "own")).toContain(T.delta.basisPrev.replace("{date}", "2026-10-02"));
+    expect(html).not.toMatch(/data-rn-b="[^"]*" data-rn-tile="own"/);
+    expect(html).toContain(fill(W.lens.categories, { n: "4" }));
+  });
+  it("the standard page keeps its layout", () => {
+    const html = render(input());
+    expect([...html.matchAll(/data-rn-tile="([a-zA-Z]+)"/g)].map((m) => m[1])).toEqual(["hmg", "dealer", "owned", "uncited"]);
+    expect(html).not.toContain('id="sec-reach"');
   });
 });

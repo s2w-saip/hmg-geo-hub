@@ -765,9 +765,12 @@ def prompt_drilldown(detail: dict) -> dict:
 # ── renewal citation-model.ts ───────────────────────────────────────────────
 
 DELTA_AXIS_MIN = 0.5
-MATRIX_MIN_N = 30
 BUMP_MOVERS = 3
 FINDINGS_MAX = 4
+#: The round summary's findings in one fixed order, 공식(HMG)/당사 first, then the categories and domains that moved:
+#: no threshold or HUB priority decides which show or their tone, which follows the direction only (2026-10-30 W6
+#: review, the user's go-ahead). The matrix no longer greys columns under 30 citations either.
+FINDING_ORDER = {"standingLead": 7, "standingTrail": 7, "engineGap": 6, "typeGap": 5, "opportunity": 4, "mover": 3, "skew": 2, "climb": 1}
 TYPE_STRENGTH = ("final_choice", "recommendation", "comparison", "definition", "mention")
 MOVED_MIN = 0.05
 TABLE_LIMIT = 100
@@ -882,9 +885,8 @@ def matrix(source: list[dict], order: list[str]) -> dict:
     base = {k: (100 * _sum(_nn(s["byCategory"].get(k), 0) for s in source)) / total if total > 0 else 0 for k in rows}
     cols = [{"key": s["key"], "n": s["total"],
              "counts": {k: _nn(s["byCategory"].get(k), 0) for k in rows},
-             "shares": {k: (100 * _nn(s["byCategory"].get(k), 0)) / s["total"] if s["total"] > 0 else 0 for k in rows},
-             "thin": s["total"] < MATRIX_MIN_N} for s in source]
-    live_cols = [c["key"] for c in cols if not c["thin"]] if len(cols) > 1 else []
+             "shares": {k: (100 * _nn(s["byCategory"].get(k), 0)) / s["total"] if s["total"] > 0 else 0 for k in rows}} for s in source]
+    live_cols = [c["key"] for c in cols] if len(cols) > 1 else []
     gaps = [abs(c["shares"][k] - base[k]) for c in cols if c["key"] in live_cols for k in rows]
     return {"cols": cols, "rows": rows, "base": base, "total": total, "live": live_cols,
             "cap": max(3, math.ceil(max([0, *gaps])))}
@@ -907,12 +909,12 @@ def type_matrix(rows: list[dict] | None, order: list[str]) -> dict | None:
 
 
 def matrix_view(m: dict | None, one_source: bool) -> dict | None:
-    """MatrixBody / MatrixActions: + each cell's gap to 전체, the 전체 counts (one source picked), any thin column."""
+    """MatrixBody / MatrixActions: + each cell's gap to 전체, the 전체 counts (one source picked)."""
     if m is None:
         return None
     return {**m, "gaps": {c["key"]: {k: c["shares"][k] - m["base"][k] for k in m["rows"]} for c in m["cols"]},
             "baseCounts": {k: js_round((m["base"][k] * m["total"]) / 100) for k in m["rows"]},
-            "anyThin": any(c["thin"] for c in m["cols"]), "oneSource": one_source}
+            "oneSource": one_source}
 
 
 def strongest_skew(engine: dict | None, type_: dict | None) -> dict | None:
@@ -984,7 +986,7 @@ def bump_view(d: dict | None, domains: list[dict]) -> dict | None:
 
 def findings(rows: list[dict], hmg_delta: float | None, picked: list[str], engine: dict | None, type_: dict | None,
              split: dict, bump: dict | None) -> list[dict]:
-    """findings: the round summary items (kind, tone, priority, jump target and message params), top 4."""
+    """findings: the round summary items (kind, tone, order, jump target and message params), the first 4 in FINDING_ORDER."""
     out = []
     hi = next((i for i, r in enumerate(rows) if r["name"] == OFFICIAL_HMG_CATEGORY), -1)
     if hi >= 0 and len(rows) > 1 and rows[hi]["pct"] is not None:
@@ -992,26 +994,26 @@ def findings(rows: list[dict], hmg_delta: float | None, picked: list[str], engin
         other = rows[1] if hi == 0 else rows[0]
         delta = hmg_delta if hmg_delta is not None else ""
         if hi == 0:
-            out.append({"kind": "standingLead", "tone": "good", "pri": 3, "target": "sec-comp", "key": o["name"],
+            out.append({"kind": "standingLead", "tone": "good", "pri": FINDING_ORDER["standingLead"], "target": "sec-comp", "key": o["name"],
                         "params": {"rival": other["name"], "gap": delta1(_nn(o["pct"], 0), _nn(other["pct"], 0)), "delta": delta}})
         else:
-            out.append({"kind": "standingTrail", "tone": "warn", "pri": 8, "target": "sec-comp", "key": o["name"],
+            out.append({"kind": "standingTrail", "tone": "warn", "pri": FINDING_ORDER["standingTrail"], "target": "sec-comp", "key": o["name"],
                         "params": {"rank": hi + 1, "share": _nn(o["pct"], 0), "leader": other["name"],
                                    "leaderShare": _nn(other["pct"], 0), "delta": delta}})
     cands = [r for r in rows if r["delta"] is not None and r["name"] != OFFICIAL_HMG_CATEGORY
              and not (r["name"] == OFFICIAL_COMPETITOR_CATEGORY and len(picked) > 0)]
     cands = sort_by(cands, lambda a, b: abs(b["delta"]) - abs(a["delta"]))
     mover = cands[0] if cands else None
+    # a move the page shows as 0.0 is no move (rounding, not a threshold); a category's move is neither good nor bad
     if mover and abs(mover["delta"]) >= 0.05:
-        rival = mover["name"] == OFFICIAL_COMPETITOR_CATEGORY and mover["delta"] > 0
-        out.append({"kind": "mover", "tone": "warn" if rival else "info", "pri": 7 if rival else 4, "target": "sec-comp",
+        out.append({"kind": "mover", "tone": "info", "pri": FINDING_ORDER["mover"], "target": "sec-comp",
                     "key": mover["name"], "params": {"category": mover["name"], "delta": mover["delta"], "share": _nn(mover["pct"], 0)}})
     if engine and len(engine["live"]) > 1 and OFFICIAL_HMG_CATEGORY in engine["rows"]:
         vals = [{"key": c["key"], "v": c["shares"][OFFICIAL_HMG_CATEGORY]} for c in engine["cols"] if c["key"] in engine["live"]]
         vals = sort_by(vals, lambda a, b: a["v"] - b["v"])
         lo, top = vals[0], vals[-1]
         gap = delta1(top["v"], lo["v"])
-        out.append({"kind": "engineGap", "tone": "warn" if gap >= 4 else "info", "pri": 6 if gap >= 4 else 1, "target": "sec-mix",
+        out.append({"kind": "engineGap", "tone": "info", "pri": FINDING_ORDER["engineGap"], "target": "sec-mix",
                     "key": OFFICIAL_HMG_CATEGORY, "axis": "engine",
                     "params": {"low": lo["key"], "lowShare": lo["v"], "high": top["key"], "gap": gap}})
     if type_ and OFFICIAL_HMG_CATEGORY in type_["rows"]:
@@ -1020,17 +1022,17 @@ def findings(rows: list[dict], hmg_delta: float | None, picked: list[str], engin
         rec, men = col("recommendation"), col("mention")
         if rec and men:
             gap = delta1(rec["shares"][OFFICIAL_HMG_CATEGORY], men["shares"][OFFICIAL_HMG_CATEGORY])
-            out.append({"kind": "typeGap", "tone": "warn" if gap < -1.5 else "good", "pri": 7 if gap < -1.5 else 2,
+            out.append({"kind": "typeGap", "tone": "warn" if gap < 0 else "good" if gap > 0 else "info", "pri": FINDING_ORDER["typeGap"],
                         "target": "sec-mix", "key": OFFICIAL_HMG_CATEGORY, "axis": "type",
                         "params": {"rec": rec["shares"][OFFICIAL_HMG_CATEGORY], "gap": gap}})
     if split.get("kind") == "ok" and split["owned"] + split["uncited"] > 0 and split["uncited"] > 0:
         sh = round1((100 * split["uncited"]) / (split["owned"] + split["uncited"]))
         # the sentence shows whole percents: rounded once from the exact share (50.49 → 50, not 50.5 → 51)
-        out.append({"kind": "opportunity", "tone": "warn", "pri": 6 if sh >= 40 else 3, "target": "sec-overview", "href": "uncited",
+        out.append({"kind": "opportunity", "tone": "info", "pri": FINDING_ORDER["opportunity"], "target": "sec-overview", "href": "uncited",
                     "params": {"n": split["uncited"], "share": js_round(exact(sh))}})
     sk = strongest_skew(engine, type_)
-    if sk and abs(sk["gap"]) >= 1:
-        out.append({"kind": "skew", "tone": "info", "pri": 5 if abs(sk["gap"]) >= 5 else 1, "target": "sec-mix", "key": sk["category"],
+    if sk and abs(sk["gap"]) >= 0.05:
+        out.append({"kind": "skew", "tone": "info", "pri": FINDING_ORDER["skew"], "target": "sec-mix", "key": sk["category"],
                     "axis": sk["axis"], "params": {"col": sk["col"], "category": sk["category"], "gap": round1(sk["gap"]),
                                                    "share": sk["share"], "base": sk["base"]}})
     if bump and bump["last"] > bump["first"]:
@@ -1039,7 +1041,7 @@ def findings(rows: list[dict], hmg_delta: float | None, picked: list[str], engin
         climbs = sort_by(climbs, lambda a, b: b["r0"] - b["r1"] - (a["r0"] - a["r1"]))
         if climbs:
             c = climbs[0]
-            out.append({"kind": "climb", "tone": "good" if c["s"]["own"] else "info", "pri": 5 if c["r0"] - c["r1"] >= 3 else 2,
+            out.append({"kind": "climb", "tone": "good" if c["s"]["own"] else "info", "pri": FINDING_ORDER["climb"],
                         "target": "sec-dom", "key": c["s"]["key"],
                         "params": {"domain": c["s"]["key"], "from": c["r0"], "to": c["r1"], "weeks": bump["last"] - bump["first"] + 1,
                                    "n": len(bump["series"])}})

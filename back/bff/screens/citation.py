@@ -11,10 +11,10 @@ Screens (query = route context `ctx.*` + the page's URL params):
   citation/as-of            header pill date + filter bar competitor options   ctx.surface
   citation/filter-bar       filter panel props (options, calendar)            ctx.surface
   citation/standard         /standard/.../citation body (ctx.variant=renewal: + the renewal model)
-  citation/website          /website/.../citation body                         ctx.role
+  citation/website          /website/.../citation body (ctx.variant=renewal: the renewal page)   ctx.role
   citation/project          /projects/[id]/analysis/citation                   ctx.project_id
-  citation/prompts          /citation/prompts sub page
-  citation/tone-urls        /citation/tone-urls sub page                       ctx.client_nav
+  citation/prompts          /citation/prompts sub page                         ctx.surface, ctx.role
+  citation/tone-urls        /citation/tone-urls sub page                       ctx.surface, ctx.role, ctx.client_nav
   citation/domains          GET /api/citations/domains                         ctx.surface, ctx.project_id
   citation/domain-detail    GET /api/citations/domains/[skey]                  ctx.skey
   citation/domains-export   GET /api/citations/domains/export
@@ -34,7 +34,7 @@ from bff.access import reader_scope
 from bff.screens import screen, split_context
 from bff.screens import citation_model as M
 from bff.screens._compare import fetch_period_compare_api, prev_period_filters
-from bff.screens._convert import as_of_date
+from bff.screens._convert import as_of_date, delta1
 from bff.screens._filters import (
     filter_dates_view, load_panel_options, read_project_custom_field_filters, read_project_custom_field_filters_raw,
     read_standard_filters, split_filter_values,
@@ -43,7 +43,9 @@ from bff.screens._period import kst_today, resolve_request_compare_period_shape,
 from bff.screens._query import analysis_query, is_uuid, js_trim, to_api_params, with_params
 from bff.screens._sort import code_unit_key
 from bff.screens._summary import provenance_of, summary_query, url_prompt_rates
-from bff.screens._trend import overview_card_delta, split_trend_dims, to_standard_trend_buckets, trend_query
+from bff.screens._trend import (
+    overview_card_delta, overview_trend_values, split_trend_dims, to_standard_trend_buckets, trend_query,
+)
 
 DEGRADE_LABEL = {"global": "standardCitations", "website": "websiteCitations", "project": "projectCitations"}
 WEBSITE_CITATION_GROUPS = ("geography", "language", "engine", "time", "source")
@@ -257,6 +259,11 @@ class Reads:
                                                            "top": M.SOURCE_TREND_TOP, "measuredDays": False,
                                                            "dims": [{"dimension": "category", "top": M.CATEGORY_TREND_TOP}]}))
 
+    def share_trend(self) -> asyncio.Future:
+        """The Overview card's citation share per round (the card Δ; the website 공식(당사) line)."""
+        return self.get("trend", trend_query(self.common, {"surface": self.surface, "bucket": "cycle", "dimension": "none",
+                                                           "metrics": ["visibility", "citation_share"], "measuredDays": False}))
+
 
 def split_citation_trends(res: dict) -> dict:
     parts = split_trend_dims({"data": res["data"], "meta": res.get("meta")})
@@ -320,11 +327,8 @@ async def load_deltas(r: Reads) -> dict:
         window = {"from": prev_filters["dateFrom"], "to": prev_filters["dateTo"]}
         return {"officialDelta": None,
                 "prevCategories": M.period_categories_of(cur["data"], prev["data"], window) if cur and prev else None}
-    share_q = trend_query(r.common, {"surface": r.surface, "bucket": "cycle", "dimension": "none",
-                                     "metrics": ["visibility", "citation_share"], "measuredDays": False})
-
     async def share():
-        return await r.get("trend", share_q)
+        return await r.share_trend()
 
     async def category():
         return split_citation_trends(await r.trends())["category"]
@@ -389,6 +393,106 @@ async def load_target_hit_rate(r: Reads) -> dict:
     if not M.targets_applicable(r.filters):
         return M.empty_target_hit_rate()
     return to_target_hit_rate_from_summary(await r.summary())
+
+
+async def load_own_share_line(r: Reads) -> dict:
+    """The website 공식(당사) tile's Δ and weekly line (its value is the citation read's own share). 당사 is the site's
+    brand scope, not the 공식(HMG) category: on the website the two shares differ (2026-10-30: 24.9 % vs 61.7 %).
+    Δ: the Overview card's (previous round, the share trend), in period mode the period before's own share. The
+    share trend has no 출처 axis, so a source filter drops the line and the round Δ (as the card Δ, R4)."""
+    prev_filters = prev_period_filters(r.filters)
+    filtered = bool(r.filters.get("sourceCategory"))
+
+    async def line():
+        return None if filtered else await r.share_trend()
+
+    async def before():
+        if prev_filters is None:
+            return None
+        b = Reads(prev_filters, r.ctx)
+        return await b.get("citations/domains", with_params(b.common, M.domains_params({"limit": 1, "competitorTotals": False})))
+
+    (line_v, _), (before_v, _) = await asyncio.gather(degrade(line()), degrade(before()))
+    slots = to_standard_trend_buckets(line_v["data"]) if line_v else []
+    spark = [overview_trend_values(b).get("citationShare") for b in slots]
+    if prev_filters is not None:
+        prev = M.mirror_pct_or_null(before_v["data"]["summary"].get("own_share")) if before_v else None
+        return {"prev": prev, "window": {"from": prev_filters["dateFrom"], "to": prev_filters["dateTo"]}, "spark": spark}
+    return {"card": overview_card_delta(slots, "citationShare"), "spark": spark}
+
+
+def url_funnel(res: dict) -> dict:
+    """One K-1 answer's prompt-unit URL funnel: measured → owned URL cited → target page cited (one denominator,
+    the original's rate cards and their rounding: url_prompt_rates)."""
+    rates = url_prompt_rates(res["data"], res.get("meta"))
+    return {"measured": rates["measuredPrompts"], "owned": rates["ownedPrompts"], "target": rates["hitPrompts"],
+            "ownedRate": rates["ownedRate"], "targetRate": rates["rate"]}
+
+
+async def load_url_reach(r: Reads, deltas: asyncio.Future) -> dict:
+    """The website 사이트 인용 도달 card: the URL funnel per prompt, its Δ and the same funnel per engine.
+    Δ compares with the round the page's other Δ use (the category trend's previous valued round: one K-1 read of
+    that day, which is that round exactly) or in period mode with the period before; only two answers of one value
+    source (published / live) compare. The engines are those the citation read found; 전체 counts a prompt once
+    whichever engine cited it, so it is not the engines' average. A source filter leaves it uncomputed (the original's
+    cards: the 출처 class is per citation, the funnel per prompt)."""
+    if not M.targets_applicable(r.filters):
+        return {"status": "notComputed"}
+    cur_res, _ = await degrade(r.summary())
+    if not cur_res:
+        return {"status": "degraded"}
+    cur = url_funnel(cur_res)
+    if not cur["measured"]:
+        return {"status": "none"}
+    prev_filters = prev_period_filters(r.filters)
+    basis: dict = {"basis": None, "date": None}
+    if prev_filters is not None:
+        before: Reads | None = Reads(prev_filters, r.ctx)
+        basis = {"basis": "period", "date": prev_filters["dateTo"], "from": prev_filters["dateFrom"]}
+    else:
+        day = ((await deltas)["prevCategories"] or {}).get("asOf")
+        before = Reads({**r.filters, "dateFrom": day, "dateTo": day}, r.ctx) if day else None
+        basis = {"basis": "round", "date": day}
+    sources, _ = await degrade(r.sources())
+    codes = [e["engine"] for e in ((sources or {}).get("data") or {}).get("by_engine") or []]
+
+    async def none():
+        return None, False
+    answers = await asyncio.gather(degrade(before.summary()) if before else none(),
+                                   *(degrade(Reads({**r.filters, "engine": [c]}, r.ctx).summary()) for c in codes))
+    prev_res = answers[0][0]
+    prev = url_funnel(prev_res) if prev_res else None
+    comparable = prev is not None and prev["measured"] > 0 and \
+        (provenance_of(prev_res.get("meta")) or {}).get("source") == (provenance_of(cur_res.get("meta")) or {}).get("source")
+    delta = {k: delta1(cur[k], prev[k]) if comparable and cur[k] is not None and prev[k] is not None else None
+             for k in ("ownedRate", "targetRate")}
+    engines = [{"engine": M.provider_label(c), **url_funnel(res)} for c, (res, _) in zip(codes, answers[1:]) if res]
+    engines = [e for e in engines if e["measured"]]
+    engines.sort(key=lambda e: (-e["measured"], -e["owned"], e["engine"]))
+    prov = provenance_of(cur_res.get("meta")) or {}
+    out = {"status": "ok", **cur, "prev": prev if comparable else None, "delta": {**delta, **(basis if comparable else {"basis": None, "date": None})},
+           "engines": engines, "enginesDegraded": any(d for _, d in answers[1:])}
+    target = to_target_hit_rate_from_summary(cur_res)
+    if "source" in target:
+        out["source"] = target["source"]
+    if "publication" in target:
+        out["publication"] = target["publication"]
+    return out
+
+
+def own_share_tile(live: dict | None, line: dict) -> dict | None:
+    """ShareTile of the website 공식(당사) share: value, Δ (+ basis), weekly line; None without the citation read."""
+    if live is None:
+        return None
+    value = live["summary"].get("officialOwnShare")
+    delta: dict = {"value": None, "basis": None, "date": None}
+    if "window" in line:
+        if value is not None and line["prev"] is not None:
+            delta = {"value": delta1(value, line["prev"]), "basis": "period", "date": line["window"]["to"], "from": line["window"]["from"]}
+    elif line["card"]:
+        delta = {"value": line["card"]["delta"], "basis": "card", "date": line["card"]["basisDate"]}
+    spark = line["spark"]
+    return {"value": value, "delta": delta, "spark": spark, "sparkOn": value is not None and any(v is not None for v in spark)}
 
 
 def table_source(view: dict, query: str) -> dict | None:
@@ -524,13 +628,29 @@ async def standard(q) -> dict:
 
 @screen("citation/website")
 async def website(q) -> dict:
-    """The website citation body: CitationsView props (+ the URL rate cards) and its numbers."""
+    """The website citation body: CitationsView props (+ the URL rate cards) and its numbers. ctx.variant=renewal
+    answers the renewal page instead: the citation/standard renewal fields on the website surface + the 공식(당사)
+    tile (`own`) and the URL funnel card (`reach`)."""
     ctx, sp = split_context(q)
     filters, actx = website_context(sp, ctx.get("role"))
     r = Reads(filters, actx)
-    view, target = await asyncio.gather(load_view(r), load_target_hit_rate(r))
-    return {"live": view["live"], "targetHitRate": target, "tableSource": table_source(view, citation_route_query(sp, "website")),
-            "dataDegraded": view["degraded"]["data"], "degradedSections": view["degraded"], "vm": citations_view_vm(view["live"])}
+    query = citation_route_query(sp, "website")
+    if ctx.get("variant") != "renewal":
+        view, target = await asyncio.gather(load_view(r), load_target_hit_rate(r))
+        return {"live": view["live"], "targetHitRate": target, "tableSource": table_source(view, query),
+                "dataDegraded": view["degraded"]["data"], "degradedSections": view["degraded"], "vm": citations_view_vm(view["live"])}
+    deltas_t = asyncio.ensure_future(load_deltas(r))
+    view, deltas, parts, period, own_line, reach = await asyncio.gather(
+        load_view(r), deltas_t, load_source_parts(r), load_period_view(r, ctx.get("today")), load_own_share_line(r),
+        load_url_reach(r, deltas_t))
+    live, degraded = view["live"], view["degraded"]
+    # The Overview card Δ is 공식(당사)'s here (the share trend counts the site's own brands), not the 공식(HMG)
+    # category's: the category rows and the 공식(HMG) tile take their own category Δ.
+    category_deltas = {**deltas, "officialDelta": None}
+    return {"live": live, "tableSource": table_source(view, query),
+            "dataDegraded": degraded["data"], "sectionDegraded": degraded, "prevCategories": deltas["prevCategories"],
+            "toneSummary": parts["toneSummary"], "periodView": period,
+            "rn": renewal_vm(live, category_deltas, parts, degraded, sp), "own": own_share_tile(live, own_line), "reach": reach}
 
 
 @screen("citation/project")
@@ -559,11 +679,19 @@ async def project(q) -> dict:
             "dataDegraded": view["degraded"]["data"], "degradedSections": view["degraded"], "vm": citations_view_vm(view["live"])}
 
 
+def sub_page_context(ctx: dict, sp: dict) -> tuple[dict, dict]:
+    """The sub pages read their page's filters: the website page's (ctx.surface=website) or the standard page's."""
+    if ctx.get("surface") == "website":
+        return website_context(sp, ctx.get("role"))
+    filters, actx, _ = global_context(sp)
+    return filters, actx
+
+
 @screen("citation/prompts")
 async def prompts(q) -> dict:
     """The owned / uncited prompts sub page (loadOwnedPromptPage): rows, both tab counts, the page window."""
-    _, sp = split_context(q)
-    filters, actx, _ = global_context(sp)
+    ctx, sp = split_context(q)
+    filters, actx = sub_page_context(ctx, sp)
     tab = "uncited" if one(sp.get("tab")) == "uncited" else "owned"
     page_no = page_param(sp)
     text = one(sp.get("q"))
@@ -601,7 +729,7 @@ async def tone_urls(q) -> dict:
     """The positive / negative URL sub page (loadToneUrlPage): rows, the tab counts (None = reuse the
     shown ones on an in-page cursor / search move, ctx.client_nav=1), the page window."""
     ctx, sp = split_context(q)
-    filters, actx, _ = global_context(sp)
+    filters, actx = sub_page_context(ctx, sp)
     tone = "negative" if one(sp.get("tone")) == "negative" else "positive"
     page_no = page_param(sp)
     text = one(sp.get("q"))

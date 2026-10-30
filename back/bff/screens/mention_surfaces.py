@@ -261,3 +261,44 @@ async def view_compare(q) -> dict:
     if r["data"] is None:
         return {"comparison": None, "typeShare": None}
     return compare_parts(r["data"], build_mention_sub_kpis(r["sub"]), None, manual or None)
+
+
+@screen("mention/view-cards")
+async def view_cards(q) -> dict:
+    """The summary cards of MentionsView alone, for the renewal Website Mention (2026-10-30, the user: a legacy KPI is
+    reshaped, never dropped): mention/view's summary, Sub KPI, Δ and Δ basis from the same reads, without the
+    head-to-head, the breakdowns, the trend and the table. The basis date only with a Δ to show (as the view drew it)."""
+    ctx, sp = split_context(q)
+    begin_degrade_scope()
+    r = await _surface_reads(ctx, sp)
+    data, prev = r["data"], r["prev"]
+    sub_kpis = build_mention_sub_kpis(r["sub"])
+    prev_sub = build_mention_sub_kpis(prev["sub"]) if prev else None
+    return {"asOf": data.get("asOf") if data else None, "summary": data["summary"] if data else None, "subKpis": sub_kpis,
+            "deltas": summary_deltas(sub_kpis, prev_sub) if data else None,
+            "prevBasisDate": prev["asOf"] if sub_kpis and prev_sub else None, "degraded": r["degraded"]}
+
+
+@screen("mention/view-weekly")
+async def view_weekly(q) -> dict:
+    """The weekly brand mentions of MentionsView (당사 + the top 10 by share) as rows for the renewal Website
+    Mention's 브랜드 상세 (2026-10-30, a legacy KPI is reshaped, never dropped): each brand's weekly counts (null = a
+    collection gap week), its latest measured week and the change from the week before when both were measured."""
+    ctx, sp = split_context(q)
+    begin_degrade_scope()
+    r = await _surface_reads(ctx, sp, full=False)
+    data = r["data"]
+    trend = (data or {}).get("trend")
+    if not trend:
+        return {"weeks": [], "gaps": [], "rows": [], "degraded": bool((data or {}).get("trendDegraded")) or r["degraded"]["data"]}
+    tracked = set(trend_split(trend, data["brands"])["own"])
+    points = trend["points"]
+    rows = []
+    for s in trend["series"]:
+        values = [None if p.get("gap") else p.get(s) for p in points]
+        last = max((i for i, v in enumerate(values) if v is not None), default=None)
+        before = values[last - 1] if last is not None and last > 0 else None
+        rows.append({"brand": s, "own": s in tracked, "values": values, "latest": values[last] if last is not None else None,
+                     "delta": values[last] - before if before is not None else None})
+    return {"weeks": [p["week"] for p in points], "gaps": [bool(p.get("gap")) for p in points], "rows": rows,
+            "degraded": False}

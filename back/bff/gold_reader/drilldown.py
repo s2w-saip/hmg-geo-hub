@@ -5,8 +5,8 @@ from collections import defaultdict
 
 from fastapi import HTTPException
 
-from bff.gold_reader.citations import category, predicate as citation_predicate
-from bff.gold_reader.context import Context, SQL, envelope, flag, limit, ratio, values
+from bff.gold_reader.citations import category, own_citation, predicate as citation_predicate
+from bff.gold_reader.context import Context, SQL, envelope, flag, limit, ratio
 
 
 async def mention_prompts(ctx: Context) -> dict:
@@ -56,11 +56,57 @@ async def mention_prompts(ctx: Context) -> dict:
                           "next_cursor": str(offset + page_limit) if rows and offset + page_limit < rows[0]["total_rows"] else None})
 
 
+async def missing_prompts(ctx: Context) -> dict:
+    """The measured prompts where 당사 is in no answer: the members of the summary's params.prompts_without_brand
+    (measured − mentioned prompts of the same kpi_cell rows, population and perspective), 2026-10-30 for the renewal
+    Website Mention's 미언급 프롬프트 list. Each carries its answers in the window, the brand mentions those answers
+    hold (answer_fact.ment_total summed: the brands the AI named instead) and its latest answer references; the
+    prompts with the most brand mentions first. None without a snapshot or period, as the count."""
+    page_limit, offset = limit(ctx.q), max(0, int(ctx.q.get("cursor") or 0))
+    if not ctx.selected_dates:
+        return envelope(ctx, {"items": []}, suppressed={"*": "no_snapshot"}, page={"limit": page_limit, "total": 0, "next_cursor": None})
+    b = SQL()
+    cell_where = ctx.predicate(b, population="mentions", perspective=True)
+    answer_where = ctx.predicate(b, alias="a", family="fact") + " AND a.std_in"
+    rows = await ctx.conn.fetch(f"""WITH miss AS (SELECT f.prompt_key FROM gold.kpi_cell f WHERE {cell_where}
+        GROUP BY f.prompt_key HAVING bool_or(f.has_measured) AND NOT bool_or(f.has_mention)),
+        sums AS (SELECT a.prompt_key,count(*)::int AS answers,coalesce(sum(a.ment_total),0)::bigint AS brand_mentions
+            FROM gold.answer_fact a WHERE {answer_where} AND a.prompt_key IN (SELECT prompt_key FROM miss) GROUP BY a.prompt_key)
+        SELECT p.prompt_key,p.prompt_id,p.text,ft.code AS funnel,coalesce(s.answers,0) AS answers,
+            coalesce(s.brand_mentions,0) AS brand_mentions,count(*) OVER()::int AS total_rows,
+            count(*) FILTER(WHERE coalesce(s.brand_mentions,0)>0) OVER()::int AS with_brand_rows
+        FROM miss JOIN gold.dim_prompt p USING(prompt_key) LEFT JOIN sums s USING(prompt_key)
+        LEFT JOIN gold.dim_taxon ft ON ft.taxon_key=p.funnel_key
+        ORDER BY brand_mentions DESC,p.text,p.prompt_id LIMIT {b.bind(page_limit)} OFFSET {b.bind(offset)}""", *b.args)
+    keys = [r["prompt_key"] for r in rows]
+    answers_limit = min(50, max(1, int(ctx.q.get("answers_limit") or 6)))
+    a = SQL()
+    where = ctx.predicate(a, family="fact") + " AND f.std_in"
+    answer_rows = await ctx.conn.fetch(f"""SELECT f.prompt_key,j.job_id,e.code AS engine,c.code AS region,j.measured_at
+        FROM gold.answer_fact f JOIN gold.job_index j USING(answer_key)
+        JOIN gold.dim_engine e ON e.engine_key=f.engine_key JOIN gold.dim_country c ON c.geo_key=f.geo_key
+        WHERE {where} AND f.prompt_key=ANY({a.bind(keys, 'int[]')})
+        ORDER BY f.prompt_key,j.measured_at DESC NULLS LAST,j.job_id""", *a.args)
+    refs = defaultdict(list)
+    for r in answer_rows:
+        refs[r["prompt_key"]].append({"job_id": str(r["job_id"]), "engine": r["engine"], "region": r["region"],
+                                      "measured_at": r["measured_at"]})
+    items = [{"prompt_id": str(r["prompt_id"]), "prompt_text": r["text"], "funnel_code": r["funnel"],
+              "answers_total": r["answers"], "brand_mentions": r["brand_mentions"],
+              "providers": sorted({x["engine"] for x in refs[r["prompt_key"]]}),
+              "answers": refs[r["prompt_key"]][:answers_limit]} for r in rows]
+    total = rows[0]["total_rows"] if rows else 0
+    # the segments over every member, not the loaded page (a list cut at its limit drops the no-brand prompts first)
+    with_brands = rows[0]["with_brand_rows"] if rows else 0
+    return envelope(ctx, {"items": items, "counts": {"with_brands": with_brands, "no_brands": total - with_brands}},
+                    page={"limit": page_limit, "total": total,
+                          "next_cursor": str(offset + page_limit) if offset + page_limit < total else None})
+
 async def citation_prompts(ctx: Context) -> dict:
     b = SQL()
     where = citation_predicate(ctx, b)
     base_args = b.args.copy()
-    owned = f"f.owner_key IN (SELECT owner_key FROM gold.dim_owned_base WHERE (brand_bit & {b.bind(ctx.bits)})<>0)" if ctx.sf == 1 else "f.loc_owned"
+    owned = own_citation(ctx, b)
     # Count per (prompt_key, engine), then per prompt_key, then join the names to the counted rows: grouping every
     # citation by its prompt's text and the engines' DISTINCT sorted 2.2 M rows (4.6 -> 1.6 s over 09-21..10-05).
     # prompt_key is dim_prompt's key and decides prompt_id, text and funnel, every cited prompt_key is in
@@ -75,15 +121,9 @@ async def citation_prompts(ctx: Context) -> dict:
         SELECT p.prompt_id,p.text,ft.code AS funnel,g.prompt_key,g.citations,g.own_citations,g.providers
         FROM g JOIN gold.dim_prompt p ON p.prompt_key=g.prompt_key LEFT JOIN gold.dim_taxon ft ON ft.taxon_key=p.funnel_key
         ORDER BY g.citations DESC,p.prompt_id""", *b.args)
+    # Only cited prompts: 자사 미인용 = a citation (hosted) and no 자사 one (gold.citation_cell); a measured prompt
+    # without any citation is in neither bucket.
     rows = [dict(r) for r in rows]
-    if not values(ctx.q,"source"):
-        b2 = SQL()
-        measured_where = ctx.predicate(b2,family="fact",measure_family="citations") + " AND f.cit_in" + (" AND f.is_rep" if ctx.card else "")
-        measured = await ctx.conn.fetch(f"""SELECT DISTINCT p.prompt_key,p.prompt_id,p.text,t.code AS funnel
-            FROM gold.answer_fact f JOIN gold.dim_prompt p ON p.prompt_key=f.prompt_key
-            LEFT JOIN gold.dim_taxon t ON t.taxon_key=p.funnel_key WHERE {measured_where}""",*b2.args)
-        existing = {r["prompt_key"] for r in rows}
-        rows += [{**dict(r),"citations":0,"own_citations":0,"providers":[]} for r in measured if r["prompt_key"] not in existing]
     if ctx.q.get("q"):
         rows = [r for r in rows if ctx.q["q"].lower() in r["text"].lower()]
     bucket = ctx.q.get("bucket", "owned" if flag(ctx.q,"owned",True) else "uncited")
@@ -199,13 +239,13 @@ async def domain(ctx: Context, skey: str) -> dict:
         FROM gold.citation_fact f JOIN gold.dim_url u ON u.url_key=f.url_key JOIN gold.dim_engine e ON e.engine_key=f.engine_key
         LEFT JOIN gold.dim_owned_base o ON o.owner_key=u.owner_key
         WHERE {where} GROUP BY u.url,u.title,o.geo_code ORDER BY citations DESC,u.url""", *b.args)
-    own = f"f.owner_key IN (SELECT owner_key FROM gold.dim_owned_base WHERE (brand_bit & {b.bind(ctx.bits)})<>0)" if ctx.sf == 1 else "f.loc_owned"
+    own = own_citation(ctx, b)
     totals = await ctx.conn.fetchrow(f"""SELECT count(*)::int AS citations,count(*) FILTER(WHERE {own})::int AS owned
         FROM gold.citation_fact f WHERE {where}""", *b.args)
     # Keep the source predicate's arguments apart from the ownership-only bind above.
     b = SQL()
     where = citation_predicate(ctx, b) + f" AND f.source_key={b.bind(source['source_key'])}"
-    owned = f"f.owner_key IN (SELECT owner_key FROM gold.dim_owned_base WHERE (brand_bit & {b.bind(ctx.bits)})<>0)" if ctx.sf == 1 else "f.loc_owned"
+    owned = own_citation(ctx, b)
     prompts = await ctx.conn.fetch(f"""SELECT p.prompt_id::text AS prompt_id,p.text,t.code AS funnel,count(*)::int AS citations,
         count(*) FILTER(WHERE {owned})::int AS own_citations,
         array_agg(DISTINCT e.code ORDER BY e.code) AS engines

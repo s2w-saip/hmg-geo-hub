@@ -2,13 +2,15 @@
 // rule for the Overview (overview-filters.tsx → DimensionFilterPanel stage "overview"),
 // built from the panel's own exported functions so the two cannot drift:
 //   axes        = overviewOnlyGroups (stage "acr": acrOnlyGroups, "mention" / "citation": composeGroups) + admin brand slot − locked axes − empty catalog axes
+//                 (surface "website": WEBSITE_ONLY_GROUPS, + 출처 카테고리 on Citation)
 //   sections    = FILTER_SECTIONS rows (디멘션 / 프롬프트 필터), empty rows dropped
 //   권역 axis   = single active brand, >1 measured region, not a region-pinned account
 //   국가/언어   = option matrix narrowed by the picked brand(s) and countries
 //   cascade     = catalog listType/depth narrowed by brand → listType → depth1 …
 //   normalize   = pruneCascade → clearDescendantsIfEmpty → clearAxesDisabledBy
 // The renewal page differs only in presentation and in applying picks at once.
-// Parity is pinned by overview-filter-model.parity.test.tsx (renders the real panel).
+// Parity is pinned by overview-filter-model.parity.test.tsx (renders the real panel) and, for the
+// Website pages, website-filter-model.parity.test.tsx.
 
 import {
   CASCADE_FIELDS,
@@ -47,6 +49,12 @@ export interface OverviewPanelInput {
    * "conversion" mirrors the app's conversion stage (STAGE_PRIMARY.conversion): CONVERSION_ONLY_GROUPS.
    */
   stage?: "overview" | "acr" | "mention" | "citation" | "visibility" | "conversion";
+  /**
+   * "website" (2026-10-30): the app's Website filters for the Overview / Mention / Citation stages —
+   * WEBSITE_ONLY_GROUPS (+ 출처 카테고리 on Citation), and the account scope as the Website surface sees it
+   * (scopeForGeoSurface). Other stages keep their own axes. Default "standard" (Global).
+   */
+  surface?: "standard" | "website";
   scope?: AllowedScope;
   catalogRows?: CatalogTaxonomyRow[];
   geographyOptions?: string[];
@@ -88,6 +96,24 @@ export const VISIBILITY_ONLY_GROUPS: readonly DimensionGroup[] = ["geography", "
  */
 export const CONVERSION_ONLY_GROUPS: readonly DimensionGroup[] = STAGE_PRIMARY.conversion;
 
+/**
+ * Website (2026-10-30): the app's Website axes — 국가 (사이트 국가) · 언어 · AI 엔진 · 기간 (website-filters.tsx
+ * WebsiteFilters, the website answer-analysis pages' WEBSITE_ONLY_GROUPS); Citation adds 출처 카테고리. Website
+ * prompts carry no catalog tagging, so there is no catalog axis, and no 경쟁사 axis. The app's website
+ * Mention / Citation panels saw the account scope as Global; the renewal pages see it as Website on every
+ * page, as the app's Website Overview does (they differ only for a dedicated-site account).
+ */
+export const WEBSITE_ONLY_GROUPS: readonly DimensionGroup[] = ["geography", "language", "engine", "time"];
+
+const websiteOnlyGroups = (stage: OverviewPanelInput["stage"], languageOptions?: string[]): DimensionGroup[] | null =>
+  stage === "mention"
+    ? composeGroups("mentions", { onlyGroups: [...WEBSITE_ONLY_GROUPS], languageOptions }).only
+    : stage === "citation"
+      ? composeGroups("citations", { onlyGroups: [...WEBSITE_ONLY_GROUPS, "source"], languageOptions }).only
+      : stage === undefined || stage === "overview"
+        ? [...WEBSITE_ONLY_GROUPS]
+        : null;
+
 const insertBrand = (base: DimensionGroup[]): DimensionGroup[] => {
   if (base.includes("brand")) return base;
   const i = base.indexOf("promptContext");
@@ -97,12 +123,14 @@ const insertBrand = (base: DimensionGroup[]): DimensionGroup[] => {
 export function overviewPanelModel(input: OverviewPanelInput, draft: Draft): OverviewPanelModel {
   const { stage, scope, catalogRows, geographyOptions, languageOptions, optionMatrix } = input;
   const isAdmin = scope?.all === true;
-  const viewScope = scope ? scopeForGeoSurface(scope, "standard") : scope;
+  const website = input.surface === "website" ? websiteOnlyGroups(stage, languageOptions) : null;
+  const viewScope = scope ? scopeForGeoSurface(scope, website ? "website" : "standard") : scope;
   const lock = new Set<DimensionGroup>();
   if (!isAdmin) lock.add("brand");
   if (!isAdmin && viewScope?.countries?.length === 1) lock.add("geography");
   const only =
-    stage === "acr"
+    website ??
+    (stage === "acr"
       ? acrOnlyGroups(languageOptions)
       : stage === "mention"
         ? composeGroups("mentions", { languageOptions }).only
@@ -112,7 +140,7 @@ export function overviewPanelModel(input: OverviewPanelInput, draft: Draft): Ove
             ? [...VISIBILITY_ONLY_GROUPS]
             : stage === "conversion"
               ? [...CONVERSION_ONLY_GROUPS]
-              : overviewOnlyGroups(languageOptions);
+              : overviewOnlyGroups(languageOptions));
   const base = isAdmin ? insertBrand(only) : only;
   const visibleGroups = base.filter((g) => {
     if (lock.has(g)) return false;

@@ -33,8 +33,8 @@ class Conn:
     """asyncpg stand-in: answers by the table read, applies a brand_key text filter like the database
     would, and records every statement."""
 
-    def __init__(self, *, kpi=(), brands=(), catalog=()):
-        self.kpi, self.brands, self.catalog, self.sql = list(kpi), list(brands), list(catalog), []
+    def __init__(self, *, kpi=(), brands=(), catalog=(), url=()):
+        self.kpi, self.brands, self.catalog, self.url, self.sql = list(kpi), list(brands), list(catalog), list(url), []
 
     async def fetch(self, sql, *args):
         self.sql.append(sql)
@@ -45,6 +45,8 @@ class Conn:
             return self.kpi
         if "FROM gold.catalog_entry" in sql:
             return self.catalog
+        if "FROM gold.url_prompt_cell" in sql:
+            return self.url
         if "gold.dim_engine" in sql:
             return [{"engine_key": 1, "code": "chatgpt"}]
         raise AssertionError(f"unexpected statement: {sql[:120]}")
@@ -160,6 +162,30 @@ class BrandTrend(unittest.TestCase):
         out = asyncio.run(metrics.trend(ctx))["data"]
         self.assertEqual([s["key"] for s in out["series"]], ["HMG", "R0", "R1"])
 
+    def test_pin_top_rival_adds_the_latest_rounds_top_rival_marked(self):
+        # 2026-10-30 legacy compare rule: the auto compare brand is the rival with the largest share on the snapshot
+        # (the latest round). R-old leads the 14-round total, R-new leads the latest round but is outside top_n.
+        brands = [brand_row(D1, 101, "R-old", 0, 50, 10), brand_row(D2, 101, "R-old", 0, 2, 2),
+                  brand_row(D2, 102, "R-new", 0, 9, 6), brand_row(D1, 103, "R-mid", 0, 20, 5), brand_row(D2, 103, "R-mid", 0, 1, 1)]
+        kpi = [counts_row(round_date=D1, answers=20, total_mentions=100), counts_row(round_date=D2, answers=20, total_mentions=40)]
+        conn = Conn(kpi=kpi, brands=brands)
+        out = asyncio.run(metrics.trend(context(conn, "surface=website&dimension=brand&metrics=share_of_voice&top_n=1&pin_top_rival=true")))["data"]
+        self.assertEqual([(s["key"], s.get("pinned", False)) for s in out["series"]], [("R-old", False), ("R-new", True)])
+        self.assertEqual([p["ratio"] for p in out["series"][1]["points"]], [{"num": 0, "den": 100}, {"num": 9, "den": 40}])
+        # already in the top: no second series; without the flag: no pin
+        conn = Conn(kpi=kpi, brands=brands)
+        out = asyncio.run(metrics.trend(context(conn, "surface=website&dimension=brand&metrics=share_of_voice&top_n=3&pin_top_rival=true")))["data"]
+        self.assertEqual([(s["key"], s.get("pinned", False)) for s in out["series"]], [("R-old", False), ("R-mid", False), ("R-new", False)])
+        conn = Conn(kpi=kpi, brands=brands)
+        out = asyncio.run(metrics.trend(context(conn, "surface=website&dimension=brand&metrics=share_of_voice&top_n=1")))["data"]
+        self.assertEqual([s["key"] for s in out["series"]], ["R-old"])
+        # a period: the body's rows are the period's, whose top rival leads the top already
+        conn = Conn(kpi=kpi, brands=brands)
+        ctx = ranged(context(conn, "surface=website&dimension=brand&metrics=share_of_voice&top_n=1&pin_top_rival=true"
+                                   "&from=2026-09-28&to=2026-10-05"))
+        out = asyncio.run(metrics.trend(ctx))["data"]
+        self.assertEqual([s["key"] for s in out["series"]], ["R-old"])
+
     def test_one_own_brand_perspective_is_labelled_by_the_brand(self):
         conn = Conn(kpi=[counts_row(round_date=D2, answers=20, own_mentions=14, total_mentions=40)],
                     brands=[brand_row(D2, 9, "Kia", 2, 14, 10), brand_row(D2, 370, "Toyota", 0, 10, 8)])
@@ -214,6 +240,55 @@ class TypeTrend(unittest.TestCase):
             with self.subTest(qs), self.assertRaises(metrics.HTTPException) as e:
                 asyncio.run(metrics.trend(context(self.conn(), f"surface=global&{qs}")))
             self.assertEqual(e.exception.status_code, 422)
+
+
+class UrlRateTrend(unittest.TestCase):
+    """The website (and project) URL rates are answer-level Gold measures (url_prompt_cell), the cards' (summary)
+    values. The trend read them from the citation counts of kpi_cell instead (cit_target / cit_owned), so on
+    2026-10-30 the website 타겟 출처 인용률 card said 65.3 % (9,832 / 15,065 answers) while its trend point for the
+    same round said 22.8 %, and the card's Δ came from that other measure. A trend point now reads the same
+    measure as the card, per round and per engine."""
+
+    def conn(self) -> Conn:
+        kpi = [counts_row(round_date=D1, engine_key=1, answers=10, cit_total=40, cit_target=2, cit_owned=20),
+               counts_row(round_date=D2, engine_key=1, answers=10, cit_total=40, cit_target=3, cit_owned=20),
+               counts_row(round_date=D2, engine_key=2, answers=10, cit_total=40, cit_target=1, cit_owned=10)]
+        url = [{"round_date": D1, "engine_key": 1, "url_den": 10, "tgt_hits": 6, "own_hits": 8, "tgt_own_hits": 5},
+               {"round_date": D2, "engine_key": 1, "url_den": 10, "tgt_hits": 7, "own_hits": 9, "tgt_own_hits": 6},
+               {"round_date": D2, "engine_key": 2, "url_den": 5, "tgt_hits": 1, "own_hits": 3, "tgt_own_hits": 1}]
+        return Conn(kpi=kpi, url=url)
+
+    def series(self, qs: str, conn: Conn | None = None) -> tuple[dict, Conn]:
+        conn = conn or self.conn()
+        out = asyncio.run(metrics.trend(ranged(context(conn, f"{qs}&from={D1}&to={D2}"))))["data"]
+        return out, conn
+
+    def test_a_website_trend_point_is_the_cards_answer_level_measure(self):
+        out, conn = self.series("surface=website&metrics=citation_accuracy,target_url_rate,owned_url_rate")
+        by = {s["metric"]: [p["ratio"] for p in s["points"]] for s in out["series"]}
+        self.assertEqual(by["citation_accuracy"], [{"num": 5, "den": 8}, {"num": 7, "den": 12}])
+        self.assertEqual(by["target_url_rate"], [{"num": 6, "den": 10}, {"num": 8, "den": 15}])
+        self.assertEqual(by["owned_url_rate"], [{"num": 8, "den": 10}, {"num": 12, "den": 15}])
+        self.assertEqual(conn.reads("url_prompt_cell"), 1)
+
+    def test_per_engine_and_summed(self):
+        out, _ = self.series("surface=website&dimension=engine&metrics=citation_accuracy&dims=none:citation_accuracy")
+        by = {s["key"]: [p["ratio"] for p in s["points"]] for s in out["series"]}
+        self.assertEqual(by["chatgpt"], [{"num": 5, "den": 8}, {"num": 6, "den": 9}])
+        (none,) = out["dims"][0]["series"]
+        self.assertEqual([p["ratio"] for p in none["points"]], [{"num": 5, "den": 8}, {"num": 7, "den": 12}])
+
+    def test_the_other_metrics_and_the_global_surface_do_not_read_the_url_cells(self):
+        out, conn = self.series("surface=website&metrics=visibility,citation_share")
+        self.assertEqual(conn.reads("url_prompt_cell"), 0)
+        _, conn = self.series("surface=global&metrics=citation_accuracy")
+        self.assertEqual(conn.reads("url_prompt_cell"), 0)
+
+    def test_a_round_with_answers_but_no_url_cells_has_no_url_value(self):
+        conn = self.conn()
+        conn.url = [r for r in conn.url if r["round_date"] == D2]
+        out, _ = self.series("surface=website&metrics=citation_accuracy", conn)
+        self.assertEqual([(p["ratio"], p["gap"]) for p in out["series"][0]["points"]], [(None, False), ({"num": 7, "den": 12}, False)])
 
 
 class TrendWindow(unittest.TestCase):

@@ -148,3 +148,47 @@ class Rules(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MissingPrompts(unittest.TestCase):
+    """mention/drill-missing-prompts (2026-10-30, the renewal Website Mention's 미언급 프롬프트 list): the card's
+    count members under the page's filters on the website surface, each a prompt row without a 당사 mention."""
+
+    def test_the_list_reads_the_website_filters_and_maps_the_rows(self):
+        seen = []
+
+        async def get(path, params=None):
+            seen.append((path, dict(params or {})))
+            return {"data": {"items": [{"prompt_id": "p1", "prompt_text": "Q?", "funnel_code": None, "answers_total": 3,
+                                        "brand_mentions": 4, "providers": ["gemini", "chatgpt"],
+                                        "answers": [{"job_id": "j1", "engine": "chatgpt", "region": "US",
+                                                     "measured_at": "2026-10-09T01:00:00Z"}]}]},
+                    "meta": {"page": {"limit": 1000, "total": 836, "next_cursor": None}}}
+        with mock.patch("bff.api.get", get):
+            got = run(md.missing_prompts(params([["geography", "US"], ["promptContext", "x"], ["surface", "website"]])))
+        path, q = seen[0]
+        self.assertEqual(path, "mentions/missing-prompts")
+        self.assertEqual((q["surface"], q["country"], q["limit"], q["answers_limit"]), ("website", ["US"], md.MISSING_PROMPTS_LIMIT, md.MISSING_ANSWERS_LIMIT))
+        self.assertNotIn("prompt_context", q)
+        self.assertEqual(got["status"], 200)
+        self.assertEqual(got["body"]["total"], 836)
+        row = got["body"]["prompts"][0]
+        self.assertEqual((row["id"], row["mentions"], row["answersTotal"], row["brandMentions"], row["providers"]),
+                         ("p1", 0, 3, 4, ["Gemini", "ChatGPT"]))
+        self.assertEqual((row["answers"][0]["jobId"], row["answers"][0]["mentionCount"]), ("j1", 0))
+
+    def test_the_segments_are_counted_over_every_member(self):
+        """2026-10-30 W6 review: the drawer's 다른 브랜드 언급 / 브랜드 언급 없음 counts come from the reader's counts of
+        every member, not the loaded rows (the list stops at its limit, the no-brand prompts last)."""
+        async def get(path, params=None):
+            return {"data": {"items": [], "counts": {"with_brands": 980, "no_brands": 73}},
+                    "meta": {"page": {"limit": 1000, "total": 1053, "next_cursor": "1000"}}}
+        with mock.patch("bff.api.get", get):
+            got = run(md.missing_prompts(params([["engine", "gemini"], ["surface", "website"]])))
+        self.assertEqual((got["body"]["total"], got["body"]["counts"]), (1053, {"withBrands": 980, "noBrands": 73}))
+
+    def test_refusals_are_empty_lists(self):
+        for status, code in ((403, 200), (404, 200), (422, 400)):
+            with mock.patch("bff.api.get", failing(status)):
+                got = run(md.missing_prompts(params([["surface", "website"]])))
+            self.assertEqual((got["status"], got["body"]), (code, {"prompts": []}))

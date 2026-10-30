@@ -51,6 +51,14 @@ def predicate(ctx: Context, b: SQL, *, alias: str = "f") -> str:
     return where
 
 
+def own_citation(ctx: Context, b: SQL, alias: str = "f") -> str:
+    """A 자사 citation, by surface as Gold defines it (gold.citation_cell): global = owner_key = ANY(허용 배열), website =
+    loc_owned ∨ tgt_hit, project = loc_owned."""
+    if ctx.sf == 1:
+        return f"{alias}.owner_key IN (SELECT owner_key FROM gold.dim_owned_base WHERE (brand_bit & {b.bind(ctx.bits)})<>0)"
+    return f"({alias}.loc_owned OR {alias}.tgt_hit)" if ctx.sf == 2 else f"{alias}.loc_owned"
+
+
 def category(row: dict) -> dict | None:
     return {"category_key": row["category_key"], "slug": row["slug"], "name": row["category_name"]} if row.get("category_key") is not None else None
 
@@ -58,7 +66,7 @@ def category(row: dict) -> dict | None:
 async def domains(ctx: Context) -> dict:
     b = SQL()
     where = predicate(ctx, b)
-    owned = f"f.owner_key IN (SELECT owner_key FROM gold.dim_owned_base WHERE (brand_bit & {b.bind(ctx.bits)})<>0)" if ctx.sf == 1 else "f.loc_owned"
+    owned = own_citation(ctx, b)
     # Aggregate the facts per source_key, then join the source dims to the ~26k result rows: the
     # distinct counts sort the fact rows by a 4-byte key instead of the source's text columns
     # (2.9 s -> 1.35 s on the global card). source_key and skey are both unique in dim_source, so

@@ -28,6 +28,8 @@ Screens (one per Suspense section; `ctx.surface` = global | website where both p
   website/trend              website KPI trend chart           {trend}
   website/composition        website source composition        {sources, topics, degraded}
   website/geo                website GEO map + snapshot        {show, degraded, geo}
+  website/engines            renewal per-engine values         {engines, consistency, extremes, widest, degraded}
+  website/brands             renewal per-brand tiles (admin)   {brands} | {brands: None}
 
 Failure rules (the old degrade registry is gone; the payload says what the page used to read from it):
 a transient failure (5xx, timeout, database error) of a read that used to degrade empties that part
@@ -54,13 +56,15 @@ from bff.screens._compare import fetch_period_compare_api
 from bff.screens._competitors import (
     brand_key, candidate_brand_keys, competitor_row, to_competitor_brand_values, to_competitor_citation_domains,
 )
-from bff.screens._convert import as_of_date, pct1_or_zero, rank_avg
-from bff.screens._filters import fetch_filter_dates, filter_dates_view, load_panel_options, read_standard_filters
+from bff.screens._convert import as_of_date, pct1_or_null, pct1_or_zero, rank_avg
+from bff.screens._filters import (
+    fetch_filter_dates, filter_dates_view, load_panel_options, load_website_prompt_options, read_standard_filters,
+)
 from bff.screens._js import is_num, js_round
 from bff.screens._period import kst_today, label_key_of, period_caption, period_chip, resolve_request_compare_period_shape
 from bff.screens._query import RHQ_REGION_COUNTRIES, UMBRELLA_BRAND, analysis_query, to_api_params
 from bff.screens._summary import (
-    DASHBOARD_SUMMARY_PARTS, apply_competitor_sov_from_brands, apply_engine_consistency, fetch_kpi_summary,
+    DASHBOARD_SUMMARY_PARTS, apply_competitor_sov_from_brands, apply_engine_consistency, consistency, fetch_kpi_summary,
     overview_card_state, summary_is_empty, to_mirror_kpis, to_url_rate_kpis,
 )
 from bff.screens._trend import (
@@ -1017,6 +1021,95 @@ async def website_composition(q) -> dict:
             raise
         return {"topics": [], "sources": [], "degraded": True}
     return {"topics": [], "sources": to_source_slices(data), "degraded": False}
+
+
+# ── website: engines and brands side by side (renewal Website Overview, 2026-10-30) ─────────────────
+# The breakdowns lay out Gold values the page already reads: the engine rows behind the 엔진 간 일관성 badge
+# (kpi/engines) and the tiles read with one brand each. Best / worst follow each KPI's direction only.
+
+ENGINE_KPI_KEYS = ("visibility", "shareOfVoice", "sentiment", "position", "citationShare")
+
+
+def engine_ratios(r: dict) -> dict:
+    """One kpi/engines row's KPI ratios: the pairs apply_engine_consistency takes min / max of (via engine_row)."""
+    def n0(k):
+        return r.get(k) if r.get(k) is not None else 0
+    return {"visibility": {"num": n0("tracked"), "den": n0("answers")},
+            "shareOfVoice": {"num": n0("tracked_mentions"), "den": n0("total_mentions")},
+            "sentiment": {"num": n0("positive_mentions"), "den": n0("sent_mentions")},
+            "position": {"sum": n0("rank_sum"), "count": n0("ranked")},
+            "citationShare": {"num": n0("cit_owned"), "den": n0("cit_total")}}
+
+
+def engines_view(rows: list[dict]) -> dict:
+    """Per engine: answers and the five values (one decimal, rank = average); per KPI the badge's consistency,
+    the best and the worst engine (exact values compared, first one kept on a tie); the widest = the KPI of
+    the lowest consistency."""
+    engines, exact_of = [], {}
+    for r in rows:
+        ratios = engine_ratios(r)
+        values = {k: (rank_avg(ratios[k]) if k == "position" else pct1_or_null(ratios[k])) for k in ENGINE_KPI_KEYS}
+        exact_of[r["engine"]] = {k: (ratios[k]["sum"] / ratios[k]["count"] if ratios[k]["count"] else None) if k == "position"
+                                 else (ratios[k]["num"] / ratios[k]["den"] if ratios[k]["den"] else None) for k in ENGINE_KPI_KEYS}
+        engines.append({"engine": r["engine"], "answers": ratios["visibility"]["den"], "values": values, "ratios": ratios})
+    cons, extremes = {}, {}
+    for k in ENGINE_KPI_KEYS:
+        measured = [(e["engine"], exact_of[e["engine"]][k], e["values"][k]) for e in engines if exact_of[e["engine"]][k] is not None]
+        c = consistency([x for _, x, _ in measured])
+        if c is not None:
+            cons[k] = c
+        if len(measured) >= 2:
+            ordered = sorted(measured, key=lambda m: m[1], reverse=k != "position")
+            best, worst = ordered[0], ordered[-1]
+            extremes[k] = {"best": {"engine": best[0], "value": best[2]}, "worst": {"engine": worst[0], "value": worst[2]}}
+    widest = min(cons, key=lambda k: cons[k]) if cons else None
+    return {"engines": engines, "consistency": cons, "extremes": extremes, "widest": widest}
+
+
+@screen("website/engines")
+async def website_engines(q) -> dict:
+    """엔진별 비교: the engine rows of the badge (kpi/engines, card) as values. A transient failure -> degraded."""
+    ctx, sp = split_context(q)
+    common = common_params(website_filters(sp, ctx.get("admin") == "true"), "website")
+    try:
+        res = await fetch_engine_rows(common, "website")
+    except Exception as exc:  # noqa: BLE001
+        if not is_transient(exc):
+            raise
+        return {"engines": [], "consistency": {}, "extremes": {}, "widest": None, "degraded": True}
+    return {**engines_view(res["data"]["rows"]), "degraded": False}
+
+
+def brand_cells(view: dict) -> dict:
+    """One brand's tiles keyed by KPI (value, unit, Δ, tone, period chip as website/summary-deferred sends them)."""
+    if view["state"] != "ok":
+        return {}
+    keep = ("unit", "value", "pending", "delta", "direction", "tone", "period")
+    return {t["key"]: {f: t.get(f) for f in keep} for g in view["tiles"]["groups"] for t in g["tiles"]}
+
+
+@screen("website/brands")
+async def website_brands(q) -> dict:
+    """HMG 브랜드별 비교: for an administrator without a brand pick, each website brand's tiles (the
+    summary-deferred tiles read with that brand), and per KPI the best brands (the shown values by the KPI's
+    direction, every brand on a tie) and the bar widths of the column. None for the other accounts and with a
+    brand pick."""
+    ctx, sp = split_context(q)
+    if ctx.get("admin") != "true" or website_filters(sp, True).get("brand"):
+        return {"brands": None}
+    names = (await load_website_prompt_options())["brandOptions"]
+    views = await asyncio.gather(*(website_tiles(ctx, {**sp, "brand": name}, True) for name in names))
+    rows = [{"brand": name, "state": v["state"], "cells": brand_cells(v)} for name, v in zip(names, views)]
+    for key, _cat, _unit, better in KPI_DEFINITIONS:
+        cells = [r["cells"][key] for r in rows if key in r["cells"]]
+        values = [c["value"] for c in cells if c["value"] is not None and not c["pending"]]
+        mx = max(values) if values else None
+        best = (min if better == "lower" else max)(values) if values else None
+        for c in cells:
+            v = None if c["pending"] else c["value"]
+            c["bar"] = bar_width(key, v, mx)
+            c["best"] = v is not None and v == best
+    return {"brands": rows}
 
 
 @screen("website/geo")

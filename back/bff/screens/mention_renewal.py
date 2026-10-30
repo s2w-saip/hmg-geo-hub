@@ -42,6 +42,10 @@ MENTION_AXES = ("brand", "geography", "language", "engine", "time", "promptConte
 SENTIMENT_KEYS = ("positive", "neutral", "mixed", "negative")
 #: strongest endorsement first (mention-model TYPE_STRENGTH)
 TYPE_STRENGTH = ("final_choice", "recommendation", "comparison", "definition", "mention")
+#: The summary findings in one fixed order, 당사 first (standing, engine gap, type, negative signals), then the
+#: competitors' moves: no threshold or HUB priority decides which show or their tone, which follows the direction
+#: only — a competitor's move is not good or bad in itself (2026-10-30 W6 review, the user's go-ahead).
+FINDING_ORDER = {"standingLead": 6, "standingTrail": 6, "engine": 5, "typeTrail": 4, "typeLead": 4, "negative": 3, "mover": 2, "climb": 1}
 TYPE_AVG_TOP = 5
 #: competitor rows on the board (the original table's cap, own rows excluded)
 BOARD_COMPETITORS = 12
@@ -390,12 +394,14 @@ def hero_trend_series(hero: dict, trend: Any, metric: str, compare: list[str]) -
         return hit.get("exposurePct") if metric == "exposure" else hit.get("sharePct")
 
     competitors = [b["brand"] for b in ((trend or {}).get("brands") or []) if not b.get("isTracked")] if trend else []
+    # the average stays the top-10 rivals' (the reader's pinned top rival only adds a line to compare, 2026-10-30)
+    top = [b["brand"] for b in ((trend or {}).get("brands") or []) if not b.get("isTracked") and not b.get("pinned")] if trend else []
     brands = [{"key": key, "values": [value_of(key, k) for k in x]} for key in compare if key in competitors]
     average = None
-    if len(compare) == 0 and competitors:
+    if len(compare) == 0 and top:
         average = []
         for k in x:
-            vs = [v for v in (value_of(b, k) for b in competitors) if v is not None]
+            vs = [v for v in (value_of(b, k) for b in top) if v is not None]
             average.append(_mean1(vs) if vs else None)
     return {"x": x, "own": [p["pct"] for p in hero["points"]], "brands": brands, "average": average}
 
@@ -571,12 +577,13 @@ def rank_series_of(fp: Any, brand: str, axis: list[str]) -> list:
 
 
 def bump_data(trend: Any) -> dict | None:
-    """Weekly mention ranks of 당사 (all tracked brands summed) and the top-10 competitor series."""
+    """Weekly mention ranks of 당사 (all tracked brands summed) and the top-10 competitor series (not the reader's
+    pinned top rival, 2026-10-30)."""
     if not trend or len(trend["buckets"]) == 0:
         return None
     axis = _mv().trend_axis(trend["buckets"], trend["unit"], trend)
     by = {b["bucketStart"]: b for b in trend["buckets"]}
-    comps = [b["brand"] for b in trend["brands"] if not b.get("isTracked")]
+    comps = [b["brand"] for b in trend["brands"] if not b.get("isTracked") and not b.get("pinned")]
     has_own = any(b.get("isTracked") for b in trend["brands"])
     keys = ([OWN_KEY] if has_own else []) + comps
     series = [{"key": k, "own": k == OWN_KEY, "mentions": [], "shares": [], "ranks": []} for k in keys]
@@ -701,7 +708,8 @@ def _standing_finding(ex: Any) -> dict | None:
     if move is not None:
         params["move"] = abs(move)
         params["widened"] = "true" if lead == (move > 0) else "false"
-    return {"kind": "standingLead" if lead else "standingTrail", "tone": "good" if lead else "warn", "pri": 3 if lead and gap >= 5 else 9,
+    kind = "standingLead" if lead else "standingTrail"
+    return {"kind": kind, "tone": "good" if lead else "warn", "pri": FINDING_ORDER[kind],
             "target": "sec-comp", "kpi": "exposure", "brand": rival["key"], "params": params}
 
 
@@ -709,17 +717,16 @@ def _type_finding(types_rows: Any) -> dict | None:
     types = [t for t in (types_rows or []) if t["gap"] is not None]
     if not types:
         return None
-    worst = _sort(list(types), lambda a, b: _sign(a["gap"] - b["gap"]))[0]
-    key = next((t for t in types[:2] if t["gap"] < 0), None)
-    pick = key if key is not None else worst
+    # the type of the smallest gap (the largest trail, else the smallest lead): magnitude only, no type preferred
+    pick = _sort(list(types), lambda a, b: _sign(a["gap"] - b["gap"]))[0]
     trail = pick["gap"] < 0
-    out = {"kind": "typeTrail" if trail else "typeLead", "tone": "warn" if trail else "good", "pri": 8 if trail else 2,
-           "target": "sec-mix", "kpi": "exposure"}
+    kind = "typeTrail" if trail else "typeLead"
+    out = {"kind": kind, "tone": "warn" if trail else "good", "pri": FINDING_ORDER[kind], "target": "sec-mix", "kpi": "exposure"}
     ref_brand = pick["ref"]["brand"]
     if _truthy(ref_brand):
         out["brand"] = ref_brand
     out["params"] = {"type": pick["type"], "ref": ref_brand if ref_brand is not None else "", "gap": abs(pick["gap"]),
-                     "own": pick["own"] if pick["own"] is not None else 0, "strong": "true" if TYPE_STRENGTH.index(pick["type"]) < 2 else "false"}
+                     "own": pick["own"] if pick["own"] is not None else 0}
     return out
 
 
@@ -733,7 +740,7 @@ def _mover_finding(sov: Any) -> dict | None:
     m = movers[0]
     own_sov = next((r for r in rows if r["own"]), None)
     own_delta = own_sov["delta"] if own_sov and own_sov["delta"] is not None else ""
-    return {"kind": "mover", "tone": "warn" if m["delta"] > 0 else "info", "pri": 7 if m["delta"] > 0 else 4, "target": "sec-brands",
+    return {"kind": "mover", "tone": "info", "pri": FINDING_ORDER["mover"], "target": "sec-brands",
             "brand": m["key"], "params": {"brand": m["key"], "delta": m["delta"], "own": own_delta}}
 
 
@@ -742,7 +749,7 @@ def _engine_finding(engines: Any) -> dict | None:
     if not eg:
         return None
     nxt = eg[1] if len(eg) > 1 else None
-    return {"kind": "engine", "tone": "warn" if eg[0]["gap"] < 5 else "info", "pri": 6 if eg[0]["gap"] < 5 else 1, "target": "sec-mix",
+    return {"kind": "engine", "tone": "warn" if eg[0]["gap"] < 0 else "good", "pri": FINDING_ORDER["engine"], "target": "sec-mix",
             "kpi": "exposure", "params": {"engine": eg[0]["engine"], "gap": eg[0]["gap"], "next": nxt["engine"] if nxt else "",
                                           "nextGap": nxt["gap"] if nxt and nxt["gap"] is not None else ""}}
 
@@ -757,7 +764,7 @@ def _climb_finding(bump: Any) -> dict | None:
     climb = cands[0] if cands else None
     if not climb or not climb["r0"] > climb["r1"]:
         return None
-    return {"kind": "climb", "tone": "info", "pri": 5 if climb["r0"] - climb["r1"] >= 3 else 2, "target": "sec-brands", "brand": climb["key"],
+    return {"kind": "climb", "tone": "info", "pri": FINDING_ORDER["climb"], "target": "sec-brands", "brand": climb["key"],
             "params": {"brand": climb["key"], "from": climb["r0"], "to": climb["r1"], "weeks": last - first + 1}}
 
 
@@ -765,9 +772,10 @@ def _negative_finding(favor: Any) -> dict | None:
     if not favor or favor["negativePct"] is None:
         return None
     v = favor["negativeDelta"]["value"]
-    if v is None or not v >= 0.3:
+    if v is None:
         return None
-    return {"kind": "negative", "tone": "warn", "pri": 6, "target": "sec-overview", "kpi": "favorability",
+    return {"kind": "negative", "tone": "warn" if v > 0 else "good" if v < 0 else "info", "pri": FINDING_ORDER["negative"],
+            "target": "sec-overview", "kpi": "favorability",
             "params": {"pct": favor["negativePct"], "delta": v}}
 
 
@@ -776,7 +784,7 @@ def _top_findings(items: list[dict]) -> list[dict]:
 
 
 def findings(f: dict) -> list[dict]:
-    """The summary findings: at most four, highest priority first (mention-model findings)."""
+    """The summary findings: at most four, in FINDING_ORDER (mention-model findings)."""
     items = [x for x in (_standing_finding(f.get("exposure")), _type_finding(f.get("types")), _mover_finding(f.get("sov")),
                          _engine_finding(f.get("engines")), _climb_finding(f.get("bump")), _negative_finding(f.get("favor"))) if x]
     return _top_findings(items)
@@ -1244,10 +1252,12 @@ def ranking_payload(data: Any, trend: Any, prev_brands: list[dict] | None = None
 
 
 def _begin(q) -> tuple[dict, Any, Any]:
+    """Route context + the page's filters: global, or the website page's with ctx.surface=website (2026-10-30, the
+    renewal Website Mention: site country, language, engine, period; brand for ctx.admin=true)."""
     c, sp = split_context(q)
     md = _md()
     md.begin_degrade_scope()
-    filters, ctx = md.mention_filters(sp)
+    filters, ctx = md.surface_filters(c, sp)
     return c, filters, ctx
 
 
@@ -1290,7 +1300,7 @@ async def rn_tab_value(q) -> dict:
         raise HTTPException(422, "ctx.kpi must be one of exposure, sov, favorability, first-rank")
     md = _md()
     if kpi == "first-rank":
-        return tab_value_payload(kpi, fp=await md.load_first_position(filters, ctx))
+        return tab_value_payload(kpi, fp=await md.load_first_position(filters, ctx, pin_top=True))
     return tab_value_payload(kpi, sub=await md.load_kpi_hero_sub_kpis(filters, ctx, kpi))
 
 
@@ -1300,7 +1310,7 @@ async def rn_tab_deltas(q) -> dict:
     md = _md()
     period, engine, subs, prevs, fp = await asyncio.gather(
         md.load_period_compare(filters, ctx), md.load_engine_kpi_trend(filters, ctx), _subs(md, filters, ctx),
-        _prevs(md, filters, ctx), md.load_first_position(filters, ctx))
+        _prevs(md, filters, ctx), md.load_first_position(filters, ctx, pin_top=True))
     return tab_deltas_payload(period, engine, subs, prevs, fp)
 
 
@@ -1317,7 +1327,7 @@ async def rn_shell(q) -> dict:
 async def rn_compare(q) -> dict:
     _, filters, ctx = _begin(q)
     md = _md()
-    brands, trend = await asyncio.gather(_body_brands(md, filters, ctx), md.load_brand_trend(filters, ctx))
+    brands, trend = await asyncio.gather(_body_brands(md, filters, ctx), md.load_brand_trend(filters, ctx, pin_top=True))
     return compare_payload(brands, trend)
 
 
@@ -1327,7 +1337,7 @@ async def rn_summary(q) -> dict:
     md = _md()
     period, subs, prevs, engine, trend, tb, fp, brands, prev_brands, prev_engines = await asyncio.gather(
         md.load_period_compare(filters, ctx), _subs(md, filters, ctx), _prevs(md, filters, ctx), md.load_engine_kpi_trend(filters, ctx),
-        md.load_brand_trend(filters, ctx), md.load_types_by_brand(filters, ctx), md.load_first_position(filters, ctx),
+        md.load_brand_trend(filters, ctx, pin_top=True), md.load_types_by_brand(filters, ctx), md.load_first_position(filters, ctx, pin_top=True),
         _body_brands(md, filters, ctx), md.load_prev_period_brands(filters, ctx), md.load_prev_period_engines(filters, ctx))
     return summary_payload(period, subs, prevs, engine, trend, tb, fp, brands, prev_brands, prev_engines)
 
@@ -1350,7 +1360,7 @@ async def rn_rate_hero(q) -> dict:
     md = _md()
     period, subs, prevs, engine, trend, brands, prev_brands = await asyncio.gather(
         md.load_period_compare(filters, ctx), _subs(md, filters, ctx, RATE_METRICS), _prevs(md, filters, ctx, RATE_METRICS),
-        md.load_engine_kpi_trend(filters, ctx), md.load_brand_trend(filters, ctx), _body_brands(md, filters, ctx),
+        md.load_engine_kpi_trend(filters, ctx), md.load_brand_trend(filters, ctx, pin_top=True), _body_brands(md, filters, ctx),
         md.load_prev_period_brands(filters, ctx))
     return {m: rate_hero_payload(m, subs[m], prevs[m], engine, period, brands, trend, prev_brands) for m in RATE_METRICS}
 
@@ -1369,7 +1379,7 @@ async def rn_rate_types(q) -> dict:
     md = _md()
     t_kpi = asyncio.ensure_future(md.load_type_kpi(filters, ctx))
     rest = asyncio.ensure_future(asyncio.gather(md.load_types_by_brand(filters, ctx), _body_brands(md, filters, ctx),
-                                                md.load_engine_kpi_trend(filters, ctx), md.load_brand_trend(filters, ctx)))
+                                                md.load_engine_kpi_trend(filters, ctx), md.load_brand_trend(filters, ctx, pin_top=True)))
     kpi = await t_kpi
     # page.tsx degraded.types: the mark once the type read settled
     degraded = md.was_kpi_tab_degraded("types")
@@ -1409,9 +1419,9 @@ async def rn_favor_matrix(q) -> dict:
 async def rn_rank(q) -> dict:
     _, filters, ctx = _begin(q)
     md = _md()
-    t_fp = asyncio.ensure_future(md.load_first_position(filters, ctx))
+    t_fp = asyncio.ensure_future(md.load_first_position(filters, ctx, pin_top=True))
     rest = asyncio.ensure_future(asyncio.gather(md.load_period_compare(filters, ctx), _body_brands(md, filters, ctx),
-                                                md.load_brand_trend(filters, ctx), md.load_prev_period_brands(filters, ctx)))
+                                                md.load_brand_trend(filters, ctx, pin_top=True), md.load_prev_period_brands(filters, ctx)))
     fp = await t_fp
     degraded = md.was_first_position_hero_degraded()
     period, brands, trend, prev_brands = await rest
@@ -1421,13 +1431,13 @@ async def rn_rank(q) -> dict:
 @screen("mention/rn-bump")
 async def rn_bump(q) -> dict:
     _, filters, ctx = _begin(q)
-    return bump_payload(await _md().load_brand_trend(filters, ctx))
+    return bump_payload(await _md().load_brand_trend(filters, ctx, pin_top=True))
 
 
 @screen("mention/rn-ranking")
 async def rn_ranking(q) -> dict:
     _, filters, ctx = _begin(q)
     md = _md()
-    data, trend, prev_brands = await asyncio.gather(md.load_mentions_live(filters, ctx), md.load_brand_trend(filters, ctx),
+    data, trend, prev_brands = await asyncio.gather(md.load_mentions_live(filters, ctx, pin_top=True), md.load_brand_trend(filters, ctx, pin_top=True),
                                                     md.load_prev_period_brands(filters, ctx))
     return ranking_payload(data, trend, prev_brands)

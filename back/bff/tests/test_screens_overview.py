@@ -286,5 +286,98 @@ class BrandMatrixFailures(unittest.TestCase):
         self.assertEqual(cm.exception.status_code, 503)
 
 
+
+def engine(code: str, answers: int, tracked: int, mentions: tuple, sent: tuple, rank: tuple, cit: tuple) -> dict:
+    """One kpi/engines row: (tracked, total) mentions, (positive, all) signals, (rank_sum, ranked), (own, total) citations."""
+    return {"engine": code, "answers": answers, "tracked": tracked, "multi": 0, "top1": 0, "top3": 0,
+            "rank_sum": rank[0], "ranked": rank[1], "total_mentions": mentions[1], "tracked_mentions": mentions[0],
+            "sent_mentions": sent[1], "positive_mentions": sent[0], "negative_mentions": 0,
+            "cit_total": cit[1], "cit_owned": cit[0]}
+
+
+class WebsiteBreakdowns(unittest.TestCase):
+    """Renewal Website Overview (2026-10-30, W1): the per-engine and per-brand breakdowns are the Gold values
+    the page already reads, laid out — the engine rows behind the 엔진 간 일관성 badge, and the brand tiles
+    read with one brand each. Nothing is judged: best / worst follow each KPI's direction only."""
+
+    ENGINES = {"data": {"rows": [engine("chatgpt", 200, 190, (95, 100), (30, 100), (210, 190), (40, 100)),
+                                 engine("gemini", 100, 33, (40, 50), (20, 40), (40, 33), (10, 80))]}, "meta": META}
+
+    def test_engine_values_are_the_badge_rows(self):
+        out = screen("website/engines", "ctx.admin=true", Router({"kpi/engines": self.ENGINES}))
+        self.assertFalse(out["degraded"])
+        rows = {r["engine"]: r for r in out["engines"]}
+        self.assertEqual(rows["chatgpt"]["answers"], 200)
+        self.assertEqual(rows["chatgpt"]["values"], {"visibility": 95.0, "shareOfVoice": 95.0, "sentiment": 30.0,
+                                                     "position": 1.1, "citationShare": 40.0})
+        self.assertEqual(rows["gemini"]["values"], {"visibility": 33.0, "shareOfVoice": 80.0, "sentiment": 50.0,
+                                                    "position": 1.2, "citationShare": 12.5})
+        self.assertEqual(rows["gemini"]["ratios"]["visibility"], {"num": 33, "den": 100})
+        self.assertEqual(rows["gemini"]["ratios"]["position"], {"sum": 40, "count": 33})
+        # the badge's numbers, from the same rows
+        self.assertEqual(out["consistency"]["visibility"], 34.7)
+        self.assertEqual(out["consistency"]["position"], round(100 * (210 / 190) / (40 / 33), 1))
+        # best / worst by the KPI's direction (rank: lower is better)
+        self.assertEqual(out["extremes"]["visibility"], {"best": {"engine": "chatgpt", "value": 95.0},
+                                                         "worst": {"engine": "gemini", "value": 33.0}})
+        self.assertEqual(out["extremes"]["position"]["best"]["engine"], "chatgpt")
+        self.assertEqual(out["extremes"]["sentiment"]["best"]["engine"], "gemini")
+        # the widest spread = the lowest consistency
+        self.assertEqual(out["widest"], "citationShare")
+
+    def test_the_consistency_is_the_badge_on_the_tiles(self):
+        bodies = {"kpi/summary": {**summary(), "meta": {**META, "surface": "website"}},
+                  "mentions/brands": {"data": {"brands": []}, "meta": META}, "kpi/engines": self.ENGINES,
+                  "trend": {"data": {"bucket": "cycle", "dimension": "none", "own_label": "HMG", "buckets": [], "series": []},
+                            "meta": META}}
+        tiles = screen("website/summary-deferred", "", Router(bodies))["tiles"]
+        badges = {t["key"]: t["engineConsistency"] for g in tiles["groups"] for t in g["tiles"] if "engineConsistency" in t}
+        self.assertEqual(badges, screen("website/engines", "", Router(bodies))["consistency"])
+
+    def test_one_engine_has_no_extremes(self):
+        one = {"data": {"rows": self.ENGINES["data"]["rows"][:1]}, "meta": META}
+        out = screen("website/engines", "ctx.admin=true&engine=chatgpt", Router({"kpi/engines": one}))
+        self.assertEqual(len(out["engines"]), 1)
+        self.assertEqual(out["extremes"], {})
+        self.assertIsNone(out["widest"])
+
+    def test_engines_degrade_on_a_transient_failure_and_raise_a_4xx(self):
+        out = screen("website/engines", "", Router({}, {"kpi/engines": 503}))
+        self.assertEqual(out, {"engines": [], "consistency": {}, "extremes": {}, "widest": None, "degraded": True})
+        with self.assertRaises(HTTPException):
+            screen("website/engines", "", Router({}, {"kpi/engines": 422}))
+
+    BRAND_BODIES = {"kpi/summary": {**summary(), "meta": {**META, "surface": "website"}},
+                    "mentions/brands": {"data": {"brands": []}, "meta": META},
+                    "kpi/engines": {"data": {"rows": []}, "meta": META},
+                    "trend": {"data": {"bucket": "cycle", "dimension": "none", "own_label": "HMG", "buckets": [], "series": []},
+                              "meta": META},
+                    "filters/options": {"data": {"regions": [], "languages": [],
+                                                 "geo_matrix": [{"brand": "Kia"}, {"brand": "Hyundai"}, {"brand": "Genesis"}]},
+                                        "meta": META}}
+
+    def test_brands_side_by_side_for_an_administrator_without_a_brand_pick(self):
+        router = Router(self.BRAND_BODIES)
+        out = screen("website/brands", "ctx.admin=true&geography=US", router)
+        self.assertEqual([b["brand"] for b in out["brands"]], ["Genesis", "Hyundai", "Kia"])
+        summaries = [dict(c) for p, c in router.calls if p == "kpi/summary"]
+        self.assertEqual(sorted(c["brand"] for c in summaries), ["Genesis", "Hyundai", "Kia"])
+        self.assertTrue(all(c["country"] == "US" for c in summaries))
+        row = out["brands"][0]
+        self.assertEqual(row["state"], "ok")
+        cell = row["cells"]["visibility"]
+        self.assertEqual((cell["value"], cell["unit"], cell["pending"]), (50.0, "percent", False))
+        # every brand ties on the stand-in values: each is the best, the bars are full
+        self.assertEqual([b["cells"]["visibility"]["best"] for b in out["brands"]], [True, True, True])
+        self.assertEqual(cell["bar"], 100)
+
+    def test_no_brands_without_the_brand_axis_or_with_a_pick(self):
+        for qs in ("ctx.admin=false", "ctx.admin=true&brand=Kia"):
+            with self.subTest(qs=qs):
+                router = Router(self.BRAND_BODIES)
+                self.assertEqual(screen("website/brands", qs, router), {"brands": None})
+                self.assertEqual(router.calls, [])
+
+
 if __name__ == "__main__":
     unittest.main()

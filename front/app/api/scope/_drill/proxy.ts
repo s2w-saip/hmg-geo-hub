@@ -16,7 +16,7 @@ import type { DrillScreenReply } from "@/app/[locale]/(dash)/standard/answer-ana
 // `ctx.params`. A failure the screen raises (a backend 5xx, a timeout) is answered with
 // hghErrorResponse ({error: {code}} with its status), as the routes did with backend failures.
 
-export type DrillScreen = "mention/drill-brand-prompts" | "mention/drill-brand-citations" | "mention/drill-signal-prompts" | "mention/drill-answer";
+export type DrillScreen = "mention/drill-brand-prompts" | "mention/drill-brand-citations" | "mention/drill-signal-prompts" | "mention/drill-answer" | "mention/drill-missing-prompts";
 
 export async function proxyDrill(req: NextRequest, screen: DrillScreen): Promise<Response> {
   const session = await getSession();

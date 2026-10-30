@@ -40,7 +40,7 @@ function render(node: ReactNode): string {
 const count = (html: string, needle: string) => html.split(needle).length - 1;
 
 describe("RnConvBody", () => {
-  it("요약: six metrics on the hero and the findings", () => {
+  it("요약: six metrics on the hero, the site line and the findings", () => {
     const html = render(<RnConvBody input={body} />);
     expect(count(html, "data-rn-kpi=")).toBe(6);
     expect(count(html, "data-rn-finding=")).toBe(body.view!.findings.length);
@@ -49,44 +49,117 @@ describe("RnConvBody", () => {
     // AI 7.5% vs 일반 4.7%: the gap is +2.8pp and AI converts better
     expect(html).toContain("7.5");
     expect(html).toContain("+2.8");
-    expect(html).toContain("AI 유입이 일반보다 잘 전환합니다");
+    expect(html).toContain("AI 유입 전환율이 일반보다 높습니다");
     expect(html).toContain("전환 27건 ÷ 사용자 360명");
     expect(html).toContain("AI 유입 전환율 7.5% — 일반 유입 4.7%보다 2.8pp 높음");
-    expect(html).toContain("GA4 속성 3개 중 2개만 측정 중");
+    expect(html).toContain("GA4 속성 3개 중 2개 측정 중");
     expect(html).toContain("AI 유입 세션 ▲19.2% · 직전 14일 대비");
-    expect(html).toContain("세션 100회당 전환은 Gemini 7.1건이 가장 높습니다(ChatGPT 6.5건).");
+    // the change finding carries the split: 7 = 3.8 + 3.2
+    expect(html).toContain("AI 유입 전환 ▲35.0% — 전환 +7건 = 유입 규모 +3.8 + 세션당 전환 +3.2");
+    expect(html).toContain("AI Assistant 채널: 채널 4개 중 세션 4위 (1.53%)");
+    expect(html).toContain("세션 100회당 주요 이벤트 4.8건 — 1위 · 사이트 전체 1.6건");
+    // the site line restores the original's page views
+    expect(html).toContain("사이트 전체");
+    expect(html).toContain("세션 28,434회");
+    expect(html).toContain("페이지 조회 84,000회");
+    expect(html).toContain("일반 유입 세션 100회당 전환 2.5건");
     expect(html).not.toContain("전환율과 격차를 계산하지 않습니다");
   });
 
-  it("the cards: trend, engines, properties, landing pages, events", () => {
+  it("the trend: four charts, AI vs general rate, and a table of every day", () => {
     const html = render(<RnConvBody input={body} />);
     expect(html).toContain("일별 AI 유입 · 전환");
-    expect(html).toContain("일별 AI 유입 전환율");
+    expect(html).toContain("일별 전환율 — AI vs 일반");
+    expect(html).toContain("일별 AI 세션 비중");
+    expect(html).toContain('data-rn-seg="table"');
+    expect(html).not.toContain("data-rn-trend-table");
+  });
+
+  it("channels: the AI row among GA4's channel groups, its ranks and the site total", () => {
+    const html = render(<RnConvBody input={body} />);
+    expect(count(html, "data-rn-channel=")).toBe(4);
+    expect(html.indexOf('data-rn-channel="Organic Search"')).toBeLessThan(html.indexOf('data-rn-channel="AI Assistant"'));
+    expect(html).toContain("AI Assistant는 채널 4개 중 세션 4위(1.53%) · 세션 100회당 주요 이벤트 1위(4.8건, 사이트 전체 1.6건)");
+    expect(html).toContain("data-rn-channel-site");
+    expect(html).toContain("28,434");
+  });
+
+  it("the change split: waterfall steps that add up, and the engines' share of the session change", () => {
+    const html = render(<RnConvBody input={body} />);
+    expect(html).toContain("전환 +7건 = 유입 규모 +3.8 + 세션당 전환 +3.2");
+    expect(count(html, "data-rn-step=")).toBe(4);
+    expect(html).toContain("AI 유입 세션 364회 → 434회 · 세션 100회당 전환 5.5건 → 6.2건");
+    expect(html).toContain("AI 유입 세션 변화 +70회 — 엔진별 몫");
+    expect(count(html, "data-rn-share=")).toBe(3);
+    expect(html).toContain("+42");
+    const noPrev = render(<RnConvBody input={{ ...body, view: { ...body.view!, prevOk: false, decomp: null } }} />);
+    expect(noPrev).toContain("직전 같은 길이 기간의 데이터가 없어 분해하지 않습니다.");
+  });
+
+  it("segments: the device mix of AI vs general and conversions per 100 sessions", () => {
+    const html = render(<RnConvBody input={body} />);
+    expect(html).toContain("AI 유입의 모바일 비중 74% — 일반 유입 55%");
+    expect(count(html, "data-rn-segment=")).toBe(2);
+    expect(html).toContain("+19.2pp");
+    expect(html).toContain('data-rn-seg="visitorType"');
+  });
+
+  it("the cards: engines, markets, landing pages with the same page's general sessions, events split AI · general", () => {
+    const html = render(<RnConvBody input={body} />);
     expect(count(html, "data-rn-engine=")).toBe(3);
     expect(html).toContain("Perplexity");
-    // three properties, the waiting one last and out of the totals
+    expect(html).toContain("세션당 페이지");
+    // three markets, the waiting one last and out of the totals; Kia IT: AI 9.1% vs general 4.7%
     expect(count(html, "data-rn-prop=")).toBe(3);
     expect(html).toContain("측정 중 2 / 3");
     expect(html).toContain("권한 대기");
     expect(html).toContain("GA4 469542848 · 주요 이벤트 기준");
     expect(html).toContain("이탈리아 · Kia");
-    // eight landing pages, all on the first screen (10 rows), the top one first
+    expect(html).toContain("9.1%");
+    expect(html).toContain("+4.5pp");
+    // eight landing pages, all on the first screen (10 rows), the top one first, with its general sessions
     expect(count(html, "data-rn-page=")).toBe(8);
     expect(html.indexOf("/it/<")).toBeLessThan(html.indexOf("/it/modelli/ev3/scopri/"));
     expect(html).not.toContain("개 더 보기");
-    // tracked events first
+    expect(html).toContain("AI 유입 1위 입구 /it/: 이 페이지 세션의 0.7%가 AI 유입 · 세션 100회당 주요 이벤트 AI 12.5건 · 일반 0.5건");
+    expect(html).toContain("16,800");
+    // tracked events first, each split AI · general
     expect(html.indexOf("book_a_test_drive")).toBeLessThan(html.indexOf("page_view"));
     expect(html).toContain("전환 집계 이벤트 2개 · 454회");
+    expect(html).toContain("AI 유입 6회 · 일반 유입 280회");
     expect(html).toContain("측정 중인 GA4 속성 2개");
+  });
+
+  it("the raw period users: folded, with every window counted", () => {
+    const html = render(<RnConvBody input={body} />);
+    expect(html).toContain("측정 원자료 · 기간 사용자 수");
+    expect(html).toContain("60행");
+    expect(html).toContain("펼치기");
+    expect(count(html, "data-rn-window=")).toBe(0);
   });
 
   it("a user filter: no rates, the reason in the summary", () => {
     const view = body.view!;
-    const filtered = { ...body, view: { ...view, filtered: true, totals: { ...view.totals, aiUsers: null, aiRate: null, genUsers: null, genRate: null, lift: null, perUser: null }, trend: { ...view.trend, rate: view.trend.rate.map(() => null) } } };
+    const filtered = {
+      ...body,
+      view: {
+        ...view,
+        filtered: true,
+        totals: { ...view.totals, aiUsers: null, aiRate: null, genUsers: null, genRate: null, lift: null, perUser: null },
+        trend: { ...view.trend, rate: view.trend.rate.map(() => null), genRate: view.trend.genRate.map(() => null) },
+      },
+    };
     const html = render(<RnConvBody input={filtered} />);
     expect(html).toContain("엔진 · 기기 · 방문자 유형 필터를 고르면");
     expect(html).toContain("전환율이 없어 계산하지 않습니다");
     expect(html).toContain("이 조건에서는 일별 사용자 수가 없어 전환율을 그리지 않습니다.");
+  });
+
+  it("an engine filter: the channel report has no AI row", () => {
+    const view = body.view!;
+    const rows = view.channels.rows.filter((r) => !r.ai);
+    const html = render(<RnConvBody input={{ ...body, view: { ...view, channels: { ...view.channels, rows, aiRank: null } } }} />);
+    expect(html).toContain("이 조건에서는 GA4 채널 보고서에 AI Assistant 행이 없습니다");
   });
 
   it("states", () => {

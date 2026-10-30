@@ -29,17 +29,19 @@ import type { CitationDomainLive, CitationsLive } from "@/lib/scope/result-adapt
 import { DEALER_CATEGORY, OFFICIAL_HMG_CATEGORY } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/citation-view";
 import {
   DELTA_AXIS_MIN,
-  MATRIX_MIN_N,
   SPARK_MIN_SPAN,
   type RnCitationDelta,
   type RnCitationInput,
   type RnCitationVm,
+  type RnCitationWebsite,
   type RnMatrixView,
+  type RnShareTile,
 } from "./citation-input";
 import { CitationCardActions, CitationProvider, DIV_LEGEND, DIV_LESS, DIV_MORE, divBg, engineLabel, useCatLabel, useCitation, type CitationCtx, type MatrixAxis } from "./citation-context";
 import { CardSkeleton, DegradedNote, DeltaChip, InfoTip, StateCard, useDegradedText } from "../../mention/_components/mention-kit";
 import { numTxt, pctTxt, deltaTxt } from "../../mention/_components/mention-context";
 import { DomainBumpCard, DomainDrawer, DomainTableCard } from "./citation-domains";
+import { ReachCard, WebsitePromptsCard } from "./citation-website";
 
 export function RnCitationBody({ input }: { input: RnCitationInput }) {
   return (
@@ -83,6 +85,7 @@ function CitationShell({ input }: { input: RnCitationInput }) {
 
 function Measured({ input, live }: { input: RnCitationInput; live: CitationsLive }) {
   const t = useTranslations("renewal.citation");
+  const tw = useTranslations("renewal.website.citation");
   const competitors = useActiveCompetitors();
   const competitorKey = competitors.join("~");
   const picked = useMemo(() => new Set(competitors), [competitorKey]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -119,8 +122,33 @@ function Measured({ input, live }: { input: RnCitationInput; live: CitationsLive
         <Suspense fallback={<SummarySkeleton />}>
           <Summary />
         </Suspense>
-        <RnSectionHead id="sec-overview" title={t("sec.overview")} desc={t("sec.overviewDesc")} />
-        <Overview />
+        {input.website ? (
+          // The website page (2026-10-30): per prompt first (the URL funnel, then the 공식(당사) URL prompt lists),
+          // then per citation (the shares and the sections below)
+          <>
+            <RnSectionHead id="sec-reach" title={tw("sec.reach")} desc={tw("sec.reachDesc")} />
+            <RnCard aria-label={tw("reach.title")}>
+              <Suspense fallback={<CardSkeleton height={300} />}>
+                <ReachCard website={input.website} />
+              </Suspense>
+            </RnCard>
+            <RnSectionHead id="sec-prompts" title={tw("sec.prompts")} desc={tw("sec.promptsDesc")} />
+            <RnCard aria-label={tw("prompts.title")}>
+              <Suspense fallback={<CardSkeleton height={280} />}>
+                <WebsitePromptsCard />
+              </Suspense>
+            </RnCard>
+            <RnSectionHead id="sec-overview" title={tw("sec.share")} desc={tw("sec.shareDesc")} />
+            <Suspense fallback={<WebsiteShareSkeleton />}>
+              <WebsiteShareRow website={input.website} />
+            </Suspense>
+          </>
+        ) : (
+          <>
+            <RnSectionHead id="sec-overview" title={t("sec.overview")} desc={t("sec.overviewDesc")} />
+            <Overview />
+          </>
+        )}
         <RnSectionHead id="sec-comp" title={t("sec.comp")} desc={t("sec.compDesc")} />
         <RnCard aria-label={t("comp.title")}>
           <Suspense fallback={<CardSkeleton height={420} />}>
@@ -232,7 +260,12 @@ function Summary() {
         detail = t("find.engineGapDetail");
         break;
       case "typeGap":
-        title = Number(p.gap) < 0 ? t("find.typeGap.titleLow", { share: pctTxt(Number(p.rec)), gap: n1(Math.abs(Number(p.gap))) }) : t("find.typeGap.titleHigh", { share: pctTxt(Number(p.rec)) });
+        title =
+          Number(p.gap) < 0
+            ? t("find.typeGap.titleLow", { share: pctTxt(Number(p.rec)), gap: n1(Math.abs(Number(p.gap))) })
+            : Number(p.gap) > 0
+              ? t("find.typeGap.titleHigh", { share: pctTxt(Number(p.rec)) })
+              : t("find.typeGap.titleSame", { share: pctTxt(Number(p.rec)) });
         detail = t("find.typeGapDetail");
         break;
       case "opportunity":
@@ -262,7 +295,9 @@ function Summary() {
         chips={<RnBasisChip>{isPeriod ? t("summary.chipPeriod") : t("summary.chipSnapshot", { date: live.asOf?.slice(0, 10) ?? "—" })}</RnBasisChip>}
       />
       <p className="m-0 px-6 pb-3.5 text-rn-16 leading-[1.6] break-keep text-white/88 [.rn-dense_&]:px-4.5 [.rn-dense_&]:pb-2.5 [&_b]:font-bold [&_b]:text-white">
-        {l.hmg.value == null
+        {input.website ? (
+          <WebsiteHeadline website={input.website} hmg={l.hmg.value} dealer={l.dealer.value} />
+        ) : l.hmg.value == null
           ? t("summary.headlineNoHmg", { dealer: pctTxt(l.dealer.value), total: numTxt(live.summary.total), domains: numTxt(live.summary.uniqueDomains) })
           : t.rich("summary.headline", {
               b: (c) => <b>{c}</b>,
@@ -275,6 +310,34 @@ function Summary() {
       </p>
       {items.length ? <RnFindingGrid items={items} /> : <p className="m-0 px-6 text-rn-12 text-white/72">{t("summary.empty")}</p>}
     </RnCard>
+  );
+}
+
+/** The website headline: the URL funnel and the shares, each with its Δ (the cards below; no new value). */
+function WebsiteHeadline({ website, hmg, dealer }: { website: Promise<RnCitationWebsite>; hmg: number | null; dealer: number | null }) {
+  const tw = useTranslations("renewal.website.citation.summary");
+  const w = use(website);
+  const d = (v: number | null | undefined) => (v == null ? "" : ` (${deltaTxt(v)})`);
+  const pieces: ReactNode[] = [];
+  const strong = (name: string, value: number | null, delta: number | null | undefined) =>
+    pieces.push(tw.rich("piece", { b: (c) => <b>{c}</b>, name, value: pctTxt(value), delta: d(delta) }));
+  if (w.reach.status === "ok") {
+    strong(tw("ownedUrl"), w.reach.ownedRate, w.reach.delta.ownedRate);
+    strong(tw("targetUrl"), w.reach.targetRate, w.reach.delta.targetRate);
+  }
+  if (w.own?.value != null) strong(tw("own"), w.own.value, w.own.delta.value);
+  if (hmg != null) pieces.push(tw("plain", { name: tw("hmg"), value: pctTxt(hmg) }));
+  if (dealer != null) pieces.push(tw("plain", { name: tw("dealer"), value: pctTxt(dealer) }));
+  return (
+    <>
+      {pieces.map((p, i) => (
+        <span key={i}>
+          {i ? " · " : ""}
+          {p}
+        </span>
+      ))}
+      .
+    </>
   );
 }
 
@@ -331,20 +394,45 @@ function TileSkeleton() {
 }
 
 function ShareTile({ kind }: { kind: "hmg" | "dealer" }) {
+  const { input } = useCitation();
+  const t = useTranslations("renewal.citation.lens");
+  const tw = useTranslations("renewal.website.citation.lens");
+  const { lens: l } = useModel();
+  // website: 공식(HMG) takes the category's own Δ (the Overview card Δ is 공식(당사)'s there)
+  const def = kind === "hmg" && input.website ? tw("hmgDef") : t(`${kind}.def`);
+  return (
+    <ShareTileView
+      kind={kind}
+      tile={l[kind]}
+      litKey={kind === "hmg" ? OFFICIAL_HMG_CATEGORY : DEALER_CATEGORY}
+      name={t(`${kind}.name`)}
+      question={t(`${kind}.question`)}
+      def={def}
+      formula={t(`${kind}.formula`)}
+      excluded={t(`${kind}.excluded`)}
+    />
+  );
+}
+
+/** A share tile: value, Δ chip + basis, weekly line; `litKey` = the category it lights across the page. */
+function ShareTileView({ kind, tile, litKey, name, question, def, formula, excluded }: { kind: string; tile: RnShareTile; litKey?: string; name: string; question: string; def: string; formula: string; excluded: string }) {
   const { hover, lit } = useCitation();
   const t = useTranslations("renewal.citation.lens");
   const basis = useDeltaBasis();
-  const { lens: l } = useModel();
-  const tile = l[kind];
-  const key = kind === "hmg" ? OFFICIAL_HMG_CATEGORY : DEALER_CATEGORY;
   const b = basis(tile.delta);
   return (
-    <div className={cx(TILE, lit === key && "shadow-[var(--shadow-rn-1),inset_0_-3px_0_var(--color-rn-navy),0_0_0_1px_var(--color-rn-line)]")} data-rn-b={key} data-rn-tile={kind} onPointerEnter={() => hover(key)} onPointerLeave={() => hover(null)}>
+    <div
+      className={cx(TILE, litKey != null && lit === litKey && "shadow-[var(--shadow-rn-1),inset_0_-3px_0_var(--color-rn-navy),0_0_0_1px_var(--color-rn-line)]")}
+      data-rn-b={litKey}
+      data-rn-tile={kind}
+      onPointerEnter={litKey != null ? () => hover(litKey) : undefined}
+      onPointerLeave={litKey != null ? () => hover(null) : undefined}
+    >
       <span className="flex items-center gap-1 text-rn-13 font-bold text-rn-ink">
-        {t(`${kind}.name`)}
-        <InfoTip label={t(`${kind}.name`)} items={[[t("defLabel"), t(`${kind}.def`)], [t("formulaLabel"), t(`${kind}.formula`)]]} />
+        {name}
+        <InfoTip label={name} items={[[t("defLabel"), def], [t("formulaLabel"), formula]]} />
       </span>
-      <span className="text-rn-11 break-keep text-rn-muted [.rn-dense_&]:hidden">{t(`${kind}.question`)}</span>
+      <span className="text-rn-11 break-keep text-rn-muted [.rn-dense_&]:hidden">{question}</span>
       <span className="mt-auto flex items-end gap-2.5">
         <span className="text-rn-28 font-bold tracking-[-0.02em] whitespace-nowrap text-rn-ink tabular-nums">
           {tile.value == null ? (
@@ -359,7 +447,7 @@ function ShareTile({ kind }: { kind: "hmg" | "dealer" }) {
         {tile.sparkOn ? <RnSparkline values={tile.spark} className="mb-1 h-7 w-[72px]" /> : null}
       </span>
       {tile.value == null ? (
-        <span className="text-rn-12 text-rn-muted">{t(`${kind}.excluded`)}</span>
+        <span className="text-rn-12 text-rn-muted">{excluded}</span>
       ) : (
         <span className="flex flex-wrap items-center gap-1.5">
           <DeltaChip value={tile.delta.value} />
@@ -409,6 +497,52 @@ function PromptTile({ kind }: { kind: "owned" | "uncited" }) {
       </span>
       <span className="text-rn-12 font-semibold text-rn-navy">{t("open")}</span>
     </Link>
+  );
+}
+
+// ── 인용 비중 (website page): 공식(HMG) · 공식(당사) · 딜러 + the totals ────────────
+
+const NO_TILE: RnShareTile = { value: null, delta: { value: null, basis: null, date: null }, spark: [], sparkOn: false };
+
+function WebsiteShareSkeleton() {
+  return (
+    <div className="grid grid-cols-1 gap-2.5 @min-[520px]/rnpage:grid-cols-3">
+      {[0, 1, 2].map((i) => (
+        <TileSkeleton key={i} />
+      ))}
+    </div>
+  );
+}
+
+// 공식(당사) is the site's brand scope, a different share from the 공식(HMG) category on the website: the two stand
+// side by side with the dealer share. The chips keep the original's totals (citations, domains, 출처 분류 수).
+function WebsiteShareRow({ website }: { website: Promise<RnCitationWebsite> }) {
+  const { input, live } = useCitation();
+  const t = useTranslations("renewal.citation");
+  const tw = useTranslations("renewal.website.citation");
+  const w = use(website);
+  const isPeriod = Boolean(input.period);
+  return (
+    <>
+      <div className="grid grid-cols-1 gap-2.5 @min-[520px]/rnpage:grid-cols-3" role="group" aria-label={t("lens.label")}>
+        <Suspense fallback={<TileSkeleton />}>
+          <ShareTile kind="hmg" />
+        </Suspense>
+        <ShareTileView kind="own" tile={w.own ?? NO_TILE} name={tw("lens.own.name")} question={tw("lens.own.question")} def={tw("lens.own.def")} formula={tw("lens.own.formula")} excluded={tw("lens.own.none")} />
+        <Suspense fallback={<TileSkeleton />}>
+          <ShareTile kind="dealer" />
+        </Suspense>
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5" data-rn-cmeta="">
+        <RnBasisChip>{t("lens.total", { n: numTxt(live.summary.total) })}</RnBasisChip>
+        <RnBasisChip>{t("lens.domains", { n: numTxt(live.summary.uniqueDomains) })}</RnBasisChip>
+        <RnBasisChip>{tw("lens.categories", { n: numTxt(live.categories?.length ?? 0) })}</RnBasisChip>
+        <RnBasisChip>{isPeriod ? t("lens.basisPeriod") : t("lens.basisSnapshot", { date: live.asOf?.slice(0, 10) ?? "—" })}</RnBasisChip>
+      </div>
+      <Suspense fallback={null}>
+        <MonthLine />
+      </Suspense>
+    </>
   );
 }
 
@@ -566,7 +700,7 @@ function MatrixCard() {
     <>
       <RnCardHead
         title={t("title")}
-        info={<InfoTip label={t("infoLabel")} items={[[t("infoLabel"), t(axis === "engine" ? "infoEngine" : "infoType", { min: MATRIX_MIN_N })]]} />}
+        info={<InfoTip label={t("infoLabel")} items={[[t("infoLabel"), t(axis === "engine" ? "infoEngine" : "infoType")]]} />}
         chips={<RnBasisChip>{t("chip")}</RnBasisChip>}
         controls={
           <RnSegmented
@@ -644,7 +778,7 @@ function MatrixBody() {
                 <small className="block text-rn-11 font-medium text-rn-muted tabular-nums">{t("n", { n: numTxt(m.total) })}</small>
               </th>
               {m.cols.map((c) => (
-                <th key={c.key} scope="col" data-rn-col={c.key} className={cx("px-2.5 pt-1 pb-1.5 text-right align-bottom text-rn-12 font-bold", c.thin ? "text-rn-muted" : "text-rn-ink-2")}>
+                <th key={c.key} scope="col" data-rn-col={c.key} className="px-2.5 pt-1 pb-1.5 text-right align-bottom text-rn-12 font-bold text-rn-ink-2">
                   {col(c.key)}
                   <small className="block text-rn-11 font-medium text-rn-muted tabular-nums">{t("n", { n: numTxt(c.n) })}</small>
                 </th>
@@ -668,8 +802,8 @@ function MatrixBody() {
                       <td
                         key={c.key}
                         data-rn-cell={`${c.key}|${k}`}
-                        title={`${col(c.key)} · ${cat(k)}\n${t("tipShare", { share: pctTxt(c.shares[k]), base: pctTxt(m.base[k]), gap: deltaTxt(gap) })}${c.thin ? `\n${t("tipThin", { n: numTxt(c.n), min: MATRIX_MIN_N })}` : ""}`}
-                        className={cx("h-[34px] rounded px-2.5 text-right whitespace-nowrap tabular-nums", c.thin ? "text-rn-muted" : "text-rn-ink", own && "font-bold", on && "outline-2 -outline-offset-2 outline-rn-navy")}
+                        title={`${col(c.key)} · ${cat(k)}\n${t("tipShare", { share: pctTxt(c.shares[k]), base: pctTxt(m.base[k]), gap: deltaTxt(gap) })}`}
+                        className={cx("h-[34px] rounded px-2.5 text-right whitespace-nowrap text-rn-ink tabular-nums", own && "font-bold", on && "outline-2 -outline-offset-2 outline-rn-navy")}
                         style={paint ? { background: divBg(gap, m.cap) } : undefined}
                       >
                         {counts ? numTxt(c.counts[k]) : pctTxt(c.shares[k])}
@@ -690,10 +824,7 @@ function MatrixBody() {
           <span>{t("less")}</span>
           <span aria-hidden className="h-2.5 w-[120px] rounded-[3px]" style={{ background: DIV_LEGEND }} />
           <span>{t("more")}</span>
-          <span className="text-rn-muted">
-            {t("cap", { cap: m.cap })}
-            {m.anyThin ? ` · ${t("thin", { min: MATRIX_MIN_N })}` : ""}
-          </span>
+          <span className="text-rn-muted">{t("cap", { cap: m.cap })}</span>
         </div>
       )}
     </>

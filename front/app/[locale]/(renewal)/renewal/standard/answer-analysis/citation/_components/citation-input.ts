@@ -6,6 +6,7 @@ import type {
   CitationTableSource,
   DomainTableViews,
   NumberedDomainRow,
+  WebsiteCitationScreen,
 } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/citation-view";
 
 // The renewal citation page's payload types (screen `citation/standard`, variant renewal:
@@ -15,8 +16,6 @@ import type {
 export const DELTA_AXIS_MIN = 0.5;
 /** Weekly share sparklines draw at least a 2pp range, so sub-point wobbles stay nearly flat. */
 export const SPARK_MIN_SPAN = 2;
-/** Columns with fewer citations stay uncoloured: a gap on a thin sample is mostly noise. */
-export const MATRIX_MIN_N = 30;
 
 /** The previous round's category totals (the Δ base), with the last round's when a period is cumulative; in period
  * mode the period before (`period`) and the selected period's totals (`current`), both cumulative. */
@@ -71,7 +70,6 @@ export interface MatrixCol {
   n: number;
   shares: Record<string, number>;
   counts: Record<string, number>;
-  thin: boolean;
 }
 export interface Matrix {
   cols: MatrixCol[];
@@ -79,7 +77,7 @@ export interface Matrix {
   /** 전체 = the columns' own sum (types double-count, so not the page total) */
   base: Record<string, number>;
   total: number;
-  /** coloured columns (two or more columns, not thin) */
+  /** coloured columns (every column when there are two or more) */
   live: string[];
   /** the gap (pp) drawn at full strength */
   cap: number;
@@ -121,11 +119,10 @@ export interface Finding {
 }
 
 
-/** A source preference matrix as drawn: + each cell's gap to 전체, the 전체 counts, any thin column, one source picked. */
+/** A source preference matrix as drawn: + each cell's gap to 전체, the 전체 counts, one source picked. */
 export type RnMatrixView = Matrix & {
   gaps: Record<string, Record<string, number>>;
   baseCounts: Record<string, number>;
-  anyThin: boolean;
   oneSource: boolean;
 };
 
@@ -162,10 +159,69 @@ export interface RnCitationVm {
   table: { rows: NumberedDomainRow[]; views: DomainTableViews; categories: string[] };
 }
 
+/** A share tile as the screen sends it (value, Δ + basis, weekly line, whether the line is drawn). */
+export interface RnShareTile {
+  value: number | null;
+  delta: RnCitationDelta;
+  spark: (number | null)[];
+  sparkOn: boolean;
+}
+
+/** The URL funnel per prompt: measured → owned URL cited → target page cited (one denominator; rates in %). */
+export interface RnUrlFunnel {
+  measured: number;
+  owned: number;
+  target: number;
+  ownedRate: number | null;
+  targetRate: number | null;
+}
+
+/** The website 사이트 인용 도달 card (back/bff/screens/citation.py load_url_reach). */
+export type RnUrlReach =
+  /** a 출처 filter: the funnel is per prompt, the 출처 class per citation (the original's cards) */
+  | { status: "notComputed" }
+  | { status: "degraded" }
+  /** no measured prompt in the filter */
+  | { status: "none" }
+  | (RnUrlFunnel & {
+      status: "ok";
+      /** the compared funnel (null = no comparable answer) */
+      prev: RnUrlFunnel | null;
+      /** Δpp of the rates vs the page's previous round (`round`) or the period before (`period`) */
+      delta: { ownedRate: number | null; targetRate: number | null; basis: "round" | "period" | null; date: string | null; from?: string | null };
+      /** the same funnel per engine (전체 counts a prompt once whichever engine cited it) */
+      engines: (RnUrlFunnel & { engine: string })[];
+      enginesDegraded: boolean;
+      source?: WebsiteCitationScreen["targetHitRate"]["source"];
+      publication?: WebsiteCitationScreen["targetHitRate"]["publication"];
+    });
+
+/** The website page's own parts: the 공식(당사) tile and the URL funnel card. */
+export interface RnCitationWebsite {
+  /** 공식(당사) share (the site's brand scope, unlike the 공식(HMG) category); null without the citation read. */
+  own: RnShareTile | null;
+  reach: RnUrlReach;
+}
+
+/** Screen `citation/website`, variant renewal: the renewal page's data on the website surface + the website parts. */
+export interface RnWebsiteCitationScreen {
+  live: CitationsLive | null;
+  tableSource: CitationTableSource | null;
+  dataDegraded: boolean;
+  sectionDegraded: CitationSectionDegraded | null;
+  prevCategories: PrevCategories;
+  toneSummary: CitationToneSummary | null;
+  periodView: PeriodDeltaView | null;
+  rn: RnCitationVm | null;
+  own: RnShareTile | null;
+  reach: RnUrlReach;
+}
+
 /**
  * What the renewal Citation page hands its client body: the screen `citation/standard` (variant
  * renewal) — the data of /standard/answer-analysis/citation plus the renewal model — each a promise
- * of the same answer, so every card streams as before.
+ * of the same answer, so every card streams as before. The website page fills the same fields from
+ * `citation/website` (variant renewal) and adds `website`.
  */
 export interface RnCitationInput {
   /** The tone tiles follow the 출처 filter (the api source; always on the screen API). */
@@ -186,4 +242,6 @@ export interface RnCitationInput {
   periodView: Promise<PeriodDeltaView | null>;
   /** the renewal model (null when `data` is null) */
   rn: Promise<RnCitationVm | null>;
+  /** website page only: the 공식(당사) tile and the URL funnel card (absent = the standard page's layout) */
+  website?: Promise<RnCitationWebsite>;
 }

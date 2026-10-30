@@ -21,18 +21,21 @@ interface Runtime {
 
 const RuntimeContext = createContext<Runtime>({ busy: false, commit: () => {} });
 
-export function RnFilterRuntime({ children }: { children: ReactNode }) {
+/** `reset`: URL params a filter change drops (a sub page's own page and cursor, which the new filters invalidate). */
+export function RnFilterRuntime({ children, reset }: { children: ReactNode; reset?: readonly string[] }) {
   const router = useRouter();
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
   const [queued, setQueued] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const resetKey = (reset ?? []).join(",");
   const go = useCallback(
-    (qs: string) => {
+    (raw: string) => {
       setQueued(false);
+      const qs = dropParams(raw, resetKey ? resetKey.split(",") : []);
       startTransition(() => router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false }));
     },
-    [pathname, router],
+    [pathname, router, resetKey],
   );
   const commit = useCallback<Runtime["commit"]>(
     (qs, opts) => {
@@ -55,6 +58,14 @@ export function RnFilterRuntime({ children }: { children: ReactNode }) {
       <RnToastProvider>{children}</RnToastProvider>
     </RuntimeContext.Provider>
   );
+}
+
+/** The query without the `reset` params (RnFilterRuntime `reset`); the query as is when there are none. */
+export function dropParams(qs: string, reset: readonly string[]): string {
+  if (!reset.length) return qs;
+  const params = new URLSearchParams(qs);
+  for (const k of reset) params.delete(k);
+  return params.toString();
 }
 
 export function useRnFilterRuntime(): Runtime {

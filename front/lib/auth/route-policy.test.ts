@@ -324,6 +324,13 @@ describe("route-policy — ROUTES table integrity", () => {
       ["/renewal/standard/answer-analysis/citation", "/standard/answer-analysis/citation"],
       ["/renewal/standard/answer-analysis/citation/prompts", "/standard/answer-analysis/citation/prompts"],
       ["/renewal/standard/answer-analysis/citation/tone-urls", "/standard/answer-analysis/citation/tone-urls"],
+      ["/renewal/website/answer-analysis/mention", "/website/answer-analysis/mention"],
+      ["/renewal/website/ai-funnel/conversion", "/website/ai-funnel/conversion"],
+      ["/renewal/website", "/website"],
+      ["/renewal/website/prompts", "/website/prompts"],
+      ["/renewal/website/answer-analysis/citation", "/website/answer-analysis/citation"],
+      ["/renewal/website/answer-analysis/citation/prompts", "/website/answer-analysis/citation"],
+      ["/renewal/website/answer-analysis/citation/tone-urls", "/website/answer-analysis/citation"],
     ]) {
       for (const role of roles) {
         expect(canAccessRoute(role, `/ko${renewal}`)).toBe(canAccessRoute(role, original));

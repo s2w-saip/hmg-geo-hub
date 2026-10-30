@@ -218,11 +218,18 @@ async def fetch_mention_summary(filters: dict, ctx: dict, cycle_offset: int = 0)
     return {"data": res["data"], "meta": res["meta"]}
 
 
-async def fetch_brand_trend(filters: dict, ctx: dict) -> dict:
-    chart_only = ctx["surface"] != "global"
+async def fetch_brand_trend(filters: dict, ctx: dict, chart_only: bool | None = None, pin_top: bool = False) -> dict:
+    """chart_only: the share lines of the website / project MentionsView only (default off the global surface). The
+    KPI readers pass False: the renewal Website Mention draws exposure and position lines too (2026-10-30).
+    pin_top: also the snapshot's top rival (the reader's ?pin_top_rival, marked `pinned`), the renewal page's auto
+    compare brand (2026-10-30)."""
+    if chart_only is None:
+        chart_only = ctx["surface"] != "global"
     req: dict = {"surface": ctx["surface"], "bucket": "cycle", "dimension": "brand",
                  "metrics": list(CHART_BRAND_TREND_METRICS if chart_only else BRAND_TREND_METRICS), "top": 10,
                  "splitOwn": True}
+    if pin_top:
+        req["pinTopRival"] = True
     if chart_only:
         req["measuredDays"] = False
     return await fetch_trend(query_params(filters, _qctx(ctx)), req)
@@ -369,7 +376,8 @@ def to_mention_trend(data: dict) -> dict | None:
             rnd = round_of.get(p.get("bucket"))
             if rnd is None:
                 rnd = p.get("bucket")
-            if point_gap(p):
+            # a round the filter has no mention in (den 0, no gap reason) is a gap too, never a made-up 0
+            if point_gap(p) or (p.get("ratio") and not p["ratio"].get("den")):
                 gap_weeks[monday_of(rnd)] = True
                 continue
             if not p.get("ratio"):
@@ -456,11 +464,12 @@ def to_standard_sub_kpis(engines: dict, summary: dict | None) -> dict:
 
 # ── loaders: mentions.ts ────────────────────────────────────────────────────
 
-async def load_mentions_live(filters: dict, ctx: dict) -> dict | None:
+async def load_mentions_live(filters: dict, ctx: dict, pin_top: bool = False) -> dict | None:
+    """pin_top: the renewal ranking's call, so its trend read stays the KPI brand trend's one read on the global surface."""
     label = f"{ctx['surface']}Mentions"
     types_run = start_early(lambda: fetch_mention_types(filters, ctx))
     summary_run = start_early(lambda: fetch_mention_summary(filters, ctx))
-    trend_run = start_early(lambda: fetch_brand_trend(filters, ctx))
+    trend_run = start_early(lambda: fetch_brand_trend(filters, ctx, pin_top=pin_top))
     brands = await degrade_on_api_failure(label, lambda: fetch_mention_brands(filters, ctx))
     if not brands:
         return None
@@ -794,8 +803,8 @@ async def load_engine_kpi_trend(filters: dict, ctx: dict) -> dict | None:
                                 "overview": overview})
 
 
-async def load_brand_trend(filters: dict, ctx: dict) -> dict | None:
-    res = await degrade_on_api_failure("standardKpiBrandTrend", lambda: fetch_brand_trend(filters, ctx))
+async def load_brand_trend(filters: dict, ctx: dict, pin_top: bool = False) -> dict | None:
+    res = await degrade_on_api_failure("standardKpiBrandTrend", lambda: fetch_brand_trend(filters, ctx, chart_only=False, pin_top=pin_top))
     return to_brand_trend_result(res["data"]) if res else None
 
 
@@ -842,8 +851,8 @@ def to_first_position_result_api(p: dict) -> dict:
     return out
 
 
-async def load_first_position(filters: dict, ctx: dict) -> dict | None:
-    trend_run = start_early(lambda: fetch_brand_trend(filters, ctx))
+async def load_first_position(filters: dict, ctx: dict, pin_top: bool = False) -> dict | None:
+    trend_run = start_early(lambda: fetch_brand_trend(filters, ctx, chart_only=False, pin_top=pin_top))
     summary_run = start_early(lambda: fetch_mention_summary(filters, ctx))
     overview_run = start_early(lambda: fetch_overview_trend(filters, ctx))
     brands = await degrade_on_api_failure("standardKpiFirstPosition", lambda: fetch_mention_brands(filters, ctx))

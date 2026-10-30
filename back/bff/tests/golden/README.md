@@ -18,6 +18,12 @@ Changes since recording (additive, each derived only from functions pinned by ot
 - 2026-10-30 `acr/renewal` (all 41 cases): `body.asOf` added — the `funnel/acr` read's `meta.as_of` (the snapshot's
   round, a period's last), which the page names in its header pill, summary chip and footer (metric review ⚠️ #1: the
   page showed no measurement date). Each case differs from its previous output by that one key only.
+- 2026-10-30 renewal Mention brand trend `pin_top_rival` (the user's go-ahead: the auto compare brand follows the
+  original screens' rule, the rival with the largest share on the snapshot, `mention_surfaces.comparison_of`). Every
+  renewal read of the KPI brand trend now asks the reader for that rival too (`pinned` when the round total leaves it
+  outside the top 10; the competitor average and the rank chart leave it out). The 18 `mention/rn-fix-*` ·
+  `rn-live-*` bundle tapes got `pin_top_rival=true` on their one `trend` dimension=brand entry (the key only); the
+  bodies are the recorded answers, which hold no pinned rival, so no output changes.
 
 Deliberate changes (what the screen shows changed by decision):
 - 2026-10-28 citation URL country (the user's decision: Gold, not the legacy hard-coded catalog). The domain
@@ -210,6 +216,18 @@ Deliberate changes (what the screen shows changed by decision):
   only in those keys: `rn-fix-nulls`, `rn-fix-suppressed`, `rn-live-month`, `rn-live-week` (0 → null),
   `rn-fn-rate-value`, `rn-fn-favor-hero` (0 → null), `rn-fn-rank` (0 → null; 6 random calls whose overview card has no
   position but a count, e.g. call 2: 120 → null).
+- 2026-10-30 no HUB threshold in the renewal summaries (W6 Website review, the user's go-ahead: the HUB makes no
+  'meaningful change' call). The Mention and Citation findings take one fixed order (Mention `FINDING_ORDER`: standing →
+  engine → type → negative → mover → climb; Citation: standing → engineGap → typeGap → opportunity → mover → skew →
+  climb) instead of priorities set by cut-offs (5pp, 4pp, −1.5pp, 40 %, 3 ranks, +0.3pp …); tones follow the direction
+  only (a competitor's or a category's move is `info`); the negative-signal finding has no +0.3pp gate, the skew no 1pp
+  gate (a move shown as 0.0 is still none); the Mention type finding is the smallest gap with no type preferred and no
+  `params.strong`. The Citation matrix no longer greys columns under 30 citations: no `cols[].thin` / `anyThin`, every
+  column is live, so `cap` and the skew may take a small column. 25 cases change, only in those keys and in which
+  findings fill the four places: `citation/fn-matrix`, `fn-rn-findings`, `fn-rn-type-matrix`, `rn-fix-all-owned`,
+  `rn-fix-degraded`, `rn-fix-picks-source`, `rn-fix-rounds`, `rn-live`; `mention/rn-fix-empty`, `rn-fix-names`,
+  `rn-fix-nulls`, `rn-fix-period`, `rn-fix-rounds`, `rn-fix-ties`, `rn-fn-findings`, `rn-fn-summary`, and the 9
+  `rn-live-*` bundles (`chatgpt`, `en`, `geo`, `kia`, `kpi-fav`, `kpi-rank`, `kpi-sov`, `none`, `period`).
 
 ## Format
 

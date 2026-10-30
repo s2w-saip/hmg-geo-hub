@@ -38,6 +38,9 @@ from bff.screens._sort import locale_compare, sort_by, table_orders
 DRILLDOWN_LIST_LIMIT = 2000
 BRAND_ANSWERS_LIMIT = 50
 SIGNAL_PROMPTS_LIMIT = 50
+#: the 미언급 프롬프트 list (every member of the card's count up to this) and the answers kept per prompt
+MISSING_PROMPTS_LIMIT = 1000
+MISSING_ANSWERS_LIMIT = 6
 SIGNAL_ANSWERS_LIMIT = 6
 DETAIL_LIMITS = {"urls_limit": 10, "prompts_limit": 100, "answers_limit": 20}
 SKEY_MAX = 512
@@ -645,6 +648,51 @@ async def signal_prompts(q) -> dict:
     total = cut_total(page_total(res), len(prompts))
     return reply(200, {"prompts": prompts, "total": total} if total is not None else {"prompts": prompts})
 
+
+
+def to_missing_prompt(item: dict) -> dict:
+    """A mentions/missing-prompts item -> the drawer row: MentionsPromptLive without a 당사 mention (mentions 0, each
+    answer's mentionCount 0) plus its answers in the window and the brand mentions they hold (who the AI named)."""
+    text = item.get("prompt_text")
+    return {"id": item.get("prompt_id"), "promptText": text if text is not None else "", "mentions": 0, "share": 0,
+            "funnelStage": item.get("funnel_code"), "providers": engine_labels(item.get("providers")),
+            "answersTotal": item.get("answers_total") or 0, "brandMentions": item.get("brand_mentions") or 0,
+            "answers": [{"jobId": a.get("job_id"), "provider": provider_label(a.get("engine")), "region": a.get("region"),
+                         "mentionCount": 0, "position": None, "highlights": {"brand": [], "model": []},
+                         "measuredAt": a.get("measured_at"), "runs": 1, "highlightTerms": []} for a in item.get("answers") or []]}
+
+@screen("mention/drill-missing-prompts")
+async def missing_prompts(q) -> dict:
+    """/api/scope/missing-prompts: the 미언급 프롬프트 card's list (2026-10-30, the renewal Website Mention) — the
+    measured prompts where 당사 is in no answer, i.e. the members of the card's count under the same filters, each
+    with its latest answers. Body {prompts, total}; 404 / 403 -> {prompts: []}; 422 -> 400."""
+    p = route_params(q)
+    target = drilldown_target(p)
+    if target is None:
+        return reply(404, {"prompts": []})
+    try:
+        blocked = await drilldown_gate(target)
+    except HTTPException as exc:
+        return relay(exc)
+    if blocked:
+        return reply(blocked, {"prompts": []})
+    params = drill_query(p, target, SIGNAL_WEBSITE_GROUPS)
+    try:
+        res = await api.get("mentions/missing-prompts", to_api_params(params, {
+            "limit": MISSING_PROMPTS_LIMIT, "answers_limit": MISSING_ANSWERS_LIMIT}))
+    except HTTPException as exc:
+        if exc.status_code in (404, 403):
+            return reply(200, {"prompts": []})
+        if exc.status_code == 422:
+            return reply(400, {"prompts": []})
+        return relay(exc)
+    prompts = [to_missing_prompt(i) for i in res["data"]["items"]]
+    total = page_total(res)
+    counts = res["data"].get("counts")
+    body = {"prompts": prompts, "total": total if total is not None else len(prompts)}
+    if counts:
+        body["counts"] = {"withBrands": counts["with_brands"], "noBrands": counts["no_brands"]}
+    return reply(200, body)
 
 @screen("mention/drill-brand-citations")
 async def brand_citations(q) -> dict:

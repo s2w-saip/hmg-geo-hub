@@ -1,9 +1,31 @@
 """Read-only prompt catalogs; identities and taxonomy are taken from Gold."""
 from __future__ import annotations
 
+import re
+from datetime import datetime
 from urllib.parse import urlsplit
+from zoneinfo import ZoneInfo
 
 from bff.gold_reader.context import AXES, BRAND_NAMES, Context, SQL, envelope, limit, values
+
+# Website list order (the screen's sort keys, website_prompts.py SORT_API): empty values last, ties by prompt id.
+# Text sorts by the Unicode root collation: Gold's default (glibc en_US.utf8) leaves Hangul unordered.
+ICU = 'COLLATE "und-x-icu"'
+WEBSITE_SORT = {"prompt": f"p.text {ICU}", "country": f"c.code {ICU}", "lang": f"lower(l.code) {ICU}",
+                "target_url": f"p.targets[1] {ICU}", "answers": "coalesce(stats.answers,0)", "last_measured": "stats.last_measured",
+                "first_measured": "stats.first_measured", "rounds": "coalesce(cardinality(stats.rounds),0)",
+                "brand": f"CASE dp.site_brand_bit {' '.join(f'WHEN {bit} THEN {name!r}' for bit, name in BRAND_NAMES.items())} END {ICU}"}
+
+
+
+def target_host(target: str) -> str:
+    """The host of a website target. Gold's targets carry no scheme ("kia.com/de/…") and may hold "//" in the path
+    ("kia.ro//informatii-legale/…"), so only a real scheme is read as one; otherwise the target is a network location."""
+    return urlsplit(target if re.match(r"^[a-z][a-z0-9+.-]*://", target, re.I) else "//" + target).netloc
+
+def like_pattern(text: str) -> str:
+    """`%text%` with LIKE's own characters taken literally."""
+    return "%" + text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
 
 
 async def prompts(ctx: Context) -> dict:
@@ -39,27 +61,52 @@ async def prompts(ctx: Context) -> dict:
             parts.append(f"c.code=ANY({b.bind(values(ctx.q, 'country'), 'text[]')})")
         if values(ctx.q, "lang"):
             parts.append(f"lower(l.code)=ANY({b.bind([v.lower() for v in values(ctx.q, 'lang')], 'text[]')})")
-        if ctx.q.get("q"):
-            parts.append(f"p.text ILIKE {b.bind('%' + ctx.q['q'] + '%')}")
-        rows = await ctx.conn.fetch(f"""WITH stats AS (
-            SELECT j.prompt_key,count(*)::int AS answers,max(j.round_date) AS last_measured,
-                array_agg(DISTINCT e.code ORDER BY e.code) AS engines
-            FROM gold.job_index j JOIN gold.dim_engine e ON e.engine_key=j.engine_key
-            WHERE j.surface=2 AND j.served GROUP BY j.prompt_key)
-            SELECT p.*,c.code AS country,l.code AS lang,dp.site_brand_bit,
-            coalesce(stats.answers,0) AS answers,stats.last_measured,stats.engines
-            FROM gold.dim_prompt p JOIN gold.dim_project dp USING(project_key)
+        # the Website Prompts screen sends `search` (its former API's name); /v1/prompts callers `q`
+        search = (ctx.q.get("search") or ctx.q.get("q") or "").strip()
+        if search:
+            pattern = b.bind(like_pattern(search))
+            parts.append(f"(p.text ILIKE {pattern} OR coalesce(p.targets[1],'') ILIKE {pattern})")
+        # Engine and period are a lens: they choose the answers a row counts and never drop a row. Only the
+        # rounds Gold serves count (the cycle's servable · hidden_scope · view_date, as the analysis screens).
+        dated = ctx.q.get("from") or ctx.q.get("to")
+        lens = [f"j.round_date=ANY({b.bind(ctx.selected_dates if dated else ctx.dates, 'date[]')})", "cy.servable",
+                "coalesce(cy.hidden_scope,0)<>1",
+                f"(cy.view_date IS NULL OR cy.view_date<={b.bind(datetime.now(ZoneInfo('Asia/Seoul')).date(), 'date')})"]
+        if values(ctx.q, "engine"):
+            lens.append(f"lower(e.code)=ANY({b.bind([v.lower() for v in values(ctx.q, 'engine')], 'text[]')})")
+        sort = WEBSITE_SORT.get(ctx.q.get("sort") or "")
+        order = f"{sort} {'ASC' if ctx.q.get('dir') == 'asc' else 'DESC'} NULLS LAST,p.prompt_id" if sort else "p.prompt_id"
+        # Per prompt: its answers by engine and the rounds it was measured in (served jobs in the lens).
+        # MATERIALIZED: once, not under a nested loop (country + language picked: 8.5 s, with the lens > 15 s)
+        listed = f"""FROM gold.dim_prompt p JOIN gold.dim_project dp USING(project_key)
             LEFT JOIN gold.dim_country c ON c.geo_key=dp.site_geo_key LEFT JOIN gold.dim_lang l USING(lang_key)
-            LEFT JOIN stats ON stats.prompt_key=p.prompt_key
-            WHERE {' AND '.join(parts)} ORDER BY p.prompt_id""", *b.args)
+            WHERE {' AND '.join(parts)}"""
+        served = f"""FROM gold.job_index j JOIN gold.dim_engine e ON e.engine_key=j.engine_key JOIN gold.dim_cycle cy ON cy.cyc_key=j.cyc_key
+            WHERE j.surface=2 AND j.served AND {' AND '.join(lens)} AND j.prompt_key IN (SELECT p.prompt_key {listed})"""
+        rows = await ctx.conn.fetch(f"""WITH r AS MATERIALIZED (
+            SELECT prompt_key,sum(n)::int AS answers,max(round_date) AS last_measured,min(round_date) AS first_measured,
+                array_agg(round_date) AS rounds
+            FROM (SELECT j.prompt_key,j.round_date,count(*) AS n {served} GROUP BY 1,2) d GROUP BY 1),
+            x AS MATERIALIZED (
+            SELECT prompt_key,array_agg(code) AS engines,array_agg(n) AS engine_answers
+            FROM (SELECT j.prompt_key,e.code,count(*)::int AS n {served} GROUP BY 1,2) d GROUP BY 1),
+            stats AS (SELECT * FROM r JOIN x USING(prompt_key))
+            SELECT p.*,c.code AS country,l.code AS lang,dp.site_brand_bit,
+            coalesce(stats.answers,0) AS answers,stats.last_measured,stats.first_measured,stats.rounds,stats.engines,stats.engine_answers
+            {listed.replace("WHERE", "LEFT JOIN stats ON stats.prompt_key=p.prompt_key WHERE", 1)} ORDER BY {order}""", *b.args)
         items = []
         for r in rows:
             target = r["targets"][0] if r["targets"] else ""
+            # gathered unordered (an ordered aggregate sorted 225k rows: +0.3 s on the whole list)
+            engines = sorted(zip(r["engines"] or [], r["engine_answers"] or []))
             items.append({"website_prompt_id": r["prompt_id"], "scope_prompt_id": r["prompt_id"], "prompt_text": r["text"],
                           "brand_code": BRAND_NAMES.get(r["site_brand_bit"], ""), "country_code": r["country"] or "",
-                          "lang_code": (r["lang"] or "").lower(), "target_url": target, "domain": urlsplit(target).netloc,
+                          "lang_code": (r["lang"] or "").lower(), "target_url": target,
+                          "domain": target_host(target),
                           "owned_base_url": None, "measured": bool(r["answers"]), "answers": r["answers"],
-                          "last_measured": r["last_measured"], "engines": r["engines"] or []})
+                          "last_measured": r["last_measured"], "engines": [code for code, _ in engines],
+                          "first_measured": r["first_measured"], "rounds": sorted(r["rounds"] or []),
+                          "engine_answers": dict(engines)})
     else:
         rows = await ctx.conn.fetch("SELECT * FROM gold.dim_prompt WHERE project_key=$1 ORDER BY prompt_id", ctx.project_key)
         items = [dict(r) for r in rows]

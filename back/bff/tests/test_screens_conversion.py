@@ -39,6 +39,7 @@ CUR = {
              2: {"chatgpt": lambda i: 1 if i % 3 == 0 else 0, "gemini": lambda i: 1 if i == 5 else 0}},
     "general_conv": {1: 30, 2: 20},
     "users": {"ai": {1: 230, 2: 130}, "general": {1: 9000, 2: 6000}}, "daily_users": {1: 20, 2: 9},
+    "daily_general_users": {1: 700, 2: 450},
 }
 PREV = {
     "end": PREV_END,
@@ -50,7 +51,24 @@ PREV = {
              2: {"chatgpt": lambda i: 1 if i % 3 == 0 else 0, "gemini": lambda i: 1 if i == 5 else 0}},
     "general_conv": {1: 28, 2: 19},
     "users": {"ai": {1: 190, 2: 110}, "general": {1: 8400, 2: 5600}}, "daily_users": {1: 18, 2: 8},
+    "daily_general_users": {1: 680, 2: 430},
 }
+# 2026-10-30 (BI rework): every row carries the device × new/returning it was cut by, report 1 the channel group.
+# The general sessions and key events split over three channels (the sums are the ones above), the AI channel row
+# of report 1 carries the AI totals, the landing rows carry key events.
+CHANNELS = (("Organic Search", 0.55, 0.5, "mobile", "new"), ("Direct", 0.30, 0.3, "desktop", "returning"), ("Referral", None, None, "desktop", "new"))
+ENGINE_CUT = {"chatgpt": ("mobile", "new"), "gemini": ("desktop", "returning"), "perplexity": ("mobile", "returning")}
+ENGINE_PPS = {"chatgpt": 2, "gemini": 3, "perplexity": 1}
+
+
+def split(total, parts):
+    """`total` over the channels by their fractions, the last one taking the rest (integers that add up)."""
+    out, left = [], total
+    for frac in parts:
+        n = left if frac is None else round(total * frac)
+        out.append(n)
+        left -= n
+    return out
 
 
 def ga4(p, days=14):
@@ -60,7 +78,8 @@ def ga4(p, days=14):
 
     def row(prop, d, report, ai, **kw):
         base = {"prop_key": prop, "date": d, "report": report, "is_ai": ai, "is_conv": False, "engine": None, "page": None, "url": None,
-                "event": None, "sessions": 0, "users_day": 0, "page_views": 0, "key_events": 0, "event_count": 0}
+                "event": None, "channel": None, "device": None, "nvr": None,
+                "sessions": 0, "users_day": 0, "page_views": 0, "key_events": 0, "event_count": 0}
         rows.append({**base, **kw})
 
     for i, d in enumerate(dates):
@@ -68,21 +87,35 @@ def ga4(p, days=14):
             ai = p["ai"][prop]
             for engine, sessions in ai.items():
                 key_events = p["conv"][prop][engine](i) if prop == 1 else 0
-                row(prop, d, 2, True, engine=engine, sessions=sessions, key_events=key_events)
+                device, nvr = ENGINE_CUT[engine]
+                row(prop, d, 2, True, engine=engine, sessions=sessions, key_events=key_events, page_views=ENGINE_PPS[engine] * sessions,
+                    device=device, nvr=nvr)
                 if prop == 2:
-                    row(prop, d, 3, True, engine=engine, is_conv=True, event="book_a_test_drive", event_count=p["conv"][prop][engine](i))
-            row(prop, d, 1, False, sessions=p["general"][prop], key_events=p["general_conv"][prop] if prop == 1 else 0)
+                    row(prop, d, 3, True, engine=engine, is_conv=True, event="book_a_test_drive", event_count=p["conv"][prop][engine](i),
+                        device=device, nvr=nvr)
+            ai_key_events = sum(p["conv"][1][e](i) for e in ai) if prop == 1 else 0
+            row(prop, d, 1, True, channel="AI Assistant", sessions=sum(ai.values()), key_events=ai_key_events,
+                page_views=sum(ENGINE_PPS[e] * n for e, n in ai.items()), device="mobile", nvr="new")
+            general_ke = p["general_conv"][prop] if prop == 1 else 0
+            for (channel, frac, ke_frac, device, nvr), sessions, ke in zip(CHANNELS, split(p["general"][prop], [c[1] for c in CHANNELS]),
+                                                                          split(general_ke, [c[2] for c in CHANNELS]), strict=True):
+                row(prop, d, 1, False, channel=channel, sessions=sessions, key_events=ke, page_views=(4 if channel == "Direct" else 2) * sessions,
+                    device=device, nvr=nvr)
             row(prop, d, 5, False, sessions=p["general"][prop] + sum(ai.values()), page_views=3 * p["general"][prop])
-            for url, sessions in p["landing"][prop].items():
-                row(prop, d, 4, True, engine="chatgpt", url=url, sessions=sessions, page_views=2 * sessions)
-            row(prop, d, 4, False, url=next(iter(p["landing"][prop])), sessions=p["general"][prop], page_views=p["general"][prop])
-            row(prop, d, 3, False, event="page_view", event_count=3 * p["general"][prop])
+            for j, (url, sessions) in enumerate(p["landing"][prop].items()):
+                row(prop, d, 4, True, engine="chatgpt", url=url, sessions=sessions, page_views=2 * sessions,
+                    key_events=(1 if prop == 1 else i % 2) if j == 0 else 0)
+            row(prop, d, 4, False, url=next(iter(p["landing"][prop])), sessions=p["general"][prop], page_views=p["general"][prop],
+                key_events=6 if prop == 1 else 3)
+            row(prop, d, 3, False, event="page_view", event_count=3 * p["general"][prop], device="mobile", nvr="new")
             if prop == 1:
-                row(prop, d, 3, False, is_conv=True, event="test_drive_request", event_count=12)
+                row(prop, d, 3, False, is_conv=True, event="test_drive_request", event_count=12, device="desktop", nvr="returning")
             else:
-                row(prop, d, 3, False, is_conv=True, event="book_a_test_drive", event_count=p["general_conv"][prop])
+                row(prop, d, 3, False, is_conv=True, event="book_a_test_drive", event_count=p["general_conv"][prop], device="desktop", nvr="returning")
             windows.append({"prop_key": prop, "window_end": d, "window_days": 1, "cohort": "ai", "engine_mask": 0, "device_mask": 0, "nvr_mask": 0,
                             "page_key": 0, "users": p["daily_users"][prop], "page": None, "url": None})
+            windows.append({"prop_key": prop, "window_end": d, "window_days": 1, "cohort": "general", "engine_mask": 0, "device_mask": 0, "nvr_mask": 0,
+                            "page_key": 0, "users": p["daily_general_users"][prop], "page": None, "url": None})
     for cohort, users in p["users"].items():
         for prop, n in users.items():
             windows.append({"prop_key": prop, "window_end": p["end"], "window_days": days, "cohort": cohort, "engine_mask": 0, "device_mask": 0,
@@ -193,18 +226,124 @@ class View(unittest.TestCase):
 
     def test_findings(self):
         codes = [f["code"] for f in self.v["findings"]]
-        self.assertEqual(codes, ["lift", "coverage", "change", "engine"])
-        engine = next(f for f in self.v["findings"] if f["code"] == "engine")
+        self.assertEqual(codes, ["lift", "coverage", "change", "channel"])
+        change = next(f for f in self.v["findings"] if f["code"] == "change")
+        self.assertEqual(change["dConv"], 7)
+        self.assertAlmostEqual(change["volume"] + change["rate"], 7)
+        channel = next(f for f in self.v["findings"] if f["code"] == "channel")
+        self.assertEqual((channel["rank"], channel["n"], channel["per100Rank"]), (4, 4, 1))
+        # with fewer findings above it the engine one shows: the largest engine and the one with most conversions per session
+        cur = json.loads(json.dumps(self.cur))
+        cur["channels"], cur["properties"] = [], [p for p in cur["properties"] if p["status"] == "active"]
+        v = conv.conversion_view(cur, self.prev, False)
+        engine = next(f for f in v["findings"] if f["code"] == "engine")
         self.assertEqual((engine["engine"], engine["best"]), ("chatgpt", "gemini"))
+
+    def test_channels(self):
+        ch = self.v["channels"]
+        self.assertEqual([(r["channel"], r["ai"], r["sessions"]) for r in ch["rows"]],
+                         [("Organic Search", False, 15400), ("Direct", False, 8400), ("Referral", False, 4200), ("AI Assistant", True, 434)])
+        ai = ch["rows"][3]
+        self.assertEqual(ai["keyEvents"], 21)  # Kia IT's AI key events (14 ChatGPT + 7 Gemini); Hyundai DE sends none
+        self.assertAlmostEqual(ai["per100"], 21 / 434 * 100)
+        self.assertAlmostEqual(ai["share"], 434 / 28434 * 100)
+        self.assertAlmostEqual(ai["pps"], (14 * (2 * 21 + 3 * 8 + 2)) / 434)
+        self.assertAlmostEqual(ch["rows"][0]["per100"], 210 / 15400 * 100)
+        self.assertEqual(ch["site"]["sessions"], 28434)
+        self.assertAlmostEqual(ch["site"]["per100"], (21 + 420) / 28434 * 100)
+        self.assertEqual(ch["aiRank"], {"sessions": 4, "per100": 1, "pps": 2, "n": 4})  # Direct 4 pages a session > AI 2.19 > the others 2
+        self.assertAlmostEqual(ai["d"], (434 - 364) / 364 * 100)
+
+    def test_segments(self):
+        dev = {r["value"]: r for r in self.v["segments"]["device"]}
+        self.assertEqual([r["value"] for r in self.v["segments"]["device"]], ["mobile", "desktop"])
+        self.assertEqual((dev["mobile"]["aiSessions"], dev["desktop"]["aiSessions"]), (322, 112))
+        self.assertEqual((dev["mobile"]["genSessions"], dev["desktop"]["genSessions"]), (15400, 12600))
+        self.assertAlmostEqual(dev["mobile"]["aiShare"], 322 / 434 * 100)
+        self.assertAlmostEqual(dev["mobile"]["genShare"], 15400 / 28000 * 100)
+        self.assertAlmostEqual(dev["mobile"]["mixGap"], 322 / 434 * 100 - 15400 / 28000 * 100)
+        # AI: Kia ChatGPT key events 14 + Hyundai ChatGPT tracked 5 on mobile; Gemini 7 + 1 on desktop
+        self.assertEqual((dev["mobile"]["aiConv"], dev["desktop"]["aiConv"]), (19, 8))
+        # general: Kia's organic key events on mobile; Direct · Referral and Hyundai's tracked events on desktop
+        self.assertEqual((dev["mobile"]["genConv"], dev["desktop"]["genConv"]), (210, 490))
+        self.assertAlmostEqual(dev["desktop"]["genPer100"], 490 / 12600 * 100)
+        nvr = {r["value"]: r for r in self.v["segments"]["visitorType"]}
+        self.assertEqual((nvr["new"]["aiSessions"], nvr["returning"]["aiSessions"]), (294, 140))
+        self.assertEqual((nvr["new"]["genSessions"], nvr["returning"]["genSessions"]), (19600, 8400))
+
+    def test_decomposition(self):
+        dc = self.v["decomp"]
+        self.assertEqual((dc["prevConv"], dc["conv"], dc["d"], dc["prevSessions"], dc["sessions"], dc["dSessions"]), (20, 27, 7, 364, 434, 70))
+        self.assertAlmostEqual(dc["volume"], 70 * 20 / 364)
+        self.assertAlmostEqual(dc["rate"], 27 - 434 * 20 / 364)
+        self.assertAlmostEqual(dc["volume"] + dc["rate"], dc["d"])
+        self.assertEqual(dc["engines"], [{"engine": "chatgpt", "d": 42}, {"engine": "gemini", "d": 28}, {"engine": "perplexity", "d": 0}])
+        self.assertEqual(dc["rest"], 0)
+        self.assertIsNone(conv.conversion_view(self.cur, None, False)["decomp"])
+
+    def test_daily_general_and_site(self):
+        tr = self.v["trend"]
+        self.assertEqual(tr["site"], [2031] * 14)
+        self.assertEqual(tr["genSessions"], [2000] * 14)
+        self.assertEqual(tr["genConv"], [50] * 14)
+        self.assertEqual(tr["genUsers"], [1150] * 14)
+        self.assertAlmostEqual(tr["genRate"][0], 50 / 1150 * 100)
+        self.assertAlmostEqual(tr["share"][0], 31 / 2031 * 100)
+        t = self.v["totals"]
+        self.assertEqual((t["siteSessions"], t["pageViews"]), (28434, 3 * 2000 * 14))
+        self.assertAlmostEqual(t["dSite"], (28434 - 27384) / 27384 * 100)
+
+    def test_same_page_and_markets_and_events(self):
+        page = self.v["pages"][0]
+        self.assertEqual((page["path"], page["sessions"], page["genSessions"], page["aiKe"], page["genKe"]), ("/it/", 112, 16800, 14, 84))
+        self.assertAlmostEqual(page["aiOfPage"], 112 / 16912 * 100)
+        self.assertAlmostEqual(page["aiKe100"], 12.5)
+        self.assertAlmostEqual(page["genKe100"], 0.5)
+        self.assertIsNone(self.v["pages"][1]["genSessions"])  # no general row for that page: unknown, not zero
+        kia = self.v["props"][0]
+        self.assertEqual((kia["conv"], kia["genConv"], kia["genSessions"]), (21, 420, 16800))
+        self.assertAlmostEqual(kia["rate"], 21 / 230 * 100)
+        self.assertAlmostEqual(kia["genRate"], 420 / 9000 * 100)
+        self.assertAlmostEqual(kia["lift"], 21 / 230 * 100 - 420 / 9000 * 100)
+        self.assertEqual((self.v["props"][2]["conv"], self.v["props"][2]["rate"]), (None, None))  # waiting for access
+        book = next(e for e in self.v["events"] if e["event"] == "book_a_test_drive")
+        self.assertEqual((book["aiCount"], book["genCount"]), (6, 280))
+        self.assertAlmostEqual(book["aiShare"], 6 / 286 * 100)
+
+    def test_raw_windows(self):
+        w = self.v["windows"]
+        self.assertEqual(len(w), 2 * 14 * 2 + 2 * 2)  # daily AI · general per property, the period AI · general
+        self.assertEqual(w[0]["days"], 14)  # the period windows first, then the days, newest first
+        self.assertEqual({(x["id"], x["cohort"], x["users"]) for x in w if x["days"] == 14},
+                         {("469542848", "ai", 230), ("310000001", "ai", 130), ("469542848", "general", 9000), ("310000001", "general", 6000)})
+        day = next(x for x in w if x["days"] == 1)
+        self.assertEqual((day["end"], day["country"], day["brand"], day["all"]), ("2026-10-25", "IT", "Kia", True))
 
     def test_few_users(self):
         cur = json.loads(json.dumps(self.cur))
         cur["metrics"].update(ai_users=40, ai_conversion_rate=27 / 40 * 100)
         v = conv.conversion_view(cur, None, False)
-        self.assertEqual(v["findings"][0], {"code": "sample", "tone": "warn", "users": 40, "min": 50})
+        # no sample-size verdict (a HUB threshold, 2026-10-30 W6 review): the users count is shown as it is
+        self.assertNotIn("sample", [f["code"] for f in v["findings"]])
+        self.assertNotIn("lowSample", v)
+        self.assertEqual(v["totals"]["aiUsers"], 40)
         self.assertFalse(v["prevOk"])
         self.assertNotIn("dAiSessions", v["totals"])
         self.assertIsNone(v["pages"][0]["d"])
+
+    def test_findings_have_no_thresholds(self):
+        """2026-10-30 W6 review: a stopped property (unmapped) is not a coverage gap, and the top landing pages' share
+        is stated as it is (it showed only from 50 %)."""
+        base = {"totals": {"aiUsers": None, "lift": None, "share": None}, "prevOk": False, "channels": {}, "engines": [],
+                "segments": {}, "coverage": {"total": 3, "active": 2, "pending_grant": 0, "unmapped": 1},
+                "pages": [{"id": f"/p{i}", "sessions": 10, "cum": c, "aiKe100": None, "genKe100": None} for i, c in enumerate((10, 20, 30, 40, 100))]}
+        got = conv.findings(base)
+        self.assertNotIn("coverage", [f["code"] for f in got])
+        pages = next(f for f in got if f["code"] == "pages")
+        self.assertEqual(pages["share"], 30)
+        pending = {**base, "coverage": {"total": 3, "active": 1, "pending_grant": 1, "unmapped": 1}}
+        cov = next(f for f in conv.findings(pending) if f["code"] == "coverage")
+        self.assertEqual((cov["active"], cov["total"]), (1, 2))
 
     def test_a_user_filter_leaves_the_rates_out(self):
         cur = answer(CUR, "days=14&engine=chatgpt")["data"]
@@ -217,16 +356,42 @@ class View(unittest.TestCase):
         self.assertNotIn("lift", [f["code"] for f in v["findings"]])
 
 
+def routed(conversion_answers, props=PROPS):
+    """bff.api.get stand-in: analytics/properties answers the registered properties, analytics/conversion the given
+    answers in turn. `get` keeps the conversion reads only (await_count, await_args_list)."""
+    get = mock.AsyncMock(side_effect=list(conversion_answers))
+
+    async def route(path, params=None):
+        if path == "analytics/properties":
+            return {"data": {"kind": "properties", "properties": [dict(p) for p in props]}, "meta": {"reason": None}}
+        return await get(path, params)
+    return route, get
+
+
 class Screens(unittest.TestCase):
-    def call(self, query, *answers):
-        get = mock.AsyncMock(side_effect=list(answers))
-        with mock.patch("bff.api.get", get), mock.patch.object(conv, "load_panel_options", mock.AsyncMock(return_value={"geographyOptions": ["IT", "DE"]})):
+    def call(self, query, *answers, props=PROPS):
+        route, get = routed(answers, props)
+        with mock.patch("bff.api.get", route):
             out = run(conv.renewal(QueryParams(query)))
         return out, get
 
+    def test_the_country_options_are_the_registered_ga4_properties(self):
+        # 2026-10-30 (the user's go-ahead): 국가 lists the markets with a GA4 property the account can read — the
+        # original page had no country axis, and Gold's answer countries named markets without one. A stopped
+        # property (unmapped, the reader leaves it out) is not offered; brand picks narrow the list (optionMatrix).
+        stopped = {**HY_FR, "prop_key": 4, "property_id": "310000003", "status": "unmapped", "country": "JP"}
+        out, get = self.call(CUR_Q, answer(CUR, CUR_Q), answer(PREV, PREV_Q), props=[*PROPS, stopped])
+        self.assertEqual([c.args[0] for c in get.await_args_list], ["analytics/conversion", "analytics/conversion"])  # no Gold read
+        self.assertEqual(out["props"], {"stage": "conversion", "geographyOptions": ["DE", "FR", "IT"],
+                                        "optionMatrix": [{"brand": "Hyundai", "region": "DE", "lang": None},
+                                                         {"brand": "Hyundai", "region": "FR", "lang": None},
+                                                         {"brand": "Kia", "region": "IT", "lang": None}]})
+        out, _ = self.call("", {"data": {"kind": "conversion", "metrics": {}, "period": {}, "properties": []}, "meta": {"reason": "no_properties"}}, props=[])
+        self.assertEqual(out["props"], {"stage": "conversion", "geographyOptions": [], "optionMatrix": []})
+
     def test_ok_reads_the_previous_period_of_the_same_length(self):
         out, get = self.call(CUR_Q, answer(CUR, CUR_Q), answer(PREV, PREV_Q))
-        self.assertEqual(out["props"], {"stage": "conversion", "geographyOptions": ["IT", "DE"]})
+        self.assertEqual(out["props"]["geographyOptions"], ["DE", "FR", "IT"])
         body = out["body"]
         self.assertEqual(body["state"], "ok")
         self.assertEqual(body["period"], {"from": "2026-10-12", "to": "2026-10-25", "days": 14})
@@ -278,8 +443,8 @@ FRONT_FIXTURE = Path(__file__).parents[3] / "front/app/[locale]/(renewal)/renewa
 
 def front_body() -> dict:
     """The body the page's render test draws: this screen's own output on the answers above."""
-    get = mock.AsyncMock(side_effect=[answer(CUR, CUR_Q), answer(PREV, PREV_Q)])
-    with mock.patch("bff.api.get", get), mock.patch.object(conv, "load_panel_options", mock.AsyncMock(return_value={})):
+    route, _ = routed([answer(CUR, CUR_Q), answer(PREV, PREV_Q)])
+    with mock.patch("bff.api.get", route):
         return json.loads(json.dumps(run(conv.renewal(QueryParams(CUR_Q)))["body"]))
 
 

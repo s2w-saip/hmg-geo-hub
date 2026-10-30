@@ -49,6 +49,29 @@ def metric_values(c: dict) -> dict:
             "citation_accuracy": ratio(c.get("cit_target"), c.get("cit_owned"))}
 
 
+URL_METRICS = ("target_url_rate", "owned_url_rate", "citation_accuracy")
+URL_COLUMNS = ("url_den", "tgt_hits", "own_hits", "tgt_own_hits")
+# The answer-level URL sums of url_prompt_cell (the website and project surfaces' URL rates).
+URL_SUMS = """sum(f.url_den)::bigint AS url_den,sum(f.tgt_hits)::bigint AS tgt_hits,
+            sum(f.own_url_hits)::bigint AS own_hits,sum(f.tgt_own_hits)::bigint AS tgt_own_hits"""
+
+
+def url_metric_values(u: dict) -> dict:
+    """The URL rates from the url_prompt_cell sums: the cards' (summary) measure, which a trend point reads too."""
+    return {"target_url_rate": ratio(u.get("tgt_hits"), u.get("url_den")),
+            "owned_url_rate": ratio(u.get("own_hits"), u.get("url_den")),
+            "citation_accuracy": ratio(u.get("tgt_own_hits"), u.get("own_hits"))}
+
+
+async def url_counts(ctx: Context, group: str) -> list[dict]:
+    """URL_SUMS by round ("date") or by round and engine ("date_engine"), on the summary's predicate."""
+    keys = {"date": "f.round_date", "date_engine": "f.round_date,f.engine_key"}[group]
+    b = SQL()
+    where = ctx.predicate(b)
+    return [dict(r) for r in await ctx.conn.fetch(f"""SELECT {keys},{URL_SUMS}
+        FROM gold.url_prompt_cell f WHERE {where} AND f.population_key=4 GROUP BY {keys}""", *b.args)]
+
+
 async def summary(ctx: Context) -> dict:
     mention = (await counts(ctx))[0]
     citation = (await counts(ctx, family="citations", prompts=False))[0]
@@ -66,12 +89,9 @@ async def summary(ctx: Context) -> dict:
             count(DISTINCT f.prompt_key) FILTER(WHERE f.eligible AND f.any_target)::int AS target,
             count(DISTINCT f.prompt_key) FILTER(WHERE f.eligible AND f.any_owned)::int AS owned,
             count(DISTINCT f.prompt_key) FILTER(WHERE f.eligible)::int AS measured,
-            sum(f.url_den)::bigint AS url_den,sum(f.tgt_hits)::bigint AS tgt_hits,
-            sum(f.own_url_hits)::bigint AS own_hits,sum(f.tgt_own_hits)::bigint AS tgt_own_hits
+            {URL_SUMS}
             FROM gold.url_prompt_cell f WHERE {where} AND f.population_key=4""", *b.args)
-        data.update(target_url_rate=ratio(rows["tgt_hits"], rows["url_den"]),
-                    owned_url_rate=ratio(rows["own_hits"], rows["url_den"]),
-                    citation_accuracy=ratio(rows["tgt_own_hits"], rows["own_hits"]))
+        data.update(url_metric_values(rows))
     # Applied prompts belong to the catalog even when they have never been measured. Counting them reads the
     # whole catalog (12k rows, ~1 s on the global card), so only when ?parts= asks for them (none = all, B089).
     applied = None
@@ -366,15 +386,38 @@ async def _trend(ctx: Context) -> dict:
             target = by_bucket.setdefault((key, None), {k: 0 for k in COUNTS})
             for col in COUNTS:
                 target[col] += c[col]
+    # The URL rates of the website and project surfaces are the answer-level url_prompt_cell measures, as on the
+    # cards (summary): the citation counts of kpi_cell gave another rate under the same name (2026-10-30, the
+    # website 타겟 출처 인용률 card 65.3 % beside a 22.8 % trend point). Read only when a URL rate is asked.
+    def add_url(target: dict, row: dict) -> None:
+        for col in URL_COLUMNS:
+            target[col] = target.get(col, 0) + (row[col] or 0)
 
-    def plain_series(cells: dict, metrics: list[str]) -> list[dict]:
+    url_groups: dict[tuple[str, str | None], dict] = {}
+    asked = {*wanted, *(m for _, ms in specs for m in ms)}
+    if ctx.sf != 1 and asked & set(URL_METRICS):
+        for row in await url_counts(ctx, grouping):
+            key = bucket_key(row["round_date"])
+            dim = engine_codes.get(row.get("engine_key")) if dimension == "engine" else None
+            add_url(url_groups.setdefault((key, dim), {}), row)
+    url_by_bucket = url_groups
+    if grouping == "date_engine":
+        url_by_bucket = {}
+        for (key, _), u in url_groups.items():
+            add_url(url_by_bucket.setdefault((key, None), {}), u)
+
+    def plain_series(cells: dict, url_cells: dict, metrics: list[str]) -> list[dict]:
         series = []
         for dim in sorted({d for _, d in cells}, key=lambda x: x or ""):
             for metric in metrics:
                 points = []
                 for key in buckets:
                     c = cells.get((key, dim))
-                    val = metric_values(c).get(metric) if c else None
+                    if ctx.sf != 1 and metric in URL_METRICS:
+                        u = url_cells.get((key, dim))
+                        val = url_metric_values(u)[metric] if c and u else None
+                    else:
+                        val = metric_values(c).get(metric) if c else None
                     points.append({"bucket": key, "rank" if metric == "position" else "ratio": val,
                                    "gap": c is None, "gap_reason": "no_answer" if c is None else None,
                                    "origin": "report" if ctx.card else "live", "negative": c["sent_neg"] if c and metric == "sentiment" else None})
@@ -398,7 +441,7 @@ async def _trend(ctx: Context) -> dict:
     def series_of(dim: str, metrics: list[str]) -> list[dict]:
         if dim == "type":
             return type_series()
-        return plain_series(groups if dim == "engine" else by_bucket, metrics)
+        return plain_series(*((groups, url_groups) if dim == "engine" else (by_bucket, url_by_bucket)), metrics)
 
     return envelope(ctx, {"bucket": bucket, "dimension": dimension, "own_label": ctx.label,
                           "buckets": bucket_rows,
@@ -421,6 +464,21 @@ async def brand_series(ctx: Context, wanted: list[str], buckets: list[str], buck
     for r in rivals:
         rival_mentions[r["name"]] += r["mentions"]
     names = sorted({r["name"] for r in rivals}, key=lambda n: -rival_mentions[n])[:int(ctx.q.get("top_n", "10"))]
+    # ?pin_top_rival (2026-10-30): also the snapshot's top rival, the original screens' auto compare brand (the rival
+    # with the largest share on the latest round, mention_surfaces.comparison_of), which the round total can leave
+    # outside the top. Marked `pinned`, so the readers of "the top N" (averages, rank charts) can leave it out. A
+    # period's rows are the period's, whose top rival leads the top already.
+    pinned = None
+    if flag(ctx.q, "pin_top_rival") and not (ctx.q.get("from") or ctx.q.get("to")) and ctx.selected_dates:
+        latest = max(ctx.selected_dates)
+        last: dict[str, int] = defaultdict(int)
+        for r in rivals:
+            if r["round_date"] == latest:
+                last[r["name"]] += r["mentions"]
+        top = min(last, key=lambda n: (-last[n], n)) if last else None
+        if top is not None and top not in names:
+            pinned = top
+            names.append(top)
     first_of: dict[str, dict] = {}
     cells: dict[tuple[str, str], list[dict]] = defaultdict(list)
     for r in rows:
@@ -453,7 +511,8 @@ async def brand_series(ctx: Context, wanted: list[str], buckets: list[str], buck
                 points.append({"bucket": key, "rank" if metric == "position" else "ratio": v, "gap": not rs})
             first = first_of[name]
             series.append({"metric": metric, "kind": "rank" if metric == "position" else "ratio", "key": name,
-                           "label": name, "brand_key": first["brand_key"], "is_own": bool(first["own_bit"] & ctx.bits), "points": points})
+                           "label": name, "brand_key": first["brand_key"], "is_own": bool(first["own_bit"] & ctx.bits), "points": points,
+                           **({"pinned": True} if name == pinned else {})})
     return series
 
 

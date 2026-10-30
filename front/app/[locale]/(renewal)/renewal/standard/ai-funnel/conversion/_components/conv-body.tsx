@@ -2,8 +2,11 @@
 
 // Body of the renewal AI Conversion page: the state cards (no property, waiting for access, nothing measured
 // yet, no match, source down), then one reading order — the navy 이 기간 요약 (AI vs 일반 전환율, the gap,
-// conversions, sessions, session share, with the findings), the daily trend, engines and GA4 properties,
-// landing pages, conversion events (conv-cards.tsx). Display only: every value comes from the screen model.
+// conversions, sessions, session share, the site's sessions and page views, with the findings), the daily trend
+// (chart or table), the AI channel among GA4's channels and the conversion change split (conv-insights.tsx),
+// engines and the device · new/returning mix, landing pages with the same page's general sessions, markets and
+// events split AI · general, and the raw period-user windows (2026-10-30 BI rework: nothing the original screen
+// showed is left out). Display only: every value comes from the screen model.
 
 import { useMemo, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
@@ -25,6 +28,7 @@ import {
 import { useRnFilterReset } from "@/app/[locale]/(renewal)/renewal/_components/overview-filters";
 import type { ConvFinding, ConvStatus, ConvView, RnConvBody } from "../_data/screen-types";
 import { ConvEngineCard, ConvEventCard, ConvPageCard, ConvPropCard, ConvTrendCard } from "./conv-cards";
+import { ConvChangeCard, ConvChannelCard, ConvRawCard, ConvSegmentCard } from "./conv-insights";
 
 export type T = ReturnType<typeof useTranslations<"renewal.conversion">>;
 
@@ -36,6 +40,9 @@ export interface ConvFmt {
   /** a signed gap in pp: "+2.8" · "−0.4" (no unit) */
   gap: (v: number | null | undefined) => string;
   one: (v: number | null | undefined) => string;
+  two: (v: number | null | undefined) => string;
+  /** a signed whole number: "+1,234" · "−5" · "0" */
+  signed: (v: number | null | undefined) => string;
   engine: (code: string) => string;
   place: (r: { country: string | null; brand: string | null }) => string;
 }
@@ -52,6 +59,8 @@ export function useConvFmt(view: Pick<ConvView, "multiBrand"> | null): ConvFmt {
       pct: (v, digits = 1) => (v == null ? "—" : `${v.toFixed(digits)}%`),
       gap: (v) => (v == null ? "—" : Math.abs(v) < 0.05 ? "0.0" : `${v > 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}`),
       one: (v) => (v == null ? "—" : v.toFixed(1)),
+      two: (v) => (v == null ? "—" : v.toFixed(2)),
+      signed: (v) => (v == null ? "—" : Math.round(v) === 0 ? "0" : `${v > 0 ? "+" : "−"}${nf.format(Math.abs(Math.round(v)))}`),
       engine: (code) => ENGINE_LABEL[code] ?? (code ? code.charAt(0).toUpperCase() + code.slice(1) : code),
       place: (r) => {
         const c = r.country ? geoCodeLabel(r.country, locale, (x) => tf(`value.${x}` as "value.worldwide")) : t("props.unknown");
@@ -65,7 +74,7 @@ export const range = (t: T, from: string | null | undefined, to: string | null |
 
 // ── shared bits ──────────────────────────────────────────────────────────────
 
-export type DefKey = "aiRate" | "genRate" | "lift" | "conv" | "sessions" | "share" | "per100" | "landing";
+export type DefKey = "aiRate" | "genRate" | "lift" | "conv" | "sessions" | "share" | "per100" | "landing" | "ke100";
 
 /** ⓘ with the metric's definition and formula (renewal.conversion.def.<key>). */
 export function DefTip({ k, align }: { k: DefKey; align?: "start" | "end" }) {
@@ -154,12 +163,20 @@ export function RnConvBody({ input }: { input: RnConvBody }) {
     <div className="@container/rnpage flex flex-col gap-2.5">
       <ConvHero view={view} />
       <ConvTrendCard view={view} />
-      <div className="grid grid-cols-1 gap-4 @min-[980px]/rnpage:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2.5 @min-[980px]/rnpage:grid-cols-2">
+        <ConvChannelCard view={view} />
+        <ConvChangeCard view={view} />
+      </div>
+      <div className="grid grid-cols-1 gap-2.5 @min-[980px]/rnpage:grid-cols-2">
         <ConvEngineCard view={view} />
-        <ConvPropCard view={view} />
+        <ConvSegmentCard view={view} />
       </div>
       <ConvPageCard view={view} />
-      <ConvEventCard view={view} />
+      <div className="grid grid-cols-1 gap-2.5 @min-[980px]/rnpage:grid-cols-2">
+        <ConvPropCard view={view} />
+        <ConvEventCard view={view} />
+      </div>
+      <ConvRawCard view={view} />
       <p className="m-0 -mt-1 px-1 text-rn-11 text-rn-muted">
         {t("foot", { from: input.period.from ?? "…", to: input.period.to ?? "…", days: view.observed, props: view.coverage.active })}
       </p>
@@ -170,11 +187,11 @@ export function RnConvBody({ input }: { input: RnConvBody }) {
 // ══ 이 기간 요약 ══
 
 function findingItems(view: ConvView, t: T, fmt: ConvFmt): RnFinding[] {
+  const known = ["desktop", "mobile", "tablet"] as const;
+  const deviceName = (d: string) => ((known as readonly string[]).includes(d) ? t(`segments.values.${d as (typeof known)[number]}`) : d);
   const chg = (v: number | null | undefined, unit = "%") => (v == null ? "—" : Math.abs(v) < 0.05 ? t("delta.flat") : `${v > 0 ? "▲" : "▼"}${Math.abs(v).toFixed(1)}${unit}`);
   return view.findings.map((f: ConvFinding): RnFinding => {
     switch (f.code) {
-      case "sample":
-        return { key: f.code, tone: f.tone, tag: t("findings.sample.tag"), title: t("findings.sample.title", { users: fmt.n(f.users), min: f.min }), detail: t("findings.sample.detail") };
       case "lift": {
         const title = Math.abs(f.lift) < 0.05 ? "titleFlat" : f.lift > 0 ? "titleUp" : "titleDown";
         return { key: f.code, tone: f.tone, tag: t("findings.lift.tag"), title: t(`findings.lift.${title}`, { ai: fmt.pct(f.ai), gen: fmt.pct(f.gen), lift: t("unit.ppN", { n: Math.abs(f.lift).toFixed(1) }) }),
@@ -183,7 +200,19 @@ function findingItems(view: ConvView, t: T, fmt: ConvFmt): RnFinding[] {
       case "coverage":
         return { key: f.code, tone: f.tone, tag: t("findings.coverage.tag"), title: t("findings.coverage.title", { active: f.active, total: f.total }), detail: t("findings.coverage.detail") };
       case "change":
-        return { key: f.code, tone: f.tone, tag: t("findings.change.tag"), title: t("findings.change.title", { chg: chg(f.sessions), days: view.days.length }), detail: t("findings.change.detail", { chg: chg(f.conv) }) };
+        return { key: f.code, tone: f.tone, tag: t("findings.change.tag"), title: t("findings.change.title", { chg: chg(f.sessions), days: view.days.length }),
+          detail: f.dConv != null && f.volume != null && f.rate != null
+            ? t("findings.change.detailSplit", { chg: chg(f.conv), d: fmt.signed(f.dConv), volume: fmt.gap(f.volume), rate: fmt.gap(f.rate) })
+            : t("findings.change.detail", { chg: chg(f.conv) }) };
+      case "channel":
+        return { key: f.code, tone: f.tone, tag: t("findings.channel.tag"), title: t("findings.channel.title", { rank: f.rank, n: f.n, share: fmt.pct(f.share, 2) }),
+          detail: f.per100 != null && f.per100Rank != null ? t("findings.channel.detail", { per100: fmt.one(f.per100), rank: f.per100Rank, site: fmt.one(f.site) }) : undefined };
+      case "samePage":
+        return { key: f.code, tone: f.tone, tag: t("findings.samePage.tag"), title: t("findings.samePage.title", { page: view.pages[f.page]?.path ?? "—", ai: fmt.one(f.ai), gen: fmt.one(f.gen) }),
+          detail: t("findings.samePage.detail") };
+      case "device":
+        return { key: f.code, tone: f.tone, tag: t("findings.device.tag"), title: t("findings.device.title", { device: deviceName(f.device), ai: fmt.pct(f.ai, 0), gen: fmt.pct(f.gen, 0) }),
+          detail: t("findings.device.detail") };
       case "engine":
         return { key: f.code, tone: f.tone, tag: t("findings.engine.tag"), title: t("findings.engine.title", { engine: fmt.engine(f.engine), share: fmt.pct(f.share) }),
           detail: f.best === f.engine ? t("findings.engine.detailSame", { engine: fmt.engine(f.engine), per100: fmt.one(f.per100) })
@@ -246,6 +275,13 @@ function ConvHero({ view }: { view: ConvView }) {
         <Kpi name={t("kpi.share")} info={<DefTip k="share" align="end" />} value={fmt.one(T.share)} unit="%" delta={<>{chip(T.dShare, "pp")}{basis}</>}
           sub={t("kpi.shareSub", { gen: fmt.n(T.genSessions) })} />
       </div>
+      <p data-rn-site="" className="m-0 mx-5 mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-white/14 pt-2.5 text-rn-12 text-white/78 tabular-nums">
+        <b className="font-semibold text-white/90">{t("site.label")}</b>
+        <span className="inline-flex items-center gap-1.5">{t("site.sessions", { n: fmt.n(T.siteSessions) })}{chip(T.dSite, "%")}</span>
+        <span className="inline-flex items-center gap-1.5">{t("site.views", { n: fmt.n(T.pageViews) })}{chip(T.dPageViews, "%")}</span>
+        <span>{t("site.genSessions", { n: fmt.n(T.genSessions) })}</span>
+        <span>{t("site.genPer100", { n: fmt.one(T.genPer100) })}</span>
+      </p>
       {noRate ? (
         <p className="m-0 mx-5 mb-3 flex items-start gap-1.5 rounded-lg bg-white/8 px-3 py-2 text-rn-12 leading-[1.5] break-keep text-white/86">
           <Info className="mt-0.5 size-3.5 flex-none" aria-hidden />

@@ -8,6 +8,7 @@
 """
 from __future__ import annotations
 
+import asyncio
 import itertools
 import math
 import random
@@ -240,6 +241,39 @@ class Helpers(unittest.TestCase):
         self.assertEqual(rn.group_country("HMG"), "KR")
 
 
+def _pinned_trend() -> dict:
+    """Two rounds of a brand trend: 당사, Toyota (in the top) and Tata, the snapshot's top rival the reader pinned."""
+    def bucket(day: str, toyota: float, tata: float) -> dict:
+        return {"bucketStart": day, "answers": 10, "totalMentions": 40, "measuredDays": 0, "firstAt": None, "lastAt": None,
+                "brands": [{"brand": "HMG", "isTracked": True, "mentions": 30, "answers": 9, "exposurePct": 90.0, "sharePct": 75.0},
+                           {"brand": "Toyota", "isTracked": False, "mentions": 4, "answers": 3, "exposurePct": toyota, "sharePct": 10.0},
+                           {"brand": "Tata", "isTracked": False, "mentions": 6, "answers": 2, "exposurePct": tata, "sharePct": 15.0}]}
+    return {"unit": "week", "brands": [{"brand": "HMG", "isTracked": True, "mentions": 60}, {"brand": "Toyota", "isTracked": False, "mentions": 8},
+                                       {"brand": "Tata", "isTracked": False, "mentions": 12, "pinned": True}],
+            "buckets": [bucket("2026-10-02", 30.0, 10.0), bucket("2026-10-09", 40.0, 20.0)],
+            "windowStartBucket": "2026-10-02", "windowEndBucket": "2026-10-09", "trendGrid": None}
+
+
+class TopRivalPin(unittest.TestCase):
+    """The original screens' compare rule (2026-10-30, user's go-ahead): with no pick the compare brand is the rival
+    with the largest share on the snapshot (mention_surfaces.comparison_of). The renewal brand trend asks the reader
+    to add that rival's line (`pinned`) when the round total leaves it outside the top 10, so it is covered and picked
+    first; the competitor average and the rank chart keep the top 10 they always drew."""
+
+    def test_the_pinned_rival_is_covered_and_picked_first(self):
+        brands = [{"brand": "HMG", "isTracked": True, "share": 75.0}, {"brand": "Tata", "isTracked": False, "share": 15.0},
+                  {"brand": "Toyota", "isTracked": False, "share": 10.0}]
+        self.assertEqual(rn.covered_brands(brands, _pinned_trend()), ["Tata", "Toyota"])
+
+    def test_the_average_and_the_rank_chart_leave_the_pinned_rival_out(self):
+        hero = {"points": [{"key": "2026-10-02", "pct": 90.0}, {"key": "2026-10-09", "pct": 90.0}]}
+        s = rn.hero_trend_series(hero, _pinned_trend(), "exposure", [])
+        self.assertEqual(s["average"], [30.0, 40.0])
+        self.assertEqual(rn.hero_trend_series(hero, _pinned_trend(), "exposure", ["Tata"])["brands"],
+                         [{"key": "Tata", "values": [10.0, 20.0]}])
+        self.assertEqual([x["key"] for x in rn.bump_data(_pinned_trend())["series"]], [rn.OWN_KEY, "Toyota"])
+
+
 async def _failing_get(status: int):
     async def get(path, params=None):
         raise HTTPException(status, "boom")
@@ -314,5 +348,171 @@ class Screens(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await self.build("mention/rn-page"), {"ownLabel": "HMG", "period": None})
 
 
+class WebsiteSurface(unittest.IsolatedAsyncioTestCase):
+    """ctx.surface=website (the renewal Website Mention, 2026-10-30): the screens read the website page's filters on
+    the website surface, as mention/as-of does (site country, language, engine, period; the brand axis only for an
+    administrator). Its KPI sections draw exposure, share and position lines, so their brand trend asks for the three
+    on every surface; the original website / project view keeps its share lines only. Without ctx.surface: global."""
+
+    async def reads(self, name: str, query: str) -> list[tuple[str, dict]]:
+        seen: list[tuple[str, dict]] = []
+
+        async def get(path, params=None):
+            seen.append((path, dict(params or {})))
+            await asyncio.sleep(0)
+            raise HTTPException(503, "boom")
+        with mock.patch("bff.api.get", get):
+            await screens.build(name, QueryParams(query))
+            await asyncio.sleep(0)  # the early-started reads nobody waited for
+        return seen
+
+    async def brands_read(self, query: str) -> dict:
+        return next(p for path, p in await self.reads("mention/rn-shell", query) if path == "mentions/brands")
+
+    async def test_the_website_filters_on_the_website_surface(self):
+        url = "geography=US&brand=Kia&listType=ranked&time=2026-09-01..2026-09-30"
+        site = await self.brands_read(f"ctx.surface=website&{url}")
+        self.assertEqual((site["surface"], site["country"], site["from"], site["to"]), ("website", ["US"], "2026-09-01", "2026-09-30"))
+        self.assertNotIn("brand", site)
+        self.assertNotIn("list_type", site)
+        self.assertEqual((await self.brands_read(f"ctx.surface=website&ctx.admin=true&{url}"))["brand"], ["Kia"])
+        glob = await self.brands_read(url)
+        self.assertEqual((glob["surface"], glob["brand"], glob["list_type"]), ("global", ["Kia"], ["ranked"]))
+
+    async def test_the_kpi_brand_trend_asks_for_every_metric(self):
+        for surface, ctx in (("global", ""), ("website", "ctx.surface=website&")):
+            for name in ("mention/rn-bump", "mention/rn-rank"):
+                trends = [p for path, p in await self.reads(name, f"{ctx}geography=US") if path == "trend" and p["dimension"] == "brand"]
+                self.assertTrue(trends, name)
+                for p in trends:
+                    self.assertEqual((p["surface"], p["metrics"]), (surface, ["visibility", "share_of_voice", "position"]), name)
+                    self.assertNotIn("measured_days", p, name)
+        view = [p for path, p in await self.reads("mention/view", "ctx.surface=website") if path == "trend"]
+        self.assertEqual([(p["surface"], p["metrics"], p["measured_days"]) for p in view], [("website", ["share_of_voice"], False)])
+
+    async def test_the_renewal_brand_trend_pins_the_snapshots_top_rival(self):
+        # TopRivalPin: every renewal read of the KPI brand trend (the KPI one and the first-position one, the same read)
+        # asks for the snapshot's top rival; the original pages' reads do not (rn-ranking's brand rows still come with
+        # the original view's share lines, which no pick reads)
+        for ctx in ("", "ctx.surface=website&"):
+            for name in ("mention/rn-compare", "mention/rn-summary", "mention/rn-rate-hero", "mention/rn-rank", "mention/rn-ranking"):
+                trends = [p for path, p in await self.reads(name, f"{ctx}geography=US")
+                          if path == "trend" and p["dimension"] == "brand" and "position" in p["metrics"]]
+                self.assertTrue(trends, name)
+                self.assertEqual({p.get("pin_top_rival") for p in trends}, {True}, name)
+        for name in ("mention/view", "mention/kpi-hero-trend"):
+            trends = [p for path, p in await self.reads(name, "ctx.surface=website&ctx.kpi=exposure") if path == "trend" and p["dimension"] == "brand"]
+            self.assertNotIn(True, {p.get("pin_top_rival") for p in trends}, name)
+
+
+class ViewCards(unittest.IsolatedAsyncioTestCase):
+    maxDiff = None
+    """mention/view-cards: the legacy website page's six summary cards for the renewal Website Mention (2026-10-30,
+    the user: a legacy KPI is reshaped, never dropped) — mention/view's summary, Sub KPI and Δ from the same reads."""
+
+    @staticmethod
+    def row(tracked: int, answers: int, multi: int, top3: int, mentions: int) -> dict:
+        return {"tracked": tracked, "answers": answers, "sentMentions": 0, "multi": multi, "top3": top3,
+                "positiveMentions": 0, "negativeMentions": 0, "totalMentions": mentions}
+
+    def reads(self, data: dict | None, prev: dict | None) -> dict:
+        return {"data": data, "sub": {"rows": [self.row(80, 100, 30, 60, 500), self.row(10, 20, 2, 9, 40)],
+                                      "promptsWithoutBrand": 7, "measuredPrompts": 50},
+                "prev": prev, "dates": None, "options": None, "degraded": {"data": False, "types": False, "subKpis": False}}
+
+    async def build(self, r: dict) -> dict:
+        async def surface_reads(ctx, sp, full=True):
+            self.assertEqual((ctx, sp), ({"surface": "website"}, {"geography": "US"}))
+            return r
+        with mock.patch("bff.screens.mention_surfaces._surface_reads", surface_reads):
+            return await screens.build("mention/view-cards", QueryParams("ctx.surface=website&geography=US"))
+
+    async def test_the_cards_and_their_deltas(self):
+        prev = {"sub": {"rows": [self.row(70, 100, 20, 50, 450)], "promptsWithoutBrand": 9, "measuredPrompts": 48}, "asOf": "2026-10-02"}
+        summary = {"total": 540, "uniqueBrands": 12, "totalPrompts": 50, "totalAnswers": 120}
+        got = await self.build(self.reads({"summary": summary, "asOf": "2026-10-09", "brands": []}, prev))
+        self.assertEqual((got["asOf"], got["summary"]), ("2026-10-09", summary))
+        sub = got["subKpis"]
+        self.assertEqual((sub["missingPrompts"], sub["multiMentionAnswers"], sub["top3Rate"], sub["top3Count"], sub["top3Base"]),
+                         (7, 32, 76.7, 69, 90))
+        self.assertEqual(got["deltas"], {
+            "total": {"diff": 90, "unit": "count", "tone": "good"}, "totalPrompts": {"diff": 2, "unit": "count", "tone": "neutral"},
+            "missingPrompts": {"diff": -2, "unit": "count", "tone": "good"}, "multiMention": {"diff": 12, "unit": "count", "tone": "good"},
+            "top3Rate": {"diff": 5.2, "unit": "pp", "tone": "good"}})  # exact values: 76.67 − 71.43, not 76.7 − 71.4
+        self.assertEqual(got["prevBasisDate"], "2026-10-02")
+
+    async def test_without_a_previous_round_or_data(self):
+        got = await self.build(self.reads({"summary": {"total": 1, "uniqueBrands": 1, "totalPrompts": 1, "totalAnswers": 1}}, None))
+        self.assertIsNone(got["prevBasisDate"])
+        self.assertIsNone(got["deltas"]["missingPrompts"])
+        empty = await self.build(self.reads(None, None))
+        self.assertEqual((empty["summary"], empty["deltas"]), (None, None))
+
+
 if __name__ == "__main__":
     unittest.main()
+
+
+class ViewWeekly(unittest.IsolatedAsyncioTestCase):
+    """mention/view-weekly: the legacy website view's weekly brand mentions (당사 + top 10) as rows for the renewal
+    Website Mention's 브랜드 상세 (2026-10-30, a legacy KPI is reshaped, never dropped): weekly counts, a gap week as
+    null, the latest measured week and its change from the week before when both were measured."""
+
+    async def build(self, data: dict | None, degraded: bool = False) -> dict:
+        async def surface_reads(ctx, sp, full=True):
+            return {"data": data, "sub": None, "prev": None, "dates": None, "options": None,
+                    "degraded": {"data": degraded, "types": False, "subKpis": False}}
+        with mock.patch("bff.screens.mention_surfaces._surface_reads", surface_reads):
+            return await screens.build("mention/view-weekly", QueryParams("ctx.surface=website"))
+
+    async def test_rows_per_brand(self):
+        trend = {"series": ["HMG", "Toyota", "BMW"], "points": [
+            {"week": "2026-09-21", "HMG": 100, "Toyota": 4, "BMW": 0},
+            {"week": "2026-09-28", "gap": {"reason": "collection_error"}, "HMG": None, "Toyota": None, "BMW": None},
+            {"week": "2026-10-05", "HMG": 120, "Toyota": 6, "BMW": 2},
+            {"week": "2026-10-12", "HMG": 90, "Toyota": 6, "BMW": 5}]}
+        brands = [{"brand": "HMG", "isTracked": True}, {"brand": "Toyota", "isTracked": False}, {"brand": "BMW", "isTracked": False}]
+        got = await self.build({"trend": trend, "brands": brands})
+        self.assertEqual(got["weeks"], ["2026-09-21", "2026-09-28", "2026-10-05", "2026-10-12"])
+        self.assertEqual(got["gaps"], [False, True, False, False])
+        self.assertEqual(got["rows"], [
+            {"brand": "HMG", "own": True, "values": [100, None, 120, 90], "latest": 90, "delta": -30},
+            {"brand": "Toyota", "own": False, "values": [4, None, 6, 6], "latest": 6, "delta": 0},
+            {"brand": "BMW", "own": False, "values": [0, None, 2, 5], "latest": 5, "delta": 3}])
+        self.assertFalse(got["degraded"])
+
+    async def test_a_gap_before_the_latest_week_has_no_delta(self):
+        trend = {"series": ["HMG"], "points": [{"week": "2026-09-28", "HMG": 3},
+                                               {"week": "2026-10-05", "gap": {"reason": "collection_error"}, "HMG": None},
+                                               {"week": "2026-10-12", "HMG": 5}]}
+        got = await self.build({"trend": trend, "brands": [{"brand": "HMG", "isTracked": True}]})
+        self.assertEqual((got["rows"][0]["latest"], got["rows"][0]["delta"]), (5, None))
+
+    async def test_without_a_trend(self):
+        self.assertEqual(await self.build({"trend": None, "trendDegraded": True, "brands": []}),
+                         {"weeks": [], "gaps": [], "rows": [], "degraded": True})
+        self.assertEqual(await self.build(None), {"weeks": [], "gaps": [], "rows": [], "degraded": False})
+
+
+class WeeklyTrendUnmeasured(unittest.TestCase):
+    """The weekly brand mentions (to_mention_trend, the legacy website chart and the renewal 주별 브랜드 언급 수): a round
+    the filter has no mention in (share of voice den 0, no gap reason — e.g. US on 07-24 · 08-07 · 08-14) is a gap,
+    never a made-up 0 for every brand (2026-10-30 W6 review)."""
+
+    def test_a_round_without_mentions_is_a_gap(self):
+        from bff.screens import mention_data
+        buckets = [{"key": d, "round_dates": [d]} for d in ("2026-07-17", "2026-07-24", "2026-08-21")]
+
+        def series(label, own, nums, dens):
+            return {"metric": "share_of_voice", "is_own": own, "label": label, "key": label,
+                    "points": [{"bucket": b["key"], "ratio": {"num": n, "den": d}} for b, n, d in zip(buckets, nums, dens)]}
+
+        data = {"own_label": "HMG", "buckets": buckets,
+                "series": [series("HMG", True, [9355, 0, 5352], [9800, 0, 5600]), series("Toyota", False, [74, 0, 58], [9800, 0, 5600])]}
+        trend = mention_data.to_mention_trend(data)
+        by_week = {p["week"]: p for p in trend["points"]}
+        self.assertEqual((by_week["2026-07-13"]["HMG"], by_week["2026-08-17"]["HMG"]), (9355, 5352))
+        gap = by_week.get("2026-07-20")
+        self.assertIsNotNone(gap)
+        self.assertEqual((gap["HMG"], gap["Toyota"]), (None, None))
+        self.assertIn("gap", gap)

@@ -12,7 +12,6 @@ import {
   RnSearchField,
   RnSelect,
   RnTabs,
-  RnTag,
   cx,
 } from "@/components/renewal-ui";
 import { AnswerModal } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/answer-modal";
@@ -22,7 +21,7 @@ import { displayCitationUrl } from "@/lib/url-display";
 import { countryName } from "@/lib/geo-catalog";
 import type { CitationDomainLive, CitationPromptLive } from "@/lib/scope/result-adapter";
 import type { RnCitationVm } from "./citation-input";
-import { CONTEXT_COLOR, MOVER_COLORS, OWN_COLOR, CitationCardActions, engineLabel, useCatLabel, useCitation } from "./citation-context";
+import { CONTEXT_COLOR, MOVER_COLORS, OWN_COLOR, CitationCardActions, OwnTag, engineLabel, useCatLabel, useCitation } from "./citation-context";
 import { DegradedNote, InfoTip, TwinTable, useDegradedText } from "../../mention/_components/mention-kit";
 import { numTxt, pctTxt, slotLabel } from "../../mention/_components/mention-context";
 
@@ -353,7 +352,7 @@ export function DomainTableCard() {
                   <td className="px-2.5 py-2.5">
                     <span className="flex min-w-0 items-center gap-1.5">
                       <b className={cx("truncate font-semibold", r.isOurs ? "text-rn-navy" : "text-rn-ink")}>{r.domain}</b>
-                      {r.isOurs ? <RnTag className="shrink-0">HMG</RnTag> : null}
+                      <OwnTag own={r.isOurs} className="shrink-0" />
                     </span>
                   </td>
                   <td className="truncate px-2.5 py-2.5 text-rn-12 text-rn-ink-2">{r.category ? cat(r.category) : "—"}</td>
@@ -446,7 +445,7 @@ function DomainSheet({ row, hidden, onClose, onAnswer }: { row: CitationDomainLi
       title={
         <span className="inline-flex items-center gap-2">
           {row.domain}
-          {row.isOurs ? <RnTag>HMG</RnTag> : null}
+          <OwnTag own={row.isOurs} />
         </span>
       }
       subtitle={row.category ? cat(row.category) : undefined}

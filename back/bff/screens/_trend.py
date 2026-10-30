@@ -198,7 +198,7 @@ def dims_param(spec: dict) -> str:
 
 def trend_query(common: dict, req: dict) -> dict:
     """Params of GET /v1/trend (fetchTrend). req = {surface, bucket, dimension?, metrics?, top?, brandKeys?,
-    splitOwn?, measuredDays?, card?, dims?}."""
+    splitOwn?, pinTopRival?, measuredDays?, card?, dims?}."""
     dimension = req["dimension"] if "dimension" in req else "none"
     extra: dict = {"bucket": req.get("bucket"), "dimension": dimension}
     if req.get("card") and req["surface"] != "project":
@@ -211,6 +211,8 @@ def trend_query(common: dict, req: dict) -> dict:
         if req.get("brandKeys"):
             extra["brand_key"] = sorted(dict.fromkeys(req["brandKeys"]))
         extra["split_own"] = _nn(req.get("splitOwn"), True)
+        if req.get("pinTopRival"):
+            extra["pin_top_rival"] = True
     if req.get("measuredDays") is False:
         extra["measured_days"] = False
     if req.get("dims"):
@@ -497,6 +499,8 @@ def brand_groups(data: dict) -> list[dict]:
         g = groups.get(gid)
         if g is None:
             g = groups[gid] = {"name": name, "isOwn": s.get("is_own") is True}
+        if s.get("pinned"):
+            g["pinned"] = True
         idx = index_points(s)
         metric = s.get("metric")
         if metric == "visibility":
@@ -583,7 +587,7 @@ def to_brand_trend_result(data: dict, opts: dict | None = None) -> dict:
             total = _sum_in_order(_num(p.get("ratio"), "num") for p in g["sov"].values())
         else:
             total = _nn(mentions.get(g["name"]), 0)
-        brands.append({"brand": g["name"], "isTracked": g["isOwn"], "mentions": total})
+        brands.append({"brand": g["name"], "isTracked": g["isOwn"], "mentions": total, **({"pinned": True} if g.get("pinned") else {})})
     out = {"unit": _nn(opts.get("unit"), "week"), "brands": brands, "buckets": buckets,
            "windowStartBucket": rounds[0] if rounds else None,
            "windowEndBucket": rounds[-1] if rounds else None,

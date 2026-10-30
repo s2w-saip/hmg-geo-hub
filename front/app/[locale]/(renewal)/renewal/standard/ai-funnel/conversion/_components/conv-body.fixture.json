@@ -61,7 +61,6 @@
   ],
   "prevOk": true,
   "filtered": false,
-  "lowSample": 50,
   "totals": {
    "aiSessions": 434,
    "aiUsers": 360,
@@ -73,15 +72,19 @@
    "genRate": 4.666666666666667,
    "share": 1.5263417035942886,
    "pageViews": 84000,
+   "siteSessions": 28434,
    "lift": 2.833333333333333,
    "perUser": 1.2055555555555555,
    "per100": 6.221198156682028,
+   "genPer100": 2.5,
    "dAiSessions": 19.23076923076923,
    "dAiConv": 35.0,
    "dAiRate": 0.833333333333333,
    "dGenRate": -0.033333333333333215,
    "dLift": 0.8666666666666663,
-   "dShare": 0.19709834981105745
+   "dShare": 0.19709834981105745,
+   "dSite": 3.834355828220859,
+   "dPageViews": 3.626943005181347
   },
   "spark": {
    "sessions": [
@@ -142,6 +145,70 @@
     29,
     29
    ],
+   "site": [
+    2031,
+    2031,
+    2031,
+    2031,
+    2031,
+    2031,
+    2031,
+    2031,
+    2031,
+    2031,
+    2031,
+    2031,
+    2031,
+    2031
+   ],
+   "genSessions": [
+    2000,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000
+   ],
+   "genConv": [
+    50,
+    50,
+    50,
+    50,
+    50,
+    50,
+    50,
+    50,
+    50,
+    50,
+    50,
+    50,
+    50,
+    50
+   ],
+   "genUsers": [
+    1150,
+    1150,
+    1150,
+    1150,
+    1150,
+    1150,
+    1150,
+    1150,
+    1150,
+    1150,
+    1150,
+    1150,
+    1150,
+    1150
+   ],
    "rate": [
     10.344827586206897,
     3.4482758620689653,
@@ -157,6 +224,38 @@
     3.4482758620689653,
     10.344827586206897,
     3.4482758620689653
+   ],
+   "genRate": [
+    4.3478260869565215,
+    4.3478260869565215,
+    4.3478260869565215,
+    4.3478260869565215,
+    4.3478260869565215,
+    4.3478260869565215,
+    4.3478260869565215,
+    4.3478260869565215,
+    4.3478260869565215,
+    4.3478260869565215,
+    4.3478260869565215,
+    4.3478260869565215,
+    4.3478260869565215,
+    4.3478260869565215
+   ],
+   "share": [
+    1.5263417035942886,
+    1.5263417035942886,
+    1.5263417035942886,
+    1.5263417035942886,
+    1.5263417035942886,
+    1.5263417035942886,
+    1.5263417035942886,
+    1.5263417035942886,
+    1.5263417035942886,
+    1.5263417035942886,
+    1.5263417035942886,
+    1.5263417035942886,
+    1.5263417035942886,
+    1.5263417035942886
    ]
   },
   "engines": [
@@ -167,6 +266,7 @@
     "conv": 19,
     "convShare": 70.37037037037037,
     "per100": 6.462585034013605,
+    "pps": 2.0,
     "d": 16.666666666666668
    },
    {
@@ -176,6 +276,7 @@
     "conv": 8,
     "convShare": 29.62962962962963,
     "per100": 7.142857142857143,
+    "pps": 3.0,
     "d": 33.333333333333336
    },
    {
@@ -185,6 +286,7 @@
     "conv": null,
     "convShare": null,
     "per100": null,
+    "pps": 1.0,
     "d": 0.0
    }
   ],
@@ -199,7 +301,13 @@
     "cum": 25.806451612903224,
     "views": 17024,
     "prev": 98,
-    "d": 14
+    "d": 14,
+    "genSessions": 16800,
+    "aiOfPage": 0.6622516556291391,
+    "aiKe": 14,
+    "aiKe100": 12.5,
+    "genKe": 84,
+    "genKe100": 0.5
    },
    {
     "id": 1,
@@ -210,7 +318,13 @@
     "cum": 45.16129032258065,
     "views": 168,
     "prev": 70,
-    "d": 14
+    "d": 14,
+    "genSessions": null,
+    "aiOfPage": null,
+    "aiKe": 0,
+    "aiKe100": 0.0,
+    "genKe": null,
+    "genKe100": null
    },
    {
     "id": 2,
@@ -221,7 +335,13 @@
     "cum": 61.29032258064516,
     "views": 11340,
     "prev": 56,
-    "d": 14
+    "d": 14,
+    "genSessions": 11200,
+    "aiOfPage": 0.6211180124223602,
+    "aiKe": 7,
+    "aiKe100": 10.0,
+    "genKe": 42,
+    "genKe100": 0.375
    },
    {
     "id": 3,
@@ -232,7 +352,13 @@
     "cum": 70.96774193548387,
     "views": 84,
     "prev": 28,
-    "d": 14
+    "d": 14,
+    "genSessions": null,
+    "aiOfPage": null,
+    "aiKe": 0,
+    "aiKe100": 0.0,
+    "genKe": null,
+    "genKe100": null
    },
    {
     "id": 4,
@@ -243,7 +369,13 @@
     "cum": 80.64516129032258,
     "views": 84,
     "prev": 42,
-    "d": 0
+    "d": 0,
+    "genSessions": null,
+    "aiOfPage": null,
+    "aiKe": 0,
+    "aiKe100": 0.0,
+    "genKe": null,
+    "genKe100": null
    },
    {
     "id": 5,
@@ -254,7 +386,13 @@
     "cum": 87.09677419354838,
     "views": 56,
     "prev": 28,
-    "d": 0
+    "d": 0,
+    "genSessions": null,
+    "aiOfPage": null,
+    "aiKe": 0,
+    "aiKe100": 0.0,
+    "genKe": null,
+    "genKe100": null
    },
    {
     "id": 6,
@@ -265,7 +403,13 @@
     "cum": 93.54838709677419,
     "views": 56,
     "prev": 14,
-    "d": 14
+    "d": 14,
+    "genSessions": null,
+    "aiOfPage": null,
+    "aiKe": 0,
+    "aiKe100": 0.0,
+    "genKe": null,
+    "genKe100": null
    },
    {
     "id": 7,
@@ -276,7 +420,13 @@
     "cum": 100.0,
     "views": 56,
     "prev": 28,
-    "d": 0
+    "d": 0,
+    "genSessions": null,
+    "aiOfPage": null,
+    "aiKe": 0,
+    "aiKe100": 0.0,
+    "genKe": null,
+    "genKe100": null
    }
   ],
   "props": [
@@ -289,7 +439,13 @@
     "sessions": 294,
     "users": 230,
     "share": 67.74193548387096,
-    "d": 16.666666666666668
+    "d": 16.666666666666668,
+    "conv": 21,
+    "rate": 9.130434782608695,
+    "genSessions": 16800,
+    "genConv": 420,
+    "genRate": 4.666666666666667,
+    "lift": 4.463768115942028
    },
    {
     "id": "310000001",
@@ -300,7 +456,13 @@
     "sessions": 140,
     "users": 130,
     "share": 32.25806451612903,
-    "d": 25.0
+    "d": 25.0,
+    "conv": 6,
+    "rate": 4.615384615384615,
+    "genSessions": 11200,
+    "genConv": 280,
+    "genRate": 4.666666666666667,
+    "lift": -0.05128205128205199
    },
    {
     "id": "310000002",
@@ -311,7 +473,13 @@
     "sessions": null,
     "users": null,
     "share": null,
-    "d": null
+    "d": null,
+    "conv": null,
+    "rate": null,
+    "genSessions": null,
+    "genConv": null,
+    "genRate": null,
+    "lift": null
    }
   ],
   "coverage": {
@@ -326,22 +494,831 @@
     "event": "book_a_test_drive",
     "count": 286,
     "tracked": true,
-    "share": 62.99559471365639
+    "share": 62.99559471365639,
+    "aiCount": 6,
+    "genCount": 280,
+    "aiShare": 2.097902097902098
    },
    {
     "event": "test_drive_request",
     "count": 168,
     "tracked": true,
-    "share": 37.00440528634361
+    "share": 37.00440528634361,
+    "aiCount": null,
+    "genCount": 168,
+    "aiShare": null
    },
    {
     "event": "page_view",
     "count": 84000,
     "tracked": false,
-    "share": null
+    "share": null,
+    "aiCount": null,
+    "genCount": 84000,
+    "aiShare": null
    }
   ],
   "tracked": 454,
+  "channels": {
+   "rows": [
+    {
+     "channel": "Organic Search",
+     "ai": false,
+     "sessions": 15400,
+     "keyEvents": 210,
+     "per100": 1.3636363636363635,
+     "pps": 2.0,
+     "d": 3.6757775683317626,
+     "share": 54.16051206302314
+    },
+    {
+     "channel": "Direct",
+     "ai": false,
+     "sessions": 8400,
+     "keyEvents": 126,
+     "per100": 1.5,
+     "pps": 4.0,
+     "d": 3.626943005181347,
+     "share": 29.542097488921712
+    },
+    {
+     "channel": "Referral",
+     "ai": false,
+     "sessions": 4200,
+     "keyEvents": 84,
+     "per100": 2.0,
+     "pps": 2.0,
+     "d": 3.4482758620689653,
+     "share": 14.771048744460856
+    },
+    {
+     "channel": "AI Assistant",
+     "ai": true,
+     "sessions": 434,
+     "keyEvents": 21,
+     "per100": 4.838709677419355,
+     "pps": 2.193548387096774,
+     "d": 19.23076923076923,
+     "share": 1.5263417035942886
+    }
+   ],
+   "site": {
+    "sessions": 28434,
+    "keyEvents": 441,
+    "per100": 1.5509601181683899,
+    "pps": 2.5937961595273262
+   },
+   "aiRank": {
+    "sessions": 4,
+    "per100": 1,
+    "pps": 2,
+    "n": 4
+   },
+   "reason": null
+  },
+  "segments": {
+   "device": [
+    {
+     "value": "mobile",
+     "aiSessions": 322,
+     "aiShare": 74.19354838709677,
+     "genSessions": 15400,
+     "genShare": 55.0,
+     "mixGap": 19.19354838709677,
+     "aiConv": 19,
+     "aiPer100": 5.900621118012422,
+     "genConv": 210,
+     "genPer100": 1.3636363636363635
+    },
+    {
+     "value": "desktop",
+     "aiSessions": 112,
+     "aiShare": 25.806451612903224,
+     "genSessions": 12600,
+     "genShare": 45.0,
+     "mixGap": -19.193548387096776,
+     "aiConv": 8,
+     "aiPer100": 7.142857142857143,
+     "genConv": 490,
+     "genPer100": 3.888888888888889
+    }
+   ],
+   "visitorType": [
+    {
+     "value": "new",
+     "aiSessions": 294,
+     "aiShare": 67.74193548387096,
+     "genSessions": 19600,
+     "genShare": 70.0,
+     "mixGap": -2.258064516129039,
+     "aiConv": 19,
+     "aiPer100": 6.462585034013605,
+     "genConv": 294,
+     "genPer100": 1.5
+    },
+    {
+     "value": "returning",
+     "aiSessions": 140,
+     "aiShare": 32.25806451612903,
+     "genSessions": 8400,
+     "genShare": 30.0,
+     "mixGap": 2.258064516129032,
+     "aiConv": 8,
+     "aiPer100": 5.714285714285714,
+     "genConv": 406,
+     "genPer100": 4.833333333333333
+    }
+   ]
+  },
+  "decomp": {
+   "prevConv": 20,
+   "conv": 27,
+   "d": 7,
+   "volume": 3.8461538461538463,
+   "rate": 3.1538461538461533,
+   "prevSessions": 364,
+   "sessions": 434,
+   "dSessions": 70,
+   "prevPer100": 5.4945054945054945,
+   "per100": 6.221198156682028,
+   "engines": [
+    {
+     "engine": "chatgpt",
+     "d": 42
+    },
+    {
+     "engine": "gemini",
+     "d": 28
+    },
+    {
+     "engine": "perplexity",
+     "d": 0
+    }
+   ],
+   "rest": 0
+  },
+  "windows": [
+   {
+    "end": "2026-10-25",
+    "days": 14,
+    "id": "469542848",
+    "country": "IT",
+    "brand": "Kia",
+    "cohort": "general",
+    "page": null,
+    "users": 9000,
+    "all": true
+   },
+   {
+    "end": "2026-10-25",
+    "days": 14,
+    "id": "469542848",
+    "country": "IT",
+    "brand": "Kia",
+    "cohort": "ai",
+    "page": null,
+    "users": 230,
+    "all": true
+   },
+   {
+    "end": "2026-10-25",
+    "days": 14,
+    "id": "310000001",
+    "country": "DE",
+    "brand": "Hyundai",
+    "cohort": "general",
+    "page": null,
+    "users": 6000,
+    "all": true
+   },
+   {
+    "end": "2026-10-25",
+    "days": 14,
+    "id": "310000001",
+    "country": "DE",
+    "brand": "Hyundai",
+    "cohort": "ai",
+    "page": null,
+    "users": 130,
+    "all": true
+   },
+   {
+    "end": "2026-10-25",
+    "days": 1,
+    "id": "469542848",
+    "country": "IT",
+    "brand": "Kia",
+    "cohort": "general",
+    "page": null,
+    "users": 700,
+    "all": true
+   },
+   {
+    "end": "2026-10-25",
+    "days": 1,
+    "id": "469542848",
+    "country": "IT",
+    "brand": "Kia",
+    "cohort": "ai",
+    "page": null,
+    "users": 20,
+    "all": true
+   },
+   {
+    "end": "2026-10-25",
+    "days": 1,
+    "id": "310000001",
+    "country": "DE",
+    "brand": "Hyundai",
+    "cohort": "general",
+    "page": null,
+    "users": 450,
+    "all": true
+   },
+   {
+    "end": "2026-10-25",
+    "days": 1,
+    "id": "310000001",
+    "country": "DE",
+    "brand": "Hyundai",
+    "cohort": "ai",
+    "page": null,
+    "users": 9,
+    "all": true
+   },
+   {
+    "end": "2026-10-24",
+    "days": 1,
+    "id": "469542848",
+    "country": "IT",
+    "brand": "Kia",
+    "cohort": "general",
+    "page": null,
+    "users": 700,
+    "all": true
+   },
+   {
+    "end": "2026-10-24",
+    "days": 1,
+    "id": "469542848",
+    "country": "IT",
+    "brand": "Kia",
+    "cohort": "ai",
+    "page": null,
+    "users": 20,
+    "all": true
+   },
+   {
+    "end": "2026-10-24",
+    "days": 1,
+    "id": "310000001",
+    "country": "DE",
+    "brand": "Hyundai",
+    "cohort": "general",
+    "page": null,
+    "users": 450,
+    "all": true
+   },
+   {
+    "end": "2026-10-24",
+    "days": 1,
+    "id": "310000001",
+    "country": "DE",
+    "brand": "Hyundai",
+    "cohort": "ai",
+    "page": null,
+    "users": 9,
+    "all": true
+   },
+   {
+    "end": "2026-10-23",
+    "days": 1,
+    "id": "469542848",
+    "country": "IT",
+    "brand": "Kia",
+    "cohort": "general",
+    "page": null,
+    "users": 700,
+    "all": true
+   },
+   {
+    "end": "2026-10-23",
+    "days": 1,
+    "id": "469542848",
+    "country": "IT",
+    "brand": "Kia",
+    "cohort": "ai",
+    "page": null,
+    "users": 20,
+    "all": true
+   },
+   {
+    "end": "2026-10-23",
+    "days": 1,
+    "id": "310000001",
+    "country": "DE",
+    "brand": "Hyundai",
+    "cohort": "general",
+    "page": null,
+    "users": 450,
+    "all": true
+   },
+   {
+    "end": "2026-10-23",
+    "days": 1,
+    "id": "310000001",
+    "country": "DE",
+    "brand": "Hyundai",
+    "cohort": "ai",
+    "page": null,
+    "users": 9,
+    "all": true
+   },
+   {
+    "end": "2026-10-22",
+    "days": 1,
+    "id": "469542848",
+    "country": "IT",
+    "brand": "Kia",
+    "cohort": "general",
+    "page": null,
+    "users": 700,
+    "all": true
+   },
+   {
+    "end": "2026-10-22",
+    "days": 1,
+    "id": "469542848",
+    "country": "IT",
+    "brand": "Kia",
+    "cohort": "ai",
+    "page": null,
+    "users": 20,
+    "all": true
+   },
+   {
+    "end": "2026-10-22",
+    "days": 1,
+    "id": "310000001",
+    "country": "DE",
+    "brand": "Hyundai",
+    "cohort": "general",
+    "page": null,
+    "users": 450,
+    "all": true
+   },
+   {
+    "end": "2026-10-22",
+    "days": 1,
+    "id": "310000001",
+    "country": "DE",
+    "brand": "Hyundai",
+    "cohort": "ai",
+    "page": null,
+    "users": 9,
+    "all": true
+   },
+   {
+    "end": "2026-10-21",
+    "days": 1,
+    "id": "469542848",
+    "country": "IT",
+    "brand": "Kia",
+    "cohort": "general",
+    "page": null,
+    "users": 700,
+    "all": true
+   },
+   {
+    "end": "2026-10-21",
+    "days": 1,
+    "id": "469542848",
+    "country": "IT",
+    "brand": "Kia",
+    "cohort": "ai",
+    "page": null,
+    "users": 20,
+    "all": true
+   },
+   {
+    "end": "2026-10-21",
+    "days": 1,
+    "id": "310000001",
+    "country": "DE",
+    "brand": "Hyundai",
+    "cohort": "general",
+    "page": null,
+    "users": 450,
+    "all": true
+   },
+   {
+    "end": "2026-10-21",
+    "days": 1,
+    "id": "310000001",
+    "country": "DE",
+    "brand": "Hyundai",
+    "cohort": "ai",
+    "page": null,
+    "users": 9,
+    "all": true
+   },
+   {
+    "end": "2026-10-20",
+    "days": 1,
+    "id": "469542848",
+    "country": "IT",
+    "brand": "Kia",
+    "cohort": "general",
+    "page": null,
+    "users": 700,
+    "all": true
+   },
+   {
+    "end": "2026-10-20",
+    "days": 1,
+    "id": "469542848",
+    "country": "IT",
+    "brand": "Kia",
+    "cohort": "ai",
+    "page": null,
+    "users": 20,
+    "all": true
+   },
+   {
+    "end": "2026-10-20",
+    "days": 1,
+    "id": "310000001",
+    "country": "DE",
+    "brand": "Hyundai",
+    "cohort": "general",
+    "page": null,
+    "users": 450,
+    "all": true
+   },
+   {
+    "end": "2026-10-20",
+    "days": 1,
+    "id": "310000001",
+    "country": "DE",
+    "brand": "Hyundai",
+    "cohort": "ai",
+    "page": null,
+    "users": 9,
+    "all": true
+   },
+   {
+    "end": "2026-10-19",
+    "days": 1,
+    "id": "469542848",
+    "country": "IT",
+    "brand": "Kia",
+    "cohort": "general",
+    "page": null,
+    "users": 700,
+    "all": true
+   },
+   {
+    "end": "2026-10-19",
+    "days": 1,
+    "id": "469542848",
+    "country": "IT",
+    "brand": "Kia",
+    "cohort": "ai",
+    "page": null,
+    "users": 20,
+    "all": true
+   },
+   {
+    "end": "2026-10-19",
+    "days": 1,
+    "id": "310000001",
+    "country": "DE",
+    "brand": "Hyundai",
+    "cohort": "general",
+    "page": null,
+    "users": 450,
+    "all": true
+   },
+   {
+    "end": "2026-10-19",
+    "days": 1,
+    "id": "310000001",
+    "country": "DE",
+    "brand": "Hyundai",
+    "cohort": "ai",
+    "page": null,
+    "users": 9,
+    "all": true
+   },
+   {
+    "end": "2026-10-18",
+    "days": 1,
+    "id": "469542848",
+    "country": "IT",
+    "brand": "Kia",
+    "cohort": "general",
+    "page": null,
+    "users": 700,
+    "all": true
+   },
+   {
+    "end": "2026-10-18",
+    "days": 1,
+    "id": "469542848",
+    "country": "IT",
+    "brand": "Kia",
+    "cohort": "ai",
+    "page": null,
+    "users": 20,
+    "all": true
+   },
+   {
+    "end": "2026-10-18",
+    "days": 1,
+    "id": "310000001",
+    "country": "DE",
+    "brand": "Hyundai",
+    "cohort": "general",
+    "page": null,
+    "users": 450,
+    "all": true
+   },
+   {
+    "end": "2026-10-18",
+    "days": 1,
+    "id": "310000001",
+    "country": "DE",
+    "brand": "Hyundai",
+    "cohort": "ai",
+    "page": null,
+    "users": 9,
+    "all": true
+   },
+   {
+    "end": "2026-10-17",
+    "days": 1,
+    "id": "469542848",
+    "country": "IT",
+    "brand": "Kia",
+    "cohort": "general",
+    "page": null,
+    "users": 700,
+    "all": true
+   },
+   {
+    "end": "2026-10-17",
+    "days": 1,
+    "id": "469542848",
+    "country": "IT",
+    "brand": "Kia",
+    "cohort": "ai",
+    "page": null,
+    "users": 20,
+    "all": true
+   },
+   {
+    "end": "2026-10-17",
+    "days": 1,
+    "id": "310000001",
+    "country": "DE",
+    "brand": "Hyundai",
+    "cohort": "general",
+    "page": null,
+    "users": 450,
+    "all": true
+   },
+   {
+    "end": "2026-10-17",
+    "days": 1,
+    "id": "310000001",
+    "country": "DE",
+    "brand": "Hyundai",
+    "cohort": "ai",
+    "page": null,
+    "users": 9,
+    "all": true
+   },
+   {
+    "end": "2026-10-16",
+    "days": 1,
+    "id": "469542848",
+    "country": "IT",
+    "brand": "Kia",
+    "cohort": "general",
+    "page": null,
+    "users": 700,
+    "all": true
+   },
+   {
+    "end": "2026-10-16",
+    "days": 1,
+    "id": "469542848",
+    "country": "IT",
+    "brand": "Kia",
+    "cohort": "ai",
+    "page": null,
+    "users": 20,
+    "all": true
+   },
+   {
+    "end": "2026-10-16",
+    "days": 1,
+    "id": "310000001",
+    "country": "DE",
+    "brand": "Hyundai",
+    "cohort": "general",
+    "page": null,
+    "users": 450,
+    "all": true
+   },
+   {
+    "end": "2026-10-16",
+    "days": 1,
+    "id": "310000001",
+    "country": "DE",
+    "brand": "Hyundai",
+    "cohort": "ai",
+    "page": null,
+    "users": 9,
+    "all": true
+   },
+   {
+    "end": "2026-10-15",
+    "days": 1,
+    "id": "469542848",
+    "country": "IT",
+    "brand": "Kia",
+    "cohort": "general",
+    "page": null,
+    "users": 700,
+    "all": true
+   },
+   {
+    "end": "2026-10-15",
+    "days": 1,
+    "id": "469542848",
+    "country": "IT",
+    "brand": "Kia",
+    "cohort": "ai",
+    "page": null,
+    "users": 20,
+    "all": true
+   },
+   {
+    "end": "2026-10-15",
+    "days": 1,
+    "id": "310000001",
+    "country": "DE",
+    "brand": "Hyundai",
+    "cohort": "general",
+    "page": null,
+    "users": 450,
+    "all": true
+   },
+   {
+    "end": "2026-10-15",
+    "days": 1,
+    "id": "310000001",
+    "country": "DE",
+    "brand": "Hyundai",
+    "cohort": "ai",
+    "page": null,
+    "users": 9,
+    "all": true
+   },
+   {
+    "end": "2026-10-14",
+    "days": 1,
+    "id": "469542848",
+    "country": "IT",
+    "brand": "Kia",
+    "cohort": "general",
+    "page": null,
+    "users": 700,
+    "all": true
+   },
+   {
+    "end": "2026-10-14",
+    "days": 1,
+    "id": "469542848",
+    "country": "IT",
+    "brand": "Kia",
+    "cohort": "ai",
+    "page": null,
+    "users": 20,
+    "all": true
+   },
+   {
+    "end": "2026-10-14",
+    "days": 1,
+    "id": "310000001",
+    "country": "DE",
+    "brand": "Hyundai",
+    "cohort": "general",
+    "page": null,
+    "users": 450,
+    "all": true
+   },
+   {
+    "end": "2026-10-14",
+    "days": 1,
+    "id": "310000001",
+    "country": "DE",
+    "brand": "Hyundai",
+    "cohort": "ai",
+    "page": null,
+    "users": 9,
+    "all": true
+   },
+   {
+    "end": "2026-10-13",
+    "days": 1,
+    "id": "469542848",
+    "country": "IT",
+    "brand": "Kia",
+    "cohort": "general",
+    "page": null,
+    "users": 700,
+    "all": true
+   },
+   {
+    "end": "2026-10-13",
+    "days": 1,
+    "id": "469542848",
+    "country": "IT",
+    "brand": "Kia",
+    "cohort": "ai",
+    "page": null,
+    "users": 20,
+    "all": true
+   },
+   {
+    "end": "2026-10-13",
+    "days": 1,
+    "id": "310000001",
+    "country": "DE",
+    "brand": "Hyundai",
+    "cohort": "general",
+    "page": null,
+    "users": 450,
+    "all": true
+   },
+   {
+    "end": "2026-10-13",
+    "days": 1,
+    "id": "310000001",
+    "country": "DE",
+    "brand": "Hyundai",
+    "cohort": "ai",
+    "page": null,
+    "users": 9,
+    "all": true
+   },
+   {
+    "end": "2026-10-12",
+    "days": 1,
+    "id": "469542848",
+    "country": "IT",
+    "brand": "Kia",
+    "cohort": "general",
+    "page": null,
+    "users": 700,
+    "all": true
+   },
+   {
+    "end": "2026-10-12",
+    "days": 1,
+    "id": "469542848",
+    "country": "IT",
+    "brand": "Kia",
+    "cohort": "ai",
+    "page": null,
+    "users": 20,
+    "all": true
+   },
+   {
+    "end": "2026-10-12",
+    "days": 1,
+    "id": "310000001",
+    "country": "DE",
+    "brand": "Hyundai",
+    "cohort": "general",
+    "page": null,
+    "users": 450,
+    "all": true
+   },
+   {
+    "end": "2026-10-12",
+    "days": 1,
+    "id": "310000001",
+    "country": "DE",
+    "brand": "Hyundai",
+    "cohort": "ai",
+    "page": null,
+    "users": 9,
+    "all": true
+   }
+  ],
   "findings": [
    {
     "code": "lift",
@@ -360,16 +1337,20 @@
     "code": "change",
     "tone": "good",
     "sessions": 19.23076923076923,
-    "conv": 35.0
+    "conv": 35.0,
+    "dConv": 7,
+    "volume": 3.8461538461538463,
+    "rate": 3.1538461538461533
    },
    {
-    "code": "engine",
+    "code": "channel",
     "tone": "info",
-    "engine": "chatgpt",
-    "share": 67.74193548387096,
-    "per100": 6.462585034013605,
-    "best": "gemini",
-    "bestPer100": 7.142857142857143
+    "rank": 4,
+    "n": 4,
+    "share": 1.5263417035942886,
+    "per100": 4.838709677419355,
+    "per100Rank": 1,
+    "site": 1.5509601181683899
    }
   ]
  },

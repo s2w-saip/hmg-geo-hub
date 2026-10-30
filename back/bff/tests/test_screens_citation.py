@@ -147,6 +147,117 @@ class Loaders(unittest.TestCase):
         self.assertEqual(sorted(first), ["citations/domains", "citations/domains", "citations/prompts", "citations/sources", "trend"])
 
 
+SUMMARY = {"data": {"url_prompts": {"measured_prompts": 10, "target_prompts": 6, "owned_prompts": 8}}, "meta": META}
+
+
+def share_trend(points):
+    """A dimension=none trend answer: (round, owned citations, all citations) per round."""
+    keys = [k for k, _, _ in points]
+    return {"data": {"bucket": "cycle", "dimension": "none", "buckets": [{"key": k, "round_dates": [k]} for k in keys],
+                     "series": [{"metric": "visibility", "points": [{"bucket": k, "ratio": {"num": 1, "den": 2}} for k in keys]},
+                                {"metric": "citation_share", "points": [{"bucket": k, "ratio": {"num": o, "den": t}} for k, o, t in points]}]},
+            "meta": META}
+
+
+class WebsiteRenewal(unittest.TestCase):
+    """citation/website ctx.variant=renewal: the renewal page on the website surface + the 공식(당사) tile."""
+
+    def answer(self, qs, overrides=None):
+        get, calls = router({"kpi/summary": SUMMARY, **(overrides or {})})
+        seen = {}
+        real = C.renewal_vm
+
+        def spy(live, deltas, parts, degraded, sp):
+            seen["deltas"] = deltas
+            return real(live, deltas, parts, degraded, sp)
+        with mock.patch("bff.api.get", get), mock.patch.object(C, "renewal_vm", spy):
+            out = run(C.website(QueryParams(qs)))
+        return out, seen, calls
+
+    def test_the_card_delta_is_own_not_the_hmg_category(self):
+        """The share trend counts the site's own brands on the website (2026-10-30: 공식(당사) 24.9 % vs 공식(HMG)
+        61.7 %), so the card Δ goes to the 공식(당사) tile and the categories keep their own Δ."""
+        trend = share_trend([("2026-10-02", 285, 1000), ("2026-10-09", 249, 1000)])
+        out, seen, _ = self.answer("ctx.variant=renewal&ctx.role=admin", {"trend:none": trend})
+        self.assertIsNone(seen["deltas"]["officialDelta"])
+        self.assertEqual(out["own"], {"value": 30.0, "delta": {"value": -3.6, "basis": "card", "date": "2026-10-02"},
+                                      "spark": [28.5, 24.9], "sparkOn": True})
+        self.assertNotEqual(out["rn"]["lens"]["hmg"]["delta"]["basis"], "card")
+        self.assertEqual(sorted(out), ["dataDegraded", "live", "own", "periodView", "prevCategories", "reach", "rn", "sectionDegraded",
+                                       "tableSource", "toneSummary"])
+        self.assertEqual([out["reach"]["status"], out["reach"]["ownedRate"], out["reach"]["targetRate"], out["tableSource"]["query"]],
+                         ["ok", 80.0, 60.0, "surface=website"])
+
+    def test_without_the_variant_the_original_body(self):
+        out, seen, calls = self.answer("ctx.role=admin")
+        self.assertEqual(sorted(out), ["dataDegraded", "degradedSections", "live", "tableSource", "targetHitRate", "vm"])
+        self.assertEqual([seen, [p for path, p in calls if path == "trend" and p.get("dimension") == "none"]], [{}, []])
+
+    def test_period_mode_compares_own_with_the_period_before(self):
+        out, _, calls = self.answer("ctx.variant=renewal&time=2026-09-01..2026-09-30", {"kpi/compare": HTTPException(503, "down")})
+        self.assertEqual(out["own"]["delta"], {"value": 0.0, "basis": "period", "date": "2026-08-31", "from": "2026-08-01"})
+        before = [p for path, p in calls if path == "citations/domains" and p.get("limit") == 1]
+        self.assertEqual([(p["from"], p["to"]) for p in before], [("2026-08-01", "2026-08-31")])
+
+    def test_a_source_filter_drops_the_line_and_the_round_delta(self):
+        out, _, calls = self.answer("ctx.variant=renewal&source=Official+%28HMG%29")
+        self.assertEqual(out["own"], {"value": 30.0, "delta": {"value": None, "basis": None, "date": None}, "spark": [], "sparkOn": False})
+        self.assertEqual([p for path, p in calls if path == "trend" and p.get("dimension") == "none"], [])
+
+    def reach(self, filters, prev=None, day="2026-10-02"):
+        """load_url_reach with the page's previous round `day` (citation/website takes it from load_deltas)."""
+        get, calls = router({"kpi/summary": SUMMARY})
+
+        async def routed(path, params=None):
+            if prev is not None and path == "kpi/summary" and (params or {}).get("to") == day:
+                calls.append((path, dict(params or {})))
+                return prev
+            return await get(path, params)
+
+        async def scenario():
+            r = C.Reads({"cumulative": True, **filters}, {"surface": "website", "scope": {"all": True}})
+            deltas = asyncio.ensure_future(asyncio.sleep(0, result={"prevCategories": {"asOf": day} if day else None}))
+            return await C.load_url_reach(r, deltas)
+        with mock.patch("bff.api.get", routed):
+            return run(scenario()), calls
+
+    def test_reach_compares_with_the_page_round_and_splits_by_engine(self):
+        """The funnel's Δ reads one K-1 answer of the page's previous round; each engine of the citation read gets the
+        same funnel (website 2026-10-30: 88.0 % · 66.6 %, ChatGPT 80.0 % · 53.2 %)."""
+        prev = {"data": {"url_prompts": {"measured_prompts": 10, "target_prompts": 5, "owned_prompts": 9}}, "meta": META}
+        out, calls = self.reach({}, prev)
+        self.assertEqual([out["status"], out["measured"], out["owned"], out["target"], out["ownedRate"], out["targetRate"]],
+                         ["ok", 10, 8, 6, 80.0, 60.0])
+        self.assertEqual(out["delta"], {"ownedRate": -10.0, "targetRate": 10.0, "basis": "round", "date": "2026-10-02"})
+        self.assertEqual(out["prev"]["ownedRate"], 90.0)
+        self.assertEqual([(e["engine"], e["ownedRate"]) for e in out["engines"]], [(M.provider_label("claude-web"), 80.0)])
+        summaries = [p for path, p in calls if path == "kpi/summary"]
+        self.assertIn(("2026-10-02", "2026-10-02"), [(p.get("from"), p.get("to")) for p in summaries])
+        self.assertIn(["claude-web"], [p.get("engine") for p in summaries])
+
+    def test_reach_compares_one_value_source_only(self):
+        """A published answer beside a live one is two measurements: no Δ."""
+        prev = {"data": {"url_prompts": {"measured_prompts": 10, "target_prompts": 5, "owned_prompts": 9}},
+                "meta": {**META, "source": {"url_rates": "report", "publication_details": [{"cycle_label": "9월"}]}}}
+        out, _ = self.reach({}, prev)
+        self.assertEqual([out["prev"], out["delta"]], [None, {"ownedRate": None, "targetRate": None, "basis": None, "date": None}])
+
+    def test_reach_without_a_round_or_under_a_source_filter(self):
+        out, _ = self.reach({}, day=None)
+        self.assertEqual([out["delta"]["ownedRate"], out["delta"]["basis"]], [None, None])
+        out, calls = self.reach({"sourceCategory": ["Official (HMG)"]})
+        self.assertEqual([out, calls], [{"status": "notComputed"}, []])
+
+    def test_sub_pages_read_the_website_filters(self):
+        tone = {"data": {"items": [], "counts": {"positive": 1, "negative": 0}}, "meta": {"page": {"limit": 50, "total": 0, "next_cursor": None}}}
+        get, calls = router({"citations/sources/tone": tone})
+        with mock.patch("bff.api.get", get):
+            run(C.prompts(QueryParams("ctx.surface=website&ctx.role=admin&geography=US&tab=uncited")))
+            run(C.tone_urls(QueryParams("ctx.surface=website&ctx.role=admin&geography=US")))
+            run(C.prompts(QueryParams("geography=US")))
+        self.assertEqual([(p["surface"], p.get("country")) for _, p in calls], [("website", ["US"]), ("website", ["US"]), ("global", ["US"])])
+
+
 class Routes(unittest.TestCase):
     def test_route_target_validation(self):
         with self.assertRaises(HTTPException):

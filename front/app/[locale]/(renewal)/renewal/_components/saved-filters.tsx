@@ -11,7 +11,10 @@ import { RnButton, RnMenu, RnMenuItem, RnSkeleton, RnTextButton, cx, useRnToast 
 // shows at once and is then replaced by the list the server answers; a refused change is undone with a
 // toast. A list this browser kept in localStorage before (rn:saved-filters:v1:<page>:<user>) moves to the
 // account on the first visit and leaves the browser.
-export type SavedFilterPage = "overview" | "mention" | "citation" | "acr" | "visibility" | "conversion" | "prompts" | "hub-prompts" | "accounts" | "ga4";
+export type SavedFilterPage =
+  | "overview" | "mention" | "citation" | "acr" | "visibility" | "conversion" | "prompts" | "hub-prompts" | "accounts" | "ga4"
+  // Website pages keep their own lists (2026-10-30): their filters are the site axes, not the Global ones.
+  | "website-overview" | "website-mention" | "website-citation" | "website-prompts" | "website-conversion" | "website-acr";
 
 export interface SavedFilter {
   id: string;

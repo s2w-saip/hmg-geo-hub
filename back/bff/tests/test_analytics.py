@@ -4,7 +4,7 @@ from datetime import date
 
 try:
     from starlette.datastructures import QueryParams
-    from bff.hub_stores.analytics_reader import conversion, conversions, empty, observed_sum, period, visibility
+    from bff.hub_stores.analytics_reader import conversion, conversions, empty, observed_sum, period, properties, visibility
 except ModuleNotFoundError as exc:
     raise unittest.SkipTest("Run aggregation tests inside the BFF image (bff.tests.test_analytics)") from exc
 
@@ -81,6 +81,43 @@ class AnalyticsRules(unittest.IsolatedAsyncioTestCase):
         gap = (await conversion(Connection([[PROP], rows[:5], [daily(1, d1), daily(1, d3)]]), QueryParams("from=2026-10-23&to=2026-10-25")))["data"]
         self.assertIsNone({t["date"]: t for t in gap["trend"]}[d2]["ai_sessions"])
 
+    async def test_a_property_missing_days_leaves_the_sums_unknown(self):
+        """2026-10-30 W6 review: when an active property was not collected on some day of the period (no daily `total`
+        window), the period sums and that day's sums would be partial (the other properties only), so they are
+        unknown, not a smaller total that inflates the change."""
+        d1, d3 = date(2026, 10, 23), date(2026, 10, 25)
+        de = dict(PROP, prop_key=2, property_id="de", country="DE")
+        def at(day, report, ai, **kw):
+            return {**row(report, ai), "date": day, **kw}
+        rows = [at(d1, 2, True, sessions=4, key_events=1), at(d1, 5, False, sessions=50), at(d3, 2, True, sessions=2), at(d3, 5, False, sessions=45),
+                at(d1, 2, True, sessions=3, key_events=1, prop_key=2), at(d1, 5, False, sessions=30, prop_key=2)]
+        def daily(prop_key, day):
+            return dict(prop_key=prop_key, window_end=day, window_days=1, cohort="total", page_key=0, engine_mask=0, device_mask=0, nvr_mask=0, users=9)
+        windows = [daily(1, d) for d in (d1, date(2026, 10, 24), d3)] + [daily(2, d1)]  # DE collected on 10-23 only
+        data = (await conversion(Connection([[PROP, de], rows, windows]), QueryParams("from=2026-10-23&to=2026-10-25")))["data"]
+        m = data["metrics"]
+        self.assertEqual((m["ai_sessions"], m["total_sessions"], m["page_views"]), (None, None, None))
+        day = {t["date"]: t for t in data["trend"]}
+        self.assertEqual((day[d1]["ai_sessions"], day[d1]["total_sessions"]), (7, 80))  # both collected that day
+        self.assertEqual((day[d3]["ai_sessions"], day[d3]["total_sessions"]), (None, None))  # DE not collected
+
+    async def test_channels_are_not_cut_by_an_engine(self):
+        """Report 1 (channels) has no engine: an engine pick would drop the AI channel row and leave the site total
+        without AI sessions, so the channels are not given under an engine filter (2026-10-30 W6 review)."""
+        rows = [{**row(1, True), "sessions": 10, "key_events": 1, "channel": "AI Assistant"},
+                {**row(1, False), "sessions": 90, "key_events": 7, "channel": "Organic Search"},
+                {**row(2, True), "sessions": 10, "key_events": 1}, {**row(5, False), "sessions": 100}]
+        plain = (await conversion(Connection([[PROP], rows, []]), QueryParams()))["data"]
+        self.assertEqual({c["channel"] for c in plain["channels"]}, {"AI Assistant", "Organic Search"})
+        picked = (await conversion(Connection([[PROP], rows, []]), QueryParams("engine=chatgpt")))["data"]
+        self.assertEqual((picked["channels"], picked["channels_reason"]), ([], "engine"))
+
+    async def test_general_sessions_come_from_report_1_only(self):
+        """No mix of reports (report 5 total − report 2 AI) when report 1 is missing: the general sessions are unknown."""
+        rows = [{**row(2, True), "sessions": 10, "key_events": 2}, {**row(5, False), "sessions": 100, "page_views": 150}]
+        m = (await conversion(Connection([[PROP], rows, []]), QueryParams()))["data"]["metrics"]
+        self.assertIsNone(m["human_sessions"])
+
     async def test_period_users_are_exact_windows_not_daily_sums(self):
         rows = [row(2,True),row(5,False),row(1,False),row(3,True)]
         rows[0].update(sessions=10,key_events=2)
@@ -105,6 +142,14 @@ class AnalyticsRules(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(result["meta"]["source"],"hub_analytics")
             self.assertFalse(result["meta"]["available"])
             self.assertTrue(all(v is None for v in result["data"]["metrics"].values()))
+
+    async def test_properties_are_every_registered_property_with_its_country(self):
+        # the AI Conversion panel's 국가 options (2026-10-30): the GA4 properties the account can read, every status
+        rows = [dict(property_id="1", brand_bit=2, status="active", country="IT"),
+                dict(property_id="2", brand_bit=1, status="unmapped", country="JP")]
+        result = await properties(Connection([rows]), QueryParams("brand=Kia"))
+        self.assertEqual(result["data"], {"kind": "properties", "properties": rows})
+        self.assertTrue(result["meta"]["available"])
 
     def test_period_ends_at_observed_date(self):
         self.assertEqual(period(QueryParams("days=7"),date(2026,10,25)),(date(2026,10,19),date(2026,10,25),7))
