@@ -354,6 +354,7 @@ Global과 Website가 같은 본문을 쓴다. Website는 `mention/rn-*`를 ctx.s
 - [ ] 9-6 출처 카테고리가 null인 행을 'Other'로 보인다(`citation_model.py` ~518, 긍정/부정 URL 행). Gold의 Other와 구분해 '—'로 보인다.
 - [ ] 9-7 도메인 표 · 서랍은 `route_context`가 website 계정 규칙을 'standard'로 읽고, 본문은 'website'로 읽는다(`citation.py` ~178-196). 전용 사이트 계정(2단계 뒤)에서 본문과 표 · 서랍의 국가 잠금이 같은지 확인하고, 다르면 website로 맞춘다.
 - [ ] 9-8 카테고리를 이름으로 찾는 곳을 slug(`dim_category.slug`)로 바꾼다(4단계 4-4와 같은 이유: 이름은 HUB 코드표 값이라 관리자가 고칠 수 있다). 대상은 `BS/citation_model.py`의 `OFFICIAL_COMPETITOR_CATEGORY`(경쟁사 고르기 · 카테고리 숨김 등, 단계 메모 '4단계'). 결과가 같으면 golden은 함수 case 입력만 바뀐다.
+- [ ] 9-9 리뉴얼 Citation 도메인 서랍이 쓰는 문구 키 `answerAnalysis.citations.drilldown.loading` · `loadFailed`가 ko · en에 없다(단계 메모 '7단계', 2026-10-31 진행 세션 확인: 그 아래 키는 noUrls · noUrlsOfficial · noPrompts · promptsTopOnly · cites · placeholder뿐). 읽는 중 · 실패 때 키 이름이 보이는지 render 시험으로 재현한 뒤 문구를 더한다.
 
 **시험.** `test_screens_citation`, `test_gold_citations`, golden citation, 인용 render 시험, 원본 대조(Global · Website 인용).
 
