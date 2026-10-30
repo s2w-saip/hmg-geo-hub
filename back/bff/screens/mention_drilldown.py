@@ -698,8 +698,8 @@ async def missing_prompts(q) -> dict:
 async def brand_citations(q) -> dict:
     """/api/scope/brand-citations: the citation sources tab of a brand row (C-1 mention_brand, up to
     2,000 sources; body {domains, total?, orders}) and, with &skey=, one source's detail ({urls,
-    promptList, urlTotal?, promptTotal?}). 404 -> the empty shape (200); 403 -> 403 and 422 -> 400
-    with the empty shape."""
+    promptList, urlTotal?, promptTotal?}). own=1 (the 당사 row) reads 당사 (mention_own). 404 -> the empty
+    shape (200); 403 -> 403 and 422 -> 400 with the empty shape."""
     p = route_params(q)
     brand = p.get("mentionBrand")
     if not brand:
@@ -718,12 +718,15 @@ async def brand_citations(q) -> dict:
     if blocked:
         return reply(blocked, empty)
     params = drill_query(p, target, WEBSITE_GROUPS)
+    # the 당사 row (own=1, as the prompts tab): the answers where an own brand of the perspective is mentioned; its label
+    # (HMG under the HMG perspective) is no Gold brand (2026-10-31 renewal audit 7-2)
+    brand_target: dict[str, Any] = {"mention_own": True} if p.get("own") == "1" else {"mention_brand": brand}
     try:
         if skey is not None:
-            res = await api.get(f"citations/domains/{skey}", to_api_params(params, {"mention_brand": brand, **DETAIL_LIMITS}))
+            res = await api.get(f"citations/domains/{skey}", to_api_params(params, {**brand_target, **DETAIL_LIMITS}))
             return reply(200, to_domain_drilldown(res["data"]))
         res = await api.get("citations/domains", to_api_params(params, {
-            "mention_brand": brand, "limit": DRILLDOWN_LIST_LIMIT, "include_competitor_totals": False}))
+            **brand_target, "limit": DRILLDOWN_LIST_LIMIT, "include_competitor_totals": False}))
     except HTTPException as exc:
         if exc.status_code == 404:
             return reply(200, empty if skey is not None else {"domains": [], "orders": domain_orders([])})

@@ -27,7 +27,7 @@ import { numTxt, pctTxt, slotLabel } from "../../mention/_components/mention-con
 
 /** Answers a prompt of the domain sheet opens: the reader's cap (gold_reader/drilldown.py `domain`, most citations
  * first). The sheet says so, since the modal shows them without a "more" line. */
-const DETAIL_ANSWERS_CAP = 8;
+export const DETAIL_ANSWERS_CAP = 8;
 
 const fmtK = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}K` : String(Math.round(n)));
 
@@ -487,7 +487,9 @@ function DomainSheet({ row, hidden, onClose, onAnswer }: { row: CitationDomainLi
   );
 }
 
-function UrlList({ row, urls, total }: { row: CitationDomainLive; urls: CitationDomainLive["urls"]; total?: number }) {
+/** A source's cited URLs (title, site country, engines, link, prompt · count); the Mention brand drawer's citation
+ * sources tab opens the same list under a row (renewal audit 7-1). */
+export function UrlList({ row, urls, total }: { row: CitationDomainLive; urls: CitationDomainLive["urls"]; total?: number }) {
   const tC = useTranslations("answerAnalysis.citations");
   const locale = useLocale();
   if (!urls.length) return <p className="m-0 rounded-lg bg-rn-page px-4 py-6 text-center text-rn-12 text-rn-muted">{tC(citationDrilldownEmptyKey(row, "urls"))}</p>;
@@ -522,18 +524,22 @@ function UrlList({ row, urls, total }: { row: CitationDomainLive; urls: Citation
   );
 }
 
-function PromptList({
+/** A source's citing prompts (a click opens the answers). `share = false`: no share column (the Mention brand drawer's
+ * detail carries none, as the original drawer showed none). */
+export function PromptList({
   row,
   prompts,
   total,
   answersCap,
   onAnswer,
+  share = true,
 }: {
   row: CitationDomainLive;
   prompts: DomainDetailView["promptList"];
   total?: number;
   answersCap: number | null;
   onAnswer: (p: CitationPromptLive) => void;
+  share?: boolean;
 }) {
   const tC = useTranslations("answerAnalysis.citations");
   const tMd = useTranslations("answerAnalysis.mentions.drilldown");
@@ -542,16 +548,17 @@ function PromptList({
   if (!prompts.length) return <p className="m-0 rounded-lg bg-rn-page px-4 py-6 text-center text-rn-12 text-rn-muted">{tC(citationDrilldownEmptyKey(row, "prompts"))}</p>;
   // the server's order (citations desc) and each prompt's share of the source's citations
   const list = prompts;
+  const cols = share ? "grid-cols-[minmax(0,1fr)_56px_60px]" : "grid-cols-[minmax(0,1fr)_56px]";
   return (
     <div className="flex flex-col gap-2">
       <p className="m-0 text-rn-11 text-rn-muted">
         {tC("v2.drilldownTabs.promptsCaption")}
         {answersCap != null ? ` ${t("answersCap", { n: answersCap })}` : ""}
       </p>
-      <div className="grid grid-cols-[minmax(0,1fr)_56px_60px] gap-2 border-b border-rn-line pb-1.5 text-rn-11 font-semibold text-rn-muted">
+      <div className={cx("grid gap-2 border-b border-rn-line pb-1.5 text-rn-11 font-semibold text-rn-muted", cols)}>
         <span>{tMd("col.prompt")}</span>
         <span className="text-right">{tC("table.col.citations")}</span>
-        <span className="text-right">{tC("table.col.share")}</span>
+        {share ? <span className="text-right">{tC("table.col.share")}</span> : null}
       </div>
       {list.map((p) => {
         const has = (p.answers?.length ?? 0) > 0;
@@ -563,7 +570,7 @@ function PromptList({
             disabled={!has}
             title={has ? undefined : t("noAnswer")}
             onClick={() => onAnswer(p)}
-            className="grid cursor-pointer grid-cols-[minmax(0,1fr)_56px_60px] items-start gap-2 rounded-md border-b border-rn-line py-2 text-left text-rn-12 hover:bg-rn-navy-25 focus-visible:outline-2 focus-visible:outline-rn-navy disabled:cursor-default disabled:hover:bg-transparent"
+            className={cx("grid cursor-pointer items-start gap-2 rounded-md border-b border-rn-line py-2 text-left text-rn-12 hover:bg-rn-navy-25 focus-visible:outline-2 focus-visible:outline-rn-navy disabled:cursor-default disabled:hover:bg-transparent", cols)}
           >
             <span className="flex min-w-0 flex-col gap-1">
               <span className="inline-flex items-start gap-1.5 text-rn-13 text-rn-ink">
@@ -580,7 +587,7 @@ function PromptList({
               </span>
             </span>
             <span className="text-right font-semibold text-rn-ink tabular-nums">{numTxt(p.citations, locale)}</span>
-            <span className="text-right text-rn-ink-2 tabular-nums">{p.share != null ? pctTxt(p.share) : "—"}</span>
+            {share ? <span className="text-right text-rn-ink-2 tabular-nums">{p.share != null ? pctTxt(p.share) : "—"}</span> : null}
           </button>
         );
       })}

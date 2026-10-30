@@ -1,7 +1,7 @@
 """Citation readers use the fact build associated with the pinned release."""
 from __future__ import annotations
 
-from bff.gold_reader.context import Context, SQL, envelope, flag, limit, ratio, values
+from bff.gold_reader.context import Context, SQL, brand_key_of, envelope, flag, limit, ratio, values
 from bff.gold_reader.metrics import TYPES
 
 OFFICIAL_COMPETITOR = "officialCompetitor"
@@ -48,7 +48,46 @@ def predicate(ctx: Context, b: SQL, *, alias: str = "f") -> str:
         where += f" AND {alias}.is_rep"
     if values(ctx.q, "source"):
         where += f" AND {alias}.source_key IN (SELECT s.source_key FROM gold.dim_source s JOIN gold.dim_category d USING(category_key) WHERE d.slug=ANY({b.bind(values(ctx.q, 'source'), 'text[]')}))"
+    if ctx.mention:
+        where += " AND " + mentioned(ctx, b, alias)
     return where
+
+
+async def mention_target(ctx: Context) -> bool:
+    """The Mention brand row's 인용 출처 tab (2026-10-31 renewal audit 7-2: the reader ignored the target, so every row
+    listed every citation of the filter). mention_brand = a display name (the contract: only the citations of answers
+    where that brand is mentioned), mention_own=true = 당사 of the perspective (the 당사 row, whose label HMG is no Gold
+    brand). Sets ctx.mention for predicate(); False for a name Gold does not know (the original API: an empty result,
+    the name in meta.dropped_filters)."""
+    if flag(ctx.q, "mention_own"):
+        ctx.mention = ("own", None)
+        return True
+    name = (ctx.q.get("mention_brand") or "").strip()
+    if not name:
+        return True
+    key = await brand_key_of(ctx.conn, name)
+    if key is None:
+        return False
+    ctx.mention = ("brand", key)
+    return True
+
+
+def mentioned(ctx: Context, b: SQL, alias: str = "f") -> str:
+    """The answer (same build, surface, round and answer key) holds a mention row of ctx.mention as the brand row's
+    prompts tab counts it (drilldown.mention_prompts: std_in, competitive, mentioned; 당사 = an own brand of the
+    perspective). The pkey of answer_brand_fact leads with those keys."""
+    kind, key = ctx.mention
+    who = (f"ab.brand_key={b.bind(key)}" if kind == "brand"
+           else f"ab.brand_key IN (SELECT brand_key FROM gold.dim_brand WHERE (own_bit & {b.bind(ctx.bits)})<>0)")
+    return (f"EXISTS(SELECT 1 FROM gold.answer_brand_fact ab WHERE (ab.build_id,ab.surface,ab.round_date,ab.answer_key)="
+            f"({alias}.build_id,{alias}.surface,{alias}.round_date,{alias}.answer_key) "
+            f"AND ab.std_in AND ab.competitive AND ab.mention_count>0 AND {who})")
+
+
+def unknown_brand(ctx: Context, out: dict) -> dict:
+    """A read of a brand Gold does not know: the empty shape and the name in meta.dropped_filters (the original API)."""
+    out["meta"]["dropped_filters"] = {"mention_brand": [ctx.q.get("mention_brand")]}
+    return out
 
 
 def own_citation(ctx: Context, b: SQL, alias: str = "f") -> str:
@@ -64,6 +103,10 @@ def category(row: dict) -> dict | None:
 
 
 async def domains(ctx: Context) -> dict:
+    if not await mention_target(ctx):
+        return unknown_brand(ctx, envelope(ctx, {"summary": {"total_citations": 0, "unique_sources": 0, "own_share": ratio(0, 0), "answers_den": 0},
+                                                 "items": [], "competitor_totals": [], "competitor_sources": [] if flag(ctx.q, "competitor_sources") else None},
+                                           page={"limit": limit(ctx.q), "total": 0, "next_cursor": None}))
     b = SQL()
     where = predicate(ctx, b)
     owned = own_citation(ctx, b)
@@ -87,6 +130,8 @@ async def domains(ctx: Context) -> dict:
     total = sum(r["citations"] for r in rows)
     b = SQL()
     where = ctx.predicate(b, family="fact", measure_family="citations") + " AND f.cit_in" + (" AND f.is_rep" if ctx.card else "")
+    if ctx.mention:  # coverage: of the answers where the brand is mentioned (the original API's answers_den_sql)
+        where += " AND " + mentioned(ctx, b)
     answer_den = await ctx.conn.fetchval(f"SELECT count(DISTINCT f.answer_key)::int FROM gold.answer_fact f WHERE {where}", *b.args)
     items = []
     for rank, row in enumerate(rows, 1):

@@ -6,6 +6,7 @@ import { RnCardActions, useRnToast } from "@/components/renewal-ui";
 import { downloadCsv, type CsvCell } from "@/app/[locale]/(renewal)/renewal/_components/csv";
 import type { KpiTab } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/kpi-tab";
 import type { RnMentionInput } from "./mention-input";
+import type { MentionTypeKey } from "@/lib/db/repositories/scope-aggregates";
 import { OWN_KEY, type RnDrawerBrand } from "../_data/screen-types";
 
 // Shared state of the renewal Mention body: the reads (promises), the KPI tab, the compare
@@ -17,9 +18,13 @@ export const COMPARE_COLORS = ["#eb6834", "#1baf7a", "#6250d6"] as const;
 export const CONTEXT_COLOR = "#c9c3bb";
 export const AVG_COLOR = "#8a837b";
 
-/** What the drawer shows: one brand (prompts · citations) or one sentiment signal (prompts). A ranking row past the
+/** A signal the drawer lists the prompts of: a sentiment, or a mention type (renewal audit 7-3, the original type
+ *  breakdown's drilldown; the signal route takes both). */
+export type DrawerSignal = "positive" | "neutral" | "mixed" | "negative" | MentionTypeKey;
+
+/** What the drawer shows: one brand (prompts · citations) or one signal (prompts). A ranking row past the
  *  shell's drawer rows passes its own `row` (renewal audit 6-1). */
-export type DrawerTarget = { kind: "brand"; brand: string; row?: RnDrawerBrand } | { kind: "signal"; signal: "positive" | "neutral" | "mixed" | "negative" };
+export type DrawerTarget = { kind: "brand"; brand: string; row?: RnDrawerBrand } | { kind: "signal"; signal: DrawerSignal };
 
 export interface ComparePick {
   /** auto = the covered competitor with the highest share of voice */

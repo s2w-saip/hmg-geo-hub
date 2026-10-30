@@ -196,6 +196,21 @@ describe("renewal Mention heroes", () => {
     expect(tips).toEqual(["9/28 · 12.5%\n당사 추천 답변 5,013개 / 전체 답변 40,100개"]);
   });
 
+  // renewal audit 7-3: the original type breakdown opened a type's prompts (the signal route with the type)
+  it("a 당사 type row opens its prompts; a type without signals does not", () => {
+    const two = {
+      ...rateTypes,
+      own: { ...rateTypes.own, exposure: { ...rateTypes.own.exposure, rows: [...rateTypes.own.exposure.rows, { ...rateTypes.own.exposure.rows[0], type: "definition", signals: 0 }] } },
+    };
+    const html = render(<Types metric="exposure" initialView="own" />, { input: { rateTypes: settled(two) } });
+    const buttons = [...html.matchAll(/<button type="button" data-rn-type="(\w+)"( disabled="")?/g)].map((m) => [m[1], Boolean(m[2])]);
+    expect(buttons).toEqual([
+      ["recommendation", false],
+      ["definition", true],
+    ]);
+    expect(html).toContain(ko.answerAnalysis.mentions.breakdown.drilldownHint);
+  });
+
   // renewal audit 5-2: a calendar month shows the 답변당 언급 수 line, as the original did
   it("a calendar month names the 답변당 언급 수 change", () => {
     const html = render(<PerAnswerLine />);

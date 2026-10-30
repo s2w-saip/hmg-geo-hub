@@ -15,6 +15,18 @@ AXES = {"funnel": "funnel_key", "brand_presence": "presence_key", "list_type": "
         "depth1": "depth1_key", "depth2": "depth2_key", "depth3": "depth3_key", "depth4": "depth4_key"}
 
 
+# The contract's mention_brand (a display name) -> gold.dim_brand.brand_key, as the original API resolved it
+# (rd.dim_brand_name): the name itself first, else its bare key; never brand_key 0 '(이름 없음)'.
+BRAND_BY_NAME = ("SELECT brand_key FROM gold.dim_brand WHERE brand_key<>0 AND (name=$1 OR lower(bare)=lower($1)) "
+                 "ORDER BY (name=$1) DESC,(bare=lower($1)) DESC,brand_key LIMIT 1")
+
+
+async def brand_key_of(conn: Any, name: str) -> int | None:
+    """A brand's display name -> its gold.dim_brand key (None when Gold has no such brand). Finding the key of a row
+    Gold already has changes no attribution (renewal audit 7-2)."""
+    return await conn.fetchval(BRAND_BY_NAME, name.strip())
+
+
 def values(q: Any, key: str) -> list[str]:
     return [v for v in q.getlist(key) if v]
 
@@ -61,6 +73,8 @@ class Context:
         self.build_dates: dict[int, date] = {}
         self.dates: list[date] = []
         self.selected_dates: list[date] = []
+        # the mention drill's target of a citation read (citations.mention_target): ("brand", brand_key) or ("own", None)
+        self.mention: tuple[str, int | None] | None = None
 
     @classmethod
     async def create(cls, conn: Any, q: Any) -> Context:

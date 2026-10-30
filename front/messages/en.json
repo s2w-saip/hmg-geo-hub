@@ -5814,7 +5814,13 @@
         "multiShareDef": "Counting only answers that mention a brand two or more times: this brand's share of every brand's multi-mentions.",
         "multiShareFormula": "This brand's multi-mentions ÷ every brand's multi-mentions × 100",
         "multiPromptsDef": "The number of distinct prompts with at least one answer that mentions this brand two or more times.",
-        "multiRateFormula": "Answers mentioning this brand 2+ times ÷ total measured answers × 100"
+        "multiRateFormula": "Answers mentioning this brand 2+ times ÷ total measured answers × 100",
+        "citeHint": "The sources cited by the answers that mention this brand. Open a row for its cited URLs and prompts.",
+        "citeOpen": "Open the cited URLs and prompts of {domain}",
+        "citeShareDef": "This domain's part of all citations in the answers that mention this brand — a different denominator from the Citation page's share.",
+        "citeShareFormula": "This domain's citations ÷ all citations in the answers that mention this brand × 100",
+        "citeCoverageDef": "The part of the measured answers that mention this brand citing this domain at least once.",
+        "citeCoverageFormula": "Answers citing this domain ÷ measured answers that mention this brand × 100"
       },
       "treemap": {
         "legend": "Share change (vs previous round)",

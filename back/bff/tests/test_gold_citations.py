@@ -1,12 +1,14 @@
 """Gold citation readers (bff.gold_reader.citations, .drilldown) over a recording stand-in connection: the 자사
 citation each surface counts and the 자사 미인용 bucket, as Gold defines them (gold.citation_cell comment: 자사 판정은
 표면별 — global = owner_key = ANY(허용 배열), website = loc_owned ∨ tgt_hit, project = loc_owned; 자사 미인용 = 인용(호스트
-있는)은 1건 이상인데 자사 인용이 0 인 프롬프트). 2026-10-30 W6 review."""
+있는)은 1건 이상인데 자사 인용이 0 인 프롬프트). 2026-10-30 W6 review. And the Mention brand row's drill (prompts, citation
+sources, one source's detail) reads that brand (BrandTarget, 2026-10-31 renewal audit 7-2)."""
 import asyncio
 import unittest
 from datetime import date
 
 try:
+    from fastapi import HTTPException
     from starlette.datastructures import QueryParams
 
     from bff.gold_reader import citations, drilldown
@@ -80,6 +82,111 @@ class UncitedPrompts(unittest.TestCase):
         got = asyncio.run(drilldown.citation_prompts(ctx))
         self.assertEqual(got["data"]["counts"], {"owned": 1, "uncited": 1})
         self.assertEqual([i["prompt_id"] for i in got["data"]["items"]], ["1"])
+
+
+class BrandConn:
+    """asyncpg stand-in of a brand row's drill (the Mention drawer): knows Gold's dim_brand names, answers every fact read
+    with no rows, records every statement with its arguments."""
+
+    BRANDS = {"Toyota": 2406}
+
+    def __init__(self):
+        self.calls: list[tuple[str, tuple]] = []
+
+    async def fetch(self, sql, *args):
+        self.calls.append((sql, args))
+        return []
+
+    async def fetchval(self, sql, *args):
+        self.calls.append((sql, args))
+        if "FROM gold.dim_brand WHERE brand_key<>0" in sql:
+            return self.BRANDS.get(args[0].strip())
+        if "SELECT name FROM gold.dim_brand" in sql:
+            return {v: k for k, v in self.BRANDS.items()}.get(args[0])
+        return 0
+
+    async def fetchrow(self, sql, *args):
+        self.calls.append((sql, args))
+        if "FROM gold.dim_source" in sql:
+            return {"source_key": 5, "skey": "kia.com", "domain": "kia.com", "is_social": False, "category_key": 1,
+                    "slug": "officialHmg", "category_name": "Official (HMG)", "competitor_brand": None}
+        return {"citations": 0, "owned": 0}
+
+    def facts(self, table: str) -> list[tuple[str, tuple]]:
+        return [(s, a) for s, a in self.calls if f"FROM gold.{table} f" in s]
+
+
+MENTIONED = "EXISTS(SELECT 1 FROM gold.answer_brand_fact ab"
+
+
+class BrandTarget(unittest.TestCase):
+    """The brand row's prompts and citation sources tabs read that brand (2026-10-31 renewal audit 7-2). The contract's
+    mention_brand is a display name the original API resolved to dim_brand.brand_key (name first, else bare); the reader
+    ignored it, so every brand row listed 당사's prompts (own defaults to true) and every citation of the filter."""
+
+    def run_read(self, read, qs: str, *args):
+        conn = BrandConn()
+        out = asyncio.run(read(context(conn, qs), *args))
+        return conn, out
+
+    def test_the_prompts_tab_reads_the_named_brand(self):
+        conn, out = self.run_read(drilldown.mention_prompts, "surface=global&mode=brand&mention_brand=Toyota&limit=2000")
+        self.assertEqual(out["data"]["target"], {"brand_key": 2406, "name": "Toyota", "signal": None})
+        reads = conn.facts("answer_brand_fact")
+        self.assertTrue(reads)
+        for sql, args in reads:
+            self.assertNotIn("own_bit", sql)
+            self.assertIn(2406, args)
+
+    def test_an_unknown_name_is_not_found(self):
+        with self.assertRaises(HTTPException) as cm:
+            self.run_read(drilldown.mention_prompts, "surface=global&mode=brand&mention_brand=Nope")
+        self.assertEqual(cm.exception.status_code, 404)
+
+    def test_own_stays_the_perspective(self):
+        conn, out = self.run_read(drilldown.mention_prompts, "surface=global&mode=brand&own=true")
+        self.assertEqual(out["data"]["target"]["name"], "HMG")
+        self.assertTrue(all("own_bit" in sql for sql, _ in conn.facts("answer_brand_fact")))
+
+    def test_the_citation_sources_count_the_brands_answers_only(self):
+        """Every citation scan and the coverage denominator (answers) keep the answers where the brand is mentioned as
+        the prompts tab counts it (std_in ∧ competitive ∧ mention_count > 0), as the original API (mention_brand_exists)."""
+        conn, _ = self.run_read(citations.domains, "surface=global&mention_brand=Toyota&limit=2000")
+        reads = conn.facts("citation_fact") + conn.facts("answer_fact")
+        self.assertEqual(len(reads), 2)
+        for sql, args in reads:
+            self.assertIn(MENTIONED, sql)
+            self.assertIn("ab.std_in AND ab.competitive AND ab.mention_count>0", sql)
+            self.assertIn(2406, args)
+
+    def test_the_own_row_counts_the_answers_of_any_own_brand(self):
+        """The 당사 row (label HMG, no Gold brand under the HMG perspective) asks for the perspective's own brands."""
+        conn, _ = self.run_read(citations.domains, "surface=global&mention_own=true&limit=2000")
+        for sql, args in conn.facts("citation_fact") + conn.facts("answer_fact"):
+            self.assertIn(MENTIONED, sql)
+            self.assertIn("own_bit &", sql)
+            self.assertIn(7, args)
+
+    def test_an_unknown_name_has_no_citations(self):
+        conn, out = self.run_read(citations.domains, "surface=global&mention_brand=Nope&limit=2000")
+        self.assertEqual(conn.facts("citation_fact"), [])
+        self.assertEqual((out["data"]["items"], out["meta"]["page"]["total"]), ([], 0))
+        self.assertEqual(out["meta"]["dropped_filters"], {"mention_brand": ["Nope"]})
+
+    def test_a_source_detail_keeps_the_brands_answers(self):
+        conn, out = self.run_read(drilldown.domain, "surface=website&mention_brand=Toyota", "kia.com")
+        reads = conn.facts("citation_fact")
+        self.assertEqual(len(reads), 4)  # URLs, totals, prompts, answer refs
+        for sql, args in reads:
+            self.assertIn(MENTIONED, sql)
+            self.assertIn(2406, args)
+        conn, out = self.run_read(drilldown.domain, "surface=website&mention_brand=Nope", "kia.com")
+        self.assertEqual(conn.facts("citation_fact"), [])
+        self.assertEqual((out["data"]["urls"], out["data"]["prompts"], out["data"]["citations"]), ([], [], 0))
+
+    def test_reads_without_a_target_are_unchanged(self):
+        conn, _ = self.run_read(citations.domains, "surface=global&limit=50")
+        self.assertTrue(all(MENTIONED not in sql for sql, _ in conn.calls))
 
 
 if __name__ == "__main__":

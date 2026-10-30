@@ -107,7 +107,7 @@ export function MentionsDrilldown({
         </TabsContent>
 
         <TabsContent value="citations">
-          <BrandCitationsTab brand={brand} isWebsite={isWebsite} projectId={projectId} />
+          <BrandCitationsTab brand={brand} own={own} isWebsite={isWebsite} projectId={projectId} />
         </TabsContent>
       </Tabs>
     </div>
@@ -368,27 +368,29 @@ function PromptsTable({
 // fetched lazily when the tab opens (Radix mounts only the active tab). Reuses
 // the citation tab's domain table; the current dimension filters ride along as
 // query params so the per-brand domains match the filtered mention view.
+// The own row asks for 당사 here too (own=1, as the prompts tab): its label (HMG under the HMG perspective) is no Gold
+// brand, and the route reads a competitor row by its name (renewal audit 7-2, 2026-10-31).
 function BrandCitationsTab({
   brand,
+  own,
   isWebsite,
   projectId,
 }: {
   brand: string;
+  own: { code: string | null } | null;
   isWebsite: boolean;
   projectId: string | null;
 }) {
   const sp = useSearchParams();
   const spStr = sp.toString();
   const [state, setState] = useState<ListState<CitationDomainLive>>({ status: "loading" });
+  const query = drilldownParams(spStr, { brand, own, isWebsite, projectId }).toString();
 
   useEffect(() => {
-    const params = drilldownParams(spStr, { brand, isWebsite, projectId });
-    return startListLoad<CitationDomainLive>(`/api/scope/brand-citations?${params.toString()}`, "domains", setState);
-  }, [brand, spStr, isWebsite, projectId]);
+    return startListLoad<CitationDomainLive>(`/api/scope/brand-citations?${query}`, "domains", setState);
+  }, [query]);
 
-  return (
-    <BrandCitationsPanel state={state} detailQuery={drilldownParams(spStr, { brand, isWebsite, projectId }).toString()} />
-  );
+  return <BrandCitationsPanel state={state} detailQuery={query} />;
 }
 
 /** The citation sources tab body for a list state: loading / error / no sources / the domain table. */

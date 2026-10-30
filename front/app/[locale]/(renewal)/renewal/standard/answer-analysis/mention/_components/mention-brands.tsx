@@ -5,12 +5,16 @@ import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronRight, Search, X } from "lucide-react";
 import { RnBasisChip, RnCard, RnCardHead, RnDrawer, RnEmpty, RnSegmented, RnTabs, RnTag, RnTextButton, cx, rnHighlightState } from "@/components/renewal-ui";
-import type { CitationDomainLive, MentionsPromptLive } from "@/lib/scope/result-adapter";
+import type { CitationDomainLive, CitationPromptLive, MentionsPromptLive } from "@/lib/scope/result-adapter";
 import { useOrderedTable } from "@/hooks/use-ordered-table";
 import type { DrillPromptRow } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/drilldown-screen-types";
 import { drilldownParams, projectIdFromPath, startListLoad, type ListState } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/mentions-drilldown";
 import { readSignalReply, type SignalPromptsState } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/signal-prompts-dialog";
 import { AnswerModal } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/answer-modal";
+import { domainDetailUrl } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/citation-domain-table";
+import { useDomainDetail } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/citations-view";
+import { DETAIL_ANSWERS_CAP, PromptList as DomainPromptList, UrlList as DomainUrlList } from "../../citation/_components/citation-domains";
+import { useCatLabel } from "../../citation/_components/citation-context";
 import {
   MENTION_TYPE_KEYS,
   NON_AUTO_GROUP,
@@ -25,7 +29,7 @@ import {
   type TreemapBrand,
 } from "../_data/screen-types";
 import { squarify } from "./treemap-layout";
-import { CONTEXT_COLOR, MentionCardActions, deltaTxt, numTxt, pctTxt, posTxt, slotLabel, useCompare, useMention, type DrawerTarget } from "./mention-context";
+import { CONTEXT_COLOR, MentionCardActions, deltaTxt, numTxt, pctTxt, posTxt, slotLabel, useCompare, useMention, type DrawerSignal, type DrawerTarget } from "./mention-context";
 import { BrandName, CardSkeleton, DegradedNote, DeltaChip, InfoTip, TwinTable, useDegradedText } from "./mention-kit";
 import { SENTIMENT_COLOR } from "./mention-favor";
 
@@ -673,11 +677,14 @@ export function rankTableRows<R extends { brand: string; group: string }>(ordere
   return { rows: kept.slice(0, limit), matched: kept.length };
 }
 
-// ── drawer: brand (prompts · citations) / sentiment signal (prompts) → the original answer modal ──
+// ── drawer: brand (prompts · citation sources) / signal: a sentiment or a mention type (prompts) → the original answer modal ──
+
+type DrawerAnswer = { prompt: Pick<MentionsPromptLive, "promptText" | "answers">; brand: string; variant: "mention" | "citation" };
 
 export function BrandDrawer({ target, onClose }: { target: DrawerTarget | null; onClose: () => void }) {
   const { ownLabel } = useMention();
-  const [answer, setAnswer] = useState<{ prompt: MentionsPromptLive; brand: string } | null>(null);
+  const tB = useTranslations("answerAnalysis.mentions.breakdown");
+  const [answer, setAnswer] = useState<DrawerAnswer | null>(null);
   // the sheet comes back one task after the modal closes, so the Escape that closed the modal
   // does not reach the sheet as well
   const [sheetHidden, setSheetHidden] = useState(false);
@@ -685,9 +692,9 @@ export function BrandDrawer({ target, onClose }: { target: DrawerTarget | null; 
     setAnswer(null);
     setSheetHidden(false);
   }, [target]);
-  const openAnswer = useCallback((prompt: MentionsPromptLive, brand: string) => {
+  const openAnswer = useCallback((prompt: DrawerAnswer["prompt"], brand: string, variant: DrawerAnswer["variant"] = "mention") => {
     setSheetHidden(true);
-    setAnswer({ prompt, brand });
+    setAnswer({ prompt, brand, variant });
   }, []);
   const closeAnswer = useCallback((o: boolean) => {
     if (o) return;
@@ -698,14 +705,27 @@ export function BrandDrawer({ target, onClose }: { target: DrawerTarget | null; 
     <>
       {target ? (
         target.kind === "brand" ? (
-          <BrandSheet brand={target.brand} fallback={target.row} hidden={sheetHidden} onClose={onClose} onAnswer={(p) => openAnswer(p, target.brand)} />
+          <BrandSheet
+            brand={target.brand}
+            fallback={target.row}
+            hidden={sheetHidden}
+            onClose={onClose}
+            onAnswer={(p) => openAnswer(p, target.brand)}
+            onCitationAnswer={(p) => openAnswer(p, target.brand, "citation")}
+          />
         ) : (
-          <SignalSheet signal={target.signal} hidden={sheetHidden} onClose={onClose} onAnswer={(p) => openAnswer(p, ownLabel)} />
+          <SignalSheet
+            signal={target.signal}
+            label={isMentionType(target.signal) ? tB(`type.${target.signal}`) : tB(target.signal)}
+            hidden={sheetHidden}
+            onClose={onClose}
+            onAnswer={(p) => openAnswer(p, ownLabel)}
+          />
         )
       ) : null}
       {/* The original answer modal (highlights, sentiment underline, sources). The sheet steps aside
           while it is open and comes back with its state when it closes. */}
-      <AnswerModal brand={answer?.brand ?? ""} promptText={answer?.prompt.promptText ?? ""} answers={answer?.prompt.answers ?? []} open={answer !== null} onOpenChange={closeAnswer} />
+      <AnswerModal brand={answer?.brand ?? ""} variant={answer?.variant} promptText={answer?.prompt.promptText ?? ""} answers={answer?.prompt.answers ?? []} open={answer !== null} onOpenChange={closeAnswer} />
     </>
   );
 }
@@ -725,6 +745,13 @@ export function signalPromptsQuery(spStr: string, signal: string, pathname: stri
   return params.toString();
 }
 
+/** A brand row's two drawer reads, on one query: the page's filters, the brand and the surface or project. The 당사 row
+ * asks for 당사 on both (own=1): the citation sources sent its label only, and HMG is no Gold brand (renewal audit 7-2). */
+export function brandDrillPaths(spStr: string, opts: Parameters<typeof drilldownParams>[1]): { query: string; prompts: string; citations: string } {
+  const query = drilldownParams(spStr, opts).toString();
+  return { query, prompts: `/api/scope/brand-mention-prompts?${query}`, citations: `/api/scope/brand-citations?${query}` };
+}
+
 function useListLoad<T>(path: string | null, key: "prompts" | "domains"): ListState<T> {
   const [state, setState] = useState<ListState<T>>({ status: "loading" });
   useEffect(() => {
@@ -735,7 +762,21 @@ function useListLoad<T>(path: string | null, key: "prompts" | "domains"): ListSt
 }
 
 /** `fallback`: the row a ranking row past the shell's drawer rows passes (renewal audit 6-1). */
-function BrandSheet({ brand, fallback, hidden, onClose, onAnswer }: { brand: string; fallback?: RnDrawerBrand; hidden: boolean; onClose: () => void; onAnswer: (p: MentionsPromptLive) => void }) {
+function BrandSheet({
+  brand,
+  fallback,
+  hidden,
+  onClose,
+  onAnswer,
+  onCitationAnswer,
+}: {
+  brand: string;
+  fallback?: RnDrawerBrand;
+  hidden: boolean;
+  onClose: () => void;
+  onAnswer: (p: MentionsPromptLive) => void;
+  onCitationAnswer: (p: CitationPromptLive) => void;
+}) {
   const { drawer } = useMention();
   const t = useTranslations("renewal.mention");
   const tT = useTranslations("answerAnalysis.mentions.table");
@@ -751,8 +792,9 @@ function BrandSheet({ brand, fallback, hidden, onClose, onAnswer }: { brand: str
   const row = drawer.find((b) => b.brand === brand) ?? fallback;
   const own = row?.own ?? null;
   const spStr = sp.toString();
-  const promptsPath = useMemo(() => `/api/scope/brand-mention-prompts?${drilldownParams(spStr, { brand, own, isWebsite, projectId }).toString()}`, [spStr, brand, own?.code, own === null, isWebsite, projectId]); // eslint-disable-line react-hooks/exhaustive-deps
-  const citationsPath = useMemo(() => (tab === "citations" ? `/api/scope/brand-citations?${drilldownParams(spStr, { brand, isWebsite, projectId }).toString()}` : null), [tab, spStr, brand, isWebsite, projectId]);
+  const paths = useMemo(() => brandDrillPaths(spStr, { brand, own, isWebsite, projectId }), [spStr, brand, own?.code, own === null, isWebsite, projectId]); // eslint-disable-line react-hooks/exhaustive-deps
+  const promptsPath = paths.prompts;
+  const citationsPath = tab === "citations" ? paths.citations : null;
   const prompts = useListLoad<DrillPromptRow>(promptsPath, "prompts");
   const citations = useListLoad<CitationDomainLive>(citationsPath, "domains");
   const types = row?.types ?? null;
@@ -826,7 +868,7 @@ function BrandSheet({ brand, fallback, hidden, onClose, onAnswer }: { brand: str
           { value: "citations", label: tDd("tabs.citations"), count: citations.status === "ready" && tab === "citations" ? citations.list.length : undefined },
         ]}
       />
-      <div className="mt-3">{tab === "prompts" ? <PromptList state={prompts} onAnswer={onAnswer} /> : <CitationList state={citations} />}</div>
+      <div className="mt-3">{tab === "prompts" ? <PromptList state={prompts} onAnswer={onAnswer} /> : <CitationList state={citations} detailQuery={paths.query} onAnswer={onCitationAnswer} />}</div>
     </RnDrawer>
   );
 }
@@ -896,28 +938,138 @@ export function PromptList({ state, onAnswer }: { state: ListState<DrillPromptRo
   );
 }
 
-function CitationList({ state }: { state: ListState<CitationDomainLive> }) {
+const CITE_COLS = "grid-cols-[minmax(0,1fr)_56px_52px_56px_60px]";
+
+/** The brand row's citation sources (renewal audit 7-1, the original drawer's domain table): the sources the answers that
+ * mention the brand cite, with their share, prompts, coverage and the 당사 mark; a row opens its cited URLs and prompts
+ * (the `&skey=` detail, read when the row opens) as the Citation page's domain sheet shows them. */
+export function CitationList({ state, detailQuery, onAnswer }: { state: ListState<CitationDomainLive>; detailQuery: string; onAnswer: (p: CitationPromptLive) => void }) {
+  const t = useTranslations("renewal.mention.brands");
   const tDd = useTranslations("answerAnalysis.mentions.drilldown");
+  const tC = useTranslations("answerAnalysis.citations");
   const tTr = useTranslations("answerAnalysis.mentions.kpi.overview.unmeasuredDialog");
   const locale = useLocale();
+  const [open, setOpen] = useState<string | null>(null);
+  useEffect(() => setOpen(null), [detailQuery]);
   const status = <ListStatus state={state} loading={tDd("citationsLoading")} error={tDd("citationsError")} empty={tDd("noCitations")} />;
   if (state.status !== "ready" || !state.list.length) return status;
+  const head: [string, [string, string][] | null][] = [
+    ["citations", null],
+    ["share", [[t("defLabel"), t("citeShareDef")], [t("formulaLabel"), t("citeShareFormula")]]],
+    ["prompts", null],
+    ["coverage", [[t("defLabel"), t("citeCoverageDef")], [t("formulaLabel"), t("citeCoverageFormula")]]],
+  ];
   return (
     <div className="flex flex-col gap-2">
-      <TwinTable
-        align={["left", "left", "right", "right", "right"]}
-        head={[tDd("col.domain"), tDd("col.category"), tDd("col.citationsCount"), tDd("col.urls"), tDd("col.promptsCount")]}
-        rows={state.list.map((d) => [d.domain, d.category ?? "—", numTxt(d.citations, locale), d.urls.length ? d.urls.length : "—", numTxt(d.prompts, locale)])}
-      />
-      {state.total !== undefined && state.total > state.list.length ? <p className="m-0 text-rn-11 text-rn-muted">{tTr("truncated", { shown: state.list.length, total: state.total })}</p> : null}
+      <p className="m-0 text-rn-11 text-rn-muted">{t("citeHint")}</p>
+      <div className={cx("grid gap-2 border-b border-rn-line pb-1.5 text-rn-11 font-semibold text-rn-muted", CITE_COLS)}>
+        <span>{tC("table.col.domain")}</span>
+        {head.map(([k, items]) => (
+          <span key={k} className="inline-flex items-center justify-end gap-1">
+            {tC(`table.col.${k}`)}
+            {items ? <InfoTip label={tC(`table.col.${k}`)} align="end" items={items} /> : null}
+          </span>
+        ))}
+      </div>
+      <div className="flex flex-col">
+        {state.list.map((d) => {
+          const key = d.skey ?? d.domain;
+          return <CitationRow key={key} row={d} open={open === key} onToggle={() => setOpen((cur) => (cur === key ? null : key))} detailQuery={detailQuery} onAnswer={onAnswer} />;
+        })}
+      </div>
+      {state.total !== undefined && state.total > state.list.length ? <p className="m-0 text-rn-11 text-rn-muted">{tTr("truncated", { shown: numTxt(state.list.length, locale), total: numTxt(state.total, locale) })}</p> : null}
     </div>
   );
 }
 
-function SignalSheet({ signal, hidden, onClose, onAnswer }: { signal: "positive" | "neutral" | "mixed" | "negative"; hidden: boolean; onClose: () => void; onAnswer: (p: MentionsPromptLive) => void }) {
+/** One source row; `open` reads its detail (the route's `&skey=` branch) once, kept while the sheet lives. */
+export function CitationRow({ row, open, onToggle, detailQuery, onAnswer }: { row: CitationDomainLive; open: boolean; onToggle: () => void; detailQuery: string; onAnswer: (p: CitationPromptLive) => void }) {
+  const t = useTranslations("renewal.mention.brands");
+  const tOv = useTranslations("renewal.overview");
+  const cat = useCatLabel();
+  const locale = useLocale();
+  const isWebsite = isWebsitePath(usePathname());
+  const detail = useDomainDetail(row.skey ? domainDetailUrl(detailQuery, row.skey) : null, open);
+  const panel = `rn-cite-${row.skey ?? row.domain}`;
+  return (
+    <div className="border-b border-rn-line last:border-0" data-rn-cite={row.domain}>
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={open ? panel : undefined}
+        aria-label={t("citeOpen", { domain: row.domain })}
+        onClick={onToggle}
+        className={cx("grid w-full cursor-pointer items-start gap-2 rounded-md py-2 text-left text-rn-12 hover:bg-rn-navy-25 focus-visible:outline-2 focus-visible:outline-rn-navy", CITE_COLS)}
+      >
+        <span className="flex min-w-0 flex-col gap-0.5">
+          <span className="inline-flex min-w-0 items-center gap-1.5 text-rn-13 font-semibold text-rn-ink">
+            <ChevronRight aria-hidden className={cx("size-3.5 shrink-0 text-rn-muted transition-transform", open && "rotate-90")} />
+            <span className="truncate">{row.domain}</span>
+            {row.isOurs ? <RnTag className="shrink-0">{isWebsite ? tOv("ownTag") : "HMG"}</RnTag> : null}
+          </span>
+          <span className="pl-5 text-rn-11 text-rn-muted">{row.category ? cat(row.category) : "—"}</span>
+        </span>
+        <span className="text-right font-semibold text-rn-ink tabular-nums">{numTxt(row.citations, locale)}</span>
+        <span className="text-right text-rn-ink-2 tabular-nums">{pctTxt(row.share)}</span>
+        <span className="text-right text-rn-ink-2 tabular-nums">{numTxt(row.prompts, locale)}</span>
+        <span className="text-right text-rn-ink-2 tabular-nums">{pctTxt(row.coverageRate)}</span>
+      </button>
+      {open ? (
+        <div id={panel} className="mb-2 flex flex-col gap-2.5 rounded-lg bg-rn-page px-3 py-3">
+          <CitationDetail row={row} detail={detail} onAnswer={onAnswer} />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** An opened source row: its cited URLs or its citing prompts (a prompt opens the answers), as the Citation page's
+ * domain sheet lists them, behind the original row's loading and failure lines (citation-domain-table DomainRow). */
+export function CitationDetail({
+  row,
+  detail,
+  onAnswer,
+  initialView = "urls",
+}: {
+  row: CitationDomainLive;
+  detail: ReturnType<typeof useDomainDetail>;
+  onAnswer: (p: CitationPromptLive) => void;
+  initialView?: "urls" | "prompts";
+}) {
+  const tCd = useTranslations("renewal.citation.drawer");
+  const tDd = useTranslations("answerAnalysis.mentions.drilldown");
+  const locale = useLocale();
+  const [view, setView] = useState<"urls" | "prompts">(initialView);
+  if (detail?.status !== "ready") return <p className="m-0 py-3 text-center text-rn-12 text-rn-muted">{detail?.status === "error" ? tDd("citationsError") : tDd("citationsLoading")}</p>;
+  return (
+    <>
+      <RnSegmented
+        label={tCd("tabs")}
+        value={view}
+        onChange={setView}
+        items={[
+          { value: "urls", label: `${tCd("urls")} ${numTxt(detail.urlTotal ?? detail.urls.length, locale)}` },
+          { value: "prompts", label: `${tCd("prompts")} ${numTxt(detail.promptTotal ?? detail.promptList.length, locale)}` },
+        ]}
+      />
+      {view === "urls" ? (
+        <DomainUrlList row={row} urls={detail.urls} total={detail.urlTotal} />
+      ) : (
+        <DomainPromptList row={row} prompts={detail.promptList} total={detail.promptTotal} answersCap={DETAIL_ANSWERS_CAP} onAnswer={onAnswer} share={false} />
+      )}
+    </>
+  );
+}
+
+/** A sentiment or mention type (renewal audit 7-3: the type rows of the own view open their prompts, as the original
+ * type breakdown did) of the signal drawer. */
+export function isMentionType(signal: DrawerSignal): signal is (typeof MENTION_TYPE_KEYS)[number] {
+  return (MENTION_TYPE_KEYS as readonly string[]).includes(signal);
+}
+
+function SignalSheet({ signal, label, hidden, onClose, onAnswer }: { signal: DrawerSignal; label: string; hidden: boolean; onClose: () => void; onAnswer: (p: MentionsPromptLive) => void }) {
   const t = useTranslations("renewal.mention");
   const tS = useTranslations("answerAnalysis.mentions.signalDrilldown");
-  const tB = useTranslations("answerAnalysis.mentions.breakdown");
   const sp = useSearchParams();
   const pathname = usePathname();
   const [state, setState] = useState<SignalPromptsState>({ status: "loading" });
@@ -936,7 +1088,7 @@ function SignalSheet({ signal, hidden, onClose, onAnswer }: { signal: "positive"
   }, [query]);
   const tTr = useTranslations("answerAnalysis.mentions.kpi.overview.unmeasuredDialog");
   return (
-    <RnDrawer open={!hidden} onClose={onClose} closeLabel={t("drawer.close")} title={tS("title", { signal: tB(signal) })} subtitle={tS("hint")}>
+    <RnDrawer open={!hidden} onClose={onClose} closeLabel={t("drawer.close")} title={tS("title", { signal: label })} subtitle={tS("hint")}>
       {state.status === "loading" ? (
         <p className="m-0 rounded-lg bg-rn-page px-4 py-6 text-center text-rn-12 text-rn-muted">{tS("loading")}</p>
       ) : state.status === "error" ? (

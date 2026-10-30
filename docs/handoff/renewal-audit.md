@@ -6,7 +6,7 @@
 - 병렬 세션으로 나누지 않고 한 세션이 순서대로 한다.
 - 단계마다 새 하위 에이전트가 깨끗한 컨텍스트로 맡는다(B 방식).
 
-**현재 위치:** 7단계(Mention ③ 서랍 · 드릴다운) 시작 전. 6단계 끝(단계 메모 '6단계'). 마지막 커밋: 6단계를 올린 커밋.
+**현재 위치:** 8단계(Mention ④ 귀속 · 트리맵 · bump) 시작 전. 7단계 끝(단계 메모 '7단계'). 마지막 커밋: 7단계를 올린 커밋.
 
 ## 진행 방식 (단계마다 새 하위 에이전트)
 
@@ -95,7 +95,7 @@
 | 4 | 경쟁사 브랜드 접기(공용 모듈) · Overview 데이터 | 1 | [x] |
 | 5 | Mention ① KPI 탭: 회차별 분자 · 분모, 답변당 언급 수 Δ, 당사 평균 위치 | 1 | [x] |
 | 6 | Mention ② 브랜드 순위 표 전체 · 열 정의 | — | [x] |
-| 7 | Mention ③ 서랍 · 드릴다운 | — | [ ] |
+| 7 | Mention ③ 서랍 · 드릴다운 | — | [x] |
 | 8 | Mention ④ 귀속 · 트리맵 · bump | 1 | [ ] |
 | 9 | Citation ① 결함 · 문구 · 귀속 | 1 | [ ] |
 | 10 | Citation ② 구성 추이 수치 · Website 도메인 표 전체 | 3 | [ ] |
@@ -288,16 +288,16 @@ Global과 Website가 같은 본문을 쓴다. Website는 `mention/rn-*`를 ctx.s
 - 원본 유형 드릴다운: website `view.typeAbs`가 부르는 BFF 화면(grep)
 
 **할 일**
-- [ ] 7-1 서랍 › 인용 출처를 원본처럼 되살린다.
+- [x] 7-1 서랍 › 인용 출처를 원본처럼 되살린다.
   - 지금은 URL 열이 늘 '—'다(`mention_drilldown.py` ~275-284 `to_citation_domain`이 `urls: []`, `mention-brands.tsx` ~845-853). 점유율 · 커버리지 · 당사 표시도 그리지 않는다.
   - 원본처럼 행을 펼치면 `&skey=` 상세를 읽는다: URL 제목 · 인용 수 · 엔진 · 프롬프트 · 국가, 프롬프트 목록.
   - URL 열은 상세를 읽은 뒤의 수로 채우거나, 빼거나 한다.
-- [ ] 7-2 서랍 목록 결함을 고친다(admin-todo 세션 메모 W2).
+- [x] 7-2 서랍 목록 결함을 고친다(admin-todo 세션 메모 W2).
   - 증상: 어느 브랜드를 열어도 프롬프트 · 인용 출처 탭에 당사 목록이 나온다.
   - 원인: BFF는 `mention_brand=<이름>`을 보내는데, Gold 리더(`mention_prompts`, 인용 도메인 읽기)는 `brand_key`만 받는다.
   - 재현 시험부터 쓴다. 고치는 방법은 BFF가 `brand_key`를 보내거나 리더가 이름을 받는 것이다. 이름으로 `dim_brand.brand_key`를 찾는 것은 귀속을 바꾸지 않는다.
   - 원본 · 리뉴얼, Global · Website가 모두 고쳐진다.
-- [ ] 7-3 유형 → 프롬프트 드릴다운을 되살린다.
+- [x] 7-3 유형 → 프롬프트 드릴다운을 되살린다.
   - 원본은 유형 조각(website 당사 유형별 건수, Global 유형 차트)을 누르면 그 유형의 프롬프트로 내려갔다. 리뉴얼에는 Global 포함 없다(W2 메모 '그대로 남은 차이').
   - 원본이 부르던 BFF 드릴다운 화면을 재사용해 유형 카드 건수에 붙인다.
 
@@ -651,6 +651,21 @@ Website 인용 도달 Δ도 값 출처(발행 / 실시간)가 다르면 숨긴�
   - **관찰(이 단계 밖, 7단계).** 서랍 프롬프트 목록은 어느 브랜드를 열어도 당사 목록(1,000개)이다. admin-todo 세션 메모 W2의 기존 결함(리더가 `mention_brand` 이름을 무시)과 같다. 100위 밖 브랜드도 같다.
   - **다음 단계가 알 것.** `DrawerTarget`(brand)에 선택 `row`가 생겼다. 서랍은 셸 행이 없으면 그 행을 쓴다. `BrandRanking`(`initialView` · `initialQuery`)과 `PromptList`는 render 시험을 위해 내보낸다. 순위표 머리 ⓘ 문구는 `renewal.mention.brands.defLabel` · `formulaLabel`이다.
 
+- **7단계(2026-10-31).** 세 항목 모두 고쳤다. 재현 시험은 고치기 전에 실패했다(Gold 리더 6개 · BFF 1개 · render 6개). 원본 · 리뉴얼, Global · Website가 같은 BFF 화면을 읽어 모두 바뀐다.
+  - **7-2 리더(먼저 했다).** live로 재현했다. `mentions/prompts`에 `mention_brand=Toyota`를 보내도 target이 HMG, total 325,173(당사)이었다. 리더가 `brand_key`만 읽고 이름을 버려서 own 기본값(true)으로 떨어졌다. `citations/domains` · 상세는 이름을 아예 읽지 않아 필터의 모든 인용이었다.
+    - 리더가 계약의 `mention_brand`(표시 이름)를 원본 API 규칙으로 `dim_brand.brand_key`로 찾는다(`context.brand_key_of`: 이름 일치 먼저, 없으면 bare 소문자, brand_key 0 제외). 귀속은 바꾸지 않는다. 모르는 이름은 원본처럼 프롬프트 404 `brand_not_found`(BFF가 빈 목록으로 바꿈), 인용 출처 · 상세는 빈 결과 + `meta.dropped_filters`다.
+    - 인용 출처 · 상세는 그 브랜드가 언급된 답변의 인용만 센다(`citations.mention_target` · `mentioned`). 같은 빌드 · 회차 · 답변의 `answer_brand_fact` 행이 프롬프트 탭과 같은 조건(std_in ∧ competitive ∧ mention_count > 0)이어야 한다. 커버리지 분모(답변 수)도 그 답변으로 좁힌다(원본 `answers_den_sql`). 원본 API는 std_in만 봤다. live global에는 std_in인데 competitive가 아닌 행이 51개 브랜드 50,025행 있고, 순위 행(brand_cell competitive) · 프롬프트 탭과 같은 모수를 골랐다(admin-todo 결정 기록 '점검 7단계').
+    - 당사 행(이름 HMG, HMG 관점에서는 Gold 브랜드가 아님)은 인용 출처도 own으로 읽는다. BFF가 `own=1`이면 `mention_own=true`를 보내고, 리더는 관점의 자사 브랜드(`dim_brand.own_bit & 관점`)가 언급된 답변으로 좁힌다. 리뉴얼 서랍과 원본 `MentionsDrilldown`(`BrandCitationsTab`)이 인용 출처에도 own을 보낸다. 고치지 않았으면 원본 당사 행 인용 출처가 빈 목록이 됐을 것이다(이전에는 필터의 모든 인용).
+    - `own_brand_code`(분할 당사 행)는 리더가 여전히 읽지 않는다. 지금 Gold 리더 `mentions/brands`는 그 키를 보내지 않아 그런 행이 없다(재현 안 됨, 해당 없음).
+    - 확인(live): 프롬프트 total이 순위 행 값과 같다. Toyota 61,535 언급 · 4,248 프롬프트, Czinger(150위) 4개, Website Tata 245 · Toyota 185 · Payback(150위) 4. 인용 출처 첫 행은 Toyota hyundai.com 16,146 · 5.0% · 13.7%, BMW hyundai.com 13,580, 당사 kia.com 76,848 · 10.4% · 16.8%, Website Tata hyundai.com 2,359 · 34.7% · 60.2%, 당사 kia.com 73,086이다. 읽기 시간: 스냅샷 Toyota 1.5초 · 당사 2.3초(브랜드 없을 때 1.8초), Website 5개월 기간 당사 7.6초(브랜드 없을 때 5.2초, 15초 제한 안). 늘어난 시간은 같은 답변의 행 확인(merge semi join)이고 정렬 비용은 원래 크다.
+  - **7-1 서랍 › 인용 출처.** URL 열('—' 고정)을 빼고, 원본 표처럼 도메인(+ 당사 표시 · 분류) · 인용 수 · 점유율 · 프롬프트 · 커버리지를 보인다. 당사 표시는 Citation 서랍과 같은 규칙이다(Website '당사', Global 'HMG', Gold 표면별 자사 인용). 점유율 · 커버리지 머리 ⓘ는 이 탭 분모(그 브랜드가 언급된 답변)로 쓴 새 문구다(`renewal.mention.brands.cite*`, ko · en). 행을 누르면 그 아래에서 `&skey=` 상세를 한 번 읽고 '인용 URL n | 프롬프트 n'을 고른다. 목록은 Citation 서랍의 부품(`citation-domains.tsx` `UrlList` · `PromptList`, 내보내기만 함)을 쓴다. 이 서랍 상세에는 프롬프트 점유율이 없어(원본에도 없음) `share={false}`로 그 열을 뺐다. 프롬프트를 누르면 답변 원문 창(인용 변형)이 열리고, 닫으면 서랍이 돌아온다. 읽는 중 · 실패 문구는 원본 행 문구(`citationsLoading` · `citationsError`)다.
+  - **7-3 유형 → 프롬프트.** 원본은 website · project `MentionsView`의 '당사 유형 구성(절대 건수)'을 누르면 신호 대화창(`/api/scope/signal-prompts`, signal = 유형)을 열었다. 원본 Global KPI 유형 차트(`type-kpi-section.tsx`)에는 드릴다운이 없었다. 리뉴얼은 유형 카드의 '당사 노출률 추이' · '당사 유형 구성' 보기의 유형 행(유형 · 막대 · 값)을 누르면 같은 신호 서랍이 그 유형으로 열린다. 신호 수가 0인 유형은 누를 수 없다. 서랍 제목은 '‘추천’ 신호가 발생한 프롬프트'이고, 꼬리말에 원본 안내(`breakdown.drilldownHint`)를 붙였다. BFF는 그대로다(`mention/drill-signal-prompts`가 이미 유형을 받음).
+  - **golden 변경 없음.** BFF 출력이 바뀌는 case가 없다(인용 출처 own case 없음). 새 BFF 화면 · 프록시가 없어 아키텍처 문서는 그대로다.
+  - **원본 대조(live, 관리자).** 원본 `/ko/standard/answer-analysis/mention`의 Toyota 서랍 첫 프롬프트('Can you compare hybrid car brands…' 769 · 1.2%)와 인용 출처 첫 행(hyundai.com 16,146 · 5.0% · 918 · 13.7%), HMG 인용 출처(kia.com 76,848 · 10.4% · 2,477 · 16.8%)가 리뉴얼과 같다. 원본 `/ko/website/answer-analysis/mention` Tata(첫 프롬프트 TUCSON Hybrid 42 · 6.4%, hyundai.com 2,359 · 34.7% · 143 · 60.2%), HMG(kia.com 73,086 · 19.8% · 3,260 · 31.9%)도 같다. 원본 HMG 인용 출처 요청에 `own=1`이 실린다.
+  - **e2e(Global · Website 각 9항목, 원본 2화면 각 2항목 통과).** 당사 · 두 경쟁사 서랍의 프롬프트가 서로 다름 → 인용 출처 행(점유율 · 커버리지, URL 열 없음) → 행 펼침 URL 목록 → 프롬프트 → 답변 원문(인용 N건) → 닫으면 서랍 복귀 → 당사 행 인용 출처 → 100위 밖(Czinger · Payback) 서랍 프롬프트가 그 브랜드 목록(4개) → 유형 '추천' 행 → 신호 서랍(50개) → 답변 원문. 5xx는 없다. 원본 페이지의 hydration 불일치(DashLayout, 6단계와 같음)가 한 번 났다.
+  - **관찰(이 단계 밖).** 리뉴얼 Citation 도메인 서랍의 읽는 중 · 실패 문구 키 `answerAnalysis.citations.drilldown.loading` · `loadFailed`가 ko · en에 없다(9단계 후보). Website Tata 서랍 프롬프트에 Hyundai TUCSON · KONA 질문이 나오는 것은 Gold 귀속(업스트림 D5 Kona 귀속과 같은 종류)이다.
+  - **다음 단계가 알 것.** Gold 리더 인용 읽기에 `ctx.mention`(브랜드 · 당사 대상)이 생겼다. `citations.predicate`가 걸므로, 다른 인용 읽기도 `mention_target(ctx)`를 먼저 부르면 같은 대상으로 좁혀진다. `DrawerTarget` signal은 감정 4종과 유형 5종(`DrawerSignal`)이다. `CitationList` · `CitationRow` · `CitationDetail` · `brandDrillPaths`는 render 시험을 위해 내보낸다.
+
 ## 진행 기록
 
 - 2026-10-31 — 계획을 작성했다. 근거는 같은 날 중간점검이다(코드 읽기 다섯 갈래: Overview · Mention · Citation · Prompts · AI Funnel, 큰 지적은 코드로 다시 확인). 처음에는 병렬 세션으로 나누려 했으나 사용자가 한 세션이 순서대로 하는 방식으로 바꿨다. 다음은 1단계다.
@@ -660,3 +675,4 @@ Website 인용 도달 Δ도 값 출처(발행 / 실시간)가 다르면 숨긴�
 - 2026-10-31 — 4단계: 인용 점유율 카드 경쟁사 줄이 카테고리를 이름 대신 Gold slug(`officialCompetitor`)로 고른다(4-4, 재현 시험은 고치기 전에 실패). 4-1은 BFF의 이름 접기 키가 Gold `dim_brand.bare`(UNIQUE)와 같아 재현되지 않았다(5,273개 브랜드 충돌 0). 4-2는 U5가 같아 할 일이 없다. 4-3은 화면에 RHQ id가 쓰이는 곳이 없어 재현되지 않았다. golden 함수 case 3개(slug 키 추가, 화면 출력 그대로). 시험: BFF 34개 모듈 전부(+live 8개), Overview 4화면 실제 확인 · 원본 대조. 다음은 5단계다.
 - 2026-10-31 — 5단계: Mention KPI 탭에 회차별 분자 · 분모를 되살렸다(노출률 · 점유율 · 우호도 추이 툴팁 · 표 · CSV, 유형 선 점 툴팁 · CSV의 회차 답변 수, 5-1). 달력 월에는 요약 아래 답변당 언급 수 기간 줄을 되살렸다(5-2, Citation 방식). Website 요약 카드의 전체 언급 수 Δ는 중립이다(5-4, 원본 website · project도 같이). 재현 시험은 고치기 전에 실패했다. 5-3은 재현되지 않았다. 리더가 R1부터 당사 행을 관점 값 하나로 보내 위치 추이가 이미 Gold 관점 값이다(live 14회차 일치). golden 24건 의도 변경. 시험: BFF 34개 모듈 571개(+live 8개), 프런트 관련 12개 파일 78개 · typecheck · lint, 원본 대조 4조건, Global · Website 실제 화면. 다음은 6단계다.
 - 2026-10-31 — 6단계: Mention 순위표가 모든 브랜드를 갖는다(6-1). BFF `rn-ranking`이 행 전부를 보내고(리더 상한 없음, global 752 · website 436), 화면은 처음 100행 · 전체 검색 · '더 보기' · 실제 전체 수 각주다. 100위 밖 행은 서랍 행을 같이 실어 서랍이 수치 · 감정 · 유형을 보인다. 검색 개수 문구 결함도 고쳤다. 순위표 머리와 서랍 프롬프트 목록 머리에 원본 열 정의 · 계산식 ⓘ를 되살렸다(6-2, 복수 언급 기준 포함). 재현 시험은 고치기 전에 실패했다. golden 9건 의도 변경. 시험: BFF 34개 모듈 574개(+live 8개), 프런트 관련 9개 파일 58개 · typecheck · lint, 원본 대조(100위 밖 행 값), e2e Global · Website 각 9항목. 다음은 7단계다.
+- 2026-10-31 — 7단계: Mention 서랍이 그 브랜드를 읽는다(7-2). Gold 리더가 계약의 `mention_brand`를 원본 규칙으로 `dim_brand.brand_key`로 찾고, 인용 출처 · 상세 · 커버리지 분모를 그 브랜드가 언급된 답변으로 좁힌다. 당사 행은 두 탭 모두 own(`mention_own`)으로 읽는다(원본 `MentionsDrilldown`도). 인용 출처 탭을 원본처럼 되살렸다(7-1: 점유율 · 커버리지 · 당사 표시, URL 열 제거, 행 펼침 URL · 프롬프트 → 답변 원문). 유형 행 → 그 유형 프롬프트 → 답변 원문(7-3, 신호 서랍 재사용). 재현 시험은 고치기 전에 실패했다. golden 변경 없음. 시험: BFF 34개 모듈 584개(live 8개 포함), 프런트 관련 14개 파일 110개 · typecheck · lint, 원본 대조(Global · Website 첫 행 값), e2e Global · Website 각 9항목 + 원본 2화면. 다음은 8단계다.

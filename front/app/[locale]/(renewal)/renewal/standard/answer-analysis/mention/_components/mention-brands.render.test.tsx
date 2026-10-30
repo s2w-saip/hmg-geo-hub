@@ -19,7 +19,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 const { MentionProvider } = await import("./mention-context");
-const { BrandDrawer, BrandRanking, PromptList, RANK_TABLE_STEP, rankTableRows } = await import("./mention-brands");
+const { BrandDrawer, BrandRanking, CitationDetail, CitationList, CitationRow, PromptList, RANK_TABLE_STEP, brandDrillPaths, rankTableRows } = await import("./mention-brands");
 
 const settled = <T,>(v: T): Promise<T> => Object.assign(Promise.resolve(v), { status: "fulfilled", value: v });
 
@@ -149,5 +149,74 @@ describe("renewal Mention brand ranking", () => {
     expect(head.find((h) => h.includes(d.colDefinition.share))).toContain(d.colFormula.share);
     expect(head.some((h) => h.includes(d.colDefinition.rank))).toBe(true);
     expect(head.some((h) => h.includes(d.colDefinition.mentions))).toBe(true);
+  });
+});
+
+// renewal audit step 7 (the drawer's drills):
+// - 7-1: the citation sources tab showed domain · category · citations · "URLs" (always "—": the list rows carry no URLs)
+//   · prompts; the original drawer's domain table showed the share, the coverage and the 당사 mark, and a row opened its
+//   URLs and prompts (the route's &skey= detail). Now: those columns, no URL column, a row opens its detail.
+// - 7-2: the 당사 row's citation sources sent its label only (HMG is no Gold brand); both tabs now ask for 당사.
+// - 7-3: the signal drawer also lists a mention type's prompts (the original type breakdown's drilldown).
+describe("renewal Mention brand drawer drills", () => {
+  const domain = (over: Partial<Record<string, unknown>>) =>
+    ({ domain: "kia.com", skey: "kia.com", citations: 1234, share: 12.5, prompts: 40, coverageRate: 33.3, urls: [], promptList: [], isOurs: false, category: "Official (HMG)", subcategory: null, ...over }) as never;
+  const ready = (list: unknown[]) => ({ status: "ready" as const, list: list as never[] });
+
+  it("lists the sources with share, prompts, coverage, the category and the 당사 mark, without a URL column", () => {
+    const html = render(<CitationList state={ready([domain({ isOurs: true }), domain({ domain: "reddit.com", skey: "reddit.com", isOurs: false, category: "Social & Video", share: 3.1 })])} detailQuery="mentionBrand=Toyota" onAnswer={() => {}} />);
+    const c = ko.answerAnalysis.citations.table.col;
+    for (const head of [c.domain, c.citations, c.share, c.prompts, c.coverage]) expect(html).toContain(head);
+    expect(html).not.toContain(ko.answerAnalysis.mentions.drilldown.col.urls);
+    expect(html).toContain("12.5%");
+    expect(html).toContain("33.3%");
+    expect(html).toContain("1,234");
+    expect(html.match(/>HMG</g)).toHaveLength(1);
+    expect(html).toContain(ko.citationCategories.officialHmg);
+    expect(html).toContain(ko.renewal.mention.brands.citeHint);
+    const b = ko.renewal.mention.brands;
+    const head = tips(html);
+    expect(head.find((h) => h.includes(b.citeShareDef))).toContain(b.citeShareFormula);
+    expect(head.find((h) => h.includes(b.citeCoverageDef))).toContain(b.citeCoverageFormula);
+    expect([...html.matchAll(/aria-expanded="(\w+)"/g)].map((m) => m[1])).toEqual(["false", "false"]);
+  });
+
+  it("an opened source reads its detail", () => {
+    const html = render(<CitationRow row={domain({})} open onToggle={() => {}} detailQuery="mentionBrand=Toyota" onAnswer={() => {}} />);
+    expect(html).toContain('aria-expanded="true"');
+    expect(html).toContain(ko.answerAnalysis.mentions.drilldown.citationsLoading);
+  });
+
+  it("an opened source lists its URLs, or its prompts", () => {
+    const detail = {
+      url: "/x",
+      status: "ready" as const,
+      urls: [{ url: "https://www.kia.com/us/ev9", title: "EV9", count: 7, aiProvider: "ChatGPT", promptText: "best SUV?", country: null }],
+      promptList: [{ id: "p1", promptText: "best SUV?", funnelStage: null, citations: 7, ownedCitations: 7, providers: ["chatgpt"], answers: [{ jobId: "j1" }], share: null }],
+      urlTotal: 20,
+    } as never;
+    const urls = render(<CitationDetail row={domain({})} detail={detail} onAnswer={() => {}} />);
+    expect(urls).toContain("EV9");
+    expect(urls).toContain("www.kia.com/us/ev9");
+    expect(urls).toContain(`7 ${ko.answerAnalysis.citations.drilldown.cites}`);
+    expect(urls).toContain(`${ko.renewal.citation.drawer.urls} 20`);
+    expect(urls).toContain("20개 중 1개 표시");
+    const prompts = render(<CitationDetail row={domain({})} detail={detail} onAnswer={() => {}} initialView="prompts" />);
+    expect(prompts).toContain('data-rn-prompt="p1"');
+    expect(prompts).not.toContain(`>${ko.answerAnalysis.citations.table.col.share}<`);
+  });
+
+  it("the 당사 row asks for 당사 on both tabs; a competitor row names its brand", () => {
+    const own = brandDrillPaths("geography=US", { brand: "HMG", own: { code: null }, isWebsite: false, projectId: null });
+    expect(own.prompts).toBe("/api/scope/brand-mention-prompts?geography=US&mentionBrand=HMG&own=1");
+    expect(own.citations).toBe("/api/scope/brand-citations?geography=US&mentionBrand=HMG&own=1");
+    const rival = brandDrillPaths("", { brand: "Toyota", own: null, isWebsite: true, projectId: null });
+    expect(rival.citations).toBe("/api/scope/brand-citations?mentionBrand=Toyota&surface=website");
+  });
+
+  it("the signal drawer names a mention type", () => {
+    const html = render(<BrandDrawer target={{ kind: "signal", signal: "recommendation" }} onClose={() => {}} />);
+    expect(html).toContain("‘추천’ 신호가 발생한 프롬프트");
+    expect(render(<BrandDrawer target={{ kind: "signal", signal: "negative" }} onClose={() => {}} />)).toContain("‘부정’ 신호가 발생한 프롬프트");
   });
 });

@@ -146,6 +146,36 @@ class Rules(unittest.TestCase):
         self.assertTrue(math.isfinite(r["body"]["prompts"][0]["share"]))
 
 
+class BrandTargets(unittest.TestCase):
+    """2026-10-31 renewal audit 7-2: the brand row's tabs read that brand. A competitor row names its brand (the reader
+    resolves mention_brand); the 당사 row (own=1) asks for 당사 on both tabs: its label (HMG under the HMG perspective) is
+    no Gold brand, so its citation sources are those of the answers where an own brand is mentioned (mention_own)."""
+
+    def reads(self, screen: str, query: dict) -> list[tuple[str, dict]]:
+        seen = []
+
+        async def get(path, params=None):
+            seen.append((path, dict(params or {})))
+            return {"data": {"items": [], "urls": [], "prompts": []}, "meta": {"page": {"total": 0}}}
+        with mock.patch("bff.api.get", get):
+            run(build(screen, QueryParams(query)))
+        return seen
+
+    def test_a_competitor_row_names_its_brand(self):
+        for query in ({"mentionBrand": "Toyota"}, {"mentionBrand": "Toyota", "skey": "kia.com"}):
+            ((path, q),) = self.reads("mention/drill-brand-citations", query)
+            self.assertEqual((q.get("mention_brand"), q.get("mention_own")), ("Toyota", None), path)
+        ((_, q),) = self.reads("mention/drill-brand-prompts", {"mentionBrand": "Toyota"})
+        self.assertEqual((q.get("mention_brand"), q.get("own")), ("Toyota", None))
+
+    def test_the_own_row_asks_for_own_on_both_tabs(self):
+        for query in ({"mentionBrand": "HMG", "own": "1"}, {"mentionBrand": "HMG", "own": "1", "skey": "kia.com"}):
+            ((path, q),) = self.reads("mention/drill-brand-citations", query)
+            self.assertEqual((q.get("mention_own"), q.get("mention_brand")), (True, None), path)
+        ((_, q),) = self.reads("mention/drill-brand-prompts", {"mentionBrand": "HMG", "own": "1"})
+        self.assertEqual((q.get("own"), q.get("mention_brand")), (True, None))
+
+
 if __name__ == "__main__":
     unittest.main()
 

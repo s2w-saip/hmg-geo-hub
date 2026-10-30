@@ -2,7 +2,7 @@
 
 import { Suspense, use, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { ArrowUpRight, TrendingUp } from "lucide-react";
+import { ArrowUpRight, ChevronRight, TrendingUp } from "lucide-react";
 import {
   RnBasisChip,
   RnCard,
@@ -422,10 +422,11 @@ function Engines({ metric }: { metric: KpiMetric }) {
 
 /** `initialView` opens another view first (render tests). */
 export function Types({ metric, initialView = "cmp" }: { metric: KpiMetric; initialView?: "cmp" | "own" }) {
-  const { input, ownLabel, tables } = useMention();
+  const { input, ownLabel, tables, openDrawer } = useMention();
   const { compare, colorOf } = useCompare();
   const t = useTranslations("renewal.mention.type");
   const tType = useTranslations("answerAnalysis.mentions.breakdown.type");
+  const tB = useTranslations("answerAnalysis.mentions.breakdown");
   const dg = useDegradedText();
   const tK = useTranslations("answerAnalysis.mentions.kpi");
   const locale = useLocale();
@@ -527,17 +528,32 @@ export function Types({ metric, initialView = "cmp" }: { metric: KpiMetric; init
             const max = unit === "count" ? own.maxCount : own.maxPct;
             return (
               <div key={r.type} className="grid min-h-10 grid-cols-[84px_minmax(60px,1fr)_64px_70px_80px] items-center gap-2.5 border-b border-rn-line text-rn-13 last:border-0">
-                <span className="font-semibold text-rn-ink">{tType(r.type)}</span>
-                <span className="h-2 overflow-hidden rounded bg-rn-page">
-                  <i className="block h-full rounded" style={{ width: `${((v ?? 0) / max) * 100}%`, background: OWN_COLOR }} />
-                </span>
-                <span className="text-right font-bold text-rn-ink tabular-nums">{unit === "count" ? t("signals", { n: numTxt(r.signals, locale) }) : pctTxt(r.pct)}</span>
+                {/* the type, its bar and value open the prompts where 당사 carries that type signal (renewal audit 7-3,
+                    the original type breakdown's drilldown: the signal route with the type) */}
+                <button
+                  type="button"
+                  data-rn-type={r.type}
+                  disabled={!r.signals}
+                  onClick={() => openDrawer({ kind: "signal", signal: r.type })}
+                  className="col-span-3 grid min-h-10 cursor-pointer grid-cols-subgrid items-center rounded-md text-left hover:bg-rn-navy-25 focus-visible:outline-2 focus-visible:outline-rn-navy disabled:cursor-default disabled:hover:bg-transparent"
+                >
+                  <span className="inline-flex items-center gap-0.5 font-semibold text-rn-ink">
+                    {tType(r.type)}
+                    {r.signals ? <ChevronRight aria-hidden className="size-3.5 text-rn-navy" /> : null}
+                  </span>
+                  <span className="h-2 overflow-hidden rounded bg-rn-page">
+                    <i className="block h-full rounded" style={{ width: `${((v ?? 0) / max) * 100}%`, background: OWN_COLOR }} />
+                  </span>
+                  <span className="text-right font-bold text-rn-ink tabular-nums">{unit === "count" ? t("signals", { n: numTxt(r.signals, locale) }) : pctTxt(r.pct)}</span>
+                </button>
                 <span className="justify-self-end">{unit === "pct" && metric === "exposure" ? <DeltaChip value={r.delta} /> : null}</span>
                 <span>{metric === "exposure" && r.hasSpark ? <RnSparkline values={r.spark} tips={sparkTips(r)} className="h-[24px]" /> : null}</span>
               </div>
             );
           })}
-          <p className="m-0 pt-2 text-rn-11 text-rn-muted">{t(metric === "sov" ? "footSov" : "footExposure")}</p>
+          <p className="m-0 pt-2 text-rn-11 text-rn-muted">
+            {t(metric === "sov" ? "footSov" : "footExposure")} · {tB("drilldownHint")}
+          </p>
         </div>
       )}
     </>

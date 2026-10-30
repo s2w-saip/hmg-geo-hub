@@ -5,8 +5,8 @@ from collections import defaultdict
 
 from fastapi import HTTPException
 
-from bff.gold_reader.citations import category, own_citation, predicate as citation_predicate
-from bff.gold_reader.context import Context, SQL, envelope, flag, limit, ratio
+from bff.gold_reader.citations import category, mention_target, own_citation, predicate as citation_predicate, unknown_brand
+from bff.gold_reader.context import Context, SQL, brand_key_of, envelope, flag, limit, ratio
 
 
 async def mention_prompts(ctx: Context) -> dict:
@@ -16,6 +16,14 @@ async def mention_prompts(ctx: Context) -> dict:
         where += " AND f.is_rep"
     brand_key = ctx.q.get("brand_key")
     signal = ctx.q.get("signal", "mention")
+    mention_brand = (ctx.q.get("mention_brand") or "").strip()
+    if not brand_key and mention_brand and ctx.q.get("mode", "brand") == "brand":
+        # the contract's display-name target (2026-10-31 renewal audit 7-2: ignored, so own defaulted to true and every
+        # brand row listed 당사's prompts); a name Gold does not know is the original API's 404 brand_not_found
+        key = await brand_key_of(ctx.conn, mention_brand)
+        if key is None:
+            raise HTTPException(404, "brand_not_found")
+        brand_key = str(key)
     columns = {"positive": "s_pos", "negative": "s_neg", "neutral": "s_neu", "mixed": "s_mix",
                "mention": "t_mention", "recommendation": "t_recommendation", "comparison": "t_comparison",
                "definition": "t_definition", "final_choice": "t_final_choice"}
@@ -231,6 +239,10 @@ async def domain(ctx: Context, skey: str) -> dict:
         LEFT JOIN gold.dim_brand b ON b.brand_key=s.competitor_brand_key WHERE s.skey=$1""", skey)
     if not source:
         raise HTTPException(404, "Source not present in Gold")
+    if not await mention_target(ctx):  # the brand row's source detail (citations.mention_target)
+        return unknown_brand(ctx, envelope(ctx, {"source": {"skey": skey, "domain": source["domain"], "is_social": source["is_social"],
+                                                            "category": category(dict(source)), "competitor_brand": source["competitor_brand"]},
+                                                 "citations": 0, "own_citations": 0, "urls": [], "prompts": [], "url_total": 0, "prompt_total": 0}))
     b = SQL()
     where = citation_predicate(ctx, b) + f" AND f.source_key={b.bind(source['source_key'])}"
     # country: the URL's owned base (dim_url.owner_key) country, null for a URL that is no own base
