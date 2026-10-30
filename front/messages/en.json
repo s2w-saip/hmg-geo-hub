@@ -5825,7 +5825,7 @@
       "treemap": {
         "legend": "Share change (vs previous round)",
         "legendPeriod": "Share change (vs previous period)",
-        "steps": "−1.0pp or less,−0.5,−0.2,within ±0.2,+0.2,+0.5,+1.0pp or more",
+        "steps": "−1.0pp or less,−0.5,−0.1,No change,+0.1,+0.5,+1.0pp or more",
         "na": "No trend",
         "all": "All groups",
         "drill": "{n} brands",

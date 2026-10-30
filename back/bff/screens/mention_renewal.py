@@ -33,7 +33,6 @@ from bff.screens._period import kst_today, period_caption, to_period_delta_view
 from bff.screens._sort import locale_compare, table_orders
 
 OWN_KEY = "__own"
-HMG_BRANDS = ("Hyundai", "Kia", "Genesis")
 KPI_TABS = ("exposure", "sov", "favorability", "first-rank")
 HERO_METRICS = ("exposure", "sov", "favorability")
 RATE_METRICS = ("exposure", "sov")
@@ -113,9 +112,16 @@ def _last_two(s: list, diff) -> Any:
     return diff(s[-1], s[-2]) if len(s) >= 2 else None
 
 
-def is_hmg_sibling(brand: str, tracked: bool) -> bool:
-    """An HMG brand that is not 당사 for this account (brand accounts see their siblings as brands)."""
-    return not tracked and brand in HMG_BRANDS
+def is_hmg_sibling(hmg_own: Any, tracked: bool) -> bool:
+    """An HMG brand that is not 당사 for this account (brand accounts see their siblings as brands). Which brands are
+    HMG's is Gold's (`is_hmg_own` = dim_brand.own_bit, the body read's `hmgOwn`); it was a HUB name list (renewal
+    audit 8-1)."""
+    return not tracked and hmg_own is True
+
+
+def hmg_flags(brands: list[dict] | None) -> dict[str, bool]:
+    """Gold's HMG flag of each rival in the body brand rows, by name (Gold's dim_brand.name, unique)."""
+    return {b["brand"]: b.get("hmgOwn") is True for b in brands or [] if not b.get("isTracked")}
 
 
 # ── brand → parent group (brand-groups.ts master data) ────────────────────────
@@ -370,7 +376,8 @@ def board(inp: dict) -> dict:
     own = {"key": OWN_KEY, "own": True, "sibling": False, "pct": hero["pct"], "mentions": None, "spark": own_spark,
            "delta": hero["delta"]["value"], "gap": None, "covered": True}
     key = mv.overview_key_of(metric)
-    comps = [{"key": r["brand"], "own": False, "sibling": is_hmg_sibling(r["brand"], False), "pct": r["pct"], "mentions": r["mentions"],
+    hmg = hmg_flags(brands)
+    comps = [{"key": r["brand"], "own": False, "sibling": is_hmg_sibling(hmg.get(r["brand"]), False), "pct": r["pct"], "mentions": r["mentions"],
               "spark": r["spark"], "gap": r["gapPp"], "covered": r["brand"] in series,
               "delta": r["wowPp"] if prev_brands is None else delta_pp(r["pct"], _prev_value(prev_brands, r["brand"], key))}
              for r in rows if not r["isTracked"]]
@@ -552,9 +559,11 @@ def _rank_cmp(a: dict, b: dict) -> int:
     return -1 if a["own"] else 1 if b["own"] else locale_compare(a["key"], b["key"])
 
 
-def rank_board(fp: Any, values: Any, hero: dict, prev_brands: list[dict] | None = None) -> dict:
-    """The 우선 노출도 table; in period mode a rival's Δ compares its period average with the period before."""
+def rank_board(fp: Any, values: Any, hero: dict, prev_brands: list[dict] | None = None, brands: list[dict] | None = None) -> dict:
+    """The 우선 노출도 table; in period mode a rival's Δ compares its period average with the period before. `brands` (the
+    body brand rows, the read the table's latest values come from) name the HMG siblings."""
     mv = _mv()
+    hmg = hmg_flags(brands)
     overlaid = mv.overlay_first_position_values(fp, values)
     table = mv.rank_table_rows(overlaid, {"sparkCycles": 4})
     series = set(overlaid.get("brands") or []) if overlaid else set()
@@ -566,7 +575,7 @@ def rank_board(fp: Any, values: Any, hero: dict, prev_brands: list[dict] | None 
             continue
         gap = mv.delta_position(r["avgPosition"], hero["avgPosition"]) if r["avgPosition"] is not None and hero["avgPosition"] is not None else None
         delta = r["wow"] if prev_brands is None else mv.delta_position(r["avgPosition"], _prev_value(prev_brands, r["brand"], "position"))
-        comps.append({"key": r["brand"], "own": False, "sibling": is_hmg_sibling(r["brand"], False), "avgPosition": r["avgPosition"],
+        comps.append({"key": r["brand"], "own": False, "sibling": is_hmg_sibling(hmg.get(r["brand"]), False), "avgPosition": r["avgPosition"],
                       "rank": r["rank"], "spark": r["spark"], "delta": delta, "gap": gap, "covered": r["brand"] in series})
     rows = _sort([own, *comps], _rank_cmp)
     ahead = 0 if hero["avgPosition"] is None else len([r for r in comps if r["avgPosition"] is not None and r["avgPosition"] < hero["avgPosition"]])
@@ -683,13 +692,14 @@ def _group_of(key: str, members: list[dict], total: float) -> dict:
 def treemap_groups(rows: list[dict], total: float) -> list[dict]:
     """Top brands → parent groups; a group's share is of every mention (`total`, the brands' share base — 2026-10-29
     metric review R6: it divided by the shown brands'); groups under 1.5 % (or past the 14th) fold into one block;
-    the group holding 당사 always stays."""
+    the group holding 당사 always stays. The '자동차 외' group (`NON_AUTO_GROUP`) follows the same rule: it folded
+    always, whatever its share (renewal audit 8-2: a display grouping, not a reason to hide)."""
     by: dict[str, list[dict]] = {}
     for r in rows:
         by.setdefault(parent_group_of(r["brand"]), []).append(r)
     total = total or 1
     groups = _sort([_group_of(k, m, total) for k, m in by.items()], lambda a, b: _sign(b["value"] - a["value"]))
-    keep_idx = [i for i, g in enumerate(groups) if g["own"] or (g["key"] != NON_AUTO_GROUP and i < FOLD_AFTER and g["share"] >= FOLD_SHARE)]
+    keep_idx = [i for i, g in enumerate(groups) if g["own"] or (i < FOLD_AFTER and g["share"] >= FOLD_SHARE)]
     keep = [groups[i] for i in keep_idx]
     rest = [g for i, g in enumerate(groups) if i not in set(keep_idx)]
     if rest:
@@ -941,7 +951,7 @@ def _drawer_row(row: dict, rank: int, types: Any) -> dict:
         "rank": rank,
         "isTracked": row["isTracked"],
         "own": {"code": row.get("ownBrandCode")} if row["isTracked"] else None,
-        "sibling": is_hmg_sibling(row["brand"], bool(row["isTracked"])),
+        "sibling": is_hmg_sibling(row.get("hmgOwn"), bool(row["isTracked"])),
         "mentions": row["mentions"],
         "share": row["share"],
         "avgPosition": row["avgPosition"],
@@ -1175,7 +1185,7 @@ def rank_payload(fp: Any, period: Any, brands: list[dict], trend: Any, degraded:
     mv = _mv()
     overlaid = mv.overlay_first_position_values(fp, None)
     hero = rank_hero(overlaid, period)
-    rb = rank_board(fp, None, hero, prev_brands)
+    rb = rank_board(fp, None, hero, prev_brands, brands)
     rows = rb["rows"]
     pts = [r["avgPosition"] for r in rows if r["avgPosition"] is not None]
     covered = covered_brands(brands, trend)
@@ -1275,7 +1285,7 @@ def ranking_payload(data: Any, trend: Any, prev_brands: list[dict] | None = None
     for i, row in enumerate(brands):
         group = parent_group_of(row["brand"])
         out_row = {
-            "brand": row["brand"], "rank": i + 1, "own": row["isTracked"], "sibling": is_hmg_sibling(row["brand"], row["isTracked"]),
+            "brand": row["brand"], "rank": i + 1, "own": row["isTracked"], "sibling": is_hmg_sibling(row.get("hmgOwn"), row["isTracked"]),
             "avgPosition": row["avgPosition"], "group": group, "grouped": group != row["brand"], "hasMulti": _truthy(row.get("multi")),
             "off": {**brand_row_values(row, False, multi_total, total_answers), "delta": deltas.get(row["brand"]),
                     "covered": row["brand"] in deltas},
@@ -1311,6 +1321,8 @@ def _begin(q) -> tuple[dict, Any, Any]:
     md = _md()
     md.begin_degrade_scope()
     filters, ctx = md.surface_filters(c, sp)
+    # every section's body brand read asks for Gold's HMG flag (the 'HMG 계열' badge, renewal audit 8-1): still one read
+    ctx["hmg"] = True
     return c, filters, ctx
 
 

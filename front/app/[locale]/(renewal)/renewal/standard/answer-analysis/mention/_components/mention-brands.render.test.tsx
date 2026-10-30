@@ -220,3 +220,43 @@ describe("renewal Mention brand drawer drills", () => {
     expect(render(<BrandDrawer target={{ kind: "signal", signal: "negative" }} onClose={() => {}} />)).toContain("‘부정’ 신호가 발생한 프롬프트");
   });
 });
+
+// renewal audit step 8 (the treemap):
+// - 8-2: the '자동차 외' group (Google, Apple, …) folded into '그 외' always; it now folds by the share and order rule of
+//   every group, so it can show: a single brand is its name (its key the brand, like any one-brand group), several the
+//   group's name, without a short code.
+// - 8-3: the Δ colours painted |Δ| < 0.2pp as "no change"; only a Δ that rounds to 0.0 is. The tint steps are a size
+//   scale (0.1 · 0.5 · 1.0pp), not a judgment.
+const treemap = await import("./mention-brands");
+describe("renewal Mention treemap", () => {
+  const { DIV_NEG, DIV_POS, DIV_ZERO, divColor, groupTile } = treemap;
+  const groupName = (g: string, several = false) => (g === "__nonAuto" ? "자동차 외" : g === "__rest" ? "그 외" : several && g !== "HMG" ? `${g} 그룹` : g);
+  const member = (brand: string) => ({ brand, value: 10, share: 2, delta: null, own: false, sibling: false });
+  const group = (key: string, brands: string[]) => ({ key, members: brands.map(member), value: 10, share: 2, delta: null, partial: false, own: false });
+
+  it("paints no change only for a Δ that rounds to 0.0, the tint by size", () => {
+    // the size the tile reads: "0.0pp" under 0.05, else one decimal (deltaTxt)
+    expect([0, 0.04, -0.04].map(divColor)).toEqual([DIV_ZERO, DIV_ZERO, DIV_ZERO]);
+    expect([0.1, 0.19, 0.4].map(divColor)).toEqual([DIV_POS[0], DIV_POS[0], DIV_POS[0]]);
+    expect([-0.1, -0.15, -0.4].map(divColor)).toEqual([DIV_NEG[0], DIV_NEG[0], DIV_NEG[0]]);
+    expect([0.5, 0.9, 1.0, 3].map(divColor)).toEqual([DIV_POS[1], DIV_POS[1], DIV_POS[2], DIV_POS[2]]);
+    expect([-0.5, -0.9, -1.0, -2.5].map(divColor)).toEqual([DIV_NEG[1], DIV_NEG[1], DIV_NEG[2], DIV_NEG[2]]);
+  });
+
+  it("names the steps in the legend", () => {
+    const html = render(<BrandRanking />);
+    const steps = ko.renewal.mention.treemap.steps.split(",");
+    expect(steps).toEqual(["−1.0pp 이하", "−0.5", "−0.1", "변화 없음", "+0.1", "+0.5", "+1.0pp 이상"]);
+    for (const s of steps) expect(html).toContain(s);
+    expect(html).not.toContain("±0.2");
+  });
+
+  it("a '자동차 외' group is a tile like any group", () => {
+    expect(groupTile(group("__nonAuto", ["Google"]), groupName)).toEqual({ key: "Google", title: "Google", short: undefined });
+    expect(groupTile(group("__nonAuto", ["Google", "Apple"]), groupName)).toEqual({ key: "__nonAuto", title: "자동차 외", short: undefined });
+    expect(groupTile(group("Toyota", ["Toyota"]), groupName)).toEqual({ key: "Toyota", title: "Toyota", short: undefined });
+    expect(groupTile(group("Toyota", ["Toyota", "Lexus"]), groupName)).toEqual({ key: "Toyota", title: "Toyota 그룹", short: "Toyota" });
+    expect(groupTile(group("__rest", ["Tesla"]), groupName)).toEqual({ key: "__rest", title: "그 외", short: undefined });
+    expect(groupTile(group("__rest", ["Tesla", "BMW"]), groupName)).toEqual({ key: "__rest", title: "그 외", short: undefined });
+  });
+});

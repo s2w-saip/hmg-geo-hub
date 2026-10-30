@@ -274,6 +274,25 @@ Deliberate changes (what the screen shows changed by decision):
   the shell sends for the first 100 only), and `orders` index every row. The first 100 rows, `count`, `treemap` (still
   the top 100) and every other screen are unchanged. 9 cases: the `rn-live-*` bundles `chatgpt` (454 rows), `en`
   (493), `geo` (215), `kia` (460), `kpi-fav` (454), `kpi-rank` (215), `kpi-sov` (460), `none` (752), `period` (752).
+- 2026-10-31 renewal audit step 8 (Mention attribution, treemap).
+  - 8-1: the 'HMG 계열' badge (`sibling`) is Gold's flag, not the HUB name list Hyundai · Kia · Genesis. The renewal
+    body brand read asks for `include=hmg` (`is_hmg_own` = dim_brand.own_bit; the original pages' read is unchanged) and
+    `to_mentions_brand_live` keeps it as `hmgOwn`; `board`, `rank_board` (new last arg `brands`, the body rows),
+    `_drawer_row` and `ranking_payload` take the badge from it. On the live data both rules pick the same brands
+    (renewal audit U1), so the args and tapes gain the flag set by that rule and the outputs stay, except where noted:
+    - tapes: the one `mentions/brands` entry of the 18 `rn-fix-*` · `rn-live-*` bundles gained `include=hmg` and each
+      brand item `is_hmg_own` (the reader's own row true, a rival `name` ∈ {Hyundai, Kia, Genesis}). No output changes.
+    - args: `rn-fn-board`, `rn-fn-rate-hero`, `rn-fn-rank`, `rn-fn-ranking`, `rn-fn-shell` (every brand row `hmgOwn`, the
+      same rule), `rn-fn-rank-board` (the 4th and 5th args: `prev_brands` null when absent, `brands` = the fp latest rows
+      with the flag), `rn-fn-is-hmg-sibling` (the first arg is the flag, was the name). Outputs unchanged, except
+      `rn-fn-rank` calls 32, 92, 112, 117: a rank row names an HMG brand (Hyundai, Genesis) the call's random body rows
+      do not hold, so no Gold flag and no badge (`sibling` true → false). Live, the rank rows come from the body read.
+    - `mention/conv-to-mentions-live` (25 of 30 calls, the key only): the recorded reader items carry `is_hmg_own`, which
+      a brand row now keeps as `hmgOwn`.
+  - 8-2: the treemap folded the '자동차 외' group (`NON_AUTO_GROUP`) into '그 외' whatever its share; it now folds by the
+    rule every group follows (under 1.5 %, or past the 14th). Only random inputs hold a large one (Alexa):
+    `rn-fn-treemap-groups` (10 calls) and the `treemap` of `rn-fn-ranking` (12 calls). No live case changes (live
+    '자동차 외' brands are 0.2 % of mentions).
 
 ## Format
 

@@ -633,3 +633,104 @@ class RankingEveryBrand(unittest.TestCase):
         top = sorted(b["brand"] for b in data["brands"][:rn.BRANDS_TOP])
         for mode, groups in rn.ranking_payload(data, None)["treemap"].items():
             self.assertEqual(sorted(m["brand"] for g in groups for m in g["members"]), top, mode)
+
+
+class GoldHmgFlag(unittest.IsolatedAsyncioTestCase):
+    """Renewal audit 8-1: the 'HMG 계열' badge (`sibling`: an HMG brand that is not 당사 for this account) came from a HUB
+    name list (Hyundai · Kia · Genesis). Gold says which brands are HMG's: `dim_brand.own_bit`, which the reader sends
+    as `is_hmg_own` when ?include= asks for `hmg`. The renewal page asks for it on its body brand read (one read, the
+    same for every section) and takes the badge from it; the original pages' reads stay as they were. On 2026-10-31
+    both rules pick the same brands (renewal audit U1), so no number moves; a brand Gold calls HMG under another name
+    gets the badge, a name Gold does not call HMG does not."""
+
+    def brands(self) -> list[dict]:
+        return [
+            {**_body_brand(1, "Kia"), "hmgOwn": True},
+            {**_body_brand(2, "Hyundai Canada"), "hmgOwn": True},
+            {**_body_brand(3, "Genesis"), "hmgOwn": False},
+            {**_body_brand(4, "Toyota"), "hmgOwn": False},
+        ]
+
+    def sibling_of(self, rows: list[dict], key: str = "brand") -> dict:
+        return {r[key]: r["sibling"] for r in rows if not r.get("own")}
+
+    def test_the_reader_flag_is_kept(self):
+        md = rn._md()
+        item = {"name": "Hyundai Canada", "mentions": 2, "share": 0.001, "exposure": 0.001, "is_own": False,
+                "sentiment": dict.fromkeys(("positive", "neutral", "mixed", "negative"), 0)}
+        self.assertNotIn("hmgOwn", md.to_mentions_brand_live(item))
+        self.assertIs(md.to_mentions_brand_live({**item, "is_hmg_own": True})["hmgOwn"], True)
+        self.assertIs(md.to_mentions_brand_live({**item, "is_hmg_own": False})["hmgOwn"], False)
+
+    def test_the_badge_is_golds_flag(self):
+        brands = self.brands()
+        want = {"Hyundai Canada": True, "Genesis": False, "Toyota": False}
+        ranking = rn.ranking_payload({"brands": brands, "summary": {"total": 4000, "totalAnswers": 100}}, None)
+        self.assertEqual(self.sibling_of(ranking["rows"]), want)
+        self.assertEqual({m["brand"]: m["sibling"] for g in ranking["treemap"]["off"] for m in g["members"] if not m["own"]}, want)
+        shell = rn.shell_payload({"brands": brands}, False, None)
+        self.assertEqual({r["brand"]: r["sibling"] for r in shell["drawer"] if not r["isTracked"]}, want)
+        hero = {"pct": 50, "points": [], "delta": {"value": None}}
+        board = rn.board({"metric": "exposure", "brands": brands, "trend": None, "values": None, "hero": hero})
+        self.assertEqual(self.sibling_of(board["rows"], "key"), want)
+        latest = [{"brand": b["brand"], "isTracked": b["isTracked"], "rank": i + 1, "avgPosition": 2.0 + i, "rankedAnswers": 5,
+                   "mentions": b["mentions"]} for i, b in enumerate(brands)]
+        fp = {"unit": "week", "brands": [b["brand"] for b in brands], "buckets": [], "latest": latest}
+        rank = rn.rank_payload(fp, None, brands, None, False)
+        self.assertEqual(self.sibling_of(rank["rows"], "key"), want)
+
+    async def brand_reads(self, name: str, query: str) -> list[dict]:
+        return [p for path, p in await WebsiteSurface.reads(self, name, query) if path == "mentions/brands"]
+
+    async def test_the_renewal_body_read_asks_for_the_flag(self):
+        for ctx in ("", "ctx.surface=website&"):
+            for name in ("mention/rn-shell", "mention/rn-compare", "mention/rn-summary", "mention/rn-rate-hero", "mention/rn-rank",
+                         "mention/rn-ranking", "mention/rn-favor-dist", "mention/rn-asof"):
+                body = [p for p in await self.brand_reads(name, f"{ctx}geography=US") if p.get("include")]
+                self.assertTrue(body, name)
+                self.assertEqual({tuple(p["include"]) for p in body}, {("multi", "prompts", "types", "hmg")}, name)
+        for name, query in (("mention/view", "ctx.surface=website"), ("mention/as-of", "")):
+            body = [p for p in await self.brand_reads(name, query) if p.get("include")]
+            self.assertTrue(body, name)
+            self.assertEqual({tuple(p["include"]) for p in body}, {("multi", "prompts", "types")}, name)
+
+
+class TreemapNonAuto(unittest.TestCase):
+    """Renewal audit 8-2: the treemap folded the '자동차 외' group (Google, Apple, …: `NON_AUTO_GROUP`) into '그 외' always,
+    whatever its share, so a large one was hidden. The group keeps its name and folds by the rule every group follows
+    (under 1.5 % of mentions, or past the 14th)."""
+
+    def tm(self, brand: str, value: int, own: bool = False) -> dict:
+        return {"brand": brand, "value": value, "share": value / 10, "delta": None, "own": own, "sibling": False}
+
+    def test_a_large_non_auto_group_stays(self):
+        rows = [self.tm("Kia", 400, True), self.tm("Toyota", 300), self.tm("Google", 80), self.tm("Apple", 40), self.tm("Tesla", 5)]
+        groups = rn.treemap_groups(rows, 1000)
+        self.assertEqual([g["key"] for g in groups], ["HMG", "Toyota", rn.NON_AUTO_GROUP, rn.TREEMAP_FOLD])
+        self.assertEqual([m["brand"] for m in groups[2]["members"]], ["Google", "Apple"])
+        self.assertEqual(groups[2]["share"], 12.0)
+
+    def test_a_small_non_auto_group_folds_like_any_other(self):
+        rows = [self.tm("Kia", 400, True), self.tm("Toyota", 300), self.tm("Google", 10), self.tm("Tesla", 10)]
+        self.assertEqual([g["key"] for g in rn.treemap_groups(rows, 1000)], ["HMG", "Toyota", rn.TREEMAP_FOLD])
+
+
+class BumpZeroIsGold(unittest.TestCase):
+    """Renewal audit 8-4 (not reproduced, nothing changed): a brand without a row in a round that has answers is drawn
+    at 0 mentions on the bump, ranked after the others. That is Gold's meaning: the cell tables keep no 0 row, so a
+    round with answers and no row of the brand is 0 mentions (renewal audit U2). A round without answers is a gap
+    (no point), as before."""
+
+    def test_a_brand_missing_from_a_measured_round_is_zero_and_an_unmeasured_round_a_gap(self):
+        def row(brand: str, mentions: int, own: bool = False) -> dict:
+            return {"brand": brand, "isTracked": own, "mentions": mentions, "answers": mentions, "exposurePct": 1.0, "sharePct": 1.0}
+        bucket = lambda day, rows: {"bucketStart": day, "answers": 100, "totalMentions": 300, "measuredDays": 1, "firstAt": None,
+                                    "lastAt": None, "brands": rows}
+        trend = {"unit": "week", "brands": [{"brand": b, "isTracked": b == "Kia", "mentions": 1} for b in ("Kia", "Toyota", "Tesla")],
+                 "buckets": [bucket("2026-09-07", [row("Kia", 50, True), row("Toyota", 40), row("Tesla", 30)]),
+                             bucket("2026-09-21", [row("Kia", 50, True), row("Toyota", 40)])],
+                 "windowStartBucket": "2026-09-07", "windowEndBucket": "2026-09-21"}
+        d = rn.bump_data(trend)
+        self.assertEqual(d["x"], ["2026-09-07", "2026-09-14", "2026-09-21"])
+        tesla = next(s for s in d["series"] if s["key"] == "Tesla")
+        self.assertEqual((tesla["mentions"], tesla["ranks"]), ([30, None, 0], [3, None, 3]))

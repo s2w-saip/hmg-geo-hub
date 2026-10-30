@@ -6,7 +6,7 @@
 - 병렬 세션으로 나누지 않고 한 세션이 순서대로 한다.
 - 단계마다 새 하위 에이전트가 깨끗한 컨텍스트로 맡는다(B 방식).
 
-**현재 위치:** 8단계(Mention ④ 귀속 · 트리맵 · bump) 시작 전. 7단계 끝(단계 메모 '7단계'). 마지막 커밋: 7단계를 올린 커밋.
+**현재 위치:** 9단계(Citation ① 결함 · 문구 · 귀속) 시작 전. 8단계 끝(단계 메모 '8단계'). 마지막 커밋: 8단계를 올린 커밋.
 
 ## 진행 방식 (단계마다 새 하위 에이전트)
 
@@ -96,7 +96,7 @@
 | 5 | Mention ① KPI 탭: 회차별 분자 · 분모, 답변당 언급 수 Δ, 당사 평균 위치 | 1 | [x] |
 | 6 | Mention ② 브랜드 순위 표 전체 · 열 정의 | — | [x] |
 | 7 | Mention ③ 서랍 · 드릴다운 | — | [x] |
-| 8 | Mention ④ 귀속 · 트리맵 · bump | 1 | [ ] |
+| 8 | Mention ④ 귀속 · 트리맵 · bump | 1 | [x] |
 | 9 | Citation ① 결함 · 문구 · 귀속 | 1 | [ ] |
 | 10 | Citation ② 구성 추이 수치 · Website 도메인 표 전체 | 3 | [ ] |
 | 11 | ACR 발견 · 귀속 · 정렬 | 1 | [ ] |
@@ -316,15 +316,15 @@ Global과 Website가 같은 본문을 쓴다. Website는 `mention/rn-*`를 ctx.s
 - `mention-brands.tsx`의 트리맵 부분(~300-340)
 
 **할 일**
-- [ ] 8-1 'HMG 계열' 배지를 이름 목록 `HMG_BRANDS` 대신 Gold `is_hmg_own`(`?include=`)으로 정한다(`mention_renewal.py` ~370 · 558 · 913 · 1229).
+- [x] 8-1 'HMG 계열' 배지를 이름 목록 `HMG_BRANDS` 대신 Gold `is_hmg_own`(`?include=`)으로 정한다(`mention_renewal.py` ~370 · 558 · 913 · 1229).
   - W6가 'golden 영향이 크다'며 남긴 항목이다.
   - U1이 '같음'이면 golden 출력은 그대로이고 tape만 바뀐다.
-- [ ] 8-2 `NON_AUTO` 이름 목록(~123-173 · 681)은 Google · Apple 등을 '자동차 외'로 묶고 트리맵에서 늘 접는다. 다른 그룹처럼 점유율 · 순서 규칙(`FOLD_SHARE` 1.5 · `FOLD_AFTER` 14)만 따르게 한다.
+- [x] 8-2 `NON_AUTO` 이름 목록(~123-173 · 681)은 Google · Apple 등을 '자동차 외'로 묶고 트리맵에서 늘 접는다. 다른 그룹처럼 점유율 · 순서 규칙(`FOLD_SHARE` 1.5 · `FOLD_AFTER` 14)만 따르게 한다.
   - 원칙 판단: 표시 묶음은 사용자가 허용했지만, 늘 접어 숨기는 것은 숨김이다. 그래서 묶음 이름은 두고 늘 접는 것만 뺀다.
   - 비완성차 분류는 업스트림 질문 '비완성차 경쟁사'의 답을 따른다.
   - 점유율 · 순서 접기 자체는 표시 묶음이라 둔다.
-- [ ] 8-3 트리맵 Δ 색 구간(~318-330, `KO renewal.mention.treemap.steps`)은 |Δ| < 0.2pp를 '변화 없음' 색으로 칠한다. W6 기준(반올림해 0일 때만 '변화 없음')으로 바꾸고, 색 세기는 판정이 아닌 크기 눈금으로 둔다.
-- [ ] 8-4 U2가 '측정되지 않음'이면 bump의 빈 점을 0 대신 비워 둔다(`_trend.py` ~578, `mention_renewal.py` ~598-599).
+- [x] 8-3 트리맵 Δ 색 구간(~318-330, `KO renewal.mention.treemap.steps`)은 |Δ| < 0.2pp를 '변화 없음' 색으로 칠한다. W6 기준(반올림해 0일 때만 '변화 없음')으로 바꾸고, 색 세기는 판정이 아닌 크기 눈금으로 둔다.
+- [x] 8-4 U2가 '측정되지 않음'이면 bump의 빈 점을 0 대신 비워 둔다(`_trend.py` ~578, `mention_renewal.py` ~598-599).
 
 **시험.** `test_screens_mention_renewal`, golden mention, render.
 
@@ -667,6 +667,19 @@ Website 인용 도달 Δ도 값 출처(발행 / 실시간)가 다르면 숨긴�
   - **관찰(이 단계 밖).** 리뉴얼 Citation 도메인 서랍의 읽는 중 · 실패 문구 키 `answerAnalysis.citations.drilldown.loading` · `loadFailed`가 ko · en에 없다(9단계 후보). Website Tata 서랍 프롬프트에 Hyundai TUCSON · KONA 질문이 나오는 것은 Gold 귀속(업스트림 D5 Kona 귀속과 같은 종류)이다.
   - **다음 단계가 알 것.** Gold 리더 인용 읽기에 `ctx.mention`(브랜드 · 당사 대상)이 생겼다. `citations.predicate`가 걸므로, 다른 인용 읽기도 `mention_target(ctx)`를 먼저 부르면 같은 대상으로 좁혀진다. `DrawerTarget` signal은 감정 4종과 유형 5종(`DrawerSignal`)이다. `CitationList` · `CitationRow` · `CitationDetail` · `brandDrillPaths`는 render 시험을 위해 내보낸다.
 
+- **8단계(2026-10-31).** 8-1 · 8-2 · 8-3을 고쳤다. 재현 시험은 고치기 전에 실패했다(BFF 4개 · render 3개). 8-4는 재현되지 않았다. Global과 Website는 같은 본문이라 둘 다 바뀐다.
+  - **8-1.** 'HMG 계열' 배지(`sibling`)를 HUB 이름 목록(`HMG_BRANDS`, 지웠다) 대신 Gold 플래그로 정한다. 리뉴얼 화면의 본문 브랜드 읽기(`mentions/brands`)가 `include=hmg`를 더해 `is_hmg_own`(= `dim_brand.own_bit ≠ 0`, 당사 행은 true)을 받고, `to_mentions_brand_live`가 `hmgOwn`으로 싣는다. `_begin`이 ctx `hmg`를 켜서 모든 rn 화면의 본문 브랜드 읽기가 같은 요청 하나다(읽기 수 그대로). 원본 화면 요청은 그대로다.
+    - 순위 행 · 서랍 행은 자기 행의 `hmgOwn`, 경쟁 구도 board는 본문 행에서 이름으로 찾는다(`hmg_flags`). 우선 노출도 표(`rank_board`)는 새 인자 `brands`(본문 행)에서 찾는다. 그 표 행은 같은 브랜드 읽기에서 온다(`to_first_position_latest`). 이름은 Gold `dim_brand.name`(UNIQUE)이다.
+    - U1대로 live에서는 결과가 같다. Kia 화면(brand=Kia)에서 Hyundai · Genesis가 Global · Website 모두 'HMG 계열'이다(실제 화면 확인). Gold가 다른 이름에 HMG를 주면 그 브랜드가 배지를 받고, 목록에만 있는 이름은 받지 않는다(재현 시험).
+    - ACR(`BS/acr.py`의 `HMG_BRANDS`)은 11단계 범위라 그대로다.
+  - **8-2.** 트리맵이 '자동차 외' 묶음을 점유율과 관계없이 늘 '그 외'로 접었다. 이제 다른 묶음처럼 점유율 1.5% 미만이거나 15번째부터만 접는다. 묶음 이름과 `NON_AUTO` 명단은 그대로 둔다(업스트림 D3 '비완성차 경쟁사'의 답이 아직 없음). 화면에서는 브랜드 하나인 '자동차 외' 타일의 키를 다른 묶음처럼 그 브랜드로 했다(`groupTile`, 원래는 늘 접혀 쓰이지 않던 갈래). live에서 '자동차 외' 브랜드는 언급의 0.2%(Global 상위 100 중 8개 · Website 2개)라 규칙대로 접혀, 지금 트리맵은 그대로다.
+  - **8-3.** 트리맵 Δ 색은 타일이 읽는 값(`deltaTxt`, 0.05 미만은 '0.0pp', 그 밖은 소수 한 자리)이 0.0일 때만 '변화 없음' 색이다. 색 세기는 크기 눈금 0.1 · 0.5 · 1.0pp다(방향 초록 · 빨강은 그대로). 범례 문구 `renewal.mention.treemap.steps`를 '−1.0pp 이하, −0.5, −0.1, 변화 없음, +0.1, +0.5, +1.0pp 이상'(en도)으로 바꿨다.
+  - **8-4 재현 안 됨.** bump는 답변이 있는 회차(`trend_axis` measured = 버킷 있음, `to_brand_trend_result`가 답변 0인 회차를 뺀다)에서만 행 없는 브랜드를 0으로 두고, 답변이 없는 회차는 빈칸이다. U2대로 셀 표에 0인 행이 없으므로 그 0이 Gold 뜻(0회)이다. 고치지 않고 시험 `BumpZeroIsGold`로 지금 동작을 고정했다.
+  - **golden.** README 'Deliberate changes' 2026-10-31 step 8. 8-1은 tape · args에 플래그만 더했다(bundle 18개 · 함수 case 7개, 출력 그대로). 출력이 바뀐 것은 셋이다. `rn-fn-rank` 4호출은 무작위 입력의 표 행이 그 호출의 본문 행에 없는 HMG 브랜드라 배지가 빠졌다(live에서는 생기지 않음). `conv-to-mentions-live` 25호출은 녹음된 리더 항목의 `is_hmg_own`이 `hmgOwn` 키로 실렸다. 8-2는 무작위 입력의 큰 '자동차 외'(Alexa)로 `rn-fn-treemap-groups` 10호출 · `rn-fn-ranking` 트리맵 12호출이 바뀌었다. live case는 그대로다.
+  - **원본 대조.** 숫자가 바뀌지 않는다(배지 · 트리맵 묶음 · 색만). 원본에는 이 배지 · 트리맵이 없다.
+  - **화면 확인.** 리뉴얼 Global · Website Mention(브랜드 상세, 기본 · brand=Kia, KPI 화면)을 1920×915로 열었다. 오류 화면 · 5xx가 없었고, 범례가 새 문구로 보였다.
+  - **다음 단계가 알 것.** 리뉴얼 Mention 본문 브랜드 행에 `hmgOwn`(Gold `is_hmg_own`)이 있다. ctx `hmg`를 켠 읽기만 받는다. 11단계(ACR)는 다른 Gold 값(`acr_entity_fact.own_bit`)이라 이 경로와 관계없다.
+
 ## 진행 기록
 
 - 2026-10-31 — 계획을 작성했다. 근거는 같은 날 중간점검이다(코드 읽기 다섯 갈래: Overview · Mention · Citation · Prompts · AI Funnel, 큰 지적은 코드로 다시 확인). 처음에는 병렬 세션으로 나누려 했으나 사용자가 한 세션이 순서대로 하는 방식으로 바꿨다. 다음은 1단계다.
@@ -677,3 +690,4 @@ Website 인용 도달 Δ도 값 출처(발행 / 실시간)가 다르면 숨긴�
 - 2026-10-31 — 5단계: Mention KPI 탭에 회차별 분자 · 분모를 되살렸다(노출률 · 점유율 · 우호도 추이 툴팁 · 표 · CSV, 유형 선 점 툴팁 · CSV의 회차 답변 수, 5-1). 달력 월에는 요약 아래 답변당 언급 수 기간 줄을 되살렸다(5-2, Citation 방식). Website 요약 카드의 전체 언급 수 Δ는 중립이다(5-4, 원본 website · project도 같이). 재현 시험은 고치기 전에 실패했다. 5-3은 재현되지 않았다. 리더가 R1부터 당사 행을 관점 값 하나로 보내 위치 추이가 이미 Gold 관점 값이다(live 14회차 일치). golden 24건 의도 변경. 시험: BFF 34개 모듈 571개(+live 8개), 프런트 관련 12개 파일 78개 · typecheck · lint, 원본 대조 4조건, Global · Website 실제 화면. 다음은 6단계다.
 - 2026-10-31 — 6단계: Mention 순위표가 모든 브랜드를 갖는다(6-1). BFF `rn-ranking`이 행 전부를 보내고(리더 상한 없음, global 752 · website 436), 화면은 처음 100행 · 전체 검색 · '더 보기' · 실제 전체 수 각주다. 100위 밖 행은 서랍 행을 같이 실어 서랍이 수치 · 감정 · 유형을 보인다. 검색 개수 문구 결함도 고쳤다. 순위표 머리와 서랍 프롬프트 목록 머리에 원본 열 정의 · 계산식 ⓘ를 되살렸다(6-2, 복수 언급 기준 포함). 재현 시험은 고치기 전에 실패했다. golden 9건 의도 변경. 시험: BFF 34개 모듈 574개(+live 8개), 프런트 관련 9개 파일 58개 · typecheck · lint, 원본 대조(100위 밖 행 값), e2e Global · Website 각 9항목. 다음은 7단계다.
 - 2026-10-31 — 7단계: Mention 서랍이 그 브랜드를 읽는다(7-2). Gold 리더가 계약의 `mention_brand`를 원본 규칙으로 `dim_brand.brand_key`로 찾고, 인용 출처 · 상세 · 커버리지 분모를 그 브랜드가 언급된 답변으로 좁힌다. 당사 행은 두 탭 모두 own(`mention_own`)으로 읽는다(원본 `MentionsDrilldown`도). 인용 출처 탭을 원본처럼 되살렸다(7-1: 점유율 · 커버리지 · 당사 표시, URL 열 제거, 행 펼침 URL · 프롬프트 → 답변 원문). 유형 행 → 그 유형 프롬프트 → 답변 원문(7-3, 신호 서랍 재사용). 재현 시험은 고치기 전에 실패했다. golden 변경 없음. 시험: BFF 34개 모듈 584개(live 8개 포함), 프런트 관련 14개 파일 110개 · typecheck · lint, 원본 대조(Global · Website 첫 행 값), e2e Global · Website 각 9항목 + 원본 2화면. 다음은 8단계다.
+- 2026-10-31 — 8단계: Mention 'HMG 계열' 배지를 HUB 이름 목록 대신 Gold `is_hmg_own`(본문 브랜드 읽기 `include=hmg`, 리뉴얼만)으로 정한다(8-1, live 결과 같음). 트리맵 '자동차 외' 묶음을 늘 접지 않고 다른 묶음과 같은 점유율 · 순서 규칙으로 접는다(8-2, 묶음 이름은 그대로). 트리맵 Δ 색은 반올림해 0.0일 때만 '변화 없음', 세기는 0.1 · 0.5 · 1.0pp 눈금(8-3, 범례 문구). 재현 시험은 고치기 전에 실패했다. 8-4는 재현되지 않았다(U2: 답변 있는 회차의 0은 Gold 뜻, 시험으로 고정). golden: tape · args에 플래그, 출력은 무작위 입력 case 3개만. 시험: BFF 34개 모듈(+live 8개), 프런트 Mention 7개 파일 · typecheck · lint, Global · Website 실제 화면. 다음은 9단계다.

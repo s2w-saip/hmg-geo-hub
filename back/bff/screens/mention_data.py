@@ -174,7 +174,10 @@ MENTION_COMPARE_METRICS = ("visibility", "share", "favorability", "position", "m
 
 
 def brands_table_of(ctx: dict) -> dict:
-    return VIEW_BRANDS_TABLE if ctx["surface"] in ("website", "project") else BRANDS_TABLE
+    """The body brand read. The renewal page (ctx `hmg`) also asks for Gold's HMG flag (`is_hmg_own` = dim_brand.own_bit,
+    the 'HMG 계열' badge, renewal audit 8-1); the original pages' read stays as it was."""
+    table = VIEW_BRANDS_TABLE if ctx["surface"] in ("website", "project") else BRANDS_TABLE
+    return {**table, "include": [*table["include"], "hmg"]} if ctx.get("hmg") else table
 
 
 async def fetch_mention_brands(filters: dict, ctx: dict, req: dict | None = None) -> dict:
@@ -264,6 +267,8 @@ def to_mentions_brand_live(item: dict) -> dict:
         out["brandKey"] = item["brand_key"]
     if item.get("own_brand_code"):
         out["ownBrandCode"] = item["own_brand_code"]
+    if "is_hmg_own" in item:
+        out["hmgOwn"] = item["is_hmg_own"] is True
     return out
 
 

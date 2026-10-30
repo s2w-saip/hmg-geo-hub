@@ -27,6 +27,7 @@ import {
   type RnBumpVM,
   type RnDrawerBrand,
   type TreemapBrand,
+  type TreemapGroup,
 } from "../_data/screen-types";
 import { squarify } from "./treemap-layout";
 import { CONTEXT_COLOR, MentionCardActions, deltaTxt, numTxt, pctTxt, posTxt, slotLabel, useCompare, useMention, type DrawerSignal, type DrawerTarget } from "./mention-context";
@@ -320,20 +321,29 @@ export function BrandRanking({ initialView = "map", initialQuery = "" }: { initi
   );
 }
 
-// Diverging steps for the share change (pp): green up, red down, sand within ±0.2pp; hatch = no trend.
-const DIV_STEPS = [0.2, 0.5, 1.0];
-const DIV_POS = ["#d3ecdc", "#8fcca6", "#4fa577"];
-const DIV_NEG = ["#f8d6ce", "#f0a28f", "#dc6a52"];
-const DIV_ZERO = "#e7e1da";
+// Diverging colours for the share change (pp): green up, red down, sand only for a change that rounds to 0.0pp (what
+// the tile reads "0.0pp"); hatch = no trend. The tint deepens with the size (from 0.1 · 0.5 · 1.0pp): a scale, not a
+// judgment (renewal audit 8-3: |Δ| < 0.2pp was painted as no change).
+const DIV_STEPS = [0.5, 1.0];
+export const DIV_POS = ["#d3ecdc", "#8fcca6", "#4fa577"];
+export const DIV_NEG = ["#f8d6ce", "#f0a28f", "#dc6a52"];
+export const DIV_ZERO = "#e7e1da";
 const DIV_NA = "repeating-linear-gradient(135deg, #f1ede8 0 6px, #e4ded7 6px 8px)";
-const divColor = (d: number | null): string => {
-  if (d == null) return DIV_ZERO;
-  const r = Math.round(d * 10) / 10;
-  const a = Math.abs(r);
-  if (a < DIV_STEPS[0]) return DIV_ZERO;
-  const i = a >= DIV_STEPS[2] ? 2 : a >= DIV_STEPS[1] ? 1 : 0;
-  return r > 0 ? DIV_POS[i] : DIV_NEG[i];
+export const divColor = (d: number | null): string => {
+  // the size the tile reads (deltaTxt: under 0.05 is "0.0pp", else one decimal)
+  if (d == null || Math.abs(d) < 0.05) return DIV_ZERO;
+  const a = Number(Math.abs(d).toFixed(1));
+  const i = a >= DIV_STEPS[1] ? 2 : a >= DIV_STEPS[0] ? 1 : 0;
+  return d > 0 ? DIV_POS[i] : DIV_NEG[i];
 };
+/** A top-level treemap tile: one brand is its name (key = the brand), several are the group's name with its short
+ * code; '그 외' and '자동차 외' have no code (renewal audit 8-2: '자동차 외' now shows as any group does). */
+export function groupTile(g: TreemapGroup, groupName: (g: string, several?: boolean) => string): { key: string; title: string; short: string | undefined } {
+  const several = g.members.length > 1;
+  if (g.key === TREEMAP_FOLD) return { key: g.key, title: groupName(g.key, several), short: undefined };
+  if (!several) return { key: g.members[0].brand, title: g.members[0].brand, short: undefined };
+  return { key: g.key, title: groupName(g.key, true), short: g.key !== NON_AUTO_GROUP ? g.key : undefined };
+}
 const relLum = (hex: string) => {
   const c = (hex.match(/\w\w/g) ?? ["0", "0", "0"]).map((x) => {
     const v = parseInt(x, 16) / 255;
@@ -475,10 +485,11 @@ function Treemap({
                   onClick: () => onBrand(m.brand),
                 }),
               )
-            : squarify(groups, 0, 0, area.w, area.h).map((g) =>
-                tile(g.key === TREEMAP_FOLD || g.key === NON_AUTO_GROUP ? g.key : g.members.length === 1 ? g.members[0].brand : g.key, g, {
-                  title: g.members.length === 1 && g.key !== TREEMAP_FOLD ? g.members[0].brand : groupName(g.key, g.members.length > 1),
-                  short: g.members.length > 1 && g.key !== TREEMAP_FOLD && g.key !== NON_AUTO_GROUP ? g.key : undefined,
+            : squarify(groups, 0, 0, area.w, area.h).map((g) => {
+                const head = groupTile(g, groupName);
+                return tile(head.key, g, {
+                  title: head.title,
+                  short: head.short,
                   share: g.share,
                   delta: g.delta,
                   hasTrend: g.delta != null,
@@ -487,8 +498,8 @@ function Treemap({
                   members: g.members,
                   tip: `${t("groupTip", { group: groupName(g.key, g.members.length > 1), share: pctTxt(g.share), delta: fmtD(g.delta), n: g.members.length })}${g.partial ? `\n${t("partial")}` : ""}`,
                   onClick: () => (g.members.length > 1 ? setDrill(g.key) : onBrand(g.members[0].brand)),
-                }),
-              )
+                });
+              })
           : null}
       </div>
       {!multi ? (
