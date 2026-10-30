@@ -264,6 +264,14 @@ class CompetitorCitations(unittest.TestCase):
         row = citation_share_row([source("toyotacertified.com", 90, "Toyota", DEALER), source("toyota.com", 30, "Toyota")])
         self.assertEqual(row, [{"brand": "Toyota", "value": 3.0}])
 
+    def test_the_category_is_known_by_its_slug_not_its_name(self):
+        # renewal audit 4-4 (2026-10-31): the row matched the category name "Official (Competitor)". The name is the
+        # HUB code table's (an admin edits it, Gold projects it into dim_category.name); the slug is the code.
+        renamed = {**OFFICIAL_COMPETITOR, "name": "공식 (경쟁사)"}
+        named_like_it = {**DEALER, "name": "Official (Competitor)"}
+        row = citation_share_row([source("toyota.com", 30, "Toyota", renamed), source("toyotacertified.com", 90, "Toyota", named_like_it)])
+        self.assertEqual(row, [{"brand": "Toyota", "value": 3.0}])
+
 
 
 class BrandMatrixFailures(unittest.TestCase):

@@ -6,7 +6,7 @@
 - 병렬 세션으로 나누지 않고 한 세션이 순서대로 한다.
 - 단계마다 새 하위 에이전트가 깨끗한 컨텍스트로 맡는다(B 방식).
 
-**현재 위치:** 4단계(경쟁사 브랜드 접기(공용 모듈) · Overview 데이터) 시작 전. 3단계 끝(단계 메모 '3단계'). 마지막 커밋: 3단계를 올린 커밋.
+**현재 위치:** 5단계(Mention ① KPI 탭) 시작 전. 4단계 끝(단계 메모 '4단계'). 마지막 커밋: 4단계를 올린 커밋.
 
 ## 진행 방식 (단계마다 새 하위 에이전트)
 
@@ -92,7 +92,7 @@
 | 1 | Gold 확인(읽기 전용)과 업스트림 질문 보강 | — | [x] |
 | 2 | Website 범위 계정 접근 | ⛔J | [x] |
 | 3 | 공통 스파크라인 회차 값 · Overview 표시 | — | [x] |
-| 4 | 경쟁사 브랜드 접기(공용 모듈) · Overview 데이터 | 1 | [ ] |
+| 4 | 경쟁사 브랜드 접기(공용 모듈) · Overview 데이터 | 1 | [x] |
 | 5 | Mention ① KPI 탭: 회차별 분자 · 분모, 답변당 언급 수 Δ, 당사 평균 위치 | 1 | [ ] |
 | 6 | Mention ② 브랜드 순위 표 전체 · 열 정의 | — | [ ] |
 | 7 | Mention ③ 서랍 · 드릴다운 | — | [ ] |
@@ -219,12 +219,12 @@
 - `BS/_query.py`의 `RHQ_REGION_COUNTRIES`
 
 **할 일**
-- [ ] 4-1 브랜드 이름을 trim하고 소문자로 맞춰 접으면서 한쪽 행을 버린다(`_competitors.py` ~36-38 · 118-126, `overview.py` ~727-741). Gold `brand_key`가 다르면 두 행을 모두 남긴다(규칙 5: 귀속을 합치지 않는다).
+- [x] 4-1 브랜드 이름을 trim하고 소문자로 맞춰 접으면서 한쪽 행을 버린다(`_competitors.py` ~36-38 · 118-126, `overview.py` ~727-741). Gold `brand_key`가 다르면 두 행을 모두 남긴다(규칙 5: 귀속을 합치지 않는다).
   - `_competitors`는 Overview · Mention · Citation이 같이 쓰므로 golden 전체를 돌린다.
   - 원본 화면도 바뀐다.
-- [ ] 4-2 U5가 '다름'이면 경쟁사 우호도 분모(`_competitors.py` ~50-55)를 당사와 같은 정의로 맞춘다. Gold가 비율을 주면 그 값을 쓴다.
-- [ ] 4-3 U7이 '다름'이면 권역 id를 Gold에 맞춘다.
-- [ ] 4-4 'Official (Competitor)' 카테고리를 이름 문자열로 맞추는 곳(`_competitors.py` ~25 · 275)을 slug(`dim_category.slug`)로 바꾼다.
+- [x] 4-2 U5가 '다름'이면 경쟁사 우호도 분모(`_competitors.py` ~50-55)를 당사와 같은 정의로 맞춘다. Gold가 비율을 주면 그 값을 쓴다.
+- [x] 4-3 U7이 '다름'이면 권역 id를 Gold에 맞춘다.
+- [x] 4-4 'Official (Competitor)' 카테고리를 이름 문자열로 맞추는 곳(`_competitors.py` ~25 · 275)을 slug(`dim_category.slug`)로 바꾼다.
 
 **시험.** `test_screens_overview` · `mention` · `citation`, golden 전체, 원본 `/ko/dashboard` 대조.
 
@@ -600,6 +600,20 @@ Website 인용 도달 Δ도 값 출처(발행 / 실시간)가 다르면 숨긴�
   - **golden.** 26건이 바뀌었다(README 'Deliberate changes' 2026-10-31): 3-3 함수 case 12호출 + website fixture 4건, 3-4 `fix-g-cards-02` · `-03` · `-10`, 3-5 website fixture 20건(키 추가). live case는 그대로다.
   - **확인.** Global · Website Overview를 로컬 서버에서 열었다(관리자, 1920×915). 오류 화면 · 5xx 없음, 툴팁 · 초점 · 카드 링크가 동작한다. 원본 `/ko/dashboard` 라벨 · 숫자와 같다.
   - **다음 단계가 알 것.** 10단계는 `RnSparkline`의 `tips`를 쓰면 된다(글은 호출하는 쪽이 만든다). 레거시 `period-delta-off-parity.render.test.tsx`(overviewKpiCards ko · en 2건)는 HEAD에서도 실패한다(이 단계와 관계없음).
+- **4단계(2026-10-31).** 4-4만 고쳤다. 4-1 · 4-3은 재현되지 않았고, 4-2는 U5가 같아 할 일이 없다.
+  - **4-1 재현 안 됨.** BFF가 행을 접는 키(`brand_key`: trim + 소문자)는 Gold `dim_brand.bare`('정본명 키 (기본 소문자·트림)')와 같다. Gold의 5,273개 브랜드를 이 함수로 접으면 서로 다른 브랜드가 같은 키가 되는 경우가 0이고, 키는 brand_key 0('(이름 없음)', bare 빈 값)을 빼면 모두 bare와 같다. Gold는 `name`과 `bare`에 UNIQUE를 건다. 그래서 이름으로 접어도 Gold 브랜드 둘이 한 행이 되지 않는다. 접는 행의 이름은 모두 `dim_brand.name`이다(언급 브랜드 행, 인용 경쟁사는 `competitor_brand_key` → name). 당사 행 이름(HMG · Hyundai · Kia · Genesis)도 경쟁사 행과 겹치지 않는다(Gold에 'HMG' 브랜드가 없고, 관점 브랜드 행은 리더가 뺀다).
+    - 이름이 같고 brandKey가 다른 행은 golden의 합성 입력에만 있다(TS 때 기록한 무작위 입력: `ov/fn-dedupe-brand-rows` · `fn-competitor-candidates` 등 함수 case 9개와 Mention fixture 일부). brand_key로 바꾸면 그 입력에서만 출력이 바뀐다. 추이 · 우선 노출도 Δ는 키가 없는 읽기라 이름으로 짝을 지으므로, 바꾸면 반쪽만 키 기준이 된다.
+    - 코드는 그대로 두고 `brand_key` docstring에 Gold bare와 같다는 것을 적었다. admin-todo 결정 기록 '점검 후속'의 '경쟁사 접기는 이름 대신 `brand_key` 기준'은 이 확인으로 할 일이 없다(진행 세션이 정리한다).
+  - **4-2 해당 없음.** U5 같음. 경쟁사 우호도(`competitor_value_of` sentiment = 긍정 ÷ 감정 4종 합)와 당사 우호도는 분모 정의가 같다.
+  - **4-3 재현 안 됨(틀리게 보이는 것이 없다).** 실제 화면에서 확인했다.
+    - 지도: 리뉴얼 · 원본 Global Overview와 리뉴얼 Website Overview는 국가 단위 지도(`level="country"`)라 권역 칠하기를 쓰지 않는다. 권역 단위 지도는 원본 `/ko/website`뿐이다. 거기서 `geo_view`의 `countries_for_rhq(m["region"])`는 Gold 대륙 코드라 늘 비고, 그 권역에 Gold가 넣은 측정 국가만 칠한다(Kia: 측정 국가만 칠하고 나머지는 회색). Gold 귀속 그대로이고, 측정하지 않은 나라에 권역 값을 칠하지 않는다(규칙 5). HUB RHQ 국가로 칠하면 귀속을 다시 정하게 된다.
+    - 측정 예정: Gold 리더의 `pending`은 늘 []다. RHQ id를 넣는 곳은 `empty_geo(active)` 하나이고 website 읽기가 일시 실패할 때뿐이다. 그때 두 화면(원본 `/ko/website`, 리뉴얼 Website)은 실패 안내를 보이고 측정 예정 줄을 그리지 않는다. 화면에 RHQ id가 나오는 경로는 없다.
+    - 그래서 고치지 않았다. 두 RHQ 경로는 Gold 행에서는 동작하지 않는 레거시 경로로 남는다.
+    - 관찰: 권역 행 이름에 Gold 코드가 그대로 보인다(Asia · Europe · Latin America · Middle East · North America · Oceania 등, 빈 코드는 '권역 미분류'). 한국어 화면에서도 영어다. `rhqLabel`이 RHQ id만 번역해서이고, 원본 · 리뉴얼이 같다. 한국어 이름을 붙이는 것은 표시 문구 일이라 이 단계 범위 밖이다(16단계 '다음 일' 후보).
+  - **4-4.** 인용 점유율 카드의 경쟁사 줄(`competitor_citation_shares`)이 카테고리 이름 'Official (Competitor)'를 비교했다. 이름은 HUB 코드표 값이라 관리자가 고칠 수 있다(Gold `dim_category.name`은 그 투영). 이제 slug `officialCompetitor`를 비교하고, `to_competitor_citation_domains`가 행에 `categorySlug`를 싣는다. 재현 시험 `test_the_category_is_known_by_its_slug_not_its_name`(이름을 바꾼 공식 경쟁사 + 이름만 같은 딜러)은 고치기 전에 실패했다(9.0 ≠ 3.0).
+  - **golden.** 함수 case 3개(README 'Deliberate changes' 2026-10-31 4-4): 변환 case 출력에 `categorySlug`, 두 case 입력에 `categorySlug`를 더했다. 화면 출력은 바뀌지 않는다(screen · live case 그대로).
+  - **원본 대조.** 원본 `/ko/dashboard` 인용 점유율 카드의 경쟁사 줄(Mercedes-Benz 2.2% · Toyota 1.7% · Tesla 1.3% · Volvo 1.1%)이 리뉴얼 브랜드 비교 표의 인용 점유율 열과 같다. 권역 행도 두 화면이 같다. 리뉴얼 · 원본 Global · Website Overview 4화면이 오류 화면 · 5xx 없이 열린다.
+  - **다음 단계가 알 것.** 카테고리를 이름으로 비교하는 곳이 `BS/citation_model.py`에 남아 있다(`OFFICIAL_COMPETITOR_CATEGORY`, 경쟁사 고르기 · 카테고리 숨김 등). 같은 이유로 slug로 바꿀 후보다(9 · 10단계). `competitor_value_index`와 경쟁사 Δ 찾기는 이름(= Gold bare)으로 짝을 짓는다.
 
 ## 진행 기록
 
@@ -607,3 +621,4 @@ Website 인용 도달 Δ도 값 출처(발행 / 실시간)가 다르면 숨긴�
 - 2026-10-31 — 1단계: Gold를 읽기 전용(SELECT, release 603 · 3647)으로 U1~U12를 확인해 '확인 결과' 표를 채웠다. 같음 7(U2 · U3 · U4 · U5 · U8 · U10 · U12), 다름 5(U1 ACR만 · U6 · U7 · U9 · U11)다. 업스트림 묶음에 'D. 2026-10-31 점검' 7개를 더했다. U1 · U6에서 나온 2개와 넘겨받은 5개(Hyundai N bit 16, 비완성차 경쟁사, 미측정 website 프롬프트 2,563개, URL 카드 모집단 4 · 10, Kona 귀속)다. `loc_owned` · `cit_m05` 차이는 W6 수정 뒤 같아져(US 19.90 = 19.90) 묻지 않는다. 코드는 고치지 않았다. 다음은 2단계다.
 - 2026-10-31 — 2단계: ⛔J 추천안대로 website를 범위 계정(hq · region · country)에게 열었다(`access.clamp`, 사이트 국가 + SA 도시 사이트, project는 403). 원본 규칙대로 같이 고쳤다: 패널 국가 · 언어 선택지를 계정 범위로 좁힘(global · website), 브랜드 하나인 계정의 Website 시장별 현황, 모든 계정에서 오류였던 Website Overview(`engineLabel` 서버 · 클라이언트 경계, `ae8da9d`). 재현 시험은 고치기 전에 실패했다. 2-3(전용 사이트 계정)은 HUB에 그런 계정이 없어 해당 없음이다. 시험: BFF 34개 모듈 전부(+live 8개), 프런트 관련 시험 · typecheck · lint, e2e 24항목 + Global 4화면. 다음은 3단계다.
 - 2026-10-31 — 3단계: 스파크라인 점마다 회차 · 값 · 직전 회차 Δ 툴팁(`RnSparkline` `tips`, Global Overview 카드), 당사 SOV 분자가 없을 때 경쟁사 대비 SOV '—', 비교 라벨을 카드들이 같이 가질 때만 머리에 두고 다르면 카드마다(Global `compareTitle`, Website `periodLabel` · `compareTitle`, Website '같은 길이' 문구 제거), 브랜드 표 Δ 없음 표시, 효과 없는 컨테이너 쿼리 · 쓰지 않는 문구 18개 정리. 재현 시험은 모두 고치기 전에 실패했다. golden 26건 의도 변경. 시험: BFF 34개 모듈 전부(+live 8개), 프런트 관련 23개 파일 181개 · typecheck · lint, 두 Overview 실제 화면 확인 · 원본 툴팁 대조. 다음은 4단계다.
+- 2026-10-31 — 4단계: 인용 점유율 카드 경쟁사 줄이 카테고리를 이름 대신 Gold slug(`officialCompetitor`)로 고른다(4-4, 재현 시험은 고치기 전에 실패). 4-1은 BFF의 이름 접기 키가 Gold `dim_brand.bare`(UNIQUE)와 같아 재현되지 않았다(5,273개 브랜드 충돌 0). 4-2는 U5가 같아 할 일이 없다. 4-3은 화면에 RHQ id가 쓰이는 곳이 없어 재현되지 않았다. golden 함수 case 3개(slug 키 추가, 화면 출력 그대로). 시험: BFF 34개 모듈 전부(+live 8개), Overview 4화면 실제 확인 · 원본 대조. 다음은 5단계다.

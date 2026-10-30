@@ -22,7 +22,9 @@ from bff.screens._sort import code_unit_compare, locale_compare, sort_by
 
 COMPETITOR_DELTA_KEYS = ("visibility", "shareOfVoice", "position")
 RANK_TABLE_TOP_BRANDS = 10
-OFFICIAL_COMPETITOR_CATEGORY = "Official (Competitor)"
+# Gold dim_category.slug of Official (Competitor). The name is the HUB code table's and an admin may edit it;
+# the slug is the code (renewal audit 4-4).
+OFFICIAL_COMPETITOR_SLUG = "officialCompetitor"
 
 # String.prototype.trim whitespace (WhiteSpace + LineTerminator).
 _JS_WS = "\t\n\u000b\u000c\r              " \
@@ -34,7 +36,9 @@ def _sign(x: float) -> int:
 
 
 def brand_key(b: str) -> str:
-    """Name folded for duplicate rows and lookups: trim + lower case."""
+    """Name folded for duplicate rows and lookups: trim + lower case. This is Gold's own name key
+    (dim_brand.bare, "정본명 키 (기본 소문자·트림)", UNIQUE like dim_brand.name), so two Gold brands never fold
+    together (renewal audit 4-1, 2026-10-31: equal to bare for all 5,273 brands but brand_key 0)."""
     return b.strip(_JS_WS).lower()
 
 
@@ -242,8 +246,8 @@ def candidate_brand_keys(brands: list[dict]) -> list[int]:
 
 
 def to_competitor_citation_domains(data: dict) -> list[dict] | None:
-    """competitor_sources (GET /v1/citations/domains) -> competitor domain rows with Gold's brand and category;
-    None = no rows."""
+    """competitor_sources (GET /v1/citations/domains) -> competitor domain rows with Gold's brand and category
+    (name and slug); None = no rows."""
     sources = data.get("competitor_sources")
     if sources is None:
         return None
@@ -253,7 +257,7 @@ def to_competitor_citation_domains(data: dict) -> list[dict] | None:
         row = {"domain": s["domain"], "citations": s["citations"],
                "share": pct1_or_zero({"num": s["citations"], "den": total}), "prompts": 0, "coverageRate": 0,
                "urls": [], "promptList": [], "isOurs": False, "category": (s["category"] or {}).get("name"),
-               "subcategory": None, "brand": s["competitor_brand"]}
+               "categorySlug": (s["category"] or {}).get("slug"), "subcategory": None, "brand": s["competitor_brand"]}
         if "skey" in s:
             row["skey"] = s["skey"]
         out.append(row)
@@ -264,15 +268,15 @@ def to_competitor_citation_domains(data: dict) -> list[dict] | None:
 
 def competitor_citation_shares(domains: list[dict] | None, limit: int | None = 4,
                                total: float | None = None) -> list[dict]:
-    """Citation-share competitor minis: the domains Gold files as official competitor, folded to the brand Gold
-    gives them, share summed (or brand citations / total x 100 when total > 0), top N by share then name, one
-    decimal."""
+    """Citation-share competitor minis: the domains Gold files as official competitor (category slug), folded to
+    the brand Gold gives them, share summed (or brand citations / total x 100 when total > 0), top N by share then
+    name, one decimal."""
     limit = 4 if limit is None else limit
     if domains is None:
         return []
     acc: dict = {}
     for d in domains:
-        if d.get("category") != OFFICIAL_COMPETITOR_CATEGORY:
+        if d.get("categorySlug") != OFFICIAL_COMPETITOR_SLUG:
             continue
         cur = acc.get(d["brand"])
         if cur:

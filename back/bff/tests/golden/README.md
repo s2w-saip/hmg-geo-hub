@@ -243,6 +243,15 @@ Deliberate changes (what the screen shows changed by decision):
     differ; both are absent without a period compare. The renewal header said '바로 앞 같은 길이의 기간' for a calendar
     month too. 20 cases: `fix-w-summary-02`…`-06`, `fix-w-summary-admin-02`, `-03`, `-05`, `-06`, `fix-w-deferred-02`…`-06`,
     `-11`, `fix-w-deferred-admin-02`…`-06`. No live case changes.
+- 2026-10-31 renewal audit step 4-4 (Overview competitor citation row). The citation-share minis keep the domains whose
+  category slug is `officialCompetitor` (Gold `dim_category.slug`); they compared the name "Official (Competitor)",
+  which is the HUB code table's and an admin may edit it. `to_competitor_citation_domains` passes the slug on as
+  `categorySlug`. 3 function cases, no output a screen shows changes:
+  - `ov/fn-to-competitor-citation-domains`: every output row gains `categorySlug`, the slug its recorded source holds
+    (361 rows in 140 calls).
+  - `ov/fn-competitor-citation-shares` (200 calls), `ov/fn-competitor-row` (106 calls): every recorded domain row in
+    `args` gains `categorySlug`, the slug Gold's `dim_category` gives its recorded `category` name (null for a name Gold
+    has none for: "News", null). The outputs are the recorded ones.
 
 ## Format
 
