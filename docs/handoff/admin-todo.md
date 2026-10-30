@@ -50,13 +50,13 @@
 
 | 세션 | 화면 (리뉴얼 경로) | 원본 | 읽는 BFF 화면 | 선행 | 상태 |
 |---|---|---|---|---|---|
-| W0 | 공통 토대 | `components/dash/website-filters.tsx` | `overview/filters` · `shared/panel-options` · `citation/filter-bar` (website) | 없음 | 끝(미커밋, 사용자 확인 대기). 쓰는 법은 아래 W0 둘째 줄 |
-| W1 | Overview (`/renewal/website`) | `(dash)/website/page.tsx` | `website/summary` · `summary-deferred` · `trend` · `composition` · `geo` | W0 필터 | 구현 · 시험 완료, 사용자 확인 대기(미커밋) |
-| W2 | Answer analysis › Mention (`/renewal/website/answer-analysis/mention`) | `(dash)/website/answer-analysis/mention` | `mention/view` · `mention/as-of` (ctx.surface=website) | W0 필터 | 구현 · 시험 완료, 사용자 확인 대기(미커밋). 읽는 화면은 `mention/rn-*` · `view-cards` · `view-weekly` · `drill-missing-prompts`(세션 메모 W2) |
-| W3 | Answer analysis › Citation (`/renewal/website/answer-analysis/citation`) | `(dash)/website/answer-analysis/citation` | `citation/filter-bar` · `citation/as-of` · `citation/website` | W0 필터 | 구현 · 시험 · e2e 끝, 미커밋, 사용자 확인 대기 |
-| W4 | Prompts (`/renewal/website/prompts`) | `(dash)/website/prompts` | `website/prompts-options` · `website/prompts-list` | W0 필터 키 | 구현 · 시험 · e2e 끝, 미커밋, 사용자 확인 대기. 쪽 · 엑셀은 `website/prompts-page` · `-rows`(세션 메모 W4) |
-| W5 | AI Agent Funnel › AI Conversion · ACR (`/renewal/website/ai-funnel/…`) | `(dash)/website/ai-funnel/*` | `conversion/renewal-header` · `conversion/renewal`(원본도 표준과 같은 화면) · `acr/gold` | ACR은 ⛔H | Conversion 구현 · BI 개편 · 시험 끝(미커밋, 사용자 확인 대기) · ACR은 ⛔H까지 보류 |
-| W6 | 디자인 다듬기 (W1~W5 화면 전부, 2026-10-30 사용자 요청) | — | 읽기 변경 없음 | W1~W5 구현 | 10개 항목 고침 · 시험 끝(미커밋, 사용자 확인 대기). 세션 메모 W6 |
+| W0 | 공통 토대 | `components/dash/website-filters.tsx` | `overview/filters` · `shared/panel-options` · `citation/filter-bar` (website) | 없음 | 끝, 커밋 · 푸시(`f28395f`), 사용자 확인 대기. 쓰는 법은 아래 W0 둘째 줄 |
+| W1 | Overview (`/renewal/website`) | `(dash)/website/page.tsx` | `website/summary` · `summary-deferred` · `trend` · `composition` · `geo` | W0 필터 | 구현 · 시험 완료, 커밋 · 푸시(`f28395f`), 사용자 확인 대기 |
+| W2 | Answer analysis › Mention (`/renewal/website/answer-analysis/mention`) | `(dash)/website/answer-analysis/mention` | `mention/view` · `mention/as-of` (ctx.surface=website) | W0 필터 | 구현 · 시험 완료, 커밋 · 푸시(`f28395f`), 사용자 확인 대기. 읽는 화면은 `mention/rn-*` · `view-cards` · `view-weekly` · `drill-missing-prompts`(세션 메모 W2) |
+| W3 | Answer analysis › Citation (`/renewal/website/answer-analysis/citation`) | `(dash)/website/answer-analysis/citation` | `citation/filter-bar` · `citation/as-of` · `citation/website` | W0 필터 | 구현 · 시험 · e2e 끝, 커밋 · 푸시(`f28395f`), 사용자 확인 대기 |
+| W4 | Prompts (`/renewal/website/prompts`) | `(dash)/website/prompts` | `website/prompts-options` · `website/prompts-list` | W0 필터 키 | 구현 · 시험 · e2e 끝, 커밋 · 푸시(`f28395f`), 사용자 확인 대기. 쪽 · 엑셀은 `website/prompts-page` · `-rows`(세션 메모 W4) |
+| W5 | AI Agent Funnel › AI Conversion · ACR (`/renewal/website/ai-funnel/…`) | `(dash)/website/ai-funnel/*` | `conversion/renewal-header` · `conversion/renewal`(원본도 표준과 같은 화면) · `acr/gold` | ACR은 ⛔H | Conversion 구현 · BI 개편 · 시험 끝, 커밋 · 푸시(`f28395f`), 사용자 확인 대기 · ACR은 ⛔H까지 보류 |
+| W6 | 디자인 다듬기 (W1~W5 화면 전부, 2026-10-30 사용자 요청) | — | 읽기 변경 없음 | W1~W5 구현 | 디자인 · 품질 검수 수정 · 시험 끝, 커밋 · 푸시(`f28395f`), 사용자 확인 대기. 세션 메모 W6 |
 
 W1 · W2 · W3은 W0 필터가 끝나기 전에도 범위 확인, BFF 점검, 본문 작업을 먼저 한다. 필터는 W0 것을 붙인다. 화면마다 필터를 따로 만들지 않는다.
 
@@ -88,7 +88,7 @@ W1 · W2 · W3은 W0 필터가 끝나기 전에도 범위 확인, BFF 점검, �
 
 **세션 메모** (세션마다 자기 줄만)
 
-- W2 · W3: `mention-body.tsx` · `citation-body.tsx`에 다른 작업의 미커밋 변경('순위 변화' 제목 '최근 N회차/주')이 있다. 커밋할 때 그 줄을 섞지 않는다.
+- W2 · W3: `mention-body.tsx` · `citation-body.tsx`의 다른 작업 변경('순위 변화' 제목 '최근 N회차')은 2026-10-31 따로 커밋했다(`911a7d3`).
 - W0: 2026-10-30 레거시 필터 대조 뒤 사용자 지시('추천대로 진행')로 세 가지를 맞췄다. 다른 W 세션의 파일도 고쳤으니 커밋 때 함께 본다.
   - Mention 비교 브랜드 '자동' = 레거시 규칙(스냅샷 점유율 1위 외부 브랜드, `mention_surfaces.comparison_of`). Gold 리더 추이에 `pin_top_rival`(상위 10 밖이면 그 브랜드를 `pinned`로 더함)을 더했고, 리뉴얼 Mention의 KPI 브랜드 추이 읽기가 모두 이것을 쓴다(`mention_renewal.py`, `mention_data.py`의 `pin_top`, `_trend.py`). 경쟁사 평균선과 순위 변화 차트는 상위 10 그대로다. website 필터 없음 Toyota → Tata, 독일 Volkswagen(레거시와 같음). Global은 Toyota 그대로. golden `mention/rn-fix-*` · `rn-live-*` 18개는 요청 키만 바꿨다(출력 같음, golden README).
   - AI Conversion 국가 선택지 = 계정이 읽을 수 있는 GA4 속성의 국가(중지 제외, 브랜드로 좁힘). 새 읽기 `analytics/properties`(`analytics_reader.properties`, `api.py`), `conversion.py property_options`. Gold Global 옵션 읽기는 뺐다. 선택지가 없으면 공용 패널이 국가 축을 숨긴다(URL에 국가가 남아 있으면 지울 수 있게 둔다). Global · Website 둘 다다.
@@ -357,4 +357,5 @@ W1 · W2 · W3은 W0 필터가 끝나기 전에도 범위 확인, BFF 점검, �
 - 2026-10-30 — W6: 사용자 요청으로 Website 화면 품질을 검수했다(보이는 것 · 인사이트 · 데이터 출처). 화면 캡처를 직접 검토했고, 출처 감사 4건(Overview · Mention · Citation · Prompts+AI Conversion, 읽기 전용, Gold SQL 확인 포함)을 돌렸다. 결과는 대화로 보고했다. 가장 큰 결함은 넷이다. Mention 주별 언급 수가 측정 없는 주를 0으로 그린다(미국 7/20 · 8/3 · 8/10). Citation 공식(당사)가 Gold 정의(website = loc_owned ∨ tgt_hit, `citation_cell` 설명)보다 좁다. Citation 미인용에 인용 0건 프롬프트가 들어간다. Overview 기간 모드에서 타겟 출처 Δ가 회차 Δ로 나온다. 요약 발견의 HUB 기준값(Mention · Citation · Conversion, Global 표준에서 옴)은 사용자 결정이 필요하다. 아무것도 고치지 않았다.
 - 2026-10-30 — W6: 품질 검수 결과를 1~3단계로 고쳤다(세션 메모 W6 '품질 검수 뒤 수정'). 고친 범위는 BFF(리더 3 · 화면 4 · HUB 리더 1), front(W1~W4 · 표준 언급 · 인용 · 전환 `_components`), 문구다. 시험: BFF 34개 모듈 550개(새 시험: `test_gold_citations`, 주별 공백, 대상 도메인, 미언급 구분 수, 전환 기준값 · 부분합 · 채널 · 대체 계산, golden 25건 재작성), front renewal 43개 파일 589개, typecheck · lint 오류 0. API를 다시 띄워 실제 화면을 확인했다: 기간 모드 · Kia 시장 표 · Mention 요약 순서 · 미국 주별 공백 · Citation 미국 19.9% · 1,131 · 당사 태그 · Prompts 64. 미커밋.
 - 2026-10-31 — W6: 사용자 결정으로 KPI 추이 답변 수 막대를 중립 회색으로 바꾸고 직전 회차 대비 증감 툴팁을 붙였다(세션 메모 W6). 언급 공백 회차의 '0'을 '—'로 고쳤다. 재현 시험 3개(회색 막대, 툴팁, 공백 '—')는 고치기 전에 실패했다. 시험: 리뉴얼 39개 파일 316개 · renewal-ui · dash 475개, typecheck 오류 0, lint 오류 0. 실제 화면에서 14회차 툴팁 값을 확인했다. 커밋 전 점검: BFF 시험 전체 550개 통과. front 시험 전체에서 작업 트리만 실패하던 `test/bff-boundary.test.ts`(Website Overview `page.tsx`가 옛 `lib/scope/engines`를 읽음)를 같은 폴더 `engineLabel`로 고쳤다. 남은 실패 23개 파일 · 121개는 HEAD에서도 똑같이 실패한다(옛 `lib/scope` · `lib/db` 시험). 미커밋.
+- 2026-10-31 — W0~W6 커밋 · 푸시: 사용자 승인으로 Website 작업 전체를 한 커밋으로 올렸다(`f28395f`). 화면 폴더 · W0 필터 · 같이 쓰는 BFF 리더 · golden 압축 파일이 얽혀 W 번호별로 나눌 수 없었다. 그 앞에 다른 작업의 '순위 변화' 제목 짝(문구 4줄 · 본문 2줄, BFF는 이미 HEAD)을 따로 올렸다(`911a7d3`). `p4-acr-model-denominator.html` 19~23번 행(다른 세션의 언급 BI 검토 메모)은 넣지 않았다. 시험: BFF 550개, front Website · 경계 시험 84개, typecheck · lint 통과. front 전체 실패 23개 파일은 부모 커밋에서도 같다.
 - 2026-10-31 — 원칙 정리: 사용자 결정으로 규칙 2(원칙을 따르면 자동 진행) · 4 · 6(자동 커밋 · 푸시) · 7(화면 원칙 새로 둠), 공통 완료 기준, CLAUDE.md 작업 규칙을 고쳤다(결정 기록 '결정 · 커밋').
