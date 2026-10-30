@@ -1,8 +1,9 @@
 """Period comparison (K-2 GET /v1/kpi/compare) in the legacy CompareResult shape
 (port of front/lib/hgh/adapters/compare.ts).
 
-Call rule: no call (None = "draw the previous Δ") unless the URL period has both ends in order;
-None too when the backend reports the epoch gate (meta.suppressed["*"] == "before_epoch").
+Call rule: no call (None = "draw the previous Δ") unless the URL period has both ends in order. The original API's
+2026-09-08 cut-off (meta.suppressed["*"] == "before_epoch", None = the previous Δ) is gone: the reader compares every
+period (⛔K 2026-10-31, HUB rule 5).
 `common` is the CommonFilters params dict of the screen (CommonQuery keys plus `cf.<uuid>` keys),
 built by the shared query module; the compare params are added on top of it.
 """
@@ -21,7 +22,6 @@ COMPARE_METRIC_TO_API = {"visibility": "visibility", "share": "share_of_voice", 
                          "position": "position", "mentionsPerAnswer": "mentions_per_answer",
                          "citationsPerAnswer": "citations_per_answer", "citationShare": "citation_share"}
 API_METRIC_TO_COMPARE = {v: k for k, v in COMPARE_METRIC_TO_API.items()}
-COMPARE_EPOCH_GATED = "before_epoch"
 
 _ISO_DAY = re.compile(r"^\d{4}-\d{2}-\d{2}\Z", re.ASCII)
 
@@ -108,14 +108,11 @@ def compare_query(common: dict, req: dict) -> dict:
 
 
 async def fetch_period_compare_view(filters: dict, common: dict, req: dict) -> dict | None:
-    """fetchPeriodCompareView: None without a closed period or when the epoch gate answers;
-    else {results, compare (meta.compare), notices}."""
+    """fetchPeriodCompareView: None without a closed period, else {results, compare (meta.compare), notices}."""
     if not has_closed_period(filters):
         return None
     res = await api.get("kpi/compare", compare_query(common, req))
     meta = res.get("meta") or {}
-    if (meta.get("suppressed") or {}).get("*") == COMPARE_EPOCH_GATED:
-        return None
     out: dict = {"results": to_compare_results(res["data"], req["metrics"])}
     if "compare" in meta:
         out["compare"] = meta["compare"]

@@ -336,6 +336,35 @@ Deliberate changes (what the screen shows changed by decision):
     page never drew (당사 wins).
   - 11-4 (additive): `boardOrders` adds `choiceCount`, `appearanceCount` (descending, ties by rank) and `brand`
     (ascending, ko collation), the original brand table's sorts. Every measured case (35).
+- 2026-10-31 renewal audit step 14 (period compare suppression, ⛔K; HUB rule 5: a value that jumps because the
+  measured range changed is shown, not hidden or warned about). The reader (`kpi/compare`) suppresses only a comparison
+  without a value to compare (`unsupported` · `no_prev` · `no_data`); `missing_share` (under 70 % of the planned
+  collection), `start_window` · `start_month` (the start-of-measurement grace) are gone, and so are the screens' copy of
+  those rules (`_period.compute_compare` · `compare_suppression_of` and helpers), their caption sentences
+  (`period_caption` reason.missingShare · startWindow · startMonth) and the adapter's 2026-09-08 cut-off
+  (`before_epoch` → no compare; the Gold reader never sent it). The recorded answers that held one of those reasons
+  are rewritten to what the reader answers now: the item compares (`suppressed` false, `reason` null, `delta` by the
+  reader's rule — `delta_of` on a reader item, the adapter's `legacy_compare_delta` on a CompareResult), the reason
+  leaves `meta.suppressed`, and `meta.suppressed["*"] = "before_epoch"` is dropped. 34 files:
+  - screen cases (tape `kpi/compare` and output): `overview/fix-g-cards-02`, `-04`, `-06`, `fix-w-deferred-10`,
+    `fix-w-deferred-admin-04`, `-05`, `-06`, `fix-w-summary-05`, `fix-w-summary-admin-02`, `-04`, `-05`, `-06` and
+    `mention/fix-kpi-period-01` (13). The card / tile period chips get their Δ, the captions name the round counts
+    (`window`) or the next suppressed result's reason (on the website fixtures the synthesized `citation_share`
+    `no_data`, see 2026-10-29 R3); the `before_epoch` fixtures (`fix-g-cards-04`, `-06`, `fix-w-deferred-10`,
+    `fix-w-summary-admin-04`, `fix-kpi-period-01`) now show their recorded period compare instead of none.
+  - function cases (args and outputs of the calls that held one): `mention/rn-fn-favor-hero` (33 of 121 calls, 10
+    outputs), `rn-fn-favor-hero-model` (33, 10), `rn-fn-rank` (33, 14), `rn-fn-rank-hero-model` (33, 14),
+    `rn-fn-rate-hero` (66 of 242, 17), `rn-fn-rate-hero-model` (66, 17), `rn-fn-resolve-delta` (31 of 85, 5),
+    `rn-fn-tab-deltas` (33 of 121, 30); `ov/fn-fetch-period-compare-api` (38 of 110, 26), `fn-fetch-period-compare-view`
+    (38, 26), `fn-period-caption` (136 of 379, 136: the caption of what the Δ compares), `fn-to-period-delta-view`
+    (79 of 200, 65) (12). No call whose args stayed changed its output.
+  - removed with their functions (9): `ov/fn-applies-missing-share`, `fn-compare-suppression-of-outcome`,
+    `fn-compute-compare-outcome`, `fn-grace-days-outcome`, `fn-judge-start-month`, `fn-judge-start-window-outcome`,
+    `fn-missing-share`, `fn-missing-share-known`, `fn-period-compare-applies-outcome`.
+  - kept as recorded (the reason does not reach their output): `mention/rn-fn-summary`, `ov/fn-to-compare-result`,
+    `fn-to-compare-results` (generic `suppressed` → no Δ) and the tapes of `overview/fix-g-cards-10`, `-13`, `-14`
+    (pending cards). No live case and no citation case changes (no recorded Website reach pairs a published answer
+    with a live one).
 
 ## Format
 

@@ -6,7 +6,7 @@
 - 병렬 세션으로 나누지 않고 한 세션이 순서대로 한다.
 - 단계마다 새 하위 에이전트가 깨끗한 컨텍스트로 맡는다(B 방식).
 
-**현재 위치:** 14단계(기간 비교 억제) 시작 전. 13단계 끝(단계 메모 '13단계'). 마지막 커밋: 13단계를 올린 커밋.
+**현재 위치:** 15단계(HUB가 만든 평균 기준선 · 분해) 시작 전. 14단계 끝(단계 메모 '14단계'). 마지막 커밋: 14단계를 올린 커밋.
 
 ## 진행 방식 (단계마다 새 하위 에이전트)
 
@@ -102,7 +102,7 @@
 | 11 | ACR 발견 · 귀속 · 정렬 | 1 | [x] |
 | 12 | AI Conversion 부분합 · 문구 | — | [x] |
 | 13 | Prompts 귀속 · 계정 범위 · 선택지 | 1 | [x] |
-| 14 | 기간 비교 억제 | ⛔K | [ ] |
+| 14 | 기간 비교 억제 | ⛔K | [x] |
 | 15 | HUB가 만든 평균 기준선 · 분해 | ⛔L | [ ] |
 | 16 | 마무리: 원본 대조, 전체 시험, 문서, 다음 일 | 1~15 | [ ] |
 
@@ -482,9 +482,9 @@ Website 인용 도달 Δ도 값 출처(발행 / 실시간)가 다르면 숨긴�
 - `docs/design/api/모듈-KPI.md` 해당 절
 
 **할 일**
-- [ ] 14-1 억제 사유를 뺀다. 쓰지 않게 된 억제 문구와 키를 정리한다.
-- [ ] 14-2 명세 문서에 '2026-10-31 HUB 규칙 5로 뺌'을 적는다. golden(ov · overview · mention · citation 기간 case)을 README에 기록한다.
-- [ ] 14-3 원본 화면도 같은 로직을 쓴다. Global · Website Overview와 Mention의 기간 모드를 한 번씩 확인한다.
+- [x] 14-1 억제 사유를 뺀다. 쓰지 않게 된 억제 문구와 키를 정리한다.
+- [x] 14-2 명세 문서에 '2026-10-31 HUB 규칙 5로 뺌'을 적는다. golden(ov · overview · mention · citation 기간 case)을 README에 기록한다.
+- [x] 14-3 원본 화면도 같은 로직을 쓴다. Global · Website Overview와 Mention의 기간 모드를 한 번씩 확인한다.
 
 **시험.** `test_period_basis`, `test_exact_deltas`, `test_screens_ov` · `overview` · `mention` · `citation` · `conversion`, golden 전체.
 
@@ -810,6 +810,26 @@ Website 인용 도달 Δ도 값 출처(발행 / 실시간)가 다르면 숨긴�
     - 관찰: 시험 관리자는 Global prompts에 기본 저장 필터 'test1'(리스트 유형 Consumer base Response)이 있어 첫 화면이 5,300개로 열린다. 사용자 데이터이고 이 단계와 관계없다.
   - **다음 단계가 알 것.** `PromptRow.kind`는 null일 수 있다. Global prompts facets에 `presence` · `kind`가 있다(값 없음 = `none`). Gold 리더 global `prompts`는 `country`를 걸므로, 전체 카탈로그는 관리자 · HQ 범위만 읽는다. `OverviewPanelInput.brandOptions`가 생겼다.
 
+- **14단계(2026-10-31).** ⛔K 추천안대로 고쳤다. 재현 시험은 고치기 전에 실패했다(Gold 리더 3개 · 도달 1개 · 화면 쪽 2개, HEAD 코드에 새 시험을 얹어 확인). 적용일 게이트는 live 리더에서 재현되지 않았다. 원본 · 리뉴얼, Global · Website가 같은 리더를 읽어 모두 바뀐다.
+  - **14-1 리더.** `GR/compare_logic.py` `suppression_of`는 비교할 값이 없을 때(unsupported · no_prev · no_data)만 사유를 낸다. missing_share(수집분 70% 미만) · start_window · start_month와 그 상수 · 판정 함수(`grace_days` · `judge_*` · `applies_missing_share`)를 지웠다. 원장의 계획 · 미발행 단위는 응답 `planned_*` · `missing_share_*`로, 첫 발행일은 `meta.compare.first_published`로 그대로 싣는다(값일 뿐 판정에 쓰지 않음). 계약 `back/bff/api-contract.json`의 reason enum도 3종으로 줄였다. 재현: `test_period_basis.CompareSuppression` 3개(이번 회차 수집분 50% · 시작 구간에 걸친 창 · 시작 달)가 고치기 전에 억제됐다.
+  - **14-1 적용일 게이트 재현 안 됨.** Gold 리더에는 처음부터 이 게이트가 없었다(명세에 '폐기'로 적혀 있고, `period_compare_applies`를 부르는 곳이 없다). `test_a_period_before_the_cut_off_compares`는 고치기 전에도 통과했다. 남아 있던 것은 쓰지 않는 상수(`PERIOD_COMPARE_EPOCH` · `EPOCH_GATED` · `period_compare_applies`, 리더와 `_period.py`)와, 리더가 보내지 않는 `before_epoch` 신호를 '비교 없음'으로 바꾸던 어댑터 분기(`BS/_compare.py`)뿐이다. K 결정대로 지웠고 동작은 바뀌지 않는다.
+  - **14-1 화면 쪽 사본.** `BS/_period.py`의 억제 이식(`compute_compare` · `compare_suppression_of`와 보조 함수 · 상수)은 화면이 쓰지 않아 지웠다. `period_caption`에서 세 사유의 문장(reason.missingShare · startWindow · startMonth)을 뺐다. 이제 화면 빌더는 리더가 보낸 사유를 문장으로 옮길 뿐 판정하지 않는다(`test_no_suppression_rule_is_left_in_the_screens`).
+  - **14-1 도달 Δ.** `BS/citation.py` `load_url_reach`는 값 출처(발행 / 실시간)가 달라도 비교한다. 각주(`source` · `publication`, 이번 답의 값 출처)는 그대로 둔다. 재현: `test_reach_compares_across_value_sources`(직전 = 발행, 이번 = 실시간)가 고치기 전에 Δ 없음이었다. live에서는 확인한 8개 조건(필터 없음 · US · DE · gemini · Kia · en · 기간 둘)이 모두 실시간 출처라 화면 값이 바뀌지 않는다.
+  - **14-1 문구 키는 그대로 뒀다.** `periodCompare.reason.missingShare` · `startWindow` · `startMonth`(ko · en, units에는 없음)는 BFF가 더 이상 보내지 않아 화면에 나오지 않는다. 다만 grep하면 프런트 레거시 순수 계층(`front/lib/kpi/period-compare.ts` · `period-compare-view.ts`)과 그 시험(`components/dash/delta-chip.render.test.tsx` · `lib/kpi/period-compare-policy.test.ts`)이 쓴다. 이 계층은 페이지 경로에서 닿지 않는다(`test/bff-boundary.test.ts`). 실제 호출처는 레거시 `lib/scope/server.ts` `fetchPeriodCompare` 하나이고, 그 함수를 부르는 곳도 없다. 키를 지우려면 레거시 계층의 억제 규칙과 시험을 같이 지워야 하는데, 이 단계의 읽을 파일 밖이다. 16단계 '다음 일' 후보다.
+  - **14-2.** 명세 `docs/design/api/모듈-KPI.md` K-2에 '2026-10-31 HUB 규칙 5로 뺌(⛔K)'을 적었다. 다른 명세 사본(`docs/spec/api/m-kpi.html` · `docs/spec/functional-spec.html` · `docs/design/api/전체-통합.md` 등)은 고치지 않았다(읽을 파일 밖, 16단계 문서 정리 후보).
+  - **golden.** 34개 파일이다(README 'Deliberate changes' 2026-10-31 step 14). 리더가 이제 보내지 않는 답(세 사유, `before_epoch`)을 녹음한 입력을 지금 리더의 답으로 바꾸고(11단계 방식) 출력을 다시 만들었다. 화면 case 13개(overview 12 · mention 1), 함수 case 12개(mention rn-fn 8 · ov 4), 지운 함수의 case 9개다. 입력을 바꾸지 않은 호출의 출력은 하나도 바뀌지 않았다. citation · live case는 그대로다. 출력이 그 사유에 닿지 않는 6개(`mention/rn-fn-summary`, `ov/fn-to-compare-result(s)`, `overview/fix-g-cards-10` · `-13` · `-14`)는 녹음 그대로 뒀다.
+  - **원본 대조 · 실데이터(관리자, 1920×915).** 같은 Gold 조건을 HEAD 리더와 새 리더로 읽어 견줬다(Global · Website 63개 조건).
+    - 억제가 풀린 조건은 Website뿐이다.
+      - 기간 2026-07-15~08-14(창 31일, 직전 06-14~07-14, 첫 발행 07-03 > 06-14 + 유예 8일, 예전 start_window): 노출률 ▲0.3pp · 점유율 ▲0.1pp · 우호도 ▲12.6pp · 우선 노출도 변화 없음 · 인용 점유율 ▲0.9pp.
+      - 달력 주 07-20~07-26(이번 주 계획 2단위 중 1단위 미발행 = 50%, 예전 missing_share): ▲0.8pp · ▼0.1pp · ▲30.8pp · 변화 없음 · ▼7.9pp.
+      - 같은 종류로 주 07-06~07-12, 창 07-10~08-09 · 07-20~08-19도 풀렸다.
+    - 예전 화면: Website 타일 Δ가 모두 '―'이고, 머리 문장이 '직전 기간이 측정을 시작한 구간이라 비교를 표시하지 않습니다' · '직전 기간 수집분이 계획의 50%에 그쳐 비교를 표시하지 않습니다'였다(HEAD `website/summary-deferred` 출력). 지금은 원본 `/ko/website`와 리뉴얼 `/ko/renewal/website` 모두 Δ 칩이 보이고 억제 문장이 없다. 리뉴얼 머리는 3단계 라벨 '증감 = 현재 4회차 / 직전 2회차 수집 기준'(07-15~08-14), '현재 1회차 / 직전 1회차 수집 기준'(07-20~07-26)이다.
+    - Global에는 풀리는 조건이 없다. 첫 발행(06-08) 앞 구간은 데이터가 없어 no_data로 남는다(비교할 값이 없음). 08-01~08-31의 원본 `/ko/dashboard` · 리뉴얼 카드 Δ(4.1pp · 10.2pp · 44.4pp · 0.4 · 0.9pp)와 Mention 기간 칩(노출률 ▼3.7pp …)은 HEAD와 같다.
+    - 적용일(09-08) 전 기간도 예전부터 비교했다(리더에 게이트가 없음). 08-01~09-07 등의 Δ가 HEAD와 같다.
+    - 3단계 라벨(`compareTitle` · `periodLabel`)은 같은 규칙으로 보인다. 칩이 생긴 타일들이 같은 window 라벨을 가져 머리에 한 번 쓴다. 5단계 `monthLine`은 달력 월에만 있다. Website 2026-07은 직전 6월 회차가 없어 no_prev로 그대로이고, 2026-08부터는 원래 억제가 없었다.
+    - 연 화면은 12개다: 원본 Global · Website Overview와 Mention, 리뉴얼 Global · Website Overview와 Mention, 리뉴얼 Website Citation(기본 · 07-20~07-26). 오류 화면 · 5xx · 억제 문장이 없다. 도달 카드는 '증감 = 직전 회차(2026-10-02) 대비' · '직전 기간(2026-07-13~2026-07-19) 대비'와 각주 '실시간 집계입니다…'를 보인다.
+  - **다음 단계가 알 것.** 리더 `kpi/compare`의 reason은 unsupported · no_prev · no_data뿐이다. 화면 쪽 `_period.py`에는 억제 판정이 없다. 프런트 레거시 `lib/kpi` 억제 계층과 세 문구 키는 남아 있다(16단계 후보). 15단계(평균 기준선 · 분해)와 겹치는 파일은 없다.
+
 ## 진행 기록
 
 - 2026-10-31 — 계획을 작성했다. 근거는 같은 날 중간점검이다(코드 읽기 다섯 갈래: Overview · Mention · Citation · Prompts · AI Funnel, 큰 지적은 코드로 다시 확인). 처음에는 병렬 세션으로 나누려 했으나 사용자가 한 세션이 순서대로 하는 방식으로 바꿨다. 다음은 1단계다.
@@ -827,3 +847,4 @@ Website 인용 도달 Δ도 값 출처(발행 / 실시간)가 다르면 숨긴�
 - 2026-10-31 — 11단계: ACR 요약 발견을 W6 방식으로 바꿨다. 순서는 고정했고, 문턱을 뺐고, 색은 당사 방향만 나타낸다. '후보군이 비슷한'은 '후보군 포함율이 가장 가까운 경쟁사와의 Top1 차'가 됐다(11-1). 'HMG 계열' 배지는 이름 목록 대신 리더가 행마다 주는 Gold 플래그로 정한다. 그 행의 당사 판정 값을 따르므로 브랜드 행은 명부, 차종 · 맞대결은 dim_brand다(11-2). 차종 당사는 Gold isOurs만이다(11-3). 브랜드 표에 원본 정렬 셋(최종 선택 · 언급 수 · 브랜드)을 되살렸다(11-4). 촘촘 화면에서도 '당사 = … 합산' 칩이 보인다(11-5). 재현 시험은 고치기 전에 실패했다. 11-6은 재현되지 않았다. 리더가 모든 ACR 축을 걸고 무시 · 제외 필터를 보내지 않으며, 시험으로 고정했다. golden은 40개 파일이다(출력 35 · 녹음만 5). 시험: BFF 34개 모듈 606개(live 8개 포함, 건너뜀 5), 프런트 ACR 2개 파일 23개 · i18n · typecheck · lint, 원본 브랜드 표 대조(12행 값 · 정렬 3종), 리뉴얼 ACR 실제 화면(HMG · Kia). 다음은 12단계다.
 - 2026-10-31 — 12단계: AI Conversion에서 수집기가 활성 속성의 하루를 빠뜨리면 합계뿐 아니라 그 조각(엔진 · 채널 · 세그먼트 전환 · 입구 페이지 · 이벤트 수, 그 속성의 시장 전환)도 모름이다. 화면의 시장 비중 · 7일 합도 부분합을 내지 않고, Hero가 빠진 속성 · 날 수를 안내한다(12-1, 리더 `missing`, 원본 표도 같은 리더). 채널 카드 합계 행은 '채널 합계'로 이름을 나눴다(Hero '사이트 전체' = report 5, 12-2). '시장 미연결'은 '수집 중지'이고, 중지 속성은 시장 카드 목록 · 칩 total에서 빠져 측정 범위 발견과 같은 total이다(12-3). 결과 없음 안내의 국가 선택지 설명을 GA4 속성 시장으로 고쳤다(12-4, visibility 문구는 맞아 그대로). 재현 시험은 고치기 전에 실패했다. golden 없음, 프런트 fixture 재생성. 시험: BFF 34개 모듈 609개(live 8개 포함), 프런트 Conversion · Website Conversion · i18n 3개 파일 20개 · typecheck · lint, 리뉴얼 두 화면 · 원본 실제 화면. 다음은 13단계다.
 - 2026-10-31 — 13단계: Global prompts의 브랜드 포함 여부 · 측정 종류는 Gold 값만 쓴다. 브랜드로 정하던 규칙과 '단발' 기본값을 지웠고, 빈 값은 '—'이며, 범위에 빈 값 행이 있으면 필터에 '값 없음'이 생긴다(13-1 · 13-2, 원본도, live 빈 값 0). Gold 리더가 범위 계정의 국가를 원본 API의 대상 시장 규칙(B1)으로 건다(13-3, live Genesis 중동 1,208 → 302). 열람 범위 pill이 브랜드 · 권역 · 국가 전체를 연다(권역 계정은 권역 국가). Website Prompts 브랜드 축이 화면 선택지를 쓴다(13-4, W0 `brandOptions`). 재현 시험은 고치기 전에 실패했다. golden 변경 없음. 시험: BFF 34개 모듈(live 8개 포함), 프런트 관련 13개 파일 147개 · i18n · typecheck · lint, 권역 계정 · 관리자 실제 화면(리뉴얼 · 원본 Prompts 4화면). 다음은 14단계다.
+- 2026-10-31 — 14단계: 기간 비교 억제를 ⛔K 추천안대로 줄였다. Gold 리더 `kpi/compare`는 비교할 값이 없을 때(unsupported · no_prev · no_data)만 억제하고, 수집분 70% · 시작 유예(start_window · start_month)는 뺐다(14-1, 원본 · 리뉴얼 같이). 화면 쪽 억제 이식(`_period.py`)과 세 사유 문장, 쓰지 않던 적용일 상수 · `before_epoch` 분기도 지웠다. 적용일 게이트는 live 리더에 없어 재현되지 않았다. Website 인용 도달 Δ는 값 출처가 달라도 보이고 각주는 그대로다. 명세 K-2와 계약 enum을 고쳤다(14-2). 재현 시험은 고치기 전에 실패했다. golden은 34개 파일이다(녹음 답을 지금 리더 답으로, 지운 함수 case 9개). 실데이터에서 Website 07-15~08-14(예전 start_window)와 07-20~07-26 주(예전 missing_share)에 Δ가 새로 보인다. Global에는 풀리는 조건이 없다(14-3). 프런트 세 문구 키는 레거시 `lib/kpi`가 써서 남겼다(16단계 후보). 시험: BFF 34개 모듈 632개 + live 8개, 프런트 i18n · delta-chip · Overview render 3개 파일 60개, 원본 · 리뉴얼 12화면. 다음은 15단계다.

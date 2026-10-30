@@ -68,20 +68,23 @@ class Period(unittest.TestCase):
         self.assertEqual(_period.iso_of_days(_period.date_utc_days(12000, 0, 1)), "+012000-01")
 
     def test_throws_where_the_ts_threw(self):
-        for call in (lambda: _period.add_days("2026-13-01", 1), lambda: _period.grace_days(0),
-                     lambda: _period.grace_days(2.5), lambda: _period.windows_from_range("2026-09-10", "2026-09-01"),
+        for call in (lambda: _period.add_days("2026-13-01", 1), lambda: _period.resolve_windows("2026-09-10", 0),
+                     lambda: _period.resolve_windows("2026-09-10", 2.5), lambda: _period.windows_from_range("2026-09-10", "2026-09-01"),
                      lambda: _period.iso_dow_of("nope"), lambda: _trend.monday_of("2026-13-01")):
             with self.assertRaises(ValueError):
                 call()
 
-    def test_policy_constants(self):
-        self.assertEqual((_period.MISSING_SHARE_MAX, _period.MISSING_SHARE_MIN_WINDOW_DAYS, _period.PERIOD_COMPARE_EPOCH),
-                         (0.3, 30, "2026-09-08"))
-        ledger = {"plannedUnits": 10, "missingUnits": 3, "publishedCycles": 1, "dataCycles": 1, "firstPublishedAnchor": None}
-        period = {"lo": "2026-08-01", "hi": "2026-08-31", "measures": {}, "ledger": ledger}
-        cur = {**period, "lo": "2026-09-01", "hi": "2026-09-13"}
-        # exactly 30% missing is suppressed (inclusive), a calendar month always applies the rule
-        self.assertEqual(_period.compare_suppression_of(period, cur, {"kind": "calendarMonth", "metrics": []}), "missing_share")
+    def test_no_suppression_rule_is_left_in_the_screens(self):
+        """⛔K 2026-10-31: the screens word the reader's reasons and decide none (the TS suppression port is gone)."""
+        for name in ("compute_compare", "compare_suppression_of", "applies_missing_share", "judge_start_window",
+                     "judge_start_month", "grace_days", "period_compare_applies", "missing_share", "MISSING_SHARE_MAX",
+                     "PERIOD_COMPARE_EPOCH", "SUPPRESSION_PRECEDENCE"):
+            self.assertFalse(hasattr(_period, name), name)
+        self.assertFalse(hasattr(_compare, "COMPARE_EPOCH_GATED"))
+        # a reason the reader no longer sends is not worded as a suppression: the caption names the round counts
+        r = {"metric": "visibility", "suppressed": True, "reason": "missing_share", "cyclesPrev": 4, "cyclesCur": 5}
+        self.assertEqual(_period.period_caption(r, {"days": 30, "kind": "window"}),
+                         {"key": "window", "params": {"prevCycles": 4, "curCycles": 5}})
 
     def test_request_shape_axis(self):
         self.assertEqual(_period.resolve_request_compare_period_shape("2026-09-07", "2026-09-13")["kind"], "calendarWeek")
@@ -109,15 +112,21 @@ class Queries(unittest.TestCase):
         self.assertEqual(q["dims"], ["category@13"])
         self.assertIs(q["measured_days"], False)
 
-    def test_compare_no_call_without_closed_period_and_epoch_gate(self):
+    def test_compare_no_call_without_closed_period_and_no_epoch_gate(self):
+        """No call without a closed period. A period before 2026-09-08 compares too (⛔K 2026-10-31): an answer naming
+        the original API's cut-off is read like any other, not turned into "no comparison"."""
         async def run():
-            get = mock.AsyncMock(return_value={"data": [], "meta": {"suppressed": {"*": "before_epoch"}}})
+            item = {"metric": "visibility", "unit": "pp", "prev": {"num": 4, "den": 10}, "cur": {"num": 5, "den": 10},
+                    "suppressed": False, "reason": None}
+            get = mock.AsyncMock(return_value={"data": [item], "meta": {"suppressed": {"*": "before_epoch"}}})
             with mock.patch("bff.api.get", get):
                 req = {"surface": "global", "kind": "window", "metrics": ["visibility"]}
                 self.assertIsNone(await _compare.fetch_period_compare_view({"dateFrom": "2026-09-01"}, {}, req))
                 get.assert_not_called()
-                self.assertIsNone(await _compare.fetch_period_compare_api(
-                    {"dateFrom": "2026-09-01", "dateTo": "2026-09-14"}, {"surface": "global"}, req))
+                results = await _compare.fetch_period_compare_api(
+                    {"dateFrom": "2026-08-01", "dateTo": "2026-08-14"}, {"surface": "global"}, req)
+                self.assertEqual(len(results), 1)
+                self.assertAlmostEqual(results[0]["delta"], 10.0)
                 get.assert_awaited_once()
                 self.assertEqual(pairs(get.await_args.args[1]),
                                  [["card", "true"], ["kind", "window"], ["metrics", "visibility"], ["surface", "global"]])

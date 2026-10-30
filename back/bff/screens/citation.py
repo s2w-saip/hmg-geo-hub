@@ -435,8 +435,10 @@ def url_funnel(res: dict) -> dict:
 async def load_url_reach(r: Reads, deltas: asyncio.Future) -> dict:
     """The website 사이트 인용 도달 card: the URL funnel per prompt, its Δ and the same funnel per engine.
     Δ compares with the round the page's other Δ use (the category trend's previous valued round: one K-1 read of
-    that day, which is that round exactly) or in period mode with the period before; only two answers of one value
-    source (published / live) compare. The engines are those the citation read found; 전체 counts a prompt once
+    that day, which is that round exactly) or in period mode with the period before. A published answer beside a live
+    one compares too (⛔K 2026-10-31, HUB rule 5: a value that jumps because the measurement changed is shown, not
+    hidden); `source` names where this answer's values come from (the card's footnote). The engines are those the
+    citation read found; 전체 counts a prompt once
     whichever engine cited it, so it is not the engines' average. A source filter leaves it uncomputed (the original's
     cards: the 출처 class is per citation, the funnel per prompt)."""
     if not M.targets_applicable(r.filters):
@@ -465,14 +467,12 @@ async def load_url_reach(r: Reads, deltas: asyncio.Future) -> dict:
                                    *(degrade(Reads({**r.filters, "engine": [c]}, r.ctx).summary()) for c in codes))
     prev_res = answers[0][0]
     prev = url_funnel(prev_res) if prev_res else None
-    comparable = prev is not None and prev["measured"] > 0 and \
-        (provenance_of(prev_res.get("meta")) or {}).get("source") == (provenance_of(cur_res.get("meta")) or {}).get("source")
+    comparable = prev is not None and prev["measured"] > 0
     delta = {k: delta1(cur[k], prev[k]) if comparable and cur[k] is not None and prev[k] is not None else None
              for k in ("ownedRate", "targetRate")}
     engines = [{"engine": M.provider_label(c), **url_funnel(res)} for c, (res, _) in zip(codes, answers[1:]) if res]
     engines = [e for e in engines if e["measured"]]
     engines.sort(key=lambda e: (-e["measured"], -e["owned"], e["engine"]))
-    prov = provenance_of(cur_res.get("meta")) or {}
     out = {"status": "ok", **cur, "prev": prev if comparable else None, "delta": {**delta, **(basis if comparable else {"basis": None, "date": None})},
            "engines": engines, "enginesDegraded": any(d for _, d in answers[1:])}
     target = to_target_hit_rate_from_summary(cur_res)

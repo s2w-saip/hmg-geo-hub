@@ -1,7 +1,7 @@
 """Period resolution and the period-compare rules (port of the front's pure period modules).
 
 Sources, kept bit for bit (same branches, same date arithmetic, same float expressions):
-  lib/kpi/period-compare.ts          day helpers, policy constants, computeCompare and its suppression
+  lib/kpi/period-compare.ts          day helpers, units, compare ratio and Δ
   lib/kpi/calendar-month-window.ts   calendar month windows (resolvePeriodCompareShape)
   lib/kpi/period-compare-week.ts     calendar weeks, regular round weekday (resolveComparePeriodShape)
   lib/period/compare-shape.ts        resolveRequestComparePeriodShape (the API source = anchor axis on)
@@ -14,6 +14,12 @@ reproduced: `Date.UTC(y, m, d)` (years 0..99 mean 1900..1999, month/day overflow
 1900 rule). "Today" is always a parameter; the default is now in Asia/Seoul.
 
 Functions that threw in TS raise ValueError here.
+
+Not ported any more (⛔K 2026-10-31, HUB rule 5: a value that jumps because the measured range changed is shown, not
+hidden or warned about): the suppression rules the TS applied before the reader did (computeCompare · suppressionOf,
+missing_share · start_window · start_month, the 2026-09-08 cut-off) and their caption sentences. The Gold reader
+(gold_reader/compare_logic.py) suppresses only a comparison without a value to compare (unsupported · no_prev ·
+no_data); `period_caption` words those three.
 """
 from __future__ import annotations
 
@@ -85,17 +91,6 @@ def utc_day_of_week(n: int) -> int:
     return (n + 4) % 7
 
 
-def _js_number(s: str) -> float:
-    """Number(s) for the short digit strings these modules slice out of dates."""
-    t = s.strip()
-    if t == "":
-        return 0
-    try:
-        return int(t, 10) if re.fullmatch(r"[+-]?\d+", t, re.ASCII) else float(t)
-    except ValueError:
-        return math.nan
-
-
 # ── KST today ──────────────────────────────────────────────────────────────
 
 KST_OFFSET = timedelta(hours=9)
@@ -153,11 +148,6 @@ COMPARE_METRIC_UNITS = {"visibility": "pp", "share": "pp", "favorability": "pp",
 COMPARE_METRIC_FAMILY = {"visibility": "mention", "share": "mention", "favorability": "mention",
                          "position": "mention", "mentionsPerAnswer": "mention", "citationsPerAnswer": "citation",
                          "citationShare": "citation"}
-SUPPRESSION_PRECEDENCE = ("unsupported", "no_prev", "no_data", "missing_share", "start_window", "start_month")
-MISSING_SHARE_MAX = 0.3
-MISSING_SHARE_MIN_WINDOW_DAYS = 30
-PERIOD_COMPARE_EPOCH = "2026-09-08"
-START_MONTH_FIRST_WEEK_LAST_DAY = 7
 CALENDAR_WEEK_DAYS = 7
 
 
@@ -167,16 +157,6 @@ def _is_integer(n: Any) -> bool:
     if isinstance(n, int):
         return True
     return isinstance(n, float) and math.isfinite(n) and n.is_integer()
-
-
-def period_compare_applies(cur_hi: str, epoch: str = PERIOD_COMPARE_EPOCH) -> bool:
-    return assert_day(cur_hi, "curHi") >= assert_day(epoch, "epoch")
-
-
-def grace_days(days: Any) -> int:
-    if not _is_integer(days) or days < 1:
-        raise ValueError(f"invalid window length: {days}")
-    return math.ceil(days / 4)
 
 
 def window_length(w: dict) -> int:
@@ -217,70 +197,6 @@ def _gt0(v: Any) -> bool:
     return isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0
 
 
-def missing_share(ledger: dict) -> float:
-    if not _gt0(ledger.get("plannedUnits")):
-        return 0
-    return ledger["missingUnits"] / ledger["plannedUnits"]
-
-
-def missing_share_known(ledger: dict) -> bool:
-    known = ledger.get("plannedKnown")
-    return known if known is not None else _gt0(ledger.get("plannedUnits"))
-
-
-def applies_missing_share(opts: dict) -> bool:
-    if opts["kind"] in ("calendarMonth", "calendarWeek"):
-        return True
-    return opts["days"] >= MISSING_SHARE_MIN_WINDOW_DAYS
-
-
-def judge_start_window(a: dict) -> bool:
-    f = a.get("firstPublishedAnchor")
-    if not f:
-        return False
-    return f > add_days(a["prevLo"], grace_days(a["days"]))
-
-
-def judge_start_month(a: dict) -> bool:
-    if a["beforeDataCycles"] > 0:
-        return False
-    f = a.get("firstPublishedAnchor")
-    if not f:
-        return False
-    if f < a["prevLo"] or f > a["prevHi"]:
-        return False
-    n = _js_number(f[8:10])
-    return not math.isnan(n) and n > START_MONTH_FIRST_WEEK_LAST_DAY
-
-
-def compare_suppression_of(prev: dict, cur: dict, opts: dict) -> str | None:
-    """period-compare.ts suppressionOf: the winning reason or None."""
-    days = opts.get("days")
-    if days is None:
-        days = window_length({"lo": cur["lo"], "hi": cur["hi"]})
-    hit: set[str] = set()
-    if opts.get("unsupported") is True:
-        hit.add("unsupported")
-    if prev["ledger"]["publishedCycles"] <= 0:
-        hit.add("no_prev")
-    if prev["ledger"]["dataCycles"] <= 0 or cur["ledger"]["dataCycles"] <= 0:
-        hit.add("no_data")
-    if applies_missing_share({"kind": opts["kind"], "days": days}):
-        def over(ledger: dict) -> bool:
-            return missing_share_known(ledger) and missing_share(ledger) >= MISSING_SHARE_MAX
-        if over(prev["ledger"]) or over(cur["ledger"]):
-            hit.add("missing_share")
-    if opts["kind"] in ("window", "calendarWeek"):
-        if judge_start_window({"firstPublishedAnchor": prev["ledger"].get("firstPublishedAnchor"), "prevLo": prev["lo"],
-                               "days": CALENDAR_WEEK_DAYS if opts["kind"] == "calendarWeek" else days}):
-            hit.add("start_window")
-    elif judge_start_month({"firstPublishedAnchor": prev["ledger"].get("firstPublishedAnchor"), "prevLo": prev["lo"],
-                            "prevHi": prev["hi"],
-                            "beforeDataCycles": ((opts.get("before") or {}).get("ledger") or {}).get("dataCycles") or 0}):
-        hit.add("start_month")
-    return next((r for r in SUPPRESSION_PRECEDENCE if r in hit), None)
-
-
 def compare_ratio(m: dict | None) -> float | None:
     if not m:
         return None
@@ -299,26 +215,6 @@ def compare_delta_of(unit: str | None, prev: float | None, cur: float | None) ->
     if prev == 0:
         return None
     return ((cur - prev) / prev) * 100
-
-
-def compute_compare(prev: dict, cur: dict, opts: dict) -> list[dict]:
-    reason = compare_suppression_of(prev, cur, opts)
-    suppressed = reason is not None
-    out = []
-    for metric in opts["metrics"]:
-        unit = COMPARE_METRIC_UNITS.get(metric)
-        p = compare_ratio(prev["measures"].get(metric))
-        c = compare_ratio(cur["measures"].get(metric))
-        row = {"metric": metric}
-        if unit is not None:
-            row["unit"] = unit
-        row.update({"prev": p, "cur": c, "delta": None if suppressed else compare_delta_of(unit, p, c),
-                    "suppressed": suppressed, "reason": reason,
-                    "cyclesPrev": prev["ledger"]["publishedCycles"], "cyclesCur": cur["ledger"]["publishedCycles"],
-                    "plannedPrev": prev["ledger"]["plannedUnits"], "plannedCur": cur["ledger"]["plannedUnits"],
-                    "missingSharePrev": missing_share(prev["ledger"]), "missingShareCur": missing_share(cur["ledger"])})
-        out.append(row)
-    return out
 
 
 # ── lib/kpi/calendar-month-window.ts ───────────────────────────────────────
@@ -471,12 +367,9 @@ def period_preset_key_of(days: Any) -> str | None:
     return next((k for k, v in PERIOD_PRESET_DAYS.items() if v == days), None)
 
 
-def _collected_pct(share: float) -> int:
-    return js_round((1 - share) * 100)
-
-
 def period_caption(r: dict, ctx: dict) -> dict:
-    """Result -> caption message {key, params} (periodCaption)."""
+    """Result -> caption message {key, params} (periodCaption): the reason without a value to compare, else what the
+    Δ compares (the round counts)."""
     reason = r.get("reason")
     if reason == "unsupported":
         return {"key": "reason.unsupported", "params": {}}
@@ -496,19 +389,6 @@ def period_caption(r: dict, ctx: dict) -> dict:
         if cur_data is None:
             cur_data = 0
         return {"key": "reason.noDataCur", "params": {}} if cur_data <= 0 else {"key": "reason.noDataPrev", "params": {}}
-    if reason == "missing_share":
-        prev_share = r.get("missingSharePrev")
-        if prev_share is None:
-            prev_share = missing_share(ctx["prevLedger"]) if ctx.get("prevLedger") else 1
-        cur_share = r.get("missingShareCur")
-        if cur_share is None:
-            cur_share = missing_share(ctx["curLedger"]) if ctx.get("curLedger") else None
-        share = prev_share if prev_share >= MISSING_SHARE_MAX else (cur_share if cur_share is not None else prev_share)
-        return {"key": "reason.missingShare", "params": {"pct": _collected_pct(share)}}
-    if reason == "start_window":
-        return {"key": "reason.startWindow", "params": {}}
-    if reason == "start_month":
-        return {"key": "reason.startMonth", "params": {}}
     params = {}
     if "cyclesPrev" in r:
         params["prevCycles"] = r["cyclesPrev"]

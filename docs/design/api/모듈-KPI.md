@@ -10,7 +10,7 @@ KPI 모듈은 대시보드 핵심 지표를 낸다. 엔드포인트는 넷이다
 | --- | --- | --- | --- |
 | K-1 | GET /v1/kpi/summary | M01~M05 카드, 웹사이트 M06·M07·인용 정확도, M12 모수, A16 분석 결손 | medium |
 | K-1b | GET /v1/kpi/unmeasured-prompts | M12 미측정 프롬프트 목록(적용 − 측정, 카드와 같은 술어, 상한 200) | low |
-| K-2 | GET /v1/kpi/compare | 기간 비교 Δ(window·calendarMonth·calendarWeek·cycle), 억제 사유 6종 | high |
+| K-2 | GET /v1/kpi/compare | 기간 비교 Δ(window·calendarMonth·calendarWeek·cycle), 억제 사유 3종(2026-10-31 6종 → 3종) | high |
 | K-3 | GET /v1/kpi/engines | 엔진별 서브 지표 행과 total, 엔진 간 일관성 | medium |
 
 설계의 중심은 **스캔 빌더 두 개**다. 세 엔드포인트가 같은 계산을 각자 SQL 로 쓰지 않는다.
@@ -112,12 +112,13 @@ meta: mode = cumulative, compare = { kind, windows: { prev, cur, before? } }
   - pp = round1((cur.rate − prev.rate)).
   - rank = round1(cur.avg − prev.avg).
   - 부호는 원시값이다. 순위의 해석 반전은 화면이 한다. 현행 overview-card-values.ts 머리 주석과 같다.
-- 억제 사유 6종(unsupported, no_prev, no_data, missing_share, start_window, start_month)과 우선순위는 suppressionOf(period-compare.ts:490)를 이식한다.
+- 억제 사유는 3종(unsupported, no_prev, no_data)이고 우선순위는 그 순서다. 비교할 값이 없을 때만 억제한다.
+- **2026-10-31 HUB 규칙 5로 뺌(⛔K):** missing_share(수집분이 계획의 70% 미만) · start_window(시작 유예 `ceil(N/4)`일) · start_month(직전 달 첫 측정이 7일 뒤)는 더 이상 억제 사유가 아니다. 측정 방식 · 범위가 회차마다 달라 값이 튀어도 숨기거나 경고하지 않는다(admin-todo 규칙 5, 2026-10-29 ACR 숨김 철회와 같은 원칙). 아래 missing_share 계산과 firstPublishedAnchor 는 응답 값(`missing_share_*`, `meta.compare.first_published`)으로만 남는다. 구현은 `back/bff/gold_reader/compare_logic.py` `suppression_of`. 원래 규칙은 suppressionOf(period-compare.ts:490) 이식이었다.
 - missing_share 는 **대안 (b)** 로 계산한다. 구간 안 (프로젝트 x 회차) 행 중 미발행 비율이다.
   - plannedKnown = ledger_backed 회차가 있다. 프로젝트 가상 회차만 있는 구간은 현행처럼 판정을 건너뛴다.
-  - 임계는 0.3 이다. 적용 조건은 appliesMissingShare(:445)를 이식한다. window 는 30일 이상, 달력 월·주는 항상 적용한다.
+  - (2026-10-31까지) 억제 임계는 0.3 이었다. 적용 조건은 appliesMissingShare(:445) 이식이었다(window 30일 이상, 달력 월·주는 항상). 지금은 값만 싣는다.
 - firstPublishedAnchor 는 `min(round_date) FROM rd.cycle WHERE surface, project_key = ANY, servable` 1문장이다. 전 이력 기준이다.
-- PERIOD_COMPARE_EPOCH(:297) 게이트는 폐기한다. A4 로 전 기간을 새 정의로 재계산하므로 목적이 사라졌다.
+- PERIOD_COMPARE_EPOCH(:297) 게이트는 폐기한다. A4 로 전 기간을 새 정의로 재계산하므로 목적이 사라졌다. 2026-10-31 HUB 규칙 5로 BFF에 남아 있던 상수와 `before_epoch` 처리도 지웠다(Gold 리더는 처음부터 이 게이트가 없었다).
 
 ### K-3 GET /v1/kpi/engines
 

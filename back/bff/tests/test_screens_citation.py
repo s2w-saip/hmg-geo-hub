@@ -204,9 +204,9 @@ class WebsiteRenewal(unittest.TestCase):
         self.assertEqual(out["own"], {"value": 30.0, "delta": {"value": None, "basis": None, "date": None}, "spark": [], "sparkOn": False})
         self.assertEqual([p for path, p in calls if path == "trend" and p.get("dimension") == "none"], [])
 
-    def reach(self, filters, prev=None, day="2026-10-02"):
+    def reach(self, filters, prev=None, day="2026-10-02", cur=SUMMARY):
         """load_url_reach with the page's previous round `day` (citation/website takes it from load_deltas)."""
-        get, calls = router({"kpi/summary": SUMMARY})
+        get, calls = router({"kpi/summary": cur})
 
         async def routed(path, params=None):
             if prev is not None and path == "kpi/summary" and (params or {}).get("to") == day:
@@ -235,12 +235,16 @@ class WebsiteRenewal(unittest.TestCase):
         self.assertIn(("2026-10-02", "2026-10-02"), [(p.get("from"), p.get("to")) for p in summaries])
         self.assertIn(["claude-web"], [p.get("engine") for p in summaries])
 
-    def test_reach_compares_one_value_source_only(self):
-        """A published answer beside a live one is two measurements: no Δ."""
+    def test_reach_compares_across_value_sources(self):
+        """A published answer beside a live one still compares (⛔K 2026-10-31, admin-todo rule 5: a value that jumps
+        because the measurement changed is shown, not hidden). The footnote keeps naming where the values come from."""
         prev = {"data": {"url_prompts": {"measured_prompts": 10, "target_prompts": 5, "owned_prompts": 9}},
                 "meta": {**META, "source": {"url_rates": "report", "publication_details": [{"cycle_label": "9월"}]}}}
-        out, _ = self.reach({}, prev)
-        self.assertEqual([out["prev"], out["delta"]], [None, {"ownedRate": None, "targetRate": None, "basis": None, "date": None}])
+        live = {**SUMMARY, "meta": {**META, "source": {"url_rates": "live"}}}
+        out, _ = self.reach({}, prev, cur=live)
+        self.assertEqual(out["delta"], {"ownedRate": -10.0, "targetRate": 10.0, "basis": "round", "date": "2026-10-02"})
+        self.assertEqual([out["prev"]["ownedRate"], out["prev"]["targetRate"]], [90.0, 50.0])
+        self.assertEqual(out["source"], "live")
 
     def test_reach_without_a_round_or_under_a_source_filter(self):
         out, _ = self.reach({}, day=None)

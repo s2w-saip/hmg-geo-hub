@@ -19146,7 +19146,7 @@
             }
           ],
           "title": "First Published",
-          "description": "전 이력 첫 발행 회차 round_date, 언급 계열(M01~M04 의 start_window·start_month 판정)"
+          "description": "전 이력 첫 발행 회차 round_date, 언급 계열(M01~M04). 억제 판정에는 쓰지 않는다(2026-10-31 HUB 규칙 5로 start_window·start_month 를 뺌)"
         },
         "first_published_citation": {
           "anyOf": [
@@ -19247,17 +19247,15 @@
               "enum": [
                 "unsupported",
                 "no_prev",
-                "no_data",
-                "missing_share",
-                "start_window",
-                "start_month"
+                "no_data"
               ]
             },
             {
               "type": "null"
             }
           ],
-          "title": "Reason"
+          "title": "Reason",
+          "description": "비교할 값이 없을 때만(unsupported · no_prev · no_data). 2026-10-31 HUB 규칙 5로 missing_share · start_window · start_month 를 뺐다"
         },
         "cycles_prev": {
           "type": "integer",
@@ -19280,7 +19278,7 @@
         "missing_share_prev": {
           "type": "number",
           "title": "Missing Share Prev",
-          "description": "직전 구간 미발행 계획 단위 비중(0~1)"
+          "description": "직전 구간 미발행 계획 단위 비중(0~1). 그대로 싣고 억제 판정에는 쓰지 않는다"
         },
         "missing_share_cur": {
           "type": "number",

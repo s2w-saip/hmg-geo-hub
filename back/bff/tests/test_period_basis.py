@@ -56,6 +56,77 @@ class CompareReader(unittest.TestCase):
         self.assertEqual((item["prev"], item["cur"]), ({"num": 300, "den": 60}, {"num": 500, "den": 50}))
 
 
+def cycle(day, *, published=True, expected=1):
+    return {"round_date": day, "hidden_scope": 0, "servable": published, "in_release": published,
+            "expected_units": expected, "status": 1}
+
+
+class LedgerConn:
+    """The cycle ledger `cycles` and one kpi row per measured day (answers 100, tracked `tracked[day]`)."""
+
+    def __init__(self, cycles, tracked):
+        self.cycles, self.tracked = cycles, tracked
+
+    async def fetch(self, sql, *args):
+        if "FROM gold.kpi_cell" in sql:
+            return [counts_row(d, answers=100, tracked=n, cit_total=10, gap_base=100) for d, n in self.tracked.items()]
+        if "FROM gold.dim_cycle" in sql:
+            return self.cycles
+        raise AssertionError(sql[:100])
+
+
+def compare_item(query, cycles, tracked):
+    """The visibility item of one kpi/compare read over `cycles` (selectable dates = the measured days)."""
+    ctx = Context(LedgerConn(cycles, tracked), QueryParams(f"surface=global&metrics=visibility&{query}"))
+    ctx.release = {"release_id": 1, "version": 1, "rule_signature": "test"}
+    ctx.builds = {"cell": [1]}
+    ctx.dates = sorted(tracked, reverse=True)
+    ctx.selected_dates = ctx.dates[:1]
+    return asyncio.run(compare.read(ctx))["data"][0]
+
+
+class CompareSuppression(unittest.TestCase):
+    """⛔K (2026-10-31, admin-todo rule 5: a value that jumps because the measured range changed is shown, not hidden or
+    warned about): only a comparison without a value to compare is suppressed (unsupported · no_prev · no_data). A thin
+    collection (missing_share), a previous period at the start of measurement (start_window · start_month) and a period
+    before the 2026-09-08 cut-off still compare."""
+
+    def assert_compared(self, item, delta):
+        self.assertEqual([item["suppressed"], item["reason"], item["delta"]], [False, None, delta])
+
+    def test_a_thin_collection_still_compares(self):
+        # the previous round collected 1 of 2 planned units (50 % missing ≥ 30 %): was missing_share
+        d1, d2 = date(2026, 9, 28), date(2026, 10, 5)
+        item = compare_item("kind=cycle", [cycle(d1), cycle(d1, published=False), cycle(d2)], {d1: 40, d2: 50})
+        self.assertEqual(item["missing_share_prev"], 0.5)
+        self.assert_compared(item, 10.0)
+
+    def test_a_previous_window_at_the_start_of_measurement_still_compares(self):
+        # 8 days: prev 09-20..09-27, the first published round 09-24 > 09-20 + grace 2: was start_window
+        first, d2 = date(2026, 9, 24), date(2026, 10, 1)
+        item = compare_item("kind=window&from=2026-09-28&to=2026-10-05", [cycle(first), cycle(d2)], {first: 40, d2: 50})
+        self.assert_compared(item, 10.0)
+
+    def test_a_previous_month_at_the_start_of_measurement_still_compares(self):
+        # 2026-10 vs 2026-09, measurement started 09-14 (> day 7) with no August data: was start_month
+        first, d2 = date(2026, 9, 14), date(2026, 10, 5)
+        item = compare_item("kind=calendarMonth&from=2026-10-01&to=2026-10-05", [cycle(first), cycle(d2)], {first: 40, d2: 50})
+        self.assert_compared(item, 10.0)
+
+    def test_a_period_before_the_cut_off_compares(self):
+        # cur ends 2026-08-31 < 2026-09-08 (the original API's PERIOD_COMPARE_EPOCH gate)
+        d1, d2 = date(2026, 8, 24), date(2026, 8, 31)
+        self.assert_compared(compare_item("kind=cycle", [cycle(d1), cycle(d2)], {d1: 40, d2: 50}), 10.0)
+
+    def test_without_a_value_to_compare_it_is_still_suppressed(self):
+        d2 = date(2026, 10, 5)
+        no_prev = compare_item("kind=cycle", [cycle(d2)], {d2: 50})
+        self.assertEqual([no_prev["suppressed"], no_prev["reason"], no_prev["delta"]], [True, "no_prev", None])
+        # the previous day's round was published but this filter has no answer in it
+        no_data = compare_item("kind=window&from=2026-10-05&to=2026-10-05", [cycle(date(2026, 10, 4)), cycle(d2)], {d2: 50})
+        self.assertEqual([no_data["suppressed"], no_data["reason"], no_data["delta"]], [True, "no_data", None])
+
+
 class CompareQuery(unittest.TestCase):
     def test_the_card_basis_follows_the_values_the_page_shows(self):
         req = {"surface": "global", "kind": "window", "metrics": ["share"]}

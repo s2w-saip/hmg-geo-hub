@@ -1,4 +1,8 @@
-"""Compare real Gold measurements and cycle ledgers with the existing KPI rules."""
+"""Compare real Gold measurements and cycle ledgers with the existing KPI rules.
+
+A comparison is suppressed only when there is no value to compare (unsupported · no_prev · no_data). The ledger's
+planned and missing units are sent as they are (planned_* · missing_share_*), never as a reason to hide the Δ (⛔K,
+2026-10-31 HUB rule 5: a value that jumps because the measured range changed is shown, not hidden or warned about)."""
 from copy import copy
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
@@ -76,7 +80,6 @@ async def read(ctx):
                     ledger.missing_units += planned
         for lab in sums:
             ledgers[(lab, family)].published_cycles = len(published[lab])
-            ledgers[(lab, family)].first_published = first[family]
         for row in await counts(scan_ctx, group="date", family=population, prompts=False):
             lab = window.label_of(row["round_date"])
             for key in COUNTS:
@@ -94,7 +97,7 @@ async def read(ctx):
     for metric in metrics:
         family, unit = logic.METRIC_FAMILY[metric], logic.METRIC_UNIT[metric]
         lp, lc = ledgers[("prev", family)], ledgers[("cur", family)]
-        reason = logic.suppression_of(window, lp, lc, before=ledgers[("before", family)]) if window else "no_prev"
+        reason = logic.suppression_of(window, lp, lc) if window else "no_prev"
         p, c = prev[metric], cur[metric]
         if metric == "position":
             p, c = p or {"sum": 0, "count": 0}, c or {"sum": 0, "count": 0}

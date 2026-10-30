@@ -13,7 +13,7 @@ def round1(value: float) -> float:
 CompareKind = Literal["window", "calendarMonth", "calendarWeek", "cycle"]
 CompareUnit = Literal["pp", "rank", "pct"]
 CompareFamily = Literal["mention", "citation"]
-SuppressReason = Literal["unsupported", "no_prev", "no_data", "missing_share", "start_window", "start_month"]
+SuppressReason = Literal["unsupported", "no_prev", "no_data"]
 MetricKey = Literal["visibility", "share_of_voice", "sentiment", "position", "citation_share",
                     "mentions_per_answer", "citations_per_answer"]
 
@@ -25,22 +25,14 @@ METRIC_UNIT: dict[str, CompareUnit] = {"visibility": "pp", "share_of_voice": "pp
 METRIC_FAMILY: dict[str, CompareFamily] = {"visibility": "mention", "share_of_voice": "mention", "sentiment": "mention",
                                            "position": "mention", "citation_share": "citation",
                                            "mentions_per_answer": "mention", "citations_per_answer": "citation"}
-SUPPRESSION_PRECEDENCE: tuple[SuppressReason, ...] = ("unsupported", "no_prev", "no_data", "missing_share", "start_window", "start_month")
-MISSING_SHARE_MAX = 0.3                 # 경계 포함(>=)
-MISSING_SHARE_MIN_WINDOW_DAYS = 30      # 창 비교만 길이 하한
-START_MONTH_FIRST_WEEK_LAST_DAY = 7
+# 비교할 값이 없을 때만 억제한다(⛔K, 2026-10-31 HUB 규칙 5: 측정 방식 · 범위가 달라 값이 튀어도 숨기거나 경고하지 않는다).
+# 원본 API 명세의 missing_share(수집분 70% 미만) · start_window · start_month(시작 유예)와 적용일(2026-09-08) 게이트는 뺐다.
+SUPPRESSION_PRECEDENCE: tuple[SuppressReason, ...] = ("unsupported", "no_prev", "no_data")
 CALENDAR_WEEK_DAYS = 7
 
-# ── 현행 프로필(compare_epoch_gate·compare_suppress) ──
-PERIOD_COMPARE_EPOCH = date(2026, 9, 8)     # 현행 period-compare.ts:297 PERIOD_COMPARE_EPOCH(운영 DB 덮어쓰기 행 없음, 머리 주석)
-EPOCH_GATED = "before_epoch"                # meta.suppressed['*']: 적용일 전이라 비교 안 함(현행 null = 종전 Δ). 어댑터가 null 로 바꾼다
+# ── 현행 프로필(compare_suppress) ──
 LEGACY_UNSUPPORTED_SURFACES = ("global", "website")    # 현행 fetchPeriodCompare 표면(project 는 현행 기간 비교가 없다)
 N_OWN_BRANDS = len(OWN_BITS)                # 현행 자사 명부 브랜드 수(Hyundai·Kia·Genesis = rd.answer 당사 열 h·k·g)
-
-
-def period_compare_applies(cur_hi: date, epoch: date = PERIOD_COMPARE_EPOCH) -> bool:
-    """periodCompareApplies 이식(period-compare.ts:300): cur.hi ≥ 적용일이면 비교한다(경계 포함)."""
-    return cur_hi >= epoch
 
 
 def legacy_unsupported_reason(surface: str, *, depth2: bool, depth3: bool, own_bits: tuple[int, ...] | list[int]) -> str | None:
@@ -79,7 +71,7 @@ class Windows:
     prev: Span | None                   # cycle 에서 직전 노출 회차가 없으면 None(no_prev)
     cur: Span
     before: Span | None = None
-    days: int | None = None             # 창 비교의 N(억제 판정 입력)
+    days: int | None = None             # 창 비교의 N
 
     def spans(self) -> dict[str, Span]:
         out = {"cur": self.cur}
@@ -103,16 +95,12 @@ class Windows:
 
 @dataclass
 class Ledger:
-    """구간 하나의 회차 원장 요약. planned·missing·published 는 필터 무관, data_cycles 만 필터 적용 후(현행 CompareLedger)."""
+    """구간 하나의 회차 원장 요약. planned·missing·published 는 필터 무관, data_cycles 만 필터 적용 후(현행 CompareLedger).
+    planned · missing 은 응답의 planned_* · missing_share_* 로 그대로 싣는다(억제 판정에는 쓰지 않는다, ⛔K)."""
     planned_units: int = 0
     missing_units: int = 0
     published_cycles: int = 0
     data_cycles: int = 0
-    first_published: date | None = None
-
-    @property
-    def planned_known(self) -> bool:
-        return self.planned_units > 0
 
     @property
     def missing_share(self) -> float:
@@ -180,32 +168,9 @@ def cycle_windows(cur: date, prev: date | None) -> Windows:
 
 
 # ── 억제 ────────────────────────────────────────────────────────────────────
-def grace_days(days: int) -> int:
-    if days < 1:
-        raise ValueError(f"창 길이는 1 이상: {days}")
-    return math.ceil(days / 4)
-
-
-def applies_missing_share(kind: CompareKind, days: int) -> bool:
-    """달력 월·주·cycle 은 항상, 창 비교는 30일 이상(appliesMissingShare 이식, cycle 은 주와 같은 원장 모양이라 항상)."""
-    if kind in ("calendarMonth", "calendarWeek", "cycle"):
-        return True
-    return days >= MISSING_SHARE_MIN_WINDOW_DAYS
-
-
-def judge_start_window(first: date | None, prev_lo: date, days: int) -> bool:
-    return first is not None and first > prev_lo + timedelta(days=grace_days(days))
-
-
-def judge_start_month(first: date | None, prev: Span, before_data_cycles: int) -> bool:
-    if before_data_cycles > 0 or first is None or first not in prev:
-        return False
-    return first.day > START_MONTH_FIRST_WEEK_LAST_DAY
-
-
-def suppression_of(w: Windows, prev: Ledger, cur: Ledger, *, before: Ledger | None = None,
-                   unsupported: bool = False) -> SuppressReason | None:
-    days = w.days if w.days is not None else w.cur.days
+def suppression_of(w: Windows, prev: Ledger, cur: Ledger, *, unsupported: bool = False) -> SuppressReason | None:
+    """비교할 값이 없을 때의 사유(우선순위 SUPPRESSION_PRECEDENCE), 비교하면 None. 수집분 비중 · 측정 시작 구간은 보지
+    않는다(⛔K 2026-10-31)."""
     if w.prev is None:
         return "unsupported" if unsupported else "no_prev"
     hit: set[str] = set()
@@ -215,16 +180,6 @@ def suppression_of(w: Windows, prev: Ledger, cur: Ledger, *, before: Ledger | No
         hit.add("no_prev")
     if prev.data_cycles <= 0 or cur.data_cycles <= 0:
         hit.add("no_data")
-    if applies_missing_share(w.kind, days):
-        def over(x: Ledger) -> bool:
-            return x.planned_known and x.missing_share >= MISSING_SHARE_MAX
-        if over(prev) or over(cur):
-            hit.add("missing_share")
-    if w.kind in ("window", "calendarWeek"):
-        if judge_start_window(prev.first_published, w.prev.lo, CALENDAR_WEEK_DAYS if w.kind == "calendarWeek" else days):
-            hit.add("start_window")
-    elif w.kind == "calendarMonth" and judge_start_month(prev.first_published, w.prev, before.data_cycles if before else 0):
-        hit.add("start_month")
     return next((r for r in SUPPRESSION_PRECEDENCE if r in hit), None)
 
 
