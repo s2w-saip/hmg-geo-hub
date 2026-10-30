@@ -271,7 +271,7 @@ function Summary() {
         detail = p.next ? t("find.engineDetail", { next: engineLabel(String(p.next)), nextGap: `${Number(p.nextGap) >= 0 ? "+" : "−"}${Math.abs(Number(p.nextGap)).toFixed(1)}pp` }) : t("find.engineDetailOne");
         break;
       case "climb":
-        title = t("find.climb.title", { brand: String(p.brand), from: p.from, to: p.to });
+        title = t("find.climb.title", { brand: String(p.brand), from: p.from, to: p.to, weeks: p.weeks });
         detail = t("find.climbDetail", { weeks: p.weeks });
         break;
       case "negative":

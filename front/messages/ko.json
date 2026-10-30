@@ -5174,7 +5174,7 @@
         "engineDetailOne": "노출률 기준",
         "climb": {
           "tag": "순위 변화",
-          "title": "{brand} 언급 순위 {from}위 → {to}위"
+          "title": "{brand} 언급 순위 {from}위 → {to}위 · 최근 {weeks}회차"
         },
         "climbDetail": "최근 {weeks}회차 · 당사 + 상위 10 기준",
         "negative": {
@@ -5447,7 +5447,7 @@
         "skewDetail": "{share} · 전체 {base} — 출처 선호 매트릭스",
         "climb": {
           "tag": "순위 변화",
-          "title": "{domain} 인용 순위 {from}위 → {to}위"
+          "title": "{domain} 인용 순위 {from}위 → {to}위 · 최근 {weeks}회차"
         },
         "climbDetail": "최근 {weeks}주 · 상위 {n}개 도메인 안에서 매긴 순위"
       },

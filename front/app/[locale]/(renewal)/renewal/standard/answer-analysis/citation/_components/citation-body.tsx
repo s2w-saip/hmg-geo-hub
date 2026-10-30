@@ -244,7 +244,7 @@ function Summary() {
         detail = t("find.skewDetail", { share: pctTxt(Number(p.share)), base: pctTxt(Number(p.base)) });
         break;
       case "climb":
-        title = t("find.climb.title", { domain: String(p.domain), from: p.from, to: p.to });
+        title = t("find.climb.title", { domain: String(p.domain), from: p.from, to: p.to, weeks: p.weeks });
         detail = t("find.climbDetail", { weeks: p.weeks, n: p.n });
         break;
     }

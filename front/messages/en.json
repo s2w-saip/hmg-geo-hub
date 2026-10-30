@@ -5174,7 +5174,7 @@
         "engineDetailOne": "Exposure basis",
         "climb": {
           "tag": "Rank change",
-          "title": "{brand} mention rank #{from} → #{to}"
+          "title": "{brand} mention rank #{from} → #{to} · last {weeks} rounds"
         },
         "climbDetail": "Last {weeks} rounds · us + top 10",
         "negative": {
@@ -5447,7 +5447,7 @@
         "skewDetail": "{share} · all {base} — source preference matrix",
         "climb": {
           "tag": "Rank change",
-          "title": "{domain} moved from #{from} to #{to}"
+          "title": "{domain} moved from #{from} to #{to} · last {weeks} rounds"
         },
         "climbDetail": "Last {weeks} weeks · rank within the top {n} domains"
       },
