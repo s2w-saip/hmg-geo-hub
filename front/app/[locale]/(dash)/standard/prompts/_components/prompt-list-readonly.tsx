@@ -237,6 +237,9 @@ export function StandardPromptReadonlyList({
   const funnelOptions = facets.funnel ?? [];
   // 시장·언어 옵션은 스코프의 행 전체에서 나온다 — 미측정 행까지 포함(D15).
   const marketOptions = facets.market ?? [];
+  // 값 없음(Gold 값이 없는 행): 서버가 범위에 그런 행이 있을 때만 준다 (점검 13-1 · 13-2)
+  const presenceNone = (facets.presence ?? []).includes("none");
+  const kindNone = (facets.kind ?? []).includes("none");
   const langOptions = facets.lang ?? [];
 
   // Picking a parent invalidates its children — reset them to "all".
@@ -619,6 +622,7 @@ export function StandardPromptReadonlyList({
                 <SelectItem value={ALL}>{t("filterAll")}</SelectItem>
                 <SelectItem value="branded">{tVal("branded")}</SelectItem>
                 <SelectItem value="unbranded">{tVal("unbranded")}</SelectItem>
+                {presenceNone ? <SelectItem value="none">{t("valueNone")}</SelectItem> : null}
               </SelectContent>
             </Select>
           </div>
@@ -639,6 +643,7 @@ export function StandardPromptReadonlyList({
                 <SelectItem value={ALL}>{t("filterAll")}</SelectItem>
                 <SelectItem value="acr">{t("kindAcr")}</SelectItem>
                 <SelectItem value="single">{t("kindSingle")}</SelectItem>
+                {kindNone ? <SelectItem value="none">{t("valueNone")}</SelectItem> : null}
               </SelectContent>
             </Select>
           </div>
@@ -890,10 +895,12 @@ export function StandardPromptReadonlyList({
                         <Swords className="h-3 w-3" aria-hidden />
                         {t("kindAcr")}
                       </Badge>
-                    ) : (
+                    ) : r.kind === "single" ? (
                       <Badge variant="outline" className="text-[10px] text-muted-foreground">
                         {t("kindSingle")}
                       </Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
                     )}
                   </td>
                   <td className="px-3 py-3">

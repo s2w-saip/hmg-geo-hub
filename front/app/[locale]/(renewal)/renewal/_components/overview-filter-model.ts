@@ -59,6 +59,11 @@ export interface OverviewPanelInput {
   catalogRows?: CatalogTaxonomyRow[];
   geographyOptions?: string[];
   languageOptions?: string[];
+  /**
+   * 브랜드 axis options from the page's own read (the app panel's brandOptions: the Website Prompts page passes the
+   * brands of website/prompts-options, renewal audit 13-4). Absent = the static DIMENSIONS.brand, as in the app.
+   */
+  brandOptions?: string[];
   optionMatrix?: MeasuredScopeCombo[];
 }
 
@@ -202,6 +207,7 @@ export function axisOptions(
     return orderGeographyOptions(narrowed);
   }
   if (group === "language") return model.languageOptions;
+  if (group === "brand" && input.brandOptions) return input.brandOptions;
   return DIMENSIONS[group];
 }
 

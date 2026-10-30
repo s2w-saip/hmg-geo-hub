@@ -8,6 +8,8 @@ from unittest import mock
 try:
     from fastapi import HTTPException
     from starlette.datastructures import QueryParams
+    from bff.gold_reader import catalog
+    from bff.gold_reader.context import Context
     from bff.screens import standard_prompts as sp
 except ModuleNotFoundError as exc:
     raise unittest.SkipTest("Run inside the BFF image (bff.tests.test_screens_standard_prompts)") from exc
@@ -37,12 +39,21 @@ class Rows(unittest.TestCase):
         self.assertEqual(sp.catalog_row(item("a"))["scopePromptId"], "s-a")
         self.assertIsNone(sp.catalog_row(item("a", measured=False))["scopePromptId"])
 
-    def test_presence_prefers_the_editorial_value_then_the_umbrella_rule(self):
-        self.assertEqual(sp.presence_of("Kia", "unbranded"), "unbranded")
-        self.assertEqual(sp.presence_of("HMG", None), "unbranded")
-        self.assertEqual(sp.presence_of("Kia", None), "branded")
-        self.assertIsNone(sp.presence_of(None, None))
-        self.assertIsNone(sp.presence_of(None, "-"))
+    def test_presence_is_gold_s_value_only(self):
+        """Renewal audit 13-1: an empty Gold value stays empty (the brand no longer stands in for it: HMG ->
+        미포함, another brand -> 포함 was the original API's presence_effective)."""
+        presence = lambda **over: sp.catalog_row(item("a", **over))["presence"]
+        self.assertEqual(presence(brand_code="Kia", brand_presence="unbranded"), "unbranded")
+        self.assertEqual(presence(brand_code="HMG", brand_presence="branded"), "branded")
+        self.assertIsNone(presence(brand_code="HMG", brand_presence=None))
+        self.assertIsNone(presence(brand_code="Kia", brand_presence=None))
+        self.assertIsNone(presence(brand_code=None, brand_presence=None))
+        self.assertIsNone(presence(brand_code="Kia", brand_presence="-"))
+
+    def test_kind_is_gold_s_value_only(self):
+        """Renewal audit 13-2: an empty Gold kind stays empty (no 'single' default)."""
+        self.assertIsNone(sp.catalog_row(item("a", kind=None))["kind"])
+        self.assertEqual([sp.catalog_row(item("a", kind=k))["kind"] for k in ("acr", "single")], ["acr", "single"])
 
     def test_common_rows_have_no_brand_or_the_umbrella_brand(self):
         self.assertEqual([r["common"] for r in rows(item("a"), item("b", brand_code="HMG"), item("c", brand_code=None))],
@@ -57,7 +68,8 @@ class Rows(unittest.TestCase):
 class Filters(unittest.TestCase):
     def setUp(self):
         self.rows = rows(item("a"), item("b", kind="acr", lang="en", regions=["US", "x:WW"], measured=False),
-                         item("c", brand_code="HMG", brand_presence=None, funnel_stage="비교/검증", text="EV Range?"))
+                         item("c", brand_code="HMG", brand_presence=None, funnel_stage="비교/검증", text="EV Range?"),
+                         item("d", brand_code="HMG", brand_presence="unbranded", kind=None))
 
     def ids(self, **filters):
         f = {**{a: "all" for a in sp.AXES}, **filters}
@@ -67,14 +79,21 @@ class Filters(unittest.TestCase):
         self.assertEqual(self.ids(kind="acr"), ["b"])
         self.assertEqual(self.ids(lang="en"), ["b"])
         self.assertEqual(self.ids(funnel="비교/검증"), ["c"])
-        self.assertEqual(self.ids(presence="unbranded"), ["c"])
+        self.assertEqual(self.ids(presence="unbranded"), ["d"])
         self.assertEqual(self.ids(status="unmeasured"), ["b"])
-        self.assertEqual(self.ids(status="tracked"), ["a", "c"])
+        self.assertEqual(self.ids(status="tracked"), ["a", "c", "d"])
         self.assertEqual(self.ids(depth1="B"), [])
+
+    def test_no_value_is_its_own_pick(self):
+        """'값 없음' picks the rows Gold left empty (renewal audit 13-1 · 13-2); a value pick never takes them."""
+        self.assertEqual(self.ids(presence="none"), ["c"])
+        self.assertEqual(self.ids(presence="branded"), ["a", "b"])
+        self.assertEqual(self.ids(kind="none"), ["d"])
+        self.assertEqual(self.ids(kind="single"), ["a", "c"])
 
     def test_market_matches_after_normalizing_both_sides(self):
         self.assertEqual(self.ids(market=" x:ww "), ["b"])
-        self.assertEqual(self.ids(market="kr"), ["a", "c"])
+        self.assertEqual(self.ids(market="kr"), ["a", "c", "d"])
         self.assertEqual(self.ids(market="  "), [])
 
     def test_search_is_trimmed_and_case_insensitive(self):
@@ -105,6 +124,15 @@ class Options(unittest.TestCase):
     def test_columns_with_a_value_in_the_scope(self):
         self.assertEqual(sp.columns(self.rows), ["listType", "depth1", "depth2"])
 
+    def test_presence_and_kind_offer_no_value_only_when_a_row_has_none(self):
+        """The fixed values always; '값 없음' (none) only when the scope has a row Gold left empty (renewal audit 13-1)."""
+        draft = {a: "all" for a in sp.AXES}
+        f = sp.facets(self.rows, draft)
+        self.assertEqual((f["presence"], f["kind"]), (["branded", "unbranded"], ["acr", "single"]))
+        empty = self.rows + rows(item("e", brand_presence=None, kind=None))
+        f = sp.facets(empty, draft)
+        self.assertEqual((f["presence"], f["kind"]), (["branded", "unbranded", "none"], ["acr", "single", "none"]))
+
 
 class Order(unittest.TestCase):
     def ids(self, rs, **q):
@@ -119,6 +147,11 @@ class Order(unittest.TestCase):
         rs = rows(item("1", kind="acr", text="b"), item("2", text="z"), item("3", kind="acr", text="a"))
         self.assertEqual(self.ids(rs, sort="kind", asc=True), ["2", "3", "1"])
         self.assertEqual(self.ids(rs, sort="kind", asc=False), ["3", "1", "2"])
+
+    def test_an_empty_kind_sorts_apart_from_single(self):
+        rs = rows(item("1", kind=None), item("2", kind="acr"), item("3"))
+        self.assertEqual(self.ids(rs, sort="kind", asc=True), ["1", "3", "2"])
+        self.assertEqual(self.ids(rs, sort="kind", asc=False), ["2", "3", "1"])
 
     def test_status_puts_unmeasured_first_ascending(self):
         rs = rows(item("1"), item("2", measured=False))
@@ -258,6 +291,51 @@ class History(unittest.TestCase):
     def test_consecutive_rows_of_one_batch_fold(self):
         vm, _ = self.history("", [audit(1, 1, batch="b"), audit(2, 1, batch="b"), audit(3, 1), audit(4, 1, batch="b")])
         self.assertEqual([(g["key"], len(g["rows"])) for g in vm["groups"]], [("1", 2), ("3", 1), ("4", 1)])
+
+
+
+class GlobalListConn:
+    def __init__(self):
+        self.calls = []
+
+    async def fetch(self, sql, *args):
+        self.calls.append((sql, args))
+        return []
+
+
+def global_list(qs):
+    conn = GlobalListConn()
+    ctx = Context(conn, QueryParams("surface=global&card=true&" + qs))
+    ctx.release = {"release_id": 1, "version": 1, "rule_signature": "test"}
+    ctx.builds = {"fact": [7]}
+    run(catalog.prompts(ctx))
+    return conn.calls[0]
+
+
+class GoldGlobalList(unittest.TestCase):
+    """Renewal audit 13-3 (2026-10-31): the global catalog read keeps the account's countries (the clamp's `country`)
+    as the original API's catalog_market_scope did (B1 2026-09-03): a prompt whose target markets are unset, hold no
+    real country, or hold a country of the scope. It used to read every market (Genesis · genesis-middle-east got
+    1,208 prompts, 302 of them for its countries)."""
+
+    MARKET = "unnest(p.regions)"
+
+    def test_the_scope_countries_narrow_the_rows(self):
+        sql, args = global_list("brand=Genesis&country=ae&country=SA&country=x:WW")
+        self.assertIn("p.regions IS NULL", sql)
+        self.assertIn("NOT LIKE 'x:%'", sql)
+        self.assertIn(["AE", "SA"], args)
+
+    def test_no_country_reads_every_market(self):
+        sql, _ = global_list("brand=Kia")
+        self.assertNotIn(self.MARKET, sql)
+        sql, _ = global_list("country=x:WW")
+        self.assertNotIn(self.MARKET, sql)
+
+    def test_the_brand_scope_stays_the_brands_and_the_umbrella(self):
+        sql, args = global_list("brand=Kia&country=DE")
+        self.assertIn("(ce.brand_bit & $2)<>0", sql)
+        self.assertEqual(args[1], 2 | 8)
 
 
 if __name__ == "__main__":

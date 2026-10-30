@@ -2329,6 +2329,7 @@
     "filterDepth4": "Depth4",
     "filterFunnel": "퍼널",
     "filterAll": "전체",
+    "valueNone": "값 없음",
     "filterReset": "리셋",
     "filterApply": "적용",
     "filteredCount": "표시 {shown} / 전체 {total}",

@@ -87,6 +87,8 @@ const FULL = page(
   ["depth1", "depth2", "depth3"],
 );
 const SPARSE = page({ listType: [], depth1: [], depth2: [], depth3: [], depth4: [], funnel: [], market: [], lang: [] }, []);
+// a scope with rows Gold left without a presence / kind (renewal audit 13-1 · 13-2): both offer '값 없음'
+const NO_VALUE = page({ ...FULL.facets, presence: ["branded", "unbranded", "none"], kind: ["acr", "single", "none"] }, ["depth1", "depth2", "depth3"]);
 
 // ── minimal parser for react-dom/server markup ──
 type El = { tag: string; attrs: Record<string, string>; children: El[]; text?: string; parent?: El };
@@ -149,6 +151,7 @@ describe("renewal Global prompts filters = the original filters", () => {
   it.each([
     ["full facets", FULL],
     ["sparse facets (empty axes hide)", SPARSE],
+    ["presence and kind with 값 없음", NO_VALUE],
   ] as const)("%s", (_l, p) => {
     SEARCH = "";
     const original = originalFilters(
@@ -174,6 +177,8 @@ describe("renewal Global prompts filters = the original filters", () => {
     );
     expect(original.length).toBeGreaterThanOrEqual(3);
     expect(renewal).toEqual(original);
+    const noValue = (axes: Axis[], label: string) => axes.find((a) => a.label === label)?.options.some(([l]) => l === "값 없음");
+    for (const label of [ko.standardPromptsView.presenceLabel, ko.standardPromptsView.kindLabel]) expect(noValue(original, label)).toBe(p === NO_VALUE);
   });
 
   it("a parent pick resets its children (the original updateDraft)", () => {

@@ -8,10 +8,10 @@
 // cut-off cells show their full text on hover, a row opens the detail sheet (prompt-detail.tsx).
 // The panel, list and sheet parts are shared with Admin › Global prompts (_components/prompt-list.tsx).
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { ArrowDownWideNarrow, ArrowUpNarrowWide, Bookmark, Download, Globe, Link2, Loader2 } from "lucide-react";
+import { ArrowDownWideNarrow, ArrowUpNarrowWide, Bookmark, ChevronDown, Download, Globe, Link2, Loader2 } from "lucide-react";
 import {
   RnButton,
   RnCard,
@@ -59,6 +59,7 @@ import {
   ALL,
   DEFAULT_SORT,
   EMPTY_FILTER,
+  NO_VALUE,
   PROMPT_AXES,
   PROMPT_SORTS,
   activeAxes,
@@ -133,6 +134,7 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
   const valueLabel = useCallback(
     (axis: PromptAxis, v: string): string => {
       if (v === ALL) return t("filterAll");
+      if ((axis === "presence" || axis === "kind") && v === NO_VALUE) return t("valueNone");
       if (axis === "presence") return tVal(v as "branded");
       if (axis === "kind") return v === "acr" ? t("kindAcr") : t("kindSingle");
       if (axis === "status") return v === "measured" ? t("statusMeasured") : t("statusUnmeasured");
@@ -289,8 +291,9 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
     }
   }
 
-  // ── scope summary (the original strip, condensed into a pill) ──
+  // ── scope summary (the original strip, condensed into a pill that opens the whole scope) ──
   const showRegions = scopeRole !== "country" && scopeRegions.length > 0;
+  const regionName = (r: string) => rhqLabel(r, locale === "en" ? "en" : "ko") ?? r;
   const scopeSummary = useMemo(() => {
     if (scopeAll) return t("scopeAll");
     const parts: string[] = [];
@@ -389,11 +392,19 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
             title={t("title")}
             meta={
               <>
-                <RnPill title={!scopeAll && scopeCountries.length ? t("scopeMarketHintDetail") : undefined}>
-                  <Globe className="size-3 text-rn-muted" aria-hidden />
-                  {tp("scopePill", { scope: scopeSummary })}
-                  {!scopeAll ? <span className="text-rn-muted">· {t("scopeCommonHint")}</span> : null}
-                </RnPill>
+                {scopeAll ? (
+                  <RnPill>
+                    <Globe className="size-3 text-rn-muted" aria-hidden />
+                    {tp("scopePill", { scope: scopeSummary })}
+                  </RnPill>
+                ) : (
+                  <ScopePill
+                    summary={tp("scopePill", { scope: scopeSummary })}
+                    brands={scopeBrands}
+                    regions={showRegions ? scopeRegions.map(regionName) : []}
+                    countries={scopeCountries.map((c) => ({ code: c, label: marketLabel(c) }))}
+                  />
+                )}
                 {period ? (
                   <span className="tabular-nums">
                     {t("collectionPeriod", { from: period.from, to: period.to })} · {t("lastCollectedAt", { date: period.to })}
@@ -561,7 +572,12 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
                                   <span data-rn-tip={tVal(r.presence)} className="truncate text-rn-12 text-rn-muted">
                                     {tp(`presenceShort.${r.presence}`)}
                                   </span>
-                                ) : null}
+                                ) : (
+                                  // Gold has no presence for the prompt: said so, never read off the brand (renewal audit 13-1)
+                                  <span data-rn-tip={`${t("presenceLabel")}: ${t("valueNone")}`} className="text-rn-12 text-rn-faint">
+                                    —
+                                  </span>
+                                )}
                               </span>
                             </td>
                             <td className={TD}>
@@ -577,7 +593,13 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
                             </td>
                             <td className={TD}>
                               <span className="flex items-center gap-1.5 text-rn-12 whitespace-nowrap">
-                                <RnKindMark acr={r.kind === "acr"} />
+                                {r.kind ? (
+                                  <RnKindMark acr={r.kind === "acr"} />
+                                ) : (
+                                  <span data-rn-tip={`${t("kindLabel")}: ${t("valueNone")}`} className="text-rn-faint">
+                                    —
+                                  </span>
+                                )}
                                 {r.scopePromptId === null ? (
                                   <span data-rn-tip={tp("unmeasuredHint")} className="inline-flex items-center gap-1 text-rn-muted">
                                     <i aria-hidden className="inline-block size-2 rounded-full border border-dashed border-rn-muted" />
@@ -621,6 +643,99 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
       </RnFilterSplit>
       <RnPromptDetail row={detail} taxonomy={taxonomy} marketLabel={marketLabel} onClose={() => setDetail(null)} />
     </div>
+  );
+}
+
+const SCOPE_LIST_W = 340;
+
+/**
+ * The 열람 범위 pill of a scoped account (renewal audit 13-3): a button that opens the whole scope, as the original
+ * strip's dropdown did — the brands, the regions and every country (the pill folds more than two into "N개국"), and
+ * what the countries mean for the list (target markets holding one of them, or unset). Closes on Escape and outside.
+ * The page header clips what overflows it (filter-split FRAME_HEAD), so the list is placed `fixed` under the pill,
+ * as the shared truncation tip is.
+ */
+function ScopePill({ summary, brands, regions, countries }: { summary: string; brands: string[]; regions: string[]; countries: { code: string; label: string }[] }) {
+  const t = useTranslations("standardPromptsView");
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+  const ref = useRef<HTMLSpanElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
+  const id = useId();
+  const place = useCallback(() => {
+    const r = button.current?.getBoundingClientRect();
+    if (r) setPos({ left: Math.max(8, Math.min(r.left, window.innerWidth - SCOPE_LIST_W - 8)), top: r.bottom + 6 });
+  }, []);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setOpen(false);
+      button.current?.focus();
+    };
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("resize", place);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", place);
+    };
+  }, [open, place]);
+  const group = (label: string, items: ReactNode, attr?: Record<string, string>) => (
+    <div className="flex flex-col gap-1.5" {...attr}>
+      <span className="text-rn-11 font-semibold text-rn-muted">{label}</span>
+      <div className="flex flex-wrap gap-1">{items}</div>
+    </div>
+  );
+  return (
+    <span ref={ref} className="relative inline-flex">
+      <button
+        ref={button}
+        type="button"
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        aria-controls={id}
+        onClick={() => {
+          if (!open) place();
+          setOpen(!open);
+        }}
+        className="inline-flex h-[26px] cursor-pointer items-center gap-1.5 rounded-full border border-rn-line-2 bg-rn-surface px-2.5 text-rn-12 text-rn-ink-2 hover:border-rn-navy-300 focus-visible:outline-2 focus-visible:outline-rn-navy"
+      >
+        <Globe className="size-3 text-rn-muted" aria-hidden />
+        {summary}
+        <span className="text-rn-muted">· {t("scopeCommonHint")}</span>
+        <ChevronDown className={cx("size-3 text-rn-muted transition-transform", open && "rotate-180")} aria-hidden />
+      </button>
+      <div
+        id={id}
+        role="dialog"
+        aria-label={t("scopeLabel")}
+        hidden={!open}
+        style={pos ? { left: pos.left, top: pos.top, width: SCOPE_LIST_W } : { width: SCOPE_LIST_W }}
+        className="fixed z-[110] flex max-h-[360px] flex-col gap-3 overflow-y-auto rounded-[10px] border border-rn-line bg-rn-surface p-3.5 text-rn-12 text-rn-ink-2 shadow-rn-3"
+      >
+        {brands.length ? group(`${t("brandLabel")} · ${t("scopeCommonHint")}`, brands.map((b) => <RnTag key={b}>{b}</RnTag>)) : null}
+        {regions.length ? group(t("scopeRegionLabel"), regions.map((r) => <RnTag key={r} className="bg-rn-inset text-rn-ink-2">{r}</RnTag>)) : null}
+        {countries.length ? (
+          <>
+            {group(
+              `${t("scopeCountryLabel")} (${countries.length})`,
+              countries.map((c) => (
+                <span key={c.code} title={c.code} className="rounded-md bg-rn-inset px-1.5 py-px text-rn-12 text-rn-ink-2">
+                  {c.label}
+                </span>
+              )),
+              { "data-rn-scope-countries": "" },
+            )}
+            <p className="m-0 border-t border-rn-line pt-2.5 text-rn-12 text-rn-muted">{t("scopeMarketHintDetail")}</p>
+          </>
+        ) : null}
+      </div>
+    </span>
   );
 }
 

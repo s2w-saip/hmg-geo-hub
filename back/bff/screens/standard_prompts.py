@@ -3,10 +3,15 @@ catalog list with its filter options, the page header's collection period, the e
 change-history feed.
 
 Ports: back/app catalog/prompts screen.py catalog_screen (the list's filters, facets, columns, order and
-paging, read-only row fields), lib/standards/prompt-markets.ts (market codes), lib/scope/brand-presence.ts
-(brand presence), lib/hgh/adapters/catalog.ts standardCollectionPeriodApi / listGlobalAuditApi,
+paging, read-only row fields), lib/standards/prompt-markets.ts (market codes),
+lib/hgh/adapters/catalog.ts standardCollectionPeriodApi / listGlobalAuditApi,
 lib/hgh/prompt-timeline.ts fetchPromptTimelineApi and the history tab's period/event filter and bulk
-grouping (audit-history-view.tsx)."""
+grouping (audit-history-view.tsx).
+
+Brand presence and measurement kind are Gold's values only (renewal audit 13-1 · 13-2, 2026-10-31): the original's
+presence_effective (no value -> 미포함 for the umbrella brand, 포함 for any other) and the 'single' default for an
+empty kind made up a value Gold does not hold (rule 5). An empty one stays empty ('—'), and the filter offers it as
+'값 없음' (NONE) when the scope has such a row. On 2026-10-31 Gold has none (renewal audit U8)."""
 from __future__ import annotations
 
 import math
@@ -32,6 +37,9 @@ PAGE_LIMIT_MAX = 500            # one page with the filter options (the former s
 READ_LIMIT = 20000              # one /v1/prompts page holds the whole global catalog
 VALUE_MAX = 5000
 UMBRELLA_BRAND = "HMG"
+PRESENCES = ("branded", "unbranded")
+KINDS = ("acr", "single")
+NONE = "none"                   # the filter pick of the rows Gold left without a presence / kind
 GEO_PSEUDO = ("x:WW", "x:EU", "x:ME")
 HISTORY_LIMIT = 500
 TIMELINE_LIMIT = 100
@@ -64,33 +72,28 @@ def split_markets(regions: list[str] | None) -> dict[str, list[str]]:
     return {"real": sorted(real), "pseudo": sorted(pseudo)}
 
 
-def presence_of(brand: str | None, explicit: str | None) -> str | None:
-    """brandPresenceOf: the editorial value when set, else the umbrella-tag rule; unknown = None."""
-    if explicit in ("branded", "unbranded"):
-        return explicit
-    if brand is None:
-        return None
-    return "unbranded" if brand == UMBRELLA_BRAND else "branded"
-
-
 def catalog_row(item: dict) -> dict:
     """A Gold catalog item as the list row. scopePromptId stays null for a prompt with no answers in the
-    current builds (the row's 측정 상태); presence, common and markets are what the row badges show."""
+    current builds (the row's 측정 상태); presence, common and markets are what the row badges show.
+    presence and kind are Gold's values (None when Gold has none, or a code the list has no label for)."""
     brand = item.get("brand_code")
     measured = bool(item.get("measured"))
+    presence, kind = item.get("brand_presence"), item.get("kind")
     return {"id": item["prompt_id"], "text": item.get("text") or "", "brand": brand,
-            "brandPresence": item.get("brand_presence"), "listType": item.get("list_type"),
+            "brandPresence": presence, "listType": item.get("list_type"),
             "depth1": item.get("depth1"), "depth2": item.get("depth2"), "depth3": item.get("depth3"),
-            "depth4": item.get("depth4"), "funnelStage": item.get("funnel_stage"), "kind": item.get("kind") or "single",
+            "depth4": item.get("depth4"), "funnelStage": item.get("funnel_stage"), "kind": kind if kind in KINDS else None,
             "lang": item.get("lang"), "regions": item.get("regions"),
             "scopePromptId": item.get("scope_prompt_id") if measured else None,
-            "presence": presence_of(brand, item.get("brand_presence")),
+            "presence": presence if presence in PRESENCES else None,
             "common": brand is None or brand == UMBRELLA_BRAND,
             "markets": split_markets(item.get("regions"))}
 
 
 async def catalog_rows() -> list[dict]:
-    """The whole global catalog (the account scope of the local reader is everything)."""
+    """The global catalog inside the account's scope: api.get clamps the read to the account's brands and countries,
+    and the reader keeps the prompts of those brands (+ the umbrella) whose target markets hold a scope country or no
+    real country (renewal audit 13-3, the original API's B1 rule). An administrator or an HQ account reads every market."""
     items: list[dict] = []
     cursor: str | None = "0"
     while cursor is not None:
@@ -144,9 +147,9 @@ def read_query(sp: dict, paged: bool = True) -> dict:
 
 def matches(row: dict, f: dict[str, str], search: str) -> bool:
     for axis, field in FIELDS.items():
-        if f[axis] != "all" and row[field] != f[axis]:
+        if f[axis] != "all" and row[field] != (None if axis == "kind" and f[axis] == NONE else f[axis]):
             return False
-    if f["presence"] != "all" and row["presence"] != f["presence"]:
+    if f["presence"] != "all" and row["presence"] != (None if f["presence"] == NONE else f["presence"]):
         return False
     if f["status"] in ("measured", "tracked") and row["scopePromptId"] is None:
         return False
@@ -163,7 +166,8 @@ def matches(row: dict, f: dict[str, str], search: str) -> bool:
 def facets(rows: list[dict], draft: dict[str, str]) -> dict[str, list[str]]:
     """Options over the whole scope: depth options narrow by the draft's parent picks (listType > depth1 >
     depth2 > depth3); the other axes do not. Market: real countries, then the geographic pseudo codes;
-    marketSort = every code (the labels a market sort needs)."""
+    marketSort = every code (the labels a market sort needs). Presence and kind: their fixed values, and
+    NONE ('값 없음') when a row of the scope has no Gold value."""
     out: dict[str, list[str]] = {}
     parents: list[tuple[str, str]] = []
     for key in ("listType", "depth1", "depth2", "depth3", "depth4", "funnel", "lang"):
@@ -175,6 +179,8 @@ def facets(rows: list[dict], draft: dict[str, str]) -> dict[str, list[str]]:
     codes = {c for r in rows for c in r["markets"]["real"] + r["markets"]["pseudo"]}
     out["market"] = sorted(c for c in codes if not c.startswith("x:")) + sorted(c for c in codes if c in GEO_PSEUDO)
     out["marketSort"] = sorted(codes)
+    out["presence"] = [*PRESENCES, *([NONE] if any(r["presence"] is None for r in rows) else [])]
+    out["kind"] = [*KINDS, *([NONE] if any(r["kind"] is None for r in rows) else [])]
     return out
 
 
@@ -209,7 +215,8 @@ def ordered(rows: list[dict], q: dict) -> list[dict]:
         "text": lambda r: key(r["text"]),
         "brand": lambda r: key(r["brand"] or ""),
         "presence": lambda r: key(r["presence"] or "~"),
-        "kind": lambda r: 1 if r["kind"] == "acr" else 0,
+        # an empty kind apart from single, where the other sorts put an empty value ('~' comes before letters in ICU)
+        "kind": lambda r: {"single": 0, "acr": 1}.get(r["kind"], -1),
         "status": lambda r: r["scopePromptId"] is not None,
         "tracked": lambda r: r["scopePromptId"] is not None,
         "market": market,

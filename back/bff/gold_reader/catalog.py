@@ -38,6 +38,15 @@ async def prompts(ctx: Context) -> dict:
                 where.append(f"{axis}.code=ANY({b.bind(values(ctx.q, axis), 'text[]')})")
         if ctx.q.get("q"):
             where.append(f"p.text ILIKE {b.bind('%' + ctx.q['q'] + '%')}")
+        # The account's countries (access.clamp sends them as `country`), as the original API's catalog_market_scope
+        # (B1 2026-09-03, back/app core/filters.py) kept them: target markets unset, holding no real country (x:* only),
+        # or holding a country of the scope. Gold's regions are ISO codes, set on every prompt (renewal audit U12, 13-3).
+        countries = sorted({c.strip().upper() for c in values(ctx.q, "country") if c.strip() and not c.strip().lower().startswith("x:")})
+        if countries:
+            where.append(f"""(p.regions IS NULL
+                OR NOT EXISTS(SELECT 1 FROM unnest(p.regions) mr(v) WHERE btrim(mr.v)<>'' AND lower(btrim(mr.v)) NOT LIKE 'x:%')
+                OR EXISTS(SELECT 1 FROM unnest(p.regions) mr(v) WHERE lower(btrim(mr.v)) NOT LIKE 'x:%'
+                    AND upper(btrim(mr.v))=ANY({b.bind(countries, 'text[]')})))""")
         rows = await ctx.conn.fetch(f"""WITH measured AS (
             SELECT DISTINCT prompt_key FROM gold.answer_fact WHERE build_id=ANY($1::bigint[]) AND std_in)
             SELECT DISTINCT ON(ce.catalog_row_id) ce.catalog_row_id,ce.brand_bit,ce.kind,

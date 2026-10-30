@@ -120,7 +120,7 @@ async function LensRounds({ list }: { list: Promise<WebsitePromptsPage> }) {
   );
 }
 
-// The original page's filter options (website/prompts-options): its 국가 · 언어 lists and round calendar.
+// The original page's filter options (website/prompts-options): its 국가 · 언어 · 브랜드 lists and round calendar.
 async function filterOptions(scope: AllowedScope, sp: SP, ctx: ScreenQuery, locale: string): Promise<OverviewFilterProps> {
   let v: PromptOptionsView;
   try {
@@ -134,6 +134,8 @@ async function filterOptions(scope: AllowedScope, sp: SP, ctx: ScreenQuery, loca
     stage: "overview",
     geographyOptions: v.geographyOptions,
     languageOptions: v.languageOptions,
+    // the brands of the options read, as the original's WebsitePromptFilters (renewal audit 13-4)
+    brandOptions: v.brandOptions,
     selectableDates: v.selectableDates ?? undefined,
   };
 }

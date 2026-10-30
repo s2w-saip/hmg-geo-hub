@@ -33,14 +33,14 @@ export interface PromptRow {
   depth3: string | null;
   depth4: string | null;
   funnelStage: string | null;
-  // 측정 종류 ('single' | 'acr')
-  kind: string;
+  // 측정 종류 ('single' | 'acr'), null = Gold 값 없음 (점검 13-2: 'single'로 채우지 않는다)
+  kind: string | null;
   // 대상 시장 원본 (실국가 ISO alpha-2 + `x:` 의사코드). 표시는 markets.
   regions: string[] | null;
   lang: string | null;
   // null = 미측정
   scopePromptId: string | null;
-  /** Brand presence class of the row (branded / unbranded / unknown). */
+  /** Gold's brand presence of the row (branded / unbranded), null = Gold has none (점검 13-1: not inferred from the brand). */
   presence: "branded" | "unbranded" | null;
   /** No brand or the umbrella brand: shown as "공통". */
   common: boolean;
@@ -61,7 +61,10 @@ export interface PromptsPage {
   pages: number;
   rangeFrom: number;
   rangeTo: number;
-  /** listType, depth1–4, funnel, lang, market (filter options), marketSort (every market code). */
+  /**
+   * listType, depth1–4, funnel, lang, market (filter options), marketSort (every market code); presence and kind:
+   * their fixed values, + "none" (값 없음) when a row of the scope has no Gold value.
+   */
   facets: Record<string, string[]>;
   /** Taxonomy columns with a value in the scope. */
   columns: string[];

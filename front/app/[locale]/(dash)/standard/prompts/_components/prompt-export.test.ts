@@ -107,6 +107,11 @@ describe("셀 값", () => {
     expect(sheet.rows.map((r) => r[5])).toEqual(["비브랜드", ""]);
   });
 
+  it("측정 종류도 행의 kind 대로, Gold 값이 없으면 빈칸 — '단일'로 채우지 않는다 (점검 13-2)", () => {
+    const sheet = buildStandardPromptSheet([row({ kind: "single" }), row({ id: "2", kind: null })], [], L, F);
+    expect(sheet.rows.map((r) => r[6])).toEqual(["단일", ""]);
+  });
+
   it("미측정(scopePromptId=null)·ACR 이 화면 배지와 같은 문구로 나온다", () => {
     const sheet = buildStandardPromptSheet([row({ scopePromptId: null, kind: "acr" })], [], L, F);
     expect(sheet.rows[0].slice(-2)).toEqual(["ACR", "미측정"]);

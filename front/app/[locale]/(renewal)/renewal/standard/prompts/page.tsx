@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { canAccessRoute } from "@/lib/auth/route-policy";
 import { throwForPage } from "@/lib/hgh/errors";
-import { scopeForGeoSurface } from "@/lib/scope/website-virtual-geo";
+import { effectiveScopeCountries } from "@/lib/rhq";
 import { loadPromptsScreens } from "@/app/[locale]/(dash)/standard/prompts/_data/server";
 import { loadSavedFilters } from "../../_components/saved-filters-server";
 import { RnPromptsView } from "./_components/prompts-view";
@@ -45,7 +45,8 @@ export default async function RenewalStandardPromptsPage({
       scopeRole={session.user.role}
       scopeBrands={scope.brands ?? []}
       scopeRegions={scope.regions ?? []}
-      scopeCountries={scopeForGeoSurface(scope, "standard").countries ?? []}
+      // the countries the list keeps (a region account: its regions' countries, as the reader's scope: renewal audit 13-3)
+      scopeCountries={effectiveScopeCountries(scope) ?? []}
       period={header.period}
       history={history}
       initialTab={tab === "history" ? "history" : "catalog"}

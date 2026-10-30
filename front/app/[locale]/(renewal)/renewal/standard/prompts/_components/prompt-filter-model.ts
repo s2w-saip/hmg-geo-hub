@@ -2,7 +2,8 @@
 // /standard/prompts filters, unchanged (product decision 2026-10-20: "앱과 100% 동일"):
 //   axes      리스트 유형 · Depth1–4 · 퍼널 · 브랜드 포함 여부 · 측정 종류 · 대상 시장 · 언어 · 측정 상태
 //   values    single choice each, "전체" (= "all") by default
-//   options   the server's facets (cascading by the current picks); presence / kind / status are fixed
+//   options   the server's facets (cascading by the current picks); status is fixed, presence / kind are fixed
+//             unless the server adds 값 없음 ("none", a row with no Gold value: renewal audit 13-1 · 13-2)
 //   shown     an axis with no options is hidden (presence / kind / status always show)
 //   cascade   picking a parent resets its children to "전체"
 //   read      the same query the original list sends (filters = draft, since picks apply at once)
@@ -30,8 +31,12 @@ const FIXED: Partial<Record<PromptAxis, readonly string[]>> = {
   status: [STATUS_MEASURED, STATUS_UNMEASURED],
 };
 
-/** Options of one axis: the server facets (presence / kind / status are fixed). */
+/** The pick of the rows Gold left without a presence / kind (the server's facet value). */
+export const NO_VALUE = "none";
+
+/** Options of one axis: the server facets (status is fixed; presence / kind fall back to their fixed values). */
 export function axisOptions(axis: PromptAxis, facets: Record<string, string[]>): readonly string[] {
+  if (axis === "presence" || axis === "kind") return facets[axis] ?? FIXED[axis]!;
   return FIXED[axis] ?? facets[axis] ?? [];
 }
 

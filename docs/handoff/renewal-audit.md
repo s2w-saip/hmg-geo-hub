@@ -6,7 +6,7 @@
 - 병렬 세션으로 나누지 않고 한 세션이 순서대로 한다.
 - 단계마다 새 하위 에이전트가 깨끗한 컨텍스트로 맡는다(B 방식).
 
-**현재 위치:** 13단계(Prompts 귀속 · 계정 범위 · 선택지) 시작 전. 12단계 끝(단계 메모 '12단계'). 마지막 커밋: 12단계를 올린 커밋.
+**현재 위치:** 14단계(기간 비교 억제) 시작 전. 13단계 끝(단계 메모 '13단계'). 마지막 커밋: 13단계를 올린 커밋.
 
 ## 진행 방식 (단계마다 새 하위 에이전트)
 
@@ -101,7 +101,7 @@
 | 10 | Citation ② 구성 추이 수치 · Website 도메인 표 전체 | 3 | [x] |
 | 11 | ACR 발견 · 귀속 · 정렬 | 1 | [x] |
 | 12 | AI Conversion 부분합 · 문구 | — | [x] |
-| 13 | Prompts 귀속 · 계정 범위 · 선택지 | 1 | [ ] |
+| 13 | Prompts 귀속 · 계정 범위 · 선택지 | 1 | [x] |
 | 14 | 기간 비교 억제 | ⛔K | [ ] |
 | 15 | HUB가 만든 평균 기준선 · 분해 | ⛔L | [ ] |
 | 16 | 마무리: 원본 대조, 전체 시험, 문서, 다음 일 | 1~15 | [ ] |
@@ -443,16 +443,16 @@ Global과 Website가 같은 본문을 쓴다. Website는 `mention/rn-*`를 ctx.s
 - `docs/design/api/모듈-프롬프트.md` ~95
 
 **할 일**
-- [ ] 13-1 브랜드 포함 여부 유추를 없앤다.
+- [x] 13-1 브랜드 포함 여부 유추를 없앤다.
   - 지금은 Gold 값이 비면 BFF가 브랜드로 정한다(`presence_of` ~67-73: HMG → 미포함, 그 외 → 포함). 이 값이 열 · 필터(~149) · 정렬 · 엑셀에 쓰인다.
   - 고친 뒤: Gold 값만 쓴다. 빈 값은 '—'이고, 필터 선택지에는 '값 없음'으로 둔다.
   - 원본 API 설계(`presence_effective`)에서 온 규칙이라 원본 화면도 바뀐다. U8로 빈 값이 몇 개인지 먼저 본다.
-- [ ] 13-2 측정 종류 기본값(~84 `kind or "single"`)을 없앤다. 빈 값은 '—'로 보인다.
-- [ ] 13-3 계정 국가 범위를 맞춘다.
+- [x] 13-2 측정 종류 기본값(~84 `kind or "single"`)을 없앤다. 빈 값은 '—'로 보인다.
+- [x] 13-3 계정 국가 범위를 맞춘다.
   - 화면 안내(`prompts-view.tsx` ~392, 원본 489-501)는 '대상 시장이 내 국가를 포함하거나 미지정인 프롬프트만 보인다'고 한다. 그런데 Gold 리더 global 분기(`GR/catalog.py` ~33-49)는 국가를 쓰지 않는다(gold-metric-review #3).
   - 먼저 원본 API가 국가를 걸었는지 본다. 걸었으면 같게 건다(U12). 아니면 문구를 사실대로 고친다.
   - 열람 범위 pill에서 국가 목록 전체를 볼 수 있게 한다(원본 드롭다운 420-481, 리뉴얼 ~294-301).
-- [ ] 13-4 Website 프롬프트의 브랜드 선택지를 화면 값으로 바꾼다.
+- [x] 13-4 Website 프롬프트의 브랜드 선택지를 화면 값으로 바꾼다.
   - 지금은 화면이 준 `brandOptions` 대신 고정 목록 `DIMENSIONS.brand`(`front/components/dash/dimension-filter-panel.tsx` ~196)를 쓴다.
   - W0 공통 `OverviewPanelInput`(`RN/_components/overview-filter-model.ts`)에 선택지를 넘기는 길을 둔다.
   - 지금 값은 같다(Genesis · Hyundai · Kia).
@@ -783,6 +783,33 @@ Website 인용 도달 Δ도 값 출처(발행 / 실시간)가 다르면 숨긴�
   - **화면 확인(1920×915, 관리자).** 리뉴얼 Global · Website AI Conversion과 원본 `/ko/standard/ai-funnel/conversion`이 오류 화면 · 5xx 없이 열린다. 지금 로컬 DB에 GA4 속성이 없어 리뉴얼 둘은 '연결된 GA4 속성이 없습니다'다.
   - **다음 단계가 알 것.** 리더 `analytics/conversion` 응답에 `missing`이 생겼다. `ConvView`에 `missing`이 있고, `ConvChannels.site`는 `total`이다. 직전 기간에만 빠진 날이 있으면 증감 칩이 '−'인데 이유 안내는 없다(합계 Δ는 W6부터 같았음, 16단계 '다음 일' 후보).
 
+- **13단계(2026-10-31).** 네 항목 모두 고쳤다. 재현 시험은 고치기 전에 실패했다(BFF 7개 · 프런트 8개: render 6 · parity 2). 13-1 · 13-2 · 13-3은 원본 `/ko/standard/prompts`도 같은 BFF 화면 · 리더를 읽어 같이 바뀐다.
+  - **13-1.** `presence_of`(빈 값이면 HMG → 미포함, 그 밖 → 포함)를 지웠다. 행의 `presence`는 Gold 값(branded · unbranded)뿐이고, 그 밖은 null이다. 열 · 필터 · 정렬 · 엑셀이 그 값을 쓴다.
+    - 빈 값은 리뉴얼 브랜드 칸 · 상세 · 원본 표에서 '—'이고, 엑셀은 빈칸이다.
+    - 필터 선택지는 범위에 빈 값 행이 있을 때만 '값 없음'(값 `none`, BFF facets `presence`)을 더한다. 다른 안은 늘 두기였다. live에서는 늘 0건인 선택지가 된다. 원본 필터도 같은 facet으로 같은 선택지를 둔다(parity 시험).
+    - 문구는 `standardPromptsView.valueNone`(ko · en)이다. 두 목록이 같이 쓰는 필터 문구 네임스페이스이고, units에는 없다.
+  - **13-2.** `kind or "single"`을 지웠다. 빈 kind는 리뉴얼 측정 칸 · 상세 · 원본 표에서 '—'이고, 엑셀은 빈칸이다.
+    - 계획에는 없던 필터 '값 없음'도 presence와 같은 규칙으로 두었다(facets `kind`). 같은 이유다: 빈 값 행을 고를 길이 없으면 '전체' 밖에서는 그 행이 보이지 않는다.
+    - 정렬에서 빈 kind는 단발과 섞이지 않는다. 다른 열의 빈 값처럼 오름차순 앞이다(ICU에서 '~'가 글자 앞).
+  - U8대로 live에는 두 값 모두 빈 행이 없다(리더 호출로 다시 확인: 12,164행 중 presence · kind 빈 값 0). 그래서 화면 · 선택지는 바뀌지 않는다. 재현은 모의 입력으로 했다.
+  - **13-3 리더.** 원본 API는 국가를 걸었다(`back/app/core/filters.py` `catalog_market_scope`, B1 2026-09-03). 규칙은 3분기다: 대상 시장 미지정, 실국가 없음(`x:`만), 범위 국가 포함.
+    - Gold 리더 global 분기가 clamp가 보내는 `country`를 같은 3분기로 건다(`GR/catalog.py`). U12대로 Gold `regions`는 모든 행에 ISO 코드가 있어, 실제로는 '범위 국가 포함'만 걸린다.
+    - 다른 안은 요청 필터 규칙(정확 포함, 미지정 제외)이었다. 이 읽기의 `country`는 BFF가 보내지 않고 clamp가 붙이는 계정 범위뿐이라 범위 규칙을 골랐다. live에서 두 규칙의 결과는 같다.
+    - live(읽기 전용 리더 호출): Genesis · genesis-middle-east 1,208 → 302, Kia · DE 5,408 → 416. 관리자 12,164 · HQ(Hyundai) 5,548은 그대로다. 읽기 시간도 그대로다(0.5~1.3초).
+    - 브랜드 범위(범위 브랜드 + 엄브렐러 8)는 그대로다. 원본 `catalog_brand_scope`의 'brand NULL' 행은 Gold에 없다(U8).
+  - **13-3 화면.** 범위 계정의 열람 범위 pill은 버튼이다. 누르면 원본 드롭다운처럼 브랜드 · 권역 · 국가 전체(국가 이름, 코드는 title)와 안내 '대상 시장이 내 국가를 포함하거나 미지정(상속)인…'이 열린다. Escape나 바깥 클릭으로 닫는다.
+    - 페이지 머리(`filter-split.tsx` `FRAME_HEAD`)가 넘치는 것을 잘라서, 목록은 pill 아래 `fixed`로 둔다(공용 잘림 툴팁과 같다). 실제 화면에서 처음 만든 `absolute` 목록이 잘리는 것을 보고 고쳤다.
+    - 다른 안은 pill title 툴팁에 나열하기였다. 국가가 많으면 읽기 어렵고 키보드로 닿지 않는다. 관리자 pill은 그대로 '전체'다.
+    - 리뉴얼 페이지는 `scopeCountries`로 `effectiveScopeCountries`를 넘긴다. 권역 계정은 권역 국가가 국가 목록이 된다(리더 범위와 같은 표, BFF `RHQ_REGION_COUNTRIES` = 프런트 `countriesForRhq` 18개 권역 확인). 그래서 pill이 '권역 · N개국'과 안내를 보인다. 원본 페이지 prop은 그대로다(권역 계정에는 국가 목록 · '내 시장 기준' 안내가 없다).
+  - **13-4.** W0 공통 `OverviewPanelInput`에 `brandOptions`를 더했다. `axisOptions`가 브랜드 축에 그 값을 쓰고, 없으면 `DIMENSIONS.brand`다(원본 패널 `brandOptions`와 같은 규칙). 리뉴얼 Website Prompts가 `website/prompts-options`의 `brandOptions`를 넘긴다. 지금 값은 같다(Genesis · Hyundai · Kia). 다른 Website 화면은 넘기지 않아 그대로다(website parity 33개 · Overview parity · 빈 축 시험 통과).
+  - **golden 없음.** `catalog/prompts-*`는 golden case가 없고, website-prompts golden은 그대로다. 새 BFF 화면 · 프록시는 없다. 아키텍처 문서 '읽기는 계정 범위 안에서만 한다'에 프롬프트 카탈로그 규칙 한 줄을 더했다.
+  - **원본 대조 · 화면 확인(1920×915).** 권역 시험 계정 `audit2-region@local`은 관리자 API로 켰다가 끝나고 중지했다.
+    - 권역 계정: 리뉴얼 `/ko/renewal/standard/prompts`와 원본 `/ko/standard/prompts`가 모두 302개다('표시 302 / 전체 302'). pill 목록에 7개국이 보인다(바레인 · 쿠웨이트 · 오만 · 카타르 · 사우디아라비아 · 아랍에미리트 · 이스라엘). IL은 genesis-middle-east 권역 국가이고, 6개국으로 읽어도 302개다.
+    - 관리자: 리뉴얼 · 원본 Global 범위 12,164, 리뉴얼 · 원본 Website 12,729, 리뉴얼 Website 브랜드 축 Genesis · Hyundai · Kia.
+    - 네 화면 모두 오류 화면 · 5xx · 페이지 오류가 없다.
+    - 관찰: 시험 관리자는 Global prompts에 기본 저장 필터 'test1'(리스트 유형 Consumer base Response)이 있어 첫 화면이 5,300개로 열린다. 사용자 데이터이고 이 단계와 관계없다.
+  - **다음 단계가 알 것.** `PromptRow.kind`는 null일 수 있다. Global prompts facets에 `presence` · `kind`가 있다(값 없음 = `none`). Gold 리더 global `prompts`는 `country`를 걸므로, 전체 카탈로그는 관리자 · HQ 범위만 읽는다. `OverviewPanelInput.brandOptions`가 생겼다.
+
 ## 진행 기록
 
 - 2026-10-31 — 계획을 작성했다. 근거는 같은 날 중간점검이다(코드 읽기 다섯 갈래: Overview · Mention · Citation · Prompts · AI Funnel, 큰 지적은 코드로 다시 확인). 처음에는 병렬 세션으로 나누려 했으나 사용자가 한 세션이 순서대로 하는 방식으로 바꿨다. 다음은 1단계다.
@@ -799,3 +826,4 @@ Website 인용 도달 Δ도 값 출처(발행 / 실시간)가 다르면 숨긴�
 - 2026-10-31 — 9-9 후속: 9-9는 재현되지 않았다. `answerAnalysis.citations.drilldown.loading` · `loadFailed`는 처음부터 `messages/units/u7`에 있었고 요청 때 합쳐진다(진행 세션 판단 착오). 9단계가 `ko.json` · `en.json`에 더한 중복 두 키를 지워 `i18n/request.test.ts` 2건 실패를 고쳤다. 서랍 render 시험은 합친 메시지로 본다. '공통 규칙'의 문구 줄에 units 확인과 `i18n/request.test.ts` 실행을 더했다. 시험: `i18n/request.test.ts`, 리뉴얼 표준 · website 인용 · 원본 citations-view render 시험, typecheck · lint.
 - 2026-10-31 — 11단계: ACR 요약 발견을 W6 방식으로 바꿨다. 순서는 고정했고, 문턱을 뺐고, 색은 당사 방향만 나타낸다. '후보군이 비슷한'은 '후보군 포함율이 가장 가까운 경쟁사와의 Top1 차'가 됐다(11-1). 'HMG 계열' 배지는 이름 목록 대신 리더가 행마다 주는 Gold 플래그로 정한다. 그 행의 당사 판정 값을 따르므로 브랜드 행은 명부, 차종 · 맞대결은 dim_brand다(11-2). 차종 당사는 Gold isOurs만이다(11-3). 브랜드 표에 원본 정렬 셋(최종 선택 · 언급 수 · 브랜드)을 되살렸다(11-4). 촘촘 화면에서도 '당사 = … 합산' 칩이 보인다(11-5). 재현 시험은 고치기 전에 실패했다. 11-6은 재현되지 않았다. 리더가 모든 ACR 축을 걸고 무시 · 제외 필터를 보내지 않으며, 시험으로 고정했다. golden은 40개 파일이다(출력 35 · 녹음만 5). 시험: BFF 34개 모듈 606개(live 8개 포함, 건너뜀 5), 프런트 ACR 2개 파일 23개 · i18n · typecheck · lint, 원본 브랜드 표 대조(12행 값 · 정렬 3종), 리뉴얼 ACR 실제 화면(HMG · Kia). 다음은 12단계다.
 - 2026-10-31 — 12단계: AI Conversion에서 수집기가 활성 속성의 하루를 빠뜨리면 합계뿐 아니라 그 조각(엔진 · 채널 · 세그먼트 전환 · 입구 페이지 · 이벤트 수, 그 속성의 시장 전환)도 모름이다. 화면의 시장 비중 · 7일 합도 부분합을 내지 않고, Hero가 빠진 속성 · 날 수를 안내한다(12-1, 리더 `missing`, 원본 표도 같은 리더). 채널 카드 합계 행은 '채널 합계'로 이름을 나눴다(Hero '사이트 전체' = report 5, 12-2). '시장 미연결'은 '수집 중지'이고, 중지 속성은 시장 카드 목록 · 칩 total에서 빠져 측정 범위 발견과 같은 total이다(12-3). 결과 없음 안내의 국가 선택지 설명을 GA4 속성 시장으로 고쳤다(12-4, visibility 문구는 맞아 그대로). 재현 시험은 고치기 전에 실패했다. golden 없음, 프런트 fixture 재생성. 시험: BFF 34개 모듈 609개(live 8개 포함), 프런트 Conversion · Website Conversion · i18n 3개 파일 20개 · typecheck · lint, 리뉴얼 두 화면 · 원본 실제 화면. 다음은 13단계다.
+- 2026-10-31 — 13단계: Global prompts의 브랜드 포함 여부 · 측정 종류는 Gold 값만 쓴다. 브랜드로 정하던 규칙과 '단발' 기본값을 지웠고, 빈 값은 '—'이며, 범위에 빈 값 행이 있으면 필터에 '값 없음'이 생긴다(13-1 · 13-2, 원본도, live 빈 값 0). Gold 리더가 범위 계정의 국가를 원본 API의 대상 시장 규칙(B1)으로 건다(13-3, live Genesis 중동 1,208 → 302). 열람 범위 pill이 브랜드 · 권역 · 국가 전체를 연다(권역 계정은 권역 국가). Website Prompts 브랜드 축이 화면 선택지를 쓴다(13-4, W0 `brandOptions`). 재현 시험은 고치기 전에 실패했다. golden 변경 없음. 시험: BFF 34개 모듈(live 8개 포함), 프런트 관련 13개 파일 147개 · i18n · typecheck · lint, 권역 계정 · 관리자 실제 화면(리뉴얼 · 원본 Prompts 4화면). 다음은 14단계다.

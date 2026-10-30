@@ -49,7 +49,7 @@ export function RnPromptDetail({
             <Field label={t("marketLabel")}>
               <RnMarketList codes={[...row.markets.real, ...row.markets.pseudo]} labelOf={marketLabel} allLabel={t("marketAll")} allHint={t("marketAllHint")} />
             </Field>
-            <Field label={t("kindLabel")}>{row.kind === "acr" ? t("kindAcr") : t("kindSingle")}</Field>
+            <Field label={t("kindLabel")}>{row.kind === "acr" ? t("kindAcr") : row.kind === "single" ? t("kindSingle") : null}</Field>
             <Field label={t("statusLabel")}>
               {row.scopePromptId === null ? (
                 <span className="flex flex-col gap-1">

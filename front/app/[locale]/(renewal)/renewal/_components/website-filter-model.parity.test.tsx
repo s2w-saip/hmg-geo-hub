@@ -61,6 +61,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 const { WebsiteFilters } = await import("@/components/dash/website-filters");
+const { WebsitePromptFilters } = await import("@/app/[locale]/(dash)/website/prompts/_components/prompt-filters");
 const { AnalysisFilterBar } = await import("@/app/[locale]/(dash)/standard/answer-analysis/_components/analysis-filter-bar");
 const { deriveMatrixOptions } = await import("@/components/dash/dimension-filter-panel");
 const { effectiveScopeCountries } = await import("@/lib/rhq");
@@ -182,6 +183,21 @@ describe("renewal filter panel with surface website shows exactly the app's Webs
     expect(renewal.sections).toEqual(app.sections);
     expect(renewal.axes.map((a) => a.label)).toEqual(app.axes.map((a) => a.label));
     for (const a of app.axes) expect(renewal.axes.find((x) => x.label === a.label)).toEqual(a);
+  });
+
+  // Renewal audit 13-4 (2026-10-31): the Website Prompts page passes the brands of its options read
+  // (website/prompts-options brandOptions), as the original WebsitePromptFilters does, not the static HMG three.
+  it("lists the page's brand options on the administrator's brand axis (Website Prompts)", () => {
+    SEARCH = "";
+    const opts = { ...optionsFor("admin", ""), brandOptions: ["Hyundai", "Kia"] };
+    const brandAxis = (html: string, read: typeof appStructure) => read(html).axes.find((a) => a.label === G.brand);
+    const app = brandAxis(wrap(<WebsitePromptFilters {...opts} isAdmin />), appStructure);
+    const renewal = brandAxis(renewalHtml("overview", opts), renewalStructure);
+    expect(app?.groups?.flatMap((g) => g.items.map(([l]) => l))).toEqual(["Hyundai", "Kia"]);
+    expect(renewal).toEqual(app);
+    // without brand options the axis keeps the static HMG three (the other Website pages)
+    const plain = brandAxis(renewalHtml("overview", optionsFor("admin", "")), renewalStructure);
+    expect(plain?.groups?.flatMap((g) => g.items.map(([l]) => l))).toEqual(["Genesis", "Hyundai", "Kia"]);
   });
 
   it("carries no catalog or 경쟁사 axis, and 출처 only on Citation", () => {

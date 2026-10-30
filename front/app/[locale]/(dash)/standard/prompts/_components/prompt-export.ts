@@ -101,7 +101,7 @@ export function buildStandardPromptSheet(
     marketCellText(r.markets, labels, fmt),
     r.lang ? fmt.language(r.lang) : "",
     r.presence === "branded" ? labels.branded : r.presence === "unbranded" ? labels.unbranded : "",
-    r.kind === "acr" ? labels.kindAcr : labels.kindSingle,
+    r.kind === "acr" ? labels.kindAcr : r.kind === "single" ? labels.kindSingle : "",
     r.scopePromptId === null ? labels.statusUnmeasured : labels.statusMeasured,
   ]);
 

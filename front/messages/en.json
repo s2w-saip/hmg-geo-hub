@@ -2329,6 +2329,7 @@
     "filterDepth4": "Depth4",
     "filterFunnel": "Funnel",
     "filterAll": "All",
+    "valueNone": "No value",
     "filterReset": "Reset",
     "filterApply": "Apply",
     "filteredCount": "Showing {shown} / {total}",

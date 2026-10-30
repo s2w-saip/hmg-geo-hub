@@ -143,6 +143,13 @@ describe("StandardPromptReadonlyList — 시장·언어·상태 렌더", () => {
     expect(html).toContain(ko.dashboard.filters.value.unbranded);
   });
 
+  it("브랜드 포함 여부 · 측정 종류의 Gold 값이 없으면 '—' — 브랜드로 정하거나 '단발'로 채우지 않는다 (점검 13-1 · 13-2)", () => {
+    const html = render([row({ text: "empty row", presence: null, brandPresence: null, kind: null })], "ko");
+    const at = html.indexOf(">empty row<");
+    const cells = [...html.slice(at, html.indexOf("</tr>", at)).matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map(([, c]) => c.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim());
+    expect(cells.slice(-4, -2)).toEqual(["—", "—"]); // 브랜드 포함 여부 · 측정 종류 (측정 상태 · 이력 앞)
+  });
+
   it("3축 필터(시장·언어·상태) 컨트롤이 렌더된다", () => {
     const html = render(ROWS, "ko");
     expect(html).toContain('id="sp-view-market"');

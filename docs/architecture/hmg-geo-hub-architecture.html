@@ -387,6 +387,8 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
       국가 계정은 자국 사이트, 권역 계정은 권역 국가의 사이트를 읽는다. HQ 계정은 자기 브랜드의 모든 사이트를 읽는다. 브랜드 통합 보기는 관리자만 한다.
       국가가 있는 범위는 그 나라의 도시 사이트(SA → SA-Dammam · SA-Jeddah · SA-Riyadh)도 읽는다. 권역 허브 사이트(worldwide · EU · MIDDLEEAST · CPO · CN-BJ)는 국가가 없는 계정만 읽는다.
       필터 패널의 국가 · 언어 선택지도 이 범위로 좁힌다(global · website). Gold 선택지 읽기는 국가 축으로 좁히지 않아서 BFF가 범위 밖 국가의 행을 뺀다.
+      Global 프롬프트 카탈로그 읽기(<code>prompts</code>)는 그 국가를 원래 API의 대상 시장 규칙(B1)으로 건다(2026-10-31, 리뉴얼 점검 후속 13단계).
+      대상 시장이 비었거나, 실국가가 없거나(<code>x:</code>만), 범위 국가를 담은 프롬프트만 읽는다. 브랜드는 범위 브랜드와 공통(HMG)이다.
       project 표면은 범위 계정에게 403으로 닫혀 있다.</li>
   </ul>
 </section>

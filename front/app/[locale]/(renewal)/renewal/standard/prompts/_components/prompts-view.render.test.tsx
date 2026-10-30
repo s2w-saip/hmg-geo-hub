@@ -159,6 +159,104 @@ describe("prompt detail sheet", () => {
   });
 });
 
+// Renewal audit 13-1 · 13-2 (2026-10-31): brand presence and measurement kind are Gold's values only — an empty one
+// shows '—' (no 포함 / 미포함 from the brand, no 단발 default), and the filter offers '값 없음' when the scope has one.
+describe("renewal Global prompts: Gold's presence and kind only", () => {
+  const empty = row("e", { presence: null, brandPresence: null, kind: null });
+  const page = (facets: Record<string, string[]> = {}): PromptsPage => ({ ...PAGE, rows: [empty], total: 1, count: 1, rangeTo: 1, facets: { ...PAGE.facets, ...facets } });
+  const open = (p: PromptsPage) =>
+    wrap(
+      <RnPromptsView
+        remote={{ initial: p, load: async () => p }}
+        scopeAll
+        scopeRole="admin"
+        scopeBrands={[]}
+        scopeRegions={[]}
+        scopeCountries={[]}
+        period={null}
+        history={HISTORY}
+        initialTab="catalog"
+        savedFilters={{ page: "prompts", userId: "test", initial: [] }}
+        defaultOpen="all"
+      />,
+    );
+  /** The option labels of one panel section, by its heading. */
+  const section = (html: string, label: string) => {
+    const at = html.indexOf(`>${label}</span>`);
+    const part = html.slice(at, html.indexOf("</section>", at));
+    return [...part.matchAll(/role="radio"[\s\S]*?<span[^>]*>[\s\S]*?<\/span><span[^>]*>([^<]*)<\/span>/g)].map(([, l]) => decode(l));
+  };
+
+  it("shows an empty presence and kind as '—'", () => {
+    const r = rowOf(list(page()), "e");
+    expect(r.cells[1]).toBe("Hyundai —");
+    expect(r.cells[5]).toBe("— 측정중");
+    expect(r.cells.join(" ")).not.toMatch(/포함|단발/);
+  });
+
+  it("says an empty kind is empty in the detail sheet", () => {
+    const html = wrap(
+      <RnToastProvider>
+        <RnPromptDetail row={empty} taxonomy={() => []} marketLabel={(c) => c} onClose={() => {}} />
+      </RnToastProvider>,
+    );
+    const fields = [...html.matchAll(/<dt[^>]*>([\s\S]*?)<\/dt><dd[^>]*>([\s\S]*?)<\/dd>/g)].map(([, k, v]) => `${strip(k)}: ${strip(v)}`);
+    expect(fields).toContain("브랜드 포함 여부: —");
+    expect(fields).toContain("측정 종류: —");
+  });
+
+  it("offers 값 없음 on presence and kind only when the scope has such a row", () => {
+    const V = ko.standardPromptsView;
+    const withNone = open(page({ presence: ["branded", "unbranded", "none"], kind: ["acr", "single", "none"] }));
+    expect(section(withNone, V.presenceLabel)).toEqual(["전체", "브랜드 포함", "브랜드 미포함", "값 없음"]);
+    expect(section(withNone, V.kindLabel)).toEqual(["전체", "ACR", "단발", "값 없음"]);
+    const without = open(page({ presence: ["branded", "unbranded"], kind: ["acr", "single"] }));
+    expect(section(without, V.presenceLabel)).toEqual(["전체", "브랜드 포함", "브랜드 미포함"]);
+    expect(section(without, V.kindLabel)).toEqual(["전체", "ACR", "단발"]);
+  });
+});
+
+// Renewal audit 13-3 (2026-10-31): the 열람 범위 pill opens the whole scope — brands, regions and every country the
+// list keeps (the original's dropdown), with what the countries mean; the pill alone folds them into "N개국".
+describe("renewal Global prompts: the scope pill", () => {
+  const COUNTRIES = ["AE", "BH", "KW", "OM", "QA", "SA"];
+  const scoped = (role: "region" | "country", countries: string[]) =>
+    wrap(
+      <RnPromptsView
+        remote={{ initial: PAGE, load: async () => PAGE }}
+        scopeAll={false}
+        scopeRole={role}
+        scopeBrands={["Genesis"]}
+        scopeRegions={["genesis-middle-east"]}
+        scopeCountries={countries}
+        period={null}
+        history={HISTORY}
+        initialTab="catalog"
+        savedFilters={{ page: "prompts", userId: "test", initial: [] }}
+      />,
+    );
+  const dialog = (html: string) => {
+    const at = html.indexOf('role="dialog"');
+    return at < 0 ? "" : html.slice(at, html.indexOf("</p>", at));
+  };
+
+  it("lists every country of the scope behind the pill", () => {
+    const html = scoped("region", COUNTRIES);
+    expect(strip(html)).toMatch(/열람 범위 · Genesis · .+ · 6개국/);
+    expect(html).toMatch(/<button[^>]*aria-expanded="false"[^>]*aria-haspopup="dialog"/);
+    const d = strip(dialog(html));
+    for (const name of ["아랍에미리트", "바레인", "쿠웨이트", "오만", "카타르", "사우디아라비아"]) expect(d).toContain(name);
+    expect(d).toContain(`${ko.standardPromptsView.scopeCountryLabel} (6)`);
+    expect(d).toContain(ko.standardPromptsView.scopeMarketHintDetail);
+  });
+
+  it("keeps the administrator's pill a plain 전체", () => {
+    const html = list();
+    expect(html).not.toContain('aria-haspopup="dialog"');
+    expect(strip(html)).toContain(`${ko.renewal.prompts.scopePill.replace("{scope}", ko.standardPromptsView.scopeAll)}`);
+  });
+});
+
 // Gold metric review ⚠️ (2026-10-29, Global prompts #6 #9 #21 #37 #40): counts group their thousands, 미측정
 // says what it is (no answer counted, whether or not answers were collected), a list emptied by the picks
 // does not read as a scope problem, the sort offers no empty Depth axis, and a change history the source
