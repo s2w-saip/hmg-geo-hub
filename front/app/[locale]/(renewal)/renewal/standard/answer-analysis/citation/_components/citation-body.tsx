@@ -34,7 +34,6 @@ import {
   type RnCitationInput,
   type RnCitationVm,
   type RnCitationWebsite,
-  type RnMatrixView,
   type RnShareTile,
 } from "./citation-input";
 import { CitationCardActions, CitationProvider, DIV_LEGEND, DIV_LESS, DIV_MORE, divBg, engineLabel, useCatLabel, useCitation, type CitationCtx, type MatrixAxis } from "./citation-context";
@@ -727,7 +726,7 @@ function MatrixCard() {
   );
 }
 
-function useMatrix(): { m: RnMatrixView | null; status: "ok" | "pending" | "degraded" } {
+function useMatrix(): RnCitationVm["typeMatrix"] {
   const { axis } = useCitation();
   const { rn } = useModel();
   return axis === "engine" ? rn.engineMatrix : rn.typeMatrix;
@@ -747,7 +746,7 @@ function MatrixActions() {
   const csv = () => ({
     name: "citation-source-matrix",
     rows: m
-      ? [[t("colCategory"), t("colAll"), ...m.cols.flatMap((c) => [col(c.key), `${col(c.key)} ${t("csvGap")}`])], ...m.rows.map((k) => [cat(k), m.base[k].toFixed(1), ...m.cols.flatMap((c) => [c.shares[k].toFixed(1), m.gaps[c.key][k].toFixed(1)])])]
+      ? [[t("colCategory"), t("colAll"), ...m.cols.flatMap((c) => [col(c.key), `${col(c.key)} ${t("csvGap")}`])], ...m.rows.map((k) => [cat(k), m.base[k].toFixed(1), ...m.cols.flatMap((c) => [c.shares[k]?.toFixed(1) ?? null, m.gaps[c.key][k]?.toFixed(1) ?? null])])]
       : [],
   });
   return <CitationCardActions section="sec-mix" csv={csv} />;
@@ -762,6 +761,7 @@ function MatrixBody() {
   const col = useColName();
   const { m, status } = useMatrix();
   if (status === "degraded") return <div className="px-6 pb-5"><DegradedNote>{dg.all}</DegradedNote></div>;
+  if (status === "empty") return <p className="m-0 px-6 pb-5 text-rn-12 text-rn-muted" data-rn-matrix-empty="">{tA("citations.v2.typeCategory.empty")}</p>;
   if (!m) return <p className="m-0 px-6 pb-5 text-rn-12 text-rn-muted">{tA("pending")}</p>;
   // one 출처 picked: every column is 100% of it — the original draws absolute counts then
   const counts = m.oneSource;
@@ -797,14 +797,15 @@ function MatrixBody() {
                   <td className="h-[34px] px-2.5 text-right font-semibold whitespace-nowrap text-rn-ink-2 tabular-nums shadow-[inset_-2px_0_0_var(--color-rn-line)]">{counts ? numTxt(m.baseCounts[k]) : pctTxt(m.base[k])}</td>
                   {m.cols.map((c) => {
                     const gap = m.gaps[c.key][k];
-                    const paint = !counts && live.has(c.key);
+                    // a column without citations has no share: '—', uncoloured
+                    const paint = !counts && live.has(c.key) && gap != null;
                     return (
                       <td
                         key={c.key}
                         data-rn-cell={`${c.key}|${k}`}
                         title={`${col(c.key)} · ${cat(k)}\n${t("tipShare", { share: pctTxt(c.shares[k]), base: pctTxt(m.base[k]), gap: deltaTxt(gap) })}`}
                         className={cx("h-[34px] rounded px-2.5 text-right whitespace-nowrap text-rn-ink tabular-nums", own && "font-bold", on && "outline-2 -outline-offset-2 outline-rn-navy")}
-                        style={paint ? { background: divBg(gap, m.cap) } : undefined}
+                        style={paint ? { background: divBg(gap!, m.cap) } : undefined}
                       >
                         {counts ? numTxt(c.counts[k]) : pctTxt(c.shares[k])}
                       </td>
@@ -816,7 +817,7 @@ function MatrixBody() {
           </tbody>
         </table>
       </div>
-      {m.cols.length < 2 ? <p className="m-0 px-6 pt-2.5 text-rn-12 text-rn-muted">{t("single")}</p> : null}
+      {m.live.length < 2 ? <p className="m-0 px-6 pt-2.5 text-rn-12 text-rn-muted">{t("single")}</p> : null}
       {counts ? (
         <p className="m-0 px-6 pt-2.5 pb-4 text-rn-12 text-rn-muted">{t("oneSource")}</p>
       ) : (

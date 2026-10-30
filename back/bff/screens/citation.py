@@ -175,8 +175,9 @@ def website_filters(raw: dict) -> dict:
     return out
 
 
-def website_context(sp: dict, role: str | None, surface_rule: str = "website") -> tuple[dict, dict]:
-    raw = read_standard_filters(sp, reader_scope(), website_groups(role), surface_rule)
+def website_context(sp: dict, role: str | None) -> tuple[dict, dict]:
+    """The website page's filters with the website account rule (site countries: a scope country's city sites stay)."""
+    raw = read_standard_filters(sp, reader_scope(), website_groups(role), "website")
     return website_filters(raw), {"surface": "website", "scope": reader_scope()}
 
 
@@ -192,7 +193,9 @@ def route_context(sp: dict, surface: str, project_id: str | None, role: str | No
             ctx["customFields"] = custom
         return filters, ctx, []
     if surface == "website":
-        filters, ctx = website_context(sp, role, "standard")
+        # the body's rule (2026-10-31 renewal audit 9-7: the table, drawer and export read the global one, so a scoped
+        # account's city site fell back to the whole scope while the body read that site)
+        filters, ctx = website_context(sp, role)
         return filters, ctx, []
     return global_context(sp)
 
@@ -561,7 +564,9 @@ def renewal_vm(live: dict | None, deltas: dict, parts: dict, degraded: dict, sp:
         "trendOn": any(any(v is not None for v in (r["trend"] or [])) for r in rows),
         "findings": M.findings(rows, lens["hmg"]["delta"]["value"], picked, engine, type_m, lens["split"], bump),
         "engineMatrix": {"status": "ok" if engine else "pending", "m": M.matrix_view(engine, one_source)},
+        # no type with citations: the original type chart's empty note (every column would read '—')
         "typeMatrix": {"status": "degraded", "m": None} if types is None else
+                      {"status": "empty", "m": None} if types and not any(t["total"] > 0 for t in types) else
                       {"status": "ok" if type_m else "pending", "m": M.matrix_view(type_m, one_source)},
         "oneSource": one_source,
         "bump": M.bump_view(bump, live["domains"]),

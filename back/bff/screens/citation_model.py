@@ -32,7 +32,6 @@ LABEL_BY_SLUG = {slug: label for label, slug in CITATION_CATEGORY_SLUGS.items()}
 OFFICIAL_HMG_CATEGORY = "Official (HMG)"
 OFFICIAL_COMPETITOR_CATEGORY = "Official (Competitor)"
 DEALER_CATEGORY = "Dealer & Marketplace"
-FALLBACK_CATEGORY = "Other"
 
 DOMAIN_PAGE = 200
 STANDARD_TABLE_ROWS = 100
@@ -512,10 +511,12 @@ def empty_target_hit_rate() -> dict:
 # ── sub pages ───────────────────────────────────────────────────────────────
 
 def to_tone_url_row(r: dict, group_by: str) -> dict:
+    """A tone URL row; a source without a category has none (None, '—'): 2026-10-31 renewal audit 9-6, it read
+    'Other', Gold's own category 13."""
     return {"url": _nn(r.get("url"), None) if group_by == "url" else None, "domain": r["skey"],
             "title": _nn(r.get("title"), None), "promptText": _nn(r.get("prompt_text"), None),
             "citations": r["citations"], "providers": [provider_label(e) for e in r["engines"]],
-            "category": _nn(category_label_of(r.get("category")), FALLBACK_CATEGORY)}
+            "category": category_label_of(r.get("category"))}
 
 
 def page_window(total: float, page: float, page_size: float) -> dict:
@@ -874,7 +875,8 @@ def lens_view(lens_: dict) -> dict:
 
 
 def matrix(source: list[dict], order: list[str]) -> dict:
-    """matrix: category share per column vs the columns' own total, the coloured columns and the gap cap."""
+    """matrix: category share per column vs the columns' own total, the coloured columns (those with citations, when
+    two or more have them) and the gap cap."""
     extra: dict = {}
     for s in source:
         for k in js_keys(s["byCategory"]):
@@ -883,10 +885,13 @@ def matrix(source: list[dict], order: list[str]) -> dict:
     rows = [*order, *sorted(extra, key=code_unit_key)]
     total = _sum(s["total"] for s in source)
     base = {k: (100 * _sum(_nn(s["byCategory"].get(k), 0) for s in source)) / total if total > 0 else 0 for k in rows}
+    # a column without citations has no share: None, uncoloured, outside the cap and the findings (2026-10-31 renewal
+    # audit 9-1: a type no answer of the filter carries showed 0.0% everywhere; the original type chart said '—')
     cols = [{"key": s["key"], "n": s["total"],
              "counts": {k: _nn(s["byCategory"].get(k), 0) for k in rows},
-             "shares": {k: (100 * _nn(s["byCategory"].get(k), 0)) / s["total"] if s["total"] > 0 else 0 for k in rows}} for s in source]
-    live_cols = [c["key"] for c in cols] if len(cols) > 1 else []
+             "shares": {k: (100 * _nn(s["byCategory"].get(k), 0)) / s["total"] if s["total"] > 0 else None for k in rows}} for s in source]
+    valued = [c["key"] for c in cols if c["n"] > 0]
+    live_cols = valued if len(valued) > 1 else []
     gaps = [abs(c["shares"][k] - base[k]) for c in cols if c["key"] in live_cols for k in rows]
     return {"cols": cols, "rows": rows, "base": base, "total": total, "live": live_cols,
             "cap": max(3, math.ceil(max([0, *gaps])))}
@@ -912,7 +917,8 @@ def matrix_view(m: dict | None, one_source: bool) -> dict | None:
     """MatrixBody / MatrixActions: + each cell's gap to 전체, the 전체 counts (one source picked)."""
     if m is None:
         return None
-    return {**m, "gaps": {c["key"]: {k: c["shares"][k] - m["base"][k] for k in m["rows"]} for c in m["cols"]},
+    return {**m, "gaps": {c["key"]: {k: c["shares"][k] - m["base"][k] if c["shares"][k] is not None else None for k in m["rows"]}
+                          for c in m["cols"]},
             "baseCounts": {k: js_round((m["base"][k] * m["total"]) / 100) for k in m["rows"]},
             "oneSource": one_source}
 

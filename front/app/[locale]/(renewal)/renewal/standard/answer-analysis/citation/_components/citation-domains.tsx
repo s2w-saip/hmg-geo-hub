@@ -64,7 +64,7 @@ export function DomainBumpCard() {
     <>
       <RnCardHead
         title={t("title")}
-        info={<InfoTip label={t("infoLabel")} items={[[t("infoLabel"), t("info")]]} />}
+        info={<InfoTip label={t("infoLabel")} items={[[t("infoLabel"), t(input.website ? "infoWebsite" : "info")]]} />}
         chips={d ? <RnBasisChip>{t("chip", { n: d.series.length, weeks: measured })}</RnBasisChip> : null}
         actions={<CitationCardActions tableId="bump" section="sec-dom" csv={csv} />}
       />
@@ -89,7 +89,7 @@ const LABEL_W = 236;
 type BumpView = NonNullable<RnCitationVm["bump"]>;
 
 function BumpChart({ d }: { d: BumpView }) {
-  const { lit, hover, live, openDomain } = useCitation();
+  const { lit, hover, live, openDomain, input } = useCitation();
   const t = useTranslations("renewal.citation.bump");
   const [ref, width] = useWidth<HTMLDivElement>();
   const movers = new Map(d.movers.map((m, i) => [m.key, i]));
@@ -134,7 +134,8 @@ function BumpChart({ d }: { d: BumpView }) {
         {d.series.some((s) => s.own) ? (
           <span className="inline-flex items-center gap-1.5">
             <i aria-hidden className="inline-block h-0.5 w-3 rounded" style={{ background: OWN_COLOR }} />
-            {t("legendOwn")}
+            {/* the site's own domains on the Website page, as the table's tag (OwnTag) names them */}
+            {t(input.website ? "legendOwnWebsite" : "legendOwn")}
           </span>
         ) : null}
         {d.movers.map((m, i) => (

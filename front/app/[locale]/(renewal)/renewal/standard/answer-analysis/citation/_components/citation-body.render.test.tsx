@@ -89,7 +89,8 @@ type Parts = {
 };
 const input = parts;
 // `website`: the website page's parts; its tests reuse the frozen model of the bare URL (`rnSearch`) and parts (`rnBase`)
-const render = (p: Parts, search = "", website?: Input["website"], rnSearch = website ? "" : search, rnBase: Parts = p) => {
+type Vm = import("./citation-input").RnCitationVm;
+const render = (p: Parts, search = "", website?: Input["website"], rnSearch = website ? "" : search, rnBase: Parts = p, rnEdit?: (vm: Vm) => Vm) => {
   SEARCH = search;
   PATH = website ? "/ko/renewal/website/answer-analysis/citation" : "/ko/renewal/standard/answer-analysis/citation";
   const i: Input = {
@@ -103,7 +104,7 @@ const render = (p: Parts, search = "", website?: Input["website"], rnSearch = we
     toneSummary: settled({ positive: { urls: 120, citations: 300, answers: 90 }, negative: { urls: 12, citations: 20, answers: 8 } }),
     tableSource: settled(null),
     periodView: settled(null),
-    rn: settled(rnVmFor({ live: rnBase.data, prev: rnBase.prevCategories, card: rnBase.officialDelta, typeRows: rnBase.typeCategories, sections: null, search: rnSearch })),
+    rn: settled(((vm) => (vm && rnEdit ? rnEdit(vm) : vm))(rnVmFor({ live: rnBase.data, prev: rnBase.prevCategories, card: rnBase.officialDelta, typeRows: rnBase.typeCategories, sections: null, search: rnSearch }))),
     website,
   };
   return renderToStaticMarkup(
@@ -155,6 +156,21 @@ describe("renewal Citation body", () => {
     expect((html.match(/data-rn-cell="[^"]*"[^>]*style="background:rgb/g) ?? []).length).toBe(8);
     expect((html.match(/data-rn-src="/g) ?? []).length).toBe(4);
     expect(html).toContain(T.comp.chipDelta.replace("{date}", "2026-10-05"));
+  });
+  it("matrix: a column without citations reads '—' and is not coloured; no type with citations says so (renewal audit 9-1)", () => {
+    const blank = <T,>(m: { rows: string[] }, v: T) => Object.fromEntries(m.rows.map((k) => [k, v]));
+    const html = render(input(), "", undefined, "", input(), (vm) => {
+      const m = vm.engineMatrix.m!;
+      const zero = { key: "perplexity", n: 0, shares: blank(m, null), counts: blank(m, 0) };
+      return { ...vm, engineMatrix: { status: "ok", m: { ...m, cols: [...m.cols, zero], gaps: { ...m.gaps, perplexity: blank(m, null) } } } };
+    });
+    const cells = [...html.matchAll(/data-rn-cell="perplexity\|[^"]*"([^>]*)>([^<]*)</g)];
+    expect(cells.length).toBe(4);
+    expect(cells.every(([, attrs, text]) => text === "—" && !attrs.includes("background"))).toBe(true);
+    expect((html.match(/data-rn-cell="[^"]*"[^>]*style="background:rgb/g) ?? []).length).toBe(8);
+    const empty = render(input(), "", undefined, "", input(), (vm) => ({ ...vm, engineMatrix: { status: "empty", m: null } as unknown as Vm["engineMatrix"] }));
+    expect(empty).toContain(ko.answerAnalysis.citations.v2.typeCategory.empty);
+    expect(empty).not.toContain("data-rn-matrix=");
   });
   it("출처 구성: Δ bars on one axis (largest change), direction only, no tick", () => {
     const html = render(input());
@@ -264,6 +280,13 @@ describe("renewal Citation body — website page", () => {
     expect(tile(html, "own")).toContain(T.delta.basisPrev.replace("{date}", "2026-10-02"));
     expect(html).not.toMatch(/data-rn-b="[^"]*" data-rn-tile="own"/);
     expect(html).toContain(fill(W.lens.categories, { n: "4" }));
+  });
+  it("the rank bump names the site's own domains 당사, as the table tag does; the standard page keeps 공식(HMG) (renewal audit 9-3)", () => {
+    const bump = T.bump as Record<string, string>;
+    const legend = (html: string) => between(html, 'data-rn-bumplg=""', "</span>");
+    expect(legend(render(input(), "", site()))).toContain(bump.legendOwnWebsite);
+    expect(bump.legendOwnWebsite).toBe("당사 도메인");
+    expect(legend(render(input()))).toContain(T.bump.legendOwn);
   });
   it("the standard page keeps its layout", () => {
     const html = render(input());

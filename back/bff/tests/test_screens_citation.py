@@ -402,5 +402,120 @@ class Model(unittest.TestCase):
         self.assertEqual(M.table_views(rows), {"": {"idx": [0, 1, 2], "maxCit": 9, "maxCov": 2}, "A": {"idx": [0, 2], "maxCit": 3, "maxCov": 1}})
 
 
+HMG, AUTO = "Official (HMG)", "Automotive Media"
+
+
+class EmptyColumns(unittest.TestCase):
+    """2026-10-31 renewal audit 9-1: a matrix column with no citations (a mention type no answer of the filter carries;
+    U9: single brands, July rounds, engine × country — Genesis AT and Hyundai CH on 10-05 have all five at 0) has no
+    share. It showed 0.0% in every row, was coloured, set the colour cap and made findings ('추천 답변 0.0% — 60pp
+    낮음'); the original type chart showed '—'."""
+
+    @staticmethod
+    def types(**totals):
+        mix = {"mention": {HMG: 6, AUTO: 4}, "comparison": {HMG: 2, AUTO: 18}}
+        return [{"type": t, "total": totals.get(t, 0), "byCategory": mix.get(t, {}) if totals.get(t) else {}} for t in M.MENTION_TYPES]
+
+    def test_a_column_without_citations_has_no_share(self):
+        m = M.type_matrix(self.types(mention=10, comparison=20), [HMG, AUTO])
+        self.assertEqual([c["key"] for c in m["cols"]], ["final_choice", "recommendation", "comparison", "definition", "mention"])
+        empty = {c["key"]: c["shares"] for c in m["cols"] if c["n"] == 0}
+        self.assertEqual(empty, {k: {HMG: None, AUTO: None} for k in ("final_choice", "recommendation", "definition")})
+        self.assertEqual(m["live"], ["comparison", "mention"])
+        self.assertEqual(m["cap"], 34)                                  # |60 − 26.7|, not |0 − 73.3|
+        view = M.matrix_view(m, False)
+        self.assertEqual(view["gaps"]["recommendation"], {HMG: None, AUTO: None})
+        self.assertAlmostEqual(view["gaps"]["mention"][HMG], 60 - 800 / 30)
+
+    def test_no_finding_reads_an_empty_column(self):
+        m = M.type_matrix(self.types(mention=10, comparison=20), [HMG, AUTO])
+        split = {"kind": "noOwned"}
+        kinds = [f["kind"] for f in M.findings([], None, [], None, m, split, None)]
+        self.assertNotIn("typeGap", kinds)                              # 추천 has no answers: nothing to compare
+        skew = M.strongest_skew(None, m)
+        self.assertEqual([skew["col"], skew["category"]], ["mention", AUTO])
+        both = M.type_matrix(self.types(mention=10, recommendation=20), [HMG, AUTO])
+        self.assertIn("typeGap", [f["kind"] for f in M.findings([], None, [], None, both, split, None)])
+
+    def test_one_valued_column_is_not_coloured(self):
+        m = M.type_matrix(self.types(mention=10), [HMG, AUTO])
+        self.assertEqual([m["live"], m["cap"]], [[], 3])
+
+    def test_every_column_empty_says_so(self):
+        live = {"categories": [{"name": HMG, "value": 6, "top": []}], "domains": [], "trend": None, "engineCategories": None}
+        deltas = {"officialDelta": None, "prevCategories": None}
+        vm = C.renewal_vm(live, deltas, {"typeCategories": self.types()}, {}, {})
+        self.assertEqual(vm["typeMatrix"], {"status": "empty", "m": None})
+        vm = C.renewal_vm(live, deltas, {"typeCategories": self.types(mention=10)}, {}, {})
+        self.assertEqual(vm["typeMatrix"]["status"], "ok")
+
+
+class CitationTrendZero(unittest.TestCase):
+    """2026-10-31 renewal audit 9-4, not reproduced: U2 found no zero rows in Gold's cell tables (citation_cell citations ≥ 1)
+    and one entity catalogue for every round, so a source without a row in a round that has citations was cited 0
+    times. The trend draws 0 there; a round without any value stays a gap."""
+
+    def test_no_row_in_a_valued_round_is_zero(self):
+        data = {"dimension": "source", "buckets": [{"key": "2026-09-28"}, {"key": "2026-10-05"}, {"key": "2026-10-12"}],
+                "series": [{"key": "a.com", "points": [{"bucket": "2026-09-28", "ratio": {"num": 3}}, {"bucket": "2026-10-05", "ratio": {"num": 2}}]},
+                           {"key": "b.com", "points": [{"bucket": "2026-09-28", "ratio": {"num": 1}}]}]}
+        out = M.to_citation_trend(data)
+        self.assertEqual([(p["a.com"], p["b.com"]) for p in out["points"]], [(3, 1), (2, 0), (None, None)])
+        self.assertEqual(out["points"][2]["gap"], {"reason": "no_value"})
+
+
+class CategoryBySlug(unittest.TestCase):
+    """2026-10-31 renewal audit 9-8, not reproduced: every category name the citation model compares comes from
+    category_label_of, the taxonomy label of Gold's slug (dim_category.slug); Gold's name (the HUB code table's, an
+    admin may edit it) is read only for a slug the taxonomy does not know. So a renamed 공식(경쟁사) is still the one the
+    competitor pick and the hidden row find, and a name copied onto another category is not."""
+
+    def test_the_pick_follows_the_slug(self):
+        renamed = {"category_key": 2, "slug": "officialCompetitor", "name": "공식 경쟁사"}
+        lookalike = {"category_key": 3, "slug": "dealerMarketplace", "name": "Official (Competitor)"}
+        rows = [M.to_citation_domain({"skey": s, "citations": n, "category": c, "share": {"num": n, "den": 10}, "coverage": {"num": 1, "den": 4}})
+                for s, n, c in (("toyota.com", 5, renamed), ("bmw.com", 3, renamed), ("cars.com", 2, lookalike))]
+        self.assertEqual([r["category"] for r in rows], ["Official (Competitor)", "Official (Competitor)", "Dealer & Marketplace"])
+        self.assertEqual([r["domain"] for r in M.apply_competitor_pick(rows, ["toyota.com"])], ["toyota.com", "cars.com"])
+        cats = M.to_category_slices({"total_citations": 10, "categories": [{"category": renamed, "citations": 8, "top_sources": []},
+                                                                           {"category": lookalike, "citations": 2, "top_sources": []}]})
+        self.assertEqual([c["name"] for c in cats], ["Official (Competitor)", "Dealer & Marketplace"])
+        live = {"categories": cats, "domains": rows, "categoryTrend": None}
+        out = {r["name"]: (r["value"], r["deltaHidden"]) for r in M.category_rows(live, None, None, ["toyota.com"])}
+        self.assertEqual(out, {"Official (Competitor)": (5, True), "Dealer & Marketplace": (2, False)})
+
+
+class ToneUrlCategory(unittest.TestCase):
+    def test_a_source_without_a_category_is_not_other(self):
+        # 2026-10-31 renewal audit 9-6: a URL row whose source has no category (the reader's LEFT JOIN; Gold leaves the
+        # column nullable, 0 rows on 2026-10-31) read 'Other', Gold's own category 13; it now has none ('—' on screen)
+        row = {"skey": "x.com", "citations": 2, "engines": ["chatgpt"]}
+        self.assertIsNone(M.to_tone_url_row({**row, "category": None}, "url")["category"])
+        other = {"category_key": 13, "slug": "other", "name": "Other"}
+        self.assertEqual(M.to_tone_url_row({**row, "category": other}, "source")["category"], "Other")
+
+
+class WebsiteAccountRule(unittest.TestCase):
+    """2026-10-31 renewal audit 9-7: the website domain table, drawer and export read the page's URL with the global
+    account rule (route_context, `standard`), the body with the website one. A scoped account's city site (SA-Dammam,
+    a site of SA) is no country of the global rule, so the table and drawer fell back to the scope (every site of it)
+    while the body read the city site."""
+
+    ME = {"all": False, "brands": ["Genesis"], "regions": ["genesis-middle-east"], "countries": []}
+
+    def test_table_and_drawer_read_the_bodys_sites(self):
+        from bff import access
+        detail = {"data": {"citations": 0, "urls": [], "prompts": [], "url_total": 0, "prompt_total": 0}, "meta": META}
+        get, calls = router({"citations/domains/kia.com": detail})
+        sp = {"geography": "SA-Dammam"}
+        with mock.patch("bff.api.get", get), access.scoped(self.ME):
+            body = C.common_of(*C.website_context(sp, None))["country"]
+            run(C.domains(QueryParams("ctx.surface=website&geography=SA-Dammam")))
+            run(C.domain_detail(QueryParams("ctx.surface=website&ctx.skey=kia.com&geography=SA-Dammam")))
+        self.assertEqual(body, ["SA-Dammam"])
+        # the global rule left the scope's countries out of the query (the clamp adds every scope site)
+        self.assertEqual([p.get("country") for _, p in calls], [body, body])
+
+
 if __name__ == "__main__":
     unittest.main()

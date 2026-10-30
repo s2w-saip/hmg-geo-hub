@@ -68,7 +68,8 @@ export type SplitState =
 export interface MatrixCol {
   key: string;
   n: number;
-  shares: Record<string, number>;
+  /** null in a column without citations (n = 0): no share, drawn '—' */
+  shares: Record<string, number | null>;
   counts: Record<string, number>;
 }
 export interface Matrix {
@@ -77,7 +78,7 @@ export interface Matrix {
   /** 전체 = the columns' own sum (types double-count, so not the page total) */
   base: Record<string, number>;
   total: number;
-  /** coloured columns (every column when there are two or more) */
+  /** coloured columns: those with citations, when two or more have them */
   live: string[];
   /** the gap (pp) drawn at full strength */
   cap: number;
@@ -121,7 +122,7 @@ export interface Finding {
 
 /** A source preference matrix as drawn: + each cell's gap to 전체, the 전체 counts, one source picked. */
 export type RnMatrixView = Matrix & {
-  gaps: Record<string, Record<string, number>>;
+  gaps: Record<string, Record<string, number | null>>;
   baseCounts: Record<string, number>;
   oneSource: boolean;
 };
@@ -146,7 +147,8 @@ export interface RnCitationVm {
   trendOn: boolean;
   findings: Finding[];
   engineMatrix: { status: "ok" | "pending"; m: RnMatrixView | null };
-  typeMatrix: { status: "ok" | "pending" | "degraded"; m: RnMatrixView | null };
+  /** empty: no mention type has citations (the original type chart's empty note) */
+  typeMatrix: { status: "ok" | "pending" | "degraded" | "empty"; m: RnMatrixView | null };
   /** One 출처 picked: absolute counts instead of shares. */
   oneSource: boolean;
   /** The weekly domain rank bump (+ draw order, measured weeks, each series' move and its row in live.domains). */

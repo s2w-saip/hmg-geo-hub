@@ -293,6 +293,18 @@ Deliberate changes (what the screen shows changed by decision):
     rule every group follows (under 1.5 %, or past the 14th). Only random inputs hold a large one (Alexa):
     `rn-fn-treemap-groups` (10 calls) and the `treemap` of `rn-fn-ranking` (12 calls). No live case changes (live
     '자동차 외' brands are 0.2 % of mentions).
+- 2026-10-31 renewal audit step 9 (Citation). 7 cases change, only in these keys:
+  - 9-1: a source preference matrix column without citations (`n` 0: a mention type no answer of the filter carries)
+    has no share. `cols[].shares` and the view's `gaps` are null there (they were 0, drawn 0.0% and coloured), `live`
+    keeps the columns with citations only when two or more have them, so the cap and the findings (typeGap, skew)
+    leave it out. `citation/fn-rn-type-matrix` (21 of 120 calls: `shares`, `live`, `cap` in 2), and the fixtures whose
+    definition column is 0, `rn-fix-all-owned`, `rn-fix-degraded`, `rn-fix-picks-source`, `rn-fix-rounds`
+    (`rn.typeMatrix.m`: definition's shares and gaps null, `live` without it; cap and findings unchanged). When no
+    type has citations `rn.typeMatrix` is `{status: "empty", m: null}` (the original type chart's empty note); no
+    case holds that state. No live case changes (no type is 0 on the recorded filters).
+  - 9-6: a tone URL row whose source has no category has `category` null; it read 'Other', Gold's category 13.
+    `citation/sub-tone-fix-counts`, `sub-tone-fix-reuse` (`page.rows[1]`, a fixture row without a category). Gold
+    has no such source on 2026-10-31 (dim_source.category_key is nullable, 0 null rows).
 
 ## Format
 

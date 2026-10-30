@@ -58,4 +58,26 @@ describe("renewal Citation sub pages", () => {
     expect(html).toContain("1 / 4,537");
     expect(html).not.toContain("226805");
   });
+
+  it("a tone URL row whose source has no category shows '—', not Gold's Other (renewal audit 9-6)", () => {
+    const row = (category: string | null, domain: string) => ({ url: `https://${domain}/a`, domain, title: domain, promptText: null, citations: 2, providers: ["chatgpt"], category });
+    const html = render(
+      <RnCitationToneUrlsView
+        tone="negative"
+        q=""
+        byDomain={false}
+        counts={{ positive: 2, negative: 2 }}
+        page={{ rows: [row(null, "a.com"), row("Other", "b.com")], total: 2, page: 1, pageSize: 50, nextCursor: null, win: { page: 1, pages: 1, from: 1, to: 2 } } as never}
+      />,
+    );
+    const chips = [...html.matchAll(/text-rn-11 text-rn-ink-2">([^<]*)</g)].map((m) => m[1]);
+    expect(chips).toEqual(["—", ko.citationCategories.other]);
+  });
+
+  it("the tone list says what the URLs are, no advice (renewal audit 9-2)", () => {
+    const sub = ko.renewal.citation.sub;
+    for (const s of [sub.positiveSub, sub.negativeSub, ko.renewal.citation.tone.subtitle]) {
+      expect(s).not.toMatch(/유지|확산|대응|필요/);
+    }
+  });
 });

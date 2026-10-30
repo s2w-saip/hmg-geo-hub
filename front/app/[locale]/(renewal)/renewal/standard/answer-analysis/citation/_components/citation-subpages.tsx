@@ -323,7 +323,7 @@ function ToneView({ tone, page, q, byDomain, counts: served }: ToneProps) {
                   <span className="flex items-start justify-between gap-3">
                     <span className="line-clamp-2 min-w-0 text-rn-13 font-semibold text-rn-ink">{r.title || r.domain}</span>
                     <span className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-                      <span className="rounded bg-rn-page px-1.5 py-0.5 text-rn-11 text-rn-ink-2">{cat(r.category)}</span>
+                      <span className="rounded bg-rn-page px-1.5 py-0.5 text-rn-11 text-rn-ink-2">{r.category ? cat(r.category) : "—"}</span>
                       {r.providers.map((p) => (
                         <span key={p} className="rounded bg-rn-page px-1.5 py-0.5 text-rn-11 text-rn-muted">
                           {engineLabel(p)}

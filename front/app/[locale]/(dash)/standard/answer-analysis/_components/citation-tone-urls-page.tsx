@@ -158,8 +158,8 @@ function ToneUrlsView({ tone, page, q, byDomain, counts: served }: ToneUrlsProps
                   <span className="min-w-0 line-clamp-2 text-sm font-medium text-foreground">{r.title || r.domain}</span>
                   <div className="flex shrink-0 items-center gap-1.5">
                     <span className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                      <span className="h-2 w-2 rounded-full" style={{ background: categoryColor(r.category) }} aria-hidden />
-                      {label(r.category)}
+                      {r.category ? <span className="h-2 w-2 rounded-full" style={{ background: categoryColor(r.category) }} aria-hidden /> : null}
+                      {r.category ? label(r.category) : "—"}
                     </span>
                     {r.providers.map((p) => (
                       <span key={p} className="rounded bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">{p}</span>

@@ -33,9 +33,10 @@ vi.mock("./citation-context", async (orig) => ({
   ...(await orig<typeof import("./citation-context")>()),
   useCitation: () => ({ input: { tableSource: SOURCE } }),
 }));
+let DETAIL_STATE: object = DETAIL;
 vi.mock("@/app/[locale]/(dash)/standard/answer-analysis/_components/citations-view", async (orig) => ({
   ...(await orig<typeof import("@/app/[locale]/(dash)/standard/answer-analysis/_components/citations-view")>()),
-  useDomainDetail: () => DETAIL,
+  useDomainDetail: () => DETAIL_STATE,
 }));
 
 const { DomainDrawer } = await import("./citation-domains");
@@ -73,5 +74,17 @@ describe("renewal Citation domain sheet", () => {
     const html = render();
     expect(html).toContain("25,283개 중 100개 표시");
     expect(html).not.toContain("25283개");
+  });
+
+  it("while the detail loads or after it failed the sheet says so in words (renewal audit 9-9: the key showed)", () => {
+    const drill = (ko.answerAnalysis.citations.drilldown as Record<string, string>);
+    for (const [status, key] of [["loading", "loading"], ["error", "loadFailed"]] as const) {
+      DETAIL_STATE = { url: "x", status };
+      const html = render();
+      expect(html).not.toContain(`drilldown.${key}`);
+      expect(drill[key]).toBeTruthy();
+      expect(html).toContain(drill[key]);
+    }
+    DETAIL_STATE = DETAIL;
   });
 });

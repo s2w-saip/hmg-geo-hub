@@ -6,7 +6,7 @@
 - 병렬 세션으로 나누지 않고 한 세션이 순서대로 한다.
 - 단계마다 새 하위 에이전트가 깨끗한 컨텍스트로 맡는다(B 방식).
 
-**현재 위치:** 9단계(Citation ① 결함 · 문구 · 귀속) 시작 전. 8단계 끝(단계 메모 '8단계'). 마지막 커밋: 8단계를 올린 커밋.
+**현재 위치:** 10단계(Citation ② 구성 추이 수치 · Website 도메인 표 전체) 시작 전. 9단계 끝(단계 메모 '9단계'). 마지막 커밋: 9단계를 올린 커밋.
 
 ## 진행 방식 (단계마다 새 하위 에이전트)
 
@@ -97,7 +97,7 @@
 | 6 | Mention ② 브랜드 순위 표 전체 · 열 정의 | — | [x] |
 | 7 | Mention ③ 서랍 · 드릴다운 | — | [x] |
 | 8 | Mention ④ 귀속 · 트리맵 · bump | 1 | [x] |
-| 9 | Citation ① 결함 · 문구 · 귀속 | 1 | [ ] |
+| 9 | Citation ① 결함 · 문구 · 귀속 | 1 | [x] |
 | 10 | Citation ② 구성 추이 수치 · Website 도메인 표 전체 | 3 | [ ] |
 | 11 | ACR 발견 · 귀속 · 정렬 | 1 | [ ] |
 | 12 | AI Conversion 부분합 · 문구 | — | [ ] |
@@ -340,21 +340,21 @@ Global과 Website가 같은 본문을 쓴다. Website는 `mention/rn-*`를 ctx.s
 - 원본: `AA/type-category-chart.tsx`
 
 **할 일**
-- [ ] 9-1 표본이 0인 유형 열을 고친다(Global · Website).
+- [x] 9-1 표본이 0인 유형 열을 고친다(Global · Website).
   - 지금: `to_type_category_rows`(~178-192)가 유형 5개를 0으로 채운다 → `type_matrix`(~901-908)에 total 0인 열이 들어간다 → `matrix`(~880-892)가 그 열의 비중을 0으로 둔다. typeGap 발견(~1019-1027)은 '추천 답변 0.0% — 40pp 낮음'까지 만든다. 프런트(`citation-body.tsx` ~798-809)도 n = 0을 막지 않는다. 원본은 '—'였다.
   - 고친 뒤: n = 0 열의 비중은 null('—')이고, live · 발견 · cap 계산에서 뺀다.
   - 재현 시험(모의 입력)부터 쓴다. U9의 실제 필터도 확인 자료로 쓴다.
-- [ ] 9-2 처방 문구를 사실만 말하는 문구로 바꾼다(ko · en 같은 키).
+- [x] 9-2 처방 문구를 사실만 말하는 문구로 바꾼다(ko · en 같은 키).
   - `renewal.citation.sub.positiveSub`: '유지·확산할 출처'
   - `renewal.citation.sub.negativeSub`: '대응 콘텐츠가 필요한 출처'
   - `renewal.citation.tone.subtitle`: '대응할 콘텐츠가 보입니다'
-- [ ] 9-3 Website 범프 범례 · 설명이 당사 도메인을 '공식(HMG) 도메인'이라 부른다(`renewal.citation.bump.legendOwn` · `bump.info`, `citation-domains.tsx` ~137). website에서는 W6 표 태그와 같게 '당사 도메인'으로 쓴다. Global은 그대로 둔다.
-- [ ] 9-4 U2가 '측정되지 않음'이면 인용 추이의 빈 점을 0 대신 비워 둔다(`citation_model.py` ~249-251).
-- [ ] 9-5 U3(답변 톤) · U4(`cit_m05`) · U6('당사' 태그)가 '다름'이면 Gold 정의로 맞춘다. 'Gold로 알 수 없음'이면 업스트림에 두고 고치지 않는다. U6는 Website Overview 출처 구성비의 '당사' 태그에도 쓰인다.
-- [ ] 9-6 출처 카테고리가 null인 행을 'Other'로 보인다(`citation_model.py` ~518, 긍정/부정 URL 행). Gold의 Other와 구분해 '—'로 보인다.
-- [ ] 9-7 도메인 표 · 서랍은 `route_context`가 website 계정 규칙을 'standard'로 읽고, 본문은 'website'로 읽는다(`citation.py` ~178-196). 전용 사이트 계정(2단계 뒤)에서 본문과 표 · 서랍의 국가 잠금이 같은지 확인하고, 다르면 website로 맞춘다.
-- [ ] 9-8 카테고리를 이름으로 찾는 곳을 slug(`dim_category.slug`)로 바꾼다(4단계 4-4와 같은 이유: 이름은 HUB 코드표 값이라 관리자가 고칠 수 있다). 대상은 `BS/citation_model.py`의 `OFFICIAL_COMPETITOR_CATEGORY`(경쟁사 고르기 · 카테고리 숨김 등, 단계 메모 '4단계'). 결과가 같으면 golden은 함수 case 입력만 바뀐다.
-- [ ] 9-9 리뉴얼 Citation 도메인 서랍이 쓰는 문구 키 `answerAnalysis.citations.drilldown.loading` · `loadFailed`가 ko · en에 없다(단계 메모 '7단계', 2026-10-31 진행 세션 확인: 그 아래 키는 noUrls · noUrlsOfficial · noPrompts · promptsTopOnly · cites · placeholder뿐). 읽는 중 · 실패 때 키 이름이 보이는지 render 시험으로 재현한 뒤 문구를 더한다.
+- [x] 9-3 Website 범프 범례 · 설명이 당사 도메인을 '공식(HMG) 도메인'이라 부른다(`renewal.citation.bump.legendOwn` · `bump.info`, `citation-domains.tsx` ~137). website에서는 W6 표 태그와 같게 '당사 도메인'으로 쓴다. Global은 그대로 둔다.
+- [x] 9-4 U2가 '측정되지 않음'이면 인용 추이의 빈 점을 0 대신 비워 둔다(`citation_model.py` ~249-251).
+- [x] 9-5 U3(답변 톤) · U4(`cit_m05`) · U6('당사' 태그)가 '다름'이면 Gold 정의로 맞춘다. 'Gold로 알 수 없음'이면 업스트림에 두고 고치지 않는다. U6는 Website Overview 출처 구성비의 '당사' 태그에도 쓰인다.
+- [x] 9-6 출처 카테고리가 null인 행을 'Other'로 보인다(`citation_model.py` ~518, 긍정/부정 URL 행). Gold의 Other와 구분해 '—'로 보인다.
+- [x] 9-7 도메인 표 · 서랍은 `route_context`가 website 계정 규칙을 'standard'로 읽고, 본문은 'website'로 읽는다(`citation.py` ~178-196). 전용 사이트 계정(2단계 뒤)에서 본문과 표 · 서랍의 국가 잠금이 같은지 확인하고, 다르면 website로 맞춘다.
+- [x] 9-8 카테고리를 이름으로 찾는 곳을 slug(`dim_category.slug`)로 바꾼다(4단계 4-4와 같은 이유: 이름은 HUB 코드표 값이라 관리자가 고칠 수 있다). 대상은 `BS/citation_model.py`의 `OFFICIAL_COMPETITOR_CATEGORY`(경쟁사 고르기 · 카테고리 숨김 등, 단계 메모 '4단계'). 결과가 같으면 golden은 함수 case 입력만 바뀐다.
+- [x] 9-9 리뉴얼 Citation 도메인 서랍이 쓰는 문구 키 `answerAnalysis.citations.drilldown.loading` · `loadFailed`가 ko · en에 없다(단계 메모 '7단계', 2026-10-31 진행 세션 확인: 그 아래 키는 noUrls · noUrlsOfficial · noPrompts · promptsTopOnly · cites · placeholder뿐). 읽는 중 · 실패 때 키 이름이 보이는지 render 시험으로 재현한 뒤 문구를 더한다.
 
 **시험.** `test_screens_citation`, `test_gold_citations`, golden citation, 인용 render 시험, 원본 대조(Global · Website 인용).
 
@@ -680,6 +680,29 @@ Website 인용 도달 Δ도 값 출처(발행 / 실시간)가 다르면 숨긴�
   - **화면 확인.** 리뉴얼 Global · Website Mention(브랜드 상세, 기본 · brand=Kia, KPI 화면)을 1920×915로 열었다. 오류 화면 · 5xx가 없었고, 범례가 새 문구로 보였다.
   - **다음 단계가 알 것.** 리뉴얼 Mention 본문 브랜드 행에 `hmgOwn`(Gold `is_hmg_own`)이 있다. ctx `hmg`를 켠 읽기만 받는다. 11단계(ACR)는 다른 Gold 값(`acr_entity_fact.own_bit`)이라 이 경로와 관계없다.
 
+- **9단계(2026-10-31).** 9-1 · 9-2 · 9-3 · 9-6 · 9-7 · 9-9를 고쳤다. 재현 시험은 고치기 전에 실패했다(BFF 6개 · render 5개). 9-4 · 9-8은 재현되지 않았고 지금 동작을 시험으로 고정했다. 9-5는 고칠 것이 없다. Global과 Website는 같은 본문 · BFF 화면이라 둘 다 바뀐다.
+  - **9-1.** 출처 선호 매트릭스(`citation_model.matrix`)에서 인용이 0인 열(n = 0)은 비중이 null('—')이다. `live`는 인용이 있는 열이 둘 이상일 때 그 열들만이다. 그래서 칠하기 · cap · 발견(typeGap · skew · engineGap)이 그 열을 읽지 않는다. 화면 뷰의 `gaps`도 null이고 CSV는 그 칸을 비운다.
+    - 유형 다섯 열이 모두 0이면 `rn.typeMatrix`가 `{status: "empty", m: null}`이다. 화면은 원본 유형 차트의 빈 안내(`answerAnalysis.citations.v2.typeCategory.empty` '유형별 출처 데이터가 없습니다')를 보인다.
+    - 인용이 있는 열이 하나뿐이면 '비교할 대상이 없다' 안내가 나온다. 조건을 열 수에서 `live` 수로 바꿨고, 문구 `renewal.citation.matrix.single`을 '인용이 있는 열이 하나뿐이라…'로 고쳤다(ko · en).
+    - 실데이터(U9, 관리자): 필터 없는 2026-07-06 하루는 최종 선택 · 정의 열이 0이라 '—'다. 나머지 열의 공식(HMG) 비중(추천 20.6 · 비교 21.4 · 단순 언급 22.7)은 원본 유형 차트와 같다. Genesis AT · Hyundai CH(10-05)는 다섯 열이 모두 0이라 빈 안내이고, 원본 `/ko/standard/…/citation`도 빈 안내다. 필터 없는 10-05 HMG는 0인 열이 없어 그대로다.
+  - **9-2.** 처방 문구 셋을 사실 문구로 바꿨다(ko · en). `sub.positiveSub`는 '당사 언급이 긍정으로 기운 답변이 근거로 쓴 URL입니다.'이고 `negativeSub`도 같은 꼴이다. `tone.subtitle`은 '당사 언급이 긍정 · 부정으로 기운 답변이 근거로 쓴 URL을 톤별로 셉니다.'다.
+  - **9-3.** Website 범프 범례와 읽는 법은 새 문구 `bump.legendOwnWebsite`('당사 도메인')와 `bump.infoWebsite`를 쓴다. 고르는 기준은 `input.website`이고, 도메인 표 태그(`OwnTag`)와 같은 규칙이다. Global은 그대로 '공식(HMG) 도메인'이다.
+  - **9-4 재현 안 됨.** U2대로 셀 표에는 0인 행이 없다. 그래서 인용이 있는 회차에 행이 없는 도메인 · 카테고리는 0회이고, 값이 없는 회차는 이미 공백(gap)이다. 시험 `CitationTrendZero`로 고정했다.
+  - **9-5 고칠 것 없음.** U3 · U4는 같다. U6에서 지금 '당사' 태그(리더 `is_own` = `citations.own_citation`)는 Gold 정의를 따른다. Website Overview 출처 구성비의 '당사' 태그도 같은 값이다. 두 Gold 값의 차이는 업스트림 D2로 물었다. 근거는 Gold 표 설명이다.
+    - `citation_cell`: '자사 판정은 표면별입니다: global = owner_key = ANY(허용 배열), website = loc_owned ∨ tgt_hit'.
+    - `dim_owned_base`: '쓰임: Global 자사 인용 판정(도메인 순위 · 인용 프롬프트 · 답변 모달 · 도메인 상세의 자사 표시와 수)', 'Website 자사 판정은 이 표가 아니라 web_unit 의 base · sibs 를 씁니다'.
+    - `dim_source.owned_brand_bit`('당사 공식 도메인 비트')는 출처 분류(category_src 3 '당사 도메인')와 Admin 분류 경고가 쓰는 값이다. 도메인 표의 자사 표시는 그 표 쓰임에 없다.
+  - **9-6.** 긍정/부정 URL 행의 출처에 카테고리가 없으면 `category`가 null이고 화면은 '—'다. 원본 `citation-tone-urls-page.tsx`도 같은 BFF 화면이라 함께 고쳤다(색 점 없이 '—'). Gold의 Other(카테고리 13)는 그대로 '기타'다. Gold `dim_source.category_key`는 null을 허용하지만 2026-10-31에 null 행은 0개라, 실데이터 화면은 바뀌지 않는다.
+  - **9-7.** 재현했다. 범위 계정(Genesis · genesis-middle-east)이 SA-Dammam(SA의 도시 사이트)을 고르면 본문은 SA-Dammam을 읽었다. 도메인 표 · 서랍 · 내보내기(`route_context`, global 계정 규칙)는 그 코드를 버려 국가 조건 없이 읽었고, clamp가 범위 사이트 전부를 붙였다. 이제 `route_context`가 website에서 본문과 같은 `website_context`(website 규칙)를 쓴다(`surface_rule` 인자는 지웠다).
+    - 원본 `/ko/website/answer-analysis/citation`의 표 · 서랍도 같은 BFF 화면이라 같이 맞춰진다. 관리자 · HQ 계정은 국가 범위가 없어 결과가 그대로다.
+    - live 확인: 그 계정의 SA-Dammam 본문은 인용 2,908 · 도메인 210이고, 표도 210행이다. 상위 5행(genesis.com 1,904 …)이 같고, 관리자가 brand=Genesis · SA-Dammam으로 읽은 본문과도 같다. 서랍(genesis.com)도 열린다. AE도 같다(2,797 · 227). 시험 계정 `audit2-region@local`은 관리자 API로 다시 켜서 쓰고 끝나고 중지했다.
+  - **9-8 재현 안 됨.** citation_model이 비교하는 카테고리 이름은 모두 `category_label_of`(Gold slug → 택소노미 라벨 `LABEL_BY_SLUG`)에서 온다. Gold 이름(HUB 코드표 값)은 택소노미에 없는 slug일 때만 쓴다. 그래서 공식(경쟁사)의 이름을 바꿔도 경쟁사 고르기와 행 숨김은 slug로 찾고, 다른 카테고리에 같은 이름을 붙여도 섞이지 않는다. 시험 `CategoryBySlug`로 고정했다. 4-4(Overview 경쟁사 줄)는 Gold 이름을 직접 비교해서 달랐다.
+  - **9-9.** render 시험으로 재현했다(읽는 중 · 실패 때 키 이름이 보였다). `answerAnalysis.citations.drilldown.loading`('도메인 상세를 불러오는 중…') · `loadFailed`('도메인 상세를 불러오지 못했습니다')를 ko · en에 더했다. 원본 `citations-view.tsx` 도메인 펼침도 같은 키를 써서 같이 고쳐진다.
+  - **golden.** 7건이다(README 'Deliberate changes' 2026-10-31 step 9). 9-1은 `fn-rn-type-matrix`(120호출 중 21) · `rn-fix-all-owned` · `-degraded` · `-picks-source` · `-rounds`다. 정의 열이 null이 되고 live에서 빠지며, 그 픽스처의 cap · 발견은 그대로다. 9-6은 `sub-tone-fix-counts` · `-reuse`(카테고리 없는 픽스처 행)다. live case는 그대로다.
+  - **원본 대조.** 숫자는 바뀌지 않는다. 바뀐 것은 0인 열의 표시 · 빈 안내 · 문구, 그리고 범위 계정이 도시 사이트를 고른 표 · 서랍이다(위 9-1 · 9-7). 리뉴얼 Global · Website 인용과 하위 화면(prompts · tone-urls), 원본 `/ko/standard/…/citation` · `/ko/website/…/citation`을 1920×915로 열었다. 오류 화면 · 5xx는 없다.
+    - 관찰: 로컬 front(next dev, 10-29부터 실행 중)가 `/ko/renewal/website/answer-analysis/citation` 한 경로에만 고치기 전 ko 문구를 보냈다. 그래서 새 키 `bump.legendOwnWebsite`가 키 이름으로 보였다. 같은 경로의 en('Our domains')과 다른 경로의 ko는 새 문구다. 파일 touch로도 풀리지 않았다. 개발 서버 캐시이므로 front를 다시 띄우면 풀린다(render 시험은 새 문구로 통과).
+  - **다음 단계가 알 것.** 매트릭스 열의 `shares` · `gaps`는 null일 수 있다(`MatrixCol`, `RnMatrixView`). `rn.typeMatrix.status`에 `empty`가 생겼다. 긍정/부정 URL 행의 `category`는 null일 수 있다(`CitationToneUrlRow`). 범위 계정의 website 인용 읽기는 모두 website 규칙(`website_context`)이다.
+
 ## 진행 기록
 
 - 2026-10-31 — 계획을 작성했다. 근거는 같은 날 중간점검이다(코드 읽기 다섯 갈래: Overview · Mention · Citation · Prompts · AI Funnel, 큰 지적은 코드로 다시 확인). 처음에는 병렬 세션으로 나누려 했으나 사용자가 한 세션이 순서대로 하는 방식으로 바꿨다. 다음은 1단계다.
@@ -691,3 +714,4 @@ Website 인용 도달 Δ도 값 출처(발행 / 실시간)가 다르면 숨긴�
 - 2026-10-31 — 6단계: Mention 순위표가 모든 브랜드를 갖는다(6-1). BFF `rn-ranking`이 행 전부를 보내고(리더 상한 없음, global 752 · website 436), 화면은 처음 100행 · 전체 검색 · '더 보기' · 실제 전체 수 각주다. 100위 밖 행은 서랍 행을 같이 실어 서랍이 수치 · 감정 · 유형을 보인다. 검색 개수 문구 결함도 고쳤다. 순위표 머리와 서랍 프롬프트 목록 머리에 원본 열 정의 · 계산식 ⓘ를 되살렸다(6-2, 복수 언급 기준 포함). 재현 시험은 고치기 전에 실패했다. golden 9건 의도 변경. 시험: BFF 34개 모듈 574개(+live 8개), 프런트 관련 9개 파일 58개 · typecheck · lint, 원본 대조(100위 밖 행 값), e2e Global · Website 각 9항목. 다음은 7단계다.
 - 2026-10-31 — 7단계: Mention 서랍이 그 브랜드를 읽는다(7-2). Gold 리더가 계약의 `mention_brand`를 원본 규칙으로 `dim_brand.brand_key`로 찾고, 인용 출처 · 상세 · 커버리지 분모를 그 브랜드가 언급된 답변으로 좁힌다. 당사 행은 두 탭 모두 own(`mention_own`)으로 읽는다(원본 `MentionsDrilldown`도). 인용 출처 탭을 원본처럼 되살렸다(7-1: 점유율 · 커버리지 · 당사 표시, URL 열 제거, 행 펼침 URL · 프롬프트 → 답변 원문). 유형 행 → 그 유형 프롬프트 → 답변 원문(7-3, 신호 서랍 재사용). 재현 시험은 고치기 전에 실패했다. golden 변경 없음. 시험: BFF 34개 모듈 584개(live 8개 포함), 프런트 관련 14개 파일 110개 · typecheck · lint, 원본 대조(Global · Website 첫 행 값), e2e Global · Website 각 9항목 + 원본 2화면. 다음은 8단계다.
 - 2026-10-31 — 8단계: Mention 'HMG 계열' 배지를 HUB 이름 목록 대신 Gold `is_hmg_own`(본문 브랜드 읽기 `include=hmg`, 리뉴얼만)으로 정한다(8-1, live 결과 같음). 트리맵 '자동차 외' 묶음을 늘 접지 않고 다른 묶음과 같은 점유율 · 순서 규칙으로 접는다(8-2, 묶음 이름은 그대로). 트리맵 Δ 색은 반올림해 0.0일 때만 '변화 없음', 세기는 0.1 · 0.5 · 1.0pp 눈금(8-3, 범례 문구). 재현 시험은 고치기 전에 실패했다. 8-4는 재현되지 않았다(U2: 답변 있는 회차의 0은 Gold 뜻, 시험으로 고정). golden: tape · args에 플래그, 출력은 무작위 입력 case 3개만. 시험: BFF 34개 모듈(+live 8개), 프런트 Mention 7개 파일 · typecheck · lint, Global · Website 실제 화면. 다음은 9단계다.
+- 2026-10-31 — 9단계: Citation 출처 선호 매트릭스에서 인용이 0인 열은 비중 '—'이고 칠하기 · cap · 발견에서 빠진다. 유형이 모두 0이면 원본 빈 안내를 보인다(9-1, U9 실데이터 07-06 · Genesis AT · Hyundai CH). 처방 문구 셋을 사실 문구로 바꿨다(9-2). Website 범프 범례는 '당사 도메인'이다(9-3). 카테고리 없는 긍정/부정 URL 행은 'Other' 대신 '—'다(9-6, 원본도). 범위 계정의 Website 도메인 표 · 서랍 · 내보내기가 본문과 같은 website 계정 규칙을 쓴다(9-7, 도시 사이트). 도메인 서랍의 읽는 중 · 실패 문구를 더했다(9-9, 원본도). 재현 시험은 고치기 전에 실패했다. 9-4(U2) · 9-8(이름이 이미 slug 라벨)은 재현되지 않았고, 9-5는 고칠 것이 없다(U3 · U4 같음, U6 태그는 Gold 설명의 도메인 순위 자사 표시 정의). golden 7건 의도 변경. 시험: BFF 34개 모듈 598개(live 8개 포함), 프런트 관련 13개 파일 103개 · typecheck · lint, 범위 계정 live 대조, Global · Website 인용 · 하위 화면 · 원본 실제 화면. 다음은 10단계다.

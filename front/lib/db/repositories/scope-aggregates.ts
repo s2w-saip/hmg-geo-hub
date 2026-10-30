@@ -11717,8 +11717,8 @@ export interface CitationToneUrlRow {
   promptText: string | null;
   citations: number;
   providers: string[];
-  /** read-time 분류(영문 택소노미 값). */
-  category: string;
+  /** read-time 분류(영문 택소노미 값). 출처에 카테고리가 없으면 null('—', Gold 의 Other 와 다름). */
+  category: string | null;
 }
 export interface CitationToneUrlPage {
   rows: CitationToneUrlRow[];

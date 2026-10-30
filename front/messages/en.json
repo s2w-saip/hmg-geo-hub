@@ -1137,6 +1137,8 @@
         "noUrlsOfficial": "No cited URLs for this domain yet.",
         "noPrompts": "No prompts cited this domain",
         "promptsTopOnly": "Prompt lists are provided only for the most-cited domains.",
+        "loading": "Loading the domain detail…",
+        "loadFailed": "Couldn't load the domain detail",
         "cites": "cites",
         "placeholder": "Prompt list will arrive once domain-prompts / prompt-details / url-prompts APIs are wired."
       },
@@ -6019,7 +6021,7 @@
         "n": "{n}",
         "csvGap": "gap vs all (pp)",
         "tipShare": "share {share} · all {base} ({gap})",
-        "single": "Only one column — nothing to compare. Try the other view or widen the filters.",
+        "single": "Only one column has citations — nothing to compare. Try the other view or widen the filters.",
         "oneSource": "One source picked, so every column is 100% — the cells show citation counts.",
         "less": "Cited less than all",
         "more": "more",
@@ -6031,7 +6033,7 @@
         "info": "Tone = whichever is larger in an answer: the positive or the negative signals on our mention (ties excluded). URLs count distinct URLs.",
         "chipApi": "Answer-level tone · source filter applied",
         "chipLegacy": "Answer-level tone · all citations, regardless of the source filter",
-        "subtitle": "The sources negative answers rest on show which content to respond with.",
+        "subtitle": "The URLs that answers leaning positive or negative on us rested on, counted by tone.",
         "positive": {
           "name": "URLs cited in positive answers"
         },
@@ -6047,6 +6049,7 @@
         "title": "Domain citation rank by round",
         "infoLabel": "How to read",
         "info": "Only the most cited domains over the drawn weeks (the count on the chip), ranked against each other by citations each week — a rank within them, not among all domains, so it can differ from the domain table below. Coloured = Official (HMG) domains (navy) and the 3 domains whose rank changed most since the first week; the rest is grey — hover a line or a legend item to isolate it, click to open the domain. Right = last week's rank · citations · rank change (▲▼).",
+        "infoWebsite": "Only the most cited domains over the drawn weeks (the count on the chip), ranked against each other by citations each week — a rank within them, not among all domains, so it can differ from the domain table below. Coloured = our domains (navy, the ones the domain table tags Ours) and the 3 domains whose rank changed most since the first week; the rest is grey — hover a line or a legend item to isolate it, click to open the domain. Right = last week's rank · citations · rank change (▲▼).",
         "chip": "Top {n} domains · {weeks} rounds",
         "colRank": "rank",
         "colCitations": "citations",
@@ -6054,6 +6057,7 @@
         "needTwo": "Rank changes show once two or more weeks are measured",
         "twin": "#{rank} · {n}",
         "legendOwn": "Official (HMG) domains",
+        "legendOwnWebsite": "Our domains",
         "legendRest": "Other domains",
         "aria": "Bump chart of domain citation ranks by round",
         "tip": "{x} · {domain} — #{rank} · {n} citations"
@@ -6090,9 +6094,9 @@
         "uncitedTitle": "Prompts not citing our official URLs",
         "uncitedSub": "Prompts with at least one citation whose answers never rested on an official URL of ours. Click a prompt to open the real answers.",
         "positiveTitle": "URLs cited in positive answers",
-        "positiveSub": "URLs that answers leaning positive on us rested on — sources to keep and spread.",
+        "positiveSub": "URLs that answers leaning positive on us rested on.",
         "negativeTitle": "URLs cited in negative answers",
-        "negativeSub": "URLs that answers leaning negative on us rested on — sources that need a response."
+        "negativeSub": "URLs that answers leaning negative on us rested on."
       }
     }
   },
