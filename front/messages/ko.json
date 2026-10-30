@@ -5796,7 +5796,7 @@
         "colMentions": "언급 수"
       },
       "brands": {
-        "title": "브랜드 언급 순위 (상위 100)",
+        "title": "브랜드 언급 순위",
         "viewLabel": "보기",
         "viewMap": "트리맵",
         "viewTable": "순위표",
@@ -5807,7 +5807,14 @@
         "rowTip": "누르면 이 브랜드의 프롬프트와 실제 AI 답변을 봅니다",
         "groupOnly": "{group} 그룹만 보기",
         "clearGroup": "그룹 필터 해제",
-        "count": "{shown}개 브랜드"
+        "count": "{shown}개 브랜드",
+        "more": "{n}개 더 보기",
+        "defLabel": "정의",
+        "formulaLabel": "계산식",
+        "multiShareDef": "한 답변 안에서 2회 이상 언급된 답변만 셀 때, 전체 브랜드 복수 언급 수 대비 이 브랜드의 비중입니다.",
+        "multiShareFormula": "이 브랜드 복수 언급 수 ÷ 전체 브랜드 복수 언급 수 × 100",
+        "multiPromptsDef": "이 브랜드가 2회 이상 언급된 답변이 하나라도 있는, 서로 다른 프롬프트의 개수입니다.",
+        "multiRateFormula": "이 브랜드가 2회 이상 언급된 답변 수 ÷ 전체 측정 답변 수 × 100"
       },
       "treemap": {
         "legend": "점유율 증감 (직전 회차 대비)",
@@ -5825,7 +5832,8 @@
         "groupTip": "{group} · 점유율 {share}\n증감 {delta} · 브랜드 {n}개",
         "brandTip": "{brand} · 점유율 {share}\n증감 {delta} · 언급 {mentions}회",
         "noDeltaTitle": "증감 없음",
-        "groupName": "{name} 그룹"
+        "groupName": "{name} 그룹",
+        "scope": "언급 상위 {n}개 브랜드"
       },
       "drawer": {
         "close": "닫기",

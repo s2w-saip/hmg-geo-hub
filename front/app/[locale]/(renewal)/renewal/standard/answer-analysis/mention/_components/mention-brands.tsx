@@ -21,6 +21,7 @@ import {
   type RankingSortKey,
   type RankingValues,
   type RnBumpVM,
+  type RnDrawerBrand,
   type TreemapBrand,
 } from "../_data/screen-types";
 import { squarify } from "./treemap-layout";
@@ -242,17 +243,18 @@ const ASC_KEYS: SortKey[] = ["brand", "rank", "avgPosition"];
 /** A ranking row with the values of the multi toggle state. */
 type RankRow = RankingRow & { v: RankingValues };
 
-function BrandRanking() {
+/** `initialView` · `initialQuery`: render-test seams (the card opens on the treemap, the search box empty). */
+export function BrandRanking({ initialView = "map", initialQuery = "" }: { initialView?: "map" | "table"; initialQuery?: string } = {}) {
   const { input, openDrawer } = useMention();
   const t = useTranslations("renewal.mention");
   const tT = useTranslations("answerAnalysis.mentions.table");
   const tTm = useTranslations("renewal.mention.treemap");
   const vm = use(input.ranking);
-  const [view, setView] = useState<"map" | "table">("map");
+  const [view, setView] = useState<"map" | "table">(initialView);
   const [multi, setMulti] = useState(false);
   const [group, setGroup] = useState<string | null>(null);
   const mode = multi ? "on" : "off";
-  // the API sends both value sets (multi toggle off / on) of the top rows
+  // the API sends both value sets (multi toggle off / on) of every body brand
   const rows = useMemo<RankRow[]>(() => vm.rows.map((r) => ({ ...r, v: r[mode] })), [vm.rows, mode]);
   // a parent with several brands reads "{name} 그룹" (HMG stays HMG); a single brand is just its name
   const groupName = (g: string, several = false) =>
@@ -308,7 +310,7 @@ function BrandRanking() {
           }}
         />
       ) : (
-        <RankTable rows={rows} orders={vm.orders[mode]} multi={multi} multiUnavailable={vm.multiUnavailable} count={vm.count} group={group} groupName={groupName} onClearGroup={() => setGroup(null)} total={vm.total} />
+        <RankTable rows={rows} orders={vm.orders[mode]} multi={multi} multiUnavailable={vm.multiUnavailable} count={vm.count} group={group} groupName={groupName} onClearGroup={() => setGroup(null)} total={vm.total} initialQuery={initialQuery} />
       )}
     </>
   );
@@ -448,7 +450,10 @@ function Treemap({
             </span>
           </>
         ) : (
-          <span className="text-rn-muted">{t("all")}</span>
+          // the treemap holds the top 100 body brands (the table holds them all: the card title names no count)
+          <span className="text-rn-muted">
+            {t("all")} · {t("scope", { n: groups.reduce((n, g) => n + g.members.length, 0) })}
+          </span>
         )}
       </div>
       <div ref={ref} role="group" aria-label={t("aria")} className="relative w-full" style={{ height }}>
@@ -511,6 +516,7 @@ function RankTable({
   groupName,
   onClearGroup,
   total,
+  initialQuery = "",
 }: {
   rows: RankRow[];
   orders: import("../_data/screen-types").RnRankingVM["orders"]["off"];
@@ -521,6 +527,7 @@ function RankTable({
   groupName: (g: string, several?: boolean) => string;
   onClearGroup: () => void;
   total?: number;
+  initialQuery?: string;
 }) {
   const { openDrawer, lit, hover, input } = useMention();
   const t = useTranslations("renewal.mention");
@@ -529,22 +536,42 @@ function RankTable({
   const tD = useTranslations("dashboard.filters");
   const tTr = useTranslations("answerAnalysis.mentions.kpi.overview.unmeasuredDialog");
   const locale = useLocale();
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(initialQuery);
   const dq = useDeferredValue(q);
   // sort orders come from the API (useOrderedTable keeps the column / direction); the search box
-  // and the treemap group stay UI filters over the ordered rows
+  // and the treemap group stay UI filters over the ordered rows, then the first `limit` of them show
   const { sorted: ordered, sortKey, asc, toggleSort } = useOrderedTable(rows, orders, { defaultKey: "rank", defaultAsc: true, ascByDefault: ASC_KEYS });
-  const sorted = ordered.filter((r) => (!dq || r.brand.toLowerCase().includes(dq.trim().toLowerCase())) && (!group || group === TREEMAP_FOLD || r.group === group));
+  // "더 보기" grows the list by RANK_TABLE_STEP; a new search or group starts again from the first step
+  const listKey = `${dq.trim().toLowerCase()}\u0000${group ?? ""}`;
+  const [more, setMore] = useState({ key: listKey, limit: RANK_TABLE_STEP });
+  const limit = more.key === listKey ? more.limit : RANK_TABLE_STEP;
+  const { rows: sorted, matched } = rankTableRows(ordered, dq, group, limit);
+  // the cut note counts the list being cut: every brand (the backend's count if it cut the list), or the matches
+  const listTotal = !dq.trim() && !group && total !== undefined && total > count ? total : matched;
+  const tB = (k: string) => t(`brands.${k}`);
+  const def = (definition: string, formula?: string): ReadonlyArray<[string, string]> => (formula ? [[tB("defLabel"), definition], [tB("formulaLabel"), formula]] : [[tB("defLabel"), definition]]);
+  const info: Partial<Record<SortKey, ReadonlyArray<[string, string]>>> = {
+    rank: def(tT("colDefinition.rank")),
+    mentions: def(multi ? tT("colDefinition.multiMentions") : tT("colDefinition.mentions")),
+    share: multi ? def(tB("multiShareDef"), tB("multiShareFormula")) : def(tT("colDefinition.share"), tT("colFormula.share")),
+    delta: def(multi ? tB("multiNoDelta") : tB(input.period ? "deltaInfoPeriod" : "deltaInfo")),
+    avgPosition: def(tT("colDefinition.position")),
+    prompts: def(multi ? tB("multiPromptsDef") : tT("colDefinition.prompts")),
+    mentionRate: multi ? def(tT("colDefinition.multiRate"), tB("multiRateFormula")) : def(tT("colDefinition.rate"), tT("colFormula.rate")),
+  };
   const head = (k: SortKey, label: string, right = true) => (
-    <button
-      type="button"
-      onClick={() => toggleSort(k)}
-      aria-sort={sortKey === k ? (asc ? "ascending" : "descending") : undefined}
-      className={cx("inline-flex cursor-pointer items-center gap-0.5 font-semibold whitespace-nowrap hover:text-rn-ink", right && "justify-end", sortKey === k ? "text-rn-ink" : "text-rn-muted")}
-    >
-      {label}
-      {sortKey === k ? <span aria-hidden>{asc ? "↑" : "↓"}</span> : null}
-    </button>
+    <span className={cx("inline-flex min-w-0 items-center gap-1", right && "justify-end")}>
+      <button
+        type="button"
+        onClick={() => toggleSort(k)}
+        aria-sort={sortKey === k ? (asc ? "ascending" : "descending") : undefined}
+        className={cx("inline-flex cursor-pointer items-center gap-0.5 font-semibold whitespace-nowrap hover:text-rn-ink", right && "justify-end", sortKey === k ? "text-rn-ink" : "text-rn-muted")}
+      >
+        {label}
+        {sortKey === k ? <span aria-hidden>{asc ? "↑" : "↓"}</span> : null}
+      </button>
+      {info[k] ? <InfoTip label={label} align={right ? "end" : undefined} items={info[k]} /> : null}
+    </span>
   );
   const keys = sorted.map((r) => r.brand);
   const COLS = "grid-cols-[34px_minmax(150px,1.6fr)_80px_68px_76px_64px_70px_64px]";
@@ -555,7 +582,7 @@ function RankTable({
           <Search className="size-3.5" aria-hidden />
           <input value={q} onChange={(e) => setQ(e.target.value)} aria-label={tF("brandSearch")} placeholder={tF("brandSearchPlaceholder")} className="min-w-0 flex-1 bg-transparent text-rn-ink outline-none" />
         </label>
-        {dq ? <span className="text-rn-12 text-rn-muted">{tD("searchResultCount", { count: sorted.length })}</span> : null}
+        {dq.trim() ? <span className="text-rn-12 text-rn-muted">{tD("searchResultCount", { matched, total: rows.length })}</span> : null}
         {group ? (
           <span className="inline-flex h-7 items-center gap-1 rounded-full bg-rn-navy-25 pr-1 pl-2.5 text-rn-12 font-semibold text-rn-navy">
             {t("brands.groupOnly", { group: groupName(group, true) })}
@@ -566,7 +593,9 @@ function RankTable({
         ) : null}
         {multi && multiUnavailable ? <span className="text-rn-11 text-rn-muted">{tT("multiUnavailable")}</span> : null}
       </div>
-      <div className="overflow-x-auto">
+      {/* no overflow box around the head: its ⓘ tooltips open below it over the rows; the rows keep a height that
+          holds the tallest tooltip, so a short search result at the page's end neither clips nor grows the page */}
+      <div>
         <div className="min-w-[700px]">
           <div className={cx("grid h-[34px] items-center gap-2.5 border-y border-rn-line px-6 text-rn-12 [.rn-dense_&]:px-4.5", COLS)}>
             {head("rank", "#", false)}
@@ -578,7 +607,7 @@ function RankTable({
             {head("prompts", tT("col.prompts"))}
             {head("mentionRate", multi ? tT("col.multiRate") : tT("col.rate"))}
           </div>
-          <div className="max-h-[520px] overflow-y-auto">
+          <div className="max-h-[520px] min-h-[168px] overflow-y-auto">
             {!sorted.length ? (
               <RnEmpty className="m-6">{tT("empty")}</RnEmpty>
             ) : (
@@ -591,7 +620,7 @@ function RankTable({
                     data-rn-b={r.brand}
                     data-rn-row={r.rank}
                     title={t("brands.rowTip")}
-                    onClick={() => openDrawer({ kind: "brand", brand: r.brand })}
+                    onClick={() => openDrawer({ kind: "brand", brand: r.brand, row: r.drawer })}
                     onPointerEnter={() => hover(r.brand)}
                     onPointerLeave={() => hover(null)}
                     className={cx(
@@ -619,9 +648,29 @@ function RankTable({
           </div>
         </div>
       </div>
-      {total !== undefined && total > count ? <p className="m-0 px-6 pt-2 text-rn-11 text-rn-muted">{tTr("truncated", { shown: count, total })}</p> : null}
+      {sorted.length < listTotal || matched > sorted.length ? (
+        <div className="flex flex-wrap items-center gap-3 px-6 pt-2 [.rn-dense_&]:px-4.5">
+          {sorted.length < listTotal ? <p className="m-0 text-rn-11 text-rn-muted">{tTr("truncated", { shown: sorted.length, total: listTotal })}</p> : null}
+          {matched > sorted.length ? (
+            <RnTextButton data-rn-more="" onClick={() => setMore({ key: listKey, limit: limit + RANK_TABLE_STEP })}>
+              {t("brands.more", { n: Math.min(RANK_TABLE_STEP, matched - sorted.length) })}
+            </RnTextButton>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
+}
+
+/** Rows the ranking table shows first and adds with "더 보기" (the original Global table's limit). */
+export const RANK_TABLE_STEP = 100;
+
+/** The ranking table's rows (renewal audit 6-1): the ordered rows the search (every brand) and the treemap group
+ *  keep, the first `limit` of them; `matched` = how many they keep. */
+export function rankTableRows<R extends { brand: string; group: string }>(ordered: R[], query: string, group: string | null, limit: number): { rows: R[]; matched: number } {
+  const q = query.trim().toLowerCase();
+  const kept = ordered.filter((r) => (!q || r.brand.toLowerCase().includes(q)) && (!group || group === TREEMAP_FOLD || r.group === group));
+  return { rows: kept.slice(0, limit), matched: kept.length };
 }
 
 // ── drawer: brand (prompts · citations) / sentiment signal (prompts) → the original answer modal ──
@@ -649,7 +698,7 @@ export function BrandDrawer({ target, onClose }: { target: DrawerTarget | null; 
     <>
       {target ? (
         target.kind === "brand" ? (
-          <BrandSheet brand={target.brand} hidden={sheetHidden} onClose={onClose} onAnswer={(p) => openAnswer(p, target.brand)} />
+          <BrandSheet brand={target.brand} fallback={target.row} hidden={sheetHidden} onClose={onClose} onAnswer={(p) => openAnswer(p, target.brand)} />
         ) : (
           <SignalSheet signal={target.signal} hidden={sheetHidden} onClose={onClose} onAnswer={(p) => openAnswer(p, ownLabel)} />
         )
@@ -685,7 +734,8 @@ function useListLoad<T>(path: string | null, key: "prompts" | "domains"): ListSt
   return state;
 }
 
-function BrandSheet({ brand, hidden, onClose, onAnswer }: { brand: string; hidden: boolean; onClose: () => void; onAnswer: (p: MentionsPromptLive) => void }) {
+/** `fallback`: the row a ranking row past the shell's drawer rows passes (renewal audit 6-1). */
+function BrandSheet({ brand, fallback, hidden, onClose, onAnswer }: { brand: string; fallback?: RnDrawerBrand; hidden: boolean; onClose: () => void; onAnswer: (p: MentionsPromptLive) => void }) {
   const { drawer } = useMention();
   const t = useTranslations("renewal.mention");
   const tT = useTranslations("answerAnalysis.mentions.table");
@@ -698,7 +748,7 @@ function BrandSheet({ brand, hidden, onClose, onAnswer }: { brand: string; hidde
   const projectId = projectIdFromPath(pathname);
   const isWebsite = isWebsitePath(pathname);
   const [tab, setTab] = useState<"prompts" | "citations">("prompts");
-  const row = drawer.find((b) => b.brand === brand);
+  const row = drawer.find((b) => b.brand === brand) ?? fallback;
   const own = row?.own ?? null;
   const spStr = sp.toString();
   const promptsPath = useMemo(() => `/api/scope/brand-mention-prompts?${drilldownParams(spStr, { brand, own, isWebsite, projectId }).toString()}`, [spStr, brand, own?.code, own === null, isWebsite, projectId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -788,8 +838,9 @@ function ListStatus({ state, loading, error, empty }: { state: ListState<unknown
   return null;
 }
 
-function PromptList({ state, onAnswer }: { state: ListState<DrillPromptRow>; onAnswer: (p: MentionsPromptLive) => void }) {
+export function PromptList({ state, onAnswer }: { state: ListState<DrillPromptRow>; onAnswer: (p: MentionsPromptLive) => void }) {
   const { engineLabel } = useMention();
+  const t = useTranslations("renewal.mention.brands");
   const tDd = useTranslations("answerAnalysis.mentions.drilldown");
   const tM = useTranslations("answerAnalysis.mentions.answerModal");
   const tTr = useTranslations("answerAnalysis.mentions.kpi.overview.unmeasuredDialog");
@@ -803,9 +854,18 @@ function PromptList({ state, onAnswer }: { state: ListState<DrillPromptRow>; onA
       <p className="m-0 text-rn-11 text-rn-muted">{tM("tableHint")}</p>
       <div className="grid grid-cols-[minmax(0,1fr)_52px_56px_60px] gap-2 border-b border-rn-line pb-1.5 text-rn-11 font-semibold text-rn-muted">
         <span>{tDd("col.prompt")}</span>
-        <span className="text-right">{tDd("col.rank")}</span>
-        <span className="text-right">{tDd("col.mentions")}</span>
-        <span className="text-right">{tDd("col.share")}</span>
+        {(
+          [
+            ["rank", [[t("defLabel"), tDd("colDefinition.rank")]]],
+            ["mentions", [[t("defLabel"), tDd("colDefinition.mentions")]]],
+            ["share", [[t("defLabel"), tDd("colDefinition.share")], [t("formulaLabel"), tDd("colFormula.share")]]],
+          ] satisfies [string, [string, string][]][]
+        ).map(([k, items]) => (
+          <span key={k} className="inline-flex items-center justify-end gap-1">
+            {tDd(`col.${k}`)}
+            <InfoTip label={tDd(`col.${k}`)} align="end" items={items} />
+          </span>
+        ))}
       </div>
       {list.map((p) => {
         const best = p.bestRank ?? null;

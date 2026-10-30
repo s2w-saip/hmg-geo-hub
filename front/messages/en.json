@@ -5796,7 +5796,7 @@
         "colMentions": "Mentions"
       },
       "brands": {
-        "title": "Brand mention ranking (top 100)",
+        "title": "Brand mention ranking",
         "viewLabel": "View",
         "viewMap": "Treemap",
         "viewTable": "Table",
@@ -5807,7 +5807,14 @@
         "rowTip": "Click to see this brand's prompts and real AI answers",
         "groupOnly": "{group} only",
         "clearGroup": "Clear group filter",
-        "count": "{shown} brands"
+        "count": "{shown} brands",
+        "more": "Show {n} more",
+        "defLabel": "Definition",
+        "formulaLabel": "Formula",
+        "multiShareDef": "Counting only answers that mention a brand two or more times: this brand's share of every brand's multi-mentions.",
+        "multiShareFormula": "This brand's multi-mentions ÷ every brand's multi-mentions × 100",
+        "multiPromptsDef": "The number of distinct prompts with at least one answer that mentions this brand two or more times.",
+        "multiRateFormula": "Answers mentioning this brand 2+ times ÷ total measured answers × 100"
       },
       "treemap": {
         "legend": "Share change (vs previous round)",
@@ -5825,7 +5832,8 @@
         "groupTip": "{group} · share {share}\nchange {delta} · {n} brands",
         "brandTip": "{brand} · share {share}\nchange {delta} · {mentions} mentions",
         "noDeltaTitle": "No change data",
-        "groupName": "{name} Group"
+        "groupName": "{name} Group",
+        "scope": "Top {n} brands by mentions"
       },
       "drawer": {
         "close": "Close",

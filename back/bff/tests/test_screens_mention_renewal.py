@@ -585,3 +585,51 @@ class PerAnswerMonthLine(unittest.TestCase):
         self.assertIsNone(rn.per_answer_line(self.period(False), {"dateFrom": "2026-09-01", "dateTo": "2026-09-30"}, "2026-10-31"))
         self.assertIsNone(rn.per_answer_line({"compare": None, "kind": "window", "shape": {"kind": "window"}}, {}, "2026-10-31"))
         self.assertIsNone(rn.per_answer_line(None, {}, "2026-10-31"))
+
+
+def _body_brand(i: int, name: str | None = None) -> dict:
+    """A body brand row (to_mentions_brand_live) at 1-based rank i, mentions falling with the rank."""
+    return {"brand": name or f"Brand {i:03d}", "mentions": 1000 - i, "prompts": 50 - i % 50, "share": 0.1, "mentionRate": 0.2,
+            "avgPosition": 3.0, "isTracked": i == 1, "sentiment": {"positive": 3, "neutral": 1, "mixed": 0, "negative": 0},
+            "multi": {"mentions": 2, "answers": 1, "prompts": 1}}
+
+
+class RankingEveryBrand(unittest.TestCase):
+    """Renewal audit 6-1: the ranking table showed the first 100 body brands only, and searched those 100. The
+    original Global searched every brand and showed 100 (brand-rank-table limit), the original website table every
+    brand. The reader sends every brand (`full`), so the screen sends every row; the table shows 100 first, searches
+    them all and shows more. The shell's drawer rows stay the first 100 (the body waits on the shell): a row past them
+    carries its own drawer row (the shell's shape), so its drawer opens with its values. The treemap stays the top
+    100 (its own section, unchanged)."""
+
+    N = 150
+
+    def data(self) -> dict:
+        brands = [_body_brand(i) for i in range(1, self.N + 1)]
+        tb = {"totals": dict.fromkeys(TYPES, 1),
+              "brands": [{"brand": b["brand"], "isTracked": b["isTracked"], "types": {**dict.fromkeys(TYPES, 0), "mention": i}}
+                         for i, b in enumerate(brands, 1)]}
+        return {"brands": brands, "summary": {"total": 100000, "totalAnswers": 500}, "typesByBrand": tb}
+
+    def test_every_brand_is_a_row_and_sorts(self):
+        out = rn.ranking_payload(self.data(), None)
+        self.assertEqual((len(out["rows"]), out["count"]), (self.N, self.N))
+        self.assertEqual([r["rank"] for r in out["rows"]][-2:], [149, 150])
+        for mode in ("off", "on"):
+            self.assertEqual(sorted(out["orders"][mode]["mentions"]["desc"]), list(range(self.N)), mode)
+
+    def test_a_row_past_the_shells_drawer_carries_its_drawer_row(self):
+        data = self.data()
+        out = rn.ranking_payload(data, None)
+        shell = rn.shell_payload({"brands": data["brands"]}, False, data["typesByBrand"])
+        self.assertEqual(len(shell["drawer"]), rn.BRANDS_TOP)
+        self.assertTrue(all("drawer" not in r for r in out["rows"][:rn.BRANDS_TOP]))
+        past = out["rows"][120]
+        self.assertEqual(past["drawer"], rn._drawer_row(data["brands"][120], 121, data["typesByBrand"]["brands"][120]["types"]))
+        self.assertEqual((past["drawer"]["rank"], past["drawer"]["types"]["mention"]), (121, 121))
+
+    def test_the_treemap_stays_the_top_rows(self):
+        data = self.data()
+        top = sorted(b["brand"] for b in data["brands"][:rn.BRANDS_TOP])
+        for mode, groups in rn.ranking_payload(data, None)["treemap"].items():
+            self.assertEqual(sorted(m["brand"] for g in groups for m in g["members"]), top, mode)

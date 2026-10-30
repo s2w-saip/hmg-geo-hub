@@ -267,6 +267,13 @@ Deliberate changes (what the screen shows changed by decision):
   - 5-4: the summary cards' 전체 언급 수 Δ (every brand's mentions, not a 당사 measure) is `neutral`; a rise read as
     good. Shared with the original website / project Mention: `mention/fix-view-website-01` (good → neutral), `-02`,
     `-04` (bad → neutral).
+- 2026-10-31 renewal audit step 6-1 (Mention brand ranking, every brand). `mention/rn-ranking` sends a row for every
+  body brand; it cut them to the first 100 (`BRANDS_TOP`), so the table could neither show nor search the rest (the
+  original Global searched every brand and showed 100, the original website table showed every brand). The table shows
+  100 first and adds 100 at a time. Each row past the first 100 carries `drawer` (the shell's drawer row shape, which
+  the shell sends for the first 100 only), and `orders` index every row. The first 100 rows, `count`, `treemap` (still
+  the top 100) and every other screen are unchanged. 9 cases: the `rn-live-*` bundles `chatgpt` (454 rows), `en`
+  (493), `geo` (215), `kia` (460), `kpi-fav` (454), `kpi-rank` (215), `kpi-sov` (460), `none` (752), `period` (752).
 
 ## Format
 

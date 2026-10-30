@@ -17,8 +17,9 @@ export const COMPARE_COLORS = ["#eb6834", "#1baf7a", "#6250d6"] as const;
 export const CONTEXT_COLOR = "#c9c3bb";
 export const AVG_COLOR = "#8a837b";
 
-/** What the drawer shows: one brand (prompts · citations) or one sentiment signal (prompts). */
-export type DrawerTarget = { kind: "brand"; brand: string } | { kind: "signal"; signal: "positive" | "neutral" | "mixed" | "negative" };
+/** What the drawer shows: one brand (prompts · citations) or one sentiment signal (prompts). A ranking row past the
+ *  shell's drawer rows passes its own `row` (renewal audit 6-1). */
+export type DrawerTarget = { kind: "brand"; brand: string; row?: RnDrawerBrand } | { kind: "signal"; signal: "positive" | "neutral" | "mixed" | "negative" };
 
 export interface ComparePick {
   /** auto = the covered competitor with the highest share of voice */
@@ -31,7 +32,7 @@ export interface MentionCtx {
   kpi: KpiTab;
   setKpi: (k: KpiTab) => void;
   ownLabel: string;
-  /** the brand drawer's rows (one per brand of the ranking, server order = mentions desc) */
+  /** the brand drawer's rows (one per brand of the first 100 body brands, server order = mentions desc) */
   drawer: RnDrawerBrand[];
   /** tracked (당사) brand names */
   ownBrands: string[];

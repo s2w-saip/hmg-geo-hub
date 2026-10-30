@@ -53,7 +53,7 @@ BOARD_COMPETITORS = 12
 BOARD_TOP = 5
 #: max compare brands (mention-context COMPARE_COLORS.length)
 COMPARE_MAX = 3
-#: brand table / treemap rows (mention-brands TOP)
+#: the treemap's brands and the shell's drawer rows; the ranking table shows this many first (mention-brands TOP)
 BRANDS_TOP = 100
 TREEMAP_FOLD = "__rest"
 FOLD_SHARE = 1.5
@@ -953,9 +953,9 @@ def _drawer_row(row: dict, rank: int, types: Any) -> dict:
 
 
 def shell_payload(data: Any, degraded: bool, types_by_brand: Any) -> dict:
-    """MentionShell (page state) + the brand drawer's rows (first row of a name). The drawer opens from the
-    ranking's rows (the first BRANDS_TOP body brands, ranking_payload), so only their names are sent: every
-    body brand made the shell 0.3-0.6 MB, and the whole body waits on it."""
+    """MentionShell (page state) + the brand drawer's rows (first row of a name) of the first BRANDS_TOP body
+    brands: every body brand made the shell 0.3-0.6 MB, and the whole body waits on it. The drawer opens from those
+    rows (the treemap, the boards); a ranking row past them carries its own drawer row (ranking_payload)."""
     measured = bool(data) and len(data["brands"]) > 0
     if not measured:
         return {"measured": False, "degraded": bool(degraded), "ownBrands": [], "drawer": []}
@@ -1258,22 +1258,33 @@ def _ranking_value(mode: str, key: str):
 
 
 def ranking_payload(data: Any, trend: Any, prev_brands: list[dict] | None = None) -> dict:
-    """브랜드 언급 순위: the top rows with both value sets (multi off / on), their sort orders and
-    the treemap groups of both."""
+    """브랜드 언급 순위: every body brand's row with both value sets (multi off / on), their sort orders and the
+    treemap groups of both (the top BRANDS_TOP rows). The table shows BRANDS_TOP rows first, searches them all and
+    shows more (renewal audit 6-1: it showed and searched the first 100 only; the original Global searched every brand
+    and showed 100, the original website table every brand). A row past the shell's drawer rows (the first
+    BRANDS_TOP, shell_payload) carries its own `drawer` row, so its drawer opens with its values."""
     brands = data["brands"] if data else []
     deltas = share_deltas(trend) if prev_brands is None else period_share_deltas(brands, prev_brands)
     multi_total = _js_sum((b["multi"]["mentions"] if b.get("multi") else 0) for b in brands)
     total_answers = (data.get("summary") or {}).get("totalAnswers") if data else None
+    tb_by: dict = {}
+    for b in ((data.get("typesByBrand") if data else None) or {}).get("brands") or []:
+        tb_by.setdefault(b["brand"], b["types"])  # a repeated name keeps the first row, as the shell's drawer
+    in_drawer = {row["brand"] for row in brands[:BRANDS_TOP]}
     rows = []
-    for i, row in enumerate(brands[:BRANDS_TOP]):
+    for i, row in enumerate(brands):
         group = parent_group_of(row["brand"])
-        rows.append({
+        out_row = {
             "brand": row["brand"], "rank": i + 1, "own": row["isTracked"], "sibling": is_hmg_sibling(row["brand"], row["isTracked"]),
             "avgPosition": row["avgPosition"], "group": group, "grouped": group != row["brand"], "hasMulti": _truthy(row.get("multi")),
             "off": {**brand_row_values(row, False, multi_total, total_answers), "delta": deltas.get(row["brand"]),
                     "covered": row["brand"] in deltas},
             "on": {**brand_row_values(row, True, multi_total, total_answers), "delta": None, "covered": False},
-        })
+        }
+        if row["brand"] not in in_drawer:
+            in_drawer.add(row["brand"])
+            out_row["drawer"] = _drawer_row(row, i + 1, tb_by.get(row["brand"]))
+        rows.append(out_row)
     orders: dict = {}
     treemap: dict = {}
     for mode in ("off", "on"):
@@ -1281,7 +1292,7 @@ def ranking_payload(data: Any, trend: Any, prev_brands: list[dict] | None = None
         tm = [{"brand": r["brand"], "value": r[mode]["mentions"] if r[mode]["mentions"] is not None else 0,
                "share": r[mode]["share"] if r[mode]["share"] is not None else 0, "delta": r[mode]["delta"], "own": r["own"],
                "sibling": r["sibling"]}
-              for r in rows if (r[mode]["mentions"] if r[mode]["mentions"] is not None else 0) > 0]
+              for r in rows[:BRANDS_TOP] if (r[mode]["mentions"] if r[mode]["mentions"] is not None else 0) > 0]
         treemap[mode] = treemap_groups(tm, multi_total if mode == "on" else (data.get("summary") or {}).get("total") if data else 0)
     out = {"rows": rows, "count": len(brands), "multiUnavailable": any(not r["hasMulti"] for r in rows), "orders": orders,
            "treemap": treemap}

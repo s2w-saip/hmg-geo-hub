@@ -83,7 +83,7 @@ export interface RnShellVM {
   degraded: boolean;
   /** tracked (당사) brand names */
   ownBrands: string[];
-  /** one per brand of the ranking's rows (the first 100 body brands), the only place the drawer opens from */
+  /** one per brand of the first 100 body brands (the treemap's, the boards'); a ranking row past them carries its own */
   drawer: RnDrawerBrand[];
 }
 
@@ -334,6 +334,8 @@ export interface RankingRow {
   hasMulti: boolean;
   off: RankingValues;
   on: RankingValues;
+  /** a row past the shell's drawer rows (rank > 100): its drawer row, so its drawer opens with its values */
+  drawer?: RnDrawerBrand;
 }
 
 export type RankingSortKey = "rank" | "brand" | "mentions" | "share" | "delta" | "avgPosition" | "prompts" | "mentionRate";
@@ -358,7 +360,7 @@ export interface TreemapGroup {
 }
 
 export interface RnRankingVM {
-  /** the top 100 brands */
+  /** every body brand, rank order (the table shows 100 first, searches them all; the treemap holds the top 100) */
   rows: RankingRow[];
   /** all body brands */
   count: number;
