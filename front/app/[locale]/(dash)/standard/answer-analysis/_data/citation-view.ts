@@ -209,6 +209,26 @@ export type NumberedDomainRow = CitationDomainLive & { rank?: number; matchRank?
 /** The table's category select views (renewal): row indices of the first 100 rows and the bar scales. */
 export type DomainTableViews = Record<string, { idx: number[]; maxCit: number; maxCov: number }>;
 
+/**
+ * The views of rows a page appended after `offset` rows (renewal audit 10-2, the Website table shows every loaded
+ * row): each page's own indices move past the rows before it, each category's bar scales take the larger. Without
+ * the earlier views nothing is known of those rows (undefined); a page without views keeps the earlier ones.
+ */
+export function appendDomainTableViews(before: DomainTableViews | undefined, page: DomainTableViews | undefined, offset: number): DomainTableViews | undefined {
+  if (!page) return before;
+  if (!before) return offset === 0 ? page : undefined;
+  const out: DomainTableViews = { ...before };
+  for (const [key, v] of Object.entries(page)) {
+    const prev = out[key];
+    out[key] = {
+      idx: [...(prev?.idx ?? []), ...v.idx.map((i) => i + offset)],
+      maxCit: Math.max(prev?.maxCit ?? 1, v.maxCit),
+      maxCov: Math.max(prev?.maxCov ?? 1, v.maxCov),
+    };
+  }
+  return out;
+}
+
 /** /api/citations/domains answer (screen citation/domains). */
 export interface DomainListPageView {
   rows: NumberedDomainRow[];

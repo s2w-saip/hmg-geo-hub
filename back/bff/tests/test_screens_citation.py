@@ -167,9 +167,9 @@ class WebsiteRenewal(unittest.TestCase):
         seen = {}
         real = C.renewal_vm
 
-        def spy(live, deltas, parts, degraded, sp):
+        def spy(live, deltas, parts, degraded, sp, **kw):
             seen["deltas"] = deltas
-            return real(live, deltas, parts, degraded, sp)
+            return real(live, deltas, parts, degraded, sp, **kw)
         with mock.patch("bff.api.get", get), mock.patch.object(C, "renewal_vm", spy):
             out = run(C.website(QueryParams(qs)))
         return out, seen, calls
@@ -515,6 +515,35 @@ class WebsiteAccountRule(unittest.TestCase):
         self.assertEqual(body, ["SA-Dammam"])
         # the global rule left the scope's countries out of the query (the clamp adds every scope site)
         self.assertEqual([p.get("country") for _, p in calls], [body, body])
+
+
+class WebsiteTableAll(unittest.TestCase):
+    """2026-10-31 renewal audit 10-2: the website domain table shows every row it loaded (the screen's first page of
+    200, then 200 more per '더 보기', the original's pages). Its category select reads the screen's views, which
+    covered the first 100 rows only (the standard table's cut), so rows 101+ were out of every category. The website
+    page's views and every route page's views cover all their rows; the standard page keeps its top 100."""
+
+    @staticmethod
+    def body(n):
+        body = domains_body()
+        row = body["data"]["items"][0]
+        body["data"]["items"] = [dict(row, skey=f"d{i}.com", domain=f"d{i}.com", citations=n - i, rank=i + 1) for i in range(n)]
+        return body
+
+    def test_the_website_views_cover_every_row(self):
+        get, _ = router({"citations/domains": self.body(230), "kpi/summary": SUMMARY})
+        with mock.patch("bff.api.get", get):
+            web = run(C.website(QueryParams("ctx.variant=renewal&ctx.role=admin")))
+            std = run(C.standard(QueryParams("ctx.variant=renewal")))
+        self.assertEqual([len(web["rn"]["table"]["rows"]), web["rn"]["table"]["views"][""]["idx"]], [230, list(range(230))])
+        self.assertEqual(web["rn"]["table"]["views"]["Official (HMG)"]["maxCit"], 230)
+        self.assertEqual(std["rn"]["table"]["views"][""]["idx"], list(range(100)))
+
+    def test_a_route_page_has_views_of_all_its_rows(self):
+        get, _ = router({"citations/domains": self.body(200)})
+        with mock.patch("bff.api.get", get):
+            page = run(C.domains(QueryParams("ctx.surface=website&cursor=200&limit=200")))
+        self.assertEqual([page["rows"][0]["no"], page["rows"][-1]["no"], page["views"][""]["idx"]], [201, 400, list(range(200))])
 
 
 if __name__ == "__main__":

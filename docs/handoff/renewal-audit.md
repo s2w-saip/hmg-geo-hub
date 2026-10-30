@@ -6,7 +6,7 @@
 - 병렬 세션으로 나누지 않고 한 세션이 순서대로 한다.
 - 단계마다 새 하위 에이전트가 깨끗한 컨텍스트로 맡는다(B 방식).
 
-**현재 위치:** 10단계(Citation ② 구성 추이 수치 · Website 도메인 표 전체) 시작 전. 9단계 끝(단계 메모 '9단계'). 마지막 커밋: 9단계를 올린 커밋.
+**현재 위치:** 11단계(ACR 발견 · 귀속 · 정렬) 시작 전. 10단계 끝(단계 메모 '10단계'). 마지막 커밋: 10단계를 올린 커밋.
 
 ## 진행 방식 (단계마다 새 하위 에이전트)
 
@@ -98,7 +98,7 @@
 | 7 | Mention ③ 서랍 · 드릴다운 | — | [x] |
 | 8 | Mention ④ 귀속 · 트리맵 · bump | 1 | [x] |
 | 9 | Citation ① 결함 · 문구 · 귀속 | 1 | [x] |
-| 10 | Citation ② 구성 추이 수치 · Website 도메인 표 전체 | 3 | [ ] |
+| 10 | Citation ② 구성 추이 수치 · Website 도메인 표 전체 | 3 | [x] |
 | 11 | ACR 발견 · 귀속 · 정렬 | 1 | [ ] |
 | 12 | AI Conversion 부분합 · 문구 | — | [ ] |
 | 13 | Prompts 귀속 · 계정 범위 · 선택지 | 1 | [ ] |
@@ -369,11 +369,11 @@ Global과 Website가 같은 본문을 쓴다. Website는 `mention/rn-*`를 ctx.s
 - 원본: `AA/citations-standard-view.tsx` 380-400, `AA/citations-view.tsx` 360-380 · 660-690 · 870-890 · 1030-1050
 
 **할 일**
-- [ ] 10-1 출처 구성 추이의 회차별 수치를 되살린다(Global · Website).
+- [x] 10-1 출처 구성 추이의 회차별 수치를 되살린다(Global · Website).
   - 지금은 줄마다 스파크라인만 있고(~683-688), 카드 CSV(~566-569)에도 회차 값이 없다.
   - 원본은 회차 축, 툴팁(회차별 인용 수), 공백 음영을 보였고, 출처를 하나 고르면 절대 인용 수로 그렸다.
   - 고친 뒤: 3단계 스파크라인 툴팁(회차 · 비중 · 인용 수)을 쓴다. 표 보기 · CSV에 회차별 인용 수와 비중을 넣는다. 출처를 하나 고르면 선을 절대 인용 수로 그린다.
-- [ ] 10-2 Website 도메인 표 101위 이하를 볼 수 있게 한다.
+- [x] 10-2 Website 도메인 표 101위 이하를 볼 수 있게 한다.
   - 지금은 `LIMIT = 100`(`citation-domains.tsx` ~229 · 248-249)이다. BFF는 website 첫 쪽으로 200행을 보낸다(~393-396).
   - 원본 website는 200행씩 '더 보기'(`LoadMoreRow`)였다.
   - website에만 '더 보기'를 둔다. 서버 읽기는 원본과 같은 화면을 쓰고, 검색도 전체가 대상이다.
@@ -703,6 +703,32 @@ Website 인용 도달 Δ도 값 출처(발행 / 실시간)가 다르면 숨긴�
     - 관찰: 로컬 front(next dev, 10-29부터 실행 중)가 `/ko/renewal/website/answer-analysis/citation` 한 경로에만 고치기 전 ko 문구를 보냈다. 그래서 새 키 `bump.legendOwnWebsite`가 키 이름으로 보였다. 같은 경로의 en('Our domains')과 다른 경로의 ko는 새 문구다. 파일 touch로도 풀리지 않았다. 개발 서버 캐시이므로 front를 다시 띄우면 풀린다(render 시험은 새 문구로 통과).
   - **다음 단계가 알 것.** 매트릭스 열의 `shares` · `gaps`는 null일 수 있다(`MatrixCol`, `RnMatrixView`). `rn.typeMatrix.status`에 `empty`가 생겼다. 긍정/부정 URL 행의 `category`는 null일 수 있다(`CitationToneUrlRow`). 범위 계정의 website 인용 읽기는 모두 website 규칙(`website_context`)이다.
 
+- **10단계(2026-10-31).** 10-1 · 10-2를 고쳤다. 재현 시험은 고치기 전에 실패했다(BFF 2개 · 훅 2개 · render 7개). 10-1은 Global · Website가 같은 본문이라 둘 다 바뀌고, 10-2는 Website만 바뀐다.
+  - **10-1 회차 툴팁.** 출처 구성 줄의 회차 선은 점마다 '회차 · 비중 · 인용 수'를 보인다(3단계 `RnSparkline` `tips`). 인용 수는 같은 화면이 이미 보내는 `live.categoryTrend`에서 읽는다. 원본 구성 추이 차트가 그리던 값이고, 원본 툴팁의 수도 이 값이다. 그래서 BFF는 그대로다(`compositionRounds`, 비중은 화면의 `rows[].trend`).
+    - 값이 없는 회차(공백)는 점을 그리지 않고 '{회차} · 인용 공백'이라고 쓴다.
+    - 열 머리에 회차 범위(예: 7/3 – 10/9)를 둔다.
+  - **10-1 표 보기 · CSV.** 카드에 표 보기를 더했다. 목록 값(비중 · 인용 수, 직전 회차 대비) 뒤에 회차마다 비중과 그 아래 인용 수를 둔다(`CompositionTable`, 목록의 '비중 · 인용 수' 칸과 같은 모양). CSV에는 회차마다 인용 수 · 비중 열을 더했다(`compositionCsvRows`).
+  - **10-1 출처 하나.** 출처를 하나 고르면(`oneSource`) 비중이 늘 100%라 선은 회차별 인용 수다(원본 absolute 모드, 세로 범위 최소값 없음). 열 머리는 '회차별 인용 수'이고, 축 각주도 그 뜻으로 바뀐다.
+  - **10-1 줄 구조.** 필터 토글 버튼은 값 다섯 칸만 감싼다(subgrid). 회차 선은 버튼 밖에 둔다. 버튼 안에 초점 가능한 점을 두면 키보드로 닿지 않고, 버튼 title 툴팁과도 겹치기 때문이다. 그래서 회차 선 칸을 눌러도 필터가 걸리지 않는다(7-3 유형 행과 같은 방식). 나머지 칸은 그대로 필터를 건다(실제 화면에서 확인).
+    - 문구(ko · en): `renewal.citation.comp`의 `col.trendCount` · `col.trendRange` · `tipPoint` · `tipGap` · `axisNoteCount`, `info` 문장 추가.
+  - **10-2 결정.** 원본처럼 서버 쪽 '더 보기'를 골랐다. 같은 route `citation/domains`를 200행씩 읽는다. 다른 안은 6단계 방식(모든 행을 보내고 화면에서 자르기)이었다. 그러나 website 출처는 14,687개(2026-10-31)라 첫 화면 응답이 약 3.6 MB가 된다(1,000행 = 244 KB). 다음 쪽은 1.2초 · 50 KB다. 검색 · 정렬은 이미 서버가 전체 출처에서 한다(규칙 7, admin-todo 결정 기록 '점검 10단계').
+  - **10-2 BFF.** `table_views(rows, limit)`이 생겼다. Website renewal 화면(`renewal_vm(..., website=True)`)과 route 쪽은 모든 행의 views를 보낸다. 표준 화면은 상위 100 그대로다. 재현: Website 첫 쪽 200행 중 views는 100행뿐이었다(BFF 시험 2개).
+  - **10-2 프런트.** `useServerDomainTable`이 '더 보기'로 붙인 쪽의 views를 앞 행 수만큼 밀어 붙인다(`appendDomainTableViews`, `_data/citation-view.ts`). 원본 화면들은 views를 읽지 않아 동작이 같다(원본 인용 시험 9개 파일 통과).
+  - **10-2 화면.** Website 표는 불러온 행을 모두 보인다. 처음 20행 → '200개 모두 보기' → '200개 더 보기'(다음 쪽) 순서다.
+    - 칩은 '인용 수 순 · 전체 14,687개'이고, 아래 줄은 '14,687개 중 400개 표시'다.
+    - 카테고리 선택은 불러온 행 안에서 고른다. 더 받을 쪽이 있으면 '불러온 400개 중 일치 101개'라고 쓴다.
+    - 검색은 서버가 전체에서 한다('일치 1,200개 · 상위 200개 표시', 그 뒤로도 더 보기).
+    - 다음 쪽 읽기가 실패하면 '다음 도메인을 불러오지 못했습니다…'라고 쓴다. 훅은 다시 시도하지 않는다(원본 `LoadMoreRow`와 같음).
+    - 원본 Global은 상위 100이라 Global 표는 그대로다.
+  - **golden.** 1건이다(README 'Deliberate changes' 2026-10-31 step 10-2): `citation/route-domains-live-more`의 views(200행 전부). live 화면 case는 그대로다.
+  - **원본 대조(live, 관리자).** 숫자는 바뀌지 않는다.
+    - Website 150위 kiachambly.ca(180 · 0.0% · 48 · 0.3%)는 원본 `/ko/website/answer-analysis/citation` 표와 같다. 두 화면에서 '더 보기'를 누른 뒤의 201위 kia.cz(141 · 0.0% · 46 · 0.3%)도 같다.
+    - 회차 툴팁의 인용 수는 원본 화면(`citation/standard` · `citation/website`)의 구성 추이 값과 같다. Global 공식(HMG)은 9/21 96,467 · 9/28 219,995 · 10/5 233,628(= U4), Website는 10/2 278,718 · 10/9 256,034다. 딜러 하나를 고르면 10/2 37,327 · 10/9 44,504(비중 100.0%)다.
+  - **e2e(26항목 통과, ko).** Website 표: 칩 → '200개 모두 보기' 200행 → 150위 행 → 서랍(도메인 상세 200) → '200개 더 보기'(route `cursor=200&limit=200`) 400행 → 201위 = route 첫 행 → 카테고리(불러온 행 안) → 검색(서버 1,200개). 구성 카드: 회차 툴팁 14개 → 표 보기 → 출처 하나(인용 수 선). Global 표: 상위 100 · 더 보기 없음, 구성 툴팁, 줄 클릭 필터. 원본 Website 표 150위 · 201위. 오류 화면 · 5xx는 없다.
+  - **관찰(이 단계 밖).** en 화면 필터 패널의 회차 달력(`components/renewal-ui/round-calendar.tsx`)이 요일 머리 키 'T' · 'S'가 겹친다는 React 경고를 낸다(요일 첫 글자를 key로 씀). 공용 부품이라 16단계 '다음 일' 후보다. 첫 방문의 404 1건은 6 · 7단계와 같다(Playwright 응답에 잡히지 않음).
+    - `i18n/request.test.ts`의 '기존 문구가 병합 뒤에도 같다' 2건(ko · en)이 HEAD(`cdcb3c1`)부터 실패한다. 9-9가 `ko.json` · `en.json`에 더한 `answerAnalysis.citations.drilldown.loading` · `loadFailed`를 `messages/units/u7.*.json`이 다른 문구로 덮는다. 실제 화면은 u7 문구('상세를 불러오는 중입니다')다. render 시험은 `ko.json`만 읽어 9-9 문구를 본다. 이 단계 문구는 단위 파일과 겹치지 않는다(겹치는 키는 그 둘뿐). 어느 문구를 남길지는 9-9 후속으로 정한다.
+  - **다음 단계가 알 것.** `DomainTableCard`는 `initialAll` prop(render 시험용)을 받는다. `CompositionTable` · `compositionRounds` · `compositionCsvRows`를 내보낸다. route `citation/domains`의 views는 쪽 전체다. 출처 구성 줄은 이제 `div` 안의 버튼이다(`data-rn-b`는 줄, `data-rn-src` · `aria-pressed`는 버튼, 회차 칸은 `data-rn-trend`).
+
 ## 진행 기록
 
 - 2026-10-31 — 계획을 작성했다. 근거는 같은 날 중간점검이다(코드 읽기 다섯 갈래: Overview · Mention · Citation · Prompts · AI Funnel, 큰 지적은 코드로 다시 확인). 처음에는 병렬 세션으로 나누려 했으나 사용자가 한 세션이 순서대로 하는 방식으로 바꿨다. 다음은 1단계다.
@@ -715,3 +741,4 @@ Website 인용 도달 Δ도 값 출처(발행 / 실시간)가 다르면 숨긴�
 - 2026-10-31 — 7단계: Mention 서랍이 그 브랜드를 읽는다(7-2). Gold 리더가 계약의 `mention_brand`를 원본 규칙으로 `dim_brand.brand_key`로 찾고, 인용 출처 · 상세 · 커버리지 분모를 그 브랜드가 언급된 답변으로 좁힌다. 당사 행은 두 탭 모두 own(`mention_own`)으로 읽는다(원본 `MentionsDrilldown`도). 인용 출처 탭을 원본처럼 되살렸다(7-1: 점유율 · 커버리지 · 당사 표시, URL 열 제거, 행 펼침 URL · 프롬프트 → 답변 원문). 유형 행 → 그 유형 프롬프트 → 답변 원문(7-3, 신호 서랍 재사용). 재현 시험은 고치기 전에 실패했다. golden 변경 없음. 시험: BFF 34개 모듈 584개(live 8개 포함), 프런트 관련 14개 파일 110개 · typecheck · lint, 원본 대조(Global · Website 첫 행 값), e2e Global · Website 각 9항목 + 원본 2화면. 다음은 8단계다.
 - 2026-10-31 — 8단계: Mention 'HMG 계열' 배지를 HUB 이름 목록 대신 Gold `is_hmg_own`(본문 브랜드 읽기 `include=hmg`, 리뉴얼만)으로 정한다(8-1, live 결과 같음). 트리맵 '자동차 외' 묶음을 늘 접지 않고 다른 묶음과 같은 점유율 · 순서 규칙으로 접는다(8-2, 묶음 이름은 그대로). 트리맵 Δ 색은 반올림해 0.0일 때만 '변화 없음', 세기는 0.1 · 0.5 · 1.0pp 눈금(8-3, 범례 문구). 재현 시험은 고치기 전에 실패했다. 8-4는 재현되지 않았다(U2: 답변 있는 회차의 0은 Gold 뜻, 시험으로 고정). golden: tape · args에 플래그, 출력은 무작위 입력 case 3개만. 시험: BFF 34개 모듈(+live 8개), 프런트 Mention 7개 파일 · typecheck · lint, Global · Website 실제 화면. 다음은 9단계다.
 - 2026-10-31 — 9단계: Citation 출처 선호 매트릭스에서 인용이 0인 열은 비중 '—'이고 칠하기 · cap · 발견에서 빠진다. 유형이 모두 0이면 원본 빈 안내를 보인다(9-1, U9 실데이터 07-06 · Genesis AT · Hyundai CH). 처방 문구 셋을 사실 문구로 바꿨다(9-2). Website 범프 범례는 '당사 도메인'이다(9-3). 카테고리 없는 긍정/부정 URL 행은 'Other' 대신 '—'다(9-6, 원본도). 범위 계정의 Website 도메인 표 · 서랍 · 내보내기가 본문과 같은 website 계정 규칙을 쓴다(9-7, 도시 사이트). 도메인 서랍의 읽는 중 · 실패 문구를 더했다(9-9, 원본도). 재현 시험은 고치기 전에 실패했다. 9-4(U2) · 9-8(이름이 이미 slug 라벨)은 재현되지 않았고, 9-5는 고칠 것이 없다(U3 · U4 같음, U6 태그는 Gold 설명의 도메인 순위 자사 표시 정의). golden 7건 의도 변경. 시험: BFF 34개 모듈 598개(live 8개 포함), 프런트 관련 13개 파일 103개 · typecheck · lint, 범위 계정 live 대조, Global · Website 인용 · 하위 화면 · 원본 실제 화면. 다음은 10단계다.
+- 2026-10-31 — 10단계: Citation 출처 구성 줄의 회차 선이 점마다 회차 · 비중 · 인용 수를 보이고(3단계 `tips`, 인용 수는 같은 화면의 `live.categoryTrend`), 표 보기와 CSV에 회차별 인용 수 · 비중이 생겼다. 출처를 하나 고르면 선은 인용 수다(10-1, Global · Website). Website 도메인 표는 불러온 행을 모두 보이고 원본처럼 route `citation/domains`의 다음 200행을 '더 보기'로 붙인다. 카테고리는 불러온 행 안, 검색은 서버 전체다(10-2, 6단계식 전체 전송은 14,687행이라 고르지 않음). 재현 시험은 고치기 전에 실패했다. golden 1건 의도 변경. 시험: BFF 34개 모듈 589개(live 8개 포함), 프런트 관련 16개 파일 121개(건너뜀 1) · typecheck · lint, 원본 대조(150위 · 201위 · 회차 인용 수), e2e 26항목. 다음은 11단계다.

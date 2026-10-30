@@ -333,6 +333,64 @@ describe("useServerDomainTable: one 'load more' at a time, stale answers dropped
   });
 });
 
+// ── renewal audit 10-2: the category views follow the appended pages ──────────
+
+describe("useServerDomainTable: 'load more' adds the page's category views after the rows before it (renewal audit 10-2)", () => {
+  // the renewal Website table shows every loaded row and picks a category among them; each page comes with the
+  // views of its own rows (indices into that page), so a page appended after n rows lands at n + i
+  const VIEWS = { "": { idx: [0, 1], maxCit: 9, maxCov: 2 }, "Automotive Media": { idx: [0, 1], maxCit: 9, maxCov: 2 } };
+  const useViews = (p: TableProps) =>
+    useServerDomainTable({
+      source: { query: "surface=website", nextCursor: "s1", total: 9 },
+      initial: INITIAL,
+      initialViews: VIEWS,
+      q: p.q,
+      sortKey: "citations",
+      asc: false,
+      pageSize: 2,
+    });
+  const page = (domainsOf: string[], cats: string[], maxCit: number, nextCursor: string | null) => ({
+    rows: domainsOf.map((d, i) => ({ ...row(d, i + 1), category: cats[i] })),
+    nextCursor,
+    total: 9,
+    views: {
+      "": { idx: domainsOf.map((_, i) => i), maxCit, maxCov: 3 },
+      ...Object.fromEntries([...new Set(cats)].map((c) => [c, { idx: cats.flatMap((x, i) => (x === c ? [i] : [])), maxCit, maxCov: 3 }])),
+    },
+  });
+
+  it("default order: the server page's views, then each page's at its row offset (scales the larger)", async () => {
+    const h = rt.mount(useViews, { q: "" });
+    expect(h.result.current.views).toEqual(VIEWS);
+    h.result.current.loadMore();
+    await flush();
+    calls[0].reply(200, page(["c", "d"], ["News & Media", "Automotive Media"], 4, "s2"));
+    await flush();
+    h.result.current.loadMore();
+    await flush();
+    calls[1].reply(200, page(["e"], ["News & Media"], 12, null));
+    await flush();
+    expect(domains(h)).toEqual(["a", "b", "c", "d", "e"]);
+    expect(h.result.current.views).toEqual({
+      "": { idx: [0, 1, 2, 3, 4], maxCit: 12, maxCov: 3 },
+      "Automotive Media": { idx: [0, 1, 3], maxCit: 9, maxCov: 3 },
+      "News & Media": { idx: [2, 4], maxCit: 12, maxCov: 3 },
+    });
+  });
+
+  it("search: the first page's views, then the next page's after its rows", async () => {
+    const h = rt.mount(useViews, { q: "k" });
+    await flush();
+    calls[0].reply(200, page(["k1", "k2"], ["Other", "Other"], 5, "c2"));
+    await flush();
+    h.result.current.loadMore();
+    await flush();
+    calls[1].reply(200, page(["k3"], ["Other"], 2, null));
+    await flush();
+    expect(h.result.current.views).toEqual({ "": { idx: [0, 1, 2], maxCit: 5, maxCov: 3 }, Other: { idx: [0, 1, 2], maxCit: 5, maxCov: 3 } });
+  });
+});
+
 // ── P6 B047: the counts before the detail caps ──────────────────────────────
 
 describe("useDomainDetail: urlTotal / promptTotal when the route sends them (B047)", () => {

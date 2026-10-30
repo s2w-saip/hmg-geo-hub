@@ -305,6 +305,13 @@ Deliberate changes (what the screen shows changed by decision):
   - 9-6: a tone URL row whose source has no category has `category` null; it read 'Other', Gold's category 13.
     `citation/sub-tone-fix-counts`, `sub-tone-fix-reuse` (`page.rows[1]`, a fixture row without a category). Gold
     has no such source on 2026-10-31 (dim_source.category_key is nullable, 0 null rows).
+- 2026-10-31 renewal audit step 10-2 (Website domain table, every row). The renewal Website table shows every row it
+  loads (the screen's first page of 200, then 200 more per '더 보기' through `citation/domains`, the original Website
+  table's pages) and picks a category among them, so a route page's `views` cover every row of the page and the
+  `citation/website` renewal `rn.table.views` every first-page row (both stopped at the first 100, the standard table's
+  cut). 1 case changes: `citation/route-domains-live-more` (`views` of its 200 rows: `""` 100 → 200 indices, the
+  categories with more indices and larger scales, two more categories). The other route cases hold 100 rows or fewer;
+  the standard page keeps its top 100 (`rn-live` unchanged). No other key changes.
 
 ## Format
 

@@ -29,9 +29,10 @@ const DETAIL = {
   promptTotal: 2534,
 };
 
+let CTX: object = { input: { tableSource: SOURCE } };
 vi.mock("./citation-context", async (orig) => ({
   ...(await orig<typeof import("./citation-context")>()),
-  useCitation: () => ({ input: { tableSource: SOURCE } }),
+  useCitation: () => CTX,
 }));
 let DETAIL_STATE: object = DETAIL;
 vi.mock("@/app/[locale]/(dash)/standard/answer-analysis/_components/citations-view", async (orig) => ({
@@ -39,7 +40,8 @@ vi.mock("@/app/[locale]/(dash)/standard/answer-analysis/_components/citations-vi
   useDomainDetail: () => DETAIL_STATE,
 }));
 
-const { DomainDrawer } = await import("./citation-domains");
+const { DomainDrawer, DomainTableCard } = await import("./citation-domains");
+const { CitationProvider } = await import("./citation-context");
 
 const ROW = {
   domain: "kia.com",
@@ -86,5 +88,68 @@ describe("renewal Citation domain sheet", () => {
       expect(html).toContain(drill[key]);
     }
     DETAIL_STATE = DETAIL;
+  });
+});
+
+// 2026-10-31 renewal audit 10-2: the domain table cut every list at 100 rows. The Website screen sends 200 and the
+// original Website table loaded 200 more per '더 보기' over all its sources (14,687 on 2026-10-31), so rows 101+ could
+// not be seen at all. The Website table shows every row it loaded and reads the next page of the same route; the
+// standard table keeps the original Global top 100.
+describe("renewal Citation domain table — every row on the Website (renewal audit 10-2)", () => {
+  const TT = ko.renewal.citation.table as typeof ko.renewal.citation.table & Record<string, string>;
+  const fill = (str: string, v: Record<string, string>) => Object.entries(v).reduce((o, [k, x]) => o.replace(`{${k}}`, x), str);
+  const rows = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({ ...ROW, domain: `d${i + 1}.com`, skey: `d${i + 1}.com`, citations: 1000 - i, isOurs: false, no: i + 1, rank: i + 1, matchRank: i + 1 }));
+  const table = (website: boolean, n: number, initialAll = false, total = 14687) => {
+    const list = rows(n);
+    const shown = website ? n : Math.min(n, 100);
+    CTX = {
+      input: {
+        tableSource: settled({ query: website ? "surface=website" : "", nextCursor: String(n), total }),
+        rn: settled({ table: { rows: list, views: { "": { idx: Array.from({ length: shown }, (_, i) => i), maxCit: 1000, maxCov: 30 } }, categories: ["Official (HMG)"] } }),
+        ...(website ? { website: settled({ own: null, reach: { status: "none" } }) } : {}),
+      },
+      lit: null,
+      hover: () => {},
+      openDomain: () => {},
+      tables: new Set(),
+      toggleTable: () => {},
+    };
+    const html = renderToStaticMarkup(
+      <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
+        {/* the card's ⋯ menu reads the context itself (not the mocked hook) */}
+        <CitationProvider value={CTX as import("./citation-context").CitationCtx}>
+          <DomainTableCard initialAll={initialAll} />
+        </CitationProvider>
+      </NextIntlClientProvider>,
+    );
+    CTX = { input: { tableSource: SOURCE } };
+    return html;
+  };
+  const count = (html: string) => (html.match(/data-rn-domain="/g) ?? []).length;
+
+  it("website: the loaded 230 rows behind '모두 보기', the chip names every source", () => {
+    const html = table(true, 230);
+    expect(html).toContain(fill(TT.showAll, { n: "230" }));
+    expect(html).toContain(fill(TT.chipAll, { n: "14,687" }));
+    expect(count(html)).toBe(20);
+  });
+  it("website, all shown: rank 150 is there, then how many of all and '200개 더 보기' (the next route page)", () => {
+    const html = table(true, 230, true);
+    expect(count(html)).toBe(230);
+    expect(html).toContain('data-rn-domain="d150.com"');
+    expect(html).toContain(fill(TT.loadedOf, { shown: "230", total: "14,687" }));
+    expect(html).toContain(fill(TT.more, { n: "200" }));
+    expect(html).toContain(fill(TT.showFirst, { n: "20" }));
+    // the last page asks for what is left
+    expect(table(true, 230, true, 300)).toContain(fill(TT.more, { n: "70" }));
+  });
+  it("standard: the top 100 as the original Global table, no '더 보기'", () => {
+    expect(table(false, 230)).toContain(fill(TT.showAll, { n: "100" }));
+    expect(table(false, 230)).toContain(fill(TT.chip, { n: "100" }));
+    const html = table(false, 230, true);
+    expect(count(html)).toBe(100);
+    expect(html).not.toContain(fill(TT.more, { n: "200" }));
+    expect(html).not.toContain('data-rn-more=""');
   });
 });

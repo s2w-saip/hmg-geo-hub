@@ -537,8 +537,9 @@ def type_chart(rows: list[dict] | None) -> dict | None:
     return {**bars, "hasAny": any(b["total"] > 0 for b in bars["bars"])}
 
 
-def renewal_vm(live: dict | None, deltas: dict, parts: dict, degraded: dict, sp: dict) -> dict | None:
-    """The renewal citation body (citation-model.ts + the cards' scales, lists and flags)."""
+def renewal_vm(live: dict | None, deltas: dict, parts: dict, degraded: dict, sp: dict, website: bool = False) -> dict | None:
+    """The renewal citation body (citation-model.ts + the cards' scales, lists and flags). The standard table shows its
+    top 100, the website table every row it loads (the screen's first page, then '더 보기' pages; renewal audit 10-2)."""
     if live is None:
         return None
     active, picked = active_sources(sp), active_competitors(sp)
@@ -570,7 +571,8 @@ def renewal_vm(live: dict | None, deltas: dict, parts: dict, degraded: dict, sp:
                       {"status": "ok" if type_m else "pending", "m": M.matrix_view(type_m, one_source)},
         "oneSource": one_source,
         "bump": M.bump_view(bump, live["domains"]),
-        "table": {"rows": initial, "views": M.table_views(initial), "categories": M.category_options(live.get("categories"))},
+        "table": {"rows": initial, "views": M.table_views(initial, None if website else M.TABLE_LIMIT),
+                  "categories": M.category_options(live.get("categories"))},
     }
 
 
@@ -655,7 +657,8 @@ async def website(q) -> dict:
     return {"live": live, "tableSource": table_source(view, query),
             "dataDegraded": degraded["data"], "sectionDegraded": degraded, "prevCategories": deltas["prevCategories"],
             "toneSummary": parts["toneSummary"], "periodView": period,
-            "rn": renewal_vm(live, category_deltas, parts, degraded, sp), "own": own_share_tile(live, own_line), "reach": reach}
+            "rn": renewal_vm(live, category_deltas, parts, degraded, sp, website=True), "own": own_share_tile(live, own_line),
+            "reach": reach}
 
 
 @screen("citation/project")
@@ -779,7 +782,8 @@ def _route_target(ctx: dict) -> tuple[str, str | None]:
 @screen("citation/domains")
 async def domains(q) -> dict:
     """GET /api/citations/domains (listCitationDomains): one page of rows + cursor + total, each row with
-    its '#' (global: rank, else matchRank or the loaded position) and the renewal table's views."""
+    its '#' (global: rank, else matchRank or the loaded position) and the renewal table's views of every row of the
+    page (the website table appends the pages; renewal audit 10-2)."""
     ctx, sp = split_context(q)
     surface, pid = _route_target(ctx)
     filters, actx, competitor = route_context(sp, surface, pid, ctx.get("role"))
@@ -795,7 +799,7 @@ async def domains(q) -> dict:
     offset = int(cursor) if cursor and cursor.isdigit() else 0
     rows = M.numbered_rows([M.to_citation_domain(r) for r in res["data"]["items"]],
                            "rank" if surface == "global" else "matchRank", offset)
-    return {"rows": rows, "nextCursor": info["nextCursor"], "total": info["total"], "views": M.table_views(rows)}
+    return {"rows": rows, "nextCursor": info["nextCursor"], "total": info["total"], "views": M.table_views(rows, None)}
 
 
 @screen("citation/domain-detail")

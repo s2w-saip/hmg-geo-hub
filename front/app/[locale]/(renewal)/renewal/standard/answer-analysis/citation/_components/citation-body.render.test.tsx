@@ -138,7 +138,14 @@ describe("renewal Citation body", () => {
     expect(html).not.toContain(T.lens.split.noOwnCategory);
   });
   it("출처 filter without 공식(HMG): the HMG tile and the prompt tiles explain why", () => {
-    const html = render(input({ data: live({ categories: [{ name: AUTO, value: 400 }], promptSplit: undefined }) }), `source=${encodeURIComponent(AUTO)}`);
+    // the page reads that source only: its trend holds that series alone, a 100% share every round
+    const base = input({ data: live({ categories: [{ name: AUTO, value: 400 }], promptSplit: undefined }) });
+    const only = { series: [AUTO], points: weeks.map((week, i) => ({ week, [AUTO]: 100 + i })) };
+    const html = render({ ...base, data: { ...base.data!, categoryTrend: only } }, `source=${encodeURIComponent(AUTO)}`, undefined, `source=${encodeURIComponent(AUTO)}`, base, (vm) => ({
+      ...vm,
+      rows: vm.rows.map((r) => ({ ...r, trend: weeks.map(() => 100) })),
+    }));
+    expect(html).not.toContain('points="3.0,18.0 41.0,18.0 79.0,18.0 117.0,18.0"');
     expect(html).toContain(T.lens.hmg.excluded);
     expect(html).toContain(T.lens.split.noOwnCategory);
     expect(html).toContain(T.matrix.oneSource);
@@ -292,5 +299,74 @@ describe("renewal Citation body — website page", () => {
     const html = render(input());
     expect([...html.matchAll(/data-rn-tile="([a-zA-Z]+)"/g)].map((m) => m[1])).toEqual(["hmg", "dealer", "owned", "uncited"]);
     expect(html).not.toContain('id="sec-reach"');
+  });
+});
+
+// 2026-10-31 renewal audit 10-1: each 출처 구성 row drew a weekly share line only — no round, no citation count, and
+// the card's CSV had neither. The original composition chart named every round on its axis, showed the round's
+// citations in its tooltip, shaded the gaps and drew citations (not 100% shares) with one 출처 picked.
+describe("renewal Citation body — 출처 구성 rounds (renewal audit 10-1)", () => {
+  const C = T.comp as typeof T.comp & Record<string, string> & { col: Record<string, string> };
+  const tips = (html: string) => [...html.matchAll(/data-rn-tip="([^"]*)"/g)].map((m) => m[1].replace(/&amp;/g, "&"));
+  it("every point of a row's line names its round, its share and its citations", () => {
+    const html = render(input());
+    // 9/21: 자동차 미디어 100 of 250 citations (100 · 50 · 60 · 40)
+    expect(tips(html)).toContain(fill(C.tipPoint, { day: "9/21", pct: "40.0%", n: "100" }));
+    expect(tips(html)).toContain(fill(C.tipPoint, { day: "10/12", pct: "15.4%", n: "40" }));
+    expect((html.match(/data-rn-spark-point="/g) ?? []).length).toBe(16);
+    // the line sits outside the row's filter button (a focusable point inside a button is not reachable)
+    const row = html.slice(html.indexOf(`data-rn-src="${AUTO}"`), html.indexOf("</button>", html.indexOf(`data-rn-src="${AUTO}"`)));
+    expect(row).not.toContain("data-rn-spark-point");
+    // the column names the rounds it spans
+    expect(html).toContain(fill(C.col.trendRange, { from: "9/21", to: "10/12" }));
+  });
+  it("a round without a value has no point and says so", () => {
+    const gapLive = live({
+      categoryTrend: {
+        series: [AUTO, NEWS, HMG, COMP],
+        points: weeks.map((week, i) => (i === 1 ? { week, [AUTO]: null, [NEWS]: null, [HMG]: null, [COMP]: null, gap: { reason: "collection_error" } } : { week, [AUTO]: 100 + i, [NEWS]: 50, [HMG]: 60 + i * 2, [COMP]: 40 })),
+      },
+    });
+    // the screen's shares of that round are null as well (category_share_series)
+    const gapHtml = render({ ...input(), data: gapLive }, "", undefined, "", input(), (vm) => ({ ...vm, rows: vm.rows.map((r) => ({ ...r, trend: (r.trend ?? []).map((v, i) => (i === 1 ? null : v)) })) }));
+    expect(tips(gapHtml).filter((s) => s === fill(C.tipGap, { day: "9/28" }))).toHaveLength(4);
+    // no ring marker on that round's zone, a marker on the others
+    const after = (i: number) => [...gapHtml.matchAll(new RegExp(`<span[^>]*data-rn-spark-point="${i}"[^>]*>(<i|</span>)`, "g"))].map((m) => m[1]);
+    expect(after(1)).toEqual(["</span>", "</span>", "</span>", "</span>"]);
+    expect(after(2)).toEqual(["<i", "<i", "<i", "<i"]);
+  });
+  it("one 출처 picked: the line draws the round's citations, the column says so", () => {
+    // the page reads that source only: its trend holds that series alone, a 100% share every round
+    const base = input({ data: live({ categories: [{ name: AUTO, value: 400 }], promptSplit: undefined }) });
+    const only = { series: [AUTO], points: weeks.map((week, i) => ({ week, [AUTO]: 100 + i })) };
+    const html = render({ ...base, data: { ...base.data!, categoryTrend: only } }, `source=${encodeURIComponent(AUTO)}`, undefined, `source=${encodeURIComponent(AUTO)}`, base, (vm) => ({
+      ...vm,
+      rows: vm.rows.map((r) => ({ ...r, trend: weeks.map(() => 100) })),
+    }));
+    expect(html).not.toContain('points="3.0,18.0 41.0,18.0 79.0,18.0 117.0,18.0"');
+    // 100 · 101 · 102 · 103 citations over the full height (a 100% share would be flat)
+    expect(html).toContain('points="3.0,33.0 41.0,23.0 79.0,13.0 117.0,3.0"');
+    expect(html).toContain(C.col.trendCount);
+    expect(tips(html)).toContain(fill(C.tipPoint, { day: "10/12", pct: "100.0%", n: "103" }));
+  });
+  it("table view and CSV: the list's values, then each round's share and citations", async () => {
+    const { compositionRounds, compositionCsvRows, CompositionTable } = await import("./citation-body");
+    const p = input();
+    const vm = rnVmFor({ live: p.data, prev: p.prevCategories, card: p.officialDelta, typeRows: p.typeCategories, sections: null, search: "" })!;
+    const rounds = compositionRounds(vm.rows, p.data!.categoryTrend);
+    expect(rounds.x).toEqual(weeks);
+    const csv = compositionCsvRows(vm.rows, rounds, { category: "c", citations: "n", pct: "%", prev: "p", delta: "d" }, (x) => x);
+    expect(csv[0]).toEqual(["c", "n", "%", "p", "d", "2026-09-21 n", "2026-09-21 %", "2026-09-28 n", "2026-09-28 %", "2026-10-05 n", "2026-10-05 %", "2026-10-12 n", "2026-10-12 %"]);
+    // 자동차 미디어: 100 of 250 → 101 of 253 → 102 of 256 → 103 of 259
+    expect(csv.find((r) => r[0] === AUTO)!.slice(5)).toEqual([100, "40.0", 101, "39.9", 102, "39.8", 103, "39.8"]);
+    const table = renderToStaticMarkup(
+      <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
+        <CompositionTable rows={vm.rows} rounds={rounds} period={false} />
+      </NextIntlClientProvider>,
+    );
+    expect(table).toContain(">9/21<");
+    const cell = (pct: string, n: string) => new RegExp(`<b[^>]*>${pct.replace(".", "\\.")}</b><small[^>]*>${n}</small>`);
+    expect(table).toMatch(cell("40.0%", "100"));
+    expect(table).toMatch(cell("15.4%", "40"));
   });
 });

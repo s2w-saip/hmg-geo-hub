@@ -25,7 +25,8 @@ import {
 import { PeriodDeltaLine } from "@/components/dash/period-delta-line";
 import { useRnFilterReset, useRnFilterToggle } from "@/app/[locale]/(renewal)/renewal/_components/overview-filters";
 import { useActiveCitationCategories, useActiveCompetitors } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/citation-url-axes";
-import type { CitationDomainLive, CitationsLive } from "@/lib/scope/result-adapter";
+import type { CitationDomainLive, CitationsLive, CitationTrend } from "@/lib/scope/result-adapter";
+import type { CsvCell } from "@/app/[locale]/(renewal)/renewal/_components/csv";
 import { DEALER_CATEGORY, OFFICIAL_HMG_CATEGORY } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/citation-view";
 import {
   DELTA_AXIS_MIN,
@@ -37,8 +38,8 @@ import {
   type RnShareTile,
 } from "./citation-input";
 import { CitationCardActions, CitationProvider, DIV_LEGEND, DIV_LESS, DIV_MORE, divBg, engineLabel, useCatLabel, useCitation, type CitationCtx, type MatrixAxis } from "./citation-context";
-import { CardSkeleton, DegradedNote, DeltaChip, InfoTip, StateCard, useDegradedText } from "../../mention/_components/mention-kit";
-import { numTxt, pctTxt, deltaTxt } from "../../mention/_components/mention-context";
+import { CardSkeleton, DegradedNote, DeltaChip, InfoTip, StateCard, TwinTable, useDegradedText } from "../../mention/_components/mention-kit";
+import { numTxt, pctTxt, deltaTxt, slotLabel } from "../../mention/_components/mention-context";
 import { DomainBumpCard, DomainDrawer, DomainTableCard } from "./citation-domains";
 import { ReachCard, WebsitePromptsCard } from "./citation-website";
 
@@ -551,8 +552,95 @@ function WebsiteShareRow({ website }: { website: Promise<RnCitationWebsite> }) {
 const ROW_GRID =
   "grid-cols-[minmax(108px,150px)_minmax(64px,1fr)_76px_minmax(88px,132px)_64px_92px] @max-[640px]/rnpage:grid-cols-[minmax(96px,130px)_minmax(48px,1fr)_68px_minmax(64px,96px)_60px]";
 
+/** One 출처 구성 row per round as the category trend read gives it: the screen's share (null in a round without a
+ * value) and the trend's citations (the original chart's tooltip count; null in a gap). */
+export interface CompositionRounds {
+  /** the trend's rounds (the bucket keys, YYYY-MM-DD) */
+  x: string[];
+  byName: Record<string, { pct: (number | null)[]; n: (number | null)[] }>;
+}
+
+/** The rounds of every 출처 구성 row (renewal audit 10-1): the row's share line (`trend`, the screen's) beside the
+ * citations the same trend point holds (`live.categoryTrend`, the line's source). */
+export function compositionRounds(rows: ReadonlyArray<RnCitationVm["rows"][number]>, trend: CitationTrend | null | undefined): CompositionRounds {
+  const points = trend?.points ?? [];
+  return {
+    x: points.map((p) => String(p.week ?? "")),
+    byName: Object.fromEntries(
+      rows.map((r) => [
+        r.name,
+        {
+          pct: points.map((_, i) => r.trend?.[i] ?? null),
+          n: points.map((p) => {
+            const v = p[r.name];
+            return typeof v === "number" ? v : null;
+          }),
+        },
+      ]),
+    ),
+  };
+}
+
+/** 출처 구성 CSV: the list's columns, then each round's citations and share (renewal audit 10-1). */
+export function compositionCsvRows(
+  rows: ReadonlyArray<RnCitationVm["rows"][number]>,
+  rounds: CompositionRounds,
+  head: { category: string; citations: string; pct: string; prev: string; delta: string },
+  cat: (name: string) => string,
+): CsvCell[][] {
+  return [
+    [head.category, head.citations, head.pct, head.prev, head.delta, ...rounds.x.flatMap((x) => [`${x} ${head.citations}`, `${x} ${head.pct}`])],
+    ...rows.map((r) => {
+      const at = rounds.byName[r.name];
+      return [
+        cat(r.name),
+        r.value,
+        r.pct ?? "",
+        r.prevPct ?? "",
+        r.delta ?? "",
+        ...rounds.x.flatMap((_, i) => [at?.n[i] ?? "", at?.pct[i] == null ? "" : at.pct[i]!.toFixed(1)]),
+      ];
+    }),
+  ];
+}
+
+/** 출처 구성 as a table (the card's table twin): the list's values, then share over citations per round (stacked as the
+ * list's 비중 · 인용 수 column, so every round fits the card). */
+export function CompositionTable({ rows, rounds, period }: { rows: ReadonlyArray<RnCitationVm["rows"][number]>; rounds: CompositionRounds; period: boolean }) {
+  const t = useTranslations("renewal.citation.comp");
+  const cat = useCatLabel();
+  const pair = (pct: number | null, n: number | null) =>
+    n == null ? (
+      "—"
+    ) : (
+      <span className="flex flex-col items-end leading-tight">
+        <b className="font-semibold text-rn-ink">{pctTxt(pct)}</b>
+        <small className="text-rn-11 text-rn-muted">{numTxt(n)}</small>
+      </span>
+    );
+  return (
+    <div className="px-6 pb-5 [.rn-dense_&]:px-4.5 [.rn-dense_&]:pb-3.5" data-rn-comptable="">
+      <TwinTable
+        head={[t("col.category"), t("col.pctCount"), t(period ? "col.deltaAxisPeriod" : "col.deltaAxis"), ...rounds.x.map(slotLabel)]}
+        rows={rows.map((r) => {
+          const at = rounds.byName[r.name];
+          const d = r.deltaHidden ? null : r.delta;
+          return [
+            <span key="c" className="whitespace-nowrap">
+              {cat(r.name)}
+            </span>,
+            pair(r.pct, r.value),
+            d == null ? "—" : deltaTxt(d),
+            ...rounds.x.map((_, i) => pair(at?.pct[i] ?? null, at?.n[i] ?? null)),
+          ];
+        })}
+      />
+    </div>
+  );
+}
+
 function CompositionCard() {
-  const { input, picked, active, lit, hover } = useCitation();
+  const { input, live, picked, active, lit, hover, tables } = useCitation();
   const t = useTranslations("renewal.citation.comp");
   const tComp = useTranslations("answerAnalysis.citations.v2.competitor");
   const dg = useDegradedText();
@@ -560,12 +648,16 @@ function CompositionCard() {
   const toggle = useRnFilterToggle();
   const { rn, rows, prev, sections } = useModel();
   const isPeriod = Boolean(input.period);
-  const { trendOn, maxPct: max, cap } = rn;
+  const { trendOn, maxPct: max, cap, oneSource } = rn;
   const keys = rows.map((r) => r.name);
+  const rounds = useMemo(() => compositionRounds(rows, live.categoryTrend), [rows, live.categoryTrend]);
+  const tableOn = tables.has("comp");
   const csv = () => ({
     name: "citation-categories",
-    rows: [[t("col.category"), t("col.citations"), t("col.pct"), t(prev?.period ? "col.prevPeriod" : "col.prev"), t("col.delta")], ...rows.map((r) => [cat(r.name), r.value, r.pct ?? "", r.prevPct ?? "", r.delta ?? ""])],
+    rows: compositionCsvRows(rows, rounds, { category: t("col.category"), citations: t("col.citations"), pct: t("col.pct"), prev: t(prev?.period ? "col.prevPeriod" : "col.prev"), delta: t("col.delta") }, cat),
   });
+  const first = rounds.x[0];
+  const last = rounds.x[rounds.x.length - 1];
   return (
     <>
       <RnCardHead
@@ -577,11 +669,13 @@ function CompositionCard() {
             {prev ? <RnBasisChip>{prev.period ? t("chipDeltaPeriod", { from: prev.period.from, to: prev.period.to }) : t("chipDelta", { date: prev.asOf.slice(0, 10) })}</RnBasisChip> : null}
           </>
         }
-        actions={<CitationCardActions section="sec-comp" csv={csv} />}
+        actions={<CitationCardActions tableId={rows.length > 0 && rounds.x.length > 0 ? "comp" : undefined} section="sec-comp" csv={csv} />}
         sub={t("sub")}
       />
       {rows.length === 0 ? (
         <p className="m-0 px-6 pb-5 text-rn-12 text-rn-muted">{t("empty")}</p>
+      ) : tableOn && rounds.x.length > 0 ? (
+        <CompositionTable rows={rows} rounds={rounds} period={Boolean(prev?.period)} />
       ) : (
         <div role="group" aria-label={t("title")} className="flex flex-col pb-3" onPointerLeave={() => hover(null)}>
           <div aria-hidden className={cx("grid min-h-7 items-end gap-2.5 px-6 pb-1 text-rn-11 font-semibold text-rn-muted [.rn-dense_&]:px-4.5", ROW_GRID)}>
@@ -597,10 +691,27 @@ function CompositionCard() {
               </span>
             </span>
             <span />
-            {trendOn ? <span className="text-right @max-[640px]/rnpage:hidden">{t("col.trend")}</span> : null}
+            {trendOn ? (
+              <span className="flex flex-col items-end gap-0.5 @max-[640px]/rnpage:hidden">
+                <span>{t(oneSource ? "col.trendCount" : "col.trend")}</span>
+                {first && last ? <span className="font-medium tabular-nums">{t("col.trendRange", { from: slotLabel(first), to: slotLabel(last) })}</span> : null}
+              </span>
+            ) : null}
           </div>
           {rows.map((r) => (
-            <CategoryLine key={r.name} r={r} max={max} cap={cap} trendOn={trendOn} pressed={active.includes(r.name)} lit={lit} keys={keys} onToggle={() => toggle("source", r.name)} />
+            <CategoryLine
+              key={r.name}
+              r={r}
+              rounds={rounds}
+              oneSource={oneSource}
+              max={max}
+              cap={cap}
+              trendOn={trendOn}
+              pressed={active.includes(r.name)}
+              lit={lit}
+              keys={keys}
+              onToggle={() => toggle("source", r.name)}
+            />
           ))}
           <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1 px-6 pt-2.5 text-rn-12 text-rn-ink-2 [.rn-dense_&]:px-4.5" data-rn-dlg="">
             <span className="inline-flex items-center gap-1.5">
@@ -611,7 +722,7 @@ function CompositionCard() {
               <i aria-hidden className="h-2.5 w-3 rounded-[2px]" style={{ background: DELTA_DOWN }} />
               {t("down")}
             </span>
-            <span className="text-rn-muted">{t("axisNote", { cap: DELTA_AXIS_MIN, span: SPARK_MIN_SPAN })}</span>
+            <span className="text-rn-muted">{t(oneSource ? "axisNoteCount" : "axisNote", { cap: DELTA_AXIS_MIN, span: SPARK_MIN_SPAN })}</span>
           </div>
           {!trendOn && sections?.categoryTrend ? (
             <div className="px-6 pt-2">
@@ -629,7 +740,29 @@ function CompositionCard() {
 const DELTA_UP = `rgb(${DIV_MORE.join(",")})`;
 const DELTA_DOWN = `rgb(${DIV_LESS.join(",")})`;
 
-function CategoryLine({ r, max, cap, trendOn, pressed, lit, keys, onToggle }: { r: RnCitationVm["rows"][number]; max: number; cap: number; trendOn: boolean; pressed: boolean; lit: string | null; keys: string[]; onToggle: () => void }) {
+function CategoryLine({
+  r,
+  rounds,
+  oneSource,
+  max,
+  cap,
+  trendOn,
+  pressed,
+  lit,
+  keys,
+  onToggle,
+}: {
+  r: RnCitationVm["rows"][number];
+  rounds: CompositionRounds;
+  oneSource: boolean;
+  max: number;
+  cap: number;
+  trendOn: boolean;
+  pressed: boolean;
+  lit: string | null;
+  keys: string[];
+  onToggle: () => void;
+}) {
   const { hover, input } = useCitation();
   const t = useTranslations("renewal.citation.comp");
   const cat = useCatLabel();
@@ -648,45 +781,65 @@ function CategoryLine({ r, max, cap, trendOn, pressed, lit, keys, onToggle }: { 
   ]
     .filter(Boolean)
     .join("\n");
+  // the round line (renewal audit 10-1): the share per round, or the citations with one 출처 picked (its share is
+  // 100% every round, the original chart's absolute mode); each point names its round, share and citations
+  const at = rounds.byName[r.name];
+  const line = oneSource ? (at?.n ?? []) : (r.trend ?? []);
+  const tips = rounds.x.map((x, i) =>
+    at?.n[i] == null ? t("tipGap", { day: slotLabel(x) }) : t("tipPoint", { day: slotLabel(x), pct: pctTxt(at.pct[i]), n: numTxt(at.n[i]) }),
+  );
   return (
-    <button
-      type="button"
+    <div
       data-rn-b={r.name}
-      data-rn-src={r.name}
-      aria-pressed={pressed}
       onPointerEnter={() => hover(r.name)}
-      onClick={onToggle}
-      title={tip}
       className={cx(
-        "grid min-h-[38px] cursor-pointer items-center gap-2.5 px-6 text-left text-rn-13 transition-[background-color,opacity] hover:bg-rn-navy-25 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rn-navy [.rn-dense_&]:min-h-8 [.rn-dense_&]:px-4.5",
+        "grid min-h-[38px] items-center gap-2.5 px-6 text-left text-rn-13 transition-[background-color,opacity] hover:bg-rn-navy-25 [.rn-dense_&]:min-h-8 [.rn-dense_&]:px-4.5",
         ROW_GRID,
         (pressed || on) && "bg-rn-navy-25 shadow-[inset_3px_0_0_var(--color-rn-navy)]",
         dim && "opacity-55",
       )}
     >
-      <span className={cx("truncate", own ? "font-bold text-rn-navy" : "text-rn-ink-2")}>{cat(r.name)}</span>
-      <span className="relative h-2 rounded-full bg-rn-inset">
-        <i className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${((r.pct ?? 0) / max) * 100}%`, background: own ? "var(--color-rn-navy)" : "var(--color-rn-navy-300)" }} />
-      </span>
-      <span className="flex flex-col items-end leading-tight tabular-nums">
-        <b className={cx("font-bold", own ? "text-rn-navy" : "text-rn-ink")}>{pctTxt(r.pct)}</b>
-        <small className="text-rn-11 text-rn-muted">{numTxt(r.value)}</small>
-      </span>
-      <span className="relative h-3" aria-hidden data-rn-dbar={!moved ? "flat" : d! > 0 ? "up" : "down"}>
-        <i className="absolute inset-y-0 left-1/2 w-px bg-rn-line-2" />
-        {moved ? <i className="absolute top-0.5 bottom-0.5 rounded-[2px]" style={{ left: d! > 0 ? "50%" : `${50 - half}%`, width: `${half}%`, background: d! > 0 ? DELTA_UP : DELTA_DOWN }} /> : null}
-      </span>
-      <span className={cx("text-right text-rn-12 whitespace-nowrap tabular-nums", own ? "font-bold text-rn-ink" : "text-rn-ink-2")} data-rn-dc="">
-        {d == null ? "—" : deltaTxt(d)}
-      </span>
+      {/* the filter toggle spans the values; the round line beside it has its own points (a focusable point inside a
+          button is not reachable) */}
+      <button
+        type="button"
+        data-rn-src={r.name}
+        aria-pressed={pressed}
+        onClick={onToggle}
+        title={tip}
+        className="col-span-5 grid min-h-[38px] cursor-pointer grid-cols-subgrid items-center rounded-[3px] text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rn-navy [.rn-dense_&]:min-h-8"
+      >
+        <span className={cx("truncate", own ? "font-bold text-rn-navy" : "text-rn-ink-2")}>{cat(r.name)}</span>
+        <span className="relative h-2 rounded-full bg-rn-inset">
+          <i className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${((r.pct ?? 0) / max) * 100}%`, background: own ? "var(--color-rn-navy)" : "var(--color-rn-navy-300)" }} />
+        </span>
+        <span className="flex flex-col items-end leading-tight tabular-nums">
+          <b className={cx("font-bold", own ? "text-rn-navy" : "text-rn-ink")}>{pctTxt(r.pct)}</b>
+          <small className="text-rn-11 text-rn-muted">{numTxt(r.value)}</small>
+        </span>
+        <span className="relative h-3" aria-hidden data-rn-dbar={!moved ? "flat" : d! > 0 ? "up" : "down"}>
+          <i className="absolute inset-y-0 left-1/2 w-px bg-rn-line-2" />
+          {moved ? <i className="absolute top-0.5 bottom-0.5 rounded-[2px]" style={{ left: d! > 0 ? "50%" : `${50 - half}%`, width: `${half}%`, background: d! > 0 ? DELTA_UP : DELTA_DOWN }} /> : null}
+        </span>
+        <span className={cx("text-right text-rn-12 whitespace-nowrap tabular-nums", own ? "font-bold text-rn-ink" : "text-rn-ink-2")} data-rn-dc="">
+          {d == null ? "—" : deltaTxt(d)}
+        </span>
+      </button>
       {trendOn ? (
-        <span className="flex justify-end @max-[640px]/rnpage:hidden">
-          {r.trend?.some((v) => v != null) ? (
-            <RnSparkline values={r.trend} minSpan={SPARK_MIN_SPAN} className={cx("h-6 w-[88px] [&_polygon]:fill-transparent", !own && "[&_circle]:fill-rn-faint [&_polyline]:stroke-rn-faint")} />
+        <span className="flex justify-end @max-[640px]/rnpage:hidden" data-rn-trend={r.name}>
+          {line.some((v) => v != null) ? (
+            <span className="block h-6 w-[88px]">
+              <RnSparkline
+                values={line}
+                minSpan={oneSource ? 0 : SPARK_MIN_SPAN}
+                tips={tips.length === line.length ? tips : undefined}
+                className={cx("h-[24px] [&_polygon]:fill-transparent", !own && "[&_circle]:fill-rn-faint [&_polyline]:stroke-rn-faint")}
+              />
+            </span>
           ) : null}
         </span>
       ) : null}
-    </button>
+    </div>
   );
 }
 

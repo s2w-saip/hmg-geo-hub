@@ -1059,10 +1059,11 @@ def ranked_domains(domains: list[dict], picked: list[str]) -> list[dict]:
     return [{**r, "rank": i + 1} for i, r in enumerate(apply_competitor_pick(list(domains), picked))]
 
 
-def table_views(rows: list[dict]) -> dict:
-    """DomainTableCard over the first 100 rows of a list: per category picked in its select ("" = all)
-    the row indices and the bar scales (Math.max(1, ...citations / coverage))."""
-    base = rows[:TABLE_LIMIT]
+def table_views(rows: list[dict], limit: int | None = TABLE_LIMIT) -> dict:
+    """DomainTableCard over the first `limit` rows of a list (None = every row: the website table and a route page,
+    2026-10-31 renewal audit 10-2): per category picked in its select ("" = all) the row indices and the bar scales
+    (Math.max(1, ...citations / coverage))."""
+    base = rows if limit is None else rows[:limit]
     keys = [""] + list(dict.fromkeys(r.get("category") for r in base if r.get("category")))
     out = {}
     for key in keys:

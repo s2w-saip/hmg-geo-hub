@@ -15,7 +15,7 @@ import {
   cx,
 } from "@/components/renewal-ui";
 import { AnswerModal } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/answer-modal";
-import { TableStatus, useDomainDetail, useServerDomainTable } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/citations-view";
+import { API_TABLE_PAGE, TableStatus, useDomainDetail, useServerDomainTable } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/citations-view";
 import { citationDrilldownEmptyKey, domainDetailUrl, type DomainDetailView, type DomainTableSortKey } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/citation-view";
 import { displayCitationUrl } from "@/lib/url-display";
 import { countryName } from "@/lib/geo-catalog";
@@ -225,35 +225,49 @@ function BumpChart({ d }: { d: BumpView }) {
   );
 }
 
-// ── 도메인 인용 순위 (상위 100): one table ─────────────────────────────────────
+// ── 도메인 인용 순위: one table (the standard page's top 100, every source on the Website) ───────────
 
 const LIMIT = 100;
 const FIRST = 20;
 type SortKey = DomainTableSortKey;
 
-export function DomainTableCard() {
+/**
+ * The standard page shows the top 100 rows (the original Global table). The Website page shows every row it loaded:
+ * the screen's first page, then the next pages of the same route on '더 보기' (the original Website table's 200 per
+ * page; renewal audit 10-2). Search and sort run on the server over every source either way.
+ * `initialAll` starts with every loaded row shown (render tests).
+ */
+export function DomainTableCard({ initialAll = false }: { initialAll?: boolean }) {
   const { input, lit, hover, openDomain } = useCitation();
   const t = useTranslations("renewal.citation.table");
   const tC = useTranslations("answerAnalysis.citations.table");
   const cat = useCatLabel();
   const source = use(input.tableSource);
+  const website = Boolean(input.website);
   const [q, setQ] = useState("");
   const deferred = useDeferredValue(q);
   const [sortKey, setSortKey] = useState<SortKey>("citations");
   const [asc, setAsc] = useState(false);
   const [category, setCategory] = useState("");
-  const [all, setAll] = useState(false);
+  const [all, setAll] = useState(initialAll);
   // the first rows after the competitor pick (# = the rank after the pick) and their category
   // views come with the screen; search and sort run on the server over every source (BG-21)
   const model = (use(input.rn) as RnCitationVm).table;
-  const table = useServerDomainTable({ source, initial: model.rows, initialViews: model.views, q: deferred, sortKey, asc, pageSize: LIMIT });
-  const base = (table.active ? table.rows : model.rows).slice(0, LIMIT);
-  // the category select: the server's row list and bar scales per category (first 100 rows)
+  const table = useServerDomainTable({ source, initial: model.rows, initialViews: model.views, q: deferred, sortKey, asc, pageSize: website ? API_TABLE_PAGE : LIMIT });
+  const loaded = table.active ? table.rows : model.rows;
+  const base = website ? loaded : loaded.slice(0, LIMIT);
+  // the category select: the server's row list and bar scales per category (the standard page's first 100 rows, the
+  // Website page's loaded pages)
   const view = (table.active ? table.views : model.views)?.[category];
-  const rows = view ? view.idx.map((i) => base[i]) : category ? [] : base;
+  const rows = view ? view.idx.map((i) => base[i]).filter(Boolean) : category ? [] : base;
   // a search runs over every source: its count is the server's, not the first page's (2026-10-29 metric review R4)
   const matched = q.trim() && !category && table.active && table.total != null ? table.total : rows.length;
   const shown = all ? rows : rows.slice(0, FIRST);
+  // the Website page reads the next page while every loaded row is in view (a first page that failed says so in the
+  // table body, as the original's LoadMoreRow under its rows); how many of all are loaded
+  const moreOn = website && table.active && base.length > 0 && (all || rows.length <= FIRST) && (table.nextCursor != null || table.status === "error");
+  const total = website ? (table.total ?? source?.total ?? null) : null;
+  const moreN = total != null ? Math.min(API_TABLE_PAGE, Math.max(0, total - base.length)) : API_TABLE_PAGE;
   const maxCit = view?.maxCit ?? 1;
   const maxCov = view?.maxCov ?? 1;
   const cats = model.categories;
@@ -288,7 +302,7 @@ export function DomainTableCard() {
       <RnCardHead
         title={t("title")}
         info={<InfoTip label={t("infoLabel")} items={[[t("infoLabel"), t("info")]]} />}
-        chips={<RnBasisChip>{t("chip", { n: LIMIT })}</RnBasisChip>}
+        chips={<RnBasisChip>{website && source?.total != null ? t("chipAll", { n: numTxt(source.total) }) : t("chip", { n: LIMIT })}</RnBasisChip>}
         actions={<CitationCardActions section="sec-dom" csv={csv} />}
       />
       <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2 px-6 pb-3 [.rn-dense_&]:px-4.5">
@@ -297,7 +311,15 @@ export function DomainTableCard() {
           {t("category")}
           <RnSelect label={t("categoryLabel")} value={category} onChange={(e) => setCategory(e.target.value)} options={[{ value: "", label: t("categoryAll") }, ...cats.map((c) => ({ value: c, label: cat(c) }))]} data-rn-catsel="" />
         </label>
-        {q.trim() || category ? <span className="text-rn-12 text-rn-muted">{matched > rows.length ? t("matchesTop", { n: matched, shown: rows.length }) : t("matches", { n: matched })}</span> : null}
+        {q.trim() || category ? (
+          <span className="text-rn-12 text-rn-muted">
+            {matched > rows.length
+              ? t("matchesTop", { n: numTxt(matched), shown: numTxt(rows.length) })
+              : website && category && table.nextCursor != null
+                ? t("matchesLoaded", { n: numTxt(matched), loaded: numTxt(base.length) })
+                : t("matches", { n: numTxt(matched) })}
+          </span>
+        ) : null}
       </div>
       <div className="overflow-x-auto" onPointerLeave={() => hover(null)}>
         <table className="w-full min-w-[720px] border-collapse text-rn-13" data-rn-dtable="">
@@ -381,11 +403,25 @@ export function DomainTableCard() {
           </tbody>
         </table>
       </div>
-      {rows.length > FIRST ? (
-        <div className="flex justify-center py-3.5">
-          <RnButton onClick={() => setAll((v) => !v)} data-rn-dall="">
-            {all ? t("showFirst", { n: FIRST }) : t("showAll", { n: rows.length })}
-          </RnButton>
+      {rows.length > FIRST || moreOn ? (
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 py-3.5">
+          {moreOn && total != null && !q.trim() && !category ? <span className="text-rn-12 text-rn-muted tabular-nums">{t("loadedOf", { shown: numTxt(base.length), total: numTxt(total) })}</span> : null}
+          {moreOn ? (
+            table.status === "error" ? (
+              <span className="text-rn-12 text-rn-muted" role="status">
+                {t("moreFailed")}
+              </span>
+            ) : (
+              <RnButton onClick={table.loadMore} disabled={table.loadingMore} aria-busy={table.loadingMore || undefined} data-rn-more="">
+                {table.loadingMore ? t("moreLoading") : t("more", { n: numTxt(moreN) })}
+              </RnButton>
+            )
+          ) : null}
+          {rows.length > FIRST ? (
+            <RnButton onClick={() => setAll((v) => !v)} data-rn-dall="">
+              {all ? t("showFirst", { n: FIRST }) : t("showAll", { n: numTxt(rows.length) })}
+            </RnButton>
+          ) : null}
         </div>
       ) : (
         <div className="h-3" />

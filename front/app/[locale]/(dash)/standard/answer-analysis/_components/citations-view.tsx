@@ -61,6 +61,7 @@ import {
   type CitationCategory,
 } from "@/lib/citation-categorizer/taxonomy";
 import {
+  appendDomainTableViews,
   citationDrilldownEmptyKey,
   contentDispositionFilename,
   domainDetailUrl,
@@ -274,7 +275,7 @@ export function useServerDomainTable(opts: {
       .then((p) =>
         settle((prev) => ({
           key: reqKey,
-          views: prev.views,
+          views: appendDomainTableViews(prev.views, p.views, prev.rows.length),
           rows: [...prev.rows, ...p.rows],
           nextCursor: p.nextCursor,
           total: fromServer ? prev.total : p.total,
@@ -297,7 +298,8 @@ export function useServerDomainTable(opts: {
   return {
     active: Boolean(source),
     rows: base.rows,
-    views: fromServer ? initialViews : base.views,
+    // the server page's views, then those of the pages "더 보기" appended after it (renewal audit 10-2)
+    views: fromServer ? appendDomainTableViews(initialViews, current?.views, initial.length) : base.views,
     total: fromServer ? (source?.total ?? null) : base.total,
     nextCursor: base.nextCursor,
     status: base.status,

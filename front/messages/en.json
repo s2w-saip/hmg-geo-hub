@@ -5976,7 +5976,7 @@
       "comp": {
         "title": "Source category mix",
         "infoLabel": "How to read",
-        "info": "Citations of AI answers grouped by source category — share and count (citations, not domains). Change = vs the previous round (or the equal period just before, when a period is selected) (pp), drawn as a bar around 0 on one axis for every row (the largest change on screen, at least ±{cap}pp), so bar lengths compare. Blue = up, orange = down (direction, not good or bad). Trend = share per round — each small line spans at least {span}pp vertically, so smaller moves draw gently. Hover to see the category's top 3 domains and their share.",
+        "info": "Citations of AI answers grouped by source category — share and count (citations, not domains). Change = vs the previous round (or the equal period just before, when a period is selected) (pp), drawn as a bar around 0 on one axis for every row (the largest change on screen, at least ±{cap}pp), so bar lengths compare. Blue = up, orange = down (direction, not good or bad). Trend = share per round — each small line spans at least {span}pp vertically, so smaller moves draw gently. Hover a point of the line for that round's share and citations; a break is a round without citations. With one source picked the share is always 100%, so the line shows citations per round. Hover a row to see the category's top 3 domains and their share.",
         "chipSnapshot": "Snapshot as of the measurement date",
         "chipPeriod": "Cumulative over the selected period",
         "chipDelta": "Change = vs the previous round ({date})",
@@ -5992,6 +5992,8 @@
           "pct": "Share",
           "delta": "Change",
           "trend": "Trend by round",
+          "trendCount": "Citations by round",
+          "trendRange": "{from} – {to}",
           "pctCount": "Share · citations",
           "deltaAxis": "vs previous round",
           "deltaAxisPeriod": "vs previous period"
@@ -6003,7 +6005,10 @@
         "down": "Down",
         "axisNote": "Change bars share one axis (at least ±{cap}pp) · trend lines span at least {span}pp",
         "tipDelta": "change {delta} (previous round {prev})",
-        "tipDeltaPeriod": "change {delta} (previous period {prev})"
+        "tipDeltaPeriod": "change {delta} (previous period {prev})",
+        "tipPoint": "{day} · share {pct} · {n} citations",
+        "tipGap": "{day} · citation gap",
+        "axisNoteCount": "Change bars share one axis (at least ±{cap}pp) · one source picked, so the trend lines show citations per round"
       },
       "matrix": {
         "title": "Source preference matrix",
@@ -6075,8 +6080,14 @@
         "categoryAll": "All",
         "matches": "{n} matches",
         "matchesTop": "{n} matches · top {shown} shown",
+        "matchesLoaded": "{n} matches in the {loaded} loaded",
         "showFirst": "Show the first {n}",
-        "showAll": "Show all {n}"
+        "showAll": "Show all {n}",
+        "chipAll": "By citations · {n} in all",
+        "loadedOf": "{shown} of {total} shown",
+        "more": "Show {n} more",
+        "moreLoading": "Loading…",
+        "moreFailed": "Could not load more domains. Reopen the page in a moment."
       },
       "drawer": {
         "close": "Close",
