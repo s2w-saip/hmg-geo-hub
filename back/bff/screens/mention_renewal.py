@@ -29,7 +29,7 @@ from bff.screens import screen, split_context
 from bff.screens._competitors import competitor_value_of
 from bff.screens._convert import Exact, delta1, exact
 from bff.screens._convert import round1 as _exact_round1
-from bff.screens._period import period_caption
+from bff.screens._period import kst_today, period_caption, to_period_delta_view
 from bff.screens._sort import locale_compare, table_orders
 
 OWN_KEY = "__own"
@@ -329,6 +329,9 @@ def rank_hero(fp: Any, period: Any) -> dict:
         "avgPosition": h.get("avgPosition"),
         "rankedAnswers": h.get("rankedAnswers"),
         "delta": delta,
+        # 당사's line: the brand trend's own rows weighted by their ranked answers. The reader sends one own series, the
+        # perspective's date totals (2026-10-29 metric review R1), so this is Gold's perspective value round by round,
+        # the hero's own (renewal audit 5-3 / U11: checked against the overview trend on live data, 2026-10-31).
         "series": mv.own_position_series(fp) if fp else [],
         "axis": _axis_keys(mv, fp) if fp else [],
     }
@@ -483,16 +486,24 @@ def type_compare_rows(inp: dict, base: dict | None = None) -> list[dict]:
     return out
 
 
+def _type_rounds(engine: Any, metric: str) -> tuple[list[str], list]:
+    """The rounds of the 당사 type lines: the exposure trend's keys and each one's type trend bucket (None = a gap or
+    no type answers). The share view has no lines."""
+    if metric != "exposure":
+        return [], []
+    mv = _mv()
+    type_by = {b["bucketStart"]: b for b in (engine.get("typeTrend") or [])} if isinstance(engine, dict) else {}
+    points = mv.kpi_trend_points(engine, "exposure")
+    return [p["bucketStart"] for p in points], [None if p.get("gap") else type_by.get(p["bucketStart"]) for p in points]
+
+
 def type_own_rows(kpi: Any, engine: Any, metric: str) -> list[dict]:
     if not kpi:
         return []
-    mv = _mv()
     # each type's line on the exposure trend's rounds: the type trend's own answers over the round's answers. A round
     # with type answers was measured; the shared type_combo_points keeps only rounds with measurement days, which the
     # Gold reader sends as null, so every line was empty (2026-10-29).
-    type_by = {b["bucketStart"]: b for b in (engine.get("typeTrend") or [])} if isinstance(engine, dict) else {}
-    rounds = [None if p.get("gap") else type_by.get(p["bucketStart"]) for p in mv.kpi_trend_points(engine, "exposure")] \
-        if metric == "exposure" else []
+    _, rounds = _type_rounds(engine, metric)
     out = []
     for type_ in TYPE_STRENGTH:
         r = next((x for x in kpi["rows"] if x["type"] == type_), None)
@@ -879,6 +890,26 @@ def period_of(filters: dict) -> dict | None:
     return {"from": filters.get("dateFrom"), "to": filters.get("dateTo")}
 
 
+def per_answer_line(period: Any, filters: dict, today: str | None) -> dict | None:
+    """The calendar-month line of the original KPI body (kpi-period monthLine) with the one compare metric no tab
+    shows: 답변당 언급 수 (renewal audit 5-2; the renewal Citation's month line keeps its per-answer metric the same
+    way). The reader answers it when asked (audit U10). A window, a week or no period: no line."""
+    shape = (period or {}).get("shape") if isinstance(period, dict) else None
+    compare = period.get("compare") if isinstance(period, dict) else None
+    if not shape or not shape.get("months") or compare is None:
+        return None
+    results = [r for r in compare if r.get("metric") == "mentionsPerAnswer"]
+    if not results:
+        return None
+    cur_lo = ((shape.get("weeks") or {}).get("cur") or {}).get("lo") or ((shape.get("months") or {}).get("cur") or {}).get("lo") \
+        or filters.get("dateFrom")
+    vctx: dict = {"days": shape.get("days") if shape.get("days") is not None else 0, "kind": shape["kind"],
+                  "todayKst": today or kst_today()}
+    if cur_lo is not None:
+        vctx["curLo"] = cur_lo
+    return to_period_delta_view(results, vctx)
+
+
 def page_payload(filters: dict) -> dict:
     return {"ownLabel": own_label_of(filters), "period": period_of(filters)}
 
@@ -1069,10 +1100,13 @@ def rate_hero_payload(metric: str, sub: Any, prev: Any, engine: Any, period: Any
     competitors = [x["brand"] for x in ((trend or {}).get("brands") or []) if not x.get("isTracked")] if trend else []
     uniq = list(dict.fromkeys(competitors))
     values = [hero_trend_series(hero, trend, metric, [c])["brands"][0]["values"] for c in uniq]
+    # each round's numerator and denominator under 당사's rate (the original's tooltip), none without a rate
+    counts = [_parts(p["pct"], p["numerator"], p["denominator"]) for p in hero["points"]]
     return {
         "delta": hero["delta"],
         "standing": standing,
         "trend": {"missing": hero["trendMissing"], "x": base["x"], "own": base["own"], "average": base["average"],
+                  "ownNum": [c[0] for c in counts], "ownDen": [c[1] for c in counts],
                   "competitors": uniq, "values": values},
         "board": {"rows": board_rows, "axis": b["axis"], "measuredCycles": b["measuredCycles"],
                   "barMax": _max_from_one(r["pct"] if r["pct"] is not None else 0 for r in rows)},
@@ -1107,16 +1141,24 @@ def rate_types_payload(types_by_brand: Any, brands: list[dict], kpi: Any, engine
     own: dict = {}
     for m in RATE_METRICS:
         rows = type_own_rows(kpi, engine, m)
-        own[m] = {"rows": [{**r, "hasSpark": _has_value(r["spark"])} for r in rows],
+        # each round's answers (the original type chart's bar) and each line's type answers in them, none without a rate
+        x, rounds = _type_rounds(engine, m) if kpi else ([], [])
+        counts = {r["type"]: [_parts(v, b["byType"][r["type"]] if b else None)[0] for v, b in zip(r["spark"], rounds)] for r in rows}
+        own[m] = {"rows": [{**r, "hasSpark": _has_value(r["spark"]), "counts": counts[r["type"]]} for r in rows],
                   "maxPct": _max_from_one(r["pct"] if r["pct"] is not None else 0 for r in rows),
-                  "maxCount": _max_from_one(r["signals"] for r in rows)}
+                  "maxCount": _max_from_one(r["signals"] for r in rows),
+                  "x": x, "answers": [b["answers"] if b else None for b in rounds]}
     return {"degraded": bool(degraded), "cmp": cmp, "own": own}
 
 
 def favor_hero_payload(sub: Any, prev: Any, engine: Any, period: Any, degraded: bool) -> dict:
     h = favor_hero(sub, prev, engine, period)
     positive, total = _parts(h["positivePct"], h["positive"], h["total"])
-    return {**h, "positive": positive, "total": total, "degraded": bool(degraded)}
+    # each round's positive and all signals under its rates (the original's tooltip), none without a rate
+    rounds = _mv().favorability_trend_points(engine)
+    points = [{**p, **dict(zip(("positiveCount", "total"), _parts(p["positive"], r.get("positive"), r.get("total"))))}
+              for p, r in zip(h["points"], rounds)]
+    return {**h, "positive": positive, "total": total, "points": points, "degraded": bool(degraded)}
 
 
 def favor_dist_payload(totals: Any) -> dict:
@@ -1333,13 +1375,16 @@ async def rn_compare(q) -> dict:
 
 @screen("mention/rn-summary")
 async def rn_summary(q) -> dict:
-    _, filters, ctx = _begin(q)
+    """이번 회차 요약 and, in a calendar month, the 답변당 언급 수 line under it (`ctx.today` pins the KST day of its
+    month label, tests)."""
+    c, filters, ctx = _begin(q)
     md = _md()
     period, subs, prevs, engine, trend, tb, fp, brands, prev_brands, prev_engines = await asyncio.gather(
         md.load_period_compare(filters, ctx), _subs(md, filters, ctx), _prevs(md, filters, ctx), md.load_engine_kpi_trend(filters, ctx),
         md.load_brand_trend(filters, ctx, pin_top=True), md.load_types_by_brand(filters, ctx), md.load_first_position(filters, ctx, pin_top=True),
         _body_brands(md, filters, ctx), md.load_prev_period_brands(filters, ctx), md.load_prev_period_engines(filters, ctx))
-    return summary_payload(period, subs, prevs, engine, trend, tb, fp, brands, prev_brands, prev_engines)
+    return {**summary_payload(period, subs, prevs, engine, trend, tb, fp, brands, prev_brands, prev_engines),
+            "monthLine": per_answer_line(period, filters, c.get("today"))}
 
 
 @screen("mention/rn-rate-value")

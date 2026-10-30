@@ -44,6 +44,7 @@ export function FavorHeroCard() {
   const tF = useTranslations("answerAnalysis.mentions.kpi.favorability");
   const dg = useDegradedText();
   const tDef = useTranslations("dashboard.kpi");
+  const tTip = useTranslations("answerAnalysis.mentions.kpi.tooltip");
   const locale = useLocale();
   const h = use(input.favorHero);
   const degraded = h.degraded;
@@ -57,6 +58,16 @@ export function FavorHeroCard() {
   ];
   const x = h.points.map((p) => slotLabel(p.key));
   const tableOn = tables.has("fav-trend");
+  // each round's counts under its positive share (the original's tooltip; its WoW % is not carried — HUB-made)
+  const count = (v: number | null) => (v == null ? "—" : tTip("count", { n: numTxt(v, locale) }));
+  const roundNote = (i: number) => {
+    const p = h.points[i];
+    return p?.positiveCount == null ? null : [`${t("favor.posCount")} ${count(p.positiveCount)}`, `${t("favor.total")} ${count(p.total)}`];
+  };
+  const counts = [
+    { name: t("favor.posCount"), values: h.points.map((p) => p.positiveCount) },
+    { name: t("favor.total"), values: h.points.map((p) => p.total) },
+  ];
   return (
     <div className="grid grid-cols-1 gap-x-8 gap-y-4 px-6 pt-5.5 pb-5 @min-[640px]/rnpage:grid-cols-[minmax(240px,320px)_minmax(0,1fr)] [.rn-dense_&]:px-4.5 [.rn-dense_&]:py-3.5">
       <div className="flex min-w-0 flex-col gap-3">
@@ -113,7 +124,7 @@ export function FavorHeroCard() {
           <h3 className="m-0 text-rn-13 font-bold text-rn-ink">{t("favor.trendTitle")}</h3>
           <InfoTip label={t("hero.trendNoteLabel")} items={[[t("hero.trendNoteLabel"), tF("trendNote")]]} />
           <span className="ml-auto">
-            <MentionCardActions tableId="fav-trend" section="sec-overview" csv={() => ({ name: "mention-favorability-trend", rows: [["", ...h.points.map((p) => p.key)], ...series.map((s) => [s.name, ...s.values])] })} />
+            <MentionCardActions tableId="fav-trend" section="sec-overview" csv={() => ({ name: "mention-favorability-trend", rows: [["", ...h.points.map((p) => p.key)], ...[...series, ...counts].map((s) => [s.name, ...s.values])] })} />
           </span>
         </div>
         <Legend items={[...series].reverse()} />
@@ -122,9 +133,21 @@ export function FavorHeroCard() {
         ) : !h.points.length ? (
           <RnEmpty>{t("hero.noTrend")}</RnEmpty>
         ) : tableOn ? (
-          <TwinTable head={["", ...x]} rows={series.map((s) => [s.name, ...s.values.map((v) => pctTxt(v))])} />
+          <TwinTable
+            head={["", ...x]}
+            rows={[...series.map((s) => [s.name, ...s.values.map((v) => pctTxt(v))]), ...counts.map((c) => [c.name, ...c.values.map((v) => numTxt(v, locale))])]}
+          />
         ) : (
-          <RnLineChart x={x} series={series} height={236} yTick={(v) => `${v}%`} value={(v) => `${v.toFixed(1)}%`} tooltipTitle={(d) => t("hero.tooltip", { x: d })} ariaLabel={t("favor.trendAria")} />
+          <RnLineChart
+            x={x}
+            series={series}
+            height={236}
+            yTick={(v) => `${v}%`}
+            value={(v) => `${v.toFixed(1)}%`}
+            tooltipTitle={(d) => t("hero.tooltip", { x: d })}
+            tooltipNote={roundNote}
+            ariaLabel={t("favor.trendAria")}
+          />
         )}
       </div>
     </div>

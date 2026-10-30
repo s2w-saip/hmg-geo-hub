@@ -436,7 +436,8 @@ class ViewCards(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((sub["missingPrompts"], sub["multiMentionAnswers"], sub["top3Rate"], sub["top3Count"], sub["top3Base"]),
                          (7, 32, 76.7, 69, 90))
         self.assertEqual(got["deltas"], {
-            "total": {"diff": 90, "unit": "count", "tone": "good"}, "totalPrompts": {"diff": 2, "unit": "count", "tone": "neutral"},
+            # 전체 언급 수 counts every brand's mentions: not a 당사 measure, so no better side (renewal audit 5-4)
+            "total": {"diff": 90, "unit": "count", "tone": "neutral"}, "totalPrompts": {"diff": 2, "unit": "count", "tone": "neutral"},
             "missingPrompts": {"diff": -2, "unit": "count", "tone": "good"}, "multiMention": {"diff": 12, "unit": "count", "tone": "good"},
             "top3Rate": {"diff": 5.2, "unit": "pp", "tone": "good"}})  # exact values: 76.67 − 71.43, not 76.7 − 71.4
         self.assertEqual(got["prevBasisDate"], "2026-10-02")
@@ -516,3 +517,71 @@ class WeeklyTrendUnmeasured(unittest.TestCase):
         self.assertIsNotNone(gap)
         self.assertEqual((gap["HMG"], gap["Toyota"]), (None, None))
         self.assertIn("gap", gap)
+
+
+def _slot(d: str, **over) -> dict:
+    """An overview trend slot (to_standard_trend_buckets) of one round."""
+    return {"bucketStart": d, "roundDate": d, "gap": None, "answers": 10, "trackedAnswers": 6, "totalMentions": 20,
+            "trackedMentions": 8, "sentMentions": 10, "positiveMentions": 6, "avgPosition": None, "measuredDays": 1, **over}
+
+
+class RoundCounts(unittest.TestCase):
+    """Renewal audit 5-1: a KPI trend names each round's numerator and denominator, as the original's tooltips did
+    (kpi-trend-chart · favorability-trend-chart: the counts under the rate) and the type chart's answers per round
+    (type-kpi-section: the answers bar). The points carried them; the payload sent the rates only. A round without a
+    value sends no counts (unknown, not 0, as the heroes). The original's WoW % is HUB-made and not carried."""
+
+    SUB = {"rows": [], "promptsWithoutBrand": None, "measuredPrompts": None}
+
+    def engine(self, slots: list[dict], **over) -> dict:
+        return {"unit": "week", "engines": [], "buckets": [], "overviewSlots": slots, "trendDegraded": False, **over}
+
+    def test_the_rate_trend_names_each_rounds_counts(self):
+        slots = [_slot("2026-09-28"), _slot("2026-10-05", trackedAnswers=7, answers=0, trackedMentions=9, totalMentions=30)]
+        for metric, num, den in (("exposure", [6, None], [10, None]), ("sov", [8, 9], [20, 30])):
+            t = rn.rate_hero_payload(metric, self.SUB, None, self.engine(slots), None, [], None)["trend"]
+            self.assertEqual((t["x"], t["ownNum"], t["ownDen"]), (["2026-09-28", "2026-10-05"], num, den), metric)
+
+    def test_the_favorability_trend_names_each_rounds_signals(self):
+        slots = [_slot("2026-09-28"), _slot("2026-10-05", positiveMentions=0, sentMentions=0)]
+        pts = rn.favor_hero_payload(self.SUB, None, self.engine(slots), None, False)["points"]
+        self.assertEqual([(p["key"], p["positiveCount"], p["total"]) for p in pts], [("2026-09-28", 6, 10), ("2026-10-05", None, None)])
+
+    def test_the_type_trend_names_each_rounds_answers(self):
+        slots = [_slot("2026-09-28"), _slot("2026-10-05")]
+        engine = self.engine(slots, typeTrend=[
+            {"bucketStart": "2026-09-28", "answers": 10, "byType": {**dict.fromkeys(TYPES, 0), "mention": 5}},
+            {"bucketStart": "2026-10-05", "answers": 20, "byType": {**dict.fromkeys(TYPES, 0), "mention": 12}}])
+        kpi = {"rows": [{"type": t, "ownExposurePct": 60.0, "ownMentions": 3} for t in TYPES], "ownMentions": 9,
+               "sentimentMatrix": {"own": []}}
+        own = rn.rate_types_payload(None, [], kpi, engine, None, False)["own"]
+        self.assertEqual((own["exposure"]["x"], own["exposure"]["answers"]), (["2026-09-28", "2026-10-05"], [10, 20]))
+        mention = next(r for r in own["exposure"]["rows"] if r["type"] == "mention")
+        self.assertEqual((mention["spark"], mention["counts"]), ([50.0, 60.0], [5, 12]))
+        self.assertEqual((own["sov"]["x"], own["sov"]["answers"]), ([], []))
+        self.assertTrue(all(r["counts"] == [] for r in own["sov"]["rows"]))
+
+
+class PerAnswerMonthLine(unittest.TestCase):
+    """Renewal audit 5-2: in a calendar month the original showed the period line under the KPI tabs, its 답변당 언급 수
+    Δ among them (kpi-period monthLine). The renewal page asks the reader for it (the reader answers when asked,
+    audit U10) but showed none. Like the renewal Citation's month line, the line carries the one compare metric no tab
+    shows; a window, a week or no period has none."""
+
+    MPA = {"metric": "mentionsPerAnswer", "unit": "pct", "delta": 4.2, "reason": None, "cur": {"collectedDays": 30}}
+
+    def period(self, months: bool) -> dict:
+        shape = {"kind": "calendarMonth", "days": 30, "months": {"cur": {"lo": "2026-09-01"}}} if months else {"kind": "window", "days": 30}
+        return {"compare": [{"metric": "visibility", "unit": "pp", "delta": 1.0, "reason": None}, self.MPA],
+                "days": 30, "kind": shape["kind"], "shape": shape}
+
+    def test_a_calendar_month_names_the_per_answer_change(self):
+        line = rn.per_answer_line(self.period(True), {"dateFrom": "2026-09-01", "dateTo": "2026-09-30"}, "2026-10-31")
+        self.assertEqual([c["key"] for c in line["chips"]], ["mentionsPerAnswer"])
+        self.assertEqual(line["presetKey"], "lastMonth")
+        self.assertFalse(line["chips"][0]["suppressed"])
+
+    def test_no_month_no_line(self):
+        self.assertIsNone(rn.per_answer_line(self.period(False), {"dateFrom": "2026-09-01", "dateTo": "2026-09-30"}, "2026-10-31"))
+        self.assertIsNone(rn.per_answer_line({"compare": None, "kind": "window", "shape": {"kind": "window"}}, {}, "2026-10-31"))
+        self.assertIsNone(rn.per_answer_line(None, {}, "2026-10-31"))

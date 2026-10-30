@@ -4,6 +4,7 @@ import { Suspense, use, useCallback, useEffect, useMemo, useRef, useState } from
 import { useTranslations } from "next-intl";
 import { ChevronDown, CircleSlash, FilterX, Hourglass, X } from "lucide-react";
 import { ENGINE_LABEL } from "@/components/dash/dimension-filter-panel";
+import { PeriodDeltaLine } from "@/components/dash/period-delta-line";
 import {
   RnBasisChip,
   RnButton,
@@ -123,6 +124,9 @@ function Measured({ shell }: { shell: RnShellVM }) {
         <Suspense fallback={<SummarySkeleton />}>
           <Summary />
         </Suspense>
+        <Suspense fallback={null}>
+          <PerAnswerLine />
+        </Suspense>
         {input.afterSummary}
         <RnMentionTabs />
         {view === "brands" ? (
@@ -213,6 +217,14 @@ function ComparePicker() {
 }
 
 // ── 이번 회차 요약 ─────────────────────────────────────────────────────────────
+
+/** A calendar month: the original's period line under the KPIs with the one compare metric no tab shows, 답변당 언급 수
+ * (renewal audit 5-2; the renewal Citation keeps its 답변당 인용 수 line the same way). */
+export function PerAnswerLine() {
+  const { input } = useMention();
+  const line = use(input.summary).monthLine;
+  return line ? <PeriodDeltaLine view={line} className="mt-0" /> : null;
+}
 
 function SummarySkeleton() {
   return (

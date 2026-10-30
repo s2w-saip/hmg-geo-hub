@@ -253,6 +253,21 @@ Deliberate changes (what the screen shows changed by decision):
     `args` gains `categorySlug`, the slug Gold's `dim_category` gives its recorded `category` name (null for a name Gold
     has none for: "News", null). The outputs are the recorded ones.
 
+- 2026-10-31 renewal audit step 5 (Mention KPI tabs). 24 cases change, only in these keys:
+  - 5-1 (additive): a KPI trend names each round's counts, as the original's tooltips and type chart did. `rn-rate-hero`
+    `trend.ownNum` / `ownDen` (당사's numerator and denominator on `x`), `rn-favor-hero` `points[].positiveCount` /
+    `total` (the signal counts under the positive share), `rn-rate-types` `own.<metric>.x` / `answers` (the exposure
+    lines' rounds and each round's answers; [] for the share view) and `rows[].counts` (the type's own answers per
+    round). A round without a rate sends none (null). `rn-fn-rate-hero` (242 calls), `rn-fn-favor-hero` (121),
+    `rn-fn-rate-types` (121) and the 18 `rn-fix-*` · `rn-live-*` bundles.
+  - 5-2 (additive): `mention/rn-summary` adds `monthLine` — in a calendar month the original's period line with the one
+    compare metric no tab shows, 답변당 언급 수 (`mentionsPerAnswer`, which the reader answers when asked); null otherwise.
+    The 18 bundles; only `rn-live-month` is a calendar month, and its `args` gained `ctx.today` 2026-10-31 so the line's
+    month label (`presetKey` lastMonth) does not follow the replay day.
+  - 5-4: the summary cards' 전체 언급 수 Δ (every brand's mentions, not a 당사 measure) is `neutral`; a rise read as
+    good. Shared with the original website / project Mention: `mention/fix-view-website-01` (good → neutral), `-02`,
+    `-04` (bad → neutral).
+
 ## Format
 
 Each file is `<family>/<case>.json.gz` (compact JSON, gzip). Two kinds:

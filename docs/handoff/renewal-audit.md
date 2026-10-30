@@ -6,7 +6,7 @@
 - 병렬 세션으로 나누지 않고 한 세션이 순서대로 한다.
 - 단계마다 새 하위 에이전트가 깨끗한 컨텍스트로 맡는다(B 방식).
 
-**현재 위치:** 5단계(Mention ① KPI 탭) 시작 전. 4단계 끝(단계 메모 '4단계'). 마지막 커밋: 4단계를 올린 커밋.
+**현재 위치:** 6단계(Mention ② 브랜드 순위 표 전체 · 열 정의) 시작 전. 5단계 끝(단계 메모 '5단계'). 마지막 커밋: 5단계를 올린 커밋.
 
 ## 진행 방식 (단계마다 새 하위 에이전트)
 
@@ -93,7 +93,7 @@
 | 2 | Website 범위 계정 접근 | ⛔J | [x] |
 | 3 | 공통 스파크라인 회차 값 · Overview 표시 | — | [x] |
 | 4 | 경쟁사 브랜드 접기(공용 모듈) · Overview 데이터 | 1 | [x] |
-| 5 | Mention ① KPI 탭: 회차별 분자 · 분모, 답변당 언급 수 Δ, 당사 평균 위치 | 1 | [ ] |
+| 5 | Mention ① KPI 탭: 회차별 분자 · 분모, 답변당 언급 수 Δ, 당사 평균 위치 | 1 | [x] |
 | 6 | Mention ② 브랜드 순위 표 전체 · 열 정의 | — | [ ] |
 | 7 | Mention ③ 서랍 · 드릴다운 | — | [ ] |
 | 8 | Mention ④ 귀속 · 트리맵 · bump | 1 | [ ] |
@@ -242,17 +242,17 @@ Global과 Website가 같은 본문을 쓴다. Website는 `mention/rn-*`를 ctx.s
 - 원본: `AA/kpi/kpi-trend-chart.tsx` 62-90, `AA/kpi/favorability-trend-chart.tsx` 69-70, `AA/kpi/type-kpi-section.tsx` 351
 
 **할 일**
-- [ ] 5-1 회차별 분자 · 분모를 되살린다(노출률 · 우호도 추이 툴팁, 유형 차트의 회차별 답변 수).
+- [x] 5-1 회차별 분자 · 분모를 되살린다(노출률 · 우호도 추이 툴팁, 유형 차트의 회차별 답변 수).
   - BFF points에는 분자 · 분모가 있지만 응답에서 뺀다(`mention_renewal.py` ~267 · ~305 · ~1075).
   - 추이 툴팁 · 표 보기 · CSV(`mention-rate.tsx` ~194 · 207, 지금은 %만)에 수를 더한다.
   - 원본의 WoW%는 HUB가 만든 값이라 옮기지 않는다.
-- [ ] 5-2 답변당 언급 수 Δ(달력 월 모드)를 되살린다.
+- [x] 5-2 답변당 언급 수 Δ(달력 월 모드)를 되살린다.
   - `resolve_delta`와 `COMPARE_KEY`(~62)가 지표 4개만 고른다. BFF는 이 값을 요청하고 있다.
   - U10이 '돌려줌'이면 기간 칩 줄에 더한다. 아니면 업스트림 질문으로 둔다.
-- [ ] 5-3 당사 평균 위치 추이를 Gold 관점 회차 값(`_trend.py` ~347 `overviewSlots.avgPosition`)으로 바꾼다.
+- [x] 5-3 당사 평균 위치 추이를 Gold 관점 회차 값(`_trend.py` ~347 `overviewSlots.avgPosition`)으로 바꾼다.
   - 지금은 당사 브랜드별 위치를 HUB가 가중평균한다(`mention_view.py` `_own_weighted_position` · `own_position_series`, `mention_renewal.py` ~332 · ~551). 히어로 값은 Gold 관점 값이라 마지막 점과 어긋날 수 있다.
   - 원본 Global 위치 추이도 같은 함수를 쓰는지 보고 단계 메모에 적는다.
-- [ ] 5-4 Website KPI 세부 지표의 '전체 언급 수' 증가를 좋아짐(초록)으로 칠한다(`BS/mention_surfaces.py` ~65, `site-cards.tsx` ~213-216). 당사 지표가 아닌 셈(전체 언급 · 언급 브랜드 수 등)은 방향 색 없이 중립으로 칠한다.
+- [x] 5-4 Website KPI 세부 지표의 '전체 언급 수' 증가를 좋아짐(초록)으로 칠한다(`BS/mention_surfaces.py` ~65, `site-cards.tsx` ~213-216). 당사 지표가 아닌 셈(전체 언급 · 언급 브랜드 수 등)은 방향 색 없이 중립으로 칠한다.
 
 **시험.** `test_screens_mention_renewal`, `test_screens_mention`, golden(mention), Mention render 시험, 원본 `/ko/standard/answer-analysis/mention` 대조(위치 추이).
 
@@ -615,6 +615,28 @@ Website 인용 도달 Δ도 값 출처(발행 / 실시간)가 다르면 숨긴�
   - **golden.** 함수 case 3개(README 'Deliberate changes' 2026-10-31 4-4): 변환 case 출력에 `categorySlug`, 두 case 입력에 `categorySlug`를 더했다. 화면 출력은 바뀌지 않는다(screen · live case 그대로).
   - **원본 대조.** 원본 `/ko/dashboard` 인용 점유율 카드의 경쟁사 줄(Mercedes-Benz 2.2% · Toyota 1.7% · Tesla 1.3% · Volvo 1.1%)이 리뉴얼 브랜드 비교 표의 인용 점유율 열과 같다. 권역 행도 두 화면이 같다. 리뉴얼 · 원본 Global · Website Overview 4화면이 오류 화면 · 5xx 없이 열린다.
   - **다음 단계가 알 것.** 카테고리를 이름으로 비교하는 곳이 `BS/citation_model.py`에 남아 있다(`OFFICIAL_COMPETITOR_CATEGORY`, 경쟁사 고르기 · 카테고리 숨김 등). 같은 이유로 slug로 바꿀 후보다(9 · 10단계). `competitor_value_index`와 경쟁사 Δ 찾기는 이름(= Gold bare)으로 짝을 짓는다.
+- **5단계(2026-10-31).** 5-1 · 5-2 · 5-4를 고쳤다. 재현 시험은 고치기 전에 실패했다(BFF 6개 · render 6개). 5-3은 재현되지 않았다. Global과 Website는 같은 본문이라 둘 다 바뀐다.
+  - **5-1.** BFF가 회차별 수를 보낸다. 노출률 · 점유율 추이는 `rn-rate-hero` `trend.ownNum` · `ownDen`, 우호도 추이는 `rn-favor-hero` `points[].positiveCount` · `total`이다. 유형 선(당사 노출률 추이 보기)은 `rn-rate-types` `own.exposure.x` · `answers`(회차 답변 수)와 `rows[].counts`(그 유형 답변 수)다. 값이 없는 회차는 수도 null이다(히어로와 같은 규칙).
+    - 화면: 추이 툴팁 아래에 당사의 분자 · 분모 두 줄을 둔다(공용 `RnLineChart`에 선택 prop `tooltipNote`를 더함, 없으면 예전과 같음). 표 보기 · CSV에 두 행을 더한다. 유형 선은 점마다 툴팁 '회차 · 비율 / 당사 {유형} 답변 n개 / 전체 답변 N개'(3단계 `RnSparkline` `tips`)를 보이고, CSV에 회차 열과 '회차 답변 수' 행을 더한다. 문구 `renewal.mention.type.sparkTip` · `sparkTipCounts` · `colRoundAnswers`(ko · en).
+    - 원본의 WoW %(분자 · 분모의 직전 회차 대비 %)는 HUB가 만든 값이라 옮기지 않았다.
+    - 점유율 추이에도 같은 두 줄(당사 브랜드 언급 수 · 전체 브랜드 언급 수)을 둔다. 원본 점유율 탭은 보통 브랜드 선 차트(수 없음)이고, 브랜드 선이 없을 때만 수가 있는 당사 선을 그렸다. 같은 Gold 값을 보일 뿐이다.
+  - **5-2.** U10대로 리더는 요청한 `mentions_per_answer`를 돌려준다. 리뉴얼 Mention에는 '기간 칩 줄'이 없어서, 원본 KPI 본문의 달력 월 줄(`kpi-period` monthLine)을 요약 카드 바로 아래에 되살렸다. 줄에는 탭 · 히어로에 없는 지표 하나, 답변당 언급 수만 둔다. 리뉴얼 Citation이 답변당 인용 수 줄을 둔 방식과 같다(`load_period_view`). 다른 네 지표의 기간 Δ는 탭과 히어로에 이미 있다.
+    - BFF `mention/rn-summary`에 `monthLine`(`per_answer_line`, 달력 월만, 그 밖에는 null)을 더했다. `ctx.today`가 월 라벨의 오늘을 고정한다(시험). 화면은 공용 `PeriodDeltaLine`(`PerAnswerLine`, `mention-body.tsx`)이다. 새 BFF 화면이 아니라서 아키텍처 문서는 그대로다.
+  - **5-3 재현 안 됨.** U11의 차이(당사 브랜드 가중평균 > Gold 관점 값)는 Gold 표 두 개(brand_cell · kpi_cell)를 견준 것이다. BFF 위치 추이(`mention_view.own_position_series`)는 브랜드 추이 읽기의 당사 행을 가중평균한다. 그런데 리더는 2026-10-29 지표 점검 R1부터 당사 행을 관점마다 하나만 보낸다. 그 값은 관점의 날짜 합계, 곧 kpi_cell 관점 값이다(`gold_reader/metrics.py` `brand_series`). 그래서 가중평균은 그 한 행 그대로이고 Gold 관점 값과 같다.
+    - live API로 확인했다. 브랜드 추이 당사 position과 관점 추이(dimension=none) position이 global HMG 14회차(2.747 … 2.353), website HMG 14회차(1.032 … 1.070) 모두 소수 셋째 자리까지 같다. 리뉴얼 선의 마지막 점 2.4 = 히어로 2.4다.
+    - golden의 3.4(히어로 2.4)는 R1 이전(10-26) 녹음 테이프가 당사 행을 브랜드별로 나눠 보냈기 때문이다. live에서는 생기지 않는다. 코드는 그대로 두고 `rank_hero`에 주석을 달았다.
+    - 원본 Global 위치 추이: 원본 우선 노출도 차트(`rank_trend_chart`)는 같은 브랜드 추이 읽기의 당사 행('HMG')을 그대로 그린다. `own_position_series`는 원본 히어로가 Overview 카드 값이 없을 때만 쓰는 대체 경로다. live 원본 HMG 선은 리뉴얼 선과 14회차 모두 같다(2.7 … 2.4).
+  - **5-4.** `mention_surfaces.summary_deltas`의 전체 언급 수 Δ를 `neutral`로 바꿨다(전 브랜드 언급 합이라 당사 지표가 아님). 측정 프롬프트 수는 이미 중립이다. 언급 브랜드 수는 Δ가 없다. 당사 지표(미언급 프롬프트 · 복수 언급 답변 · Top 3)는 방향 색을 그대로 둔다. 공용 함수라 원본 website · project Mention 요약 카드의 색도 같이 바뀐다(값은 그대로).
+  - **golden.** 24건(README 'Deliberate changes' 2026-10-31 step 5). 5-1 · 5-2는 키만 더했다: 함수 case 3개(`rn-fn-rate-hero` · `rn-fn-favor-hero` · `rn-fn-rate-types`)와 번들 18개. 달력 월 번들 `rn-live-month`는 args에 `ctx.today` 2026-10-31을 넣었다. 5-4는 원본 website fixture 3개의 tone이다. 다른 값은 바뀌지 않는다.
+  - **원본 대조(live, 관리자).** 필터 없음 · 미국 · gemini · 2026-09 네 조건에서 견줬다.
+    - 노출률 회차별 분자 · 분모가 원본 `mention/kpi-hero-trend`와 14회차 모두 같다(10-05 34,452 / 44,979).
+    - 우호도 긍정 · 전체 신호 수가 원본 `mention/favor-trend`와 같다(10-05 175,995 / 325,173).
+    - 유형 선의 회차 답변 수가 원본 유형 차트 막대(`mention/kpi-engines` combo `answers`)와 같다.
+    - 2026-09 답변당 언급 수 칩이 원본 달력 월 줄과 같다(▼10.9%, 전전월 대비, 현재 4회차 / 직전 5회차). Website 2026-09는 ▼17.6%다.
+    - Website 요약 카드 전체 언급 수 Δ는 이제 neutral이다.
+  - **화면 확인.** 리뉴얼 Global · Website Mention(기본 · 2026-09 · 우호도 탭 · 유형 당사 보기)을 1920×915로 열었다. 오류 화면과 5xx가 없었다. 툴팁 아래 줄, 기간 줄, 유형 점 툴팁이 보였다.
+    - 관찰(이 단계 밖): Next 개발 오버레이에 hydration 불일치 1건이 뜬다. 위치는 `_shell/rn-sidebar.tsx` NavGroup(226행) `id`다. 이 단계 파일이 아니다. 첫 방문의 404 1건은 페이지 요청이 아니다(Playwright 응답에 잡히지 않음).
+  - **다음 단계가 알 것.** 공용 `RnLineChart`에 `tooltipNote`(점 index → 줄 목록)가 생겼다. 6단계 이후 추이 차트에 회차별 수를 보일 때 쓴다. `TrendTooltip`은 시험을 위해 `charts.tsx`에서 내보낸다(index에는 없음). `Types`는 `initialView` prop으로 내보낸다(render 시험).
 
 ## 진행 기록
 
@@ -623,3 +645,4 @@ Website 인용 도달 Δ도 값 출처(발행 / 실시간)가 다르면 숨긴�
 - 2026-10-31 — 2단계: ⛔J 추천안대로 website를 범위 계정(hq · region · country)에게 열었다(`access.clamp`, 사이트 국가 + SA 도시 사이트, project는 403). 원본 규칙대로 같이 고쳤다: 패널 국가 · 언어 선택지를 계정 범위로 좁힘(global · website), 브랜드 하나인 계정의 Website 시장별 현황, 모든 계정에서 오류였던 Website Overview(`engineLabel` 서버 · 클라이언트 경계, `ae8da9d`). 재현 시험은 고치기 전에 실패했다. 2-3(전용 사이트 계정)은 HUB에 그런 계정이 없어 해당 없음이다. 시험: BFF 34개 모듈 전부(+live 8개), 프런트 관련 시험 · typecheck · lint, e2e 24항목 + Global 4화면. 다음은 3단계다.
 - 2026-10-31 — 3단계: 스파크라인 점마다 회차 · 값 · 직전 회차 Δ 툴팁(`RnSparkline` `tips`, Global Overview 카드), 당사 SOV 분자가 없을 때 경쟁사 대비 SOV '—', 비교 라벨을 카드들이 같이 가질 때만 머리에 두고 다르면 카드마다(Global `compareTitle`, Website `periodLabel` · `compareTitle`, Website '같은 길이' 문구 제거), 브랜드 표 Δ 없음 표시, 효과 없는 컨테이너 쿼리 · 쓰지 않는 문구 18개 정리. 재현 시험은 모두 고치기 전에 실패했다. golden 26건 의도 변경. 시험: BFF 34개 모듈 전부(+live 8개), 프런트 관련 23개 파일 181개 · typecheck · lint, 두 Overview 실제 화면 확인 · 원본 툴팁 대조. 다음은 4단계다.
 - 2026-10-31 — 4단계: 인용 점유율 카드 경쟁사 줄이 카테고리를 이름 대신 Gold slug(`officialCompetitor`)로 고른다(4-4, 재현 시험은 고치기 전에 실패). 4-1은 BFF의 이름 접기 키가 Gold `dim_brand.bare`(UNIQUE)와 같아 재현되지 않았다(5,273개 브랜드 충돌 0). 4-2는 U5가 같아 할 일이 없다. 4-3은 화면에 RHQ id가 쓰이는 곳이 없어 재현되지 않았다. golden 함수 case 3개(slug 키 추가, 화면 출력 그대로). 시험: BFF 34개 모듈 전부(+live 8개), Overview 4화면 실제 확인 · 원본 대조. 다음은 5단계다.
+- 2026-10-31 — 5단계: Mention KPI 탭에 회차별 분자 · 분모를 되살렸다(노출률 · 점유율 · 우호도 추이 툴팁 · 표 · CSV, 유형 선 점 툴팁 · CSV의 회차 답변 수, 5-1). 달력 월에는 요약 아래 답변당 언급 수 기간 줄을 되살렸다(5-2, Citation 방식). Website 요약 카드의 전체 언급 수 Δ는 중립이다(5-4, 원본 website · project도 같이). 재현 시험은 고치기 전에 실패했다. 5-3은 재현되지 않았다. 리더가 R1부터 당사 행을 관점 값 하나로 보내 위치 추이가 이미 Gold 관점 값이다(live 14회차 일치). golden 24건 의도 변경. 시험: BFF 34개 모듈 571개(+live 8개), 프런트 관련 12개 파일 78개 · typecheck · lint, 원본 대조 4조건, Global · Website 실제 화면. 다음은 6단계다.

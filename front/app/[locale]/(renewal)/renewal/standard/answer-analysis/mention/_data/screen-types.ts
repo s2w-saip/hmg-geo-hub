@@ -4,7 +4,7 @@
 
 import type { KpiTab } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/kpi-tab";
 import type { MentionTypeKey } from "@/lib/db/repositories/scope-aggregates";
-import type { PeriodCaptionMessage } from "@/lib/kpi/period-compare-view";
+import type { PeriodCaptionMessage, PeriodDeltaView } from "@/lib/kpi/period-compare-view";
 
 export type SentimentKey = "positive" | "neutral" | "mixed" | "negative";
 export const SENTIMENT_KEYS: readonly SentimentKey[] = ["positive", "neutral", "mixed", "negative"];
@@ -122,6 +122,8 @@ export interface RnSummaryVM {
   typeFindings: TypeFinding[];
   /** per pick: the type finding (index) and the four shown, highest priority first (-1 = the type finding) */
   options: Record<string, { type: number | null; order: number[] }>;
+  /** a calendar month: the original's period line with the one compare metric no tab shows (답변당 언급 수); else null */
+  monthLine: PeriodDeltaView | null;
 }
 
 /** A metric without a value (its read failed or was suppressed) has no numerator or denominator either (null). */
@@ -157,6 +159,9 @@ export interface RnRateHeroMetric {
     own: (number | null)[];
     /** the competitors' average (shown when nothing is picked) */
     average: (number | null)[] | null;
+    /** 당사's numerator and denominator per round, on x (null without a rate) */
+    ownNum: (number | null)[];
+    ownDen: (number | null)[];
     competitors: string[];
     /** per competitor, on x */
     values: (number | null)[][];
@@ -191,6 +196,8 @@ export interface TypeOwnRow {
   pct: number | null;
   signals: number;
   spark: (number | null)[];
+  /** the type's own answers per round, on the view's x (null without a rate; [] for the share view) */
+  counts: (number | null)[];
   delta: number | null;
   hasSpark: boolean;
 }
@@ -207,7 +214,8 @@ export interface RnRateTypesVM {
     dots: DotCell[][];
     options: Record<string, { refs: string[][]; top: number }>;
   };
-  own: Record<"exposure" | "sov", { rows: TypeOwnRow[]; maxPct: number; maxCount: number }>;
+  /** `x` = the rounds of the lines and `answers` = each round's answers (the exposure view; [] for the share view) */
+  own: Record<"exposure" | "sov", { rows: TypeOwnRow[]; maxPct: number; maxCount: number; x: string[]; answers: (number | null)[] }>;
 }
 
 export interface RnFavorHeroVM {
@@ -219,7 +227,8 @@ export interface RnFavorHeroVM {
   positiveDelta: RnDelta;
   negativeDelta: RnDelta;
   mixedBasis: boolean;
-  points: Array<{ key: string; positive: number | null; negative: number | null; gap: boolean }>;
+  /** per round: the signal shares and the counts under the positive one (null without a share) */
+  points: Array<{ key: string; positive: number | null; negative: number | null; positiveCount: number | null; total: number | null; gap: boolean }>;
   trendMissing: boolean;
   degraded: boolean;
 }

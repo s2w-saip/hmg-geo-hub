@@ -175,9 +175,16 @@ function HeroTrend({ metric }: { metric: KpiMetric }) {
   const { ownLabel, lit, hover, tables } = useMention();
   const { compare, colorOf } = useCompare();
   const t = useTranslations("renewal.mention");
+  const tTip = useTranslations("answerAnalysis.mentions.kpi.tooltip");
   const dg = useDegradedText();
+  const locale = useLocale();
   const s = useHero(metric).trend;
   const name = useMetricShort(metric);
+  // 당사's counts per round under its rate (the original's tooltip; its WoW % is not carried — HUB-made)
+  const numLabel = tTip(metric === "sov" ? "sovNumerator" : "exposureNumerator");
+  const denLabel = tTip(metric === "sov" ? "sovDenominator" : "exposureDenominator");
+  const count = (v: number | null) => (v == null ? "—" : tTip("count", { n: numTxt(v, locale) }));
+  const note = (i: number) => (s.ownNum[i] == null ? null : [`${numLabel} ${count(s.ownNum[i])}`, `${denLabel} ${count(s.ownDen[i])}`]);
   // the picked brands' lines (looked up), else the competitors' average
   const average = compare.length === 0 ? s.average : null;
   const brands = compare.filter((b) => s.competitors.includes(b)).map((key) => ({ key, values: s.values[s.competitors.indexOf(key)] }));
@@ -195,7 +202,11 @@ function HeroTrend({ metric }: { metric: KpiMetric }) {
         <h3 className="m-0 text-rn-13 font-bold text-rn-ink">{t(metric === "sov" ? "hero.trendTitleSov" : "hero.trendTitleExposure")}</h3>
         <InfoTip label={t("hero.trendNoteLabel")} items={[[t("hero.trendNoteLabel"), t("hero.trendNote", { metric: name })]]} />
         <span className="ml-auto">
-          <MentionCardActions tableId={id} section="sec-overview" csv={() => ({ name: `mention-${metric}-trend`, rows: [["", ...s.x], ...series.map((r) => [r.name, ...r.values])] })} />
+          <MentionCardActions
+            tableId={id}
+            section="sec-overview"
+            csv={() => ({ name: `mention-${metric}-trend`, rows: [["", ...s.x], ...series.map((r) => [r.name, ...r.values]), [numLabel, ...s.ownNum], [denLabel, ...s.ownDen]] })}
+          />
         </span>
       </div>
       <Legend items={[...series].reverse()} />
@@ -204,7 +215,10 @@ function HeroTrend({ metric }: { metric: KpiMetric }) {
       ) : !s.x.length ? (
         <RnEmpty>{t("hero.noTrend")}</RnEmpty>
       ) : tableOn ? (
-        <TwinTable head={["", ...x]} rows={series.map((r) => [r.name, ...r.values.map((v) => pctTxt(v))])} />
+        <TwinTable
+          head={["", ...x]}
+          rows={[...series.map((r) => [r.name, ...r.values.map((v) => pctTxt(v))]), [numLabel, ...s.ownNum.map((v) => numTxt(v, locale))], [denLabel, ...s.ownDen.map((v) => numTxt(v, locale))]]}
+        />
       ) : (
         <RnLineChart
           x={x}
@@ -213,6 +227,7 @@ function HeroTrend({ metric }: { metric: KpiMetric }) {
           yTick={(v) => `${v}%`}
           value={(v) => `${v.toFixed(1)}%`}
           tooltipTitle={(d) => t("hero.tooltip", { x: d })}
+          tooltipNote={note}
           ariaLabel={t("hero.trendAria", { metric: name })}
           lit={lit}
           onHover={hover}
@@ -405,7 +420,8 @@ function Engines({ metric }: { metric: KpiMetric }) {
 
 // ── 멘션 유형 ────────────────────────────────────────────────────────────────
 
-function Types({ metric }: { metric: KpiMetric }) {
+/** `initialView` opens another view first (render tests). */
+export function Types({ metric, initialView = "cmp" }: { metric: KpiMetric; initialView?: "cmp" | "own" }) {
   const { input, ownLabel, tables } = useMention();
   const { compare, colorOf } = useCompare();
   const t = useTranslations("renewal.mention.type");
@@ -415,7 +431,7 @@ function Types({ metric }: { metric: KpiMetric }) {
   const locale = useLocale();
   const vm = use(input.rateTypes);
   const degraded = vm.degraded;
-  const [view, setView] = useState<"cmp" | "own">("cmp");
+  const [view, setView] = useState<"cmp" | "own">(initialView);
   const [unit, setUnit] = useState<"pct" | "count">("pct");
   const { rows: cmpRows, top } = useMemo(() => typeRowsOf(vm.cmp, compare), [vm.cmp, compare]);
   const own = vm.own[metric];
@@ -423,10 +439,24 @@ function Types({ metric }: { metric: KpiMetric }) {
   const id = `type-${metric}`;
   const tableOn = tables.has(id);
   const isCmp = view === "cmp";
+  // the exposure lines' rounds: each point names its type answers and the round's answers (the original type chart's bar)
+  const sparkTips = (r: (typeof ownRows)[number]) =>
+    r.spark.map((v, i) =>
+      v == null
+        ? null
+        : `${t("sparkTip", { day: slotLabel(own.x[i]), pct: pctTxt(v) })}\n${t("sparkTipCounts", { type: tType(r.type), n: numTxt(r.counts[i], locale), den: numTxt(own.answers[i], locale) })}`,
+    );
   const csv = () =>
     isCmp
       ? { name: `mention-type-compare`, rows: [[t("colType"), ownLabel, ...compare, t("avg", { n: TYPE_AVG_TOP }), t("colGap")], ...cmpRows.map((r) => [tType(r.type), r.own, ...r.dots.map((d) => d.value), r.avg, r.gap])] }
-      : { name: `mention-type-own-${metric}`, rows: [[t("colType"), t(metric === "sov" ? "colOwnSov" : "colOwnExposure"), t("colSignals"), t("colDelta")], ...ownRows.map((r) => [tType(r.type), r.pct, r.signals, r.delta])] };
+      : {
+          name: `mention-type-own-${metric}`,
+          rows: [
+            [t("colType"), t(metric === "sov" ? "colOwnSov" : "colOwnExposure"), t("colSignals"), t("colDelta"), ...own.x],
+            ...ownRows.map((r) => [tType(r.type), r.pct, r.signals, r.delta, ...r.spark]),
+            ...(own.x.length ? [[t("colRoundAnswers"), "", "", "", ...own.answers]] : []),
+          ],
+        };
   const empty = isCmp ? !cmpRows.length : !ownRows.length;
   return (
     <>
@@ -503,7 +533,7 @@ function Types({ metric }: { metric: KpiMetric }) {
                 </span>
                 <span className="text-right font-bold text-rn-ink tabular-nums">{unit === "count" ? t("signals", { n: numTxt(r.signals, locale) }) : pctTxt(r.pct)}</span>
                 <span className="justify-self-end">{unit === "pct" && metric === "exposure" ? <DeltaChip value={r.delta} /> : null}</span>
-                <span>{metric === "exposure" && r.hasSpark ? <RnSparkline values={r.spark} className="h-[24px]" /> : null}</span>
+                <span>{metric === "exposure" && r.hasSpark ? <RnSparkline values={r.spark} tips={sparkTips(r)} className="h-[24px]" /> : null}</span>
               </div>
             );
           })}

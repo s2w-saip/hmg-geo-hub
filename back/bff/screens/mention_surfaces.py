@@ -60,9 +60,12 @@ def summary_delta(cur: Any, prev: Any, unit: str, positive_is_good: bool | None)
 
 
 def summary_deltas(sub: dict | None, prev: dict | None) -> dict:
+    """The summary cards' Δ and tone. A count that is not 당사's — 전체 언급 수 (every brand's mentions), the
+    measured prompts — has no better side and is neutral (renewal audit 5-4: more mentions of all brands read as
+    good for 당사); 당사's counts keep their side (미언급 프롬프트 down, 복수 언급 답변 and Top 3 up)."""
     p = prev or {}
     s = sub or {}
-    out = {"total": summary_delta(s.get("totalMentions"), p.get("totalMentions"), "count", True),
+    out = {"total": summary_delta(s.get("totalMentions"), p.get("totalMentions"), "count", None),
            "totalPrompts": summary_delta(s.get("measuredPrompts"), p.get("measuredPrompts"), "count", None)}
     if sub:
         out.update({"missingPrompts": summary_delta(sub.get("missingPrompts"), p.get("missingPrompts"), "count", False),

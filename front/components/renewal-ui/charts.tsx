@@ -69,26 +69,34 @@ function spread(ys: number[], gap: number, max: number): number[] {
   return out;
 }
 
-function TrendTooltip({
+/** The data row's key holding its index on x (the tooltip note's argument). */
+const ROW_INDEX = "__rnRow";
+
+/** The chart's tooltip (exported for its render test). */
+export function TrendTooltip({
   active,
   payload,
   label,
   series,
   value,
   title,
+  note,
 }: {
   active?: boolean;
-  payload?: ReadonlyArray<{ dataKey?: unknown; value?: unknown }>;
+  payload?: ReadonlyArray<{ dataKey?: unknown; value?: unknown; payload?: Record<string, unknown> }>;
   label?: unknown;
   series: ReadonlyArray<RnLineSeries>;
   value: (v: number) => string;
   title: (x: string) => string;
+  note?: (index: number) => ReadonlyArray<string> | null;
 }) {
   if (!active || !payload?.length) return null;
   const rows = series
     .map((s) => ({ s, v: payload.find((p) => p.dataKey === s.key)?.value }))
     .filter((r): r is { s: RnLineSeries; v: number } => typeof r.v === "number")
     .sort((a, b) => b.v - a.v);
+  const at = payload[0]?.payload?.[ROW_INDEX];
+  const lines = note && typeof at === "number" ? note(at) : null;
   return (
     <div className="min-w-[160px] rounded-[10px] bg-rn-ink px-3 py-2.5 text-rn-12 text-white shadow-rn-3">
       <b className="mb-1 block text-rn-11 font-semibold text-rn-sky">{title(String(label))}</b>
@@ -99,6 +107,13 @@ function TrendTooltip({
           <span className="text-white/80">{s.name}</span>
         </div>
       ))}
+      {lines?.length ? (
+        <div data-rn-tip-note="" className="mt-1 border-t border-white/15 pt-1 text-rn-11 text-white/80 tabular-nums">
+          {lines.map((l) => (
+            <div key={l}>{l}</div>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -119,6 +134,7 @@ export function RnLineChart({
   onHover,
   invert = false,
   domain,
+  tooltipNote,
 }: {
   x: ReadonlyArray<string>;
   series: ReadonlyArray<RnLineSeries>;
@@ -133,6 +149,8 @@ export function RnLineChart({
   invert?: boolean;
   /** fixed y domain and ticks (default: nice ticks over the values, floor 0) */
   domain?: { lo: number; hi: number; ticks: number[] };
+  /** lines under the tooltip's values for point `index` of x (e.g. that round's counts); none = no note */
+  tooltipNote?: (index: number) => ReadonlyArray<string> | null;
 }) {
   const nums = series.flatMap((s) => s.values).filter((v): v is number => v != null);
   const rawLo = nums.length ? Math.min(...nums) : 0;
@@ -140,7 +158,7 @@ export function RnLineChart({
   const ticks = domain?.ticks ?? rnNiceTicks(Math.max(0, rawLo - (rawHi - rawLo) * 0.15), rawHi, 4);
   const lo = domain?.lo ?? ticks[0];
   const hi = domain?.hi ?? ticks[ticks.length - 1];
-  const data = x.map((label, i) => ({ x: label, ...Object.fromEntries(series.map((s) => [s.key, s.values[i] ?? null])) }));
+  const data = x.map((label, i) => ({ x: label, [ROW_INDEX]: i, ...Object.fromEntries(series.map((s) => [s.key, s.values[i] ?? null])) }));
   const fading = series.some((s) => lit.includes(s.key));
   const labelText = (s: RnLineSeries) => {
     const i = lastIndex(s.values);
@@ -158,7 +176,7 @@ export function RnLineChart({
           <YAxis width={44} tick={TICK} tickLine={false} axisLine={false} domain={[lo, hi]} ticks={ticks} tickFormatter={yTick} reversed={invert} />
           <Tooltip
             cursor={{ stroke: "var(--color-rn-faint)", strokeDasharray: "3 3" }}
-            content={<TrendTooltip series={series} value={value} title={tooltipTitle} />}
+            content={<TrendTooltip series={series} value={value} title={tooltipTitle} note={tooltipNote} />}
             isAnimationActive={false}
           />
           {series
