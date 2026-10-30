@@ -1137,8 +1137,6 @@
         "noUrlsOfficial": "No cited URLs for this domain yet.",
         "noPrompts": "No prompts cited this domain",
         "promptsTopOnly": "Prompt lists are provided only for the most-cited domains.",
-        "loading": "Loading the domain detail…",
-        "loadFailed": "Couldn't load the domain detail",
         "cites": "cites",
         "placeholder": "Prompt list will arrive once domain-prompts / prompt-details / url-prompts APIs are wired."
       },

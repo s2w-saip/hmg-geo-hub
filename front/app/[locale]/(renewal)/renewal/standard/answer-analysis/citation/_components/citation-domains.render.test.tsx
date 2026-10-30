@@ -9,6 +9,7 @@ import type { CitationDomainLive } from "@/lib/scope/result-adapter";
 // "25283개 중 100개 표시"), the cut notes group thousands, and the prompt list says how many answers a prompt opens
 // (2026-10-29 metric review, sub pages #40 #41 #45 #46 #50).
 
+vi.mock("next-intl/server", () => ({ getRequestConfig: <T,>(fn: T) => fn }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: () => {}, push: () => {} }),
   usePathname: () => "/ko/renewal/standard/answer-analysis/citation",
@@ -42,6 +43,9 @@ vi.mock("@/app/[locale]/(dash)/standard/answer-analysis/_components/citations-vi
 
 const { DomainDrawer, DomainTableCard } = await import("./citation-domains");
 const { CitationProvider } = await import("./citation-context");
+const { loadMessages } = await import("@/i18n/request");
+// the messages a request serves: ko.json merged with the unit files (the drawer's loading copy is units/u7's)
+const MERGED = (await loadMessages("ko")) as typeof ko;
 
 const ROW = {
   domain: "kia.com",
@@ -57,9 +61,9 @@ const ROW = {
   subcategory: null,
 } as unknown as CitationDomainLive;
 
-const render = () =>
+const render = (messages: typeof ko = ko) =>
   renderToStaticMarkup(
-    <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
+    <NextIntlClientProvider locale="ko" messages={messages} timeZone="Asia/Seoul">
       <DomainDrawer row={ROW} onClose={() => {}} />
     </NextIntlClientProvider>,
   );
@@ -78,11 +82,11 @@ describe("renewal Citation domain sheet", () => {
     expect(html).not.toContain("25283개");
   });
 
-  it("while the detail loads or after it failed the sheet says so in words (renewal audit 9-9: the key showed)", () => {
-    const drill = (ko.answerAnalysis.citations.drilldown as Record<string, string>);
+  it("while the detail loads or after it failed the sheet says so in words (the served messages, units/u7)", () => {
+    const drill = MERGED.answerAnalysis.citations.drilldown as Record<string, string>;
     for (const [status, key] of [["loading", "loading"], ["error", "loadFailed"]] as const) {
       DETAIL_STATE = { url: "x", status };
-      const html = render();
+      const html = render(MERGED);
       expect(html).not.toContain(`drilldown.${key}`);
       expect(drill[key]).toBeTruthy();
       expect(html).toContain(drill[key]);
