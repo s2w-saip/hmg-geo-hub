@@ -353,6 +353,7 @@ Global과 Website가 같은 본문을 쓴다. Website는 `mention/rn-*`를 ctx.s
 - [ ] 9-5 U3(답변 톤) · U4(`cit_m05`) · U6('당사' 태그)가 '다름'이면 Gold 정의로 맞춘다. 'Gold로 알 수 없음'이면 업스트림에 두고 고치지 않는다. U6는 Website Overview 출처 구성비의 '당사' 태그에도 쓰인다.
 - [ ] 9-6 출처 카테고리가 null인 행을 'Other'로 보인다(`citation_model.py` ~518, 긍정/부정 URL 행). Gold의 Other와 구분해 '—'로 보인다.
 - [ ] 9-7 도메인 표 · 서랍은 `route_context`가 website 계정 규칙을 'standard'로 읽고, 본문은 'website'로 읽는다(`citation.py` ~178-196). 전용 사이트 계정(2단계 뒤)에서 본문과 표 · 서랍의 국가 잠금이 같은지 확인하고, 다르면 website로 맞춘다.
+- [ ] 9-8 카테고리를 이름으로 찾는 곳을 slug(`dim_category.slug`)로 바꾼다(4단계 4-4와 같은 이유: 이름은 HUB 코드표 값이라 관리자가 고칠 수 있다). 대상은 `BS/citation_model.py`의 `OFFICIAL_COMPETITOR_CATEGORY`(경쟁사 고르기 · 카테고리 숨김 등, 단계 메모 '4단계'). 결과가 같으면 golden은 함수 case 입력만 바뀐다.
 
 **시험.** `test_screens_citation`, `test_gold_citations`, golden citation, 인용 render 시험, 원본 대조(Global · Website 인용).
 
