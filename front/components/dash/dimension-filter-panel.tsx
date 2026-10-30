@@ -59,6 +59,7 @@ import {
   OFFICIAL_COMPETITOR_CATEGORY,
   citationCategorySlug,
 } from "@/lib/citation-categorizer/taxonomy";
+import { ENGINE_LABEL } from "./engine-label";
 
 // 7 Dimension catalog (KPI ShortList v25). 사용자 결정 (2026-06-04):
 // L1-L4 Layer 구분은 미개발 — 각 그룹은 단일 평면 옵션 리스트.
@@ -1025,19 +1026,8 @@ export const LABELED_VALUES = new Set([
   "returning",
 ]);
 
-// Engine: canonical value = scope target token (lowercase); display = proper
-// product name. Locale-independent proper nouns (like the geography Intl path),
-// so a static map rather than an i18n key. Mirrors result-adapter's TARGET_LABEL.
-export const ENGINE_LABEL: Record<string, string> = {
-  chatgpt: "ChatGPT",
-  gemini: "Gemini",
-  deepseek: "DeepSeek",
-  perplexity: "Perplexity",
-  claude: "Claude",
-  "claude-web": "Claude",
-  "claude-sonnet": "Claude",
-  "claude-opus": "Claude",
-};
+// Engine display names: ./engine-label (a plain module, so server components can read it too).
+export { ENGINE_LABEL };
 
 export type Draft = Partial<Record<DimensionGroup, string[]>>;
 

@@ -33,7 +33,8 @@ import {
 import { RnWebsiteOverviewBody } from "./_overview/website-overview-body";
 import { websiteFindings } from "./_overview/website-findings";
 import { WebsiteFindingList } from "./_overview/website-findings-view";
-import { engineLabel, type WebsiteBrandsView, type WebsiteEnginesView } from "./_overview/website-format";
+import type { WebsiteBrandsView, WebsiteEnginesView } from "./_overview/website-format";
+import { engineLabel } from "./_overview/engine-label";
 
 // Renewal Website Overview (2026-10-30, W1) — the redesigned /website, served side by side with the original.
 // Data: the SAME screens as /website/page.tsx (back/bff/screens/overview.py), ctx.surface=website on the

@@ -4,7 +4,6 @@
 // and the links to the website analysis pages. No values are computed here.
 
 import { useLocale, useTranslations } from "next-intl";
-import { ENGINE_LABEL } from "@/components/dash/dimension-filter-panel";
 import type { KpiKey, KpiUnit } from "@/app/[locale]/(dash)/dashboard/_data/model";
 import type { PeriodChip } from "@/lib/kpi/period-compare-view";
 
@@ -54,7 +53,7 @@ export interface WebsiteBrandsView {
   brands: { brand: string; state: "ok" | "empty" | "degraded"; cells: Partial<Record<KpiKey, BrandCellView>> }[] | null;
 }
 
-export const engineLabel = (code: string) => ENGINE_LABEL[code] ?? code;
+export { engineLabel } from "./engine-label";
 
 /** The website analysis page a KPI opens (the renewal Overview's rule on the website pages). */
 export function websiteDetailHref(key: KpiKey, locale: string, qs: string): string {
