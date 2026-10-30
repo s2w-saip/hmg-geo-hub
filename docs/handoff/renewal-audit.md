@@ -6,7 +6,7 @@
 - 병렬 세션으로 나누지 않고 한 세션이 순서대로 한다.
 - 단계마다 새 하위 에이전트가 깨끗한 컨텍스트로 맡는다(B 방식).
 
-**현재 위치:** 1단계(Gold 확인) 시작 전. 마지막 커밋: 이 계획을 올린 커밋.
+**현재 위치:** 2단계(Website 범위 계정 접근) 시작 전. 1단계 끝(결과는 '확인 결과' 표 · 단계 메모). 마지막 커밋: 1단계 결과를 올린 커밋.
 
 ## 진행 방식 (단계마다 새 하위 에이전트)
 
@@ -89,7 +89,7 @@
 
 | 단계 | 내용 | 먼저 필요한 것 | 상태 |
 |---|---|---|---|
-| 1 | Gold 확인(읽기 전용)과 업스트림 질문 보강 | — | [ ] |
+| 1 | Gold 확인(읽기 전용)과 업스트림 질문 보강 | — | [x] |
 | 2 | Website 범위 계정 접근 | ⛔J | [ ] |
 | 3 | 공통 스파크라인 회차 값 · Overview 표시 | — | [ ] |
 | 4 | 경쟁사 브랜드 접기(공용 모듈) · Overview 데이터 | 1 | [ ] |
@@ -548,23 +548,38 @@ Website 인용 도달 Δ도 값 출처(발행 / 실시간)가 다르면 숨긴�
 
 ## 확인 결과 (1단계가 채운다)
 
+2026-10-31에 Gold 읽기 전용 계정으로 SELECT만 해서 확인했다.
+- **기준.** live global = release 603, live website = release 3647이다. 빌드는 `release_item`(state ready) ⋈ `build`(status validated)이고, 회차 하나는 `dim_cycle`의 slice_key `cyc:<cyc_key>`로 찾는다. release 번호는 Gold가 다시 발행하면 바뀐다. 다시 돌릴 때는 `active_release`(scope, read_mode live)에서 읽는다.
+- **조건.** 리더와 같다. global은 `bgrp & (관점 비트 | 8) <> 0`이다. 언급은 population 1, 인용은 population 2, 관점은 `dim_perspective.own_bits`로 고른다. HMG = 7, Hyundai 1 · Kia 2 · Genesis 4다.
+- **접속.** psql에 `.env.gold.local`의 URL을 쓰고 `PGOPTIONS='-c default_transaction_read_only=on'`을 건다. U10은 리더 함수 `bff.gold_reader.compare.read`를 읽기 전용 asyncpg 세션에서 직접 불렀다. 로컬 API는 로그인이 필요하다.
+
 | ID | 결과 | 근거(쿼리 · 수치) | 다음 |
 |---|---|---|---|
-| U1 | | | |
-| U2 | | | |
-| U3 | | | |
-| U4 | | | |
-| U5 | | | |
-| U6 | | | |
-| U7 | | | |
-| U8 | | | |
-| U9 | | | |
-| U10 | | | |
-| U11 | | | |
-| U12 | | | |
+| U1 | **다름(ACR만)** · 업스트림 D1 | **Mention · Overview는 같다.** `dim_brand`에서 own_bit ≠ 0인 브랜드는 Hyundai(1) · Kia(2) · Genesis(4) 셋뿐이다. 이름은 유일하고, 나머지 5,270개는 own_bit 0이다. 그래서 이름 목록과 Gold `is_hmg_own`(= `bool(dim_brand.own_bit)`)이 같은 브랜드를 고른다. **ACR은 다르다.** `acr_entity_fact`(level 1 · keep) ⋈ `dim_brand`를 release 603 acr 빌드로 좁혀 `x.own_bit<>0 OR b.own_bit<>0`로 묶었다. 그 행의 own_bit('명부')가 0이 아닌데 dim_brand.own_bit = 0(kind 2)인 이름이 둘이다. '제네시스 마그마'는 own_bit 4, 5행 · appearance 5 · choice 0(08-24 · 09-07 · 09-14)이다. 'Hyundai Canada'는 own_bit 1, 2행 · appearance 2 · choice 0(09-14)이다. 리더는 이 둘을 `x.own_bit & 관점`으로 당사로 세지만, 이름 목록에는 없다. | 8 · 11 |
+| U2 | **같음(0회)** | 두 셀 표 모두 0인 행을 두지 않는다. `brand_cell`(release 603 cell) 3,843,121행의 mention_count 최솟값은 1이고, `citation_cell` 14,553,380행의 citations 최솟값도 1이다. release 603 · 3647의 cell · fact · acr 빌드는 모두 `build.ecat_ver` 01a173a4 하나다. 엔티티 카탈로그가 회차마다 같다는 뜻이다. 그래서 범위 안에 답변이 있는 회차(kpi_cell 행 있음. kpi_cell은 '언급 · 인용이 0이어도 분모 셀을 남김')에 행이 없는 브랜드 · 도메인은 0회다. 측정 안 됨은 답변이 없는 회차 · 범위뿐이다(리더 gap). 예외가 하나 있다. smart · Cruise(kind 3)는 같은 release 안에서 `competitive`가 행마다 다르다. smart는 경쟁 행 179 · 비경쟁 행 740 언급, Cruise는 8 · 15다. 그 회차에 비경쟁 행만 있으면 경쟁 추이에서 0으로 보인다(D3). | 8 · 9 |
+| U3 | **같음** | 10-05 global HMG를 보았다. `citation_cell` Σcit_pos는 561,946, Σcit_neg는 16,284다. `citation_fact` ⋈ `answer_fact`(전체 키)를 cit_in으로 좁히고, p = Σsent_pos_{h,k,g}, n = Σsent_neg로 셌다. p > n은 561,946, n > p는 16,284로 정확히 같다. p = n(0 포함)은 빠지고, 0이 아닌 동점은 7,739건이다. Kia 관점(sent_*_k만)도 203,225 · 5,228로 같다. | 9 |
+| U4 | **같음** | Gold 설명은 'global cit_m05 = Σcit_off(카테고리 Official (HMG))'이다. kpi_cell(pop 1)의 Σcit_m05 · Σcit_total과 citation_cell(pop 2)의 category_key 1 인용 · source_key ≠ 0 인용을 비교했다. 회차 × 국가 × 엔진이 HMG 659칸, Kia 483칸, Hyundai 471칸 모두 같다. 10-05 HMG는 233,628 / 935,276 = 24.98%다. 빌드 시점 `citation_cell.category_key`와 지금 `dim_source.category_key`로 센 Official(HMG) 수도 지금은 같다. | 9 |
+| U5 | **같음** | kpi_cell(pop 1, 관점)의 sent_pos · sent_all과 brand_cell(pop 1, own_bit & 관점, 모두 competitive)의 s_pos · (s_pos + s_neu + s_mix + s_neg)를 비교했다. 회차 × 국가 × 엔진이 HMG 659칸, Kia 483칸 모두 같다. website(release 3647) HMG도 14회차 모두 같다(Σ 2,745,087). sent_all = 감정 4종 합 = 당사 언급 수다(10-05 HMG 325,173). | 4 |
+| U6 | **다름(작음)** · 업스트림 D2 | 당사 태그는 그 출처 인용 중 하나라도 표면별 자사인 경우다(global owner_key ∈ owned_base(brand_bit & 관점), website loc_owned ∨ tgt_hit). 이것과 `dim_source.owned_brand_bit`를 비교했다. **global HMG 14회차:** 태그 39 · 비트 40. 비트에만 있는 것은 kia.pt 하나다(09-28 1건, URL owner_key 없음). 태그에만 있는 것은 0이다. **10-05:** 33 · 34. 비트에만 있는 것은 hyundai.lt다(9건이 모두 cars.hyundai.lt URL이라 base `hyundai.lt`에 맞지 않음). Kia 10-05는 12 = 12다. **website 전 회차:** 태그 54 · 비트 42. 태그에만 12개가 있다. hyundai.pe(13,361/13,478) · hyundaipr.com · beijing-hyundai.com.cn · kia.cn · hyundaiksa.com · kiavietnam.com.vn · kiaphilippines.com · hyundaicolombia.co · hyundai-me.com · kia.uz · hyundai-n.com.cn · kia.am이다. 8개는 dealerMarketplace, 4개는 officialHmg이고, 모두 category_src 5다. 태그는 Gold 표면별 자사 정의(`citation_cell` 설명)를 따르고, 비트는 도메인 단위 '당사 공식 도메인'이다. | 9 |
+| U7 | **다름(전부)** | Gold `dim_region.code`는 대륙(Africa · Asia · Europe · Latin America · Middle East · North America · Oceania · 빈 코드)이다. 표 설명도 '계정 권역(RHQ)과는 다른 개념'이라고 한다. HUB `RHQ_REGION_COUNTRIES`의 id 19개(hyundai-* · kia-* · genesis-*)와 겹치는 id는 0개다. geo 리더는 `region_id` = 대륙 코드를 보내고 `pending`은 늘 []다. 그래서 `countries_for_rhq(m["region"])`는 늘 비고, 지도는 market 자기 국가로 칠한다. '측정 예정'은 행이 없을 때(`empty_geo`)만 RHQ id로 나온다. 측정 국가(release 603 global kpi_cell)의 대륙은 Europe 25 · Asia 9 · Middle East 7 · Latin America 4 · North America 3 · Africa 1 · Oceania 1 · 빈 코드 2(CO · VN, B5)다. 소속도 다르다. MX는 Gold North America이고 kia-central-south-america에 든다. AU는 Oceania이고 *-asia-pacific에 든다. KZ는 Europe이고 genesis-asia-pacific에 든다. | 4 |
+| U8 | **같음(빈 값 0)** | release 603 fact 빌드의 `catalog_entry`를 catalog_row_id마다 최신 빌드 한 행으로 셌다. 12,164행, 프롬프트 11,903개다. kind 빈 행은 0이다(single 11,184 · acr 980). presence 빈 행도 0이다(`dim_taxon` branded 6,376 · unbranded 5,788). brand_bit이 {1, 2, 4, 8} 밖인 행도 0이다(1 5,548 · 2 5,408 · 4 1,208, 엄브렐러 8 · 0 · NULL 행 없음). 그래서 `presence_of`의 대체 규칙과 `kind or "single"`은 쓰이지 않는다. `common`(brand 없음 · HMG)도 지금은 한 행도 참이 아니다. | 13 |
+| U9 | **다름(생김)** | citation_cell(pop 2, 관점)의 cit_t_{5종}을 회차 × (엔진 × 국가 · 엔진 · 국가 · 언어)로 합했다. release 603 14회차에서 한 열 이상이 0인 조합은 다음과 같다. HMG는 엔진 × 국가 77/656(8회차), 국가 35/331, 엔진 7/28, 언어 17/197이다. Hyundai는 엔진 × 국가 103/467, 다섯 열 모두 0인 것 13이다. Kia는 76/480 · 9, Genesis는 107/314 · 29다. 필터 없는 HMG에서도 definition이 07-06 · 07-13 · 07-20에 0이고, final_choice가 07-06에 0이다. 10-05 HMG 엔진 × 국가는 0건이다. 같은 날 Genesis AT는 다섯 열 모두 0이다(인용 181). Hyundai CH도 다섯 열 모두 0이다(인용 111). | 9 |
+| U10 | **같음(요청하면 줌)** | 리더 `compare.read`(`kpi/compare`)는 metrics[]에 `mentions_per_answer`가 있을 때만 돌려준다. 기본 5개(visibility · share_of_voice · sentiment · position · citation_share)에는 없다. BFF는 `MENTION_COMPARE_METRICS` → `COMPARE_METRIC_TO_API`로 요청한다. 값은 num = own_mentions, den = answers다. global cycle 09-28 → 10-05는 315,562/45,500 → 325,173/44,979, Δ +4.2%(단위 pct, 억제 없음)다. website 10-02 → 10-09는 169,602/19,859 → 270,247/20,219, Δ +56.5%다. | 5 |
+| U11 | **다름(수치)** | Gold 관점 값은 kpi_cell Σrank_sum / Σranked다. 복수 관점은 답변 단위 '0을 뺀 최솟값'이다(`dim_perspective` 규칙). 당사 브랜드 가중평균은 brand_cell(own_bit & 관점, competitive)의 Σrank_sum / Σranked다. **global HMG:** 10-05에 Gold 2.353(81,064/34,452), 가중 3.283(164,635/50,154), +0.93이다. 14회차 차이는 +0.69(08-03) ~ +0.98(08-24)이다. **website HMG:** 10-09에 1.070 · 1.188, +0.12다. 14회차는 +0.10 ~ +0.20이다. 단일 브랜드 관점(Hyundai)은 14회차 모두 같다(차 0). | 5 |
+| U12 | **같음(있음)** | `dim_prompt.regions`(text[] 'Scope 시장 태그')를 global 카탈로그 프롬프트 11,903개에서 보았다. 모두 1개 이상의 값이 있다(1개 9,520 · 여러 개 2,383, 최대 22). 값은 ISO alpha-2 52종이고 가상 코드(x:)는 없다. 측정된 11,401개는 답변 국가(answer_fact std_in의 geo)가 모두 태그 안에 있고, 11,109개는 정확히 같다. 리더 `GR/catalog.py` prompts가 이미 `p.regions`를 읽어 행 `regions` · `markets`로 보낸다. | 13 |
 
 ## 단계 메모 (다음 단계가 알아야 할 것, 단계마다)
+
+- **1단계(2026-10-31).** 코드는 고치지 않았다. 재현 시험 대신 Gold SQL로 확인했고, 근거는 '확인 결과' 표에 있다. 업스트림 질문은 `upstream-questions-2026-10-30.md`의 'D. 2026-10-31 점검'(D1~D7)으로 더했고 사용자가 보낸다. 다음 단계의 할 일에 걸리는 것은 아래와 같다(단계 절 본문은 고치지 않았다).
+  - **4단계.** U5가 같으므로 당사와 경쟁사의 우호도 분모는 같은 정의다(감정 4종 합 = 언급 수). U7은 Gold 대륙 코드와 HUB RHQ id가 하나도 맞지 않는다. 권역을 칠하거나 측정 예정을 Gold 값으로 맞추려면 Gold에는 RHQ 표가 없다는 것을 전제로 한다. HUB 계정 권역 표와 대륙은 다른 개념이다.
+  - **5단계.** U10: 답변당 언급 수 Δ는 Gold 리더가 이미 준다(요청할 때만). U11: 당사 평균 위치를 브랜드 행 가중평균으로 내면 HMG에서 Gold 관점 값보다 0.7~1.0(global), 0.1~0.2(website) 크다. 단일 브랜드에서만 같다. Gold 관점 값(kpi_cell)을 쓰는 쪽이 Gold 정의다.
+  - **8단계.** U1: Mention에서는 이름 목록과 Gold 플래그(`dim_brand.own_bit`)의 결과가 같다. 바꿔도 출력이 같다. U2: 회차에 브랜드가 없으면 0으로 두는 지금 처리가 Gold 뜻과 같다. 공백은 답변이 없는 회차뿐이다.
+  - **9단계.** U2: 인용 도메인 추이의 0도 맞다. U3 · U4는 같아서 고칠 방향이 없다. U6: 당사 태그는 Gold 표면별 자사 정의를 따른다. `owned_brand_bit`로 바꾸면 global 10-05에서 hyundai.lt가 더해지고, website에서는 자사 사이트 12개(hyundai.pe 등)가 빠진다. U9: 유형 열 합이 0인 경우가 실제로 생긴다. 10-05 HMG에서는 없고, 단일 브랜드 · 7월 회차 · 엔진 × 국가에서 생긴다(예: Genesis AT, Hyundai CH는 다섯 열 모두 0).
+  - **11단계.** U1이 ACR에서 다르다. 이름 목록 대신 Gold 플래그(`acr_entity_fact.own_bit`)를 쓰면 '제네시스 마그마' · 'Hyundai Canada'가 당사(HMG)로 바뀐다. 영향은 live release에서 7행 · appearance 7 · choice 0이다. 명부(`acr_entity_fact.own_bit`)는 ACR 리더가 이미 당사 판정(`is_ours` · `own_cells`)에 쓰는 값이다. `dim_brand.own_bit`로 고르면 지금 이름 목록과 결과가 같다. 두 Gold 값이 서로 다른 것은 D1로 물었고, HUB는 어느 쪽도 고쳐 쓰지 않는다(규칙 5).
+  - **13단계.** U8: 빈 값 대체 규칙이 쓰이는 행이 지금 없다. 엄브렐러(brand_bit 8) 행도 없어 '공통' 배지는 0행이다. U12: 계정 국가를 걸 Gold 값 `dim_prompt.regions`가 모든 행에 있고 리더가 이미 보낸다. 측정 국가와도 맞는다. Hyundai N(bit 16, D4)은 website 프롬프트 이야기다.
+  - **2단계.** U와 관계없다(⛔J는 admin-todo에서 결정됨, `34a3980`).
 
 ## 진행 기록
 
 - 2026-10-31 — 계획을 작성했다. 근거는 같은 날 중간점검이다(코드 읽기 다섯 갈래: Overview · Mention · Citation · Prompts · AI Funnel, 큰 지적은 코드로 다시 확인). 처음에는 병렬 세션으로 나누려 했으나 사용자가 한 세션이 순서대로 하는 방식으로 바꿨다. 다음은 1단계다.
+- 2026-10-31 — 1단계: Gold를 읽기 전용(SELECT, release 603 · 3647)으로 U1~U12를 확인해 '확인 결과' 표를 채웠다. 같음 7(U2 · U3 · U4 · U5 · U8 · U10 · U12), 다름 5(U1 ACR만 · U6 · U7 · U9 · U11)다. 업스트림 묶음에 'D. 2026-10-31 점검' 7개를 더했다. U1 · U6에서 나온 2개와 넘겨받은 5개(Hyundai N bit 16, 비완성차 경쟁사, 미측정 website 프롬프트 2,563개, URL 카드 모집단 4 · 10, Kona 귀속)다. `loc_owned` · `cit_m05` 차이는 W6 수정 뒤 같아져(US 19.90 = 19.90) 묻지 않는다. 코드는 고치지 않았다. 다음은 2단계다.

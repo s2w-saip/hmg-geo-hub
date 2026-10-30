@@ -17,6 +17,7 @@
 | A. 측정 · 판정 (수집, ACR 판정, 감정 · 유형, 순위) | 5 | 회차별 측정 · 판정 방식 변경 기록(metric_version) |
 | B. Gold 모델 · 귀속 (dim_entity · dim_source · 카테고리 · 카탈로그) | 8 | 당사 소유 출처(owned base) 귀속 빈칸 |
 | C. 기준값 연동 (HUB → 파이프라인) | 1 (세부 6) | 인용 출처 교정값 전달 방식 |
+| D. 2026-10-31 점검 (B팀 6 · A팀 1, 팀별 추가분) | 7 | ACR 명부와 dim_brand의 당사 비트 차이(D1) |
 
 ---
 
@@ -344,6 +345,138 @@ HUB가 출처 카테고리 교정(override), 출처 분류 코드표, 시드·�
 7. 출처 분류 코드표(카테고리 13개, 분류 출처 코드 1~6)와 시드·공식 소셜 목록도 HUB가 정본으로 관리하고, 같은 방식(외부 API, change_seq)으로 드립니다: GET /ext/v1/reference/source_code · source_seed(도메인 → 카테고리) · source_social(계정 키, 도메인, URL 매칭 규칙 [{prefix, boundary}], 카테고리 officialHmg). 지금 이 값들을 어디서 가져가시는지(dim_category 설명에는 HUB 코드표의 투영이라고 되어 있습니다), 이 목록으로 바꿔도 되는지 알려 주세요.
 
 참고: 다음 단계로 시드 키워드(family keyword)와 엔티티 역할(family entity)도 같은 방식(HUB 정본, 외부 API, change_seq)으로 드릴 예정입니다. 이 방식에 문제가 있으면 함께 알려 주세요.
+```
+
+---
+
+## D. 2026-10-31 점검
+
+리뉴얼 중간점검 1단계(`renewal-audit.md`)에서 Gold를 읽기 전용으로 확인하고 더한 질문이다.
+- 기준은 live global release 603(최신 회차 2026-10-05)과 live website release 3647(card 3648, 최신 회차 2026-10-09)이다.
+- 근거 쿼리는 `renewal-audit.md` '확인 결과' 표(U1 ~ U12)에 있다.
+- D1 · D2는 이번 확인(U1 · U6)에서 나왔다. D3 ~ D7은 Website 세션(W2 · W4 · W6)이 남긴 질문이다.
+- 받는 팀은 질문마다 적었다. 보낼 메시지는 끝에 팀별 추가분으로 모았다.
+
+### D1. ACR 명부의 당사 비트와 dim_brand의 당사 비트가 다른 브랜드 2개 (B팀)
+
+- **화면 영향:** ACR은 `acr_entity_fact.own_bit`(명부)로 당사를 센다. 그래서 두 이름이 관점 비트가 맞으면 당사로 들어가고, HMG 형제 표시(이름 Hyundai · Kia · Genesis)는 받지 못한다. Mention · Overview는 `dim_brand.own_bit`를 써서 영향이 없다.
+- **근거:**
+  - release 603 acr 빌드의 level 1 · keep 행에서 own_bit ≠ 0인 이름은 Hyundai · Kia · Genesis 외에 둘이 더 있다.
+    - '제네시스 마그마': own_bit 4, 5행 · appearance 5 · choice 0, 08-24 · 09-07 · 09-14.
+    - 'Hyundai Canada': own_bit 1, 2행 · appearance 2 · choice 0, 09-14.
+  - 두 brand_key의 `dim_brand`는 own_bit 0 · kind 2(경쟁)다.
+  - `dim_brand`에서 own_bit ≠ 0인 브랜드는 Hyundai(1) · Kia(2) · Genesis(4) 셋뿐이다.
+- **답에 따라 HUB가 할 일:** HUB는 귀속을 다시 정하지 않고 Gold 값을 그대로 쓴다. 차종 · 지역 법인 이름이 level 1로 잡힌 것이라면 Gold가 부모 브랜드로 접은 뒤 그대로 반영된다.
+
+### D2. Website 자사 사이트인데 당사 공식 도메인이 아니고 Dealer & Marketplace로 분류된 출처 (B팀)
+
+- **화면 영향:** Website 인용에서 당사 태그(자사 인용 = loc_owned ∨ tgt_hit)는 붙는데, 출처 카테고리는 Official (HMG)이 아닌 곳이 있다. 공식(HMG) 비중과 공식(당사) 인용이 서로 다른 출처 묶음을 센다.
+- **근거:**
+  - website release 3647 전 회차에서 자사 인용이 1건 이상인 출처는 54개다. 그중 12개는 `dim_source.owned_brand_bit = 0`이다: hyundai.pe(자사 13,361 / 전체 13,478) · hyundaipr.com · beijing-hyundai.com.cn · kia.cn · hyundaiksa.com · kiavietnam.com.vn · kiaphilippines.com · hyundaicolombia.co · hyundai-me.com · kia.uz · hyundai-n.com.cn · kia.am.
+  - 12개 중 8개는 dealerMarketplace, 4개(hyundai.pe · kia.cn · kia.uz · kia.am)는 officialHmg이고, 모두 category_src 5(규칙)다.
+  - 반대 방향(B1과 같은 종류)도 있다. global hyundai.lt(owned_brand_bit 1)의 10-05 인용 9건은 모두 cars.hyundai.lt URL이라 owner_key가 없다(base `hyundai.lt`의 호스트와 다름). kia.pt도 09-28 1건이 owner_key 없음이다.
+- **물을 것:** 사이트 운영사(현지 배급사 · 합작 법인) 도메인을 owned_brand_bit와 당사 도메인 분류(분류 출처 3)에 넣어야 하나요? 아니면 지금처럼 Website 자사 판정(web_unit)만 하나요? cars.hyundai.lt 같은 하위 호스트를 base에 넣을 계획도 있나요?
+- **답에 따라 HUB가 할 일:** 당사 태그는 Gold 표면별 자사 정의(`citation_cell` 설명)를 그대로 쓴다. 분류가 바뀌면 화면에 그대로 반영된다.
+
+### D3. 완성차가 아닌 브랜드가 경쟁 브랜드(kind 2)로 잡힘 (B팀)
+
+- **화면 영향:** Mention 순위 표, 경쟁사 평균, 비교 브랜드 후보, Overview 경쟁사에 AI 비서 · 지도 앱 · 스포츠 · 패션 브랜드가 경쟁사로 들어간다. HUB는 브랜드 → 모그룹 표시 묶음에서 이 이름들을 '완성차 아님' 묶음으로 접고 있다.
+- **근거:**
+  - release 603 · 10-05 global, `brand_cell` competitive 행의 언급 수다. 모두 `dim_brand` kind 2(경쟁)다.
+    - Huawei 542 · Alexa 314 · Alphabet 221 · Apollo 202 · Formula 1 199
+    - Giorgio Armani 193 · Waze 140 · G2 127 · Mobis 96(HMG 계열 부품사) · Uber 41 · Nokia 9
+  - 반면 Apple(2,617)과 Google(3,024)은 kind 3(비경쟁)이라 competitive = false 행에만 있다.
+  - 한 브랜드의 competitive가 셀마다 다른 경우도 있다. 같은 release에서 smart는 경쟁 행 179 · 비경쟁 행 740 언급(각 9회차)이고, Cruise는 8 · 15다. B2의 Smart 질문과 같은 원인일 수 있다.
+  - ACR에서도 비자동차 엔티티가 선택된다(B3).
+- **물을 것:** kind 2와 3을 나누는 기준이 무엇인가요? 위 이름들을 kind 3으로 옮길 계획이 있나요? 한 브랜드의 competitive가 셀마다 다른 이유도 알려 주세요.
+- **답에 따라 HUB가 할 일:** Gold kind를 그대로 쓰고 표시 묶음만 둔다. 분류가 바뀌면 HUB의 '완성차 아님' 이름 목록을 줄인다.
+
+### D4. Hyundai N 사이트 브랜드 비트 16 (B팀)
+
+- **화면 영향:** Website › Prompts에서 Hyundai N 사이트 프롬프트의 브랜드 칸이 비고, 브랜드 필터로 고를 수 없다. 관점(`dim_perspective.own_bits` 1 ~ 7)과 `dim_brand.own_bit`(1 · 2 · 4)에 16이 없다. 그래서 Hyundai N 사이트를 당사 브랜드 관점으로 묶을 수 없다.
+- **근거:**
+  - `dim_project`(surface 2)의 site_brand_bit 값은 1 · 2 · 4 · 16이다. web_reg 프롬프트 수는 1이 프로젝트 50개 · 5,587, 2가 54개 · 5,107, 4가 20개 · 1,807, 16이 3개 · 228이다.
+  - `dim_country`에 가상 브랜드 코드 HYUNDAI-N이 있다(kind virtual_brand, virtual_brand_bit 16).
+  - 열 설명은 '사이트 브랜드 비트'뿐이다.
+- **물을 것:** 16은 Hyundai의 하위 브랜드인가요, 별도 브랜드인가요? 관점 · 브랜드 필터에서 Hyundai(1)로 접어야 하나요?
+- **답에 따라 HUB가 할 일:** 답에 따라 리더 브랜드 이름표(`BRAND_NAMES`)에 16을 더하거나, Hyundai로 접는다.
+
+### D5. 등록됐지만 7월 뒤로 측정되지 않은 website 프롬프트 2,563개 (A팀)
+
+- **화면 영향:** Website › Prompts에 미측정 · 오래된 측정 행으로 남는다. 열람 화면 사용자가 할 수 있는 일은 없다.
+- **근거:** `dim_prompt`(surface 2 · web_reg)는 12,729개다. `job_index`(surface 2)로 본 마지막 회차는 다음과 같다.
+  - 10-09 10,021 · 09-25 5 · 09-04 37 · 08-28 103 · 07-17 2,290 · 07-03 273.
+  - 07-17 · 07-03의 2,563개는 그 뒤 작업이 한 건도 없다(서비스하지 않는 회차 포함).
+- **물을 것:** "웹 카탈로그에 등록된 website 프롬프트 2,563개가 7월 이후 측정되지 않습니다. 의도한 제외라면 등록을 해제하고, 아니라면 측정 대상에 다시 넣어 주실 수 있을까요?"(W6 문구)
+- **답에 따라 HUB가 할 일:** 화면은 측정값을 그대로 보인다. 측정 범위를 보는 화면이 필요해지면 Admin 6단계(⛔C)에서 다룬다.
+
+### D6. Website URL 인용률의 모집단: population 4와 10 (B팀)
+
+- **화면 영향:** Website Overview · Citation의 자사 · 타겟 URL 인용률 라이브 값은 HUB가 `url_prompt_cell` population 4로 읽는다. 발행값(`report_value`)과 모수가 다를 수 있다.
+- **근거:**
+  - `dim_population`에서 4는 url · web_reg · all이고, 10은 url · web_reg · report_unit이다.
+  - 10-09 website 전체의 두 모집단이다.
+
+    | population | 분모 답변 | 자사 URL 인용 | 타겟 URL 인용 | 측정 프롬프트 |
+    |---|---:|---:|---:|---:|
+    | 4 | 20,326 | 15,062 (74.1%) | 9,829 (48.4%) | 10,021 |
+    | 10 | 19,500 | 14,561 (74.7%) | 9,554 (49.0%) | 9,677 |
+- **물을 것:** 화면 라이브 값에는 어느 모집단이 맞나요? 10(보고 유닛)은 발행값과 같은 모수를 만들려는 것인가요? 엔진 · 기간 필터처럼 발행값을 쓸 수 없을 때 10을 써야 하나요?
+- **답에 따라 HUB가 할 일:** 리더가 읽는 population_key를 답대로 고른다. 지금은 4다.
+
+### D7. Kona가 Hyundai가 아닌 별도 경쟁 브랜드로 잡힘 (B팀)
+
+- **화면 영향:** Website Mention 미국 미언급 프롬프트 목록에 Kona 질문이 들어간다(W2). Kona 언급이 당사가 아니라 경쟁사 언급으로 셈해진다.
+- **근거:**
+  - `dim_brand`에서 'Kona'(brand_key 5100)는 kind 2 · own_bit 0이다. `dim_entity`에도 'Kona'가 Brand 엔티티로 있다(brand_key 5100).
+  - Kona 차종 엔티티('Hyundai Kona', 'KONA Eléctrica' 등 Product)는 brand_key 1(Hyundai)이다.
+  - website release 3647에서 'Kona' 경쟁 언급은 159건이다. 08-28 · 09-04 · 09-11에 나왔고, 미국은 61 · 26 · 22건이다.
+- **물을 것:** 'Kona' Brand 엔티티를 Hyundai로 접거나 차종(level 2)으로 옮겨 주실 수 있나요?
+- **답에 따라 HUB가 할 일:** HUB는 귀속을 다시 정하지 않는다. Gold가 고치면 그대로 반영된다.
+
+### D 안에서 확인만 하고 보내지 않는 것
+
+- **W3 'loc_owned와 cit_m05 차이'.** Website 자사 인용은 Gold 정의(`citation_cell` 설명)대로 loc_owned ∨ tgt_hit이고, kpi_cell cit_m05도 같은 값이다. HUB가 W6에서 이 정의로 바꿨다. 10-09 값은 둘이 같다: 전체 24.93 = 24.93, US 19.90 = 19.90, en 18.38 = 18.38이다. loc_owned만 세면 US 18.93, en 18.29가 되는데, 이것이 W3가 본 차이다. 물을 것이 없다.
+- **같음으로 끝난 확인.** 인용 톤(U3), Global 공식(HMG) Δ의 cit_m05(U4), 우호도 분모(U5), 비교의 답변당 언급 수(U10), 카탈로그 빈 값(U8), 프롬프트 시장 태그(U12)는 Gold와 같거나 값이 있었다. 질문할 것이 없다.
+
+### D절 팀별 추가분
+
+```text
+[문의 추가] HMG GEO HUB — Gold 모델·귀속 확인 6건 (2026-10-31 점검, Gold live global release 603, website release 3647)
+
+1. ACR 명부 당사 비트와 dim_brand 당사 비트가 다른 브랜드 2개
+ - acr_entity_fact level 1(keep)에서 '제네시스 마그마' own_bit 4(5행, 08-24·09-07·09-14), 'Hyundai Canada' own_bit 1(2행, 09-14). 두 brand_key의 dim_brand는 own_bit 0·kind 2.
+ 물을 것: 어느 쪽이 맞나요? 차종·지역 법인 이름이 브랜드(level 1)로 잡힌 것이면 부모 브랜드로 접어 주실 수 있나요?
+
+2. Website 자사 사이트인데 owned_brand_bit 0인 출처 12개
+ - hyundai.pe(자사 13,361/13,478)·hyundaipr.com·beijing-hyundai.com.cn·kia.cn·hyundaiksa.com·kiavietnam.com.vn·kiaphilippines.com·hyundaicolombia.co·hyundai-me.com·kia.uz·hyundai-n.com.cn·kia.am. 8개는 dealerMarketplace, 4개는 officialHmg, 모두 category_src 5.
+ - global hyundai.lt는 10-05 인용 9건이 모두 cars.hyundai.lt라 owner_key 없음(B1과 같은 종류).
+ 물을 것: 사이트 운영사 도메인을 당사 공식 도메인(분류 출처 3)에 넣어야 하나요? 하위 호스트를 base에 넣을 계획이 있나요?
+
+3. 완성차가 아닌 브랜드가 경쟁(kind 2)
+ - 10-05 global 경쟁 언급: Huawei 542·Alexa 314·Alphabet 221·Apollo 202·Formula 1 199·Giorgio Armani 193·Waze 140·G2 127·Mobis 96(HMG 계열 부품사)·Uber 41·Nokia 9. Apple·Google은 kind 3.
+ - smart(경쟁 179·비경쟁 740)·Cruise(8·15)는 같은 release 안에서 competitive가 셀마다 다름.
+ 물을 것: kind 2·3의 기준은? 위 이름을 kind 3으로 옮길 계획이 있나요? competitive가 셀마다 다른 이유는?
+
+4. Hyundai N 사이트 브랜드 비트 16
+ - dim_project(website) site_brand_bit 16: 프로젝트 3개, web_reg 프롬프트 228개. dim_country HYUNDAI-N(virtual_brand_bit 16). 관점 own_bits·dim_brand own_bit에는 16이 없음.
+ 물을 것: 16은 Hyundai의 하위 브랜드인가요, 별도 브랜드인가요? 관점·브랜드 필터에서 Hyundai로 접어야 하나요?
+
+5. Website URL 인용률 모집단 population 4·10
+ - 10-09 전체: pop 4 분모 20,326·자사 74.1%·타겟 48.4%·프롬프트 10,021 / pop 10 분모 19,500·자사 74.7%·타겟 49.0%·프롬프트 9,677. HUB 라이브 값은 4를 읽음.
+ 물을 것: 화면 라이브 값에는 어느 모집단이 맞나요? 10은 발행값과 같은 모수를 만들려는 것인가요?
+
+6. Kona 귀속
+ - dim_brand 'Kona'(5100) kind 2·own_bit 0, dim_entity에도 Brand 엔티티. Kona 차종 엔티티는 brand_key 1(Hyundai). website 'Kona' 경쟁 언급 159건(08-28·09-04·09-11, 미국 61·26·22).
+ 물을 것: 'Kona'를 Hyundai로 접거나 차종으로 옮겨 주실 수 있나요?
+```
+
+```text
+[문의 추가] HMG GEO HUB — 측정 범위 확인 1건 (2026-10-31 점검, Gold live website release 3647)
+
+1. 등록됐지만 7월 뒤로 측정되지 않은 website 프롬프트 2,563개
+ - dim_prompt(website, web_reg) 12,729개의 job_index 마지막 회차: 10-09 10,021 / 09-25 5 / 09-04 37 / 08-28 103 / 07-17 2,290 / 07-03 273.
+ 물을 것: 웹 카탈로그에 등록된 website 프롬프트 2,563개가 7월 이후 측정되지 않습니다. 의도한 제외라면 등록을 해제하고, 아니라면 측정 대상에 다시 넣어 주실 수 있을까요?
 ```
 
 ---
