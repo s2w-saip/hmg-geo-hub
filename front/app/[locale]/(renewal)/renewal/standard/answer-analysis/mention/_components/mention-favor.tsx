@@ -6,7 +6,7 @@ import { ChevronRight } from "lucide-react";
 import { RnBasisChip, RnCard, RnCardHead, RnEmpty, RnLineChart, RnSectionHead, RnSegmented, cx } from "@/components/renewal-ui";
 import { SENTIMENT_KEYS, type SentimentKey } from "../_data/screen-types";
 import { MentionCardActions, numTxt, pctTxt, slotLabel, useMention } from "./mention-context";
-import { CardSkeleton, DegradedNote, DeltaChip, InfoTip, Legend, Stat, TwinTable, useDeltaBasis, useDeltaNote } from "./mention-kit";
+import { CardSkeleton, DegradedNote, DeltaChip, InfoTip, Legend, Stat, TwinTable, useDegradedText, useDeltaBasis, useDeltaNote } from "./mention-kit";
 import { KpiBasisChip } from "./mention-tabs";
 
 // Sentiment colours: positive / neutral / mixed / negative (never the compare-brand hues).
@@ -38,11 +38,11 @@ export function FavorBody() {
   );
 }
 
-function FavorHeroCard() {
+export function FavorHeroCard() {
   const { input, tables } = useMention();
   const t = useTranslations("renewal.mention");
   const tF = useTranslations("answerAnalysis.mentions.kpi.favorability");
-  const tK = useTranslations("answerAnalysis.mentions.kpi");
+  const dg = useDegradedText();
   const tDef = useTranslations("dashboard.kpi");
   const locale = useLocale();
   const h = use(input.favorHero);
@@ -51,8 +51,9 @@ function FavorHeroCard() {
   const note = useDeltaNote();
   const foot = note(h.positiveDelta);
   const series = [
-    { key: "neg", name: tF("trendNegative"), color: SENTIMENT_COLOR.negative, values: h.points.map((p) => p.negative) },
-    { key: "pos", name: tF("trendPositive"), color: SENTIMENT_COLOR.positive, values: h.points.map((p) => p.positive), own: true },
+    // signal shares of 당사's mentions (the hero's own names), not answers
+    { key: "neg", name: t("favor.negative"), color: SENTIMENT_COLOR.negative, values: h.points.map((p) => p.negative) },
+    { key: "pos", name: t("favor.positive"), color: SENTIMENT_COLOR.positive, values: h.points.map((p) => p.positive), own: true },
   ];
   const x = h.points.map((p) => slotLabel(p.key));
   const tableOn = tables.has("fav-trend");
@@ -61,7 +62,14 @@ function FavorHeroCard() {
       <div className="flex min-w-0 flex-col gap-3">
         <div className="flex items-center gap-1.5 text-rn-12 font-bold text-rn-muted">
           {t("favor.label")}
-          <InfoTip label={t("hero.trendNoteLabel")} items={[[tDef("definitionLabel"), tDef("definition.sentiment")], [tDef("formulaLabel"), tDef("formula.sentiment")]]} />
+          <InfoTip
+            label={t("hero.trendNoteLabel")}
+            items={[
+              [tDef("definitionLabel"), tDef("definition.sentiment")],
+              [tDef("formulaLabel"), tDef("formula.sentiment")],
+              [t("hero.basisLabel"), t("hero.basisAll")],
+            ]}
+          />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div className="flex min-w-0 flex-col gap-1">
@@ -91,7 +99,7 @@ function FavorHeroCard() {
           </div>
         </div>
         {foot ? <p className="m-0 text-rn-11 text-rn-muted">{foot}</p> : null}
-        {degraded ? <DegradedNote>{tK("degraded")}</DegradedNote> : null}
+        {degraded ? <DegradedNote>{dg.all}</DegradedNote> : null}
         <dl className="m-0 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-rn-line pt-3">
           <Stat label={t("favor.posCount")} value={numTxt(h.positive, locale)} />
           <Stat label={t("favor.total")} value={numTxt(h.total, locale)} />
@@ -110,7 +118,7 @@ function FavorHeroCard() {
         </div>
         <Legend items={[...series].reverse()} />
         {h.trendMissing ? (
-          <DegradedNote>{tK("degraded")}</DegradedNote>
+          <DegradedNote>{dg.all}</DegradedNote>
         ) : !h.points.length ? (
           <RnEmpty>{t("hero.noTrend")}</RnEmpty>
         ) : tableOn ? (
@@ -204,7 +212,7 @@ function Matrix() {
           />
         }
         actions={<MentionCardActions section="sec-mix" csv={csv} />}
-        sub={tF("matrix.hint")}
+        sub={t("favor.matrixHint")}
       />
       {!rows.length ? (
         <RnEmpty className="mx-6 mb-5">{tF("matrix.empty")}</RnEmpty>

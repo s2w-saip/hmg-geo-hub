@@ -37,7 +37,7 @@ import {
   type RnMatrixView,
 } from "./citation-input";
 import { CitationCardActions, CitationProvider, DIV_LEGEND, DIV_LESS, DIV_MORE, divBg, engineLabel, useCatLabel, useCitation, type CitationCtx, type MatrixAxis } from "./citation-context";
-import { CardSkeleton, DegradedNote, DeltaChip, InfoTip, StateCard } from "../../mention/_components/mention-kit";
+import { CardSkeleton, DegradedNote, DeltaChip, InfoTip, StateCard, useDegradedText } from "../../mention/_components/mention-kit";
 import { numTxt, pctTxt, deltaTxt } from "../../mention/_components/mention-context";
 import { DomainBumpCard, DomainDrawer, DomainTableCard } from "./citation-domains";
 
@@ -62,10 +62,10 @@ function CitationShell({ input }: { input: RnCitationInput }) {
   const degraded = use(input.dataDegraded);
   const t = useTranslations("renewal.citation.states");
   const tA = useTranslations("answerAnalysis");
-  const tK = useTranslations("answerAnalysis.mentions.kpi");
+  const dg = useDegradedText();
   const reset = useRnFilterReset();
   if (!live) {
-    if (degraded) return <StateCard icon={<CircleSlash className="size-5" aria-hidden />} title={tK("degraded")} />;
+    if (degraded) return <StateCard icon={<CircleSlash className="size-5" aria-hidden />} title={dg.all} />;
     return input.filtered ? (
       <StateCard icon={<FilterX className="size-5" aria-hidden />} title={t("noResultTitle")} desc={t("noResultDesc")}>
         <RnButton onClick={reset}>{t("reset")}</RnButton>
@@ -372,7 +372,7 @@ function ShareTile({ kind }: { kind: "hmg" | "dealer" }) {
 
 function PromptTile({ kind }: { kind: "owned" | "uncited" }) {
   const t = useTranslations("renewal.citation.lens");
-  const tK = useTranslations("answerAnalysis.mentions.kpi");
+  const dg = useDegradedText();
   const href = useSubpageHref();
   const { lens: l } = useModel();
   const s = l.split;
@@ -386,7 +386,7 @@ function PromptTile({ kind }: { kind: "owned" | "uncited" }) {
     </>
   );
   if (s.kind !== "ok") {
-    const reason = s.kind === "degraded" ? tK("degraded") : t(`split.${s.kind}`);
+    const reason = s.kind === "degraded" ? dg.all : t(`split.${s.kind}`);
     return (
       <div className={cx(TILE, "bg-rn-page shadow-[0_0_0_1px_var(--color-rn-line)]")} data-rn-tile={kind} aria-disabled="true">
         {head}
@@ -422,7 +422,7 @@ function CompositionCard() {
   const { input, picked, active, lit, hover } = useCitation();
   const t = useTranslations("renewal.citation.comp");
   const tComp = useTranslations("answerAnalysis.citations.v2.competitor");
-  const tK = useTranslations("answerAnalysis.mentions.kpi");
+  const dg = useDegradedText();
   const cat = useCatLabel();
   const toggle = useRnFilterToggle();
   const { rn, rows, prev, sections } = useModel();
@@ -482,7 +482,7 @@ function CompositionCard() {
           </div>
           {!trendOn && sections?.categoryTrend ? (
             <div className="px-6 pt-2">
-              <DegradedNote>{tK("degraded")}</DegradedNote>
+              <DegradedNote>{dg.all}</DegradedNote>
             </div>
           ) : null}
         </div>
@@ -623,11 +623,11 @@ function MatrixBody() {
   const { lit, hover } = useCitation();
   const t = useTranslations("renewal.citation.matrix");
   const tA = useTranslations("answerAnalysis");
-  const tK = useTranslations("answerAnalysis.mentions.kpi");
+  const dg = useDegradedText();
   const cat = useCatLabel();
   const col = useColName();
   const { m, status } = useMatrix();
-  if (status === "degraded") return <div className="px-6 pb-5"><DegradedNote>{tK("degraded")}</DegradedNote></div>;
+  if (status === "degraded") return <div className="px-6 pb-5"><DegradedNote>{dg.all}</DegradedNote></div>;
   if (!m) return <p className="m-0 px-6 pb-5 text-rn-12 text-rn-muted">{tA("pending")}</p>;
   // one 출처 picked: every column is 100% of it — the original draws absolute counts then
   const counts = m.oneSource;
@@ -703,7 +703,7 @@ function MatrixBody() {
 function ToneCard() {
   const { input } = useCitation();
   const t = useTranslations("renewal.citation.tone");
-  const tK = useTranslations("answerAnalysis.mentions.kpi");
+  const dg = useDegradedText();
   const href = useSubpageHref();
   const sum = use(input.toneSummary);
   const tile = (tone: "positive" | "negative", color: string): ReactNode => {
@@ -740,7 +740,7 @@ function ToneCard() {
       />
       {sum == null ? (
         <div className="px-6 pb-5">
-          <DegradedNote>{tK("degraded")}</DegradedNote>
+          <DegradedNote>{dg.all}</DegradedNote>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-y-4 pb-5 @min-[560px]/rnpage:grid-cols-2 @min-[560px]/rnpage:divide-x @min-[560px]/rnpage:divide-rn-line">

@@ -8,7 +8,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { ArrowLeft, ExternalLink, Loader2, MessageSquareText, Search } from "lucide-react";
 import { RnButton, RnCard, RnCardHead, RnTag, cx } from "@/components/renewal-ui";
@@ -22,6 +22,7 @@ import type { CitationOwnedPromptPage, CitationTone, CitationToneUrlPage } from 
 import { displayCitationUrl } from "@/lib/url-display";
 import { engineLabel, useCatLabel } from "./citation-context";
 import { numTxt } from "../../mention/_components/mention-context";
+import { useDegradedText } from "../../mention/_components/mention-kit";
 
 // ── shared pieces ────────────────────────────────────────────────────────────
 
@@ -102,13 +103,14 @@ function SubSearch({ q, label }: { q: string; label: string }) {
 
 function SubPager({ win, onPage, hasNext }: { win: PageWindow; onPage: (p: number) => void; hasNext?: boolean }) {
   const t = useTranslations("answerAnalysis.citations.v2.pager");
+  const locale = useLocale();
   const nextDisabled = hasNext === undefined ? win.page >= win.pages : !hasNext;
   return (
     <div className="flex items-center justify-end gap-2 px-6 pb-4 text-rn-12">
       <RnButton disabled={win.page <= 1} onClick={() => onPage(win.page - 1)}>
         {t("prev")}
       </RnButton>
-      <span className="text-rn-muted tabular-nums">{t("page", { page: win.page, pages: win.pages })}</span>
+      <span className="text-rn-muted tabular-nums">{t("page", { page: numTxt(win.page, locale), pages: numTxt(win.pages, locale) })}</span>
       <RnButton disabled={nextDisabled} onClick={() => onPage(win.page + 1)}>
         {t("next")}
       </RnButton>
@@ -117,6 +119,12 @@ function SubPager({ win, onPage, hasNext }: { win: PageWindow; onPage: (p: numbe
 }
 
 const EMPTY = "m-0 px-6 py-10 text-center text-rn-13 text-rn-muted";
+
+/** "4,951–5,000 / 총 5,646개": the window and total grouped like the tab counts (an ICU simple argument prints a
+ * number as String(n), "총 5646개"). */
+function rangeArgs(win: PageWindow, total: number, locale: string) {
+  return { from: numTxt(win.from, locale), to: numTxt(win.to, locale), total: numTxt(total, locale) };
+}
 
 // ── 공식(당사) URL 인용/미인용 프롬프트 ─────────────────────────────────────────
 
@@ -133,7 +141,8 @@ export function RnCitationPromptsView(props: { tab: "owned" | "uncited"; page: C
 function PromptsView({ tab, page, q, ownedCount, uncitedCount }: { tab: "owned" | "uncited"; page: CursorAware<CitationOwnedPromptPage> | null; q: string; ownedCount: number | null; uncitedCount: number | null }) {
   const t = useTranslations("answerAnalysis.citations.v2.promptsPage");
   const tR = useTranslations("renewal.citation.sub");
-  const tK = useTranslations("answerAnalysis.mentions.kpi");
+  const degradedText = useDegradedText();
+  const locale = useLocale();
   const nav = useSubpageNav();
   const [selected, setSelected] = useState<PromptRow | null>(null);
   const win = page?.win ?? null;
@@ -144,19 +153,19 @@ function PromptsView({ tab, page, q, ownedCount, uncitedCount }: { tab: "owned" 
       <SubTabs
         label={t("title")}
         items={[
-          { key: "owned", active: tab === "owned", href: nav.href({ tab: "owned", page: "1" }), label: t("ownedTab", { n: ownedCount == null ? "—" : numTxt(ownedCount) }) },
-          { key: "uncited", active: tab === "uncited", href: nav.href({ tab: "uncited", page: "1" }), label: t("uncitedTab", { n: uncitedCount == null ? "—" : numTxt(uncitedCount) }) },
+          { key: "owned", active: tab === "owned", href: nav.href({ tab: "owned", page: "1" }), label: t("ownedTab", { n: numTxt(ownedCount, locale) }) },
+          { key: "uncited", active: tab === "uncited", href: nav.href({ tab: "uncited", page: "1" }), label: t("uncitedTab", { n: numTxt(uncitedCount, locale) }) },
         ]}
       />
       <RnCard aria-label={t("title")}>
         <RnCardHead title={tR(tab === "owned" ? "ownedTitle" : "uncitedTitle")} sub={tR(tab === "owned" ? "ownedSub" : "uncitedSub")} />
         <div className="flex flex-wrap items-center justify-between gap-3 px-6 pb-3">
           <SubSearch q={q} label={t("search")} />
-          {win ? <span className="text-rn-12 text-rn-muted tabular-nums">{t("range", { from: win.from, to: win.to, total: page!.total })}</span> : null}
+          {win ? <span className="text-rn-12 text-rn-muted tabular-nums">{t("range", rangeArgs(win, page!.total, locale))}</span> : null}
         </div>
         <FilterContentDim>
           {page == null ? (
-            <p className={EMPTY}>{tK("degraded")}</p>
+            <p className={EMPTY}>{degradedText.all}</p>
           ) : page.rows.length === 0 ? (
             <p className={EMPTY}>{t("empty")}</p>
           ) : (
@@ -165,7 +174,9 @@ function PromptsView({ tab, page, q, ownedCount, uncitedCount }: { tab: "owned" 
                 <thead className="border-y border-rn-line bg-rn-page">
                   <tr>
                     <th scope="col" className="px-6 py-2 text-left text-rn-12 font-semibold text-rn-muted">{t("col.prompt")}</th>
-                    <th scope="col" className="w-24 px-3 py-2 text-right text-rn-12 font-semibold text-rn-muted">{t("col.citations")}</th>
+                    <th scope="col" title={tR("colCitationsTip")} className="w-28 px-3 py-2 text-right text-rn-12 font-semibold text-rn-muted">
+                      {tR("colCitations")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -205,7 +216,7 @@ function PromptsView({ tab, page, q, ownedCount, uncitedCount }: { tab: "owned" 
                             </span>
                           </span>
                         </td>
-                        <td className="px-3 py-2.5 text-right font-semibold text-rn-ink tabular-nums">{numTxt(r.citations)}</td>
+                        <td className="px-3 py-2.5 text-right font-semibold text-rn-ink tabular-nums">{numTxt(r.citations, locale)}</td>
                       </tr>
                     );
                   })}
@@ -262,7 +273,8 @@ function ToneView({ tone, page, q, byDomain, counts: served }: ToneProps) {
   const counts = useShownToneCounts(served);
   const t = useTranslations("answerAnalysis.citations.v2.toneUrlsPage");
   const tR = useTranslations("renewal.citation.sub");
-  const tK = useTranslations("answerAnalysis.mentions.kpi");
+  const degradedText = useDegradedText();
+  const locale = useLocale();
   const cat = useCatLabel();
   const nav = useSubpageNav();
   const win = page?.win ?? null;
@@ -273,8 +285,8 @@ function ToneView({ tone, page, q, byDomain, counts: served }: ToneProps) {
       <SubTabs
         label={t("title")}
         items={[
-          { key: "positive", active: tone === "positive", href: nav.href({ tone: "positive", page: "1" }), label: t("positiveTab", { n: counts.positive == null ? "—" : numTxt(counts.positive) }) },
-          { key: "negative", active: tone === "negative", href: nav.href({ tone: "negative", page: "1" }), label: t("negativeTab", { n: counts.negative == null ? "—" : numTxt(counts.negative) }) },
+          { key: "positive", active: tone === "positive", href: nav.href({ tone: "positive", page: "1" }), label: t("positiveTab", { n: numTxt(counts.positive, locale) }) },
+          { key: "negative", active: tone === "negative", href: nav.href({ tone: "negative", page: "1" }), label: t("negativeTab", { n: numTxt(counts.negative, locale) }) },
         ]}
       />
       <RnCard aria-label={t("title")}>
@@ -297,11 +309,11 @@ function ToneView({ tone, page, q, byDomain, counts: served }: ToneProps) {
               </button>
             </label>
           </span>
-          {win ? <span className="text-rn-12 text-rn-muted tabular-nums">{t("range", { from: win.from, to: win.to, total: page!.total })}</span> : null}
+          {win ? <span className="text-rn-12 text-rn-muted tabular-nums">{t("range", rangeArgs(win, page!.total, locale))}</span> : null}
         </div>
         <FilterContentDim>
           {page == null ? (
-            <p className={EMPTY}>{tK("degraded")}</p>
+            <p className={EMPTY}>{degradedText.all}</p>
           ) : page.rows.length === 0 ? (
             <p className={EMPTY}>{t("empty")}</p>
           ) : (
@@ -331,7 +343,7 @@ function ToneView({ tone, page, q, byDomain, counts: served }: ToneProps) {
                   )}
                   <span className="text-rn-11 text-rn-muted">
                     {r.promptText ? `“${r.promptText}” · ` : ""}
-                    {t("cites", { n: numTxt(r.citations) })}
+                    {t("cites", { n: numTxt(r.citations, locale) })}
                   </span>
                 </li>
               ))}

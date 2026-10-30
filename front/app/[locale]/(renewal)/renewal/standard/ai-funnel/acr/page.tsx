@@ -48,7 +48,8 @@ export default async function RenewalAcrPage({
   } catch (e) {
     throwForPage(e, locale);
   }
-  const header = (
+  // the snapshot pill names its round once the body's read has answered (asOf); the loading skeleton shows it without
+  const header = (asOf: string | null) => (
     <RnPageHeader
       title={
         <>
@@ -64,7 +65,7 @@ export default async function RenewalAcrPage({
             {t("cadence")}
             <span aria-hidden className="h-3 w-px bg-rn-line-2" />
             <span className="font-semibold tabular-nums text-rn-ink-2">
-              {head.period ? t("periodRange", { from: head.dateFrom ?? "…", to: head.dateTo ?? "…" }) : t("snapshot")}
+              {head.period ? t("periodRange", { from: head.dateFrom ?? "…", to: head.dateTo ?? "…" }) : asOf ? t("snapshotOf", { date: asOf }) : t("snapshot")}
             </span>
           </RnPill>
         </>
@@ -74,7 +75,7 @@ export default async function RenewalAcrPage({
   );
   return (
     <RnFilterRuntime>
-      <Suspense fallback={<PageSkeleton header={header} />}>
+      <Suspense fallback={<PageSkeleton header={header(null)} />}>
         <RenewalAcr sp={sp} scope={session.user.scope} userId={session.user.id} locale={locale} header={header} />
       </Suspense>
     </RnFilterRuntime>
@@ -92,7 +93,7 @@ async function RenewalAcr({
   scope: AllowedScope;
   userId: string;
   locale: string;
-  header: ReactNode;
+  header: (asOf: string | null) => ReactNode;
 }) {
   const saved = loadSavedFilters("acr");
   let read: RnAcrScreen;
@@ -103,7 +104,7 @@ async function RenewalAcr({
   }
   return (
     <RnOverviewFilters props={{ ...read.props, scope }} savedFilters={{ page: "acr", userId, initial: await saved }}>
-      <RnFilterSplit header={header} panel={<RnOverviewFilterPanel />} rail={<RnOverviewFilterRail />}>
+      <RnFilterSplit header={header(read.body.asOf)} panel={<RnOverviewFilterPanel />} rail={<RnOverviewFilterRail />}>
         <RnOverviewApplied />
         <RnBusyScope className="flex flex-col gap-4">
           <RnAcrBody input={read.body} />

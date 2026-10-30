@@ -45,7 +45,7 @@ export function RnAcrBody({ input }: { input: RnAcrInput }) {
   const { view } = input;
   if (!input.measured || !view) {
     return input.filtered ? (
-      <StateCard icon={<FilterX className="size-5" aria-hidden />} title={t("states.noResultTitle")} desc={t("states.noResultDesc")}>
+      <StateCard icon={<FilterX className="size-5" aria-hidden />} title={t("states.noResultTitle")} desc={t(input.period ? "states.noResultDescPeriod" : "states.noResultDesc")}>
         <RnButton onClick={reset}>{t("states.reset")}</RnButton>
       </StateCard>
     ) : (
@@ -128,7 +128,7 @@ function AcrMeasured({ input, view }: { input: RnAcrInput; view: RnAcrView }) {
         <RnControlBar label={t("bar.label")}>
           <ComparePicker pick={pick} setPick={setPick} />
         </RnControlBar>
-        <AcrFindings period={input.period} />
+        <AcrFindings period={input.period} asOf={input.asOf} />
         <RnSectionHead id="sec-overview" title={t("sec.overview")} desc={t("sec.overviewDesc")} />
         <AcrHero period={input.period} roundBuckets={input.roundBuckets} />
         <RnSectionHead id="sec-comp" title={t("sec.comp")} desc={t("sec.compDesc")} />
@@ -143,7 +143,7 @@ function AcrMeasured({ input, view }: { input: RnAcrInput; view: RnAcrView }) {
         <RnSectionHead id="sec-dist" title={t("sec.dist")} desc={t("sec.distDesc")} />
         <AcrDistribution />
         <p className="m-0 px-1 text-rn-11 text-rn-muted">
-          {t(input.period ? "foot.period" : "foot.snapshot", { prompts: T.prompts, cells: T.promptRuns.toLocaleString(locale), iterations: T.iterations.toLocaleString(locale) })}
+          {t(input.period ? "foot.period" : "foot.snapshot", { date: input.asOf ?? "—", prompts: T.prompts, cells: T.promptRuns.toLocaleString(locale), iterations: T.iterations.toLocaleString(locale) })}
         </p>
       </div>
     </AcrProvider>
@@ -219,12 +219,12 @@ function ComparePicker({ pick, setPick }: { pick: { auto: boolean; brands: strin
 
 // ── 이번 회차 요약 ─────────────────────────────────────────────────────────────
 
-function AcrFindings({ period }: { period: boolean }) {
+function AcrFindings({ period, asOf }: { period: boolean; asOf: string | null }) {
   const { view, totals, ownLabel, engineLabel, countryLabel } = useAcr();
   const t = useTranslations("renewal.acr");
   const o = view.own;
   // read-only findings (no jump to the card)
-  const items: RnFinding[] = view.findings.map((f, i) => findingCopy(f, i, t, { engineLabel, countryLabel }));
+  const items: RnFinding[] = view.findings.map((f, i) => findingCopy(f, i, t, { engineLabel, countryLabel, measured: totals.prompts }));
   return (
     <RnCard id="sec-summary" aria-label={t(period ? "summary.titlePeriod" : "summary.title")} tone="hero" className="pb-[18px] [.rn-dense_&]:pb-3">
       <RnCardHead
@@ -234,7 +234,7 @@ function AcrFindings({ period }: { period: boolean }) {
             <RnInfoTipItem label={t("summary.howLabel")}>{t("summary.how")}</RnInfoTipItem>
           </RnInfoTip>
         }
-        chips={<RnBasisChip>{t(period ? "summary.chipPeriod" : "summary.chipSnapshot")}</RnBasisChip>}
+        chips={<RnBasisChip>{period ? t("summary.chipPeriod") : t("summary.chipSnapshot", { date: asOf ?? "—" })}</RnBasisChip>}
       />
       <p className="m-0 px-6 pb-3.5 text-rn-16 leading-[1.6] break-keep text-white/88 [.rn-dense_&]:px-4.5 [.rn-dense_&]:pb-2.5 [&_b]:font-bold [&_b]:text-white">
         {t.rich("summary.headline", {
@@ -259,7 +259,7 @@ function findingCopy(
   f: AcrFinding,
   i: number,
   t: Tr,
-  h: { engineLabel: (e: string) => string; countryLabel: (c: string | null) => string },
+  h: { engineLabel: (e: string) => string; countryLabel: (c: string | null) => string; measured: number },
 ): RnFinding {
   const p = f.params;
   const num = (v: string | number) => (typeof v === "number" ? v.toFixed(1) : v);
@@ -276,7 +276,7 @@ function findingCopy(
       break;
     case "engine":
       title = t("find.engine.title", { engine: h.engineLabel(String(p.engine)), wins: p.wins, total: p.total, other: h.engineLabel(String(p.other)), diff: p.diff });
-      detail = t("find.engine.detail");
+      detail = t("find.engine.detail", { total: p.total, measured: h.measured });
       break;
     case "sweep":
       title = t("find.sweep.title", { rival: String(p.rival), count: p.count });

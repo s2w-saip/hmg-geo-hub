@@ -124,9 +124,10 @@ export interface RnSummaryVM {
   options: Record<string, { type: number | null; order: number[] }>;
 }
 
+/** A metric without a value (its read failed or was suppressed) has no numerator or denominator either (null). */
 export interface RnRateValueVM {
-  exposure: { pct: number | null; numerator: number; denominator: number };
-  sov: { pct: number | null; numerator: number; denominator: number };
+  exposure: { pct: number | null; numerator: number | null; denominator: number | null };
+  sov: { pct: number | null; numerator: number | null; denominator: number | null };
   degraded: boolean;
 }
 
@@ -212,8 +213,9 @@ export interface RnRateTypesVM {
 export interface RnFavorHeroVM {
   positivePct: number | null;
   negativePct: number | null;
-  positive: number;
-  total: number;
+  /** null with positivePct */
+  positive: number | null;
+  total: number | null;
   positiveDelta: RnDelta;
   negativeDelta: RnDelta;
   mixedBasis: boolean;
@@ -266,8 +268,9 @@ export interface RnRankVM {
   /** the first-position read answered (else the degraded note) */
   fp: boolean;
   degraded: boolean;
-  hero: { avgPosition: number | null; rankedAnswers: number; delta: RnDelta; series: (number | null)[]; axis: string[] };
-  ahead: number;
+  /** rankedAnswers and ahead are null when avgPosition is (no 당사 position: nothing counted or compared) */
+  hero: { avgPosition: number | null; rankedAnswers: number | null; delta: RnDelta; series: (number | null)[]; axis: string[] };
+  ahead: number | null;
   rows: RankRow[];
   /** row order with the ladder off (당사 first) */
   ownFirst: number[];

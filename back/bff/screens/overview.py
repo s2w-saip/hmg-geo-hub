@@ -22,7 +22,7 @@ Screens (one per Suspense section; `ctx.surface` = global | website where both p
   overview/card-trend        card Δ + sparklines (deferred)    {degraded, cards, count}
   overview/card-competitors  card competitor rows (deferred)   {degraded, rows, standing?}
   overview/geo               GEO section (global, renewal)     {geo, degraded}
-  overview/brand-matrix      renewal brand x KPI table         {rows, cols} | null
+  overview/brand-matrix      renewal brand x KPI table         {rows, cols, degraded?} | null
   website/summary            website tiles                     {state, tiles}
   website/summary-deferred   website tiles with Δ and badge    {tiles}
   website/trend              website KPI trend chart           {trend}
@@ -888,23 +888,32 @@ async def geo(q) -> dict:
     return {"geo": geo_view(to_live_geo(markets["data"]), ctx.get("locale", "ko")), "degraded": False}
 
 
+TREND_DEGRADE_LABEL = "standardTrend:day"  # the old degrade label of the round trend (card Δ)
+
+
 @screen("overview/brand-matrix")
 async def brand_matrix_screen(q) -> dict | None:
     """Renewal brand x KPI table: 당사 (card values, trend Δ) and every card's compared competitors.
-    None when the summary is empty (the card shows the empty state)."""
+    None when the summary is empty (the card shows the empty state); a failed summary is raised (the page
+    shows the table's failure). `degraded` = the old labels of the parts that failed transiently — the
+    competitor reads (COMPETITOR_LABELS order), then the trend — present only when one did (2026-10-29 metric
+    review ⚠️ Overview #32: a failed competitor read read as "no competitor value")."""
     _ctx, sp = split_context(q)
     filters = global_filters(sp)
     common = common_params(filters, "global")
+    trend_failed = False
 
     async def trend_or_none():
+        nonlocal trend_failed
         try:
             return await load_live_trend(common, "global", OVERVIEW_TREND_METRICS, "day")
         except Exception as exc:  # noqa: BLE001
             if not is_transient(exc):
                 raise
+            trend_failed = True
             return None
 
-    summary, trend, (src, _degraded) = await asyncio.gather(
+    summary, trend, (src, degraded) = await asyncio.gather(
         fetch_dashboard_summary(common, "global"), trend_or_none(), load_competitor_sources(common, "global"))
     if summary_is_empty(summary["data"], summary["meta"]):
         return None
@@ -914,7 +923,11 @@ async def brand_matrix_screen(q) -> dict | None:
     own = {"label": own_label_of(filters),
            "values": {k: overview_card_state(by_key.get(k))["value"] for k in OVERVIEW_KPI_KEYS},
            "deltas": {k: overview_card_state(applied.get(k))["delta"] for k in OVERVIEW_KPI_KEYS}}
-    return brand_matrix(own, {k: competitor_row(src, k) for k in OVERVIEW_KPI_KEYS})
+    out = brand_matrix(own, {k: competitor_row(src, k) for k in OVERVIEW_KPI_KEYS})
+    failed = [*degraded, *([TREND_DEGRADE_LABEL] if trend_failed else [])]
+    if failed:
+        out["degraded"] = failed
+    return out
 
 
 # ── website ─────────────────────────────────────────────────────────────────

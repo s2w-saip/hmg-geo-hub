@@ -8,9 +8,11 @@
 //   value / pending / period chip + caption   overview/cards (compareTitle = what Δ compares against)
 //   Δ, sparkline, its domain and labels        overview/card-trend
 //   standing                                   overview/card-competitors (ctx.view=renewal)
-//   brand table (cells, best, bar, Δ marks)    overview/brand-matrix
+//   brand table (cells, best, bar, Δ marks)    overview/brand-matrix (+ the parts that failed)
 //   markets                                    overview/geo (GeoOverview)
-// This file formats and lays them out.
+// This file formats and lays them out. What the numbers count is said on the page (Gold metric review ⚠️,
+// 2026-10-29): the cards and the table count 대표 답변 (Mention / Citation count every answer), and a read
+// that failed says so instead of vanishing or reading as "no competitor value".
 
 import { Suspense, use } from "react";
 import Link from "next/link";
@@ -45,16 +47,23 @@ import type {
 import { periodChipText } from "@/lib/period-chip-text";
 import { GeoOverview } from "@/app/[locale]/(dash)/dashboard/_components/geo-overview";
 
+/** overview/brand-matrix with the old labels of the parts that failed transiently (absent = none failed). */
+export type RnBrandMatrixView = BrandMatrixView & { degraded?: string[] };
+/** The brand table's read: the table, null (no answers) or "failed" (its screen failed transiently). */
+export type RnBrandMatrixRead = RnBrandMatrixView | null | "failed";
+
 export interface OverviewDeferredData {
   trend: Promise<CardTrendView>;
   competitors: Promise<CardCompetitorsView>;
-  matrix: Promise<BrandMatrixView | null>;
+  matrix: Promise<RnBrandMatrixRead>;
 }
 
 /** The rank KPI reads lower = better (reversed spark, Δ tone). */
 const isRank = (k: OverviewKpiKey) => k === "position";
 
 const infoKeyOf = (k: OverviewKpiKey) => (k === "citationShare" ? "citationShareGlobal" : k);
+/** The analysis page of a KPI, which counts every answer (the menu label of its nav key). */
+const analysisPageOf = (k: OverviewKpiKey) => (k === "citationShare" ? "answerAnalysisCitation" : "answerAnalysisMention");
 
 function useFormat() {
   const tUnit = useTranslations("metricUnit");
@@ -86,7 +95,7 @@ export function RnOverviewBody({
       <KpiRow cards={cards} compareTitle={compareTitle} deferred={deferred} qs={qs} />
       {/* brand comparison before the (long) market table so it is not buried */}
       <Suspense fallback={<CardSkeleton rows={5} />}>
-        <BrandMatrix matrix={deferred.matrix} />
+        <BrandMatrix matrix={deferred.matrix} compareTitle={compareTitle} />
       </Suspense>
       {geo ? (
         <Suspense fallback={<CardSkeleton rows={8} />}>
@@ -127,6 +136,7 @@ function KpiRow({
   const tO = useTranslations("dashboard.overview");
   const tP = useTranslations("periodCompare");
   const tKpi = useTranslations("dashboard.kpi");
+  const tNav = useTranslations("nav");
   const locale = useLocale();
   const byKey = new Map(cards.map((c) => [c.key, c]));
   return (
@@ -135,7 +145,7 @@ function KpiRow({
         title={t("kpiTitle")}
         hint={
           <>
-            {t("kpiHintDelta", { compare: compareTitle ? tP(compareTitle.key as "label.weekly", compareTitle.params) : tO("compare") })}
+            {t("kpiHintBasis")} · {t("kpiHintDelta", { compare: compareTitle ? tP(compareTitle.key as "label.weekly", compareTitle.params) : tO("compare") })}
             <Suspense fallback={null}>
               <TrendCount trend={deferred.trend} />
             </Suspense>
@@ -159,7 +169,9 @@ function KpiRow({
                 <span className="relative z-[1] inline-flex">
                   <RnInfoTip label={t("infoLabel", { name })} align={i >= 3 ? "end" : "start"}>
                     <RnInfoTipItem label={t("definition")}>{tKpi(`definition.${infoKeyOf(key)}` as "definition.visibility")}</RnInfoTipItem>
-                    <RnInfoTipItem label={t("formula")}>{tKpi(`formula.${infoKeyOf(key)}` as "formula.visibility")}</RnInfoTipItem>
+                    {/* 우선 노출도: the card shows "N번째"; the shared formula (legacy dashboard copy) names the unit "위" */}
+                    <RnInfoTipItem label={t("formula")}>{key === "position" ? t("formulaPosition") : tKpi(`formula.${infoKeyOf(key)}` as "formula.visibility")}</RnInfoTipItem>
+                    <RnInfoTipItem label={t("basisLabel")}>{t("basisTip", { page: tNav(analysisPageOf(key)) })}</RnInfoTipItem>
                   </RnInfoTip>
                 </span>
               </span>
@@ -297,27 +309,44 @@ function SparkCell({ k, trend }: { k: OverviewKpiKey; trend: Promise<CardTrendVi
 function StandingLine({ k, competitors }: { k: OverviewKpiKey; competitors: Promise<CardCompetitorsView> }) {
   const t = useTranslations("renewal.overview");
   const tO = useTranslations("dashboard.overview");
-  const st = use(competitors).standing?.[k] ?? null;
-  if (!st) return <>{tO("noCompetitorData")}</>;
+  const view = use(competitors);
+  const st = view.standing?.[k] ?? null;
+  // no standing: a competitor read that failed says so (not "no competitor value", 2026-10-29 review ⚠️ #32)
+  if (!st) return <>{view.degraded.length ? t("rivalsFailed") : tO("noCompetitorData")}</>;
   return <>{t.rich("standing", { b: (c) => <b className="font-semibold text-white">{c}</b>, rank: st.rank, count: st.count })}</>;
 }
 
 // ─── 브랜드 비교 (brands × KPIs) ────────────────────────────────────────────
 
-function BrandMatrix({ matrix }: { matrix: Promise<BrandMatrixView | null> }) {
+function BrandMatrix({ matrix, compareTitle }: { matrix: Promise<RnBrandMatrixRead>; compareTitle: ScreenMessage | null }) {
   const t = useTranslations("renewal.overview");
   const tO = useTranslations("dashboard.overview");
+  const tP = useTranslations("periodCompare");
   const tKpi = useTranslations("dashboard.kpi.name");
   const f = useFormat();
   const m = use(matrix);
+  // the table's screen failed: the card says so instead of leaving the page without it (review ⚠️ #31)
+  if (m === "failed")
+    return (
+      <RnCard aria-label={t("brandsTitle")}>
+        <RnCardHeader title={t("brandsTitle")} />
+        <RnEmpty className="mx-6 mb-5">{t("brandsFailed")}</RnEmpty>
+      </RnCard>
+    );
   if (!m) return null;
   const { rows, cols } = m;
+  // A period compare on the cards (compareTitle) compares the period with the one before; the table's Δ stays
+  // the last two rounds of the period, so the hint and the Δ titles say which (review ⚠️ #28).
+  const compare = compareTitle ? t("deltaRounds") : tO("compare");
+  const hint = compareTitle
+    ? t("brandsHintPeriod", { compare: tP(compareTitle.key as "label.weekly", compareTitle.params) })
+    : t("brandsHint", { compare });
   const deltaText = (k: OverviewKpiKey, mark: BrandCellView["deltaMark"]) => {
     if (mark == null) return null;
     if (mark.tone === "flat") return <span className="text-rn-11 font-semibold text-rn-muted">{t("deltaFlat")}</span>;
     const good = mark.tone === "good";
     return (
-      <span className={cx("text-rn-11 font-semibold tabular-nums", good ? "text-rn-up-ink" : "text-rn-danger-ink")} title={t("deltaTitle", { dir: good ? t("deltaUp") : t("deltaDown"), compare: tO("compare") })}>
+      <span className={cx("text-rn-11 font-semibold tabular-nums", good ? "text-rn-up-ink" : "text-rn-danger-ink")} title={t("deltaTitle", { dir: good ? t("deltaUp") : t("deltaDown"), compare })}>
         {mark.r > 0 ? "▲" : "▼"}
         {f.delta(k, mark.r)}
       </span>
@@ -325,7 +354,7 @@ function BrandMatrix({ matrix }: { matrix: Promise<BrandMatrixView | null> }) {
   };
   return (
     <RnCard aria-label={t("brandsTitle")}>
-      <RnCardHeader title={t("brandsTitle")} hint={t("brandsHint", { compare: tO("compare") })} />
+      <RnCardHeader title={t("brandsTitle")} hint={hint} />
       <div className="overflow-x-auto">
         <table className="w-full min-w-[640px] table-fixed border-separate border-spacing-0 text-rn-13" data-rn-brand-matrix="">
           <colgroup>
@@ -383,7 +412,11 @@ function BrandMatrix({ matrix }: { matrix: Promise<BrandMatrixView | null> }) {
           </tbody>
         </table>
       </div>
-      {rows.length === 1 ? <RnEmpty className="mx-6 mt-3">{tO("noCompetitorData")}</RnEmpty> : null}
+      {m.degraded?.length ? (
+        <RnEmpty className="mx-6 mt-3">{t("brandsPartial")}</RnEmpty>
+      ) : rows.length === 1 ? (
+        <RnEmpty className="mx-6 mt-3">{tO("noCompetitorData")}</RnEmpty>
+      ) : null}
       <p className="m-0 px-6 pt-2.5 pb-4 text-rn-11 leading-[1.55] break-keep text-rn-muted">{t("brandsFoot")}</p>
     </RnCard>
   );

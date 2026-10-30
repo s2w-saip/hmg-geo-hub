@@ -170,7 +170,8 @@ describe("renewal Citation body", () => {
   it("no data: empty, filtered and delayed states", () => {
     expect(render(input({ data: null }))).toContain(ko.answerAnalysis.empty);
     expect(render(input({ data: null, filtered: true }))).toContain(T.states.noResultTitle);
-    expect(render(input({ data: null, dataDegraded: true }))).toContain(ko.answerAnalysis.mentions.kpi.degraded);
+    // a failed read says it could not load (the shared copy said every failure "timed out")
+    expect(render(input({ data: null, dataDegraded: true }))).toContain(ko.renewal.mention.degraded.all);
   });
   it("tone tiles: api vs legacy basis chip", () => {
     expect(render(input())).toContain(T.tone.chipLegacy);

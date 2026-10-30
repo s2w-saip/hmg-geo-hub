@@ -246,5 +246,45 @@ class CompetitorCitations(unittest.TestCase):
         self.assertEqual(row, [{"brand": "Toyota", "value": 3.0}])
 
 
+
+class BrandMatrixFailures(unittest.TestCase):
+    """Gold metric review ⚠️ Overview #31 #32 (2026-10-29): the brand table dropped what failed — a competitor read
+    that failed left 당사 alone under "경쟁사 값을 제공하지 않는 지표입니다", a failed trend left the Δ out without a
+    word. The table names the parts that failed (the old degrade labels); a failed summary is raised, so the page
+    shows the table's failure instead of no table."""
+
+    BODIES = {"kpi/summary": summary(), "mentions/brands": {"data": {"brands": []}, "meta": META},
+              "trend": {"data": {"bucket": "cycle", "dimension": "none", "own_label": "HMG", "buckets": [], "series": []},
+                        "meta": META},
+              "brand-trend": {"data": {"bucket": "cycle", "dimension": "brand", "own_label": "HMG", "buckets": [],
+                                       "series": []}, "meta": META},
+              "citations/domains": {"data": {"summary": {"own_share": {"num": 0, "den": 0}}, "items": [],
+                                             "competitor_sources": []}, "meta": META}}
+
+    def matrix(self, fail: dict):
+        return screen("overview/brand-matrix", "", Router(self.BODIES, fail))
+
+    def test_nothing_failed_names_nothing(self):
+        out = self.matrix({})
+        self.assertEqual(sorted(out), ["cols", "rows"])
+
+    def test_the_parts_that_failed_are_named(self):
+        cases = [({"mentions/brands": 503}, ["standardMentions"]),
+                 ({"brand-trend": 503}, ["brandTrend", "firstPosition"]),
+                 ({"citations/domains": 503}, ["standardCitationDomains"]),
+                 ({"trend": 503}, ["standardTrend:day"]),
+                 ({"mentions/brands": 503, "trend": 503}, ["standardMentions", "standardTrend:day"])]
+        for fail, labels in cases:
+            with self.subTest(fail=fail):
+                out = self.matrix(fail)
+                self.assertEqual(out["degraded"], labels)
+                self.assertEqual(out["rows"][0]["own"], True)
+
+    def test_a_failed_summary_is_raised(self):
+        with self.assertRaises(HTTPException) as cm:
+            self.matrix({"kpi/summary": 503})
+        self.assertEqual(cm.exception.status_code, 503)
+
+
 if __name__ == "__main__":
     unittest.main()

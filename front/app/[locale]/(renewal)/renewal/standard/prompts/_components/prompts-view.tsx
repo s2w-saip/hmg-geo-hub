@@ -319,6 +319,11 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
   const picked = activeAxes(filters);
   const depthCols = (["depth1", "depth2", "depth3", "depth4"] as const).filter((c) => data.columns.includes(c));
   const hasListType = axisOptions("listType", facets).length > 0;
+  // the sort offers the taxonomy axes the list shows (a Depth no row of the scope has is not offered — Gold
+  // metric review ⚠️ #40: Depth4 is empty everywhere); the sort in use stays listed
+  const sortKeys = PROMPT_SORTS.filter((k) => k === sort.key || (k === "listType" ? hasListType : !k.startsWith("depth") || (depthCols as readonly string[]).includes(k)));
+  // counts group their thousands like the tab's count (review ⚠️ #6: "표시 12164")
+  const num = (n: number) => n.toLocaleString(locale);
   // a row's taxonomy levels: the list type and the Depth columns of the scope ("-" = an unset level)
   const level = (v: string | null) => (v && v.trim() !== "-" ? v : null);
   const taxonomy = (r: PromptRow) => [
@@ -460,7 +465,7 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
                 </RnTextButton>
               </RnNote>
             ) : null}
-            <RnCard busy={busy} aria-label={t("count", { count: data.count })}>
+            <RnCard busy={busy} aria-label={t("count", { count: num(data.count) })}>
               <div className="flex flex-wrap items-center gap-2 border-b border-rn-line px-5 py-3">
                 <RnSearchField
                   id="rn-prompt-search"
@@ -481,7 +486,7 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
                     setSort({ key, asc: firstAsc(key) });
                     setPage(1);
                   }}
-                  options={PROMPT_SORTS.map((k) => ({ value: k, label: sortLabel(k, t) }))}
+                  options={sortKeys.map((k) => ({ value: k, label: sortLabel(k, t) }))}
                 />
                 <RnIconButton
                   label={sort.asc ? tp("sortAsc") : tp("sortDesc")}
@@ -492,14 +497,15 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
                 >
                   {sort.asc ? <ArrowUpNarrowWide className="size-4" aria-hidden /> : <ArrowDownWideNarrow className="size-4" aria-hidden />}
                 </RnIconButton>
-                <span className="ml-auto text-rn-12 text-rn-muted tabular-nums">{t("filteredCount", { shown: total, total: data.count })}</span>
+                <span className="ml-auto text-rn-12 text-rn-muted tabular-nums">{t("filteredCount", { shown: num(total), total: num(data.count) })}</span>
                 <RnButton size="sm" onClick={handleExport} disabled={exporting || total === 0}>
                   {exporting ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : <Download className="size-3.5" aria-hidden />}
                   {t("exportLabel")}
                 </RnButton>
               </div>
               {total === 0 ? (
-                <RnEmpty className="m-5">{t("empty")}</RnEmpty>
+                // the scope has prompts and the picks left none: say so, not that nothing is viewable (review ⚠️ #21)
+                <RnEmpty className="m-5">{data.count > 0 ? tp("emptyFiltered") : t("empty")}</RnEmpty>
               ) : (
                 <div {...tip.bind}>
                   <table className="w-full table-fixed border-separate border-spacing-0 text-rn-13" data-rn-prompt-table="">
@@ -573,7 +579,7 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
                               <span className="flex items-center gap-1.5 text-rn-12 whitespace-nowrap">
                                 <RnKindMark acr={r.kind === "acr"} />
                                 {r.scopePromptId === null ? (
-                                  <span data-rn-tip={t("statusUnmeasuredHint")} className="inline-flex items-center gap-1 text-rn-muted">
+                                  <span data-rn-tip={tp("unmeasuredHint")} className="inline-flex items-center gap-1 text-rn-muted">
                                     <i aria-hidden className="inline-block size-2 rounded-full border border-dashed border-rn-muted" />
                                     {t("statusUnmeasured")}
                                   </span>

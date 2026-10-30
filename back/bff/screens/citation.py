@@ -134,6 +134,13 @@ async def degrade(aw) -> tuple[Any, bool]:
         return None, True
 
 
+def _shown_page(page_no: int, cursor: str | None, restarted: bool) -> int:
+    """The page a sub page's window names: the URL's page while a cursor placed the rows, else page one, which is what
+    a read without a cursor (or one restarted after a stale cursor) returns. ?page=N alone (an old link or bookmark)
+    named page N over the first rows."""
+    return page_no if cursor and not restarted else 1
+
+
 async def _restartable_page(cursor: str | None, run):
     """pageOrFirst: a stale (409 cursor_stale) or foreign (422 cursor_invalid) cursor reads page one."""
     try:
@@ -581,7 +588,8 @@ async def prompts(q) -> dict:
     for r in data["items"]:
         p = M.to_citation_prompt(r)
         rows.append({k: p[k] for k in ("id", "promptText", "funnelStage", "citations", "providers", "answers")})
-    page = {"rows": rows, "total": total, "page": 1 if restarted else page_no, "pageSize": page_size, "nextCursor": info["nextCursor"]}
+    page = {"rows": rows, "total": total, "page": _shown_page(page_no, cursor, restarted), "pageSize": page_size,
+            "nextCursor": info["nextCursor"]}
     page["win"] = M.page_window(total, page["page"], page_size)
     owned_zero = data["counts"]["owned"] == 0
     return {**out, "page": page, "ownedCount": None if owned_zero else data["counts"]["owned"],
@@ -618,7 +626,7 @@ async def tone_urls(q) -> dict:
     total = info["total"] if info["total"] is not None else len(data["items"])
     page_size = info["limit"] if info["limit"] is not None else M.SUBPAGE_SIZE
     page = {"rows": [M.to_tone_url_row(r, group_by) for r in data["items"]], "total": total,
-            "page": 1 if restarted else page_no, "pageSize": page_size, "nextCursor": info["nextCursor"]}
+            "page": _shown_page(page_no, cursor, restarted), "pageSize": page_size, "nextCursor": info["nextCursor"]}
     page["win"] = M.page_window(total, page["page"], page_size)
     counts = data.get("counts") or {}
     return {**out, "page": page,

@@ -1010,12 +1010,20 @@ def _top_findings_ids(ids: list[tuple[int, dict]]) -> list[int]:
     return [i for i, _ in _sort(ids, lambda a, b: _sign(b[1]["pri"] - a[1]["pri"]))[:4]]
 
 
+def _parts(value: Any, *parts: Any) -> list:
+    """A hero's parts (numerator, denominator, counts) only next to its value: without one (the read failed or was
+    suppressed, or 당사 has no rank) they are unknown, not 0 — the page showed "—%" over "0 / 0" (2026-10-29 metric
+    review, Mention #69)."""
+    return [None if value is None else p for p in parts]
+
+
 def rate_value_payload(subs: dict, degraded: bool) -> dict:
     """HeroValue of the exposure and share tabs (+ the hero degrade mark)."""
     out: dict = {}
     for m in RATE_METRICS:
         h = rate_hero(m, subs[m], None, None, None)
-        out[m] = {"pct": h["pct"], "numerator": h["numerator"], "denominator": h["denominator"]}
+        num, den = _parts(h["pct"], h["numerator"], h["denominator"])
+        out[m] = {"pct": h["pct"], "numerator": num, "denominator": den}
     out["degraded"] = bool(degraded)
     return out
 
@@ -1098,7 +1106,9 @@ def rate_types_payload(types_by_brand: Any, brands: list[dict], kpi: Any, engine
 
 
 def favor_hero_payload(sub: Any, prev: Any, engine: Any, period: Any, degraded: bool) -> dict:
-    return {**favor_hero(sub, prev, engine, period), "degraded": bool(degraded)}
+    h = favor_hero(sub, prev, engine, period)
+    positive, total = _parts(h["positivePct"], h["positive"], h["total"])
+    return {**h, "positive": positive, "total": total, "degraded": bool(degraded)}
 
 
 def favor_dist_payload(totals: Any) -> dict:
@@ -1138,11 +1148,12 @@ def rank_payload(fp: Any, period: Any, brands: list[dict], trend: Any, degraded:
         options[key] = hi
         if str(hi) not in ticks:
             ticks[str(hi)] = rank_axis_ticks(hi)
+    ranked, ahead = _parts(hero["avgPosition"], hero["rankedAnswers"], rb["ahead"])
     return {
         "fp": fp is not None,
         "degraded": bool(degraded),
-        "hero": hero,
-        "ahead": rb["ahead"],
+        "hero": {**hero, "rankedAnswers": ranked},
+        "ahead": ahead,
         "rows": [{**r, "pos": i + 1, "hasSpark": _has_value(r["spark"])} for i, r in enumerate(rows)],
         "ownFirst": [i for i, r in enumerate(rows) if r["own"]] + [i for i, r in enumerate(rows) if not r["own"]],
         "barMax": _max_from_one(r["avgPosition"] if r["avgPosition"] is not None else 0 for r in rows),

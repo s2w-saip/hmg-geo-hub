@@ -16,7 +16,6 @@ import {
   cx,
 } from "@/components/renewal-ui";
 import { AnswerModal } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/answer-modal";
-import { TruncatedNote } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/citation-domain-table";
 import { TableStatus, useDomainDetail, useServerDomainTable } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/citations-view";
 import { citationDrilldownEmptyKey, domainDetailUrl, type DomainDetailView, type DomainTableSortKey } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/citation-view";
 import { displayCitationUrl } from "@/lib/url-display";
@@ -24,8 +23,12 @@ import { countryName } from "@/lib/geo-catalog";
 import type { CitationDomainLive, CitationPromptLive } from "@/lib/scope/result-adapter";
 import type { RnCitationVm } from "./citation-input";
 import { CONTEXT_COLOR, MOVER_COLORS, OWN_COLOR, CitationCardActions, engineLabel, useCatLabel, useCitation } from "./citation-context";
-import { DegradedNote, InfoTip, TwinTable } from "../../mention/_components/mention-kit";
+import { DegradedNote, InfoTip, TwinTable, useDegradedText } from "../../mention/_components/mention-kit";
 import { numTxt, pctTxt, slotLabel } from "../../mention/_components/mention-context";
+
+/** Answers a prompt of the domain sheet opens: the reader's cap (gold_reader/drilldown.py `domain`, most citations
+ * first). The sheet says so, since the modal shows them without a "more" line. */
+const DETAIL_ANSWERS_CAP = 8;
 
 const fmtK = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}K` : String(Math.round(n)));
 
@@ -49,7 +52,7 @@ export function DomainBumpCard() {
   const { input, live, tables } = useCitation();
   const t = useTranslations("renewal.citation.bump");
   const tA = useTranslations("answerAnalysis");
-  const tK = useTranslations("answerAnalysis.mentions.kpi");
+  const dg = useDegradedText();
   const sections = use(input.sectionDegraded);
   const d = (use(input.rn) as RnCitationVm).bump;
   const tableOn = tables.has("bump");
@@ -68,7 +71,7 @@ export function DomainBumpCard() {
       />
       <div className="px-6 pb-5 [.rn-dense_&]:px-4.5 [.rn-dense_&]:pb-3.5">
         {!live.trend ? (
-          sections?.trend ? <DegradedNote>{tK("degraded")}</DegradedNote> : <RnEmpty>{tA("pending")}</RnEmpty>
+          sections?.trend ? <DegradedNote>{dg.all}</DegradedNote> : <RnEmpty>{tA("pending")}</RnEmpty>
         ) : !d || measured < 2 ? (
           <RnEmpty>{t("needTwo")}</RnEmpty>
         ) : tableOn ? (
@@ -424,6 +427,7 @@ function DomainSheet({ row, hidden, onClose, onAnswer }: { row: CitationDomainLi
   const t = useTranslations("renewal.citation.drawer");
   const tC = useTranslations("answerAnalysis.citations");
   const cat = useCatLabel();
+  const locale = useLocale();
   const source = use(input.tableSource);
   const [tab, setTab] = useState<"urls" | "prompts">("urls");
   useEffect(() => setTab("urls"), [row]);
@@ -449,9 +453,9 @@ function DomainSheet({ row, hidden, onClose, onAnswer }: { row: CitationDomainLi
     >
       <dl className="m-0 grid grid-cols-4 gap-3 rounded-xl bg-rn-page px-4 py-3">
         {[
-          [tC("table.col.citations"), numTxt(row.citations)],
+          [tC("table.col.citations"), numTxt(row.citations, locale)],
           [tC("table.col.share"), pctTxt(row.share)],
-          [tC("table.col.prompts"), numTxt(row.prompts)],
+          [tC("table.col.prompts"), numTxt(row.prompts, locale)],
           [tC("table.col.coverage"), pctTxt(row.coverageRate)],
         ].map(([l, v]) => (
           <div key={l}>
@@ -466,8 +470,9 @@ function DomainSheet({ row, hidden, onClose, onAnswer }: { row: CitationDomainLi
         value={tab}
         onChange={setTab}
         items={[
-          { value: "urls", label: t("urls"), count: pending ? undefined : urls.length },
-          { value: "prompts", label: t("prompts"), count: pending ? undefined : prompts.length },
+          // the domain's URLs and prompts (the lists below hold the first 100 and 12 of them)
+          { value: "urls", label: t("urls"), count: pending ? undefined : numTxt(loaded?.urlTotal ?? urls.length, locale) },
+          { value: "prompts", label: t("prompts"), count: pending ? undefined : numTxt(loaded?.promptTotal ?? prompts.length, locale) },
         ]}
       />
       <div className="mt-3" data-rn-dpanel={tab}>
@@ -476,7 +481,7 @@ function DomainSheet({ row, hidden, onClose, onAnswer }: { row: CitationDomainLi
         ) : tab === "urls" ? (
           <UrlList row={row} urls={urls} total={loaded?.urlTotal} />
         ) : (
-          <PromptList row={row} prompts={prompts} total={loaded?.promptTotal} onAnswer={onAnswer} />
+          <PromptList row={row} prompts={prompts} total={loaded?.promptTotal} answersCap={lazy ? DETAIL_ANSWERS_CAP : null} onAnswer={onAnswer} />
         )}
       </div>
     </RnDrawer>
@@ -509,25 +514,41 @@ function UrlList({ row, urls, total }: { row: CitationDomainLive; urls: Citation
           </a>
           <span className="text-rn-11 text-rn-muted">
             {u.promptText ? `“${u.promptText}” · ` : ""}
-            {numTxt(u.count)} {tC("drilldown.cites")}
+            {numTxt(u.count, locale)} {tC("drilldown.cites")}
           </span>
         </div>
       ))}
-      <TruncatedNote shown={urls.length} total={total} className="m-0 text-rn-11 text-rn-muted" />
+      <CutNote shown={urls.length} total={total} />
     </div>
   );
 }
 
-function PromptList({ row, prompts, total, onAnswer }: { row: CitationDomainLive; prompts: DomainDetailView["promptList"]; total?: number; onAnswer: (p: CitationPromptLive) => void }) {
+function PromptList({
+  row,
+  prompts,
+  total,
+  answersCap,
+  onAnswer,
+}: {
+  row: CitationDomainLive;
+  prompts: DomainDetailView["promptList"];
+  total?: number;
+  answersCap: number | null;
+  onAnswer: (p: CitationPromptLive) => void;
+}) {
   const tC = useTranslations("answerAnalysis.citations");
   const tMd = useTranslations("answerAnalysis.mentions.drilldown");
   const t = useTranslations("renewal.citation.drawer");
+  const locale = useLocale();
   if (!prompts.length) return <p className="m-0 rounded-lg bg-rn-page px-4 py-6 text-center text-rn-12 text-rn-muted">{tC(citationDrilldownEmptyKey(row, "prompts"))}</p>;
   // the server's order (citations desc) and each prompt's share of the source's citations
   const list = prompts;
   return (
     <div className="flex flex-col gap-2">
-      <p className="m-0 text-rn-11 text-rn-muted">{tC("v2.drilldownTabs.promptsCaption")}</p>
+      <p className="m-0 text-rn-11 text-rn-muted">
+        {tC("v2.drilldownTabs.promptsCaption")}
+        {answersCap != null ? ` ${t("answersCap", { n: answersCap })}` : ""}
+      </p>
       <div className="grid grid-cols-[minmax(0,1fr)_56px_60px] gap-2 border-b border-rn-line pb-1.5 text-rn-11 font-semibold text-rn-muted">
         <span>{tMd("col.prompt")}</span>
         <span className="text-right">{tC("table.col.citations")}</span>
@@ -559,12 +580,21 @@ function PromptList({ row, prompts, total, onAnswer }: { row: CitationDomainLive
                 ))}
               </span>
             </span>
-            <span className="text-right font-semibold text-rn-ink tabular-nums">{numTxt(p.citations)}</span>
+            <span className="text-right font-semibold text-rn-ink tabular-nums">{numTxt(p.citations, locale)}</span>
             <span className="text-right text-rn-ink-2 tabular-nums">{p.share != null ? pctTxt(p.share) : "—"}</span>
           </button>
         );
       })}
-      <TruncatedNote shown={prompts.length} total={total} className="m-0 text-rn-11 text-rn-muted" />
+      <CutNote shown={prompts.length} total={total} />
     </div>
   );
+}
+
+/** "25,283개 중 100개 표시" under a list the reader cut (the shared TruncatedNote's copy, numbers grouped like the
+ * sheet's other counts); nothing when the list is whole. */
+function CutNote({ shown, total }: { shown: number; total?: number }) {
+  const t = useTranslations("answerAnalysis.mentions.kpi.overview.unmeasuredDialog");
+  const locale = useLocale();
+  if (total === undefined || total <= shown) return null;
+  return <p className="m-0 text-rn-11 text-rn-muted">{t("truncated", { shown: numTxt(shown, locale), total: numTxt(total, locale) })}</p>;
 }

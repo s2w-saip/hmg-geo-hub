@@ -9,6 +9,7 @@ import { isValidElement, type ReactElement } from "react";
 const st = vi.hoisted(() => ({
   calls: [] as { name: string; query: Record<string, unknown> }[],
   holdFilters: false,
+  failMatrix: false,
   savedPages: [] as string[],
 }));
 vi.mock("@/i18n/navigation", () => ({ Link: () => null, usePathname: () => "/", useRouter: () => ({}) }));
@@ -48,6 +49,9 @@ vi.mock("@/lib/screen", () => ({
         return Promise.resolve({ degraded: [], rows: {}, standing: {} });
       case "overview/geo":
         return Promise.resolve({ geo: null, degraded: false });
+      case "overview/brand-matrix":
+        // a transient failure (timeout) of the brand table's screen
+        return st.failMatrix ? Promise.reject(Object.assign(new Error("timeout"), { name: "TimeoutError" })) : Promise.resolve({ screen: name });
       default:
         return Promise.resolve({ screen: name });
     }
@@ -88,6 +92,7 @@ const render = (sp: Record<string, string>) => Page({ params: Promise.resolve({ 
 beforeEach(() => {
   st.calls = [];
   st.holdFilters = false;
+  st.failMatrix = false;
   st.savedPages = [];
 });
 
@@ -119,5 +124,14 @@ describe("renewal overview page", () => {
       userId: "u1",
       initial: [{ id: "a", name: "독일", query: "geography=DE", isDefault: true }],
     });
+  });
+
+  // Gold metric review ⚠️ Overview #31: a transient failure of the brand table emptied it to null and the card
+  // vanished without a word; it now reaches the body as "failed" (the body shows the failure notice).
+  it("hands a failed brand table on as failed, not as no table", async () => {
+    st.failMatrix = true;
+    const got = await collect(await render({}));
+    const deferred = got.get("RnOverviewBody")!.deferred as Record<string, Promise<unknown>>;
+    expect(await deferred.matrix).toBe("failed");
   });
 });

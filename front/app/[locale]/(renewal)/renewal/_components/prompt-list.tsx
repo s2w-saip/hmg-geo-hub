@@ -227,10 +227,13 @@ export function RnListPager({
   onPage: (page: number) => void;
 }) {
   const t = useTranslations("standardPromptsView");
+  const locale = useLocale();
+  // thousands grouped ("1–50 / 12,164"), as the counts beside the list
+  const num = (n: number) => n.toLocaleString(locale);
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 text-rn-12 text-rn-muted">
       <span className="flex items-center gap-2">
-        <span className="tabular-nums">{t("pageRange", { from: rangeFrom, to: rangeTo, total })}</span>
+        <span className="tabular-nums">{t("pageRange", { from: num(rangeFrom), to: num(rangeTo), total: num(total) })}</span>
         <RnSelect
           label={t("pageSize")}
           value={String(pageSize)}
@@ -244,7 +247,7 @@ export function RnListPager({
             <ChevronLeft className="size-3.5" aria-hidden />
             {t("prev")}
           </RnButton>
-          <span className="tabular-nums">{t("pageOf", { page, pages })}</span>
+          <span className="tabular-nums">{t("pageOf", { page: num(page), pages: num(pages) })}</span>
           <RnButton size="sm" disabled={page >= pages} onClick={() => onPage(page + 1)}>
             {t("next")}
             <ChevronRight className="size-3.5" aria-hidden />

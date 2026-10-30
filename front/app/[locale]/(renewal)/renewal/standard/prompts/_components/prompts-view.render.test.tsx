@@ -17,6 +17,7 @@ vi.mock("next/navigation", () => ({
 const { RnToastProvider } = await import("@/components/renewal-ui");
 const { RnPromptsView } = await import("./prompts-view");
 const { RnPromptDetail } = await import("./prompt-detail");
+const { RnAuditHistory } = await import("./prompt-history");
 
 const row = (id: string, over: Partial<PromptRow> = {}): PromptRow => ({
   id,
@@ -81,10 +82,10 @@ const wrap = (node: ReactNode) =>
 const decode = (s: string) => s.replace(/&quot;/g, '"').replace(/&#x27;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
 const strip = (s: string) => decode(s.replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
 
-const list = () =>
+const list = (page: PromptsPage = PAGE) =>
   wrap(
     <RnPromptsView
-      remote={{ initial: PAGE, load: async () => PAGE }}
+      remote={{ initial: page, load: async () => page }}
       scopeAll
       scopeRole="admin"
       scopeBrands={[]}
@@ -155,5 +156,60 @@ describe("prompt detail sheet", () => {
       "측정 종류: 단발",
       "측정 상태: 측정중",
     ]);
+  });
+});
+
+// Gold metric review ⚠️ (2026-10-29, Global prompts #6 #9 #21 #37 #40): counts group their thousands, 미측정
+// says what it is (no answer counted, whether or not answers were collected), a list emptied by the picks
+// does not read as a scope problem, the sort offers no empty Depth axis, and a change history the source
+// does not supply shows that notice alone.
+describe("renewal Global prompts wording", () => {
+  const P = ko.renewal.prompts;
+  const V = ko.standardPromptsView;
+
+  it("groups the thousands of the toolbar count and the pager", () => {
+    const out = strip(list({ ...PAGE, total: 12164, count: 12164, pages: 244, rangeFrom: 1, rangeTo: 50 }));
+    expect(out).toContain("표시 12,164 / 전체 12,164");
+    expect(out).toContain("1–50 / 12,164");
+    expect(out).not.toMatch(/12164/);
+  });
+
+  it("says 미측정 = no answer of the prompt counts toward the KPIs, in the list and the detail sheet", () => {
+    const tips = [...rowOf(list(), "b").html.matchAll(/data-rn-tip="([^"]*)"/g)].map(([, v]) => decode(v));
+    expect(tips).toContain(P.unmeasuredHint);
+    expect(tips).not.toContain(V.statusUnmeasuredHint);
+    const html = wrap(
+      <RnToastProvider>
+        <RnPromptDetail row={ROWS[1]} taxonomy={() => []} marketLabel={(c) => c} onClose={() => {}} />
+      </RnToastProvider>,
+    );
+    const status = [...html.matchAll(/<dt[^>]*>([\s\S]*?)<\/dt><dd[^>]*>([\s\S]*?)<\/dd>/g)].map(([, k, v]) => `${strip(k)}: ${strip(v)}`).at(-1);
+    expect(status).toBe(`${V.statusLabel}: ${V.statusUnmeasured} ${P.unmeasuredHint}`);
+  });
+
+  it("tells a list the picks emptied from a scope with no prompts", () => {
+    const none: PromptsPage = { ...PAGE, rows: [], total: 0, rangeFrom: 0, rangeTo: 0 };
+    expect(strip(list(none))).toContain(P.emptyFiltered);
+    expect(strip(list(none))).not.toContain(V.empty);
+    expect(strip(list({ ...none, count: 0 }))).toContain(V.empty);
+  });
+
+  it("offers no sort by a Depth the scope has no value for", () => {
+    const sorts = (html: string) => {
+      const select = html.match(new RegExp(`<select[^>]*aria-label="${P.sortLabel}"[^>]*>([\\s\\S]*?)</select>`))?.[1] ?? "";
+      return [...select.matchAll(/<option value="([^"]+)"/g)].map(([, v]) => v);
+    };
+    expect(sorts(list())).toEqual(["text", "brand", "presence", "listType", "depth1", "depth2", "depth3", "funnel", "kind", "market", "lang", "status"]);
+    expect(sorts(list({ ...PAGE, columns: ["listType", "depth1", "depth2", "depth3", "depth4"] }))).toContain("depth4");
+  });
+
+  it("shows the change history's source notice alone when the source supplies none", () => {
+    const H = ko.promptAudit;
+    const off = strip(wrap(<RnAuditHistory initial={{ available: false, shown: 0, groups: [] }} load={async () => ({ available: false, shown: 0, groups: [] })} />));
+    expect(off).toContain(H.sourceUnavailable);
+    for (const gone of [H.history.shownCount.replace("{count}", "0"), H.history.days90, H.history.exportCsv, H.history.sectionDescription]) expect(off).not.toContain(gone);
+    const on = strip(wrap(<RnAuditHistory initial={HISTORY} load={async () => HISTORY} />));
+    expect(on).toContain(H.history.shownCount.replace("{count}", "0"));
+    expect(on).toContain(H.empty);
   });
 });

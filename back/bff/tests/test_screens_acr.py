@@ -173,6 +173,15 @@ class Reads(unittest.TestCase):
                 run(builder(QueryParams("")))
             self.assertEqual(ctx.exception.status_code, 403)
 
+    def test_the_renewal_body_names_the_round_it_shows(self):
+        """The snapshot's round (the read's as_of) for the header, the summary chip and the footer (2026-10-30, metric
+        review ⚠️ #1: the page named no measurement date); a period's last round; none when the read names none."""
+        for query, answer, as_of in (("", acr_body(), "2026-09-14"), ("time=2026-09-01..2026-09-30", acr_body(), "2026-09-14"),
+                                     ("", {**acr_body(), "meta": {"suppressed": {}}}, None)):
+            get, _ = fake_api(answer)
+            with mock.patch("bff.api.get", get):
+                self.assertEqual(run(acr.renewal(QueryParams(query)))["body"]["asOf"], as_of)
+
 
 class Shapes(unittest.TestCase):
     def test_measured_rule_and_own_block(self):

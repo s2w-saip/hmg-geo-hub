@@ -25,7 +25,7 @@ import {
 } from "../_data/screen-types";
 import { squarify } from "./treemap-layout";
 import { CONTEXT_COLOR, MentionCardActions, deltaTxt, numTxt, pctTxt, posTxt, slotLabel, useCompare, useMention, type DrawerTarget } from "./mention-context";
-import { BrandName, CardSkeleton, DegradedNote, DeltaChip, InfoTip, TwinTable } from "./mention-kit";
+import { BrandName, CardSkeleton, DegradedNote, DeltaChip, InfoTip, TwinTable, useDegradedText } from "./mention-kit";
 import { SENTIMENT_COLOR } from "./mention-favor";
 
 export function BrandDetail() {
@@ -65,7 +65,7 @@ function useWidth<T extends HTMLElement>(): [React.RefObject<T | null>, number] 
 function BumpCard() {
   const { input, ownLabel, tables } = useMention();
   const t = useTranslations("renewal.mention");
-  const tK = useTranslations("answerAnalysis.mentions.kpi");
+  const dg = useDegradedText();
   const vm = use(input.bump);
   const d = vm.data;
   const name = (k: string) => (k === OWN_KEY ? ownLabel : k);
@@ -85,7 +85,7 @@ function BumpCard() {
       />
       <div className="px-6 pb-5 [.rn-dense_&]:px-4.5 [.rn-dense_&]:pb-3.5">
         {!vm.trend ? (
-          <DegradedNote>{tK("degradedTrend")}</DegradedNote>
+          <DegradedNote>{dg.trend}</DegradedNote>
         ) : !d || measured < 2 ? (
           <RnEmpty>{t("bump.needTwo")}</RnEmpty>
         ) : tableOn ? (

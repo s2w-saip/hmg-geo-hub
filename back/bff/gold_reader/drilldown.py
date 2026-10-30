@@ -61,12 +61,20 @@ async def citation_prompts(ctx: Context) -> dict:
     where = citation_predicate(ctx, b)
     base_args = b.args.copy()
     owned = f"f.owner_key IN (SELECT owner_key FROM gold.dim_owned_base WHERE (brand_bit & {b.bind(ctx.bits)})<>0)" if ctx.sf == 1 else "f.loc_owned"
-    rows = await ctx.conn.fetch(f"""SELECT p.prompt_id,p.text,ft.code AS funnel,f.prompt_key,
-        count(*)::int AS citations,count(*) FILTER(WHERE {owned})::int AS own_citations,
-        array_agg(DISTINCT e.code ORDER BY e.code) AS providers
-        FROM gold.citation_fact f JOIN gold.dim_prompt p ON p.prompt_key=f.prompt_key
-        JOIN gold.dim_engine e ON e.engine_key=f.engine_key LEFT JOIN gold.dim_taxon ft ON ft.taxon_key=p.funnel_key
-        WHERE {where} GROUP BY p.prompt_id,p.text,ft.code,f.prompt_key ORDER BY citations DESC,p.prompt_id""", *b.args)
+    # Count per (prompt_key, engine), then per prompt_key, then join the names to the counted rows: grouping every
+    # citation by its prompt's text and the engines' DISTINCT sorted 2.2 M rows (4.6 -> 1.6 s over 09-21..10-05).
+    # prompt_key is dim_prompt's key and decides prompt_id, text and funnel, every cited prompt_key is in
+    # dim_prompt (checked on every active fact build, 2026-10-30) and an engine has one code, so the groups,
+    # their counts, engines and order are the same.
+    rows = await ctx.conn.fetch(f"""WITH pe AS (SELECT f.prompt_key,f.engine_key,
+          count(*)::int AS citations,count(*) FILTER(WHERE {owned})::int AS own_citations
+          FROM gold.citation_fact f WHERE {where} GROUP BY f.prompt_key,f.engine_key),
+        g AS (SELECT pe.prompt_key,sum(pe.citations)::int AS citations,sum(pe.own_citations)::int AS own_citations,
+          array_agg(e.code ORDER BY e.code) AS providers
+          FROM pe JOIN gold.dim_engine e ON e.engine_key=pe.engine_key GROUP BY pe.prompt_key)
+        SELECT p.prompt_id,p.text,ft.code AS funnel,g.prompt_key,g.citations,g.own_citations,g.providers
+        FROM g JOIN gold.dim_prompt p ON p.prompt_key=g.prompt_key LEFT JOIN gold.dim_taxon ft ON ft.taxon_key=p.funnel_key
+        ORDER BY g.citations DESC,p.prompt_id""", *b.args)
     rows = [dict(r) for r in rows]
     if not values(ctx.q,"source"):
         b2 = SQL()
@@ -127,17 +135,27 @@ async def tone(ctx: Context) -> dict:
     with_counts = flag(ctx.q, "with_counts") and not by_source
     page_limit, offset = limit(ctx.q), max(0, int(ctx.q.get("cursor") or 0))
     names = ("s.skey,s.domain" if by_source else "u.url,u.title,s.skey,s.domain") + ",c.category_key,c.slug,c.name AS category_name"
+    # The answer joins on its full key: on (build_id, answer_key) alone the index walked the build for every
+    # citation (US · ChatGPT 11 s -> 0.3 s). An answer has one row per build and its citations carry its surface
+    # and round date, so the same rows pair (checked on every active fact build, 2026-10-30).
+    # A URL page without a search names only the URLs that can be on it: those cited at least as often as the
+    # page's last row (ties are ordered by URL, so all of them). Every grouped URL has its dim_url / dim_source
+    # rows, so the total is the grouped URLs of the tone. Joining every URL to sort it took 1.4 of A's 2.6 s.
+    top = not by_source and not q and page_limit > 0
+    total = f"(SELECT count(*) FROM t WHERE {chosen}>0)::int" if top else "count(*) OVER()::int"
+    cut = (f" AND t.{chosen}>=coalesce((SELECT {chosen} FROM t WHERE {chosen}>0 ORDER BY {chosen} DESC "
+           f"OFFSET {b.bind(offset + page_limit - 1)} LIMIT 1),0)") if top else ""
     rows = await ctx.conn.fetch(f"""WITH t AS (SELECT {key} AS k,min(f.source_key) AS source_key,
             count(*) FILTER(WHERE {is_pos})::int AS pos,count(*) FILTER(WHERE {is_neg})::int AS neg,
             array_agg(DISTINCT f.engine_key) FILTER(WHERE {is_pos if chosen == 'pos' else is_neg}) AS engine_keys
-          FROM gold.citation_fact f JOIN gold.answer_fact a ON (a.build_id,a.answer_key)=(f.build_id,f.answer_key)
+          FROM gold.citation_fact f JOIN gold.answer_fact a ON (a.build_id,a.surface,a.round_date,a.answer_key)=(f.build_id,f.surface,f.round_date,f.answer_key)
           WHERE {where} AND ({positive})<>({negative}) GROUP BY {key})
-        SELECT {names},t.{chosen} AS citations,t.engine_keys,count(*) OVER()::int AS total
+        SELECT {names},t.{chosen} AS citations,t.engine_keys,{total} AS total
           {",(SELECT count(*) FROM t WHERE pos>0)::int AS n_pos,(SELECT count(*) FROM t WHERE neg>0)::int AS n_neg" if with_counts else ""}
         FROM t JOIN gold.dim_source s ON s.source_key=t.source_key
           {"" if by_source else "JOIN gold.dim_url u ON u.url_key=t.k"}
           LEFT JOIN gold.dim_category c ON c.category_key=s.category_key
-        WHERE t.{chosen}>0{search}
+        WHERE t.{chosen}>0{search}{cut}
         ORDER BY t.{chosen} DESC,{'s.skey' if by_source else 'u.url'}
         LIMIT {b.bind(page_limit)} OFFSET {b.bind(offset)}""", *b.args)
     counts = None
@@ -150,7 +168,7 @@ async def tone(ctx: Context) -> dict:
             where2 = citation_predicate(ctx, b2)
             row = await ctx.conn.fetchrow(f"""SELECT count(DISTINCT f.url_key) FILTER(WHERE {is_pos})::int AS positive,
                 count(DISTINCT f.url_key) FILTER(WHERE {is_neg})::int AS negative
-                FROM gold.citation_fact f JOIN gold.answer_fact a ON (a.build_id,a.answer_key)=(f.build_id,f.answer_key)
+                FROM gold.citation_fact f JOIN gold.answer_fact a ON (a.build_id,a.surface,a.round_date,a.answer_key)=(f.build_id,f.surface,f.round_date,f.answer_key)
                 WHERE {where2}""", *b2.args)
             counts = {"positive": row["positive"], "negative": row["negative"]}
     codes = {r["engine_key"]: r["code"] for r in await ctx.conn.fetch("SELECT engine_key,code FROM gold.dim_engine")} if rows else {}

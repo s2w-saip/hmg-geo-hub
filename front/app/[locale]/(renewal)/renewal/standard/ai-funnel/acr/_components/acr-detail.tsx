@@ -55,7 +55,7 @@ function WinBadge({ brand }: { brand: string | null }) {
 }
 
 export function AcrBattle() {
-  const { view, compare, colorOf, engineLabel, battle, setBattle, lit, hover } = useAcr();
+  const { view, totals, compare, colorOf, engineLabel, battle, setBattle, lit, hover } = useAcr();
   const t = useTranslations("renewal.acr.battle");
   const [more, setMore] = useState(false);
   const engines = view.engines;
@@ -77,7 +77,7 @@ export function AcrBattle() {
             <RnInfoTipItem label={t("infoLabel")}>{t("info")}</RnInfoTipItem>
           </RnInfoTip>
         }
-        chips={<RnBasisChip>{t("chip", { prompts: grid.count, engines: engines.length })}</RnBasisChip>}
+        chips={<RnBasisChip>{t("chip", { prompts: grid.count, measured: totals.prompts, engines: engines.length })}</RnBasisChip>}
         controls={
           <RnSegmented
             label={t("viewLabel")}

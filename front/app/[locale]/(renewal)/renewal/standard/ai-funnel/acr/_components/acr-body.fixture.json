@@ -5,6 +5,7 @@
   "acrPromptCount": 67,
   "roundBuckets": true,
   "period": false,
+  "asOf": "2026-09-14",
   "ownLabel": "HMG",
   "totals": {
    "promptRuns": 8,
@@ -508,6 +509,7 @@
   "acrPromptCount": 67,
   "roundBuckets": true,
   "period": true,
+  "asOf": "2026-09-14",
   "ownLabel": "HMG",
   "totals": {
    "promptRuns": 8,

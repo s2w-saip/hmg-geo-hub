@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { RnBasisChip, RnCard, RnCardHead, RnEmpty, RnLineChart, RnSectionHead, RnSparkline, cx, rnHighlightState } from "@/components/renewal-ui";
 import { OWN_KEY, pickKey, type RankRow } from "../_data/screen-types";
 import { CONTEXT_COLOR, MentionCardActions, OWN_COLOR, numTxt, posTxt, slotLabel, useCompare, useMention } from "./mention-context";
-import { BrandName, CardSkeleton, DegradedNote, DeltaChip, InfoTip, Legend, Stat, TwinTable, useDeltaBasis } from "./mention-kit";
+import { BrandName, CardSkeleton, DegradedNote, DeltaChip, InfoTip, Legend, Stat, TwinTable, useDegradedText, useDeltaBasis } from "./mention-kit";
 import { KpiBasisChip } from "./mention-tabs";
 
 export function RankBody() {
@@ -32,13 +32,13 @@ function useRank() {
   return use(input.rank);
 }
 
-function RankHeroCard() {
+export function RankHeroCard() {
   const { ownLabel, lit, hover, tables } = useMention();
   const { compare, colorOf } = useCompare();
   const t = useTranslations("renewal.mention.rank");
   const tH = useTranslations("renewal.mention.hero");
   const tFR = useTranslations("answerAnalysis.mentions.kpi.firstRank");
-  const tK = useTranslations("answerAnalysis.mentions.kpi");
+  const dg = useDegradedText();
   const tDef = useTranslations("dashboard.kpi");
   const locale = useLocale();
   const vm = useRank();
@@ -58,7 +58,15 @@ function RankHeroCard() {
       <div className="flex min-w-0 flex-col gap-3">
         <div className="flex items-center gap-1.5 text-rn-12 font-bold text-rn-muted">
           {t("label")}
-          <InfoTip label={tH("trendNoteLabel")} items={[[tDef("definitionLabel"), tDef("definition.position")], [tDef("formulaLabel"), tDef("formula.position")]]} />
+          <InfoTip
+            label={tH("trendNoteLabel")}
+            items={[
+              [tDef("definitionLabel"), tDef("definition.position")],
+              // the page's own copy: the shared Overview formula names the unit "위", the page shows "번째"
+              [tDef("formulaLabel"), t("formula")],
+              [tH("basisLabel"), tH("basisAll")],
+            ]}
+          />
         </div>
         <div className="text-rn-56 font-bold tracking-[-0.035em] text-rn-navy tabular-nums" data-rn-hero="first-rank">
           {hero.avgPosition == null ? (
@@ -75,10 +83,19 @@ function RankHeroCard() {
           <DeltaChip value={hero.delta.value} rank />
           <span>{hero.delta.basis?.kind === "period" ? basis(hero.delta) : t("basis")}</span>
         </div>
-        {degraded ? <DegradedNote>{tK("degraded")}</DegradedNote> : null}
+        {degraded ? <DegradedNote>{dg.all}</DegradedNote> : null}
         <dl className="m-0 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-rn-line pt-3">
-          <Stat label={t("ranked")} value={t("count", { n: numTxt(hero.rankedAnswers, locale) })} />
-          <Stat label={t("ahead")} value={t("count", { n: ahead })} />
+          {/* without a 당사 position the screen sends no counts (null → "—", not "0개") */}
+          <Stat label={t("ranked")} value={hero.rankedAnswers == null ? "—" : t("count", { n: numTxt(hero.rankedAnswers, locale) })} />
+          <Stat
+            label={
+              <>
+                {t("ahead")}
+                <InfoTip label={t("ahead")} items={[[t("ahead"), t("aheadTip")]]} />
+              </>
+            }
+            value={ahead == null ? "—" : t("count", { n: ahead })}
+          />
         </dl>
       </div>
       <div className="flex min-w-0 flex-col gap-2">
@@ -96,7 +113,7 @@ function RankHeroCard() {
         </div>
         <Legend items={[...series].reverse()} />
         {!vm.fp ? (
-          <DegradedNote>{tK("degraded")}</DegradedNote>
+          <DegradedNote>{dg.all}</DegradedNote>
         ) : !hero.axis.length ? (
           <RnEmpty>{tH("noTrend")}</RnEmpty>
         ) : tableOn ? (

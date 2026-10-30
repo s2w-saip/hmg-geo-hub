@@ -109,7 +109,8 @@
     "renewalAnswerAnalysisCitation": "Citation (Renewal)",
     "renewalAdminStandardPrompts": "글로벌 프롬프트 관리",
     "renewalAdmin": "사용자 관리",
-    "renewalAdminGa4": "GA4 연동"
+    "renewalAdminGa4": "GA4 연동",
+    "renewalAdminCitationSources": "인용 출처 분류"
   },
   "locale": {
     "label": "언어",
@@ -4604,6 +4605,7 @@
       "beta": "베타",
       "cadence": "주 1회 측정",
       "snapshot": "최신 회차 스냅샷",
+      "snapshotOf": "최신 회차 {date} 스냅샷",
       "periodRange": "기간 누적 {from} ~ {to}",
       "bar": {
         "label": "페이지 조작"
@@ -4640,7 +4642,7 @@
         "titlePeriod": "이 기간 요약",
         "howLabel": "만드는 방법",
         "how": "이 페이지 카드들의 숫자에서 규칙으로 뽑은 요약입니다(새 데이터 없음). 당사 순위와 격차, 후보에 오르고도 선택되지 않는 지점, 엔진·프롬프트별 1위, 차종 전환, 가장 크게 움직인 브랜드 순으로 중요도를 매겨 4개를 고릅니다.",
-        "chipSnapshot": "최신 회차 · 직전 회차 대비",
+        "chipSnapshot": "{date} 기준 · 직전 회차 대비",
         "chipPeriod": "기간 누적",
         "headline": "<b>{own}</b> — Top1 ACR <b>{rank}위</b> {share}{delta}, 후보군 포함율 {coverage}, 1순위 선택 {count}회 · 프롬프트 {prompts}개 × 엔진 {engines}개"
       },
@@ -4661,7 +4663,7 @@
         "engine": {
           "tag": "AI 엔진",
           "title": "{engine}에서 당사 1위 프롬프트 {wins}/{total} — {other}보다 {diff}개 적음",
-          "detail": "프롬프트 × 엔진에서 가장 많이 최종 선택된 브랜드 기준"
+          "detail": "분모 = 선택이 나온 프롬프트 {total}개(측정 {measured}개 중) · 프롬프트 × 엔진에서 가장 많이 최종 선택된 브랜드 기준"
         },
         "sweep": {
           "tag": "프롬프트",
@@ -4752,8 +4754,8 @@
       "battle": {
         "title": "AI 엔진별 선택 구도",
         "infoLabel": "읽는 법",
-        "info": "프롬프트 × 엔진 셀마다 가장 많이 최종 선택된 브랜드(국가 합산, 동점이면 브랜드 이름순)입니다. 위 막대 = 엔진마다 각 브랜드가 1위인 프롬프트 수.",
-        "chip": "프롬프트 {prompts}개 × 엔진 {engines}개",
+        "info": "프롬프트 × 엔진 셀마다 가장 많이 최종 선택된 브랜드(국가 합산, 동점이면 브랜드 이름순)입니다. 위 막대 = 엔진마다 각 브랜드가 1위인 프롬프트 수. 분모는 어느 엔진에서든 최종 선택이 한 번 이상 나온 프롬프트입니다 — 측정했지만 어느 엔진에서도 선택이 없는 프롬프트는 빠져, 위 요약의 측정 프롬프트 수보다 작을 수 있습니다.",
+        "chip": "선택이 나온 프롬프트 {prompts}개(측정 {measured}개) × 엔진 {engines}개",
         "viewLabel": "프롬프트 보기",
         "all": "전체",
         "notOwn": "당사 1위 아님",
@@ -4827,12 +4829,13 @@
         "tipAbsent": "당사가 후보로도 오르지 않았습니다 · 후보 브랜드 {candidates}개 · 측정 {cells}건 합산"
       },
       "foot": {
-        "snapshot": "최신 회차 스냅샷 — 프롬프트 {prompts}개 · 셀(프롬프트×엔진×국가) {cells}개 · 반복 {iterations}회",
+        "snapshot": "최신 회차({date}) 스냅샷 — 프롬프트 {prompts}개 · 셀(프롬프트×엔진×국가) {cells}개 · 반복 {iterations}회",
         "period": "기간 누적 — 프롬프트 {prompts}개 · 셀(프롬프트×엔진×국가) {cells}개 · 반복 {iterations}회"
       },
       "states": {
         "noResultTitle": "이 조건에는 ACR 측정 결과가 없습니다",
         "noResultDesc": "ACR은 일부 국가·언어에서만 측정합니다. 국가·언어·카탈로그 조건을 줄여 보세요.",
+        "noResultDescPeriod": "이 기간에는 ACR 측정 회차가 없거나, 고른 국가·언어·카탈로그 조건에 맞는 측정이 없습니다. 기간을 바꾸거나 조건을 줄여 보세요.",
         "reset": "필터 초기화"
       },
       "conv": {
@@ -4979,8 +4982,17 @@
       "kpiTitle": "KPI 5종",
       "kpiHintDelta": "증감 = {compare}",
       "kpiHintTrend": "추이 = 최근 {count}회차",
+      "kpiHintBasis": "집계 = 대표 답변",
+      "basisLabel": "집계 기준",
+      "basisTip": "같은 프롬프트를 한 회차에 같은 엔진·국가에서 여러 번 측정했으면 대표 답변만 셉니다. {page} 화면은 모든 답변을 세므로 같은 지표도 값이 조금 다를 수 있습니다.",
+      "formulaPosition": "Σ(답변 내 브랜드 중 당사 순위 = 당사보다 먼저 언급된 비노이즈 브랜드 수 + 1) ÷ 당사 브랜드가 1회 이상 언급된 답변 수 (단위: 번째)",
+      "rivalsFailed": "경쟁사 값을 불러오지 못했습니다",
       "standing": "비교 브랜드 {count}개 중 <b>{rank}위</b>",
       "brandsHint": "5개 지표를 한 표에 · 막대는 열마다 최고값 기준 · 우선 노출도는 낮을수록 앞섬 · 증감 = 모든 행 {compare}",
+      "brandsHintPeriod": "5개 지표를 한 표에 · 막대는 열마다 최고값 기준 · 우선 노출도는 낮을수록 앞섬 · 값 = 선택 기간 합산 · 증감 = 모든 행 기간의 마지막 두 회차 차 (위 KPI 증감은 {compare})",
+      "deltaRounds": "기간의 마지막 두 회차 차",
+      "brandsFailed": "브랜드 비교 표를 불러오지 못했습니다. 잠시 뒤 페이지를 다시 열어 주세요.",
+      "brandsPartial": "일부 값을 불러오지 못해 빈 칸이 있습니다. 잠시 뒤 페이지를 다시 열어 주세요.",
       "colBrand": "브랜드",
       "colStanding": "당사 {rank}위 / {count}",
       "short": {
@@ -4992,7 +5004,7 @@
       },
       "notCompared": "{kpi}의 비교 경쟁사(상위 4)에 없는 브랜드입니다",
       "deltaTitle": "{dir} · {compare}",
-      "brandsFoot": "‘—’ = 그 지표의 비교 경쟁사(상위 4)에 없는 브랜드 · 인용 점유율은 인용 기준 경쟁사가 따로 있습니다 · 우호도 · 인용 점유율은 경쟁사 증감을 제공하지 않습니다",
+      "brandsFoot": "‘—’ = 그 지표의 비교 경쟁사(상위 4)에 없는 브랜드 · 인용 점유율은 인용 기준 경쟁사가 따로 있습니다(기간을 고르면 경쟁사 값은 전체 답변 기준) · 우호도 · 인용 점유율은 경쟁사 증감을 제공하지 않습니다",
       "marketsTitle": "시장별 현황",
       "heatLegend": "칸 색: 지표별 국가 순위 · 뒤",
       "heatLegendFront": "앞",
@@ -5017,6 +5029,8 @@
       "tabsLabel": "보기",
       "historyOf": "{text} 변경 이력",
       "scopePill": "열람 범위 · {scope}",
+      "unmeasuredHint": "이 프롬프트의 답변이 지표 집계에 하나도 들어가지 않았습니다. 답변을 수집했어도 집계 대상에서 빠졌으면 미측정으로 표시합니다.",
+      "emptyFiltered": "조건에 맞는 프롬프트가 없습니다. 필터나 검색어를 바꿔 보세요.",
       "optionSearch": "{label} 검색",
       "copyLink": "링크 복사",
       "linkCopied": "지금 조건이 담긴 링크를 복사했습니다",
@@ -5037,6 +5051,10 @@
       "title": "언급 분석",
       "beta": "베타",
       "periodRange": "기간 누적 {from} ~ {to}",
+      "degraded": {
+        "all": "이 구간의 집계를 불러오지 못했습니다(시간 초과 등 일시 오류) — 다른 수치는 정상입니다",
+        "trend": "이 구간의 추이를 불러오지 못했습니다(시간 초과 등 일시 오류) — 다른 수치는 정상입니다"
+      },
       "bar": {
         "label": "페이지 조작"
       },
@@ -5051,7 +5069,7 @@
         "favMix": "유형별 감정",
         "favMixDesc": "어떤 방식으로 언급될 때 긍정이 많은지 봅니다.",
         "rank": "순위표",
-        "rankDesc": "각 브랜드가 답변에서 몇 번째로 언급되는지 — 막대가 길수록 먼저 언급됩니다.",
+        "rankDesc": "각 브랜드가 답변에서 몇 번째로 언급되는지 — 점이 왼쪽일수록 먼저 언급됩니다.",
         "brands": "브랜드 상세",
         "brandsDesc": "브랜드별 언급 순위와 구성 — 브랜드를 누르면 프롬프트와 실제 AI 답변까지 내려갑니다."
       },
@@ -5111,8 +5129,8 @@
         "titlePeriod": "선택 기간 요약",
         "howLabel": "만드는 방법",
         "how": "이 페이지 카드들의 숫자에서 규칙으로 뽑은 요약입니다(새 데이터 없음). 당사 순위와 격차, 당사가 뒤지는 유형, 가장 크게 움직인 경쟁사, 엔진 격차, 언급 순위 급변, 부정 신호 증가 순으로 중요도를 매겨 4개를 고릅니다.",
-        "chipSnapshot": "{date} 기준 · 직전 회차 대비",
-        "chipPeriod": "선택 기간 누적 기준",
+        "chipSnapshot": "{date} 기준 · 집계 = 모든 답변 · 직전 회차 대비",
+        "chipPeriod": "선택 기간 누적 기준 · 집계 = 모든 답변",
         "headline": "<b>{own}</b> — 노출률 <b>{expRank}</b> {exp}, 점유율 <b>{sovRank}</b> {sov}, 우호도 {fav}, 우선 노출도 {pos}.",
         "empty": "요약할 수 있는 변화가 없습니다",
         "rank": "{rank}위"
@@ -5169,6 +5187,8 @@
         "trendTitleExposure": "브랜드별 노출률 추이",
         "trendTitleSov": "브랜드별 점유율 추이",
         "trendNoteLabel": "지표 차이",
+        "basisLabel": "집계 기준",
+        "basisAll": "이 화면은 모든 답변을 셉니다. Overview 카드는 같은 프롬프트를 한 회차에 같은 엔진·국가에서 여러 번 측정했으면 대표 답변만 세므로, 같은 지표도 값이 조금 다를 수 있습니다.",
         "trendNote": "브랜드별 {metric}(%) 추이입니다 — 아래 ‘브랜드 상세’의 주별 순위는 언급 수 기준이라 지표가 다릅니다. 비교 브랜드가 없으면 추이가 있는 경쟁사의 평균을 그립니다.",
         "standing": "비교 {n}개 브랜드 중 <b>{rank}위</b>",
         "leadFirst": "2위 {brand}와 +{gap}pp",
@@ -5222,7 +5242,7 @@
         "titleExposure": "멘션 유형별 노출",
         "titleSov": "멘션 유형별 점유율",
         "infoLabel": "이 카드가 보여 주는 것",
-        "info": "AI가 당사를 얼마나가 아니라 어떤 식으로 언급하는지(단순 언급 · 추천 · 비교 · 정의 · 최종 선택)입니다. 답변 분석기가 브랜드 언급마다 붙이는 유형 신호 기준이며, 한 언급이 여러 유형을 가질 수 있어 유형끼리 더하지 않습니다. 경쟁 비교 = 그 유형의 전 브랜드 신호 중 각 브랜드의 몫, 막대 구간 = 당사와 기준(가장 앞선 비교 브랜드, 없으면 경쟁사 평균)의 차이.",
+        "info": "AI가 당사를 얼마나가 아니라 어떤 식으로 언급하는지(단순 언급 · 추천 · 비교 · 정의 · 최종 선택)입니다. 답변 분석기가 브랜드 언급마다 붙이는 유형 신호 기준입니다. 유형별 노출률은 그 유형으로 당사가 언급된 답변의 비율이라, 한 답변에 여러 유형이 함께 나오면 각 유형에 모두 들어갑니다 — 유형끼리 더하지 않습니다. 경쟁 비교 = 그 유형의 전 브랜드 신호 중 각 브랜드의 몫, 막대 구간 = 당사와 기준(가장 앞선 비교 브랜드, 없으면 경쟁사 평균)의 차이.",
         "chip": "유형 신호 기준",
         "sub": "위에서부터 추천 강도 순 — 최종 선택 · 추천에서 앞서는지가 가장 중요합니다.",
         "viewLabel": "보기",
@@ -5267,14 +5287,17 @@
         "matrixAria": "멘션 유형별 감정 분포",
         "matrixAll": "전체 언급",
         "matrixNoteTitle": "전체와 유형",
-        "matrixNote": "전체 언급은 당사 언급 전체의 감정 구성으로, 위 감정 분포 카드와 같은 값입니다. 한 언급이 여러 유형 신호를 가질 수 있어 유형 행을 더하면 전체보다 많습니다."
+        "matrixNote": "전체 언급은 당사 언급 전체의 감정 구성으로, 위 감정 분포 카드와 같은 값입니다. 유형 행은 그 유형으로 당사 브랜드가 언급된 답변에서 그 브랜드에 붙은 감정 신호 전체를 셉니다 — 한 답변에서 여러 유형으로 언급되면 각 유형 행에 모두 들어가, 유형 행을 더하면 전체보다 많습니다.",
+        "matrixHint": "멘션 유형별로, 그 유형으로 언급된 답변에서 당사가 받은 감정 신호의 구성을 비교합니다. 우측 수치는 그 행의 긍정 비율입니다."
       },
       "rank": {
         "label": "AI 우선 노출도",
         "unit": "{n}번째",
         "basis": "직전 회차 대비 · 숫자가 작을수록 먼저 언급",
         "ranked": "순위 답변",
-        "ahead": "당사보다 앞선 브랜드",
+        "ahead": "표에서 당사보다 앞선 경쟁사",
+        "aheadTip": "아래 표의 경쟁사 중 평균 위치가 당사보다 앞선(숫자가 작은) 브랜드 수입니다. 당사 브랜드가 여럿이면 당사 값은 답변마다 그중 가장 먼저 나온 순위의 평균이라, 브랜드 하나의 순위인 경쟁사 값보다 앞서기 쉽습니다.",
+        "formula": "Σ(답변 내 브랜드 중 당사 순위 = 당사보다 먼저 언급된 비노이즈 브랜드 수 + 1) ÷ 당사 브랜드가 1회 이상 언급된 답변 수 (단위: 번째)",
         "count": "{n}개",
         "trackTitle": "브랜드별 평균 위치",
         "trackNote": "왼쪽일수록 먼저 언급",
@@ -5426,7 +5449,7 @@
           "tag": "순위 변화",
           "title": "{domain} 인용 순위 {from}위 → {to}위"
         },
-        "climbDetail": "최근 {weeks}주 · 상위 {n}개 도메인 기준"
+        "climbDetail": "최근 {weeks}주 · 상위 {n}개 도메인 안에서 매긴 순위"
       },
       "lens": {
         "label": "인용 KPI",
@@ -5543,7 +5566,7 @@
       "bump": {
         "title": "주별 도메인 인용 순위",
         "infoLabel": "읽는 법",
-        "info": "주마다 상위 도메인을 인용 수로 줄 세운 순위입니다. 색 = 공식(HMG) 도메인(남색)과 첫 주 대비 순위가 가장 많이 바뀐 도메인 3개, 나머지는 회색 — 선이나 범례에 올리면 그 도메인만 강조되고, 누르면 도메인 상세가 열립니다. 오른쪽 = 마지막 주 순위 · 인용 수 · 순위 변화(▲▼).",
+        "info": "그린 기간에 인용이 가장 많은 상위 도메인(칩의 개수)만 골라, 주마다 그 도메인끼리 인용 수로 줄 세운 순위입니다 — 전체 도메인 중 순위가 아니라서 아래 도메인 표의 순위와 다를 수 있습니다. 색 = 공식(HMG) 도메인(남색)과 첫 주 대비 순위가 가장 많이 바뀐 도메인 3개, 나머지는 회색 — 선이나 범례에 올리면 그 도메인만 강조되고, 누르면 도메인 상세가 열립니다. 오른쪽 = 마지막 주 순위 · 인용 수 · 순위 변화(▲▼).",
         "chip": "상위 {n} 도메인 · {weeks}주",
         "colRank": "순위",
         "colCitations": "인용 수",
@@ -5576,9 +5599,12 @@
         "tabs": "도메인 상세",
         "urls": "인용 URL",
         "prompts": "프롬프트",
-        "noAnswer": "연결된 답변이 없습니다"
+        "noAnswer": "연결된 답변이 없습니다",
+        "answersCap": "프롬프트를 누르면 이 도메인을 인용한 답변을 인용 많은 순으로 최대 {n}개까지 봅니다."
       },
       "sub": {
+        "colCitations": "전체 인용 수",
+        "colCitationsTip": "이 프롬프트의 답변이 인용한 출처 전체의 인용 수입니다(공식(당사) URL 인용만이 아님). 목록도 이 수가 많은 순입니다.",
         "ownedTitle": "공식(당사) URL을 인용한 프롬프트",
         "ownedSub": "AI가 당사 공식 URL을 1회 이상 근거로 쓴 프롬프트 — 강점 영역입니다. 프롬프트를 누르면 실제 답변이 열립니다.",
         "uncitedTitle": "공식(당사) URL을 인용하지 않은 프롬프트",
@@ -5905,6 +5931,108 @@
       "source_unavailable": "HUB 데이터 DB에 연결할 수 없습니다. 잠시 뒤에 다시 시도하세요.",
       "not_found": "속성을 찾을 수 없습니다.",
       "failed": "처리하지 못했습니다. 잠시 뒤에 다시 시도하세요."
+    }
+  },
+  "hubSourceOverrides": {
+    "title": "인용 출처 분류",
+    "description": "AI 답변이 인용한 출처의 카테고리를 교정합니다. HUB는 교정만 정하고, 자동 분류와 시드 · 소셜 목록은 Gold 값을 그대로 보여 줍니다.",
+    "storePill": "HUB 데이터 DB",
+    "roundPill": "Gold {date} 회차 · 글로벌",
+    "publishedPill": "업스트림 목록 v{version} · {items}건",
+    "publishedTip": "외부 API source_override 목록 · 순번(change_seq) {seq} · {at} 기록",
+    "listLabel": "인용 출처 목록",
+    "searchLabel": "검색",
+    "searchPlaceholder": "도메인 검색",
+    "otherOnly": "미분류만",
+    "count": "{shown} / {total}개 · 교정 {overrides} · 미분류 {other} · 반영 대기 {pending}",
+    "empty": "표시할 출처가 없습니다.",
+    "emptyFiltered": "조건에 맞는 출처가 없습니다.",
+    "hint": "Gold {date} 회차(글로벌)의 인용 수 상위 {limit}개 출처와, HUB가 교정한 출처, Gold가 교정을 적용한 출처를 모두 보여 줍니다.",
+    "loading": "불러오는 중…",
+    "login": "로그인",
+    "loginRequired": "인용 출처 분류 관리는 HUB 로그인이 필요합니다.",
+    "flowNoteTitle": "반영 시점",
+    "flowNote": "여기서 고친 분류는 HUB에 저장되고 외부 API 목록(source_override)으로 파이프라인에 넘어갑니다. 인용 화면 숫자에는 파이프라인이 이 목록을 가져가 Gold를 다시 만든 뒤 반영되고, 그 전까지 '반영 대기'로 보입니다.",
+    "axis": {
+      "category": "카테고리",
+      "source": "분류 출처",
+      "state": "반영 상태"
+    },
+    "column": {
+      "domain": "도메인",
+      "citations": "인용 수",
+      "category": "카테고리",
+      "source": "분류 출처",
+      "state": "반영",
+      "note": "메모",
+      "actions": "작업"
+    },
+    "source": {
+      "override": "운영자 교정",
+      "social": "공식 소셜",
+      "owned": "당사 보유",
+      "seed": "큐레이션",
+      "rule": "규칙",
+      "fallback": "미분류"
+    },
+    "state": {
+      "applied": "반영됨",
+      "pending": "반영 대기",
+      "pendingClear": "원복 대기",
+      "upstream": "업스트림 교정"
+    },
+    "stateTip": {
+      "applied": "Gold가 이 교정을 적용했습니다.",
+      "pending": "파이프라인이 아직 이 교정을 가져가지 않았습니다. Gold 재가공 뒤 반영됩니다.",
+      "pendingClear": "파이프라인이 아직 원복을 가져가지 않았습니다. Gold 재가공 뒤 기본 분류로 돌아갑니다.",
+      "upstream": "Gold가 적용한 교정이지만 HUB 목록에는 없습니다. 카테고리를 고르면 HUB 교정이 됩니다."
+    },
+    "social": "소셜 계정",
+    "shadowsOwned": "당사 보유 도메인을 덮어쓰는 중",
+    "goldValue": "Gold 값: {category} · {source}",
+    "goldNone": "Gold에 없는 출처",
+    "categoryOf": "{domain} 카테고리",
+    "revert": "원복",
+    "historyOpen": "{domain} 변경 이력",
+    "system": "관리 명령",
+    "toast": {
+      "saved": "{domain} 분류를 저장했습니다. 파이프라인이 가져간 뒤 인용 집계에 반영됩니다.",
+      "reverted": "{domain} 교정을 원복했습니다. 파이프라인이 가져간 뒤 기본 분류로 돌아갑니다."
+    },
+    "detailTitle": "출처 분류",
+    "field": {
+      "citations": "인용 수",
+      "category": "카테고리",
+      "status": "상태",
+      "hub": "HUB 교정",
+      "origin": "처음 값",
+      "gold": "Gold 값",
+      "state": "반영",
+      "note": "메모"
+    },
+    "status": {
+      "active": "적용 중",
+      "cleared": "원복됨"
+    },
+    "origin": {
+      "gold_import": "Gold에서 가져옴",
+      "hub": "이 화면에서 지정"
+    },
+    "noOverride": "HUB 교정이 없습니다. 카테고리를 고르면 교정이 생깁니다.",
+    "history": "변경 이력",
+    "noHistory": "변경 이력이 없습니다.",
+    "event": {
+      "import": "가져오기",
+      "set": "교정",
+      "clear": "원복"
+    },
+    "error": {
+      "invalid_value": "입력값을 확인하세요: {fields}",
+      "not_found": "Gold에 없는 출처이거나 HUB 교정이 없습니다.",
+      "unauthorized": "로그인이 만료되었습니다. 다시 로그인하세요.",
+      "forbidden": "최상위 관리자만 인용 출처 분류를 관리할 수 있습니다.",
+      "source_unavailable": "HUB 저장소나 Gold를 읽지 못했습니다. 잠시 뒤 다시 시도하세요.",
+      "failed": "요청을 처리하지 못했습니다."
     }
   },
   "hubPrompts": {

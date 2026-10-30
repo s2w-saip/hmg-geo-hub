@@ -55,7 +55,8 @@ async def get(path: str, params: Mapping[str, Any] | Iterable[tuple[str, Any]] |
     Identical reads that run at the same time (sections of one page asking for the same
     summary) share one execution; a Gold read's answer is kept under Gold's state (gold_reader.cache).
     The read runs inside the request account's scope (access.clamp), before it is keyed: accounts of
-    different scopes never share a read."""
+    different scopes never share a read. The shared read holds the answer's JSON text and every caller
+    parses its own copy (a screen may change what it reads)."""
     q = access.clamp(query(params))
     key = f"{path}?{q}"
     pending = _inflight.get(key)
@@ -71,7 +72,7 @@ async def get(path: str, params: Mapping[str, Any] | Iterable[tuple[str, Any]] |
         # The front's per-call timeout (HGH_API_TIMEOUT_MS, 20 s): the section degrades, the page
         # does not wait for one slow read.
         raise HTTPException(504, "Gold read timed out") from None
-    return json.loads(json.dumps(result))
+    return json.loads(result)
 
 
 def _forget(key: str, done: asyncio.Future) -> None:
@@ -80,8 +81,19 @@ def _forget(key: str, done: asyncio.Future) -> None:
         done.exception()  # read here: when every waiter already answered 504, nobody else does
 
 
-async def _read_json(path: str, q: QueryParams) -> Any:
+def _encode(answer: Any) -> str:
+    """json.dumps(jsonable_encoder(answer)) in one pass: json encodes the JSON types itself and hands jsonable_encoder
+    only what it cannot (a date, a Decimal, a record). A dict key json cannot take (a date) takes the two passes."""
+    try:
+        return json.dumps(answer, default=jsonable_encoder)
+    except TypeError:
+        return json.dumps(jsonable_encoder(answer))
+
+
+async def _read_json(path: str, q: QueryParams) -> str:
+    """The read's answer as JSON text (2026-10-30, ACR P5: it was encoded, parsed, then encoded and parsed again
+    for every caller's copy)."""
     async def text() -> str:
-        return json.dumps(jsonable_encoder(await read(path, q)))
+        return _encode(await read(path, q))
     # the HUB analytics store is not Gold: no Gold state to key it on
-    return json.loads(await (text() if path in ANALYTICS else gold_cache.read(f"{path}?{q}", text)))
+    return await (text() if path in ANALYTICS else gold_cache.read(f"{path}?{q}", text))

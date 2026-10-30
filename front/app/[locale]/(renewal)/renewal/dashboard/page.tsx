@@ -10,7 +10,6 @@ import { screenGet, type ScreenQuery } from "@/lib/screen";
 import { throwForPage } from "@/lib/hgh/errors";
 import type {
   AsOfView,
-  BrandMatrixView,
   CardCompetitorsView,
   CardsView,
   CardTrendView,
@@ -36,7 +35,7 @@ import {
   RnOverviewFilters,
   type OverviewFilterProps,
 } from "../_components/overview-filters";
-import { RnOverviewBody } from "./_components/overview-body";
+import { RnOverviewBody, type RnBrandMatrixRead } from "./_components/overview-body";
 
 // Renewal Overview (2026-10-20) — the redesigned /dashboard, served side by side with the original.
 // Data: the SAME overview screens as /dashboard/page.tsx (back/bff/screens/overview.py), plus the
@@ -168,7 +167,8 @@ function bodyReads(sp: SP, locale: string, showGeo: boolean) {
     competitors: handled(
       onTransient(screenGet<CardCompetitorsView>("overview/card-competitors", { ...q, "ctx.view": "renewal" }), DEGRADED_CARD_COMPETITORS),
     ),
-    matrix: handled(onTransient(screenGet<BrandMatrixView | null>("overview/brand-matrix", q), null)),
+    // a transient failure is "failed", not null (= no answers): the card says it failed (review ⚠️ #31)
+    matrix: handled(onTransient(screenGet<RnBrandMatrixRead>("overview/brand-matrix", q), "failed")),
     geo: showGeo
       ? handled(
           screenGet<OverviewGeoView>("overview/geo", { ...q, "ctx.locale": locale }).catch((e: unknown) =>

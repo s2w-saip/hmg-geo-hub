@@ -197,6 +197,8 @@ export interface RnAcrInput {
   /** API path: trend buckets are rounds */
   roundBuckets: boolean;
   period: boolean;
+  /** the round shown (YYYY-MM-DD): the snapshot's, a period's last; null when the read names none */
+  asOf: string | null;
   /** 당사 name (the applied own brands, else the HMG umbrella) */
   ownLabel: string;
   totals: StandardAcr["totals"];

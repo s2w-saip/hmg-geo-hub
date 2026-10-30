@@ -109,7 +109,8 @@
     "renewalAnswerAnalysisCitation": "Citation (Renewal)",
     "renewalAdminStandardPrompts": "Global prompt management",
     "renewalAdmin": "User management",
-    "renewalAdminGa4": "GA4 connection"
+    "renewalAdminGa4": "GA4 connection",
+    "renewalAdminCitationSources": "Citation Sources"
   },
   "locale": {
     "label": "Language",
@@ -4604,6 +4605,7 @@
       "beta": "Beta",
       "cadence": "Measured weekly",
       "snapshot": "Latest round snapshot",
+      "snapshotOf": "Latest round {date} snapshot",
       "periodRange": "Period total {from} ~ {to}",
       "bar": {
         "label": "Page controls"
@@ -4640,7 +4642,7 @@
         "titlePeriod": "This period",
         "howLabel": "How it is made",
         "how": "Rules over the numbers on this page (no new data): our rank and gap, where we are shortlisted but not picked, top brands per engine and prompt, model conversion and the biggest mover, ranked by importance; the top four are shown.",
-        "chipSnapshot": "Latest round · vs the previous round",
+        "chipSnapshot": "As of {date} · vs the previous round",
         "chipPeriod": "Period total",
         "headline": "<b>{own}</b> — Top1 ACR <b>#{rank}</b> {share}{delta}, shortlist rate {coverage}, picked first {count} times · {prompts} prompts × {engines} engines"
       },
@@ -4661,7 +4663,7 @@
         "engine": {
           "tag": "AI engine",
           "title": "We top {wins}/{total} prompts on {engine} — {diff} fewer than on {other}",
-          "detail": "By the brand picked most per prompt × engine"
+          "detail": "Of the {total} prompts with a pick ({measured} measured) · by the brand picked most per prompt × engine"
         },
         "sweep": {
           "tag": "Prompts",
@@ -4752,8 +4754,8 @@
       "battle": {
         "title": "Picks by AI engine",
         "infoLabel": "How to read",
-        "info": "For each prompt × engine cell, the brand picked most (countries added up; ties by brand name). Bars = how many prompts each brand tops on that engine.",
-        "chip": "{prompts} prompts × {engines} engines",
+        "info": "For each prompt × engine cell, the brand picked most (countries added up; ties by brand name). Bars = how many prompts each brand tops on that engine. The base is the prompts with at least one final pick on any engine — measured prompts with no pick on any engine are left out, so it can be smaller than the measured prompts in the summary.",
+        "chip": "{prompts} prompts with a pick ({measured} measured) × {engines} engines",
         "viewLabel": "Prompt view",
         "all": "All",
         "notOwn": "We are not #1",
@@ -4827,12 +4829,13 @@
         "tipAbsent": "We were not even listed · {candidates} brands listed · {cells} measurements summed"
       },
       "foot": {
-        "snapshot": "Latest round snapshot — {prompts} prompts · {cells} cells (prompt × engine × country) · {iterations} repetitions",
+        "snapshot": "Latest round ({date}) snapshot —{prompts} prompts · {cells} cells (prompt × engine × country) · {iterations} repetitions",
         "period": "Period total — {prompts} prompts · {cells} cells (prompt × engine × country) · {iterations} repetitions"
       },
       "states": {
         "noResultTitle": "No ACR measurement for these filters",
         "noResultDesc": "ACR runs in some countries and languages only. Try fewer country, language or catalog filters.",
+        "noResultDescPeriod": "This period may hold no ACR round, or no measurement matches the country, language or catalog filters. Try another period or fewer filters.",
         "reset": "Clear filters"
       },
       "conv": {
@@ -4979,8 +4982,17 @@
       "kpiTitle": "5 KPIs",
       "kpiHintDelta": "Δ = {compare}",
       "kpiHintTrend": "trend = last {count} rounds",
+      "kpiHintBasis": "basis = representative answers",
+      "basisLabel": "Basis",
+      "basisTip": "When a prompt was measured more than once in a round on the same engine and market, only its representative answer counts. The {page} page counts every answer, so the same KPI can differ slightly there.",
+      "formulaPosition": "Σ(our rank among brands in the answer = non-noise brands mentioned before ours + 1) ÷ answers mentioning our brand ≥1× (unit: position #n)",
+      "rivalsFailed": "Competitor values could not be loaded",
       "standing": "<b>#{rank}</b> of {count} compared brands",
       "brandsHint": "All 5 KPIs in one table · bars scale to each column's best · a lower Average Position is ahead · Δ = {compare} on every row",
+      "brandsHintPeriod": "All 5 KPIs in one table · bars scale to each column's best · a lower Average Position is ahead · values = the selected period · Δ = the period's last two rounds on every row (the KPI Δ above: {compare})",
+      "deltaRounds": "the period's last two rounds",
+      "brandsFailed": "The brand comparison could not be loaded. Please reopen the page in a moment.",
+      "brandsPartial": "Some values could not be loaded and are left blank. Please reopen the page in a moment.",
       "colBrand": "Brand",
       "colStanding": "Ours #{rank} / {count}",
       "short": {
@@ -4992,7 +5004,7 @@
       },
       "notCompared": "Not among the compared competitors (top 4) of {kpi}",
       "deltaTitle": "{dir} · {compare}",
-      "brandsFoot": "‘—’ = not among that KPI's compared competitors (top 4) · Citation Share has its own citation-based competitors · Sentiment and Citation Share have no competitor Δ",
+      "brandsFoot": "‘—’ = not among that KPI's compared competitors (top 4) · Citation Share has its own citation-based competitors (with a period picked, their values count every answer) · Sentiment and Citation Share have no competitor Δ",
       "marketsTitle": "Markets",
       "heatLegend": "Cell colour: country rank per KPI · behind",
       "heatLegendFront": "ahead",
@@ -5017,6 +5029,8 @@
       "tabsLabel": "View",
       "historyOf": "Change history of {text}",
       "scopePill": "Viewing · {scope}",
+      "unmeasuredHint": "None of this prompt's answers count toward the KPIs. A prompt whose answers were collected but left out of the aggregation also shows as not measured.",
+      "emptyFiltered": "No prompts match these conditions. Try other filters or search words.",
       "optionSearch": "Search {label}",
       "copyLink": "Copy link",
       "linkCopied": "Link with the current conditions copied",
@@ -5037,6 +5051,10 @@
       "title": "Mention",
       "beta": "Beta",
       "periodRange": "Period total {from} ~ {to}",
+      "degraded": {
+        "all": "This section's figures could not be loaded (a timeout or another temporary error) — the other figures are unaffected",
+        "trend": "This section's trend could not be loaded (a timeout or another temporary error) — the other figures are unaffected"
+      },
       "bar": {
         "label": "Page controls"
       },
@@ -5051,7 +5069,7 @@
         "favMix": "Sentiment by type",
         "favMixDesc": "Which kinds of mention carry the most positive signals.",
         "rank": "Ranking",
-        "rankDesc": "How early each brand is named in answers — a longer bar means named earlier.",
+        "rankDesc": "How early each brand is named in answers — a dot further left means named earlier.",
         "brands": "Brand detail",
         "brandsDesc": "Brand mention ranking and mix — click a brand to go down to its prompts and the real AI answers."
       },
@@ -5111,8 +5129,8 @@
         "titlePeriod": "Selected period at a glance",
         "howLabel": "How this is made",
         "how": "A rule-based summary of the numbers on this page (no new data). It ranks our standing and gap, the mention types where we trail, the competitor that moved most, the engine gap, sharp mention-rank changes and rising negative signals, and picks four.",
-        "chipSnapshot": "As of {date} · vs previous round",
-        "chipPeriod": "Selected period, cumulative",
+        "chipSnapshot": "As of {date} · basis = every answer · vs previous round",
+        "chipPeriod": "Selected period, cumulative · basis = every answer",
         "headline": "<b>{own}</b> — exposure <b>{expRank}</b> {exp}, share of voice <b>{sovRank}</b> {sov}, favorability {fav}, first position {pos}.",
         "empty": "Nothing to summarise",
         "rank": "#{rank}"
@@ -5169,6 +5187,8 @@
         "trendTitleExposure": "Exposure by brand",
         "trendTitleSov": "Share of voice by brand",
         "trendNoteLabel": "Metric note",
+        "basisLabel": "Basis",
+        "basisAll": "This page counts every answer. When a prompt was measured more than once in a round on the same engine and market, the Overview cards count only its representative answer, so the same KPI can differ slightly.",
         "trendNote": "{metric} (%) by brand — the weekly ranking under ‘Brand detail’ counts mentions, a different metric. With no compare brand the line is the average of the competitors with a trend.",
         "standing": "<b>#{rank}</b> of {n} brands compared",
         "leadFirst": "+{gap}pp over #2 {brand}",
@@ -5222,7 +5242,7 @@
         "titleExposure": "Exposure by mention type",
         "titleSov": "Share of voice by mention type",
         "infoLabel": "What this shows",
-        "info": "Not how often but how AI mentions us (plain mention · recommendation · comparison · definition · final choice), from the type signals the answer analyser puts on each brand mention. One mention can carry several types, so types do not add up. Competition = each brand's share of the type's signals; the bar span = the gap between us and the reference (the leading compare brand, else the competitor average).",
+        "info": "Not how often but how AI mentions us (plain mention · recommendation · comparison · definition · final choice), from the type signals the answer analyser puts on each brand mention. A type's exposure is the share of answers that mention us with that type, and an answer that names us in several types counts in each — so the types do not add up. Competition = each brand's share of the type's signals; the bar span = the gap between us and the reference (the leading compare brand, else the competitor average).",
         "chip": "Type signals",
         "sub": "Strongest endorsement first — leading in final choice and recommendation matters most.",
         "viewLabel": "View",
@@ -5267,14 +5287,17 @@
         "matrixAria": "Sentiment by mention type",
         "matrixAll": "All mentions",
         "matrixNoteTitle": "All and the types",
-        "matrixNote": "All mentions is the sentiment of every own mention, the same as the sentiment distribution card above. One mention can carry several type signals, so the type rows add up to more than all mentions."
+        "matrixNote": "All mentions is the sentiment of every own mention, the same as the sentiment distribution card above. A type row counts every sentiment signal our brand got in the answers that mention it with that type — an answer that names it in several types counts in each of those rows, so the type rows add up to more than all mentions.",
+        "matrixHint": "By mention type: the sentiment mix we got in the answers that mention us with that type. The figure on the right is the row's positive share."
       },
       "rank": {
         "label": "AI first position",
         "unit": "#{n}",
         "basis": "vs previous round · a smaller number is named earlier",
         "ranked": "Ranked answers",
-        "ahead": "Brands named before us",
+        "ahead": "Rivals in the table named before us",
+        "aheadTip": "Rivals in the table below whose average position is ahead of ours (a smaller number). With several own brands, our value averages, per answer, the earliest of them, so it is easier for us to lead than for a rival measured as one brand.",
+        "formula": "Σ(our rank among brands in the answer = non-noise brands mentioned before ours + 1) ÷ answers mentioning our brand ≥1× (unit: position #n)",
         "count": "{n}",
         "trackTitle": "Average position by brand",
         "trackNote": "Further left = named earlier",
@@ -5426,7 +5449,7 @@
           "tag": "Rank change",
           "title": "{domain} moved from #{from} to #{to}"
         },
-        "climbDetail": "Last {weeks} weeks · among the top {n} domains"
+        "climbDetail": "Last {weeks} weeks · rank within the top {n} domains"
       },
       "lens": {
         "label": "Citation KPIs",
@@ -5543,7 +5566,7 @@
       "bump": {
         "title": "Weekly domain citation rank",
         "infoLabel": "How to read",
-        "info": "Each week, the top domains ranked by citations. Coloured = Official (HMG) domains (navy) and the 3 domains whose rank changed most since the first week; the rest is grey — hover a line or a legend item to isolate it, click to open the domain. Right = last week's rank · citations · rank change (▲▼).",
+        "info": "Only the most cited domains over the drawn weeks (the count on the chip), ranked against each other by citations each week — a rank within them, not among all domains, so it can differ from the domain table below. Coloured = Official (HMG) domains (navy) and the 3 domains whose rank changed most since the first week; the rest is grey — hover a line or a legend item to isolate it, click to open the domain. Right = last week's rank · citations · rank change (▲▼).",
         "chip": "Top {n} domains · {weeks} weeks",
         "colRank": "rank",
         "colCitations": "citations",
@@ -5576,9 +5599,12 @@
         "tabs": "Domain detail",
         "urls": "Cited URLs",
         "prompts": "Prompts",
-        "noAnswer": "No linked answer"
+        "noAnswer": "No linked answer",
+        "answersCap": "Click a prompt to see the answers citing this domain, most citations first, up to {n}."
       },
       "sub": {
+        "colCitations": "All citations",
+        "colCitationsTip": "Every citation in this prompt's answers, from any source (not only our official URLs). The list is ordered by it too.",
         "ownedTitle": "Prompts citing our official URLs",
         "ownedSub": "Prompts whose answers rested on an official URL of ours at least once — the strong areas. Click a prompt to open the real answers.",
         "uncitedTitle": "Prompts not citing our official URLs",
@@ -5905,6 +5931,108 @@
       "source_unavailable": "The HUB data DB cannot be reached. Try again shortly.",
       "not_found": "Property not found.",
       "failed": "Could not complete. Try again shortly."
+    }
+  },
+  "hubSourceOverrides": {
+    "title": "Citation Sources",
+    "description": "Correct the category of the sources AI answers cite. The HUB sets the corrections only; the automatic classification and the seed and social lists are Gold's, shown as they are.",
+    "storePill": "HUB data DB",
+    "roundPill": "Gold round {date} · Global",
+    "publishedPill": "Upstream list v{version} · {items}",
+    "publishedTip": "External API list source_override · change_seq {seq} · recorded {at}",
+    "listLabel": "Cited sources",
+    "searchLabel": "Search",
+    "searchPlaceholder": "Search domains",
+    "otherOnly": "Uncategorized only",
+    "count": "{shown} / {total} · corrected {overrides} · uncategorized {other} · pending {pending}",
+    "empty": "No sources to show.",
+    "emptyFiltered": "No source matches the filters.",
+    "hint": "Shows the top {limit} sources by citations in Gold round {date} (Global), every source the HUB corrected and every source Gold applies a correction to.",
+    "loading": "Loading…",
+    "login": "Sign in",
+    "loginRequired": "Managing citation sources needs a HUB sign-in.",
+    "flowNoteTitle": "When it applies",
+    "flowNote": "A correction is saved in the HUB and goes to the pipeline as the external API list (source_override). The citation numbers change after the pipeline reads the list and Gold is rebuilt; until then the row shows 'Pending'.",
+    "axis": {
+      "category": "Category",
+      "source": "Classified by",
+      "state": "Applied"
+    },
+    "column": {
+      "domain": "Domain",
+      "citations": "Citations",
+      "category": "Category",
+      "source": "Classified by",
+      "state": "Applied",
+      "note": "Note",
+      "actions": "Actions"
+    },
+    "source": {
+      "override": "Correction",
+      "social": "Official social",
+      "owned": "Owned",
+      "seed": "Curated",
+      "rule": "Rule",
+      "fallback": "Uncategorized"
+    },
+    "state": {
+      "applied": "Applied",
+      "pending": "Pending",
+      "pendingClear": "Revert pending",
+      "upstream": "Upstream correction"
+    },
+    "stateTip": {
+      "applied": "Gold applies this correction.",
+      "pending": "The pipeline has not read this correction yet. It applies after Gold is rebuilt.",
+      "pendingClear": "The pipeline has not read the revert yet. The default classification returns after Gold is rebuilt.",
+      "upstream": "Gold applies this correction but the HUB list does not have it. Pick a category to make it a HUB correction."
+    },
+    "social": "Social account",
+    "shadowsOwned": "Overrides an owned domain",
+    "goldValue": "Gold: {category} · {source}",
+    "goldNone": "Not in Gold",
+    "categoryOf": "Category of {domain}",
+    "revert": "Revert",
+    "historyOpen": "History of {domain}",
+    "system": "Management command",
+    "toast": {
+      "saved": "Saved the category of {domain}. It reaches the citation numbers after the pipeline reads it.",
+      "reverted": "Reverted the correction of {domain}. The default classification returns after the pipeline reads it."
+    },
+    "detailTitle": "Source classification",
+    "field": {
+      "citations": "Citations",
+      "category": "Category",
+      "status": "Status",
+      "hub": "HUB correction",
+      "origin": "First value",
+      "gold": "Gold",
+      "state": "Applied",
+      "note": "Note"
+    },
+    "status": {
+      "active": "Active",
+      "cleared": "Reverted"
+    },
+    "origin": {
+      "gold_import": "Taken from Gold",
+      "hub": "Set on this screen"
+    },
+    "noOverride": "No HUB correction. Picking a category makes one.",
+    "history": "History",
+    "noHistory": "No changes yet.",
+    "event": {
+      "import": "Import",
+      "set": "Correct",
+      "clear": "Revert"
+    },
+    "error": {
+      "invalid_value": "Check the values: {fields}",
+      "not_found": "The source is not in Gold, or the HUB has no correction for it.",
+      "unauthorized": "Your session has ended. Sign in again.",
+      "forbidden": "Only the top-level administrator manages citation sources.",
+      "source_unavailable": "The HUB store or Gold could not be read. Try again shortly.",
+      "failed": "The request failed."
     }
   },
   "hubPrompts": {

@@ -34,6 +34,13 @@ export function DegradedNote({ children }: { children: ReactNode }) {
   return <p className="m-0 rounded-lg bg-rn-page px-3 py-2.5 text-rn-12 text-rn-muted">{children}</p>;
 }
 
+/** The copy of a degraded read (a timeout, a database or server error, a lost connection: the BFF degrade marks).
+ * The shared answerAnalysis copy says every such read "timed out"; the renewal Mention and Citation say what is known. */
+export function useDegradedText(): { all: string; trend: string } {
+  const t = useTranslations("renewal.mention.degraded");
+  return { all: t("all"), trend: t("trend") };
+}
+
 /** `neutral`: a rival's move (direction only; better/worse is 당사's). */
 export function DeltaChip({ value, rank = false, invert = false, neutral = false, unit = "pp" }: { value: number | null; rank?: boolean; invert?: boolean; neutral?: boolean; unit?: "pp" | "" }) {
   const t = useTranslations("renewal.mention.delta");

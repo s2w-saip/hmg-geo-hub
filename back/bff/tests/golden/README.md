@@ -15,6 +15,9 @@ Changes since recording (additive, each derived only from functions pinned by ot
 - 2026-10-27 `mention/*kpi-period*`: `output.periodSlots` added (the chip and caption PeriodDeltaSlot used to
   compute in the browser, now built by `mention.period_slots` from `period_chip`/`period_caption`, which the
   `ov` goldens pin to the old TypeScript).
+- 2026-10-30 `acr/renewal` (all 41 cases): `body.asOf` added — the `funnel/acr` read's `meta.as_of` (the snapshot's
+  round, a period's last), which the page names in its header pill, summary chip and footer (metric review ⚠️ #1: the
+  page showed no measurement date). Each case differs from its previous output by that one key only.
 
 Deliberate changes (what the screen shows changed by decision):
 - 2026-10-28 citation URL country (the user's decision: Gold, not the legacy hard-coded catalog). The domain
@@ -190,6 +193,23 @@ Deliberate changes (what the screen shows changed by decision):
   - The 당사 type lines (`rn-fn-rate-types`, `rn-fn-type-own-rows`): a round with type answers draws. The shared
     `type_combo_points` keeps only rounds with measurement days, which the reader sends as null, so every line was
     empty; `spark`, `delta` and `hasSpark` change, the legacy page's cases stay.
+- 2026-10-30 ACR tape `row_count` = the sheet's prompts. The 10-29 migration gave 65 `funnel/acr` sheets in 8 cases the
+  count of their cells (the reader sends its prompts, one row per prompt), so their `states` added up to fewer rows
+  than `row_count`. Those sheets now carry `row_count` = Σ `states`. The 6 `acr/standard` cases (`std-brand-kia` 17
+  sheets, `std-default` 20, `std-engine-chatgpt`, `std-geo-us`, `std-lang-ko` 1 each, `std-open-from` 2) keep their
+  outputs (the standard view does not show the count); the 2 `acr/renewal` cases change only in those tabs'
+  `view.sheets[].count` (`rn-default` 20 tabs, e.g. US · ChatGPT 80 → 65; `rn-kia-period` 3, its first sheet 47 → 43).
+  The first sheet of `rn-kia-period` and the standard tapes' sheet rows stay one per cell, as recorded.
+- 2026-10-30 the renewal brand table names what failed (metric review ⚠️ Overview #31/#32). `overview/brand-matrix`
+  adds `degraded` — the old labels of the parts that failed transiently (COMPETITOR_LABELS order, then
+  `standardTrend:day` for the table's own trend) — only when one did. `overview/fix-rn-matrix-10`
+  (`["standardTrend:day"]`) and `fix-rn-matrix-11` (`["standardMentions"]`) change, nothing else.
+- 2026-10-30 a renewal Mention hero without a value sends no parts (metric review ⚠️ Mention #69: "—%" over "0 / 0").
+  `rn-rate-value` `numerator`/`denominator` are null when `pct` is, `rn-favor-hero` `positive`/`total` when
+  `positivePct` is, `rn-rank` `hero.rankedAnswers` and `ahead` when `hero.avgPosition` is. 7 `mention` cases change
+  only in those keys: `rn-fix-nulls`, `rn-fix-suppressed`, `rn-live-month`, `rn-live-week` (0 → null),
+  `rn-fn-rate-value`, `rn-fn-favor-hero` (0 → null), `rn-fn-rank` (0 → null; 6 random calls whose overview card has no
+  position but a count, e.g. call 2: 120 → null).
 
 ## Format
 

@@ -26,7 +26,7 @@ from fastapi import HTTPException
 from bff import api
 from bff.access import reader_scope
 from bff.screens import screen, split_context
-from bff.screens._convert import delta1, exact, filter_notices, pct1_or_null, round1, whole_suppression
+from bff.screens._convert import as_of_date, delta1, exact, filter_notices, pct1_or_null, round1, whole_suppression
 from bff.screens._filters import load_filter_dates, load_panel_options, read_standard_filters
 from bff.screens._js import is_num, js_round, js_str
 from bff.screens._query import UMBRELLA_BRAND, analysis_query, to_api_params
@@ -147,7 +147,7 @@ def _territory_sheet(s: dict) -> dict:
 async def load_acr_screen(filters: dict, ctx: dict, territory_rows: str = "all", duels: bool = False) -> dict:
     """loadAcrScreen: GET /v1/funnel/acr with the screen's filters (analysisQuery) and the B097 flags. The renewal
     page asks for the first sheet's rows only (territory_rows=first; acr/renewal-sheet reads the others) and for the
-    head-to-head (include_head_to_head)."""
+    head-to-head (include_head_to_head). `asOf` is the read's round (meta.as_of: the snapshot's, a period's last)."""
     flags: dict[str, Any] = {"include_option_countries": False, "include_catalog_count": False}
     if territory_rows != "all":
         flags["territory_rows"] = territory_rows
@@ -158,7 +158,8 @@ async def load_acr_screen(filters: dict, ctx: dict, territory_rows: str = "all",
     data, meta = res["data"], res.get("meta")
     count = data["totals"].get("catalog_acr_prompts")
     return {"data": to_standard_acr(data, meta), "acrPromptCount": 0 if count is None else count,
-            "languageOptions": list((data.get("options") or {}).get("langs") or []), "notices": filter_notices(meta)}
+            "languageOptions": list((data.get("options") or {}).get("langs") or []), "notices": filter_notices(meta),
+            "asOf": as_of_date(meta)}
 
 
 # ── panel props ──────────────────────────────────────────────────────────────
@@ -759,7 +760,8 @@ async def renewal_header(q) -> dict:
 @screen("acr/renewal")
 async def renewal(q) -> dict:
     """The renewal ACR page body: {props: RnOverviewFilters option props (scope added by the page),
-    body: the state flags and, when measured, the full view model}."""
+    body: the state flags, the round shown (asOf; 2026-10-30, metric review ⚠️ #1: the page named no measurement
+    date) and, when measured, the full view model}."""
     _, sp = split_context(q)
     filters = read_standard_filters(sp, reader_scope())
     st = page_state(sp, filters)
@@ -768,7 +770,7 @@ async def renewal(q) -> dict:
     data = acr["data"]
     own = dict(data["own"]) if data.get("own") is not None else None
     body = {"measured": bool(data["measured"]), "filtered": st["filtered"], "acrPromptCount": acr["acrPromptCount"],
-            "roundBuckets": True, "period": st["period"], "ownLabel": st["ownLabel"], "totals": data["totals"],
+            "roundBuckets": True, "period": st["period"], "asOf": acr["asOf"], "ownLabel": st["ownLabel"], "totals": data["totals"],
             "view": renewal_view(data, own, True, st["period"]) if data["measured"] else None}
     return {"props": props, "body": body}
 

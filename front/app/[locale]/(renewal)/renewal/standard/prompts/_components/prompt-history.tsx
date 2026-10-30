@@ -110,6 +110,15 @@ export function RnAuditHistory({ initial, load = fetchPromptsHistory }: { initia
       </td>
     </tr>
   );
+  // The source supplies no change history: its notice alone — no 0-count, period or event picks, CSV or
+  // record description over a history that does not exist (Gold metric review ⚠️ #37).
+  if (!history.available && !readError)
+    return (
+      <div className="flex flex-col gap-4">
+        <h2 className="m-0 text-rn-15 font-bold text-rn-ink">{th("sectionTitle")}</h2>
+        <RnEmpty>{t("sourceUnavailable")}</RnEmpty>
+      </div>
+    );
   return (
     <div className="flex flex-col gap-4">
       <div>

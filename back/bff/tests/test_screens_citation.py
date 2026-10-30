@@ -220,6 +220,24 @@ class SubPages(unittest.TestCase):
         self.assertEqual([("with_counts" in p) for _, p in calls], [False, True, True])
         self.assertEqual([moved["tone"], moved["page"]["win"]], ["negative", {"page": 1, "pages": 1, "from": 0, "to": 0}])
 
+    def test_page_without_cursor_is_page_one(self):
+        """A link with ?page=N and no cursor (an old link or bookmark) reads the first rows, so its window is page one:
+        it said "51–100 · 2/3" over rows 1–50 (2026-10-29 metric review, sub pages #17). A cursor keeps its page."""
+        page = {"limit": 50, "total": 120, "next_cursor": "50"}
+        prompts = {"data": {"counts": {"owned": 120, "uncited": 3},
+                            "items": [{"prompt_id": "p1", "text": "t", "funnel": None, "citations": 1, "providers": [], "answers": []}]},
+                   "meta": {"page": page}}
+        tone = {"data": {"items": [], "counts": {"positive": 120, "negative": 4}}, "meta": {"page": page}}
+        get, _ = router({"citations/prompts": prompts, "citations/sources/tone": tone})
+        with mock.patch("bff.api.get", get):
+            bare = run(C.prompts(QueryParams("page=2")))
+            bare_tone = run(C.tone_urls(QueryParams("page=3")))
+            kept = run(C.prompts(QueryParams("page=2&cursor=50")))
+        first = {"page": 1, "pages": 3, "from": 1, "to": 50}
+        self.assertEqual([bare["page"]["page"], bare["page"]["win"]], [1, first])
+        self.assertEqual([bare_tone["page"]["page"], bare_tone["page"]["win"]], [1, first])
+        self.assertEqual([kept["page"]["page"], kept["page"]["win"]], [2, {"page": 2, "pages": 3, "from": 51, "to": 100}])
+
 
 class UrlRules(unittest.TestCase):
     def test_route_query_encoding(self):

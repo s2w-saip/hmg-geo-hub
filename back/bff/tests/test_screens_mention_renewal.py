@@ -246,6 +246,32 @@ async def _failing_get(status: int):
     return get
 
 
+class NoValueNoParts(unittest.IsolatedAsyncioTestCase):
+    """A hero without a value (its read failed, was suppressed, or 당사 has no rank) sends no parts either: the
+    page showed "—%" over "0 / 0", and "측정 없음" over 순위 답변 "0개" and 앞선 경쟁사 "0개" (2026-10-29 metric
+    review, Mention #69). A hero with a value keeps them."""
+
+    async def test_failed_reads_send_null_parts(self):
+        with mock.patch("bff.api.get", await _failing_get(503)):
+            value = await screens.build("mention/rn-rate-value", QueryParams(""))
+            favor = await screens.build("mention/rn-favor-hero", QueryParams(""))
+            rank = await screens.build("mention/rn-rank", QueryParams(""))
+        for m in rn.RATE_METRICS:
+            self.assertEqual(value[m], {"pct": None, "numerator": None, "denominator": None})
+        self.assertEqual((favor["positivePct"], favor["positive"], favor["total"]), (None, None, None))
+        self.assertEqual((rank["hero"]["avgPosition"], rank["hero"]["rankedAnswers"], rank["ahead"]), (None, None, None))
+
+    def test_a_value_keeps_its_parts(self):
+        cards = {"visibility": {"numerator": 3, "denominator": 4}, "shareOfVoice": {"numerator": 0, "denominator": 9}}
+        sub = {"rows": [], "promptsWithoutBrand": None, "measuredPrompts": None, "overviewCards": cards}
+        value = rn.rate_value_payload({"exposure": sub, "sov": sub}, False)
+        self.assertEqual(value["exposure"], {"pct": 75.0, "numerator": 3, "denominator": 4})
+        self.assertEqual(value["sov"], {"pct": 0.0, "numerator": 0, "denominator": 9})
+        rows = [{"engine": "chatgpt", "sentMentions": 10, "positiveMentions": 6, "negativeMentions": 1}]
+        favor = rn.favor_hero_payload({"rows": rows}, None, None, None, False)
+        self.assertEqual((favor["positivePct"], favor["positive"], favor["total"]), (60.0, 6, 10))
+
+
 class Screens(unittest.IsolatedAsyncioTestCase):
     """Every read failing transiently: the sections degrade instead of failing; a 4xx raises."""
 

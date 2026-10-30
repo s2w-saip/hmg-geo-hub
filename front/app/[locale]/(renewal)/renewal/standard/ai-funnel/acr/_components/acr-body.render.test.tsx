@@ -55,6 +55,25 @@ describe("renewal ACR body: 후보 → 선택 전환 and 결선 맞대결", () =
   });
 });
 
+describe("renewal ACR body: what the page counts, and when", () => {
+  it("a snapshot names its round in the summary chip and the footer", () => {
+    const html = render(bodies.snapshot);
+    expect(html).toContain(">2026-09-14 기준 · 직전 회차 대비<");
+    expect(html).toContain("최신 회차(2026-09-14) 스냅샷 — 프롬프트 3개");
+  });
+  it("the engine card counts the prompts with a pick, of the prompts measured", () => {
+    const html = render(bodies.snapshot);
+    expect(html).toContain(">선택이 나온 프롬프트 1개(측정 3개) × 엔진 2개<");
+  });
+  it("an empty period says the period may hold no ACR round; other filters keep the scope reason", () => {
+    const empty = (b: RnAcrInput): RnAcrInput => ({ ...b, measured: false, filtered: true, view: null });
+    expect(render(empty(bodies.period))).toContain("이 기간에는 ACR 측정 회차가 없거나");
+    const filtered = render(empty(bodies.snapshot));
+    expect(filtered).toContain(T.states.noResultDesc);
+    expect(filtered).not.toContain("이 기간에는 ACR 측정 회차가 없거나");
+  });
+});
+
 describe("renewal ACR body: rounds compared", () => {
   it("a snapshot draws the trend, the Δ column and its sort", () => {
     const html = render(bodies.snapshot);

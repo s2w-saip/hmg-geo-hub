@@ -78,6 +78,97 @@ describe("renewal Overview brand table", () => {
   });
 });
 
+// Gold metric review ⚠️ (2026-10-29, Overview #20 #28 #30 #31 #32): the page says what its numbers count
+// (대표 답변, while Mention / Citation count every answer), what the brand table's Δ compares in a period,
+// and a read that failed says it failed — it neither vanishes nor reads as "no competitor value".
+describe("renewal Overview basis and failure wording", () => {
+  const O = ko.renewal.overview;
+  const decode = (s: string) => s.replace(/&quot;/g, '"').replace(/&#x27;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+  const text = (s: string) => decode(s.replace(/<!-- -->/g, "").replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
+  const fill = (s: string, params: Record<string, string>) => Object.entries(params).reduce((acc, [k, v]) => acc.replace(`{${k}}`, v), s);
+  const NONE = Object.fromEntries(OVERVIEW_KPI_KEYS.map((k) => [k, null])) as never;
+  const one = { value: 50, delta: 0.5, bar: 50, best: true, deltaMark: { r: 0.5, tone: "good" as const } };
+  const ownOnly = (degraded?: string[]): BrandMatrixView & { degraded?: string[] } => ({
+    cols: OVERVIEW_KPI_KEYS.map((key) => ({ key, best: 50, max: 50, standing: null })),
+    rows: [{ name: "HMG", own: true, cells: Object.fromEntries(OVERVIEW_KPI_KEYS.map((k) => [k, one])) as BrandMatrixView["rows"][0]["cells"] }],
+    ...(degraded ? { degraded } : {}),
+  });
+  function render(opts: { matrix?: unknown; compareTitle?: { key: string; params: Record<string, unknown> } | null; competitors?: unknown }) {
+    return renderToStaticMarkup(
+      <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
+        <RnOverviewBody
+          cards={cards}
+          compareTitle={(opts.compareTitle ?? null) as never}
+          geo={null}
+          qs=""
+          deferred={{
+            trend: settled(trend),
+            competitors: settled((opts.competitors ?? { degraded: [], rows: {}, standing: NONE }) as never),
+            matrix: settled((opts.matrix ?? null) as never),
+          }}
+        />
+      </NextIntlClientProvider>,
+    );
+  }
+  const brandCard = (out: string) => out.slice(out.indexOf(`aria-label="${O.brandsTitle}"`));
+  const standing = (out: string, k: string) => text(out.match(new RegExp(`data-rn-standing="${k}"[^>]*>([\\s\\S]*?)</span>`))?.[1] ?? "");
+
+  it("names the 대표 답변 basis in the KPI header and in every KPI's tip, with the page that counts every answer", () => {
+    const out = render({});
+    const head = text(out.slice(0, out.indexOf("data-rn-kpi=")));
+    expect(head).toContain(O.kpiHintBasis);
+    for (const k of OVERVIEW_KPI_KEYS) {
+      const page = k === "citationShare" ? "Citation" : "Mention";
+      expect(text(card(out, k)), k).toContain(`${O.basisLabel} ${fill(O.basisTip, { page })}`);
+    }
+  });
+
+  it("says in a period compare that the brand table's Δ is the period's last two rounds, not the cards' compare", () => {
+    const out = render({ matrix: ownOnly(), compareTitle: { key: "label.weekly", params: {} } });
+    const hint = text(brandCard(out).slice(0, brandCard(out).indexOf("<table")));
+    expect(hint).toContain(fill(O.brandsHintPeriod, { compare: ko.periodCompare.label.weekly }));
+    expect(brandCard(out)).toContain(`title="${O.deltaUp} · ${O.deltaRounds}"`);
+    // without a period the table and the cards compare the same rounds
+    const plain = brandCard(render({ matrix: ownOnly() }));
+    expect(text(plain.slice(0, plain.indexOf("<table")))).toContain(fill(O.brandsHint, { compare: ko.dashboard.overview.compare }));
+  });
+
+  it("says a period's competitor citation shares count every answer", () => {
+    expect(text(brandCard(render({ matrix: ownOnly() })))).toContain(O.brandsFoot);
+    expect(O.brandsFoot).toContain("전체 답변");
+  });
+
+  it("shows the brand table's failure instead of dropping the table", () => {
+    const out = render({ matrix: "failed" });
+    expect(out).toContain(`aria-label="${O.brandsTitle}"`);
+    expect(text(brandCard(out))).toContain(O.brandsFailed);
+  });
+
+  it("says a competitor read failed instead of 'no competitor value'", () => {
+    const failed = render({ matrix: ownOnly(["standardMentions"]), competitors: { degraded: ["standardMentions"], rows: {}, standing: NONE } });
+    for (const k of OVERVIEW_KPI_KEYS) expect(standing(failed, k), k).toBe(O.rivalsFailed);
+    expect(text(brandCard(failed))).toContain(O.brandsPartial);
+    expect(text(brandCard(failed))).not.toContain(ko.dashboard.overview.noCompetitorData);
+    // nothing failed and nobody compared: the old wording stays
+    const none = render({ matrix: ownOnly() });
+    expect(standing(none, "visibility")).toBe(ko.dashboard.overview.noCompetitorData);
+    expect(text(brandCard(none))).toContain(ko.dashboard.overview.noCompetitorData);
+  });
+});
+
+// The AI 우선 노출도 card reads "2.3번째"; its formula tip said "(단위: 위)" (the shared dashboard copy the legacy page and
+// its copy test keep). The renewal card says the unit it shows, as the renewal Mention does.
+describe("renewal Overview first position unit", () => {
+  it("the position formula's unit is the card's (번째)", () => {
+    const tip = card(html(), "position");
+    expect(tip).toContain("(단위: 번째)");
+    expect(tip).not.toContain("(단위: 위)");
+  });
+  it("the other KPIs keep the shared formulas", () => {
+    expect(card(html(), "visibility")).toContain(ko.dashboard.kpi.formula.visibility);
+  });
+});
+
 // 2026-10-28 (user): 상세 opened the original pages — from the renewal shell the card opens the renewal
 // ones, with the KPI's tab and the page's filters
 describe("renewal Overview detail links", () => {

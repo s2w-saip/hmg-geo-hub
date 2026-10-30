@@ -54,7 +54,7 @@ export function RnPromptDetail({
               {row.scopePromptId === null ? (
                 <span className="flex flex-col gap-1">
                   <span>{t("statusUnmeasured")}</span>
-                  <span className="text-rn-12 text-rn-muted">{t("statusUnmeasuredHint")}</span>
+                  <span className="text-rn-12 text-rn-muted">{tp("unmeasuredHint")}</span>
                 </span>
               ) : (
                 t("statusMeasured")

@@ -20,7 +20,7 @@ import {
 } from "@/components/renewal-ui";
 import { OWN_KEY, firstPicked, pickKey, type BoardRow, type RnRateTypesVM } from "../_data/screen-types";
 import { AVG_COLOR, CONTEXT_COLOR, MentionCardActions, OWN_COLOR, deltaTxt, numTxt, pctTxt, ppTxt, slotLabel, useCompare, useMention } from "./mention-context";
-import { BrandName, CardSkeleton, DegradedNote, DeltaChip, InfoTip, Legend, Stat, TwinTable, useDeltaBasis, useDeltaNote } from "./mention-kit";
+import { BrandName, CardSkeleton, DegradedNote, DeltaChip, InfoTip, Legend, Stat, TwinTable, useDegradedText, useDeltaBasis, useDeltaNote } from "./mention-kit";
 import { KpiBasisChip } from "./mention-tabs";
 
 type KpiMetric = "exposure" | "sov";
@@ -65,7 +65,7 @@ function useMetricShort(metric: KpiMetric): string {
 
 // ── 히어로: value (snapshot) · Δ · standing | brand trend ─────────────────────
 
-function RateHero({ metric }: { metric: KpiMetric }) {
+export function RateHero({ metric }: { metric: KpiMetric }) {
   const t = useTranslations("renewal.mention");
   const tName = useTranslations("answerAnalysis.mentions.kpi.metric");
   const tDef = useTranslations("dashboard.kpi");
@@ -80,6 +80,7 @@ function RateHero({ metric }: { metric: KpiMetric }) {
               items={[
                 [tDef("definitionLabel"), tDef(`definition.${DEF_KEY[metric]}`)],
                 [tDef("formulaLabel"), tDef(`formula.${DEF_KEY[metric]}`)],
+                [t("hero.basisLabel"), t("hero.basisAll")],
               ]}
             />
           </div>
@@ -97,11 +98,11 @@ function RateHero({ metric }: { metric: KpiMetric }) {
   );
 }
 
-function HeroValue({ metric }: { metric: KpiMetric }) {
+export function HeroValue({ metric }: { metric: KpiMetric }) {
   const { input, ownBrands } = useMention();
   const t = useTranslations("renewal.mention");
   const tTip = useTranslations("answerAnalysis.mentions.kpi.tooltip");
-  const tK = useTranslations("answerAnalysis.mentions.kpi");
+  const dg = useDegradedText();
   const locale = useLocale();
   const value = use(input.rateValue);
   const hero = value[metric];
@@ -115,7 +116,8 @@ function HeroValue({ metric }: { metric: KpiMetric }) {
       <Suspense fallback={<RnSkeleton className="h-6 w-40" />}>
         <HeroDelta metric={metric} />
       </Suspense>
-      {degraded ? <DegradedNote>{tK("degraded")}</DegradedNote> : null}
+      {degraded ? <DegradedNote>{dg.all}</DegradedNote> : null}
+      {/* without a ratio the screen sends no parts (null → "—", not "0 / 0") */}
       <dl className="m-0 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-rn-line pt-3">
         <Stat label={tTip(metric === "sov" ? "sovNumerator" : "exposureNumerator")} value={numTxt(hero.numerator, locale)} />
         <Stat label={tTip(metric === "sov" ? "sovDenominator" : "exposureDenominator")} value={numTxt(hero.denominator, locale)} />
@@ -173,7 +175,7 @@ function HeroTrend({ metric }: { metric: KpiMetric }) {
   const { ownLabel, lit, hover, tables } = useMention();
   const { compare, colorOf } = useCompare();
   const t = useTranslations("renewal.mention");
-  const tK = useTranslations("answerAnalysis.mentions.kpi");
+  const dg = useDegradedText();
   const s = useHero(metric).trend;
   const name = useMetricShort(metric);
   // the picked brands' lines (looked up), else the competitors' average
@@ -198,7 +200,7 @@ function HeroTrend({ metric }: { metric: KpiMetric }) {
       </div>
       <Legend items={[...series].reverse()} />
       {s.missing ? (
-        <DegradedNote>{tK("degradedTrend")}</DegradedNote>
+        <DegradedNote>{dg.trend}</DegradedNote>
       ) : !s.x.length ? (
         <RnEmpty>{t("hero.noTrend")}</RnEmpty>
       ) : tableOn ? (
@@ -225,7 +227,7 @@ function HeroTrend({ metric }: { metric: KpiMetric }) {
 const BOARD_COLS =
   "grid-cols-[26px_minmax(150px,1.3fr)_minmax(60px,1.4fr)_58px_88px_74px_70px] @max-[720px]/rnpage:grid-cols-[26px_minmax(130px,1.3fr)_minmax(40px,1fr)_58px_74px_64px]";
 
-function Board({ metric }: { metric: KpiMetric }) {
+export function Board({ metric }: { metric: KpiMetric }) {
   const { input, ownLabel, lit, hover } = useMention();
   const { compare, covered, colorOf, toggle } = useCompare();
   const t = useTranslations("renewal.mention");
@@ -250,7 +252,7 @@ function Board({ metric }: { metric: KpiMetric }) {
         chips={
           <>
             <RnBasisChip>{t(input.period ? "board.chipPeriod" : "board.chipSnapshot")}</RnBasisChip>
-            {b.measuredCycles ? <RnBasisChip>{t("board.chipTrend", { n: b.axis.length })}</RnBasisChip> : null}
+            {b.measuredCycles ? <RnBasisChip>{t("board.chipTrend", { n: b.measuredCycles })}</RnBasisChip> : null}
           </>
         }
         actions={<MentionCardActions section="sec-comp" csv={csv} />}
@@ -331,6 +333,7 @@ function Engines({ metric }: { metric: KpiMetric }) {
   const { input, engineLabel, ownLabel } = useMention();
   const t = useTranslations("renewal.mention");
   const tK = useTranslations("answerAnalysis.mentions.kpi");
+  const dg = useDegradedText();
   const { rows, x, trendMissing } = use(input.rateEngines)[metric];
   const short = useMetricShort(metric);
   const title = t(metric === "sov" ? "engine.titleSov" : "engine.titleExposure");
@@ -379,7 +382,7 @@ function Engines({ metric }: { metric: KpiMetric }) {
                 </div>
               </div>
               {trendMissing ? (
-                <DegradedNote>{tK("degradedTrend")}</DegradedNote>
+                <DegradedNote>{dg.trend}</DegradedNote>
               ) : r.hasSeries ? (
                 <RnLineChart
                   x={x.map(slotLabel)}
@@ -407,6 +410,7 @@ function Types({ metric }: { metric: KpiMetric }) {
   const { compare, colorOf } = useCompare();
   const t = useTranslations("renewal.mention.type");
   const tType = useTranslations("answerAnalysis.mentions.breakdown.type");
+  const dg = useDegradedText();
   const tK = useTranslations("answerAnalysis.mentions.kpi");
   const locale = useLocale();
   const vm = use(input.rateTypes);
@@ -458,7 +462,7 @@ function Types({ metric }: { metric: KpiMetric }) {
         sub={t("sub")}
       />
       {empty ? (
-        <RnEmpty className="mx-6 mb-5">{degraded ? tK("degraded") : tK("type.empty")}</RnEmpty>
+        <RnEmpty className="mx-6 mb-5">{degraded ? dg.all : tK("type.empty")}</RnEmpty>
       ) : isCmp ? (
         <div className="flex flex-col gap-2 px-6 pb-5 [.rn-dense_&]:px-4.5 [.rn-dense_&]:pb-3.5">
           <Legend

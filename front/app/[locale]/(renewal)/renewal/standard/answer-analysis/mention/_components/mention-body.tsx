@@ -23,7 +23,7 @@ import {
 import { useRnFilterReset } from "@/app/[locale]/(renewal)/renewal/_components/overview-filters";
 import { OWN_KEY, firstPicked, pickKey, type Finding, type RnShellVM, type TypeFinding } from "../_data/screen-types";
 import { COMPARE_COLORS, MentionProvider, type DrawerTarget, deltaTxt, pctTxt, posTxt, useCompare, useMention, type ComparePick, type MentionCtx } from "./mention-context";
-import { CardSkeleton, InfoTip, StateCard } from "./mention-kit";
+import { CardSkeleton, InfoTip, StateCard, useDegradedText } from "./mention-kit";
 import { RateBody } from "./mention-rate";
 import { FavorBody } from "./mention-favor";
 import { RankBody } from "./mention-rank";
@@ -56,10 +56,10 @@ function MentionShell() {
   const shell = use(input.shell);
   const t = useTranslations("renewal.mention.states");
   const tA = useTranslations("answerAnalysis");
-  const tK = useTranslations("answerAnalysis.mentions.kpi");
+  const dg = useDegradedText();
   const reset = useRnFilterReset();
   if (!shell.measured) {
-    if (shell.degraded) return <StateCard icon={<CircleSlash className="size-5" aria-hidden />} title={tK("degraded")} />;
+    if (shell.degraded) return <StateCard icon={<CircleSlash className="size-5" aria-hidden />} title={dg.all} />;
     return input.filtered ? (
       <StateCard icon={<FilterX className="size-5" aria-hidden />} title={t("noResultTitle")} desc={t("noResultDesc")}>
         <RnButton onClick={reset}>{t("reset")}</RnButton>
