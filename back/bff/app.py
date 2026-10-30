@@ -2,8 +2,8 @@
 login needs a signed-in HUB account (hub_stores/hub_auth.py), and screens and data reads run inside its scope
 (bff/access.py). Read-only, except what the HUB writes: every account changes its own password
 (/v1/auth/password) and keeps its own saved filters (/v1/hub/saved-filters); the top-level administrator also
-manages the accounts (/v1/hub/accounts), edits Global prompts (/v1/hub/global-prompts) and keeps the GA4 property
-registry (/v1/hub/ga4-properties)."""
+manages the accounts (/v1/hub/accounts), edits Global prompts (/v1/hub/global-prompts), keeps the GA4 property
+registry (/v1/hub/ga4-properties) and the source category corrections (/v1/hub/source-overrides)."""
 from __future__ import annotations
 
 import json
@@ -18,7 +18,8 @@ from fastapi.responses import JSONResponse
 
 from bff import access, api, screens
 from bff.gold_reader.db import close_pool, connection, open_pool
-from bff.hub_stores import accounts, analytics_db, catalog_editor, ga4_registry, hub_auth, hub_catalog, operations_db, saved_filters
+from bff.hub_stores import (accounts, analytics_db, catalog_editor, ga4_registry, hub_auth, hub_catalog, operations_db, saved_filters,
+                             source_overrides)
 
 log = logging.getLogger("hgh.gold")
 
@@ -32,6 +33,7 @@ async def lifespan(app: FastAPI):
     await saved_filters.open_pool()
     await accounts.open_pool()
     await ga4_registry.open_pool()
+    await source_overrides.open_pool()
     try:
         yield
     finally:
@@ -42,11 +44,33 @@ async def lifespan(app: FastAPI):
         await saved_filters.close_pool()
         await accounts.close_pool()
         await ga4_registry.close_pool()
+        await source_overrides.close_pool()
 
 
 app = FastAPI(title="HMG GEO HUB BFF / read-only API", lifespan=lifespan)
 
 STATUS_CODES = {401: "unauthorized", 403: "forbidden", 404: "not_found", 405: "read_only", 409: "conflict", 429: "rate_limited"}
+RENDER = {"ensure_ascii": False, "allow_nan": False, "indent": None, "separators": (",", ":")}   # JSONResponse.render's
+
+
+def encode_body(content) -> bytes:
+    """JSONResponse(jsonable_encoder(content)).body in one pass (2026-10-30, ACR P5): json writes the JSON types itself
+    and hands jsonable_encoder only what it cannot (a date, a Decimal, a model); a screen's answer is mostly JSON
+    already (api.get parses the shared read). A dict key json cannot take (a date) takes the two passes. The one
+    difference from two passes: jsonable_encoder drops dict keys that start with "_sa" (SQLAlchemy state); no answer
+    has such a key (bff.tests.test_app_encoding)."""
+    try:
+        text = json.dumps(content, default=jsonable_encoder, **RENDER)
+    except TypeError:
+        text = json.dumps(jsonable_encoder(content), **RENDER)
+    return text.encode("utf-8")
+
+
+class EncodedJSON(JSONResponse):
+    """A JSONResponse whose body is encode_body(content): the same bytes as JSONResponse(jsonable_encoder(content))."""
+
+    def render(self, content) -> bytes:
+        return encode_body(content)
 
 
 @app.exception_handler(HTTPException)
@@ -206,6 +230,34 @@ async def ga4_property_action(property_id: str, action: str, request: Request):
     return hub_json(await ga4_registry.set_enabled(ga4_property_id(property_id), action == "resume", actor))
 
 
+# Admin › 인용 출처 분류 (hub_stores/source_overrides.py): the top-level administrator only. A source key can hold a
+# slash (an official social account), so it travels in the body or the query, not in the path.
+@app.get("/v1/hub/source-overrides")
+async def source_override_list(request: Request):
+    await hub_auth.admin(request.headers.get("authorization"))
+    return hub_json(await source_overrides.listing())
+
+
+@app.get("/v1/hub/source-overrides/history")
+async def source_override_history(request: Request, skey: str | None = Query(None, max_length=400)):
+    await hub_auth.admin(request.headers.get("authorization"))
+    return hub_json(await source_overrides.history(skey))
+
+
+@app.post("/v1/hub/source-overrides")
+async def source_override_set(request: Request):
+    actor = await hub_auth.admin(request.headers.get("authorization"))
+    body = catalog_editor.parse(source_overrides.OverrideSet, await json_body(request), "source correction")
+    return hub_json(await source_overrides.set_category(body, actor))
+
+
+@app.post("/v1/hub/source-overrides/clear")
+async def source_override_clear(request: Request):
+    actor = await hub_auth.admin(request.headers.get("authorization"))
+    body = catalog_editor.parse(source_overrides.OverrideClear, await json_body(request), "source correction")
+    return hub_json(await source_overrides.clear(body, actor))
+
+
 @app.get("/v1/hub/global-prompts")
 async def global_prompts(request: Request):
     await hub_auth.admin(request.headers.get("authorization"))
@@ -294,7 +346,7 @@ async def screen(path: str, request: Request):
     who = await hub_auth.principal(request.headers.get("authorization"))
     with access.scoped(who.scope()):
         built = await screens.build(path, request.query_params)
-    return JSONResponse(jsonable_encoder(built), headers={"Cache-Control": "no-store"})
+    return EncodedJSON(built, headers={"Cache-Control": "no-store"})
 
 
 @app.api_route("/v1/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
@@ -303,4 +355,4 @@ async def read(path: str, request: Request):
         raise HTTPException(405, "This service is read-only")
     who = await hub_auth.principal(request.headers.get("authorization"))
     data = await api.read(path, access.clamp(request.query_params, who.scope()))
-    return JSONResponse(jsonable_encoder(data), headers={"Cache-Control": "no-store"})
+    return EncodedJSON(data, headers={"Cache-Control": "no-store"})

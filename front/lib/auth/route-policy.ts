@@ -319,6 +319,14 @@ export const ROUTES = [
     roles: ADMIN_ONLY,
     group: "admin" as const,
   },
+  // HUB source category corrections (2026-10-30, lib/hub): same roles as the original 인용 출처 분류 page;
+  // the renewal sidebar's Admin › 인용 출처 분류 opens it.
+  {
+    path: "/renewal/admin/standards/citation-sources",
+    key: "renewalAdminCitationSources",
+    roles: ADMIN_ONLY,
+    group: "admin" as const,
+  },
   // HUB GA4 property registry (2026-10-29, lib/hub): same roles as the original GA4 연동 page; the
   // renewal sidebar's Admin › GA4 연동 opens it.
   {

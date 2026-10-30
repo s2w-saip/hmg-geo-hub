@@ -15,6 +15,7 @@ const session = await import("./session/route");
 const prompts = await import("./global-prompts/[[...rest]]/route");
 const saved = await import("./saved-filters/[[...rest]]/route");
 const ga4 = await import("./ga4-properties/[[...rest]]/route");
+const sources = await import("./source-overrides/[[...rest]]/route");
 
 const ID = "8f6f0c1e-2b7a-4c1e-9d2a-1b2c3d4e5f60";
 const SITE = "http://127.0.0.1:3333";
@@ -173,6 +174,36 @@ describe("/api/hub/ga4-properties", () => {
       [ga4.GET(req("GET", "/api/hub/ga4-properties"), ctx()), 401],
       [ga4.POST(req("POST", "/api/hub/ga4-properties/1/stop", { cookie: "tok", origin: "http://evil.test" }), ctx(["1", "stop"])), 403],
       [ga4.PUT(req("PUT", "/api/hub/ga4-properties/1", { cookie: "tok" }), ctx(["1"])), 422],
+    ];
+    for (const [res, status] of cases) expect((await res).status).toBe(status);
+    expect(bff.fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("/api/hub/source-overrides", () => {
+  it("passes the list, a source's history and the writes to the BFF with the token", async () => {
+    bff.fetch.mockResolvedValue({ data: { items: [] } });
+    expect((await sources.GET(req("GET", "/api/hub/source-overrides", { cookie: "tok", origin: null }), ctx())).status).toBe(200);
+    expect(bff.fetch).toHaveBeenLastCalledWith("GET", "/v1/hub/source-overrides", { token: "tok", body: undefined });
+    // a social account key holds a slash: it travels in the query, not the path
+    const history = req("GET", "/api/hub/source-overrides/history?skey=instagram.com%2Fhyundai", { cookie: "tok", origin: null });
+    expect((await sources.GET(history, ctx(["history"]))).status).toBe(200);
+    expect(bff.fetch).toHaveBeenLastCalledWith("GET", "/v1/hub/source-overrides/history", { token: "tok", body: undefined, query: "skey=instagram.com%2Fhyundai" });
+    const body = { skey: "danawa.com", category: "dealerMarketplace" };
+    expect((await sources.POST(req("POST", "/api/hub/source-overrides", { body, cookie: "tok" }), ctx())).status).toBe(200);
+    expect(bff.fetch).toHaveBeenLastCalledWith("POST", "/v1/hub/source-overrides", { token: "tok", body });
+    expect((await sources.POST(req("POST", "/api/hub/source-overrides/clear", { body: { skey: "danawa.com" }, cookie: "tok" }), ctx(["clear"]))).status).toBe(200);
+    expect(bff.fetch).toHaveBeenLastCalledWith("POST", "/v1/hub/source-overrides/clear", { token: "tok", body: { skey: "danawa.com" } });
+  });
+
+  it("refuses unknown paths, missing sessions, cross-site writes and bodiless writes before the BFF", async () => {
+    const cases: Array<[Promise<Response>, number]> = [
+      [sources.GET(req("GET", "/api/hub/source-overrides/danawa.com", { cookie: "tok" }), ctx(["danawa.com"])), 404],
+      [sources.POST(req("POST", "/api/hub/source-overrides/history", { body: {}, cookie: "tok" }), ctx(["history"])), 404],
+      [sources.GET(req("GET", "/api/hub/source-overrides/clear", { cookie: "tok" }), ctx(["clear"])), 404],
+      [sources.GET(req("GET", "/api/hub/source-overrides"), ctx()), 401],
+      [sources.POST(req("POST", "/api/hub/source-overrides/clear", { body: { skey: "x.com" }, cookie: "tok", origin: "http://evil.test" }), ctx(["clear"])), 403],
+      [sources.POST(req("POST", "/api/hub/source-overrides", { cookie: "tok" }), ctx()), 422],
     ];
     for (const [res, status] of cases) expect((await res).status).toBe(status);
     expect(bff.fetch).not.toHaveBeenCalled();

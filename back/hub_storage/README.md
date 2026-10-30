@@ -29,7 +29,7 @@ macOS(Docker 없음)는 네이티브 모드로 같은 일을 한다: `HGH_PYTHON
 
 시작 스크립트는 기존 analytics 마이그레이션을 확인하고 새 DB/증분 마이그레이션을 적용한 뒤 API를 재시작한다. 실제 Gold 프로젝트·프롬프트만 가져온다. 기존 Next 프로세스는 유지한다. 반복 실행은 변경 없는 정의에 새 버전을 만들지 않는다. 적용된 SQL의 체크섬이 바뀌면 중단하므로 변경은 새 마이그레이션으로 추가한다.
 
-로컬 비밀 파일은 git에서 제외하고 Windows에서는 현재 사용자와 SYSTEM에만 ACL을 부여한다. API에는 각 DB의 **조회 계정**과, 글로벌 프롬프트 편집용 **INSERT 전용 편집 계정**(`hmg_catalog_editor`, 아래 절), 저장한 필터용 **한 표 계정**(`hmg_saved_filter_editor`, 아래 절), 계정 관리용 `hmg_account_editor`, GA4 속성 등록부용 `hmg_ga4_registry_editor`(아래 절)만 전달한다. 카탈로그 쓰기 계정과 운영 쓰기 계정은 관리 명령이 일시적으로 사용하며 Next나 API 이미지에 넣지 않는다. 초기화 전 기존 데이터 DB 백업을 만들었으며, 이후 두 DB 백업은 위 명령으로 실행한다. 백업 복원 시 두 DB와 비밀 파일을 함께 복원하고 프로젝트 참조를 검사한다.
+로컬 비밀 파일은 git에서 제외하고 Windows에서는 현재 사용자와 SYSTEM에만 ACL을 부여한다. API에는 각 DB의 **조회 계정**과, 글로벌 프롬프트 편집용 **INSERT 전용 편집 계정**(`hmg_catalog_editor`, 아래 절), 저장한 필터용 **한 표 계정**(`hmg_saved_filter_editor`, 아래 절), 계정 관리용 `hmg_account_editor`, GA4 속성 등록부용 `hmg_ga4_registry_editor`(아래 절), 인용 출처 교정용 `hmg_source_override_editor`(아래 절)만 전달한다. 카탈로그 쓰기 계정과 운영 쓰기 계정은 관리 명령이 일시적으로 사용하며 Next나 API 이미지에 넣지 않는다. 초기화 전 기존 데이터 DB 백업을 만들었으며, 이후 두 DB 백업은 위 명령으로 실행한다. 백업 복원 시 두 DB와 비밀 파일을 함께 복원하고 프로젝트 참조를 검사한다.
 
 ## 프로젝트·프롬프트의 기준
 
@@ -108,6 +108,23 @@ HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py init   # 006_ga4_regi
 HGH_PYTHON=~/micromamba/envs/hgh-bff/bin/python bash scripts/start-local.sh   # API 재시작 (Windows: ./scripts/start-gold.ps1)
 ```
 
+## 인용 출처 교정 (2026-10-30)
+
+리뉴얼 Admin › 인용 출처 분류(`/renewal/admin/standards/citation-sources`)에서 최상위 관리자가 AI 답변이 인용한 출처의 카테고리를 교정한다. HUB는 사람이 정한 교정만 갖고, 자동 분류와 시드 · 소셜 목록은 Gold 값을 읽기만 한다. 같은 구조를 시드 키워드 · 엔티티 역할도 따른다([`docs/handoff/admin-todo.md`](../../docs/handoff/admin-todo.md) '기준값 편집 공통 구조').
+
+- **저장(`007_source_overrides`, 데이터 DB):** `catalog.source_override`에 출처 키(Gold `dim_source.skey`, 소문자 · 앞 `www.` 제거)마다 카테고리(`gold.dim_category.slug`)와 상태(`active` · `cleared`)를 둔다. 지우지 않고, 원복은 `cleared`다. 바꿀 때마다 `source_override_event`(`changes = {필드: [전, 후]}`, 실린 목록의 `published_seq`)가 남는다.
+- **업스트림 전달:** 쓰기마다 같은 트랜잭션에서 발행 함수 `catalog.publish_source_overrides()`가 활성 교정 전체를 기준값 종류 `source_override`(source `hub_edit`)의 새 set으로 기록한다(내용이 같으면 기록 안 함, catalog lock 617427413). 외부 API는 `GET /ext/v1/reference/source_override`로 내보내고, 공개는 `publish-reference source_override`로 승인한다. `hub_edit`은 `ext.meta.hub_reference`에 들지 않아 편집해도 `contract_version`이 바뀌지 않는다. Gold 가져오기는 이 표와 이 종류를 쓰지 않는다.
+- **처음 값:** `import-source-overrides`가 Gold가 지금 적용 중인 교정(`dim_source.category_src = 1`)을 API 이미지 안에서 읽어 한 번 넣는다(`origin = gold_import`). HUB에 교정이 하나라도 있으면 거부한다. 2026-10-30 기준 2건(arxiv.org, danawa.com).
+- **계정과 권한:** 목록은 데이터 DB 조회 계정과 Gold 조회 계정으로 읽고, 쓰기는 `HGH_SOURCE_OVERRIDE_EDITOR_DB_URL`(`hmg_source_override_editor`: `source_override` INSERT와 카테고리 · 상태 · 시각 · 행위자 UPDATE, `source_override_event` INSERT, 발행 함수 실행)로 한다. 키 · 출처 · 메모 변경, DELETE, `reference_set` 직접 쓰기(다른 역할이 `hub_edit` set을 쓰면 트리거가 거부), 다른 catalog 표, 운영 DB 접속은 없다.
+- **화면:** Gold 최신 회차(글로벌 live)의 인용 수 상위 500개 출처, HUB가 교정한 출처, Gold가 교정을 적용한 출처를 보인다. 행마다 Gold 값과 HUB 값을 비교해 반영됨 · 반영 대기 · 업스트림 교정으로 표시한다. 카테고리를 고르면 바로 저장하고, 숫자에는 파이프라인이 목록을 가져가 Gold를 다시 만든 뒤 반영된다.
+- **API:** `GET /v1/hub/source-overrides`, `GET /v1/hub/source-overrides/history?skey=`, `POST /v1/hub/source-overrides`(`{skey, category}`), `POST /v1/hub/source-overrides/clear`(`{skey}`) (관리자만). 브라우저는 Next `/api/hub/source-overrides`를 거친다.
+
+```bash
+HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py init                      # 007_source_overrides, hmg_source_override_editor, .env.source-override-db.local, .env.hub-edit.local에 연결 추가
+HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py import-source-overrides   # 처음 값(한 번만)
+HGH_PYTHON=~/micromamba/envs/hgh-bff/bin/python bash scripts/start-local.sh          # API 재시작 (Windows: ./scripts/start-gold.ps1)
+```
+
 ## 외부 API (2026-10-28)
 
 현재 저장된 프롬프트와 그 수집·가공에 필요한 값을 API 키를 가진 외부 호출자에게 읽기 전용으로 준다. 가공 결과(지표·판정·이전 회차 분석), 회차·측정 작업 원장, GA4 속성, 답변·인용 원문은 주지 않는다. 앱은 `back/ext/app.py`, 구조·범위·변경 감지 규칙은 [정본 문서 `#ext`](../../docs/architecture/hmg-geo-hub-architecture.html#ext)에 있다.
@@ -146,6 +163,6 @@ GA4와 프로젝트의 관계는 `catalog.project_ga4_property`에 실제 연동
 
 ## 검증
 
-`verify`는 롤백되는 트랜잭션에서 비공개/선택 공개, 외부 계정의 기본 테이블 접근 차단, 버전 불변성, 운영 설정 이력·감사 이력 보존, 잘못된 참조 차단을 확인한다. 외부 API 경계도 같은 방식으로 확인한다: 키 없음·빈 키·만료·폐기·비활성 호출자는 0행, 다른 호출자의 프로젝트와 미승인 종류는 안 보임, 내부 Gold 식별자 비노출, 쓰기 계정의 `change_seq` 지정 거부, 승인 변경 시 순번 증가, `hmg_ext_api`의 운영 DB 접속 거부. 저장한 필터 계정은 자기 표만 쓰고(계정·자격증명·역할·감사 표 거부, 데이터 DB 접속 거부), 기본 필터 둘·주인 없는 행·빈 이름은 DB가 거부한다. GA4 등록부 계정은 등록부와 이력만 쓰고(속성 ID 변경·DELETE·이력 고치기·수집 결과 쓰기·GA4 행 읽기 거부, 운영 DB 접속 거부), 한 시장의 두 번째 수집 속성·숫자 아닌 속성 ID·소문자 국가·모르는 브랜드·이벤트 없는 고른 이벤트 기준은 DB가 거부한다. API 통합 검증은 `back/bff/tests/test_hub_storage.py`, 가져오기 규칙은 `test_hub_sync.py`, 저장한 필터는 `test_saved_filters.py`, 외부 API는 `back/ext/tests/test_app.py`를 사용한다. 영구 테스트 사용자나 가상 측정치를 생성하지 않는다.
+`verify`는 롤백되는 트랜잭션에서 비공개/선택 공개, 외부 계정의 기본 테이블 접근 차단, 버전 불변성, 운영 설정 이력·감사 이력 보존, 잘못된 참조 차단을 확인한다. 외부 API 경계도 같은 방식으로 확인한다: 키 없음·빈 키·만료·폐기·비활성 호출자는 0행, 다른 호출자의 프로젝트와 미승인 종류는 안 보임, 내부 Gold 식별자 비노출, 쓰기 계정의 `change_seq` 지정 거부, 승인 변경 시 순번 증가, `hmg_ext_api`의 운영 DB 접속 거부. 저장한 필터 계정은 자기 표만 쓰고(계정·자격증명·역할·감사 표 거부, 데이터 DB 접속 거부), 기본 필터 둘·주인 없는 행·빈 이름은 DB가 거부한다. GA4 등록부 계정은 등록부와 이력만 쓰고(속성 ID 변경·DELETE·이력 고치기·수집 결과 쓰기·GA4 행 읽기 거부, 운영 DB 접속 거부), 한 시장의 두 번째 수집 속성·숫자 아닌 속성 ID·소문자 국가·모르는 브랜드·이벤트 없는 고른 이벤트 기준은 DB가 거부한다. 출처 교정 계정은 교정과 이력만 쓰고 발행 함수로만 목록을 기록한다(키 · 출처 · 메모 변경, DELETE, 이력 고치기, `reference_set` 직접 쓰기, catalog · GA4 · 키 읽기, 운영 DB 접속 거부). 대문자 · `www.` 키, slug 아닌 카테고리는 DB가 거부하고, Gold 가져오기 계정은 `hub_edit` set을 쓰지 못한다. 교정 종류는 승인 전에는 외부 API에 나가지 않고 `hub_reference`를 바꾸지 않으며, 원복한 교정은 목록에서 빠진다. API 통합 검증은 `back/bff/tests/test_hub_storage.py`, 가져오기 규칙은 `test_hub_sync.py`, 저장한 필터는 `test_saved_filters.py`, 외부 API는 `back/ext/tests/test_app.py`를 사용한다. 영구 테스트 사용자나 가상 측정치를 생성하지 않는다.
 
-마이그레이션: 데이터 DB `002_data_catalog_publication`, `003_published_dimensions`, `004_hub_prompt_editing`, `005_external_api`, `006_ga4_registry`, 운영 DB `001_operations`, `002_hub_login`, `003_saved_filters`. 기존 데이터 DB `001_gold_ga4_seo`는 변경하지 않았다.
+마이그레이션: 데이터 DB `002_data_catalog_publication`, `003_published_dimensions`, `004_hub_prompt_editing`, `005_external_api`, `006_ga4_registry`, `007_source_overrides`, 운영 DB `001_operations`, `002_hub_login`, `003_saved_filters`. 기존 데이터 DB `001_gold_ga4_seo`는 변경하지 않았다.

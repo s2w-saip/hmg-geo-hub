@@ -263,13 +263,14 @@ def catalog() -> Figure:
 
 
 def external() -> Figure:
-    """hmg_analytics external API boundary: back/hub_storage/data-005.sql."""
-    f = Figure("ext", 642, "HUB 데이터 DB의 외부 API 경계 ERD. 기준값은 종류별 set과 항목으로 쌓이고, 호출자는 키와 허용 프로젝트를 가지며, "
-               "ext 뷰는 트랜잭션 설정 hgh.key_hash로 한 호출자의 범위만 보여 준다.")
+    """hmg_analytics external API boundary: back/hub_storage/data-005.sql; the HUB's source corrections data-007.sql."""
+    f = Figure("ext", 900, "HUB 데이터 DB의 외부 API 경계 ERD. 기준값은 종류별 set과 항목으로 쌓이고, 호출자는 키와 허용 프로젝트를 가지며, "
+               "ext 뷰는 트랜잭션 설정 hgh.key_hash로 한 호출자의 범위만 보여 준다. 아래 줄은 관리자가 고치는 출처 교정과 그 이력이고, "
+               "활성 교정은 기준값 종류 source_override로 발행된다.")
     f.table("catalog.reference_set", 16, 40, 280, "기준값 한 종류의 한 버전이다. 하나라도 바뀌면 그 종류 전체를 새 set으로 쌓는다.", [
         ("PK", "set_id", "uuid"), ("UK", "family", "text"), ("UK", "version", "integer"), ("", "item_count", "integer"),
-        ("", "sha256", "text"), ("", "source", "=gold|hub"), ("", "source_release", "jsonb"), ("", "change_seq", "bigint"),
-        ("", "recorded_at", "timestamptz")], notes=["UNIQUE (family, version) · 17종"])
+        ("", "sha256", "text"), ("", "source", "=gold|hub|hub_edit"), ("", "source_release", "jsonb"), ("", "change_seq", "bigint"),
+        ("", "recorded_at", "timestamptz")], notes=["UNIQUE (family, version) · 18종"])
     f.table("catalog.reference_item", 336, 40, 250, "set에 든 항목 하나로, 자연키와 정의(JSON)를 담는다.", [
         ("PK FK", "set_id", "uuid"), ("PK", "item_key", "text"), ("", "definition", "jsonb")])
     f.table("publication.reference_access", 626, 40, 270, "기준값 종류별 공개 승인이다. HUB 코드표 세 종류는 늘 공개된다.", [
@@ -291,6 +292,15 @@ def external() -> Figure:
         ("PK FK", "client_id", "uuid"), ("PK FK", "project_id", "→ catalog.project"), ("", "granted_by", "text"),
         ("", "granted_at", "timestamptz"), ("", "grant_seq", "bigint"), ("", "revoked_at", "timestamptz"),
         ("", "revoked_by", "text")])
+    y3 = 650
+    f.table("catalog.source_override_event", 16, y3, 280, "출처 교정의 변경 이력이다. changes는 {필드: [전, 후]}이고 지우지 않는다.", [
+        ("PK", "event_id", "bigint"), ("FK", "skey", "text"), ("", "action", "=import|set|clear"), ("", "actor_id", "uuid"),
+        ("", "changes", "jsonb"), ("", "published_seq", "bigint"), ("", "occurred_at", "timestamptz")])
+    f.table("catalog.source_override", 336, y3, 250, "관리자가 Admin › 인용 출처 분류에서 정한 출처 카테고리 교정이다.", [
+        ("PK", "skey", "text"), ("", "category", "dim_category.slug"), ("", "note", "text"), ("", "status", "=active|cleared"),
+        ("", "origin", "=gold_import|hub"), ("", "created_at", "timestamptz"), ("", "updated_at", "timestamptz"),
+        ("", "updated_by", "uuid")], notes=["활성 행 → set source_override"])
+    f.fk("source_override_event", "skey", "source_override", to="skey")
     f.fk("reference_item", "set_id", "reference_set")
     f.fk("api_key", "client_id", "api_client")
     f.fk("api_client_project", "client_id", "api_client")

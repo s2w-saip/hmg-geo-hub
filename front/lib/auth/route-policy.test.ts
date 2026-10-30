@@ -205,6 +205,7 @@ describe("route-policy — visibleRoutes (SNB list)", () => {
       "/admin/standards/prompts",
       "/renewal/admin",
       "/renewal/admin/standards/prompts",
+      "/renewal/admin/standards/citation-sources",
       "/renewal/admin/ga4",
       "/admin/standards/customer-interest",
       "/admin/standards/entities",
@@ -304,8 +305,8 @@ describe("route-policy — guard bypass and default landing", () => {
 });
 
 describe("route-policy — ROUTES table integrity", () => {
-  it("exposes 43 routes (renewal Overview / Global prompts / ACR / Mention / Citation / AI Visibility / AI Conversion, HUB accounts, global prompts and GA4 registry, production Admin 분석 엔진 / 리포트 관리 / 측정 크레딧 추가)", () => {
-    expect(ROUTES).toHaveLength(43);
+  it("exposes 44 routes (renewal Overview / Global prompts / ACR / Mention / Citation / AI Visibility / AI Conversion, HUB accounts, global prompts, GA4 registry and source corrections, production Admin 분석 엔진 / 리포트 관리 / 측정 크레딧 추가)", () => {
+    expect(ROUTES).toHaveLength(44);
   });
 
   it("renewal pages open to exactly the roles of their originals", () => {
@@ -317,6 +318,7 @@ describe("route-policy — ROUTES table integrity", () => {
       ["/renewal/standard/ai-funnel/conversion", "/standard/ai-funnel/conversion"],
       ["/renewal/admin", "/admin"],
       ["/renewal/admin/standards/prompts", "/admin/standards/prompts"],
+      ["/renewal/admin/standards/citation-sources", "/admin/standards/citation-sources"],
       ["/renewal/admin/ga4", "/admin/ga4"],
       ["/renewal/standard/answer-analysis/mention", "/standard/answer-analysis/mention"],
       ["/renewal/standard/answer-analysis/citation", "/standard/answer-analysis/citation"],

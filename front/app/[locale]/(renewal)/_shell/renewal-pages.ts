@@ -13,5 +13,6 @@ export const RENEWAL_PAGES: ReadonlySet<string> = new Set([
   "/standard/ai-funnel/visibility",
   "/admin",
   "/admin/standards/prompts",
+  "/admin/standards/citation-sources",
   "/admin/ga4",
 ]);

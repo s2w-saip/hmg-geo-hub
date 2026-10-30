@@ -120,7 +120,27 @@ async def main(config):
     else:
         await forbidden.close()
         raise AssertionError('GA4 registry credentials can connect to the operations DB')
+    # Source correction role: the correction tables on the data server only.
+    override = await asyncpg.connect(config['source_override'], timeout=5)
+    try:
+        await override.fetchval('SELECT count(*) FROM catalog.source_override')
+        try:
+            await override.execute('SELECT 1 FROM catalog.prompt LIMIT 1')
+        except asyncpg.InsufficientPrivilegeError:
+            pass
+        else:
+            raise AssertionError('Source correction role reads beyond the correction tables')
+    finally:
+        await override.close()
+    try:
+        forbidden = await asyncpg.connect(config['source_override_operations'], timeout=5)
+    except asyncpg.InvalidAuthorizationSpecificationError:
+        pass
+    else:
+        await forbidden.close()
+        raise AssertionError('Source correction credentials can connect to the operations DB')
     print(json.dumps({'tcp_authentication':'passed','external_operations_access':'denied','api_operations_reader':'read_only',
                       'ext_api':'scoped_read_only','ext_operations_access':'denied','saved_filter':'one_table',
                       'saved_filter_data_access':'denied','account':'account_tables','account_data_access':'denied',
-                      'ga4_registry':'registry_tables','ga4_registry_operations_access':'denied'}))
+                      'ga4_registry':'registry_tables','ga4_registry_operations_access':'denied',
+                      'source_override':'correction_tables','source_override_operations_access':'denied'}))

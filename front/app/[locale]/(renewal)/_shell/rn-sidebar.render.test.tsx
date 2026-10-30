@@ -86,7 +86,7 @@ describe("renewal sidebar", () => {
           "Global prompts → /renewal/admin/standards/prompts",
           "Customer interest config · 미구현 → /renewal/admin/standards/customer-interest",
           "Entity catalog · 미구현 → /renewal/admin/standards/entities",
-          "인용 출처 분류 · 미구현 → /renewal/admin/standards/citation-sources",
+          "인용 출처 분류 → /renewal/admin/standards/citation-sources",
           "Keyword tools · 미구현 → /renewal/admin/keyword-tools",
           "GA4 연동 → /renewal/admin/ga4",
           "분석 엔진 · 미구현 → /renewal/admin/analysis",
@@ -103,7 +103,7 @@ describe("renewal sidebar", () => {
   it("marks the items without a renewal page and shows no beta badge", () => {
     const out = html("admin");
     const marks = [...out.matchAll(/<span data-rn-nav-unimplemented="" title="([^"]+)"[^>]*><svg[^>]*>.*?<\/svg><span class="sr-only">([^<]+)<\/span><\/span>/g)];
-    expect(marks.length).toBe(13); // Website 5 · Project 1 · Admin 7
+    expect(marks.length).toBe(12); // Website 5 · Project 1 · Admin 6
     for (const [, title, sr] of marks) expect([title, sr]).toEqual([ko.unimplemented.label, ko.unimplemented.label]);
     expect(out).not.toContain("β");
   });

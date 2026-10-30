@@ -26,19 +26,23 @@ EXT_SECRET = ROOT / '.env.ext-api-db.local'        # external API role password
 FILTER_SECRET = ROOT / '.env.saved-filter-db.local'  # saved filter role password (operations DB)
 ACCOUNT_SECRET = ROOT / '.env.account-db.local'    # account editor role password (operations DB)
 GA4_REGISTRY_SECRET = ROOT / '.env.ga4-registry-db.local'  # GA4 registry editor role password (data DB)
+SOURCE_OVERRIDE_SECRET = ROOT / '.env.source-override-db.local'  # source correction editor role password (data DB)
 OPS_CONTAINER = 'hgh-operations-db'
 OPS_DB = 'hmg_operations'
 # External API (2026-10-28): what a project approval covers, the Gold reference families an approval can
 # open (the HUB-owned surface/brand_bit/mention_type are always part of the contract), key lifetimes.
 PROJECT_FLAGS = ('projects', 'prompts')
+# source_override (2026-10-30) is the HUB's own corrections (source hub_edit), approved like the Gold families.
 REFERENCE_FAMILIES = ('engine', 'region', 'country', 'language', 'taxon', 'brand', 'entity', 'source_category',
-                      'source', 'owned_base', 'crawl_bot', 'keyword', 'perspective', 'population')
+                      'source', 'owned_base', 'crawl_bot', 'keyword', 'perspective', 'population', 'source_override')
 KEY_DAYS, KEY_DAYS_MAX, KEYS_PER_CLIENT = 180, 365, 2
 KEY_LOCK = 617427414     # one key issue at a time, so the per-client limit holds
+CATALOG_LOCK = 617427413  # every catalog writer (sync_catalog.py, the HUB editors): change_seq order = commit order
 
 
 def sanitize(message):
-    for path in (OPS_SECRET, DATA_SECRET, EDIT_SECRET, EXT_SECRET, FILTER_SECRET, ACCOUNT_SECRET, analytics.SECRET):
+    for path in (OPS_SECRET, DATA_SECRET, EDIT_SECRET, EXT_SECRET, FILTER_SECRET, ACCOUNT_SECRET, SOURCE_OVERRIDE_SECRET,
+                 analytics.SECRET):
         if path.exists():
             for key, value in analytics.env_file(path).items():
                 if ('PASSWORD' in key or 'SECRET' in key) and value:
@@ -268,17 +272,33 @@ ALTER ROLE hmg_ga4_registry_editor CONNECTION LIMIT 4;
 GRANT CONNECT ON DATABASE hmg_analytics TO hmg_ga4_registry_editor;
 COMMIT;""")
     migrate('data-006.sql', '006_ga4_registry')
+    # Source category corrections (2026-10-30): the API's role for the corrections, their history and their
+    # publishing function (Admin › 인용 출처 분류) and nothing else.
+    if not SOURCE_OVERRIDE_SECRET.exists() and sql("SELECT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='hmg_source_override_editor');").stdout.strip() == 't':
+        raise RuntimeError('The source correction role already exists; restore .env.source-override-db.local rather than replacing credentials')
+    override = create_secret(SOURCE_OVERRIDE_SECRET, {'SOURCE_OVERRIDE_EDITOR_PASSWORD': None})
+    sql(f"""BEGIN;
+DO $$ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='hmg_source_override_editor') THEN CREATE ROLE hmg_source_override_editor LOGIN; END IF;
+END $$;
+ALTER ROLE hmg_source_override_editor WITH NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD {analytics.literal(override['SOURCE_OVERRIDE_EDITOR_PASSWORD'])};
+ALTER ROLE hmg_source_override_editor SET statement_timeout='15s';
+ALTER ROLE hmg_source_override_editor CONNECTION LIMIT 4;
+GRANT CONNECT ON DATABASE hmg_analytics TO hmg_source_override_editor;
+COMMIT;""")
+    migrate('data-007.sql', '007_source_overrides')
     analytics.secure_write(ROOT / '.env.ext-api.local', '# External API: the caller-scoped ext views only.\n'
         f"HGH_EXT_DB_URL=postgresql://hmg_ext_api:{ext['EXT_API_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n")
     analytics.secure_write(ROOT / '.env.operations.local', '# FastAPI read-only operations connection.\n'
         f"HGH_OPERATIONS_DB_URL=postgresql://hmg_operations_reader:{values['OPERATIONS_READER_PASSWORD']}@{service_host('operations')}/{OPS_DB}\n")
     analytics.secure_write(ROOT / '.env.hub-edit.local', '# FastAPI HUB writes: Global prompt editing (INSERT-only catalog role), '
-        'saved filters (system.saved_filter only), accounts (the account tables only), the GA4 registry (its two tables) '
-        'and the login token secret.\n'
+        'saved filters (system.saved_filter only), accounts (the account tables only), the GA4 registry (its two tables), '
+        'source category corrections (their two tables and publishing function) and the login token secret.\n'
         f"HGH_CATALOG_EDITOR_DB_URL=postgresql://hmg_catalog_editor:{edit['CATALOG_EDITOR_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n"
         f"HGH_SAVED_FILTER_EDITOR_DB_URL=postgresql://hmg_saved_filter_editor:{saved['SAVED_FILTER_EDITOR_PASSWORD']}@{service_host('operations')}/{OPS_DB}\n"
         f"HGH_ACCOUNT_EDITOR_DB_URL=postgresql://hmg_account_editor:{account['ACCOUNT_EDITOR_PASSWORD']}@{service_host('operations')}/{OPS_DB}\n"
         f"HGH_GA4_REGISTRY_EDITOR_DB_URL=postgresql://hmg_ga4_registry_editor:{registry['GA4_REGISTRY_EDITOR_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n"
+        f"HGH_SOURCE_OVERRIDE_EDITOR_DB_URL=postgresql://hmg_source_override_editor:{override['SOURCE_OVERRIDE_EDITOR_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n"
         f"HGH_AUTH_SECRET={edit['HGH_AUTH_SECRET']}\n")
     analytics.secure_write(ROOT / '.env.data-external.local', '# Local connection only. Empty exports until per-project approval.\n'
         f"HGH_DATA_EXTERNAL_DB_URL=postgresql://hmg_data_external:{data['DATA_EXTERNAL_PASSWORD']}@127.0.0.1:{data_port()}/hmg_analytics\n")
@@ -317,6 +337,7 @@ def verify():
     saved = f"postgresql://hmg_saved_filter_editor:{analytics.env_file(FILTER_SECRET)['SAVED_FILTER_EDITOR_PASSWORD']}"
     account = f"postgresql://hmg_account_editor:{analytics.env_file(ACCOUNT_SECRET)['ACCOUNT_EDITOR_PASSWORD']}"
     registry = f"postgresql://hmg_ga4_registry_editor:{analytics.env_file(GA4_REGISTRY_SECRET)['GA4_REGISTRY_EDITOR_PASSWORD']}"
+    override = f"postgresql://hmg_source_override_editor:{analytics.env_file(SOURCE_OVERRIDE_SECRET)['SOURCE_OVERRIDE_EDITOR_PASSWORD']}"
     config = {'external':external+f"@{service_host('analytics')}/hmg_analytics",
               'external_operations':external+f"@{service_host('operations')}/{OPS_DB}",
               'ext':ext_api+f"@{service_host('analytics')}/hmg_analytics",
@@ -327,7 +348,9 @@ def verify():
               'account':account+f"@{service_host('operations')}/{OPS_DB}",
               'account_data':account+f"@{service_host('analytics')}/hmg_analytics",
               'ga4_registry':registry+f"@{service_host('analytics')}/hmg_analytics",
-              'ga4_registry_operations':registry+f"@{service_host('operations')}/{OPS_DB}"}
+              'ga4_registry_operations':registry+f"@{service_host('operations')}/{OPS_DB}",
+              'source_override':override+f"@{service_host('analytics')}/hmg_analytics",
+              'source_override_operations':override+f"@{service_host('operations')}/{OPS_DB}"}
     script = (HERE / 'verify_connections.py').read_text(encoding='utf8') + '\nasyncio.run(main(' + repr(config) + '))\n'
     print(api_python(script).strip())
     print('Verified opt-in exports, grants, immutable versions, operations isolation; all fixture transactions rolled back')
@@ -369,6 +392,57 @@ WITH gone AS (DELETE FROM system.global_role WHERE user_id={who} RETURNING 1) SE
 INSERT INTO system.audit_event(actor_id,action,details) VALUES(NULL,'hub_login.revoke_admin',json_build_object('login',{analytics.literal(login)})::jsonb);
 COMMIT;""", True).stdout.strip()
     print(f'{login}: ' + ('top-level role revoked; its sessions have ended' if out == '1' else 'no top-level role to revoke'))
+
+
+# ═══ source category corrections: the first values (2026-10-30) ═══════════════════════════════════════════
+
+# Read inside the API image (the Gold credentials stay there): the corrections Gold applies (dim_source.category_src 1).
+GOLD_OVERRIDES_SCRIPT = '''import asyncio, json, os
+import asyncpg
+async def main():
+    conn = await asyncpg.connect(os.environ['HGH_GOLD_DB_URL'], server_settings={'default_transaction_read_only': 'on', 'statement_timeout': '30000'})
+    try:
+        rows = await conn.fetch("SELECT s.skey,c.slug FROM gold.dim_source s JOIN gold.dim_category c USING(category_key) WHERE s.category_src=1 ORDER BY s.skey")
+    finally:
+        await conn.close()
+    print(json.dumps([[r['skey'], r['slug']] for r in rows]))
+asyncio.run(main())
+'''
+
+
+def source_key(value):
+    """The key the HUB and the pipeline compare: lower case, trimmed, no leading www. (catalog.source_override)."""
+    return re.sub(r'^www\.', '', value.strip().lower())
+
+
+def import_source_overrides(args):
+    """import-source-overrides: the HUB's first source corrections are the ones Gold applies now. Runs once: refused
+    when the HUB already has a correction. Records them (origin gold_import), their history and the first
+    `source_override` list for the external API, in one transaction under the catalog lock."""
+    rows = json.loads(api_python(GOLD_OVERRIDES_SCRIPT).strip().splitlines()[-1])
+    found = {}
+    for skey, slug in rows:
+        key = source_key(skey)
+        if found.get(key, slug) != slug:
+            raise RuntimeError(f'Gold has two categories for {key}; nothing imported')
+        found[key] = slug
+    if not found:
+        print('Gold applies no source correction; nothing imported')
+        return
+    values = ','.join(f"({analytics.literal(k)},{analytics.literal(v)},'gold_import')" for k, v in sorted(found.items()))
+    sql(f"""BEGIN;
+SELECT pg_advisory_xact_lock({CATALOG_LOCK});
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM catalog.source_override) THEN RAISE EXCEPTION 'The HUB already has source corrections; the first import runs once'; END IF;
+END $$;
+INSERT INTO catalog.source_override(skey,category,origin) VALUES{values};
+SELECT count(*) FROM catalog.publish_source_overrides();
+INSERT INTO catalog.source_override_event(skey,action,changes,published_seq)
+SELECT skey,'import',jsonb_build_object('category',jsonb_build_array(NULL,category)),
+       (SELECT change_seq FROM catalog.current_reference_set WHERE family='source_override')
+FROM catalog.source_override;
+COMMIT;""")
+    print(json.dumps({'imported': len(found), 'corrections': dict(sorted(found.items()))}, ensure_ascii=False))
 
 
 # ═══ external API: approvals, callers, keys (data DB; the API itself only reads them) ═══════════════════
@@ -531,6 +605,7 @@ COMMANDS = {
     'ext-client-add': client_add, 'ext-client-disable': lambda a: client_status(a, 'disabled'),
     'ext-client-enable': lambda a: client_status(a, 'active'), 'ext-key-issue': key_issue, 'ext-key-revoke': key_revoke,
     'grant-project': lambda a: grant(a, True), 'withdraw-project': lambda a: grant(a, False), 'ext-list': ext_list,
+    'import-source-overrides': import_source_overrides,
 }
 
 if __name__ == '__main__':

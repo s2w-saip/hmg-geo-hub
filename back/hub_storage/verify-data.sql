@@ -184,4 +184,78 @@ DO $$ BEGIN
    RAISE EXCEPTION 'The API reader cannot read the registry'; END IF;
 END $$;
 RESET ROLE;
+-- Source corrections (007): the API's role keeps the corrections and their history and publishes them through
+-- catalog.publish_source_overrides() only. The family needs an approval, stays out of hub_reference (contract_version)
+-- and no other writer records it.
+SET LOCAL ROLE hmg_source_override_editor;
+INSERT INTO catalog.source_override(skey,category,origin,updated_by) VALUES('rollback-only.example','newsMedia','hub',gen_random_uuid());
+UPDATE catalog.source_override SET category='blogsReviews',updated_at=now() WHERE skey='rollback-only.example';
+INSERT INTO catalog.source_override_event(skey,action,changes) VALUES('rollback-only.example','set','{"category":[null,"blogsReviews"]}');
+DO $$ DECLARE v integer; BEGIN
+ SELECT set_version INTO v FROM catalog.publish_source_overrides();
+ IF v IS NULL THEN RAISE EXCEPTION 'A changed correction list was not published'; END IF;
+ IF EXISTS(SELECT 1 FROM catalog.publish_source_overrides()) THEN RAISE EXCEPTION 'An unchanged correction list was published again'; END IF;
+ BEGIN UPDATE catalog.source_override SET skey='other.example' WHERE skey='rollback-only.example';
+       RAISE EXCEPTION 'Correction role changes a key'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN UPDATE catalog.source_override SET origin='gold_import'; RAISE EXCEPTION 'Correction role changes the origin'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN UPDATE catalog.source_override SET note='x'; RAISE EXCEPTION 'Correction role writes notes'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN DELETE FROM catalog.source_override; RAISE EXCEPTION 'Correction role deletes corrections'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN UPDATE catalog.source_override_event SET action='clear'; RAISE EXCEPTION 'Correction role rewrites history'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN DELETE FROM catalog.source_override_event; RAISE EXCEPTION 'Correction role deletes history'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN INSERT INTO catalog.reference_set(set_id,family,version,item_count,sha256,source)
+       VALUES(gen_random_uuid(),'source_override',99999,0,repeat('f',64),'hub_edit');
+       RAISE EXCEPTION 'Correction role records a set of its own'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN PERFORM 1 FROM catalog.prompt; RAISE EXCEPTION 'Correction role reads the catalog'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN PERFORM 1 FROM analytics.ga4_row; RAISE EXCEPTION 'Correction role reads GA4 rows'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN PERFORM 1 FROM publication.api_key; RAISE EXCEPTION 'Correction role reads keys'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN INSERT INTO catalog.source_override(skey,category,origin) VALUES('Upper.example','newsMedia','hub');
+       RAISE EXCEPTION 'An upper-case key'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN INSERT INTO catalog.source_override(skey,category,origin) VALUES('www.lower.example','newsMedia','hub');
+       RAISE EXCEPTION 'A key with www.'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN INSERT INTO catalog.source_override(skey,category,origin) VALUES('name.example','News & Media','hub');
+       RAISE EXCEPTION 'A category name instead of its slug'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN INSERT INTO catalog.source_override(skey,category,origin,status) VALUES('status.example','newsMedia','hub','deleted');
+       RAISE EXCEPTION 'An unknown status'; EXCEPTION WHEN check_violation THEN NULL; END;
+END $$;
+RESET ROLE;
+SET LOCAL ROLE hmg_catalog_writer;
+DO $$ BEGIN
+ BEGIN INSERT INTO catalog.reference_set(set_id,family,version,item_count,sha256,source)
+       VALUES(gen_random_uuid(),'source_override',99999,0,repeat('f',64),'hub_edit');
+       RAISE EXCEPTION 'The Gold import records HUB corrections'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN INSERT INTO catalog.reference_set(set_id,family,version,item_count,sha256,source)
+       VALUES(gen_random_uuid(),'source_override',99999,0,repeat('f',64),'gold');
+       RAISE EXCEPTION 'The HUB correction family under another source'; EXCEPTION WHEN check_violation THEN NULL; END;
+END $$;
+RESET ROLE;
+INSERT INTO publication.reference_access(family,enabled,approved_by) VALUES('source_override',false,'rollback-only test')
+ ON CONFLICT(family) DO UPDATE SET enabled=false;
+SET LOCAL ROLE hmg_ext_api;
+DO $$ BEGIN
+ PERFORM set_config('hgh.key_hash',repeat('1',64),true);
+ IF EXISTS(SELECT 1 FROM ext.reference_sets WHERE family='source_override') THEN RAISE EXCEPTION 'Unapproved HUB corrections exported'; END IF;
+ IF coalesce((SELECT hub_reference FROM ext.meta),'') LIKE '%source_override%' THEN RAISE EXCEPTION 'HUB corrections change contract_version'; END IF;
+END $$;
+RESET ROLE;
+UPDATE publication.reference_access SET enabled=true WHERE family='source_override';
+SET LOCAL ROLE hmg_ext_api;
+DO $$ BEGIN
+ PERFORM set_config('hgh.key_hash',repeat('1',64),true);
+ IF NOT EXISTS(SELECT 1 FROM ext.reference_items WHERE family='source_override' AND item_key='rollback-only.example'
+               AND definition->>'category'='blogsReviews') THEN RAISE EXCEPTION 'Approved HUB corrections missing'; END IF;
+END $$;
+RESET ROLE;
+SET LOCAL ROLE hmg_source_override_editor;
+UPDATE catalog.source_override SET status='cleared',updated_at=now() WHERE skey='rollback-only.example';
+DO $$ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM catalog.publish_source_overrides()) THEN RAISE EXCEPTION 'A revert was not published'; END IF;
+END $$;
+RESET ROLE;
+SET LOCAL ROLE hmg_analytics_reader;
+DO $$ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM catalog.source_override_event WHERE skey='rollback-only.example') THEN RAISE EXCEPTION 'The API reader cannot read the corrections'; END IF;
+ IF EXISTS(SELECT 1 FROM catalog.current_reference WHERE family='source_override' AND item_key='rollback-only.example') THEN
+   RAISE EXCEPTION 'A reverted correction is still published'; END IF;
+END $$;
+RESET ROLE;
 ROLLBACK;
