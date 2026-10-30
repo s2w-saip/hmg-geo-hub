@@ -41,8 +41,8 @@ def acr_body(**over) -> dict:
     data = {
         "totals": {"prompt_runs": 8, "prompts": 3, "iterations": 20, "engines": ["chatgpt", "gemini"], "catalog_acr_prompts": 67},
         "brands": [
-            {"brand": "Hyundai", "is_ours": True, "choice": 7, "appearance": 11, "cells": 3, "choice_share": {"num": 7, "den": 20}, "coverage": {"num": 3, "den": 8}},
-            {"brand": "Toyota", "is_ours": False, "choice": 1, "appearance": 2, "cells": 1, "choice_share": {"num": 1, "den": 20}, "coverage": {"num": 1, "den": 8}},
+            {"brand": "Hyundai", "is_ours": True, "is_hmg": True, "choice": 7, "appearance": 11, "cells": 3, "choice_share": {"num": 7, "den": 20}, "coverage": {"num": 3, "den": 8}},
+            {"brand": "Toyota", "is_ours": False, "is_hmg": False, "choice": 1, "appearance": 2, "cells": 1, "choice_share": {"num": 1, "den": 20}, "coverage": {"num": 1, "den": 8}},
         ],
         "trend": {"series_brands": ["Hyundai", "Toyota"], "buckets": [
             {"round_date": "2026-09-10", "gap": False, "den": 3, "own": 1, "series": [{"brand": "Hyundai", "num": 1}, {"brand": "Toyota", "num": 2}]},
@@ -52,7 +52,7 @@ def acr_body(**over) -> dict:
         "battle": [{"prompt_id": "p1", "prompt_text": "best suv", "cells": [
             {"engine": "chatgpt", "winner_brand": "Hyundai", "winner_is_ours": True, "choice": 4},
             {"engine": "gemini", "winner_brand": None, "winner_is_ours": False, "choice": 0}]}],
-        "model_conversion": [{"brand": None, "model": "Tucson", "is_ours": True, "conversion": {"num": 2, "den": 3}, "cells": 2, "top1": 2}],
+        "model_conversion": [{"brand": None, "model": "Tucson", "is_ours": True, "is_hmg": True, "conversion": {"num": 2, "den": 3}, "cells": 2, "top1": 2}],
         "territory": [{"country": None, "engine": "chatgpt", "row_count": 1, "rows": [
             {"prompt_id": "p1", "prompt_text": None, "valid_acr": 5, "cells": 1, "entries": [{"brand": "Hyundai", "choice": 4, "appearance": 4, "is_ours": True}]}]}],
         "options": {"langs": ["de", "en"], "countries": ["DE", "US"]},
@@ -463,7 +463,8 @@ class Duels(unittest.TestCase):
         self.assertEqual(names, [f"B{i:02d}" for i in range(12)])
 
     def test_an_hmg_rival_is_a_sibling(self):
-        d = self.view([{"engine": "chatgpt", "brand": "Hyundai", "iterations": 3, "own_wins": 1, "rival_wins": 1}], own=["Kia"])
+        # Gold's HMG flag on the reader's row (2026-10-31 renewal audit 11-2; it was the name)
+        d = self.view([{"engine": "chatgpt", "brand": "Hyundai", "iterations": 3, "own_wins": 1, "rival_wins": 1, "is_hmg": True}], own=["Kia"])
         self.assertEqual((d["views"]["all"][0]["sibling"], d["views"]["all"][0]["lead"]), (True, "even"))
 
     def test_none_without_the_read(self):
@@ -504,14 +505,191 @@ class CrossRoundCompared(unittest.TestCase):
                 self.assertTrue(v["brands"])
 
 
+def rival(brand, choice, cells, *, iterations=100, runs=10, hmg=False):
+    return {"brand": brand, "is_ours": False, "is_hmg": hmg, "choice": choice, "appearance": cells, "cells": cells,
+            "choice_share": {"num": choice, "den": iterations}, "coverage": {"num": cells, "den": runs}}
+
+
+def ours(brand, choice, cells, *, iterations=100, runs=10):
+    return {**rival(brand, choice, cells, iterations=iterations, runs=runs, hmg=True), "is_ours": True}
+
+
+def own_total(choice, cells, brands, rank=2, of=2, *, iterations=100, runs=10):
+    return {"choice": choice, "appearance": cells, "cells": cells, "choice_share": {"num": choice, "den": iterations},
+            "coverage": {"num": cells, "den": runs}, "brands": brands, "rank": rank, "ranked_brands": of}
+
+
+def battle(*rows):
+    """(prompt, {engine: (winner, ours)}) rows."""
+    return [{"prompt_id": p, "prompt_text": p, "cells": [{"engine": e, "winner_brand": w, "winner_is_ours": o, "choice": 1}
+                                                         for e, (w, o) in cells.items()]} for p, cells in rows]
+
+
+def round_trend(brands_by_round, own_by_round=None, den=1000):
+    """Two (or more) rounds: {brand: num} per round over `den` repetitions."""
+    days = ["2026-09-28", "2026-10-05", "2026-10-12"]
+    return {"series_brands": list(brands_by_round[0]), "buckets": [
+        {"round_date": days[i], "gap": False, "den": den, "own": (own_by_round or [0] * len(brands_by_round))[i],
+         "series": [{"brand": b, "num": n} for b, n in r.items()]} for i, r in enumerate(brands_by_round)]}
+
+
+def findings_of(**over) -> list[dict]:
+    over.setdefault("territory", [])
+    over.setdefault("model_conversion", [])
+    over.setdefault("trend", {"series_brands": [], "buckets": []})
+    std = acr.to_standard_acr(acr_body(**over)["data"], {})
+    return acr.renewal_view(std, std.get("own"), True, False)["findings"]
+
+
+class FindingsInOneOrder(unittest.TestCase):
+    """2026-10-31 renewal audit 11-1 (W6's rule for Mention, Citation and Conversion): the summary findings take one
+    fixed order, 당사 first and the brand that moved most last; no threshold or HUB priority decides which show, and
+    the colour follows 당사's direction only (a competitor's fact is info)."""
+
+    ALL = dict(
+        totals={"prompt_runs": 10, "prompts": 6, "iterations": 100, "engines": ["chatgpt", "gemini"], "catalog_acr_prompts": 6},
+        brands=[rival("Toyota", 30, 6), ours("Hyundai", 20, 6)],
+        own=own_total(20, 6, ["Hyundai"]),
+        battle=battle(("p1", {"chatgpt": ("Hyundai", True), "gemini": ("Toyota", False)}),
+                      ("p2", {"chatgpt": ("Hyundai", True), "gemini": ("Toyota", False)}),
+                      ("p3", {"chatgpt": ("Hyundai", True), "gemini": ("Toyota", False)}),
+                      ("p4", {"chatgpt": ("Toyota", False), "gemini": ("Toyota", False)}),
+                      ("p5", {"chatgpt": ("Toyota", False), "gemini": ("Toyota", False)}),
+                      ("p6", {"chatgpt": ("Toyota", False), "gemini": ("Toyota", False)})),
+        model_conversion=[{"brand": "Hyundai", "model": "Tucson", "is_ours": True, "is_hmg": True, "conversion": {"num": 1, "den": 2}, "cells": 2, "top1": 1},
+                          {"brand": "Hyundai", "model": "Kona", "is_ours": True, "is_hmg": True, "conversion": {"num": 1, "den": 5}, "cells": 5, "top1": 1}],
+        trend=round_trend([{"Toyota": 200, "Hyundai": 200}, {"Toyota": 300, "Hyundai": 200}], [200, 200]),
+        territory=[{"country": "US", "engine": "chatgpt", "row_count": 3, "rows": [
+            {"prompt_id": p, "prompt_text": None, "valid_acr": 10, "cells": 1, "entries": [{"brand": "Toyota", "choice": 3, "appearance": 3, "is_ours": False}]}
+            for p in ("p4", "p5", "p6")]}],
+    )
+
+    def test_the_first_four_in_the_fixed_order(self):
+        # every finding has a value here (and passed the old cut-offs); the old priorities put the sweep before the engine
+        self.assertEqual([f["kind"] for f in findings_of(**self.ALL)], ["standing", "leak", "engine", "sweep"])
+
+    def test_no_cut_off_keeps_an_engine_gap_of_one_or_a_single_sweep(self):
+        # no 당사 total or brand row: no standing and no leak; 당사 tops one prompt on chatgpt and none on gemini, and
+        # Toyota tops one prompt on both (the old rule needed a gap of 3 and three sweeps)
+        f = findings_of(own=None, brands=[rival("Toyota", 30, 6)],
+                        battle=battle(("p1", {"chatgpt": ("Hyundai", True), "gemini": ("Toyota", False)}),
+                                      ("p2", {"chatgpt": ("Toyota", False), "gemini": ("Toyota", False)})))
+        self.assertEqual([(x["kind"], x["tone"]) for x in f], [("engine", "info"), ("sweep", "info")])
+        self.assertEqual((f[0]["params"]["engine"], f[0]["params"]["diff"], f[1]["params"]["count"]), ("gemini", 1, 1))
+
+    def test_an_engine_gap_of_none_is_told_as_such(self):
+        f = findings_of(own=None, brands=[rival("Toyota", 30, 6)],
+                        battle=battle(("p1", {"chatgpt": ("Hyundai", True), "gemini": ("Hyundai", True)})))
+        self.assertEqual([(x["kind"], x["params"]["diff"]) for x in f], [("engine", 0)])
+
+    def test_one_prompt_never_picking_us_and_a_small_move_are_facts(self):
+        # one engine (no engine finding, no sweep); the old rule needed three such prompts and a move of 0.5pp
+        f = findings_of(own=None, brands=[rival("Toyota", 30, 6)],
+                        totals={"prompt_runs": 10, "prompts": 2, "iterations": 100, "engines": ["chatgpt"], "catalog_acr_prompts": 2},
+                        battle=[],
+                        trend=round_trend([{"Toyota": 300}, {"Toyota": 302}]),
+                        territory=[{"country": "US", "engine": "chatgpt", "row_count": 2, "rows": [
+                            {"prompt_id": "p1", "prompt_text": None, "valid_acr": 10, "cells": 1, "entries": [{"brand": "Toyota", "choice": 3, "appearance": 3, "is_ours": False}]},
+                            {"prompt_id": "p2", "prompt_text": None, "valid_acr": 10, "cells": 1, "entries": [{"brand": "Hyundai", "choice": 2, "appearance": 2, "is_ours": True}]}]}])
+        self.assertEqual([(x["kind"], x["tone"]) for x in f], [("dist", "info"), ("mover", "info")])
+        self.assertEqual((f[0]["params"]["zero"], f[0]["params"]["rows"], f[1]["params"]["d"]), (1, 2, 0.2))
+
+    def test_a_move_shown_as_zero_is_none(self):
+        f = findings_of(own=None, brands=[rival("Toyota", 30, 6)], battle=[],
+                        totals={"prompt_runs": 10, "prompts": 2, "iterations": 100, "engines": ["chatgpt"], "catalog_acr_prompts": 2},
+                        trend={"series_brands": ["Toyota"], "buckets": [
+                            {"round_date": "2026-09-28", "gap": False, "den": 1000, "own": 0, "series": [{"brand": "Toyota", "num": 300}]},
+                            {"round_date": "2026-10-05", "gap": False, "den": 1003, "own": 0, "series": [{"brand": "Toyota", "num": 301}]}]})
+        self.assertEqual(f, [])
+
+    def test_a_competitors_move_is_info_and_ours_follows_its_direction(self):
+        base = dict(own=None, battle=[], totals={"prompt_runs": 10, "prompts": 2, "iterations": 100, "engines": ["chatgpt"], "catalog_acr_prompts": 2})
+        up = findings_of(brands=[rival("Toyota", 30, 6)], trend=round_trend([{"Toyota": 200}, {"Toyota": 300}]), **base)
+        self.assertEqual([(x["kind"], x["tone"]) for x in up], [("mover", "info")])
+        down = findings_of(brands=[ours("Hyundai", 20, 6)], trend=round_trend([{"Hyundai": 300}, {"Hyundai": 200}]), **base)
+        self.assertEqual([(x["kind"], x["tone"], x["params"]["d"]) for x in down], [("mover", "warn", -10.0)])
+
+
+class LeakIsTheClosestShortlistRival(unittest.TestCase):
+    """11-1: '후보군이 비슷한' was a cut-off (6pp apart, then −0.5pp); the finding now names the rival whose 후보군 포함율 is
+    closest to an own brand's and their Top1 ACR difference, the smallest of the own brands (a gap shown as 0.0 is the
+    same)."""
+
+    def leak(self, brands):
+        f = findings_of(brands=brands, own=own_total(20, 5, [b["brand"] for b in brands if b["is_ours"]]), battle=[],
+                        totals={"prompt_runs": 10, "prompts": 2, "iterations": 100, "engines": ["chatgpt"], "catalog_acr_prompts": 2})
+        return next(x for x in f if x["kind"] == "leak")
+
+    def test_a_rival_ten_points_apart_is_still_the_closest(self):
+        f = self.leak([rival("Toyota", 30, 6), ours("Hyundai", 20, 5), rival("BMW", 5, 2)])
+        self.assertEqual((f["tone"], f["brand"]), ("warn", "Toyota"))
+        self.assertEqual(f["params"], {"own": "Hyundai", "rival": "Toyota", "gap": 10.0, "dir": "less", "ownCov": 50.0,
+                                       "rivalCov": 60.0, "ownTop1": 20.0, "rivalTop1": 30.0})
+
+    def test_the_same_top1_and_a_lead_are_facts_too(self):
+        same = self.leak([rival("Toyota", 30, 6), ours("Hyundai", 30, 5)])
+        self.assertEqual((same["tone"], same["params"]["dir"], same["params"]["gap"]), ("info", "same", 0))
+        lead = self.leak([ours("Hyundai", 35, 5), rival("Toyota", 30, 6)])
+        self.assertEqual((lead["tone"], lead["params"]["dir"], lead["params"]["gap"]), ("good", "more", 5.0))
+
+    def test_the_own_brand_with_the_smallest_difference(self):
+        # Hyundai's closest rival is Toyota (−10pp), Kia's is BMW (+5pp)
+        f = self.leak([rival("Toyota", 30, 6), ours("Hyundai", 20, 5), ours("Kia", 10, 2), rival("BMW", 5, 2)])
+        self.assertEqual((f["params"]["own"], f["params"]["rival"], f["params"]["dir"]), ("Hyundai", "Toyota", "less"))
+
+
+class HmgSiblingIsGolds(unittest.TestCase):
+    """2026-10-31 renewal audit 11-2 · 11-3: the 'HMG 계열' badge reads Gold's flag the reader sends with each row (the
+    flag its 당사 is judged by: the brand rows' registry acr_entity_fact.own_bit, the models' and the head-to-head's
+    dim_brand.own_bit), not the names Hyundai · Kia · Genesis; a model is 당사 by Gold's isOurs alone."""
+
+    def view(self, **over):
+        std = acr.to_standard_acr(acr_body(**over)["data"], {})
+        return acr.renewal_view(std, std.get("own"), True, False)
+
+    def test_a_brand_row_is_a_sibling_by_its_flag(self):
+        v = self.view(brands=[ours("Kia", 30, 6), rival("Genesis", 20, 5, hmg=False), rival("제네시스 마그마", 0, 1, hmg=True),
+                              rival("Toyota", 10, 4)], own=own_total(30, 6, ["Kia"], rank=1, of=4))
+        self.assertEqual({b["brand"]: (b["own"], b["sibling"]) for b in v["brands"]},
+                         {"Kia": (True, False), "Genesis": (False, False), "제네시스 마그마": (False, True), "Toyota": (False, False)})
+
+    def test_a_model_is_ours_by_gold_and_a_sibling_by_its_flag(self):
+        v = self.view(brands=[ours("Kia", 30, 6)], own=own_total(30, 6, ["Kia"], rank=1, of=1), model_conversion=[
+            {"brand": "Kia", "model": "EV9", "is_ours": False, "is_hmg": False, "conversion": {"num": 1, "den": 2}, "cells": 1, "top1": 1},
+            {"brand": "Hyundai", "model": "Tucson", "is_ours": False, "is_hmg": False, "conversion": {"num": 1, "den": 3}, "cells": 1, "top1": 1},
+            {"brand": "Hyundai Canada", "model": "Kona", "is_ours": False, "is_hmg": True, "conversion": {"num": 1, "den": 4}, "cells": 1, "top1": 1},
+            {"brand": "Genesis", "model": "GV70", "is_ours": True, "is_hmg": True, "conversion": {"num": 1, "den": 5}, "cells": 1, "top1": 1}])
+        self.assertEqual([(m["model"], m["own"], m["sibling"]) for m in v["models"]["rows"]],
+                         [("EV9", False, False), ("Tucson", False, False), ("Kona", False, True), ("GV70", True, False)])
+
+    def test_a_rival_met_in_the_duels_is_a_sibling_by_its_flag(self):
+        v = self.view(head_to_head={"sample": {"iterations": 9, "cells": 9}, "rows": [
+            {"engine": "chatgpt", "brand": "Hyundai Canada", "iterations": 3, "own_wins": 1, "rival_wins": 1, "is_hmg": True},
+            {"engine": "chatgpt", "brand": "Genesis", "iterations": 2, "own_wins": 1, "rival_wins": 1, "is_hmg": False}]})
+        self.assertEqual({r["brand"]: r["sibling"] for r in v["duels"]["views"]["all"]}, {"Hyundai Canada": True, "Genesis": False})
+
+
+class BoardSorts(unittest.TestCase):
+    """2026-10-31 renewal audit 11-4: the original brand table's sorts the renewal board lacked — the name (ascending,
+    ko collation), the final picks and the mentions (descending, ties by rank)."""
+
+    def test_name_picks_and_mentions(self):
+        brands = [rival("Toyota", 30, 4), ours("현대", 20, 6), rival("BMW", 20, 2), rival("Audi", 5, 6)]
+        std = acr.to_standard_acr(acr_body(brands=brands, own=own_total(20, 6, ["현대"]))["data"], {})
+        orders = acr.renewal_view(std, std["own"], True, False)["boardOrders"]
+        self.assertEqual(orders["brand"], [1, 3, 2, 0])  # 현대, Audi, BMW, Toyota (ko: Hangul first)
+        self.assertEqual(orders["choiceCount"], [0, 1, 2, 3])
+        self.assertEqual(orders["appearanceCount"], [1, 3, 0, 2])
+
+
 FRONT_FIXTURE = Path(__file__).parents[3] / "front/app/[locale]/(renewal)/renewal/standard/ai-funnel/acr/_components/acr-body.fixture.json"
 FIXTURE_OWN = {"choice": 7, "appearance": 11, "cells": 3, "choice_share": {"num": 7, "den": 20}, "coverage": {"num": 3, "den": 8},
                "brands": ["Hyundai"], "rank": 1, "ranked_brands": 2}
 
 
 FIXTURE_DUELS = {"sample": {"iterations": 8, "cells": 8}, "rows": [
-    {"engine": "chatgpt", "brand": "Toyota", "iterations": 6, "own_wins": 1, "rival_wins": 3},
-    {"engine": "gemini", "brand": "Toyota", "iterations": 2, "own_wins": 1, "rival_wins": 0}]}
+    {"engine": "chatgpt", "brand": "Toyota", "iterations": 6, "own_wins": 1, "rival_wins": 3, "is_hmg": False},
+    {"engine": "gemini", "brand": "Toyota", "iterations": 2, "own_wins": 1, "rival_wins": 0, "is_hmg": False}]}
 
 
 def front_fixture() -> dict:

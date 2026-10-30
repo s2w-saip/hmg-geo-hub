@@ -5120,7 +5120,7 @@
         "title": "이번 회차 요약",
         "titlePeriod": "이 기간 요약",
         "howLabel": "만드는 방법",
-        "how": "이 페이지 카드들의 숫자에서 규칙으로 뽑은 요약입니다(새 데이터 없음). 당사 순위와 격차, 후보에 오르고도 선택되지 않는 지점, 엔진·프롬프트별 1위, 차종 전환, 가장 크게 움직인 브랜드 순으로 중요도를 매겨 4개를 고릅니다.",
+        "how": "이 페이지 카드들의 숫자를 정해진 순서로 다시 적은 요약입니다(새 데이터 없음). 당사 순위와 격차 → 후보군 포함율이 가장 가까운 경쟁사와의 Top1 ACR 차 → 엔진별 당사 1위 프롬프트 → 모든 엔진에서 1위인 경쟁사 → 당사 차종 전환율 → 당사가 한 번도 선택되지 않은 프롬프트 → 가장 크게 움직인 브랜드 순서로, 값이 있는 것 4개를 보입니다. 기준값으로 거르거나 중요도를 매기지 않고, 색은 당사 기준의 방향(앞섬 · 뒤짐, 늘어남 · 줄어듦)만 나타냅니다.",
         "chipSnapshot": "{date} 기준 · 직전 회차 대비",
         "chipPeriod": "기간 누적",
         "headline": "<b>{own}</b> — Top1 ACR <b>{rank}위</b> {share}{delta}, 후보군 포함율 {coverage}, 1순위 선택 {count}회 · 프롬프트 {prompts}개 × 엔진 {engines}개"
@@ -5136,18 +5136,21 @@
         },
         "leak": {
           "tag": "후보 → 선택",
-          "title": "{own}, 후보군은 {rival}와 비슷하지만 선택은 {gap}pp 적음",
+          "titleLess": "{own}, 후보군 포함율이 가장 가까운 {rival}보다 Top1 ACR {gap}pp 낮음",
+          "titleMore": "{own}, 후보군 포함율이 가장 가까운 {rival}보다 Top1 ACR {gap}pp 높음",
+          "titleSame": "{own}, 후보군 포함율이 가장 가까운 {rival}와 Top1 ACR 같음",
           "detail": "후보군 포함율 {ownCov}% vs {rivalCov}% · Top1 ACR {ownTop1}% vs {rivalTop1}%"
         },
         "engine": {
           "tag": "AI 엔진",
           "title": "{engine}에서 당사 1위 프롬프트 {wins}/{total} — {other}보다 {diff}개 적음",
+          "titleSame": "엔진마다 당사 1위 프롬프트 {wins}/{total}로 같음",
           "detail": "분모 = 선택이 나온 프롬프트 {total}개(측정 {measured}개 중) · 프롬프트 × 엔진에서 가장 많이 최종 선택된 브랜드 기준"
         },
         "sweep": {
           "tag": "프롬프트",
           "title": "{rival}가 모든 엔진에서 1위인 프롬프트 {count}개",
-          "detail": "당사가 한 엔진에서도 1위가 아닌 질문 — 콘텐츠 보강 후보"
+          "detail": "이 프롬프트에서 당사는 어느 엔진에서도 1위가 아닙니다 · 프롬프트 × 엔진에서 가장 많이 최종 선택된 브랜드 기준"
         },
         "model": {
           "tag": "차종",
@@ -5200,6 +5203,9 @@
         "sortTop1": "Top1 ACR",
         "sortCoverage": "후보군 포함율",
         "sortDelta": "증감",
+        "sortChoices": "최종 선택",
+        "sortMentions": "언급 수",
+        "sortBrand": "브랜드",
         "colBrand": "브랜드",
         "colTop1": "Top1 ACR",
         "colTrend": "추이",

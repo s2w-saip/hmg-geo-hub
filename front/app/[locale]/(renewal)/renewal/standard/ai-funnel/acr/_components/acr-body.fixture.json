@@ -34,6 +34,7 @@
      "appearanceCount": 11,
      "choiceShare": 35.0,
      "coverage": 37.5,
+     "isHmg": true,
      "rank": 1,
      "trend": [
       6.3,
@@ -56,6 +57,7 @@
      "appearanceCount": 2,
      "choiceShare": 5.0,
      "coverage": 12.5,
+     "isHmg": false,
      "rank": 2,
      "trend": [
       null,
@@ -93,7 +95,8 @@
     "choiceCount": 1,
     "appearanceCount": 2,
     "choiceShare": 5.0,
-    "coverage": 12.5
+    "coverage": 12.5,
+    "isHmg": false
    },
    "k": 0.8,
    "engines": [
@@ -129,21 +132,9 @@
    "sweeps": [],
    "findings": [
     {
-     "kind": "mover",
-     "tone": "good",
-     "pri": 4,
-     "target": "sec-overview",
-     "brand": "Hyundai",
-     "params": {
-      "brand": "Hyundai",
-      "d": 27.1,
-      "ownD": 27.1
-     }
-    },
-    {
      "kind": "standing",
      "tone": "good",
-     "pri": 3,
+     "pri": 7,
      "target": "sec-comp",
      "brand": "Toyota",
      "params": {
@@ -154,6 +145,51 @@
       "widened": "",
       "own": 35.0,
       "rivalShare": 5.0
+     }
+    },
+    {
+     "kind": "leak",
+     "tone": "good",
+     "pri": 6,
+     "target": "sec-comp",
+     "brand": "Toyota",
+     "params": {
+      "own": "Hyundai",
+      "rival": "Toyota",
+      "gap": 30.0,
+      "dir": "more",
+      "ownCov": 37.5,
+      "rivalCov": 12.5,
+      "ownTop1": 35.0,
+      "rivalTop1": 5.0
+     }
+    },
+    {
+     "kind": "engine",
+     "tone": "info",
+     "pri": 5,
+     "target": "sec-prompt",
+     "act": {
+      "battle": "notown"
+     },
+     "params": {
+      "engine": "gemini",
+      "wins": 0,
+      "total": 1,
+      "other": "chatgpt",
+      "diff": 1
+     }
+    },
+    {
+     "kind": "mover",
+     "tone": "good",
+     "pri": 1,
+     "target": "sec-overview",
+     "brand": "Hyundai",
+     "params": {
+      "brand": "Hyundai",
+      "d": 27.1,
+      "ownD": 27.1
      }
     }
    ],
@@ -172,6 +208,18 @@
      1
     ],
     "d": [
+     0,
+     1
+    ],
+    "choiceCount": [
+     0,
+     1
+    ],
+    "appearanceCount": [
+     0,
+     1
+    ],
+    "brand": [
      0,
      1
     ]
@@ -216,6 +264,7 @@
       "conversionRate": 66.7,
       "shortlistCount": 2,
       "top1Count": 2,
+      "isHmg": true,
       "rank": 1,
       "brandLabel": "—",
       "own": true,
@@ -538,6 +587,7 @@
      "appearanceCount": 11,
      "choiceShare": 35.0,
      "coverage": 37.5,
+     "isHmg": true,
      "rank": 1,
      "trend": [
       6.3,
@@ -560,6 +610,7 @@
      "appearanceCount": 2,
      "choiceShare": 5.0,
      "coverage": 12.5,
+     "isHmg": false,
      "rank": 2,
      "trend": [
       null,
@@ -597,7 +648,8 @@
     "choiceCount": 1,
     "appearanceCount": 2,
     "choiceShare": 5.0,
-    "coverage": 12.5
+    "coverage": 12.5,
+    "isHmg": false
    },
    "k": 0.8,
    "engines": [
@@ -635,7 +687,7 @@
     {
      "kind": "standing",
      "tone": "good",
-     "pri": 3,
+     "pri": 7,
      "target": "sec-comp",
      "brand": "Toyota",
      "params": {
@@ -646,6 +698,39 @@
       "widened": "",
       "own": 35.0,
       "rivalShare": 5.0
+     }
+    },
+    {
+     "kind": "leak",
+     "tone": "good",
+     "pri": 6,
+     "target": "sec-comp",
+     "brand": "Toyota",
+     "params": {
+      "own": "Hyundai",
+      "rival": "Toyota",
+      "gap": 30.0,
+      "dir": "more",
+      "ownCov": 37.5,
+      "rivalCov": 12.5,
+      "ownTop1": 35.0,
+      "rivalTop1": 5.0
+     }
+    },
+    {
+     "kind": "engine",
+     "tone": "info",
+     "pri": 5,
+     "target": "sec-prompt",
+     "act": {
+      "battle": "notown"
+     },
+     "params": {
+      "engine": "gemini",
+      "wins": 0,
+      "total": 1,
+      "other": "chatgpt",
+      "diff": 1
      }
     }
    ],
@@ -664,6 +749,18 @@
      1
     ],
     "d": [
+     0,
+     1
+    ],
+    "choiceCount": [
+     0,
+     1
+    ],
+    "appearanceCount": [
+     0,
+     1
+    ],
+    "brand": [
      0,
      1
     ]
@@ -708,6 +805,7 @@
       "conversionRate": 66.7,
       "shortlistCount": 2,
       "top1Count": 2,
+      "isHmg": true,
       "rank": 1,
       "brandLabel": "—",
       "own": true,

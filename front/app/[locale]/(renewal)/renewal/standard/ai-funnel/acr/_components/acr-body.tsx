@@ -271,11 +271,15 @@ function findingCopy(
       detail = p.move !== "" ? t(p.widened ? "find.standing.detailWidened" : "find.standing.detailNarrowed", { move: num(p.move) }) : t("find.standing.detail", { own: num(p.own), rival: String(p.rival), rivalShare: num(p.rivalShare) });
       break;
     case "leak":
-      title = t("find.leak.title", { own: String(p.own), rival: String(p.rival), gap: num(p.gap) });
+      // the rival with the closest 후보군 포함율 and the Top1 ACR difference, either way (renewal audit 11-1)
+      title = t(p.dir === "same" ? "find.leak.titleSame" : p.dir === "more" ? "find.leak.titleMore" : "find.leak.titleLess", { own: String(p.own), rival: String(p.rival), gap: num(p.gap) });
       detail = t("find.leak.detail", { ownCov: num(p.ownCov), rivalCov: num(p.rivalCov), ownTop1: num(p.ownTop1), rivalTop1: num(p.rivalTop1) });
       break;
     case "engine":
-      title = t("find.engine.title", { engine: h.engineLabel(String(p.engine)), wins: p.wins, total: p.total, other: h.engineLabel(String(p.other)), diff: p.diff });
+      title =
+        p.diff === 0
+          ? t("find.engine.titleSame", { wins: p.wins, total: p.total })
+          : t("find.engine.title", { engine: h.engineLabel(String(p.engine)), wins: p.wins, total: p.total, other: h.engineLabel(String(p.other)), diff: p.diff });
       detail = t("find.engine.detail", { total: p.total, measured: h.measured });
       break;
     case "sweep":
@@ -361,7 +365,7 @@ function AcrHero({ period, roundBuckets }: { period: boolean; roundBuckets: bool
             <Stat label={t("hero.iterations")} value={t("hero.times", { n: totals.iterations.toLocaleString(locale) })} />
           </dl>
           {view.ownBrands.length > 1 ? (
-            <div className="flex flex-wrap gap-1.5 [.rn-dense_&]:hidden">
+            <div className="flex flex-wrap gap-1.5">
               <span className="inline-flex h-[22px] items-center rounded-full bg-rn-page px-2 text-rn-11 font-semibold text-rn-muted">{t("hero.ownSum", { brands: view.ownBrands.join("+") })}</span>
             </div>
           ) : null}
@@ -481,7 +485,7 @@ function AcrBoard() {
   const { view, ownLabel, compare, colorOf, lit, hover, toggleCompare, tables } = useAcr();
   const t = useTranslations("renewal.acr");
   const tDef = useTranslations("aiFunnelView.acr.def");
-  const [sort, setSort] = useState<"choiceShare" | "coverage" | "d">("choiceShare");
+  const [sort, setSort] = useState<keyof RnAcrView["boardOrders"]>("choiceShare");
   const rows = view.boardOrders[sort].map((i) => view.brands[i]);
   const o = view.own;
   const multiOwn = view.multiOwn;
@@ -563,6 +567,9 @@ function AcrBoard() {
               { value: "choiceShare", label: t("board.sortTop1") },
               { value: "coverage", label: t("board.sortCoverage") },
               { value: "d", label: t("board.sortDelta") },
+              { value: "choiceCount", label: t("board.sortChoices") },
+              { value: "appearanceCount", label: t("board.sortMentions") },
+              { value: "brand", label: t("board.sortBrand") },
             ]}
           />
         }

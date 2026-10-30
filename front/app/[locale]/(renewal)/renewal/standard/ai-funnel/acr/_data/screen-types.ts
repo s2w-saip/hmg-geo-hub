@@ -27,13 +27,15 @@ export interface AcrFinding {
 }
 
 export interface AcrBrandRow extends AcrBrand {
+  /** Gold's HMG flag (own_bit ≠ 0) of the value the reader judges this row's 당사 by (renewal audit 11-2) */
+  isHmg?: boolean;
   /** server rank (API order) */
   rank: number;
   trend: Array<number | null> | null;
   d: number | null;
   /** an own brand of this account */
   own: boolean;
-  /** an HMG brand that is not 당사 for this account */
+  /** Gold's HMG flag and not 당사 for this account */
   sibling: boolean;
   /** a rival with a trend (a compare candidate) */
   canCompare: boolean;
@@ -137,8 +139,8 @@ export interface RnAcrView {
   ownBrands: string[];
   multiOwn: boolean;
   brands: AcrBrandRow[];
-  /** board orders (metric descending, nulls last, ties by rank) */
-  boardOrders: Record<"choiceShare" | "coverage" | "d", number[]>;
+  /** board orders: the metrics descending (nulls last), the brand name ascending; ties by rank */
+  boardOrders: Record<"choiceShare" | "coverage" | "d" | "choiceCount" | "appearanceCount" | "brand", number[]>;
   /** Top1 bar width of the 당사 total row */
   ownTop1Bar: number | null;
   /** trend buckets (labels as given: YYYY-MM-DD) */
@@ -175,7 +177,8 @@ export interface RnAcrView {
     total: number;
   };
   models: {
-    rows: (StandardAcr["modelConversion"][number] & { rank: number; brandLabel: string; own: boolean; sibling: boolean; bar: number })[];
+    /** own = Gold's isOurs; sibling = Gold's HMG flag (isHmg) and not own */
+    rows: (StandardAcr["modelConversion"][number] & { isHmg?: boolean; rank: number; brandLabel: string; own: boolean; sibling: boolean; bar: number })[];
     orders: Record<AcrModelSort, number[]>;
   };
   /** every sheet, the most rows first */

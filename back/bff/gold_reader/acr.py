@@ -57,17 +57,18 @@ def own_sums(rows, key) -> dict:
 async def head_to_head(ctx: Context, where: str, args: list) -> dict:
     """결선 맞대결 (2026-10-29): per engine and rival, the repetitions whose shortlist holds 당사 and the rival, and
     how many 당사 and the rival won. acr_iter_fact keeps about one repetition per cell, so this is a sample of the
-    repetitions (`sample`, said on the card)."""
+    repetitions (`sample`, said on the card). A rival carries Gold's HMG flag (`is_hmg`: dim_brand.own_bit ≠ 0, the value
+    the shortlist's 당사 is judged by) for the 'HMG 계열' badge (2026-10-31 renewal audit 11-2)."""
     rows = await ctx.conn.fetch(f"""WITH c AS (SELECT f.build_id,f.acr_cell_key,e.code AS engine FROM gold.acr_cell_fact f
               JOIN gold.dim_engine e ON e.engine_key=f.engine_key WHERE {where}),
           it AS (SELECT c.engine,i.build_id,i.acr_cell_key,i.iter_no,w.name AS winner,coalesce((w.own_bit & {ctx.bits})<>0,false) AS own_won
               FROM c JOIN gold.acr_iter_fact i ON i.build_id=c.build_id AND i.acr_cell_key=c.acr_cell_key
               LEFT JOIN gold.dim_brand w ON w.brand_key=i.winner_brand_key AND w.brand_key<>{NO_BRAND}),
-          sl AS (SELECT DISTINCT s.build_id,s.acr_cell_key,s.iter_no,b.name,(b.own_bit & {ctx.bits})<>0 AS own
+          sl AS (SELECT DISTINCT s.build_id,s.acr_cell_key,s.iter_no,b.name,(b.own_bit & {ctx.bits})<>0 AS own,b.own_bit<>0 AS hmg
               FROM c JOIN gold.acr_iter_shortlist s ON s.build_id=c.build_id AND s.acr_cell_key=c.acr_cell_key AND s.level=1
               JOIN gold.dim_brand b ON b.brand_key=s.brand_key AND b.brand_key<>{NO_BRAND} AND coalesce(b.name,'')<>'')
         SELECT it.engine,r.name AS brand,count(*) AS iterations,count(*) FILTER (WHERE it.own_won) AS own_wins,
-          count(*) FILTER (WHERE it.winner=r.name) AS rival_wins
+          count(*) FILTER (WHERE it.winner=r.name) AS rival_wins,bool_or(r.hmg) AS is_hmg
         FROM it JOIN sl r ON r.build_id=it.build_id AND r.acr_cell_key=it.acr_cell_key AND r.iter_no=it.iter_no AND NOT r.own
         WHERE EXISTS (SELECT 1 FROM sl o WHERE o.build_id=it.build_id AND o.acr_cell_key=it.acr_cell_key AND o.iter_no=it.iter_no AND o.own)
         GROUP BY 1,2""", *args)
@@ -76,7 +77,7 @@ async def head_to_head(ctx: Context, where: str, args: list) -> dict:
         WHERE {where}""", *args)
     return {"sample": {"iterations": sample["iterations"], "cells": sample["cells"]},
             "rows": [{"engine": r["engine"], "brand": r["brand"], "iterations": r["iterations"], "own_wins": r["own_wins"],
-                      "rival_wins": r["rival_wins"]} for r in sorted(rows, key=lambda r: (r["engine"], -r["iterations"], r["brand"]))]}
+                      "rival_wins": r["rival_wins"], "is_hmg": bool(r["is_hmg"])} for r in sorted(rows, key=lambda r: (r["engine"], -r["iterations"], r["brand"]))]}
 
 
 def territory_sheets(ctx: Context, sheets: list, rows_by_cell: dict, with_rows, own: dict) -> list[dict]:
@@ -159,7 +160,7 @@ async def read(ctx: Context) -> dict:
     pairs, own_cells, model_rows = [], 0, []
     if cells:
         pairs = [dict(r) for r in await ctx.conn.fetch(f"""SELECT f.prompt_key,f.engine_key,f.geo_key,br.name AS brand,
-            bool_or((x.own_bit & {ctx.bits})<>0) AS is_ours,coalesce(sum(x.choice),0)::bigint AS choice,
+            bool_or((x.own_bit & {ctx.bits})<>0) AS is_ours,bool_or(x.own_bit<>0) AS is_hmg,coalesce(sum(x.choice),0)::bigint AS choice,
             coalesce(sum(x.appearance),0)::bigint AS appearance,count(DISTINCT x.acr_cell_key) FILTER (WHERE x.appearance<>0) AS cells
             FROM {entities} AND x.level=1 JOIN gold.dim_brand br ON br.brand_key=x.brand_key
             WHERE {where} AND coalesce(br.name,'')<>'' GROUP BY 1,2,3,4""", *b.args)]
@@ -173,13 +174,16 @@ async def read(ctx: Context) -> dict:
             WHERE {where} AND coalesce(en.rep_name,'')<>'' GROUP BY 1,2,3""", *b.args)]
     brand_groups: dict = {}
     for r in pairs:
-        g = brand_groups.setdefault(r["brand"], {"brand": r["brand"], "is_ours": r["is_ours"], "choice": 0, "appearance": 0, "cells": 0})
+        g = brand_groups.setdefault(r["brand"], {"brand": r["brand"], "is_ours": r["is_ours"], "is_hmg": r["is_hmg"], "choice": 0,
+                                                 "appearance": 0, "cells": 0})
         g["choice"] += r["choice"]
         g["appearance"] += r["appearance"]
         g["cells"] += r["cells"]
+    # is_hmg: Gold's HMG flag of the registry 당사 is judged by (acr_entity_fact.own_bit ≠ 0, whatever the perspective),
+    # for the 'HMG 계열' badge (2026-10-31 renewal audit 11-2)
     brands = []
     for r in brand_groups.values():
-        brands.append({"brand": r["brand"], "is_ours": r["is_ours"], "choice": r["choice"], "appearance": r["appearance"],
+        brands.append({"brand": r["brand"], "is_ours": r["is_ours"], "is_hmg": bool(r["is_hmg"]), "choice": r["choice"], "appearance": r["appearance"],
                        "cells": r["cells"], "choice_share": ratio(r["choice"], totals["iterations"]),
                        "coverage": ratio(r["cells"], totals["prompt_runs"])})
     brands.sort(key=lambda r: (-r["choice"], -r["appearance"], r["brand"]))
@@ -224,7 +228,7 @@ async def read(ctx: Context) -> dict:
     # them (2026-10-29 metric review R5: one representative repetition per cell, ~1/10 of the picks, every model).
     chosen_models = sorted((m for m in model_rows if m["choice"] > 0 and m["den"] > 0),
                            key=lambda m: (-m["choice"] / m["den"], -m["choice"], m["model"], m["parent_brand"] or "", m["entity_key"]))
-    models = [{"brand": m["parent_brand"], "model": m["model"], "is_ours": bool(m["own_bit"] & ctx.bits),
+    models = [{"brand": m["parent_brand"], "model": m["model"], "is_ours": bool(m["own_bit"] & ctx.bits), "is_hmg": m["own_bit"] != 0,
                "conversion": ratio(m["choice"], m["den"]), "cells": m["cells"], "top1": m["choice"]}
               for m in chosen_models[:max(1, min(50, int(ctx.q.get("model_limit", "12"))))]]
     sheets = sheet_groups(cells)

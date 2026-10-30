@@ -6,7 +6,7 @@
 - 병렬 세션으로 나누지 않고 한 세션이 순서대로 한다.
 - 단계마다 새 하위 에이전트가 깨끗한 컨텍스트로 맡는다(B 방식).
 
-**현재 위치:** 11단계(ACR 발견 · 귀속 · 정렬) 시작 전. 10단계 끝(단계 메모 '10단계'). 마지막 커밋: 10단계를 올린 커밋.
+**현재 위치:** 12단계(AI Conversion 부분합 · 문구) 시작 전. 11단계 끝(단계 메모 '11단계'). 마지막 커밋: 11단계를 올린 커밋.
 
 ## 진행 방식 (단계마다 새 하위 에이전트)
 
@@ -99,7 +99,7 @@
 | 8 | Mention ④ 귀속 · 트리맵 · bump | 1 | [x] |
 | 9 | Citation ① 결함 · 문구 · 귀속 | 1 | [x] |
 | 10 | Citation ② 구성 추이 수치 · Website 도메인 표 전체 | 3 | [x] |
-| 11 | ACR 발견 · 귀속 · 정렬 | 1 | [ ] |
+| 11 | ACR 발견 · 귀속 · 정렬 | 1 | [x] |
 | 12 | AI Conversion 부분합 · 문구 | — | [ ] |
 | 13 | Prompts 귀속 · 계정 범위 · 선택지 | 1 | [ ] |
 | 14 | 기간 비교 억제 | ⛔K | [ ] |
@@ -392,18 +392,18 @@ Global과 Website가 같은 본문을 쓴다. Website는 `mention/rn-*`를 ctx.s
 - `KO renewal.acr.summary` · `find.*`
 
 **할 일**
-- [ ] 11-1 발견(~452-520)을 W6가 Mention · Citation · Conversion에 쓴 방식으로 바꾼다. 고정 순서로 두고, 색은 방향만 나타내고, 문턱은 없앤다.
+- [x] 11-1 발견(~452-520)을 W6가 Mention · Citation · Conversion에 쓴 방식으로 바꾼다. 고정 순서로 두고, 색은 방향만 나타내고, 문턱은 없앤다.
   - 지금 있는 문턱: 6pp(leak의 '비슷함'), −0.5pp(leak), 3개(engine), 3개(sweep), 0.5pp(mover), 3개(dist). `pri` 중요도로 상위 4개를 고른다.
   - leak: '후보군이 비슷한' 경쟁사를 고르는 것 자체가 문턱이다. '후보군 포함율이 가장 가까운 경쟁사와의 Top1 차'라는 사실로 바꾼다. 차가 반올림해 0이면 '같음'이다.
   - engine · sweep · dist: 값이 있으면 사실로 쓴다(엔진 2개 이상, sweep 1개 이상, 0 선택 프롬프트 1개 이상).
   - mover: |Δ|가 반올림해 0이 아니면 쓴다. 제목 '가장 큰 변화'는 최댓값이라는 사실이라 둔다(Mention · Citation과 같다).
   - 문구: `summary.how`('중요도를 매겨 4개'), `find.leak.title`('비슷하지만'), `find.sweep.detail`('콘텐츠 보강 후보')를 고친다.
   - golden `acr/*`가 바뀐다. README의 2026-10-30 'no HUB threshold' 항목에 ACR을 더한다.
-- [ ] 11-2 'HMG 계열' 배지를 이름 목록(~365 · 531-533) 대신 Gold `own_bit`으로 정한다. 리더가 브랜드마다 준다(`GR/acr.py` ~38 · 101). HMG 계열 = own_bit ≠ 0이고 관점 밖인 브랜드다. U1 결과를 확인한다.
-- [ ] 11-3 차종 당사 판정(~567)은 Gold `isOurs` 또는 부모 브랜드 이름 일치다. Gold `isOurs`만 쓴다.
-- [ ] 11-4 원본 정렬 5종 가운데 리뉴얼에 없는 이름 · 선택 수 · 언급 수 정렬을 브랜드 표에 되살린다.
-- [ ] 11-5 촘촘 모드에서 Hero의 '당사 = … 합산' 칩이 숨는다(`acr-body.tsx` ~363-366). 정보이므로 숨기지 않는다.
-- [ ] 11-6 필터 무시 · 제외 안내(`filter_notices`, ~161)는 계산되지만 어느 화면에도 보이지 않는다(원본도 같다). 무시된 필터를 알리지 않으면 사용자는 그 필터가 걸린 줄 안다. 그래서 보이게 한다.
+- [x] 11-2 'HMG 계열' 배지를 이름 목록(~365 · 531-533) 대신 Gold `own_bit`으로 정한다. 리더가 브랜드마다 준다(`GR/acr.py` ~38 · 101). HMG 계열 = own_bit ≠ 0이고 관점 밖인 브랜드다. U1 결과를 확인한다.
+- [x] 11-3 차종 당사 판정(~567)은 Gold `isOurs` 또는 부모 브랜드 이름 일치다. Gold `isOurs`만 쓴다.
+- [x] 11-4 원본 정렬 5종 가운데 리뉴얼에 없는 이름 · 선택 수 · 언급 수 정렬을 브랜드 표에 되살린다.
+- [x] 11-5 촘촘 모드에서 Hero의 '당사 = … 합산' 칩이 숨는다(`acr-body.tsx` ~363-366). 정보이므로 숨기지 않는다.
+- [x] 11-6 필터 무시 · 제외 안내(`filter_notices`, ~161)는 계산되지만 어느 화면에도 보이지 않는다(원본도 같다). 무시된 필터를 알리지 않으면 사용자는 그 필터가 걸린 줄 안다. 그래서 보이게 한다.
 
 **시험.** `test_screens_acr`, `test_gold_acr`, golden acr, ACR render, 원본 `/ko/standard/ai-funnel/acr` 대조(브랜드 표).
 
@@ -730,6 +730,38 @@ Website 인용 도달 Δ도 값 출처(발행 / 실시간)가 다르면 숨긴�
     - `i18n/request.test.ts`의 '기존 문구가 병합 뒤에도 같다' 2건(ko · en)이 HEAD(`cdcb3c1`)부터 실패한다. 9-9가 `ko.json` · `en.json`에 더한 `answerAnalysis.citations.drilldown.loading` · `loadFailed`를 `messages/units/u7.*.json`이 다른 문구로 덮는다. 실제 화면은 u7 문구('상세를 불러오는 중입니다')다. render 시험은 `ko.json`만 읽어 9-9 문구를 본다. 이 단계 문구는 단위 파일과 겹치지 않는다(겹치는 키는 그 둘뿐). 어느 문구를 남길지는 9-9 후속으로 정한다.
   - **다음 단계가 알 것.** `DomainTableCard`는 `initialAll` prop(render 시험용)을 받는다. `CompositionTable` · `compositionRounds` · `compositionCsvRows`를 내보낸다. route `citation/domains`의 views는 쪽 전체다. 출처 구성 줄은 이제 `div` 안의 버튼이다(`data-rn-b`는 줄, `data-rn-src` · `aria-pressed`는 버튼, 회차 칸은 `data-rn-trend`).
 
+- **11단계(2026-10-31).** 11-1 · 11-2 · 11-3 · 11-4 · 11-5를 고쳤다. 재현 시험은 고치기 전에 실패했다(BFF 12개 · Gold 리더 3개 · render 5개). 11-6은 재현되지 않았다. 리뉴얼 ACR(Global)만 바뀐다.
+  - **11-1 발견.** W6 방식(Mention · Citation)으로 바꿨다. 순서는 하나로 고정했다(`acr.FINDING_ORDER`). 당사 순위와 격차 → 후보군 포함율이 가장 가까운 경쟁사와의 Top1 ACR 차(leak) → 엔진별 당사 1위 프롬프트(engine) → 모든 엔진에서 1위인 경쟁사(sweep) → 당사 차종 전환율(model) → 당사가 한 번도 선택되지 않은 프롬프트(dist) → 가장 크게 움직인 브랜드(mover) 순서로, 값이 있는 앞의 4개를 보인다. 순서는 원본 '만드는 방법' 문구의 순서이고, Mention · Citation처럼 움직인 브랜드를 끝에 두었다.
+    - 문턱을 모두 뺐다: leak 6pp · −0.5pp, engine 3개, sweep 3개, mover 0.5pp, dist 3개. engine은 엔진 2개 이상이면 쓴다. 차가 0이면 '엔진마다 당사 1위 프롬프트 n/N로 같음'이다. sweep · dist는 1개 이상이면 쓴다. mover는 반올림해 0.0이 아니면 쓴다('가장 큰 변화' 제목은 그대로).
+    - leak: 당사 브랜드 행마다 후보군 포함율이 가장 가까운 경쟁사를 고른다. 거리는 정확값으로 재고, 같으면 표 순서가 앞선 쪽이다. 그 둘의 Top1 ACR 차(`delta1`)가 가장 작은(가장 뒤진, 없으면 가장 덜 앞선) 당사 브랜드를 보인다. Mention 유형 발견과 같은 규칙이다. `params.dir`은 less · more · same(반올림해 0)이고, 문구는 '{own}, 후보군 포함율이 가장 가까운 {rival}보다 Top1 ACR {gap}pp 낮음 / 높음', 같으면 '…{rival}와 Top1 ACR 같음'이다. 다른 안은 당사 합계로 비교하기였다. 원본 발견은 당사 브랜드별이었고, 합계 포함율은 브랜드들의 합집합이라 어느 브랜드의 후보 → 선택 차인지 흐려진다.
+    - 색은 당사 기준 방향만이다. standing은 앞섬 good · 뒤짐 warn, leak은 낮음 warn · 높음 good · 같음 info, mover는 당사면 방향대로 · 경쟁사면 info(오르면 warn이었다)다. engine · sweep · dist · model은 info다(Citation engineGap · opportunity와 같다).
+    - 문구(ko · en): `summary.how`(정해진 순서, 기준값 · 중요도 없음, 색은 방향만), `find.leak.title` → `titleLess` · `titleMore` · `titleSame`, `find.engine.titleSame`(새 키), `find.sweep.detail`('콘텐츠 보강 후보' → '이 프롬프트에서 당사는 어느 엔진에서도 1위가 아닙니다 · …기준'). units에는 `renewal.acr` 키가 없다.
+  - **11-2 배지.** 'HMG 계열'은 이름 목록(`HMG_BRANDS`, 지웠다)이 아니라 리더가 행마다 주는 Gold 플래그(`is_hmg`)로 정한다. 그 값은 그 행의 당사 판정에 리더가 이미 쓰는 Gold 값을 따른다. 그래야 한 카드 안에서 당사 · HMG 계열 · 그 외가 한 Gold 값으로 갈린다.
+    - 브랜드 행: 명부 `acr_entity_fact.own_bit ≠ 0`. `is_ours` · `own_cells` · `own.brands`가 읽는 값이다. Gold 설명은 열 '당사 비트: 명부', 표 쓰임 'Global ACR 브랜드별 ACR 표 …'다.
+    - 차종 행: 부모 `dim_brand.own_bit ≠ 0`. 차종 `is_ours`가 읽는 값이다(리더 `model_rows`의 `parent.own_bit`).
+    - 맞대결 행: `dim_brand.own_bit ≠ 0`. 후보군의 당사 판정이 읽는 값이다(`head_to_head`의 `sl`).
+    - BFF `to_standard_acr`는 리더가 보낼 때 `isHmg`로 싣는다. 배지 = `isHmg` ∧ 당사 아님. 맞대결 행은 리더 규칙상 늘 당사가 아니다.
+    - live에서 결과는 이름 목록과 같다(U1). '제네시스 마그마'(명부 4) · 'Hyundai Canada'(명부 1)는 HMG 관점에서 이미 당사이고, 단일 브랜드 관점에서는 HMG 계열이 된다. 둘은 choice 0 · appearance 7이라 상위 12 표에 들지 않는다.
+    - 다른 안은 모두 `dim_brand.own_bit`로 고르기였다. 그러면 브랜드 표 안에서 당사(명부)와 계열(dim_brand)이 서로 다른 Gold 값을 읽는다. 두 Gold 값의 차이는 D1로 물었다. HUB는 합치거나 고치지 않는다(규칙 5).
+  - **11-3.** 차종 당사는 Gold `isOurs`만이다(부모 이름이 당사 브랜드 목록에 있으면 당사로 보던 것을 뺐다). 배지도 `isHmg` ∧ ¬당사라, 당사와 HMG 계열이 함께 켜지지 않는다.
+  - **11-4.** 브랜드 표 정렬에 원본의 최종 선택 · 언급 수(내림차순, 같으면 순위) · 브랜드(이름 오름차순, ko 정렬)를 더했다. `boardOrders`의 `choiceCount` · `appearanceCount` · `brand`이고, 문구는 `board.sortChoices` · `sortMentions` · `sortBrand`다. 정렬 버튼은 Top1 ACR · 후보군 포함율 · 증감 · 최종 선택 · 언급 수 · 브랜드 순서다. 1920 폭에서 카드 머리에 한 줄로 들어간다.
+  - **11-5.** Hero의 '당사 = … 합산' 칩에서 `[.rn-dense_&]:hidden`을 뺐다. 리뉴얼은 늘 촘촘이라 그동안 이 칩이 보이지 않았다.
+  - **11-6 재현 안 됨.** 리더 `funnel/acr`는 ACR 패널의 모든 축을 셀 조건에 건다(국가 · 언어 · 엔진 · 브랜드 유무 · 목록 유형 · depth1~3 · 브랜드(bgrp) · 기간). meta의 `ignored_filters` · `dropped_filters`는 늘 비어 있다(`context.meta`). 이 값을 채우는 곳은 인용 리더의 brand_not_found 하나다. BFF도 패널 축을 모두 리더 쿼리로 넘긴다(`read_standard_filters` → `analysis_query`). 그래서 무시되는 필터가 없고, 보일 안내도 없다. 시험 `EveryFilterApplies`(`test_gold_acr`)로 고정했다. 리더가 안내를 보내게 되면 그때 화면 표시를 더한다.
+  - **golden.** `acr/renewal` 40개 파일이다(출력 35 · 녹음만 5, README 'Deliberate changes' 2026-10-31 step 11). 2026-10-30 'no HUB threshold' 항목에도 ACR을 이었다.
+    - 발견은 33건이다.
+    - 녹음(`funnel/acr`)에 `is_hmg`를 더했다. live Gold가 그 이름에 주는 규칙(U1)을 따랐다: `is_ours`이거나 이름이 Hyundai · Kia · Genesis.
+    - 출력에는 `isHmg` 키(브랜드 행 · leader · 차종 행)와 `boardOrders` 세 키가 더해졌다.
+    - 11-3으로 무작위 녹음의 차종 8행이 당사 → HMG 계열로 바뀌었다. 당사 차종 23행은 화면에 그리지 않던 `sibling`이 빠졌다.
+    - `acr/standard` · `acr/gold`는 그대로다. 녹음에 플래그가 없고, live에서는 `isHmg`가 실리지만 원본 화면은 쓰지 않는다.
+  - **원본 대조(live, 관리자).** 원본 `/ko/standard/ai-funnel/acr` 브랜드 표 12행의 Top1 ACR · 후보군 포함율 · 최종 선택 · 언급 수가 리뉴얼 브랜드 표 행과 같다(예: Toyota 17.7% · 64.5% · 6,374 · 16,029, Hyundai 6.8% · 88.9% · 2,451 · 22,230). 원본 정렬 셋(최종 선택 · 언급 수 · 브랜드)의 행 순서도 리뉴얼 새 정렬과 같다. 숫자는 바뀌지 않는다.
+  - **화면 확인(1920×915, 관리자).** 리뉴얼 ACR 기본(HMG)과 `?brand=Kia`가 오류 화면 · 5xx 없이 열린다.
+    - HMG 요약: 'Top1 ACR Toyota에 5.4pp 뒤짐', 'Kia, 후보군 포함율이 가장 가까운 BMW보다 Top1 ACR 0.1pp 낮음', 'Gemini에서 당사 1위 프롬프트 115/908 — ChatGPT보다 37개 적음', 'Toyota가 모든 엔진에서 1위인 프롬프트 156개'.
+    - '당사 = Hyundai+Kia+Genesis 합산' 칩이 보인다.
+    - Kia: 브랜드 표 Hyundai에 'HMG 계열'이 붙고, 페이지 전체에서는 5곳(표 · 차종 · 맞대결)이다.
+    - 리더의 바뀐 SQL은 읽기 전용 세션에서 live Gold로 돌렸다(HMG 1.3초 · Kia 0.7초).
+  - **그대로 둔 것.** standing의 격차 변화가 반올림해 0.0이면 '좁혀졌습니다'로 읽힌다. Mention standing도 같은 규칙이다. 리더 안에서 카드마다 당사 판정 Gold 값이 다르다(브랜드 표 = 명부, 차종 · 맞대결 · 추이 당사 합 = dim_brand). 두 이름(choice 0)에서만 갈리고, D1의 답을 기다린다.
+  - **다음 단계가 알 것.** ACR 리더의 브랜드 · 차종 · 맞대결 행에 `is_hmg`가 있다. `StandardAcr` 행에는 리더가 보낼 때만 `isHmg`가 있다. `RnAcrView.boardOrders`는 키가 여섯이다. ACR 발견의 `params.dir`(leak)과 `diff` 0(engine)은 화면 문구를 고른다.
+
 ## 진행 기록
 
 - 2026-10-31 — 계획을 작성했다. 근거는 같은 날 중간점검이다(코드 읽기 다섯 갈래: Overview · Mention · Citation · Prompts · AI Funnel, 큰 지적은 코드로 다시 확인). 처음에는 병렬 세션으로 나누려 했으나 사용자가 한 세션이 순서대로 하는 방식으로 바꿨다. 다음은 1단계다.
@@ -744,3 +776,4 @@ Website 인용 도달 Δ도 값 출처(발행 / 실시간)가 다르면 숨긴�
 - 2026-10-31 — 9단계: Citation 출처 선호 매트릭스에서 인용이 0인 열은 비중 '—'이고 칠하기 · cap · 발견에서 빠진다. 유형이 모두 0이면 원본 빈 안내를 보인다(9-1, U9 실데이터 07-06 · Genesis AT · Hyundai CH). 처방 문구 셋을 사실 문구로 바꿨다(9-2). Website 범프 범례는 '당사 도메인'이다(9-3). 카테고리 없는 긍정/부정 URL 행은 'Other' 대신 '—'다(9-6, 원본도). 범위 계정의 Website 도메인 표 · 서랍 · 내보내기가 본문과 같은 website 계정 규칙을 쓴다(9-7, 도시 사이트). 도메인 서랍의 읽는 중 · 실패 문구를 더했다(9-9, 원본도). 재현 시험은 고치기 전에 실패했다. 9-4(U2) · 9-8(이름이 이미 slug 라벨)은 재현되지 않았고, 9-5는 고칠 것이 없다(U3 · U4 같음, U6 태그는 Gold 설명의 도메인 순위 자사 표시 정의). golden 7건 의도 변경. 시험: BFF 34개 모듈 598개(live 8개 포함), 프런트 관련 13개 파일 103개 · typecheck · lint, 범위 계정 live 대조, Global · Website 인용 · 하위 화면 · 원본 실제 화면. 다음은 10단계다.
 - 2026-10-31 — 10단계: Citation 출처 구성 줄의 회차 선이 점마다 회차 · 비중 · 인용 수를 보이고(3단계 `tips`, 인용 수는 같은 화면의 `live.categoryTrend`), 표 보기와 CSV에 회차별 인용 수 · 비중이 생겼다. 출처를 하나 고르면 선은 인용 수다(10-1, Global · Website). Website 도메인 표는 불러온 행을 모두 보이고 원본처럼 route `citation/domains`의 다음 200행을 '더 보기'로 붙인다. 카테고리는 불러온 행 안, 검색은 서버 전체다(10-2, 6단계식 전체 전송은 14,687행이라 고르지 않음). 재현 시험은 고치기 전에 실패했다. golden 1건 의도 변경. 시험: BFF 34개 모듈 589개(live 8개 포함), 프런트 관련 16개 파일 121개(건너뜀 1) · typecheck · lint, 원본 대조(150위 · 201위 · 회차 인용 수), e2e 26항목. 다음은 11단계다.
 - 2026-10-31 — 9-9 후속: 9-9는 재현되지 않았다. `answerAnalysis.citations.drilldown.loading` · `loadFailed`는 처음부터 `messages/units/u7`에 있었고 요청 때 합쳐진다(진행 세션 판단 착오). 9단계가 `ko.json` · `en.json`에 더한 중복 두 키를 지워 `i18n/request.test.ts` 2건 실패를 고쳤다. 서랍 render 시험은 합친 메시지로 본다. '공통 규칙'의 문구 줄에 units 확인과 `i18n/request.test.ts` 실행을 더했다. 시험: `i18n/request.test.ts`, 리뉴얼 표준 · website 인용 · 원본 citations-view render 시험, typecheck · lint.
+- 2026-10-31 — 11단계: ACR 요약 발견을 W6 방식으로 바꿨다. 순서는 고정했고, 문턱을 뺐고, 색은 당사 방향만 나타낸다. '후보군이 비슷한'은 '후보군 포함율이 가장 가까운 경쟁사와의 Top1 차'가 됐다(11-1). 'HMG 계열' 배지는 이름 목록 대신 리더가 행마다 주는 Gold 플래그로 정한다. 그 행의 당사 판정 값을 따르므로 브랜드 행은 명부, 차종 · 맞대결은 dim_brand다(11-2). 차종 당사는 Gold isOurs만이다(11-3). 브랜드 표에 원본 정렬 셋(최종 선택 · 언급 수 · 브랜드)을 되살렸다(11-4). 촘촘 화면에서도 '당사 = … 합산' 칩이 보인다(11-5). 재현 시험은 고치기 전에 실패했다. 11-6은 재현되지 않았다. 리더가 모든 ACR 축을 걸고 무시 · 제외 필터를 보내지 않으며, 시험으로 고정했다. golden은 40개 파일이다(출력 35 · 녹음만 5). 시험: BFF 34개 모듈 606개(live 8개 포함, 건너뜀 5), 프런트 ACR 2개 파일 23개 · i18n · typecheck · lint, 원본 브랜드 표 대조(12행 값 · 정렬 3종), 리뉴얼 ACR 실제 화면(HMG · Kia). 다음은 12단계다.

@@ -5120,7 +5120,7 @@
         "title": "This round",
         "titlePeriod": "This period",
         "howLabel": "How it is made",
-        "how": "Rules over the numbers on this page (no new data): our rank and gap, where we are shortlisted but not picked, top brands per engine and prompt, model conversion and the biggest mover, ranked by importance; the top four are shown.",
+        "how": "The numbers of this page's cards restated in one fixed order (no new data): our standing and gap → the Top1 ACR difference to the competitor shortlisted most alike → the prompts we top per engine → a competitor topping every engine → our model conversion → the prompts we were never picked in → the brand that moved most, the first four that have values. No threshold filters them and nothing is ranked by importance; the colour shows only the direction for us (ahead · behind, up · down).",
         "chipSnapshot": "As of {date} · vs the previous round",
         "chipPeriod": "Period total",
         "headline": "<b>{own}</b> — Top1 ACR <b>#{rank}</b> {share}{delta}, shortlist rate {coverage}, picked first {count} times · {prompts} prompts × {engines} engines"
@@ -5136,18 +5136,21 @@
         },
         "leak": {
           "tag": "Shortlist → pick",
-          "title": "{own} is shortlisted as often as {rival} but picked {gap}pp less",
+          "titleLess": "{own}: Top1 ACR {gap}pp below {rival}, the competitor with the closest shortlist rate",
+          "titleMore": "{own}: Top1 ACR {gap}pp above {rival}, the competitor with the closest shortlist rate",
+          "titleSame": "{own}: the same Top1 ACR as {rival}, the competitor with the closest shortlist rate",
           "detail": "Shortlist rate {ownCov}% vs {rivalCov}% · Top1 ACR {ownTop1}% vs {rivalTop1}%"
         },
         "engine": {
           "tag": "AI engine",
           "title": "We top {wins}/{total} prompts on {engine} — {diff} fewer than on {other}",
+          "titleSame": "We top {wins}/{total} prompts on every engine",
           "detail": "Of the {total} prompts with a pick ({measured} measured) · by the brand picked most per prompt × engine"
         },
         "sweep": {
           "tag": "Prompts",
           "title": "{rival} tops {count} prompts on every engine",
-          "detail": "Questions where we top no engine — content candidates"
+          "detail": "Prompts where we top no engine · by the brand picked most per prompt × engine"
         },
         "model": {
           "tag": "Models",
@@ -5200,6 +5203,9 @@
         "sortTop1": "Top1 ACR",
         "sortCoverage": "Shortlist rate",
         "sortDelta": "Change",
+        "sortChoices": "Final picks",
+        "sortMentions": "Mentions",
+        "sortBrand": "Brand",
         "colBrand": "Brand",
         "colTop1": "Top1 ACR",
         "colTrend": "Trend",

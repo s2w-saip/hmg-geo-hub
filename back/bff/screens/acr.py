@@ -7,7 +7,7 @@ Ports, with the front's rules unchanged:
   (acr-live-view.tsx: language axis rule, trend rows, brand colours, table orders, battle pivot and
   top 30, territory legend and per-row choice counts)
 - (renewal)/renewal/standard/ai-funnel/acr: acr-model.ts acrView / acrFindings / sortBrandRows,
-  the HMG brand list of acr-context.tsx, the derived values of acr-body.tsx and acr-detail.tsx
+  the derived values of acr-body.tsx and acr-detail.tsx
   (gap, standing count, board orders and bar scale, map deviation, battle views, engine segments
   base, model orders and scale, distribution sheets: own picks, orders, present brands, CSV pivot)
   and the page-level period / filtered / 당사 label.
@@ -26,7 +26,7 @@ from fastapi import HTTPException
 from bff import api
 from bff.access import reader_scope
 from bff.screens import screen, split_context
-from bff.screens._convert import as_of_date, delta1, exact, filter_notices, pct1_or_null, round1, whole_suppression
+from bff.screens._convert import as_of_date, delta1, exact, filter_notices, pct1_or_null, whole_suppression
 from bff.screens._filters import load_filter_dates, load_panel_options, read_standard_filters
 from bff.screens._js import is_num, js_round, js_str
 from bff.screens._query import UMBRELLA_BRAND, analysis_query, to_api_params
@@ -39,11 +39,6 @@ from bff.screens.sources import source_query
 def _n(v: Any) -> Any:
     """A JSON value in JS arithmetic: null -> 0 (`s + null === s`)."""
     return 0 if v is None else v
-
-
-def _round1(v: float) -> float:
-    """Math.round(v * 10) / 10, keeping the exact value (a Δ or a gap subtracts exact values)."""
-    return round1(v)
 
 
 def _key(v: Any) -> str:
@@ -90,6 +85,13 @@ def _nn(v: Any) -> Any:
     return None if v is None else v
 
 
+def _hmg(row: dict, src: dict) -> dict:
+    """The row with Gold's HMG flag (`isHmg`) when the reader sent it (`is_hmg`, 2026-10-31 renewal audit 11-2)."""
+    if "is_hmg" in src:
+        row["isHmg"] = bool(src["is_hmg"])
+    return row
+
+
 def to_standard_acr(d: dict, meta: Any) -> dict:
     totals = d["totals"]
     runs = totals.get("prompt_runs")
@@ -97,8 +99,8 @@ def to_standard_acr(d: dict, meta: Any) -> dict:
         return _empty_acr()
     out: dict[str, Any] = {
         "measured": True,
-        "brands": [{"brand": b["brand"], "isOurs": b["is_ours"], "choiceCount": b["choice"], "appearanceCount": b["appearance"],
-                    "choiceShare": pct1_or_null(b.get("choice_share")), "coverage": pct1_or_null(b.get("coverage"))}
+        "brands": [_hmg({"brand": b["brand"], "isOurs": b["is_ours"], "choiceCount": b["choice"], "appearanceCount": b["appearance"],
+                         "choiceShare": pct1_or_null(b.get("choice_share")), "coverage": pct1_or_null(b.get("coverage"))}, b)
                    for b in d["brands"]],
     }
     own = d.get("own")
@@ -121,15 +123,15 @@ def to_standard_acr(d: dict, meta: Any) -> dict:
                       "cells": [{"engine": c["engine"], "winner": _nn(c.get("winner_brand")), "winnerIsOurs": c["winner_is_ours"],
                                  "choiceCount": c["choice"]} for c in r["cells"]]}
                      for r in d["battle"]]
-    out["modelConversion"] = [{"brand": _nn(m.get("brand")), "model": m["model"], "isOurs": m["is_ours"],
-                               "conversionRate": pct1_or_null(m.get("conversion")), "shortlistCount": m["cells"], "top1Count": m["top1"]}
+    out["modelConversion"] = [_hmg({"brand": _nn(m.get("brand")), "model": m["model"], "isOurs": m["is_ours"],
+                                    "conversionRate": pct1_or_null(m.get("conversion")), "shortlistCount": m["cells"], "top1Count": m["top1"]}, m)
                               for m in d["model_conversion"]]
     out["territory"] = [_territory_sheet(s) for s in d["territory"]]
     h = d.get("head_to_head")
     out["headToHead"] = None if h is None else {
         "sample": {"iterations": h["sample"]["iterations"], "cells": h["sample"]["cells"]},
-        "rows": [{"engine": r["engine"], "brand": r["brand"], "iterations": r["iterations"], "ownWins": r["own_wins"],
-                  "rivalWins": r["rival_wins"]} for r in h["rows"]]}
+        "rows": [_hmg({"engine": r["engine"], "brand": r["brand"], "iterations": r["iterations"], "ownWins": r["own_wins"],
+                       "rivalWins": r["rival_wins"]}, r) for r in h["rows"]]}
     out["totals"] = {"promptRuns": totals["prompt_runs"], "prompts": totals["prompts"], "iterations": totals["iterations"],
                      "engines": list(totals["engines"])}
     return out
@@ -362,7 +364,6 @@ async def gold(q) -> dict:
 # ── renewal ACR (acr-model.ts + acr-body.tsx / acr-detail.tsx) ───────────────
 
 ACR_AXES = ("brand", "geography", "language", "engine", "time", "brandPresence", "listType", "depth1", "depth2", "depth3")
-HMG_BRANDS = ("Hyundai", "Kia", "Genesis")
 DIST_VISIBLE = 20
 CONVERSION_VISIBLE = 15
 DUEL_ROWS = 12
@@ -447,8 +448,26 @@ def acr_view(data: dict, own: dict | None, round_buckets: bool, period: bool) ->
     return view
 
 
+#: The round summary's findings in one fixed order — 당사's standing, an own brand against the rival shortlisted most
+#: alike, 당사 by engine, a rival topping every engine, 당사's models, the prompts 당사 was never picked in, then the
+#: brand that moved most — the first FINDINGS_MAX that have a value. No threshold or HUB priority decides which show
+#: or their tone, which follows 당사's direction only: a competitor's fact is info (2026-10-31 renewal audit 11-1, the
+#: rule W6 gave Mention · Citation · Conversion on 2026-10-30).
+FINDING_ORDER = {"standing": 7, "leak": 6, "engine": 5, "sweep": 4, "model": 3, "dist": 2, "mover": 1}
+FINDINGS_MAX = 4
+
+
+def _closest_rival(a: dict, rivals: list[dict]) -> dict:
+    """The rival whose 후보군 포함율 is closest to `a`'s (exact values), the first in table order on a tie."""
+    best = rivals[0]
+    for c in rivals[1:]:
+        if abs(exact(a["coverage"]) - exact(c["coverage"])) < abs(exact(a["coverage"]) - exact(best["coverage"])):
+            best = c
+    return best
+
+
 def acr_findings(data: dict, v: dict) -> list[dict]:
-    """acr-model.ts acrFindings: rules over the page's numbers, the four most important first."""
+    """acr-model.ts acrFindings: the page's numbers restated in FINDING_ORDER, the first FINDINGS_MAX with a value."""
     out: list[dict] = []
     o = v["own"]
     lead = v["leader"]
@@ -458,53 +477,50 @@ def acr_findings(data: dict, v: dict) -> list[dict]:
         lead_row = next((b for b in v["brands"] if b["brand"] == lead["brand"]), None)
         gap_move = (delta1(v["ownDelta"], lead_row["d"])
                     if v["ownDelta"] is not None and lead_row is not None and lead_row["d"] is not None else None)
-        out.append({"kind": "standing", "tone": "good" if first else "warn", "pri": 3 if first else 9, "target": "sec-comp",
+        out.append({"kind": "standing", "tone": "good" if first else "warn", "pri": FINDING_ORDER["standing"], "target": "sec-comp",
                     "brand": lead["brand"],
                     "params": {"rival": lead["brand"], "gap": abs(gap), "first": 1 if first else 0,
                                "move": "" if gap_move is None else abs(gap_move),
                                "widened": "" if gap_move is None else (1 if (gap_move > 0) == first else 0),
                                "own": o["choiceShare"], "rivalShare": lead["choiceShare"]}})
+    # an own brand against the rival whose 후보군 포함율 is closest to its own, the own brand with the smallest Top1 ACR
+    # difference (the largest trail, else the smallest lead; the first in table order on a tie): 'shortlisted alike'
+    # was a cut-off (6pp apart, then −0.5pp), the closest rival is a fact
+    def valued(b: dict) -> bool:
+        return b["coverage"] is not None and b["choiceShare"] is not None
+    rivals = [b for b in data["brands"] if not b["isOurs"] and valued(b)]
     leak = None
-    for a in (b for b in data["brands"] if b["isOurs"]):
-        for c in (b for b in data["brands"] if not b["isOurs"]):
-            if a["coverage"] is None or c["coverage"] is None or a["choiceShare"] is None or c["choiceShare"] is None:
-                continue
-            if abs(a["coverage"] - c["coverage"]) > 6:
-                continue
-            dt = a["choiceShare"] - c["choiceShare"]
-            if leak is None or dt < leak[2]:
-                leak = (a, c, dt)
-    if leak is not None and leak[2] < -0.5:
+    for a in (b for b in data["brands"] if b["isOurs"] and valued(b)) if rivals else ():
+        c = _closest_rival(a, rivals)
+        dt = delta1(a["choiceShare"], c["choiceShare"])
+        if leak is None or dt < leak[2]:
+            leak = (a, c, dt)
+    if leak is not None:
         a, c, dt = leak
-        out.append({"kind": "leak", "tone": "warn", "pri": 8, "target": "sec-comp", "brand": c["brand"],
-                    "params": {"own": a["brand"], "rival": c["brand"], "gap": _round1(abs(dt)), "ownCov": a["coverage"],
-                               "rivalCov": c["coverage"], "ownTop1": a["choiceShare"], "rivalTop1": c["choiceShare"]}})
+        out.append({"kind": "leak", "tone": "info" if dt == 0 else "warn" if dt < 0 else "good", "pri": FINDING_ORDER["leak"],
+                    "target": "sec-comp", "brand": c["brand"],
+                    "params": {"own": a["brand"], "rival": c["brand"], "gap": abs(dt), "dir": "same" if dt == 0 else "less" if dt < 0 else "more",
+                               "ownCov": a["coverage"], "rivalCov": c["coverage"], "ownTop1": a["choiceShare"], "rivalTop1": c["choiceShare"]}})
     if len(v["engineWins"]) > 1:
+        # 당사's prompts on the engine it tops fewest against the one it tops most (diff 0: the same on every engine)
         w = sort_by(list(v["engineWins"]), lambda a, b: _cmp_num(a["ownWins"] - b["ownWins"]))
         lo, hi = w[0], w[-1]
-        if hi["ownWins"] - lo["ownWins"] >= 3:
-            out.append({"kind": "engine", "tone": "warn", "pri": 6, "target": "sec-prompt", "act": {"battle": "notown"},
-                        "params": {"engine": lo["engine"], "wins": lo["ownWins"], "total": len(data["battle"]), "other": hi["engine"],
-                                   "diff": hi["ownWins"] - lo["ownWins"]}})
+        out.append({"kind": "engine", "tone": "info", "pri": FINDING_ORDER["engine"], "target": "sec-prompt", "act": {"battle": "notown"},
+                    "params": {"engine": lo["engine"], "wins": lo["ownWins"], "total": len(data["battle"]), "other": hi["engine"],
+                               "diff": hi["ownWins"] - lo["ownWins"]}})
     sw = v["sweeps"][0] if v["sweeps"] else None
-    if sw is not None and sw["count"] >= 3:
-        out.append({"kind": "sweep", "tone": "warn", "pri": 7, "target": "sec-prompt", "brand": sw["brand"], "act": {"battle": "notown"},
+    if sw is not None:
+        out.append({"kind": "sweep", "tone": "info", "pri": FINDING_ORDER["sweep"], "target": "sec-prompt", "brand": sw["brand"], "act": {"battle": "notown"},
                     "params": {"rival": sw["brand"], "count": sw["count"]}})
     om = sort_by([m for m in data["modelConversion"] if m["isOurs"] and m["conversionRate"] is not None],
                  lambda a, b: _cmp_num(b["conversionRate"] - a["conversionRate"]))
     if len(om) >= 2:
         best, worst = om[0], om[-1]
-        f = {"kind": "model", "tone": "info", "pri": 5, "target": "sec-model",
+        f = {"kind": "model", "tone": "info", "pri": FINDING_ORDER["model"], "target": "sec-model",
              "params": {"model": best["model"], "rate": best["conversionRate"], "worst": worst["model"], "worstRate": worst["conversionRate"]}}
         if best["brand"] is not None:
             f["brand"] = best["brand"]
         out.append(f)
-    movers = sort_by([b for b in v["brands"] if b["d"] is not None], lambda a, b: _cmp_num(abs(b["d"]) - abs(a["d"])))
-    mover = movers[0] if movers else None
-    if mover is not None and abs(mover["d"]) >= 0.5:
-        tone = ("good" if mover["d"] > 0 else "warn") if mover["isOurs"] else ("warn" if mover["d"] > 0 else "info")
-        out.append({"kind": "mover", "tone": tone, "pri": 4, "target": "sec-overview", "brand": mover["brand"],
-                    "params": {"brand": mover["brand"], "d": mover["d"], "ownD": "" if v["ownDelta"] is None else v["ownDelta"]}})
     sheet = data["territory"][0] if data["territory"] else None
     if sheet is not None:
         # prompts of the sheet in which 당사 was never picked, of its prompts (a prompt can hold several cells;
@@ -513,11 +529,19 @@ def acr_findings(data: dict, v: dict) -> list[dict]:
         for r in sheet["rows"]:
             own_picks[r["promptId"]] = _n(own_picks.get(r["promptId"])) + _sum(_n(e["choice"]) for e in r["entries"] if e["isOurs"])
         zero = len([p for p, n in own_picks.items() if n == 0])
-        if zero >= 3:
+        if zero > 0:
             region = "" if sheet["region"] is None else sheet["region"]
-            out.append({"kind": "dist", "tone": "warn", "pri": 5, "target": "sec-dist", "act": {"sheet": sheet_key(sheet["region"], sheet["engine"])},
+            out.append({"kind": "dist", "tone": "info", "pri": FINDING_ORDER["dist"], "target": "sec-dist",
+                        "act": {"sheet": sheet_key(sheet["region"], sheet["engine"])},
                         "params": {"region": region, "engine": sheet["engine"], "zero": zero, "rows": len(own_picks)}})
-    return sort_by(out, lambda a, b: _cmp_num(b["pri"] - a["pri"]))[:4]
+    movers = sort_by([b for b in v["brands"] if b["d"] is not None], lambda a, b: _cmp_num(abs(b["d"]) - abs(a["d"])))
+    mover = movers[0] if movers else None
+    # a move shown as 0.0 is no move (rounding, not a threshold); a competitor's move is neither good nor bad
+    if mover is not None and mover["d"] != 0:
+        tone = ("good" if mover["d"] > 0 else "warn") if mover["isOurs"] else "info"
+        out.append({"kind": "mover", "tone": tone, "pri": FINDING_ORDER["mover"], "target": "sec-overview", "brand": mover["brand"],
+                    "params": {"brand": mover["brand"], "d": mover["d"], "ownD": "" if v["ownDelta"] is None else v["ownDelta"]}})
+    return sort_by(out, lambda a, b: _cmp_num(b["pri"] - a["pri"]))[:FINDINGS_MAX]
 
 
 def sort_brand_rows(rows: list[dict], key: str) -> list[int]:
@@ -528,9 +552,21 @@ def sort_brand_rows(rows: list[dict], key: str) -> list[int]:
     return sort_by(idx, lambda i, j: _cmp_num(val(rows[j]) - val(rows[i])) or _cmp_num(rows[i]["rank"] - rows[j]["rank"]))
 
 
-def _sibling(brand: Any, own_brands: list) -> bool:
-    """acr-context.tsx isHmgSibling: an HMG brand that is not 당사 for this account."""
-    return brand in HMG_BRANDS and brand not in own_brands
+def name_order(rows: list[dict]) -> list[int]:
+    """The board by brand name, ascending (localeCompare, the original table's name sort), ties by rank."""
+    return sort_by(list(range(len(rows))), lambda i, j: locale_compare(_key(rows[i]["brand"]), _key(rows[j]["brand"]))
+                   or _cmp_num(rows[i]["rank"] - rows[j]["rank"]))
+
+
+#: the board's sorts: the metric ones descending, the name ascending (2026-10-31 renewal audit 11-4 brought back the
+#: original table's name, final-pick and mention sorts)
+BOARD_SORTS = ("choiceShare", "coverage", "d", "choiceCount", "appearanceCount")
+
+
+def _sibling(row: dict, own: bool) -> bool:
+    """'HMG 계열': Gold's HMG flag on the row (`isHmg`, the value the reader judges that row's 당사 by) and not 당사 for
+    this account (2026-10-31 renewal audit 11-2: it was the names Hyundai · Kia · Genesis)."""
+    return bool(row.get("isHmg")) and not own
 
 
 def _battle(data: dict, engines: list[str]) -> dict:
@@ -554,7 +590,7 @@ def _battle(data: dict, engines: list[str]) -> dict:
             "visible": BATTLE_VISIBLE, "count": n, "total": n or 1}
 
 
-def _models(data: dict, own_brands: list) -> dict:
+def _models(data: dict) -> dict:
     """acr-detail.tsx AcrModels: rank, the three sort orders, the bar scale, own / sibling marks."""
     rows = data["modelConversion"]
     rates = [_n(r["conversionRate"]) for r in rows]
@@ -564,8 +600,10 @@ def _models(data: dict, own_brands: list) -> dict:
     out = []
     for i, r in enumerate(rows):
         brand = "—" if r["brand"] is None else r["brand"]
-        out.append({**r, "rank": i + 1, "brandLabel": brand, "own": bool(r["isOurs"] or brand in own_brands),
-                    "sibling": _sibling(brand, own_brands), "bar": (_n(r["conversionRate"]) / mx) * 100})
+        # 당사 is Gold's isOurs alone (2026-10-31 renewal audit 11-3: or the parent's name among the own brands)
+        own = bool(r["isOurs"])
+        out.append({**r, "rank": i + 1, "brandLabel": brand, "own": own, "sibling": _sibling(r, own),
+                    "bar": (_n(r["conversionRate"]) / mx) * 100})
 
     def order(key: str) -> list[int]:
         def val(i: int) -> float:
@@ -611,23 +649,26 @@ def _conversion(data: dict, engines: list[str]) -> dict:
     return {"engines": ["all", *engines], "views": views, "visible": CONVERSION_VISIBLE}
 
 
-def _duels(data: dict, engines: list[str], own_brands: list) -> dict | None:
+def _duels(data: dict, engines: list[str]) -> dict | None:
     """결선 맞대결 (2026-10-29): per rival, the repetitions whose shortlist held 당사 and the rival (the reader's sample of
     about one repetition per cell), on every engine summed (all) or on one; the DUEL_ROWS rivals met most, then by
     name; 당사's wins, the rival's and the rest (another brand or no pick), each share rounded once. The bars of a view
-    share one scale: its largest 당사 or rival share fills its half."""
+    share one scale: its largest 당사 or rival share fills its half. A rival is never 당사 (the reader's shortlist rule),
+    so its badge is Gold's HMG flag alone."""
     h = data.get("headToHead")
     if h is None:
         return None
     views = {}
     for key in ["all", *engines]:
         by_brand: dict = {}
+        hmg: dict = {}
         for r in h["rows"]:
             if key == "all" or r["engine"] == key:
                 g = by_brand.setdefault(r["brand"], [0, 0, 0])
                 g[0] += r["iterations"]
                 g[1] += r["ownWins"]
                 g[2] += r["rivalWins"]
+                hmg.setdefault(r["brand"], r)
         met = sort_by(list(by_brand), lambda a, b: _cmp_num(by_brand[b][0] - by_brand[a][0]) or locale_compare(a, b))[:DUEL_ROWS]
         top = max((max(by_brand[b][1], by_brand[b][2]) / by_brand[b][0] for b in met), default=0) or 1
         rows = []
@@ -635,7 +676,7 @@ def _duels(data: dict, engines: list[str], own_brands: list) -> dict | None:
             n, own, rival = by_brand[brand]
             counts = {"own": own, "rival": rival, "rest": n - own - rival}
             rows.append({"brand": brand, "n": n, "counts": counts, "shares": _shares(counts, n),
-                         "bars": {"own": (own / n) / top * 100, "rival": (rival / n) / top * 100}, "sibling": _sibling(brand, own_brands),
+                         "bars": {"own": (own / n) / top * 100, "rival": (rival / n) / top * 100}, "sibling": _sibling(hmg[brand], False),
                          "lead": "own" if own > rival else "rival" if rival > own else "even"})
         views[key] = rows
     return {"engines": ["all", *engines], "views": views, "sample": dict(h["sample"])}
@@ -720,7 +761,7 @@ def renewal_view(data: dict, own: dict | None, round_buckets: bool, period: bool
     for b in v["brands"]:
         is_own = b["brand"] in own_brands
         dev = _n(exact(b["choiceShare"])) - v["k"] * _n(exact(b["coverage"]))
-        b.update({"own": is_own, "sibling": _sibling(b["brand"], own_brands),
+        b.update({"own": is_own, "sibling": _sibling(b, is_own),
                   "canCompare": (not is_own) and b["brand"] in v["rivals"],
                   "top1Bar": (_n(b["choiceShare"]) / max_t1) * 100,
                   "mapX": _n(b["coverage"]), "mapY": _n(b["choiceShare"]), "dev": dev, "devCsv": js_round(dev * 10) / 10})
@@ -731,17 +772,17 @@ def renewal_view(data: dict, own: dict | None, round_buckets: bool, period: bool
         "defaultCompare": v["rivals"][:1],
         "multiOwn": len(own_brands) > 1,
         "gap": gap,
-        "boardOrders": {key: sort_brand_rows(v["brands"], key) for key in ("choiceShare", "coverage", "d")},
+        "boardOrders": {**{key: sort_brand_rows(v["brands"], key) for key in BOARD_SORTS}, "brand": name_order(v["brands"])},
         "ownTop1Bar": None if o is None else (_n(o.get("choiceShare")) / max_t1) * 100,
         "battle": _battle(data, v["engines"]),
-        "models": _models(data, own_brands),
+        "models": _models(data),
         # the sheet tabs, and the first sheet's rows (acr/renewal-sheet sends the others when their tab opens)
         "sheets": [{"key": sheet_key(s["region"], s["engine"]), "region": s["region"], "engine": s["engine"], "count": s["rowCount"]}
                    for s in data["territory"]],
         "sheet": _sheet(data["territory"][0]) if data["territory"] else None,
         "distVisible": DIST_VISIBLE,
         "conversion": _conversion(data, v["engines"]),
-        "duels": _duels(data, v["engines"], own_brands),
+        "duels": _duels(data, v["engines"]),
     })
     for w in v["engineWins"]:
         # 그 외 브랜드 = prompts another brand won: no pick (no winner, or no cell on that engine) is apart (R5)

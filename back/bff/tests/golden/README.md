@@ -228,6 +228,7 @@ Deliberate changes (what the screen shows changed by decision):
   `rn-fix-degraded`, `rn-fix-picks-source`, `rn-fix-rounds`, `rn-live`; `mention/rn-fix-empty`, `rn-fix-names`,
   `rn-fix-nulls`, `rn-fix-period`, `rn-fix-rounds`, `rn-fix-ties`, `rn-fn-findings`, `rn-fn-summary`, and the 9
   `rn-live-*` bundles (`chatgpt`, `en`, `geo`, `kia`, `kpi-fav`, `kpi-rank`, `kpi-sov`, `none`, `period`).
+  The renewal ACR summary followed on 2026-10-31 (renewal audit step 11-1, the entry below).
 - 2026-10-31 renewal audit step 3 (Overview). 26 cases change, only in these keys:
   - 3-3: without 당사's share-of-voice numerator (`share_of_voice` absent or `num` null) the 경쟁사 대비 SOV has no value
     (`competitorSov.value` null); it took 당사's mentions as 0 and the website tile read "0.0배".
@@ -312,6 +313,29 @@ Deliberate changes (what the screen shows changed by decision):
   cut). 1 case changes: `citation/route-domains-live-more` (`views` of its 200 rows: `""` 100 → 200 indices, the
   categories with more indices and larger scales, two more categories). The other route cases hold 100 rows or fewer;
   the standard page keeps its top 100 (`rn-live` unchanged). No other key changes.
+- 2026-10-31 renewal audit step 11 (ACR). 40 `acr/renewal` files are rewritten: 35 outputs change, 5 tapes only
+  (`fix-rn-r08`, `-r26`, `-r32`, `-r34`, `-r36`). `acr/standard`, `acr/gold` and `rn-zz-empty` are unchanged.
+  - 11-1 (the 2026-10-30 no-HUB-threshold rule, now for ACR): the findings take one fixed order (`acr.FINDING_ORDER`:
+    standing → leak → engine → sweep → model → dist → mover, `pri` 7 … 1), the first four with a value. The cut-offs
+    are gone: the leak's 6pp shortlist band and −0.5pp, the engine gap of 3, three sweeps, a 0.5pp move, three
+    never-picked prompts. The leak is the rival whose 후보군 포함율 is closest to an own brand's (exact values, the first
+    in table order on a tie) and their Top1 ACR difference (`delta1`), the own brand with the smallest difference;
+    `params.dir` is less · more · same (0.0). An engine gap of 0 and a single sweep or never-picked prompt are facts; a
+    move shown as 0.0 is none. Tones follow 당사's direction only: engine, sweep and dist are info, a competitor's move
+    is info (it was warn when it rose). 33 outputs change in `body.view.findings`.
+  - 11-2: the 'HMG 계열' badge is Gold's HMG flag, not the names Hyundai · Kia · Genesis. The reader sends `is_hmg`
+    with every brand row (registry `acr_entity_fact.own_bit` ≠ 0, the value `is_ours` reads), model row (parent
+    `dim_brand.own_bit` ≠ 0, the value its `is_ours` reads) and head-to-head row (`dim_brand.own_bit` ≠ 0, as its
+    shortlist's own); `to_standard_acr` keeps it as `isHmg` when sent. The `funnel/acr` tapes of the `acr/renewal`
+    cases gain the flag by the rule live Gold gives those names (renewal audit U1): a row's `is_ours`, or its name ∈
+    {Hyundai, Kia, Genesis}. Outputs gain the `isHmg` key on brand rows, `leader` and model rows; no brand or duel
+    badge changes on these tapes.
+  - 11-3: a model is 당사 by Gold's `isOurs` alone (it was also its parent's name among the own brands) and its badge is
+    `isHmg` and not 당사. 8 model rows of random tapes flip 당사 → 'HMG 계열' (`isOurs` false, the parent's name an own
+    brand: `fix-rn-r02`, `-r04`, `-r10`, `-r17`, `-r24`, `-r25`, `-r28`), and 23 own model rows lose a `sibling` that the
+    page never drew (당사 wins).
+  - 11-4 (additive): `boardOrders` adds `choiceCount`, `appearanceCount` (descending, ties by rank) and `brand`
+    (ascending, ko collation), the original brand table's sorts. Every measured case (35).
 
 ## Format
 

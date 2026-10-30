@@ -83,8 +83,9 @@ class Conn:
                     c = self.cell(r["acr_cell_key"])
                     g = out.setdefault((c["prompt_key"], c["engine_key"], c["geo_key"], r["brand"]), {
                         "prompt_key": c["prompt_key"], "engine_key": c["engine_key"], "geo_key": c["geo_key"], "brand": r["brand"],
-                        "is_ours": False, "choice": 0, "appearance": 0, "keys": set()})
+                        "is_ours": False, "is_hmg": False, "choice": 0, "appearance": 0, "keys": set()})
                     g["is_ours"] |= bool(r["own_bit"] & bits)
+                    g["is_hmg"] |= bool(r["own_bit"])
                     g["choice"] += r["choice"] or 0
                     g["appearance"] += r["appearance"] or 0
                     if r["appearance"]:
@@ -260,14 +261,67 @@ class HeadToHead(unittest.TestCase):
 
     def test_the_rows_by_engine_then_size(self):
         conn = Conn(CELLS, ROWS)
-        conn.duels = [{"engine": "gemini", "brand": "BMW", "iterations": 4, "own_wins": 1, "rival_wins": 2},
-                      {"engine": "chatgpt", "brand": "Tesla", "iterations": 3, "own_wins": 0, "rival_wins": 1},
-                      {"engine": "chatgpt", "brand": "BMW", "iterations": 3, "own_wins": 2, "rival_wins": 0},
-                      {"engine": "chatgpt", "brand": "Toyota", "iterations": 9, "own_wins": 1, "rival_wins": 5}]
+        conn.duels = [{"engine": "gemini", "brand": "BMW", "iterations": 4, "own_wins": 1, "rival_wins": 2, "is_hmg": False},
+                      {"engine": "chatgpt", "brand": "Tesla", "iterations": 3, "own_wins": 0, "rival_wins": 1, "is_hmg": False},
+                      {"engine": "chatgpt", "brand": "BMW", "iterations": 3, "own_wins": 2, "rival_wins": 0, "is_hmg": False},
+                      {"engine": "chatgpt", "brand": "Toyota", "iterations": 9, "own_wins": 1, "rival_wins": 5, "is_hmg": False}]
         h = read(CELLS, ROWS, "surface=global&include_head_to_head=true", selected=[D2], conn=conn)["head_to_head"]
         self.assertEqual(h["sample"], {"iterations": 3, "cells": 3})
         self.assertEqual([(r["engine"], r["brand"]) for r in h["rows"]],
                          [("chatgpt", "Toyota"), ("chatgpt", "BMW"), ("chatgpt", "Tesla"), ("gemini", "BMW")])
+
+
+class HmgFlag(unittest.TestCase):
+    """2026-10-31 renewal audit 11-2: every brand, model and head-to-head row carries Gold's HMG flag (own_bit ≠ 0,
+    whatever the perspective) from the value its 당사 is judged by — the brand rows' registry acr_entity_fact.own_bit,
+    the models' parent dim_brand.own_bit, the head-to-head's dim_brand.own_bit — for the 'HMG 계열' badge."""
+
+    def test_a_brand_row_carries_the_registry_flag(self):
+        rows = [entity(1, "Kia", 2, 3), entity(1, "제네시스 마그마", 4, 0), entity(1, "Toyota", 0, 2)]
+        brands = read([cell(1, D2)], rows, "surface=global&brand=Kia", selected=[D2])["brands"]
+        self.assertEqual({b["brand"]: (b["is_ours"], b["is_hmg"]) for b in brands},
+                         {"Kia": (True, True), "제네시스 마그마": (False, True), "Toyota": (False, False)})
+
+    def test_a_model_carries_its_parents_flag(self):
+        rows = [model(1, 60, "Tucson", "Hyundai", 1, 3), model(1, 50, "Corolla", "Toyota", 0, 1)]
+        models = read([cell(1, D2)], rows, "surface=global&brand=Kia", selected=[D2])["model_conversion"]
+        self.assertEqual([(m["model"], m["is_ours"], m["is_hmg"]) for m in models], [("Tucson", False, True), ("Corolla", False, False)])
+
+    def test_a_head_to_head_rival_carries_its_flag(self):
+        conn = Conn(CELLS, ROWS)
+        conn.duels = [{"engine": "chatgpt", "brand": "Hyundai", "iterations": 4, "own_wins": 1, "rival_wins": 2, "is_hmg": True},
+                      {"engine": "chatgpt", "brand": "Toyota", "iterations": 3, "own_wins": 0, "rival_wins": 1, "is_hmg": False}]
+        h = read(CELLS, ROWS, "surface=global&brand=Kia&include_head_to_head=true", selected=[D2], conn=conn)["head_to_head"]
+        self.assertEqual([(r["brand"], r["is_hmg"]) for r in h["rows"]], [("Hyundai", True), ("Toyota", False)])
+
+
+class EveryFilterApplies(unittest.TestCase):
+    """2026-10-31 renewal audit 11-6, not reproduced: the plan feared the ACR page applies filters it never names as
+    ignored. The reader binds every ACR panel axis into the cell predicate and names none ignored or dropped, so there
+    is no notice for the page to show; this pins that (a new notice would need its display)."""
+
+    def test_every_acr_axis_is_bound_and_none_reported(self):
+        conn = Conn(CELLS, ROWS)
+        statements = []
+        fetch = conn.fetch
+
+        async def spy(sql, *args):
+            statements.append(sql)
+            return await fetch(sql, *args)
+        conn.fetch = spy
+        qs = ("surface=global&brand=Kia&country=US&lang=en&engine=chatgpt&brand_presence=branded&list_type=single"
+              "&depth1=a&depth2=b&depth3=c&from=2026-09-28&to=2026-10-05")
+        ctx = Context(conn, QueryParams(qs))
+        ctx.release = {"release_id": 1, "version": 1, "rule_signature": "test"}
+        ctx.builds = {"acr": [0, 1], "fact": [9]}
+        ctx.build_dates = {0: D2, 1: D1}
+        ctx.dates = ctx.selected_dates = [D2, D1]
+        meta = asyncio.run(acr.read(ctx))["meta"]
+        cells = next(q for q in statements if "FROM gold.acr_cell_fact f JOIN gold.dim_prompt" in q)
+        for column in ("geo_key IN", "lang_key IN", "engine_key IN", "presence_key IN", "list_type_key IN", "depth1_key IN",
+                       "depth2_key IN", "depth3_key IN", "f.bgrp &", "f.round_date=ANY"):
+            self.assertIn(column, cells)
+        self.assertEqual((meta["ignored_filters"], meta["dropped_filters"]), ([], {}))
 
 
 class SheetsOnDemand(unittest.TestCase):

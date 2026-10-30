@@ -88,3 +88,45 @@ describe("renewal ACR body: rounds compared", () => {
     expect(html).toContain(`aria-label="${T.hero.trendAria}"`);
   });
 });
+
+describe("renewal ACR body: the summary restates the page's numbers (renewal audit 11-1)", () => {
+  const withFindings = (findings: NonNullable<RnAcrInput["view"]>["findings"]): RnAcrInput => ({ ...bodies.snapshot, view: { ...bodies.snapshot.view!, findings } });
+  it("the leak names the rival shortlisted most alike and the Top1 difference either way", () => {
+    expect(render(bodies.snapshot)).toContain("Hyundai, 후보군 포함율이 가장 가까운 Toyota보다 Top1 ACR 30.0pp 높음");
+    const leak = bodies.snapshot.view!.findings[1];
+    const less = render(withFindings([{ ...leak, tone: "warn", params: { ...leak.params, gap: 2, dir: "less" } }]));
+    expect(less).toContain("Hyundai, 후보군 포함율이 가장 가까운 Toyota보다 Top1 ACR 2.0pp 낮음");
+    const same = render(withFindings([{ ...leak, tone: "info", params: { ...leak.params, gap: 0, dir: "same" } }]));
+    expect(same).toContain("Hyundai, 후보군 포함율이 가장 가까운 Toyota와 Top1 ACR 같음");
+    expect(same).not.toContain("비슷하지만");
+  });
+  it("an engine gap of none says so, and a sweep names no content to add", () => {
+    const engine = bodies.snapshot.view!.findings[2];
+    expect(render(withFindings([{ ...engine, params: { ...engine.params, wins: 1, diff: 0 } }]))).toContain("엔진마다 당사 1위 프롬프트 1/1로 같음");
+    const sweep = render(withFindings([{ kind: "sweep", tone: "info", pri: 4, target: "sec-prompt", brand: "Toyota", params: { rival: "Toyota", count: 1 } }]));
+    expect(sweep).toContain("Toyota가 모든 엔진에서 1위인 프롬프트 1개");
+    expect(sweep).not.toContain("보강");
+  });
+  it("the how-to names the fixed order and no importance", () => {
+    expect(T.summary.how).not.toContain("중요도를 매겨");
+    expect(T.summary.how).toContain("정해진 순서");
+  });
+});
+
+describe("renewal ACR body: the brand board (renewal audit 11-4 · 11-5)", () => {
+  it("sorts by the original table's name, final picks and mentions too", () => {
+    const html = render(bodies.snapshot);
+    for (const label of [T.board.sortTop1, T.board.sortCoverage, T.board.sortDelta, T.board.sortChoices, T.board.sortMentions, T.board.sortBrand]) {
+      expect(html).toContain(`>${label}<`);
+    }
+  });
+  it("keeps the 당사 = … 합산 chip in the dense layout", () => {
+    const multi: RnAcrInput = { ...bodies.snapshot, view: { ...bodies.snapshot.view!, ownBrands: ["Hyundai", "Kia"], multiOwn: true } };
+    const html = render(multi);
+    const chip = T.hero.ownSum.replace("{brands}", "Hyundai+Kia");
+    expect(html).toContain(`>${chip}<`);
+    const box = html.slice(html.lastIndexOf("<div", html.indexOf(`>${chip}<`)), html.indexOf(`>${chip}<`));
+    expect(box).not.toContain("rn-dense_&amp;]:hidden");
+    expect(box).not.toContain("rn-dense_&]:hidden");
+  });
+});
