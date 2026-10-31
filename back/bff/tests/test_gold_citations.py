@@ -4,6 +4,7 @@ citation each surface counts and the 자사 미인용 bucket, as Gold defines th
 있는)은 1건 이상인데 자사 인용이 0 인 프롬프트). 2026-10-30 W6 review. And the Mention brand row's drill (prompts, citation
 sources, one source's detail) reads that brand (BrandTarget, 2026-10-31 renewal audit 7-2)."""
 import asyncio
+import re
 import unittest
 from datetime import date
 
@@ -22,11 +23,14 @@ D1, D2 = date(2026, 10, 2), date(2026, 10, 9)
 class Conn:
     """asyncpg stand-in: answers the citation fact and answer fact reads with fixed rows, records every statement."""
 
-    def __init__(self, *, cited=(), measured=()):
-        self.cited, self.measured, self.sql = list(cited), list(measured), []
+    def __init__(self, *, cited=(), measured=(), bases=()):
+        self.cited, self.measured, self.bases, self.sql, self.args = list(cited), list(measured), list(bases), [], []
 
     async def fetch(self, sql, *args):
         self.sql.append(sql)
+        self.args.append(args)
+        if sql.startswith("SELECT owner_key,brand_bit"):  # the 허용 배열 read (citations.owned_bases)
+            return self.bases
         if "FROM gold.citation_fact" in sql and "job_index" not in sql:
             return self.cited
         if "FROM gold.answer_fact" in sql:
@@ -35,7 +39,16 @@ class Conn:
 
     async def fetchval(self, sql, *args):
         self.sql.append(sql)
+        self.args.append(args)
         return 10
+
+    async def fetchrow(self, sql, *args):
+        self.sql.append(sql)
+        self.args.append(args)
+        if "FROM gold.dim_source" in sql:
+            return {"source_key": 5, "skey": "kia.com", "domain": "kia.com", "is_social": False, "category_key": 1,
+                    "slug": "officialHmg", "category_name": "Official (HMG)", "competitor_brand": None}
+        return {"citations": 0, "owned": 0}
 
 
 def context(conn: Conn, qs: str) -> Context:
@@ -68,7 +81,55 @@ class OwnCitationBySurface(unittest.TestCase):
             (sql,) = self.statements("surface=project&project=p1", read)
             self.assertEqual(owned_filter(sql), "f.loc_owned", read.__name__)
             (sql,) = self.statements("surface=global", read)
-            self.assertIn("f.owner_key IN (SELECT owner_key FROM gold.dim_owned_base", owned_filter(sql), read.__name__)
+            self.assertRegex(owned_filter(sql), r"^f\.owner_key=ANY\(\$\d+::smallint\[\]\)$", read.__name__)
+
+
+def base(key, bit, geo, lang):
+    return {"owner_key": key, "brand_bit": bit, "geo_code": geo, "language": lang}
+
+
+# Gold dim_owned_base rows (2026-10-31): Hyundai 1 · Kia 2 · Genesis 4, both kinds; a base may have no country.
+BASES = [base(2, 1, "US", "en"), base(44, 4, "US", "en"), base(59, 2, "US", "en"), base(60, 2, "US", "es"),
+         base(193, 1, "US", "en"), base(10, 1, "DE", "de"), base(20, 2, "DE", "de"), base(30, 1, None, "en")]
+
+
+class GlobalOwnedBases(unittest.TestCase):
+    """Global 자사 = owner_key = ANY(허용 배열) (gold.dim_owned_base comment): the bases whose brand_bit is in the
+    perspective → narrowed to the requested countries' geo_code → to the requested languages; a step whose result is
+    empty does not narrow. The reader took every base of the perspective whatever the filter, so a country or language
+    filter counted other markets' own sites as 자사 (2026-10-31 data lineage: US 3,290 vs Gold cit_owned_c 2,226)."""
+
+    def allowed(self, qs: str, read=citations.domains, *args) -> list[list[int]]:
+        conn = Conn(bases=BASES)
+        asyncio.run(read(context(conn, qs), *args))
+        out = []
+        for sql, bound in zip(conn.sql, conn.args):
+            for clause in re.findall(r"FILTER\(WHERE (f\.owner_key=ANY\(\$(\d+)::smallint\[\]\))\)", sql):
+                out.append(sorted(bound[int(clause[1]) - 1]))
+        self.assertTrue(out, qs)
+        return out
+
+    def test_no_filter_keeps_every_base_of_the_perspective(self):
+        self.assertEqual(self.allowed("surface=global"), [[2, 10, 20, 30, 44, 59, 60, 193]])
+        self.assertEqual(self.allowed("surface=global&brand=Kia"), [[20, 59, 60]])
+
+    def test_a_country_narrows_to_its_bases(self):
+        self.assertEqual(self.allowed("surface=global&country=US"), [[2, 44, 59, 60, 193]])
+        self.assertEqual(self.allowed("surface=global&country=us&country=DE"), [[2, 10, 20, 44, 59, 60, 193]])
+        self.assertEqual(self.allowed("surface=global&brand=Kia&country=US"), [[59, 60]])
+
+    def test_a_language_narrows_after_the_country(self):
+        self.assertEqual(self.allowed("surface=global&country=US&lang=es"), [[60]])
+        self.assertEqual(self.allowed("surface=global&lang=en"), [[2, 30, 44, 59, 193]])
+
+    def test_an_empty_step_does_not_narrow(self):
+        self.assertEqual(self.allowed("surface=global&country=worldwide"), [[2, 10, 20, 30, 44, 59, 60, 193]])
+        self.assertEqual(self.allowed("surface=global&country=US&lang=fr"), [[2, 44, 59, 60, 193]])
+
+    def test_every_read_of_the_judgment_narrows(self):
+        """The prompts split (owned / uncited) and a source's detail count 자사 with the same array."""
+        self.assertEqual(self.allowed("surface=global&country=US&include_refs=false", drilldown.citation_prompts), [[2, 44, 59, 60, 193]])
+        self.assertEqual(self.allowed("surface=global&country=US", drilldown.domain, "kia.com"), [[2, 44, 59, 60, 193]] * 2)
 
 
 class UncitedPrompts(unittest.TestCase):

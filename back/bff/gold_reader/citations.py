@@ -90,11 +90,27 @@ def unknown_brand(ctx: Context, out: dict) -> dict:
     return out
 
 
-def own_citation(ctx: Context, b: SQL, alias: str = "f") -> str:
+async def owned_bases(ctx: Context) -> list[int]:
+    """The global 허용 배열 (gold.dim_owned_base comment): the bases (both kinds) whose brand_bit is in the perspective
+    (every base when it has none) → narrowed to the requested countries' geo_code → to the requested languages; a
+    step whose result is empty does not narrow. owner_key 0 is the 자사 아님 row (2026-10-31: the reader took every
+    base of the perspective, so a country or language filter counted other markets' own sites as 자사)."""
+    if ctx.owned_bases is None:
+        rows = await ctx.conn.fetch("SELECT owner_key,brand_bit,geo_code,language FROM gold.dim_owned_base WHERE owner_key<>0")
+        allowed = [r for r in rows if r["brand_bit"] & ctx.bits] or rows
+        for column, axis in (("geo_code", "country"), ("language", "lang")):
+            picked = {v.lower() for v in values(ctx.q, axis)}
+            if picked:
+                allowed = [r for r in allowed if (r[column] or "").lower() in picked] or allowed
+        ctx.owned_bases = sorted(r["owner_key"] for r in allowed)
+    return ctx.owned_bases
+
+
+async def own_citation(ctx: Context, b: SQL, alias: str = "f") -> str:
     """A 자사 citation, by surface as Gold defines it (gold.citation_cell): global = owner_key = ANY(허용 배열), website =
     loc_owned ∨ tgt_hit, project = loc_owned."""
     if ctx.sf == 1:
-        return f"{alias}.owner_key IN (SELECT owner_key FROM gold.dim_owned_base WHERE (brand_bit & {b.bind(ctx.bits)})<>0)"
+        return f"{alias}.owner_key=ANY({b.bind(await owned_bases(ctx), 'smallint[]')})"
     return f"({alias}.loc_owned OR {alias}.tgt_hit)" if ctx.sf == 2 else f"{alias}.loc_owned"
 
 
@@ -109,7 +125,7 @@ async def domains(ctx: Context) -> dict:
                                            page={"limit": limit(ctx.q), "total": 0, "next_cursor": None}))
     b = SQL()
     where = predicate(ctx, b)
-    owned = own_citation(ctx, b)
+    owned = await own_citation(ctx, b)
     # Aggregate the facts per source_key, then join the source dims to the ~26k result rows: the
     # distinct counts sort the fact rows by a 4-byte key instead of the source's text columns
     # (2.9 s -> 1.35 s on the global card). source_key and skey are both unique in dim_source, so

@@ -37,6 +37,8 @@ class DomainsConn:
         self.rows = rows
 
     async def fetch(self, sql, *args):
+        if "FROM gold.dim_owned_base" in sql:  # the global 자사 판정's 허용 배열 (citations.owned_bases)
+            return []
         assert "FROM gold.citation_fact" in sql
         return self.rows
 

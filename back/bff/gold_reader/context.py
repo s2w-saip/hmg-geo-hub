@@ -75,6 +75,8 @@ class Context:
         self.selected_dates: list[date] = []
         # the mention drill's target of a citation read (citations.mention_target): ("brand", brand_key) or ("own", None)
         self.mention: tuple[str, int | None] | None = None
+        # the global 자사 judgment's 허용 배열 of this request (citations.owned_bases), read once
+        self.owned_bases: list[int] | None = None
 
     @classmethod
     async def create(cls, conn: Any, q: Any) -> Context:

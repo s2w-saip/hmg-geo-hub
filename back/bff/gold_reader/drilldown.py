@@ -114,7 +114,7 @@ async def citation_prompts(ctx: Context) -> dict:
     b = SQL()
     where = citation_predicate(ctx, b)
     base_args = b.args.copy()
-    owned = own_citation(ctx, b)
+    owned = await own_citation(ctx, b)
     # Count per (prompt_key, engine), then per prompt_key, then join the names to the counted rows: grouping every
     # citation by its prompt's text and the engines' DISTINCT sorted 2.2 M rows (4.6 -> 1.6 s over 09-21..10-05).
     # prompt_key is dim_prompt's key and decides prompt_id, text and funnel, every cited prompt_key is in
@@ -251,13 +251,13 @@ async def domain(ctx: Context, skey: str) -> dict:
         FROM gold.citation_fact f JOIN gold.dim_url u ON u.url_key=f.url_key JOIN gold.dim_engine e ON e.engine_key=f.engine_key
         LEFT JOIN gold.dim_owned_base o ON o.owner_key=u.owner_key
         WHERE {where} GROUP BY u.url,u.title,o.geo_code ORDER BY citations DESC,u.url""", *b.args)
-    own = own_citation(ctx, b)
+    own = await own_citation(ctx, b)
     totals = await ctx.conn.fetchrow(f"""SELECT count(*)::int AS citations,count(*) FILTER(WHERE {own})::int AS owned
         FROM gold.citation_fact f WHERE {where}""", *b.args)
     # Keep the source predicate's arguments apart from the ownership-only bind above.
     b = SQL()
     where = citation_predicate(ctx, b) + f" AND f.source_key={b.bind(source['source_key'])}"
-    owned = own_citation(ctx, b)
+    owned = await own_citation(ctx, b)
     prompts = await ctx.conn.fetch(f"""SELECT p.prompt_id::text AS prompt_id,p.text,t.code AS funnel,count(*)::int AS citations,
         count(*) FILTER(WHERE {owned})::int AS own_citations,
         array_agg(DISTINCT e.code ORDER BY e.code) AS engines
