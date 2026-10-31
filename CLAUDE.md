@@ -8,7 +8,7 @@ Website · Admin 화면 개발의 정본 todo를 아래 줄이 불러온다(2026
 
 ## 다음 세션 최우선 작업
 
-- [x] **리뉴얼 점검 후속 (한 세션, 순서대로)** — 2026-10-31 1~16단계를 모두 마쳤다(사용자 확인 대기). 결과는 `docs/handoff/renewal-audit.md` 단계 메모, 남은 일은 `docs/handoff/admin-todo.md` '점검 후속 뒤 남은 일' 절이다. Website 하위 화면(W0~W6)은 커밋 · 푸시했다(`f28395f`, 사용자 확인 대기).
+- [ ] **리뉴얼 점검 후속 (한 세션, 순서대로)** — 2026-10-31 1~16단계를 모두 마쳤다(사용자 확인 대기). 결과는 `docs/handoff/renewal-audit.md` 단계 메모, 남은 일은 `docs/handoff/admin-todo.md` '점검 후속 뒤 남은 일' 절이다. Website 하위 화면(W0~W6)은 커밋 · 푸시했다(`f28395f`, 사용자 확인 대기).
 - [ ] **Admin 탭 남은 페이지** — 순서, 규칙, 결정 대기 항목은 `docs/handoff/admin-todo.md` 하나에만 둔다.
 
 - [x] **P4 ACR 차종 전환율 분모 중복 확인** — 2026-10-28 완료. Gold 기준 영향 없음, 수정 없음. 결과는 `docs/handoff/p4-acr-model-denominator.html` 머리 배너.
