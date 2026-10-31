@@ -157,8 +157,6 @@ export interface RnRateHeroMetric {
     missing: boolean;
     x: string[];
     own: (number | null)[];
-    /** the competitors' average (shown when nothing is picked) */
-    average: (number | null)[] | null;
     /** 당사's numerator and denominator per round, on x (null without a rate) */
     ownNum: (number | null)[];
     ownDen: (number | null)[];
@@ -207,10 +205,8 @@ export interface RnRateTypesVM {
   cmp: {
     covered: string[];
     /** per type (strongest endorsement first); [] when there is no type signal */
-    rows: Array<{ type: MentionTypeKey; own: number | null; avg: number | null }>;
-    /** the competitor average as the reference, per type */
-    avgRef: DotCell[];
-    /** dots[i][t] = covered[i] on rows[t] */
+    rows: Array<{ type: MentionTypeKey; own: number | null }>;
+    /** dots[i][t] = covered[i] on rows[t]; the reference of a type is its leading compare brand (none without one) */
     dots: DotCell[][];
     options: Record<string, { refs: string[][]; top: number }>;
   };

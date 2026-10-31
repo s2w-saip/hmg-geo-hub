@@ -36,9 +36,11 @@ no fill-in, no significance call.
   이벤트 per 100 sessions.
 - 시장 = per property: AI and general 전환율 on its own exact period users, and the gap in pp.
 - 이벤트 = the same event counts split AI · general.
-- 전환 변화 분해 = an exact identity on the AI totals of the two periods: ΔC = (S₁ − S₀) × C₀/S₀ [유입 규모] + (C₁ − S₁ ×
-  C₀/S₀) [세션당 전환]; the session change splits into the engines' own changes, the rest (engines without both
-  periods, sessions without an engine) kept as one remainder so the parts add up to the total.
+- 전환 변화의 두 요인 = the AI sessions and the conversions per 100 sessions of the two periods side by side, each with its
+  change, and the AI conversions they make (2026-10-31 ⛔L, renewal audit 15: the split ΔC = (S₁ − S₀) × C₀/S₀ [유입 규모] +
+  (C₁ − S₁ × C₀/S₀) [세션당 전환] took the previous period's rate as the baseline, a HUB choice, and is gone); the session
+  change by engine = each engine's own change on both periods, the rest (engines without both periods, sessions
+  without an engine) kept as one line so the lines add up to the total.
 - 측정 원자료 = the reader's period-user windows as they are (the original screen's 기간 사용자 측정값).
 Findings are codes + params; the front turns them into text."""
 from __future__ import annotations
@@ -131,13 +133,14 @@ def _segments(raw: list[dict]) -> list[dict]:
     return sorted(rows, key=lambda r: (r["aiSessions"] is None, -(r["aiSessions"] or 0), -(r["genSessions"] or 0), str(r["value"])))
 
 
-def _decomposition(t: dict, p: dict, engines: list[dict], prev_engines: dict) -> dict | None:
-    """The AI conversion change as 유입 규모 + 세션당 전환 (an identity, see the module rules), and the AI session change
-    as each engine's own change plus one remainder."""
+def _factors(t: dict, p: dict, engines: list[dict], prev_engines: dict) -> dict | None:
+    """The AI conversion change's two factors — AI sessions and conversions per 100 sessions — and the conversions, each
+    as the previous period's value, this period's and the change (counts also in %); and the AI session change as each
+    engine's own change plus one remainder (see the module rules). None without both periods' totals."""
     s1, c1, s0, c0 = t["aiSessions"], t["aiConv"], p["aiSessions"], p["aiConv"]
-    if None in (s1, c1, s0, c0) or not s0:
+    if None in (s1, c1, s0, c0):
         return None
-    r0 = c0 / s0
+    p0, p1 = share(c0, s0), share(c1, s1)
     parts, known = [], 0
     for e in engines:
         before = prev_engines.get(e["engine"])
@@ -145,8 +148,9 @@ def _decomposition(t: dict, p: dict, engines: list[dict], prev_engines: dict) ->
             parts.append({"engine": e["engine"], "d": e["sessions"] - before})
             known += e["sessions"] - before
     parts.sort(key=lambda x: (-abs(x["d"]), x["engine"]))
-    return {"prevConv": c0, "conv": c1, "d": c1 - c0, "volume": (s1 - s0) * r0, "rate": c1 - s1 * r0,
-            "prevSessions": s0, "sessions": s1, "dSessions": s1 - s0, "prevPer100": 100 * r0, "per100": share(c1, s1),
+    return {"sessions": {"prev": s0, "cur": s1, "d": s1 - s0, "pct": change_pct(s1, s0)},
+            "per100": {"prev": p0, "cur": p1, "d": gap(p1, p0)},
+            "conv": {"prev": c0, "cur": c1, "d": c1 - c0, "pct": change_pct(c1, c0)},
             "engines": parts, "rest": (s1 - s0) - known}
 
 
@@ -252,7 +256,7 @@ def conversion_view(cur: dict, prev: dict | None, filtered: bool) -> dict:
         "coverage": coverage, "multiBrand": len({r["brand"] for r in props}) > 1, "events": events,
         "tracked": tracked, "channels": _channels(cur, prev, prev_ok),
         "segments": {"device": _segments(segs.get("device") or []), "visitorType": _segments(segs.get("visitor_type") or [])},
-        "decomp": _decomposition(totals, _totals(prev.get("metrics") or {}), engines, prev_eng) if prev_ok else None,
+        "factors": _factors(totals, _totals(prev.get("metrics") or {}), engines, prev_eng) if prev_ok else None,
         "windows": windows, "missing": missing,
     }
     view["findings"] = findings(view)
@@ -270,10 +274,10 @@ def findings(v: dict) -> list[dict]:
     if cov["active"] < cov["total"]:
         out.append((8, {"code": "coverage", "tone": "warn", "active": cov["active"], "total": cov["total"]}))
     if v["prevOk"] and t.get("dAiSessions") is not None:
-        d, dc = t["dAiSessions"], v.get("decomp")
+        d, fc = t["dAiSessions"], v.get("factors")
         change = {"code": "change", "tone": "good" if d > 0 else "warn" if d < 0 else "info", "sessions": d, "conv": t.get("dAiConv")}
-        if dc is not None:
-            change.update(dConv=dc["d"], volume=dc["volume"], rate=dc["rate"])
+        if fc is not None and fc["per100"]["d"] is not None:
+            change.update(per100Prev=fc["per100"]["prev"], per100=fc["per100"]["cur"])
         out.append((7, change))
     ch = v.get("channels") or {}
     rank = ch.get("aiRank")

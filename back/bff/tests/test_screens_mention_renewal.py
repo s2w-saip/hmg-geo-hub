@@ -74,8 +74,8 @@ def type_rows_of(cmp: dict, compare: list[str]) -> list[dict]:
     out = []
     for t, r in enumerate(cmp["rows"]):
         ref = first_picked(compare, opt["refs"][t])
-        at = (cell(ref, t) if ref is not None else None) or cmp["avgRef"][t]
-        out.append({"type": r["type"], "own": r["own"], "avg": r["avg"],
+        at = (cell(ref, t) if ref is not None else None) or {"value": None, "gap": None}
+        out.append({"type": r["type"], "own": r["own"],
                     "dots": [{"brand": b, "value": (cell(b, t) or {}).get("value")} for b in compare],
                     "ref": {"brand": ref, "value": at["value"]}, "gap": at["gap"]})
     return out
@@ -133,7 +133,7 @@ class PickOrder(unittest.TestCase):
                     old = rn.type_compare_rows({"typesByBrand": tb, "brands": brands, "compare": list(pick)})
                     new = type_rows_of(payload["cmp"], list(pick))
                     for o, n in zip(old, new):
-                        self.assertEqual({k: o[k] for k in ("type", "own", "avg", "dots", "ref", "gap")}, n, (seed, pick))
+                        self.assertEqual({k: o[k] for k in ("type", "own", "dots", "ref", "gap")}, n, (seed, pick))
                     if old:
                         self.assertEqual(payload["cmp"]["options"][pick_key(list(pick), covered)]["top"], rn.type_dots_top(old))
 
@@ -258,20 +258,96 @@ class TopRivalPin(unittest.TestCase):
     """The original screens' compare rule (2026-10-30, user's go-ahead): with no pick the compare brand is the rival
     with the largest share on the snapshot (mention_surfaces.comparison_of). The renewal brand trend asks the reader
     to add that rival's line (`pinned`) when the round total leaves it outside the top 10, so it is covered and picked
-    first; the competitor average and the rank chart keep the top 10 they always drew."""
+    first; the rank chart keeps the top 10 it always drew (the competitor average line is gone, ⛔L)."""
 
     def test_the_pinned_rival_is_covered_and_picked_first(self):
         brands = [{"brand": "HMG", "isTracked": True, "share": 75.0}, {"brand": "Tata", "isTracked": False, "share": 15.0},
                   {"brand": "Toyota", "isTracked": False, "share": 10.0}]
         self.assertEqual(rn.covered_brands(brands, _pinned_trend()), ["Tata", "Toyota"])
 
-    def test_the_average_and_the_rank_chart_leave_the_pinned_rival_out(self):
+    def test_the_pinned_rival_draws_its_line_and_the_rank_chart_leaves_it_out(self):
         hero = {"points": [{"key": "2026-10-02", "pct": 90.0}, {"key": "2026-10-09", "pct": 90.0}]}
-        s = rn.hero_trend_series(hero, _pinned_trend(), "exposure", [])
-        self.assertEqual(s["average"], [30.0, 40.0])
         self.assertEqual(rn.hero_trend_series(hero, _pinned_trend(), "exposure", ["Tata"])["brands"],
                          [{"key": "Tata", "values": [10.0, 20.0]}])
         self.assertEqual([x["key"] for x in rn.bump_data(_pinned_trend())["series"]], [rn.OWN_KEY, "Toyota"])
+
+
+def _type_input() -> tuple[dict, list[dict]]:
+    """당사 30 · Toyota 20 · BMW 10 · Audi 5 of 100 signals on every type."""
+    names = (("HMG", True, 30), ("Toyota", False, 20), ("BMW", False, 10), ("Audi", False, 5))
+    tb = {"totals": {t: 100 for t in TYPES}, "brands": [{"brand": b, "isTracked": o, "types": {t: n for t in TYPES}} for b, o, n in names]}
+    brands = [{"brand": b, "isTracked": o, "mentions": n, "share": float(n), "prompts": 1, "mentionRate": 1.0, "avgPosition": None}
+              for b, o, n in names]
+    return tb, brands
+
+
+class NoHubBaseline(unittest.TestCase):
+    """2026-10-31 ⛔L (renewal audit 15, HUB rule 5): the page drew two baselines the HUB made — the hero's competitor
+    average line (the top-10 rivals' mean per round, over whichever had a value that round) and the type card's top-5
+    rival average, which the type finding fell back to without a compare brand. Neither is Gold's: the compare brands'
+    own values are shown instead, and a type finding needs a compare brand. The engine cards' 당사 vs 경쟁사 평균 is
+    the original page's (a legacy KPI) and stays."""
+
+    HERO = {"points": [{"key": "2026-10-02", "pct": 90.0}, {"key": "2026-10-09", "pct": 90.0}]}
+
+    def test_the_hero_trend_draws_no_competitor_average(self):
+        s = rn.hero_trend_series(self.HERO, _pinned_trend(), "exposure", [])
+        self.assertNotIn("average", s)
+        self.assertEqual((s["own"], s["brands"]), ([90.0, 90.0], []))
+
+    def test_the_type_rows_compare_with_the_picked_brands_only(self):
+        tb, brands = _type_input()
+        rows = rn.type_compare_rows({"typesByBrand": tb, "brands": brands, "compare": []})
+        self.assertEqual(len(rows), len(TYPES))
+        for r in rows:
+            self.assertNotIn("avg", r)
+            self.assertEqual((r["own"], r["ref"], r["gap"]), (30.0, {"brand": None, "value": None}, None))
+        self.assertIsNone(rn._type_finding(rows))
+        picked = rn.type_compare_rows({"typesByBrand": tb, "brands": brands, "compare": ["BMW", "Toyota"]})
+        self.assertEqual({(r["ref"]["brand"], r["gap"]) for r in picked}, {("Toyota", 10.0)})
+
+    def test_the_type_card_sends_no_average(self):
+        tb, brands = _type_input()
+        trend = {"unit": "week", "brands": [{"brand": b["brand"], "isTracked": b["isTracked"], "mentions": 1} for b in brands], "buckets": []}
+        cmp = rn.rate_types_payload(tb, brands, None, None, trend, False)["cmp"]
+        self.assertNotIn("avgRef", cmp)
+        self.assertEqual(cmp["rows"][0], {"type": "final_choice", "own": 30.0})
+        self.assertEqual(cmp["options"]["0"]["refs"], [[]] * len(TYPES))
+
+    def test_a_type_finding_names_its_compare_brand(self):
+        tb, brands = _type_input()
+        rows = rn.type_compare_rows({"typesByBrand": tb, "brands": brands, "compare": ["Toyota"]})
+        f = rn._type_finding(rows)
+        self.assertEqual((f["kind"], f["brand"], f["params"]["ref"], f["params"]["gap"]), ("typeLead", "Toyota", "Toyota", 10.0))
+        self.assertNotIn("dir", f["params"])
+
+    def test_a_type_gap_shown_as_zero_is_level(self):
+        # the smallest gap 0.0: no type trails, the one closest is level — not 'ahead' (W6: a direction only, info)
+        def row(type_, gap):
+            return {"type": type_, "own": 30.0, "dots": [], "ref": {"brand": "Toyota", "value": 30.0 - gap}, "gap": gap}
+        f = rn._type_finding([row("final_choice", 0.0), row("mention", 2.0)])
+        self.assertEqual((f["kind"], f["tone"], f["params"]["type"], f["params"]["dir"]), ("typeLead", "info", "final_choice", "same"))
+
+
+class StandingGapChange(unittest.TestCase):
+    """The standing finding's gap change rounded to 0.0 is no change (W6's rule; renewal audit 15): it read
+    '좁혀졌습니다' (narrowed) whenever the change was not a widening."""
+
+    @staticmethod
+    def finding(own_delta, rival_delta, lead=False):
+        own = {"key": rn.OWN_KEY, "own": True, "pct": 60.0 if lead else 40.0, "delta": own_delta}
+        rival = {"key": "Toyota", "own": False, "pct": 50.0, "delta": rival_delta}
+        return rn._standing_finding({"rows": [own, rival] if lead else [rival, own]})
+
+    def test_a_change_shown_as_zero_is_no_change(self):
+        for lead in (True, False):
+            p = self.finding(0.32, 0.30, lead)["params"]
+            self.assertEqual((p["move"], p["widened"]), (0, "same"), lead)
+
+    def test_a_change_keeps_its_direction(self):
+        self.assertEqual(self.finding(1.0, 0.2)["params"]["widened"], "false")  # trailing, 당사 gained more: narrowed
+        self.assertEqual(self.finding(0.2, 1.0)["params"]["widened"], "true")
+        self.assertEqual(self.finding(1.0, 0.2, lead=True)["params"]["widened"], "true")
 
 
 async def _failing_get(status: int):

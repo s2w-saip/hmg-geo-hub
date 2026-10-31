@@ -107,9 +107,28 @@ describe("renewal ACR body: the summary restates the page's numbers (renewal aud
     expect(sweep).toContain("Toyota가 모든 엔진에서 1위인 프롬프트 1개");
     expect(sweep).not.toContain("보강");
   });
+  // renewal audit 15 (W6): a gap change shown as 0.0 is no change, not 'widened' or 'narrowed'
+  it("a gap change of 0.0 is told as no change", () => {
+    const standing = { kind: "standing", tone: "warn", pri: 7, target: "sec-comp", brand: "Toyota", params: { rival: "Toyota", gap: 10, first: 0, own: 20, rivalShare: 30 } } as const;
+    const same = render(withFindings([{ ...standing, params: { ...standing.params, move: 0, widened: "same" } }]));
+    expect(same).toContain("직전 회차 대비 격차 변화 없음");
+    expect(same).not.toContain("벌어졌습니다");
+    expect(same).not.toContain("좁혀졌습니다");
+    expect(render(withFindings([{ ...standing, params: { ...standing.params, move: 1.2, widened: 1 } }]))).toContain("격차가 직전 회차보다 1.2pp 벌어졌습니다");
+  });
   it("the how-to names the fixed order and no importance", () => {
     expect(T.summary.how).not.toContain("중요도를 매겨");
     expect(T.summary.how).toContain("정해진 순서");
+  });
+});
+
+describe("renewal ACR body: 후보 → 최종 선택 (renewal audit 15, ⛔L)", () => {
+  it("draws each brand's two values as a dot, without a brand average line or a distance to it", () => {
+    const html = render(bodies.snapshot);
+    expect(html).toContain(T.map.title);
+    expect(html).toContain(`>브랜드 ${bodies.snapshot.view!.brands.length}개<`);
+    expect(html).not.toContain("평균선");
+    expect(html).not.toContain("평균보다");
   });
 });
 

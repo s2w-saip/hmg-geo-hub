@@ -54,8 +54,8 @@ describe("RnConvBody", () => {
     expect(html).toContain("AI 유입 전환율 7.5% — 일반 유입 4.7%보다 2.8pp 높음");
     expect(html).toContain("GA4 속성 3개 중 2개 측정 중");
     expect(html).toContain("AI 유입 세션 ▲19.2% · 직전 14일 대비");
-    // the change finding carries the split: 7 = 3.8 + 3.2
-    expect(html).toContain("AI 유입 전환 ▲35.0% — 전환 +7건 = 유입 규모 +3.8 + 세션당 전환 +3.2");
+    // the change finding names the conversions per 100 sessions of both periods, not a split (renewal audit 15, ⛔L)
+    expect(html).toContain("AI 유입 전환 ▲35.0% · 세션 100회당 전환 5.5건 → 6.2건");
     expect(html).toContain("AI Assistant 채널: 채널 4개 중 세션 4위 (1.53%)");
     // 채널 합계 = the channel rows' own total; 사이트 전체 = GA4's totals report on the site line (renewal audit 12-2)
     expect(html).toContain("세션 100회당 주요 이벤트 4.8건 — 1위 · 채널 합계 1.6건");
@@ -104,16 +104,20 @@ describe("RnConvBody", () => {
     expect(render(<RnConvBody input={body} />)).not.toContain("수집되지 않은 날이 있습니다");
   });
 
-  it("the change split: waterfall steps that add up, and the engines' share of the session change", () => {
+  // renewal audit 15 (⛔L, HUB rule 5): the two factors side by side; the split of the conversion change into a 유입 규모
+  // part and a 세션당 전환 part took the previous period's rate as the base, a HUB choice
+  it("the change card: AI sessions and conversions per 100 sessions of both periods, no split into parts", () => {
     const html = render(<RnConvBody input={body} />);
-    expect(html).toContain("전환 +7건 = 유입 규모 +3.8 + 세션당 전환 +3.2");
-    expect(count(html, "data-rn-step=")).toBe(4);
-    expect(html).toContain("AI 유입 세션 364회 → 434회 · 세션 100회당 전환 5.5건 → 6.2건");
-    expect(html).toContain("AI 유입 세션 변화 +70회 — 엔진별 몫");
+    expect(html).not.toContain("유입 규모");
+    expect(count(html, "data-rn-step=")).toBe(0);
+    expect(count(html, "data-rn-factor=")).toBe(3);
+    expect(html).toContain("AI 유입 세션 ▲19.2% · 세션 100회당 전환 +0.7건 · AI 유입 전환 ▲35.0%");
+    for (const v of ["364회", "434회", "+70회", "5.5건", "6.2건", "+0.7건", "20건", "27건", "+7건"]) expect(html).toContain(`>${v}<`);
+    expect(html).toContain("AI 유입 세션 변화 +70회 — 엔진별");
     expect(count(html, "data-rn-share=")).toBe(3);
     expect(html).toContain("+42");
-    const noPrev = render(<RnConvBody input={{ ...body, view: { ...body.view!, prevOk: false, decomp: null } }} />);
-    expect(noPrev).toContain("직전 같은 길이 기간의 데이터가 없어 분해하지 않습니다.");
+    const noPrev = render(<RnConvBody input={{ ...body, view: { ...body.view!, prevOk: false, factors: null } }} />);
+    expect(noPrev).toContain("직전 같은 길이 기간의 데이터가 없어 비교하지 않습니다.");
   });
 
   it("segments: the device mix of AI vs general and conversions per 100 sessions", () => {

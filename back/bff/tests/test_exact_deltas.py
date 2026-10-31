@@ -4,8 +4,7 @@ import unittest
 
 try:
     from bff.screens import _competitors, _trend, acr, citation_model, mention_view
-    from bff.screens._convert import exact, pct1_or_null, rank_avg
-    from bff.screens._js import js_round
+    from bff.screens._convert import pct1_or_null, rank_avg
 except ModuleNotFoundError as exc:
     raise unittest.SkipTest("Run inside the BFF image (bff.tests.test_exact_deltas)") from exc
 
@@ -111,14 +110,7 @@ class Acr(unittest.TestCase):
         self.assertEqual(v["gap"], -5.4)
         self.assertEqual(next(f for f in v["findings"] if f["kind"] == "standing")["params"]["gap"], 5.4)
 
-    def test_deviation_from_the_average_line(self):
-        v = self.view()
-        shares = {"Toyota": (6374 / 35927 * 100, 3000 / 3761 * 100), "BMW": (1000 / 35927 * 100, 1234 / 3761 * 100)}
-        k = sum(s for s, _ in shares.values()) / sum(c for _, c in shares.values())
-        for b in v["brands"]:
-            s, c = shares[b["brand"]]
-            self.assertAlmostEqual(exact(b["dev"]), s - k * c, places=9)
-            self.assertEqual(b["devCsv"], js_round((s - k * c) * 10) / 10)
+    # the map's average line (k) and the distance to it (dev) are gone (2026-10-31 ⛔L, renewal audit 15)
 
 
 if __name__ == "__main__":

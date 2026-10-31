@@ -8,7 +8,7 @@ Ports, with the front's rules unchanged:
   top 30, territory legend and per-row choice counts)
 - (renewal)/renewal/standard/ai-funnel/acr: acr-model.ts acrView / acrFindings / sortBrandRows,
   the derived values of acr-body.tsx and acr-detail.tsx
-  (gap, standing count, board orders and bar scale, map deviation, battle views, engine segments
+  (gap, standing count, board orders and bar scale, map dots, battle views, engine segments
   base, model orders and scale, distribution sheets: own picks, orders, present brands, CSV pivot)
   and the page-level period / filtered / 당사 label.
 
@@ -28,7 +28,7 @@ from bff.access import reader_scope
 from bff.screens import screen, split_context
 from bff.screens._convert import as_of_date, delta1, exact, filter_notices, pct1_or_null, whole_suppression
 from bff.screens._filters import load_filter_dates, load_panel_options, read_standard_filters
-from bff.screens._js import is_num, js_round, js_str
+from bff.screens._js import is_num, js_str
 from bff.screens._query import UMBRELLA_BRAND, analysis_query, to_api_params
 from bff.screens._sort import locale_compare, sort_by, table_orders
 from bff.screens.sources import source_query
@@ -412,9 +412,6 @@ def acr_view(data: dict, own: dict | None, round_buckets: bool, period: bool) ->
     rivals = [b["brand"] for b in data["brands"] if not b["isOurs"] and isinstance(b["brand"], str) and b["brand"] in series_set]
     comps = [b for b in data["brands"] if not b["isOurs"]]
     standing = data.get("ownStanding") or {"rank": None, "of": None}
-    shown = [b for b in data["brands"] if _n(b["coverage"]) > 0]
-    # the map's average line from the exact shares (the deviations from it are rounded once, on display)
-    k = _sum(_n(exact(b["choiceShare"])) for b in shown) / (_sum(_n(exact(b["coverage"])) for b in shown) or 1)
 
     if data["totals"]["engines"]:
         engines = list(data["totals"]["engines"])
@@ -442,7 +439,7 @@ def acr_view(data: dict, own: dict | None, round_buckets: bool, period: bool) ->
                      lambda a, b: _cmp_num(b["count"] - a["count"]) or locale_compare(a["brand"], b["brand"]))
     view = {"own": own, "ownBrands": own_brands, "brands": brands, "dates": dates, "ownTrend": own_trend, "ownDelta": own_delta,
             "rivals": rivals, "showDelta": show_delta, "rank": standing["rank"], "standingN": standing["of"],
-            "leader": comps[0] if comps else None, "k": k,
+            "leader": comps[0] if comps else None,
             "engines": engines, "engineWins": engine_wins, "sweeps": sweeps}
     view["findings"] = acr_findings(data, view)
     return view
@@ -481,7 +478,8 @@ def acr_findings(data: dict, v: dict) -> list[dict]:
                     "brand": lead["brand"],
                     "params": {"rival": lead["brand"], "gap": abs(gap), "first": 1 if first else 0,
                                "move": "" if gap_move is None else abs(gap_move),
-                               "widened": "" if gap_move is None else (1 if (gap_move > 0) == first else 0),
+                               # a change shown as 0.0 is no change (W6; renewal audit 15: it read widened or narrowed)
+                               "widened": "" if gap_move is None else "same" if gap_move == 0 else (1 if (gap_move > 0) == first else 0),
                                "own": o["choiceShare"], "rivalShare": lead["choiceShare"]}})
     # an own brand against the rival whose 후보군 포함율 is closest to its own, the own brand with the smallest Top1 ACR
     # difference (the largest trail, else the smallest lead; the first in table order on a tie): 'shortlisted alike'
@@ -760,11 +758,12 @@ def renewal_view(data: dict, own: dict | None, round_buckets: bool, period: bool
     max_t1 = max_t1 or 1
     for b in v["brands"]:
         is_own = b["brand"] in own_brands
-        dev = _n(exact(b["choiceShare"])) - v["k"] * _n(exact(b["coverage"]))
+        # the map's dot: the brand's two Gold values. The 'brand average line' through it (k = ΣTop1 ACR ÷ Σ후보군 포함율
+        # of the brands shown) and each brand's distance to it were a baseline the HUB made (2026-10-31 ⛔L, renewal audit 15)
         b.update({"own": is_own, "sibling": _sibling(b, is_own),
                   "canCompare": (not is_own) and b["brand"] in v["rivals"],
                   "top1Bar": (_n(b["choiceShare"]) / max_t1) * 100,
-                  "mapX": _n(b["coverage"]), "mapY": _n(b["choiceShare"]), "dev": dev, "devCsv": js_round(dev * 10) / 10})
+                  "mapX": _n(b["coverage"]), "mapY": _n(b["choiceShare"])})
     gap = None
     if o is not None and o.get("choiceShare") is not None and lead is not None and lead.get("choiceShare") is not None:
         gap = delta1(o["choiceShare"], lead["choiceShare"])

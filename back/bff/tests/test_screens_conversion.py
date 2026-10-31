@@ -240,8 +240,7 @@ class View(unittest.TestCase):
         codes = [f["code"] for f in self.v["findings"]]
         self.assertEqual(codes, ["lift", "coverage", "change", "channel"])
         change = next(f for f in self.v["findings"] if f["code"] == "change")
-        self.assertEqual(change["dConv"], 7)
-        self.assertAlmostEqual(change["volume"] + change["rate"], 7)
+        self.assertAlmostEqual(change["conv"], 35.0)
         channel = next(f for f in self.v["findings"] if f["code"] == "channel")
         self.assertEqual((channel["rank"], channel["n"], channel["per100Rank"]), (4, 4, 1))
         # with fewer findings above it the engine one shows: the largest engine and the one with most conversions per session
@@ -275,7 +274,7 @@ class View(unittest.TestCase):
         self.assertTrue(all(e["count"] is None and e["share"] is None for e in v["events"]))
         self.assertIsNone(v["tracked"])
         self.assertTrue(all(r["aiConv"] is None for r in v["segments"]["device"]))
-        self.assertIsNone(v["decomp"])  # its inputs are the period sums (W6)
+        self.assertIsNone(v["factors"])  # its inputs are the period sums (W6)
         self.assertEqual([f["code"] for f in v["findings"]], ["coverage"])
 
     def test_a_stopped_property_is_outside_the_measured_scope(self):
@@ -323,15 +322,41 @@ class View(unittest.TestCase):
         self.assertEqual((nvr["new"]["aiSessions"], nvr["returning"]["aiSessions"]), (294, 140))
         self.assertEqual((nvr["new"]["genSessions"], nvr["returning"]["genSessions"]), (19600, 8400))
 
-    def test_decomposition(self):
-        dc = self.v["decomp"]
-        self.assertEqual((dc["prevConv"], dc["conv"], dc["d"], dc["prevSessions"], dc["sessions"], dc["dSessions"]), (20, 27, 7, 364, 434, 70))
-        self.assertAlmostEqual(dc["volume"], 70 * 20 / 364)
-        self.assertAlmostEqual(dc["rate"], 27 - 434 * 20 / 364)
-        self.assertAlmostEqual(dc["volume"] + dc["rate"], dc["d"])
-        self.assertEqual(dc["engines"], [{"engine": "chatgpt", "d": 42}, {"engine": "gemini", "d": 28}, {"engine": "perplexity", "d": 0}])
-        self.assertEqual(dc["rest"], 0)
-        self.assertIsNone(conv.conversion_view(self.cur, None, False)["decomp"])
+    def test_the_change_shows_its_two_factors_side_by_side(self):
+        """2026-10-31 ⛔L (renewal audit 15, HUB rule 5): the conversion change was split into a 유입 규모 part and a
+        세션당 전환 part by the previous period's conversions per session, a baseline the HUB chose. The card shows the
+        two factors — AI sessions and conversions per 100 sessions — and the conversions, each with both periods and its
+        change; the session change by engine stays (each engine's own two values)."""
+        self.assertNotIn("decomp", self.v)
+        f = self.v["factors"]
+        self.assertEqual({k: f["sessions"][k] for k in ("prev", "cur", "d")}, {"prev": 364, "cur": 434, "d": 70})
+        self.assertAlmostEqual(f["sessions"]["pct"], 70 / 364 * 100)
+        self.assertAlmostEqual(f["per100"]["prev"], 20 / 364 * 100)
+        self.assertAlmostEqual(f["per100"]["cur"], 27 / 434 * 100)
+        self.assertAlmostEqual(f["per100"]["d"], 27 / 434 * 100 - 20 / 364 * 100)
+        self.assertEqual({k: f["conv"][k] for k in ("prev", "cur", "d")}, {"prev": 20, "cur": 27, "d": 7})
+        self.assertAlmostEqual(f["conv"]["pct"], 35.0)
+        change = next(x for x in self.v["findings"] if x["code"] == "change")
+        self.assertFalse({"dConv", "volume", "rate"} & change.keys())
+        self.assertAlmostEqual(change["per100Prev"], 20 / 364 * 100)
+        self.assertAlmostEqual(change["per100"], 27 / 434 * 100)
+
+    def test_the_session_change_by_engine(self):
+        f = self.v["factors"]
+        self.assertEqual(f["engines"], [{"engine": "chatgpt", "d": 42}, {"engine": "gemini", "d": 28}, {"engine": "perplexity", "d": 0}])
+        self.assertEqual(f["rest"], 0)
+        self.assertEqual(sum(e["d"] for e in f["engines"]) + f["rest"], f["sessions"]["d"])
+        self.assertIsNone(conv.conversion_view(self.cur, None, False)["factors"])
+
+    def test_no_previous_session_has_no_rate_before(self):
+        prev = json.loads(json.dumps(self.prev))
+        prev["metrics"] = {**prev["metrics"], "ai_sessions": 0, "ai_conversions": 0}
+        v = conv.conversion_view(self.cur, prev, False)
+        f = v["factors"]
+        self.assertEqual((f["sessions"]["prev"], f["sessions"]["d"], f["sessions"]["pct"]), (0, 434, None))
+        self.assertEqual((f["per100"]["prev"], f["per100"]["d"]), (None, None))
+        change = [x for x in v["findings"] if x["code"] == "change"]
+        self.assertTrue(all("per100" not in x for x in change))
 
     def test_daily_general_and_site(self):
         tr = self.v["trend"]

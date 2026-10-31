@@ -148,18 +148,20 @@ export interface ConvSegment {
   genPer100: number | null;
 }
 
-/** ΔC = volume + rate exactly; the session change = Σ engines + rest. */
-export interface ConvDecomp {
-  prevConv: number;
-  conv: number;
-  d: number;
-  volume: number;
-  rate: number;
-  prevSessions: number;
-  sessions: number;
-  dSessions: number;
-  prevPer100: number;
-  per100: number | null;
+/** A value of the previous period and this one, and the change (`pct` = the count change in %). */
+export interface ConvFactor {
+  prev: number | null;
+  cur: number | null;
+  d: number | null;
+  pct?: number | null;
+}
+
+/** The AI conversion change's two factors side by side — AI sessions and conversions per 100 sessions — and the
+ *  conversions; no split of the change into their parts (2026-10-31 ⛔L). The session change = Σ engines + rest. */
+export interface ConvFactors {
+  sessions: ConvFactor;
+  per100: ConvFactor;
+  conv: ConvFactor;
   engines: { engine: string; d: number }[];
   rest: number;
 }
@@ -181,7 +183,7 @@ export interface ConvWindow {
 export type ConvFinding =
   | { code: "lift"; tone: "good" | "warn" | "info"; ai: number; gen: number; lift: number }
   | { code: "coverage"; tone: "warn"; active: number; total: number }
-  | { code: "change"; tone: "good" | "warn" | "info"; sessions: number; conv: number | null; dConv?: number; volume?: number; rate?: number }
+  | { code: "change"; tone: "good" | "warn" | "info"; sessions: number; conv: number | null; per100Prev?: number; per100?: number }
   | { code: "channel"; tone: "info"; rank: number; n: number; share: number | null; per100: number | null; per100Rank: number | null; total: number | null }
   | { code: "samePage"; tone: "info"; page: number; ai: number; gen: number }
   | { code: "device"; tone: "info"; device: string; ai: number; gen: number }
@@ -226,8 +228,8 @@ export interface ConvView {
   findings: ConvFinding[];
   channels: ConvChannels;
   segments: { device: ConvSegment[]; visitorType: ConvSegment[] };
-  /** null without the previous period */
-  decomp: ConvDecomp | null;
+  /** null without both periods' AI totals */
+  factors: ConvFactors | null;
   windows: ConvWindow[];
   /** active properties the collector missed a day of the period for: every period sum over them, and the shares,
    * ranks and 7-day blocks built on those, are unknown (renewal audit 12-1) */

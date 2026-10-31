@@ -241,7 +241,8 @@ function pickTypeFinding(tf: TypeFinding, compare: readonly string[]): Finding {
   return { ...rest, ...(ref ? { brand: ref } : {}), params: { ...rest.params, ref: ref ?? "" } };
 }
 
-function Summary() {
+/** Exported for the render test. */
+export function Summary() {
   const { input, ownLabel, engineLabel } = useMention();
   const { compare } = useCompare();
   const t = useTranslations("renewal.mention");
@@ -265,15 +266,23 @@ function Summary() {
       case "standingLead":
       case "standingTrail":
         title = t(`find.${f.kind}.title`, { rank: p.rank, rival: String(p.rival), gap: n1(p.gap) });
-        // in period mode both Δs compare the period with the one before (2026-10-29 metric review R3)
+        // in period mode both Δs compare the period with the one before (2026-10-29 metric review R3); a change shown as
+        // 0.0 is no change (W6, renewal audit 15)
         detail =
-          p.move != null
-            ? t(p.widened === "true" ? (isPeriod ? "find.standingWidenedPeriod" : "find.standingWidened") : isPeriod ? "find.standingNarrowedPeriod" : "find.standingNarrowed", { move: n1(p.move) })
-            : t("find.standingDetail", { own: pctTxt(Number(p.own)) });
+          p.move == null
+            ? t("find.standingDetail", { own: pctTxt(Number(p.own)) })
+            : p.widened === "same"
+              ? t(isPeriod ? "find.standingSamePeriod" : "find.standingSame")
+              : t(p.widened === "true" ? (isPeriod ? "find.standingWidenedPeriod" : "find.standingWidened") : isPeriod ? "find.standingNarrowedPeriod" : "find.standingNarrowed", { move: n1(p.move) });
         break;
       case "typeTrail":
       case "typeLead":
-        title = t(`find.${f.kind}.title`, { type: tType(String(p.type) as "mention"), ref: p.ref ? String(p.ref) : t("find.competitorAvg"), gap: f.kind === "typeLead" ? `+${n1(p.gap)}pp` : n1(p.gap) });
+        // against the leading compare brand of the type (the top-5 competitor average is gone, 2026-10-31 ⛔L)
+        title = t(f.kind === "typeLead" && p.dir === "same" ? "find.typeLead.titleSame" : `find.${f.kind}.title`, {
+          type: tType(String(p.type) as "mention"),
+          ref: String(p.ref),
+          gap: f.kind === "typeLead" ? `+${n1(p.gap)}pp` : n1(p.gap),
+        });
         detail = t("find.typeDetail", { own: pctTxt(Number(p.own)) });
         break;
       case "mover":

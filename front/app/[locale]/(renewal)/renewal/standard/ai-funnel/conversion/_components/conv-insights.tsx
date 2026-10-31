@@ -1,18 +1,19 @@
 "use client";
 
-// The BI cards of the renewal AI Conversion page (2026-10-30): the AI channel among GA4's channel groups, the
-// conversion change split into 유입 규모 and 세션당 전환 (an exact identity, with the engines' share of the session
-// change), the device · new/returning mix of AI vs general, and the raw period-user windows (the original screen's
-// 기간 사용자 측정값). Display only: every value, rank and part comes from the screen model.
+// The BI cards of the renewal AI Conversion page (2026-10-30): the AI channel among GA4's channel groups, the AI
+// sessions and conversions per session of both periods side by side (with the session change by engine; the split
+// of the conversion change into their parts left on 2026-10-31, ⛔L), the device · new/returning mix of AI vs general,
+// and the raw period-user windows (the original screen's 기간 사용자 측정값). Display only: every value, rank and part
+// comes from the screen model.
 
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { RnBasisChip, RnButton, RnCard, RnCardHead, RnDeltaChip, RnSegmented, cx } from "@/components/renewal-ui";
-import type { ConvDecomp, ConvSegment, ConvView, ConvWindow } from "../_data/screen-types";
+import type { ConvFactors, ConvSegment, ConvView, ConvWindow } from "../_data/screen-types";
 import { DefTip, NoteTip, useConvFmt, type ConvFmt } from "./conv-body";
 import { AI_COLOR, Bar, GEN_COLOR, GREY, Head, Legend, MoreButton, Takeaway, useDeltaLabels } from "./conv-cards";
 
-// diverging pair for a change's parts (+ cool, − warm) and the two period totals
+// diverging pair for a change (+ cool, − warm) and the previous period's bar
 const UP = "#1a4d8e";
 const DOWN = "#eb6834";
 const PREV = "#6b89b3";
@@ -107,68 +108,72 @@ function MarkedBar({ w, mark, color }: { w: number | null; mark: number | null; 
   );
 }
 
-// ══ 전환 변화 분해 ══
+// ══ AI 유입 세션 · 세션당 전환 ══
 
+/** The conversion change's two factors side by side — AI sessions and conversions per 100 sessions — and the AI
+ *  conversions, each with both periods and its change; no split of the change into their parts, which depends on the
+ *  period taken as the base (2026-10-31 ⛔L, renewal audit 15). The session change by engine follows. */
 export function ConvChangeCard({ view }: { view: ConvView }) {
-  const t = useTranslations("renewal.conversion.change");
+  const t = useTranslations("renewal.conversion");
   const fmt = useConvFmt(view);
-  const dc = view.decomp;
+  const labels = useDeltaLabels();
+  const f = view.factors;
+  const chg = (v: number | null | undefined) => (v == null ? "—" : Math.abs(v) < 0.05 ? labels.flat : `${v > 0 ? "▲" : "▼"}${Math.abs(v).toFixed(1)}%`);
+  const grid = "grid grid-cols-[minmax(108px,1fr)_minmax(0,1.6fr)_minmax(0,1.6fr)_72px] items-center gap-3";
+  const rows = f
+    ? ([
+        { key: "sessions", f: f.sessions, v: (x: number | null) => (x == null ? "—" : t("unit.sessionsN", { n: fmt.n(x) })), d: t("unit.sessionsN", { n: fmt.signed(f.sessions.d) }), pct: f.sessions.pct },
+        { key: "per100", f: f.per100, v: (x: number | null) => (x == null ? "—" : t("unit.convN", { n: fmt.one(x) })), d: f.per100.d == null ? "—" : t("unit.convN", { n: fmt.gap(f.per100.d) }), pct: undefined },
+        { key: "conv", f: f.conv, v: (x: number | null) => (x == null ? "—" : t("unit.convN", { n: fmt.n(x) })), d: t("unit.convN", { n: fmt.signed(f.conv.d) }), pct: f.conv.pct },
+      ] as const)
+    : [];
   return (
-    <RnCard aria-label={t("title")}>
-      <RnCardHead title={t("title")} info={<NoteTip title={t("howTitle")}>{t("info")}</NoteTip>} chips={<RnBasisChip>{t("chip", { days: view.days.length })}</RnBasisChip>} />
+    <RnCard aria-label={t("change.title")}>
+      <RnCardHead title={t("change.title")} info={<NoteTip title={t("change.howTitle")}>{t("change.info")}</NoteTip>} chips={<RnBasisChip>{t("change.chip", { days: view.days.length })}</RnBasisChip>} />
       <div className="flex flex-col px-6 pb-4.5 [.rn-dense_&]:px-4.5">
-        {dc ? (
+        {f ? (
           <>
-            <Takeaway>{t("take", { d: fmt.signed(dc.d), volume: fmt.gap(dc.volume), rate: fmt.gap(dc.rate) })}</Takeaway>
-            <Waterfall dc={dc} fmt={fmt} />
-            <p className="m-0 mt-1 text-center text-rn-12 text-rn-muted tabular-nums">
-              {t("basis", { s0: fmt.n(dc.prevSessions), s1: fmt.n(dc.sessions), p0: fmt.one(dc.prevPer100), p1: fmt.one(dc.per100) })}
-            </p>
-            <EngineShares dc={dc} fmt={fmt} />
+            <Takeaway>{t("change.take", { s: chg(f.sessions.pct), p: f.per100.d == null ? "—" : t("unit.convN", { n: fmt.gap(f.per100.d) }), c: chg(f.conv.pct) })}</Takeaway>
+            <Head grid={grid} cols={[[t("change.cols.factor")], [t("change.cols.prev")], [t("change.cols.cur")], [t("change.cols.d"), "r"]]} />
+            {rows.map((r) => {
+              const max = Math.max(r.f.prev ?? 0, r.f.cur ?? 0) || 1;
+              return (
+                <div key={r.key} data-rn-factor={r.key} className={cx(grid, "min-h-11 border-b border-rn-line text-rn-13 last:border-b-0")}>
+                  <b className="font-semibold text-rn-ink">{t(`change.rows.${r.key}`)}</b>
+                  {([
+                    [r.f.prev, PREV],
+                    [r.f.cur, AI_COLOR],
+                  ] as const).map(([x, color], i) => (
+                    <span key={i} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+                      <Bar w={x == null ? null : (x / max) * 100} color={color} />
+                      <b className="text-right font-bold tabular-nums">{r.v(x)}</b>
+                    </span>
+                  ))}
+                  <span className="flex flex-col items-end text-rn-12 leading-tight tabular-nums">
+                    <b className="font-bold text-rn-ink">{r.d}</b>
+                    {r.pct !== undefined ? <small className="text-rn-11 text-rn-muted">{chg(r.pct)}</small> : null}
+                  </span>
+                </div>
+              );
+            })}
+            <EngineSessions f={f} fmt={fmt} />
           </>
         ) : (
-          <p className="m-0 rounded-[10px] bg-rn-page p-3.5 text-rn-12 break-keep text-rn-muted">{view.prevOk ? t("noTotals") : t("noPrev")}</p>
+          <p className="m-0 rounded-[10px] bg-rn-page p-3.5 text-rn-12 break-keep text-rn-muted">{view.prevOk ? t("change.noTotals") : t("change.noPrev")}</p>
         )}
       </div>
     </RnCard>
   );
 }
 
-function Waterfall({ dc, fmt }: { dc: ConvDecomp; fmt: ConvFmt }) {
-  const t = useTranslations("renewal.conversion.change.steps");
-  const mid = dc.prevConv + dc.volume;
-  const top = Math.max(1, dc.prevConv, dc.conv, mid);
-  const steps = [
-    { key: "prev", lo: 0, hi: dc.prevConv, value: fmt.n(dc.prevConv), color: PREV },
-    { key: "volume", lo: Math.min(dc.prevConv, mid), hi: Math.max(dc.prevConv, mid), value: fmt.gap(dc.volume), color: dc.volume >= 0 ? UP : DOWN },
-    { key: "rate", lo: Math.min(mid, dc.conv), hi: Math.max(mid, dc.conv), value: fmt.gap(dc.rate), color: dc.rate >= 0 ? UP : DOWN },
-    { key: "cur", lo: 0, hi: dc.conv, value: fmt.n(dc.conv), color: AI_COLOR },
-  ] as const;
-  return (
-    <div role="img" aria-label={t("aria", { prev: fmt.n(dc.prevConv), volume: fmt.gap(dc.volume), rate: fmt.gap(dc.rate), cur: fmt.n(dc.conv) })} className="grid grid-cols-4 gap-3 pt-5">
-      {steps.map((s) => (
-        <div key={s.key} data-rn-step={s.key} className="flex flex-col items-center gap-1.5">
-          <div className="relative h-[120px] w-full border-b border-rn-line-2">
-            <b className="absolute inset-x-0 text-center text-rn-12 font-bold text-rn-ink tabular-nums" style={{ bottom: `calc(${(s.hi / top) * 100}% + 3px)` }}>
-              {s.value}
-            </b>
-            <i className="absolute inset-x-[22%] rounded-t" style={{ bottom: `${(s.lo / top) * 100}%`, height: `max(2px, ${((s.hi - s.lo) / top) * 100}%)`, background: s.color }} />
-          </div>
-          <span className="text-center text-rn-11 leading-tight font-semibold text-rn-muted">{t(s.key)}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function EngineShares({ dc, fmt }: { dc: ConvDecomp; fmt: ConvFmt }) {
+function EngineSessions({ f, fmt }: { f: ConvFactors; fmt: ConvFmt }) {
   const t = useTranslations("renewal.conversion.change");
-  const parts = [...dc.engines.map((e) => ({ key: e.engine, label: fmt.engine(e.engine), d: e.d })), ...(dc.rest ? [{ key: "_rest", label: t("rest"), d: dc.rest }] : [])];
+  const parts = [...f.engines.map((e) => ({ key: e.engine, label: fmt.engine(e.engine), d: e.d })), ...(f.rest ? [{ key: "_rest", label: t("rest"), d: f.rest }] : [])];
   if (!parts.length) return null;
   const max = Math.max(1, ...parts.map((p) => Math.abs(p.d)));
   return (
     <div className="mt-3 flex flex-col border-t border-rn-line pt-2.5">
-      <h3 className="m-0 mb-1.5 text-rn-12 font-bold text-rn-muted">{t("sessionsTitle", { d: fmt.signed(dc.dSessions) })}</h3>
+      <h3 className="m-0 mb-1.5 text-rn-12 font-bold text-rn-muted">{t("sessionsTitle", { d: fmt.signed(f.sessions.d) })}</h3>
       {parts.map((p) => (
         <div key={p.key} data-rn-share={p.key} className="grid min-h-7 grid-cols-[minmax(84px,1fr)_minmax(0,2.4fr)_56px] items-center gap-2 text-rn-12">
           <span className="truncate font-semibold text-rn-ink-2">{p.label}</span>

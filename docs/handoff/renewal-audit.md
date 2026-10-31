@@ -6,7 +6,7 @@
 - 병렬 세션으로 나누지 않고 한 세션이 순서대로 한다.
 - 단계마다 새 하위 에이전트가 깨끗한 컨텍스트로 맡는다(B 방식).
 
-**현재 위치:** 15단계(HUB가 만든 평균 기준선 · 분해) 시작 전. 14단계 끝(단계 메모 '14단계'). 마지막 커밋: 14단계를 올린 커밋.
+**현재 위치:** 16단계(마무리) 시작 전. 15단계 끝(단계 메모 '15단계'). 마지막 커밋: 15단계를 올린 커밋.
 
 ## 진행 방식 (단계마다 새 하위 에이전트)
 
@@ -103,7 +103,7 @@
 | 12 | AI Conversion 부분합 · 문구 | — | [x] |
 | 13 | Prompts 귀속 · 계정 범위 · 선택지 | 1 | [x] |
 | 14 | 기간 비교 억제 | ⛔K | [x] |
-| 15 | HUB가 만든 평균 기준선 · 분해 | ⛔L | [ ] |
+| 15 | HUB가 만든 평균 기준선 · 분해 | ⛔L | [x] |
 | 16 | 마무리: 원본 대조, 전체 시험, 문서, 다음 일 | 1~15 | [ ] |
 
 순서를 이렇게 잡은 이유:
@@ -830,6 +830,35 @@ Website 인용 도달 Δ도 값 출처(발행 / 실시간)가 다르면 숨긴�
     - 연 화면은 12개다: 원본 Global · Website Overview와 Mention, 리뉴얼 Global · Website Overview와 Mention, 리뉴얼 Website Citation(기본 · 07-20~07-26). 오류 화면 · 5xx · 억제 문장이 없다. 도달 카드는 '증감 = 직전 회차(2026-10-02) 대비' · '직전 기간(2026-07-13~2026-07-19) 대비'와 각주 '실시간 집계입니다…'를 보인다.
   - **다음 단계가 알 것.** 리더 `kpi/compare`의 reason은 unsupported · no_prev · no_data뿐이다. 화면 쪽 `_period.py`에는 억제 판정이 없다. 프런트 레거시 `lib/kpi` 억제 계층과 세 문구 키는 남아 있다(16단계 후보). 15단계(평균 기준선 · 분해)와 겹치는 파일은 없다.
 
+- **15단계(2026-10-31).** ⛔L 추천안대로 고쳤다. 재현 시험은 고치기 전에 실패했다(BFF 8개 · render 7개, HEAD 코드에 새 시험을 얹어 확인). 리뉴얼 화면만 바뀐다: Mention(Global · Website 같은 본문), ACR(Global), AI Conversion(Global · Website 같은 본문). 원본 화면은 바뀐 BFF 함수를 쓰지 않는다(`mention/rn-*` · `acr/renewal` · `conversion/renewal`은 리뉴얼 페이지만 읽는다).
+  - **15-1 Mention 히어로.** '경쟁사 평균' 추이선(회차마다 상위 10 경쟁사 중 값이 있는 브랜드의 평균)을 뺐다. `hero_trend_series`와 `rn-rate-hero`의 `trend.average`가 없다. 비교 브랜드 선(기본은 자동 비교 브랜드 = 스냅샷 점유율 1위 경쟁사)은 그대로이고, 비교 브랜드를 모두 빼면 당사 선만 그린다. 문구 `hero.trendNote` 끝 문장을 '비교 브랜드가 없으면 당사 선만 그립니다'로 바꾸고 `hero.average`를 지웠다. 쓰지 않게 된 `_mean1` · `AVG_COLOR`도 지웠다.
+  - **15-2 Mention 유형.** 유형별 경쟁사 평균(언급 수 상위 5개사, `TYPE_AVG_TOP`)과 그 평균을 기준으로 삼던 차이를 뺐다. 기준은 그 유형에서 값이 가장 큰 비교 브랜드뿐이고, 비교 브랜드 값이 없으면 기준과 차이가 없다(`ref` {null, null}). BFF에서 `cmp.rows[].avg` · `cmp.avgRef`를 지웠다.
+    - 화면: 평균 마름모 · 범례 · 표 열을 지웠다. 비교 브랜드가 없으면 차이 칸은 '—'이고 각주에 '비교 브랜드를 고르면 차이가 보입니다'를 붙인다. CSV는 평균 열 대신 '기준 브랜드' 열이다. 문구는 `type.info`를 고쳤고, 새 키 `type.colRef` · `noCompare` · `rowAriaOwn`을 더했고, `type.avg`를 지웠다.
+    - 발견: typeTrail · typeLead는 비교 브랜드가 있을 때만 생긴다(평균 대체 없음). typeLead 문장은 비교 브랜드를 적는다: '모든 유형에서 비교 브랜드보다 앞섬 — {유형}에서 {브랜드}와 차이가 가장 작음(+…pp)'. typeTrail은 원래 브랜드를 적었다. `find.competitorAvg`를 지웠고, `summary.how`는 '유형별 비교 브랜드와의 격차'다.
+    - 계획 밖으로 같이 고친 것: 가장 작은 유형 차이가 반올림해 0.0이면 '앞섬'이 아니라 '{유형}에서 {브랜드}와 같음 — 뒤지는 유형 없음'이다(tone info, `params.dir` same, 새 키 `find.typeLead.titleSame`). 발견 문장을 다시 쓰면서 W6 규칙(반올림해 0이면 방향 없음)과 11단계 ACR leak의 'same'에 맞췄다. 재현 시험은 고치기 전에 실패했다.
+    - 실제 화면: Global '모든 유형에서 비교 브랜드보다 앞섬 — 최종 선택에서 Toyota와 차이가 가장 작음(+4.7pp)', Website '… 비교에서 Tata와 차이가 가장 작음(+81.2pp)'. 자동 비교 브랜드를 빼면 유형 발견이 빠지고 다음 순서의 발견(가장 큰 변화)이 들어온다.
+  - **15-3 ACR.** '브랜드 평균선'(k = 표시된 브랜드의 ΣTop1 ACR ÷ Σ후보군 포함율)과 '평균선 대비' 편차(`dev` · `devCsv`)를 뺐다. 지도는 브랜드마다 두 Gold 값의 점만 그린다(선 · 위아래 캡션 없음). 공용 `RnScatterChart`(`components/renewal-ui/charts.tsx`, ACR만 씀)에서 `k` · `lineLabel` · `above` · `below`와 기준선을 지웠다. 툴팁 · 표 보기 · CSV에서 '평균선 대비'를 뺐다. 문구는 `map.info` · `chip`('브랜드 {n}개') · `aria` · `tip`을 고쳤고, `map.line` · `above` · `below` · `colDev`와 쓰지 않게 된 `ppTxt`를 지웠다.
+  - **15-4 AI Conversion.** 전환 변화 분해(유입 규모 = (S₁−S₀)×C₀/S₀, 세션당 전환 = C₁−S₁×C₀/S₀)를 뺐다.
+    - 카드 'AI 유입 세션 · 세션당 전환'은 AI 유입 세션 · 세션 100회당 전환 · AI 유입 전환을 직전 기간 · 이번 기간 · 증감으로 나란히 보인다. 수는 % 증감도 보인다. 행마다 두 막대는 그 행 안의 눈금이다.
+    - BFF: `decomp` → `factors` {sessions, per100, conv: {prev, cur, d, pct}, engines, rest}. 발견 change의 detail은 '세션 100회당 전환 {p0}건 → {p1}건'(`per100Prev` · `per100`, 문구 `detailRate`)이다.
+    - 엔진별 세션 변화(엔진마다 두 기간 값의 차)와 '그 외' 한 줄은 그대로 둔다. 기준값 없이 두 값의 차를 보일 뿐이다. 제목만 '— 엔진별'(몫 → 엔진별)로 바꿨다.
+    - 입력은 12단계 규칙 그대로다. 빠진 날이 있으면 합계가 모름이라 `factors`가 null이다. 직전 세션이 0이면 세션당 전환의 직전 값과 그 증감만 없다(분해 때는 카드 전체가 비었다).
+    - 문구: `change.*`(제목 · 읽는 법 · take · cols · rows · sessionsTitle · noPrev · noTotals)와 `summary.how`를 고쳤다. `change.basis` · `change.steps.*` · `findings.change.detailSplit`은 지웠다. 렌더 fixture(`conv-body.fixture.json`)를 다시 만들었다.
+  - **함께 할 일(당사 순위 격차 변화).** Mention · ACR standing의 격차 변화가 반올림해 0.0이면 `params.widened` = "same"이고, 화면은 '직전 회차(기간) 대비 격차 변화 없음'이다. 새 키는 Mention `find.standingSame` · `standingSamePeriod`, ACR `find.standing.detailSame`이다. 전에는 Mention이 '좁혀졌습니다', ACR(뒤짐)이 '벌어졌습니다'로 읽혔다. 녹음된 golden에는 이런 경우가 없다.
+  - **남긴 것.** 엔진별 '당사 vs 경쟁사 평균'(레거시 KPI: `engine_rows` `avg`, 원본 `mention_view` `competitorAvgPct`)과 그 발견(engine)은 그대로다.
+  - **문구.** `renewal.mention` · `renewal.acr` · `renewal.conversion` 키는 `messages/units`에 없다(확인). 지운 키는 지우기 전에 쓰는 곳이 없는지 grep했다. `i18n/request.test.ts`를 통과했다.
+  - **golden.** 59개 파일이다(README 'Deliberate changes' 2026-10-31 step 15).
+    - ACR 35개는 `k` · `dev` · `devCsv`만 빠졌다.
+    - Mention은 번들 18개와 함수 case 6개다.
+    - `rn-fn-findings`는 녹음된 유형 행(입력)을 지금 `type_compare_rows`가 주는 모양으로 바꿨다(121개 호출 중 106개). 출력은 16개가 바뀌었다. 평균을 기준으로 한 유형 발견 14개가 빠졌고, 0.0 동점 2개는 '같음'이 됐다.
+    - live 숫자는 바뀌지 않는다.
+  - **원본 대조.** 원본에 없던 것이라 숫자 대조는 없다. 원본 화면은 바뀐 BFF 함수를 쓰지 않아 열지 않았다.
+  - **화면 확인(1920×915, 관리자).** 리뉴얼 Global · Website Mention, ACR, Global · Website AI Conversion을 열었다. 오류 화면 · 5xx · 페이지 오류가 없다.
+    - Mention: 히어로 범례에 '경쟁사 평균'이 없다. 자동 비교 브랜드(Global Toyota · Website Tata)를 빼면 히어로는 당사 선 하나이고, 유형 카드는 '—'와 안내다.
+    - ACR: 지도는 점 12개, 점선 0개, 칩 '브랜드 12개'다.
+    - AI Conversion: 로컬 DB에 GA4 속성이 없어 둘 다 '연결된 GA4 속성이 없습니다'다. 새 카드는 render 시험(BFF 출력 fixture)으로 봤다.
+  - **다음 단계가 알 것.** Mention 유형 비교에서 비교 브랜드가 여럿이면 유형마다 기준 브랜드가 다를 수 있다(유형마다 가장 앞선 비교 브랜드, 원래 규칙). 16단계 문서 정리 후보: `docs/catalog/global-renewal-catalog.html`의 ACR 지도 설명('평균선 아래 = …')은 옛 화면 기준이다(읽을 파일 밖이라 고치지 않음).
+
 ## 진행 기록
 
 - 2026-10-31 — 계획을 작성했다. 근거는 같은 날 중간점검이다(코드 읽기 다섯 갈래: Overview · Mention · Citation · Prompts · AI Funnel, 큰 지적은 코드로 다시 확인). 처음에는 병렬 세션으로 나누려 했으나 사용자가 한 세션이 순서대로 하는 방식으로 바꿨다. 다음은 1단계다.
@@ -848,3 +877,4 @@ Website 인용 도달 Δ도 값 출처(발행 / 실시간)가 다르면 숨긴�
 - 2026-10-31 — 12단계: AI Conversion에서 수집기가 활성 속성의 하루를 빠뜨리면 합계뿐 아니라 그 조각(엔진 · 채널 · 세그먼트 전환 · 입구 페이지 · 이벤트 수, 그 속성의 시장 전환)도 모름이다. 화면의 시장 비중 · 7일 합도 부분합을 내지 않고, Hero가 빠진 속성 · 날 수를 안내한다(12-1, 리더 `missing`, 원본 표도 같은 리더). 채널 카드 합계 행은 '채널 합계'로 이름을 나눴다(Hero '사이트 전체' = report 5, 12-2). '시장 미연결'은 '수집 중지'이고, 중지 속성은 시장 카드 목록 · 칩 total에서 빠져 측정 범위 발견과 같은 total이다(12-3). 결과 없음 안내의 국가 선택지 설명을 GA4 속성 시장으로 고쳤다(12-4, visibility 문구는 맞아 그대로). 재현 시험은 고치기 전에 실패했다. golden 없음, 프런트 fixture 재생성. 시험: BFF 34개 모듈 609개(live 8개 포함), 프런트 Conversion · Website Conversion · i18n 3개 파일 20개 · typecheck · lint, 리뉴얼 두 화면 · 원본 실제 화면. 다음은 13단계다.
 - 2026-10-31 — 13단계: Global prompts의 브랜드 포함 여부 · 측정 종류는 Gold 값만 쓴다. 브랜드로 정하던 규칙과 '단발' 기본값을 지웠고, 빈 값은 '—'이며, 범위에 빈 값 행이 있으면 필터에 '값 없음'이 생긴다(13-1 · 13-2, 원본도, live 빈 값 0). Gold 리더가 범위 계정의 국가를 원본 API의 대상 시장 규칙(B1)으로 건다(13-3, live Genesis 중동 1,208 → 302). 열람 범위 pill이 브랜드 · 권역 · 국가 전체를 연다(권역 계정은 권역 국가). Website Prompts 브랜드 축이 화면 선택지를 쓴다(13-4, W0 `brandOptions`). 재현 시험은 고치기 전에 실패했다. golden 변경 없음. 시험: BFF 34개 모듈(live 8개 포함), 프런트 관련 13개 파일 147개 · i18n · typecheck · lint, 권역 계정 · 관리자 실제 화면(리뉴얼 · 원본 Prompts 4화면). 다음은 14단계다.
 - 2026-10-31 — 14단계: 기간 비교 억제를 ⛔K 추천안대로 줄였다. Gold 리더 `kpi/compare`는 비교할 값이 없을 때(unsupported · no_prev · no_data)만 억제하고, 수집분 70% · 시작 유예(start_window · start_month)는 뺐다(14-1, 원본 · 리뉴얼 같이). 화면 쪽 억제 이식(`_period.py`)과 세 사유 문장, 쓰지 않던 적용일 상수 · `before_epoch` 분기도 지웠다. 적용일 게이트는 live 리더에 없어 재현되지 않았다. Website 인용 도달 Δ는 값 출처가 달라도 보이고 각주는 그대로다. 명세 K-2와 계약 enum을 고쳤다(14-2). 재현 시험은 고치기 전에 실패했다. golden은 34개 파일이다(녹음 답을 지금 리더 답으로, 지운 함수 case 9개). 실데이터에서 Website 07-15~08-14(예전 start_window)와 07-20~07-26 주(예전 missing_share)에 Δ가 새로 보인다. Global에는 풀리는 조건이 없다(14-3). 프런트 세 문구 키는 레거시 `lib/kpi`가 써서 남겼다(16단계 후보). 시험: BFF 34개 모듈 632개 + live 8개, 프런트 i18n · delta-chip · Overview render 3개 파일 60개, 원본 · 리뉴얼 12화면. 다음은 15단계다.
+- 2026-10-31 — 15단계: ⛔L 추천안대로 HUB가 만든 기준선 · 분해를 뺐다. Mention 히어로의 '경쟁사 평균' 추이선과 유형별 경쟁사 평균(상위 5)을 지웠고, 유형 비교 · 발견은 비교 브랜드 기준이다(비교 브랜드가 없으면 차이 · 발견 없음, 0.0 차이는 '같음'). ACR 지도는 '브랜드 평균선'과 '평균선 대비' 없이 점만 그린다(공용 `RnScatterChart`의 기준선 제거). AI Conversion은 전환 변화 분해 대신 AI 유입 세션 · 세션 100회당 전환 · 전환을 직전 · 이번 · 증감으로 나란히 보인다. 함께 할 일로 Mention · ACR 당사 순위 격차 변화가 반올림해 0.0이면 '변화 없음'이다. 엔진별 경쟁사 평균(레거시)은 남겼다. 재현 시험은 고치기 전에 실패했다(BFF 8개 · render 7개). golden 59개 파일 의도 변경, Conversion · ACR 렌더 fixture 재생성. 시험: BFF 34개 모듈 전부 + live 8개, 프런트 관련 15개 파일 111개 · i18n · typecheck · lint, 리뉴얼 5화면 실제 확인. 다음은 16단계다.

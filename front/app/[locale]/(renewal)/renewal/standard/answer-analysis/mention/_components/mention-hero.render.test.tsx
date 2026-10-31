@@ -21,7 +21,7 @@ vi.mock("next/navigation", () => ({
 
 const { MentionProvider } = await import("./mention-context");
 const { Board, HeroValue, RateHero, Types } = await import("./mention-rate");
-const { PerAnswerLine } = await import("./mention-body");
+const { PerAnswerLine, Summary } = await import("./mention-body");
 const { FavorHeroCard } = await import("./mention-favor");
 const { RankHeroCard } = await import("./mention-rank");
 const { RnMentionPageProvider } = await import("./mention-tabs");
@@ -125,12 +125,12 @@ const ctx = {
   openDrawer: () => {},
 };
 
-const render = (node: ReactNode, over: { tables?: string[]; input?: object } = {}) => {
+const render = (node: ReactNode, over: { tables?: string[]; input?: object; pick?: { auto: boolean; brands: string[] } } = {}) => {
   const inp = { ...(input as object), ...over.input } as never;
   return renderToStaticMarkup(
     <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
       <RnMentionPageProvider input={inp}>
-        <MentionProvider value={{ ...ctx, input: inp, tables: new Set(over.tables ?? []) }}>{node}</MentionProvider>
+        <MentionProvider value={{ ...ctx, input: inp, tables: new Set(over.tables ?? []), ...(over.pick ? { pick: over.pick } : {}) }}>{node}</MentionProvider>
       </RnMentionPageProvider>
     </NextIntlClientProvider>,
   );
@@ -209,6 +209,53 @@ describe("renewal Mention heroes", () => {
       ["definition", true],
     ]);
     expect(html).toContain(ko.answerAnalysis.mentions.breakdown.drilldownHint);
+  });
+
+  // renewal audit 15 (⛔L, HUB rule 5): no HUB-made baseline. Without a compare brand the hero draws 당사 alone (a payload
+  // that still carried the old competitor average is not drawn), and the type card compares with the picked brands only
+  it("with no compare brand the hero trend draws 당사 alone, no competitor average", () => {
+    const old = { ...rateHero, exposure: { ...rateHero.exposure, trend: { ...rateHero.exposure.trend, average: AXIS.map(() => 30) } } };
+    const over = { input: { rateHero: settled(old) }, pick: { auto: false, brands: [] } };
+    expect(render(<RateHero metric="exposure" />, over)).not.toContain("경쟁사 평균");
+    const rows = cells(render(<RateHero metric="exposure" />, { ...over, tables: ["hero-exposure"] }));
+    expect(rows.map((r) => r[0])).toEqual(["", "HMG", "브랜드 언급 답변 수", "모니터링 답변 수"]);
+  });
+
+  it("the type card compares with the picked brands only: no competitor average, no gap without a pick", () => {
+    const cell = (value: number, own: number) => ({ value, gap: own - value, lo: Math.min(own, value), hi: Math.max(own, value) });
+    // the old payload's average fields (rows[].avg, avgRef) are not drawn
+    const cmp = { covered: ["BMW"], rows: [{ type: "final_choice", own: 30, avg: 11.7 }], avgRef: [cell(11.7, 30)], dots: [[cell(20, 30)]], options: { "0": { refs: [[]], top: 40 }, "1": { refs: [["BMW"]], top: 40 } } };
+    const types = { ...rateTypes, cmp } as unknown as RnRateTypesVM;
+    const none = render(<Types metric="exposure" />, { input: { rateTypes: settled(types) }, pick: { auto: false, brands: [] } });
+    expect(none).not.toContain("경쟁사 평균");
+    expect(none).not.toContain("vs ");
+    expect(none).toContain("비교 브랜드를 고르면 차이가 보입니다");
+    expect(none).toContain("최종 선택: 당사 30.0%");
+    const bmw = render(<Types metric="exposure" />, { input: { rateTypes: settled(types) } });
+    expect(bmw).toContain("vs BMW");
+    expect(bmw).toContain("+10.0pp");
+    expect(bmw).not.toContain("경쟁사 평균");
+  });
+
+  // renewal audit 15 (W6): a gap change or a type gap shown as 0.0 has no direction
+  it("the summary names a gap change of 0.0 as no change, and a type gap of 0.0 as level with the compare brand", () => {
+    const s = {
+      asOf: "2026-10-05",
+      exp: { rank: 2, pct: 40, delta: 0.3 },
+      sov: { rank: 2, pct: 20, delta: null },
+      fav: 50,
+      pos: 2.4,
+      covered: ["BMW"],
+      fixed: [{ kind: "standingTrail", tone: "warn", pri: 6, target: "sec-comp", kpi: "exposure", brand: "BMW", params: { rank: 2, rival: "BMW", gap: 10, own: 40, move: 0, widened: "same" } }],
+      typeFindings: [{ kind: "typeLead", tone: "info", pri: 4, target: "sec-mix", kpi: "exposure", params: { type: "final_choice", gap: 0, own: 30, dir: "same" }, refCands: ["BMW"] }],
+      options: { "0": { type: null, order: [0] }, "1": { type: 0, order: [0, -1] } },
+      monthLine: null,
+    } as unknown as RnSummaryVM;
+    const html = render(<Summary />, { input: { summary: settled(s) } });
+    expect(html).toContain("직전 회차 대비 격차 변화 없음");
+    expect(html).not.toContain("좁혀졌습니다");
+    expect(html).toContain("최종 선택에서 BMW와 같음 — 뒤지는 유형 없음");
+    expect(html).not.toContain("모든 유형에서");
   });
 
   // renewal audit 5-2: a calendar month shows the 답변당 언급 수 line, as the original did

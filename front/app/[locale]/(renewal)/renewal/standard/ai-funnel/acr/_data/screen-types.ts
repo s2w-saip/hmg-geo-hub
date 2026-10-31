@@ -41,11 +41,9 @@ export interface AcrBrandRow extends AcrBrand {
   canCompare: boolean;
   /** Top1 bar width (% of the largest Top1 on the board) */
   top1Bar: number;
-  /** 후보 → 최종 선택 map: coverage (x), Top1 (y), the distance to the average line and its CSV value */
+  /** 후보 → 최종 선택 map: coverage (x) and Top1 (y), a dot without a reference line (2026-10-31 ⛔L) */
   mapX: number;
   mapY: number;
-  dev: number;
-  devCsv: number;
 }
 
 export type AcrBattleView = "all" | "notown" | "split";
@@ -158,8 +156,6 @@ export interface RnAcrView {
   leader: AcrBrand | null;
   gap: number | null;
   standingN: number | null;
-  /** 지도 평균선 slope */
-  k: number;
   engines: string[];
   /** per engine: own wins, prompts nobody was picked in (or not measured on it), wins per winner brand (null = nobody
    * chosen), prompts another brand won (prompts − own − none) */

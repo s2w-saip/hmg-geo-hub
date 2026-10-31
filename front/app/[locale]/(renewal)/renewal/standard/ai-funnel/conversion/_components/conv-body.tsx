@@ -201,8 +201,8 @@ function findingItems(view: ConvView, t: T, fmt: ConvFmt): RnFinding[] {
         return { key: f.code, tone: f.tone, tag: t("findings.coverage.tag"), title: t("findings.coverage.title", { active: f.active, total: f.total }), detail: t("findings.coverage.detail") };
       case "change":
         return { key: f.code, tone: f.tone, tag: t("findings.change.tag"), title: t("findings.change.title", { chg: chg(f.sessions), days: view.days.length }),
-          detail: f.dConv != null && f.volume != null && f.rate != null
-            ? t("findings.change.detailSplit", { chg: chg(f.conv), d: fmt.signed(f.dConv), volume: fmt.gap(f.volume), rate: fmt.gap(f.rate) })
+          detail: f.per100Prev != null && f.per100 != null
+            ? t("findings.change.detailRate", { chg: chg(f.conv), p0: fmt.one(f.per100Prev), p1: fmt.one(f.per100) })
             : t("findings.change.detail", { chg: chg(f.conv) }) };
       case "channel":
         return { key: f.code, tone: f.tone, tag: t("findings.channel.tag"), title: t("findings.channel.title", { rank: f.rank, n: f.n, share: fmt.pct(f.share, 2) }),

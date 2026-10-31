@@ -610,6 +610,43 @@ class FindingsInOneOrder(unittest.TestCase):
         self.assertEqual([(x["kind"], x["tone"], x["params"]["d"]) for x in down], [("mover", "warn", -10.0)])
 
 
+class StandingGapChange(unittest.TestCase):
+    """The standing finding's gap change rounded to 0.0 is no change (W6's rule; renewal audit 15): it read
+    'widened' or 'narrowed' by the sign test alone."""
+
+    BASE = dict(own=own_total(20, 6, ["Hyundai"]), brands=[rival("Toyota", 30, 6), ours("Hyundai", 20, 6)], battle=[],
+                totals={"prompt_runs": 10, "prompts": 2, "iterations": 100, "engines": ["chatgpt"], "catalog_acr_prompts": 2})
+
+    def standing(self, toyota, hyundai, own):
+        f = findings_of(trend=round_trend([{"Toyota": toyota[0], "Hyundai": hyundai[0]}, {"Toyota": toyota[1], "Hyundai": hyundai[1]}], own),
+                        **self.BASE)
+        return next(x for x in f if x["kind"] == "standing")["params"]
+
+    def test_a_change_shown_as_zero_is_no_change(self):
+        p = self.standing((200, 300), (100, 200), [100, 200])  # both +10.0pp
+        self.assertEqual((p["first"], p["move"], p["widened"]), (0, 0, "same"))
+
+    def test_a_change_keeps_its_direction(self):
+        self.assertEqual(self.standing((200, 300), (100, 150), [100, 150])["widened"], 1)  # 당사 +5, Toyota +10: wider
+        self.assertEqual(self.standing((200, 250), (100, 200), [100, 200])["widened"], 0)
+
+
+class NoAverageLine(unittest.TestCase):
+    """2026-10-31 ⛔L (renewal audit 15, HUB rule 5): the 후보 → 최종 선택 map drew a 'brand average line' (k = ΣTop1 ACR ÷
+    Σ후보군 포함율 of the brands shown) and named each brand's distance to it ('평균선 대비'), a baseline the HUB made.
+    The map shows each brand's two Gold values as a dot, without a line."""
+
+    def test_the_view_has_no_line_and_no_distance(self):
+        get, _ = fake_api()
+        with mock.patch("bff.api.get", get):
+            v = run(acr.renewal(QueryParams("")))["body"]["view"]
+        self.assertNotIn("k", v)
+        self.assertTrue(v["brands"])
+        for b in v["brands"]:
+            self.assertFalse({"dev", "devCsv"} & b.keys(), b["brand"])
+            self.assertEqual((b["mapX"], b["mapY"]), (b["coverage"], b["choiceShare"]))
+
+
 class LeakIsTheClosestShortlistRival(unittest.TestCase):
     """11-1: '후보군이 비슷한' was a cut-off (6pp apart, then −0.5pp); the finding now names the rival whose 후보군 포함율 is
     closest to an own brand's and their Top1 ACR difference, the smallest of the own brands (a gap shown as 0.0 is the

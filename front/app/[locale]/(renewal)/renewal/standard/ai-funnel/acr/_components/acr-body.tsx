@@ -34,7 +34,7 @@ import {
 } from "@/components/renewal-ui";
 import { useRnFilterReset } from "@/app/[locale]/(renewal)/renewal/_components/overview-filters";
 import type { AcrFinding, RnAcrInput, RnAcrView } from "../_data/screen-types";
-import { AcrCardActions, AcrProvider, COMPARE_COLORS, OWN_COLOR, deltaTxt, makeColorOf, pctTxt, ppTxt, useAcr, type AcrCtx } from "./acr-context";
+import { AcrCardActions, AcrProvider, COMPARE_COLORS, OWN_COLOR, deltaTxt, makeColorOf, pctTxt, useAcr, type AcrCtx } from "./acr-context";
 import { AcrBattle, AcrDistribution, AcrModels } from "./acr-detail";
 import { AcrConversion, AcrDuels } from "./acr-funnel";
 
@@ -268,7 +268,13 @@ function findingCopy(
   switch (f.kind) {
     case "standing":
       title = t(p.first ? "find.standing.titleFirst" : "find.standing.titleBehind", { rival: String(p.rival), gap: num(p.gap) });
-      detail = p.move !== "" ? t(p.widened ? "find.standing.detailWidened" : "find.standing.detailNarrowed", { move: num(p.move) }) : t("find.standing.detail", { own: num(p.own), rival: String(p.rival), rivalShare: num(p.rivalShare) });
+      // a gap change shown as 0.0 is no change (W6, renewal audit 15)
+      detail =
+        p.move === ""
+          ? t("find.standing.detail", { own: num(p.own), rival: String(p.rival), rivalShare: num(p.rivalShare) })
+          : p.widened === "same"
+            ? t("find.standing.detailSame")
+            : t(p.widened ? "find.standing.detailWidened" : "find.standing.detailNarrowed", { move: num(p.move) });
       break;
     case "leak":
       // the rival with the closest 후보군 포함율 and the Top1 ACR difference, either way (renewal audit 11-1)
@@ -629,7 +635,7 @@ function AcrBoard() {
   );
 }
 
-// ── 후보 → 최종 선택 (map with the brand average line) ─────────────────────────
+// ── 후보 → 최종 선택 (each brand's two values as a dot; the brand average line was a HUB-made baseline, ⛔L) ──
 
 function AcrMap() {
   const { view, compare, colorOf, lit, hover, tables } = useAcr();
@@ -642,12 +648,10 @@ function AcrMap() {
     color: colorOf(b.brand),
     own: b.own,
     emph: b.own || compare.includes(b.brand),
-    tip: t("map.tip", { brand: b.brand, x: pctTxt(b.coverage), y: pctTxt(b.choiceShare), dev: ppTxt(b.dev) }),
-    dev: b.dev,
-    devCsv: b.devCsv,
+    tip: t("map.tip", { brand: b.brand, x: pctTxt(b.coverage), y: pctTxt(b.choiceShare) }),
   }));
   const tableOn = tables.has("acr-map");
-  const csv = () => ({ name: "acr-shortlist-pick", rows: [[t("board.colBrand"), t("board.colCoverage"), t("board.colTop1"), t("map.colDev")], ...points.map((p) => [p.name, p.x, p.y, p.devCsv])] });
+  const csv = () => ({ name: "acr-shortlist-pick", rows: [[t("board.colBrand"), t("board.colCoverage"), t("board.colTop1")], ...points.map((p) => [p.name, p.x, p.y])] });
   return (
     <RnCard aria-label={t("map.title")}>
       <RnCardHead
@@ -662,18 +666,14 @@ function AcrMap() {
       />
       <div className="px-6 pb-5 [.rn-dense_&]:px-4.5 [.rn-dense_&]:pb-3.5">
         {tableOn ? (
-          <TwinTable head={csv().rows[0]} rows={points.map((p) => [p.name, pctTxt(p.x), pctTxt(p.y), ppTxt(p.dev)])} />
+          <TwinTable head={csv().rows[0]} rows={points.map((p) => [p.name, pctTxt(p.x), pctTxt(p.y)])} />
         ) : (
           <RnScatterChart
             points={points}
-            k={view.k}
             height={320}
             ariaLabel={t("map.aria")}
             xTitle={t("map.x")}
             yTitle={t("map.y")}
-            lineLabel={t("map.line")}
-            above={t("map.above")}
-            below={t("map.below")}
             pct={(v) => `${v.toFixed(1)}%`}
             lit={lit}
             onHover={hover}

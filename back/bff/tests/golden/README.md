@@ -336,6 +336,30 @@ Deliberate changes (what the screen shows changed by decision):
     page never drew (당사 wins).
   - 11-4 (additive): `boardOrders` adds `choiceCount`, `appearanceCount` (descending, ties by rank) and `brand`
     (ascending, ko collation), the original brand table's sorts. Every measured case (35).
+- 2026-10-31 renewal audit step 15 (⛔L, HUB rule 5: the HUB makes no baseline of its own). The renewal pages drop the
+  baselines they made; the compare brands' own values are shown instead. 59 files, outputs only except one:
+  - `acr/renewal` (35 measured cases: `fix-rn-hand`, 31 `fix-rn-rNN`, `rn-default`, `rn-hmg-us`, `rn-kia-period`): the
+    map's 'brand average line' `view.k` (ΣTop1 ACR ÷ Σ후보군 포함율 of the brands shown) and each brand's `dev` · `devCsv`
+    (the distance to it) are gone; the map draws each brand's two values as a dot (`mapX`, `mapY`, unchanged). No other
+    key changes. The standing finding's `widened` is "same" when the gap change rounds to 0.0 (it read widened or
+    narrowed); no recorded case has such a change.
+  - Mention, the hero: `rate_hero_payload` · `hero_trend_series` lose `trend.average` (the top-10 rivals' mean per round
+    over whichever had a value). `rn-fn-hero-trend-series` (726 calls), `rn-fn-rate-hero` (242) and the 18 bundles
+    (`rn-fix-*` 7, `rn-live-*` 11, key `rn-rate-hero`).
+  - Mention, the type card: `type_compare_rows` rows lose `avg` (the top-5 rivals' mean), and a type without a compare
+    brand with a value has no reference (`ref` {null, null}) and no gap (it fell back to the mean); `rate_types_payload`
+    loses `cmp.avgRef` and `cmp.rows[].avg`, and `options[pick].top` is the axis over 당사 and the picks only.
+    `rn-fn-type-compare-rows` (318 of 363), `rn-fn-rate-types` (121), the bundles' `rn-rate-types`.
+  - Mention, the summary: a type finding needs a compare brand (the pick without one, `options["0"]`, has none; a pick
+    whose brands have no value on a type does not fall back), and a smallest type gap of 0.0 is level: tone info and
+    `params.dir` "same" (it was 'ahead', tone good). The standing finding's `widened` is "same" when the gap change
+    rounds to 0.0; no recorded case has one. `rn-fn-summary` (80 of 121), the bundles' `rn-summary` (13 of 18:
+    `typeFindings`, `options[].type` · `order`). `rn-fn-findings`: the recorded type rows (args) are rewritten to the
+    rows `type_compare_rows` gives now (no `avg`; a row whose reference was the mean has none: `ref` {null, null}, `gap`
+    null; 106 of 121 calls), and 16 outputs change: 14 lose their type finding (its reference was the mean), 2 are level
+    (Mercedes-Benz, BMW at 0.0: info, `dir` same).
+  - Kept: the engine cards' 당사 vs 경쟁사 평균 (`engine_rows` `avg`, the original page's, a legacy KPI) and every live
+    number. AI Conversion has no golden case (its render fixture is regenerated).
 - 2026-10-31 renewal audit step 14 (period compare suppression, ⛔K; HUB rule 5: a value that jumps because the
   measured range changed is shown, not hidden or warned about). The reader (`kpi/compare`) suppresses only a comparison
   without a value to compare (`unsupported` · `no_prev` · `no_data`); `missing_share` (under 70 % of the planned

@@ -58,7 +58,6 @@ export function makeColorOf(compare: readonly string[], isOwn: (b: string) => bo
 }
 
 export const pctTxt = (v: number | null | undefined) => (v == null ? "—" : `${v.toFixed(1)}%`);
-export const ppTxt = (v: number) => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}pp`;
 export const deltaTxt = (v: number | null | undefined) => (v == null ? "—" : Math.abs(v) < 0.05 ? "0.0pp" : `${v > 0 ? "▲" : "▼"}${Math.abs(v).toFixed(1)}pp`);
 
 /** Card actions: table twin toggle (when `tableId`) + ⋯ with CSV export (not while `csv` is null: nothing loaded yet)

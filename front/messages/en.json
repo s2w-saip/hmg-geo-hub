@@ -4783,7 +4783,7 @@
       "summary": {
         "title": "This period",
         "howTitle": "How it is made",
-        "how": "The six figures come straight from the GA4 session and conversion rows and the period users (formula under each ⓘ). The small lines under conversions and sessions are 7-day sums. The findings restate this page's numbers in one fixed order — the AI vs general gap, measured properties, change vs the previous period (with the conversion change split), channel rank, engines, the same landing page, the top landing pages' share, device, session share — the first four that have values. No threshold filters them, and no significance or 'meaningful change' is judged.",
+        "how": "The six figures come straight from the GA4 session and conversion rows and the period users (formula under each ⓘ). The small lines under conversions and sessions are 7-day sums. The findings restate this page's numbers in one fixed order — the AI vs general gap, measured properties, change vs the previous period (sessions · conversions per session), channel rank, engines, the same landing page, the top landing pages' share, device, session share — the first four that have values. No threshold filters them, and no significance or 'meaningful change' is judged.",
         "chipPrev": "{range} · vs previous {days} days",
         "usersFilter": "With an engine · device · visitor type filter there are no GA4 period users (the rates' denominator), so the rates and the gap are not computed. Sessions and conversions follow the filters.",
         "usersWindow": "There are no GA4 period users for this period, so the rates and the gap are not computed. Period users exist only for the pre-aggregated periods (last 7 · 28 · 90 days).",
@@ -4827,7 +4827,7 @@
           "tag": "vs previous",
           "title": "AI sessions {chg} · vs previous {days} days",
           "detail": "AI conversions {chg}",
-          "detailSplit": "AI conversions {chg} — {d} conversions = volume {volume} + per-session {rate}"
+          "detailRate": "AI conversions {chg} · conversions per 100 sessions {p0} → {p1}"
         },
         "engine": {
           "tag": "AI engines",
@@ -4993,23 +4993,26 @@
         "note": "Tick = all channels' key events per 100 sessions. Channels compare on GA4 key events, the same measure for every property (the summary's conversions follow each property's basis)."
       },
       "change": {
-        "title": "AI conversion change, split",
-        "howTitle": "How it is split",
-        "info": "The change in AI conversions vs the previous period of the same length, in two parts. Volume = (sessions now − before) × conversions per session before; per-session = conversions now − sessions now × conversions per session before. The parts add up to the actual change exactly (no estimate). Below, the AI session change split into each engine's change; engines with values in both periods show on their own, the rest is one line.",
+        "title": "AI sessions · conversions per session",
+        "howTitle": "How to read",
+        "info": "AI sessions, conversions per 100 sessions and the AI conversions they make (= sessions × conversions per session), for the previous period of the same length and this one, side by side. The conversion change is not split into the two factors’ parts — the parts depend on which period is taken as the base. Below, the AI session change by engine; engines with values in both periods show on their own, the rest is one line.",
         "chip": "vs previous {days} days",
-        "take": "{d} conversions = volume {volume} + per-session {rate}",
-        "basis": "AI sessions {s0} → {s1} · conversions per 100 sessions {p0} → {p1}",
+        "take": "AI sessions {s} · conversions per 100 sessions {p} · AI conversions {c}",
+        "cols": {
+          "factor": "Item",
+          "prev": "Previous",
+          "cur": "This period",
+          "d": "Change"
+        },
+        "rows": {
+          "sessions": "AI sessions",
+          "per100": "Conversions per 100 sessions",
+          "conv": "AI conversions"
+        },
         "sessionsTitle": "AI session change {d} — by engine",
         "rest": "Other (no engine · one period only)",
-        "noPrev": "No data for the previous period of the same length, so no split.",
-        "noTotals": "Both periods need AI sessions and conversions for the split.",
-        "steps": {
-          "prev": "Previous conversions",
-          "volume": "Volume",
-          "rate": "Per-session",
-          "cur": "Conversions now",
-          "aria": "previous conversions {prev}, volume {volume}, per-session {rate}, conversions now {cur}"
-        }
+        "noPrev": "No data for the previous period of the same length, so no comparison.",
+        "noTotals": "Both periods need AI sessions and conversions for the comparison."
       },
       "segments": {
         "title": "Device · new/returning mix",
@@ -5135,6 +5138,7 @@
           "titleBehind": "Top1 ACR {gap}pp behind {rival}",
           "detailWidened": "The gap widened by {move}pp since the previous round",
           "detailNarrowed": "The gap narrowed by {move}pp since the previous round",
+          "detailSame": "No change in the gap since the previous round",
           "detail": "Us {own}% · {rival} {rivalShare}%"
         },
         "leak": {
@@ -5228,16 +5232,12 @@
       "map": {
         "title": "Shortlist → final pick",
         "infoLabel": "How to read",
-        "info": "x = shortlist rate, y = Top1 ACR. Dashed = the brand average line (Σ Top1 ACR ÷ Σ shortlist rate of the brands shown). Above it = picked more than brands shortlisted as often; below = picked less. The units differ (repetition · cell), so the line is a reference, not a conversion rate. No new data.",
-        "chip": "{n} brands · vs the average line",
+        "info": "x = shortlist rate, y = Top1 ACR, one dot per brand — further right = shortlisted more, higher = picked more. The units differ (repetition · cell), so y ÷ x is not a conversion rate. No new data.",
+        "chip": "{n} brands",
         "x": "Shortlist rate →",
         "y": "↑ Top1 ACR",
-        "line": "Brand average",
-        "above": "Above: picked more than average",
-        "below": "Below: picked less than average",
-        "aria": "Top1 ACR against the shortlist rate, with the brand average line",
-        "tip": "{brand} — shortlist rate {x} · Top1 ACR {y} · vs average {dev}",
-        "colDev": "vs average"
+        "aria": "Top1 ACR against the shortlist rate, one dot per brand",
+        "tip": "{brand} — shortlist rate {x} · Top1 ACR {y}"
       },
       "battle": {
         "title": "Picks by AI engine",
@@ -5602,7 +5602,7 @@
         "title": "This round at a glance",
         "titlePeriod": "Selected period at a glance",
         "howLabel": "How this is made",
-        "how": "The numbers of this page's cards restated (no new data): our standing and gap → the engine gap → the type gap → the negative-signal share → the competitor that moved most → the competitor whose mention rank rose most, the first four that have values. No threshold filters them and nothing is ranked by importance; the colour shows only the direction for us (ahead · behind, up · down).",
+        "how": "The numbers of this page's cards restated (no new data): our standing and gap → the engine gap → the type gap to the compare brands → the negative-signal share → the competitor that moved most → the competitor whose mention rank rose most, the first four that have values. No threshold filters them and nothing is ranked by importance; the colour shows only the direction for us (ahead · behind, up · down).",
         "chipSnapshot": "As of {date} · basis = every answer · vs previous round",
         "chipPeriod": "Selected period, cumulative · basis = every answer",
         "headline": "<b>{own}</b> — exposure <b>{expRank}</b> {exp}, share of voice <b>{sovRank}</b> {sov}, favorability {fav}, first position {pos}.",
@@ -5620,8 +5620,10 @@
         },
         "standingWidened": "The gap widened by {move}pp since the previous round",
         "standingNarrowed": "The gap narrowed by {move}pp since the previous round",
+        "standingSame": "No change in the gap since the previous round",
         "standingWidenedPeriod": "The gap widened by {move}pp since the previous period",
         "standingNarrowedPeriod": "The gap narrowed by {move}pp since the previous period",
+        "standingSamePeriod": "No change in the gap since the previous period",
         "standingDetail": "Us {own}",
         "typeTrail": {
           "tag": "Mention type",
@@ -5629,10 +5631,10 @@
         },
         "typeLead": {
           "tag": "Mention type",
-          "title": "Ahead in every type — closest in {type} ({gap})"
+          "title": "Ahead of the compare brands in every type — closest to {ref} in {type} ({gap})",
+          "titleSame": "Level with {ref} in {type} — behind in no type"
         },
         "typeDetail": "Share within the type · us {own}",
-        "competitorAvg": "competitor average (top 5)",
         "mover": {
           "tag": "Change",
           "title": "{brand} share {delta} — the biggest move"
@@ -5662,13 +5664,12 @@
         "trendNoteLabel": "Metric note",
         "basisLabel": "Basis",
         "basisAll": "This page counts every answer. When a prompt was measured more than once in a round on the same engine and market, the Overview cards count only its representative answer, so the same KPI can differ slightly.",
-        "trendNote": "{metric} (%) by brand — the weekly ranking under ‘Brand detail’ counts mentions, a different metric. With no compare brand the line is the average of the competitors with a trend.",
+        "trendNote": "{metric} (%) by brand — the weekly ranking under ‘Brand detail’ counts mentions, a different metric. With no compare brand only our line is drawn.",
         "standing": "<b>#{rank}</b> of {n} brands compared",
         "leadFirst": "+{gap}pp over #2 {brand}",
         "leadBehind": "{gap}pp vs #1 {brand}",
         "ownSum": "Us = {brands} combined",
         "asOf": "As of {date}",
-        "average": "Competitor average",
         "noTrend": "No trend data",
         "tooltip": "Round {x}",
         "trendAria": "{metric} trend of us and the compare brands",
@@ -5715,7 +5716,7 @@
         "titleExposure": "Exposure by mention type",
         "titleSov": "Share of voice by mention type",
         "infoLabel": "What this shows",
-        "info": "Not how often but how AI mentions us (plain mention · recommendation · comparison · definition · final choice), from the type signals the answer analyser puts on each brand mention. A type's exposure is the share of answers that mention us with that type, and an answer that names us in several types counts in each — so the types do not add up. Competition = each brand's share of the type's signals; the bar span = the gap between us and the reference (the leading compare brand, else the competitor average).",
+        "info": "Not how often but how AI mentions us (plain mention · recommendation · comparison · definition · final choice), from the type signals the answer analyser puts on each brand mention. A type's exposure is the share of answers that mention us with that type, and an answer that names us in several types counts in each — so the types do not add up. Competition = each brand's share of the type's signals; the bar span = the gap between us and the leading compare brand (no gap without a compare brand).",
         "chip": "Type signals",
         "sub": "From the top: final choice → recommendation → comparison → definition → mention.",
         "viewLabel": "View",
@@ -5725,7 +5726,6 @@
         "unitLabel": "Unit",
         "unitPct": "Rate",
         "unitCount": "Count",
-        "avg": "Competitor average (top {n})",
         "vs": "vs {brand}",
         "colType": "Type",
         "colOwnExposure": "Our exposure",
@@ -5735,6 +5735,7 @@
         "colDelta": "Change",
         "colTrend": "Trend",
         "colGap": "Gap",
+        "colRef": "Reference brand",
         "signals": "{n}",
         "footExposure": "Denominator = all answers — of 100 answers, how many named us with that type",
         "sparkTip": "{day} · {pct}",
@@ -5742,8 +5743,10 @@
         "colRoundAnswers": "Answers in the round",
         "footSov": "Denominator = our type signals (mix across types)",
         "footCompare": "Share within the type = each brand's part of the type's signals",
+        "noCompare": "Pick a compare brand to see the gap",
         "dotTip": "{type} · {who}\nShare within the type {value}",
         "rowAria": "{type}: us {own}, {ref} {refValue}",
+        "rowAriaOwn": "{type}: us {own}",
         "aria": "Share within each mention type"
       },
       "favor": {

@@ -5,7 +5,6 @@ import {
   CartesianGrid,
   ComposedChart,
   Line,
-  ReferenceLine,
   ResponsiveContainer,
   Scatter,
   ScatterChart,
@@ -281,40 +280,32 @@ export interface RnScatterPoint {
 }
 
 /**
- * Two measures of the same brands (x 0–100 %, y 0–max %), with a reference line through
- * the origin of slope `k` and two captions. Labels: emphasised points first, then the
- * tallest; a label goes right, else left, else (unemphasised) is dropped — never on a dot.
+ * Two measures of the same brands (x 0–100 %, y 0–max %), one dot per brand and no reference
+ * line (a line through the dots was a baseline the chart made, 2026-10-31 ⛔L). Labels:
+ * emphasised points first, then the tallest; a label goes right, else left, else
+ * (unemphasised) is dropped — never on a dot.
  */
 export function RnScatterChart({
   points,
-  k,
   height,
   ariaLabel,
   xTitle,
   yTitle,
-  lineLabel,
-  above,
-  below,
   pct,
   lit = [],
   onHover,
 }: {
   points: ReadonlyArray<RnScatterPoint>;
-  k: number;
   height: number;
   ariaLabel: string;
   xTitle: string;
   yTitle: string;
-  lineLabel: string;
-  above: string;
-  below: string;
   pct: (v: number) => string;
   lit?: ReadonlyArray<string>;
   onHover?: (key: string | null) => void;
 }) {
   const yTicks = rnNiceTicks(0, Math.max(1, ...points.map((p) => p.y)) * 1.15, 4);
   const top = yTicks[yTicks.length - 1];
-  const xEnd = k > 0 ? Math.min(100, top / k) : 100;
   return (
     <div role="img" aria-label={ariaLabel} className="w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
@@ -322,17 +313,8 @@ export function RnScatterChart({
           <CartesianGrid stroke="var(--color-rn-line)" />
           <XAxis type="number" dataKey="x" domain={[0, 100]} ticks={[0, 20, 40, 60, 80, 100]} tick={TICK} tickLine={false} axisLine={false} tickFormatter={(v: number) => `${v}%`} />
           <YAxis type="number" dataKey="y" width={44} domain={[0, top]} ticks={yTicks} tick={TICK} tickLine={false} axisLine={false} tickFormatter={(v: number) => `${v}%`} />
-          <ReferenceLine
-            segment={[
-              { x: 0, y: 0 },
-              { x: xEnd, y: k * xEnd },
-            ]}
-            stroke="var(--color-rn-faint)"
-            strokeDasharray="4 4"
-            ifOverflow="hidden"
-          />
           <Scatter data={points as RnScatterPoint[]} isAnimationActive={false} shape={() => <g />} />
-          <ScatterMarks points={points} top={top} k={k} xEnd={xEnd} xTitle={xTitle} yTitle={yTitle} lineLabel={lineLabel} above={above} below={below} pct={pct} lit={lit} onHover={onHover} />
+          <ScatterMarks points={points} top={top} xTitle={xTitle} yTitle={yTitle} pct={pct} lit={lit} onHover={onHover} />
         </ScatterChart>
       </ResponsiveContainer>
     </div>
@@ -342,25 +324,15 @@ export function RnScatterChart({
 function ScatterMarks({
   points,
   top,
-  k,
-  xEnd,
   xTitle,
   yTitle,
-  lineLabel,
-  above,
-  below,
   lit,
   onHover,
 }: {
   points: ReadonlyArray<RnScatterPoint>;
   top: number;
-  k: number;
-  xEnd: number;
   xTitle: string;
   yTitle: string;
-  lineLabel: string;
-  above: string;
-  below: string;
   pct: (v: number) => string;
   lit: ReadonlyArray<string>;
   onHover?: (key: string | null) => void;
@@ -396,15 +368,6 @@ function ScatterMarks({
       </text>
       <text x={plot.x + plot.width} y={plot.y + plot.height + 34} textAnchor="end" fontSize={12} fontWeight={600} fill="var(--color-rn-ink-2)">
         {xTitle}
-      </text>
-      <text x={X(xEnd) - 6} y={Y(k * xEnd) + (xEnd < 100 ? 14 : -8)} textAnchor="end" fontSize={11} fontWeight={600} fill="var(--color-rn-muted)">
-        {lineLabel}
-      </text>
-      <text x={plot.x + 8} y={plot.y + 14} fontSize={11} fontWeight={600} fill="var(--color-rn-muted)">
-        {above}
-      </text>
-      <text x={plot.x + plot.width - 6} y={plot.y + plot.height - 8} textAnchor="end" fontSize={11} fontWeight={600} fill="var(--color-rn-muted)">
-        {below}
       </text>
       {draw.map(({ d, i }) => {
         const l = labels.get(i);

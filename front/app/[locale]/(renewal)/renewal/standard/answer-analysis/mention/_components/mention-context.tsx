@@ -16,7 +16,6 @@ import { OWN_KEY, type RnDrawerBrand } from "../_data/screen-types";
 export const OWN_COLOR = "#002c5f";
 export const COMPARE_COLORS = ["#eb6834", "#1baf7a", "#6250d6"] as const;
 export const CONTEXT_COLOR = "#c9c3bb";
-export const AVG_COLOR = "#8a837b";
 
 /** A signal the drawer lists the prompts of: a sentiment, or a mention type (renewal audit 7-3, the original type
  *  breakdown's drilldown; the signal route takes both). */

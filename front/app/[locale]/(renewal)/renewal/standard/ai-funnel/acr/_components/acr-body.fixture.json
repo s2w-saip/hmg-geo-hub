@@ -46,9 +46,7 @@
      "canCompare": false,
      "top1Bar": 100.0,
      "mapX": 37.5,
-     "mapY": 35.0,
-     "dev": 5.0,
-     "devCsv": 5.0
+     "mapY": 35.0
     },
     {
      "brand": "Toyota",
@@ -69,9 +67,7 @@
      "canCompare": true,
      "top1Bar": 14.285714285714285,
      "mapX": 12.5,
-     "mapY": 5.0,
-     "dev": -5.0,
-     "devCsv": -5.0
+     "mapY": 5.0
     }
    ],
    "dates": [
@@ -98,7 +94,6 @@
     "coverage": 12.5,
     "isHmg": false
    },
-   "k": 0.8,
    "engines": [
     "chatgpt",
     "gemini"
@@ -599,9 +594,7 @@
      "canCompare": false,
      "top1Bar": 100.0,
      "mapX": 37.5,
-     "mapY": 35.0,
-     "dev": 5.0,
-     "devCsv": 5.0
+     "mapY": 35.0
     },
     {
      "brand": "Toyota",
@@ -622,9 +615,7 @@
      "canCompare": true,
      "top1Bar": 14.285714285714285,
      "mapX": 12.5,
-     "mapY": 5.0,
-     "dev": -5.0,
-     "devCsv": -5.0
+     "mapY": 5.0
     }
    ],
    "dates": [
@@ -651,7 +642,6 @@
     "coverage": 12.5,
     "isHmg": false
    },
-   "k": 0.8,
    "engines": [
     "chatgpt",
     "gemini"
