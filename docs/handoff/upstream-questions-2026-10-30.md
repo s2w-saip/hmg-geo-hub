@@ -355,11 +355,12 @@ HUB가 출처 카테고리 교정(override), 출처 분류 코드표, 시드·�
 - 기준은 live global release 603(최신 회차 2026-10-05)과 live website release 3647(card 3648, 최신 회차 2026-10-09)이다.
 - 근거 쿼리는 `renewal-audit.md` '확인 결과' 표(U1 ~ U12)에 있다.
 - D1 · D2는 이번 확인(U1 · U6)에서 나왔다. D3 ~ D7은 Website 세션(W2 · W4 · W6)이 남긴 질문이다.
+- 점검 16단계(2026-10-31)에서 2 ~ 15단계 결과와 맞췄다. D1(11단계 배지)과 D3(8단계 트리맵 접기 · 15단계 기준선 제거)의 화면 영향을 고쳤고, D7에 같은 종류의 이름을 더했다. 질문 수는 그대로다.
 - 받는 팀은 질문마다 적었다. 보낼 메시지는 끝에 팀별 추가분으로 모았다.
 
 ### D1. ACR 명부의 당사 비트와 dim_brand의 당사 비트가 다른 브랜드 2개 (B팀)
 
-- **화면 영향:** ACR은 `acr_entity_fact.own_bit`(명부)로 당사를 센다. 그래서 두 이름이 관점 비트가 맞으면 당사로 들어가고, HMG 형제 표시(이름 Hyundai · Kia · Genesis)는 받지 못한다. Mention · Overview는 `dim_brand.own_bit`를 써서 영향이 없다.
+- **화면 영향:** ACR 브랜드 표는 `acr_entity_fact.own_bit`(명부)로 당사를 센다. 'HMG 계열' 배지도 리뉴얼 점검 11단계부터 그 행의 명부 값으로 정한다(이름 목록이 아님). 그래서 두 이름은 관점 비트가 맞으면 당사로 들어가고, 단일 브랜드 관점에서는 'HMG 계열'이 된다. 같은 ACR 리더의 차종 · 결선 맞대결 · 추이 당사 합은 `dim_brand.own_bit`로 정하므로, 한 화면 안에서 두 이름의 당사 판정이 카드마다 다르다. 두 이름은 live release에서 choice 0 · appearance 7이다. Mention · Overview는 `dim_brand.own_bit`를 써서 영향이 없다.
 - **근거:**
   - release 603 acr 빌드의 level 1 · keep 행에서 own_bit ≠ 0인 이름은 Hyundai · Kia · Genesis 외에 둘이 더 있다.
     - '제네시스 마그마': own_bit 4, 5행 · appearance 5 · choice 0, 08-24 · 09-07 · 09-14.
@@ -380,7 +381,7 @@ HUB가 출처 카테고리 교정(override), 출처 분류 코드표, 시드·�
 
 ### D3. 완성차가 아닌 브랜드가 경쟁 브랜드(kind 2)로 잡힘 (B팀)
 
-- **화면 영향:** Mention 순위 표, 경쟁사 평균, 비교 브랜드 후보, Overview 경쟁사에 AI 비서 · 지도 앱 · 스포츠 · 패션 브랜드가 경쟁사로 들어간다. HUB는 브랜드 → 모그룹 표시 묶음에서 이 이름들을 '완성차 아님' 묶음으로 접고 있다.
+- **화면 영향:** Mention 순위 표, 엔진별 경쟁사 평균, 비교 브랜드 후보, Overview 경쟁사에 AI 비서 · 지도 앱 · 스포츠 · 패션 브랜드가 경쟁사로 들어간다. HUB는 브랜드 → 모그룹 표시 묶음에서 이 이름들을 '자동차 외' 묶음으로 둔다. 리뉴얼 점검 8단계부터 트리맵은 이 묶음도 다른 묶음과 같은 점유율 · 순서 규칙으로만 접는다(늘 접지 않음).
 - **근거:**
   - release 603 · 10-05 global, `brand_cell` competitive 행의 언급 수다. 모두 `dim_brand` kind 2(경쟁)다.
     - Huawei 542 · Alexa 314 · Alphabet 221 · Apollo 202 · Formula 1 199
@@ -389,7 +390,7 @@ HUB가 출처 카테고리 교정(override), 출처 분류 코드표, 시드·�
   - 한 브랜드의 competitive가 셀마다 다른 경우도 있다. 같은 release에서 smart는 경쟁 행 179 · 비경쟁 행 740 언급(각 9회차)이고, Cruise는 8 · 15다. B2의 Smart 질문과 같은 원인일 수 있다.
   - ACR에서도 비자동차 엔티티가 선택된다(B3).
 - **물을 것:** kind 2와 3을 나누는 기준이 무엇인가요? 위 이름들을 kind 3으로 옮길 계획이 있나요? 한 브랜드의 competitive가 셀마다 다른 이유도 알려 주세요.
-- **답에 따라 HUB가 할 일:** Gold kind를 그대로 쓰고 표시 묶음만 둔다. 분류가 바뀌면 HUB의 '완성차 아님' 이름 목록을 줄인다.
+- **답에 따라 HUB가 할 일:** Gold kind를 그대로 쓰고 표시 묶음만 둔다. 분류가 바뀌면 HUB의 '자동차 외' 이름 목록(`NON_AUTO`)을 줄인다.
 
 ### D4. Hyundai N 사이트 브랜드 비트 16 (B팀)
 
@@ -431,12 +432,16 @@ HUB가 출처 카테고리 교정(override), 출처 분류 코드표, 시드·�
   - `dim_brand`에서 'Kona'(brand_key 5100)는 kind 2 · own_bit 0이다. `dim_entity`에도 'Kona'가 Brand 엔티티로 있다(brand_key 5100).
   - Kona 차종 엔티티('Hyundai Kona', 'KONA Eléctrica' 등 Product)는 brand_key 1(Hyundai)이다.
   - website release 3647에서 'Kona' 경쟁 언급은 159건이다. 08-28 · 09-04 · 09-11에 나왔고, 미국은 61 · 26 · 22건이다.
-- **물을 것:** 'Kona' Brand 엔티티를 Hyundai로 접거나 차종(level 2)으로 옮겨 주실 수 있나요?
+  - 같은 종류(차종 · 판매점 · 지역 법인 이름이 별도 경쟁 브랜드)가 Kona 밖에도 있다(리뉴얼 점검 16단계 확인, website release 3647 경쟁 언급). 모두 `dim_brand` kind 2 · own_bit 0이다.
+    - Porsche Centre Leeds 48 · Smart Fortwo Electric Drive 29 · Renault Korea 22 · Fiat 132 18 · Honda City Hatchback 16 · Mazda CX-90 PHEV 13.
+    - ACR 명부의 'Hyundai Canada'(D1)도 같은 종류다.
+- **물을 것:** 'Kona' Brand 엔티티를 Hyundai로 접거나 차종(level 2)으로 옮겨 주실 수 있나요? 위 차종 · 판매점 · 지역 법인 이름도 부모 브랜드로 접을 계획이 있나요?
 - **답에 따라 HUB가 할 일:** HUB는 귀속을 다시 정하지 않는다. Gold가 고치면 그대로 반영된다.
 
 ### D 안에서 확인만 하고 보내지 않는 것
 
 - **W3 'loc_owned와 cit_m05 차이'.** Website 자사 인용은 Gold 정의(`citation_cell` 설명)대로 loc_owned ∨ tgt_hit이고, kpi_cell cit_m05도 같은 값이다. HUB가 W6에서 이 정의로 바꿨다. 10-09 값은 둘이 같다: 전체 24.93 = 24.93, US 19.90 = 19.90, en 18.38 = 18.38이다. loc_owned만 세면 US 18.93, en 18.29가 되는데, 이것이 W3가 본 차이다. 물을 것이 없다.
+- **Website Tata 서랍의 Hyundai 질문(리뉴얼 점검 7단계 관찰).** Gold 귀속 문제가 아니다. website 프롬프트는 모두 당사 사이트 프롬프트라, 어느 경쟁사 서랍이든 당사 차종 질문이 나온다. 'Tata'(brand_key 2319)는 kind 2 브랜드 하나이고, website 전 회차 경쟁 언급이 1,821건이다. 인도 350 · 영국 337 · 호주 310 순이다. 'Tata Curvv EV' 같은 Tata 차종 브랜드는 website 언급이 없다. 물을 것이 없다(16단계 확인).
 - **같음으로 끝난 확인.** 인용 톤(U3), Global 공식(HMG) Δ의 cit_m05(U4), 우호도 분모(U5), 비교의 답변당 언급 수(U10), 카탈로그 빈 값(U8), 프롬프트 시장 태그(U12)는 Gold와 같거나 값이 있었다. 질문할 것이 없다.
 
 ### D절 팀별 추가분
@@ -446,6 +451,7 @@ HUB가 출처 카테고리 교정(override), 출처 분류 코드표, 시드·�
 
 1. ACR 명부 당사 비트와 dim_brand 당사 비트가 다른 브랜드 2개
  - acr_entity_fact level 1(keep)에서 '제네시스 마그마' own_bit 4(5행, 08-24·09-07·09-14), 'Hyundai Canada' own_bit 1(2행, 09-14). 두 brand_key의 dim_brand는 own_bit 0·kind 2.
+ - 그래서 ACR 화면에서 두 이름이 브랜드 표(명부)에서는 당사인데, 차종·결선 맞대결·추이 당사 합(dim_brand)에서는 당사가 아닙니다.
  물을 것: 어느 쪽이 맞나요? 차종·지역 법인 이름이 브랜드(level 1)로 잡힌 것이면 부모 브랜드로 접어 주실 수 있나요?
 
 2. Website 자사 사이트인데 owned_brand_bit 0인 출처 12개
@@ -468,7 +474,8 @@ HUB가 출처 카테고리 교정(override), 출처 분류 코드표, 시드·�
 
 6. Kona 귀속
  - dim_brand 'Kona'(5100) kind 2·own_bit 0, dim_entity에도 Brand 엔티티. Kona 차종 엔티티는 brand_key 1(Hyundai). website 'Kona' 경쟁 언급 159건(08-28·09-04·09-11, 미국 61·26·22).
- 물을 것: 'Kona'를 Hyundai로 접거나 차종으로 옮겨 주실 수 있나요?
+ - 같은 종류(website 경쟁 언급, 모두 kind 2): Porsche Centre Leeds 48·Smart Fortwo Electric Drive 29·Renault Korea 22·Fiat 132 18·Honda City Hatchback 16·Mazda CX-90 PHEV 13.
+ 물을 것: 'Kona'를 Hyundai로 접거나 차종으로 옮겨 주실 수 있나요? 위 차종·판매점·지역 법인 이름도 부모 브랜드로 접을 계획이 있나요?
 ```
 
 ```text
