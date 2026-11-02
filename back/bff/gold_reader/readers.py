@@ -24,7 +24,7 @@ async def read(path: str, q: QueryParams) -> dict:
 
 async def dispatch(path, ctx):
     handlers = {"citations/domains": citations.domains, "citations/sources": citations.sources,
-                "citations/targets": citations.targets, "funnel/acr": acr.read, "funnel/acr/territory": acr.territory,
+                "citations/targets": citations.targets, "funnel/acr": acr.read, "funnel/acr/territory": acr.territory, "funnel/acr/coverage": acr.coverage,
                 "prompts": catalog.prompts, "kpi/unmeasured-prompts": catalog.unmeasured,
                 "answers": answers.listing, "geo": advanced.geo, "mentions/types": advanced.types,
                 "kpi/compare": compare.read, "mentions/prompts": drilldown.mention_prompts,

@@ -5144,8 +5144,8 @@
         },
         "model": {
           "tag": "Models",
-          "title": "{model} converts {rate}% — our best model",
-          "detail": "Lowest: {worst} at {worstRate}% · how often a shortlisted model is picked"
+          "title": "{model} converts {rate}% — our best model in the table",
+          "detail": "Lowest in the table: {worst} at {worstRate}% · how often a shortlisted model is picked"
         },
         "mover": {
           "tag": "Change",

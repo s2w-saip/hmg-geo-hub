@@ -5144,8 +5144,8 @@
         },
         "model": {
           "tag": "차종",
-          "title": "{model} 전환율 {rate}% — 당사 차종 중 최고",
-          "detail": "가장 낮은 {worst}은 {worstRate}% · 후보에 오르면 실제로 선택되는 정도"
+          "title": "{model} 전환율 {rate}% — 표의 당사 차종 중 최고",
+          "detail": "표에서 가장 낮은 {worst}은 {worstRate}% · 후보에 오르면 실제로 선택되는 정도"
         },
         "mover": {
           "tag": "변화",

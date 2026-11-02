@@ -27,9 +27,10 @@ from bff import api
 from bff.access import reader_scope
 from bff.screens import screen, split_context
 from bff.screens._convert import as_of_date, delta1, exact, filter_notices, pct1_or_null, whole_suppression
-from bff.screens._filters import load_filter_dates, load_panel_options, read_standard_filters
+from bff.screens._filters import load_filter_dates, load_panel_options, read_standard_filters, to_catalog_rows
 from bff.screens._js import is_num, js_str
 from bff.screens._query import UMBRELLA_BRAND, analysis_query, to_api_params
+from bff.screens.overview import is_transient
 from bff.screens._sort import locale_compare, sort_by, table_orders
 from bff.screens.sources import source_query
 
@@ -190,6 +191,27 @@ def _panel_props(options: dict, languages: list, dates: dict) -> dict:
     out["languageOptions"] = languages
     _put(out, "selectableDates", dates.get("selectableDates"))
     return out
+
+
+async def load_acr_coverage() -> dict | None:
+    """What the renewal panel can offer (funnel/acr/coverage); a transient failure leaves the panel as it is."""
+    try:
+        return (await api.get("funnel/acr/coverage", to_api_params(analysis_query({}, {"surface": "global", "scope": reader_scope()}), {})))["data"]
+    except Exception as exc:  # noqa: BLE001
+        if not is_transient(exc):
+            raise
+        return None
+
+
+def covered_options(options: dict, dates: dict, coverage: dict | None) -> tuple[dict, dict]:
+    """The panel without what has no ACR cell: a pick there was an empty page with nothing to say why."""
+    if not coverage or coverage.get("rounds") is None:
+        return options, dates
+    catalog = {tuple(r.values()) for r in to_catalog_rows(coverage["catalog"]) or []}
+    kept_options = {**options, "geographyOptions": [c for c in options.get("geographyOptions") or [] if c in set(coverage["countries"])],
+                    "catalogRows": [r for r in options.get("catalogRows") or [] if tuple(r.values()) in catalog]}
+    kept_dates = {**dates, "selectableDates": [d for d in dates.get("selectableDates") or [] if d in set(coverage["rounds"])]}
+    return kept_options, kept_dates
 
 
 async def _global_reads(filters: dict, territory_rows: str = "all", duels: bool = False) -> tuple[dict, dict, dict]:
@@ -805,7 +827,8 @@ async def renewal(q) -> dict:
     _, sp = split_context(q)
     filters = read_standard_filters(sp, reader_scope())
     st = page_state(sp, filters)
-    acr, options, dates = await _global_reads(filters, "first", duels=True)
+    (acr, options, dates), coverage = await asyncio.gather(_global_reads(filters, "first", duels=True), load_acr_coverage())
+    options, dates = covered_options(options, dates, coverage)
     props = {"stage": "acr", **_panel_props(options, acr["languageOptions"], dates)}
     data = acr["data"]
     own = dict(data["own"]) if data.get("own") is not None else None

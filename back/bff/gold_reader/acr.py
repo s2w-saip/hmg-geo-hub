@@ -6,7 +6,7 @@ from copy import copy
 
 from fastapi import HTTPException
 
-from bff.gold_reader.context import Context, SQL, envelope, flag, ratio
+from bff.gold_reader.context import AXES, BRAND_NAMES, Context, SQL, envelope, flag, ratio
 
 TREND_CYCLES = 12
 CELL_JOINS = """JOIN gold.dim_prompt p ON p.prompt_key=f.prompt_key JOIN gold.dim_engine e ON e.engine_key=f.engine_key
@@ -245,6 +245,27 @@ async def read(ctx: Context) -> dict:
                           "territory": territory_sheets(ctx, sheets, rows_by_cell, with_rows, own_by_prompt), "head_to_head": duels,
                           "options": {"langs": sorted({r["lang"].lower() for r in cells if r["lang"]}),
                                       "countries": sorted({r["country"] for r in cells if r["country"]})}})
+
+
+async def coverage(ctx: Context) -> dict:
+    """funnel/acr/coverage: what the filter panel can offer: the rounds with ACR cells, and the countries and catalog
+    combinations with cells on the selected rounds, whatever the other filters."""
+    b = SQL()
+    all_rounds = ctx.predicate(b, family="acr", dates=False, dimensions=False, taxonomy=False)
+    rounds = await ctx.conn.fetch(f"SELECT DISTINCT f.round_date FROM gold.acr_cell_fact f WHERE {all_rounds} AND f.acr_in", *b.args)
+    b = SQL()
+    where = ctx.predicate(b, family="acr", dimensions=False, taxonomy=False)
+    countries = await ctx.conn.fetch(f"""SELECT DISTINCT c.code FROM gold.acr_cell_fact f JOIN gold.dim_country c ON c.geo_key=f.geo_key
+        WHERE {where} AND f.acr_in""", *b.args)
+    b = SQL()
+    where = ctx.predicate(b, family="acr", dimensions=False, taxonomy=False)
+    joins = " ".join(f"LEFT JOIN gold.dim_taxon {axis} ON {axis}.taxon_key=k.{col}" for axis, col in AXES.items())
+    combinations = await ctx.conn.fetch(f"""WITH p AS (SELECT DISTINCT f.prompt_key FROM gold.acr_cell_fact f WHERE {where} AND f.acr_in),
+        k AS (SELECT DISTINCT ce.brand_bit,{','.join(f'ce.{col}' for col in AXES.values())} FROM gold.catalog_entry ce JOIN p USING(prompt_key)
+              WHERE ce.build_id=ANY({b.bind(ctx.builds.get("fact", []), "bigint[]")}))
+        SELECT k.brand_bit,{','.join(f'{a}.code AS {a}' for a in AXES)} FROM k {joins}""", *b.args)
+    return envelope(ctx, {"rounds": sorted(r["round_date"].isoformat() for r in rounds), "countries": sorted(r["code"] for r in countries if r["code"]),
+                          "catalog": {"rows": [{"brand": BRAND_NAMES.get(r["brand_bit"]), **{a: r[a] for a in AXES}} for r in combinations]}})
 
 
 async def territory(ctx: Context) -> dict:

@@ -747,5 +747,25 @@ class FrontFixture(unittest.TestCase):
         self.assertEqual(json.loads(FRONT_FIXTURE.read_text(encoding="utf-8")), front_fixture())
 
 
+
+class Coverage(unittest.TestCase):
+    """Global score sheet (2026-11-02): the panel offered rounds, countries and catalog rows with no ACR cell (07-13 and
+    before, EG, 276 of 317 catalog rows): picking one gave an empty page with nothing to say why."""
+
+    def test_the_panel_keeps_what_has_cells(self):
+        row = {"brand": "Kia", "brandPresence": "branded", "listType": "A", "depth1": "x", "depth2": None, "depth3": None, "depth4": None}
+        other = {**row, "listType": "B"}
+        options = {"geographyOptions": ["EG", "US"], "catalogRows": [row, other]}
+        dates = {"selectableDates": ["2026-06-08", "2026-10-05"]}
+        coverage = {"rounds": ["2026-10-05"], "countries": ["US"], "catalog": {"rows": [
+            {"brand": "Kia", "brand_presence": "branded", "list_type": "A", "depth1": "x", "depth2": None, "depth3": None, "depth4": None}]}}
+        kept_o, kept_d = acr.covered_options(options, dates, coverage)
+        self.assertEqual((kept_o["geographyOptions"], kept_o["catalogRows"], kept_d["selectableDates"]), (["US"], [row], ["2026-10-05"]))
+
+    def test_no_coverage_leaves_the_panel_as_it_is(self):
+        options, dates = {"geographyOptions": ["EG"]}, {"selectableDates": ["2026-10-05"]}
+        self.assertEqual(acr.covered_options(options, dates, None), (options, dates))
+
+
 if __name__ == "__main__":
     unittest.main()

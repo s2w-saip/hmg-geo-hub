@@ -26,6 +26,7 @@ Changes since recording (additive, each derived only from functions pinned by ot
   bodies are the recorded answers, which hold no pinned rival, so no output changes.
 
 Deliberate changes (what the screen shows changed by decision):
+- 2026-11-02 `acr/renewal` filter panel (score sheet defect: rounds, countries and catalog rows with no ACR cell gave an empty page). The screen reads `funnel/acr/coverage`, which the recordings predate: the 41 cases got that tape entry with `rounds: null`, meaning no narrowing, so their outputs stay. `test_screens_acr.Coverage` covers the narrowing.
 - 2026-11-02 Mention treemap group Δ (score sheet defect: BMW group +0.4 against Gold's +0.34): the exact member Δ are summed, then rounded once. `mention/rn-fn-ranking` calls 66 and 76 change by 0.1 (28.0 → 27.9, −38.0 → −38.1).
 - 2026-11-02 Overview brand table with a closed period (score sheet defect: 2026-09 인용 점유율 +2.6 on the chip, −2.7 in the table). 당사's Δ is the period compare the card chip shows and the rivals' last-round Δ is left out. 10 cases (`fix-rn-matrix-02 · 03 · 04 · 05 · 06 · 10 · 11`, `live-rn-matrix-closed · month · week`): the own `trend` tape entry is replaced by the same query's recorded `kpi/compare` answer from another case, and the outputs follow.
 - 2026-10-28 citation URL country (the user's decision: Gold, not the legacy hard-coded catalog). The domain
