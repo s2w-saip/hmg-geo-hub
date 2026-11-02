@@ -422,7 +422,7 @@ function Manager({ initial, roles, savedFilters }: HubAccountsManagerProps) {
 // the scope column cannot sort (a mixed list of brands, regions and countries); same head as the sortable ones
 const LIST_TH_PLAIN = "sticky -top-1 z-[1] h-[38px] border-b border-rn-line-2 bg-rn-surface px-3 font-semibold";
 
-/** 사용 중 = a filled navy dot; 첫 로그인 전 = a navy ring; 사용 중지 = a dashed one, muted. */
+/** 사용 중 = a filled navy dot; 비밀번호 변경 필요 = a navy ring; 사용 중지 = a dashed one, muted. */
 function StateMark({ state }: { state: AccountState }) {
   const t = useTranslations("hubAccounts");
   return (

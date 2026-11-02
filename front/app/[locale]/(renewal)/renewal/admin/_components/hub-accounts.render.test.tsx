@@ -59,6 +59,18 @@ describe("account list", () => {
     expect(out).toContain("1 / 4개 계정");
   });
 
+  // Admin check (2026-11-02, F12): the state is `must_change`, set on a new account and on every reset, and a sign-in
+  // with the temporary password leaves it set. '첫 로그인 전' named a reset account, or one with a last sign-in, wrongly.
+  it("names the state by its value: a password still to change, whatever the sign-ins", () => {
+    const reset = { ...COUNTRY, lastSignInAt: "2026-10-30T01:00:00Z", createdAt: "2026-09-01T02:00:00Z" };
+    const out = html(<HubAccountsManager initial={[reset]} roles={ROLES} savedFilters={{ page: "accounts", userId: "u", initial: [] }} />);
+    expect(out).toContain('data-hub-account-state="pending"');
+    expect(out).toContain(">비밀번호 변경 필요<");
+    expect(out).not.toContain("첫 로그인");
+    const { state, note, issued, description } = ko.hubAccounts;
+    for (const text of [state.pending, note.pending, issued.hint, description]) expect(text).not.toMatch(/첫 로그인|처음 로그인/);
+  });
+
   it("filters by role, state, brand and the search text, and keeps them in the URL", () => {
     expect(matches(HQ, { ...DEFAULT_FILTER, state: "disabled" }, "")).toBe(true);
     expect(matches(HQ, { ...DEFAULT_FILTER, brand: "Kia" }, "")).toBe(false);

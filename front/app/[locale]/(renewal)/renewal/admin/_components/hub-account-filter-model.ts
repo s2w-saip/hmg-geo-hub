@@ -10,7 +10,7 @@ export type AccountAxis = (typeof ACCOUNT_AXES)[number];
 export type AccountFilter = Record<AccountAxis, string>;
 export const DEFAULT_FILTER: AccountFilter = { role: ALL, state: ALL, brand: ALL };
 
-/** 사용 중 · 첫 로그인 전 (an issued password not yet replaced) · 사용 중지 */
+/** 사용 중 · 비밀번호 변경 필요 (an issued password not yet replaced: a new account or a reset) · 사용 중지 */
 export const STATES = ["active", "pending", "disabled"] as const;
 export type AccountState = (typeof STATES)[number];
 export const NO_ROLE = "none";

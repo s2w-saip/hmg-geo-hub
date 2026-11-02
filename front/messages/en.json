@@ -6234,7 +6234,7 @@
   "hubAccounts": {
     "title": "User management",
     "storePill": "HUB operations DB",
-    "description": "Set the HUB accounts' roles and data scope. A temporary password an administrator issues is replaced at the first sign-in.",
+    "description": "Set the HUB accounts' roles and data scope. A temporary password an administrator issues is replaced at the next sign-in.",
     "create": "New account",
     "createTitle": "New account",
     "createHint": "Its temporary password is shown once.",
@@ -6272,7 +6272,7 @@
     },
     "state": {
       "active": "Active",
-      "pending": "Before first sign-in",
+      "pending": "Password change required",
       "disabled": "Disabled"
     },
     "status": {
@@ -6327,12 +6327,12 @@
       "copy": "Copy",
       "copied": "Copied.",
       "copyFailed": "Could not copy. Select it and copy it yourself.",
-      "hint": "This password is shown only now. Hand it to the user safely; they set their own at the first sign-in before any page opens.",
+      "hint": "This password is shown only now. Hand it to the user safely; they set their own at the next sign-in before any page opens.",
       "done": "Done"
     },
     "note": {
       "disabled": "This account is disabled and cannot sign in.",
-      "pending": "The temporary password is not replaced yet; the account sets its own at the first sign-in.",
+      "pending": "The temporary password is not replaced yet; the account sets its own at the next sign-in before any page opens.",
       "noRole": "Without a role this account cannot sign in. Set one with Edit."
     },
     "confirm": {
