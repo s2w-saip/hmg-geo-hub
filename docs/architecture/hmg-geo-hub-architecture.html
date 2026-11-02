@@ -178,12 +178,12 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   <p class="ssot"><strong>정본(SSOT)</strong> · 서비스 구조와 HUB DB ERD는 이 문서 하나에만 둔다. 테이블·컬럼·권한의 최종 근거는
     SQL 마이그레이션이고, 이 문서는 그것을 그림으로 옮긴 정본이다. 구조나 스키마를 바꾸는 변경은 같은 커밋에서 이 문서를 고친다.
     방법은 <a href="#maintain">이 문서 고치는 법</a>.</p>
-  <p class="asof">마지막 갱신 2026-11-02(Admin 고객 관심 데이터 관리: 시드 키워드 · 커뮤니티 소스, data-009 · Global 인용 자사 판정의 범위 국가 좁힘 · 화면 지표 출처 표 연결) · 반영한 스키마: <code>back/analytics/schema.sql</code>·<code>operations.sql</code>,
+  <p class="asof">마지막 갱신 2026-11-02(Admin 엔티티 카탈로그: 엔티티 역할, data-010 · 고객 관심 데이터 관리: 시드 키워드 · 커뮤니티 소스, data-009 · Global 인용 자사 판정의 범위 국가 좁힘) · 반영한 스키마: <code>back/analytics/schema.sql</code>·<code>operations.sql</code>,
     <code>back/hub_storage/data-002~008.sql</code>, <code>operations-001~004.sql</code></p>
   <dl class="facts">
     <div><dt>프로세스</dt><dd>Next.js <span class="mono">:3333</span> · FastAPI <span class="mono">:5555</span> · 외부 API <span class="mono">:5560</span></dd></div>
     <div><dt>DB</dt><dd>Gold(외부) · 데이터 DB · 운영 DB</dd></div>
-    <div><dt>앱이 DB에 쓰는 곳</dt><dd>글로벌 프롬프트 편집 (INSERT만) · 계정별 저장한 필터 · 계정 관리 · GA4 속성 등록부 · 인용 출처 분류(교정 · 시드 · 공식 소셜 · 코드표) · 고객 관심 데이터(시드 키워드 · 커뮤니티 소스). 외부 API는 읽기만</dd></div>
+    <div><dt>앱이 DB에 쓰는 곳</dt><dd>글로벌 프롬프트 편집 (INSERT만) · 계정별 저장한 필터 · 계정 관리 · GA4 속성 등록부 · 인용 출처 분류(교정 · 시드 · 공식 소셜 · 코드표) · 고객 관심 데이터(시드 키워드 · 커뮤니티 소스) · 엔티티 역할. 외부 API는 읽기만</dd></div>
     <div><dt>로그인</dt><dd>모든 화면 · 관리자·HQ·권역·국가 4역할, 관리자 아닌 계정은 자기 범위만</dd></div>
   </dl>
   <nav class="toc" aria-label="목차">
@@ -351,7 +351,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <span><svg viewBox="0 0 28 12"><rect x="1" y="1" width="26" height="10" rx="2" class="sw-gold"/></svg>외부 DB</span>
       </div>
       <p><strong>그림 1.</strong> 브라우저 요청은 모두 middleware 관문을 지나 Next 서버에서 끝난다. BFF를 부르는 것은 Next 서버이고,
-        DB 자격증명은 BFF만 갖는다. 빨간 선 네 개가 앱이 DB에 쓰는 경로의 전부다(계정 관리, 계정별 저장한 필터, 글로벌 프롬프트 INSERT, GA4 속성 등록부 · 인용 출처 분류 · 고객 관심 데이터).
+        DB 자격증명은 BFF만 갖는다. 빨간 선 네 개가 앱이 DB에 쓰는 경로의 전부다(계정 관리, 계정별 저장한 필터, 글로벌 프롬프트 INSERT, GA4 속성 등록부 · 인용 출처 분류 · 고객 관심 데이터 · 엔티티 역할).
         Next 서버는 BFF를 부를 때마다 쿠키의 토큰을 Bearer로 붙이고, BFF는 토큰 없는 화면·데이터 읽기를 401로 거절한다.</p>
     </figcaption>
   </figure>
@@ -412,6 +412,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <tr><td class="k">GA4 등록부</td><td><code>HGH_GA4_REGISTRY_EDITOR_DB_URL</code></td><td><code>hmg_analytics</code><br><span class="muted">계정 hmg_ga4_registry_editor</span></td><td><code>analytics.ga4_registry</code> INSERT와 속성 ID 뺀 열 UPDATE, <code>ga4_registry_event</code> INSERT만. 지우기 권한 없음. 목록·이벤트 읽기는 데이터 DB 조회 연결로 한다</td><td class="mono">≤ 2</td></tr>
         <tr><td class="k">출처 분류 입력</td><td><code>HGH_SOURCE_OVERRIDE_EDITOR_DB_URL</code></td><td><code>hmg_analytics</code><br><span class="muted">계정 hmg_source_override_editor</span></td><td>교정(<code>catalog.source_override</code>)·시드(<code>source_seed</code>)·공식 소셜(<code>source_social</code>) INSERT와 값·상태·시각·행위자 UPDATE, 코드표(<code>source_code</code>) 이름·설명·순서 UPDATE, 이력 표 INSERT, 발행 함수 <code>catalog.publish_source_*()</code> 실행만. 지우기·키 변경·코드 추가·<code>reference_set</code> 직접 쓰기 권한 없음. 목록은 데이터 DB 조회 연결과 Gold 조회 연결로 읽는다</td><td class="mono">≤ 2</td></tr>
         <tr><td class="k">고객 관심 입력</td><td><code>HGH_INTEREST_EDITOR_DB_URL</code></td><td><code>hmg_analytics</code><br><span class="muted">계정 hmg_interest_editor</span></td><td>시드 키워드(<code>catalog.interest_keyword</code>)·커뮤니티 소스(<code>interest_source</code>) INSERT와 값·상태·시각·행위자 UPDATE, 이력 표 INSERT, 발행 함수 <code>catalog.publish_interest_*()</code> 실행만. 지우기·키·원문 변경·<code>reference_set</code> 직접 쓰기 권한 없음. 목록은 데이터 DB 조회 계정과 Gold 조회 계정으로 읽는다</td></tr>
+        <tr><td class="k">엔티티 역할</td><td><code>HGH_ENTITY_ROLE_EDITOR_DB_URL</code></td><td><code>hmg_analytics</code><br><span class="muted">계정 hmg_entity_role_editor</span></td><td>역할(<code>catalog.entity_role</code>) INSERT와 역할·자사 브랜드·메모·상태·시각·행위자 UPDATE, 이력 표 INSERT, 발행 함수 <code>catalog.publish_entity_roles()</code> 실행만. 지우기·엔티티·이름 변경·<code>reference_set</code> 직접 쓰기 권한 없음. 목록은 데이터 DB 조회 계정과 Gold 조회 계정으로 읽는다</td></tr>
       </tbody>
     </table>
   </div>
@@ -421,7 +422,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   <h2 id="h-writes">누가 어디에 쓰는가</h2>
   <figure>
     <div class="scroll">
-      <svg viewBox="0 0 1200 556" role="img" aria-label="HUB DB에 쓰는 경로는 여섯 개다. BFF 글로벌 프롬프트 편집이 catalog에 INSERT하고, BFF 저장한 필터가 운영 DB system.saved_filter에 계정마다 자기 행만 쓰고, BFF 계정 관리가 최상위 관리자의 요청으로 운영 DB 계정 표를 쓰고, BFF GA4 연동이 최상위 관리자의 요청으로 데이터 DB의 GA4 속성 등록부(analytics.ga4_registry)와 그 이력을 쓰고, BFF 인용 출처 분류가 최상위 관리자의 요청으로 catalog.source_override와 그 이력을 쓰고 발행 함수로 기준값 종류 source_override를 기록하고, BFF 고객 관심 데이터 관리가 같은 방식으로 catalog.interest_keyword · interest_source와 그 이력을 쓰고, manage.py 관리 명령이 Gold 정의를 읽어 catalog에 새 버전을 기록하며 운영 DB에 관리자와 UUID 참조를 등록한다. Gold에는 아무도 쓰지 않는다. GA4 수집기(back/analytics/ga4_collect.py)는 hmg_analytics_writer 계정으로 그 등록부를 읽어 GA4 Data API 값을 analytics.ga4_*에 쓰고 속성마다 결과를 ga4_collect_status에 남기도록 만들어 두었지만, GA4 자격 증명을 인계받기 전이라 아직 돌지 않는다. SEO 수집기는 없다. 외부 API는 hmg_ext_api 계정으로 ext 뷰만 읽는다.">
+      <svg viewBox="0 0 1200 556" role="img" aria-label="HUB DB에 쓰는 경로는 여섯 개다. BFF 글로벌 프롬프트 편집이 catalog에 INSERT하고, BFF 저장한 필터가 운영 DB system.saved_filter에 계정마다 자기 행만 쓰고, BFF 계정 관리가 최상위 관리자의 요청으로 운영 DB 계정 표를 쓰고, BFF GA4 연동이 최상위 관리자의 요청으로 데이터 DB의 GA4 속성 등록부(analytics.ga4_registry)와 그 이력을 쓰고, BFF 인용 출처 분류가 최상위 관리자의 요청으로 catalog.source_override와 그 이력을 쓰고 발행 함수로 기준값 종류 source_override를 기록하고, BFF 고객 관심 데이터 관리가 같은 방식으로 catalog.interest_keyword · interest_source와 그 이력을 쓰고, BFF 엔티티 카탈로그가 같은 방식으로 catalog.entity_role과 그 이력을 쓰고, manage.py 관리 명령이 Gold 정의를 읽어 catalog에 새 버전을 기록하며 운영 DB에 관리자와 UUID 참조를 등록한다. Gold에는 아무도 쓰지 않는다. GA4 수집기(back/analytics/ga4_collect.py)는 hmg_analytics_writer 계정으로 그 등록부를 읽어 GA4 Data API 값을 analytics.ga4_*에 쓰고 속성마다 결과를 ga4_collect_status에 남기도록 만들어 두었지만, GA4 자격 증명을 인계받기 전이라 아직 돌지 않는다. SEO 수집기는 없다. 외부 API는 hmg_ext_api 계정으로 ext 뷰만 읽는다.">
         <defs>
           <marker id="f2a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker>
           <marker id="f2w" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto"><path class="ahw" d="M0,0L10,5L0,10z"/></marker>
@@ -517,8 +518,8 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <path class="ed" d="M466,464V404" marker-end="url(#f2d)"/>
 
         <rect class="box" x="36" y="464" width="280" height="64" rx="6"/>
-        <text class="b" x="176" y="490" text-anchor="middle">BFF GA4 · 출처 분류 · 고객 관심</text>
-        <text class="m mu sm" x="176" y="510" text-anchor="middle">ga4_registry · source_* · interest · 관리자만</text>
+        <text class="b" x="176" y="490" text-anchor="middle">BFF GA4 · 출처 · 고객 관심 · 엔티티</text>
+        <text class="m mu sm" x="176" y="510" text-anchor="middle">ga4 · source_* · interest · entity_roles</text>
         <path class="ew" d="M176,464V444H372V404" marker-end="url(#f2w)"/>
         <text class="sm w" x="190" y="456">등록부와 이력만</text>
         <path class="ew" d="M96,464V404" marker-end="url(#f2w)"/>
@@ -551,6 +552,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         외부 API 목록(기준값 종류 <code>source_override</code>·<code>source_seed</code>·<code>source_social</code>·<code>source_code</code>, source <code>hub_edit</code>)은
         이 계정이 직접 쓰지 못하고 종류마다 있는 발행 함수 <code>catalog.publish_source_*()</code>가 catalog lock 안에서 기록한다.
         2026-11-02부터 고객 관심 데이터 관리 화면이 같은 선을 쓴다: <code>hmg_interest_editor</code>로 시드 키워드(<code>interest_keyword</code>)·커뮤니티 소스(<code>interest_source</code>, <code>data-009.sql</code>)와 그 이력만 쓰고, 발행 함수 <code>catalog.publish_interest_*()</code>가 같은 방식으로 기록한다.
+        엔티티 카탈로그 화면도 같은 선을 쓴다: <code>hmg_entity_role_editor</code>로 역할(<code>entity_role</code>, <code>data-010.sql</code>)과 그 이력만 쓰고, 발행 함수 <code>catalog.publish_entity_roles()</code>가 기록한다. 초안·미리보기·승인은 두지 않는다(적용은 파이프라인의 Gold 재가공이다).
         점선의 GA4 수집기(<code>back/analytics/ga4_collect.py</code>)는 <code>hmg_analytics_writer</code>로 그 등록부를 읽어 속성마다 수집한 날짜를 통째로 바꿔 쓰고,
         결과(수집됨 · 권한 대기 · 실패 · 중지됨)를 <code>ga4_collect_status</code>에 남긴다. 화면은 그 값을 그대로 보인다.
         GA4 자격 증명(<code>.env.ga4.local</code>)은 이 프로세스만 읽고, BFF와 브라우저는 GA4를 부르지 않는다. 자격 증명을 인계받으면 돌린다.
@@ -677,6 +679,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <tr><td>HUB가 정한 출처 카테고리 교정(종류 <code>source_override</code>): 키(소문자·앞 <code>www.</code> 뺀 skey)와 카테고리 slug. 원복한 교정은 빠진다</td><td>같은 표 (<code>source=hub_edit</code>)<br><span class="muted">원본은 <code>catalog.source_override</code></span></td><td>Admin › 인용 출처 분류 저장마다 발행 함수가 기록<br><span class="muted">처음 값은 manage.py import-source-overrides</span></td></tr>
         <tr><td>HUB가 정본인 시드 · 공식 소셜 계정 · 코드표(종류 <code>source_seed</code>·<code>source_social</code>·<code>source_code</code>): 시드는 도메인과 카테고리, 소셜은 계정 키·도메인·URL 매칭 규칙(카테고리 Official (HMG)), 코드표는 카테고리 13개와 분류 출처 6개의 번호·이름·순서·설명. 뺀 시드와 중지한 계정은 빠진다</td><td>같은 표 (<code>source=hub_edit</code>)<br><span class="muted">원본은 <code>catalog.source_seed</code>·<code>source_social</code>·<code>source_code</code></span></td><td>Admin › 인용 출처 분류 탭에서 저장마다 발행 함수가 기록<br><span class="muted">처음 값은 manage.py import-source-lists (seed.json · official-social.ts · Gold dim_category · 화면 문구)</span></td></tr>
         <tr><td>HUB가 정본인 고객 관심 입력(종류 <code>interest_keyword</code>·<code>interest_source</code>): 키워드는 term·term_norm·수집 조건(location_code · language_code)·소스·브랜드, 소스는 정규화 키·URL·채널·브랜드. 중지한 행은 빠진다</td><td>같은 표 (<code>source=hub_edit</code>)<br><span class="muted">원본은 <code>catalog.interest_keyword</code>·<code>interest_source</code></span></td><td>Admin › 고객 관심 데이터 관리 저장마다 발행 함수가 기록<br><span class="muted">키워드 처음 값은 manage.py import-interest-keywords · 소스는 처음 값 없음</span></td></tr>
+        <tr><td>HUB가 정본인 엔티티 역할(종류 <code>entity_role</code>): Gold <code>entity_id</code>, 역할(own · excluded), 자사 브랜드, 대표 이름. 사람이 정한 역할만 내고, 분석이 찾은 엔티티는 내지 않는다. 경쟁사로 되돌린 행은 빠진다</td><td>같은 표 (<code>source=hub_edit</code>)<br><span class="muted">원본은 <code>catalog.entity_role</code></span></td><td>Admin › 엔티티 카탈로그 저장마다 발행 함수가 기록<br><span class="muted">처음 값은 manage.py import-entity-roles</span></td></tr>
       </tbody>
     </table>
   </div>
@@ -1163,7 +1166,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   <figure>
     <div class="scroll">
       <!-- erd:ext -->
-<svg viewBox="0 0 1200 1260" role="img" aria-label="HUB 데이터 DB의 외부 API 경계 ERD. 기준값은 종류별 set과 항목으로 쌓이고, 호출자는 키와 허용 프로젝트를 가지며, ext 뷰는 트랜잭션 설정 hgh.key_hash로 한 호출자의 범위만 보여 준다. 아래 두 줄은 관리자가 Admin › 인용 출처 분류에서 고치는 출처 분류 입력(교정 · 시드 · 공식 소셜 · 코드표)과, Admin › 고객 관심 데이터 관리에서 고치는 시드 키워드 · 커뮤니티 소스, 그 이력이고, 각각 기준값 종류 source_override · source_seed · source_social · source_code · interest_keyword · interest_source로 발행된다.">
+<svg viewBox="0 0 1200 1530" role="img" aria-label="HUB 데이터 DB의 외부 API 경계 ERD. 기준값은 종류별 set과 항목으로 쌓이고, 호출자는 키와 허용 프로젝트를 가지며, ext 뷰는 트랜잭션 설정 hgh.key_hash로 한 호출자의 범위만 보여 준다. 아래 두 줄은 관리자가 Admin › 인용 출처 분류에서 고치는 출처 분류 입력(교정 · 시드 · 공식 소셜 · 코드표)과, Admin › 고객 관심 데이터 관리에서 고치는 시드 키워드 · 커뮤니티 소스, 그 이력이고, Admin › 엔티티 카탈로그에서 고치는 엔티티 역할이고, 각각 기준값 종류 source_override · source_seed · source_social · source_code · interest_keyword · interest_source · entity_role로 발행된다.">
 <defs><marker id="ext-a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker><marker id="ext-d" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ahd" d="M0,0L10,5L0,10z"/></marker></defs>
 <rect class="tbox" x="16" y="40" width="280" height="266" rx="6"/>
 <path class="th" d="M16,70V46q0,-6 6,-6H290q6,0 6,6V70z"/>
@@ -1193,7 +1196,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 <text class="m sm ty" x="286" y="257" text-anchor="end">bigint</text>
 <text class="m" x="64" y="275">recorded_at</text>
 <text class="m sm ty" x="286" y="275" text-anchor="end">timestamptz</text>
-<text class="mu sm" x="28" y="293">UNIQUE (family, version) · 23종</text>
+<text class="mu sm" x="28" y="293">UNIQUE (family, version) · 24종</text>
 <rect class="tbox" x="336" y="40" width="250" height="140" rx="6"/>
 <path class="th" d="M336,70V46q0,-6 6,-6H580q6,0 6,6V70z"/>
 <line class="rule" x1="336" y1="70" x2="586" y2="70"/>
@@ -1459,8 +1462,8 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 <line class="rule" x1="336" y1="990" x2="586" y2="990"/>
 <line class="hair" x1="348" y1="1032" x2="574" y2="1032"/>
 <text class="m b" x="348" y="980"><tspan class="tsch">catalog.</tspan>*_event</text>
-<text class="desc" x="348" y="1007">시드 · 소셜 · 코드표 · 키워드 · 소스의</text>
-<text class="desc" x="348" y="1023">변경 이력(같은 모양 다섯 표)이다.</text>
+<text class="desc" x="348" y="1007">시드부터 역할까지 입력 여섯 종의 변경</text>
+<text class="desc" x="348" y="1023">이력(같은 모양)이다.</text>
 <text class="kb pk" x="346" y="1051">PK</text>
 <text class="m" x="384" y="1051">event_id</text>
 <text class="m sm ty" x="576" y="1051" text-anchor="end">bigint</text>
@@ -1529,6 +1532,33 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 <text class="m" x="984" y="1195">updated_by</text>
 <text class="m sm ty" x="1174" y="1195" text-anchor="end">uuid</text>
 <text class="mu sm" x="948" y="1213">활성 행 → set interest_source</text>
+<rect class="tbox" x="16" y="1250" width="280" height="266" rx="6"/>
+<path class="th" d="M16,1280V1256q0,-6 6,-6H290q6,0 6,6V1280z"/>
+<line class="rule" x1="16" y1="1280" x2="296" y2="1280"/>
+<line class="hair" x1="28" y1="1322" x2="284" y2="1322"/>
+<text class="m b" x="28" y="1270"><tspan class="tsch">catalog.</tspan>entity_role</text>
+<text class="desc" x="28" y="1297">HUB가 정본인 엔티티 역할이다. 경쟁사는</text>
+<text class="desc" x="28" y="1313">기본값이라 저장하지 않는다.</text>
+<text class="kb pk" x="26" y="1341">PK</text>
+<text class="m" x="64" y="1341">entity_id</text>
+<text class="m sm ty" x="286" y="1341" text-anchor="end">uuid</text>
+<text class="m" x="64" y="1359">rep_name</text>
+<text class="m sm ty" x="286" y="1359" text-anchor="end">text</text>
+<text class="m" x="64" y="1377">role</text>
+<text class="m sm val" x="286" y="1377" text-anchor="end">own|excluded</text>
+<text class="m" x="64" y="1395">brand</text>
+<text class="m sm ty" x="286" y="1395" text-anchor="end">text</text>
+<text class="m" x="64" y="1413">note</text>
+<text class="m sm ty" x="286" y="1413" text-anchor="end">text</text>
+<text class="m" x="64" y="1431">status</text>
+<text class="m sm val" x="286" y="1431" text-anchor="end">active|cleared</text>
+<text class="m" x="64" y="1449">origin</text>
+<text class="m sm val" x="286" y="1449" text-anchor="end">gold_import|hub</text>
+<text class="m" x="64" y="1467">updated_at</text>
+<text class="m sm ty" x="286" y="1467" text-anchor="end">timestamptz</text>
+<text class="m" x="64" y="1485">updated_by</text>
+<text class="m sm ty" x="286" y="1485" text-anchor="end">uuid</text>
+<text class="mu sm" x="28" y="1503">활성 행 → set entity_role</text>
 <path class="e" d="M296,755.0H316.0V737H336" marker-end="url(#ext-a)"/>
 <path class="e" d="M336,127.0H296" marker-end="url(#ext-a)"/>
 <path class="e" d="M296,455.0H336" marker-end="url(#ext-a)"/>
@@ -1566,6 +1596,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         세 이력 표는 같은 모양이고, 발행 함수가 각각 <code>source_seed</code>·<code>source_social</code>·<code>source_code</code> set을 기록한다.
         같은 줄의 오른쪽(2026-11-02, <code>data-009.sql</code>)은 Admin › 고객 관심 데이터 관리의 시드 키워드(<code>interest_keyword</code>, 키는 Gold <code>dim_keyword.term_norm</code>과 같은 규칙)와 커뮤니티 소스(<code>interest_source</code>)다. 지우지 않고 중지는 <code>stopped</code>이며, 이력 표도 같은 모양이다.
         커뮤니티 소스는 Gold에 대응 목록이 없고 아직 읽는 수집기도 없어, 화면은 Gold 소셜 스냅샷의 host와 나란히 보일 뿐 반영 여부를 말하지 않는다.
+        맨 아래 줄(2026-11-02, <code>data-010.sql</code>)은 Admin › 엔티티 카탈로그의 역할(<code>entity_role</code>)이다. 키는 Gold <code>entity_id</code>이고(두 DB 사이 키는 없어 BFF가 Gold를 먼저 읽어 확인한다), 경쟁사는 기본값이라 저장하지 않으며, 경쟁사로 되돌리면 <code>cleared</code>로 남는다.
         Gold 가져오기는 이 표와 이 종류를 쓰지 않는다.</p>
     </figcaption>
   </figure>
@@ -2240,6 +2271,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
           <code>reference_set</code>에 직접 쓰지 못하고(발행 함수만 <code>hub_edit</code> set을 기록, 다른 역할은 트리거가 거부), 다른 catalog 표는 읽지도 못하며 운영 DB에는 접속하지 못한다</td></tr>
         <tr><td class="k mono">hmg_interest_editor</td><td>API 고객 관심 데이터 관리 · <code>HGH_INTEREST_EDITOR_DB_URL</code></td><td><code>catalog.interest_keyword</code> INSERT와 수집 조건·소스·브랜드·메모·상태·시각·행위자 UPDATE, <code>interest_source</code> INSERT와 채널·브랜드·메모·상태·시각·행위자 UPDATE, 두 이력 표 INSERT, 이 넷 SELECT,
           <code>publish_interest_keywords()</code>·<code>publish_interest_sources()</code> 실행(<code>data-009.sql</code>). 키·원문(<code>term</code>·<code>url</code>)·출처 변경과 DELETE 없음. <code>reference_set</code>에 직접 쓰지 못하고, 다른 catalog 표는 읽지도 못하며 운영 DB에는 접속하지 못한다</td></tr>
+        <tr><td class="k mono">hmg_entity_role_editor</td><td>API 엔티티 카탈로그 · <code>HGH_ENTITY_ROLE_EDITOR_DB_URL</code></td><td><code>catalog.entity_role</code> INSERT와 역할·자사 브랜드·메모·상태·시각·행위자 UPDATE, <code>entity_role_event</code> INSERT, 이 둘 SELECT, <code>publish_entity_roles()</code> 실행(<code>data-010.sql</code>). 엔티티·이름·출처 변경과 DELETE 없음. <code>reference_set</code>에 직접 쓰지 못하고, 다른 catalog 표는 읽지도 못하며 운영 DB에는 접속하지 못한다</td></tr>
         <tr><td class="k mono">hmg_catalog_writer</td><td><code>manage.py sync-gold-catalog</code></td><td><code>catalog</code> 정체성·버전 표와 <code>reference_set</code>·<code>reference_item</code> INSERT(버전 표·set은 <code>change_seq</code> 뺀 열만), <code>sync_run</code> INSERT·결과 열 UPDATE, <code>catalog</code> SELECT</td></tr>
         <tr><td class="k mono">hmg_catalog_editor</td><td>API 글로벌 프롬프트 편집 · <code>HGH_CATALOG_EDITOR_DB_URL</code></td><td><code>catalog.prompt</code> INSERT, <code>prompt_version</code>은 <code>change_seq</code> 뺀 열만 INSERT, <code>catalog</code> SELECT(분류 체계는 <code>current_reference</code>)</td></tr>
         <tr><td class="k mono">hmg_data_external</td><td>DB 직접 공개 (미개방)</td><td><code>published</code> SELECT만. <code>ext</code>는 못 읽는다</td></tr>
@@ -2267,6 +2299,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <tr><td>출처 카테고리 교정 (HUB 정본)</td><td>데이터 DB <code>catalog.source_override</code> → 기준값 종류 <code>source_override</code></td><td><span class="pill on">들어옴</span> <span class="muted">Admin › 인용 출처 분류 · 처음 값은 Gold 교정 2건 · 파이프라인이 읽는 합의는 대기</span></td></tr>
         <tr><td>출처 시드 · 공식 소셜 계정 · 코드표 (HUB 정본)</td><td>데이터 DB <code>catalog.source_seed</code>·<code>source_social</code>·<code>source_code</code> → 기준값 종류 <code>source_seed</code>·<code>source_social</code>·<code>source_code</code></td><td><span class="pill on">들어옴</span> <span class="muted">Admin › 인용 출처 분류 탭 · 처음 값은 원본 앱 파일(시드 795 · 소셜 9)과 코드 19개 · 파이프라인이 읽는 합의는 대기</span></td></tr>
         <tr><td>시드 키워드 · 커뮤니티 수집 소스 (HUB 정본)</td><td>데이터 DB <code>catalog.interest_keyword</code>·<code>interest_source</code> → 기준값 종류 <code>interest_keyword</code>·<code>interest_source</code></td><td><span class="pill on">들어옴</span> <span class="muted">Admin › 고객 관심 데이터 관리 · 키워드 처음 값은 Gold 시드 84개 · 소스는 비어 있고 원본 운영 DB 값은 받지 못함 · 파이프라인이 읽는 합의는 대기</span></td></tr>
+        <tr><td>엔티티 역할 (HUB 정본)</td><td>데이터 DB <code>catalog.entity_role</code> → 기준값 종류 <code>entity_role</code></td><td><span class="pill on">들어옴</span> <span class="muted">Admin › 엔티티 카탈로그 · 처음 값은 Gold 명부 19건(자사 5 · 제외 14) · 파이프라인이 읽는 합의는 대기</span></td></tr>
         <tr><td>사용자·멤버십·SW 설정·감사 이력</td><td>운영 DB <code>system.*</code></td><td><span class="pill off">관리자 외 비어 있음</span></td></tr>
       </tbody>
     </table>

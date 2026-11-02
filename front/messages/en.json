@@ -111,7 +111,8 @@
     "renewalAdmin": "User management",
     "renewalAdminGa4": "GA4 connection",
     "renewalAdminCitationSources": "Citation Sources",
-    "renewalAdminCustomerInterest": "Customer interest config"
+    "renewalAdminCustomerInterest": "Customer interest config",
+    "renewalAdminEntities": "Entity catalog"
   },
   "locale": {
     "label": "Language",
@@ -7025,6 +7026,115 @@
         "stopped": "Stopped {url}. It leaves the external API list.",
         "resumed": "Resumed {url}. It returns to the external API list."
       }
+    }
+  },
+  "hubEntities": {
+    "title": "Entity catalog",
+    "description": "Manage the role (own, competitor, excluded) of the entities found in answers. The role decides every KPI's own side.",
+    "login": "Sign in",
+    "loginRequired": "Sign in to the HUB first.",
+    "flowNoteTitle": "When it takes effect",
+    "flowNote": "Roles changed here are saved in the HUB and go to the pipeline through the external API list (entity_role). The numbers and the own side change after the pipeline takes the list and rebuilds Gold; until then they show as 'Pending'.",
+    "listLabel": "Entity list",
+    "searchLabel": "Search",
+    "searchPlaceholder": "Search entities and display brands",
+    "count": "{shown} / {total} · own {own} · excluded {excluded} · pending {pending} · upstream {upstream}",
+    "empty": "No entities.",
+    "emptyFiltered": "No entities match these conditions.",
+    "hint": "Entities, display brands, kinds, answers and mentions are Gold's values as they are; answers and mentions are all-time totals. An entity with no role counts as a competitor.",
+    "open": "Set role",
+    "recent": "Recent changes",
+    "detailTitle": "Entity",
+    "save": "Save",
+    "saved": "Saved the role of {name}. It takes effect after the pipeline takes it and rebuilds Gold.",
+    "notePlaceholder": "Optional: why",
+    "roleDefault": "Default",
+    "confirmOwn": "This changes the own side. After Gold is rebuilt, this entity's {answers} answers and {mentions} mentions affect the own totals of every KPI. I checked the samples.",
+    "numbers": "{answers} answers · {mentions} mentions",
+    "loading": "Loading…",
+    "surfaces": "Observed surfaces",
+    "surfaceMonths": "{surface} · {months} mo",
+    "noSurfaces": "Gold has no observed surface.",
+    "samples": "Mention samples",
+    "samplesHint": "Searched in the latest {rounds} global rounds, within the display brand's latest answers, so a rare spelling may not appear.",
+    "noSamples": "No sample in the latest rounds.",
+    "problem": {
+      "brand": "Pick the own brand.",
+      "note": "A note is up to 500 characters.",
+      "confirm": "Confirm to save."
+    },
+    "axis": {
+      "role": "Role",
+      "brand": "Own brand",
+      "kind": "Gold kind",
+      "state": "Reflection"
+    },
+    "column": {
+      "name": "Entity",
+      "displayBrand": "Display brand",
+      "kind": "Gold kind",
+      "answers": "Answers",
+      "mentions": "Mentions",
+      "firstSeen": "First seen",
+      "role": "Role",
+      "state": "Reflection",
+      "actions": "Actions"
+    },
+    "role": {
+      "own": "Own",
+      "competitor": "Competitor",
+      "excluded": "Excluded"
+    },
+    "kind": {
+      "own": "Own",
+      "competitor": "Competitor",
+      "nonCompetitor": "Non-competitor"
+    },
+    "status": {
+      "active": "Active",
+      "cleared": "Cleared"
+    },
+    "state": {
+      "applied": "Applied",
+      "pending": "Pending",
+      "upstream": "Upstream role"
+    },
+    "stateTip": {
+      "applied": "Gold applies this role.",
+      "pending": "The pipeline has not taken it yet. It takes effect after Gold is rebuilt.",
+      "upstream": "Gold has a role the HUB list does not have. Saving a role makes it the HUB's.",
+      "none": "No role on either side: it counts as a competitor."
+    },
+    "origin": {
+      "gold_import": "Imported from Gold's registry",
+      "hub": "Set on this screen"
+    },
+    "event": {
+      "import": "Import",
+      "set": "Change",
+      "clear": "Clear"
+    },
+    "field": {
+      "role": "Role",
+      "brand": "Own brand",
+      "note": "Note",
+      "status": "Status",
+      "displayBrand": "Display brand",
+      "kind": "Gold kind",
+      "type": "Entity type",
+      "numbers": "All time",
+      "firstSeen": "First seen",
+      "goldRole": "Gold role",
+      "state": "Reflection",
+      "origin": "First value"
+    },
+    "error": {
+      "invalid_value": "Check the input: {fields}",
+      "not_found": "Gold has no such entity.",
+      "unauthorized": "Your session expired. Sign in again.",
+      "forbidden": "Only the top-level administrator can manage entity roles.",
+      "source_unavailable": "Could not read the HUB store or Gold. Try again shortly.",
+      "failed": "The request failed."
     }
   },
   "hubPrompts": {

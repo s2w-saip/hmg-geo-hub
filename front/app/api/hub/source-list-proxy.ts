@@ -5,7 +5,7 @@ import { NO_STORE, hubErrorResponse, hubFail, jsonBody, sameOrigin } from "@/lib
 
 // Admin › 인용 출처 분류 › 시드 · 공식 소셜 · 코드표 (2026-10-30): the browser's calls, passed to the BFF with the HUB
 // session token (back/bff/hub_stores/source_lists.py), as /api/hub/source-overrides does. A key can hold a slash (an
-// official social account), so it travels in the body or the query (`queryKeys`, history only), never in the path.
+// official social account), so it travels in the body or the query (`queryKeys`, the GET sub-paths), never in the path.
 
 type Ctx = { params: Promise<{ rest?: string[] }> };
 
@@ -22,7 +22,7 @@ export function sourceListProxy(base: string, routes: ReadonlyArray<readonly [Hu
       if (body === undefined) return hubFail(422, "invalid_value");
     }
     const params = new URLSearchParams();
-    if (rest === "history") {
+    if (method === "GET" && rest) {
       for (const k of queryKeys) {
         const v = req.nextUrl.searchParams.get(k);
         if (v) params.set(k, v);

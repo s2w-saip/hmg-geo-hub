@@ -406,4 +406,54 @@ DO $$ BEGIN
    RAISE EXCEPTION 'The API reader cannot read the interest history'; END IF;
 END $$;
 RESET ROLE;
+-- The entity role editor (010): the roles, their history and their publishing function, nothing else. own carries a brand,
+-- excluded none, a cleared row leaves the published list, and the HUB list stays out of contract_version.
+SET LOCAL ROLE hmg_entity_role_editor;
+INSERT INTO catalog.entity_role(entity_id,rep_name,role,brand,origin,updated_by)
+VALUES('00000000-0000-4000-8000-00000000e001','Rollback Own','own','Kia','hub',gen_random_uuid()),
+      ('00000000-0000-4000-8000-00000000e002','Rollback Excluded','excluded',NULL,'hub',NULL);
+UPDATE catalog.entity_role SET brand='Hyundai',note='x',updated_at=now() WHERE entity_id='00000000-0000-4000-8000-00000000e001';
+UPDATE catalog.entity_role SET status='cleared' WHERE entity_id='00000000-0000-4000-8000-00000000e002';
+INSERT INTO catalog.entity_role_event(entity_id,action,changes) VALUES('00000000-0000-4000-8000-00000000e001','set','{}');
+DO $$ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM catalog.publish_entity_roles()) THEN RAISE EXCEPTION 'A changed role list was not published'; END IF;
+ IF EXISTS(SELECT 1 FROM catalog.publish_entity_roles()) THEN RAISE EXCEPTION 'An unchanged role list was published again'; END IF;
+ BEGIN UPDATE catalog.entity_role SET entity_id=gen_random_uuid(); RAISE EXCEPTION 'Role editor changes an entity'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN UPDATE catalog.entity_role SET rep_name='x'; RAISE EXCEPTION 'Role editor changes a name'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN UPDATE catalog.entity_role SET origin='gold_import'; RAISE EXCEPTION 'Role editor changes an origin'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN DELETE FROM catalog.entity_role; RAISE EXCEPTION 'Role editor deletes roles'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN UPDATE catalog.entity_role_event SET action='clear'; RAISE EXCEPTION 'Role editor rewrites history'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN DELETE FROM catalog.entity_role_event; RAISE EXCEPTION 'Role editor deletes history'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN PERFORM 1 FROM catalog.publish_hub_edit('entity_role','[]'); RAISE EXCEPTION 'Role editor calls the shared publisher';
+       EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN PERFORM 1 FROM catalog.publish_interest_keywords(); RAISE EXCEPTION 'Role editor publishes another list'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN PERFORM 1 FROM catalog.interest_keyword; RAISE EXCEPTION 'Role editor reads another list'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN INSERT INTO catalog.reference_set(set_id,family,version,item_count,sha256,source)
+       VALUES(gen_random_uuid(),'entity_role',99999,0,repeat('f',64),'hub_edit');
+       RAISE EXCEPTION 'Role editor writes reference sets'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN INSERT INTO catalog.entity_role(entity_id,rep_name,role,origin) VALUES(gen_random_uuid(),'x','own','hub');
+       RAISE EXCEPTION 'An own role without a brand'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN INSERT INTO catalog.entity_role(entity_id,rep_name,role,brand,origin) VALUES(gen_random_uuid(),'x','excluded','Kia','hub');
+       RAISE EXCEPTION 'An excluded role with a brand'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN INSERT INTO catalog.entity_role(entity_id,rep_name,role,origin) VALUES(gen_random_uuid(),'x','competitor','hub');
+       RAISE EXCEPTION 'A stored competitor'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN INSERT INTO catalog.entity_role(entity_id,rep_name,role,brand,origin) VALUES(gen_random_uuid(),'x','own','Toyota','hub');
+       RAISE EXCEPTION 'An unknown own brand'; EXCEPTION WHEN check_violation THEN NULL; END;
+END $$;
+RESET ROLE;
+SET LOCAL ROLE hmg_ext_api;
+DO $$ BEGIN
+ PERFORM set_config('hgh.key_hash',repeat('1',64),true);
+ IF coalesce((SELECT hub_reference FROM ext.meta),'') LIKE '%entity_role%' THEN RAISE EXCEPTION 'The entity role list changes contract_version'; END IF;
+END $$;
+RESET ROLE;
+SET LOCAL ROLE hmg_analytics_reader;
+DO $$ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM catalog.current_reference WHERE family='entity_role' AND item_key='00000000-0000-4000-8000-00000000e001'
+               AND definition->>'role'='own' AND definition->>'brand'='Hyundai') THEN RAISE EXCEPTION 'The published role list misses a role'; END IF;
+ IF EXISTS(SELECT 1 FROM catalog.current_reference WHERE family='entity_role' AND item_key='00000000-0000-4000-8000-00000000e002') THEN
+   RAISE EXCEPTION 'A cleared role is published'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM catalog.entity_role_event) THEN RAISE EXCEPTION 'The API reader cannot read the role history'; END IF;
+END $$;
+RESET ROLE;
 ROLLBACK;

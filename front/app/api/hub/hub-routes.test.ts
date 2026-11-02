@@ -21,6 +21,7 @@ const socials = await import("./source-socials/[[...rest]]/route");
 const codes = await import("./source-codes/[[...rest]]/route");
 const interestKeywords = await import("./interest-keywords/[[...rest]]/route");
 const interestSources = await import("./interest-sources/[[...rest]]/route");
+const entityRoles = await import("./entity-roles/[[...rest]]/route");
 
 const ID = "8f6f0c1e-2b7a-4c1e-9d2a-1b2c3d4e5f60";
 const SITE = "http://127.0.0.1:3333";
@@ -238,6 +239,36 @@ describe("/api/hub/interest-keywords · interest-sources", () => {
       [interestKeywords.GET(req("GET", "/api/hub/interest-keywords", { origin: null }), ctx()), 401],
       [interestSources.POST(req("POST", "/api/hub/interest-sources", { body: {}, cookie: "tok", origin: "http://evil.test" }), ctx()), 403],
       [interestSources.POST(req("POST", "/api/hub/interest-sources", { cookie: "tok" }), ctx()), 422],
+    ] as const) {
+      expect((await p).status).toBe(status);
+    }
+    expect(bff.fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("/api/hub/entity-roles", () => {
+  it("passes the list, the history and mention keys, and the writes to the BFF", async () => {
+    bff.fetch.mockResolvedValue({ data: {} });
+    expect((await entityRoles.GET(req("GET", "/api/hub/entity-roles", { cookie: "tok", origin: null }), ctx())).status).toBe(200);
+    expect(bff.fetch).toHaveBeenLastCalledWith("GET", "/v1/hub/entity-roles", { token: "tok", body: undefined });
+    expect((await entityRoles.GET(req("GET", `/api/hub/entity-roles/history?entity=${ID}&x=1`, { cookie: "tok", origin: null }), ctx(["history"]))).status).toBe(200);
+    expect(bff.fetch).toHaveBeenLastCalledWith("GET", "/v1/hub/entity-roles/history", { token: "tok", body: undefined, query: `entity=${ID}` });
+    expect((await entityRoles.GET(req("GET", "/api/hub/entity-roles/history", { cookie: "tok", origin: null }), ctx(["history"]))).status).toBe(200);
+    expect(bff.fetch).toHaveBeenLastCalledWith("GET", "/v1/hub/entity-roles/history", { token: "tok", body: undefined });
+    expect((await entityRoles.GET(req("GET", `/api/hub/entity-roles/mentions?entity=${ID}`, { cookie: "tok", origin: null }), ctx(["mentions"]))).status).toBe(200);
+    expect(bff.fetch).toHaveBeenLastCalledWith("GET", "/v1/hub/entity-roles/mentions", { token: "tok", body: undefined, query: `entity=${ID}` });
+    expect((await entityRoles.POST(req("POST", "/api/hub/entity-roles", { body: { entityId: ID, role: "excluded" }, cookie: "tok" }), ctx())).status).toBe(200);
+    expect(bff.fetch).toHaveBeenLastCalledWith("POST", "/v1/hub/entity-roles", { token: "tok", body: { entityId: ID, role: "excluded" } });
+    expect((await entityRoles.POST(req("POST", "/api/hub/entity-roles/clear", { body: { entityId: ID }, cookie: "tok" }), ctx(["clear"]))).status).toBe(200);
+  });
+
+  it("refuses other paths, no session, cross-site writes and a malformed body", async () => {
+    for (const [p, status] of [
+      [entityRoles.GET(req("GET", `/api/hub/entity-roles/${ID}`, { cookie: "tok" }), ctx([ID])), 404],
+      [entityRoles.POST(req("POST", "/api/hub/entity-roles/approve", { body: {}, cookie: "tok" }), ctx(["approve"])), 404],
+      [entityRoles.GET(req("GET", "/api/hub/entity-roles", { origin: null }), ctx()), 401],
+      [entityRoles.POST(req("POST", "/api/hub/entity-roles", { body: {}, cookie: "tok", origin: "http://evil.test" }), ctx()), 403],
+      [entityRoles.POST(req("POST", "/api/hub/entity-roles", { cookie: "tok" }), ctx()), 422],
     ] as const) {
       expect((await p).status).toBe(status);
     }

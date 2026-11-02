@@ -91,6 +91,7 @@ export function HistorySection<T extends { history: ListEvent[] }>({
   load,
   version,
   eventLabel,
+  eventTitle,
   fieldLabel,
   value,
   errorText: errorTextOf,
@@ -99,6 +100,8 @@ export function HistorySection<T extends { history: ListEvent[] }>({
   /** changes when the row changed (its updatedAt): reload */
   version: string;
   eventLabel: (action: string) => string;
+  /** the whole event title, for a list of several rows; default: eventLabel */
+  eventTitle?: (event: ListEvent) => string;
   fieldLabel: (field: string) => string;
   value: (field: string, v: unknown) => string | null;
   /** the screen's own error text; default: 인용 출처 분류's */
@@ -123,7 +126,7 @@ export function HistorySection<T extends { history: ListEvent[] }>({
 
   const events = (data?.history ?? []).map((e) => ({
     key: String(e.id),
-    label: eventLabel(e.action),
+    label: eventTitle ? eventTitle(e) : eventLabel(e.action),
     at: e.at,
     actor: e.actor ? e.actor.displayName || e.actor.login : t("system"),
     changes: Object.fromEntries(Object.entries(e.changes).map(([field, [before, after]]) => [field, { old: value(field, before), new: value(field, after) }])),

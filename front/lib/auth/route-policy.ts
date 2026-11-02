@@ -335,6 +335,14 @@ export const ROUTES = [
     roles: ADMIN_ONLY,
     group: "admin" as const,
   },
+  // HUB entity roles (2026-11-02, lib/hub): same roles as the original 엔티티 카탈로그 page; the renewal sidebar's
+  // Admin › Entity catalog opens it.
+  {
+    path: "/renewal/admin/standards/entities",
+    key: "renewalAdminEntities",
+    roles: ADMIN_ONLY,
+    group: "admin" as const,
+  },
   // HUB GA4 property registry (2026-10-29, lib/hub): same roles as the original GA4 연동 page; the
   // renewal sidebar's Admin › GA4 연동 opens it.
   {

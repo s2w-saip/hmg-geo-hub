@@ -155,6 +155,21 @@ HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py init                 
 HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py import-interest-keywords   # 처음 값(한 번만)
 ```
 
+## 엔티티 역할 (2026-11-02)
+
+리뉴얼 Admin › 엔티티 카탈로그다(admin-todo 결정 A · F, '기준값 편집 공통 구조'). 누가 자사이고 누가 제외인지는 사람이 정하므로 HUB가 갖고, 엔티티 · 표시 브랜드 · 수치는 Gold 값을 읽기만 한다. 경쟁사는 기본값이라 저장하지 않는다.
+
+- **저장(`010_entity_roles`, 데이터 DB):** `catalog.entity_role`(키 = Gold `entity_id`, 대표 이름, 역할 `own` · `excluded`, 자사 브랜드, 메모, `active` · `cleared`)과 이력 표 `entity_role_event`. 두 DB 사이에 키가 없어 BFF가 쓰기 전에 Gold를 읽어 엔티티를 확인한다. 경쟁사로 되돌리면 행은 `cleared`로 남는다.
+- **업스트림 전달:** 쓰기마다 `catalog.publish_entity_roles()`가 기준값 종류 `entity_role`(source `hub_edit`)의 새 set을 기록한다(내용이 같으면 기록 안 함). 공개 승인은 `manage.py publish-reference entity_role`이다. 사람이 정한 역할만 내보내고, 분석이 찾은 엔티티는 내보내지 않는다.
+- **처음 값:** `import-entity-roles`가 Gold 명부(`dim_entity.registry_role`, 자사 5 · 제외 14)를 한 번 넣는다(`origin = gold_import`). HUB에 역할이 하나라도 있으면 거부한다.
+- **계정과 권한:** 쓰기는 `HGH_ENTITY_ROLE_EDITOR_DB_URL`(`hmg_entity_role_editor`, 비밀번호 `.env.entity-role-db.local`)이다. 역할 · 자사 브랜드 · 메모 · 상태 · 시각 · 행위자 열만 UPDATE하고, 엔티티 · 이름 · 출처 변경, DELETE, 공용 발행 함수 직접 실행, 다른 catalog 표 읽기, 운영 DB 접속은 없다.
+- **API:** `GET|POST /v1/hub/entity-roles`, `POST …/clear`, `GET …/history?entity=`, `GET …/mentions?entity=`. 최상위 관리자 전용이고 쓰기는 catalog lock 안에서 한다. 초안 · 미리보기 · 승인은 없다(결정 F).
+
+```bash
+HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py init                  # 010_entity_roles, hmg_entity_role_editor, .env.hub-edit.local
+HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py import-entity-roles   # 처음 값(한 번만)
+```
+
 ## 외부 API (2026-10-28)
 
 현재 저장된 프롬프트와 그 수집·가공에 필요한 값을 API 키를 가진 외부 호출자에게 읽기 전용으로 준다. 가공 결과(지표·판정·이전 회차 분석), 회차·측정 작업 원장, GA4 속성, 답변·인용 원문은 주지 않는다. 앱은 `back/ext/app.py`, 구조·범위·변경 감지 규칙은 [정본 문서 `#ext`](../../docs/architecture/hmg-geo-hub-architecture.html#ext)에 있다.
@@ -195,4 +210,4 @@ GA4와 프로젝트의 관계는 `catalog.project_ga4_property`에 실제 연동
 
 `verify`는 롤백되는 트랜잭션에서 비공개/선택 공개, 외부 계정의 기본 테이블 접근 차단, 버전 불변성, 운영 설정 이력·감사 이력 보존, 잘못된 참조 차단을 확인한다. 외부 API 경계도 같은 방식으로 확인한다: 키 없음·빈 키·만료·폐기·비활성 호출자는 0행, 다른 호출자의 프로젝트와 미승인 종류는 안 보임, 내부 Gold 식별자 비노출, 쓰기 계정의 `change_seq` 지정 거부, 승인 변경 시 순번 증가, `hmg_ext_api`의 운영 DB 접속 거부. 저장한 필터 계정은 자기 표만 쓰고(계정·자격증명·역할·감사 표 거부, 데이터 DB 접속 거부), 기본 필터 둘·주인 없는 행·빈 이름은 DB가 거부한다. GA4 등록부 계정은 등록부와 이력만 쓰고(속성 ID 변경·DELETE·이력 고치기·수집 결과 쓰기·GA4 행 읽기 거부, 운영 DB 접속 거부), 한 시장의 두 번째 수집 속성·숫자 아닌 속성 ID·소문자 국가·모르는 브랜드·이벤트 없는 고른 이벤트 기준은 DB가 거부한다. 출처 교정 계정은 교정과 이력만 쓰고 발행 함수로만 목록을 기록한다(키 · 출처 · 메모 변경, DELETE, 이력 고치기, `reference_set` 직접 쓰기, catalog · GA4 · 키 읽기, 운영 DB 접속 거부). 대문자 · `www.` 키, slug 아닌 카테고리는 DB가 거부하고, Gold 가져오기 계정은 `hub_edit` set을 쓰지 못한다. 교정 종류는 승인 전에는 외부 API에 나가지 않고 `hub_reference`를 바꾸지 않으며, 원복한 교정은 목록에서 빠진다. API 통합 검증은 `back/bff/tests/test_hub_storage.py`, 가져오기 규칙은 `test_hub_sync.py`, 저장한 필터는 `test_saved_filters.py`, 외부 API는 `back/ext/tests/test_app.py`를 사용한다. 영구 테스트 사용자나 가상 측정치를 생성하지 않는다.
 
-마이그레이션: 데이터 DB `002_data_catalog_publication`, `003_published_dimensions`, `004_hub_prompt_editing`, `005_external_api`, `006_ga4_registry`, `007_source_overrides`, `008_source_lists`, `009_interest_inputs`, 운영 DB `001_operations`, `002_hub_login`, `003_saved_filters`. 기존 데이터 DB `001_gold_ga4_seo`는 변경하지 않았다.
+마이그레이션: 데이터 DB `002_data_catalog_publication`, `003_published_dimensions`, `004_hub_prompt_editing`, `005_external_api`, `006_ga4_registry`, `007_source_overrides`, `008_source_lists`, `009_interest_inputs`, `010_entity_roles`, 운영 DB `001_operations`, `002_hub_login`, `003_saved_filters`. 기존 데이터 DB `001_gold_ga4_seo`는 변경하지 않았다.

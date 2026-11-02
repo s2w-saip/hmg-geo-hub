@@ -28,17 +28,18 @@ ACCOUNT_SECRET = ROOT / '.env.account-db.local'    # account editor role passwor
 GA4_REGISTRY_SECRET = ROOT / '.env.ga4-registry-db.local'  # GA4 registry editor role password (data DB)
 SOURCE_OVERRIDE_SECRET = ROOT / '.env.source-override-db.local'  # source correction editor role password (data DB)
 INTEREST_SECRET = ROOT / '.env.interest-db.local'  # customer-interest editor role password (data DB)
+ENTITY_ROLE_SECRET = ROOT / '.env.entity-role-db.local'  # entity role editor role password (data DB)
 OPS_CONTAINER = 'hgh-operations-db'
 OPS_DB = 'hmg_operations'
 # External API (2026-10-28): what a project approval covers, the Gold reference families an approval can
 # open (the HUB-owned surface/brand_bit/mention_type are always part of the contract), key lifetimes.
 PROJECT_FLAGS = ('projects', 'prompts')
 # source_override, source_seed, source_social and source_code (2026-10-30) are the HUB's own source classification
-# inputs, interest_keyword and interest_source (2026-11-02) its customer-interest collection inputs (source hub_edit),
-# approved like the Gold families.
+# inputs, interest_keyword and interest_source (2026-11-02) its customer-interest collection inputs, entity_role
+# (2026-11-02) its entity roles (source hub_edit), approved like the Gold families.
 REFERENCE_FAMILIES = ('engine', 'region', 'country', 'language', 'taxon', 'brand', 'entity', 'source_category',
                       'source', 'owned_base', 'crawl_bot', 'keyword', 'perspective', 'population', 'source_override',
-                      'source_seed', 'source_social', 'source_code', 'interest_keyword', 'interest_source')
+                      'source_seed', 'source_social', 'source_code', 'interest_keyword', 'interest_source', 'entity_role')
 KEY_DAYS, KEY_DAYS_MAX, KEYS_PER_CLIENT = 180, 365, 2
 KEY_LOCK = 617427414     # one key issue at a time, so the per-client limit holds
 CATALOG_LOCK = 617427413  # every catalog writer (sync_catalog.py, the HUB editors): change_seq order = commit order
@@ -46,7 +47,7 @@ CATALOG_LOCK = 617427413  # every catalog writer (sync_catalog.py, the HUB edito
 
 def sanitize(message):
     for path in (OPS_SECRET, DATA_SECRET, EDIT_SECRET, EXT_SECRET, FILTER_SECRET, ACCOUNT_SECRET, SOURCE_OVERRIDE_SECRET,
-                 INTEREST_SECRET, analytics.SECRET):
+                 INTEREST_SECRET, ENTITY_ROLE_SECRET, analytics.SECRET):
         if path.exists():
             for key, value in analytics.env_file(path).items():
                 if ('PASSWORD' in key or 'SECRET' in key) and value:
@@ -309,6 +310,21 @@ ALTER ROLE hmg_interest_editor CONNECTION LIMIT 4;
 GRANT CONNECT ON DATABASE hmg_analytics TO hmg_interest_editor;
 COMMIT;""")
     migrate('data-009.sql', '009_interest_inputs')
+    # Entity roles (2026-11-02): the API's role for the roles, their history and their publishing function
+    # (Admin › 엔티티 카탈로그) and nothing else.
+    if not ENTITY_ROLE_SECRET.exists() and sql("SELECT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='hmg_entity_role_editor');").stdout.strip() == 't':
+        raise RuntimeError('The entity role editor already exists; restore .env.entity-role-db.local rather than replacing credentials')
+    entity_role = create_secret(ENTITY_ROLE_SECRET, {'ENTITY_ROLE_EDITOR_PASSWORD': None})
+    sql(f"""BEGIN;
+DO $$ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='hmg_entity_role_editor') THEN CREATE ROLE hmg_entity_role_editor LOGIN; END IF;
+END $$;
+ALTER ROLE hmg_entity_role_editor WITH NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD {analytics.literal(entity_role['ENTITY_ROLE_EDITOR_PASSWORD'])};
+ALTER ROLE hmg_entity_role_editor SET statement_timeout='15s';
+ALTER ROLE hmg_entity_role_editor CONNECTION LIMIT 4;
+GRANT CONNECT ON DATABASE hmg_analytics TO hmg_entity_role_editor;
+COMMIT;""")
+    migrate('data-010.sql', '010_entity_roles')
     analytics.secure_write(ROOT / '.env.ext-api.local', '# External API: the caller-scoped ext views only.\n'
         f"HGH_EXT_DB_URL=postgresql://hmg_ext_api:{ext['EXT_API_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n")
     analytics.secure_write(ROOT / '.env.operations.local', '# FastAPI read-only operations connection.\n'
@@ -316,13 +332,14 @@ COMMIT;""")
     analytics.secure_write(ROOT / '.env.hub-edit.local', '# FastAPI HUB writes: Global prompt editing (INSERT-only catalog role), '
         'saved filters (system.saved_filter only), accounts (the account tables only), the GA4 registry (its two tables), '
         'source category corrections (their two tables and publishing function), the customer-interest inputs (their lists and '
-        'publishing functions) and the login token secret.\n'
+        'publishing functions), the entity roles (their two tables and publishing function) and the login token secret.\n'
         f"HGH_CATALOG_EDITOR_DB_URL=postgresql://hmg_catalog_editor:{edit['CATALOG_EDITOR_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n"
         f"HGH_SAVED_FILTER_EDITOR_DB_URL=postgresql://hmg_saved_filter_editor:{saved['SAVED_FILTER_EDITOR_PASSWORD']}@{service_host('operations')}/{OPS_DB}\n"
         f"HGH_ACCOUNT_EDITOR_DB_URL=postgresql://hmg_account_editor:{account['ACCOUNT_EDITOR_PASSWORD']}@{service_host('operations')}/{OPS_DB}\n"
         f"HGH_GA4_REGISTRY_EDITOR_DB_URL=postgresql://hmg_ga4_registry_editor:{registry['GA4_REGISTRY_EDITOR_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n"
         f"HGH_SOURCE_OVERRIDE_EDITOR_DB_URL=postgresql://hmg_source_override_editor:{override['SOURCE_OVERRIDE_EDITOR_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n"
         f"HGH_INTEREST_EDITOR_DB_URL=postgresql://hmg_interest_editor:{interest['INTEREST_EDITOR_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n"
+        f"HGH_ENTITY_ROLE_EDITOR_DB_URL=postgresql://hmg_entity_role_editor:{entity_role['ENTITY_ROLE_EDITOR_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n"
         f"HGH_AUTH_SECRET={edit['HGH_AUTH_SECRET']}\n")
     analytics.secure_write(ROOT / '.env.data-external.local', '# Local connection only. Empty exports until per-project approval.\n'
         f"HGH_DATA_EXTERNAL_DB_URL=postgresql://hmg_data_external:{data['DATA_EXTERNAL_PASSWORD']}@127.0.0.1:{data_port()}/hmg_analytics\n")
@@ -363,6 +380,7 @@ def verify():
     registry = f"postgresql://hmg_ga4_registry_editor:{analytics.env_file(GA4_REGISTRY_SECRET)['GA4_REGISTRY_EDITOR_PASSWORD']}"
     override = f"postgresql://hmg_source_override_editor:{analytics.env_file(SOURCE_OVERRIDE_SECRET)['SOURCE_OVERRIDE_EDITOR_PASSWORD']}"
     interest = f"postgresql://hmg_interest_editor:{analytics.env_file(INTEREST_SECRET)['INTEREST_EDITOR_PASSWORD']}"
+    entity_role = f"postgresql://hmg_entity_role_editor:{analytics.env_file(ENTITY_ROLE_SECRET)['ENTITY_ROLE_EDITOR_PASSWORD']}"
     config = {'external':external+f"@{service_host('analytics')}/hmg_analytics",
               'external_operations':external+f"@{service_host('operations')}/{OPS_DB}",
               'ext':ext_api+f"@{service_host('analytics')}/hmg_analytics",
@@ -377,7 +395,9 @@ def verify():
               'source_override':override+f"@{service_host('analytics')}/hmg_analytics",
               'source_override_operations':override+f"@{service_host('operations')}/{OPS_DB}",
               'interest':interest+f"@{service_host('analytics')}/hmg_analytics",
-              'interest_operations':interest+f"@{service_host('operations')}/{OPS_DB}"}
+              'interest_operations':interest+f"@{service_host('operations')}/{OPS_DB}",
+              'entity_role':entity_role+f"@{service_host('analytics')}/hmg_analytics",
+              'entity_role_operations':entity_role+f"@{service_host('operations')}/{OPS_DB}"}
     script = (HERE / 'verify_connections.py').read_text(encoding='utf8') + '\nasyncio.run(main(' + repr(config) + '))\n'
     print(api_python(script).strip())
     print('Verified opt-in exports, grants, immutable versions, operations isolation; all fixture transactions rolled back')
@@ -757,6 +777,49 @@ COMMIT;""")
     print(json.dumps({'imported': len(found)}))
 
 
+GOLD_ROLES_SCRIPT = '''import asyncio, json, os
+import asyncpg
+async def main():
+    conn = await asyncpg.connect(os.environ['HGH_GOLD_DB_URL'], server_settings={'default_transaction_read_only': 'on', 'statement_timeout': '30000'})
+    try:
+        rows = await conn.fetch("""SELECT e.entity_id::text AS entity_id,coalesce(e.rep_name,b.name) AS rep_name,e.registry_role,
+            CASE WHEN b.kind=1 THEN b.name END AS brand FROM gold.dim_entity e LEFT JOIN gold.dim_brand b USING(brand_key)
+            WHERE e.registry_role IS NOT NULL ORDER BY e.entity_id""")
+    finally:
+        await conn.close()
+    print(json.dumps([[r['entity_id'], r['rep_name'], r['registry_role'], r['brand']] for r in rows], ensure_ascii=False))
+asyncio.run(main())
+'''
+
+
+def import_entity_roles(args):
+    """import-entity-roles: the HUB's first entity roles are Gold's registry_role rows (the reference family `entity`).
+    Runs once: refused when the HUB already has a role. Records them (origin gold_import), their history and the first
+    `entity_role` list for the external API, in one transaction under the catalog lock."""
+    rows = json.loads(api_python(GOLD_ROLES_SCRIPT).strip().splitlines()[-1])
+    if not rows:
+        print('Gold has no entity role; nothing imported')
+        return
+    for entity_id, name, role, brand in rows:
+        if role not in ('own', 'excluded') or not name or (role == 'own' and brand is None):
+            raise RuntimeError(f'Gold entity {entity_id}: role {role} with brand {brand}; nothing imported')
+    values = ','.join(f"({analytics.literal(e)}::uuid,{analytics.literal(n)},{analytics.literal(r)},"
+                      f"{analytics.literal(b) if r == 'own' else 'NULL'},'gold_import')" for e, n, r, b in rows)
+    sql(f"""BEGIN;
+SELECT pg_advisory_xact_lock({CATALOG_LOCK});
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM catalog.entity_role) THEN RAISE EXCEPTION 'The HUB already has entity roles; the first import runs once'; END IF;
+END $$;
+INSERT INTO catalog.entity_role(entity_id,rep_name,role,brand,origin) VALUES{values};
+SELECT count(*) FROM catalog.publish_entity_roles();
+INSERT INTO catalog.entity_role_event(entity_id,action,changes,published_seq)
+SELECT entity_id,'import',jsonb_build_object('role',jsonb_build_array(NULL,role),'brand',jsonb_build_array(NULL,brand)),
+       (SELECT change_seq FROM catalog.current_reference_set WHERE family='entity_role')
+FROM catalog.entity_role;
+COMMIT;""")
+    print(json.dumps({'imported': len(rows), 'own': sum(r[2] == 'own' for r in rows), 'excluded': sum(r[2] == 'excluded' for r in rows)}))
+
+
 COMMANDS = {
     'init': lambda a: initialize(), 'start': lambda a: start(), 'sync-gold-catalog': sync, 'status': lambda a: status(),
     'verify': lambda a: verify(), 'backup': lambda a: backup(), 'set-admin': lambda a: set_admin(), 'revoke-admin': lambda a: revoke_admin(),
@@ -768,6 +831,7 @@ COMMANDS = {
     'import-source-overrides': import_source_overrides,
     'import-source-lists': import_source_lists,
     'import-interest-keywords': import_interest_keywords,
+    'import-entity-roles': import_entity_roles,
 }
 
 if __name__ == '__main__':

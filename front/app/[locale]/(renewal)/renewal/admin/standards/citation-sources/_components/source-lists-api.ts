@@ -14,6 +14,8 @@ export interface ListPublished {
 
 export interface ListEvent {
   id: number;
+  /** the row the event belongs to */
+  key?: string;
   action: string;
   at: string;
   actor: { login: string; displayName: string | null } | null;

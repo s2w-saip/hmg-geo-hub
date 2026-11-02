@@ -111,7 +111,8 @@
     "renewalAdmin": "사용자 관리",
     "renewalAdminGa4": "GA4 연동",
     "renewalAdminCitationSources": "인용 출처 분류",
-    "renewalAdminCustomerInterest": "고객 관심 데이터 관리"
+    "renewalAdminCustomerInterest": "고객 관심 데이터 관리",
+    "renewalAdminEntities": "엔티티 카탈로그"
   },
   "locale": {
     "label": "언어",
@@ -7025,6 +7026,115 @@
         "stopped": "{url} 소스를 중지했습니다. 외부 API 목록에서 빠집니다.",
         "resumed": "{url} 소스를 다시 활성화했습니다. 외부 API 목록에 다시 들어갑니다."
       }
+    }
+  },
+  "hubEntities": {
+    "title": "엔티티 카탈로그",
+    "description": "답변에서 발견된 엔티티의 역할(자사 · 경쟁사 · 제외)을 관리합니다. 역할은 모든 KPI의 당사 판정을 정합니다.",
+    "login": "로그인",
+    "loginRequired": "HUB 로그인이 필요합니다.",
+    "flowNoteTitle": "반영 시점",
+    "flowNote": "여기서 고친 역할은 HUB에 저장되고 외부 API 목록(entity_role)으로 파이프라인에 넘어갑니다. 화면 숫자와 당사 판정에는 파이프라인이 이 목록을 가져가 Gold를 다시 만든 뒤 반영되고, 그 전까지 '반영 대기'로 보입니다.",
+    "listLabel": "엔티티 목록",
+    "searchLabel": "검색",
+    "searchPlaceholder": "엔티티 · 표시 브랜드 검색",
+    "count": "{shown} / {total}개 · 자사 {own} · 제외 {excluded} · 반영 대기 {pending} · 업스트림 {upstream}",
+    "empty": "엔티티가 없습니다.",
+    "emptyFiltered": "조건에 맞는 엔티티가 없습니다.",
+    "hint": "엔티티 · 표시 브랜드 · 분류 · 답변 · 언급 수는 Gold 값 그대로이고, 답변 · 언급은 전 기간 합계입니다. 역할을 정하지 않은 엔티티는 경쟁사로 칩니다.",
+    "open": "역할 지정",
+    "recent": "최근 변경",
+    "detailTitle": "엔티티",
+    "save": "저장",
+    "saved": "{name} 역할을 저장했습니다. 파이프라인이 가져가 Gold를 다시 만든 뒤 반영됩니다.",
+    "notePlaceholder": "선택 — 지정 사유",
+    "roleDefault": "기본값",
+    "confirmOwn": "당사 판정이 바뀌는 변경입니다. 이 엔티티의 답변 {answers}건 · 언급 {mentions}건이 Gold 재가공 뒤 모든 KPI의 당사 집계에 영향을 줍니다. 표본을 확인했습니다.",
+    "numbers": "답변 {answers} · 언급 {mentions}",
+    "loading": "불러오는 중…",
+    "surfaces": "관측 표면",
+    "surfaceMonths": "{surface} · {months}개월",
+    "noSurfaces": "Gold에 관측 표면이 없습니다.",
+    "samples": "언급 표본",
+    "samplesHint": "Global 최근 {rounds}개 회차에서 찾았습니다. 표시 브랜드의 최신 답변 안에서 찾으므로 드문 표기는 나오지 않을 수 있습니다.",
+    "noSamples": "최근 회차에서 찾은 표본이 없습니다.",
+    "problem": {
+      "brand": "자사 브랜드를 고르세요.",
+      "note": "메모는 500자까지입니다.",
+      "confirm": "저장하려면 확인이 필요합니다."
+    },
+    "axis": {
+      "role": "역할",
+      "brand": "자사 브랜드",
+      "kind": "Gold 분류",
+      "state": "반영 상태"
+    },
+    "column": {
+      "name": "엔티티",
+      "displayBrand": "표시 브랜드",
+      "kind": "Gold 분류",
+      "answers": "답변",
+      "mentions": "언급",
+      "firstSeen": "첫 발견",
+      "role": "역할",
+      "state": "반영",
+      "actions": "작업"
+    },
+    "role": {
+      "own": "자사",
+      "competitor": "경쟁사",
+      "excluded": "제외"
+    },
+    "kind": {
+      "own": "자사",
+      "competitor": "경쟁",
+      "nonCompetitor": "비경쟁"
+    },
+    "status": {
+      "active": "적용",
+      "cleared": "해제"
+    },
+    "state": {
+      "applied": "반영됨",
+      "pending": "반영 대기",
+      "upstream": "업스트림 역할"
+    },
+    "stateTip": {
+      "applied": "Gold가 이 역할을 적용했습니다.",
+      "pending": "파이프라인이 아직 가져가지 않았습니다. Gold 재가공 뒤 반영됩니다.",
+      "upstream": "Gold에 역할이 있지만 HUB 목록에는 없습니다. 역할을 저장하면 HUB 값이 됩니다.",
+      "none": "양쪽 모두 역할이 없어 경쟁사로 칩니다."
+    },
+    "origin": {
+      "gold_import": "Gold 명부에서 가져옴",
+      "hub": "이 화면에서 지정"
+    },
+    "event": {
+      "import": "가져오기",
+      "set": "변경",
+      "clear": "해제"
+    },
+    "field": {
+      "role": "역할",
+      "brand": "자사 브랜드",
+      "note": "메모",
+      "status": "상태",
+      "displayBrand": "표시 브랜드",
+      "kind": "Gold 분류",
+      "type": "엔티티 유형",
+      "numbers": "전 기간",
+      "firstSeen": "첫 발견",
+      "goldRole": "Gold 역할",
+      "state": "반영",
+      "origin": "처음 값"
+    },
+    "error": {
+      "invalid_value": "입력값을 확인하세요: {fields}",
+      "not_found": "Gold에 없는 엔티티입니다.",
+      "unauthorized": "로그인이 만료되었습니다. 다시 로그인하세요.",
+      "forbidden": "최상위 관리자만 엔티티 역할을 관리할 수 있습니다.",
+      "source_unavailable": "HUB 저장소나 Gold를 읽지 못했습니다. 잠시 뒤 다시 시도하세요.",
+      "failed": "요청을 처리하지 못했습니다."
     }
   },
   "hubPrompts": {

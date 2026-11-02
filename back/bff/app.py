@@ -3,8 +3,8 @@ login needs a signed-in HUB account (hub_stores/hub_auth.py), and screens and da
 (bff/access.py). Read-only, except what the HUB writes: every account changes its own password
 (/v1/auth/password) and keeps its own saved filters (/v1/hub/saved-filters); the top-level administrator also
 manages the accounts (/v1/hub/accounts), edits Global prompts (/v1/hub/global-prompts), keeps the GA4 property
-registry (/v1/hub/ga4-properties), the source category corrections (/v1/hub/source-overrides) and the customer-interest
-inputs (/v1/hub/interest-keywords, /v1/hub/interest-sources)."""
+registry (/v1/hub/ga4-properties), the source category corrections (/v1/hub/source-overrides), the customer-interest
+inputs (/v1/hub/interest-keywords, /v1/hub/interest-sources) and the entity roles (/v1/hub/entity-roles)."""
 from __future__ import annotations
 
 import json
@@ -19,8 +19,8 @@ from fastapi.responses import JSONResponse
 
 from bff import access, api, screens
 from bff.gold_reader.db import close_pool, connection, open_pool
-from bff.hub_stores import (accounts, analytics_db, catalog_editor, ga4_registry, hub_auth, hub_catalog, interest, operations_db,
-                             saved_filters, source_lists, source_overrides)
+from bff.hub_stores import (accounts, analytics_db, catalog_editor, entity_roles, ga4_registry, hub_auth, hub_catalog, interest,
+                             operations_db, saved_filters, source_lists, source_overrides)
 
 log = logging.getLogger("hgh.gold")
 
@@ -36,6 +36,7 @@ async def lifespan(app: FastAPI):
     await ga4_registry.open_pool()
     await source_overrides.open_pool()
     await interest.open_pool()
+    await entity_roles.open_pool()
     try:
         yield
     finally:
@@ -48,6 +49,7 @@ async def lifespan(app: FastAPI):
         await ga4_registry.close_pool()
         await source_overrides.close_pool()
         await interest.close_pool()
+        await entity_roles.close_pool()
 
 
 app = FastAPI(title="HMG GEO HUB BFF / read-only API", lifespan=lifespan)
@@ -400,6 +402,39 @@ async def interest_source_status(action: str, request: Request):
     actor = await hub_auth.admin(request.headers.get("authorization"))
     body = catalog_editor.parse(interest.SourceKey, await json_body(request), "source")
     return hub_json(await interest.set_source_status(body, action == "stop", actor))
+
+
+# Admin › 엔티티 카탈로그 (hub_stores/entity_roles.py): the top-level administrator only.
+@app.get("/v1/hub/entity-roles")
+async def entity_role_list(request: Request):
+    await hub_auth.admin(request.headers.get("authorization"))
+    return hub_json(await entity_roles.listing())
+
+
+@app.get("/v1/hub/entity-roles/history")
+async def entity_role_history(request: Request, entity: str | None = Query(None, max_length=40)):
+    await hub_auth.admin(request.headers.get("authorization"))
+    return hub_json(await entity_roles.history(entity))
+
+
+@app.get("/v1/hub/entity-roles/mentions")
+async def entity_role_mentions(request: Request, entity: str | None = Query(None, max_length=40)):
+    await hub_auth.admin(request.headers.get("authorization"))
+    return hub_json(await entity_roles.mentions(entity))
+
+
+@app.post("/v1/hub/entity-roles")
+async def entity_role_set(request: Request):
+    actor = await hub_auth.admin(request.headers.get("authorization"))
+    body = catalog_editor.parse(entity_roles.RoleSet, await json_body(request), "entity role")
+    return hub_json(await entity_roles.set_role(body, actor))
+
+
+@app.post("/v1/hub/entity-roles/clear")
+async def entity_role_clear(request: Request):
+    actor = await hub_auth.admin(request.headers.get("authorization"))
+    body = catalog_editor.parse(entity_roles.RoleClear, await json_body(request), "entity role")
+    return hub_json(await entity_roles.clear(body, actor))
 
 
 @app.get("/v1/hub/global-prompts")
