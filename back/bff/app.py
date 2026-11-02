@@ -3,7 +3,8 @@ login needs a signed-in HUB account (hub_stores/hub_auth.py), and screens and da
 (bff/access.py). Read-only, except what the HUB writes: every account changes its own password
 (/v1/auth/password) and keeps its own saved filters (/v1/hub/saved-filters); the top-level administrator also
 manages the accounts (/v1/hub/accounts), edits Global prompts (/v1/hub/global-prompts), keeps the GA4 property
-registry (/v1/hub/ga4-properties) and the source category corrections (/v1/hub/source-overrides)."""
+registry (/v1/hub/ga4-properties), the source category corrections (/v1/hub/source-overrides) and the customer-interest
+inputs (/v1/hub/interest-keywords, /v1/hub/interest-sources)."""
 from __future__ import annotations
 
 import json
@@ -18,8 +19,8 @@ from fastapi.responses import JSONResponse
 
 from bff import access, api, screens
 from bff.gold_reader.db import close_pool, connection, open_pool
-from bff.hub_stores import (accounts, analytics_db, catalog_editor, ga4_registry, hub_auth, hub_catalog, operations_db, saved_filters,
-                             source_lists, source_overrides)
+from bff.hub_stores import (accounts, analytics_db, catalog_editor, ga4_registry, hub_auth, hub_catalog, interest, operations_db,
+                             saved_filters, source_lists, source_overrides)
 
 log = logging.getLogger("hgh.gold")
 
@@ -34,6 +35,7 @@ async def lifespan(app: FastAPI):
     await accounts.open_pool()
     await ga4_registry.open_pool()
     await source_overrides.open_pool()
+    await interest.open_pool()
     try:
         yield
     finally:
@@ -45,6 +47,7 @@ async def lifespan(app: FastAPI):
         await accounts.close_pool()
         await ga4_registry.close_pool()
         await source_overrides.close_pool()
+        await interest.close_pool()
 
 
 app = FastAPI(title="HMG GEO HUB BFF / read-only API", lifespan=lifespan)
@@ -339,6 +342,64 @@ async def source_code_order(request: Request):
     actor = await hub_auth.admin(request.headers.get("authorization"))
     body = catalog_editor.parse(source_lists.CodeOrder, await json_body(request), "code order")
     return hub_json(await source_lists.order_codes(body, actor))
+
+
+# Admin › 고객 관심 데이터 관리 (hub_stores/interest.py): the top-level administrator only. A keyword or a URL can hold any
+# character, so it travels in the body or the query, not in the path.
+@app.get("/v1/hub/interest-keywords")
+async def interest_keyword_list(request: Request):
+    await hub_auth.admin(request.headers.get("authorization"))
+    return hub_json(await interest.keywords())
+
+
+@app.get("/v1/hub/interest-keywords/history")
+async def interest_keyword_history(request: Request, term: str | None = Query(None, max_length=400)):
+    await hub_auth.admin(request.headers.get("authorization"))
+    return hub_json(await interest.keyword_history(term))
+
+
+@app.post("/v1/hub/interest-keywords")
+async def interest_keyword_set(request: Request):
+    actor = await hub_auth.admin(request.headers.get("authorization"))
+    body = catalog_editor.parse(interest.KeywordSet, await json_body(request), "keyword")
+    return hub_json(await interest.set_keyword(body, actor))
+
+
+@app.post("/v1/hub/interest-keywords/{action}")
+async def interest_keyword_status(action: str, request: Request):
+    if action not in ("stop", "resume"):
+        raise HTTPException(404, "Unknown action")
+    actor = await hub_auth.admin(request.headers.get("authorization"))
+    body = catalog_editor.parse(interest.KeywordKey, await json_body(request), "keyword")
+    return hub_json(await interest.set_keyword_status(body, action == "stop", actor))
+
+
+@app.get("/v1/hub/interest-sources")
+async def interest_source_list(request: Request):
+    await hub_auth.admin(request.headers.get("authorization"))
+    return hub_json(await interest.sources())
+
+
+@app.get("/v1/hub/interest-sources/history")
+async def interest_source_history(request: Request, url: str | None = Query(None, max_length=600)):
+    await hub_auth.admin(request.headers.get("authorization"))
+    return hub_json(await interest.source_history(url))
+
+
+@app.post("/v1/hub/interest-sources")
+async def interest_source_set(request: Request):
+    actor = await hub_auth.admin(request.headers.get("authorization"))
+    body = catalog_editor.parse(interest.SourceSet, await json_body(request), "source")
+    return hub_json(await interest.set_source(body, actor))
+
+
+@app.post("/v1/hub/interest-sources/{action}")
+async def interest_source_status(action: str, request: Request):
+    if action not in ("stop", "resume"):
+        raise HTTPException(404, "Unknown action")
+    actor = await hub_auth.admin(request.headers.get("authorization"))
+    body = catalog_editor.parse(interest.SourceKey, await json_body(request), "source")
+    return hub_json(await interest.set_source_status(body, action == "stop", actor))
 
 
 @app.get("/v1/hub/global-prompts")

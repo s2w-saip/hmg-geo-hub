@@ -110,7 +110,8 @@
     "renewalAdminStandardPrompts": "Global prompt management",
     "renewalAdmin": "User management",
     "renewalAdminGa4": "GA4 connection",
-    "renewalAdminCitationSources": "Citation Sources"
+    "renewalAdminCitationSources": "Citation Sources",
+    "renewalAdminCustomerInterest": "Customer interest config"
   },
   "locale": {
     "label": "Language",
@@ -6811,6 +6812,218 @@
         "import": "Import",
         "set": "Change",
         "order": "Order change"
+      }
+    }
+  },
+  "hubInterest": {
+    "title": "Customer interest config",
+    "login": "Sign in",
+    "loginRequired": "Sign in to the HUB first.",
+    "tabs": {
+      "label": "Customer interest data view",
+      "keywords": "Keywords",
+      "sources": "Sources"
+    },
+    "flowNoteTitle": "When it takes effect",
+    "searchLabel": "Search",
+    "cancel": "Cancel",
+    "save": "Save",
+    "stop": "Stop",
+    "resume": "Resume",
+    "historyOpen": "{name} history",
+    "brandCommon": "Common",
+    "brandHint": "With none picked, it is common to every brand.",
+    "notePlaceholder": "Optional: why it was added",
+    "noteProblem": "A note is up to 500 characters.",
+    "conditionToken": "Condition",
+    "conditionRemove": "Remove the {condition} condition",
+    "conditionClear": "Clear all",
+    "conditionSearch": "Search country or language",
+    "region": {
+      "northAmerica": "North America",
+      "asia": "Asia",
+      "europe": "Europe",
+      "oceania": "Oceania",
+      "southAmerica": "South America",
+      "middleEast": "Middle East",
+      "africa": "Africa"
+    },
+    "source": {
+      "google_keyword": "Google Keyword",
+      "community_voc": "Community VoC"
+    },
+    "sourceShort": {
+      "google_keyword": "Google",
+      "community_voc": "VoC"
+    },
+    "channel": {
+      "news": "News",
+      "pr": "PR",
+      "social": "Social",
+      "community": "Community"
+    },
+    "status": {
+      "active": "Active",
+      "stopped": "Stopped"
+    },
+    "event": {
+      "import": "Import",
+      "add": "Add",
+      "set": "Change",
+      "stop": "Stop",
+      "resume": "Resume"
+    },
+    "field": {
+      "term": "Keyword",
+      "conditions": "Collection conditions",
+      "source_types": "Sources",
+      "brands": "Brands",
+      "note": "Note",
+      "status": "Status",
+      "channel": "Channel",
+      "url": "URL / domain",
+      "origin": "First value"
+    },
+    "error": {
+      "invalid_value": "Check the input: {fields}",
+      "not_found": "The HUB list has no such item.",
+      "unauthorized": "Your session expired. Sign in again.",
+      "forbidden": "Only the top-level administrator can manage customer interest data.",
+      "source_unavailable": "Could not read the HUB store or Gold. Try again shortly.",
+      "failed": "The request failed."
+    },
+    "keywords": {
+      "description": "Manage the search keywords to collect and their collection conditions (country and language).",
+      "flowNote": "Keywords changed here are saved in the HUB and go to the pipeline through the external API list (interest_keyword). Keyword data changes after the pipeline takes the list and collects; until then they show as 'Pending'.",
+      "listLabel": "Keyword list",
+      "searchPlaceholder": "Search keywords",
+      "count": "{shown} / {total} · active {active} · stopped {stopped} · pending {pending} · upstream {upstream}",
+      "empty": "No keywords.",
+      "emptyFiltered": "No keywords match these conditions.",
+      "hint": "Every HUB keyword, plus keywords Gold collected that the HUB does not have. Gold collection is the number of conditions in Gold's seed rows (kw_suggestion) and the last collection date.",
+      "add": "Add keyword",
+      "addAsKeyword": "Add as keyword",
+      "edit": "Edit",
+      "conditionsMore": "{first} and {more} more",
+      "goldTip": "Gold collected {collected} of the HUB's {total} conditions.",
+      "goldNone": "Gold never collected this keyword.",
+      "collectedAt": "collected {at}",
+      "notCollected": "not collected",
+      "detailTitle": "Keyword",
+      "axis": {
+        "market": "Collection condition",
+        "source": "Source",
+        "brand": "Brand",
+        "state": "Reflection",
+        "status": "Status"
+      },
+      "column": {
+        "term": "Keyword",
+        "conditions": "Conditions",
+        "source": "Sources",
+        "brand": "Brands",
+        "observed": "Gold collection",
+        "state": "Reflection",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "state": {
+        "applied": "Applied",
+        "pending": "Pending",
+        "upstream": "Upstream keyword"
+      },
+      "stateTip": {
+        "applied": "Gold collected this keyword under all of the HUB's conditions.",
+        "pending": "Some conditions are not collected yet. It takes effect after the pipeline takes the list and collects.",
+        "upstream": "Gold collected it but the HUB list does not have it. 'Add as keyword' makes it a HUB keyword.",
+        "none": "A stopped keyword. It leaves the external API list; what Gold still holds is past collection."
+      },
+      "origin": {
+        "gold_import": "Imported from Gold's seeds",
+        "hub": "Set on this screen"
+      },
+      "field": {
+        "state": "Reflection",
+        "goldExtra": "Conditions only in Gold"
+      },
+      "form": {
+        "titleAdd": "Add keyword",
+        "titleEdit": "Edit keyword",
+        "termPlaceholder": "e.g. family SUV",
+        "termHint": "It cannot change after saving. The collection API takes no brackets or commas.",
+        "problem": {
+          "term": "A keyword is 1 to 99 characters, without brackets or commas.",
+          "duplicate": "This keyword already exists. Edit it in the list.",
+          "conditions": "Pick at least one collection condition.",
+          "sources": "Pick at least one source."
+        }
+      },
+      "toast": {
+        "saved": "Saved {term}. It takes effect after the pipeline takes it and collects.",
+        "stopped": "Stopped {term}. It leaves the external API list.",
+        "resumed": "Resumed {term}. It returns to the external API list."
+      }
+    },
+    "sources": {
+      "description": "Manage the community URLs and domains to collect from.",
+      "flowNote": "Sources changed here are saved in the HUB and go to the pipeline through the external API list (interest_source). No collector reads this list yet, so it does not affect collection until the pipeline agrees.",
+      "listLabel": "Source list",
+      "searchPlaceholder": "Search URLs and domains",
+      "count": "{shown} / {total} · active {active} · stopped {stopped} · not in the HUB {upstream}",
+      "empty": "No sources.",
+      "emptyFiltered": "No sources match these conditions.",
+      "hint": "Every HUB source, plus domains in Gold's social snapshot ({date}) the HUB does not have. Mentions add up the counts per context and condition, so one utterance can count more than once. Compared only when the domain without www. is exactly the same.",
+      "snapshotPill": "Gold social snapshot {date} · {sources} sources",
+      "add": "Add source",
+      "addAsSource": "Add as source",
+      "edit": "Edit",
+      "detailTitle": "Source",
+      "corpusValue": "{mentions} mentions · {entities} contexts and conditions",
+      "corpusNone": "Not in Gold's social snapshot",
+      "axis": {
+        "channel": "Channel",
+        "brand": "Brand",
+        "state": "Corpus",
+        "status": "Status"
+      },
+      "column": {
+        "url": "URL / domain",
+        "channel": "Channel",
+        "brand": "Brands",
+        "mentions": "Corpus mentions",
+        "state": "Corpus",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "state": {
+        "observed": "In the corpus",
+        "unseen": "Not in the corpus",
+        "upstream": "Not in the HUB"
+      },
+      "stateTip": {
+        "observed": "This domain is in Gold's social snapshot. It does not mean this list was applied.",
+        "unseen": "This domain is not in Gold's social snapshot.",
+        "upstream": "It is in Gold's social snapshot but not in the HUB list. 'Add as source' makes it a HUB source."
+      },
+      "field": {
+        "key": "Key",
+        "host": "Domain",
+        "corpus": "Gold corpus"
+      },
+      "form": {
+        "titleAdd": "Add source",
+        "titleEdit": "Edit source",
+        "urlPlaceholder": "e.g. bobaedream.co.kr",
+        "urlHint": "A domain or a URL. It cannot change after saving.",
+        "problem": {
+          "url": "Check the domain or URL.",
+          "duplicate": "This source already exists. Edit it in the list."
+        }
+      },
+      "toast": {
+        "saved": "Saved {url}.",
+        "stopped": "Stopped {url}. It leaves the external API list.",
+        "resumed": "Resumed {url}. It returns to the external API list."
       }
     }
   },

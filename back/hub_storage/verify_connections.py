@@ -140,8 +140,29 @@ async def main(config):
     else:
         await forbidden.close()
         raise AssertionError('Source correction credentials can connect to the operations DB')
+    # Customer-interest role: its two lists on the data server only.
+    interest = await asyncpg.connect(config['interest'], timeout=5)
+    try:
+        await interest.fetchval('SELECT count(*) FROM catalog.interest_keyword')
+        await interest.fetchval('SELECT count(*) FROM catalog.interest_source')
+        try:
+            await interest.execute('SELECT 1 FROM catalog.source_override LIMIT 1')
+        except asyncpg.InsufficientPrivilegeError:
+            pass
+        else:
+            raise AssertionError('Customer-interest role reads beyond its lists')
+    finally:
+        await interest.close()
+    try:
+        forbidden = await asyncpg.connect(config['interest_operations'], timeout=5)
+    except asyncpg.InvalidAuthorizationSpecificationError:
+        pass
+    else:
+        await forbidden.close()
+        raise AssertionError('Customer-interest credentials can connect to the operations DB')
     print(json.dumps({'tcp_authentication':'passed','external_operations_access':'denied','api_operations_reader':'read_only',
                       'ext_api':'scoped_read_only','ext_operations_access':'denied','saved_filter':'one_table',
                       'saved_filter_data_access':'denied','account':'account_tables','account_data_access':'denied',
                       'ga4_registry':'registry_tables','ga4_registry_operations_access':'denied',
-                      'source_override':'correction_tables','source_override_operations_access':'denied'}))
+                      'source_override':'correction_tables','source_override_operations_access':'denied',
+                      'interest':'interest_lists','interest_operations_access':'denied'}))

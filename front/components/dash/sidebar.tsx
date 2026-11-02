@@ -106,6 +106,7 @@ const ROUTE_ICON: Record<RouteKey, ComponentType<{ className?: string }>> = {
   renewalAdmin: Shield,
   renewalAdminGa4: Plug,
   renewalAdminCitationSources: Link2,
+  renewalAdminCustomerInterest: Database,
   adminStandardCustomerInterest: Database,
   adminStandardEntities: Building2,
   adminCitationSources: Link2,

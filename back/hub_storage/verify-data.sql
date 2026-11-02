@@ -338,4 +338,72 @@ DO $$ BEGIN
    RAISE EXCEPTION 'The API reader cannot read the list history'; END IF;
 END $$;
 RESET ROLE;
+-- The customer-interest role (009): its two lists, their history and their publishing functions, nothing else. Keys are
+-- the normalized forms, a stopped row leaves the published list, and the HUB lists stay out of contract_version.
+DO $$ BEGIN
+ IF catalog.interest_term_norm(E' \u3000ÜBER SUV\n')<>'über suv' THEN RAISE EXCEPTION 'The keyword key differs from Gold term_norm'; END IF;
+END $$;
+SET LOCAL ROLE hmg_interest_editor;
+INSERT INTO catalog.interest_keyword(term_norm,term,conditions,source_types,origin,updated_by)
+VALUES('rollback-only seed','Rollback-Only Seed','[{"location_code":2410,"language_code":"ko"}]',ARRAY['google_keyword'],'hub',gen_random_uuid());
+UPDATE catalog.interest_keyword SET conditions='[{"location_code":2840,"language_code":"en"}]',source_types=ARRAY['google_keyword','community_voc'],
+    brands=ARRAY['Kia'],note='x',updated_at=now() WHERE term_norm='rollback-only seed';
+INSERT INTO catalog.interest_keyword_event(term_norm,action,changes) VALUES('rollback-only seed','add','{}');
+INSERT INTO catalog.interest_source(source_key,url,channel,updated_by) VALUES('rollback-only.example/forum','https://www.Rollback-Only.example/forum/','community',gen_random_uuid());
+INSERT INTO catalog.interest_source(source_key,url,channel) VALUES('rollback-stopped.example','rollback-stopped.example','news');
+UPDATE catalog.interest_source SET channel='news',brands=ARRAY['Genesis'],note='x',updated_at=now() WHERE source_key='rollback-only.example/forum';
+UPDATE catalog.interest_source SET status='stopped' WHERE source_key='rollback-stopped.example';
+INSERT INTO catalog.interest_source_event(source_key,action,changes) VALUES('rollback-only.example/forum','add','{}');
+DO $$ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM catalog.publish_interest_keywords()) THEN RAISE EXCEPTION 'A changed keyword list was not published'; END IF;
+ IF EXISTS(SELECT 1 FROM catalog.publish_interest_keywords()) THEN RAISE EXCEPTION 'An unchanged keyword list was published again'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM catalog.publish_interest_sources()) THEN RAISE EXCEPTION 'A changed source list was not published'; END IF;
+ BEGIN UPDATE catalog.interest_keyword SET term_norm='other'; RAISE EXCEPTION 'Interest role changes a keyword key'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN UPDATE catalog.interest_keyword SET term='Other'; RAISE EXCEPTION 'Interest role changes a term'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN UPDATE catalog.interest_keyword SET origin='gold_import'; RAISE EXCEPTION 'Interest role changes an origin'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN DELETE FROM catalog.interest_keyword; RAISE EXCEPTION 'Interest role deletes keywords'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN UPDATE catalog.interest_source SET source_key='other.example'; RAISE EXCEPTION 'Interest role changes a source key'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN UPDATE catalog.interest_source SET url='other.example'; RAISE EXCEPTION 'Interest role changes a URL'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN DELETE FROM catalog.interest_source; RAISE EXCEPTION 'Interest role deletes sources'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN UPDATE catalog.interest_keyword_event SET action='stop'; RAISE EXCEPTION 'Interest role rewrites keyword history'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN DELETE FROM catalog.interest_source_event; RAISE EXCEPTION 'Interest role deletes source history'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN PERFORM 1 FROM catalog.publish_hub_edit('interest_keyword','[]'); RAISE EXCEPTION 'Interest role calls the shared publisher';
+       EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN PERFORM 1 FROM catalog.publish_source_seeds(); RAISE EXCEPTION 'Interest role publishes another list'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN PERFORM 1 FROM catalog.source_seed; RAISE EXCEPTION 'Interest role reads another list'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN INSERT INTO catalog.reference_set(set_id,family,version,item_count,sha256,source)
+       VALUES(gen_random_uuid(),'interest_keyword',99999,0,repeat('f',64),'hub_edit');
+       RAISE EXCEPTION 'Interest role writes reference sets'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN INSERT INTO catalog.interest_keyword(term_norm,term,conditions,source_types,origin) VALUES('not the norm','Other','[{}]',ARRAY['google_keyword'],'hub');
+       RAISE EXCEPTION 'A key that is not the term''s norm'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN INSERT INTO catalog.interest_keyword(term_norm,term,conditions,source_types,origin) VALUES('no condition','No Condition','[]',ARRAY['google_keyword'],'hub');
+       RAISE EXCEPTION 'A keyword without a condition'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN INSERT INTO catalog.interest_keyword(term_norm,term,conditions,source_types,origin) VALUES('bad type','Bad Type','[{}]',ARRAY['other'],'hub');
+       RAISE EXCEPTION 'An unknown source type'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN INSERT INTO catalog.interest_source(source_key,url,channel) VALUES('www.lower.example','lower.example','news');
+       RAISE EXCEPTION 'A source key with www.'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN INSERT INTO catalog.interest_source(source_key,url,channel) VALUES('https://lower.example','lower.example','news');
+       RAISE EXCEPTION 'A source key with a scheme'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN INSERT INTO catalog.interest_source(source_key,url,channel) VALUES('lower.example','lower.example','blog');
+       RAISE EXCEPTION 'An unknown channel'; EXCEPTION WHEN check_violation THEN NULL; END;
+END $$;
+RESET ROLE;
+SET LOCAL ROLE hmg_ext_api;
+DO $$ BEGIN
+ PERFORM set_config('hgh.key_hash',repeat('1',64),true);
+ IF coalesce((SELECT hub_reference FROM ext.meta),'') LIKE '%interest_%' THEN RAISE EXCEPTION 'Customer-interest lists change contract_version'; END IF;
+END $$;
+RESET ROLE;
+SET LOCAL ROLE hmg_analytics_reader;
+DO $$ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM catalog.current_reference WHERE family='interest_keyword' AND item_key='rollback-only seed'
+               AND definition->>'term'='Rollback-Only Seed' AND definition->'brands'='["Kia"]') THEN RAISE EXCEPTION 'The published keyword list misses a keyword'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM catalog.current_reference WHERE family='interest_source' AND item_key='rollback-only.example/forum'
+               AND definition->>'channel'='news') THEN RAISE EXCEPTION 'The published source list misses a source'; END IF;
+ IF EXISTS(SELECT 1 FROM catalog.current_reference WHERE family='interest_source' AND item_key='rollback-stopped.example') THEN
+   RAISE EXCEPTION 'A stopped source is published'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM catalog.interest_keyword_event) OR NOT EXISTS(SELECT 1 FROM catalog.interest_source_event) THEN
+   RAISE EXCEPTION 'The API reader cannot read the interest history'; END IF;
+END $$;
+RESET ROLE;
 ROLLBACK;

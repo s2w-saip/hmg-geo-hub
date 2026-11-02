@@ -110,7 +110,8 @@
     "renewalAdminStandardPrompts": "글로벌 프롬프트 관리",
     "renewalAdmin": "사용자 관리",
     "renewalAdminGa4": "GA4 연동",
-    "renewalAdminCitationSources": "인용 출처 분류"
+    "renewalAdminCitationSources": "인용 출처 분류",
+    "renewalAdminCustomerInterest": "고객 관심 데이터 관리"
   },
   "locale": {
     "label": "언어",
@@ -6811,6 +6812,218 @@
         "import": "가져오기",
         "set": "변경",
         "order": "순서 변경"
+      }
+    }
+  },
+  "hubInterest": {
+    "title": "고객 관심 데이터 관리",
+    "login": "로그인",
+    "loginRequired": "HUB 로그인이 필요합니다.",
+    "tabs": {
+      "label": "고객 관심 데이터 보기",
+      "keywords": "키워드",
+      "sources": "수집 소스"
+    },
+    "flowNoteTitle": "반영 시점",
+    "searchLabel": "검색",
+    "cancel": "취소",
+    "save": "저장",
+    "stop": "중지",
+    "resume": "재개",
+    "historyOpen": "{name} 변경 이력",
+    "brandCommon": "공통",
+    "brandHint": "고르지 않으면 모든 브랜드에 공통입니다.",
+    "notePlaceholder": "선택 — 등록 사유",
+    "noteProblem": "메모는 500자까지입니다.",
+    "conditionToken": "조건",
+    "conditionRemove": "{condition} 조건 빼기",
+    "conditionClear": "모두 지우기",
+    "conditionSearch": "국가 · 언어 검색",
+    "region": {
+      "northAmerica": "북미",
+      "asia": "아시아",
+      "europe": "유럽",
+      "oceania": "오세아니아",
+      "southAmerica": "남미",
+      "middleEast": "중동",
+      "africa": "아프리카"
+    },
+    "source": {
+      "google_keyword": "Google Keyword",
+      "community_voc": "커뮤니티 VoC"
+    },
+    "sourceShort": {
+      "google_keyword": "Google",
+      "community_voc": "VoC"
+    },
+    "channel": {
+      "news": "뉴스",
+      "pr": "PR",
+      "social": "소셜",
+      "community": "커뮤니티"
+    },
+    "status": {
+      "active": "활성",
+      "stopped": "중지됨"
+    },
+    "event": {
+      "import": "가져오기",
+      "add": "추가",
+      "set": "변경",
+      "stop": "중지",
+      "resume": "재개"
+    },
+    "field": {
+      "term": "키워드",
+      "conditions": "수집 조건",
+      "source_types": "소스",
+      "brands": "브랜드",
+      "note": "메모",
+      "status": "상태",
+      "channel": "채널",
+      "url": "URL / 도메인",
+      "origin": "처음 값"
+    },
+    "error": {
+      "invalid_value": "입력값을 확인하세요: {fields}",
+      "not_found": "HUB 목록에 없는 항목입니다.",
+      "unauthorized": "로그인이 만료되었습니다. 다시 로그인하세요.",
+      "forbidden": "최상위 관리자만 고객 관심 데이터를 관리할 수 있습니다.",
+      "source_unavailable": "HUB 저장소나 Gold를 읽지 못했습니다. 잠시 뒤 다시 시도하세요.",
+      "failed": "요청을 처리하지 못했습니다."
+    },
+    "keywords": {
+      "description": "수집할 검색 키워드와 수집 조건(국가 · 언어)을 관리합니다.",
+      "flowNote": "여기서 고친 키워드는 HUB에 저장되고 외부 API 목록(interest_keyword)으로 파이프라인에 넘어갑니다. 키워드 데이터에는 파이프라인이 이 목록을 가져가 수집한 뒤 반영되고, 그 전까지 '반영 대기'로 보입니다.",
+      "listLabel": "키워드 목록",
+      "searchPlaceholder": "키워드 검색",
+      "count": "{shown} / {total}개 · 활성 {active} · 중지 {stopped} · 반영 대기 {pending} · 업스트림 {upstream}",
+      "empty": "키워드가 없습니다.",
+      "emptyFiltered": "조건에 맞는 키워드가 없습니다.",
+      "hint": "HUB의 키워드 전체와, Gold가 수집했지만 HUB 목록에는 없는 키워드를 보여 줍니다. Gold 수집은 Gold 시드 행(kw_suggestion)의 조건 수와 마지막 수집일입니다.",
+      "add": "키워드 추가",
+      "addAsKeyword": "키워드로 추가",
+      "edit": "편집",
+      "conditionsMore": "{first} 외 {more}개",
+      "goldTip": "HUB 조건 {total}개 중 {collected}개를 Gold가 수집했습니다.",
+      "goldNone": "Gold가 수집한 적 없는 키워드입니다.",
+      "collectedAt": "{at} 수집",
+      "notCollected": "수집 전",
+      "detailTitle": "키워드",
+      "axis": {
+        "market": "수집 조건",
+        "source": "소스",
+        "brand": "브랜드",
+        "state": "반영 상태",
+        "status": "상태"
+      },
+      "column": {
+        "term": "키워드",
+        "conditions": "수집 조건",
+        "source": "소스",
+        "brand": "브랜드",
+        "observed": "Gold 수집",
+        "state": "반영",
+        "status": "상태",
+        "actions": "작업"
+      },
+      "state": {
+        "applied": "반영됨",
+        "pending": "반영 대기",
+        "upstream": "업스트림 키워드"
+      },
+      "stateTip": {
+        "applied": "Gold가 이 키워드를 HUB의 조건 모두로 수집했습니다.",
+        "pending": "아직 수집하지 않은 조건이 있습니다. 파이프라인이 목록을 가져가 수집한 뒤 반영됩니다.",
+        "upstream": "Gold가 수집했지만 HUB 목록에는 없습니다. '키워드로 추가'를 누르면 HUB 키워드가 됩니다.",
+        "none": "중지한 키워드입니다. 외부 API 목록에서 빠지며, Gold에 남은 값은 지난 수집 기록입니다."
+      },
+      "origin": {
+        "gold_import": "Gold 시드에서 가져옴",
+        "hub": "이 화면에서 지정"
+      },
+      "field": {
+        "state": "반영",
+        "goldExtra": "Gold에만 있는 조건"
+      },
+      "form": {
+        "titleAdd": "키워드 추가",
+        "titleEdit": "키워드 편집",
+        "termPlaceholder": "예: 패밀리 SUV",
+        "termHint": "저장 뒤에는 바꿀 수 없습니다. 괄호 · 쉼표는 수집 API가 받지 않습니다.",
+        "problem": {
+          "term": "키워드는 1~99자이고 괄호 · 쉼표를 넣을 수 없습니다.",
+          "duplicate": "이미 있는 키워드입니다. 목록에서 편집하세요.",
+          "conditions": "수집 조건을 하나 이상 고르세요.",
+          "sources": "소스를 하나 이상 고르세요."
+        }
+      },
+      "toast": {
+        "saved": "{term} 키워드를 저장했습니다. 파이프라인이 가져가 수집한 뒤 반영됩니다.",
+        "stopped": "{term} 키워드를 중지했습니다. 외부 API 목록에서 빠집니다.",
+        "resumed": "{term} 키워드를 다시 활성화했습니다. 외부 API 목록에 다시 들어갑니다."
+      }
+    },
+    "sources": {
+      "description": "커뮤니티 수집 대상 URL · 도메인을 관리합니다.",
+      "flowNote": "여기서 고친 소스는 HUB에 저장되고 외부 API 목록(interest_source)으로 파이프라인에 넘어갑니다. 지금은 이 목록을 읽는 수집기가 없어, 파이프라인 합의 전까지 수집에 영향을 주지 않습니다.",
+      "listLabel": "수집 소스 목록",
+      "searchPlaceholder": "URL · 도메인 검색",
+      "count": "{shown} / {total}개 · 활성 {active} · 중지 {stopped} · HUB 미등록 {upstream}",
+      "empty": "수집 소스가 없습니다.",
+      "emptyFiltered": "조건에 맞는 소스가 없습니다.",
+      "hint": "HUB의 소스 전체와, Gold 소셜 스냅샷({date})에 있지만 HUB에 없는 도메인을 보여 줍니다. 근거 수는 맥락 · 조건별 근거 수의 합이라 한 발화가 여러 번 셀 수 있습니다. 비교는 www.를 뺀 도메인이 정확히 같을 때만 합니다.",
+      "snapshotPill": "Gold 소셜 스냅샷 {date} · 출처 {sources}개",
+      "add": "소스 추가",
+      "addAsSource": "소스로 추가",
+      "edit": "편집",
+      "detailTitle": "수집 소스",
+      "corpusValue": "근거 {mentions}건 · 맥락 · 조건 {entities}개",
+      "corpusNone": "Gold 소셜 스냅샷에 없음",
+      "axis": {
+        "channel": "채널",
+        "brand": "브랜드",
+        "state": "코퍼스",
+        "status": "상태"
+      },
+      "column": {
+        "url": "URL / 도메인",
+        "channel": "채널",
+        "brand": "브랜드",
+        "mentions": "코퍼스 근거",
+        "state": "코퍼스",
+        "status": "상태",
+        "actions": "작업"
+      },
+      "state": {
+        "observed": "코퍼스에 있음",
+        "unseen": "코퍼스에 없음",
+        "upstream": "HUB 미등록"
+      },
+      "stateTip": {
+        "observed": "이 도메인이 Gold 소셜 스냅샷에 있습니다. 이 목록을 반영했다는 뜻은 아닙니다.",
+        "unseen": "이 도메인이 Gold 소셜 스냅샷에 없습니다.",
+        "upstream": "Gold 소셜 스냅샷에 있지만 HUB 목록에는 없습니다. '소스로 추가'를 누르면 HUB 소스가 됩니다."
+      },
+      "field": {
+        "key": "키",
+        "host": "도메인",
+        "corpus": "Gold 코퍼스"
+      },
+      "form": {
+        "titleAdd": "수집 소스 추가",
+        "titleEdit": "수집 소스 편집",
+        "urlPlaceholder": "예: bobaedream.co.kr",
+        "urlHint": "도메인이나 URL을 적습니다. 저장 뒤에는 바꿀 수 없습니다.",
+        "problem": {
+          "url": "도메인이나 URL 형식을 확인하세요.",
+          "duplicate": "이미 있는 소스입니다. 목록에서 편집하세요."
+        }
+      },
+      "toast": {
+        "saved": "{url} 소스를 저장했습니다.",
+        "stopped": "{url} 소스를 중지했습니다. 외부 API 목록에서 빠집니다.",
+        "resumed": "{url} 소스를 다시 활성화했습니다. 외부 API 목록에 다시 들어갑니다."
       }
     }
   },

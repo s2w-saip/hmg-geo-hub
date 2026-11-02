@@ -19,6 +19,8 @@ const sources = await import("./source-overrides/[[...rest]]/route");
 const seeds = await import("./source-seeds/[[...rest]]/route");
 const socials = await import("./source-socials/[[...rest]]/route");
 const codes = await import("./source-codes/[[...rest]]/route");
+const interestKeywords = await import("./interest-keywords/[[...rest]]/route");
+const interestSources = await import("./interest-sources/[[...rest]]/route");
 
 const ID = "8f6f0c1e-2b7a-4c1e-9d2a-1b2c3d4e5f60";
 const SITE = "http://127.0.0.1:3333";
@@ -209,6 +211,36 @@ describe("/api/hub/source-overrides", () => {
       [sources.POST(req("POST", "/api/hub/source-overrides", { cookie: "tok" }), ctx()), 422],
     ];
     for (const [res, status] of cases) expect((await res).status).toBe(status);
+    expect(bff.fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("/api/hub/interest-keywords · interest-sources", () => {
+  it("passes the lists, the history key, the writes and the stop / resume actions to the BFF", async () => {
+    bff.fetch.mockResolvedValue({ data: {} });
+    expect((await interestKeywords.GET(req("GET", "/api/hub/interest-keywords", { cookie: "tok", origin: null }), ctx())).status).toBe(200);
+    expect(bff.fetch).toHaveBeenLastCalledWith("GET", "/v1/hub/interest-keywords", { token: "tok", body: undefined });
+    expect((await interestKeywords.GET(req("GET", "/api/hub/interest-keywords/history?term=suv&x=1", { cookie: "tok", origin: null }), ctx(["history"]))).status).toBe(200);
+    expect(bff.fetch).toHaveBeenLastCalledWith("GET", "/v1/hub/interest-keywords/history", { token: "tok", body: undefined, query: "term=suv" });
+    expect((await interestKeywords.POST(req("POST", "/api/hub/interest-keywords/stop", { body: { term: "SUV" }, cookie: "tok" }), ctx(["stop"]))).status).toBe(200);
+    expect(bff.fetch).toHaveBeenLastCalledWith("POST", "/v1/hub/interest-keywords/stop", { token: "tok", body: { term: "SUV" } });
+    expect((await interestSources.GET(req("GET", "/api/hub/interest-sources/history?url=arca.live", { cookie: "tok", origin: null }), ctx(["history"]))).status).toBe(200);
+    expect(bff.fetch).toHaveBeenLastCalledWith("GET", "/v1/hub/interest-sources/history", { token: "tok", body: undefined, query: "url=arca.live" });
+    expect((await interestSources.POST(req("POST", "/api/hub/interest-sources", { body: { url: "arca.live", channel: "community" }, cookie: "tok" }), ctx())).status).toBe(200);
+    expect(bff.fetch).toHaveBeenLastCalledWith("POST", "/v1/hub/interest-sources", { token: "tok", body: { url: "arca.live", channel: "community" } });
+    expect((await interestSources.POST(req("POST", "/api/hub/interest-sources/resume", { body: { url: "arca.live" }, cookie: "tok" }), ctx(["resume"]))).status).toBe(200);
+  });
+
+  it("refuses other paths, no session, cross-site writes and a malformed body", async () => {
+    for (const [p, status] of [
+      [interestKeywords.GET(req("GET", "/api/hub/interest-keywords/suv", { cookie: "tok" }), ctx(["suv"])), 404],
+      [interestKeywords.POST(req("POST", "/api/hub/interest-keywords/delete", { body: {}, cookie: "tok" }), ctx(["delete"])), 404],
+      [interestKeywords.GET(req("GET", "/api/hub/interest-keywords", { origin: null }), ctx()), 401],
+      [interestSources.POST(req("POST", "/api/hub/interest-sources", { body: {}, cookie: "tok", origin: "http://evil.test" }), ctx()), 403],
+      [interestSources.POST(req("POST", "/api/hub/interest-sources", { cookie: "tok" }), ctx()), 422],
+    ] as const) {
+      expect((await p).status).toBe(status);
+    }
     expect(bff.fetch).not.toHaveBeenCalled();
   });
 });

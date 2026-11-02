@@ -16,7 +16,7 @@
 |---|---:|---|
 | A. 측정 · 판정 (수집, ACR 판정, 감정 · 유형, 순위) | 5 | 회차별 측정 · 판정 방식 변경 기록(metric_version) |
 | B. Gold 모델 · 귀속 (dim_entity · dim_source · 카테고리 · 카탈로그) | 8 | 당사 소유 출처(owned base) 귀속 빈칸 |
-| C. 기준값 연동 (HUB → 파이프라인) | 1 (세부 6) | 인용 출처 교정값 전달 방식 |
+| C. 기준값 연동 (HUB → 파이프라인) | 2 (세부 11) | 인용 출처 교정값 전달 방식 |
 | D. 2026-10-31 점검 (B팀 6 · A팀 1, 팀별 추가분) | 7 | ACR 명부와 dim_brand의 당사 비트 차이(D1) |
 
 ---
@@ -326,6 +326,17 @@
   7. 코드표와 시드 · 공식 소셜 목록을 받는 방식을 들으면 2단계 남은 작업(범위 확인 전)의 설계에 반영한다.
   - 3단계 시드 키워드와 4단계 엔티티 역할도 같은 방식으로 넘길 예정이라, 이 합의가 그 둘의 틀이 된다.
 
+### C2. 고객 관심 입력: 시드 키워드와 커뮤니티 수집 소스 (2026-11-02 추가)
+
+- **화면 영향:** Admin › 고객 관심 데이터 관리. 합의 전까지 키워드는 '반영 대기'로 남고, 수집 소스는 수집에 영향을 주지 않는다(화면에 그대로 적었다).
+- **근거:**
+  - Gold `kw_suggestion.is_seed` 행은 `kw_key = seed_kw_key`인 행이고, 표 설명은 '요청 시 수집'이다. 호출 106건(2026-07-03 ~ 10-07), 84 term. `su`, `SIIIUUUUUU`, 영상 제목 같은 값이 있어 사람이 고른 목록보다 조회 기록에 가깝다. 시드 키는 87개인데 `is_seed` 행이 없는 시드가 3개다.
+  - 커뮤니티 소스 목록에 해당하는 Gold 표가 없고, 저장소에서 원본 `standard_sources`를 읽는 수집기도 없다. `ctx_snapshot`은 1개(`source = scope_context_mirror`, 2026-07-07, 출처 606)이고 `ctx_research_*`는 0행이다.
+- **답에 따라 HUB가 할 일:**
+  1. `is_seed`가 조회 기록이면 처음 값 84개 중 시드가 아닌 것을 정리하고, 표준 시드 목록을 어디서 받을지 정한다.
+  2. 목록을 읽겠다는 답이 오면 `manage.py publish-reference interest_keyword interest_source`로 공개하고, 수집 소스 화면의 '읽는 수집기 없음' 문구를 고친다.
+  3. 리서치 실행 경로가 생기면 옮기지 않은 소셜 리서치 카드를 다시 다룬다.
+
 ### C팀에 보낼 메시지
 
 ```text
@@ -345,6 +356,21 @@ HUB가 출처 카테고리 교정(override), 출처 분류 코드표, 시드·�
 7. 출처 분류 코드표(카테고리 13개, 분류 출처 코드 1~6)와 시드·공식 소셜 목록도 HUB가 정본으로 관리하고, 같은 방식(외부 API, change_seq)으로 드립니다: GET /ext/v1/reference/source_code · source_seed(도메인 → 카테고리) · source_social(계정 키, 도메인, URL 매칭 규칙 [{prefix, boundary}], 카테고리 officialHmg). 지금 이 값들을 어디서 가져가시는지(dim_category 설명에는 HUB 코드표의 투영이라고 되어 있습니다), 이 목록으로 바꿔도 되는지 알려 주세요.
 
 참고: 다음 단계로 시드 키워드(family keyword)와 엔티티 역할(family entity)도 같은 방식(HUB 정본, 외부 API, change_seq)으로 드릴 예정입니다. 이 방식에 문제가 있으면 함께 알려 주세요.
+```
+
+```text
+[문의 추가] HMG GEO HUB — 고객 관심 입력 전달 방식 (2026-11-02)
+
+HUB가 시드 키워드와 커뮤니티 수집 소스의 정본을 갖게 되었습니다. 같은 외부 API로 드립니다.
+- GET /ext/v1/reference/interest_keyword: term · term_norm · 수집 조건(location_code, language_code) · source_types · brands
+- GET /ext/v1/reference/interest_source: source_key · url · channel · brands
+
+확인 부탁드립니다.
+1. Gold kw_suggestion의 is_seed 행(84 term, 호출 106건)은 요청 시 조회한 기록인가요, 표준 시드 목록인가요? su, SIIIUUUUUU 같은 값이 있어 여쭙니다. 시드 키 87개 중 3개는 is_seed 행이 없습니다.
+2. interest_keyword 목록을 키워드 수집 입력으로 읽어 주실 수 있나요? 주기는 얼마인가요? 목록에서 빠진 키워드는 수집만 멈추고 지난 값은 그대로 두나요?
+3. term_norm 규칙이 NFC · 공백 trim · 소문자로 맞나요(HUB는 catalog.interest_term_norm으로 같은 규칙을 씁니다)?
+4. 소셜 코퍼스(ctx_snapshot, scope_context_mirror, 2026-07-07)는 앞으로 어떻게 갱신되나요? interest_source 목록을 수집 대상으로 읽어 주실 수 있나요? 키의 단위(도메인 또는 경로)는 어느 쪽이 맞나요?
+5. ctx_research_* 표가 0행입니다. Admin 리서치 실행 화면을 계획하고 계신가요?
 ```
 
 ---

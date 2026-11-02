@@ -140,6 +140,21 @@ HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py init                 
 HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py import-source-lists   # 처음 값(목록마다 한 번)
 ```
 
+## 고객 관심 데이터 (2026-11-02)
+
+리뉴얼 Admin › 고객 관심 데이터 관리의 키워드 · 수집 소스 탭이다(admin-todo 결정 A · E, '기준값 편집 공통 구조'). 무엇을 수집할지는 HUB가 정하고, 수집한 결과는 Gold가 가진다. 화면은 Gold 값을 옆에 보일 뿐 고치지 않는다.
+
+- **저장(`009_interest_inputs`, 데이터 DB):** `catalog.interest_keyword`(키 = Gold `dim_keyword.term_norm`과 같은 규칙의 `catalog.interest_term_norm`, 수집 조건 `[{location_code, language_code}]`, 소스, 브랜드, `active` · `stopped`), `catalog.interest_source`(키 = 소문자 · scheme · 앞 `www.` · 쿼리 · 끝 `/` 뺀 URL, 입력한 URL, 채널, 브랜드, `active` · `stopped`)와 이력 표 `*_event`. 행은 지우지 않는다. 정규화는 ICU로 소문자를 만든다(이 저장소는 C 로케일이라 `lower()`가 비ASCII를 접지 못한다).
+- **업스트림 전달:** 쓰기마다 `catalog.publish_interest_keywords()` · `publish_interest_sources()`가 기준값 종류 `interest_keyword` · `interest_source`(source `hub_edit`)의 새 set을 기록한다(내용이 같으면 기록 안 함). 공개 승인은 `manage.py publish-reference interest_keyword interest_source`다.
+- **처음 값:** `import-interest-keywords`가 Gold 시드 행(`kw_suggestion.is_seed`, 기준값 종류 `keyword`와 같은 읽기)을 한 번 넣는다(`origin = gold_import`, 소스 Google Keyword, 브랜드 공통). HUB에 키워드가 하나라도 있으면 거부한다. 수집 소스는 Gold에 대응 목록이 없어 처음 값이 없다.
+- **계정과 권한:** 쓰기는 `HGH_INTEREST_EDITOR_DB_URL`(`hmg_interest_editor`, 비밀번호 `.env.interest-db.local`)이다. 값 · 상태 · 메모 · 시각 · 행위자 열만 UPDATE하고, 키 · 원문 · 출처 변경, DELETE, 공용 발행 함수 직접 실행, 다른 catalog 표 읽기, 운영 DB 접속은 없다.
+- **API:** `GET|POST /v1/hub/interest-keywords`, `POST …/stop|resume`, `GET …/history?term=`; `GET|POST /v1/hub/interest-sources`, `POST …/stop|resume`, `GET …/history?url=`. 최상위 관리자 전용이고 쓰기는 catalog lock 안에서 한다.
+
+```bash
+HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py init                       # 009_interest_inputs, hmg_interest_editor, .env.hub-edit.local
+HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py import-interest-keywords   # 처음 값(한 번만)
+```
+
 ## 외부 API (2026-10-28)
 
 현재 저장된 프롬프트와 그 수집·가공에 필요한 값을 API 키를 가진 외부 호출자에게 읽기 전용으로 준다. 가공 결과(지표·판정·이전 회차 분석), 회차·측정 작업 원장, GA4 속성, 답변·인용 원문은 주지 않는다. 앱은 `back/ext/app.py`, 구조·범위·변경 감지 규칙은 [정본 문서 `#ext`](../../docs/architecture/hmg-geo-hub-architecture.html#ext)에 있다.
@@ -180,4 +195,4 @@ GA4와 프로젝트의 관계는 `catalog.project_ga4_property`에 실제 연동
 
 `verify`는 롤백되는 트랜잭션에서 비공개/선택 공개, 외부 계정의 기본 테이블 접근 차단, 버전 불변성, 운영 설정 이력·감사 이력 보존, 잘못된 참조 차단을 확인한다. 외부 API 경계도 같은 방식으로 확인한다: 키 없음·빈 키·만료·폐기·비활성 호출자는 0행, 다른 호출자의 프로젝트와 미승인 종류는 안 보임, 내부 Gold 식별자 비노출, 쓰기 계정의 `change_seq` 지정 거부, 승인 변경 시 순번 증가, `hmg_ext_api`의 운영 DB 접속 거부. 저장한 필터 계정은 자기 표만 쓰고(계정·자격증명·역할·감사 표 거부, 데이터 DB 접속 거부), 기본 필터 둘·주인 없는 행·빈 이름은 DB가 거부한다. GA4 등록부 계정은 등록부와 이력만 쓰고(속성 ID 변경·DELETE·이력 고치기·수집 결과 쓰기·GA4 행 읽기 거부, 운영 DB 접속 거부), 한 시장의 두 번째 수집 속성·숫자 아닌 속성 ID·소문자 국가·모르는 브랜드·이벤트 없는 고른 이벤트 기준은 DB가 거부한다. 출처 교정 계정은 교정과 이력만 쓰고 발행 함수로만 목록을 기록한다(키 · 출처 · 메모 변경, DELETE, 이력 고치기, `reference_set` 직접 쓰기, catalog · GA4 · 키 읽기, 운영 DB 접속 거부). 대문자 · `www.` 키, slug 아닌 카테고리는 DB가 거부하고, Gold 가져오기 계정은 `hub_edit` set을 쓰지 못한다. 교정 종류는 승인 전에는 외부 API에 나가지 않고 `hub_reference`를 바꾸지 않으며, 원복한 교정은 목록에서 빠진다. API 통합 검증은 `back/bff/tests/test_hub_storage.py`, 가져오기 규칙은 `test_hub_sync.py`, 저장한 필터는 `test_saved_filters.py`, 외부 API는 `back/ext/tests/test_app.py`를 사용한다. 영구 테스트 사용자나 가상 측정치를 생성하지 않는다.
 
-마이그레이션: 데이터 DB `002_data_catalog_publication`, `003_published_dimensions`, `004_hub_prompt_editing`, `005_external_api`, `006_ga4_registry`, `007_source_overrides`, `008_source_lists`, 운영 DB `001_operations`, `002_hub_login`, `003_saved_filters`. 기존 데이터 DB `001_gold_ga4_seo`는 변경하지 않았다.
+마이그레이션: 데이터 DB `002_data_catalog_publication`, `003_published_dimensions`, `004_hub_prompt_editing`, `005_external_api`, `006_ga4_registry`, `007_source_overrides`, `008_source_lists`, `009_interest_inputs`, 운영 DB `001_operations`, `002_hub_login`, `003_saved_filters`. 기존 데이터 DB `001_gold_ga4_seo`는 변경하지 않았다.

@@ -65,6 +65,8 @@ const STATE_DOT: Record<string, string> = {
   pending: "border-[1.5px] border-rn-navy",
   shadowed: "border-[1.5px] border-rn-muted bg-rn-inset",
   upstream: "border border-dashed border-rn-muted",
+  observed: "bg-rn-navy",
+  unseen: "border-[1.5px] border-rn-muted bg-rn-inset",
 };
 
 /** A state against Gold: a dot and a label, the explanation as the hover tip; "—" when there is nothing to compare. */
@@ -77,7 +79,7 @@ export function StateMark({ state, label, tip, attr }: { state: string | null; l
     );
   }
   return (
-    <span className={cx("inline-flex max-w-full items-center gap-1.5 text-rn-12", state === "applied" ? "text-rn-ink" : "text-rn-ink-2")} data-rn-tip={tip} {...{ [attr]: state }}>
+    <span className={cx("inline-flex max-w-full items-center gap-1.5 text-rn-12", state === "applied" || state === "observed" ? "text-rn-ink" : "text-rn-ink-2")} data-rn-tip={tip} {...{ [attr]: state }}>
       <i aria-hidden className={cx("inline-block size-2 shrink-0 rounded-full", STATE_DOT[state])} />
       <span className="truncate">{label}</span>
     </span>
@@ -91,6 +93,7 @@ export function HistorySection<T extends { history: ListEvent[] }>({
   eventLabel,
   fieldLabel,
   value,
+  errorText: errorTextOf,
 }: {
   load: () => Promise<T>;
   /** changes when the row changed (its updatedAt): reload */
@@ -98,9 +101,12 @@ export function HistorySection<T extends { history: ListEvent[] }>({
   eventLabel: (action: string) => string;
   fieldLabel: (field: string) => string;
   value: (field: string, v: unknown) => string | null;
+  /** the screen's own error text; default: 인용 출처 분류's */
+  errorText?: (e: unknown) => string;
 }) {
   const t = useTranslations("hubSourceLists");
-  const errorText = useListError();
+  const listError = useListError();
+  const errorText = errorTextOf ?? listError;
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<unknown>(null);
 

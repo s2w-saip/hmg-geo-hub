@@ -27,16 +27,18 @@ FILTER_SECRET = ROOT / '.env.saved-filter-db.local'  # saved filter role passwor
 ACCOUNT_SECRET = ROOT / '.env.account-db.local'    # account editor role password (operations DB)
 GA4_REGISTRY_SECRET = ROOT / '.env.ga4-registry-db.local'  # GA4 registry editor role password (data DB)
 SOURCE_OVERRIDE_SECRET = ROOT / '.env.source-override-db.local'  # source correction editor role password (data DB)
+INTEREST_SECRET = ROOT / '.env.interest-db.local'  # customer-interest editor role password (data DB)
 OPS_CONTAINER = 'hgh-operations-db'
 OPS_DB = 'hmg_operations'
 # External API (2026-10-28): what a project approval covers, the Gold reference families an approval can
 # open (the HUB-owned surface/brand_bit/mention_type are always part of the contract), key lifetimes.
 PROJECT_FLAGS = ('projects', 'prompts')
 # source_override, source_seed, source_social and source_code (2026-10-30) are the HUB's own source classification
-# inputs (source hub_edit), approved like the Gold families.
+# inputs, interest_keyword and interest_source (2026-11-02) its customer-interest collection inputs (source hub_edit),
+# approved like the Gold families.
 REFERENCE_FAMILIES = ('engine', 'region', 'country', 'language', 'taxon', 'brand', 'entity', 'source_category',
                       'source', 'owned_base', 'crawl_bot', 'keyword', 'perspective', 'population', 'source_override',
-                      'source_seed', 'source_social', 'source_code')
+                      'source_seed', 'source_social', 'source_code', 'interest_keyword', 'interest_source')
 KEY_DAYS, KEY_DAYS_MAX, KEYS_PER_CLIENT = 180, 365, 2
 KEY_LOCK = 617427414     # one key issue at a time, so the per-client limit holds
 CATALOG_LOCK = 617427413  # every catalog writer (sync_catalog.py, the HUB editors): change_seq order = commit order
@@ -44,7 +46,7 @@ CATALOG_LOCK = 617427413  # every catalog writer (sync_catalog.py, the HUB edito
 
 def sanitize(message):
     for path in (OPS_SECRET, DATA_SECRET, EDIT_SECRET, EXT_SECRET, FILTER_SECRET, ACCOUNT_SECRET, SOURCE_OVERRIDE_SECRET,
-                 analytics.SECRET):
+                 INTEREST_SECRET, analytics.SECRET):
         if path.exists():
             for key, value in analytics.env_file(path).items():
                 if ('PASSWORD' in key or 'SECRET' in key) and value:
@@ -292,18 +294,35 @@ COMMIT;""")
     # The rest of the source classification inputs (2026-10-30): seeds, official social accounts and the code table,
     # kept by the same role (Admin › 인용 출처 분류).
     migrate('data-008.sql', '008_source_lists')
+    # Customer-interest inputs (2026-11-02): the API's role for the seed keywords, the community sources, their history
+    # and their publishing functions (Admin › 고객 관심 데이터 관리) and nothing else.
+    if not INTEREST_SECRET.exists() and sql("SELECT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='hmg_interest_editor');").stdout.strip() == 't':
+        raise RuntimeError('The customer-interest role already exists; restore .env.interest-db.local rather than replacing credentials')
+    interest = create_secret(INTEREST_SECRET, {'INTEREST_EDITOR_PASSWORD': None})
+    sql(f"""BEGIN;
+DO $$ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='hmg_interest_editor') THEN CREATE ROLE hmg_interest_editor LOGIN; END IF;
+END $$;
+ALTER ROLE hmg_interest_editor WITH NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD {analytics.literal(interest['INTEREST_EDITOR_PASSWORD'])};
+ALTER ROLE hmg_interest_editor SET statement_timeout='15s';
+ALTER ROLE hmg_interest_editor CONNECTION LIMIT 4;
+GRANT CONNECT ON DATABASE hmg_analytics TO hmg_interest_editor;
+COMMIT;""")
+    migrate('data-009.sql', '009_interest_inputs')
     analytics.secure_write(ROOT / '.env.ext-api.local', '# External API: the caller-scoped ext views only.\n'
         f"HGH_EXT_DB_URL=postgresql://hmg_ext_api:{ext['EXT_API_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n")
     analytics.secure_write(ROOT / '.env.operations.local', '# FastAPI read-only operations connection.\n'
         f"HGH_OPERATIONS_DB_URL=postgresql://hmg_operations_reader:{values['OPERATIONS_READER_PASSWORD']}@{service_host('operations')}/{OPS_DB}\n")
     analytics.secure_write(ROOT / '.env.hub-edit.local', '# FastAPI HUB writes: Global prompt editing (INSERT-only catalog role), '
         'saved filters (system.saved_filter only), accounts (the account tables only), the GA4 registry (its two tables), '
-        'source category corrections (their two tables and publishing function) and the login token secret.\n'
+        'source category corrections (their two tables and publishing function), the customer-interest inputs (their lists and '
+        'publishing functions) and the login token secret.\n'
         f"HGH_CATALOG_EDITOR_DB_URL=postgresql://hmg_catalog_editor:{edit['CATALOG_EDITOR_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n"
         f"HGH_SAVED_FILTER_EDITOR_DB_URL=postgresql://hmg_saved_filter_editor:{saved['SAVED_FILTER_EDITOR_PASSWORD']}@{service_host('operations')}/{OPS_DB}\n"
         f"HGH_ACCOUNT_EDITOR_DB_URL=postgresql://hmg_account_editor:{account['ACCOUNT_EDITOR_PASSWORD']}@{service_host('operations')}/{OPS_DB}\n"
         f"HGH_GA4_REGISTRY_EDITOR_DB_URL=postgresql://hmg_ga4_registry_editor:{registry['GA4_REGISTRY_EDITOR_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n"
         f"HGH_SOURCE_OVERRIDE_EDITOR_DB_URL=postgresql://hmg_source_override_editor:{override['SOURCE_OVERRIDE_EDITOR_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n"
+        f"HGH_INTEREST_EDITOR_DB_URL=postgresql://hmg_interest_editor:{interest['INTEREST_EDITOR_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n"
         f"HGH_AUTH_SECRET={edit['HGH_AUTH_SECRET']}\n")
     analytics.secure_write(ROOT / '.env.data-external.local', '# Local connection only. Empty exports until per-project approval.\n'
         f"HGH_DATA_EXTERNAL_DB_URL=postgresql://hmg_data_external:{data['DATA_EXTERNAL_PASSWORD']}@127.0.0.1:{data_port()}/hmg_analytics\n")
@@ -343,6 +362,7 @@ def verify():
     account = f"postgresql://hmg_account_editor:{analytics.env_file(ACCOUNT_SECRET)['ACCOUNT_EDITOR_PASSWORD']}"
     registry = f"postgresql://hmg_ga4_registry_editor:{analytics.env_file(GA4_REGISTRY_SECRET)['GA4_REGISTRY_EDITOR_PASSWORD']}"
     override = f"postgresql://hmg_source_override_editor:{analytics.env_file(SOURCE_OVERRIDE_SECRET)['SOURCE_OVERRIDE_EDITOR_PASSWORD']}"
+    interest = f"postgresql://hmg_interest_editor:{analytics.env_file(INTEREST_SECRET)['INTEREST_EDITOR_PASSWORD']}"
     config = {'external':external+f"@{service_host('analytics')}/hmg_analytics",
               'external_operations':external+f"@{service_host('operations')}/{OPS_DB}",
               'ext':ext_api+f"@{service_host('analytics')}/hmg_analytics",
@@ -355,7 +375,9 @@ def verify():
               'ga4_registry':registry+f"@{service_host('analytics')}/hmg_analytics",
               'ga4_registry_operations':registry+f"@{service_host('operations')}/{OPS_DB}",
               'source_override':override+f"@{service_host('analytics')}/hmg_analytics",
-              'source_override_operations':override+f"@{service_host('operations')}/{OPS_DB}"}
+              'source_override_operations':override+f"@{service_host('operations')}/{OPS_DB}",
+              'interest':interest+f"@{service_host('analytics')}/hmg_analytics",
+              'interest_operations':interest+f"@{service_host('operations')}/{OPS_DB}"}
     script = (HERE / 'verify_connections.py').read_text(encoding='utf8') + '\nasyncio.run(main(' + repr(config) + '))\n'
     print(api_python(script).strip())
     print('Verified opt-in exports, grants, immutable versions, operations isolation; all fixture transactions rolled back')
@@ -691,6 +713,50 @@ FROM catalog.source_social;""")
     print(json.dumps({'imported': done, 'already_present': {k: v for k, v in counts.items() if v}}, ensure_ascii=False))
 
 
+GOLD_KEYWORDS_SCRIPT = '''import asyncio, json, os
+import asyncpg
+async def main():
+    conn = await asyncpg.connect(os.environ['HGH_GOLD_DB_URL'], server_settings={'default_transaction_read_only': 'on', 'statement_timeout': '30000'})
+    try:
+        rows = await conn.fetch("""SELECT DISTINCT k.term,k.term_norm,s.location_code,s.language_code FROM gold.kw_suggestion s
+            JOIN gold.dim_keyword k ON k.kw_key=s.kw_key WHERE s.is_seed ORDER BY k.term_norm,k.term,s.location_code,s.language_code""")
+    finally:
+        await conn.close()
+    print(json.dumps([[r['term'], r['term_norm'], r['location_code'], r['language_code']] for r in rows]))
+asyncio.run(main())
+'''
+
+
+def import_interest_keywords(args):
+    """import-interest-keywords: the HUB's first seed keywords are Gold's seed rows (the reference family `keyword`). Runs
+    once: refused when the HUB already has a keyword. Records them (origin gold_import, Google keyword, common to every
+    brand), their history and the first `interest_keyword` list for the external API, in one transaction under the
+    catalog lock."""
+    rows = json.loads(api_python(GOLD_KEYWORDS_SCRIPT).strip().splitlines()[-1])
+    found = {}
+    for term, term_norm, location, language in rows:
+        item = found.setdefault(term_norm, {'term': term, 'conditions': []})
+        item['conditions'].append({'location_code': location, 'language_code': language})
+    if not found:
+        print('Gold has no seed keyword; nothing imported')
+        return
+    values = ','.join(f"({analytics.literal(k)},{analytics.literal(v['term'])},{analytics.literal(json.dumps(v['conditions'], ensure_ascii=False))}::jsonb,"
+                      "ARRAY['google_keyword'],'gold_import')" for k, v in sorted(found.items()))
+    sql(f"""BEGIN;
+SELECT pg_advisory_xact_lock({CATALOG_LOCK});
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM catalog.interest_keyword) THEN RAISE EXCEPTION 'The HUB already has seed keywords; the first import runs once'; END IF;
+END $$;
+INSERT INTO catalog.interest_keyword(term_norm,term,conditions,source_types,origin) VALUES{values};
+SELECT count(*) FROM catalog.publish_interest_keywords();
+INSERT INTO catalog.interest_keyword_event(term_norm,action,changes,published_seq)
+SELECT term_norm,'import',jsonb_build_object('conditions',jsonb_build_array(NULL,conditions)),
+       (SELECT change_seq FROM catalog.current_reference_set WHERE family='interest_keyword')
+FROM catalog.interest_keyword;
+COMMIT;""")
+    print(json.dumps({'imported': len(found)}))
+
+
 COMMANDS = {
     'init': lambda a: initialize(), 'start': lambda a: start(), 'sync-gold-catalog': sync, 'status': lambda a: status(),
     'verify': lambda a: verify(), 'backup': lambda a: backup(), 'set-admin': lambda a: set_admin(), 'revoke-admin': lambda a: revoke_admin(),
@@ -701,6 +767,7 @@ COMMANDS = {
     'grant-project': lambda a: grant(a, True), 'withdraw-project': lambda a: grant(a, False), 'ext-list': ext_list,
     'import-source-overrides': import_source_overrides,
     'import-source-lists': import_source_lists,
+    'import-interest-keywords': import_interest_keywords,
 }
 
 if __name__ == '__main__':

@@ -327,6 +327,14 @@ export const ROUTES = [
     roles: ADMIN_ONLY,
     group: "admin" as const,
   },
+  // HUB customer-interest inputs (2026-11-02, lib/hub): same roles as the original 고객 관심 데이터 관리 page; the
+  // renewal sidebar's Admin › Customer interest config opens it.
+  {
+    path: "/renewal/admin/standards/customer-interest",
+    key: "renewalAdminCustomerInterest",
+    roles: ADMIN_ONLY,
+    group: "admin" as const,
+  },
   // HUB GA4 property registry (2026-10-29, lib/hub): same roles as the original GA4 연동 page; the
   // renewal sidebar's Admin › GA4 연동 opens it.
   {

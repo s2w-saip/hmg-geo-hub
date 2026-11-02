@@ -142,7 +142,7 @@ export interface CodeHistory {
 
 // ─── calls ───────────────────────────────────────────────────────────────────
 
-async function call<T>(base: string, path: string, method: "GET" | "POST" = "GET", body?: unknown): Promise<T> {
+export async function call<T>(base: string, path: string, method: "GET" | "POST" = "GET", body?: unknown): Promise<T> {
   const res = await fetch(`/api/hub/${base}${path}`, {
     method,
     cache: "no-store",

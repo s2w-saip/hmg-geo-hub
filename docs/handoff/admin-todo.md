@@ -4,7 +4,7 @@
 
 **세션의 첫 답변:** 첫 줄에 아래 '지금 할 일' 줄을 그대로 옮겨 적는다. 그래야 사용자가 이 파일을 확인했는지 알 수 있다. 사용자가 '다음 작업'처럼 대상을 말하지 않으면 '지금 할 일'을 뜻한다. 요청이 이 순서와 다르면 무엇이 다른지 말하고 사용자에게 묻는다.
 
-**지금 할 일:** Admin 3단계 '고객 관심 데이터 관리'(`/admin/standards/customer-interest`)의 범위 확인부터 한다(규칙 4, 아래 '3.' 절). 시드 키워드는 '기준값 편집 공통 구조'를 따른다. 커뮤니티 수집 소스는 ⛔E가 미정이다. 리뉴얼 점검 후속(1~16단계)은 2026-10-31에 끝났고 사용자 확인을 기다린다('리뉴얼 점검 후속' 절). 그 뒤 남은 일은 '점검 후속 뒤 남은 일' 절에 모았다. Website 화면(W0~W6)과 Admin 2단계 남은 일도 커밋 · 푸시했고(`f28395f` · `a36b835`) 사용자 확인을 기다린다.
+**지금 할 일:** Admin 3단계 '고객 관심 데이터 관리'(`/renewal/admin/standards/customer-interest`)의 구현 · 시험 · e2e · 커밋을 마쳤고 사용자 확인을 기다린다('3.' 절). 확인이 끝나면 Admin 4단계 '엔티티 카탈로그'(`/admin/standards/entities`)의 범위 확인부터 한다(규칙 4, 아래 '4.' 절). 편집 흐름은 ⛔F가 미정이다. 리뉴얼 점검 후속(1~16단계)과 Website 화면(W0~W6), Admin 2단계 남은 일도 사용자 확인을 기다린다(`f28395f` · `a36b835`). 그 뒤 남은 일은 '점검 후속 뒤 남은 일' 절에 모았다.
 
 ## 절대 규칙
 
@@ -231,7 +231,7 @@ W1 · W2 · W3은 W0 필터가 끝나기 전에도 범위 확인, BFF 점검, �
 | B | GA4 '검증' 버튼. 원칙('BFF는 GA4를 부르지 않는다')을 지키면 검증 결과는 수집기 실행 결과(권한 대기 / 활성)로 보인다. 누르자마자 확인하려면 BFF가 GA4를 부르도록 구조를 바꿔야 한다. | 1의 검증 항목만 | 2026-10-29 결정 |
 | C | 분석 엔진 · 리포트 관리 · 측정 크레딧 명세. 운영 웹(hmg-geo.vercel.app) 화면 캡처나 설명이 필요하다. | 6 | 미정 |
 | D | 키워드 도구. DataForSEO · OpenRouter 키를 인계받는지, BFF가 유료 외부 API를 불러도 되는지, 비용 상한을 어떻게 둘지. | 5 | 미정 |
-| E | 고객 관심. 커뮤니티 수집 소스를 HUB가 새로 가질지. 2026-10-30 확인: Gold 표 86개에 없고, 저장소에서 이 목록(원본 `app.standard_source`)을 읽는 수집기도 없다. 원본 관리 CRUD만 쓴다. | 3 | 미정 |
+| E | 고객 관심. 커뮤니티 수집 소스를 HUB가 새로 가질지. 2026-10-30 확인: Gold 표 86개에 없고, 저장소에서 이 목록(원본 `app.standard_source`)을 읽는 수집기도 없다. 원본 관리 CRUD만 쓴다. | 3 | 2026-11-02 결정: HUB가 갖는다(결정 기록 'E') |
 | F | 엔티티 카탈로그. 원본의 초안·검토·적용 흐름을 옮길지, 글로벌 프롬프트처럼 버전 행과 변경 이력만 둘지. | 4 | 미정 |
 | G | 출처 시드 · 공식 소셜 목록의 정본. Gold `dim_source`에는 결과(분류 출처 4 · 2)만 있고, 원래 값은 원본 HUB 앱 파일이다(`front/lib/citation-categorizer/seed.json` 795개 · `official-social.ts` 9개, 2026-10-30 대조). HUB 편집 대상으로 할지, 파일로 둘지, Gold 열람만 할지. | 2 (공통 구조 '소유') | 2026-10-30 결정: HUB 편집 대상 |
 | H | Website ACR. Gold `acr_cell_fact`에 website(surface 2) 행이 0개다(global 89,808 · project 76, 2026-10-30). 표 설명에는 'Website · Project ACR'에 쓴다고 되어 있다. 원본 website ACR은 `acr/gold`로 surface website를 읽는다. Gold 팀에 가공 예정인지 묻는다. | W5의 ACR | 미정 |
@@ -258,7 +258,7 @@ W1 · W2 · W3은 W0 필터가 끝나기 전에도 범위 확인, BFF 점검, �
   - 비밀번호는 `.env.source-override-db.local`, 연결은 `.env.hub-edit.local`의 `HGH_SOURCE_OVERRIDE_EDITOR_DB_URL`.
 - **BFF.** `hub_stores/<종류>.py`와 `/v1/hub/<종류>`를 둔다. 관리자 전용이고, 쓰기는 catalog lock 안에서 한다(5초 대기 뒤 503). 목록은 Gold 값과 HUB 값을 나란히 주고 `state`를 붙인다: applied(Gold가 HUB 값을 적용함), pending(아직), upstream(Gold에만 있음). 같은지 비교만 하므로 새 판단이 아니다.
 - **화면 반영 시점 문구.** "고친 값은 HUB에 저장되고 외부 API 목록으로 파이프라인에 넘어간다. 화면 숫자에는 파이프라인이 가져가 Gold를 다시 만든 뒤 반영되고, 그 전까지 '반영 대기'로 보인다." '저장 즉시 반영'은 쓰지 않는다.
-- **3단계 시드 키워드.** 그대로 쓴다. 거울은 family `keyword`(term · term_norm · 수집 조건)이고, HUB 표 키는 term_norm, 값은 수집 조건(location · language)이다. Gold `kw_suggestion.is_seed`는 2026-10-30 기준 84 term이다.
+- **3단계 시드 키워드.** 그대로 썼다. 거울은 family `keyword`(term · term_norm · 수집 조건)이고, HUB 표 키는 term_norm, 값은 수집 조건(location · language)이다. Gold `kw_suggestion.is_seed`는 2026-10-30 기준 84 term이다. 만들며 확인한 사실: 이 행은 사람이 고른 목록이 아니라 요청 시 수집한 호출의 시드 행이다(`su`, `SIIIUUUUUU`도 있음, 업스트림 C2). 원본의 켜기/끄기 · 삭제는 `status`(active · stopped) 하나로 합쳤고, 원본이 메모를 입력받으므로 `note`는 이 화면 역할이 UPDATE한다. 전용 역할은 `hmg_interest_editor`, 종류는 `interest_keyword` · `interest_source`다.
 - **4단계 엔티티 역할.** 그대로 쓴다. 거울은 family `entity`(registry_role 지정분, 2026-10-30 기준 own 5 · excluded 14)이고, HUB 표 키는 Gold `entity_id`, 값은 역할과 자사 브랜드다. Gold에 있는 엔티티에만 역할을 줄 수 있다. 편집 흐름은 F 결정을 따른다.
 
 ## 단계
@@ -319,12 +319,14 @@ W1 · W2 · W3은 W0 필터가 끝나기 전에도 범위 확인, BFF 점검, �
 > 6. API 키 발급 대상(호출자 이름)을 알려 주세요.
 > 7. 출처 분류 코드표(카테고리 13개, 분류 출처 코드 1~6)와 시드 · 공식 소셜 목록도 HUB가 정본으로 관리하고, 같은 방식(외부 API, change_seq)으로 드립니다: `GET /ext/v1/reference/source_code` · `source_seed`(도메인 → 카테고리) · `source_social`(계정 키, 도메인, URL 매칭 규칙 `[{prefix, boundary}]`, 카테고리 officialHmg). 지금 이 값들을 어디서 가져가시는지(`dim_category` 설명에는 HUB 코드표의 투영이라고 되어 있습니다), 이 목록으로 바꿔도 되는지 알려 주세요.
 
-### 3. 고객 관심 데이터 관리 (`/admin/standards/customer-interest`) ⛔E
+### 3. 고객 관심 데이터 관리 (`/admin/standards/customer-interest`)
 
-- [ ] 범위를 확인한다. 원본은 `keyword-list.tsx`, `source-list.tsx`, 소셜 스크레이핑 흐름이다.
-- [ ] 시드 키워드는 2단계 공통 구조로 만든다. Gold `keyword` 기준값(term, location, language)이다.
-- [ ] 커뮤니티 수집 소스는 E 결정을 따른다. Gold에 해당 표가 정말 없는지 먼저 확인한다.
-- [ ] 공통 완료 기준을 채운다.
+- [x] 범위를 확인한다. 2026-11-02, 결정 기록 '3 범위'. 원본은 카드 3개(소셜 리서치 · `keyword-list.tsx` · `source-list.tsx`)다.
+- [x] 시드 키워드는 2단계 공통 구조로 만든다. `catalog.interest_keyword`, 기준값 종류 `interest_keyword`, 처음 값은 `manage.py import-interest-keywords`(Gold 84개).
+- [x] 커뮤니티 수집 소스는 E 결정을 따른다. Gold에 해당 표가 없음을 다시 확인했다(결정 기록 'E'). `catalog.interest_source`, 기준값 종류 `interest_source`, 처음 값 없음.
+- [ ] 공통 완료 기준을 채운다. 사용자 확인만 남았다. 마이그레이션 `data-009.sql` · 전용 역할 `hmg_interest_editor` · Mac 적용 · `verify`, `hub_stores/interest.py` · `/v1/hub/interest-*`, 화면 · render 시험 16개, 메뉴 · 경로 · 사이드바 시험, 아키텍처 문서 · ERD, e2e 한 번을 마쳤다.
+- [ ] 원본 운영 DB의 `standard_keywords` · `standard_sources` 행(이관 필수, 마이그레이션 부록 A)을 받지 못했다. 로컬에 그 DB가 없다. 받으면 화면에서 넣거나 가져오기를 만든다(사용자 보유 정보).
+- [ ] 업스트림 C2(`upstream-questions-2026-10-30.md`). 사용자가 보낸다. 답이 오면 공개 승인(`publish-reference interest_keyword interest_source`)과 수집 소스 화면의 '읽는 수집기 없음' 문구를 정리한다.
 
 ### 4. 엔티티 카탈로그 (`/admin/standards/entities`) ⛔F
 
@@ -384,6 +386,8 @@ W1 · W2 · W3은 W0 필터가 끝나기 전에도 범위 확인, BFF 점검, �
 | 2026-10-31 | 점검 13단계 | Global prompts의 브랜드 포함 여부 · 측정 종류는 Gold 값만 쓴다. 빈 값은 '—'이고, 필터는 범위에 빈 값 행이 있을 때만 '값 없음'을 더한다(측정 종류도 같은 규칙, 계획 밖). 다른 안: '값 없음'을 늘 두기(live에서는 늘 0건인 선택지). 범위 계정의 국가는 Gold 리더가 원본 API의 범위 규칙(B1: 대상 시장 미지정 · 실국가 없음 · 범위 국가 포함)으로 건다. 다른 안: 요청 필터 규칙(정확 포함, 미지정 제외). 이 읽기의 국가는 clamp가 붙인 범위뿐이고 live 결과는 같다. 열람 범위 pill은 누르면 브랜드 · 권역 · 국가 전체가 열리고, 권역 계정의 국가는 권역 국가다(리더 범위와 같음). 다른 안: pill title 툴팁에 나열(국가가 많으면 읽기 어렵고 키보드로 닿지 않음). '값 없음' 문구는 두 목록이 같이 쓰는 `standardPromptsView`에 둔다. | 규칙 5(없는 값을 만들지 않음, 원본 API 범위 규칙 그대로) · 규칙 7(설계는 UX로). 근거는 `renewal-audit.md` 단계 메모 '13단계'. |
 | 2026-10-31 | 점검 14단계 | 기간 비교 억제는 Gold 리더 한 곳에서 정한다(비교할 값이 없을 때만). 화면 쪽 억제 이식 · 세 사유 문장, 쓰지 않던 적용일 상수 · `before_epoch` 분기는 지운다. 인용 도달 카드 각주는 이번 답의 값 출처 하나만 둔다. 다른 안: 직전 답의 출처도 적기(K는 각주를 '둔다'고만 했고, live에서는 둘 다 실시간이다). 프런트 문구 키 `periodCompare.reason.missingShare` · `startWindow` · `startMonth`는 남긴다. 다른 안: 지금 지우기(레거시 `front/lib/kpi` 순수 계층과 그 시험이 아직 쓰고, 그 계층은 페이지에서 닿지 않는다. 16단계 '다음 일'). golden은 리더가 보내지 않는 녹음 답을 지금 리더 답으로 바꾼다(11단계 방식). | 규칙 5(측정 범위가 달라 값이 튀어도 숨기거나 경고하지 않는다) · ⛔K. 근거는 `renewal-audit.md` 단계 메모 '14단계'. |
 | 2026-10-31 | 점검 15단계 | ⛔L 적용. Mention 히어로는 비교 브랜드가 없으면 당사 선만 그린다. 유형 비교 · 발견의 기준은 그 유형에서 가장 앞선 비교 브랜드뿐이고, 비교 브랜드 값이 없으면 차이 · 발견이 없다. 가장 작은 유형 차이가 반올림해 0.0이면 '앞섬' 대신 '같음'(info)이다(계획 밖, W6 · 11단계 leak과 같은 규칙). ACR 지도는 점만 그리고 공용 `RnScatterChart`의 기준선 prop을 지운다(ACR만 씀). AI Conversion은 분해 대신 AI 유입 세션 · 세션 100회당 전환 · 전환을 직전 · 이번 · 증감으로 나란히 보이고, 엔진별 세션 변화와 '그 외' 줄은 둔다(두 값의 차일 뿐 기준값이 없다). 다른 안: 엔진별 세션 변화도 빼기(분해 카드의 일부였지만 L은 유입 · 효율 분해만 겨눴다), 차트 기준선을 선택 prop으로 남기기(쓰는 곳이 없다). 당사 순위 격차 변화가 반올림해 0.0이면 '변화 없음'(Mention · ACR). | 규칙 5(HUB가 새 기준선 · 판단을 만들지 않는다) · ⛔L · W6 문턱 제거. 근거는 `renewal-audit.md` 단계 메모 '15단계'. |
+| 2026-11-02 | E | 커뮤니티 수집 소스는 HUB가 갖는다. HUB 표 `catalog.interest_source`에 두고 외부 API 목록(`interest_source`)으로 내보낸다. 다른 안: 옮기지 않기(원본 목록이 사라지고, 입력을 정할 곳이 없어진다). 지금 읽는 수집기가 없다는 사실은 화면 안내에 그대로 적는다. | 선택 추이(규칙 2): A · G · 코드표에서 사람이 정한 입력은 늘 HUB 정본을 골랐고, 외부 API는 수집 입력을 낸다(규칙 5). 재확인: Gold 표에 없고 저장소에 읽는 수집기가 없다. Gold 소셜 코퍼스는 `scope_context_mirror` 스냅샷 1개다. |
+| 2026-11-02 | 3 범위 | 옮긴다: 키워드 · 소스 목록을 탭 2개로(`?tab=`), 추가, 메모, 정렬, 빈 상태. 켜기/끄기 · 삭제는 중지 · 재개 하나로 합친다(GA4 범위 결정과 같음, 행은 지우지 않음). 더한다: 수집 조건(공통 구조), 편집, 필터 · 검색, 변경 이력, Gold 값 나란히(키워드는 조건별 수집일, 소스는 활성 스냅샷의 host 근거 수), Gold에만 있는 키워드 · host의 업스트림 행과 추가 버튼. 키워드 하나가 소스 · 브랜드를 여럿 가질 수 있다(원본은 행을 나눴고, 키가 term_norm이라 합쳤다). 옮기지 않는다: 소셜 리서치 카드(원본 페이지가 데이터를 넘기지 않아 늘 빈 상태, Gold `ctx_research_*` 0행, 실행 경로 없음). 처음 값: 키워드는 Gold 84개를 활성으로 넣고 정리는 관리자가 한다. 다른 안: 빈 목록으로 시작(공통 구조와 다르다). 소스의 코퍼스 비교는 www.를 뺀 host가 정확히 같을 때만 한다(하위 도메인을 묶으면 HUB가 판단을 더한다). 머리 칩의 출처 수는 Gold `source_total`(606)을 그대로 보인다(목록은 www.를 접어 593행). 소스 상태는 '반영됨'이라 부르지 않고 '코퍼스에 있음'이라 부른다(이 목록을 읽는 곳이 없다). | 규칙 5(HUB가 판단 · 숫자를 새로 만들지 않음, 없는 정보 금지) · 규칙 7(설계는 UX로). GA4 범위 결정의 중지 · 재개 선례. |
 
 ## 진행 기록
 
@@ -427,3 +431,4 @@ W1 · W2 · W3은 W0 필터가 끝나기 전에도 범위 확인, BFF 점검, �
 - 2026-10-31 — 리뉴얼 점검 후속 16단계(마무리): 리뉴얼 · 원본을 같은 조건(필터 없음 · 미국)으로 Global 5화면 · Website 4화면씩 대조했다(값 모두 같음, 다른 것은 단계 메모의 의도한 변경뿐). 범위 계정 Website Overview도 원본과 같다. BFF 34개 모듈 643개, 프런트 관련 121개 파일 1,542개 · typecheck · lint 통과. 아키텍처 문서 '마지막 갱신'을 고쳤고, 업스트림 D1 · D3 · D7을 2~15단계 결과와 맞췄다. 보류 · 다음 일은 '점검 후속 뒤 남은 일' 절에 모았다. '지금 할 일'을 Admin 3단계 범위 확인으로 바꿨다. 점검 후속 1~16단계 끝, 사용자 확인 대기.
 - 2026-10-31 — 사용자 요청으로 리뉴얼 화면 지표마다 Gold · HUB 데이터 출처를 정리했다(`docs/handoff/kpi-data-lineage.html`). 화면 20개 · 지표 424행이고, 화면 묶음 다섯 갈래를 하위 에이전트가 조사했다. 진행 세션이 코드 인용 1,210개와 대표 숫자를 Gold에서 다시 세어 확인했다. 기본 조건 대조 275건은 모두 일치했다. 필터 조건에서 Global Citation 자사 판정이 Gold 정의와 갈리는 결함 하나와, 정할 일 셋을 '점검 후속 뒤 남은 일'에 더했다. 코드는 고치지 않았다.
 - 2026-10-31 — 사용자 요청으로 Global Citation 자사 판정 결함을 고쳤다(`9dbd27d`, '점검 후속 뒤 남은 일'). 재현 시험 6건(`test_gold_citations`)은 고치기 전에 실패했다. 고친 뒤에는 BFF 34개 모듈 648건과 실제 API 시험 8건이 통과했다. 고치기 전후를 국가 · 언어 조건 일곱 개로 대조했다. 필터 없음은 그대로이고, 미국은 공식(당사) 9.5% → 6.4%, 인용 · 미인용 프롬프트 349 · 446 → 238 · 557, 'HMG' 태그 도메인 8 → 3이다. 값은 모두 Gold `kpi_cell.cit_owned_c` · `citation_cell` 합과 같다. `kpi-data-lineage.html`의 해당 5행에서 '원칙 확인'을 풀었다(27행 남음).
+- 2026-11-02 — 3단계: 사용자 지시('다음 단계 시작')로 시작했다(2단계 · 점검 후속 · Website 사용자 확인은 그대로 대기). 범위와 ⛔E를 규칙 2로 정했다(결정 기록 'E' · '3 범위'). 만든 것: `data-009.sql`(`catalog.interest_keyword` · `interest_source` · 이력 · 발행 함수 · `interest_term_norm`), `hmg_interest_editor`, `manage.py import-interest-keywords`(84개), `hub_stores/interest.py`, `/v1/hub/interest-keywords` · `-sources`, `/renewal/admin/standards/customer-interest`(탭 2개), `/api/hub/interest-*`, 메뉴 · 경로 정책, 아키텍처 문서 · ERD, README, 업스트림 C2. 만들며 찾은 결함: 저장소가 C 로케일이라 `lower('ÜBER')`가 `Über`였다. 키가 Gold `term_norm`과 달라지므로 ICU로 고치고 `verify`에 검사를 더했다. 시험: BFF 35개 모듈 전체 통과(새 `test_hub_interest` 11건, 실 DB 롤백 포함), 프런트 관련 18개 파일 388건, typecheck · lint 오류 0, `verify` 통과. e2e 두 번 통과: 키워드 추가(입력 오류 포함) · 수정 · 중지 · 재개 · 이력 · 필터 · 검색, 소스 Gold host 추가 · URL 정규화 · 중복 거부 · 수정 · 중지 · 재개 · 이력 · 필터 · 새로고침 복원, 외부 목록 정의. 끝 상태는 처음과 같다(시험 행은 지웠다).
