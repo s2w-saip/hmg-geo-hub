@@ -36,7 +36,7 @@ export default async function RenewalWebsiteCitationPromptsRoute({
           <RnTag className="ml-2 align-middle text-rn-11">{tR("beta")}</RnTag>
         </>
       }
-      meta={<span className="text-rn-13 text-rn-muted">{t("description")}</span>}
+      meta={<span className="text-rn-13 text-rn-muted">{tR("sub.promptsDescription")}</span>}
     />
   );
   const query = { ...sp, "ctx.surface": "website", "ctx.role": session.user.role };

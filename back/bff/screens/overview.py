@@ -736,13 +736,16 @@ def bar_width(key: str, v: float | None, mx: float | None) -> float:
     return max(2, (v / mx) * 100)
 
 
-def delta_mark(key: str, d: float | None) -> dict | None:
-    """The table Δ: rounded to one decimal, 0 = flat, else good / bad by the KPI's direction."""
+def delta_mark(key: str, d: float | None, own: bool = True) -> dict | None:
+    """The table Δ: rounded to one decimal, 0 = flat, else good / bad by the KPI's direction; a rival's is neutral (its
+    move is not good or bad in itself, 2026-11-02 premise review)."""
     if d is None:
         return None
     r = js_round(d * 10) / 10
     if r == 0:
         return {"r": 0, "tone": "flat"}
+    if not own:
+        return {"r": r, "tone": "neutral"}
     good = r < 0 if key == "position" else r > 0
     return {"r": r, "tone": "good" if good else "bad"}
 
@@ -781,7 +784,7 @@ def brand_matrix(own: dict, rivals: dict) -> dict:
             v = cell["value"]
             cell["bar"] = bar_width(c["key"], v, c["max"])
             cell["best"] = v is not None and v == c["best"]
-            cell["deltaMark"] = delta_mark(c["key"], cell["delta"])
+            cell["deltaMark"] = delta_mark(c["key"], cell["delta"], r["own"])
     return {"rows": rows, "cols": cols}
 
 

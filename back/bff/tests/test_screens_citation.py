@@ -441,6 +441,15 @@ class EmptyColumns(unittest.TestCase):
         both = M.type_matrix(self.types(mention=10, recommendation=20), [HMG, AUTO])
         self.assertIn("typeGap", [f["kind"] for f in M.findings([], None, [], None, both, split, None)])
 
+    def test_the_type_gap_is_told_without_a_verdict(self):
+        # 2026-11-02 premise review: 추천 and 단순 언급 are two answer types, not a before and after, so neither side is the
+        # better one: the sentence keeps both values, the HUB paints no warning or praise (W6: colour is a direction)
+        split = {"kind": "noOwned"}
+        for mention, recommendation in ((10, 20), (20, 10), (10, 10)):
+            both = M.type_matrix(self.types(mention=mention, recommendation=recommendation), [HMG, AUTO])
+            gap = next(f for f in M.findings([], None, [], None, both, split, None) if f["kind"] == "typeGap")
+            self.assertEqual(gap["tone"], "info", (mention, recommendation))
+
     def test_one_valued_column_is_not_coloured(self):
         m = M.type_matrix(self.types(mention=10), [HMG, AUTO])
         self.assertEqual([m["live"], m["cap"]], [[], 3])

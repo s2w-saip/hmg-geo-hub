@@ -525,7 +525,7 @@ function AcrBoard() {
         <span className="@max-[680px]/rnpage:hidden">{r.trend ? <RnSparkline values={r.trend} className="h-[26px]" /> : <span className="text-rn-11 text-rn-muted">{t("board.noTrend")}</span>}</span>
         <span className="justify-self-end">
           {r.trend && view.showDelta ? (
-            <RnDeltaChip delta={r.d} format={(v) => `${Math.abs(v).toFixed(1)}pp`} emptyText={t("delta.none")} labels={DELTA_LABELS(t)} />
+            <RnDeltaChip delta={r.d} neutral={!r.own} format={(v) => `${Math.abs(v).toFixed(1)}pp`} emptyText={t("delta.none")} labels={DELTA_LABELS(t)} />
           ) : (
             <span className="text-rn-11 text-rn-muted" title={r.trend ? undefined : t("board.noTrendTip")}>
               —

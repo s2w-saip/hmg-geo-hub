@@ -87,8 +87,17 @@ async def prompts(ctx: Context) -> dict:
         order = f"{sort} {'ASC' if ctx.q.get('dir') == 'asc' else 'DESC'} NULLS LAST,p.prompt_id" if sort else "p.prompt_id"
         # Per prompt: its answers by engine and the rounds it was measured in (served jobs in the lens).
         # MATERIALIZED: once, not under a nested loop (country + language picked: 8.5 s, with the lens > 15 s)
+        # A prompt's country is where it is measured, as in every Gold cell: one site row can hold several markets
+        # (Genesis Saudi Arabia: one project, SA-Dammam, with Jeddah and Riyadh prompts), so a prompt measured elsewhere
+        # takes that country. Read first and bound as values: a CTE here keeps the job scans below from running in
+        # parallel (0.2 → 0.9 s on a country).
+        moved = await ctx.conn.fetch("""SELECT DISTINCT ON(j.prompt_key) j.prompt_key,j.geo_key
+            FROM gold.job_index j JOIN gold.dim_project s USING(project_key)
+            WHERE j.surface=2 AND j.geo_key IS DISTINCT FROM s.site_geo_key ORDER BY j.prompt_key,j.round_date DESC""")
+        geo = f"unnest({b.bind([r['prompt_key'] for r in moved], 'bigint[]')},{b.bind([r['geo_key'] for r in moved], 'int[]')})"
         listed = f"""FROM gold.dim_prompt p JOIN gold.dim_project dp USING(project_key)
-            LEFT JOIN gold.dim_country c ON c.geo_key=dp.site_geo_key LEFT JOIN gold.dim_lang l USING(lang_key)
+            LEFT JOIN {geo} g(prompt_key,geo_key) ON g.prompt_key=p.prompt_key
+            LEFT JOIN gold.dim_country c ON c.geo_key=coalesce(g.geo_key,dp.site_geo_key) LEFT JOIN gold.dim_lang l USING(lang_key)
             WHERE {' AND '.join(parts)}"""
         served = f"""FROM gold.job_index j JOIN gold.dim_engine e ON e.engine_key=j.engine_key JOIN gold.dim_cycle cy ON cy.cyc_key=j.cyc_key
             WHERE j.surface=2 AND j.served AND {' AND '.join(lens)} AND j.prompt_key IN (SELECT p.prompt_key {listed})"""

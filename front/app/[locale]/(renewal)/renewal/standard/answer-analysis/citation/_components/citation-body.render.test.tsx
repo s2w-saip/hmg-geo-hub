@@ -295,6 +295,19 @@ describe("renewal Citation body — website page", () => {
     expect(bump.legendOwnWebsite).toBe("당사 도메인");
     expect(legend(render(input()))).toContain(T.bump.legendOwn);
   });
+  // 2026-11-02 premise review: the page says what it splits; what is a strength or an opportunity is the reader's call
+  it("the prompts page's description names no strengths or opportunities", () => {
+    expect((T.sub as Record<string, string>).promptsDescription).toContain("나눠 봅니다");
+    expect((T.sub as Record<string, string>).promptsDescription).not.toMatch(/강점|기회/);
+  });
+  // 2026-11-02 premise review: the movers are other domains; their climb or fall is not good or bad in itself
+  it("the rank bump's movers tell their direction with no better/worse colour", () => {
+    const html = render(input());
+    const from = html.indexOf('data-rn-bumplg=""');
+    const legend = html.slice(from, html.indexOf("</div>", from));
+    expect(legend).toMatch(/[▲▼]/);
+    expect(legend).not.toMatch(/text-rn-(up|danger)-ink/);
+  });
   it("the standard page keeps its layout", () => {
     const html = render(input());
     expect([...html.matchAll(/data-rn-tile="([a-zA-Z]+)"/g)].map((m) => m[1])).toEqual(["hmg", "dealer", "owned", "uncited"]);

@@ -142,7 +142,7 @@ function BumpChart({ d }: { d: BumpView }) {
           <span key={m.key} data-rn-b={m.key} onPointerEnter={() => hover(m.key)} onPointerLeave={() => hover(null)} className={cx("inline-flex items-center gap-1.5", lit === m.key && "font-bold text-rn-ink")}>
             <i aria-hidden className="inline-block h-0.5 w-3 rounded" style={{ background: MOVER_COLORS[i] }} />
             {m.key}
-            <b className={m.move > 0 ? "text-rn-up-ink" : "text-rn-danger-ink"}>
+            <b>
               {m.move > 0 ? "▲" : "▼"}
               {Math.abs(m.move)}
             </b>

@@ -202,6 +202,9 @@ class ListConn:
         self.calls = []
 
     async def fetch(self, sql, *args):
+        if "s.site_geo_key" in sql:
+            self.moved = sql
+            return [{"prompt_key": 7, "geo_key": 119}]
         self.calls.append((sql, args))
         return [{"prompt_id": "a", "text": "t", "targets": ["kia.com/de/models"], "site_brand_bit": 2, "country": "DE",
                  "lang": "DE", "answers": 3, "last_measured": D2, "first_measured": D1, "rounds": [D2, D1],
@@ -218,7 +221,7 @@ def website_list(qs):
         ctx.selected_dates = [D1]
     res = run(catalog.prompts(ctx))
     sql, args = conn.calls[0]
-    return res, sql, args
+    return res, sql, args + (conn.moved,)
 
 
 class GoldWebsiteList(unittest.TestCase):
@@ -241,6 +244,19 @@ class GoldWebsiteList(unittest.TestCase):
         self.assertIn("c.code=ANY(", stats)
         self.assertIn(["gemini"], args)
         self.assertIn([D1], args)
+
+    def test_the_country_is_where_the_prompt_is_measured(self):
+        # 2026-11-02 premise review: one site row can hold several markets. Genesis Saudi Arabia is one project, site
+        # country SA-Dammam, with prompts on /sa-jeddah/ and /sa-riyadh/ too, and every Gold cell and the filter have the
+        # three cities: picking Jeddah listed nothing here. A prompt's job country is that market; the site's only without one.
+        _, sql, args = website_list("country=SA-Jeddah")
+        self.assertIn("j.geo_key IS DISTINCT FROM s.site_geo_key", args[-1])
+        self.assertIn("g(prompt_key,geo_key) ON g.prompt_key=p.prompt_key", sql)
+        self.assertIn("c.geo_key=coalesce(g.geo_key,dp.site_geo_key)", sql)
+        self.assertNotIn("c.geo_key=dp.site_geo_key", sql)
+        self.assertIn(["SA-Jeddah"], args)
+        self.assertIn([7], args)
+        self.assertIn([119], args)
 
     def test_without_a_period_every_served_round_counts(self):
         _, sql, args = website_list("")

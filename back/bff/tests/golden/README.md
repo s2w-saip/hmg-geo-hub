@@ -422,6 +422,10 @@ lists in order.
     null without a position). `rn-fn-rank`, `rn-fn-rank-hero-model` and the 18 bundles; nothing else moves.
   - Additive: `mention/rn-shell` `ownSum`, the reader's `own.brands`. The '당사 = … 합산' chip counted the tracked brand rows,
     one row since 2026-10-29 R1, so it never showed. `rn-fn-shell` (no names: `[]`) and the 18 bundles.
+- 2026-11-02 premise review, HUB-made verdicts (HUB rule 5). The Citation `typeGap` finding has `tone` info: 추천 and 단순 언급
+  are two answer types, not a before and after, so neither side is the better one (`warn` / `good` → `info`, the sentence
+  and its values stay): `citation/fn-rn-findings` 17 calls and `rn-fix-all-owned` · `-degraded` · `-picks-source` · `-rounds` ·
+  `rn-live`. A rival's Overview brand table Δ is `tone: neutral` (`delta_mark`); no golden holds a rival Δ.
 
 | Folder | Cases | Covers |
 |---|---|---|

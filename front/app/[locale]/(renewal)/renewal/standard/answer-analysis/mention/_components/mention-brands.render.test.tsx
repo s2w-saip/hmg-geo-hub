@@ -102,6 +102,16 @@ describe("renewal Mention brand ranking", () => {
     expect(html).not.toContain("(상위 100)");
   });
 
+  // 2026-11-02 premise review: the arrow tells a rival's move; only 당사's change is better or worse (the boards' rule)
+  it("colours 당사's Δ only", () => {
+    const moved = (i: number, own: boolean): RankingRow => ({ ...row(i), own, off: { ...vals(i), delta: 1.2, covered: true } });
+    const rows = [moved(1, true), moved(2, false)];
+    const one = { ...ranking, rows, count: 2, orders: { off: { ...orders, rank: { asc: [0, 1], desc: [1, 0] } }, on: orders } as RnRankingVM["orders"] };
+    const inp = { ...(input as object), ranking: settled(one) } as never;
+    const html = render(<MentionProvider value={{ ...ctx, input: inp }}><BrandRanking initialView="table" /></MentionProvider>);
+    expect([...html.matchAll(/data-tone="(\w+)"/g)].map((m) => m[1])).toEqual(["up", "flat"]);
+  });
+
   it("searches every brand, the ones past the first 100 too", () => {
     const html = render(<BrandRanking initialView="table" initialQuery="Brand 14" />);
     expect(rowBrands(html)).toEqual(["Brand 140", "Brand 141", "Brand 142", "Brand 143", "Brand 144", "Brand 145", "Brand 146", "Brand 147", "Brand 148", "Brand 149"]);

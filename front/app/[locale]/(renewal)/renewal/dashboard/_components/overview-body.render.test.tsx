@@ -117,6 +117,18 @@ describe("renewal Overview brand table", () => {
     expect([...bmw.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].slice(2).map(([, c]) => c)).toEqual(["—", "—", "—", "—"]);
     expect(bmw).toMatch(/<b[^>]*>31\.2%<\/b><span[^>]*><i[^>]*><\/i><\/span><span data-rn-no-delta=""[^>]*>−<\/span><\/div>/);
   });
+
+  // 2026-11-02 premise review: the arrow tells a rival's move; only 당사's change is better or worse (Mention's rule)
+  it("a rival's Δ keeps its arrow without the better/worse colour", () => {
+    const moved = { value: 31.2, delta: 0.4, bar: 31.2, best: false, deltaMark: { r: 0.4, tone: "neutral" as const } };
+    const rival = { ...matrix.rows[1], cells: Object.fromEntries(OVERVIEW_KPI_KEYS.map((k) => [k, moved])) as BrandMatrixView["rows"][0]["cells"] };
+    const out = html({ ...matrix, rows: [matrix.rows[0], rival] });
+    const from = out.indexOf('data-rn-brand-row="BMW"');
+    const row = out.slice(from, out.indexOf("</tr>", from));
+    expect(row).toContain("▲");
+    expect(row).not.toMatch(/text-rn-(up|danger)-ink/);
+    expect(row).not.toContain(ko.renewal.overview.deltaUp);
+  });
 });
 
 // Gold metric review ⚠️ (2026-10-29, Overview #20 #28 #30 #31 #32): the page says what its numbers count

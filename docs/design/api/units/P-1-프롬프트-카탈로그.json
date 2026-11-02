@@ -23,7 +23,7 @@
     "supported": [
       "surface(필수: global|website)",
       "brand[](카탈로그 브랜드)",
-      "country[](대상 시장/사이트 국가)",
+      "country[](global: 대상 시장, website: 프롬프트가 측정된 국가, 측정이 없으면 사이트 국가)",
       "lang[](website: wp.lang_code, global: prompts.lang)",
       "funnel[](global 전용, funnel_stage)",
       "brand_presence[](global 전용)",

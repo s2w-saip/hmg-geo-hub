@@ -6112,6 +6112,7 @@
         "answersCap": "Click a prompt to see the answers citing this domain, most citations first, up to {n}."
       },
       "sub": {
+        "promptsDescription": "Within the current citation data, prompts that cited an official (own) domain URL at least once, apart from those that did not.",
         "colCitations": "All citations",
         "colCitationsTip": "Every citation in this prompt's answers, from any source (not only our official URLs). The list is ordered by it too.",
         "ownedTitle": "Prompts citing our official URLs",

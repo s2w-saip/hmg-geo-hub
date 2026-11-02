@@ -652,7 +652,7 @@ function RankTable({
                     </span>
                     <span className="text-right font-semibold text-rn-ink tabular-nums">{numTxt(r.v.mentions, locale)}</span>
                     <span className="text-right text-rn-ink-2 tabular-nums">{pctTxt(r.v.share)}</span>
-                    <span className="justify-self-end">{multi ? <span className="text-rn-11 text-rn-muted" title={t("brands.multiNoDelta")}>—</span> : r.v.covered ? <DeltaChip value={r.v.delta} /> : <span className="text-rn-11 text-rn-muted" title={t(input.period ? "board.noPrevPeriodTip" : "board.noTrendTip")}>{t(input.period ? "board.noPrevPeriod" : "board.noTrend")}</span>}</span>
+                    <span className="justify-self-end">{multi ? <span className="text-rn-11 text-rn-muted" title={t("brands.multiNoDelta")}>—</span> : r.v.covered ? <DeltaChip value={r.v.delta} neutral={!r.own} /> : <span className="text-rn-11 text-rn-muted" title={t(input.period ? "board.noPrevPeriodTip" : "board.noTrendTip")}>{t(input.period ? "board.noPrevPeriod" : "board.noTrend")}</span>}</span>
                     <span className="text-right text-rn-ink-2 tabular-nums">{posTxt(r.avgPosition)}</span>
                     <span className="text-right text-rn-ink-2 tabular-nums">{numTxt(r.v.prompts, locale)}</span>
                     <span className="text-right text-rn-ink-2 tabular-nums">{pctTxt(r.v.mentionRate)}</span>

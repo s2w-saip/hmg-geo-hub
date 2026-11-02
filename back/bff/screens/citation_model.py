@@ -1028,7 +1028,8 @@ def findings(rows: list[dict], hmg_delta: float | None, picked: list[str], engin
         rec, men = col("recommendation"), col("mention")
         if rec and men:
             gap = delta1(rec["shares"][OFFICIAL_HMG_CATEGORY], men["shares"][OFFICIAL_HMG_CATEGORY])
-            out.append({"kind": "typeGap", "tone": "warn" if gap < 0 else "good" if gap > 0 else "info", "pri": FINDING_ORDER["typeGap"],
+            # two answer types, not a before and after: neither side is the better one (2026-11-02 premise review)
+            out.append({"kind": "typeGap", "tone": "info", "pri": FINDING_ORDER["typeGap"],
                         "target": "sec-mix", "key": OFFICIAL_HMG_CATEGORY, "axis": "type",
                         "params": {"rec": rec["shares"][OFFICIAL_HMG_CATEGORY], "gap": gap}})
     if split.get("kind") == "ok" and split["owned"] + split["uncited"] > 0 and split["uncited"] > 0:

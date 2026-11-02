@@ -389,9 +389,10 @@ function BrandMatrix({ matrix, compare: basis }: { matrix: Promise<RnBrandMatrix
         </span>
       );
     if (mark.tone === "flat") return <span className="text-rn-11 font-semibold text-rn-muted">{t("deltaFlat")}</span>;
+    const neutral = mark.tone === "neutral";
     const good = mark.tone === "good";
     return (
-      <span className={cx("text-rn-11 font-semibold tabular-nums", good ? "text-rn-up-ink" : "text-rn-danger-ink")} title={t("deltaTitle", { dir: good ? t("deltaUp") : t("deltaDown"), compare })}>
+      <span className={cx("text-rn-11 font-semibold tabular-nums", neutral ? "text-rn-muted" : good ? "text-rn-up-ink" : "text-rn-danger-ink")} title={neutral ? compare : t("deltaTitle", { dir: good ? t("deltaUp") : t("deltaDown"), compare })}>
         {mark.r > 0 ? "▲" : "▼"}
         {f.delta(k, mark.r)}
       </span>

@@ -214,6 +214,10 @@ class Helpers(unittest.TestCase):
         self.assertEqual(ov.delta_mark("visibility", 0.05), {"r": 0.1, "tone": "good"})
         self.assertEqual(ov.delta_mark("position", 0.25), {"r": 0.3, "tone": "bad"})
         self.assertEqual(ov.delta_mark("position", -1.25), {"r": -1.2, "tone": "good"})
+        # 2026-11-02 premise review: a rival's move is not good or bad in itself, the arrow alone tells it
+        self.assertEqual(ov.delta_mark("visibility", 0.5, own=False), {"r": 0.5, "tone": "neutral"})
+        self.assertEqual(ov.delta_mark("position", 0.25, own=False), {"r": 0.3, "tone": "neutral"})
+        self.assertEqual(ov.delta_mark("visibility", 0.04, own=False), {"r": 0, "tone": "flat"})
 
     def test_tile_goodness(self):
         self.assertEqual([ov.goodness(d, b) for d in ("up", "down", "flat") for b in ("higher", "lower")],

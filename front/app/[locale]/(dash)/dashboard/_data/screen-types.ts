@@ -144,7 +144,7 @@ export interface BrandCellView {
   delta: number | null;
   bar: number;
   best: boolean;
-  deltaMark: { r: number; tone: "flat" | "good" | "bad" } | null;
+  deltaMark: { r: number; tone: "flat" | "good" | "bad" | "neutral" } | null;
 }
 
 /** overview/brand-matrix (renewal) — null when the cards are empty. */

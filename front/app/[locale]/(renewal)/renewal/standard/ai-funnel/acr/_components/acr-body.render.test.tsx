@@ -82,6 +82,15 @@ describe("renewal ACR body: rounds compared", () => {
     expect(html).toContain(`>${T.board.colDelta}</span>`);
     expect(html).toContain(`>${T.board.sortDelta}<`);
   });
+  // 2026-11-02 premise review: the arrow tells a rival's move; only 당사's change is better or worse (Mention's rule)
+  it("colours 당사's Δ only", () => {
+    const input = structuredClone(bodies.snapshot);
+    input.view!.brands[1].d = 5;
+    const html = render(input);
+    const chip = (brand: string) => html.slice(html.indexOf(`data-rn-b="${brand}" data-rn-top1`)).match(/data-tone="(\w+)"/)?.[1];
+    expect(chip("Hyundai")).toBe("up");
+    expect(chip("Toyota")).toBe("flat");
+  });
   it("a period of several rounds shows their sums and its trend", () => {
     const html = render(bodies.period);
     expect(html).toContain(T.summary.titlePeriod);
