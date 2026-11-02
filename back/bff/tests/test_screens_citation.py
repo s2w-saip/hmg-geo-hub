@@ -559,5 +559,15 @@ class WebsiteTableAll(unittest.TestCase):
         self.assertEqual([page["rows"][0]["no"], page["rows"][-1]["no"], page["views"][""]["idx"]], [201, 400, list(range(200))])
 
 
+
+class DomainCategory(unittest.TestCase):
+    """Global score sheet (2026-11-02): the table's category pick reads every source, by Gold's slug."""
+
+    def test_the_label_becomes_the_slug_the_reader_filters_on(self):
+        from bff.screens import citation_model as M
+        self.assertEqual(M.domains_params({"limit": 5, "categorySlug": M.slug_of_label("Academic & Research")})["category_slug"], "academicResearch")
+        self.assertNotIn("category_slug", M.domains_params({"limit": 5}))
+
+
 if __name__ == "__main__":
     unittest.main()

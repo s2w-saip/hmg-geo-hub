@@ -157,3 +157,13 @@ describe("renewal Citation domain table — every row on the Website (renewal au
     expect(html).not.toContain('data-rn-more=""');
   });
 });
+
+describe("bumpMoveFill", () => {
+  it("colours 당사's rank move only: a rival's is neutral (Global score sheet, 2026-11-02)", async () => {
+    const { bumpMoveFill } = await import("./citation-domains");
+    expect(bumpMoveFill(true, 2)).toContain("up-ink");
+    expect(bumpMoveFill(true, -2)).toContain("danger-ink");
+    expect(bumpMoveFill(false, 2)).toBe(bumpMoveFill(false, -2));
+    expect(bumpMoveFill(false, 2)).not.toMatch(/up-ink|danger-ink/);
+  });
+});

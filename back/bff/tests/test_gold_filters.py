@@ -156,7 +156,7 @@ class Tone(unittest.TestCase):
         self.assertIn("%consumer\\_reports%", conn.args[0])
         self.assertEqual([(r["key"], r["url"], r["engines"]) for r in out["data"]["items"]], [("kia.com", None, ["chatgpt"])])
         _, conn = self.read("q=kia.com/a")
-        self.assertRegex(conn.main(), r"regexp_replace\(regexp_replace\(u\.url,.*\) ILIKE \$\d+")
+        self.assertRegex(conn.main(), r"regexp_replace\(regexp_replace\(t\.url,.*\) ILIKE \$\d+")
 
 
 class EngineConn:

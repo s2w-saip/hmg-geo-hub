@@ -49,7 +49,8 @@ from bff.screens._trend import (
 
 DEGRADE_LABEL = {"global": "standardCitations", "website": "websiteCitations", "project": "projectCitations"}
 WEBSITE_CITATION_GROUPS = ("geography", "language", "engine", "time", "source")
-NON_FILTER_KEYS = frozenset({"tab", "tone", "q", "page", "by", "cursor", "sort", "dir", "limit", "locale", "surface", "projectId"})
+NON_FILTER_KEYS = frozenset({"tab", "tone", "q", "page", "by", "cursor", "sort", "dir", "limit", "locale", "surface", "projectId",
+                             "domainCategory"})
 _CURSOR = re.compile(r"[A-Za-z0-9_-]{1,8192}")
 
 
@@ -794,6 +795,8 @@ async def domains(q) -> dict:
                  "sort": first(sp.get("sort")) or "citations", "competitor": competitor, "competitorTotals": False}
     if first(sp.get("dir")):
         req["dir"] = first(sp.get("dir"))
+    if first(sp.get("domainCategory")):
+        req["categorySlug"] = M.slug_of_label(first(sp.get("domainCategory")))
     res = await api.get("citations/domains", with_params(common_of(filters, actx), M.domains_params(req)))
     info = page_info(res.get("meta"))
     offset = int(cursor) if cursor and cursor.isdigit() else 0

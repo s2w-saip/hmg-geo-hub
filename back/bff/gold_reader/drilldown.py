@@ -177,12 +177,13 @@ async def tone(ctx: Context) -> dict:
     is_pos, is_neg = f"({positive})>({negative})", f"({negative})>({positive})"
     chosen = "neg" if ctx.q.get("tone") == "negative" else "pos"
     by_source = ctx.q.get("group_by") == "source"
-    key = "f.source_key" if by_source else "f.url_key"
+    # A page is Gold's url_norm: its utm and #:~:text= variants are one row, shown by the shortest spelling.
+    key = "f.source_key" if by_source else "coalesce(u.url_norm,u.url)"
     q = (ctx.q.get("q") or "").strip()
-    search = f" AND {'s.skey' if by_source else DISPLAY_URL} ILIKE {b.bind(like(q))}" if q else ""
+    search = f" AND {'s.skey' if by_source else DISPLAY_URL.replace('u.url', 't.url')} ILIKE {b.bind(like(q))}" if q else ""
     with_counts = flag(ctx.q, "with_counts") and not by_source
     page_limit, offset = limit(ctx.q), max(0, int(ctx.q.get("cursor") or 0))
-    names = ("s.skey,s.domain" if by_source else "u.url,u.title,s.skey,s.domain") + ",c.category_key,c.slug,c.name AS category_name"
+    names = ("s.skey,s.domain" if by_source else "t.url,t.title,s.skey,s.domain") + ",c.category_key,c.slug,c.name AS category_name"
     # The answer joins on its full key: on (build_id, answer_key) alone the index walked the build for every
     # citation (US · ChatGPT 11 s -> 0.3 s). An answer has one row per build and its citations carry its surface
     # and round date, so the same rows pair (checked on every active fact build, 2026-10-30).
@@ -193,18 +194,20 @@ async def tone(ctx: Context) -> dict:
     total = f"(SELECT count(*) FROM t WHERE {chosen}>0)::int" if top else "count(*) OVER()::int"
     cut = (f" AND t.{chosen}>=coalesce((SELECT {chosen} FROM t WHERE {chosen}>0 ORDER BY {chosen} DESC "
            f"OFFSET {b.bind(offset + page_limit - 1)} LIMIT 1),0)") if top else ""
-    rows = await ctx.conn.fetch(f"""WITH t AS (SELECT {key} AS k,min(f.source_key) AS source_key,
+    spelling = "" if by_source else ",(array_agg(u.url ORDER BY length(u.url),u.url))[1] AS url,min(u.title) AS title"
+    url_join = "" if by_source else "JOIN gold.dim_url u ON u.url_key=f.url_key"
+    rows = await ctx.conn.fetch(f"""WITH t AS (SELECT {key} AS k,min(f.source_key) AS source_key{spelling},
             count(*) FILTER(WHERE {is_pos})::int AS pos,count(*) FILTER(WHERE {is_neg})::int AS neg,
             array_agg(DISTINCT f.engine_key) FILTER(WHERE {is_pos if chosen == 'pos' else is_neg}) AS engine_keys
           FROM gold.citation_fact f JOIN gold.answer_fact a ON (a.build_id,a.surface,a.round_date,a.answer_key)=(f.build_id,f.surface,f.round_date,f.answer_key)
+          {url_join}
           WHERE {where} AND ({positive})<>({negative}) GROUP BY {key})
         SELECT {names},t.{chosen} AS citations,t.engine_keys,{total} AS total
           {",(SELECT count(*) FROM t WHERE pos>0)::int AS n_pos,(SELECT count(*) FROM t WHERE neg>0)::int AS n_neg" if with_counts else ""}
         FROM t JOIN gold.dim_source s ON s.source_key=t.source_key
-          {"" if by_source else "JOIN gold.dim_url u ON u.url_key=t.k"}
           LEFT JOIN gold.dim_category c ON c.category_key=s.category_key
         WHERE t.{chosen}>0{search}{cut}
-        ORDER BY t.{chosen} DESC,{'s.skey' if by_source else 'u.url'}
+        ORDER BY t.{chosen} DESC,{'s.skey' if by_source else 't.url'}
         LIMIT {b.bind(page_limit)} OFFSET {b.bind(offset)}""", *b.args)
     counts = None
     if flag(ctx.q, "with_counts"):
@@ -214,9 +217,10 @@ async def tone(ctx: Context) -> dict:
             # source mode, or a page past the end: the distinct URLs of each tone, read on their own
             b2 = SQL()
             where2 = citation_predicate(ctx, b2)
-            row = await ctx.conn.fetchrow(f"""SELECT count(DISTINCT f.url_key) FILTER(WHERE {is_pos})::int AS positive,
-                count(DISTINCT f.url_key) FILTER(WHERE {is_neg})::int AS negative
+            row = await ctx.conn.fetchrow(f"""SELECT count(DISTINCT coalesce(u.url_norm,u.url)) FILTER(WHERE {is_pos})::int AS positive,
+                count(DISTINCT coalesce(u.url_norm,u.url)) FILTER(WHERE {is_neg})::int AS negative
                 FROM gold.citation_fact f JOIN gold.answer_fact a ON (a.build_id,a.surface,a.round_date,a.answer_key)=(f.build_id,f.surface,f.round_date,f.answer_key)
+                JOIN gold.dim_url u ON u.url_key=f.url_key
                 WHERE {where2}""", *b2.args)
             counts = {"positive": row["positive"], "negative": row["negative"]}
     codes = {r["engine_key"]: r["code"] for r in await ctx.conn.fetch("SELECT engine_key,code FROM gold.dim_engine")} if rows else {}
@@ -246,11 +250,11 @@ async def domain(ctx: Context, skey: str) -> dict:
     b = SQL()
     where = citation_predicate(ctx, b) + f" AND f.source_key={b.bind(source['source_key'])}"
     # country: the URL's owned base (dim_url.owner_key) country, null for a URL that is no own base
-    rows = await ctx.conn.fetch(f"""SELECT u.url,u.title,count(*)::int AS citations,array_agg(DISTINCT e.code ORDER BY e.code) AS engines,
+    rows = await ctx.conn.fetch(f"""SELECT (array_agg(u.url ORDER BY length(u.url),u.url))[1] AS url,min(u.title) AS title,count(*)::int AS citations,array_agg(DISTINCT e.code ORDER BY e.code) AS engines,
         nullif(o.geo_code,'') AS country
         FROM gold.citation_fact f JOIN gold.dim_url u ON u.url_key=f.url_key JOIN gold.dim_engine e ON e.engine_key=f.engine_key
         LEFT JOIN gold.dim_owned_base o ON o.owner_key=u.owner_key
-        WHERE {where} GROUP BY u.url,u.title,o.geo_code ORDER BY citations DESC,u.url""", *b.args)
+        WHERE {where} GROUP BY coalesce(u.url_norm,u.url),o.geo_code ORDER BY citations DESC,url""", *b.args)
     own = await own_citation(ctx, b)
     totals = await ctx.conn.fetchrow(f"""SELECT count(*)::int AS citations,count(*) FILTER(WHERE {own})::int AS owned
         FROM gold.citation_fact f WHERE {where}""", *b.args)

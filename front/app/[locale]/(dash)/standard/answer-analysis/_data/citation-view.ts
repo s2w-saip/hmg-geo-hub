@@ -126,6 +126,8 @@ const withQuery = (path: string, base: string, extra: Record<string, string | nu
 };
 
 export interface DomainTableQuery {
+  /** The renewal table's category pick (its label); empty or absent = every category. */
+  category?: string;
   q: string;
   sortKey: DomainTableSortKey;
   asc: boolean;
@@ -135,6 +137,7 @@ export interface DomainTableQuery {
 export function domainListUrl(source: Pick<CitationTableSource, "query">, t: DomainTableQuery, limit: number, cursor?: string | null): string {
   return withQuery("/api/citations/domains", source.query, {
     q: t.q.trim(),
+    domainCategory: t.category || null,
     sort: API_DOMAIN_SORT[t.sortKey],
     dir: t.asc ? "asc" : "desc",
     limit,
@@ -160,7 +163,7 @@ export function domainExportUrl(source: Pick<CitationTableSource, "query">, t: D
 
 /** 기본 순서(검색 없음·인용 수 내림차순)면 서버 첫 페이지를 그대로 쓴다. */
 export function isDefaultDomainQuery(t: DomainTableQuery): boolean {
-  return !t.q.trim() && t.sortKey === "citations" && !t.asc;
+  return !t.q.trim() && !t.category && t.sortKey === "citations" && !t.asc;
 }
 
 /**

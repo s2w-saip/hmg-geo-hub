@@ -31,6 +31,9 @@ def select_domains(ctx: Context, items: list[dict]) -> list[dict]:
     skeys = set(values(ctx.q, "skey"))
     if skeys:
         items = [r for r in items if r["skey"] in skeys]
+    slug = ctx.q.get("category_slug")
+    if slug:  # the table's category pick, over every source; ranks kept
+        items = [r for r in items if (r["category"] or {}).get("slug") == slug]
     sort = ctx.q.get("sort") or "citations"
     if sort not in DOMAIN_SORTS:
         sort = "citations"
@@ -227,8 +230,9 @@ async def sources(ctx: Context) -> dict:
     negative = "+".join(f"coalesce(a.sent_neg_{s},0)" for bit,s in ((1,"h"),(2,"k"),(4,"g")) if ctx.bits & bit)
     tone_rows = await ctx.conn.fetch(f"""SELECT
         CASE WHEN ({positive}) > ({negative}) THEN 'positive' ELSE 'negative' END AS tone,
-        count(*)::int AS citations,count(DISTINCT f.url_key)::int AS urls,count(DISTINCT f.answer_key)::int AS answers
+        count(*)::int AS citations,count(DISTINCT coalesce(u.url_norm,u.url))::int AS urls,count(DISTINCT f.answer_key)::int AS answers
         FROM gold.citation_fact f JOIN gold.answer_fact a ON (a.build_id,a.surface,a.round_date,a.answer_key)=(f.build_id,f.surface,f.round_date,f.answer_key)
+        JOIN gold.dim_url u ON u.url_key=f.url_key
         WHERE {where} AND ({positive})<>({negative}) GROUP BY tone""", *b.args)
     tone = {key: {"urls": 0, "citations": 0, "answers": 0} for key in ("positive", "negative")}
     for r in tone_rows:

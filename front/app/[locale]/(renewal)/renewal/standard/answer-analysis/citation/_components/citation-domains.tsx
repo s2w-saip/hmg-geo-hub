@@ -88,6 +88,12 @@ const LABEL_W = 236;
 
 type BumpView = NonNullable<RnCitationVm["bump"]>;
 
+/** A rank move's colour: 당사's says better or worse; a rival's rise is not good or bad for the HUB to say. */
+export function bumpMoveFill(own: boolean, move: number): string {
+  if (!own) return "var(--color-rn-ink-2)";
+  return move > 0 ? "var(--color-rn-up-ink)" : "var(--color-rn-danger-ink)";
+}
+
 function BumpChart({ d }: { d: BumpView }) {
   const { lit, hover, live, openDomain, input } = useCitation();
   const t = useTranslations("renewal.citation.bump");
@@ -208,7 +214,7 @@ function BumpChart({ d }: { d: BumpView }) {
                     {s.values[d.last] == null ? "—" : fmtK(s.values[d.last]!)}
                   </text>
                   {move ? (
-                    <text x={x0 + 192} y={y(r1) + 4} fontSize={11} fontWeight={700} fill={move > 0 ? "var(--color-rn-up-ink)" : "var(--color-rn-danger-ink)"}>
+                    <text x={x0 + 192} y={y(r1) + 4} fontSize={11} fontWeight={700} fill={bumpMoveFill(s.own, move)}>
                       {move > 0 ? "▲" : "▼"}
                       {Math.abs(move)}
                     </text>
@@ -253,15 +259,14 @@ export function DomainTableCard({ initialAll = false }: { initialAll?: boolean }
   // the first rows after the competitor pick (# = the rank after the pick) and their category
   // views come with the screen; search and sort run on the server over every source (BG-21)
   const model = (use(input.rn) as RnCitationVm).table;
-  const table = useServerDomainTable({ source, initial: model.rows, initialViews: model.views, q: deferred, sortKey, asc, pageSize: website ? API_TABLE_PAGE : LIMIT });
+  const table = useServerDomainTable({ source, initial: model.rows, initialViews: model.views, q: deferred, category, sortKey, asc, pageSize: website ? API_TABLE_PAGE : LIMIT });
   const loaded = table.active ? table.rows : model.rows;
   const base = website ? loaded : loaded.slice(0, LIMIT);
-  // the category select: the server's row list and bar scales per category (the standard page's first 100 rows, the
-  // Website page's loaded pages)
+  // the category select reads every source on the server; the views are that answer's rows and bar scales
   const view = (table.active ? table.views : model.views)?.[category];
   const rows = view ? view.idx.map((i) => base[i]).filter(Boolean) : category ? [] : base;
-  // a search runs over every source: its count is the server's, not the first page's (2026-10-29 metric review R4)
-  const matched = q.trim() && !category && table.active && table.total != null ? table.total : rows.length;
+  // a search or a category runs over every source: its count is the server's, not the first page's (2026-10-29 metric review R4)
+  const matched = (q.trim() || category) && table.active && table.total != null ? table.total : rows.length;
   const shown = all ? rows : rows.slice(0, FIRST);
   // the Website page reads the next page while every loaded row is in view (a first page that failed says so in the
   // table body, as the original's LoadMoreRow under its rows); how many of all are loaded

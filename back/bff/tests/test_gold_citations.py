@@ -250,5 +250,26 @@ class BrandTarget(unittest.TestCase):
         self.assertTrue(all(MENTIONED not in sql for sql, _ in conn.calls))
 
 
+
+class ScoreSheet(unittest.TestCase):
+    """Global score sheet (2026-11-02). A category pick looked only inside the first 100 rows, so 학술 · 연구 read empty
+    with 124 Gold sources; URLs were counted by url_key, so a page's utm and #:~:text= variants were counted and listed
+    apart (긍정 226,805 against 130,284 pages, kia.com twice in the drawer at 222 and 198)."""
+
+    @staticmethod
+    def rows():
+        return [{"skey": s, "rank": i, "citations": 10 - i, "citing_prompts": 1, "share": 1, "coverage": 1, "is_own": False,
+                 "category": {"slug": slug}} for i, (s, slug) in enumerate((("a.com", "other"), ("b.edu", "academicResearch")), 1)]
+
+    def test_a_category_pick_keeps_its_rows_and_their_ranks(self):
+        ctx = type("Ctx", (), {"q": QueryParams("category_slug=academicResearch")})()
+        self.assertEqual([(r["skey"], r["rank"]) for r in citations.select_domains(ctx, self.rows())], [("b.edu", 2)])
+
+    def test_urls_are_grouped_by_goldes_normal_form(self):
+        tone = open(drilldown.__file__, encoding="utf8").read()
+        self.assertIn("coalesce(u.url_norm,u.url)", tone)
+        self.assertIn("count(DISTINCT coalesce(u.url_norm,u.url))", open(citations.__file__, encoding="utf8").read())
+
+
 if __name__ == "__main__":
     unittest.main()

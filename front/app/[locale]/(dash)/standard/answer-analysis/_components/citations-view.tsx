@@ -192,6 +192,8 @@ export function useServerDomainTable(opts: {
   /** The category views of `initial` (renewal table), passed through as `views` on the default order. */
   initialViews?: DomainTableViews;
   q: string;
+  /** The renewal table's category pick: read over every source on the server. */
+  category?: string;
   sortKey: DomainTableSortKey;
   asc: boolean;
   pageSize: number;
@@ -207,8 +209,8 @@ export function useServerDomainTable(opts: {
   loadingMore: boolean;
   loadMore: () => void;
 } {
-  const { source, initial, initialViews, q, sortKey, asc, pageSize } = opts;
-  const t = useMemo(() => ({ q: q.trim(), sortKey, asc }), [q, sortKey, asc]);
+  const { source, initial, initialViews, q, category = "", sortKey, asc, pageSize } = opts;
+  const t = useMemo(() => ({ q: q.trim(), category, sortKey, asc }), [q, category, sortKey, asc]);
   const isDefault = isDefaultDomainQuery(t);
   // 409 재시작 번호. 그 409 가 난 필터 조건(source.query)에만 붙는다: 필터가 바뀌면 서버가 새
   // 첫 페이지·커서를 주므로 0 으로 돌아간다.

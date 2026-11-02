@@ -29,6 +29,11 @@ from bff.screens._sort import code_unit_compare, code_unit_key, locale_compare, 
 
 CITATION_CATEGORIES = list(CITATION_CATEGORY_SLUGS)
 LABEL_BY_SLUG = {slug: label for label, slug in CITATION_CATEGORY_SLUGS.items()}
+
+
+def slug_of_label(label: str) -> str:
+    """The table's category pick -> Gold's slug; an unknown label stays as it is and matches no source."""
+    return CITATION_CATEGORY_SLUGS.get(label, label)
 OFFICIAL_HMG_CATEGORY = "Official (HMG)"
 OFFICIAL_COMPETITOR_CATEGORY = "Official (Competitor)"
 DEALER_CATEGORY = "Dealer & Marketplace"
@@ -382,6 +387,8 @@ def domains_params(req: dict) -> dict:
     skey = pick_list(req.get("skey"))
     if skey:
         out["skey"] = skey
+    if req.get("categorySlug"):
+        out["category_slug"] = req["categorySlug"]
     if req.get("competitorSources"):
         out["competitor_sources"] = True
     if req.get("competitorTotals") is False:
