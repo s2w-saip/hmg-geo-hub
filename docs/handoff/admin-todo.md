@@ -2,7 +2,7 @@
 
 이 파일은 할 일과 기록이다. 규칙의 정본은 `CLAUDE.md`(마스터 룰)다. 순서는 사용자가 2026-10-29에 정했고, 2026-10-30에 Website 화면을 앞에 두었다. 바꾸려면 먼저 사용자에게 묻는다.
 
-**지금 할 일:** 사용자 지시를 기다린다. 남은 일은 바로 아래 '할 일' 절에 모았다. 1절 F1~F4(마지막 검수의 18건)는 2026-11-02 고쳤다(`e41ea10`). 바로 할 수 있는 것은 1절 결함 F5~F11과 2절 인사이트 개선 후보다. 3절은 사용자 결정, 4절은 업스트림 · 계정, 5절은 사용자 확인을 기다린다. Admin은 5단계(⛔D) · 6단계(⛔C)에서 멈춰 있다.
+**지금 할 일:** 사용자 지시를 기다린다. 남은 일은 바로 아래 '할 일' 절에 모았다. 1절 F1~F4(마지막 검수의 18건)와 F5~F7은 2026-11-02 고쳤다(`e41ea10` · `9c69765`, F6의 hydration 건은 재현 안 됨). 바로 할 수 있는 것은 1절 결함 F8~F11과 2절 인사이트 개선 후보다. 3절은 사용자 결정, 4절은 업스트림 · 계정, 5절은 사용자 확인을 기다린다. Admin은 5단계(⛔D) · 6단계(⛔C)에서 멈춰 있다.
 
 ## 할 일
 
@@ -12,9 +12,6 @@
 
 | ID | 화면 | 할 일 | 근거 |
 |---|---|---|---|
-| F5 | 공통 문구 | 한국어 조사 '와' 고정(8곳) · Gold 권역 이름이 영어(`rhqLabel`) | 화면 · 코드 |
-| F6 | 공통 | en 회차 달력 key 중복 · 리뉴얼 사이드바와 원본 DashLayout의 hydration 불일치 | 화면 · 코드 |
-| F7 | Admin | 저장한 필터가 없는 화면 3개(인용 출처 분류 · 고객 관심 · 엔티티) · Global prompts 편집이 측정 종류 빈칸을 'single'로 채움(없는 값, 지금 0건) | Admin 화면 점검 · 화면 · 코드 |
 | F8 | 분석 화면 | 출처 카테고리 이름 · 순서를 HUB 코드표(`catalog.source_code`)에서 읽는다(지금은 코드 상수, 13개 같음) | 화면 · 코드 |
 | F9 | 작은 것 | 답변 원문 창 스탠스 '당사'의 이름 비교 · Overview 기간 모드 인용 순위의 card · live 섞임 · `published.ga4_*` 뷰의 `hmg_data_external` 권한 잔재 · `rn-sidebar.tsx`의 `max-lg` 모바일 잔재 | 대전제 검수 |
 | F10 | 정리 | `front/lib/kpi/period-compare*`와 그 시험 · 문구 키 3개 · 명세 사본의 억제 규칙 · `global-renewal-catalog.html` ACR 설명 · 점검 전부터 실패하는 원본 시험 3건 · 원본 Prompts 열람 범위 pill | 화면 · 코드 |
@@ -250,19 +247,19 @@ W1 · W2 · W3은 W0 필터가 끝나기 전에도 범위 확인, BFF 점검, �
 
 **화면 · 코드**
 
-- 한국어 화면에서 Gold 대륙 권역 이름(Asia · Europe · Latin America · Middle East · North America · Oceania 등)이 영어로 보인다. `rhqLabel`이 HUB RHQ id만 번역해서다. 원본 · 리뉴얼이 같다(4단계).
-- 리뉴얼 사이드바 NavGroup `id`의 hydration 불일치(`_shell/rn-sidebar.tsx`, 5단계)와 원본 DashLayout의 hydration 불일치(6 · 7단계). Next 개발 오버레이에 가끔 뜬다. 16단계에 연 화면에서는 나지 않았다.
-- en 회차 달력(`components/renewal-ui/round-calendar.tsx`)이 요일 첫 글자('T' · 'S')를 key로 써서 key 중복 경고를 낸다(10단계). 16단계에도 `/en/renewal/dashboard`에서 났다.
+- (끝) 한국어 화면에서 Gold 대륙 권역 이름(Asia · Europe · Latin America · Middle East · North America · Oceania 등)이 영어로 보인다. `rhqLabel`이 HUB RHQ id만 번역해서다. 원본 · 리뉴얼이 같다(4단계). 2026-11-02 Gold 대륙 권역 7개에 표시 이름을 붙였다(`9c69765`).
+- (끝) 리뉴얼 사이드바 NavGroup `id`의 hydration 불일치(`_shell/rn-sidebar.tsx`, 5단계)와 원본 DashLayout의 hydration 불일치(6 · 7단계). Next 개발 오버레이에 가끔 뜬다. 16단계에 연 화면에서는 나지 않았다. 2026-11-02 12개 화면(리뉴얼 · 원본 · en)에서 0건이라 재현되지 않았다. 코드는 그대로 두었고, 다시 나면 재현 시험부터 한다.
+- (끝) en 회차 달력(`components/renewal-ui/round-calendar.tsx`)이 요일 첫 글자('T' · 'S')를 key로 써서 key 중복 경고를 낸다(10단계). 16단계에도 `/en/renewal/dashboard`에서 났다. 2026-11-02 요일 머리를 자리로 key 삼았다(`9c69765`, 경고 6 → 0).
 - AI Conversion: 직전 기간에만 빠진 날이 있으면 증감 칩이 이유 안내 없이 '−'다(12단계).
 - AI Conversion 실제 숫자 대조: 12 · 15단계는 로컬 DB에 GA4 속성이 없어 fixture로만 봤다. GA4 수집을 시작하면 리뉴얼 · 원본을 같은 조건으로 한 번 대조한다.
 - 원본 Prompts의 열람 범위 pill은 범위 계정에게 국가 목록 · '내 시장 기준' 안내를 보이지 않는다(원본 페이지 prop, 13단계). 리뉴얼은 보인다.
-- 한국어 조사: 비교 브랜드 이름 뒤 조사가 받침과 관계없이 '와'로 고정이다. 예: Website Mention 미국 '2위 Audio System와 +51.6pp', '비교에서 Audio System와 차이가 가장 작음'. 문구는 `renewal.acr` · `renewal.mention`의 8곳이다(16단계).
+- (끝) 한국어 조사: 비교 브랜드 이름 뒤 조사가 받침과 관계없이 '와'로 고정이다. 예: Website Mention 미국 '2위 Audio System와 +51.6pp', '비교에서 Audio System와 차이가 가장 작음'. 문구는 `renewal.acr` · `renewal.mention`의 8곳이다(16단계). 2026-11-02 이름 뒤에 조사가 오지 않는 문장으로 바꿨다(10곳, `9c69765`).
 - 레거시 정리: 페이지에서 닿지 않는 `front/lib/kpi/period-compare*`(기간 비교 억제 규칙)와 그 시험, 문구 키 3개(`periodCompare.reason.missingShare` · `startWindow` · `startMonth`). 명세 사본 `docs/spec/api/m-kpi.html` · `docs/spec/functional-spec.html` · `docs/design/api/전체-통합.md`의 억제 규칙도 남아 있다(`모듈-KPI.md` K-2는 고침, 14단계).
 - 문서: `docs/catalog/global-renewal-catalog.html`의 ACR 지도 설명('평균선 아래 = …')은 15단계 전 화면 기준이다.
 - 점검 전(`1a7dd8b`)부터 실패하는 원본 시험 3건: `(dash)/dashboard/_components/period-delta-off-parity.render.test.tsx` 2건(3단계), `(dash)/projects/[id]/project-gate.test.ts` 1건(demo project, gap G16, 16단계).
 - (끝) Global Citation 자사 판정이 국가 · 언어 필터에서 Gold 정의와 다르다. 리더 `gold_reader/citations.py` `own_citation`은 Gold `dim_owned_base`의 관점 브랜드 베이스를 모두 자사로 보고, Gold 표 설명의 규칙은 요청 국가 → 언어로 더 좁힌다. 국가 미국(2026-10-05)에서 자사 인용 3,288건(화면 9.5%) 대 2,224건(약 6.4%)이고, 필터 없음에서는 같다. 버그 수정 규칙을 따른다(`kpi-data-lineage.html` 2절). 2026-10-31 고쳤다(`9dbd27d`). 리더 `owned_bases`가 Gold 규칙대로 허용 배열을 만든다. 관점 베이스에서 요청 국가 geo_code로, 다시 요청 언어로 좁히고, 좁힌 결과가 비면 그 단계는 건너뛴다. 도메인 표 · 프롬프트 분할 · 도메인 상세가 모두 이 배열을 쓴다. 미국은 2,226건(6.4%)으로 Gold `kpi_cell.cit_owned_c`와 같다. 미국+독일 · en · 미국+es도 `citation_cell` 허용 배열 합과 같다. 필터 없음은 그대로다.
 - 분석 화면의 출처 카테고리 이름 · 순서는 코드 상수(`_query.py` `CITATION_CATEGORY_SLUGS` · `taxonomy.ts` · 문구 `citationCategories`)다. HUB 정본 코드표(`catalog.source_code`)를 고쳐도 분석 화면 이름은 바뀌지 않는다. 지금 13개는 같다(`kpi-data-lineage.html` 2절).
-- Admin › Global prompts 편집은 Gold 측정 종류가 비면 'single'로 채운다(`catalog_editor.py`). Global Prompts는 13단계에서 이 규칙을 뺐다. 지금 빈 값은 0건이다.
+- (끝) Admin › Global prompts 편집은 Gold 측정 종류가 비면 'single'로 채운다(`catalog_editor.py`). Global Prompts는 13단계에서 이 규칙을 뺐다. 지금 빈 값은 0건이다. 2026-11-02 빈 값은 빈 값으로 보이고 거르기 · 정렬도 Gold 값 그대로다(`9c69765`). 새 프롬프트 폼의 기본값 'single'은 사용자가 저장할 입력이라 두었다.
 - Mention 서랍 목록은 BFF가 2,000행을 청해도 Gold 리더 `limit` 상한 1,000에서 끊긴다(화면은 '1,000 / 전체' 안내). 상한을 맞출지 정한다.
 
 **`CLAUDE.md`에서 옮긴 일** (2026-11-02, 마스터 룰 적용 때 문구 그대로)
@@ -290,7 +287,7 @@ W1 · W2 · W3은 W0 필터가 끝나기 전에도 범위 확인, BFF 점검, �
 사용자 요청으로 Admin 화면 10개를 1920×915에서 보고 폼 · 서랍 · 필터를 눌러 봤다. 바로 고친 것은 진행 기록(`f41a002`)에 있다. 아래는 남은 것이다.
 
 - 고객 관심 › 소셜 결과 지도. Gold `ctx_entity`(4,136) · `ctx_combination`(5,739) · `ctx_domain` · `ctx_evidence`에 2026-07-07 스냅샷 결과가 있고, 표 설명의 쓰임에 Admin Customer interest config의 표 · 상세 · 조합 표 · 소스 도메인이 있다. 원본 페이지는 `SocialScrapingFlow`에 데이터를 넘기지 않아 늘 빈 카드였고, 3단계 범위에서 뺐다('3 범위'). 리더는 `gold_reader/insights.py` `social`에 있다. 옮길지는 사용자가 정한다.
-- 저장한 필터가 없는 화면: 인용 출처 분류(교정 · 시드) · 고객 관심(키워드 · 소스) · 엔티티 카탈로그(`saved={null}`). 사용자 관리 · GA4 · 글로벌 프롬프트에는 있다. 화면 키를 `saved_filters.py` `PAGES` · `SavedFilterPage`에 더해야 한다.
+- (끝) 저장한 필터가 없는 화면: 인용 출처 분류(교정 · 시드) · 고객 관심(키워드 · 소스) · 엔티티 카탈로그(`saved={null}`). 사용자 관리 · GA4 · 글로벌 프롬프트에는 있다. 화면 키를 `saved_filters.py` `PAGES` · `SavedFilterPage`에 더해야 한다. 2026-11-02 다섯 목록에 붙였다(공용 훅 `admin-saved-filters.tsx`, `9c69765`).
 - 수집 소스의 실제 채널 값은 원본 운영 DB `standard_sources` 행에 있다(3단계 남은 일과 같음, 사용자 보유).
 
 **2026-11-02 Global 데이터 점수표에서 나온 일**
@@ -643,3 +640,4 @@ W1 · W2 · W3은 W0 필터가 끝나기 전에도 범위 확인, BFF 점검, �
 - 2026-11-02 — 인사이트 · 정확도 마지막 검수(사용자 요청). 하위 에이전트 넷이 Website Overview(45항목) · Citation(50) · Mention(61) · Prompts(21)를 점수표 기준으로 매기고 Gold에서 따로 다시 셌다. Global은 점수표의 낮은 행 47개와 고친 구역(약 5,000칸)을 다시 봤다. 진행 세션이 Gold 설명(`url_prompt_cell` · `report_value` · `web_report_prompt` · `citation_fact`)을 직접 읽었고, 큰 주장 셋(Prompts 상세 이력 키 · 이력 500건 자르기 · Website Mention 엔진 표 머리)을 코드로 확인했다. 값 불일치는 이미 알려진 ⑥ 2건과 Mention 2건뿐이다. 정의 2건과 라벨 · 키 · 정렬 18건, 인사이트 낮음 52항목과 Global 47행이 나왔다('점검 후속 뒤 남은 일'). 코드는 고치지 않았다. 브라우저 화면과 범위 계정 화면은 보지 못했다.
 - 2026-11-02 — 할 일 정리(사용자 'todo를 검수하고 다듬자'). 열린 항목을 코드로 다시 확인했고(모두 그대로), 맨 위 '할 일' 절 하나로 모았다: 결함 F1~F11 · 인사이트 개선 I1~I6 · 사용자 결정 D-1~D-7 · 업스트림 · 외부 U1~U7 · 확인 대기. 점검 · 검수 절은 근거로 두고 체크 상자를 뺐다. '지금 할 일' 줄을 고쳤다. 업스트림 초안에 없는 질문 둘(D6 덧붙임 · Overview 라벨 정의)을 U1에 적었다.
 - 2026-11-02 — 마지막 검수 결함 F1~F4 18건(사용자 '고쳐', `e41ea10`). 재현 시험은 고치기 전 실패를 확인했다(BFF 12건 · 프런트 14건). Website Prompts 엔진 선택지 단언 하나는 고친 뒤에 더했다. Global: Prompts 상세 이력 키(HUB id) · 이력 탭 기간 먼저 · 묶음 전체 건수, Mention 요약 '변화'가 모든 브랜드 선, 경쟁 구도 표 · 경쟁사 표 정확값 정렬, Overview 기간 모드 안내 · '언급 1위 경쟁사', ACR 선택지 고른 회차 · 차종 발견 문구. Website: 기간 문구 회차 수(Gold 데이터 회차), ④ · ⑤ 문구, 추이 머리 회차 범위, 패널 엔진 선택지 Gold(Overview · Mention · Citation · Prompts), Mention 열 이름 · 엔진 표 머리 · 주별 문구 · Top 3 ⓘ · 브랜드별 사이트 시장 수, Citation 공식(당사) 문구 · 하위 화면 제목. 시험: BFF 37개 모듈 739건 통과(건너뜀 7), 프런트 관련 167개 파일 1,816건 통과 · 실패 2건은 기준선(period-delta-off-parity overviewKpiCards, 깨끗한 작업 트리에서 같은 실패 확인) · typecheck · eslint 통과. 프런트 전체 시험은 돌리지 않았다. 골든: ACR 8건 테이프 회차 이동 · Mention 16건 정확값 순서 · website 선택지 39건 engineOptions 추가(README, 그 밖 변화 없음 확인). 옛 Overview 바이트 골든의 '경쟁 순위의 합' 1줄씩 고침. 실데이터(API 재시작 뒤): 이력 24,460건 4묶음 0.37초 · 상세 2건, 미국 '변화' Mazda ▼0.4, Website 점유율 2위 Tata, ACR 08-17 9개국(EG 포함), Kia 답변 없는 시장 15, 미국 9월 직전 2회차, DeepSeek 노출률 31.0% · Prompts 렌즈 284개. 화면(3333, 1920×915): 새 문구 · 엔진 선택지 · 이력 묶음이 보인다, 오류는 기존 첫 방문 404 1건. 작은 표시 변경이라 e2e는 돌리지 않았다. `kpi-data-lineage.html` 15행과 집계(공통 4행 확인 안 함 → 일치)를 고쳤다.
+- 2026-11-02 — 할 일 F5~F7(사용자 '고쳐', 추천 순서대로 F1~F4 다음, `9c69765`). F5: renewal ACR · Mention 문구 10곳에서 이름 뒤 고정 조사를 없앴고('2위 BMW 대비 +45.2pp'), Gold 대륙 권역 7개에 표시 이름을 붙였다. F6: en 회차 달력 key 중복은 브라우저에서 수정 전 경고 6건을 확인하고 고쳐 0건이 됐다(DOM 시험 환경이 없어 render 시험으로는 재현되지 않는다). 사이드바 · DashLayout hydration 불일치는 12개 화면에서 0건이라 손대지 않았다. F7: 인용 출처 분류(교정 · 시드) · 고객 관심(키워드 · 소스) · 엔티티 카탈로그에 저장한 필터를 붙였고(공용 훅, `saved_filters.PAGES` 5개, 마이그레이션 없음), Admin › Global prompts의 빈 측정 종류를 'single'로 보이지 않게 했다. 재현 시험은 고치기 전 실패를 확인했다(BFF 2건 · 프런트 5건). 시험: BFF 37개 모듈 742건 통과, typecheck · eslint 통과, 프런트 관련 폴더(lib 전체 포함) 실패 118건은 20개 파일 모두 작업 전 커밋 `6ee044f`의 깨끗한 작업 트리에서 같은 수로 실패한다(기준선). 화면(3333): Admin 다섯 목록에 '저장한 필터' 구역, Global Mention '2위 BMW 대비 +45.2pp', 페이지 오류 0. `kpi-data-lineage.html` 3행 · 각주 1곳을 고쳤다.
