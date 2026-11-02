@@ -407,6 +407,21 @@ Comparison (`golden_util.diff`): same keys (a missing key is not `null`), number
 lists in order.
 
 ## Families
+- 2026-11-02 premise review, Mention.
+  - Treemap group Δ (HUB rule 5, a partial sum is not the group's change). `_group_of`: a group with a member without a
+    Δ has no Δ (`partial` stays true, the tile is grey and says why); it summed the members that had one (`delta`
+    → null: `rn-fn-treemap-groups` 34 groups, `rn-fn-ranking` 13, `rn-fix-names` · `rn-fix-rounds` 1 each). So that real
+    groups have every Δ, `mention/rn-ranking` in round mode reads every brand's share line
+    (`mention_data.load_brand_share_lines`, `trend` with `top_n=10000`, `visibility` + `share_of_voice`) in place of the
+    KPI brand trend, which stops at the top rivals; period mode reads no line (the rows compare with the period before).
+    The 18 `rn-fix-*` · `rn-live-*` tapes got that read: the recorded brand trend's body with those two metrics, the
+    tape holds no other brands, so their other outputs are unchanged. Live on 2026-11-02: Global default 6 of 12 tiles
+    partial → 0, Website 2 of 2 → 0, the ranking table's Δ 752 of 752 rows (Website 436 of 436).
+  - Additive, the original's 우선 노출도 counts: `hero.rankedSeries` (당사's ranked answers per axis slot, the chart tooltip,
+    table and CSV) and `standing` (당사's place in the table, `{rank, total, topPct}`, the original's '{n}위 · 상위 {pct}%',
+    null without a position). `rn-fn-rank`, `rn-fn-rank-hero-model` and the 18 bundles; nothing else moves.
+  - Additive: `mention/rn-shell` `ownSum`, the reader's `own.brands`. The '당사 = … 합산' chip counted the tracked brand rows,
+    one row since 2026-10-29 R1, so it never showed. `rn-fn-shell` (no names: `[]`) and the 18 bundles.
 
 | Folder | Cases | Covers |
 |---|---|---|

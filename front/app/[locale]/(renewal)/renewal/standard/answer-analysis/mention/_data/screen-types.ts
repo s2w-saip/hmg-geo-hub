@@ -81,8 +81,10 @@ export interface RnShellVM {
   measured: boolean;
   /** the body read failed transiently */
   degraded: boolean;
-  /** tracked (당사) brand names */
+  /** tracked (당사) brand rows' names */
   ownBrands: string[];
+  /** the brands summed into 당사 (the rows carry the perspective as one row) */
+  ownSum: string[];
   /** one per brand of the first 100 body brands (the treemap's, the boards'); a ranking row past them carries its own */
   drawer: RnDrawerBrand[];
 }
@@ -274,8 +276,10 @@ export interface RnRankVM {
   fp: boolean;
   degraded: boolean;
   /** rankedAnswers and ahead are null when avgPosition is (no 당사 position: nothing counted or compared) */
-  hero: { avgPosition: number | null; rankedAnswers: number | null; delta: RnDelta; series: (number | null)[]; axis: string[] };
+  hero: { avgPosition: number | null; rankedAnswers: number | null; delta: RnDelta; series: (number | null)[]; rankedSeries: (number | null)[]; axis: string[] };
   ahead: number | null;
+  /** 당사's place in the table below (its brands are the base); null without a 당사 position */
+  standing: { rank: number; total: number; topPct: number } | null;
   rows: RankRow[];
   /** row order with the ladder off (당사 first) */
   ownFirst: number[];

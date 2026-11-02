@@ -42,7 +42,7 @@ export function RankHeroCard() {
   const tDef = useTranslations("dashboard.kpi");
   const locale = useLocale();
   const vm = useRank();
-  const { hero, rows, ahead, degraded } = vm;
+  const { hero, rows, ahead, standing, degraded } = vm;
   const basis = useDeltaBasis();
   // the picked brands' lines (looked up; a brand without a value is left out)
   const at = (b: string) => vm.covered.indexOf(b);
@@ -53,6 +53,7 @@ export function RankHeroCard() {
   const hi = vm.options[pickKey(compare, vm.covered)] ?? 5;
   const x = hero.axis.map(slotLabel);
   const tableOn = tables.has("rank-trend");
+  const rankedNote = (i: number) => (hero.rankedSeries[i] == null ? null : [tFR("rankedAnswers", { n: numTxt(hero.rankedSeries[i], locale) })]);
   return (
     <div className="grid grid-cols-1 gap-x-8 gap-y-4 px-6 pt-5.5 pb-5 @min-[640px]/rnpage:grid-cols-[minmax(220px,290px)_minmax(0,1fr)] [.rn-dense_&]:px-4.5 [.rn-dense_&]:py-3.5">
       <div className="flex min-w-0 flex-col gap-3">
@@ -96,6 +97,15 @@ export function RankHeroCard() {
             }
             value={ahead == null ? "—" : t("count", { n: ahead })}
           />
+          <Stat
+            label={
+              <>
+                {t("standing")}
+                {standing ? <InfoTip label={t("standing")} items={[[t("standing"), t("standingTip", { n: standing.total })]]} /> : null}
+              </>
+            }
+            value={standing ? `${tFR("unit", { n: standing.rank })} · ${tFR("topPct", { pct: standing.topPct })}` : "—"}
+          />
         </dl>
       </div>
       <div className="flex min-w-0 flex-col gap-2">
@@ -108,7 +118,7 @@ export function RankHeroCard() {
           <h3 className="m-0 text-rn-13 font-bold text-rn-ink">{t("trendTitle")}</h3>
           <InfoTip label={tH("trendNoteLabel")} items={[[tH("trendNoteLabel"), tFR("chartNote")]]} />
           <span className="ml-auto">
-            <MentionCardActions tableId="rank-trend" section="sec-overview" csv={() => ({ name: "mention-first-position-trend", rows: [["", ...hero.axis], ...series.map((s) => [s.name, ...s.values])] })} />
+            <MentionCardActions tableId="rank-trend" section="sec-overview" csv={() => ({ name: "mention-first-position-trend", rows: [["", ...hero.axis], ...series.map((s) => [s.name, ...s.values]), [t("ranked"), ...hero.rankedSeries]] })} />
           </span>
         </div>
         <Legend items={[...series].reverse()} />
@@ -117,7 +127,7 @@ export function RankHeroCard() {
         ) : !hero.axis.length ? (
           <RnEmpty>{tH("noTrend")}</RnEmpty>
         ) : tableOn ? (
-          <TwinTable head={["", ...x]} rows={series.map((s) => [s.name, ...s.values.map((v) => posTxt(v))])} />
+          <TwinTable head={["", ...x]} rows={[...series.map((s) => [s.name, ...s.values.map((v) => posTxt(v))]), [t("ranked"), ...hero.rankedSeries.map((v) => numTxt(v, locale))]]} />
         ) : (
           <RnLineChart
             x={x}
@@ -128,6 +138,7 @@ export function RankHeroCard() {
             yTick={(v) => `${v}`}
             value={(v) => t("unit", { n: v.toFixed(1) })}
             tooltipTitle={(d) => tH("tooltip", { x: d })}
+            tooltipNote={rankedNote}
             ariaLabel={t("trendAria")}
             lit={lit}
             onHover={hover}

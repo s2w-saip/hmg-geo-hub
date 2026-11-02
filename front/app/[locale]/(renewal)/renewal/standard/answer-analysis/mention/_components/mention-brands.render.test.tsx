@@ -72,6 +72,7 @@ const ctx = {
   ownLabel: "HMG",
   drawer: [],
   ownBrands: ["Hyundai", "Kia", "Genesis"],
+  ownSum: [],
   pick: { auto: true, brands: [] },
   setPick: () => {},
   lit: [],

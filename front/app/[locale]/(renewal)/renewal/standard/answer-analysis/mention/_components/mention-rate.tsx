@@ -97,7 +97,7 @@ export function RateHero({ metric }: { metric: KpiMetric }) {
 }
 
 export function HeroValue({ metric }: { metric: KpiMetric }) {
-  const { input, ownBrands } = useMention();
+  const { input, ownSum } = useMention();
   const t = useTranslations("renewal.mention");
   const tTip = useTranslations("answerAnalysis.mentions.kpi.tooltip");
   const dg = useDegradedText();
@@ -123,9 +123,9 @@ export function HeroValue({ metric }: { metric: KpiMetric }) {
       <Suspense fallback={<RnSkeleton className="h-9 w-full" />}>
         <HeroStanding metric={metric} />
       </Suspense>
-      {ownBrands.length > 1 ? (
-        <div className="flex flex-wrap gap-1.5 [.rn-dense_&]:hidden">
-          <RnBasisChip>{t("hero.ownSum", { brands: ownBrands.join("+") })}</RnBasisChip>
+      {ownSum.length > 1 ? (
+        <div className="flex flex-wrap gap-1.5">
+          <RnBasisChip>{t("hero.ownSum", { brands: ownSum.join("+") })}</RnBasisChip>
         </div>
       ) : null}
     </>

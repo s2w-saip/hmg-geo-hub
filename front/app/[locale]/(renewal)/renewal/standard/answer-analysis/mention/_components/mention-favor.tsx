@@ -115,7 +115,7 @@ export function FavorHeroCard() {
           <Stat label={t("favor.posCount")} value={numTxt(h.positive, locale)} />
           <Stat label={t("favor.total")} value={numTxt(h.total, locale)} />
         </dl>
-        <div className="flex flex-wrap gap-1.5 [.rn-dense_&]:hidden">
+        <div className="flex flex-wrap gap-1.5">
           <RnBasisChip>{t("favor.chipSignal")}</RnBasisChip>
         </div>
       </div>

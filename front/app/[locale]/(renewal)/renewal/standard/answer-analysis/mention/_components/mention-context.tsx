@@ -40,6 +40,7 @@ export interface MentionCtx {
   drawer: RnDrawerBrand[];
   /** tracked (당사) brand names */
   ownBrands: string[];
+  ownSum: string[];
   pick: ComparePick;
   setPick: (p: ComparePick) => void;
   lit: string[];

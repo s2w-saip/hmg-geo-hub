@@ -168,6 +168,8 @@ KPI_TAB_ENGINE_PART = "sov"
 MENTION_SUMMARY_PARTS = ("measured",)
 BRAND_TREND_METRICS = ("visibility", "share_of_voice", "position")
 CHART_BRAND_TREND_METRICS = ("share_of_voice",)
+#: every brand of a trend read: past any brand count of Gold's, the reader has no "all"
+ALL_BRANDS_TOP_N = 10000
 OVERVIEW_TREND_METRICS = ("visibility", "share_of_voice", "sentiment", "position")
 ENGINE_TREND_METRICS = ("visibility", "share_of_voice", "sentiment")
 MENTION_COMPARE_METRICS = ("visibility", "share", "favorability", "position", "mentionsPerAnswer")
@@ -510,6 +512,12 @@ async def _brands_or_none(filters: dict, ctx: dict) -> dict | None:
     return None if not res or whole_suppression(res["meta"]) else res
 
 
+async def load_own_sum(filters: dict, ctx: dict) -> list[str]:
+    """The brands of 당사's sum, the reader's `own.brands` (the brand read: the rows carry the perspective as one row)."""
+    res = await _brands_or_none(filters, ctx)
+    return list((res["data"].get("own") or {}).get("brands") or []) if res else []
+
+
 async def load_mentions_as_of(filters: dict, ctx: dict) -> str | None:
     res = await _brands_or_none(filters, ctx)
     return as_of_date(res["meta"]) if res else None
@@ -810,6 +818,18 @@ async def load_engine_kpi_trend(filters: dict, ctx: dict) -> dict | None:
 
 async def load_brand_trend(filters: dict, ctx: dict, pin_top: bool = False) -> dict | None:
     res = await degrade_on_api_failure("standardKpiBrandTrend", lambda: fetch_brand_trend(filters, ctx, chart_only=False, pin_top=pin_top))
+    return to_brand_trend_result(res["data"]) if res else None
+
+
+async def load_brand_share_lines(filters: dict, ctx: dict) -> dict | None:
+    """Round mode: every brand's share line, for the ranking's Δ: the KPI brand trend stops at the top rivals, and a
+    treemap group's Δ needs all its brands (2026-11-02 premise review). `visibility` carries each round's answers
+    (to_brand_trend_result). None in period mode: the rows compare with the period before (load_prev_period_brands)."""
+    if prev_period_filters(filters) is not None:
+        return None
+    req = {"surface": ctx["surface"], "bucket": "cycle", "dimension": "brand", "metrics": ["visibility", "share_of_voice"], "splitOwn": True}
+    res = await degrade_on_api_failure("standardKpiBrandTrend",
+                                       lambda: fetch_trend({**query_params(filters, _qctx(ctx)), "top_n": ALL_BRANDS_TOP_N}, req))
     return to_brand_trend_result(res["data"]) if res else None
 
 

@@ -662,6 +662,18 @@ def own_position_series(fp: dict) -> list:
     return out
 
 
+def own_ranked_series(fp: dict) -> list:
+    """당사's ranked answers per axis slot, the answers behind own_position_series (none without a position)."""
+    axis = trend_axis(fp["buckets"], fp["unit"], fp)
+    by_bucket = {b["bucketStart"]: b for b in fp["buckets"]}
+    out = []
+    for a in axis:
+        b = by_bucket.get(a["bucketStart"]) if a["measured"] else None
+        w = _own_weighted_position(b["brands"]) if b else None
+        out.append(w["ranked"] if w and w["pos"] is not None else None)
+    return out
+
+
 def first_rank_hero(fp: dict | None) -> dict:
     if not fp:
         return {"avgPosition": None, "rank": None, "rankedAnswers": 0, "delta": None, "brands": []}

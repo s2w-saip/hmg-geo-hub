@@ -390,7 +390,7 @@ class Screens(unittest.IsolatedAsyncioTestCase):
 
     async def test_transient_failures_degrade(self):
         with mock.patch("bff.api.get", await _failing_get(503)):
-            self.assertEqual(await self.build("mention/rn-shell"), {"measured": False, "degraded": True, "ownBrands": [], "drawer": []})
+            self.assertEqual(await self.build("mention/rn-shell"), {"measured": False, "degraded": True, "ownBrands": [], "ownSum": [], "drawer": []})
             value = await self.build("mention/rn-rate-value")
             self.assertTrue(value["degraded"])
             self.assertIsNone(value["exposure"]["pct"])
@@ -468,10 +468,10 @@ class WebsiteSurface(unittest.IsolatedAsyncioTestCase):
 
     async def test_the_renewal_brand_trend_pins_the_snapshots_top_rival(self):
         # TopRivalPin: every renewal read of the KPI brand trend (the KPI one and the first-position one, the same read)
-        # asks for the snapshot's top rival; the original pages' reads do not (rn-ranking's brand rows still come with
-        # the original view's share lines, which no pick reads)
+        # asks for the snapshot's top rival; the original pages' reads do not (rn-ranking's Δ read is every brand's
+        # share line: TreemapGroupDelta)
         for ctx in ("", "ctx.surface=website&"):
-            for name in ("mention/rn-compare", "mention/rn-summary", "mention/rn-rate-hero", "mention/rn-rank", "mention/rn-ranking"):
+            for name in ("mention/rn-compare", "mention/rn-summary", "mention/rn-rate-hero", "mention/rn-rank"):
                 trends = [p for path, p in await self.reads(name, f"{ctx}geography=US")
                           if path == "trend" and p["dimension"] == "brand" and "position" in p["metrics"]]
                 self.assertTrue(trends, name)
@@ -789,6 +789,110 @@ class TreemapNonAuto(unittest.TestCase):
     def test_a_small_non_auto_group_folds_like_any_other(self):
         rows = [self.tm("Kia", 400, True), self.tm("Toyota", 300), self.tm("Google", 10), self.tm("Tesla", 10)]
         self.assertEqual([g["key"] for g in rn.treemap_groups(rows, 1000)], ["HMG", "Toyota", rn.TREEMAP_FOLD])
+
+
+class TreemapGroupDelta(unittest.IsolatedAsyncioTestCase):
+    """2026-11-02 premise review: a group tile's Δ and colour were the sum of the members that had a Δ, and the round Δ
+    came from the KPI brand trend, which stops at the top rivals: VW was the sum of 2 of its 8 brands (the Global default
+    showed 6 of 12 tiles so), named on hover only. A partial sum is not the group's change (W6 · step 12), so a group
+    has a Δ only when every member has one, and the round Δ reads every brand's share line (period mode reads every
+    brand's row already)."""
+
+    @staticmethod
+    def member(brand: str, delta: float | None) -> dict:
+        return {"brand": brand, "value": 10, "share": 1.0, "delta": delta, "own": False, "sibling": False}
+
+    def test_a_group_missing_a_members_delta_has_no_delta(self):
+        group = rn._group_of("VW", [self.member("VW", 0.4), self.member("Audi", None)], 1000)
+        self.assertEqual((group["delta"], group["partial"]), (None, True))
+
+    def test_a_group_with_every_members_delta_sums_them(self):
+        group = rn._group_of("VW", [self.member("VW", 0.4), self.member("Audi", -0.1)], 1000)
+        self.assertEqual((group["delta"], group["partial"]), (0.3, False))
+
+    def test_every_brand_gets_a_round_delta_from_its_share_line(self):
+        names = [f"Brand {i}" for i in range(1500)]
+        def bucket(day: str, shares: dict) -> dict:
+            return {"bucketStart": day, "answers": 10, "totalMentions": 10, "measuredDays": 1, "firstAt": None, "lastAt": None,
+                    "brands": [{"brand": n, "isTracked": False, "mentions": 1, "answers": 1, "exposurePct": 1.0, "sharePct": v} for n, v in shares.items()]}
+        trend = {"unit": "cycle", "brands": [{"brand": n, "isTracked": False, "mentions": 2} for n in names],
+                 "buckets": [bucket("2026-09-28", dict.fromkeys(names, 1.0)), bucket("2026-10-05", dict.fromkeys(names, 1.5))],
+                 "windowStartBucket": "2026-09-28", "windowEndBucket": "2026-10-05", "trendGrid": []}
+        with mock.patch.object(rn._mv(), "trend_axis", return_value=[{"bucketStart": b["bucketStart"], "measured": True} for b in trend["buckets"]]):
+            out = rn.share_deltas(trend)
+        self.assertEqual(len(out), 1500)
+        self.assertEqual(out["Brand 1499"], 0.5)
+
+    async def share_lines(self, query: str) -> list[dict]:
+        seen: list[dict] = []
+
+        async def get(path, params=None):
+            if path == "trend" and (params or {}).get("top_n"):
+                seen.append(dict(params))
+            await asyncio.sleep(0)
+            raise HTTPException(503, "boom")
+        with mock.patch("bff.api.get", get):
+            await screens.build("mention/rn-ranking", QueryParams(query))
+            await asyncio.sleep(0)
+        return seen
+
+    async def test_the_ranking_reads_every_brands_share_line_on_a_round(self):
+        for query in ("", "ctx.surface=website"):
+            lines = await self.share_lines(query)
+            self.assertEqual([(p["dimension"], p["metrics"], p["top_n"]) for p in lines],
+                             [("brand", ["visibility", "share_of_voice"], rn._md().ALL_BRANDS_TOP_N)], query)
+
+    async def test_a_period_compares_rows_and_reads_no_share_lines(self):
+        self.assertEqual(await self.share_lines("time=2026-09-01..2026-09-30"), [])
+
+
+class RankRoundCounts(unittest.TestCase):
+    """2026-11-02 premise review: the original's 우선 노출도 tooltip named each round's ranked answers and its table marked
+    당사 '{n}위 · 상위 {pct}%' (the table's brands the base, a brand without a rank stands after them,
+    first-rank-kpi-tab). The renewal kept the latest count only."""
+
+    @staticmethod
+    def row(brand: str, own: bool, pos: float | None, ranked: int) -> dict:
+        return {"brand": brand, "isTracked": own, "avgPosition": pos, "rank": None if own else 2, "rankedAnswers": ranked, "mentions": ranked}
+
+    def fp(self) -> dict:
+        def bucket(day: str, rows: list[dict]) -> dict:
+            return {"bucketStart": day, "answers": 100, "brands": rows, "measuredDays": 1}
+        latest = [self.row("HMG", True, 2.4, 900), self.row("BMW", False, 1.5, 50), self.row("Audi", False, 3.0, 40), self.row("Ford", False, None, 0)]
+        return {"unit": "week", "latest": latest, "brands": ["HMG", "BMW"], "overviewCards": None,
+                "buckets": [bucket("2026-09-28", [self.row("HMG", True, 2.1, 800), self.row("BMW", False, 1.4, 60)]),
+                            bucket("2026-10-05", [self.row("HMG", True, 2.4, 900), self.row("BMW", False, 1.5, 50)])],
+                "windowStartBucket": "2026-09-28", "windowEndBucket": "2026-10-05"}
+
+    def test_every_round_names_its_ranked_answers(self):
+        got = rn.rank_payload(self.fp(), None, [], None, False)
+        self.assertEqual((got["hero"]["axis"], got["hero"]["rankedSeries"]), (["2026-09-28", "2026-10-05"], [800, 900]))
+
+    def test_a_round_without_a_position_has_no_count(self):
+        fp = self.fp()
+        fp["buckets"][0]["brands"] = [self.row("BMW", False, 1.4, 60)]
+        self.assertEqual(rn.rank_payload(fp, None, [], None, False)["hero"]["rankedSeries"], [None, 900])
+
+    def test_the_standing_is_the_tables_place(self):
+        got = rn.rank_payload(self.fp(), None, [], None, False)
+        self.assertEqual(got["standing"], {"rank": 2, "total": 4, "topPct": 50})
+
+    def test_no_position_no_standing(self):
+        self.assertIsNone(rn.rank_payload(None, None, [], None, False)["standing"])
+
+
+class ShellOwnSum(unittest.TestCase):
+    """2026-11-02 premise review: the '당사 = Hyundai+Kia+Genesis 합산' chip counted the tracked brand rows, and since the
+    reader sends the perspective as one row (2026-10-29 R1) there is one: the chip never showed, with or without the
+    dense layout. The names come from the reader's `own.brands`; the rows stay what the page highlights."""
+
+    def test_the_shell_names_the_brands_of_the_sum(self):
+        row = {"brand": "HMG", "isTracked": True, "mentions": 1, "prompts": 1, "share": 1, "mentionRate": 1, "avgPosition": 1, "sentiment": {}}
+        got = rn.shell_payload({"brands": [row]}, False, None, ["Hyundai", "Kia", "Genesis"])
+        self.assertEqual((got["ownBrands"], got["ownSum"]), (["HMG"], ["Hyundai", "Kia", "Genesis"]))
+
+    def test_no_measurement_names_no_brands(self):
+        self.assertEqual(rn.shell_payload(None, False, None, ["Kia"])["ownSum"], [])
 
 
 class BumpZeroIsGold(unittest.TestCase):

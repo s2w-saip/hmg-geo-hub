@@ -94,6 +94,7 @@ function Measured({ shell }: { shell: RnShellVM }) {
     ownLabel: input.ownLabel,
     drawer: shell.drawer,
     ownBrands,
+    ownSum: shell.ownSum,
     pick,
     setPick,
     lit,

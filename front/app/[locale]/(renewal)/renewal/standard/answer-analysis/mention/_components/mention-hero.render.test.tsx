@@ -66,8 +66,9 @@ const favorHero: RnFavorHeroVM = {
 const rank = {
   fp: false,
   degraded: true,
-  hero: { avgPosition: null, rankedAnswers: null, delta: NO_DELTA, series: [], axis: [] },
+  hero: { avgPosition: null, rankedAnswers: null, delta: NO_DELTA, series: [], rankedSeries: [], axis: [] },
   ahead: null,
+  standing: null,
   rows: [],
   ownFirst: [],
   barMax: 1,
@@ -113,7 +114,8 @@ const ctx = {
   setKpi: () => {},
   ownLabel: "HMG",
   drawer: [],
-  ownBrands: ["Hyundai", "Kia", "Genesis"],
+  ownBrands: ["HMG"],
+  ownSum: ["Hyundai", "Kia", "Genesis"],
   pick: { auto: true, brands: [] },
   setPick: () => {},
   lit: [],
@@ -169,12 +171,36 @@ describe("renewal Mention heroes", () => {
 
   it("first position: no counts without a rank, the rivals' scope, the formula in 번째", () => {
     const html = render(<RankHeroCard />);
-    expect(dd(html)).toEqual(["—", "—"]);
+    expect(dd(html)).toEqual(["—", "—", "—"]);
     expect(html).toContain(ko.renewal.mention.rank.ahead);
     expect(html).toContain(ko.renewal.mention.rank.aheadTip);
     expect(html).toContain("(단위: 번째)");
     expect(html).not.toContain("(단위: 위)");
     expect(html).toContain(ko.renewal.mention.hero.basisAll);
+  });
+
+  // 2026-11-02 premise review: the original's counts and basis chips, gone from the renewal or hidden by the dense layout
+  it("the rate hero names the brands of its sum and the favorability hero its basis, in the dense layout too", () => {
+    const rate = render(<HeroValue metric="exposure" />);
+    expect(rate).toContain("당사 = Hyundai+Kia+Genesis 합산");
+    expect(rate).not.toContain("rn-dense_&amp;]:hidden");
+    const favor = render(<FavorHeroCard />);
+    expect(favor).toContain(ko.renewal.mention.favor.chipSignal);
+    expect(favor).not.toContain("rn-dense_&amp;]:hidden");
+  });
+
+  it("first position names the ranked answers of every round and 당사's place in the table", () => {
+    const ranked = {
+      ...rank,
+      fp: true,
+      hero: { avgPosition: 2.4, rankedAnswers: 900, delta: NO_DELTA, series: [2.1, 2.4], axis: ["2026-09-28", "2026-10-05"], rankedSeries: [800, 900] },
+      ahead: 6,
+      standing: { rank: 7, total: 11, topPct: 64 },
+    };
+    const html = render(<RankHeroCard />, { input: { rank: settled(ranked) }, tables: ["rank-trend"] });
+    expect(cells(html)).toContainEqual([ko.renewal.mention.rank.ranked, "800", "900"]);
+    expect(dd(html)[2]).toBe("7위 · 상위 64%");
+    expect(html).toContain("아래 표 11개 브랜드 중 당사 자리입니다");
   });
 
   // renewal audit 5-1: the trends name each round's counts, as the original's tooltips and type chart did

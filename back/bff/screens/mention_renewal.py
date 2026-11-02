@@ -29,6 +29,7 @@ from bff.screens import screen, split_context
 from bff.screens._competitors import competitor_value_of
 from bff.screens._convert import Exact, delta1, exact
 from bff.screens._convert import round1 as _exact_round1
+from bff.screens._js import js_round
 from bff.screens._period import kst_today, period_caption, to_period_delta_view
 from bff.screens._sort import locale_compare, table_orders
 
@@ -332,6 +333,7 @@ def rank_hero(fp: Any, period: Any) -> dict:
         # perspective's date totals (2026-10-29 metric review R1), so this is Gold's perspective value round by round,
         # the hero's own (renewal audit 5-3 / U11: checked against the overview trend on live data, 2026-10-31).
         "series": mv.own_position_series(fp) if fp else [],
+        "rankedSeries": mv.own_ranked_series(fp) if fp else [],
         "axis": _axis_keys(mv, fp) if fp else [],
     }
 
@@ -619,28 +621,20 @@ def bump_data(trend: Any) -> dict | None:
 
 
 def share_deltas(trend: Any) -> dict:
-    """Share Δ (pp, last two axis slots) per series brand. 당사 = sum of tracked (TS Map → dict, same key order)."""
+    """Share Δ (pp, last two axis slots) per series brand. 당사 = sum of tracked (TS Map → dict, same key order).
+    The two slots are indexed once: the ranking reads every brand's line (load_brand_share_lines)."""
     out: dict = {}
     if not trend:
         return out
     axis = _mv().trend_axis(trend["buckets"], trend["unit"], trend)
     by = {b["bucketStart"]: b for b in trend["buckets"]}
-
-    def spark_of(pick) -> list:
-        res = []
-        for a in axis:
-            b = by.get(a["bucketStart"]) if a["measured"] else None
-            res.append(pick(b) if b else None)
-        return res
-
+    slots = [by.get(a["bucketStart"]) if a["measured"] else None for a in axis[-2:]]
+    shares = [{x["brand"]: x.get("sharePct") for x in reversed(b["brands"])} if b else {} for b in slots]
     for s in trend["brands"]:
-        def pick(b, name=s["brand"]):
-            hit = next((x for x in b["brands"] if x["brand"] == name), None)
-            return hit.get("sharePct") if hit and hit.get("sharePct") is not None else None
-        out[s["brand"]] = _last_two(spark_of(pick), delta_pp)
+        out[s["brand"]] = _last_two([row.get(s["brand"]) for row in shares], delta_pp)
     if any(b.get("isTracked") for b in trend["brands"]):
-        out[OWN_KEY] = _last_two(spark_of(lambda b: round1(_js_sum((x.get("sharePct") if x.get("sharePct") is not None else 0)
-                                                                   for x in b["brands"] if x.get("isTracked")))), delta_pp)
+        out[OWN_KEY] = _last_two([round1(_js_sum((x.get("sharePct") if x.get("sharePct") is not None else 0)
+                                                 for x in b["brands"] if x.get("isTracked"))) if b else None for b in slots], delta_pp)
     return out
 
 
@@ -659,13 +653,15 @@ def _group_of(key: str, members: list[dict], total: float) -> dict:
     sorted_m = _sort(list(members), lambda a, b: _sign(b["value"] - a["value"]))
     value = _js_sum(m["value"] for m in sorted_m)
     with_d = [m for m in sorted_m if m["delta"] is not None]
+    partial = 0 < len(with_d) < len(sorted_m)
     return {
         "key": key,
         "members": sorted_m,
         "value": value,
         "share": round1((100 * value) / total),
-        "delta": round1(_js_sum(m["delta"] for m in with_d)) if with_d else None,
-        "partial": 0 < len(with_d) < len(sorted_m),
+        # a sum of some members is not the group's change (2026-11-02 premise review)
+        "delta": round1(_js_sum(m["delta"] for m in with_d)) if with_d and not partial else None,
+        "partial": partial,
         "own": any(m["own"] for m in sorted_m),
     }
 
@@ -949,13 +945,13 @@ def _drawer_row(row: dict, rank: int, types: Any) -> dict:
     }
 
 
-def shell_payload(data: Any, degraded: bool, types_by_brand: Any) -> dict:
+def shell_payload(data: Any, degraded: bool, types_by_brand: Any, own_sum: list[str] | None = None) -> dict:
     """MentionShell (page state) + the brand drawer's rows (first row of a name) of the first BRANDS_TOP body
     brands: every body brand made the shell 0.3-0.6 MB, and the whole body waits on it. The drawer opens from those
     rows (the treemap, the boards); a ranking row past them carries its own drawer row (ranking_payload)."""
     measured = bool(data) and len(data["brands"]) > 0
     if not measured:
-        return {"measured": False, "degraded": bool(degraded), "ownBrands": [], "drawer": []}
+        return {"measured": False, "degraded": bool(degraded), "ownBrands": [], "ownSum": [], "drawer": []}
     brands = data["brands"]
     tb_by: dict = {}
     if types_by_brand:
@@ -968,7 +964,8 @@ def shell_payload(data: Any, degraded: bool, types_by_brand: Any) -> dict:
             continue
         seen.add(row["brand"])
         drawer.append(_drawer_row(row, i + 1, tb_by.get(row["brand"])))
-    return {"measured": True, "degraded": bool(degraded), "ownBrands": [b["brand"] for b in brands if b["isTracked"]], "drawer": drawer}
+    return {"measured": True, "degraded": bool(degraded), "ownBrands": [b["brand"] for b in brands if b["isTracked"]],
+            "ownSum": own_sum or [], "drawer": drawer}
 
 
 def compare_payload(brands: list[dict], trend: Any) -> dict:
@@ -1166,6 +1163,15 @@ def favor_matrix_payload(kpi: Any, totals: Any = None) -> dict:
     return {"rows": favor_matrix(kpi, totals)}
 
 
+def rank_standing(rows: list[dict], hero: dict) -> dict | None:
+    """당사's place in the table, the original's '{n}위 · 상위 {pct}%': the table's brands are the base, a brand without a
+    rank stands after them (first-rank-kpi-tab, 2026-11-02 premise review)."""
+    rank = next((i + 1 for i, r in enumerate(rows) if r["own"]), None)
+    if rank is None or hero["avgPosition"] is None:
+        return None
+    return {"rank": rank, "total": len(rows), "topPct": max(1, js_round((100 * rank) / len(rows)))}
+
+
 def rank_payload(fp: Any, period: Any, brands: list[dict], trend: Any, degraded: bool, prev_brands: list[dict] | None = None) -> dict:
     """RankHeroCard + RankTable (useRank) and the rank chart's y top for every compare pick."""
     mv = _mv()
@@ -1200,6 +1206,7 @@ def rank_payload(fp: Any, period: Any, brands: list[dict], trend: Any, degraded:
         "degraded": bool(degraded),
         "hero": {**hero, "rankedAnswers": ranked},
         "ahead": ahead,
+        "standing": rank_standing(rows, hero),
         "rows": [{**r, "pos": i + 1, "hasSpark": _has_value(r["spark"])} for i, r in enumerate(rows)],
         "ownFirst": [i for i, r in enumerate(rows) if r["own"]] + [i for i, r in enumerate(rows) if not r["own"]],
         "barMax": _max_from_one(r["avgPosition"] if r["avgPosition"] is not None else 0 for r in rows),
@@ -1370,8 +1377,8 @@ async def rn_shell(q) -> dict:
     _, filters, ctx = _begin(q)
     md = _md()
     # the brand rows only: the whole body waits on this section, and the aggregate's brand trend took twice as long
-    brands, tb = await asyncio.gather(md.load_mentions_brands(filters, ctx), md.load_types_by_brand(filters, ctx))
-    return shell_payload(None if brands is None else {"brands": brands}, md.mentions_degraded(ctx)["data"], tb)
+    brands, own_sum, tb = await asyncio.gather(md.load_mentions_brands(filters, ctx), md.load_own_sum(filters, ctx), md.load_types_by_brand(filters, ctx))
+    return shell_payload(None if brands is None else {"brands": brands}, md.mentions_degraded(ctx)["data"], tb, own_sum)
 
 
 @screen("mention/rn-compare")
@@ -1492,6 +1499,6 @@ async def rn_bump(q) -> dict:
 async def rn_ranking(q) -> dict:
     _, filters, ctx = _begin(q)
     md = _md()
-    data, trend, prev_brands = await asyncio.gather(md.load_mentions_live(filters, ctx, pin_top=True), md.load_brand_trend(filters, ctx, pin_top=True),
+    data, trend, prev_brands = await asyncio.gather(md.load_mentions_live(filters, ctx, pin_top=True), md.load_brand_share_lines(filters, ctx),
                                                     md.load_prev_period_brands(filters, ctx))
     return ranking_payload(data, trend, prev_brands)

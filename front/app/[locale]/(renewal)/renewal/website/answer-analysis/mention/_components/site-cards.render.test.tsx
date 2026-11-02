@@ -54,6 +54,7 @@ const VM: RnSiteCardsVM = {
 const input = (kpi: "exposure" | "sov") => ({ kpi, view: "kpi", ownLabel: "HMG", period: null, filtered: false }) as never;
 const ctx = (tables: string[] = []) => ({
   input: input("exposure"), kpi: "exposure" as const, setKpi: () => {}, ownLabel: "HMG", drawer: [], ownBrands: ["HMG"],
+ ownSum: [],
   pick: { auto: true, brands: [] }, setPick: () => {}, lit: [], hover: () => {}, flash: () => {}, tables: new Set(tables),
   toggleTable: () => {}, engineLabel: (e: string) => e, openDrawer: () => {},
 });
