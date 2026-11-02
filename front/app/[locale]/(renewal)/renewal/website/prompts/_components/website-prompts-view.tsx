@@ -3,7 +3,7 @@
 // Renewal Website › Prompts body (2026-10-30, W4): the list's insights over the listed prompts, then the list.
 // The first page and the insights come with the page render (the panel's filters are the URL's); search,
 // order, page, page size and the list's own picks read again through GET /api/website/prompts/*
-// (website-prompts-read.ts). The URL keeps q · sort · dir · size and the picks (m · rd · last · eset · ans), so
+// (website-prompts-read.ts). The URL keeps q · sort · dir · size and the picks (rd · miss · last · eset), so
 // a link restores the list; the page number stays out of it (a new query starts at page 1). A new server
 // render (the panel applied a pick) remounts this body with its answer (page.tsx keys it).
 // Engine and period are a lens (the original's rule): they choose the answers a row counts, never the rows.
@@ -168,11 +168,11 @@ export function RnWebsitePrompts({
     setPage(1);
   };
   const onHead = (key: WebsitePromptSortKey) => changeSort(sort.key === key ? { key, asc: !sort.asc } : { key, asc: firstAsc(key) });
-  const onDrill = useCallback((key: DrillKey, value: string | number) => {
+  const onDrill = useCallback((key: DrillKey, value: string) => {
     setDrill((d) => {
       const next = { ...d };
       if (d[key] === value) delete next[key];
-      else (next as Record<DrillKey, string | number>)[key] = value;
+      else next[key] = value;
       return next;
     });
     setPage(1);
@@ -197,11 +197,10 @@ export function RnWebsitePrompts({
 
   const drillText = (key: DrillKey): string => {
     const v = drill[key];
-    if (key === "m") return v === "1" ? tw("drill.m1") : tw("drill.m0");
     if (key === "rd") return tw("drill.rd", { date: String(v) });
+    if (key === "miss") return tw("drill.miss", { date: String(v) });
     if (key === "last") return v === "none" ? tw("drill.lastNone") : tw("drill.last", { date: String(v) });
-    if (key === "eset") return v === "none" ? tw("drill.esetNone") : tw("drill.eset", { engines: byEngineOrder(String(v).split("~")).map((e) => ENGINE_LABEL[e] ?? e).join(" · ") });
-    return tw("drill.ans", { count: Number(v) });
+    return v === "none" ? tw("drill.esetNone") : tw("drill.eset", { engines: byEngineOrder(String(v).split("~")).map((e) => ENGINE_LABEL[e] ?? e).join(" · ") });
   };
   const drillKeys = DRILL_KEYS.filter((k) => drill[k] !== undefined);
 
@@ -236,7 +235,7 @@ export function RnWebsitePrompts({
 
   const num = (n: number) => n.toLocaleString(locale);
   const { rows, total } = data;
-  const legend = byEngineOrder(insights.engines.map((e) => e.engine));
+  const legend = byEngineOrder(insights.engines);
 
   return (
     <>
@@ -246,12 +245,8 @@ export function RnWebsitePrompts({
         onToggle={toggleOpen}
         drill={drill}
         onDrill={onDrill}
-        onPanel={toggleFilter}
-        onSite={(domain) => {
-          setSearch((q) => (q === domain ? "" : domain));
-          setPage(1);
-        }}
-        picked={{ geography: splitFilterValues(sp.get("geography")), language: splitFilterValues(sp.get("language")), q: search.trim() }}
+        onCountry={(code) => toggleFilter("geography", code)}
+        countries={splitFilterValues(sp.get("geography"))}
         geoLabel={geoLabel}
         narrowed={drillKeys.length ? { count: total, onJump: () => document.getElementById(LIST_ID)?.scrollIntoView({ behavior: "smooth", block: "start" }) } : undefined}
       />
@@ -325,7 +320,7 @@ export function RnWebsitePrompts({
         {total === 0 ? (
           <RnEmpty className="m-5">{tp("emptyFiltered")}</RnEmpty>
         ) : (
-          <RnWebsitePromptTable rows={rows} roundAxis={data.roundAxis} sort={sort} onSort={onHead} onOpen={setDetail} />
+          <RnWebsitePromptTable rows={rows} sort={sort} onSort={onHead} onOpen={setDetail} />
         )}
         {total > 0 ? (
           <RnListPager

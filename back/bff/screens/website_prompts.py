@@ -9,6 +9,7 @@ import asyncio
 import math
 import re
 from collections import Counter
+from collections.abc import Mapping
 from typing import Any
 
 from fastapi import HTTPException
@@ -19,6 +20,7 @@ from bff.screens import screen, split_context
 from bff.screens._filters import load_filter_dates, load_website_prompt_options, read_standard_filters, standard_filter_key
 from bff.screens._js import js_parse_int
 from bff.screens._query import analysis_query, js_trim, to_api_params
+from bff.screens.mention_view import fill_trend_gaps
 
 PAGE_SIZE = 50
 PAGE_SIZES = (25, 50, 100)      # the renewal page's page sizes
@@ -170,36 +172,28 @@ def read_size(raw: Any) -> int:
 
 def read_drill(sp: dict) -> dict:
     """The renewal list's own picks, made from its insights (one value each, malformed ones ignored):
-    m 1/0 measured or not in the lens · rd a round the prompt was measured in · last its latest round (none =
-    unmeasured) · eset its exact engine set (none = no engine) · ans its exact answer count."""
+    rd a round the prompt was measured in · miss a round it was not · last its latest round (none = unmeasured) ·
+    eset its exact engine set (none = no engine)."""
     out: dict[str, Any] = {}
-    m = one(sp.get("m"))
-    if m in ("0", "1"):
-        out["m"] = m
-    for key in ("rd", "last"):
+    for key in ("rd", "miss", "last"):
         v = one(sp.get(key))
         if isinstance(v, str) and (DAY_RE.fullmatch(v) or (key == "last" and v == "none")):
             out[key] = v
     eset = one(sp.get("eset"))
     if isinstance(eset, str) and eset:
         out["eset"] = "none" if eset == "none" else "~".join(sorted({e.lower() for e in eset.split("~") if e}))
-    ans = one(sp.get("ans"))
-    if isinstance(ans, str) and ans.isdigit():
-        out["ans"] = int(ans)
     return out
 
 
 def drilled(rows: list[dict], drill: dict) -> list[dict]:
     def keep(r: dict) -> bool:
-        if "m" in drill and (r["answers"] > 0) != (drill["m"] == "1"):
-            return False
         if "rd" in drill and drill["rd"] not in r["rounds"]:
+            return False
+        if "miss" in drill and drill["miss"] in r["rounds"]:
             return False
         if "last" in drill and (r["lastMeasuredAt"] or "none") != drill["last"]:
             return False
-        if "eset" in drill and ("~".join(sorted(r["engines"])) or "none") != drill["eset"]:
-            return False
-        return "ans" not in drill or r["answers"] == drill["ans"]
+        return "eset" not in drill or ("~".join(sorted(r["engines"])) or "none") == drill["eset"]
     return [r for r in rows if keep(r)] if drill else rows
 
 
@@ -216,7 +210,7 @@ async def round_axis(req: dict, rows: list[dict]) -> list[str]:
 async def prompts_page(q) -> dict:
     """The renewal list: page ?page of ?size (25/50/100) rows, filters, search and order as website/prompts-list,
     narrowed by the list's own picks (read_drill); a page past the end shows the last one. `roundAxis` = the
-    lens's rounds, for each row's measured-rounds strip."""
+    lens's rounds, for the detail sheet's measured-rounds strip."""
     ctx, sp = split_context(q)
     req = read_query(sp, reader_scope(), is_admin(ctx))
     listed = await all_rows(list_query(req, reader_scope()))
@@ -240,29 +234,18 @@ async def prompts_rows(q) -> dict:
     return {"rows": drilled(listed, read_drill(sp)), "roundAxis": await round_axis(req, listed)}
 
 
+def round_slots(axis: list[str], counts: Mapping[str, int]) -> list[dict]:
+    """Measured prompts per round of the lens, oldest first. A week with no round between them is a slot without a
+    count (`prompts` null): rounds are weekly, and Gold has no job on 2026-07-31."""
+    points = [{"bucketStart": d} for d in axis]
+    return [{"date": p["bucketStart"], "prompts": None if p.get("gap") else counts.get(p["bucketStart"], 0)}
+            for p in fill_trend_gaps(points, "week", lambda k: {"bucketStart": k, "gap": True})]
+
+
 def insights_of(rows: list[dict], axis: list[str]) -> dict:
-    """What the listed rows hold, counted: prompts, answers and engines, the rounds each was measured in, the
-    latest round, answer counts, engine sets, brands, site countries, languages and target sites."""
-    def tally(key) -> dict:
-        out: dict[Any, dict] = {}
-        for r in rows:
-            t = out.setdefault(key(r), {"prompts": 0, "measured": 0, "answers": 0})
-            t["prompts"] += 1
-            t["measured"] += r["answers"] > 0
-            t["answers"] += r["answers"]
-        return out
-
-    def ranked(table: dict, name: str) -> list[dict]:
-        return [{name: k, **v} for k, v in sorted(table.items(), key=lambda kv: (-kv[1]["prompts"], str(kv[0])))]
-
-    engines: dict[str, dict] = {}
-    for r in rows:
-        for code, n in r["engineAnswers"].items():
-            e = engines.setdefault(code, {"prompts": 0, "answers": 0})
-            e["prompts"] += 1
-            e["answers"] += n
-    per_round = Counter(d for r in rows for d in r["rounds"])
-    last = Counter(r["lastMeasuredAt"] for r in rows)
+    """What the listed rows hold, counted: what is measured, where and how steadily: the rounds each prompt was
+    measured in, its engine sets, and its brands and countries (with the counts of its target sites and languages)."""
+    brands = Counter(r["brand"] for r in rows)
     markets: dict[str, dict] = {}
     for r in rows:
         m = markets.setdefault(r["countryCode"], {"prompts": 0, "brands": {}})
@@ -270,17 +253,14 @@ def insights_of(rows: list[dict], axis: list[str]) -> dict:
         m["brands"][r["brand"]] = m["brands"].get(r["brand"], 0) + 1
     sets = Counter("~".join(sorted(r["engines"])) for r in rows)
     return {
-        "prompts": len(rows), "measured": sum(r["answers"] > 0 for r in rows), "answers": sum(r["answers"] for r in rows),
-        "roundAxis": axis,
-        "engines": [{"engine": k, **v} for k, v in sorted(engines.items())],
-        "rounds": [{"date": d, "prompts": per_round.get(d, 0)} for d in axis],
-        "lastMeasured": [{"date": d, "prompts": n} for d, n in sorted(last.items(), key=lambda kv: kv[0] or "", reverse=True)],
-        "depth": [{"answers": a, "prompts": n} for a, n in sorted(Counter(r["answers"] for r in rows).items())],
+        "prompts": len(rows),
+        "engines": sorted({code for r in rows for code in r["engineAnswers"]}),
+        "rounds": round_slots(axis, Counter(d for r in rows for d in r["rounds"])),
         "engineSets": [{"engines": k.split("~") if k else [], "prompts": n} for k, n in sorted(sets.items(), key=lambda kv: (-kv[1], kv[0]))],
-        "brands": ranked(tally(lambda r: r["brand"]), "brand"),
+        "brands": [k for k, _ in sorted(brands.items(), key=lambda kv: (-kv[1], kv[0]))],
         "markets": [{"country": k, **v} for k, v in sorted(markets.items(), key=lambda kv: (-kv[1]["prompts"], kv[0]))],
-        "langs": ranked(tally(lambda r: r["langCode"]), "lang"),
-        "sites": ranked(tally(lambda r: r["domain"]), "domain"),
+        "langCount": len({r["langCode"] for r in rows}),
+        "siteCount": len({r["domain"] for r in rows}),
     }
 
 

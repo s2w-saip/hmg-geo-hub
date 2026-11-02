@@ -4019,58 +4019,42 @@
           "basis": "Counted over the list of the current filters, search and lens",
           "collapse": "Collapse",
           "expand": "Expand",
-          "jump": "See the narrowed list ({count})",
-          "barTip": "{label} · {prompts} prompts · {measured} measured · {answers} answers"
+          "jump": "See the narrowed list ({count})"
         },
         "kpi": {
           "prompts": "Listed prompts",
           "promptsSub": "{sites} target domains · {countries} countries · {langs} languages",
-          "measured": "Measured prompts",
-          "measuredTip": "Keep only the measured prompts",
-          "ofList": "{pct} of the list",
-          "unmeasured": "{count} unmeasured",
-          "unmeasuredTip": "Keep only the unmeasured prompts",
-          "answers": "Answers",
-          "rounds": "Rounds",
-          "roundsValue": "{count}",
-          "roundsRange": "{from} – {to}",
           "latest": "Measured in the latest round",
           "latestTip": "Keep only the prompts measured in the {date} round",
-          "latestSub": "{date} round · {pct} of the list"
+          "latestSub": "{date} round · {pct} of the list",
+          "missing": "Not measured in the latest round",
+          "missingTip": "Keep only the prompts not measured in the {date} round"
         },
         "rounds": {
           "title": "Measured prompts per round",
-          "info": "Prompts measured at least once in each round. The dashed line is the number of prompts in the list. Click a bar to keep only the prompts measured in that round.",
+          "info": "Prompts measured at least once in each round. The dashed line is the size of the list; a week with no round is an empty slot. A bar keeps only the prompts measured in that round.",
           "listLine": "List {count}",
-          "tip": "{date} round · {count} measured ({pct} of the list)"
+          "tip": "{date} round · {count} measured ({pct} of the list)",
+          "gapTip": "{date} · no round"
         },
-        "depth": {
-          "title": "Answer depth · engines",
-          "info": "How many answers each prompt has, and the engines that measured it. Click a bar or a set to keep only those prompts.",
-          "tip": "{answers} answers · {count} prompts ({pct} of the list)",
-          "sets": "Engine sets",
+        "engineSets": {
+          "title": "Engine sets",
+          "info": "The engines each prompt was measured by. A set keeps only those prompts in the list.",
           "noEngine": "No engine (unmeasured)",
           "setTip": "{engines} · {count} ({pct} of the list)"
         },
         "markets": {
           "title": "Market coverage",
-          "info": "Prompts by site country and brand. Click a country to add it to or remove it from the country filter.",
+          "info": "Prompts by country and brand. ‘·’ means the pair has no prompts. A country adds to or removes from the country filter.",
+          "chip": "{markets} markets · {pairs} pairs",
+          "orderLabel": "Market table order",
+          "orderGaps": "Most blanks",
+          "orderPrompts": "Most prompts",
           "country": "Country",
           "total": "Total",
-          "legend": "Shade = up to ¼ · ½ · ¾ · all of the largest cell ({max}) · ‘·’ = 0",
           "noBrand": "(no name)",
-          "more": "Show all ({count})",
-          "less": "Collapse",
           "countryTip": "{country} — add to or remove from the country filter",
           "cellTip": "{country} · {brand} · {count}"
-        },
-        "langs": {
-          "title": "Languages",
-          "info": "Prompts by language. Click one to add it to or remove it from the language filter."
-        },
-        "sites": {
-          "title": "Target domains",
-          "info": "Prompts by the domain of their target URL. Click one to search the list for it."
         },
         "columns": {
           "market": "Market",
@@ -4084,20 +4068,17 @@
           "label": "Narrow the list",
           "clear": "Clear all",
           "remove": "Remove {label}",
-          "m1": "Measured",
-          "m0": "Unmeasured",
           "rd": "Measured in the {date} round",
+          "miss": "Not measured in {date}",
           "last": "{date}",
           "lastNone": "Unmeasured",
           "eset": "{engines}",
           "esetNone": "No engine",
-          "ans": "{count}",
           "key": {
-            "m": "Measurement",
             "rd": "Round",
+            "miss": "Round",
             "last": "Latest measured",
-            "eset": "Engine set",
-            "ans": "Answers"
+            "eset": "Engine set"
           }
         },
         "export": {

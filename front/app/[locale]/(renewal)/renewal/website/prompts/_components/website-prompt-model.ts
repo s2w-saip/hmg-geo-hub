@@ -26,31 +26,23 @@ export interface WebsitePromptsPage {
   rangeTo: number;
   sort: WebsitePromptSortKey;
   dir: "asc" | "desc";
-  /** The lens's rounds, oldest first (each row's strip). */
+  /** The lens's rounds, oldest first (the detail sheet's strip). */
   roundAxis: string[];
-}
-
-export interface Tally {
-  prompts: number;
-  measured: number;
-  answers: number;
 }
 
 /** Screen website/prompts-insights: counts of the listed rows (filters, search, lens; not the list's picks). */
 export interface WebsitePromptInsights {
   prompts: number;
-  measured: number;
-  answers: number;
-  roundAxis: string[];
-  engines: { engine: string; prompts: number; answers: number }[];
-  rounds: { date: string; prompts: number }[];
-  lastMeasured: { date: string | null; prompts: number }[];
-  depth: { answers: number; prompts: number }[];
+  /** The engines the listed rows were measured by (the list's legend). */
+  engines: string[];
+  /** Measured prompts per round of the lens; null = a week with no round. */
+  rounds: { date: string; prompts: number | null }[];
   engineSets: { engines: string[]; prompts: number }[];
-  brands: (Tally & { brand: string })[];
+  /** The listed rows' brands, most prompts first. */
+  brands: string[];
   markets: { country: string; prompts: number; brands: Record<string, number> }[];
-  langs: (Tally & { lang: string })[];
-  sites: (Tally & { domain: string })[];
+  langCount: number;
+  siteCount: number;
 }
 
 // ── engines: one colour per engine, whatever the list holds (the renewal's validated palette, grey beyond) ──
@@ -76,34 +68,30 @@ export function byEngineOrder(codes: readonly string[]): string[] {
 // ── the list's own picks (made from the insights; the BFF reads them as read_drill) ──
 
 export interface Drill {
-  /** measured in the lens ("1") or not ("0") */
-  m?: "0" | "1";
   /** a round the prompt was measured in */
   rd?: string;
+  /** a round it was not measured in */
+  miss?: string;
   /** its latest round; "none" = unmeasured */
   last?: string;
   /** its exact engine set, sorted and joined with "~"; "none" = no engine */
   eset?: string;
-  /** its exact answer count */
-  ans?: number;
 }
 export type DrillKey = keyof Drill;
-export const DRILL_KEYS: readonly DrillKey[] = ["m", "rd", "last", "eset", "ans"];
+export const DRILL_KEYS: readonly DrillKey[] = ["rd", "miss", "last", "eset"];
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 export function readDrill(sp: { get(name: string): string | null }): Drill {
   const d: Drill = {};
-  const m = sp.get("m");
-  if (m === "0" || m === "1") d.m = m;
   const rd = sp.get("rd");
   if (rd && DAY.test(rd)) d.rd = rd;
+  const miss = sp.get("miss");
+  if (miss && DAY.test(miss)) d.miss = miss;
   const last = sp.get("last");
   if (last && (DAY.test(last) || last === "none")) d.last = last;
   const eset = sp.get("eset");
   if (eset) d.eset = eset === "none" ? "none" : engineSetKey(eset.split("~"));
-  const ans = sp.get("ans");
-  if (ans && /^\d+$/.test(ans)) d.ans = Number(ans);
   return d;
 }
 

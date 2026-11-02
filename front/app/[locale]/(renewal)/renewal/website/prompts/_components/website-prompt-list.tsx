@@ -1,11 +1,11 @@
 "use client";
 
 // Renewal Website › Prompts list (2026-10-30, W4): the original /website/prompts table in the one-line list of
-// the renewal prompt pages, every original field kept — prompt, brand, site country and language (시장),
-// target URL, answers with their engines, latest measurement — plus what the rows already carry: the rounds
-// each prompt was measured in (a strip over the lens's rounds) and its answers by engine (a stacked bar).
-// A cut-off cell shows its full text on hover; a row opens the detail sheet. State lives in
-// website-prompts-view.tsx; this file draws.
+// the renewal prompt pages, every original field kept — prompt, brand, country and language (시장), target URL,
+// answers with their engines (a dot each, the counts in the tip), latest measurement. A row opens the detail sheet,
+// which holds what the rows carry besides: the rounds on a strip and the answers by engine (the rows' strip and
+// stacked bar left 2026-11-02: 83.5 % of the rows share 3 round patterns, 98.1 % the same engine split).
+// A cut-off cell shows its full text on hover. State lives in website-prompts-view.tsx; this file draws.
 
 import { useCallback, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
@@ -53,13 +53,11 @@ export function targetHref(url: string): string {
 
 export function RnWebsitePromptTable({
   rows,
-  roundAxis,
   sort,
   onSort,
   onOpen,
 }: {
   rows: WebsitePromptRow[];
-  roundAxis: string[];
   sort: Sort;
   onSort: (key: WebsitePromptSortKey) => void;
   onOpen: (row: WebsitePromptRow) => void;
@@ -70,8 +68,6 @@ export function RnWebsitePromptTable({
   const tip = useRnTruncTip();
   const geoLabel = useGeoLabel();
   const label = useSortLabels();
-  // the answers bars share one scale, so a longer bar is more answers on every row of the page
-  const maxAnswers = Math.max(1, ...rows.map((r) => r.answers));
   const head = (key: WebsitePromptSortKey, text: string, className?: string) => <RnSortHead sortKey={key} label={text} sort={sort} onSort={onSort} className={className} />;
   return (
     <div {...tip.bind}>
@@ -80,9 +76,8 @@ export function RnWebsitePromptTable({
           <col />
           <col className="w-[84px]" />
           <col className="w-[164px]" />
-          <col className="w-[208px]" />
-          <col className="w-[128px]" />
-          <col className="w-[128px]" />
+          <col className="w-[260px]" />
+          <col className="w-[96px]" />
           <col className="w-[100px]" />
         </colgroup>
         <thead>
@@ -91,7 +86,6 @@ export function RnWebsitePromptTable({
             {head("brand", label.brand)}
             {head("country", tc("market"))}
             {head("targetUrl", label.targetUrl)}
-            {head("rounds", tc("rounds"))}
             {head("answers", label.answers)}
             {head("lastMeasuredAt", label.lastMeasuredAt, "pr-5")}
           </tr>
@@ -130,10 +124,7 @@ export function RnWebsitePromptTable({
                 </a>
               </td>
               <td className={TD}>
-                <RoundStrip row={r} axis={roundAxis} />
-              </td>
-              <td className={TD}>
-                <AnswersBar row={r} max={maxAnswers} />
+                <Answers row={r} />
               </td>
               <td className={cx(TD, "pr-5 text-rn-12 whitespace-nowrap tabular-nums")}>
                 {day(r.lastMeasuredAt) ?? <span className="text-rn-muted">{t("notMeasured")}</span>}
@@ -148,20 +139,20 @@ export function RnWebsitePromptTable({
 }
 
 /** The lens's rounds, oldest first: filled where the prompt was measured. */
-export function RoundStrip({ row, axis, size = "sm" }: { row: WebsitePromptRow; axis: string[]; size?: "sm" | "lg" }) {
+function RoundStrip({ row, axis }: { row: WebsitePromptRow; axis: string[] }) {
   const tc = useTranslations("renewal.website.prompts.columns");
   const measured = new Set(row.rounds);
   const tipText = row.rounds.length
     ? tc("roundsTip", { count: row.rounds.length, total: axis.length, first: day(row.firstMeasuredAt) ?? "—", last: day(row.lastMeasuredAt) ?? "—" })
     : tc("roundsNone");
   return (
-    <span data-rn-tip={tipText} data-rn-round-strip="" className={cx("flex min-w-0 items-center", size === "lg" ? "gap-[3px]" : "gap-[2px]")}>
+    <span data-rn-tip={tipText} data-rn-round-strip="" className="flex min-w-0 items-center gap-[3px]">
       {axis.map((d) => (
         <i
           key={d}
           aria-hidden
           data-on={measured.has(d) || undefined}
-          className={cx("block min-w-[3px] flex-1 rounded-[2px]", size === "lg" ? "h-4 max-w-[18px]" : "h-3 max-w-[7px]", measured.has(d) ? "bg-rn-navy" : "bg-rn-line-2")}
+          className={cx("block h-4 max-w-[18px] min-w-[3px] flex-1 rounded-[2px]", measured.has(d) ? "bg-rn-navy" : "bg-rn-line-2")}
         />
       ))}
       <span className="sr-only">{tipText}</span>
@@ -169,24 +160,19 @@ export function RoundStrip({ row, axis, size = "sm" }: { row: WebsitePromptRow; 
   );
 }
 
-/** The answers, stacked by engine on the page's scale, and their number. */
-function AnswersBar({ row, max }: { row: WebsitePromptRow; max: number }) {
+/** The answers and a dot per engine, the counts by engine in the tip. */
+function Answers({ row }: { row: WebsitePromptRow }) {
   const locale = useLocale();
   const engines = byEngineOrder(Object.keys(row.engineAnswers));
   const parts = engines.map((e) => `${ENGINE_LABEL[e] ?? e} ${row.engineAnswers[e].toLocaleString(locale)}`).join(" · ");
   return (
     <span data-rn-tip={parts || undefined} className="flex min-w-0 items-center gap-2">
-      <span className="flex h-2 w-[68px] shrink-0 overflow-hidden rounded-[3px] bg-rn-inset">
+      <span className="text-rn-12 tabular-nums text-rn-ink">{row.answers > 0 ? row.answers.toLocaleString(locale) : "—"}</span>
+      <span className="inline-flex shrink-0 gap-0.5">
         {engines.map((e) => (
-          <i
-            key={e}
-            data-engine={e}
-            className="block h-full border-r-2 border-rn-surface last:border-r-0"
-            style={{ width: `${(row.engineAnswers[e] / max) * 100}%`, background: engineColor(e) }}
-          />
+          <i key={e} aria-hidden data-engine={e} className="inline-block size-2 rounded-full" style={{ background: engineColor(e) }} />
         ))}
       </span>
-      <span className="ml-auto text-rn-12 tabular-nums text-rn-ink">{row.answers > 0 ? row.answers.toLocaleString(locale) : "—"}</span>
       {parts ? <span className="sr-only">{parts}</span> : null}
     </span>
   );
@@ -253,7 +239,7 @@ export function RnWebsitePromptDetail({ row, axis, lens, onClose }: { row: Websi
               <Field label={tc("rounds")}>
                 <span className="flex flex-col gap-1.5">
                   <span className="tabular-nums">{tc("roundsOf", { count: row.rounds.length, total: axis.length })}</span>
-                  <RoundStrip row={row} axis={axis} size="lg" />
+                  <RoundStrip row={row} axis={axis} />
                   {row.rounds.length ? <span className="text-rn-12 break-words text-rn-muted tabular-nums">{row.rounds.join(" · ")}</span> : null}
                 </span>
               </Field>

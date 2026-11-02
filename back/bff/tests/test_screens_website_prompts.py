@@ -137,14 +137,19 @@ class RenewalPage(unittest.TestCase):
     def test_the_list_picks_narrow_the_rows_not_the_read(self):
         over = {0: {"answers": 0, "engines": []}, 1: {"answers": 3, "engines": ["chatgpt", "gemini"], "rounds": ["2026-10-02", "2026-10-09"], "last_measured": "2026-10-09"},
                 2: {"answers": 2, "engines": ["gemini"], "rounds": ["2026-10-02"], "last_measured": "2026-10-02"}}
-        cases = {"m=0": ["w0"], "m=1": ["w1", "w2"], "rd=2026-10-09": ["w1"], "last=2026-10-02": ["w2"], "last=none": ["w0"],
-                 "eset=gemini~CHATGPT": ["w1"], "eset=none": ["w0"], "ans=2": ["w2"], "m=1&rd=2026-10-02&eset=gemini": ["w2"],
-                 "m=x&rd=yesterday&ans=-1": ["w0", "w1", "w2"]}
+        cases = {"rd=2026-10-09": ["w1"], "miss=2026-10-09": ["w0", "w2"], "miss=2026-10-02": ["w0"], "last=2026-10-02": ["w2"], "last=none": ["w0"],
+                 "eset=gemini~CHATGPT": ["w1"], "eset=none": ["w0"], "rd=2026-10-02&eset=gemini": ["w2"],
+                 "rd=yesterday&miss=x": ["w0", "w1", "w2"]}
         for qs, ids in cases.items():
             vm, params = self.page(qs, n=3, over=over)
             self.assertEqual([r["id"] for r in vm["rows"]], ids, qs)
             self.assertEqual((vm["total"], vm["listed"]), (len(ids), 3), qs)
-            self.assertTrue({"m", "rd", "last", "eset", "ans"}.isdisjoint(params), qs)
+            self.assertTrue({"rd", "miss", "last", "eset"}.isdisjoint(params), qs)
+
+    def test_picks_of_the_removed_cards_do_nothing(self):
+        # 2026-11-02: the 측정된 프롬프트 KPI and the depth card left; an old link's m · ans keep every row
+        vm, _ = self.page("m=0&ans=2", n=3)
+        self.assertEqual(vm["total"], 3)
 
     def test_the_round_axis_keeps_the_period_and_every_measured_round(self):
         vm, _ = self.page("time=2026-10-01..2026-10-31", n=1, over={0: {"rounds": ["2026-10-02", "2026-07-03"]}})
@@ -154,7 +159,7 @@ class RenewalPage(unittest.TestCase):
         get = mock.AsyncMock(side_effect=[rows_body(2, next_cursor="2"), rows_body(1, start=2)])
         a, b = patched(get)
         with a, b:
-            vm = run(wp.prompts_rows(QueryParams("geography=KR&m=1")))
+            vm = run(wp.prompts_rows(QueryParams("geography=KR")))
         self.assertEqual([r["id"] for r in vm["rows"]], ["w0", "w1", "w2"])
         self.assertEqual(get.call_args_list[1].args[1]["cursor"], "2")
         self.assertEqual(get.call_args_list[0].args[1]["country"], ["KR"])
@@ -179,40 +184,51 @@ class Insights(unittest.TestCase):
 
     def test_counts_of_the_listed_rows(self):
         v = self.insights()
-        self.assertEqual((v["prompts"], v["measured"], v["answers"]), (3, 2, 6))
-        self.assertEqual(v["engines"], [{"engine": "chatgpt", "prompts": 1, "answers": 3}, {"engine": "gemini", "prompts": 2, "answers": 3}])
+        self.assertEqual(v["prompts"], 3)
+        self.assertEqual(v["engines"], ["chatgpt", "gemini"])
         self.assertEqual(v["rounds"], [{"date": "2026-09-25", "prompts": 0}, {"date": "2026-10-02", "prompts": 2}, {"date": "2026-10-09", "prompts": 1}])
-        self.assertEqual(v["lastMeasured"], [{"date": "2026-10-09", "prompts": 1}, {"date": "2026-10-02", "prompts": 1}, {"date": None, "prompts": 1}])
-        self.assertEqual(v["depth"], [{"answers": 0, "prompts": 1}, {"answers": 1, "prompts": 1}, {"answers": 5, "prompts": 1}])
         self.assertEqual(v["engineSets"], [{"engines": [], "prompts": 1}, {"engines": ["chatgpt", "gemini"], "prompts": 1}, {"engines": ["gemini"], "prompts": 1}])
         self.assertEqual(v["markets"], [{"country": "DE", "prompts": 2, "brands": {"Kia": 1, "Hyundai": 1}}, {"country": "KR", "prompts": 1, "brands": {"Kia": 1}}])
-        self.assertEqual(v["brands"][0], {"brand": "Kia", "prompts": 2, "measured": 1, "answers": 5})
-        self.assertEqual(v["langs"], [{"lang": "de", "prompts": 2, "measured": 2, "answers": 6}, {"lang": "ko", "prompts": 1, "measured": 0, "answers": 0}])
-        self.assertEqual(v["sites"][0], {"domain": "kia.com", "prompts": 2, "measured": 1, "answers": 5})
+        self.assertEqual(v["brands"], ["Kia", "Hyundai"])
+        self.assertEqual((v["siteCount"], v["langCount"]), (2, 2))
+
+    def test_the_cards_that_left_send_nothing(self):
+        # 2026-11-02 scoring of the page's charts: the 측정된 프롬프트 · 측정 횟수 · 측정 회차 KPIs and the depth, language
+        # and domain cards left (each repeated another or never moved); the rows keep those values
+        self.assertTrue({"measured", "answers", "roundAxis", "lastMeasured", "depth", "langs", "sites"}.isdisjoint(self.insights()))
 
     def test_the_list_picks_do_not_narrow_the_insights(self):
-        self.assertEqual(self.insights("m=0&eset=none")["prompts"], 3)
+        self.assertEqual(self.insights("miss=2026-10-09&eset=none")["prompts"], 3)
+
+    def test_a_week_without_a_round_is_an_empty_slot(self):
+        # 2026-11-02: the page says 주 1회, and Gold has no job on 2026-07-31; the bars closed the gap up
+        slots = wp.round_slots(["2026-07-24", "2026-08-07", "2026-08-14"], {"2026-07-24": 2, "2026-08-14": 5})
+        self.assertEqual(slots, [{"date": "2026-07-24", "prompts": 2}, {"date": "2026-07-31", "prompts": None},
+                                 {"date": "2026-08-07", "prompts": 0}, {"date": "2026-08-14", "prompts": 5}])
+        self.assertEqual(wp.round_slots(["2026-08-07"], {}), [{"date": "2026-08-07", "prompts": 0}])
+        self.assertEqual(wp.round_slots([], {}), [])
 
 
 D1, D2 = date(2026, 10, 2), date(2026, 10, 9)
 
 
 class ListConn:
-    def __init__(self):
+    def __init__(self, bit=2):
         self.calls = []
+        self.bit = bit
 
     async def fetch(self, sql, *args):
         if "s.site_geo_key" in sql:
             self.moved = sql
             return [{"prompt_key": 7, "geo_key": 119}]
         self.calls.append((sql, args))
-        return [{"prompt_id": "a", "text": "t", "targets": ["kia.com/de/models"], "site_brand_bit": 2, "country": "DE",
+        return [{"prompt_id": "a", "text": "t", "targets": ["kia.com/de/models"], "site_brand_bit": self.bit, "country": "DE",
                  "lang": "DE", "answers": 3, "last_measured": D2, "first_measured": D1, "rounds": [D2, D1],
                  "engines": ["gemini", "chatgpt"], "engine_answers": [1, 2]}]
 
 
-def website_list(qs):
-    conn = ListConn()
+def website_list(qs, bit=2):
+    conn = ListConn(bit)
     ctx = Context(conn, QueryParams("surface=website&" + qs))
     ctx.release = {"release_id": 1, "version": 1, "rule_signature": "test"}
     ctx.dates = [D2, D1]
@@ -244,6 +260,13 @@ class GoldWebsiteList(unittest.TestCase):
         self.assertIn("c.code=ANY(", stats)
         self.assertIn(["gemini"], args)
         self.assertIn([D1], args)
+
+    def test_a_hyundai_n_site_is_named(self):
+        # Gold's site brand bit 16 (hyundai-n.com · .com.cn, 228 prompts): the list and the market table left it blank.
+        # The name only: it stays its own brand, not Hyundai's, and the brand filter keeps Gold's three
+        self.assertEqual(website_list("", bit=16)[0]["data"]["items"][0]["brand_code"], "Hyundai N")
+        self.assertEqual(website_list("", bit=32)[0]["data"]["items"][0]["brand_code"], "")
+        self.assertIn("WHEN 16 THEN 'Hyundai N'", website_list("sort=brand")[1])
 
     def test_the_country_is_where_the_prompt_is_measured(self):
         # 2026-11-02 premise review: one site row can hold several markets. Genesis Saudi Arabia is one project, site

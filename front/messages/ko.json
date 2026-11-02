@@ -4019,58 +4019,42 @@
           "basis": "지금 필터 · 검색 · 렌즈의 목록을 센 값",
           "collapse": "접기",
           "expand": "펼치기",
-          "jump": "좁힌 목록 {count}개 보기",
-          "barTip": "{label} · 프롬프트 {prompts}개 · 측정됨 {measured}개 · 측정 횟수 {answers}"
+          "jump": "좁힌 목록 {count}개 보기"
         },
         "kpi": {
           "prompts": "목록 프롬프트",
           "promptsSub": "타겟 도메인 {sites} · 국가 {countries} · 언어 {langs}",
-          "measured": "측정된 프롬프트",
-          "measuredTip": "측정된 프롬프트만 목록에 남기기",
-          "ofList": "목록의 {pct}",
-          "unmeasured": "미측정 {count}",
-          "unmeasuredTip": "미측정 프롬프트만 목록에 남기기",
-          "answers": "측정 횟수",
-          "rounds": "측정 회차",
-          "roundsValue": "{count}회",
-          "roundsRange": "{from} ~ {to}",
           "latest": "최근 회차 측정",
           "latestTip": "{date} 회차에 측정된 프롬프트만 목록에 남기기",
-          "latestSub": "{date} 회차 · 목록의 {pct}"
+          "latestSub": "{date} 회차 · 목록의 {pct}",
+          "missing": "최근 회차 미측정",
+          "missingTip": "{date} 회차에 측정되지 않은 프롬프트만 목록에 남기기"
         },
         "rounds": {
           "title": "회차별 측정 프롬프트",
-          "info": "회차마다 한 번 이상 측정된 프롬프트 수입니다. 점선은 지금 목록의 프롬프트 수입니다. 막대를 누르면 그 회차에 측정된 프롬프트만 목록에 남습니다.",
+          "info": "회차마다 한 번 이상 측정된 프롬프트 수입니다. 점선은 지금 목록의 프롬프트 수이고, 회차가 없는 주는 빈 칸입니다. 막대를 누르면 그 회차에 측정된 프롬프트만 목록에 남습니다.",
           "listLine": "목록 {count}",
-          "tip": "{date} 회차 · {count}개 측정 (목록의 {pct})"
+          "tip": "{date} 회차 · {count}개 측정 (목록의 {pct})",
+          "gapTip": "{date} · 회차 없음"
         },
-        "depth": {
-          "title": "측정 깊이 · 엔진",
-          "info": "프롬프트별 측정 횟수의 분포와, 프롬프트를 측정한 엔진 조합입니다. 막대나 조합을 누르면 그 프롬프트만 목록에 남습니다.",
-          "tip": "측정 {answers}회 · {count}개 (목록의 {pct})",
-          "sets": "엔진 조합",
+        "engineSets": {
+          "title": "엔진 조합",
+          "info": "프롬프트를 측정한 엔진 조합입니다. 누르면 그 프롬프트만 목록에 남습니다.",
           "noEngine": "엔진 없음 (미측정)",
           "setTip": "{engines} · {count}개 (목록의 {pct})"
         },
         "markets": {
           "title": "시장 커버리지",
-          "info": "사이트 국가와 브랜드별 프롬프트 수입니다. 국가를 누르면 국가 필터에 더하거나 뺍니다.",
+          "info": "국가와 브랜드별 프롬프트 수입니다. ‘·’는 그 조합의 프롬프트가 없다는 뜻입니다. 국가를 누르면 국가 필터에 더하거나 뺍니다.",
+          "chip": "시장 {markets} · 조합 {pairs}",
+          "orderLabel": "시장 표 정렬",
+          "orderGaps": "빈칸 많은 순",
+          "orderPrompts": "프롬프트 많은 순",
           "country": "국가",
           "total": "합계",
-          "legend": "색 진하기 = 가장 큰 칸({max}개)의 ¼ · ½ · ¾ · 전체까지 · ‘·’ = 0개",
           "noBrand": "(이름 없음)",
-          "more": "모두 보기 ({count})",
-          "less": "접기",
           "countryTip": "{country} — 국가 필터에 더하거나 빼기",
           "cellTip": "{country} · {brand} · {count}개"
-        },
-        "langs": {
-          "title": "언어",
-          "info": "언어별 프롬프트 수입니다. 누르면 언어 필터에 더하거나 뺍니다."
-        },
-        "sites": {
-          "title": "타겟 도메인",
-          "info": "타겟 URL의 도메인별 프롬프트 수입니다. 누르면 그 도메인으로 목록을 검색합니다."
         },
         "columns": {
           "market": "시장",
@@ -4084,20 +4068,17 @@
           "label": "목록 좁히기",
           "clear": "모두 해제",
           "remove": "{label} 빼기",
-          "m1": "측정됨",
-          "m0": "미측정",
           "rd": "{date} 회차에 측정",
+          "miss": "{date} 회차에 미측정",
           "last": "{date}",
           "lastNone": "미측정",
           "eset": "{engines}",
           "esetNone": "엔진 없음",
-          "ans": "{count}회",
           "key": {
-            "m": "측정",
             "rd": "회차",
+            "miss": "회차",
             "last": "마지막 측정",
-            "eset": "엔진 조합",
-            "ans": "측정 횟수"
+            "eset": "엔진 조합"
           }
         },
         "export": {

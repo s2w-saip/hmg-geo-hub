@@ -8,13 +8,16 @@ from zoneinfo import ZoneInfo
 
 from bff.gold_reader.context import AXES, BRAND_NAMES, Context, SQL, envelope, limit, values
 
+# A site's brand: Gold's own brands, and the site brand bit that has no perspective of its own (Gold's virtual code
+# HYUNDAI-N: hyundai-n.com · .com.cn). The name only; it stays a brand apart from Hyundai.
+SITE_BRANDS = {**BRAND_NAMES, 16: "Hyundai N"}
 # Website list order (the screen's sort keys, website_prompts.py SORT_API): empty values last, ties by prompt id.
 # Text sorts by the Unicode root collation: Gold's default (glibc en_US.utf8) leaves Hangul unordered.
 ICU = 'COLLATE "und-x-icu"'
 WEBSITE_SORT = {"prompt": f"p.text {ICU}", "country": f"c.code {ICU}", "lang": f"lower(l.code) {ICU}",
                 "target_url": f"p.targets[1] {ICU}", "answers": "coalesce(stats.answers,0)", "last_measured": "stats.last_measured",
                 "first_measured": "stats.first_measured", "rounds": "coalesce(cardinality(stats.rounds),0)",
-                "brand": f"CASE dp.site_brand_bit {' '.join(f'WHEN {bit} THEN {name!r}' for bit, name in BRAND_NAMES.items())} END {ICU}"}
+                "brand": f"CASE dp.site_brand_bit {' '.join(f'WHEN {bit} THEN {name!r}' for bit, name in SITE_BRANDS.items())} END {ICU}"}
 
 
 
@@ -118,7 +121,7 @@ async def prompts(ctx: Context) -> dict:
             # gathered unordered (an ordered aggregate sorted 225k rows: +0.3 s on the whole list)
             engines = sorted(zip(r["engines"] or [], r["engine_answers"] or []))
             items.append({"website_prompt_id": r["prompt_id"], "scope_prompt_id": r["prompt_id"], "prompt_text": r["text"],
-                          "brand_code": BRAND_NAMES.get(r["site_brand_bit"], ""), "country_code": r["country"] or "",
+                          "brand_code": SITE_BRANDS.get(r["site_brand_bit"], ""), "country_code": r["country"] or "",
                           "lang_code": (r["lang"] or "").lower(), "target_url": target,
                           "domain": target_host(target),
                           "owned_base_url": None, "measured": bool(r["answers"]), "answers": r["answers"],
