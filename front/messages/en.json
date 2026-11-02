@@ -4262,13 +4262,15 @@
       "mention": {
         "title": "Website mention",
         "cards": {
-          "title": "KPI breakdown",
-          "desc": "The answer, prompt and mention counts behind the four KPI tabs below. Click a group title to open that KPI.",
+          "title": "KPIs",
+          "desc": "Pick a cell and the sections below show that KPI. The counts in a cell show the answers, prompts and mentions it rests on.",
           "chipAsOf": "As of {date}",
           "chipDelta": "Change = vs previous round ({date})",
           "chipDeltaPeriod": "Change = vs the cumulative total at the first measurement in range ({date})",
           "openKpi": "Open {kpi}",
-          "openMissing": "Show the {count} prompts without us"
+          "openMissing": "Show the {count} prompts without us",
+          "brands": "Brand detail",
+          "brandsHint": "Brands named alongside"
         },
         "missing": {
           "title": "Prompts without our brand",
@@ -4285,7 +4287,11 @@
           "search": "Search prompts",
           "noMatch": "No prompt matches the search.",
           "empty": "Every measured prompt names our brand under these filters.",
-          "order": "Prompts with the most brand mentions first."
+          "order": "Prompts with the most brand mentions first.",
+          "partial": "Some engines only",
+          "partialHint": "Prompts where one AI engine names us and another does not. They are not in the missing count above.",
+          "partialEngines": "Missing on {engines}",
+          "target": "Target page"
         },
         "weekly": {
           "title": "Weekly brand mentions",
@@ -4293,10 +4299,70 @@
           "chip": "wk {from} – wk {to} · {n} weeks",
           "weekOf": "wk {d}",
           "brand": "Brand",
-          "trend": "Weekly trend",
           "latest": "Latest week",
           "delta": "vs previous week",
           "gapNote": "A break in a line is a week without collection."
+        },
+        "summary": {
+          "how": "Restates this page's values (no new data), in a fixed order: market, missing prompts, engine, favorability. The market line names where the answers naming us fell and rose most. No threshold filters or ranks them.",
+          "tagMarket": "Market",
+          "tagMissing": "Missing",
+          "tagEngine": "AI engine",
+          "tagFavor": "Favorability",
+          "marketMoves": "Answers naming us — {down} {downDelta}, {up} {upDelta}",
+          "marketOne": "{country}: answers naming us {delta}",
+          "marketFlat": "No market changed in answers naming us",
+          "missing": "{count} prompts without us — {withBrands} name another brand · {noBrands} name none",
+          "engine": "Exposure by engine — {list}",
+          "favor": "Positive signals {pct} ({delta}) · negative {neg}",
+          "favorFlat": "Positive signals {pct} · negative {neg}"
+        },
+        "ownTrend": {
+          "exposure": "Our exposure trend",
+          "sov": "Our share trend"
+        },
+        "markets": {
+          "title": "By market",
+          "desc": "Where we drop out and who appears instead. A country adds to the filter; a missing count opens its prompts.",
+          "card": "{kpi} by market",
+          "orderLabel": "Market table order",
+          "orderRivals": "Most naming other brands",
+          "orderDrop": "Largest fall",
+          "orderLow": "Lowest value",
+          "orderAnswers": "Most answers",
+          "country": "Country",
+          "value": "Value",
+          "delta": "Change",
+          "missing": "Missing prompts",
+          "withBrands": "Naming other brands",
+          "noBrand": "Answers naming no brand",
+          "answers": "Answers",
+          "rival": "Top rival (exposure)",
+          "countryTip": "{country} — add to or remove from the country filter",
+          "openMissing": "See {country}'s {count} missing prompts",
+          "noteBrand": "Brand columns read Hyundai, Kia and Genesis. Hyundai N sites count in the value column only, so the three may not match it.",
+          "noteNoBrand": "Answers naming no brand: answers with no brand mention counted (Gold `ment_total = 0`).",
+          "noteUnmeasured": "{n} markets without answers are not listed.",
+          "empty": "No market values under these filters."
+        },
+        "engines": {
+          "title": "By AI engine",
+          "colEngine": "AI engine",
+          "colRounds": "Rounds measured",
+          "rounds": "{n}",
+          "colTrend": "Trend"
+        },
+        "compare": {
+          "title": "Us vs a compare brand",
+          "desc": "Picking a compare brand changes this table, the trend and the type mix together.",
+          "role": "Role",
+          "roleOurs": "Us",
+          "roleTarget": "Compare",
+          "rolePeer": "Reference",
+          "brand": "Brand",
+          "trendTitle": "Compare brand trend",
+          "typeTitle": "Mentions by type",
+          "failed": "Could not load the comparison."
         }
       },
       "conversion": {

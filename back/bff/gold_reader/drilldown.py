@@ -64,23 +64,55 @@ async def mention_prompts(ctx: Context) -> dict:
                           "next_cursor": str(offset + page_limit) if rows and offset + page_limit < rows[0]["total_rows"] else None})
 
 
+async def market_gaps(ctx: Context) -> dict:
+    """Per country, what the renewal Website Mention's market table shows beside the rates (2026-11-02): the 미언급
+    prompts (as missing_prompts, those whose answers hold other brands apart) and the answers that name no brand at all
+    (answer_fact.ment_total = 0). The last holds answers the AI named no brand in and answers Gold's analysis came back
+    empty for, which Gold does not tell apart (upstream D8). None without a snapshot or period, as the counts."""
+    if not ctx.selected_dates:
+        return envelope(ctx, {"items": []}, suppressed={"*": "no_snapshot"})
+    b = SQL()
+    cell_where = ctx.predicate(b, population="mentions", perspective=True)
+    answer_where = ctx.predicate(b, alias="a", family="fact") + " AND a.std_in"
+    rows = await ctx.conn.fetch(f"""WITH miss AS (SELECT f.geo_key,f.prompt_key FROM gold.kpi_cell f WHERE {cell_where}
+        GROUP BY f.geo_key,f.prompt_key HAVING bool_or(f.has_measured) AND NOT bool_or(f.has_mention)),
+        ans AS MATERIALIZED (SELECT a.geo_key,a.prompt_key,coalesce(a.ment_total,0) AS ment FROM gold.answer_fact a WHERE {answer_where}),
+        said AS (SELECT geo_key,prompt_key,sum(ment) AS ment FROM ans GROUP BY geo_key,prompt_key),
+        empty AS (SELECT geo_key,count(*)::int AS n FROM ans WHERE ment=0 GROUP BY geo_key)
+        SELECT c.code,count(m.prompt_key)::int AS missing,count(m.prompt_key) FILTER(WHERE s.ment>0)::int AS with_brands,
+            coalesce(e.n,0)::int AS answers_no_brand
+        FROM (SELECT DISTINCT geo_key FROM ans) g JOIN gold.dim_country c USING(geo_key) LEFT JOIN empty e USING(geo_key)
+        LEFT JOIN miss m ON m.geo_key=g.geo_key LEFT JOIN said s ON s.geo_key=m.geo_key AND s.prompt_key=m.prompt_key
+        GROUP BY c.code,e.n""", *b.args)
+    return envelope(ctx, {"items": [{"country": r["code"], "missing": r["missing"], "with_brands": r["with_brands"],
+                                     "answers_no_brand": r["answers_no_brand"]} for r in rows]})
+
+
 async def missing_prompts(ctx: Context) -> dict:
     """The measured prompts where 당사 is in no answer: the members of the summary's params.prompts_without_brand
     (measured − mentioned prompts of the same kpi_cell rows, population and perspective), 2026-10-30 for the renewal
-    Website Mention's 미언급 프롬프트 list. Each carries its answers in the window, the brand mentions those answers
-    hold (answer_fact.ment_total summed: the brands the AI named instead) and its latest answer references; the
-    prompts with the most brand mentions first. None without a snapshot or period, as the count."""
+    Website Mention's 미언급 프롬프트 list. Each carries its target page, its answers in the window, the brand mentions
+    those answers hold (answer_fact.ment_total summed: the brands the AI named instead) and its latest answer
+    references; the prompts with the most brand mentions first. None without a snapshot or period, as the count.
+    ?partial: the prompts 당사 is in on one engine and not on another instead (2026-11-02: the count leaves them out,
+    though the page is missing there too), with the engines that left it out."""
     page_limit, offset = limit(ctx.q), max(0, int(ctx.q.get("cursor") or 0))
     if not ctx.selected_dates:
         return envelope(ctx, {"items": []}, suppressed={"*": "no_snapshot"}, page={"limit": page_limit, "total": 0, "next_cursor": None})
     b = SQL()
     cell_where = ctx.predicate(b, population="mentions", perspective=True)
     answer_where = ctx.predicate(b, alias="a", family="fact") + " AND a.std_in"
-    rows = await ctx.conn.fetch(f"""WITH miss AS (SELECT f.prompt_key FROM gold.kpi_cell f WHERE {cell_where}
-        GROUP BY f.prompt_key HAVING bool_or(f.has_measured) AND NOT bool_or(f.has_mention)),
+    cells = f"""FROM gold.kpi_cell f JOIN gold.dim_engine e USING(engine_key) WHERE {cell_where} GROUP BY f.prompt_key"""
+    left_out = """HAVING bool_or(f.has_mention)
+        AND count(DISTINCT f.engine_key) FILTER(WHERE f.has_measured)>count(DISTINCT f.engine_key) FILTER(WHERE f.has_mention)"""
+    having = left_out if flag(ctx.q, "partial") else "HAVING bool_or(f.has_measured) AND NOT bool_or(f.has_mention)"
+    rows = await ctx.conn.fetch(f"""WITH miss AS (SELECT f.prompt_key,
+            array_agg(DISTINCT e.code) FILTER(WHERE f.has_measured) AS measured_engines,
+            array_agg(DISTINCT e.code) FILTER(WHERE f.has_mention) AS mentioned_engines {cells} {having}),
         sums AS (SELECT a.prompt_key,count(*)::int AS answers,coalesce(sum(a.ment_total),0)::bigint AS brand_mentions
             FROM gold.answer_fact a WHERE {answer_where} AND a.prompt_key IN (SELECT prompt_key FROM miss) GROUP BY a.prompt_key)
-        SELECT p.prompt_key,p.prompt_id,p.text,ft.code AS funnel,coalesce(s.answers,0) AS answers,
+        SELECT p.prompt_key,p.prompt_id,p.text,p.targets[1] AS target,miss.measured_engines,miss.mentioned_engines,
+            ft.code AS funnel,coalesce(s.answers,0) AS answers,
             coalesce(s.brand_mentions,0) AS brand_mentions,count(*) OVER()::int AS total_rows,
             count(*) FILTER(WHERE coalesce(s.brand_mentions,0)>0) OVER()::int AS with_brand_rows
         FROM miss JOIN gold.dim_prompt p USING(prompt_key) LEFT JOIN sums s USING(prompt_key)
@@ -100,13 +132,17 @@ async def missing_prompts(ctx: Context) -> dict:
         refs[r["prompt_key"]].append({"job_id": str(r["job_id"]), "engine": r["engine"], "region": r["region"],
                                       "measured_at": r["measured_at"]})
     items = [{"prompt_id": str(r["prompt_id"]), "prompt_text": r["text"], "funnel_code": r["funnel"],
-              "answers_total": r["answers"], "brand_mentions": r["brand_mentions"],
+              "target_url": r["target"], "answers_total": r["answers"], "brand_mentions": r["brand_mentions"],
+              "missing_engines": sorted(set(r["measured_engines"] or ()) - set(r["mentioned_engines"] or ())),
               "providers": sorted({x["engine"] for x in refs[r["prompt_key"]]}),
               "answers": refs[r["prompt_key"]][:answers_limit]} for r in rows]
     total = rows[0]["total_rows"] if rows else 0
     # the segments over every member, not the loaded page (a list cut at its limit drops the no-brand prompts first)
     with_brands = rows[0]["with_brand_rows"] if rows else 0
-    return envelope(ctx, {"items": items, "counts": {"with_brands": with_brands, "no_brands": total - with_brands}},
+    c = SQL()
+    partial = await ctx.conn.fetch(f"""SELECT count(*)::int AS n FROM (SELECT 1
+        FROM gold.kpi_cell f WHERE {ctx.predicate(c, population="mentions", perspective=True)} GROUP BY f.prompt_key {left_out}) x""", *c.args)
+    return envelope(ctx, {"items": items, "counts": {"with_brands": with_brands, "no_brands": total - with_brands, "partial": partial[0]["n"]}},
                     page={"limit": page_limit, "total": total,
                           "next_cursor": str(offset + page_limit) if offset + page_limit < total else None})
 

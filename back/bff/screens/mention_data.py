@@ -33,7 +33,7 @@ from bff.access import reader_scope
 from bff.screens._competitors import rank_first_position_rows
 from bff.screens._compare import fetch_period_compare_api, prev_period_filters
 from bff.screens._convert import as_of_date, pct1_or_zero, rank_avg, round1, suppression_of, whole_suppression
-from bff.screens._filters import read_standard_filters
+from bff.screens._filters import load_website_prompt_options, read_standard_filters
 from bff.screens._period import resolve_request_compare_period_shape
 from bff.screens._query import analysis_query, to_api_params
 from bff.screens._sort import code_unit_key
@@ -510,6 +510,36 @@ def mentions_degraded(ctx: dict) -> dict:
 async def _brands_or_none(filters: dict, ctx: dict) -> dict | None:
     res = await degrade_on_api_failure(f"{ctx['surface']}Mentions", lambda: fetch_mention_brands(filters, ctx))
     return None if not res or whole_suppression(res["meta"]) else res
+
+
+async def _geo_countries(filters: dict, ctx: dict, extra: dict | None, brand: str | None = None) -> dict | None:
+    """The countries of /v1/geo (the Overview market table's read, the page's live cells here) by code; None = failed.
+    `brand` goes on the read itself: the query leaves a scoped account's brands out (access.clamp adds the whole scope)."""
+    params = {**query_params(filters, _qctx(ctx), extra), **({"brand": [brand]} if brand else {})}
+    res = await degrade_on_api_failure("websiteMarkets", lambda: api.get("geo", params))
+    return {c["code"]: c for m in res["data"]["markets"] for c in m["countries"]} if res else None
+
+
+async def load_market_reads(filters: dict, ctx: dict, brands: list[str]) -> dict:
+    """What mention/rn-markets joins: this window and the one before (a snapshot: the round before; a closed period: the
+    period before; an open one has none) for the page's own filters and for each brand column, and the 미언급 counts."""
+    prev = prev_period_filters(filters)
+    extra = None
+    if prev is None and not (filters.get("dateFrom") or filters.get("dateTo")):
+        prev, extra = filters, {"cycle_offset": 1}
+
+    async def window(f: dict | None, x: dict | None, brand: str | None = None) -> dict | None:
+        return await _geo_countries(f, ctx, x, brand) if f is not None else None
+    cur, before, *by_brand = await asyncio.gather(
+        window(filters, None), window(prev, extra),
+        *(window(filters, None, b) for b in brands),
+        *(window(prev, extra, b) for b in brands))
+    n = len(brands)
+    gaps, options = await asyncio.gather(
+        degrade_on_api_failure("websiteMarkets", lambda: api.get("mentions/market-gaps", query_params(filters, _qctx(ctx)))),
+        degrade_on_api_failure("websiteMarkets", load_website_prompt_options))
+    return {"cur": cur, "prev": before, "brands": {b: {"cur": by_brand[i], "prev": by_brand[n + i]} for i, b in enumerate(brands)},
+            "gaps": {g["country"]: g for g in gaps["data"]["items"]} if gaps else {}, "countries": (options or {}).get("geographyOptions") or []}
 
 
 async def load_own_sum(filters: dict, ctx: dict) -> list[str]:

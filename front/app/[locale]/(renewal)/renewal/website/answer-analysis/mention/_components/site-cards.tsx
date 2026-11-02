@@ -1,21 +1,23 @@
 "use client";
 
-import { Suspense, use, useState } from "react";
+import { Suspense, use, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { ChevronRight } from "lucide-react";
-import { RnBasisChip, RnCard, RnCardHead, RnSkeleton, RnToneChip, cx, type RnTone } from "@/components/renewal-ui";
+import { RnBasisChip, RnCard, RnCardHead, RnSkeleton, RnSparkline, RnToneChip, cx, type RnTone } from "@/components/renewal-ui";
 import type { KpiTab } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/kpi-tab";
 import type { MentionViewScreen, SummaryDelta } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/mention-screen";
+import { posTxt } from "../../../../standard/answer-analysis/mention/_components/mention-context";
 import { InfoTip, useDegradedText } from "../../../../standard/answer-analysis/mention/_components/mention-kit";
-import { KPI_QUESTION, useMentionPage } from "../../../../standard/answer-analysis/mention/_components/mention-tabs";
+import { KPI_QUESTION, TabDelta, useMentionPage } from "../../../../standard/answer-analysis/mention/_components/mention-tabs";
 import { RnMissingPrompts } from "./missing-prompts";
 
-// KPI 세부 지표 (2026-10-30): every count the legacy website Mention showed — its six summary cards and the
-// sentiment card's signal counts (mentions-view.tsx) — kept on the renewal page and set under the KPI tab each one
-// explains, so a KPI reads with its base: 노출률 with the prompts measured and the prompts without 당사, 점유율
-// with all mentions, the brands in the field and the multi-mention answers, 우호도 with the signal counts, 우선
-// 노출도 with the Top 3 share. A group title opens its KPI; the 미언급 count opens its prompt list. Values, Δ and the
-// Δ basis come from mention/view-cards (back/bff/screens/mention_surfaces.py), the legacy page's reads.
+// The KPI cells (2026-11-02): the page's picker, the KPI tabs and the KPI breakdown in one card. A cell shows its KPI
+// (value, Δ, a small line) over every count the legacy website Mention showed for it — its six summary cards and the
+// sentiment card's signal counts (mentions-view.tsx): 노출률 with the prompts measured and the prompts without 당사, 점유율
+// with all mentions, the brands in the field and the multi-mention answers, 우호도 with the signal counts, 우선 노출도
+// with the Top 3 share. A cell's head picks the KPI (`?kpi=`) for the sections below, 브랜드 상세 at the card's head is the
+// view of its own; the 미언급 count opens its prompt list. Counts, their Δ and the Δ basis come from mention/view-cards
+// (back/bff/screens/mention_surfaces.py), the legacy page's reads; the value and Δ from the KPI tabs' screens.
 // Design pass (2026-10-30, W6): the head says only what 이번 회차 요약 above does not — the Δ basis with its date,
 // and the cards' own date when it is not the page's — and each count is one row (label · value · Δ), so a group
 // with one count leaves little empty under it.
@@ -36,15 +38,17 @@ export const KPI_GROUPS: ReadonlyArray<{ kpi: KpiTab; cards: readonly CardKey[] 
   { kpi: "first-rank", cards: ["top3Rate"] },
 ];
 
+const GRID = "grid grid-cols-2 gap-2 @min-[960px]/rnpage:grid-cols-4";
+
 export function RnSiteCards({ cards, period, pageAsOf }: { cards: Promise<RnSiteCardsVM>; period: boolean; pageAsOf: Promise<string | null> | null }) {
   const t = useTranslations("renewal.website.mention.cards");
   return (
     <RnCard id="sec-site-cards" aria-label={t("title")}>
       <Suspense
         fallback={
-          <div className="grid grid-cols-2 gap-2 px-6 py-4 @min-[960px]/rnpage:grid-cols-4 [.rn-dense_&]:px-4.5">
+          <div className={cx(GRID, "px-6 py-4 [.rn-dense_&]:px-4.5")}>
             {KPI_GROUPS.map((g) => (
-              <RnSkeleton key={g.kpi} className="h-[132px] w-full" />
+              <RnSkeleton key={g.kpi} className="h-[176px] w-full" />
             ))}
           </div>
         }
@@ -68,7 +72,7 @@ function Cards({ cards, period, pageAsOf }: { cards: Promise<RnSiteCardsVM>; per
   const tQ = useTranslations("dashboard.kpi.question");
   const dg = useDegradedText();
   const locale = useLocale();
-  const { input, kpi, view, setKpi } = useMentionPage();
+  const { input, kpi, view, setKpi, showBrands } = useMentionPage();
   const [missingOpen, setMissingOpen] = useState(false);
   const vm = use(cards);
   const asOf = pageAsOf ? use(pageAsOf) : null;
@@ -107,8 +111,24 @@ function Cards({ cards, period, pageAsOf }: { cards: Promise<RnSiteCardsVM>; per
             </>
           ) : undefined
         }
+        controls={
+          <button
+            type="button"
+            data-rn-kgroup="brands"
+            title={t("brandsHint")}
+            onClick={showBrands}
+            aria-pressed={view === "brands"}
+            className={cx(
+              "group/kg inline-flex h-8 cursor-pointer items-center gap-0.5 rounded-lg px-3 text-rn-12 font-bold focus-visible:outline-2 focus-visible:outline-rn-navy",
+              view === "brands" ? "bg-rn-navy text-white" : "bg-rn-page text-rn-ink hover:bg-rn-navy-25",
+            )}
+          >
+            {t("brands")}
+            <ChevronRight aria-hidden className="size-3.5 opacity-60 group-hover/kg:opacity-100" />
+          </button>
+        }
       />
-      <div className="grid grid-cols-2 gap-2 px-6 pb-3 @min-[960px]/rnpage:grid-cols-4 [.rn-dense_&]:px-4.5">
+      <div className={cx(GRID, "px-6 pb-3 [.rn-dense_&]:px-4.5")}>
         {KPI_GROUPS.map((g) => {
           const on = view === "kpi" && kpi === g.kpi;
           return (
@@ -121,14 +141,25 @@ function Cards({ cards, period, pageAsOf }: { cards: Promise<RnSiteCardsVM>; per
               <button
                 type="button"
                 onClick={() => setKpi(g.kpi)}
+                aria-pressed={on}
                 aria-label={t("openKpi", { kpi: tTab(g.kpi) })}
-                className="group/kg flex cursor-pointer flex-col items-start gap-0.5 rounded-t-lg border-b border-rn-line px-3.5 pt-2.5 pb-2 text-left hover:bg-rn-navy-25 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rn-navy"
+                className="group/kg flex w-full cursor-pointer flex-col items-stretch gap-0.5 rounded-t-lg border-b border-rn-line px-3.5 pt-2.5 pb-2 text-left hover:bg-rn-navy-25 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rn-navy"
               >
                 <span className={cx("inline-flex items-center gap-0.5 text-rn-13 font-bold", on ? "text-rn-navy" : "text-rn-ink")}>
                   {tTab(g.kpi)}
                   <ChevronRight aria-hidden className="size-3.5 opacity-60 group-hover/kg:opacity-100" />
                 </span>
                 <span className="text-rn-11 text-rn-muted">{tQ(KPI_QUESTION[g.kpi] as "coverage")}</span>
+                <span className="mt-1 flex items-center gap-2">
+                  <Suspense fallback={<RnSkeleton className="h-6 w-20" />}>
+                    <KpiValue k={g.kpi} />
+                  </Suspense>
+                  <span className="min-w-0 flex-1">
+                    <Suspense fallback={null}>
+                      <KpiLine k={g.kpi} />
+                    </Suspense>
+                  </span>
+                </span>
               </button>
               <dl className="m-0 flex flex-col gap-1 px-3.5 py-2">
                 {g.cards.map((k) => (
@@ -150,6 +181,33 @@ function Cards({ cards, period, pageAsOf }: { cards: Promise<RnSiteCardsVM>; per
       {missing > 0 ? <RnMissingPrompts open={missingOpen} onClose={() => setMissingOpen(false)} ownLabel={input.ownLabel} /> : null}
     </>
   );
+}
+
+/** The KPI's value and its Δ (the tabs' screens). */
+function KpiValue({ k }: { k: KpiTab }) {
+  const { input } = useMentionPage();
+  const tRank = useTranslations("renewal.mention.rank");
+  const { value } = use(input.tabValue[k]);
+  return (
+    <span className="flex flex-col whitespace-nowrap tabular-nums">
+      <b className="text-rn-20 leading-tight font-bold text-rn-ink">{value == null ? "—" : k === "first-rank" ? tRank("unit", { n: posTxt(value) }) : `${value.toFixed(1)}%`}</b>
+      <span className="text-rn-11">
+        <Suspense fallback={null}>
+          <TabDelta k={k} />
+        </Suspense>
+      </span>
+    </span>
+  );
+}
+
+/** The KPI's line, 당사 only: the shape of the rounds; the section below shows the values. */
+function KpiLine({ k }: { k: KpiTab }): ReactNode {
+  const { input } = useMentionPage();
+  const rate = use(input.rateHero);
+  const favor = use(input.favorHero);
+  const rank = use(input.rank);
+  const values = k === "favorability" ? favor.points.map((p) => p.positive) : k === "first-rank" ? rank.hero.series : rate[k].trend.own;
+  return <RnSparkline values={values} invert={k === "first-rank"} className="h-[28px] w-full" />;
 }
 
 /** Label and definition of a count: the summary cards' own, the sentiment card's signal counts. */

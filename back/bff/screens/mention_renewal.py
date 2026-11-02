@@ -25,9 +25,10 @@ from functools import cmp_to_key
 from itertools import combinations
 from typing import Any
 
+from bff.access import BRANDS, reader_scope
 from bff.screens import screen, split_context
 from bff.screens._competitors import competitor_value_of
-from bff.screens._convert import Exact, delta1, exact
+from bff.screens._convert import Exact, delta1, exact, pct1_or_null, rank_avg
 from bff.screens._convert import round1 as _exact_round1
 from bff.screens._js import js_round
 from bff.screens._period import kst_today, period_caption, to_period_delta_view
@@ -1494,6 +1495,67 @@ async def rn_rank(q) -> dict:
 async def rn_bump(q) -> dict:
     _, filters, ctx = _begin(q)
     return bump_payload(await _md().load_brand_trend(filters, ctx, pin_top=True))
+
+
+def market_values(own: dict) -> dict:
+    """The page's four KPIs from a /v1/geo row's own block (num / den, sum / count)."""
+    return {"exposure": pct1_or_null(own.get("visibility")), "sov": pct1_or_null(own.get("share_of_voice")),
+            "favorability": pct1_or_null(own.get("sentiment")), "first-rank": rank_avg(own.get("position"))}
+
+
+def _market_cell(row: dict | None, prev: dict | None) -> dict | None:
+    """A brand column's cell: the KPIs and the exposure Δ (the cell the table colours)."""
+    if not row:
+        return None
+    cur, was = market_values(row["own"]), market_values(prev["own"]) if prev else {}
+    return {**cur, "delta": delta1(cur["exposure"], was["exposure"]) if cur["exposure"] is not None and was.get("exposure") is not None else None}
+
+
+def market_row(code: str, row: dict, prev: dict | None, cells: dict, gap: dict | None) -> dict:
+    """A market: the KPIs, their change, the answers that named 당사 and their change, the top rival, the brand cells and the
+    미언급 counts. Gold values and their differences; the row says nothing about why a value moved (upstream D8)."""
+    cur, was = market_values(row["own"]), market_values(prev["own"]) if prev else {}
+    mentioned = (row["own"].get("visibility") or {}).get("num")
+    was_mentioned = ((prev or {}).get("own", {}).get("visibility") or {}).get("num")
+    rival = row.get("top_rival")
+    gap = gap or {}
+    return {"country": code, "answers": row["answers"], "values": cur,
+            "deltas": {k: delta1(v, was[k]) if v is not None and was.get(k) is not None else None for k, v in cur.items()},
+            "mentioned": mentioned, "mentionedDelta": mentioned - was_mentioned if mentioned is not None and was_mentioned is not None else None,
+            "rival": {"brand": rival["brand"], "exposure": pct1_or_null((rival.get("metrics") or {}).get("visibility"))} if rival else None,
+            "brands": cells, "missing": gap.get("missing", 0), "missingWithBrands": gap.get("with_brands", 0), "noBrandAnswers": gap.get("answers_no_brand", 0)}
+
+
+def market_brands(filters: dict, scope: dict) -> list[str]:
+    """The brand columns: the brands the account may read and the page's brand filter leaves, two or more. A brand outside
+    the scope is not read at all: access.clamp would answer it with a brand of the scope."""
+    allowed = list(BRANDS) if scope.get("all") else [b for b in scope.get("brands") or () if b in BRANDS]
+    asked = [b for b in filters.get("brand") or [] if b in BRANDS]
+    cols = [b for b in allowed if not asked or b in asked]
+    return cols if len(cols) > 1 else []
+
+
+def markets_payload(reads: dict, brands: list[str], geography_picked: bool) -> dict:
+    cur = reads["cur"]
+    if cur is None:
+        return {"brands": brands, "rows": [], "unmeasured": 0, "degraded": True}
+    prev = reads["prev"] or {}
+    by_brand = reads["brands"]
+    rows = [market_row(code, row, prev.get(code),
+                       {b: _market_cell((by_brand[b]["cur"] or {}).get(code), (by_brand[b]["prev"] or {}).get(code)) for b in brands},
+                       reads["gaps"].get(code)) for code, row in cur.items()]
+    unmeasured = 0 if geography_picked else len(set(reads["countries"]) - set(cur))
+    return {"brands": brands, "rows": rows, "unmeasured": unmeasured, "degraded": False}
+
+
+@screen("mention/rn-markets")
+async def rn_markets(q) -> dict:
+    """The Website Mention's market table (2026-11-02, docs/handoff/website-mention-redesign.md): every market's KPIs from
+    the read the Overview's market table uses, beside the window before, a column per brand and the 미언급 counts."""
+    _, filters, ctx = _begin(q)
+    brands = market_brands(filters, reader_scope())
+    reads = await _md().load_market_reads(filters, ctx, brands)
+    return markets_payload(reads, brands, bool(filters.get("websiteCountry")))
 
 
 @screen("mention/rn-ranking")

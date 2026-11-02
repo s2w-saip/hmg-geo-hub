@@ -29,6 +29,7 @@ async def dispatch(path, ctx):
                 "answers": answers.listing, "geo": advanced.geo, "mentions/types": advanced.types,
                 "kpi/compare": compare.read, "mentions/prompts": drilldown.mention_prompts,
                 "mentions/missing-prompts": drilldown.missing_prompts,
+                "mentions/market-gaps": drilldown.market_gaps,
                 "citations/prompts": drilldown.citation_prompts, "citations/sources/tone": drilldown.tone}
     if path == "gold/projects":
         return await projects.listing(ctx)

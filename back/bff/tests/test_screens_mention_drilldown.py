@@ -215,7 +215,27 @@ class MissingPrompts(unittest.TestCase):
                     "meta": {"page": {"limit": 1000, "total": 1053, "next_cursor": "1000"}}}
         with mock.patch("bff.api.get", get):
             got = run(md.missing_prompts(params([["engine", "gemini"], ["surface", "website"]])))
-        self.assertEqual((got["body"]["total"], got["body"]["counts"]), (1053, {"withBrands": 980, "noBrands": 73}))
+        self.assertEqual((got["body"]["total"], got["body"]["counts"]), (1053, {"withBrands": 980, "noBrands": 73, "partial": 0}))
+
+    def test_a_row_carries_its_page_and_the_partial_list_is_asked_for(self):
+        """2026-11-02: the page to fix is what a marketer acts on; a prompt one engine left out is a list of its own."""
+        seen = []
+
+        async def get(path, params=None):
+            seen.append(dict(params or {}))
+            return {"data": {"items": [{"prompt_id": "p1", "prompt_text": "Q?", "target_url": "kia.com/us/ev6", "missing_engines": ["gemini"],
+                                        "answers_total": 2, "brand_mentions": 3, "providers": ["gemini"], "answers": []}],
+                             "counts": {"with_brands": 1, "no_brands": 2, "partial": 7}},
+                    "meta": {"page": {"limit": 1000, "total": 3, "next_cursor": None}}}
+        with mock.patch("bff.api.get", get):
+            whole = run(md.missing_prompts(params([["surface", "website"]])))
+            partial = run(md.missing_prompts(params([["surface", "website"], ["partial", "1"]])))
+        self.assertNotIn("partial", seen[0])
+        self.assertIs(seen[1]["partial"], True)
+        row = whole["body"]["prompts"][0]
+        self.assertEqual((row["targetUrl"], row["missingEngines"]), ("kia.com/us/ev6", ["Gemini"]))
+        self.assertEqual(whole["body"]["counts"], {"withBrands": 1, "noBrands": 2, "partial": 7})
+        self.assertEqual(partial["status"], 200)
 
     def test_refusals_are_empty_lists(self):
         for status, code in ((403, 200), (404, 200), (422, 400)):

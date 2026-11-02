@@ -32,7 +32,8 @@ function useRank() {
   return use(input.rank);
 }
 
-export function RankHeroCard() {
+/** `plain` (the Website page): the value and its line, without the rivals' track and table place. */
+export function RankHeroCard({ plain = false }: { plain?: boolean }) {
   const { ownLabel, lit, hover, tables } = useMention();
   const { compare, colorOf } = useCompare();
   const t = useTranslations("renewal.mention.rank");
@@ -88,32 +89,40 @@ export function RankHeroCard() {
         <dl className="m-0 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-rn-line pt-3">
           {/* without a 당사 position the screen sends no counts (null → "—", not "0개") */}
           <Stat label={t("ranked")} value={hero.rankedAnswers == null ? "—" : t("count", { n: numTxt(hero.rankedAnswers, locale) })} />
-          <Stat
-            label={
-              <>
-                {t("ahead")}
-                <InfoTip label={t("ahead")} items={[[t("ahead"), t("aheadTip")]]} />
-              </>
-            }
-            value={ahead == null ? "—" : t("count", { n: ahead })}
-          />
-          <Stat
-            label={
-              <>
-                {t("standing")}
-                {standing ? <InfoTip label={t("standing")} items={[[t("standing"), t("standingTip", { n: standing.total })]]} /> : null}
-              </>
-            }
-            value={standing ? `${tFR("unit", { n: standing.rank })} · ${tFR("topPct", { pct: standing.topPct })}` : "—"}
-          />
+          {plain ? null : (
+            <>
+              <Stat
+                label={
+                  <>
+                    {t("ahead")}
+                    <InfoTip label={t("ahead")} items={[[t("ahead"), t("aheadTip")]]} />
+                  </>
+                }
+                value={ahead == null ? "—" : t("count", { n: ahead })}
+              />
+              <Stat
+                label={
+                  <>
+                    {t("standing")}
+                    {standing ? <InfoTip label={t("standing")} items={[[t("standing"), t("standingTip", { n: standing.total })]]} /> : null}
+                  </>
+                }
+                value={standing ? `${tFR("unit", { n: standing.rank })} · ${tFR("topPct", { pct: standing.topPct })}` : "—"}
+              />
+            </>
+          )}
         </dl>
       </div>
       <div className="flex min-w-0 flex-col gap-2">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <h3 className="m-0 text-rn-13 font-bold text-rn-ink">{t("trackTitle")}</h3>
-          <span className="text-rn-12 text-rn-muted">{t("trackNote")}</span>
-        </div>
-        <Track rows={rows} track={vm.track} />
+        {plain ? null : (
+          <>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <h3 className="m-0 text-rn-13 font-bold text-rn-ink">{t("trackTitle")}</h3>
+              <span className="text-rn-12 text-rn-muted">{t("trackNote")}</span>
+            </div>
+            <Track rows={rows} track={vm.track} />
+          </>
+        )}
         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
           <h3 className="m-0 text-rn-13 font-bold text-rn-ink">{t("trendTitle")}</h3>
           <InfoTip label={tH("trendNoteLabel")} items={[[tH("trendNoteLabel"), tFR("chartNote")]]} />

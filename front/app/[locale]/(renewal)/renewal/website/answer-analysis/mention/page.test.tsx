@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { isValidElement, type ReactElement } from "react";
 
-// /renewal/website/answer-analysis/mention: the renewal Global Mention's screens (mention/rn-<section>) with
-// ctx.surface=website (+ ctx.admin for an unrestricted account), the shared panel on the website surface with the
+// /renewal/website/answer-analysis/mention: the renewal Mention's screens (mention/rn-<section>) with ctx.surface=website
+// (+ ctx.admin for an unrestricted account) in the page's own body, the shared panel on the website surface with the
 // website axes only (the original page's option reads), and its own saved filter list.
 
 const st = vi.hoisted(() => ({ calls: [] as { name: string; query: Record<string, unknown> }[], all: false }));
@@ -76,8 +76,9 @@ describe("renewal website mention page", () => {
     const sp = { geography: "HYUNDAI-N", brand: "Kia", promptContext: "x", time: "2026-09-01..2026-09-30" };
     const got = await render(sp);
     const reads = queries("mention/");
-    expect(reads.map((c) => c.name)).toEqual(expect.arrayContaining(["mention/rn-page", "mention/rn-shell", "mention/rn-summary", "mention/rn-ranking", "mention/rn-bump", "mention/view-cards", "mention/view-weekly"]));
-    expect(reads.length).toBe(22); // rn-page, rn-asof, 4 tab values, 14 sections, the KPI breakdown and the weekly brand mentions
+    expect(reads.map((c) => c.name)).toEqual(expect.arrayContaining(["mention/rn-page", "mention/rn-shell", "mention/rn-summary", "mention/rn-ranking", "mention/rn-markets", "mention/view-cards", "mention/view-compare", "mention/view-weekly"]));
+    expect(reads.map((c) => c.name)).not.toContain("mention/rn-bump"); // no rank chart on this page
+    expect(reads.length).toBe(23); // rn-page, rn-asof, 4 tab values, 13 sections, the markets, the KPI cells' counts, the head-to-head, the weekly mentions
     for (const c of reads) expect(c.query).toEqual({ ...sp, "ctx.surface": "website", ...(c.query["ctx.kpi"] ? { "ctx.kpi": c.query["ctx.kpi"] } : {}) });
     // the brand axis is not a website axis for a restricted account: the panel options do not narrow by it
     expect(byName("shared/panel-options")).toEqual({ geography: "HYUNDAI-N", time: "2026-09-01..2026-09-30", surface: "website" });
@@ -86,12 +87,14 @@ describe("renewal website mention page", () => {
     expect(filters.props).toMatchObject({ stage: "mention", surface: "website", geographyOptions: ["HYUNDAI-N", "US"], selectableDates: ["2026-10-02", "2026-10-09"] });
     expect((filters.props as Record<string, unknown>).catalogRows).toBeUndefined();
     expect((filters.savedFilters as { page: string }).page).toBe("website-mention");
-    const input = got.get("RnMentionPageProvider")!.input as { filtered: boolean; afterSummary: { props: { period: boolean } }; brandsExtra: { props: { weekly: Promise<unknown> } } };
+    const input = got.get("RnMentionPageProvider")!.input as { filtered: boolean; body: { props: { period: boolean; admin: boolean; reads: Record<string, Promise<unknown>> } } };
     expect(input.filtered).toBe(true);
-    // the legacy website values stay (a legacy KPI is reshaped, never dropped): the KPI breakdown under 이번 회차 요약,
-    // the weekly brand mentions at the end of 브랜드 상세
-    expect(input.afterSummary.props.period).toBe(false);
-    expect(input.brandsExtra.props.weekly).toBeInstanceOf(Promise);
+    // the page's own body over the standard parts; the legacy website values stay (a legacy KPI is reshaped, never
+    // dropped): its counts in the KPI cells, its head-to-head and weekly mentions under 브랜드 상세
+    expect(input.body.props.period).toBe(false);
+    expect(input.body.props.admin).toBe(false);
+    expect(Object.keys(input.body.props.reads).sort()).toEqual(["cards", "compare", "markets", "weekly"]);
+    expect(input.body.props.reads.compare).toBeInstanceOf(Promise);
   });
 
   it("an unrestricted account also gets the brand axis (ctx.admin, panel brand narrowing)", async () => {

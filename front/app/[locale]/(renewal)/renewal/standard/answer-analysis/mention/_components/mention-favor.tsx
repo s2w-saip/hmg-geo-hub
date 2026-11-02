@@ -154,7 +154,7 @@ export function FavorHeroCard() {
   );
 }
 
-function Distribution() {
+export function Distribution() {
   const { input, openDrawer } = useMention();
   const t = useTranslations("renewal.mention");
   const tF = useTranslations("answerAnalysis.mentions.kpi.favorability");
@@ -207,7 +207,7 @@ function Distribution() {
   );
 }
 
-function Matrix() {
+export function Matrix() {
   const { input } = useMention();
   const t = useTranslations("renewal.mention");
   const tF = useTranslations("answerAnalysis.mentions.kpi.favorability");

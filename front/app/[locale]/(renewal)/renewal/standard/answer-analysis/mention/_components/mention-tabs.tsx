@@ -270,7 +270,7 @@ function TabValue({ k }: { k: KpiTab }) {
 }
 
 // Δ as text, not a chip (a chip row reads as a KPI summary): arrow = direction, ink = better / worse.
-function TabDelta({ k }: { k: KpiTab }) {
+export function TabDelta({ k }: { k: KpiTab }) {
   const { input } = useMentionPage();
   const delta = use(input.tabDeltas)[k];
   const t = useTranslations("renewal.mention.delta");

@@ -248,14 +248,15 @@ const ASC_KEYS: SortKey[] = ["brand", "rank", "avgPosition"];
 /** A ranking row with the values of the multi toggle state. */
 type RankRow = RankingRow & { v: RankingValues };
 
-/** `initialView` · `initialQuery`: render-test seams (the card opens on the treemap, the search box empty). */
-export function BrandRanking({ initialView = "map", initialQuery = "" }: { initialView?: "map" | "table"; initialQuery?: string } = {}) {
+/** `initialView` · `initialQuery`: render-test seams (the card opens on the treemap, the search box empty).
+ * `tableOnly` (the Website page): the table with no treemap to switch to. */
+export function BrandRanking({ initialView = "map", initialQuery = "", tableOnly = false }: { initialView?: "map" | "table"; initialQuery?: string; tableOnly?: boolean } = {}) {
   const { input, openDrawer } = useMention();
   const t = useTranslations("renewal.mention");
   const tT = useTranslations("answerAnalysis.mentions.table");
   const tTm = useTranslations("renewal.mention.treemap");
   const vm = use(input.ranking);
-  const [view, setView] = useState<"map" | "table">(initialView);
+  const [view, setView] = useState<"map" | "table">(tableOnly ? "table" : initialView);
   const [multi, setMulti] = useState(false);
   const [group, setGroup] = useState<string | null>(null);
   const mode = multi ? "on" : "off";
@@ -271,15 +272,17 @@ export function BrandRanking({ initialView = "map", initialQuery = "" }: { initi
         info={<InfoTip label={t("board.infoLabel")} items={[[t("brands.colDelta"), t(input.period ? "brands.deltaInfoPeriod" : "brands.deltaInfo")]]} />}
         controls={
           <>
-            <RnSegmented
-              label={t("brands.viewLabel")}
-              value={view}
-              onChange={setView}
-              items={[
-                { value: "map", label: t("brands.viewMap") },
-                { value: "table", label: t("brands.viewTable") },
-              ]}
-            />
+            {tableOnly ? null : (
+              <RnSegmented
+                label={t("brands.viewLabel")}
+                value={view}
+                onChange={setView}
+                items={[
+                  { value: "map", label: t("brands.viewMap") },
+                  { value: "table", label: t("brands.viewTable") },
+                ]}
+              />
+            )}
             <button type="button" role="switch" aria-checked={multi} title={tT("multiHint")} onClick={() => setMulti((v) => !v)} className="inline-flex cursor-pointer items-center gap-2 text-rn-12 font-semibold text-rn-ink-2 focus-visible:outline-2 focus-visible:outline-rn-navy">
               <span aria-hidden className={cx("relative h-[18px] w-8 rounded-full transition-colors", multi ? "bg-rn-navy" : "bg-rn-line-2")}>
                 <i className={cx("absolute top-0.5 size-3.5 rounded-full bg-white shadow transition-[left]", multi ? "left-4" : "left-0.5")} />

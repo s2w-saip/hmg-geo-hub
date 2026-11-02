@@ -920,6 +920,97 @@ class ShellOwnSum(unittest.TestCase):
         self.assertEqual(rn.shell_payload(None, False, None, ["Kia"])["ownSum"], [])
 
 
+class Markets(unittest.IsolatedAsyncioTestCase):
+    """mention/rn-markets (2026-11-02, docs/handoff/website-mention-redesign.md): the Website Mention's market table, the
+    page's KPIs per country from the same /v1/geo read as the Overview's, this round beside the one before, a column per
+    brand, and the 미언급 counts per country. A brand outside the account's scope is never read: access.clamp would turn it
+    into a brand of the scope and the column would show another brand's value."""
+
+    @staticmethod
+    def geo_row(code: str, num: int, den: int = 100) -> dict:
+        own = {"visibility": {"num": num, "den": den}, "share_of_voice": {"num": 9, "den": 10}, "sentiment": {"num": 1, "den": 4},
+               "position": {"sum": 11, "count": 10}}
+        return {"code": code, "answers": den, "own": own, "top_rival": {"brand": "BMW", "metrics": {"visibility": {"num": 3, "den": den}}}}
+
+    def api(self, seen: list):
+        async def get(path, params=None):
+            p = dict(params or {})
+            seen.append((path, p))
+            await asyncio.sleep(0)
+            if path == "geo":
+                brand = (p.get("brand") or [None])[0]
+                prev = p.get("cycle_offset") == 1 or p.get("from") == "2026-08-01"
+                num = {None: 90, "Hyundai": 0, "Kia": 99, "Genesis": 100}[brand] + (5 if prev and brand is None else 0)
+                num = 99 if prev and brand == "Hyundai" else num
+                return {"data": {"markets": [{"countries": [self.geo_row("US", num)]}]}, "meta": {}}
+            if path == "mentions/market-gaps":
+                return {"data": {"items": [{"country": "US", "missing": 8, "with_brands": 3, "answers_no_brand": 12}]}, "meta": {}}
+            if path == "filters/options":
+                return {"data": {"regions": [{"code": "US"}, {"code": "CO"}], "languages": [], "geo_matrix": []}, "meta": {}}
+            raise HTTPException(503, "boom")
+        return get
+
+    async def build(self, query: str = "", scope: dict | None = None) -> tuple[dict, list]:
+        from bff import access
+        seen: list = []
+        with mock.patch("bff.api.get", self.api(seen)), access.scoped(scope or access.ALL):
+            got = await screens.build("mention/rn-markets", QueryParams(f"ctx.surface=website&ctx.admin=true{query}"))
+        return got, seen
+
+    async def test_a_row_of_kpis_this_round_and_the_change(self):
+        got, _ = await self.build()
+        self.assertEqual(got["brands"], ["Hyundai", "Kia", "Genesis"])
+        row = got["rows"][0]
+        self.assertEqual((row["country"], row["answers"], row["mentioned"], row["mentionedDelta"]), ("US", 100, 90, -5))
+        self.assertEqual(row["values"], {"exposure": 90.0, "sov": 90.0, "favorability": 25.0, "first-rank": 1.1})
+        self.assertEqual(row["deltas"]["exposure"], -5.0)
+        self.assertEqual(row["deltas"]["sov"], 0.0)
+        self.assertEqual((row["missing"], row["missingWithBrands"], row["noBrandAnswers"]), (8, 3, 12))
+        self.assertEqual(row["rival"], {"brand": "BMW", "exposure": 3.0})
+
+    async def test_each_brand_column_reads_its_own_perspective(self):
+        got, seen = await self.build()
+        cells = got["rows"][0]["brands"]
+        self.assertEqual((cells["Hyundai"]["exposure"], cells["Kia"]["exposure"], cells["Genesis"]["exposure"]), (0.0, 99.0, 100.0))
+        self.assertEqual(cells["Hyundai"]["delta"], -99.0)
+        self.assertEqual(sorted({(p.get("brand") or [""])[0] for path, p in seen if path == "geo"}), ["", "Genesis", "Hyundai", "Kia"])
+
+    async def test_the_previous_round_is_the_cycle_before(self):
+        _, seen = await self.build()
+        offsets = [p.get("cycle_offset") for path, p in seen if path == "geo"]
+        self.assertEqual((offsets.count(1), offsets.count(None)), (4, 4))
+
+    async def test_a_period_compares_with_the_period_before(self):
+        got, seen = await self.build("&time=2026-09-01..2026-09-30")
+        self.assertNotIn(1, [p.get("cycle_offset") for path, p in seen if path == "geo"])
+        self.assertEqual(sorted({p.get("from") for path, p in seen if path == "geo"}), ["2026-08-01", "2026-09-01"])
+        self.assertEqual(got["rows"][0]["deltas"]["exposure"], -5.0)
+
+    async def test_a_scoped_account_reads_its_own_brands_only(self):
+        got, seen = await self.build(scope={"brands": ["Kia", "Genesis"]})
+        self.assertEqual(got["brands"], ["Kia", "Genesis"])
+        self.assertEqual({(p.get("brand") or [None])[0] for path, p in seen if path == "geo"} - {None}, {"Kia", "Genesis"})
+
+    async def test_one_brand_needs_no_columns(self):
+        for query, scope in (("&brand=Kia", None), ("", {"brands": ["Kia"]})):
+            got, seen = await self.build(query, scope)
+            self.assertEqual(got["brands"], [], query)
+            self.assertEqual(len([1 for path, _ in seen if path == "geo"]), 2, query)
+
+    async def test_markets_with_no_answers_this_round_are_counted(self):
+        got, _ = await self.build()
+        self.assertEqual(got["unmeasured"], 1)
+        filtered, _ = await self.build("&geography=US")
+        self.assertEqual(filtered["unmeasured"], 0)
+
+    async def test_a_failed_read_says_so(self):
+        async def get(path, params=None):
+            raise HTTPException(503, "boom")
+        with mock.patch("bff.api.get", get):
+            got = await screens.build("mention/rn-markets", QueryParams("ctx.surface=website"))
+        self.assertEqual((got["rows"], got["degraded"]), ([], True))
+
+
 class BumpZeroIsGold(unittest.TestCase):
     """Renewal audit 8-4 (not reproduced, nothing changed): a brand without a row in a round that has answers is drawn
     at 0 mentions on the bump, ranked after the others. That is Gold's meaning: the cell tables keep no 0 row, so a

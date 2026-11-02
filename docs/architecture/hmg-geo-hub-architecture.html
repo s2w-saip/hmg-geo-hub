@@ -178,7 +178,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   <p class="ssot"><strong>정본(SSOT)</strong> · 서비스 구조와 HUB DB ERD는 이 문서 하나에만 둔다. 테이블·컬럼·권한의 최종 근거는
     SQL 마이그레이션이고, 이 문서는 그것을 그림으로 옮긴 정본이다. 구조나 스키마를 바꾸는 변경은 같은 커밋에서 이 문서를 고친다.
     방법은 <a href="#maintain">이 문서 고치는 법</a>.</p>
-  <p class="asof">마지막 갱신 2026-11-02(Admin 엔티티 카탈로그: 엔티티 역할, data-010 · 고객 관심 데이터 관리: 시드 키워드 · 커뮤니티 소스, data-009 · Global 인용 자사 판정의 범위 국가 좁힘) · 반영한 스키마: <code>back/analytics/schema.sql</code>·<code>operations.sql</code>,
+  <p class="asof">마지막 갱신 2026-11-02(Website Mention 시장 읽기: BFF 화면 mention/rn-markets · Gold 리더 mentions/market-gaps · Admin 엔티티 카탈로그: 엔티티 역할, data-010 · 고객 관심 데이터 관리: 시드 키워드 · 커뮤니티 소스, data-009 · Global 인용 자사 판정의 범위 국가 좁힘) · 반영한 스키마: <code>back/analytics/schema.sql</code>·<code>operations.sql</code>,
     <code>back/hub_storage/data-002~008.sql</code>, <code>operations-001~004.sql</code></p>
   <dl class="facts">
     <div><dt>프로세스</dt><dd>Next.js <span class="mono">:3333</span> · FastAPI <span class="mono">:5555</span> · 외부 API <span class="mono">:5560</span></dd></div>
@@ -358,7 +358,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 
   <ul class="points">
     <li><b>Next는 계산하지 않는다.</b> 페이지는 <code>/v1/screens/{name}</code>에서 완성된 뷰모델을 받아 그리기만 한다.
-      지표 계산은 BFF의 <code>screens/</code> 빌더 94개가 맡는다.
+      지표 계산은 BFF의 <code>screens/</code> 빌더 95개가 맡는다.
       페이지를 연 뒤 브라우저가 더 읽는 부분(글로벌 · Website 프롬프트 목록의 검색 · 정렬 · 다음 쪽과 엑셀 행, Website 프롬프트 인사이트, ACR 분포 시트를 탭을 열 때 하나씩)은
       <code>/api/standard/*</code> · <code>/api/website/prompts/*</code> 얇은 프록시가 같은 방식으로 화면 빌더에 넘긴다.
       로컬 모드는 <code>/api/hub/*</code> 밖의 GET 아닌 요청을 막으므로, 이런 읽기는 서버 액션(POST)이 아니라 GET 프록시로 둔다.</li>

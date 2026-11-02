@@ -656,6 +656,7 @@ def to_missing_prompt(item: dict) -> dict:
     text = item.get("prompt_text")
     return {"id": item.get("prompt_id"), "promptText": text if text is not None else "", "mentions": 0, "share": 0,
             "funnelStage": item.get("funnel_code"), "providers": engine_labels(item.get("providers")),
+            "targetUrl": item.get("target_url"), "missingEngines": engine_labels(item.get("missing_engines")),
             "answersTotal": item.get("answers_total") or 0, "brandMentions": item.get("brand_mentions") or 0,
             "answers": [{"jobId": a.get("job_id"), "provider": provider_label(a.get("engine")), "region": a.get("region"),
                          "mentionCount": 0, "position": None, "highlights": {"brand": [], "model": []},
@@ -679,7 +680,7 @@ async def missing_prompts(q) -> dict:
     params = drill_query(p, target, SIGNAL_WEBSITE_GROUPS)
     try:
         res = await api.get("mentions/missing-prompts", to_api_params(params, {
-            "limit": MISSING_PROMPTS_LIMIT, "answers_limit": MISSING_ANSWERS_LIMIT}))
+            "limit": MISSING_PROMPTS_LIMIT, "answers_limit": MISSING_ANSWERS_LIMIT, **({"partial": True} if p.get("partial") else {})}))
     except HTTPException as exc:
         if exc.status_code in (404, 403):
             return reply(200, {"prompts": []})
@@ -691,7 +692,7 @@ async def missing_prompts(q) -> dict:
     counts = res["data"].get("counts")
     body = {"prompts": prompts, "total": total if total is not None else len(prompts)}
     if counts:
-        body["counts"] = {"withBrands": counts["with_brands"], "noBrands": counts["no_brands"]}
+        body["counts"] = {"withBrands": counts["with_brands"], "noBrands": counts["no_brands"], "partial": counts.get("partial", 0)}
     return reply(200, body)
 
 @screen("mention/drill-brand-citations")

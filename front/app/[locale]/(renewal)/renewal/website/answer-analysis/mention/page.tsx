@@ -23,23 +23,26 @@ import {
 import {
   MENTION_VIEW_PARAM,
   resolveMentionView,
-  type MentionView,
   type RnMentionInput,
 } from "../../../standard/answer-analysis/mention/_components/mention-input";
 import type { RnAsOfVM, RnPageVM } from "../../../standard/answer-analysis/mention/_data/screen-types";
 import { RnMentionBody } from "../../../standard/answer-analysis/mention/_components/mention-body";
-import { RnMentionPageProvider, RnMentionTabsFallback } from "../../../standard/answer-analysis/mention/_components/mention-tabs";
-import { RnSiteCards, type RnSiteCardsVM } from "./_components/site-cards";
-import { RnWeeklyMentions, type RnWeeklyVM } from "./_components/weekly-mentions";
+import { RnMentionPageProvider } from "../../../standard/answer-analysis/mention/_components/mention-tabs";
+import type { ComparePartsScreen } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/mention-screen";
+import type { RnSiteCardsVM } from "./_components/site-cards";
+import type { RnMarketsVM } from "./_components/site-markets";
+import type { RnWeeklyVM } from "./_components/weekly-mentions";
+import { RnWebsiteMentionBody } from "./_components/website-mention-body";
 
-// Renewal Website Mention (2026-10-30, W2) — the redesigned /website/answer-analysis/mention: the renewal Global
-// Mention (its body and screens "mention/rn-<section>") over the website surface. ctx.surface=website makes the
-// screens read the website page's filters (back/bff/screens/mention_data.py website_filters: site country, language,
-// engine, period; brand with ctx.admin) from the same loaders the original page's mention/view reads, so the values
-// both pages show agree. Nothing the original showed is dropped (the user, 2026-10-30: a legacy KPI is reshaped,
-// never dropped): its summary and signal counts sit under 이번 회차 요약 as the KPI breakdown, grouped by the KPI tab
-// each explains (mention/view-cards; the 미언급 count opens its prompt list), and its weekly brand mentions close
-// 브랜드 상세 (mention/view-weekly). Filters: the shared panel with surface "website"; its saved filters are its own.
+// Renewal Website Mention (W2, reworked 2026-11-02, docs/handoff/website-mention-redesign.md) — the redesigned
+// /website/answer-analysis/mention: the renewal Mention's screens "mention/rn-<section>" and parts over the website
+// surface, in a page of its own (_components/website-mention-body.tsx). ctx.surface=website makes the screens read the
+// website page's filters (back/bff/screens/mention_data.py website_filters: site country, language, engine, period;
+// brand with ctx.admin) from the same loaders the original page's mention/view reads, so the values both pages show
+// agree. Nothing the original showed is dropped (a legacy KPI is reshaped, never dropped): its summary and signal
+// counts sit in the KPI cells (mention/view-cards; the 미언급 count opens its prompt list), its head-to-head and type
+// stack (mention/view-compare) and weekly brand mentions (mention/view-weekly) in 브랜드 상세. Filters: the shared panel
+// with surface "website"; its saved filters are its own.
 
 export const maxDuration = 120;
 
@@ -110,13 +113,24 @@ export default async function RenewalWebsiteMentionPage({
     ownLabel: head.ownLabel,
     period,
     filtered,
-    afterSummary: <RnSiteCards cards={screenGet<RnSiteCardsVM>("mention/view-cards", q)} period={Boolean(period)} pageAsOf={asOf ? asOf.catch(() => null) : null} />,
-    brandsExtra: <RnWeeklyMentions weekly={screenGet<RnWeeklyVM>("mention/view-weekly", q)} />,
+    body: (
+      <RnWebsiteMentionBody
+        reads={{
+          cards: screenGet<RnSiteCardsVM>("mention/view-cards", q),
+          markets: screenGet<RnMarketsVM>("mention/rn-markets", q),
+          weekly: screenGet<RnWeeklyVM>("mention/view-weekly", q),
+          compare: screenGet<ComparePartsScreen>("mention/view-compare", q),
+        }}
+        period={Boolean(period)}
+        pageAsOf={asOf ? asOf.catch(() => null) : null}
+        admin={admin}
+      />
+    ),
     ...sectionReads(q, locale),
   };
   return (
     <RnFilterRuntime>
-      <Suspense fallback={<PageSkeleton header={header} kpi={body.kpi} view={body.view} />}>
+      <Suspense fallback={<PageSkeleton header={header} />}>
         <RenewalWebsiteMention sp={sp} admin={admin} scope={session.user.scope} userId={session.user.id} locale={locale} header={header} body={body} />
       </Suspense>
     </RnFilterRuntime>
@@ -158,7 +172,8 @@ function sectionReads(q: ScreenQuery, locale: string): Reads {
     favorDist: get("rn-favor-dist"),
     favorMatrix: get("rn-favor-matrix"),
     rank: get("rn-rank"),
-    bump: get("rn-bump"),
+    // no rank chart on this page (the rivals sit under 0.2 % here)
+    bump: Promise.resolve({ trend: false, data: null, measured: 0, maxShare: 1 }) as Reads["bump"],
     ranking: get("rn-ranking"),
   };
 }
@@ -221,7 +236,7 @@ async function RenewalWebsiteMention({
   );
 }
 
-function PageSkeleton({ header, kpi, view }: { header: ReactNode; kpi: KpiTab; view: MentionView }) {
+function PageSkeleton({ header }: { header: ReactNode }) {
   return (
     <RnFilterSplit header={header} panel={<RnCard className="h-[480px]" />} rail={<RnCard className="h-24" />}>
       <RnCard className="h-12" />
@@ -229,7 +244,7 @@ function PageSkeleton({ header, kpi, view }: { header: ReactNode; kpi: KpiTab; v
         <RnSkeleton className="h-4 w-40" />
         <RnSkeleton className="h-16 w-full" />
       </RnCard>
-      <RnMentionTabsFallback kpi={kpi} view={view} />
+      <RnCard className="h-[220px]" />
       <RnCard className="h-[320px]" />
     </RnFilterSplit>
   );

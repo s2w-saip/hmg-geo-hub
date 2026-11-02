@@ -4262,13 +4262,15 @@
       "mention": {
         "title": "웹사이트 언급 분석",
         "cards": {
-          "title": "KPI 세부 지표",
-          "desc": "아래 KPI 탭 4개가 어떤 답변 · 프롬프트 · 언급 수에서 나오는지 보입니다. 묶음 제목을 누르면 그 KPI로 갑니다.",
+          "title": "KPI",
+          "desc": "칸을 누르면 그 KPI로 아래 구역이 바뀝니다. 칸 안의 수는 그 KPI가 어떤 답변 · 프롬프트 · 언급 수에서 나오는지 보입니다.",
           "chipAsOf": "{date} 기준",
           "chipDelta": "증감 = 직전 회차({date}) 대비",
           "chipDeltaPeriod": "증감 = 기간 첫 측정일({date}) 누적 대비",
           "openKpi": "{kpi} 보기",
-          "openMissing": "미언급 프롬프트 {count}개 목록 보기"
+          "openMissing": "미언급 프롬프트 {count}개 목록 보기",
+          "brands": "브랜드 상세",
+          "brandsHint": "함께 언급된 브랜드"
         },
         "missing": {
           "title": "당사 미언급 프롬프트",
@@ -4285,7 +4287,11 @@
           "search": "프롬프트 검색",
           "noMatch": "검색과 맞는 프롬프트가 없습니다.",
           "empty": "현재 조건에서는 당사가 나오지 않은 프롬프트가 없습니다.",
-          "order": "브랜드 언급이 많은 프롬프트부터 보입니다."
+          "order": "브랜드 언급이 많은 프롬프트부터 보입니다.",
+          "partial": "일부 엔진만 빠짐",
+          "partialHint": "한 AI 엔진에는 당사가 나오고 다른 엔진에는 나오지 않은 프롬프트입니다. 위 미언급 수에는 들지 않습니다.",
+          "partialEngines": "빠진 엔진 {engines}",
+          "target": "타겟 페이지"
         },
         "weekly": {
           "title": "주별 브랜드 언급 수",
@@ -4293,10 +4299,70 @@
           "chip": "{from} 주 ~ {to} 주 · {n}주",
           "weekOf": "{d} 주",
           "brand": "브랜드",
-          "trend": "주별 추이",
           "latest": "최근 주 언급",
           "delta": "직전 주 대비",
           "gapNote": "선이 끊긴 곳은 수집 공백 주입니다."
+        },
+        "summary": {
+          "how": "이 페이지의 값을 다시 적은 요약입니다(새 데이터 없음). 시장 → 미언급 프롬프트 → 엔진 → 우호도 순서로 고정해서 보입니다. 시장은 당사를 언급한 답변이 가장 많이 줄어든 곳과 늘어난 곳입니다. 기준값으로 거르거나 중요도를 매기지 않습니다.",
+          "tagMarket": "시장",
+          "tagMissing": "미언급",
+          "tagEngine": "AI 엔진",
+          "tagFavor": "우호도",
+          "marketMoves": "언급 답변 변화 — {down} {downDelta}, {up} {upDelta}",
+          "marketOne": "{country} 언급 답변 {delta}",
+          "marketFlat": "언급 답변이 달라진 시장이 없습니다",
+          "missing": "미언급 프롬프트 {count}개 — 다른 브랜드 언급 {withBrands} · 브랜드 언급 없음 {noBrands}",
+          "engine": "엔진별 노출률 — {list}",
+          "favor": "긍정 신호 {pct} ({delta}) · 부정 신호 {neg}",
+          "favorFlat": "긍정 신호 {pct} · 부정 신호 {neg}"
+        },
+        "ownTrend": {
+          "exposure": "당사 노출률 추이",
+          "sov": "당사 점유율 추이"
+        },
+        "markets": {
+          "title": "시장별 지표",
+          "desc": "어느 시장에서 빠지고, 대신 누가 나오는지 봅니다. 국가를 누르면 필터에 더하고, 미언급 수를 누르면 프롬프트 목록을 엽니다.",
+          "card": "시장별 {kpi}",
+          "orderLabel": "시장 표 정렬",
+          "orderRivals": "다른 브랜드 언급 많은 순",
+          "orderDrop": "언급 답변 감소 순",
+          "orderLow": "값이 낮은 순",
+          "orderAnswers": "답변 많은 순",
+          "country": "국가",
+          "value": "값",
+          "delta": "증감",
+          "missing": "미언급 프롬프트",
+          "withBrands": "다른 브랜드 언급",
+          "noBrand": "브랜드 언급 없는 답변",
+          "answers": "답변",
+          "rival": "선두 경쟁사(노출률)",
+          "countryTip": "{country} — 국가 필터에 더하거나 빼기",
+          "openMissing": "{country} 미언급 프롬프트 {count}개 보기",
+          "noteBrand": "브랜드 열은 Hyundai · Kia · Genesis 관점의 값입니다. Hyundai N 사이트는 값 열에만 들어가므로 세 열이 값 열과 맞지 않는 시장이 있습니다.",
+          "noteNoBrand": "브랜드 언급 없는 답변은 어떤 브랜드 언급도 집계되지 않은 답변 수입니다(Gold `ment_total = 0`).",
+          "noteUnmeasured": "답변이 없는 시장 {n}개는 표에 없습니다.",
+          "empty": "이 조건에서 시장별 값이 없습니다."
+        },
+        "engines": {
+          "title": "AI 엔진별 비교",
+          "colEngine": "AI 엔진",
+          "colRounds": "측정 회차",
+          "rounds": "{n}회",
+          "colTrend": "추이"
+        },
+        "compare": {
+          "title": "당사 대 비교 브랜드",
+          "desc": "비교 브랜드를 고르면 표와 추이, 유형 구성이 함께 바뀝니다.",
+          "role": "구분",
+          "roleOurs": "당사",
+          "roleTarget": "비교",
+          "rolePeer": "참고",
+          "brand": "브랜드",
+          "trendTitle": "비교 브랜드 추이",
+          "typeTitle": "유형별 언급 구성",
+          "failed": "비교를 불러오지 못했습니다."
         }
       },
       "conversion": {

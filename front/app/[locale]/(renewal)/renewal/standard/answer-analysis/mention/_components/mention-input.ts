@@ -53,10 +53,9 @@ export interface RnMentionInput {
   period: { from: string | null; to: string | null } | null;
   /** any filter axis in the URL (decides "결과 없음" vs "측정 대기"). */
   filtered: boolean;
-  /** A block of the page's own under 이번 회차 요약 (the Website page: its KPI breakdown, 2026-10-30). */
-  afterSummary?: ReactNode;
-  /** A block of the page's own at the end of 브랜드 상세 (the Website page: the weekly brand mentions, 2026-10-30). */
-  brandsExtra?: ReactNode;
+  /** The page's own sections in place of the standard bar, rail and views (the Website page, 2026-11-02: its prompts aim
+   * at its own pages, so the page reads differently), inside the same providers. */
+  body?: ReactNode;
   /** the tab rail: each tab's value, then the Δ of all four */
   tabValue: Record<KpiTab, Promise<RnTabValueVM>>;
   tabDeltas: Promise<RnTabDeltasVM>;

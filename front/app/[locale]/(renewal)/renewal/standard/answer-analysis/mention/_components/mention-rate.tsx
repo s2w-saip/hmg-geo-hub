@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, use, useMemo, useState } from "react";
+import { Suspense, use, useMemo, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { ArrowUpRight, ChevronRight, TrendingUp } from "lucide-react";
 import {
@@ -63,7 +63,7 @@ function useMetricShort(metric: KpiMetric): string {
 
 // ── 히어로: value (snapshot) · Δ · standing | brand trend ─────────────────────
 
-export function RateHero({ metric }: { metric: KpiMetric }) {
+export function RateHero({ metric, trendTitle }: { metric: KpiMetric; trendTitle?: string }) {
   const t = useTranslations("renewal.mention");
   const tName = useTranslations("answerAnalysis.mentions.kpi.metric");
   const tDef = useTranslations("dashboard.kpi");
@@ -88,7 +88,7 @@ export function RateHero({ metric }: { metric: KpiMetric }) {
         </div>
         <div className="flex min-w-0 flex-col gap-2">
           <Suspense fallback={<RnSkeleton className="h-[260px] w-full" />}>
-            <HeroTrend metric={metric} />
+            <HeroTrend metric={metric} title={trendTitle} />
           </Suspense>
         </div>
       </div>
@@ -169,7 +169,7 @@ function HeroStanding({ metric }: { metric: KpiMetric }) {
   );
 }
 
-function HeroTrend({ metric }: { metric: KpiMetric }) {
+export function HeroTrend({ metric, title }: { metric: KpiMetric; title?: string }) {
   const { ownLabel, lit, hover, tables } = useMention();
   const { compare, colorOf } = useCompare();
   const t = useTranslations("renewal.mention");
@@ -196,7 +196,7 @@ function HeroTrend({ metric }: { metric: KpiMetric }) {
   return (
     <>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-        <h3 className="m-0 text-rn-13 font-bold text-rn-ink">{t(metric === "sov" ? "hero.trendTitleSov" : "hero.trendTitleExposure")}</h3>
+        <h3 className="m-0 text-rn-13 font-bold text-rn-ink">{title ?? t(metric === "sov" ? "hero.trendTitleSov" : "hero.trendTitleExposure")}</h3>
         <InfoTip label={t("hero.trendNoteLabel")} items={[[t("hero.trendNoteLabel"), t("hero.trendNote", { metric: name })]]} />
         <span className="ml-auto">
           <MentionCardActions
@@ -417,8 +417,8 @@ function Engines({ metric }: { metric: KpiMetric }) {
 
 // ── 멘션 유형 ────────────────────────────────────────────────────────────────
 
-/** `initialView` opens another view first (render tests). */
-export function Types({ metric, initialView = "cmp" }: { metric: KpiMetric; initialView?: "cmp" | "own" }) {
+/** `initialView` opens another view first (the Website page, render tests); `picker` sits over the compare view. */
+export function Types({ metric, initialView = "cmp", picker }: { metric: KpiMetric; initialView?: "cmp" | "own"; picker?: ReactNode }) {
   const { input, ownLabel, tables, openDrawer } = useMention();
   const { compare, colorOf } = useCompare();
   const t = useTranslations("renewal.mention.type");
@@ -489,6 +489,7 @@ export function Types({ metric, initialView = "cmp" }: { metric: KpiMetric; init
         actions={<MentionCardActions tableId={isCmp ? id : undefined} section="sec-mix" csv={csv} />}
         sub={t("sub")}
       />
+      {isCmp && picker ? <div className="px-6 pb-2 [.rn-dense_&]:px-4.5">{picker}</div> : null}
       {empty ? (
         <RnEmpty className="mx-6 mb-5">{degraded ? dg.all : tK("type.empty")}</RnEmpty>
       ) : isCmp ? (

@@ -33,13 +33,13 @@ import { KPI_QUESTION, KpiBasisChip, RnMentionTabs, RnMentionTabsFallback, useMe
 
 /** The page body; the reads and the view (KPI tab or 브랜드 상세) come from RnMentionPageProvider (mention-tabs). */
 export function RnMentionBody() {
-  const { kpi, view } = useMentionPage();
+  const { input, kpi, view } = useMentionPage();
   return (
     <Suspense
       fallback={
         <div className="rn-dense flex flex-col gap-2.5">
           <SummarySkeleton />
-          <RnMentionTabsFallback kpi={kpi} view={view} />
+          {input.body ? null : <RnMentionTabsFallback kpi={kpi} view={view} />}
           <RnCard className="p-6">
             <RnSkeleton className="h-40 w-full" />
           </RnCard>
@@ -116,31 +116,33 @@ function Measured({ shell }: { shell: RnShellVM }) {
     <MentionProvider value={ctx}>
       {/* always the compact rhythm (2026-10-29, the user's call: the 기본 / 촘촘 toggle is gone) */}
       <div className="@container/rnpage rn-dense flex flex-col gap-2.5">
-        <RnControlBar label={t("bar.label")}>
-          <Suspense fallback={<span className="text-rn-12 font-semibold text-rn-muted">{t("compare.label")}</span>}>
-            <ComparePicker />
-          </Suspense>
-        </RnControlBar>
-        {/* every KPI at once: above the rail, outside what it switches */}
-        <Suspense fallback={<SummarySkeleton />}>
-          <Summary />
-        </Suspense>
-        <Suspense fallback={null}>
-          <PerAnswerLine />
-        </Suspense>
-        {input.afterSummary}
-        <RnMentionTabs />
-        {view === "brands" ? (
+        {input.body ?? (
           <>
-            <RnSectionHead id="sec-brands" title={t("sec.brands")} desc={t("sec.brandsDesc")} />
-            <BrandDetail />
-            {input.brandsExtra}
-          </>
-        ) : (
-          <>
-            {/* the KPI tab drives this section and the next two (경쟁 구도 · 엔진·유형 or their favour / rank twins) */}
-            <RnSectionHead id="sec-overview" title={t("sec.overview")} chip={<KpiBasisChip />} desc={tQ(KPI_QUESTION[kpi] as "coverage")} />
-            {kpi === "favorability" ? <FavorBody /> : kpi === "first-rank" ? <RankBody /> : <RateBody metric={kpi} />}
+            <RnControlBar label={t("bar.label")}>
+              <Suspense fallback={<span className="text-rn-12 font-semibold text-rn-muted">{t("compare.label")}</span>}>
+                <ComparePicker />
+              </Suspense>
+            </RnControlBar>
+            {/* every KPI at once: above the rail, outside what it switches */}
+            <Suspense fallback={<SummarySkeleton />}>
+              <Summary />
+            </Suspense>
+            <Suspense fallback={null}>
+              <PerAnswerLine />
+            </Suspense>
+            <RnMentionTabs />
+            {view === "brands" ? (
+              <>
+                <RnSectionHead id="sec-brands" title={t("sec.brands")} desc={t("sec.brandsDesc")} />
+                <BrandDetail />
+              </>
+            ) : (
+              <>
+                {/* the KPI tab drives this section and the next two (경쟁 구도 · 엔진·유형 or their favour / rank twins) */}
+                <RnSectionHead id="sec-overview" title={t("sec.overview")} chip={<KpiBasisChip />} desc={tQ(KPI_QUESTION[kpi] as "coverage")} />
+                {kpi === "favorability" ? <FavorBody /> : kpi === "first-rank" ? <RankBody /> : <RateBody metric={kpi} />}
+              </>
+            )}
           </>
         )}
         <BrandDrawer target={drawer} onClose={closeDrawer} />
@@ -151,7 +153,7 @@ function Measured({ shell }: { shell: RnShellVM }) {
 
 // ── compare brands (control bar) ──────────────────────────────────────────────
 
-function ComparePicker() {
+export function ComparePicker() {
   const { pick, setPick } = useMention();
   const { compare, covered, toggle } = useCompare();
   const t = useTranslations("renewal.mention.compare");
@@ -227,7 +229,7 @@ export function PerAnswerLine() {
   return line ? <PeriodDeltaLine view={line} className="mt-0" /> : null;
 }
 
-function SummarySkeleton() {
+export function SummarySkeleton() {
   return (
     <RnCard id="sec-summary" tone="hero" className="min-h-[214px]">
       <CardSkeleton height={200} />
@@ -244,7 +246,7 @@ function pickTypeFinding(tf: TypeFinding, compare: readonly string[]): Finding {
 
 /** Exported for the render test. */
 export function Summary() {
-  const { input, ownLabel, engineLabel } = useMention();
+  const { input, engineLabel } = useMention();
   const { compare } = useCompare();
   const t = useTranslations("renewal.mention");
   const tType = useTranslations("answerAnalysis.mentions.breakdown.type");
@@ -254,10 +256,6 @@ export function Summary() {
     return opt.order.map((i) => (i < 0 && opt.type != null ? pickTypeFinding(s.typeFindings[opt.type], compare) : s.fixed[i]));
   }, [s, compare]);
   const isPeriod = Boolean(input.period);
-  const asOf = s.asOf;
-  // one flat message (nesting rich texts repeats their element keys)
-  const rankTxt = (rank: number | null) => (rank ? t("summary.rank", { rank }) : "");
-  const rateTxt = (pct: number | null, d: number | null) => `${pctTxt(pct)}${d != null ? ` (${deltaTxt(d)})` : ""}`;
   const items: RnFinding[] = list.map((f, i) => {
     const p = f.params;
     const n1 = (v: string | number) => (typeof v === "number" ? v.toFixed(1) : v);
@@ -305,12 +303,25 @@ export function Summary() {
     }
     return { key: `${f.kind}-${i}`, tone: f.tone, tag: t(`find.${f.kind}.tag` as "find.mover.tag"), title, detail };
   });
+  return <SummaryCard items={items} how={t("summary.how")} />;
+}
+
+/** The navy card: the headline of the four KPIs over the page's findings. */
+export function SummaryCard({ items, how }: { items: RnFinding[]; how: string }) {
+  const { input, ownLabel } = useMention();
+  const t = useTranslations("renewal.mention");
+  const s = use(input.summary);
+  const isPeriod = Boolean(input.period);
+  const asOf = s.asOf;
+  // one flat message (nesting rich texts repeats their element keys)
+  const rankTxt = (rank: number | null) => (rank ? t("summary.rank", { rank }) : "");
+  const rateTxt = (pct: number | null, d: number | null) => `${pctTxt(pct)}${d != null ? ` (${deltaTxt(d)})` : ""}`;
   const title = t(isPeriod ? "summary.titlePeriod" : "summary.title");
   return (
     <RnCard id="sec-summary" aria-label={title} tone="hero" className="pb-[18px] [.rn-dense_&]:pb-3">
       <RnCardHead
         title={title}
-        info={<InfoTip label={t("summary.howLabel")} items={[[t("summary.howLabel"), t("summary.how")]]} />}
+        info={<InfoTip label={t("summary.howLabel")} items={[[t("summary.howLabel"), how]]} />}
         chips={<RnBasisChip>{isPeriod ? t("summary.chipPeriod") : t("summary.chipSnapshot", { date: asOf ?? "—" })}</RnBasisChip>}
       />
       <p className="m-0 px-6 pb-3.5 text-rn-16 leading-[1.6] break-keep text-white/88 [.rn-dense_&]:px-4.5 [.rn-dense_&]:pb-2.5 [&_b]:font-bold [&_b]:text-white">
